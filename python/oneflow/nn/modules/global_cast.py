@@ -13,7 +13,6 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 """
-from oneflow.support.blocking import BlockingInfoContext
 import oneflow as flow
 from oneflow.framework.tensor import register_tensor_op, Tensor
 from oneflow.nn.module import Module
@@ -77,8 +76,7 @@ def to_global_op(input, placement=None, sbp=None, grad_sbp=None):
 
     if grad_sbp is None:
         grad_sbp = tuple()
-    with BlockingInfoContext() as ctx:
-        return flow._C.to_global(input, placement, sbp, grad_sbp)
+    return flow._C.to_global(input, placement, sbp, grad_sbp)
 
 
 class ToLocal(Module):

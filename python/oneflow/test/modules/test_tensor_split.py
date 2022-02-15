@@ -20,16 +20,16 @@ import oneflow.unittest
 
 
 @flow.unittest.skip_unless_1n1d()
-class TestTorchSplitVec(flow.unittest.TestCase):
+class TestTensorSplitVec(flow.unittest.TestCase):
     @autotest(check_graph=True)
     def test_flow_tensor_split_vec(test_case):
         device = random_device()
         x = random_tensor(
             ndim=4,
+            dim0=random(3, 6),
             dim1=random(3, 6),
             dim2=random(3, 6),
             dim3=random(3, 6),
-            dim4=random(3, 6),
         ).to(device)
         dim = random(-3, 3).to(int)
         z = torch.tensor_split(x, (1, 2), dim)
@@ -37,18 +37,18 @@ class TestTorchSplitVec(flow.unittest.TestCase):
 
 
 @flow.unittest.skip_unless_1n1d()
-class TestTorchSplitInt(flow.unittest.TestCase):
+class TestTensorSplitInt(flow.unittest.TestCase):
     @autotest(check_graph=True)
     def test_flow_tensor_split_int(test_case):
         device = random_device()
         x = random_tensor(
             ndim=4,
+            dim0=random(3, 6),
             dim1=random(3, 6),
             dim2=random(3, 6),
             dim3=random(3, 6),
-            dim4=random(3, 6),
         ).to(device)
-        split = random(-3, 3).to(int)
+        split = random(1, 3).to(int)
         dim = random(-3, 3).to(int)
         z = torch.tensor_split(x, split, dim)
         return z[0]

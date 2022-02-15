@@ -171,7 +171,7 @@ Maybe<CheckConsistencyAsyncTransportCtx> LaunchTensorMetaConsistencyCheck(
 }
 
 Maybe<void> BusyWaitAndCheck(std::shared_ptr<CheckConsistencyAsyncTransportCtx>& ctx) {
-  JUST(TransportUtil::WaitUntilDoneOrTimeout(*ctx, TransportUtil::TimeoutSeconds()));
+  JUST(ctx->WaitDone());
   JUST(ctx->Check());
   return Maybe<void>::Ok();
 }
