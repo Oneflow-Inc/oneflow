@@ -181,7 +181,11 @@ def tensor_getstate(self):
         # save_load_path is None means setstate/getstate is called inside
         # methods other than flow.save/load, for example, copy.deepcopy
         if self.is_local:
-            return {"data": self.numpy(), "dtype": self.dtype}
+            if self.is_cuda:
+                device = "cuda"
+            else:
+                device = "cpu"
+            return {"data": self.numpy(), "dtype": self.dtype, "device": device}
         else:
             return {
                 "data": self.numpy(),
@@ -209,7 +213,11 @@ def tensor_setstate(self, pickle_dict):
             )
         else:
             return self.__init__(
-                flow.tensor(pickle_dict["data"], dtype=pickle_dict["dtype"])
+                flow.tensor(
+                    pickle_dict["data"],
+                    dtype=pickle_dict["dtype"],
+                    device=pickle_dict["device"],
+                )
             )
 
 
