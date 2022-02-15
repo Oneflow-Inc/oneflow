@@ -73,9 +73,7 @@ bool HasNotFiniteGpu(ep::Stream* stream, const Blob* blob, bool* has_not_finite_
     return HasNotFinite<double>(stream, elem_cnt, blob->dptr<double>(), has_not_finite_host,
                                 has_not_finite_device);
   } else if (dtype == kFloat16) {
-    if (cuda_stream->device_properties().major >= 6
-        || (cuda_stream->device_properties().major == 5
-            && cuda_stream->device_properties().minor >= 3)) {
+    if (cuda_stream->cuda_arch() >= 530) {
       return HasNotFinite<half>(stream, elem_cnt, blob->dptr<half>(), has_not_finite_host,
                                 has_not_finite_device);
     } else {
