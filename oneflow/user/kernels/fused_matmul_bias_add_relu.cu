@@ -155,8 +155,9 @@ void SetCublasEpilogue(const FusedMatmulBiasAddReluKernelCache* matmul_cache,
                        const void* bias_ptr, 
                        const void* aux_ptr){
   if(epilogue == CUBLASLT_EPILOGUE_RELU_BIAS || 
-     epilogue == CUBLASLT_EPILOGUE_BIAS || 
-     epilogue == CUBLASLT_EPILOGUE_RELU_AUX_BIAS){
+     epilogue == CUBLASLT_EPILOGUE_BIAS
+    //  epilogue == CUBLASLT_EPILOGUE_RELU_AUX_BIAS
+    ){
     // Set epilogue
     OF_CUBLAS_CHECK(cublasLtMatmulDescSetAttribute(
       matmul_cache->operation_desc, CUBLASLT_MATMUL_DESC_EPILOGUE, &epilogue, sizeof(epilogue)));
@@ -166,12 +167,12 @@ void SetCublasEpilogue(const FusedMatmulBiasAddReluKernelCache* matmul_cache,
       sizeof(bias_ptr)));
   }
   // // TODO: GELU_AUX_BIAS
-  if(epilogue == CUBLASLT_EPILOGUE_RELU_AUX_BIAS){
-    // Set aux ptr for backward. 
-    OF_CUBLAS_CHECK(cublasLtMatmulDescSetAttribute(matmul_cache->operation_desc,
-      CUBLASLT_MATMUL_DESC_EPILOGUE_AUX_POINTER, &aux_ptr,
-      sizeof(aux_ptr)));
-  }
+  // if(epilogue == CUBLASLT_EPILOGUE_RELU_AUX_BIAS){
+  //   // Set aux ptr for backward. 
+  //   OF_CUBLAS_CHECK(cublasLtMatmulDescSetAttribute(matmul_cache->operation_desc,
+  //     CUBLASLT_MATMUL_DESC_EPILOGUE_AUX_POINTER, &aux_ptr,
+  //     sizeof(aux_ptr)));
+  // }
 }
 
 void SetCublasAttr(const FusedMatmulBiasAddReluKernelCache* matmul_cache, 
@@ -298,65 +299,65 @@ class FusedMatmulBiasAddReluKernel final : public user_op::OpKernel {
       // cublasLtEpilogue_t epilogue = CUBLASLT_EPILOGUE_RELU_AUX_BIAS;
       cublasLtEpilogue_t epilogue = CUBLASLT_EPILOGUE_RELU_BIAS;
       
-      // if(idx == 0){
-      //   x_ptr = x->mut_dptr();
-      //   InferMatmulCublasMNK(x_shape, weight_shape, 
-      //                       /*transpose_a=*/ep::primitive::BlasTransposeType::N, 
-      //                       /*transpose_b=*/ep::primitive::BlasTransposeType::T, 
-      //                       &cublas_m, &cublas_n, &cublas_k, 
-      //                       &cublas_lda, &cublas_ldb, &cublas_ldc);
-      // }else{
-      //   InferMatmulCublasMNK(tmp_shape, weight_shape, 
-      //                       /*transpose_a=*/ep::primitive::BlasTransposeType::N, 
-      //                       /*transpose_b=*/ep::primitive::BlasTransposeType::T, 
-      //                       &cublas_m, &cublas_n, &cublas_k, 
-      //                       &cublas_lda, &cublas_ldb, &cublas_ldc);
-      // }
-      // if(idx == weight_size-1){
-      //   y_ptr = ctx->Tensor4ArgNameAndIndex("out", 0)->mut_dptr();
-      //   printf("Here??? \n"); 
-      //   if(skip_final_activation){
-      //     epilogue = CUBLASLT_EPILOGUE_BIAS;
-      //   }
-      // }else{
-      //   printf("0211212100 \n"); 
-      //   y_ptr = ctx->Tensor4ArgNameAndIndex("hidden", idx)->mut_dptr();
-      //   // y_ptr = tmp_y_buffer; 
-      // }
-      // printf("0333131311313113100 \n"); 
+      if(idx == 0){
+        x_ptr = x->mut_dptr();
+        InferMatmulCublasMNK(x_shape, weight_shape, 
+                            /*transpose_a=*/ep::primitive::BlasTransposeType::N, 
+                            /*transpose_b=*/ep::primitive::BlasTransposeType::T, 
+                            &cublas_m, &cublas_n, &cublas_k, 
+                            &cublas_lda, &cublas_ldb, &cublas_ldc);
+      }else{
+        InferMatmulCublasMNK(tmp_shape, weight_shape, 
+                            /*transpose_a=*/ep::primitive::BlasTransposeType::N, 
+                            /*transpose_b=*/ep::primitive::BlasTransposeType::T, 
+                            &cublas_m, &cublas_n, &cublas_k, 
+                            &cublas_lda, &cublas_ldb, &cublas_ldc);
+      }
+      if(idx == weight_size-1){
+        y_ptr = ctx->Tensor4ArgNameAndIndex("out", 0)->mut_dptr();
+        printf("Here??? \n"); 
+        if(skip_final_activation){
+          epilogue = CUBLASLT_EPILOGUE_BIAS;
+        }
+      }else{
+        printf("0211212100 \n"); 
+        y_ptr = ctx->Tensor4ArgNameAndIndex("hidden", idx)->mut_dptr();
+        // y_ptr = tmp_y_buffer; 
+      }
+      printf("0333131311313113100 \n"); 
 
-      // SetCublasAttr(matmul_cache, 
-      //               cublas_compute_dtype, 
-      //               cuda_data_type, 
-      //               epilogue, 
-      //               bias->dptr(), 
-      //               // cublas_aux->dptr(), 
-      //               nullptr, 
-      //               cublas_m, 
-      //               cublas_n, 
-      //               cublas_k, 
-      //               cublas_lda, 
-      //               cublas_ldb, 
-      //               cublas_ldc); 
+      SetCublasAttr(matmul_cache, 
+                    cublas_compute_dtype, 
+                    cuda_data_type, 
+                    epilogue, 
+                    bias->dptr(), 
+                    // cublas_aux->dptr(), 
+                    nullptr, 
+                    cublas_m, 
+                    cublas_n, 
+                    cublas_k, 
+                    cublas_lda, 
+                    cublas_ldb, 
+                    cublas_ldc); 
 
-      // OF_CUBLAS_CHECK(cublasLtMatmul(
-      //     cuda_stream->cublas_lt_handle(), 
-      //     matmul_cache->operation_desc, &sp_alpha, 
-      //     weight->dptr(),
-      //     matmul_cache->cublas_a_desc, 
-      //     x_ptr, 
-      //     matmul_cache->cublas_b_desc, 
-      //     &sp_beta,
-      //     y_ptr, matmul_cache->cublas_c_desc, 
-      //     y_ptr, matmul_cache->cublas_c_desc,
-      //     nullptr, cuda_stream->cublas_workspace(), 
-      //     cuda_stream->cublas_workspace_size(),
-      //     cuda_stream->cuda_stream()));
+      OF_CUBLAS_CHECK(cublasLtMatmul(
+          cuda_stream->cublas_lt_handle(), 
+          matmul_cache->operation_desc, &sp_alpha, 
+          weight->dptr(),
+          matmul_cache->cublas_a_desc, 
+          x_ptr, 
+          matmul_cache->cublas_b_desc, 
+          &sp_beta,
+          y_ptr, matmul_cache->cublas_c_desc, 
+          y_ptr, matmul_cache->cublas_c_desc,
+          nullptr, cuda_stream->cublas_workspace(), 
+          cuda_stream->cublas_workspace_size(),
+          cuda_stream->cuda_stream()));
       printf("99999999 \n"); 
       
       // Set hidden_layer ptr as next layer input x. 
-      // x_ptr = y_ptr; 
-      // tmp_shape.at(1) = out_feature; 
+      x_ptr = y_ptr; 
+      tmp_shape.at(1) = out_feature; 
       printf("9191991919191 \n"); 
     }
   }
