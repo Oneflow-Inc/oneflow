@@ -52,7 +52,7 @@ class TestMatMulModule(flow.unittest.TestCase):
             for x_sbp in all_sbp(placement, max_dim=2):
                 for y_sbp in all_sbp(placement, max_dim=2):
                     _test_matmul(test_case, placement, x_sbp, y_sbp)
-    
+
     @globaltest
     def test_broadcast_matmul(test_case):
         for placement in all_placement():
