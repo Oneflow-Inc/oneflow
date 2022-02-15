@@ -39,7 +39,7 @@ add_docstr(
         >>> import numpy as np
         >>> np_arr = np.array([0.5, 0.6, 0.7]).astype(np.float32)
         >>> input = flow.Tensor(np_arr)
-        >>> placement = flow.placement("cpu", {0:range(1)})
+        >>> placement = flow.placement("cpu", ranks=[0])
         >>> output_tensor = input.to_global(placement, [flow.sbp.split(0)])
         >>> output_tensor.is_global
         True
@@ -65,7 +65,7 @@ add_docstr(
         >>> import numpy as np
         >>> np_arr = np.array([0.5, 0.6, 0.7]).astype(np.float32)
         >>> input = flow.tensor(np_arr, dtype=flow.float32)
-        >>> placement = flow.placement("cpu", {0:range(1)})
+        >>> placement = flow.placement("cpu", ranks=[0])
         >>> global_tensor = input.to_global(placement, [flow.sbp.split(0)])
         >>> global_tensor.to_local()
         tensor([0.5000, 0.6000, 0.7000], dtype=oneflow.float32)
