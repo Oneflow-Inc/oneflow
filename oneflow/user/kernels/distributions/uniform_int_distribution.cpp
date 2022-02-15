@@ -17,6 +17,7 @@ limitations under the License.
 #include "oneflow/core/framework/framework.h"
 #include "oneflow/core/framework/dtype.h"
 #include "oneflow/user/kernels/distributions/uniform_int_distribution.h"
+#include "oneflow/core/control/global_process_ctx.h"
 
 namespace oneflow {
 
@@ -39,7 +40,9 @@ void UniformIntDistribution<DeviceType::kCPU, T>::operator()(
   auto gen = CHECK_JUST(generator->Get<one::CPUGeneratorImpl>());
   // std::uniform_int_distribution generates [low, high], but we want [low, high) here
   CPUUniformIntDistributionImpl<T> impl(low_, high_ - 1);
-  for (int64_t i = 0; i < elem_cnt; ++i) { dptr[i] = impl(gen->engine()); }
+  int64_t rank_id = GlobalProcessCtx::Rank();
+  for(int64_t i = 0; i < elem_cnt*rank_id; ++i ){ impl(gen->engine()); }
+  for(int64_t i = 0; i < elem_cnt; ++i ){ dptr[i] = impl(gen->engine()); }
 }
 
 #define INITIATE_CPU_UNIFORM_INT_DISTRIBUTION(T, typeproto)              \
