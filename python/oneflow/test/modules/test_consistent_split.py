@@ -64,19 +64,19 @@ def _test_flow_split_sizes_neg_dim_with_random_data(test_case, placement, sbp):
 
 
 class TestConsistentSplitModule(flow.unittest.TestCase):
-    @global_view
+    @globaltest
     def test_flow_split_with_random_data(test_case):
         for placement in all_placement():
             for sbp in all_sbp(placement, max_dim=2):
                 _test_flow_split_with_random_data(test_case, placement, sbp)
 
-    @global_view
+    @globaltest
     def test_flow_split_sizes_with_random_data(test_case):
         for placement in all_placement():
             for sbp in all_sbp(placement, max_dim=2):
                 _test_flow_split_sizes_with_random_data(test_case, placement, sbp)
 
-    @global_view
+    @globaltest
     def test_flow_split_sizes_neg_dim_with_random_data(test_case):
         for placement in all_placement():
             for sbp in all_sbp(placement, max_dim=2):
