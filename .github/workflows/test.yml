@@ -434,10 +434,6 @@ jobs:
         if: ${{ !fromJSON(matrix.is-single-client) }}
         run: |
           echo "TEST_IMG_TAG=${TEST_WITH_TORCH_IMG_TAG}" >> $GITHUB_ENV
-      - name: Enable ONEFLOW_TEST_VERBOSE
-        if: ${{ contains(github.event.pull_request.labels.*.name, 'need-test-verbose') }}
-        run: |
-          echo "ONEFLOW_TEST_VERBOSE=1" >> $GITHUB_ENV
       - name: Set environment variables
         if: ${{ !fromJson(matrix.cache-hit) && contains(matrix.runs-on, 'self-hosted') }}
         run: |
@@ -459,6 +455,11 @@ jobs:
           EXTRA_DOCKER_ARGS+=" --env ONEFLOW_KERNEL_ENABLE_CUDA_GRAPH=1"
           EXTRA_DOCKER_ARGS+=" --env ONEFLOW_THREAD_ENABLE_LOCAL_MESSAGE_QUEUE=1"
           EXTRA_DOCKER_ARGS+=" --env ONEFLOW_KERNEL_DISABLE_BLOB_ACCESS_CHECKER=1"
+          echo "EXTRA_DOCKER_ARGS=${EXTRA_DOCKER_ARGS}" >> $GITHUB_ENV
+      - name: Enable ONEFLOW_TEST_VERBOSE
+        if: ${{ contains(github.event.pull_request.labels.*.name, 'need-test-verbose') }}
+        run: |
+          EXTRA_DOCKER_ARGS+=" --env ONEFLOW_TEST_VERBOSE=1"
           echo "EXTRA_DOCKER_ARGS=${EXTRA_DOCKER_ARGS}" >> $GITHUB_ENV
       - name: Set environment variables (distributed)
         if: ${{ fromJson(matrix.is-distributed) }}
