@@ -33,135 +33,105 @@ class TensorScatterNdUpdate(flow.nn.Graph):
         return flow.tensor_scatter_nd_update(origin, indices, update)
 
 
-def _test_global_tensor_scatter_nd_update(
-    test_case, placement, sbp, check_graph=False
-):
-    origin = flow.tensor(np.arange(16), dtype=flow.float).to_global(
-        flow.env.all_device_placement("cpu"), flow.sbp.broadcast
-    )
-    origin = origin.to_global(placement, sbp)
+def _test_global_tensor_scatter_nd_update(test_case, placement, sbp, check_graph=False):
+    np.random.seed(10)
+    np_origin = np.random.uniform(-1e-05, 1e-05, (16,))
+    np_indices = np.random.choice(16, 8, replace=False)
+    np_update = np.random.uniform(-1e-05, 1e-05, (8,))
+
+    origin = flow.tensor(np_origin, dtype=flow.float, placement=placement, sbp=sbp)
     indices = flow.tensor(
-        np.array([[1], [6], [4], [3], [8], [10], [5], [7]]), dtype=flow.int
-    ).to_global(
-        placement, [flow.sbp.broadcast for _ in range(len(placement.hierarchy))]
+        np_indices.reshape(8, 1),
+        dtype=flow.int,
+        placement=placement,
+        sbp=[flow.sbp.broadcast for _ in range(len(placement.ranks.shape))],
     )
     update = flow.tensor(
-        np.array([10.2, 5.1, 12.7, 5.4, 9.2, 3.1, 4.2, 5.2]), dtype=flow.float
-    ).to_global(
-        placement, [flow.sbp.broadcast for _ in range(len(placement.hierarchy))]
+        np_update,
+        dtype=flow.float,
+        placement=placement,
+        sbp=[flow.sbp.broadcast for _ in range(len(placement.ranks.shape))],
     )
-    np_out = np.array(
-        [
-            0.0,
-            10.2,
-            2.0,
-            5.4,
-            12.7,
-            4.2,
-            5.1,
-            5.2,
-            9.2,
-            9.0,
-            3.1,
-            11.0,
-            12.0,
-            13.0,
-            14.0,
-            15.0,
-        ]
-    )
+
     if check_graph:
         tensor_scatter_nd_update = TensorScatterNdUpdate()
         output = tensor_scatter_nd_update(origin, indices, update)
     else:
         output = flow.tensor_scatter_nd_update(origin, indices, update)
 
-    test_case.assertTrue(np.allclose(output.numpy(), np_out, 0.0001, 0.0001))
+    np_origin[np_indices] = np_update
+
+    test_case.assertTrue(np.allclose(output.numpy(), np_origin, 0.0001, 0.0001))
 
 
 def _test_global_tensor_scatter_nd_update_t(
     test_case, placement, sbp, check_graph=False
 ):
-    origin = flow.tensor(np.arange(32).reshape(8, 4), dtype=flow.float).to_global(
-        flow.env.all_device_placement("cpu"), flow.sbp.broadcast
-    )
-    origin = origin.to_global(placement, sbp)
-    indices = flow.tensor(np.array([[0], [4], [2]]), dtype=flow.int).to_global(
-        placement, [flow.sbp.broadcast for _ in range(len(placement.hierarchy))]
+    np.random.seed(20)
+    np_origin = np.random.uniform(-1e-05, 1e-05, (16, 4))
+    np_indices = np.random.choice(16, 8, replace=False)
+    np_update = np.random.uniform(-1e-05, 1e-05, (8, 4))
+
+    origin = flow.tensor(np_origin, dtype=flow.float, placement=placement, sbp=sbp)
+    indices = flow.tensor(
+        np_indices.reshape(8, 1),
+        dtype=flow.int,
+        placement=placement,
+        sbp=[flow.sbp.broadcast for _ in range(len(placement.ranks.shape))],
     )
     update = flow.tensor(
-        np.array([[1, 1, 1, 1], [2, 2, 2, 2], [3, 3, 3, 3]]), dtype=flow.float,
-    ).to_global(
-        placement, [flow.sbp.broadcast for _ in range(len(placement.hierarchy))]
+        np_update,
+        dtype=flow.float,
+        placement=placement,
+        sbp=[flow.sbp.broadcast for _ in range(len(placement.ranks.shape))],
     )
-    np_out = np.array(
-        [
-            [1.0, 1.0, 1.0, 1.0],
-            [4.0, 5.0, 6.0, 7.0],
-            [3.0, 3.0, 3.0, 3.0],
-            [12.0, 13.0, 14.0, 15.0],
-            [2.0, 2.0, 2.0, 2.0],
-            [20.0, 21.0, 22.0, 23.0],
-            [24.0, 25.0, 26.0, 27.0],
-            [28.0, 29.0, 30.0, 31.0],
-        ]
-    )
+
     if check_graph:
         tensor_scatter_nd_update = TensorScatterNdUpdate()
         output = tensor_scatter_nd_update(origin, indices, update)
     else:
         output = flow.tensor_scatter_nd_update(origin, indices, update)
-    test_case.assertTrue(np.allclose(output.numpy(), np_out, 0.0001, 0.0001))
+
+    np_origin[np_indices] = np_update
+
+    test_case.assertTrue(np.allclose(output.numpy(), np_origin, 0.0001, 0.0001))
 
 
 def _test_eager_global_tensor_scatter_nd_update_backward(test_case, placement, sbp):
+    np.random.seed(30)
+    np_origin = np.random.uniform(-1e-05, 1e-05, (16,))
+    np_indices = np.random.choice(16, 8, replace=False)
+    np_update = np.random.uniform(-1e-05, 1e-05, (8,))
+
     origin = flow.tensor(
-        np.arange(16), dtype=flow.float, requires_grad=True,
-    ).to_global(flow.env.all_device_placement("cpu"), flow.sbp.broadcast)
-    origin = origin.to_global(placement, sbp)
-
+        np_origin, dtype=flow.float, placement=placement, sbp=sbp, requires_grad=True
+    )
     indices = flow.tensor(
-        np.array([[1], [6], [4], [3], [8], [10], [5], [7]]), dtype=flow.int
-    ).to_global(
-        placement, [flow.sbp.broadcast for _ in range(len(placement.hierarchy))]
+        np_indices.reshape(8, 1),
+        dtype=flow.int,
+        placement=placement,
+        sbp=[flow.sbp.broadcast for _ in range(len(placement.ranks.shape))],
+    )
+    update = flow.tensor(
+        np_update,
+        dtype=flow.float,
+        placement=placement,
+        sbp=[flow.sbp.broadcast for _ in range(len(placement.ranks.shape))],
+        requires_grad=True,
     )
 
-    of_update = flow.tensor(
-        np.array([10.2, 5.1, 12.7, 5.4, 9.2, 3.1, 4.2, 5.2]),
-        requires_grad=True,
-        dtype=flow.float,
-    ).to_global(
-        placement, [flow.sbp.broadcast for _ in range(len(placement.hierarchy))]
-    )
-    np_out = np.array(
-        [
-            0.0,
-            10.2,
-            2.0,
-            5.4,
-            12.7,
-            4.2,
-            5.1,
-            5.2,
-            9.2,
-            9.0,
-            3.1,
-            11.0,
-            12.0,
-            13.0,
-            14.0,
-            15.0,
-        ]
-    )
-    np_update_grad = np.array([1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0])
-    np_origin_grad = np.array(
-        [1.0, 0.0, 1.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.0, 1.0, 1.0, 1.0, 1.0, 1.0]
-    )
-    output = flow.tensor_scatter_nd_update(origin, indices, of_update)
+    np_update_grad = np.ones(8)
+    np_origin_grad = np.ones(16)
+    np_origin_grad[np_indices] = np.zeros(8)
+
+    output = flow.tensor_scatter_nd_update(origin, indices, update)
     out_sum = output.sum()
     out_sum.backward()
-    test_case.assertTrue(np.allclose(output.numpy(), np_out, 0.0001, 0.0001))
-    test_case.assertTrue(np.allclose(of_update.grad.numpy(), np_update_grad))
+
+    np_origin[np_indices] = np_update
+
+    test_case.assertTrue(np.allclose(output.numpy(), np_origin, 0.0001, 0.0001))
+    test_case.assertTrue(np.allclose(update.grad.numpy(), np_update_grad))
     test_case.assertTrue(np.allclose(origin.grad.numpy(), np_origin_grad))
 
 
