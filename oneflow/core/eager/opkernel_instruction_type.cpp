@@ -486,17 +486,7 @@ struct DTRLocalCallOpKernelUtil final : public LocalCallOpKernelUtil {
           }
           return Maybe<void>::Ok();
         }));
-
-    JUST(ForEachDTRInputTensor(operand.get(),
-                               [&](vm::DTREagerBlobObject* dtr_blob_object) -> Maybe<void> {
-                                 CHECK_OR_RETURN(dtr_blob_object->is_in_memory());
-                                 return Maybe<void>::Ok();
-                               }));
-    JUST(ForEachDTRInputTensor(operand.get(),
-                               [&](vm::DTREagerBlobObject* dtr_blob_object) -> Maybe<void> {
-                                 CHECK_NOTNULL_OR_RETURN(dtr_blob_object->blob().dptr());
-                                 return Maybe<void>::Ok();
-                               }));
+    JUST(CheckInputInMemory(operand.get()));
 
     JUST(ComputeOperand(operand.get(), device_ctx));
     const double compute_time = JUST(GetEstimatedComputeTime(operand));

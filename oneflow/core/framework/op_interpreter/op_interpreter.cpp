@@ -98,6 +98,15 @@ Maybe<void> AutogradInterpreter::Apply(const OpExpr& op_expr, const TensorTuple&
     const auto& grad_closure = JUST(op_expr.GetOrCreateOpGradClosure());
     JUST(grad_closure->Capture(inputs, *outputs, ctx));
 
+    /*
+     *  x.add_(1)
+     *  x.grad_fn = add_op
+     *  ------
+     *  y = x.add(1)
+     *  y.grad_fn = add_op
+     *  x.grad_fn = y.grad_fn
+     */
+
     auto backward_fn =
         std::make_shared<std::function<Maybe<void>(const TensorTuple&, TensorTuple*, bool)>>(
             [=](const TensorTuple& out_grads, TensorTuple* in_grads,
