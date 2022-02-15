@@ -4287,6 +4287,22 @@ def OneFlow_FusedMatmulBiasAddReluOp : OneFlow_BaseOp<"fused_matmul_bias_add_rel
   let has_data_type_infer_fn = 1;
 }
 
+def OneFlow_FusedMatmulBiasAddReluBackwardOp : OneFlow_BaseOp<"fused_matmul_bias_add_relu_backward", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
+  let input = (ins
+    OneFlow_Tensor:$last_mlp_x,
+    OneFlow_Tensor:$last_mlp_bias,
+    OneFlow_Tensor:$dy
+  );
+  let output = (outs
+    OneFlow_Tensor:$dx, 
+    OneFlow_Tensor:$dbias
+  );
+  let has_logical_tensor_desc_infer_fn = 1;
+  let has_physical_tensor_desc_infer_fn = 1;
+  let has_get_sbp_fn = 1;
+  let has_data_type_infer_fn = 1;
+}
+
 #endif // GET_ONEFLOW_MATMUL_OP_DEFINITIONS
 
 // Group: MISC

@@ -919,6 +919,28 @@ class FusedScaleMaskSoftmaxDropoutGradFunctor {
   std::shared_ptr<OpExpr> op_;
 };
 
+class FusedMatmulBiasAddReluGradFunctor {
+ public:
+  FusedMatmulBiasAddReluGradFunctor() {
+    op_ = CHECK_JUST(one::OpBuilder("fused_matmul_bias_add_relu_backward")
+                    .Input("last_mlp_x")
+                    .Input("last_mlp_bias")
+                    .Input("dy")
+                    .Output("dx")
+                    .Output("dbias")
+                    .Build());
+  }
+  Maybe<TensorTuple> operator()(const std::shared_ptr<one::Tensor>& last_mlp_x, 
+                           const std::shared_ptr<one::Tensor>& last_mlp_bias,
+                           const std::shared_ptr<one::Tensor>& dy) const {
+    MutableAttrMap attrs;
+    return OpInterpUtil::Dispatch<TensorTuple>(*op_, {last_mlp_x, last_mlp_bias, dy}, attrs);
+  }
+
+ private:
+  std::shared_ptr<OpExpr> op_;
+};
+
 }  // namespace impl
 
 ONEFLOW_FUNCTION_LIBRARY(m) {
@@ -953,6 +975,7 @@ ONEFLOW_FUNCTION_LIBRARY(m) {
       "FusedScaleTrilSoftmaxMaskScaleGrad");
   m.add_functor<impl::FusedScaleMaskSoftmaxGradFunctor>("FusedScaleMaskSoftmaxGrad");
   m.add_functor<impl::FusedScaleMaskSoftmaxDropoutGradFunctor>("FusedScaleMaskSoftmaxDropoutGrad");
+  m.add_functor<impl::FusedMatmulBiasAddReluGradFunctor>("FusedMatmulBiasAddReluBackward");
 };
 
 }  // namespace functional
