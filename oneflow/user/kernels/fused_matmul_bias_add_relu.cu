@@ -154,7 +154,9 @@ void SetCublasEpilogue(const FusedMatmulBiasAddReluKernelCache* matmul_cache,
                        cublasLtEpilogue_t epilogue, 
                        const void* bias_ptr, 
                        const void* aux_ptr){
-  if(epilogue == CUBLASLT_EPILOGUE_RELU_BIAS || epilogue == CUBLASLT_EPILOGUE_BIAS){
+  if(epilogue == CUBLASLT_EPILOGUE_RELU_BIAS || 
+     epilogue == CUBLASLT_EPILOGUE_BIAS || 
+     epilogue == CUBLASLT_EPILOGUE_RELU_AUX_BIAS){
     // Set epilogue
     OF_CUBLAS_CHECK(cublasLtMatmulDescSetAttribute(
       matmul_cache->operation_desc, CUBLASLT_MATMUL_DESC_EPILOGUE, &epilogue, sizeof(epilogue)));
@@ -164,12 +166,12 @@ void SetCublasEpilogue(const FusedMatmulBiasAddReluKernelCache* matmul_cache,
       sizeof(bias_ptr)));
   }
   // // TODO: GELU_AUX_BIAS
-  // if(epilogue == CUBLASLT_EPILOGUE_RELU_AUX_BIAS){
-  //   // Set aux ptr for backward. 
-  //   OF_CUBLAS_CHECK(cublasLtMatmulDescSetAttribute(matmul_cache->operation_desc,
-  //     CUBLASLT_MATMUL_DESC_AUX_POINTER, &aux_ptr,
-  //     sizeof(aux_ptr)));
-  // }
+  if(epilogue == CUBLASLT_EPILOGUE_RELU_AUX_BIAS){
+    // Set aux ptr for backward. 
+    OF_CUBLAS_CHECK(cublasLtMatmulDescSetAttribute(matmul_cache->operation_desc,
+      CUBLASLT_MATMUL_DESC_EPILOGUE_AUX_POINTER, &aux_ptr,
+      sizeof(aux_ptr)));
+  }
 }
 
 void SetCublasAttr(const FusedMatmulBiasAddReluKernelCache* matmul_cache, 
@@ -235,6 +237,7 @@ class FusedMatmulBiasAddReluKernel final : public user_op::OpKernel {
  private:
   void Compute(user_op::KernelComputeContext* ctx, user_op::OpKernelState*,
                const user_op::OpKernelCache* cache) const override {
+    printf("000 \n"); 
     /*
     Fused DenseActivation Layer. Assume we have two layers: 
     A: (m, k)
@@ -253,20 +256,24 @@ class FusedMatmulBiasAddReluKernel final : public user_op::OpKernel {
     user_op::Tensor* x = ctx->Tensor4ArgNameAndIndex("x", 0); 
     user_op::Tensor* out = ctx->Tensor4ArgNameAndIndex("out", 0);
     bool skip_final_activation = ctx->Attr<bool>("skip_final_activation"); 
+    printf("000111 \n"); 
 
     const DataType data_type = out->data_type();
     const cublasComputeType_t cublas_compute_dtype = GetComputeType(data_type);
     const cudaDataType_t cuda_data_type = GetCudaDataType(data_type);
     size_t cublas_m = 0, cublas_n = 0, cublas_k = 0; 
     int64_t cublas_lda = 0, cublas_ldb = 0, cublas_ldc = 0; 
+    printf("0002222 \n"); 
 
     const double alpha = 1.0;
     const auto sp_alpha = GetCublasScalarParameter(alpha, cublas_compute_dtype);
     const double beta = 0.0;
     const auto sp_beta = GetCublasScalarParameter(beta, cublas_compute_dtype);
+    printf("0033330 \n"); 
 
     const int64_t batch_size = ctx->Tensor4ArgNameAndIndex("x", 0)->shape().At(0); 
     int64_t in_feature = ctx->Tensor4ArgNameAndIndex("x", 0)->shape().At(1); 
+    printf("0004444 \n"); 
     
     // currently only support 2D matmul. 
     DimVector x_shape(2); 
@@ -274,68 +281,83 @@ class FusedMatmulBiasAddReluKernel final : public user_op::OpKernel {
     DimVector tmp_shape(2); 
     tmp_shape.at(0) = x_shape.at(0); 
     DimVector weight_shape(2); 
+    printf("005555550 \n"); 
     
     int64_t out_feature = 0; 
-    user_op::Tensor* tmp_buffer = ctx->Tensor4ArgNameAndIndex("tmp_buffer", 0);
-    T* tmp_x_buffer = x->mut_dptr<T>();
-    T* tmp_y_buffer = tmp_buffer->mut_dptr<T>();
+    printf("00099999 \n"); 
     void* x_ptr = nullptr; 
     void* y_ptr = nullptr; 
 
     for(int idx = 0; idx < weight_size; idx++){
       const user_op::Tensor* weight = ctx->Tensor4ArgNameAndIndex("weights", idx);
       const user_op::Tensor* bias = ctx->Tensor4ArgNameAndIndex("biases", idx);
+      // user_op::Tensor* cublas_aux = ctx->Tensor4ArgNameAndIndex("cublas_aux", idx);
+      
       out_feature = weight->shape().At(0); 
       weight->shape().ToDimVector(&weight_shape); 
+      // cublasLtEpilogue_t epilogue = CUBLASLT_EPILOGUE_RELU_AUX_BIAS;
       cublasLtEpilogue_t epilogue = CUBLASLT_EPILOGUE_RELU_BIAS;
       
-      if(idx == 0){
-        x_ptr = x->mut_dptr();
-        InferMatmulCublasMNK(x_shape, weight_shape, 
-                            /*transpose_a=*/ep::primitive::BlasTransposeType::N, 
-                            /*transpose_b=*/ep::primitive::BlasTransposeType::T, 
-                            &cublas_m, &cublas_n, &cublas_k, 
-                            &cublas_lda, &cublas_ldb, &cublas_ldc);
-      }else{
-        InferMatmulCublasMNK(tmp_shape, weight_shape, 
-                            /*transpose_a=*/ep::primitive::BlasTransposeType::N, 
-                            /*transpose_b=*/ep::primitive::BlasTransposeType::T, 
-                            &cublas_m, &cublas_n, &cublas_k, 
-                            &cublas_lda, &cublas_ldb, &cublas_ldc);
-      }
-      if(idx == weight_size-1){
-        y_ptr = ctx->Tensor4ArgNameAndIndex("out", 0)->mut_dptr();
-        if(skip_final_activation){
-          epilogue = CUBLASLT_EPILOGUE_BIAS;
-        }
-      }else{
-        y_ptr = tmp_y_buffer; 
-      }
+      // if(idx == 0){
+      //   x_ptr = x->mut_dptr();
+      //   InferMatmulCublasMNK(x_shape, weight_shape, 
+      //                       /*transpose_a=*/ep::primitive::BlasTransposeType::N, 
+      //                       /*transpose_b=*/ep::primitive::BlasTransposeType::T, 
+      //                       &cublas_m, &cublas_n, &cublas_k, 
+      //                       &cublas_lda, &cublas_ldb, &cublas_ldc);
+      // }else{
+      //   InferMatmulCublasMNK(tmp_shape, weight_shape, 
+      //                       /*transpose_a=*/ep::primitive::BlasTransposeType::N, 
+      //                       /*transpose_b=*/ep::primitive::BlasTransposeType::T, 
+      //                       &cublas_m, &cublas_n, &cublas_k, 
+      //                       &cublas_lda, &cublas_ldb, &cublas_ldc);
+      // }
+      // if(idx == weight_size-1){
+      //   y_ptr = ctx->Tensor4ArgNameAndIndex("out", 0)->mut_dptr();
+      //   printf("Here??? \n"); 
+      //   if(skip_final_activation){
+      //     epilogue = CUBLASLT_EPILOGUE_BIAS;
+      //   }
+      // }else{
+      //   printf("0211212100 \n"); 
+      //   y_ptr = ctx->Tensor4ArgNameAndIndex("hidden", idx)->mut_dptr();
+      //   // y_ptr = tmp_y_buffer; 
+      // }
+      // printf("0333131311313113100 \n"); 
 
-      SetCublasAttr(matmul_cache, 
-                    cublas_compute_dtype, 
-                    cuda_data_type, 
-                    epilogue, 
-                    bias->dptr(), 
-                    nullptr, 
-                    cublas_m, 
-                    cublas_n, 
-                    cublas_k, 
-                    cublas_lda, 
-                    cublas_ldb, 
-                    cublas_ldc); 
+      // SetCublasAttr(matmul_cache, 
+      //               cublas_compute_dtype, 
+      //               cuda_data_type, 
+      //               epilogue, 
+      //               bias->dptr(), 
+      //               // cublas_aux->dptr(), 
+      //               nullptr, 
+      //               cublas_m, 
+      //               cublas_n, 
+      //               cublas_k, 
+      //               cublas_lda, 
+      //               cublas_ldb, 
+      //               cublas_ldc); 
 
-      OF_CUBLAS_CHECK(cublasLtMatmul(
-          cuda_stream->cublas_lt_handle(), matmul_cache->operation_desc, &sp_alpha, weight->dptr(),
-          matmul_cache->cublas_a_desc, tmp_x_buffer, matmul_cache->cublas_b_desc, &sp_beta,
-          y_ptr, matmul_cache->cublas_c_desc, y_ptr, matmul_cache->cublas_c_desc,
-          nullptr, cuda_stream->cublas_workspace(), cuda_stream->cublas_workspace_size(),
-          cuda_stream->cuda_stream()));
+      // OF_CUBLAS_CHECK(cublasLtMatmul(
+      //     cuda_stream->cublas_lt_handle(), 
+      //     matmul_cache->operation_desc, &sp_alpha, 
+      //     weight->dptr(),
+      //     matmul_cache->cublas_a_desc, 
+      //     x_ptr, 
+      //     matmul_cache->cublas_b_desc, 
+      //     &sp_beta,
+      //     y_ptr, matmul_cache->cublas_c_desc, 
+      //     y_ptr, matmul_cache->cublas_c_desc,
+      //     nullptr, cuda_stream->cublas_workspace(), 
+      //     cuda_stream->cublas_workspace_size(),
+      //     cuda_stream->cuda_stream()));
+      printf("99999999 \n"); 
       
-      tmp_x_buffer = tmp_y_buffer; 
-      // move to next buffer to store result. 
-      tmp_y_buffer += batch_size * out_feature; 
-      tmp_shape.at(1) = out_feature; 
+      // Set hidden_layer ptr as next layer input x. 
+      // x_ptr = y_ptr; 
+      // tmp_shape.at(1) = out_feature; 
+      printf("9191991919191 \n"); 
     }
   }
 };
@@ -344,19 +366,7 @@ class FusedMatmulBiasAddReluKernel final : public user_op::OpKernel {
   REGISTER_USER_KERNEL("fused_matmul_bias_add_relu")                   \
       .SetCreateFn<FusedMatmulBiasAddReluKernel<cpp_type>>()           \
       .SetIsMatchedHob((user_op::HobDeviceType() == DeviceType::kCUDA) \
-                       && (user_op::HobDataType("out", 0) == data_type)) \
-      .SetInferTmpSizeFn([](user_op::InferContext* ctx) {                               \
-        int64_t tmp_size = 0; \
-        const Shape& x_shape = ctx->InputShape("x", 0); \
-        int64_t batch_size = x_shape.At(0); \
-        int32_t weight_size = ctx->input_size("weights"); \
-        for(int i = 0; i < weight_size-1; i++){ \
-          /* If there is only one layer, we don't need to allocate temp buffer to store result. */\
-          tmp_size += batch_size * ctx->InputShape("weights", i).At(0); \
-        }          \
-        const int64_t tmp_buffer_size = GetCudaAlignedSize(tmp_size*sizeof(cpp_type));    \
-        return tmp_buffer_size;                                          \
-    });
+                       && (user_op::HobDataType("out", 0) == data_type));
 
 REGISTER_MATMUL_BIAS_ADD_RELU_KERNEL_GPU(double, DataType::kDouble);
 REGISTER_MATMUL_BIAS_ADD_RELU_KERNEL_GPU(float, DataType::kFloat);

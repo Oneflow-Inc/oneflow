@@ -86,7 +86,7 @@ class FusedMatmulBiasAddReluGradKernel final : public user_op::OpKernel {
     DispatchFusedBiasAddBackwardImpl<decltype(relu_grad_by_x_functor), T>(ctx->stream(), relu_grad_by_x_functor, elem_cnt,
         bias_size, last_mlp_x->dptr<T>(), last_mlp_bias->dptr<T>(), dy_tensor->dptr<T>(), dx_tensor->mut_dptr<T>()); 
     
-    // reduce for bias. 
+    // Use Gemm to reduce bias_grad. 
     T* reduce_tmp_buffer = tmp_buffer->mut_dptr<T>();
     const int32_t m = bias_size;
     const int32_t n = 1;

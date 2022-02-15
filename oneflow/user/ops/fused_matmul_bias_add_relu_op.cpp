@@ -53,9 +53,18 @@ Maybe<void> InferTensorDesc4FusedMatmul(user_op::InferContext* ctx) {
     
     // Set for next layer. 
     k = n; 
+    // Set Middle result shape. 
+    user_op::TensorDesc* cublas_aux_desc = ctx->OutputTensorDesc("cublas_aux", idx);
+    *ctx->OutputShape("cublas_aux", idx) = x_desc.shape();
+    cublas_aux_desc->mut_shape()->Set(1, k);
+    // TODO(zzk): Maybe no need weight_Size hidden, only need weight_size-1. 
+    user_op::TensorDesc* hidden_desc = ctx->OutputTensorDesc("hidden", idx);
+    *ctx->OutputShape("hidden", idx) = x_desc.shape();
+    hidden_desc->mut_shape()->Set(1, k);
   }
   *ctx->OutputShape("out", 0) = x_desc.shape();
   out->mut_shape()->Set(1, n);
+  printf("OKKKK \n"); 
   return Maybe<void>::Ok();
 }
 
@@ -69,10 +78,12 @@ Maybe<void> InferDataType4Matmul(user_op::InferContext* ctx){
     CHECK_EQ_OR_RETURN(in_desc.data_type(), first_in_desc.data_type());
   }
 
-  user_op::TensorDesc* out_desc = ctx->OutputTensorDesc("out", 0);
-  // user_op::TensorDesc* aux_desc = ctx->OutputTensorDesc("out", 0);
-  *out_desc->mut_data_type() = first_in_desc.data_type();
-  // *aux_desc->mut_data_type() = first_in_desc.data_type();
+  for (const auto& out_arg_pair : ctx->outputs()) {
+    user_op::TensorDesc* out_desc =
+        ctx->OutputTensorDesc(out_arg_pair.first, out_arg_pair.second);
+    *out_desc->mut_data_type() = first_in_desc.data_type();
+  }
+  printf("OKKKK?????? \n"); 
 
   return Maybe<void>::Ok(); 
 }
@@ -99,9 +110,12 @@ Maybe<void> InferDataType4Matmul(user_op::InferContext* ctx){
   for(int i =0; i<ctx->user_op_conf().input_size("biases"); ++i) {
     builder.Broadcast(user_op::OpArg("biases", i));
   }
-  // for(int i =0; i<ctx->user_op_conf().output_size("aux"); ++i) {
-  //   builder.Split(user_op::OpArg("aux", i), 0);
-  // }
+  for(int i =0; i<ctx->user_op_conf().output_size("cublas_aux"); ++i) {
+    builder.Split(user_op::OpArg("cublas_aux", i), 0);
+  }
+  for(int i =0; i<ctx->user_op_conf().output_size("hidden"); ++i) {
+    builder.Split(user_op::OpArg("hidden", i), 0);
+  }
   builder.Split(user_op::OpArg("out", 0), 0); 
   builder.Build();
   return Maybe<void>::Ok();
