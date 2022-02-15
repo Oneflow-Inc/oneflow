@@ -96,7 +96,7 @@ def _test_global_transpose_with_0_size_data(test_case, placement, sbp):
 
 
 class TestConsistentTranspose(flow.unittest.TestCase):
-    @global_view
+    @globaltest
     def test_global_transpose(test_case):
         arg_dict = OrderedDict()
         arg_dict["fun"] = [
@@ -111,13 +111,13 @@ class TestConsistentTranspose(flow.unittest.TestCase):
                 for sbp in all_sbp(placement, max_dim=4):
                     arg[0](test_case, placement, sbp)
 
-    @global_view
+    @globaltest
     def test_global_transpose_flow_with_random_data(test_case):
         for placement in all_placement():
             for sbp in all_sbp(placement, max_dim=4):
                 _test_global_transpose_flow_with_random_data(test_case, placement, sbp)
 
-    @global_view
+    @globaltest
     def test_global_transpose_with_0_size_data(test_case, valid_split_axis=[0, 1, 3]):
         for placement in all_placement():
             for sbp in all_sbp(placement, max_dim=4):
