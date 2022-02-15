@@ -365,13 +365,6 @@ def GetDualObject(name, pytorch, oneflow):
                                         )
                                 else:
                                     graph_functional_oneflow = copy.deepcopy(oneflow)
-                                    # TODO: deepcopy will cause the device of tensor to be changed to cpu, waiting for repair.
-                                    if "__self__" in dir(
-                                        graph_functional_oneflow
-                                    ) and flow.is_tensor(oneflow.__self__):
-                                        graph_functional_oneflow.__self__.data = (
-                                            oneflow.__self__.detach().clone()
-                                        )
 
                             if verbose:
                                 print(
@@ -600,13 +593,6 @@ def GetDualObject(name, pytorch, oneflow):
                                 repr(oneflow_method),
                             )
                         graph_tensor_oneflow = copy.deepcopy(oneflow_method)
-                        # TODO: deepcopy will cause the device of tensor to be changed to cpu, waiting for repair.
-                        if "__self__" in dir(graph_tensor_oneflow) and flow.is_tensor(
-                            oneflow_method.__self__
-                        ):
-                            graph_tensor_oneflow.__self__.data = (
-                                oneflow_method.__self__.detach().clone()
-                            )
                         oneflow_res = oneflow_method(*oneflow_args, **oneflow_kwargs)
                         if verbose:
                             print(
@@ -1045,7 +1031,7 @@ def autotest(
     return deco
 
 
-def global_view(f):
+def globaltest(f):
     @functools.wraps(f)
     def new_f(*args, **kwargs):
         with GlobalScope() as scope:
@@ -1090,4 +1076,4 @@ def random_tensor(
 
 
 torch = GetDualObject("", torch_original, flow)
-__all__ = ["autotest", "global_view", "random_tensor"]
+__all__ = ["autotest", "globaltest", "random_tensor"]
