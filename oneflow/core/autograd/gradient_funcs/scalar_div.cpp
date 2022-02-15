@@ -16,10 +16,7 @@ limitations under the License.
 #include "oneflow/core/framework/attr_map.h"
 #include "oneflow/core/framework/op_expr_grad_function.h"
 #include "oneflow/core/functional/functional.h"
-<<<<<<< HEAD
-=======
 #include "oneflow/core/common/container_util.h"
->>>>>>> a416374b40d14799f576e2e2f301e0c39b5ccf24
 
 namespace oneflow {
 namespace one {
