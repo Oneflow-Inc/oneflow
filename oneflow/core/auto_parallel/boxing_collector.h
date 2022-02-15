@@ -55,11 +55,15 @@ class BoxingCollector final {
   // If is_customized is true and we can not find a middle node list with
   // resonable cost, error occurs.
   // If compute_cost is true, then no error occur even if no suitable middle nodes paths found.
+  // For different placements, we would return a diagonal node.
+  // Before this diagonal node (< *diag_node), we use the parallel description of the producer.
+  // After this diagonal node (>= *diag_node), we use the parallel description of the consumer.
   Maybe<void> AskSbpCombination(const cfg::NdSbp& sbp_producer, const cfg::NdSbp& sbp_consumer,
                                 const BlobDesc& logical_blob_desc,
                                 const ParallelDesc& producer_parallel_desc,
                                 const ParallelDesc& consumer_parallel_desc, bool is_customized,
-                                std::vector<cfg::NdSbp>& middle_sbps, bool compute_cost);
+                                std::vector<cfg::NdSbp>& middle_sbps, int32_t* diag_node,
+                                bool compute_cost);
   // Filter nd sbp from nd_sbp_lists_ with given logical shape
   Maybe<void> FilterNdSbpList4LogicalShape(const BlobDesc& logical_blob_desc,
                                            const Shape& parallel_hierarchy);
@@ -67,6 +71,8 @@ class BoxingCollector final {
  private:
   // Collect Sbp Parallel
   void CollectUniverse(const cfg::SbpParallel& sbp);
+  // Find corresponding id for Nd sbp
+  int32_t FindId4NdSbp(const cfg::NdSbp& nd_sbp);
   // Stores all the possible cfg::SbpParallel.
   HashMap<::oneflow::cfg::SbpParallel, int32_t> SbpParallelUniverse_;
   // Relationship between id and Sbp Parallel
