@@ -41,10 +41,14 @@ class BoxingCollector final {
 
   // Generate nd sbp list
   void GenerateNdSbpList();
+  // Generate the map from 1d sbp to 2d sbp
+  void GenerateMap1d2nd();
   // Generate the transfer rule for different combinations with the same hierarchie
   Maybe<void> GenerateCombination4SamePlacement(int32_t max_middle_node_num);
-  // Generate the transfer rule for different combinations with the different hierarchies
-  Maybe<void> GenerateCombination4DiffPlacement(int32_t max_middle_node_num);
+  // Generate the transfer rule for different combinations with different hierarchies
+  // It could be on the same placement or different placements.
+  Maybe<void> GenerateCombination4DiffHierarchy(int32_t max_middle_node_num,
+                                                bool if_diff_placement);
   // Print the cost and middle nodes
   void PrintBoxingTables();
   // Ask if the boxing algorithm accepts the current sbp combination
@@ -79,8 +83,10 @@ class BoxingCollector final {
   std::unordered_map<::oneflow::cfg::NdSbp, int32_t> NdSbpUniverse_;
   // Relationship between id and Nd Sbp
   std::vector<cfg::NdSbp> nd_sbp_lists_;
-  // The diagonal middle node for differe placement
-  std::vector<std::vector<std::vector<int32_t>>> diag_middle_nodes_;
+  // The diagonal middle node for differe placements
+  std::vector<std::vector<std::vector<int32_t>>> diag_node_diff_placement_;
+  // The diagonal middle node for differe hierarchies in the same placement
+  std::vector<std::vector<std::vector<int32_t>>> diag_node_diff_hierarchy_;
   // The cost for transferring a 1D sbp between different placements
   std::vector<double> cost_4_diff_placement_;
   // Id Map from 1d sbp to 2d sbp

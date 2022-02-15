@@ -53,7 +53,8 @@ Maybe<void> BoxingCollector::Init(int32_t max_axis) {
   CollectUniverse(max_axis);
   GenerateNdSbpList();
   JUST(GenerateCombination4SamePlacement(3));
-  JUST(GenerateCombination4DiffPlacement(3));
+  JUST(GenerateCombination4DiffHierarchy(3, /*if_diff_placement=*/false));
+  JUST(GenerateCombination4DiffHierarchy(3, /*if_diff_placement=*/true));
   return Maybe<void>::Ok();
 }
 
@@ -89,6 +90,26 @@ void BoxingCollector::GenerateNdSbpList() {
   cfg::NdSbp nd_sbp;
   for (int32_t dim_sbp = 0; dim_sbp < hierarchy_num; dim_sbp++) { nd_sbp.add_sbp_parallel(); }
   DfsSetNdSbp(id2SbpParallel_, 0, hierarchy_num, nd_sbp, nd_sbp_lists_, NdSbpUniverse_);
+}
+
+// Generate the map from 1d sbp to 2d sbp
+void BoxingCollector::GenerateMap1d2nd() {
+  // Number of 1d sbp
+  int32_t m = id2SbpParallel_.size();
+
+  // Generate the id Map from 1d sbp to 2d sbp
+  int32_t hierarchy_num = 2;
+  cfg::NdSbp nd_sbp;
+  for (int32_t dim_sbp = 0; dim_sbp < hierarchy_num; dim_sbp++) { nd_sbp.add_sbp_parallel(); }
+  id_1d_2_2d_.resize(m, -1);
+  for (int32_t id_1d = 0; id_1d < m; id_1d++) {
+    for (int32_t dim_sbp = 0; dim_sbp < hierarchy_num; dim_sbp++) {
+      *nd_sbp.mutable_sbp_parallel(dim_sbp) = id2SbpParallel_[id_1d];
+    }
+    // NOTE: The 2d sbp might be filtered out already.
+    const auto& it_ = NdSbpUniverse_.find(nd_sbp);
+    if (it_ != NdSbpUniverse_.end()) { id_1d_2_2d_[id_1d] = it_->second; }
+  }
 }
 
 // Generate the transfer rule for different combinations with the same hierarchie
@@ -184,61 +205,55 @@ Maybe<void> BoxingCollector::GenerateCombination4SamePlacement(int32_t max_middl
   return Maybe<void>::Ok();
 }
 
-// Generate the transfer rule for different combinations with the different hierarchies
-Maybe<void> BoxingCollector::GenerateCombination4DiffPlacement(int32_t max_middle_node_num) {
-  // Other parameters
-  int32_t kWorldSize = GlobalProcessCtx::WorldSize();
-  BlobDesc blob_desc({16, 16, 16, 16}, DataType::kInt8, /*is_dynamic=*/false);
-  // Virtual placements before transfer
-  Shape in_hierarchy44({4 * kWorldSize + 1, 4 * kWorldSize});
-  std::shared_ptr<Shape> in_hierarchy = std::make_shared<Shape>(in_hierarchy44);
-  auto in_parallel_desc = JUST(ParallelDesc::New(
-      "cpu", {"0:0-" + std::to_string(in_hierarchy44.elem_cnt() - 1)}, in_hierarchy));
-  // Virtual placements after transfer
-  Shape out_hierarchy44({4 * kWorldSize, 4 * kWorldSize});
-  std::shared_ptr<Shape> out_hierarchy = std::make_shared<Shape>(out_hierarchy44);
-  auto out_parallel_desc = JUST(ParallelDesc::New(
-      "cpu", {"0:0-" + std::to_string(out_hierarchy44.elem_cnt() - 1)}, out_hierarchy));
-
-  // Generate the id Map from 1d sbp to 2d sbp
-  int32_t hierarchy_num = 2;
-  cfg::NdSbp nd_sbp;
-  for (int32_t dim_sbp = 0; dim_sbp < hierarchy_num; dim_sbp++) { nd_sbp.add_sbp_parallel(); }
-  for (int32_t id_1d = 0; id_1d < id2SbpParallel_.size(); id_1d++) {
-    for (int32_t dim_sbp = 0; dim_sbp < hierarchy_num; dim_sbp++) {
-      *nd_sbp.mutable_sbp_parallel(dim_sbp) = id2SbpParallel_[id_1d];
-    }
-    // NOTE: The 2d sbp might be filtered out already.
-    const auto& it_ = NdSbpUniverse_.find(nd_sbp);
-    if (it_ != NdSbpUniverse_.end()) {
-      id_1d_2_2d_[id_1d] = NdSbpUniverse_[nd_sbp];
-    } else {
-      id_1d_2_2d_[id_1d] = -1;
-    }
-  }
+// Generate the transfer rule for different combinations with different hierarchies
+Maybe<void> BoxingCollector::GenerateCombination4DiffHierarchy(int32_t max_middle_node_num,
+                                                               bool if_diff_placement) {
   // Number of 1d sbp
-  int32_t m = id_1d_2_2d_.size();
+  int32_t m = id2SbpParallel_.size();
+  if (id_1d_2_2d_.size() <= 0) { GenerateMap1d2nd(); }
 
-  // Compute the cost while transferring between different placements
-  // Compute the cost while transferring a 1D sbp between different placements
-  cost_4_diff_placement_.resize(m, GetMaxVal<float>());
-  for (int32_t id_1d = 0; id_1d < m; id_1d++) {
-    int32_t id_2d = id_1d_2_2d_[id_1d];
-    if (id_2d < 0) { continue; }
+  if (if_diff_placement) {
+    // Other parameters
+    int32_t kWorldSize = GlobalProcessCtx::WorldSize();
+    BlobDesc blob_desc({16, 16, 16, 16}, DataType::kInt8, /*is_dynamic=*/false);
+    // Virtual placements before transfer
+    Shape in_hierarchy44({4 * kWorldSize + 1, 4 * kWorldSize});
+    std::shared_ptr<Shape> in_hierarchy = std::make_shared<Shape>(in_hierarchy44);
+    auto in_parallel_desc = JUST(ParallelDesc::New(
+        "cpu", {"0:0-" + std::to_string(in_hierarchy44.elem_cnt() - 1)}, in_hierarchy));
+    // Virtual placements after transfer
+    Shape out_hierarchy44({4 * kWorldSize, 4 * kWorldSize});
+    std::shared_ptr<Shape> out_hierarchy = std::make_shared<Shape>(out_hierarchy44);
+    auto out_parallel_desc = JUST(ParallelDesc::New(
+        "cpu", {"0:0-" + std::to_string(out_hierarchy44.elem_cnt() - 1)}, out_hierarchy));
 
-    cost_4_diff_placement_[id_1d] =
-        JUST(ComputeLazyCopyCostBetweenNdSbp(nd_sbp_lists_[id_2d], nd_sbp_lists_[id_2d], blob_desc,
-                                             *in_parallel_desc, *out_parallel_desc, false));
+    // Compute the cost while transferring a 1D sbp between different placements
+    cost_4_diff_placement_.resize(m, GetMaxVal<float>());
+    for (int32_t id_1d = 0; id_1d < m; id_1d++) {
+      int32_t id_2d = id_1d_2_2d_[id_1d];
+      if (id_2d < 0) { continue; }
+
+      cost_4_diff_placement_[id_1d] = JUST(
+          ComputeLazyCopyCostBetweenNdSbp(nd_sbp_lists_[id_2d], nd_sbp_lists_[id_2d], blob_desc,
+                                          *in_parallel_desc, *out_parallel_desc, false));
+    }
   }
 
+  // Store the middle nodes
+  std::vector<std::vector<std::vector<int32_t>>>* diag_nodes;
+  if (if_diff_placement) {
+    diag_nodes = &diag_node_diff_placement_;
+  } else {
+    diag_nodes = &diag_node_diff_hierarchy_;
+  }
   // Search the path that contains one of the diagonal sbp
   int32_t n = nd_sbp_lists_.size();
-  diag_middle_nodes_.resize(n);
+  diag_nodes->resize(n);
   for (int32_t i = 0; i < n; i++) {
-    diag_middle_nodes_[i].resize(n);
+    (*diag_nodes)[i].resize(n);
     for (int32_t j = 0; j < n; j++) {
       // minimum number of node
-      int32_t min_middle_node_num = 100;
+      int32_t min_path_length = 100;
       // minimum cost
       double min_cost = GetMaxVal<float>();
 
@@ -246,32 +261,36 @@ Maybe<void> BoxingCollector::GenerateCombination4DiffPlacement(int32_t max_middl
         int32_t id_2d = id_1d_2_2d_[id_1d];
         if (id_2d < 0) { continue; }
         // Find the path with minimum number of nodes
-        int32_t curr_middle_node_num = 0;
+        int32_t path_length = 0;
         // Transfer from i to id_2d
         if (middle_nodes_[i][id_2d].size() > 0) {
-          curr_middle_node_num += middle_nodes_[i][id_2d][0].size();
+          path_length += middle_nodes_[i][id_2d][0].size() + 1;
+        } else if (i != id_2d) {
+          path_length++;
         }
         // Transfer from id_2d to j
         if (middle_nodes_[id_2d][j].size() > 0) {
-          curr_middle_node_num += middle_nodes_[id_2d][j][0].size();
+          path_length += middle_nodes_[id_2d][j][0].size() + 1;
+        } else if (id_2d != j) {
+          path_length++;
         }
         // Pick the path with minimum copy cost
-        if (curr_middle_node_num <= min_middle_node_num) {
+        if (path_length <= min_path_length) {
           // TODO: Need experiment to decide whether we should use the cost for the diagonal node
-          // double curr_cost = minimum_copy_cost_[i][id_2d] + cost_4_diff_placement_[id_2d] +
-          // minimum_copy_cost_[id_2d][j];
           double curr_cost = minimum_copy_cost_[i][id_2d] + minimum_copy_cost_[id_2d][j];
+          // NOTE: Middle nodes algorithm would have extra cost on different placements.
+          if (if_diff_placement) { curr_cost += cost_4_diff_placement_[id_2d]; }
 
-          min_middle_node_num = curr_middle_node_num;
+          min_path_length = path_length;
           // Find a candidate with small cost
           if (curr_cost < min_cost * 1.0000001) {
             // Find a smaller cost, clear the previous path.
             if (curr_cost < min_cost * 0.9999999) {
               min_cost = curr_cost;
-              diag_middle_nodes_[i][j].clear();
+              (*diag_nodes)[i][j].clear();
             }
             // Add the current diagonal node
-            diag_middle_nodes_[i][j].push_back(id_2d);
+            (*diag_nodes)[i][j].push_back(id_2d);
           }
         }
       }
@@ -343,7 +362,45 @@ void BoxingCollector::PrintBoxingTables() {
     LOG(INFO) << "logical blob size: " << logical_blob_size << std::endl;
     LOG(INFO) << "hierarchy: " << *in_hierarchy << std::endl;
 
-    LOG(INFO) << "================================================" << std::endl;
+    LOG(INFO) << "====================middle nodes for different placement===================="
+              << std::endl;
+
+    std::cout << "Middle nodes for different placement\t";
+    for (int32_t j = 0; j < n; j++) { std::cout << NdSbpToString(nd_sbp_lists_[j]) << "\t"; }
+    std::cout << std::endl;
+    for (int32_t i = 0; i < n; i++) {
+      std::cout << NdSbpToString(nd_sbp_lists_[i]) << "\t";
+      for (int32_t j = 0; j < n; j++) {
+        if (diag_node_diff_placement_[i][j].size() > 0) {
+          for (int32_t k = 0; k < diag_node_diff_placement_[i][j].size(); k++) {
+            std::cout << NdSbpToString(nd_sbp_lists_[diag_node_diff_placement_[i][j][k]]) << "; ";
+          }
+        }
+        std::cout << "\t";
+      }
+      std::cout << std::endl;
+    }
+
+    std::cout << "====================middle nodes for different hierarchy===================="
+              << std::endl;
+
+    std::cout << "Middle nodes for different hierarchy\t";
+    for (int32_t j = 0; j < n; j++) { std::cout << NdSbpToString(nd_sbp_lists_[j]) << "\t"; }
+    std::cout << std::endl;
+    for (int32_t i = 0; i < n; i++) {
+      std::cout << NdSbpToString(nd_sbp_lists_[i]) << "\t";
+      for (int32_t j = 0; j < n; j++) {
+        if (diag_node_diff_hierarchy_[i][j].size() > 0) {
+          for (int32_t k = 0; k < diag_node_diff_hierarchy_[i][j].size(); k++) {
+            std::cout << NdSbpToString(nd_sbp_lists_[diag_node_diff_hierarchy_[i][j][k]]) << "; ";
+          }
+        }
+        std::cout << "\t";
+      }
+      std::cout << std::endl;
+    }
+
+    std::cout << "================================================" << std::endl;
   }
 }
 
