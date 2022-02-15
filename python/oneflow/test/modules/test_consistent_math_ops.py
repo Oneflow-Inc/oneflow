@@ -152,8 +152,8 @@ def _test_acosh(test_case, placement, sbp):
     return y
 
 
-class TestMathOps(flow.unittest.TestCase):
-    @global_view
+class TestUnaryMathOps(flow.unittest.TestCase):
+    @globaltest
     def test_unary_api(test_case):
         for placement in all_placement():
             for sbp in all_sbp(placement, max_dim=2):
@@ -173,6 +173,47 @@ class TestMathOps(flow.unittest.TestCase):
                 _test_arccosh(test_case, placement, sbp)
                 _test_acosh(test_case, placement, sbp)
 
+
+@autotest(auto_backward=False, check_graph=False)
+def _test_floordiv(test_case, placement, x_sbp, y_sbp):
+    ndim = random(3, 6).to(int).value()
+    dim_list = [random().to(int).value() for _ in range(ndim - 2)]
+    x = random_tensor(ndim, 8, 8, *dim_list).to_global(placement, x_sbp)
+    y = random_tensor(ndim, 8, 8, *dim_list).to_global(placement, y_sbp)
+    z = torch.floor_divide(x, y)
+    return z
+
+
+@autotest(check_graph=False)
+def _test_broadcast_maximum(test_case, placement, x_sbp, y_sbp):
+    k1 = random().to(int).value() * 8
+    k2 = random().to(int).value() * 8
+    k3 = random().to(int).value() * 8
+    x = random_tensor(ndim=5, dim0=8, dim1=8, dim2=k1, dim3=1, dim4=k3).to_global(
+        placement, x_sbp
+    )
+    y = random_tensor(ndim=5, dim0=8, dim1=8, dim2=1, dim3=k2, dim4=1).to_global(
+        placement, y_sbp
+    )
+    z = torch.maximum(x, y)
+    return z
+
+
+class TestBinaryMathOps(flow.unittest.TestCase):
+    @globaltest
+    def test_binary_api(test_case):
+        for placement in all_placement():
+            for x_sbp in all_sbp(placement, max_dim=2):
+                for y_sbp in all_sbp(placement, max_dim=2):
+                    _test_floordiv(test_case, placement, x_sbp, y_sbp)
+                    _test_broadcast_maximum(test_case, placement, x_sbp, y_sbp)
+
+    @global_view
+    def test_broadcast_maximum(test_case):
+        for placement in all_placement():
+            for x_sbp in all_sbp(placement, valid_split_axis=[0, 1, 2]):
+                for y_sbp in all_sbp(placement, valid_split_axis=[0, 1, 3]):
+                    _test_broadcast_maximum(test_case, placement, x_sbp, y_sbp)
 
 
 if __name__ == "__main__":
