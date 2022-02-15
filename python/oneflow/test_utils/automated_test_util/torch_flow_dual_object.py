@@ -862,6 +862,7 @@ def autotest(
     check_allclose=True,
 ):
     verbose = os.getenv("ONEFLOW_TEST_VERBOSE") is not None
+    mlir_codegen_fuse = os.getenv("ONEFLOW_MLIR_ENABLE_CODEGEN_FUSERS") is not None
 
     if check_graph == "ValidatedFlase":
         # check graph is intentionally closed and threre is a validated reason.
@@ -869,7 +870,6 @@ def autotest(
     
     if check_mlir:
         os.environ["ONEFLOW_MLIR_ENABLE_ROUND_TRIP"] = "1"
-        os.environ["ONEFLOW_MLIR_ENABLE_CODEGEN_FUSERS"] = "1"
     
     if check_mlir and verbose:
         os.environ["ONEFLOW_MLIR_STDOUT"] = "1"
