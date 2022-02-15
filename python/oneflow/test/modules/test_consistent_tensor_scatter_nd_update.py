@@ -166,7 +166,7 @@ def _test_eager_global_tensor_scatter_nd_update_backward(test_case, placement, s
 
 
 class TestTensorScatterNdUpdate(flow.unittest.TestCase):
-    @global_view
+    @globaltest
     def test_global_tensor_scatter_nd_update(test_case):
         for placement in all_placement():
             for sbp in all_sbp(placement, max_dim=1):
@@ -177,7 +177,7 @@ class TestTensorScatterNdUpdate(flow.unittest.TestCase):
                     test_case, placement, sbp, True
                 )  # nn graph
 
-    @global_view
+    @globaltest
     def test_global_tensor_scatter_nd_update_t(test_case):
         for placement in all_placement():
             for sbp in all_sbp(placement, max_dim=1):
@@ -188,7 +188,7 @@ class TestTensorScatterNdUpdate(flow.unittest.TestCase):
                     test_case, placement, sbp, True
                 )  # nn graph
 
-    @global_view
+    @globaltest
     def test_global_tensor_scatter_nd_update_backward(test_case):
         for placement in all_placement():
             for sbp in all_sbp(placement, max_dim=1):
