@@ -499,7 +499,9 @@ def GetDualObject(name, pytorch, oneflow):
                                 if find_check_module_func:
                                     if isinstance(test_g_res, tuple):
                                         for _, g_res in enumerate(test_g_res):
-                                            check_eager_graph_mlir_tensor(oneflow_res, g_res)
+                                            check_eager_graph_mlir_tensor(
+                                                oneflow_res, g_res
+                                            )
                                     else:
                                         check_eager_graph_mlir_tensor(
                                             oneflow_res, test_g_res
@@ -867,10 +869,10 @@ def autotest(
     if check_graph == "ValidatedFlase":
         # check graph is intentionally closed and threre is a validated reason.
         check_graph = False
-    
+
     if check_mlir:
         os.environ["ONEFLOW_MLIR_ENABLE_ROUND_TRIP"] = "1"
-    
+
     if check_mlir and verbose:
         os.environ["ONEFLOW_MLIR_STDOUT"] = "1"
 
@@ -963,7 +965,7 @@ def autotest(
 
                 if verbose and check_graph:
                     print(f"{f.__name__} test graph passed.")
-                
+
                 if verbose and check_mlir:
                     print(f"{f.__name__} test mlir passed.")
 
