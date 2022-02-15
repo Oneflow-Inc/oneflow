@@ -614,7 +614,7 @@ class ExpandFunctor {
     JUST(attrs.SetAttr<std::vector<int32_t>>("logical_in_shape", in_shape));
     JUST(attrs.SetAttr<std::vector<int32_t>>("logical_expand_shape", expand_shape));
 
-    // if input tensor is eager local, than try return tensor's view first
+    // if input tensor is eager local, then try return tensor's view
     if (x->is_local() && !(LazyMode::is_enabled())) {
       if (!(x->shape()->NumAxes() <= 1 || x->shape()->elem_cnt() <= 1)) {
         return view::Expand(x, in_shape, expand_shape);
@@ -662,7 +662,7 @@ class ExpandDimsFunctor {
     JUST(attrs.SetAttr<int32_t>("axis", expand_dim));
 
     auto& x = input;
-    // if input tensor is eager local, than try return tensor's view first
+    // if input tensor is eager local, then try return tensor's view
     if (x->is_local() && !(LazyMode::is_enabled())) {
       if (!(x->shape()->NumAxes() <= 1 || x->shape()->elem_cnt() <= 1)) {
         return view::ExpandDims(x, expand_dim);
@@ -1077,7 +1077,7 @@ class ReshapeFunctor {
       JUST(attrs.SetAttr<Shape>("shape", infered_shape));
     }
 
-    // if input tensor is eager local, than try return tensor's view first
+    // if input tensor is eager local, then try return tensor's view
     if (x->is_local() && !(LazyMode::is_enabled())) {
       if (!(x->shape()->NumAxes() <= 1 || x->shape()->elem_cnt() <= 1)) {
         // in some case, view operate is not allowed, so need to check it's validation,
@@ -1358,7 +1358,7 @@ class SqueezeFunctor {
     MutableAttrMap attrs;
     JUST(attrs.SetAttr<std::vector<int32_t>>("axes", squeeze_dims));
 
-    // if input tensor is eager local, than try return tensor's view first
+    // if input tensor is eager local, then try return tensor's view
     if (x->is_local() && !(LazyMode::is_enabled())) {
       if (!(x->shape()->NumAxes() <= 1 || x->shape()->elem_cnt() <= 1)) {
         return view::Squeeze(x, squeeze_dims);
