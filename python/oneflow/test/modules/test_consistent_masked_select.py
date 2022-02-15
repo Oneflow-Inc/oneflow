@@ -44,7 +44,7 @@ def _test_masked_select_broadcast(test_case, placement, sbp):
 
 
 class TestMaskedSelect(flow.unittest.TestCase):
-    @global_view
+    @globaltest
     def test_masked_select(test_case):
         for placement in all_placement():
             for sbp in all_sbp(placement, max_dim=2):
