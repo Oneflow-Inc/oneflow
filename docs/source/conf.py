@@ -199,7 +199,7 @@ def should_skip_member(app, what, name, obj, skip, options):
     is_deprecated = oneflow.is_deprecated(obj)
     if is_deprecated:
         print("skipping deprecated", what, name, obj)
-    magical = name in ["__weakref__", "__doc__", "__module__", "__dict__"]
+    magical = name in ["__weakref__", "__doc__", "__module__", "__dict__", "extra_repr"]
     return skip or is_deprecated or magical
 
 
