@@ -41,9 +41,10 @@ class TestTensor(flow.unittest.TestCase):
     @flow.unittest.skip_unless_1n1d()
     def test_tensor_deepcopy(test_case):
         shape = (2, 3)
-        tensor1 = flow.ones(*shape)
+        tensor1 = flow.ones(*shape).cuda()
         tensor2 = copy.deepcopy(tensor1)
         tensor1[0, 0] = 0
+        test_case.assertEqual(tensor1.device, tensor2.device)
         test_case.assertEqual(tensor1[0, 0], 0)
         test_case.assertEqual(tensor2[0, 0], 1)
 

@@ -351,13 +351,6 @@ def GetDualObject(name, pytorch, oneflow):
 
                                 else:
                                     graph_functional_oneflow = copy.deepcopy(oneflow)
-                                    # TODO: deepcopy will cause the device of tensor to be changed to cpu, waiting for repair.
-                                    if "__self__" in dir(
-                                        graph_functional_oneflow
-                                    ) and flow.is_tensor(oneflow.__self__):
-                                        graph_functional_oneflow.__self__.data = (
-                                            oneflow.__self__.detach().clone()
-                                        )
 
                             if verbose:
                                 print(
@@ -558,13 +551,6 @@ def GetDualObject(name, pytorch, oneflow):
                                 repr(oneflow_method),
                             )
                         graph_tensor_oneflow = copy.deepcopy(oneflow_method)
-                        # TODO: deepcopy will cause the device of tensor to be changed to cpu, waiting for repair.
-                        if "__self__" in dir(graph_tensor_oneflow) and flow.is_tensor(
-                            oneflow_method.__self__
-                        ):
-                            graph_tensor_oneflow.__self__.data = (
-                                oneflow_method.__self__.detach().clone()
-                            )
                         oneflow_res = oneflow_method(*oneflow_args, **oneflow_kwargs)
                         if verbose:
                             print(
