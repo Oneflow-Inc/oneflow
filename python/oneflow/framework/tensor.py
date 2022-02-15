@@ -969,11 +969,11 @@ def _numpy(self):
 
 
 def _is_consistent(self):
-    raise RuntimeError("is_consistent is removed. Please use is_global instead")
+    raise RuntimeError(".is_consistent has been removed, please use .is_global instead")
 
 
 def _to_consistent(self):
-    raise RuntimeError("to_consistent is removed. Please use to_global instead")
+    raise RuntimeError(".to_consistent has been removed, please use .to_global instead")
 
 
 def RegisterMethods():
