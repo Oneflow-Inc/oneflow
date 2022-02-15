@@ -46,6 +46,41 @@ namespace oneflow {
 namespace one {
 namespace functional {
 
+namespace {
+bool CheckViewValid(const int64_t elem_count, const DimVector& shape, const StrideVector& stride,
+                    const DimVector& target_shape) {
+  if (elem_count == 0) { return false; }
+
+  int64_t view_d = target_shape.size() - 1;
+  int64_t chunk_base_stride = stride.back();
+  std::vector<int64_t> newstride(target_shape.size());
+  // stride for each subspace in the chunk
+  // numel in current chunk
+  int64_t tensor_numel = 1;
+  int64_t view_numel = 1;
+  for (int64_t tensor_d = shape.size() - 1; tensor_d >= 0; tensor_d--) {
+    tensor_numel *= shape[tensor_d];
+    // if end of tensor size chunk, check view
+    if ((tensor_d == 0)
+        || (shape[tensor_d - 1] != 1 && stride[tensor_d - 1] != tensor_numel * chunk_base_stride)) {
+      while (view_d >= 0 && (view_numel < tensor_numel || target_shape[view_d] == 1)) {
+        newstride[view_d] = view_numel * chunk_base_stride;
+        view_numel *= target_shape[view_d];
+        view_d--;
+      }
+      if (view_numel != tensor_numel) { return false; }
+      if (tensor_d > 0) {
+        chunk_base_stride = stride[tensor_d - 1];
+        tensor_numel = 1;
+        view_numel = 1;
+      }
+    }
+  }
+  if (view_d != -1) { return false; }
+  return true;
+}
+}// namespace
+
 namespace impl {
 
 class ArgMaxFunctor {
@@ -655,12 +690,56 @@ class ExpandDimsFunctor {
     auto& x = input;
     // if input tensor is eager local, then try return tensor's view
     if (x->is_local() && !(LazyMode::is_enabled())) {
-      if (!(x->shape()->NumAxes() <= 1 || x->shape()->elem_cnt() <= 1)) {
+      // exclude 0 shape and scalar tensor 
+      if (x->shape()->elem_cnt() > 1) { 
         return view::UnSqueeze(x, expand_dim);
       }
     }
   
     return OpInterpUtil::Dispatch<Tensor>(*op_, {input}, attrs);
+  }
+
+ private:
+  std::shared_ptr<OpExpr> op_;
+};
+
+
+class SqueezeFunctor {
+ public:
+  SqueezeFunctor() {
+    op_ = CHECK_JUST(one::OpBuilder("squeeze").Input("in").Output("out").Build());
+  }
+  Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x,
+                           const Optional<std::vector<int32_t>>& dim) const {
+    int32_t ndim = x->shape()->NumAxes();
+    std::vector<int32_t> squeeze_dims;
+    squeeze_dims.reserve(ndim);
+    if (dim.has_value() == true) {
+      std::vector<int32_t> dims = *JUST(dim);
+      for (int32_t dim_i : dims) {
+        CHECK_OR_RETURN((dim_i >= -(ndim + 1)) && (dim_i <= ndim))
+            << "Dimension out of range (expected to be in range of  [" << -ndim << "," << ndim - 1
+            << "], but got " << dim_i;
+        if (dim_i < 0) { dim_i += ndim; }
+        if (x->shape()->At(dim_i) == 1) { squeeze_dims.emplace_back(dim_i); }
+      }
+    } else {
+      for (int i = 0; i < ndim; ++i) {
+        if (x->shape()->At(i) == 1) { squeeze_dims.emplace_back(i); }
+      }
+    }
+
+    MutableAttrMap attrs;
+    JUST(attrs.SetAttr<std::vector<int32_t>>("axes", squeeze_dims));
+
+    // if input tensor is eager local, then try return tensor's view
+    if (x->is_local() && !(LazyMode::is_enabled())) {
+      // exclude 0 shape and scalar tensor 
+      if (x->shape()->elem_cnt() > 1) {
+        return view::Squeeze(x, squeeze_dims);
+      }
+    }
+    return OpInterpUtil::Dispatch<Tensor>(*op_, {x}, attrs);
   }
 
  private:
@@ -992,39 +1071,6 @@ class ScatterNdLikeFunctor {
 };
 
 
-bool checkViewValid(const int64_t elem_count, const DimVector& shape, const StrideVector& stride,
-                    const DimVector& target_shape) {
-  if (elem_count == 0) { return false; }
-
-  int64_t view_d = target_shape.size() - 1;
-  int64_t chunk_base_stride = stride.back();
-  std::vector<int64_t> newstride(target_shape.size());
-  // stride for each subspace in the chunk
-  // numel in current chunk
-  int64_t tensor_numel = 1;
-  int64_t view_numel = 1;
-  for (int64_t tensor_d = shape.size() - 1; tensor_d >= 0; tensor_d--) {
-    tensor_numel *= shape[tensor_d];
-    // if end of tensor size chunk, check view
-    if ((tensor_d == 0)
-        || (shape[tensor_d - 1] != 1 && stride[tensor_d - 1] != tensor_numel * chunk_base_stride)) {
-      while (view_d >= 0 && (view_numel < tensor_numel || target_shape[view_d] == 1)) {
-        newstride[view_d] = view_numel * chunk_base_stride;
-        view_numel *= target_shape[view_d];
-        view_d--;
-      }
-      if (view_numel != tensor_numel) { return false; }
-      if (tensor_d > 0) {
-        chunk_base_stride = stride[tensor_d - 1];
-        tensor_numel = 1;
-        view_numel = 1;
-      }
-    }
-  }
-  if (view_d != -1) { return false; }
-  return true;
-}
-
 class ReshapeFunctor {
  public:
   ReshapeFunctor() {
@@ -1062,11 +1108,11 @@ class ReshapeFunctor {
 
     // if input tensor is eager local, then try return tensor's view
     if (x->is_local() && !(LazyMode::is_enabled())) {
-      if (!(x->shape()->NumAxes() <= 1 || x->shape()->elem_cnt() <= 1)) {
+      if (x->shape()->elem_cnt() > 1) { // exclude 0 shape and scalar tensor 
         // in some case, view operate is not allowed, so need to check it's validation,
         // the check refer to torch(aten/src/ATen/native/TensorShape.cpp)
         bool is_view_valid =
-            checkViewValid(x->shape()->elem_cnt(), x->shape()->dim_vec(),
+            CheckViewValid(x->shape()->elem_cnt(), x->shape()->dim_vec(),
                            JUST(x->stride())->StrideVec(), infered_shape.dim_vec());
         if (is_view_valid) { return view::Reshape(x, infered_shape); }
       }
@@ -1113,11 +1159,11 @@ class ViewFunctor {
     }
 
     if (x->is_local() && !(LazyMode::is_enabled())) {
-      if (!(x->shape()->NumAxes() <= 1 || x->shape()->elem_cnt() <= 1)) {
+      if (x->shape()->elem_cnt() > 1) {  // exclude 0 shape and scalar tensor 
         // in some case, view operate is not allowed, so need to check it's validation,
         // the check refer to torch(aten/src/ATen/native/TensorShape.cpp)
         bool is_view_valid =
-            checkViewValid(x->shape()->elem_cnt(), x->shape()->dim_vec(),
+            CheckViewValid(x->shape()->elem_cnt(), x->shape()->dim_vec(),
                            JUST(x->stride())->StrideVec(), infered_shape.dim_vec());
         CHECK_OR_RETURN(is_view_valid)
             << " >> view size is not compatible with input tensor's size and stride (at least one "
@@ -1274,47 +1320,6 @@ class SliceUpdateFunctor {
     } else {
       return OpInterpUtil::Dispatch<Tensor>(*op_, {x, update}, attrs);
     }
-  }
-
- private:
-  std::shared_ptr<OpExpr> op_;
-};
-
-class SqueezeFunctor {
- public:
-  SqueezeFunctor() {
-    op_ = CHECK_JUST(one::OpBuilder("squeeze").Input("in").Output("out").Build());
-  }
-  Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x,
-                           const Optional<std::vector<int32_t>>& dim) const {
-    int32_t ndim = x->shape()->NumAxes();
-    std::vector<int32_t> squeeze_dims;
-    squeeze_dims.reserve(ndim);
-    if (dim.has_value() == true) {
-      std::vector<int32_t> dims = *JUST(dim);
-      for (int32_t dim_i : dims) {
-        CHECK_OR_RETURN((dim_i >= -(ndim + 1)) && (dim_i <= ndim))
-            << "Dimension out of range (expected to be in range of  [" << -ndim << "," << ndim - 1
-            << "], but got " << dim_i;
-        if (dim_i < 0) { dim_i += ndim; }
-        if (x->shape()->At(dim_i) == 1) { squeeze_dims.emplace_back(dim_i); }
-      }
-    } else {
-      for (int i = 0; i < ndim; ++i) {
-        if (x->shape()->At(i) == 1) { squeeze_dims.emplace_back(i); }
-      }
-    }
-
-    MutableAttrMap attrs;
-    JUST(attrs.SetAttr<std::vector<int32_t>>("axes", squeeze_dims));
-
-    // if input tensor is eager local, then try return tensor's view
-    if (x->is_local() && !(LazyMode::is_enabled())) {
-      if (!(x->shape()->NumAxes() <= 1 || x->shape()->elem_cnt() <= 1)) {
-        return view::Squeeze(x, squeeze_dims);
-      }
-    }
-    return OpInterpUtil::Dispatch<Tensor>(*op_, {x}, attrs);
   }
 
  private:
