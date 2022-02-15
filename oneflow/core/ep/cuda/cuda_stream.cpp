@@ -160,7 +160,7 @@ cudnnHandle_t CudaStream::cudnn_handle() const { return cudnn_handle_; }
 
 const cudaDeviceProp& CudaStream::device_properties() const { return device_->properties(); }
 
-const int CudaStream::cuda_arch() const {
+int CudaStream::cuda_arch() const {
   return device_->properties().major * 100 + device_->properties().minor * 10;
 }
 
