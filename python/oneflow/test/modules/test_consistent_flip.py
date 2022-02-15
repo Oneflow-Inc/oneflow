@@ -36,7 +36,7 @@ def test_flip_impl(test_case, ndim, placement, sbp):
 
 
 class TestFlipConsistent(flow.unittest.TestCase):
-    @global_view
+    @globaltest
     def test_flip(test_case):
         # random ndim in range [1,4]
         ndim = random(1, 5).to(int).value()
