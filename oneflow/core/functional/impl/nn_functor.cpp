@@ -264,23 +264,6 @@ class BatchMatMulFunctor {
 class FusedMatMulBiasAddReluFunctor {
  public:
   FusedMatMulBiasAddReluFunctor() {
-    // fused_op_ = CHECK_JUST(one::OpBuilder("fused_matmul_bias_add_relu")
-    //                            .Input("a")
-    //                            .Input("b")
-    //                            .Input("bias1")
-    //                            .Input("c")
-    //                            .Input("bias2")
-    //                            .Output("out")
-    //                            .Output("aux")
-    //                            .Build());
-    // fused_op_ = CHECK_JUST(one::OpBuilder("fused_matmul_bias_add_relu")
-    //                            .Input("x")
-    //                            .Input("weights", 128)
-    //                            .Input("biases", 128)
-    //                            .Output("out")
-    //                           //  .Output("aux", 128)
-    //                            .Build());
-
     fused_op_.resize(kMaxInputCount /*the maximum number of inputs*/);
     for (int n = 1; n < fused_op_.size(); ++n) {
       fused_op_[n] = CHECK_JUST(one::OpBuilder("fused_matmul_bias_add_relu")
@@ -296,47 +279,43 @@ class FusedMatMulBiasAddReluFunctor {
                            const TensorTuple& weights,
                            const TensorTuple& biases, 
                            bool skip_final_activation) const {
-    // const auto& a_shape = a->shape();
-    // const auto& b_shape = b->shape();
+    const int64_t weight_size = weights.size();
+    const int64_t bias_size = weights.size();
+    CHECK_EQ_OR_RETURN(weight_size, bias_size) << "The number of weights should be equal to biases. ";
+    int64_t m = 0, n = 0, k = 0;  
+    /*
+    x: (m, k)
+    weight: (n, k) need transpose
+    bias: (n)
+    */
+    const auto& x_shape = x->shape(); 
+    m = x_shape->At(0); 
+    k = x_shape->At(1); 
+    for(int64_t i = 0; i < weight_size; i++){
+      const auto& weight_shape = weights[i]->shape();
+      const auto& bias_shape = biases[i]->shape();
 
-    // // TODO(): Support Fused batch/broadcast matmul.
-    // CHECK_EQ_OR_RETURN(a_shape->NumAxes(), 2) << "Tensor a's dim should == 2";
-    // CHECK_EQ_OR_RETURN(b_shape->NumAxes(), 2) << "Tensor b's dim should == 2";
+      // TODO(): Support Fused batch/broadcast matmul.
+      CHECK_EQ_OR_RETURN(weight_shape->NumAxes(), 2) << "Weight's dim should == 2";
+      CHECK_EQ_OR_RETURN(bias_shape->NumAxes(), 1) << "Bias's dim should == 1";
+      
+      n = weight_shape->At(0); 
+      CHECK_EQ_OR_RETURN(bias_shape->At(0), n) << "Bias's dim is not equal to weight's last dim. ";
+      CHECK_EQ_OR_RETURN(weight_shape->At(1), k) << "weight's first dim should be equal to input's last dim. ";
 
-    // int64_t m = 0, n = 0, k_a = 0, k_b = 0;  // tensor a (no trans): m*k, tensor b (no trans): k*n
+      // Set for next layer. 
+      k = n; 
+    }
 
-    // if (!transpose_a) {
-    //   m = a->shape()->At(0);
-    //   k_a = a->shape()->At(1);
-    // } else {
-    //   m = a->shape()->At(1);
-    //   k_a = a->shape()->At(0);
-    // }
-
-    // if (!transpose_b) {
-    //   k_b = b->shape()->At(0);
-    //   n = b->shape()->At(1);
-    // } else {
-    //   k_b = b->shape()->At(1);
-    //   n = b->shape()->At(0);
-    // }
-
-    // CHECK_EQ_OR_RETURN(k_a, k_b) << "RuntimeError: mat1 and mat2 shapes cannot be multiplied "
-    //                              << "(" << m << "x" << k_a << ") and (" << k_b << "x" << n << ")";
-    // CHECK_EQ_OR_RETURN(bias->shape()->NumAxes(), 1) << "Bias num axes size should be 1.";
-    // CHECK_EQ_OR_RETURN(bias->shape()->At(0), n)
-    //     << "Bias shape cannot be added (" << bias->shape()->At(0) << ") and (" << n << ")";
+    TensorTuple input(2*weight_size+1);
+    input[0] = x; 
+    std::copy(weights.begin(), weights.end(), input.begin()+1); 
+    std::copy(biases.begin(), biases.end(), input.begin()+1+weight_size); 
 
     MutableAttrMap attrs;
     JUST(attrs.SetAttr<bool>("skip_final_activation", skip_final_activation));
-    const int64_t ninput = weights.size();
-    printf("N is %ld \n", ninput);
-    TensorTuple input(2*ninput+1);
-    input[0] = x; 
-    std::copy(weights.begin(), weights.end(), input.begin()+1); 
-    std::copy(biases.begin(), biases.end(), input.begin()+1+ninput); 
-    return OpInterpUtil::Dispatch<Tensor>(*fused_op_[ninput], input, attrs);
 
+    return OpInterpUtil::Dispatch<Tensor>(*fused_op_[weight_size], input, attrs);
   }
 
  private:
