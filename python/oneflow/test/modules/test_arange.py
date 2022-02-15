@@ -87,7 +87,7 @@ class TestArange(flow.unittest.TestCase):
         x.to(device)
         return x
 
-    def test_consistent_naive(test_case):
+    def test_global_naive(test_case):
         placement = flow.placement("cpu", {0: [0]})
         sbp = (flow.sbp.broadcast,)
         x = flow.arange(start=0, end=10, step=1, placement=placement, sbp=sbp)
@@ -122,9 +122,9 @@ class TestArangeConsistent(flow.unittest.TestCase):
     def test_arange_consistent(test_case):
         arg_dict = OrderedDict()
         arg_dict["test_fun"] = [_test_consistent_arange, _test_consistent_arange_graph]
-        arg_dict["start"] = [i for i in range(1,5,1)]
-        arg_dict["end"]   = [i for i in range(10,50,10)]
-        arg_dict["step"]  = [i for i in range(1,5,1)]
+        arg_dict["start"] = [i for i in range(1, 5, 1)]
+        arg_dict["end"] = [i for i in range(10, 50, 10)]
+        arg_dict["step"] = [i for i in range(1, 5, 1)]
         arg_dict["placement"] = [
             flow.placement("cpu", {0: [0, 1]}),
             flow.placement("cuda", {0: [0, 1]}),
