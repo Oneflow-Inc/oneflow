@@ -39,9 +39,6 @@ Maybe<Tensor> Reshape(const std::shared_ptr<Tensor>& input, const Shape& shape);
 Maybe<Tensor> Slice(const std::shared_ptr<Tensor>& input, const std::vector<int64_t>& starts,
                     const std::vector<int64_t>& ends, const std::vector<int64_t>& steps);
 
-Maybe<Tensor> Narrow(const std::shared_ptr<Tensor>& input, const int64_t& dim, const int64_t& start,
-                     const int64_t& length);
-
 Maybe<Tensor> UnSqueeze(const std::shared_ptr<Tensor>& input, const int32_t& expand_dim);
 
 Maybe<Tensor> Squeeze(const std::shared_ptr<Tensor>& input,

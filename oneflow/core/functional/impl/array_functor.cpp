@@ -1194,17 +1194,10 @@ class NarrowFunctor {
         << " (Dimension out of range, expected to be in range of [" << -ndim << ", " << ndim - 1
         << "], but got:" << dim << ")";
     if (narrow_dim < 0) { narrow_dim += ndim; }
-
-    if (input->is_local() && !(LazyMode::is_enabled())) {
-      if (!(input->shape()->NumAxes() <= 1 || input->shape()->elem_cnt() <= 1)) {
-        return JUST(view::Narrow(input, narrow_dim, start, length));
-      }
-    }
-
     MutableAttrMap attrs;
     JUST(attrs.SetAttr<int64_t>("dim", narrow_dim));
     JUST(attrs.SetAttr<int64_t>("start", start));
-    JUST(attrs.SetAttr<int64_t>("length", length));  
+    JUST(attrs.SetAttr<int64_t>("length", length));
     return OpInterpUtil::Dispatch<Tensor>(*op_, {input}, attrs);
   }
 
