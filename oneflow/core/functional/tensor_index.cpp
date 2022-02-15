@@ -65,10 +65,10 @@ Maybe<TensorTuple> ExpandMaskIndex(const std::shared_ptr<Tensor>& index) {
     size_tensor = JUST(functional::ConsistentToLocal(size_tensor));
   }
   int64_t size = 0;
-  const auto& callback = std::make_shared<std::function<void(uint64_t)>>([&](uint64_t of_blob_ptr) {
+  const auto& callback = [&](uint64_t of_blob_ptr) {
     auto* of_blob = reinterpret_cast<OfBlob*>(of_blob_ptr);
     of_blob->AutoMemCopyTo<int64_t>(&size, 1);
-  });
+  };
   JUST(SyncAccessTensorWithTimeOut(size_tensor, callback, "const"));
 
   for (int i = 0; i < index->ndim(); ++i) {

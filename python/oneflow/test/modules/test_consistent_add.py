@@ -41,7 +41,7 @@ def _test_add_with_alpha(test_case, placement, sbp):
 
 
 class TestAddModule(flow.unittest.TestCase):
-    @global_view
+    @globaltest
     def test_add_with_alpha(test_case):
         for placement in all_placement():
             for sbp in all_sbp(placement, max_dim=2):
