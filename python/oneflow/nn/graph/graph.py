@@ -219,8 +219,8 @@ class Graph(object):
         * learn rate scheduler's ``step()``.
 
         Also note that only scalar tensor are allowed to call ``backward()``
-        in ``nn.Graph.build()`` for the moment. So you may call
-        ``Tensor.mean()`` to make the loss tensor a scalar tensor.
+        in ``nn.Graph.build()`` for the moment. So you may call methods such as ``Tensor.mean()``
+        to make the loss tensor a scalar tensor.
 
         .. code-block:: python
 
