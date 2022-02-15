@@ -87,29 +87,21 @@ bool HasNotFiniteGpu(ep::Stream* stream, const Blob* blob, bool* has_not_finite_
   }
 }
 
+void DumpBlob(KernelContext* ctx, const std::string& bn) {
+  Blob* blob = ctx->BnInOp2Blob(bn);
+  if (blob != nullptr) {
+    std::vector<char> buffer(blob->ByteSizeOfBlobBody());
+    OF_CUDA_CHECK(
+        cudaMemcpy(buffer.data(), blob->dptr(), blob->ByteSizeOfBlobBody(), cudaMemcpyDefault));
+    OF_CUDA_CHECK(cudaDeviceSynchronize());
+    std::ofstream ofs(bn);
+    ofs.write(buffer.data(), blob->ByteSizeOfBlobBody());
+  }
+}
+
 void DumpBlobs(KernelContext* ctx, const Kernel* kernel) {
-  for (const auto& obn : kernel->op_attribute().output_bns()) {
-    Blob* blob = ctx->BnInOp2Blob(obn);
-    if (blob != nullptr) {
-      std::vector<char> buffer(blob->ByteSizeOfBlobBody());
-      OF_CUDA_CHECK(
-          cudaMemcpy(buffer.data(), blob->dptr(), blob->ByteSizeOfBlobBody(), cudaMemcpyDefault));
-      OF_CUDA_CHECK(cudaDeviceSynchronize());
-      std::ofstream ofs(obn);
-      ofs.write(buffer.data(), blob->ByteSizeOfBlobBody());
-    }
-  }
-  for (const auto& ibn : kernel->op_attribute().input_bns()) {
-    Blob* blob = ctx->BnInOp2Blob(ibn);
-    if (blob != nullptr) {
-      std::vector<char> buffer(blob->ByteSizeOfBlobBody());
-      OF_CUDA_CHECK(
-          cudaMemcpy(buffer.data(), blob->dptr(), blob->ByteSizeOfBlobBody(), cudaMemcpyDefault));
-      OF_CUDA_CHECK(cudaDeviceSynchronize());
-      std::ofstream ofs(ibn);
-      ofs.write(static_cast<const char*>(buffer.data()), blob->ByteSizeOfBlobBody());
-    }
-  }
+  for (const auto& obn : kernel->op_attribute().output_bns()) { DumpBlob(ctx, obn); }
+  for (const auto& ibn : kernel->op_attribute().input_bns()) { DumpBlob(ctx, ibn); }
 }
 
 }  // namespace
@@ -134,7 +126,10 @@ void CudaCheckNumericsKernelObserver::DidForwardDataContent(KernelContext* ctx,
     if (blob != nullptr) {
       bool has_not_finite =
           HasNotFiniteGpu(ctx->stream(), blob, has_not_finite_host_, has_not_finite_device_);
-      if (has_not_finite) { DumpBlobs(ctx, kernel); }
+      if (has_not_finite
+          && ParseBooleanFromEnv("ONEFLOW_DEBUG_KERNEL_SYNC_CHECK_NUMERICS_DUMP", false)) {
+        DumpBlobs(ctx, kernel);
+      }
       CHECK(!has_not_finite) << kernel->op_conf().name() << " : " << obn << " has nan or inf";
     }
   }
