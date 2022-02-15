@@ -160,7 +160,7 @@ class Graph(object):
 
             >>> linear_graph = MyGraph()
             >>> x = flow.randn(4, 3)
-            >>> model.eval() # make linear module executing in evaluation mode
+            >>> linear.eval() # make linear module executing in evaluation mode
             >>> y = linear_graph(x) # The build() method is called implicitly
 
         Note:
