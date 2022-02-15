@@ -31,14 +31,14 @@ def _test_masked_select(test_case, placement, sbp):
 
 
 @autotest(check_graph=False)
-def _test_masked_select_broadcast(test_case, placement, sbp):
+def _test_masked_select_broadcast(test_case, placement, input_sbp, mask_sbp):
     k1 = random().to(int).value() * 8
     k2 = random().to(int).value() * 8
     input = random_tensor(ndim=4, dim0=k1, dim1=k2, dim2=1, dim3=k2).to_global(
-        placement, sbp
+        placement, input_sbp
     )
     mask = random_tensor(ndim=4, dim0=k1, dim1=k2, dim2=k1, dim3=1).to_global(
-        placement, sbp
+        placement, mask_sbp
     )
     return torch.masked_select(input, mask > 0.5)
 
@@ -49,7 +49,15 @@ class TestMaskedSelect(flow.unittest.TestCase):
         for placement in all_placement():
             for sbp in all_sbp(placement, max_dim=2):
                 _test_masked_select(test_case, placement, sbp)
-                _test_masked_select_broadcast(test_case, placement, sbp)
+
+    @globaltest
+    def test_masked_select_broadcast(test_case):
+        for placement in all_placement():
+            for input_sbp in all_sbp(placement, valid_split_axis=[0, 1, 3]):
+                for mask_sbp in all_sbp(placement, max_dim=3):
+                    _test_masked_select_broadcast(
+                        test_case, placement, input_sbp, mask_sbp
+                    )
 
 
 if __name__ == "__main__":
