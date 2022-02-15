@@ -47,9 +47,9 @@ def _test_eager_boxing_with_non_overlapping_placement_p_to_s1(
         )
     device = flow.device(in_device)
     tensor = flow.tensor(np_arr, device=device, dtype=flow.float32)
-    placement = flow.placement(in_device, {0: [0, 1]})
+    placement = flow.placement(in_device, ranks=[0, 1])
     x = tensor.to_global(placement, flow.sbp.partial_sum)
-    new_placement = flow.placement(out_device, {0: [2, 3]})
+    new_placement = flow.placement(out_device, ranks=[2, 3])
     y = x.to_global(new_placement, flow.sbp.split(1))
     test_case.assertEqual(y.placement, new_placement)
     if flow.env.get_rank() == 2:
@@ -90,9 +90,9 @@ def _test_eager_boxing_with_non_overlapping_placement_b_to_s1(
         )
     device = flow.device(in_device)
     tensor = flow.tensor(np_arr, device=device, dtype=flow.float32)
-    placement = flow.placement(in_device, {0: [0, 1]})
+    placement = flow.placement(in_device, ranks=[0, 1])
     x = tensor.to_global(placement, flow.sbp.broadcast)
-    new_placement = flow.placement(out_device, {0: [2, 3]})
+    new_placement = flow.placement(out_device, ranks=[2, 3])
     y = x.to_global(new_placement, flow.sbp.split(1))
     test_case.assertEqual(y.placement, new_placement)
     if flow.env.get_rank() == 2:
@@ -133,9 +133,9 @@ def _test_eager_boxing_with_non_overlapping_placement_s0_to_s1(
         )
     device = flow.device(in_device)
     tensor = flow.tensor(np_arr, device=device, dtype=flow.float32)
-    placement = flow.placement(in_device, {0: [0, 1]})
+    placement = flow.placement(in_device, ranks=[0, 1])
     x = tensor.to_global(placement, flow.sbp.split(0))
-    new_placement = flow.placement(out_device, {0: [2, 3]})
+    new_placement = flow.placement(out_device, ranks=[2, 3])
     y = x.to_global(new_placement, flow.sbp.split(1))
     test_case.assertEqual(y.placement, new_placement)
     if flow.env.get_rank() == 2:
@@ -191,10 +191,10 @@ def _test_eager_boxing_with_non_overlapping_placement_s1_to_s1(
         )
     device = flow.device(in_device)
     tensor = flow.tensor(np_arr, device=device, dtype=flow.float32)
-    placement = flow.placement(in_device, {0: [0, 1]})
+    placement = flow.placement(in_device, ranks=[0, 1])
     x = tensor.to_global(placement, flow.sbp.split(0))
     y = x.to_global(placement, flow.sbp.split(1))
-    new_placement = flow.placement(out_device, {0: [2, 3]})
+    new_placement = flow.placement(out_device, ranks=[2, 3])
     z = y.to_global(new_placement, flow.sbp.split(1))
     test_case.assertEqual(z.placement, new_placement)
     if flow.env.get_rank() == 2:
@@ -250,10 +250,10 @@ def _test_eager_boxing_with_non_overlapping_placement_s1_to_s0(
         )
     device = flow.device(in_device)
     tensor = flow.tensor(np_arr, device=device, dtype=flow.float32)
-    placement = flow.placement(in_device, {0: [0, 1]})
+    placement = flow.placement(in_device, ranks=[0, 1])
     x = tensor.to_global(placement, flow.sbp.split(0))
     y = x.to_global(placement, flow.sbp.split(1))
-    new_placement = flow.placement(out_device, {0: [2, 3]})
+    new_placement = flow.placement(out_device, ranks=[2, 3])
     z = y.to_global(new_placement, flow.sbp.split(0))
     test_case.assertEqual(z.placement, new_placement)
     if flow.env.get_rank() == 2:
@@ -300,10 +300,10 @@ def _test_eager_boxing_with_non_overlapping_placement_s1_to_b(
         )
     device = flow.device(in_device)
     tensor = flow.tensor(np_arr, device=device, dtype=flow.float32)
-    placement = flow.placement(in_device, {0: [0, 1]})
+    placement = flow.placement(in_device, ranks=[0, 1])
     x = tensor.to_global(placement, flow.sbp.split(0))
     y = x.to_global(placement, flow.sbp.split(1))
-    new_placement = flow.placement(out_device, {0: [2, 3]})
+    new_placement = flow.placement(out_device, ranks=[2, 3])
     z = y.to_global(new_placement, flow.sbp.broadcast)
     test_case.assertEqual(z.placement, new_placement)
     if flow.env.get_rank() == 2:
@@ -368,10 +368,10 @@ def _test_eager_boxing_with_non_overlapping_placement_s1_to_p(
         )
     device = flow.device(in_device)
     tensor = flow.tensor(np_arr, device=device, dtype=flow.float32)
-    placement = flow.placement(in_device, {0: [0, 1]})
+    placement = flow.placement(in_device, ranks=[0, 1])
     x = tensor.to_global(placement, flow.sbp.split(0))
     y = x.to_global(placement, flow.sbp.split(1))
-    new_placement = flow.placement(out_device, {0: [2, 3]})
+    new_placement = flow.placement(out_device, ranks=[2, 3])
     z = y.to_global(new_placement, flow.sbp.partial_sum)
     test_case.assertEqual(z.placement, new_placement)
     if flow.env.get_rank() == 2:
@@ -436,9 +436,9 @@ def _test_eager_boxing_with_overlapping_placement_p_to_s1(
         )
     device = flow.device(in_device)
     tensor = flow.tensor(np_arr, device=device, dtype=flow.float32)
-    placement = flow.placement(in_device, {0: [0, 1, 3]})
+    placement = flow.placement(in_device, ranks=[0, 1, 3])
     x = tensor.to_global(placement, flow.sbp.partial_sum)
-    new_placement = flow.placement(out_device, {0: [2, 3]})
+    new_placement = flow.placement(out_device, ranks=[2, 3])
     y = x.to_global(new_placement, flow.sbp.split(1))
     test_case.assertEqual(y.placement, new_placement)
     if flow.env.get_rank() == 2:
@@ -479,9 +479,9 @@ def _test_eager_boxing_with_overlapping_placement_b_to_s1(
         )
     device = flow.device(in_device)
     tensor = flow.tensor(np_arr, device=device, dtype=flow.float32)
-    placement = flow.placement(in_device, {0: [0, 1, 3]})
+    placement = flow.placement(in_device, ranks=[0, 1, 3])
     x = tensor.to_global(placement, flow.sbp.broadcast)
-    new_placement = flow.placement(out_device, {0: [2, 3]})
+    new_placement = flow.placement(out_device, ranks=[2, 3])
     y = x.to_global(new_placement, flow.sbp.split(1))
     test_case.assertEqual(y.placement, new_placement)
     if flow.env.get_rank() == 2:
@@ -522,9 +522,9 @@ def _test_eager_boxing_with_overlapping_placement_s0_to_s1(
         )
     device = flow.device(in_device)
     tensor = flow.tensor(np_arr, device=device, dtype=flow.float32)
-    placement = flow.placement(in_device, {0: [0, 1, 3]})
+    placement = flow.placement(in_device, ranks=[0, 1, 3])
     x = tensor.to_global(placement, flow.sbp.split(0))
-    new_placement = flow.placement(out_device, {0: [2, 3]})
+    new_placement = flow.placement(out_device, ranks=[2, 3])
     y = x.to_global(new_placement, flow.sbp.split(1))
     test_case.assertEqual(y.placement, new_placement)
     if flow.env.get_rank() == 2:
@@ -620,10 +620,10 @@ def _test_eager_boxing_with_overlapping_placement_s1_to_s1(
         )
     device = flow.device(in_device)
     tensor = flow.tensor(np_arr, device=device, dtype=flow.float32)
-    placement = flow.placement(in_device, {0: [0, 1, 3]})
+    placement = flow.placement(in_device, ranks=[0, 1, 3])
     x = tensor.to_global(placement, flow.sbp.split(0))
     y = x.to_global(placement, flow.sbp.split(1))
-    new_placement = flow.placement(out_device, {0: [2, 3]})
+    new_placement = flow.placement(out_device, ranks=[2, 3])
     z = y.to_global(new_placement, flow.sbp.split(1))
     test_case.assertEqual(z.placement, new_placement)
     if flow.env.get_rank() == 2:
@@ -719,10 +719,10 @@ def _test_eager_boxing_with_overlapping_placement_s1_to_s0(
         )
     device = flow.device(in_device)
     tensor = flow.tensor(np_arr, device=device, dtype=flow.float32)
-    placement = flow.placement(in_device, {0: [0, 1, 3]})
+    placement = flow.placement(in_device, ranks=[0, 1, 3])
     x = tensor.to_global(placement, flow.sbp.split(0))
     y = x.to_global(placement, flow.sbp.split(1))
-    new_placement = flow.placement(out_device, {0: [2, 3]})
+    new_placement = flow.placement(out_device, ranks=[2, 3])
     z = y.to_global(new_placement, flow.sbp.split(0))
     test_case.assertEqual(z.placement, new_placement)
     if flow.env.get_rank() == 2:
@@ -806,10 +806,10 @@ def _test_eager_boxing_with_overlapping_placement_s1_to_b(
         )
     device = flow.device(in_device)
     tensor = flow.tensor(np_arr, device=device, dtype=flow.float32)
-    placement = flow.placement(in_device, {0: [0, 1, 3]})
+    placement = flow.placement(in_device, ranks=[0, 1, 3])
     x = tensor.to_global(placement, flow.sbp.split(0))
     y = x.to_global(placement, flow.sbp.split(1))
-    new_placement = flow.placement(out_device, {0: [2, 3]})
+    new_placement = flow.placement(out_device, ranks=[2, 3])
     z = y.to_global(new_placement, flow.sbp.broadcast)
     test_case.assertEqual(z.placement, new_placement)
     if flow.env.get_rank() == 2:
@@ -905,10 +905,10 @@ def _test_eager_boxing_with_overlapping_placement_s1_to_p(
         )
     device = flow.device(in_device)
     tensor = flow.tensor(np_arr, device=device, dtype=flow.float32)
-    placement = flow.placement(in_device, {0: [0, 1, 3]})
+    placement = flow.placement(in_device, ranks=[0, 1, 3])
     x = tensor.to_global(placement, flow.sbp.split(0))
     y = x.to_global(placement, flow.sbp.split(1))
-    new_placement = flow.placement(out_device, {0: [2, 3]})
+    new_placement = flow.placement(out_device, ranks=[2, 3])
     z = y.to_global(new_placement, flow.sbp.partial_sum)
     test_case.assertEqual(z.placement, new_placement)
     if flow.env.get_rank() == 2:
@@ -981,9 +981,9 @@ def _test_eager_boxing_with_in_placement_contain_out_placement_p_to_s1(
         )
     device = flow.device(in_device)
     tensor = flow.tensor(np_arr, device=device, dtype=flow.float32)
-    placement = flow.placement(in_device, {0: [0, 1, 3]})
+    placement = flow.placement(in_device, ranks=[0, 1, 3])
     x = tensor.to_global(placement, flow.sbp.partial_sum)
-    new_placement = flow.placement(out_device, {0: [1, 3]})
+    new_placement = flow.placement(out_device, ranks=[1, 3])
     y = x.to_global(new_placement, flow.sbp.split(1))
     test_case.assertEqual(y.placement, new_placement)
     if flow.env.get_rank() == 1:
@@ -1024,9 +1024,9 @@ def _test_eager_boxing_with_in_placement_contain_out_placement_b_to_s1(
         )
     device = flow.device(in_device)
     tensor = flow.tensor(np_arr, device=device, dtype=flow.float32)
-    placement = flow.placement(in_device, {0: [0, 1, 3]})
+    placement = flow.placement(in_device, ranks=[0, 1, 3])
     x = tensor.to_global(placement, flow.sbp.broadcast)
-    new_placement = flow.placement(out_device, {0: [1, 3]})
+    new_placement = flow.placement(out_device, ranks=[1, 3])
     y = x.to_global(new_placement, flow.sbp.split(1))
     test_case.assertEqual(y.placement, new_placement)
     if flow.env.get_rank() == 1:
@@ -1067,9 +1067,9 @@ def _test_eager_boxing_with_in_placement_contain_out_placement_s0_to_s1(
         )
     device = flow.device(in_device)
     tensor = flow.tensor(np_arr, device=device, dtype=flow.float32)
-    placement = flow.placement(in_device, {0: [0, 1, 3]})
+    placement = flow.placement(in_device, ranks=[0, 1, 3])
     x = tensor.to_global(placement, flow.sbp.split(0))
-    new_placement = flow.placement(out_device, {0: [1, 3]})
+    new_placement = flow.placement(out_device, ranks=[1, 3])
     y = x.to_global(new_placement, flow.sbp.split(1))
     test_case.assertEqual(y.placement, new_placement)
     if flow.env.get_rank() == 1:
@@ -1142,10 +1142,10 @@ def _test_eager_boxing_with_in_placement_contain_out_placement_s1_to_s1(
         )
     device = flow.device(in_device)
     tensor = flow.tensor(np_arr, device=device, dtype=flow.float32)
-    placement = flow.placement(in_device, {0: [0, 2, 1, 3]})
+    placement = flow.placement(in_device, ranks=[0, 2, 1, 3])
     x = tensor.to_global(placement, flow.sbp.broadcast)
     y = x.to_global(placement, flow.sbp.split(1))
-    new_placement = flow.placement(out_device, {0: [1, 3]})
+    new_placement = flow.placement(out_device, ranks=[1, 3])
     z = y.to_global(new_placement, flow.sbp.split(1))
     test_case.assertEqual(z.placement, new_placement)
     if flow.env.get_rank() == 1:
@@ -1186,10 +1186,10 @@ def _test_eager_boxing_with_in_placement_contain_out_placement_s1_to_s0(
         )
     device = flow.device(in_device)
     tensor = flow.tensor(np_arr, device=device, dtype=flow.float32)
-    placement = flow.placement(in_device, {0: [0, 2, 1, 3]})
+    placement = flow.placement(in_device, ranks=[0, 2, 1, 3])
     x = tensor.to_global(placement, flow.sbp.broadcast)
     y = x.to_global(placement, flow.sbp.split(1))
-    new_placement = flow.placement(out_device, {0: [1, 3]})
+    new_placement = flow.placement(out_device, ranks=[1, 3])
     z = y.to_global(new_placement, flow.sbp.split(0))
     test_case.assertEqual(z.placement, new_placement)
     if flow.env.get_rank() == 1:
@@ -1230,10 +1230,10 @@ def _test_eager_boxing_with_in_placement_contain_out_placement_s1_to_p(
         )
     device = flow.device(in_device)
     tensor = flow.tensor(np_arr, device=device, dtype=flow.float32)
-    placement = flow.placement(in_device, {0: [0, 2, 1, 3]})
+    placement = flow.placement(in_device, ranks=[0, 2, 1, 3])
     x = tensor.to_global(placement, flow.sbp.broadcast)
     y = x.to_global(placement, flow.sbp.split(1))
-    new_placement = flow.placement(out_device, {0: [1, 3]})
+    new_placement = flow.placement(out_device, ranks=[1, 3])
     z = y.to_global(new_placement, flow.sbp.partial_sum)
     test_case.assertEqual(z.placement, new_placement)
     if flow.env.get_rank() == 1:
@@ -1280,10 +1280,10 @@ def _test_eager_boxing_with_in_placement_contain_out_placement_s1_to_b(
         )
     device = flow.device(in_device)
     tensor = flow.tensor(np_arr, device=device, dtype=flow.float32)
-    placement = flow.placement(in_device, {0: [0, 2, 1, 3]})
+    placement = flow.placement(in_device, ranks=[0, 2, 1, 3])
     x = tensor.to_global(placement, flow.sbp.broadcast)
     y = x.to_global(placement, flow.sbp.split(1))
-    new_placement = flow.placement(out_device, {0: [1, 3]})
+    new_placement = flow.placement(out_device, ranks=[1, 3])
     z = y.to_global(new_placement, flow.sbp.broadcast)
     test_case.assertEqual(z.placement, new_placement)
     if flow.env.get_rank() == 1:
@@ -1330,9 +1330,9 @@ def _test_eager_boxing_with_out_placement_contain_in_placement_p_to_s1(
         )
     device = flow.device(in_device)
     tensor = flow.tensor(np_arr, device=device, dtype=flow.float32)
-    placement = flow.placement(in_device, {0: [0, 1, 3]})
+    placement = flow.placement(in_device, ranks=[0, 1, 3])
     x = tensor.to_global(placement, flow.sbp.partial_sum)
-    new_placement = flow.placement(out_device, {0: [0, 1, 2, 3]})
+    new_placement = flow.placement(out_device, ranks=[0, 1, 2, 3])
     y = x.to_global(new_placement, flow.sbp.split(1))
     test_case.assertEqual(y.placement, new_placement)
     if flow.env.get_rank() == 0:
@@ -1387,9 +1387,9 @@ def _test_eager_boxing_with_out_placement_contain_in_placement_b_to_s1(
         )
     device = flow.device(in_device)
     tensor = flow.tensor(np_arr, device=device, dtype=flow.float32)
-    placement = flow.placement(in_device, {0: [0, 1, 3]})
+    placement = flow.placement(in_device, ranks=[0, 1, 3])
     x = tensor.to_global(placement, flow.sbp.broadcast)
-    new_placement = flow.placement(out_device, {0: [0, 1, 2, 3]})
+    new_placement = flow.placement(out_device, ranks=[0, 1, 2, 3])
     y = x.to_global(new_placement, flow.sbp.split(1))
     test_case.assertEqual(y.placement, new_placement)
     if flow.env.get_rank() == 0:
@@ -1444,9 +1444,9 @@ def _test_eager_boxing_with_out_placement_contain_in_placement_s0_to_s1(
         )
     device = flow.device(in_device)
     tensor = flow.tensor(np_arr, device=device, dtype=flow.float32)
-    placement = flow.placement(in_device, {0: [0, 1, 3]})
+    placement = flow.placement(in_device, ranks=[0, 1, 3])
     x = tensor.to_global(placement, flow.sbp.split(0))
-    new_placement = flow.placement(out_device, {0: [0, 1, 2, 3]})
+    new_placement = flow.placement(out_device, ranks=[0, 1, 2, 3])
     y = x.to_global(new_placement, flow.sbp.split(1))
     test_case.assertEqual(y.placement, new_placement)
     if flow.env.get_rank() == 0:
@@ -1536,10 +1536,10 @@ def _test_eager_boxing_with_out_placement_contain_in_placement_s1_to_b(
         )
     device = flow.device(in_device)
     tensor = flow.tensor(np_arr, device=device, dtype=flow.float32)
-    placement = flow.placement(in_device, {0: [0, 1, 3]})
+    placement = flow.placement(in_device, ranks=[0, 1, 3])
     x = tensor.to_global(placement, flow.sbp.split(0))
     y = x.to_global(placement, flow.sbp.split(1))
-    new_placement = flow.placement(out_device, {0: [0, 1, 2, 3]})
+    new_placement = flow.placement(out_device, ranks=[0, 1, 2, 3])
     z = y.to_global(new_placement, flow.sbp.broadcast)
     test_case.assertEqual(z.placement, new_placement)
     test_case.assertTrue(
@@ -1611,10 +1611,10 @@ def _test_eager_boxing_with_out_placement_contain_in_placement_s1_to_p(
         )
     device = flow.device(in_device)
     tensor = flow.tensor(np_arr, device=device, dtype=flow.float32)
-    placement = flow.placement(in_device, {0: [0, 1, 3]})
+    placement = flow.placement(in_device, ranks=[0, 1, 3])
     x = tensor.to_global(placement, flow.sbp.split(0))
     y = x.to_global(placement, flow.sbp.split(1))
-    new_placement = flow.placement(out_device, {0: [0, 1, 2, 3]})
+    new_placement = flow.placement(out_device, ranks=[0, 1, 2, 3])
     z = y.to_global(new_placement, flow.sbp.partial_sum)
     test_case.assertEqual(z.placement, new_placement)
     if flow.env.get_rank() == 0:
@@ -1756,10 +1756,10 @@ def _test_eager_boxing_with_out_placement_contain_in_placement_s1_to_s0(
         )
     device = flow.device(in_device)
     tensor = flow.tensor(np_arr, device=device, dtype=flow.float32)
-    placement = flow.placement(in_device, {0: [0, 1, 3]})
+    placement = flow.placement(in_device, ranks=[0, 1, 3])
     x = tensor.to_global(placement, flow.sbp.split(0))
     y = x.to_global(placement, flow.sbp.split(1))
-    new_placement = flow.placement(out_device, {0: [0, 1, 2, 3]})
+    new_placement = flow.placement(out_device, ranks=[0, 1, 2, 3])
     z = y.to_global(new_placement, flow.sbp.split(0))
     test_case.assertEqual(z.placement, new_placement)
     if flow.env.get_rank() == 0:
@@ -1849,10 +1849,10 @@ def _test_eager_boxing_with_out_placement_contain_in_placement_s1_to_s1(
         )
     device = flow.device(in_device)
     tensor = flow.tensor(np_arr, device=device, dtype=flow.float32)
-    placement = flow.placement(in_device, {0: [0, 1]})
+    placement = flow.placement(in_device, ranks=[0, 1])
     x = tensor.to_global(placement, flow.sbp.split(0))
     y = x.to_global(placement, flow.sbp.split(1))
-    new_placement = flow.placement(out_device, {0: [0, 1, 2, 3]})
+    new_placement = flow.placement(out_device, ranks=[0, 1, 2, 3])
     z = y.to_global(new_placement, flow.sbp.split(1))
     test_case.assertEqual(z.placement, new_placement)
     if flow.env.get_rank() == 0:
@@ -1966,7 +1966,7 @@ def _test_eager_boxing_with_same_placement_p_to_s1(test_case, in_device, out_dev
         )
     device = flow.device(in_device)
     tensor = flow.tensor(np_arr, device=device, dtype=flow.float32)
-    placement = flow.placement(in_device, {0: [0, 1, 3]})
+    placement = flow.placement(in_device, ranks=[0, 1, 3])
     x = tensor.to_global(placement, flow.sbp.partial_sum)
     y = x.to_global(placement, flow.sbp.split(1))
     test_case.assertEqual(y.placement, placement)
@@ -2053,7 +2053,7 @@ def _test_eager_boxing_with_same_placement_b_to_s1(test_case, in_device, out_dev
         )
     device = flow.device(in_device)
     tensor = flow.tensor(np_arr, device=device, dtype=flow.float32)
-    placement = flow.placement(in_device, {0: [0, 1, 3]})
+    placement = flow.placement(in_device, ranks=[0, 1, 3])
     x = tensor.to_global(placement, flow.sbp.broadcast)
     y = x.to_global(placement, flow.sbp.split(1))
     test_case.assertEqual(y.placement, placement)
@@ -2130,7 +2130,7 @@ def _test_eager_boxing_with_same_placement_s0_to_s1(test_case, in_device, out_de
         )
     device = flow.device(in_device)
     tensor = flow.tensor(np_arr, device=device, dtype=flow.float32)
-    placement = flow.placement(in_device, {0: [0, 1, 3]})
+    placement = flow.placement(in_device, ranks=[0, 1, 3])
     x = tensor.to_global(placement, flow.sbp.split(0))
     y = x.to_global(placement, flow.sbp.split(1))
     test_case.assertEqual(y.placement, placement)
@@ -2248,7 +2248,7 @@ def _test_eager_boxing_with_same_placement_s1_to_s1(test_case, in_device, out_de
         )
     device = flow.device(in_device)
     tensor = flow.tensor(np_arr, device=device, dtype=flow.float32)
-    placement = flow.placement(in_device, {0: [0, 1, 3]})
+    placement = flow.placement(in_device, ranks=[0, 1, 3])
     x = tensor.to_global(placement, flow.sbp.split(0))
     y = x.to_global(placement, flow.sbp.split(1))
     z = y.to_global(placement, flow.sbp.split(1))
@@ -2367,7 +2367,7 @@ def _test_eager_boxing_with_same_placement_s1_to_s0(test_case, in_device, out_de
         )
     device = flow.device(in_device)
     tensor = flow.tensor(np_arr, device=device, dtype=flow.float32)
-    placement = flow.placement(in_device, {0: [0, 1, 3]})
+    placement = flow.placement(in_device, ranks=[0, 1, 3])
     x = tensor.to_global(placement, flow.sbp.split(0))
     y = x.to_global(placement, flow.sbp.split(1))
     z = y.to_global(placement, flow.sbp.split(0))
@@ -2462,7 +2462,7 @@ def _test_eager_boxing_with_same_placement_s1_to_p(test_case, in_device, out_dev
         )
     device = flow.device(in_device)
     tensor = flow.tensor(np_arr, device=device, dtype=flow.float32)
-    placement = flow.placement(in_device, {0: [0, 1, 3]})
+    placement = flow.placement(in_device, ranks=[0, 1, 3])
     x = tensor.to_global(placement, flow.sbp.split(0))
     y = x.to_global(placement, flow.sbp.split(1))
     z = y.to_global(placement, flow.sbp.partial_sum)
@@ -2581,7 +2581,7 @@ def _test_eager_boxing_with_same_placement_s1_to_b(test_case, in_device, out_dev
         )
     device = flow.device(in_device)
     tensor = flow.tensor(np_arr, device=device, dtype=flow.float32)
-    placement = flow.placement(in_device, {0: [0, 1, 3]})
+    placement = flow.placement(in_device, ranks=[0, 1, 3])
     x = tensor.to_global(placement, flow.sbp.split(0))
     y = x.to_global(placement, flow.sbp.split(1))
     z = y.to_global(placement, flow.sbp.broadcast)
@@ -2668,9 +2668,9 @@ def _test_eager_boxing_b_to_s(
     x = flow.tensor(np_arr, device="cuda", dtype=flow.float32)
     x = x.to_global(placement_with_all_cuda_device, flow.sbp.broadcast)
 
-    placement = flow.placement(device_type, {0: in_device_list})
+    placement = flow.placement(device_type, in_device_list)
     y = x.to_global(placement, flow.sbp.broadcast)
-    new_placement = flow.placement(device_type, {0: out_device_list})
+    new_placement = flow.placement(device_type, out_device_list)
     z = y.to_global(new_placement, flow.sbp.split(out_split_axis))
 
     if flow.env.get_rank() in out_device_list:
@@ -2709,12 +2709,12 @@ def _test_eager_boxing_s_to_b(
     x = flow.tensor(np_arr, device="cuda", dtype=flow.float32)
     x = x.to_global(placement_with_all_cuda_device, flow.sbp.broadcast)
 
-    placement = flow.placement(device_type, {0: in_device_list})
+    placement = flow.placement(device_type, in_device_list)
     y = x.to_global(placement, flow.sbp.broadcast)
 
     y = y.to_global(placement, flow.sbp.split(in_split_axis))
 
-    new_placement = flow.placement(device_type, {0: out_device_list})
+    new_placement = flow.placement(device_type, out_device_list)
     z = y.to_global(new_placement, flow.sbp.broadcast)
 
     if flow.env.get_rank() in out_device_list:
@@ -2735,10 +2735,10 @@ def _test_eager_boxing_p_to_s(
     x = flow.tensor(np_arr, device="cuda", dtype=flow.float32)
     x = x.to_global(placement_with_all_cuda_device, flow.sbp.broadcast)
 
-    placement = flow.placement(device_type, {0: in_device_list})
+    placement = flow.placement(device_type, in_device_list)
     y = x.to_global(placement, flow.sbp.broadcast)
     y = y.to_global(placement, flow.sbp.partial_sum)
-    new_placement = flow.placement(device_type, {0: out_device_list})
+    new_placement = flow.placement(device_type, out_device_list)
     z = y.to_global(new_placement, flow.sbp.split(out_split_axis))
 
     if flow.env.get_rank() in out_device_list:
@@ -2777,11 +2777,11 @@ def _test_eager_boxing_p_to_b(
     x = flow.tensor(np_arr, device="cuda", dtype=flow.float32)
     x = x.to_global(placement_with_all_cuda_device, flow.sbp.broadcast)
 
-    placement = flow.placement(device_type, {0: in_device_list})
+    placement = flow.placement(device_type, in_device_list)
     y = x.to_global(placement, flow.sbp.broadcast)
     y = y.to_global(placement, flow.sbp.partial_sum)
 
-    new_placement = flow.placement(device_type, {0: out_device_list})
+    new_placement = flow.placement(device_type, out_device_list)
     z = y.to_global(new_placement, flow.sbp.broadcast)
 
     if flow.env.get_rank() in out_device_list:
@@ -2807,11 +2807,11 @@ def _test_eager_naive_boxing_s_to_s(
 
     x = x.to_global(placement_with_all_cuda_device, flow.sbp.broadcast)
 
-    placement = flow.placement(device_type, {0: in_device_list})
+    placement = flow.placement(device_type, in_device_list)
     y = x.to_global(placement, flow.sbp.broadcast)
     y = y.to_global(placement, flow.sbp.split(in_split_axis))
 
-    new_placement = flow.placement(device_type, {0: out_device_list})
+    new_placement = flow.placement(device_type, out_device_list)
     z = y.to_global(new_placement, flow.sbp.split(out_split_axis))
 
     if flow.env.get_rank() in out_device_list:
@@ -3204,7 +3204,7 @@ class TestEagerNaiveBoxingSToS(flow.unittest.TestCase):
 class TestEagerConsistentCastWithSamePlacementAndSBP(flow.unittest.TestCase):
     def test_eager_global_cast_with_same_placement_and_sbp(test_case):
         x = np.ones((4, 8), dtype=np.int32)
-        placement = flow.placement("cuda", {0: range(2)})
+        placement = flow.placement("cuda", ranks=[0, 1])
         y = flow.tensor(
             x,
             dtype=flow.float32,
@@ -3221,8 +3221,8 @@ class TestEagerConsistentCastWithSamePlacementAndSBP(flow.unittest.TestCase):
 class TestEagerConsistentCast1DTo2DSBP(flow.unittest.TestCase):
     def test_eager_global_cast_1d_to_2d_sbp(test_case):
         x = np.ones((4, 8), dtype=np.int32)
-        placement1 = flow.placement("cuda", {0: range(4)})
-        placement2 = flow.placement("cuda", {0: range(4)}, (2, 2))
+        placement1 = flow.placement("cuda", ranks=[0, 1, 2, 3])
+        placement2 = flow.placement("cuda", ranks=[[0, 1], [2, 3]])
         y = flow.tensor(
             x,
             dtype=flow.float32,
@@ -3244,8 +3244,8 @@ class TestEagerConsistentCast1DTo2DSBP(flow.unittest.TestCase):
 class TestEagerConsistentCast2DTo1DSBP(flow.unittest.TestCase):
     def test_eager_global_cast_2d_to_1d_sbp(test_case):
         x = np.ones((4, 8), dtype=np.int32)
-        placement1 = flow.placement("cuda", {0: range(4)})
-        placement2 = flow.placement("cuda", {0: range(4)}, (2, 2))
+        placement1 = flow.placement("cuda", ranks=[0, 1, 2, 3])
+        placement2 = flow.placement("cuda", ranks=[[0, 1], [2, 3]])
         y = flow.tensor(
             x,
             dtype=flow.float32,
@@ -3262,7 +3262,7 @@ class TestEagerConsistentCast2DTo1DSBP(flow.unittest.TestCase):
 
 def _test_eager_global_cast_1d_uneven_split(test_case, device_type, shape):
     np_arr = np.random.uniform(-1e-05, 1e-05, shape)
-    placement = flow.placement(device_type, {0: range(flow.env.get_world_size())})
+    placement = flow.placement(device_type, range(flow.env.get_world_size()))
     x = flow.tensor(
         np_arr, dtype=flow.float32, device=device_type, requires_grad=False,
     )
@@ -3321,16 +3321,16 @@ class TestEagerConsistentCastOneDUnevenSplit(flow.unittest.TestCase):
 def _test_eager_global_n_dim_reduce(test_case, device_type, src_sbp, dst_sbp):
     np.random.seed(10)
     np_arr = np.random.uniform(-1e-05, 1e-05, (16, 32))
-    placement0 = flow.placement(device_type, {0: [0]}, (1, 1))
-    placement1 = flow.placement(device_type, {0: range(4)}, (2, 2))
+    placement0 = flow.placement(device_type, ranks=[[0]])
+    placement1 = flow.placement(device_type, ranks=[[0, 1], [2, 3]])
 
-    # oneflow.placement(device_type="cuda", device_ids={0 : [0]}, hierarchy=(1, 1))
+    # oneflow.placement(type="cuda", ranks=[[0]])
     # (src_sbp, src_sbp)
     x = flow.tensor(
         np_arr, placement=placement0, sbp=[src_sbp, src_sbp], requires_grad=False,
     )
 
-    # oneflow.placement(device_type="cuda", device_ids={0 : [0, 1, 2, 3]}, hierarchy=(2, 2))
+    # oneflow.placement(type="cuda", ranks=[[0,1],[2,3]])
     # (dst_sbp, dst_sbp)
     y = x.to_global(placement=placement1, sbp=[dst_sbp, dst_sbp])
 
@@ -3362,8 +3362,8 @@ def _test_eager_consistent_with_0_size_data(
     in_sbp,
     out_sbp,
 ):
-    in_placement = flow.placement(in_device_type, {0: in_device_list})
-    out_placement = flow.placement(out_device_type, {0: out_device_list})
+    in_placement = flow.placement(in_device_type, in_device_list)
+    out_placement = flow.placement(out_device_type, out_device_list)
     x = flow.Tensor(*shape, placement=in_placement, sbp=in_sbp)
     y = x.to_global(out_placement, out_sbp)
 
