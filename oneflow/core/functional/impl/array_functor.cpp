@@ -651,6 +651,15 @@ class ExpandDimsFunctor {
     if (dim < 0) { expand_dim = dim + ndim + 1; }
     MutableAttrMap attrs;
     JUST(attrs.SetAttr<int32_t>("axis", expand_dim));
+
+    auto& x = input;
+    // if input tensor is eager local, then try return tensor's view
+    if (x->is_local() && !(LazyMode::is_enabled())) {
+      if (!(x->shape()->NumAxes() <= 1 || x->shape()->elem_cnt() <= 1)) {
+        return view::UnSqueeze(x, expand_dim);
+      }
+    }
+  
     return OpInterpUtil::Dispatch<Tensor>(*op_, {input}, attrs);
   }
 
@@ -1305,6 +1314,13 @@ class SqueezeFunctor {
 
     MutableAttrMap attrs;
     JUST(attrs.SetAttr<std::vector<int32_t>>("axes", squeeze_dims));
+
+    // if input tensor is eager local, then try return tensor's view
+    if (x->is_local() && !(LazyMode::is_enabled())) {
+      if (!(x->shape()->NumAxes() <= 1 || x->shape()->elem_cnt() <= 1)) {
+        return view::Squeeze(x, squeeze_dims);
+      }
+    }
     return OpInterpUtil::Dispatch<Tensor>(*op_, {x}, attrs);
   }
 
@@ -2803,6 +2819,7 @@ ONEFLOW_FUNCTION_LIBRARY(m) {
   m.add_functor<impl::ExpandGradFunctor>("ExpandGrad");
   m.add_functor<impl::ExpandDimsFunctor>("ExpandDims");
   m.add_functor<impl::ExpandDimsFunctor>("Unsqueeze");
+  m.add_functor<impl::SqueezeFunctor>("Squeeze");
   m.add_functor<impl::RollFunctor>("Roll");
   m.add_functor<impl::GatherFunctor>("Gather");
   m.add_functor<impl::DimGatherFunctor>("DimGather");
@@ -2821,7 +2838,6 @@ ONEFLOW_FUNCTION_LIBRARY(m) {
   m.add_functor<impl::LogicalSliceFunctor>("LogicalSlice");
   m.add_functor<impl::SliceUpdateFunctor>("SliceUpdate");
   m.add_functor<impl::SliceView1dContiguousFunctor>("SliceView1dContiguous");
-  m.add_functor<impl::SqueezeFunctor>("Squeeze");
   m.add_functor<impl::CopyFunctor>("Copy");
   m.add_functor<impl::FlipFunctor>("Flip");
   m.add_functor<impl::FlipGradFunctor>("FlipGrad");
