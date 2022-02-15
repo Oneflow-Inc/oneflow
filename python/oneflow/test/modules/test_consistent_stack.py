@@ -35,7 +35,7 @@ def _test_stack_with_random_data(test_case, placement, sbp):
 
 
 class TestStackModule(flow.unittest.TestCase):
-    @global_view
+    @globaltest
     def test_stack_with_random_data(test_case):
         for placement in all_placement():
             for sbp in all_sbp(placement, max_dim=4):

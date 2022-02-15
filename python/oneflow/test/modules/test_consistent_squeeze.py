@@ -49,19 +49,19 @@ def _test_squeeze_with_0_size_data(test_case, placement, sbp):
 
 
 class TestConsistentSqueeze(flow.unittest.TestCase):
-    @global_view
+    @globaltest
     def test_squeeze_1d_input(test_case):
         for placement in all_placement():
             for sbp in all_sbp(placement, max_dim=1):
                 _test_squeeze_1d_input(test_case, placement, sbp)
 
-    @global_view
+    @globaltest
     def test_flow_squeeze_with_random_data(test_case):
         for placement in all_placement():
             for sbp in all_sbp(placement, max_dim=2):
                 _test_flow_squeeze_with_random_data(test_case, placement, sbp)
 
-    @global_view
+    @globaltest
     def test_squeeze_with_0_size_data(test_case):
         for placement in all_placement():
             for sbp in all_sbp(placement, max_dim=2):

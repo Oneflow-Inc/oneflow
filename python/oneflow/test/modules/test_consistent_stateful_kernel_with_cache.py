@@ -52,7 +52,7 @@ def _test_global_stateful_kernel_with_inpersistent_state(test_case, placement, s
 
 
 class TestStatefulKernelWithInpersistentState(flow.unittest.TestCase):
-    @global_view
+    @globaltest
     def test_global_stateful_kernel_with_inpersistent_state(test_case):
         for placement in all_placement():
             # logical_slice only support 1d sbp
