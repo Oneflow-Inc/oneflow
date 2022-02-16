@@ -48,18 +48,18 @@ __global__ void GenerateGatherIndicesGpu(const int32_t elem_cnt, const int32_t s
 template<typename T>
 __global__ void GatherConcatGpu(int32_t elem_cnt, int32_t out_cols, int32_t valid_out_cols,
                                 int32_t in_cols, int32_t output_concat_end_dim,
-                                const int32_t* gather_col_indices, const T* in,
+                                const int32_t* gather_indices, const T* in,
                                 const T* output_concat_ptr, T* out_ptr) {
   CUDA_1D_KERNEL_LOOP(i, elem_cnt) {
     const int32_t row = i / out_cols;
     const int32_t col = i - row * out_cols;
     T out_val = 0;
     if (col < output_concat_end_dim) {
-      int32_t output_concat_idx = row * output_concat_end_dim + col;
+      const int32_t output_concat_idx = row * output_concat_end_dim + col;
       out_val = output_concat_ptr[output_concat_idx];
     } else if (col < valid_out_cols) {
-      int32_t gather_col_idx = gather_col_indices[col - output_concat_end_dim];
-      int32_t in_offset = row * in_cols + gather_col_idx;
+      const int32_t gather_col_idx = gather_indices[col - output_concat_end_dim];
+      const int32_t in_offset = row * in_cols + gather_col_idx;
       out_val = in[in_offset];
     }
     out_ptr[i] = out_val;
@@ -68,8 +68,8 @@ __global__ void GatherConcatGpu(int32_t elem_cnt, int32_t out_cols, int32_t vali
 
 template<typename T>
 __global__ void ScatterSplitAddTransposeGpu(int32_t elem_cnt, int32_t stride_dim, int32_t out_dim,
-                                            int32_t in_grad_stride, int32_t in_matrix_cols,
-                                            int32_t in_matrix_valid_cols,
+                                            int32_t in_grad_stride, int32_t in_grad_matrix_dim,
+                                            int32_t in_grad_matrix_valid_dim,
                                             int32_t output_concat_end_dim, const int32_t offset,
                                             const T* dy, T* output_concat_grad, T* in_grad) {
   CUDA_1D_KERNEL_LOOP(i, elem_cnt) {
@@ -79,25 +79,25 @@ __global__ void ScatterSplitAddTransposeGpu(int32_t elem_cnt, int32_t stride_dim
       output_concat_grad[row * output_concat_end_dim + col] = dy[row * out_dim + col];
     } else {
       int32_t in_col_id = col - output_concat_end_dim;
-      const int32_t in_matrix_row = in_col_id / in_matrix_cols;
-      const int32_t in_matrix_col = in_col_id - in_matrix_row * in_matrix_cols;
+      const int32_t matrix_row = in_col_id / in_grad_matrix_dim;
+      const int32_t matrix_col = in_col_id - matrix_row * in_grad_matrix_dim;
       T grad_val = 0;
       const T* row_dy = dy + row * out_dim + output_concat_end_dim;
-      if (in_matrix_col < in_matrix_row && in_matrix_row < in_matrix_valid_cols) {
-        int32_t dy_col_idx =
-            (in_matrix_row - 1 + offset) * (in_matrix_row + offset) / 2 + in_matrix_col;
-        grad_val = row_dy[dy_col_idx];
-      } else if (in_matrix_row < in_matrix_col && in_matrix_col < in_matrix_valid_cols) {
-        // transpose add
-        int32_t trans_row_id = in_matrix_col;
-        int32_t trans_col_id = in_matrix_row;
-        int32_t dy_col_idx =
-            (trans_row_id - 1 + offset) * (trans_row_id + offset) / 2 + trans_col_id;
-        grad_val = row_dy[dy_col_idx];
-      } else if (in_matrix_col == in_matrix_row && (offset == 1)) {
-        int32_t dy_col_idx =
-            (in_matrix_row - 1 + offset) * (in_matrix_row + offset) / 2 + in_matrix_col;
-        grad_val = row_dy[dy_col_idx] * static_cast<T>(2);
+      if (matrix_row < in_grad_matrix_valid_dim && matrix_col < in_grad_matrix_valid_dim) {
+        if (matrix_col < matrix_row) {
+          int32_t dy_col_idx = (matrix_row - 1 + offset) * (matrix_row + offset) / 2 + matrix_col;
+          grad_val = row_dy[dy_col_idx];
+        } else if (matrix_row < matrix_col) {
+          // transpose add
+          int32_t trans_row_id = matrix_col;
+          int32_t trans_col_id = matrix_row;
+          int32_t dy_col_idx =
+              (trans_row_id - 1 + offset) * (trans_row_id + offset) / 2 + trans_col_id;
+          grad_val = row_dy[dy_col_idx];
+        } else if ((matrix_row == matrix_col) && (offset == 1)) {
+          int32_t dy_col_idx = (matrix_row - 1 + offset) * (matrix_row + offset) / 2 + matrix_col;
+          grad_val = row_dy[dy_col_idx] * static_cast<T>(2);
+        }
       }
       int32_t in_grad_offset = row * in_grad_stride + in_col_id;
       in_grad[in_grad_offset] = grad_val;
@@ -169,7 +169,7 @@ void GatherConcatKernel(ep::Stream* stream, int32_t elem_cnt, int32_t out_dim,
 
 template<typename T>
 void ScatterSplitAddTranspose(ep::Stream* stream, int32_t batch_size, int32_t out_dim,
-                              int32_t concated_padded_dim, int32_t concat_dim,
+                              int32_t concated_padded_dim, int32_t features_concated_dim,
                               int32_t output_concat_end_dim, const bool self_interaction,
                               const T* dy, T* output_concat_grad, T* matmul_out_grad_ptr) {
   int32_t stride_dim = output_concat_end_dim + concated_padded_dim * concated_padded_dim;
@@ -178,7 +178,7 @@ void ScatterSplitAddTranspose(ep::Stream* stream, int32_t batch_size, int32_t ou
   int32_t offset = self_interaction ? 1 : 0;
   ScatterSplitAddTransposeGpu<<<BlocksNum4ThreadsNum(elem_cnt), kCudaThreadsNumPerBlock, 0,
                                 stream->As<ep::CudaStream>()->cuda_stream()>>>(
-      elem_cnt, stride_dim, out_dim, matmul_stride, concated_padded_dim, concat_dim,
+      elem_cnt, stride_dim, out_dim, matmul_stride, concated_padded_dim, features_concated_dim,
       output_concat_end_dim, offset, dy, output_concat_grad, matmul_out_grad_ptr);
 }
 
