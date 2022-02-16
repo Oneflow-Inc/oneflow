@@ -129,7 +129,7 @@ void TensorViewInstructionType::Compute(vm::Instruction* instruction) const {
   OfBlob input_ofblob(device_ctx->stream(), ptr->eager_blob_object()->mut_blob());
   OfBlob view_ofblob(device_ctx->stream(), ptr->view_eager_blob_object()->mut_blob());
 
-  void* input_ptr = input_ofblob.mut_blob()->mut_dptr();
+  void* input_ptr = input_ofblob.mut_blob()->mut_raw_dptr();
   view_ofblob.mut_blob()->reset_dptr(static_cast<char*>(input_ptr));
 }
 
