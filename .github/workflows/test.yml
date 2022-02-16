@@ -402,7 +402,7 @@ jobs:
     if: github.event.pull_request.draft == false && github.base_ref == 'master' && contains(github.event.pull_request.requested_reviewers.*.login, 'oneflow-ci-bot')
     concurrency:
       group: distributed-test-${{ matrix.entry }}-rank-${{ matrix.rank }}
-      cancel-in-progress: true
+      cancel-in-progress: false
     strategy:
       fail-fast: true
       max-parallel: 2
