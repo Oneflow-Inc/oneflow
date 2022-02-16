@@ -34,7 +34,7 @@ def _test_consistent_randint(test_case, shape, placement, sbp, dtype):
 
 
 def _test_graph_randint(test_case, shape, placement, sbp, dtype):
-    class ConsistentRandGraph(flow.nn.Graph):
+    class ConsistentRandintGraph(flow.nn.Graph):
         def __init__(self,):
             super().__init__()
 
@@ -42,7 +42,7 @@ def _test_graph_randint(test_case, shape, placement, sbp, dtype):
             x = flow.randint(1, 10, shape, placement=placement, sbp=sbp, dtype=dtype)
             return x
 
-    model = ConsistentRandGraph()
+    model = ConsistentRandintGraph()
     x = model()
 
     test_case.assertEqual(x.shape, flow.Size(shape))
