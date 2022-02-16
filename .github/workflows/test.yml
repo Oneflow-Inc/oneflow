@@ -491,7 +491,7 @@ jobs:
             -v $HOME/test-container-cache/dot-local:/root/.local \
             -v $HOME/test-container-cache/dot-cache:/root/.cache \
             -e NODE_RANK=${{ matrix.rank }} \
-            -e _MASTER_ADDR=${{ steps.get-primary-node.outputs.get-primary-node }} \
+            -e _MASTER_ADDR=${{ steps.get-primary-node.outputs.master-address }} \
             -e ONEFLOW_WHEEL_PATH=${ONEFLOW_WHEEL_PATH} \
             -e ONEFLOW_CI=1 \
             -v $PWD:$PWD \
