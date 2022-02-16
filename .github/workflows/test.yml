@@ -396,7 +396,7 @@ jobs:
           oneflow-src: ${{ env.ONEFLOW_SRC }}
 
   test-distributed:
-    name: Test suite
+    name: Distributed test suite
     needs: [wait_for_gpu_slot, find-test-cache-distributed]
     runs-on: ${{ matrix.runs-on }}
     if: github.event.pull_request.draft == false && github.base_ref == 'master' && contains(github.event.pull_request.requested_reviewers.*.login, 'oneflow-ci-bot')
