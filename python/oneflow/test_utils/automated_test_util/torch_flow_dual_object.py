@@ -1003,6 +1003,10 @@ def random_tensor(
 def choice_tensor(
     a, size=None, replace=True, p=None, dtype=int, requires_grad=False,
 ):
+    """Generates a random sample from a given 1-D array, which aligns with numpy.random.choice
+    see https://numpy.org/doc/stable/reference/random/generated/numpy.random.choice.html for details
+
+    """
     if isinstance(requires_grad, generator):
         requires_grad = requires_grad.value()
     pytorch_tensor = (
