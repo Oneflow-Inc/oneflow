@@ -297,13 +297,13 @@ class UserOpExprPhysicalInferContext final : public UserOpExprInferContext {
     UNIMPLEMENTED();
     return *(const ParallelDesc*)nullptr;
   }
-  const cfg::SbpParallel& SbpParallel4ArgNameAndIndex(const std::string&, int32_t) const override {
+  const SbpParallel& SbpParallel4ArgNameAndIndex(const std::string&, int32_t) const override {
     UNIMPLEMENTED();
-    return *(const cfg::SbpParallel*)nullptr;
+    return *(const SbpParallel*)nullptr;
   }
-  const cfg::NdSbp& NdSbp4ArgNameAndIndex(const std::string&, int32_t) const override {
+  const NdSbp& NdSbp4ArgNameAndIndex(const std::string&, int32_t) const override {
     UNIMPLEMENTED();
-    return *(const cfg::NdSbp*)nullptr;
+    return *(const NdSbp*)nullptr;
   }
   int64_t parallel_num() const override { return 1; }
 };
@@ -334,16 +334,16 @@ class UserOpExprLogicalInferContext final : public UserOpExprInferContext {
 
   const ParallelContext& parallel_ctx() const override { return parallel_ctx_; }
   const ParallelDesc& parallel_desc() const override { return *parallel_desc_; }
-  const cfg::SbpParallel& SbpParallel4ArgNameAndIndex(const std::string& name,
-                                                      int32_t index) const override {
+  const SbpParallel& SbpParallel4ArgNameAndIndex(const std::string& name,
+                                                 int32_t index) const override {
     auto* tensor_meta = dynamic_cast<ConsistentTensorMeta*>(
         const_cast<UserOpExprLogicalInferContext*>(this)->TensorDesc4ArgNameAndIndex(name, index));
     CHECK_NOTNULL(tensor_meta);
-    Symbol<cfg::NdSbp> nd_sbp = tensor_meta->nd_sbp();
+    Symbol<NdSbp> nd_sbp = tensor_meta->nd_sbp();
     CHECK_EQ(nd_sbp->sbp_parallel_size(), 1);
     return nd_sbp->sbp_parallel(0);
   }
-  const cfg::NdSbp& NdSbp4ArgNameAndIndex(const std::string& name, int32_t index) const override {
+  const NdSbp& NdSbp4ArgNameAndIndex(const std::string& name, int32_t index) const override {
     auto* tensor_meta = dynamic_cast<ConsistentTensorMeta*>(
         const_cast<UserOpExprLogicalInferContext*>(this)->TensorDesc4ArgNameAndIndex(name, index));
     CHECK_NOTNULL(tensor_meta);
@@ -463,11 +463,11 @@ Maybe<Symbol<Device>> UserOpExpr::InferDevices(const AttrMap& attrs,
 }
 
 ConsistentToConsistentOpExpr::ConsistentToConsistentOpExpr(
-    const Optional<Symbol<cfg::NdSbp>>& grad_nd_sbp)
+    const Optional<Symbol<NdSbp>>& grad_nd_sbp)
     : grad_nd_sbp_(grad_nd_sbp) {}
 
 /* static */ Maybe<ConsistentToConsistentOpExpr> ConsistentToConsistentOpExpr::New(
-    const Optional<Symbol<cfg::NdSbp>>& grad_nd_sbp) {
+    const Optional<Symbol<NdSbp>>& grad_nd_sbp) {
   auto* ptr = new ConsistentToConsistentOpExpr(grad_nd_sbp);
   return std::shared_ptr<ConsistentToConsistentOpExpr>(ptr);
 }

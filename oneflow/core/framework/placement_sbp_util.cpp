@@ -21,7 +21,7 @@ limitations under the License.
 #include "oneflow/core/common/shape.h"
 #include "oneflow/core/common/util.h"
 #include "oneflow/core/job/parallel_desc.h"
-#include "oneflow/core/job/sbp_parallel.cfg.h"
+#include "oneflow/core/job/sbp_parallel.h"
 #include "oneflow/core/common/decorator.h"
 #include "oneflow/core/common/optional.h"
 #include "oneflow/core/common/util.h"
@@ -86,7 +86,7 @@ Maybe<const Shape> GetSelectedShape(const Shape& hierarchy_shape,
   return std::make_shared<const Shape>(dim_vec);
 }
 
-Maybe<Symbol<std::vector<int>>> CalcAxis2IsBroadcast(Symbol<cfg::NdSbp> nd_sbp) {
+Maybe<Symbol<std::vector<int>>> CalcAxis2IsBroadcast(Symbol<NdSbp> nd_sbp) {
   std::vector<int> axis2is_selected(nd_sbp->sbp_parallel_size());
   for (int i = 0; i < axis2is_selected.size(); ++i) {
     axis2is_selected.at(i) = nd_sbp->sbp_parallel(i).has_broadcast_parallel();
@@ -148,21 +148,21 @@ Maybe<std::vector<int64_t>> GetSelectedParallelIds(const Shape& hierarchy_shape,
 }
 
 Maybe<Symbol<ParallelDesc>> GetBroadcastSubParallelDesc(Symbol<ParallelDesc> parallel_desc,
-                                                        Symbol<cfg::NdSbp> nd_sbp) {
+                                                        Symbol<NdSbp> nd_sbp) {
   const auto& axis2is_selected = JUST(GetAxis2IsBroadcast(nd_sbp));
   return GetSelectedSubParallelDesc(parallel_desc, axis2is_selected);
 }
 
 namespace {
 
-Maybe<Symbol<cfg::NdSbp>> MakeNdSbp(const cfg::SbpParallel& sbp) {
-  cfg::NdSbp nd_sbp;
+Maybe<Symbol<NdSbp>> MakeNdSbp(const SbpParallel& sbp) {
+  NdSbp nd_sbp;
   nd_sbp.mutable_sbp_parallel()->Add()->CopyFrom(sbp);
   return SymbolOf(nd_sbp);
 }
 
 Maybe<void> InitShapeAxis2NdSbpIndexes(
-    Symbol<cfg::NdSbp> nd_sbp, std::vector<std::vector<int64_t>>* shape_axis2nd_sbp_indexes) {
+    Symbol<NdSbp> nd_sbp, std::vector<std::vector<int64_t>>* shape_axis2nd_sbp_indexes) {
   for (int i = 0; i < nd_sbp->sbp_parallel_size(); ++i) {
     const auto& sbp = nd_sbp->sbp_parallel(i);
     if (sbp.has_split_parallel()) {
@@ -234,11 +234,11 @@ Maybe<void> InitOldAxis2NewAxisOffset(std::vector<int64_t>* old_axis2new_axis_of
   return Maybe<void>::Ok();
 }
 
-Maybe<Symbol<cfg::NdSbp>> ShiftSplitAxis(
-    Symbol<cfg::NdSbp> nd_sbp, const std::vector<std::vector<int64_t>>& shape_axis2nd_sbp_indexes,
+Maybe<Symbol<NdSbp>> ShiftSplitAxis(
+    Symbol<NdSbp> nd_sbp, const std::vector<std::vector<int64_t>>& shape_axis2nd_sbp_indexes,
     const std::vector<int64_t>& old_axis2new_axis_offset) {
   CHECK_EQ_OR_RETURN(shape_axis2nd_sbp_indexes.size(), old_axis2new_axis_offset.size());
-  cfg::NdSbp new_nd_sbp(*nd_sbp);
+  NdSbp new_nd_sbp(*nd_sbp);
   for (int axis = 0; axis < shape_axis2nd_sbp_indexes.size(); ++axis) {
     int64_t offset = old_axis2new_axis_offset.at(axis);
     for (int64_t j = 0; j < shape_axis2nd_sbp_indexes.at(axis).size(); ++j) {
@@ -256,10 +256,9 @@ Maybe<Symbol<cfg::NdSbp>> ShiftSplitAxis(
 
 }  // namespace
 
-Maybe<std::tuple<std::shared_ptr<const Shape>, Symbol<cfg::NdSbp>, Symbol<cfg::NdSbp>>>
+Maybe<std::tuple<std::shared_ptr<const Shape>, Symbol<NdSbp>, Symbol<NdSbp>>>
 CalcDecomposableEquivalentShapeAndNdSbpPair(const Shape& shape, const Shape& hierarchy,
-                                            Symbol<cfg::NdSbp> src_nd_sbp,
-                                            Symbol<cfg::NdSbp> dst_nd_sbp) {
+                                            Symbol<NdSbp> src_nd_sbp, Symbol<NdSbp> dst_nd_sbp) {
   CHECK_EQ_OR_RETURN(src_nd_sbp->sbp_parallel_size(), dst_nd_sbp->sbp_parallel_size());
   std::vector<std::vector<int64_t>> shape_axis2src_nd_sbp_indexes(shape.NumAxes());
   JUST(InitShapeAxis2NdSbpIndexes(src_nd_sbp, &shape_axis2src_nd_sbp_indexes));
@@ -273,9 +272,9 @@ CalcDecomposableEquivalentShapeAndNdSbpPair(const Shape& shape, const Shape& hie
   CHECK_EQ_OR_RETURN(new_shape->elem_cnt(), shape.elem_cnt());
   std::vector<int64_t> old_axis2new_axis_offset(shape.NumAxes());
   JUST(InitOldAxis2NewAxisOffset(&old_axis2new_axis_offset, shape_axis2expanded_dims));
-  Symbol<cfg::NdSbp> new_src_nd_sbp =
+  Symbol<NdSbp> new_src_nd_sbp =
       JUST(ShiftSplitAxis(src_nd_sbp, shape_axis2src_nd_sbp_indexes, old_axis2new_axis_offset));
-  Symbol<cfg::NdSbp> new_dst_nd_sbp =
+  Symbol<NdSbp> new_dst_nd_sbp =
       JUST(ShiftSplitAxis(dst_nd_sbp, shape_axis2dst_nd_sbp_indexes, old_axis2new_axis_offset));
   return std::make_tuple(new_shape, new_src_nd_sbp, new_dst_nd_sbp);
 }
@@ -289,10 +288,10 @@ namespace {
 // 3) (S1, S1) is not decomposable.
 // although `nd_sbp (S0, S0) on shape (4, 4)` is not decomposable, they could be transformed into a
 // decomposable form: `n_sbp (S0, S1) on shape (2, 2, 4)`.
-Maybe<std::pair<Symbol<one::ConsistentTensorMeta>, Symbol<cfg::NdSbp>>> CalcDecomposableEquivalent(
-    Symbol<one::ConsistentTensorMeta> tensor_meta, Symbol<cfg::NdSbp> dst_nd_sbp) {
+Maybe<std::pair<Symbol<one::ConsistentTensorMeta>, Symbol<NdSbp>>> CalcDecomposableEquivalent(
+    Symbol<one::ConsistentTensorMeta> tensor_meta, Symbol<NdSbp> dst_nd_sbp) {
   std::shared_ptr<const Shape> shape = tensor_meta->shape_ptr();
-  Symbol<cfg::NdSbp> src_nd_sbp = tensor_meta->nd_sbp();
+  Symbol<NdSbp> src_nd_sbp = tensor_meta->nd_sbp();
   const auto& hierarchy = tensor_meta->parallel_desc()->hierarchy();
   std::tie(shape, src_nd_sbp, dst_nd_sbp) = *JUST(
       CalcDecomposableEquivalentShapeAndNdSbpPair(*shape, *hierarchy, src_nd_sbp, dst_nd_sbp));
@@ -306,8 +305,8 @@ static constexpr auto* GetDecomposableEquivalent =
     DECORATE(&CalcDecomposableEquivalent, ThreadLocal);
 
 Maybe<void> InitDstNdSbpAxis2ExclusiveSrcNdSbpAxis(
-    HashMap<int64_t, int64_t>* dst_nd_sbp_axis2exclusive_src_nd_sbp_axis,
-    Symbol<cfg::NdSbp> src_nd_sbp, Symbol<cfg::NdSbp> dst_nd_sbp) {
+    HashMap<int64_t, int64_t>* dst_nd_sbp_axis2exclusive_src_nd_sbp_axis, Symbol<NdSbp> src_nd_sbp,
+    Symbol<NdSbp> dst_nd_sbp) {
   HashMap<int64_t, int64_t> split_axis2src_nd_sbp_axis;
   for (int i = 0; i < src_nd_sbp->sbp_parallel_size(); ++i) {
     const auto& sbp_parallel = src_nd_sbp->sbp_parallel(i);
@@ -330,7 +329,7 @@ Maybe<void> InitDstNdSbpAxis2ExclusiveSrcNdSbpAxis(
 
 Maybe<void> MakeExclusiveSrcNdSbpAxis4DstNdSbpAxis(
     std::function<Maybe<Optional<int64_t>>(int64_t)>* ExclusiveSrcNdSbpAxis4DstNdSbpAxis,
-    Symbol<cfg::NdSbp> src_nd_sbp, Symbol<cfg::NdSbp> dst_nd_sbp) {
+    Symbol<NdSbp> src_nd_sbp, Symbol<NdSbp> dst_nd_sbp) {
   CHECK_EQ_OR_RETURN(src_nd_sbp->sbp_parallel_size(), dst_nd_sbp->sbp_parallel_size());
   HashMap<int64_t, int64_t> split_axis2src_nd_sbp_axis;
   for (int i = 0; i < src_nd_sbp->sbp_parallel_size(); ++i) {
@@ -389,8 +388,7 @@ Maybe<bool> IsNdSbpBoxingAcyclic(
 }
 
 Maybe<void> InitNdSbpValidTransformationAxisSequence(
-    std::vector<int64_t>* nd_sbp_axis_sequence, Symbol<cfg::NdSbp> src_nd_sbp,
-    Symbol<cfg::NdSbp> dst_nd_sbp,
+    std::vector<int64_t>* nd_sbp_axis_sequence, Symbol<NdSbp> src_nd_sbp, Symbol<NdSbp> dst_nd_sbp,
     const std::function<Maybe<Optional<int64_t>>(int64_t)>& ExclusiveSrcNdSbpAxis4DstNdSbpAxis) {
   CHECK_EQ_OR_RETURN(src_nd_sbp->sbp_parallel_size(), dst_nd_sbp->sbp_parallel_size());
   int64_t num_axes = src_nd_sbp->sbp_parallel_size();
@@ -417,15 +415,15 @@ Maybe<void> InitNdSbpValidTransformationAxisSequence(
 
 }  // namespace
 
-Maybe<bool> IsNdSbpBoxingAcyclic(Symbol<cfg::NdSbp> src_nd_sbp, Symbol<cfg::NdSbp> dst_nd_sbp) {
+Maybe<bool> IsNdSbpBoxingAcyclic(Symbol<NdSbp> src_nd_sbp, Symbol<NdSbp> dst_nd_sbp) {
   std::function<Maybe<Optional<int64_t>>(int64_t)> ExclusiveSrcNdSbpAxis4DstNdSbpAxis;
   JUST(MakeExclusiveSrcNdSbpAxis4DstNdSbpAxis(&ExclusiveSrcNdSbpAxis4DstNdSbpAxis, src_nd_sbp,
                                               dst_nd_sbp));
   return IsNdSbpBoxingAcyclic(src_nd_sbp->sbp_parallel_size(), ExclusiveSrcNdSbpAxis4DstNdSbpAxis);
 }
 
-Maybe<std::vector<int64_t>> GetNdSbpValidTransformationAxisSequence(Symbol<cfg::NdSbp> src_nd_sbp,
-                                                                    Symbol<cfg::NdSbp> dst_nd_sbp) {
+Maybe<std::vector<int64_t>> GetNdSbpValidTransformationAxisSequence(Symbol<NdSbp> src_nd_sbp,
+                                                                    Symbol<NdSbp> dst_nd_sbp) {
   HashMap<int64_t, int64_t> dst_nd_sbp_axis2exclusive_src_nd_sbp_axis;
   std::function<Maybe<Optional<int64_t>>(int64_t)> ExclusiveSrcNdSbpAxis4DstNdSbpAxis;
   JUST(MakeExclusiveSrcNdSbpAxis4DstNdSbpAxis(&ExclusiveSrcNdSbpAxis4DstNdSbpAxis, src_nd_sbp,
@@ -441,7 +439,7 @@ Maybe<std::vector<int64_t>> GetNdSbpValidTransformationAxisSequence(Symbol<cfg::
 }
 
 std::string GetCyclicBoxingDebugString(
-    Symbol<cfg::NdSbp> src_nd_sbp, Symbol<cfg::NdSbp> dst_nd_sbp,
+    Symbol<NdSbp> src_nd_sbp, Symbol<NdSbp> dst_nd_sbp,
     const std::function<Maybe<Optional<int64_t>>(int64_t)>& ExclusiveSrcNdSbpAxis4DstNdSbpAxis) {
   CHECK_EQ(src_nd_sbp->sbp_parallel_size(), dst_nd_sbp->sbp_parallel_size());
   std::stringstream ss;
@@ -463,7 +461,7 @@ std::string GetCyclicBoxingDebugString(
   return ss.str();
 }
 
-Maybe<Shape> GetPhysicalShape(const Shape& shape, Symbol<cfg::NdSbp> nd_sbp,
+Maybe<Shape> GetPhysicalShape(const Shape& shape, Symbol<NdSbp> nd_sbp,
                               Symbol<ParallelDesc> parallel_desc) {
   const auto& parallel_id = JUST(GetParallelId4CurrentProcessCtx(parallel_desc));
   return GetPhysicalShape(shape, *nd_sbp, *parallel_desc, JUST(*parallel_id));
@@ -471,7 +469,7 @@ Maybe<Shape> GetPhysicalShape(const Shape& shape, Symbol<cfg::NdSbp> nd_sbp,
 
 Maybe<Symbol<one::ConsistentTensorMeta>> CalcSubConsistentTensorMeta(
     Symbol<one::ConsistentTensorMeta> tensor_meta, Symbol<ParallelDesc> sub_parallel_desc,
-    Symbol<cfg::NdSbp> sub_nd_sbp) {
+    Symbol<NdSbp> sub_nd_sbp) {
   const auto& physical_shape = JUST(
       GetPhysicalShape(tensor_meta->shape(), tensor_meta->nd_sbp(), tensor_meta->parallel_desc()));
   const auto& logical_shape =
@@ -484,25 +482,25 @@ Maybe<Symbol<one::ConsistentTensorMeta>> CalcSubConsistentTensorMeta(
 static constexpr auto* GetSubConsistentTensorMeta =
     DECORATE(&CalcSubConsistentTensorMeta, ThreadLocal);
 
-Maybe<Symbol<cfg::NdSbp>> ReplaceNdSbpComponent(Symbol<cfg::NdSbp> nd_sbp, int64_t axis,
-                                                Symbol<cfg::NdSbp> component) {
+Maybe<Symbol<NdSbp>> ReplaceNdSbpComponent(Symbol<NdSbp> nd_sbp, int64_t axis,
+                                           Symbol<NdSbp> component) {
   CHECK_GE_OR_RETURN(axis, 0);
   CHECK_LT_OR_RETURN(axis, nd_sbp->sbp_parallel_size());
   CHECK_EQ_OR_RETURN(component->sbp_parallel_size(), 1);
-  cfg::NdSbp new_nd_sbp(*nd_sbp);
+  NdSbp new_nd_sbp(*nd_sbp);
   *new_nd_sbp.mutable_sbp_parallel(axis) = component->sbp_parallel(0);
   return SymbolOf(new_nd_sbp);
 }
 
 Maybe<Symbol<one::ConsistentTensorMeta>> ReplaceNdSbp(Symbol<one::ConsistentTensorMeta> tensor_meta,
-                                                      Symbol<cfg::NdSbp> nd_sbp) {
+                                                      Symbol<NdSbp> nd_sbp) {
   one::ConsistentTensorMeta new_tensor_meta(tensor_meta->shape_ptr(), tensor_meta->dtype(), nd_sbp,
                                             tensor_meta->parallel_desc());
   return SymbolOf(new_tensor_meta);
 }
 
 Maybe<std::vector<NaiveBoxingTransformation>> DecomposeIntoNaiveTransformations(
-    Symbol<one::ConsistentTensorMeta> tensor_meta, Symbol<cfg::NdSbp> dst_nd_sbp) {
+    Symbol<one::ConsistentTensorMeta> tensor_meta, Symbol<NdSbp> dst_nd_sbp) {
   std::tie(tensor_meta, dst_nd_sbp) = *JUST(GetDecomposableEquivalent(tensor_meta, dst_nd_sbp));
   const auto& parallel_desc = tensor_meta->parallel_desc();
   const auto& src_nd_sbp = tensor_meta->nd_sbp();
@@ -633,8 +631,8 @@ Maybe<void> RawCheckIsNdSbpBoxingAcyclicWithDecompose(Symbol<PlacedNdSbp> in,
                                                       Symbol<PlacedNdSbp> out,
                                                       const Shape& logical_shape) {
   using namespace private_details;
-  Symbol<cfg::NdSbp> src_nd_sbp = in->nd_sbp();
-  Symbol<cfg::NdSbp> dst_nd_sbp = out->nd_sbp();
+  Symbol<NdSbp> src_nd_sbp = in->nd_sbp();
+  Symbol<NdSbp> dst_nd_sbp = out->nd_sbp();
   const auto& hierarchy = in->placement()->hierarchy();
   std::shared_ptr<const Shape> shape;
 

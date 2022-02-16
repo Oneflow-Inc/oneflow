@@ -31,7 +31,7 @@ namespace shape_inference {
 
 void InferShape(XrtGraph* graph, const XrtPassOptions& options, const ParallelContext* parallel_ctx,
                 const ParallelDesc* parallel_desc,
-                const util::PbMap<std::string, cfg::SbpSignature>* sbp_signatures,
+                const util::PbMap<std::string, SbpSignature>* sbp_signatures,
                 const util::PbMap<std::string, BlobDescProto>* lbn2logical_blob_desc_proto,
                 util::Map<std::string, BlobDesc>* blob_descs) {
   algorithm::TopologyVisit(*graph, [&](XrtNode* node) {
@@ -63,7 +63,7 @@ void InferShape(XrtGraph* graph, const XrtPassOptions& options, const ParallelCo
       };
       CHECK_JUST(op->FillLogicalInBlobDesc(GetLogicalBlobDesc4BnInOp));
       CHECK_JUST(op->FillLogicalOutBlobDesc(GetLogicalBlobDesc4BnInOp));
-      const cfg::SbpSignature& sbp_signature = sbp_signatures->at(node->name());
+      const SbpSignature& sbp_signature = sbp_signatures->at(node->name());
       CHECK_JUST(op->FillSbpSignature(sbp_signature));
       CHECK_JUST(op->InferOutBlobDescsIf(get_blob_desc_fn, parallel_ctx));
     }
@@ -92,8 +92,7 @@ class InferShapePass : public XrtPass {
                                   "InferShapePass.";
     const auto* parallel_ctx = any_cast<const ParallelContext*>(params[0]);
     const auto* parallel_desc = any_cast<const ParallelDesc*>(params[1]);
-    const auto* sbp_signatures =
-        any_cast<const util::PbMap<std::string, cfg::SbpSignature>*>(params[2]);
+    const auto* sbp_signatures = any_cast<const util::PbMap<std::string, SbpSignature>*>(params[2]);
     const auto* lbn2logical_blob_desc_proto =
         any_cast<const util::PbMap<std::string, BlobDescProto>*>(params[3]);
     auto* blob_descs = any_cast<util::Map<std::string, BlobDesc>*>(params[4]);

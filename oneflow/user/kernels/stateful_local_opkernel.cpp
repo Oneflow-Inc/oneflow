@@ -236,15 +236,14 @@ class LocalUserKernelInitAndCacheContext final : public user_op::KernelInitConte
                                                                int32_t index) const override {
     return base_ctx_.ConsistentTensorMetaView4ArgNameAndIndex(arg_name, index);
   }
-  const cfg::SbpParallel& SbpParallel4ArgNameAndIndex(const std::string& arg_name,
-                                                      int32_t index) const override {
+  const SbpParallel& SbpParallel4ArgNameAndIndex(const std::string& arg_name,
+                                                 int32_t index) const override {
     const auto& nd_sbp = NdSbp4ArgNameAndIndex(arg_name, index);
     CHECK_EQ(nd_sbp.sbp_parallel_size(), 1);
     return nd_sbp.sbp_parallel(0);
   }
 
-  const cfg::NdSbp& NdSbp4ArgNameAndIndex(const std::string& arg_name,
-                                          int32_t index) const override {
+  const NdSbp& NdSbp4ArgNameAndIndex(const std::string& arg_name, int32_t index) const override {
     return *CHECK_NOTNULL(base_ctx_.ConsistentTensorMeta4ArgNameAndIndex(arg_name, index))
                 ->nd_sbp();
   }

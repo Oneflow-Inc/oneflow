@@ -20,7 +20,7 @@ limitations under the License.
 #include "oneflow/core/common/util.h"
 #include "oneflow/core/common/symbol.h"
 #include "oneflow/core/common/optional.h"
-#include "oneflow/core/job/sbp_parallel.cfg.h"
+#include "oneflow/core/job/sbp_parallel.h"
 #include "oneflow/core/operator/op_conf.pb.h"
 #include "oneflow/core/framework/attr_map.h"
 #include "oneflow/core/framework/device.h"
@@ -172,9 +172,9 @@ class ConsistentToConsistentOpExpr : public OpExpr {
  public:
   virtual ~ConsistentToConsistentOpExpr() = default;
 
-  static Maybe<ConsistentToConsistentOpExpr> New(const Optional<Symbol<cfg::NdSbp>>& grad_nd_sbp);
+  static Maybe<ConsistentToConsistentOpExpr> New(const Optional<Symbol<NdSbp>>& grad_nd_sbp);
 
-  const Optional<Symbol<cfg::NdSbp>>& grad_nd_sbp() const { return grad_nd_sbp_; }
+  const Optional<Symbol<NdSbp>>& grad_nd_sbp() const { return grad_nd_sbp_; }
   const std::string& op_type_name() const override;
   int input_size() const override { return 1; }
   int output_size() const override { return 1; }
@@ -183,9 +183,9 @@ class ConsistentToConsistentOpExpr : public OpExpr {
   Maybe<OpExprGradClosure> GetOrCreateOpGradClosure() const override;
 
  protected:
-  ConsistentToConsistentOpExpr(const Optional<Symbol<cfg::NdSbp>>& grad_nd_sbp);
+  ConsistentToConsistentOpExpr(const Optional<Symbol<NdSbp>>& grad_nd_sbp);
 
-  Optional<Symbol<cfg::NdSbp>> grad_nd_sbp_;  //  Reserved for configuring grad sbp
+  Optional<Symbol<NdSbp>> grad_nd_sbp_;  //  Reserved for configuring grad sbp
   mutable std::shared_ptr<OpExprGradFunctionIf> op_grad_func_;
 };
 

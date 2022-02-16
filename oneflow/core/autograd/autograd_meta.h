@@ -31,9 +31,7 @@ class Shape;
 
 class Device;
 class ParallelDesc;
-namespace cfg {
 class NdSbp;
-}
 
 namespace one {
 
@@ -111,7 +109,7 @@ class TensorInfo final {
   Symbol<DType> dtype_;
   Optional<Symbol<Device>> device_;               // for local tensor
   Optional<Symbol<ParallelDesc>> parallel_desc_;  // for consistent tensor
-  Optional<Symbol<cfg::NdSbp>> nd_sbp_;           // for consistent tensor
+  Optional<Symbol<NdSbp>> nd_sbp_;                // for consistent tensor
 };
 
 }  // namespace one

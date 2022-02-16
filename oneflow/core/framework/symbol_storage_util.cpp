@@ -14,33 +14,18 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 #include "oneflow/core/common/util.h"
-#include "oneflow/core/vm/init_symbol_instruction_type.h"
 #include "oneflow/core/job/job_desc.h"
 #include "oneflow/core/job/scope.h"
 #include "oneflow/core/operator/op_node_signature.pb.h"
 #include "oneflow/core/operator/op_conf_symbol.h"
+#include "oneflow/core/vm/symbol_storage.h"
 
 namespace oneflow {
-namespace vm {
 
+COMMAND(Global<symbol::Storage<ParallelDesc>>::SetAllocated(new symbol::Storage<ParallelDesc>()));
 COMMAND(Global<symbol::Storage<Scope>>::SetAllocated(new symbol::Storage<Scope>()));
-using ScopeInstr = vm::InitSymbolInstructionType<Scope>;
-COMMAND(vm::RegisterInstructionType<ScopeInstr>("InitScopeSymbol"));
-
 COMMAND(Global<symbol::Storage<JobDesc>>::SetAllocated(new symbol::Storage<JobDesc>()));
-using JobDescInstr = vm::InitSymbolInstructionType<JobDesc>;
-COMMAND(vm::RegisterInstructionType<JobDescInstr>("InitJobDescSymbol"));
-
 COMMAND(Global<symbol::Storage<OperatorConfSymbol>>::SetAllocated(
     new symbol::Storage<OperatorConfSymbol>()));
 
-using OperatorConfInstr = vm::InitSymbolInstructionType<OperatorConfSymbol>;
-COMMAND(vm::RegisterInstructionType<OperatorConfInstr>("InitOperatorConfSymbol"));
-
-COMMAND(Global<symbol::Storage<OpNodeSignatureDesc>>::SetAllocated(
-    new symbol::Storage<OpNodeSignatureDesc>()));
-using OpNodeSignatureInstr = vm::InitSymbolInstructionType<OpNodeSignatureDesc>;
-COMMAND(vm::RegisterInstructionType<OpNodeSignatureInstr>("InitOpNodeSignatureDescSymbol"));
-
-}  // namespace vm
 }  // namespace oneflow

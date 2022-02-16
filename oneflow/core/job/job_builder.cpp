@@ -37,40 +37,40 @@ int64_t GetParallelHierarchyNumAxes(
 
 void SetNdSbpSignature4Oba(Job* job,
                            HashMap<std::string, NdSbpSignature*>* op_name2nd_sbp_signature_map,
-                           const OpBlobArg& oba, const cfg::NdSbp& nd_sbp) {
+                           const OpBlobArg& oba, const NdSbp& nd_sbp) {
   auto* nd_sbp_sig = &(*job->mutable_job_parallel_view_conf()
                             ->mutable_op_name2nd_sbp_signature_conf())[oba.op_name()];
-  nd_sbp.ToProto(&(*nd_sbp_sig->mutable_bn_in_op2nd_sbp())[oba.bn_in_op()]);
+  (*nd_sbp_sig->mutable_bn_in_op2nd_sbp())[oba.bn_in_op()] = nd_sbp;
   auto* op_name2nd_sbp_signature_conf =
       job->mutable_job_parallel_view_conf()->mutable_op_name2nd_sbp_signature_conf();
   (*op_name2nd_sbp_signature_map)[oba.op_name()] = &(*op_name2nd_sbp_signature_conf)[oba.op_name()];
 }
 
-void SetSbpSignature4Oba(Job* job, const OpBlobArg& oba, const cfg::SbpParallel& sbp_parallel) {
+void SetSbpSignature4Oba(Job* job, const OpBlobArg& oba, const SbpParallel& sbp_parallel) {
   auto* sbp_sig = &(
       *job->mutable_job_parallel_view_conf()->mutable_op_name2sbp_signature_conf())[oba.op_name()];
-  sbp_parallel.ToProto(&(*sbp_sig->mutable_bn_in_op2sbp_parallel())[oba.bn_in_op()]);
+  (*sbp_sig->mutable_bn_in_op2sbp_parallel())[oba.bn_in_op()] = sbp_parallel;
 }
 
 void AddOrSetNdSbpSignature4OpName(
     Job* job, HashMap<std::string, NdSbpSignature*>* op_name2nd_sbp_signature_map,
-    const std::string& op_name, const cfg::NdSbpSignature& nd_sbp_signature) {
+    const std::string& op_name, const NdSbpSignature& nd_sbp_signature) {
   const auto& it = op_name2nd_sbp_signature_map->find(op_name);
   if (it != op_name2nd_sbp_signature_map->end()) {
-    nd_sbp_signature.ToProto(it->second);
+    *it->second = nd_sbp_signature;
   } else {
     auto* op_name2nd_sbp_signature_conf =
         job->mutable_job_parallel_view_conf()->mutable_op_name2nd_sbp_signature_conf();
-    nd_sbp_signature.ToProto(&(*op_name2nd_sbp_signature_conf)[op_name]);
+    (*op_name2nd_sbp_signature_conf)[op_name] = nd_sbp_signature;
     op_name2nd_sbp_signature_map->emplace(op_name, &(*op_name2nd_sbp_signature_conf)[op_name]);
   }
 }
 
 void AddOrSetSbpSignature4OpName(Job* job, const std::string& op_name,
-                                 const cfg::SbpSignature& sbp_signature) {
+                                 const SbpSignature& sbp_signature) {
   auto* op_name2sbp_signature_conf =
       job->mutable_job_parallel_view_conf()->mutable_op_name2sbp_signature_conf();
-  sbp_signature.ToProto(&(*op_name2sbp_signature_conf)[op_name]);
+  (*op_name2sbp_signature_conf)[op_name] = sbp_signature;
 }
 
 }  // namespace
@@ -114,8 +114,7 @@ JobBuilder::JobBuilder(Job* job) : job_(job) {
       const auto& op_name2sbp_sig = job_parallel_view_conf->op_name2sbp_signature_conf();
       const auto it = op_name2sbp_sig.find(pair.first);
       CHECK(it != op_name2sbp_sig.end());
-      CheckSbpSignatureAndNdSbpEquals(cfg::SbpSignature(it->second),
-                                      cfg::NdSbpSignature(pair.second));
+      CheckSbpSignatureAndNdSbpEquals(SbpSignature(it->second), NdSbpSignature(pair.second));
     }
   }
   FOR_RANGE(int32_t, i, 0, job->placement().blob_placement_group_size()) {
@@ -329,34 +328,34 @@ SbpParallel* JobBuilder::MutSbpParallel4Oba(const OpBlobArg& oba) const {
   return &(*sbp_sig->mutable_bn_in_op2sbp_parallel())[oba.bn_in_op()];
 }
 
-void JobBuilder::SetSbpParallel4Oba(const OpBlobArg& oba, const cfg::SbpParallel& sbp_parallel) {
+void JobBuilder::SetSbpParallel4Oba(const OpBlobArg& oba, const SbpParallel& sbp_parallel) {
   CHECK_EQ(GetParallelHierarchyNumAxes(op_name2parallel_conf_, oba.op_name()), 1);
   SetSbpSignature4Oba(job_, oba, sbp_parallel);
-  cfg::NdSbp nd_sbp;
+  NdSbp nd_sbp;
   *nd_sbp.add_sbp_parallel() = sbp_parallel;
   SetNdSbpSignature4Oba(job_, &op_name2nd_sbp_signature_conf_, oba, nd_sbp);
 }
 
-void JobBuilder::SetNdSbp4Oba(const OpBlobArg& oba, const cfg::NdSbp& nd_sbp) {
+void JobBuilder::SetNdSbp4Oba(const OpBlobArg& oba, const NdSbp& nd_sbp) {
   SetNdSbpSignature4Oba(job_, &op_name2nd_sbp_signature_conf_, oba, nd_sbp);
   if (GetParallelHierarchyNumAxes(op_name2parallel_conf_, oba.op_name()) == 1) {
     SetSbpSignature4Oba(job_, oba, nd_sbp.sbp_parallel(0));
   }
 }
 
-const cfg::SbpSignature JobBuilder::SbpSignature4OpName(const std::string& op_name) const {
+const SbpSignature JobBuilder::SbpSignature4OpName(const std::string& op_name) const {
   CHECK_EQ(GetParallelHierarchyNumAxes(op_name2parallel_conf_, op_name), 1);
   const auto& it = op_name2nd_sbp_signature_conf_.find(op_name);
   CHECK(it != op_name2nd_sbp_signature_conf_.end());
 
-  cfg::SbpSignature sbp_sig_conf;
+  SbpSignature sbp_sig_conf;
   NdSbpSignatureToSbpSignature(*it->second, &sbp_sig_conf);
   return sbp_sig_conf;
 }
 
 void JobBuilder::AddSbpSignature4OpName(const std::string& op_name,
-                                        const cfg::SbpSignature& sbp_signature) {
-  cfg::NdSbpSignature nd_sbp_signature;
+                                        const SbpSignature& sbp_signature) {
+  NdSbpSignature nd_sbp_signature;
   SbpSignatureToNdSbpSignature(sbp_signature, &nd_sbp_signature);
   AddOrSetNdSbpSignature4OpName(job_, &op_name2nd_sbp_signature_conf_, op_name, nd_sbp_signature);
   CHECK_EQ(GetParallelHierarchyNumAxes(op_name2parallel_conf_, op_name), 1);
@@ -370,10 +369,10 @@ const NdSbpSignature& JobBuilder::NdSbpSignature4OpName(const std::string& op_na
 }
 
 void JobBuilder::AddNdSbpSignature4OpName(const std::string& op_name,
-                                          const cfg::NdSbpSignature& nd_sbp_signature) {
+                                          const NdSbpSignature& nd_sbp_signature) {
   AddOrSetNdSbpSignature4OpName(job_, &op_name2nd_sbp_signature_conf_, op_name, nd_sbp_signature);
   if (GetParallelHierarchyNumAxes(op_name2parallel_conf_, op_name) == 1) {
-    cfg::SbpSignature sbp_signature;
+    SbpSignature sbp_signature;
     NdSbpSignatureToSbpSignature(nd_sbp_signature, &sbp_signature);
     AddOrSetSbpSignature4OpName(job_, op_name, sbp_signature);
   }

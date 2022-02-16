@@ -316,13 +316,12 @@ Maybe<void> NNGraph::GetVariableRealBlobAfterSyncPlan() {
           plan_.job_id2op_attribute_ref_table().at(job_id).op_name2op_attribute().at(var_name);
       // NOTE(chengcheng): handle constant variable created by job pass
       Symbol<ParallelDesc> placement(op_attribute.parallel_conf_signature().op_parallel_conf());
-      cfg::NdSbp nd_sbp(
-          cfg::NdSbpSignature(op_attribute.nd_sbp_signature()).bn_in_op2nd_sbp().at("out"));
+      NdSbp nd_sbp(NdSbpSignature(op_attribute.nd_sbp_signature()).bn_in_op2nd_sbp().at("out"));
       const BlobDesc blob_desc(
           op_attribute.logical_blob_desc_signature().bn_in_op2blob_desc().at("out"));
       DType dtype(blob_desc.data_type());
-      std::shared_ptr<std::vector<Symbol<cfg::SbpParallel>>> sbp_tuple =
-          JUST(GetSbpList(Symbol<cfg::NdSbp>(nd_sbp)));
+      std::shared_ptr<std::vector<Symbol<SbpParallel>>> sbp_tuple =
+          JUST(GetSbpList(Symbol<NdSbp>(nd_sbp)));
 
       auto load_tensor_iter = additional_variable_op_tobe_loaded_name2tensor_.find(var_name);
       if (load_tensor_iter == additional_variable_op_tobe_loaded_name2tensor_.end()) {
@@ -346,7 +345,7 @@ Maybe<void> NNGraph::GetVariableRealBlobAfterSyncPlan() {
       } else {
         // Load a additional variable tensor
         auto lazy_mode_disabled_guard = LazyMode::Guard(/*is_enabled*/ false);
-        std::vector<Symbol<cfg::SbpParallel>> grad_sbp_tuple;
+        std::vector<Symbol<SbpParallel>> grad_sbp_tuple;
         // To consistent from a local or consistent tensor.
         tensor = JUST(one::functional::ToConsistent(load_tensor_iter->second, placement, *sbp_tuple,
                                                     grad_sbp_tuple));
@@ -366,19 +365,18 @@ Maybe<void> NNGraph::GetVariableRealBlobAfterSyncPlan() {
       var_blob = JUST(local_var->eager_blob_object())->mut_blob();
     } else if (tensor->is_consistent()) {
       // Deal with tensors which need to change sbp.
-      cfg::NdSbpSignature var_nd_sbp_signature =
-          cfg::NdSbpSignature(plan_.job_id2op_attribute_ref_table()
-                                  .at(job_id)
-                                  .op_name2op_attribute()
-                                  .at(var_name)
-                                  .nd_sbp_signature());
-      cfg::NdSbp optimized_nd_sbp = var_nd_sbp_signature.bn_in_op2nd_sbp().at("out");
+      NdSbpSignature var_nd_sbp_signature = NdSbpSignature(plan_.job_id2op_attribute_ref_table()
+                                                               .at(job_id)
+                                                               .op_name2op_attribute()
+                                                               .at(var_name)
+                                                               .nd_sbp_signature());
+      NdSbp optimized_nd_sbp = var_nd_sbp_signature.bn_in_op2nd_sbp().at("out");
       // Change variable tensor's impl with new sbp when job pass has changed their sbp.
       if (*JUST(tensor->nd_sbp()) != optimized_nd_sbp) {
         VLOG(2) << "Graph with name " << name_ << " variable with name `" << var_name
                 << "` changes its' sbp from " << NdSbpToString(*JUST(tensor->nd_sbp())) << " to "
                 << NdSbpToString(optimized_nd_sbp) << " after compile optimization.";
-        std::vector<Symbol<cfg::SbpParallel>> optimized_sbp_parallels;
+        std::vector<Symbol<SbpParallel>> optimized_sbp_parallels;
         for (int i = 0; i < optimized_nd_sbp.sbp_parallel_size(); ++i) {
           optimized_sbp_parallels.emplace_back(optimized_nd_sbp.sbp_parallel(i));
         }

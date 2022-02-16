@@ -34,6 +34,7 @@ limitations under the License.
 #include "oneflow/core/framework/nd_sbp.h"
 #include "oneflow/core/eager/foreign_boxing_util.h"
 #include "oneflow/core/operator/operator.h"
+#include "oneflow/core/job/sbp_parallel.h"
 #include "oneflow/core/job/job_build_and_infer_ctx_mgr.h"
 #include "oneflow/core/vm/vm_util.h"
 
@@ -65,7 +66,7 @@ Maybe<Tensor> BuildTensor(const OpAttribute& op_attribute, const std::string& bn
     auto nd_sbp_it = nd_sbp_sign_map.find(bn_in_op);
     CHECK_OR_RETURN(nd_sbp_it != nd_sbp_sign_map.end())
         << "nd_sbp of " << bn_in_op << " not found in op " << op_attribute.op_conf().name();
-    cfg::NdSbp nd_sbp(nd_sbp_it->second);
+    NdSbp nd_sbp(nd_sbp_it->second);
     const auto& tensor = JUST(ConsistentTensor::MakeTensor(
         shape, dtype, SymbolOf(nd_sbp), SymbolOf(*parallel_desc), is_lazy,
         /*requires_grad=*/false, /*is_leaf=*/true));
@@ -98,7 +99,7 @@ Maybe<void> CheckTensorMatchAttr(const std::shared_ptr<Tensor>& tensor,
     auto nd_sbp_it = nd_sbp_sign_map.find(bn_in_op);
     CHECK_OR_RETURN(nd_sbp_it != nd_sbp_sign_map.end())
         << "nd_sbp of " << bn_in_op << " not found in op " << op_attribute.op_conf().name();
-    cfg::NdSbp nd_sbp(nd_sbp_it->second);
+    NdSbp nd_sbp(nd_sbp_it->second);
     CHECK_OR_RETURN(JUST(tensor->nd_sbp()) == SymbolOf(nd_sbp))
         << "The input sbp is not valid for an inplace operation, please try to use non-inplace.";
     CHECK_OR_RETURN(JUST(tensor->parallel_desc()) == SymbolOf(*parallel_desc));
@@ -140,7 +141,7 @@ Maybe<void> GenNdSbpByTensor(NdSbp* nd_sbp, const std::shared_ptr<Tensor>& tenso
     //   placement is only this rank, and SbpParallel is Broadcast.
     nd_sbp->add_sbp_parallel()->mutable_broadcast_parallel();
   } else {
-    JUST(tensor->nd_sbp())->ToProto(nd_sbp);
+    *nd_sbp = *JUST(tensor->nd_sbp());
   }
   return Maybe<void>::Ok();
 }
@@ -149,11 +150,11 @@ Maybe<void> GenVariableOpConfNdSbpStringByTensor(VariableOpConf* var_conf,
                                                  const std::shared_ptr<Tensor>& tensor) {
   var_conf->clear_nd_sbp();
   if (tensor->is_local()) {
-    cfg::SbpParallel broadcast;
+    SbpParallel broadcast;
     broadcast.mutable_broadcast_parallel();
     var_conf->add_nd_sbp(SbpParallelToString(broadcast));
   } else {
-    const cfg::NdSbp& nd_sbp = *JUST(tensor->nd_sbp());
+    const NdSbp& nd_sbp = *JUST(tensor->nd_sbp());
     for (const auto& sbp_parallel : nd_sbp.sbp_parallel()) {
       var_conf->add_nd_sbp(SbpParallelToString(sbp_parallel));
     }
