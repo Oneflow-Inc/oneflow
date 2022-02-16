@@ -550,6 +550,12 @@ jobs:
               repo: context.repo.repo,
               body: 'CI failed when running job: ${{ matrix.entry }}. PR label automerge has been removed'
             })
+      - name: Remove container
+        timeout-minutes: 45
+        if: ${{ always() && contains(matrix.runs-on, 'self-hosted') }}
+        run: |
+          docker rm -f ${{ env.TEST_CONTAINER_NAME }} || true
+          docker run --rm -v $PWD:$PWD -w $PWD busybox rm -rf *
 
   test:
     name: Test suite
