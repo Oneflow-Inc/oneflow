@@ -49,12 +49,6 @@ class ForeignCallback {
     UNIMPLEMENTED();
     return 0;
   }
-  // return parallel_desc_symbol_id
-  virtual int64_t MakeParallelDescSymbol(
-      const std::shared_ptr<cfg::ParallelConf>& parallel_conf) const {
-    UNIMPLEMENTED();
-    return 0;
-  }
 };
 
 }  // namespace oneflow

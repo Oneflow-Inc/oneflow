@@ -146,7 +146,7 @@ oneflow
             tensor, 
             tile, 
             to, 
-            to_consistent,
+            to_global,
             to_local,
             transpose,
             t,
@@ -171,5 +171,13 @@ oneflow
             topk,
             nms,
             cumprod,
+            HalfTensor,
+            FloatTensor,
+            DoubleTensor,
+            BoolTensor,
+            ByteTensor,
+            CharTensor,
+            IntTensor,
+            LongTensor,
 
 .. autofunction:: oneflow.relu

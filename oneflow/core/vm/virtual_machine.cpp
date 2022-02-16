@@ -23,11 +23,13 @@ limitations under the License.
 #include "oneflow/core/common/cpp_attribute.h"
 #include "oneflow/core/control/global_process_ctx.h"
 #include "oneflow/core/job/global_for.h"
+#include "oneflow/core/common/foreign_lock_helper.h"
 #include "oneflow/core/thread/thread_consistent_id.h"
 #include "oneflow/core/framework/transport_token.h"
 #include "oneflow/core/profiler/profiler.h"
 #include "oneflow/core/platform/include/pthread_fork.h"
 #include "oneflow/core/common/env_var.h"
+#include "oneflow/core/framework/device.h"
 
 namespace oneflow {
 
@@ -55,6 +57,13 @@ void GetSchedulerThreadInitializer(std::function<void()>* Initializer) {
     if (!CHECK_JUST(IsMultiClient())) { return; }
     CHECK_JUST(InitThisThreadUniqueConsistentId(kThreadConsistentIdScheduler, "scheduler"));
     OF_PROFILER_NAME_THIS_HOST_THREAD("_VM::Scheduler");
+  };
+}
+
+void GetCallbackThreadInitializer(std::function<void()>* Initializer) {
+  *Initializer = [&]() {
+    if (!CHECK_JUST(IsMultiClient())) { return; }
+    OF_PROFILER_NAME_THIS_HOST_THREAD("_VM::Callback");
   };
 }
 
@@ -106,12 +115,14 @@ void WorkerLoop(vm::ThreadCtx* thread_ctx, const std::function<void(vm::ThreadCt
 
 }  // namespace
 
-VirtualMachine::VirtualMachine(const Resource& resource, int64_t this_machine_id)
-    : vm_(intrusive::make_shared<vm::VirtualMachineEngine>(
-        vm::MakeVmDesc(resource, this_machine_id).Get())) {
+VirtualMachine::VirtualMachine(const Resource& resource, int64_t this_machine_id) {
+  // Class VirtualMachineEngine only cares the basic logical of vm, while class VirtualMachine
+  // manages threads and condition variables.
+  // In order to notify threads in VirtualMachineEngine, a notify callback lambda should be take as
+  // an argument for VirtualMachineEngine's constructor.
+  vm_ = intrusive::make_shared<vm::VirtualMachineEngine>(
+      vm::MakeVmDesc(resource, this_machine_id).Get(), [this]() { callback_notifier_.Notify(); });
   OF_PROFILER_NAME_THIS_HOST_THREAD("_Main");
-  std::function<void()> SchedulerInitializer;
-  GetSchedulerThreadInitializer(&SchedulerInitializer);
   std::function<void(vm::ThreadCtx*)> WorkerInitializer;
   GetWorkerThreadInitializer(vm_, &WorkerInitializer);
   CHECK_JUST(ForEachThreadCtx(vm_.Mutable(), [&](vm::ThreadCtx* thread_ctx) -> Maybe<void> {
@@ -119,7 +130,12 @@ VirtualMachine::VirtualMachine(const Resource& resource, int64_t this_machine_id
     worker_threads_.push_back(std::move(thread));
     return Maybe<void>::Ok();
   }));
-  schedule_thread_ = std::thread(&VirtualMachine::Loop, this, SchedulerInitializer);
+  std::function<void()> CallbackInitializer;
+  GetCallbackThreadInitializer(&CallbackInitializer);
+  callback_thread_ = std::thread(&VirtualMachine::CallbackLoop, this, CallbackInitializer);
+  std::function<void()> SchedulerInitializer;
+  GetSchedulerThreadInitializer(&SchedulerInitializer);
+  schedule_thread_ = std::thread(&VirtualMachine::ScheduleLoop, this, SchedulerInitializer);
 }
 
 namespace {
@@ -137,22 +153,23 @@ void MakeCtrlSeqInstructions(vm::VirtualMachineEngine* vm, vm::InstructionMsgLis
 }  // namespace
 
 void VirtualMachine::ControlSync() {
-  BlockingCounter bc(1);
+  auto bc = std::make_shared<BlockingCounter>(1);
   vm::InstructionMsgList list;
-  MakeCtrlSeqInstructions(mut_vm(), &list, [&] { bc.Decrease(); });
+  MakeCtrlSeqInstructions(mut_vm(), &list, [bc] { bc->Decrease(); });
   CHECK_JUST(Receive(&list));
-  CHECK_JUST(
-      bc.WaitUntilCntEqualZero(VirtualMachine::GetPredicatorNoMoreErasedLivelyInstructions()));
+  CHECK_JUST(bc->WaitUntilCntEqualZero(VirtualMachine::GetPredicatorNoMoreInstructionsFinished()));
 }
 
 VirtualMachine::~VirtualMachine() {
   ControlSync();
-  notifier_.Close();
+  pending_notifier_.Close();
   schedule_thread_.join();
   CHECK(!vm_);
+  callback_notifier_.Close();
+  callback_thread_.join();
 }
 
-std::function<Maybe<bool>()> VirtualMachine::GetPredicatorNoMoreErasedLivelyInstructions() {
+std::function<Maybe<bool>()> VirtualMachine::GetPredicatorNoMoreInstructionsFinished() {
   auto last_total_erased = std::make_shared<size_t>(0);
   auto* vm = Global<VirtualMachine>::Get();
   if (vm != nullptr) { *last_total_erased = vm->vm().total_erased_lively_instruction_cnt(); }
@@ -175,7 +192,7 @@ bool VirtualMachine::NoMoreErasedLivelyInstructions(
 }
 
 std::string VirtualMachine::GetBlockingDebugString() {
-  size_t limit = ThreadLocalEnvInteger<ONEFLOW_VM_BLOCKING_DEBUG_INSTRUCTIONS_DISPLAY_LIMIT>();
+  size_t limit = EnvInteger<ONEFLOW_VM_BLOCKING_DEBUG_INSTRUCTIONS_DISPLAY_LIMIT>();
   return vm_->GetLivelyInstructionListDebugString(limit);
 }
 
@@ -189,20 +206,39 @@ Maybe<void> VirtualMachine::Receive(vm::InstructionMsgList* instr_list) {
     }
     JUST(vm_->Receive(instr_list));
     while (!vm_->Empty()) { vm_->Schedule(); }
+    vm_->Callback();
+    // no scheduler processing gc, we must do it in current thread.
+    vm::InstructionMsgList garbage_msg_list;
+    vm_->mut_garbage_msg_list()->MoveTo(&garbage_msg_list);
   } else {
+    const int64_t kHighWaterMark = GetInstructionHighWaterMark();
+    if (vm_->flying_instruction_cnt() > kHighWaterMark) {
+      JUST(Global<ForeignLockHelper>::Get()->WithScopedRelease([&, this]() -> Maybe<void> {
+        auto bc = std::make_shared<BlockingCounter>(1);
+        vm_->InsertProbe([bc](vm::VirtualMachineEngine* vm) {
+          const int64_t kLowWaterMark = GetInstructionLowWaterMark();
+          if (vm->flying_instruction_cnt() > kLowWaterMark) { return false; }
+          bc->Decrease();
+          return true;
+        });
+        pending_notifier_.Notify();
+        JUST(bc->WaitUntilCntEqualZero(VirtualMachine::GetPredicatorNoMoreInstructionsFinished()));
+        return Maybe<void>::Ok();
+      }));
+    }
     if (JUST(vm_->Receive(instr_list))) {
       // old pending_instruction_list is empty.
-      notifier_.Notify();
+      pending_notifier_.Notify();
     }
   }
   return Maybe<void>::Ok();
 }
 
-void VirtualMachine::Loop(const std::function<void()>& Initializer) {
+void VirtualMachine::ScheduleLoop(const std::function<void()>& Initializer) {
   Initializer();
   auto* vm = mut_vm();
-  while (notifier_.WaitAndClearNotifiedCnt() == kNotifierStatusSuccess) {
-    OF_PROFILER_RANGE_PUSH("VirtualMachine::Loop");
+  while (pending_notifier_.WaitAndClearNotifiedCnt() == kNotifierStatusSuccess) {
+    OF_PROFILER_RANGE_PUSH("VirtualMachine::ScheduleLoop");
     auto start = std::chrono::steady_clock::now();
     static constexpr int kWorkingMicroseconds = 1000;
     // Every time this thread wakes up, vm is scheduled for about `kWorkingMicroseconds`.
@@ -217,27 +253,37 @@ void VirtualMachine::Loop(const std::function<void()>& Initializer) {
       int i = 0;
       do {
         // Use ThreadUnsafeEmpty to avoid acquiring mutex lock.
-        // It's safe to use ThreadUnsafeEmpty here. notifier_.notified_cnt_ will be greater than
-        // zero
-        // when inconsistency between vm->pending_msg_list.list_head_.list_head_.container_ and
+        // It's safe to use ThreadUnsafeEmpty here. pending_notifier_.notified_cnt_ will be greater
+        // than zero when inconsistency between
+        // vm->pending_msg_list.list_head_.list_head_.container_ and
         // vm->pending_msg_list.list_head_.list_head_.size_ occured. hence the pending
         // instructions
         // will get handled in the next iteration.
         //  VirtualMachine::Receive may be less effiencient if the thread safe version `vm->Empty()`
         // used
-        //  here, because VirtualMachine::Loop is more likely to get the mutex lock.
+        //  here, because VirtualMachine::ScheduleLoop is more likely to get the mutex lock.
         do { vm->Schedule(); } while (!vm->ThreadUnsafeEmpty());
+        vm->NotifyCallback();
       } while (++i < kNumSchedulingPerTimoutTest);
     } while (MicrosecondsFrom(start) < kWorkingMicroseconds);
     OF_PROFILER_RANGE_POP();
   }
-  while (!vm->Empty()) { vm->Schedule(); }
+  while (!(vm->Empty() && vm->CallbackEmpty())) {
+    vm->Schedule();
+    vm->NotifyCallback();
+  }
   CHECK_JUST(ForEachThreadCtx(vm_.Mutable(), [&](vm::ThreadCtx* thread_ctx) -> Maybe<void> {
     thread_ctx->mut_pending_instruction_list()->Close();
     return Maybe<void>::Ok();
   }));
   for (const auto& worker_thread : worker_threads_) { worker_thread->join(); }
   vm_.Reset();
+}
+
+void VirtualMachine::CallbackLoop(const std::function<void()>& Initializer) {
+  Initializer();
+  auto* vm = mut_vm();
+  while (callback_notifier_.WaitAndClearNotifiedCnt() == kNotifierStatusSuccess) { vm->Callback(); }
 }
 
 }  // namespace oneflow

@@ -303,6 +303,7 @@ from oneflow.framework.generator import (
 from oneflow.framework.scope_util import api_current_scope as current_scope
 from oneflow.framework.tensor import Tensor
 from oneflow.framework.tensor import is_nonzero
+from oneflow.framework.type_tensor import *
 
 from oneflow.nn.modules.pooling import (
     adaptive_avg_pool1d,
@@ -360,8 +361,8 @@ from oneflow.nn.modules.tensor_buffer import (
 )
 from oneflow.nn.modules.as_tensor import as_tensor
 from oneflow.nn.modules.tensor_buffer import tensor_to_tensor_buffer
-from oneflow.nn.modules.consistent_cast import to_consistent_op as to_consistent
-from oneflow.nn.modules.consistent_cast import to_local_op as to_local
+from oneflow.nn.modules.global_cast import to_global_op as to_global
+from oneflow.nn.modules.global_cast import to_local_op as to_local
 from oneflow.nn.modules.where import where_op as where
 from oneflow.nn.modules.scatter import *
 from oneflow.ops.stateful_ops import StatefulOp as stateful_op

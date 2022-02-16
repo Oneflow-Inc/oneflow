@@ -22,13 +22,13 @@ limitations under the License.
 #include "mlir/Conversion/MemRefToLLVM/MemRefToLLVM.h"
 #include "mlir/Conversion/TosaToLinalg/TosaToLinalg.h"
 #include "mlir/Dialect/Affine/IR/AffineOps.h"
-#include "mlir/Dialect/Linalg/IR/LinalgTypes.h"
 #include "mlir/Dialect/Linalg/Passes.h"
 #include "mlir/Dialect/MemRef/IR/MemRef.h"
 #include "mlir/Dialect/StandardOps/IR/Ops.h"
 #include "mlir/Dialect/StandardOps/Transforms/Passes.h"
 #include "mlir/Dialect/Tosa/IR/TosaOps.h"
 #include "mlir/IR/BuiltinAttributes.h"
+#include "mlir/IR/BuiltinTypes.h"
 #include "mlir/IR/OpImplementation.h"
 #include "mlir/IR/PatternMatch.h"
 #include "mlir/Pass/Pass.h"
@@ -47,19 +47,26 @@ struct ScalarMulByTensorOpLowering final : public OpConversionPattern<ScalarMulB
 
   LogicalResult matchAndRewrite(ScalarMulByTensorOp op, OpAdaptor adaptor,
                                 ConversionPatternRewriter& rewriter) const override {
-    auto scalar = op.scalar();
-    auto reshaped_scalar =
-        rewriter
-            .create<tosa::ReshapeOp>(
-                op->getLoc(),
-                RankedTensorType::get({1, 1}, scalar.getType().cast<TensorType>().getElementType()),
-                scalar, rewriter.getI64ArrayAttr({1, 1}))
-            .output();
+    Value scalar = op.scalar();
+    if (auto scalar_type = scalar.getType().dyn_cast<RankedTensorType>()) {
+      auto rank = op.x().getType().dyn_cast<RankedTensorType>().getRank();
+      if (scalar_type.getRank() != rank) {
+        std::vector<int64_t> perm(rank);
+        std::fill(perm.begin(), perm.end(), 1);
+        scalar = rewriter
+                     .create<tosa::ReshapeOp>(
+                         op->getLoc(),
+                         RankedTensorType::get(
+                             perm, scalar.getType().cast<TensorType>().getElementType()),
+                         scalar, rewriter.getI64ArrayAttr(perm))
+                     .output();
+      }
+    }
     rewriter.replaceOpWithNewOp<tosa::MulOp>(
         op,
         /* output */ op->getResultTypes().front().cast<TensorType>(),
         /* input1 */ op.x(),
-        /* input2 */ reshaped_scalar,
+        /* input2 */ scalar,
         /* shift */ rewriter.getIntegerAttr(rewriter.getI32Type(), 0));
     return success();
   }
