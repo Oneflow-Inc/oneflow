@@ -833,7 +833,7 @@
 
 - name: "fused_matmul_bias_add_relu_grad"
   signature:
-    "TensorTuple (Tensor last_mlp_x, Tensor last_mlp_bias, Tensor dy) => FusedMatmulBiasAddReluBackward"
+    "Tensor (Tensor in, Tensor dy, Tensor aux) => FusedMatmulBiasAddReluBackward"
   bind_python: True
 
 - name: "broadcast_matmul_grad_b"

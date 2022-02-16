@@ -4273,14 +4273,14 @@ def OneFlow_FusedMatmulBiasAddReluOp : OneFlow_BaseOp<"fused_matmul_bias_add_rel
 
 def OneFlow_FusedMatmulBiasAddReluBackwardOp : OneFlow_BaseOp<"fused_matmul_bias_add_relu_backward", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
-    OneFlow_Tensor:$last_mlp_x,
-    OneFlow_Tensor:$last_mlp_bias,
-    Variadic<OneFlow_Tensor>:$hidden, 
-    OneFlow_Tensor:$dy
+    OneFlow_Tensor:$dy,
+    OneFlow_Tensor:$in,
+    OneFlow_Tensor:$aux
   );
   let output = (outs
-    OneFlow_Tensor:$dx, 
-    OneFlow_Tensor:$dbias
+    OneFlow_Tensor:$d_weight, 
+    OneFlow_Tensor:$d_bias, 
+    OneFlow_Tensor:$d_relu
   );
   let has_logical_tensor_desc_infer_fn = 1;
   let has_physical_tensor_desc_infer_fn = 1;

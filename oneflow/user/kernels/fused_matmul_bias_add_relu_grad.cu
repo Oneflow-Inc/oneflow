@@ -100,10 +100,15 @@ void InferMatmulCublasMNK(const DimVector& a_shape, const DimVector& b_shape,
     } else {
       UNIMPLEMENTED();
     }
+    printf("M is: %ld \n", m);
+    printf("N is: %ld \n", n);
+    printf("K is: %ld \n", k);
+
     *cublas_m = n; 
     *cublas_n = m; 
     *cublas_k = k; 
     *cublas_ldc = n;
+    // *cublas_ldc = *cublas_n;
   }
 
 
@@ -148,34 +153,39 @@ void SetCublasMatrixLayout(cublasLtMatrixLayout_t layout_desc, cudaDataType_t cu
                                                     &cublas_ld, sizeof(cublas_ld)));
 }
 
-void SetCublasEpilogue(const FusedMatmulBiasAddReluGradKernelCache* matmul_cache, 
+void SetCublasEpilogue(const FusedMatmulBiasAddReluGradKernelCache* matmul_grad_cache, 
                         cublasLtEpilogue_t epilogue, 
                         const void* bias_ptr, 
                         const void* aux_ptr){
-  if(epilogue == CUBLASLT_EPILOGUE_RELU_BIAS || 
-      epilogue == CUBLASLT_EPILOGUE_BIAS
-    //  epilogue == CUBLASLT_EPILOGUE_RELU_AUX_BIAS
-    ){
-    // Set epilogue
-    OF_CUBLAS_CHECK(cublasLtMatmulDescSetAttribute(
-      matmul_cache->operation_desc, CUBLASLT_MATMUL_DESC_EPILOGUE, &epilogue, sizeof(epilogue)));
-    // Set bias ptr
-    OF_CUBLAS_CHECK(cublasLtMatmulDescSetAttribute(matmul_cache->operation_desc,
-      CUBLASLT_MATMUL_DESC_BIAS_POINTER, &bias_ptr,
-      sizeof(bias_ptr)));
-  }
+  // if(epilogue == CUBLASLT_EPILOGUE_RELU_BIAS || 
+  //     epilogue == CUBLASLT_EPILOGUE_BIAS
+  //   //  epilogue == CUBLASLT_EPILOGUE_RELU_AUX_BIAS
+  //   ){
+  //   // Set epilogue
+  //   OF_CUBLAS_CHECK(cublasLtMatmulDescSetAttribute(
+  //     matmul_grad_cache->operation_desc, CUBLASLT_MATMUL_DESC_EPILOGUE, &epilogue, sizeof(epilogue)));
+  //   // Set bias ptr
+  //   OF_CUBLAS_CHECK(cublasLtMatmulDescSetAttribute(matmul_grad_cache->operation_desc,
+  //     CUBLASLT_MATMUL_DESC_BIAS_POINTER, &bias_ptr,
+  //     sizeof(bias_ptr)));
+  // }
   // // TODO: GELU_AUX_BIAS
   // if(epilogue == CUBLASLT_EPILOGUE_RELU_AUX_BIAS){
   //   // Set aux ptr for backward. 
-  //   OF_CUBLAS_CHECK(cublasLtMatmulDescSetAttribute(matmul_cache->operation_desc,
+  //   OF_CUBLAS_CHECK(cublasLtMatmulDescSetAttribute(matmul_grad_cache->operation_desc,
   //     CUBLASLT_MATMUL_DESC_EPILOGUE_AUX_POINTER, &aux_ptr,
   //     sizeof(aux_ptr)));
   // }
+
+  OF_CUBLAS_CHECK(cublasLtMatmulDescSetAttribute(
+    matmul_grad_cache->operation_desc, CUBLASLT_MATMUL_DESC_EPILOGUE, &epilogue, sizeof(epilogue)));
 }
 
-void SetCublasAttr(const FusedMatmulBiasAddReluGradKernelCache* matmul_cache, 
+void SetCublasAttr(const FusedMatmulBiasAddReluGradKernelCache* matmul_grad_cache, 
                     const cublasComputeType_t cublas_compute_dtype, 
                     const cudaDataType_t cuda_data_type, 
+                    ep::primitive::BlasTransposeType transpose_a, 
+                    ep::primitive::BlasTransposeType transpose_b,
                     cublasLtEpilogue_t epilogue, 
                     const void* bias_ptr, 
                     const void* aux_ptr, 
@@ -187,7 +197,7 @@ void SetCublasAttr(const FusedMatmulBiasAddReluGradKernelCache* matmul_cache,
                     int64_t cublas_ldc
                     ){
   OF_CUBLAS_CHECK(cublasLtMatmulDescSetAttribute(
-    matmul_cache->operation_desc, CUBLASLT_MATMUL_DESC_COMPUTE_TYPE, &cublas_compute_dtype,
+    matmul_grad_cache->operation_desc, CUBLASLT_MATMUL_DESC_COMPUTE_TYPE, &cublas_compute_dtype,
     sizeof(cublas_compute_dtype)));
 
   // For best performance when using the bias vector, specify beta == 0 and
@@ -195,27 +205,28 @@ void SetCublasAttr(const FusedMatmulBiasAddReluGradKernelCache* matmul_cache,
   // https://docs.nvidia.com/cuda/cublas/index.html#cublasLtPointerMode_t)
   cublasLtPointerMode_t mode = CUBLASLT_POINTER_MODE_HOST;
   OF_CUBLAS_CHECK(cublasLtMatmulDescSetAttribute(
-      matmul_cache->operation_desc, CUBLASLT_MATMUL_DESC_POINTER_MODE, &mode, sizeof(mode)));
+      matmul_grad_cache->operation_desc, CUBLASLT_MATMUL_DESC_POINTER_MODE, &mode, sizeof(mode)));
   
   // transpose_a = False, transpose_b = True. But in cublas is reversed. 
-  const cublasOperation_t cublas_trans_a = CUBLAS_OP_T;
-  const cublasOperation_t cublas_trans_b = CUBLAS_OP_N;
-  OF_CUBLAS_CHECK(cublasLtMatmulDescSetAttribute(matmul_cache->operation_desc,
+  const cublasOperation_t cublas_trans_a = transpose_b == ep::primitive::BlasTransposeType::T ? CUBLAS_OP_T : CUBLAS_OP_N;
+  const cublasOperation_t cublas_trans_b = transpose_a == ep::primitive::BlasTransposeType::T ? CUBLAS_OP_T : CUBLAS_OP_N;
+  OF_CUBLAS_CHECK(cublasLtMatmulDescSetAttribute(matmul_grad_cache->operation_desc,
                                                 CUBLASLT_MATMUL_DESC_TRANSA, &cublas_trans_a,
                                                 sizeof(cublas_trans_a)));
-  OF_CUBLAS_CHECK(cublasLtMatmulDescSetAttribute(matmul_cache->operation_desc,
+  OF_CUBLAS_CHECK(cublasLtMatmulDescSetAttribute(matmul_grad_cache->operation_desc,
                                                 CUBLASLT_MATMUL_DESC_TRANSB, &cublas_trans_b,
                                                 sizeof(cublas_trans_b)));
   
   // Set epilogue
-  SetCublasEpilogue(matmul_cache, epilogue, bias_ptr, aux_ptr);
+  SetCublasEpilogue(matmul_grad_cache, epilogue, bias_ptr, aux_ptr);
 
   // Set matrix layout
-  SetCublasMatrixLayout(matmul_cache->cublas_a_desc, cuda_data_type, cublas_trans_a, cublas_m,
+  SetCublasMatrixLayout(matmul_grad_cache->cublas_a_desc, cuda_data_type, cublas_trans_a, cublas_m,
                         cublas_k, cublas_lda);
-  SetCublasMatrixLayout(matmul_cache->cublas_b_desc, cuda_data_type, cublas_trans_b, cublas_k,
+  SetCublasMatrixLayout(matmul_grad_cache->cublas_b_desc, cuda_data_type, cublas_trans_b, cublas_k,
                         cublas_n, cublas_ldb);
-  SetCublasMatrixLayout(matmul_cache->cublas_c_desc, cuda_data_type, CUBLAS_OP_N, cublas_m,
+                        
+  SetCublasMatrixLayout(matmul_grad_cache->cublas_c_desc, cuda_data_type, CUBLAS_OP_N, cublas_m,
                         cublas_n, cublas_ldc);
 }
 
@@ -238,15 +249,18 @@ class FusedMatmulBiasAddReluGradKernel final : public user_op::OpKernel {
   using user_op::OpKernel::Compute;
   void Compute(user_op::KernelComputeContext* ctx, user_op::OpKernelState*,
     const user_op::OpKernelCache* cache) const override {
+    printf("111 \n");
     user_op::Tensor* d_bias = ctx->Tensor4ArgNameAndIndex("d_bias", 0);
     user_op::Tensor* d_relu = ctx->Tensor4ArgNameAndIndex("d_relu", 0);
     user_op::Tensor* d_weight = ctx->Tensor4ArgNameAndIndex("d_weight", 0);
-    const user_op::Tensor* in = ctx->Tensor4ArgNameAndIndex("in", 0);
     const user_op::Tensor* dy = ctx->Tensor4ArgNameAndIndex("dy", 0);
+    const user_op::Tensor* in = ctx->Tensor4ArgNameAndIndex("in", 0);
     const user_op::Tensor* aux = ctx->Tensor4ArgNameAndIndex("aux", 0);
+    printf("1112222 \n");
     
     const auto* matmul_grad_cache =
     CHECK_NOTNULL(dynamic_cast<const FusedMatmulBiasAddReluGradKernelCache*>(cache));
+    auto* cuda_stream = ctx->stream()->As<ep::CudaStream>();
 
     const DataType data_type = dy->data_type();
     const cublasComputeType_t cublas_compute_dtype = GetComputeType(data_type);
@@ -261,29 +275,29 @@ class FusedMatmulBiasAddReluGradKernel final : public user_op::OpKernel {
     const auto sp_beta = GetCublasScalarParameter(beta, cublas_compute_dtype);
     printf("0033330 \n"); 
 
-    const int64_t batch_size = ctx->Tensor4ArgNameAndIndex("x", 0)->shape().At(0); 
-    int64_t in_feature = ctx->Tensor4ArgNameAndIndex("x", 0)->shape().At(1); 
-    printf("0004444 \n"); 
-    
     // currently only support 2D matmul. 
     DimVector dy_shape(2); 
     dy->shape().ToDimVector(&dy_shape); 
-
-    weight->shape().ToDimVector(&weight_shape); 
+    DimVector in_shape(2); 
+    in->shape().ToDimVector(&in_shape); 
     // cublasLtEpilogue_t epilogue = CUBLASLT_EPILOGUE_RELU_AUX_BIAS;
-    cublasLtEpilogue_t epilogue = CUBLASLT_EPILOGUE_RELU_BIAS;
+    // cublasLtEpilogue_t epilogue = CUBLASLT_EPILOGUE_RELU_BIAS;
+    cublasLtEpilogue_t epilogue = CUBLASLT_EPILOGUE_RELU;
     
-    InferMatmulCublasMNK(dy_shape, weight_shape, 
+    InferMatmulCublasMNK(dy_shape, in_shape, 
                         /*transpose_a=*/ep::primitive::BlasTransposeType::T, 
                         /*transpose_b=*/ep::primitive::BlasTransposeType::N, 
                         &cublas_m, &cublas_n, &cublas_k, 
                         &cublas_lda, &cublas_ldb, &cublas_ldc);
     
-    SetCublasAttr(matmul_cache, 
+    SetCublasAttr(matmul_grad_cache, 
                   cublas_compute_dtype, 
                   cuda_data_type, 
+                  /*transpose_a=*/ep::primitive::BlasTransposeType::T, 
+                  /*transpose_b=*/ep::primitive::BlasTransposeType::N, 
                   epilogue, 
-                  bias->dptr(), 
+                  // bias->dptr(), 
+                  nullptr, 
                   // cublas_aux->dptr(), 
                   nullptr, 
                   cublas_m, 
@@ -295,16 +309,16 @@ class FusedMatmulBiasAddReluGradKernel final : public user_op::OpKernel {
 
     OF_CUBLAS_CHECK(cublasLtMatmul(
         cuda_stream->cublas_lt_handle(), 
-        matmul_cache->operation_desc, &sp_alpha, 
+        matmul_grad_cache->operation_desc, &sp_alpha, 
+        in->dptr(),
+        matmul_grad_cache->cublas_a_desc,  
         dy->dptr(),
-        matmul_cache->cublas_a_desc, 
-        in->dptr(), 
-        matmul_cache->cublas_b_desc, 
+        matmul_grad_cache->cublas_b_desc, 
         &sp_beta,
         d_weight->mut_dptr(), 
-        matmul_cache->cublas_c_desc, 
+        matmul_grad_cache->cublas_c_desc, 
         d_weight->mut_dptr(), 
-        matmul_cache->cublas_c_desc,
+        matmul_grad_cache->cublas_c_desc,
         nullptr, cuda_stream->cublas_workspace(), 
         cuda_stream->cublas_workspace_size(),
         cuda_stream->cuda_stream()));
@@ -318,7 +332,7 @@ class FusedMatmulBiasAddReluGradKernel final : public user_op::OpKernel {
   REGISTER_USER_KERNEL("fused_matmul_bias_add_relu_backward")                     \
       .SetCreateFn<FusedMatmulBiasAddReluGradKernel<dtype>>()               \
       .SetIsMatchedHob((user_op::HobDeviceType() == DeviceType::kCUDA) \
-                       && (user_op::HobDataType("dx", 0) == GetDataType<dtype>::value));
+                       && (user_op::HobDataType("in", 0) == GetDataType<dtype>::value));
 
 REGISTER_FUSED_MATMUL_BIAS_ADD_GELU_GRAD_KERNEL(float)
 REGISTER_FUSED_MATMUL_BIAS_ADD_GELU_GRAD_KERNEL(double)

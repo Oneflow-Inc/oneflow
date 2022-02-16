@@ -923,18 +923,20 @@ class FusedMatmulBiasAddReluGradFunctor {
  public:
   FusedMatmulBiasAddReluGradFunctor() {
     op_ = CHECK_JUST(one::OpBuilder("fused_matmul_bias_add_relu_backward")
-                    .Input("last_mlp_x")
-                    .Input("last_mlp_bias")
                     .Input("dy")
-                    .Output("dx")
-                    .Output("dbias")
+                    .Input("in")
+                    .Input("aux")
+                    .Output("d_weight")
+                    .Output("d_bias")
+                    .Output("d_relu")
                     .Build());
   }
-  Maybe<TensorTuple> operator()(const std::shared_ptr<one::Tensor>& last_mlp_x, 
-                           const std::shared_ptr<one::Tensor>& last_mlp_bias,
-                           const std::shared_ptr<one::Tensor>& dy) const {
+  Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& dy,
+                           const std::shared_ptr<one::Tensor>& in, 
+                           const std::shared_ptr<one::Tensor>& aux) const {
     MutableAttrMap attrs;
-    return OpInterpUtil::Dispatch<TensorTuple>(*op_, {last_mlp_x, last_mlp_bias, dy}, attrs);
+    printf("here \n");
+    return OpInterpUtil::Dispatch<Tensor>(*op_, {dy, in, aux}, attrs);
   }
 
  private:

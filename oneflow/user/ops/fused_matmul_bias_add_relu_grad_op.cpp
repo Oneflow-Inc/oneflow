@@ -24,26 +24,37 @@ namespace oneflow {
 namespace {
 
 Maybe<void> InferTensorDesc4FusedMatmulBackward(user_op::InferContext* ctx) {
+  const user_op::TensorDesc& in_desc = ctx->InputTensorDesc("in", 0);
   const user_op::TensorDesc& dy_desc = ctx->InputTensorDesc("dy", 0);
-  *ctx->OutputShape("dx", 0) = dy_desc.shape();
- 
-  DimVector dbias_shape(1); 
-  dbias_shape.at(0) = dy_desc.shape().At(1); 
+  const user_op::TensorDesc& aux_desc = ctx->InputTensorDesc("aux", 0);
+  const int64_t bias_size = in_desc.shape().At(1); 
+  printf("dy shape 1 is: %ld \n", dy_desc.shape().At(1)); 
+  printf("in shape 1 is: %ld \n", in_desc.shape().At(1)); 
 
-  *ctx->OutputShape("dbias", 0) = Shape(dbias_shape);
-
+  Shape d_weight_shape({dy_desc.shape().At(1), in_desc.shape().At(1)}); 
+  *ctx->OutputShape("d_weight", 0) = d_weight_shape;
+  *ctx->OutputShape("d_bias", 0) = Shape({bias_size});
+  *ctx->OutputShape("d_relu", 0) = d_weight_shape;
+  printf("success shape \n"); 
   return Maybe<void>::Ok();
 }
 
 
 Maybe<void> InferDataType4MatmulBackward(user_op::InferContext* ctx){
+  const user_op::TensorDesc& in_desc = ctx->InputTensorDesc("in", 0);
   const user_op::TensorDesc& dy_desc = ctx->InputTensorDesc("dy", 0);
-  user_op::TensorDesc* dx_desc = ctx->OutputTensorDesc("dx", 0);
-  user_op::TensorDesc* dbias_desc = ctx->OutputTensorDesc("dbias", 0);
+  const user_op::TensorDesc& aux_desc = ctx->InputTensorDesc("aux", 0);
+  CHECK_EQ_OR_RETURN(in_desc.data_type(), dy_desc.data_type()); 
+  CHECK_EQ_OR_RETURN(dy_desc.data_type(), aux_desc.data_type()); 
 
-  *dx_desc->mut_data_type() = dy_desc.data_type();
-  *dbias_desc->mut_data_type() = dy_desc.data_type();
+  user_op::TensorDesc* d_weight_desc = ctx->OutputTensorDesc("d_weight", 0);
+  user_op::TensorDesc* d_bias_desc = ctx->OutputTensorDesc("d_bias", 0);
+  user_op::TensorDesc* d_relu_desc = ctx->OutputTensorDesc("d_relu", 0);
 
+  *d_weight_desc->mut_data_type() = dy_desc.data_type();
+  *d_bias_desc->mut_data_type() = dy_desc.data_type();
+  *d_relu_desc->mut_data_type() = dy_desc.data_type();
+  printf("success datatype \n"); 
   return Maybe<void>::Ok(); 
 }
 
@@ -61,6 +72,14 @@ Maybe<void> InferDataType4MatmulBackward(user_op::InferContext* ctx){
 }
 
 /* static */ Maybe<void> FusedMatmulBiasAddReluBackwardOp::GetSbp(user_op::SbpContext* ctx) {
+  ctx->NewBuilder()
+      .Broadcast(user_op::OpArg("in", 0))
+      .Broadcast(user_op::OpArg("dy", 0))
+      .Broadcast(user_op::OpArg("aux", 0))
+      .Broadcast(user_op::OpArg("d_weight", 0))
+      .Broadcast(user_op::OpArg("d_bias", 0))
+      .Broadcast(user_op::OpArg("d_relu", 0))
+      .Build();
   return Maybe<void>::Ok();
 }
 
