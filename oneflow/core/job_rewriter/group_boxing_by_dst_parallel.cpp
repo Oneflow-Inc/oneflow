@@ -20,7 +20,7 @@ limitations under the License.
 namespace oneflow {
 
 Maybe<void> GroupBoxingByDstParallel(const OpGraph& op_graph, JobBuilder* job_builder) {
-  HashMap<LogicalBlobId, HashMap<std::pair<ParallelDesc, cfg::NdSbp>,
+  HashMap<LogicalBlobId, HashMap<std::pair<ParallelDesc, NdSbp>,
                                  std::vector<std::pair<const OpNode*, std::string>>>>
       lbi2consumer_grouped_by_parallel;
   HashMap<const OpNode*, OperatorConf> op_node2op_conf;
@@ -30,8 +30,8 @@ Maybe<void> GroupBoxingByDstParallel(const OpGraph& op_graph, JobBuilder* job_bu
     for (const std::string& ibn : node->op().input_bns()) {
       const LogicalBlobId& lbi = node->op().BnInOp2Lbi(ibn);
       const OpNode& producer = node->ProducerOpNode4Lbi(lbi);
-      const cfg::NdSbp& producer_nd_sbp = producer.NdSbp4Lbi(lbi);
-      const cfg::NdSbp& consumer_nd_sbp = node->NdSbp4BnInOp(ibn);
+      const NdSbp& producer_nd_sbp = producer.NdSbp4Lbi(lbi);
+      const NdSbp& consumer_nd_sbp = node->NdSbp4BnInOp(ibn);
 
       if (producer.parallel_desc() != node->parallel_desc()
           || (node->parallel_desc().parallel_num() != 1 && producer_nd_sbp != consumer_nd_sbp)) {
@@ -48,14 +48,14 @@ Maybe<void> GroupBoxingByDstParallel(const OpGraph& op_graph, JobBuilder* job_bu
     for (const auto& parallel7group : lbi7groups.second) {
       if (parallel7group.second.size() < 2) { continue; }
       const ParallelDesc& dst_parallel_desc = parallel7group.first.first;
-      const cfg::NdSbp& dst_nd_sbp = parallel7group.first.second;
+      const NdSbp& dst_nd_sbp = parallel7group.first.second;
       OperatorConf identity_op_conf{};
       identity_op_conf.set_name("System-Boxing-Identity-" + NewUniqueId());
       IdentityOpConf* identity_conf = identity_op_conf.mutable_identity_conf();
       identity_conf->set_in(GenLogicalBlobName(lbi));
       identity_conf->set_out("out");
       job_builder->AddOps(dst_parallel_desc.parallel_conf(), {identity_op_conf});
-      cfg::NdSbpSignature identity_nd_sbp_signature;
+      NdSbpSignature identity_nd_sbp_signature;
       (*identity_nd_sbp_signature.mutable_bn_in_op2nd_sbp())["in"] = dst_nd_sbp;
       (*identity_nd_sbp_signature.mutable_bn_in_op2nd_sbp())["out"] = dst_nd_sbp;
       job_builder->AddNdSbpSignature4OpName(identity_op_conf.name(), identity_nd_sbp_signature);

@@ -121,12 +121,6 @@ void ClusterInstruction::MasterSendAbort() {
   PushClusterInstruction(cluster_instruction);
 }
 
-void ClusterInstruction::MasterSendEagerInstruction(
-    const ClusterInstructionProto& cluster_instruction) {
-  CHECK(cluster_instruction.has_eager_instruction());
-  PushClusterInstruction(cluster_instruction);
-}
-
 void ClusterInstruction::WorkerReceiveInstruction(ClusterInstructionProto* cluster_instruction) {
   PullClusterInstruction(cluster_instruction);
 }
