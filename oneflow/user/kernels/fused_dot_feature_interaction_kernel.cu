@@ -25,74 +25,76 @@ namespace oneflow {
 
 namespace {
 
-__global__ void GenerateGatherIndicesGpu(const int32_t concat_dim, const int32_t concat_padded_dim,
-                                         const int32_t offset, int32_t* gather_indices) {
-  for (int32_t row = threadIdx.y; row < concat_dim; row += blockDim.y) {
-    for (int32_t col = threadIdx.x; col < concat_dim; col += blockDim.x) {
-      if (col < row + offset) {
-        int32_t in_index = row * concat_padded_dim + col;
-        int32_t idx = (row - 1 + offset) * (row + offset) / 2 + col;
-        gather_indices[idx] = in_index;
-      }
-    }
-  }
-}
-
-__global__ void GenerateScatterIndicesGpu(const int32_t concat_dim,
-                                          const int32_t concated_padded_dim, const int32_t offset,
-                                          int32_t* scatter_indices) {
-  for (int32_t row = threadIdx.y; row < concated_padded_dim; row += blockDim.y) {
-    for (int32_t col = threadIdx.x; col < concated_padded_dim; col += blockDim.x) {
-      int32_t out_idx = row * concated_padded_dim + col;
-      if (col < row + offset && row < concat_dim) {
-        int32_t in_idx = (row - 1 + offset) * (row + offset) / 2 + col;
-        scatter_indices[out_idx] = in_idx;
-      } else {
-        scatter_indices[out_idx] = -1;
-      }
+__global__ void GenerateGatherIndicesGpu(const int32_t elem_cnt, const int32_t stride,
+                                         const int32_t in_cols, const int32_t offset,
+                                         int32_t* gather_indices) {
+  CUDA_1D_KERNEL_LOOP(i, elem_cnt) {
+    const int32_t row = i / stride;
+    const int32_t col = i - row * stride;
+    if (col < row + offset) {
+      int32_t in_index = row * in_cols + col;
+      int32_t idx = (row - 1 + offset) * (row + offset) / 2 + col;
+      gather_indices[idx] = in_index;
     }
   }
 }
 
 template<typename T>
-__global__ void GatherConcatGpu(int32_t elem_cnt, int32_t out_dim, int32_t valid_out_dim,
-                                int32_t matmul_stride, int32_t output_concat_end_dim,
-                                const int32_t* gather_indices, const T* matmul_out,
+__global__ void GatherConcatGpu(int32_t elem_cnt, int32_t out_cols, int32_t valid_out_cols,
+                                int32_t in_cols, int32_t output_concat_end_dim,
+                                const int32_t* gather_col_indices, const T* in,
                                 const T* output_concat_ptr, T* out_ptr) {
   CUDA_1D_KERNEL_LOOP(i, elem_cnt) {
-    const int32_t row = i / out_dim;
-    const int32_t col = i - row * out_dim;
+    const int32_t row = i / out_cols;
+    const int32_t col = i - row * out_cols;
     T out_val = 0;
     if (col < output_concat_end_dim) {
       int32_t output_concat_idx = row * output_concat_end_dim + col;
       out_val = output_concat_ptr[output_concat_idx];
-    } else if (col < valid_out_dim) {
-      int32_t gather_col_idx = gather_indices[col - output_concat_end_dim];
-      int32_t gather_idx = row * matmul_stride + gather_col_idx;
-      out_val = matmul_out[gather_idx];
+    } else if (col < valid_out_cols) {
+      int32_t gather_col_idx = gather_col_indices[col - output_concat_end_dim];
+      int32_t in_offset = row * in_cols + gather_col_idx;
+      out_val = in[in_offset];
     }
     out_ptr[i] = out_val;
   }
 }
 
 template<typename T>
-__global__ void ScatterSplitGpu(int32_t elem_cnt, int32_t stride_dim, int32_t out_dim,
-                                int32_t matmul_stride, int32_t output_concat_end_dim, const T* dy,
-                                const int32_t* scatter_indices, T* output_concat_grad,
-                                T* matmul_out_grad) {
+__global__ void ScatterSplitAddTransposeGpu(int32_t elem_cnt, int32_t stride_dim, int32_t out_dim,
+                                            int32_t in_grad_stride, int32_t in_matrix_cols,
+                                            int32_t in_matrix_valid_cols,
+                                            int32_t output_concat_end_dim, const int32_t offset,
+                                            const T* dy, T* output_concat_grad, T* in_grad) {
   CUDA_1D_KERNEL_LOOP(i, elem_cnt) {
     const int32_t row = i / stride_dim;
     const int32_t col = i - row * stride_dim;
     if (col < output_concat_end_dim) {
       output_concat_grad[row * output_concat_end_dim + col] = dy[row * out_dim + col];
     } else {
-      int32_t matmul_col_id = col - output_concat_end_dim;
-      int32_t scatter_col_id = scatter_indices[matmul_col_id];
-      int32_t matmul_idx = row * matmul_stride + matmul_col_id;
-      T grad_val = (scatter_col_id != -1)
-                       ? dy[row * out_dim + output_concat_end_dim + scatter_col_id]
-                       : static_cast<T>(0);
-      matmul_out_grad[matmul_idx] = grad_val;
+      int32_t in_col_id = col - output_concat_end_dim;
+      const int32_t in_matrix_row = in_col_id / in_matrix_cols;
+      const int32_t in_matrix_col = in_col_id - in_matrix_row * in_matrix_cols;
+      T grad_val = 0;
+      const T* row_dy = dy + row * out_dim + output_concat_end_dim;
+      if (in_matrix_col < in_matrix_row && in_matrix_row < in_matrix_valid_cols) {
+        int32_t dy_col_idx =
+            (in_matrix_row - 1 + offset) * (in_matrix_row + offset) / 2 + in_matrix_col;
+        grad_val = row_dy[dy_col_idx];
+      } else if (in_matrix_row < in_matrix_col && in_matrix_col < in_matrix_valid_cols) {
+        // transpose add
+        int32_t trans_row_id = in_matrix_col;
+        int32_t trans_col_id = in_matrix_row;
+        int32_t dy_col_idx =
+            (trans_row_id - 1 + offset) * (trans_row_id + offset) / 2 + trans_col_id;
+        grad_val = row_dy[dy_col_idx];
+      } else if (in_matrix_col == in_matrix_row && (offset == 1)) {
+        int32_t dy_col_idx =
+            (in_matrix_row - 1 + offset) * (in_matrix_row + offset) / 2 + in_matrix_col;
+        grad_val = row_dy[dy_col_idx] * static_cast<T>(2);
+      }
+      int32_t in_grad_offset = row * in_grad_stride + in_col_id;
+      in_grad[in_grad_offset] = grad_val;
     }
   }
 }
@@ -173,20 +175,16 @@ void BatchMatmul(ep::Stream* stream, DataType data_type, const bool transpose_b,
       cuda_data_type, ldc, stride_c, batch_size, compute_type, algo));
 }
 
-void GenerateScatterIndices(ep::Stream* stream, const int32_t concat_dim,
-                            const int32_t concat_padded_dim, const bool self_interaction,
-                            int32_t* scatter_indices) {
-  int32_t offset = self_interaction ? 1 : 0;
-  GenerateScatterIndicesGpu<<<1, dim3(32, 32), 0, stream->As<ep::CudaStream>()->cuda_stream()>>>(
-      concat_dim, concat_padded_dim, offset, scatter_indices);
-}
-
 void GenerateGatherIndices(ep::Stream* stream, const int32_t concat_dim,
                            const int32_t concat_padded_dim, const bool self_interaction,
                            int32_t* gather_indices) {
   int32_t offset = self_interaction ? 1 : 0;
-  GenerateGatherIndicesGpu<<<1, dim3(32, 32), 0, stream->As<ep::CudaStream>()->cuda_stream()>>>(
-      concat_dim, concat_padded_dim, offset, gather_indices);
+  int32_t elem_cnt = concat_dim * concat_dim;
+  int32_t stride = concat_dim;
+  int32_t in_cols = concat_padded_dim;
+  GenerateGatherIndicesGpu<<<BlocksNum4ThreadsNum(elem_cnt), kCudaThreadsNumPerBlock, 0,
+                             stream->As<ep::CudaStream>()->cuda_stream()>>>(
+      elem_cnt, stride, in_cols, offset, gather_indices);
 }
 
 template<typename T>
@@ -203,16 +201,18 @@ void GatherConcatKernel(ep::Stream* stream, int32_t elem_cnt, int32_t out_dim,
 }
 
 template<typename T>
-void ScatterSplit(ep::Stream* stream, int32_t batch_size, int32_t out_dim,
-                  int32_t concated_padded_dim, int32_t output_concat_end_dim, const T* dy,
-                  const int32_t* scatter_indices, T* output_concat_grad, T* matmul_out_grad_ptr) {
+void ScatterSplitAddTranspose(ep::Stream* stream, int32_t batch_size, int32_t out_dim,
+                              int32_t concated_padded_dim, int32_t concat_dim,
+                              int32_t output_concat_end_dim, const bool self_interaction,
+                              const T* dy, T* output_concat_grad, T* matmul_out_grad_ptr) {
   int32_t stride_dim = output_concat_end_dim + concated_padded_dim * concated_padded_dim;
   int32_t matmul_stride = concated_padded_dim * concated_padded_dim;
   const int32_t elem_cnt = batch_size * stride_dim;
-  ScatterSplitGpu<<<BlocksNum4ThreadsNum(elem_cnt), kCudaThreadsNumPerBlock, 0,
-                    stream->As<ep::CudaStream>()->cuda_stream()>>>(
-      elem_cnt, stride_dim, out_dim, matmul_stride, output_concat_end_dim, dy, scatter_indices,
-      output_concat_grad, matmul_out_grad_ptr);
+  int32_t offset = self_interaction ? 1 : 0;
+  ScatterSplitAddTransposeGpu<<<BlocksNum4ThreadsNum(elem_cnt), kCudaThreadsNumPerBlock, 0,
+                                stream->As<ep::CudaStream>()->cuda_stream()>>>(
+      elem_cnt, stride_dim, out_dim, matmul_stride, concated_padded_dim, concat_dim,
+      output_concat_end_dim, offset, dy, output_concat_grad, matmul_out_grad_ptr);
 }
 
 template<typename T>
@@ -367,13 +367,6 @@ class FusedDotFeatureInteractionGradKernel final : public user_op::OpKernel {
         tmp_buffer->mut_dptr<char>() + matmul_out_grad_size + transposed_matmul_out_grad_size);
     size_t padded_concated_features_grad_size =
         GetCudaAlignedSize(batch_size * concated_padded_dim * embedding_size * sizeof(T));
-    int32_t* scatter_indices_ptr = reinterpret_cast<int32_t*>(
-        tmp_buffer->mut_dptr<char>() + matmul_out_grad_size + transposed_matmul_out_grad_size
-        + padded_concated_features_grad_size);
-    size_t scatter_indices_size =
-        GetCudaAlignedSize(concated_padded_dim * concated_padded_dim * sizeof(int32_t));
-    GenerateScatterIndices(ctx->stream(), features_concated_dim, concated_padded_dim,
-                           self_interaction, scatter_indices_ptr);
 
     T* output_concat_grad_ptr = nullptr;
     int64_t output_concat_end_dim = 0;
@@ -382,21 +375,9 @@ class FusedDotFeatureInteractionGradKernel final : public user_op::OpKernel {
       output_concat_grad_ptr = output_concat_grad->mut_dptr<T>();
       output_concat_end_dim = output_concat_grad->shape().At(1);
     }
-    ScatterSplit(ctx->stream(), batch_size, out_dim, concated_padded_dim, output_concat_end_dim,
-                 dy->dptr<T>(), scatter_indices_ptr, output_concat_grad_ptr, matmul_out_grad_ptr);
-    const int32_t num_dims = 3;
-    DimVector transpose_dims = {batch_size, concated_padded_dim, concated_padded_dim};
-    std::vector<int32_t> perm = {0, 2, 1};
-    const int64_t count = batch_size * concated_padded_dim * concated_padded_dim;
-    auto transpose_primitive =
-        ep::primitive::NewPrimitive<ep::primitive::PermuteFactory>(DeviceType::kCUDA, 3);
-    transpose_primitive->Launch(ctx->stream(), data_type, num_dims, transpose_dims.data(),
-                                matmul_out_grad_ptr, perm.data(), transposed_matmul_out_grad_ptr);
-
-    auto add_primitive =
-        ep::primitive::NewPrimitive<ep::primitive::AddFactory>(DeviceType::kCUDA, data_type);
-    add_primitive->Launch(ctx->stream(), matmul_out_grad_ptr, transposed_matmul_out_grad_ptr,
-                          matmul_out_grad_ptr, count);
+    ScatterSplitAddTranspose(ctx->stream(), batch_size, out_dim, concated_padded_dim,
+                             features_concated_dim, output_concat_end_dim, self_interaction,
+                             dy->dptr<T>(), output_concat_grad_ptr, matmul_out_grad_ptr);
 
     BatchMatmul(ctx->stream(), data_type, false, batch_size, concated_padded_dim, embedding_size,
                 concated_padded_dim, matmul_out_grad_ptr, padded_concated_features->dptr<T>(),
@@ -421,10 +402,8 @@ user_op::InferTmpSizeFn GenFusedDotFeatureInteractionGradInferTmpSizeFn() {
     size_t transposed_matmul_out_grad_size = matmul_out_grad_size;
     size_t padded_concated_features_grad_size =
         GetCudaAlignedSize(batch_size * concated_padded_dim * embedding_size * sizeof(T));
-    size_t scatter_indices_size =
-        GetCudaAlignedSize(concated_padded_dim * concated_padded_dim * sizeof(int32_t));
     return matmul_out_grad_size + transposed_matmul_out_grad_size
-           + padded_concated_features_grad_size + scatter_indices_size;
+           + padded_concated_features_grad_size;
   };
 }
 
