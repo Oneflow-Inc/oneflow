@@ -63,8 +63,8 @@ class ConstantLR(LRScheduler):
         self.total_iters = total_iters
         super().__init__(optimizer, last_step, verbose)
 
-    def get_lr(self):
-        if self.last_step < self.total_iters:
+    def get_lr(self, step):
+        if step < self.total_iters:
             return [base_lr * self.factor for base_lr in self.base_lrs]
         else:
             return [base_lr for base_lr in self.base_lrs]

@@ -63,8 +63,8 @@ class MultiStepLR(LRScheduler):
         self.gamma = gamma
         super().__init__(optimizer, last_step, verbose)
 
-    def get_lr(self):
-        sect = bisect.bisect_right(self.milestones, self.last_step)
+    def get_lr(self, step):
+        sect = bisect.bisect_right(self.milestones, step)
         factor = self.gamma ** sect
         return [base_lr * factor for base_lr in self.base_lrs]
 

@@ -93,8 +93,8 @@ class LambdaLR(LRScheduler):
             if fn is not None:
                 self.lr_lambdas[idx].__dict__.update(fn)
 
-    def get_lr(self):
+    def get_lr(self, step):
         return [
-            base_lr * lmbda(self.last_step)
+            base_lr * lmbda(step)
             for (lmbda, base_lr) in zip(self.lr_lambdas, self.base_lrs)
         ]

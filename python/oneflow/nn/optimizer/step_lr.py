@@ -60,8 +60,8 @@ class StepLR(LRScheduler):
         self.gamma = gamma
         super().__init__(optimizer, last_step, verbose)
 
-    def get_lr(self):
-        step_stage = math.floor(self.last_step / self.step_size)
+    def get_lr(self, step):
+        step_stage = math.floor(step / self.step_size)
         factor = self.gamma ** step_stage
         return [base_lr * factor for base_lr in self.base_lrs]
 

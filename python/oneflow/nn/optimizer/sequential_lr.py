@@ -68,7 +68,7 @@ class SequentialLR(LRScheduler):
             raise ValueError("Sequential Schedulers expects at least one scheduler")
 
         for i in range(len(schedulers)):
-            if schedulers[i]._optimizer != optimizer:
+            if schedulers[i].optimizer != optimizer:
                 raise ValueError(
                     "Sequential Schedulers expects all schedulers to belong to the same optimizer, but "
                     f"got schedulers at index {i} to be different than the optimizer passed in."
@@ -94,50 +94,44 @@ class SequentialLR(LRScheduler):
             assert isinstance(interval_rescaling, bool)
             interval_rescaling = [interval_rescaling] * (len(schedulers))
 
-        self.schedulers = schedulers
-        self.milestones = milestones
+        self.schedulers = list(schedulers)
+        self.milestones = list(milestones)
         self.interval_rescaling = interval_rescaling
         super().__init__(optimizer, last_step, verbose)
 
-    def get_lr(self):
-        idx = bisect.bisect_right(self.milestones, self.last_step)
-        cur_step = self.last_step
-        if self.interval_rescaling[idx] and idx > 0:
-            cur_step -= self.milestones[idx - 1]
-
-        with _scheduler_with_step(self.schedulers[idx], cur_step) as scheduler:
-            lrs = scheduler.get_lr()
-
-        return lrs
-
     def step(self):
-        super().step()
-        # sync last_step
-        for s in self.schedulers:
-            s.last_step = self.last_step
+        self.last_step += 1
+        cur_step = self.last_step
+        stage = bisect.bisect_right(self.milestones, cur_step)
+        if self.interval_rescaling[stage] and stage > 0:
+            cur_step -= sum(self.milestones[:stage])
+
+        scheduler = self.schedulers[stage]
+        scheduler.last_step = cur_step
+        lrs = scheduler.get_lr(cur_step)
+        self.update_lrs(lrs)
 
     def state_dict(self):
         # exclude optimizer and nested schedulers
         state_dict = {
             key: value
             for key, value in self.__dict__.items()
-            if key not in ("_optimizer", "schedulers")
+            if key not in ("optimizer", "schedulers")
         }
         state_dict["schedulers"] = [None] * len(self.schedulers)
-
-        for idx, s in enumerate(self.schedulers):
-            state_dict["schedulers"][idx] = s.state_dict()
+        for i, s in enumerate(self.schedulers):
+            state_dict["schedulers"][i] = s.state_dict()
 
         return state_dict
 
     def load_state_dict(self, state_dict):
-        schedulers = state_dict.pop("schedulers")
+        scheduler_states = state_dict.pop("schedulers")
         self.__dict__.update(state_dict)
         # avoid side effect of calling load_state_dict twice
-        state_dict["schedulers"] = schedulers
+        state_dict["schedulers"] = scheduler_states
 
-        for idx, s in enumerate(schedulers):
-            self.schedulers[idx].load_state_dict(s)
+        for i, s in enumerate(scheduler_states):
+            self.schedulers[i].load_state_dict(s)
 
     def _generate_conf_for_graph(self, opt_confs):
         raise NotImplementedError("SequentialLR is not supported in graph mode")

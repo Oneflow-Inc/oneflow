@@ -259,7 +259,7 @@ class Graph(object):
         if lr_sch is not None:
             assert isinstance(lr_sch, LRScheduler)
             assert (
-                lr_sch._optimizer is optim
+                lr_sch.optimizer is optim
             ), "lr_scheduler's optimizer must be the same optimizer in add_optimizer."
             opt_dict["lr_sch"] = lr_sch
         self._opts.append(opt_dict)
