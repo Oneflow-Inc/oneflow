@@ -3397,5 +3397,50 @@ class TestEagerNaiveBoxingSToS(flow.unittest.TestCase):
             _test_eager_consistent_with_0_size_data(test_case, *arg)
 
 
+@flow.unittest.skip_unless_1n4d()
+@unittest.skipIf(os.getenv("ONEFLOW_TEST_CPU_ONLY"), "only test cpu cases")
+class TestEagerBoxingOneToNWithDiffDim(flow.unittest.TestCase):
+    def test_eager_boxing_one_to_n_with_diff_dim(test_case):
+        x = flow.tensor(
+            [1, 2, 3, 4],
+            sbp=flow.sbp.broadcast,
+            placement=flow.placement("cuda", ranks=[0]),
+        )
+        y = x.to_global(
+            sbp=[flow.sbp.broadcast, flow.sbp.split(0)],
+            placement=flow.placement("cuda", ranks=[[0, 1], [2, 3]]),
+        )
+
+        rank = flow.env.get_rank()
+        if rank == 0 or rank == 2:
+            test_case.assertTrue(
+                np.array_equal(y.to_local().numpy(), np.array([1, 2]),)
+            )
+        elif rank == 1 or rank == 3:
+            test_case.assertTrue(
+                np.array_equal(y.to_local().numpy(), np.array([3, 4]),)
+            )
+
+
+@flow.unittest.skip_unless_1n4d()
+@unittest.skipIf(os.getenv("ONEFLOW_TEST_CPU_ONLY"), "only test cpu cases")
+class TestEagerBoxingNToOneWithDiffDim(flow.unittest.TestCase):
+    def test_eager_boxing_n_to_one_with_diff_dim(test_case):
+        x = flow.tensor(
+            [1, 2, 3, 4],
+            sbp=[flow.sbp.broadcast, flow.sbp.split(0)],
+            placement=flow.placement("cuda", ranks=[[0, 1], [2, 3]]),
+        )
+        y = x.to_global(
+            sbp=flow.sbp.broadcast, placement=flow.placement("cuda", ranks=[0])
+        )
+
+        rank = flow.env.get_rank()
+        if rank == 0:
+            test_case.assertTrue(
+                np.array_equal(y.to_local().numpy(), np.array([1, 2, 3, 4]),)
+            )
+
+
 if __name__ == "__main__":
     unittest.main()
