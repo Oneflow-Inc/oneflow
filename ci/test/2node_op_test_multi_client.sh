@@ -2,6 +2,10 @@
 
 set -xeu
 
+echo "HTTP_PROXY:  ${HTTP_PROXY}"
+echo "HTTPS_PROXY: ${HTTPS_PROXY}"
+echo "http_proxy:  ${http_proxy}"
+echo "https_proxy: ${https_proxy}"
 export PYTHONUNBUFFERED=1
 
 src_dir=${ONEFLOW_SRC_DIR:-"$PWD"}
