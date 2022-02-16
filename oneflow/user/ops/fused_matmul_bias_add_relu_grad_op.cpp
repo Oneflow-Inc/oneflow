@@ -24,14 +24,14 @@ namespace oneflow {
 namespace {
 
 Maybe<void> InferTensorDesc4FusedMatmulBackward(user_op::InferContext* ctx) {
-  const user_op::TensorDesc& in_desc = ctx->InputTensorDesc("in", 0);
+  const user_op::TensorDesc& weight_desc = ctx->InputTensorDesc("weight", 0);
   const user_op::TensorDesc& dy_desc = ctx->InputTensorDesc("dy", 0);
   const user_op::TensorDesc& aux_desc = ctx->InputTensorDesc("aux", 0);
-  const int64_t bias_size = in_desc.shape().At(1); 
-  printf("dy shape 1 is: %ld \n", dy_desc.shape().At(1)); 
-  printf("in shape 1 is: %ld \n", in_desc.shape().At(1)); 
+  const int64_t bias_size = weight_desc.shape().At(1); 
+  printf("dy shape 0 is: %ld \n", dy_desc.shape().At(0)); 
+  printf("in shape 0 is: %ld \n", weight_desc.shape().At(1)); 
 
-  Shape d_weight_shape({dy_desc.shape().At(1), in_desc.shape().At(1)}); 
+  Shape d_weight_shape({dy_desc.shape().At(0), weight_desc.shape().At(1)}); 
   *ctx->OutputShape("d_weight", 0) = d_weight_shape;
   *ctx->OutputShape("d_bias", 0) = Shape({bias_size});
   *ctx->OutputShape("d_relu", 0) = d_weight_shape;
@@ -41,10 +41,10 @@ Maybe<void> InferTensorDesc4FusedMatmulBackward(user_op::InferContext* ctx) {
 
 
 Maybe<void> InferDataType4MatmulBackward(user_op::InferContext* ctx){
-  const user_op::TensorDesc& in_desc = ctx->InputTensorDesc("in", 0);
+  const user_op::TensorDesc& weight_desc = ctx->InputTensorDesc("weight", 0);
   const user_op::TensorDesc& dy_desc = ctx->InputTensorDesc("dy", 0);
   const user_op::TensorDesc& aux_desc = ctx->InputTensorDesc("aux", 0);
-  CHECK_EQ_OR_RETURN(in_desc.data_type(), dy_desc.data_type()); 
+  CHECK_EQ_OR_RETURN(weight_desc.data_type(), dy_desc.data_type()); 
   CHECK_EQ_OR_RETURN(dy_desc.data_type(), aux_desc.data_type()); 
 
   user_op::TensorDesc* d_weight_desc = ctx->OutputTensorDesc("d_weight", 0);
@@ -73,7 +73,7 @@ Maybe<void> InferDataType4MatmulBackward(user_op::InferContext* ctx){
 
 /* static */ Maybe<void> FusedMatmulBiasAddReluBackwardOp::GetSbp(user_op::SbpContext* ctx) {
   ctx->NewBuilder()
-      .Broadcast(user_op::OpArg("in", 0))
+      .Broadcast(user_op::OpArg("weight", 0))
       .Broadcast(user_op::OpArg("dy", 0))
       .Broadcast(user_op::OpArg("aux", 0))
       .Broadcast(user_op::OpArg("d_weight", 0))

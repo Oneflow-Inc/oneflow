@@ -924,19 +924,19 @@ class FusedMatmulBiasAddReluGradFunctor {
   FusedMatmulBiasAddReluGradFunctor() {
     op_ = CHECK_JUST(one::OpBuilder("fused_matmul_bias_add_relu_backward")
                     .Input("dy")
-                    .Input("in")
+                    .Input("weight")
                     .Input("aux")
                     .Output("d_weight")
                     .Output("d_bias")
                     .Output("d_relu")
                     .Build());
   }
-  Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& dy,
-                           const std::shared_ptr<one::Tensor>& in, 
+  Maybe<TensorTuple> operator()(const std::shared_ptr<one::Tensor>& dy,
+                           const std::shared_ptr<one::Tensor>& weight, 
                            const std::shared_ptr<one::Tensor>& aux) const {
     MutableAttrMap attrs;
     printf("here \n");
-    return OpInterpUtil::Dispatch<Tensor>(*op_, {dy, in, aux}, attrs);
+    return OpInterpUtil::Dispatch<TensorTuple>(*op_, {dy, weight, aux}, attrs);
   }
 
  private:

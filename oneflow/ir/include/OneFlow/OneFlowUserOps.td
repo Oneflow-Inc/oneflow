@@ -4274,7 +4274,7 @@ def OneFlow_FusedMatmulBiasAddReluOp : OneFlow_BaseOp<"fused_matmul_bias_add_rel
 def OneFlow_FusedMatmulBiasAddReluBackwardOp : OneFlow_BaseOp<"fused_matmul_bias_add_relu_backward", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
     OneFlow_Tensor:$dy,
-    OneFlow_Tensor:$in,
+    OneFlow_Tensor:$weight,
     OneFlow_Tensor:$aux
   );
   let output = (outs
