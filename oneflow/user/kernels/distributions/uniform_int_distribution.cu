@@ -19,6 +19,7 @@ limitations under the License.
 #include "oneflow/core/framework/dtype.h"
 #include "oneflow/user/kernels/distributions/uniform_int_distribution.h"
 #include "oneflow/core/ep/cuda/cuda_stream.h"
+#include "oneflow/core/control/global_process_ctx.h"
 
 namespace oneflow {
 
@@ -32,11 +33,14 @@ __device__ int64_t GenUniformInt(curandState* state, const int64_t low, const in
 }
 
 template<typename T>
-__global__ void GenerateGpu(curandState* state, const int64_t elem_cnt, T* dptr, const int64_t low,
+__global__ void GenerateGpu(curandState* state, const int64_t rank_id,const int64_t elem_cnt, T* dptr, const int64_t low,
                             const int64_t high) {
   const int id = blockIdx.x * blockDim.x + threadIdx.x;
   curandState localState = state[id];
-  CUDA_1D_KERNEL_LOOP(i, elem_cnt) {
+  CUDA_1D_KERNEL_LOOP(i, elem_cnt*rank_id) {
+    static_cast<T>(GenUniformInt(&localState, low, high));
+  }
+   CUDA_1D_KERNEL_LOOP(i, elem_cnt) {
     dptr[i] = static_cast<T>(GenUniformInt(&localState, low, high));
   }
   state[id] = localState;
@@ -53,8 +57,9 @@ void UniformIntDistribution<DeviceType::kCUDA, T>::operator()(
   int32_t block_num = gen->max_block_num();
   int32_t thread_num = gen->max_thread_num();
   auto* curand_states = gen->curand_states();
+  int64_t rank_id = GlobalProcessCtx::Rank();
   GenerateGpu<T><<<block_num, thread_num, 0, stream->As<ep::CudaStream>()->cuda_stream()>>>(
-      curand_states, elem_cnt, dptr, low_, high_);
+      curand_states, rank_id, elem_cnt, dptr, low_, high_);
 }
 
 #define INITIATE_CUDA_UNIFORM_INT_DISTRIBUTION(T, typeproto)              \
