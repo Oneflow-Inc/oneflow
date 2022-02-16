@@ -36,7 +36,10 @@ class TestToConsistentError(flow.unittest.TestCase):
             sbp = flow.sbp.split(0)
             global_data = data.to_consistent(placement=placement, sbp=sbp)
 
-        self.assertTrue(".to_consistent has been removed, please use .to_global instead" in str(context.exception))
+        self.assertTrue(
+            ".to_consistent has been removed, please use .to_global instead"
+            in str(context.exception)
+        )
 
     @unittest.skipIf(os.getenv("ONEFLOW_TEST_CPU_ONLY"), "only test cpu cases")
     def test_tensor_is_consistent(self):
@@ -44,7 +47,10 @@ class TestToConsistentError(flow.unittest.TestCase):
             data = flow.rand(2, dtype=flow.float32)
             print(data.is_consistent())
 
-        self.assertTrue(".is_consistent has been removed, please use .is_global instead" in str(context.exception))
+        self.assertTrue(
+            ".is_consistent has been removed, please use .is_global instead"
+            in str(context.exception)
+        )
 
     @unittest.skipIf(os.getenv("ONEFLOW_TEST_CPU_ONLY"), "only test cpu cases")
     def test_module_to_consistent(self):
@@ -54,7 +60,11 @@ class TestToConsistentError(flow.unittest.TestCase):
             sbp = flow.sbp.split(0)
             m.to_consistent(placement=placement, sbp=sbp)
 
-        self.assertTrue(".to_consistent has been removed, please use .to_global instead" in str(context.exception))
+        self.assertTrue(
+            ".to_consistent has been removed, please use .to_global instead"
+            in str(context.exception)
+        )
+
 
 if __name__ == "__main__":
     unittest.main()
