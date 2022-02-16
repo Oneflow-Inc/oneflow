@@ -41,8 +41,8 @@ class GatherOpKernelCache final : public user_op::OpKernelCache {
   const int64_t upper_;
 };
 
-void CheckNdSbp(const Shape& hierarchy, int64_t gather_axis, const cfg::NdSbp& in_nd_sbp,
-                const cfg::NdSbp& indices_nd_sbp, const cfg::NdSbp& out_nd_sbp) {
+void CheckNdSbp(const Shape& hierarchy, int64_t gather_axis, const NdSbp& in_nd_sbp,
+                const NdSbp& indices_nd_sbp, const NdSbp& out_nd_sbp) {
   CHECK_EQ(hierarchy.NumAxes(), in_nd_sbp.sbp_parallel_size());
   CHECK_EQ(hierarchy.NumAxes(), indices_nd_sbp.sbp_parallel_size());
   CHECK_EQ(hierarchy.NumAxes(), in_nd_sbp.sbp_parallel_size());
@@ -68,7 +68,7 @@ class GatherKernel final : public user_op::OpKernel, public user_op::CudaGraphSu
       user_op::KernelCacheContext* ctx) const override {
     if (ctx->parallel_ctx().parallel_num() > 1) {
       const auto axis = ctx->Attr<int64_t>("axis");
-      const cfg::NdSbp& in_nd_sbp = ctx->NdSbp4ArgNameAndIndex("in", 0);
+      const NdSbp& in_nd_sbp = ctx->NdSbp4ArgNameAndIndex("in", 0);
       const Shape& hierarchy = *ctx->parallel_desc().hierarchy();
       CheckNdSbp(hierarchy, axis, in_nd_sbp, ctx->NdSbp4ArgNameAndIndex("indices", 0),
                  ctx->NdSbp4ArgNameAndIndex("out", 0));

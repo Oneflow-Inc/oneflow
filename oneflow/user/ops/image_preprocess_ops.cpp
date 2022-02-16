@@ -152,7 +152,7 @@ namespace oneflow {
   user_op::TensorDesc* out_tensor = ctx->OutputTensorDesc("out", 0);
   int64_t batch_size = ctx->Attr<int64_t>("batch_size");
   const ParallelContext& parallel_ctx = ctx->parallel_ctx();
-  const cfg::SbpParallel& out_sbp = ctx->SbpParallel4ArgNameAndIndex("out", 0);
+  const SbpParallel& out_sbp = ctx->SbpParallel4ArgNameAndIndex("out", 0);
   if (parallel_ctx.parallel_num() > 1 && out_sbp.has_split_parallel()) {
     BalancedSplitter bs(batch_size, parallel_ctx.parallel_num());
     *out_tensor->mut_shape() = Shape({bs.At(parallel_ctx.parallel_id()).size()});
@@ -169,9 +169,9 @@ namespace oneflow {
 
 /* static */ Maybe<void> CoinFlipOp::InferNdSbp(user_op::InferNdSbpFnContext* ctx) {
   const Shape& hierarchy = ctx->parallel_hierarchy();
-  cfg::NdSbp* output_dist = ctx->NdSbp4ArgNameAndIndex("out", 0);
+  NdSbp* output_dist = ctx->NdSbp4ArgNameAndIndex("out", 0);
   // the input may be produced by tick which should be broadcast parallel dist
-  std::vector<cfg::NdSbp*> inputs_dist;
+  std::vector<NdSbp*> inputs_dist;
   for (const auto& arg_pair : ctx->inputs()) {
     inputs_dist.emplace_back(ctx->NdSbp4ArgNameAndIndex(arg_pair.first, arg_pair.second));
   }
@@ -186,7 +186,7 @@ namespace oneflow {
   } else {
     CHECK_EQ_OR_RETURN(dist_conf.size(), hierarchy.NumAxes());
     for (const std::string& sbp_str : dist_conf) {
-      cfg::SbpParallel sbp_parallel;
+      SbpParallel sbp_parallel;
       CHECK_OR_RETURN(ParseSbpParallelFromString(sbp_str, &sbp_parallel));
       CHECK_OR_RETURN(
           (sbp_parallel.has_split_parallel() && sbp_parallel.split_parallel().axis() == 0)
