@@ -16,7 +16,6 @@ limitations under the License.
 #ifndef ONEFLOW_CORE_EAGER_BLOB_OBJECT_H_
 #define ONEFLOW_CORE_EAGER_BLOB_OBJECT_H_
 
-#include "oneflow/core/vm/object.h"
 #include "oneflow/core/register/blob_desc.h"
 #include "oneflow/core/register/blob.h"
 
@@ -26,14 +25,14 @@ class ParallelDesc;
 
 namespace vm {
 
-class BlobObject : public vm::Object {
+class BlobObject {
  public:
   BlobObject(const std::shared_ptr<MemoryCase>& mem_case, const std::shared_ptr<Shape>& shape,
              DataType data_type)
       : mem_case_(mem_case), blob_desc_(shape, data_type) {}
   BlobObject(const BlobObject&) = delete;
   BlobObject(BlobObject&&) = delete;
-  virtual ~BlobObject() override = default;
+  virtual ~BlobObject() = default;
 
   const BlobDesc& blob_desc() const { return blob_desc_; }
   virtual BlobDesc* mut_blob_desc() = 0;
