@@ -20,10 +20,16 @@ limitations under the License.
 #include "oneflow/core/ep/include/primitive/copy_nd.h"
 #include "oneflow/core/ep/include/primitive/permute.h"
 #include "oneflow/core/ep/include/primitive/add.h"
+#include "oneflow/core/ep/include/primitive/batch_matmul.h"
+#include "oneflow/core/ep/include/primitive/matmul.h"
 
 namespace oneflow {
 
 namespace {
+
+ep::primitive::BlasTransposeType GetBlasTransposeType(bool transpose) {
+  return transpose ? ep::primitive::BlasTransposeType::T : ep::primitive::BlasTransposeType::N;
+}
 
 __global__ void GenerateGatherIndicesGpu(const int32_t elem_cnt, const int32_t stride,
                                          const int32_t in_cols, const int32_t offset,
@@ -100,14 +106,25 @@ __global__ void ScatterSplitAddTransposeGpu(int32_t elem_cnt, int32_t stride_dim
 }
 
 template<typename T>
-void ConcatFeatures(user_op::KernelComputeContext* ctx, const T* pad_tensor_ptr,
-                    const int64_t pad_dim, const int64_t embedding_size) {
+__global__ void SetOut(int32_t elem_cnt, int32_t stride, int32_t cols_offset, int32_t out_cols,
+                       T* out) {
+  CUDA_1D_KERNEL_LOOP(i, elem_cnt) {
+    int32_t row = i / stride;
+    int32_t col = i - row * stride;
+    int32_t out_offset = row * out_cols + cols_offset + col;
+    out[out_offset] = 0;
+  }
+}
+
+template<typename T>
+void ConcatFeatures(user_op::KernelComputeContext* ctx) {
   const int64_t feature_input_size = ctx->input_size("features");
   user_op::Tensor* padded_concated_features =
       ctx->Tensor4ArgNameAndIndex("padded_concated_features", 0);
   auto primitive = ep::primitive::NewPrimitive<ep::primitive::CopyNdFactory>(DeviceType::kCUDA, 2);
-  DimVector dst_shape = {padded_concated_features->shape().At(0),
-                         padded_concated_features->shape().Count(1)};
+  const int64_t dst_rows = padded_concated_features->shape().At(0);
+  const int64_t dst_cols = padded_concated_features->shape().Count(1);
+  DimVector dst_shape = {dst_rows, dst_cols};
   int64_t out_col_offset = 0;
   for (int64_t i = 0; i < feature_input_size; ++i) {
     const user_op::Tensor* feature = ctx->Tensor4ArgNameAndIndex("features", i);
@@ -122,81 +139,31 @@ void ConcatFeatures(user_op::KernelComputeContext* ctx, const T* pad_tensor_ptr,
                       feature->dptr<T>(), src_shape.data(), src_pos_vec.data(), extent_vec.data());
     out_col_offset += feature_cols;
   }
+  int64_t pad_dim = dst_cols - out_col_offset;
   if (pad_dim > 0) {
-    CHECK_EQ(out_col_offset + pad_dim * embedding_size, padded_concated_features->shape().Count(1));
-    DimVector dst_pos_vec = {0, out_col_offset};
-    DimVector src_shape = {padded_concated_features->shape().At(0), pad_dim * embedding_size};
-    DimVector src_pos_vec = {0, 0};
-    DimVector extent_vec = {padded_concated_features->shape().At(0), pad_dim * embedding_size};
-    primitive->Launch(ctx->stream(), padded_concated_features->data_type(), 2,
-                      padded_concated_features->mut_dptr<T>(), dst_shape.data(), dst_pos_vec.data(),
-                      pad_tensor_ptr, src_shape.data(), src_pos_vec.data(), extent_vec.data());
+    int64_t pad_elem_cnt = dst_rows * pad_dim;
+    SetOut<<<BlocksNum4ThreadsNum(pad_elem_cnt), kCudaThreadsNumPerBlock, 0,
+             ctx->stream()->As<ep::CudaStream>()->cuda_stream()>>>(
+        pad_elem_cnt, pad_dim, out_col_offset, dst_cols, padded_concated_features->mut_dptr<T>());
   }
-}
-
-template<typename T>
-void BatchMatmul(ep::Stream* stream, DataType data_type, const bool transpose_b,
-                 const int32_t batch_size, const int32_t m, const int32_t n, const int32_t k,
-                 const T* in_a, const T* in_b, T* out) {
-  float alpha = 1.0f;
-  float beta = 0.0f;
-  int32_t lda = k;
-  int32_t ldb;
-  int32_t ldc = n;
-  int32_t stride_a = m * k;
-  int32_t stride_b = k * n;
-  int32_t stride_c = m * n;
-  cublasOperation_t trans_b{};
-  if (transpose_b) {
-    trans_b = CUBLAS_OP_T;
-    ldb = k;
-  } else {
-    trans_b = CUBLAS_OP_N;
-    ldb = n;
-  }
-#if CUDA_VERSION >= 11000
-  cublasGemmAlgo_t algo = CUBLAS_GEMM_DEFAULT;
-#else
-  cublasGemmAlgo_t algo =
-      (data_type == DataType::kFloat16) ? CUBLAS_GEMM_DFALT_TENSOR_OP : CUBLAS_GEMM_DEFAULT;
-#endif
-  cudaDataType_t cuda_data_type;
-  cudaDataType_t compute_type = CUDA_R_32F;
-  if (data_type == DataType::kFloat16) {
-    cuda_data_type = CUDA_R_16F;
-  } else if (data_type == DataType::kFloat) {
-    cuda_data_type = CUDA_R_32F;
-  } else {
-    UNIMPLEMENTED();
-  }
-  OF_CUBLAS_CHECK(cublasGemmStridedBatchedEx(
-      stream->As<ep::CudaStream>()->cublas_handle(), trans_b, CUBLAS_OP_N, n, m, k, &alpha, in_b,
-      cuda_data_type, ldb, stride_b, in_a, cuda_data_type, lda, stride_a, &beta, out,
-      cuda_data_type, ldc, stride_c, batch_size, compute_type, algo));
-}
-
-void GenerateGatherIndices(ep::Stream* stream, const int32_t concat_dim,
-                           const int32_t concat_padded_dim, const bool self_interaction,
-                           int32_t* gather_indices) {
-  int32_t offset = self_interaction ? 1 : 0;
-  int32_t elem_cnt = concat_dim * concat_dim;
-  int32_t stride = concat_dim;
-  int32_t in_cols = concat_padded_dim;
-  GenerateGatherIndicesGpu<<<BlocksNum4ThreadsNum(elem_cnt), kCudaThreadsNumPerBlock, 0,
-                             stream->As<ep::CudaStream>()->cuda_stream()>>>(
-      elem_cnt, stride, in_cols, offset, gather_indices);
 }
 
 template<typename T>
 void GatherConcatKernel(ep::Stream* stream, int32_t elem_cnt, int32_t out_dim,
-                        int32_t interaction_dim, int32_t concated_padded_dim,
-                        int32_t output_concat_end_dim, const int32_t* gather_indices,
-                        const T* matmul_out, const T* output_concat_ptr, T* out_ptr) {
+                        int32_t valid_out_dim, int32_t features_concated_dim,
+                        int32_t concated_padded_dim, int32_t output_concat_end_dim,
+                        bool self_interaction, const T* matmul_out, const T* output_concat_ptr,
+                        int32_t* gather_indices_ptr, T* out_ptr) {
+  cudaStream_t cuda_stream = stream->As<ep::CudaStream>()->cuda_stream();
+  const int32_t gen_indices_elem_cnt = features_concated_dim * features_concated_dim;
+  int32_t offset = self_interaction ? 1 : 0;
+  GenerateGatherIndicesGpu<<<BlocksNum4ThreadsNum(gen_indices_elem_cnt), kCudaThreadsNumPerBlock, 0,
+                             cuda_stream>>>(gen_indices_elem_cnt, features_concated_dim,
+                                            concated_padded_dim, offset, gather_indices_ptr);
+
   int32_t matmul_stride = concated_padded_dim * concated_padded_dim;
-  int32_t valid_out_dim = output_concat_end_dim + interaction_dim;
-  GatherConcatGpu<<<BlocksNum4ThreadsNum(elem_cnt), kCudaThreadsNumPerBlock, 0,
-                    stream->As<ep::CudaStream>()->cuda_stream()>>>(
-      elem_cnt, out_dim, valid_out_dim, matmul_stride, output_concat_end_dim, gather_indices,
+  GatherConcatGpu<<<BlocksNum4ThreadsNum(elem_cnt), kCudaThreadsNumPerBlock, 0, cuda_stream>>>(
+      elem_cnt, out_dim, valid_out_dim, matmul_stride, output_concat_end_dim, gather_indices_ptr,
       matmul_out, output_concat_ptr, out_ptr);
 }
 
@@ -261,6 +228,8 @@ class FusedDotFeatureInteractionKernel final : public user_op::OpKernel {
     const int64_t concated_padded_dim = padded_concated_features->shape().At(1);
     const int64_t embedding_size = padded_concated_features->shape().At(2);
     const int64_t out_dim = out->shape().At(1);
+    const int32_t output_padding = ctx->Attr<int32_t>("output_padding");
+    const int64_t valid_out_dim = out_dim - output_padding;
     const bool self_interaction = ctx->Attr<bool>("self_interaction");
 
     T* matmul_out = reinterpret_cast<T*>(tmp_buffer->mut_dptr<char>());
@@ -271,20 +240,15 @@ class FusedDotFeatureInteractionKernel final : public user_op::OpKernel {
                                         : features_concated_dim * (features_concated_dim - 1) / 2;
     int32_t* gather_indices_ptr =
         reinterpret_cast<int32_t*>(tmp_buffer->mut_dptr<char>() + matmul_out_size);
-    size_t gather_indices_size = GetCudaAlignedSize(interaction_dim * sizeof(int32_t));
-    GenerateGatherIndices(ctx->stream(), features_concated_dim, concated_padded_dim,
-                          self_interaction, gather_indices_ptr);
-    T* pad_tensor_ptr =
-        reinterpret_cast<T*>(tmp_buffer->mut_dptr<char>() + matmul_out_size + gather_indices_size);
-    const int64_t pad_dim = concated_padded_dim - features_concated_dim;
-    size_t pad_tensor_size = GetCudaAlignedSize(batch_size * pad_dim * embedding_size * sizeof(T));
-    OF_CUDA_CHECK(cudaMemsetAsync(pad_tensor_ptr, 0, pad_tensor_size,
-                                  ctx->stream()->As<ep::CudaStream>()->cuda_stream()));
-    ConcatFeatures<T>(ctx, pad_tensor_ptr, pad_dim, embedding_size);
-    BatchMatmul(ctx->stream(), padded_concated_features->data_type(), true, batch_size,
-                concated_padded_dim, concated_padded_dim, embedding_size,
-                padded_concated_features->dptr<T>(), padded_concated_features->dptr<T>(),
-                matmul_out);
+
+    ConcatFeatures<T>(ctx);
+    auto batch_matmul = ep::primitive::NewPrimitive<ep::primitive::BatchMatmulFactory>(
+        ctx->device_type(), padded_concated_features->data_type(), GetBlasTransposeType(false),
+        GetBlasTransposeType(true));
+    batch_matmul->Launch(ctx->stream(), batch_size, concated_padded_dim, concated_padded_dim,
+                         embedding_size, 1.0, padded_concated_features->dptr(),
+                         padded_concated_features->dptr(), 0.0, matmul_out);
+
     int64_t output_concat_end_dim = 0;
     const T* output_concat_ptr = nullptr;
     if (ctx->has_input("output_concat", 0)) {
@@ -292,9 +256,11 @@ class FusedDotFeatureInteractionKernel final : public user_op::OpKernel {
       output_concat_end_dim = output_concat->shape().At(1);
       output_concat_ptr = output_concat->dptr<T>();
     }
-    GatherConcatKernel<T>(ctx->stream(), out->shape().elem_cnt(), out_dim, interaction_dim,
-                          concated_padded_dim, output_concat_end_dim, gather_indices_ptr,
-                          matmul_out, output_concat_ptr, out->mut_dptr<T>());
+    CHECK_EQ(valid_out_dim, output_concat_end_dim + interaction_dim);
+    GatherConcatKernel<T>(ctx->stream(), out->shape().elem_cnt(), out_dim, valid_out_dim,
+                          features_concated_dim, concated_padded_dim, output_concat_end_dim,
+                          self_interaction, matmul_out, output_concat_ptr, gather_indices_ptr,
+                          out->mut_dptr<T>());
   }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
@@ -379,9 +345,12 @@ class FusedDotFeatureInteractionGradKernel final : public user_op::OpKernel {
                              features_concated_dim, output_concat_end_dim, self_interaction,
                              dy->dptr<T>(), output_concat_grad_ptr, matmul_out_grad_ptr);
 
-    BatchMatmul(ctx->stream(), data_type, false, batch_size, concated_padded_dim, embedding_size,
-                concated_padded_dim, matmul_out_grad_ptr, padded_concated_features->dptr<T>(),
-                padded_concated_features_grad_ptr);
+    auto batch_matmul = ep::primitive::NewPrimitive<ep::primitive::BatchMatmulFactory>(
+        ctx->device_type(), padded_concated_features->data_type(), GetBlasTransposeType(false),
+        GetBlasTransposeType(false));
+    batch_matmul->Launch(ctx->stream(), batch_size, concated_padded_dim, embedding_size,
+                         concated_padded_dim, 1.0, matmul_out_grad_ptr,
+                         padded_concated_features->dptr(), 0.0, padded_concated_features_grad_ptr);
 
     ConcatFeaturesGrad(ctx, batch_size, concated_padded_dim, embedding_size,
                        padded_concated_features_grad_ptr);
