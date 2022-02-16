@@ -687,13 +687,8 @@ class ExpandDimsFunctor {
     MutableAttrMap attrs;
     JUST(attrs.SetAttr<int32_t>("axis", expand_dim));
 
-    auto& x = input;
-    // if input tensor is eager local, then try return tensor's view
-    if (x->is_local() && !(LazyMode::is_enabled())) {
-      // exclude 0 shape and scalar tensor 
-      if (x->shape()->elem_cnt() > 1) { 
-        return view::UnSqueeze(x, expand_dim);
-      }
+    if (view::IsViewApplicable(input)){
+      return view::Unsqueeze(input, expand_dim);
     }
   
     return OpInterpUtil::Dispatch<Tensor>(*op_, {input}, attrs);
@@ -732,13 +727,10 @@ class SqueezeFunctor {
     MutableAttrMap attrs;
     JUST(attrs.SetAttr<std::vector<int32_t>>("axes", squeeze_dims));
 
-    // if input tensor is eager local, then try return tensor's view
-    if (x->is_local() && !(LazyMode::is_enabled())) {
-      // exclude 0 shape and scalar tensor 
-      if (x->shape()->elem_cnt() > 1) {
-        return view::Squeeze(x, squeeze_dims);
-      }
+    if (view::IsViewApplicable(x)){
+      return view::Squeeze(x, squeeze_dims);
     }
+
     return OpInterpUtil::Dispatch<Tensor>(*op_, {x}, attrs);
   }
 
@@ -1106,18 +1098,14 @@ class ReshapeFunctor {
       JUST(attrs.SetAttr<Shape>("shape", infered_shape));
     }
 
-    // if input tensor is eager local, then try return tensor's view
-    if (x->is_local() && !(LazyMode::is_enabled())) {
-      if (x->shape()->elem_cnt() > 1) { // exclude 0 shape and scalar tensor 
-        // in some case, view operate is not allowed, so need to check it's validation,
+    if (view::IsViewApplicable(x)){
+      // in some case, view operate is not allowed, so need to check it's validation,
         // the check refer to torch(aten/src/ATen/native/TensorShape.cpp)
         bool is_view_valid =
             CheckViewValid(x->shape()->elem_cnt(), x->shape()->dim_vec(),
                            JUST(x->stride())->StrideVec(), infered_shape.dim_vec());
         if (is_view_valid) { return view::Reshape(x, infered_shape); }
-      }
     }
-
     return OpInterpUtil::Dispatch<Tensor>(*op_, {x}, attrs);
   }
 
@@ -1158,10 +1146,7 @@ class ViewFunctor {
       JUST(attrs.SetAttr<Shape>("shape", infered_shape));
     }
 
-    if (x->is_local() && !(LazyMode::is_enabled())) {
-      if (x->shape()->elem_cnt() > 1) {  // exclude 0 shape and scalar tensor 
-        // in some case, view operate is not allowed, so need to check it's validation,
-        // the check refer to torch(aten/src/ATen/native/TensorShape.cpp)
+    if (view::IsViewApplicable(x)){
         bool is_view_valid =
             CheckViewValid(x->shape()->elem_cnt(), x->shape()->dim_vec(),
                            JUST(x->stride())->StrideVec(), infered_shape.dim_vec());
@@ -1169,7 +1154,6 @@ class ViewFunctor {
             << " >> view size is not compatible with input tensor's size and stride (at least one "
                "dimension spans across two contiguous subspaces). Use .reshape(...) instead.";
         return view::Reshape(x, infered_shape);
-      }
     }
 
     return OpInterpUtil::Dispatch<Tensor>(*op_, {x}, attrs);

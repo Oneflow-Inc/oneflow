@@ -49,6 +49,15 @@ Maybe<bool> IsContiguous(const std::shared_ptr<Tensor>& tensor) {
 
 namespace view {
 
+bool IsViewApplicable(const std::shared_ptr<Tensor>& input){
+  // only eager local tensor support view for now!
+  if (input->is_local() && !(LazyMode::is_enabled()) && input->shape()->elem_cnt() > 1) { 
+    //elem_cnt() > 1  exclude 0 shape and scalar tensor 
+    return true;
+  }
+  return false;
+}
+
 Maybe<Tensor> BasicView(const std::shared_ptr<Tensor>& input, const Shape& target_shape,
                         int64_t storage_offset) {
   /**
@@ -168,7 +177,7 @@ Maybe<Tensor> Slice(const std::shared_ptr<Tensor>& input, const std::vector<int6
 }
 
 
-Maybe<Tensor> UnSqueeze(const std::shared_ptr<Tensor>& input, const int32_t& expand_dim) {
+Maybe<Tensor> Unsqueeze(const std::shared_ptr<Tensor>& input, const int32_t& expand_dim) {
   if (!(input->is_eager() && input->is_local())) {
     return Error::RuntimeError()
            << "view::UnSqueeze(): input should be eager local tensor, but got "
