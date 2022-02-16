@@ -30,17 +30,14 @@ from oneflow.test_utils.automated_test_util import *
 class TestToConsistentError(flow.unittest.TestCase):
     @autotest(n=1, check_graph=True)
     @unittest.skipIf(os.getenv("ONEFLOW_TEST_CPU_ONLY"), "only test cpu cases")
-    def test_to_consistent(test_case):
-        try:
+    def test(self):
+        with self.assertRaises(Exception) as context:
             data = flow.rand(2, dtype=flow.float32)
             placement = flow.env.all_device_placement("cuda")
             sbp = flow.sbp.split(0)
             global_data = data.to_consistent(placement=placement, sbp=sbp)
 
-        except Exception as e:
-            err_msg = ".to_consistent has been removed, please use .to_global instead"
-            assert err_msg in str(e)
-
+        self.assertTrue(".to_consistent has been removed, please use .to_global instead" in str(context.exception))
 
 if __name__ == "__main__":
     unittest.main()
