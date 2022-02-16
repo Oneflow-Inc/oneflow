@@ -409,7 +409,7 @@ jobs:
       matrix: ${{ fromJson(needs.find-test-cache-distributed.outputs.matrix) }}
     env:
       ONEFLOW_SRC: .
-      TEST_CONTAINER_NAME: "pr-${{ github.event.pull_request.number }}-run-id-${{ github.run_id }}-${{ matrix.entry }}-rank-${{ matrix.rank }}"
+      TEST_CONTAINER_NAME: "ci-test-distributed"
       TEST_IMG_TAG: registry.cn-beijing.aliyuncs.com/oneflow/test-with-pytorch-1.9.0:e7a497b41d8b7f1bce055b1f23d027f93b1557ae
       SSH_TANK_HOST: 192.168.1.13
       SSH_TANK_PATH: /tank
