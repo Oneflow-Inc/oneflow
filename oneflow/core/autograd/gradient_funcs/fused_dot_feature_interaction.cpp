@@ -26,8 +26,8 @@ struct FusedDotFeatureInteractionCaptureState : public AutoGradCaptureState {
   bool need_grad_op = false;
   std::vector<bool> features_requires_grad;
   std::vector<int32_t> feature_dims;
-  int32_t output_concat_grad_dim;
-  bool self_interaction;
+  int32_t output_concat_grad_dim = 0;
+  bool self_interaction = false;
   bool has_output_concat = false;
   bool has_output_concat_grad = false;
 };
@@ -57,7 +57,7 @@ Maybe<void> FusedDotFeatureInteraction::Capture(FusedDotFeatureInteractionCaptur
                                                 const AttrMap& attrs) const {
   ctx->SaveTensorForBackward(outputs.at(1));  // padded_concated_features
   ctx->has_output_concat = JUST(attrs.GetAttr<bool>("has_output_concat"));
-  int32_t num_features;
+  int32_t num_features = 0;
   if (ctx->has_output_concat) {
     num_features = inputs.size() - 1;
     const auto& output_concat = inputs.at(num_features);
