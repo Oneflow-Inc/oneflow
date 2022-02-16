@@ -161,6 +161,7 @@ class Graph(object):
             >>> linear_graph = MyGraph()
             >>> x = flow.randn(4, 3)
             >>> linear.eval() # make linear module executing in evaluation mode
+            Linear(in_features=3, out_features=8, bias=False)
             >>> y = linear_graph(x) # The build() method is called implicitly
 
         Note:
@@ -246,6 +247,10 @@ class Graph(object):
             >>> x = flow.randn(10, 3)
             >>> y = flow.randn(10)
             >>> model.train() # make model executing in training mode
+            Sequential(
+              (0): Linear(in_features=3, out_features=1, bias=True)
+              (1): Flatten(start_dim=0, end_dim=1)
+            )
             >>> for t in range(3):
             ...     loss = linear_graph(x, y)
 
