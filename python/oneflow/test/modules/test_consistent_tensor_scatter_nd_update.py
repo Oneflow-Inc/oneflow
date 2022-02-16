@@ -34,30 +34,27 @@ class TensorScatterNdUpdate(flow.nn.Graph):
 
 
 def _test_global_tensor_scatter_nd_update(test_case, placement, sbp, check_graph=False):
-    np.random.seed(10)
-    np_origin = np.random.uniform(-1e-05, 1e-05, (16,))
-    np_indices = np.random.choice(16, 8, replace=False)
-    np_update = np.random.uniform(-1e-05, 1e-05, (8,))
+    origin = random_tensor(1, 16, requires_grad=False).to_global(placement, sbp)
+    indices = choice(16, (8, 1), replace=False).to_global(
+        placement, [flow.sbp.broadcast for _ in range(len(placement.ranks.shape))]
+    )
+    update = random_tensor(1, 8, requires_grad=False).to_global(
+        placement, [flow.sbp.broadcast for _ in range(len(placement.ranks.shape))]
+    )
 
-    origin = flow.tensor(np_origin, dtype=flow.float, placement=placement, sbp=sbp)
-    indices = flow.tensor(
-        np_indices.reshape(8, 1),
-        dtype=flow.int,
-        placement=placement,
-        sbp=[flow.sbp.broadcast for _ in range(len(placement.ranks.shape))],
-    )
-    update = flow.tensor(
-        np_update,
-        dtype=flow.float,
-        placement=placement,
-        sbp=[flow.sbp.broadcast for _ in range(len(placement.ranks.shape))],
-    )
+    np_origin = origin.oneflow.numpy()
+    np_indices = indices.oneflow.numpy().reshape(8)
+    np_update = update.oneflow.numpy()
 
     if check_graph:
         tensor_scatter_nd_update = TensorScatterNdUpdate()
-        output = tensor_scatter_nd_update(origin, indices, update)
+        output = tensor_scatter_nd_update(
+            origin.oneflow, indices.oneflow, update.oneflow
+        )
     else:
-        output = flow.tensor_scatter_nd_update(origin, indices, update)
+        output = flow.tensor_scatter_nd_update(
+            origin.oneflow, indices.oneflow, update.oneflow
+        )
 
     np_origin[np_indices] = np_update
 
@@ -67,30 +64,28 @@ def _test_global_tensor_scatter_nd_update(test_case, placement, sbp, check_graph
 def _test_global_tensor_scatter_nd_update_t(
     test_case, placement, sbp, check_graph=False
 ):
-    np.random.seed(20)
-    np_origin = np.random.uniform(-1e-05, 1e-05, (16, 4))
-    np_indices = np.random.choice(16, 8, replace=False)
-    np_update = np.random.uniform(-1e-05, 1e-05, (8, 4))
 
-    origin = flow.tensor(np_origin, dtype=flow.float, placement=placement, sbp=sbp)
-    indices = flow.tensor(
-        np_indices.reshape(8, 1),
-        dtype=flow.int,
-        placement=placement,
-        sbp=[flow.sbp.broadcast for _ in range(len(placement.ranks.shape))],
+    origin = random_tensor(2, 16, 4, requires_grad=False).to_global(placement, sbp)
+    indices = choice(16, (8, 1), replace=False).to_global(
+        placement, [flow.sbp.broadcast for _ in range(len(placement.ranks.shape))]
     )
-    update = flow.tensor(
-        np_update,
-        dtype=flow.float,
-        placement=placement,
-        sbp=[flow.sbp.broadcast for _ in range(len(placement.ranks.shape))],
+    update = random_tensor(2, 8, 4, requires_grad=False).to_global(
+        placement, [flow.sbp.broadcast for _ in range(len(placement.ranks.shape))]
     )
+
+    np_origin = origin.oneflow.numpy()
+    np_indices = indices.oneflow.numpy().reshape(8)
+    np_update = update.oneflow.numpy()
 
     if check_graph:
         tensor_scatter_nd_update = TensorScatterNdUpdate()
-        output = tensor_scatter_nd_update(origin, indices, update)
+        output = tensor_scatter_nd_update(
+            origin.oneflow, indices.oneflow, update.oneflow
+        )
     else:
-        output = flow.tensor_scatter_nd_update(origin, indices, update)
+        output = flow.tensor_scatter_nd_update(
+            origin.oneflow, indices.oneflow, update.oneflow
+        )
 
     np_origin[np_indices] = np_update
 
@@ -98,41 +93,33 @@ def _test_global_tensor_scatter_nd_update_t(
 
 
 def _test_eager_global_tensor_scatter_nd_update_backward(test_case, placement, sbp):
-    np.random.seed(30)
-    np_origin = np.random.uniform(-1e-05, 1e-05, (16,))
-    np_indices = np.random.choice(16, 8, replace=False)
-    np_update = np.random.uniform(-1e-05, 1e-05, (8,))
+    origin = random_tensor(1, 16,).to_global(placement, sbp)
+    indices = choice(16, (8, 1), replace=False).to_global(
+        placement, [flow.sbp.broadcast for _ in range(len(placement.ranks.shape))]
+    )
+    update = random_tensor(1, 8).to_global(
+        placement, [flow.sbp.broadcast for _ in range(len(placement.ranks.shape))]
+    )
 
-    origin = flow.tensor(
-        np_origin, dtype=flow.float, placement=placement, sbp=sbp, requires_grad=True
-    )
-    indices = flow.tensor(
-        np_indices.reshape(8, 1),
-        dtype=flow.int,
-        placement=placement,
-        sbp=[flow.sbp.broadcast for _ in range(len(placement.ranks.shape))],
-    )
-    update = flow.tensor(
-        np_update,
-        dtype=flow.float,
-        placement=placement,
-        sbp=[flow.sbp.broadcast for _ in range(len(placement.ranks.shape))],
-        requires_grad=True,
-    )
+    np_origin = origin.oneflow.numpy()
+    np_indices = indices.oneflow.numpy().reshape(8)
+    np_update = update.oneflow.numpy()
 
     np_update_grad = np.ones(8)
     np_origin_grad = np.ones(16)
     np_origin_grad[np_indices] = np.zeros(8)
 
-    output = flow.tensor_scatter_nd_update(origin, indices, update)
+    output = flow.tensor_scatter_nd_update(
+        origin.oneflow, indices.oneflow, update.oneflow
+    )
     out_sum = output.sum()
     out_sum.backward()
 
     np_origin[np_indices] = np_update
 
     test_case.assertTrue(np.allclose(output.numpy(), np_origin, 0.0001, 0.0001))
-    test_case.assertTrue(np.allclose(update.grad.numpy(), np_update_grad))
-    test_case.assertTrue(np.allclose(origin.grad.numpy(), np_origin_grad))
+    test_case.assertTrue(np.allclose(update.oneflow.grad.numpy(), np_update_grad))
+    test_case.assertTrue(np.allclose(origin.oneflow.grad.numpy(), np_origin_grad))
 
 
 class TestTensorScatterNdUpdate(flow.unittest.TestCase):
