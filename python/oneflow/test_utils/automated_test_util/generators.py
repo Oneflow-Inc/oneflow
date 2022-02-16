@@ -557,13 +557,7 @@ class choice_pytorch_tensor(generator):
         pytorch_tensor = None
         np_arr = np.random.choice(self.a, self.size, self.replace, self.p)
         torch_dtype = None
-        if self.dtype == float:
-            torch_dtype = torch.float
-        elif self.dtype == int:
-            torch_dtype = torch.int64
-        else:
-            raise NotImplementedError(f"Not implemented dtype {dtype} in choice")
-        return torch.tensor(np_arr, dtype=torch_dtype)
+        return torch.tensor(np_arr.astype(self.dtype))
 
 
 __all__ = [

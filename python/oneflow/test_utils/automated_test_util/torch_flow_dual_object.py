@@ -1000,7 +1000,7 @@ def random_tensor(
     return GetDualObject("unused", pytorch_tensor, flow_tensor)
 
 
-def choice(
+def choice_tensor(
     a, size=None, replace=True, p=None, dtype=int, requires_grad=False,
 ):
     if isinstance(requires_grad, generator):
@@ -1027,4 +1027,4 @@ def choice(
 
 
 torch = GetDualObject("", torch_original, flow)
-__all__ = ["autotest", "globaltest", "random_tensor", "choice"]
+__all__ = ["autotest", "globaltest", "random_tensor", "choice_tensor"]
