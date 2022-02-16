@@ -6,14 +6,7 @@ export PYTHONUNBUFFERED=1
 
 src_dir=${ONEFLOW_SRC_DIR:-"$PWD"}
 test_dir=${ONEFLOW_TEST_DIR:-"$PWD/python/oneflow/test/modules"}
-test_tmp_dir=${ONEFLOW_TEST_TMP_DIR:-"./test_tmp_dir"}
-export ONEFLOW_TEST_UTILS_DIR=$src_dir/python/oneflow/test_utils
-
-
-rm -rf $test_tmp_dir
-mkdir -p $test_tmp_dir
-cp -r $test_dir $test_tmp_dir
-cd ${test_tmp_dir}/$(basename $test_dir)
+cd ${test_dir}
 
 for device_num in 1 2 4
 do
