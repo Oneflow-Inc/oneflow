@@ -453,6 +453,12 @@ jobs:
           entry: ${{ matrix.compute-platform }}
           ssh-tank-host: ${{ env.SSH_TANK_HOST }}
           ssh-tank-path: ${{ env.SSH_TANK_PATH }}
+      - name: Get primary node
+        if: ${{ !fromJson(matrix.cache-hit) && contains(matrix.runs-on, 'self-hosted') }}
+        uses: Oneflow-Inc/get-oneflow/master-address@distributed-v2
+        id: get-primary-node
+        with:
+          rank: ${{ matrix.rank }}
       - name: Set environment variables
         if: ${{ !fromJson(matrix.cache-hit) && contains(matrix.runs-on, 'self-hosted') }}
         run: |
@@ -485,7 +491,7 @@ jobs:
             -v $HOME/test-container-cache/dot-local:/root/.local \
             -v $HOME/test-container-cache/dot-cache:/root/.cache \
             -e NODE_RANK=${{ matrix.rank }} \
-            -e _MASTER_ADDR=192.168.1.11 \
+            -e _MASTER_ADDR=${{ steps.get-primary-node.outputs.get-primary-node }} \
             -e ONEFLOW_WHEEL_PATH=${ONEFLOW_WHEEL_PATH} \
             -e ONEFLOW_CI=1 \
             -v $PWD:$PWD \
