@@ -36,7 +36,7 @@ def _test_expand_new_dims_broadcast(test_case, device):
 
     of_input = flow.tensor(input_nd, dtype=flow.float32, requires_grad=True)
     global_of_input = of_input.to_global(
-        placement=flow.placement(device, {0: [0, 1]}), sbp=flow.sbp.broadcast,
+        placement=flow.placement(device, ranks=[0, 1]), sbp=flow.sbp.broadcast,
     )
     of_out = global_of_input.expand(*expand_dim)
     of_out.sum().backward()
@@ -46,9 +46,7 @@ def _test_expand_new_dims_broadcast(test_case, device):
             np.array_equal(of_out.to_local().numpy(), torch_out.detach().cpu().numpy())
         )
         test_case.assertTrue(
-            np.array_equal(
-                of_input.grad.to_local().numpy(), torch_in.grad.cpu().numpy()
-            )
+            np.array_equal(of_input.grad.numpy(), torch_in.grad.cpu().numpy())
         )
 
 
@@ -63,7 +61,7 @@ def _test_expand_same_dim_broadcast(test_case, device):
 
     of_input = flow.tensor(input_nd, dtype=flow.float32, requires_grad=True)
     global_of_input = of_input.to_global(
-        placement=flow.placement(device, {0: [0, 1]}), sbp=flow.sbp.broadcast,
+        placement=flow.placement(device, ranks=[0, 1]), sbp=flow.sbp.broadcast,
     )
 
     of_out = global_of_input.expand(*expand_dim)
@@ -75,9 +73,7 @@ def _test_expand_same_dim_broadcast(test_case, device):
             np.array_equal(of_out.to_local().numpy(), torch_out.detach().cpu().numpy())
         )
         test_case.assertTrue(
-            np.array_equal(
-                of_input.grad.to_local().numpy(), torch_in.grad.cpu().numpy()
-            )
+            np.array_equal(of_input.grad.numpy(), torch_in.grad.cpu().numpy())
         )
 
 
@@ -92,7 +88,7 @@ def _test_expand_same_dim_negative_broadcast(test_case, device):
 
     of_input = flow.tensor(input_nd, dtype=flow.float32, requires_grad=True)
     global_of_input = of_input.to_global(
-        placement=flow.placement(device, {0: [0, 1]}), sbp=flow.sbp.broadcast,
+        placement=flow.placement(device, ranks=[0, 1]), sbp=flow.sbp.broadcast,
     )
 
     of_out = global_of_input.expand(*expand_dim)
@@ -104,9 +100,7 @@ def _test_expand_same_dim_negative_broadcast(test_case, device):
             np.array_equal(of_out.to_local().numpy(), torch_out.detach().cpu().numpy())
         )
         test_case.assertTrue(
-            np.array_equal(
-                of_input.grad.to_local().numpy(), torch_in.grad.cpu().numpy()
-            )
+            np.array_equal(of_input.grad.numpy(), torch_in.grad.cpu().numpy())
         )
 
 
@@ -121,7 +115,7 @@ def _test_expand_new_dims_split(test_case, device):
 
     of_input = flow.tensor(input_nd, dtype=flow.float32, requires_grad=True)
     global_of_input = of_input.to_global(
-        placement=flow.placement(device, {0: [0, 1]}), sbp=flow.sbp.broadcast,
+        placement=flow.placement(device, ranks=[0, 1]), sbp=flow.sbp.broadcast,
     )
     global_of_input = global_of_input.to_global(sbp=flow.sbp.split(0))
 
@@ -138,8 +132,7 @@ def _test_expand_new_dims_split(test_case, device):
         )
         test_case.assertTrue(
             np.array_equal(
-                of_input.grad.to_local().numpy(),
-                torch_in.grad.cpu().numpy()[0:2, :, :, :],
+                of_input.grad.numpy(), torch_in.grad.cpu().numpy()[0:2, :, :, :],
             )
         )
 
@@ -155,7 +148,7 @@ def _test_expand_same_dim_split(test_case, device):
 
     of_input = flow.tensor(input_nd, dtype=flow.float32, requires_grad=True)
     global_of_input = of_input.to_global(
-        placement=flow.placement(device, {0: [0, 1]}), sbp=flow.sbp.broadcast,
+        placement=flow.placement(device, ranks=[0, 1]), sbp=flow.sbp.broadcast,
     )
     global_of_input = global_of_input.to_global(sbp=flow.sbp.split(0))
 
@@ -172,8 +165,7 @@ def _test_expand_same_dim_split(test_case, device):
         )
         test_case.assertTrue(
             np.array_equal(
-                of_input.grad.to_local().numpy(),
-                torch_in.grad.cpu().numpy()[0:2, :, :, :],
+                of_input.grad.numpy(), torch_in.grad.cpu().numpy()[0:2, :, :, :],
             )
         )
 
@@ -189,7 +181,7 @@ def _test_expand_same_dim_negative_split(test_case, device):
 
     of_input = flow.tensor(input_nd, dtype=flow.float32, requires_grad=True)
     global_of_input = of_input.to_global(
-        placement=flow.placement(device, {0: [0, 1]}), sbp=flow.sbp.broadcast,
+        placement=flow.placement(device, ranks=[0, 1]), sbp=flow.sbp.broadcast,
     )
     global_of_input = global_of_input.to_global(sbp=flow.sbp.split(2))
 
@@ -206,8 +198,7 @@ def _test_expand_same_dim_negative_split(test_case, device):
         )
         test_case.assertTrue(
             np.array_equal(
-                of_input.grad.to_local().numpy(),
-                torch_in.grad.cpu().numpy()[:, :, 0:2, :],
+                of_input.grad.numpy(), torch_in.grad.cpu().numpy()[:, :, 0:2, :],
             )
         )
 
