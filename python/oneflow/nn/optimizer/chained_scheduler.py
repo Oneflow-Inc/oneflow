@@ -26,15 +26,15 @@ class ChainedScheduler(LRScheduler):
 
     Example:
         >>> # Assuming optimizer uses lr = 1. for all groups
-        >>> # lr = 0.09     if epoch == 0
-        >>> # lr = 0.081    if epoch == 1
-        >>> # lr = 0.729    if epoch == 2
-        >>> # lr = 0.6561   if epoch == 3
-        >>> # lr = 0.59049  if epoch >= 4
+        >>> # lr = 0.09     if step == 0
+        >>> # lr = 0.081    if step == 1
+        >>> # lr = 0.729    if step == 2
+        >>> # lr = 0.6561   if step == 3
+        >>> # lr = 0.59049  if step >= 4
         >>> scheduler1 = ConstantLR(self.opt, factor=0.1, total_iters=2)
         >>> scheduler2 = ExponentialLR(self.opt, gamma=0.9)
         >>> scheduler = ChainedScheduler([scheduler1, scheduler2])
-        >>> for epoch in range(100):
+        >>> for _ in range(100):
         >>>     train(...)
         >>>     validate(...)
         >>>     scheduler.step()

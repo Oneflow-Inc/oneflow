@@ -21,8 +21,8 @@ from .lr_scheduler import LRScheduler
 class CosineAnnealingWarmRestarts(LRScheduler):
     r"""Set the learning rate of each parameter group using a cosine annealing
     schedule, where :math:`\eta_{max}` is set to the initial lr, :math:`T_{cur}`
-    is the number of epochs since the last restart and :math:`T_{i}` is the number
-    of epochs between two warm restarts in SGDR:
+    is the number of steps since the last restart and :math:`T_{i}` is the number
+    of steps between two warm restarts in SGDR:
 
     .. math::
         \eta_t = \eta_{min} + \frac{1}{2}(\eta_{max} - \eta_{min})\left(1 +
@@ -39,7 +39,9 @@ class CosineAnnealingWarmRestarts(LRScheduler):
         T_0 (int): Number of iterations for the first restart.
         T_mult (int, optional): A factor increases :math:`T_{i}` after a restart. Default: 1.
         eta_min (float, optional): Minimum learning rate. Default: 0.
-        last_epoch (int, optional): The index of last epoch. Default: -1.
+        decay_rate (float, optional): Decay rate every restarts.
+        restart_limit (int, optional): The limit of restarts. 0 indicate unlimited restarts. Default: 0.
+        last_step (int, optional): The index of last step. Default: -1.
         verbose (bool): If ``True``, prints a message to stdout for
             each update. Default: ``False``.
 
