@@ -16,7 +16,7 @@ limitations under the License.
 import bisect
 from typing import Sequence, Union
 from .optimizer import Optimizer
-from .lr_scheduler import LRScheduler, _scheduler_with_step
+from .lr_scheduler import LRScheduler
 
 
 class SequentialLR(LRScheduler):
@@ -133,5 +133,14 @@ class SequentialLR(LRScheduler):
         for i, s in enumerate(scheduler_states):
             self.schedulers[i].load_state_dict(s)
 
-    def _generate_conf_for_graph(self, opt_confs):
-        raise NotImplementedError("SequentialLR is not supported in graph mode")
+    def _generate_conf_for_graph(self, lr_conf):
+        seq_lr_conf = lr_conf.mutable_sequential_scheduler_conf()
+
+        for scheduler in self.schedulers:
+            scheduler._generate_conf_for_graph(seq_lr_conf.add_schedulers())
+
+        for m in self.milestones:
+            seq_lr_conf.add_milestones(m)
+
+        for r in self.interval_rescaling:
+            seq_lr_conf.add_interval_rescaling(r)

@@ -68,11 +68,8 @@ class MultiStepLR(LRScheduler):
         factor = self.gamma ** sect
         return [base_lr * factor for base_lr in self.base_lrs]
 
-    def _generate_conf_for_graph(self, opt_confs):
-        for opt_conf in opt_confs:
-            learning_rate_decay_conf = opt_conf.mutable_learning_rate_decay()
-            for milestone in self.milestones:
-                learning_rate_decay_conf.mutable_multi_step_conf().add_milestones(
-                    milestone
-                )
-            learning_rate_decay_conf.mutable_multi_step_conf().set_gamma(self.gamma)
+    def _generate_conf_for_graph(self, lr_conf):
+        multi_step_conf = lr_conf.mutable_multi_step_conf()
+        for milestone in self.milestones:
+            multi_step_conf.add_milestones(milestone)
+        multi_step_conf.set_gamma(self.gamma)

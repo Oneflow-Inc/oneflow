@@ -106,5 +106,5 @@ class ChainedScheduler(LRScheduler):
         for i, s in enumerate(scheduler_states):
             self.schedulers[i].load_state_dict(s)
 
-    def _generate_conf_for_graph(self, opt_confs):
-        raise NotImplementedError("ChainedScheduler is not supported in graph mode")
+    def _generate_conf_for_graph(self, lr_conf):
+        raise NotImplementedError("ChainedScheduler is not supported in graph mode yet")

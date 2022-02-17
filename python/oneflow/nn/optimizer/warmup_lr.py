@@ -205,18 +205,3 @@ class WarmupLR(SequentialLR):
             last_step=self.last_step,
             verbose=self.verbose,
         )
-
-    def _generate_conf_for_graph(self, opt_confs):
-        if self.warmup_scheduler:
-            for op_conf in opt_confs:
-                warmup_conf = op_conf.mutable_warmup_conf()
-                warmup_conf.set_warmup_batches(self.warmup_iters)
-                warmup_conf.set_warmup_factor(self.warmup_factor)
-                if self.warmup_method == "linear":
-                    warmup_conf.mutable_linear_conf()
-                else:
-                    warmup_conf.mutable_constant_conf()
-                warmup_conf.set_prefix(self.warmup_prefix)
-
-        if self.successor_scheduler:
-            self.successor_scheduler._generate_conf_for_graph(opt_confs)

@@ -65,8 +65,7 @@ class StepLR(LRScheduler):
         factor = self.gamma ** step_stage
         return [base_lr * factor for base_lr in self.base_lrs]
 
-    def _generate_conf_for_graph(self, opt_confs):
-        for opt_conf in opt_confs:
-            learning_rate_decay_conf = opt_conf.mutable_learning_rate_decay()
-            learning_rate_decay_conf.mutable_step_conf().set_step_size(self.step_size)
-            learning_rate_decay_conf.mutable_step_conf().set_gamma(self.gamma)
+    def _generate_conf_for_graph(self, lr_conf):
+        step_conf = lr_conf.mutable_step_conf()
+        step_conf.set_step_size(self.step_size)
+        step_conf.set_gamma(self.gamma)
