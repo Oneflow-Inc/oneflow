@@ -282,10 +282,7 @@ class FusedMatmulBiasAddReluGradKernel final : public user_op::OpKernel {
     dy->shape().ToDimVector(&dy_shape); 
     DimVector weight_shape(2); 
     weight->shape().ToDimVector(&weight_shape); 
-    // cublasLtEpilogue_t epilogue = CUBLASLT_EPILOGUE_DRELU_BGRAD;
-    cublasLtEpilogue_t epilogue = CUBLASLT_EPILOGUE_DGELU_BGRAD;
-    // cublasLtEpilogue_t epilogue = CUBLASLT_EPILOGUE_RELU_AUX_BIAS;
-    // cublasLtEpilogue_t epilogue = CUBLASLT_EPILOGUE_RELU;
+    cublasLtEpilogue_t epilogue = CUBLASLT_EPILOGUE_DRELU_BGRAD;
     
     InferMatmulCublasMNK(dy_shape, weight_shape, 
                         /*transpose_a=*/ep::primitive::BlasTransposeType::N, 

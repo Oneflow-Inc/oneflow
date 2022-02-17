@@ -243,7 +243,6 @@ class FusedMatmulBiasAddReluKernel final : public user_op::OpKernel {
  private:
   void Compute(user_op::KernelComputeContext* ctx, user_op::OpKernelState*,
                const user_op::OpKernelCache* cache) const override {
-    printf("000 \n"); 
     /*
     Fused DenseActivation Layer. Assume we have two layers: 
     A: (m, k)
@@ -262,24 +261,20 @@ class FusedMatmulBiasAddReluKernel final : public user_op::OpKernel {
     user_op::Tensor* x = ctx->Tensor4ArgNameAndIndex("x", 0); 
     user_op::Tensor* out = ctx->Tensor4ArgNameAndIndex("out", 0);
     bool skip_final_activation = ctx->Attr<bool>("skip_final_activation"); 
-    printf("000111 \n"); 
 
     const DataType data_type = out->data_type();
     const cublasComputeType_t cublas_compute_dtype = GetComputeType(data_type);
     const cudaDataType_t cuda_data_type = GetCudaDataType(data_type);
     size_t cublas_m = 0, cublas_n = 0, cublas_k = 0; 
     int64_t cublas_lda = 0, cublas_ldb = 0, cublas_ldc = 0; 
-    printf("0002222 \n"); 
 
     const double alpha = 1.0;
     const auto sp_alpha = GetCublasScalarParameter(alpha, cublas_compute_dtype);
     const double beta = 0.0;
     const auto sp_beta = GetCublasScalarParameter(beta, cublas_compute_dtype);
-    printf("0033330 \n"); 
 
     const int64_t batch_size = ctx->Tensor4ArgNameAndIndex("x", 0)->shape().At(0); 
     int64_t in_feature = ctx->Tensor4ArgNameAndIndex("x", 0)->shape().At(1); 
-    printf("0004444 \n"); 
     
     // currently only support 2D matmul. 
     DimVector x_shape(2); 
@@ -287,10 +282,8 @@ class FusedMatmulBiasAddReluKernel final : public user_op::OpKernel {
     DimVector tmp_shape(2); 
     tmp_shape.at(0) = x_shape.at(0); 
     DimVector weight_shape(2); 
-    printf("005555550 \n"); 
     
     int64_t out_feature = 0; 
-    printf("00099999 \n"); 
     void* x_ptr = nullptr; 
     void* y_ptr = nullptr; 
 
@@ -324,12 +317,10 @@ class FusedMatmulBiasAddReluKernel final : public user_op::OpKernel {
           epilogue = CUBLASLT_EPILOGUE_BIAS;
         }
       }else{
-        printf("0211212100 \n"); 
+        printf("Here use hidden \n"); 
         y_ptr = ctx->Tensor4ArgNameAndIndex("hidden", idx)->mut_dptr();
         // y_ptr = tmp_y_buffer; 
       }
-      printf("0333131311313113100 \n"); 
-
       SetCublasAttr(matmul_cache, 
                     cublas_compute_dtype, 
                     cuda_data_type, 
@@ -356,12 +347,9 @@ class FusedMatmulBiasAddReluKernel final : public user_op::OpKernel {
           nullptr, cuda_stream->cublas_workspace(), 
           cuda_stream->cublas_workspace_size(),
           cuda_stream->cuda_stream()));
-      printf("99999999 \n"); 
-      
       // Set hidden_layer ptr as next layer input x. 
       x_ptr = y_ptr; 
       tmp_shape.at(1) = out_feature; 
-      printf("9191991919191 \n"); 
     }
   }
 };
