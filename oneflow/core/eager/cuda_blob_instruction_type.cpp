@@ -24,14 +24,6 @@ limitations under the License.
 
 namespace oneflow {
 namespace vm {
-class GpuLazyReferenceInstructionType : public LazyReferenceInstructionType {
- public:
-  GpuLazyReferenceInstructionType() = default;
-  ~GpuLazyReferenceInstructionType() override = default;
-
-  using stream_type = vm::AsyncCudaStreamType;
-};
-COMMAND(vm::RegisterInstructionType<GpuLazyReferenceInstructionType>("gpu.LazyReference"));
 
 class GpuAccessBlobByCallbackInstructionType final : public AccessBlobByCallbackInstructionType {
  public:

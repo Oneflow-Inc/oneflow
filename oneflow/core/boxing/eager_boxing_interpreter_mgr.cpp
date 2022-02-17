@@ -157,8 +157,8 @@ Maybe<BoxingExprIf> RawMainBoxingExpr() {
 
 static constexpr auto* MainBoxingExpr = DECORATE(&RawMainBoxingExpr, ThreadLocal);
 
-Maybe<EagerBoxingInterpreter> GetBoxingInterpreter(Symbol<cfg::NdSbp> in_nd_sbp,
-                                                   Symbol<cfg::NdSbp> out_nd_sbp,
+Maybe<EagerBoxingInterpreter> GetBoxingInterpreter(Symbol<NdSbp> in_nd_sbp,
+                                                   Symbol<NdSbp> out_nd_sbp,
                                                    Symbol<ParallelDesc> in_parallel_desc,
                                                    Symbol<ParallelDesc> out_parallel_desc,
                                                    const Shape& logical_shape) {
@@ -186,9 +186,8 @@ static constexpr auto* CachedGetBoxingInterpreter =
 }  // namespace
 
 Maybe<EagerBoxingInterpreter> EagerBoxingInterpreterManager::GetEagerBoxingInterpreter(
-    Symbol<cfg::NdSbp> in_nd_sbp, Symbol<cfg::NdSbp> out_nd_sbp,
-    Symbol<ParallelDesc> in_parallel_desc, Symbol<ParallelDesc> out_parallel_desc,
-    const Shape& logical_shape) const {
+    Symbol<NdSbp> in_nd_sbp, Symbol<NdSbp> out_nd_sbp, Symbol<ParallelDesc> in_parallel_desc,
+    Symbol<ParallelDesc> out_parallel_desc, const Shape& logical_shape) const {
   return JUST(CachedGetBoxingInterpreter(in_nd_sbp, out_nd_sbp, in_parallel_desc, out_parallel_desc,
                                          logical_shape));
 }
