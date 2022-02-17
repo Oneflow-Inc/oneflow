@@ -314,7 +314,6 @@ class CublasFusedMLPFunctor {
     Symbol<Device> device = JUST(x->device());
     
     #if CUDA_VERSION >= 11040
-    printf("cuda version > 11040"); 
     if(device->enum_type() == DeviceType::kCUDA){
       TensorTuple input(2*weight_size+1);
       input[0] = x; 
