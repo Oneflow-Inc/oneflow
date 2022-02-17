@@ -197,31 +197,50 @@ double MultiStepLearningRate(const MultiStepConf& conf, double lr, int64_t cur_b
   return lr * std::pow(gamma, i);
 }
 
+double CosineAnnealingWarmRestartsLearningRate(const CosineAnnealingWarmRestartsConf& conf,
+                                               const double base_lr, const int64_t step) {
+  int64_t epoch_steps = conf.t_initial();
+  int64_t epoch = step / epoch_steps;
+  int64_t step_in_epoch = step - (epoch_steps * epoch);
+  if (conf.t_mult() > 1) {
+    epoch = static_cast<int64_t>(std::floor(
+        std::log(1 - step / conf.t_initial() * (1 - conf.t_mult())) / std::log(conf.t_mult())));
+    int64_t interval = std::pow(conf.t_mult(), epoch);
+    epoch_steps = interval * conf.t_initial();
+    step_in_epoch = step
+                    - static_cast<int64_t>(std::floor(static_cast<double>(1 - interval)
+                                                      / (1 - conf.t_mult()) * conf.t_initial()));
+  }
+  double lr = base_lr;
+  if (conf.restart_limit() == 0 || (conf.restart_limit() > 0 && epoch < conf.restart_limit())) {
+    double gamma = std::pow(conf.decay_rate(), epoch);
+    const double PI = std::atan(1.0) * 4.0;
+    const double eta_min = conf.eta_min();
+    CHECK_LT(eta_min, lr);
+    lr = conf.eta_min()
+         + 0.5 * (base_lr * gamma - conf.eta_min())
+               * (1 + std::cos(PI * step_in_epoch / epoch_steps));
+  }
+  return lr;
+}
+
 double SequentialScheduler(const SequentialSchedulerConf& conf, const double base_lr,
                            const int64_t step) {
   CHECK_GE(conf.schedulers_size(), 1);
   CHECK_EQ(conf.milestones_size(), conf.schedulers_size() - 1);
-  CHECK_EQ(conf.interval_rescaling_size(), conf.schedulers_size());
+  CHECK_EQ(conf.interval_rescaling_size(), conf.milestones_size());
 
-  auto IsTurn = [&](size_t index) -> bool {
-    if (conf.milestones_size() == 0) { return true; }
-    if (step >= conf.milestones(index)) { return false; }
-    if (index > 1 && step < conf.milestones(index - 1)) { return false; }
-    return true;
-  };
-
-  double lr = base_lr;
-  int64_t gone_steps = 0;
-  for (size_t i = 0; i < conf.schedulers_size(); ++i) {
-    if (IsTurn(i)) {
-      int64_t cur_step = step;
-      if (bool(conf.interval_rescaling(i))) { cur_step -= gone_steps; }
-      lr = GetDecayedLearningRate(conf.schedulers(i), lr, cur_step);
+  int64_t cur_step = step;
+  size_t scheduler_idx = 0;
+  for (size_t i = 0; i < conf.milestones_size(); ++i) {
+    if (step < conf.milestones(i)) {
       break;
+    } else {
+      if (conf.interval_rescaling(i)) { cur_step = step - conf.milestones(i); }
+      scheduler_idx++;
     }
-    if (i > 0) { gone_steps += conf.milestones(i - 1); }
   }
-  return lr;
+  return GetDecayedLearningRate(conf.schedulers(scheduler_idx), base_lr, cur_step);
 }
 
 double GetDecayedLearningRate(const LearningRateDecayConf& conf, double lr, int64_t cur_batch_num) {
@@ -254,6 +273,9 @@ double GetDecayedLearningRate(const LearningRateDecayConf& conf, double lr, int6
     return LinearLearningRate(lr, conf.linear_lr_conf().start_factor(),
                               conf.linear_lr_conf().end_factor(),
                               conf.linear_lr_conf().total_iters(), cur_batch_num);
+  } else if (conf.has_cosine_annealing_warm_restarts_conf()) {
+    return CosineAnnealingWarmRestartsLearningRate(conf.cosine_annealing_warm_restarts_conf(), lr,
+                                                   cur_batch_num);
   } else if (conf.has_sequential_scheduler_conf()) {
     return SequentialScheduler(conf.sequential_scheduler_conf(), lr, cur_batch_num);
   } else {
@@ -267,7 +289,7 @@ void LearningRateScheduleKernel::ForwardDataContent(KernelContext* ctx) const {
   const LearningRateScheduleOpConf& conf = this->op_conf().learning_rate_schedule_conf();
   const int64_t train_step = *ctx->BnInOp2Blob("train_step")->dptr<int64_t>();
   float learning_rate = conf.learning_rate();
-  double lr = GetDecayedLearningRate(conf.learning_rate_decay(), learning_rate, train_step);
+  learning_rate = GetDecayedLearningRate(conf.learning_rate_decay(), learning_rate, train_step);
   *ctx->BnInOp2Blob("out")->mut_dptr<float>() = learning_rate;
   if (Global<ResourceDesc, ForSession>::Get()->enable_debug_mode()) {
     (*log_stream_) << std::to_string(train_step) << ", " << std::to_string(learning_rate) << "\n";

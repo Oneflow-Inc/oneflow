@@ -102,3 +102,11 @@ class CosineAnnealingWarmRestarts(LRScheduler):
             lrs = [self.eta_min for _ in self.base_lrs]
 
         return lrs
+
+    def _generate_conf_for_graph(self, lr_conf):
+        cosa_warm_restarts_conf = lr_conf.mutable_cosine_annealing_warm_restarts_conf()
+        cosa_warm_restarts_conf.set_t_initial(self.T_0)
+        cosa_warm_restarts_conf.set_t_mult(self.T_mult)
+        cosa_warm_restarts_conf.set_eta_min(self.eta_min)
+        cosa_warm_restarts_conf.set_decay_rate(self.decay_rate)
+        cosa_warm_restarts_conf.set_restart_limit(self.restart_limit)

@@ -82,31 +82,31 @@ class SequentialLR(LRScheduler):
             )
 
         if isinstance(interval_rescaling, (list, tuple)):
-            if len(interval_rescaling) != len(schedulers):
+            if len(interval_rescaling) != len(milestones):
                 raise ValueError(
                     "'interval_rescaling' expects a bool or a list of bool with length be equal to "
-                    f"the number of sequential schedulers, but got number of schedulers {len(schedulers)} "
+                    f"the number of milestones, but got number of milestones {len(milestones)} "
                     f"and the length of list of interval_rescaling {len(interval_rescaling)}"
                 )
 
             assert all([isinstance(r, bool) for r in interval_rescaling])
         else:
             assert isinstance(interval_rescaling, bool)
-            interval_rescaling = [interval_rescaling] * (len(schedulers))
+            interval_rescaling = [interval_rescaling] * (len(milestones))
 
         self.schedulers = list(schedulers)
         self.milestones = list(milestones)
-        self.interval_rescaling = interval_rescaling
+        self.interval_rescaling = list(interval_rescaling)
         super().__init__(optimizer, last_step, verbose)
 
     def step(self):
         self.last_step += 1
         cur_step = self.last_step
-        stage = bisect.bisect_right(self.milestones, cur_step)
-        if self.interval_rescaling[stage] and stage > 0:
-            cur_step -= sum(self.milestones[:stage])
+        s_i = bisect.bisect_right(self.milestones, cur_step)
+        if s_i > 0 and self.interval_rescaling[s_i - 1]:
+            cur_step = self.last_step - self.milestones[s_i - 1]
 
-        scheduler = self.schedulers[stage]
+        scheduler = self.schedulers[s_i]
         scheduler.last_step = cur_step
         lrs = scheduler.get_lr(cur_step)
         self.update_lrs(lrs)
@@ -137,7 +137,7 @@ class SequentialLR(LRScheduler):
         seq_lr_conf = lr_conf.mutable_sequential_scheduler_conf()
 
         for scheduler in self.schedulers:
-            scheduler._generate_conf_for_graph(seq_lr_conf.add_schedulers())
+            scheduler._generate_conf_for_graph(seq_lr_conf.mutable_schedulers().Add())
 
         for m in self.milestones:
             seq_lr_conf.add_milestones(m)

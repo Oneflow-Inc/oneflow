@@ -123,7 +123,7 @@ class WarmupLR(SequentialLR):
             opt = scheduler_or_optimizer
             scheduler = None
 
-        if self.scheduler is None and warmup_iters == 0:
+        if scheduler is None and warmup_iters == 0:
             raise ValueError(
                 "When 'scheduler_or_optimizer' is an optimizer warmup_iters can't be equal to 0"
             )
@@ -137,7 +137,7 @@ class WarmupLR(SequentialLR):
         self.last_step = last_step
         self.verbose = verbose
         self._init_base_lrs()
-        warmup = self._init_warmup_scheduler()
+        warmup = self._init_warmup_scheduler(scheduler)
         self._init_seq_scheduler(scheduler, warmup)
 
     def _init_warmup_scheduler(self, scheduler):
@@ -185,15 +185,15 @@ class WarmupLR(SequentialLR):
         if warmup and scheduler:
             schedulers = [warmup, scheduler]
             milestones = [self.warmup_iters]
-            interval_rescaling = [False, self.warmup_prefix]
+            interval_rescaling = [self.warmup_prefix]
         elif warmup:
             schedulers = [warmup]
             milestones = []
-            interval_rescaling = False
+            interval_rescaling = []
         elif scheduler:
             schedulers = [scheduler]
             milestones = []
-            interval_rescaling = False
+            interval_rescaling = []
         else:
             raise ValueError("No scheduler can work")
 
