@@ -294,11 +294,9 @@ Maybe<void> BoxingCollector::GenerateCombination4DiffHierarchy(
 }
 
 // Generate the transfer rule for different combinations with different placements
-Maybe<void> BoxingCollector::GenerateCombination4DiffPlacement(int32_t max_middle_node_num) {
-  // Number of 1d sbp
-  int32_t m = id2SbpParallel_.size();
-
-  // Other parameters
+Maybe<void> BoxingCollector::GenerateCombination4DiffPlacement(
+    BoxingCollector* boxing_collector_producer, BoxingCollector* boxing_collector_consumer) {
+  // Virtual hierarchies
   int32_t kWorldSize = GlobalProcessCtx::WorldSize();
   BlobDesc blob_desc({16, 16, 16, 16}, DataType::kInt8, /*is_dynamic=*/false);
   // Virtual placements before transfer
@@ -312,6 +310,8 @@ Maybe<void> BoxingCollector::GenerateCombination4DiffPlacement(int32_t max_middl
   auto out_parallel_desc = JUST(ParallelDesc::New(
       "cpu", {"0:0-" + std::to_string(out_hierarchy44.elem_cnt() - 1)}, out_hierarchy));
 
+  // Number of 1d sbp
+  int32_t m = id2SbpParallel_.size();
   // The cost for transferring a 1D sbp between different placements
   std::vector<std::vector<double>> cost_4_diff_placement;
   // Compute the cost while transferring a 1D sbp between different placements
@@ -336,67 +336,8 @@ Maybe<void> BoxingCollector::GenerateCombination4DiffPlacement(int32_t max_middl
   for (int32_t i = 0; i < n; i++) {
     diag_node_diff_placement_[i].resize(n);
     for (int32_t j = 0; j < n; j++) {
-      // minimum number of node
-      int32_t min_path_length = 100;
-      // minimum cost
-      double min_cost = GetMaxVal<float>();
-
-      // From the producer to the first diagonal node
-      for (int32_t id_1d_producer = 0; id_1d_producer < m; id_1d_producer++) {
-        int32_t diag_producer = id_1d_2_nd_[id_1d_producer];
-        // The diagonal sbp is not supported or no paths exist from the producer to the diagonal
-        // sbp.
-        if (diag_producer < 0 || minimum_copy_cost_[i][diag_producer] > GetValidMaxCopyCost()) {
-          continue;
-        }
-        // Find the path with minimum number of nodes
-        int32_t path_length = 0;
-        // Transfer from i to id_2d
-        if (middle_nodes_[i][diag_producer].size() > 0) {
-          path_length += middle_nodes_[i][diag_producer][0].size() + 1;
-        } else if (i != diag_producer) {
-          path_length++;
-        }
-
-        // From the second diagonal node to the consumer
-        for (int32_t id_1d_consumer = 0; id_1d_consumer < m; id_1d_consumer++) {
-          int32_t diag_consumer = id_1d_2_nd_[id_1d_consumer];
-          // The diagonal sbp is not supported or no paths exist from the diagonal sbp to the
-          // consumer or between the two diagonal sbps.
-          if (diag_consumer < 0 || minimum_copy_cost_[diag_consumer][j] > GetValidMaxCopyCost()
-              || cost_4_diff_placement[id_1d_producer][id_1d_consumer] > GetValidMaxCopyCost()) {
-            continue;
-          }
-          // Transfer from id_2d to j
-          if (middle_nodes_[diag_consumer][j].size() > 0) {
-            path_length += middle_nodes_[diag_consumer][j][0].size() + 1;
-          } else if (diag_consumer != j) {
-            path_length++;
-          }
-          // Pick the path with minimum copy cost
-          if (path_length <= min_path_length) {
-            double curr_cost = minimum_copy_cost_[i][diag_producer]
-                               + cost_4_diff_placement[id_1d_producer][id_1d_consumer]
-                               + minimum_copy_cost_[diag_consumer][j];
-
-            min_path_length = path_length;
-            // Find a candidate with small cost
-            if (curr_cost < min_cost * 1.0000001) {
-              // Find a smaller cost, clear the previous path.
-              if (curr_cost < min_cost * 0.9999999) {
-                min_cost = curr_cost;
-                diag_node_diff_placement_[i][j].clear();
-              }
-              // Add the current diagonal node
-              // int32_t diag_producer = diag_producer;
-              // if (i == diag_producer) { diag_producer = -1; }
-              // int32_t diag_consumer = diag_consumer;
-              // if (diag_consumer == j) { diag_consumer = -1; }
-              diag_node_diff_placement_[i][j].push_back({diag_producer, diag_consumer});
-            }
-          }
-        }
-      }
+      Generate1Combination4DiffPlacement(i, j, boxing_collector_producer, boxing_collector_consumer,
+                                         cost_4_diff_placement, diag_node_diff_placement_[i][j]);
     }
   }
 
@@ -960,6 +901,89 @@ Maybe<void> BoxingCollector::Ask1Combination4DiffHierarchy(
       }
     }
   }
+}
+
+// Generate the transfer rule for one combination with different placements
+// id_producer -> id_consumer.
+Maybe<void> BoxingCollector::Generate1Combination4DiffPlacement(
+    int32_t id_producer, int32_t id_consumer, BoxingCollector* boxing_collector_producer,
+    BoxingCollector* boxing_collector_consumer,
+    const std::vector<std::vector<double>>& cost_4_diff_placement,
+    std::vector<std::vector<int32_t>>& diag_nodes) {
+  // Number of 1d sbp
+  int32_t m = id2SbpParallel_.size();
+  // minimum number of node
+  int32_t min_path_length = 100;
+  // minimum cost
+  double min_cost = GetMaxVal<float>();
+
+  // Search the path that contains two of the diagonal sbp
+  // From the producer to the first diagonal node
+  for (int32_t id_1d_producer = 0; id_1d_producer < m; id_1d_producer++) {
+    // We do not support [2, 3]: (S0, S1) -> [6]: S0 for a tensor with shape (14, 21)
+    // Thus, the diagonal node should suit both the hierarchies.
+    int32_t diag_producer = boxing_collector_producer->id_1d_2_nd_[id_1d_producer];
+    if (diag_producer < 0
+        || boxing_collector_producer->minimum_copy_cost_[id_producer][diag_producer]
+               > GetValidMaxCopyCost()) {
+      continue;
+    }
+    // Find the path with minimum number of nodes
+    int32_t path_length = 0;
+    // Transfer from id_producer to diag_producer
+    if (boxing_collector_producer->middle_nodes_[id_producer][diag_producer].size() > 0) {
+      path_length +=
+          boxing_collector_producer->middle_nodes_[id_producer][diag_producer][0].size() + 1;
+    } else if (id_producer != diag_producer) {
+      path_length++;
+    }
+    // pruning
+    if (path_length > min_path_length) { continue; }
+
+    // From the second diagonal node to the consumer
+    for (int32_t id_1d_consumer = 0; id_1d_consumer < m; id_1d_consumer++) {
+      int32_t diag_consumer = boxing_collector_consumer->id_1d_2_nd_[id_1d_consumer];
+      // The diagonal sbp is not supported or no paths exist from the diagonal sbp to the
+      // consumer or between the two diagonal sbps.
+      if (diag_consumer < 0
+          || boxing_collector_consumer->minimum_copy_cost_[diag_consumer][id_consumer]
+                 > GetValidMaxCopyCost()
+          || cost_4_diff_placement[id_1d_producer][id_1d_consumer] > GetValidMaxCopyCost()) {
+        continue;
+      }
+
+      // Transfer from diag_consumer to id_consumer
+      if (boxing_collector_consumer->middle_nodes_[diag_consumer][id_consumer].size() > 0) {
+        path_length +=
+            boxing_collector_consumer->middle_nodes_[diag_consumer][id_consumer][0].size() + 1;
+      } else if (diag_consumer != id_consumer) {
+        path_length++;
+      }
+      // Pick the path with minimum copy cost
+      if (path_length <= min_path_length) {
+        double curr_cost =
+            boxing_collector_producer->minimum_copy_cost_[id_producer][diag_producer]
+            + cost_4_diff_placement[id_1d_producer][id_1d_consumer]
+            + boxing_collector_consumer->minimum_copy_cost_[diag_consumer][id_consumer];
+
+        min_path_length = path_length;
+        // Find a candidate with small cost
+        if (curr_cost < min_cost * 1.0000001) {
+          // Find a smaller cost, clear the previous path.
+          if (curr_cost < min_cost * 0.9999999) {
+            min_cost = curr_cost;
+            diag_nodes.clear();
+          }
+          // Add the current diagonal node
+          // Asymmetry happens here. We can only store one side of the diagonal node.
+          // We do not store diag_consumer
+          diag_nodes.push_back({diag_producer, diag_consumer});
+        }
+      }
+    }
+  }
+
+  return Maybe<void>::Ok();
 }
 
 // Filter nd sbp from nd_sbp_lists_ with given logical shape

@@ -52,7 +52,8 @@ class BoxingCollector final {
   Maybe<void> GenerateCombination4DiffHierarchy(BoxingCollector* boxing_collector_producer,
                                                 BoxingCollector* boxing_collector_consumer);
   // Generate the transfer rule for different combinations with different placements
-  Maybe<void> GenerateCombination4DiffPlacement(int32_t max_middle_node_num);
+  Maybe<void> GenerateCombination4DiffPlacement(BoxingCollector* boxing_collector_producer,
+                                                BoxingCollector* boxing_collector_consumer);
   // Print the cost and middle nodes
   void PrintBoxingTables();
   // Ask if the boxing algorithm accepts the current sbp combination
@@ -95,6 +96,13 @@ class BoxingCollector final {
                                                  BoxingCollector* boxing_collector_producer,
                                                  BoxingCollector* boxing_collector_consumer,
                                                  std::vector<std::vector<int32_t>>& diag_nodes);
+  // Generate the transfer rule for one combination with different placements
+  // id_producer -> id_consumer.
+  Maybe<void> Generate1Combination4DiffPlacement(
+      int32_t id_producer, int32_t id_consumer, BoxingCollector* boxing_collector_producer,
+      BoxingCollector* boxing_collector_consumer,
+      const std::vector<std::vector<double>>& cost_4_diff_placement,
+      std::vector<std::vector<int32_t>>& diag_nodes);
   // Ask for one combination with different hierarchies
   Maybe<void> Ask1Combination4DiffHierarchy(
       const cfg::NdSbp& sbp_producer, const cfg::NdSbp& sbp_consumer,
