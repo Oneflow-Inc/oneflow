@@ -35,7 +35,8 @@ class VarKernel final : public user_op::OpKernel {
     const T* in_ptr = input->dptr<T>();
     T* out_ptr = output->mut_dptr<T>();
     const std::vector<int32_t> axis = ctx->Attr<std::vector<int32_t>>("dim");
-    T* tmp_buffer_ptr = axis.size() == input->shape().NumAxes()
+	// only all dims cuda case will use tmp buffer.
+    T* tmp_buffer_ptr = (axis.size() == input->shape().NumAxes() && DeviceType::kCUDA == device_type)
                             ? ctx->Tensor4ArgNameAndIndex("tmp_buffer", 0)->mut_dptr<T>()
                             : nullptr;
     VarParamHelper param_helper(input->shape(), axis, unbiased);
@@ -50,7 +51,7 @@ size_t InferTmpBufferSize(user_op::InferContext* ctx) {
   const Shape& input_shape = input.shape();
   const std::vector<int32_t> axis = ctx->Attr<std::vector<int32_t>>("dim");
   if (axis.size() == input_shape.NumAxes()) {
-    return static_cast<size_t>(std::ceil(std::sqrt(input.shape().elem_cnt())))
+    return std::min(static_cast<int32_t>(std::ceil(std::sqrt(input.shape().elem_cnt()))), kCudaMaxBlocksNum)
            * GetSizeOfDataType(input.data_type()) * 3;
   }
   return 0;
