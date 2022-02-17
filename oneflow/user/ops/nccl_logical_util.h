@@ -71,7 +71,7 @@ struct OpTypeNameFromContext<user_op::InferContext> {
 
 template<typename ContextT>
 Maybe<void> GetNcclLogicalNdSbpFromAttr(ContextT* ctx, const std::string& attr_name,
-                                        cfg::NdSbp* nd_sbp) {
+                                        NdSbp* nd_sbp) {
   const auto& sbp_str_list = AttrFromContext<ContextT, std::vector<std::string>>()(ctx, attr_name);
 
   if (!ParseNdSbpFromStringList(sbp_str_list, nd_sbp)) {
