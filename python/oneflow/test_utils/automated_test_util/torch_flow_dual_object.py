@@ -341,27 +341,20 @@ def GetDualObject(name, pytorch, oneflow):
                                 for arg in oneflow_args:
                                     if flow.is_tensor(arg):
                                         arg_device_type = arg.device.type
-                            if testing_graph and isinstance(oneflow, flow.nn.Module):
-                                graph_train_oneflow = copy.deepcopy(oneflow)
-                                graph_train_oneflow = graph_train_oneflow.to(
-                                    arg_device_type
-                                )
-                                of_sgd = flow.optim.SGD(
-                                    graph_train_oneflow.parameters(),
-                                    lr=0.001,
-                                    momentum=0.9,
-                                )
+                            
+                            graph_train_parameters_len = 0
 
                             if testing_graph:
                                 if isinstance(oneflow, flow.nn.Module):
+                                    for param in oneflow._parameters.values():
+                                        if param is not None:
+                                            graph_train_parameters_len += 1
                                     graph_train_oneflow = copy.deepcopy(oneflow)
-                                    if not is_global():
-                                        arg_device_type = "cpu"
-                                        for arg in oneflow_args:
-                                            if flow.is_tensor(arg):
-                                                arg_device_type = arg.device.type
-                                        graph_train_oneflow = graph_train_oneflow.to(
-                                            arg_device_type
+                                    if graph_train_parameters_len:
+                                        of_sgd = flow.optim.SGD(
+                                            graph_train_oneflow.parameters(),
+                                            lr=0.001,
+                                            momentum=0.9,
                                         )
                                 else:
                                     graph_functional_oneflow = copy.deepcopy(oneflow)
@@ -388,11 +381,6 @@ def GetDualObject(name, pytorch, oneflow):
                                 ignore_apis_list = ["tensor", "train"]
                                 test_g_res = []
                                 if isinstance(oneflow, flow.nn.Module):
-                                    graph_train_parameters_len = 0
-                                    for param in oneflow._parameters.values():
-                                        if param is not None:
-                                            graph_train_parameters_len += 1
-
                                     class TestGraphOfModule(flow.nn.Graph):
                                         def __init__(self):
                                             super().__init__()
@@ -443,6 +431,7 @@ def GetDualObject(name, pytorch, oneflow):
                                         and flow.is_tensor(oneflow_res)
                                         and oneflow_res.ndim > 1
                                     ):
+                                        # The output of functiona or method without parameters is connected to a  LayerNorm module for backward and optimize in nn.Graph.
                                         graph_functional_layernorm = flow.nn.LayerNorm(
                                             oneflow_res.shape[-1]
                                         )
@@ -605,6 +594,7 @@ def GetDualObject(name, pytorch, oneflow):
                                 and flow.is_tensor(oneflow_res)
                                 and oneflow_res.ndim > 1
                             ):
+                                # The output of functiona or method without parameters is connected to a  LayerNorm module for backward and optimize in nn.Graph.
                                 graph_functional_layernorm = flow.nn.LayerNorm(
                                     oneflow_res.shape[-1]
                                 )
@@ -634,9 +624,6 @@ def GetDualObject(name, pytorch, oneflow):
                                         self.add_optimizer(of_sgd)
 
                                 def build(self):
-                                    return graph_tensor_oneflow(
-                                        *tensor_graph_args, **tensor_graph_kwargs
-                                    )
                                     forward_res = res
                                     if (
                                         global_backward
