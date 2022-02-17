@@ -449,7 +449,9 @@ void BoxingCollector::PrintBoxingTables() {
       for (int32_t j = 0; j < n; j++) {
         if (diag_node_diff_placement_[i][j].size() > 0) {
           for (int32_t k = 0; k < diag_node_diff_placement_[i][j].size(); k++) {
-            std::cout << NdSbpToString(nd_sbp_lists_[diag_node_diff_placement_[i][j][k]]) << "; ";
+            std::cout << "[" << NdSbpToString(nd_sbp_lists_[diag_node_diff_placement_[i][j][k][0]])
+                      << ", " << NdSbpToString(nd_sbp_lists_[diag_node_diff_placement_[i][j][k][1]])
+                      << "]; ";
           }
         }
         std::cout << "\t";
@@ -468,7 +470,8 @@ void BoxingCollector::PrintBoxingTables() {
       for (int32_t j = 0; j < n; j++) {
         if (diag_node_diff_hierarchy_[i][j].size() > 0) {
           for (int32_t k = 0; k < diag_node_diff_hierarchy_[i][j].size(); k++) {
-            std::cout << NdSbpToString(nd_sbp_lists_[diag_node_diff_hierarchy_[i][j][k]]) << "; ";
+            std::cout << NdSbpToString(nd_sbp_lists_[diag_node_diff_hierarchy_[i][j][k][0]])
+                      << "; ";
           }
         }
         std::cout << "\t";
@@ -533,20 +536,10 @@ Maybe<void> BoxingCollector::AskSbpCombination(
         // Transfer between different hierarchies under the same placement
         // For example, [2, 3]: (S0, S1) -> [3, 2]: (B, S0)
         // [4]: P -> [2, 2]: (S0, S1)
-        CHECK_OR_RETURN(diag_node_diff_hierarchy_.size() > 0)
-            << "Have not initialzie the combination table for different hierarchies yet! "
-               "Please run JUST(GenerateCombination4DiffHierarchy(this, this)); "
-               "before Asking sbp combination for different parallel description.";
-        diag_nodes = &(diag_node_diff_hierarchy_[i][j]);
       } else {
         // Transfer between different placements
         // For example, [2, 3]: (S0, S1) -> [5]: B
         // [2, 2]: (P, S0) -> [5, 3]: (P, S0)
-        CHECK_OR_RETURN(diag_node_diff_placement_.size() > 0)
-            << "Have not initialzie the combination table for different placements yet! "
-               "Please run JUST(GenerateCombination4DiffPlacement(this, this)); "
-               "before Asking sbp combination for different parallel description.";
-        diag_nodes = &(diag_node_diff_placement_[i][j]);
       }
 
       // Pick the path with minimum storage for the diagonal node
@@ -728,7 +721,7 @@ Maybe<void> BoxingCollector::AskSbpCombination4Same2DPlacement(
     if (min_k >= 0) {
       for (int32_t middle_sbp_id : middle_nodes_[i][j][min_k]) {
         middle_sbps.emplace_back(
-            JUST(SetNdSbpDim(nd_sbp_lists_[middle_sbp_id], producer_hierarchy_num)));
+            *JUST(SetNdSbpDim(nd_sbp_lists_[middle_sbp_id], producer_hierarchy_num)));
       }
       return Maybe<void>::Ok();
     }
@@ -765,17 +758,20 @@ Maybe<void> BoxingCollector::AskSbpCombination4DiffHierarchy(
   bool same_placement = producer_parallel_desc.EqualsIgnoringHierarchy(consumer_parallel_desc);
   // Dealing with 2D sbp
   if (i >= 0 && j >= 0) {
-    CHECK_OR_RETURN(diag_node_diff_hierarchy_.size() > 0)
-        << "Have not initialzie the combination table for different hierarchies yet! "
-           "Please run JUST(GenerateCombination4DiffHierarchy(6)); "
-           "before Asking sbp combination for different parallel description.";
-
     if (same_placement) {
+      CHECK_OR_RETURN(diag_node_diff_hierarchy_.size() > 0)
+          << "Have not initialzie the combination table for different hierarchies yet! "
+             "Please run JUST(GenerateCombination4DiffHierarchy(this, this)); "
+             "before Asking sbp combination for different parallel description.";
       Ask1Combination4DiffPlacement(sbp_producer, sbp_consumer, logical_blob_desc,
                                     producer_parallel_desc, consumer_parallel_desc, is_customized,
                                     middle_sbps, diag_node_pos, compute_cost, this, this,
                                     diag_node_diff_hierarchy_[i][j]);
     } else {
+      CHECK_OR_RETURN(diag_node_diff_placement_.size() > 0)
+          << "Have not initialzie the combination table for different hierarchies yet! "
+             "Please run JUST(GenerateCombination4DiffPlacement(this, this)); "
+             "before Asking sbp combination for different parallel description.";
       Ask1Combination4DiffPlacement(sbp_producer, sbp_consumer, logical_blob_desc,
                                     producer_parallel_desc, consumer_parallel_desc, is_customized,
                                     middle_sbps, diag_node_pos, compute_cost, this, this,
@@ -950,14 +946,14 @@ Maybe<void> BoxingCollector::Ask1Combination4DiffPlacement(
           /*is_customized=*/false, middle_sbps_buffer, diag_node_pos, compute_cost));
       // Add the path into middle_sbps
       for (auto& middle_sbp : middle_sbps_buffer) {
-        middle_sbps.emplace_back(JUST(SetNdSbpDim(middle_sbp, producer_hierarchy_num_axes)));
+        middle_sbps.emplace_back(*JUST(SetNdSbpDim(middle_sbp, producer_hierarchy_num_axes)));
       }
       // If different placement,
       // or the same placement but the diagonal sbp is different from the consumer sbp
       if (diff_placement || diff_sbp4consumer) {
         middle_sbps.emplace_back(
-            JUST(SetNdSbpDim(boxing_collector_producer->nd_sbp_lists_[min_diag_producer],
-                             producer_hierarchy_num_axes)));
+            *JUST(SetNdSbpDim(boxing_collector_producer->nd_sbp_lists_[min_diag_producer],
+                              producer_hierarchy_num_axes)));
       }
     }
     // Find the middle nodes between the diagonal node and the consumer
@@ -971,12 +967,12 @@ Maybe<void> BoxingCollector::Ask1Combination4DiffPlacement(
       // If different placement
       if (diff_placement) {
         middle_sbps.emplace_back(
-            JUST(SetNdSbpDim(boxing_collector_consumer->nd_sbp_lists_[min_diag_consumer],
-                             consumer_hierarchy_num_axes)));
+            *JUST(SetNdSbpDim(boxing_collector_consumer->nd_sbp_lists_[min_diag_consumer],
+                              consumer_hierarchy_num_axes)));
       }
       // Add the path into middle_sbps
       for (auto& middle_sbp : middle_sbps_buffer) {
-        middle_sbps.emplace_back(JUST(SetNdSbpDim(middle_sbp, consumer_hierarchy_num_axes)));
+        middle_sbps.emplace_back(*JUST(SetNdSbpDim(middle_sbp, consumer_hierarchy_num_axes)));
       }
     }
   }
