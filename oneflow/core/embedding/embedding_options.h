@@ -60,7 +60,7 @@ class EmbeddingOptions final {
     line_size_ = storage_dim;
     auto kv_store = GetValue(json_object, "kv_store");
     auto caches = kv_store["caches"];
-    if (caches != nlohmann::detail::value_t::null) {
+    if (caches != nlohmann::detail::value_t::null && caches.size() > 0) {
       CHECK(caches.is_array());
       l1_cache_policy_ = GetValue(caches.at(0), "policy");
       l1_cache_memory_budget_mb_ = GetValue(caches.at(0), "cache_memory_budget_mb");

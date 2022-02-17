@@ -25,8 +25,8 @@ limitations under the License.
 #include "oneflow/user/kernels/unsorted_segment_sum_kernel_util.h"
 #include <cub/cub.cuh>
 #include "oneflow/core/cuda/atomic.cuh"
+#include "oneflow/core/embedding/hash_functions.cuh"
 #include "oneflow/core/ep/include/primitive/cast.h"
-#include "oneflow/user/kernels/unique_key.cuh"
 
 namespace oneflow {
 
