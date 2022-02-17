@@ -85,6 +85,7 @@ class UniformIntKernel final : public user_op::OpKernel {
     user_op::Tensor* out = ctx->Tensor4ArgNameAndIndex("out", 0);
     int64_t from = ctx->Attr<int64_t>("from");
     int64_t to = ctx->Attr<int64_t>("to");
+    int64_t cnt = to - from + 1;
     CHECK_LT(from, to) << "uniform kernel expects 'from' to be less than 'to'";
 
     if (IsFloating<T>::value) {
@@ -101,7 +102,7 @@ class UniformIntKernel final : public user_op::OpKernel {
     const auto& generator = distribution_state->generator();
     CHECK_NOTNULL(generator);
     UniformIntDistribution<device_type, T> distribution(from, to);
-    distribution(ctx->stream(), elem_cnt, out_dptr, generator);
+    distribution(ctx->stream(), elem_cnt,cnt, out_dptr, generator);
   }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };

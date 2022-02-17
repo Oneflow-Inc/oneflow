@@ -35,7 +35,7 @@ class UniformIntDistribution<DeviceType::kCPU, T> final {
   UniformIntDistribution(int64_t low, int64_t high) : low_(low), high_(high) {}
   ~UniformIntDistribution() = default;
 
-  void operator()(ep::Stream* stream, const int64_t elem_cnt, T* dptr,
+  void operator()(ep::Stream* stream, const int64_t elem_cnt, const int64_t cnt,T* dptr,
                   const std::shared_ptr<one::Generator>& generator) const;
 
  private:
@@ -51,7 +51,7 @@ class UniformIntDistribution<DeviceType::kCUDA, T> final {
   UniformIntDistribution(int64_t low, int64_t high) : low_(low), high_(high) {}
   ~UniformIntDistribution() = default;
 
-  void operator()(ep::Stream* stream, const int64_t elem_cnt, T* dptr,
+  void operator()(ep::Stream* stream, const int64_t elem_cnt, const int64_t cnt, T* dptr,
                   const std::shared_ptr<one::Generator>& generator) const;
 
  private:
