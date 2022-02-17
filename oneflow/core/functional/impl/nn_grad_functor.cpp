@@ -24,6 +24,7 @@ limitations under the License.
 #include "oneflow/core/functional/function_library.h"
 #include "oneflow/core/functional/impl/common.h"
 #include "oneflow/core/functional/impl/unary_functor.h"
+#include "oneflow/core/common/container_util.h"
 
 namespace oneflow {
 namespace one {
@@ -961,10 +962,11 @@ class FusedDotFeatureInteractionGradFunctor {
     for (int32_t i = 0; i < n_features_grad; ++i) { inputs[i + 2] = features_grad_like[i]; }
     if (has_output_concat) {
       return OpInterpUtil::Dispatch<TensorTuple>(
-          *ops_has_output_concat_grad_.at(n_features_grad - 1), inputs, attrs);
+          *JUST(oneflow::VectorAt(ops_has_output_concat_grad_, n_features_grad - 1)), inputs,
+          attrs);
     } else {
       return OpInterpUtil::Dispatch<TensorTuple>(
-          *ops_no_output_concat_grad_.at(n_features_grad - 1), inputs, attrs);
+          *JUST(oneflow::VectorAt(ops_no_output_concat_grad_, n_features_grad - 1)), inputs, attrs);
     }
   }
 
