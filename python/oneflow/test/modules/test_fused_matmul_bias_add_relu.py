@@ -23,101 +23,87 @@ from test_util import GenArgList
 import oneflow as flow
 
 
-def _test_fused_matmul_bias_add_relu(test_case, transpose_a, transpose_b, dtype):
-    m = np.random.randint(low=1, high=128)
-    k = np.random.randint(low=1, high=128)
-    n = np.random.randint(low=1, high=128)
-    alpha = np.random.random()
+def _matmul_bias_relu(x, weight, bias, activate): 
+    out = flow._C.bias_add(flow._C.matmul(x, weight, transpose_b=True), bias, axis=1)
+    if activate: 
+        out = flow._C.relu(out)
+    return out
 
-    a = np.random.randn(m, k)
-    if transpose_a:
-        a = np.transpose(a, (1, 0))
 
-    b = np.random.randn(k, n)
-    if transpose_b:
-        b = np.transpose(b, (1, 0))
+def _test_fused_matmul_bias_add_relu(test_case, 
+                                     batchsize, 
+                                     in_feature, 
+                                     hidden_size_list, 
+                                     out_feature, 
+                                     dtype, 
+                                     device):
+    
+    x = np.random.randn(batchsize, in_feature)
+    fused_x = flow.tensor(x, dtype=dtype, device=device, requires_grad=True)
+    naive_x = flow.tensor(x, dtype=dtype, device=device, requires_grad=True)
 
-    bias = np.random.randn(n)
+    fused_weight_list = []
+    naive_weight_list = []
+    fused_bias_list = []
+    naive_bias_list = []
 
-    fused_a_tensor = flow.tensor(a, dtype=dtype, device="cuda")
-    fused_b_tensor = flow.tensor(b, dtype=dtype, device="cuda")
-    fused_bias_tensor = flow.tensor(bias, dtype=dtype, device="cuda")
-    fused_a_tensor.requires_grad = True
-    fused_b_tensor.requires_grad = True
-    fused_bias_tensor.requires_grad = True
+    weight_num = len(hidden_size_list)
 
-    fused_out = flow._C.fused_matmul_bias_add_relu(
-        fused_a_tensor,
-        fused_b_tensor,
-        fused_bias_tensor,
-        transpose_a=transpose_a,
-        transpose_b=transpose_b,
-        alpha=alpha,
+    np_first_weight = np.random.randn(hidden_size_list[0], in_feature)
+    np_first_bias = np.random.randn(hidden_size_list[0])
+    fused_weight_list.append(flow.tensor(np_first_weight, dtype=dtype, device=device, requires_grad=True))
+    fused_bias_list.append(flow.tensor(np_first_bias, dtype=dtype, device=device, requires_grad=True))
+    naive_weight_list.append(flow.tensor(np_first_weight, dtype=dtype, device=device, requires_grad=True))
+    naive_bias_list.append(flow.tensor(np_first_bias, dtype=dtype, device=device, requires_grad=True))
+
+    for idx in range(1, weight_num): 
+        np_weight = np.random.randn(hidden_size_list[idx], hidden_size_list[idx-1])
+        np_bias = np.random.randn(hidden_size_list[idx])
+        fused_weight_list.append(flow.tensor(np_weight, dtype=dtype, device=device, requires_grad=True))
+        fused_bias_list.append(flow.tensor(np_bias, dtype=dtype, device=device, requires_grad=True))
+        naive_weight_list.append(flow.tensor(np_weight, dtype=dtype, device=device, requires_grad=True))
+        naive_bias_list.append(flow.tensor(np_bias, dtype=dtype, device=device, requires_grad=True))
+        
+    np_final_weight = np.random.randn(out_feature, hidden_size_list[-1])
+    np_final_bias = np.random.randn(out_feature)
+    fused_weight_list.append(flow.tensor(np_final_weight, dtype=dtype, device=device, requires_grad=True))
+    fused_bias_list.append(flow.tensor(np_final_bias, dtype=dtype, device=device, requires_grad=True))
+    naive_weight_list.append(flow.tensor(np_final_weight, dtype=dtype, device=device, requires_grad=True))
+    naive_bias_list.append(flow.tensor(np_final_bias, dtype=dtype, device=device, requires_grad=True))
+        
+
+    fused_out = flow._C.cublas_fused_mlp(
+        fused_x,
+        fused_weight_list,
+        fused_bias_list,
+        skip_final_activation=False
     )
 
-    origin_a_tensor = flow.tensor(a, dtype=dtype, device="cuda")
-    origin_b_tensor = flow.tensor(b, dtype=dtype, device="cuda")
-    origin_bias_tensor = flow.tensor(bias, dtype=dtype, device="cuda")
 
-    origin_a_tensor.requires_grad = True
-    origin_b_tensor.requires_grad = True
-    origin_bias_tensor.requires_grad = True
+    naive_out = _matmul_bias_relu(naive_x, naive_weight_list[0], naive_bias_list[0], True)
+    for idx in range(1, weight_num+1): 
+        naive_out = _matmul_bias_relu(naive_out, naive_weight_list[idx], naive_bias_list[idx], True)
 
-    origin_out = flow._C.relu(
-        flow._C.bias_add(
-            flow._C.matmul(
-                origin_a_tensor,
-                origin_b_tensor,
-                transpose_a=transpose_a,
-                transpose_b=transpose_b,
-                alpha=alpha,
-            ),
-            origin_bias_tensor,
-            axis=1,
-        )
-    )  # TODO: currently only support 2d fused matmul.
+        # todo add skip final activate logic
 
-    total_out = fused_out.sum() + origin_out.sum()
+    total_out = fused_out.sum() + naive_out.sum()
     total_out.backward()
 
     test_case.assertTrue(
-        np.allclose(fused_out.numpy(), origin_out.numpy(), atol=1e-4, rtol=1e-4)
+        np.allclose(fused_out.numpy(), naive_out.numpy(), atol=1e-4, rtol=1e-4)
     )
-    test_case.assertTrue(
-        np.allclose(
-            fused_a_tensor.grad.numpy(),
-            origin_a_tensor.grad.numpy(),
-            atol=1e-4,
-            rtol=1e-4,
-        )
-    )
-    test_case.assertTrue(
-        np.allclose(
-            fused_b_tensor.grad.numpy(),
-            origin_b_tensor.grad.numpy(),
-            atol=1e-4,
-            rtol=1e-4,
-        )
-    )
-    test_case.assertTrue(
-        np.allclose(
-            fused_bias_tensor.grad.numpy(),
-            origin_bias_tensor.grad.numpy(),
-            atol=1e-4,
-            rtol=1e-4,
-        )
-    )
-
-
+    
 @flow.unittest.skip_unless_1n1d()
-@unittest.skipIf(os.getenv("ONEFLOW_TEST_CPU_ONLY"), "only test gpu cases")
 class TestFusedMatmulBiasAddRelu(flow.unittest.TestCase):
     def test_fused_matmul_op(test_case):
         args_dict = OrderedDict()
         args_dict["test_fun"] = [_test_fused_matmul_bias_add_relu]
-        args_dict["transpose_a"] = [False, True]
-        args_dict["transpose_b"] = [False, True]
+        args_dict["batchsize"] = [1]
+        args_dict["in_feature"] = [128]
+        args_dict["hidden_size_list"] = [[256, 512]]
+        args_dict["out_feature"] = [1024]
         args_dict["dtype"] = [flow.float32, flow.float64]
+        args_dict["device"] = ["cuda"]
 
         for arg in GenArgList(args_dict):
             arg[0](test_case, *arg[1:])
