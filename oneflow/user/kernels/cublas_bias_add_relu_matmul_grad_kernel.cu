@@ -107,16 +107,16 @@ void InferMatmulCublasMNK(const DimVector& a_shape, const DimVector& b_shape,
   }
 
 
-class FusedMatmulBiasAddReluGradKernelCache final : public user_op::OpKernelCache {
+class CublasBiasAddReluMatmulGradKernelCache final : public user_op::OpKernelCache {
   public:
-  FusedMatmulBiasAddReluGradKernelCache() {
+  CublasBiasAddReluMatmulGradKernelCache() {
   // Just for init.
   OF_CUBLAS_CHECK(cublasLtMatmulDescCreate(&operation_desc, CUBLAS_COMPUTE_32F, CUDA_R_32F));
   OF_CUBLAS_CHECK(cublasLtMatrixLayoutCreate(&cublas_a_desc, CUDA_R_32F, 1, 1, 1));
   OF_CUBLAS_CHECK(cublasLtMatrixLayoutCreate(&cublas_b_desc, CUDA_R_32F, 1, 1, 1));
   OF_CUBLAS_CHECK(cublasLtMatrixLayoutCreate(&cublas_c_desc, CUDA_R_32F, 1, 1, 1));
   }
-  ~FusedMatmulBiasAddReluGradKernelCache() override {
+  ~CublasBiasAddReluMatmulGradKernelCache() override {
     OF_CUBLAS_CHECK(cublasLtMatmulDescDestroy(operation_desc));
     OF_CUBLAS_CHECK(cublasLtMatrixLayoutDestroy(cublas_a_desc));
     OF_CUBLAS_CHECK(cublasLtMatrixLayoutDestroy(cublas_b_desc));
@@ -128,8 +128,8 @@ class FusedMatmulBiasAddReluGradKernelCache final : public user_op::OpKernelCach
   cublasLtMatrixLayout_t cublas_c_desc;
 };
 
-std::shared_ptr<FusedMatmulBiasAddReluGradKernelCache> CreateFusedMatmulBiasAddReluGradKernelCache() {
-  std::shared_ptr<FusedMatmulBiasAddReluGradKernelCache> cache(new FusedMatmulBiasAddReluGradKernelCache());
+std::shared_ptr<CublasBiasAddReluMatmulGradKernelCache> CreateCublasBiasAddReluMatmulGradKernelCache() {
+  std::shared_ptr<CublasBiasAddReluMatmulGradKernelCache> cache(new CublasBiasAddReluMatmulGradKernelCache());
   return cache;
 }
 
@@ -148,7 +148,7 @@ void SetCublasMatrixLayout(cublasLtMatrixLayout_t layout_desc, cudaDataType_t cu
                                                     &cublas_ld, sizeof(cublas_ld)));
 }
 
-void SetCublasEpilogue(const FusedMatmulBiasAddReluGradKernelCache* matmul_grad_cache, 
+void SetCublasEpilogue(const CublasBiasAddReluMatmulGradKernelCache* matmul_grad_cache, 
                         cublasLtEpilogue_t epilogue, 
                         const void* d_bias_ptr, 
                         const void* aux_ptr){
@@ -169,7 +169,7 @@ void SetCublasEpilogue(const FusedMatmulBiasAddReluGradKernelCache* matmul_grad_
 
 }
 
-void SetCublasAttr(const FusedMatmulBiasAddReluGradKernelCache* matmul_grad_cache, 
+void SetCublasAttr(const CublasBiasAddReluMatmulGradKernelCache* matmul_grad_cache, 
                     const cublasComputeType_t cublas_compute_dtype, 
                     const cudaDataType_t cuda_data_type, 
                     ep::primitive::BlasTransposeType transpose_a, 
@@ -230,15 +230,15 @@ void SetCublasAttr(const FusedMatmulBiasAddReluGradKernelCache* matmul_grad_cach
 
 
 template<typename T>
-class FusedMatmulBiasAddReluGradKernel final : public user_op::OpKernel {
+class CublasBiasAddReluMatmulGradKernel final : public user_op::OpKernel {
  public:
-  FusedMatmulBiasAddReluGradKernel() = default;
-  ~FusedMatmulBiasAddReluGradKernel() override = default;
+  CublasBiasAddReluMatmulGradKernel() = default;
+  ~CublasBiasAddReluMatmulGradKernel() override = default;
 
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
   std::shared_ptr<user_op::OpKernelCache> InitOpKernelCache(
       user_op::KernelCacheContext* ctx) const override {
-    return CreateFusedMatmulBiasAddReluGradKernelCache();
+    return CreateCublasBiasAddReluMatmulGradKernelCache();
   }
 
  private:
@@ -252,7 +252,7 @@ class FusedMatmulBiasAddReluGradKernel final : public user_op::OpKernel {
     user_op::Tensor* d_grad = ctx->Tensor4ArgNameAndIndex("d_grad", 0);
     
     const auto* matmul_grad_cache =
-    CHECK_NOTNULL(dynamic_cast<const FusedMatmulBiasAddReluGradKernelCache*>(cache));
+    CHECK_NOTNULL(dynamic_cast<const CublasBiasAddReluMatmulGradKernelCache*>(cache));
     auto* cuda_stream = ctx->stream()->As<ep::CudaStream>();
 
     const DataType data_type = dy->data_type();
@@ -316,14 +316,14 @@ class FusedMatmulBiasAddReluGradKernel final : public user_op::OpKernel {
   };
 };
 
-#define REGISTER_FUSED_MATMUL_BIAS_ADD_GELU_GRAD_KERNEL(dtype)                \
-  REGISTER_USER_KERNEL("fused_matmul_bias_add_relu_backward")                     \
-      .SetCreateFn<FusedMatmulBiasAddReluGradKernel<dtype>>()               \
+#define REGISTER_CUBLAS_BIAS_ADD_RELU_MATMUL_GRAD_KERNEL(dtype)                \
+  REGISTER_USER_KERNEL("cublas_bias_add_relu_matmul_grad")                     \
+      .SetCreateFn<CublasBiasAddReluMatmulGradKernel<dtype>>()               \
       .SetIsMatchedHob((user_op::HobDeviceType() == DeviceType::kCUDA) \
                        && (user_op::HobDataType("weight", 0) == GetDataType<dtype>::value));
 
-REGISTER_FUSED_MATMUL_BIAS_ADD_GELU_GRAD_KERNEL(float)
-REGISTER_FUSED_MATMUL_BIAS_ADD_GELU_GRAD_KERNEL(double)
-// REGISTER_FUSED_MATMUL_BIAS_ADD_GELU_GRAD_KERNEL(half)
+REGISTER_CUBLAS_BIAS_ADD_RELU_MATMUL_GRAD_KERNEL(float)
+REGISTER_CUBLAS_BIAS_ADD_RELU_MATMUL_GRAD_KERNEL(double)
+// REGISTER_CUBLAS_BIAS_ADD_RELU_MATMUL_GRAD_KERNEL(half)
 
 }  // namespace oneflow

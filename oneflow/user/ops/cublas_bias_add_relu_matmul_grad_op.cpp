@@ -52,17 +52,17 @@ Maybe<void> InferDataType4MatmulBackward(user_op::InferContext* ctx){
 
 }  // namespace
 
-/* static */ Maybe<void> FusedMatmulBiasAddReluBackwardOp::InferLogicalTensorDesc(
+/* static */ Maybe<void> CublasBiasAddReluMatmulGradOp::InferLogicalTensorDesc(
     user_op::InferContext* ctx) {
   return InferTensorDesc4FusedMatmulBackward(ctx);
 }
 
-/*static*/ Maybe<void> FusedMatmulBiasAddReluBackwardOp::InferPhysicalTensorDesc(
+/*static*/ Maybe<void> CublasBiasAddReluMatmulGradOp::InferPhysicalTensorDesc(
     user_op::InferContext* ctx) {
   return InferLogicalTensorDesc(ctx);
 }
 
-/* static */ Maybe<void> FusedMatmulBiasAddReluBackwardOp::GetSbp(user_op::SbpContext* ctx) {
+/* static */ Maybe<void> CublasBiasAddReluMatmulGradOp::GetSbp(user_op::SbpContext* ctx) {
   ctx->NewBuilder()
       .Broadcast(user_op::OpArg("weight", 0))
       .Broadcast(user_op::OpArg("dy", 0))
@@ -73,7 +73,7 @@ Maybe<void> InferDataType4MatmulBackward(user_op::InferContext* ctx){
   return Maybe<void>::Ok();
 }
 
-/* static */ Maybe<void> FusedMatmulBiasAddReluBackwardOp::InferDataType(user_op::InferContext* ctx) {
+/* static */ Maybe<void> CublasBiasAddReluMatmulGradOp::InferDataType(user_op::InferContext* ctx) {
   return InferDataType4MatmulBackward(ctx);
 }
 

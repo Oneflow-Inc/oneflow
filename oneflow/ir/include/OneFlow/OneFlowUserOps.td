@@ -4251,7 +4251,7 @@ def OneFlow_MatmulOp : OneFlow_BaseOp<"matmul", [NoSideEffect, DeclareOpInterfac
   let has_data_type_infer_fn = 1;
 }
 
-def OneFlow_FusedMatmulBiasAddReluOp : OneFlow_BaseOp<"fused_matmul_bias_add_relu", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
+def OneFlow_CublasFusedMLPOp : OneFlow_BaseOp<"cublas_fused_mlp", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
     OneFlow_Tensor:$x,
     Variadic<OneFlow_Tensor>:$weights, 
@@ -4271,7 +4271,7 @@ def OneFlow_FusedMatmulBiasAddReluOp : OneFlow_BaseOp<"fused_matmul_bias_add_rel
   let has_data_type_infer_fn = 1;
 }
 
-def OneFlow_FusedMatmulBiasAddReluBackwardOp : OneFlow_BaseOp<"fused_matmul_bias_add_relu_backward", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
+def OneFlow_CublasBiasAddReluMatmulGradOp : OneFlow_BaseOp<"cublas_bias_add_relu_matmul_grad", [NoSideEffect, NoGrad, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
     OneFlow_Tensor:$dy,
     OneFlow_Tensor:$weight,

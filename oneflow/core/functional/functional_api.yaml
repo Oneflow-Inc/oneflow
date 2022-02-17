@@ -826,14 +826,14 @@
     Double alpha=1.0) => MatMul"
   bind_python: True
 
-- name: "fused_matmul_bias_add_relu"
+- name: "cublas_fused_mlp"
   signature:
-    "TensorTuple (Tensor x, TensorTuple weights, TensorTuple biases, Bool skip_final_activation) => FusedMatmulBiasAddRelu"
+    "TensorTuple (Tensor x, TensorTuple weights, TensorTuple biases, Bool skip_final_activation) => CublasFusedMLP"
   bind_python: True
 
-- name: "fused_matmul_bias_add_relu_grad"
+- name: "cublas_bias_add_relu_matmul_grad"
   signature:
-    "TensorTuple (Tensor dy, Tensor weight, Tensor aux) => FusedMatmulBiasAddReluBackward"
+    "TensorTuple (Tensor dy, Tensor weight, Tensor aux) => CublasBiasAddReluMatmulGrad"
   bind_python: False
 
 - name: "broadcast_matmul_grad_b"

@@ -109,16 +109,16 @@ void InferMatmulCublasMNK(const DimVector& a_shape, const DimVector& b_shape,
   }
 
 
-class FusedMatmulBiasAddReluKernelCache final : public user_op::OpKernelCache {
+class CublasFusedMLPKernelCache final : public user_op::OpKernelCache {
  public:
-  FusedMatmulBiasAddReluKernelCache() {
+  CublasFusedMLPKernelCache() {
   // Just for init.
   OF_CUBLAS_CHECK(cublasLtMatmulDescCreate(&operation_desc, CUBLAS_COMPUTE_32F, CUDA_R_32F));
   OF_CUBLAS_CHECK(cublasLtMatrixLayoutCreate(&cublas_a_desc, CUDA_R_32F, 1, 1, 1));
   OF_CUBLAS_CHECK(cublasLtMatrixLayoutCreate(&cublas_b_desc, CUDA_R_32F, 1, 1, 1));
   OF_CUBLAS_CHECK(cublasLtMatrixLayoutCreate(&cublas_c_desc, CUDA_R_32F, 1, 1, 1));
   }
-  ~FusedMatmulBiasAddReluKernelCache() override {
+  ~CublasFusedMLPKernelCache() override {
     OF_CUBLAS_CHECK(cublasLtMatmulDescDestroy(operation_desc));
     OF_CUBLAS_CHECK(cublasLtMatrixLayoutDestroy(cublas_a_desc));
     OF_CUBLAS_CHECK(cublasLtMatrixLayoutDestroy(cublas_b_desc));
@@ -130,8 +130,8 @@ class FusedMatmulBiasAddReluKernelCache final : public user_op::OpKernelCache {
   cublasLtMatrixLayout_t cublas_c_desc;
 };
 
-std::shared_ptr<FusedMatmulBiasAddReluKernelCache> CreateFusedMatmulBiasAddReluKernelCache() {
-  std::shared_ptr<FusedMatmulBiasAddReluKernelCache> cache(new FusedMatmulBiasAddReluKernelCache());
+std::shared_ptr<CublasFusedMLPKernelCache> CreateCublasFusedMLPKernelCache() {
+  std::shared_ptr<CublasFusedMLPKernelCache> cache(new CublasFusedMLPKernelCache());
   return cache;
 }
 
@@ -150,7 +150,7 @@ void SetCublasMatrixLayout(cublasLtMatrixLayout_t layout_desc, cudaDataType_t cu
                                                    &cublas_ld, sizeof(cublas_ld)));
 }
 
-void SetCublasEpilogue(const FusedMatmulBiasAddReluKernelCache* matmul_cache, 
+void SetCublasEpilogue(const CublasFusedMLPKernelCache* matmul_cache, 
                        cublasLtEpilogue_t epilogue, 
                        const void* bias_ptr, 
                        const void* aux_ptr){
@@ -176,7 +176,7 @@ void SetCublasEpilogue(const FusedMatmulBiasAddReluKernelCache* matmul_cache,
   }
 }
 
-void SetCublasAttr(const FusedMatmulBiasAddReluKernelCache* matmul_cache, 
+void SetCublasAttr(const CublasFusedMLPKernelCache* matmul_cache, 
                    const cublasComputeType_t cublas_compute_dtype, 
                    const cudaDataType_t cuda_data_type, 
                    cublasLtEpilogue_t epilogue, 
@@ -228,15 +228,15 @@ void SetCublasAttr(const FusedMatmulBiasAddReluKernelCache* matmul_cache,
 }  // namespace
 
 template<typename T>
-class FusedMatmulBiasAddReluKernel final : public user_op::OpKernel {
+class CublasFusedMLPKernel final : public user_op::OpKernel {
  public:
-  FusedMatmulBiasAddReluKernel() = default;
-  ~FusedMatmulBiasAddReluKernel() override = default;
+  CublasFusedMLPKernel() = default;
+  ~CublasFusedMLPKernel() override = default;
 
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
   std::shared_ptr<user_op::OpKernelCache> InitOpKernelCache(
       user_op::KernelCacheContext* ctx) const override {
-    return CreateFusedMatmulBiasAddReluKernelCache();
+    return CreateCublasFusedMLPKernelCache();
   }
 
  private:
@@ -255,7 +255,7 @@ class FusedMatmulBiasAddReluKernel final : public user_op::OpKernel {
     CHECK_EQ(weight_size, bias_size) << "The number of weight and bias is not equal!. "; 
     auto* cuda_stream = ctx->stream()->As<ep::CudaStream>();
     const auto* matmul_cache =
-        CHECK_NOTNULL(dynamic_cast<const FusedMatmulBiasAddReluKernelCache*>(cache));
+        CHECK_NOTNULL(dynamic_cast<const CublasFusedMLPKernelCache*>(cache));
     
     user_op::Tensor* x = ctx->Tensor4ArgNameAndIndex("x", 0); 
     user_op::Tensor* out = ctx->Tensor4ArgNameAndIndex("out", 0);
@@ -351,17 +351,17 @@ class FusedMatmulBiasAddReluKernel final : public user_op::OpKernel {
   }
 };
 
-#define REGISTER_MATMUL_BIAS_ADD_RELU_KERNEL_GPU(cpp_type, data_type)  \
-  REGISTER_USER_KERNEL("fused_matmul_bias_add_relu")                   \
-      .SetCreateFn<FusedMatmulBiasAddReluKernel<cpp_type>>()           \
+#define REGISTER_CUBLAS_FUSED_MLP_KERNEL_GPU(cpp_type, data_type)  \
+  REGISTER_USER_KERNEL("cublas_fused_mlp")                   \
+      .SetCreateFn<CublasFusedMLPKernel<cpp_type>>()           \
       .SetIsMatchedHob((user_op::HobDeviceType() == DeviceType::kCUDA) \
                        && (user_op::HobDataType("out", 0) == data_type));
 
-REGISTER_MATMUL_BIAS_ADD_RELU_KERNEL_GPU(double, DataType::kDouble);
-REGISTER_MATMUL_BIAS_ADD_RELU_KERNEL_GPU(float, DataType::kFloat);
-REGISTER_MATMUL_BIAS_ADD_RELU_KERNEL_GPU(half, DataType::kFloat16);
+REGISTER_CUBLAS_FUSED_MLP_KERNEL_GPU(double, DataType::kDouble);
+REGISTER_CUBLAS_FUSED_MLP_KERNEL_GPU(float, DataType::kFloat);
+REGISTER_CUBLAS_FUSED_MLP_KERNEL_GPU(half, DataType::kFloat16);
 #if CUDA_VERSION >= 11000
-// REGISTER_MATMUL_BIAS_ADD_RELU_KERNEL_GPU(nv_bfloat16, DataType::kBFloat16);
+// REGISTER_CUBLAS_FUSED_MLP_KERNEL_GPU(nv_bfloat16, DataType::kBFloat16);
 #endif
 
 }  // namespace oneflow

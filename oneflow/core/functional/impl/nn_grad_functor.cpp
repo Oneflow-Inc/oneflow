@@ -919,10 +919,10 @@ class FusedScaleMaskSoftmaxDropoutGradFunctor {
   std::shared_ptr<OpExpr> op_;
 };
 
-class FusedMatmulBiasAddReluGradFunctor {
+class CublasBiasAddReluMatmulGradFunctor {
  public:
-  FusedMatmulBiasAddReluGradFunctor() {
-    op_ = CHECK_JUST(one::OpBuilder("fused_matmul_bias_add_relu_backward")
+  CublasBiasAddReluMatmulGradFunctor() {
+    op_ = CHECK_JUST(one::OpBuilder("cublas_bias_add_relu_matmul_grad")
                     .Input("dy")
                     .Input("weight")
                     .Input("aux")
@@ -975,7 +975,7 @@ ONEFLOW_FUNCTION_LIBRARY(m) {
       "FusedScaleTrilSoftmaxMaskScaleGrad");
   m.add_functor<impl::FusedScaleMaskSoftmaxGradFunctor>("FusedScaleMaskSoftmaxGrad");
   m.add_functor<impl::FusedScaleMaskSoftmaxDropoutGradFunctor>("FusedScaleMaskSoftmaxDropoutGrad");
-  m.add_functor<impl::FusedMatmulBiasAddReluGradFunctor>("FusedMatmulBiasAddReluBackward");
+  m.add_functor<impl::CublasBiasAddReluMatmulGradFunctor>("CublasBiasAddReluMatmulGrad");
 };
 
 }  // namespace functional

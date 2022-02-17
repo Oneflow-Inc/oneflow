@@ -261,12 +261,12 @@ class BatchMatMulFunctor {
   std::shared_ptr<OpExpr> batch_matmul_op_;
 };
 
-class FusedMatMulBiasAddReluFunctor {
+class CublasFusedMLPFunctor {
  public:
-  FusedMatMulBiasAddReluFunctor() {
+  CublasFusedMLPFunctor() {
     fused_op_.resize(kMaxInputCount /*the maximum number of inputs*/);
     for (int n = 1; n < fused_op_.size(); ++n) {
-      fused_op_[n] = CHECK_JUST(one::OpBuilder("fused_matmul_bias_add_relu")
+      fused_op_[n] = CHECK_JUST(one::OpBuilder("cublas_fused_mlp")
                                .Input("x")
                                .Input("weights", n)
                                .Input("biases", n)
@@ -2245,7 +2245,7 @@ ONEFLOW_FUNCTION_LIBRARY(m) {
   m.add_functor<impl::DeConv3dFunctor>("Deconv3d");
   m.add_functor<impl::MatMulFunctor>("MatMul");
   m.add_functor<impl::BatchMatMulFunctor>("BatchMatMul");
-  m.add_functor<impl::FusedMatMulBiasAddReluFunctor>("FusedMatmulBiasAddRelu");
+  m.add_functor<impl::CublasFusedMLPFunctor>("CublasFusedMLP");
   m.add_functor<impl::LayerNormFunctor>("LayerNorm");
   m.add_functor<impl::LayerNormAffineFunctor>("LayerNormAffine");
   m.add_functor<impl::TFAvgPool2DFunctor>("AvgPool2D");

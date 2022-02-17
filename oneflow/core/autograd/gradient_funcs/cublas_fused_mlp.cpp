@@ -26,31 +26,31 @@ namespace oneflow {
 
 namespace one {
 
-struct FusedMatmulBiasAddReluCaptureState : public AutoGradCaptureState {
+struct CublasFusedMLPCaptureState : public AutoGradCaptureState {
     int32_t weight_num = 0; 
     bool skip_final_activation = false; 
 };
 
-class FusedMatmulBiasAddRelu : public OpExprGradFunction<FusedMatmulBiasAddReluCaptureState> {
+class CublasFusedMLP : public OpExprGradFunction<CublasFusedMLPCaptureState> {
  public:
   Maybe<void> Init(const OpExpr& op) override;
-  Maybe<void> Capture(FusedMatmulBiasAddReluCaptureState* ctx, const TensorTuple& inputs,
+  Maybe<void> Capture(CublasFusedMLPCaptureState* ctx, const TensorTuple& inputs,
                       const TensorTuple& outputs, const AttrMap& attrs) const override;
-  Maybe<void> Apply(const FusedMatmulBiasAddReluCaptureState* ctx, const TensorTuple& out_grads,
+  Maybe<void> Apply(const CublasFusedMLPCaptureState* ctx, const TensorTuple& out_grads,
                     TensorTuple* in_grads) const override;
 
  protected:
   AttrMap base_attrs_;
 };
 
-Maybe<void> FusedMatmulBiasAddRelu::Init(const OpExpr& op) {
+Maybe<void> CublasFusedMLP::Init(const OpExpr& op) {
   const UserOpExpr* fw_op_expr = dynamic_cast<const UserOpExpr*>(&op);
   CHECK_NOTNULL_OR_RETURN(fw_op_expr);
   base_attrs_ = MakeAttrMapFromUserOpConf(fw_op_expr->proto());
   return Maybe<void>::Ok();
 }
 
-Maybe<void> FusedMatmulBiasAddRelu::Capture(FusedMatmulBiasAddReluCaptureState* ctx,
+Maybe<void> CublasFusedMLP::Capture(CublasFusedMLPCaptureState* ctx,
                                             const TensorTuple& inputs, const TensorTuple& outputs,
                                             const AttrMap& attrs) const {
   int32_t weight_num = (inputs.size() - 1) / 2; 
@@ -74,7 +74,7 @@ Maybe<void> FusedMatmulBiasAddRelu::Capture(FusedMatmulBiasAddReluCaptureState* 
   return Maybe<void>::Ok();
 }
 
-Maybe<void> FusedMatmulBiasAddRelu::Apply(const FusedMatmulBiasAddReluCaptureState* ctx,
+Maybe<void> CublasFusedMLP::Apply(const CublasFusedMLPCaptureState* ctx,
                                           const TensorTuple& out_grads,
                                           TensorTuple* in_grads) const {
   int32_t weight_num = ctx->weight_num; 
@@ -118,7 +118,7 @@ Maybe<void> FusedMatmulBiasAddRelu::Apply(const FusedMatmulBiasAddReluCaptureSta
         Then use Matmul to compute weight grad. 
         if it is final layer, we use out_grads[0] as dy.
         */
-        const auto& matmul_relu_bias_bgrad = JUST(functional::FusedMatmulBiasAddReluBackward(
+        const auto& matmul_relu_bias_bgrad = JUST(functional::CublasBiasAddReluMatmulGrad(
                                                   last_relu_grad, weights.at(hidden_layer_idx), cublas_auxs.at(hidden_layer_idx-1)));
         // dgrad
         dgrad.at(hidden_layer_idx) = matmul_relu_bias_bgrad->at(0); 
@@ -128,7 +128,7 @@ Maybe<void> FusedMatmulBiasAddRelu::Apply(const FusedMatmulBiasAddReluCaptureSta
         in_grads->at(1+hidden_layer_idx) = JUST(functional::MatMul(last_relu_grad, hiddens.at(hidden_layer_idx-1), true, false, 1.0));
     
     }else{
-        const auto& matmul_relu_bias_bgrad = JUST(functional::FusedMatmulBiasAddReluBackward(
+        const auto& matmul_relu_bias_bgrad = JUST(functional::CublasBiasAddReluMatmulGrad(
                                              dgrad.at(hidden_layer_idx+1), weights.at(hidden_layer_idx), cublas_auxs.at(hidden_layer_idx-1)));
         // dgrad
         dgrad.at(hidden_layer_idx) = matmul_relu_bias_bgrad->at(0);
@@ -147,7 +147,7 @@ Maybe<void> FusedMatmulBiasAddRelu::Apply(const FusedMatmulBiasAddReluCaptureSta
   return Maybe<void>::Ok();
 }
 
-REGISTER_OP_EXPR_GRAD_FUNCTION("fused_matmul_bias_add_relu", FusedMatmulBiasAddRelu);
+REGISTER_OP_EXPR_GRAD_FUNCTION("cublas_fused_mlp", CublasFusedMLP);
 
 }  // namespace one
 

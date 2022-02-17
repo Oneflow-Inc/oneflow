@@ -87,17 +87,17 @@ Maybe<void> InferDataType4Matmul(user_op::InferContext* ctx){
 
 }  // namespace
 
-/* static */ Maybe<void> FusedMatmulBiasAddReluOp::InferLogicalTensorDesc(
+/* static */ Maybe<void> CublasFusedMLPOp::InferLogicalTensorDesc(
     user_op::InferContext* ctx) {
   return InferTensorDesc4FusedMatmul(ctx);
 }
 
-/*static*/ Maybe<void> FusedMatmulBiasAddReluOp::InferPhysicalTensorDesc(
+/*static*/ Maybe<void> CublasFusedMLPOp::InferPhysicalTensorDesc(
     user_op::InferContext* ctx) {
   return InferLogicalTensorDesc(ctx);
 }
 
-/* static */ Maybe<void> FusedMatmulBiasAddReluOp::GetSbp(user_op::SbpContext* ctx) {
+/* static */ Maybe<void> CublasFusedMLPOp::GetSbp(user_op::SbpContext* ctx) {
   // Currently Only support S0 B B B B ... S0
   auto builder = ctx->NewBuilder().Split(user_op::OpArg("x", 0), 0); 
   for(int i =0; i<ctx->user_op_conf().input_size("weights"); ++i) {
@@ -117,7 +117,7 @@ Maybe<void> InferDataType4Matmul(user_op::InferContext* ctx){
   return Maybe<void>::Ok();
 }
 
-/* static */ Maybe<void> FusedMatmulBiasAddReluOp::InferDataType(user_op::InferContext* ctx) {
+/* static */ Maybe<void> CublasFusedMLPOp::InferDataType(user_op::InferContext* ctx) {
   return InferDataType4Matmul(ctx);
 }
 
