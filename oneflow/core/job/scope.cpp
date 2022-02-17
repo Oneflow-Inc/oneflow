@@ -19,7 +19,6 @@ limitations under the License.
 #include "oneflow/core/job/scope.pb.h"
 #include "oneflow/core/operator/operator.h"
 #include "oneflow/core/vm/symbol_storage.h"
-#include "oneflow/core/framework/interpreter.h"
 #include "oneflow/core/framework/instructions_builder.h"
 #include "oneflow/core/framework/symbol_id_cache.h"
 
@@ -102,7 +101,7 @@ Maybe<int64_t> NewScopeSymbolId(
   std::shared_ptr<cfg::ScopeProto> new_scope = JUST(old_scope.MakeChildScopeProto());
   InitNewScopeProto(new_scope);
   int64_t symbol_id = 0;
-  JUST(LogicalInterpreter().Run([&](InstructionsBuilder* builder) -> Maybe<void> {
+  JUST(PhysicalRun([&](InstructionsBuilder* builder) -> Maybe<void> {
     symbol_id = JUST(builder->FindOrCreateSymbolId<cfg::ScopeProto>(*new_scope));
     return Maybe<void>::Ok();
   }));
