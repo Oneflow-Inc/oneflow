@@ -43,12 +43,13 @@ class BoxingCollector final {
   void GenerateNdSbpList();
   // Generate the map from 1d sbp to 2d sbp
   void GenerateMap1d2nd();
-  // Generate the transfer rule for different combinations with the same hierarchie
+  // Generate the transfer rule for different combinations with the same hierarchy
   Maybe<void> GenerateCombination4SamePlacement(int32_t max_middle_node_num);
   // Generate the transfer rule for different combinations with different hierarchies
-  // It could be on the same placement or different placements.
-  Maybe<void> GenerateCombination4DiffHierarchy(int32_t max_middle_node_num,
-                                                bool if_diff_placement);
+  // on the same placement
+  Maybe<void> GenerateCombination4DiffHierarchy(int32_t max_middle_node_num);
+  // Generate the transfer rule for different combinations with different placements
+  Maybe<void> GenerateCombination4DiffPlacement(int32_t max_middle_node_num);
   // Print the cost and middle nodes
   void PrintBoxingTables();
   // Ask if the boxing algorithm accepts the current sbp combination
@@ -73,6 +74,18 @@ class BoxingCollector final {
   void CollectUniverse(const cfg::SbpParallel& sbp);
   // Find corresponding id for Nd sbp
   int32_t FindId4NdSbp(const cfg::NdSbp& nd_sbp);
+  // Ask for sbp combination with the same 2-D hierarchy and placement
+  Maybe<void> AskSbpCombination4Same2DPlacement(
+      const cfg::NdSbp& sbp_producer, const cfg::NdSbp& sbp_consumer,
+      const BlobDesc& logical_blob_desc, const ParallelDesc& producer_parallel_desc,
+      const ParallelDesc& consumer_parallel_desc, bool is_customized,
+      std::vector<cfg::NdSbp>& middle_sbps, int32_t* diag_node, bool compute_cost);
+  // Ask for sbp combination with different hierarchies on the same placement
+  Maybe<void> AskSbpCombination4DiffHierarchy(
+      const cfg::NdSbp& sbp_producer, const cfg::NdSbp& sbp_consumer,
+      const BlobDesc& logical_blob_desc, const ParallelDesc& producer_parallel_desc,
+      const ParallelDesc& consumer_parallel_desc, bool is_customized,
+      std::vector<cfg::NdSbp>& middle_sbps, int32_t* diag_node, bool compute_cost);
   // Stores all the possible cfg::SbpParallel.
   HashMap<::oneflow::cfg::SbpParallel, int32_t> SbpParallelUniverse_;
   // Relationship between id and Sbp Parallel
@@ -90,11 +103,9 @@ class BoxingCollector final {
   // Relationship between id and Nd Sbp
   std::vector<cfg::NdSbp> nd_sbp_lists_;
   // The diagonal middle node for differe placements
-  std::vector<std::vector<std::vector<int32_t>>> diag_node_diff_placement_;
+  std::vector<std::vector<std::vector<std::vector<int32_t>>>> diag_node_diff_placement_;
   // The diagonal middle node for differe hierarchies in the same placement
   std::vector<std::vector<std::vector<int32_t>>> diag_node_diff_hierarchy_;
-  // The cost for transferring a 1D sbp between different placements
-  std::vector<double> cost_4_diff_placement_;
   // Id Map from 1d sbp to 2d sbp
   // For example: B -> (B, B), S0 -> (S0, S0)
   std::vector<int32_t> id_1d_2_2d_;
