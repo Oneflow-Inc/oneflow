@@ -13,6 +13,7 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
+#include "oneflow/core/common/just.h"
 #include "oneflow/core/job_rewriter/job_pass.h"
 #include "oneflow/core/framework/framework.h"
 
@@ -84,15 +85,15 @@ Maybe<void> FuseAddToOutputPass::Apply(const OpGraph& op_graph, JobBuilder* job_
 
   auto IsReachable = op_graph.MakePredicatorIsOpNameDataOrCtrlReachable();
   std::vector<OperatorConf> delete_ops;
-  op_graph.ForEachNode([&](const OpNode* op_node) {
+  op_graph.MaybeForEachNode([&](const OpNode* op_node) -> Maybe<void> {
     const OperatorConf& op_conf = op_node->op().op_conf();
-    if (!op_conf.has_user_conf()) { return; }
-    if (!op_conf.ctrl_in_op_name().empty()) { return; }
-    if (ctrl_in_op_names.find(op_conf.name()) != ctrl_in_op_names.end()) { return; }
-    if (op_conf.user_conf().op_type_name() != "add_n") { return; }
-    if (op_name2op_conf.find(op_conf.name()) != op_name2op_conf.end()) { return; }
+    if (!op_conf.has_user_conf()) { return Maybe<void>::Ok(); }
+    if (!op_conf.ctrl_in_op_name().empty()) { return Maybe<void>::Ok(); }
+    if (ctrl_in_op_names.find(op_conf.name()) != ctrl_in_op_names.end()) { return Maybe<void>::Ok(); }
+    if (op_conf.user_conf().op_type_name() != "add_n") { return Maybe<void>::Ok(); }
+    if (op_name2op_conf.find(op_conf.name()) != op_name2op_conf.end()) { return Maybe<void>::Ok(); }
     const user_op::UserOpConfWrapper user_op_conf(op_conf);
-    if (user_op_conf.input_size("in") != 2) { return; }
+    if (user_op_conf.input_size("in") != 2) { return Maybe<void>::Ok(); }
 
     const LogicalBlobId in_0 = GenLogicalBlobId(user_op_conf.input("in", 0));
     const LogicalBlobId in_1 = GenLogicalBlobId(user_op_conf.input("in", 1));
@@ -113,24 +114,34 @@ Maybe<void> FuseAddToOutputPass::Apply(const OpGraph& op_graph, JobBuilder* job_
       add_to_lbi = &in_0;
       sum_lbi = &in_1;
     } else {
-      return;
+      return Maybe<void>::Ok();
     }
     // Make a new_add_to_op to fuse add_n into this op.
-    OperatorConf new_add_to_op_conf = add_to_node->op().op_conf();
-    *(*(new_add_to_op_conf.mutable_user_conf()->mutable_input()))["_add_to_output"]
-         .mutable_s()
-         ->Add() = GenLogicalBlobName(*add_to_lbi);
-    job_builder->MutOpsOnlyOnce({new_add_to_op_conf});
+    if (JUST(job_builder->IsInMutOpTransaction(add_to_node->op().op_name()))) {
+      OperatorConf& new_add_to_op_conf = *JUST(job_builder->MutOpTransactionGet(add_to_node->op().op_name()));
+      *(*(new_add_to_op_conf.mutable_user_conf()->mutable_input()))["_add_to_output"]
+           .mutable_s()
+           ->Add() = GenLogicalBlobName(*add_to_lbi);
+    } else {
+      OperatorConf new_add_to_op_conf = add_to_node->op().op_conf();
+      *(*(new_add_to_op_conf.mutable_user_conf()->mutable_input()))["_add_to_output"]
+           .mutable_s()
+           ->Add() = GenLogicalBlobName(*add_to_lbi);
+      JUST(job_builder->MutOpTransactionMut(new_add_to_op_conf));
+    }
     for (const OpEdge* out_edge : op_node->out_edges()) {
       const OpNode* consumer = out_edge->dst_node();
       const std::string& consumer_op_name = consumer->op().op_name();
       if (op_name2op_conf.find(consumer_op_name) == op_name2op_conf.end()) {
-        op_name2op_conf[consumer_op_name] = consumer->op().op_conf();
+        if (!JUST(job_builder->IsInMutOpTransaction(consumer->op().op_name()))) {
+          op_name2op_conf[consumer_op_name] = consumer->op().op_conf();
+          JUST(job_builder->MutOpTransactionMut(consumer->op().op_conf()));
+        }
       }
       // Make add_n op's consumer to consume the new_add_to_op
       for (const std::string& ibn : consumer->op().input_bns()) {
         if (consumer->op().BnInOp2Lbi(ibn) == out) {
-          OperatorConf& consumer_op_conf = op_name2op_conf.at(consumer_op_name);
+          OperatorConf& consumer_op_conf = *JUST(job_builder->MutOpTransactionGet(consumer_op_name));
           const auto& new_val = GenLogicalBlobName(*sum_lbi);
           const auto& old_val = ReplaceInputLbnInOpCustomizedConf(&consumer_op_conf, ibn, new_val);
           CHECK_EQ(GenLogicalBlobName(out), old_val);
@@ -139,9 +150,10 @@ Maybe<void> FuseAddToOutputPass::Apply(const OpGraph& op_graph, JobBuilder* job_
     }
     // Add the add_n op to removing list
     delete_ops.emplace_back(op_conf);
+    return Maybe<void>::Ok();
   });
+  JUST(job_builder->MutOpTransactionCommit());
   job_builder->DelOps(delete_ops);
-  for (const auto& pair : op_name2op_conf) { job_builder->MutOpsOnlyOnce({pair.second}); }
   return Maybe<void>::Ok();
 }
 

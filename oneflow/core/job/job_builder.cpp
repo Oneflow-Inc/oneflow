@@ -14,8 +14,10 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 #include "oneflow/core/job/job_builder.h"
+#include "oneflow/core/common/maybe.h"
 #include "oneflow/core/common/util.h"
 #include "oneflow/core/common/container_util.h"
+#include "oneflow/core/job/job.pb.h"
 #include "oneflow/core/operator/operator.h"
 
 namespace oneflow {
@@ -277,18 +279,44 @@ void JobBuilder::DelOps(const std::vector<OperatorConf>& op_confs) {
 }
 
 Maybe<void> JobBuilder::MutOpOnlyOnce(const OperatorConf& op_conf) {
-  CHECK_OR_RETURN(modified_op_conf_op_names_.emplace(op_conf.name()).second);
-  op_name2op_conf_.at(op_conf.name())->CopyFrom(op_conf);
+  CHECK_OR_RETURN(modified_op_conf_op_names_.emplace(op_conf.name()).second) << op_conf.name() << " is mut twice.";
+  auto find_iter = op_name2op_conf_.find(op_conf.name());
+  CHECK_OR_RETURN(find_iter != op_name2op_conf_.end()) << op_conf.name() << " not found.";
+  find_iter->second->CopyFrom(op_conf);
   return Maybe<void>::Ok();
 }
 
 void JobBuilder::MutOpsOnlyOnce(const std::vector<OperatorConf>& op_confs) {
   for (const auto& op_conf : op_confs) {
-    if (!modified_op_conf_op_names_.emplace(op_conf.name()).second) {
-      LOG(INFO) << op_conf.name() << " is mut twice.";
-    }
+    CHECK(modified_op_conf_op_names_.emplace(op_conf.name()).second) << op_conf.name() << " is mut twice.";
     op_name2op_conf_.at(op_conf.name())->CopyFrom(op_conf);
   }
+}
+
+Maybe<bool> JobBuilder::IsInMutOpTransaction(const std::string& op_name) const {
+  auto find_iter = mut_op_transaction_name2op_conf_.find(op_name);
+  return find_iter != mut_op_transaction_name2op_conf_.end();
+}
+
+Maybe<OperatorConf*> JobBuilder::MutOpTransactionGet(const std::string& op_name) {
+  return JUST(MapAt(&mut_op_transaction_name2op_conf_, op_name));
+}
+
+Maybe<void> JobBuilder::MutOpTransactionMut(const OperatorConf& op_conf) {
+  auto find_iter = mut_op_transaction_name2op_conf_.find(op_conf.name());
+  if (find_iter == mut_op_transaction_name2op_conf_.end()) {
+    CHECK_OR_RETURN(mut_op_transaction_name2op_conf_.emplace(op_conf.name(), op_conf).second) << op_conf.name() << " has been added.";
+  } else {
+    find_iter->second.CopyFrom(op_conf);
+  }
+  return Maybe<void>::Ok();
+}
+
+Maybe<void> JobBuilder::MutOpTransactionCommit() {
+  for(const auto& pair : mut_op_transaction_name2op_conf_) {
+    JUST(MutOpOnlyOnce(pair.second));
+  }
+  return Maybe<void>::Ok();
 }
 
 void JobBuilder::AddOrMutOpsOnlyOnce(const ParallelConf& parallel_conf,
