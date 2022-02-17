@@ -35,6 +35,8 @@ limitations under the License.
 #include "oneflow/user/kernels/random_mask_like_kernel.h"
 #include "oneflow/user/kernels/dropout_kernel.h"
 #include "oneflow/core/register/ofblob.h"
+#include "oneflow/core/common/container_util.h"
+
 namespace oneflow {
 namespace one {
 namespace functional {
@@ -2201,14 +2203,14 @@ class FusedDotFeatureInteractionFunctor {
     if (output_concat) {
       JUST(attrs.SetAttr<bool>("has_output_concat", true));
       TensorTuple inputs(n_features + 1);
-      for (int64_t i = 0; i < n_features; ++i) { inputs[i] = features.at(i); }
+      for (int64_t i = 0; i < n_features; ++i) { inputs[i] = JUST(oneflow::VectorAt(features, i)); }
       inputs[n_features] = JUST(output_concat);
-      return OpInterpUtil::Dispatch<Tensor>(*ops_has_output_concat_.at(n_features - 1), inputs,
-                                            attrs);
+      return OpInterpUtil::Dispatch<Tensor>(
+          *JUST(oneflow::VectorAt(ops_has_output_concat_, n_features - 1)), inputs, attrs);
     } else {
       JUST(attrs.SetAttr<bool>("has_output_concat", false));
-      return OpInterpUtil::Dispatch<Tensor>(*ops_no_output_concat_.at(n_features - 1), features,
-                                            attrs);
+      return OpInterpUtil::Dispatch<Tensor>(
+          *JUST(oneflow::VectorAt(ops_no_output_concat_, n_features - 1)), features, attrs);
     }
   }
 
