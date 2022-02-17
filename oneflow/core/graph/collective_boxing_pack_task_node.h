@@ -27,8 +27,8 @@ class CollectiveBoxingPackTaskNode : public TransportTaskNode {
   ~CollectiveBoxingPackTaskNode() override = default;
 
   void Init(int64_t machine_id, int64_t thrd_id, const LogicalBlobId& lbi,
-            const Shape& logical_shape, const cfg::SbpParallel& src_sbp_parallel,
-            const cfg::SbpParallel& dst_sbp_parallel, const int64_t parallel_num);
+            const Shape& logical_shape, const SbpParallel& src_sbp_parallel,
+            const SbpParallel& dst_sbp_parallel, const int64_t parallel_num);
   TaskType GetTaskType() const override { return TaskType::kCollectiveBoxingPack; }
 
  private:
@@ -38,8 +38,8 @@ class CollectiveBoxingPackTaskNode : public TransportTaskNode {
   void InferProducedDataRegstTimeShape() final;
 
   Shape logical_shape_;
-  cfg::SbpParallel src_sbp_parallel_;
-  cfg::SbpParallel dst_sbp_parallel_;
+  SbpParallel src_sbp_parallel_;
+  SbpParallel dst_sbp_parallel_;
   int64_t parallel_num_;
 };
 

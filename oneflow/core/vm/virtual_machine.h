@@ -17,7 +17,6 @@ limitations under the License.
 #define ONEFLOW_CORE_VM_VIRTUAL_MACHINE_H_
 
 #include "oneflow/core/common/notifier.h"
-#include "oneflow/core/vm/interpret_type.h"
 #include "oneflow/core/vm/vm_desc.h"
 #include "oneflow/core/vm/virtual_machine_engine.h"
 #include "oneflow/core/thread/thread_pool.h"
