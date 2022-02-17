@@ -51,8 +51,8 @@ size_t InferTmpBufferSize(user_op::InferContext* ctx) {
   const Shape& input_shape = input.shape();
   const std::vector<int32_t> axis = ctx->Attr<std::vector<int32_t>>("dim");
   if (axis.size() == input_shape.NumAxes()) {
-    return std::min(static_cast<int32_t>(std::ceil(std::sqrt(input.shape().elem_cnt()))), kCudaMaxBlocksNum)
-           * GetSizeOfDataType(input.data_type()) * 3;
+    return GetCudaAlignedSize(std::min(static_cast<int32_t>(std::ceil(std::sqrt(input.shape().elem_cnt()))), kCudaMaxBlocksNum)
+           * GetSizeOfDataType(input.data_type()) * 3);
   }
   return 0;
 }
