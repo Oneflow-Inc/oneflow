@@ -155,11 +155,11 @@ Maybe<Symbol<ParallelDesc>> PyUnpackParallelDesc(PyObject* obj);
 
 // SBP
 bool PySbpParallelCheck(PyObject* obj);
-Maybe<Symbol<cfg::SbpParallel>> PyUnpackSbpParallel(PyObject* obj);
+Maybe<Symbol<SbpParallel>> PyUnpackSbpParallel(PyObject* obj);
 
 // SBP list
 bool PySbpParallelSequenceCheck(PyObject* obj);
-Maybe<std::vector<Symbol<cfg::SbpParallel>>> PyUnpackSbpParallelSequence(PyObject* obj);
+Maybe<std::vector<Symbol<SbpParallel>>> PyUnpackSbpParallelSequence(PyObject* obj);
 
 // Tensor index
 bool PyTensorIndexCheck(PyObject* obj);
