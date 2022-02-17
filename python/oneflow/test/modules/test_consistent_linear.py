@@ -48,11 +48,11 @@ def _test_linear_with_random_data(test_case, placement, weight_sbp, input_sbp):
 
 
 # class TestLinearModule(flow.unittest.TestCase):
-#     @global_view
+#     @globaltest
 #     def test_linear_with_random_data(test_case):
 #         for placement in all_placement():
 #             # TODO(): Fix 2d sbp
-#             if len(placement.hierarchy) != 1:
+#             if len(placement.ranks.shape) != 1:
 #                 continue
 #             for sbp in all_sbp(placement, max_dim=2):
 #                 _test_linear_with_random_data(test_case, placement, sbp, sbp)
