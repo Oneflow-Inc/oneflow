@@ -28,6 +28,7 @@ limitations under the License.
 #include "oneflow/core/framework/random_generator.h"
 #include "oneflow/core/functional/functional.h"
 #include "oneflow/core/functional/function_library.h"
+#include "oneflow/core/functional/functional_api.yaml.h"
 #include "oneflow/core/functional/sequence_function.h"
 #include "oneflow/core/functional/impl/common.h"
 #include "oneflow/core/functional/impl/unary_functor.h"
@@ -308,15 +309,45 @@ class CublasFusedMLPFunctor {
       k = n; 
     }
 
-    TensorTuple input(2*weight_size+1);
-    input[0] = x; 
-    std::copy(weights.begin(), weights.end(), input.begin()+1); 
-    std::copy(biases.begin(), biases.end(), input.begin()+1+weight_size); 
+    Symbol<Device> device = JUST(x->device());
+    
+    #if CUDA_VERSION >= 11400
+    if(device->enum_type() == DeviceType::kCUDA){
+      TensorTuple input(2*weight_size+1);
+      input[0] = x; 
+      std::copy(weights.begin(), weights.end(), input.begin()+1); 
+      std::copy(biases.begin(), biases.end(), input.begin()+1+weight_size); 
 
-    MutableAttrMap attrs;
-    JUST(attrs.SetAttr<bool>("skip_final_activation", skip_final_activation));
+      MutableAttrMap attrs;
+      JUST(attrs.SetAttr<bool>("skip_final_activation", skip_final_activation));
 
-    return OpInterpUtil::Dispatch<Tensor>(*fused_op_[weight_size], input, attrs);
+      return OpInterpUtil::Dispatch<Tensor>(*fused_op_[weight_size], input, attrs);
+    }
+    #endif
+
+    // Fall back to matmul + bias_add + relu 
+    std::shared_ptr<one::Tensor> out; 
+    for(int32_t layer_idx=0; layer_idx < weight_size; layer_idx++){
+      printf("enter here cpu version?! \n"); 
+      if(layer_idx == 0){
+        out = JUST(functional::BiasAdd(
+                    JUST(functional::MatMul(x, weights[layer_idx], false, true, 1.0)), 
+                    biases[layer_idx], 1));
+      }
+      else{
+        out = JUST(functional::BiasAdd(
+                  JUST(functional::MatMul(out, weights[layer_idx], false, true, 1.0)), 
+                  biases[layer_idx], 1));
+      }
+      if(layer_idx == weight_size-1){
+        if(!skip_final_activation){
+          out = JUST(functional::Relu(out, false)); 
+        }
+      }else{
+        out = JUST(functional::Relu(out, false)); 
+      }
+    }
+    return out; 
   }
 
  private:

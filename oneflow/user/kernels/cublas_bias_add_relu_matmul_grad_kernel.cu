@@ -13,6 +13,8 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
+// CUBLAS_AUX_EPILOGUE only support in cuda11.4 or higher version, in cuda11.4 it need static link. 
+#if CUDA_VERSION >= 11400
 #include "oneflow/core/device/cuda_util.h"
 #include "oneflow/core/framework/framework.h"
 #include "oneflow/core/ep/include/primitive/fill.h"
@@ -324,6 +326,7 @@ class CublasBiasAddReluMatmulGradKernel final : public user_op::OpKernel {
 
 REGISTER_CUBLAS_BIAS_ADD_RELU_MATMUL_GRAD_KERNEL(float)
 REGISTER_CUBLAS_BIAS_ADD_RELU_MATMUL_GRAD_KERNEL(double)
-// REGISTER_CUBLAS_BIAS_ADD_RELU_MATMUL_GRAD_KERNEL(half)
+REGISTER_CUBLAS_BIAS_ADD_RELU_MATMUL_GRAD_KERNEL(half)
 
 }  // namespace oneflow
+#endif 
