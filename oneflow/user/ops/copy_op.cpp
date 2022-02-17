@@ -28,7 +28,7 @@ Maybe<Symbol<Stream>> MakeCopyStream(const Symbol<Device>& in_device,
     const auto device = JUST(Device::New("cuda", in_device->device_id()));
     return Stream::New(device, StreamRole::kDevice2Host);
   } else if (JUST(in_device->of_type()) == "cpu" && JUST(out_device->of_type()) == "gpu") {
-    const auto device = JUST(Device::New("cuda", in_device->device_id()));
+    const auto device = JUST(Device::New("cuda", out_device->device_id()));
     return Stream::New(device, StreamRole::kHost2Device);
   } else {
     CHECK_EQ_OR_RETURN(in_device->type(), out_device->type());
