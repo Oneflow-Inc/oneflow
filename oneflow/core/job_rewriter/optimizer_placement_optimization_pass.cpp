@@ -106,7 +106,7 @@ void SetBroadcastParallel4OpNodeIbn(JobBuilder* builder, const OpNode* node,
   OpBlobArg op_blob_arg;
   op_blob_arg.set_op_name(node->op().op_name());
   op_blob_arg.set_bn_in_op(ibn);
-  cfg::SbpParallel sbp_parallel;
+  SbpParallel sbp_parallel;
   sbp_parallel.mutable_broadcast_parallel();
   builder->SetSbpParallel4Oba(op_blob_arg, sbp_parallel);
 }
@@ -180,22 +180,22 @@ void ForEachParallelSortedNodeSequence(
   }
 }
 
-bool IsS0Parallel(const cfg::SbpParallel& sbp_parallel) {
+bool IsS0Parallel(const SbpParallel& sbp_parallel) {
   return sbp_parallel.has_split_parallel() && sbp_parallel.split_parallel().axis() == 0;
 }
 
-bool IsS0Parallel(const cfg::SbpSignature& signature, const std::string& bn) {
+bool IsS0Parallel(const SbpSignature& signature, const std::string& bn) {
   return IsS0Parallel(signature.bn_in_op2sbp_parallel().at(bn));
 }
 
 bool IsS0SignatureSupported(const OpNode* node) {
   if (node->op().input_bns().size() != 1 || node->op().output_bns().size() != 1) { return false; }
-  cfg::SbpSignatureList list;
+  SbpSignatureList list;
   auto LogicalBlobDesc4Ibn = [&](const std::string& bn) -> Maybe<const BlobDesc&> {
     return Maybe<const BlobDesc&>(node->LogicalBlobDesc4Lbi(node->op().BnInOp2Lbi(bn)));
   };
   CHECK_JUST(node->op().GetSbpSignaturesIf(LogicalBlobDesc4Ibn, node->parallel_desc(), &list));
-  const auto IsInOutS0Parallel = [&](const cfg::SbpSignature& signature) {
+  const auto IsInOutS0Parallel = [&](const SbpSignature& signature) {
     return IsS0Parallel(signature, node->op().SoleIbn())
            && IsS0Parallel(signature, node->op().SoleObn());
   };

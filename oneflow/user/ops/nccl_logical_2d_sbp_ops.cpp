@@ -34,8 +34,8 @@ namespace oneflow {
 
 /* static */ Maybe<void> _ncclLogical_2DSameDim0AllReduceOp::InferNdSbp(
     user_op::InferNdSbpFnContext* ctx) {
-  cfg::NdSbp* input_nd_sbp = ctx->NdSbp4ArgNameAndIndex("in", 0);
-  cfg::NdSbp* output_nd_sbp = ctx->NdSbp4ArgNameAndIndex("out", 0);
+  NdSbp* input_nd_sbp = ctx->NdSbp4ArgNameAndIndex("in", 0);
+  NdSbp* output_nd_sbp = ctx->NdSbp4ArgNameAndIndex("out", 0);
   input_nd_sbp->clear_sbp_parallel();
   output_nd_sbp->clear_sbp_parallel();
 
@@ -76,8 +76,8 @@ namespace oneflow {
 
 /* static */ Maybe<void> _ncclLogical_2DSameDim1AllReduceOp::InferNdSbp(
     user_op::InferNdSbpFnContext* ctx) {
-  cfg::NdSbp* input_nd_sbp = ctx->NdSbp4ArgNameAndIndex("in", 0);
-  cfg::NdSbp* output_nd_sbp = ctx->NdSbp4ArgNameAndIndex("out", 0);
+  NdSbp* input_nd_sbp = ctx->NdSbp4ArgNameAndIndex("in", 0);
+  NdSbp* output_nd_sbp = ctx->NdSbp4ArgNameAndIndex("out", 0);
   input_nd_sbp->clear_sbp_parallel();
   output_nd_sbp->clear_sbp_parallel();
 
@@ -118,8 +118,8 @@ namespace oneflow {
 
 /* static */ Maybe<void> _ncclLogical_2DSameDim0AllGatherOp::InferNdSbp(
     user_op::InferNdSbpFnContext* ctx) {
-  cfg::NdSbp* input_nd_sbp = ctx->NdSbp4ArgNameAndIndex("in", 0);
-  cfg::NdSbp* output_nd_sbp = ctx->NdSbp4ArgNameAndIndex("out", 0);
+  NdSbp* input_nd_sbp = ctx->NdSbp4ArgNameAndIndex("in", 0);
+  NdSbp* output_nd_sbp = ctx->NdSbp4ArgNameAndIndex("out", 0);
   input_nd_sbp->clear_sbp_parallel();
   output_nd_sbp->clear_sbp_parallel();
 
@@ -162,8 +162,8 @@ namespace oneflow {
 
 /* static */ Maybe<void> _ncclLogical_2DSameDim0AllGatherNoncontinuousOp::InferNdSbp(
     user_op::InferNdSbpFnContext* ctx) {
-  cfg::NdSbp* input_nd_sbp = ctx->NdSbp4ArgNameAndIndex("in", 0);
-  cfg::NdSbp* output_nd_sbp = ctx->NdSbp4ArgNameAndIndex("out", 0);
+  NdSbp* input_nd_sbp = ctx->NdSbp4ArgNameAndIndex("in", 0);
+  NdSbp* output_nd_sbp = ctx->NdSbp4ArgNameAndIndex("out", 0);
   input_nd_sbp->clear_sbp_parallel();
   output_nd_sbp->clear_sbp_parallel();
 
@@ -205,8 +205,8 @@ namespace oneflow {
 
 /* static */ Maybe<void> _ncclLogical_2DSameDim0All2allOp::InferNdSbp(
     user_op::InferNdSbpFnContext* ctx) {
-  cfg::NdSbp* input_nd_sbp = ctx->NdSbp4ArgNameAndIndex("in", 0);
-  cfg::NdSbp* output_nd_sbp = ctx->NdSbp4ArgNameAndIndex("out", 0);
+  NdSbp* input_nd_sbp = ctx->NdSbp4ArgNameAndIndex("in", 0);
+  NdSbp* output_nd_sbp = ctx->NdSbp4ArgNameAndIndex("out", 0);
   input_nd_sbp->clear_sbp_parallel();
   output_nd_sbp->clear_sbp_parallel();
 

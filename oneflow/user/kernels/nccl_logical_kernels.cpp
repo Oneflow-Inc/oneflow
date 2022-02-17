@@ -187,7 +187,7 @@ class NcclLogicalAllGatherNoncontinuous final : public user_op::OpKernel {
   std::shared_ptr<user_op::OpKernelState> CreateOpKernelState(
       user_op::KernelInitContext* ctx) const override {
     auto state = std::make_shared<NcclLogicalAllGatherNoncontinuousKernelState>(ctx);
-    cfg::NdSbp src_nd_sbp;
+    NdSbp src_nd_sbp;
     CHECK_JUST(GetNcclLogicalNdSbpFromAttr(ctx, "src_reduced_nd_sbp", &src_nd_sbp));
     CHECK_EQ(src_nd_sbp.sbp_parallel_size(), 1);
     CHECK(src_nd_sbp.sbp_parallel(0).has_split_parallel());
@@ -255,8 +255,8 @@ class NcclLogicalS2SKernel final : public user_op::OpKernel {
   std::shared_ptr<user_op::OpKernelState> CreateOpKernelState(
       user_op::KernelInitContext* ctx) const override {
     auto state = std::make_shared<NcclLogicalS2SKernelState>(ctx);
-    cfg::NdSbp src_nd_sbp;
-    cfg::NdSbp dst_nd_sbp;
+    NdSbp src_nd_sbp;
+    NdSbp dst_nd_sbp;
     CHECK_JUST(GetNcclLogicalNdSbpFromAttr(ctx, "src_reduced_nd_sbp", &src_nd_sbp));
     CHECK_JUST(GetNcclLogicalNdSbpFromAttr(ctx, "dst_reduced_nd_sbp", &dst_nd_sbp));
     CHECK_EQ(src_nd_sbp.sbp_parallel_size(), 1);
@@ -372,8 +372,8 @@ size_t InferS2SKernelTmpBufferSize(user_op::InferContext* ctx) {
   const user_op::TensorDesc& in_tensor = ctx->InputTensorDesc("in", 0);
   size_t tensor_byte_size =
       GetCudaAlignedSize(in_tensor.shape().elem_cnt() * GetSizeOfDataType(in_tensor.data_type()));
-  cfg::NdSbp src_nd_sbp;
-  cfg::NdSbp dst_nd_sbp;
+  NdSbp src_nd_sbp;
+  NdSbp dst_nd_sbp;
   CHECK_JUST(GetNcclLogicalNdSbpFromAttr(ctx, "src_reduced_nd_sbp", &src_nd_sbp));
   CHECK_JUST(GetNcclLogicalNdSbpFromAttr(ctx, "dst_reduced_nd_sbp", &dst_nd_sbp));
   CHECK_EQ(src_nd_sbp.sbp_parallel_size(), 1);

@@ -141,18 +141,8 @@ void FindAllConnectedSubgraphForGpuExecOrder(std::vector<HashSet<const OpNode*>>
             });
 }
 
-bool NdSbpAllSameSplitParallel(const cfg::NdSbp& nd_sbp) {
-  CHECK_GT(nd_sbp.sbp_parallel_size(), 0);
-  const cfg::SbpParallel& first_sbp = nd_sbp.sbp_parallel(0);
-  if (!first_sbp.has_split_parallel()) { return false; }
-  FOR_RANGE(int64_t, i, 1, nd_sbp.sbp_parallel_size()) {
-    if (nd_sbp.sbp_parallel(i) != first_sbp) { return false; }
-  }
-  return true;
-}
-
-bool TryBuildNcclBy1DHierarchy(OperatorConf* ret, const cfg::SbpParallel& src_sbp,
-                               const cfg::SbpParallel& dst_sbp, const std::string& lbn,
+bool TryBuildNcclBy1DHierarchy(OperatorConf* ret, const SbpParallel& src_sbp,
+                               const SbpParallel& dst_sbp, const std::string& lbn,
                                const int64_t scope_symbol_id, const BlobDesc& logical_blob_desc,
                                const int64_t parallel_num) {
   auto CanSplitAtDim = [&](int64_t dim) -> bool {
@@ -231,16 +221,16 @@ bool TryBuildNcclBy1DHierarchy(OperatorConf* ret, const cfg::SbpParallel& src_sb
   return false;
 }
 
-bool TryBuildNcclBy2DHierarchySameDim0(OperatorConf* ret, const cfg::NdSbp& src_nd_sbp,
-                                       const cfg::NdSbp& dst_nd_sbp,
+bool TryBuildNcclBy2DHierarchySameDim0(OperatorConf* ret, const NdSbp& src_nd_sbp,
+                                       const NdSbp& dst_nd_sbp,
                                        const std::shared_ptr<Shape>& hierarchy,
                                        const std::string& lbn, const int64_t scope_symbol_id,
                                        const BlobDesc& logical_blob_desc) {
   CHECK_EQ(src_nd_sbp.sbp_parallel_size(), 2);
   CHECK_EQ(dst_nd_sbp.sbp_parallel_size(), 2);
   CHECK(src_nd_sbp.sbp_parallel(0) == dst_nd_sbp.sbp_parallel(0));
-  const cfg::SbpParallel& src_dim1_sbp = src_nd_sbp.sbp_parallel(1);
-  const cfg::SbpParallel& dst_dim1_sbp = dst_nd_sbp.sbp_parallel(1);
+  const SbpParallel& src_dim1_sbp = src_nd_sbp.sbp_parallel(1);
+  const SbpParallel& dst_dim1_sbp = dst_nd_sbp.sbp_parallel(1);
 
   // split when dim0 sbp is split parallel
   DimVector dim_vec = logical_blob_desc.shape().dim_vec();
@@ -313,16 +303,16 @@ bool TryBuildNcclBy2DHierarchySameDim0(OperatorConf* ret, const cfg::NdSbp& src_
   return false;
 }
 
-bool TryBuildNcclBy2DHierarchySameDim1(OperatorConf* ret, const cfg::NdSbp& src_nd_sbp,
-                                       const cfg::NdSbp& dst_nd_sbp,
+bool TryBuildNcclBy2DHierarchySameDim1(OperatorConf* ret, const NdSbp& src_nd_sbp,
+                                       const NdSbp& dst_nd_sbp,
                                        const std::shared_ptr<Shape>& hierarchy,
                                        const std::string& lbn, const int64_t scope_symbol_id,
                                        const BlobDesc& logical_blob_desc) {
   CHECK_EQ(src_nd_sbp.sbp_parallel_size(), 2);
   CHECK_EQ(dst_nd_sbp.sbp_parallel_size(), 2);
   CHECK(src_nd_sbp.sbp_parallel(1) == dst_nd_sbp.sbp_parallel(1));
-  const cfg::SbpParallel& src_dim1_sbp = src_nd_sbp.sbp_parallel(0);
-  const cfg::SbpParallel& dst_dim1_sbp = dst_nd_sbp.sbp_parallel(0);
+  const SbpParallel& src_dim1_sbp = src_nd_sbp.sbp_parallel(0);
+  const SbpParallel& dst_dim1_sbp = dst_nd_sbp.sbp_parallel(0);
   if (src_dim1_sbp.has_partial_sum_parallel() && dst_dim1_sbp.has_broadcast_parallel()) {
     // (P, *) -> (B, *) : AllReduce
     *ret =
@@ -359,8 +349,8 @@ Maybe<int64_t> BuildScopeWithReducedParallelDesc(int64_t old_scope_symbol_id,
 
 bool TryBuildNcclLogicalOpConf(OperatorConf* ret, const OpNode* src_node, const OpNode* dst_node,
                                const LogicalBlobId& lbi, ParallelDesc* src_reduced_parallel_desc,
-                               ParallelDesc* dst_reduced_parallel_desc,
-                               cfg::NdSbp* src_reduced_nd_sbp, cfg::NdSbp* dst_reduced_nd_sbp) {
+                               ParallelDesc* dst_reduced_parallel_desc, NdSbp* src_reduced_nd_sbp,
+                               NdSbp* dst_reduced_nd_sbp) {
   if (!src_node->op().op_conf().has_scope_symbol_id()) { return false; /* device_tick */ }
   const std::string lbn = GenLogicalBlobName(lbi);
   const BlobDesc& logical_blob_desc = src_node->LogicalBlobDesc4Lbi(lbi);
@@ -433,8 +423,8 @@ void InsertNcclLogicalOpsAsCloseAsPossibleToSrcNode(
         OperatorConf nccl_op;
         ParallelDesc src_reduced_parallel_desc = op_edge->src_node()->parallel_desc();
         ParallelDesc dst_reduced_parallel_desc = op_edge->dst_node()->parallel_desc();
-        cfg::NdSbp src_reduced_nd_sbp;
-        cfg::NdSbp dst_reduced_nd_sbp;
+        NdSbp src_reduced_nd_sbp;
+        NdSbp dst_reduced_nd_sbp;
         if (!TryBuildNcclLogicalOpConf(&nccl_op, src_node, dst_node, lbi,
                                        &src_reduced_parallel_desc, &dst_reduced_parallel_desc,
                                        &src_reduced_nd_sbp, &dst_reduced_nd_sbp)) {
@@ -498,8 +488,8 @@ void InsertNcclLogicalOpsAsCloseAsPossibleToDstNode(
         OperatorConf nccl_op;
         ParallelDesc src_reduced_parallel_desc = op_edge->src_node()->parallel_desc();
         ParallelDesc dst_reduced_parallel_desc = op_edge->dst_node()->parallel_desc();
-        cfg::NdSbp src_reduced_nd_sbp;
-        cfg::NdSbp dst_reduced_nd_sbp;
+        NdSbp src_reduced_nd_sbp;
+        NdSbp dst_reduced_nd_sbp;
         if (!TryBuildNcclLogicalOpConf(&nccl_op, src_node, dst_node, lbi,
                                        &src_reduced_parallel_desc, &dst_reduced_parallel_desc,
                                        &src_reduced_nd_sbp, &dst_reduced_nd_sbp)) {
@@ -594,8 +584,8 @@ void InsertNcclLogicalOpsAfterAcc(const OpGraph& op_graph,
         OperatorConf nccl_op;
         ParallelDesc src_reduced_parallel_desc = op_edge->src_node()->parallel_desc();
         ParallelDesc dst_reduced_parallel_desc = op_edge->dst_node()->parallel_desc();
-        cfg::NdSbp src_reduced_nd_sbp;
-        cfg::NdSbp dst_reduced_nd_sbp;
+        NdSbp src_reduced_nd_sbp;
+        NdSbp dst_reduced_nd_sbp;
         if (!TryBuildNcclLogicalOpConf(&nccl_op, op_edge->src_node(), op_edge->dst_node(), lbi,
                                        &src_reduced_parallel_desc, &dst_reduced_parallel_desc,
                                        &src_reduced_nd_sbp, &dst_reduced_nd_sbp)) {

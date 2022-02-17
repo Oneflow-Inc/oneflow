@@ -40,7 +40,7 @@ static constexpr auto* GetLocalToConsistentOpExpr =
 Maybe<one::Tensor> ReinterpterConsistentTensor(const std::shared_ptr<one::Tensor>& tensor,
                                                const Shape& shape,
                                                Symbol<ParallelDesc> parallel_desc,
-                                               Symbol<cfg::NdSbp> nd_sbp) {
+                                               Symbol<NdSbp> nd_sbp) {
   const auto& op = JUST(GetLocalToConsistentOpExpr());
   MutableAttrMap attrs;
   JUST(attrs.SetAttr<Shape>("shape", shape));
@@ -54,9 +54,8 @@ Maybe<one::Tensor> ReinterpterConsistentTensor(const std::shared_ptr<one::Tensor
       *op, {x}, one::OpExprInterpContext(attrs, parallel_desc, nd_sbp)));
 }
 
-Maybe<one::Tensor> Apply1DBoxing(const std::shared_ptr<one::Tensor>& input,
-                                 Symbol<cfg::NdSbp> in_nd_sbp, Symbol<cfg::NdSbp> out_nd_sbp,
-                                 Symbol<ParallelDesc> in_parallel_desc,
+Maybe<one::Tensor> Apply1DBoxing(const std::shared_ptr<one::Tensor>& input, Symbol<NdSbp> in_nd_sbp,
+                                 Symbol<NdSbp> out_nd_sbp, Symbol<ParallelDesc> in_parallel_desc,
                                  Symbol<ParallelDesc> out_parallel_desc) {
   const auto& boxing_interpreter =
       JUST(Global<EagerBoxingInterpreterManager>::Get()->GetEagerBoxingInterpreter(
