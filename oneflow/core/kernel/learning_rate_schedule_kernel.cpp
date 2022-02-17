@@ -211,15 +211,11 @@ double CosineAnnealingWarmRestartsLearningRate(const CosineAnnealingWarmRestarts
                     - static_cast<int64_t>(std::floor(static_cast<double>(1 - interval)
                                                       / (1 - conf.t_mult()) * conf.t_initial()));
   }
-  double lr = base_lr;
+  double lr = conf.eta_min();
   if (conf.restart_limit() == 0 || (conf.restart_limit() > 0 && epoch < conf.restart_limit())) {
     double gamma = std::pow(conf.decay_rate(), epoch);
     const double PI = std::atan(1.0) * 4.0;
-    const double eta_min = conf.eta_min();
-    CHECK_LT(eta_min, lr);
-    lr = conf.eta_min()
-         + 0.5 * (base_lr * gamma - conf.eta_min())
-               * (1 + std::cos(PI * step_in_epoch / epoch_steps));
+    lr = lr + 0.5 * (base_lr * gamma - lr) * (1 + std::cos(PI * step_in_epoch / epoch_steps));
   }
   return lr;
 }

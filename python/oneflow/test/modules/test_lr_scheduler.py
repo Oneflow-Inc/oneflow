@@ -814,7 +814,7 @@ class CosineAnnealingWarmRestartsTestCase(flow.unittest.TestCase):
             f"\nexpected_lrs: {expected_lrs}\nvs.\ncalculated lrs: {lrs}",
         )
 
-    def test_multi_2_decay_half_limit_2(test_case):
+    def test_mult_2_decay_half_limit_2(test_case):
         param = flow.nn.Parameter(flow.ones(3, 4))
         optimizer = flow.optim.SGD([param], lr=0.1)
         cosa_r_lr = flow.optim.lr_scheduler.CosineAnnealingWarmRestarts(
