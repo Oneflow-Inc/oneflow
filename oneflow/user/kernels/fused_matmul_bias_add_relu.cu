@@ -155,8 +155,8 @@ void SetCublasEpilogue(const FusedMatmulBiasAddReluKernelCache* matmul_cache,
                        const void* bias_ptr, 
                        const void* aux_ptr){
   if(epilogue == CUBLASLT_EPILOGUE_RELU_BIAS || 
-     epilogue == CUBLASLT_EPILOGUE_BIAS
-    //  epilogue == CUBLASLT_EPILOGUE_RELU_AUX_BIAS
+     epilogue == CUBLASLT_EPILOGUE_BIAS || 
+     epilogue == CUBLASLT_EPILOGUE_RELU_AUX_BIAS
     ){
     // Set epilogue
     OF_CUBLAS_CHECK(cublasLtMatmulDescSetAttribute(
@@ -167,12 +167,13 @@ void SetCublasEpilogue(const FusedMatmulBiasAddReluKernelCache* matmul_cache,
       sizeof(bias_ptr)));
   }
   // // TODO: GELU_AUX_BIAS
-  // if(epilogue == CUBLASLT_EPILOGUE_RELU_AUX_BIAS){
-  //   // Set aux ptr for backward. 
-  //   OF_CUBLAS_CHECK(cublasLtMatmulDescSetAttribute(matmul_cache->operation_desc,
-  //     CUBLASLT_MATMUL_DESC_EPILOGUE_AUX_POINTER, &aux_ptr,
-  //     sizeof(aux_ptr)));
-  // }
+  if(epilogue == CUBLASLT_EPILOGUE_RELU_AUX_BIAS){
+    printf("enter relu aux bias. \n"); 
+    // Set aux ptr for backward. 
+    OF_CUBLAS_CHECK(cublasLtMatmulDescSetAttribute(matmul_cache->operation_desc,
+      CUBLASLT_MATMUL_DESC_EPILOGUE_AUX_POINTER, &aux_ptr,
+      sizeof(aux_ptr)));
+  }
 }
 
 void SetCublasAttr(const FusedMatmulBiasAddReluKernelCache* matmul_cache, 
@@ -211,6 +212,10 @@ void SetCublasAttr(const FusedMatmulBiasAddReluKernelCache* matmul_cache,
   
   // Set epilogue
   SetCublasEpilogue(matmul_cache, epilogue, bias_ptr, aux_ptr);
+  long aux_ld = cublas_ldc; 
+  printf("AUX LD IS: %ld \n", aux_ld); 
+  OF_CUBLAS_CHECK(cublasLtMatmulDescSetAttribute(matmul_cache->operation_desc, CUBLASLT_MATMUL_DESC_EPILOGUE_AUX_LD, 
+    &aux_ld, sizeof(aux_ld)));
 
   // Set matrix layout
   SetCublasMatrixLayout(matmul_cache->cublas_a_desc, cuda_data_type, cublas_trans_a, cublas_m,
@@ -292,12 +297,11 @@ class FusedMatmulBiasAddReluKernel final : public user_op::OpKernel {
     for(int idx = 0; idx < weight_size; idx++){
       const user_op::Tensor* weight = ctx->Tensor4ArgNameAndIndex("weights", idx);
       const user_op::Tensor* bias = ctx->Tensor4ArgNameAndIndex("biases", idx);
-      // user_op::Tensor* cublas_aux = ctx->Tensor4ArgNameAndIndex("cublas_aux", idx);
+      user_op::Tensor* cublas_aux = ctx->Tensor4ArgNameAndIndex("cublas_aux", idx);
       
       out_feature = weight->shape().At(0); 
       weight->shape().ToDimVector(&weight_shape); 
-      // cublasLtEpilogue_t epilogue = CUBLASLT_EPILOGUE_RELU_AUX_BIAS;
-      cublasLtEpilogue_t epilogue = CUBLASLT_EPILOGUE_RELU_BIAS;
+      cublasLtEpilogue_t epilogue = CUBLASLT_EPILOGUE_RELU_AUX_BIAS;
       
       if(idx == 0){
         x_ptr = x->mut_dptr();
@@ -331,8 +335,7 @@ class FusedMatmulBiasAddReluKernel final : public user_op::OpKernel {
                     cuda_data_type, 
                     epilogue, 
                     bias->dptr(), 
-                    // cublas_aux->dptr(), 
-                    nullptr, 
+                    cublas_aux->dptr(), 
                     cublas_m, 
                     cublas_n, 
                     cublas_k, 
