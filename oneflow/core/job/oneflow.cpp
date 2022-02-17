@@ -40,7 +40,7 @@ limitations under the License.
 #include "oneflow/core/graph/plan_task_graph.h"
 #include "oneflow/core/graph/boxing/collective_boxing_util.h"
 #include "oneflow/core/profiler/profiler.h"
-#include "oneflow/core/job/sbp_parallel.cfg.h"
+#include "oneflow/core/job/sbp_parallel.h"
 
 namespace std {
 
@@ -56,22 +56,6 @@ struct hash<oneflow::ParallelBlobConf> {
 }  // namespace std
 
 namespace oneflow {
-
-bool operator==(const SbpParallel& lhs, const SbpParallel& rhs) {
-  return lhs.parallel_type_case() == rhs.parallel_type_case();
-}
-
-bool operator!=(const SbpParallel& lhs, const SbpParallel& rhs) { return !(lhs == rhs); }
-
-bool operator==(const NdSbp& lhs, const NdSbp& rhs) {
-  if (lhs.sbp_parallel().size() != rhs.sbp_parallel().size()) { return false; }
-  for (int i = 0; i < lhs.sbp_parallel().size(); ++i) {
-    if (lhs.sbp_parallel().Get(i) != rhs.sbp_parallel().Get(i)) { return false; }
-  }
-  return true;
-}
-
-bool operator!=(const NdSbp& lhs, const NdSbp& rhs) { return !(lhs == rhs); }
 
 bool operator==(const ParallelBlobConf& lhs, const ParallelBlobConf& rhs) {
   return BlobDesc(lhs.logical_blob_desc_conf()) == BlobDesc(rhs.logical_blob_desc_conf())
