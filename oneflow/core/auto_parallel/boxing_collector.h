@@ -125,7 +125,9 @@ class BoxingCollector final {
   std::vector<std::vector<std::vector<std::vector<int32_t>>>> diag_node_diff_hierarchy_;
   // Id Map from 1d sbp to 2d sbp
   // For example: B -> (B, B), S0 -> (S0, S0)
-  std::vector<int32_t> id_1d_2_2d_;
+  std::vector<int32_t> id_1d_2_nd_;
+  // The sbp size in the combination table
+  int32_t hierarchy_num_;
 };  // class BoxingCollector
 
 }  // namespace oneflow

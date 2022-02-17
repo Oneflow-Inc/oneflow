@@ -100,6 +100,7 @@ Maybe<void> BoxingCollector::Init(const BlobDesc& logical_blob_desc,
   GenerateNdSbpList(parallel_desc.hierarchy()->NumAxes());
   // Filter out unsuitable middle nodes before computing minimum cost.
   JUST(FilterNdSbpList4LogicalShape(logical_blob_desc, *parallel_desc.hierarchy()));
+  GenerateMap1d2nd();
   JUST(GenerateCombination4SamePlacement(5));
   return Maybe<void>::Ok();
 }
@@ -115,14 +116,8 @@ void BoxingCollector::CollectUniverse(const cfg::SbpParallel& sbp) {
 
 // Find corresponding id for Nd sbp
 int32_t BoxingCollector::FindId4NdSbp(const cfg::NdSbp& nd_sbp) {
-  if (nd_sbp.sbp_parallel_size() == 1) {
-    const auto& it_nd_sbp = SbpParallelUniverse_.find(nd_sbp.sbp_parallel(0));
-    if (it_nd_sbp != SbpParallelUniverse_.end()) {
-      return id_1d_2_2d_[it_nd_sbp->second];
-    } else {
-      return -1;
-    }
-  } else {
+  // Directly search on the nd_sbp_list
+  if (nd_sbp.sbp_parallel_size() == hierarchy_num_) {
     const auto& it_nd_sbp = NdSbpUniverse_.find(nd_sbp);
     if (it_nd_sbp != NdSbpUniverse_.end()) {
       return it_nd_sbp->second;
@@ -130,6 +125,15 @@ int32_t BoxingCollector::FindId4NdSbp(const cfg::NdSbp& nd_sbp) {
       return -1;
     }
   }
+
+  // Find the diagonal node if it could be converted to a 1D sbp
+  if (Is1dSbp(nd_sbp)) {
+    const auto& it_nd_sbp = SbpParallelUniverse_.find(nd_sbp.sbp_parallel(0));
+    if (it_nd_sbp != SbpParallelUniverse_.end()) { return id_1d_2_nd_[it_nd_sbp->second]; }
+  }
+
+  // Can not be converted to a 1D sbp or not found in the 1D sbp list
+  return -1;
 }
 
 // Set default Sbp list
@@ -149,6 +153,7 @@ void BoxingCollector::CollectUniverse(int32_t max_axis) {
 void BoxingCollector::GenerateNdSbpList(int32_t hierarchy_num) {
   // 1D sbp does not support S->P. But it seems that we do not need to deal with it for now.
   // And we do not have 3D sbp or higher dimension.
+  hierarchy_num_ = hierarchy_num;
 
   // Generate possible nd_sbp lists
   cfg::NdSbp nd_sbp;
@@ -161,18 +166,17 @@ void BoxingCollector::GenerateMap1d2nd() {
   // Number of 1d sbp
   int32_t m = id2SbpParallel_.size();
 
-  // Generate the id Map from 1d sbp to 2d sbp
-  int32_t hierarchy_num = 2;
+  // Generate the id Map from 1d sbp to nd sbp
   cfg::NdSbp nd_sbp;
-  for (int32_t dim_sbp = 0; dim_sbp < hierarchy_num; dim_sbp++) { nd_sbp.add_sbp_parallel(); }
-  id_1d_2_2d_.resize(m, -1);
+  for (int32_t dim_sbp = 0; dim_sbp < hierarchy_num_; dim_sbp++) { nd_sbp.add_sbp_parallel(); }
+  id_1d_2_nd_.resize(m, -1);
   for (int32_t id_1d = 0; id_1d < m; id_1d++) {
-    for (int32_t dim_sbp = 0; dim_sbp < hierarchy_num; dim_sbp++) {
+    for (int32_t dim_sbp = 0; dim_sbp < hierarchy_num_; dim_sbp++) {
       *nd_sbp.mutable_sbp_parallel(dim_sbp) = id2SbpParallel_[id_1d];
     }
     // NOTE: The 2d sbp might be filtered out already.
     const auto& it_ = NdSbpUniverse_.find(nd_sbp);
-    if (it_ != NdSbpUniverse_.end()) { id_1d_2_2d_[id_1d] = it_->second; }
+    if (it_ != NdSbpUniverse_.end()) { id_1d_2_nd_[id_1d] = it_->second; }
   }
 }
 
@@ -314,11 +318,11 @@ Maybe<void> BoxingCollector::GenerateCombination4DiffPlacement(int32_t max_middl
   cost_4_diff_placement.resize(m);
   for (int32_t id_1d_producer = 0; id_1d_producer < m; id_1d_producer++) {
     cost_4_diff_placement[id_1d_producer].resize(m, GetMaxVal<float>());
-    int32_t diag_producer = id_1d_2_2d_[id_1d_producer];
+    int32_t diag_producer = id_1d_2_nd_[id_1d_producer];
     if (diag_producer < 0) { continue; }
 
     for (int32_t id_1d_consumer = 0; id_1d_consumer < m; id_1d_consumer++) {
-      int32_t diag_consumer = id_1d_2_2d_[id_1d_consumer];
+      int32_t diag_consumer = id_1d_2_nd_[id_1d_consumer];
       if (diag_consumer < 0) { continue; }
       cost_4_diff_placement[id_1d_producer][id_1d_consumer] = JUST(ComputeLazyCopyCostBetweenNdSbp(
           nd_sbp_lists_[id_1d_producer], nd_sbp_lists_[diag_consumer], blob_desc, *in_parallel_desc,
@@ -339,7 +343,7 @@ Maybe<void> BoxingCollector::GenerateCombination4DiffPlacement(int32_t max_middl
 
       // From the producer to the first diagonal node
       for (int32_t id_1d_producer = 0; id_1d_producer < m; id_1d_producer++) {
-        int32_t diag_producer = id_1d_2_2d_[id_1d_producer];
+        int32_t diag_producer = id_1d_2_nd_[id_1d_producer];
         // The diagonal sbp is not supported or no paths exist from the producer to the diagonal
         // sbp.
         if (diag_producer < 0 || minimum_copy_cost_[i][diag_producer] > GetValidMaxCopyCost()) {
@@ -356,7 +360,7 @@ Maybe<void> BoxingCollector::GenerateCombination4DiffPlacement(int32_t max_middl
 
         // From the second diagonal node to the consumer
         for (int32_t id_1d_consumer = 0; id_1d_consumer < m; id_1d_consumer++) {
-          int32_t diag_consumer = id_1d_2_2d_[id_1d_consumer];
+          int32_t diag_consumer = id_1d_2_nd_[id_1d_consumer];
           // The diagonal sbp is not supported or no paths exist from the diagonal sbp to the
           // consumer or between the two diagonal sbps.
           if (diag_consumer < 0 || minimum_copy_cost_[diag_consumer][j] > GetValidMaxCopyCost()
@@ -830,9 +834,9 @@ Maybe<void> BoxingCollector::Generate1Combination4DiffHierarchy(
   for (int32_t id_1d = 0; id_1d < m; id_1d++) {
     // We do not support [2, 3]: (S0, S1) -> [6]: S0 for a tensor with shape (14, 21)
     // Thus, the diagonal node should suit both the hierarchies.
-    int32_t diag_producer = boxing_collector_producer->id_1d_2_2d_[id_1d];
+    int32_t diag_producer = boxing_collector_producer->id_1d_2_nd_[id_1d];
     if (diag_producer < 0) { continue; }
-    int32_t diag_consumer = boxing_collector_consumer->id_1d_2_2d_[id_1d];
+    int32_t diag_consumer = boxing_collector_consumer->id_1d_2_nd_[id_1d];
     if (diag_consumer < 0) { continue; }
     // Find the path with minimum number of nodes
     int32_t path_length = 0;
