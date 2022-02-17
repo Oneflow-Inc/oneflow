@@ -111,14 +111,14 @@ class BoxingCollector final {
       BoxingCollector* boxing_collector_consumer,
       const std::vector<std::vector<double>>& cost_4_diff_placement,
       std::vector<std::vector<int32_t>>& diag_nodes);
-  // Ask for one combination with different hierarchies
-  Maybe<void> Ask1Combination4DiffHierarchy(
+  // Ask for one combination with different hierarchies and placements
+  Maybe<void> Ask1Combination4DiffPlacement(
       const cfg::NdSbp& sbp_producer, const cfg::NdSbp& sbp_consumer,
       const BlobDesc& logical_blob_desc, const ParallelDesc& producer_parallel_desc,
       const ParallelDesc& consumer_parallel_desc, bool is_customized,
       std::vector<cfg::NdSbp>& middle_sbps, int32_t* diag_node_pos, bool compute_cost,
       BoxingCollector* boxing_collector_producer, BoxingCollector* boxing_collector_consumer,
-      std::vector<std::vector<int32_t>>& diag_nodes);
+      const std::vector<std::vector<int32_t>>& diag_nodes);
   // Stores all the possible cfg::SbpParallel.
   HashMap<::oneflow::cfg::SbpParallel, int32_t> SbpParallelUniverse_;
   // Relationship between id and Sbp Parallel
