@@ -265,6 +265,7 @@ class BatchMatMulFunctor {
 class CublasFusedMLPFunctor {
  public:
   CublasFusedMLPFunctor() {
+    #if CUDA_VERSION >= 11040
     fused_op_.resize(kMaxInputCount /*the maximum number of inputs*/);
     for (int n = 1; n < fused_op_.size(); ++n) {
       fused_op_[n] = CHECK_JUST(one::OpBuilder("cublas_fused_mlp")
@@ -276,6 +277,7 @@ class CublasFusedMLPFunctor {
                                .Output("hidden", n)
                                .Build());
     }
+    #endif
   }
   Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x,
                            const TensorTuple& weights,
@@ -311,7 +313,8 @@ class CublasFusedMLPFunctor {
 
     Symbol<Device> device = JUST(x->device());
     
-    #if CUDA_VERSION >= 11400
+    #if CUDA_VERSION >= 11040
+    printf("cuda version > 11040"); 
     if(device->enum_type() == DeviceType::kCUDA){
       TensorTuple input(2*weight_size+1);
       input[0] = x; 
@@ -328,7 +331,7 @@ class CublasFusedMLPFunctor {
     // Fall back to matmul + bias_add + relu 
     std::shared_ptr<one::Tensor> out; 
     for(int32_t layer_idx=0; layer_idx < weight_size; layer_idx++){
-      printf("enter here cpu version?! \n"); 
+      printf("Here enter cpu version. \n"); 
       if(layer_idx == 0){
         out = JUST(functional::BiasAdd(
                     JUST(functional::MatMul(x, weights[layer_idx], false, true, 1.0)), 
@@ -351,7 +354,9 @@ class CublasFusedMLPFunctor {
   }
 
  private:
+  #if CUDA_VERSION >= 11040
   std::vector<std::shared_ptr<OpExpr>> fused_op_;
+  #endif
 };
 
 class LayerNormFunctor {
