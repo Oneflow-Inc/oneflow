@@ -1976,3 +1976,7 @@
 - name: "cumprod_grad"
   signature: "Tensor (Tensor input, Tensor y, Tensor x, Int64 dim) => CumprodGrad"
   bind_python: False
+
+- name: "einsum"
+  signature: "Tensor (String equation, TensorTuple operands) => EinSum"
+  bind_python: True

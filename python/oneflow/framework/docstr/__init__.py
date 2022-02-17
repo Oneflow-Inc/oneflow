@@ -61,3 +61,4 @@ from .global_cast import *
 from .sort import *
 from .is_floating_point import *
 from .where import *
+from .einsum import *

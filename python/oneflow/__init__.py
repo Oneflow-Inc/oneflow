@@ -310,6 +310,7 @@ from oneflow.nn.modules.pooling import (
     adaptive_avg_pool2d,
     adaptive_avg_pool3d,
 )
+from oneflow.nn.modules.einsum import einsum_op as einsum
 from oneflow.nn.modules.is_tensor import is_tensor_op as is_tensor
 from oneflow.nn.modules.arange import arange_op as arange
 from oneflow.nn.modules.linspace import linspace_op as linspace
