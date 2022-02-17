@@ -341,7 +341,7 @@ def GetDualObject(name, pytorch, oneflow):
                                 for arg in oneflow_args:
                                     if flow.is_tensor(arg):
                                         arg_device_type = arg.device.type
-                            
+
                             graph_train_parameters_len = 0
 
                             if testing_graph:
@@ -381,6 +381,7 @@ def GetDualObject(name, pytorch, oneflow):
                                 ignore_apis_list = ["tensor", "train"]
                                 test_g_res = []
                                 if isinstance(oneflow, flow.nn.Module):
+
                                     class TestGraphOfModule(flow.nn.Graph):
                                         def __init__(self):
                                             super().__init__()
