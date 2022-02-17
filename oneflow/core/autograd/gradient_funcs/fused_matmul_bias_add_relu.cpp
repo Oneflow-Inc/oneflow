@@ -135,7 +135,7 @@ Maybe<void> FusedMatmulBiasAddRelu::Apply(const FusedMatmulBiasAddReluCaptureSta
     
     }else{
         const auto& matmul_relu_bias_bgrad = JUST(functional::FusedMatmulBiasAddReluBackward(
-                                             dgrad.at(hidden_layer_idx+1), weights.at(hidden_layer_idx), cublas_auxs.at(hidden_layer_idx)));
+                                             dgrad.at(hidden_layer_idx+1), weights.at(hidden_layer_idx), cublas_auxs.at(hidden_layer_idx-1)));
         // dgrad
         dgrad.at(hidden_layer_idx) = matmul_relu_bias_bgrad->at(0);
         // bias grad
