@@ -20,8 +20,8 @@ namespace oneflow {
 
 void CollectiveBoxingPackTaskNode::Init(int64_t machine_id, int64_t thrd_id,
                                         const LogicalBlobId& lbi, const Shape& logical_shape,
-                                        const cfg::SbpParallel& src_sbp_parallel,
-                                        const cfg::SbpParallel& dst_sbp_parallel,
+                                        const SbpParallel& src_sbp_parallel,
+                                        const SbpParallel& dst_sbp_parallel,
                                         const int64_t parallel_num) {
   set_machine_id(machine_id);
   set_thrd_id(thrd_id);
@@ -50,8 +50,8 @@ void CollectiveBoxingPackTaskNode::BuildExecGphAndRegst() {
   auto* collective_boxing_pack_conf = op_conf.mutable_collective_boxing_pack_conf();
   *collective_boxing_pack_conf->mutable_lbi() = lbi();
   logical_shape_.ToProto(collective_boxing_pack_conf->mutable_logical_shape());
-  src_sbp_parallel_.ToProto(collective_boxing_pack_conf->mutable_src_sbp_parallel());
-  dst_sbp_parallel_.ToProto(collective_boxing_pack_conf->mutable_dst_sbp_parallel());
+  *collective_boxing_pack_conf->mutable_src_sbp_parallel() = src_sbp_parallel_;
+  *collective_boxing_pack_conf->mutable_dst_sbp_parallel() = dst_sbp_parallel_;
   collective_boxing_pack_conf->set_num_ranks(parallel_num_);
   std::shared_ptr<Operator> sole_op = CHECK_JUST(ConstructOp(op_conf));
   node->mut_op() = sole_op;

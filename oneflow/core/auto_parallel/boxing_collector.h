@@ -19,7 +19,7 @@ limitations under the License.
 
 #include "oneflow/core/common/hash_container.h"
 #include "oneflow/core/job/parallel_desc.h"
-#include "oneflow/core/job/sbp_parallel.cfg.h"
+#include "oneflow/core/job/sbp_parallel.h"
 #include "oneflow/core/framework/sbp_infer_util.h"
 
 namespace oneflow {
@@ -49,22 +49,22 @@ class BoxingCollector final {
   // If is_customized is true and we can not find a middle node list with
   // resonable cost, error occurs.
   // If compute_cost is true, then no error occur even if no suitable middle nodes paths found.
-  Maybe<void> AskSbpCombination(const cfg::NdSbp& sbp_producer, const cfg::NdSbp& sbp_consumer,
+  Maybe<void> AskSbpCombination(const NdSbp& sbp_producer, const NdSbp& sbp_consumer,
                                 const BlobDesc& logical_blob_desc,
                                 const ParallelDesc& producer_parallel_desc,
                                 const ParallelDesc& consumer_parallel_desc, bool is_customized,
-                                std::vector<cfg::NdSbp>& middle_sbps, bool compute_cost);
+                                std::vector<NdSbp>& middle_sbps, bool compute_cost);
   // Filter nd sbp from nd_sbp_lists_ with given logical shape
   Maybe<void> FilterNdSbpList4LogicalShape(const BlobDesc& logical_blob_desc,
                                            const Shape& parallel_hierarchy);
 
  private:
   // Collect Sbp Parallel
-  void CollectUniverse(const cfg::SbpParallel& sbp);
-  // Stores all the possible cfg::SbpParallel.
-  HashMap<::oneflow::cfg::SbpParallel, int32_t> SbpParallelUniverse_;
+  void CollectUniverse(const SbpParallel& sbp);
+  // Stores all the possible SbpParallel.
+  HashMap<::oneflow::SbpParallel, int32_t> SbpParallelUniverse_;
   // Relationship between id and Sbp Parallel
-  std::vector<::oneflow::cfg::SbpParallel> id2SbpParallel_;
+  std::vector<::oneflow::SbpParallel> id2SbpParallel_;
   // minimum cost
   // minimum_copy_cost[producer][consumer]
   std::vector<std::vector<double>> minimum_copy_cost_;
@@ -73,10 +73,10 @@ class BoxingCollector final {
   // middle_nodes_[producer][consumer][different choices].size() is the minimum number of middle
   // nodes that needs to be inserted
   std::vector<std::vector<std::vector<std::vector<int32_t>>>> middle_nodes_;
-  // Stores all the possible cfg::NdSbp.
-  std::unordered_map<::oneflow::cfg::NdSbp, int32_t> NdSbpUniverse_;
+  // Stores all the possible NdSbp.
+  std::unordered_map<::oneflow::NdSbp, int32_t> NdSbpUniverse_;
   // Relationship between id and Nd Sbp
-  std::vector<cfg::NdSbp> nd_sbp_lists_;
+  std::vector<NdSbp> nd_sbp_lists_;
 };  // class BoxingCollector
 
 }  // namespace oneflow

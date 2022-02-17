@@ -194,6 +194,15 @@ inline bool operator!=(const BlobDescProto& lhs, const BlobDescProto& rhs) { ret
 
 PersistentOutStream& operator<<(PersistentOutStream&, const PbMessage&);
 
+template<typename T>
+struct SerializedHashPb {
+  size_t operator()(const T& pb) const {
+    std::string serialized_string;
+    pb.SerializeToString(&serialized_string);
+    return std::hash<std::string>()(serialized_string);
+  }
+};
+
 }  // namespace oneflow
 
 namespace std {
