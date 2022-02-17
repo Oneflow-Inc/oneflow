@@ -378,14 +378,40 @@ def get_tensor_graph_res(
     return test_g_res
 
 
+def get_oneflow_eager_res(
+    oneflow, oneflow_args, oneflow_kwargs, verbose, is_tesnor_method=False
+):
+    if not is_tesnor_method:
+        if verbose:
+            print(
+                "Before running eager module or functional: ", repr(oneflow),
+            )
+
+        oneflow_res = oneflow(*oneflow_args, **oneflow_kwargs)
+        if verbose:
+            print(
+                "The result after running eager module or functional: ", oneflow_res,
+            )
+    else:
+        if verbose:
+            print(
+                "Before running eager tensor method: ", repr(oneflow),
+            )
+        oneflow_res = oneflow(*oneflow_args, **oneflow_kwargs)
+        if verbose:
+            print(
+                "The result after running eager tensor method: ", oneflow_res,
+            )
+    return oneflow_res
+
+
 # NOTE(lixiang): Check if the results of eager and graph are equal when oneflow is of type nn.Module or functional.
-def check_eager_graph_res(
+def oneflow_eager_run_with_graph_check(
     oneflow, oneflow_args, oneflow_kwargs, testing_graph, verbose, *args
 ):
     if testing_graph:
         graph_args, graph_kwargs = get_args_copy(oneflow_args, oneflow_kwargs)
 
-    if testing_graph:
         if isinstance(oneflow, flow.nn.Module):
             graph_train_oneflow = copy.deepcopy(oneflow)
             if not is_global():
@@ -398,16 +424,7 @@ def check_eager_graph_res(
         else:
             graph_functional_oneflow = copy.deepcopy(oneflow)
 
-    if verbose:
-        print(
-            "Before running eager module or functional: ", repr(oneflow),
-        )
-
-    oneflow_res = oneflow(*oneflow_args, **oneflow_kwargs)
-    if verbose:
-        print(
-            "The result after running eager module or functional: ", oneflow_res,
-        )
+    oneflow_res = get_oneflow_eager_res(oneflow, oneflow_args, oneflow_kwargs, verbose)
     if testing_graph:
         if verbose:
             print(
@@ -460,24 +477,19 @@ def check_eager_graph_res(
 
 
 # NOTE(lixiang): Check if the results of eager and graph are equal when oneflow is of type tensor.
-def check_eager_graph_tensor_res(
+def oneflow_tensor_eager_run_with_graph_check(
     oneflow, oneflow_method, oneflow_args, oneflow_kwargs, testing_graph, verbose
 ):
     if testing_graph:
         tensor_graph_args, tensor_graph_kwargs = get_args_copy(
             oneflow_args, oneflow_kwargs
         )
+        graph_tensor_oneflow = copy.deepcopy(oneflow_method)
 
-    if verbose:
-        print(
-            "Before running eager tensor method: ", repr(oneflow_method),
-        )
-    graph_tensor_oneflow = copy.deepcopy(oneflow_method)
-    oneflow_res = oneflow_method(*oneflow_args, **oneflow_kwargs)
-    if verbose:
-        print(
-            "The result after running eager tensor method: ", oneflow_res,
-        )
+    oneflow_res = get_oneflow_eager_res(
+        oneflow_method, oneflow_args, oneflow_kwargs, verbose, is_tesnor_method=True
+    )
+
     if testing_graph:
         if verbose:
             print(
@@ -548,7 +560,7 @@ def get_pytorch_oneflow_res(
     if name in postulate:
         oneflow_res = torch_tensor_to_flow(pytorch_res)
     else:
-        oneflow_res = check_eager_graph_res(
+        oneflow_res = oneflow_eager_run_with_graph_check(
             oneflow, oneflow_args, oneflow_kwargs, testing_graph, verbose, *args,
         )
     return pytorch_res, oneflow_res
@@ -579,7 +591,7 @@ def get_pytorch_oneflow_tensor_res(
                 "PyTorch has an error but OneFlow is ok, maybe you should check your implementation to align with PyTorch."
             )
         raise PyTorchDoesNotSupportError(e)
-    oneflow_res = check_eager_graph_tensor_res(
+    oneflow_res = oneflow_tensor_eager_run_with_graph_check(
         oneflow, oneflow_method, oneflow_args, oneflow_kwargs, testing_graph, verbose,
     )
     return pytorch_res, oneflow_res
