@@ -55,7 +55,9 @@ class TestEmptyConsistent(flow.unittest.TestCase):
         shapes = [(8,), (8, 8,), (8, 8, 8)]
         for shape in shapes:
             for placement in all_placement():
-                for sbp in all_sbp(placement, max_dim=len(shape), except_partial_sum=True):
+                for sbp in all_sbp(
+                    placement, max_dim=len(shape), except_partial_sum=True
+                ):
                     _test_consistent_empty(test_case, shape, placement, sbp)
 
     @unittest.skipIf(os.getenv("ONEFLOW_TEST_CPU_ONLY"), "only test cpu cases")
