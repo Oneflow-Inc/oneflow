@@ -13,6 +13,7 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
+#include "oneflow/core/common/hash_container.h"
 #include "oneflow/core/common/just.h"
 #include "oneflow/core/job_rewriter/job_pass.h"
 #include "oneflow/core/framework/framework.h"
@@ -85,12 +86,14 @@ Maybe<void> FuseAddToOutputPass::Apply(const OpGraph& op_graph, JobBuilder* job_
 
   auto IsReachable = op_graph.MakePredicatorIsOpNameDataOrCtrlReachable();
   std::vector<OperatorConf> delete_ops;
+  HashSet<std::string> be_fused_op_names;
   op_graph.MaybeForEachNode([&](const OpNode* op_node) -> Maybe<void> {
     const OperatorConf& op_conf = op_node->op().op_conf();
     if (!op_conf.has_user_conf()) { return Maybe<void>::Ok(); }
     if (!op_conf.ctrl_in_op_name().empty()) { return Maybe<void>::Ok(); }
     if (ctrl_in_op_names.find(op_conf.name()) != ctrl_in_op_names.end()) { return Maybe<void>::Ok(); }
     if (op_conf.user_conf().op_type_name() != "add_n") { return Maybe<void>::Ok(); }
+    if (be_fused_op_names.count(op_conf.name()) > 0) { return Maybe<void>::Ok();}
     if (op_name2op_conf.find(op_conf.name()) != op_name2op_conf.end()) { return Maybe<void>::Ok(); }
     const user_op::UserOpConfWrapper user_op_conf(op_conf);
     if (user_op_conf.input_size("in") != 2) { return Maybe<void>::Ok(); }
@@ -108,11 +111,13 @@ Maybe<void> FuseAddToOutputPass::Apply(const OpGraph& op_graph, JobBuilder* job_
       add_to_node = in_0_node;
       add_to_lbi = &in_1;
       sum_lbi = &in_0;
+      be_fused_op_names.insert(in_1.op_name());
     } else if ((!IsReachable(in_1.op_name(), in_0.op_name()))
                && IsAddToOutputSupported(in_1_node, in_1)) {
       add_to_node = in_1_node;
       add_to_lbi = &in_0;
       sum_lbi = &in_1;
+      be_fused_op_names.insert(in_0.op_name());
     } else {
       return Maybe<void>::Ok();
     }
