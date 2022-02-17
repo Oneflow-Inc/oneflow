@@ -343,7 +343,7 @@ std::shared_ptr<user_op::OpKernelCache> CreateSliceCache(user_op::KernelCacheCon
     // split_axis == SPLIT_AXIS_FOR_NON_SPLIT means the sbp attribute is not 'split'
     return std::make_shared<OpKernelCacheWrapper<SliceContext>>(SPLIT_AXIS_FOR_NON_SPLIT, 0, 0, 0);
   }
-  const cfg::SbpParallel& in_sbp = ctx->SbpParallel4ArgNameAndIndex(large_tensor_name, 0);
+  const SbpParallel& in_sbp = ctx->SbpParallel4ArgNameAndIndex(large_tensor_name, 0);
   if (in_sbp.has_split_parallel()) {
     const user_op::TensorDesc* in_logical_desc =
         ctx->LogicalTensorDesc4ArgNameAndIndex(large_tensor_name, 0);
@@ -368,8 +368,8 @@ class LogicalSliceKernel final : public user_op::OpKernel {
 
   std::shared_ptr<user_op::OpKernelCache> InitOpKernelCache(
       user_op::KernelCacheContext* ctx) const override {
-    const cfg::SbpParallel& x_sbp = ctx->SbpParallel4ArgNameAndIndex("x", 0);
-    const cfg::SbpParallel& y_sbp = ctx->SbpParallel4ArgNameAndIndex("y", 0);
+    const SbpParallel& x_sbp = ctx->SbpParallel4ArgNameAndIndex("x", 0);
+    const SbpParallel& y_sbp = ctx->SbpParallel4ArgNameAndIndex("y", 0);
     if (ctx->parallel_ctx().parallel_num() > 1) {
       if (x_sbp.has_split_parallel()) {
         CHECK(y_sbp.has_partial_sum_parallel());
@@ -418,7 +418,7 @@ class LogicalSliceAssignKernel final : public user_op::OpKernel {
   std::shared_ptr<user_op::OpKernelCache> InitOpKernelCache(
       user_op::KernelCacheContext* ctx) const override {
     if (ctx->parallel_ctx().parallel_num() > 1) {
-      const cfg::SbpParallel& value_sbp = ctx->SbpParallel4ArgNameAndIndex("value", 0);
+      const SbpParallel& value_sbp = ctx->SbpParallel4ArgNameAndIndex("value", 0);
       CHECK(value_sbp.has_broadcast_parallel());
     }
     return CreateSliceCache(ctx, "ref");

@@ -100,13 +100,13 @@ inline Maybe<void> CopyBetweenMirroredTensorAndNumpy(
     tensor = JUST(t->AsMirroredTensor());
   } else {
     const Symbol<ConsistentTensorMeta>& tensor_meta = JUST(t->consistent_tensor_meta());
-    const Symbol<cfg::NdSbp>& nd_sbp = tensor_meta->nd_sbp();
+    const Symbol<NdSbp>& nd_sbp = tensor_meta->nd_sbp();
     CHECK_OR_RETURN(!nd_sbp->sbp_parallel().empty());
-    cfg::SbpParallel broadcast_sbp;
+    SbpParallel broadcast_sbp;
     broadcast_sbp.mutable_broadcast_parallel();
-    std::vector<Symbol<cfg::SbpParallel>> sbp_tuple(nd_sbp->sbp_parallel_size(),
-                                                    SymbolOf(broadcast_sbp));
-    std::vector<Symbol<cfg::SbpParallel>> none;
+    std::vector<Symbol<SbpParallel>> sbp_tuple(nd_sbp->sbp_parallel_size(),
+                                               SymbolOf(broadcast_sbp));
+    std::vector<Symbol<SbpParallel>> none;
     const auto& consistent_tensor =
         JUST(functional::ToConsistent(t, tensor_meta->parallel_desc(), sbp_tuple, none));
     tensor = JUST(consistent_tensor->cur_rank_phy_tensor());
@@ -159,7 +159,7 @@ Maybe<Tensor> MakeLocalTensorFromData(PyObject* data, const Optional<Symbol<DTyp
 
 Maybe<Tensor> MakeConsistentTensorFromData(PyObject* data, const Optional<Symbol<DType>>& dtype,
                                            Symbol<ParallelDesc> placement,
-                                           const std::vector<Symbol<cfg::SbpParallel>>& sbp_tuple,
+                                           const std::vector<Symbol<SbpParallel>>& sbp_tuple,
                                            bool requires_grad);
 
 Maybe<Tensor> MakeTensorFromOtherTensor(const std::shared_ptr<Tensor>& other);
@@ -172,7 +172,7 @@ Maybe<Tensor> MakeTensorFromOtherTensor(const std::shared_ptr<Tensor>& other,
 Maybe<Tensor> MakeTensorFromOtherTensor(const std::shared_ptr<Tensor>& other,
                                         const Optional<Symbol<DType>>& dtype,
                                         const Symbol<ParallelDesc>& placement,
-                                        const std::vector<Symbol<cfg::SbpParallel>>& sbp_tuple,
+                                        const std::vector<Symbol<SbpParallel>>& sbp_tuple,
                                         const bool& requires_grad);
 
 }  // namespace one
