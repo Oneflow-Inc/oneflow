@@ -2196,17 +2196,19 @@ class FusedDotFeatureInteractionFunctor {
     MutableAttrMap attrs;
     JUST(attrs.SetAttr<bool>("self_interaction", self_interaction));
     JUST(attrs.SetAttr<int32_t>("output_padding", output_padding));
-    const int64_t ninput = features.size();
-    CHECK_LE_OR_RETURN(ninput, kMaxInputCount);
+    const int64_t n_features = features.size();
+    CHECK_LE_OR_RETURN(n_features, kMaxInputCount);
     if (output_concat) {
       JUST(attrs.SetAttr<bool>("has_output_concat", true));
-      TensorTuple inputs(ninput + 1);
-      for (int64_t i = 0; i < ninput; ++i) { inputs[i] = features.at(i); }
-      inputs[ninput] = JUST(output_concat);
-      return OpInterpUtil::Dispatch<Tensor>(*ops_has_output_concat_.at(ninput - 1), inputs, attrs);
+      TensorTuple inputs(n_features + 1);
+      for (int64_t i = 0; i < n_features; ++i) { inputs[i] = features.at(i); }
+      inputs[n_features] = JUST(output_concat);
+      return OpInterpUtil::Dispatch<Tensor>(*ops_has_output_concat_.at(n_features - 1), inputs,
+                                            attrs);
     } else {
       JUST(attrs.SetAttr<bool>("has_output_concat", false));
-      return OpInterpUtil::Dispatch<Tensor>(*ops_no_output_concat_.at(ninput - 1), features, attrs);
+      return OpInterpUtil::Dispatch<Tensor>(*ops_no_output_concat_.at(n_features - 1), features,
+                                            attrs);
     }
   }
 

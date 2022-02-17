@@ -25,14 +25,13 @@ namespace oneflow {
   const Shape& first_feature_shape = ctx->InputShape("features", 0);
   CHECK_EQ(first_feature_shape.NumAxes(), 3);
   const int64_t batch_size = first_feature_shape.At(0);
-  const int64_t embedding_size = first_feature_shape.At(2);
-  int64_t features_concated_dim = 0;
-  features_concated_dim += first_feature_shape.At(1);
+  const int64_t vector_size = first_feature_shape.At(2);
+  int64_t features_concated_dim = first_feature_shape.At(1);
   for (int64_t i = 1; i < feature_input_size; ++i) {
     const Shape& feature_shape = ctx->InputShape("features", i);
     CHECK_EQ(feature_shape.NumAxes(), 3);
     CHECK_EQ(feature_shape.At(0), batch_size);
-    CHECK_EQ(feature_shape.At(2), embedding_size);
+    CHECK_EQ(feature_shape.At(2), vector_size);
     features_concated_dim += feature_shape.At(1);
   }
   const int64_t align_dim = 16;
@@ -53,7 +52,7 @@ namespace oneflow {
   }
   *ctx->OutputShape("out", 0) = Shape({batch_size, out_dim});
   *ctx->OutputShape("padded_concated_features", 0) =
-      Shape({batch_size, concated_padded_dim, embedding_size});
+      Shape({batch_size, concated_padded_dim, vector_size});
   return Maybe<void>::Ok();
 }
 
@@ -90,7 +89,7 @@ namespace oneflow {
   CHECK_EQ_OR_RETURN(padded_concated_features_shape.NumAxes(), 3);
   const int64_t batch_size = padded_concated_features_shape.At(0);
   CHECK_EQ_OR_RETURN(dy_shape.At(0), batch_size);
-  const int64_t embedding_size = padded_concated_features_shape.At(2);
+  const int64_t vector_size = padded_concated_features_shape.At(2);
   CHECK_EQ_OR_RETURN(ctx->output_size("features_grad"), ctx->input_size("features_grad_like"));
   for (int64_t i = 0; i < ctx->output_size("features_grad"); ++i) {
     *ctx->OutputShape("features_grad", i) = ctx->InputShape("features_grad_like", i);
@@ -130,7 +129,7 @@ REGISTER_USER_OP_GRAD("fused_dot_feature_interaction")
       const Shape& padded_concated_features_shape =
           op.TensorDesc4ArgNameAndIndex("padded_concated_features", 0).shape();
       CHECK_EQ_OR_RETURN(padded_concated_features_shape.NumAxes(), 3);
-      const int64_t embedding_size = padded_concated_features_shape.At(2);
+      const int64_t vector_size = padded_concated_features_shape.At(2);
       user_op::UserOpConfWrapperBuilder builder(op.op_name() + "_grad");
       builder.Op("fused_dot_feature_interaction_grad")
           .Input("dy", op.GetGradTensorWithOpOutput("out", 0))
