@@ -26,7 +26,7 @@ namespace oneflow {
 
 /*static*/ Maybe<void> ConstantOp::InferPhysicalTensorDesc(user_op::InferContext* ctx) {
   const Shape& parallel_hierarchy = *ctx->parallel_desc().hierarchy();
-  const cfg::NdSbp& nd_sbp = ctx->NdSbp4ArgNameAndIndex("out", 0);
+  const NdSbp& nd_sbp = ctx->NdSbp4ArgNameAndIndex("out", 0);
   const Shape& logical_shape = ctx->Attr<Shape>("shape");
   const int64_t parallel_id = ctx->parallel_ctx().parallel_id();
   const Shape& physical_shape =
