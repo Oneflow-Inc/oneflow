@@ -85,7 +85,7 @@ class TestBinaryMathOps(flow.unittest.TestCase):
     @globaltest
     def test_broadcast_maximum_minimum(test_case):
         for placement in all_placement():
-            for x_sbp in all_sbp(placement, valid_split_axis=[0, 1, 2]):
+            for x_sbp in all_sbp(placement, valid_split_axis=[0, 1, 2, 4]):
                 for y_sbp in all_sbp(placement, valid_split_axis=[0, 1, 3]):
                     _test_broadcast_maximum(test_case, placement, x_sbp, y_sbp)
                     _test_broadcast_minimum(test_case, placement, x_sbp, y_sbp)
