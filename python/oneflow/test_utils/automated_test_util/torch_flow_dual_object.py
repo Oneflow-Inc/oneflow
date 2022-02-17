@@ -378,6 +378,215 @@ def get_tensor_graph_res(
     return test_g_res
 
 
+# NOTE(lixiang): Check if the results of eager and graph are equal when oneflow is of type nn.Module or functional.
+def check_eager_graph_res(
+    oneflow, oneflow_args, oneflow_kwargs, testing_graph, verbose, *args
+):
+    if testing_graph:
+        graph_args, graph_kwargs = get_args_copy(oneflow_args, oneflow_kwargs)
+
+    if testing_graph:
+        if isinstance(oneflow, flow.nn.Module):
+            graph_train_oneflow = copy.deepcopy(oneflow)
+            if not is_global():
+                arg_device_type = "cpu"
+                for arg in oneflow_args:
+                    if flow.is_tensor(arg):
+                        arg_device_type = arg.device.type
+                graph_train_oneflow = graph_train_oneflow.to(arg_device_type)
+
+        else:
+            graph_functional_oneflow = copy.deepcopy(oneflow)
+
+    if verbose:
+        print(
+            "Before running eager module or functional: ", repr(oneflow),
+        )
+
+    oneflow_res = oneflow(*oneflow_args, **oneflow_kwargs)
+    if verbose:
+        print(
+            "The result after running eager module or functional: ", oneflow_res,
+        )
+    if testing_graph:
+        if verbose:
+            print(
+                "After running eager module or functional: ", repr(oneflow),
+            )
+        find_check_module_func = True
+        ignore_apis_list = ["tensor", "train"]
+        test_g_res = []
+        if isinstance(oneflow, flow.nn.Module):
+            test_g = get_module_graph_test(graph_train_oneflow, oneflow, *args)
+            if verbose:
+                print("Run graph of module: ", repr(oneflow))
+                test_g.debug(3)
+            # When testing module methods, kwargs are not considered.
+            test_g_res = test_g(*graph_args)
+            if verbose:
+                print(
+                    "The result after running graph module: ", test_g_res,
+                )
+        elif oneflow.__name__ in ignore_apis_list:
+            find_check_module_func = False
+        # 1. "oneflow.nn.modules" not in oneflow.__module__: For avoid run nn.Module branch graph test, like fold op call Fold Module actually.
+        # 2. inspect.isfunction(oneflow): Compared with the ordinary flow.xxx, oneflow.nn.modules.math_ops series op exist an extra layer of python wrapper.
+        # 3. inspect.ismethod(oneflow) and "oneflow.nn.modules" in oneflow.__module__:  For op that only has Tensor.xxx method, and call oneflow.xxx actually, like masked_fill.
+        elif (
+            ("oneflow.nn.modules" not in oneflow.__module__)
+            or inspect.isfunction(oneflow)
+            or (
+                inspect.ismethod(oneflow) and "oneflow.nn.modules" in oneflow.__module__
+            )
+        ):
+
+            test_g_res = get_functional_graph_res(
+                graph_functional_oneflow,
+                oneflow,
+                oneflow_res,
+                oneflow_args,
+                oneflow_kwargs,
+                verbose,
+                *graph_args,
+                **graph_kwargs,
+            )
+        if find_check_module_func:
+            if isinstance(test_g_res, tuple):
+                for _, g_res in enumerate(test_g_res):
+                    check_eager_graph_tensor(oneflow_res, g_res)
+            else:
+                check_eager_graph_tensor(oneflow_res, test_g_res)
+    return oneflow_res
+
+
+# NOTE(lixiang): Check if the results of eager and graph are equal when oneflow is of type tensor.
+def check_eager_graph_tensor_res(
+    oneflow, oneflow_method, oneflow_args, oneflow_kwargs, testing_graph, verbose
+):
+    if testing_graph:
+        tensor_graph_args, tensor_graph_kwargs = get_args_copy(
+            oneflow_args, oneflow_kwargs
+        )
+
+    if verbose:
+        print(
+            "Before running eager tensor method: ", repr(oneflow_method),
+        )
+    graph_tensor_oneflow = copy.deepcopy(oneflow_method)
+    oneflow_res = oneflow_method(*oneflow_args, **oneflow_kwargs)
+    if verbose:
+        print(
+            "The result after running eager tensor method: ", oneflow_res,
+        )
+    if testing_graph:
+        if verbose:
+            print(
+                "After running eager tensor method: ", repr(oneflow_method),
+            )
+
+        test_g_res = get_tensor_graph_res(
+            graph_tensor_oneflow,
+            oneflow,
+            verbose,
+            *tensor_graph_args,
+            **tensor_graph_kwargs,
+        )
+
+        if isinstance(test_g_res, tuple):
+            for _, g_res in enumerate(test_g_res):
+                check_eager_graph_tensor(oneflow_res, g_res)
+        else:
+            check_eager_graph_tensor(oneflow_res, test_g_res)
+    return oneflow_res
+
+
+def get_pytorch_oneflow_res(pytorch,oneflow,pytorch_args,pytorch_kwargs,oneflow_args,oneflow_kwargs,name,verbose,testing_graph,*args):
+    try:
+        pytorch_res = pytorch(*pytorch_args, **pytorch_kwargs)
+
+        if isinstance(pytorch_res, torch_original.Tensor):
+            if (
+                hasattr(pytorch, "__name__")
+                and pytorch.__name__ == "to"
+                and (
+                    (
+                        len(pytorch_args) > 0
+                        and pytorch_args[0] == "cpu"
+                    )
+                    or (
+                        len(pytorch_kwargs) > 0
+                        and pytorch_kwargs["device"] == "cpu"
+                    )
+                )
+            ):
+                extra_input_tensor.add(pytorch_res)
+            elif (
+                len(pytorch_args) > 0
+                and isinstance(
+                    pytorch_args[0], torch_original.Tensor
+                )
+                and id(pytorch_args[0]) == id(pytorch_res)
+            ):
+                extra_input_tensor.add(pytorch_res)
+            else:
+                call_tensor_id.append(id(pytorch_res))
+
+    except Exception as e:
+        if align_exception:
+            try:
+                oneflow_res = oneflow(
+                    *oneflow_args, **oneflow_kwargs
+                )
+            except Exception as ee:
+                raise BothDoNotSupportError(e, ee) from None
+            print(
+                "PyTorch has an error but OneFlow is ok, maybe you should check your implementation to align with PyTorch."
+            )
+        raise PyTorchDoesNotSupportError(e)
+
+    if name in postulate:
+        oneflow_res = torch_tensor_to_flow(pytorch_res)
+    else:
+        oneflow_res = check_eager_graph_res(
+            oneflow,
+            oneflow_args,
+            oneflow_kwargs,
+            testing_graph,
+            verbose,
+            *args,
+        )
+    return pytorch_res,oneflow_res
+
+def get_pytorch_oneflow_tensor_res(pytorch_method,oneflow_method,oneflow,pytorch_args,pytorch_kwargs,oneflow_args,oneflow_kwargs,testing_graph,verbose):
+    try:
+        pytorch_res = pytorch_method(
+            *pytorch_args, **pytorch_kwargs
+        )
+        if isinstance(pytorch_res, torch_original.Tensor):
+            call_tensor_id.append(id(pytorch_res))
+    except Exception as e:
+        if align_exception:
+            try:
+                oneflow_res = oneflow_method(
+                    *oneflow_args, **oneflow_kwargs
+                )
+            except Exception as ee:
+                raise BothDoNotSupportError(e, ee) from None
+            print(
+                "PyTorch has an error but OneFlow is ok, maybe you should check your implementation to align with PyTorch."
+            )
+        raise PyTorchDoesNotSupportError(e)
+    oneflow_res = check_eager_graph_tensor_res(
+        oneflow,
+        oneflow_method,
+        oneflow_args,
+        oneflow_kwargs,
+        testing_graph,
+        verbose,
+    )
+
+
+
 def GetDualObject(name, pytorch, oneflow):
     global counter
     counter += 1
@@ -416,140 +625,7 @@ def GetDualObject(name, pytorch, oneflow):
                             oneflow_kwargs,
                         ) = get_args(pytorch, *args, **kwargs)
 
-                        try:
-                            pytorch_res = pytorch(*pytorch_args, **pytorch_kwargs)
-
-                            if isinstance(pytorch_res, torch_original.Tensor):
-                                if (
-                                    hasattr(pytorch, "__name__")
-                                    and pytorch.__name__ == "to"
-                                    and (
-                                        (
-                                            len(pytorch_args) > 0
-                                            and pytorch_args[0] == "cpu"
-                                        )
-                                        or (
-                                            len(pytorch_kwargs) > 0
-                                            and pytorch_kwargs["device"] == "cpu"
-                                        )
-                                    )
-                                ):
-                                    extra_input_tensor.add(pytorch_res)
-                                elif (
-                                    len(pytorch_args) > 0
-                                    and isinstance(
-                                        pytorch_args[0], torch_original.Tensor
-                                    )
-                                    and id(pytorch_args[0]) == id(pytorch_res)
-                                ):
-                                    extra_input_tensor.add(pytorch_res)
-                                else:
-                                    call_tensor_id.append(id(pytorch_res))
-
-                        except Exception as e:
-                            if align_exception:
-                                try:
-                                    oneflow_res = oneflow(
-                                        *oneflow_args, **oneflow_kwargs
-                                    )
-                                except Exception as ee:
-                                    raise BothDoNotSupportError(e, ee) from None
-                                print(
-                                    "PyTorch has an error but OneFlow is ok, maybe you should check your implementation to align with PyTorch."
-                                )
-                            raise PyTorchDoesNotSupportError(e)
-
-                        if name in postulate:
-                            oneflow_res = torch_tensor_to_flow(pytorch_res)
-                        else:
-                            if testing_graph:
-                                graph_args, graph_kwargs = get_args_copy(
-                                    oneflow_args, oneflow_kwargs
-                                )
-
-                            if testing_graph:
-                                if isinstance(oneflow, flow.nn.Module):
-                                    graph_train_oneflow = copy.deepcopy(oneflow)
-                                    if not is_global():
-                                        arg_device_type = "cpu"
-                                        for arg in oneflow_args:
-                                            if flow.is_tensor(arg):
-                                                arg_device_type = arg.device.type
-                                        graph_train_oneflow = graph_train_oneflow.to(
-                                            arg_device_type
-                                        )
-
-                                else:
-                                    graph_functional_oneflow = copy.deepcopy(oneflow)
-
-                            if verbose:
-                                print(
-                                    "Before running eager module or functional: ",
-                                    repr(oneflow),
-                                )
-
-                            oneflow_res = oneflow(*oneflow_args, **oneflow_kwargs)
-                            if verbose:
-                                print(
-                                    "The result after running eager module or functional: ",
-                                    oneflow_res,
-                                )
-                            if testing_graph:
-                                if verbose:
-                                    print(
-                                        "After running eager module or functional: ",
-                                        repr(oneflow),
-                                    )
-                                find_check_module_func = True
-                                ignore_apis_list = ["tensor", "train"]
-                                test_g_res = []
-                                if isinstance(oneflow, flow.nn.Module):
-                                    test_g = get_module_graph_test(
-                                        graph_train_oneflow, oneflow, *args
-                                    )
-                                    if verbose:
-                                        print("Run graph of module: ", repr(oneflow))
-                                        test_g.debug(3)
-                                    # When testing module methods, kwargs are not considered.
-                                    test_g_res = test_g(*graph_args)
-                                    if verbose:
-                                        print(
-                                            "The result after running graph module: ",
-                                            test_g_res,
-                                        )
-                                elif oneflow.__name__ in ignore_apis_list:
-                                    find_check_module_func = False
-                                # 1. "oneflow.nn.modules" not in oneflow.__module__: For avoid run nn.Module branch graph test, like fold op call Fold Module actually.
-                                # 2. inspect.isfunction(oneflow): Compared with the ordinary flow.xxx, oneflow.nn.modules.math_ops series op exist an extra layer of python wrapper.
-                                # 3. inspect.ismethod(oneflow) and "oneflow.nn.modules" in oneflow.__module__:  For op that only has Tensor.xxx method, and call oneflow.xxx actually, like masked_fill.
-                                elif (
-                                    ("oneflow.nn.modules" not in oneflow.__module__)
-                                    or inspect.isfunction(oneflow)
-                                    or (
-                                        inspect.ismethod(oneflow)
-                                        and "oneflow.nn.modules" in oneflow.__module__
-                                    )
-                                ):
-
-                                    test_g_res = get_functional_graph_res(
-                                        graph_functional_oneflow,
-                                        oneflow,
-                                        oneflow_res,
-                                        oneflow_args,
-                                        oneflow_kwargs,
-                                        verbose,
-                                        *graph_args,
-                                        **graph_kwargs,
-                                    )
-                                if find_check_module_func:
-                                    if isinstance(test_g_res, tuple):
-                                        for _, g_res in enumerate(test_g_res):
-                                            check_eager_graph_tensor(oneflow_res, g_res)
-                                    else:
-                                        check_eager_graph_tensor(
-                                            oneflow_res, test_g_res
-                                        )
-
+                        pytorch_res,oneflow_res=get_pytorch_oneflow_res(pytorch,oneflow,pytorch_args,pytorch_kwargs,oneflow_args,oneflow_kwargs,name,verbose,testing_graph,*args)
                         return GetDualObject("unused", pytorch_res, oneflow_res)
 
                 else:
@@ -581,44 +657,14 @@ def GetDualObject(name, pytorch, oneflow):
                                     "PyTorch has an error but OneFlow is ok, maybe you should check your implementation to align with PyTorch."
                                 )
                             raise PyTorchDoesNotSupportError(e)
-
-                        if testing_graph:
-                            tensor_graph_args, tensor_graph_kwargs = get_args_copy(
-                                oneflow_args, oneflow_kwargs
-                            )
-
-                        if verbose:
-                            print(
-                                "Before running eager tensor method: ",
-                                repr(oneflow_method),
-                            )
-                        graph_tensor_oneflow = copy.deepcopy(oneflow_method)
-                        oneflow_res = oneflow_method(*oneflow_args, **oneflow_kwargs)
-                        if verbose:
-                            print(
-                                "The result after running eager tensor method: ",
-                                oneflow_res,
-                            )
-                        if testing_graph:
-                            if verbose:
-                                print(
-                                    "After running eager tensor method: ",
-                                    repr(oneflow_method),
-                                )
-
-                            test_g_res = get_tensor_graph_res(
-                                graph_tensor_oneflow,
-                                oneflow,
-                                verbose,
-                                *tensor_graph_args,
-                                **tensor_graph_kwargs,
-                            )
-
-                            if isinstance(test_g_res, tuple):
-                                for _, g_res in enumerate(test_g_res):
-                                    check_eager_graph_tensor(oneflow_res, g_res)
-                            else:
-                                check_eager_graph_tensor(oneflow_res, test_g_res)
+                        oneflow_res = check_eager_graph_tensor_res(
+                            oneflow,
+                            oneflow_method,
+                            oneflow_args,
+                            oneflow_kwargs,
+                            testing_graph,
+                            verbose,
+                        )
                         return GetDualObject("unused", pytorch_res, oneflow_res)
 
                 return dual_method
