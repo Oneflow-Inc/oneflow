@@ -500,7 +500,18 @@ def check_eager_graph_tensor_res(
     return oneflow_res
 
 
-def get_pytorch_oneflow_res(pytorch,oneflow,pytorch_args,pytorch_kwargs,oneflow_args,oneflow_kwargs,name,verbose,testing_graph,*args):
+def get_pytorch_oneflow_res(
+    pytorch,
+    oneflow,
+    pytorch_args,
+    pytorch_kwargs,
+    oneflow_args,
+    oneflow_kwargs,
+    name,
+    verbose,
+    testing_graph,
+    *args,
+):
     try:
         pytorch_res = pytorch(*pytorch_args, **pytorch_kwargs)
 
@@ -509,22 +520,14 @@ def get_pytorch_oneflow_res(pytorch,oneflow,pytorch_args,pytorch_kwargs,oneflow_
                 hasattr(pytorch, "__name__")
                 and pytorch.__name__ == "to"
                 and (
-                    (
-                        len(pytorch_args) > 0
-                        and pytorch_args[0] == "cpu"
-                    )
-                    or (
-                        len(pytorch_kwargs) > 0
-                        and pytorch_kwargs["device"] == "cpu"
-                    )
+                    (len(pytorch_args) > 0 and pytorch_args[0] == "cpu")
+                    or (len(pytorch_kwargs) > 0 and pytorch_kwargs["device"] == "cpu")
                 )
             ):
                 extra_input_tensor.add(pytorch_res)
             elif (
                 len(pytorch_args) > 0
-                and isinstance(
-                    pytorch_args[0], torch_original.Tensor
-                )
+                and isinstance(pytorch_args[0], torch_original.Tensor)
                 and id(pytorch_args[0]) == id(pytorch_res)
             ):
                 extra_input_tensor.add(pytorch_res)
@@ -534,9 +537,7 @@ def get_pytorch_oneflow_res(pytorch,oneflow,pytorch_args,pytorch_kwargs,oneflow_
     except Exception as e:
         if align_exception:
             try:
-                oneflow_res = oneflow(
-                    *oneflow_args, **oneflow_kwargs
-                )
+                oneflow_res = oneflow(*oneflow_args, **oneflow_kwargs)
             except Exception as ee:
                 raise BothDoNotSupportError(e, ee) from None
             print(
@@ -548,28 +549,30 @@ def get_pytorch_oneflow_res(pytorch,oneflow,pytorch_args,pytorch_kwargs,oneflow_
         oneflow_res = torch_tensor_to_flow(pytorch_res)
     else:
         oneflow_res = check_eager_graph_res(
-            oneflow,
-            oneflow_args,
-            oneflow_kwargs,
-            testing_graph,
-            verbose,
-            *args,
+            oneflow, oneflow_args, oneflow_kwargs, testing_graph, verbose, *args,
         )
-    return pytorch_res,oneflow_res
+    return pytorch_res, oneflow_res
 
-def get_pytorch_oneflow_tensor_res(pytorch_method,oneflow_method,oneflow,pytorch_args,pytorch_kwargs,oneflow_args,oneflow_kwargs,testing_graph,verbose):
+
+def get_pytorch_oneflow_tensor_res(
+    pytorch_method,
+    oneflow_method,
+    oneflow,
+    pytorch_args,
+    pytorch_kwargs,
+    oneflow_args,
+    oneflow_kwargs,
+    testing_graph,
+    verbose,
+):
     try:
-        pytorch_res = pytorch_method(
-            *pytorch_args, **pytorch_kwargs
-        )
+        pytorch_res = pytorch_method(*pytorch_args, **pytorch_kwargs)
         if isinstance(pytorch_res, torch_original.Tensor):
             call_tensor_id.append(id(pytorch_res))
     except Exception as e:
         if align_exception:
             try:
-                oneflow_res = oneflow_method(
-                    *oneflow_args, **oneflow_kwargs
-                )
+                oneflow_res = oneflow_method(*oneflow_args, **oneflow_kwargs)
             except Exception as ee:
                 raise BothDoNotSupportError(e, ee) from None
             print(
@@ -577,14 +580,9 @@ def get_pytorch_oneflow_tensor_res(pytorch_method,oneflow_method,oneflow,pytorch
             )
         raise PyTorchDoesNotSupportError(e)
     oneflow_res = check_eager_graph_tensor_res(
-        oneflow,
-        oneflow_method,
-        oneflow_args,
-        oneflow_kwargs,
-        testing_graph,
-        verbose,
+        oneflow, oneflow_method, oneflow_args, oneflow_kwargs, testing_graph, verbose,
     )
-
+    return pytorch_res, oneflow_res
 
 
 def GetDualObject(name, pytorch, oneflow):
@@ -625,7 +623,18 @@ def GetDualObject(name, pytorch, oneflow):
                             oneflow_kwargs,
                         ) = get_args(pytorch, *args, **kwargs)
 
-                        pytorch_res,oneflow_res=get_pytorch_oneflow_res(pytorch,oneflow,pytorch_args,pytorch_kwargs,oneflow_args,oneflow_kwargs,name,verbose,testing_graph,*args)
+                        pytorch_res, oneflow_res = get_pytorch_oneflow_res(
+                            pytorch,
+                            oneflow,
+                            pytorch_args,
+                            pytorch_kwargs,
+                            oneflow_args,
+                            oneflow_kwargs,
+                            name,
+                            verbose,
+                            testing_graph,
+                            *args,
+                        )
                         return GetDualObject("unused", pytorch_res, oneflow_res)
 
                 else:
@@ -639,27 +648,12 @@ def GetDualObject(name, pytorch, oneflow):
                             oneflow_args,
                             oneflow_kwargs,
                         ) = get_args(pytorch_method, *args, **kwargs)
-                        try:
-                            pytorch_res = pytorch_method(
-                                *pytorch_args, **pytorch_kwargs
-                            )
-                            if isinstance(pytorch_res, torch_original.Tensor):
-                                call_tensor_id.append(id(pytorch_res))
-                        except Exception as e:
-                            if align_exception:
-                                try:
-                                    oneflow_res = oneflow_method(
-                                        *oneflow_args, **oneflow_kwargs
-                                    )
-                                except Exception as ee:
-                                    raise BothDoNotSupportError(e, ee) from None
-                                print(
-                                    "PyTorch has an error but OneFlow is ok, maybe you should check your implementation to align with PyTorch."
-                                )
-                            raise PyTorchDoesNotSupportError(e)
-                        oneflow_res = check_eager_graph_tensor_res(
-                            oneflow,
+                        pytorch_res, oneflow_res = get_pytorch_oneflow_tensor_res(
+                            pytorch_method,
                             oneflow_method,
+                            oneflow,
+                            pytorch_args,
+                            pytorch_kwargs,
                             oneflow_args,
                             oneflow_kwargs,
                             testing_graph,
