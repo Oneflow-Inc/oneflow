@@ -977,7 +977,7 @@ def _is_consistent(self):
     raise RuntimeError(".is_consistent has been removed, please use .is_global instead")
 
 
-def _to_consistent(self):
+def _to_consistent(self, *args, **kwargs):
     raise RuntimeError(".to_consistent has been removed, please use .to_global instead")
 
 

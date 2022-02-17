@@ -165,7 +165,7 @@ class ConsistentConstantFunctor {
   }
   Maybe<Tensor> operator()(const Shape& shape, const Scalar& value, const Symbol<DType>& dtype,
                            const Symbol<ParallelDesc>& placement,
-                           const std::vector<Symbol<cfg::SbpParallel>>& sbp_tuple) const {
+                           const std::vector<Symbol<SbpParallel>>& sbp_tuple) const {
     JUST(CheckDeviceIdsIsValid(placement));
     MutableAttrMap attrs;
     JUST(attrs.SetAttr<Shape>("shape", shape));
@@ -246,7 +246,7 @@ class ConsistentEmptyFunctor {
   ConsistentEmptyFunctor() { op_ = CHECK_JUST(one::OpBuilder("empty").Output("out").Build()); }
   Maybe<Tensor> operator()(const Shape& shape, const Symbol<DType>& dtype,
                            const Symbol<ParallelDesc>& placement,
-                           const std::vector<Symbol<cfg::SbpParallel>>& sbp_tuple) const {
+                           const std::vector<Symbol<SbpParallel>>& sbp_tuple) const {
     JUST(CheckDeviceIdsIsValid(placement));
     MutableAttrMap attrs;
     JUST(attrs.SetAttr<Shape>("shape", shape));
@@ -2503,7 +2503,7 @@ Maybe<Tensor> ConsistentTensorTo(const std::shared_ptr<Tensor>& x, const std::st
     auto old_placement = JUST(x->parallel_desc());
     auto placement = JUST(ReplacePlacementDeviceTag(input_placement, device_type));
     auto nd_sbp = JUST(x->nd_sbp());
-    std::vector<Symbol<cfg::SbpParallel>> sbp_tuple(nd_sbp->sbp_parallel().size());
+    std::vector<Symbol<SbpParallel>> sbp_tuple(nd_sbp->sbp_parallel().size());
     for (int i = 0; i < sbp_tuple.size(); ++i) { sbp_tuple[i] = nd_sbp->sbp_parallel().Get(i); }
     tensor = JUST(ConsistentToLocal(x));
     Symbol<Device> device = JUST(Device::New(device_type));
