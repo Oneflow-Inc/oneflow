@@ -34,7 +34,7 @@ namespace oneflow {
   const Shape& shape = ctx->Attr<Shape>("shape");
   DimVector dim_vec{shape.dim_vec()};
 
-  const cfg::SbpParallel& out_sbp_para = ctx->SbpParallel4ArgNameAndIndex("out", 0);
+  const SbpParallel& out_sbp_para = ctx->SbpParallel4ArgNameAndIndex("out", 0);
   if (out_sbp_para.has_split_parallel()) {
     const int64_t& parallel_num = ctx->parallel_ctx().parallel_num();
     if (parallel_num > 1) {
@@ -55,7 +55,7 @@ namespace oneflow {
 }
 
 /* static */ Maybe<void> UniformOp::InferNdSbp(user_op::InferNdSbpFnContext* ctx) {
-  cfg::SbpParallel default_sbp;
+  SbpParallel default_sbp;
   default_sbp.mutable_broadcast_parallel();
   return user_op::InferNdSbp4SrcOp(ctx, default_sbp);
 }
