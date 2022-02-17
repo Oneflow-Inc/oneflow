@@ -85,11 +85,22 @@ Maybe<void> BoxingCollector::Init(int32_t max_axis) {
   // Set up at least two split for op graph.
   // For a negative example: Resnet50 only have B, P, S(0)
   CollectUniverse(max_axis);
-  GenerateNdSbpList();
+  GenerateNdSbpList(2);
   GenerateMap1d2nd();
   JUST(GenerateCombination4SamePlacement(3));
   JUST(GenerateCombination4DiffHierarchy(3));
   JUST(GenerateCombination4DiffHierarchy(3));
+  return Maybe<void>::Ok();
+}
+
+// Init with given blob description
+Maybe<void> BoxingCollector::Init(const BlobDesc& logical_blob_desc,
+                                  const ParallelDesc& parallel_desc) {
+  CollectUniverse(logical_blob_desc.shape().NumAxes());
+  GenerateNdSbpList(parallel_desc.hierarchy()->NumAxes());
+  // Filter out unsuitable middle nodes before computing minimum cost.
+  JUST(FilterNdSbpList4LogicalShape(logical_blob_desc, *parallel_desc.hierarchy()));
+  JUST(GenerateCombination4SamePlacement(5));
   return Maybe<void>::Ok();
 }
 
@@ -135,10 +146,9 @@ void BoxingCollector::CollectUniverse(int32_t max_axis) {
 }
 
 // Generate nd sbp list
-void BoxingCollector::GenerateNdSbpList() {
+void BoxingCollector::GenerateNdSbpList(int32_t hierarchy_num) {
   // 1D sbp does not support S->P. But it seems that we do not need to deal with it for now.
   // And we do not have 3D sbp or higher dimension.
-  int32_t hierarchy_num = 2;
 
   // Generate possible nd_sbp lists
   cfg::NdSbp nd_sbp;
@@ -757,12 +767,7 @@ Maybe<void> BoxingCollector::AskSbpCombination4Same2DPlacement(
 
   // Customized boxing collector and try the algorithm again
   BoxingCollector customized_boxing_collector;
-  customized_boxing_collector.CollectUniverse(logical_blob_desc.shape().NumAxes());
-  customized_boxing_collector.GenerateNdSbpList();
-  // Filter out unsuitable middle nodes before computing minimum cost.
-  JUST(customized_boxing_collector.FilterNdSbpList4LogicalShape(
-      logical_blob_desc, *producer_parallel_desc.hierarchy()));
-  JUST(customized_boxing_collector.GenerateCombination4SamePlacement(5));
+  customized_boxing_collector.Init(logical_blob_desc, producer_parallel_desc);
   JUST(customized_boxing_collector.AskSbpCombination4Same2DPlacement(
       sbp_producer, sbp_consumer, logical_blob_desc, producer_parallel_desc, consumer_parallel_desc,
       /*is_customized=*/true, middle_sbps, diag_node_pos, compute_cost));
@@ -795,20 +800,10 @@ Maybe<void> BoxingCollector::AskSbpCombination4DiffHierarchy(
   // Customized boxing collector and try the algorithm again
   // Customize boxing collector for producer
   BoxingCollector customized_boxing_collector_producer;
-  customized_boxing_collector_producer.CollectUniverse(logical_blob_desc.shape().NumAxes());
-  customized_boxing_collector_producer.GenerateNdSbpList();
-  // Filter out unsuitable middle nodes before computing minimum cost.
-  JUST(customized_boxing_collector_producer.FilterNdSbpList4LogicalShape(
-      logical_blob_desc, *producer_parallel_desc.hierarchy()));
-  JUST(customized_boxing_collector_producer.GenerateCombination4SamePlacement(5));
+  customized_boxing_collector_producer.Init(logical_blob_desc, producer_parallel_desc);
   // Customize boxing collector for consumer
   BoxingCollector customized_boxing_collector_consumer;
-  customized_boxing_collector_consumer.CollectUniverse(logical_blob_desc.shape().NumAxes());
-  customized_boxing_collector_consumer.GenerateNdSbpList();
-  // Filter out unsuitable middle nodes before computing minimum cost.
-  JUST(customized_boxing_collector_consumer.FilterNdSbpList4LogicalShape(
-      logical_blob_desc, *consumer_parallel_desc.hierarchy()));
-  JUST(customized_boxing_collector_consumer.GenerateCombination4SamePlacement(5));
+  customized_boxing_collector_consumer.Init(logical_blob_desc, consumer_parallel_desc);
   // Generate the combination table for different hierarchies or placements
 
   JUST(customized_boxing_collector_producer.AskSbpCombination4Same2DPlacement(
@@ -929,8 +924,7 @@ Maybe<void> BoxingCollector::Ask1Combination4DiffHierarchy(
   // If we found a diagonal middle node with current boxing collector
   if (min_diag_producer >= 0) {
     std::vector<cfg::NdSbp> middle_sbps_buffer;
-    bool diff_sbp4consumer =
-        id_consumer != min_diag_consumer;
+    bool diff_sbp4consumer = id_consumer != min_diag_consumer;
     // Find the middle nodes between the producer and the diagonal node
     if (id_producer != min_diag_producer) {
       JUST(boxing_collector_producer->AskSbpCombination(

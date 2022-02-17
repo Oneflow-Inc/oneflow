@@ -38,9 +38,11 @@ class BoxingCollector final {
 
   // Construct a boxing collector with given maximum number of axis
   Maybe<void> Init(int32_t max_axis);
+  // Init with given blob description
+  Maybe<void> Init(const BlobDesc& logical_blob_desc, const ParallelDesc& parallel_desc);
 
   // Generate nd sbp list
-  void GenerateNdSbpList();
+  void GenerateNdSbpList(int32_t hierarchy_num);
   // Generate the map from 1d sbp to 2d sbp
   void GenerateMap1d2nd();
   // Generate the transfer rule for different combinations with the same hierarchy
