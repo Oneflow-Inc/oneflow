@@ -37,6 +37,8 @@ __global__ void GenerateGpu(curandState* state, const int64_t rank_id,const int6
                             const int64_t high) {
   const int id = blockIdx.x * blockDim.x + threadIdx.x;
   curandState localState = state[id];
+  /*when sbp=s/b, offset according to rank id to conform to the setting\
+   that the local spliced tensor is equal to the global tensor */
   CUDA_1D_KERNEL_LOOP(i, elem_cnt*rank_id) {
     static_cast<T>(GenUniformInt(&localState, low, high));
   }
