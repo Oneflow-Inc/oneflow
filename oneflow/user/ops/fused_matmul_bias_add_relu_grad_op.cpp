@@ -26,16 +26,10 @@ namespace {
 Maybe<void> InferTensorDesc4FusedMatmulBackward(user_op::InferContext* ctx) {
   const user_op::TensorDesc& weight_desc = ctx->InputTensorDesc("weight", 0);
   const user_op::TensorDesc& dy_desc = ctx->InputTensorDesc("dy", 0);
-  const user_op::TensorDesc& aux_desc = ctx->InputTensorDesc("aux", 0);
   const int64_t bias_size = weight_desc.shape().At(1); 
-  printf("dy shape 0 is: %ld \n", dy_desc.shape().At(0)); 
-  printf("in shape 0 is: %ld \n", weight_desc.shape().At(1)); 
-
-  Shape d_weight_shape({dy_desc.shape().At(0), weight_desc.shape().At(1)}); 
-  *ctx->OutputShape("d_weight", 0) = d_weight_shape;
+  Shape d_grad_shape({dy_desc.shape().At(0), weight_desc.shape().At(1)}); 
+  *ctx->OutputShape("d_grad", 0) = d_grad_shape;
   *ctx->OutputShape("d_bias", 0) = Shape({bias_size});
-  *ctx->OutputShape("d_relu", 0) = d_weight_shape;
-  printf("success shape \n"); 
   return Maybe<void>::Ok();
 }
 
@@ -47,14 +41,11 @@ Maybe<void> InferDataType4MatmulBackward(user_op::InferContext* ctx){
   CHECK_EQ_OR_RETURN(weight_desc.data_type(), dy_desc.data_type()); 
   CHECK_EQ_OR_RETURN(dy_desc.data_type(), aux_desc.data_type()); 
 
-  user_op::TensorDesc* d_weight_desc = ctx->OutputTensorDesc("d_weight", 0);
+  user_op::TensorDesc* d_grad_desc = ctx->OutputTensorDesc("d_grad", 0);
   user_op::TensorDesc* d_bias_desc = ctx->OutputTensorDesc("d_bias", 0);
-  user_op::TensorDesc* d_relu_desc = ctx->OutputTensorDesc("d_relu", 0);
 
-  *d_weight_desc->mut_data_type() = dy_desc.data_type();
+  *d_grad_desc->mut_data_type() = dy_desc.data_type();
   *d_bias_desc->mut_data_type() = dy_desc.data_type();
-  *d_relu_desc->mut_data_type() = dy_desc.data_type();
-  printf("success datatype \n"); 
   return Maybe<void>::Ok(); 
 }
 
@@ -76,9 +67,8 @@ Maybe<void> InferDataType4MatmulBackward(user_op::InferContext* ctx){
       .Broadcast(user_op::OpArg("weight", 0))
       .Broadcast(user_op::OpArg("dy", 0))
       .Broadcast(user_op::OpArg("aux", 0))
-      .Broadcast(user_op::OpArg("d_weight", 0))
+      .Broadcast(user_op::OpArg("d_grad", 0))
       .Broadcast(user_op::OpArg("d_bias", 0))
-      .Broadcast(user_op::OpArg("d_relu", 0))
       .Build();
   return Maybe<void>::Ok();
 }

@@ -166,9 +166,9 @@ void SetCublasEpilogue(const FusedMatmulBiasAddReluKernelCache* matmul_cache,
       CUBLASLT_MATMUL_DESC_BIAS_POINTER, &bias_ptr,
       sizeof(bias_ptr)));
   }
-  // // TODO: GELU_AUX_BIAS
+  
+  // TODO: Support GELU_AUX_BIAS
   if(epilogue == CUBLASLT_EPILOGUE_RELU_AUX_BIAS){
-    printf("enter relu aux bias. \n"); 
     // Set aux ptr for backward. 
     OF_CUBLAS_CHECK(cublasLtMatmulDescSetAttribute(matmul_cache->operation_desc,
       CUBLASLT_MATMUL_DESC_EPILOGUE_AUX_POINTER, &aux_ptr,
@@ -213,7 +213,6 @@ void SetCublasAttr(const FusedMatmulBiasAddReluKernelCache* matmul_cache,
   // Set epilogue
   SetCublasEpilogue(matmul_cache, epilogue, bias_ptr, aux_ptr);
   long aux_ld = cublas_ldc; 
-  printf("AUX LD IS: %ld \n", aux_ld); 
   OF_CUBLAS_CHECK(cublasLtMatmulDescSetAttribute(matmul_cache->operation_desc, CUBLASLT_MATMUL_DESC_EPILOGUE_AUX_LD, 
     &aux_ld, sizeof(aux_ld)));
 
@@ -276,7 +275,7 @@ class FusedMatmulBiasAddReluKernel final : public user_op::OpKernel {
     const int64_t batch_size = ctx->Tensor4ArgNameAndIndex("x", 0)->shape().At(0); 
     int64_t in_feature = ctx->Tensor4ArgNameAndIndex("x", 0)->shape().At(1); 
     
-    // currently only support 2D matmul. 
+    // Currently only support 2D matmul. 
     DimVector x_shape(2); 
     x->shape().ToDimVector(&x_shape); 
     DimVector tmp_shape(2); 
@@ -312,14 +311,11 @@ class FusedMatmulBiasAddReluKernel final : public user_op::OpKernel {
       }
       if(idx == weight_size-1){
         y_ptr = ctx->Tensor4ArgNameAndIndex("out", 0)->mut_dptr();
-        printf("Here??? \n"); 
         if(skip_final_activation){
           epilogue = CUBLASLT_EPILOGUE_BIAS;
         }
       }else{
-        printf("Here use hidden \n"); 
         y_ptr = ctx->Tensor4ArgNameAndIndex("hidden", idx)->mut_dptr();
-        // y_ptr = tmp_y_buffer; 
       }
       SetCublasAttr(matmul_cache, 
                     cublas_compute_dtype, 
@@ -347,7 +343,8 @@ class FusedMatmulBiasAddReluKernel final : public user_op::OpKernel {
           nullptr, cuda_stream->cublas_workspace(), 
           cuda_stream->cublas_workspace_size(),
           cuda_stream->cuda_stream()));
-      // Set hidden_layer ptr as next layer input x. 
+
+      // Set hidden_layer ptr as next layer's input. 
       x_ptr = y_ptr; 
       tmp_shape.at(1) = out_feature; 
     }

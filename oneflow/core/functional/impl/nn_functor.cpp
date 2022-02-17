@@ -282,7 +282,6 @@ class FusedMatMulBiasAddReluFunctor {
                            bool skip_final_activation) const {
     const int64_t weight_size = weights.size();
     const int64_t bias_size = biases.size();
-    printf("weight size is: %ld \n", weight_size); 
     CHECK_EQ_OR_RETURN(weight_size, bias_size) << "The number of weights should be equal to biases. ";
     int64_t m = 0, n = 0, k = 0;  
     /*

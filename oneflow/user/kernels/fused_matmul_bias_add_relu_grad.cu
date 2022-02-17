@@ -100,10 +100,6 @@ void InferMatmulCublasMNK(const DimVector& a_shape, const DimVector& b_shape,
     } else {
       UNIMPLEMENTED();
     }
-    printf("M is: %ld \n", m);
-    printf("N is: %ld \n", n);
-    printf("K is: %ld \n", k);
-
     *cublas_m = n; 
     *cublas_n = m; 
     *cublas_k = k; 
@@ -156,8 +152,8 @@ void SetCublasEpilogue(const FusedMatmulBiasAddReluGradKernelCache* matmul_grad_
                         cublasLtEpilogue_t epilogue, 
                         const void* d_bias_ptr, 
                         const void* aux_ptr){
-  if(epilogue == CUBLASLT_EPILOGUE_DRELU_BGRAD || epilogue == CUBLASLT_EPILOGUE_DGELU_BGRAD){
-    printf("enter here epilogue. \n");
+  // TODO: Support GELU_AUX_BIAS. 
+  if(epilogue == CUBLASLT_EPILOGUE_DRELU_BGRAD){
     // Set epilogue
     OF_CUBLAS_CHECK(cublasLtMatmulDescSetAttribute(
       matmul_grad_cache->operation_desc, CUBLASLT_MATMUL_DESC_EPILOGUE, &epilogue, sizeof(epilogue)));
@@ -171,11 +167,6 @@ void SetCublasEpilogue(const FusedMatmulBiasAddReluGradKernelCache* matmul_grad_
       sizeof(aux_ptr)));
   }
 
-  // // Set epilogue
-  // OF_CUBLAS_CHECK(cublasLtMatmulDescSetAttribute(
-  //   matmul_grad_cache->operation_desc, CUBLASLT_MATMUL_DESC_EPILOGUE, &epilogue, sizeof(epilogue)));
-
-  // TODO: GELU_AUX_BIAS
 }
 
 void SetCublasAttr(const FusedMatmulBiasAddReluGradKernelCache* matmul_grad_cache, 
@@ -216,10 +207,13 @@ void SetCublasAttr(const FusedMatmulBiasAddReluGradKernelCache* matmul_grad_cach
   
   // Set epilogue
   SetCublasEpilogue(matmul_grad_cache, epilogue, d_bias_ptr, aux_ptr);
-  // Set AUX pointer LD, maybe k
-  // TODO(use long)
+  /*
+  Set AUX pointer LD
+  If is used for CUBLASLT_EPILOGUE_DRELU_BGRAD, the AUX_LD need to align 128bit.
+  If is used for CUBLASLT_EPILOGUE_DGELU_BGRAD, the AUX_LD need to align 8.
+  For more details you can refer to CUBLAS docs: https://docs.nvidia.com/cuda/cublas/index.html#cublasLtMatmulDescAttributes_t `CUBLASLT_MATMUL_DESC_EPILOGUE_AUX_LD`. 
+  */
   long aux_ld = cublas_ldc; 
-  printf("AUX LD IS: %ld \n", aux_ld); 
   OF_CUBLAS_CHECK(cublasLtMatmulDescSetAttribute(matmul_grad_cache->operation_desc, CUBLASLT_MATMUL_DESC_EPILOGUE_AUX_LD, 
     &aux_ld, sizeof(aux_ld)));
     
@@ -251,14 +245,11 @@ class FusedMatmulBiasAddReluGradKernel final : public user_op::OpKernel {
   using user_op::OpKernel::Compute;
   void Compute(user_op::KernelComputeContext* ctx, user_op::OpKernelState*,
     const user_op::OpKernelCache* cache) const override {
-    printf("111 \n");
     const user_op::Tensor* dy = ctx->Tensor4ArgNameAndIndex("dy", 0);
     const user_op::Tensor* weight = ctx->Tensor4ArgNameAndIndex("weight", 0);
     const user_op::Tensor* aux = ctx->Tensor4ArgNameAndIndex("aux", 0);
     user_op::Tensor* d_bias = ctx->Tensor4ArgNameAndIndex("d_bias", 0);
-    user_op::Tensor* d_weight = ctx->Tensor4ArgNameAndIndex("d_weight", 0);
-    
-    printf("1112222 \n");
+    user_op::Tensor* d_grad = ctx->Tensor4ArgNameAndIndex("d_grad", 0);
     
     const auto* matmul_grad_cache =
     CHECK_NOTNULL(dynamic_cast<const FusedMatmulBiasAddReluGradKernelCache*>(cache));
@@ -269,13 +260,11 @@ class FusedMatmulBiasAddReluGradKernel final : public user_op::OpKernel {
     const cudaDataType_t cuda_data_type = GetCudaDataType(data_type);
     size_t cublas_m = 0, cublas_n = 0, cublas_k = 0; 
     int64_t cublas_lda = 0, cublas_ldb = 0, cublas_ldc = 0; 
-    printf("0002222 \n"); 
 
     const double alpha = 1.0;
     const auto sp_alpha = GetCublasScalarParameter(alpha, cublas_compute_dtype);
     const double beta = 0.0;
     const auto sp_beta = GetCublasScalarParameter(beta, cublas_compute_dtype);
-    printf("0033330 \n"); 
 
     // currently only support 2D matmul. 
     DimVector dy_shape(2); 
@@ -297,9 +286,7 @@ class FusedMatmulBiasAddReluGradKernel final : public user_op::OpKernel {
                   /*transpose_b=*/ep::primitive::BlasTransposeType::N, 
                   epilogue, 
                   d_bias->dptr(), 
-                  // nullptr, 
                   aux->dptr(), 
-                  // nullptr, 
                   cublas_m, 
                   cublas_n, 
                   cublas_k, 
@@ -318,17 +305,14 @@ class FusedMatmulBiasAddReluGradKernel final : public user_op::OpKernel {
         dy->dptr(),
         matmul_grad_cache->cublas_b_desc, 
         &sp_beta,
-        d_weight->mut_dptr(), 
+        d_grad->mut_dptr(), 
         matmul_grad_cache->cublas_c_desc, 
-        d_weight->mut_dptr(), 
+        d_grad->mut_dptr(), 
         matmul_grad_cache->cublas_c_desc,
         nullptr, cuda_stream->cublas_workspace(), 
         cuda_stream->cublas_workspace_size(),
         cuda_stream->cuda_stream()));
 
-    printf("99999999 \n"); 
-    
-    printf("9191991919191 \n"); 
   };
 };
 

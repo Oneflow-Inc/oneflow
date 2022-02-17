@@ -57,14 +57,12 @@ Maybe<void> InferTensorDesc4FusedMatmul(user_op::InferContext* ctx) {
     user_op::TensorDesc* cublas_aux_desc = ctx->OutputTensorDesc("cublas_aux", idx);
     *ctx->OutputShape("cublas_aux", idx) = x_desc.shape();
     cublas_aux_desc->mut_shape()->Set(1, k);
-    // TODO(zzk): Maybe no need weight_Size hidden, only need weight_size-1. 
     user_op::TensorDesc* hidden_desc = ctx->OutputTensorDesc("hidden", idx);
     *ctx->OutputShape("hidden", idx) = x_desc.shape();
     hidden_desc->mut_shape()->Set(1, k);
   }
   *ctx->OutputShape("out", 0) = x_desc.shape();
   out->mut_shape()->Set(1, n);
-  printf("OKKKK \n"); 
   return Maybe<void>::Ok();
 }
 
@@ -83,8 +81,6 @@ Maybe<void> InferDataType4Matmul(user_op::InferContext* ctx){
         ctx->OutputTensorDesc(out_arg_pair.first, out_arg_pair.second);
     *out_desc->mut_data_type() = first_in_desc.data_type();
   }
-  printf("OKKKK?????? \n"); 
-
   return Maybe<void>::Ok(); 
 }
 

@@ -4278,9 +4278,8 @@ def OneFlow_FusedMatmulBiasAddReluBackwardOp : OneFlow_BaseOp<"fused_matmul_bias
     OneFlow_Tensor:$aux
   );
   let output = (outs
-    OneFlow_Tensor:$d_weight, 
-    OneFlow_Tensor:$d_bias, 
-    OneFlow_Tensor:$d_relu
+    OneFlow_Tensor:$d_grad, 
+    OneFlow_Tensor:$d_bias
   );
   let has_logical_tensor_desc_infer_fn = 1;
   let has_physical_tensor_desc_infer_fn = 1;

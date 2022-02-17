@@ -926,16 +926,14 @@ class FusedMatmulBiasAddReluGradFunctor {
                     .Input("dy")
                     .Input("weight")
                     .Input("aux")
-                    .Output("d_weight")
+                    .Output("d_grad")
                     .Output("d_bias")
-                    .Output("d_relu")
                     .Build());
   }
   Maybe<TensorTuple> operator()(const std::shared_ptr<one::Tensor>& dy,
                            const std::shared_ptr<one::Tensor>& weight, 
                            const std::shared_ptr<one::Tensor>& aux) const {
     MutableAttrMap attrs;
-    printf("here \n");
     return OpInterpUtil::Dispatch<TensorTuple>(*op_, {dy, weight, aux}, attrs);
   }
 
