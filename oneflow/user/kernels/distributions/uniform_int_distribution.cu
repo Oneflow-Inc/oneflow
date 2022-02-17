@@ -33,16 +33,16 @@ __device__ int64_t GenUniformInt(curandState* state, const int64_t low, const in
 }
 
 template<typename T>
-__global__ void GenerateGpu(curandState* state, const int64_t rank_id,const int64_t elem_cnt, T* dptr, const int64_t low,
-                            const int64_t high) {
+__global__ void GenerateGpu(curandState* state, const int64_t rank_id, const int64_t elem_cnt,
+                            T* dptr, const int64_t low, const int64_t high) {
   const int id = blockIdx.x * blockDim.x + threadIdx.x;
   curandState localState = state[id];
-  /*when sbp=s/b, offset according to rank id to conform to the setting\
+  /*when sbp=s/p, offset according to rank id to conform to the setting\
    that the local spliced tensor is equal to the global tensor */
   CUDA_1D_KERNEL_LOOP(i, elem_cnt*rank_id) {
     static_cast<T>(GenUniformInt(&localState, low, high));
   }
-   CUDA_1D_KERNEL_LOOP(i, elem_cnt) {
+  CUDA_1D_KERNEL_LOOP(i, elem_cnt) {
     dptr[i] = static_cast<T>(GenUniformInt(&localState, low, high));
   }
   state[id] = localState;
