@@ -21,7 +21,7 @@ limitations under the License.
 #include "oneflow/core/framework/tensor.h"
 #include "oneflow/core/framework/stride.h"
 #include "oneflow/core/job/parallel_desc.h"
-#include "oneflow/core/job/sbp_parallel.cfg.h"
+#include "oneflow/core/job/sbp_parallel.h"
 #include "oneflow/core/functional/functional.h"
 #include "oneflow/core/framework/device.h"
 #include "oneflow/core/framework/dtype.h"
@@ -199,7 +199,7 @@ bool ConsistentTensorMeta::operator==(const ConsistentTensorMeta& other) const {
 
 size_t ConsistentTensorMeta::CalcHashValue() const {
   return std::hash<Shape>()(*shape_ptr()) ^ std::hash<DataType>()(dtype())
-         ^ std::hash<Symbol<cfg::NdSbp>>()(nd_sbp())
+         ^ std::hash<Symbol<NdSbp>>()(nd_sbp())
          ^ std::hash<Symbol<ParallelDesc>>()(parallel_desc());
 }
 
@@ -226,7 +226,7 @@ EagerConsistentTensorImpl::EagerConsistentTensorImpl(
 
 namespace {
 
-Maybe<Shape> GetPhysicalShape(const Shape& logical_shape, const cfg::NdSbp& nd_sbp,
+Maybe<Shape> GetPhysicalShape(const Shape& logical_shape, const NdSbp& nd_sbp,
                               const ParallelDesc& parallel_desc,
                               const Optional<int64_t>& parallel_id) {
   if (parallel_id.has_value()) {

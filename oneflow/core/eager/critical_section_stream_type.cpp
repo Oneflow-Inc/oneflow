@@ -49,7 +49,6 @@ bool CriticalSectionStreamType::QueryInstructionStatusDone(
 void CriticalSectionStreamType::Compute(Instruction* instruction) const {
   {
     const auto& instr_type_id = instruction->mut_instr_msg()->instr_type_id();
-    CHECK_EQ(instr_type_id.stream_type_id().interpret_type(), InterpretType::kCompute);
     instr_type_id.instruction_type().Compute(instruction);
   }
 }
@@ -57,7 +56,7 @@ void CriticalSectionStreamType::Compute(Instruction* instruction) const {
 intrusive::shared_ptr<StreamDesc> CriticalSectionStreamType::MakeStreamDesc(
     const Resource& resource, int64_t this_machine_id) const {
   auto ret = intrusive::make_shared<StreamDesc>();
-  ret->mut_stream_type_id()->__Init__(LookupStreamType4TypeIndex<CriticalSectionStreamType>());
+  ret->set_stream_type(StaticGlobalStreamType<CriticalSectionStreamType>());
   ret->set_num_streams_per_machine(1);
   ret->set_num_streams_per_thread(1);
   return ret;

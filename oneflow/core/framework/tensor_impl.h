@@ -141,9 +141,9 @@ class ConsistentTensorImpl : public TensorImpl {
   // Getters
   const std::shared_ptr<const Shape>& shape() const override { return tensor_meta_->shape_ptr(); }
   DataType dtype() const override { return tensor_meta_->dtype(); }
-  Symbol<cfg::NdSbp> nd_sbp() const { return tensor_meta_->nd_sbp(); }
+  Symbol<NdSbp> nd_sbp() const { return tensor_meta_->nd_sbp(); }
   Symbol<ParallelDesc> parallel_desc() const { return tensor_meta_->parallel_desc(); }
-  const Optional<Symbol<cfg::NdSbp>>& consumer_nd_sbp_constraint() const {
+  const Optional<Symbol<NdSbp>>& consumer_nd_sbp_constraint() const {
     return consumer_nd_sbp_constraint_;
   }
   virtual Maybe<MirroredTensor> cur_rank_phy_tensor() const { RETURN_ERROR_WITH_BUG_PROMPT(); }
@@ -157,7 +157,7 @@ class ConsistentTensorImpl : public TensorImpl {
   Maybe<bool> has_eager_blob_object() const override { RETURN_ERROR_WITH_BUG_PROMPT(); }
 
   // Setters
-  void set_consumer_nd_sbp_constraint(Symbol<cfg::NdSbp> val) { consumer_nd_sbp_constraint_ = val; }
+  void set_consumer_nd_sbp_constraint(Symbol<NdSbp> val) { consumer_nd_sbp_constraint_ = val; }
 
   ConsistentTensorMeta* mut_tensor_meta() {
     PRINT_BUG_PROMPT_AND_ABORT();
@@ -181,7 +181,7 @@ class ConsistentTensorImpl : public TensorImpl {
         transport_token_() {}
 
   Symbol<ConsistentTensorMeta> tensor_meta_;
-  Optional<Symbol<cfg::NdSbp>> consumer_nd_sbp_constraint_;
+  Optional<Symbol<NdSbp>> consumer_nd_sbp_constraint_;
   Optional<TransportToken> transport_token_;
 };
 
