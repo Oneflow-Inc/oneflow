@@ -828,7 +828,7 @@
 
 - name: "cublas_fused_mlp"
   signature:
-    "TensorTuple (Tensor x, TensorTuple weights, TensorTuple biases, Bool skip_final_activation) => CublasFusedMLP"
+    "Tensor (Tensor x, TensorTuple weights, TensorTuple biases, Bool skip_final_activation) => CublasFusedMLP"
   bind_python: True
 
 - name: "cublas_bias_add_relu_matmul_grad"

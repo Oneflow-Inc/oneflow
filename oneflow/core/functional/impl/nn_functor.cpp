@@ -276,7 +276,7 @@ class CublasFusedMLPFunctor {
                                .Build());
     }
   }
-  Maybe<TensorTuple> operator()(const std::shared_ptr<one::Tensor>& x,
+  Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x,
                            const TensorTuple& weights,
                            const TensorTuple& biases, 
                            bool skip_final_activation) const {
@@ -316,7 +316,7 @@ class CublasFusedMLPFunctor {
     MutableAttrMap attrs;
     JUST(attrs.SetAttr<bool>("skip_final_activation", skip_final_activation));
 
-    return OpInterpUtil::Dispatch<TensorTuple>(*fused_op_[weight_size], input, attrs);
+    return OpInterpUtil::Dispatch<Tensor>(*fused_op_[weight_size], input, attrs);
   }
 
  private:

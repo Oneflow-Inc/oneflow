@@ -61,7 +61,7 @@ class FusedMLP(Module):
 
     """
 
-    def __init__(self, in_features: int, hidden_features_lists: Tuple[int], out_features: int, skip_last_activation=True) -> None:
+    def __init__(self, in_features: int, hidden_features_lists: Tuple[int], out_features: int, skip_last_activation=False) -> None:
         super().__init__()
         self.in_features = in_features
         self.hidden_features_lists = hidden_features_lists
@@ -84,7 +84,6 @@ class FusedMLP(Module):
         self.add_parameters(in_features, hidden_features_lists[0], 0)
         # Middle Layer. 
         for idx in range(self.hidden_layer_num-1): 
-            print(idx)
             self.add_parameters(hidden_features_lists[idx], hidden_features_lists[idx+1], idx+1)
         # Last layer. 
         self.add_parameters(hidden_features_lists[-1], out_features, self.hidden_layer_num)
@@ -110,10 +109,11 @@ class FusedMLP(Module):
 
 
     def forward(self, x):
-        res = flow._C.fused_matmul_bias_add_relu(
-                res, 
+        res = flow._C.cublas_fused_mlp(
+                x, 
                 self.weights, 
-                self.biases
+                self.biases, 
+                self.skip_last_activation
             )
         return res
 
