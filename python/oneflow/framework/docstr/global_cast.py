@@ -17,19 +17,19 @@ import oneflow
 from oneflow.framework.docstr.utils import add_docstr
 
 add_docstr(
-    oneflow.to_consistent,
+    oneflow.to_global,
     """
-    to_consistent(input, placement=None, sbp=None, grad_sbp=None) -> Tensor
+    to_global(input, placement=None, sbp=None, grad_sbp=None) -> Tensor
 
-    Cast a local tensor to consistent tensor or cast a
-    consistent tensor to another consistent tensor with
+    Cast a local tensor to global tensor or cast a
+    global tensor to another global tensor with
     different sbp or placement
 
 
     Args:
         input (Tensor): the input tensor.
-        placement (flow.placement, optional): the desired placement of returned consistent tensor. Default: if None, the input tensor must be consistent one and use its own placement.
-        sbp (flow.sbp.sbp or tuple of flow.sbp.sbp, optional): the desired sbp descriptor of returned consistent tensor. Default: if None, the input tensor must be consistent one and use its own sbp.
+        placement (flow.placement, optional): the desired placement of returned global tensor. Default: if None, the input tensor must be consistent one and use its own placement.
+        sbp (flow.sbp.sbp or tuple of flow.sbp.sbp, optional): the desired sbp descriptor of returned global tensor. Default: if None, the input tensor must be consistent one and use its own sbp.
 
     For example:
 
@@ -39,9 +39,9 @@ add_docstr(
         >>> import numpy as np
         >>> np_arr = np.array([0.5, 0.6, 0.7]).astype(np.float32)
         >>> input = flow.Tensor(np_arr)
-        >>> placement = flow.placement("cpu", {0:range(1)})
-        >>> output_tensor = input.to_consistent(placement, [flow.sbp.split(0)])
-        >>> output_tensor.is_consistent
+        >>> placement = flow.placement("cpu", ranks=[0])
+        >>> output_tensor = input.to_global(placement, [flow.sbp.split(0)])
+        >>> output_tensor.is_global
         True
     """,
 )
@@ -51,7 +51,7 @@ add_docstr(
     """
     to_local(input) -> Tensor
 
-    Returns the local tensor of a consistent tensor.
+    Returns the local tensor of a global tensor.
 
 
     Args:
@@ -65,9 +65,9 @@ add_docstr(
         >>> import numpy as np
         >>> np_arr = np.array([0.5, 0.6, 0.7]).astype(np.float32)
         >>> input = flow.tensor(np_arr, dtype=flow.float32)
-        >>> placement = flow.placement("cpu", {0:range(1)})
-        >>> consistent_tensor = input.to_consistent(placement, [flow.sbp.split(0)])
-        >>> consistent_tensor.to_local()
+        >>> placement = flow.placement("cpu", ranks=[0])
+        >>> global_tensor = input.to_global(placement, [flow.sbp.split(0)])
+        >>> global_tensor.to_local()
         tensor([0.5000, 0.6000, 0.7000], dtype=oneflow.float32)
     """,
 )

@@ -34,8 +34,8 @@ bool ContainsEmptySlice(const std::vector<TensorSliceView>& slices) {
                      [](const TensorSliceView& slice) { return slice.IsEmpty(); });
 }
 
-Maybe<Symbol<cfg::NdSbp>> GetAllSplitNdSbp(int64_t axis, int64_t ndim) {
-  cfg::NdSbp split_nd_sbp;
+Maybe<Symbol<NdSbp>> GetAllSplitNdSbp(int64_t axis, int64_t ndim) {
+  NdSbp split_nd_sbp;
   for (int64_t i = 0; i < ndim; ++i) {
     split_nd_sbp.mutable_sbp_parallel()->Add()->mutable_split_parallel()->set_axis(axis);
   }

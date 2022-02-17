@@ -33,14 +33,14 @@ namespace oneflow {
 
 /* static */ Maybe<void> _ncclLogical_2DSameDim0AllReduceOp::InferNdSbp(
     user_op::InferNdSbpFnContext* ctx) {
-  const cfg::NdSbp& in_dis_hint = ctx->NdSbpHint4InputArgNameAndIndex("in", 0);
+  const NdSbp& in_dis_hint = ctx->NdSbpHint4InputArgNameAndIndex("in", 0);
   CHECK_EQ_OR_RETURN(in_dis_hint.sbp_parallel_size(), 2);
   CHECK_OR_RETURN(in_dis_hint.sbp_parallel(1).has_partial_sum_parallel());
   const Shape& parallel_hierarchy = ctx->parallel_hierarchy();
   CHECK_EQ_OR_RETURN(parallel_hierarchy.NumAxes(), 2);
 
-  cfg::NdSbp* in_distribution = ctx->NdSbp4ArgNameAndIndex("in", 0);
-  cfg::NdSbp* out_distribution = ctx->NdSbp4ArgNameAndIndex("out", 0);
+  NdSbp* in_distribution = ctx->NdSbp4ArgNameAndIndex("in", 0);
+  NdSbp* out_distribution = ctx->NdSbp4ArgNameAndIndex("out", 0);
   in_distribution->clear_sbp_parallel();
   out_distribution->clear_sbp_parallel();
   // in use hint
@@ -78,14 +78,14 @@ namespace oneflow {
 
 /* static */ Maybe<void> _ncclLogical_2DSameDim1AllReduceOp::InferNdSbp(
     user_op::InferNdSbpFnContext* ctx) {
-  const cfg::NdSbp& in_dis_hint = ctx->NdSbpHint4InputArgNameAndIndex("in", 0);
+  const NdSbp& in_dis_hint = ctx->NdSbpHint4InputArgNameAndIndex("in", 0);
   CHECK_EQ_OR_RETURN(in_dis_hint.sbp_parallel_size(), 2);
   CHECK_OR_RETURN(in_dis_hint.sbp_parallel(0).has_partial_sum_parallel());
   const Shape& parallel_hierarchy = ctx->parallel_hierarchy();
   CHECK_EQ_OR_RETURN(parallel_hierarchy.NumAxes(), 2);
 
-  cfg::NdSbp* in_distribution = ctx->NdSbp4ArgNameAndIndex("in", 0);
-  cfg::NdSbp* out_distribution = ctx->NdSbp4ArgNameAndIndex("out", 0);
+  NdSbp* in_distribution = ctx->NdSbp4ArgNameAndIndex("in", 0);
+  NdSbp* out_distribution = ctx->NdSbp4ArgNameAndIndex("out", 0);
   in_distribution->clear_sbp_parallel();
   out_distribution->clear_sbp_parallel();
   // in use hint
@@ -123,7 +123,7 @@ namespace oneflow {
 
 /* static */ Maybe<void> _ncclLogical_2DSameDim0AllGatherOp::InferNdSbp(
     user_op::InferNdSbpFnContext* ctx) {
-  const cfg::NdSbp& in_dis_hint = ctx->NdSbpHint4InputArgNameAndIndex("in", 0);
+  const NdSbp& in_dis_hint = ctx->NdSbpHint4InputArgNameAndIndex("in", 0);
   CHECK_EQ_OR_RETURN(in_dis_hint.sbp_parallel_size(), 2);
   // (*, S(0)) -> (*, B)
   CHECK_OR_RETURN(in_dis_hint.sbp_parallel(1).has_split_parallel());
@@ -131,8 +131,8 @@ namespace oneflow {
   const Shape& parallel_hierarchy = ctx->parallel_hierarchy();
   CHECK_EQ_OR_RETURN(parallel_hierarchy.NumAxes(), 2);
 
-  cfg::NdSbp* in_distribution = ctx->NdSbp4ArgNameAndIndex("in", 0);
-  cfg::NdSbp* out_distribution = ctx->NdSbp4ArgNameAndIndex("out", 0);
+  NdSbp* in_distribution = ctx->NdSbp4ArgNameAndIndex("in", 0);
+  NdSbp* out_distribution = ctx->NdSbp4ArgNameAndIndex("out", 0);
   in_distribution->clear_sbp_parallel();
   out_distribution->clear_sbp_parallel();
   // in use hint
@@ -171,7 +171,7 @@ namespace oneflow {
 
 /* static */ Maybe<void> _ncclLogical_2DSameDim0AllGatherNoncontinuousOp::InferNdSbp(
     user_op::InferNdSbpFnContext* ctx) {
-  const cfg::NdSbp& in_dis_hint = ctx->NdSbpHint4InputArgNameAndIndex("in", 0);
+  const NdSbp& in_dis_hint = ctx->NdSbpHint4InputArgNameAndIndex("in", 0);
   CHECK_EQ_OR_RETURN(in_dis_hint.sbp_parallel_size(), 2);
   // (*, S(1)) -> (*, B)
   const int64_t in_split_axis = ctx->user_op_conf().attr<int64_t>("in_dim1_split_axis");
@@ -181,8 +181,8 @@ namespace oneflow {
   const Shape& parallel_hierarchy = ctx->parallel_hierarchy();
   CHECK_EQ_OR_RETURN(parallel_hierarchy.NumAxes(), 2);
 
-  cfg::NdSbp* in_distribution = ctx->NdSbp4ArgNameAndIndex("in", 0);
-  cfg::NdSbp* out_distribution = ctx->NdSbp4ArgNameAndIndex("out", 0);
+  NdSbp* in_distribution = ctx->NdSbp4ArgNameAndIndex("in", 0);
+  NdSbp* out_distribution = ctx->NdSbp4ArgNameAndIndex("out", 0);
   in_distribution->clear_sbp_parallel();
   out_distribution->clear_sbp_parallel();
   // in use hint
@@ -221,7 +221,7 @@ _ncclLogical_2DSameDim0AllGatherNoncontinuousOp::InferDeviceAndStream(
 
 /* static */ Maybe<void> _ncclLogical_2DSameDim0All2allOp::InferNdSbp(
     user_op::InferNdSbpFnContext* ctx) {
-  const cfg::NdSbp& in_dis_hint = ctx->NdSbpHint4InputArgNameAndIndex("in", 0);
+  const NdSbp& in_dis_hint = ctx->NdSbpHint4InputArgNameAndIndex("in", 0);
   CHECK_EQ_OR_RETURN(in_dis_hint.sbp_parallel_size(), 2);
   // (*, S(in_dim1_split_axis)) -> (*, S(out_dim1_split_axis))
   const int64_t in_split_axis = ctx->user_op_conf().attr<int64_t>("in_dim1_split_axis");
@@ -231,8 +231,8 @@ _ncclLogical_2DSameDim0AllGatherNoncontinuousOp::InferDeviceAndStream(
   const Shape& parallel_hierarchy = ctx->parallel_hierarchy();
   CHECK_EQ_OR_RETURN(parallel_hierarchy.NumAxes(), 2);
 
-  cfg::NdSbp* in_distribution = ctx->NdSbp4ArgNameAndIndex("in", 0);
-  cfg::NdSbp* out_distribution = ctx->NdSbp4ArgNameAndIndex("out", 0);
+  NdSbp* in_distribution = ctx->NdSbp4ArgNameAndIndex("in", 0);
+  NdSbp* out_distribution = ctx->NdSbp4ArgNameAndIndex("out", 0);
   in_distribution->clear_sbp_parallel();
   out_distribution->clear_sbp_parallel();
   // in use hint

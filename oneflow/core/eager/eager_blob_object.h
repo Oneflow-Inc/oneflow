@@ -106,6 +106,7 @@ class EagerBlobObject final : public BlobObject {
 
   Maybe<void> TryInitBlob() override;
   Maybe<void> InitBlob();
+  Maybe<void> InitBlobWithOffset(const int64_t offset);
 
   Maybe<void> TryAllocateBlobBodyMemory(DeviceCtx* device_ctx) override;
   Maybe<void> DeallocateBlobDataPtr() override {
@@ -128,10 +129,6 @@ class EagerBlobObject final : public BlobObject {
 
   void set_is_shape_synced(bool val) { is_shape_synced_ = val; }
 
-  int64_t storage_offset() const { return storage_offset_; }
-
-  void set_storage_offset(int64_t storage_offset) { storage_offset_ = storage_offset; }
-
   const Optional<Symbol<Stream>>& producer_stream() const {
     return tensor_storage_->producer_stream();
   }
@@ -151,7 +148,6 @@ class EagerBlobObject final : public BlobObject {
   std::unique_ptr<char[]> header_buffer_;
   std::shared_ptr<TensorStorage> tensor_storage_;
   std::atomic<bool> is_shape_synced_;
-  int64_t storage_offset_;
   intrusive::shared_ptr<LocalDepObject> compute_local_dep_object_;
 };
 

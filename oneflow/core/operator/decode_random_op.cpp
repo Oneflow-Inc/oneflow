@@ -60,7 +60,7 @@ Maybe<void> DecodeRandomOp::InferOutBlobDescs(
   return Maybe<void>::Ok();
 }
 
-Maybe<void> DecodeRandomOp::GetSbpSignatures(cfg::SbpSignatureList* sbp_sig_list) const {
+Maybe<void> DecodeRandomOp::GetSbpSignatures(SbpSignatureList* sbp_sig_list) const {
   SbpSignatureBuilder()
       .Broadcast(input_bns())
       .Split(output_bns(), 0)

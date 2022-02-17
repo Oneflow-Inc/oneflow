@@ -41,9 +41,10 @@ class TestTensor(flow.unittest.TestCase):
     @flow.unittest.skip_unless_1n1d()
     def test_tensor_deepcopy(test_case):
         shape = (2, 3)
-        tensor1 = flow.ones(*shape)
+        tensor1 = flow.ones(*shape).cuda()
         tensor2 = copy.deepcopy(tensor1)
         tensor1[0, 0] = 0
+        test_case.assertEqual(tensor1.device, tensor2.device)
         test_case.assertEqual(tensor1[0, 0], 0)
         test_case.assertEqual(tensor2[0, 0], 1)
 
@@ -184,9 +185,9 @@ class TestTensor(flow.unittest.TestCase):
                 *args,
                 **kwargs,
                 sbp=flow.sbp.broadcast,
-                placement=flow.placement("cuda", {0: range(2)})
+                placement=flow.placement("cuda", range(2))
             ),
-            lambda x: x.to_consistent(sbp=flow.sbp.broadcast).to_local().numpy(),
+            lambda x: x.to_global(sbp=flow.sbp.broadcast).to_local().numpy(),
         )
 
     @flow.unittest.skip_unless_1n1d()
@@ -237,7 +238,7 @@ class TestTensor(flow.unittest.TestCase):
         with test_case.assertRaises(
             oneflow._oneflow_internal.exception.RuntimeException
         ):
-            x.consistent_id()
+            x.global_id()
 
         with test_case.assertRaises(
             oneflow._oneflow_internal.exception.RuntimeException

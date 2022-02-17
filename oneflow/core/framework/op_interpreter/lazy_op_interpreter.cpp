@@ -34,6 +34,7 @@ limitations under the License.
 #include "oneflow/core/framework/nd_sbp.h"
 #include "oneflow/core/eager/foreign_boxing_util.h"
 #include "oneflow/core/operator/operator.h"
+#include "oneflow/core/job/sbp_parallel.h"
 #include "oneflow/core/job/job_build_and_infer_ctx_mgr.h"
 #include "oneflow/core/vm/vm_util.h"
 
@@ -65,7 +66,7 @@ Maybe<Tensor> BuildTensor(const OpAttribute& op_attribute, const std::string& bn
     auto nd_sbp_it = nd_sbp_sign_map.find(bn_in_op);
     CHECK_OR_RETURN(nd_sbp_it != nd_sbp_sign_map.end())
         << "nd_sbp of " << bn_in_op << " not found in op " << op_attribute.op_conf().name();
-    cfg::NdSbp nd_sbp(nd_sbp_it->second);
+    NdSbp nd_sbp(nd_sbp_it->second);
     const auto& tensor = JUST(ConsistentTensor::MakeTensor(
         shape, dtype, SymbolOf(nd_sbp), SymbolOf(*parallel_desc), is_lazy,
         /*requires_grad=*/false, /*is_leaf=*/true));
@@ -98,7 +99,7 @@ Maybe<void> CheckTensorMatchAttr(const std::shared_ptr<Tensor>& tensor,
     auto nd_sbp_it = nd_sbp_sign_map.find(bn_in_op);
     CHECK_OR_RETURN(nd_sbp_it != nd_sbp_sign_map.end())
         << "nd_sbp of " << bn_in_op << " not found in op " << op_attribute.op_conf().name();
-    cfg::NdSbp nd_sbp(nd_sbp_it->second);
+    NdSbp nd_sbp(nd_sbp_it->second);
     CHECK_OR_RETURN(JUST(tensor->nd_sbp()) == SymbolOf(nd_sbp))
         << "The input sbp is not valid for an inplace operation, please try to use non-inplace.";
     CHECK_OR_RETURN(JUST(tensor->parallel_desc()) == SymbolOf(*parallel_desc));
@@ -140,7 +141,7 @@ Maybe<void> GenNdSbpByTensor(NdSbp* nd_sbp, const std::shared_ptr<Tensor>& tenso
     //   placement is only this rank, and SbpParallel is Broadcast.
     nd_sbp->add_sbp_parallel()->mutable_broadcast_parallel();
   } else {
-    JUST(tensor->nd_sbp())->ToProto(nd_sbp);
+    *nd_sbp = *JUST(tensor->nd_sbp());
   }
   return Maybe<void>::Ok();
 }
@@ -149,11 +150,11 @@ Maybe<void> GenVariableOpConfNdSbpStringByTensor(VariableOpConf* var_conf,
                                                  const std::shared_ptr<Tensor>& tensor) {
   var_conf->clear_nd_sbp();
   if (tensor->is_local()) {
-    cfg::SbpParallel broadcast;
+    SbpParallel broadcast;
     broadcast.mutable_broadcast_parallel();
     var_conf->add_nd_sbp(SbpParallelToString(broadcast));
   } else {
-    const cfg::NdSbp& nd_sbp = *JUST(tensor->nd_sbp());
+    const NdSbp& nd_sbp = *JUST(tensor->nd_sbp());
     for (const auto& sbp_parallel : nd_sbp.sbp_parallel()) {
       var_conf->add_nd_sbp(SbpParallelToString(sbp_parallel));
     }
@@ -592,7 +593,7 @@ Maybe<void> LazyInterpreter::ApplyImpl(const UserOpExpr& op_expr, const TensorTu
 
   // NOTE(chengcheng): Handle special UserOp such as:
   //     1. [Source UserOp] : OFRecordReader, CoinFlip
-  //     2. [Change Placement/ParallelDesc UserOp] : to(copy)/to_consistent/parallel_cast
+  //     2. [Change Placement/ParallelDesc UserOp] : to(copy)/to_global/parallel_cast
   //     3. [Multi-Inputs & Different ParallelDesc for each input UserOp] : like there are 2 inputs,
   //             one from CPU and the other from GPU.
   //     ..., etc.
@@ -634,9 +635,8 @@ Maybe<void> LazyInterpreter::ApplyImpl(const UserOpExpr& op_expr, const TensorTu
     CHECK_OR_RETURN(device_tag == GetDeviceTagOfTensor(input_tensor))
         << " Lazy nn.Graph name : " << graph_name << " encountered ERROR where multi-input tensor"
         << " has different device type in module/op_name: " << new_op_name
-        << ". Please use tensor.to() or tensor.to_consistent() to make all input with same device.";
-    CHECK_OR_RETURN(
-        parallel_desc->EqualsIgnoringHierarchy(*JUST(GetParallelDescOfTensor(input_tensor))));
+        << ". Please use tensor.to() or tensor.to_global() to make all input with same device.";
+    CHECK_OR_RETURN(parallel_desc->Equals(*JUST(GetParallelDescOfTensor(input_tensor))));
     CHECK_EQ_OR_RETURN(is_local, input_tensor->is_local());
     const std::string& ibn = op_expr.indexed_ibns().at(i);
     std::string lbn = TensorNameScope::Global()->Lookup(input_tensor);
@@ -732,7 +732,7 @@ Maybe<void> LazyInterpreter::ApplyImpl(const ConsistentToConsistentOpExpr& op_ex
 
   std::shared_ptr<Tensor> input_proxy;
   if (!JUST(GetParallelDescOfTensor(input_tensor))
-           ->EqualsIgnoringHierarchy(*parallel_desc_sym.shared_from_symbol())) {
+           ->Equals(*parallel_desc_sym.shared_from_symbol())) {
     // NOTE(zwx): The input tensor's parallel_desc is not equal to that of op's,
     // create a proxy input with the parallel_desc that is the same as op's
     input_proxy =
@@ -748,7 +748,7 @@ Maybe<void> LazyInterpreter::ApplyImpl(const ConsistentToConsistentOpExpr& op_ex
   CHECK_OR_RETURN(!(*outputs)[0]);
 
   if (!op_expr.grad_nd_sbp().has_value() && sbp_sym == JUST(input_tensor->nd_sbp())) {
-    // NOTE(chengcheng):  if to_consistent ONLY change placement (nd_sbp and grad_nd_sbp is same),
+    // NOTE(chengcheng):  if to_global ONLY change placement (nd_sbp and grad_nd_sbp is same),
     //    there is no need to build hierarchical_parallel_cast op.
     if (input_proxy) {
       (*outputs)[0] = input_proxy;

@@ -43,7 +43,7 @@ void UpdateJobHelperConfProducedLbi2ConsumedDiffLbi(
 void SetNdSbpSignatureHintByIdenticalSbpObaPairs(const OpGraph& op_graph,
                                                  const OpBlobArgPairs& identical_sbp_oba_pairs,
                                                  JobBuilder* job_builder) {
-  HashMap<OpBlobArg, const cfg::NdSbp*> oba2nd_sbp;
+  HashMap<OpBlobArg, const NdSbp*> oba2nd_sbp;
   op_graph.ForEachNode([&](OpNode* op_node) {
     auto ForEachBn = [&](const std::function<void(const std::string&)>& Handler) {
       for (const auto& ibn : op_node->op().input_bns()) { Handler(ibn); }
@@ -56,7 +56,7 @@ void SetNdSbpSignatureHintByIdenticalSbpObaPairs(const OpGraph& op_graph,
   });
   auto HasNdSbp = [&](const OpBlobArg& oba) { return oba2nd_sbp.find(oba) != oba2nd_sbp.end(); };
   for (const auto& pair : identical_sbp_oba_pairs.pair()) {
-    const cfg::NdSbp* nd_sbp = nullptr;
+    const NdSbp* nd_sbp = nullptr;
     if (HasNdSbp(pair.first()) && HasNdSbp(pair.second())) {
       CHECK(oba2nd_sbp.at(pair.first()) == oba2nd_sbp.at(pair.second()));
       nd_sbp = oba2nd_sbp.at(pair.first());

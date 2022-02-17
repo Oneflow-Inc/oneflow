@@ -79,7 +79,7 @@ Maybe<bool> IsAllZeroSizeTensorMeta(const std::vector<Symbol<ConsistentTensorMet
 constexpr auto* CachedIsAllZeroSizeTensorMeta =
     DECORATE(&IsAllZeroSizeTensorMeta, ThreadLocalCopiable);
 
-Maybe<Tensor> CalcBoxingOutput(const std::shared_ptr<Tensor>& input, Symbol<cfg::NdSbp> out_nd_sbp,
+Maybe<Tensor> CalcBoxingOutput(const std::shared_ptr<Tensor>& input, Symbol<NdSbp> out_nd_sbp,
                                Symbol<ParallelDesc> out_parallel_desc,
                                bool current_rank_local_is_valid) {
   const auto& logical_shape = input->shape();

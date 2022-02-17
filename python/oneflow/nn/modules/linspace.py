@@ -54,7 +54,7 @@ def linspace_op(
     .. code-block:: python
 
         >>> import oneflow as flow
-        
+
         >>> y = flow.linspace(3, 10, steps=5)
         >>> y
         tensor([ 3.0000,  4.7500,  6.5000,  8.2500, 10.0000], dtype=oneflow.float32)
@@ -85,8 +85,8 @@ def linspace_op(
         else:
             for elem in sbp:
                 assert isinstance(elem, flow.sbp.sbp), "sbp: %s" % sbp
-        assert len(sbp) == len(placement.hierarchy)
-        res = flow._C.consistent_arange(
+        assert len(sbp) == len(placement.ranks.shape)
+        res = flow._C.global_arange(
             start, end, step, dtype=dtype, placement=placement, sbp=sbp
         )
 

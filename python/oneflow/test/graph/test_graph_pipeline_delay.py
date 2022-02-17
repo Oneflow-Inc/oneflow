@@ -38,8 +38,8 @@ def _test_graph_pipeline_delay_output(test_case):
             out1 = self.linear2(out0)
             return out1
 
-    P0 = flow.placement("cuda", {0: [0]})
-    P1 = flow.placement("cuda", {0: [1]})
+    P0 = flow.placement("cuda", ranks=[0])
+    P1 = flow.placement("cuda", ranks=[1])
     B = flow.sbp.broadcast
 
     class PipelineModule(flow.nn.Module):
@@ -47,15 +47,15 @@ def _test_graph_pipeline_delay_output(test_case):
             super().__init__()
             self.layer_0 = StageLayerModule()
             self.layer_1 = StageLayerModule()
-            self.layer_0.to_consistent(P0, B)
-            self.layer_1.to_consistent(P1, B)
+            self.layer_0.to_global(P0, B)
+            self.layer_1.to_global(P1, B)
 
         def forward(self, x):
             # stage 0
-            in0 = x.to_consistent(P0, B)
+            in0 = x.to_global(P0, B)
             out0 = self.layer_0(in0)
             # stage 1
-            in1 = out0.to_consistent(P1, B)
+            in1 = out0.to_global(P1, B)
             out1 = self.layer_1(in1)
             return out1
 
@@ -77,7 +77,7 @@ def _test_graph_pipeline_delay_output(test_case):
             loss = pp_out.mean()
             loss.backward()
             y = x + y
-            free_out = y.to_consistent(P1, B)
+            free_out = y.to_global(P1, B)
             return loss, free_out
 
     pp_g = PipelineGraph()
@@ -85,8 +85,8 @@ def _test_graph_pipeline_delay_output(test_case):
     for i in range(3):
         x = flow.randn(16, 10)
         y = flow.randn(16, 10)
-        x = x.to_consistent(P0, B)
-        y = y.to_consistent(P0, B)
+        x = x.to_global(P0, B)
+        y = y.to_global(P0, B)
         if rank == 1:
             time.sleep(2)
         loss_pack_4, free_out = pp_g(x, y)

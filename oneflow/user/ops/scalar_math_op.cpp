@@ -58,6 +58,7 @@ IMPLEMENT_SCALAR_MATH_OP_FUNCS(ScalarAdd, GetSbp4ScalarMath)
 IMPLEMENT_SCALAR_MATH_OP_FUNCS(ScalarFloordiv, GetSbp4ScalarMath)
 IMPLEMENT_SCALAR_MATH_OP_FUNCS(ScalarFmod, GetSbp4ScalarMath)
 IMPLEMENT_SCALAR_MATH_OP_FUNCS(ScalarMul, GetSbp4ScalarMul)
+IMPLEMENT_SCALAR_MATH_OP_FUNCS(ScalarDiv, GetSbp4ScalarMul)
 IMPLEMENT_SCALAR_MATH_OP_FUNCS(ScalarPow, GetSbp4ScalarMath)
 #undef IMPLEMENT_SCALAR_MATH_OP_FUNCS
 
@@ -97,6 +98,26 @@ REGISTER_USER_OP_GRAD("scalar_mul")
         user_op::UserOpConfWrapperBuilder builder(op.op_name() + "_grad");
         user_op::UserOpConfWrapper grad_op =
             builder.Op("scalar_mul")
+                .Input("in", op.GetGradTensorWithOpOutput("out", 0))
+                .Output("out")
+                .Attr("has_int_operand", op.attr<bool>("has_int_operand"))
+                .Attr("int_operand", op.attr_or_default<int64_t>("int_operand", 0))
+                .Attr("has_float_operand", op.attr<bool>("has_float_operand"))
+                .Attr("float_operand", op.attr_or_default<double>("float_operand", 0.0))
+                .Build();
+        op.BindGradTensorWithOpInput(grad_op.output("out", 0), "in", 0);
+        AddOp(grad_op);
+      }
+      return Maybe<void>::Ok();
+    });
+
+REGISTER_USER_OP_GRAD("scalar_div")
+    .SetGenBackwardOpConfFn([](const user_op::UserOpWrapper& op,
+                               const user_op::AddOpFn& AddOp) -> Maybe<void> {
+      if (op.NeedGenGradTensor4OpInput("in", 0)) {
+        user_op::UserOpConfWrapperBuilder builder(op.op_name() + "_grad");
+        user_op::UserOpConfWrapper grad_op =
+            builder.Op("scalar_div")
                 .Input("in", op.GetGradTensorWithOpOutput("out", 0))
                 .Output("out")
                 .Attr("has_int_operand", op.attr<bool>("has_int_operand"))

@@ -32,9 +32,9 @@ namespace oneflow {
 }
 
 /* static */ Maybe<void> _ncclLogicalAllReduceOp::InferNdSbp(user_op::InferNdSbpFnContext* ctx) {
-  const cfg::NdSbp& in_dis_hint = ctx->NdSbpHint4InputArgNameAndIndex("in", 0);
-  cfg::NdSbp* in_distribution = ctx->NdSbp4ArgNameAndIndex("in", 0);
-  cfg::NdSbp* out_distribution = ctx->NdSbp4ArgNameAndIndex("out", 0);
+  const NdSbp& in_dis_hint = ctx->NdSbpHint4InputArgNameAndIndex("in", 0);
+  NdSbp* in_distribution = ctx->NdSbp4ArgNameAndIndex("in", 0);
+  NdSbp* out_distribution = ctx->NdSbp4ArgNameAndIndex("out", 0);
   CHECK_GE_OR_RETURN(in_dis_hint.sbp_parallel_size(), 1);
   for (const auto& sbp_hint : in_dis_hint.sbp_parallel()) {
     CHECK_OR_RETURN(sbp_hint.has_partial_sum_parallel());
@@ -76,9 +76,9 @@ namespace oneflow {
 
 /* static */ Maybe<void> _ncclLogicalReduceScatterOp::InferNdSbp(
     user_op::InferNdSbpFnContext* ctx) {
-  const cfg::NdSbp& in_dis_hint = ctx->NdSbpHint4InputArgNameAndIndex("in", 0);
-  cfg::NdSbp* in_distribution = ctx->NdSbp4ArgNameAndIndex("in", 0);
-  cfg::NdSbp* out_distribution = ctx->NdSbp4ArgNameAndIndex("out", 0);
+  const NdSbp& in_dis_hint = ctx->NdSbpHint4InputArgNameAndIndex("in", 0);
+  NdSbp* in_distribution = ctx->NdSbp4ArgNameAndIndex("in", 0);
+  NdSbp* out_distribution = ctx->NdSbp4ArgNameAndIndex("out", 0);
   CHECK_GE_OR_RETURN(in_dis_hint.sbp_parallel_size(), 1);
   for (const auto& sbp_hint : in_dis_hint.sbp_parallel()) {
     CHECK_OR_RETURN(sbp_hint.has_partial_sum_parallel());
@@ -119,9 +119,9 @@ namespace oneflow {
 }
 
 /* static */ Maybe<void> _ncclLogicalAllGatherOp::InferNdSbp(user_op::InferNdSbpFnContext* ctx) {
-  const cfg::NdSbp& in_dis_hint = ctx->NdSbpHint4InputArgNameAndIndex("in", 0);
-  cfg::NdSbp* in_distribution = ctx->NdSbp4ArgNameAndIndex("in", 0);
-  cfg::NdSbp* out_distribution = ctx->NdSbp4ArgNameAndIndex("out", 0);
+  const NdSbp& in_dis_hint = ctx->NdSbpHint4InputArgNameAndIndex("in", 0);
+  NdSbp* in_distribution = ctx->NdSbp4ArgNameAndIndex("in", 0);
+  NdSbp* out_distribution = ctx->NdSbp4ArgNameAndIndex("out", 0);
   CHECK_GE_OR_RETURN(in_dis_hint.sbp_parallel_size(), 1);
   for (const auto& sbp_hint : in_dis_hint.sbp_parallel()) {
     CHECK_OR_RETURN(sbp_hint.has_split_parallel());
@@ -164,7 +164,7 @@ namespace oneflow {
 
 /* static */ Maybe<void> _ncclLogicalAllGatherNoncontinuousOp::InferNdSbp(
     user_op::InferNdSbpFnContext* ctx) {
-  const cfg::NdSbp& in_dis_hint = ctx->NdSbpHint4InputArgNameAndIndex("in", 0);
+  const NdSbp& in_dis_hint = ctx->NdSbpHint4InputArgNameAndIndex("in", 0);
   CHECK_GE_OR_RETURN(in_dis_hint.sbp_parallel_size(), 1);
   const int64_t in_split_axis = ctx->user_op_conf().attr<int64_t>("in_split_axis");
   CHECK_GE_OR_RETURN(in_split_axis, 1);
@@ -173,8 +173,8 @@ namespace oneflow {
     CHECK_EQ_OR_RETURN(sbp_hint.split_parallel().axis(), in_split_axis);
   }
 
-  cfg::NdSbp* in_distribution = ctx->NdSbp4ArgNameAndIndex("in", 0);
-  cfg::NdSbp* out_distribution = ctx->NdSbp4ArgNameAndIndex("out", 0);
+  NdSbp* in_distribution = ctx->NdSbp4ArgNameAndIndex("in", 0);
+  NdSbp* out_distribution = ctx->NdSbp4ArgNameAndIndex("out", 0);
   in_distribution->clear_sbp_parallel();
   out_distribution->clear_sbp_parallel();
 
@@ -212,9 +212,9 @@ namespace oneflow {
 /* static */ Maybe<void> _ncclLogicalS2sOp::InferNdSbp(user_op::InferNdSbpFnContext* ctx) {
   const int64_t in_split_axis = ctx->user_op_conf().attr<int64_t>("in_split_axis");
   const int64_t out_split_axis = ctx->user_op_conf().attr<int64_t>("out_split_axis");
-  const cfg::NdSbp& in_dis_hint = ctx->NdSbpHint4InputArgNameAndIndex("in", 0);
-  cfg::NdSbp* in_distribution = ctx->NdSbp4ArgNameAndIndex("in", 0);
-  cfg::NdSbp* out_distribution = ctx->NdSbp4ArgNameAndIndex("out", 0);
+  const NdSbp& in_dis_hint = ctx->NdSbpHint4InputArgNameAndIndex("in", 0);
+  NdSbp* in_distribution = ctx->NdSbp4ArgNameAndIndex("in", 0);
+  NdSbp* out_distribution = ctx->NdSbp4ArgNameAndIndex("out", 0);
   CHECK_GE_OR_RETURN(in_dis_hint.sbp_parallel_size(), 1);
   for (const auto& sbp_hint : in_dis_hint.sbp_parallel()) {
     CHECK_OR_RETURN(sbp_hint.has_split_parallel());
