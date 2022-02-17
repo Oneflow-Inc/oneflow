@@ -36,6 +36,7 @@ void* TensorToMem(const user_op::Tensor* tensor) {
   switch (tensor->data_type()) {
     case DataType::kFloat: return TENSOR_MEM_CAST(float);
     case DataType::kDouble: return TENSOR_MEM_CAST(double);
+    case DataType::kBool: return TENSOR_MEM_CAST(bool);
     case DataType::kInt8: return TENSOR_MEM_CAST(int8_t);
     case DataType::kInt32: return TENSOR_MEM_CAST(int32_t);
     case DataType::kInt64: return TENSOR_MEM_CAST(int64_t);
@@ -79,6 +80,7 @@ void MemToTensor(void* array_data_ptr, const size_t size, user_op::Tensor* tenso
   switch (tensor->data_type()) {
     case DataType::kFloat: TENSOR_MEM_ASSIGN(float); break;
     case DataType::kDouble: TENSOR_MEM_ASSIGN(double); break;
+    case DataType::kBool: TENSOR_MEM_ASSIGN(bool); break;
     case DataType::kInt8: TENSOR_MEM_ASSIGN(int8_t); break;
     case DataType::kInt32: TENSOR_MEM_ASSIGN(int32_t); break;
     case DataType::kInt64: TENSOR_MEM_ASSIGN(int64_t); break;

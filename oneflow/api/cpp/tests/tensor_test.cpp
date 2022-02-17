@@ -70,6 +70,7 @@ TEST(Api, tensor_from_buffer_and_copy_to) {
 
   TEST_TENSOR_FROM_AND_TO_BLOB(DType::kFloat, float)
   TEST_TENSOR_FROM_AND_TO_BLOB(DType::kDouble, double)
+  TEST_TENSOR_FROM_AND_TO_BLOB(DType::kBool, bool)
   TEST_TENSOR_FROM_AND_TO_BLOB(DType::kInt8, int8_t)
   TEST_TENSOR_FROM_AND_TO_BLOB(DType::kInt32, int32_t)
   TEST_TENSOR_FROM_AND_TO_BLOB(DType::kInt64, int64_t)

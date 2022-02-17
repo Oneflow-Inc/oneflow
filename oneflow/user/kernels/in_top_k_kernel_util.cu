@@ -22,7 +22,7 @@ namespace {
 
 template<typename T>
 __global__ void InTopkGpu(const int instance_num, const int classes_num, const T* targets,
-                          const float* predictions, const int k, int8_t* out) {
+                          const float* predictions, const int k, bool* out) {
   CUDA_1D_KERNEL_LOOP(idx, instance_num) {
     T target = targets[idx];
     bool cannot_say = (target >= classes_num) || !isfinite(predictions[idx * classes_num + target]);
@@ -51,7 +51,7 @@ __global__ void InTopkGpu(const int instance_num, const int classes_num, const T
 template<typename T>
 struct InTopkKernelUtil<DeviceType::kCUDA, T> {
   static void InTopk(ep::Stream* stream, const int instance_num, const int classes_num,
-                     const T* targets, const float* predictions, const int k, int8_t* out) {
+                     const T* targets, const float* predictions, const int k, bool* out) {
     RUN_CUDA_KERNEL((InTopkGpu<T>), stream, instance_num, instance_num, classes_num, targets,
                     predictions, k, out);
   }

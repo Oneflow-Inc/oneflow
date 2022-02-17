@@ -23,7 +23,7 @@ namespace oneflow {
 template<DeviceType device_type, typename T>
 struct InTopkKernelUtil {
   static void InTopk(ep::Stream* stream, const int instance_num, const int classes_num,
-                     const T* targets, const float* predictions, const int k, int8_t* out);
+                     const T* targets, const float* predictions, const int k, bool* out);
 };
 }  // namespace oneflow
 

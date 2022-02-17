@@ -60,7 +60,7 @@ Maybe<void> PySliceUnpack(PyObject* object, Py_ssize_t* start, Py_ssize_t* stop,
 
 Maybe<DataType> InferScalarType(PyObject* object) {
   if (PyBool_Check(object)) {
-    return DataType::kUInt8;
+    return DataType::kBool;
   } else if (PyLong_Check(object)) {
     return DataType::kInt64;
   } else if (PyArray_Check(object)) {
@@ -156,7 +156,7 @@ Maybe<Tensor> ConvertToIndexingTensor(PyObject* object) {
   const auto& device = JUST(Device::New("cpu"));
 
   // index type must be integers
-  if (!IsIntegralDataType(dtype)) {
+  if (!(IsIntegralDataType(dtype) || (IsBoolDataType(dtype)))) {
     return Error::IndexError() << "only integers, slices (`:`), ellipsis (`...`), numpy.newaxis "
                                   "(`None`) and integer or boolean arrays are valid indices";
   }

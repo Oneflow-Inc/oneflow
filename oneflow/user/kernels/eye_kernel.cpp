@@ -46,6 +46,7 @@ class EyeKernel final : public OpKernel {
       && (user_op::HobAttr<DataType>("dtype") == GetDataType<dtype>::value));
 
 #define REGISTER_EYE_KERNELS_WITH_DEVICE(device) \
+  REGISTER_EYE_KERNEL(device, bool)              \
   REGISTER_EYE_KERNEL(device, uint8_t)           \
   REGISTER_EYE_KERNEL(device, int8_t)            \
   REGISTER_EYE_KERNEL(device, int32_t)           \

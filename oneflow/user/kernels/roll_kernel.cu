@@ -285,6 +285,7 @@ class GpuRollKernel final : public user_op::OpKernel {
 REGISTER_ROLL_KERNEL(float);
 REGISTER_ROLL_KERNEL(double);
 REGISTER_ROLL_KERNEL(float16);
+REGISTER_ROLL_KERNEL(bool);
 REGISTER_ROLL_KERNEL(uint8_t);
 REGISTER_ROLL_KERNEL(int8_t);
 REGISTER_ROLL_KERNEL(int32_t);

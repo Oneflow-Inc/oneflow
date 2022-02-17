@@ -26,14 +26,14 @@ using PackType = ulonglong2;
 
 union Pack {
   PackType p_value;
-  int8_t b_value[sizeof(PackType)];
+  bool b_value[sizeof(PackType)];
 };
 
-__device__ int8_t GenMask(curandState* state, const float rate) {
+__device__ bool GenMask(curandState* state, const float rate) {
   return curand_uniform(state) > rate;
 }
 
-__global__ void GenerateGpu(curandState* state, const int64_t n, const float rate, int8_t* mask) {
+__global__ void GenerateGpu(curandState* state, const int64_t n, const float rate, bool* mask) {
   const int id = blockIdx.x * blockDim.x + threadIdx.x;
   curandState localState = state[id];
   PackType* pack_mask = reinterpret_cast<PackType*>(mask);
@@ -52,7 +52,7 @@ __global__ void GenerateGpu(curandState* state, const int64_t n, const float rat
 }  // namespace
 
 void RandomMaskGenerator<DeviceType::kCUDA>::Generate(ep::Stream* stream, const int64_t n,
-                                                      const float rate, int8_t* mask) {
+                                                      const float rate, bool* mask) {
   int32_t block_num = generator_->max_block_num();
   int32_t thread_num = generator_->max_thread_num();
   auto* curand_states = generator_->curand_states();
