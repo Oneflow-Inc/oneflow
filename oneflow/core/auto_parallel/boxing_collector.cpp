@@ -294,8 +294,9 @@ Maybe<void> BoxingCollector::GenerateCombination4DiffHierarchy(
   for (int32_t i = 0; i < n; i++) {
     diag_node_diff_hierarchy_[i].resize(n);
     for (int32_t j = 0; j < n; j++) {
-      Generate1Combination4DiffHierarchy(i, j, boxing_collector_producer, boxing_collector_consumer,
-                                         diag_node_diff_hierarchy_[i][j]);
+      JUST(Generate1Combination4DiffHierarchy(i, j, boxing_collector_producer,
+                                              boxing_collector_consumer,
+                                              diag_node_diff_hierarchy_[i][j]));
     }
   }
 
@@ -324,15 +325,13 @@ Maybe<void> BoxingCollector::GenerateCombination4DiffPlacement(
   return Maybe<void>::Ok();
 }
 
-// Generate the transfer rule for different combinations with different placements
-Maybe<void> BoxingCollector::GenerateCombination4DiffPlacement(
-    BoxingCollector* boxing_collector_producer, BoxingCollector* boxing_collector_consumer,
+// The cost for transferring a 1D sbp between different placements
+Maybe<void> BoxingCollector::ComputeCostFor1DSbpDiffPlacement(
     const BlobDesc& blob_desc, const ParallelDesc& in_parallel_desc,
-    const ParallelDesc& out_parallel_desc) {
+    const ParallelDesc& out_parallel_desc,
+    std::vector<std::vector<double>>& cost_4_diff_placement) {
   // Number of 1d sbp
   int32_t m = id2SbpParallel_.size();
-  // The cost for transferring a 1D sbp between different placements
-  std::vector<std::vector<double>> cost_4_diff_placement;
   // Compute the cost while transferring a 1D sbp between different placements
   cost_4_diff_placement.resize(m);
   for (int32_t id_1d_producer = 0; id_1d_producer < m; id_1d_producer++) {
@@ -348,6 +347,19 @@ Maybe<void> BoxingCollector::GenerateCombination4DiffPlacement(
           out_parallel_desc, false));
     }
   }
+  return Maybe<void>::Ok();
+}
+
+// Generate the transfer rule for different combinations with different placements
+Maybe<void> BoxingCollector::GenerateCombination4DiffPlacement(
+    BoxingCollector* boxing_collector_producer, BoxingCollector* boxing_collector_consumer,
+    const BlobDesc& blob_desc, const ParallelDesc& in_parallel_desc,
+    const ParallelDesc& out_parallel_desc) {
+  // The cost for transferring a 1D sbp between different placements
+  std::vector<std::vector<double>> cost_4_diff_placement;
+  // Compute the cost while transferring a 1D sbp between different placements
+  JUST(ComputeCostFor1DSbpDiffPlacement(blob_desc, in_parallel_desc, out_parallel_desc,
+                                        cost_4_diff_placement));
 
   // Search the path that contains two of the diagonal sbp
   int32_t n = nd_sbp_lists_.size();
@@ -355,8 +367,9 @@ Maybe<void> BoxingCollector::GenerateCombination4DiffPlacement(
   for (int32_t i = 0; i < n; i++) {
     diag_node_diff_placement_[i].resize(n);
     for (int32_t j = 0; j < n; j++) {
-      Generate1Combination4DiffPlacement(i, j, boxing_collector_producer, boxing_collector_consumer,
-                                         cost_4_diff_placement, diag_node_diff_placement_[i][j]);
+      JUST(Generate1Combination4DiffPlacement(i, j, boxing_collector_producer,
+                                              boxing_collector_consumer, cost_4_diff_placement,
+                                              diag_node_diff_placement_[i][j]));
     }
   }
 
@@ -731,7 +744,7 @@ Maybe<void> BoxingCollector::AskSbpCombination4Same2DPlacement(
 
   // Customized boxing collector and try the algorithm again
   BoxingCollector customized_boxing_collector;
-  customized_boxing_collector.Init(logical_blob_desc, producer_parallel_desc);
+  JUST(customized_boxing_collector.Init(logical_blob_desc, producer_parallel_desc));
   JUST(customized_boxing_collector.AskSbpCombination4Same2DPlacement(
       sbp_producer, sbp_consumer, logical_blob_desc, producer_parallel_desc, consumer_parallel_desc,
       /*is_customized=*/true, middle_sbps, diag_node_pos, compute_cost));
@@ -744,8 +757,6 @@ Maybe<void> BoxingCollector::AskSbpCombination4DiffHierarchy(
     const BlobDesc& logical_blob_desc, const ParallelDesc& producer_parallel_desc,
     const ParallelDesc& consumer_parallel_desc, bool is_customized,
     std::vector<cfg::NdSbp>& middle_sbps, int32_t* diag_node_pos, bool compute_cost) {
-  CHECK_OR_RETURN(producer_parallel_desc.EqualsIgnoringHierarchy(consumer_parallel_desc))
-  "Producer and consumer have different placements, Please use AskSbpCombination directly";
   // Find the 2D sbp id
   int32_t i = FindId4NdSbp(sbp_producer);
   int32_t j = FindId4NdSbp(sbp_consumer);
@@ -772,17 +783,45 @@ Maybe<void> BoxingCollector::AskSbpCombination4DiffHierarchy(
     }
   }
   // Customized boxing collector and try the algorithm again
+  if (is_customized) {
+    CHECK_OR_RETURN(compute_cost) << "Boxing does not support " << NdSbpToString(sbp_producer)
+                                  << "[hierarchy: " << *producer_parallel_desc.hierarchy()
+                                  << "] -> " << NdSbpToString(sbp_consumer)
+                                  << "[hierarchy: " << *consumer_parallel_desc.hierarchy()
+                                  << "] for blob shape: " << logical_blob_desc.shape();
+    return Maybe<void>::Ok();
+  }
   // Customize boxing collector for producer
   BoxingCollector customized_boxing_collector_producer;
-  customized_boxing_collector_producer.Init(logical_blob_desc, producer_parallel_desc);
+  JUST(customized_boxing_collector_producer.Init(logical_blob_desc, producer_parallel_desc));
   // Customize boxing collector for consumer
   BoxingCollector customized_boxing_collector_consumer;
-  customized_boxing_collector_consumer.Init(logical_blob_desc, consumer_parallel_desc);
-  // Generate the combination table for different hierarchies or placements
+  JUST(customized_boxing_collector_consumer.Init(logical_blob_desc, consumer_parallel_desc));
 
-  JUST(customized_boxing_collector_producer.AskSbpCombination4Same2DPlacement(
+  std::vector<std::vector<int32_t>> diag_nodes;
+  // Generate the combination table for different hierarchies or placements
+  if (same_placement) {
+    JUST(customized_boxing_collector_producer.Generate1Combination4DiffHierarchy(
+        customized_boxing_collector_producer.FindId4NdSbp(sbp_producer),
+        customized_boxing_collector_consumer.FindId4NdSbp(sbp_consumer),
+        &customized_boxing_collector_producer, &customized_boxing_collector_consumer, diag_nodes));
+  } else {
+    // Compute the cost while transferring a 1D sbp between different placements
+    std::vector<std::vector<double>> cost_4_diff_placement;
+    JUST(ComputeCostFor1DSbpDiffPlacement(logical_blob_desc, producer_parallel_desc,
+                                          consumer_parallel_desc, cost_4_diff_placement));
+
+    JUST(customized_boxing_collector_producer.Generate1Combination4DiffPlacement(
+        customized_boxing_collector_producer.FindId4NdSbp(sbp_producer),
+        customized_boxing_collector_consumer.FindId4NdSbp(sbp_consumer),
+        &customized_boxing_collector_producer, &customized_boxing_collector_consumer,
+        cost_4_diff_placement, diag_nodes));
+  }
+
+  JUST(customized_boxing_collector_producer.Ask1Combination4DiffPlacement(
       sbp_producer, sbp_consumer, logical_blob_desc, producer_parallel_desc, consumer_parallel_desc,
-      /*is_customized=*/true, middle_sbps, diag_node_pos, compute_cost));
+      /*is_customized=*/true, middle_sbps, diag_node_pos, compute_cost,
+      &customized_boxing_collector_producer, &customized_boxing_collector_consumer, diag_nodes));
   return Maybe<void>::Ok();
 }
 

@@ -104,6 +104,11 @@ class BoxingCollector final {
                                                  BoxingCollector* boxing_collector_producer,
                                                  BoxingCollector* boxing_collector_consumer,
                                                  std::vector<std::vector<int32_t>>& diag_nodes);
+  // The cost for transferring a 1D sbp between different placements
+  Maybe<void> ComputeCostFor1DSbpDiffPlacement(
+      const BlobDesc& blob_desc, const ParallelDesc& in_parallel_desc,
+      const ParallelDesc& out_parallel_desc,
+      std::vector<std::vector<double>>& cost_4_diff_placement);
   // Generate the transfer rule for one combination with different placements
   // id_producer -> id_consumer.
   Maybe<void> Generate1Combination4DiffPlacement(
