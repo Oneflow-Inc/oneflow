@@ -47,7 +47,8 @@ class BoxingCollector final {
   Maybe<void> GenerateCombination4SamePlacement(int32_t max_middle_node_num);
   // Generate the transfer rule for different combinations with different hierarchies
   // on the same placement
-  Maybe<void> GenerateCombination4DiffHierarchy(int32_t max_middle_node_num);
+  Maybe<void> GenerateCombination4DiffHierarchy(BoxingCollector* boxing_collector_producer,
+                                                BoxingCollector* boxing_collector_consumer);
   // Generate the transfer rule for different combinations with different placements
   Maybe<void> GenerateCombination4DiffPlacement(int32_t max_middle_node_num);
   // Print the cost and middle nodes
@@ -57,13 +58,13 @@ class BoxingCollector final {
   // resonable cost, error occurs.
   // If compute_cost is true, then no error occur even if no suitable middle nodes paths found.
   // For different placements, we would return a diagonal node.
-  // Before this diagonal node (< *diag_node), we use the parallel description of the producer.
-  // After this diagonal node (>= *diag_node), we use the parallel description of the consumer.
+  // Before this diagonal node (< *diag_node_pos), we use the parallel description of the producer.
+  // After this diagonal node (>= *diag_node_pos), we use the parallel description of the consumer.
   Maybe<void> AskSbpCombination(const cfg::NdSbp& sbp_producer, const cfg::NdSbp& sbp_consumer,
                                 const BlobDesc& logical_blob_desc,
                                 const ParallelDesc& producer_parallel_desc,
                                 const ParallelDesc& consumer_parallel_desc, bool is_customized,
-                                std::vector<cfg::NdSbp>& middle_sbps, int32_t* diag_node,
+                                std::vector<cfg::NdSbp>& middle_sbps, int32_t* diag_node_pos,
                                 bool compute_cost);
   // Filter nd sbp from nd_sbp_lists_ with given logical shape
   Maybe<void> FilterNdSbpList4LogicalShape(const BlobDesc& logical_blob_desc,
@@ -79,13 +80,13 @@ class BoxingCollector final {
       const cfg::NdSbp& sbp_producer, const cfg::NdSbp& sbp_consumer,
       const BlobDesc& logical_blob_desc, const ParallelDesc& producer_parallel_desc,
       const ParallelDesc& consumer_parallel_desc, bool is_customized,
-      std::vector<cfg::NdSbp>& middle_sbps, int32_t* diag_node, bool compute_cost);
+      std::vector<cfg::NdSbp>& middle_sbps, int32_t* diag_node_pos, bool compute_cost);
   // Ask for sbp combination with different hierarchies on the same placement
   Maybe<void> AskSbpCombination4DiffHierarchy(
       const cfg::NdSbp& sbp_producer, const cfg::NdSbp& sbp_consumer,
       const BlobDesc& logical_blob_desc, const ParallelDesc& producer_parallel_desc,
       const ParallelDesc& consumer_parallel_desc, bool is_customized,
-      std::vector<cfg::NdSbp>& middle_sbps, int32_t* diag_node, bool compute_cost);
+      std::vector<cfg::NdSbp>& middle_sbps, int32_t* diag_node_pos, bool compute_cost);
   // Generate the transfer rule for one combination with different hierarchies on the same
   // placement. id_producer -> id_consumer.
   Maybe<void> Generate1Combination4DiffHierarchy(int32_t id_producer, int32_t id_consumer,
@@ -109,13 +110,13 @@ class BoxingCollector final {
   // The diagonal middle node for differe placements
   std::vector<std::vector<std::vector<std::vector<int32_t>>>> diag_node_diff_placement_;
   // The diagonal middle node for differe hierarchies in the same placement
-  std::vector<std::vector<std::vector<int32_t>>> diag_node_diff_hierarchy_;
+  std::vector<std::vector<std::vector<std::vector<int32_t>>>> diag_node_diff_hierarchy_;
   // Id Map from 1d sbp to 2d sbp
   // For example: B -> (B, B), S0 -> (S0, S0)
   std::vector<int32_t> id_1d_2_2d_;
   // Two boxing collector to deal with different placement.
-  BoxingCollector* boxing_collector_producer;
-  BoxingCollector* boxing_collector_consumer;
+  BoxingCollector* boxing_collector_producer_;
+  BoxingCollector* boxing_collector_consumer_;
 };  // class BoxingCollector
 
 }  // namespace oneflow
