@@ -15,12 +15,17 @@ limitations under the License.
 */
 #include "oneflow/core/framework/framework.h"
 #include "oneflow/core/framework/op_generated.h"
+#include "oneflow/user/ops/source_op_util.h"
 
 namespace oneflow {
 
 /* static */ Maybe<void> ConstantOp::InferLogicalTensorDesc(user_op::InferContext* ctx) {
   *ctx->OutputShape("out", 0) = Shape(ctx->Attr<Shape>("shape").dim_vec());
   return Maybe<void>::Ok();
+}
+
+/*static*/ Maybe<void> ConstantOp::InferPhysicalTensorDesc(user_op::InferContext* ctx) {
+  return user_op::InferSourceOpPhysicalTensorDesc(ctx);
 }
 
 /* static */ Maybe<void> ConstantOp::GetSbp(user_op::SbpContext* ctx) { return Maybe<void>::Ok(); }

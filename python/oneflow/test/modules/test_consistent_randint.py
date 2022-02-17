@@ -65,7 +65,7 @@ class TestRandintConsistent(flow.unittest.TestCase):
         ]
         for shape in shapes:
             for placement in all_placement():
-                for sbp in all_sbp(placement, max_dim=len(shape)):
+                for sbp in all_sbp(placement, max_dim=len(shape), except_partial_sum=True):
                     for dtype in dtypes:
                         _test_consistent_randint(
                             test_case, shape, placement, sbp, dtype
