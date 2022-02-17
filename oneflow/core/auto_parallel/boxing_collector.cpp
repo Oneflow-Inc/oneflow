@@ -264,8 +264,6 @@ Maybe<void> BoxingCollector::GenerateCombination4SamePlacement(int32_t max_middl
 Maybe<void> BoxingCollector::GenerateCombination4DiffHierarchy(
     BoxingCollector* boxing_collector_producer, BoxingCollector* boxing_collector_consumer) {
   // Store the boxing collector pointer
-  boxing_collector_producer_ = boxing_collector_producer;
-  boxing_collector_consumer_ = boxing_collector_consumer;
 
   // Search the path that contains one of the diagonal sbp
   int32_t n = nd_sbp_lists_.size();
@@ -273,7 +271,8 @@ Maybe<void> BoxingCollector::GenerateCombination4DiffHierarchy(
   for (int32_t i = 0; i < n; i++) {
     diag_node_diff_hierarchy_[i].resize(n);
     for (int32_t j = 0; j < n; j++) {
-      Generate1Combination4DiffHierarchy(i, j, diag_node_diff_hierarchy_[i][j]);
+      Generate1Combination4DiffHierarchy(i, j, boxing_collector_producer, boxing_collector_consumer,
+                                         diag_node_diff_hierarchy_[i][j]);
     }
   }
 
@@ -788,70 +787,10 @@ Maybe<void> BoxingCollector::AskSbpCombination4DiffHierarchy(
            "Please run JUST(GenerateCombination4DiffHierarchy(6)); "
            "before Asking sbp combination for different parallel description.";
 
-    // Pick the path with minimum storage for the diagonal node
-    // NOTE: For simplicity, We do not dig into those storage cost for the other middle nodes at
-    // this moment.
-    double min_cost = GetValidMaxCopyCost();
-    int32_t producer_hierarchy_num_axes = producer_parallel_desc.hierarchy()->NumAxes();
-    int32_t consumer_hierarchy_num_axes = consumer_parallel_desc.hierarchy()->NumAxes();
-    int32_t min_diag_producer = -1, min_diag_consumer = -1;
-    for (const auto& diag_nodes : diag_node_diff_hierarchy_[i][j]) {
-      Shape logical_shape = logical_blob_desc.shape();
-      // We do not check whether such shape is valid under two side of the sbp list in the
-      // middle nodes algorithm. Thus, we need to check them here.
-      double curr_cost =
-          Storage4NdSbp(*JUST(SetNdSbpDim(boxing_collector_producer_->nd_sbp_lists_[diag_nodes[0]],
-                                          producer_hierarchy_num_axes)),
-                        logical_shape, *producer_parallel_desc.hierarchy());
-      // Check the shape for both producer and consumer.
-      logical_shape = logical_blob_desc.shape();
-      curr_cost +=
-          Storage4NdSbp(*JUST(SetNdSbpDim(boxing_collector_consumer_->nd_sbp_lists_[diag_nodes[1]],
-                                          consumer_hierarchy_num_axes)),
-                        logical_shape, *producer_parallel_desc.hierarchy());
-      if (curr_cost < min_cost) {
-        min_cost = curr_cost;
-        min_diag_producer = diag_nodes[0];
-        min_diag_consumer = diag_nodes[1];
-      }
-    }
-
-    // If we found a diagonal middle node with current boxing collector
-    if (min_diag_producer >= 0) {
-      std::vector<cfg::NdSbp> middle_sbps_buffer;
-      bool diff_sbp4consumer =
-          boxing_collector_consumer_->FindId4NdSbp(sbp_consumer) != min_diag_consumer;
-      // Find the middle nodes between the producer and the diagonal node
-      if (boxing_collector_producer_->FindId4NdSbp(sbp_producer) != min_diag_producer) {
-        JUST(AskSbpCombination(
-            sbp_producer, boxing_collector_producer_->nd_sbp_lists_[min_diag_producer],
-            logical_blob_desc, producer_parallel_desc, producer_parallel_desc,
-            /*is_customized=*/false, middle_sbps_buffer, diag_node_pos, compute_cost));
-        // Add the path into middle_sbps
-        for (auto& middle_sbp : middle_sbps_buffer) {
-          middle_sbps.emplace_back(SetNdSbpDim(middle_sbp, producer_hierarchy_num_axes));
-        }
-        if (diff_sbp4consumer) {
-          middle_sbps.emplace_back(
-              SetNdSbpDim(boxing_collector_producer_->nd_sbp_lists_[min_diag_producer],
-                          producer_hierarchy_num_axes));
-        }
-      }
-      // Find the middle nodes between the diagonal node and the consumer
-      if (diff_sbp4consumer) {
-        JUST(AskSbpCombination(
-            boxing_collector_consumer_->nd_sbp_lists_[min_diag_consumer], sbp_consumer,
-            logical_blob_desc, consumer_parallel_desc, consumer_parallel_desc,
-            /*is_customized=*/false, middle_sbps_buffer, diag_node_pos, compute_cost));
-        // Set the diagonal node position and stop using it as buffer
-        *diag_node_pos = middle_sbps.size();
-        // Add the path into middle_sbps
-
-        for (auto& middle_sbp : middle_sbps_buffer) {
-          middle_sbps.emplace_back(JUST(SetNdSbpDim(middle_sbp, consumer_hierarchy_num_axes)));
-        }
-      }
-    }
+    Ask1Combination4DiffHierarchy(sbp_producer, sbp_consumer, logical_blob_desc,
+                                  producer_parallel_desc, consumer_parallel_desc, is_customized,
+                                  middle_sbps, diag_node_pos, compute_cost, this, this,
+                                  diag_node_diff_hierarchy_[i][j]);
   }
   // Customized boxing collector and try the algorithm again
   // Customize boxing collector for producer
@@ -881,7 +820,8 @@ Maybe<void> BoxingCollector::AskSbpCombination4DiffHierarchy(
 // Generate the transfer rule for one combination with different hierarchies on the same
 // placement. id_producer -> id_consumer.
 Maybe<void> BoxingCollector::Generate1Combination4DiffHierarchy(
-    int32_t id_producer, int32_t id_consumer, std::vector<std::vector<int32_t>>& diag_nodes) {
+    int32_t id_producer, int32_t id_consumer, BoxingCollector* boxing_collector_producer,
+    BoxingCollector* boxing_collector_consumer, std::vector<std::vector<int32_t>>& diag_nodes) {
   // Number of 1d sbp
   int32_t m = id2SbpParallel_.size();
 
@@ -895,31 +835,31 @@ Maybe<void> BoxingCollector::Generate1Combination4DiffHierarchy(
   for (int32_t id_1d = 0; id_1d < m; id_1d++) {
     // We do not support [2, 3]: (S0, S1) -> [6]: S0 for a tensor with shape (14, 21)
     // Thus, the diagonal node should suit both the hierarchies.
-    int32_t diag_producer = boxing_collector_producer_->id_1d_2_2d_[id_1d];
+    int32_t diag_producer = boxing_collector_producer->id_1d_2_2d_[id_1d];
     if (diag_producer < 0) { continue; }
-    int32_t diag_consumer = boxing_collector_consumer_->id_1d_2_2d_[id_1d];
+    int32_t diag_consumer = boxing_collector_consumer->id_1d_2_2d_[id_1d];
     if (diag_consumer < 0) { continue; }
     // Find the path with minimum number of nodes
     int32_t path_length = 0;
     // Transfer from id_producer to id_2d
-    if (boxing_collector_producer_->middle_nodes_[id_producer][diag_producer].size() > 0) {
+    if (boxing_collector_producer->middle_nodes_[id_producer][diag_producer].size() > 0) {
       path_length +=
-          boxing_collector_producer_->middle_nodes_[id_producer][diag_producer][0].size() + 1;
+          boxing_collector_producer->middle_nodes_[id_producer][diag_producer][0].size() + 1;
     } else if (id_producer != diag_producer) {
       path_length++;
     }
     // Transfer from id_2d to id_consumer
-    if (boxing_collector_consumer_->middle_nodes_[diag_consumer][id_consumer].size() > 0) {
+    if (boxing_collector_consumer->middle_nodes_[diag_consumer][id_consumer].size() > 0) {
       path_length +=
-          boxing_collector_consumer_->middle_nodes_[diag_consumer][id_consumer][0].size() + 1;
+          boxing_collector_consumer->middle_nodes_[diag_consumer][id_consumer][0].size() + 1;
     } else if (diag_consumer != id_consumer) {
       path_length++;
     }
     // Pick the path with minimum copy cost
     if (path_length <= min_path_length) {
       double curr_cost =
-          boxing_collector_producer_->minimum_copy_cost_[id_producer][diag_producer]
-          + boxing_collector_consumer_->minimum_copy_cost_[diag_consumer][id_consumer];
+          boxing_collector_producer->minimum_copy_cost_[id_producer][diag_producer]
+          + boxing_collector_consumer->minimum_copy_cost_[diag_consumer][id_consumer];
 
       min_path_length = path_length;
       // Find a candidate with small cost
@@ -938,6 +878,90 @@ Maybe<void> BoxingCollector::Generate1Combination4DiffHierarchy(
   }
 
   return Maybe<void>::Ok();
+}
+
+// Ask for one combination with different hierarchies
+Maybe<void> BoxingCollector::Ask1Combination4DiffHierarchy(
+    const cfg::NdSbp& sbp_producer, const cfg::NdSbp& sbp_consumer,
+    const BlobDesc& logical_blob_desc, const ParallelDesc& producer_parallel_desc,
+    const ParallelDesc& consumer_parallel_desc, bool is_customized,
+    std::vector<cfg::NdSbp>& middle_sbps, int32_t* diag_node_pos, bool compute_cost,
+    BoxingCollector* boxing_collector_producer, BoxingCollector* boxing_collector_consumer,
+    std::vector<std::vector<int32_t>>& diag_nodes) {
+  // Pick the path with minimum storage for the diagonal node
+  int32_t id_producer = boxing_collector_producer->FindId4NdSbp(sbp_producer);
+  if (id_producer < 0) {
+    CHECK_OR_RETURN(compute_cost) << logical_blob_desc.shape() << " has an invalid sbp "
+                                  << NdSbpToString(sbp_producer);
+  }
+  int32_t id_consumer = boxing_collector_consumer->FindId4NdSbp(sbp_consumer);
+  if (id_consumer < 0) {
+    CHECK_OR_RETURN(compute_cost) << logical_blob_desc.shape() << " has an invalid sbp "
+                                  << NdSbpToString(sbp_consumer);
+  }
+  // NOTE: For simplicity, We do not dig into those storage cost for the other middle nodes at
+  // this moment.
+  double min_cost = GetValidMaxCopyCost();
+  int32_t producer_hierarchy_num_axes = producer_parallel_desc.hierarchy()->NumAxes();
+  int32_t consumer_hierarchy_num_axes = consumer_parallel_desc.hierarchy()->NumAxes();
+  int32_t min_diag_producer = -1, min_diag_consumer = -1;
+  for (const auto& diag_pair : diag_nodes) {
+    Shape logical_shape = logical_blob_desc.shape();
+    // We do not check whether such shape is valid under two side of the sbp list in the
+    // middle nodes algorithm. Thus, we need to check them here.
+    double curr_cost =
+        Storage4NdSbp(*JUST(SetNdSbpDim(boxing_collector_producer->nd_sbp_lists_[diag_pair[0]],
+                                        producer_hierarchy_num_axes)),
+                      logical_shape, *producer_parallel_desc.hierarchy());
+    // Check the shape for both producer and consumer.
+    logical_shape = logical_blob_desc.shape();
+    curr_cost +=
+        Storage4NdSbp(*JUST(SetNdSbpDim(boxing_collector_consumer->nd_sbp_lists_[diag_pair[1]],
+                                        consumer_hierarchy_num_axes)),
+                      logical_shape, *consumer_parallel_desc.hierarchy());
+    if (curr_cost < min_cost) {
+      min_cost = curr_cost;
+      min_diag_producer = diag_pair[0];
+      min_diag_consumer = diag_pair[1];
+    }
+  }
+
+  // If we found a diagonal middle node with current boxing collector
+  if (min_diag_producer >= 0) {
+    std::vector<cfg::NdSbp> middle_sbps_buffer;
+    bool diff_sbp4consumer =
+        id_consumer != min_diag_consumer;
+    // Find the middle nodes between the producer and the diagonal node
+    if (id_producer != min_diag_producer) {
+      JUST(boxing_collector_producer->AskSbpCombination(
+          sbp_producer, boxing_collector_producer->nd_sbp_lists_[min_diag_producer],
+          logical_blob_desc, producer_parallel_desc, producer_parallel_desc,
+          /*is_customized=*/false, middle_sbps_buffer, diag_node_pos, compute_cost));
+      // Add the path into middle_sbps
+      for (auto& middle_sbp : middle_sbps_buffer) {
+        middle_sbps.emplace_back(SetNdSbpDim(middle_sbp, producer_hierarchy_num_axes));
+      }
+      if (diff_sbp4consumer) {
+        middle_sbps.emplace_back(
+            SetNdSbpDim(boxing_collector_producer->nd_sbp_lists_[min_diag_producer],
+                        producer_hierarchy_num_axes));
+      }
+    }
+    // Find the middle nodes between the diagonal node and the consumer
+    if (diff_sbp4consumer) {
+      JUST(boxing_collector_consumer->AskSbpCombination(
+          boxing_collector_consumer->nd_sbp_lists_[min_diag_consumer], sbp_consumer,
+          logical_blob_desc, consumer_parallel_desc, consumer_parallel_desc,
+          /*is_customized=*/false, middle_sbps_buffer, diag_node_pos, compute_cost));
+      // Set the diagonal node position and stop using it as buffer
+      *diag_node_pos = middle_sbps.size();
+      // Add the path into middle_sbps
+
+      for (auto& middle_sbp : middle_sbps_buffer) {
+        middle_sbps.emplace_back(JUST(SetNdSbpDim(middle_sbp, consumer_hierarchy_num_axes)));
+      }
+    }
+  }
 }
 
 // Filter nd sbp from nd_sbp_lists_ with given logical shape

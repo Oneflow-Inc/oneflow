@@ -90,7 +90,17 @@ class BoxingCollector final {
   // Generate the transfer rule for one combination with different hierarchies on the same
   // placement. id_producer -> id_consumer.
   Maybe<void> Generate1Combination4DiffHierarchy(int32_t id_producer, int32_t id_consumer,
+                                                 BoxingCollector* boxing_collector_producer,
+                                                 BoxingCollector* boxing_collector_consumer,
                                                  std::vector<std::vector<int32_t>>& diag_nodes);
+  // Ask for one combination with different hierarchies
+  Maybe<void> Ask1Combination4DiffHierarchy(
+      const cfg::NdSbp& sbp_producer, const cfg::NdSbp& sbp_consumer,
+      const BlobDesc& logical_blob_desc, const ParallelDesc& producer_parallel_desc,
+      const ParallelDesc& consumer_parallel_desc, bool is_customized,
+      std::vector<cfg::NdSbp>& middle_sbps, int32_t* diag_node_pos, bool compute_cost,
+      BoxingCollector* boxing_collector_producer, BoxingCollector* boxing_collector_consumer,
+      std::vector<std::vector<int32_t>>& diag_nodes);
   // Stores all the possible cfg::SbpParallel.
   HashMap<::oneflow::cfg::SbpParallel, int32_t> SbpParallelUniverse_;
   // Relationship between id and Sbp Parallel
@@ -114,9 +124,6 @@ class BoxingCollector final {
   // Id Map from 1d sbp to 2d sbp
   // For example: B -> (B, B), S0 -> (S0, S0)
   std::vector<int32_t> id_1d_2_2d_;
-  // Two boxing collector to deal with different placement.
-  BoxingCollector* boxing_collector_producer_;
-  BoxingCollector* boxing_collector_consumer_;
 };  // class BoxingCollector
 
 }  // namespace oneflow
