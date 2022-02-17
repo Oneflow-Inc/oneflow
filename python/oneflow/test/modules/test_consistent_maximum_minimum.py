@@ -73,7 +73,7 @@ def _test_broadcast_minimum(test_case, placement, x_sbp, y_sbp):
     return z
 
 
-class TestBinaryMathOps(flow.unittest.TestCase):
+class TestMaximumMinimumOps(flow.unittest.TestCase):
     @globaltest
     def test_maximum_minimum(test_case):
         for placement in all_placement():
