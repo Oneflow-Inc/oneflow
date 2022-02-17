@@ -49,7 +49,7 @@ class ChainedScheduler(LRScheduler):
         if len(schedulers) == 0:
             raise ValueError("length of list of schedulers must be greater than 0")
 
-        opt = schedulers[0]
+        opt = schedulers[0].optimizer
 
         for i in range(1, len(schedulers)):
             if schedulers[i].optimizer != opt:
@@ -65,10 +65,10 @@ class ChainedScheduler(LRScheduler):
         self.last_step += 1
         lrs = self.schedulers[0].base_lrs
         for i, scheduler in enumerate(self.schedulers):
-            if i > 0:
-                scheduler.base_lrs = lrs
-
+            origin_lrs = scheduler.base_lrs
+            scheduler.base_lrs = lrs
             lrs = scheduler.get_lr(self.last_step)
+            scheduler.base_lrs = origin_lrs
             scheduler.last_step = self.last_step
 
         self.update_lrs(lrs)
