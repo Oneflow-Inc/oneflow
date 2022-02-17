@@ -103,6 +103,8 @@ class TensorInfo final {
   explicit TensorInfo(const Tensor& tensor);
 
   Maybe<Tensor> zeros() const;
+  Optional<Symbol<ParallelDesc>> GetPlacement() { return parallel_desc_; }
+  Optional<Symbol<NdSbp>> GetSBP() { return nd_sbp_; }
 
  private:
   std::shared_ptr<const Shape> shape_;

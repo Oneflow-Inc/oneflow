@@ -66,6 +66,14 @@ class Module(object):
     def forward(self, *args, **kwargs):
         raise NotImplementedError()
 
+    @contextmanager
+    def no_global_param_grad_sync(self):
+        flag = oneflow._oneflow_internal.GetGlobalParamGradSync()
+        if flag:
+            oneflow._oneflow_internal.SetGlobalParamGradSync(false)
+            yield
+            oneflow._oneflow_internal.SetGlobalParamGradSync(flag)
+
     def __call__(self, *args, **kwargs):
         for hook in itertools.chain(self._forward_pre_hooks.values()):
             result = hook(self, args)

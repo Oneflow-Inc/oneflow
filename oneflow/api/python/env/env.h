@@ -93,6 +93,17 @@ inline Maybe<void> SetFLAGS_v(int32_t v_level) {
   return Maybe<void>::Ok();
 }
 inline Maybe<int32_t> GetFLAGS_v() { return FLAGS_v; }
+
+inline Maybe<void> SetGlobalParamGradSync(bool flag) {
+  CHECK_NOTNULL_OR_RETURN((Global<bool, GlobalParamGradSync>::Get()));
+  *Global<bool, GlobalParamGradSync>::Get() = flag;
+  return Maybe<void>::Ok();
+}
+
+inline Maybe<bool> GetGlobalParamGradSync() {
+  auto flag = *Global<bool, GlobalParamGradSync>::Get();
+  return flag;
+}
 }  // namespace oneflow
 
 #endif  // ONEFLOW_API_PYTHON_ENV_ENV_H_

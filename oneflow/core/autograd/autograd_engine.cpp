@@ -25,6 +25,7 @@ limitations under the License.
 #include "oneflow/core/autograd/autograd_mode.h"
 #include "oneflow/core/eager/dev_vm_dep_object_consume_mode.h"
 #include "oneflow/core/functional/functional.h"
+#include "oneflow/api/python/env/env_api.h"
 
 namespace oneflow {
 namespace one {
@@ -144,9 +145,28 @@ Maybe<void> FunctionNode::AccGrad4RetainGradTensor() {
 }
 
 Maybe<void> FunctionNode::AccGrad4LeafTensor(bool create_graph) {
-  for (const std::shared_ptr<AutogradMeta>& out : output_meta_data_) {
+  // for (const std::shared_ptr<AutogradMeta>& out : output_meta_data_) {
+  for (auto i = 0; i < output_meta_data_.size(); i++) {
+    auto& out = output_meta_data_[i];
+
     if (out->is_leaf() && out->requires_grad()) {
       JUST(CopyOrAccGrad(out.get(), /*autograd_mode=*/false));
+
+      // control acc_grad to do boxing conditionally
+      const auto& acc_grad = out->acc_grad();
+      if (JUST(GetGlobalParamGradSync()) && acc_grad->is_consistent()) {
+        auto& tensor_info = output_tensor_infos_[i];
+        const auto& placement = JUST(tensor_info.GetPlacement());
+        const auto& nd_sbp = JUST(tensor_info.GetSBP());
+        std::vector<Symbol<SbpParallel>> sbp_tuple(nd_sbp->sbp_parallel().size());
+        for (auto i = 0; i < sbp_tuple.size(); ++i) {
+          sbp_tuple[i] = nd_sbp->sbp_parallel().Get(i);
+        }
+        std::vector<Symbol<SbpParallel>> grad_sbp_tuple;
+        functional::ToConsistent(acc_grad, placement, sbp_tuple, grad_sbp_tuple);
+
+        JUST(out->set_acc_grad(acc_grad));
+      }
     }
   }
   return Maybe<void>::Ok();

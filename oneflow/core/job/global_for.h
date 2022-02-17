@@ -27,6 +27,7 @@ class EagerExecution {};
 
 class MultiClient {};
 
+class GlobalParamGradSync {};
 }  // namespace oneflow
 
 #endif  // ONEFLOW_CORE_JOB_GLOBAL_FOR_H_
