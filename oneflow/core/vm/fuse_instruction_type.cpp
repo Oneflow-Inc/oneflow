@@ -45,7 +45,6 @@ class FuseInstructionType : public vm::InstructionType {
     last_instr_msg->instr_type_id().instruction_type().InitInstructionStatusIf(instruction);
   }
 
-  void Infer(vm::Instruction* instruction) const override { UNIMPLEMENTED(); }
   void Compute(vm::Instruction* instruction) const override {
     const auto& phy_instr_operand = instruction->instr_msg().phy_instr_operand();
     auto* ptr = dynamic_cast<vm::FusePhyInstrOperand*>(phy_instr_operand.get());
