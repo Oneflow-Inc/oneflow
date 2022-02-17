@@ -23,6 +23,7 @@ limitations under the License.
 #include "oneflow/core/job/sbp_parallel.cfg.h"
 #include "oneflow/core/job/sbp_parallel.h"
 #include "oneflow/core/job/sbp_parallel.pb.h"
+#include "oneflow/core/register/blob_desc.h"
 #include "oneflow/core/rpc/include/global_process_ctx.h"
 #include "oneflow/core/framework/sbp_infer_util.h"
 #include "oneflow/core/job/parallel_desc.h"
@@ -88,12 +89,12 @@ Maybe<void> BoxingCollector::Init(int32_t max_axis) {
   GenerateNdSbpList(2);
   GenerateMap1d2nd();
   JUST(GenerateCombination4SamePlacement(3));
-  JUST(GenerateCombination4DiffHierarchy(3));
-  JUST(GenerateCombination4DiffHierarchy(3));
+  JUST(GenerateCombination4DiffHierarchy(this, this));
+  JUST(GenerateCombination4DiffPlacement(this, this));
   return Maybe<void>::Ok();
 }
 
-// Init with given blob description
+// Customized initialization with given blob and parallel description
 Maybe<void> BoxingCollector::Init(const BlobDesc& logical_blob_desc,
                                   const ParallelDesc& parallel_desc) {
   CollectUniverse(logical_blob_desc.shape().NumAxes());
@@ -101,7 +102,7 @@ Maybe<void> BoxingCollector::Init(const BlobDesc& logical_blob_desc,
   // Filter out unsuitable middle nodes before computing minimum cost.
   JUST(FilterNdSbpList4LogicalShape(logical_blob_desc, *parallel_desc.hierarchy()));
   GenerateMap1d2nd();
-  JUST(GenerateCombination4SamePlacement(5));
+  JUST(GenerateCombination4SamePlacement(5, logical_blob_desc, parallel_desc));
   return Maybe<void>::Ok();
 }
 
@@ -186,10 +187,18 @@ Maybe<void> BoxingCollector::GenerateCombination4SamePlacement(int32_t max_middl
   // NOTE: The performance of this function are all the same with different hierarchy
   int32_t kWorldSize = GlobalProcessCtx::WorldSize();
   Shape hierarchy44({4 * kWorldSize, 4 * kWorldSize});
-  std::shared_ptr<Shape> in_hierarchy = std::make_shared<Shape>(hierarchy44);
-  auto in_parallel_desc = JUST(ParallelDesc::New(
-      "cpu", {"0:0-" + std::to_string(hierarchy44.elem_cnt() - 1)}, in_hierarchy));
+  std::shared_ptr<Shape> virtual_hierarchy = std::make_shared<Shape>(hierarchy44);
+  auto parallel_desc = JUST(ParallelDesc::New(
+      "cpu", {"0:0-" + std::to_string(hierarchy44.elem_cnt() - 1)}, virtual_hierarchy));
   BlobDesc blob_desc({16, 16, 16, 16}, DataType::kInt8, /*is_dynamic=*/false);
+  JUST(GenerateCombination4SamePlacement(max_middle_node_num, blob_desc, *parallel_desc));
+  return Maybe<void>::Ok();
+}
+
+// Generate the transfer rule for different combinations with the same hierarchie
+Maybe<void> BoxingCollector::GenerateCombination4SamePlacement(int32_t max_middle_node_num,
+                                                               const BlobDesc& blob_desc,
+                                                               const ParallelDesc& parallel_desc) {
   // Store the origin transfer cost information
   int32_t n = nd_sbp_lists_.size();
   minimum_copy_cost_.resize(n);
@@ -201,7 +210,7 @@ Maybe<void> BoxingCollector::GenerateCombination4SamePlacement(int32_t max_middl
       // Get copy cost in lazy mode
       LazyMode::Guard enable_lazy_mode(true);
       minimum_copy_cost_[i][j] = JUST(ComputeLazyCopyCostBetweenNdSbp(
-          nd_sbp_lists_[i], nd_sbp_lists_[j], blob_desc, *in_parallel_desc, *in_parallel_desc,
+          nd_sbp_lists_[i], nd_sbp_lists_[j], blob_desc, parallel_desc, parallel_desc,
           /*is_same_sbp=*/false));
     }
   }
@@ -296,7 +305,7 @@ Maybe<void> BoxingCollector::GenerateCombination4DiffHierarchy(
 // Generate the transfer rule for different combinations with different placements
 Maybe<void> BoxingCollector::GenerateCombination4DiffPlacement(
     BoxingCollector* boxing_collector_producer, BoxingCollector* boxing_collector_consumer) {
-  // Virtual hierarchies
+  // Virtual parallel and blob description
   int32_t kWorldSize = GlobalProcessCtx::WorldSize();
   BlobDesc blob_desc({16, 16, 16, 16}, DataType::kInt8, /*is_dynamic=*/false);
   // Virtual placements before transfer
@@ -310,6 +319,16 @@ Maybe<void> BoxingCollector::GenerateCombination4DiffPlacement(
   auto out_parallel_desc = JUST(ParallelDesc::New(
       "cpu", {"0:0-" + std::to_string(out_hierarchy44.elem_cnt() - 1)}, out_hierarchy));
 
+  JUST(GenerateCombination4DiffPlacement(boxing_collector_producer, boxing_collector_consumer,
+                                         blob_desc, *in_parallel_desc, *out_parallel_desc));
+  return Maybe<void>::Ok();
+}
+
+// Generate the transfer rule for different combinations with different placements
+Maybe<void> BoxingCollector::GenerateCombination4DiffPlacement(
+    BoxingCollector* boxing_collector_producer, BoxingCollector* boxing_collector_consumer,
+    const BlobDesc& blob_desc, const ParallelDesc& in_parallel_desc,
+    const ParallelDesc& out_parallel_desc) {
   // Number of 1d sbp
   int32_t m = id2SbpParallel_.size();
   // The cost for transferring a 1D sbp between different placements
@@ -325,8 +344,8 @@ Maybe<void> BoxingCollector::GenerateCombination4DiffPlacement(
       int32_t diag_consumer = id_1d_2_nd_[id_1d_consumer];
       if (diag_consumer < 0) { continue; }
       cost_4_diff_placement[id_1d_producer][id_1d_consumer] = JUST(ComputeLazyCopyCostBetweenNdSbp(
-          nd_sbp_lists_[id_1d_producer], nd_sbp_lists_[diag_consumer], blob_desc, *in_parallel_desc,
-          *out_parallel_desc, false));
+          nd_sbp_lists_[id_1d_producer], nd_sbp_lists_[diag_consumer], blob_desc, in_parallel_desc,
+          out_parallel_desc, false));
     }
   }
 
@@ -503,7 +522,7 @@ Maybe<void> BoxingCollector::AskSbpCombination(
         // [4]: P -> [2, 2]: (S0, S1)
         CHECK_OR_RETURN(diag_node_diff_hierarchy_.size() > 0)
             << "Have not initialzie the combination table for different hierarchies yet! "
-               "Please run JUST(GenerateCombination4DiffHierarchy(6, false)); "
+               "Please run JUST(GenerateCombination4DiffHierarchy(this, this)); "
                "before Asking sbp combination for different parallel description.";
         diag_nodes = &(diag_node_diff_hierarchy_[i][j]);
       } else {
@@ -512,7 +531,7 @@ Maybe<void> BoxingCollector::AskSbpCombination(
         // [2, 2]: (P, S0) -> [5, 3]: (P, S0)
         CHECK_OR_RETURN(diag_node_diff_placement_.size() > 0)
             << "Have not initialzie the combination table for different placements yet! "
-               "Please run JUST(GenerateCombination4DiffHierarchy(6, true)); "
+               "Please run JUST(GenerateCombination4DiffPlacement(this, this)); "
                "before Asking sbp combination for different parallel description.";
         diag_nodes = &(diag_node_diff_placement_[i][j]);
       }

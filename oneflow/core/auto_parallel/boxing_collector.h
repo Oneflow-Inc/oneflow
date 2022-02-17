@@ -47,6 +47,9 @@ class BoxingCollector final {
   void GenerateMap1d2nd();
   // Generate the transfer rule for different combinations with the same hierarchy
   Maybe<void> GenerateCombination4SamePlacement(int32_t max_middle_node_num);
+  Maybe<void> GenerateCombination4SamePlacement(int32_t max_middle_node_num,
+                                                const BlobDesc& blob_desc,
+                                                const ParallelDesc& parallel_desc);
   // Generate the transfer rule for different combinations with different hierarchies
   // on the same placement
   Maybe<void> GenerateCombination4DiffHierarchy(BoxingCollector* boxing_collector_producer,
@@ -54,6 +57,11 @@ class BoxingCollector final {
   // Generate the transfer rule for different combinations with different placements
   Maybe<void> GenerateCombination4DiffPlacement(BoxingCollector* boxing_collector_producer,
                                                 BoxingCollector* boxing_collector_consumer);
+  Maybe<void> GenerateCombination4DiffPlacement(BoxingCollector* boxing_collector_producer,
+                                                BoxingCollector* boxing_collector_consumer,
+                                                const BlobDesc& blob_desc,
+                                                const ParallelDesc& in_parallel_desc,
+                                                const ParallelDesc& out_parallel_desc);
   // Print the cost and middle nodes
   void PrintBoxingTables();
   // Ask if the boxing algorithm accepts the current sbp combination
