@@ -68,7 +68,6 @@ class Stream final : public intrusive::Base {
   int64_t machine_id() const;
   int64_t device_id() const;
   const StreamType& stream_type() const;
-  const StreamTypeId& stream_type_id() const;
 
  private:
   void MoveToFreeList(intrusive::shared_ptr<Instruction>&& instruction);
