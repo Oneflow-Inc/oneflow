@@ -27,7 +27,7 @@ namespace oneflow {
 /* static */ Maybe<void> OFRecordReaderOp::InferPhysicalTensorDesc(user_op::InferContext* ctx) {
   user_op::TensorDesc* out_tensor = ctx->OutputTensorDesc("out", 0);
   int32_t batch_size = ctx->Attr<int32_t>("batch_size");
-  const cfg::SbpParallel& sbp = ctx->SbpParallel4ArgNameAndIndex("out", 0);
+  const SbpParallel& sbp = ctx->SbpParallel4ArgNameAndIndex("out", 0);
   int64_t parallel_num = ctx->parallel_ctx().parallel_num();
   if (sbp.has_split_parallel() && parallel_num > 1) {
     CHECK_EQ_OR_RETURN(batch_size % parallel_num, 0);
@@ -53,7 +53,7 @@ namespace oneflow {
 }
 
 /* static */ Maybe<void> OFRecordReaderOp::InferNdSbp(user_op::InferNdSbpFnContext* ctx) {
-  cfg::SbpParallel default_sbp;
+  SbpParallel default_sbp;
   default_sbp.mutable_split_parallel()->set_axis(0);
   return user_op::InferNdSbp4SrcOp(ctx, default_sbp);
 }
