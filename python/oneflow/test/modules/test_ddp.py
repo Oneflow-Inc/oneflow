@@ -64,6 +64,47 @@ class TestDDP(flow.unittest.TestCase):
         for dev_type in test_device:
             test_case._test_ddp_basic(dev_type)
 
+    def _test_ddp_multiple_buckets(test_case, dev_type):
+        class Mul(flow.nn.Module):
+            def __init__(self):
+                super().__init__()
+                for i in range(10):
+                    self.register_parameter(
+                        f"w{i}", flow.nn.Parameter(flow.Tensor([i % 2 + 1, i % 2 + 1]))
+                    )
+
+            def forward(self, x):
+                for i in range(10):
+                    x = x * getattr(self, f"w{i}")
+                return x
+
+        rank = flow.env.get_rank()
+        if rank == 0:
+            x = flow.Tensor([1, 1])
+        elif rank == 1:
+            x = flow.Tensor([2, 2])
+        else:
+            raise ValueError()
+
+        x = x.to(dev_type)
+        m = Mul().to(dev_type)
+        m = ddp(m, bucket_size=3)
+
+        y = m(x)
+        y.sum().backward()
+
+        for i in range(10):
+            test_case.assertTrue(
+                np_allclose_with_shape(
+                    getattr(m, f"w{i}").grad.numpy(),
+                    np.array([48, 48]) if i % 2 == 0 else np.array([24, 24]),
+                )
+            )
+
+    def test_ddp_multiple_buckets(test_case):
+        for dev_type in test_device:
+            test_case._test_ddp_multiple_buckets(dev_type)
+
     def _test_ddp_with_unused_param(test_case, dev_type):
         class Model(flow.nn.Module):
             def __init__(self):
@@ -88,7 +129,7 @@ class TestDDP(flow.unittest.TestCase):
 
         x = x.to(dev_type)
         m = Model().to(dev_type)
-        m = ddp(m)
+        m = ddp(m, bucket_size=2)
         y = m(x)
         y.backward()
 
@@ -133,7 +174,7 @@ class TestDDP(flow.unittest.TestCase):
 
         x = x.to(dev_type)
         m = Model().to(dev_type)
-        m = ddp(m)
+        m = ddp(m, bucket_size=1)
         y = m(x)
         y.backward()
 
@@ -144,6 +185,37 @@ class TestDDP(flow.unittest.TestCase):
     def test_out_of_order_execution(test_case):
         for dev_type in test_device:
             test_case._test_out_of_order_execution(dev_type)
+
+    def _test_ddp_two_iters(test_case, dev_type):
+        class Mul(flow.nn.Module):
+            def __init__(self):
+                super().__init__()
+                self.w = flow.nn.Parameter(flow.Tensor([1, 1]))
+
+            def forward(self, x):
+                return x * self.w
+
+        rank = flow.env.get_rank()
+        if rank == 0:
+            x = flow.Tensor([1, 1])
+        elif rank == 1:
+            x = flow.Tensor([2, 2])
+        else:
+            raise ValueError()
+
+        x = x.to(dev_type)
+        m = Mul().to(dev_type)
+        m = ddp(m)
+
+        for _ in range(2):
+            y = m(x)
+            y.sum().backward()
+
+        test_case.assertTrue(np_allclose_with_shape(m.w.grad.numpy(), np.array([3, 3])))
+
+    def test_ddp_two_iters(test_case):
+        for dev_type in test_device:
+            test_case._test_ddp_two_iters(dev_type)
 
     def _test_broadcast_buffer(test_case, dev_type):
         rank = flow.env.get_rank()

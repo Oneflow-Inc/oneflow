@@ -14,6 +14,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 """
 from typing import Union
+import os
 
 import oneflow as flow
 from oneflow.nn.module import Module
@@ -80,6 +81,7 @@ class _FusedBatchNorm(_FusedNormBase):
         track_running_stats=True,
     ):
         super().__init__(num_features, eps, momentum, affine, track_running_stats)
+        self.channel_axis = 1
 
     def forward(self, x, addend=None):
         self._check_input_dim(x)
@@ -97,7 +99,7 @@ class _FusedBatchNorm(_FusedNormBase):
             self.running_var if not self.training or self.track_running_stats else None,
             self.weight,
             self.bias,
-            axis=1,
+            axis=self.channel_axis,
             epsilon=self.eps,
             momentum=self.momentum,
             is_training=is_training,
@@ -256,6 +258,18 @@ class FusedBatchNorm2d(_FusedBatchNorm):
         >>> y = m(x, addend=None)
 
     """
+
+    def __init__(
+        self,
+        num_features,
+        eps=1e-05,
+        momentum=0.1,
+        affine=True,
+        track_running_stats=True,
+    ):
+        super().__init__(num_features, eps, momentum, affine, track_running_stats)
+        if os.getenv("ONEFLOW_ENABLE_NHWC") == "1":
+            self.channel_axis = 3
 
     def _check_input_dim(self, input):
         if input.ndim != 4:

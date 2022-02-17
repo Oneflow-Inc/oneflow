@@ -57,7 +57,6 @@ from oneflow._C import upsample
 from oneflow._C import triplet_margin_loss
 from oneflow._C import ctc_greedy_decoder
 from oneflow._C import one_hot
-from oneflow._C import l2_normalize
 from oneflow._C import normalize
 from oneflow._C import soft_target_cross_entropy
 from oneflow._C import jsd_cross_entropy

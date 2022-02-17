@@ -47,8 +47,7 @@ class DimScatterKernel final : public user_op::OpKernel {
     } else if (like_tensor) {
       Memset<device_type>(ctx->stream(), output, 0, out_bytes_size);
     } else {
-      std::cerr << "Unimplemented Error" << std::endl;
-      throw Error::UnimplementedError();  // TODO: Remove throw Error.
+      UNIMPLEMENTED() << "Input tensor and like tensor cannot be empty simultaneously.";
     }
 
     const int ndim = src_tensor->shape().NumAxes();

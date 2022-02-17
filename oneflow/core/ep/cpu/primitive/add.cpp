@@ -88,6 +88,10 @@ class AddOneDnnImpl : public Add {
     for (int i = 1; i < arity; i++) {
       if (srcs[i] == dst) { LOG(FATAL) << "Only the first parameter can be operated inplace"; }
     }
+    CpuStream* cpu_stream = stream->As<CpuStream>();
+    size_t num_threads = static_cast<CpuDevice*>(cpu_stream->device())->GetNumThreads();
+    CpuNumThreadsGuard guard(num_threads);
+
     dnnl::engine* onednn_engine = stream->As<CpuStream>()->onednn_engine();
     dnnl::stream* onednn_stream = stream->As<CpuStream>()->onednn_stream();
 
@@ -144,6 +148,7 @@ std::unique_ptr<Add> NewOneDnnAdd() {
   CPU_PRIMITIVE_ONEDNN_BFLOAT16_TYPE_SEQ
 
 #define CPU_PRIMITIVE_ADD_DEFAULT_TYPE_SEQ \
+  CPU_PRIMITIVE_BOOL_TYPE_SEQ              \
   CPU_PRIMITIVE_CHAR_TYPE_SEQ              \
   CPU_PRIMITIVE_DOUBLE_TYPE_SEQ            \
   CPU_PRIMITIVE_INT64_TYPE_SEQ

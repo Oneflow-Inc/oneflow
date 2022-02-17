@@ -93,7 +93,7 @@ class IndexedSlicesUpdateOpKernelCache final : public user_op::OpKernelCache {
 
 std::shared_ptr<user_op::OpKernelCache> CreateIndexedSlicesUpdateOpKernelCache(
     user_op::KernelCacheContext* ctx) {
-  const cfg::SbpParallel& model_sbp = ctx->SbpParallel4ArgNameAndIndex("model", 0);
+  const SbpParallel& model_sbp = ctx->SbpParallel4ArgNameAndIndex("model", 0);
   const user_op::TensorDesc* model_logical_desc =
       ctx->LogicalTensorDesc4ArgNameAndIndex("model", 0);
   const int64_t num_model_instances = model_logical_desc->shape().At(0);
@@ -676,15 +676,13 @@ class LambUpdateKernel final : public user_op::OpKernel, public user_op::CudaGra
 
  private:
   void Compute(user_op::KernelComputeContext* ctx) const override {
-    const user_op::Tensor* learning_rate = ctx->Tensor4ArgNameAndIndex("learning_rate", 0);
     const user_op::Tensor* model_diff = ctx->Tensor4ArgNameAndIndex("model_diff", 0);
     user_op::Tensor* model = ctx->Tensor4ArgNameAndIndex("model", 0);
     user_op::Tensor* m = ctx->Tensor4ArgNameAndIndex("m", 0);
     user_op::Tensor* v = ctx->Tensor4ArgNameAndIndex("v", 0);
-    user_op::Tensor* beta1_t = ctx->Tensor4ArgNameAndIndex("beta1_t", 0);
-    user_op::Tensor* beta2_t = ctx->Tensor4ArgNameAndIndex("beta2_t", 0);
     user_op::Tensor* tmp_buffer = ctx->Tensor4ArgNameAndIndex("tmp_buffer", 0);
     LambTmpBufferManager<device_type, T> tbm(tmp_buffer->mut_dptr(), model->shape().elem_cnt());
+
     const auto scale = ctx->Attr<double>("scale");
     const auto l1 = ctx->Attr<float>("l1");
     const auto l2 = ctx->Attr<float>("l2");
@@ -692,6 +690,31 @@ class LambUpdateKernel final : public user_op::OpKernel, public user_op::CudaGra
     const auto beta2 = ctx->Attr<float>("beta2");
     const auto epsilon = ctx->Attr<float>("epsilon");
     const auto weight_decay = ctx->Attr<float>("weight_decay");
+
+    const bool do_bias_correction = ctx->Attr<bool>("do_bias_correction");
+    const float bias_correction1_val = ctx->Attr<float>("bias_correction1_val");
+    const float* bias_correction1_ptr = nullptr;
+    if (ctx->has_input("bias_correction1", 0)) {
+      const user_op::Tensor* bias_correction1 = ctx->Tensor4ArgNameAndIndex("bias_correction1", 0);
+      // Just for Lazy optional input check.
+      CHECK_EQ(bias_correction1->shape().elem_cnt(), 1);
+      bias_correction1_ptr = bias_correction1->dptr<float>();
+    }
+    const float bias_correction2_val = ctx->Attr<float>("bias_correction2_val");
+    const float* bias_correction2_ptr = nullptr;
+    if (ctx->has_input("bias_correction2", 0)) {
+      const user_op::Tensor* bias_correction2 = ctx->Tensor4ArgNameAndIndex("bias_correction2", 0);
+      CHECK_EQ(bias_correction2->shape().elem_cnt(), 1);
+      bias_correction2_ptr = bias_correction2->dptr<float>();
+    }
+
+    const float learning_rate_val = ctx->Attr<float>("learning_rate_val");
+    const float* learning_rate_ptr = nullptr;
+    if (ctx->has_input("learning_rate", 0)) {
+      const user_op::Tensor* learning_rate = ctx->Tensor4ArgNameAndIndex("learning_rate", 0);
+      learning_rate_ptr = learning_rate->dptr<float>();
+    }
+
     const T* scale_by_ptr = nullptr;
     if (ctx->has_input("scale_by_tensor", 0)) {
       const user_op::Tensor* scale_by_tensor = ctx->Tensor4ArgNameAndIndex("scale_by_tensor", 0);
@@ -699,17 +722,20 @@ class LambUpdateKernel final : public user_op::OpKernel, public user_op::CudaGra
       CHECK_EQ(scale_by_tensor->shape().elem_cnt(), 1);
       scale_by_ptr = scale_by_tensor->dptr<T>();
     }
+
     const int64_t* skip_if_ptr = nullptr;
     if (ctx->has_input("skip_if", 0)) {
       const user_op::Tensor* skip_if = ctx->Tensor4ArgNameAndIndex("skip_if", 0);
       CHECK_EQ(skip_if->shape().elem_cnt(), 1);
       skip_if_ptr = skip_if->dptr<int64_t>();
     }
+
     LambUpdateKernelUtil<device_type, T, G>::Update(
         ctx->stream(), m->shape().elem_cnt(), scale, l1, l2, beta1, beta2, epsilon, weight_decay,
-        learning_rate->dptr<float>(), scale_by_ptr, skip_if_ptr, model_diff->dptr<G>(),
-        tbm.AdamDiffPtr(), model->mut_dptr<T>(), m->mut_dptr<T>(), v->mut_dptr<T>(),
-        tbm.NormBufferPtr(), beta1_t->mut_dptr<T>(), beta2_t->mut_dptr<T>());
+        learning_rate_val, do_bias_correction, bias_correction1_val, bias_correction2_val,
+        learning_rate_ptr, bias_correction1_ptr, bias_correction2_ptr, scale_by_ptr, skip_if_ptr,
+        model_diff->dptr<G>(), tbm.AdamDiffPtr(), model->mut_dptr<T>(), m->mut_dptr<T>(),
+        v->mut_dptr<T>(), tbm.NormBufferPtr());
   }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return true; }
 };

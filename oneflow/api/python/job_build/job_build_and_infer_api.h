@@ -90,8 +90,9 @@ inline bool JobBuildAndInferCtx_IsDynamic(const std::string& job_name, const std
   return oneflow::JobBuildAndInferCtx_IsDynamic(job_name, lbn).GetOrThrow();
 }
 
-inline bool JobBuildAndInferCtx_DisableBoxing(const std::string& job_name, const std::string& lbn) {
-  return oneflow::JobBuildAndInferCtx_DisableBoxing(job_name, lbn).GetOrThrow();
+inline bool JobBuildAndInferCtx_IsDisableBoxing(const std::string& job_name,
+                                                const std::string& lbn) {
+  return oneflow::JobBuildAndInferCtx_IsDisableBoxing(job_name, lbn).GetOrThrow();
 }
 
 inline std::string JobBuildAndInferCtx_GetSplitAxisFromProducerView(const std::string& job_name,

@@ -28,5 +28,5 @@ def BalancedRanges(total, part_size):
     for part_num in balanced_part_nums:
         end = start + part_num
         ranges.append((start, end))
-        start == end
+        start = end
     return ranges

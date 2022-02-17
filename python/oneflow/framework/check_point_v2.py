@@ -123,11 +123,11 @@ ValueContainer = Union[FileBackendVariableBlob, np.ndarray, "oneflow.Tensor"]
 
 
 def _LoadSingleVariable(
-    path: Optional[str], consistent_src_rank: Optional[int] = None
+    path: Optional[str], global_src_rank: Optional[int] = None
 ) -> "flow.Tensor":
-    if consistent_src_rank is not None:
+    if global_src_rank is not None:
         rank = flow.env.get_rank()
-        if rank == consistent_src_rank:
+        if rank == global_src_rank:
             assert isinstance(path, str)
             file_backed_blob = FileBackendVariableBlob(path)
             loaded = flow.tensor(
@@ -135,8 +135,8 @@ def _LoadSingleVariable(
             ).to("cuda")
         else:
             loaded = flow.tensor([]).to("cuda")
-        loaded = loaded.to_consistent(
-            flow.placement("cuda", [consistent_src_rank]), flow.sbp.broadcast
+        loaded = loaded.to_global(
+            flow.placement("cuda", [global_src_rank]), flow.sbp.broadcast
         )
         return loaded
 
@@ -154,14 +154,14 @@ def _broadcast_py_object(obj, src: int = 0):
 
 
 # NOTE(jianhao):
-# (de)serializing a container of consistent tensors requires the order
+# (de)serializing a container of global tensors requires the order
 # of those tensors are the same across all ranks.
 def tensor_getstate(self):
     if save_load_path is not None:
         # save_load_path is not None means setstate/getstate is called inside
         # flow.save or flow.load
         assert isinstance(save_load_path, Path)
-        if consistent_src_dsk_rank is None:
+        if global_src_dsk_rank is None:
             assert self.is_local
             rel_dir_name = id_util.UniqueStr("tensor_")
             abs_dir_name = save_load_path / rel_dir_name
@@ -169,26 +169,30 @@ def tensor_getstate(self):
             tensor = self
         else:
             assert not self.is_local
-            rel_dir_name = f"consistent_tensor_{self.consistent_id()}"
+            rel_dir_name = f"global_tensor_{self.global_id()}"
             abs_dir_name = save_load_path / rel_dir_name
 
-            tensor = self.to_consistent(
-                sbp=[flow.sbp.broadcast] * len(self.sbp)
-            ).to_local()
-        if (
-            consistent_src_dsk_rank is None
-            or consistent_src_dsk_rank == flow.env.get_rank()
-        ):
+            tensor = self.to_global(sbp=[flow.sbp.broadcast] * len(self.sbp)).to_local()
+        if global_src_dsk_rank is None or global_src_dsk_rank == flow.env.get_rank():
             _save_tensor_to_disk(tensor, abs_dir_name)
 
         return {"path": rel_dir_name}
     else:
         # save_load_path is None means setstate/getstate is called inside
         # methods other than flow.save/load, for example, copy.deepcopy
-        assert (
-            self.is_local
-        ), "copy.deepcopy and similar methods only support local tensors"
-        return {"data": self.numpy(), "dtype": self.dtype}
+        if self.is_local:
+            if self.is_cuda:
+                device = "cuda"
+            else:
+                device = "cpu"
+            return {"data": self.numpy(), "dtype": self.dtype, "device": device}
+        else:
+            return {
+                "data": self.numpy(),
+                "dtype": self.dtype,
+                "placement": self.placement,
+                "sbp": self.sbp,
+            }
 
 
 def tensor_setstate(self, pickle_dict):
@@ -196,36 +200,63 @@ def tensor_setstate(self, pickle_dict):
         assert isinstance(save_load_path, Path)
         rel_dir_name = pickle_dict["path"]
         abs_dir_name = save_load_path / rel_dir_name
-        self.__init__(_LoadSingleVariable(str(abs_dir_name), consistent_src_dsk_rank))
+        self.__init__(_LoadSingleVariable(str(abs_dir_name), global_src_dsk_rank))
     else:
-        return self.__init__(
-            flow.tensor(pickle_dict["data"], dtype=pickle_dict["dtype"])
-        )
+        if "placement" in pickle_dict:
+            return self.__init__(
+                flow.tensor(
+                    pickle_dict["data"],
+                    dtype=pickle_dict["dtype"],
+                    placement=pickle_dict["placement"],
+                    sbp=pickle_dict["sbp"],
+                )
+            )
+        else:
+            return self.__init__(
+                flow.tensor(
+                    pickle_dict["data"],
+                    dtype=pickle_dict["dtype"],
+                    device=pickle_dict["device"],
+                )
+            )
+
+
+def placement_getstate(self):
+    return {
+        "type": self.type,
+        "ranks": self.ranks,
+    }
+
+
+def placement_setstate(self, state):
+    return self.__init__(state["type"], state["ranks"])
 
 
 def RegisterMethods():
     Tensor.__setstate__ = tensor_setstate
     Tensor.__getstate__ = tensor_getstate
+    flow._oneflow_internal.placement.__getstate__ = placement_getstate
+    flow._oneflow_internal.placement.__setstate__ = placement_setstate
 
 
 def legacy_load(
-    path: Union[str, Path], consistent_src_rank: Optional[int] = None,
+    path: Union[str, Path], global_src_rank: Optional[int] = None,
 ) -> Dict[str, "flow.Tensor"]:
     assert os.path.isdir(path), "Directory {} doesn't exist!".format(path)
     rank = flow.env.get_rank()
     var_dict = {}
-    if consistent_src_rank is None or rank == consistent_src_rank:
+    if global_src_rank is None or rank == global_src_rank:
         all_files = os.listdir(path)
         assert SNAPSHOT_DONE_FILENAME in all_files
         all_files.remove(SNAPSHOT_DONE_FILENAME)
-        if consistent_src_rank is not None:
-            _broadcast_py_object(all_files, consistent_src_rank)
+        if global_src_rank is not None:
+            _broadcast_py_object(all_files, global_src_rank)
     else:
-        all_files = _broadcast_py_object(None, consistent_src_rank)
+        all_files = _broadcast_py_object(None, global_src_rank)
     for f in all_files:
         var_dir = os.path.join(path, f)
         try:
-            var_dict[f] = _LoadSingleVariable(var_dir, consistent_src_rank)
+            var_dict[f] = _LoadSingleVariable(var_dir, global_src_rank)
         except FileNotFoundError:
             warnings.warn(
                 f"'{var_dir}' does not have valid tensor data. Please check it if it is unexpected.",
@@ -235,29 +266,29 @@ def legacy_load(
 
 
 @contextmanager
-def tensor_pickling_context(path: Path, consistent_src_dst_rank: int):
+def tensor_pickling_context(path: Path, global_src_dst_rank: int):
     global save_load_path
-    global consistent_src_dsk_rank
-    consistent_src_dsk_rank = consistent_src_dst_rank
+    global global_src_dsk_rank
+    global_src_dsk_rank = global_src_dst_rank
     save_load_path = path
     try:
         yield
     finally:
-        consistent_src_dsk_rank = None
+        global_src_dsk_rank = None
         save_load_path = None
 
 
-def load(path: str, consistent_src_rank: Optional[int] = None,) -> Any:
+def load(path: str, global_src_rank: Optional[int] = None,) -> Any:
     r"""Loads an object saved with oneflow.save() from a directory.
 
     Args:
         path (str): The directory containing the object
-        consistent_src_rank (int, optional): The source rank for 
-            loading consistent tensors. When specified, only the 
-            process whose rank == consistent_src_rank will really
+        global_src_rank (int, optional): The source rank for 
+            loading global tensors. When specified, only the 
+            process whose rank == global_src_rank will really
             read the files in `path`, and tensors in the loaded
             object will be consistent with placement = 
-            `flow.placement('cuda', [consistent_src_rank])`
+            `flow.placement('cuda', [global_src_rank])`
 
     Returns:
         The loaded object
@@ -266,42 +297,42 @@ def load(path: str, consistent_src_rank: Optional[int] = None,) -> Any:
     assert path.is_dir(), "Directory {} doesn't exist!".format(path)
     pickle_path = path / PICKLE_FILENAME
     rank = flow.env.get_rank()
-    if consistent_src_rank is None or consistent_src_rank == rank:
+    if global_src_rank is None or global_src_rank == rank:
         is_legacy = not pickle_path.exists()
-        if consistent_src_rank is not None:
-            _broadcast_py_object(is_legacy, consistent_src_rank)
+        if global_src_rank is not None:
+            _broadcast_py_object(is_legacy, global_src_rank)
     else:
-        is_legacy = _broadcast_py_object(None, consistent_src_rank)
+        is_legacy = _broadcast_py_object(None, global_src_rank)
     if is_legacy:
-        return legacy_load(path, consistent_src_rank)
+        return legacy_load(path, global_src_rank)
 
-    if consistent_src_rank is not None:
-        if rank == consistent_src_rank:
+    if global_src_rank is not None:
+        if rank == global_src_rank:
             pickle_bytes = pickle_path.read_bytes()
-            _broadcast_py_object(pickle_bytes, consistent_src_rank)
+            _broadcast_py_object(pickle_bytes, global_src_rank)
         else:
-            pickle_bytes = _broadcast_py_object(None, consistent_src_rank)
+            pickle_bytes = _broadcast_py_object(None, global_src_rank)
     else:
         pickle_bytes = pickle_path.read_bytes()
 
-    with tensor_pickling_context(path, consistent_src_rank):
+    with tensor_pickling_context(path, global_src_rank):
         res = pickle.loads(pickle_bytes)
     assert res["protocol_version"] == PROTOCOL_VERSION
     return res["data"]
 
 
 def save(
-    obj: Any, path: Union[str, Path], consistent_dst_rank: Optional[int] = None,
+    obj: Any, path: Union[str, Path], global_dst_rank: Optional[int] = None,
 ) -> None:
     r"""Save an object to a directory.
 
     Args:
         obj: The object to be saved
         path (str): The directory in which the object is saved
-        consistent_dst_rank (int, optional): The destination rank for 
-            saving consistent tensors. When specified, whole tensors
+        global_dst_rank (int, optional): The destination rank for 
+            saving global tensors. When specified, whole tensors
             will be saved by the process whose rank == 
-            consistent_src_rank, while other processes will not do any
+            global_src_rank, while other processes will not do any
             disk I/O.
     """
     path: Path = Path(path)
@@ -322,14 +353,14 @@ def save(
         return
 
     obj = {"protocol_version": PROTOCOL_VERSION, "data": obj}
-    with tensor_pickling_context(path, consistent_dst_rank):
+    with tensor_pickling_context(path, global_dst_rank):
         pickled_bytes = pickle.dumps(obj)
     rank = flow.env.get_rank()
-    if consistent_dst_rank is None or consistent_dst_rank == rank:
+    if global_dst_rank is None or global_dst_rank == rank:
         path.mkdir(exist_ok=True)
         pickle_path = path / PICKLE_FILENAME
         pickle_path.write_bytes(pickled_bytes)
 
 
 save_load_path = None
-consistent_src_dsk_rank = None
+global_src_dsk_rank = None

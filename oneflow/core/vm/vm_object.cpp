@@ -20,27 +20,17 @@ limitations under the License.
 namespace oneflow {
 namespace vm {
 
-void RwMutexedObjectAccess::__Init__() {
+void DependenceAccess::__Init__() {
   clear_instruction();
   clear_mirrored_object();
-  clear_rw_mutexed_object();
 }
 
-void RwMutexedObjectAccess::__Init__(Instruction* instruction, MirroredObject* mirrored_object,
-                                     OperandAccessType access_type) {
+void DependenceAccess::__Init__(Instruction* instruction, MirroredObject* mirrored_object,
+                                OperandAccessType access_type) {
   __Init__();
   set_instruction(instruction);
   set_mirrored_object(mirrored_object);
-  set_rw_mutexed_object(mirrored_object->mut_rw_mutexed_object());
   set_access_type(access_type);
-  mut_mirrored_object_id()->CopyFrom(mirrored_object->mirrored_object_id());
-}
-
-void MirroredObject::__Init__(LogicalObject* logical_object, int64_t global_device_id) {
-  __Init__();
-  mut_mirrored_object_id()->__Init__(logical_object->logical_object_id(), global_device_id);
-  set_global_device_id(global_device_id);
-  mut_rw_mutexed_object();
 }
 
 }  // namespace vm

@@ -22,14 +22,13 @@ namespace {
 
 Maybe<void> InferMaskedFillTensorDesc(user_op::InferContext* ctx) {
   const Shape& mask_shape = ctx->InputShape("mask", 0);
-  const Shape& x_shape = ctx->InputShape("x", 0);
   *ctx->OutputShape("out", 0) = mask_shape;
   return Maybe<void>::Ok();
 }
 
 Maybe<void> InferMaskedFillDataType(user_op::InferContext* ctx) {
   const DataType& mask_dtype = ctx->InputDType("mask", 0);
-  CHECK_OR_RETURN(IsIntegralDataType(mask_dtype));
+  CHECK_OR_RETURN(IsIntegralDataType(mask_dtype) || IsBoolDataType(mask_dtype));
   *ctx->OutputDType("out", 0) = ctx->InputDType("x", 0);
   return Maybe<void>::Ok();
 }
@@ -57,11 +56,6 @@ Maybe<void> GetMaskedFillSbpSignatures(user_op::SbpContext* ctx) {
       UNIMPLEMENTED();
     }
   }
-  ctx->NewBuilder()
-      .Broadcast(user_op::OpArg("mask", 0))
-      .PartialSum(user_op::OpArg("x", 0))
-      .PartialSum(user_op::OpArg("out", 0))
-      .Build();
   return Maybe<void>::Ok();
 }
 

@@ -22,7 +22,6 @@ limitations under the License.
 #include "oneflow/core/common/maybe.h"
 #include "oneflow/core/common/symbol.h"
 #include "oneflow/core/framework/nd_sbp.h"
-#include "oneflow/core/job/sbp_parallel.cfg.h"
 #include "oneflow/core/job/sbp_parallel.h"
 #include "oneflow/core/framework/nd_sbp.h"
 
@@ -32,46 +31,78 @@ namespace oneflow {
 
 namespace {
 
-std::string SbpParallelSymbolToString(const Symbol<cfg::SbpParallel>& sbp_sym) {
+std::string SbpParallelSymbolToString(const Symbol<SbpParallel>& sbp_sym) {
   return *api::SbpToString(sbp_sym).GetPtrOrThrow();
 }
 
-Maybe<std::vector<Symbol<cfg::SbpParallel>>> MakeSplitSbpParallelList(int max_split_axis) {
-  std::shared_ptr<std::vector<Symbol<cfg::SbpParallel>>> ret =
-      std::make_shared<std::vector<Symbol<cfg::SbpParallel>>>(max_split_axis);
+Maybe<std::vector<Symbol<SbpParallel>>> MakeSplitSbpParallelList(int max_split_axis) {
+  std::shared_ptr<std::vector<Symbol<SbpParallel>>> ret =
+      std::make_shared<std::vector<Symbol<SbpParallel>>>(max_split_axis);
   for (int i = 0; i < max_split_axis; ++i) { ret->at(i) = JUST(MakeSplitSbpParallel(i)); }
   return ret;
 }
 
-Maybe<Symbol<cfg::SbpParallel>> GetSplitSbpParallel(int axis) {
+Maybe<Symbol<SbpParallel>> GetSplitSbpParallel(int axis) {
   CHECK_LT_OR_RETURN(axis, kMaxSplitAxis);
-  static std::vector<Symbol<cfg::SbpParallel>> split_sbp_sym_list =
+  static std::vector<Symbol<SbpParallel>> split_sbp_sym_list =
       *JUST(MakeSplitSbpParallelList(kMaxSplitAxis));
   return split_sbp_sym_list.at(axis);
 }
 
-Maybe<Symbol<cfg::SbpParallel>> GetBroadcastSbpParallel() {
-  static Symbol<cfg::SbpParallel> broadcast_sbp = JUST(MakeBroadcastSbpParallel());
+Maybe<Symbol<SbpParallel>> GetBroadcastSbpParallel() {
+  static Symbol<SbpParallel> broadcast_sbp = JUST(MakeBroadcastSbpParallel());
   return broadcast_sbp;
 }
 
-Maybe<Symbol<cfg::SbpParallel>> GetPartialSumSbpParallel() {
-  static Symbol<cfg::SbpParallel> partial_sum_sbp = JUST(MakePartialSumSbpParallel());
+Maybe<Symbol<SbpParallel>> GetPartialSumSbpParallel() {
+  static Symbol<SbpParallel> partial_sum_sbp = JUST(MakePartialSumSbpParallel());
   return partial_sum_sbp;
+}
+
+Maybe<std::pair<std::string, int>> SbpGetState(const Symbol<SbpParallel>& sbp) {
+  if (sbp->has_broadcast_parallel()) {
+    return std::make_shared<std::pair<std::string, int>>("B", -1);
+  } else if (sbp->has_partial_sum_parallel()) {
+    return std::make_shared<std::pair<std::string, int>>("P", -1);
+  } else if (sbp->has_split_parallel()) {
+    return std::make_shared<std::pair<std::string, int>>("S", sbp->split_parallel().axis());
+  } else {
+    return Error::RuntimeError() << "Invalid sbp signature: " << sbp->DebugString();
+  }
+}
+
+Maybe<Symbol<SbpParallel>> GetSbpFromState(const std::pair<std::string, int>& state) {
+  if (state.first == "B") {
+    return GetBroadcastSbpParallel();
+  } else if (state.first == "P") {
+    return GetPartialSumSbpParallel();
+  } else if (state.first == "S") {
+    return GetSplitSbpParallel(state.second);
+  } else {
+    return Error::RuntimeError() << "Invalid sbp signature state: (" << state.first << ", "
+                                 << state.second << ");";
+  }
 }
 
 }  // namespace
 
 ONEFLOW_API_PYBIND11_MODULE("sbp", m) {
   m.attr("max_split_axis") = kMaxSplitAxis;
-  py::class_<Symbol<cfg::SbpParallel>, std::shared_ptr<Symbol<cfg::SbpParallel>>>(
-      m, "sbp", py::dynamic_attr())
+  py::class_<Symbol<SbpParallel>, std::shared_ptr<Symbol<SbpParallel>>>(m, "sbp",
+                                                                        py::dynamic_attr())
       .def("__str__", &SbpParallelSymbolToString)
       .def("__repr__", &SbpParallelSymbolToString)
       .def(py::self == py::self)
       .def(py::hash(py::self))
       .def("_ToAttrStr",
-           [](const Symbol<cfg::SbpParallel>& sbp_sym) { return SbpParallelToString(*sbp_sym); });
+           [](const Symbol<SbpParallel>& sbp_sym) { return SbpParallelToString(*sbp_sym); })
+      .def(py::pickle(
+          [](const Symbol<SbpParallel>& sbp) {  // __getstate__
+            return SbpGetState(sbp).GetOrThrow();
+          },
+          [](const std::pair<std::string, int>& state) {  // __setstate__
+            return GetSbpFromState(state).GetOrThrow();
+          }));
   m.def(
       "split", [](int axis) { return GetSplitSbpParallel(axis).GetOrThrow(); }, py::arg("axis"));
   m.def("broadcast", []() { return GetBroadcastSbpParallel().GetOrThrow(); });

@@ -13,13 +13,14 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
+#include "gtest/gtest.h"
 #include "oneflow/core/framework/placement_sbp_util.h"
 #include "oneflow/core/framework/tensor_meta.h"
 #include "oneflow/core/job/parallel_desc.h"
 #include "oneflow/core/common/util.h"
 #include "oneflow/core/common/shape.h"
 #include "oneflow/core/control/ctrl_bootstrap.pb.h"
-#include "oneflow/core/job/sbp_parallel.cfg.h"
+#include "oneflow/core/job/sbp_parallel.h"
 
 namespace oneflow {
 namespace test {
@@ -126,7 +127,7 @@ TEST(GetSelectedParallelIds, 2d_nonbroadcast_broadcast) {
 
 namespace {
 
-void InitSbpParallel(cfg::SbpParallel* sbp_parallel, const std::string& sbp_tag) {
+void InitSbpParallel(SbpParallel* sbp_parallel, const std::string& sbp_tag) {
   CHECK(sbp_tag.size() == 1 || sbp_tag.size() == 2);
   if (sbp_tag[0] == 'S') {
     CHECK_EQ(sbp_tag.size(), 2);
@@ -142,8 +143,8 @@ void InitSbpParallel(cfg::SbpParallel* sbp_parallel, const std::string& sbp_tag)
 }
 
 template<typename... Args>
-Symbol<cfg::NdSbp> GetNdSbp(Args... sbps) {
-  cfg::NdSbp nd_sbp;
+Symbol<NdSbp> GetNdSbp(Args... sbps) {
+  NdSbp nd_sbp;
   for (const auto& sbp : std::vector<std::string>{sbps...}) {
     InitSbpParallel(nd_sbp.mutable_sbp_parallel()->Add(), sbp);
   }
@@ -151,7 +152,7 @@ Symbol<cfg::NdSbp> GetNdSbp(Args... sbps) {
 }
 
 Symbol<one::ConsistentTensorMeta> MakeConsistentTensorMeta(Symbol<ParallelDesc> parallel_desc,
-                                                           Symbol<cfg::NdSbp> nd_sbp) {
+                                                           Symbol<NdSbp> nd_sbp) {
   const auto& shape = std::make_shared<const Shape>(DimVector{256, 256});
   one::ConsistentTensorMeta tensor_meta(shape, DataType::kInt32, nd_sbp, parallel_desc);
   return SymbolOf(tensor_meta);

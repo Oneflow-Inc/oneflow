@@ -288,7 +288,7 @@ class DistributedPartialFcSampleGpuKernel final : public user_op::OpKernel {
 
   std::shared_ptr<user_op::OpKernelState> CreateOpKernelState(
       user_op::KernelInitContext* ctx) const override {
-    const cfg::SbpParallel& in_sbp = ctx->SbpParallel4ArgNameAndIndex("weight", 0);
+    const SbpParallel& in_sbp = ctx->SbpParallel4ArgNameAndIndex("weight", 0);
     const TensorDesc* in_logical_desc = ctx->LogicalTensorDesc4ArgNameAndIndex("weight", 0);
     const int64_t class_num = in_logical_desc->shape().At(0);
     const int64_t num_sample = ctx->Attr<int64_t>("num_sample");

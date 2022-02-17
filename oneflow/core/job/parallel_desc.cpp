@@ -103,7 +103,7 @@ Maybe<ParallelDesc> ParallelDesc::New(const std::string& device_tag,
                                       const std::shared_ptr<Shape>& hierarchy) {
   const auto parallel_conf = JUST(MakeParallelConf(device_tag, machine_device_ids, hierarchy));
   std::shared_ptr<ParallelDesc> parallel_desc;
-  JUST(LogicalRun([&parallel_desc, &parallel_conf](InstructionsBuilder* builder) -> Maybe<void> {
+  JUST(PhysicalRun([&parallel_desc, &parallel_conf](InstructionsBuilder* builder) -> Maybe<void> {
     parallel_desc = JUST(builder->GetParallelDescSymbol(parallel_conf));
     return Maybe<void>::Ok();
   }));
@@ -322,6 +322,10 @@ Maybe<void> ParallelDesc::CheckDeviceIdsIsValid() const {
   if (likely(JUST(IsMultiClient()))) {
     const auto& sorted_dev_phy_ids_iter =
         machine_id2sorted_dev_phy_ids_->find(GlobalProcessCtx::Rank());
+    for (int64_t machine_id : sorted_machine_ids_) {
+      CHECK_LT_OR_RETURN(machine_id, GlobalProcessCtx::WorldSize())
+          << "Placment is invalid because rank must be less than world size!";
+    }
     if (sorted_dev_phy_ids_iter != machine_id2sorted_dev_phy_ids_->end()) {
       for (int64_t dev_phy_id : *sorted_dev_phy_ids_iter->second) {
         if (device_type_ == DeviceType::kCUDA) {
@@ -441,6 +445,19 @@ Maybe<Symbol<ParallelDesc>> RawReplaceDeviceType(Symbol<ParallelDesc> parallel_d
   return SymbolOf(ParallelDesc(parallel_conf));
 }
 
+Maybe<std::string> RanksToString(int64_t axis, const int64_t* ranks, const Shape& shape) {
+  if (axis == shape.NumAxes()) { return std::to_string(*ranks); }
+  int64_t stride = shape.Count(axis) / shape.At(axis);
+  std::string str = "[";
+  for (int i = 0; i < shape.At(axis); ++i) {
+    str += *JUST(RanksToString(axis + 1, ranks, shape));
+    ranks += stride;
+    if (i != shape.At(axis) - 1) { str += ", "; }
+  }
+  str += "]";
+  return str;
+}
+
 Maybe<std::string> RawPlacementToString(Symbol<ParallelDesc> placement) {
   std::string device_type = placement->device_tag() == "gpu" ? "\"cuda\"" : "\"cpu\"";
   std::vector<int64_t> sorted_node_ids;
@@ -455,35 +472,16 @@ Maybe<std::string> RawPlacementToString(Symbol<ParallelDesc> placement) {
       node_id2sorted_dev_phy_ids[node_id].emplace_back(device_id);
     }
   }
-  std::string machine_device_ids = "{";
-  int64_t node_idx = 0;
+  std::vector<int64_t> ranks;
   for (int64_t node_id : sorted_node_ids) {
-    std::string device_name = std::to_string(node_id) + " : [";
-    int64_t device_idx = 0;
     for (int64_t device_id : node_id2sorted_dev_phy_ids.at(node_id)) {
-      device_name += std::to_string(device_id);
-      if (++device_idx != node_id2sorted_dev_phy_ids.at(node_id).size()) { device_name += ", "; }
-    }
-    device_name += "]";
-    if (++node_idx != sorted_node_ids.size()) { device_name += ", "; }
-    machine_device_ids += device_name;
-  }
-  machine_device_ids += "}";
-  std::string hierarchy = "(";
-  int32_t hierarchy_dim_idx = 0;
-  for (int64_t dim : placement->hierarchy()->dim_vec()) {
-    hierarchy += std::to_string(dim);
-    if (++hierarchy_dim_idx != placement->hierarchy()->dim_vec().size()) {
-      hierarchy += ", ";
-    } else if (placement->hierarchy()->dim_vec().size() == 1) {
-      hierarchy += ",";
+      ranks.emplace_back(node_id * GlobalProcessCtx::NumOfProcessPerNode() + device_id);
     }
   }
-  hierarchy += ")";
-  std::string placement_str = "oneflow.placement(device_type=" + device_type
-                              + ", machine_device_ids=" + machine_device_ids
-                              + ", hierarchy=" + hierarchy + ")";
-  return placement_str;
+  CHECK_EQ_OR_RETURN(ranks.size(), placement->hierarchy()->elem_cnt())
+      << "rank size is " << ranks.size() << ", but shape is " << placement->hierarchy()->ToString();
+  const auto& ranks_str = JUST(RanksToString(0, ranks.data(), *placement->hierarchy()));
+  return "oneflow.placement(type=" + device_type + ", ranks=" + *ranks_str + ")";
 }
 
 Maybe<Symbol<Device>> RawGetTensorDevice(Symbol<ParallelDesc> parallel_desc) {

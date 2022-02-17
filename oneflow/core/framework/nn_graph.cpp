@@ -15,7 +15,10 @@ limitations under the License.
 */
 #include "oneflow/core/framework/nn_graph.h"
 #include "oneflow/core/common/buffer_manager.h"
+#include "oneflow/core/common/maybe.h"
 #include "oneflow/core/common/scalar.h"
+#include "oneflow/core/common/util.h"
+#include "oneflow/core/common/container_util.h"
 #include "oneflow/core/control/ctrl_client.h"
 #include "oneflow/core/control/global_process_ctx.h"
 #include "oneflow/core/eager/eager_blob_object.h"
@@ -99,7 +102,23 @@ const std::vector<std::string>& NNGraph::outputs_tensor_meta_str() const {
   return outputs_tensor_meta_str_;
 }
 
-int64_t NNGraph::variable_op_size() const { return variable_op_name2eager_blob_.size(); }
+int64_t NNGraph::variable_op_size() const { return variable_op_names_.size(); }
+
+Maybe<void> NNGraph::RegisterAdditionalVarOpNamesAndTensorsToBeLoaded(
+    const std::vector<std::string>& additional_var_names,
+    const std::vector<std::shared_ptr<one::Tensor>>& additional_var_tensors) {
+  CHECK_EQ_OR_RETURN(additional_var_names.size(), additional_var_tensors.size());
+  CHECK_OR_RETURN(additional_variable_op_tobe_loaded_name2tensor_.empty())
+      << " The additional variables (states in Optimizer or LRScheduler) of nn.Graph " << name_
+      << " are register repeatedly.";
+  FOR_RANGE(size_t, i, 0, additional_var_names.size()) {
+    CHECK_OR_RETURN(additional_variable_op_tobe_loaded_name2tensor_
+                        .emplace(JUST(VectorAt(additional_var_names, i)),
+                                 JUST(VectorAt(additional_var_tensors, i)))
+                        .second);
+  }
+  return Maybe<void>::Ok();
+}
 
 Maybe<void> NNGraph::RegisterInputOpNamesAndTensors(
     const std::vector<std::string>& inputs_op_names,
@@ -144,21 +163,12 @@ Maybe<void> NNGraph::RegisterVariableOpNamesAndTensors(
     const std::vector<std::shared_ptr<one::Tensor>>& variable_tensors) {
   JUST(vm::CurrentRankSync());
   CHECK_EQ_OR_RETURN(variable_op_names.size(), variable_tensors.size());
-  CHECK_OR_RETURN(variable_op_name2eager_blob_.empty());
   for (int32_t i = 0; i < variable_op_names.size(); ++i) {
     const std::shared_ptr<one::Tensor>& var = variable_tensors.at(i);
     CHECK_OR_RETURN(var->is_eager());
-    Blob* var_blob = nullptr;
-    if (var->is_consistent()) {
-      // NOTE(chengcheng): var_blob maybe nullptr when consistent tensor has no cur_rank_phy_tensor.
-      const std::shared_ptr<one::MirroredTensor> local_var = JUST(var->cur_rank_phy_tensor());
-      var_blob = JUST(local_var->eager_blob_object())->mut_blob();
-    } else {
-      var_blob = JUST(var->eager_blob_object())->mut_blob();
-    }
     const std::string& var_name = variable_op_names.at(i);
     CHECK_OR_RETURN(!var_name.empty());
-    CHECK_OR_RETURN(variable_op_name2eager_blob_.emplace(var_name, var_blob).second);
+    CHECK_OR_RETURN(variable_op_name2tensor_.emplace(var_name, var).second);
     CHECK_OR_RETURN(variable_op_names_.insert(var_name).second);
   }
   return Maybe<void>::Ok();
@@ -172,67 +182,50 @@ Maybe<void> NNGraph::RegisterFreeEagerTensorsToVariableOpNames() {
     const std::string& var_name = pair.first;
     const std::shared_ptr<one::Tensor>& var = pair.second;
     CHECK_OR_RETURN(var->is_eager());
-    Blob* var_blob = nullptr;
-    if (var->is_consistent()) {
-      const std::shared_ptr<one::MirroredTensor> local_var = JUST(var->cur_rank_phy_tensor());
-      var_blob = JUST(local_var->eager_blob_object())->mut_blob();
-    } else {
-      var_blob = JUST(var->eager_blob_object())->mut_blob();
-    }
     CHECK_OR_RETURN(!var_name.empty());
-    CHECK_OR_RETURN(variable_op_name2eager_blob_.emplace(var_name, var_blob).second);
+    CHECK_OR_RETURN(variable_op_name2tensor_.emplace(var_name, var).second);
+    CHECK_OR_RETURN(additional_variable_op_name_.insert(var_name).second);
     CHECK_OR_RETURN(variable_op_names_.insert(var_name).second);
   }
   return Maybe<void>::Ok();
 }
 
-Maybe<void> NNGraph::CreateAndRegisterNewVariableOpInJobPass() {
-  JUST(vm::CurrentRankSync());
-  // NOTE(chengcheng): New EagerTensor need set LazyMode false.
-  auto lazy_mode_disabled_guard = LazyMode::Guard(/* is_enabled */ false);
+Maybe<std::vector<std::string>> NNGraph::GetAdditionalVarOpNames() const {
+  std::vector<std::string> names;
+  for (const auto& iter : additional_variable_op_name_) { names.push_back(iter); }
+  return names;
+}
+
+Maybe<std::vector<std::shared_ptr<one::Tensor>>> NNGraph::GetAdditionalVarOpTensors() const {
+  std::vector<std::shared_ptr<one::Tensor>> tensors;
+  for (const auto& iter : additional_variable_op_name_) {
+    auto find_iter = variable_op_name2tensor_.find(iter);
+    CHECK_OR_RETURN(find_iter != variable_op_name2tensor_.end());
+    tensors.push_back(find_iter->second);
+  }
+  return tensors;
+}
+
+Maybe<void> NNGraph::RegisterNewVariableOpInJobPass() {
   OpGraph op_graph(job_);
   JUST(op_graph.MaybeForEachNode([&](OpNode* op_node) -> Maybe<void> {
     if (op_node->op().op_conf().has_variable_conf() == false) { return Maybe<void>::Ok(); }
     const Operator& variable_op = op_node->op();
-    const LogicalBlobId& variable_lbi = variable_op.BnInOp2Lbi(variable_op.SoleObn());
     const VariableOpConf& var_conf = variable_op.op_conf().variable_conf();
     const std::string& var_name = variable_op.op_name();
     CHECK_OR_RETURN(var_conf.has_initializer())
         << " nn.Graph ONLY support variable op with initializer conf.";
     if (var_conf.initializer().has_constant_conf()
         || var_conf.initializer().has_constant_int_conf()) {
-      CHECK_OR_RETURN(variable_op_names_.find(var_name) == variable_op_names_.end())
-          << " ERROR! variable_op_name : " << var_name << " has been add in nn.Graph: " << name_;
-      // NOTE(chengcheng): handle constant variable created by job pass
-      Symbol<ParallelDesc> placement(op_node->parallel_desc());
-      const auto& nd_sbp = op_node->NdSbp4Lbi(variable_lbi);
-      const BlobDesc& blob_desc = op_node->LogicalBlobDesc4Lbi(variable_lbi);
-      DType dtype(blob_desc.data_type());
-      std::shared_ptr<std::vector<Symbol<cfg::SbpParallel>>> sbp_tuple =
-          JUST(GetSbpList(Symbol<cfg::NdSbp>(nd_sbp)));
-      Scalar value;
-      if (var_conf.initializer().has_constant_conf()) {
-        value = var_conf.initializer().constant_conf().value();
-      } else if (var_conf.initializer().has_constant_int_conf()) {
-        value = var_conf.initializer().constant_int_conf().value();
-      } else {
-        OF_UNIMPLEMENTED();
-      }
-      std::shared_ptr<one::Tensor> tensor = JUST(one::functional::ConsistentConstant(
-          blob_desc.shape(), value, Symbol<DType>(dtype), placement, *sbp_tuple));
-      JUST(vm::CurrentRankSync());
-      const std::shared_ptr<one::MirroredTensor> local_var = JUST(tensor->cur_rank_phy_tensor());
-      Blob* var_blob = JUST(local_var->eager_blob_object())->mut_blob();
-      CHECK_OR_RETURN(variable_op_name2eager_blob_.emplace(var_name, var_blob).second);
-      CHECK_OR_RETURN(variable_op_names_.insert(var_name).second);
-
-      // NOTE(chengcheng): just for tensor lifetime hold by session context in graph lifetime valid.
-      Global<MultiClientSessionContext>::Get()->StoreFreeEagerTensorWithNameByGraphName(
-          name_, tensor, var_name);
-
-      VLOG(2) << "Lazy nn.Graph name " << name_ << " op : \n"
-              << variable_op.op_conf().DebugString()
-              << " created in JobPass, nn.Graph will new EagerTensor for this variable.\n";
+      CHECK_OR_RETURN(variable_op_names_.insert(var_name).second)
+          << " ERROR! variable_op_name: " << var_name << " has been add in nn.Graph: " << name_;
+      CHECK_OR_RETURN(
+          variable_op_name2tensor_.insert({var_name, std::shared_ptr<one::Tensor>()}).second)
+          << " ERROR! variable Tensor with op_name: " << var_name
+          << " has been add in nn.Graph: " << name_;
+      CHECK_OR_RETURN(additional_variable_op_name_.insert(var_name).second)
+          << " ERROR! variable Tensor with op_name: " << var_name
+          << " has been add in nn.Graph: " << name_;
     } else {
       CHECK_OR_RETURN(var_conf.initializer().has_empty_conf())
           << " nn.Graph ONLY support variable_op with empty conf,"
@@ -248,12 +241,13 @@ Maybe<void> NNGraph::CreateAndRegisterNewVariableOpInJobPass() {
 }
 
 Maybe<void> NNGraph::CompileAndInitRuntime() {
-  JUST(RegisterFreeEagerTensorsToVariableOpNames());
   CHECK_OR_RETURN(!runtime_inited_);
   JobBuildAndInferCtx* job_ctx = JUST(GetJobBuildAndInferCtx(name_));
-  job_ = job_ctx->job();
   // TODO(chengcheng): CHECK job valid for each rank.
-  JUST(CreateAndRegisterNewVariableOpInJobPass());
+  job_ = job_ctx->job();
+
+  JUST(RegisterFreeEagerTensorsToVariableOpNames());
+  JUST(RegisterNewVariableOpInJobPass());
 
   // NOTE(chengcheng): TensorNameScope need to be cleared after current graph is built.
   one::TensorNameScope::Global()->Clear();
@@ -297,8 +291,114 @@ Maybe<void> NNGraph::CompileAndInitRuntime() {
   PlanUtil::PopulateOpAttribute(&plan_, plan_.job_id2op_attribute_ref_table());
 
   NewRuntimeBuffers();
+
+  JUST(GetVariableRealBlobAfterSyncPlan());
   runtime_.reset(new Runtime(plan_, variable_op_name2eager_blob_));
   runtime_inited_ = true;
+  return Maybe<void>::Ok();
+}
+
+Maybe<void> NNGraph::GetVariableRealBlobAfterSyncPlan() {
+  CHECK_OR_RETURN(variable_op_name2eager_blob_.empty());
+  JUST(vm::CurrentRankSync());
+  JobBuildAndInferCtx* job_ctx = JUST(GetJobBuildAndInferCtx(name_));
+  auto job_id = job_ctx->job_id();
+  // Create or Rebuild variable, then get the real blob.
+  for (const std::string& var_name : variable_op_names_) {
+    auto iter = variable_op_name2tensor_.find(var_name);
+    CHECK_OR_RETURN(iter != variable_op_name2tensor_.end()) << var_name << " not found.";
+    std::shared_ptr<one::Tensor> tensor = iter->second;
+    Blob* var_blob = nullptr;
+    if (/*is_null=*/!tensor) {
+      // Deal with tensors which are not in the nn.Module.
+      // We can call these tensors as additional variables.
+      const auto& op_attribute =
+          plan_.job_id2op_attribute_ref_table().at(job_id).op_name2op_attribute().at(var_name);
+      // NOTE(chengcheng): handle constant variable created by job pass
+      Symbol<ParallelDesc> placement(op_attribute.parallel_conf_signature().op_parallel_conf());
+      NdSbp nd_sbp(NdSbpSignature(op_attribute.nd_sbp_signature()).bn_in_op2nd_sbp().at("out"));
+      const BlobDesc blob_desc(
+          op_attribute.logical_blob_desc_signature().bn_in_op2blob_desc().at("out"));
+      DType dtype(blob_desc.data_type());
+      std::shared_ptr<std::vector<Symbol<SbpParallel>>> sbp_tuple =
+          JUST(GetSbpList(Symbol<NdSbp>(nd_sbp)));
+
+      auto load_tensor_iter = additional_variable_op_tobe_loaded_name2tensor_.find(var_name);
+      if (load_tensor_iter == additional_variable_op_tobe_loaded_name2tensor_.end()) {
+        // Create a additional variable tensor
+        Scalar value;
+        const VariableOpConf& var_conf = op_attribute.op_conf().variable_conf();
+        if (var_conf.initializer().has_constant_conf()) {
+          value = var_conf.initializer().constant_conf().value();
+        } else if (var_conf.initializer().has_constant_int_conf()) {
+          value = var_conf.initializer().constant_int_conf().value();
+        } else {
+          OF_UNIMPLEMENTED();
+        }
+        // NOTE(chengcheng): New EagerTensor need set LazyMode false.
+        auto lazy_mode_disabled_guard = LazyMode::Guard(/*is_enabled*/ false);
+        tensor = JUST(one::functional::ConsistentConstant(
+            blob_desc.shape(), value, Symbol<DType>(dtype), placement, *sbp_tuple));
+        JUST(vm::CurrentRankSync());
+        VLOG(2) << "Lazy nn.Graph name " << name_ << " op: " << op_attribute.op_conf().name()
+                << " created in JobPass, nn.Graph has created a eager tensor for this variable.\n";
+      } else {
+        // Load a additional variable tensor
+        auto lazy_mode_disabled_guard = LazyMode::Guard(/*is_enabled*/ false);
+        std::vector<Symbol<SbpParallel>> grad_sbp_tuple;
+        // To consistent from a local or consistent tensor.
+        tensor = JUST(one::functional::ToConsistent(load_tensor_iter->second, placement, *sbp_tuple,
+                                                    grad_sbp_tuple));
+        JUST(vm::CurrentRankSync());
+        VLOG(2) << "Lazy nn.Graph name " << name_ << " op: " << op_attribute.op_conf().name()
+                << " created in JobPass, nn.Graph has loaded the tensor from state dict for this "
+                   "variable.\n";
+      }
+      // Register
+      *JUST(MapAt(&variable_op_name2tensor_, var_name)) = tensor;
+      // NOTE(chengcheng): Just for tensor lifetime hold by session context in graph lifetime
+      // valid.
+      Global<MultiClientSessionContext>::Get()->StoreFreeEagerTensorWithNameByGraphName(
+          name_, tensor, var_name);
+
+      const std::shared_ptr<one::MirroredTensor> local_var = JUST(tensor->cur_rank_phy_tensor());
+      var_blob = JUST(local_var->eager_blob_object())->mut_blob();
+    } else if (tensor->is_consistent()) {
+      // Deal with tensors which need to change sbp.
+      NdSbpSignature var_nd_sbp_signature = NdSbpSignature(plan_.job_id2op_attribute_ref_table()
+                                                               .at(job_id)
+                                                               .op_name2op_attribute()
+                                                               .at(var_name)
+                                                               .nd_sbp_signature());
+      NdSbp optimized_nd_sbp = var_nd_sbp_signature.bn_in_op2nd_sbp().at("out");
+      // Change variable tensor's impl with new sbp when job pass has changed their sbp.
+      if (*JUST(tensor->nd_sbp()) != optimized_nd_sbp) {
+        VLOG(2) << "Graph with name " << name_ << " variable with name `" << var_name
+                << "` changes its' sbp from " << NdSbpToString(*JUST(tensor->nd_sbp())) << " to "
+                << NdSbpToString(optimized_nd_sbp) << " after compile optimization.";
+        std::vector<Symbol<SbpParallel>> optimized_sbp_parallels;
+        for (int i = 0; i < optimized_nd_sbp.sbp_parallel_size(); ++i) {
+          optimized_sbp_parallels.emplace_back(optimized_nd_sbp.sbp_parallel(i));
+        }
+        {
+          auto lazy_mode_disabled_guard = LazyMode::Guard(/* is_enabled */ false);
+          const auto& new_tensor = JUST(one::functional::ToConsistent(
+              tensor, JUST(tensor->parallel_desc()), optimized_sbp_parallels, {}));
+          JUST(vm::CurrentRankSync());
+          // Use tensor.set_data inferface and make new TensorImpl instead of the old one.
+          JUST(tensor->set_data(new_tensor));
+        }
+      }
+      const std::shared_ptr<one::MirroredTensor> local_var = JUST(tensor->cur_rank_phy_tensor());
+      var_blob = JUST(local_var->eager_blob_object())->mut_blob();
+    } else {
+      var_blob = JUST(tensor->eager_blob_object())->mut_blob();
+    }
+    CHECK_OR_RETURN(var_blob != nullptr);
+    CHECK_OR_RETURN(variable_op_name2eager_blob_.emplace(var_name, var_blob).second);
+  }
+  // Clear after load additional variable is finished.
+  additional_variable_op_tobe_loaded_name2tensor_.clear();
   return Maybe<void>::Ok();
 }
 

@@ -20,6 +20,7 @@ limitations under the License.
 #include "oneflow/core/common/scalar.h"
 #include "oneflow/core/framework/dtype.h"
 #include "oneflow/core/framework/device.h"
+#include "oneflow/core/framework/op_expr.h"
 #include "oneflow/core/framework/tensor.h"
 #include "oneflow/core/framework/tensor_tuple.h"
 #include "oneflow/core/framework/random_generator.h"
@@ -65,7 +66,7 @@ OF_PP_FOR_EACH_TUPLE(INSTANCE_OBJECT_AS_FLOAT, FLOATING_TYPE_SEQ)
 
 template<>
 Maybe<std::string> PythonArg::ObjectAs<std::string>() const {
-  return std::make_shared<std::string>(JUST(PyStringAsString(object_)));
+  return JUST(PyStringAsString(object_));
 }
 
 template<>
@@ -104,9 +105,19 @@ Maybe<Symbol<DType>> PythonArg::ObjectAs<Symbol<DType>>() const {
 }
 
 template<>
+Maybe<std::vector<Symbol<DType>>> PythonArg::ObjectAs<std::vector<Symbol<DType>>>() const {
+  return PyUnpackDTypeSequence(object_);
+}
+
+template<>
 Maybe<Shape> PythonArg::ObjectAs<Shape>() const {
   const auto& shape = JUST(PyUnpackLongSequence<int64_t>(object_));
   return std::make_shared<Shape>(DimVector(shape->begin(), shape->end()));
+}
+
+template<>
+Maybe<std::vector<Shape>> PythonArg::ObjectAs<std::vector<Shape>>() const {
+  return PyUnpackShapeSequence(object_);
 }
 
 template<>
@@ -123,7 +134,7 @@ Maybe<one::Generator> PythonArg::ObjectAs<one::Generator>() const {
 template<>
 Maybe<Symbol<Device>> PythonArg::ObjectAs<Symbol<Device>>() const {
   if (PyStringCheck(object_)) {
-    const char* device_str = JUST(PyStringAsString(object_));
+    std::string device_str = *JUST(PyStringAsString(object_));
     return Device::ParseAndNew(device_str);
   }
   return PyUnpackDevice(object_);
@@ -135,16 +146,16 @@ Maybe<Symbol<ParallelDesc>> PythonArg::ObjectAs<Symbol<ParallelDesc>>() const {
 }
 
 template<>
-Maybe<Symbol<cfg::SbpParallel>> PythonArg::ObjectAs<Symbol<cfg::SbpParallel>>() const {
+Maybe<Symbol<SbpParallel>> PythonArg::ObjectAs<Symbol<SbpParallel>>() const {
   return PyUnpackSbpParallel(object_);
 }
 
 template<>
-Maybe<std::vector<Symbol<cfg::SbpParallel>>>
-PythonArg::ObjectAs<std::vector<Symbol<cfg::SbpParallel>>>() const {
+Maybe<std::vector<Symbol<SbpParallel>>> PythonArg::ObjectAs<std::vector<Symbol<SbpParallel>>>()
+    const {
   if (PySbpParallelCheck(object_)) {
-    return std::make_shared<std::vector<Symbol<cfg::SbpParallel>>>(
-        1, JUST(PyUnpackSbpParallel(object_)));
+    return std::make_shared<std::vector<Symbol<SbpParallel>>>(1,
+                                                              JUST(PyUnpackSbpParallel(object_)));
   }
   return PyUnpackSbpParallelSequence(object_);
 }
@@ -152,6 +163,16 @@ PythonArg::ObjectAs<std::vector<Symbol<cfg::SbpParallel>>>() const {
 template<>
 Maybe<TensorIndex> PythonArg::ObjectAs<TensorIndex>() const {
   return PyUnpackTensorIndex(object_);
+}
+
+template<>
+Maybe<std::shared_ptr<one::OpExpr>> PythonArg::ObjectAs<std::shared_ptr<one::OpExpr>>() const {
+  return JUST(PyUnpackOpExpr(object_));
+}
+
+template<>
+Maybe<one::OpExpr> PythonArg::ObjectAs<one::OpExpr>() const {
+  return PyUnpackOpExpr(object_);
 }
 
 template<>
@@ -166,9 +187,8 @@ Maybe<const PyObject*> PythonArg::ObjectAs<const PyObject*>() const {
 
 template<>
 Maybe<std::vector<std::string>> PythonArg::ObjectAs<std::vector<std::string>>() const {
-  return PyUnpackSequence<std::string>(object_, [](PyObject* item) -> Maybe<std::string> {
-    return std::make_shared<std::string>(JUST(PyStringAsString(item)));
-  });
+  return PyUnpackSequence<std::string>(
+      object_, [](PyObject* item) -> Maybe<std::string> { return JUST(PyStringAsString(item)); });
 }
 
 Maybe<bool> PythonArg::TypeCheck(ValueType type) const {
@@ -206,7 +226,10 @@ Maybe<bool> PythonArg::TypeCheck(ValueType type) const {
     case kSBP_PARALLEL: return PySbpParallelCheck(object_);
     case kSBP_PARALLEL_LIST:
       return PySbpParallelSequenceCheck(object_) || PySbpParallelCheck(object_);
+    case kOPEXPR_REF: return PyOpExprCheck(object_);
     case kPY_OBJECT: return nullptr != object_;
+    case kDTYPE_LIST: return PyDTypeSequenceCheck(object_);
+    case kSHAPE_LIST: return PyShapeSequenceCheck(object_);
     default: {
       OF_UNIMPLEMENTED() << "Can not check type " << JUST(ValueTypeName(type));
     }

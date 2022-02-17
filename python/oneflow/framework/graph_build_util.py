@@ -14,6 +14,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 """
 from contextlib import contextmanager
+import os
 
 from google.protobuf import text_format
 import oneflow
@@ -28,6 +29,8 @@ import oneflow.framework.c_api_util as c_api_util
 import oneflow.framework.scope_util as scope_util
 import oneflow.framework.session_context as session_context
 from oneflow.framework.tensor import Tensor
+
+import oneflow._oneflow_internal._C as _C
 
 lazy_mode = oneflow._oneflow_internal.lazy_mode
 
@@ -87,6 +90,24 @@ class BlockScopeContext(object):
             return False
 
 
+class GLogScopeContext(object):
+    def __init__(self, s_level, v_level=0):
+        self._prev_v = oneflow._oneflow_internal.GetFLAGS_v()
+        self._prev_logtostderr = oneflow._oneflow_internal.GetFLAGS_alsologtostderr()
+        self._v = v_level
+        self._s = s_level
+
+    def __enter__(self):
+        oneflow._oneflow_internal.SetFLAGS_v(self._v)
+        if self._s == 0 and self._v >= 1:
+            oneflow._oneflow_internal.SetFLAGS_alsologtostderr(True)
+
+    def __exit__(self, exc_type, exc_val, exc_tb):
+        if self._s == 0 and self._v >= 1:
+            oneflow._oneflow_internal.SetFLAGS_alsologtostderr(self._prev_logtostderr)
+        oneflow._oneflow_internal.SetFLAGS_v(self._prev_v)
+
+
 def make_new_block_scope(prev_scope, block):
     assert prev_scope is not None
     assert block is not None
@@ -119,7 +140,7 @@ def make_new_block_scope(prev_scope, block):
         new_scope = builder.BuildScopeByProtoSetter(prev_scope, scope_proto_setter)
         assert new_scope is not None
 
-    oneflow._oneflow_internal.deprecated.LogicalRun(build_scope)
+    oneflow._oneflow_internal.deprecated.PhysicalRun(build_scope)
     oneflow._oneflow_internal.eager.multi_client.Sync()
     return new_scope
 
@@ -137,8 +158,7 @@ def build_graph_input_arg(op_name, arg):
     input_op = oneflow._oneflow_internal.one.FeedInputOpExpr(
         op_name, input_conf, ["in_0"], ["out_0"]
     )
-    attrs = oneflow._oneflow_internal.MutableCfgAttrMap()
-    lazy_arg = input_op.apply([arg], attrs)[0]
+    lazy_arg = _C.dispatch_feed_input(input_op, arg)
     return lazy_arg
 
 
@@ -150,23 +170,19 @@ def build_graph_state(op_name, state_tensor, state_config):
     var_op = oneflow._oneflow_internal.one.FeedVariableOpExpr(
         op_name, var_conf, ["in_0"], ["out_0"]
     )
-
-    attrs = oneflow._oneflow_internal.MutableCfgAttrMap()
+    l2 = 0.0
     if state_config is not None:
-        attr_l2 = user_op_attr_cfg.AttrValue()
-        attr_l2.set_at_double(state_config.l2)
-        attrs["l2"] = attr_l2
+        l2 = state_config.l2
     elif state_tensor.requires_grad:
-        attrs["l2"] = 0.0
+        l2 = 0.0
 
     assert isinstance(state_tensor, Tensor)
-    lazy_tensor = var_op.apply([state_tensor], attrs)[0]
+    lazy_tensor = _C.dispatch_feed_variable(var_op, state_tensor, l2=l2)
     return lazy_tensor
 
 
 def build_graph_output(op_name, out):
     assert isinstance(out, Tensor)
-    assert out.is_lazy
 
     output_conf = (
         oneflow._oneflow_internal.oneflow.core.operator.op_conf.FetchOutputOpConf()
@@ -175,8 +191,6 @@ def build_graph_output(op_name, out):
     output_op = oneflow._oneflow_internal.one.FetchOutputOpExpr(
         op_name, output_conf, ["in_0"], ["out_0"]
     )
-    attrs = oneflow._oneflow_internal.MutableCfgAttrMap()
-
-    fake_eager_out = output_op.apply([out], attrs)[0]
+    fake_eager_out = _C.dispatch_fetch_output(output_op, out)
 
     return fake_eager_out
