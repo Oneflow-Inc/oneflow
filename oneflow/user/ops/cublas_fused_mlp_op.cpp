@@ -130,15 +130,22 @@ REGISTER_USER_OP_GRAD("cublas_fused_mlp")
 
       // TODO: Add skip_final_activation logic. 
 
-      // step1: use dy and final output to get last layer's relu grad. 
-      user_op::UserOpConfWrapperBuilder relu_grad_builder(op.op_name() + "_relu_grad");
-      user_op::UserOpConfWrapper relu_grad_op =
-          relu_grad_builder.Op("relu_grad")
-              .Input("y", op.output("out", 0))
-              .Input("dy", op.GetGradTensorWithOpOutput("out", 0))
-              .Output("dx")
-              .Build();
-      AddOp(relu_grad_op);
+      std::string last_grad; 
+      if(!skip_final_activation){
+        // step1: use dy and final output to get last layer's relu grad. 
+        user_op::UserOpConfWrapperBuilder relu_grad_builder(op.op_name() + "_relu_grad");
+        user_op::UserOpConfWrapper relu_grad_op =
+            relu_grad_builder.Op("relu_grad")
+                .Input("y", op.output("out", 0))
+                .Input("dy", op.GetGradTensorWithOpOutput("out", 0))
+                .Output("dx")
+                .Build();
+        AddOp(relu_grad_op);
+        last_grad = relu_grad_op.output("dx", 0); 
+      }else{
+        last_grad = op.GetGradTensorWithOpOutput("out", 0); 
+      }
+      
       // step2: use reduce_sum to get last layer's bias grad. 
       // TODO: Currently Only support 2d fused_matmul.
       // so here we hard encode bias reduce axis as 0.
@@ -146,7 +153,7 @@ REGISTER_USER_OP_GRAD("cublas_fused_mlp")
       user_op::UserOpConfWrapperBuilder bias_grad_builder(op.op_name() + "_bias_grad");
       user_op::UserOpConfWrapper bias_grad_op =
           bias_grad_builder.Op("reduce_sum")
-              .Input("input_tensor", relu_grad_op.output("dx", 0))
+              .Input("input_tensor", last_grad)
               .Output("output_tensor")
               .Attr("axis", reduce_axes_vec)
               .Attr("keepdims", false)
@@ -161,7 +168,7 @@ REGISTER_USER_OP_GRAD("cublas_fused_mlp")
           // TODO: Add skip activation logic. 
           user_op::UserOpConfWrapper cublas_bias_add_relu_matmul_grad_op =
             cublas_bias_add_relu_matmul_grad_builder.Op("cublas_bias_add_relu_matmul_grad")
-                                                    .Input("dy", relu_grad_op.output("dx", 0))
+                                                    .Input("dy", last_grad)
                                                     .Input("weight", op.input("weights", hidden_layer_idx))
                                                     .Input("aux", op.output("cublas_aux", hidden_layer_idx-1))
                                                     .Output("d_grad")
@@ -173,7 +180,7 @@ REGISTER_USER_OP_GRAD("cublas_fused_mlp")
           user_op::UserOpConfWrapperBuilder matmul_weight_grad_builder(op.op_name()+ "_matmul_a_grad_" + std::to_string(hidden_layer_idx));  
           user_op::UserOpConfWrapper matmul_weight_grad_op =
                 matmul_weight_grad_builder.Op("matmul")
-                    .Input("a", relu_grad_op.output("dx", 0))
+                    .Input("a", last_grad)
                     .Input("b", op.output("hidden", hidden_layer_idx-1))
                     .Output("out")
                     .Attr<bool>("transpose_a", true)
@@ -215,6 +222,7 @@ REGISTER_USER_OP_GRAD("cublas_fused_mlp")
           dgrad = cublas_bias_add_relu_matmul_grad_op.output("d_grad", 0); 
         }
       }
+      // For first layer, we need to use 2 matmul to get grads. 
       if(weight_num!=1){
         // dx: 
         if(op.NeedGenGradTensor4OpInput("x", 0)){
@@ -251,7 +259,7 @@ REGISTER_USER_OP_GRAD("cublas_fused_mlp")
           user_op::UserOpConfWrapperBuilder matmul_input_grad_builder(op.op_name()+ "_matmul_input_grad");  
           user_op::UserOpConfWrapper matmul_input_grad_op =
                 matmul_input_grad_builder.Op("matmul")
-                    .Input("a", relu_grad_op.output("dx", 0))
+                    .Input("a", last_grad)
                     .Input("b", op.input("weights", 0))
                     .Output("out")
                     .Attr<bool>("transpose_a", true)
@@ -265,7 +273,7 @@ REGISTER_USER_OP_GRAD("cublas_fused_mlp")
         user_op::UserOpConfWrapperBuilder matmul_weight_grad_builder(op.op_name()+ "_matmul_input_grad");  
         user_op::UserOpConfWrapper matmul_weight_grad_op =
               matmul_weight_grad_builder.Op("matmul")
-                  .Input("a", relu_grad_op.output("dx", 0))
+                  .Input("a", last_grad)
                   .Input("b", op.input("x", 0))
                   .Output("out")
                   .Attr<bool>("transpose_a", true)
@@ -275,7 +283,6 @@ REGISTER_USER_OP_GRAD("cublas_fused_mlp")
         AddOp(matmul_weight_grad_op);
         op.BindGradTensorWithOpInput(matmul_weight_grad_op.output("out", 0), "weights", 0);
       }
-
       return Maybe<void>::Ok();
     });
 
