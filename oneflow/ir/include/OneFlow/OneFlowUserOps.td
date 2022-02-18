@@ -2475,7 +2475,7 @@ def OneFlow_NormalizationAddReluGradOp : OneFlow_BaseOp<"normalization_add_relu_
 }
 
 
-def OneFlow_FusedDotFeatureInteractionOp : OneFlow_BaseOp<"fused_dot_feature_interaction", [DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
+def OneFlow_FusedDotFeatureInteractionOp : OneFlow_BaseOp<"fused_dot_feature_interaction", [AttrSizedOperandSegments, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
     Variadic<OneFlow_Tensor>:$features,
     Optional<OneFlow_Tensor>:$output_concat
@@ -4881,8 +4881,8 @@ def OneFlow__ncclLogical_2DSameDim0All2allOp : OneFlow_BaseOp<"_nccl_logical_2D_
     OneFlow_Tensor:$out
   );
   let attrs = (ins
-    DefaultValuedAttr<SI64Attr, "-1">:$in_dim1_split_axis,
-    DefaultValuedAttr<SI64Attr, "-1">:$out_dim1_split_axis
+    StrArrayAttr:$src_reduced_nd_sbp,
+    StrArrayAttr:$dst_reduced_nd_sbp
   );
   let has_logical_tensor_desc_infer_fn = 1;
   let has_get_sbp_fn = 1;
@@ -4897,6 +4897,10 @@ def OneFlow__ncclLogical_2DSameDim0AllGatherOp : OneFlow_BaseOp<"_nccl_logical_2
   );
   let output = (outs
     OneFlow_Tensor:$out
+  );
+  let attrs = (ins
+    StrArrayAttr:$src_reduced_nd_sbp,
+    StrArrayAttr:$dst_reduced_nd_sbp
   );
   let has_logical_tensor_desc_infer_fn = 1;
   let has_get_sbp_fn = 1;
@@ -4913,7 +4917,8 @@ def OneFlow__ncclLogical_2DSameDim0AllGatherNoncontinuousOp : OneFlow_BaseOp<"_n
     OneFlow_Tensor:$out
   );
   let attrs = (ins
-    DefaultValuedAttr<SI64Attr, "-1">:$in_dim1_split_axis
+    StrArrayAttr:$src_reduced_nd_sbp,
+    StrArrayAttr:$dst_reduced_nd_sbp
   );
   let has_logical_tensor_desc_infer_fn = 1;
   let has_get_sbp_fn = 1;
@@ -4929,6 +4934,10 @@ def OneFlow__ncclLogical_2DSameDim0AllReduceOp : OneFlow_BaseOp<"_nccl_logical_2
   let output = (outs
     OneFlow_Tensor:$out
   );
+  let attrs = (ins
+    StrArrayAttr:$src_reduced_nd_sbp,
+    StrArrayAttr:$dst_reduced_nd_sbp
+  );
   let has_logical_tensor_desc_infer_fn = 1;
   let has_get_sbp_fn = 1;
   let has_data_type_infer_fn = 1;
@@ -4943,6 +4952,10 @@ def OneFlow__ncclLogical_2DSameDim1AllReduceOp : OneFlow_BaseOp<"_nccl_logical_2
   let output = (outs
     OneFlow_Tensor:$out
   );
+  let attrs = (ins
+    StrArrayAttr:$src_reduced_nd_sbp,
+    StrArrayAttr:$dst_reduced_nd_sbp
+  );
   let has_logical_tensor_desc_infer_fn = 1;
   let has_get_sbp_fn = 1;
   let has_data_type_infer_fn = 1;
@@ -4956,6 +4969,10 @@ def OneFlow__ncclLogicalAllGatherOp : OneFlow_BaseOp<"_nccl_logical_all_gather",
   );
   let output = (outs
     OneFlow_Tensor:$out
+  );
+  let attrs = (ins
+    StrArrayAttr:$src_reduced_nd_sbp,
+    StrArrayAttr:$dst_reduced_nd_sbp
   );
   let has_logical_tensor_desc_infer_fn = 1;
   let has_get_sbp_fn = 1;
@@ -4972,7 +4989,8 @@ def OneFlow__ncclLogicalAllGatherNoncontinuousOp : OneFlow_BaseOp<"_nccl_logical
     OneFlow_Tensor:$out
   );
   let attrs = (ins
-    DefaultValuedAttr<SI64Attr, "-1">:$in_split_axis
+    StrArrayAttr:$src_reduced_nd_sbp,
+    StrArrayAttr:$dst_reduced_nd_sbp
   );
   let has_logical_tensor_desc_infer_fn = 1;
   let has_get_sbp_fn = 1;
@@ -4988,6 +5006,10 @@ def OneFlow__ncclLogicalAllReduceOp : OneFlow_BaseOp<"_nccl_logical_all_reduce",
   let output = (outs
     OneFlow_Tensor:$out
   );
+  let attrs = (ins
+    StrArrayAttr:$src_reduced_nd_sbp,
+    StrArrayAttr:$dst_reduced_nd_sbp
+  );
   let has_logical_tensor_desc_infer_fn = 1;
   let has_get_sbp_fn = 1;
   let has_data_type_infer_fn = 1;
@@ -5001,6 +5023,10 @@ def OneFlow__ncclLogicalReduceScatterOp : OneFlow_BaseOp<"_nccl_logical_reduce_s
   );
   let output = (outs
     OneFlow_Tensor:$out
+  );
+  let attrs = (ins
+    StrArrayAttr:$src_reduced_nd_sbp,
+    StrArrayAttr:$dst_reduced_nd_sbp
   );
   let has_logical_tensor_desc_infer_fn = 1;
   let has_get_sbp_fn = 1;
@@ -5017,8 +5043,8 @@ def OneFlow__ncclLogicalS2sOp : OneFlow_BaseOp<"_nccl_logical_s2s", [NoSideEffec
     OneFlow_Tensor:$out
   );
   let attrs = (ins
-    DefaultValuedAttr<SI64Attr, "-1">:$in_split_axis,
-    DefaultValuedAttr<SI64Attr, "-1">:$out_split_axis
+    StrArrayAttr:$src_reduced_nd_sbp,
+    StrArrayAttr:$dst_reduced_nd_sbp
   );
   let has_logical_tensor_desc_infer_fn = 1;
   let has_get_sbp_fn = 1;
@@ -6434,7 +6460,6 @@ def OneFlow_ReshapeLikeOp : OneFlow_BaseOp<"reshape_like", [NoSideEffect, Declar
   let has_get_sbp_fn = 1;
   let has_data_type_infer_fn = 1;
   let has_input_arg_modify_fn = 1;
-  let has_nd_sbp_infer_fn = 1;
 }
 
 #endif // GET_ONEFLOW_RESHAPE_OP_DEFINITIONS
