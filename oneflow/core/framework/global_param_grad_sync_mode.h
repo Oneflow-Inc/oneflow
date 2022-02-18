@@ -19,17 +19,17 @@ limitations under the License.
 
 namespace oneflow {
 
-struct GradSyncMode {
+struct GlobalGradSyncMode {
   static bool is_enabled();
   static void set_enabled(bool enabled);
 };
 
 class GlobalParamGradSyncMode {
  public:
-  GlobalParamGradSyncMode(bool enabled) : prev_mode_(GradSyncMode::is_enabled()) {
-    GradSyncMode::set_enabled(enabled);
+  GlobalParamGradSyncMode(bool enabled) : prev_mode_(GlobalGradSyncMode::is_enabled()) {
+    GlobalGradSyncMode::set_enabled(enabled);
   }
-  ~GlobalParamGradSyncMode() { GradSyncMode::set_enabled(prev_mode_); }
+  ~GlobalParamGradSyncMode() { GlobalGradSyncMode::set_enabled(prev_mode_); }
   bool prev_mode() const { return prev_mode_; }
 
  private:

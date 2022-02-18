@@ -27,8 +27,8 @@ bool* GetThreadLocalGradSyncMode() {
 
 }  // namespace
 
-bool GradSyncMode::is_enabled() { return *GetThreadLocalGradSyncMode(); }
+bool GlobalGradSyncMode::is_enabled() { return *GetThreadLocalGradSyncMode(); }
 
-void GradSyncMode::set_enabled(bool enabled) { *GetThreadLocalGradSyncMode() = enabled; }
+void GlobalGradSyncMode::set_enabled(bool enabled) { *GetThreadLocalGradSyncMode() = enabled; }
 
 }  // namespace oneflow
