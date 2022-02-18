@@ -174,7 +174,7 @@ void SetupClusterEdge(ClusterEdge* cluster_edge, const XrtEdge* xrt_edge) {
   cluster_edge->set_is_control_edge(xrt_edge->IsControlEdge());
   CHECK(xrt_edge->HasAttr("time_shape"));
   CHECK(xrt_edge->HasAttr("sbp_policy"));
-  const auto& sbp_policy = xrt_edge->Attr<std::vector<cfg::SbpParallel>>("sbp_policy");
+  const auto& sbp_policy = xrt_edge->Attr<std::vector<SbpParallel>>("sbp_policy");
   cluster_edge->set_start_sbp_policy(sbp_policy[0]);
   cluster_edge->set_end_sbp_policy(sbp_policy[1]);
 

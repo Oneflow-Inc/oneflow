@@ -43,9 +43,9 @@ namespace oneflow {
 
 /* static */ Maybe<void> EagerSymmetricSToPOp::InferNdSbp(user_op::InferNdSbpFnContext* ctx) {
   const int64_t in_split_axis = ctx->user_op_conf().attr<int64_t>("in_split_axis");
-  const cfg::NdSbp& in_dis_hint = ctx->NdSbpHint4InputArgNameAndIndex("in", 0);
-  cfg::NdSbp* in_nd_sbp = ctx->NdSbp4ArgNameAndIndex("in", 0);
-  cfg::NdSbp* out_nd_sbp = ctx->NdSbp4ArgNameAndIndex("out", 0);
+  const NdSbp& in_dis_hint = ctx->NdSbpHint4InputArgNameAndIndex("in", 0);
+  NdSbp* in_nd_sbp = ctx->NdSbp4ArgNameAndIndex("in", 0);
+  NdSbp* out_nd_sbp = ctx->NdSbp4ArgNameAndIndex("out", 0);
   CHECK_GE_OR_RETURN(in_dis_hint.sbp_parallel_size(), 1);
   for (const auto& sbp_hint : in_dis_hint.sbp_parallel()) {
     CHECK_OR_RETURN(sbp_hint.has_split_parallel());
