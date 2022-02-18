@@ -48,33 +48,33 @@ namespace functional {
 
 namespace {
 
-Maybe<Shape> CheckReshape(const std::shared_ptr<one::Tensor>& x,  const Shape& shape){
-    int need_infer_axis = -1;
-    size_t count = 1;
-    for (int i = 0; i < shape.NumAxes(); ++i) {
-      if (shape.At(i) < -1) {
-        return Error::RuntimeError() << "Invalid shape dimension " << shape.At(i);
-      } else if (shape.At(i) == -1) {
-        CHECK_EQ_OR_RETURN(need_infer_axis, -1)
-            << "Shape " << shape.ToString() << " has more than 1 axis that needs to be infered.";
-        need_infer_axis = i;
-      } else {
-        count *= shape.At(i);
-      }
-    }
-    size_t x_count = x->shape()->Count(0);
-    Shape infered_shape = shape;
-    if (need_infer_axis == -1) {
-      CHECK_EQ_OR_RETURN(shape.Count(0), x_count)
-          << "\n Shape " << shape.ToString() << " is invalid for input shape "
-          << x->shape()->ToString();
+Maybe<Shape> CheckReshape(const std::shared_ptr<one::Tensor>& x, const Shape& shape) {
+  int need_infer_axis = -1;
+  size_t count = 1;
+  for (int i = 0; i < shape.NumAxes(); ++i) {
+    if (shape.At(i) < -1) {
+      return Error::RuntimeError() << "Invalid shape dimension " << shape.At(i);
+    } else if (shape.At(i) == -1) {
+      CHECK_EQ_OR_RETURN(need_infer_axis, -1)
+          << "Shape " << shape.ToString() << " has more than 1 axis that needs to be infered.";
+      need_infer_axis = i;
     } else {
-      infered_shape.Set(need_infer_axis, x_count / count);
-      CHECK_EQ_OR_RETURN(infered_shape.Count(0), x_count)
-          << "\n Shape " << shape.ToString() << " is invalid for input shape "
-          << x->shape()->ToString();
+      count *= shape.At(i);
     }
-    return infered_shape;
+  }
+  size_t x_count = x->shape()->Count(0);
+  Shape infered_shape = shape;
+  if (need_infer_axis == -1) {
+    CHECK_EQ_OR_RETURN(shape.Count(0), x_count)
+        << "\n Shape " << shape.ToString() << " is invalid for input shape "
+        << x->shape()->ToString();
+  } else {
+    infered_shape.Set(need_infer_axis, x_count / count);
+    CHECK_EQ_OR_RETURN(infered_shape.Count(0), x_count)
+        << "\n Shape " << shape.ToString() << " is invalid for input shape "
+        << x->shape()->ToString();
+  }
+  return infered_shape;
 }
 
 bool CheckViewValid(const int64_t elem_count, const DimVector& shape, const StrideVector& stride,
@@ -109,7 +109,7 @@ bool CheckViewValid(const int64_t elem_count, const DimVector& shape, const Stri
   if (view_d != -1) { return false; }
   return true;
 }
-}// namespace
+}  // namespace
 
 namespace impl {
 
@@ -717,17 +717,14 @@ class ExpandDimsFunctor {
     MutableAttrMap attrs;
     JUST(attrs.SetAttr<int32_t>("axis", expand_dim));
 
-    if (view::IsViewApplicable(input)){
-      return view::Unsqueeze(input, expand_dim);
-    }
-  
+    if (view::IsViewApplicable(input)) { return view::Unsqueeze(input, expand_dim); }
+
     return OpInterpUtil::Dispatch<Tensor>(*op_, {input}, attrs);
   }
 
  private:
   std::shared_ptr<OpExpr> op_;
 };
-
 
 class SqueezeFunctor {
  public:
@@ -757,9 +754,7 @@ class SqueezeFunctor {
     MutableAttrMap attrs;
     JUST(attrs.SetAttr<std::vector<int32_t>>("axes", squeeze_dims));
 
-    if (view::IsViewApplicable(x)){
-      return view::Squeeze(x, squeeze_dims);
-    }
+    if (view::IsViewApplicable(x)) { return view::Squeeze(x, squeeze_dims); }
 
     return OpInterpUtil::Dispatch<Tensor>(*op_, {x}, attrs);
   }
@@ -1102,13 +1097,12 @@ class ReshapeFunctor {
     MutableAttrMap attrs;
     JUST(attrs.SetAttr<Shape>("shape", infered_shape));
 
-    if (view::IsViewApplicable(x)){
+    if (view::IsViewApplicable(x)) {
       // in some case, view operate is not allowed, so need to check it's validation,
-        // the check refer to torch(aten/src/ATen/native/TensorShape.cpp)
-        bool is_view_valid =
-            CheckViewValid(x->shape()->elem_cnt(), x->shape()->dim_vec(),
-                           JUST(x->stride())->StrideVec(), infered_shape.dim_vec());
-        if (is_view_valid) { return view::Reshape(x, infered_shape); }
+      // the check refer to torch(aten/src/ATen/native/TensorShape.cpp)
+      bool is_view_valid = CheckViewValid(x->shape()->elem_cnt(), x->shape()->dim_vec(),
+                                          JUST(x->stride())->StrideVec(), infered_shape.dim_vec());
+      if (is_view_valid) { return view::Reshape(x, infered_shape); }
     }
     return OpInterpUtil::Dispatch<Tensor>(*op_, {x}, attrs);
   }
@@ -1125,14 +1119,13 @@ class ViewFunctor {
     MutableAttrMap attrs;
     JUST(attrs.SetAttr<Shape>("shape", infered_shape));
 
-    if (view::IsViewApplicable(x)){
-        bool is_view_valid =
-            CheckViewValid(x->shape()->elem_cnt(), x->shape()->dim_vec(),
-                           JUST(x->stride())->StrideVec(), infered_shape.dim_vec());
-        CHECK_OR_RETURN(is_view_valid)
-            << " >> view size is not compatible with input tensor's size and stride (at least one "
-               "dimension spans across two contiguous subspaces). Use .reshape(...) instead.";
-        return view::Reshape(x, infered_shape);
+    if (view::IsViewApplicable(x)) {
+      bool is_view_valid = CheckViewValid(x->shape()->elem_cnt(), x->shape()->dim_vec(),
+                                          JUST(x->stride())->StrideVec(), infered_shape.dim_vec());
+      CHECK_OR_RETURN(is_view_valid)
+          << " >> view size is not compatible with input tensor's size and stride (at least one "
+             "dimension spans across two contiguous subspaces). Use .reshape(...) instead.";
+      return view::Reshape(x, infered_shape);
     }
 
     return OpInterpUtil::Dispatch<Tensor>(*op_, {x}, attrs);
@@ -1141,7 +1134,6 @@ class ViewFunctor {
  private:
   std::shared_ptr<OpExpr> op_;
 };
-
 
 class SliceBaseFunctor {
  public:

@@ -49,10 +49,10 @@ Maybe<bool> IsContiguous(const std::shared_ptr<Tensor>& tensor) {
 
 namespace view {
 
-bool IsViewApplicable(const std::shared_ptr<Tensor>& input){
+bool IsViewApplicable(const std::shared_ptr<Tensor>& input) {
   // only eager local tensor support view for now!
-  if (input->is_local() && !(LazyMode::is_enabled()) && input->shape()->elem_cnt() > 1) { 
-    //elem_cnt() > 1  exclude 0 shape and scalar tensor 
+  if (input->is_local() && !(LazyMode::is_enabled()) && input->shape()->elem_cnt() > 1) {
+    // elem_cnt() > 1  exclude 0 shape and scalar tensor
     return true;
   }
   return false;
@@ -176,7 +176,6 @@ Maybe<Tensor> Slice(const std::shared_ptr<Tensor>& input, const std::vector<int6
   return output;
 }
 
-
 Maybe<Tensor> Unsqueeze(const std::shared_ptr<Tensor>& input, const int32_t& expand_dim) {
   if (!(input->is_eager() && input->is_local())) {
     return Error::RuntimeError()
@@ -217,8 +216,8 @@ Maybe<Tensor> Unsqueeze(const std::shared_ptr<Tensor>& input, const int32_t& exp
               return Maybe<void>::Ok();
             });
     TensorTuple outputs{output};
-    JUST(GetThreadLocalAutogradEngine()->AddBackwardFuncPtr("view::unsqueeze_backward",
-                                                            backward_fn, {input}, &outputs));
+    JUST(GetThreadLocalAutogradEngine()->AddBackwardFuncPtr("view::unsqueeze_backward", backward_fn,
+                                                            {input}, &outputs));
   }
   return output;
 }
@@ -268,7 +267,6 @@ Maybe<Tensor> Squeeze(const std::shared_ptr<Tensor>& input,
   }
   return output;
 }
-
 
 }  // namespace view
 }  // namespace one
