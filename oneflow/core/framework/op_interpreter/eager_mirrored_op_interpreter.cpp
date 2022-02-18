@@ -244,8 +244,7 @@ Maybe<Tensor> Broadcast(const std::shared_ptr<Tensor>& tensor, int64_t src_rank,
 namespace {
 
 Maybe<Tensor> GetSyncedTensorIfBroadcast(const std::shared_ptr<Tensor>& tensor,
-                                         Symbol<ParallelDesc> parallel_desc,
-                                         Symbol<cfg::NdSbp> nd_sbp) {
+                                         Symbol<ParallelDesc> parallel_desc, Symbol<NdSbp> nd_sbp) {
   Optional<int64_t> parallel_id;
   JUST(GetTensorDevice4CurrentProcessCtx(parallel_desc, &parallel_id));
   if (!parallel_id.has_value()) { return tensor; }

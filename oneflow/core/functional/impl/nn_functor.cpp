@@ -983,7 +983,7 @@ class SparseSoftmaxCrossEntropyFunctor {
 
     if (logits->shape()->NumAxes() != 2) { return false; }
 
-    const cfg::NdSbp& logits_nd_sbp = *(JUST(logits->nd_sbp()));
+    const NdSbp& logits_nd_sbp = *(JUST(logits->nd_sbp()));
     const int32_t split_axis = logits->shape()->NumAxes() - 1;
     bool has_split_axis_parallel = false;
     for (int64_t i = 0; i < logits_nd_sbp.sbp_parallel_size(); ++i) {
@@ -1031,11 +1031,11 @@ class SparseSoftmaxCrossEntropyFunctor {
     std::shared_ptr<Tensor> max_global_stage_input0 = max_device_stage->at(0);
     std::shared_ptr<Tensor> max_global_stage_input1 = max_device_stage->at(2);
 
-    const cfg::NdSbp& logits_nd_sbp = *(JUST(logits->nd_sbp()));
-    std::vector<Symbol<cfg::SbpParallel>> s0b_sbp_parallels;
-    std::vector<Symbol<cfg::SbpParallel>> s0s1_sbp_parallels;
+    const NdSbp& logits_nd_sbp = *(JUST(logits->nd_sbp()));
+    std::vector<Symbol<SbpParallel>> s0b_sbp_parallels;
+    std::vector<Symbol<SbpParallel>> s0s1_sbp_parallels;
     if (logits_nd_sbp.sbp_parallel_size() == 2) {
-      cfg::SbpParallel sbp;
+      SbpParallel sbp;
       sbp.mutable_broadcast_parallel();
       s0b_sbp_parallels.emplace_back(logits_nd_sbp.sbp_parallel(0));
       s0b_sbp_parallels.emplace_back(sbp);
@@ -1074,7 +1074,7 @@ class SparseSoftmaxCrossEntropyFunctor {
         JUST(OpInterpUtil::Dispatch<TensorTuple>(*op_reduce_sum_, {output_exp->at(0)}, attrs));
     std::shared_ptr<Tensor> broadcast_div_input1 = output_reduce_sum->at(0);
     if (logits_nd_sbp.sbp_parallel_size() == 2) {
-      std::vector<Symbol<cfg::SbpParallel>> empty_grad_sbp_parallels;
+      std::vector<Symbol<SbpParallel>> empty_grad_sbp_parallels;
       broadcast_div_input1 = JUST(functional::ToConsistent(
           output_reduce_sum->at(0), JUST(output_reduce_sum->at(0)->parallel_desc()),
           s0b_sbp_parallels, s0b_sbp_parallels));
@@ -1741,12 +1741,10 @@ class OneHotFunctor {
       auto tensor_max = JUST(functional::ReduceMax(input, axis, false));
 
       int64_t max = 0;
-      const auto& callback =
-          std::make_shared<std::function<void(uint64_t)>>([&](uint64_t of_blob_ptr) {
-            auto* of_blob = reinterpret_cast<OfBlob*>(of_blob_ptr);
-            of_blob->AutoMemCopyTo<int64_t>(&max,
-                                            1);  // copy 1 scalar(int64_t) tensor's value to max
-          });
+      const auto& callback = [&](uint64_t of_blob_ptr) {
+        auto* of_blob = reinterpret_cast<OfBlob*>(of_blob_ptr);
+        of_blob->AutoMemCopyTo<int64_t>(&max, 1);  // copy 1 scalar(int64_t) tensor's value to max
+      };
       JUST(SyncAccessTensorWithTimeOut(tensor_max, callback, "const"));
       JUST(attrs.SetAttr<int64_t>("depth", max + 1));
 

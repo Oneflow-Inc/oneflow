@@ -89,6 +89,7 @@ class CudaStream : public Stream {
   void* cublas_workspace() const;
   size_t cublas_workspace_size() const;
   const cudaDeviceProp& device_properties() const;
+  int cuda_arch() const;
 
   void InitLaunchConfigWithWaves(CudaLaunchConfig* config, size_t elem_cnt, size_t block_size,
                                  size_t max_waves) const {
