@@ -830,6 +830,8 @@ Maybe<bool> BoxingCollector::Ask1Combination4DiffPlacement(
                               producer_hierarchy_num_axes)));
       }
     }
+    // If we do not have middle nodes on the consumer side
+    *diag_node_pos = middle_sbps.size();
     // Find the middle nodes between the diagonal node and the consumer
     if (id_consumer != min_diag_consumer) {
       JUST(boxing_collector_consumer->AskSbpCombination(
