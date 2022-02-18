@@ -67,11 +67,8 @@ Maybe<void> InferTensorDesc4FusedMatmul(user_op::InferContext* ctx) {
     cublas_aux_ld = k; 
     // Set Middle result shape. 
     AlignReluAuxLd(&cublas_aux_ld); 
-    int64_t aux_size = m * cublas_aux_ld; 
-    *ctx->OutputShape("cublas_aux", idx) = Shape({aux_size / 8});
-    // user_op::TensorDesc* hidden_desc = ctx->OutputTensorDesc("hidden", idx);
-    // *ctx->OutputShape("hidden", idx) = x_desc.shape();
-    // hidden_desc->mut_shape()->Set(1, k);
+    int64_t aux_size = cublas_aux_ld / 8; // Cause we use int8_t as dtype 
+    *ctx->OutputShape("cublas_aux", idx) = Shape({m, aux_size});
     *ctx->OutputShape("hidden", idx) = Shape({m, k});
   }
   *ctx->OutputShape("out", 0) = x_desc.shape();
@@ -89,11 +86,6 @@ Maybe<void> InferDataType4Matmul(user_op::InferContext* ctx){
     CHECK_EQ_OR_RETURN(in_desc.data_type(), first_in_desc.data_type());
   }
 
-  // for (const auto& out_arg_pair : ctx->outputs()) {
-  //   user_op::TensorDesc* out_desc =
-  //       ctx->OutputTensorDesc(out_arg_pair.first, out_arg_pair.second);
-  //   *out_desc->mut_data_type() = first_in_desc.data_type();
-  // }
   user_op::TensorDesc* out_desc = ctx->OutputTensorDesc("out", 0);
   *out_desc->mut_data_type() = first_in_desc.data_type();
 

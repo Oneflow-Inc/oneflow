@@ -63,11 +63,11 @@ Maybe<void> InferDataType4MatmulBackward(user_op::InferContext* ctx){
 
 /* static */ Maybe<void> CublasBiasAddReluMatmulGradOp::GetSbp(user_op::SbpContext* ctx) {
   ctx->NewBuilder()
-      .Broadcast(user_op::OpArg("weight", 0))
+      .Split(user_op::OpArg("weight", 0), 0)
       .Broadcast(user_op::OpArg("dy", 0))
-      .Broadcast(user_op::OpArg("aux", 0))
-      .Broadcast(user_op::OpArg("d_grad", 0))
-      .Broadcast(user_op::OpArg("d_bias", 0))
+      .Split(user_op::OpArg("aux", 0), 0)
+      .Split(user_op::OpArg("d_grad", 0), 0)
+      .Split(user_op::OpArg("d_bias", 0), 0)
       .Build();
   return Maybe<void>::Ok();
 }
