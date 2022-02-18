@@ -19,6 +19,7 @@ import random
 import sys
 import traceback
 from typing import List, Optional, Sequence, Tuple, Union
+import warnings
 
 from numpy import int64
 
@@ -52,4 +53,5 @@ class DistributedPariticalFCSample(Module):
 
 
 def distributed_partial_fc_sample_op(weight, label, num_sample):
+    warnings.warn("the function of distributed_partial_fc_sample deprecated,advise to use nn.DistributedPariticalFCSample", DeprecationWarning)
     return DistributedPariticalFCSample(num_sample)(weight, label)
