@@ -27,13 +27,13 @@ def test_reflection_pad2d_impl(test_case, padding, placement, sbp):
     m = torch.nn.ReflectionPad2d(padding=padding)
     dims = [random(2, 4) * 8 for _ in range(4)]
     x = random_tensor(4, *dims)
-    y = x.to_consistent(placement=placement, sbp=sbp)
+    y = x.to_global(placement=placement, sbp=sbp)
     z = m(y)
     return z
 
 
 class TestReflectionPad2dConsistent(flow.unittest.TestCase):
-    @consistent
+    @globalview
     def test_reflection_pad2d(test_case):
         padding = [
             (2, 2, 1, 1),

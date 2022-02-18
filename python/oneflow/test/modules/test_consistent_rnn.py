@@ -75,7 +75,9 @@ def test_rnn_impl(
         w.copy_(flow.tensor(w_torch))
     rnn_flow = rnn_flow.to_global(
         flow.env.all_device_placement("cpu"), flow.sbp.broadcast
-    ).to_global(placement=placement, sbp=[module_sbp for _ in range(len(placement.hierarchy))])
+    ).to_global(
+        placement=placement, sbp=[module_sbp for _ in range(len(placement.hierarchy))]
+    )
 
     x = np.random.rand(32, 16, input_size).astype(np.float32)
     x_torch = torch.tensor(x, dtype=torch.float32, requires_grad=True)
@@ -89,7 +91,10 @@ def test_rnn_impl(
     out_flow, hid_flow = rnn_flow(x_flow)
 
     # check forward
-    local_output = out_flow.to_global(placement=placement, sbp=[flow.sbp.broadcast for _ in range(len(placement.hierarchy))]).to_local()
+    local_output = out_flow.to_global(
+        placement=placement,
+        sbp=[flow.sbp.broadcast for _ in range(len(placement.hierarchy))],
+    ).to_local()
     if flow.env.get_rank() == 0:
         test_case.assertTrue(
             np.allclose(
@@ -103,7 +108,10 @@ def test_rnn_impl(
     # check backward
     out_torch.sum().backward()
     out_flow.sum().backward()
-    local_x_grad = x_flow.to_global(placement=placement, sbp=[flow.sbp.broadcast for _ in range(len(placement.hierarchy))]).to_local()
+    local_x_grad = x_flow.to_global(
+        placement=placement,
+        sbp=[flow.sbp.broadcast for _ in range(len(placement.hierarchy))],
+    ).to_local()
     if flow.env.get_rank() == 0:
         test_case.assertTrue(
             np.allclose(

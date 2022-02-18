@@ -27,13 +27,13 @@ def test_repeat_impl(test_case, ndim, placement, sbp):
     dims = [random(1, 4) * 8 for _ in range(ndim)]
     repeat_size = [random(1, 4) for _ in range(ndim)]
     x = random_tensor(ndim, *dims)
-    y = x.to_consistent(placement=placement, sbp=sbp)
+    y = x.to_global(placement=placement, sbp=sbp)
     z = torch.reciprocal(y)
     return z
 
 
 class TestRepeatConsistent(flow.unittest.TestCase):
-    @consistent
+    @globaltest
     def test_repeat(test_case):
         # random ndim in range [1,4]
         ndim = random(1, 5).to(int).value()
