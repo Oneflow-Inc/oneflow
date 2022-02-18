@@ -60,7 +60,7 @@ def _backward(self, gradient=None, retain_graph=False, create_graph=False):
         ), "nn.Graph only accept lazy tensor to call backward() in lazy mode."
         assert (
             self.shape.numel() == 1
-        ), " loss_tensor.backward(), loss_tensor must be a scalar in nn.Graph, please use loss_tesnor.sum() or loss_tensor.mean() to make it a scalar tensor."
+        ), " loss_tensor.backward(), loss_tensor must be a scalar in nn.Graph, please use loss_tensor.sum() or loss_tensor.mean() to make it a scalar tensor."
         assert (
             gradient is None
         ), "nn.Graph donot accept 'gradient' argument in backward() at the moment."
@@ -968,11 +968,11 @@ def _numpy(self):
 
 
 def _is_consistent(self):
-    raise RuntimeError("is_consistent is removed. Please use is_global instead")
+    raise RuntimeError(".is_consistent has been removed, please use .is_global instead")
 
 
-def _to_consistent(self):
-    raise RuntimeError("to_consistent is removed. Please use to_global instead")
+def _to_consistent(self, *args, **kwargs):
+    raise RuntimeError(".to_consistent has been removed, please use .to_global instead")
 
 
 def RegisterMethods():

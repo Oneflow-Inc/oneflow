@@ -13,27 +13,28 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
-#include "oneflow/core/common/thread_local_callback.h"
+
+#ifndef ONEFLOW_XRT_TENSORRT_COMMON_H_
+#define ONEFLOW_XRT_TENSORRT_COMMON_H_
+
+#include "NvInferVersion.h"
 
 namespace oneflow {
+namespace xrt {
+namespace tensorrt {
 
-namespace blocking {
+#ifdef NV_TENSORRT_MAJOR
+#if NV_TENSORRT_MAJOR > 7
+#define TRT_OPTIONAL_NOEXCEPT noexcept
+#else
+#define TRT_OPTIONAL_NOEXCEPT
+#endif
+#else
+#define TRT_OPTIONAL_NOEXCEPT
+#endif
 
-std::function<void()>* MutStackInfoCallback() {
-  static thread_local std::function<void()> StackInfoCallback = [] {};
-  return &StackInfoCallback;
-}
-
-void StackInfoCallback() { (*MutStackInfoCallback())(); }
-
-void RegisterStackInfoCallback(const std::function<void()>& Callback) {
-  *MutStackInfoCallback() = Callback;
-}
-
-void ClearStackInfoCallback() {
-  *MutStackInfoCallback() = [] {};
-}
-
-}  // namespace blocking
-
+}  // namespace tensorrt
+}  // namespace xrt
 }  // namespace oneflow
+
+#endif  // ONEFLOW_XRT_TENSORRT_COMMON_H_
