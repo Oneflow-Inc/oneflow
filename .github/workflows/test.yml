@@ -138,13 +138,15 @@ jobs:
             exit 0
           fi
           echo "is_secrets_accessible=1" >> $GITHUB_ENV
-      - uses: Oneflow-Inc/gh-action-scheduler-v2@fix-for-new-distributed
-        name: Wait for GPU slot
+      - name: Wait for GPU slot
+        uses: Oneflow-Inc/get-oneflow/wait-for-gpu@distributed-v2
         if: env.is_secrets_accessible == '1'
-        timeout-minutes: 45
+        timeout-minutes: 60
         continue-on-error: true
-        env:
-          CI_PERSONAL_ACCESS_TOKEN: ${{ secrets.CI_PERSONAL_ACCESS_TOKEN }}
+        with:
+          token: ${{ secrets.CI_PERSONAL_ACCESS_TOKEN }}
+          timeout-minutes: 2
+          max-try-times: 30
 
   find-build-cache:
     name: "Find build cache"
