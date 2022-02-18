@@ -93,7 +93,7 @@ class BoxingCollector final {
       const ParallelDesc& consumer_parallel_desc, bool is_customized,
       std::vector<cfg::NdSbp>& middle_sbps, int32_t* diag_node_pos, bool compute_cost);
   // Ask for sbp combination with different hierarchies on the same placement
-  Maybe<void> AskSbpCombination4DiffHierarchy(
+  Maybe<void> AskSbpCombination4DiffPlacement(
       const cfg::NdSbp& sbp_producer, const cfg::NdSbp& sbp_consumer,
       const BlobDesc& logical_blob_desc, const ParallelDesc& producer_parallel_desc,
       const ParallelDesc& consumer_parallel_desc, bool is_customized,
