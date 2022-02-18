@@ -14,20 +14,21 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-#include <pybind11/pybind11.h>
-#include "oneflow/api/python/of_api_registry.h"
-#include "oneflow/core/framework/dtype.h"
-#include "oneflow/core/common/util.h"
 #include "oneflow/core/framework/global_param_grad_sync_mode.h"
-
-namespace py = pybind11;
 
 namespace oneflow {
 
-ONEFLOW_API_PYBIND11_MODULE("", m) {
-  py::class_<GlobalParamGradSyncMode, std::shared_ptr<GlobalParamGradSyncMode>>(
-      m, "GlobalParamGradSyncMode")
-      .def(py::init([](bool flag) { return std::make_shared<GlobalParamGradSyncMode>(flag); }));
+namespace {
+
+bool* GetThreadLocalGradSyncMode() {
+  static thread_local bool g_grad_mode = true;
+  return &g_grad_mode;
 }
+
+}  // namespace
+
+bool GradSyncMode::is_enabled() { return *GetThreadLocalGradSyncMode(); }
+
+void GradSyncMode::set_enabled(bool enabled) { *GetThreadLocalGradSyncMode() = enabled; }
 
 }  // namespace oneflow

@@ -13,29 +13,29 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
-#ifndef ONEFLOW_CORE_FRAMEWORK_GLOBAL_PARAM_GRAD_SYNC_GUARD_H_
-#define ONEFLOW_CORE_FRAMEWORK_GLOBAL_PARAM_GRAD_SYNC_GUARD_H_
+
+#ifndef ONEFLOW_CORE_FRAMEWORK_GLOBAL_PARAM_GRAD_SYNC_MODE_
+#define ONEFLOW_CORE_FRAMEWORK_GLOBAL_PARAM_GRAD_SYNC_MODE_
 
 namespace oneflow {
 
-class GlobalParamGardSyncGuard {
- public:
-  GlobalParamGardSyncGuard(bool flag) {
-    old_flag_ = flag_;
-    flag_ = flag;
-  }
-  ~GlobalParamGardSyncGuard() { flag_ = old_flag_; }
-
-  static bool* MutThreadLocalGlobalParamGradSyncFlag() { return &flag_; }
-
- private:
-  static thread_local bool old_flag_;
-  static thread_local bool flag_;
+struct GradSyncMode {
+  static bool is_enabled();
+  static void set_enabled(bool enabled);
 };
 
-thread_local bool GlobalParamGardSyncGuard::old_flag_ = true;
-thread_local bool GlobalParamGardSyncGuard::flag_ = true;
+class GlobalParamGradSyncMode {
+ public:
+  GlobalParamGradSyncMode(bool enabled) : prev_mode_(GradSyncMode::is_enabled()) {
+    GradSyncMode::set_enabled(enabled);
+  }
+  ~GlobalParamGradSyncMode() { GradSyncMode::set_enabled(prev_mode_); }
+  bool prev_mode() const { return prev_mode_; }
+
+ private:
+  bool prev_mode_;
+};
 
 }  // namespace oneflow
 
-#endif  // ONEFLOW_CORE_FRAMEWORK_GLOBAL_PARAM_GRAD_SYNC_GUARD_H_
+#endif  // ONEFLOW_CORE_FRAMEWORK_GLOBAL_PARAM_GRAD_SYNC_MODE_
