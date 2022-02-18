@@ -6393,7 +6393,6 @@ def OneFlow_ReshapeLikeOp : OneFlow_BaseOp<"reshape_like", [NoSideEffect, Declar
   let has_get_sbp_fn = 1;
   let has_data_type_infer_fn = 1;
   let has_input_arg_modify_fn = 1;
-  let has_nd_sbp_infer_fn = 1;
 }
 
 #endif // GET_ONEFLOW_RESHAPE_OP_DEFINITIONS
