@@ -87,7 +87,7 @@ Maybe<void> FuseAddToOutputPass::Apply(const OpGraph& op_graph, JobBuilder* job_
   auto IsReachable = op_graph.MakePredicatorIsOpNameDataOrCtrlReachable();
   std::vector<OperatorConf> delete_ops;
   HashSet<std::string> be_fused_op_names;
-  op_graph.MaybeForEachNode([&](const OpNode* op_node) -> Maybe<void> {
+  JUST(op_graph.MaybeForEachNode([&](const OpNode* op_node) -> Maybe<void> {
     const OperatorConf& op_conf = op_node->op().op_conf();
     if (!op_conf.has_user_conf()) { return Maybe<void>::Ok(); }
     if (!op_conf.ctrl_in_op_name().empty()) { return Maybe<void>::Ok(); }
@@ -160,7 +160,7 @@ Maybe<void> FuseAddToOutputPass::Apply(const OpGraph& op_graph, JobBuilder* job_
     // Add the add_n op to removing list
     delete_ops.emplace_back(op_conf);
     return Maybe<void>::Ok();
-  });
+  }));
   JUST(job_builder->MutOpTransactionCommit());
   job_builder->DelOps(delete_ops);
   return Maybe<void>::Ok();
