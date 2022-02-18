@@ -40,14 +40,15 @@ void UniformIntDistribution<DeviceType::kCPU, T>::operator()(
   auto gen = CHECK_JUST(generator->Get<one::CPUGeneratorImpl>());
   // std::uniform_int_distribution generates [low, high], but we want [low, high) here
   CPUUniformIntDistributionImpl<T> impl(low_, high_ - 1);
-  if(elem_cnt!=cnt){
+  if(elem_cnt != cnt){
     int64_t rank_id = GlobalProcessCtx::Rank();
-    /*when sbp=s/p, offset according to rank id to conform to the setting\
+    /*when sbp=s, offset according to rank id to conform to the setting\
     that the local spliced tensor is equal to the global tensor */
     for (int64_t i = 0; i < elem_cnt * rank_id; ++i) { impl(gen->engine()); }
     for (int64_t i = 0; i < elem_cnt; ++i) { dptr[i] = impl(gen->engine()); }
+  }else{
+    for (int64_t i = 0; i < elem_cnt; ++i) { dptr[i] = impl(gen->engine()); }
   }
-  for (int64_t i = 0; i < elem_cnt; ++i) { dptr[i] = impl(gen->engine()); }
 }
 
 #define INITIATE_CPU_UNIFORM_INT_DISTRIBUTION(T, typeproto)              \
