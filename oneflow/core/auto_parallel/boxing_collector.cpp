@@ -818,7 +818,6 @@ Maybe<bool> BoxingCollector::Ask1Combination4DiffPlacement(
   // If we found a diagonal middle node with current boxing collector
   if (min_diag_producer >= 0) {
     std::vector<cfg::NdSbp> middle_sbps_buffer;
-    bool diff_sbp4consumer = id_consumer != min_diag_consumer;
     // Find the middle nodes between the producer and the diagonal node
     if (id_producer != min_diag_producer) {
       JUST(boxing_collector_producer->AskSbpCombination(
@@ -830,15 +829,17 @@ Maybe<bool> BoxingCollector::Ask1Combination4DiffPlacement(
         middle_sbps.emplace_back(*JUST(SetNdSbpDim(middle_sbp, producer_hierarchy_num_axes)));
       }
       // If different placement,
-      // or the same placement but the diagonal sbp is different from the consumer sbp
-      if (diff_placement || diff_sbp4consumer) {
+      // or the same placement but with 2D hierarchies
+      // For example: Oneflow supports [6]: (S0) -> [3, 2]: (S0, S1)
+      // but does not support [2, 3]: (S0, S0) -> [3, 2]: (S0, S1)
+      if (diff_placement || producer_hierarchy_num_axes > 1) {
         middle_sbps.emplace_back(
             *JUST(SetNdSbpDim(boxing_collector_producer->nd_sbp_lists_[min_diag_producer],
                               producer_hierarchy_num_axes)));
       }
     }
     // Find the middle nodes between the diagonal node and the consumer
-    if (diff_sbp4consumer) {
+    if (id_consumer != min_diag_consumer) {
       JUST(boxing_collector_consumer->AskSbpCombination(
           boxing_collector_consumer->nd_sbp_lists_[min_diag_consumer], sbp_consumer,
           logical_blob_desc, consumer_parallel_desc, consumer_parallel_desc,
@@ -846,7 +847,7 @@ Maybe<bool> BoxingCollector::Ask1Combination4DiffPlacement(
       // Set the diagonal node position and stop using it as buffer
       *diag_node_pos = middle_sbps.size();
       // If different placement
-      if (diff_placement) {
+      if (diff_placement || consumer_hierarchy_num_axes > 1) {
         middle_sbps.emplace_back(
             *JUST(SetNdSbpDim(boxing_collector_consumer->nd_sbp_lists_[min_diag_consumer],
                               consumer_hierarchy_num_axes)));
