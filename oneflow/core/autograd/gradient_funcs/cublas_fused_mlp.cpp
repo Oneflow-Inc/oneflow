@@ -140,10 +140,18 @@ Maybe<void> CublasFusedMLP::Apply(const CublasFusedMLPCaptureState* ctx,
     }
   }
   // For first layer, we need to use 2 matmul to get grads. 
-  // dx: 
-  in_grads->at(0) = JUST(functional::MatMul(dgrad.at(1), weights.at(0), false, false, 1.0));
-  // dw: 
-  in_grads->at(1) = JUST(functional::MatMul(dgrad.at(1), ctx->SavedTensors().at(0), true, false, 1.0));
+  if(weight_num!=1){
+    // dx: 
+    in_grads->at(0) = JUST(functional::MatMul(dgrad.at(1), weights.at(0), false, false, 1.0));
+    // dw: 
+    in_grads->at(1) = JUST(functional::MatMul(dgrad.at(1), ctx->SavedTensors().at(0), true, false, 1.0));
+  }else{
+    // If there is only one dense layer, we directly use last_relu_grad as dgrad. 
+    // dx: 
+    in_grads->at(0) = JUST(functional::MatMul(last_relu_grad, weights.at(0), false, false, 1.0));
+    // dw: 
+    in_grads->at(1) = JUST(functional::MatMul(last_relu_grad, ctx->SavedTensors().at(0), true, false, 1.0));
+  }
 
   return Maybe<void>::Ok();
 }

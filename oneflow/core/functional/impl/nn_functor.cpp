@@ -330,7 +330,6 @@ class CublasFusedMLPFunctor {
     // Fall back to matmul + bias_add + relu 
     std::shared_ptr<one::Tensor> out; 
     for(int32_t layer_idx=0; layer_idx < weight_size; layer_idx++){
-      printf("Here enter cpu version. \n"); 
       if(layer_idx == 0){
         out = JUST(functional::BiasAdd(
                     JUST(functional::MatMul(x, weights[layer_idx], false, true, 1.0)), 
