@@ -401,7 +401,10 @@ class all_placement(generator):
             else:
                 self.valid_device = list(valid_device)
         else:
-            self.valid_device = ["cuda", "cpu"]
+            if os.getenv("ONEFLOW_TEST_CPU_ONLY"):
+                self.valid_device = ["cpu",]
+            else:
+                self.valid_device = ["cuda", "cpu"]
         self.node_size = flow.env.get_node_size()
         self.world_size = flow.env.get_world_size()
         self.num_rank_for_each_node = self.world_size // self.node_size
@@ -413,12 +416,7 @@ class all_placement(generator):
         return self.value()[key]
 
     def _calc_device(self):
-        if os.getenv("ONEFLOW_TEST_CPU_ONLY"):
-            return [
-                "cpu",
-            ]
-        else:
-            return self.valid_device
+        return self.valid_device
 
     def _calc_all_placement(self):
         all_device = self._calc_device()
