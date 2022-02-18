@@ -164,7 +164,10 @@ def compare_eager_2d_global_with_torch(
             of_output.numpy(), torch_output.detach().numpy(), rtol=1e-03, atol=1e-04
         )
         assert np.allclose(
-            of_logits_grad.numpy(), torch_logits.grad.detach().numpy(), rtol=1e-03, atol=1e-04
+            of_logits_grad.numpy(),
+            torch_logits.grad.detach().numpy(),
+            rtol=1e-03,
+            atol=1e-04,
         )
 
 
