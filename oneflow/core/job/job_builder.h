@@ -57,6 +57,11 @@ class JobBuilder final {
   void AddOps(const ParallelConf& parallel_conf, const std::vector<OperatorConf>& op_confs);
   Maybe<void> MutOpOnlyOnce(const OperatorConf& op_conf);
   void MutOpsOnlyOnce(const std::vector<OperatorConf>& op_confs);
+  // Mut op with transaction
+  Maybe<bool> IsInMutOpTransaction(const std::string& op_name) const;
+  Maybe<OperatorConf*> MutOpTransactionGet(const std::string& op_name);
+  Maybe<void> MutOpTransactionMut(const OperatorConf& op_conf);
+  Maybe<void> MutOpTransactionCommit();
   void MutParallelConfOnlyOnce(const std::string& op_name, const ParallelConf& parallel_conf);
   void AddOrMutOpsOnlyOnce(const ParallelConf& parallel_conf,
                            const std::vector<OperatorConf>& op_confs);
@@ -93,6 +98,7 @@ class JobBuilder final {
 
   HashMap<std::string, NdSbpSignature*> op_name2nd_sbp_signature_conf_;
   HashMap<ParallelConf, PlacementGroup*> parallel_conf2placement_group_;
+  HashMap<std::string, OperatorConf> mut_op_transaction_name2op_conf_;
 };
 
 }  // namespace oneflow
