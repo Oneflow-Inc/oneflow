@@ -157,6 +157,7 @@ class UserOpConfWrapperBuilder final {
   UserOpConfWrapperBuilder& Attr(const std::string& attr_name, const T& val);
 
   UserOpConfWrapperBuilder& ScopeSymbolId(int64_t scope_symbol_id);
+  UserOpConfWrapperBuilder& DeviceTag(const std::string& device_tag);
 
   UserOpConfWrapper Build();
 
@@ -170,6 +171,7 @@ class UserOpConfWrapperBuilder final {
   std::vector<std::string> input_order_;
   std::vector<std::string> output_order_;
   OptInt64 scope_symbol_id_;
+  std::string device_tag_;
 };
 
 using BackwardOpBuilder = UserOpConfWrapperBuilder;
