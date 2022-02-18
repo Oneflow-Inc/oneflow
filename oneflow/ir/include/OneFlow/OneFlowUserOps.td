@@ -8979,6 +8979,24 @@ def OneFlow_EmbeddingUpdatePlaceholderOp : OneFlow_BaseOp<"embedding_update_plac
   let has_data_type_infer_fn = 1;
 }
 
+def OneFlow_UniqueKeyValuePairOp : OneFlow_BaseOp<"unique_key_value_pair", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
+  let input = (ins
+    OneFlow_Tensor:$keys,
+    OneFlow_Tensor:$values
+  );
+  let output = (outs
+    OneFlow_Tensor:$num_unique,
+    OneFlow_Tensor:$unique_keys,
+    OneFlow_Tensor:$unique_values,
+    OneFlow_Tensor:$reverse_index
+  );
+  let same_output_regst_num = 1;
+  let has_logical_tensor_desc_infer_fn = 1;
+  let has_physical_tensor_desc_infer_fn = 1;
+  let has_get_sbp_fn = 1;
+  let has_data_type_infer_fn = 1;
+}
+
 def OneFlow_IdShuffleOp : OneFlow_BaseOp<"id_shuffle", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
     AnyType:$ids,

@@ -18,6 +18,41 @@ limitations under the License.
 
 namespace oneflow {
 
+/* static */ Maybe<void> UniqueKeyValuePairOp::InferLogicalTensorDesc(user_op::InferContext* ctx) {
+  const Shape& keys_shape = ctx->InputShape("keys", 0);
+  const Shape& values_shape = ctx->InputShape("values", 0);
+  CHECK_EQ_OR_RETURN(keys_shape.NumAxes(), values_shape.NumAxes());
+  for (int i = 0; i < keys_shape.NumAxes(); ++i) {
+    CHECK_EQ_OR_RETURN(keys_shape.At(i), values_shape.At(i));
+  }
+  *ctx->OutputShape("num_unique", 0) = Shape({1});
+  *ctx->OutputShape("unique_keys", 0) = Shape({keys_shape.elem_cnt()});
+  *ctx->OutputShape("unique_values", 0) = Shape({values_shape.elem_cnt()});
+  *ctx->OutputShape("reverse_index", 0) = keys_shape;
+  return Maybe<void>::Ok();
+}
+
+/*static*/ Maybe<void> UniqueKeyValuePairOp::InferPhysicalTensorDesc(user_op::InferContext* ctx) {
+  return InferLogicalTensorDesc(ctx);
+}
+
+/* static */ Maybe<void> UniqueKeyValuePairOp::GetSbp(user_op::SbpContext* ctx) {
+  ctx->NewBuilder().Split(ctx->inputs(), 0).Split(ctx->outputs(), 0).Build();
+  return Maybe<void>::Ok();
+}
+
+/* static */ Maybe<void> UniqueKeyValuePairOp::InferDataType(user_op::InferContext* ctx) {
+  const DataType key_dtype = ctx->InputDType("keys", 0);
+  const DataType values_dtype = ctx->InputDType("values", 0);
+  CHECK_EQ_OR_RETURN(values_dtype, DataType::kInt32);
+  CHECK_OR_RETURN((key_dtype == DataType::kInt64) || (key_dtype == DataType::kInt32));
+  *ctx->OutputDType("num_unique", 0) = DataType::kInt32;
+  *ctx->OutputDType("unique_keys", 0) = key_dtype;
+  *ctx->OutputDType("unique_values", 0) = values_dtype;
+  *ctx->OutputDType("reverse_index", 0) = DataType::kInt32;
+  return Maybe<void>::Ok();
+}
+
 /* static */ Maybe<void> IdShuffleOp::InferLogicalTensorDesc(user_op::InferContext* ctx) {
   const Shape& ids_shape = ctx->InputShape("ids", 0);
   const Shape& column_ids_shape = ctx->InputShape("column_ids", 0);
