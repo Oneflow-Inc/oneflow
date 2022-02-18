@@ -485,33 +485,41 @@ Maybe<void> BoxingCollector::AskSbpCombination(
   // Dealing with 1D sbp to 1D sbp
   // Specifically, S -> P.
   if (Is1dSbp(sbp_producer) && Is1dSbp(sbp_consumer)) {
-    if (sbp_producer.sbp_parallel(0).has_split_parallel()
-        && sbp_consumer.sbp_parallel(0).has_partial_sum_parallel()) {
-      // S -> B -> P (Large cost!)
-      // TODO: Please implement S -> P directly.
-
-      int32_t hierarchy_size;
-      if (producer_parallel_desc.hierarchy()->elem_cnt()
-          < consumer_parallel_desc.hierarchy()->elem_cnt()) {
-        // The diagonal node uses the parallel description from producer
-        // (S, S) -> (B, B) -> P/(P, P) or S -> B -> P/(P, P)
-        *diag_node_pos = 1;
-        hierarchy_size = producer_parallel_desc.hierarchy()->NumAxes();
-      } else {
-        // The diagonal node uses the parallel description from consumer
-        // S/(S, S) -> B -> P or S/(S, S) -> (B, B) -> (P, P)
-        *diag_node_pos = 0;
-        hierarchy_size = consumer_parallel_desc.hierarchy()->NumAxes();
+    if (sbp_consumer.sbp_parallel(0).has_partial_sum_parallel()) {
+      // Support [4]: P <--> [2, 2]: (P, P)
+      if (producer_parallel_desc.EqualsIgnoringHierarchy(consumer_parallel_desc)
+          && sbp_producer.sbp_parallel(0).has_partial_sum_parallel()) {
+        return Maybe<void>::Ok();
       }
 
-      NdSbp broadcast_nd;
-      for (int32_t i = 0; i < hierarchy_size; i++) {
-        broadcast_nd.add_sbp_parallel();
-        broadcast_nd.mutable_sbp_parallel(i)->mutable_broadcast_parallel();
+      if (!sbp_producer.sbp_parallel(0).has_broadcast_parallel()) {
+        // S -> B -> P (Large cost!)
+        // TODO: Please implement S -> P directly.
+        // We do not support [3]: P <--> [2, 2]: (P, P) as well.
+
+        int32_t hierarchy_size;
+        if (producer_parallel_desc.hierarchy()->elem_cnt()
+            < consumer_parallel_desc.hierarchy()->elem_cnt()) {
+          // The diagonal node uses the parallel description from producer
+          // (S, S) -> (B, B) -> P/(P, P) or S -> B -> P/(P, P)
+          *diag_node_pos = 1;
+          hierarchy_size = producer_parallel_desc.hierarchy()->NumAxes();
+        } else {
+          // The diagonal node uses the parallel description from consumer
+          // S/(S, S) -> B -> P or S/(S, S) -> (B, B) -> (P, P)
+          *diag_node_pos = 0;
+          hierarchy_size = consumer_parallel_desc.hierarchy()->NumAxes();
+        }
+
+        NdSbp broadcast_nd;
+        for (int32_t i = 0; i < hierarchy_size; i++) {
+          broadcast_nd.add_sbp_parallel();
+          broadcast_nd.mutable_sbp_parallel(i)->mutable_broadcast_parallel();
+        }
+        middle_sbps.emplace_back(broadcast_nd);
       }
-      middle_sbps.emplace_back(broadcast_nd);
+      return Maybe<void>::Ok();
     }
-    return Maybe<void>::Ok();
   }
 
   // Middle nodes algorithm supports transfer for different machines or devices or hierarchies
