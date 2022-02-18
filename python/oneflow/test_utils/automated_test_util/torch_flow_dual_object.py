@@ -625,6 +625,9 @@ def GetDualObject(name, pytorch, oneflow):
                                         self.add_optimizer(of_sgd)
 
                                 def build(self):
+                                    res = graph_tensor_oneflow(
+                                        *tensor_graph_args, **tensor_graph_kwargs
+                                    )
                                     forward_res = res
                                     if (
                                         global_backward
