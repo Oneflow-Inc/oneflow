@@ -54,7 +54,7 @@ std::string SbpToString(const SbpParallel& sbp);
 std::string NdSbpToString(const NdSbp& nd_sbp);
 
 // If an nd sbp can be converted to a 1d sbp.
-bool Is1dSbp(const cfg::NdSbp& nd_sbp);
+bool Is1dSbp(const NdSbp& nd_sbp);
 
 }  // namespace oneflow
 

@@ -39,15 +39,24 @@ class TestModuleDiffHierarchy(nn.Module):
             for sbp2 in sbp_1ds:
                 for sbp3 in sbp_1ds:
                     # (2, 2) -> 4
-                    x = x.to_global(placement = flow.placement(
+                    x = x.to_global(
+                        placement=flow.placement(
                             device_type="cuda", device_ids={0: range(4)}
-                        ), sbp=[sbp1])
+                        ),
+                        sbp=[sbp1],
+                    )
                     # 4 -> (2, 2)
-                    x = x.to_global(placement = flow.placement(
-                            device_type="cuda", device_ids={0: range(4)}, hierarchy=(2, 2)
-                        ), sbp=[sbp2, sbp3])
+                    x = x.to_global(
+                        placement=flow.placement(
+                            device_type="cuda",
+                            device_ids={0: range(4)},
+                            hierarchy=(2, 2),
+                        ),
+                        sbp=[sbp2, sbp3],
+                    )
 
         return x
+
 
 class TestModuleDiffPlacement(nn.Module):
     def forward(self, x):
@@ -66,13 +75,21 @@ class TestModuleDiffPlacement(nn.Module):
                 for sbp3 in sbp_1ds:
                     # (2, 2) -> 3
                     # 4 is not divisible by 3
-                    x = x.to_global(placement = flow.placement(
+                    x = x.to_global(
+                        placement=flow.placement(
                             device_type="cuda", device_ids={0: range(3)}
-                        ), sbp=[sbp1])
+                        ),
+                        sbp=[sbp1],
+                    )
                     # 3 -> (2, 2)
-                    x = x.to_global(placement = flow.placement(
-                            device_type="cuda", device_ids={0: range(4)}, hierarchy=(2, 2)
-                        ), sbp=[sbp2, sbp3])
+                    x = x.to_global(
+                        placement=flow.placement(
+                            device_type="cuda",
+                            device_ids={0: range(4)},
+                            hierarchy=(2, 2),
+                        ),
+                        sbp=[sbp2, sbp3],
+                    )
 
         return x
 
@@ -91,7 +108,7 @@ class TestGraph(nn.Graph):
 @unittest.skipIf(os.getenv("ONEFLOW_TEST_CPU_ONLY"), "only test cpu cases")
 class TestLazyAllSbpCombinationTesting(flow.unittest.TestCase):
     def test_lazy_boxing_2d_all_combination(test_case):
-        
+
         x = flow.ones(
             4,
             12,
@@ -108,7 +125,6 @@ class TestLazyAllSbpCombinationTesting(flow.unittest.TestCase):
         model_diff_placement = TestModuleDiffPlacement()
         graph_diff_placement = TestGraph(model_diff_placement)
         z = graph_diff_placement(x)
-
 
 
 if __name__ == "__main__":
