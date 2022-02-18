@@ -393,8 +393,15 @@ class gpu_device(generator):
 
 
 class all_placement(generator):
-    def __init__(self):
+    def __init__(self, valid_device: str = None):
         super().__init__([])
+        if valid_device is not None:
+            if isinstance(valid_device, str):
+                self.valid_device = [valid_device]
+            else:
+                self.valid_device = list(valid_device)
+        else:
+            self.valid_device = ["cuda", "cpu"]
         self.node_size = flow.env.get_node_size()
         self.world_size = flow.env.get_world_size()
         self.num_rank_for_each_node = self.world_size // self.node_size
@@ -411,7 +418,7 @@ class all_placement(generator):
                 "cpu",
             ]
         else:
-            return ["cuda", "cpu"]
+            return self.valid_device
 
     def _calc_all_placement(self):
         all_device = self._calc_device()
