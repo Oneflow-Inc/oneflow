@@ -117,7 +117,7 @@ class BoxingCollector final {
       const std::vector<std::vector<double>>& cost_4_diff_placement,
       std::vector<std::vector<int32_t>>& diag_nodes);
   // Ask for one combination with different hierarchies and placements
-  Maybe<void> Ask1Combination4DiffPlacement(
+  Maybe<bool> Ask1Combination4DiffPlacement(
       const cfg::NdSbp& sbp_producer, const cfg::NdSbp& sbp_consumer,
       const BlobDesc& logical_blob_desc, const ParallelDesc& producer_parallel_desc,
       const ParallelDesc& consumer_parallel_desc, bool is_customized,

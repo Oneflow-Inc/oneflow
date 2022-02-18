@@ -555,6 +555,7 @@ Maybe<void> BoxingCollector::AskSbpCombination4Same2DPlacement(
     std::vector<cfg::NdSbp>& middle_sbps, int32_t* diag_node_pos, bool compute_cost) {
   CHECK_OR_RETURN(producer_parallel_desc == consumer_parallel_desc)
       << "Producer and consumer have different placements, Please use AskSbpCombination directly";
+  middle_sbps.clear();
 
   // Find the 2D sbp id
   int32_t i = FindId4NdSbp(sbp_producer);
@@ -622,6 +623,7 @@ Maybe<void> BoxingCollector::AskSbpCombination4DiffPlacement(
     const BlobDesc& logical_blob_desc, const ParallelDesc& producer_parallel_desc,
     const ParallelDesc& consumer_parallel_desc, bool is_customized,
     std::vector<cfg::NdSbp>& middle_sbps, int32_t* diag_node_pos, bool compute_cost) {
+  middle_sbps.clear();
   // Find the 2D sbp id
   int32_t i = FindId4NdSbp(sbp_producer);
   int32_t j = FindId4NdSbp(sbp_consumer);
@@ -635,19 +637,23 @@ Maybe<void> BoxingCollector::AskSbpCombination4DiffPlacement(
           << "Have not initialzie the combination table for different hierarchies yet! "
              "Please run JUST(GenerateCombination4DiffHierarchy(this, this)); "
              "before Asking sbp combination for different parallel description.";
-      Ask1Combination4DiffPlacement(sbp_producer, sbp_consumer, logical_blob_desc,
-                                    producer_parallel_desc, consumer_parallel_desc, is_customized,
-                                    middle_sbps, diag_node_pos, compute_cost, this, this,
-                                    diag_node_diff_hierarchy_[i][j]);
+      if (JUST(Ask1Combination4DiffPlacement(
+              sbp_producer, sbp_consumer, logical_blob_desc, producer_parallel_desc,
+              consumer_parallel_desc, is_customized, middle_sbps, diag_node_pos, compute_cost, this,
+              this, diag_node_diff_hierarchy_[i][j]))) {
+        return Maybe<void>::Ok();
+      }
     } else {
       CHECK_OR_RETURN(diag_node_diff_placement_.size() > 0)
           << "Have not initialzie the combination table for different hierarchies yet! "
              "Please run JUST(GenerateCombination4DiffPlacement(this, this)); "
              "before Asking sbp combination for different parallel description.";
-      Ask1Combination4DiffPlacement(sbp_producer, sbp_consumer, logical_blob_desc,
-                                    producer_parallel_desc, consumer_parallel_desc, is_customized,
-                                    middle_sbps, diag_node_pos, compute_cost, this, this,
-                                    diag_node_diff_placement_[i][j]);
+      if (JUST(Ask1Combination4DiffPlacement(
+              sbp_producer, sbp_consumer, logical_blob_desc, producer_parallel_desc,
+              consumer_parallel_desc, is_customized, middle_sbps, diag_node_pos, compute_cost, this,
+              this, diag_node_diff_placement_[i][j]))) {
+        return Maybe<void>::Ok();
+      }
     }
   }
   // Customized boxing collector and try the algorithm again
@@ -757,7 +763,7 @@ Maybe<void> BoxingCollector::Generate1Combination4DiffHierarchy(
 }
 
 // Ask for one combination with different hierarchies and placements
-Maybe<void> BoxingCollector::Ask1Combination4DiffPlacement(
+Maybe<bool> BoxingCollector::Ask1Combination4DiffPlacement(
     const cfg::NdSbp& sbp_producer, const cfg::NdSbp& sbp_consumer,
     const BlobDesc& logical_blob_desc, const ParallelDesc& producer_parallel_desc,
     const ParallelDesc& consumer_parallel_desc, bool is_customized,
@@ -769,12 +775,15 @@ Maybe<void> BoxingCollector::Ask1Combination4DiffPlacement(
   if (id_producer < 0) {
     CHECK_OR_RETURN(compute_cost) << "Source data with shape " << logical_blob_desc.shape()
                                   << " has an invalid sbp " << NdSbpToString(sbp_producer);
+    return false;
   }
   int32_t id_consumer = boxing_collector_consumer->FindId4NdSbp(sbp_consumer);
   if (id_consumer < 0) {
     CHECK_OR_RETURN(compute_cost) << "Target data with shape " << logical_blob_desc.shape()
                                   << " has an invalid sbp " << NdSbpToString(sbp_consumer);
+    return false;
   }
+  middle_sbps.clear();
   // NOTE: For simplicity, We do not dig into those storage cost for the other middle nodes at
   // this moment.
   double min_cost = GetValidMaxCopyCost();
@@ -847,8 +856,9 @@ Maybe<void> BoxingCollector::Ask1Combination4DiffPlacement(
         middle_sbps.emplace_back(*JUST(SetNdSbpDim(middle_sbp, consumer_hierarchy_num_axes)));
       }
     }
+    return true;
   }
-  return Maybe<void>::Ok();
+  return false;
 }
 
 // Generate the transfer rule for one combination with different placements
