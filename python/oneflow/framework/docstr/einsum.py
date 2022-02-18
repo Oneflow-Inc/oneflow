@@ -74,7 +74,7 @@ add_docstr(
 
     Args:
         equation (String): The subscripts for the Einstein summation.
-        operands (*oneflow.Tensor): The tensors to compute the Einstein summation of.
+        *operands (oneflow.Tensor): The tensors to compute the Einstein summation of.
 
     For example:
 
