@@ -132,7 +132,7 @@ std::string NdSbpToString(const NdSbp& nd_sbp) {
 }
 
 // If an nd sbp can be converted to a 1d sbp.
-bool Is1dSbp(const cfg::NdSbp& nd_sbp) {
+bool Is1dSbp(const NdSbp& nd_sbp) {
   for (int32_t i = 1; i < nd_sbp.sbp_parallel_size(); i++) {
     if (nd_sbp.sbp_parallel(0) != nd_sbp.sbp_parallel(i)) { return false; }
   }
