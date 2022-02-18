@@ -27,7 +27,7 @@ from oneflow.test_utils.automated_test_util import *
 
 
 @flow.unittest.skip_unless_1n2d()
-class TestGlobalBranchError(flow.unittest.TestCase):
+class TestGlobalMeanBranchError(flow.unittest.TestCase):
     @unittest.skipIf(os.getenv("ONEFLOW_TEST_CPU_ONLY"), "only test cpu cases")
     def test_global_branch_error_global_data_mean(test_case):
         try:
