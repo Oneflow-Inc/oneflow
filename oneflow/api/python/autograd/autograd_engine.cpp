@@ -27,9 +27,7 @@ namespace oneflow {
 ONEFLOW_API_PYBIND11_MODULE("", m) {
   py::class_<GlobalParamGardSyncGuard, std::shared_ptr<GlobalParamGardSyncGuard>>(
       m, "GlobalParamGardSyncGuard")
-      .def(py::init([]() { return std::make_shared<GlobalParamGardSyncGuard>(); }))
-      .def("MutThreadLocalGlobalParamGradSyncFlag",
-           &GlobalParamGardSyncGuard::MutThreadLocalGlobalParamGradSyncFlag);
+      .def(py::init([](bool flag) { return std::make_shared<GlobalParamGardSyncGuard>(flag); }));
 }
 
 }  // namespace oneflow

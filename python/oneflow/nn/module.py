@@ -69,10 +69,11 @@ class Module(object):
 
     @contextmanager
     def global_param_grad_no_sync(self):
-        flag = oneflow._oneflow_internal.GetGlobalParamGradSync()
-        oneflow._oneflow_internal.SetGlobalParamGradSync(false)
-        yield
-        oneflow._oneflow_internal.SetGlobalParamGradSync(flag)
+        guard = oneflow._oneflow_internal.GlobalParamGardSyncGuard(false)
+        try:
+            yield
+        finally:
+            del guard
 
     def __call__(self, *args, **kwargs):
         for hook in itertools.chain(self._forward_pre_hooks.values()):

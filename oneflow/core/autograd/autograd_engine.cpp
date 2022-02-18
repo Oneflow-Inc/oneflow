@@ -155,7 +155,7 @@ Maybe<void> FunctionNode::AccGrad4LeafTensor(bool create_graph) {
 
       // control acc_grad to do boxing conditionally
       const auto& acc_grad = out->acc_grad();
-      if (*GlobalParamGardSyncGuard().MutThreadLocalGlobalParamGradSyncFlag()
+      if (*GlobalParamGardSyncGuard::MutThreadLocalGlobalParamGradSyncFlag()
           && acc_grad->is_consistent()) {
         auto& tensor_info = output_tensor_infos_[i];
         const auto& placement = JUST(tensor_info.placement());

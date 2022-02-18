@@ -20,11 +20,21 @@ namespace oneflow {
 
 class GlobalParamGardSyncGuard {
  public:
-  bool* MutThreadLocalGlobalParamGradSyncFlag() {
-    static thread_local bool flag = true;
-    return &flag;
+  GlobalParamGardSyncGuard(bool flag) {
+    old_flag_ = flag_;
+    flag_ = flag;
   }
+  ~GlobalParamGardSyncGuard() { flag_ = old_flag_; }
+
+  static bool* MutThreadLocalGlobalParamGradSyncFlag() { return &flag_; }
+
+ private:
+  static thread_local bool old_flag_;
+  static thread_local bool flag_;
 };
+
+thread_local bool GlobalParamGardSyncGuard::old_flag_ = true;
+thread_local bool GlobalParamGardSyncGuard::flag_ = true;
 
 }  // namespace oneflow
 
