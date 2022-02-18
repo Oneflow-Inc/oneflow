@@ -208,9 +208,6 @@ AutogradEngine* GetThreadLocalAutogradEngine();
 
 Maybe<void> AddAccumulateFunctionNode(const std::shared_ptr<Tensor>& tensor);
 
-Maybe<void> SetGlobalParamGradSync(bool flag);
-Maybe<bool> GetGlobalParamGradSync();
-
 }  // namespace one
 
 }  // namespace oneflow

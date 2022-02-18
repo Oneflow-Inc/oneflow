@@ -13,23 +13,19 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
-
-#include <pybind11/pybind11.h>
-#include "oneflow/api/python/of_api_registry.h"
-#include "oneflow/core/framework/dtype.h"
-#include "oneflow/core/common/util.h"
-#include "oneflow/core/framework/global_param_grad_sync_guard.h"
-
-namespace py = pybind11;
+#ifndef ONEFLOW_CORE_FRAMEWORK_GLOBAL_PARAM_GRAD_SYNC_GUARD_H_
+#define ONEFLOW_CORE_FRAMEWORK_GLOBAL_PARAM_GRAD_SYNC_GUARD_H_
 
 namespace oneflow {
 
-ONEFLOW_API_PYBIND11_MODULE("", m) {
-  py::class_<GlobalParamGardSyncGuard, std::shared_ptr<GlobalParamGardSyncGuard>>(
-      m, "GlobalParamGardSyncGuard")
-      .def(py::init([]() { return std::make_shared<GlobalParamGardSyncGuard>(); }))
-      .def("MutThreadLocalGlobalParamGradSyncFlag",
-           &GlobalParamGardSyncGuard::MutThreadLocalGlobalParamGradSyncFlag);
-}
+class GlobalParamGardSyncGuard {
+ public:
+  bool* MutThreadLocalGlobalParamGradSyncFlag() {
+    static thread_local bool flag = true;
+    return &flag;
+  }
+};
 
 }  // namespace oneflow
+
+#endif  // ONEFLOW_CORE_FRAMEWORK_GLOBAL_PARAM_GRAD_SYNC_GUARD_H_
