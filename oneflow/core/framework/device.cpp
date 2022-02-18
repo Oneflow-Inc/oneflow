@@ -24,10 +24,9 @@ limitations under the License.
 #include "oneflow/core/job/env_global_objects_scope.h"
 #include "oneflow/core/memory/memory_case_util.h"
 #include "oneflow/core/common/container_util.h"
+#include "oneflow/core/framework/to_string.h"
 
 namespace oneflow {
-
-const std::unordered_set<std::string> Device::type_supported({"cuda", "cpu"});
 
 namespace {
 
@@ -36,7 +35,7 @@ inline size_t HashDevice(const std::string& type, int64_t device_id) {
 }
 
 void CheckDeviceType(const std::string& type) {
-  if (Device::type_supported.find(type) == Device::type_supported.end()) {
+  if (!TRY(DeviceType4DeviceTag(type)).IsOk()) {
     std::string error_msg =
         "Expected one of cpu, cuda device type at start of device string " + type;
     throw std::runtime_error(error_msg);
@@ -54,7 +53,11 @@ Device::Device(const std::string& type, int64_t device_id)
 Maybe<void> Device::Init() {
   if (type_ == "auto") { return Maybe<void>::Ok(); }
   enum_type_ = JUST(DeviceType4DeviceTag(type()));
-  mem_case_ = MemoryCaseUtil::MakeMemCase(enum_type_, device_id_);
+  {
+    DeviceType dev_type = enum_type_;
+    if (dev_type == kMockDevice) { dev_type = DeviceType::kCPU; }
+    mem_case_ = MemoryCaseUtil::MakeMemCase(dev_type, device_id_);
+  }
   return Maybe<void>::Ok();
 }
 
