@@ -81,34 +81,30 @@ add_docstr(
     .. code-block:: python
 
         >>> import oneflow as flow
+
         # trace
-        >>> flow.einsum('ii', flow.randn(4, 4))
-        tensor(-5.0156, dtype=oneflow.float32)
+        >>> flow.einsum('ii', flow.arange(4*4).reshape(4,4).to(flow.float32))
+        tensor(30., dtype=oneflow.float32)
 
         # diagonal
-        >>> flow.einsum('ii->i', flow.randn(4, 4))
-        tensor([-0.2733,  1.8842,  0.0184, -0.5071], dtype=oneflow.float32)
+        >>> flow.einsum('ii->i', flow.arange(4*4).reshape(4,4).to(flow.float32))
+        tensor([ 0.,  5., 10., 15.], dtype=oneflow.float32)
 
         # outer product
-        >>> x = flow.randn(5)
-        >>> y = flow.randn(4)
+        >>> x = flow.arange(5).to(flow.float32)
+        >>> y = flow.arange(4).to(flow.float32)
         >>> flow.einsum('i,j->ij', x, y)
-        tensor([[ 2.7658,  0.5906, -1.0622, -2.1872],
-                [ 1.1117,  0.2374, -0.4270, -0.8791],
-                [ 1.5635,  0.3338, -0.6005, -1.2364],
-                [-0.6069, -0.1296,  0.2331,  0.4799],
-                [ 1.3963,  0.2981, -0.5363, -1.1042]], dtype=oneflow.float32)
+        tensor([[ 0.,  0.,  0.,  0.],
+                [ 0.,  1.,  2.,  3.],
+                [ 0.,  2.,  4.,  6.],
+                [ 0.,  3.,  6.,  9.],
+                [ 0.,  4.,  8., 12.]], dtype=oneflow.float32)
         
         # batch matrix multiplication
-        >>> As = flow.randn(3,2,5)
-        >>> Bs = flow.randn(3,5,4)
-        >>> flow.einsum('bij,bjk->bik', As, Bs)
-        tensor([[[ 1.0340,  0.7739,  0.8595,  0.4059],
-                    [-1.9362, -1.9822, -2.4199, -0.0150]],
-                [[-0.3833, -2.5700, -1.2115,  1.1083],
-                    [-1.1640, -0.6404,  0.5564, -2.1097]],
-                [[-7.8882,  6.7370, -1.3566, -0.3848],
-                    [ 0.8045,  1.5177, -0.8427, -0.3266]]], dtype=oneflow.float32)
+        >>> As = flow.arange(3*2*5).reshape(3,2,5).to(flow.float32)
+        >>> Bs = flow.arange(3*5*4).reshape(3,5,4).to(flow.float32)
+        >>> flow.einsum('bij,bjk->bik', As, Bs).shape
+        oneflow.Size([3, 2, 4])
 
         # batch permute
         >>> A = flow.randn(2, 3, 4, 5)
@@ -119,9 +115,8 @@ add_docstr(
         >>> A = flow.randn(3,5,4)
         >>> l = flow.randn(2,5)
         >>> r = flow.randn(2,4)
-        >>> flow.einsum('bn,anm,bm->ba', l, A, r)
-        tensor([[-1.0065,  6.0008,  0.3527],
-                [-3.8851, -1.9454, -4.9834]], dtype=oneflow.float32)
+        >>> flow.einsum('bn,anm,bm->ba', l, A, r).shape
+        oneflow.Size([2, 3])
 
     """,
 )
