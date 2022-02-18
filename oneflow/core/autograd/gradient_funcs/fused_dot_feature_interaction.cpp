@@ -18,6 +18,7 @@ limitations under the License.
 #include "oneflow/core/framework/op_expr.h"
 #include "oneflow/core/framework/op_interpreter/op_interpreter_util.h"
 #include "oneflow/core/functional/functional.h"
+#include "oneflow/core/common/container_util.h"
 
 namespace oneflow {
 namespace one {
@@ -55,12 +56,12 @@ Maybe<void> FusedDotFeatureInteraction::Capture(FusedDotFeatureInteractionCaptur
                                                 const TensorTuple& inputs,
                                                 const TensorTuple& outputs,
                                                 const AttrMap& attrs) const {
-  ctx->SaveTensorForBackward(outputs.at(1));  // padded_concated_features
+  ctx->SaveTensorForBackward(JUST(oneflow::VectorAt(outputs, 1)));  // padded_concated_features
   ctx->has_output_concat = JUST(attrs.GetAttr<bool>("has_output_concat"));
   int32_t num_features = 0;
   if (ctx->has_output_concat) {
     num_features = inputs.size() - 1;
-    const auto& output_concat = inputs.at(num_features);
+    const auto& output_concat = JUST(oneflow::VectorAt(inputs, num_features));
     ctx->has_output_concat_grad = output_concat->requires_grad();
     ctx->output_concat_grad_dim = output_concat->shape()->At(1);
   } else {
@@ -70,9 +71,9 @@ Maybe<void> FusedDotFeatureInteraction::Capture(FusedDotFeatureInteractionCaptur
   ctx->features_requires_grad.resize(num_features);
   ctx->feature_dims.resize(num_features);
   for (int32_t i = 0; i < num_features; ++i) {
-    const auto& feature = inputs.at(i);
-    ctx->features_requires_grad.at(i) = feature->requires_grad();
-    ctx->feature_dims.at(i) = feature->shape()->At(1);
+    const auto& feature = JUST(oneflow::VectorAt(inputs, i));
+    ctx->features_requires_grad[i] = feature->requires_grad();
+    ctx->feature_dims[i] = feature->shape()->At(1);
     if (feature->requires_grad()) { ctx->need_grad_op = true; }
     ctx->SaveTensorForBackward(feature);
   }
@@ -87,17 +88,24 @@ Maybe<void> FusedDotFeatureInteraction::Apply(const FusedDotFeatureInteractionCa
   if (!ctx->need_grad_op) { return Maybe<void>::Ok(); }
   int32_t num_features = ctx->features_requires_grad.size();
   in_grads->resize(num_features + 1);
-  const auto& padded_concated_features = ctx->SavedTensors().at(0);
+  const auto& padded_concated_features = JUST(oneflow::VectorAt(ctx->SavedTensors(), 0));
   TensorTuple like(num_features);
-  for (int i = 0; i < num_features; ++i) { like[i] = ctx->SavedTensors().at(i + 1); }
+  for (int i = 0; i < num_features; ++i) {
+    like[i] = JUST(oneflow::VectorAt(ctx->SavedTensors(), i + 1));
+  }
 
-  const auto& grads = JUST(functional::FusedDotFeatureInteractionGrad(
-      out_grads.at(0), padded_concated_features, like, ctx->has_output_concat,
+  const auto grads = JUST(functional::FusedDotFeatureInteractionGrad(
+      JUST(oneflow::VectorAt(out_grads, 0)), padded_concated_features, like, ctx->has_output_concat,
       ctx->self_interaction, ctx->output_concat_grad_dim));
   for (int32_t i = 0; i < num_features; ++i) {
-    if (ctx->features_requires_grad.at(i)) { in_grads->at(i) = grads->at(i); }
+    if (JUST(oneflow::VectorAt(ctx->features_requires_grad, i))) {
+      *JUST(oneflow::VectorAt(in_grads, i)) = JUST(oneflow::VectorAt(*grads, i));
+    }
   }
-  if (ctx->has_output_concat_grad) { in_grads->at(num_features) = grads->at(num_features); }
+  if (ctx->has_output_concat_grad) {
+    *JUST(oneflow::VectorAt(in_grads, num_features)) =
+        JUST(oneflow::VectorAt(*grads, num_features));
+  }
   return Maybe<void>::Ok();
 }
 
