@@ -310,10 +310,10 @@ Maybe<void> BoxingCollector::GenerateCombination4DiffPlacement(
   int32_t kWorldSize = GlobalProcessCtx::WorldSize();
   BlobDesc blob_desc({16, 16, 16, 16}, DataType::kInt8, /*is_dynamic=*/false);
   // Virtual placements before transfer
-  Shape in_hierarchy44({4 * kWorldSize, 4 * kWorldSize});
+  Shape in_hierarchy44({4 * kWorldSize + 1, 4 * kWorldSize});
   std::shared_ptr<Shape> in_hierarchy = std::make_shared<Shape>(in_hierarchy44);
   auto in_parallel_desc = JUST(ParallelDesc::New(
-      "cuda", {"0:0-" + std::to_string(in_hierarchy44.elem_cnt() - 1)}, in_hierarchy));
+      "cpu", {"0:0-" + std::to_string(in_hierarchy44.elem_cnt() - 1)}, in_hierarchy));
   // Virtual placements after transfer
   Shape out_hierarchy44({4 * kWorldSize, 4 * kWorldSize});
   std::shared_ptr<Shape> out_hierarchy = std::make_shared<Shape>(out_hierarchy44);
