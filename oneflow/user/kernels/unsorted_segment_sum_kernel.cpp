@@ -134,9 +134,14 @@ class UnsortedSegmentSumKernel final : public user_op::OpKernel, public user_op:
 OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(REGISTER_UNSORTED_SEGMENT_SUM_KERNEL_CASE, DEVICE_TYPE_SEQ,
                                  UNSORTED_SEGMENT_SUM_DATA_TYPE_SEQ, INDEX_DATA_TYPE_SEQ)
 
+OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(REGISTER_UNSORTED_SEGMENT_SUM_KERNEL_CASE,
+                                 OF_PP_MAKE_TUPLE_SEQ(DeviceType::kCUDA), HALF_DATA_TYPE_SEQ,
+                                 INDEX_DATA_TYPE_SEQ)
+
 OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(REGISTER_UNSORTED_SEGMENT_SUM_LIKE_KERNEL_CASE, DEVICE_TYPE_SEQ,
                                  UNSORTED_SEGMENT_SUM_DATA_TYPE_SEQ, INDEX_DATA_TYPE_SEQ)
 
+/*
 #ifdef WITH_CUDA
 template<typename K>
 class UnsortedSegmentSumHalfKernel final : public user_op::OpKernel {
@@ -208,6 +213,7 @@ OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(REGISTER_UNSORTED_SEGMENT_SUM_HALF_KERNEL_CASE,
 #undef REGISTER_UNSORTED_SEGMENT_SUM_HALF_KERNEL_CASE
 
 #endif  // WITH_CUDA
+*/
 
 }  // namespace user_op
 
