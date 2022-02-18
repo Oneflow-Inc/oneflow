@@ -51,11 +51,11 @@ Maybe<void> FuseAddToOutputPass::Apply(const OpGraph& op_graph, JobBuilder* job_
        {"fused_bias_add_mask_scale", user_op::OpArg("out", 0)},
        {"broadcast_matmul", user_op::OpArg("out", 0)},
        {"broadcast_matmul_grad_b", user_op::OpArg("out", 0)}});
-  HashMap<std::string, OperatorConf> op_name2op_conf;
+  HashSet<std::string> consumer_op_names;
   auto IsAddToOutputSupported = [&](const OpNode* node, const LogicalBlobId& lbi) -> bool {
     const OperatorConf& op_conf = node->op().op_conf();
     if (!op_conf.has_user_conf()) { return false; }
-    if (op_name2op_conf.find(op_conf.name()) != op_name2op_conf.end()) { return false; }
+    if (consumer_op_names.count(op_conf.name()) > 0) { return false; }
     auto it = supported_op_type_name2output_arg.find(op_conf.user_conf().op_type_name());
     if (it == supported_op_type_name2output_arg.end()) { return false; }
     const user_op::UserOpConfWrapper user_op_conf(op_conf);
@@ -94,7 +94,7 @@ Maybe<void> FuseAddToOutputPass::Apply(const OpGraph& op_graph, JobBuilder* job_
     if (ctrl_in_op_names.find(op_conf.name()) != ctrl_in_op_names.end()) { return Maybe<void>::Ok(); }
     if (op_conf.user_conf().op_type_name() != "add_n") { return Maybe<void>::Ok(); }
     if (be_fused_op_names.count(op_conf.name()) > 0) { return Maybe<void>::Ok();}
-    if (op_name2op_conf.find(op_conf.name()) != op_name2op_conf.end()) { return Maybe<void>::Ok(); }
+    if (consumer_op_names.count(op_conf.name()) > 0) { return Maybe<void>::Ok(); }
     const user_op::UserOpConfWrapper user_op_conf(op_conf);
     if (user_op_conf.input_size("in") != 2) { return Maybe<void>::Ok(); }
 
@@ -137,9 +137,9 @@ Maybe<void> FuseAddToOutputPass::Apply(const OpGraph& op_graph, JobBuilder* job_
     for (const OpEdge* out_edge : op_node->out_edges()) {
       const OpNode* consumer = out_edge->dst_node();
       const std::string& consumer_op_name = consumer->op().op_name();
-      if (op_name2op_conf.find(consumer_op_name) == op_name2op_conf.end()) {
+      if (consumer_op_names.count(consumer_op_name) == 0) {
         if (!JUST(job_builder->IsInMutOpTransaction(consumer->op().op_name()))) {
-          op_name2op_conf[consumer_op_name] = consumer->op().op_conf();
+          consumer_op_names.insert(consumer_op_name);
           JUST(job_builder->MutOpTransactionMut(consumer->op().op_conf()));
         }
       }
