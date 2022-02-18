@@ -30,7 +30,7 @@ __global__ void GenerateGatherIndicesGpu(const int32_t elem_cnt, const int32_t s
     const int32_t col = i - row * stride;
     if (col < row + offset) {
       int32_t in_index = row * in_cols + col;
-      int32_t idx = (row - 1 + offset) * (row + offset) / 2 + col;
+      int32_t idx = row * (offset + row - 1 + offset) / 2 + col;
       gather_indices[idx] = in_index;
     }
   }
@@ -78,17 +78,17 @@ __global__ void ScatterSplitAddTransposeGpu(int32_t elem_cnt, int32_t stride_dim
       const T* row_dy = dy + row * out_dim + output_concat_end_dim;
       if (matrix_row < in_grad_matrix_valid_dim && matrix_col < in_grad_matrix_valid_dim) {
         if (matrix_col < matrix_row) {
-          int32_t dy_col_idx = (matrix_row - 1 + offset) * (matrix_row + offset) / 2 + matrix_col;
+          int32_t dy_col_idx = matrix_row * (offset + matrix_row - 1 + offset) / 2 + matrix_col;
           grad_val = row_dy[dy_col_idx];
         } else if (matrix_row < matrix_col) {
           // transpose add
           int32_t trans_row_id = matrix_col;
           int32_t trans_col_id = matrix_row;
           int32_t dy_col_idx =
-              (trans_row_id - 1 + offset) * (trans_row_id + offset) / 2 + trans_col_id;
+              trans_row_id * (offset + trans_row_id - 1 + offset) / 2 + trans_col_id;
           grad_val = row_dy[dy_col_idx];
         } else if ((matrix_row == matrix_col) && (offset == 1)) {
-          int32_t dy_col_idx = (matrix_row - 1 + offset) * (matrix_row + offset) / 2 + matrix_col;
+          int32_t dy_col_idx = matrix_row * (offset + matrix_row - 1 + offset) / 2 + matrix_col;
           grad_val = row_dy[dy_col_idx] * static_cast<T>(2);
         }
       }
