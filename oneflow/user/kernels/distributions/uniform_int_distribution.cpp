@@ -45,9 +45,8 @@ void UniformIntDistribution<DeviceType::kCPU, T>::operator()(
     /*when sbp=s, offset according to rank id to conform to the setting\
     that the local spliced tensor is equal to the global tensor */
     for (int64_t i = 0; i < elem_cnt * rank_id; ++i) { impl(gen->engine()); }
-    for (int64_t i = 0; i < elem_cnt; ++i) { dptr[i] = impl(gen->engine()); }
-  }else{
-    for (int64_t i = 0; i < elem_cnt; ++i) { dptr[i] = impl(gen->engine()); }
+  }
+  for (int64_t i = 0; i < elem_cnt; ++i) { dptr[i] = impl(gen->engine()); }
   }
 }
 
