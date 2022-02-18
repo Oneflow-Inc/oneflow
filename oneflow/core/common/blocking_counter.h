@@ -29,6 +29,7 @@ class BlockingCounter final {
 
   BlockingCounter(int64_t cnt_val) { cnt_val_ = cnt_val; }
 
+  int64_t Increase();
   int64_t Decrease();
   void WaitForeverUntilCntEqualZero();
   Maybe<void> WaitUntilCntEqualZero(size_t timeout_seconds);

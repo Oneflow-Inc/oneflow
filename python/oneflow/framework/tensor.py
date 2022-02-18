@@ -60,7 +60,7 @@ def _backward(self, gradient=None, retain_graph=False, create_graph=False):
         ), "nn.Graph only accept lazy tensor to call backward() in lazy mode."
         assert (
             self.shape.numel() == 1
-        ), " loss_tensor.backward(), loss_tensor must be a scalar in nn.Graph, please use loss_tesnor.sum() or loss_tensor.mean() to make it a scalar tensor."
+        ), " loss_tensor.backward(), loss_tensor must be a scalar in nn.Graph, please use loss_tensor.sum() or loss_tensor.mean() to make it a scalar tensor."
         assert (
             gradient is None
         ), "nn.Graph donot accept 'gradient' argument in backward() at the moment."
@@ -958,8 +958,9 @@ def _numpy(self):
         tensors = flow.tensor_buffer_to_list_of_tensors(self, shapes, dtypes)
         return [t.numpy() for t in tensors]
     if self.is_global:
-        sbp_list = [flow.sbp.broadcast for _ in range(len(self.sbp))]
-        self = self.to_global(placement=self.placement, sbp=sbp_list).to_local()
+        self = self.to_global(
+            placement=flow.env.all_device_placement("cpu"), sbp=flow.sbp.broadcast
+        ).to_local()
     assert self.is_local
     if self.device != flow.device("cpu"):
         self = self.cpu()
@@ -967,11 +968,11 @@ def _numpy(self):
 
 
 def _is_consistent(self):
-    raise RuntimeError("is_consistent is removed. Please use is_global instead")
+    raise RuntimeError(".is_consistent has been removed, please use .is_global instead")
 
 
-def _to_consistent(self):
-    raise RuntimeError("to_consistent is removed. Please use to_global instead")
+def _to_consistent(self, *args, **kwargs):
+    raise RuntimeError(".to_consistent has been removed, please use .to_global instead")
 
 
 def RegisterMethods():

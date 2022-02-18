@@ -32,9 +32,9 @@ limitations under the License.
 namespace oneflow {
 
 namespace {
-void DfsSetNdSbp(std::vector<::oneflow::cfg::SbpParallel>& id2SbpParallel, int32_t depth,
-                 int32_t max_depth, cfg::NdSbp& nd_sbp, std::vector<cfg::NdSbp>& nd_sbp_lists_,
-                 std::unordered_map<::oneflow::cfg::NdSbp, int32_t>& NdSbpUniverse_) {
+void DfsSetNdSbp(std::vector<::oneflow::SbpParallel>& id2SbpParallel, int32_t depth,
+                 int32_t max_depth, NdSbp& nd_sbp, std::vector<NdSbp>& nd_sbp_lists_,
+                 std::unordered_map<::oneflow::NdSbp, int32_t>& NdSbpUniverse_) {
   if (depth == max_depth) {
     NdSbpUniverse_[nd_sbp] = nd_sbp_lists_.size();
     nd_sbp_lists_.push_back(nd_sbp);
@@ -47,20 +47,20 @@ void DfsSetNdSbp(std::vector<::oneflow::cfg::SbpParallel>& id2SbpParallel, int32
 }
 
 // Let a nd sbp be consistent with the given hierarchy number
-Maybe<cfg::NdSbp> SetNdSbpDim(cfg::NdSbp nd_sbp, int32_t hierarchy_num) {
+Maybe<NdSbp> SetNdSbpDim(NdSbp nd_sbp, int32_t hierarchy_num) {
   // Do not need to change
   if (nd_sbp.sbp_parallel_size() == hierarchy_num) { return nd_sbp; }
   // (S0, S0) -> S0
   if (hierarchy_num == 1) {
     CHECK_OR_RETURN(Is1dSbp(nd_sbp))
         << NdSbpToString(nd_sbp) << " can not be converted to a 1d sbp!";
-    cfg::NdSbp new_sbp;
+    NdSbp new_sbp;
     new_sbp.add_sbp_parallel();
     *new_sbp.mutable_sbp_parallel(0) = nd_sbp.sbp_parallel(0);
     return new_sbp;
   }
   // S0 -> (S0, S0)
-  cfg::NdSbp new_sbp;
+  NdSbp new_sbp;
   for (int32_t i = 0; i < hierarchy_num; i++) {
     new_sbp.add_sbp_parallel();
     *new_sbp.mutable_sbp_parallel(i) = nd_sbp.sbp_parallel(0);
@@ -99,7 +99,7 @@ Maybe<void> BoxingCollector::Init(const BlobDesc& logical_blob_desc,
 }
 
 // Collect Sbp Parallel
-void BoxingCollector::CollectUniverse(const cfg::SbpParallel& sbp) {
+void BoxingCollector::CollectUniverse(const SbpParallel& sbp) {
   if (SbpParallelUniverse_.find(sbp) == SbpParallelUniverse_.end()) {
     int32_t curr_size = SbpParallelUniverse_.size();
     SbpParallelUniverse_[sbp] = curr_size;
@@ -108,7 +108,7 @@ void BoxingCollector::CollectUniverse(const cfg::SbpParallel& sbp) {
 }
 
 // Find corresponding id for Nd sbp
-int32_t BoxingCollector::FindId4NdSbp(const cfg::NdSbp& nd_sbp) {
+int32_t BoxingCollector::FindId4NdSbp(const NdSbp& nd_sbp) {
   // Directly search on the nd_sbp_list
   if (nd_sbp.sbp_parallel_size() == hierarchy_num_) {
     const auto& it_nd_sbp = NdSbpUniverse_.find(nd_sbp);
@@ -131,7 +131,7 @@ int32_t BoxingCollector::FindId4NdSbp(const cfg::NdSbp& nd_sbp) {
 
 // Set default Sbp list
 void BoxingCollector::CollectUniverse(int32_t max_axis) {
-  cfg::SbpParallel sbp;
+  SbpParallel sbp;
   sbp.mutable_broadcast_parallel();
   CollectUniverse(sbp);
   for (int32_t axis = 0; axis < max_axis; axis++) {
@@ -149,7 +149,7 @@ void BoxingCollector::GenerateNdSbpList(int32_t hierarchy_num) {
   hierarchy_num_ = hierarchy_num;
 
   // Generate possible nd_sbp lists
-  cfg::NdSbp nd_sbp;
+  NdSbp nd_sbp;
   for (int32_t dim_sbp = 0; dim_sbp < hierarchy_num; dim_sbp++) { nd_sbp.add_sbp_parallel(); }
   DfsSetNdSbp(id2SbpParallel_, 0, hierarchy_num, nd_sbp, nd_sbp_lists_, NdSbpUniverse_);
 }
@@ -160,7 +160,7 @@ void BoxingCollector::GenerateMap1d2nd() {
   int32_t m = id2SbpParallel_.size();
 
   // Generate the id Map from 1d sbp to nd sbp
-  cfg::NdSbp nd_sbp;
+  NdSbp nd_sbp;
   for (int32_t dim_sbp = 0; dim_sbp < hierarchy_num_; dim_sbp++) { nd_sbp.add_sbp_parallel(); }
   id_1d_2_nd_.resize(m, -1);
   for (int32_t id_1d = 0; id_1d < m; id_1d++) {
@@ -476,11 +476,12 @@ void BoxingCollector::PrintBoxingTables() {
 }
 
 // Ask if the boxing algorithm accepts the current sbp combination
-Maybe<void> BoxingCollector::AskSbpCombination(
-    const cfg::NdSbp& sbp_producer, const cfg::NdSbp& sbp_consumer,
-    const BlobDesc& logical_blob_desc, const ParallelDesc& producer_parallel_desc,
-    const ParallelDesc& consumer_parallel_desc, bool is_customized,
-    std::vector<cfg::NdSbp>& middle_sbps, int32_t* diag_node_pos, bool compute_cost) {
+Maybe<void> BoxingCollector::AskSbpCombination(const NdSbp& sbp_producer, const NdSbp& sbp_consumer,
+                                               const BlobDesc& logical_blob_desc,
+                                               const ParallelDesc& producer_parallel_desc,
+                                               const ParallelDesc& consumer_parallel_desc,
+                                               bool is_customized, std::vector<NdSbp>& middle_sbps,
+                                               int32_t* diag_node_pos, bool compute_cost) {
   middle_sbps.clear();
   // Dealing with 1D sbp to 1D sbp
   // Specifically, S -> P.
@@ -549,10 +550,10 @@ Maybe<void> BoxingCollector::AskSbpCombination(
 
 // Ask for sbp combination with the same 2-D hierarchy and placement
 Maybe<void> BoxingCollector::AskSbpCombination4Same2DPlacement(
-    const cfg::NdSbp& sbp_producer, const cfg::NdSbp& sbp_consumer,
-    const BlobDesc& logical_blob_desc, const ParallelDesc& producer_parallel_desc,
-    const ParallelDesc& consumer_parallel_desc, bool is_customized,
-    std::vector<cfg::NdSbp>& middle_sbps, int32_t* diag_node_pos, bool compute_cost) {
+    const NdSbp& sbp_producer, const NdSbp& sbp_consumer, const BlobDesc& logical_blob_desc,
+    const ParallelDesc& producer_parallel_desc, const ParallelDesc& consumer_parallel_desc,
+    bool is_customized, std::vector<NdSbp>& middle_sbps, int32_t* diag_node_pos,
+    bool compute_cost) {
   CHECK_OR_RETURN(producer_parallel_desc == consumer_parallel_desc)
       << "Producer and consumer have different placements, Please use AskSbpCombination directly";
   middle_sbps.clear();
@@ -619,10 +620,10 @@ Maybe<void> BoxingCollector::AskSbpCombination4Same2DPlacement(
 
 // Ask for sbp combination with different hierarchies and placements
 Maybe<void> BoxingCollector::AskSbpCombination4DiffPlacement(
-    const cfg::NdSbp& sbp_producer, const cfg::NdSbp& sbp_consumer,
-    const BlobDesc& logical_blob_desc, const ParallelDesc& producer_parallel_desc,
-    const ParallelDesc& consumer_parallel_desc, bool is_customized,
-    std::vector<cfg::NdSbp>& middle_sbps, int32_t* diag_node_pos, bool compute_cost) {
+    const NdSbp& sbp_producer, const NdSbp& sbp_consumer, const BlobDesc& logical_blob_desc,
+    const ParallelDesc& producer_parallel_desc, const ParallelDesc& consumer_parallel_desc,
+    bool is_customized, std::vector<NdSbp>& middle_sbps, int32_t* diag_node_pos,
+    bool compute_cost) {
   middle_sbps.clear();
   // Find the 2D sbp id
   int32_t i = FindId4NdSbp(sbp_producer);
@@ -764,10 +765,9 @@ Maybe<void> BoxingCollector::Generate1Combination4DiffHierarchy(
 
 // Ask for one combination with different hierarchies and placements
 Maybe<bool> BoxingCollector::Ask1Combination4DiffPlacement(
-    const cfg::NdSbp& sbp_producer, const cfg::NdSbp& sbp_consumer,
-    const BlobDesc& logical_blob_desc, const ParallelDesc& producer_parallel_desc,
-    const ParallelDesc& consumer_parallel_desc, bool is_customized,
-    std::vector<cfg::NdSbp>& middle_sbps, int32_t* diag_node_pos, bool compute_cost,
+    const NdSbp& sbp_producer, const NdSbp& sbp_consumer, const BlobDesc& logical_blob_desc,
+    const ParallelDesc& producer_parallel_desc, const ParallelDesc& consumer_parallel_desc,
+    bool is_customized, std::vector<NdSbp>& middle_sbps, int32_t* diag_node_pos, bool compute_cost,
     BoxingCollector* boxing_collector_producer, BoxingCollector* boxing_collector_consumer,
     const std::vector<std::vector<int32_t>>& diag_nodes) {
   // Pick the path with minimum storage for the diagonal node
@@ -817,7 +817,7 @@ Maybe<bool> BoxingCollector::Ask1Combination4DiffPlacement(
 
   // If we found a diagonal middle node with current boxing collector
   if (min_diag_producer >= 0) {
-    std::vector<cfg::NdSbp> middle_sbps_buffer;
+    std::vector<NdSbp> middle_sbps_buffer;
     // Find the middle nodes between the producer and the diagonal node
     if (id_producer != min_diag_producer) {
       JUST(boxing_collector_producer->AskSbpCombination(

@@ -30,13 +30,13 @@ namespace {
 static const double kUnsupportedBoxing = GetMaxVal<float>();
 
 // check whether the sbp_parallel is legal
-bool CheckSbpParallel(const cfg::SbpParallel& sbp_parallel) {
+bool CheckSbpParallel(const SbpParallel& sbp_parallel) {
   return sbp_parallel.has_split_parallel() || sbp_parallel.has_broadcast_parallel()
          || sbp_parallel.has_partial_sum_parallel();
 }
 
 // check whether the nd_sbp is legal
-bool CheckNdSbp(const cfg::NdSbp& nd_sbp) {
+bool CheckNdSbp(const NdSbp& nd_sbp) {
   if (nd_sbp.sbp_parallel_size() <= 0) { return false; }
   for (const auto& sbp : nd_sbp.sbp_parallel()) {
     if (!CheckSbpParallel(sbp)) { return false; }
@@ -44,8 +44,8 @@ bool CheckNdSbp(const cfg::NdSbp& nd_sbp) {
   return true;
 }
 
-Maybe<double> ComputCopyCostBetweenTwoSbpParallel(const cfg::SbpParallel& producer_sbp_parallel,
-                                                  const cfg::SbpParallel& consumer_sbp_parallel,
+Maybe<double> ComputCopyCostBetweenTwoSbpParallel(const SbpParallel& producer_sbp_parallel,
+                                                  const SbpParallel& consumer_sbp_parallel,
                                                   const BlobDesc& logical_blob_desc,
                                                   const ParallelDesc& producer_parallel_desc,
                                                   const ParallelDesc& consumer_parallel_desc) {
@@ -106,8 +106,8 @@ Maybe<double> ComputCopyCostBetweenTwoSbpParallel(const cfg::SbpParallel& produc
 
 // compute copy cost for two SBPs.
 // They may be either different or on different devices.
-double ComputCopyCostBetweenTwoDiffSbpParallel(const cfg::SbpParallel& producer_sbp_parallel,
-                                               const cfg::SbpParallel& consumer_sbp_parallel,
+double ComputCopyCostBetweenTwoDiffSbpParallel(const SbpParallel& producer_sbp_parallel,
+                                               const SbpParallel& consumer_sbp_parallel,
                                                double logical_blob_size, double parallel_num,
                                                bool on_same_devices) {
   // Not supporting S->P for now.
@@ -147,9 +147,8 @@ double ComputCopyCostBetweenTwoDiffSbpParallel(const cfg::SbpParallel& producer_
   }
 }
 
-Maybe<double> ComputCopyCostBetweenTwoNdSbp(const cfg::NdSbp& producer_nd_sbp,
-                                            const cfg::NdSbp& consumer_nd_sbp,
-                                            double logical_blob_size,
+Maybe<double> ComputCopyCostBetweenTwoNdSbp(const NdSbp& producer_nd_sbp,
+                                            const NdSbp& consumer_nd_sbp, double logical_blob_size,
                                             const std::shared_ptr<Shape>& hierarchy,
                                             bool on_same_devices) {
   if (hierarchy->NumAxes() != 2) { return kUnsupportedBoxing; }
@@ -195,8 +194,8 @@ Maybe<double> ComputCopyCostBetweenTwoNdSbp(const cfg::NdSbp& producer_nd_sbp,
   return kUnsupportedBoxing;
 }
 
-Maybe<double> ComputeEagerCopyCostBetweenNdSbp(const cfg::NdSbp& producer_sbp_parallel,
-                                               const cfg::NdSbp& consumer_sbp_parallel,
+Maybe<double> ComputeEagerCopyCostBetweenNdSbp(const NdSbp& producer_sbp_parallel,
+                                               const NdSbp& consumer_sbp_parallel,
                                                const BlobDesc& logical_blob_desc,
                                                const ParallelDesc& producer_parallel_desc,
                                                const ParallelDesc& consumer_parallel_desc,
@@ -215,8 +214,8 @@ Maybe<double> ComputeEagerCopyCostBetweenNdSbp(const cfg::NdSbp& producer_sbp_pa
 
   ParallelDesc reduced_in_parallel_desc = producer_parallel_desc;
   ParallelDesc reduced_out_parallel_desc = consumer_parallel_desc;
-  cfg::NdSbp reduced_in_nd_sbp;
-  cfg::NdSbp reduced_out_nd_sbp;
+  NdSbp reduced_in_nd_sbp;
+  NdSbp reduced_out_nd_sbp;
   InOutParallelDimReduce(producer_parallel_desc, consumer_parallel_desc, producer_sbp_parallel,
                          consumer_sbp_parallel, &reduced_in_parallel_desc,
                          &reduced_out_parallel_desc, &reduced_in_nd_sbp, &reduced_out_nd_sbp);
@@ -301,8 +300,8 @@ Maybe<double> ComputeEagerCopyCostBetweenNdSbp(const cfg::NdSbp& producer_sbp_pa
   return total_cost;
 }
 
-using CopyCostFunc = Maybe<double>(const cfg::NdSbp&, const cfg::NdSbp&, const BlobDesc&,
-                                   const ParallelDesc&, const ParallelDesc&, bool);
+using CopyCostFunc = Maybe<double>(const NdSbp&, const NdSbp&, const BlobDesc&, const ParallelDesc&,
+                                   const ParallelDesc&, bool);
 Maybe<CopyCostFunc*> GetComputeCopyCostFunc() {
   if (LazyMode::is_enabled() || /*single_client=*/(!JUST(IsMultiClient()))) {
     return &ComputeCopyCostWithMiddleNodes;
@@ -313,8 +312,8 @@ Maybe<CopyCostFunc*> GetComputeCopyCostFunc() {
 
 }  // namespace
 
-Maybe<double> ComputeLazyCopyCostBetweenNdSbp(const cfg::NdSbp& producer_sbp_parallel,
-                                              const cfg::NdSbp& consumer_sbp_parallel,
+Maybe<double> ComputeLazyCopyCostBetweenNdSbp(const NdSbp& producer_sbp_parallel,
+                                              const NdSbp& consumer_sbp_parallel,
                                               const BlobDesc& logical_blob_desc,
                                               const ParallelDesc& producer_parallel_desc,
                                               const ParallelDesc& consumer_parallel_desc,
@@ -324,8 +323,8 @@ Maybe<double> ComputeLazyCopyCostBetweenNdSbp(const cfg::NdSbp& producer_sbp_par
   }
   ParallelDesc reduced_in_parallel_desc = producer_parallel_desc;
   ParallelDesc reduced_out_parallel_desc = consumer_parallel_desc;
-  cfg::NdSbp reduced_in_nd_sbp;
-  cfg::NdSbp reduced_out_nd_sbp;
+  NdSbp reduced_in_nd_sbp;
+  NdSbp reduced_out_nd_sbp;
   InOutParallelDimReduce(producer_parallel_desc, consumer_parallel_desc, producer_sbp_parallel,
                          consumer_sbp_parallel, &reduced_in_parallel_desc,
                          &reduced_out_parallel_desc, &reduced_in_nd_sbp, &reduced_out_nd_sbp);
@@ -390,24 +389,24 @@ double GetValidMaxCopyCost() {
   return kValidMaxCopyCost;
 }
 
-void ResizeNdSbpSignature(cfg::NdSbpSignature& nd_sbp_sig, int32_t size) {
+void ResizeNdSbpSignature(NdSbpSignature& nd_sbp_sig, int32_t size) {
   for (auto& pair : *nd_sbp_sig.mutable_bn_in_op2nd_sbp()) {
     if (pair.second.sbp_parallel_size() > size) { pair.second.clear_sbp_parallel(); }
     while (pair.second.sbp_parallel_size() < size) { pair.second.add_sbp_parallel(); }
   }
 }
 
-void SetNdSbpSignature(cfg::NdSbpSignature* nd_sbp_signature,
-                       const cfg::SbpSignature& sbp_signature, int32_t sbp_axis) {
+void SetNdSbpSignature(NdSbpSignature* nd_sbp_signature, const SbpSignature& sbp_signature,
+                       int32_t sbp_axis) {
   for (const auto& pair : sbp_signature.bn_in_op2sbp_parallel()) {
     *((*nd_sbp_signature->mutable_bn_in_op2nd_sbp())[pair.first].mutable_sbp_parallel(sbp_axis)) =
         pair.second;
   }
 }
 
-void DfsGetNdSbpSignature(cfg::NdSbpSignature& nd_sbp_sig, int32_t depth, int32_t dims,
-                          const cfg::SbpSignatureList& sbp_sig_list,
-                          std::vector<cfg::NdSbpSignature>* nd_sbp_sig_list) {
+void DfsGetNdSbpSignature(NdSbpSignature& nd_sbp_sig, int32_t depth, int32_t dims,
+                          const SbpSignatureList& sbp_sig_list,
+                          std::vector<NdSbpSignature>* nd_sbp_sig_list) {
   if (depth == dims) {
     nd_sbp_sig_list->push_back(nd_sbp_sig);
   } else {
@@ -419,8 +418,7 @@ void DfsGetNdSbpSignature(cfg::NdSbpSignature& nd_sbp_sig, int32_t depth, int32_
 }
 
 // Compute storage per device for given NdSbp
-double Storage4NdSbp(const cfg::NdSbp& nd_sbp, Shape& logical_shape,
-                     const Shape& parallel_hierarchy) {
+double Storage4NdSbp(const NdSbp& nd_sbp, Shape& logical_shape, const Shape& parallel_hierarchy) {
   if (nd_sbp.sbp_parallel_size() == 1) {
     double logical_blob_size = logical_shape.elem_cnt();
     // Checking 1D sbp
@@ -453,13 +451,13 @@ double Storage4NdSbp(const cfg::NdSbp& nd_sbp, Shape& logical_shape,
 
 // Judge whether an NdSbp could be applied on a tensor with given logical shape
 // True means this NdSbp is not valid.
-Maybe<bool> FilterNdSbpByLogicalShape(const cfg::NdSbp& nd_sbp, Shape& logical_shape,
+Maybe<bool> FilterNdSbpByLogicalShape(const NdSbp& nd_sbp, Shape& logical_shape,
                                       const Shape& parallel_hierarchy) {
   return Storage4NdSbp(nd_sbp, logical_shape, parallel_hierarchy) > GetValidMaxCopyCost();
 }
 
-Maybe<double> ComputeCopyCostBetweenNdSbp(const cfg::NdSbp& producer_sbp_parallel,
-                                          const cfg::NdSbp& consumer_sbp_parallel,
+Maybe<double> ComputeCopyCostBetweenNdSbp(const NdSbp& producer_sbp_parallel,
+                                          const NdSbp& consumer_sbp_parallel,
                                           const BlobDesc& logical_blob_desc,
                                           const ParallelDesc& producer_parallel_desc,
                                           const ParallelDesc& consumer_parallel_desc,
@@ -469,8 +467,8 @@ Maybe<double> ComputeCopyCostBetweenNdSbp(const cfg::NdSbp& producer_sbp_paralle
                                         consumer_parallel_desc, requires_same_sbp);
 }
 
-Maybe<double> ComputeCopyCostWithMiddleNodes(const cfg::NdSbp& producer_sbp_parallel,
-                                             const cfg::NdSbp& consumer_sbp_parallel,
+Maybe<double> ComputeCopyCostWithMiddleNodes(const NdSbp& producer_sbp_parallel,
+                                             const NdSbp& consumer_sbp_parallel,
                                              const BlobDesc& logical_blob_desc,
                                              const ParallelDesc& producer_parallel_desc,
                                              const ParallelDesc& consumer_parallel_desc,
@@ -478,7 +476,7 @@ Maybe<double> ComputeCopyCostWithMiddleNodes(const cfg::NdSbp& producer_sbp_para
   // Initialize boxing collector
   constexpr int32_t kRegularMaxSplitAxes = 6;
   static thread_local BoxingCollector boxing_collector(kRegularMaxSplitAxes);
-  std::vector<cfg::NdSbp> middle_sbps;
+  std::vector<NdSbp> middle_sbps;
   // Ask for middle nodes
   int32_t diag_node;
   JUST(boxing_collector.AskSbpCombination(
@@ -489,7 +487,7 @@ Maybe<double> ComputeCopyCostWithMiddleNodes(const cfg::NdSbp& producer_sbp_para
   double total_cost = 0.0;
   double transfer_cost = ParseFloatFromEnv("AUTO_PARALLEL_TRANSFER_COST", 1.65e7);
   // Set up the information of the first node in the first connection
-  const cfg::NdSbp* pre_nd_sbp = &producer_sbp_parallel;
+  const NdSbp* pre_nd_sbp = &producer_sbp_parallel;
   const ParallelDesc* pre_parallel_desc = &producer_parallel_desc;
   // Connection for the next middle node
   for (const auto& middle_sbp : middle_sbps) {

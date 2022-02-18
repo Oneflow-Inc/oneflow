@@ -114,7 +114,7 @@ def logical_slice_op(input, slice_tup_list: Sequence[Tuple[int, int, int]]):
 
         >>> import oneflow as flow
 
-        >>> placement = flow.placement("cpu", {0: [0]})
+        >>> placement = flow.placement("cpu", ranks=[0])
         >>> x = flow.Tensor([[1, 2], [3, 4]], placement=placement, sbp=flow.sbp.broadcast)
         >>> y = flow.logical_slice(x, slice_tup_list=[[0, 1, 1]])
         >>> y.numpy()

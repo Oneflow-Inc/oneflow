@@ -17,28 +17,28 @@ limitations under the License.
 #include "oneflow/core/common/multi_client.h"
 #include "oneflow/core/framework/instructions_builder.h"
 #include "oneflow/core/framework/symbol_storage_util.h"
-#include "oneflow/core/eager/eager_symbol.cfg.h"
 #include "oneflow/core/device/event_record.h"
 #include "oneflow/core/job/job_conf.cfg.h"
 #include "oneflow/core/job/placement.cfg.h"
 #include "oneflow/core/job/scope.cfg.h"
 #include "oneflow/core/framework/parallel_conf_util.h"
 #include "oneflow/core/framework/object_storage.h"
-#include "oneflow/core/operator/op_node_signature.cfg.h"
+#include "oneflow/core/operator/op_node_signature.pb.h"
 #include "oneflow/core/operator/operator.h"
 #include "oneflow/core/framework/id_util.h"
 #include "oneflow/core/operator/interface_blob_conf.cfg.h"
 #include "oneflow/core/framework/scope_util.h"
 #include "oneflow/core/framework/session_util.h"
-#include "oneflow/core/eager/eager_oneflow.h"
 #include "oneflow/core/common/container_util.h"
 #include "oneflow/core/common/decorator.h"
+#include "oneflow/core/common/blocking_counter.h"
 #include "oneflow/core/rpc/include/global_process_ctx.h"
 #include "oneflow/core/vm/no_arg_cb_phy_instr_operand.h"
 #include "oneflow/core/vm/access_blob_arg_cb_phy_instr_operand.h"
 #include "oneflow/core/vm/consume_local_dep_object_phy_instr_operand.h"
 #include "oneflow/core/eager/release_tensor_arg_phy_instr_operand.h"
 #include "oneflow/core/vm/virtual_machine.h"
+#include "oneflow/core/vm/vm_util.h"
 #include "oneflow/core/framework/consistent_tensor_infer_cache.h"
 #include "oneflow/core/eager/local_dep_object.h"
 #include "oneflow/core/framework/tensor.h"
@@ -49,51 +49,6 @@ limitations under the License.
 #include "oneflow/core/platform/include/pthread_fork.h"
 
 namespace oneflow {
-
-namespace {
-
-template<typename T>
-T* MutEagerSymbolConf(vm::cfg::EagerSymbol*);
-
-template<>
-cfg::JobConfigProto* MutEagerSymbolConf<cfg::JobConfigProto>(vm::cfg::EagerSymbol* eager_symbol) {
-  return eager_symbol->mutable_job_conf_symbol();
-}
-
-template<>
-cfg::ParallelConf* MutEagerSymbolConf<cfg::ParallelConf>(vm::cfg::EagerSymbol* eager_symbol) {
-  return eager_symbol->mutable_parallel_conf_symbol();
-}
-
-template<>
-cfg::ScopeProto* MutEagerSymbolConf<cfg::ScopeProto>(vm::cfg::EagerSymbol* eager_symbol) {
-  return eager_symbol->mutable_scope_symbol();
-}
-
-uint64_t NewTokenId() {
-  static std::atomic<uint64_t> token_id(0);
-  token_id++;
-  return token_id;
-}
-
-using IntList = std::vector<int64_t>;
-using Int2IntListMap = HashMap<int64_t, std::shared_ptr<IntList>>;
-// This function is used to determine whether the machine_id2sorted_dev_phy_ids of ParallelDesc are
-// equal
-bool Int2IntListMapContaining(const Int2IntListMap& bigger, const Int2IntListMap& smaller) {
-  for (const auto& pair : smaller) {
-    if (bigger.find(pair.first) == bigger.end()) { return false; }
-    const auto& bigger_device_ids = bigger.find(pair.first)->second;
-    std::vector<int64_t>::iterator ret;
-    for (int64_t device_id : *pair.second) {
-      ret = std::find(bigger_device_ids->begin(), bigger_device_ids->end(), device_id);
-      if (ret == bigger_device_ids->end()) { return false; }
-    }
-  }
-  return true;
-}
-
-}  // namespace
 
 namespace {
 
@@ -514,7 +469,7 @@ Maybe<void> InstructionsBuilder::TensorView(const T input_tensor, const T view_t
   const std::shared_ptr<vm::EagerBlobObject>& view_eager_blob_object =
       JUST(view_tensor->eager_blob_object());
   // init view blob (with empty data pointer)
-  JUST(view_eager_blob_object->TryInitBlob());
+  JUST(view_eager_blob_object->InitBlobWithOffset(JUST(view_tensor->storage_offset())));
   view_eager_blob_object->set_is_shape_synced(true);
   view_eager_blob_object->set_last_used_device(JUST(input_tensor->device()));
   // prepare instruction operand
@@ -535,23 +490,55 @@ template Maybe<void> InstructionsBuilder::TensorView(
 
 template<typename T>
 Maybe<void> InstructionsBuilder::SyncAccessBlobByCallback(
-    const T tensor, const std::shared_ptr<SpinCounter>& spin_counter,
-    std::shared_ptr<std::function<void(uint64_t)>> Callback, const std::string& modifier) {
-  const auto& CallbackWrapper = [spin_counter, Callback](uint64_t ofblob_ptr) {
-    (*Callback)(ofblob_ptr);
-    spin_counter->Decrease();
+    const T tensor, const std::shared_ptr<BlockingThenBusy>& btb,
+    const std::function<void(uint64_t)>& Callback, const std::string& modifier) {
+  // We want balance the cpu overhead and notification latency.
+  //
+  // balanced timeline here:
+  //
+  //   B: blocking wait
+  //   W: wake up
+  //   S: spin wait
+  //
+  //   vm thread:    |<--------------- prev ops ------------------>|<- Callback() ->|
+  //
+  //   main thread:  |<-------------------- B -------------------->|<- W ->|<- S  ->|
+  //
+  // bad timeline with more notification latency:
+  //
+  //   B: blocking wait
+  //   W: wake up
+  //   S: spin wait
+  //
+  //   vm thread:    |<--------------- prev ops ------------------>|<- Callback() ->|
+  //
+  //   main thread:  |<---------------------------- B ----------------------------->|<- W ->|
+  //
+  // bad timeline with more cpu overhead:
+  //
+  //   B: blocking wait
+  //   W: wake up
+  //   S: spin wait
+  //
+  //   vm thread:    |<--------------- prev ops ------------------>|<- Callback() ->|
+  //                 |                                             |                |
+  //   main thread:  |<---------------------------- S ----------------------------->|
+
+  const auto& CallbackWrapper = [btb, Callback](uint64_t ofblob_ptr) {
+    btb->mut_blocking_counter()->Decrease();
+    Callback(ofblob_ptr);
+    btb->mut_spin_counter()->Decrease();
   };
   return AccessBlobByCallback(tensor, CallbackWrapper, modifier);
 }
 
 template Maybe<void> InstructionsBuilder::SyncAccessBlobByCallback(
-    const std::shared_ptr<one::MirroredTensor> tensor,
-    const std::shared_ptr<SpinCounter>& spin_counter,
-    std::shared_ptr<std::function<void(uint64_t)>> callback, const std::string& modifier);
+    const std::shared_ptr<one::MirroredTensor> tensor, const std::shared_ptr<BlockingThenBusy>& btb,
+    const std::function<void(uint64_t)>& Callback, const std::string& modifier);
 
 template Maybe<void> InstructionsBuilder::SyncAccessBlobByCallback(
-    const one::EagerMirroredTensorImpl* tensor, const std::shared_ptr<SpinCounter>& spin_counter,
-    std::shared_ptr<std::function<void(uint64_t)>> callback, const std::string& modifier);
+    const one::EagerMirroredTensorImpl* tensor, const std::shared_ptr<BlockingThenBusy>& btb,
+    const std::function<void(uint64_t)>& Callback, const std::string& modifier);
 
 template<typename T>
 Maybe<void> InstructionsBuilder::AccessBlobByCallback(const T tensor,
@@ -582,26 +569,25 @@ Maybe<void> InstructionsBuilder::ComputeRankFrontSeqCallback(
   auto instruction = intrusive::make_shared<vm::InstructionMsg>(
       Global<VirtualMachine>::Get()->mut_vm(), "ComputeRankFrontSeqCallback",
       std::shared_ptr<const ParallelDesc>(), phy_instr_operand);
-  instruction->add_int64_operand(GlobalProcessCtx::Rank());
   instruction_list_->PushBack(instruction.Mutable());
   return Maybe<void>::Ok();
 }
 
 Maybe<void> InstructionsBuilder::ComputeGlobalFrontSeqBarrier() {
-  intrusive::shared_ptr<vm::InstructionMsg> instruction =
-      intrusive::make_shared<vm::InstructionMsg>("ComputeGlobalFrontSeqBarrier");
+  const auto& phy_instr_operand = std::make_shared<vm::NoArgCbPhyInstrOperand>([] {});
+  auto instruction = intrusive::make_shared<vm::InstructionMsg>(
+      Global<VirtualMachine>::Get()->mut_vm(), "ComputeGlobalFrontSeqBarrier",
+      std::shared_ptr<const ParallelDesc>(), phy_instr_operand);
   instruction_list_->PushBack(instruction.Mutable());
   return Maybe<void>::Ok();
 }
 
 Maybe<void> PhysicalRun(const std::function<Maybe<void>(InstructionsBuilder*)>& Build) {
   vm::InstructionMsgList instruction_list;
-  vm::cfg::EagerSymbolList eager_symbol_list;
   InstructionsBuilder instructions_builder(std::make_shared<vm::PhysicalIdGenerator>(),
-                                           &instruction_list, &eager_symbol_list);
+                                           &instruction_list);
   JUST(Build(&instructions_builder));
-  JUST(Global<vm::EagerOneflow>::Get()->RunPhysicalInstruction(
-      instructions_builder.mut_instruction_list(), instructions_builder.eager_symbol_list()));
+  JUST(vm::Run(instructions_builder.mut_instruction_list()));
   return Maybe<void>::Ok();
 }
 
