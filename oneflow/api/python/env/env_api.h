@@ -62,10 +62,4 @@ inline void SetFLAGS_v(int32_t v_level) { return oneflow::SetFLAGS_v(v_level).Ge
 
 inline int32_t GetFLAGS_v() { return oneflow::GetFLAGS_v().GetOrThrow(); }
 
-inline void SetGlobalParamGradSync(bool flag) {
-  return oneflow::SetGlobalParamGradSync(flag).GetOrThrow();
-}
-
-inline bool GetGlobalParamGradSync() { return oneflow::GetGlobalParamGradSync().GetOrThrow(); }
-
 #endif  // ONEFLOW_API_PYTHON_ENV_ENV_API_H_

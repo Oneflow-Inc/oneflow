@@ -156,11 +156,11 @@ Maybe<void> FunctionNode::AccGrad4LeafTensor(bool create_graph) {
       const auto& acc_grad = out->acc_grad();
       if (JUST(GetGlobalParamGradSync()) && acc_grad->is_consistent()) {
         auto& tensor_info = output_tensor_infos_[i];
-        const auto& placement = JUST(tensor_info.GetPlacement());
-        const auto& nd_sbp = JUST(tensor_info.GetSBP());
+        const auto& placement = JUST(tensor_info.placement());
+        const auto& nd_sbp = JUST(tensor_info.sbp());
         std::vector<Symbol<SbpParallel>> sbp_tuple(nd_sbp->sbp_parallel().size());
-        for (auto i = 0; i < sbp_tuple.size(); ++i) {
-          sbp_tuple[i] = nd_sbp->sbp_parallel().Get(i);
+        for (auto j = 0; j < sbp_tuple.size(); ++j) {
+          sbp_tuple[j] = nd_sbp->sbp_parallel().Get(j);
         }
         std::vector<Symbol<SbpParallel>> grad_sbp_tuple;
         functional::ToConsistent(acc_grad, placement, sbp_tuple, grad_sbp_tuple);
@@ -527,6 +527,15 @@ Maybe<void> AddAccumulateFunctionNode(const std::shared_ptr<Tensor>& tensor) {
       "accumulate_grad", backward_fn, TensorTuple(), TensorTuple({tensor})));
   return Maybe<void>::Ok();
 }
+
+static thread_local bool global_param_grad_sync_flag = true;
+
+Maybe<void> SetGlobalParamGradSync(bool flag) {
+  global_param_grad_sync_flag = flag;
+  return Maybe<void>::Ok();
+}
+
+Maybe<bool> GetGlobalParamGradSync() { return global_param_grad_sync_flag; }
 
 }  // namespace one
 }  // namespace oneflow
