@@ -228,6 +228,21 @@ std::string SbpParallelToString(const SbpParallel& sbp_parallel) {
   return SbpToString(sbp_parallel);
 }
 
+bool ParseNdSbpFromStringList(const std::vector<std::string>& sbp_str_list, NdSbp* nd_sbp) {
+  for (const auto& sbp_str : sbp_str_list) {
+    if (!ParseSbpParallelFromString(sbp_str, nd_sbp->add_sbp_parallel())) { return false; }
+  }
+  return true;
+}
+
+std::vector<std::string> NdSbpToStringList(const NdSbp& nd_sbp) {
+  std::vector<std::string> sbp_str_list(nd_sbp.sbp_parallel_size());
+  for (size_t i = 0; i < sbp_str_list.size(); ++i) {
+    sbp_str_list[i] = SbpToString(nd_sbp.sbp_parallel(i));
+  }
+  return sbp_str_list;
+}
+
 void SbpSignatureToNdSbpSignature(const SbpSignature& sbp_signature,
                                   NdSbpSignature* nd_sbp_signature) {
   for (const auto& pair : sbp_signature.bn_in_op2sbp_parallel()) {
