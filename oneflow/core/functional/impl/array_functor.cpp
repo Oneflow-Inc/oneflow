@@ -20,6 +20,7 @@ limitations under the License.
 #include "oneflow/core/common/global.h"
 #include "oneflow/core/common/optional.h"
 #include "oneflow/core/common/protobuf.h"
+#include "oneflow/core/common/container_util.h"
 #include "oneflow/core/control/global_process_ctx.h"
 #include "oneflow/core/device/cuda_util.h"
 #include "oneflow/core/framework/attr_map.h"
@@ -2307,10 +2308,9 @@ class MeshgridFunctor {
   Maybe<TensorTuple> operator()(const TensorTuple& tensors, const std::string& indexing) const {
     int size = tensors.size();
     CHECK_GT_OR_RETURN(size, 0) << "meshgrid expects a non-empty TensorList";
-
     for (int i = 0; i < size - 1; ++i) {
-      const auto& cur_tensor = tensors.at(i);
-      const auto& next_tensor = tensors.at(i + 1);
+      const auto& cur_tensor = JUST(VectorAt(tensors, i));
+      const auto& next_tensor = JUST(VectorAt(tensors, i + 1));
       CHECK_OR_RETURN(cur_tensor->dtype() == next_tensor->dtype())
           << "Meshgrid expects all tensors have the same dtype.";
       if (cur_tensor->is_local()) {
