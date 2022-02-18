@@ -38,9 +38,7 @@ Maybe<void> InferTensorDesc4FusedMatmulBackward(user_op::InferContext* ctx) {
 Maybe<void> InferDataType4MatmulBackward(user_op::InferContext* ctx){
   const user_op::TensorDesc& weight_desc = ctx->InputTensorDesc("weight", 0);
   const user_op::TensorDesc& dy_desc = ctx->InputTensorDesc("dy", 0);
-  const user_op::TensorDesc& aux_desc = ctx->InputTensorDesc("aux", 0);
   CHECK_EQ_OR_RETURN(weight_desc.data_type(), dy_desc.data_type()); 
-  CHECK_EQ_OR_RETURN(dy_desc.data_type(), aux_desc.data_type()); 
 
   user_op::TensorDesc* d_grad_desc = ctx->OutputTensorDesc("d_grad", 0);
   user_op::TensorDesc* d_bias_desc = ctx->OutputTensorDesc("d_bias", 0);

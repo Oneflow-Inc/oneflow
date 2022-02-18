@@ -78,7 +78,6 @@ cublasComputeType_t GetComputeType(DataType data_type) {
   }
 }
 
-
 union CublasScalarParameter {
   double d;
   float s;
@@ -177,6 +176,15 @@ void SetCublasEpilogue(const CublasFusedMLPKernelCache* matmul_cache,
   }
 }
 
+void AlignReluAuxLd(long* aux_ld){
+    /*
+    ReLu bit-mask matrix leading dimension in elements. 
+    Must be divisible by 128 and be no less than the number of rows in the output matrix.
+    */
+    long old_aux_ld = *aux_ld; 
+    *aux_ld = ((old_aux_ld + 128 - 1)/ 128) * 128; 
+}
+
 void SetCublasAttr(const CublasFusedMLPKernelCache* matmul_grad_cache, 
     const cublasComputeType_t cublas_compute_dtype, 
     const cudaDataType_t cuda_data_type, 
@@ -222,6 +230,7 @@ void SetCublasAttr(const CublasFusedMLPKernelCache* matmul_grad_cache,
     For more details you can refer to CUBLAS docs: https://docs.nvidia.com/cuda/cublas/index.html#cublasLtMatmulDescAttributes_t `CUBLASLT_MATMUL_DESC_EPILOGUE_AUX_LD`. 
     */
     long aux_ld = cublas_ldc; 
+    AlignReluAuxLd(&aux_ld); 
     OF_CUBLAS_CHECK(cublasLtMatmulDescSetAttribute(matmul_grad_cache->operation_desc, CUBLASLT_MATMUL_DESC_EPILOGUE_AUX_LD, 
     &aux_ld, sizeof(aux_ld)));
 

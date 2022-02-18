@@ -14,6 +14,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 // #if CUDA_VERSION >= 11040
+#include "oneflow/core/common/data_type.pb.h"
 #include "oneflow/core/common/just.h"
 #include "oneflow/core/common/maybe.h"
 #include "oneflow/core/framework/framework.h"
@@ -23,6 +24,15 @@ limitations under the License.
 namespace oneflow {
 
 namespace {
+
+void AlignReluAuxLd(long* aux_ld){
+    /*
+    ReLu bit-mask matrix leading dimension in elements. 
+    Must be divisible by 128 and be no less than the number of rows in the output matrix.
+    */
+    long old_aux_ld = *aux_ld; 
+    *aux_ld = ((old_aux_ld + 128 - 1)/ 128) * 128; 
+}
 
 Maybe<void> InferTensorDesc4FusedMatmul(user_op::InferContext* ctx) {
   const user_op::TensorDesc& x_desc = ctx->InputTensorDesc("x", 0);
@@ -35,7 +45,7 @@ Maybe<void> InferTensorDesc4FusedMatmul(user_op::InferContext* ctx) {
   B: (n, k) need transpose
   C: (m, n)
   */
-  int64_t m = 0, n = 0, k = 0;
+  int64_t m = 0, n = 0, k = 0, cublas_aux_ld=0;
   m = x_desc.shape().At(0); 
   k = x_desc.shape().At(1); 
 
@@ -54,13 +64,15 @@ Maybe<void> InferTensorDesc4FusedMatmul(user_op::InferContext* ctx) {
     
     // Set for next layer. 
     k = n; 
+    cublas_aux_ld = k; 
     // Set Middle result shape. 
-    user_op::TensorDesc* cublas_aux_desc = ctx->OutputTensorDesc("cublas_aux", idx);
-    *ctx->OutputShape("cublas_aux", idx) = x_desc.shape();
-    cublas_aux_desc->mut_shape()->Set(1, k);
-    user_op::TensorDesc* hidden_desc = ctx->OutputTensorDesc("hidden", idx);
-    *ctx->OutputShape("hidden", idx) = x_desc.shape();
-    hidden_desc->mut_shape()->Set(1, k);
+    AlignReluAuxLd(&cublas_aux_ld); 
+    int64_t aux_size = m * cublas_aux_ld; 
+    *ctx->OutputShape("cublas_aux", idx) = Shape({aux_size / 8});
+    // user_op::TensorDesc* hidden_desc = ctx->OutputTensorDesc("hidden", idx);
+    // *ctx->OutputShape("hidden", idx) = x_desc.shape();
+    // hidden_desc->mut_shape()->Set(1, k);
+    *ctx->OutputShape("hidden", idx) = Shape({m, k});
   }
   *ctx->OutputShape("out", 0) = x_desc.shape();
   out->mut_shape()->Set(1, n);
@@ -77,11 +89,24 @@ Maybe<void> InferDataType4Matmul(user_op::InferContext* ctx){
     CHECK_EQ_OR_RETURN(in_desc.data_type(), first_in_desc.data_type());
   }
 
-  for (const auto& out_arg_pair : ctx->outputs()) {
-    user_op::TensorDesc* out_desc =
-        ctx->OutputTensorDesc(out_arg_pair.first, out_arg_pair.second);
-    *out_desc->mut_data_type() = first_in_desc.data_type();
+  // for (const auto& out_arg_pair : ctx->outputs()) {
+  //   user_op::TensorDesc* out_desc =
+  //       ctx->OutputTensorDesc(out_arg_pair.first, out_arg_pair.second);
+  //   *out_desc->mut_data_type() = first_in_desc.data_type();
+  // }
+  user_op::TensorDesc* out_desc = ctx->OutputTensorDesc("out", 0);
+  *out_desc->mut_data_type() = first_in_desc.data_type();
+
+  for(int32_t i = 0; i < ctx->output_size("hidden"); i++){
+    user_op::TensorDesc* hidden_desc = ctx->OutputTensorDesc("hidden", i);
+    *hidden_desc->mut_data_type() = first_in_desc.data_type();
   }
+
+  for(int32_t i = 0; i < ctx->output_size("cublas_aux"); i++){
+    user_op::TensorDesc* aux_desc = ctx->OutputTensorDesc("cublas_aux", i);
+    *aux_desc->mut_data_type() = DataType::kInt8;
+  }
+
   return Maybe<void>::Ok(); 
 }
 
