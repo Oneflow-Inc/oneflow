@@ -793,13 +793,6 @@ Maybe<void> Operator::InferNdSbpSignature(
     cfg::NdSbpSignature* nd_sbp_signature, const cfg::NdSbpSignature& nd_sbp_constraints,
     const ParallelDesc& parallel_desc,
     std::function<Maybe<const NdSbpInferHint*>(const std::string&)> NdSbpInferHint4Ibn) const {
-  const auto IsBroadcast = [](const cfg::NdSbp& nd_sbp, const ParallelDesc& parallel_desc) -> bool {
-    if (parallel_desc.parallel_num() == 1) { return true; }
-    for (int64_t i = 0; i < nd_sbp.sbp_parallel_size(); ++i) {
-      if (!nd_sbp.sbp_parallel(i).has_broadcast_parallel()) { return false; }
-    }
-    return true;
-  };
   const auto& parallel_hierarchy = parallel_desc.hierarchy();
   CHECK_GT(parallel_hierarchy->NumAxes(), 0);
   if (parallel_hierarchy->NumAxes() == 1) {
@@ -808,7 +801,7 @@ Maybe<void> Operator::InferNdSbpSignature(
     for (const auto& ibn : input_bns()) {
       const NdSbpInferHint* hint = JUST(NdSbpInferHint4Ibn(ibn));
       if (hint->nd_sbp().sbp_parallel_size() != 1) {
-        CHECK_OR_RETURN(IsBroadcast(hint->nd_sbp(), hint->parallel_desc()));
+        CHECK_OR_RETURN(Is1dSbp(hint->nd_sbp()) || hint->parallel_desc().parallel_num() == 1);
       }
       ibn2sbp_infer_hint.emplace(ibn,
                                  SbpInferHint(&hint->parallel_desc(), &hint->logical_blob_desc(),
