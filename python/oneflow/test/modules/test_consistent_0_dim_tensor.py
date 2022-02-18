@@ -14,14 +14,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 """
 import unittest
-from collections import OrderedDict
-
-import numpy as np
-
 import oneflow as flow
-
-
-from test_util import GenArgList
 
 from oneflow.test_utils.automated_test_util import *
 
