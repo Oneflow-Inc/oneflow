@@ -950,6 +950,7 @@ class _MultiProcessingDataLoaderIter(_BaseDataLoaderIter):
                     i,
                     self._num_workers,
                     self._persistent_workers,
+                    self._prefetch_factor,
                 ),
             )
             w.daemon = True

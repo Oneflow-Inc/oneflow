@@ -25,6 +25,8 @@ import queue
 from dataclasses import dataclass
 from typing import Union
 from oneflow.multiprocessing import _prctl_pr_set_pdeathsig  # type: ignore[attr-defined]
+from oneflow.multiprocessing.reductions import cleanup_shm_at_exit
+from oneflow.utils.signal_utils import prepend_signal
 import signal
 
 import oneflow as flow
@@ -283,6 +285,7 @@ def _worker_loop(
     worker_id,
     num_workers,
     persistent_workers,
+    prefetch_factor,
 ):
     # See NOTE [ Data Loader Multiprocessing Shutdown Logic ] for details on the
     # logic of this function.
@@ -307,8 +310,11 @@ def _worker_loop(
 
         global _worker_info
         _worker_info = WorkerInfo(
-            id=worker_id, num_workers=num_workers, seed=seed, dataset=dataset
+            id=worker_id, num_workers=num_workers, seed=seed, dataset=dataset, prefetch_factor=prefetch_factor
         )
+
+        prepend_signal(signal.SIGTERM, cleanup_shm_at_exit)
+        prepend_signal(signal.SIGINT, cleanup_shm_at_exit)
 
         from oneflow.utils.data import _DatasetKind
 
@@ -399,3 +405,6 @@ def _worker_loop(
     if done_event.is_set():
         data_queue.cancel_join_thread()
         data_queue.close()
+
+    cleanup_shm_at_exit(None, None)
+
