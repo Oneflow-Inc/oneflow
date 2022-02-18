@@ -88,7 +88,6 @@ class TestGraphIOCheck(flow.unittest.TestCase):
                 return t, lt, n, dic
 
         g = CustomGraphIOCheck()
-        g.debug(1)
 
         x = flow.tensor(np.random.randn(1,), dtype=flow.float32)
 
@@ -127,6 +126,33 @@ class TestGraphIOCheck(flow.unittest.TestCase):
         test_case.assertTrue(np.array_equal(odic["kw0"].numpy(), t4.numpy()))
         test_case.assertTrue(np.array_equal(odic["kw1"][0].numpy(), t5.numpy()))
         test_case.assertTrue(np.array_equal(odic["kw1"][1].numpy(), t6.numpy()))
+
+    def test_graph_return_size_0_tuple(test_case):
+        class CustomModule(flow.nn.Module):
+            def __init__(self):
+                super().__init__()
+        
+            def forward(self, t):
+                return (t, None)
+        
+        class CustomGraph(flow.nn.Graph):
+            def __init__(self):
+                super().__init__()
+                self.m = CustomModule()
+            
+            def build(self, t):
+                rt = self.m(t)
+                return rt
+        
+        
+        model = CustomModule()
+        graph = CustomGraph()
+        
+        x = np.ones((1, 10))
+        x = flow.tensor(x, dtype=flow.float32)
+        
+        print(model(x), type(model(x)))
+        print(graph(x), type(graph(x)))
 
     def test_graph_outputs_buffer(test_case):
         class CustomModuleIOCheck(flow.nn.Module):
