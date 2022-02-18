@@ -56,6 +56,7 @@ class JobBuilder final {
   Maybe<void> AddOp(const ParallelConf& parallel_conf, const OperatorConf& op_conf);
   void AddOps(const ParallelConf& parallel_conf, const std::vector<OperatorConf>& op_confs);
   Maybe<void> MutOpOnlyOnce(const OperatorConf& op_conf);
+  // TODO(strint): job builder return maybe
   void MutOpsOnlyOnce(const std::vector<OperatorConf>& op_confs);
   void MutParallelConfOnlyOnce(const std::string& op_name, const ParallelConf& parallel_conf);
   void AddOrMutOpsOnlyOnce(const ParallelConf& parallel_conf,
