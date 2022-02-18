@@ -278,7 +278,8 @@ void JobBuilder::DelOps(const std::vector<OperatorConf>& op_confs) {
 }
 
 Maybe<void> JobBuilder::MutOpOnlyOnce(const OperatorConf& op_conf) {
-  CHECK_OR_RETURN(modified_op_conf_op_names_.emplace(op_conf.name()).second) << op_conf.name() << " is mut twice.";
+  CHECK_OR_RETURN(modified_op_conf_op_names_.emplace(op_conf.name()).second)
+      << op_conf.name() << " is mut twice.";
   auto find_iter = op_name2op_conf_.find(op_conf.name());
   CHECK_OR_RETURN(find_iter != op_name2op_conf_.end()) << op_conf.name() << " not found.";
   find_iter->second->CopyFrom(op_conf);
@@ -287,7 +288,8 @@ Maybe<void> JobBuilder::MutOpOnlyOnce(const OperatorConf& op_conf) {
 
 void JobBuilder::MutOpsOnlyOnce(const std::vector<OperatorConf>& op_confs) {
   for (const auto& op_conf : op_confs) {
-    CHECK(modified_op_conf_op_names_.emplace(op_conf.name()).second) << op_conf.name() << " is mut twice.";
+    CHECK(modified_op_conf_op_names_.emplace(op_conf.name()).second)
+        << op_conf.name() << " is mut twice.";
     op_name2op_conf_.at(op_conf.name())->CopyFrom(op_conf);
   }
 }
@@ -304,7 +306,8 @@ Maybe<OperatorConf*> JobBuilder::MutOpTransactionGet(const std::string& op_name)
 Maybe<void> JobBuilder::MutOpTransactionMut(const OperatorConf& op_conf) {
   auto find_iter = mut_op_transaction_name2op_conf_.find(op_conf.name());
   if (find_iter == mut_op_transaction_name2op_conf_.end()) {
-    CHECK_OR_RETURN(mut_op_transaction_name2op_conf_.emplace(op_conf.name(), op_conf).second) << op_conf.name() << " has been added.";
+    CHECK_OR_RETURN(mut_op_transaction_name2op_conf_.emplace(op_conf.name(), op_conf).second)
+        << op_conf.name() << " has been added.";
   } else {
     find_iter->second.CopyFrom(op_conf);
   }
@@ -312,9 +315,7 @@ Maybe<void> JobBuilder::MutOpTransactionMut(const OperatorConf& op_conf) {
 }
 
 Maybe<void> JobBuilder::MutOpTransactionCommit() {
-  for(const auto& pair : mut_op_transaction_name2op_conf_) {
-    JUST(MutOpOnlyOnce(pair.second));
-  }
+  for (const auto& pair : mut_op_transaction_name2op_conf_) { JUST(MutOpOnlyOnce(pair.second)); }
   return Maybe<void>::Ok();
 }
 

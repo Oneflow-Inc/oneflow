@@ -91,9 +91,11 @@ Maybe<void> FuseAddToOutputPass::Apply(const OpGraph& op_graph, JobBuilder* job_
     const OperatorConf& op_conf = op_node->op().op_conf();
     if (!op_conf.has_user_conf()) { return Maybe<void>::Ok(); }
     if (!op_conf.ctrl_in_op_name().empty()) { return Maybe<void>::Ok(); }
-    if (ctrl_in_op_names.find(op_conf.name()) != ctrl_in_op_names.end()) { return Maybe<void>::Ok(); }
+    if (ctrl_in_op_names.find(op_conf.name()) != ctrl_in_op_names.end()) {
+      return Maybe<void>::Ok();
+    }
     if (op_conf.user_conf().op_type_name() != "add_n") { return Maybe<void>::Ok(); }
-    if (be_fused_op_names.count(op_conf.name()) > 0) { return Maybe<void>::Ok();}
+    if (be_fused_op_names.count(op_conf.name()) > 0) { return Maybe<void>::Ok(); }
     if (consumer_op_names.count(op_conf.name()) > 0) { return Maybe<void>::Ok(); }
     const user_op::UserOpConfWrapper user_op_conf(op_conf);
     if (user_op_conf.input_size("in") != 2) { return Maybe<void>::Ok(); }
@@ -123,7 +125,8 @@ Maybe<void> FuseAddToOutputPass::Apply(const OpGraph& op_graph, JobBuilder* job_
     }
     // Make a new_add_to_op to fuse add_n into this op.
     if (JUST(job_builder->IsInMutOpTransaction(add_to_node->op().op_name()))) {
-      OperatorConf& new_add_to_op_conf = *JUST(job_builder->MutOpTransactionGet(add_to_node->op().op_name()));
+      OperatorConf& new_add_to_op_conf =
+          *JUST(job_builder->MutOpTransactionGet(add_to_node->op().op_name()));
       *(*(new_add_to_op_conf.mutable_user_conf()->mutable_input()))["_add_to_output"]
            .mutable_s()
            ->Add() = GenLogicalBlobName(*add_to_lbi);
@@ -146,7 +149,8 @@ Maybe<void> FuseAddToOutputPass::Apply(const OpGraph& op_graph, JobBuilder* job_
       // Make add_n op's consumer to consume the new_add_to_op
       for (const std::string& ibn : consumer->op().input_bns()) {
         if (consumer->op().BnInOp2Lbi(ibn) == out) {
-          OperatorConf& consumer_op_conf = *JUST(job_builder->MutOpTransactionGet(consumer_op_name));
+          OperatorConf& consumer_op_conf =
+              *JUST(job_builder->MutOpTransactionGet(consumer_op_name));
           const auto& new_val = GenLogicalBlobName(*sum_lbi);
           const auto& old_val = ReplaceInputLbnInOpCustomizedConf(&consumer_op_conf, ibn, new_val);
           CHECK_EQ(GenLogicalBlobName(out), old_val);
