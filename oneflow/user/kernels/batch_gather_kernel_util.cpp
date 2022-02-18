@@ -75,6 +75,21 @@ void BatchGatherKernelUtil<device_type, T>::Backward(ep::Stream* stream, const B
 }
 
 template<typename T, typename K>
+struct BatchGatherKernelUtilImpl<kMockDevice, T, K> final {
+  static void Forward(ep::Stream* stream, const T* in, const K* indices,
+                      const Shape& flat_out_shape, int64_t gather_dim_size, T* out) {}
+  static void Backward(ep::Stream* stream, const T* out_diff, const K* indices,
+                       const Shape& flat_out_diff_shape, int64_t gather_dim_size, T* in_diff) {}
+};
+
+template<typename T>
+struct BatchGatherKernelUtil<kMockDevice, T> final {
+  static void Forward(ep::Stream* stream, const Blob* in, const Blob* indices, Blob* out) {}
+  static void Backward(ep::Stream* stream, const Blob* out_diff, const Blob* indices,
+                       Blob* in_diff) {}
+};
+
+template<typename T, typename K>
 struct BatchGatherKernelUtilImpl<DeviceType::kCPU, T, K> final {
   static void Forward(ep::Stream* stream, const T* in, const K* indices,
                       const Shape& flat_out_shape, int64_t gather_dim_size, T* out);
@@ -122,6 +137,8 @@ void BatchGatherKernelUtilImpl<DeviceType::kCPU, T, K>::Backward(
 
 #define INSTANTIATE_BATCH_GATHER_KERNEL_UTIL_IMPL_CPU(in_type_pair, index_type_pair)          \
   template struct BatchGatherKernelUtilImpl<DeviceType::kCPU, OF_PP_PAIR_FIRST(in_type_pair), \
+                                            OF_PP_PAIR_FIRST(index_type_pair)>;               \
+  template struct BatchGatherKernelUtilImpl<kMockDevice, OF_PP_PAIR_FIRST(in_type_pair),      \
                                             OF_PP_PAIR_FIRST(index_type_pair)>;
 OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(INSTANTIATE_BATCH_GATHER_KERNEL_UTIL_IMPL_CPU,
                                  FLOATING_DATA_TYPE_SEQ, INT_DATA_TYPE_SEQ);

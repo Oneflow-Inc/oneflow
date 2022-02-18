@@ -18,6 +18,7 @@ limitations under the License.
 #include "oneflow/core/ndarray/xpu_var_ndarray.h"
 #include "oneflow/user/kernels/two_stage_reduce_kernel_util.h"
 #include "oneflow/core/ep/include/primitive/cast.h"
+#include "oneflow/user/kernels/mock_kernel.h"
 
 namespace oneflow {
 
@@ -64,6 +65,9 @@ class ReduceDeviceStageKernel final : public OpKernel {
   }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
+
+template<template<typename> class BinaryFunc, typename T>
+class ReduceDeviceStageKernel<BinaryFunc, kMockDevice, T> final : public MockKernel {};
 
 template<typename T>
 user_op::InferTmpSizeFn GenDeviceStageInferTmpSizeFn() {
@@ -124,6 +128,9 @@ class ReduceDeviceStageGradKernel final : public OpKernel {
 };
 
 template<typename T>
+class ReduceDeviceStageGradKernel<kMockDevice, T> final : public MockKernel {};
+
+template<typename T>
 user_op::InferTmpSizeFn GenDeviceStageGradInferTmpSizeFn() {
   return [](user_op::InferContext* ctx) {
     const Shape& out_diff_shape = ctx->InputShape("out_diff", 0);
@@ -174,6 +181,9 @@ class ReduceGlobalStageKernel final : public OpKernel {
   }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
+
+template<template<typename> class BinaryFunc, typename T>
+class ReduceGlobalStageKernel<BinaryFunc, kMockDevice, T> final : public MockKernel {};
 
 #define REGISTER_REDUCE_GLOBAL_STAGE_KERNEL(op_name, binary_func, device, dtype_pair)            \
   REGISTER_USER_KERNEL(op_name)                                                                  \
@@ -252,6 +262,9 @@ class ReduceGlobalStageGradKernel final : public OpKernel {
 
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
+
+template<typename T>
+class ReduceGlobalStageGradKernel<kMockDevice, T> final : public MockKernel {};
 
 template<typename T>
 user_op::InferTmpSizeFn GenGlobalStageGradInferTmpSizeFn() {

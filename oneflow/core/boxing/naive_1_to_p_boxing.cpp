@@ -56,7 +56,7 @@ Maybe<one::Tensor> Naive1ToP(const std::shared_ptr<one::Tensor>& tensor, Symbol<
   if (root == GlobalProcessCtx::Rank() || !out_parallel_id->has_value()) {
     // do nothing
   } else {
-    const std::string& device_type = Device::Type4DeviceTag(tensor_placement->device_tag());
+    const std::string& device_type = tensor_placement->device_tag();
     local_tensor = JUST(one::functional::Constant(*tensor->shape(), 0, tensor->dtype(),
                                                   JUST(Device::New(device_type))));
   }

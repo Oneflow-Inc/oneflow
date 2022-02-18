@@ -101,13 +101,7 @@ std::shared_ptr<of::one::TensorTuple> ConvertToTensorTuple(
   return tensor_tuple;
 }
 
-std::string GetDeviceTag(const Device& device) {
-  if (device.type() == "cuda") {
-    return "gpu";
-  } else {
-    return "cpu";
-  }
-}
+std::string GetDeviceTag(const Device& device) { return device.type(); }
 
 template<class T1, class T2>
 const std::pair<std::vector<T1>, std::vector<T2>> Unzip(const of::HashMap<T1, T2>& hash_map) {

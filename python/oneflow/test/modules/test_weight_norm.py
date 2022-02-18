@@ -71,7 +71,7 @@ def _test_weightnorm(test_case, device, dim):
                 1e-05,
             )
         )
-    elif device == "gpu":
+    elif device == "cuda":
         test_case.assertTrue(
             np.allclose(
                 m_flow.weight_g.detach().cpu().numpy(),

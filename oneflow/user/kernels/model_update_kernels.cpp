@@ -18,6 +18,7 @@ limitations under the License.
 #include "oneflow/user/kernels/indexed_slices_reduce_sum_kernel_util.h"
 #include "oneflow/core/common/balanced_splitter.h"
 #include "oneflow/core/kernel/cuda_graph_support.h"
+#include "oneflow/user/kernels/mock_kernel.h"
 
 namespace oneflow {
 
@@ -151,6 +152,9 @@ class SGDUpdateKernel final : public user_op::OpKernel, public user_op::CudaGrap
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return true; }
 };
 
+template<typename T, typename G>
+class SGDUpdateKernel<kMockDevice, T, G> final : public MockKernel {};
+
 #define REGISTER_SGD_UPDATE_KERNEL(device, dtype, gtype)                                  \
   REGISTER_USER_KERNEL("sgd_update")                                                      \
       .SetCreateFn<SGDUpdateKernel<device, dtype, gtype>>()                               \
@@ -230,6 +234,9 @@ class IndexedSlicesSGDUpdateKernel final : public user_op::OpKernel {
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return true; }
 };
 
+template<typename T, typename K>
+class IndexedSlicesSGDUpdateKernel<kMockDevice, T, K> final : public MockKernel {};
+
 #define REGISTER_INDEXED_SLICES_SGD_UPDATE_KERNEL(device_type_v, data_type_pair,                 \
                                                   indices_type_pair)                             \
   REGISTER_USER_KERNEL("indexed_slices_sgd_update")                                              \
@@ -290,6 +297,9 @@ class MomentumUpdateKernel final : public user_op::OpKernel, public user_op::Cud
   }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return true; }
 };
+
+template<typename T, typename G>
+class MomentumUpdateKernel<kMockDevice, T, G> final : public MockKernel {};
 
 #define REGISTER_MOMENTUM_UPDATE_KERNEL(device, dtype, gtype)                             \
   REGISTER_USER_KERNEL("momentum_update")                                                 \
@@ -360,6 +370,9 @@ class IndexedSlicesMomentumUpdateKernel final : public user_op::OpKernel {
   }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return true; }
 };
+
+template<typename T, typename K>
+class IndexedSlicesMomentumUpdateKernel<kMockDevice, T, K> final : public MockKernel {};
 
 #define REGISTER_INDEXED_SLICES_MOMENTUM_UPDATE_KERNEL(device_type_v, data_type_pair,              \
                                                        indices_type_pair)                          \
@@ -450,6 +463,9 @@ class AdamUpdateKernel final : public user_op::OpKernel, public user_op::CudaGra
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return true; }
 };
 
+template<typename T, typename G>
+class AdamUpdateKernel<kMockDevice, T, G> final : public MockKernel {};
+
 #define REGISTER_ADAM_UPDATE_KERNEL(device, dtype, gtype)                                 \
   REGISTER_USER_KERNEL("adam_update")                                                     \
       .SetCreateFn<AdamUpdateKernel<device, dtype, gtype>>()                              \
@@ -516,6 +532,9 @@ class AdagradUpdateKernel final : public user_op::OpKernel, public user_op::Cuda
   }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return true; }
 };
+
+template<typename T, typename G>
+class AdagradUpdateKernel<kMockDevice, T, G> final : public MockKernel {};
 
 #define REGISTER_ADAGRAD_UPDATE_KERNEL(device, dtype, gtype)                              \
   REGISTER_USER_KERNEL("adagrad_update")                                                  \
@@ -616,6 +635,9 @@ class IndexedSlicesAdamUpdateKernel final : public user_op::OpKernel {
   }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return true; }
 };
+
+template<typename T, typename K>
+class IndexedSlicesAdamUpdateKernel<kMockDevice, T, K> final : public MockKernel {};
 
 #define REGISTER_INDEXED_SLICES_ADAM_UPDATE_KERNEL(device_type_v, data_type_pair,                 \
                                                    indices_type_pair)                             \
@@ -740,6 +762,9 @@ class LambUpdateKernel final : public user_op::OpKernel, public user_op::CudaGra
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return true; }
 };
 
+template<typename T, typename G>
+class LambUpdateKernel<kMockDevice, T, G> final : public MockKernel {};
+
 template<DeviceType device_type, typename T>
 user_op::InferTmpSizeFn LambGenInferTmpSizeFn() {
   return [](user_op::InferContext* ctx) {
@@ -782,6 +807,9 @@ class BiasCorrectionFactorKernel final : public user_op::OpKernel,
   }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return true; }
 };
+
+template<>
+class BiasCorrectionFactorKernel<kMockDevice> final : public MockKernel {};
 
 #define REGISTER_ADAM_BIAS_CORRECTION_FACTOR_KERNEL(device) \
   REGISTER_USER_KERNEL("adam_bias_correction_factor")       \
@@ -841,6 +869,10 @@ class RmsPropUpdateKernel final : public user_op::OpKernel, public user_op::Cuda
   }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return true; }
 };
+
+template<typename T, typename G>
+class RmsPropUpdateKernel<kMockDevice, T, G> final : public user_op::OpKernel,
+                                                     public user_op::CudaGraphSupport {};
 
 #define REGISTER_RMSPROP_UPDATE_KERNEL(device, dtype, gtype)                              \
   REGISTER_USER_KERNEL("rmsprop_update")                                                  \
@@ -934,6 +966,9 @@ class LarsUpdateKernel final : public user_op::OpKernel, public user_op::CudaGra
   }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return true; }
 };
+
+template<typename T, typename G>
+class LarsUpdateKernel<kMockDevice, T, G> final : public MockKernel {};
 
 template<DeviceType device_type, typename T>
 user_op::InferTmpSizeFn LarsGenInferTmpSizeFn() {

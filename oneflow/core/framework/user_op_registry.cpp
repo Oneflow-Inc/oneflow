@@ -241,7 +241,7 @@ Maybe<OpRegistry&> OpRegistry::Finish() {
       for (const auto& pair : ctx->inputs()) {
         const Symbol<Device>& input_device =
             ctx->InputTensorDevice4ArgNameAndIndex(pair.first, pair.second);
-        CHECK_EQ(JUST(input_device->of_type()), "cpu");
+        CHECK_EQ(input_device->type(), "cpu");
       }
       Symbol<Device> default_device;
       {

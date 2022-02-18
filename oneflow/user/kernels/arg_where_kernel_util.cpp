@@ -51,5 +51,6 @@ struct ArgWhereKernelUtil<DeviceType::kCPU, IN_T, OUT_T, NDIM> {
 };
 
 INSTANTIATE_ARG_WHERE_KERNEL_UTIL_FOR_DEVICE(DeviceType::kCPU)
+INSTANTIATE_ARG_WHERE_KERNEL_UTIL_FOR_DEVICE(kMockDevice)
 
 }  // namespace oneflow

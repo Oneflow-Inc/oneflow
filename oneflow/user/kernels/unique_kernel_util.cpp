@@ -56,8 +56,10 @@ struct UniqueKernelUtil<DeviceType::kCPU, KEY, IDX> {
   }
 };
 
-#define INSTANTIATE_UNIQUE_KERNEL_UTIL_CPU(key_type_pair, idx_type_pair)              \
-  template struct UniqueKernelUtil<DeviceType::kCPU, OF_PP_PAIR_FIRST(key_type_pair), \
+#define INSTANTIATE_UNIQUE_KERNEL_UTIL_CPU(key_type_pair, idx_type_pair)                     \
+  template struct UniqueKernelUtil<DeviceType::kCPU, OF_PP_PAIR_FIRST(key_type_pair),        \
+                                   OF_PP_PAIR_FIRST(idx_type_pair)>;                         \
+  template struct UniqueKernelUtil<DeviceType::kMockDevice, OF_PP_PAIR_FIRST(key_type_pair), \
                                    OF_PP_PAIR_FIRST(idx_type_pair)>;
 OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(INSTANTIATE_UNIQUE_KERNEL_UTIL_CPU, ARITHMETIC_DATA_TYPE_SEQ,
                                  INDEX_DATA_TYPE_SEQ);

@@ -18,6 +18,17 @@ limitations under the License.
 
 #include "oneflow/core/common/device_type.pb.h"
 
+#if defined(WITH_CUDA)
+#define CUDA_DEVICE_TYPE_SEQ OF_PP_MAKE_TUPLE_SEQ(DeviceType::kCUDA)
+#else
+#define CUDA_DEVICE_TYPE_SEQ
+#endif
+
+#define DEVICE_TYPE_SEQ                         \
+  OF_PP_MAKE_TUPLE_SEQ(DeviceType::kCPU)        \
+  OF_PP_MAKE_TUPLE_SEQ(DeviceType::kMockDevice) \
+  CUDA_DEVICE_TYPE_SEQ
+
 namespace std {
 
 template<>
@@ -31,14 +42,6 @@ struct hash<oneflow::DeviceType> final {
 
 namespace oneflow {
 
-inline std::string DeviceTypeName(DeviceType device_type) {
-  switch (device_type) {
-    case kCPU: return "cpu";
-    case kCUDA: return "cuda";
-    default: return "invalid";
-  }
-}
-
 inline std::string PrintAvailableDevices() {
   std::string str("[");
   str += "\"cpu\"";
@@ -49,14 +52,6 @@ inline std::string PrintAvailableDevices() {
   str += "]";
   return str;
 }
-
-#if defined(WITH_CUDA)
-#define DEVICE_TYPE_SEQ                  \
-  OF_PP_MAKE_TUPLE_SEQ(DeviceType::kCPU) \
-  OF_PP_MAKE_TUPLE_SEQ(DeviceType::kCUDA)
-#else
-#define DEVICE_TYPE_SEQ OF_PP_MAKE_TUPLE_SEQ(DeviceType::kCPU)
-#endif
 
 }  // namespace oneflow
 

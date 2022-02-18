@@ -117,7 +117,7 @@ Maybe<StatefulLocalOpKernel> UserOpExpr::MutKernel4Stream(Symbol<Stream> stream)
 
   std::shared_ptr<OperatorConf> op_conf = std::make_shared<OperatorConf>();
   JUST(BuildOpConf(op_conf.get(), {}));
-  op_conf->set_device_tag(JUST(stream->device()->of_type()));
+  op_conf->set_device_tag(stream->device()->type());
   auto parallel_desc = JUST(Placement4Device(stream->device())).shared_from_symbol();
   const auto& opkernel = JUST(StatefulLocalOpKernel::New(
       op_conf, stream, base_attrs(), parallel_desc, input_arg_tuple(), output_arg_tuple()));

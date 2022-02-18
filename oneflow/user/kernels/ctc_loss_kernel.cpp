@@ -15,6 +15,7 @@ limitations under the License.
 */
 #include "oneflow/core/framework/framework.h"
 #include "oneflow/user/kernels/ctc_loss_kernel_util.h"
+#include "oneflow/user/kernels/mock_kernel.h"
 
 namespace oneflow {
 
@@ -56,6 +57,9 @@ class CtcLossKernel final : public user_op::OpKernel {
   }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
+
+template<typename T, typename IDX>
+class CtcLossKernel<kMockDevice, T, IDX> final : public MockKernel {};
 
 #define REGISTER_CTC_LOSS_KERNEL(device, dtype, idx_dtype)                                        \
   REGISTER_USER_KERNEL("ctc_loss")                                                                \
@@ -114,6 +118,9 @@ class CtcLossGradKernel final : public user_op::OpKernel {
   }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
+
+template<typename T, typename IDX>
+class CtcLossGradKernel<kMockDevice, T, IDX> final : public MockKernel {};
 
 #define REGISTER_CTC_LOSS_BACKWARD_KERNEL(device, dtype, idx_dtype)                          \
   REGISTER_USER_KERNEL("ctc_loss_grad")                                                      \

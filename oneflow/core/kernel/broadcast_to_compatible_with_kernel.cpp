@@ -48,6 +48,17 @@ void BroadcastToCompatibleWithKernel<device_type, T>::ForwardDataContent(KernelC
                                            XpuVarNdarray<const T>(x, num_axes));
 }
 
+template<typename T>
+class BroadcastToCompatibleWithKernel<kMockDevice, T> final : public Kernel {
+ public:
+  OF_DISALLOW_COPY_AND_MOVE(BroadcastToCompatibleWithKernel);
+  BroadcastToCompatibleWithKernel() = default;
+  ~BroadcastToCompatibleWithKernel() = default;
+
+ private:
+  void ForwardDataContent(KernelContext* ctx) const override {}
+};
+
 #define REGISTTER_BROADCAST_TO_COMPATIBLE_WITH_KERNEL(device_type_v, dtype_pair)                 \
   REGISTER_KERNEL_WITH_DEVICE_AND_DTYPE(                                                         \
       OperatorConf::kBroadcastToCompatibleWithConf, device_type_v, OF_PP_PAIR_FIRST(dtype_pair), \

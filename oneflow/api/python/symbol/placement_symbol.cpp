@@ -50,7 +50,8 @@ int64_t GetGpuDeviceNum() {
 
 struct PlacementSymbolExportUtil {
   static Maybe<std::string> GetDeviceTag(const std::string& type) {
-    static const HashMap<std::string, std::string> type2device_tag{{"cpu", "cpu"}, {"cuda", "gpu"}};
+    static const HashMap<std::string, std::string> type2device_tag{{"cpu", "cpu"},
+                                                                   {"cuda", "cuda"}};
     const auto& it = type2device_tag.find(type);
     if (it == type2device_tag.end()) {
       return Error::RuntimeError() << "placement type should only be cpu or cuda, but got " << type;
@@ -162,7 +163,7 @@ struct PlacementSymbolExportUtil {
     if (it == device_tag2placement.end()) {
       int64_t node_size = GlobalProcessCtx::NodeSize();
       int64_t device_num = GlobalProcessCtx::NumOfProcessPerNode();
-      if (*device_tag == "gpu") {
+      if (*device_tag == "cuda") {
         const int64_t gpu_device_num = GetGpuDeviceNum();
         CHECK_NE_OR_RETURN(gpu_device_num, 0)
             << "Can\'t construct placment with \"cuda\" type because there is no CUDA device!";
@@ -236,10 +237,9 @@ ONEFLOW_API_PYBIND11_MODULE("", m) {
                 PyExc_UserWarning,
                 "The property .device_type of placement is deprecated, please use .type instead",
                 1);
-            return p->device_tag() == "gpu" ? "cuda" : "cpu";
+            return p->device_tag();
           })
-      .def_property_readonly(
-          "type", [](Symbol<ParallelDesc> p) { return p->device_tag() == "gpu" ? "cuda" : "cpu"; })
+      .def_property_readonly("type", [](Symbol<ParallelDesc> p) { return p->device_tag(); })
       .def_property_readonly("hierarchy",
                              [](Symbol<ParallelDesc> p) {
                                PyErr_WarnEx(PyExc_UserWarning,

@@ -22,7 +22,7 @@ namespace vm {
 
 void VmResourceDesc::__Init__(const Resource& resource) {
   __Init__(resource.machine_num(),
-           {{"cpu", resource.cpu_device_num()}, {"gpu", resource.gpu_device_num()}});
+           {{"cpu", resource.cpu_device_num()}, {"cuda", resource.gpu_device_num()}});
 }
 
 void VmResourceDesc::__Init__(int64_t machine_num,
