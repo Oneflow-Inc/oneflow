@@ -47,6 +47,36 @@ namespace one {
 namespace functional {
 
 namespace {
+
+Maybe<Shape> CheckReshape(const std::shared_ptr<one::Tensor>& x,  const Shape& shape){
+    int need_infer_axis = -1;
+    size_t count = 1;
+    for (int i = 0; i < shape.NumAxes(); ++i) {
+      if (shape.At(i) < -1) {
+        return Error::RuntimeError() << "Invalid shape dimension " << shape.At(i);
+      } else if (shape.At(i) == -1) {
+        CHECK_EQ_OR_RETURN(need_infer_axis, -1)
+            << "Shape " << shape.ToString() << " has more than 1 axis that needs to be infered.";
+        need_infer_axis = i;
+      } else {
+        count *= shape.At(i);
+      }
+    }
+    size_t x_count = x->shape()->Count(0);
+    Shape infered_shape = shape;
+    if (need_infer_axis == -1) {
+      CHECK_EQ_OR_RETURN(shape.Count(0), x_count)
+          << "\n Shape " << shape.ToString() << " is invalid for input shape "
+          << x->shape()->ToString();
+    } else {
+      infered_shape.Set(need_infer_axis, x_count / count);
+      CHECK_EQ_OR_RETURN(infered_shape.Count(0), x_count)
+          << "\n Shape " << shape.ToString() << " is invalid for input shape "
+          << x->shape()->ToString();
+    }
+    return infered_shape;
+}
+
 bool CheckViewValid(const int64_t elem_count, const DimVector& shape, const StrideVector& stride,
                     const DimVector& target_shape) {
   if (elem_count == 0) { return false; }
@@ -1062,41 +1092,15 @@ class ScatterNdLikeFunctor {
   std::shared_ptr<OpExpr> op_;
 };
 
-
 class ReshapeFunctor {
  public:
   ReshapeFunctor() {
     op_ = CHECK_JUST(one::OpBuilder("reshape").Input("in").Output("out").Build());
   }
   Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x, const Shape& shape) const {
-    int need_infer_axis = -1;
-    size_t count = 1;
-    for (int i = 0; i < shape.NumAxes(); ++i) {
-      if (shape.At(i) < -1) {
-        return Error::RuntimeError() << "Invalid shape dimension " << shape.At(i);
-      } else if (shape.At(i) == -1) {
-        CHECK_EQ_OR_RETURN(need_infer_axis, -1)
-            << "Shape " << shape.ToString() << " has more than 1 axis that needs to be infered.";
-        need_infer_axis = i;
-      } else {
-        count *= shape.At(i);
-      }
-    }
-    size_t x_count = x->shape()->Count(0);
+    Shape infered_shape = *JUST(CheckReshape(x, shape));
     MutableAttrMap attrs;
-    Shape infered_shape = shape;
-    if (need_infer_axis == -1) {
-      CHECK_EQ_OR_RETURN(shape.Count(0), x_count)
-          << "\n Shape " << shape.ToString() << " is invalid for input shape "
-          << x->shape()->ToString();
-      JUST(attrs.SetAttr<Shape>("shape", shape));
-    } else {
-      infered_shape.Set(need_infer_axis, x_count / count);
-      CHECK_EQ_OR_RETURN(infered_shape.Count(0), x_count)
-          << "\n Shape " << shape.ToString() << " is invalid for input shape "
-          << x->shape()->ToString();
-      JUST(attrs.SetAttr<Shape>("shape", infered_shape));
-    }
+    JUST(attrs.SetAttr<Shape>("shape", infered_shape));
 
     if (view::IsViewApplicable(x)){
       // in some case, view operate is not allowed, so need to check it's validation,
@@ -1117,34 +1121,9 @@ class ViewFunctor {
  public:
   ViewFunctor() { op_ = CHECK_JUST(one::OpBuilder("reshape").Input("in").Output("out").Build()); }
   Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x, const Shape& shape) const {
-    int need_infer_axis = -1;
-    size_t count = 1;
-    for (int i = 0; i < shape.NumAxes(); ++i) {
-      if (shape.At(i) < -1) {
-        return Error::RuntimeError() << "Invalid shape dimension " << shape.At(i);
-      } else if (shape.At(i) == -1) {
-        CHECK_EQ_OR_RETURN(need_infer_axis, -1)
-            << "Shape " << shape.ToString() << " has more than 1 axis that needs to be infered.";
-        need_infer_axis = i;
-      } else {
-        count *= shape.At(i);
-      }
-    }
-    size_t x_count = x->shape()->Count(0);
+    Shape infered_shape = *JUST(CheckReshape(x, shape));
     MutableAttrMap attrs;
-    Shape infered_shape = shape;
-    if (need_infer_axis == -1) {
-      CHECK_EQ_OR_RETURN(infered_shape.Count(0), x_count)
-          << "\n Shape " << infered_shape.ToString() << " is invalid for input shape "
-          << x->shape()->ToString();
-      JUST(attrs.SetAttr<Shape>("shape", infered_shape));
-    } else {
-      infered_shape.Set(need_infer_axis, x_count / count);
-      CHECK_EQ_OR_RETURN(infered_shape.Count(0), x_count)
-          << "\n Shape " << shape.ToString() << " is invalid for input shape "
-          << x->shape()->ToString();
-      JUST(attrs.SetAttr<Shape>("shape", infered_shape));
-    }
+    JUST(attrs.SetAttr<Shape>("shape", infered_shape));
 
     if (view::IsViewApplicable(x)){
         bool is_view_valid =
