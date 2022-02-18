@@ -34,7 +34,7 @@ struct GatherKernelUtilImpl final {
                       const Shape& flat_in_shape, T* out, int64_t offset);
 };
 
-#define GATHER_DATA_TYPE_SEQ ARITHMETIC_DATA_TYPE_SEQ FLOAT16_DATA_TYPE_SEQ HALF_DATA_TYPE_SEQ
+#define GATHER_DATA_TYPE_SEQ ARITHMETIC_DATA_TYPE_SEQ HALF_DATA_TYPE_SEQ
 
 }  // namespace oneflow
 
