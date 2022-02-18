@@ -147,7 +147,6 @@ from oneflow._C import softplus
 from oneflow._C import tril
 from oneflow._C import triu
 from oneflow._C import pad
-from oneflow._C import distributed_partial_fc_sample
 from oneflow._C import transpose
 from oneflow._C import relu
 from oneflow._C import softmax
@@ -323,6 +322,7 @@ from oneflow.nn.modules.empty import empty_op as empty
 from oneflow.nn.modules.dataset import tensor_buffer_to_list_of_tensors
 from oneflow._C import movedim
 from oneflow.nn.modules.expand import expand_op as expand
+from oneflow.nn.modules.distributed_partial_fc_sample import distributed_partial_fc_sample_op as distributed_partial_fc_sample
 from oneflow.nn.modules.roll import roll_op as roll
 from oneflow.nn.modules.flip import flip_op as flip
 from oneflow.nn.modules.logical_ops import logical_and_op as logical_and

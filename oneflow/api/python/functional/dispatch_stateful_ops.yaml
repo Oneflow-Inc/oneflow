@@ -50,6 +50,11 @@
   ]
   bind_python: True
 
+- name: "dispatch_distributed_partial_fc_sample"
+  signature:
+    "TensorTuple (OpExpr op, Tensor weight, Tensor label, Int64 num_sample) => DispatchDistributedPariticalFCSample"
+  bind_python: True
+
 - name: "dispatch_crop_mirror_normalize_from_uint8"
   signature: "Tensor (OpExpr op, TensorTuple input, Int64 crop_h=0, Int64 crop_w=0, Float crop_pos_x=0.5, Float crop_pos_y=0.5, FloatList mean, FloatList std, DataType output_dtype=kFloat, String output_layout=\"NCHW\", String color_space=\"BGR\") => DispatchCropMirrorNormalizeFromUint8"
   bind_python: True
