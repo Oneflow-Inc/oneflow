@@ -25,7 +25,7 @@ limitations under the License.
 #include "oneflow/core/autograd/autograd_mode.h"
 #include "oneflow/core/eager/dev_vm_dep_object_consume_mode.h"
 #include "oneflow/core/functional/functional.h"
-#include "oneflow/api/python/env/env_api.h"
+#include "oneflow/core/framework/nd_sbp.h"
 
 namespace oneflow {
 namespace one {
@@ -158,12 +158,7 @@ Maybe<void> FunctionNode::AccGrad4LeafTensor(bool create_graph) {
         auto& tensor_info = output_tensor_infos_[i];
         const auto& placement = JUST(tensor_info.placement());
         const auto& nd_sbp = JUST(tensor_info.sbp());
-        std::vector<Symbol<SbpParallel>> sbp_tuple(nd_sbp->sbp_parallel().size());
-        for (auto j = 0; j < sbp_tuple.size(); ++j) {
-          sbp_tuple[j] = nd_sbp->sbp_parallel().Get(j);
-        }
-        std::vector<Symbol<SbpParallel>> grad_sbp_tuple;
-        functional::ToConsistent(acc_grad, placement, sbp_tuple, grad_sbp_tuple);
+        functional::ToConsistent(acc_grad, placement, *JUST(GetSbpList(nd_sbp)), GetNoneSbpList());
 
         JUST(out->set_acc_grad(acc_grad));
       }
