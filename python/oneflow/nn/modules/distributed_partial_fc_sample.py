@@ -32,25 +32,24 @@ import oneflow.framework.id_util as id_util
 
 
 class DistributedPariticalFCSample(Module):
-    def __init__(self):
+    def __init__(self, num_sample):
         super().__init__()
+        self.num_sample = num_sample
         self._op = flow.stateful_op("distributed_partial_fc_sample").Input("weight")          \
                                                                     .Input("label")           \
                                                                     .Output("mapped_label")   \
                                                                     .Output("sampled_label")  \
                                                                     .Output("sampled_weight").Build()
 
-    def forward(self, weight, label, num_sample):
+    def forward(self, weight, label):
         res = _C.dispatch_distributed_partial_fc_sample(
             self._op,
             weight = weight,
             label = label,
-            num_sample = num_sample
+            num_sample = self.num_sample
         )
         return res
 
 
 def distributed_partial_fc_sample_op(weight, label, num_sample):
-    model = DistributedPariticalFCSample()
-    res = model(weight, label, num_sample)
-    return res
+    return DistributedPariticalFCSample(num_sample)(weight, label)
