@@ -20,6 +20,7 @@ limitations under the License.
 #include "oneflow/core/job/parallel_desc.h"
 #include "oneflow/core/ep/include/primitive/permute.h"
 #include "oneflow/core/ep/cuda/cuda_stream.h"
+#include "oneflow/user/ops/nccl_logical_util.h"
 
 #if defined(WITH_CUDA) && NCCL_VERSION_CODE > 2700
 
@@ -27,7 +28,7 @@ namespace oneflow {
 
 namespace {
 
-class NcclLogical2DSameDim0KernelCommState final : public user_op::OpKernelState {
+class NcclLogical2DSameDim0KernelCommState : public user_op::OpKernelState {
  public:
   explicit NcclLogical2DSameDim0KernelCommState(user_op::KernelInitContext* ctx)
       : is_init_(false),
@@ -37,7 +38,7 @@ class NcclLogical2DSameDim0KernelCommState final : public user_op::OpKernelState
         this_parallel_id_(ctx->parallel_ctx().parallel_id()) {
     if (has_independent_stream_) { stream_name_ = ctx->op_conf().stream_name_hint(); }
   }
-  ~NcclLogical2DSameDim0KernelCommState() = default;
+  ~NcclLogical2DSameDim0KernelCommState() override = default;
 
   ncclComm_t comm() {
     if (!is_init_) { Init(); }
@@ -84,6 +85,36 @@ class NcclLogical2DSameDim0KernelCommState final : public user_op::OpKernelState
   int64_t this_parallel_id_;
   int64_t num_ranks_{};
   ncclComm_t comm_{};
+};
+
+class NcclLogical2DSameDim0AllGatherNoncontinuousKernelState
+    : public NcclLogical2DSameDim0KernelCommState {
+ public:
+  explicit NcclLogical2DSameDim0AllGatherNoncontinuousKernelState(user_op::KernelInitContext* ctx)
+      : NcclLogical2DSameDim0KernelCommState(ctx), src_split_axis_(-1) {}
+  ~NcclLogical2DSameDim0AllGatherNoncontinuousKernelState() override = default;
+
+  int64_t src_split_axis() const { return src_split_axis_; }
+  void set_src_split_axis(int64_t split_axis) { src_split_axis_ = split_axis; }
+
+ private:
+  int64_t src_split_axis_;
+};
+
+class NcclLogical2DSameDim0All2AllKernelState : public NcclLogical2DSameDim0KernelCommState {
+ public:
+  explicit NcclLogical2DSameDim0All2AllKernelState(user_op::KernelInitContext* ctx)
+      : NcclLogical2DSameDim0KernelCommState(ctx), src_split_axis_(-1), dst_split_axis_(-1) {}
+  ~NcclLogical2DSameDim0All2AllKernelState() override = default;
+
+  int64_t src_split_axis() const { return src_split_axis_; }
+  void set_src_split_axis(int64_t split_axis) { src_split_axis_ = split_axis; }
+  int64_t dst_split_axis() const { return dst_split_axis_; }
+  void set_dst_split_axis(int64_t split_axis) { dst_split_axis_ = split_axis; }
+
+ private:
+  int64_t src_split_axis_;
+  int64_t dst_split_axis_;
 };
 
 class NcclLogical2DSameDim0AllReduce final : public user_op::OpKernel {
@@ -148,14 +179,21 @@ class NcclLogical2DSameDim0AllGatherNoncontinuous final : public user_op::OpKern
 
   std::shared_ptr<user_op::OpKernelState> CreateOpKernelState(
       user_op::KernelInitContext* ctx) const override {
-    return std::make_shared<NcclLogical2DSameDim0KernelCommState>(ctx);
+    auto state = std::make_shared<NcclLogical2DSameDim0AllGatherNoncontinuousKernelState>(ctx);
+    NdSbp src_nd_sbp;
+    CHECK_JUST(GetNcclLogicalNdSbpFromAttr(ctx, "src_reduced_nd_sbp", &src_nd_sbp));
+    CHECK_EQ(src_nd_sbp.sbp_parallel_size(), 2);
+    CHECK(src_nd_sbp.sbp_parallel(1).has_split_parallel());
+    state->set_src_split_axis(src_nd_sbp.sbp_parallel(1).split_parallel().axis());
+    return state;
   }
 
  private:
   void Compute(user_op::KernelComputeContext* ctx, user_op::OpKernelState* state,
                const user_op::OpKernelCache*) const override {
-    auto* nccl_comm = dynamic_cast<NcclLogical2DSameDim0KernelCommState*>(state);
-    CHECK(nccl_comm != nullptr);
+    auto* kernel_state =
+        static_cast<NcclLogical2DSameDim0AllGatherNoncontinuousKernelState*>(state);
+    CHECK_NOTNULL(kernel_state);
     const user_op::Tensor* in = ctx->Tensor4ArgNameAndIndex("in", 0);
     user_op::Tensor* out = ctx->Tensor4ArgNameAndIndex("out", 0);
     user_op::Tensor* tmp_buffer = ctx->Tensor4ArgNameAndIndex("tmp_buffer", 0);
@@ -165,8 +203,8 @@ class NcclLogical2DSameDim0AllGatherNoncontinuous final : public user_op::OpKern
     CHECK_EQ(tmp_buffer->shape().elem_cnt(), data_size);
 
     CHECK_EQ(in->data_type(), out->data_type());
-    const int64_t num_ranks = nccl_comm->num_ranks();
-    const int64_t in_split_axis = ctx->Attr<int64_t>("in_dim1_split_axis");
+    const int64_t num_ranks = kernel_state->num_ranks();
+    const int64_t in_split_axis = kernel_state->src_split_axis();
 
     DimVector logical_shape_dim_vec;
     in->shape().ToDimVector(&logical_shape_dim_vec);
@@ -175,7 +213,7 @@ class NcclLogical2DSameDim0AllGatherNoncontinuous final : public user_op::OpKern
     // NOTE(chengcheng): Do AllGather
     CHECK_EQ(in->shape().elem_cnt() * num_ranks, out->shape().elem_cnt());
     OF_NCCL_CHECK(ncclAllGather(in->dptr(), unpack_from_ptr, in->shape().elem_cnt(),
-                                GetNcclDataType(in->data_type()), nccl_comm->comm(),
+                                GetNcclDataType(in->data_type()), kernel_state->comm(),
                                 ctx->stream()->As<ep::CudaStream>()->cuda_stream()));
 
     CHECK_GT(in_split_axis, 0);
@@ -211,14 +249,25 @@ class NcclLogical2DSameDim0All2All final : public user_op::OpKernel {
 
   std::shared_ptr<user_op::OpKernelState> CreateOpKernelState(
       user_op::KernelInitContext* ctx) const override {
-    return std::make_shared<NcclLogical2DSameDim0KernelCommState>(ctx);
+    auto state = std::make_shared<NcclLogical2DSameDim0All2AllKernelState>(ctx);
+    NdSbp src_nd_sbp;
+    NdSbp dst_nd_sbp;
+    CHECK_JUST(GetNcclLogicalNdSbpFromAttr(ctx, "src_reduced_nd_sbp", &src_nd_sbp));
+    CHECK_JUST(GetNcclLogicalNdSbpFromAttr(ctx, "dst_reduced_nd_sbp", &dst_nd_sbp));
+    CHECK_EQ(src_nd_sbp.sbp_parallel_size(), 2);
+    CHECK_EQ(dst_nd_sbp.sbp_parallel_size(), 2);
+    CHECK(src_nd_sbp.sbp_parallel(1).has_split_parallel());
+    CHECK(dst_nd_sbp.sbp_parallel(1).has_split_parallel());
+    state->set_src_split_axis(src_nd_sbp.sbp_parallel(1).split_parallel().axis());
+    state->set_dst_split_axis(dst_nd_sbp.sbp_parallel(1).split_parallel().axis());
+    return state;
   }
 
  private:
   void Compute(user_op::KernelComputeContext* ctx, user_op::OpKernelState* state,
                const user_op::OpKernelCache*) const override {
-    auto* nccl_comm = dynamic_cast<NcclLogical2DSameDim0KernelCommState*>(state);
-    CHECK(nccl_comm != nullptr);
+    auto* kernel_state = static_cast<NcclLogical2DSameDim0All2AllKernelState*>(state);
+    CHECK_NOTNULL(kernel_state);
     const user_op::Tensor* in = ctx->Tensor4ArgNameAndIndex("in", 0);
     user_op::Tensor* out = ctx->Tensor4ArgNameAndIndex("out", 0);
     user_op::Tensor* tmp_buffer = ctx->Tensor4ArgNameAndIndex("tmp_buffer", 0);
@@ -232,11 +281,11 @@ class NcclLogical2DSameDim0All2All final : public user_op::OpKernel {
     CHECK(tmp_size == 0 || tmp_size == data_size || tmp_size == data_size * 2);
 
     CHECK_EQ(in->data_type(), out->data_type());
-    const int64_t num_ranks = nccl_comm->num_ranks();
+    const int64_t num_ranks = kernel_state->num_ranks();
     CHECK_EQ(in->shape().elem_cnt(), out->shape().elem_cnt());
     const int64_t elem_cnt = in->shape().elem_cnt();
-    const int64_t in_split_axis = ctx->Attr<int64_t>("in_dim1_split_axis");
-    const int64_t out_split_axis = ctx->Attr<int64_t>("out_dim1_split_axis");
+    const int64_t in_split_axis = kernel_state->src_split_axis();
+    const int64_t out_split_axis = kernel_state->dst_split_axis();
 
     DimVector logical_shape_dim_vec;
     in->shape().ToDimVector(&logical_shape_dim_vec);
@@ -280,11 +329,11 @@ class NcclLogical2DSameDim0All2All final : public user_op::OpKernel {
         OF_NCCL_CHECK(ncclSend(reinterpret_cast<const void*>(
                                    reinterpret_cast<const char*>(pack_to_ptr) + j * chunk_size),
                                elem_per_chunk, GetNcclDataType(in->data_type()), j,
-                               nccl_comm->comm(),
+                               kernel_state->comm(),
                                ctx->stream()->As<ep::CudaStream>()->cuda_stream()));
         OF_NCCL_CHECK(ncclRecv(
             reinterpret_cast<void*>(reinterpret_cast<char*>(unpack_from_ptr) + j * chunk_size),
-            elem_per_chunk, GetNcclDataType(in->data_type()), j, nccl_comm->comm(),
+            elem_per_chunk, GetNcclDataType(in->data_type()), j, kernel_state->comm(),
             ctx->stream()->As<ep::CudaStream>()->cuda_stream()));
       }
       OF_NCCL_CHECK(ncclGroupEnd());
@@ -317,11 +366,16 @@ size_t Infer2DSameDim0All2AllKernelTmpBufferSize(user_op::InferContext* ctx) {
   const user_op::TensorDesc& in_tensor = ctx->InputTensorDesc("in", 0);
   size_t tensor_byte_size =
       GetCudaAlignedSize(in_tensor.shape().elem_cnt() * GetSizeOfDataType(in_tensor.data_type()));
-  const cfg::SbpParallel& in_sbp = ctx->NdSbp4ArgNameAndIndex("in", 0).sbp_parallel(1);
-  const cfg::SbpParallel& out_sbp = ctx->NdSbp4ArgNameAndIndex("out", 0).sbp_parallel(1);
-  CHECK(in_sbp.has_split_parallel() && out_sbp.has_split_parallel());
-  if (in_sbp.split_parallel().axis() != 0) { ret += tensor_byte_size; }
-  if (out_sbp.split_parallel().axis() != 0) { ret += tensor_byte_size; }
+  NdSbp src_nd_sbp;
+  NdSbp dst_nd_sbp;
+  CHECK_JUST(GetNcclLogicalNdSbpFromAttr(ctx, "src_reduced_nd_sbp", &src_nd_sbp));
+  CHECK_JUST(GetNcclLogicalNdSbpFromAttr(ctx, "dst_reduced_nd_sbp", &dst_nd_sbp));
+  CHECK_EQ(src_nd_sbp.sbp_parallel_size(), 2);
+  CHECK_EQ(dst_nd_sbp.sbp_parallel_size(), 2);
+  CHECK(src_nd_sbp.sbp_parallel(1).has_split_parallel());
+  CHECK(dst_nd_sbp.sbp_parallel(1).has_split_parallel());
+  if (src_nd_sbp.sbp_parallel(1).split_parallel().axis() != 0) { ret += tensor_byte_size; }
+  if (dst_nd_sbp.sbp_parallel(1).split_parallel().axis() != 0) { ret += tensor_byte_size; }
   return ret;
 }
 
