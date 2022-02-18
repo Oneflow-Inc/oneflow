@@ -113,10 +113,17 @@ def _save_tensor_to_disk(tensor: "oneflow.Tensor", dir_name: Union[str, Path]) -
     )
     data_path = os.path.join(dir_name, DATA_FILENAME)
     with open(data_path, "wb") as f:
-        f.write(tensor.numpy().tobytes())
+        for _, _, slice in _read_slice(tensor):
+            f.write(slice.tobytes())
 
     with open(os.path.join(dir_name, META_INFO_FILENAME), "w") as f:
         f.write(text_format.MessageToString(meta_info))
+
+
+def copy_slice_by_slice(src_tensor: "oneflow.Tensor", dst_tensor: "oneflow.Tensor"):
+    for start, stop, slice in _read_slice(src_tensor):
+        slice = slice.to_global(placement=dst_tensor.placement, sbp=dst_tensor.sbp)
+        flow._C.logical_slice_assign(dst_tensor, slice, list(start), list(stop), [1] * len(start))
 
 
 ValueContainer = Union[FileBackendVariableBlob, np.ndarray, "oneflow.Tensor"]
@@ -132,11 +139,11 @@ def _LoadSingleVariable(
             file_backed_blob = FileBackendVariableBlob(path)
             loaded = flow.tensor(
                 file_backed_blob.numpy(), dtype=file_backed_blob.dtype
-            ).to("cuda")
+            )
         else:
-            loaded = flow.tensor([]).to("cuda")
+            loaded = flow.tensor([])
         loaded = loaded.to_global(
-            flow.placement("cuda", [global_src_rank]), flow.sbp.broadcast
+            flow.placement("cpu", [global_src_rank]), flow.sbp.broadcast
         )
         return loaded
 
@@ -153,6 +160,101 @@ def _broadcast_py_object(obj, src: int = 0):
         return pickle.loads(flow._oneflow_internal.cpu_broadcast(None, src))
 
 
+def _elem_cnt(shape):
+    return np.prod(shape).astype(np.int).item()
+
+
+def _read_slice(
+    container: ValueContainer,
+) -> Iterable[Tuple[Sequence[int], Sequence[int], np.ndarray]]:
+    """
+    Return a generator which iterates over the input blob or array and yields
+    (start_nd_idx, stop_nd_idx, slice_np_array)
+    """
+    if isinstance(container, flow.Tensor):
+
+        def read_from_tensor(tensor, start_nd_idx, stop_nd_idx):
+            return flow._C.logical_slice(tensor, list(start_nd_idx), list(stop_nd_idx), [1] * len(start_nd_idx))
+
+        yield from _for_each_slice(container, read_from_tensor)
+    elif isinstance(container, FileBackendVariableBlob):
+        np_dtype = np.dtype(
+            dtype_util.convert_oneflow_dtype_to_numpy_dtype(container.dtype)
+        )
+        with open(container.file_path, "rb") as f:
+
+            def read_from_file(_, start_nd_idx, stop_nd_idx):
+                length = _elem_cnt(np.array(stop_nd_idx) - np.array(start_nd_idx))
+                slice = f.read(length * np_dtype.itemsize)
+                return np.frombuffer(slice, dtype=np_dtype,).reshape(
+                    np.array(stop_nd_idx) - np.array(start_nd_idx)
+                )
+
+            yield from _for_each_slice(container, read_from_file)
+    elif isinstance(container, np.ndarray):
+
+        def read_from_np_array(array, start_nd_idx, stop_nd_idx):
+            slice_objs = []
+            for start, stop in zip(start_nd_idx, stop_nd_idx):
+                slice_objs.append(slice(start, stop))
+            return array[tuple(slice_objs)]
+
+        yield from _for_each_slice(container, read_from_np_array)
+    else:
+        raise RuntimeError("Unknown type: {}".format(type(container).__name__))
+
+
+def _for_each_slice(
+    container: ValueContainer,
+    f: Union[
+        Callable[["oneflow.Tensor", Sequence[int], Sequence[int]], Any],
+        Callable[[FileBackendVariableBlob, Sequence[int], Sequence[int]], Any],
+        Callable[[np.ndarray, Sequence[int], Sequence[int]], Any],
+    ],
+):
+    """
+    Slice container into slices whose size < SLICE_BYTES. For every slice,
+    yield start_nd_idx, stop_nd_idx and f(slice)
+    """
+    assert isinstance(
+        container, (flow.Tensor, FileBackendVariableBlob, np.ndarray)
+    ), "Unknown type: {}".format(type(container).__name__)
+    assert container.shape is not None
+    assert len(container.shape) > 0
+    # For current implementation (transport data by grpc), SLICE_BYTES must be lower than 64M
+    SLICE_BYTES = 32 * 1024 * 1024
+    if isinstance(container, np.ndarray):
+        np_dtype = container.dtype
+    else:
+        np_dtype = np.dtype(
+            dtype_util.convert_oneflow_dtype_to_numpy_dtype(container.dtype)
+        )
+    SLICE_LEN = SLICE_BYTES // np_dtype.itemsize
+    start_idx = 0
+    size = _elem_cnt(container.shape)
+    cnt = 1
+    for axis in reversed(range(len(container.shape))):
+        cnt *= container.shape[axis]
+        if cnt > SLICE_LEN:
+            break
+    unit_size = _elem_cnt(container.shape[axis + 1 :])
+    max_unit_num = SLICE_LEN // unit_size
+    while start_idx < size:
+        remainder = container.shape[axis]
+        while remainder > 0:
+            unit_num = max_unit_num if remainder >= max_unit_num else remainder
+            length = unit_num * unit_size
+            remainder -= unit_num
+            stop_idx = start_idx + length
+            start_nd_idx = np.unravel_index(start_idx, container.shape)
+            stop_nd_idx = np.unravel_index(stop_idx - 1, container.shape)
+            start_nd_idx = list(map(lambda x: x.item(), start_nd_idx))
+            stop_nd_idx = list(map(lambda x: x.item(), stop_nd_idx))
+            stop_nd_idx = tuple([x + 1 for x in stop_nd_idx])
+            yield start_nd_idx, stop_nd_idx, f(container, start_nd_idx, stop_nd_idx)
+            start_idx = stop_idx
+
+
 # NOTE(jianhao):
 # (de)serializing a container of global tensors requires the order
 # of those tensors are the same across all ranks.
@@ -164,17 +266,14 @@ def tensor_getstate(self):
         if global_src_dsk_rank is None:
             assert self.is_local
             rel_dir_name = id_util.UniqueStr("tensor_")
-            abs_dir_name = save_load_path / rel_dir_name
-
-            tensor = self
         else:
             assert not self.is_local
             rel_dir_name = f"global_tensor_{self.global_id()}"
-            abs_dir_name = save_load_path / rel_dir_name
 
-            tensor = self.to_global(sbp=[flow.sbp.broadcast] * len(self.sbp)).to_local()
+            # tensor = self.to_global(sbp=[flow.sbp.broadcast] * len(self.sbp)).to_local()
         if global_src_dsk_rank is None or global_src_dsk_rank == flow.env.get_rank():
-            _save_tensor_to_disk(tensor, abs_dir_name)
+            abs_dir_name = save_load_path / rel_dir_name
+            _save_tensor_to_disk(self, abs_dir_name)
 
         return {"path": rel_dir_name}
     else:

@@ -17,6 +17,7 @@ import oneflow as flow
 from oneflow._oneflow_internal.exception import IndexException
 import oneflow.framework.tensor_str as tensor_str
 import oneflow.ops.initializer_util as initializer_util
+import oneflow.framework.check_point_v2 as check_point_v2
 import oneflow._oneflow_internal.lazy_mode as lazy_mode
 import oneflow.core.framework.variable_meta_info_pb2 as variable_meta_info_pb
 
@@ -777,10 +778,10 @@ def _copy(self, other: Union[Tensor, np.ndarray]):
             other = flow.tensor(
                 other, dtype=self.dtype, placement=self.placement, sbp=self.sbp
             )
+            flow._C.assign_local_tensor(self.to_local(), other.to_local())
         else:
             assert other.is_global
-            other = other.to_global(placement=self.placement, sbp=self.sbp)
-        flow._C.assign_local_tensor(self.to_local(), other.to_local())
+            check_point_v2.copy_slice_by_slice(other, self)
     else:
         if not isinstance(other, (Tensor)):
             assert isinstance(other, np.ndarray)
