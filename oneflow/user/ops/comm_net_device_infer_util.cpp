@@ -27,12 +27,12 @@ namespace {
 
 Maybe<Symbol<Stream>> RawGetNcclDevice(bool is_async_launced) {
   StreamRole stream_role =
-      (is_async_launced ? StreamRole::kAsyncedLaunchedCC : StreamRole::kSyncedLaunchedCC);
+      (is_async_launced ? StreamRole::kAsyncedLaunchedCommNet : StreamRole::kSyncedLaunchedCommNet);
   return Stream::New(JUST(Device::New("cuda")), stream_role);
 }
 
 Maybe<Symbol<Stream>> RawGetCpuTransportDevice() {
-  return Stream::New(JUST(Device::New("cpu")), StreamRole::kSyncedLaunchedCC);
+  return Stream::New(JUST(Device::New("cpu")), StreamRole::kSyncedLaunchedCommNet);
 }
 
 }  // namespace

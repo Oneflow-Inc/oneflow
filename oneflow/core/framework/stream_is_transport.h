@@ -22,15 +22,15 @@ limitations under the License.
 namespace oneflow {
 
 struct StreamIsTransport {
-  static bool Case(SR<StreamRole::kInvalid>) {  // NOLINT
+  static bool Case(StreamRoleCase<StreamRole::kInvalid>) {  // NOLINT
     LOG(FATAL);
   }
-  static bool Case(SR<StreamRole::kCompute>) { return false; }
-  static bool Case(SR<StreamRole::kHost2Device>) { return false; }
-  static bool Case(SR<StreamRole::kDevice2Host>) { return false; }
-  static bool Case(SR<StreamRole::kSyncedLaunchedCC>) { return true; }
-  static bool Case(SR<StreamRole::kAsyncedLaunchedCC>) { return true; }
-  static bool Case(SR<StreamRole::kCriticalSection>) { return false; }
+  static bool Case(StreamRoleCase<StreamRole::kCompute>) { return false; }
+  static bool Case(StreamRoleCase<StreamRole::kHost2Device>) { return false; }
+  static bool Case(StreamRoleCase<StreamRole::kDevice2Host>) { return false; }
+  static bool Case(StreamRoleCase<StreamRole::kSyncedLaunchedCommNet>) { return true; }
+  static bool Case(StreamRoleCase<StreamRole::kAsyncedLaunchedCommNet>) { return true; }
+  static bool Case(StreamRoleCase<StreamRole::kCriticalSection>) { return false; }
 };
 
 }  // namespace oneflow

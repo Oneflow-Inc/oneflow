@@ -48,7 +48,7 @@ Stream::Stream(Symbol<Device> device, StreamRole stream_role)
       transport_local_dep_object_(NullOpt) {
   static constexpr auto* GetComputeDep = DECORATE(&RawNewComputeDepObject, StaticGlobalCopiable);
   schedule_local_dep_object_ = GetComputeDep(device, stream_role).Mutable();
-  if (SRSwitch<StreamIsTransport>(stream_role)) {
+  if (StreamRoleSwitch<StreamIsTransport>(stream_role)) {
     transport_local_dep_object_ = GetStaticGlobalTransportLocalDepObject();
   }
 }
