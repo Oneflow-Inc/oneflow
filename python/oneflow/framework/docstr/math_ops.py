@@ -1295,13 +1295,17 @@ add_docstr(
     r"""
     Slices the self tensor along the selected dimension at the given index. This function returns 
     a view of the original tensor with the given dimension removed.
+
     Args:
         input (Tensor): the input tensor.
         dim  (int):  the dimension to slice.
         select (int): the index to select with.
+
     Returns:
         oneflow.Tensor: the output Tensor.
+
     For example:
+    
     .. code-block:: python
         >>> import oneflow as flow
         >>> input = flow.rand(3, 4, 5)
