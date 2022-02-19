@@ -72,6 +72,15 @@ def api_enable_dtr(val: bool = False, thres: str = "1500MB", debug_level: int = 
     return enable_if.unique([enable_dtr])(val, thres, debug_level, heuristic)
 
 
+def api_check_dtr() -> bool:
+    """Return whether enabled DTR or not
+
+    Returns:
+        bool: [description]
+    """
+    return enable_if.unique([check_dtr])()
+
+
 @enable_if.condition(hob.in_normal_mode & ~hob.any_global_function_defined)
 def enable_eager_environment(val=True):
     return oneflow._oneflow_internal.EnableEagerEnvironment(val)
@@ -97,6 +106,10 @@ def enable_dtr(val=False, thres="1500MB", debug=False, heuristic="full"):
         raise TypeError("CUDA memory value should be a str or an int.")
 
     return oneflow._oneflow_internal.EnableDTRStrategy(val, out, debug, heuristic)
+
+@enable_if.condition(hob.in_normal_mode)
+def check_dtr() -> bool:
+    return oneflow._oneflow_internal.CheckDTRStrategy()
 
 
 def api_env_init() -> bool:

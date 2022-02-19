@@ -26,6 +26,11 @@ Maybe<void> EnableDTRStrategy(bool enable_dtr, size_t thres, int debug_level,
   *Global<DTRConfig>::Get() = DTRConfig(enable_dtr, thres, debug_level, heuristic);
   return Maybe<void>::Ok();
 }
+
+Maybe<bool> CheckDTRStrategy() {
+  CHECK_NOTNULL_OR_RETURN((Global<DTRConfig>::Get()));
+  return Global<DTRConfig>::Get()->is_enabled;
+}
 }  // namespace oneflow
 
 void ApiEnableDTRStrategy(bool enable_dtr, size_t thres, int debug_level,
@@ -33,11 +38,16 @@ void ApiEnableDTRStrategy(bool enable_dtr, size_t thres, int debug_level,
   oneflow::EnableDTRStrategy(enable_dtr, thres, debug_level, heuristic).GetOrThrow();
 }
 
+bool ApiCheckDTRStrategy() {
+   return oneflow::CheckDTRStrategy().GetOrThrow();
+}
+
 ONEFLOW_API_PYBIND11_MODULE("", m) {
   m.def("CurrentResource", &CurrentResource);
   m.def("EnvResource", &EnvResource);
   m.def("EnableEagerEnvironment", &EnableEagerEnvironment);
   m.def("EnableDTRStrategy", &ApiEnableDTRStrategy);
+  m.def("CheckDTRStrategy", &ApiCheckDTRStrategy);
 
   m.def("IsEnvInited", &IsEnvInited);
   m.def("InitEnv", &InitEnv);
