@@ -26,33 +26,72 @@ limitations under the License.
 namespace oneflow {
 
 struct GetCallInstructionName {
-  static Maybe<std::string> Case(SR<StreamRole::kInvalid>, DeviceType device_type) {  // NOLINT
-    UNIMPLEMENTED_THEN_RETURN();
+  static Maybe<const std::string&> Case(StreamRoleCase<StreamRole::kInvalid>,
+                                        DeviceType device_type) {  // NOLINT
+    static constexpr auto* Get = DECORATE(&Call::Invalid, ThreadLocal);
+    return *JUST(Get(device_type));
   }
-  static Maybe<std::string> Case(SR<StreamRole::kCompute>, DeviceType device_type) {
-    return *JUST(DeviceTag4DeviceType(device_type)) + ".LocalCallOpKernel";
+  static Maybe<const std::string&> Case(StreamRoleCase<StreamRole::kCompute>,
+                                        DeviceType device_type) {
+    static constexpr auto* Get = DECORATE(&Call::Compute, ThreadLocal);
+    return *JUST(Get(device_type));
   }
-  static Maybe<std::string> Case(SR<StreamRole::kHost2Device>, DeviceType device_type) {
-    CHECK_EQ_OR_RETURN(device_type, kCUDA);
-    return std::string("cuda_h2d.LocalCallOpKernel");
+  static Maybe<const std::string&> Case(StreamRoleCase<StreamRole::kHost2Device>,
+                                        DeviceType device_type) {
+    static constexpr auto* Get = DECORATE(&Call::Host2Device, ThreadLocal);
+    return *JUST(Get(device_type));
   }
-  static Maybe<std::string> Case(SR<StreamRole::kDevice2Host>, DeviceType device_type) {
-    CHECK_EQ_OR_RETURN(device_type, kCUDA);
-    return std::string("cuda_d2h.LocalCallOpKernel");
+  static Maybe<const std::string&> Case(StreamRoleCase<StreamRole::kDevice2Host>,
+                                        DeviceType device_type) {
+    static constexpr auto* Get = DECORATE(&Call::Device2Host, ThreadLocal);
+    return *JUST(Get(device_type));
   }
-  static Maybe<std::string> Case(SR<StreamRole::kSyncedLaunchedCC>, DeviceType device_type) {
-    if (device_type == kCPU) { return std::string("cpu.LocalCallOpKernel"); }
-    CHECK_EQ_OR_RETURN(device_type, kCUDA);
-    return std::string("cuda.LocalCallOpKernel");
+  static Maybe<const std::string&> Case(StreamRoleCase<StreamRole::kSyncedLaunchedCommNet>,
+                                        DeviceType device_type) {
+    static constexpr auto* Get = DECORATE(&Call::SyncedLaunchedCommNet, ThreadLocal);
+    return *JUST(Get(device_type));
   }
-  static Maybe<std::string> Case(SR<StreamRole::kAsyncedLaunchedCC>, DeviceType device_type) {
-    if (device_type == kCPU) { return std::string("cpu.LocalCallOpKernel"); }
-    CHECK_EQ_OR_RETURN(device_type, kCUDA);
-    return std::string("async.cuda.LocalCallOpKernel");
+  static Maybe<const std::string&> Case(StreamRoleCase<StreamRole::kAsyncedLaunchedCommNet>,
+                                        DeviceType device_type) {
+    static constexpr auto* Get = DECORATE(&Call::AsyncedLaunchedCommNet, ThreadLocal);
+    return *JUST(Get(device_type));
   }
-  static Maybe<std::string> Case(SR<StreamRole::kCriticalSection>, DeviceType device_type) {
-    UNIMPLEMENTED_THEN_RETURN();
+  static Maybe<const std::string&> Case(StreamRoleCase<StreamRole::kCriticalSection>,
+                                        DeviceType device_type) {
+    static constexpr auto* Get = DECORATE(&Call::CriticalSection, ThreadLocal);
+    return *JUST(Get(device_type));
   }
+
+ private:
+  struct Call {
+    static Maybe<std::string> Invalid(DeviceType device_type) {  // NOLINT
+      UNIMPLEMENTED_THEN_RETURN();
+    }
+    static Maybe<std::string> Compute(DeviceType device_type) {
+      return *JUST(DeviceTag4DeviceType(device_type)) + ".LocalCallOpKernel";
+    }
+    static Maybe<std::string> Host2Device(DeviceType device_type) {
+      CHECK_EQ_OR_RETURN(device_type, kCUDA);
+      return std::string("cuda_h2d.LocalCallOpKernel");
+    }
+    static Maybe<std::string> Device2Host(DeviceType device_type) {
+      CHECK_EQ_OR_RETURN(device_type, kCUDA);
+      return std::string("cuda_d2h.LocalCallOpKernel");
+    }
+    static Maybe<std::string> SyncedLaunchedCommNet(DeviceType device_type) {
+      if (device_type == kCPU) { return std::string("cpu.LocalCallOpKernel"); }
+      CHECK_EQ_OR_RETURN(device_type, kCUDA);
+      return std::string("cuda.LocalCallOpKernel");
+    }
+    static Maybe<std::string> AsyncedLaunchedCommNet(DeviceType device_type) {
+      if (device_type == kCPU) { return std::string("cpu.LocalCallOpKernel"); }
+      CHECK_EQ_OR_RETURN(device_type, kCUDA);
+      return std::string("async.cuda.LocalCallOpKernel");
+    }
+    static Maybe<std::string> CriticalSection(DeviceType device_type) {
+      UNIMPLEMENTED_THEN_RETURN();
+    }
+  };
 };
 
 }  // namespace oneflow

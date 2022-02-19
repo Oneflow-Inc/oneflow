@@ -39,7 +39,7 @@ void LocalCallOpKernelPhyInstrOperand::ForEachConstMirroredObject(
 void LocalCallOpKernelPhyInstrOperand::InitStreamSequentialDependence() {
   const auto& stream = opkernel().stream();
   auto* device_schedule_dep_object = stream->mut_schedule_local_dep_object();
-  if (SRSwitch<StreamIsTransport>(stream->stream_role())) {
+  if (StreamRoleSwitch<StreamIsTransport>(stream->stream_role())) {
     // Sequantialize nccl instructions to avoid deadlock
     stream_sequential_dependence_ = device_schedule_dep_object;
   } else {

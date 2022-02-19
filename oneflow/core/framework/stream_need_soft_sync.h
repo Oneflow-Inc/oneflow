@@ -23,17 +23,21 @@ limitations under the License.
 namespace oneflow {
 
 struct NeedSoftSync {
-  static bool Case(SR<StreamRole::kInvalid>, DeviceType) {  // NOLINT
+  static bool Case(StreamRoleCase<StreamRole::kInvalid>, DeviceType) {  // NOLINT
     LOG(FATAL);
   }
-  static bool Case(SR<StreamRole::kCompute>, DeviceType device_type) { return device_type != kCPU; }
-  static bool Case(SR<StreamRole::kHost2Device>, DeviceType) { return false; }
-  static bool Case(SR<StreamRole::kDevice2Host>, DeviceType) { return false; }
-  static bool Case(SR<StreamRole::kSyncedLaunchedCC>, DeviceType device_type) {
+  static bool Case(StreamRoleCase<StreamRole::kCompute>, DeviceType device_type) {
     return device_type != kCPU;
   }
-  static bool Case(SR<StreamRole::kAsyncedLaunchedCC>, DeviceType) { return false; }
-  static bool Case(SR<StreamRole::kCriticalSection>, DeviceType) { return false; }
+  static bool Case(StreamRoleCase<StreamRole::kHost2Device>, DeviceType) { return false; }
+  static bool Case(StreamRoleCase<StreamRole::kDevice2Host>, DeviceType) { return false; }
+  static bool Case(StreamRoleCase<StreamRole::kSyncedLaunchedCommNet>, DeviceType device_type) {
+    return device_type != kCPU;
+  }
+  static bool Case(StreamRoleCase<StreamRole::kAsyncedLaunchedCommNet>, DeviceType) {
+    return false;
+  }
+  static bool Case(StreamRoleCase<StreamRole::kCriticalSection>, DeviceType) { return false; }
 };
 
 }  // namespace oneflow

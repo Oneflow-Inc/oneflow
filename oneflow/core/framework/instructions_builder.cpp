@@ -357,10 +357,10 @@ Maybe<void> InstructionsBuilder::LocalCallOpKernel(
   auto phy_instr_operand = JUST(vm::LocalCallOpKernelPhyInstrOperand::New(
       opkernel, input_eager_blob_objects, output_eager_blob_objects, consistent_tensor_infer_result,
       ctx, *one::CurrentDevVmDepObjectConsumeMode()));
-  auto instruction_name =
-      JUST(SRSwitch<GetCallInstructionName>(stream->stream_role(), stream->device()->enum_type()));
+  const auto& instruction_name = JUST(StreamRoleSwitch<GetCallInstructionName>(
+      stream->stream_role(), stream->device()->enum_type()));
   auto instruction = intrusive::make_shared<vm::InstructionMsg>(
-      Global<VirtualMachine>::Get()->mut_vm(), *instruction_name, parallel_desc_sym,
+      Global<VirtualMachine>::Get()->mut_vm(), instruction_name, parallel_desc_sym,
       phy_instr_operand);
   instruction_list_->EmplaceBack(std::move(instruction));
   for (const auto& output : *output_eager_blob_objects) {
@@ -386,11 +386,11 @@ Maybe<void> InstructionsBuilder::ReleaseTensor(
   Optional<Symbol<Stream>> stream{};
   if (*one::CurrentDevVmDepObjectConsumeMode() == one::DevVmDepObjectConsumeMode::NONE) {
     stream = Optional<Symbol<Stream>>(NullOpt);
-  } else if (SRSwitch<StreamIsTransport>(last_used_stream->stream_role())) {
+  } else if (StreamRoleSwitch<StreamIsTransport>(last_used_stream->stream_role())) {
     // Disable inter-device instruction sequential for tensor used by communicative stream.
     // It's not acceptable for us that cuda compute stream is blocked by cuda nccl stream.
     stream = Optional<Symbol<Stream>>(NullOpt);
-  } else if (SRSwitch<StreamIsTransport>(producer_stream->stream_role())) {
+  } else if (StreamRoleSwitch<StreamIsTransport>(producer_stream->stream_role())) {
     // Disable inter-device instruction sequential for tensor produced by communicative stream.
     stream = Optional<Symbol<Stream>>(NullOpt);
   } else {
@@ -399,10 +399,10 @@ Maybe<void> InstructionsBuilder::ReleaseTensor(
   const auto& phy_instr_operand =
       std::make_shared<vm::ReleaseTensorArgPhyInstrOperand>(eager_blob_object, stream);
   DeviceType device_type = producer_stream->device()->enum_type();
-  auto instruction_name =
-      JUST(SRSwitch<GetReleaseInstructionName>(producer_stream->stream_role(), device_type));
+  const auto& instruction_name = JUST(
+      StreamRoleSwitch<GetReleaseInstructionName>(producer_stream->stream_role(), device_type));
   auto instruction = intrusive::make_shared<vm::InstructionMsg>(
-      Global<VirtualMachine>::Get()->mut_vm(), *instruction_name, parallel_desc, phy_instr_operand);
+      Global<VirtualMachine>::Get()->mut_vm(), instruction_name, parallel_desc, phy_instr_operand);
   instruction_list_->EmplaceBack(std::move(instruction));
   return Maybe<void>::Ok();
 }
@@ -436,7 +436,9 @@ Maybe<void> InstructionsBuilder::SoftSyncStream(
     std::vector<intrusive::shared_ptr<LocalDepObject>>&& compute_local_dep_objects,
     const std::string& modifier, Symbol<Stream> stream) {
   DeviceType device_type = stream->device()->enum_type();
-  if (!SRSwitch<NeedSoftSync>(stream->stream_role(), device_type)) { return Maybe<void>::Ok(); }
+  if (!StreamRoleSwitch<NeedSoftSync>(stream->stream_role(), device_type)) {
+    return Maybe<void>::Ok();
+  }
   OF_PROFILER_RANGE_PUSH("SoftStream");
   const auto& parallel_desc = JUST(Placement4Device(stream->device())).shared_from_symbol();
   const auto& phy_instr_operand = std::make_shared<vm::ConsumeLocalDepObjectPhyInstrOperand>(
