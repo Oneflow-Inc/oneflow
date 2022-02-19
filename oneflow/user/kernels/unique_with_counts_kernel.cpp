@@ -15,7 +15,6 @@ limitations under the License.
 */
 #include "oneflow/user/kernels/unique_kernel_util.h"
 #include "oneflow/core/framework/framework.h"
-#include "oneflow/user/kernels/mock_kernel.h"
 
 namespace oneflow {
 
@@ -44,31 +43,17 @@ class UniqueWithCountsKernel final : public user_op::OpKernel {
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
 
-template<typename T, typename K>
-class UniqueWithCountsKernel<kMockDevice, T, K> final : public MockKernel {};
+template<DeviceType device_type, typename T, typename K>
+user_op::InferTmpSizeFn GenInferTmpSizeFn() {
+  return [](user_op::InferContext* ctx) {
+    const auto& x = ctx->InputTensorDesc("x", 0);
+    int64_t workspace_size_in_bytes;
+    UniqueKernelUtil<device_type, T, K>::GetUniqueWithCountsWorkspaceSizeInBytes(
+        nullptr, x.shape().elem_cnt(), &workspace_size_in_bytes);
 
-template<DeviceType device_type>
-struct GenInferTmpSizeFn final {
-  template<typename T, typename K>
-  static user_op::InferTmpSizeFn Call() {
-    return [](user_op::InferContext* ctx) {
-      const auto& x = ctx->InputTensorDesc("x", 0);
-      int64_t workspace_size_in_bytes;
-      UniqueKernelUtil<device_type, T, K>::GetUniqueWithCountsWorkspaceSizeInBytes(
-          nullptr, x.shape().elem_cnt(), &workspace_size_in_bytes);
-
-      return workspace_size_in_bytes;
-    };
-  }
-};
-
-template<>
-struct GenInferTmpSizeFn<kMockDevice> final {
-  template<typename T, typename K>
-  static user_op::InferTmpSizeFn Call() {
-    return [](user_op::InferContext* ctx) { return 0; };
-  }
-};
+    return workspace_size_in_bytes;
+  };
+}
 
 #define REGISTER_UNIQUE_WITH_COUNTS_KERNEL(device_type_v, data_type_pair, indices_type_pair) \
   REGISTER_USER_KERNEL("unique_with_counts")                                                 \
@@ -78,9 +63,8 @@ struct GenInferTmpSizeFn<kMockDevice> final {
           (user_op::HobDeviceType() == device_type_v)                                        \
           && (user_op::HobDataType("x", 0) == OF_PP_PAIR_SECOND(data_type_pair))             \
           && (user_op::HobDataType("idx", 0) == OF_PP_PAIR_SECOND(indices_type_pair)))       \
-      .SetInferTmpSizeFn(                                                                    \
-          GenInferTmpSizeFn<device_type_v>::Call<OF_PP_PAIR_FIRST(data_type_pair),           \
-                                                 OF_PP_PAIR_FIRST(indices_type_pair)>());
+      .SetInferTmpSizeFn(GenInferTmpSizeFn<device_type_v, OF_PP_PAIR_FIRST(data_type_pair),  \
+                                           OF_PP_PAIR_FIRST(indices_type_pair)>());
 
 OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(REGISTER_UNIQUE_WITH_COUNTS_KERNEL, DEVICE_TYPE_SEQ,
                                  ARITHMETIC_DATA_TYPE_SEQ, INDEX_DATA_TYPE_SEQ)

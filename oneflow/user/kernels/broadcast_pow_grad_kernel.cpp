@@ -17,7 +17,6 @@ limitations under the License.
 #include "oneflow/core/ndarray/ndarray_util.h"
 #include "oneflow/core/ndarray/xpu_var_ndarray.h"
 #include "oneflow/core/kernel/kernel_util.cuh"
-#include "oneflow/user/kernels/mock_kernel.h"
 
 namespace oneflow {
 
@@ -57,9 +56,6 @@ class BroadcastPowXGradKernel final : public user_op::OpKernel {
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
 
-template<typename T>
-class BroadcastPowXGradKernel<kMockDevice, T> final : public MockKernel {};
-
 template<DeviceType device, typename T>
 class BroadcastPowYGradKernel final : public user_op::OpKernel {
  public:
@@ -93,9 +89,6 @@ class BroadcastPowYGradKernel final : public user_op::OpKernel {
   };
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
-
-template<typename T>
-class BroadcastPowYGradKernel<kMockDevice, T> final : public MockKernel {};
 
 }  // namespace
 

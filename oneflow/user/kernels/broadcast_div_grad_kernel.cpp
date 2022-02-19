@@ -16,7 +16,6 @@ limitations under the License.
 #include "oneflow/core/framework/framework.h"
 #include "oneflow/core/ndarray/ndarray_util.h"
 #include "oneflow/core/ndarray/xpu_var_ndarray.h"
-#include "oneflow/user/kernels/mock_kernel.h"
 
 namespace oneflow {
 
@@ -54,9 +53,6 @@ class BroadcastDivGradKernel final : public user_op::OpKernel {
   };
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
-
-template<typename T>
-class BroadcastDivGradKernel<kMockDevice, T> final : public MockKernel {};
 
 }  // namespace
 

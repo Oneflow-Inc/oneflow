@@ -16,7 +16,6 @@ limitations under the License.
 #include "oneflow/user/kernels/indexed_slices_reduce_sum_kernel_util.h"
 #include "oneflow/user/kernels/unique_kernel_util.h"
 #include "oneflow/user/kernels/unsorted_segment_sum_kernel_util.h"
-#include "oneflow/user/kernels/mock_kernel.h"
 
 namespace oneflow {
 
@@ -53,15 +52,6 @@ void IndexedSlicesReduceSumKernelUtil<device_type, K, T, IDX>::GetReduceSumWorks
                                                                            &unique_workspace_size);
   *workspace_size_in_bytes = GetUniqueIdxSize<IDX>(n) + unique_workspace_size;
 }
-
-template<typename K, typename T, typename IDX>
-struct IndexedSlicesReduceSumKernelUtil<kMockDevice, K, T, IDX> {
-  static void ReduceSum(ep::Stream* stream, int64_t n, int64_t m, const K* indices, const T* values,
-                        IDX* num_unique_indices, K* indices_out, T* values_out, void* workspace,
-                        int64_t workspace_size_in_bytes) {}
-  static void GetReduceSumWorkspaceSizeInBytes(ep::Stream* stream, int64_t n, int64_t m,
-                                               int64_t* workspace_size_in_bytes) {}
-};
 
 #define INSTANTIATE_INDEXED_SLICES_REDUCE_SUM_KERNEL_UTIL(device_type, key_type_pair,            \
                                                           val_type_pair, idx_type_pair)          \

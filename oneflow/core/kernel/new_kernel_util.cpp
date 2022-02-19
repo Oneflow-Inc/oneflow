@@ -26,18 +26,8 @@ void Memcpy<DeviceType::kCPU>(ep::Stream* stream, void* dst, const void* src, si
 }
 
 template<>
-void Memcpy<kMockDevice>(ep::Stream* stream, void* dst, const void* src, size_t sz) {
-  // Do nothing.
-}
-
-template<>
 void Memset<DeviceType::kCPU>(ep::Stream* stream, void* dst, const char value, size_t sz) {
   memset(dst, value, sz);
-}
-
-template<>
-void Memset<DeviceType::kMockDevice>(ep::Stream* stream, void* dst, const char value, size_t sz) {
-  // Do nothing
 }
 
 void WithHostBlobAndStreamSynchronizeEnv(ep::Stream* stream, Blob* blob,

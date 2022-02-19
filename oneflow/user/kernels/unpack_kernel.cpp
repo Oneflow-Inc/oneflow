@@ -16,7 +16,6 @@ limitations under the License.
 #include "oneflow/core/framework/framework.h"
 #include "oneflow/core/kernel/new_kernel_util.h"
 #include "oneflow/user/kernels/op_kernel_wrapper.h"
-#include "oneflow/user/kernels/mock_kernel.h"
 
 namespace oneflow {
 
@@ -57,9 +56,6 @@ class UnpackKernel final : public user_op::OpKernel {
   }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
-
-template<>
-class UnpackKernel<kMockDevice> final : public MockKernel {};
 
 #define REGISTER_UNPACK_KERNEL(device)                                                \
   REGISTER_USER_KERNEL("unpack").SetCreateFn<UnpackKernel<device>>().SetIsMatchedHob( \

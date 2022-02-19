@@ -21,8 +21,6 @@ limitations under the License.
 #include "oneflow/user/ops/math_binary_broadcast_seq.h"
 #include "oneflow/core/kernel/cuda_graph_support.h"
 #include "oneflow/core/ep/include/primitive/broadcast_elementwise_binary.h"
-#include "oneflow/user/kernels/mock_kernel.h"
-
 namespace oneflow {
 
 template<typename Context, ep::primitive::BinaryOp binary_op>
@@ -136,11 +134,6 @@ class MathBinaryBroadcastKernel final : public user_op::OpKernel, public user_op
   }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
-
-template<typename T, typename K,
-         void (*binary_func)(ep::Stream* stream, const XpuVarNdarray<K>& z,
-                             const XpuVarNdarray<const T>& x, const XpuVarNdarray<const T>& y)>
-class MathBinaryBroadcastKernel<kMockDevice, T, K, binary_func> final : public MockKernel {};
 
 #define MATH_BINARY_BROADCAST_DEFAULT_FUNC_SEQ          \
   OF_PP_MAKE_TUPLE_SEQ("broadcast_floor_mod", FloorMod) \

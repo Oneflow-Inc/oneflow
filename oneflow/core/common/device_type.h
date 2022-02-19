@@ -24,9 +24,8 @@ limitations under the License.
 #define CUDA_DEVICE_TYPE_SEQ
 #endif
 
-#define DEVICE_TYPE_SEQ                         \
-  OF_PP_MAKE_TUPLE_SEQ(DeviceType::kCPU)        \
-  OF_PP_MAKE_TUPLE_SEQ(DeviceType::kMockDevice) \
+#define DEVICE_TYPE_SEQ                  \
+  OF_PP_MAKE_TUPLE_SEQ(DeviceType::kCPU) \
   CUDA_DEVICE_TYPE_SEQ
 
 namespace std {

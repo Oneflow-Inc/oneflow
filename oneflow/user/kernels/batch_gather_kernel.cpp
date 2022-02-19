@@ -16,7 +16,6 @@ limitations under the License.
 #include "oneflow/core/framework/framework.h"
 #include "oneflow/user/kernels/batch_gather_kernel_util.h"
 #include "oneflow/core/kernel/cuda_graph_support.h"
-#include "oneflow/user/kernels/mock_kernel.h"
 
 namespace oneflow {
 
@@ -42,9 +41,6 @@ class BatchGatherKernel final : public user_op::OpKernel, public user_op::CudaGr
   }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
-
-template<typename T, typename K>
-class BatchGatherKernel<kMockDevice, T, K> final : public MockKernel {};
 
 #define REGISTER_BATCH_GATHER_KERNEL(device, out_dtype, indices_dtype)        \
   REGISTER_USER_KERNEL("batch_gather")                                        \

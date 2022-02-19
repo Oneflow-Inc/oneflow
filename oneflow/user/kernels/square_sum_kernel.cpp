@@ -17,7 +17,6 @@ limitations under the License.
 #include "oneflow/user/kernels/square_sum_kernel_util.h"
 #include "oneflow/core/common/balanced_splitter.h"
 #include "oneflow/core/kernel/cuda_graph_support.h"
-#include "oneflow/user/kernels/mock_kernel.h"
 
 namespace oneflow {
 
@@ -39,9 +38,6 @@ class SquareSumKernel final : public user_op::OpKernel, public user_op::CudaGrap
   }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
-
-template<typename T>
-class SquareSumKernel<kMockDevice, T> final : public MockKernel {};
 
 #define REGISTER_SQUARE_SUM_KERNEL(device, dtype)                      \
   REGISTER_USER_KERNEL("square_sum")                                   \
@@ -72,9 +68,6 @@ class MultiSquareSumKernel final : public user_op::OpKernel, public user_op::Cud
   }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
-
-template<typename T>
-class MultiSquareSumKernel<kMockDevice, T> final : public MockKernel {};
 
 #define REGISTER_MULTI_SQUARE_SUM_KERNEL(device, dtype)                     \
   REGISTER_USER_KERNEL("multi_square_sum")                                  \

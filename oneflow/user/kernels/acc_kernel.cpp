@@ -16,7 +16,6 @@ limitations under the License.
 #include "oneflow/core/framework/framework.h"
 #include "oneflow/core/kernel/kernel_util.h"
 #include "oneflow/core/ep/include/primitive/add.h"
-#include "oneflow/user/kernels/mock_kernel.h"
 
 namespace oneflow {
 
@@ -42,9 +41,6 @@ class AccKernel final : public user_op::OpKernel {
   }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
-
-template<typename T>
-class AccKernel<kMockDevice, T> final : public MockKernel {};
 
 #define REGISTER_ACC_KERNEL(device, dtype)                       \
   REGISTER_USER_KERNEL("acc")                                    \

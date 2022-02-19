@@ -16,7 +16,6 @@ limitations under the License.
 #include "oneflow/core/framework/framework.h"
 #include "oneflow/user/kernels/where_kernel_util.h"
 #include "oneflow/core/ndarray/ndarray_util.h"
-#include "oneflow/user/kernels/mock_kernel.h"
 
 namespace oneflow {
 
@@ -61,9 +60,6 @@ class WhereKernel final : public user_op::OpKernel {
   }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
-
-template<typename T, typename CondT>
-class WhereKernel<kMockDevice, T, CondT> final : public MockKernel {};
 
 template<DeviceType device_type, typename T, typename CondT>
 class WhereScalarXKernel final : public user_op::OpKernel {
@@ -110,9 +106,6 @@ class WhereScalarXKernel final : public user_op::OpKernel {
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
 
-template<typename T, typename CondT>
-class WhereScalarXKernel<kMockDevice, T, CondT> final : public MockKernel {};
-
 template<DeviceType device_type, typename T, typename CondT>
 class WhereScalarYKernel final : public user_op::OpKernel {
  public:
@@ -158,9 +151,6 @@ class WhereScalarYKernel final : public user_op::OpKernel {
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
 
-template<typename T, typename CondT>
-class WhereScalarYKernel<kMockDevice, T, CondT> final : public MockKernel {};
-
 template<DeviceType device_type, typename T, typename CondT>
 class WhereScalarXYKernel final : public user_op::OpKernel {
  public:
@@ -192,9 +182,6 @@ class WhereScalarXYKernel final : public user_op::OpKernel {
   }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
-
-template<typename T, typename CondT>
-class WhereScalarXYKernel<kMockDevice, T, CondT> final : public MockKernel {};
 
 #define REGISTER_WHERE_KERNEL(device_type_v, dtype_pair, ctype_pair)                              \
   REGISTER_USER_KERNEL("where")                                                                   \

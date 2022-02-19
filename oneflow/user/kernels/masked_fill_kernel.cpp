@@ -16,7 +16,6 @@ limitations under the License.
 #include "oneflow/core/framework/framework.h"
 #include "oneflow/user/kernels/where_kernel_util.h"
 #include "oneflow/core/ndarray/ndarray_util.h"
-#include "oneflow/user/kernels/mock_kernel.h"
 
 namespace oneflow {
 
@@ -47,9 +46,6 @@ class MaskedFillKernel final : public user_op::OpKernel {
   }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
-
-template<typename T, typename CondT>
-class MaskedFillKernel<kMockDevice, T, CondT> final : public MockKernel {};
 
 #define REGISTER_MASKED_FILL_KERNEL(device_type_v, dtype_pair, ctype_pair)                   \
   REGISTER_USER_KERNEL("masked_fill")                                                        \

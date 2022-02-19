@@ -15,7 +15,6 @@ limitations under the License.
 */
 #include "oneflow/core/framework/framework.h"
 #include "oneflow/user/kernels/in_top_k_kernel_util.h"
-#include "oneflow/user/kernels/mock_kernel.h"
 
 namespace oneflow {
 
@@ -42,9 +41,6 @@ class InTopkKernel final : public user_op::OpKernel {
   }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
-
-template<typename T>
-class InTopkKernel<kMockDevice, T> final : public MockKernel {};
 
 #define REGISTER_IN_TOP_K_KERNEL(device, target_dtype_pair)                     \
   REGISTER_USER_KERNEL("in_top_k")                                              \

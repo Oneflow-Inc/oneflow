@@ -16,7 +16,6 @@ limitations under the License.
 #include "oneflow/core/framework/framework.h"
 #include "oneflow/core/kernel/new_kernel_util.h"
 #include "oneflow/core/kernel/cuda_graph_support.h"
-#include "oneflow/user/kernels/mock_kernel.h"
 
 namespace oneflow {
 
@@ -78,9 +77,6 @@ class ScalarAddByTensorKernel final : public user_op::OpKernel, public user_op::
   };
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
-
-template<ByScalarFunc by_scalar_func, typename T>
-class ScalarAddByTensorKernel<by_scalar_func, kMockDevice, T> final : public MockKernel {};
 
 }  // namespace
 

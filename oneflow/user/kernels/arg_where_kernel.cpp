@@ -17,7 +17,6 @@ limitations under the License.
 #include "oneflow/core/common/data_type_seq.h"
 #include "oneflow/core/common/switch_func.h"
 #include "oneflow/user/kernels/arg_where_kernel_util.h"
-#include "oneflow/user/kernels/mock_kernel.h"
 
 namespace oneflow {
 
@@ -55,29 +54,14 @@ class ArgWhereKernel final : public user_op::OpKernel {
   }
 };
 
-template<typename IN_T, typename OUT_T>
-class ArgWhereKernel<kMockDevice, IN_T, OUT_T> final : public MockKernel {};
-
-template<DeviceType device_type>
-struct GetWorkspaceBytesSize final {
-  template<typename IN_T, typename OUT_T, int NDIM>
-  static size_t Call(int64_t elem_cnt) {
-    return ArgWhereKernelUtil<device_type, IN_T, OUT_T, NDIM>::GetWorkspaceBytesSize(nullptr,
-                                                                                     elem_cnt);
-  }
-};
-
-template<>
-struct GetWorkspaceBytesSize<kMockDevice> final {
-  template<typename IN_T, typename OUT_T, int NDIM>
-  static size_t Call(int64_t elem_cnt) {
-    return 0;
-  }
-};
+template<DeviceType device_type, typename IN_T, typename OUT_T, int NDIM>
+size_t GetWorkspaceBytesSize(int64_t elem_cnt) {
+  return ArgWhereKernelUtil<device_type, IN_T, OUT_T, NDIM>::GetWorkspaceBytesSize(nullptr,
+                                                                                   elem_cnt);
+}
 
 struct SwitchUtil {
-#define SWITCH_ENTRY(func_name, device, itype, otype, ndim) \
-  func_name<device>::Call<itype, otype, ndim>
+#define SWITCH_ENTRY(func_name, device, itype, otype, ndim) func_name<device, itype, otype, ndim>
 
   DEFINE_STATIC_SWITCH_FUNC(
       size_t, GetWorkspaceBytesSize, SWITCH_ENTRY, MAKE_DEVICE_TYPE_CTRV_SEQ(DEVICE_TYPE_SEQ),

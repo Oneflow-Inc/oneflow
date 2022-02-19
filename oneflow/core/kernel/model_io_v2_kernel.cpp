@@ -91,11 +91,6 @@ void SyncCopyToHost<DeviceType::kCPU>(ep::Stream* stream, const void* src, void*
   std::memcpy(dst, src, size);
 }
 
-template<>
-void SyncCopyToHost<kMockDevice>(ep::Stream* stream, const void* src, void* dst, size_t size) {
-  // do nothing.
-}
-
 #ifdef WITH_CUDA
 template<>
 void SyncCopyToHost<DeviceType::kCUDA>(ep::Stream* stream, const void* src, void* dst,
@@ -115,9 +110,6 @@ void SyncCopyToDevice<DeviceType::kCPU>(ep::Stream* stream, const void* src, voi
                                         size_t size) {
   std::memcpy(dst, src, size);
 }
-
-template<>
-void SyncCopyToDevice<kMockDevice>(ep::Stream* stream, const void* src, void* dst, size_t size) {}
 
 #ifdef WITH_CUDA
 template<>

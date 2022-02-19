@@ -20,7 +20,6 @@ limitations under the License.
 #include "oneflow/core/kernel/cuda_graph_support.h"
 #include "oneflow/core/ep/include/primitive/cast.h"
 #include "oneflow/core/ep/include/primitive/fill.h"
-#include "oneflow/user/kernels/mock_kernel.h"
 
 namespace oneflow {
 
@@ -71,9 +70,6 @@ class ReduceSumLikeOpKernel final : public user_op::OpKernel, public user_op::Cu
   }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
-
-template<typename T>
-class ReduceSumLikeOpKernel<kMockDevice, T> final : public MockKernel {};
 
 #define REGISTER_REDUCE_SUM_LIKE_KERNEL(device, data_type_pair)                                \
   REGISTER_USER_KERNEL("reduce_sum_like")                                                      \

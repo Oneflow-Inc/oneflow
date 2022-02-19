@@ -17,7 +17,6 @@ limitations under the License.
 #include "oneflow/user/kernels/gather_kernel_util.h"
 #include "oneflow/core/kernel/cuda_graph_support.h"
 #include "oneflow/core/job/nd_sbp_util.h"
-#include "oneflow/user/kernels/mock_kernel.h"
 
 namespace oneflow {
 
@@ -106,9 +105,6 @@ class GatherKernel final : public user_op::OpKernel, public user_op::CudaGraphSu
   }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
-
-template<typename T, typename K>
-class GatherKernel<kMockDevice, T, K> final : public MockKernel {};
 
 #define REGISTER_GATHER_KERNEL(device, in_type, indices_type)                                \
   REGISTER_USER_KERNEL("gather")                                                             \

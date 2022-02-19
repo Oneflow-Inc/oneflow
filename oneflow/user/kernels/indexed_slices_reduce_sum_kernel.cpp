@@ -15,7 +15,6 @@ limitations under the License.
 */
 #include "oneflow/core/framework/framework.h"
 #include "oneflow/user/kernels/indexed_slices_reduce_sum_kernel_util.h"
-#include "oneflow/user/kernels/mock_kernel.h"
 
 namespace oneflow {
 
@@ -46,9 +45,6 @@ class IndexedSlicesReduceSumKernel final : public user_op::OpKernel {
   }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
-
-template<typename T, typename K>
-class IndexedSlicesReduceSumKernel<kMockDevice, T, K> final : public MockKernel {};
 
 template<DeviceType device_type, typename T, typename K>
 user_op::InferTmpSizeFn GenInferTmpSizeFn() {

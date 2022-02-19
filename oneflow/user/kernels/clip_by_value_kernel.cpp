@@ -15,7 +15,6 @@ limitations under the License.
 */
 #include "oneflow/user/kernels/clip_by_value_kernel.h"
 #include "oneflow/core/framework/framework.h"
-#include "oneflow/user/kernels/mock_kernel.h"
 
 namespace oneflow {
 
@@ -87,9 +86,6 @@ class ClipByScalarKernel final : public user_op::OpKernel {
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
 
-template<typename T>
-class ClipByScalarKernel<kMockDevice, T> final : public MockKernel {};
-
 template<DeviceType device_type, typename T>
 class ClipByScalarMinKernel final : public user_op::OpKernel {
  public:
@@ -109,9 +105,6 @@ class ClipByScalarMinKernel final : public user_op::OpKernel {
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
 
-template<typename T>
-class ClipByScalarMinKernel<kMockDevice, T> final : public MockKernel {};
-
 template<DeviceType device_type, typename T>
 class ClipByScalarMaxKernel final : public user_op::OpKernel {
  public:
@@ -130,9 +123,6 @@ class ClipByScalarMaxKernel final : public user_op::OpKernel {
   }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
-
-template<typename T>
-class ClipByScalarMaxKernel<kMockDevice, T> final : public MockKernel {};
 
 template<DeviceType device_type, typename T>
 class ClipByScalarGradKernel final : public user_op::OpKernel {
@@ -157,9 +147,6 @@ class ClipByScalarGradKernel final : public user_op::OpKernel {
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
 
-template<typename T>
-class ClipByScalarGradKernel<kMockDevice, T> final : public MockKernel {};
-
 template<DeviceType device_type, typename T>
 class ClipByScalarMinGradKernel final : public user_op::OpKernel {
  public:
@@ -180,9 +167,6 @@ class ClipByScalarMinGradKernel final : public user_op::OpKernel {
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
 
-template<typename T>
-class ClipByScalarMinGradKernel<kMockDevice, T> final : public MockKernel {};
-
 template<DeviceType device_type, typename T>
 class ClipByScalarMaxGradKernel final : public user_op::OpKernel {
  public:
@@ -202,9 +186,6 @@ class ClipByScalarMaxGradKernel final : public user_op::OpKernel {
   }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
-
-template<typename T>
-class ClipByScalarMaxGradKernel<kMockDevice, T> final : public MockKernel {};
 
 #define REGISTER_CLIP_KERNEL(op_type_name, kernel_name, device_type_v, dtype)                   \
   REGISTER_USER_KERNEL(#op_type_name)                                                           \

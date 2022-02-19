@@ -18,7 +18,6 @@ limitations under the License.
 #include "oneflow/core/kernel/cuda_graph_support.h"
 #include "oneflow/core/job/nd_sbp_util.h"
 #include "oneflow/core/ep/include/primitive/cast.h"
-#include "oneflow/user/kernels/mock_kernel.h"
 
 namespace oneflow {
 
@@ -114,9 +113,6 @@ class UnsortedSegmentSumKernel final : public user_op::OpKernel, public user_op:
   }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return true; }
 };
-
-template<typename T, typename K>
-class UnsortedSegmentSumKernel<kMockDevice, T, K> final : public MockKernel {};
 
 #define REGISTER_UNSORTED_SEGMENT_SUM_KERNEL(device, out_type, segment_ids_type, kernel_type) \
   REGISTER_USER_KERNEL(kernel_type)                                                           \

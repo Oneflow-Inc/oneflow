@@ -34,12 +34,6 @@ struct GatherKernelUtilImpl final {
                       const Shape& flat_in_shape, T* out, int64_t offset);
 };
 
-template<typename T, typename K>
-struct GatherKernelUtilImpl<kMockDevice, T, K> final {
-  static void Forward(ep::Stream* stream, const K* indices, int64_t num_indices, const T* in,
-                      const Shape& flat_in_shape, T* out, int64_t offset) {}
-};
-
 #define GATHER_DATA_TYPE_SEQ ARITHMETIC_DATA_TYPE_SEQ FLOAT16_DATA_TYPE_SEQ
 
 }  // namespace oneflow
