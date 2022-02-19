@@ -33,5 +33,10 @@ class TestMockModule(flow.unittest.TestCase):
         test_case.assertEqual(device.type, "mock")
 
 
+    def test_mock_placement(test_case):
+        placement = flow.placement("mock", [0])
+        test_case.assertEqual(placement.type, "mock")
+
+
 if __name__ == "__main__":
     unittest.main()

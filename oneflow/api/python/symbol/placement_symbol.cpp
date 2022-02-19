@@ -24,6 +24,7 @@ limitations under the License.
 #include "oneflow/core/common/symbol.h"
 #include "oneflow/core/framework/instructions_builder.h"
 #include "oneflow/core/framework/parallel_conf_util.h"
+#include "oneflow/core/framework/to_string.h"
 #include "oneflow/core/job/parallel_desc.h"
 #include "oneflow/core/job/global_for.h"
 #include "oneflow/core/job/resource_desc.h"
@@ -49,24 +50,18 @@ int64_t GetGpuDeviceNum() {
 }
 
 struct PlacementSymbolExportUtil {
-  static Maybe<std::string> GetDeviceTag(const std::string& type) {
-    static const HashMap<std::string, std::string> type2device_tag{{"cpu", "cpu"},
-                                                                   {"cuda", "cuda"}};
-    const auto& it = type2device_tag.find(type);
-    if (it == type2device_tag.end()) {
-      return Error::RuntimeError() << "placement type should only be cpu or cuda, but got " << type;
+  static Maybe<void> CheckDeviceTag(const std::string& type) {
+    if (!TRY(DeviceType4DeviceTag(type)).IsOk()) {
+      return Error::RuntimeError() << "placement type " << type << " not supported.";
     }
-    return it->second;
+    return Maybe<void>::Ok();
   }
 
   static Maybe<ParallelDesc> CreateParallelDesc(
       const std::string& type, const std::vector<std::string>& formated_machine_device_ids,
       const std::shared_ptr<Shape>& hierarchy_shape) {
-    CHECK_OR_RETURN(type == "cpu" || type == "cuda")
-        << "placement type must be \"cpu\" or \"cuda\".";
-    const auto& device_tag = JUST(GetDeviceTag(type));
-    auto parallel_conf =
-        JUST(MakeParallelConf(*device_tag, formated_machine_device_ids, hierarchy_shape));
+    JUST(CheckDeviceTag(type));
+    auto parallel_conf = JUST(MakeParallelConf(type, formated_machine_device_ids, hierarchy_shape));
     std::shared_ptr<ParallelDesc> parallel_desc;
     JUST(PhysicalRun([&parallel_desc, &parallel_conf](InstructionsBuilder* builder) -> Maybe<void> {
       parallel_desc = JUST(builder->GetParallelDescSymbol(parallel_conf));
@@ -158,12 +153,12 @@ struct PlacementSymbolExportUtil {
   static Maybe<Symbol<ParallelDesc>> AllDevicePlacement(const std::string& type) {
     static thread_local HashMap<std::string, Symbol<ParallelDesc>> device_tag2placement;
     CHECK_NOTNULL((Global<ResourceDesc, ForEnv>::Get()));
-    const auto& device_tag = JUST(GetDeviceTag(type));
-    auto it = device_tag2placement.find(*device_tag);
+    JUST(CheckDeviceTag(type));
+    auto it = device_tag2placement.find(type);
     if (it == device_tag2placement.end()) {
       int64_t node_size = GlobalProcessCtx::NodeSize();
       int64_t device_num = GlobalProcessCtx::NumOfProcessPerNode();
-      if (*device_tag == "cuda") {
+      if (type == "cuda") {
         const int64_t gpu_device_num = GetGpuDeviceNum();
         CHECK_NE_OR_RETURN(gpu_device_num, 0)
             << "Can\'t construct placment with \"cuda\" type because there is no CUDA device!";
@@ -176,7 +171,7 @@ struct PlacementSymbolExportUtil {
       }
       Symbol<ParallelDesc> placement =
           SymbolOf(*JUST(CreateParallelDesc(type, machine_device_ids, std::shared_ptr<Shape>())));
-      it = device_tag2placement.emplace(*device_tag, placement).first;
+      it = device_tag2placement.emplace(type, placement).first;
     }
     return it->second;
   }
