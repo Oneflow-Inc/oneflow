@@ -25,12 +25,12 @@ from typing import Tuple
 class FusedMLP(Module):
     """Applies a linear transformation with relu activation to the incoming data: :math:`y = ReLU(xA^T + b)`
 
-    Currently only support in GPU. 
-
     Args:
         in_features: size of each input sample
 
-        hidden_features_lists: A tuple of each Linear layer output size
+        hidden_features_lists: A tuple of each Linear layer hidden size
+
+        out_features: The final Linear layer hidden size
 
     Shape:
         - Input: :math:`(N, *, H_{in})` where :math:`*` means any number of
@@ -40,10 +40,7 @@ class FusedMLP(Module):
           are the same shape as the input and :math:`H_{out} = {out\\_features}`.
 
     Attr:
-        - :attr:`weight`: the learnable weights of the module of shape :math:`({out\\_features}, {in\\_features})`. The values are initialized from :math:`\\mathcal{U}(-\\sqrt{k}, \\sqrt{k})`, where :math:`(k = 1 / {in\\_features})`
-
-        - :attr:`bias`: the learnable bias of the module of shape :math:`({out\\_features})`. If :attr:`bias` is ``True``, the values are initialized from :math:`\\mathcal{U}(-\\sqrt{k}, \\sqrt{k})` where :math:`(k = 1 / {in\\_features})`
-
+        - :attr:`skip_final_activation`: Whether to skip final hidden layer's activation. Default: False. 
 
     For example:
 
@@ -53,11 +50,11 @@ class FusedMLP(Module):
         >>> import oneflow as flow
         
 
-        >>> m = flow.nn.FusedMLP(20, 30).to("cuda")
-        >>> input = flow.Tensor(np.random.randn(128, 20)).to("cuda")
+        >>> m = flow.nn.FusedMLP(128, [256, 512], 1024).to("cuda")
+        >>> input = flow.Tensor(np.random.randn(1, 128)).to("cuda")
         >>> output = m(input)
         >>> output.size()
-        oneflow.Size([128, 30])
+        oneflow.Size([1, 1024])
 
     """
 
@@ -71,15 +68,6 @@ class FusedMLP(Module):
         self.weights = []
         self.biases = []
         self.hidden_layer_num = len(hidden_features_lists)
-        # assert (self.hidden_layer_num + 1) % 2 == 0, "Currently only support even times Dense Layers. "
-        # self.fuse_layer_num = (self.hidden_layer_num + 1) // 2
-        """
-        in = 128
-        hidden = [64, 32, 16, 32, 16]
-        out = 4
-        (128, 64), (64, 32) (32, 16) (64, 32) (32, 16) (16, 4)
-        self.fuse_layer_num = (len(hidden_features_lists) + 1) // 2 = 6
-        """ 
         # First layer. 
         self.add_parameters(in_features, hidden_features_lists[0], 0)
         # Middle Layer. 

@@ -96,7 +96,7 @@ Operators for neural networks
         FusedBatchNorm1d, 
         FusedBatchNorm2d, 
         FusedBatchNorm3d, 
-        FusedLinearReLU, 
+        FusedMLP, 
 
 .. autofunction:: oneflow.nn.parallel.DistributedDataParallel
 
