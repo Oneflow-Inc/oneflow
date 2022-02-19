@@ -336,11 +336,6 @@ def GetDualObject(name, pytorch, oneflow):
                                         graph_kwargs[key] = value.clone().detach()
                                     else:
                                         graph_kwargs[key] = copy.deepcopy(value)
-                            if not is_global():
-                                arg_device_type = "cpu"
-                                for arg in oneflow_args:
-                                    if flow.is_tensor(arg):
-                                        arg_device_type = arg.device.type
 
                             graph_train_parameters_len = 0
 
@@ -437,7 +432,7 @@ def GetDualObject(name, pytorch, oneflow):
                                             oneflow_res.shape[-1]
                                         )
                                         graph_functional_layernorm = graph_functional_layernorm.to(
-                                            arg_device_type
+                                            oneflow_res.device.type
                                         )
                                         of_sgd = flow.optim.SGD(
                                             graph_functional_layernorm.parameters(),
@@ -589,6 +584,7 @@ def GetDualObject(name, pytorch, oneflow):
                                 "The result after running eager tensor method: ",
                                 oneflow_res,
                             )
+                        
                         if testing_graph:
                             if (
                                 global_backward
@@ -600,7 +596,7 @@ def GetDualObject(name, pytorch, oneflow):
                                     oneflow_res.shape[-1]
                                 )
                                 graph_functional_layernorm = graph_functional_layernorm.to(
-                                    arg_device_type
+                                    oneflow_res.device.type
                                 )
                                 of_sgd = flow.optim.SGD(
                                     graph_functional_layernorm.parameters(),
