@@ -584,7 +584,7 @@ def GetDualObject(name, pytorch, oneflow):
                                 "The result after running eager tensor method: ",
                                 oneflow_res,
                             )
-                        
+
                         if testing_graph:
                             if (
                                 global_backward
