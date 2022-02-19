@@ -20,6 +20,7 @@ limitations under the License.
 #include "oneflow/core/common/global.h"
 #include "oneflow/core/common/optional.h"
 #include "oneflow/core/common/protobuf.h"
+#include "oneflow/core/common/container_util.h"
 #include "oneflow/core/control/global_process_ctx.h"
 #include "oneflow/core/device/cuda_util.h"
 #include "oneflow/core/framework/attr_map.h"
@@ -2383,12 +2384,22 @@ class MeshgridFunctor {
   Maybe<TensorTuple> operator()(const TensorTuple& tensors, const std::string& indexing) const {
     int size = tensors.size();
     CHECK_GT_OR_RETURN(size, 0) << "meshgrid expects a non-empty TensorList";
-
     for (int i = 0; i < size - 1; ++i) {
-      CHECK_OR_RETURN(
-          (tensors[i]->dtype() == tensors[i + 1]->dtype())
-          && (JUST(tensors[i]->device())->type() == JUST(tensors[i + 1]->device())->type()))
-          << "meshgrid expects all tensors to have the same dtype and device";
+      const auto& cur_tensor = JUST(VectorAt(tensors, i));
+      const auto& next_tensor = JUST(VectorAt(tensors, i + 1));
+      CHECK_OR_RETURN(cur_tensor->dtype() == next_tensor->dtype())
+          << "Meshgrid expects all tensors have the same dtype.";
+      if (cur_tensor->is_local()) {
+        CHECK_OR_RETURN(next_tensor->is_local())
+            << "Meshgrid expects all tensors are local tensor.";
+        CHECK_OR_RETURN(JUST(cur_tensor->device())->type() == JUST(next_tensor->device())->type())
+            << "Meshgrid expects all tensors have the same device.";
+      } else {
+        CHECK_OR_RETURN(!next_tensor->is_local())
+            << "Meshgrid expects all tensors are global tensor.";
+        CHECK_OR_RETURN(JUST(cur_tensor->parallel_desc()) == JUST(next_tensor->parallel_desc()))
+            << "Meshgrid expects all tensors have the same placement.";
+      }
     }
 
     std::vector<std::shared_ptr<Tensor>> tensor_consts(tensors.begin(), tensors.end());
