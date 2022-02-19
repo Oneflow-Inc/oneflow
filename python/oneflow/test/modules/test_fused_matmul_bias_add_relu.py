@@ -21,22 +21,24 @@ from test_util import GenArgList
 import oneflow as flow
 
 
-def _matmul_bias_relu(x, weight, bias, skip_activate): 
+def _matmul_bias_relu(x, weight, bias, skip_activate):
     out = flow._C.bias_add(flow._C.matmul(x, weight, transpose_b=True), bias, axis=1)
-    if not skip_activate: 
+    if not skip_activate:
         out = flow._C.relu(out)
     return out
 
 
-def _test_fused_matmul_bias_add_relu(test_case, 
-                                     batchsize, 
-                                     in_feature, 
-                                     hidden_size_list, 
-                                     out_feature, 
-                                     skip_final_activation, 
-                                     dtype, 
-                                     device):
-    
+def _test_fused_matmul_bias_add_relu(
+    test_case,
+    batchsize,
+    in_feature,
+    hidden_size_list,
+    out_feature,
+    skip_final_activation,
+    dtype,
+    device,
+):
+
     x = np.random.randn(batchsize, in_feature)
     fused_x = flow.tensor(x, dtype=dtype, device=device, requires_grad=True)
     naive_x = flow.tensor(x, dtype=dtype, device=device, requires_grad=True)
@@ -48,45 +50,81 @@ def _test_fused_matmul_bias_add_relu(test_case,
 
     weight_num = len(hidden_size_list)
 
-    if weight_num != 0: 
+    if weight_num != 0:
         np_first_weight = np.random.randn(hidden_size_list[0], in_feature)
         np_first_bias = np.random.randn(hidden_size_list[0])
-        fused_weight_list.append(flow.tensor(np_first_weight, dtype=dtype, device=device, requires_grad=True))
-        fused_bias_list.append(flow.tensor(np_first_bias, dtype=dtype, device=device, requires_grad=True))
-        naive_weight_list.append(flow.tensor(np_first_weight, dtype=dtype, device=device, requires_grad=True))
-        naive_bias_list.append(flow.tensor(np_first_bias, dtype=dtype, device=device, requires_grad=True))
+        fused_weight_list.append(
+            flow.tensor(np_first_weight, dtype=dtype, device=device, requires_grad=True)
+        )
+        fused_bias_list.append(
+            flow.tensor(np_first_bias, dtype=dtype, device=device, requires_grad=True)
+        )
+        naive_weight_list.append(
+            flow.tensor(np_first_weight, dtype=dtype, device=device, requires_grad=True)
+        )
+        naive_bias_list.append(
+            flow.tensor(np_first_bias, dtype=dtype, device=device, requires_grad=True)
+        )
 
-    for idx in range(1, weight_num): 
-        np_weight = np.random.randn(hidden_size_list[idx], hidden_size_list[idx-1])
+    for idx in range(1, weight_num):
+        np_weight = np.random.randn(hidden_size_list[idx], hidden_size_list[idx - 1])
         np_bias = np.random.randn(hidden_size_list[idx])
-        fused_weight_list.append(flow.tensor(np_weight, dtype=dtype, device=device, requires_grad=True))
-        fused_bias_list.append(flow.tensor(np_bias, dtype=dtype, device=device, requires_grad=True))
-        naive_weight_list.append(flow.tensor(np_weight, dtype=dtype, device=device, requires_grad=True))
-        naive_bias_list.append(flow.tensor(np_bias, dtype=dtype, device=device, requires_grad=True))
+        fused_weight_list.append(
+            flow.tensor(np_weight, dtype=dtype, device=device, requires_grad=True)
+        )
+        fused_bias_list.append(
+            flow.tensor(np_bias, dtype=dtype, device=device, requires_grad=True)
+        )
+        naive_weight_list.append(
+            flow.tensor(np_weight, dtype=dtype, device=device, requires_grad=True)
+        )
+        naive_bias_list.append(
+            flow.tensor(np_bias, dtype=dtype, device=device, requires_grad=True)
+        )
 
     np_final_weight = np.random.randn(out_feature, in_feature)
-    if weight_num != 0: 
+    if weight_num != 0:
         np_final_weight = np.random.randn(out_feature, hidden_size_list[-1])
-        
+
     np_final_bias = np.random.randn(out_feature)
-    fused_weight_list.append(flow.tensor(np_final_weight, dtype=dtype, device=device, requires_grad=True))
-    fused_bias_list.append(flow.tensor(np_final_bias, dtype=dtype, device=device, requires_grad=True))
-    naive_weight_list.append(flow.tensor(np_final_weight, dtype=dtype, device=device, requires_grad=True))
-    naive_bias_list.append(flow.tensor(np_final_bias, dtype=dtype, device=device, requires_grad=True))
+    fused_weight_list.append(
+        flow.tensor(np_final_weight, dtype=dtype, device=device, requires_grad=True)
+    )
+    fused_bias_list.append(
+        flow.tensor(np_final_bias, dtype=dtype, device=device, requires_grad=True)
+    )
+    naive_weight_list.append(
+        flow.tensor(np_final_weight, dtype=dtype, device=device, requires_grad=True)
+    )
+    naive_bias_list.append(
+        flow.tensor(np_final_bias, dtype=dtype, device=device, requires_grad=True)
+    )
 
     fused_out = flow._C.cublas_fused_mlp(
         fused_x,
         fused_weight_list,
         fused_bias_list,
-        skip_final_activation=skip_final_activation
+        skip_final_activation=skip_final_activation,
     )
-    
-    naive_out = _matmul_bias_relu(naive_x, naive_weight_list[0], naive_bias_list[0], False if weight_num != 0 else skip_final_activation)
-    for idx in range(1, weight_num+1): 
-        if idx == weight_num: 
-            naive_out = _matmul_bias_relu(naive_out, naive_weight_list[idx], naive_bias_list[idx], skip_final_activation)    
-        else: 
-            naive_out = _matmul_bias_relu(naive_out, naive_weight_list[idx], naive_bias_list[idx], False)
+
+    naive_out = _matmul_bias_relu(
+        naive_x,
+        naive_weight_list[0],
+        naive_bias_list[0],
+        False if weight_num != 0 else skip_final_activation,
+    )
+    for idx in range(1, weight_num + 1):
+        if idx == weight_num:
+            naive_out = _matmul_bias_relu(
+                naive_out,
+                naive_weight_list[idx],
+                naive_bias_list[idx],
+                skip_final_activation,
+            )
+        else:
+            naive_out = _matmul_bias_relu(
+                naive_out, naive_weight_list[idx], naive_bias_list[idx], False
+            )
 
         # todo add skip final activate logic
 
@@ -98,17 +136,28 @@ def _test_fused_matmul_bias_add_relu(test_case,
         np.allclose(fused_out.numpy(), naive_out.numpy(), atol=1e-4, rtol=1e-4)
     )
     # Test weight equality
-    for idx in range(weight_num+1): 
+    for idx in range(weight_num + 1):
         test_case.assertTrue(
-            np.allclose(fused_weight_list[idx].numpy(), naive_weight_list[idx].numpy(), atol=1e-4, rtol=1e-4)
+            np.allclose(
+                fused_weight_list[idx].numpy(),
+                naive_weight_list[idx].numpy(),
+                atol=1e-4,
+                rtol=1e-4,
+            )
         )
         test_case.assertTrue(
-            np.allclose(fused_bias_list[idx].numpy(), naive_bias_list[idx].numpy(), atol=1e-4, rtol=1e-4)
+            np.allclose(
+                fused_bias_list[idx].numpy(),
+                naive_bias_list[idx].numpy(),
+                atol=1e-4,
+                rtol=1e-4,
+            )
         )
     # Test dx equality
     test_case.assertTrue(
-            np.allclose(fused_x.numpy(), naive_x.numpy(), atol=1e-4, rtol=1e-4)
-        )
+        np.allclose(fused_x.numpy(), naive_x.numpy(), atol=1e-4, rtol=1e-4)
+    )
+
 
 @flow.unittest.skip_unless_1n1d()
 class TestFusedMatmulBiasAddRelu(flow.unittest.TestCase):
@@ -122,9 +171,10 @@ class TestFusedMatmulBiasAddRelu(flow.unittest.TestCase):
         args_dict["skip_final_activation"] = [True, False]
         args_dict["dtype"] = [flow.float32, flow.float64]
         args_dict["device"] = ["cuda", "cpu"]
-        
+
         for arg in GenArgList(args_dict):
             arg[0](test_case, *arg[1:])
+
 
 if __name__ == "__main__":
     unittest.main()

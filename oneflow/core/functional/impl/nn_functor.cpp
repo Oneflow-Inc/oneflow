@@ -265,96 +265,93 @@ class BatchMatMulFunctor {
 class CublasFusedMLPFunctor {
  public:
   CublasFusedMLPFunctor() {
-    #if CUDA_VERSION >= 11040
+#if CUDA_VERSION >= 11040
     fused_op_.resize(kMaxInputCount /*the maximum number of inputs*/);
     for (int n = 1; n < fused_op_.size(); ++n) {
       fused_op_[n] = CHECK_JUST(one::OpBuilder("cublas_fused_mlp")
-                               .Input("x")
-                               .Input("weights", n)
-                               .Input("biases", n)
-                               .Output("out")
-                               .Output("cublas_aux", n)
-                               .Output("hidden", n)
-                               .Build());
+                                    .Input("x")
+                                    .Input("weights", n)
+                                    .Input("biases", n)
+                                    .Output("out")
+                                    .Output("cublas_aux", n)
+                                    .Output("hidden", n)
+                                    .Build());
     }
-    #endif
+#endif
   }
-  Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x,
-                           const TensorTuple& weights,
-                           const TensorTuple& biases, 
-                           bool skip_final_activation) const {
+  Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x, const TensorTuple& weights,
+                           const TensorTuple& biases, bool skip_final_activation) const {
     const int64_t weight_size = weights.size();
     const int64_t bias_size = biases.size();
-    CHECK_EQ_OR_RETURN(weight_size, bias_size) << "The number of weights should be equal to biases. ";
-    int64_t m = 0, n = 0, k = 0;  
+    CHECK_EQ_OR_RETURN(weight_size, bias_size)
+        << "The number of weights should be equal to biases. ";
+    int64_t m = 0, n = 0, k = 0;
     /*
     x: (m, k)
     weight: (n, k) need transpose
     bias: (n)
     */
-    const auto& x_shape = x->shape(); 
-    m = x_shape->At(0); 
-    k = x_shape->At(1); 
-    for(int64_t i = 0; i < weight_size; i++){
+    const auto& x_shape = x->shape();
+    m = x_shape->At(0);
+    k = x_shape->At(1);
+    for (int64_t i = 0; i < weight_size; i++) {
       const auto& weight_shape = weights[i]->shape();
       const auto& bias_shape = biases[i]->shape();
 
       // TODO(): Support Fused batch/broadcast matmul.
       CHECK_EQ_OR_RETURN(weight_shape->NumAxes(), 2) << "Weight's dim should == 2";
       CHECK_EQ_OR_RETURN(bias_shape->NumAxes(), 1) << "Bias's dim should == 1";
-      
-      n = weight_shape->At(0); 
-      CHECK_EQ_OR_RETURN(bias_shape->At(0), n) << "Bias's dim is not equal to weight's last dim. ";
-      CHECK_EQ_OR_RETURN(weight_shape->At(1), k) << "weight's first dim should be equal to input's last dim. ";
 
-      // Set for next layer. 
-      k = n; 
+      n = weight_shape->At(0);
+      CHECK_EQ_OR_RETURN(bias_shape->At(0), n) << "Bias's dim is not equal to weight's last dim. ";
+      CHECK_EQ_OR_RETURN(weight_shape->At(1), k)
+          << "weight's first dim should be equal to input's last dim. ";
+
+      // Set for next layer.
+      k = n;
     }
 
     Symbol<Device> device = JUST(x->device());
-    
-    #if CUDA_VERSION >= 11040
-    if(device->enum_type() == DeviceType::kCUDA){
-      TensorTuple input(2*weight_size+1);
-      input[0] = x; 
-      std::copy(weights.begin(), weights.end(), input.begin()+1); 
-      std::copy(biases.begin(), biases.end(), input.begin()+1+weight_size); 
+
+#if CUDA_VERSION >= 11040
+    if (device->enum_type() == DeviceType::kCUDA) {
+      TensorTuple input(2 * weight_size + 1);
+      input[0] = x;
+      std::copy(weights.begin(), weights.end(), input.begin() + 1);
+      std::copy(biases.begin(), biases.end(), input.begin() + 1 + weight_size);
 
       MutableAttrMap attrs;
       JUST(attrs.SetAttr<bool>("skip_final_activation", skip_final_activation));
 
       return OpInterpUtil::Dispatch<Tensor>(*fused_op_[weight_size], input, attrs);
     }
-    #endif
+#endif
 
-    // Fall back to matmul + bias_add + relu 
-    std::shared_ptr<one::Tensor> out; 
-    for(int32_t layer_idx=0; layer_idx < weight_size; layer_idx++){
-      if(layer_idx == 0){
-        out = JUST(functional::BiasAdd(
-                    JUST(functional::MatMul(x, weights[layer_idx], false, true, 1.0)), 
-                    biases[layer_idx], 1));
+    // Fall back to matmul + bias_add + relu
+    std::shared_ptr<one::Tensor> out;
+    for (int32_t layer_idx = 0; layer_idx < weight_size; layer_idx++) {
+      if (layer_idx == 0) {
+        out = JUST(
+            functional::BiasAdd(JUST(functional::MatMul(x, weights[layer_idx], false, true, 1.0)),
+                                biases[layer_idx], 1));
+      } else {
+        out = JUST(
+            functional::BiasAdd(JUST(functional::MatMul(out, weights[layer_idx], false, true, 1.0)),
+                                biases[layer_idx], 1));
       }
-      else{
-        out = JUST(functional::BiasAdd(
-                  JUST(functional::MatMul(out, weights[layer_idx], false, true, 1.0)), 
-                  biases[layer_idx], 1));
-      }
-      if(layer_idx == weight_size-1){
-        if(!skip_final_activation){
-          out = JUST(functional::Relu(out, false)); 
-        }
-      }else{
-        out = JUST(functional::Relu(out, false)); 
+      if (layer_idx == weight_size - 1) {
+        if (!skip_final_activation) { out = JUST(functional::Relu(out, false)); }
+      } else {
+        out = JUST(functional::Relu(out, false));
       }
     }
-    return out; 
+    return out;
   }
 
  private:
-  #if CUDA_VERSION >= 11040
+#if CUDA_VERSION >= 11040
   std::vector<std::shared_ptr<OpExpr>> fused_op_;
-  #endif
+#endif
 };
 
 class LayerNormFunctor {
