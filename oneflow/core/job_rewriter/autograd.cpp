@@ -575,6 +575,7 @@ void ClipGradientByGlobalNorm(const OpGraph& op_graph, JobBuilder* job_builder,
                               HashMap<LogicalBlobId, LogicalBlobId>* lbi2diff_lbi,
                               const ClipByGlobalNormConf& conf) {
   if (lbi2diff_lbi->empty()) { return; }
+  const float ord = conf.has_global_norm() ? conf.global_norm() : 2.0f;
   bool all_same_parallel_desc = true;
   const ParallelDesc& any_parallel_desc =
       op_graph.OpNode4OpName(lbi2diff_lbi->begin()->first.op_name())->parallel_desc();
@@ -598,9 +599,10 @@ void ClipGradientByGlobalNorm(const OpGraph& op_graph, JobBuilder* job_builder,
         param_group_parallel_confs.emplace_back(parallel_desc.parallel_conf());
         if (job_builder->job().job_conf().enable_gradients_stats_aggregation()) {
           auto multi_square_sum_op_builder =
-              user_op::UserOpConfWrapperBuilder("System-ClipGradient-GlobalNorm-MultiSquareSum-"
-                                                + NewUniqueId())
-                  .Op("multi_square_sum")
+              user_op::UserOpConfWrapperBuilder(
+                  "System-ClipGradient-GlobalNorm-MultiReduceSumPowAbs-" + NewUniqueId())
+                  .Op("multi_reduce_sum_pow_abs")
+                  .Attr("p", ord)
                   .Output("y")
                   .ScopeSymbolId(scope_symbol_id);
           for (const auto& lbi : lbis) {
@@ -615,10 +617,11 @@ void ClipGradientByGlobalNorm(const OpGraph& op_graph, JobBuilder* job_builder,
           for (const auto& lbi : lbis) {
             const LogicalBlobId& diff_lbi = lbi2diff_lbi->at(lbi);
             const auto square_sum_op =
-                user_op::UserOpConfWrapperBuilder("System-ClipGradient-GlobalNorm-SquareSum-"
+                user_op::UserOpConfWrapperBuilder("System-ClipGradient-GlobalNorm-ReduceSumPowAbs-"
                                                   + NewUniqueId())
-                    .Op("square_sum")
+                    .Op("multi_reduce_sum_pow_abs")
                     .Input("x", GenLogicalBlobName(diff_lbi))
+                    .Attr("p", ord)
                     .Output("y")
                     .ScopeSymbolId(scope_symbol_id)
                     .Build();
@@ -657,7 +660,7 @@ void ClipGradientByGlobalNorm(const OpGraph& op_graph, JobBuilder* job_builder,
       user_op::UserOpConfWrapperBuilder("System-ClipGradient-GlobalNorm-GlobalPow-" + NewUniqueId())
           .Op("scalar_pow")
           .Input("x", square_sum_lbn)
-          .Attr("float_operand", 0.5)
+          .Attr("float_operand", 1 / ord)
           .Attr("has_float_operand", true)
           .Output("y")
           .ScopeSymbolId(scope_symbol_id)
