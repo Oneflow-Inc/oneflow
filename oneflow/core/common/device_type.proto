@@ -5,5 +5,7 @@ enum DeviceType {
   kInvalidDevice = 0;
   kCPU = 1;
   kCUDA = 2;
-  kMockDevice = 3;
+  kMockDevice = 3; // pseudo device for test
+  kCriticalSectionDevice = 4; // pseudo device for lazy mode
+  kLazyJobLauncher = 5; // pseudo device for lazy mode
 }
