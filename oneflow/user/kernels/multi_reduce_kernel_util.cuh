@@ -51,7 +51,8 @@ __global__ void MultiReduceSumGpu(F func, const MultiReduceParamsPack<T> pack_pa
 
 template<typename T, typename F>
 struct MultiReduceSum<DeviceType::kCUDA, T, F> {
-  void operator()(ep::Stream* stream, F func, const std::vector<MultiReduceParam<T>>& params, T* sum) {
+  void operator()(ep::Stream* stream, F func, const std::vector<MultiReduceParam<T>>& params,
+                  T* sum) {
     Memset<DeviceType::kCUDA>(stream, sum, 0, sizeof(T));
     for (size_t i = 0; i < params.size(); i += kMultiReduceMaxPackSize) {
       MultiReduceParamsPack<T> pack_params{};
@@ -61,20 +62,23 @@ struct MultiReduceSum<DeviceType::kCUDA, T, F> {
         pack_params.params[j] = params[i + j];
         max_elem_cnt = std::max(max_elem_cnt, pack_params.params[j].size);
       }
-      MultiReduceSumGpu<T, F><<<BlocksNum4ThreadsNum(max_elem_cnt), kCudaThreadsNumPerBlock, 0,
-                                stream->As<ep::CudaStream>()->cuda_stream()>>>(func, pack_params, sum);
+      MultiReduceSumGpu<T, F>
+          <<<BlocksNum4ThreadsNum(max_elem_cnt), kCudaThreadsNumPerBlock, 0,
+             stream->As<ep::CudaStream>()->cuda_stream()>>>(func, pack_params, sum);
     }
   }
 }
 
 template<>
 struct Abs<half> {
-  OF_DEVICE_FUNC half operator()(half x) const { return __hlt(x, GetZeroVal<half>()) ? __hneg(x) : x; }
+  OF_DEVICE_FUNC half operator()(half x) const {
+    return __hlt(x, GetZeroVal<half>()) ? __hneg(x) : x;
+  }
 };
 
 template<>
 struct PowByZero {
-  OF_DEVICE_FUNC half operator()(half x) const { 
+  OF_DEVICE_FUNC half operator()(half x) const {
     return x == GetZeroVal<half>() ? x : GetOneVal<half>();
   }
 };
