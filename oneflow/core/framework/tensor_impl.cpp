@@ -42,32 +42,21 @@ Maybe<void> TensorImpl::set_requires_grad(bool requires_grad) {
                     || tensor_dtype == DataType::kFloat16)
         << "RuntimeError: only Tensors of floating point can require gradients";
   }
-  requires_grad_ = requires_grad;
-  if (autograd_meta_) { autograd_meta_->set_requires_grad(requires_grad); }
+  autograd_meta_->set_requires_grad(requires_grad);
   return Maybe<void>::Ok();
 }
 
-Maybe<Tensor> TensorImpl::acc_grad() const {
-  CHECK_NOTNULL_OR_RETURN(autograd_meta_);
-  return autograd_meta_->acc_grad();
-}
+Maybe<Tensor> TensorImpl::acc_grad() const { return autograd_meta_->acc_grad(); }
 
-Maybe<TensorArg> TensorImpl::current_grad() const {
-  CHECK_NOTNULL_OR_RETURN(autograd_meta_);
-  return autograd_meta_->current_grad();
-}
+Maybe<TensorArg> TensorImpl::current_grad() const { return autograd_meta_->current_grad(); }
 
 Maybe<void> TensorImpl::set_acc_grad(const std::shared_ptr<Tensor>& grad) {
   return autograd_meta_->set_acc_grad(grad);
 }
 
-Maybe<Tensor> TensorImpl::mut_acc_grad() {
-  CHECK_NOTNULL_OR_RETURN(autograd_meta_);
-  return autograd_meta_->mut_acc_grad();
-}
+Maybe<Tensor> TensorImpl::mut_acc_grad() { return autograd_meta_->mut_acc_grad(); }
 
 Maybe<void> TensorImpl::set_retain_grad(bool retain_grad) {
-  CHECK_NOTNULL_OR_RETURN(autograd_meta_);
   autograd_meta_->set_retain_grad(retain_grad);
   return Maybe<void>::Ok();
 }
