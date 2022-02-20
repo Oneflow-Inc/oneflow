@@ -652,42 +652,68 @@ void ClipGradientByGlobalNorm(const OpGraph& op_graph, JobBuilder* job_builder,
   const std::string square_sum_lbn =
       AddLbns(job_builder, square_sum_lbns_for_add, global_norm_parallel_conf, scope_symbol_id,
               "System-ClipGradient-GlobalNorm-Add-");
-  auto inv_global_norm_op = user_op::UserOpConfWrapperBuilder(
-                                "System-ClipGradient-GlobalNorm-InvGlobalNorm-" + NewUniqueId())
-                                .Op("rsqrt")
-                                .Input("x", square_sum_lbn)
-                                .Output("y")
-                                .ScopeSymbolId(scope_symbol_id)
-                                .Build();
-  job_builder->AddOps(global_norm_parallel_conf, {inv_global_norm_op.op_conf()});
-  OperatorConf inv_clip_norm_op_conf{};
-  inv_clip_norm_op_conf.set_name("System-ClipGradient-GlobalNorm-InvClipNorm-" + NewUniqueId());
-  ConstantLikeOpConf* inv_clip_norm_constant_like_conf =
-      inv_clip_norm_op_conf.mutable_constant_like_conf();
-  inv_clip_norm_constant_like_conf->set_like(inv_global_norm_op.output("y", 0));
-  inv_clip_norm_constant_like_conf->set_float_operand(1.0 / conf.clip_norm());
-  inv_clip_norm_constant_like_conf->set_out("out");
-  inv_clip_norm_op_conf.set_scope_symbol_id(scope_symbol_id);
-  job_builder->AddOps(global_norm_parallel_conf, {inv_clip_norm_op_conf});
-  auto minimum_op =
-      user_op::UserOpConfWrapperBuilder("System-ClipGradient-GlobalNorm-Minimum-" + NewUniqueId())
-          .Op("broadcast_minimum")
-          .Input("x", inv_global_norm_op.output("y", 0))
-          .Input("y", GenLogicalBlobName(inv_clip_norm_op_conf.name(),
-                                         inv_clip_norm_constant_like_conf->out()))
-          .Output("z")
+
+  auto global_pow_op =
+      user_op::UserOpConfWrapperBuilder("System-ClipGradient-GlobalNorm-GlobalPow-" + NewUniqueId())
+          .Op("scalar_pow")
+          .Input("x", square_sum_lbn)
+          .Attr("float_operand", 0.5)
+          .Attr("has_float_operand", true)
+          .Output("y")
           .ScopeSymbolId(scope_symbol_id)
           .Build();
-  job_builder->AddOps(global_norm_parallel_conf, {minimum_op.op_conf()});
-  const std::string gradient_scale_factor_lbn = minimum_op.output("z", 0);
+  job_builder->AddOps(global_norm_parallel_conf, {global_pow_op.op_conf()});
+
+  auto add_eps_ops =
+      user_op::UserOpConfWrapperBuilder("System-ClipGradient-GlobalNorm-AddEps-" + NewUniqueId())
+          .Op("scalar_add")
+          .Input("x", global_pow_op.output("y", 0))
+          .Attr("float_operand", 1e-6)
+          .Attr("has_float_operand", true)
+          .Output("y")
+          .ScopeSymbolId(scope_symbol_id)
+          .Build();
+  job_builder->AddOps(global_norm_parallel_conf, {add_eps_ops.op_conf()});
+
+  auto inv_op =
+      user_op::UserOpConfWrapperBuilder("System-ClipGradient-GlobalNorm-Inv-" + NewUniqueId())
+          .Op("reciprocal_no_nan")
+          .Input("x", add_eps_ops.output("y", 0))
+          .Output("y")
+          .ScopeSymbolId(scope_symbol_id)
+          .Build();
+  job_builder->AddOps(global_norm_parallel_conf, {inv_op.op_conf()});
+
+  auto coeff_op =
+      user_op::UserOpConfWrapperBuilder("System-ClipGradient-GlobalNorm-Coeff-" + NewUniqueId())
+          .Op("scalar_mul")
+          .Input("x", inv_op.output("y", 0))
+          .Attr("float_operand", conf.clip_norm())
+          .Attr("has_float_operand", true)
+          .Output("y")
+          .ScopeSymbolId(scope_symbol_id)
+          .Build();
+  job_builder->AddOps(global_norm_parallel_conf, {coeff_op.op_conf()});
+
+  auto clamp_coeff_op =
+      user_op::UserOpConfWrapperBuilder("System-ClipGradient-GlobalNorm-Clamp-" + NewUniqueId())
+          .Op("clip_by_scalar_max")
+          .Input("x", coeff_op.output("y", 0))
+          .Attr("floating_max", 1.0)
+          .Output("y")
+          .ScopeSymbolId(scope_symbol_id)
+          .Build();
+  job_builder->AddOps(global_norm_parallel_conf, {clamp_coeff_op.op_conf()});
+
+  const std::string& coeff_lbn = clamp_coeff_op.output("z", 0);
   for (auto& pair : *lbi2diff_lbi) {
     const LogicalBlobId& lbi = pair.first;
     LogicalBlobId& diff_lbi = pair.second;
-    auto scalar_mul_op = user_op::UserOpConfWrapperBuilder(
-                             "System-ClipGradient-GlobalNorm-ScalarMul-" + NewUniqueId())
+    auto mul_op_name = "System-ClipGradient-GlobalNorm-ScalarMul-" + NewUniqueId();
+    auto scalar_mul_op = user_op::UserOpConfWrapperBuilder(mul_op_name)
                              .Op("scalar_mul_by_tensor")
                              .Input("x", GenLogicalBlobName(diff_lbi))
-                             .Input("scalar", gradient_scale_factor_lbn)
+                             .Input("scalar", coeff_lbn)
                              .Output("y")
                              .ScopeSymbolId(ScopeSymbolId4Lbi(op_graph, lbi))
                              .Build();
