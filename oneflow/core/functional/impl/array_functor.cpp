@@ -1719,10 +1719,12 @@ class DiagonalFunctor {
     CHECK_NE_OR_RETURN(p_dim1, p_dim2)
         << ", diagonal dimensions cannot be identical " << dim1 << ", " << dim2;
 
-    std::vector<int32_t> input_index{p_dim1, p_dim2};
+    std::vector<int32_t> input_index;
     for (int32_t i = 0; i < ndims; i++) {
       if (i != p_dim1 && i != p_dim2) { input_index.push_back(i); }
     }
+    input_index.push_back(p_dim1);
+    input_index.push_back(p_dim2);
 
     std::shared_ptr<one::Tensor> d_x = JUST(Transpose(x, input_index));
 

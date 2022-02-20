@@ -26,12 +26,12 @@ namespace oneflow {
   CHECK_GE_OR_RETURN(in_dim, 2);
 
   DimVector out_dim_vec = {};
-  FOR_RANGE(int32_t, index, 2, in_dim) { out_dim_vec.push_back(in_shape.At(index)); }
+  FOR_RANGE(int32_t, index, 0, in_dim - 2) { out_dim_vec.push_back(in_shape.At(index)); }
   int32_t last_dim = 0;
   if (offset >= 0) {
-    last_dim = std::min(in_shape.At(0), in_shape.At(1) - offset);
+    last_dim = std::min(in_shape.At(in_dim-2), in_shape.At(in_dim-1) - offset);
   } else {
-    last_dim = std::min(in_shape.At(0) + offset, in_shape.At(1));
+    last_dim = std::min(in_shape.At(in_dim-2) + offset, in_shape.At(in_dim-1));
   }
   if (last_dim < 0) { last_dim = 0; }
   out_dim_vec.push_back(last_dim);

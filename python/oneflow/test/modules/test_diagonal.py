@@ -26,36 +26,41 @@ class TestDiagonal(flow.unittest.TestCase):
     @autotest(n=40, check_graph=True)
     def test_flow_diagonal_with_random_data(test_case):
         device = random_device()
-        offset = random(-5, 5).to(int)
+        offset = random(-4, 4).to(int)
         dim1 = random(-4, 4).to(int)
         dim2 = random(-4, 4).to(int)
-
+        
+        a = random(4,6)
+        b = random(4,6)
+        c = random(4,6)
+        d = random(4,6)
+        print(offset,dim1,dim2,a,b,c,d)
         x = random_tensor(
             ndim=4,
-            dim1=random(4, 6),
-            dim2=random(4, 6),
-            dim3=random(4, 6),
-            dim4=random(4, 6),
+            dim0 =a,
+            dim1 =b,
+            dim2 =c,
+            dim3 =d,
         ).to(device)
         z = torch.diagonal(x, offset, dim1, dim2)
         return z
 
-    @autotest(auto_backward=False, n=40, check_graph=True)
-    def test_flow_diagonal_with_random_data(test_case):
-        device = random_device()
-        offset = random(-5, 5).to(int)
-        dim1 = random(-4, 4).to(int)
-        dim2 = random(-4, 4).to(int)
+   
+     # @autotest(auto_backward=False, n=40, check_graph=True)
+    # def test_flow_diagonal_with_random_data(test_case):
+    #     device = random_device()
+    #     offset = random(-5, 5).to(int)
+    #     dim1 = random(-4, 4).to(int)
+    #     dim2 = random(-4, 4).to(int)
 
-        x = random_tensor(
-            ndim=4,
-            dim1=random(4, 6),
-            dim2=random(4, 6),
-            dim3=random(4, 6),
-            dim4=random(4, 6),
-        ).to(device, torch.bool)
-        z = torch.diagonal(x, offset, dim1, dim2)
-        return z
+    #     x = random_tensor(
+    #         ndim=4,
+    #         dim1=random(4, 6),
+    #         dim2=random(4, 6),
+    #         dim3=random(4, 6),
+    #         dim4=random(4, 6),
+    #     ).to(device, torch.bool)
+    #     z = torch.diagonal(x, offset, dim1, dim2)    return z
 
 
 if __name__ == "__main__":
