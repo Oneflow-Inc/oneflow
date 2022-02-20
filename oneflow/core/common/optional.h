@@ -294,6 +294,26 @@ class OptionalBase<
     }
   }
 
+  template<typename F,
+           typename U = std::decay_t<decltype(std::declval<F>()(std::declval<T>()))>>
+  U apply_function_or(U&& default_value, F&& f) && {
+    if (has_value()) {
+      return f(std::move(*value_));
+    } else {
+      return default_value;
+    }
+  }
+
+  template<typename F,
+           typename U = std::decay_t<decltype(std::declval<F>()(std::declval<T>()))>>
+  U apply_function_or(U&& default_value, F&& f) const& {
+    if (has_value()) {
+      return f(*value_);
+    } else {
+      return default_value;
+    }
+  }
+
   void reset() { value_.reset(); }
 
  private:
@@ -391,6 +411,19 @@ class Optional final : private internal::OptionalBase<T> {
   template<typename U>
   decltype(auto) value_or(U&& other) && {
     return std::move(*this).base::value_or(std::forward<U>(other));
+  }
+
+  template<typename F,
+           typename U>
+  decltype(auto) apply_function_or(U&& default_value, F&& f) && {
+    return std::move(this).base::apply_function_or(std::forward<U>(default_value), std::forward<F>(f));
+  }
+
+
+  template<typename F,
+           typename U>
+  decltype(auto) apply_function_or(U&& default_value, F&& f) const& {
+    return base::apply_function_or(std::forward<U>(default_value), std::forward<F>(f));
   }
 
   bool has_value() const { return base::has_value(); }

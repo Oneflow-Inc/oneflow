@@ -17,6 +17,7 @@ limitations under the License.
 #define ONEFLOW_CORE_IPC_SHARED_MEMORY_H_
 
 #include "oneflow/core/common/maybe.h"
+#include "oneflow/core/common/optional.h"
 
 namespace oneflow {
 namespace ipc {
@@ -27,7 +28,7 @@ class SharedMemory final {
   SharedMemory(SharedMemory&&) = delete;
   ~SharedMemory();
 
-  static Maybe<SharedMemory> Open(size_t size);
+  static Maybe<SharedMemory> Open(const Optional<std::string>& shm_name, size_t size);
   static Maybe<SharedMemory> Open(const std::string& name);
 
   const char* buf() const { return buf_; }
@@ -38,6 +39,7 @@ class SharedMemory final {
 
   Maybe<void> Close();
   Maybe<void> Unlink();
+  static Maybe<void> UnlinkByName(const std::string& name);
 
  private:
   SharedMemory(char* buf, const std::string& name, size_t size)

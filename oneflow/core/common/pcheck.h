@@ -21,9 +21,19 @@ limitations under the License.
 
 namespace oneflow {
 
+namespace {
+inline Error GetErrorFromErrNo() {
+  if (errno == EEXIST) {
+    return Error::FileExistsError();
+  } else {
+    return Error::UnknownOsError(errno);
+  }
+}
+}  // namespace
+
 #define PCHECK_OR_RETURN(expr)                                             \
   for (int __err = (expr), *__cond = nullptr; __cond == nullptr; ++__cond) \
-  CHECK_EQ_OR_RETURN(__err, 0) << strerror(__err) << " "
+    if (__err != 0) return GetErrorFromErrNo() << strerror(errno)
 
 }  // namespace oneflow
 

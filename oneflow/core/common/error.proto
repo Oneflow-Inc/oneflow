@@ -135,6 +135,16 @@ message TimeoutError {}
 
 message ValueNotFoundError {}
 
+// Corresponds to Python FileExistsError and errno EEXIST
+message FileExistsError {}
+
+message UnknownOsError {
+  // NOTE: Do not use "errno" as the field name, "errno" is
+  // a macro defined in errno.h
+  required int32 error_number = 1;
+}
+// TODO: add other OS exceptions
+
 message ErrorProto {
   optional string error_summary = 1 [default = ""];
   optional string msg = 2 [default = ""];
@@ -158,8 +168,10 @@ message ErrorProto {
     IndexError index_error = 28;
     TypeError type_error = 29;
     RuntimeError runtime_error = 30;
-    TimeoutError timeout_error = 40;
     ValueNotFoundError value_not_found_error = 31;
+    UnknownOsError unknown_os_error = 32;
+    FileExistsError file_exists_error = 33;
+    TimeoutError timeout_error = 40;
     
     JobNameExistError job_name_exist_error = 100;
     JobNameEmptyError job_name_empty_error = 101;

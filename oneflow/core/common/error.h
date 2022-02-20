@@ -88,6 +88,13 @@ class Error final {
 
   static Error InputDeviceNotMatchError();
 
+  // OS Exceptions
+
+  // Even if we name it as "UnknownOSError", protoc will still generate a
+  // "UnknownOsError" instead
+  static Error UnknownOsError(int error_number);
+  static Error FileExistsError();
+  
  private:
   std::shared_ptr<cfg::ErrorProto> error_proto_;
 };

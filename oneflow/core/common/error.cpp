@@ -297,6 +297,19 @@ Error Error::InputDeviceNotMatchError() {
   return error;
 }
 
+Error Error::UnknownOsError(int error_number) {
+  auto error = std::make_shared<cfg::ErrorProto>();
+  auto* unknown_os_error = error->mutable_unknown_os_error();
+  unknown_os_error->set_error_number(error_number);
+  return error;
+}
+
+Error Error::FileExistsError() {
+  auto error = std::make_shared<cfg::ErrorProto>();
+  error->mutable_file_exists_error();
+  return error;
+}
+
 void ThrowError(const std::shared_ptr<cfg::ErrorProto>& error) {
   const auto& maybe_error = TRY(FormatErrorStr(error));
   const auto& error_str = maybe_error.GetDataAndErrorProto(error->DebugString());

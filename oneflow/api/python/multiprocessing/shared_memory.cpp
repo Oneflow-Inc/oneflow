@@ -16,6 +16,7 @@ limitations under the License.
 #include <pybind11/pybind11.h>
 #include <pybind11/stl.h>
 #include "oneflow/api/python/of_api_registry.h"
+#include "oneflow/core/common/optional.h"
 #include "oneflow/core/ipc/shared_memory.h"
 
 namespace oneflow {
@@ -25,12 +26,21 @@ namespace py = pybind11;
 ONEFLOW_API_PYBIND11_MODULE("multiprocessing", m) {
   py::class_<ipc::SharedMemory, std::shared_ptr<ipc::SharedMemory>>(m, "SharedMemory")
       .def(py::init([](const std::string& name, bool create, size_t size) {
-             if (create) { return ipc::SharedMemory::Open(size).GetPtrOrThrow(); }
-             return ipc::SharedMemory::Open(name).GetPtrOrThrow();
+            auto opt_name = name == "" ? NullOpt : Optional<std::string>(name);
+             if (create) { return ipc::SharedMemory::Open(opt_name, size).GetPtrOrThrow(); }
+             return opt_name
+                 .apply_function_or(Maybe<ipc::SharedMemory>(Error::InvalidValueError(
+                                        "name should not be None if create=False")),
+                                    [](const std::string& name) -> Maybe<ipc::SharedMemory> {
+                                      return ipc::SharedMemory::Open(name);
+                                    })
+                 .GetPtrOrThrow();
            }),
            py::arg("name") = "", py::arg("create") = false, py::arg("size") = 0)
       .def("close", [](ipc::SharedMemory* shm) { return shm->Close().GetOrThrow(); })
       .def("unlink", [](ipc::SharedMemory* shm) { return shm->Unlink().GetOrThrow(); })
+      .def("unlink_by_name",
+           [](const std::string& name) { return ipc::SharedMemory::UnlinkByName(name); })
       .def_property_readonly("buf",
                              [](ipc::SharedMemory* shm) {
                                return py::memoryview::from_memory(shm->mut_buf(), shm->size());

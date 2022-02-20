@@ -27,13 +27,18 @@ class SharedMemory:
         if create:
             if size == 0:
                 raise ValueError("'size' must be a positive number different from zero")
+        if name is None:
+            if not create:
+                raise ValueError("'create' must be True if name is None")
+            
         self.shm_ = flow._oneflow_internal.multiprocessing.SharedMemory(
             name=name if name is not None else "", create=create, size=size
         )
 
     def __del__(self):
         try:
-            self.close()
+            if hasattr(self, 'shm_'):
+                self.close()
         except OSError:
             pass
 

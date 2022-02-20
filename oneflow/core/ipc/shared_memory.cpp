@@ -17,6 +17,7 @@ limitations under the License.
 #include "oneflow/core/common/util.h"
 #include "oneflow/core/common/pcheck.h"
 #include "oneflow/core/common/str_util.h"
+#include "oneflow/core/common/optional.h"
 #ifdef __linux__
 #include <sys/types.h>
 #include <sys/mman.h>
@@ -33,8 +34,8 @@ namespace {
 #ifdef __linux__
 
 // return errno
-int ShmOpen(const std::string& shm_name, int* fd) {
-  *fd = shm_open(shm_name.c_str(), O_CREAT | O_RDWR, S_IRUSR | S_IWUSR);
+int ShmOpen(const std::string& shm_name, bool create, int* fd) {
+  *fd = shm_open(shm_name.c_str(), (create ? O_CREAT : 0) | O_EXCL | O_RDWR, S_IRUSR | S_IWUSR);
   return *fd == -1 ? errno : 0;
 }
 
@@ -44,7 +45,7 @@ int ShmOpen(std::string* shm_name, int* fd) {
   while (true) {
     static constexpr int kNameLength = 8;
     *shm_name = std::string("/ofshm_") + GenAlphaNumericString(kNameLength);
-    err = ShmOpen(*shm_name, fd);
+    err = ShmOpen(*shm_name, true, fd);
     if (err != EEXIST) { return err; }
   }
   return err;
@@ -57,52 +58,48 @@ int ShmMap(int fd, const size_t shm_size, void** ptr) {
 
 #endif
 
-Maybe<void*> ShmSetUp(std::string* shm_name, size_t shm_size) {
-#ifdef __linux__
-  int fd = 0;
-  PCHECK_OR_RETURN(ShmOpen(shm_name, &fd));
-  PCHECK_OR_RETURN(posix_fallocate(fd, 0, shm_size)) << ReturnEmptyStr([&] { close(fd); });
-  void* ptr = nullptr;
-  PCHECK_OR_RETURN(ShmMap(fd, shm_size, &ptr)) << ReturnEmptyStr([&] { close(fd); });
-  close(fd);
-  std::memset(ptr, 0, shm_size);
-  return ptr;
-#else
-  TODO_THEN_RETURN();
-#endif
-}
-
-Maybe<void*> ShmSetUp(const std::string& shm_name, size_t* shm_size) {
-#ifdef __linux__
-  int fd = 0;
-  PCHECK_OR_RETURN(ShmOpen(shm_name, &fd));
-  struct stat st;  // NOLINT
-  PCHECK_OR_RETURN(fstat(fd, &st)) << ReturnEmptyStr([&] { close(fd); });
-  *shm_size = st.st_size;
-  void* ptr = nullptr;
-  PCHECK_OR_RETURN(ShmMap(fd, *shm_size, &ptr)) << ReturnEmptyStr([&] { close(fd); });
-  close(fd);
-  return ptr;
-#else
-  TODO_THEN_RETURN();
-#endif
-}
 }  // namespace
 
 SharedMemory::~SharedMemory() {
   if (buf_ != nullptr) { CHECK_JUST(Close()); }
 }
 
-Maybe<SharedMemory> SharedMemory::Open(size_t shm_size) {
+Maybe<SharedMemory> SharedMemory::Open(const Optional<std::string>& opt_shm_name, size_t shm_size) {
+#ifdef __linux__
+  int fd = 0;
   std::string shm_name;
-  char* ptr = static_cast<char*>(JUST(ShmSetUp(&shm_name, shm_size)));
-  return std::shared_ptr<SharedMemory>(new SharedMemory(ptr, shm_name, shm_size));
+  if (opt_shm_name.has_value()) {
+    shm_name = *JUST(opt_shm_name);
+    PCHECK_OR_RETURN(ShmOpen(shm_name, true, &fd));
+    std::cout << "create " << shm_name << std::endl;
+  } else {
+    PCHECK_OR_RETURN(ShmOpen(&shm_name, &fd));
+  }
+  PCHECK_OR_RETURN(posix_fallocate(fd, 0, shm_size)) << ReturnEmptyStr([&] { close(fd); });
+  void* ptr = nullptr;
+  PCHECK_OR_RETURN(ShmMap(fd, shm_size, &ptr)) << ReturnEmptyStr([&] { close(fd); });
+  close(fd);
+  std::memset(ptr, 0, shm_size);
+  return std::shared_ptr<SharedMemory>(new SharedMemory(static_cast<char*>(ptr), shm_name, shm_size));
+#else
+  TODO_THEN_RETURN();
+#endif
 }
 
 Maybe<SharedMemory> SharedMemory::Open(const std::string& shm_name) {
-  size_t shm_size = 0;
-  char* ptr = static_cast<char*>(JUST(ShmSetUp(shm_name, &shm_size)));
-  return std::shared_ptr<SharedMemory>(new SharedMemory(ptr, shm_name, shm_size));
+#ifdef __linux__
+  int fd = 0;
+  PCHECK_OR_RETURN(ShmOpen(shm_name, false, &fd));
+  struct stat st;  // NOLINT
+  PCHECK_OR_RETURN(fstat(fd, &st)) << ReturnEmptyStr([&] { close(fd); });
+  size_t shm_size = st.st_size;
+  void* ptr = nullptr;
+  PCHECK_OR_RETURN(ShmMap(fd, shm_size, &ptr)) << ReturnEmptyStr([&] { close(fd); });
+  close(fd);
+  return std::shared_ptr<SharedMemory>(new SharedMemory(static_cast<char*>(ptr), shm_name, shm_size));
+#else
+  TODO_THEN_RETURN();
+#endif
 }
 
 Maybe<void> SharedMemory::Close() {
@@ -117,7 +114,15 @@ Maybe<void> SharedMemory::Close() {
 
 Maybe<void> SharedMemory::Unlink() {
 #ifdef __linux__
-  PCHECK_OR_RETURN(shm_unlink(name_.c_str()));
+  return UnlinkByName(name_);
+#else
+  TODO_THEN_RETURN();
+#endif
+}
+
+Maybe<void> SharedMemory::UnlinkByName(const std::string& name) {
+#ifdef __linux__
+  PCHECK_OR_RETURN(shm_unlink(name.c_str()));
   return Maybe<void>::Ok();
 #else
   TODO_THEN_RETURN();

@@ -40,7 +40,10 @@ except ImportError:
 def rebuild_shm_tensor(shm, shape, dtype, requires_grad):
     def delete_shm():
         shm.close()
-        shm.unlink()
+        try:
+            shm.unlink()
+        except:
+            pass
 
     arr = np.ndarray(shape, dtype=dtype, buffer=shm.buf)
     t = flow.from_numpy(arr)
@@ -53,7 +56,10 @@ def rebuild_shm_tensor(shm, shape, dtype, requires_grad):
 def rebuild_shm_parameter(shm, shape, dtype, requires_grad):
     def delete_shm():
         shm.close()
-        shm.unlink()
+        try:
+            shm.unlink()
+        except:
+            pass
 
     arr = np.ndarray(shape, dtype=dtype, buffer=shm.buf)
     t = flow.from_numpy(arr)
@@ -61,12 +67,12 @@ def rebuild_shm_parameter(shm, shape, dtype, requires_grad):
     return Parameter(t, requires_grad=requires_grad)
 
 
-shm_list = []
+shm_name_list = []
 
 def cleanup_shm_at_exit(num, frame):
-    for shm in shm_list:
+    for shm_name in shm_name_list:
         try:
-            shm.unlink()
+            flow._oneflow_internal.multiprocessing.SharedMemory.unlink_by_name(shm_name)
         except:
             pass
     sys.exit()
@@ -75,16 +81,22 @@ def cleanup_shm_at_exit(num, frame):
 def get_reduce_fn(rebuild_fn):
     def reduce_tensor(tensor):
         tensor_data = tensor.numpy()
-
-        shm = shared_memory.SharedMemory(create=True, size=tensor_data.nbytes)
+        
+        prefetch_factor = dataloader.get_worker_info().prefetch_factor
+        while True:
+            try:
+                shm_name = "aofshm_" + flow._oneflow_internal.str_util.GenAlphaNumericString(8)
+                if len(shm_name_list) == prefetch_factor + 2:
+                    shm_name_list.pop(0)
+                shm_name_list.append(shm_name)
+                shm = shared_memory.SharedMemory(name=shm_name, create=True, size=tensor_data.nbytes)
+                break
+            except FileExistsError:
+                shm_name_list.pop()
         # TODO: There will be a problem if dataloader is not the only one pickling
         # tensors by ForkingPickler.
         # The next step is generate the share memory in dataloader and maintain
         # the shm_list also in dataloader, instead of here
-        prefetch_factor = dataloader.get_worker_info().prefetch_factor
-        if len(shm_list) == prefetch_factor + 1:
-            shm_list.remove(shm_list[0])
-        shm_list.append(shm)
         shm_numpy = np.ndarray(tensor_data.shape, dtype=tensor_data.dtype, buffer=shm.buf)
         shm_numpy[:] = tensor_data[:]
 
