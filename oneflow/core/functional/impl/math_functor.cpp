@@ -1407,6 +1407,9 @@ class SelectFunctor {
         << "], but got " << dim << ")";
     int32_t pos_dim = dim >= 0 ? dim : dim + ndim;
     auto size = input->dim(pos_dim);
+    CHECK_OR_RETURN((index >= -size) && (index < size))
+        << "Index out of range (expected to be in range of [" << -size << "," << size - 1
+        << "], but got " << index << ")";
     int32_t pos_index = index >= 0 ? index : index + size;
 
     std::vector<int32_t> sizes(input->shape()->dim_vec().begin(), input->shape()->dim_vec().end());
