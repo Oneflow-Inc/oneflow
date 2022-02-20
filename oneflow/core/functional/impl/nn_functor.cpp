@@ -35,6 +35,8 @@ limitations under the License.
 #include "oneflow/user/kernels/random_mask_like_kernel.h"
 #include "oneflow/user/kernels/dropout_kernel.h"
 #include "oneflow/core/register/ofblob.h"
+#include "oneflow/core/common/container_util.h"
+
 namespace oneflow {
 namespace one {
 namespace functional {
@@ -2194,24 +2196,52 @@ class EmbeddingLookupFunctor {
   std::shared_ptr<OpExpr> op_;
 };
 
-class FusedInteractionFunctor {
+class FusedDotFeatureInteractionFunctor {
  public:
-  FusedInteractionFunctor() {
-    op_ = CHECK_JUST(one::OpBuilder("fused_interaction")
-                         .Input("dense_feature")
-                         .Input("sparse_feature")
-                         .Output("out")
-                         .Output("concat_out")
-                         .Build());
+  FusedDotFeatureInteractionFunctor() {
+    ops_has_output_concat_.resize(kMaxInputCount);
+    ops_no_output_concat_.resize(kMaxInputCount);
+    for (int n = 0; n < ops_has_output_concat_.size(); ++n) {
+      ops_has_output_concat_[n] = CHECK_JUST(one::OpBuilder("fused_dot_feature_interaction")
+                                                 .Input("features", n + 1)
+                                                 .Input("output_concat")
+                                                 .Output("out")
+                                                 .Output("padded_concated_features")
+                                                 .Build());
+    }
+    for (int n = 0; n < ops_no_output_concat_.size(); ++n) {
+      ops_no_output_concat_[n] = CHECK_JUST(one::OpBuilder("fused_dot_feature_interaction")
+                                                .Input("features", n + 1)
+                                                .Output("out")
+                                                .Output("padded_concated_features")
+                                                .Build());
+    }
   }
 
-  Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& dense_feature,
-                           const std::shared_ptr<one::Tensor>& sparse_feature) const {
-    return OpInterpUtil::Dispatch<Tensor>(*op_, {dense_feature, sparse_feature});
+  Maybe<Tensor> operator()(const TensorTuple& features, const Optional<one::Tensor>& output_concat,
+                           const bool& self_interaction, const int32_t& output_padding) const {
+    MutableAttrMap attrs;
+    JUST(attrs.SetAttr<bool>("self_interaction", self_interaction));
+    JUST(attrs.SetAttr<int32_t>("output_padding", output_padding));
+    const int64_t n_features = features.size();
+    CHECK_LE_OR_RETURN(n_features, kMaxInputCount);
+    if (output_concat) {
+      JUST(attrs.SetAttr<bool>("has_output_concat", true));
+      TensorTuple inputs(n_features + 1);
+      for (int64_t i = 0; i < n_features; ++i) { inputs[i] = JUST(oneflow::VectorAt(features, i)); }
+      inputs[n_features] = JUST(output_concat);
+      return OpInterpUtil::Dispatch<Tensor>(
+          *JUST(oneflow::VectorAt(ops_has_output_concat_, n_features - 1)), inputs, attrs);
+    } else {
+      JUST(attrs.SetAttr<bool>("has_output_concat", false));
+      return OpInterpUtil::Dispatch<Tensor>(
+          *JUST(oneflow::VectorAt(ops_no_output_concat_, n_features - 1)), features, attrs);
+    }
   }
 
  private:
-  std::shared_ptr<OpExpr> op_;
+  std::vector<std::shared_ptr<OpExpr>> ops_has_output_concat_;
+  std::vector<std::shared_ptr<OpExpr>> ops_no_output_concat_;
 };
 
 }  // namespace impl
@@ -2284,7 +2314,7 @@ ONEFLOW_FUNCTION_LIBRARY(m) {
   m.add_functor<impl::RoiAlignFunctor>("RoiAlign");
   m.add_functor<impl::RoiAlignGradFunctor>("RoiAlignGrad");
   m.add_functor<impl::EmbeddingLookupFunctor>("OneEmbeddingLookup");
-  m.add_functor<impl::FusedInteractionFunctor>("FusedInteraction");
+  m.add_functor<impl::FusedDotFeatureInteractionFunctor>("FusedDotFeatureInteraction");
 };
 
 }  // namespace functional

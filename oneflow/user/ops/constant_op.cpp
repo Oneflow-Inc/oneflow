@@ -15,11 +15,24 @@ limitations under the License.
 */
 #include "oneflow/core/framework/framework.h"
 #include "oneflow/core/framework/op_generated.h"
+#include "oneflow/core/job/nd_sbp_util.h"
 
 namespace oneflow {
 
 /* static */ Maybe<void> ConstantOp::InferLogicalTensorDesc(user_op::InferContext* ctx) {
   *ctx->OutputShape("out", 0) = Shape(ctx->Attr<Shape>("shape").dim_vec());
+  return Maybe<void>::Ok();
+}
+
+/*static*/ Maybe<void> ConstantOp::InferPhysicalTensorDesc(user_op::InferContext* ctx) {
+  const Shape& parallel_hierarchy = *ctx->parallel_desc().hierarchy();
+  const NdSbp& nd_sbp = ctx->NdSbp4ArgNameAndIndex("out", 0);
+  const Shape& logical_shape = ctx->Attr<Shape>("shape");
+  const int64_t parallel_id = ctx->parallel_ctx().parallel_id();
+  const Shape& physical_shape =
+      GetTensorSliceView4ParallelId(parallel_hierarchy, nd_sbp, logical_shape, parallel_id).shape();
+
+  *ctx->OutputShape("out", 0) = physical_shape;
   return Maybe<void>::Ok();
 }
 
