@@ -33,28 +33,26 @@ __device__ int64_t GenUniformInt(curandState* state, const int64_t low, const in
 }
 
 template<typename T>
-__global__ void GenerateGpu(curandState* state, const int64_t rank_id, const int64_t elem_cnt,const int64_t cnt,
+__global__ void GenerateGpu(curandState* state, const int64_t rank_id, const int64_t elem_cnt,const std::string sbp,
                             T* dptr, const int64_t low, const int64_t high) {
   const int id = blockIdx.x * blockDim.x + threadIdx.x;
   curandState localState = state[id];
-  if(elem_cnt != cnt){
+  if(sbp != "B" ){
   /*when sbp=s, offset according to rank id to conform to the setting\
    that the local spliced tensor is equal to the global tensor */
-  CUDA_1D_KERNEL_LOOP(i, elem_cnt*rank_id) {
-    GenUniformInt(&localState, low, high);
-  }
+  unsigned long long r_cnt = static_cast<unsigned long long>(rank_id*elem_cnt);
+  skipahead(r_cnt,&localState);
   }
   CUDA_1D_KERNEL_LOOP(i, elem_cnt) {
     dptr[i] = static_cast<T>(GenUniformInt(&localState, low, high));
   }
   state[id] = localState;
   }
-}
 }  // namespace
 
 template<typename T>
 void UniformIntDistribution<DeviceType::kCUDA, T>::operator()(
-  ep::Stream* stream, const int64_t elem_cnt,const int64_t cnt, T* dptr,
+  ep::Stream* stream, const int64_t elem_cnt,const std::string sbp, T* dptr,
   const std::shared_ptr<one::Generator>& generator) const {
   CHECK_GE(elem_cnt, 0);
   auto gen = CHECK_JUST(generator->Get<one::CUDAGeneratorImpl>());
@@ -63,12 +61,12 @@ void UniformIntDistribution<DeviceType::kCUDA, T>::operator()(
   auto* curand_states = gen->curand_states();
   int64_t rank_id = GlobalProcessCtx::Rank();
   GenerateGpu<T><<<block_num, thread_num, 0, stream->As<ep::CudaStream>()->cuda_stream()>>>(
-      curand_states, rank_id, elem_cnt,cnt, dptr, low_, high_);
+      curand_states, rank_id, elem_cnt, sbp, dptr, low_, high_);
 }
 
 #define INITIATE_CUDA_UNIFORM_INT_DISTRIBUTION(T, typeproto)              \
   template void UniformIntDistribution<DeviceType::kCUDA, T>::operator()( \
-      ep::Stream* stream, const int64_t elem_cnt,const int64_t cnt, T* dptr,                \
+      ep::Stream* stream, const int64_t elem_cnt,const std::string sbp, T* dptr,                \
       const std::shared_ptr<one::Generator>& generator) const;
 
 OF_PP_FOR_EACH_TUPLE(INITIATE_CUDA_UNIFORM_INT_DISTRIBUTION, FLOATING_DATA_TYPE_SEQ)
