@@ -413,6 +413,10 @@ class Optional final : private internal::OptionalBase<T> {
     return std::move(*this).base::value_or(std::forward<U>(other));
   }
 
+  // analogue of haskell's `maybe` or `optional` function
+  // https://hackage.haskell.org/package/base-4.16.0.0/docs/Data-Maybe.html#v:maybe
+  // https://hackage.haskell.org/package/optional-args-1.0.2/docs/Data-Optional.html#v:optional
+  // TODO: implement a `Optional A -> (() -> B) -> (A -> B) -> B` version
   template<typename F,
            typename U>
   decltype(auto) apply_function_or(U&& default_value, F&& f) && {
