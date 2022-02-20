@@ -503,7 +503,7 @@ Maybe<void> AddAccumulateFunctionNode(const std::shared_ptr<Tensor>& tensor) {
       std::make_shared<std::function<Maybe<void>(const TensorTuple&, TensorTuple*, bool)>>(
           [=](const TensorTuple& out_grads, TensorTuple* in_grads,
               bool create_graph) -> Maybe<void> { return Maybe<void>::Ok(); });
-  tensor->set_grad_fn_node(std::make_shared<StackFunctionNode>(
+  tensor->set_grad_fn_node(std::make_shared<GraphFunctionNode>(
       "accumulate_grad", backward_fn, TensorTuple(), TensorTuple({tensor})));
   return Maybe<void>::Ok();
 }
