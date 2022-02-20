@@ -297,31 +297,12 @@ def get_functional_graph_res(
 ):
     test_g_res = []
 
-    if global_backward and flow.is_tensor(oneflow_res) and oneflow_res.ndim > 1:
-        # The output of functiona or method without parameters is connected to a  LayerNorm module for backward and optimize in nn.Graph.
-        graph_functional_layernorm = flow.nn.LayerNorm(oneflow_res.shape[-1])
-        graph_functional_layernorm = graph_functional_layernorm.to(
-            oneflow_res.device.type
-        )
-        of_sgd = flow.optim.SGD(
-            graph_functional_layernorm.parameters(), lr=0.001, momentum=0.9,
-        )
-
     class TestGraphOfFunctional(flow.nn.Graph):
         def __init__(self):
             super().__init__()
-            if global_backward and flow.is_tensor(oneflow_res) and oneflow_res.ndim > 1:
-                self.m = graph_functional_layernorm
-                self.add_optimizer(of_sgd)
 
         def build(self):
-            res = graph_functional_oneflow(*graph_args, **graph_kwargs)
-            forward_res = res
-            if global_backward and flow.is_tensor(oneflow_res) and oneflow_res.ndim > 1:
-                res = self.m(res)
-                res = res.sum()
-                res.backward()
-            return forward_res
+            return graph_functional_oneflow(*graph_args, **graph_kwargs)
 
     try:
         # When the tensor on the cpu executes to to the cpu in nn.Graph, a check error will be reported.
@@ -370,40 +351,16 @@ def get_functional_graph_res(
 # NOTE(lixiang): When oneflow is of tensor type, build the following Graph for testing, and return the test results in Graph mode.
 #   graph_tensor_oneflow is a deepcopy of oneflow.
 def get_tensor_graph_res(
-    graph_tensor_oneflow,
-    oneflow,
-    oneflow_res,
-    verbose,
-    *tensor_graph_args,
-    **tensor_graph_kwargs,
+    graph_tensor_oneflow, oneflow, verbose, *tensor_graph_args, **tensor_graph_kwargs
 ):
     test_g_res = []
-
-    if global_backward and flow.is_tensor(oneflow_res) and oneflow_res.ndim > 1:
-        # The output of functiona or method without parameters is connected to a  LayerNorm module for backward and optimize in nn.Graph.
-        graph_functional_layernorm = flow.nn.LayerNorm(oneflow_res.shape[-1])
-        graph_functional_layernorm = graph_functional_layernorm.to(
-            oneflow_res.device.type
-        )
-        of_sgd = flow.optim.SGD(
-            graph_functional_layernorm.parameters(), lr=0.001, momentum=0.9,
-        )
 
     class TestGraphOfTensorMethod(flow.nn.Graph):
         def __init__(self):
             super().__init__()
-            if global_backward and flow.is_tensor(oneflow_res) and oneflow_res.ndim > 1:
-                self.m = graph_functional_layernorm
-                self.add_optimizer(of_sgd)
 
         def build(self):
-            res = graph_tensor_oneflow(*tensor_graph_args, **tensor_graph_kwargs)
-            forward_res = res
-            if global_backward and flow.is_tensor(oneflow_res) and oneflow_res.ndim > 1:
-                res = self.m(res)
-                res = res.sum()
-                res.backward()
-            return forward_res
+            return graph_tensor_oneflow(*tensor_graph_args, **tensor_graph_kwargs)
 
     try:
         test_g = TestGraphOfTensorMethod()
@@ -452,14 +409,10 @@ def get_oneflow_eager_res(
 def oneflow_eager_run_with_graph_check(
     oneflow, oneflow_args, oneflow_kwargs, testing_graph, verbose, *args
 ):
-    graph_train_parameters_len = 0
     if testing_graph:
         graph_args, graph_kwargs = get_args_copy(oneflow_args, oneflow_kwargs)
 
         if isinstance(oneflow, flow.nn.Module):
-            for param in oneflow._parameters.values():
-                if param is not None:
-                    graph_train_parameters_len += 1
             graph_train_oneflow = copy.deepcopy(oneflow)
             if not is_global():
                 arg_device_type = "cpu"
@@ -467,10 +420,6 @@ def oneflow_eager_run_with_graph_check(
                     if flow.is_tensor(arg):
                         arg_device_type = arg.device.type
                 graph_train_oneflow = graph_train_oneflow.to(arg_device_type)
-            if graph_train_parameters_len:
-                of_sgd = flow.optim.SGD(
-                    graph_train_oneflow.parameters(), lr=0.001, momentum=0.9,
-                )
 
         else:
             graph_functional_oneflow = copy.deepcopy(oneflow)
@@ -550,7 +499,6 @@ def oneflow_tensor_eager_run_with_graph_check(
         test_g_res = get_tensor_graph_res(
             graph_tensor_oneflow,
             oneflow,
-            oneflow_res,
             verbose,
             *tensor_graph_args,
             **tensor_graph_kwargs,
