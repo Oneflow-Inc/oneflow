@@ -2102,7 +2102,6 @@ static Maybe<one::Tensor> sumproduct_pair(const std::shared_ptr<one::Tensor>& le
     CHECK_OR_RETURN(!sum_dims[d]) << "dim " << d << " appears multiple times in the list of dims";
     sum_dims[d] = true;
   }
-  // auto sum_dims = at::dim_list_to_bitset(sum_dims_, dim);
 
   // dimensions that will be part of the output (i.e. not summed over) in three vectors
   // dims in lro appear in left, right and output, similarly lo: left and output, ro: right and
@@ -2138,6 +2137,7 @@ static Maybe<one::Tensor> sumproduct_pair(const std::shared_ptr<one::Tensor>& le
       ro_size *= right->shape()->At(i);
     }
   }
+
   // we now work with the following permutations / shapes.
   // the pipeline is permute inputs -> reshape inputs -> batch matrix mul -> reshape(view) output ->
   // permute output output: "lro, lo, 1-for-summed-dims, ro" with orgiginal shape dimensions left:
@@ -2244,19 +2244,31 @@ class EinSumFunctor {
   EinSumFunctor() {}
   Maybe<Tensor> operator()(const std::string& equation, const one::TensorTuple& operands) const {
     CHECK_OR_RETURN(operands.size() > 0) << "einsum(): must provide at least one input tensor.";
+    // NOTE(Liang Depeng): In order to better understand what einsum is doing,
+    //                     the following comments will give a detailed explaination of
+    //                     how the operands of equation "ik,jkl,il->ij" (bilinear)
+    //                     are transformed during the computation.
+    //                     Assume that the size of each operands "ik", "jkl" and "il" are
+    //                     [2, 3], [4, 3, 5], [2, 5] respectively.
 
     // Code used to identify ELLIPSIS ("...")
     constexpr uint8_t ELLIPSIS = 52;
 
-    // Find arrow (->) to split equation into lhs and rhs
+    // Find arrow (->) to split equation into lhs (input equations) and rhs (output equation)
     const auto arrow_pos = equation.find("->");
     const auto lhs = equation.substr(0, arrow_pos);
 
     const auto num_ops = operands.size();
 
-    // Convert labels for input operands into an index in [0, 52] and store
+    // Convert each input equations into indexes in range [0, 52] and store
     // them in op_labels for each operand along with ELLIPSIS if present.
     std::vector<std::vector<uint8_t>> op_labels(num_ops);
+    // NOTE(Liang Depeng): Continue explaining the equation "ik,jkl,il->ij".
+    //                     After running the following for loop, `op_labels` contains 3 vectors.
+    //                     The contents of each vectors are:
+    //                     op_labels[0]: [34('i'-'a'+26), 36('k'-'a'+26)]
+    //                     op_labels[1]: [35('j'-'a'+26), 36('k'-'a'+26), 37('l'-'a'+26)]
+    //                     op_labels[2]: [34('i'-'a'+26), 37('l'-'a'+26)]
     bool found_ell = false;
     std::size_t curr_op = 0;
     for (auto i = decltype(lhs.length()){0}; i < lhs.length(); ++i) {
@@ -2267,6 +2279,7 @@ class EinSumFunctor {
           break;
 
         case '.':
+          // process ellipsis
           CHECK_OR_RETURN(
               // Only one ellipsis per operand can be given
               !found_ell)
@@ -2308,6 +2321,14 @@ class EinSumFunctor {
     // The maximum number of dimensions covered by any ellipsis, needed when
     // unsqueezing missing dimensions from operands to permute and broadcast
     int32_t ell_num_dim = 0;
+    // NOTE(Liang Depeng): Continue explaining the equation "ik,jkl,il->ij".
+    //                     After running the following for loop,
+    //                     the none zero indexes of `label_count` are:
+    //                     op_labels[34] = 2
+    //                     op_labels[35] = 1
+    //                     op_labels[36] = 2
+    //                     op_labels[37] = 2
+    //                     `ell_num_dim` equals to 0 because no ellipsis in equation
 
     // Compute label frequency and number of dimensions covered by ellipsis
     // We do this after parsing labels to make it more readable and simpler
@@ -2352,6 +2373,14 @@ class EinSumFunctor {
     int32_t ell_index = 0;
     found_ell = false;
 
+    // NOTE(Liang Depeng): Continue explaining the equation "ik,jkl,il->ij".
+    //                     After running the following if-else code block,
+    //                     the none -1 indexes of `label_perm_index` are:
+    //                     label_perm_index[34] = 0
+    //                     label_perm_index[35] = 1
+    //                     `perm_index` equals to 2
+    //                     `ell_index` equals to 0 because no ellipsis in equation
+    //                     `found_ell` equals to false because no ellipsis in equation
     if (arrow_pos == std::string::npos) {
       // Implicit output is ellipsis (...) + labels seen only once
       perm_index = ell_num_dim;
@@ -2370,6 +2399,7 @@ class EinSumFunctor {
             break;
 
           case '.':
+            // process ellipsis
             CHECK_OR_RETURN(
                 // There can only be one ellipsis in the output
                 !found_ell)
@@ -2409,6 +2439,16 @@ class EinSumFunctor {
       ell_index = perm_index;
       perm_index += ell_num_dim;
     }
+
+    // NOTE(Liang Depeng): Continue explaining the equation "ik,jkl,il->ij".
+    //                     After running the following foor loop,
+    //                     the none -1 indexes of `label_perm_index` are:
+    //                     label_perm_index[34] = 0 ('i')
+    //                     label_perm_index[35] = 1 ('j')
+    //                     label_perm_index[36] = 2 ('k')
+    //                     label_perm_index[37] = 3 ('l')
+    //                     `out_size` equals to 2
+    //                     `perm_index` equals to 4
 
     // Add contraction labels (labels not present in output)
     for (auto label = 0; label < TOTAL_LABELS; label++) {
@@ -2463,12 +2503,37 @@ class EinSumFunctor {
         }
       }
       permuted_operands.emplace_back(JUST(functional::Permute(operand, perm_shape)));
+
+      // NOTE(Liang Depeng): Continue explaining the equation "ik,jkl,il->ij".
+      //                     What is going on within this foor loop?
+      //                     For operand "ik" size = [2, 3]:
+      //                        `perm_shape` equals to [0, 2, 1, 3]
+      //                        first unsqueeze "ik" to 4 dim, from [2, 3] to [2, 3, 1, 1]
+      //                        then permute with `perm_shape`, from [2, 3, 1, 1] to [2, 1, 3, 1]
+      //
+      //                     For operand "jkl" size = [4, 3, 5]:
+      //                        `perm_shape` equals to [3, 0, 1, 2]
+      //                        first unsqueeze "jkl" to 4 dim, from [4, 3, 5] to [4, 3, 5, 1]
+      //                        then permute with `perm_shape`, from [4, 3, 5, 1] to [1, 4, 3, 5]
+      //
+      //                     For operand "il" size = [2, 5]:
+      //                        `perm_shape` equals to [0, 2, 3, 1]
+      //                        first unsqueeze "ik" to 4 dim, from [2, 5] to [2, 5, 1, 1]
+      //                        then permute with `perm_shape`, from [2, 5, 1, 1] to [2, 1, 1, 5]
     }
 
     // Check if operands broadcast and keep track of last operand with
     // dimension size != 1 for optimizing reductions
     std::vector<std::size_t> dim_last_op(perm_index, 0);
     bool has_zero_size_dim = false;
+    // NOTE(Liang Depeng): Continue explaining the equation "ik,jkl,il->ij".
+    //                     After running the following foor loop,
+    //                     The contents of `dim_last_op` are:
+    //                     dim_last_op[0] = 2
+    //                     dim_last_op[1] = 1
+    //                     dim_last_op[2] = 1
+    //                     dim_last_op[3] = 2
+    //                     `has_zero_size_dim` equals to false
     for (auto dim = 0; dim < perm_index; dim++) {
       auto broadcast_size = permuted_operands[0]->dim(dim);
       for (auto i = 1; i < num_ops; i++) {
@@ -2551,6 +2616,35 @@ class EinSumFunctor {
         // result = JUST(functional::ReduceSum(result, sum_dims, false));
         result = JUST(sumproduct_pair(result, operand, sum_dims, false));
       }
+
+      // NOTE(Liang Depeng): Continue explaining the equation "ik,jkl,il->ij".
+      //                     What is going on within this foor loop?
+      //                     For iter i = 1:
+      //                        result = permuted_operands[0], size = [2, 1, 3, 1]
+      //                        operand = permuted_operands[1], size = [1, 4, 3, 5]
+      //                        sum_dims = [2, ]
+      //                        what happened in `sumproduct_pair` ?
+      //                            result [2, 1, 3, 1] will be permuted to [2, 3, 1, 1] then
+      //                                reshaped to [1, 2, 3]
+      //                            operand [1, 4, 3, 5] will be permuted to [3, 4, 5, 1] then
+      //                                reshape to [1, 3, 4 * 5]
+      //                            perform batch_matmul(result, operand) => [1, 2, 4 * 5]
+      //                            then reshape to [2, 1, 4, 5] then permute to
+      //                            [2, 4, 1, 5], at last reshape to [2, 4, 5]
+      //
+      //                     For iter i = 2:
+      //                        result, size = [2, 4, 5]
+      //                        operand = permuted_operands[2], size = [2, 1, 1, 5]
+      //                        squeeze operand from [2, 1, 1, 5] to [2, 1, 5]
+      //                        sum_dims = [2,]
+      //                        what happened in `sumproduct_pair` ?
+      //                            result [2, 4, 5] will be permuted to [2, 4, 5] then
+      //                                reshaped to [2, 4, 5]
+      //                            operand [2, 1, 5] will be permuted to [2, 5, 1] then
+      //                                reshape to [2, 5, 1]
+      //                            perform batch_matmul(result, operand)=>[2, 4, 1]
+      //                            then reshape to [2, 4, 1] then permute to [2, 4, 1]
+      //                            at last reshape to [2, 4]
     }
     return result;
   }
