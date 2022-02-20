@@ -1307,6 +1307,7 @@ add_docstr(
     For example:
     
     .. code-block:: python
+    
         >>> import oneflow as flow
         >>> input = flow.rand(3, 4, 5)
         >>> out = flow.select(input, 0, 1)
