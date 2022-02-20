@@ -1945,7 +1945,7 @@
   signature: "Tensor (Tensor shadow, Tensor ids, Tensor column_ids, DataType dtype, String embedding_options) => OneEmbeddingLookup"
   bind_python: True
 
-  - name: "fused_dot_feature_interaction"
+- name: "fused_dot_feature_interaction"
   signature: "Tensor (TensorTuple features, Tensor output_concat=None, Bool self_interaction=False, Int32 output_padding=0) => FusedDotFeatureInteraction"
   bind_python: True
 
