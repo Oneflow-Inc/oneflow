@@ -221,7 +221,7 @@ NonRecursiveMetaInfoConsistencyCheckScope::~NonRecursiveMetaInfoConsistencyCheck
 Maybe<void> MetaInfoConsistencyCheck(const Symbol<ParallelDesc>& placement,
                                      const Optional<Symbol<NdSbp>>& nd_sbp,
                                      const Optional<Symbol<NdSbp>>& grad_nd_sbp) {
-  if (!IsMetaInfoConsistencyCheckDisable()) {
+  if (std::getenv("ONEFLOW_DEBUG_MODE") != nullptr && !IsMetaInfoConsistencyCheckDisable()) {
     JUST(MetaInfoConsistencyCheckUtil(placement, nd_sbp, grad_nd_sbp));
   }
   return Maybe<void>::Ok();
@@ -229,7 +229,7 @@ Maybe<void> MetaInfoConsistencyCheck(const Symbol<ParallelDesc>& placement,
 
 Maybe<void> MetaInfoConsistencyCheck(const Symbol<ParallelDesc>& placement,
                                      const Optional<Symbol<NdSbp>>& nd_sbp) {
-  if (!IsMetaInfoConsistencyCheckDisable()) {
+  if (std::getenv("ONEFLOW_DEBUG_MODE") != nullptr && !IsMetaInfoConsistencyCheckDisable()) {
     JUST(MetaInfoConsistencyCheckUtil(placement, nd_sbp, Optional<Symbol<NdSbp>>()));
   }
   return Maybe<void>::Ok();
