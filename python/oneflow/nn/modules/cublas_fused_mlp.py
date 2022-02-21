@@ -71,31 +71,53 @@ class FusedMLP(Module):
         self.out_features = out_features
         # TODO(zzk): Add more activation support.
         self.skip_last_activation = skip_last_activation
-        self.weights = []
-        self.biases = []
+        # self.weights = []
+        # self.biases = []
         self.hidden_layer_num = len(hidden_features_lists)
+        
+        # # First layer.
+        # self.add_parameters(in_features, hidden_features_lists[0], 0)
+        # # Middle Layer.
+        # for idx in range(self.hidden_layer_num - 1):
+        #     self.add_parameters(
+        #         hidden_features_lists[idx], hidden_features_lists[idx + 1], idx + 1
+        #     )
+        # # Last layer.
+        # self.add_parameters(
+        #     hidden_features_lists[-1], out_features, self.hidden_layer_num
+        # )
+
+        # for idx, weight in enumerate(self.weights):
+        #     self.register_parameter(f"weight_{idx}", weight)
+        # for idx, bias in enumerate(self.biases):
+        #     self.register_parameter(f"bias_{idx}", bias)
+        self.add_parameters()
+        # self.reset_parameters()
+
+    def add_parameters(self) -> None:
         # First layer.
-        self.add_parameters(in_features, hidden_features_lists[0], 0)
-        # Middle Layer.
-        for idx in range(self.hidden_layer_num - 1):
-            self.add_parameters(
-                hidden_features_lists[idx], hidden_features_lists[idx + 1], idx + 1
-            )
-        # Last layer.
-        self.add_parameters(
-            hidden_features_lists[-1], out_features, self.hidden_layer_num
-        )
+        self.register_parameter(f"weight_{0}", flow.nn.Parameter(flow.Tensor(self.hidden_features_lists[0], self.in_features)))
+        self.register_parameter(f"bias_{0}", flow.nn.Parameter(flow.Tensor(self.hidden_features_lists[0])))
+        
+        # # Middle Layer.
+        for idx in range(1, self.hidden_layer_num):
+            self.register_parameter(f"weight_{idx}", flow.nn.Parameter(flow.Tensor(self.hidden_features_lists[idx], self.hidden_features_lists[idx-1])))
+            self.register_parameter(f"bias_{idx}", flow.nn.Parameter(flow.Tensor(self.hidden_features_lists[idx])))
+        
+        self.register_parameter(f"weight_{self.hidden_layer_num}", flow.nn.Parameter(flow.Tensor(self.out_features, self.hidden_features_lists[self.hidden_layer_num-1])))
+        self.register_parameter(f"bias_{self.hidden_layer_num}", flow.nn.Parameter(flow.Tensor(self.out_features)))
+        
+    def weight(self, i): 
+        return getattr(self, f"weight_{i}")
 
-        for idx, weight in enumerate(self.weights):
-            self.register_parameter(f"weight_{idx}", weight)
-        for idx, bias in enumerate(self.biases):
-            self.register_parameter(f"bias_{idx}", bias)
+    def weights(self): 
+        return [self.weight(i) for i in range(self.hidden_layer_num+1)]
 
-        self.reset_parameters()
+    def bias(self, i): 
+        return getattr(self, f"bias_{i}")
 
-    def add_parameters(self, in_features, out_features, layer_idx) -> None:
-        self.weights.append(flow.nn.Parameter(flow.Tensor(out_features, in_features)))
-        self.biases.append(flow.nn.Parameter(flow.Tensor(out_features)))
+    def biases(self): 
+        return [self.bias(i) for i in range(self.hidden_layer_num+1)]
 
     def reset_parameters(self) -> None:
         for layer_idx in range(self.hidden_layer_num + 1):
@@ -106,7 +128,7 @@ class FusedMLP(Module):
 
     def forward(self, x):
         res = flow._C.cublas_fused_mlp(
-            x, self.weights, self.biases, self.skip_last_activation
+            x, self.weights(), self.biases(), self.skip_last_activation
         )
         return res
 
