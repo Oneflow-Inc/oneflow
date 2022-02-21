@@ -1,0 +1,48 @@
+"""
+Copyright 2020 The OneFlow Authors. All rights reserved.
+
+Licensed under the Apache License, Version 2.0 (the "License");
+you may not use this file except in compliance with the License.
+You may obtain a copy of the License at
+
+    http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+See the License for the specific language governing permissions and
+limitations under the License.
+"""
+import unittest
+from collections import OrderedDict
+
+import oneflow as flow
+import oneflow.unittest
+
+from oneflow.test_utils.automated_test_util import *
+
+
+@autotest(n=1, auto_backward=False, check_graph=False)
+def test_sort_impl(test_case, placement, sbp):
+    x_dims = [random(2, 4) * 8 for _ in range(4)]
+    x = random_tensor(4, *x_dims)
+    y = x.to_global(placement=placement, sbp=sbp)
+    sort_ascending = torch.sort(y)
+    sort_descending = torch.sort(y, descending=True)
+    sort_dim = torch.sort(y, dim=0)
+    value_ascending = sort_ascending[0]
+    value_descending = sort_descending[0]
+    value_dim = sort_dim[0]
+    return value_ascending, value_descending, value_dim
+
+
+class TestSortConsistent(flow.unittest.TestCase):
+    @globaltest
+    def test_sort(test_case):
+        for placement in all_placement():
+            for sbp in all_sbp(placement, max_dim=4):
+                test_sort_impl(test_case, placement, sbp)
+
+
+if __name__ == "__main__":
+    unittest.main()
