@@ -239,6 +239,11 @@ ONEFLOW_API_PYBIND11_MODULE("", m) {
   auto nn = m.def_submodule("nn");
   py::class_<Parameter, std::shared_ptr<Parameter>, Tensor>(nn, "Parameter")
       .def(py::init(&ApiNewParameter), "data"_a, "requires_grad"_a = true);
+  m.def("static_zeros",
+        [](const std::shared_ptr<const Shape>& shape, DataType dtype, Symbol<Device> device,
+           const Symbol<ParallelDesc>& parallel_desc, const Symbol<NdSbp>& ndsbp) {
+          return StaticZerosTensor::MakeTensor(shape, dtype, device, parallel_desc, ndsbp);
+        });
 }
 
 }  // namespace one
