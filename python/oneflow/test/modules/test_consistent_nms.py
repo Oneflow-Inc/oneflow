@@ -37,6 +37,7 @@ class TestNMS(flow.unittest.TestCase):
     @globaltest
     def test_nms(test_case):
         for placement in all_placement():
+            # TODO: nms only has cuda kernel at now.
             if placement.type == "cpu":
                 continue
             for sbp in all_sbp(placement, max_dim=1):
