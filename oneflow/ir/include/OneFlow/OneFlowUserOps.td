@@ -3993,7 +3993,8 @@ def OneFlow_VarOp : OneFlow_BaseOp<"var", [NoSideEffect, DeclareOpInterfaceMetho
   let attrs = (ins
     SI32ArrayAttr:$dim,
     DefaultValuedAttr<BoolAttr, "true">:$unbiased,
-    DefaultValuedAttr<BoolAttr, "false">:$keepdim
+    DefaultValuedAttr<BoolAttr, "false">:$keepdim,
+    OneFlow_DataType:$dtype
   );
   let has_logical_tensor_desc_infer_fn = 1;
   let has_physical_tensor_desc_infer_fn = 1;
