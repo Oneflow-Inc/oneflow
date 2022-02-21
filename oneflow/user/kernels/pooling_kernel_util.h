@@ -54,12 +54,6 @@ struct DeviceAdd {
   };
 };
 
-#ifdef WITH_CUDA
-
-OF_DEVICE_FUNC int32_t device_min(int32_t a, int32_t b) { return a <= b ? a : b; }
-
-#endif
-
 class MaxPoolingParams3D {
  public:
   MaxPoolingParams3D(const int32_t dim, const ShapeView& x_shape, const std::string& data_format,

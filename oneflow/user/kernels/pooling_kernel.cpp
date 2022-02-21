@@ -294,7 +294,6 @@ class MaxPool2dKernel final : public user_op::OpKernel {
     const MaxPoolingParams3D& params_3d = pooling_cache->GetParams3D();
 
     const int64_t elem_num = y->shape().elem_cnt();
-    // const int32_t elem_num = y->shape().elem_cnt();
 
     const T* src = x->dptr<T>();
     T* dest = y->mut_dptr<T>();
