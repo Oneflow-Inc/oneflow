@@ -14,10 +14,27 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 #include "oneflow/core/framework/framework.h"
-#include "oneflow/core/framework/device.h"
-#include "oneflow/core/framework/stride.h"
+#include "oneflow/core/framework/op_generated.h"
+
 
 namespace oneflow {
+
+// TODO(zhaoluyang): register use mlir in oneflow/oneflow/ir/include/OneFlow/OneFlowUserOps.td
+// /*static*/ Maybe<void> ToContiguousOp::GetSbp(user_op::SbpContext* ctx) {
+//   ctx->NewBuilder().PartialSum(ctx->inputs()).PartialSum(ctx->outputs()).Build();
+//   return Maybe<void>::Ok();
+// }
+// /*static*/ Maybe<void> ToContiguousOp::InferLogicalTensorDesc(user_op::InferContext* ctx) {
+//   *ctx->OutputShape("out", 0) = ctx->InputShape("in", 0);
+//   return Maybe<void>::Ok();
+// }
+// /*static*/ Maybe<void> ToContiguousOp::InferPhysicalTensorDesc(user_op::InferContext* ctx) {
+//   return InferLogicalTensorDesc(ctx);
+// }
+// /*static*/ Maybe<void> ToContiguousOp::InferDataType(user_op::InferContext* ctx) {
+//   *ctx->OutputDType("out", 0) = ctx->InputDType("in", 0);
+//   return Maybe<void>::Ok();
+// }
 
 namespace {
 
@@ -39,4 +56,5 @@ REGISTER_USER_OP("to_contiguous")
     });
 
 }  // namespace
+
 }  // namespace oneflow
