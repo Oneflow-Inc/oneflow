@@ -312,7 +312,11 @@
   bind_python: True
 
 - name: "permute"
-  signature: "Tensor (Tensor input, Int32List dims) => Permute"
+  signature: 
+    [
+        "Tensor (Tensor input, Int32List dims) => Permute",
+        "Tensor (Tensor input, Int32List dims, Bool view=True) => ViewPermute"   
+    ]
   bind_python: True
 
 - name: "T"

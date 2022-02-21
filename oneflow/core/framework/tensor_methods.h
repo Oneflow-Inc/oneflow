@@ -44,6 +44,8 @@ Maybe<Tensor> Unsqueeze(const std::shared_ptr<Tensor>& input, const int32_t& exp
 Maybe<Tensor> Squeeze(const std::shared_ptr<Tensor>& input,
                       const std::vector<int32_t>& squeeze_dims);
 
+Maybe<Tensor> Permute(const std::shared_ptr<Tensor>& input, const std::vector<int32_t>& permute);
+
 }  // namespace view
 }  // namespace one
 }  // namespace oneflow

@@ -653,6 +653,45 @@ class Transpose2dimFunctor {
   std::shared_ptr<OpExpr> op_;
 };
 
+class ViewPermuteFunctor {
+ public:
+  ViewPermuteFunctor() {
+    op_ = CHECK_JUST(one::OpBuilder("transpose").Input("input").Output("output").Build());
+  }
+  Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& input,
+                           const std::vector<int32_t>& permute, const bool view) const {
+    MutableAttrMap attrs;
+    auto ndim = input->ndim();
+    CHECK_EQ_OR_RETURN(ndim, permute.size()) << "number of dims don't match in permute";
+
+    // handle negative permute value here, because of permute is const,
+    // so copy it to local var and do modification.
+    auto positive_perm = permute;
+    for (auto i = 0; i < positive_perm.size(); i++) {
+      if (positive_perm[i] < 0) { positive_perm[i] += ndim; }
+      CHECK_OR_RETURN(positive_perm[i] >= 0 && positive_perm[i] < ndim)
+          << "IndexError: Dimension out of range (expected to be in range of [" << -ndim << ","
+          << ndim << " ) but got " << positive_perm[i];
+    }
+
+    JUST(attrs.SetAttr<std::vector<int32_t>>("perm", positive_perm));
+
+    printf("\nViewPermuteFunctor >>>>>>> view:%d", view);
+
+    if(view && view::IsViewApplicable(input)){
+      return JUST(view::Permute(input, positive_perm));
+      printf("view >>>>>>>>>>>>>>>>>>>> true");
+    }else{
+      printf("view >>>>>>>>>>>>>>>>>>>> false");
+    }
+
+    return OpInterpUtil::Dispatch<Tensor>(*op_, {input}, attrs);
+  }
+
+ private:
+  std::shared_ptr<OpExpr> op_;
+};
+
 class AsStridedFunctor {
  public:
   AsStridedFunctor() {
@@ -2104,8 +2143,9 @@ ONEFLOW_FUNCTION_LIBRARY(m) {
   m.add_functor<ReduceMinGlobalStageGradFunctor>("ReduceMinGlobalStageGrad");
   m.add_functor<ReduceMaxGlobalStageGradFunctor>("ReduceMaxGlobalStageGrad");
   m.add_functor<TransposeFunctor>("Transpose");
-  m.add_functor<TransposeFunctor>("Permute");
   m.add_functor<Transpose2dimFunctor>("Transpose2dim");
+  m.add_functor<TransposeFunctor>("Permute");
+  m.add_functor<ViewPermuteFunctor>("ViewPermute");
   m.add_functor<AsStridedFunctor>("AsStrided");
   m.add_functor<AsStridedGradFunctor>("AsStridedGrad");
   m.add_functor<SwapaxesFunctor>("Swapaxes");
