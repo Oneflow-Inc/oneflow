@@ -208,7 +208,6 @@ def _test_gru_impl(
 class TestRNNConsistent(oneflow.unittest.TestCase):
     @globaltest
     def test_rnn(test_case):
-        return None
         arg_dict = OrderedDict()
         arg_dict["input_size"] = [
             8,
@@ -235,7 +234,6 @@ class TestRNNConsistent(oneflow.unittest.TestCase):
 
     @globaltest
     def test_lstm(test_case):
-        return None
         arg_dict = OrderedDict()
         arg_dict["input_size"] = [
             8,
