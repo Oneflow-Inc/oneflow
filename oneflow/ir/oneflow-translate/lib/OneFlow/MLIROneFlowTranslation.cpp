@@ -537,7 +537,8 @@ LogicalResult JobImporter::ProcessJob() {
       if (type) {
         input_types.emplace_back(type);
       } else {
-        GetModule()->emitError("fail to collect func arg types for job: " + op_conf->DebugString());
+        GetModule()->emitError("fail to collect func arg types for job:\n"
+                               + op_conf->DebugString());
         is_succeeded = false;
       }
     }
