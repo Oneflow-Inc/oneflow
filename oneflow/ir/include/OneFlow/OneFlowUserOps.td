@@ -3991,7 +3991,7 @@ def OneFlow_VarOp : OneFlow_BaseOp<"var", [NoSideEffect, DeclareOpInterfaceMetho
     OneFlow_Tensor:$output
   );
   let attrs = (ins
-    SI64ArrayAttr:$dim,
+    SI32ArrayAttr:$dim,
     DefaultValuedAttr<BoolAttr, "true">:$unbiased,
     DefaultValuedAttr<BoolAttr, "false">:$keepdim
   );

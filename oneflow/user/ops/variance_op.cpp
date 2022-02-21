@@ -16,11 +16,11 @@ limitations under the License.
 #include "oneflow/core/framework/framework.h"
 #include "oneflow/core/operator/reduce_sbp_util.h"
 #include "oneflow/core/ndarray/binary_func.h"
+#include "oneflow/core/framework/op_generated.h"
 
 namespace oneflow {
 
-namespace {
-Maybe<void> InferTensorDescFn(user_op::InferContext* ctx) {
+Maybe<void> VarOp::InferLogicalTensorDesc(user_op::InferContext* ctx) {
   const Shape& input_shape = ctx->InputShape("input", 0);
   const auto& reduce_axes = ctx->Attr<std::vector<int32_t>>("dim");
   CHECK_OR_RETURN(!reduce_axes.empty());
@@ -36,12 +36,16 @@ Maybe<void> InferTensorDescFn(user_op::InferContext* ctx) {
   return Maybe<void>::Ok();
 }
 
-Maybe<void> InferDataType(user_op::InferContext* ctx) {
+Maybe<void> VarOp::InferPhysicalTensorDesc(user_op::InferContext* ctx) {
+  return InferLogicalTensorDesc(ctx);
+}
+
+Maybe<void> VarOp::InferDataType(user_op::InferContext* ctx) {
   *ctx->OutputDType("output", 0) = ctx->InputDType("input", 0);
   return Maybe<void>::Ok();
 }
 
-Maybe<void> GetSbpFn(user_op::SbpContext* ctx) {
+Maybe<void> VarOp::GetSbp(user_op::SbpContext* ctx) {
   ctx->NewBuilder().Broadcast(ctx->inputs()).Broadcast(ctx->outputs()).Build();
   const Shape& input_shape = ctx->LogicalTensorDesc4InputArgNameAndIndex("input", 0).shape();
   const int64_t ndim = input_shape.NumAxes();
@@ -53,16 +57,5 @@ Maybe<void> GetSbpFn(user_op::SbpContext* ctx) {
   }
   return Maybe<void>::Ok();
 }
-}  // namespace
-
-REGISTER_USER_OP("var")
-    .Input("input")
-    .Output("output")
-    .Attr<std::vector<int32_t>>("dim")
-    .Attr<bool>("unbiased", true)
-    .Attr<bool>("keepdim", false)
-    .SetTensorDescInferFn(InferTensorDescFn)
-    .SetGetSbpFn(GetSbpFn)
-    .SetDataTypeInferFn(InferDataType);
 
 }  // namespace oneflow
