@@ -20,41 +20,21 @@ limitations under the License.
 namespace oneflow {
 
 // TODO(zhaoluyang): register use mlir in oneflow/oneflow/ir/include/OneFlow/OneFlowUserOps.td
-// /*static*/ Maybe<void> ToContiguousOp::GetSbp(user_op::SbpContext* ctx) {
-//   ctx->NewBuilder().PartialSum(ctx->inputs()).PartialSum(ctx->outputs()).Build();
-//   return Maybe<void>::Ok();
-// }
-// /*static*/ Maybe<void> ToContiguousOp::InferLogicalTensorDesc(user_op::InferContext* ctx) {
-//   *ctx->OutputShape("out", 0) = ctx->InputShape("in", 0);
-//   return Maybe<void>::Ok();
-// }
-// /*static*/ Maybe<void> ToContiguousOp::InferPhysicalTensorDesc(user_op::InferContext* ctx) {
-//   return InferLogicalTensorDesc(ctx);
-// }
-// /*static*/ Maybe<void> ToContiguousOp::InferDataType(user_op::InferContext* ctx) {
-//   *ctx->OutputDType("out", 0) = ctx->InputDType("in", 0);
-//   return Maybe<void>::Ok();
-// }
+/*static*/ Maybe<void> ToContiguousOp::GetSbp(user_op::SbpContext* ctx) {
+  ctx->NewBuilder().PartialSum(ctx->inputs()).PartialSum(ctx->outputs()).Build();
+  return Maybe<void>::Ok();
+}
+/*static*/ Maybe<void> ToContiguousOp::InferLogicalTensorDesc(user_op::InferContext* ctx) {
+  *ctx->OutputShape("out", 0) = ctx->InputShape("in", 0);
+  return Maybe<void>::Ok();
+}
+/*static*/ Maybe<void> ToContiguousOp::InferPhysicalTensorDesc(user_op::InferContext* ctx) {
+  return InferLogicalTensorDesc(ctx);
+}
+/*static*/ Maybe<void> ToContiguousOp::InferDataType(user_op::InferContext* ctx) {
+  *ctx->OutputDType("out", 0) = ctx->InputDType("in", 0);
+  return Maybe<void>::Ok();
+}
 
-namespace {
-
-REGISTER_USER_OP("to_contiguous")
-    .Input("in")
-    .Output("out")
-    .Attr<std::vector<int64_t>>("stride")
-    .SetTensorDescInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
-      *ctx->OutputShape("out", 0) = ctx->InputShape("in", 0);
-      return Maybe<void>::Ok();
-    })
-    .SetDataTypeInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
-      *ctx->OutputDType("out", 0) = ctx->InputDType("in", 0);
-      return Maybe<void>::Ok();
-    })
-    .SetGetSbpFn([](user_op::SbpContext* ctx) -> Maybe<void> {
-      ctx->NewBuilder().PartialSum(ctx->inputs()).PartialSum(ctx->outputs()).Build();
-      return Maybe<void>::Ok();
-    });
-
-}  // namespace
 
 }  // namespace oneflow
