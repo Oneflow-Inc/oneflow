@@ -227,6 +227,15 @@ struct SmoothMaximumUnitFunctor {
   T lambda_val; 
 };
 
+template<typename T>
+struct SmoothMaximumUnitGradFunctor {
+  OF_DEVICE_FUNC explicit SmoothMaximumUnitGradFunctor(float lambda_val): lambda_val(lambda_val) {}
+  OF_DEVICE_FUNC T operator()(T x, T dy) const {
+    return static_cast<T>(dy*(1+erf(lambda_val*x)+lambda_val*x*(2*exp(-1*x*x)/sqrt(M_PI)))); 
+  }
+  T lambda_val; 
+};
+
 #define REGISTER_ELU_KERNEL(device, dtype)                        \
   REGISTER_UNARY_ELEMWISE_USER_KERNEL(                            \
       device, "elu", EluFunctor, dtype, dtype,                    \
@@ -383,7 +392,13 @@ struct SmoothMaximumUnitFunctor {
       [](user_op::KernelComputeContext* ctx) {                    \
         return SmoothMaximumUnitFunctor<dtype>(ctx->Attr<float>("lambda_val"));     \
       },                                                          \
-      "out", "in");   
+      "out", "in");
+  REGISTER_BINARY_ELEMWISE_USER_KERNEL(                            \
+      device, "smu_grad", SmoothMaximumUnitGradFunctor, dtype, dtype, dtype,                   \
+      [](user_op::KernelComputeContext* ctx) {                    \
+        return SmoothMaximumUnitGradFunctor<dtype>(ctx->Attr<float>("lambda_val"));     \
+      },                                                          \
+      "dx", "x", "dy");   
 
 }  // namespace oneflow
 
