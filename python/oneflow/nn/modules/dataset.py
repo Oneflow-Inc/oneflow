@@ -181,6 +181,13 @@ class CoinFlip(Module):
         if placement is None:
             if device is None:
                 self.device = flow.device("cpu")
+            else:
+                self.device = (
+                    device if isinstance(device, flow.device) else flow.device(device)
+                )
+                assert (
+                    self.device.type != "cuda"
+                ), "CoinFlip doesn't support cuda device now."
         else:
             assert device is None
 
@@ -192,6 +199,9 @@ class CoinFlip(Module):
                 for elem in sbp:
                     assert isinstance(elem, flow.sbp.sbp), "sbp: %s" % sbp
             assert len(sbp) == len(placement.ranks.shape)
+            assert (
+                self.placement.type != "cuda"
+            ), "CoinFlip doesn't support cuda device now."
         else:
             assert sbp is None, "sbp: %s" % sbp
 
