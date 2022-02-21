@@ -216,7 +216,7 @@ Maybe<void> NNGraph::RegisterNewVariableOpInJobPass() {
     CHECK_OR_RETURN(var_conf.has_initializer())
         << " nn.Graph ONLY support variable op with initializer conf.";
     if (var_conf.initializer().has_constant_conf()
-        || var_conf.initializer().has_constant_int_conf()) {
+        || var_conf.initializer().has_constant_int_conf() /* vairable ops inserted by system */) {
       CHECK_OR_RETURN(variable_op_names_.insert(var_name).second)
           << " ERROR! variable_op_name: " << var_name << " has been add in nn.Graph: " << name_;
       CHECK_OR_RETURN(
@@ -226,7 +226,7 @@ Maybe<void> NNGraph::RegisterNewVariableOpInJobPass() {
       CHECK_OR_RETURN(additional_variable_op_name_.insert(var_name).second)
           << " ERROR! variable Tensor with op_name: " << var_name
           << " has been add in nn.Graph: " << name_;
-    } else {
+    } else /* vairable ops from user code */ {
       CHECK_OR_RETURN(var_conf.initializer().has_empty_conf())
           << " nn.Graph ONLY support variable_op with empty conf,"
           << " because variable is inited by eager tensor."
