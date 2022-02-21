@@ -36,7 +36,9 @@ def _test_nms(test_case, placement, sbp):
 class TestNMS(flow.unittest.TestCase):
     @globaltest
     def test_nms(test_case):
-        for placement in all_placement(valid_device="cuda"):
+        for placement in all_placement():
+            if placement.type == "cpu":
+                continue
             for sbp in all_sbp(placement, max_dim=1):
                 _test_nms(test_case, placement, sbp)
 
