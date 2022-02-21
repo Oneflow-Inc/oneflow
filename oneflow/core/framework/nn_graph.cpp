@@ -233,7 +233,7 @@ Maybe<void> NNGraph::RegisterNewVariableOpInJobPass() {
           << " This error variable conf is : " << variable_op.op_conf().DebugString()
           << " in nn.Graph " << name_;
       CHECK_OR_RETURN(variable_op_names_.find(var_name) != variable_op_names_.end())
-          << " ERROR! cannot find variable_op_name : " << var_name << " in nn.Graph: " << name_;
+          << " ERROR! " << var_name << " must be a variable created in nn.Graph: " << name_;
     }
     return Maybe<void>::Ok();
   }));
