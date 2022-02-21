@@ -85,7 +85,7 @@ class UniformIntKernel final : public user_op::OpKernel {
     user_op::Tensor* out = ctx->Tensor4ArgNameAndIndex("out", 0);
     int64_t from = ctx->Attr<int64_t>("from");
     int64_t to = ctx->Attr<int64_t>("to");
-    const std::string sbp = ctx->Attr<std::vector<std::string>>("nd_sbp")[0];
+    const char sbp = ctx->Attr<std::vector<std::string>>("nd_sbp")[0][0];
     CHECK_LT(from, to) << "uniform kernel expects 'from' to be less than 'to'";
 
     if (IsFloating<T>::value) {

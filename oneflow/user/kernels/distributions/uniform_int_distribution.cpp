@@ -34,13 +34,13 @@ class CPUUniformIntDistributionImpl {
 
 template<typename T>
 void UniformIntDistribution<DeviceType::kCPU, T>::operator()(
-    ep::Stream* stream, const int64_t elem_cnt,const std::string sbp, T* dptr,
+    ep::Stream* stream, const int64_t elem_cnt,const char sbp, T* dptr,
     const std::shared_ptr<one::Generator>& generator) const {
   CHECK_GE(elem_cnt, 0);
   auto gen = CHECK_JUST(generator->Get<one::CPUGeneratorImpl>());
   // std::uniform_int_distribution generates [low, high], but we want [low, high) here
   CPUUniformIntDistributionImpl<T> impl(low_, high_ - 1);
-  if(sbp != "B"){
+  if(sbp != 'B'){
     int64_t rank_id = GlobalProcessCtx::Rank();
     /*when sbp=s, offset according to rank id to conform to the setting\
     that the local spliced tensor is equal to the global tensor */
@@ -52,7 +52,7 @@ void UniformIntDistribution<DeviceType::kCPU, T>::operator()(
 
 #define INITIATE_CPU_UNIFORM_INT_DISTRIBUTION(T, typeproto)              \
   template void UniformIntDistribution<DeviceType::kCPU, T>::operator()( \
-      ep::Stream* stream, const int64_t elem_cnt,const std::string sbp, T* dptr,               \
+      ep::Stream* stream, const int64_t elem_cnt,const char sbp, T* dptr,               \
       const std::shared_ptr<one::Generator>& generator) const;
 
 OF_PP_FOR_EACH_TUPLE(INITIATE_CPU_UNIFORM_INT_DISTRIBUTION, FLOATING_DATA_TYPE_SEQ)

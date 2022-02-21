@@ -33,15 +33,15 @@ __device__ int64_t GenUniformInt(curandState* state, const int64_t low, const in
 }
 
 template<typename T>
-__global__ void GenerateGpu(curandState* state, const int64_t rank_id, const int64_t elem_cnt,const std::string sbp,
+__global__ void GenerateGpu(curandState* state, const int64_t rank_id, const int64_t elem_cnt,const char sbp,
                             T* dptr, const int64_t low, const int64_t high) {
   const int id = blockIdx.x * blockDim.x + threadIdx.x;
   curandState localState = state[id];
-  if(sbp != "B" ){
   /*when sbp=s, offset according to rank id to conform to the setting\
    that the local spliced tensor is equal to the global tensor */
-  unsigned long long r_cnt = static_cast<unsigned long long>(rank_id*elem_cnt);
-  skipahead(r_cnt,&localState);
+  if(sbp != 'B'){
+    unsigned long long r_cnt = static_cast<unsigned long long>(rank_id*elem_cnt);
+    skipahead(r_cnt,&localState);
   }
   CUDA_1D_KERNEL_LOOP(i, elem_cnt) {
     dptr[i] = static_cast<T>(GenUniformInt(&localState, low, high));
@@ -52,7 +52,7 @@ __global__ void GenerateGpu(curandState* state, const int64_t rank_id, const int
 
 template<typename T>
 void UniformIntDistribution<DeviceType::kCUDA, T>::operator()(
-  ep::Stream* stream, const int64_t elem_cnt,const std::string sbp, T* dptr,
+  ep::Stream* stream, const int64_t elem_cnt,const char sbp, T* dptr,
   const std::shared_ptr<one::Generator>& generator) const {
   CHECK_GE(elem_cnt, 0);
   auto gen = CHECK_JUST(generator->Get<one::CUDAGeneratorImpl>());
@@ -66,7 +66,7 @@ void UniformIntDistribution<DeviceType::kCUDA, T>::operator()(
 
 #define INITIATE_CUDA_UNIFORM_INT_DISTRIBUTION(T, typeproto)              \
   template void UniformIntDistribution<DeviceType::kCUDA, T>::operator()( \
-      ep::Stream* stream, const int64_t elem_cnt,const std::string sbp, T* dptr,                \
+      ep::Stream* stream, const int64_t elem_cnt,const char sbp, T* dptr,                \
       const std::shared_ptr<one::Generator>& generator) const;
 
 OF_PP_FOR_EACH_TUPLE(INITIATE_CUDA_UNIFORM_INT_DISTRIBUTION, FLOATING_DATA_TYPE_SEQ)
