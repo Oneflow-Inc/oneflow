@@ -120,19 +120,38 @@ class StaticZerosTensor final : public Tensor {
                                              DataType dtype, Symbol<Device> device) {
     return std::shared_ptr<StaticZerosTensor>(new StaticZerosTensor(shape, dtype, device));
   }
+  static Maybe<StaticZerosTensor> MakeTensor(const std::shared_ptr<const Shape>& shape,
+                                             DataType dtype, Symbol<Device> device,
+                                             const Symbol<ParallelDesc>& parallel_desc,
+                                             const Symbol<NdSbp>& ndsbp) {
+    return std::shared_ptr<StaticZerosTensor>(
+        new StaticZerosTensor(shape, dtype, device, parallel_desc, ndsbp));
+  }
   // Getters
   const std::shared_ptr<const Shape>& shape() const override { return shape_; }
   Symbol<DType> dtype() const override { return CHECK_JUST(DType::Get(dtype_)); }
   Maybe<TransportToken> transport_token() const override { RETURN_ERROR_WITH_BUG_PROMPT(); }
-  Maybe<Symbol<NdSbp>> nd_sbp() const override { RETURN_ERROR_WITH_BUG_PROMPT(); }
-  Maybe<Symbol<ParallelDesc>> parallel_desc() const override { RETURN_ERROR_WITH_BUG_PROMPT(); }
+  Maybe<Symbol<NdSbp>> nd_sbp() const override {
+    if (is_consistent()) {
+      return JUST(ndsbp_);
+    } else {
+      RETURN_ERROR_WITH_BUG_PROMPT();
+    }
+  }
+  Maybe<Symbol<ParallelDesc>> parallel_desc() const override {
+    if (is_consistent()) {
+      return JUST(parallel_desc_);
+    } else {
+      RETURN_ERROR_WITH_BUG_PROMPT();
+    }
+  }
   Maybe<Symbol<Device>> device() const override { return device_; }
   Maybe<Symbol<Device>*> mut_device() override { RETURN_ERROR_WITH_BUG_PROMPT(); }
   bool is_cuda() const override {
     PRINT_BUG_PROMPT_AND_ABORT();
     return false;
   }
-  bool is_consistent() const override { return false; }
+  bool is_consistent() const override { return parallel_desc_.has_value() && ndsbp_.has_value(); }
   bool is_local() const override { return !is_consistent(); }
   bool is_lazy() const override {
     PRINT_BUG_PROMPT_AND_ABORT();
@@ -239,9 +258,19 @@ class StaticZerosTensor final : public Tensor {
   StaticZerosTensor(const std::shared_ptr<const Shape>& shape, DataType dtype,
                     Symbol<Device> device)
       : shape_(shape), dtype_(dtype), device_(device) {}
+  StaticZerosTensor(const std::shared_ptr<const Shape>& shape, DataType dtype,
+                    Symbol<Device> device, const Symbol<ParallelDesc>& parallel_desc,
+                    const Symbol<NdSbp>& ndsbp)
+      : shape_(shape),
+        dtype_(dtype),
+        device_(device),
+        parallel_desc_(parallel_desc),
+        ndsbp_(ndsbp) {}
   const std::shared_ptr<const Shape> shape_;
   DataType dtype_;
   Symbol<Device> device_;
+  Optional<Symbol<ParallelDesc>> parallel_desc_;
+  Optional<Symbol<NdSbp>> ndsbp_;
 };
 
 template<typename DerivedT>
