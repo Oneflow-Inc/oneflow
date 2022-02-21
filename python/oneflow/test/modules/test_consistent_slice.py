@@ -25,7 +25,7 @@ from oneflow.test_utils.automated_test_util import *
 
 
 def _test_logical_slice(test_case, placement, sbp):
-    x = random_pytorch_tensor(2, 8, 8, requires_grad=False).oneflow
+    x = random_tensor(2, 8, 8, requires_grad=False).oneflow
     x_numpy = x.detach().cpu().numpy()
 
     x = x.to_global(placement=placement, sbp=sbp)
@@ -36,7 +36,7 @@ def _test_logical_slice(test_case, placement, sbp):
 
 
 def _test_logical_slice_with_bool(test_case, placement, sbp):
-    x = random_pytorch_tensor(2, 8, 8).oneflow > 0.5
+    x = random_tensor(2, 8, 8).oneflow > 0.5
     x_numpy = x.detach().cpu().numpy()
 
     x = x.to_global(placement=placement, sbp=sbp)
