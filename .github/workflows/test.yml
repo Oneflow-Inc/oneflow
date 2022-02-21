@@ -624,7 +624,6 @@ jobs:
             extra_docker_args+=" --env ONEFLOW_TEST_CPU_ONLY=1"
             extra_docker_args+=" --env CUDA_VISIBLE_DEVICES=-1"
           fi
-          extra_docker_args+=" --e ONEFLOW_TEST_VERBOSE"
           echo "EXTRA_DOCKER_ARGS=${extra_docker_args}" >> $GITHUB_ENV
           echo "ONEFLOW_TEST_CACHE_DIR=$HOME/ci-cache/test_cache" >> $GITHUB_ENV
 
