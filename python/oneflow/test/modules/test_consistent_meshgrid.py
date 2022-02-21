@@ -22,8 +22,10 @@ from oneflow.test_utils.automated_test_util import *
 
 
 @autotest(auto_backward=False, check_graph=False)
-def _test_meshgrid(test_case, placement, x_sbp, y_sbp):
+def _test_meshgrid(test_case, placement):
+    x_sbp = random_sbp(placement, max_dim=1)
     x = random_tensor(ndim=1, dim0=8, requires_grad=False).to_global(placement, x_sbp)
+    y_sbp = random_sbp(placement, max_dim=1)
     y = random_tensor(ndim=1, dim0=8, requires_grad=False).to_global(placement, y_sbp)
     res = torch.meshgrid(x, y)
     return res[0], res[1]
@@ -33,9 +35,7 @@ class TestMeshGrid(flow.unittest.TestCase):
     @globaltest
     def test_meshgrid(test_case):
         for placement in all_placement():
-            for x_sbp in all_sbp(placement, max_dim=1):
-                for y_sbp in all_sbp(placement, max_dim=1):
-                    _test_meshgrid(test_case, placement, x_sbp, y_sbp)
+            _test_meshgrid(test_case, placement)
 
 
 if __name__ == "__main__":
