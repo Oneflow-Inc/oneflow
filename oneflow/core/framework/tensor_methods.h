@@ -24,8 +24,6 @@ namespace one {
 
 class Tensor;
 
-Maybe<bool> IsContiguous(const std::shared_ptr<Tensor>& tensor);
-
 namespace view {
 
 bool IsViewApplicable(const std::shared_ptr<Tensor>& input);
