@@ -45,7 +45,8 @@ Stream::Stream(Symbol<Device> device, StreamRole stream_role)
     : device_(device),
       stream_role_(stream_role),
       schedule_local_dep_object_(nullptr),
-      transport_local_dep_object_(NullOpt) {
+      transport_local_dep_object_(NullOpt),
+      vm_stream_(nullptr) {
   static constexpr auto* GetComputeDep = DECORATE(&RawNewComputeDepObject, StaticGlobalCopiable);
   schedule_local_dep_object_ = GetComputeDep(device, stream_role).Mutable();
   if (StreamRoleSwitch<StreamIsTransport>(stream_role)) {
@@ -53,11 +54,22 @@ Stream::Stream(Symbol<Device> device, StreamRole stream_role)
   }
 }
 
-namespace {
-
-Symbol<Stream> RawNewStream(Symbol<Device> device, StreamRole stream_role) {
-  return SymbolOf(Stream(device, stream_role));
+Maybe<void> Stream::Init() {
+  return Maybe<void>::Ok();
 }
+
+/*static*/Maybe<Symbol<Stream>> Stream::RawNew(Symbol<Device> device, StreamRole stream_role) {
+  Stream stream(device, stream_role);
+  JUST(stream.Init());
+  return SymbolOf(stream);
+}
+
+/*static*/Maybe<Symbol<Stream>> Stream::New(Symbol<Device> device, StreamRole stream_role) {
+  constexpr auto* Make = DECORATE(&Stream::RawNew, ThreadLocal);
+  return Make(device, stream_role);
+}
+
+namespace {
 
 Symbol<Stream> RawGetDefaultStreamByDevice(Symbol<Device> device) {
   return Stream::New(device, StreamRole::kCompute);
@@ -68,8 +80,6 @@ Maybe<Symbol<Stream>> RawGetDefaultStreamByPlacement(Symbol<ParallelDesc> parall
 }
 
 }  // namespace
-
-decltype(Stream::New) Stream::New = DECORATE(&RawNewStream, ThreadLocal);
 
 decltype(GetDefaultStreamByDevice) GetDefaultStreamByDevice =
     DECORATE(&RawGetDefaultStreamByDevice, ThreadLocal);

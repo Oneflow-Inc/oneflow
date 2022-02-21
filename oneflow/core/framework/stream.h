@@ -22,6 +22,8 @@ limitations under the License.
 #include "oneflow/core/common/optional.h"
 #include "oneflow/core/common/maybe.h"
 #include "oneflow/core/framework/device.h"
+#include "oneflow/core/intrusive/intrusive.h"
+#include "oneflow/core/vm/stream.h"
 
 namespace oneflow {
 
@@ -41,9 +43,7 @@ class Stream final {
   }
   bool operator!=(const Stream& that) const { return !(*this == that); }
 
-  Stream(Symbol<Device> device, StreamRole stream_role);
-
-  static Symbol<Stream> (*New)(Symbol<Device> device, StreamRole stream_role);
+  static Maybe<Symbol<Stream>> New(Symbol<Device> device, StreamRole stream_role);
 
   Symbol<Device> device() const { return device_; }
   StreamRole stream_role() const { return stream_role_; }
@@ -53,12 +53,21 @@ class Stream final {
     return transport_local_dep_object_;
   }
 
+  vm::Stream* mut_vm_stream() const { return vm_stream_; }
+
  private:
+  Stream(Symbol<Device> device, StreamRole stream_role);
+
+  static Maybe<Symbol<Stream>> RawNew(Symbol<Device> device, StreamRole stream_role);
+
+  Maybe<void> Init();
+
   Symbol<Device> device_;
   StreamRole stream_role_;
 
   LocalDepObject* schedule_local_dep_object_;
   Optional<LocalDepObject*> transport_local_dep_object_;
+  intrusive::shared_ptr<vm::Stream> vm_stream_;
 };
 
 LocalDepObject* GetStaticGlobalTransportLocalDepObject();
