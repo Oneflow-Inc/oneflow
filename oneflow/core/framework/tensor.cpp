@@ -14,6 +14,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 #include "oneflow/core/framework/tensor.h"
+#include "oneflow/core/framework/tensor_methods.h"
 #include "oneflow/core/framework/tensor_rpc_util.h"
 #include "oneflow/core/framework/nd_sbp.h"
 #include "oneflow/core/common/maybe.h"
@@ -35,6 +36,11 @@ Maybe<MirroredTensor> StaticZerosTensor::AsMirroredTensor() {
   CHECK_OR_RETURN(is_local());
   return std::dynamic_pointer_cast<MirroredTensor>(
       JUST(functional::Constant(*shape_, Scalar(0), CHECK_JUST(DType::Get(dtype_)), device_)));
+}
+
+std::shared_ptr<Tensor> Parameter::contiguous() const {
+  if (tensor_->is_contiguous()) { return std::const_pointer_cast<Tensor>(shared_from_this()); }
+  return std::make_shared<Parameter>(tensor_->contiguous(), this->requires_grad());
 }
 
 /* static */ Maybe<MirroredTensor> MirroredTensor::MakeTensor(
@@ -60,11 +66,23 @@ Maybe<Tensor> MirroredTensor::detach() const {
   return tensor;
 }
 
+std::shared_ptr<Tensor> MirroredTensor::contiguous() const {
+  std::shared_ptr<Tensor> tensor = std::const_pointer_cast<Tensor>(shared_from_this());
+  if (tensor->is_contiguous()) { return tensor; }
+  return CHECK_JUST(functional::ToContiguous(tensor));
+}
+
 Maybe<Tensor> MirroredTensor::clone() const {
   const auto& device_type = JUST(this->device())->type();
   int64_t device_id = JUST(this->device())->device_id();
   std::shared_ptr<Tensor> input = std::const_pointer_cast<Tensor>(shared_from_this());
   return JUST(functional::Copy(input, device_type, device_id));
+}
+
+std::shared_ptr<Tensor> ConsistentTensor::contiguous() const {
+  std::shared_ptr<Tensor> tensor = std::const_pointer_cast<Tensor>(shared_from_this());
+  if (tensor->is_contiguous()) { return tensor; }
+  return CHECK_JUST(functional::ToContiguous(tensor));
 }
 
 Maybe<Tensor> ConsistentTensor::clone() const {
