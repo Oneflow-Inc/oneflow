@@ -71,60 +71,72 @@ class FusedMLP(Module):
         self.out_features = out_features
         # TODO(zzk): Add more activation support.
         self.skip_last_activation = skip_last_activation
-        # self.weights = []
-        # self.biases = []
         self.hidden_layer_num = len(hidden_features_lists)
-        
-        # # First layer.
-        # self.add_parameters(in_features, hidden_features_lists[0], 0)
-        # # Middle Layer.
-        # for idx in range(self.hidden_layer_num - 1):
-        #     self.add_parameters(
-        #         hidden_features_lists[idx], hidden_features_lists[idx + 1], idx + 1
-        #     )
-        # # Last layer.
-        # self.add_parameters(
-        #     hidden_features_lists[-1], out_features, self.hidden_layer_num
-        # )
 
-        # for idx, weight in enumerate(self.weights):
-        #     self.register_parameter(f"weight_{idx}", weight)
-        # for idx, bias in enumerate(self.biases):
-        #     self.register_parameter(f"bias_{idx}", bias)
         self.add_parameters()
-        # self.reset_parameters()
+        self.reset_parameters()
 
     def add_parameters(self) -> None:
         # First layer.
-        self.register_parameter(f"weight_{0}", flow.nn.Parameter(flow.Tensor(self.hidden_features_lists[0], self.in_features)))
-        self.register_parameter(f"bias_{0}", flow.nn.Parameter(flow.Tensor(self.hidden_features_lists[0])))
-        
-        # # Middle Layer.
+        self.register_parameter(
+            f"weight_{0}",
+            flow.nn.Parameter(
+                flow.Tensor(self.hidden_features_lists[0], self.in_features)
+            ),
+        )
+        self.register_parameter(
+            f"bias_{0}", flow.nn.Parameter(flow.Tensor(self.hidden_features_lists[0]))
+        )
+
+        # Middle Layer.
         for idx in range(1, self.hidden_layer_num):
-            self.register_parameter(f"weight_{idx}", flow.nn.Parameter(flow.Tensor(self.hidden_features_lists[idx], self.hidden_features_lists[idx-1])))
-            self.register_parameter(f"bias_{idx}", flow.nn.Parameter(flow.Tensor(self.hidden_features_lists[idx])))
-        
-        self.register_parameter(f"weight_{self.hidden_layer_num}", flow.nn.Parameter(flow.Tensor(self.out_features, self.hidden_features_lists[self.hidden_layer_num-1])))
-        self.register_parameter(f"bias_{self.hidden_layer_num}", flow.nn.Parameter(flow.Tensor(self.out_features)))
-        
-    def weight(self, i): 
+            self.register_parameter(
+                f"weight_{idx}",
+                flow.nn.Parameter(
+                    flow.Tensor(
+                        self.hidden_features_lists[idx],
+                        self.hidden_features_lists[idx - 1],
+                    )
+                ),
+            )
+            self.register_parameter(
+                f"bias_{idx}",
+                flow.nn.Parameter(flow.Tensor(self.hidden_features_lists[idx])),
+            )
+
+        # Final Layer.
+        self.register_parameter(
+            f"weight_{self.hidden_layer_num}",
+            flow.nn.Parameter(
+                flow.Tensor(
+                    self.out_features,
+                    self.hidden_features_lists[self.hidden_layer_num - 1],
+                )
+            ),
+        )
+        self.register_parameter(
+            f"bias_{self.hidden_layer_num}",
+            flow.nn.Parameter(flow.Tensor(self.out_features)),
+        )
+
+    def weight(self, i):
         return getattr(self, f"weight_{i}")
 
-    def weights(self): 
-        return [self.weight(i) for i in range(self.hidden_layer_num+1)]
+    def weights(self):
+        return [self.weight(i) for i in range(self.hidden_layer_num + 1)]
 
-    def bias(self, i): 
+    def bias(self, i):
         return getattr(self, f"bias_{i}")
 
-    def biases(self): 
-        return [self.bias(i) for i in range(self.hidden_layer_num+1)]
+    def biases(self):
+        return [self.bias(i) for i in range(self.hidden_layer_num + 1)]
 
     def reset_parameters(self) -> None:
         for layer_idx in range(self.hidden_layer_num + 1):
-            flow.nn.init.kaiming_uniform_(self.weights[layer_idx], a=math.sqrt(5))
-            (fan_in, _) = _calculate_fan_in_and_fan_out(self.weights[layer_idx])
+            flow.nn.init.kaiming_uniform_(self.weight(layer_idx), a=math.sqrt(5))
+            (fan_in, _) = _calculate_fan_in_and_fan_out(self.weight(layer_idx))
             bound = 1 / math.sqrt(fan_in)
-            flow.nn.init.uniform_(self.biases[layer_idx], -bound, bound)
+            flow.nn.init.uniform_(self.bias(layer_idx), -bound, bound)
 
     def forward(self, x):
         res = flow._C.cublas_fused_mlp(
