@@ -46,72 +46,6 @@ limitations under the License.
 namespace oneflow {
 namespace one {
 namespace functional {
-
-namespace {
-
-Maybe<Shape> CheckReshapeValid(const std::shared_ptr<one::Tensor>& x, const Shape& shape) {
-  int need_infer_axis = -1;
-  size_t count = 1;
-  for (int i = 0; i < shape.NumAxes(); ++i) {
-    if (shape.At(i) < -1) {
-      return Error::RuntimeError() << "Invalid shape dimension " << shape.At(i);
-    } else if (shape.At(i) == -1) {
-      CHECK_EQ_OR_RETURN(need_infer_axis, -1)
-          << "Shape " << shape.ToString() << " has more than 1 axis that needs to be infered.";
-      need_infer_axis = i;
-    } else {
-      count *= shape.At(i);
-    }
-  }
-  size_t x_count = x->shape()->Count(0);
-  Shape infered_shape = shape;
-  if (need_infer_axis == -1) {
-    CHECK_EQ_OR_RETURN(shape.Count(0), x_count)
-        << "\n Shape " << shape.ToString() << " is invalid for input shape "
-        << x->shape()->ToString();
-  } else {
-    infered_shape.Set(need_infer_axis, x_count / count);
-    CHECK_EQ_OR_RETURN(infered_shape.Count(0), x_count)
-        << "\n Shape " << shape.ToString() << " is invalid for input shape "
-        << x->shape()->ToString();
-  }
-  return infered_shape;
-}
-
-bool CheckViewValid(const int64_t elem_count, const DimVector& shape, const StrideVector& stride,
-                    const DimVector& target_shape) {
-  if (elem_count == 0) { return false; }
-
-  int64_t view_d = target_shape.size() - 1;
-  int64_t chunk_base_stride = stride.back();
-  std::vector<int64_t> newstride(target_shape.size());
-  // stride for each subspace in the chunk
-  // numel in current chunk
-  int64_t tensor_numel = 1;
-  int64_t view_numel = 1;
-  for (int64_t tensor_d = shape.size() - 1; tensor_d >= 0; tensor_d--) {
-    tensor_numel *= shape[tensor_d];
-    // if end of tensor size chunk, check view
-    if ((tensor_d == 0)
-        || (shape[tensor_d - 1] != 1 && stride[tensor_d - 1] != tensor_numel * chunk_base_stride)) {
-      while (view_d >= 0 && (view_numel < tensor_numel || target_shape[view_d] == 1)) {
-        newstride[view_d] = view_numel * chunk_base_stride;
-        view_numel *= target_shape[view_d];
-        view_d--;
-      }
-      if (view_numel != tensor_numel) { return false; }
-      if (tensor_d > 0) {
-        chunk_base_stride = stride[tensor_d - 1];
-        tensor_numel = 1;
-        view_numel = 1;
-      }
-    }
-  }
-  if (view_d != -1) { return false; }
-  return true;
-}
-}  // namespace
-
 namespace impl {
 
 class ArgMaxFunctor {
@@ -1094,7 +1028,7 @@ class ReshapeFunctor {
     op_ = CHECK_JUST(one::OpBuilder("reshape").Input("in").Output("out").Build());
   }
   Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x, const Shape& shape) const {
-    Shape infered_shape = *JUST(CheckReshapeValid(x, shape));
+    Shape infered_shape = *JUST(ComputeReshape(x, shape));
     MutableAttrMap attrs;
     JUST(attrs.SetAttr<Shape>("shape", infered_shape));
 
@@ -1116,7 +1050,7 @@ class ViewFunctor {
  public:
   ViewFunctor() { op_ = CHECK_JUST(one::OpBuilder("reshape").Input("in").Output("out").Build()); }
   Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x, const Shape& shape) const {
-    Shape infered_shape = *JUST(CheckReshapeValid(x, shape));
+    Shape infered_shape = *JUST(ComputeReshape(x, shape));
     MutableAttrMap attrs;
     JUST(attrs.SetAttr<Shape>("shape", infered_shape));
 

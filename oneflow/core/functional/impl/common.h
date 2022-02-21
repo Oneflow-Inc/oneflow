@@ -34,6 +34,9 @@ Maybe<void> CheckInplaceValid(const std::shared_ptr<Tensor>& x);
 Maybe<void> CheckInplaceCastValid(const std::shared_ptr<Tensor>& x,
                                   const std::shared_ptr<Tensor>& x_cast);
 Maybe<void> CheckShapeCanExpandTo(const Shape& shape, const Shape& expand_shape);
+bool CheckViewValid(const int64_t elem_count, const DimVector& shape, const StrideVector& stride,
+                    const DimVector& target_shape);
+Maybe<Shape> ComputeReshape(const std::shared_ptr<one::Tensor>& x, const Shape& shape);
 
 }  // namespace functional
 }  // namespace one
