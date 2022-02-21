@@ -181,9 +181,9 @@ Maybe<void> CheckSplitAxisExpandable(
     const std::vector<std::vector<int64_t>>& shape_axis2dst_nd_sbp_indexes) {
   const auto& GetHierarchyDim = [&](int64_t axis) { return hierarchy.At(axis); };
   for (int i = 0; i < shape_axis2src_nd_sbp_indexes.size(); ++i) {
-    const auto& src_nd_sbp_indexes = shape_axis2src_nd_sbp_indexes.at(i);
+    const auto& src_nd_sbp_indexes = JUST(VectorAt(shape_axis2src_nd_sbp_indexes, i));
     if (src_nd_sbp_indexes.empty()) { continue; }
-    const auto& dst_nd_sbp_indexes = shape_axis2dst_nd_sbp_indexes.at(i);
+    const auto& dst_nd_sbp_indexes = JUST(VectorAt(shape_axis2dst_nd_sbp_indexes, i));
     if (dst_nd_sbp_indexes.empty()) { continue; }
     std::vector<int64_t> src_nd_sbp_dims{};
     src_nd_sbp_dims.reserve(src_nd_sbp_indexes.size());
