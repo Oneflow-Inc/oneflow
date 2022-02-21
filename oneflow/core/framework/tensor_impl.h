@@ -74,8 +74,8 @@ class TensorImpl {
   // Getters for autograd
   Maybe<Tensor> acc_grad() const;
   Maybe<TensorArg> current_grad() const;
-  bool requires_grad() const { return requires_grad_; }
-  bool is_leaf() const { return is_leaf_; }
+  bool requires_grad() const { return autograd_meta_->requires_grad(); }
+  bool is_leaf() const { return autograd_meta_->is_leaf(); }
   bool retain_grad() const { return autograd_meta_->retain_grad(); }
 
   // Setters for autograd
@@ -83,24 +83,24 @@ class TensorImpl {
   Maybe<Tensor> mut_acc_grad();
   Maybe<void> set_requires_grad(bool requires_grad);
   Maybe<void> set_retain_grad(bool retain_grad);
-  void set_is_leaf(bool is_leaf) { is_leaf_ = is_leaf; }
+
+  void set_is_leaf(bool is_leaf) { autograd_meta_->set_is_leaf(is_leaf); }
+
   std::shared_ptr<const AutogradMeta> autograd_meta() const { return autograd_meta_; }
   std::shared_ptr<AutogradMeta> mut_autograd_meta() { return autograd_meta_; }
   void set_autograd_meta(const std::shared_ptr<AutogradMeta>& autograd_meta) {
     autograd_meta_ = autograd_meta;
   }
-  bool has_autograd_meta() const { return autograd_meta_.get(); }
 
   virtual Maybe<void> RegisterStorageDeleteHook(const std::function<void()>& hook) {
     OF_UNIMPLEMENTED();
   }
 
  protected:
-  TensorImpl(bool requires_grad, bool is_leaf) : requires_grad_(requires_grad), is_leaf_(is_leaf) {}
+  TensorImpl(bool requires_grad, bool is_leaf)
+      : autograd_meta_(std::make_shared<AutogradMeta>(requires_grad, is_leaf)) {}
 
  protected:
-  bool requires_grad_;
-  bool is_leaf_;
   std::shared_ptr<AutogradMeta> autograd_meta_;
 };
 
