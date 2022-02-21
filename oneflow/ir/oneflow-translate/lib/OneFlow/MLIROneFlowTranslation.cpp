@@ -557,7 +557,13 @@ LogicalResult JobImporter::ProcessJob() {
     }
   });
   if (is_succeeded == false) { return failure(); }
-
+  SmallVector<mlir::Value, 4> loss_tensors;
+  for (auto& loss_lbn : job_wrapper_.job()->job_conf().train_conf().loss_lbn()) {
+    loss_tensors.push_back(lbn2result_.at(loss_lbn));
+  }
+  if (job_wrapper_.job()->job_conf().train_conf().loss_lbn_size() > 0) {
+    GetBuilder().create<mlir::oneflow::LossMarkerOp>(GetRootLocation(), loss_tensors);
+  }
   mlir::oneflow::ReturnOp return_op;
   if (!entryBlock->empty()) { return_op = dyn_cast<mlir::oneflow::ReturnOp>(entryBlock->back()); }
   if (!return_op) { GetBuilder().create<mlir::oneflow::ReturnOp>(GetRootLocation(), results); }
@@ -634,6 +640,8 @@ LogicalResult JobImporter::TryToUpdateJob() {
         }
       }
     } else if (llvm::dyn_cast<mlir::oneflow::Job>(op)) {
+      // do nothing and advance
+    } else if (op->hasTrait<OpTrait::OnlyExistsInIR>()) {
       // do nothing and advance
     } else if (auto return_op = llvm::dyn_cast<mlir::oneflow::ReturnOp>(op)) {
       for (auto operand : return_op->getOperands()) { outputs.emplace_back(operand); }
@@ -725,11 +733,11 @@ Type JobImporter::GetInterfaceBlobConfType(const ::oneflow::InterfaceBlobConf& b
                                *data_type);
 }
 
-void DumpMLIR(RoundTripOneFlowJobWrapperInterface& job_wrapper, ModuleOp module, std::string kind) {
+void DumpMLIR(RoundTripOneFlowJobWrapperInterface& job_wrapper, ModuleOp module, std::string name) {
   std::string mlir;
   llvm::raw_string_ostream os_mlir(mlir);
   module->print(os_mlir);
-  job_wrapper.DumpLog("RoundTripOneFlowJob." + kind + ".mlir", mlir);
+  job_wrapper.DumpLog(name + ".mlir", mlir);
 }
 
 LogicalResult ApplyRoundTripPatterns(RoundTripOneFlowJobWrapperInterface& job_wrapper,
@@ -747,8 +755,8 @@ LogicalResult ApplyRoundTripPatterns(RoundTripOneFlowJobWrapperInterface& job_wr
     module->emitError("Failed to run round-trip passes");
     return failure();
   }
-  job_wrapper.DumpLog("RoundTripOneFlowJob.mlir.dot", graphviz);
-  DumpMLIR(job_wrapper, module.get(), "optimized");
+  job_wrapper.DumpLog("RoundTripOneFlowJob.optimized.mlir.dot", graphviz);
+  DumpMLIR(job_wrapper, module.get(), "RoundTripOneFlowJob.optimized");
   return success();
 }
 
@@ -776,7 +784,7 @@ void RoundTripOneFlowJob(
   JobImporter imp(job_wrapper, &context, module.get());
   // TODO: Add flag in job desc to decide whether to run mlir optimizer
   if (succeeded(imp.ProcessJob())) {
-    DumpMLIR(job_wrapper, module.get(), "imported");
+    DumpMLIR(job_wrapper, module.get(), "RoundTripOneFlowJob.imported");
     if (failed(ApplyRoundTripPatterns(job_wrapper, &context, module))) { exit(EXIT_FAILURE); }
     if (::oneflow::ParseBooleanFromEnv("ONEFLOW_MLIR_STDOUT", false)) {
       module->print(llvm::outs());
