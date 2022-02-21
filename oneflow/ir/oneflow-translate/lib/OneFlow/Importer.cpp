@@ -680,6 +680,7 @@ LogicalResult ConvertDT(::mlir::oneflow::DataType data_type_mlir, ::oneflow::Dat
       DEFINE_ONE_CASE(OFRecord)
       DEFINE_ONE_CASE(Float16)
       DEFINE_ONE_CASE(TensorBuffer)
+      DEFINE_ONE_CASE(Bool)
 #undef DEFINE_ONE_CASE
     default: return failure();
   }
