@@ -996,16 +996,18 @@ Maybe<void> LazyJobBuildAndInferCtx::Complete() {
       return false;
     }
   };
+  int32_t pass_cnt = 0;
   auto DoPass = [&](const std::string& pass_name, int32_t cnt = 0) -> Maybe<void> {
     if (unlikely(NeedLogJob(pass_name))) {
       std::string cnt_str = cnt > 0 ? std::to_string(cnt) : "";
-      LogJob(pass_name + cnt_str + "-before");
+      LogJob("pass_cnt_" + std::to_string(pass_cnt) + "-" + pass_name + cnt_str + "-before");
     }
     JUST(JobPass4Name(pass_name)(mut_job(), &job_pass_ctx));
     if (unlikely(NeedLogJob(pass_name))) {
       std::string cnt_str = cnt > 0 ? std::to_string(cnt) : "";
-      LogJob(pass_name + cnt_str + "-after");
+      LogJob("pass_cnt_" + std::to_string(pass_cnt) + "-" + pass_name + cnt_str + "-after");
     }
+    ++pass_cnt;
     return Maybe<void>::Ok();
   };
 
