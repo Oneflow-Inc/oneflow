@@ -112,7 +112,10 @@ class FusedMLP(Module):
 
     def extra_repr(self) -> str:
         return "in_features={}, hidden_features_lists={}, out_features={}, skip_final_activation={}".format(
-            self.in_features, self.hidden_features_lists, self.out_features, self.skip_last_activation
+            self.in_features,
+            self.hidden_features_lists,
+            self.out_features,
+            self.skip_last_activation,
         )
 
 

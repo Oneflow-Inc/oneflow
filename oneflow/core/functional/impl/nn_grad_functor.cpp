@@ -940,7 +940,7 @@ class CublasBiasAddReluMatmulGradFunctor {
 
  private:
   std::shared_ptr<OpExpr> op_;
-}; 
+};
 
 class FusedDotFeatureInteractionGradFunctor {
  public:

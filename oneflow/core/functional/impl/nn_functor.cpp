@@ -312,10 +312,15 @@ class CublasFusedMLPFunctor {
       k = n;
     }
 
-    Symbol<Device> device = JUST(x->device());
+    DeviceType device_type;
+    if (x->is_consistent()) {
+      device_type = JUST(x->parallel_desc())->device_type();
+    } else {
+      device_type = JUST(x->device())->enum_type();
+    }
 
 #if CUDA_VERSION >= 11040
-    if (device->enum_type() == DeviceType::kCUDA) {
+    if (device_type == DeviceType::kCUDA) {
       TensorTuple input(2 * weight_size + 1);
       input[0] = x;
       std::copy(weights.begin(), weights.end(), input.begin() + 1);
