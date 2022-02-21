@@ -23,8 +23,8 @@ from oneflow.test_utils.automated_test_util import *
 
 @autotest(check_graph=False)
 def _test_masked_select(test_case, placement, sbp):
-    k1 = random(1, 3).to(int).value() * 8
-    k2 = random(1, 3).to(int).value() * 8
+    k1 = random(1, 2).to(int).value() * 8
+    k2 = random(1, 2).to(int).value() * 8
     input = random_tensor(ndim=2, dim0=k1, dim1=k2).to_global(placement, sbp)
     mask = input.ge(0.5)
     return torch.masked_select(input, mask)
@@ -32,8 +32,8 @@ def _test_masked_select(test_case, placement, sbp):
 
 @autotest(check_graph=False)
 def _test_masked_select_broadcast(test_case, placement, input_sbp, mask_sbp):
-    k1 = random(1, 3).to(int).value() * 8
-    k2 = random(1, 3).to(int).value() * 8
+    k1 = random(1, 2).to(int).value() * 8
+    k2 = random(1, 2).to(int).value() * 8
     input = random_tensor(ndim=4, dim0=k1, dim1=k2, dim2=1, dim3=k2).to_global(
         placement, input_sbp
     )
