@@ -136,6 +136,8 @@ def OneFlow_VariableOp : OneFlow_ConcreteSystemOp<"variable", [OneFlow_TensorSou
     DefaultValuedAttr<F32Attr, "0.0f">:$l1_regularization,
     DefaultValuedAttr<F32Attr, "0.0f">:$l2_regularization,
     DefaultValuedAttr<BoolAttr, "true">:$trainable,
+    OptionalAttr<F32Attr>:$float_initializer,
+    OptionalAttr<SI64Attr>:$integer_initializer,
     StrArrayAttr:$nd_sbp
   );
 }

@@ -867,9 +867,16 @@ LogicalResult ConvertVariableOpConf(Operation* op, oneflow::VariableOpAdaptor& a
     op_conf->add_ctrl_in_op_name(
         operand.getDefiningOp()->getAttrOfType<StringAttr>("op_name").getValue().str());
   }
-
-  // empty initializer
-  var_op_conf->mutable_initializer()->mutable_empty_conf();
+  if (auto floatInit = adaptor.float_initializer()) {
+    var_op_conf->mutable_initializer()->mutable_constant_conf()->set_value(
+        floatInit.getValue().convertToFloat());
+  } else if (auto integerInit = adaptor.integer_initializer()) {
+    var_op_conf->mutable_initializer()->mutable_constant_int_conf()->set_value(
+        integerInit.getValue());
+  } else {
+    // empty initializer
+    var_op_conf->mutable_initializer()->mutable_empty_conf();
+  }
 
   return success();
 }

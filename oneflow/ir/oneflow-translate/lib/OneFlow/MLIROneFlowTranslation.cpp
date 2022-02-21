@@ -295,6 +295,18 @@ LogicalResult JobImporter::ProcessVariableOp(const ::oneflow::OperatorConf& op_c
     attr_vec.emplace_back(
         GetBuilder().getNamedAttr("trainable", GetBuilder().getBoolAttr(trainable)));
   }
+  if (op_conf.variable_conf().has_initializer()) {
+    if (op_conf.variable_conf().initializer().has_constant_conf()) {
+      const mlir::Attribute const_initialize_attr = GetBuilder().getF32FloatAttr(
+          op_conf.variable_conf().initializer().constant_conf().value());
+      attr_vec.emplace_back(GetBuilder().getNamedAttr("float_initializer", const_initialize_attr));
+    } else if (op_conf.variable_conf().initializer().has_constant_int_conf()) {
+      const mlir::Attribute const_initialize_attr =
+          getSI64IntegerAttr(op_conf.variable_conf().initializer().constant_int_conf().value());
+      attr_vec.emplace_back(
+          GetBuilder().getNamedAttr("integer_initializer", const_initialize_attr));
+    }
+  }
   // attr nd_sbp
   const std::vector<StringRef> nd_sbp_str_vec{op_conf.variable_conf().nd_sbp().begin(),
                                               op_conf.variable_conf().nd_sbp().end()};
