@@ -113,7 +113,6 @@ Maybe<void> AvgPoolForwardGetSbpFn(user_op::SbpContext* ctx) {
 
 Maybe<void> MaxPoolBackwardGetSbpFn(user_op::SbpContext* ctx) {
   const user_op::TensorDesc& tensor = ctx->LogicalTensorDesc4InputArgNameAndIndex("x", 0);
-  const std::vector<int32_t>& padding = ctx->Attr<std::vector<int32_t>>("padding");
   FOR_RANGE(int64_t, i, 0, std::min(2, (int)tensor.shape().NumAxes())) {
     ctx->NewBuilder()
         .Split(user_op::OpArg("x", 0), i)
