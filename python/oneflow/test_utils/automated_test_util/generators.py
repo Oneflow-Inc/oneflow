@@ -406,7 +406,12 @@ class all_placement(generator):
         return self.value()[key]
 
     def _calc_device(self):
-        return self.valid_device
+        if os.getenv("ONEFLOW_TEST_CPU_ONLY"):
+            return [
+                "cpu",
+            ]
+        else:
+            return ["cuda", "cpu"]
 
     def _calc_all_placement(self):
         all_device = self._calc_device()
@@ -420,12 +425,7 @@ class all_placement(generator):
         ]
 
     def _calc_value(self):
-        if os.getenv("ONEFLOW_TEST_CPU_ONLY"):
-            return [
-                "cpu",
-            ]
-        else:
-            return ["cuda", "cpu"]
+        return self._calc_all_placement()
 
 
 class random_placement(all_placement):
