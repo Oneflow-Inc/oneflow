@@ -774,9 +774,9 @@ void RoundTripOneFlowJob(
   OwningOpRef<ModuleOp> module(
       ModuleOp::create(FileLineColLoc::get(&context, "", /*line=*/0, /*column=*/0)));
   JobImporter imp(job_wrapper, &context, module.get());
-  DumpMLIR(job_wrapper, module.get(), "imported");
   // TODO: Add flag in job desc to decide whether to run mlir optimizer
   if (succeeded(imp.ProcessJob())) {
+    DumpMLIR(job_wrapper, module.get(), "imported");
     if (failed(ApplyRoundTripPatterns(job_wrapper, &context, module))) { exit(EXIT_FAILURE); }
     if (::oneflow::ParseBooleanFromEnv("ONEFLOW_MLIR_STDOUT", false)) {
       module->print(llvm::outs());
