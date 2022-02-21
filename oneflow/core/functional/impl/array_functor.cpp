@@ -49,7 +49,7 @@ namespace functional {
 
 namespace {
 
-Maybe<Shape> CheckReshape(const std::shared_ptr<one::Tensor>& x, const Shape& shape) {
+Maybe<Shape> CheckReshapeValid(const std::shared_ptr<one::Tensor>& x, const Shape& shape) {
   int need_infer_axis = -1;
   size_t count = 1;
   for (int i = 0; i < shape.NumAxes(); ++i) {
@@ -1094,7 +1094,7 @@ class ReshapeFunctor {
     op_ = CHECK_JUST(one::OpBuilder("reshape").Input("in").Output("out").Build());
   }
   Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x, const Shape& shape) const {
-    Shape infered_shape = *JUST(CheckReshape(x, shape));
+    Shape infered_shape = *JUST(CheckReshapeValid(x, shape));
     MutableAttrMap attrs;
     JUST(attrs.SetAttr<Shape>("shape", infered_shape));
 
@@ -1116,7 +1116,7 @@ class ViewFunctor {
  public:
   ViewFunctor() { op_ = CHECK_JUST(one::OpBuilder("reshape").Input("in").Output("out").Build()); }
   Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x, const Shape& shape) const {
-    Shape infered_shape = *JUST(CheckReshape(x, shape));
+    Shape infered_shape = *JUST(CheckReshapeValid(x, shape));
     MutableAttrMap attrs;
     JUST(attrs.SetAttr<Shape>("shape", infered_shape));
 
