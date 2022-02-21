@@ -2595,9 +2595,8 @@ class EinSumFunctor {
         } else if (dim_last_op[j] == i) {
           if (result->dim(dim) == 1) {
             operand = JUST(functional::ReduceSum(operand, {dim}, false));
-            std::vector<int32_t> dims = {dim};
+            std::vector<int32_t> dims = {dim--};
             result = JUST(functional::Squeeze(result, dims));
-            --dim;
           } else {
             sum_dims.push_back(dim);
           }
@@ -2612,8 +2611,6 @@ class EinSumFunctor {
         auto flatten_operand = JUST(functional::Flatten(operand, 0, -1));
         result = JUST(functional::Dot(flatten_result, flatten_operand));
       } else {
-        // result = JUST(functional::Mul(result, operand));
-        // result = JUST(functional::ReduceSum(result, sum_dims, false));
         result = JUST(sumproduct_pair(result, operand, sum_dims, false));
       }
 
