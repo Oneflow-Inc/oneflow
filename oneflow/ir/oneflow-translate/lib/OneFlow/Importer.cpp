@@ -344,6 +344,7 @@ llvm::Optional<Type> Importer::GetTypeFromOneFlowDataType(::oneflow::DataType dt
     if (dt == ::oneflow::DataType::kUInt8) { return GetBuilder().getIntegerType(8, false); }
     if (dt == ::oneflow::DataType::kOFRecord) { return llvm::None; }
     if (dt == ::oneflow::DataType::kFloat16) { return GetBuilder().getF16Type(); }
+    if (dt == ::oneflow::DataType::kBool) { return GetBuilder().getI8Type(); }
     if (dt == ::oneflow::DataType::kTensorBuffer) { return llvm::None; }
     return llvm::None;
   }
