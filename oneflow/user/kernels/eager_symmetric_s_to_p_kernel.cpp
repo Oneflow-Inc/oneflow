@@ -25,8 +25,8 @@ namespace oneflow {
 
 namespace {
 
-Maybe<Symbol<cfg::NdSbp>> GetAllSplitNdSbp(int64_t axis, int64_t ndim) {
-  cfg::NdSbp split_nd_sbp;
+Maybe<Symbol<NdSbp>> GetAllSplitNdSbp(int64_t axis, int64_t ndim) {
+  NdSbp split_nd_sbp;
   for (int64_t i = 0; i < ndim; ++i) {
     split_nd_sbp.mutable_sbp_parallel()->Add()->mutable_split_parallel()->set_axis(axis);
   }
@@ -35,8 +35,8 @@ Maybe<Symbol<cfg::NdSbp>> GetAllSplitNdSbp(int64_t axis, int64_t ndim) {
 
 auto* CachedGetAllSplitNdSbp = DECORATE(&GetAllSplitNdSbp, ThreadLocal);
 
-Maybe<Symbol<cfg::NdSbp>> GetAllPartialSumNdSbp(int64_t ndim) {
-  cfg::NdSbp split_nd_sbp;
+Maybe<Symbol<NdSbp>> GetAllPartialSumNdSbp(int64_t ndim) {
+  NdSbp split_nd_sbp;
   for (int64_t i = 0; i < ndim; ++i) {
     split_nd_sbp.mutable_sbp_parallel()->Add()->mutable_partial_sum_parallel();
   }
@@ -93,8 +93,9 @@ class EagerSymmetricSToPKernel final : public user_op::OpKernel {
   EagerSymmetricSToPKernel() = default;
   ~EagerSymmetricSToPKernel() override = default;
 
-  void InitOpKernelCache(user_op::KernelCacheContext* ctx, int8_t flag,
-                         std::shared_ptr<user_op::OpKernelCache>* cache_ptr) const override {
+  void InitOpKernelCacheWithFlags(
+      user_op::KernelCacheContext* ctx, int8_t flag,
+      std::shared_ptr<user_op::OpKernelCache>* cache_ptr) const override {
     if (*cache_ptr == nullptr) {
       *cache_ptr = std::make_shared<EagerSymmetricSToPOpKernelCache>(ctx);
     }

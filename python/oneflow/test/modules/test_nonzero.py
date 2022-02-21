@@ -57,10 +57,33 @@ class TestNonzero(flow.unittest.TestCase):
         for arg in GenArgList(arg_dict):
             arg[0](test_case, *arg[1:])
 
-    @autotest(auto_backward=False, check_graph=False)
+    # Not check graph because of one reason:
+    # Reason 1, lazy tensor cannot call .numpy(). tensor.numpy() is not allowed to called in nn.Graph.build(*args) or called by lazy tensor.
+    # Please refer to File "python/oneflow/nn/modules/nonzero.py", line 29, in nonzero_op.
+    @autotest(auto_backward=False, check_graph="ValidatedFlase")
     def test_nonzero_with_random_data(test_case):
         device = random_device()
-        x = random_pytorch_tensor(ndim=random(2, 5).to(int)).to(device)
+        x = random_tensor(ndim=random(2, 5).to(int)).to(device)
+        y = torch.nonzero(x)
+        return y
+
+    # Not check graph because of one reason:
+    # Reason 1, lazy tensor cannot call .numpy(). tensor.numpy() is not allowed to called in nn.Graph.build(*args) or called by lazy tensor.
+    # Please refer to File "python/oneflow/nn/modules/nonzero.py", line 29, in nonzero_op.
+    @autotest(auto_backward=False, check_graph="ValidatedFlase")
+    def test_nonzero_bool_with_random_data(test_case):
+        device = random_device()
+        x = random_tensor(ndim=random(2, 5).to(int)).to(device=device, dtype=torch.bool)
+        y = torch.nonzero(x)
+        return y
+
+    # Not check graph because of one reason:
+    # Reason 1, lazy tensor cannot call .numpy(). tensor.numpy() is not allowed to called in nn.Graph.build(*args) or called by lazy tensor.
+    # Please refer to File "python/oneflow/nn/modules/nonzero.py", line 29, in nonzero_op.
+    @autotest(auto_backward=False, check_graph="ValidatedFlase")
+    def test_nonzero_with_0dim_data(test_case):
+        device = random_device()
+        x = random_tensor(ndim=0).to(device)
         y = torch.nonzero(x)
         return y
 

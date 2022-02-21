@@ -22,20 +22,27 @@ namespace oneflow {
 namespace {
 
 Maybe<void> GetSbpSignatures(user_op::SbpContext* ctx) {
-  int32_t num_axes = ctx->LogicalTensorDesc4InputArgNameAndIndex("like", 0).shape().NumAxes();
+  const auto& x_shape = ctx->LogicalTensorDesc4InputArgNameAndIndex("x", 0).shape();
+  const auto& like_shape = ctx->LogicalTensorDesc4InputArgNameAndIndex("like", 0).shape();
+  int32_t x_num_axes = x_shape.NumAxes();
+  int32_t like_num_axes = like_shape.NumAxes();
   const auto& reduced_axes = ctx->Attr<std::vector<int32_t>>("broadcast_axes");
+  if (x_num_axes != like_num_axes && (x_num_axes + reduced_axes.size() != like_num_axes)) {
+    return Error::RuntimeError() << "Can not broadcast shape " << x_shape.ToString() << " to "
+                                 << like_shape.ToString();
+  }
   HashSet<int32_t> conf_axes;
-  ReduceSbpUtil::GetRegularAxes(num_axes, reduced_axes, &conf_axes);
-  auto IsReducedAxis = ReduceSbpUtil::MakePredicatorIsReducedAxis(conf_axes, num_axes);
+  ReduceSbpUtil::GetRegularAxes(like_num_axes, reduced_axes, &conf_axes);
+  auto IsReducedAxis = ReduceSbpUtil::MakePredicatorIsReducedAxis(conf_axes, like_num_axes);
   int32_t num_reduced_axis = 0;
-  FOR_RANGE(int64_t, i, 0, num_axes) {
+  FOR_RANGE(int64_t, i, 0, like_num_axes) {
     if (IsReducedAxis(i)) {
       ctx->NewBuilder()
           .Broadcast(user_op::OpArg("x", 0))
           .Split(user_op::OpArg("like", 0), i)
           .Split(user_op::OpArg("y", 0), i)
           .Build();
-      num_reduced_axis += 1;
+      if (x_num_axes < like_num_axes) { num_reduced_axis += 1; }
     } else {
       ctx->NewBuilder()
           .Split(user_op::OpArg("x", 0), i - num_reduced_axis)

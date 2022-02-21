@@ -40,21 +40,21 @@ namespace impl {
 
 namespace {
 
-bool IsAllBroadcastNdSbp(Symbol<cfg::NdSbp> nd_sbp) {
+bool IsAllBroadcastNdSbp(Symbol<NdSbp> nd_sbp) {
   for (const auto& sbp_parallel : nd_sbp->sbp_parallel()) {
     if (!sbp_parallel.has_broadcast_parallel()) { return false; }
   }
   return true;
 }
 
-bool IsAllPartialSumNdSbp(Symbol<cfg::NdSbp> nd_sbp) {
+bool IsAllPartialSumNdSbp(Symbol<NdSbp> nd_sbp) {
   for (const auto& sbp_parallel : nd_sbp->sbp_parallel()) {
     if (!sbp_parallel.has_partial_sum_parallel()) { return false; }
   }
   return true;
 }
 
-bool IsAllSplitNdSbp(Symbol<cfg::NdSbp> nd_sbp, int64_t axis) {
+bool IsAllSplitNdSbp(Symbol<NdSbp> nd_sbp, int64_t axis) {
   for (const auto& sbp_parallel : nd_sbp->sbp_parallel()) {
     if (!(sbp_parallel.has_split_parallel() && sbp_parallel.split_parallel().axis() == axis)) {
       return false;
@@ -63,9 +63,7 @@ bool IsAllSplitNdSbp(Symbol<cfg::NdSbp> nd_sbp, int64_t axis) {
   return true;
 }
 
-bool IsSplitSbp(Symbol<cfg::SbpParallel> sbp_parallel) {
-  return sbp_parallel->has_split_parallel();
-}
+bool IsSplitSbp(Symbol<SbpParallel> sbp_parallel) { return sbp_parallel->has_split_parallel(); }
 
 Maybe<one::UserOpExpr> EagerNcclAllReduce(Symbol<ParallelDesc> parallel_desc) {
   return one::OpBuilder("eager_nccl_all_reduce", *JUST(UniqueStr("eager_nccl_all_reduce")))
@@ -99,9 +97,8 @@ Maybe<one::UserOpExpr> EagerNcclAllGather(Symbol<ParallelDesc> parallel_desc) {
 
 static constexpr auto* CachedEagerNcclAllGatherOpExpr = DECORATE(&EagerNcclAllGather, ThreadLocal);
 
-Maybe<one::UserOpExpr> EagerNcclS2S(Symbol<ParallelDesc> parallel_desc,
-                                    Symbol<cfg::SbpParallel> src_sbp,
-                                    Symbol<cfg::SbpParallel> dst_sbp) {
+Maybe<one::UserOpExpr> EagerNcclS2S(Symbol<ParallelDesc> parallel_desc, Symbol<SbpParallel> src_sbp,
+                                    Symbol<SbpParallel> dst_sbp) {
   return one::OpBuilder("eager_nccl_s2s", *JUST(UniqueStr("eager_nccl_s2s")))
       .Input("in")
       .Output("out")
@@ -142,6 +139,31 @@ class BroadcastFunctor {
 
 namespace {
 
+Maybe<one::UserOpExpr> RawStreamTouchFunctorOpExpr(size_t input_size) {
+  return one::OpBuilder("eager_nccl_touch", *JUST(UniqueStr("eager_nccl_touch")))
+      .Input("in", input_size)
+      .Build();
+}
+
+static constexpr auto* StreamTouchFunctorOpExpr =
+    DECORATE(&RawStreamTouchFunctorOpExpr, ThreadLocal);
+
+}  // namespace
+
+class StreamTouchFunctor {
+ public:
+  StreamTouchFunctor() = default;
+  Maybe<void> operator()(const one::TensorTuple& inputs) const {
+    if (inputs.empty()) { return Maybe<void>::Ok(); }
+    std::shared_ptr<UserOpExpr> op_expr = JUST(StreamTouchFunctorOpExpr(inputs.size()));
+    TensorTuple outputs{};
+    JUST(OpInterpUtil::Dispatch(*op_expr, inputs, &outputs));
+    return Maybe<void>::Ok();
+  }
+};
+
+namespace {
+
 Maybe<one::UserOpExpr> RankGroupAndDeviceType2AllReduceOpExpr(Symbol<RankGroup> rank_group,
                                                               DeviceType device_type) {
   const auto& parallel_desc = JUST(RankGroup::GetDefaultParallelDesc(device_type, rank_group));
@@ -161,7 +183,7 @@ auto* CachedRankGroupAndDeviceType2AllReduceOpExpr =
 class LocalAllReduceFunctor {
  public:
   LocalAllReduceFunctor() = default;
-  Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x) const {
+  Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x, bool inplace) const {
     const auto& device = JUST(x->device());
     CHECK_EQ_OR_RETURN(device->device_id(), GlobalProcessCtx::LocalRank());
     const auto& rank_group = JUST(RankGroupScope::CurrentRankGroup());
@@ -170,11 +192,17 @@ class LocalAllReduceFunctor {
     DeviceType device_type = device_type_str == "cuda" ? DeviceType::kCUDA : DeviceType::kCPU;
     std::shared_ptr<OpExpr> op_expr =
         JUST(CachedRankGroupAndDeviceType2AllReduceOpExpr(rank_group, device_type));
+    auto op_input = x;
     if (const auto& static_zeros_tensor = std::dynamic_pointer_cast<StaticZerosTensor>(x)) {
-      return OpInterpUtil::Dispatch<Tensor>(*op_expr,
-                                            {JUST(static_zeros_tensor->AsMirroredTensor())}, {});
+      op_input = std::dynamic_pointer_cast<Tensor>(JUST(static_zeros_tensor->AsMirroredTensor()));
+    }
+    if (inplace) {
+      JUST(CheckInplaceValid(op_input));
+      TensorTuple outputs{op_input};
+      JUST(OpInterpUtil::Dispatch(*op_expr, {op_input}, &outputs));
+      return outputs[0];
     } else {
-      return OpInterpUtil::Dispatch<Tensor>(*op_expr, {x}, {});
+      return OpInterpUtil::Dispatch<Tensor>(*op_expr, {op_input}, {});
     }
   }
 };
@@ -233,9 +261,9 @@ class ConsistentS2SFunctor {
  public:
   ConsistentS2SFunctor() = default;
   Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x,
-                           const std::vector<Symbol<cfg::SbpParallel>>& sbp_parallels) const {
-    Symbol<cfg::NdSbp> in_nd_sbp = JUST(x->nd_sbp());
-    Symbol<cfg::NdSbp> out_nd_sbp = JUST(GetNdSbp(sbp_parallels));
+                           const std::vector<Symbol<SbpParallel>>& sbp_parallels) const {
+    Symbol<NdSbp> in_nd_sbp = JUST(x->nd_sbp());
+    Symbol<NdSbp> out_nd_sbp = JUST(GetNdSbp(sbp_parallels));
     {
       CHECK_OR_RETURN(x->is_consistent());
       CHECK_EQ_OR_RETURN(in_nd_sbp->sbp_parallel_size(), 1);
@@ -372,6 +400,7 @@ class LocalReduceFunctor {
 }  // namespace impl
 
 ONEFLOW_FUNCTION_LIBRARY(m) {
+  m.add_functor<impl::StreamTouchFunctor>("StreamTouch");
   m.add_functor<impl::BroadcastFunctor>("Broadcast");
   m.add_functor<impl::LocalAllReduceFunctor>("LocalAllReduce");
   m.add_functor<impl::ConsistentAllReduceFunctor>("ConsistentAllReduce");

@@ -77,12 +77,12 @@ class COCODataLoaderDistributedTestCase(oneflow.unittest.TestCase):
             batch_size=2, device=flow.device("cpu", rank)
         )
 
-        consistent_coco_loader = COCODataLoader(
+        global_coco_loader = COCODataLoader(
             batch_size=4,
-            placement=flow.placement("cpu", {0: [0, 1]}),
+            placement=flow.placement("cpu", ranks=[0, 1]),
             sbp=[flow.sbp.split(0)],
         )
-        coco_loader_graph = DataLoaderGraph(consistent_coco_loader)
+        coco_loader_graph = DataLoaderGraph(global_coco_loader)
         # coco_loader_graph.debug()
 
         iteration = 1

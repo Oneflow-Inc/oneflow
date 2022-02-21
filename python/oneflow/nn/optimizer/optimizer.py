@@ -23,6 +23,7 @@ from oneflow.framework.tensor import Tensor
 from oneflow.nn.graph.block import TensorBlock
 from oneflow.nn.parameter import Parameter
 from oneflow.nn.utils.clip_grad import clip_grad_norm_
+import oneflow as flow
 
 
 class ParamGroup(object):
@@ -48,6 +49,7 @@ class ParamGroup(object):
         for key in self._options:
             if key in parameters:
                 self._options[key] = parameters[key]
+
         self._enable_clip_grad = False
         if "clip_grad_max_norm" in parameters and "clip_grad_norm_type" in parameters:
             self._enable_clip_grad = True
@@ -63,6 +65,10 @@ class ParamGroup(object):
     def __contains__(self, key):
         return self._options.__contains__(key)
 
+    def setdefault(self, key, value):
+        if key not in self._options:
+            self._options[key] = value
+
     def items(self):
         return self.__dict__.items()
 
@@ -75,6 +81,27 @@ class ParamGroup(object):
         return self._parameters
 
 
+class _SourceOpOnlyResourceDependenceMode:
+    def __init__(self):
+        self.guard_ = None
+
+    def __enter__(self):
+        self.guard = (
+            flow._oneflow_internal.eager.multi_client.SourceOpOnlyResourceDependenceModeGuard()
+        )
+
+    def __exit__(self, *args, **kwargs):
+        del self.guard
+
+
+def _decorate_step(step):
+    def decorated_step(*args, **kwargs):
+        with _SourceOpOnlyResourceDependenceMode():
+            return step(*args, **kwargs)
+
+    return decorated_step
+
+
 class Optimizer(object):
     def __init__(self, parameters, options):
         self.param_groups = list()
@@ -83,6 +110,8 @@ class Optimizer(object):
         self._state["step"] = 0
 
         self._parse_input_parameters(parameters)
+
+        self.step = _decorate_step(self.step)
 
     def add_param_group(self, param_group) -> None:
         raise NotImplementedError()
@@ -125,9 +154,7 @@ class Optimizer(object):
                 if value.is_local:
                     value = value.to(param.device)
                 else:
-                    value = value.to_consistent(
-                        placement=param.placement, sbp=param.sbp
-                    )
+                    value = value.to_global(placement=param.placement, sbp=param.sbp)
                 return value
             elif isinstance(value, dict):
                 return {k: cast(param, v) for k, v in value.items()}
@@ -205,13 +232,13 @@ class Optimizer(object):
     def clip_grad(self):
         r"""Clips gradient norm of an iterable of parameters. 
         The norm is computed over all gradients together, as if they were concatenated into a single vector.
-        
+
         You can set the max_norm and norm_type. 
 
         For more details, you can refer to the documentation of each optimizer(like Adam, SGD and so on). 
 
         You can also refer the code in :func:`oneflow.nn.utils.clip_grad_norm_`
-        
+
         """
         for param_group in self.param_groups:
             if param_group._enable_clip_grad:
@@ -308,7 +335,7 @@ class Optimizer(object):
                 if param not in vars_conf:
                     raise ValueError(
                         f"Parameter <{param}> is not in the corresponding nn.Graph/nn.Module."
-                        " Please make sure you call the module's to(..)/to_consistent(...) method first,"
+                        " Please make sure you call the module's to(..)/to_global(...) method first,"
                         " then add the module's parameters into an optimizer."
                     )
 

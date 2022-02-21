@@ -23,15 +23,16 @@ limitations under the License.
 #include "oneflow/core/ep/cuda/cuda_stream.h"
 
 // General executable setup.
-DEFINE_int64(max_workspace_bytes, EnvToInt64(FLAGS_max_workspace_bytes, -1),
-             "Maximum temporary workspace bytes.");
-// TENSORRT executable setup.
-DEFINE_int32(max_batch_size, EnvToInt(FLAGS_max_batch_size, 1),
-             "Maximum batch size for builder of TENSORRT engine.");
+// Maximum temporary workspace bytes.
+int64_t FLAGS_max_workspace_bytes = EnvToInt64(FLAGS_max_workspace_bytes, -1);
 
-DECLARE_bool(tensorrt_fp16);
-DECLARE_bool(tensorrt_int8);
-DECLARE_string(int8_calibration);
+// TENSORRT executable setup.
+// Maximum batch size for builder of TENSORRT engine.
+int32_t FLAGS_max_batch_size = EnvToInt(FLAGS_max_batch_size, 1);
+
+extern bool FLAGS_tensorrt_fp16;
+extern bool FLAGS_tensorrt_int8;
+extern std::string FLAGS_int8_calibration;
 
 namespace oneflow {
 namespace xrt {
@@ -95,11 +96,9 @@ xrt::Executable* XrtLaunchKernel<device_type>::BuildExecutable(
       std::unordered_map<std::string, BlobDesc> entry_blob_descs;
       desc_getter_.DumpEntryBlobDescTo(&entry_blob_descs);
       auto options = xrt::CreateDefaultXrtPassOptions();
-      xrt::util::PbMap<std::string, cfg::SbpSignature> cfg_sbp_signatures;
-      for (auto& pair : sbp_signatures) {
-        cfg_sbp_signatures.insert({pair.first, cfg::SbpSignature(pair.second)});
-      }
-      const xrt::util::PbMap<std::string, cfg::SbpSignature>* const_cfg_sbp_signatures_ptr =
+      xrt::util::PbMap<std::string, SbpSignature> cfg_sbp_signatures;
+      for (auto& pair : sbp_signatures) { cfg_sbp_signatures.insert({pair.first, pair.second}); }
+      const xrt::util::PbMap<std::string, SbpSignature>* const_cfg_sbp_signatures_ptr =
           &cfg_sbp_signatures;
       xrt::RunXrtPass("InferShape", graph.get(), options, &parallel_ctx, &parallel_desc,
                       const_cfg_sbp_signatures_ptr, &lbn2logical_blob_desc, &entry_blob_descs);
@@ -117,7 +116,7 @@ xrt::Executable* XrtLaunchKernel<device_type>::BuildExecutable(
     executable = compilation_cache_->GetRecord(signature);
   }
 
-  return std::move(executable);
+  return executable;
 }
 
 template<DeviceType device_type>

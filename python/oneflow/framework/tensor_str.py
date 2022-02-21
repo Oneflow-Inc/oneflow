@@ -17,10 +17,10 @@ limitations under the License.
 This file is mostly referenced from PyTorch v1.8.1 torch/_tensor_str.py
 """
 
+
 import math
 import numpy as np
 from typing import Optional
-
 import oneflow as flow
 from oneflow.framework.tensor_str_util import slice_wrapper
 from oneflow.framework.tensor_str_util import _autoset_linewidth
@@ -286,7 +286,7 @@ def _tensor_str(self, indent):
         self = self.float()
 
     # TODO: not support nd sbp tensor for now
-    if self.is_consistent and len(self.placement.hierarchy) > 1:
+    if self.is_global and len(self.placement.ranks.shape) > 1:
         return "[...]"
 
     with flow.no_grad():
@@ -349,8 +349,8 @@ def _gen_tensor_str_template(tensor, is_meta):
     indent = len(prefix)
     suffixes = []
 
-    # tensor is local or consistent
-    if tensor.is_consistent:
+    # tensor is local or global
+    if tensor.is_global:
         suffixes.append(f"placement={str(tensor.placement)}")
         suffixes.append(f"sbp={str(tensor.sbp)}")
     elif tensor.device.type == "cuda" or tensor.device.type == "gpu":

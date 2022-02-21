@@ -34,12 +34,12 @@ namespace oneflow {
 }
 
 /* static */ Maybe<void> CastToTickOp::InferNdSbp(user_op::InferNdSbpFnContext* ctx) {
-  const cfg::NdSbp& in_dis_hint = ctx->NdSbpHint4InputArgNameAndIndex("in", 0);
+  const NdSbp& in_dis_hint = ctx->NdSbpHint4InputArgNameAndIndex("in", 0);
   const Shape& parallel_hierarchy = ctx->parallel_hierarchy();
   CHECK_EQ_OR_RETURN(in_dis_hint.sbp_parallel_size(), parallel_hierarchy.NumAxes());
 
-  cfg::NdSbp* in_distribution = ctx->NdSbp4ArgNameAndIndex("in", 0);
-  cfg::NdSbp* out_distribution = ctx->NdSbp4ArgNameAndIndex("out", 0);
+  NdSbp* in_distribution = ctx->NdSbp4ArgNameAndIndex("in", 0);
+  NdSbp* out_distribution = ctx->NdSbp4ArgNameAndIndex("out", 0);
   in_distribution->clear_sbp_parallel();
   out_distribution->clear_sbp_parallel();
   // in use hint

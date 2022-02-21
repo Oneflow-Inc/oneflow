@@ -420,7 +420,7 @@ class TestInstanceNorm(flow.unittest.TestCase):
         for arg in GenArgList(arg_dict):
             arg[0](test_case, *arg[1:])
 
-    @autotest(n=5, auto_backward=True, rtol=1e-3, atol=1e-3, check_graph=False)
+    @autotest(n=5, auto_backward=True, rtol=1e-3, atol=1e-3, check_graph=True)
     def test_instancenorm_with_random_data(test_case):
         height = random(1, 6).to(int)
         width = random(1, 6).to(int)
@@ -434,11 +434,11 @@ class TestInstanceNorm(flow.unittest.TestCase):
         m.train(random())
         device = random_device()
         m.to(device)
-        x = random_pytorch_tensor(ndim=3, dim1=height, dim2=width).to(device)
+        x = random_tensor(ndim=3, dim1=height, dim2=width).to(device)
         y = m(x)
         return y
 
-    @autotest(n=5, auto_backward=True, rtol=1e-3, atol=1e-3, check_graph=False)
+    @autotest(n=5, auto_backward=True, rtol=1e-3, atol=1e-3, check_graph=True)
     def test_instancenorm_with_random_data(test_case):
         channel = random(1, 6).to(int)
         height = random(1, 6).to(int)
@@ -453,13 +453,11 @@ class TestInstanceNorm(flow.unittest.TestCase):
         m.train(random())
         device = random_device()
         m.to(device)
-        x = random_pytorch_tensor(ndim=4, dim1=channel, dim2=height, dim3=width).to(
-            device
-        )
+        x = random_tensor(ndim=4, dim1=channel, dim2=height, dim3=width).to(device)
         y = m(x)
         return y
 
-    @autotest(n=5, auto_backward=False, rtol=1e-3, atol=1e-3, check_graph=False)
+    @autotest(n=5, auto_backward=False, rtol=1e-3, atol=1e-3, check_graph=True)
     def test_instancenorm_with_random_data(test_case):
         channel = random(1, 6).to(int)
         depth = random(1, 6).to(int)
@@ -477,9 +475,9 @@ class TestInstanceNorm(flow.unittest.TestCase):
         m.train(random())
         device = random_device()
         m.to(device)
-        x = random_pytorch_tensor(
-            ndim=5, dim1=channel, dim2=depth, dim3=height, dim4=width
-        ).to(device)
+        x = random_tensor(ndim=5, dim1=channel, dim2=depth, dim3=height, dim4=width).to(
+            device
+        )
         y = m(x)
         return y
 

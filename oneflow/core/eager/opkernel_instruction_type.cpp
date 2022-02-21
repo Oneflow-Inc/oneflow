@@ -18,20 +18,14 @@ limitations under the License.
 #include "oneflow/core/job/job_desc.h"
 #include "oneflow/core/job/parallel_desc.h"
 #include "oneflow/core/operator/operator.h"
-#include "oneflow/core/eager/opkernel_object.h"
 #include "oneflow/core/eager/eager_blob_object.h"
-#include "oneflow/core/vm/object_wrapper.h"
-#include "oneflow/core/vm/string_object.h"
 #include "oneflow/core/vm/stream.h"
 #include "oneflow/core/vm/thread_ctx.h"
 #include "oneflow/core/vm/cuda_stream_type.h"
-#include "oneflow/core/eager/opkernel_instruction.h"
 #include "oneflow/core/eager/opkernel_instruction_type.h"
 #include "oneflow/core/eager/local_call_opkernel_phy_instr_operand.h"
-#include "oneflow/core/vm/device_helper_stream_type.h"
 #include "oneflow/core/vm/instruction.h"
 #include "oneflow/core/vm/instruction_type.h"
-#include "oneflow/core/vm/object.h"
 #include "oneflow/core/framework/user_op_registry_manager.h"
 #include "oneflow/core/job/foreign_callback.h"
 #include "oneflow/core/job/parallel_signature.cfg.h"
@@ -46,427 +40,42 @@ limitations under the License.
 namespace oneflow {
 namespace vm {
 
-class InitOpKernelObjectInstructionType final : public vm::InstructionType {
- public:
-  InitOpKernelObjectInstructionType() = default;
-  ~InitOpKernelObjectInstructionType() override = default;
-
-  using stream_type = vm::DeviceHelperStreamType;
-
-  void Infer(vm::Instruction* instruction) const override {
-    FlatMsgView<NewOpKernelObjectInstrOperand> view;
-    CHECK(view.Match(instruction->instr_msg().operand()));
-    CHECK_EQ(view->op_conf_size(), view->op_size());
-    const auto* operand_job_desc = instruction->operand_type(view->job_desc());
-    CHECK_NOTNULL(operand_job_desc);
-    const auto& job_desc_object = CHECK_JUST(operand_job_desc->Get<vm::ObjectWrapper<JobDesc>>());
-    for (int i = 0; i < view->op_size(); ++i) {
-      CHECK_GT(view->op(i).logical_object_id(), 0);
-      const auto* operand_op_conf = instruction->operand_type(view->op_conf(i));
-      CHECK_NOTNULL(operand_op_conf);
-      const auto& op_conf_object =
-          CHECK_JUST(operand_op_conf->Get<vm::ObjectWrapper<OperatorConfSymbol>>());
-      CHECK(op_conf_object.Get().op_conf().has_user_conf());
-      vm::RwMutexedObject* rw_mutexed_object = instruction->mut_operand_type(view->op(i));
-      const auto& parallel_desc = instruction->parallel_desc();
-      CHECK(static_cast<bool>(parallel_desc));
-      DeviceType device_type = parallel_desc->device_type();
-      rw_mutexed_object->Init<OpKernelObject>(op_conf_object.Get().op_conf(),
-                                              job_desc_object.GetPtr(), device_type);
-    }
-  }
-  void Compute(vm::Instruction* instruction) const override {
-    // do nothing
-  }
-};
-COMMAND(vm::RegisterInstructionType<InitOpKernelObjectInstructionType>("InitOpKernelObject"));
-
-class DeleteOpKernelObjectInstructionType final : public vm::InstructionType {
- public:
-  DeleteOpKernelObjectInstructionType() = default;
-  ~DeleteOpKernelObjectInstructionType() override = default;
-
-  using stream_type = vm::DeviceHelperStreamType;
-
-  void Infer(vm::Instruction* instruction) const override {
-    FlatMsgView<DeleteOpKernelObjectInstrOperand> view;
-    CHECK(view.Match(instruction->instr_msg().operand()));
-    for (int i = 0; i < view->op_size(); ++i) {
-      auto* type_rw_mutexed_object = instruction->mut_operand_type(view->op(i));
-      CHECK(type_rw_mutexed_object->Has<OpKernelObject>());
-      type_rw_mutexed_object->reset_object();
-    }
-  }
-  void Compute(vm::Instruction* instruction) const override {
-    // do nothing
-  }
-};
-COMMAND(vm::RegisterInstructionType<DeleteOpKernelObjectInstructionType>("DeleteOpKernelObject"));
-
-namespace {
-
-template<typename T, typename CallbackT>
-Maybe<void> ForEachConstInputBnAndBlobObject(vm::Instruction* instruction, const T& args,
-                                             const CallbackT& Callback) {
-  CHECK_EQ_OR_RETURN(args.const_ibn_size(), args.const_input_blob_size());
-  FOR_RANGE(int, i, 0, args.const_ibn_size()) {
-    const auto* operand_ibn = instruction->operand_type(args.const_ibn(i));
-    CHECK_NOTNULL_OR_RETURN(operand_ibn);
-    const std::string& bn_in_op = JUST(operand_ibn->template Get<vm::StringObject>()).str();
-    const auto* operand_input_blob = instruction->operand_type(args.const_input_blob(i));
-    CHECK_NOTNULL_OR_RETURN(operand_input_blob)
-        << "bn_in_op: " << bn_in_op
-        << ", object_id: " << args.const_input_blob(i).logical_object_id();
-    const auto& blob_object = JUST(operand_input_blob->template Get<BlobObject>());
-    JUST(Callback(bn_in_op, blob_object));
-  }
-  return Maybe<void>::Ok();
-}
-
-template<typename T, typename CallbackT>
-Maybe<void> ForEachMutInputBnAndBlobObject(vm::Instruction* instruction, const T& args,
-                                           const CallbackT& Callback) {
-  CHECK_EQ_OR_RETURN(args.mut_ibn_size(), args.mut_input_blob_size());
-  FOR_RANGE(int, i, 0, args.mut_ibn_size()) {
-    const auto* operand_ibn = instruction->operand_type(args.mut_ibn(i));
-    CHECK_NOTNULL_OR_RETURN(operand_ibn);
-    const std::string& bn_in_op = JUST(operand_ibn->template Get<vm::StringObject>()).str();
-    auto* operand_input_blob = instruction->mut_operand_type(args.mut_input_blob(i));
-    CHECK_NOTNULL_OR_RETURN(operand_input_blob)
-        << "bn_in_op: " << bn_in_op
-        << ", object_id: " << args.mut_input_blob(i).logical_object_id();
-    auto* blob_object = JUST(operand_input_blob->template Mut<BlobObject>());
-    JUST(Callback(bn_in_op, blob_object));
-  }
-  return Maybe<void>::Ok();
-}
-
-template<typename T, typename CallbackT>
-Maybe<void> ForEachOutputBnAndBlobObject(vm::Instruction* instruction, const T& args,
-                                         const CallbackT& Callback) {
-  CHECK_EQ_OR_RETURN(args.obn_size(), args.output_blob_size());
-  FOR_RANGE(int, i, 0, args.obn_size()) {
-    const auto* operand_obn = instruction->operand_type(args.obn(i));
-    CHECK_NOTNULL_OR_RETURN(operand_obn);
-    const std::string& bn_in_op = JUST(operand_obn->template Get<vm::StringObject>()).str();
-    auto* operand_output_blob = instruction->mut_operand_type(args.output_blob(i));
-    CHECK_NOTNULL_OR_RETURN(operand_output_blob) << "obn: " << bn_in_op;
-    auto* blob_object = JUST(operand_output_blob->template Mut<BlobObject>());
-    JUST(Callback(bn_in_op, blob_object));
-  }
-  CHECK_EQ_OR_RETURN(args.mut2_obn_size(), args.mut2_output_blob_size());
-  FOR_RANGE(int, i, 0, args.mut2_obn_size()) {
-    const auto* operand_obn = instruction->operand_type(args.mut2_obn(i));
-    CHECK_NOTNULL_OR_RETURN(operand_obn);
-    const std::string& bn_in_op = JUST(operand_obn->template Get<vm::StringObject>()).str();
-    auto* operand_output_blob = instruction->mut_operand_type(args.mut2_output_blob(i));
-    CHECK_NOTNULL_OR_RETURN(operand_output_blob) << "obn: " << bn_in_op;
-    auto* blob_object = JUST(operand_output_blob->template Mut<BlobObject>());
-    JUST(Callback(bn_in_op, blob_object));
-  }
-  return Maybe<void>::Ok();
-}
-
-template<typename T>
-Maybe<void> MakeBlobDesc4BnInOp(vm::Instruction* instruction, const T& args,
-                                std::function<BlobDesc*(const std::string&)>* BlobDesc4BnInOp) {
-  const auto& obn2blob_desc = std::make_shared<HashMap<std::string, BlobDesc*>>();
-  {
-    HashSet<const BlobDesc*> out_blob_descs;
-    JUST(ForEachOutputBnAndBlobObject(
-        instruction, args,
-        [&](const std::string& bn_in_op, BlobObject* blob_object) -> Maybe<void> {
-          auto* blob_desc = blob_object->mut_blob_desc();
-          CHECK_OR_RETURN(out_blob_descs.insert(blob_desc).second);
-          CHECK_OR_RETURN(obn2blob_desc->emplace(bn_in_op, blob_desc).second);
-          return Maybe<void>::Ok();
-        }));
-  }
-  const auto& ibn2blob_desc = std::make_shared<HashMap<std::string, const BlobDesc*>>();
-  JUST(ForEachConstInputBnAndBlobObject(
-      instruction, args,
-      [&](const std::string& bn_in_op, const BlobObject& blob_object) -> Maybe<void> {
-        CHECK_OR_RETURN(ibn2blob_desc->emplace(bn_in_op, &blob_object.blob_desc()).second);
-        return Maybe<void>::Ok();
-      }));
-  JUST(ForEachMutInputBnAndBlobObject(
-      instruction, args, [&](const std::string& bn_in_op, BlobObject* blob_object) -> Maybe<void> {
-        CHECK_OR_RETURN(ibn2blob_desc->emplace(bn_in_op, &blob_object->blob_desc()).second);
-        return Maybe<void>::Ok();
-      }));
-  *BlobDesc4BnInOp = [obn2blob_desc, ibn2blob_desc](const std::string& bn_in_op) -> BlobDesc* {
-    const auto& output_iter = obn2blob_desc->find(bn_in_op);
-    if (output_iter != obn2blob_desc->end()) { return output_iter->second; }
-    const auto& input_iter = ibn2blob_desc->find(bn_in_op);
-    if (input_iter != ibn2blob_desc->end()) { return const_cast<BlobDesc*>(input_iter->second); }
-    return nullptr;
-  };
-  return Maybe<void>::Ok();
-}
-
-template<typename T>
-Maybe<void> MakeBlob4BnInOp(
-    vm::Instruction* instruction, const T& args,
-    std::function<Blob*(const std::string&)>* Blob4BnInOp,
-    const std::function<bool(const std::string&, const BlobObject&)>& FilterOutBlob) {
-  const auto& obn2blob = std::make_shared<HashMap<std::string, Blob*>>();
-  JUST(ForEachOutputBnAndBlobObject(
-      instruction, args, [&](const std::string& bn_in_op, BlobObject* blob_object) -> Maybe<void> {
-        if (!FilterOutBlob(bn_in_op, *blob_object)) { return Maybe<void>::Ok(); }
-        CHECK_OR_RETURN(obn2blob->emplace(bn_in_op, blob_object->mut_blob()).second);
-        return Maybe<void>::Ok();
-      }));
-  const auto& ibn2blob = std::make_shared<HashMap<std::string, const Blob*>>();
-  JUST(ForEachConstInputBnAndBlobObject(
-      instruction, args,
-      [&](const std::string& bn_in_op, const BlobObject& blob_object) -> Maybe<void> {
-        CHECK_OR_RETURN(ibn2blob->emplace(bn_in_op, &blob_object.blob()).second);
-        return Maybe<void>::Ok();
-      }));
-  JUST(ForEachMutInputBnAndBlobObject(
-      instruction, args, [&](const std::string& bn_in_op, BlobObject* blob_object) -> Maybe<void> {
-        CHECK_OR_RETURN(ibn2blob->emplace(bn_in_op, blob_object->mut_blob()).second);
-        return Maybe<void>::Ok();
-      }));
-  *Blob4BnInOp = [obn2blob, ibn2blob](const std::string& bn_in_op) -> Blob* {
-    const auto& output_iter = obn2blob->find(bn_in_op);
-    if (output_iter != obn2blob->end()) { return output_iter->second; }
-    const auto& input_iter = ibn2blob->find(bn_in_op);
-    if (input_iter != ibn2blob->end()) { return const_cast<Blob*>(input_iter->second); }
-    return nullptr;
-  };
-  return Maybe<void>::Ok();
-}
-
-template<typename T>
-Maybe<void> MakeBlob4BnInOp(vm::Instruction* instruction, const T& args,
-                            std::function<Blob*(const std::string&)>* Blob4BnInOp) {
-  return MakeBlob4BnInOp(instruction, args, Blob4BnInOp,
-                         [](const std::string&, const BlobObject&) { return true; });
-}
-
-template<typename T>
-void InitOutputBlobObjects(vm::Instruction* instruction, const T& args,
-                           const std::shared_ptr<MemoryCase>& mem_case, DataType data_type) {
-  const auto& InitRwMutexedObject = [&](vm::RwMutexedObject* rw_mutexed_object) {
-    const auto& parallel_desc = instruction->parallel_desc();
-    CHECK(static_cast<bool>(parallel_desc));
-    if (rw_mutexed_object->has_object()) {
-      // mutable input
-      CHECK(rw_mutexed_object->Has<BlobObject>());
-    } else {
-      rw_mutexed_object->Init<EagerBlobObject>(mem_case, std::make_shared<Shape>(), data_type,
-                                               std::make_shared<TensorStorage>());
-    }
-  };
-  FOR_RANGE(int, i, 0, args.output_blob_size()) {
-    InitRwMutexedObject(instruction->mut_operand_type(args.output_blob(i)));
-  }
-  FOR_RANGE(int, i, 0, args.mut2_output_blob_size()) {
-    InitRwMutexedObject(instruction->mut_operand_type(args.mut2_output_blob(i)));
-  }
-}
-
-template<typename T>
-Maybe<void> CheckBlobParallel(vm::Instruction* instruction, const T& args,
-                              const OpNodeSignatureDesc* op_node_signature) {
-  const auto& bn_in_op2parallel_desc_symbol_id =
-      op_node_signature->parallel_signature().bn_in_op2parallel_desc_symbol_id();
-
-  const auto& ParallelDesc4BnInOp = [&](const std::string& bn_in_op) -> Maybe<const ParallelDesc*> {
-    const auto& iter = bn_in_op2parallel_desc_symbol_id.find(bn_in_op);
-    // TODO(Liang Depeng): should not tolerate nullptr.
-    if (iter == bn_in_op2parallel_desc_symbol_id.end()) { return nullptr; }
-    int64_t symbol_id = iter->second;
-    const symbol::Storage<ParallelDesc>* symbol_storage_ptr =
-        Global<symbol::Storage<ParallelDesc>>::Get();
-    CHECK_OR_RETURN(symbol_storage_ptr->Has(symbol_id));
-    return symbol_storage_ptr->GetPtr(symbol_id).get();
-  };
-
-  JUST(ForEachOutputBnAndBlobObject(
-      instruction, args, [&](const std::string& bn_in_op, BlobObject* blob_object) -> Maybe<void> {
-        const auto* parallel_desc = JUST(ParallelDesc4BnInOp(bn_in_op));
-        if (parallel_desc == nullptr) { return Maybe<void>::Ok(); }
-        JUST(blob_object->CheckMemCase(*parallel_desc, instruction->stream().machine_id()));
-        return Maybe<void>::Ok();
-      }));
-
-  JUST(ForEachConstInputBnAndBlobObject(
-      instruction, args,
-      [&](const std::string& bn_in_op, const BlobObject& blob_object) -> Maybe<void> {
-        const auto* parallel_desc = JUST(ParallelDesc4BnInOp(bn_in_op));
-        if (parallel_desc == nullptr) { return Maybe<void>::Ok(); }
-        JUST(blob_object.CheckMemCase(*parallel_desc, instruction->stream().machine_id()));
-        return Maybe<void>::Ok();
-      }));
-  JUST(ForEachMutInputBnAndBlobObject(
-      instruction, args, [&](const std::string& bn_in_op, BlobObject* blob_object) -> Maybe<void> {
-        const auto* parallel_desc = JUST(ParallelDesc4BnInOp(bn_in_op));
-        if (parallel_desc == nullptr) { return Maybe<void>::Ok(); }
-        JUST(blob_object->CheckMemCase(*parallel_desc, instruction->stream().machine_id()));
-        return Maybe<void>::Ok();
-      }));
-  return Maybe<void>::Ok();
-}
-
-template<typename T>
-Maybe<void> OpKernelInfer(OpKernelObject* opkernel_obj, vm::Instruction* instruction, const T& args,
-                          const std::shared_ptr<MemoryCase>& mem_case) {
-  {
-    DataType default_data_type = opkernel_obj->job_desc().DefaultDataType();
-    CHECK_NE_OR_RETURN(default_data_type, DataType::kInvalidDataType);
-    InitOutputBlobObjects(instruction, args, mem_case, default_data_type);
-  }
-  std::function<BlobDesc*(const std::string&)> BlobDesc4BnInOp;
-  JUST(MakeBlobDesc4BnInOp(instruction, args, &BlobDesc4BnInOp));
-  const OpNodeSignatureDesc* op_node_signature = nullptr;
-  {
-    const auto* operand = instruction->operand_type(args.op_node_signature());
-    const auto& op_node_signature_object =
-        JUST(operand->template Get<vm::ObjectWrapper<OpNodeSignatureDesc>>());
-    op_node_signature = &op_node_signature_object.Get();
-  }
-  ParallelContext parallel_ctx;
-  JUST(instruction->parallel_desc()->GetParallelContext(
-      &parallel_ctx, instruction->stream().machine_id(), instruction->stream().device_id()));
-  JUST(opkernel_obj->ResetOpAndKernel(*op_node_signature, &parallel_ctx, BlobDesc4BnInOp,
-                                      instruction->parallel_desc().get()));
-  JUST(CheckBlobParallel(instruction, args, op_node_signature));
-  JUST(ForEachOutputBnAndBlobObject(
-      instruction, args, [](const std::string& obn, BlobObject* blob_object) -> Maybe<void> {
-        return blob_object->TryInitBlob();
-      }));
-  std::function<Blob*(const std::string&)> Blob4BnInOp;
-  Shape empty_shape{};
-  const auto& FilterOutBlob = [&](const std::string& bn_in_op, const BlobObject& blob_object) {
-    return !(bn_in_op == "tmp_buffer_0" && blob_object.blob_desc().shape() == empty_shape);
-  };
-  JUST(MakeBlob4BnInOp(instruction, args, &Blob4BnInOp, FilterOutBlob));
-  opkernel_obj->kernel().Infer(Blob4BnInOp);
-  return Maybe<void>::Ok();
-}
-
-Maybe<void> OpKernelInfer(SystemOpKernelObject* opkernel_obj, vm::Instruction* instruction,
-                          const StatelessCallOpKernelInstrOperand& args,
-                          const std::shared_ptr<MemoryCase>& mem_case) {
-  {
-    DataType default_data_type = opkernel_obj->job_desc().DefaultDataType();
-    CHECK_NE_OR_RETURN(default_data_type, DataType::kInvalidDataType);
-    InitOutputBlobObjects(instruction, args, mem_case, default_data_type);
-  }
-  std::function<BlobDesc*(const std::string&)> BlobDesc4BnInOp;
-  JUST(MakeBlobDesc4BnInOp(instruction, args, &BlobDesc4BnInOp));
-  const OpNodeSignatureDesc* op_node_signature = nullptr;
-  {
-    const auto* operand = instruction->operand_type(args.op_node_signature());
-    const auto& op_node_signature_object =
-        JUST(operand->template Get<vm::ObjectWrapper<OpNodeSignatureDesc>>());
-    op_node_signature = &op_node_signature_object.Get();
-  }
-  ParallelContext parallel_ctx;
-  JUST(instruction->parallel_desc()->GetParallelContext(
-      &parallel_ctx, instruction->stream().machine_id(), instruction->stream().device_id()));
-  JUST(opkernel_obj->ResetKernel(*op_node_signature, &parallel_ctx, BlobDesc4BnInOp,
-                                 instruction->parallel_desc().get()));
-  JUST(CheckBlobParallel(instruction, args, op_node_signature));
-  JUST(ForEachOutputBnAndBlobObject(
-      instruction, args, [](const std::string& obn, BlobObject* blob_object) -> Maybe<void> {
-        return blob_object->TryInitBlob();
-      }));
-  std::function<Blob*(const std::string&)> Blob4BnInOp;
-  JUST(MakeBlob4BnInOp(instruction, args, &Blob4BnInOp));
-  opkernel_obj->kernel_ctx()->UpdateBnInOp2BlobFn(Blob4BnInOp);
-  opkernel_obj->kernel().SystemForwardHeader(opkernel_obj->kernel_ctx());
-  return Maybe<void>::Ok();
-}
-
-template<typename T>
-Maybe<void> OpKernelCompute(OpKernelObject* opkernel_obj, vm::Instruction* instruction,
-                            const T& args) {
-  DeviceCtx* device_ctx = instruction->stream().device_ctx().get();
-  JUST(ForEachOutputBnAndBlobObject(
-      instruction, args, [&](const std::string&, BlobObject* blob_object) -> Maybe<void> {
-        JUST(blob_object->TryAllocateBlobBodyMemory(device_ctx));
-        return Maybe<void>::Ok();
-      }));
-  std::shared_ptr<user_op::OpKernelState> new_state;
-  {
-    std::function<Blob*(const std::string&)> Blob4BnInOp;
-    Shape empty_shape{};
-    const auto& FilterOutBlob = [&](const std::string& bn_in_op, const BlobObject& blob_object) {
-      return !(bn_in_op == "tmp_buffer_0" && blob_object.blob_desc().shape() == empty_shape);
-    };
-    JUST(MakeBlob4BnInOp(instruction, args, &Blob4BnInOp, FilterOutBlob));
-    EagerKernel* eager_kernel = opkernel_obj->mut_kernel();
-    const auto& old_state = opkernel_obj->opkernel_state();
-    new_state = eager_kernel->EagerForward(old_state, device_ctx, Blob4BnInOp);
-  }
-  opkernel_obj->reset_opkernel_state(new_state);
-  return Maybe<void>::Ok();
-}
-
-Maybe<void> OpKernelCompute(SystemOpKernelObject* opkernel_obj, vm::Instruction* instruction,
-                            const StatelessCallOpKernelInstrOperand& args) {
-  DeviceCtx* device_ctx = instruction->stream().device_ctx().get();
-  JUST(ForEachOutputBnAndBlobObject(
-      instruction, args, [&](const std::string&, BlobObject* blob_object) -> Maybe<void> {
-        JUST(blob_object->TryAllocateBlobBodyMemory(device_ctx));
-        return Maybe<void>::Ok();
-      }));
-  std::function<Blob*(const std::string&)> Blob4BnInOp;
-  JUST(MakeBlob4BnInOp(instruction, args, &Blob4BnInOp));
-  opkernel_obj->kernel_ctx()->UpdateBnInOp2BlobFn(Blob4BnInOp);
-  opkernel_obj->kernel_ctx()->set_device_ctx(device_ctx);
-  opkernel_obj->kernel().SystemForwardDataContent(opkernel_obj->kernel_ctx());
-  return Maybe<void>::Ok();
-}
-
-template<typename T>
-Maybe<T*> GetSharedOpKernel(vm::Instruction* instruction, DeviceType device_type,
-                            const StatelessCallOpKernelInstrOperand& args) {
-  const auto* operand_job_desc = instruction->operand_type(args.job_desc());
-  CHECK_NOTNULL_OR_RETURN(operand_job_desc);
-  const auto& job_desc_ptr = JUST(operand_job_desc->Get<vm::ObjectWrapper<JobDesc>>()).GetPtr();
-  const auto* operand_op_conf = instruction->mut_operand_type(args.op_conf());
-  const auto& op_conf =
-      JUST(operand_op_conf->Get<vm::ObjectWrapper<OperatorConfSymbol>>()).Get().op_conf();
-  vm::RwMutexedObject* rw_mutexed_object = instruction->mut_operand_type(args.shared_opkernel());
-  CHECK_OR_RETURN(!rw_mutexed_object->has_object() || rw_mutexed_object->Has<OpKernelObject>()
-                  || rw_mutexed_object->Has<SystemOpKernelObject>());
-  const auto& parallel_desc = instruction->parallel_desc();
-  CHECK_OR_RETURN(static_cast<bool>(parallel_desc));
-  CHECK_EQ_OR_RETURN(device_type, parallel_desc->device_type());
-  rw_mutexed_object->reset_object();
-  return rw_mutexed_object->Init<T>(op_conf, job_desc_ptr, device_type);
-}
-
-}  // namespace
-
 struct LocalCallOpKernelUtil final {
-  static inline Maybe<void> Compute(vm::Instruction* instruction) {
-    auto* operand = LocalCallOpKernelUtil::GetLocalCallOpKernelPhyInstrOperand(instruction);
+  static inline Maybe<void> Compute(const vm::InstructionMsg& instr_msg) {
+    OF_PROFILER_RANGE_PUSH("ResetPrior");
+    auto* operand = LocalCallOpKernelUtil::GetLocalCallOpKernelPhyInstrOperand(instr_msg);
     operand->mut_opkernel()->composed_attrs_for_scheduler_thread()->ResetPrior(operand->attrs());
-    DeviceCtx* device_ctx = instruction->stream().device_ctx().get();
+    DeviceCtx* device_ctx = instr_msg.phy_instr_stream()->device_ctx().get();
+    OF_PROFILER_RANGE_POP();
+    OF_PROFILER_RANGE_PUSH("AllocateOutputBlobsMemory");
     JUST(AllocateOutputBlobsMemory(operand, device_ctx));
+    OF_PROFILER_RANGE_POP();
     if (unlikely(operand->need_temp_storage())) {
+      OF_PROFILER_RANGE_PUSH("TryAllocateTempStorageBlobMemory");
       InferTempStorageBlobDesc(operand);
       JUST(ResetTempStorageBlob(operand));
       JUST(TryAllocateTempStorageBlobMemory(operand, device_ctx));
+      OF_PROFILER_RANGE_POP();
     }
     user_op::OpKernelState* state = nullptr;
     user_op::OpKernelCache* cache = nullptr;
-    TryInitOpKernelStateAndCache(operand, device_ctx, &state, &cache);
+    if (operand->user_opkernel()->has_state_or_cache()) {
+      OF_PROFILER_RANGE_PUSH("TryInitOpKernelStateAndCache");
+      TryInitOpKernelStateAndCache(operand, device_ctx, &state, &cache);
+      OF_PROFILER_RANGE_POP();
+    }
     OpKernelCompute(operand, device_ctx, state, cache);
     if (unlikely(operand->need_temp_storage())) {
+      OF_PROFILER_RANGE_PUSH("DeallocateTempStorageBlobMemory");
       JUST(DeallocateTempStorageBlobMemory(operand, device_ctx));
+      OF_PROFILER_RANGE_POP();
     }
     return Maybe<void>::Ok();
   }
 
   static inline LocalCallOpKernelPhyInstrOperand* GetLocalCallOpKernelPhyInstrOperand(
-      vm::Instruction* instruction) {
-    auto* operand = CHECK_NOTNULL(instruction->instr_msg().phy_instr_operand().get());
+      const vm::InstructionMsg& instr_msg) {
+    auto* operand = CHECK_NOTNULL(instr_msg.phy_instr_operand().get());
     return CHECK_NOTNULL(dynamic_cast<LocalCallOpKernelPhyInstrOperand*>(operand));
   }
 
@@ -507,7 +116,6 @@ struct LocalCallOpKernelUtil final {
   static inline Maybe<void> AllocateOutputBlobsMemory(LocalCallOpKernelPhyInstrOperand* operand,
                                                       DeviceCtx* device_ctx) {
     for (const auto& blob_object : *operand->outputs()) {
-      CHECK_NOTNULL_OR_RETURN(blob_object);
       JUST(blob_object->TryInitBlob());
       JUST(blob_object->TryAllocateBlobBodyMemory(device_ctx));
     }
@@ -526,7 +134,9 @@ struct LocalCallOpKernelUtil final {
     auto* compute_ctx =
         opkernel->UpdateComputeContext(operand->inputs().get(), operand->outputs().get(),
                                        operand->consistent_tensor_infer_result().get(), device_ctx);
+    OF_PROFILER_RANGE_PUSH("Compute");
     operand->user_opkernel()->Compute(compute_ctx, state, cache);
+    OF_PROFILER_RANGE_POP();
     // tensor tuples are not allowed to be hold by StatefulLocalOpKernel
     opkernel->UpdateComputeContext(nullptr, nullptr, nullptr, nullptr);
   }
@@ -537,169 +147,20 @@ struct LocalCallOpKernelUtil final {
   }
 };
 
-void LocalCallOpKernelInstructionType::Infer(vm::Instruction* instruction) const {
-  UNIMPLEMENTED();
-}
-
 void LocalCallOpKernelInstructionType::Compute(vm::Instruction* instruction) const {
-  CHECK_JUST(LocalCallOpKernelUtil::Compute(instruction));
+  CHECK_JUST(LocalCallOpKernelUtil::Compute(instruction->instr_msg()));
 }
 
-const std::string& LocalCallOpKernelInstructionType::DebugOpTypeName(
-    vm::Instruction* instruction) const {
-  auto* operand = LocalCallOpKernelUtil::GetLocalCallOpKernelPhyInstrOperand(instruction);
-  return operand->opkernel().op_type_name();
+void LocalCallOpKernelInstructionType::ComputeInFuseMode(vm::InstructionMsg* instr_msg) const {
+  CHECK_JUST(LocalCallOpKernelUtil::Compute(*instr_msg));
 }
 
-Maybe<void> CallOpKernelInstructionType::MaybeInfer(vm::Instruction* instruction,
-                                                    const CallOpKernelInstrOperand& args) const {
-  auto* opkernel_obj = JUST(instruction->mut_operand_type(args.opkernel())->Mut<OpKernelObject>());
-  DeviceType device_type = JUST(DeviceType4DeviceTag(this->device_tag()));
-  int64_t device_id = instruction->stream().device_id();
-  const auto& mem_case = MemoryCaseUtil::MakeMemCase(device_type, device_id);
-  JUST(OpKernelInfer(opkernel_obj, instruction, args, mem_case));
-  return Maybe<void>::Ok();
-}
-
-void CallOpKernelInstructionType::Infer(vm::Instruction* instruction) const {
-  FlatMsgView<CallOpKernelInstrOperand> args(instruction->instr_msg().operand());
-  CHECK_OK(MaybeInfer(instruction, args.Get()))
-      << "\ndevice_tag: " << device_tag() << "\nmachine_id: " << instruction->stream().machine_id()
-      << "\ndevice_id: " << instruction->stream().device_id()
-      << "\n============ parallel_conf ============\n"
-      << instruction->parallel_desc()->parallel_conf().DebugString();
-}
-
-Maybe<void> CallOpKernelInstructionType::MaybeCompute(vm::Instruction* instruction,
-                                                      const CallOpKernelInstrOperand& args) const {
-  auto* opkernel_obj = JUST(instruction->mut_operand_type(args.opkernel())->Mut<OpKernelObject>());
-  JUST(OpKernelCompute(opkernel_obj, instruction, args));
-  return Maybe<void>::Ok();
-}
-
-void CallOpKernelInstructionType::Compute(vm::Instruction* instruction) const {
-  FlatMsgView<CallOpKernelInstrOperand> args(instruction->instr_msg().operand());
-  CHECK_OK(MaybeCompute(instruction, args.Get()))
-      << "\ndevice_tag: " << device_tag() << "\nmachine_id: " << instruction->stream().machine_id()
-      << "\ndevice_id: " << instruction->stream().device_id()
-      << "\n============ parallel_conf ============\n"
-      << instruction->parallel_desc()->parallel_conf().DebugString();
-}
-
-Maybe<const OperatorConf&> GetOpConf(vm::Instruction* instruction,
-                                     const StatelessCallOpKernelInstrOperand& args) {
-  const auto* operand_op_conf = instruction->operand_type(args.op_conf());
-  CHECK_NOTNULL_OR_RETURN(operand_op_conf);
-  return JUST(operand_op_conf->Get<vm::ObjectWrapper<OperatorConfSymbol>>()).Get().op_conf();
-}
-
-Maybe<void> UserStatelessCallOpKernelInstructionType::Infer(
-    vm::Instruction* instruction, const StatelessCallOpKernelInstrOperand& args) const {
-  DeviceType device_type = JUST(DeviceType4DeviceTag(this->device_tag()));
-  int64_t device_id = instruction->stream().device_id();
-  auto* opkernel = JUST(GetSharedOpKernel<OpKernelObject>(instruction, device_type, args));
-  const auto& mem_case = MemoryCaseUtil::MakeMemCase(device_type, device_id);
-  JUST(OpKernelInfer(opkernel, instruction, args, mem_case));
-  return Maybe<void>::Ok();
-}
-
-void UserStatelessCallOpKernelInstructionType::Infer(vm::Instruction* instruction) const {
-  FlatMsgView<StatelessCallOpKernelInstrOperand> args(instruction->instr_msg().operand());
-  CHECK_OK(Infer(instruction, args.Get()))
-      << "\nmachine_id: " << instruction->stream().machine_id()
-      << "\ndevice_id: " << instruction->stream().device_id()
-      << "\n============ parallel_conf ============\n"
-      << instruction->parallel_desc()->parallel_conf().DebugString()
-      << "\n============ op_conf ============\n"
-      << CHECK_JUST(GetOpConf(instruction, args.Get())).DebugString();
-}
-
-Maybe<void> UserStatelessCallOpKernelInstructionType::Compute(
-    vm::Instruction* instruction, const StatelessCallOpKernelInstrOperand& args) const {
-  auto* opkernel_obj =
-      JUST(instruction->mut_operand_type(args.shared_opkernel())->Mut<OpKernelObject>());
-  JUST(OpKernelCompute(opkernel_obj, instruction, args));
-  return Maybe<void>::Ok();
-}
-
-void UserStatelessCallOpKernelInstructionType::Compute(vm::Instruction* instruction) const {
-  FlatMsgView<StatelessCallOpKernelInstrOperand> args(instruction->instr_msg().operand());
-  CHECK_OK(Compute(instruction, args.Get()))
-      << "\nmachine_id: " << instruction->stream().machine_id()
-      << "\ndevice_id: " << instruction->stream().device_id()
-      << "\n============ parallel_conf ============\n"
-      << instruction->parallel_desc()->parallel_conf().DebugString()
-      << "\n============ op_conf ============\n"
-      << CHECK_JUST(GetOpConf(instruction, args.Get())).DebugString();
-}
-
-std::shared_ptr<MemoryCase> SystemStatelessCallOpKernelInstructionType::GetOutBlobMemCase(
-    const DeviceType device_type, const int64_t device_id) const {
-  return MemoryCaseUtil::MakeMemCase(device_type, device_id);
-}
-
-Maybe<void> SystemStatelessCallOpKernelInstructionType::Infer(
-    vm::Instruction* instruction, const StatelessCallOpKernelInstrOperand& args) const {
-  DeviceType device_type = JUST(DeviceType4DeviceTag(this->device_tag()));
-  int64_t device_id = instruction->stream().device_id();
-  auto* opkernel = JUST(GetSharedOpKernel<SystemOpKernelObject>(instruction, device_type, args));
-  const auto& mem_case = GetOutBlobMemCase(device_type, device_id);
-  JUST(OpKernelInfer(opkernel, instruction, args, mem_case));
-  return Maybe<void>::Ok();
-}
-
-void SystemStatelessCallOpKernelInstructionType::Infer(vm::Instruction* instruction) const {
-  FlatMsgView<StatelessCallOpKernelInstrOperand> args(instruction->instr_msg().operand());
-  CHECK_OK(Infer(instruction, args.Get()))
-      << "\nmachine_id: " << instruction->stream().machine_id()
-      << "\ndevice_id: " << instruction->stream().device_id()
-      << "\n============ parallel_conf ============\n"
-      << instruction->parallel_desc()->parallel_conf().DebugString()
-      << "\n============ op_conf ============\n"
-      << CHECK_JUST(GetOpConf(instruction, args.Get())).DebugString();
-}
-
-Maybe<void> SystemStatelessCallOpKernelInstructionType::Compute(
-    vm::Instruction* instruction, const StatelessCallOpKernelInstrOperand& args) const {
-  auto* opkernel_obj =
-      JUST(instruction->mut_operand_type(args.shared_opkernel())->Mut<SystemOpKernelObject>());
-  JUST(OpKernelCompute(opkernel_obj, instruction, args));
-  return Maybe<void>::Ok();
-}
-
-void SystemStatelessCallOpKernelInstructionType::Compute(vm::Instruction* instruction) const {
-  FlatMsgView<StatelessCallOpKernelInstrOperand> args(instruction->instr_msg().operand());
-  CHECK_OK(Compute(instruction, args.Get()))
-      << "\nmachine_id: " << instruction->stream().machine_id()
-      << "\ndevice_id: " << instruction->stream().device_id()
-      << "\n============ parallel_conf ============\n"
-      << instruction->parallel_desc()->parallel_conf().DebugString()
-      << "\n============ op_conf ============\n"
-      << CHECK_JUST(GetOpConf(instruction, args.Get())).DebugString();
-}
-
-template<typename T>
-void FeedOrFetchBlob(vm::Instruction* instruction) {
-  FlatMsgView<T> args(instruction->instr_msg().operand());
-  DeviceCtx* device_ctx = instruction->stream().device_ctx().get();
-  auto* rw_mutext_blob = instruction->mut_operand_type(args->blob());
-  auto* blob_object = CHECK_JUST(rw_mutext_blob->template Mut<BlobObject>());
-  OfBlob of_blob(device_ctx->stream(), blob_object->mut_blob());
-  int64_t of_blob_ptr = reinterpret_cast<int64_t>(&of_blob);
-  (*Global<std::shared_ptr<ForeignCallback>>::Get())
-      ->OfBlobCall(args->unique_callback_id(), of_blob_ptr);
-}
-
-void FetchBlobHeaderInstructionType::Infer(vm::Instruction* instruction) const {
-  FeedOrFetchBlob<FetchBlobInstrOperand>(instruction);
-}
-
-void FetchBlobBodyInstructionType::Compute(vm::Instruction* instruction) const {
-  FeedOrFetchBlob<FetchBlobInstrOperand>(instruction);
-}
-
-void FeedBlobInstructionType::Compute(vm::Instruction* instruction) const {
-  FeedOrFetchBlob<FeedBlobInstrOperand>(instruction);
+std::string LocalCallOpKernelInstructionType::DebugOpTypeName(
+    const vm::InstructionMsg& instr_msg) const {
+  auto* operand = CHECK_NOTNULL(instr_msg.phy_instr_operand().get());
+  return CHECK_NOTNULL(dynamic_cast<LocalCallOpKernelPhyInstrOperand*>(operand))
+      ->opkernel()
+      .op_type_name();
 }
 
 }  // namespace vm
