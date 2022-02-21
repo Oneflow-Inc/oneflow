@@ -14,13 +14,14 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 #include <type_traits>
-#include "oneflow/core/common/spin_counter.h"
+#include "oneflow/core/common/blocking_then_busy.h"
+#include "oneflow/core/vm/virtual_machine.h"
 #include "oneflow/core/framework/instructions_builder.h"
 #include "oneflow/core/framework/tensor_impl.h"
 #include "oneflow/core/framework/tensor.h"
 #include "oneflow/core/framework/stride.h"
 #include "oneflow/core/job/parallel_desc.h"
-#include "oneflow/core/job/sbp_parallel.cfg.h"
+#include "oneflow/core/job/sbp_parallel.h"
 #include "oneflow/core/functional/functional.h"
 #include "oneflow/core/framework/device.h"
 #include "oneflow/core/framework/dtype.h"
@@ -41,33 +42,21 @@ Maybe<void> TensorImpl::set_requires_grad(bool requires_grad) {
                     || tensor_dtype == DataType::kFloat16)
         << "RuntimeError: only Tensors of floating point can require gradients";
   }
-  requires_grad_ = requires_grad;
-  if (autograd_meta_) { autograd_meta_->set_requires_grad(requires_grad); }
+  autograd_meta_->set_requires_grad(requires_grad);
   return Maybe<void>::Ok();
 }
 
-Maybe<Tensor> TensorImpl::acc_grad() const {
-  CHECK_NOTNULL_OR_RETURN(autograd_meta_);
-  return autograd_meta_->acc_grad();
-}
+Maybe<Tensor> TensorImpl::acc_grad() const { return autograd_meta_->acc_grad(); }
 
-Maybe<TensorArg> TensorImpl::current_grad() const {
-  CHECK_NOTNULL_OR_RETURN(autograd_meta_);
-  return autograd_meta_->current_grad();
-}
+Maybe<TensorArg> TensorImpl::current_grad() const { return autograd_meta_->current_grad(); }
 
 Maybe<void> TensorImpl::set_acc_grad(const std::shared_ptr<Tensor>& grad) {
-  CHECK_NOTNULL_OR_RETURN(autograd_meta_);
   return autograd_meta_->set_acc_grad(grad);
 }
 
-Maybe<Tensor> TensorImpl::mut_acc_grad() {
-  CHECK_NOTNULL_OR_RETURN(autograd_meta_);
-  return autograd_meta_->mut_acc_grad();
-}
+Maybe<Tensor> TensorImpl::mut_acc_grad() { return autograd_meta_->mut_acc_grad(); }
 
 Maybe<void> TensorImpl::set_retain_grad(bool retain_grad) {
-  CHECK_NOTNULL_OR_RETURN(autograd_meta_);
   autograd_meta_->set_retain_grad(retain_grad);
   return Maybe<void>::Ok();
 }
@@ -126,7 +115,6 @@ Maybe<void> EagerMirroredTensorImpl::InitEagerBlobObject(
         mem_case, mut_shape, dtype(), std::make_shared<vm::TensorStorage>(), dep_object);
     JUST(set_eager_blob_object(eager_blob_object));
   }
-  eager_blob_object_->set_storage_offset(tensor_meta()->storage_offset());
   return Maybe<void>::Ok();
 }
 
@@ -145,16 +133,16 @@ const std::shared_ptr<const Shape>& EagerMirroredTensorImpl::shape() const {
   if (eager_blob_object_->is_shape_synced()) { return eager_blob_object_->blob_desc().shape_ptr(); }
 
   const auto& shape_ptr = eager_blob_object_->blob_desc().shape_ptr();
-  const auto& Callback =
-      std::make_shared<std::function<void(uint64_t)>>([&shape_ptr](uint64_t of_blob_ptr) {
-        const auto* of_blob = reinterpret_cast<OfBlob*>(of_blob_ptr);
-        of_blob->blob().shape_view().ToShape(const_cast<Shape*>(shape_ptr.get()));
-      });
-  CHECK_JUST(SpinCounter::SpinWait(1, [&](const std::shared_ptr<SpinCounter>& sc) -> Maybe<void> {
-    return PhysicalRun([&](InstructionsBuilder* builder) -> Maybe<void> {
-      return builder->SyncAccessBlobByCallback(this, sc, Callback, "const");
-    });
+  const auto& Callback = [&shape_ptr](uint64_t of_blob_ptr) {
+    const auto* of_blob = reinterpret_cast<OfBlob*>(of_blob_ptr);
+    of_blob->blob().shape_view().ToShape(const_cast<Shape*>(shape_ptr.get()));
+  };
+  auto btb = std::make_shared<BlockingThenBusy>(1);
+  CHECK_JUST(PhysicalRun([&](InstructionsBuilder* builder) -> Maybe<void> {
+    return builder->SyncAccessBlobByCallback(this, btb, Callback, "const");
   }));
+  TRY(btb->WaitUntilCntEqualZero(VirtualMachine::GetPredicatorNoMoreInstructionsFinished()))
+      .GetOrThrow();
   eager_blob_object_->set_is_shape_synced(true);
   return shape_ptr;
 }
@@ -211,7 +199,7 @@ bool ConsistentTensorMeta::operator==(const ConsistentTensorMeta& other) const {
 
 size_t ConsistentTensorMeta::CalcHashValue() const {
   return std::hash<Shape>()(*shape_ptr()) ^ std::hash<DataType>()(dtype())
-         ^ std::hash<Symbol<cfg::NdSbp>>()(nd_sbp())
+         ^ std::hash<Symbol<NdSbp>>()(nd_sbp())
          ^ std::hash<Symbol<ParallelDesc>>()(parallel_desc());
 }
 
@@ -238,7 +226,7 @@ EagerConsistentTensorImpl::EagerConsistentTensorImpl(
 
 namespace {
 
-Maybe<Shape> GetPhysicalShape(const Shape& logical_shape, const cfg::NdSbp& nd_sbp,
+Maybe<Shape> GetPhysicalShape(const Shape& logical_shape, const NdSbp& nd_sbp,
                               const ParallelDesc& parallel_desc,
                               const Optional<int64_t>& parallel_id) {
   if (parallel_id.has_value()) {
@@ -260,7 +248,10 @@ Maybe<Shape> GetPhysicalShape(const Shape& logical_shape, const cfg::NdSbp& nd_s
   const auto& cur_rank_phy_shape =
       JUST(GetPhysicalShape(*shape, *nd_sbp, *parallel_desc, parallel_id));
   std::shared_ptr<MirroredTensor> cur_rank_phy_tensor;
-  if (parallel_id.has_value()) {
+  // If the `'parallel_desc` doesn't cover current ProcessCtx or the tensor has 0-size shape, there
+  // is no need to compute through the corresponding opkernel, and can be obtained directly through
+  // empty op.
+  if (parallel_id.has_value() && shape->elem_cnt() != 0) {
     const auto& cur_rank_phy_tensor_meta =
         std::make_shared<MirroredTensorMeta>(cur_rank_phy_shape, dtype, device);
     auto cur_rank_phy_tensor_impl =

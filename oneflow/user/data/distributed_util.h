@@ -44,7 +44,7 @@ inline Maybe<void> InitDataSourceDistributedInfo(user_op::KernelInitContext* ctx
     index_helper.OffsetToNdIndex(ctx->parallel_ctx().parallel_id(), nd_index);
 
     for (int i = hierarchy.NumAxes() - 1; i >= 0; --i) {
-      cfg::SbpParallel sbp;
+      SbpParallel sbp;
       CHECK_OR_RETURN(ParseSbpParallelFromString(nd_sbp_str_vec[i], &sbp));
       if (sbp.has_split_parallel()) {
         rank += nd_index[i] * world_size;

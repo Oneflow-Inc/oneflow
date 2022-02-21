@@ -26,8 +26,7 @@ namespace one {
 
 namespace {
 
-bool OptionalEqual(const Optional<Symbol<cfg::NdSbp>>& lhs,
-                   const Optional<Symbol<cfg::NdSbp>>& rhs) {
+bool OptionalEqual(const Optional<Symbol<NdSbp>>& lhs, const Optional<Symbol<NdSbp>>& rhs) {
   if (lhs.has_value() != rhs.has_value()) { return false; }
   if (!lhs.has_value()) { return true; }
   return CHECK_JUST(lhs) == CHECK_JUST(rhs);
@@ -38,7 +37,7 @@ bool OptionalEqual(const Optional<Symbol<cfg::NdSbp>>& lhs,
 size_t InputConsistentTensorMeta::hash_value() const {
   size_t hash_value = std::hash<Symbol<ConsistentTensorMeta>>()(tensor_meta());
   if (consumer_nd_sbp_constraint().has_value()) {
-    hash_value ^= std::hash<Symbol<cfg::NdSbp>>()(CHECK_JUST(consumer_nd_sbp_constraint()));
+    hash_value ^= std::hash<Symbol<NdSbp>>()(CHECK_JUST(consumer_nd_sbp_constraint()));
   }
   return hash_value;
 }
@@ -48,9 +47,8 @@ bool InputConsistentTensorMeta::operator==(const InputConsistentTensorMeta& othe
          && OptionalEqual(this->consumer_nd_sbp_constraint(), other.consumer_nd_sbp_constraint());
 }
 
-void InputConsistentTensorMeta::assign(
-    Symbol<ConsistentTensorMeta> tensor_meta,
-    const Optional<Symbol<cfg::NdSbp>>& consumer_nd_sbp_constraint) {
+void InputConsistentTensorMeta::assign(Symbol<ConsistentTensorMeta> tensor_meta,
+                                       const Optional<Symbol<NdSbp>>& consumer_nd_sbp_constraint) {
   tensor_meta_ = tensor_meta;
   consumer_nd_sbp_constraint_ = consumer_nd_sbp_constraint;
 }
@@ -67,7 +65,7 @@ size_t ConsistentTensorMetaInferArgs::hash_value() const {
 size_t SrcOpConsistentTensorMetaInferArgs::hash_value() const {
   size_t hash_value = std::hash<AttrMap>()(attrs_);
   hash_value ^= std::hash<Symbol<ParallelDesc>>()(parallel_desc_);
-  hash_value ^= std::hash<Symbol<cfg::NdSbp>>()(nd_sbp_);
+  hash_value ^= std::hash<Symbol<NdSbp>>()(nd_sbp_);
   return hash_value;
 }
 
@@ -83,7 +81,7 @@ bool SrcOpConsistentTensorMetaInferArgs::operator==(
 }
 
 Maybe<void> ConsistentTensorMetaInferArgs::MakeNdSbpConstraints(
-    const UserOpExpr& user_op_expr, cfg::NdSbpSignature* nd_sbp_signature) const {
+    const UserOpExpr& user_op_expr, NdSbpSignature* nd_sbp_signature) const {
   const auto& input_arg_tuple = *user_op_expr.input_arg_tuple();
   auto* map = nd_sbp_signature->mutable_bn_in_op2nd_sbp();
   for (int i = 0; i < input_arg_tuple.size(); ++i) {
@@ -132,7 +130,7 @@ Maybe<ConsistentTensorMetaInferArgs> ConsistentTensorMetaInferArgs::New(
 }
 
 Maybe<SrcOpConsistentTensorMetaInferArgs> SrcOpConsistentTensorMetaInferArgs::New(
-    const AttrMap& attrs, Symbol<ParallelDesc> parallel_desc, Symbol<cfg::NdSbp> nd_sbp) {
+    const AttrMap& attrs, Symbol<ParallelDesc> parallel_desc, Symbol<NdSbp> nd_sbp) {
   std::shared_ptr<SrcOpConsistentTensorMetaInferArgs> infer_args(
       new SrcOpConsistentTensorMetaInferArgs());
   infer_args->attrs_ = attrs;
@@ -262,9 +260,10 @@ class UserOpExprOpDeviceInferContext final : public user_op::DeviceInferContext 
   }
   const auto& op = JUST(MakeOp(user_op_expr, infer_args.attrs(), parallel_desc->device_tag()));
   JUST(op->FillOpParallelDesc(parallel_desc.shared_from_symbol()));
+  JUST(op->InferParallelSignatureIf());
   {
     // Infer parallel distribution.
-    cfg::NdSbpSignature nd_sbp_constraints;
+    NdSbpSignature nd_sbp_constraints;
     JUST(infer_args.MakeNdSbpConstraints(user_op_expr, &nd_sbp_constraints));
     std::vector<BlobDesc> blob_descs;
     JUST(infer_args.MakeInputBlobDescs(user_op_expr, &blob_descs));

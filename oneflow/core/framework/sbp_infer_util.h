@@ -23,35 +23,46 @@ namespace oneflow {
 
 double GetValidMaxCopyCost();
 
-Maybe<std::string> NdSbpSignatureListAsString(
-    const std::vector<cfg::NdSbpSignature>& nd_sbp_sig_list, const PbRpf<std::string>& inputs,
-    const PbRpf<std::string>& outputs);
+void ResizeNdSbpSignature(NdSbpSignature& nd_sbp_sig, int32_t size);
 
-void ResizeNdSbpSignature(cfg::NdSbpSignature& nd_sbp_sig, int32_t size);
+void SetNdSbpSignature(NdSbpSignature* nd_sbp_signature, const SbpSignature& sbp_signature,
+                       int32_t sbp_axis);
 
-void SetNdSbpSignature(cfg::NdSbpSignature* nd_sbp_signature,
-                       const cfg::SbpSignature& sbp_signature, int32_t sbp_axis);
+void DfsGetNdSbpSignature(NdSbpSignature& nd_sbp_sig, int32_t depth, int32_t dims,
+                          const SbpSignatureList& sbp_sig_list,
+                          std::vector<NdSbpSignature>* nd_sbp_sig_list);
 
-void DfsGetNdSbpSignature(cfg::NdSbpSignature& nd_sbp_sig, int32_t depth, int32_t dims,
-                          const cfg::SbpSignatureList& sbp_sig_list,
-                          std::vector<cfg::NdSbpSignature>* nd_sbp_sig_list);
+// Compute storage for given NdSbp
+double Storage4NdSbp(const NdSbp& nd_sbp, Shape& logical_shape, const Shape& parallel_hierarchy);
 
-// TODO: unified lazy and eager boxing
-// Compute eager copy cost
-Maybe<double> ComputeEagerCopyCostBetweenNdSbp(const cfg::NdSbp& producer_sbp_parallel,
-                                               const cfg::NdSbp& consumer_sbp_parallel,
-                                               const BlobDesc& logical_blob_desc,
-                                               const ParallelDesc& producer_parallel_desc,
-                                               const ParallelDesc& consumer_parallel_desc,
-                                               bool is_same_sbp);
+// Judge whether an NdSbp could be applied on a tensor with given logical shape
+Maybe<bool> FilterNdSbpByLogicalShape(const NdSbp& nd_sbp, Shape& logical_shape,
+                                      const Shape& parallel_hierarchy);
 
-// Compute lazy copy cost
-Maybe<double> ComputeLazyCopyCostBetweenNdSbp(const cfg::NdSbp& producer_sbp_parallel,
-                                              const cfg::NdSbp& consumer_sbp_parallel,
+// TODO: Unify lazy and eager boxing
+Maybe<double> ComputeCopyCostBetweenNdSbp(const NdSbp& producer_sbp_parallel,
+                                          const NdSbp& consumer_sbp_parallel,
+                                          const BlobDesc& logical_blob_desc,
+                                          const ParallelDesc& producer_parallel_desc,
+                                          const ParallelDesc& consumer_parallel_desc,
+                                          bool is_same_sbp);
+
+// Cost for boxing in lazy
+Maybe<double> ComputeLazyCopyCostBetweenNdSbp(const NdSbp& producer_sbp_parallel,
+                                              const NdSbp& consumer_sbp_parallel,
                                               const BlobDesc& logical_blob_desc,
                                               const ParallelDesc& producer_parallel_desc,
                                               const ParallelDesc& consumer_parallel_desc,
-                                              bool is_same_sbp);
+                                              bool requires_same_sbp);
+
+// The public interface for computing cost
+// It uses the middle nodes algorithm.
+Maybe<double> ComputeCopyCostWithMiddleNodes(const NdSbp& producer_sbp_parallel,
+                                             const NdSbp& consumer_sbp_parallel,
+                                             const BlobDesc& logical_blob_desc,
+                                             const ParallelDesc& producer_parallel_desc,
+                                             const ParallelDesc& consumer_parallel_desc,
+                                             bool requires_same_sbp);
 
 }  // namespace oneflow
 

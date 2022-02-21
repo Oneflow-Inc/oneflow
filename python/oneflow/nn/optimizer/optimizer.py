@@ -49,6 +49,7 @@ class ParamGroup(object):
         for key in self._options:
             if key in parameters:
                 self._options[key] = parameters[key]
+
         self._enable_clip_grad = False
         if "clip_grad_max_norm" in parameters and "clip_grad_norm_type" in parameters:
             self._enable_clip_grad = True
@@ -63,6 +64,10 @@ class ParamGroup(object):
 
     def __contains__(self, key):
         return self._options.__contains__(key)
+
+    def setdefault(self, key, value):
+        if key not in self._options:
+            self._options[key] = value
 
     def items(self):
         return self.__dict__.items()
@@ -149,9 +154,7 @@ class Optimizer(object):
                 if value.is_local:
                     value = value.to(param.device)
                 else:
-                    value = value.to_consistent(
-                        placement=param.placement, sbp=param.sbp
-                    )
+                    value = value.to_global(placement=param.placement, sbp=param.sbp)
                 return value
             elif isinstance(value, dict):
                 return {k: cast(param, v) for k, v in value.items()}
@@ -229,13 +232,13 @@ class Optimizer(object):
     def clip_grad(self):
         r"""Clips gradient norm of an iterable of parameters. 
         The norm is computed over all gradients together, as if they were concatenated into a single vector.
-        
+
         You can set the max_norm and norm_type. 
 
         For more details, you can refer to the documentation of each optimizer(like Adam, SGD and so on). 
 
         You can also refer the code in :func:`oneflow.nn.utils.clip_grad_norm_`
-        
+
         """
         for param_group in self.param_groups:
             if param_group._enable_clip_grad:
@@ -332,7 +335,7 @@ class Optimizer(object):
                 if param not in vars_conf:
                     raise ValueError(
                         f"Parameter <{param}> is not in the corresponding nn.Graph/nn.Module."
-                        " Please make sure you call the module's to(..)/to_consistent(...) method first,"
+                        " Please make sure you call the module's to(..)/to_global(...) method first,"
                         " then add the module's parameters into an optimizer."
                     )
 

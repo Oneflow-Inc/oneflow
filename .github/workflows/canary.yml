@@ -4,20 +4,31 @@ on:
   push:
     branches:
       - master
-      - add-remove-single-client
+      - "canary/*"
   workflow_dispatch:
     inputs:
       oneflow-ref:
         description: ""
         default: "master"
         required: true
-
+concurrency:
+  group: canary-${{ github.ref }}
+  cancel-in-progress: false
 jobs:
   canary_release:
     name: Canary Release
-    timeout-minutes: 1200
+    timeout-minutes: 120
     runs-on: [self-hosted, linux, release]
     if: github.repository == 'Oneflow-Inc/oneflow'
+    strategy:
+      fail-fast: false
+      matrix:
+        entry: ["canary", "profiler"]
+        include:
+          - entry: "canary"
+            cmake-init-cache: "cmake/caches/ci/canary/cuda.cmake"
+          - entry: "profiler"
+            cmake-init-cache: "cmake/caches/ci/profiler/cuda.cmake"
     env:
       ONEFLOW_SRC: .
       MANYLINUX_CACHE_DIR: ~/manylinux-cache-dir/canary-cu112
@@ -25,8 +36,8 @@ jobs:
       COMPUTE_PLATFORM: cu112
       CUDA_VERSION: "11.2"
       OSS_BUCKET: oneflow-staging
-      OSS_WHEEL_HOUSE_DIR: canary/commit/${{ github.sha }}
-      OSS_GITHUB_REF_DIR: canary/${{ github.ref }}
+      OSS_WHEEL_HOUSE_DIR: ${{ matrix.entry }}/commit/${{ github.sha }}
+      OSS_GITHUB_REF_DIR: ${{ matrix.entry }}/${{ github.ref }}
     steps:
       - name: Fix permissions
         run: |
@@ -43,11 +54,11 @@ jobs:
       - name: Checkout Oneflow-Inc/oneflow
         if: ${{ github.event.inputs.oneflow-ref == '' }}
         uses: actions/checkout@v2
-      - uses: Oneflow-Inc/get-oneflow@remove-single-client
+      - uses: Oneflow-Inc/get-oneflow@distributed-v2
         name: Build manylinux
         id: build-cuda
         with:
-          cmake-init-cache: ${{ env.ONEFLOW_SRC }}/cmake/caches/ci/canary/cuda.cmake
+          cmake-init-cache: ${{ env.ONEFLOW_SRC }}/${{ matrix.cmake-init-cache }}
           build-script: ${{ env.ONEFLOW_SRC }}/ci/manylinux/build-gcc7.sh
           oneflow-src: ${{ env.ONEFLOW_SRC }}
           oneflow-build-env: manylinux

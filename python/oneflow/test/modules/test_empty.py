@@ -29,28 +29,10 @@ def _test_local_empty(test_case, shape, dtype, device, requires_grad):
         device=flow.device(device),
         requires_grad=requires_grad if dtype == flow.float32 else False,
     )
-    test_case.assertFalse(x.is_consistent)
+    test_case.assertFalse(x.is_global)
     test_case.assertEqual(x.shape, flow.Size(shape))
     test_case.assertEqual(x.dtype, dtype)
     test_case.assertEqual(x.device, flow.device(device))
-    if dtype == flow.float32:
-        test_case.assertEqual(x.requires_grad, requires_grad)
-
-
-def _test_consistent_empty(test_case, shape, dtype, placement, sbp, requires_grad):
-    placement = flow.placement(placement, {0: [0]})
-    x = flow.empty(
-        shape,
-        dtype=dtype,
-        placement=placement,
-        sbp=sbp,
-        requires_grad=requires_grad if dtype == flow.float32 else False,
-    )
-    test_case.assertTrue(x.is_consistent)
-    test_case.assertEqual(x.shape, flow.Size(shape))
-    test_case.assertEqual(x.dtype, dtype)
-    test_case.assertEqual(x.placement, placement)
-    test_case.assertEqual(x.sbp[0], sbp)
     if dtype == flow.float32:
         test_case.assertEqual(x.requires_grad, requires_grad)
 
@@ -65,16 +47,6 @@ class TestEmptyOp(flow.unittest.TestCase):
         arg_dict["requires_grad"] = [True, False]
         for arg in GenArgDict(arg_dict):
             _test_local_empty(test_case, **arg)
-
-    def test_consistent_empty(test_case):
-        arg_dict = OrderedDict()
-        arg_dict["shape"] = [(2, 3), (2, 3, 4), (2, 3, 4, 5)]
-        arg_dict["dtype"] = [flow.float32, flow.float16, flow.int32]
-        arg_dict["placement"] = ["cpu", "cuda"]
-        arg_dict["sbp"] = [flow.sbp.broadcast]
-        arg_dict["requires_grad"] = [True, False]
-        for arg in GenArgDict(arg_dict):
-            _test_consistent_empty(test_case, **arg)
 
 
 if __name__ == "__main__":

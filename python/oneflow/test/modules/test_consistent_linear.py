@@ -34,15 +34,13 @@ def _test_linear_with_random_data(test_case, placement, weight_sbp, input_sbp):
     m = torch.nn.Linear(in_features=input_size, out_features=8, bias=random())
     m.train(random())
     m.weight = torch.nn.Parameter(
-        m.weight.to_consistent(placement=placement, sbp=weight_sbp)
+        m.weight.to_global(placement=placement, sbp=weight_sbp)
     )
     if m.bias is not None:
         # bias is 1-d tensor
         bias_sbp = random_sbp(placement, max_dim=1)
-        m.bias = torch.nn.Parameter(
-            m.bias.to_consistent(placement=placement, sbp=bias_sbp)
-        )
-    x = random_pytorch_tensor(ndim=2, dim1=input_size, dim2=8).to_consistent(
+        m.bias = torch.nn.Parameter(m.bias.to_global(placement=placement, sbp=bias_sbp))
+    x = random_tensor(ndim=2, dim1=input_size, dim2=8).to_global(
         placement=placement, sbp=input_sbp
     )
     y = m(x)
@@ -50,11 +48,11 @@ def _test_linear_with_random_data(test_case, placement, weight_sbp, input_sbp):
 
 
 # class TestLinearModule(flow.unittest.TestCase):
-#     @consistent
+#     @globaltest
 #     def test_linear_with_random_data(test_case):
 #         for placement in all_placement():
 #             # TODO(): Fix 2d sbp
-#             if len(placement.hierarchy) != 1:
+#             if len(placement.ranks.shape) != 1:
 #                 continue
 #             for sbp in all_sbp(placement, max_dim=2):
 #                 _test_linear_with_random_data(test_case, placement, sbp, sbp)

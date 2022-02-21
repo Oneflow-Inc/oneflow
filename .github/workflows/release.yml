@@ -1,192 +1,156 @@
 name: Release
 
 on:
+  push:
+    branches:
+      - "release/*"
   schedule:
     # beijing: 2 am.
     # utc: 6 pm.
     - cron: "0 18 * * *"
   workflow_dispatch:
     inputs:
-      python_version:
-        description: "python_version"
-        default: "3.6,3.7,3.8,3.9"
+      placeholder:
+        description: "update .github/workflows/release.yml to config your build"
         required: false
-      compute_platforms:
-        description: ""
-        default: "cpu,cu100,cu101,cu102,cu110,cu111,cu112,cu100_xla,cu101_xla,cu102_xla,cu110_xla"
-        required: false
-      package_name:
-        description: ""
-        default: "oneflow"
-        required: false
-      release_version:
-        description: ""
-        default: ""
-        required: false
-      build_profile:
-        description: ""
-        default: "OFF"
-        required: false
-
+concurrency:
+  group: release-${{ github.ref }}
+  cancel-in-progress: ${{ github.ref != 'refs/heads/master' }}
+env:
+  ONEFLOW_SRC: .
 jobs:
+  generate-build-matrix:
+    name: "Generate build matrix"
+    runs-on: ubuntu-latest
+    env:
+      ONEFLOW_SRC: .
+    outputs:
+      matrix: ${{ steps.find-cache.outputs.matrix }}
+    steps:
+      - name: Checkout Oneflow-Inc/oneflow
+        uses: actions/checkout@v2
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+          repository: ${{github.event.pull_request.head.repo.full_name}}
+      - uses: Oneflow-Inc/get-oneflow/cache-complete/matrix/build@distributed-v2
+        name: find cache
+        id: find-cache
+        timeout-minutes: 5
+        with:
+          delete-cache: ${{ contains(github.event.pull_request.labels.*.name, 'need-clean-ccache') }}
+          runner-labels: |
+            self-hosted
+            linux
+            release
+          oneflow-src: ${{ env.ONEFLOW_SRC }}
+          entries: |
+            cu112
+            cu102
+            cpu
+
   staging_release:
+    env:
+      MANYLINUX_CACHE_DIR: ~/manylinux-cache-dir/release/${{ matrix.entry }}
+      WHEELHOUSE_DIR: manylinux_wheelhouse
+      OSS_DIR: branch/${{ github.ref_name }}/${{ matrix.entry }}/${{ github.sha }}
+    needs: [generate-build-matrix]
     name: Staging Release
-    timeout-minutes: 1200
+    timeout-minutes: 180
     runs-on: [self-hosted, linux, release]
     if: github.repository == 'Oneflow-Inc/oneflow'
     strategy:
       fail-fast: false
       max-parallel: 5
-      matrix:
-        compute_platform:
-          [
-            "cpu",
-            "cu100",
-            "cu101",
-            "cu102",
-            "cu110",
-            "cu111",
-            "cu112",
-            "cu101_xla",
-          ]
+      matrix: ${{ fromJson(needs.generate-build-matrix.outputs.matrix) }}
     steps:
       - name: Fix permissions
         run: |
-          docker run --rm -v $PWD:/p -w /p busybox chmod -R o+w .
+          docker run --rm -v $PWD:/p -w /p busybox rm -rf *
       - name: Install dependencies
         run: |
           python3 -m pip config set global.index-url https://pypi.tuna.tsinghua.edu.cn/simple
           python3 -m pip install -U pip setuptools wheel --user
           python3 -m pip install oss2  --user
       - uses: actions/checkout@v2
-      - name: Set environment variables
-        env:
-          python_version: ${{ github.event.inputs.python_version }}
-          compute_platforms: ${{ github.event.inputs.compute_platforms }}
-          build_profile: ${{ github.event.inputs.build_profile }}
-          OSS_ACCESS_KEY_ID: ${{ secrets.OSS_ACCESS_KEY_ID }}
-          OSS_ACCESS_KEY_SECRET: ${{ secrets.OSS_ACCESS_KEY_SECRET }}
-        run: |
-          set -x
-          if [ "${{ matrix.compute_platform }}" == "cpu" ]; then
-              cuda_version="10.2"
-              extra_flags="--cpu"
-          elif [ "${{ matrix.compute_platform }}" == "cu100" ]; then
-              cuda_version="10.0"
-          elif [ "${{ matrix.compute_platform }}" == "cu101" ]; then
-              cuda_version="10.1"
-          elif [ "${{ matrix.compute_platform }}" == "cu102" ]; then
-              cuda_version="10.2"
-          elif [ "${{ matrix.compute_platform }}" == "cu110" ]; then
-              cuda_version="11.0"
-          elif [ "${{ matrix.compute_platform }}" == "cu111" ]; then
-              cuda_version="11.1"
-          elif [ "${{ matrix.compute_platform }}" == "cu112" ]; then
-              cuda_version="11.2"
-          elif [ "${{ matrix.compute_platform }}" == "cu100_xla" ]; then
-              cuda_version="10.0"
-              extra_flags="--xla"
-          elif [ "${{ matrix.compute_platform }}" == "cu101_xla" ]; then
-              cuda_version="10.1"
-              extra_flags="--xla"
-          elif [ "${{ matrix.compute_platform }}" == "cu102_xla" ]; then
-              cuda_version="10.2"
-              extra_flags="--xla"
-          elif [ "${{ matrix.compute_platform }}" == "cu110_xla" ]; then
-              cuda_version="11.0"
-              extra_flags="--xla"
-          elif [ "${{ matrix.compute_platform }}" == "cu111_xla" ]; then
-              cuda_version="11.1"
-              extra_flags="--xla"
-          else
-              echo "Release version: ${{ matrix.compute_platform }} not supported"
-              exit 1
-          fi
-
-          if [ -z "$cuda_version" ]
-          then
-            echo "cuda_version empty"
-            exit 1
-          fi
-
-          python3 ci/build/ensure_img.py
-          python_version=${python_version:-"3.6,3.7,3.8,3.9"}
-          compute_platforms=${compute_platforms:-"cpu,cu100,cu101,cu102,cu110,cu111,cu112,cu100_xla,cu101_xla,cu102_xla,cu110_xla"}
-          build_profile=${build_profile:-"OFF"}
-          if [ ! -z "${{ matrix.package_name }}"] && [ "${{ matrix.package_name }}" != "oneflow" ]; then
-              extra_flags+=" --package_name=${{ matrix.package_name }}"
-          fi
-          extra_flags+=" --extra_oneflow_cmake_args=-DBUILD_PROFILER=${build_profile}"
-          extra_flags+=" --extra_oneflow_cmake_args=-DTREAT_WARNINGS_AS_ERRORS=OFF"
-          extra_flags+=" --extra_oneflow_cmake_args=-DPIP_INDEX_MIRROR=https://pypi.tuna.tsinghua.edu.cn/simple"
-          echo "cuda_version=${cuda_version}" >> $GITHUB_ENV
-          echo "python_version=${python_version}" >> $GITHUB_ENV
-          echo "compute_platforms=${compute_platforms}" >> $GITHUB_ENV
-          container_name=release-run-id-${{ github.run_id }}-${{ matrix.compute_platform }}
-          echo "container_name=${container_name}" >> $GITHUB_ENV
-          extra_flags+=" --container_name ${container_name}"
-          echo "extra_flags=${extra_flags}" >> $GITHUB_ENV
-
-          tmp_dir=$HOME/ci-tmp-rel
-          echo "ci_tmp_dir=${tmp_dir}" >> $GITHUB_ENV
-          echo "wheelhouse_dir=${tmp_dir}/wheelhouse" >> $GITHUB_ENV
-
-          git_branch=${GITHUB_REF##*/}
-          oss_branch_dir=branch/${git_branch}/${{ matrix.compute_platform }}
-          oss_dir=${oss_branch_dir}/${GITHUB_SHA}
-          echo "oss_branch_dir=${oss_branch_dir}" >> $GITHUB_ENV
-          echo "oss_dir=${oss_dir}" >> $GITHUB_ENV
-          echo "git_branch=${git_branch}" >> $GITHUB_ENV
-
-          $(python3 tools/oss_file_exist.py --bucket oneflow-staging --path ${oss_dir}/oneflow)
-          echo "is_built=${OSS_FILE_EXISTED}" >> $GITHUB_ENV
-          # if release_version not given, it is a nightly build
-          if [ -z "${{ github.event.inputs.release_version }}" ]; then
-            extra_docker_args+=" --env ONEFLOW_RELEASE_NIGHTLY=1"
-          else
-            extra_docker_args+=" --env ONEFLOW_RELEASE_VERSION=${{ github.event.inputs.release_version }}"
-          fi
-          echo "extra_docker_args=${extra_docker_args}" >> $GITHUB_ENV
-
-      - name: Build OneFlow
-        if: env.is_built != '1' && contains(env.compute_platforms, matrix.compute_platform)
-        uses: ./.github/actions/whl
+      - uses: Oneflow-Inc/get-oneflow@distributed-v2
+        name: Build ${{ matrix.entry }}
+        if: ${{ matrix.entry !='cpu' }}
         with:
-          tmp_dir: ${{ env.ci_tmp_dir }}
-          cuda_version: ${{ env.cuda_version }}
-          python_version: ${{ env.python_version }}
-          extra_flags: ${{ env.extra_flags }}
-          extra_docker_args: ${{ env.extra_docker_args }}
+          cmake-init-cache: ${{ env.ONEFLOW_SRC }}/cmake/caches/ci/release/cuda.cmake
+          build-script: ${{ env.ONEFLOW_SRC }}/ci/manylinux/build-gcc7.sh
+          oneflow-src: ${{ env.ONEFLOW_SRC }}
+          oneflow-build-env: manylinux
+          wheelhouse-dir: ${{ env.WHEELHOUSE_DIR }}
+          clear-wheelhouse-dir: true
+          self-hosted: true
+          compute-platform: ${{ matrix.entry }}
+          manylinux-cache-dir: ${{ env.MANYLINUX_CACHE_DIR }}
+          docker-run-use-system-http-proxy: false
+          docker-run-use-lld: false
+          retry-failed-build: true
+          clean-ccache: true
+          nightly: ${{ github.event_name == 'schedule' }}
+          python-versions: |
+            3.6
+            3.7
+            3.8
+            3.9
+            3.10
+      - uses: Oneflow-Inc/get-oneflow@distributed-v2
+        name: Build ${{ matrix.entry }}
+        if: ${{ matrix.entry =='cpu' }}
+        with:
+          cmake-init-cache: ${{ env.ONEFLOW_SRC }}/cmake/caches/ci/release/cpu.cmake
+          build-script: ${{ env.ONEFLOW_SRC }}/ci/manylinux/build.sh
+          oneflow-src: ${{ env.ONEFLOW_SRC }}
+          oneflow-build-env: manylinux
+          wheelhouse-dir: ${{ env.WHEELHOUSE_DIR }}
+          clear-wheelhouse-dir: true
+          self-hosted: true
+          compute-platform: ${{ matrix.entry }}
+          manylinux-cache-dir: ${{ env.MANYLINUX_CACHE_DIR }}
+          docker-run-use-system-http-proxy: false
+          docker-run-use-lld: false
+          retry-failed-build: true
+          clean-ccache: false
+          nightly: ${{ github.event_name == 'schedule' || github.ref == 'refs/heads/master'}}
+          python-versions: |
+            3.6
+            3.7
+            3.8
+            3.9
+            3.10
       - name: Upload wheel
-        if: env.is_built != '1' && contains(env.compute_platforms, matrix.compute_platform)
         uses: ./.github/actions/upload_oss
         with:
-          src_path: ${{ env.wheelhouse_dir }}
-          oss_dst_path: oss://oneflow-staging/${{ env.oss_dir }}
+          src_path: ${{ env.WHEELHOUSE_DIR }}
+          oss_dst_path: oss://oneflow-staging/${{ env.OSS_DIR }}
           oss_access_key_id: ${{ secrets.OSS_ACCESS_KEY_ID }}
           oss_access_key_secret: ${{ secrets.OSS_ACCESS_KEY_SECRET }}
       - name: Update pip index
-        if: env.is_built != '1' && contains(env.compute_platforms, matrix.compute_platform)
         env:
           OSS_ACCESS_KEY_ID: ${{ secrets.OSS_ACCESS_KEY_ID }}
           OSS_ACCESS_KEY_SECRET: ${{ secrets.OSS_ACCESS_KEY_SECRET }}
         run: |
           python3 -m pip config set global.index-url https://pypi.tuna.tsinghua.edu.cn/simple
           python3 -m pip install oss2 beautifulsoup4 --user
-          python3 tools/create_pip_index.py --dir_key ${oss_dir} -b oneflow-staging --index_key=${oss_branch_dir}/index.html --index_key=${oss_dir}/index.html --index_key=commit/${GITHUB_SHA}/${{ matrix.compute_platform }}/index.html
+          python3 tools/create_pip_index.py --dir_key ${{ env.OSS_DIR }} -b oneflow-staging \
+            --index_key=branch/${{ github.ref_name }}/${{ matrix.entry }}/index.html \
+            --index_key=${{ env.OSS_DIR }}/index.html \
+            --index_key=commit/${{ github.sha }}/${{ matrix.entry }}/index.html
       - name: Update API docs
-        if: github.ref == 'refs/heads/master' && matrix.compute_platform == 'cpu' && contains(env.compute_platforms, matrix.compute_platform)
+        if: github.ref == 'refs/heads/master' && matrix.entry == 'cpu'
         env:
           READTHEDOCS_TOKEN: ${{ secrets.READTHEDOCS_TOKEN }}
         run: |
           curl -X POST -d "branches=master" -d "token=${READTHEDOCS_TOKEN}"  https://readthedocs.org/api/v2/webhook/oneflow/135376/
   pack_src:
     name: Pack source code
+    if: github.ref == 'refs/heads/master' && github.repository == 'Oneflow-Inc/oneflow'
     runs-on: ubuntu-18.04
     steps:
       - uses: actions/checkout@v2
       - name: Pack OneFlow source code
-        if: github.ref == 'refs/heads/master' && github.repository == 'Oneflow-Inc/oneflow'
         env:
           OSS_ACCESS_KEY_ID: ${{ secrets.OSS_ACCESS_KEY_ID }}
           OSS_ACCESS_KEY_SECRET: ${{ secrets.OSS_ACCESS_KEY_SECRET }}
