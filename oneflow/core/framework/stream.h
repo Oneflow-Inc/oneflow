@@ -53,7 +53,7 @@ class Stream final {
     return transport_local_dep_object_;
   }
 
-  vm::Stream* mut_vm_stream() const { return vm_stream_; }
+  vm::Stream* mut_vm_stream() const { return vm_stream_.get(); }
 
  private:
   Stream(Symbol<Device> device, StreamRole stream_role);
@@ -72,7 +72,7 @@ class Stream final {
 
 LocalDepObject* GetStaticGlobalTransportLocalDepObject();
 
-extern Symbol<Stream> (*GetDefaultStreamByDevice)(Symbol<Device>);
+extern Maybe<Symbol<Stream>> (*GetDefaultStreamByDevice)(Symbol<Device>);
 class ParallelDesc;
 extern Maybe<Symbol<Stream>> (*GetDefaultStreamByPlacement)(Symbol<ParallelDesc>);
 

@@ -31,7 +31,7 @@ Maybe<LocalDepObject*> RawGetEagerNcclLocalDepObject(StreamRole stream_role) {
   //   error when using local rank to create a EagerNcclLocalDepObject, but we only need an legal
   //   device so we use device 0.
   const auto& device = JUST(Device::New("cpu", 0));
-  const auto& stream = Stream::New(device, stream_role);
+  const auto& stream = JUST(::oneflow::Stream::New(device, stream_role));
   const auto& local_dep_object = stream->mut_transport_local_dep_object();
   CHECK_OR_RETURN(local_dep_object.has_value());
   return JUST(local_dep_object);

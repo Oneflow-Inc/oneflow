@@ -54,24 +54,22 @@ Stream::Stream(Symbol<Device> device, StreamRole stream_role)
   }
 }
 
-Maybe<void> Stream::Init() {
-  return Maybe<void>::Ok();
-}
+Maybe<void> Stream::Init() { return Maybe<void>::Ok(); }
 
-/*static*/Maybe<Symbol<Stream>> Stream::RawNew(Symbol<Device> device, StreamRole stream_role) {
+/*static*/ Maybe<Symbol<Stream>> Stream::RawNew(Symbol<Device> device, StreamRole stream_role) {
   Stream stream(device, stream_role);
   JUST(stream.Init());
   return SymbolOf(stream);
 }
 
-/*static*/Maybe<Symbol<Stream>> Stream::New(Symbol<Device> device, StreamRole stream_role) {
+/*static*/ Maybe<Symbol<Stream>> Stream::New(Symbol<Device> device, StreamRole stream_role) {
   constexpr auto* Make = DECORATE(&Stream::RawNew, ThreadLocal);
   return Make(device, stream_role);
 }
 
 namespace {
 
-Symbol<Stream> RawGetDefaultStreamByDevice(Symbol<Device> device) {
+Maybe<Symbol<Stream>> RawGetDefaultStreamByDevice(Symbol<Device> device) {
   return Stream::New(device, StreamRole::kCompute);
 }
 
