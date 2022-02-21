@@ -14,10 +14,20 @@ mkdir -p $test_tmp_dir
 cp -r $test_dir $test_tmp_dir
 cd ${test_tmp_dir}/$(basename $test_dir)
 
-if [[ "$(python3 -c 'import oneflow.sysconfig;print(oneflow.sysconfig.has_rpc_backend_grpc())')" == *"True"* ]]; then
-    export ONEFLOW_TEST_DEVICE_NUM=2
-    python3 -m oneflow.distributed.launch --nproc_per_node 2 ${PWD}/test_global_branch_error_with_global_mean.py --failfast --verbose
-    python3 -m oneflow.distributed.launch --nproc_per_node 2 ${PWD}/test_global_branch_error_with_local_to_global.py --failfast --verbose
-else
-    python3 -c 'import oneflow.sysconfig;assert(oneflow.sysconfig.has_rpc_backend_grpc() == False)'
-fi
+for file in $(ls ${PWD}/test_*.py)
+do
+    if test -f $file
+    then
+        export ONEFLOW_TEST_DEVICE_NUM=1
+        python3 $file --failfast --verbose
+        if [[ "$(python3 -c 'import oneflow.sysconfig;print(oneflow.sysconfig.has_rpc_backend_grpc())')" == *"True"* ]]; then
+            export ONEFLOW_TEST_DEVICE_NUM=2
+            python3 -m oneflow.distributed.launch --nproc_per_node 2 $file --failfast --verbose
+
+            export ONEFLOW_TEST_DEVICE_NUM=4
+            python3 -m oneflow.distributed.launch --nproc_per_node 4 $file --failfast --verbose
+        else
+            python3 -c 'import oneflow.sysconfig;assert(oneflow.sysconfig.has_rpc_backend_grpc() == False)'
+        fi
+    fi
+done
