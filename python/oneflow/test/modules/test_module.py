@@ -201,7 +201,7 @@ class TestModule(flow.unittest.TestCase):
         res2 = m()
         test_case.assertTrue(np.array_equal(res1.numpy(), res2.numpy()))
 
-    @flow.unittest.skip_unless_1n2d()
+    @flow.unittest.skip_unless_1n4d()
     def test_save_and_load_global_from_nested_dict(test_case):
         class CustomModule(flow.nn.Module):
             def __init__(self):
@@ -212,9 +212,9 @@ class TestModule(flow.unittest.TestCase):
                 return self.param
 
         m1 = CustomModule()
-        m1 = m1.to_global(flow.placement("cuda", range(2)), flow.sbp.broadcast)
+        m1 = m1.to_global(flow.placement("cuda", range(2)), flow.sbp.split(1))
         m2 = CustomModule()
-        m2 = m2.to_global(flow.placement("cuda", range(2)), flow.sbp.broadcast)
+        m2 = m2.to_global(flow.placement("cuda", [1]), flow.sbp.broadcast)
         res1 = m1() + m2()
         state_dict1 = m1.state_dict()
         state_dict2 = m2.state_dict()
@@ -233,7 +233,7 @@ class TestModule(flow.unittest.TestCase):
             m1 = CustomModule()
             m1 = m1.to_global(flow.placement("cuda", range(2)), flow.sbp.broadcast)
             m2 = CustomModule()
-            m2 = m2.to_global(flow.placement("cuda", range(2)), flow.sbp.broadcast)
+            m2 = m2.to_global(flow.placement("cuda", range(4)), flow.sbp.split(1))
 
             with test_case.assertRaises(Exception):
                 loaded_state_dict = flow.load(f)
