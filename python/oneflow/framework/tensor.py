@@ -902,6 +902,10 @@ def _masked_fill(self, mask, fill_value):
 def _masked_select(self, mask):
     return flow.masked_select(self, mask)
 
+def _contiguous(self):
+    if self.is_contiguous():
+        return self
+    return flow._C.contiguous(self)
 
 def _reshape(self, *shape):
     if len(shape) == 1:
@@ -1123,7 +1127,6 @@ def RegisterMethods():
     Tensor.tril = _tril
     Tensor.triu = _triu
     Tensor.where = _where
-    Tensor.contiguous = _contiguous
     Tensor.norm = _norm
     Tensor.vector_norm = _vector_norm
     Tensor.matrix_norm = _matrix_norm
@@ -1162,6 +1165,7 @@ def RegisterMethods():
     Tensor.lt = _lt
     Tensor.le = _le
     Tensor.to_local = _to_local
+    Tensor.contiguous = _contiguous
     Tensor.reshape = _reshape
     Tensor.view = _view
     Tensor.sort = _sort

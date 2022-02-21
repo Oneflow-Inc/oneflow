@@ -1117,6 +1117,10 @@
   signature: "Tensor (Tensor x, Shape shape) => View"
   bind_python: True
 
+- name: "contiguous"
+  signature: "Tensor (Tensor input) => ToContiguous"
+  bind_python: True
+
 - name: "slice_view_1d_contiguous"
   signature: "Tensor (Tensor x, Int64 start, Int64 end) => SliceView1dContiguous"
   bind_python: True
