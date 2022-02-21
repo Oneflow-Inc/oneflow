@@ -53,7 +53,7 @@ def argwhere_op(input, dtype: Optional[flow.dtype] = flow.int32):
     """
 
     if input.is_lazy:
-        raise ValueError("A lazy tensor can not be applied to argwhere")
+        raise ValueError("A lazy tensor can not be applied to argwhere.")
 
     (res, size) = flow._C.argwhere(input, dtype=dtype)
     slice_tup_list = [(0, size.numpy().item(), 1)]
