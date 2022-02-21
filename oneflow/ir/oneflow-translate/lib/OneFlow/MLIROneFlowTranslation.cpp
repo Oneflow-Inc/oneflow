@@ -725,10 +725,16 @@ Type JobImporter::GetInterfaceBlobConfType(const ::oneflow::InterfaceBlobConf& b
                                *data_type);
 }
 
+void DumpMLIR(RoundTripOneFlowJobWrapperInterface& job_wrapper, ModuleOp module, std::string kind) {
+  std::string mlir;
+  llvm::raw_string_ostream os_mlir(mlir);
+  module->print(os_mlir);
+  job_wrapper.DumpLog("RoundTripOneFlowJob." + kind + ".mlir", mlir);
+}
+
 LogicalResult ApplyRoundTripPatterns(RoundTripOneFlowJobWrapperInterface& job_wrapper,
                                      MLIRContext* context, OwningOpRef<ModuleOp>& module) {
   mlir::PassManager pm(context);
-  pm.addPass(createCanonicalizerPass());
   std::string graphviz;
   if (job_wrapper.IsLastIRPass() && std::getenv("ONEFLOW_MLIR_ENABLE_CODEGEN_FUSERS") != nullptr) {
     pm.addPass(oneflow::createOutlineJitFunctionPass());
@@ -742,10 +748,7 @@ LogicalResult ApplyRoundTripPatterns(RoundTripOneFlowJobWrapperInterface& job_wr
     return failure();
   }
   job_wrapper.DumpLog("RoundTripOneFlowJob.mlir.dot", graphviz);
-  std::string mlir;
-  llvm::raw_string_ostream os_mlir(mlir);
-  module->print(os_mlir);
-  job_wrapper.DumpLog("RoundTripOneFlowJob.mlir", mlir);
+  DumpMLIR(job_wrapper, module.get(), "optimized");
   return success();
 }
 
@@ -771,6 +774,7 @@ void RoundTripOneFlowJob(
   OwningOpRef<ModuleOp> module(
       ModuleOp::create(FileLineColLoc::get(&context, "", /*line=*/0, /*column=*/0)));
   JobImporter imp(job_wrapper, &context, module.get());
+  DumpMLIR(job_wrapper, module.get(), "imported");
   // TODO: Add flag in job desc to decide whether to run mlir optimizer
   if (succeeded(imp.ProcessJob())) {
     if (failed(ApplyRoundTripPatterns(job_wrapper, &context, module))) { exit(EXIT_FAILURE); }
