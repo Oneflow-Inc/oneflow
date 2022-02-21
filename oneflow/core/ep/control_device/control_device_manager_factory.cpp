@@ -22,23 +22,23 @@ namespace ep {
 
 namespace {
 
-class CriticalSectionDeviceManagerFactory : public DeviceManagerFactory {
+class ControlDeviceManagerFactory : public DeviceManagerFactory {
  public:
-  OF_DISALLOW_COPY_AND_MOVE(CriticalSectionDeviceManagerFactory);
-  CriticalSectionDeviceManagerFactory() = default;
-  ~CriticalSectionDeviceManagerFactory() override = default;
+  OF_DISALLOW_COPY_AND_MOVE(ControlDeviceManagerFactory);
+  ControlDeviceManagerFactory() = default;
+  ~ControlDeviceManagerFactory() override = default;
 
   std::unique_ptr<DeviceManager> NewDeviceManager(DeviceManagerRegistry* registry) override {
     return std::unique_ptr<DeviceManager>();
   }
 
-  DeviceType device_type() const override { return DeviceType::kCriticalSectionDevice; }
+  DeviceType device_type() const override { return DeviceType::kControlDevice; }
 
-  std::string device_type_name() const override { return "critical_section"; }
+  std::string device_type_name() const override { return "control"; }
 };
 
 COMMAND(DeviceManagerRegistry::RegisterDeviceManagerFactory(
-    std::make_unique<CriticalSectionDeviceManagerFactory>()))
+    std::make_unique<ControlDeviceManagerFactory>()))
 
 }  // namespace
 
