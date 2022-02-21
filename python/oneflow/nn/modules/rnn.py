@@ -209,7 +209,10 @@ class RNN(Module):
             if input.is_global:
                 h_t = h_t.to_global(
                     input.placement,
-                    [flow.sbp.broadcast for _ in range(len(input.placement.hierarchy))],
+                    [
+                        flow.sbp.broadcast
+                        for _ in range(len(input.placement.ranks.shape))
+                    ],
                 )
             else:
                 h_t = h_t.to(input.device)
@@ -535,12 +538,14 @@ class GRU(Module):
             h_t = flow.zeros(
                 (D * num_layers, batch_size, self.hidden_size),
                 dtype=input.dtype,
-                device=input.device,
             )
             if input.is_global:
                 h_t = h_t.to_global(
                     input.placement,
-                    [flow.sbp.broadcast for _ in range(len(input.placement.hierarchy))],
+                    [
+                        flow.sbp.broadcast
+                        for _ in range(len(input.placement.ranks.shape))
+                    ],
                 )
             else:
                 h_t = h_t.to(input.device)
@@ -925,27 +930,29 @@ class LSTM(nn.Module):
                 self.proj_size if self.proj_size > 0 else self.hidden_size
             )
             h_t = flow.zeros(
-                (D * num_layers, batch_size, real_hidden_size),
-                dtype=input.dtype,
-                device=input.device,
+                (D * num_layers, batch_size, real_hidden_size), dtype=input.dtype,
             )
             if input.is_global:
                 h_t = h_t.to_global(
                     input.placement,
-                    [flow.sbp.broadcast for _ in range(len(input.placement.hierarchy))],
+                    [
+                        flow.sbp.broadcast
+                        for _ in range(len(input.placement.ranks.shape))
+                    ],
                 )
             else:
                 h_t = h_t.to(input.device)
 
             c_t = flow.zeros(
-                (D * num_layers, batch_size, self.hidden_size),
-                dtype=input.dtype,
-                device=input.device,
+                (D * num_layers, batch_size, self.hidden_size), dtype=input.dtype,
             )
             if input.is_global:
                 c_t = c_t.to_global(
                     input.placement,
-                    [flow.sbp.broadcast for _ in range(len(input.placement.hierarchy))],
+                    [
+                        flow.sbp.broadcast
+                        for _ in range(len(input.placement.ranks.shape))
+                    ],
                 )
             else:
                 c_t = c_t.to(input.device)

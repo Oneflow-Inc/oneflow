@@ -33,7 +33,7 @@ def test_reflection_pad2d_impl(test_case, padding, placement, sbp):
 
 
 class TestReflectionPad2dConsistent(flow.unittest.TestCase):
-    @globalview
+    @globaltest
     def test_reflection_pad2d(test_case):
         padding = [
             (2, 2, 1, 1),
