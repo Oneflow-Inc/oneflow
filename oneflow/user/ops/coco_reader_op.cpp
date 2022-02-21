@@ -38,7 +38,7 @@ namespace oneflow {
 }
 
 /* static */ Maybe<void> COCOReaderOp::InferPhysicalTensorDesc(user_op::InferContext* ctx) {
-  const cfg::SbpParallel& sbp = ctx->SbpParallel4ArgNameAndIndex("image", 0);
+  const SbpParallel& sbp = ctx->SbpParallel4ArgNameAndIndex("image", 0);
   CHECK_OR_RETURN(sbp == ctx->SbpParallel4ArgNameAndIndex("image_id", 0));
   CHECK_OR_RETURN(sbp == ctx->SbpParallel4ArgNameAndIndex("image_size", 0));
   CHECK_OR_RETURN(sbp == ctx->SbpParallel4ArgNameAndIndex("gt_bbox", 0));
@@ -109,7 +109,7 @@ namespace oneflow {
 }
 
 /* static */ Maybe<void> COCOReaderOp::InferNdSbp(user_op::InferNdSbpFnContext* ctx) {
-  cfg::SbpParallel default_sbp;
+  SbpParallel default_sbp;
   default_sbp.mutable_split_parallel()->set_axis(0);
   return user_op::InferNdSbp4SrcOp(ctx, default_sbp);
 }

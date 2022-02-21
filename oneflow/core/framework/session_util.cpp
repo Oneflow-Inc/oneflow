@@ -47,17 +47,12 @@ Maybe<void> SetDefaultSessionId(int64_t val) {
 Session::Session(int64_t id)
     : id_(id), is_mirrored_strategy_enabled_stack_(new std::vector<bool>()) {
   instruction_list_.reset(new vm::InstructionMsgList());
-  eager_symbol_list_.reset(new vm::cfg::EagerSymbolList());
 }
 
 int64_t Session::id() const { return id_; }
 
 const std::shared_ptr<vm::InstructionMsgList>& Session::instruction_list() const {
   return instruction_list_;
-}
-
-std::shared_ptr<vm::cfg::EagerSymbolList> Session::eager_symbol_list() const {
-  return eager_symbol_list_;
 }
 
 Maybe<void> Session::PushMirroredStrategyEnabled(bool is_mirrored) {

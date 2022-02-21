@@ -40,12 +40,22 @@ __device__ __inline__ int64_t AtomicAdd(int64_t* address, int64_t val) {
 }
 
 template<typename T>
+__inline__ __device__ bool IsFinite(T x) {
+  return isfinite(x);
+}
+
+template<>
+__inline__ __device__ bool IsFinite<half>(half x) {
+  return IsFinite(static_cast<float>(x));
+}
+
+template<typename T>
 __global__ void CountNotFiniteGpu(const int64_t n, const T* x, int64_t* y) {
   typedef cub::BlockReduce<int64_t, kCudaThreadsNumPerBlock> BlockReduce;
   __shared__ typename BlockReduce::TempStorage cub_reduce_tmp_storage;
   int64_t thread_count = 0;
   CUDA_1D_KERNEL_LOOP(i, n) {
-    if (!isfinite(x[i])) { thread_count += 1; }
+    if (!IsFinite(x[i])) { thread_count += 1; }
   }
   __syncthreads();
   int64_t block_count_sum = BlockReduce(cub_reduce_tmp_storage).Reduce(thread_count, cub::Sum());
@@ -59,7 +69,7 @@ __global__ void MultiCountNotFiniteGpu(Param<T, N> param) {
   int64_t thread_count = 0;
   for (int32_t k = 0; k < param.num_x; ++k) {
     CUDA_1D_KERNEL_LOOP(i, param.x_elem_cnt[k]) {
-      if (!isfinite(param.x[k][i])) { thread_count += 1; }
+      if (!IsFinite(param.x[k][i])) { thread_count += 1; }
     }
   }
   __syncthreads();
@@ -103,6 +113,7 @@ class CountNotFiniteGpuKernel final : public user_op::OpKernel, public user_op::
       .SetIsMatchedHob((user_op::HobDeviceType() == DeviceType::kCUDA) \
                        && (user_op::HobDataType("x", 0) == GetDataType<dtype>::value));
 
+REGISTER_COUNT_NOT_FINITE_CUDA_KERNEL(half)
 REGISTER_COUNT_NOT_FINITE_CUDA_KERNEL(float)
 REGISTER_COUNT_NOT_FINITE_CUDA_KERNEL(double)
 
@@ -154,6 +165,7 @@ class MultiCountNotFiniteGpuKernel final : public user_op::OpKernel,
       .SetIsMatchedHob((user_op::HobDeviceType() == DeviceType::kCUDA) \
                        && (user_op::HobDataType("x", 0) == GetDataType<dtype>::value));
 
+REGISTER_MULTI_COUNT_NOT_FINITE_CUDA_KERNEL(half)
 REGISTER_MULTI_COUNT_NOT_FINITE_CUDA_KERNEL(float)
 REGISTER_MULTI_COUNT_NOT_FINITE_CUDA_KERNEL(double)
 
