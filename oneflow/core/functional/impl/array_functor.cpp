@@ -1028,15 +1028,12 @@ class ReshapeFunctor {
     op_ = CHECK_JUST(one::OpBuilder("reshape").Input("in").Output("out").Build());
   }
   Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x, const Shape& shape) const {
-    Shape infered_shape = *JUST(ComputeReshape(x, shape));
+    Shape infered_shape = *JUST(ComputeShape(x, shape));
     MutableAttrMap attrs;
     JUST(attrs.SetAttr<Shape>("shape", infered_shape));
 
     if (view::IsViewApplicable(x)) {
-      // in some case, view operate is not allowed, so need to check it's validation,
-      // the check refer to torch(aten/src/ATen/native/TensorShape.cpp)
-      bool is_view_valid = CheckViewValid(x->shape()->elem_cnt(), x->shape()->dim_vec(),
-                                          JUST(x->stride())->StrideVec(), infered_shape.dim_vec());
+      bool is_view_valid = CheckViewValid(*(x->shape()), *JUST(x->stride()), infered_shape);
       if (is_view_valid) { return view::Reshape(x, infered_shape); }
     }
     return OpInterpUtil::Dispatch<Tensor>(*op_, {x}, attrs);
@@ -1050,13 +1047,12 @@ class ViewFunctor {
  public:
   ViewFunctor() { op_ = CHECK_JUST(one::OpBuilder("reshape").Input("in").Output("out").Build()); }
   Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x, const Shape& shape) const {
-    Shape infered_shape = *JUST(ComputeReshape(x, shape));
+    Shape infered_shape = *JUST(ComputeShape(x, shape));
     MutableAttrMap attrs;
     JUST(attrs.SetAttr<Shape>("shape", infered_shape));
 
     if (view::IsViewApplicable(x)) {
-      bool is_view_valid = CheckViewValid(x->shape()->elem_cnt(), x->shape()->dim_vec(),
-                                          JUST(x->stride())->StrideVec(), infered_shape.dim_vec());
+      bool is_view_valid = CheckViewValid(*(x->shape()), *JUST(x->stride()), infered_shape);
       CHECK_OR_RETURN(is_view_valid)
           << " >> view size is not compatible with input tensor's size and stride (at least one "
              "dimension spans across two contiguous subspaces). Use .reshape(...) instead.";
