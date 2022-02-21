@@ -39,7 +39,7 @@ limitations under the License.
 #include "oneflow/core/vm/symbol_storage.h"
 #include "oneflow/core/framework/multi_client_session_context.h"
 #include "oneflow/core/framework/symbol_id_cache.h"
-#include "oneflow/core/operator/op_node_signature.cfg.h"
+#include "oneflow/core/operator/op_node_signature.pb.h"
 #include "oneflow/core/operator/op_conf.cfg.h"
 #include "oneflow/core/comm_network/comm_network.h"
 #include "oneflow/core/comm_network/epoll/epoll_comm_network.h"
@@ -52,6 +52,7 @@ limitations under the License.
 #include "oneflow/core/platform/include/ibv.h"
 #endif  // WITH_RDMA
 #include "oneflow/core/ep/include/device_manager_registry.h"
+#include "oneflow/core/ep/cpu/cpu_device_manager.h"
 
 namespace oneflow {
 
@@ -97,10 +98,18 @@ Resource GetDefaultResource(const EnvProto& env_proto) {
   return resource;
 }
 
-void ClearAllSymbolAndIdCache() {
-  Global<symbol::Storage<StringSymbol>>::Get()->ClearAll();
-  Global<symbol::IdCache<std::string>>::Get()->ClearAll();
+void SetCpuDeviceManagerNumThreads() {
+  ep::CpuDeviceManager* cpu_device_manager = dynamic_cast<ep::CpuDeviceManager*>(
+      Global<ep::DeviceManagerRegistry>::Get()->GetDeviceManager(DeviceType::kCPU));
+  constexpr size_t kDefaultUsedNumThreads = 2;
+  int64_t cpu_logic_core = std::thread::hardware_concurrency();
+  int64_t default_num_threads =
+      (cpu_logic_core / GlobalProcessCtx::NumOfProcessPerNode()) - kDefaultUsedNumThreads;
+  int64_t num_threads = ParseIntegerFromEnv("ONEFLOW_EP_CPU_NUM_THREADS", default_num_threads);
+  cpu_device_manager->SetDeviceNumThreads(num_threads);
+}
 
+void ClearAllSymbolAndIdCache() {
   Global<symbol::Storage<Scope>>::Get()->ClearAll();
   Global<symbol::IdCache<cfg::ScopeProto>>::Get()->ClearAll();
 
@@ -112,8 +121,6 @@ void ClearAllSymbolAndIdCache() {
 
   Global<symbol::Storage<OperatorConfSymbol>>::Get()->ClearAll();
   Global<symbol::IdCache<cfg::OperatorConf>>::Get()->ClearAll();
-  Global<symbol::Storage<OpNodeSignatureDesc>>::Get()->ClearAll();
-  Global<symbol::IdCache<cfg::OpNodeSignature>>::Get()->ClearAll();
 }
 
 #if defined(__linux__) && defined(WITH_RDMA)
@@ -176,6 +183,7 @@ Maybe<void> EnvGlobalObjectsScope::Init(const EnvProto& env_proto) {
   }
   Global<ep::DeviceManagerRegistry>::New();
   Global<ThreadPool>::New(Global<ResourceDesc, ForSession>::Get()->ComputeThreadPoolSize());
+  SetCpuDeviceManagerNumThreads();
 #ifdef WITH_CUDA
   Global<EagerNcclCommMgr>::New();
   Global<CudnnConvAlgoCache>::New();

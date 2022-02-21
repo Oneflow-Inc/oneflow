@@ -106,8 +106,8 @@ class MyModule1(flow.nn.Module):
         # )
         y = flow._C.matmul(x, self.weight, transpose_b=True)
         # print(f"y shape: {y.shape}, placement: {y.placement}, sbp: {y.sbp}")
-        if y.is_consistent:
-            y = y.to_consistent(sbp=flow.sbp.broadcast)
+        if y.is_global:
+            y = y.to_global(sbp=flow.sbp.broadcast)
             # print(f"post y shape: {y.shape}, placement: {y.placement}, sbp: {y.sbp}")
         return self.activation(y)
 
@@ -121,12 +121,12 @@ class MyModule2(flow.nn.Module):
 
     def forward(self, x):
         # print(f"weight shape: {self.weight.shape}, placement: {self.weight.placement}, sbp: {self.weight.sbp}")
-        if self.weight.is_consistent:
-            y = self.weight.to_consistent(grad_sbp=flow.sbp.broadcast)
+        if self.weight.is_global:
+            y = self.weight.to_global(grad_sbp=flow.sbp.broadcast)
         z = flow._C.matmul(y, x, transpose_b=True)
         out = self.activation(z).sum()
-        if self.weight.is_consistent:
-            out = out.to_consistent(sbp=flow.sbp.broadcast)
+        if self.weight.is_global:
+            out = out.to_global(sbp=flow.sbp.broadcast)
         return out
 
 
@@ -139,8 +139,8 @@ class MyModule3(flow.nn.Module):
 
     def forward(self, x, y):
         z = flow._C.matmul(x, y, self.transpose_a, self.transpose_b)
-        if z.is_consistent:
-            z = z.to_consistent(sbp=flow.sbp.broadcast)
+        if z.is_global:
+            z = z.to_global(sbp=flow.sbp.broadcast)
         return self.activation(z)
 
 
@@ -173,7 +173,7 @@ class ToPlacementModule(flow.nn.Module):
         self.placement = placement
 
     def forward(self, x):
-        return x.to_consistent(placement=self.placement)
+        return x.to_global(placement=self.placement)
 
 
 class MyGraph(flow.nn.Graph):
@@ -192,14 +192,14 @@ class MyGraph(flow.nn.Graph):
 
 @unittest.skipIf(os.getenv("ONEFLOW_TEST_CPU_ONLY"), "only test cpu cases")
 @flow.unittest.skip_unless_1n2d()
-class ToConsistentGraphTestCase(oneflow.unittest.TestCase):
+class ToGlobalGraphTestCase(oneflow.unittest.TestCase):
     # @unittest.skipIf(True, "")
     def test_fwd_P2B(test_case):
         """ compare eager fwd and lazy bwd
         """
         rank = flow.env.get_rank()
         # pid = os.getpid()
-        # print(f"[{pid}][{rank}] ToConsistentGraphTestCase.test_fwd_P2B")
+        # print(f"[{pid}][{rank}] ToGlobalGraphTestCase.test_fwd_P2B")
 
         local_x = flow.tensor(x, dtype=flow.float32, device=flow.device(f"cuda:{rank}"))
         local_y = flow.tensor(y, dtype=flow.float32, device=flow.device(f"cuda:{rank}"))
@@ -213,10 +213,10 @@ class ToConsistentGraphTestCase(oneflow.unittest.TestCase):
         # print(f"z shape: {z.shape}, device: {z.device}")
         # print(z.numpy())
 
-        placement = flow.placement("cuda", {0: [0, 1]})
+        placement = flow.placement("cuda", ranks=[0, 1])
         sbp = flow.sbp.split(1)
-        c_x = local_x.to_consistent(placement=placement, sbp=sbp)
-        c_y = local_y.to_consistent(placement=placement, sbp=sbp)
+        c_x = local_x.to_global(placement=placement, sbp=sbp)
+        c_y = local_y.to_global(placement=placement, sbp=sbp)
 
         # print(f"c_x shape: {c_x.shape}, placement: {c_x.placement}, sbp: {c_x.sbp}")
         # print(f"c_y shape: {c_y.shape}, placement: {c_y.placement}, sbp: {c_y.sbp}")
@@ -235,7 +235,7 @@ class ToConsistentGraphTestCase(oneflow.unittest.TestCase):
         """
         rank = flow.env.get_rank()
         # pid = os.getpid()
-        # print(f"[{pid}][{rank}] ToConsistentGraphTestCase.test_bwd_P2B")
+        # print(f"[{pid}][{rank}] ToGlobalGraphTestCase.test_bwd_P2B")
 
         local_x = flow.tensor(x, dtype=flow.float32, device=flow.device(f"cuda:{rank}"))
         local_y = flow.tensor(y, dtype=flow.float32, device=flow.device(f"cuda:{rank}"))
@@ -246,9 +246,9 @@ class ToConsistentGraphTestCase(oneflow.unittest.TestCase):
         z = flow._C.relu(z)
         z = z.sum()
 
-        placement = flow.placement("cuda", {0: [0, 1]})
-        c_x = local_x.to_consistent(placement=placement, sbp=flow.sbp.split(0))
-        c_y = local_y.to_consistent(placement=placement, sbp=flow.sbp.broadcast)
+        placement = flow.placement("cuda", ranks=[0, 1])
+        c_x = local_x.to_global(placement=placement, sbp=flow.sbp.split(0))
+        c_y = local_y.to_global(placement=placement, sbp=flow.sbp.broadcast)
 
         m = MyModule2(c_y)
         optimizer = flow.optim.SGD(m.parameters(), lr=1.0)
@@ -256,10 +256,10 @@ class ToConsistentGraphTestCase(oneflow.unittest.TestCase):
 
         g_z = g(c_x)
         # print(f"g_z shape: {g_z.shape}, placement: {g_z.placement}, sbp: {g_z.sbp}")
-        test_case.assertTrue(g_z.is_consistent)
+        test_case.assertTrue(g_z.is_global)
         test_case.assertTrue(g_z.sbp[0] == flow.sbp.broadcast)
         # S(1) -> B not supported yet
-        # c_z = g_z.to_consistent(sbp=flow.sbp.broadcast)
+        # c_z = g_z.to_global(sbp=flow.sbp.broadcast)
         # print(f"c_z shape: {c_z.shape}, placement: {c_z.placement}, sbp: {c_z.sbp}")
         test_case.assertTrue(np.allclose(z.numpy(), g_z.to_local().numpy()))
 
@@ -280,14 +280,14 @@ class ToConsistentGraphTestCase(oneflow.unittest.TestCase):
         """
         rank = flow.env.get_rank()
         # pid = os.getpid()
-        # print(f"[{pid}][{rank}] ToConsistentGraphTestCase.test_multi_graph")
+        # print(f"[{pid}][{rank}] ToGlobalGraphTestCase.test_multi_graph")
 
         local_x = flow.tensor(x, dtype=flow.float32, device=flow.device(f"cuda:{rank}"))
         local_y = flow.tensor(y, dtype=flow.float32, device=flow.device(f"cuda:{rank}"))
 
-        placement = flow.placement("cuda", {0: [0, 1]})
-        x1 = local_x.to_consistent(placement=placement, sbp=flow.sbp.broadcast)
-        y1 = local_y.to_consistent(placement=placement, sbp=flow.sbp.broadcast)
+        placement = flow.placement("cuda", ranks=[0, 1])
+        x1 = local_x.to_global(placement=placement, sbp=flow.sbp.broadcast)
+        y1 = local_y.to_global(placement=placement, sbp=flow.sbp.broadcast)
         # B * B -> B -> B
         m1 = MyModule3(transpose_b=True)
         g1 = MyGraph(m1)
@@ -296,8 +296,8 @@ class ToConsistentGraphTestCase(oneflow.unittest.TestCase):
             int(rank * local_x.shape[0] / 2), int((rank + 1) * local_x.shape[0] / 2)
         )
         x2 = local_x[slice_obj, :]
-        x2 = x2.to_consistent(placement=placement, sbp=flow.sbp.split(0))
-        y2 = local_y.to_consistent(placement=placement, sbp=flow.sbp.broadcast)
+        x2 = x2.to_global(placement=placement, sbp=flow.sbp.split(0))
+        y2 = local_y.to_global(placement=placement, sbp=flow.sbp.broadcast)
         # S(0) * B -> S(0) -> B
         m2 = MyModule3(transpose_b=True)
         g2 = MyGraph(m2)
@@ -305,11 +305,11 @@ class ToConsistentGraphTestCase(oneflow.unittest.TestCase):
         x3 = local_x[
             :, int(rank * local_x.shape[1] / 2) : int((rank + 1) * local_x.shape[1] / 2)
         ]
-        x3 = x3.to_consistent(placement=placement, sbp=flow.sbp.split(1))
+        x3 = x3.to_global(placement=placement, sbp=flow.sbp.split(1))
         y3 = local_y[
             :, int(rank * local_y.shape[1] / 2) : int((rank + 1) * local_y.shape[1] / 2)
         ]
-        y3 = y3.to_consistent(placement=placement, sbp=flow.sbp.split(1))
+        y3 = y3.to_global(placement=placement, sbp=flow.sbp.split(1))
         # S(1) * S(0) -> P -> B
         m3 = MyModule3(transpose_b=True)
         g3 = MyGraph(m3)
@@ -328,43 +328,43 @@ class ToConsistentGraphTestCase(oneflow.unittest.TestCase):
         test_case.assertTrue(np.allclose(z1.to_local().numpy(), z3.to_local().numpy()))
 
     # @unittest.skipIf(True, "")
-    def test_consistent_to(test_case):
+    def test_global_to(test_case):
         c_x = flow.ones(
-            (4, 3), placement=flow.placement("cpu", {0: [0, 1]}), sbp=flow.sbp.split(0)
+            (4, 3), placement=flow.placement("cpu", ranks=[0, 1]), sbp=flow.sbp.split(0)
         )
 
-        consistent_to = ConsistentToModule("cuda")
-        g_consistent_to = MyGraph(consistent_to)
+        global_to = ConsistentToModule("cuda")
+        g_global_to = MyGraph(global_to)
 
-        e = consistent_to(c_x)
+        e = global_to(c_x)
         test_case.assertTrue(e.is_cuda)
-        test_case.assertTrue(e.is_consistent)
+        test_case.assertTrue(e.is_global)
         test_case.assertTrue(e.sbp[0] == flow.sbp.split(0))
 
-        g = g_consistent_to(c_x)
+        g = g_global_to(c_x)
         test_case.assertTrue(g.is_cuda)
-        test_case.assertTrue(g.is_consistent)
+        test_case.assertTrue(g.is_global)
         test_case.assertTrue(g.sbp[0] == flow.sbp.split(0))
 
         test_case.assertTrue(np.allclose(e.to_local().numpy(), g.to_local().numpy()))
 
     # @unittest.skipIf(True, "")
-    def test_free_tensor_to_consistent(test_case):
+    def test_free_tensor_to_global(test_case):
         local_x = flow.tensor(x, dtype=flow.float32, device="cpu")
-        placement = flow.placement("cuda", {0: [0, 1]})
-        c_x = local_x.to_consistent(placement, flow.sbp.split(0))
+        placement = flow.placement("cuda", ranks=[0, 1])
+        c_x = local_x.to_global(placement, flow.sbp.split(0))
 
         m = FreeTensorModule((3, 10), placement, flow.sbp.broadcast)
         g = MyGraph(m)
 
         eager_out = m(c_x)
         test_case.assertTrue(eager_out.is_cuda)
-        test_case.assertTrue(eager_out.is_consistent)
+        test_case.assertTrue(eager_out.is_global)
         test_case.assertTrue(eager_out.sbp[0] == flow.sbp.split(0))
 
         graph_out = g(c_x)
         test_case.assertTrue(graph_out.is_cuda)
-        test_case.assertTrue(graph_out.is_consistent)
+        test_case.assertTrue(graph_out.is_global)
         test_case.assertTrue(graph_out.sbp[0] == flow.sbp.split(0))
 
         test_case.assertTrue(
@@ -375,7 +375,7 @@ class ToConsistentGraphTestCase(oneflow.unittest.TestCase):
     def test_to_placement(test_case):
         rank = flow.env.get_rank()
         # pid = os.getpid()
-        # print(f"[{pid}][{rank}] ToConsistentGraphTestCase.test_to_placement")
+        # print(f"[{pid}][{rank}] ToGlobalGraphTestCase.test_to_placement")
 
         if rank == 0:
             x = flow.ones((2, 3), dtype=flow.float32)
@@ -384,27 +384,27 @@ class ToConsistentGraphTestCase(oneflow.unittest.TestCase):
         else:
             raise ValueError
 
-        c_x = x.to_consistent(
-            placement=flow.placement("cpu", {0: [0]}), sbp=flow.sbp.broadcast
+        c_x = x.to_global(
+            placement=flow.placement("cpu", ranks=[0]), sbp=flow.sbp.broadcast
         )
-        # print(f"c_x shape: {c_x.shape}, placment: {c_x.placement}, sbp: {c_x.sbp}")
+        # print(f"c_x shape: {c_x.shape}, placement: {c_x.placement}, sbp: {c_x.sbp}")
 
-        p1 = flow.placement("cpu", {0: [0, 1]})
+        p1 = flow.placement("cpu", ranks=[0, 1])
         m1 = ToPlacementModule(p1)
         g1 = MyGraph(m1)
         y1 = g1(c_x)
 
-        # print(f"y1 shape: {y1.shape}, placment: {y1.placement}, sbp: {y1.sbp}")
+        # print(f"y1 shape: {y1.shape}, placement: {y1.placement}, sbp: {y1.sbp}")
         test_case.assertTrue(y1.placement == p1)
         test_case.assertTrue(y1.sbp[0] == flow.sbp.broadcast)
         test_case.assertTrue(y1.to_local().numpy().mean() == 1.0)
 
-        p2 = flow.placement("cuda", {0: [0, 1]})
+        p2 = flow.placement("cuda", ranks=[0, 1])
         m2 = ToPlacementModule(p2)
         g2 = MyGraph(m2)
         y2 = g2(y1)
 
-        # print(f"y2 shape: {y2.shape}, placment: {y2.placement}, sbp: {y2.sbp}")
+        # print(f"y2 shape: {y2.shape}, placement: {y2.placement}, sbp: {y2.sbp}")
         test_case.assertTrue(y2.placement == p2)
         test_case.assertTrue(y2.sbp[0] == flow.sbp.broadcast)
         test_case.assertTrue(y2.to_local().numpy().mean() == 1.0)
@@ -413,7 +413,7 @@ class ToConsistentGraphTestCase(oneflow.unittest.TestCase):
     def test_to_dtype(test_case):
         x = flow.ones((2, 3), dtype=flow.int32, device="cpu")
 
-        placement = flow.placement("cpu", {0: [0, 1]})
+        placement = flow.placement("cpu", ranks=[0, 1])
         c_x = flow.ones(
             (2, 3), dtype=flow.int32, placement=placement, sbp=flow.sbp.broadcast
         )
@@ -453,17 +453,17 @@ class MyModule5(flow.nn.Module):
 
     def forward(self, x, y):
         z = flow._C.matmul(x, y, self.transpose_a, self.transpose_b)
-        assert z.is_consistent
+        assert z.is_global
         assert len(z.sbp) == len(self.sbp)
-        return z.to_consistent(sbp=self.sbp)
+        return z.to_global(sbp=self.sbp)
 
 
 @unittest.skipIf(True, "")
 @unittest.skipIf(os.getenv("ONEFLOW_TEST_CPU_ONLY"), "only test cpu cases")
 @flow.unittest.skip_unless_1n4d()
-class ToConsistent2DGraphTestCase(oneflow.unittest.TestCase):
+class ToGlobal2DGraphTestCase(oneflow.unittest.TestCase):
     def test_matmul(test_case):
-        placement = flow.placement("cuda", {0: range(4)}, hierarchy=(2, 2))
+        placement = flow.placement("cuda", ranks=[[0, 1], [2, 3]])
         x = flow.ones(
             (4, 6), placement=placement, sbp=[flow.sbp.split(0), flow.sbp.split(1)]
         )
@@ -471,11 +471,65 @@ class ToConsistent2DGraphTestCase(oneflow.unittest.TestCase):
             (4, 6), placement=placement, sbp=[flow.sbp.broadcast, flow.sbp.split(1)]
         )
         z = flow._C.matmul(x, y, transpose_b=True)
-        print(f"z shape: {z.shape}, placment: {z.placement}, sbp: {z.sbp}")
+        print(f"z shape: {z.shape}, placement: {z.placement}, sbp: {z.sbp}")
 
         # m = MyModule5(transpose_b=True, sbp=[flow.sbp.split(0), flow.sbp.broadcast])
         # z = m(x, y)
-        # print(f"z shape: {z.shape}, placment: {z.placement}, sbp: {z.sbp}")
+        # print(f"z shape: {z.shape}, placement: {z.placement}, sbp: {z.sbp}")
+
+
+@flow.unittest.skip_unless_1n4d()
+@unittest.skipIf(os.getenv("ONEFLOW_TEST_CPU_ONLY"), "only test cpu cases")
+class TestLazy1dTo2dConsistent(flow.unittest.TestCase):
+    def test_lazy_1d_to_2d_sbp(test_case):
+        P_1d = flow.placement(
+            device_type="cuda", device_ids={0: range(4)}, hierarchy=(4,)
+        )
+        P_2d = flow.placement(
+            device_type="cuda", device_ids={0: range(4)}, hierarchy=(2, 2)
+        )
+        B = flow.sbp.broadcast
+
+        class Test1dTo2dModule(flow.nn.Module):
+            def forward(self, x):
+                return x.to_global(placement=P_2d, sbp=[B, B])
+
+        class Test1dTo2dGraph(flow.nn.Graph):
+            def __init__(self, model):
+                super().__init__()
+                self.model = model
+
+            def build(self, x):
+                return self.model(x)
+
+        class Test2dTo1dModule(flow.nn.Module):
+            def forward(self, x):
+                return x.to_global(placement=P_1d, sbp=[B])
+
+        class Test2dTo1dGraph(flow.nn.Graph):
+            def __init__(self, model):
+                super().__init__()
+                self.model = model
+
+            def build(self, x):
+                return self.model(x)
+
+        model_1d_to_2d = Test1dTo2dModule()
+        graph_1d_to_2d = Test1dTo2dGraph(model_1d_to_2d)
+
+        x = flow.zeros(4, 4, 4, 4, sbp=[B, B], placement=P_2d)
+        x = x.to_global(placement=P_1d, sbp=[B])
+        test_case.assertTrue(x.sbp == (B,))
+        test_case.assertTrue(x.placement == P_1d)
+        y = graph_1d_to_2d(x)
+        test_case.assertTrue(y.sbp == (B, B))
+        test_case.assertTrue(y.placement == P_2d)
+
+        model_2d_to_1d = Test2dTo1dModule()
+        graph_2d_to_1d = Test2dTo1dGraph(model_2d_to_1d)
+        z = graph_2d_to_1d(y)
+        test_case.assertTrue(z.sbp == x.sbp)
+        test_case.assertTrue(z.placement == x.placement)
 
 
 if __name__ == "__main__":

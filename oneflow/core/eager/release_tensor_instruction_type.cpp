@@ -35,9 +35,9 @@ class ReleaseTensorInstructionType : public vm::InstructionType {
 
   using stream_type = StreamT;
 
-  void Infer(vm::Instruction* instruction) const override { UNIMPLEMENTED(); }
-  void Compute(vm::Instruction* instruction) const override {
-    const vm::InstructionMsg& instr_msg = instruction->instr_msg();
+  InstructionFuseType fuse_type() const override { return kEnableInstructionFuseAtAnyPosition; }
+
+  void Release(const vm::InstructionMsg& instr_msg) const {
     const auto& phy_instr_operand = instr_msg.phy_instr_operand();
     CHECK(static_cast<bool>(phy_instr_operand));
     const auto* ptr =
@@ -45,6 +45,8 @@ class ReleaseTensorInstructionType : public vm::InstructionType {
     CHECK_NOTNULL(ptr);
     CHECK_JUST(ptr->eager_blob_object()->DeallocateBlobDataPtr());
   }
+  void Compute(vm::Instruction* instruction) const override { Release(instruction->instr_msg()); }
+  void ComputeInFuseMode(vm::InstructionMsg* instr_msg) const override { Release(*instr_msg); }
 };
 
 COMMAND(

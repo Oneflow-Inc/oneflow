@@ -34,19 +34,19 @@ class TestStatefulLocalKernel(flow.unittest.TestCase):
         test_case.assertEqual(y.shape, flow.Size((2, 3, 1)))
 
     @flow.unittest.skip_unless_1n2d()
-    def test_stateful_local_kernel_in_consistent_mode(test_case):
+    def test_stateful_local_kernel_in_global_mode(test_case):
         rank = int(os.getenv("RANK"))
 
         x = flow.tensor(np.array([1, 2]) * (rank + 1)).to("cuda")
-        x = x.to_consistent(flow.placement("cuda", {0: range(2)}), flow.sbp.split(0))
+        x = x.to_global(flow.placement("cuda", range(2)), flow.sbp.split(0))
 
         y = flow.tensor([3, 4, 5]).to("cuda")
-        y = y.to_consistent(flow.placement("cuda", {0: range(2)}), flow.sbp.broadcast)
+        y = y.to_global(flow.placement("cuda", range(2)), flow.sbp.broadcast)
 
         # logical slice assign op needs sbp and logical shape from stateful local opkernel
         x[:3] = y
 
-        x = x.to_consistent(sbp=flow.sbp.broadcast)
+        x = x.to_global(sbp=flow.sbp.broadcast)
 
         test_case.assertTrue(
             np.array_equal(x.to_local().numpy(), np.array([3, 4, 5, 4]))

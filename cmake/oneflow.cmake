@@ -38,9 +38,14 @@ foreach(oneflow_hdr_to_be_expanded ${oneflow_all_hdr_to_be_expanded})
   set_source_files_properties(${oneflow_all_hdr_expanded} PROPERTIES GENERATED TRUE)
 endforeach()
 
-file(GLOB_RECURSE oneflow_all_src "${PROJECT_SOURCE_DIR}/oneflow/core/*.*"
-     "${PROJECT_SOURCE_DIR}/oneflow/user/*.*" "${PROJECT_SOURCE_DIR}/oneflow/api/*.*"
-     "${PROJECT_SOURCE_DIR}/oneflow/extension/python/*.*")
+file(
+  GLOB_RECURSE
+  oneflow_all_src
+  "${PROJECT_SOURCE_DIR}/oneflow/core/*.*"
+  "${PROJECT_SOURCE_DIR}/oneflow/user/*.*"
+  "${PROJECT_SOURCE_DIR}/oneflow/api/*.*"
+  "${PROJECT_SOURCE_DIR}/oneflow/maybe/*.*"
+  "${PROJECT_SOURCE_DIR}/oneflow/extension/python/*.*")
 if(WITH_XLA OR WITH_TENSORRT OR WITH_OPENVINO)
   file(GLOB_RECURSE oneflow_xrt_src "${PROJECT_SOURCE_DIR}/oneflow/xrt/*.*")
   if(NOT WITH_XLA)
@@ -274,10 +279,10 @@ set(ONEFLOW_TOOLS_DIR "${PROJECT_BINARY_DIR}/tools"
     CACHE STRING "dir to put binary for debugging and development")
 
 set(LLVM_MONO_REPO_URL
-    "https://github.com/llvm/llvm-project/archive/649d95371680cbf7f740c990c0357372c2bd4058.zip"
+    "https://github.com/llvm/llvm-project/archive/c63522e6ba7782c335043893ae7cbd37eca24fe5.zip"
     CACHE STRING "")
 use_mirror(VARIABLE LLVM_MONO_REPO_URL URL ${LLVM_MONO_REPO_URL})
-set(LLVM_MONO_REPO_MD5 "9bda804e5cc61899085fb0f0dce1089f" CACHE STRING "")
+set(LLVM_MONO_REPO_MD5 "f2f17229cf21049663b8ef4f2b6b8062" CACHE STRING "")
 set(ONEFLOW_BUILD_ROOT_DIR "${PROJECT_BINARY_DIR}")
 add_subdirectory(${PROJECT_SOURCE_DIR}/oneflow/ir)
 if(WITH_MLIR)
@@ -569,6 +574,10 @@ if(BUILD_CPP_API)
     ${MLIR_RELATED_TARGETS}
     ${LLVM_RELATED_TARGETS}
     ${EXTERNAL_TARGETS})
+
+  if(BUILD_TESTING AND BUILD_SHARED_LIBS)
+    list(APPEND LIBONEFLOW_TARGETS gtest_main gtest)
+  endif()
 
   if(BUILD_TESTING)
     list(APPEND LIBONEFLOW_TARGETS oneflow_cpp_api_testexe)

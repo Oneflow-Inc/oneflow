@@ -33,17 +33,23 @@ from oneflow.framework.tensor_tuple_util import convert_to_tensor_tuple
 from oneflow.nn.graph.block import Block, BlockType, get_block_cls
 from oneflow.nn.graph.graph_config import GraphConfig
 from oneflow.nn.graph.optimizer import OptDict, VariableConfig
-from oneflow.nn.graph.util import add_indent, seq_to_func_return, sys_exc_error_msg
+from oneflow.nn.graph.util import (
+    add_indent,
+    seq_to_func_return,
+    sys_exc_error_msg,
+    IONodeType,
+    IONode,
+)
 from oneflow.nn.module import Module
-from oneflow.nn.optimizer.lr_scheduler import LrScheduler
+from oneflow.nn.optimizer.lr_scheduler import LRScheduler
 from oneflow.nn.optimizer.optimizer import Optimizer
 from oneflow.nn.optimizer.sparse_optimizer import SparseOptimizer
 
 
 class Graph(object):
-    r"""Base class for training or evaluating a neural network in graph mode.
+    r"""Base class for training or evaluating a neural network in static graph mode.
 
-    To use graph mode for model training or evaluation in OneFlow, you should:
+    To use static graph mode for model training or evaluation in OneFlow, you should:
 
     1. Define your customized graph as a subclass of ``nn.Graph``.
     2. Add ``super().__init__()`` in your subclass's ``__init__()``.
@@ -78,7 +84,8 @@ class Graph(object):
         >>> linear_graph(x).shape
         oneflow.Size([4, 8])
 
-    Note that Graph cannot be nested at the moment.
+    Note:
+        nn.Graph cannot be nested at the moment.
     """
     _child_init_cnt = dict()
 
@@ -103,7 +110,10 @@ class Graph(object):
         self._opts = []
         self._grad_scaler = None
         self._variables_conf = OrderedDict()
+        self._additional_variable_tobe_loaded = OrderedDict()
         self._is_compiled = False
+        # Default is local view
+        self._is_global_view = False
         # forward graph job proto
         self._forward_job_proto = None
         # forward, backward and optimized graph job proto
@@ -122,7 +132,7 @@ class Graph(object):
         session.TryInit()
         session.AddCGraph(self._c_nn_graph)
 
-    def build(self, *args):
+    def build(self, *args, **kwargs):
         r"""The ``build()`` method must be overridden to define neural network
         computaion logic.
 
@@ -140,29 +150,60 @@ class Graph(object):
         .. code-block:: python
 
             >>> import oneflow as flow
+            >>> linear = flow.nn.Linear(3, 8, False)
             >>> class MyGraph(flow.nn.Graph):
             ...     def __init__(self):
             ...         super().__init__()
-            ...         self.linear = flow.nn.Linear(3, 8, False)
+            ...         self.model = linear
             ...     def build(self, x):
-            ...         return self.linear(x)
+            ...         return self.model(x)
 
             >>> linear_graph = MyGraph()
             >>> x = flow.randn(4, 3)
+            >>> linear.eval() # make linear module executing in evaluation mode
+            Linear(in_features=3, out_features=8, bias=False)
             >>> y = linear_graph(x) # The build() method is called implicitly
 
-        Note that ``build()`` method's inputs and outputs only accept positional
-        arguements at the moment, each argument must be one of these types:
+        Note:
+            ``build()`` method's inputs and outputs support list/tuple/dict,
+            but the item in them must be one of these types:
 
-        * ``Tensor``
-        * ``list`` of ``Tensor``
-        * ``None``
+            * ``Tensor``
+            * ``None``
 
         """
         raise NotImplementedError()
 
+    def __call__(self, *args, **kwargs):
+        r"""Call nn.Graph subclass instance to run your customized graph.
+
+        Call your customized graph after the instantiation:
+
+        .. code-block:: python
+
+            g = CustomGraph()
+            out_tensors = g(input_tensors)
+
+        The inputs of ``__call__`` method must match the inputs of ``build()``
+        method. And the ``__call__`` method will return outputs matching the
+        outputs of ``build()`` method.
+
+        Note:
+            The first call takes longer than later calls, because nn.Graph
+            will do the computaion graph generation and optimization at the first call.
+
+            Donot override this function.
+        """
+        if not self._is_compiled:
+            with graph_build_util.GLogScopeContext(
+                self._debug_min_s_level, self._debug_max_v_level
+            ):
+                self._compile(*args, **kwargs)
+
+        return self.__run(*args, **kwargs)
+
     def add_optimizer(
-        self, optim: Optimizer, *, lr_sch: LrScheduler = None,
+        self, optim: Optimizer, *, lr_sch: LRScheduler = None,
     ):
         r"""Add an optimizer, an learning rate scheduler to the graph.
 
@@ -179,8 +220,8 @@ class Graph(object):
         * learn rate scheduler's ``step()``.
 
         Also note that only scalar tensor are allowed to call ``backward()``
-        in ``nn.Graph.build()`` for the moment. So you may call ``Tensor.sum()``
-        or ``Tensor.mean()`` to make the loss tensor a scalar tensor.
+        in ``nn.Graph.build()`` for the moment. So you may call methods such as ``Tensor.mean()``
+        to make the loss tensor a scalar tensor.
 
         .. code-block:: python
 
@@ -205,6 +246,11 @@ class Graph(object):
             >>> linear_graph = LinearTrainGraph()
             >>> x = flow.randn(10, 3)
             >>> y = flow.randn(10)
+            >>> model.train() # make model executing in training mode
+            Sequential(
+              (0): Linear(in_features=3, out_features=1, bias=True)
+              (1): Flatten(start_dim=0, end_dim=1)
+            )
             >>> for t in range(3):
             ...     loss = linear_graph(x, y)
 
@@ -219,7 +265,7 @@ class Graph(object):
         ), "optimizer must be an instance of Optimizer"
         opt_dict["optim"] = optim
         if lr_sch is not None:
-            assert isinstance(lr_sch, LrScheduler)
+            assert isinstance(lr_sch, LRScheduler)
             assert (
                 lr_sch._optimizer is optim
             ), "lr_scheduler's optimizer must be the same optimizer in add_optimizer."
@@ -235,29 +281,99 @@ class Graph(object):
         assert isinstance(grad_scaler, (GradScaler, StaticGradScaler))
         self._grad_scaler = grad_scaler
 
-    def __call__(self, *args):
-        r"""Call nn.Graph subclass instance to run your customized graph.
+    def state_dict(
+        self, destination=None
+    ) -> Dict[str, Union[Dict[str, Tensor], Tensor]]:
+        r"""Returns a dictionary containing a whole state of the graph.
 
-        Call your customized graph after the instantiation:
+        States of modules/optimizers/lr schedulers in a graph are included.
 
-        .. code-block:: python
+        Keys of modules' state dict are corresponding to their name in the graph.
+        Values of modules' state dict are corresponding to their nn.Module's
+        state dict.
 
-            g = CustomGraph()
-            out_tensors = g(input_tensors)
+        Other keys and tensors are states of optimizers/lr schedulers/etc.
 
-        The inputs of ``__call__`` method must match the inputs of ``build()``
-        method. And the ``__call__`` method will return outputs matching the
-        outputs of ``build()`` method.
+        Returns:
+            dict: a dictionary containing the whole state of the graph.
 
-        Note that the first call takes longer than later calls, because nn.Graph
-        will do the computaion graph generation and optimization at the first call.
-
-        Donot override this function.
         """
-        if not self._is_compiled:
-            self._compile(*args)
+        # Sync to make sure states has been updated.
+        oneflow._oneflow_internal.eager.multi_client.Sync()
+        if destination is None:
+            destination = OrderedDict()
+            destination._metadata = OrderedDict()
+        # Get states from sub module block
+        for name, block in self._blocks.items():
+            assert block.type == BlockType.MODULE
+            sub_destination = OrderedDict()
+            sub_destination._metadata = OrderedDict()
+            module = block.origin
+            if module is not None:
+                module.state_dict(
+                    sub_destination, "", keep_vars=False,
+                )
+            destination[name] = sub_destination
+        # Get additional states.
+        # Additional variables are states in Optimizer/LRScheduler and free eager tensors of nn.Graph.
+        if self._is_compiled:
+            # Get from _c_nn_graph.
+            additional_var_names = self._c_nn_graph.additional_var_names
+            additional_var_tensors = self._c_nn_graph.additional_var_tensors
+            assert len(additional_var_names) == len(additional_var_tensors)
+            for i in range(len(additional_var_names)):
+                additional_tensor = additional_var_tensors[i]
+                if not self._is_global_view:
+                    additional_tensor = additional_tensor.to_local()
+                destination[additional_var_names[i]] = additional_tensor
+        else:
+            # Get form loaded dict.
+            for name, item in self._additional_variable_tobe_loaded.items():
+                destination[name] = item
+        return destination
 
-        return self._run(*args)
+    def load_state_dict(
+        self,
+        state_dict: Dict[str, Union[Dict[str, Tensor], Tensor]],
+        strict: bool = True,
+    ):
+        r"""Copies module's states and other graph states from :attr:`state_dict`
+        into this graph. If :attr:`strict` is ``True``, then
+        the keys of :attr:`state_dict` must exactly match the keys returned
+        by this module's :meth:`nn.Graph.state_dict` function.
+
+        Args:
+            state_dict (dict): a dict containing module's states and other graph states.
+            strict (bool, optional): whether to strictly enforce that the keys
+                in :attr:`state_dict` match the keys returned by this graph's
+                :meth:`nn.Graph.state_dict` function. Default: ``True``.
+
+        Note:
+            nn.Graph's state dict can only be loaded before the first call of a graph.
+        """
+        assert (
+            not self._is_compiled
+        ), "nn.Graph's state dict can only be loaded before the first call of a graph."
+        # Additional variables are states in Optimizer or LRScheduler of nn.Graph.
+        additional_var_names = list()
+        additional_var_tensors = list()
+        for name, item in state_dict.items():
+            if name in self._blocks:
+                # 1 load parameter/buffer to Modules
+                self._blocks[name].origin.load_state_dict(item, strict)
+            else:
+                # 2 store other state to CNNGraph, CNNGraph load them after job pass
+                assert isinstance(item, Tensor)
+                additional_var_names.append(name)
+                additional_var_tensors.append(item)
+                self._additional_variable_tobe_loaded[name] = item
+
+        if len(additional_var_names) > 0:
+            self._c_nn_graph.register_additional_variable_names_and_tensors(
+                additional_var_names, convert_to_tensor_tuple(additional_var_tensors)
+            )
+        # Sync to make sure states has been loaded.
+        oneflow._oneflow_internal.eager.multi_client.Sync()
 
     @property
     def name(self):
@@ -289,7 +405,7 @@ class Graph(object):
         print graph build info of each nn.Module. ``v_level`` 2 will additionally print graph build
         info of each operation. ``v_level`` 3 will additionally print more detailed info of each
         operation.
-        
+
         Use ``ranks`` to choose which rank to print the debug information.
 
         .. code-block:: python
@@ -373,7 +489,7 @@ class Graph(object):
         shallow_repr = "(GRAPH:" + self._name + ":" + self.__class__.__name__ + ")"
         return shallow_repr
 
-    def _print(self, s_level=2, v_level=0, msg: str = ""):
+    def __print(self, s_level=2, v_level=0, msg: str = ""):
         r"""Do print according to info level.
         """
         assert isinstance(s_level, int)
@@ -396,7 +512,7 @@ class Graph(object):
     @property
     def _graph_proto(self):
         if not self._is_compiled:
-            self._print(
+            self.__print(
                 2,
                 0,
                 f"[ERROR]{self._shallow_repr()} has not been compiled, so it's graph proto is None."
@@ -407,7 +523,7 @@ class Graph(object):
     @property
     def _full_graph_proto(self):
         if not self._is_compiled:
-            self._print(
+            self.__print(
                 2,
                 0,
                 f"[ERROR]{self._shallow_repr()} has not been compiled, so it's full graph proto is None."
@@ -438,6 +554,9 @@ class Graph(object):
 
         for state_block in self._state():
             state_tensor = state_block.origin
+            # If any state tensor is global tensor, graph is in global view.
+            if state_tensor.is_global:
+                self._is_global_view = True
             if state_tensor in state_tensor_set:
                 continue
             op_name = state_block.name_prefix + state_block.name
@@ -492,20 +611,17 @@ class Graph(object):
                 )
                 state2lazy_builder[state_tensor] = state_block.lazy_origin_builder()
 
-    def _compile(self, *args):
+    def _compile(self, *args, **kwargs):
         # Build graph
         try:
-            self._print(0, 0, self._shallow_repr() + " start building graph.")
+            self.__print(0, 0, self._shallow_repr() + " start building graph.")
             assert not self._is_compiled, (
                 "nn.Graph " + self._name + " has already been compiled."
             )
             build_graph_start = time.perf_counter()
-            with graph_build_util.GLogScopeContext(
-                self._debug_min_s_level, self._debug_max_v_level
-            ):
-                eager_outputs = self._build_graph(*args)
+            eager_outputs = self.__build_graph(*args, **kwargs)
             build_graph_end = time.perf_counter()
-            self._print(
+            self.__print(
                 0,
                 0,
                 self._shallow_repr()
@@ -515,7 +631,7 @@ class Graph(object):
                 + "\n",
             )
         except:
-            self._print(
+            self.__print(
                 2,
                 0,
                 "[ERROR]"
@@ -527,13 +643,13 @@ class Graph(object):
 
         # Complie graph to execution plan and init Runtime
         try:
-            self._print(
+            self.__print(
                 0, 0, self._shallow_repr() + " start building plan.",
             )
             compile_and_init_start = time.perf_counter()
             self._c_nn_graph.complie_and_init_runtime()
             compile_and_init_end = time.perf_counter()
-            self._print(
+            self.__print(
                 0,
                 0,
                 self._shallow_repr()
@@ -548,7 +664,7 @@ class Graph(object):
                 + "\n",
             )
         except:
-            self._print(
+            self.__print(
                 2,
                 0,
                 "[ERROR]"
@@ -559,9 +675,11 @@ class Graph(object):
             raise
 
         self._is_compiled = True
+        # After compile, _additional_variable_tobe_loaded is useless.
+        self._additional_variable_tobe_loaded.clear()
         return eager_outputs
 
-    def _build_graph(self, *args):
+    def __build_graph(self, *args, **kwargs):
         session = session_ctx.GetDefaultSession()
         assert type(session) is MultiClientSession
 
@@ -571,14 +689,14 @@ class Graph(object):
         self._generate_config_proto()
 
         # Deal with parameter and buffer
-        self._print(
+        self.__print(
             0,
             1,
             self._shallow_repr()
             + " start building graph builders of parameters and buffers.",
         )
         self._create_states_builder()
-        self._print(
+        self.__print(
             0,
             1,
             self._shallow_repr()
@@ -587,19 +705,19 @@ class Graph(object):
 
         with graph_build_util.graph_build_context(self.config.proto, session):
             # Deal with inputs
-            self._print(0, 1, self._shallow_repr() + " start building graph inputs.")
-            arg_op_names, lazy_args, self._args_repr, _ = self._build_io(
-                "input", graph_build_util.build_graph_input_arg, *args
+            self.__print(0, 1, self._shallow_repr() + " start building graph inputs.")
+            arg_op_names, lazy_args, lazy_kwargs, self._args_repr, _ = self.__build_io(
+                "input", graph_build_util.build_graph_input_arg, *args, **kwargs
             )
-            self._print(0, 1, self._shallow_repr() + " end building graph inputs.")
+            self.__print(0, 1, self._shallow_repr() + " end building graph inputs.")
 
             # Deal with module in self.build(*args)
-            self._print(0, 1, self._shallow_repr() + " start building graph modules.")
-            outputs = self.build(*lazy_args)
-            self._print(0, 1, self._shallow_repr() + " end building graph modules.")
+            self.__print(0, 1, self._shallow_repr() + " start building graph modules.")
+            outputs = self.build(*lazy_args, **lazy_kwargs)
+            self.__print(0, 1, self._shallow_repr() + " end building graph modules.")
 
             # Deal with outputs
-            self._print(0, 1, self._shallow_repr() + " start building graph outputs.")
+            self.__print(0, 1, self._shallow_repr() + " start building graph outputs.")
             if not (type(outputs) is tuple or type(outputs) is list):
                 if outputs is None:
                     outputs = ()
@@ -609,16 +727,17 @@ class Graph(object):
             (
                 output_op_names,
                 self._eager_outputs,
+                _,  # empty kwargs return
                 self._outs_repr,
                 out2name,
-            ) = self._build_io("output", graph_build_util.build_graph_output, *outputs)
+            ) = self.__build_io("output", graph_build_util.build_graph_output, *outputs)
 
-            self._print(0, 1, self._shallow_repr() + " end building graph outputs.")
+            self.__print(0, 1, self._shallow_repr() + " end building graph outputs.")
 
             # Save forward graph job proto
             self._forward_job_proto = c_api_util.GetCurrentJob()
 
-            self._print(
+            self.__print(
                 0,
                 1,
                 self._shallow_repr() + " start building graph with compile passes.",
@@ -627,19 +746,19 @@ class Graph(object):
             oneflow._oneflow_internal.CurJobBuildAndInferCtx_Complete()
             # Save full graph job proto after job Complete for find real output blob shape and build it.
             self._full_job_proto = c_api_util.GetCurrentJob()
-            self._print(
+            self.__print(
                 0, 1, self._shallow_repr() + " end building graph with compile passes."
             )
 
             # Re-build outputs accoring to full graph and outputs buffer config.
-            self._print(
+            self.__print(
                 0,
                 1,
                 self._shallow_repr()
                 + " start re-building graph outputs for optimizatioin.",
             )
-            self._rebuild_outputs(out2name)
-            self._print(
+            self.__rebuild_outputs(out2name)
+            self.__print(
                 0,
                 1,
                 self._shallow_repr()
@@ -648,7 +767,8 @@ class Graph(object):
 
             # Register input/output/variable/buffer to _c_nn_graph
             self._c_nn_graph.register_input_op_names_and_tensors(
-                arg_op_names, convert_to_tensor_tuple(self._flatten_io("input", *args))
+                arg_op_names,
+                convert_to_tensor_tuple(self.__flatten_io("input", *args, **kwargs)),
             )
             self._c_nn_graph.register_output_op_names_and_tensors(
                 output_op_names, self._outputs_tensor_tuple
@@ -659,7 +779,7 @@ class Graph(object):
 
         return seq_to_func_return(self._eager_outputs_buffer[0])
 
-    def _rebuild_outputs(self, out2name=None):
+    def __rebuild_outputs(self, out2name=None):
         # NOTE(chengcheng):
         #   Lazy build output eager tensors.
         #
@@ -674,7 +794,7 @@ class Graph(object):
             dtype = fake_eager_out.dtype
 
             with oneflow._oneflow_internal.lazy_mode.guard(False):
-                if fake_eager_out.is_consistent:
+                if fake_eager_out.is_global:
                     eager_out = oneflow.empty(
                         shape,
                         dtype=dtype,
@@ -696,12 +816,12 @@ class Graph(object):
             )
             return tensor_tuple
 
-        self._eager_outputs = self._mapping_io(
+        self._eager_outputs, _ = self.__map_io(
             "output", build_real_output, *self._eager_outputs
         )
 
         self._outputs_tensor_tuple = convert_to_synced_tensor_tuple(
-            self._flatten_io("output", *self._eager_outputs)
+            self.__flatten_io("output", *self._eager_outputs)
         )
         self._eager_outputs_buffer = [
             self._eager_outputs,
@@ -712,15 +832,17 @@ class Graph(object):
 
         # Make outputs buffer
         for i in range(self._outputs_buffer_size - 1):
-            outputs_buffer_item = self._empty_like_io("output", *self._eager_outputs)
+            outputs_buffer_item, _ = self.__empty_like_io(
+                "output", *self._eager_outputs
+            )
             self._eager_outputs_buffer.append(outputs_buffer_item)
             outputs_tensor_tuple_buffer_item = convert_to_synced_tensor_tuple(
-                self._flatten_io("output", *outputs_buffer_item)
+                self.__flatten_io("output", *outputs_buffer_item)
             )
             self._outputs_tensor_tuple_buffer.append(outputs_tensor_tuple_buffer_item)
-        self._check_outputs_buffer()
+        self.__check_outputs_buffer()
 
-    def _check_outputs_buffer(self):
+    def __check_outputs_buffer(self):
         has_len = len(self._outputs_tensor_tuple_buffer)
         assert (
             has_len == self._outputs_buffer_size
@@ -742,9 +864,9 @@ class Graph(object):
                     item, "graph_ouputs_buffer_" + str(b_idx) + "_" + str(i_idx)
                 )
 
-    def _run(self, *args):
+    def __run(self, *args, **kwargs):
         try:
-            flattened_eager_args = self._flatten_io("input", *args)
+            flattened_eager_args = self.__flatten_io("input", *args, **kwargs)
             outputs_tensor_tuple = self._outputs_tensor_tuple_buffer[
                 self._cur_index_of_ouputs_buffer
             ]
@@ -762,7 +884,7 @@ class Graph(object):
             if self._cur_index_of_ouputs_buffer >= self._outputs_buffer_size:
                 self._cur_index_of_ouputs_buffer = 0
         except:
-            self._print(
+            self.__print(
                 2,
                 0,
                 "[ERROR]"
@@ -773,7 +895,7 @@ class Graph(object):
             raise
 
         # Copy outputs from buffer
-        eager_outputs = self._copy_io("output", *eager_outputs)
+        eager_outputs, _ = self.__copy_io("output", *eager_outputs)
 
         # Make sure that last used devices of tensors in `outputs_tensor_tuple` are
         # "critical_section".
@@ -784,10 +906,8 @@ class Graph(object):
         )
         return seq_to_func_return(eager_outputs)
 
-    def _build_io(self, io_type, build_func, *args):
+    def __build_io(self, io_type, build_func, *args, **kwargs):
         assert io_type in ("input", "output")
-        io_type_upper = io_type.upper()
-        build_args = []
         op_names = []
         args_repr = []
         tensor2op_name = {}
@@ -802,139 +922,40 @@ class Graph(object):
                 build_arg = None
 
             args_repr.append(repr_str)
-            self._print(0, 1, repr_str)
+            self.__print(0, 1, repr_str)
             return build_arg
 
-        for idx, arg in enumerate(args):
-            if isinstance(arg, Tensor) or arg is None:
-                if arg is None:
-                    name, repr_str = self._io_item_check_and_gen(
-                        arg, None, io_type, idx
-                    )
-                else:
-                    name, repr_str = self._io_item_check_and_gen(
-                        arg, Tensor, io_type, idx
-                    )
-                build_args.append(build_tensor_or_none(arg, name, repr_str))
-            elif isinstance(arg, (TensorTuple, list)):
-                if isinstance(arg, TensorTuple):
-                    seq_args = TensorTuple()
-                else:
-                    seq_args = list()
-                for i in range(len(arg)):
-                    name, repr_str = self._io_item_check_and_gen(
-                        arg[i], Tensor, io_type, idx, i
-                    )
-                    seq_args.append(build_tensor_or_none(arg[i], name, repr_str))
-                build_args.append(seq_args)
-            else:
-                self._io_item_check_and_gen(arg, Tensor, io_type, idx)
+        io_node = IONode(None, 0, (args, kwargs), "_" + self.name + "_" + io_type)
 
-        return op_names, build_args, args_repr, tensor2op_name
-
-    def _mapping_io(self, io_type, func, *args):
-        assert io_type in ("input", "output")
-        io_type_upper = io_type.upper()
-        mapped_args = []
-
-        def mapping_tensor_or_none(tensor):
-            assert tensor is None or (isinstance(tensor, Tensor))
-            if isinstance(tensor, Tensor):
-                mapped_arg = func(tensor)
-            else:
-                mapped_arg = None
-            return mapped_arg
-
-        for idx, arg in enumerate(args):
-            if isinstance(arg, Tensor) or arg is None:
-                mapped_args.append(mapping_tensor_or_none(arg))
-            elif isinstance(arg, (TensorTuple, list)):
-                if isinstance(arg, TensorTuple):
-                    seq_args = TensorTuple()
-                else:
-                    seq_args = list()
-                for i in range(len(arg)):
-                    seq_args.append(mapping_tensor_or_none(arg[i]))
-                mapped_args.append(seq_args)
-            else:
-                self._io_item_check(arg, None, io_type, idx)
-
-        return mapped_args
-
-    def _empty_like_io(self, io_type, *args):
-        def func(t):
-            shape = t.shape
-            dtype = t.dtype
-
-            with oneflow._oneflow_internal.lazy_mode.guard(False):
-                if t.is_consistent:
-                    eager_out = oneflow.empty(
-                        shape, dtype=dtype, placement=t.placement, sbp=t.sbp,
-                    )
-                else:
-                    eager_out = oneflow.empty(shape, dtype=dtype, device=t.device)
-
-            return eager_out
-
-        return self._mapping_io(io_type, func, *args)
-
-    def _copy_io(self, io_type, *args):
-        def func(tensor):
-            with oneflow._oneflow_internal.lazy_mode.guard(False):
-                build_arg = tensor.to(copy=True)
+        def leaf_node_fn(node):
+            name = node._prefix + "_" + node._name
+            if node._type == IONodeType.TENSOR:
+                arg_repr = self.__io_item_check_and_gen_repr(
+                    node._value, Tensor, io_type, name
+                )
+                build_arg = build_tensor_or_none(node._value, name, arg_repr)
                 return build_arg
+            elif node._type == IONodeType.NONE:
+                arg_repr = self.__io_item_check_and_gen_repr(
+                    node._value, None, io_type, name
+                )
+                build_arg = build_tensor_or_none(node._value, name, arg_repr)
 
-        return self._mapping_io(io_type, func, *args)
+                return build_arg
+            elif node._type == IONodeType.OPAQUE:
+                # Error
+                arg_repr = self.__io_item_check_and_gen_repr(
+                    node._value, None, io_type, name
+                )
 
-    def _flatten_io(self, io_type, *args):
-        assert isinstance(args, tuple)
-        flattened_args = []
-        for idx, arg in enumerate(args):
-            if isinstance(arg, Tensor):
-                flattened_args.append(arg)
-            elif isinstance(arg, (TensorTuple, list)):
-                for i in range(len(arg)):
-                    self._io_item_check(arg[i], Tensor, io_type, idx, i)
-                    flattened_args.append(arg[i])
-            else:
-                self._io_item_check(arg, None, io_type, idx)
-        return flattened_args
+        out = io_node.map_leaf(leaf_node_fn)
+        build_args = list(out[0])
+        build_kwargs = out[1]
 
-    def _io_item_check(self, item, expect_type, io_type, idx, second_idx=None):
-        if expect_type is None and item is None:
-            return
-        elif expect_type is not None and isinstance(item, expect_type):
-            return
-        else:
-            assert io_type in ("input", "output")
-            name = (
-                "_"
-                + self.name
-                + "-"
-                + io_type
-                + "_"
-                + str(idx)
-                + ("" if second_idx is None else "_" + str(second_idx))
-            )
-            repr_str = (
-                "[ERROR](" + io_type.upper() + ":" + name + ":" + str(type(item)) + ")"
-            )
-            self._print(2, 0, repr_str)
-            raise NotImplementedError(
-                "nn.Graph.build()'s input/output only support types: Tensor/list(Tensor)/None."
-            )
+        return op_names, build_args, build_kwargs, args_repr, tensor2op_name
 
-    def _io_item_check_and_gen(self, item, expect_type, io_type, idx, second_idx=None):
+    def __io_item_check_and_gen_repr(self, item, expect_type, io_type, name):
         assert io_type in ("input", "output")
-        name = (
-            "_"
-            + self.name
-            + "-"
-            + io_type
-            + "_"
-            + str(idx)
-            + ("" if second_idx is None else "_" + str(second_idx))
-        )
         if expect_type is None and item is None:
             repr_str = (
                 "[WARNING]("
@@ -945,7 +966,7 @@ class Graph(object):
                 + str(type(item))
                 + ")"
             )
-            return name, repr_str
+            return repr_str
         elif expect_type is not None and isinstance(item, expect_type):
             if isinstance(item, Tensor):
                 repr_str = (
@@ -961,15 +982,92 @@ class Graph(object):
                     + str(type(item))
                     + ")"
                 )
-            return name, repr_str
+            return repr_str
         else:
             repr_str = (
                 "[ERROR](" + io_type.upper() + ":" + name + ":" + str(type(item)) + ")"
             )
-            self._print(2, 0, repr_str)
+            self.__print(2, 0, repr_str)
             raise NotImplementedError(
-                "nn.Graph.build()'s input/output only support types: Tensor/list(Tensor)/None."
+                "nn.Graph.build()'s input/output item only support types: Tensor/None."
             )
+
+    def __map_io(self, io_type, func, *args, **kwargs):
+        assert io_type in ("input", "output")
+
+        def mapping_tensor_or_none(tensor):
+            assert tensor is None or (isinstance(tensor, Tensor))
+            if isinstance(tensor, Tensor):
+                mapped_arg = func(tensor)
+            else:
+                mapped_arg = None
+            return mapped_arg
+
+        io_node = IONode(None, 0, (args, kwargs), "_" + self.name + "_" + io_type)
+
+        def leaf_node_fn(leaf_node):
+            arg = leaf_node._value
+            if isinstance(arg, Tensor) or arg is None:
+                return mapping_tensor_or_none(arg)
+            else:
+                self.__io_item_check(
+                    arg, None, io_type, leaf_node._prefix + "_" + leaf_node._name,
+                )
+
+        out = io_node.map_leaf(leaf_node_fn)
+        mapped_args = list(out[0])
+        mapped_kwargs = out[1]
+        return mapped_args, mapped_kwargs
+
+    def __flatten_io(self, io_type, *args, **kwargs):
+        flattened_args = []
+        io_node = IONode(None, 0, (args, kwargs), "_" + self.name + "_" + io_type)
+        for (name, node) in list(io_node.named_nodes()):
+            if node._type == IONodeType.TENSOR:
+                flattened_args.append(node._value)
+            else:
+                continue
+        return flattened_args
+
+    def __io_item_check(self, item, expect_type, io_type, name):
+        if expect_type is None and item is None:
+            return
+        elif expect_type is not None and isinstance(item, expect_type):
+            return
+        else:
+            assert io_type in ("input", "output")
+            repr_str = (
+                "[ERROR](" + io_type.upper() + ":" + name + ":" + str(type(item)) + ")"
+            )
+            self.__print(2, 0, repr_str)
+            raise NotImplementedError(
+                "nn.Graph.build()'s input/output item only support types: Tensor/None."
+            )
+
+    def __empty_like_io(self, io_type, *args, **kwargs):
+        def func(t):
+            shape = t.shape
+            dtype = t.dtype
+
+            with oneflow._oneflow_internal.lazy_mode.guard(False):
+                if t.is_global:
+                    eager_out = oneflow.empty(
+                        shape, dtype=dtype, placement=t.placement, sbp=t.sbp,
+                    )
+                else:
+                    eager_out = oneflow.empty(shape, dtype=dtype, device=t.device)
+
+            return eager_out
+
+        return self.__map_io(io_type, func, *args, **kwargs)
+
+    def __copy_io(self, io_type, *args, **kwargs):
+        def func(tensor):
+            with oneflow._oneflow_internal.lazy_mode.guard(False):
+                build_arg = tensor.to(copy=True)
+                return build_arg
+
+        return self.__map_io(io_type, func, *args, **kwargs)
 
     def _add_block(self, name: str, module: Module = None) -> None:
         r"""Adds module to the graph as a block so that the module will

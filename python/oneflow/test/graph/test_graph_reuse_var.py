@@ -29,7 +29,7 @@ import oneflow.unittest
 class TestGraphResueVar(flow.unittest.TestCase):
     def test_graph_reuse_var(test_case):
         rank = flow.env.get_rank()
-        P = flow.placement("cuda", {0: [0, 1]})
+        P = flow.placement("cuda", ranks=[0, 1])
         B = flow.sbp.broadcast
 
         class ReuseVarModule(flow.nn.Module):
@@ -48,7 +48,7 @@ class TestGraphResueVar(flow.unittest.TestCase):
                 return x
 
         reuse_var_m = ReuseVarModule()
-        reuse_var_m.to_consistent(placement=P, sbp=B)
+        reuse_var_m.to_global(placement=P, sbp=B)
         of_sgd = flow.optim.SGD(reuse_var_m.parameters(), lr=0.001, momentum=0.9)
 
         class ReuseVarGraph(flow.nn.Graph):

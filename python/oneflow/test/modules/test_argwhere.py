@@ -49,7 +49,7 @@ class TestArgwhere(flow.unittest.TestCase):
     @autotest(n=5, rtol=1e-5, atol=1e-5)
     def test_argwhere_with_random_data(test_case):
         device = random_device()
-        x = random_pytorch_tensor(ndim=random(2, 5).to(int)).to(device)
+        x = random_tensor(ndim=random(2, 5).to(int)).to(device)
         y = torch.argwhere(x)
         return y
 
