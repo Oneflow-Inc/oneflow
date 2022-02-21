@@ -19,6 +19,7 @@ import unittest
 import oneflow as flow
 from oneflow import nn
 import os
+import numpy as np
 
 import oneflow.unittest
 
@@ -40,17 +41,13 @@ class TestModuleDiffHierarchy(nn.Module):
                 for sbp3 in sbp_1ds:
                     # (2, 2) -> 4
                     x = x.to_global(
-                        placement=flow.placement(
-                            device_type="cuda", device_ids={0: range(4)}
-                        ),
+                        placement=flow.placement(type="cuda", ranks=np.array(range(4))),
                         sbp=[sbp1],
                     )
                     # 4 -> (2, 2)
                     x = x.to_global(
                         placement=flow.placement(
-                            device_type="cuda",
-                            device_ids={0: range(4)},
-                            hierarchy=(2, 2),
+                            type="cuda", ranks=np.array(range(4)).reshape(2, 2)
                         ),
                         sbp=[sbp2, sbp3],
                     )
@@ -76,17 +73,13 @@ class TestModuleDiffPlacement(nn.Module):
                     # (2, 2) -> 3
                     # 4 is not divisible by 3
                     x = x.to_global(
-                        placement=flow.placement(
-                            device_type="cuda", device_ids={0: range(3)}
-                        ),
+                        placement=flow.placement(type="cuda", ranks=np.array(range(3))),
                         sbp=[sbp1],
                     )
                     # 3 -> (2, 2)
                     x = x.to_global(
                         placement=flow.placement(
-                            device_type="cuda",
-                            device_ids={0: range(4)},
-                            hierarchy=(2, 2),
+                            type="cuda", ranks=np.array(range(4)).reshape(2, 2)
                         ),
                         sbp=[sbp2, sbp3],
                     )
@@ -115,7 +108,9 @@ class TestLazyAllSbpCombinationTesting(flow.unittest.TestCase):
             4,
             12,
             sbp=[flow.sbp.broadcast, flow.sbp.broadcast],
-            placement=flow.placement("cuda", {0: range(4)}, (2, 2)),
+            placement=flow.placement(
+                type="cuda", ranks=np.array(range(4)).reshape(2, 2)
+            ),
         )
 
         model_diff_hierarchy = TestModuleDiffHierarchy()

@@ -19,6 +19,7 @@ import unittest
 import oneflow as flow
 from oneflow import nn
 import os
+import numpy as np
 
 import oneflow.unittest
 
@@ -42,18 +43,14 @@ class TestModuleDiffHierarchy(nn.Module):
                         # (3, 2) -> (2, 3)
                         x = x.to_global(
                             placement=flow.placement(
-                                device_type="cuda",
-                                device_ids={0: range(6)},
-                                hierarchy=(2, 3),
+                                type="cuda", ranks=np.array(range(6)).reshape(2, 3)
                             ),
                             sbp=[sbp1, sbp2],
                         )
                         # (2, 3) -> (3, 2)
                         x = x.to_global(
                             placement=flow.placement(
-                                device_type="cuda",
-                                device_ids={0: range(6)},
-                                hierarchy=(3, 2),
+                                type="cuda", ranks=np.array(range(6)).reshape(3, 2)
                             ),
                             sbp=[sbp3, sbp4],
                         )
@@ -80,18 +77,14 @@ class TestModuleDiffPlacement(nn.Module):
                         # (3, 2) -> (2, 2)
                         x = x.to_global(
                             placement=flow.placement(
-                                device_type="cuda",
-                                device_ids={0: range(4)},
-                                hierarchy=(2, 2),
+                                type="cuda", ranks=np.array(range(4)).reshape(2, 2)
                             ),
                             sbp=[sbp1, sbp2],
                         )
                         # (2, 2) -> (3, 2)
                         x = x.to_global(
                             placement=flow.placement(
-                                device_type="cuda",
-                                device_ids={0: range(6)},
-                                hierarchy=(3, 2),
+                                type="cuda", ranks=np.array(range(6)).reshape(3, 2)
                             ),
                             sbp=[sbp3, sbp4],
                         )
@@ -109,7 +102,7 @@ class TestGraph(nn.Graph):
         return x
 
 
-@flow.unittest.skip_unless_1n8d()
+@flow.unittest.skip_unless_2n8d()
 @unittest.skipIf(os.getenv("ONEFLOW_TEST_CPU_ONLY"), "only test cpu cases")
 class TestLazyAllSbpCombinationTesting(flow.unittest.TestCase):
     def test_lazy_boxing_2d_all_combination(test_case):
@@ -120,7 +113,9 @@ class TestLazyAllSbpCombinationTesting(flow.unittest.TestCase):
             12,
             12,
             sbp=[flow.sbp.broadcast, flow.sbp.broadcast],
-            placement=flow.placement("cuda", {0: range(6)}, (3, 2)),
+            placement=flow.placement(
+                type="cuda", ranks=np.array(range(6)).reshape(3, 2)
+            ),
         )
 
         model_diff_hierarchy = TestModuleDiffHierarchy()

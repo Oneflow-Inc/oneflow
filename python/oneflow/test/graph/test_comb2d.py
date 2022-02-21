@@ -19,6 +19,7 @@ import unittest
 import oneflow as flow
 from oneflow import nn
 import os
+import numpy as np
 
 import oneflow.unittest
 
@@ -70,7 +71,9 @@ class TestLazyAllSbpCombinationTesting(flow.unittest.TestCase):
             4,
             4,
             sbp=[flow.sbp.broadcast, flow.sbp.broadcast],
-            placement=flow.placement("cuda", {0: range(4)}, (2, 2)),
+            placement=flow.placement(
+                type="cuda", ranks=np.array(range(4)).reshape(2, 2)
+            ),
         )
         y = graph(x)
 
