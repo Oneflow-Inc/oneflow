@@ -598,7 +598,12 @@ def get_pytorch_oneflow_tensor_res(
             )
         raise PyTorchDoesNotSupportError(e)
     oneflow_res = oneflow_tensor_eager_run_with_graph_check(
-        oneflow, oneflow_method, oneflow_args, oneflow_kwargs, testing_graph_mlir, verbose,
+        oneflow,
+        oneflow_method,
+        oneflow_args,
+        oneflow_kwargs,
+        testing_graph_mlir,
+        verbose,
     )
     return pytorch_res, oneflow_res
 
