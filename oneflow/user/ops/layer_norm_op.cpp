@@ -222,13 +222,7 @@ oneflow::DataType InferBnParamDataType(const DataType x_data_type) {
 /* static */ Maybe<void> LayerNormParamGradOp::GetSbp(user_op::SbpContext* ctx) {
   int64_t begin_params_axis = ctx->Attr<int64_t>("begin_params_axis");
   for (int i = 0; i < begin_params_axis; ++i) {
-    ctx->NewBuilder()
-        .Split(ctx->inputs(), i)
-        .Split(ctx->outputs(), i)
-        .Broadcast(user_op::OpArg("gamma", 0))
-        .PartialSum(user_op::OpArg("gamma_diff", 0))
-        .PartialSum(user_op::OpArg("beta_diff", 0))
-        .Build();
+    ctx->NewBuilder().Split(ctx->inputs(), i).PartialSum(ctx->outputs()).Build();
   }
   return Maybe<void>::Ok();
 }
