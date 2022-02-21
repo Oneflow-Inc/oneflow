@@ -55,8 +55,8 @@ Maybe<void> CopyOrAccGrad(AutogradMeta* autograd_meta, bool autograd_mode) {
     //
     // As we know that dx = dz + dp / z and dy = dz, so it will lead to wrong value
     // for dy if dx is shared with dz.
-    const auto& output = JUST(
-        functional::Add(autograd_meta->acc_grad(), current_grad, /*alpha=*/1, /*inplace=*/false));
+    const auto& output = JUST(functional::Add(autograd_meta->acc_grad(), current_grad, /*alpha=*/1,
+                                              /*inplace=*/autograd_meta->is_grad_acc_inplace()));
     JUST(autograd_meta->set_acc_grad(output));
   } else {
     JUST(autograd_meta->set_acc_grad(current_grad));
@@ -503,7 +503,7 @@ Maybe<void> AddAccumulateFunctionNode(const std::shared_ptr<Tensor>& tensor) {
       std::make_shared<std::function<Maybe<void>(const TensorTuple&, TensorTuple*, bool)>>(
           [=](const TensorTuple& out_grads, TensorTuple* in_grads,
               bool create_graph) -> Maybe<void> { return Maybe<void>::Ok(); });
-  tensor->set_grad_fn_node(std::make_shared<StackFunctionNode>(
+  tensor->set_grad_fn_node(std::make_shared<GraphFunctionNode>(
       "accumulate_grad", backward_fn, TensorTuple(), TensorTuple({tensor})));
   return Maybe<void>::Ok();
 }

@@ -966,10 +966,8 @@ LogicalResult ConvertOutputOpConf(Operation* op, oneflow::OutputOpAdaptor& adapt
     return failure();
   }
   auto result = op->getOperand(0).dyn_cast<mlir::OpResult>();
-  auto* producer_op = result.getDefiningOp();
-
-  auto output_lbn = producer_op->getAttrOfType<ArrayAttr>("output_lbns")[result.getResultNumber()];
-  output_op_conf->set_in(output_lbn.dyn_cast<StringAttr>().getValue().str());
+  auto output_lbn = GetOutputLbn(result).getValue();
+  output_op_conf->set_in(output_lbn);
   for (size_t i = 1; i < op->getNumOperands(); ++i) {
     op_conf->add_ctrl_in_op_name(
         op->getOperand(i).getDefiningOp()->getAttrOfType<StringAttr>("op_name").getValue().str());

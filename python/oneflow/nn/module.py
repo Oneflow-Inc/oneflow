@@ -16,6 +16,7 @@ limitations under the License.
 import itertools
 from collections import OrderedDict, namedtuple
 from typing import Callable, Dict, Iterator, List, Optional, Set, Tuple, TypeVar, Union
+import traceback
 
 import numpy as np
 import oneflow as flow
@@ -366,8 +367,14 @@ class Module(object):
                         param.copy_(input_param)
                 except Exception as ex:
                     error_msgs.append(
-                        'While copying the parameter named "{}", whose dimensions in the model are {} and whose dimensions in the checkpoint are {}, an exception occurred : {}.'.format(
-                            key, param.shape, input_param.shape, ex.args
+                        'While copying the parameter "{}", an exception occurred : \n\n{}.'.format(
+                            key,
+                            "".join(
+                                map(
+                                    lambda line: "\t" + line,
+                                    traceback.format_exc().splitlines(True),
+                                )
+                            ),
                         )
                     )
             elif strict:
@@ -528,6 +535,11 @@ class Module(object):
             return t.to(device)
 
         return self._apply(convert)
+
+    def to_consistent(self, *args, **kwargs):
+        raise RuntimeError(
+            ".to_consistent has been removed, please use .to_global instead"
+        )
 
     def to_global(self, placement=None, sbp=None):
         def convert(t):

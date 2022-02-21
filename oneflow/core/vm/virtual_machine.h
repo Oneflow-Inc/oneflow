@@ -17,7 +17,6 @@ limitations under the License.
 #define ONEFLOW_CORE_VM_VIRTUAL_MACHINE_H_
 
 #include "oneflow/core/common/notifier.h"
-#include "oneflow/core/vm/interpret_type.h"
 #include "oneflow/core/vm/vm_desc.h"
 #include "oneflow/core/vm/virtual_machine_engine.h"
 #include "oneflow/core/thread/thread_pool.h"
@@ -33,7 +32,7 @@ class VirtualMachine final {
   VirtualMachine(const Resource& resource, int64_t this_machine_id);
   ~VirtualMachine();
 
-  static std::function<Maybe<bool>()> GetPredicatorNoMoreErasedLivelyInstructions();
+  static std::function<Maybe<bool>()> GetPredicatorNoMoreInstructionsFinished();
 
   bool NoMoreErasedLivelyInstructions(size_t* last_total_erased_lively_instruction_cnt) const;
   std::string GetBlockingDebugString();

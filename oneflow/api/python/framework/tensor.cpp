@@ -109,8 +109,8 @@ void ApiRegisterTensorHook(const std::shared_ptr<Tensor>& self, const AutogradMe
   return RegisterTensorHook(self, hook).GetOrThrow();
 }
 
-void ApiRegisterTensorPostGradAccumutaionHook(const std::shared_ptr<Tensor>& self,
-                                              const AutogradMeta::Hook& hook) {
+void ApiRegisterTensorPostGradAccumulationHook(const std::shared_ptr<Tensor>& self,
+                                               const AutogradMeta::Hook& hook) {
   return RegisterTensorPostGradAccumulationHook(self, hook).GetOrThrow();
 }
 
@@ -158,13 +158,7 @@ ONEFLOW_API_PYBIND11_MODULE("", m) {
       .def_property_readonly("is_cuda", &Tensor::is_cuda)
       .def_property(
           "grad",
-          [](const Tensor& t) -> std::shared_ptr<Tensor> {
-            if (t.has_autograd_meta()) {
-              return t.acc_grad().GetPtrOrThrow();
-            } else {
-              return std::shared_ptr<Tensor>();
-            }
-          },
+          [](const Tensor& t) -> std::shared_ptr<Tensor> { return t.acc_grad().GetPtrOrThrow(); },
           [](Tensor& t, const std::shared_ptr<Tensor>& grad) {
             if (t.is_leaf()) {
               if (grad != nullptr) {
@@ -175,6 +169,12 @@ ONEFLOW_API_PYBIND11_MODULE("", m) {
             } else {
               throw std::runtime_error("You can only change gradient of leaf tensors.");
             }
+          })
+      .def_property(
+          "_is_grad_acc_inplace",
+          [](const Tensor& t) -> bool { return t.autograd_meta()->is_grad_acc_inplace(); },
+          [](Tensor& t, bool is_inplace) {
+            t.mut_autograd_meta()->set_is_grad_acc_inplace(is_inplace);
           })
       .def_property(
           "data", [](Tensor& t) { return t.data().GetPtrOrThrow(); },
@@ -210,7 +210,7 @@ ONEFLOW_API_PYBIND11_MODULE("", m) {
       .def_property_readonly("is_local", &Tensor::is_local)
       .def("zeros_", &ApiEagerMirroredTensorZeros)
       .def("register_hook", &ApiRegisterTensorHook)
-      .def("_register_post_grad_accumulation_hook", &ApiRegisterTensorPostGradAccumutaionHook)
+      .def("_register_post_grad_accumulation_hook", &ApiRegisterTensorPostGradAccumulationHook)
       // local tensor only
       .def_property_readonly("_tensor_buffer_shapes_and_dtypes", &GetTensorBufferShapesAndDTypes)
       .def_property_readonly("device", &TensorGetDevice)

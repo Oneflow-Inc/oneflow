@@ -47,9 +47,9 @@ from oneflow.nn.optimizer.sparse_optimizer import SparseOptimizer
 
 
 class Graph(object):
-    r"""Base class for training or evaluating a neural network in graph mode.
+    r"""Base class for training or evaluating a neural network in static graph mode.
 
-    To use graph mode for model training or evaluation in OneFlow, you should:
+    To use static graph mode for model training or evaluation in OneFlow, you should:
 
     1. Define your customized graph as a subclass of ``nn.Graph``.
     2. Add ``super().__init__()`` in your subclass's ``__init__()``.
@@ -84,7 +84,8 @@ class Graph(object):
         >>> linear_graph(x).shape
         oneflow.Size([4, 8])
 
-    Note that Graph cannot be nested at the moment.
+    Note:
+        nn.Graph cannot be nested at the moment.
     """
     _child_init_cnt = dict()
 
@@ -109,7 +110,10 @@ class Graph(object):
         self._opts = []
         self._grad_scaler = None
         self._variables_conf = OrderedDict()
+        self._additional_variable_tobe_loaded = OrderedDict()
         self._is_compiled = False
+        # Default is local view
+        self._is_global_view = False
         # forward graph job proto
         self._forward_job_proto = None
         # forward, backward and optimized graph job proto
@@ -146,25 +150,57 @@ class Graph(object):
         .. code-block:: python
 
             >>> import oneflow as flow
+            >>> linear = flow.nn.Linear(3, 8, False)
             >>> class MyGraph(flow.nn.Graph):
             ...     def __init__(self):
             ...         super().__init__()
-            ...         self.linear = flow.nn.Linear(3, 8, False)
+            ...         self.model = linear
             ...     def build(self, x):
-            ...         return self.linear(x)
+            ...         return self.model(x)
 
             >>> linear_graph = MyGraph()
             >>> x = flow.randn(4, 3)
+            >>> linear.eval() # make linear module executing in evaluation mode
+            Linear(in_features=3, out_features=8, bias=False)
             >>> y = linear_graph(x) # The build() method is called implicitly
 
-        Note that ``build()`` method's inputs and outputs support list/tuple/dict,
-        but the item in them must be one of these types:
+        Note:
+            ``build()`` method's inputs and outputs support list/tuple/dict,
+            but the item in them must be one of these types:
 
-        * ``Tensor``
-        * ``None``
+            * ``Tensor``
+            * ``None``
 
         """
         raise NotImplementedError()
+
+    def __call__(self, *args, **kwargs):
+        r"""Call nn.Graph subclass instance to run your customized graph.
+
+        Call your customized graph after the instantiation:
+
+        .. code-block:: python
+
+            g = CustomGraph()
+            out_tensors = g(input_tensors)
+
+        The inputs of ``__call__`` method must match the inputs of ``build()``
+        method. And the ``__call__`` method will return outputs matching the
+        outputs of ``build()`` method.
+
+        Note:
+            The first call takes longer than later calls, because nn.Graph
+            will do the computaion graph generation and optimization at the first call.
+
+            Donot override this function.
+        """
+        if not self._is_compiled:
+            with graph_build_util.GLogScopeContext(
+                self._debug_min_s_level, self._debug_max_v_level
+            ):
+                self._compile(*args, **kwargs)
+
+        return self.__run(*args, **kwargs)
 
     def add_optimizer(
         self, optim: Optimizer, *, lr_sch: LRScheduler = None,
@@ -184,8 +220,8 @@ class Graph(object):
         * learn rate scheduler's ``step()``.
 
         Also note that only scalar tensor are allowed to call ``backward()``
-        in ``nn.Graph.build()`` for the moment. So you may call ``Tensor.sum()``
-        or ``Tensor.mean()`` to make the loss tensor a scalar tensor.
+        in ``nn.Graph.build()`` for the moment. So you may call methods such as ``Tensor.mean()``
+        to make the loss tensor a scalar tensor.
 
         .. code-block:: python
 
@@ -210,6 +246,11 @@ class Graph(object):
             >>> linear_graph = LinearTrainGraph()
             >>> x = flow.randn(10, 3)
             >>> y = flow.randn(10)
+            >>> model.train() # make model executing in training mode
+            Sequential(
+              (0): Linear(in_features=3, out_features=1, bias=True)
+              (1): Flatten(start_dim=0, end_dim=1)
+            )
             >>> for t in range(3):
             ...     loss = linear_graph(x, y)
 
@@ -240,29 +281,99 @@ class Graph(object):
         assert isinstance(grad_scaler, (GradScaler, StaticGradScaler))
         self._grad_scaler = grad_scaler
 
-    def __call__(self, *args, **kwargs):
-        r"""Call nn.Graph subclass instance to run your customized graph.
+    def state_dict(
+        self, destination=None
+    ) -> Dict[str, Union[Dict[str, Tensor], Tensor]]:
+        r"""Returns a dictionary containing a whole state of the graph.
 
-        Call your customized graph after the instantiation:
+        States of modules/optimizers/lr schedulers in a graph are included.
 
-        .. code-block:: python
+        Keys of modules' state dict are corresponding to their name in the graph.
+        Values of modules' state dict are corresponding to their nn.Module's
+        state dict.
 
-            g = CustomGraph()
-            out_tensors = g(input_tensors)
+        Other keys and tensors are states of optimizers/lr schedulers/etc.
 
-        The inputs of ``__call__`` method must match the inputs of ``build()``
-        method. And the ``__call__`` method will return outputs matching the
-        outputs of ``build()`` method.
+        Returns:
+            dict: a dictionary containing the whole state of the graph.
 
-        Note that the first call takes longer than later calls, because nn.Graph
-        will do the computaion graph generation and optimization at the first call.
-
-        Donot override this function.
         """
-        if not self._is_compiled:
-            self._compile(*args, **kwargs)
+        # Sync to make sure states has been updated.
+        oneflow._oneflow_internal.eager.multi_client.Sync()
+        if destination is None:
+            destination = OrderedDict()
+            destination._metadata = OrderedDict()
+        # Get states from sub module block
+        for name, block in self._blocks.items():
+            assert block.type == BlockType.MODULE
+            sub_destination = OrderedDict()
+            sub_destination._metadata = OrderedDict()
+            module = block.origin
+            if module is not None:
+                module.state_dict(
+                    sub_destination, "", keep_vars=False,
+                )
+            destination[name] = sub_destination
+        # Get additional states.
+        # Additional variables are states in Optimizer/LRScheduler and free eager tensors of nn.Graph.
+        if self._is_compiled:
+            # Get from _c_nn_graph.
+            additional_var_names = self._c_nn_graph.additional_var_names
+            additional_var_tensors = self._c_nn_graph.additional_var_tensors
+            assert len(additional_var_names) == len(additional_var_tensors)
+            for i in range(len(additional_var_names)):
+                additional_tensor = additional_var_tensors[i]
+                if not self._is_global_view:
+                    additional_tensor = additional_tensor.to_local()
+                destination[additional_var_names[i]] = additional_tensor
+        else:
+            # Get form loaded dict.
+            for name, item in self._additional_variable_tobe_loaded.items():
+                destination[name] = item
+        return destination
 
-        return self.__run(*args, **kwargs)
+    def load_state_dict(
+        self,
+        state_dict: Dict[str, Union[Dict[str, Tensor], Tensor]],
+        strict: bool = True,
+    ):
+        r"""Copies module's states and other graph states from :attr:`state_dict`
+        into this graph. If :attr:`strict` is ``True``, then
+        the keys of :attr:`state_dict` must exactly match the keys returned
+        by this module's :meth:`nn.Graph.state_dict` function.
+
+        Args:
+            state_dict (dict): a dict containing module's states and other graph states.
+            strict (bool, optional): whether to strictly enforce that the keys
+                in :attr:`state_dict` match the keys returned by this graph's
+                :meth:`nn.Graph.state_dict` function. Default: ``True``.
+
+        Note:
+            nn.Graph's state dict can only be loaded before the first call of a graph.
+        """
+        assert (
+            not self._is_compiled
+        ), "nn.Graph's state dict can only be loaded before the first call of a graph."
+        # Additional variables are states in Optimizer or LRScheduler of nn.Graph.
+        additional_var_names = list()
+        additional_var_tensors = list()
+        for name, item in state_dict.items():
+            if name in self._blocks:
+                # 1 load parameter/buffer to Modules
+                self._blocks[name].origin.load_state_dict(item, strict)
+            else:
+                # 2 store other state to CNNGraph, CNNGraph load them after job pass
+                assert isinstance(item, Tensor)
+                additional_var_names.append(name)
+                additional_var_tensors.append(item)
+                self._additional_variable_tobe_loaded[name] = item
+
+        if len(additional_var_names) > 0:
+            self._c_nn_graph.register_additional_variable_names_and_tensors(
+                additional_var_names, convert_to_tensor_tuple(additional_var_tensors)
+            )
+        # Sync to make sure states has been loaded.
+        oneflow._oneflow_internal.eager.multi_client.Sync()
 
     @property
     def name(self):
@@ -443,6 +554,9 @@ class Graph(object):
 
         for state_block in self._state():
             state_tensor = state_block.origin
+            # If any state tensor is global tensor, graph is in global view.
+            if state_tensor.is_global:
+                self._is_global_view = True
             if state_tensor in state_tensor_set:
                 continue
             op_name = state_block.name_prefix + state_block.name
@@ -505,10 +619,7 @@ class Graph(object):
                 "nn.Graph " + self._name + " has already been compiled."
             )
             build_graph_start = time.perf_counter()
-            with graph_build_util.GLogScopeContext(
-                self._debug_min_s_level, self._debug_max_v_level
-            ):
-                eager_outputs = self.__build_graph(*args, **kwargs)
+            eager_outputs = self.__build_graph(*args, **kwargs)
             build_graph_end = time.perf_counter()
             self.__print(
                 0,
@@ -564,6 +675,8 @@ class Graph(object):
             raise
 
         self._is_compiled = True
+        # After compile, _additional_variable_tobe_loaded is useless.
+        self._additional_variable_tobe_loaded.clear()
         return eager_outputs
 
     def __build_graph(self, *args, **kwargs):
