@@ -2574,7 +2574,8 @@ class EinSumFunctor {
     for (int i = dim; i < perm_index; ++i, ++dim) {
       if (dim_last_op[i] == 0) {
         if (result->dim(dim) == 1) {
-          result = JUST(functional::Unsqueeze(result, dim--));
+          std::vector<int32_t> dims = {dim--};
+          result = JUST(functional::Squeeze(result, dims));
         } else {
           result = JUST(functional::ReduceSum(result, {dim--}, false));
         }
@@ -2589,9 +2590,8 @@ class EinSumFunctor {
       dim = out_size;
       for (int j = dim; j < perm_index; ++j, ++dim) {
         if (dim_last_op[j] < i) {
-          std::vector<int32_t> dims = {dim};
+          std::vector<int32_t> dims = {dim--};
           operand = JUST(functional::Squeeze(operand, dims));
-          --dim;
         } else if (dim_last_op[j] == i) {
           if (result->dim(dim) == 1) {
             operand = JUST(functional::ReduceSum(operand, {dim}, false));
