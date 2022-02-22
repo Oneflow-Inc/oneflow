@@ -52,18 +52,12 @@ def argwhere_op(input, dtype: Optional[flow.dtype] = flow.int32):
 
     """
 
-    if input.is_global:
-        raise ValueError(
-            "A global tensor can not be applied to argwhere, and use `tensor.to_local()` to convert it to local tensor first."
-        )
+    if input.is_lazy:
+        raise ValueError("A lazy tensor can not be applied to argwhere.")
 
     (res, size) = flow._C.argwhere(input, dtype=dtype)
-    if input.is_lazy:
-        raise NotImplementedError
-        # return flow._C.sync_dynamic_resize(res, size, dim=0)
-    else:
-        slice_tup_list = [(0, size.numpy().item(), 1)]
-        return flow.slice(res, slice_tup_list=slice_tup_list)
+    slice_tup_list = [(0, size.numpy().item(), 1)]
+    return flow.slice(res, slice_tup_list=slice_tup_list)
 
 
 if __name__ == "__main__":
