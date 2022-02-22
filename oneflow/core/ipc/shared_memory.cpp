@@ -90,7 +90,7 @@ Maybe<void*> ShmSetUp(const std::string& shm_name, size_t* shm_size) {
 }  // namespace
 
 SharedMemory::~SharedMemory() {
-  if (buf_ != nullptr) { CHECK_JUST(Close()); }
+  CHECK_JUST(Close());
 }
 
 Maybe<SharedMemory> SharedMemory::Open(size_t shm_size) {
@@ -107,8 +107,10 @@ Maybe<SharedMemory> SharedMemory::Open(const std::string& shm_name) {
 
 Maybe<void> SharedMemory::Close() {
 #ifdef __linux__
-  PCHECK_OR_RETURN(munmap(buf_, size_));
-  buf_ = nullptr;
+  if (buf_ != nullptr) {
+    PCHECK_OR_RETURN(munmap(buf_, size_));
+    buf_ = nullptr;
+  }
   return Maybe<void>::Ok();
 #else
   TODO_THEN_RETURN();
