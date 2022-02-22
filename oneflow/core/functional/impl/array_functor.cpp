@@ -1139,10 +1139,10 @@ class ViewFunctor {
         // the check refer to torch(aten/src/ATen/native/TensorShape.cpp)
         Optional<const Stride> infered_stride = computeStride(x->shape()->elem_cnt(), x->shape()->dim_vec(),
                            JUST(x->stride())->StrideVec(), infered_shape.dim_vec());
-        CHECK_OR_RETURN(!(infered_stride.has_value()))
+        CHECK_OR_RETURN(infered_stride.has_value())
         << " >> view size is not compatible with input tensor's size and stride (at least one "
                 "dimension spans across two contiguous subspaces). Use .reshape(...) instead.";
-        return view::Reshape(x, infered_shape);
+        return view::Reshape(x, infered_shape,  *JUST(infered_stride));
       }
     }
 
