@@ -187,6 +187,17 @@ struct SmoothMaximumUnitFunctor<half> {
   SmoothMaximumUnitFunctor<float> float_functor;
 };
 
+template<>
+struct SmoothMaximumUnitGradFunctor<half> {
+  OF_DEVICE_FUNC explicit SmoothMaximumUnitFunctor(float lambda_val)
+      : lambda_val(lambda_val), float_functor(SmoothMaximumUnitGradFunctor<float>(lambda_val)) {}
+  OF_DEVICE_FUNC half operator()(half x, half dy) const {
+    return __float2half(float_functor(__half2float(x, dyt)));
+  }
+  const float lambda_val;
+  SmoothMaximumUnitGradFunctor<float> float_functor;
+};
+
 #define REGISTER_ACTIVATION_GPU_KERNEL(dtype)            \
   REGISTER_ELU_KERNEL(DeviceType::kGPU, dtype);          \
   REGISTER_CELU_KERNEL(DeviceType::kGPU, dtype);         \
