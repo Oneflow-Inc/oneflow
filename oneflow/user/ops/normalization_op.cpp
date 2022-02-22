@@ -251,7 +251,7 @@ user_op::DataTypeInferFn MakeFwDataTypeInferFn() {
       for (int32_t i = 0; i < x_nd_sbp.sbp_parallel_size(); ++i) {
         if (x_nd_sbp.sbp_parallel(i).has_split_parallel()) {
           CHECK_EQ_OR_RETURN(x_nd_sbp.sbp_parallel(i).split_parallel().axis(), 0)
-              << "x only support B or S(0)";
+              << "blob x in NormalizationAddReluOp only support B or S(0)";
           split_num *= hierarchy.At(i);
         }
       }
@@ -317,14 +317,22 @@ void InferCudnnReserveSpaceSize(DataType data_type, cudnnBatchNormOps_t ops, int
     const auto axis = ctx->Attr<int32_t>("axis");
     CHECK_EQ_OR_RETURN(x_shape.Count(axis + 1), 1);
     int64_t n = x_shape.At(0);
+    {
+      const auto& x_nd_sbp = ctx->NdSbp4ArgNameAndIndex("x", 0);
+      const Shape& hierarchy = *ctx->parallel_desc().hierarchy();
+      int64_t split_num = 1;
+      for (int32_t i = 0; i < x_nd_sbp.sbp_parallel_size(); ++i) {
+        if (x_nd_sbp.sbp_parallel(i).has_split_parallel()) {
+          CHECK_EQ_OR_RETURN(x_nd_sbp.sbp_parallel(i).split_parallel().axis(), 0)
+              << "blob x in CudnnFusedNormalizationAddReluOp only support B or S(0)";
+          split_num *= hierarchy.At(i);
+        }
+      }
+      n = n / split_num;
+    }
     int64_t h = x_shape.Count(1, axis);
     int64_t w = 1;
     int64_t c = x_shape.At(axis);
-    const auto& x_sbp = ctx->SbpParallel4ArgNameAndIndex("x", 0);
-    if (x_sbp.has_split_parallel()) {
-      CHECK_EQ_OR_RETURN(x_sbp.split_parallel().axis(), 0);
-      n = n / ctx->parallel_num();
-    }
     cudnnBatchNormOps_t ops;
     if (ctx->has_input("addend", 0)) {
       ops = CUDNN_BATCHNORM_OPS_BN_ADD_ACTIVATION;
