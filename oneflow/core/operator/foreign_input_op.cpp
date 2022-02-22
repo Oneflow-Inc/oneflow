@@ -57,7 +57,7 @@ Maybe<void> ForeignInputOp::InferOutBlobDescs(
   return InferBlobDescs(op_conf(), GetBlobDesc4BnInOp);
 }
 
-Maybe<void> ForeignInputOp::GetSbpSignatures(cfg::SbpSignatureList* sbp_sig_list) const {
+Maybe<void> ForeignInputOp::GetSbpSignatures(SbpSignatureList* sbp_sig_list) const {
   return Maybe<void>::Ok();
 }
 
