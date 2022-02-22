@@ -34,26 +34,28 @@ struct MultiReduceParamsPack {
   size_t size;
 };
 
-template<typename T, typename F>
-__global__ void MultiReduceSumGpu(F func, const MultiReduceParamsPack<T> pack_params, T* sum) {
-  T t_sum = 0;
+template<typename T, typename TransformFn, typename ReduceFn>
+__global__ void MultiReduceGpu(TransformFn transform, const MultiReduceParamsPack<T> pack_params,
+                               T* out) {
+  ReduceFn reduce_fn{};
+  T t_out = *out;
   for (int i = 0; i < pack_params.size; ++i) {
     const auto& param = pack_params.params[i];
-    CUDA_1D_KERNEL_LOOP(j, param.size) { t_sum += func(param.data[j]); }
+    CUDA_1D_KERNEL_LOOP(j, param.size) { t_out = reduce_fn(t_out, transform(param.data[j])); }
   }
   typedef cub::BlockReduce<T, kCudaThreadsNumPerBlock> BlockReduce;
   __shared__ typename BlockReduce::TempStorage temp_storage;
-  T b_sum = BlockReduce(temp_storage).Sum(t_sum);
-  if (threadIdx.x == 0) { cuda::atomic::Add(sum, b_sum); }
+  T b_out = BlockReduce(temp_storage).Reduce(t_out, reduce_fn);
+  if (threadIdx.x == 0) { cuda::atomic::Add(out, b_sum); }
 }
 
 }  // namespace
 
-template<typename T, typename F>
-struct MultiReduceSum<DeviceType::kCUDA, T, F> {
-  void operator()(ep::Stream* stream, F func, const std::vector<MultiReduceParam<T>>& params,
-                  T* sum) {
-    Memset<DeviceType::kCUDA>(stream, sum, 0, sizeof(T));
+template<typename T, typename TransformFn, typename ReduceFn>
+struct MultiReduce<DeviceType::kCUDA, TransformFn, ReduceFn> {
+  void operator()(ep::Stream* stream, TransformFn transform,
+                  const std::vector<MultiReduceParam<T>>& params, T init, T* ret) {
+    Memset<DeviceType::kCUDA>(stream, ret, init, sizeof(T));
     for (size_t i = 0; i < params.size(); i += kMultiReduceMaxPackSize) {
       MultiReduceParamsPack<T> pack_params{};
       size_t max_elem_cnt = 0;
@@ -62,9 +64,9 @@ struct MultiReduceSum<DeviceType::kCUDA, T, F> {
         pack_params.params[j] = params[i + j];
         max_elem_cnt = std::max(max_elem_cnt, pack_params.params[j].size);
       }
-      MultiReduceSumGpu<T, F>
+      MultiReduceGpu<T, TransformFn, ReduceFn>
           <<<BlocksNum4ThreadsNum(max_elem_cnt), kCudaThreadsNumPerBlock, 0,
-             stream->As<ep::CudaStream>()->cuda_stream()>>>(func, pack_params, sum);
+             stream->As<ep::CudaStream>()->cuda_stream()>>>(transform, pack_params, ret);
     }
   }
 }

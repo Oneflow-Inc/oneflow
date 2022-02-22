@@ -18,6 +18,7 @@ limitations under the License.
 
 #include "oneflow/core/common/data_type.h"
 #include "oneflow/core/common/device_type.h"
+#include "oneflow/core/common/device_type.pb.h"
 #include "oneflow/core/ep/include/stream.h"
 
 namespace oneflow {
@@ -28,46 +29,63 @@ struct MultiReduceParam {
   size_t size;
 };
 
-template<DeviceType device_type, typename T, typename F>
-struct MultiReduceSum {
-  void operator()(ep::Stream* stream, F func, const std::vector<MultiReduceParam<T>>& params,
-                  T* sum);
+template<DeviceType device_type, typename T, typename TransformFn, typename ReduceFn>
+struct MultiReduce {
+  void operator()(ep::Stream* stream, TransformFn transform,
+                  const std::vector<MultiReduceParam<T>>& params, T init, T* ret);
 };
 
-template<typename T, typename F>
-struct MultiReduceSum<DeviceType::kCPU, T, F> {
-  void operator()(ep::Stream* stream, F func, const std::vector<MultiReduceParam<T>>& params,
-                  T* sum) {
-    T sum_v = 0;
+template<typename T, typename TransformFn, typename ReduceFn>
+struct MultiReduce<DeviceType::kCPU, T, TransformFn, ReduceFn> {
+  void operator()(ep::Stream* stream, TransformFn transform,
+                  const std::vector<MultiReduceParam<T>>& params, T init, T* ret) {
+    *ret = init;
+    ReduceFn reduce{};
     FOR_RANGE(size_t, i, 0, params.size()) {
       const auto& p = params[i];
-      FOR_RANGE(size_t, j, 0, p.size) { sum_v += func(p.data[j]); }
+      FOR_RANGE(size_t, j, 0, p.size) { *ret = reduce(*ret, transform(p.data[j])); }
     }
-    *sum = sum_v;
   }
 };
 
 template<typename T>
+struct BinaryAdd {
+  OF_DEVICE_FUNC T operator()(const T& x, const T& y) const { return x + y; }
+};
+
+template<typename T>
+struct BinaryMax {
+  OF_DEVICE_FUNC T operator()(const T& x, const T& y) const { return x > y ? x : y; }
+};
+
+template<typename T>
+struct BinaryMin {
+  OF_DEVICE_FUNC T operator()(const T& x, const T& y) const { return x < y ? x : y; }
+};
+
+template<typename T>
 struct Abs {
-  OF_DEVICE_FUNC T operator()(T x) const { return x < 0 ? -x : x; }
+  OF_DEVICE_FUNC T operator()(const T& x) const { return x < GetZeroVal<T>() ? -x : x; }
 };
 
 template<typename T>
 struct PowByZero {
-  OF_DEVICE_FUNC T operator()(T x) const { return x != T(0) ? T(1) : x; }
+  OF_DEVICE_FUNC T operator()(const T& x) const {
+    return x != GetZeroVal<T>() ? GetOneVal<T>() : x;
+  }
 };
 
 template<typename T>
 struct Square {
-  OF_DEVICE_FUNC T operator()(T x) const { return x * x; }
+  OF_DEVICE_FUNC T operator()(const T& x) const { return x * x; }
 };
 
 template<typename T>
 struct AbsPow {
-  explicit AbsPow(T base) : base_(base) {}
+  explicit AbsPow(const T& base) : base_(base) {}
 
-  OF_DEVICE_FUNC T operator()(T x) {
-    T abs_x = x < T(0) ? -x : x;
+  OF_DEVICE_FUNC T operator()(const T& x) {
+    T abs_x = x < GetZeroVal<T>() ? -x : x;
 #if defined(__CUDA_ARCH__)
     return pow(abs_x, base_);
 #else

@@ -614,7 +614,7 @@ std::string GlobalAbsMaxMin(const OpGraph& op_graph, JobBuilder* job_builder,
     bool has_split = HasSplit(nd_sbp, parallel_desc);
     if (job_builder->job().job_conf().enable_gradients_stats_aggregation()) {
       std::string reduce_op_type_name =
-          has_split ? (max_or_min ? "multi_device_reduce_max_abs" : "multi_device_reduce_min_abs")
+          has_split ? (max_or_min ? "local_multi_reduce_max_abs" : "local_multi_reduce_min_abs")
                     : (max_or_min ? "multi_reduce_max_abs" : "multi_reduce_min_abs");
       std::string reduce_op_name =
           "System-ClipGradient-GlobalNorm-MultiReduceXimumAbs-" + NewUniqueId();
