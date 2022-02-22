@@ -184,7 +184,7 @@ class OneDnnBroadcastElementwiseBinaryImpl : public BroadcastElementwiseBinary {
 
     dnnl::engine* onednn_engine = stream->As<CpuStream>()->onednn_engine();
     dnnl::stream* onednn_stream = stream->As<CpuStream>()->onednn_stream();
-    size_t num_dims = std::max(num_src0_dims, num_src1_dims);
+    size_t num_dims = std::max(std::max(num_src0_dims, num_src1_dims), 4ul);
     dnnl::memory::dims src_0_dims(num_dims);
     dnnl::memory::dims src_1_dims(num_dims);
     dnnl::memory::dims dst_dims(num_dims);
