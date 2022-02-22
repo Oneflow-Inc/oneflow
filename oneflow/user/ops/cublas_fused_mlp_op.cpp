@@ -219,7 +219,7 @@ REGISTER_USER_OP_GRAD("cublas_fused_mlp")
                 cublas_bias_add_relu_matmul_grad_builder.Op("cublas_bias_add_relu_matmul_grad")
                     .Input("dy", dgrad)
                     .Input("weight", op.input("weights", hidden_layer_idx))
-                    .Input("aux", op.output("cublas_aux", hidden_layer_idx))
+                    .Input("aux", op.output("cublas_aux", hidden_layer_idx-1))
                     .Output("d_grad")
                     .Output("d_bias")
                     .Build();
