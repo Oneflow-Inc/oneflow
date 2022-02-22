@@ -221,7 +221,7 @@ class OneFlow_AvgPoolBaseOp<string mnemonic, list<Trait> traits = []> :
     SI32ArrayAttr:$stride,
     DefaultValuedAttr<BoolAttr, "false">:$ceil_mode,
     DefaultValuedAttr<BoolAttr, "false">:$count_include_pad,
-    DefaultValuedAttr<SI64Attr, "0">:$divisor_override
+    DefaultValuedAttr<SI32Attr, "0">:$divisor_override
   );
   let has_logical_tensor_desc_infer_fn = 1;
   let has_physical_tensor_desc_infer_fn = 1;
@@ -274,7 +274,7 @@ class OneFlow_AvgPoolGradBaseOp<string mnemonic, list<Trait> traits = []> :
     SI32ArrayAttr:$stride,
     DefaultValuedAttr<BoolAttr, "false">:$ceil_mode,
     DefaultValuedAttr<BoolAttr, "false">:$count_include_pad,
-    DefaultValuedAttr<SI64Attr, "0">:$divisor_override
+    DefaultValuedAttr<SI32Attr, "0">:$divisor_override
   );
   let has_logical_tensor_desc_infer_fn = 1;
   let has_physical_tensor_desc_infer_fn = 1;
