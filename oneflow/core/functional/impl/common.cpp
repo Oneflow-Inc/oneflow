@@ -80,18 +80,18 @@ Maybe<void> CheckShapeCanExpandTo(const Shape& shape, const Shape& expand_shape)
   return Maybe<void>::Ok();
 }
 
-bool CheckViewValid(const Shape& shape,  const Stride& stride, const Shape& target_shape){
+bool CheckViewValid(const Shape& shape, const Stride& stride, const Shape& target_shape) {
   /*************************************************
    * Description: in some case, view operate is not allowed, so need to check it's validation,
    * the check refer to torch(aten/src/ATen/native/TensorShape.cpp)
-  *************************************************/ 
- int64_t elem_count = shape.elem_cnt();
- int64_t ndim = shape.NumAxes();
- int64_t tgt_ndim = target_shape.NumAxes();
- DimVector shape_vec = shape.dim_vec();
- DimVector tgt_shape_vec = target_shape.dim_vec();
- DimVector stride_vec = stride.StrideVec();
- if (elem_count == 0) { return false; }
+   *************************************************/
+  int64_t elem_count = shape.elem_cnt();
+  int64_t ndim = shape.NumAxes();
+  int64_t tgt_ndim = target_shape.NumAxes();
+  DimVector shape_vec = shape.dim_vec();
+  DimVector tgt_shape_vec = target_shape.dim_vec();
+  DimVector stride_vec = stride.StrideVec();
+  if (elem_count == 0) { return false; }
 
   int64_t view_d = tgt_ndim - 1;
   int64_t chunk_base_stride = stride_vec.back();
@@ -100,11 +100,12 @@ bool CheckViewValid(const Shape& shape,  const Stride& stride, const Shape& targ
   // numel in current chunk
   int64_t tensor_numel = 1;
   int64_t view_numel = 1;
-  for (int64_t tensor_d =  ndim- 1; tensor_d >= 0; tensor_d--) {
+  for (int64_t tensor_d = ndim - 1; tensor_d >= 0; tensor_d--) {
     tensor_numel *= shape_vec[tensor_d];
     // if end of tensor size chunk, check view
     if ((tensor_d == 0)
-        || (shape_vec[tensor_d - 1] != 1 && stride_vec[tensor_d - 1] != tensor_numel * chunk_base_stride)) {
+        || (shape_vec[tensor_d - 1] != 1
+            && stride_vec[tensor_d - 1] != tensor_numel * chunk_base_stride)) {
       while (view_d >= 0 && (view_numel < tensor_numel || tgt_shape_vec[view_d] == 1)) {
         newstride[view_d] = view_numel * chunk_base_stride;
         view_numel *= tgt_shape_vec[view_d];
@@ -120,10 +121,9 @@ bool CheckViewValid(const Shape& shape,  const Stride& stride, const Shape& targ
   }
   if (view_d != -1) { return false; }
   return true;
-
 }
 
-Maybe<Shape> ComputeShape(const std::shared_ptr<one::Tensor>& x, const Shape& shape) {
+Maybe<Shape> InferShape(const std::shared_ptr<one::Tensor>& x, const Shape& shape) {
   int need_infer_axis = -1;
   size_t count = 1;
   for (int i = 0; i < shape.NumAxes(); ++i) {
@@ -151,7 +151,6 @@ Maybe<Shape> ComputeShape(const std::shared_ptr<one::Tensor>& x, const Shape& sh
   }
   return infered_shape;
 }
-
 
 }  // namespace functional
 }  // namespace one
