@@ -241,13 +241,6 @@ double SbpGraph<SbpSignature>::ComputeCost() {
     GraphCost += this_node->GetCurrCost();
     // Edge Cost
     for (const auto& edge_out : this_node->EdgesOut) { GraphCost += edge_out->GetCurrCost(); }
-    // Child Cost
-    for (SbpNode<SbpSignature>* child : this_node->Children) {
-      GraphCost += child->GetCurrCost();
-      // The only edge connecting the child node and his father
-      for (const auto& edge_in : child->EdgesIn) { GraphCost += edge_in->GetCurrCost(); }
-      for (const auto& edge_out : child->EdgesOut) { GraphCost += edge_out->GetCurrCost(); }
-    }
   }
   return GraphCost;
 }
