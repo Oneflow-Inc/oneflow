@@ -53,7 +53,10 @@ Maybe<BoxingExprIf> SymmetricOneDimPToSxBoxingExpr() {
 Maybe<BoxingExprIf> SymmetricCyclicNDimToNDimBoxingExpr() {
   return JUST(BoxingExpr(JUST(InPlacementAndRepeatFirstSbp()),
                          JUST(BoxingExpr("symmetric-acyclic-nd-sbp-to-nd-sbp")),
-                         JUST(BoxingExpr("symmetric-acyclic-nd-sbp-to-nd-sbp"))));
+                         JUST(BoxingExpr("symmetric-acyclic-nd-sbp-to-nd-sbp"))))
+         | JUST(BoxingExpr(JUST(InPlacementAndBroadcast()),
+                           JUST(BoxingExpr("symmetric-acyclic-nd-sbp-to-nd-sbp")),
+                           JUST(BoxingExpr("symmetric-acyclic-nd-sbp-to-nd-sbp"))));
 }
 
 Maybe<BoxingExprIf> SymmetricNDimToNDimBoxingExpr() {
