@@ -125,8 +125,10 @@ Maybe<void> SharedMemory::Close() {
 Maybe<void> SharedMemory::Unlink() {
 #ifdef __linux__
   auto shm_names = Global<SharedMemoryManager>::Get()->get_shm_names();
-  shm_names.erase(std::remove(shm_names.begin(), shm_names.end(), name_), shm_names.end());
-  PCHECK_OR_RETURN(shm_unlink(name_.c_str()));
+  auto it = std::find(shm_names.begin(), shm_names.end(), name_);
+  if (it != shm_names.end()){
+    shm_names.erase(it);
+  }
   return Maybe<void>::Ok();
 #else
   TODO_THEN_RETURN();

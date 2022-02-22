@@ -31,6 +31,7 @@ class SharedMemoryManager final {
   }
 
  private:
+  SharedMemoryManager(const std::vector <std::string>& shm_names):shm_names_(shm_names) {}
   std::vector <std::string> shm_names_;
 };
 
