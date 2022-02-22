@@ -304,6 +304,10 @@
   signature: "Tensor (Tensor dy, Tensor input, Int32List size, Int32List stride, Int32 storage_offset=0) => AsStridedGrad"
   bind_python: False
 
+- name: "select"
+  signature: "Tensor (Tensor input, Int32 dim, Int32 index) => Select"
+  bind_python: True
+
 - name: "swapaxes"
   signature:
     [
@@ -1605,28 +1609,28 @@
   signature:
     'Tensor (Tensor input, Int32List[1] kernel_size, Int32List[1] stride=None, 
              Int32List[1] padding=0, Bool ceil_mode=False, Bool count_include_pad=True,
-             Int64 divisor_override=0, String data_format="channels_first") => Avgpool1D'
+             Int32 divisor_override=0, String data_format="channels_first") => Avgpool1D'
   bind_python: True
 
 - name: "avg_pool2d"
   signature:
     'Tensor (Tensor input, Int32List[2] kernel_size, Int32List[2] stride=None, 
              Int32List[2] padding=0, Bool ceil_mode=False, Bool count_include_pad=True,
-             Int64 divisor_override=0, String data_format="channels_first") => Avgpool2D'
+             Int32 divisor_override=0, String data_format="channels_first") => Avgpool2D'
   bind_python: True
 
 - name: "avg_pool3d"
   signature:
     'Tensor (Tensor input, Int32List[3] kernel_size, Int32List[3] stride=None, 
              Int32List[3] padding=0, Bool ceil_mode=False, Bool count_include_pad=True,
-             Int64 divisor_override=0, String data_format="channels_first") => Avgpool3D'
+             Int32 divisor_override=0, String data_format="channels_first") => Avgpool3D'
   bind_python: True
 
 - name: "avg_pooling_grad"
   signature:
     "Tensor (Tensor x, Tensor y, Tensor dy, Int32 ndims, String data_format, Int32List padding,
     Int32List kernel_size, Int32List stride, Bool ceil_mode, Bool count_include_pad,
-    Int64 divisor_override=0) => AvgPoolingNdGrad"
+    Int32 divisor_override=0) => AvgPoolingNdGrad"
   bind_python: False
 
 - name: "minimum"

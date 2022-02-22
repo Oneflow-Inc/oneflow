@@ -1409,6 +1409,36 @@ class ClampGradFunctor {
   std::shared_ptr<OpExpr> clip_max_op_;
 };
 
+class SelectFunctor {
+ public:
+  SelectFunctor() = default;
+
+  Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& input, const int32_t& dim,
+                           const int32_t& index) const {
+    int32_t ndim = input->ndim();
+    CHECK_OR_RETURN(ndim > 0) << "select() cannot be applied to a 0-dim tensor.";
+    CHECK_OR_RETURN((dim >= -ndim) && (dim < ndim))
+        << "Dimension out of range (expected to be in range of [" << -ndim << "," << ndim - 1
+        << "], but got " << dim << ")";
+    int32_t pos_dim = dim >= 0 ? dim : dim + ndim;
+    auto size = input->dim(pos_dim);
+    CHECK_OR_RETURN((index >= -size) && (index < size))
+        << "Index out of range (expected to be in range of [" << -size << "," << size - 1
+        << "], but got " << index << ")";
+    int32_t pos_index = index >= 0 ? index : index + size;
+
+    std::vector<int32_t> sizes(input->shape()->dim_vec().begin(), input->shape()->dim_vec().end());
+    const auto& stride = JUST(input->stride())->StrideVec();
+    std::vector<int32_t> strides(stride.begin(), stride.end());
+    auto storage_offset = JUST(input->storage_offset()) + pos_index * strides[pos_dim];
+
+    sizes.erase(sizes.begin() + pos_dim);
+    strides.erase(strides.begin() + pos_dim);
+
+    return AsStrided(input, sizes, strides, storage_offset);
+  }
+};
+
 class SelectTopNFunctor {
  public:
   SelectTopNFunctor() { op_ = CHECK_JUST(one::SelectTopNOpExpr::New()); }
@@ -2140,6 +2170,7 @@ ONEFLOW_FUNCTION_LIBRARY(m) {
   m.add_functor<NormFunctor, Norm2Functor>("Norm");
   m.add_functor<ScalarNormFunctor, ScalarNorm2Functor>("ScalarNorm");
   m.add_functor<ClampGradFunctor>("ClampGrad");
+  m.add_functor<SelectFunctor>("Select");
   m.add_functor<SelectTopNFunctor>("SelectTopN");
   m.add_functor<MinimumFunctor>("Minimum");
   m.add_functor<MaximumFunctor>("Maximum");
