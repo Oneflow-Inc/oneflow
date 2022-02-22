@@ -177,19 +177,19 @@ Maybe<Symbol<ParallelDesc>> PyUnpackParallelDesc(PyObject* obj) {
 // SBP
 bool PySbpParallelCheck(PyObject* obj) {
   auto handle = py::reinterpret_borrow<py::object>(obj);
-  return py::isinstance<Symbol<cfg::SbpParallel>>(handle);
+  return py::isinstance<Symbol<SbpParallel>>(handle);
 }
-Maybe<Symbol<cfg::SbpParallel>> PyUnpackSbpParallel(PyObject* obj) {
+Maybe<Symbol<SbpParallel>> PyUnpackSbpParallel(PyObject* obj) {
   auto handle = py::reinterpret_borrow<py::object>(obj);
-  return *py::cast<std::shared_ptr<Symbol<cfg::SbpParallel>>>(handle);
+  return *py::cast<std::shared_ptr<Symbol<SbpParallel>>>(handle);
 }
 
 // SBP list
 bool PySbpParallelSequenceCheck(PyObject* obj) {
   return PySequenceCheck(obj, [](PyObject* item) { return PySbpParallelCheck(item); });
 }
-Maybe<std::vector<Symbol<cfg::SbpParallel>>> PyUnpackSbpParallelSequence(PyObject* obj) {
-  return PyUnpackSequence<Symbol<cfg::SbpParallel>>(
+Maybe<std::vector<Symbol<SbpParallel>>> PyUnpackSbpParallelSequence(PyObject* obj) {
+  return PyUnpackSequence<Symbol<SbpParallel>>(
       obj, [](PyObject* item) { return PyUnpackSbpParallel(item); });
 }
 

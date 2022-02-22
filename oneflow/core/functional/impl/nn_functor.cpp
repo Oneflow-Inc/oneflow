@@ -35,6 +35,8 @@ limitations under the License.
 #include "oneflow/user/kernels/random_mask_like_kernel.h"
 #include "oneflow/user/kernels/dropout_kernel.h"
 #include "oneflow/core/register/ofblob.h"
+#include "oneflow/core/common/container_util.h"
+
 namespace oneflow {
 namespace one {
 namespace functional {
@@ -887,7 +889,7 @@ class SparseSoftmaxCrossEntropyFunctor {
 
     if (logits->shape()->NumAxes() != 2) { return false; }
 
-    const cfg::NdSbp& logits_nd_sbp = *(JUST(logits->nd_sbp()));
+    const NdSbp& logits_nd_sbp = *(JUST(logits->nd_sbp()));
     const int32_t split_axis = logits->shape()->NumAxes() - 1;
     bool has_split_axis_parallel = false;
     for (int64_t i = 0; i < logits_nd_sbp.sbp_parallel_size(); ++i) {
@@ -935,11 +937,11 @@ class SparseSoftmaxCrossEntropyFunctor {
     std::shared_ptr<Tensor> max_global_stage_input0 = max_device_stage->at(0);
     std::shared_ptr<Tensor> max_global_stage_input1 = max_device_stage->at(2);
 
-    const cfg::NdSbp& logits_nd_sbp = *(JUST(logits->nd_sbp()));
-    std::vector<Symbol<cfg::SbpParallel>> s0b_sbp_parallels;
-    std::vector<Symbol<cfg::SbpParallel>> s0s1_sbp_parallels;
+    const NdSbp& logits_nd_sbp = *(JUST(logits->nd_sbp()));
+    std::vector<Symbol<SbpParallel>> s0b_sbp_parallels;
+    std::vector<Symbol<SbpParallel>> s0s1_sbp_parallels;
     if (logits_nd_sbp.sbp_parallel_size() == 2) {
-      cfg::SbpParallel sbp;
+      SbpParallel sbp;
       sbp.mutable_broadcast_parallel();
       s0b_sbp_parallels.emplace_back(logits_nd_sbp.sbp_parallel(0));
       s0b_sbp_parallels.emplace_back(sbp);
@@ -978,7 +980,7 @@ class SparseSoftmaxCrossEntropyFunctor {
         JUST(OpInterpUtil::Dispatch<TensorTuple>(*op_reduce_sum_, {output_exp->at(0)}, attrs));
     std::shared_ptr<Tensor> broadcast_div_input1 = output_reduce_sum->at(0);
     if (logits_nd_sbp.sbp_parallel_size() == 2) {
-      std::vector<Symbol<cfg::SbpParallel>> empty_grad_sbp_parallels;
+      std::vector<Symbol<SbpParallel>> empty_grad_sbp_parallels;
       broadcast_div_input1 = JUST(functional::ToConsistent(
           output_reduce_sum->at(0), JUST(output_reduce_sum->at(0)->parallel_desc()),
           s0b_sbp_parallels, s0b_sbp_parallels));
@@ -1531,7 +1533,7 @@ class AvgPoolingNDFunctor {
                            const std::vector<int32_t>& kernel_size,
                            const Optional<std::vector<int32_t>>& stride,
                            const std::vector<int32_t>& padding, const bool& ceil_mode,
-                           const bool& count_include_pad, const int64_t& divisor_override,
+                           const bool& count_include_pad, const int32_t& divisor_override,
                            const std::string& data_format) const {
     MutableAttrMap attrs;
     JUST(attrs.SetAttr<std::string>("data_format", data_format));
@@ -1545,7 +1547,7 @@ class AvgPoolingNDFunctor {
     }
     JUST(attrs.SetAttr<bool>("ceil_mode", ceil_mode));
     JUST(attrs.SetAttr<bool>("count_include_pad", count_include_pad));
-    JUST(attrs.SetAttr<int64_t>("divisor_override", divisor_override));
+    JUST(attrs.SetAttr<int32_t>("divisor_override", divisor_override));
     return OpInterpUtil::Dispatch<Tensor>(*op_, {x}, attrs);
   }
 
@@ -2169,6 +2171,54 @@ class RoiAlignGradFunctor {
   std::shared_ptr<OpExpr> op_;
 };
 
+class FusedDotFeatureInteractionFunctor {
+ public:
+  FusedDotFeatureInteractionFunctor() {
+    ops_has_output_concat_.resize(kMaxInputCount);
+    ops_no_output_concat_.resize(kMaxInputCount);
+    for (int n = 0; n < ops_has_output_concat_.size(); ++n) {
+      ops_has_output_concat_[n] = CHECK_JUST(one::OpBuilder("fused_dot_feature_interaction")
+                                                 .Input("features", n + 1)
+                                                 .Input("output_concat")
+                                                 .Output("out")
+                                                 .Output("padded_concated_features")
+                                                 .Build());
+    }
+    for (int n = 0; n < ops_no_output_concat_.size(); ++n) {
+      ops_no_output_concat_[n] = CHECK_JUST(one::OpBuilder("fused_dot_feature_interaction")
+                                                .Input("features", n + 1)
+                                                .Output("out")
+                                                .Output("padded_concated_features")
+                                                .Build());
+    }
+  }
+
+  Maybe<Tensor> operator()(const TensorTuple& features, const Optional<one::Tensor>& output_concat,
+                           const bool& self_interaction, const int32_t& output_padding) const {
+    MutableAttrMap attrs;
+    JUST(attrs.SetAttr<bool>("self_interaction", self_interaction));
+    JUST(attrs.SetAttr<int32_t>("output_padding", output_padding));
+    const int64_t n_features = features.size();
+    CHECK_LE_OR_RETURN(n_features, kMaxInputCount);
+    if (output_concat) {
+      JUST(attrs.SetAttr<bool>("has_output_concat", true));
+      TensorTuple inputs(n_features + 1);
+      for (int64_t i = 0; i < n_features; ++i) { inputs[i] = JUST(oneflow::VectorAt(features, i)); }
+      inputs[n_features] = JUST(output_concat);
+      return OpInterpUtil::Dispatch<Tensor>(
+          *JUST(oneflow::VectorAt(ops_has_output_concat_, n_features - 1)), inputs, attrs);
+    } else {
+      JUST(attrs.SetAttr<bool>("has_output_concat", false));
+      return OpInterpUtil::Dispatch<Tensor>(
+          *JUST(oneflow::VectorAt(ops_no_output_concat_, n_features - 1)), features, attrs);
+    }
+  }
+
+ private:
+  std::vector<std::shared_ptr<OpExpr>> ops_has_output_concat_;
+  std::vector<std::shared_ptr<OpExpr>> ops_no_output_concat_;
+};
+
 }  // namespace impl
 
 ONEFLOW_FUNCTION_LIBRARY(m) {
@@ -2238,6 +2288,7 @@ ONEFLOW_FUNCTION_LIBRARY(m) {
   m.add_functor<impl::NmsFunctor>("Nms");
   m.add_functor<impl::RoiAlignFunctor>("RoiAlign");
   m.add_functor<impl::RoiAlignGradFunctor>("RoiAlignGrad");
+  m.add_functor<impl::FusedDotFeatureInteractionFunctor>("FusedDotFeatureInteraction");
 };
 
 }  // namespace functional
