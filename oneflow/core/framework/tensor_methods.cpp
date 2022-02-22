@@ -95,6 +95,7 @@ Maybe<Tensor> BasicView(const std::shared_ptr<Tensor>& input, const Shape& targe
 }
 
 Maybe<Tensor> Reshape(const std::shared_ptr<Tensor>& input, const Shape& target_shape) {
+  // TODO:(zhaoluyang) check input tensor is contiguous
   CHECK_OR_RETURN(IsViewApplicable(input))
     << Error::RuntimeError() << "view::Reshape(): input should be eager local tensor, but got "
                                  << (input->is_lazy() ? "lazy tensor" : "consistent tensor");
