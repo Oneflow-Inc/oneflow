@@ -87,10 +87,6 @@ class SbpEdge {
   SbpEdge(SbpNode<SbpSignature>* start_node, SbpNode<SbpSignature>* mid_node,
           SbpNode<SbpSignature>* end_node, SbpEdge<SbpSignature>* first_edge,
           SbpEdge<SbpSignature>* second_edge);
-  // Compute copy cost for type 1
-  void ComputeCost(
-      const std::function<double(SbpNode<SbpSignature>*, SbpSignature*, SbpNode<SbpSignature>*,
-                                 SbpSignature*)>& SbpInferHint4Ibn);
 
   // Update copy cost for type 2 and 3
   void SummarizeCost();
@@ -163,21 +159,6 @@ SbpEdge<SbpSignature>::SbpEdge(SbpNode<SbpSignature>* start_node, SbpNode<SbpSig
     : StartNode(start_node), MidNode(mid_node), EndNode(end_node) {
   EdgeList.emplace_back(first_edge);
   EdgeList.emplace_back(second_edge);
-};
-
-template<class SbpSignature>
-void SbpEdge<SbpSignature>::ComputeCost(
-    const std::function<double(SbpNode<SbpSignature>*, SbpSignature*, SbpNode<SbpSignature>*,
-                               SbpSignature*)>& SbpInferHint4Ibn) {
-  Cost.resize(StartNode->Cost.size());
-  int32_t EndNodeSbpSize = EndNode->Cost.size();
-  for (int32_t sbp_start = 0; sbp_start < Cost.size(); sbp_start++) {
-    Cost[sbp_start].resize(EndNodeSbpSize);
-    for (int32_t sbp_end = 0; sbp_end < EndNodeSbpSize; sbp_end++) {
-      Cost[sbp_start][sbp_end] = SbpInferHint4Ibn(StartNode, StartNode->SbpSignatureList[sbp_start],
-                                                  EndNode, EndNode->SbpSignatureList[sbp_end]);
-    }
-  }
 };
 
 template<class SbpSignature>
