@@ -60,8 +60,10 @@ message AdagradModelUpdateConf {
 }
 
 message ClipByGlobalNormConf {
-  required float clip_norm = 1;
-  optional float global_norm = 2;
+  optional float max_norm = 1 [default = 1.0];
+  optional float norm_type = 2 [default = 2.0];
+  optional bool inf_norm_type = 3 [default = false];
+  optional bool neg_inf_norm_type = 4 [default = false];
 }
 
 message ClipConf {
