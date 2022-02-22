@@ -27,10 +27,9 @@ from oneflow.test_utils.automated_test_util import *
 
 
 @flow.unittest.skip_unless_1n2d()
-class TestConsistentBranchError(flow.unittest.TestCase):
-    @autotest(n=1, check_graph=True)
+class TestLocalToGlobalBranchError(flow.unittest.TestCase):
     @unittest.skipIf(os.getenv("ONEFLOW_TEST_CPU_ONLY"), "only test cpu cases")
-    def test_add_with_alpha(test_case):
+    def test_global_branch_error_with_local_to_global(test_case):
         try:
             os.environ["ONEFLOW_TIMEOUT_SECONDS"] = "2"
             data = flow.rand(2, dtype=flow.float32)
@@ -38,8 +37,7 @@ class TestConsistentBranchError(flow.unittest.TestCase):
             sbp = flow.sbp.split(0)
             global_data = data.to_global(placement=placement, sbp=sbp)
             if flow.env.get_rank() == 0:
-                print(data.mean())
-                print(global_data.mean())
+                global_data = data.to_global(placement=placement, sbp=sbp)
             else:
                 time.sleep(2)
 
