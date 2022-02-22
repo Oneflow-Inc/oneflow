@@ -26,7 +26,7 @@ namespace ipc {
 class SharedMemoryManager final {
  public:
   OF_DISALLOW_COPY_AND_MOVE(SharedMemoryManager);
-  SharedMemoryManager() = delete;
+  SharedMemoryManager() {};
   ~SharedMemoryManager();
   Maybe<void> AddShmName(const std::string& shm_name);
   Maybe<void> DeleteShmName(const std::string& shm_name);
