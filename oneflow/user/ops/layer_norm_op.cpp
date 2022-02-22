@@ -192,7 +192,6 @@ oneflow::DataType InferBnParamDataType(const DataType x_data_type) {
   const int64_t begin_params_axis = ctx->Attr<int64_t>("begin_params_axis");
   const bool has_beta_diff = has_tensor("beta_diff");
   const bool has_gamma_diff = has_tensor("gamma_diff");
-  const bool has_gamma = has_tensor("gamma");
   CHECK_GE_OR_RETURN(begin_params_axis, 1);
   CHECK_LT_OR_RETURN(begin_params_axis, dy.shape().NumAxes());
   DimVector param_shape_dim_vec;
@@ -207,10 +206,6 @@ oneflow::DataType InferBnParamDataType(const DataType x_data_type) {
   if (has_gamma_diff) {
     user_op::TensorDesc* gamma_diff = ctx->OutputTensorDesc("gamma_diff", 0);
     *gamma_diff->mut_shape() = param_shape;
-  }
-  if (has_gamma) {
-    const user_op::TensorDesc& gamma = ctx->InputTensorDesc("gamma", 0);
-    CHECK_EQ_OR_RETURN(gamma.shape(), param_shape);
   }
   return Maybe<void>::Ok();
 }
@@ -240,7 +235,6 @@ oneflow::DataType InferBnParamDataType(const DataType x_data_type) {
   };
   const bool has_beta_diff = has_tensor("beta_diff");
   const bool has_gamma_diff = has_tensor("gamma_diff");
-  const bool has_gamma = has_tensor("gamma");
   const user_op::TensorDesc& dy = ctx->InputTensorDesc("dy", 0);
   if (has_beta_diff) {
     user_op::TensorDesc* beta_diff = ctx->OutputTensorDesc("beta_diff", 0);
@@ -249,10 +243,6 @@ oneflow::DataType InferBnParamDataType(const DataType x_data_type) {
   if (has_gamma_diff) {
     user_op::TensorDesc* gamma_diff = ctx->OutputTensorDesc("gamma_diff", 0);
     *gamma_diff->mut_data_type() = dy.data_type();
-  }
-  if (has_gamma) {
-    const user_op::TensorDesc& gamma = ctx->InputTensorDesc("gamma", 0);
-    CHECK_EQ_OR_RETURN(gamma.data_type(), dy.data_type());
   }
   return Maybe<void>::Ok();
 }
