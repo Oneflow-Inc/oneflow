@@ -13,6 +13,7 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
+#include <iomanip>
 #include "oneflow/core/control/ctrl_client.h"
 #include "oneflow/core/control/global_process_ctx.h"
 #include "oneflow/core/job/eager_nccl_comm_manager.h"
@@ -110,15 +111,14 @@ ncclComm_t EagerNcclCommMgr::GetCommForDevice(
   return comm;
 }
 
-ncclComm_t EagerNcclCommMgr::GetCommForDeviceAndStreamId(
-    const std::set<std::pair<int64_t, int64_t>>& device_set, const int32_t stream_id) {
+ncclComm_t EagerNcclCommMgr::GetCommForDeviceAndStreamName(
+    const std::set<std::pair<int64_t, int64_t>>& device_set, const std::string& stream_name) {
   int dev;
   OF_CUDA_CHECK(cudaGetDevice(&dev));
 
   std::vector<std::pair<int64_t, int64_t>> device_vec(device_set.cbegin(), device_set.cend());
   std::sort(device_vec.begin(), device_vec.end(), CompareDeviceSetPair);
-  std::string key =
-      GetNcclUniqueIdRpcKey(device_vec) + "-stream_id_hint:" + std::to_string(stream_id);
+  std::string key = GetNcclUniqueIdRpcKey(device_vec) + "-stream_name_hint:" + stream_name;
 
   {
     std::lock_guard<std::mutex> lock(mutex_);

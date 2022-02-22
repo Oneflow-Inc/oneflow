@@ -28,7 +28,7 @@ limitations under the License.
 #include "oneflow/core/job_rewriter/calculation_pass.h"
 #include "oneflow/core/graph/boxing/sub_task_graph_builder_util.h"
 #include "oneflow/core/graph/boxing/hierarchical_sub_task_graph_builder_impl.h"
-#include "oneflow/core/graph/stream_index_getter_registry_manager.h"
+#include "oneflow/core/graph/task_stream_index_manager.h"
 #include "oneflow/core/ep/include/primitive/memcpy.h"
 
 namespace oneflow {
@@ -121,7 +121,7 @@ bool CanBeMergedInChain(const TaskNode* node) {
   if (IsTaskNodeProducedResgtHasMultiRegstNum(node)) { return false; }
   const auto* fw_comp_node = dynamic_cast<const NormalForwardCompTaskNode*>(node);
   if (fw_comp_node == nullptr) { return false; }
-  if (fw_comp_node->device_type() != DeviceType::kGPU) { return false; }
+  if (fw_comp_node->device_type() != DeviceType::kCUDA) { return false; }
   const Operator* op = fw_comp_node->op().get();
   if (IsSpecialOpNotConsiderMergeInChain(op)) { return false; }
   return true;
@@ -290,18 +290,19 @@ void GenSortedCompTaskNodes(const OpNode* op_node, std::vector<CompTaskNode*>* s
               : static_cast<DeviceId::device_index_t>(dev_phy_id);
       DeviceId device_id{static_cast<DeviceId::rank_t>(machine_id), parallel_desc.device_type(),
                          device_index};
-      StreamId::stream_index_t stream_index{};
-      if (op_node->op().op_conf().has_stream_index_hint()) {
-        int32_t stream_index_hint = op_node->op().op_conf().stream_index_hint();
-        LOG(INFO) << "set op: " << op_node->op().op_name() << " to stream: " << stream_index_hint;
-        stream_index = static_cast<StreamId::stream_index_t>(stream_index_hint);
+      StreamId::stream_index_t stream_index = 0;
+      if (op_node->op().op_conf().has_stream_name_hint()) {
+        const std::string& stream_name_hint = op_node->op().op_conf().stream_name_hint();
+        LOG(INFO) << "set op: " << op_node->op().op_name() << " to stream: " << stream_name_hint;
+        stream_index = Global<TaskStreamIndexManager>::Get()->GetNamedTaskStreamIndex(
+            device_id, stream_name_hint);
       } else {
-        stream_index = StreamIndexGetterRegistryManager::Get().StreamIndex4DeviceIdAndTaskType(
-            device_id, comp_task_node->GetTaskType());
+        stream_index = Global<TaskStreamIndexManager>::Get()->GetTaskStreamIndex(
+            comp_task_node->GetTaskType(), device_id);
       }
       comp_task_node->set_thrd_id(EncodeStreamIdToInt64(StreamId{device_id, stream_index}));
       comp_task_node->set_op_node(op_node);
-      sorted_comp_tasks->push_back(comp_task_node);
+      sorted_comp_tasks->emplace_back(comp_task_node);
     }
   }
 }
@@ -312,8 +313,8 @@ bool IsConnectedLbisAllSameNdSbp(const OpEdge* op_edge) {
   CHECK_GT(op_edge->lbis().size(), 0);
   HashSet<bool> predicators;
   for (const LogicalBlobId& lbi : op_edge->lbis()) {
-    const cfg::NdSbp& src_nd_sbp = src_node->NdSbp4Lbi(lbi);
-    const cfg::NdSbp& dst_nd_sbp = dst_node->NdSbp4Lbi(lbi);
+    const NdSbp& src_nd_sbp = src_node->NdSbp4Lbi(lbi);
+    const NdSbp& dst_nd_sbp = dst_node->NdSbp4Lbi(lbi);
     predicators.insert(src_nd_sbp == dst_nd_sbp);
   }
   CHECK_EQ(predicators.size(), 1);
@@ -540,48 +541,6 @@ void TaskGraph::ConnectCtrlEdges(const std::vector<CompTaskNode*>& src_task_node
   }
 }
 
-void TaskGraph::AddCtrlEdgeBetweenSrcDstTickAndInputOutputInSameRank() {
-  if (!CHECK_JUST(IsMultiClient())) { return; }
-  HashMap<int64_t, TaskNode*> rank_id2src_tick;
-  HashMap<int64_t, TaskNode*> rank_id2dst_tick;
-  HashMap<int64_t, HashSet<TaskNode*>> rank_id2input_output_nodes;
-
-  ForEachNode([&](TaskNode* node) {
-    if (node->GetTaskType() == TaskType::kSrcSubsetTick) {
-      CHECK(rank_id2src_tick.emplace(node->machine_id(), node).second);
-    } else if (node->GetTaskType() == TaskType::kDstSubsetTick) {
-      CHECK(rank_id2dst_tick.emplace(node->machine_id(), node).second);
-    } else if (node->GetTaskType() == TaskType::kNormalForward) {
-      auto* forward_node = reinterpret_cast<NormalForwardCompTaskNode*>(node);
-      CHECK(forward_node);
-      if (forward_node->op()->op_conf().has_input_conf()
-          || forward_node->op()->op_conf().has_output_conf()) {
-        CHECK(rank_id2input_output_nodes[node->machine_id()].insert(node).second);
-      }
-    }
-  });
-
-  auto AddCtrlEdge = [&](TaskNode* src, TaskNode* dst) {
-    std::string ctrl_regst_name;
-    src->BuildCtrlRegstDesc(dst, &ctrl_regst_name);
-    TaskEdge* edge = NewEdge();
-    Connect<TaskNode>(src, edge, dst);
-    src->BindEdgeWithProducedRegst(edge, ctrl_regst_name);
-  };
-
-  for (auto& pair : rank_id2src_tick) {
-    int64_t rank_id = pair.first;
-    TaskNode* src = pair.second;
-    for (TaskNode* io_task : rank_id2input_output_nodes[rank_id]) { AddCtrlEdge(src, io_task); }
-  }
-
-  for (auto& pair : rank_id2dst_tick) {
-    int64_t rank_id = pair.first;
-    TaskNode* dst = pair.second;
-    for (TaskNode* io_task : rank_id2input_output_nodes[rank_id]) { AddCtrlEdge(io_task, dst); }
-  }
-}
-
 void TaskGraph::RemoveEmptyRegsts() {
   ForEachNode([&](TaskNode* node) { node->EraseUninitializedShapeProducedBlob(); });
   ForEachNode([&](TaskNode* node) { node->EraseZeroSizeConsumedRegst(); });
@@ -730,7 +689,7 @@ void TaskGraph::ForEachGpuDeviceNodes(
     const std::function<void(const HashSet<TaskNode*>& dev_nodes)>& Handler) const {
   HashMap<std::pair<int64_t, int64_t>, HashSet<TaskNode*>> global_dev_phy_id2nodes;
   ForEachNode([&](TaskNode* task_node) {
-    if (task_node->device_type() != DeviceType::kGPU) { return; }
+    if (task_node->device_type() != DeviceType::kCUDA) { return; }
     int64_t dev_phy_id = task_node->stream_id().device_id().device_index();
     global_dev_phy_id2nodes[{task_node->machine_id(), dev_phy_id}].emplace(task_node);
   });
@@ -758,8 +717,8 @@ DEFINE_BLD_SUB_TASK_GRAPH_METHOD(BldSubTskGphByBoxing) {
     std::vector<TaskNode*> out_nodes;
     out_nodes.reserve(sorted_dst_comp_tasks.size());
     std::vector<std::vector<TaskNode*>> sorted_ctrl_tasks;
-    const cfg::NdSbp& src_nd_sbp = src_op_node->NdSbp4Lbi(lbi);
-    const cfg::NdSbp& dst_nd_sbp = dst_op_node->NdSbp4Lbi(lbi);
+    const NdSbp& src_nd_sbp = src_op_node->NdSbp4Lbi(lbi);
+    const NdSbp& dst_nd_sbp = dst_op_node->NdSbp4Lbi(lbi);
     const ParallelDesc& src_parallel_desc = src_op_node->parallel_desc();
     const ParallelDesc& dst_parallel_desc = dst_op_node->parallel_desc();
     const BlobDesc& blob_desc = src_op_node->LogicalBlobDesc4Lbi(lbi);

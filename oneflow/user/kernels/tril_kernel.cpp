@@ -51,8 +51,8 @@ class CpuTrilKernel final : public user_op::OpKernel {
 
 #define REGISTER_CPU_TRIL_KERNEL(dtype)                                             \
   REGISTER_USER_KERNEL("tril").SetCreateFn<CpuTrilKernel<dtype>>().SetIsMatchedHob( \
-      (user_op::HobDeviceTag() == "cpu")                                            \
-      & (user_op::HobDataType("out", 0) == GetDataType<dtype>::value));
+      (user_op::HobDeviceType() == DeviceType::kCPU)                                \
+      && (user_op::HobDataType("out", 0) == GetDataType<dtype>::value));
 
 REGISTER_CPU_TRIL_KERNEL(float)
 REGISTER_CPU_TRIL_KERNEL(double)

@@ -24,6 +24,8 @@ import traceback
 import queue
 from dataclasses import dataclass
 from typing import Union
+from oneflow.multiprocessing import _prctl_pr_set_pdeathsig  # type: ignore[attr-defined]
+import signal
 
 import oneflow as flow
 from . import signal_handling, MP_STATUS_CHECK_INTERVAL, IS_WINDOWS, HAS_NUMPY
@@ -275,6 +277,7 @@ def _worker_loop(
     auto_collation,
     collate_fn,
     drop_last,
+    generator,
     base_seed,
     init_fn,
     worker_id,
@@ -284,6 +287,7 @@ def _worker_loop(
     # See NOTE [ Data Loader Multiprocessing Shutdown Logic ] for details on the
     # logic of this function.
     try:
+        _prctl_pr_set_pdeathsig(signal.SIGINT)
         # Initialize C side signal handlers for SIGBUS and SIGSEGV. Python signal
         # module's handlers are executed after Python returns from C low-level
         # handlers, likely when the same fatal signal had already happened
@@ -294,7 +298,7 @@ def _worker_loop(
         # TODO:flow.set_num_threads(1)
         seed = base_seed + worker_id
         random.seed(seed)
-        flow.manual_seed(seed)
+        generator.manual_seed(seed)
         if HAS_NUMPY:
             np_seed = _generate_state(base_seed, worker_id)
             import numpy as np

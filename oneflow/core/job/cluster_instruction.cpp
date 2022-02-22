@@ -53,7 +53,7 @@ class ObsoleteCtrlKeys {
   }
   void Add(const std::string& key) {
     std::unique_lock<std::mutex> lck(mutex_);
-    keys_.push_back(key);
+    keys_.emplace_back(key);
   }
 
  private:
@@ -118,12 +118,6 @@ void ClusterInstruction::MasterSendAbort() {
   LOG(ERROR) << "sending abort instruction";
   ClusterInstructionProto cluster_instruction;
   cluster_instruction.mutable_cluster_ctrl_abort();
-  PushClusterInstruction(cluster_instruction);
-}
-
-void ClusterInstruction::MasterSendEagerInstruction(
-    const ClusterInstructionProto& cluster_instruction) {
-  CHECK(cluster_instruction.has_eager_instruction());
   PushClusterInstruction(cluster_instruction);
 }
 

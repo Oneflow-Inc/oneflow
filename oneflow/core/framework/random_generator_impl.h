@@ -112,6 +112,11 @@ class CPUGeneratorImpl : public DeviceGeneratorImpl {
 };
 
 #ifdef WITH_CUDA
+struct CUDAGeneratorState {
+  uint64_t dev_offset;
+  int32_t dev_counter;
+};
+
 class CUDAGeneratorImpl : public DeviceGeneratorImpl {
  public:
   explicit CUDAGeneratorImpl(uint64_t seed, int device_index);
@@ -121,6 +126,7 @@ class CUDAGeneratorImpl : public DeviceGeneratorImpl {
   int32_t max_thread_num() const { return max_thread_num_; }
 
   curandState* curand_states() const { return curand_states_; }
+  CUDAGeneratorState* cuda_gen_state() const { return cuda_gen_state_; }
 
   void set_current_seed(uint64_t seed) override;
 
@@ -133,11 +139,13 @@ class CUDAGeneratorImpl : public DeviceGeneratorImpl {
   int32_t max_block_num_;
   int32_t max_thread_num_;
   curandState* curand_states_;
+  CUDAGeneratorState* cuda_gen_state_;
 };
 
 namespace detail {
 
-void InitCurandStates(uint64_t seed, int32_t block_num, int32_t thread_num, curandState* states);
+void InitCurandStates(uint64_t seed, int32_t block_num, int32_t thread_num, curandState* states,
+                      CUDAGeneratorState* cuda_gen_state);
 
 }  // namespace detail
 #endif  // WITH_CUDA

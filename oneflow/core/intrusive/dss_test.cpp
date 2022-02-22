@@ -13,6 +13,7 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
+#include "gtest/gtest.h"
 #include "oneflow/core/intrusive/dss.h"
 #include "oneflow/core/common/util.h"
 
@@ -58,7 +59,7 @@ struct IsScalar {
 template<int field_counter, typename WalkCtxType, typename FieldType>
 struct DumpFieldName {
   static void Call(WalkCtxType* ctx, FieldType* field, const char* field_name) {
-    ctx->push_back(field_name);
+    ctx->emplace_back(field_name);
   }
 };
 
@@ -82,7 +83,7 @@ template<>
 struct PushBackPtrFieldName<true> {
   template<typename WalkCtxType>
   static void Call(WalkCtxType* ctx, const char* field_name) {
-    ctx->push_back(field_name);
+    ctx->emplace_back(field_name);
   }
 };
 
@@ -142,8 +143,8 @@ template<typename StructT, int field_counter, typename WalkCtxType, typename Fie
          bool is_oneof_field>
 struct StaticDumpFieldName {
   static void Call(WalkCtxType* ctx, const char* field_name, const char* oneof_name) {
-    ctx->push_back(field_name);
-    ctx->push_back(oneof_name);
+    ctx->emplace_back(field_name);
+    ctx->emplace_back(oneof_name);
   }
 };
 

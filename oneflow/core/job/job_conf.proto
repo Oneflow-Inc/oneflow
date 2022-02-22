@@ -47,9 +47,10 @@ message LazyAdamModelUpdateConf {
 }
 
 message LambModelUpdateConf {
-  required float beta1 = 1;
-  required float beta2 = 2;
-  required float epsilon = 3;
+  optional float beta1 = 1 [default = 0.9];
+  optional float beta2 = 2 [default = 0.999];
+  optional float epsilon = 3 [default = 1e-8];
+  optional bool do_bias_correction = 4 [default = true];
 }
 
 message AdagradModelUpdateConf {
@@ -160,6 +161,7 @@ message XrtConfig {
   }
   optional bool use_xla_jit = 1 [default = false];
   optional bool use_tensorrt = 2 [default = false];
+  optional bool use_openvino = 5 [default = false];
   optional XlaConfig xla_config = 3;
   optional TensorRTConfig tensorrt_config = 4;
 }

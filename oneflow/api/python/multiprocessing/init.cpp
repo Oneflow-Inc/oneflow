@@ -22,6 +22,7 @@ limitations under the License.
 
 #if defined(__linux__)
 #include <sys/prctl.h>
+#include <system_error>
 #endif
 
 #define SYSASSERT(rv, ...) \

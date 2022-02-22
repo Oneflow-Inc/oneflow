@@ -32,19 +32,19 @@ struct NdarrayApplyBroadcastBinary<
     typename std::enable_if<std::is_same<T, typename DevDType<device_type, T>::type>::value>::type>
     final {
   using RetT = typename BinaryFuncTrait<binary_func, T>::return_type;
-  static void Apply(DeviceCtx* ctx, const XpuVarNdarray<RetT>& y, const XpuVarNdarray<const T>& a,
-                    const XpuVarNdarray<const T>& b) {
+  static void Apply(ep::Stream* stream, const XpuVarNdarray<RetT>& y,
+                    const XpuVarNdarray<const T>& a, const XpuVarNdarray<const T>& b) {
     if (a.shape() == b.shape()) {
-      return NdarrayApplyBinary<device_type, T, binary_func>::Apply(ctx, y, a, b);
+      return NdarrayApplyBinary<device_type, T, binary_func>::Apply(stream, y, a, b);
     }
-    if (TryInplaceApply<std::is_same<RetT, T>::value>(ctx, y, a, b)) { return; }
+    if (TryInplaceApply<std::is_same<RetT, T>::value>(stream, y, a, b)) { return; }
     CheckBroadcastable(y, a, b);
     DimVector simplified_y_dim;
     DimVector simplified_a_dim;
     DimVector simplified_b_dim;
     SimplifyBroadcastShapes(y.shape(), a.shape(), b.shape(), &simplified_y_dim, &simplified_a_dim,
                             &simplified_b_dim);
-    return SwitchApply(SwitchCase(simplified_y_dim.size()), ctx,
+    return SwitchApply(SwitchCase(simplified_y_dim.size()), stream,
                        XpuVarNdarray<RetT>(Shape(simplified_y_dim), y.ptr()),
                        XpuVarNdarray<const T>(Shape(simplified_a_dim), a.ptr()),
                        XpuVarNdarray<const T>(Shape(simplified_b_dim), b.ptr()));
@@ -52,30 +52,30 @@ struct NdarrayApplyBroadcastBinary<
 
   template<bool enabled>
   static typename std::enable_if<enabled, bool>::type TryInplaceApply(
-      DeviceCtx* ctx, const XpuVarNdarray<RetT>& y, const XpuVarNdarray<const T>& a,
+      ep::Stream* stream, const XpuVarNdarray<RetT>& y, const XpuVarNdarray<const T>& a,
       const XpuVarNdarray<const T>& b) {
     bool is_inplace = (y.shape() == a.shape() && y.ptr() == a.ptr());
-    if (is_inplace) { InplaceApply(ctx, y, b); }
+    if (is_inplace) { InplaceApply(stream, y, b); }
     return is_inplace;
   }
 
   template<bool enabled>
   static typename std::enable_if<!enabled, bool>::type TryInplaceApply(
-      DeviceCtx* ctx, const XpuVarNdarray<RetT>& y, const XpuVarNdarray<const T>& a,
+      ep::Stream* stream, const XpuVarNdarray<RetT>& y, const XpuVarNdarray<const T>& a,
       const XpuVarNdarray<const T>& b) {
     return false;
   }
 
-  static void InplaceApply(DeviceCtx* ctx, const XpuVarNdarray<T>& y,
+  static void InplaceApply(ep::Stream* stream, const XpuVarNdarray<T>& y,
                            const XpuVarNdarray<const T>& x) {
     if (y.shape() == x.shape()) {
-      return NdarrayApplyBinary<device_type, T, binary_func>::InplaceApply(ctx, y, x);
+      return NdarrayApplyBinary<device_type, T, binary_func>::InplaceApply(stream, y, x);
     }
     CheckBroadcastable(y, reinterpret_cast<const XpuVarNdarray<const T>&>(y), x);
     DimVector simplified_y_dim;
     DimVector simplified_x_dim;
     SimplifyBroadcastShapes(y.shape(), x.shape(), &simplified_y_dim, &simplified_x_dim);
-    return SwitchInplaceApply(SwitchCase(simplified_y_dim.size()), ctx,
+    return SwitchInplaceApply(SwitchCase(simplified_y_dim.size()), stream,
                               XpuVarNdarray<T>(Shape(simplified_y_dim), y.ptr()),
                               XpuVarNdarray<const T>(Shape(simplified_x_dim), x.ptr()));
   }
@@ -114,18 +114,18 @@ struct NdarrayApplyBroadcastBinary<
     typename std::enable_if<!std::is_same<T, typename DevDType<device_type, T>::type>::value>::type>
     final {
   using NewT = typename DevDType<device_type, T>::type;
-  static void Apply(DeviceCtx* ctx,
+  static void Apply(ep::Stream* stream,
                     const XpuVarNdarray<typename BinaryFuncTrait<binary_func, T>::return_type>& y,
                     const XpuVarNdarray<const T>& a, const XpuVarNdarray<const T>& b) {
     return NdarrayApplyBroadcastBinary<device_type, NewT, binary_func>::Apply(
-        ctx, reinterpret_cast<const XpuVarNdarray<NewT>&>(y),
+        stream, reinterpret_cast<const XpuVarNdarray<NewT>&>(y),
         reinterpret_cast<const XpuVarNdarray<const NewT>&>(a),
         reinterpret_cast<const XpuVarNdarray<const NewT>&>(b));
   }
-  static void InplaceApply(DeviceCtx* ctx, const XpuVarNdarray<T>& y,
+  static void InplaceApply(ep::Stream* stream, const XpuVarNdarray<T>& y,
                            const XpuVarNdarray<const T>& x) {
     return NdarrayApplyBroadcastBinary<device_type, NewT, binary_func>::InplaceApply(
-        ctx, reinterpret_cast<const XpuVarNdarray<NewT>&>(y),
+        stream, reinterpret_cast<const XpuVarNdarray<NewT>&>(y),
         reinterpret_cast<const XpuVarNdarray<const NewT>&>(x));
   }
 };

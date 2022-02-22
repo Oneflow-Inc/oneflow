@@ -25,39 +25,39 @@ enum ByScalarFunc { add, sub, mul, div };
 
 template<ByScalarFunc by_scalar_func, DeviceType device_type, typename T>
 struct ComputeScalarByTensor {
-  static void DoCompute(DeviceCtx* ctx, const T* x_ptr, const T* scalar_ptr, T* y_ptr,
+  static void DoCompute(ep::Stream* stream, const T* x_ptr, const T* scalar_ptr, T* y_ptr,
                         const int64_t n);
 };
 
 template<DeviceType device_type, typename T>
 struct ComputeScalarByTensor<ByScalarFunc::add, device_type, T> {
-  static void DoCompute(DeviceCtx* ctx, const T* x_ptr, const T* scalar_ptr, T* y_ptr,
+  static void DoCompute(ep::Stream* stream, const T* x_ptr, const T* scalar_ptr, T* y_ptr,
                         const int64_t n) {
-    NewKernelUtil<device_type>::AddByScalarPtr(ctx, n, x_ptr, scalar_ptr, y_ptr);
+    NewKernelUtil<device_type>::AddByScalarPtr(stream, n, x_ptr, scalar_ptr, y_ptr);
   }
 };
 
 template<DeviceType device_type, typename T>
 struct ComputeScalarByTensor<ByScalarFunc::sub, device_type, T> {
-  static void DoCompute(DeviceCtx* ctx, const T* x_ptr, const T* scalar_ptr, T* y_ptr,
+  static void DoCompute(ep::Stream* stream, const T* x_ptr, const T* scalar_ptr, T* y_ptr,
                         const int64_t n) {
-    NewKernelUtil<device_type>::SubByScalarPtr(ctx, n, x_ptr, scalar_ptr, y_ptr);
+    NewKernelUtil<device_type>::SubByScalarPtr(stream, n, x_ptr, scalar_ptr, y_ptr);
   }
 };
 
 template<DeviceType device_type, typename T>
 struct ComputeScalarByTensor<ByScalarFunc::mul, device_type, T> {
-  static void DoCompute(DeviceCtx* ctx, const T* x_ptr, const T* scalar_ptr, T* y_ptr,
+  static void DoCompute(ep::Stream* stream, const T* x_ptr, const T* scalar_ptr, T* y_ptr,
                         const int64_t n) {
-    NewKernelUtil<device_type>::MulByScalarPtr(ctx, n, x_ptr, scalar_ptr, y_ptr);
+    NewKernelUtil<device_type>::MulByScalarPtr(stream, n, x_ptr, scalar_ptr, y_ptr);
   }
 };
 
 template<DeviceType device_type, typename T>
 struct ComputeScalarByTensor<ByScalarFunc::div, device_type, T> {
-  static void DoCompute(DeviceCtx* ctx, const T* x_ptr, const T* scalar_ptr, T* y_ptr,
+  static void DoCompute(ep::Stream* stream, const T* x_ptr, const T* scalar_ptr, T* y_ptr,
                         const int64_t n) {
-    NewKernelUtil<device_type>::DivByScalarPtr(ctx, n, x_ptr, scalar_ptr, y_ptr);
+    NewKernelUtil<device_type>::DivByScalarPtr(stream, n, x_ptr, scalar_ptr, y_ptr);
   }
 };
 
@@ -72,9 +72,8 @@ class ScalarAddByTensorKernel final : public user_op::OpKernel, public user_op::
     const user_op::Tensor* x = ctx->Tensor4ArgNameAndIndex("x", 0);
     const user_op::Tensor* scalar = ctx->Tensor4ArgNameAndIndex("scalar", 0);
     user_op::Tensor* y = ctx->Tensor4ArgNameAndIndex("y", 0);
-    ComputeScalarByTensor<by_scalar_func, device, T>::DoCompute(ctx->device_ctx(), x->dptr<T>(),
-                                                                scalar->dptr<T>(), y->mut_dptr<T>(),
-                                                                x->shape().elem_cnt());
+    ComputeScalarByTensor<by_scalar_func, device, T>::DoCompute(
+        ctx->stream(), x->dptr<T>(), scalar->dptr<T>(), y->mut_dptr<T>(), x->shape().elem_cnt());
   };
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
@@ -85,8 +84,8 @@ class ScalarAddByTensorKernel final : public user_op::OpKernel, public user_op::
   REGISTER_USER_KERNEL(OF_PP_PAIR_FIRST(scalar_by_tensor_pair))                                 \
       .SetCreateFn<ScalarAddByTensorKernel<OF_PP_PAIR_SECOND(scalar_by_tensor_pair), device,    \
                                            OF_PP_PAIR_FIRST(dtype_pair)>>()                     \
-      .SetIsMatchedHob((user_op::HobDeviceTag() == device)                                      \
-                       & (user_op::HobDataType("x", 0) == OF_PP_PAIR_SECOND(dtype_pair)))       \
+      .SetIsMatchedHob((user_op::HobDeviceType() == device)                                     \
+                       && (user_op::HobDataType("x", 0) == OF_PP_PAIR_SECOND(dtype_pair)))      \
       .SetInplaceProposalFn([](const user_op::InferContext&,                                    \
                                user_op::AddInplaceArgPair AddInplaceArgPairFn) -> Maybe<void> { \
         OF_RETURN_IF_ERROR(AddInplaceArgPairFn("y", 0, "x", 0, true));                          \
@@ -103,7 +102,7 @@ OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(REGISTER_SCALAR_ADD_BY_TENSOR_KERNEL, SCALAR_BY
                                  DEVICE_TYPE_SEQ, ARITHMETIC_DATA_TYPE_SEQ)
 #ifdef WITH_CUDA
 OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(REGISTER_SCALAR_ADD_BY_TENSOR_KERNEL, SCALAR_BY_TENSOR_SEQ,
-                                 (DeviceType::kGPU), FLOAT16_DATA_TYPE_SEQ)
+                                 (DeviceType::kCUDA), FLOAT16_DATA_TYPE_SEQ)
 #endif
 
 }  // namespace oneflow

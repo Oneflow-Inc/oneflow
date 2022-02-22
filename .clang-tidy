@@ -35,7 +35,8 @@ Checks: >-
   performance-for-range-copy,
   google-default-arguments,
   google-global-names-in-headers,
-  google-explicit-constructor
+  google-explicit-constructor,
+  modernize-use-emplace
 
 # TODO: treat all maybe warnings as errors when existing warnings are all fixed
 # `clang-analyzer-cplusplus.NewDelete` cannot model reference counting properly for ObjectMsg
@@ -49,7 +50,8 @@ WarningsAsErrors: >-
   performance-noexcept-move-constructor,
   google-default-arguments,
   google-global-names-in-headers,
-  -clang-analyzer-cplusplus.NewDelete
+  -clang-analyzer-cplusplus.NewDelete,
+  modernize-use-emplace
 
 CheckOptions:
   # `cppcoreguidelines-special-member-functions` is enabled, refer to https://en.cppreference.com/w/cpp/language/rule_of_three

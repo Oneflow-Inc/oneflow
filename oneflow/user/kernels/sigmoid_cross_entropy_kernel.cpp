@@ -20,7 +20,7 @@ namespace oneflow {
 namespace {
 template<template<typename, typename> class Opt, typename PredT, typename LabelT>
 struct ElemwiseSigmoidCrossEntropyGradFunctor<DeviceType::kCPU, Opt, PredT, LabelT> final {
-  void operator()(DeviceCtx* ctx, int64_t n, PredT* prediction_diff, const PredT* prediction,
+  void operator()(ep::Stream* stream, int64_t n, PredT* prediction_diff, const PredT* prediction,
                   const LabelT* label, const PredT* loss_diff) {
     FOR_RANGE(int64_t, i, 0, n) {
       prediction_diff[i] = Opt<PredT, LabelT>()(prediction[i], label[i], loss_diff[i]);
@@ -30,7 +30,7 @@ struct ElemwiseSigmoidCrossEntropyGradFunctor<DeviceType::kCPU, Opt, PredT, Labe
 
 template<template<typename, typename> class Opt, typename PredT, typename LabelT>
 struct ElemwiseSigmoidCrossEntropyFunctor<DeviceType::kCPU, Opt, PredT, LabelT> final {
-  void operator()(DeviceCtx* ctx, int64_t n, PredT* loss, const PredT* prediction,
+  void operator()(ep::Stream* stream, int64_t n, PredT* loss, const PredT* prediction,
                   const LabelT* label) {
     FOR_RANGE(int64_t, i, 0, n) { loss[i] = Opt<PredT, LabelT>()(prediction[i], label[i]); }
   }

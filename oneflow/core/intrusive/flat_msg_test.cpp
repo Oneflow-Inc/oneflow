@@ -13,6 +13,7 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
+#include "gtest/gtest.h"
 #include "oneflow/core/common/util.h"
 #include "oneflow/core/intrusive/flat_msg.h"
 
@@ -23,7 +24,7 @@ namespace {
 template<int field_counter, typename WalkCtxType, typename FieldType>
 struct DumpFieldName {
   static void Call(WalkCtxType* ctx, FieldType* field, const char* field_name) {
-    ctx->push_back(field_name);
+    ctx->emplace_back(field_name);
   }
 };
 

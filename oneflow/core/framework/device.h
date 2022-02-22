@@ -19,6 +19,7 @@ limitations under the License.
 #include <memory>
 #include <string>
 #include <unordered_set>
+#include "oneflow/core/common/device_type.pb.h"
 #include "oneflow/core/common/maybe.h"
 #include "oneflow/core/common/symbol.h"
 #include "oneflow/core/common/optional.h"
@@ -27,10 +28,14 @@ namespace oneflow {
 
 class ParallelDesc;
 class MemoryCase;
-class LocalDepObject;
 
-inline size_t GetInstructionHighWaterMark() { return 500; }
-inline size_t GetInstructionLowWaterMark() { return 200; }
+namespace vm {
+class MirroredObject;
+}
+using LocalDepObject = vm::MirroredObject;
+
+inline size_t GetInstructionHighWaterMark() { return 40000; }
+inline size_t GetInstructionLowWaterMark() { return 20000; }
 
 class Device final {
  public:
@@ -39,6 +44,7 @@ class Device final {
   ~Device() = default;
   Device& operator=(const Device&) = delete;
   const std::string& type() const { return type_; }
+  DeviceType enum_type() const { return enum_type_; }
   Maybe<const std::string&> of_type() const;
   int64_t device_id() const { return device_id_; }
   std::string ToString() const;
@@ -55,6 +61,7 @@ class Device final {
   static Maybe<Symbol<Device>> ThreadLocalGetOrNew(const std::string& type, int64_t device_id);
   static Maybe<Symbol<Device>> New(const std::string& type, int64_t device_id);
   static Maybe<Symbol<Device>> New(const std::string& type);
+  static Maybe<Symbol<Device>> ParseAndNew(const std::string& type_or_type_with_device_id);
 
   static Maybe<Symbol<Device>> MakeDeviceByParallelDesc(const ParallelDesc& parallel_desc);
   static const std::unordered_set<std::string> type_supported;
@@ -78,6 +85,7 @@ class Device final {
   Maybe<void> Init();
 
   const std::string type_;
+  DeviceType enum_type_;
   const int64_t device_id_;
   const size_t hash_value_;
   std::shared_ptr<MemoryCase> mem_case_;

@@ -193,7 +193,11 @@ static __device__ __forceinline__ scalar_t safe_downgrade_to_int_range(scalar_t 
   // -100.0 does not have special meaning. This is just to make sure
   // it's not WithinBounds2D or WithinBounds3D, and does not cause
   // undefined behavior. See #35506.
-  if (x > INT_MAX - 1 || x < INT_MIN || !isfinite(static_cast<double>(x)))
+  // TODO(pei tingkuan): (explicit or implicit) type conversion from
+  // INT_MAX - 1 to float(INT_MAX - 1) indeed changes value from
+  // 2147483647 to 2147483648 and losses precision
+  // Reference: https://stackoverflow.com/q/526070
+  if (x > static_cast<scalar_t>(INT_MAX - 1) || x < INT_MIN || !isfinite(static_cast<double>(x)))
     return static_cast<scalar_t>(-100.0);
   return x;
 }

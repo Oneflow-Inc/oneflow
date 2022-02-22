@@ -15,6 +15,7 @@ limitations under the License.
 */
 #include "oneflow/core/framework/framework.h"
 #include "oneflow/core/cuda/softmax.cuh"
+#include "oneflow/core/ep/cuda/cuda_stream.h"
 
 namespace oneflow {
 
@@ -35,8 +36,8 @@ struct TrilScaleLoad {
     bool need_load = (col <= diagonal_col_id);
     cuda::softmax::Pack<SRC, N> pack;
     if (need_load) {
-      const int64_t offset = row * row_size + col;
-      pack.storage = *reinterpret_cast<const cuda::softmax::PackType<SRC, N>*>(src + offset);
+      const int64_t offset = (row * row_size + col) / N;
+      pack.storage = *(reinterpret_cast<const cuda::softmax::PackType<SRC, N>*>(src) + offset);
     }
 #pragma unroll
     for (int i = 0; i < N; ++i) {
@@ -63,18 +64,19 @@ struct MaskAndScaleStore {
   __device__ void store(const SRC* src, int64_t row, int64_t col) {
     cuda::softmax::Pack<DST, N> softmax_y_pack;
     cuda::softmax::Pack<DST, N> dst_pack;
-    const int64_t offset = row * row_size + col;
+    const int64_t offset = (row * row_size + col) / N;
     cuda::softmax::Pack<int8_t, N> mask_pack;
-    mask_pack.storage = *reinterpret_cast<const cuda::softmax::PackType<int8_t, N>*>(mask + offset);
+    mask_pack.storage =
+        *(reinterpret_cast<const cuda::softmax::PackType<int8_t, N>*>(mask) + offset);
 #pragma unroll
     for (int i = 0; i < N; ++i) {
       softmax_y_pack.elem[i] = static_cast<DST>(src[i]);
       dst_pack.elem[i] =
           static_cast<DST>(src[i]) * static_cast<DST>(mask_pack.elem[i]) * static_cast<DST>(scale);
     }
-    *reinterpret_cast<cuda::softmax::PackType<DST, N>*>(softmax_y + offset) =
+    *(reinterpret_cast<cuda::softmax::PackType<DST, N>*>(softmax_y) + offset) =
         softmax_y_pack.storage;
-    *reinterpret_cast<cuda::softmax::PackType<DST, N>*>(dst + offset) = dst_pack.storage;
+    *(reinterpret_cast<cuda::softmax::PackType<DST, N>*>(dst) + offset) = dst_pack.storage;
   }
   DST* dst;
   DST* softmax_y;
@@ -90,10 +92,11 @@ struct MaskAndScaleLoad {
   template<int N>
   __device__ void load(DST* dst, int64_t row, int64_t col) const {
     cuda::softmax::Pack<SRC, N> pack;
-    const int64_t offset = row * row_size + col;
-    pack.storage = *reinterpret_cast<const cuda::softmax::PackType<SRC, N>*>(src + offset);
+    const int64_t offset = (row * row_size + col) / N;
+    pack.storage = *(reinterpret_cast<const cuda::softmax::PackType<SRC, N>*>(src) + offset);
     cuda::softmax::Pack<int8_t, N> mask_pack;
-    mask_pack.storage = *reinterpret_cast<const cuda::softmax::PackType<int8_t, N>*>(mask + offset);
+    mask_pack.storage =
+        *(reinterpret_cast<const cuda::softmax::PackType<int8_t, N>*>(mask) + offset);
 #pragma unroll
     for (int i = 0; i < N; ++i) {
       dst[i] = static_cast<DST>(pack.elem[i]) * static_cast<DST>(mask_pack.elem[i])
@@ -119,7 +122,7 @@ struct TrilScaleStore {
   template<int N>
   __device__ void store(const SRC* src, int64_t row, int64_t col) {
     cuda::softmax::Pack<DST, N> pack;
-    const int64_t offset = row * row_size + col;
+    const int64_t offset = (row * row_size + col) / N;
     int64_t tril_row = row % tril_num_rows;
 #pragma unroll
     for (int i = 0; i < N; ++i) {
@@ -129,7 +132,7 @@ struct TrilScaleStore {
         pack.elem[i] = static_cast<DST>(src[i]) * static_cast<DST>(scale);
       }
     }
-    *reinterpret_cast<cuda::softmax::PackType<DST, N>*>(dst + offset) = pack.storage;
+    *(reinterpret_cast<cuda::softmax::PackType<DST, N>*>(dst) + offset) = pack.storage;
   }
   DST* dst;
   int64_t tril_num_rows;
@@ -165,21 +168,21 @@ class FusedTrilScaleSoftmaxMaskScaleKernel final : public user_op::OpKernel {
                                             mask->dptr<int8_t>(), cols,
                                             ctx->Attr<float>("mask_scale_value"));
     OF_CUDA_CHECK((cuda::softmax::DispatchSoftmax<decltype(load), decltype(store), ComputeType>(
-        ctx->device_ctx()->cuda_stream(), load, store, rows, cols)));
+        ctx->stream()->As<ep::CudaStream>()->cuda_stream(), load, store, rows, cols)));
   }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
 
-#define REGISTER_FUSED_TRIL_SCALE_SOFTMAX_MASK_SCALE_GPU_KERNEL(dtype) \
-  REGISTER_USER_KERNEL("fused_tril_scale_softmax_mask_scale")          \
-      .SetCreateFn<FusedTrilScaleSoftmaxMaskScaleKernel<dtype>>()      \
-      .SetIsMatchedHob((user_op::HobDeviceTag() == DeviceType::kGPU)   \
-                       & (user_op::HobDataType("y", 0) == GetDataType<dtype>::value));
+#define REGISTER_FUSED_TRIL_SCALE_SOFTMAX_MASK_SCALE_CUDA_KERNEL(dtype) \
+  REGISTER_USER_KERNEL("fused_tril_scale_softmax_mask_scale")           \
+      .SetCreateFn<FusedTrilScaleSoftmaxMaskScaleKernel<dtype>>()       \
+      .SetIsMatchedHob((user_op::HobDeviceType() == DeviceType::kCUDA)  \
+                       && (user_op::HobDataType("y", 0) == GetDataType<dtype>::value));
 
-REGISTER_FUSED_TRIL_SCALE_SOFTMAX_MASK_SCALE_GPU_KERNEL(half)
-REGISTER_FUSED_TRIL_SCALE_SOFTMAX_MASK_SCALE_GPU_KERNEL(float)
-REGISTER_FUSED_TRIL_SCALE_SOFTMAX_MASK_SCALE_GPU_KERNEL(double)
-#undef REGISTER_FUSED_TRIL_SCALE_SOFTMAX_MASK_SCALE_GPU_KERNEL
+REGISTER_FUSED_TRIL_SCALE_SOFTMAX_MASK_SCALE_CUDA_KERNEL(half)
+REGISTER_FUSED_TRIL_SCALE_SOFTMAX_MASK_SCALE_CUDA_KERNEL(float)
+REGISTER_FUSED_TRIL_SCALE_SOFTMAX_MASK_SCALE_CUDA_KERNEL(double)
+#undef REGISTER_FUSED_TRIL_SCALE_SOFTMAX_MASK_SCALE_CUDA_KERNEL
 
 template<typename T>
 class FusedTrilScaleSoftmaxMaskScaleGradKernel final : public user_op::OpKernel {
@@ -208,7 +211,8 @@ class FusedTrilScaleSoftmaxMaskScaleGradKernel final : public user_op::OpKernel 
                                          ctx->Attr<float>("tril_scale_value"));
     OF_CUDA_CHECK((cuda::softmax::DispatchSoftmaxGrad<decltype(load_softmax_y), decltype(load_dy),
                                                       decltype(store), ComputeType>(
-        ctx->device_ctx()->cuda_stream(), load_softmax_y, load_dy, store, rows, cols)));
+        ctx->stream()->As<ep::CudaStream>()->cuda_stream(), load_softmax_y, load_dy, store, rows,
+        cols)));
   }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
@@ -216,8 +220,8 @@ class FusedTrilScaleSoftmaxMaskScaleGradKernel final : public user_op::OpKernel 
 #define REGISTER_FUSED_TRIL_SCALE_SOFTMAX_MASK_SCALE_GRAD_KERNEL(dtype) \
   REGISTER_USER_KERNEL("fused_tril_scale_softmax_mask_scale_grad")      \
       .SetCreateFn<FusedTrilScaleSoftmaxMaskScaleGradKernel<dtype>>()   \
-      .SetIsMatchedHob((user_op::HobDeviceTag() == DeviceType::kGPU)    \
-                       & (user_op::HobDataType("dx", 0) == GetDataType<dtype>::value));
+      .SetIsMatchedHob((user_op::HobDeviceType() == DeviceType::kCUDA)  \
+                       && (user_op::HobDataType("dx", 0) == GetDataType<dtype>::value));
 
 REGISTER_FUSED_TRIL_SCALE_SOFTMAX_MASK_SCALE_GRAD_KERNEL(half)
 REGISTER_FUSED_TRIL_SCALE_SOFTMAX_MASK_SCALE_GRAD_KERNEL(float)

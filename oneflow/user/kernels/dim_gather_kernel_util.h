@@ -25,10 +25,11 @@ namespace oneflow {
 
 #define DIM_GATHER_SCATTER_DATA_TYPE_CPU_SEQ \
   ARITHMETIC_DATA_TYPE_SEQ                   \
-  UNSIGNED_INT_DATA_TYPE_SEQ
+  UNSIGNED_INT_DATA_TYPE_SEQ                 \
+  BOOL_DATA_TYPE_SEQ
 
-#define DIM_GATHER_SCATTER_DATA_TYPE_GPU_SEQ \
-  DIM_GATHER_SCATTER_DATA_TYPE_CPU_SEQ       \
+#define DIM_GATHER_SCATTER_DATA_TYPE_CUDA_SEQ \
+  DIM_GATHER_SCATTER_DATA_TYPE_CPU_SEQ        \
   FLOAT16_DATA_TYPE_SEQ
 
 constexpr int kDimGatherMaxDimCount = 8;
@@ -40,7 +41,7 @@ namespace user_op {
 
 template<DeviceType device_type, typename IN_T, typename IDX_T>
 struct DimGatherFunctor final {
-  void operator()(DeviceCtx* ctx, const DimOpIndexNdHelper<IDX_T>& input_nd_helper,
+  void operator()(ep::Stream* stream, const DimOpIndexNdHelper<IDX_T>& input_nd_helper,
                   const DimOpIndexNdHelper<IDX_T>& index_nd_helper, int ndim, int64_t elem_cnt,
                   int32_t dim, const IDX_T* index, const IN_T* input, IN_T* output);
 };

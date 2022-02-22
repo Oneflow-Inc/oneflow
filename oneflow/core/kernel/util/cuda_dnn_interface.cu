@@ -16,6 +16,7 @@ limitations under the License.
 #include "oneflow/core/kernel/util/cuda_dnn_interface.h"
 #include "oneflow/core/kernel/new_kernel_util.h"
 #include "oneflow/core/kernel/util/cuda_half_util.h"
+#include "oneflow/core/ep/cuda/cuda_stream.h"
 
 namespace oneflow {
 
@@ -130,102 +131,105 @@ __global__ void SigmoidBackwardGpu<half>(const int n, const half* y, const half*
 
 template<typename T>
 struct ReluHelper final {
-  static void ReluForward(DeviceCtx* ctx, const int64_t n, const T* x, T* y) {
+  static void ReluForward(ep::Stream* stream, const int64_t n, const T* x, T* y) {
     CHECK_LE(n, GetMaxVal<int32_t>() / 2);
     if (n == 0) { return; }
     if (x == y) {
-      InplaceReluForwardGpu<T>
-          <<<BlocksNum4ThreadsNum(n), kCudaThreadsNumPerBlock, 0, ctx->cuda_stream()>>>(n, y);
+      InplaceReluForwardGpu<T><<<BlocksNum4ThreadsNum(n), kCudaThreadsNumPerBlock, 0,
+                                 stream->As<ep::CudaStream>()->cuda_stream()>>>(n, y);
     } else {
-      ReluForwardGpu<T>
-          <<<BlocksNum4ThreadsNum(n), kCudaThreadsNumPerBlock, 0, ctx->cuda_stream()>>>(n, x, y);
+      ReluForwardGpu<T><<<BlocksNum4ThreadsNum(n), kCudaThreadsNumPerBlock, 0,
+                          stream->As<ep::CudaStream>()->cuda_stream()>>>(n, x, y);
     }
   }
 
-  static void ReluBackward(DeviceCtx* ctx, const int64_t n, const T* y, const T* dy, T* dx) {
+  static void ReluBackward(ep::Stream* stream, const int64_t n, const T* y, const T* dy, T* dx) {
     CHECK_LE(n, GetMaxVal<int32_t>() / 2);
     if (dy == dx) {
-      InplaceReluBackwardGpu<T>
-          <<<BlocksNum4ThreadsNum(n), kCudaThreadsNumPerBlock, 0, ctx->cuda_stream()>>>(n, y, dx);
+      InplaceReluBackwardGpu<T><<<BlocksNum4ThreadsNum(n), kCudaThreadsNumPerBlock, 0,
+                                  stream->As<ep::CudaStream>()->cuda_stream()>>>(n, y, dx);
     } else {
-      ReluBackwardGpu<T>
-          <<<BlocksNum4ThreadsNum(n), kCudaThreadsNumPerBlock, 0, ctx->cuda_stream()>>>(n, y, dy,
-                                                                                        dx);
+      ReluBackwardGpu<T><<<BlocksNum4ThreadsNum(n), kCudaThreadsNumPerBlock, 0,
+                           stream->As<ep::CudaStream>()->cuda_stream()>>>(n, y, dy, dx);
     }
   }
 };
 
 }  // namespace
 
-void DnnIf<DeviceType::kGPU>::Relu(DeviceCtx* ctx, const int64_t n, const float* x, float* y) {
-  ReluHelper<float>::ReluForward(ctx, n, x, y);
+void DnnIf<DeviceType::kCUDA>::Relu(ep::Stream* stream, const int64_t n, const float* x, float* y) {
+  ReluHelper<float>::ReluForward(stream, n, x, y);
 }
 
-void DnnIf<DeviceType::kGPU>::Relu(DeviceCtx* ctx, const int64_t n, const double* x, double* y) {
-  ReluHelper<double>::ReluForward(ctx, n, x, y);
+void DnnIf<DeviceType::kCUDA>::Relu(ep::Stream* stream, const int64_t n, const double* x,
+                                    double* y) {
+  ReluHelper<double>::ReluForward(stream, n, x, y);
 }
 
-void DnnIf<DeviceType::kGPU>::Relu(DeviceCtx* ctx, const int64_t n, const float16* x, float16* y) {
-  ReluHelper<half>::ReluForward(ctx, n, reinterpret_cast<const half*>(x),
+void DnnIf<DeviceType::kCUDA>::Relu(ep::Stream* stream, const int64_t n, const float16* x,
+                                    float16* y) {
+  ReluHelper<half>::ReluForward(stream, n, reinterpret_cast<const half*>(x),
                                 reinterpret_cast<half*>(y));
 }
 
-void DnnIf<DeviceType::kGPU>::ReluBackward(DeviceCtx* ctx, const int64_t n, const float* x,
-                                           const float* y, const float* dy, float* dx) {
-  ReluHelper<float>::ReluBackward(ctx, n, y, dy, dx);
+void DnnIf<DeviceType::kCUDA>::ReluBackward(ep::Stream* stream, const int64_t n, const float* x,
+                                            const float* y, const float* dy, float* dx) {
+  ReluHelper<float>::ReluBackward(stream, n, y, dy, dx);
 }
 
-void DnnIf<DeviceType::kGPU>::ReluBackward(DeviceCtx* ctx, const int64_t n, const double* x,
-                                           const double* y, const double* dy, double* dx) {
-  ReluHelper<double>::ReluBackward(ctx, n, y, dy, dx);
+void DnnIf<DeviceType::kCUDA>::ReluBackward(ep::Stream* stream, const int64_t n, const double* x,
+                                            const double* y, const double* dy, double* dx) {
+  ReluHelper<double>::ReluBackward(stream, n, y, dy, dx);
 }
 
-void DnnIf<DeviceType::kGPU>::ReluBackward(DeviceCtx* ctx, const int64_t n, const float16* x,
-                                           const float16* y, const float16* dy, float16* dx) {
-  ReluHelper<half>::ReluBackward(ctx, n, reinterpret_cast<const half*>(y),
+void DnnIf<DeviceType::kCUDA>::ReluBackward(ep::Stream* stream, const int64_t n, const float16* x,
+                                            const float16* y, const float16* dy, float16* dx) {
+  ReluHelper<half>::ReluBackward(stream, n, reinterpret_cast<const half*>(y),
                                  reinterpret_cast<const half*>(dy), reinterpret_cast<half*>(dx));
 }
 
-void DnnIf<DeviceType::kGPU>::Sigmoid(DeviceCtx* ctx, int64_t n, const float* x, float* y) {
+void DnnIf<DeviceType::kCUDA>::Sigmoid(ep::Stream* stream, int64_t n, const float* x, float* y) {
   CHECK(IsKernelSafeInt32(n));
-  SigmoidForwardGpu<float>
-      <<<BlocksNum4ThreadsNum(n), kCudaThreadsNumPerBlock, 0, ctx->cuda_stream()>>>(n, x, y);
+  SigmoidForwardGpu<float><<<BlocksNum4ThreadsNum(n), kCudaThreadsNumPerBlock, 0,
+                             stream->As<ep::CudaStream>()->cuda_stream()>>>(n, x, y);
 }
 
-void DnnIf<DeviceType::kGPU>::Sigmoid(DeviceCtx* ctx, int64_t n, const double* x, double* y) {
+void DnnIf<DeviceType::kCUDA>::Sigmoid(ep::Stream* stream, int64_t n, const double* x, double* y) {
   CHECK(IsKernelSafeInt32(n));
-  SigmoidForwardGpu<double>
-      <<<BlocksNum4ThreadsNum(n), kCudaThreadsNumPerBlock, 0, ctx->cuda_stream()>>>(n, x, y);
+  SigmoidForwardGpu<double><<<BlocksNum4ThreadsNum(n), kCudaThreadsNumPerBlock, 0,
+                              stream->As<ep::CudaStream>()->cuda_stream()>>>(n, x, y);
 }
 
-void DnnIf<DeviceType::kGPU>::Sigmoid(DeviceCtx* ctx, int64_t n, const float16* x, float16* y) {
+void DnnIf<DeviceType::kCUDA>::Sigmoid(ep::Stream* stream, int64_t n, const float16* x,
+                                       float16* y) {
   CHECK(IsKernelSafeInt32(n));
-  SigmoidForwardGpu<half>
-      <<<BlocksNum4ThreadsNum(n), kCudaThreadsNumPerBlock, 0, ctx->cuda_stream()>>>(
-          n, reinterpret_cast<const half*>(x), reinterpret_cast<half*>(y));
+  SigmoidForwardGpu<half><<<BlocksNum4ThreadsNum(n), kCudaThreadsNumPerBlock, 0,
+                            stream->As<ep::CudaStream>()->cuda_stream()>>>(
+      n, reinterpret_cast<const half*>(x), reinterpret_cast<half*>(y));
 }
 
-void DnnIf<DeviceType::kGPU>::SigmoidBackward(DeviceCtx* ctx, const int64_t n, const float* x,
-                                              const float* y, const float* dy, float* dx) {
+void DnnIf<DeviceType::kCUDA>::SigmoidBackward(ep::Stream* stream, const int64_t n, const float* x,
+                                               const float* y, const float* dy, float* dx) {
   CHECK(IsKernelSafeInt32(n));
-  SigmoidBackwardGpu<float>
-      <<<BlocksNum4ThreadsNum(n), kCudaThreadsNumPerBlock, 0, ctx->cuda_stream()>>>(n, y, dy, dx);
+  SigmoidBackwardGpu<float><<<BlocksNum4ThreadsNum(n), kCudaThreadsNumPerBlock, 0,
+                              stream->As<ep::CudaStream>()->cuda_stream()>>>(n, y, dy, dx);
 }
 
-void DnnIf<DeviceType::kGPU>::SigmoidBackward(DeviceCtx* ctx, const int64_t n, const double* x,
-                                              const double* y, const double* dy, double* dx) {
+void DnnIf<DeviceType::kCUDA>::SigmoidBackward(ep::Stream* stream, const int64_t n, const double* x,
+                                               const double* y, const double* dy, double* dx) {
   CHECK(IsKernelSafeInt32(n));
-  SigmoidBackwardGpu<double>
-      <<<BlocksNum4ThreadsNum(n), kCudaThreadsNumPerBlock, 0, ctx->cuda_stream()>>>(n, y, dy, dx);
+  SigmoidBackwardGpu<double><<<BlocksNum4ThreadsNum(n), kCudaThreadsNumPerBlock, 0,
+                               stream->As<ep::CudaStream>()->cuda_stream()>>>(n, y, dy, dx);
 }
 
-void DnnIf<DeviceType::kGPU>::SigmoidBackward(DeviceCtx* ctx, const int64_t n, const float16* x,
-                                              const float16* y, const float16* dy, float16* dx) {
+void DnnIf<DeviceType::kCUDA>::SigmoidBackward(ep::Stream* stream, const int64_t n,
+                                               const float16* x, const float16* y,
+                                               const float16* dy, float16* dx) {
   CHECK(IsKernelSafeInt32(n));
-  SigmoidBackwardGpu<half>
-      <<<BlocksNum4ThreadsNum(n), kCudaThreadsNumPerBlock, 0, ctx->cuda_stream()>>>(
-          n, reinterpret_cast<const half*>(y), reinterpret_cast<const half*>(dy),
-          reinterpret_cast<half*>(dx));
+  SigmoidBackwardGpu<half><<<BlocksNum4ThreadsNum(n), kCudaThreadsNumPerBlock, 0,
+                             stream->As<ep::CudaStream>()->cuda_stream()>>>(
+      n, reinterpret_cast<const half*>(y), reinterpret_cast<const half*>(dy),
+      reinterpret_cast<half*>(dx));
 }
 
 }  // namespace oneflow

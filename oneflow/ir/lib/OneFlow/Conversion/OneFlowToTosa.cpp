@@ -22,13 +22,13 @@ limitations under the License.
 #include "mlir/Conversion/MemRefToLLVM/MemRefToLLVM.h"
 #include "mlir/Conversion/TosaToLinalg/TosaToLinalg.h"
 #include "mlir/Dialect/Affine/IR/AffineOps.h"
-#include "mlir/Dialect/Linalg/IR/LinalgTypes.h"
 #include "mlir/Dialect/Linalg/Passes.h"
 #include "mlir/Dialect/MemRef/IR/MemRef.h"
 #include "mlir/Dialect/StandardOps/IR/Ops.h"
 #include "mlir/Dialect/StandardOps/Transforms/Passes.h"
 #include "mlir/Dialect/Tosa/IR/TosaOps.h"
 #include "mlir/IR/BuiltinAttributes.h"
+#include "mlir/IR/BuiltinTypes.h"
 #include "mlir/IR/OpImplementation.h"
 #include "mlir/IR/PatternMatch.h"
 #include "mlir/Pass/Pass.h"
@@ -37,28 +37,36 @@ limitations under the License.
 #include "mlir/Transforms/DialectConversion.h"
 #include "mlir/Transforms/Passes.h"
 
-using namespace mlir;
-using namespace mlir::oneflow;
+namespace mlir {
+
+namespace oneflow {
 
 struct ScalarMulByTensorOpLowering final : public OpConversionPattern<ScalarMulByTensorOp> {
  public:
   using OpConversionPattern<ScalarMulByTensorOp>::OpConversionPattern;
 
-  LogicalResult matchAndRewrite(ScalarMulByTensorOp op, ArrayRef<Value> operands,
-                                ConversionPatternRewriter& rewriter) const final {
-    auto scalar = op.scalar();
-    auto reshaped_scalar =
-        rewriter
-            .create<tosa::ReshapeOp>(
-                op->getLoc(),
-                RankedTensorType::get({1, 1}, scalar.getType().cast<TensorType>().getElementType()),
-                scalar, rewriter.getI64ArrayAttr({1, 1}))
-            .output();
+  LogicalResult matchAndRewrite(ScalarMulByTensorOp op, OpAdaptor adaptor,
+                                ConversionPatternRewriter& rewriter) const override {
+    Value scalar = op.scalar();
+    if (auto scalar_type = scalar.getType().dyn_cast<RankedTensorType>()) {
+      auto rank = op.x().getType().dyn_cast<RankedTensorType>().getRank();
+      if (scalar_type.getRank() != rank) {
+        std::vector<int64_t> perm(rank);
+        std::fill(perm.begin(), perm.end(), 1);
+        scalar = rewriter
+                     .create<tosa::ReshapeOp>(
+                         op->getLoc(),
+                         RankedTensorType::get(
+                             perm, scalar.getType().cast<TensorType>().getElementType()),
+                         scalar, rewriter.getI64ArrayAttr(perm))
+                     .output();
+      }
+    }
     rewriter.replaceOpWithNewOp<tosa::MulOp>(
         op,
         /* output */ op->getResultTypes().front().cast<TensorType>(),
         /* input1 */ op.x(),
-        /* input2 */ reshaped_scalar,
+        /* input2 */ scalar,
         /* shift */ rewriter.getIntegerAttr(rewriter.getI32Type(), 0));
     return success();
   }
@@ -67,11 +75,11 @@ struct ScalarMulByTensorOpLowering final : public OpConversionPattern<ScalarMulB
 struct CastOpLowering final : public OpConversionPattern<CastOp> {
  public:
   using OpConversionPattern<CastOp>::OpConversionPattern;
-  LogicalResult matchAndRewrite(CastOp op, ArrayRef<Value> operands,
-                                ConversionPatternRewriter& rewriter) const final {
+  LogicalResult matchAndRewrite(CastOp op, OpAdaptor adaptor,
+                                ConversionPatternRewriter& rewriter) const override {
     rewriter.replaceOpWithNewOp<tosa::CastOp>(op,
-                                              /* output */ op.y().getType(),
-                                              /* input */ op.x());
+                                              /* output */ op.out().getType(),
+                                              /* input */ op.in());
     return success();
   }
 };
@@ -82,7 +90,7 @@ struct OneFlowLoweringToTosaPass : public LowerOneFlowToTosaPassBase<OneFlowLowe
 };
 }  // namespace
 
-std::unique_ptr<Pass> mlir::oneflow::createLowerOneFlowToTosaPass() {
+std::unique_ptr<Pass> createLowerOneFlowToTosaPass() {
   return std::make_unique<OneFlowLoweringToTosaPass>();
 }
 
@@ -97,3 +105,7 @@ void OneFlowLoweringToTosaPass::runOnOperation() {
     signalPassFailure();
   }
 }
+
+}  // namespace oneflow
+
+}  // namespace mlir

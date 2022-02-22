@@ -16,6 +16,7 @@ limitations under the License.
 #include "oneflow/core/common/data_type.h"
 #include "oneflow/core/framework/framework.h"
 #include "oneflow/core/kernel/util/cuda_half_util.h"
+#include "oneflow/core/ep/cuda/cuda_stream.h"
 
 namespace oneflow {
 
@@ -162,35 +163,36 @@ class GpuTrilKernel final : public user_op::OpKernel {
     if (num_cols % (kCudaWarpSize * 2) == 0) {
       const int64_t total_rows = elem_cnt / num_cols;
       TrilWarpProcessRowGpu<<<BlocksNum4ThreadsNum(total_rows * kCudaWarpSize),
-                              kCudaThreadsNumPerBlock, 0, ctx->device_ctx()->cuda_stream()>>>(
+                              kCudaThreadsNumPerBlock, 0,
+                              ctx->stream()->As<ep::CudaStream>()->cuda_stream()>>>(
           total_rows, num_rows, num_cols, diagonal, x->dptr<T>(), fill, y->mut_dptr<T>());
     } else {
       TrilGpu<<<BlocksNum4ThreadsNum(elem_cnt), kCudaThreadsNumPerBlock, 0,
-                ctx->device_ctx()->cuda_stream()>>>(elem_cnt, num_rows, num_cols, diagonal,
-                                                    x->dptr<T>(), fill, y->mut_dptr<T>());
+                ctx->stream()->As<ep::CudaStream>()->cuda_stream()>>>(
+          elem_cnt, num_rows, num_cols, diagonal, x->dptr<T>(), fill, y->mut_dptr<T>());
     }
   }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
 
-#define REGISTER_GPU_TRIL_KERNEL(dtype)                                                         \
+#define REGISTER_CUDA_TRIL_KERNEL(dtype)                                                        \
   REGISTER_USER_KERNEL("tril")                                                                  \
       .SetCreateFn<GpuTrilKernel<dtype>>()                                                      \
-      .SetIsMatchedHob((user_op::HobDeviceTag() == "gpu")                                       \
-                       & (user_op::HobDataType("out", 0) == GetDataType<dtype>::value))         \
+      .SetIsMatchedHob((user_op::HobDeviceType() == DeviceType::kCUDA)                          \
+                       && (user_op::HobDataType("out", 0) == GetDataType<dtype>::value))        \
       .SetInplaceProposalFn([](const user_op::InferContext&,                                    \
                                user_op::AddInplaceArgPair AddInplaceArgPairFn) -> Maybe<void> { \
         OF_RETURN_IF_ERROR(AddInplaceArgPairFn("out", 0, "in", 0, true));                       \
         return Maybe<void>::Ok();                                                               \
       });
 
-REGISTER_GPU_TRIL_KERNEL(float)
-REGISTER_GPU_TRIL_KERNEL(double)
-REGISTER_GPU_TRIL_KERNEL(uint8_t)
-REGISTER_GPU_TRIL_KERNEL(int8_t)
-REGISTER_GPU_TRIL_KERNEL(int32_t)
-REGISTER_GPU_TRIL_KERNEL(int64_t)
-REGISTER_GPU_TRIL_KERNEL(half)
+REGISTER_CUDA_TRIL_KERNEL(float)
+REGISTER_CUDA_TRIL_KERNEL(double)
+REGISTER_CUDA_TRIL_KERNEL(uint8_t)
+REGISTER_CUDA_TRIL_KERNEL(int8_t)
+REGISTER_CUDA_TRIL_KERNEL(int32_t)
+REGISTER_CUDA_TRIL_KERNEL(int64_t)
+REGISTER_CUDA_TRIL_KERNEL(half)
 
 template<typename T>
 class GpuFusedScaleTrilKernel final : public user_op::OpKernel {
@@ -218,34 +220,34 @@ class GpuFusedScaleTrilKernel final : public user_op::OpKernel {
       const int64_t total_rows = elem_cnt / num_cols;
       FusedScaleTrilWarpProcessRowGpu<<<BlocksNum4ThreadsNum(total_rows * kCudaWarpSize),
                                         kCudaThreadsNumPerBlock, 0,
-                                        ctx->device_ctx()->cuda_stream()>>>(
+                                        ctx->stream()->As<ep::CudaStream>()->cuda_stream()>>>(
           total_rows, num_rows, num_cols, diagonal, scale, x->dptr<T>(), fill, y->mut_dptr<T>());
     } else {
       FusedScaleTrilGpu<<<BlocksNum4ThreadsNum(elem_cnt), kCudaThreadsNumPerBlock, 0,
-                          ctx->device_ctx()->cuda_stream()>>>(
+                          ctx->stream()->As<ep::CudaStream>()->cuda_stream()>>>(
           elem_cnt, num_rows, num_cols, diagonal, scale, x->dptr<T>(), fill, y->mut_dptr<T>());
     }
   }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
 
-#define REGISTER_GPU_FUSED_SCALE_TRIL_KERNEL(dtype)                                             \
+#define REGISTER_CUDA_FUSED_SCALE_TRIL_KERNEL(dtype)                                            \
   REGISTER_USER_KERNEL("fused_scale_tril")                                                      \
       .SetCreateFn<GpuFusedScaleTrilKernel<dtype>>()                                            \
-      .SetIsMatchedHob((user_op::HobDeviceTag() == "gpu")                                       \
-                       & (user_op::HobDataType("out", 0) == GetDataType<dtype>::value))         \
+      .SetIsMatchedHob((user_op::HobDeviceType() == DeviceType::kCUDA)                          \
+                       && (user_op::HobDataType("out", 0) == GetDataType<dtype>::value))        \
       .SetInplaceProposalFn([](const user_op::InferContext&,                                    \
                                user_op::AddInplaceArgPair AddInplaceArgPairFn) -> Maybe<void> { \
         OF_RETURN_IF_ERROR(AddInplaceArgPairFn("out", 0, "in", 0, true));                       \
         return Maybe<void>::Ok();                                                               \
       });
 
-REGISTER_GPU_FUSED_SCALE_TRIL_KERNEL(float)
-REGISTER_GPU_FUSED_SCALE_TRIL_KERNEL(double)
-REGISTER_GPU_FUSED_SCALE_TRIL_KERNEL(uint8_t)
-REGISTER_GPU_FUSED_SCALE_TRIL_KERNEL(int8_t)
-REGISTER_GPU_FUSED_SCALE_TRIL_KERNEL(int32_t)
-REGISTER_GPU_FUSED_SCALE_TRIL_KERNEL(int64_t)
-REGISTER_GPU_FUSED_SCALE_TRIL_KERNEL(half)
+REGISTER_CUDA_FUSED_SCALE_TRIL_KERNEL(float)
+REGISTER_CUDA_FUSED_SCALE_TRIL_KERNEL(double)
+REGISTER_CUDA_FUSED_SCALE_TRIL_KERNEL(uint8_t)
+REGISTER_CUDA_FUSED_SCALE_TRIL_KERNEL(int8_t)
+REGISTER_CUDA_FUSED_SCALE_TRIL_KERNEL(int32_t)
+REGISTER_CUDA_FUSED_SCALE_TRIL_KERNEL(int64_t)
+REGISTER_CUDA_FUSED_SCALE_TRIL_KERNEL(half)
 
 }  // namespace oneflow

@@ -28,6 +28,7 @@ limitations under the License.
 #include <nccl.h>
 #include <cuda_fp16.h>
 #include "oneflow/core/device/cuda_pseudo_half.h"
+#include "oneflow/core/ep/cuda/cuda_stream.h"
 
 #if CUDA_VERSION >= 10020
 
@@ -109,28 +110,17 @@ const int32_t kCudaWarpSize = 32;
 // TODO: limit of shared memory should be different for different arch
 const int32_t kCudaMaxSharedMemoryByteSize = 48 << 10;
 
-int32_t GetSMCudaMaxBlocksNum();
-void InitGlobalCudaDeviceProp();
-bool IsCuda9OnTuringDevice();
-
 inline int32_t BlocksNum4ThreadsNum(const int32_t n) {
   CHECK_GT(n, 0);
   return std::min((n + kCudaThreadsNumPerBlock - 1) / kCudaThreadsNumPerBlock, kCudaMaxBlocksNum);
 }
 
-inline int32_t SMBlocksNum4ThreadsNum(const int32_t n) {
-  CHECK_GT(n, 0);
-  return std::min((n + kCudaThreadsNumPerBlock - 1) / kCudaThreadsNumPerBlock,
-                  GetSMCudaMaxBlocksNum());
-}
-
-#define RUN_CUDA_KERNEL(func, device_ctx_ptr, thread_num, ...)           \
-  func<<<SMBlocksNum4ThreadsNum(thread_num), kCudaThreadsNumPerBlock, 0, \
-         (device_ctx_ptr)->cuda_stream()>>>(__VA_ARGS__)
+#define RUN_CUDA_KERNEL(func, stream, elem_cnt, ...) \
+  stream->As<ep::CudaStream>()->LaunchKernel(func, elem_cnt, 1, __VA_ARGS__)
 
 size_t GetAvailableGpuMemSize(int dev_id);
 
-void NumaAwareCudaMallocHost(int32_t dev, void** ptr, size_t size);
+cudaError_t NumaAwareCudaMallocHost(int32_t dev, void** ptr, size_t size);
 
 class CudaCurrentDeviceGuard final {
  public:

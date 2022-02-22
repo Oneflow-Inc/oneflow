@@ -76,7 +76,7 @@ class ConcatKernel final : public user_op::OpKernel {
         DimVector src_shape = {rows, in_cols};
         DimVector src_pos_vec = {0, 0};
         DimVector extent_vec = {rows, in_cols};
-        primitive->Launch(ctx->stream_ctx(), out_tensor->data_type(), 2, out_tensor->mut_dptr(),
+        primitive->Launch(ctx->stream(), out_tensor->data_type(), 2, out_tensor->mut_dptr(),
                           dst_shape.data(), dst_pos_vec.data(), in_tensor->dptr(), src_shape.data(),
                           src_pos_vec.data(), extent_vec.data());
       }
@@ -88,11 +88,11 @@ class ConcatKernel final : public user_op::OpKernel {
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
 
-hob::HobContextGetter<user_op::KernelRegContext, bool> CopyNdPrimitiveExists() {
-  return user_op::HobCtxGetter<bool>("CopyNdPrimitiveExists",
-                                     [](const user_op::KernelRegContext& ctx) {
-                                       return NewCopyNdPrimitive(&ctx).operator bool();
-                                     });
+auto CopyNdPrimitiveExists() {
+  return hob::make_custom("CopyNdPrimitiveExists",
+                          [](const user_op::KernelRegContext& ctx) -> bool {
+                            return NewCopyNdPrimitive(&ctx).operator bool();
+                          });
 }
 
 }  // namespace

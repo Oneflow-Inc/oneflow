@@ -64,42 +64,42 @@ __global__ void InitPtr(const int32_t elements, T* ptr) {
 
 template<typename T>
 struct GpuExpandFunctor final {
-  void operator()(DeviceCtx* ctx, const T* in_ptr, const STRIDES in_stride,
+  void operator()(ep::Stream* stream, const T* in_ptr, const STRIDES in_stride,
                   const STRIDES expand_stride, const int32_t dims, const int32_t elements,
                   T* out_ptr) {
-    RUN_CUDA_KERNEL((ExpandCudaKernel<T>), ctx, elements, in_ptr, in_stride, expand_stride, dims,
+    RUN_CUDA_KERNEL((ExpandCudaKernel<T>), stream, elements, in_ptr, in_stride, expand_stride, dims,
                     elements, out_ptr);
   }
 };
 
 template<>
-void GpuExpandFunctor<float16>::operator()(DeviceCtx* ctx, const float16* in_ptr,
+void GpuExpandFunctor<float16>::operator()(ep::Stream* stream, const float16* in_ptr,
                                            const STRIDES in_stride, const STRIDES expand_stride,
                                            const int32_t dims, const int32_t elements,
                                            float16* out_ptr) {
-  RUN_CUDA_KERNEL((ExpandCudaKernel<half>), ctx, elements, reinterpret_cast<const half*>(in_ptr),
+  RUN_CUDA_KERNEL((ExpandCudaKernel<half>), stream, elements, reinterpret_cast<const half*>(in_ptr),
                   in_stride, expand_stride, dims, elements, reinterpret_cast<half*>(out_ptr));
 }
 
 template<typename T>
 struct GpuExpandGradFunctor final {
-  void operator()(DeviceCtx* ctx, const T* in_ptr, const STRIDES in_stride,
+  void operator()(ep::Stream* stream, const T* in_ptr, const STRIDES in_stride,
                   const STRIDES expand_stride, const int32_t dims, const int32_t elements,
                   const int32_t out_elements, T* out_ptr) {
-    RUN_CUDA_KERNEL((InitPtr<T>), ctx, out_elements, out_elements, out_ptr);
-    RUN_CUDA_KERNEL((ExpandGradCudaKernel<T>), ctx, elements, in_ptr, in_stride, expand_stride,
+    RUN_CUDA_KERNEL((InitPtr<T>), stream, out_elements, out_elements, out_ptr);
+    RUN_CUDA_KERNEL((ExpandGradCudaKernel<T>), stream, elements, in_ptr, in_stride, expand_stride,
                     dims, elements, out_ptr);
   }
 };
 
 template<>
-void GpuExpandGradFunctor<float16>::operator()(DeviceCtx* ctx, const float16* in_ptr,
+void GpuExpandGradFunctor<float16>::operator()(ep::Stream* stream, const float16* in_ptr,
                                                const STRIDES in_stride, const STRIDES expand_stride,
                                                const int32_t dims, const int32_t elements,
                                                const int32_t out_elements, float16* out_ptr) {
-  RUN_CUDA_KERNEL((InitPtr<half>), ctx, out_elements, out_elements,
+  RUN_CUDA_KERNEL((InitPtr<half>), stream, out_elements, out_elements,
                   reinterpret_cast<half*>(out_ptr));
-  RUN_CUDA_KERNEL((ExpandGradCudaKernel<half>), ctx, elements,
+  RUN_CUDA_KERNEL((ExpandGradCudaKernel<half>), stream, elements,
                   reinterpret_cast<const half*>(in_ptr), in_stride, expand_stride, dims, elements,
                   reinterpret_cast<half*>(out_ptr));
 }
@@ -137,7 +137,7 @@ class GpuExpandKernel final : public user_op::OpKernel {
     for (int i = 0; i < out_dims; ++i) { expand_stride.val[i] = stride[i]; }
     STRIDES out_stride;
     InitStride(out_stride.val, out_shape.data(), out_dims);
-    GpuExpandFunctor<T>()(ctx->device_ctx(), in_ptr, out_stride, expand_stride, out_dims, out_size,
+    GpuExpandFunctor<T>()(ctx->stream(), in_ptr, out_stride, expand_stride, out_dims, out_size,
                           out_ptr);
   }
 
@@ -146,12 +146,13 @@ class GpuExpandKernel final : public user_op::OpKernel {
 
 #define REGISTER_EXPAND_KERNEL(dtype)                                                   \
   REGISTER_USER_KERNEL("expand").SetCreateFn<GpuExpandKernel<dtype>>().SetIsMatchedHob( \
-      (user_op::HobDeviceTag() == DeviceType::kGPU)                                     \
-      & (user_op::HobDataType("in", 0) == GetDataType<dtype>::value))
+      (user_op::HobDeviceType() == DeviceType::kCUDA)                                   \
+      && (user_op::HobDataType("in", 0) == GetDataType<dtype>::value))
 
 REGISTER_EXPAND_KERNEL(float);
 REGISTER_EXPAND_KERNEL(double);
 REGISTER_EXPAND_KERNEL(float16);
+REGISTER_EXPAND_KERNEL(bool);
 REGISTER_EXPAND_KERNEL(uint8_t);
 REGISTER_EXPAND_KERNEL(int8_t);
 REGISTER_EXPAND_KERNEL(int32_t);
@@ -193,18 +194,18 @@ class GpuExpandGradKernel final : public user_op::OpKernel {
     STRIDES in_stride;
     InitStride(in_stride.val, in_shape.data(), in_dims);
 
-    GpuExpandGradFunctor<T>()(ctx->device_ctx(), in_ptr, in_stride, expand_stride, in_dims, in_size,
+    GpuExpandGradFunctor<T>()(ctx->stream(), in_ptr, in_stride, expand_stride, in_dims, in_size,
                               out_size, out_ptr);
   }
 
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
 
-#define REGISTER_EXPAND_GRAD_KERNEL(dtype)                           \
-  REGISTER_USER_KERNEL("expand_grad")                                \
-      .SetCreateFn<GpuExpandGradKernel<dtype>>()                     \
-      .SetIsMatchedHob((user_op::HobDeviceTag() == DeviceType::kGPU) \
-                       & (user_op::HobDataType("in", 0) == GetDataType<dtype>::value))
+#define REGISTER_EXPAND_GRAD_KERNEL(dtype)                             \
+  REGISTER_USER_KERNEL("expand_grad")                                  \
+      .SetCreateFn<GpuExpandGradKernel<dtype>>()                       \
+      .SetIsMatchedHob((user_op::HobDeviceType() == DeviceType::kCUDA) \
+                       && (user_op::HobDataType("in", 0) == GetDataType<dtype>::value))
 
 REGISTER_EXPAND_GRAD_KERNEL(float);
 REGISTER_EXPAND_GRAD_KERNEL(double);

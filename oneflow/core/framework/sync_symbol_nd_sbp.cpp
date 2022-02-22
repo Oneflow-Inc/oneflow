@@ -17,7 +17,7 @@ limitations under the License.
 #include "oneflow/core/framework/sync_symbol_nd_sbp.h"
 #include "oneflow/core/framework/rank_group_rpc_util.h"
 #include "oneflow/core/job/rank_group_scope.h"
-#include "oneflow/core/job/sbp_parallel.cfg.h"
+#include "oneflow/core/job/sbp_parallel.h"
 #include "oneflow/core/common/shape_vec.h"
 
 namespace oneflow {
@@ -37,7 +37,7 @@ FLAT_MSG_END(FlatPartialSumParallel);
 
 FLAT_MSG_BEGIN(FlatSbpParallel);
  public:
-  Maybe<void> Init(const cfg::SbpParallel& sbp_parallel) {
+  Maybe<void> Init(const SbpParallel& sbp_parallel) {
     if (sbp_parallel.has_split_parallel()) {
       this->mutable_split_parallel()->set_axis(sbp_parallel.split_parallel().axis());
     } else if (sbp_parallel.has_broadcast_parallel()) {
@@ -50,7 +50,7 @@ FLAT_MSG_BEGIN(FlatSbpParallel);
     return Maybe<void>::Ok();
   }
 
-  Maybe<void> Check(const cfg::SbpParallel& sbp_parallel) const {
+  Maybe<void> Check(const SbpParallel& sbp_parallel) const {
     if (sbp_parallel.has_split_parallel()) {
       CHECK_EQ_OR_RETURN(this->split_parallel().axis(), sbp_parallel.split_parallel().axis());
     } else if (sbp_parallel.has_broadcast_parallel()) {
@@ -72,7 +72,7 @@ FLAT_MSG_END(FlatSbpParallel);
 
 FLAT_MSG_BEGIN(FlatNdSbp);
  public:
-  Maybe<void> Init(uint64_t symbol_id, Symbol<cfg::NdSbp> nd_sbp) {
+  Maybe<void> Init(uint64_t symbol_id, Symbol<NdSbp> nd_sbp) {
     this->set_symbol_id(symbol_id);
     this->set_size(nd_sbp->sbp_parallel_size());
     for (int i = 0; i < this->size(); ++i) {
@@ -82,7 +82,7 @@ FLAT_MSG_BEGIN(FlatNdSbp);
     return Maybe<void>::Ok();
   }
 
-  Maybe<void> Check(uint64_t symbol_id, Symbol<cfg::NdSbp> nd_sbp) const {
+  Maybe<void> Check(uint64_t symbol_id, Symbol<NdSbp> nd_sbp) const {
     CHECK_EQ_OR_RETURN(this->symbol_id(), symbol_id);
     CHECK_EQ_OR_RETURN(this->size(), nd_sbp->sbp_parallel_size());
     for (int i = 0; i < this->size(); ++i) {
@@ -101,7 +101,7 @@ FLAT_MSG_END(FlatNdSbp);
 class FlatNdSbpAsyncTransportCtx : public AsyncTransportCtx {
  public:
   FlatNdSbpAsyncTransportCtx(const TransportToken& transport_token, uint64_t symbol_id,
-                             Symbol<cfg::NdSbp> nd_sbp)
+                             Symbol<NdSbp> nd_sbp)
       : AsyncTransportCtx(transport_token), symbol_id_(symbol_id), nd_sbp_(nd_sbp) {}
 
   ~FlatNdSbpAsyncTransportCtx() override {}
@@ -134,7 +134,7 @@ class FlatNdSbpAsyncTransportCtx : public AsyncTransportCtx {
 
  private:
   uint64_t symbol_id_;
-  Symbol<cfg::NdSbp> nd_sbp_;
+  Symbol<NdSbp> nd_sbp_;
   std::shared_ptr<FlatNdSbp> flat_nd_sbp_;
 };
 
@@ -142,14 +142,15 @@ class FlatNdSbpAsyncTransportCtx : public AsyncTransportCtx {
 
 namespace {}
 
-Maybe<void> SyncSymbolNdSbp(uint64_t symbol_id, Symbol<cfg::NdSbp> symbol) {
+Maybe<void> SyncSymbolNdSbp(uint64_t symbol_id, Symbol<NdSbp> symbol) {
   const auto& rank_group = JUST(RankGroupScope::CurrentRankGroup());
   const auto& transport_token =
       JUST(TransportToken::NewTransportToken(kTransportTokenTypeSyncSymbolNdSbp));
   FlatNdSbpAsyncTransportCtx ctx(transport_token, symbol_id, symbol);
   JUST(TransportUtil::SendToNextRankInRing(rank_group, transport_token, &ctx));
   JUST(TransportUtil::ReceiveFromPrevRankInRing(rank_group, transport_token, &ctx));
-  JUST(TransportUtil::WaitUntilDoneOrTimeout(ctx, TransportUtil::TimeoutSeconds()));
+  JUST_MSG(ctx.WaitDone(), "Maybe executing different code in different ranks, please check if "
+                           "the code is branched and operates on the global tensor.");
   JUST(ctx.Check());
   return Maybe<void>::Ok();
 }

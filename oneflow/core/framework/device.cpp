@@ -36,10 +36,19 @@ inline size_t HashDevice(const std::string& type, int64_t device_id) {
   return std::hash<std::string>()(type) ^ std::hash<int64_t>()(device_id);
 }
 
+void CheckDeviceType(const std::string& type) {
+  if (Device::type_supported.find(type) == Device::type_supported.end()) {
+    std::string error_msg =
+        "Expected one of cpu, cuda device type at start of device string " + type;
+    throw std::runtime_error(error_msg);
+  }
+}
+
 }  // namespace
 
 Device::Device(const std::string& type, int64_t device_id)
     : type_(type),
+      enum_type_(kInvalidDevice),
       device_id_(device_id),
       hash_value_(HashDevice(type, device_id)),
       transport_local_dep_object_(),
@@ -47,16 +56,16 @@ Device::Device(const std::string& type, int64_t device_id)
 
 Maybe<void> Device::Init() {
   if (type_ == "auto") { return Maybe<void>::Ok(); }
-  DeviceType dev_type = JUST(DeviceType4DeviceTag(JUST(of_type())));
-  mem_case_ = MemoryCaseUtil::MakeMemCase(dev_type, device_id_);
+  enum_type_ = JUST(DeviceType4DeviceTag(JUST(of_type())));
+  mem_case_ = MemoryCaseUtil::MakeMemCase(enum_type_, device_id_);
   const auto& opt_device_transport_tag = JUST(GetSharedTransportDeviceType());
   if (opt_device_transport_tag.has_value()) {
     const auto& device_transport_tag = *JUST(opt_device_transport_tag);
-    transport_local_dep_object_ = JUST(GetLocalDepObject4Device(Device(device_transport_tag, 0)));
+    transport_local_dep_object_ = GetStaticLocalDepObject4Device(Device(device_transport_tag, 0));
   }
   const auto& schedule_device_type = JUST(GetSharedScheduleDeviceType());
   schedule_local_dep_object_ =
-      JUST(GetLocalDepObject4Device(Device(schedule_device_type, device_id_)));
+      GetStaticLocalDepObject4Device(Device(schedule_device_type, device_id_));
   return Maybe<void>::Ok();
 }
 
@@ -80,6 +89,19 @@ Maybe<void> Device::Init() {
 
 /* static */ Maybe<Symbol<Device>> Device::New(const std::string& type) {
   return New(type, GlobalProcessCtx::LocalRank());
+}
+
+/* static */ Maybe<Symbol<Device>> Device::ParseAndNew(
+    const std::string& type_or_type_with_device_id) {
+  std::string type;
+  int device_id = -1;
+  JUST(ParsingDeviceTag(type_or_type_with_device_id, &type, &device_id));
+  CheckDeviceType(type);
+  if (device_id == -1) {
+    return Device::New(type);
+  } else {
+    return Device::New(type, device_id);
+  }
 }
 
 Maybe<const std::string&> Device::of_type() const {
@@ -190,6 +212,7 @@ std::string Device::ToString() const {
 Maybe<Symbol<Device>> Device::MakeDeviceByParallelDesc(const ParallelDesc& parallel_desc) {
   std::string type = Type4DeviceTag(parallel_desc.device_tag());
   std::vector<std::string> machine_device_ids;
+  machine_device_ids.reserve(parallel_desc.parallel_conf().device_name().size());
   for (const auto& item : parallel_desc.parallel_conf().device_name()) {
     machine_device_ids.emplace_back(item);
   }

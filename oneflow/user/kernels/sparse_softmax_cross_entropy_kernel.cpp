@@ -33,18 +33,17 @@ std::unique_ptr<ep::primitive::LogSoftmax> NewLogSoftmaxPrimitive(Context* ctx) 
                                                                        data_type);
 }
 
-hob::HobContextGetter<user_op::KernelRegContext, bool> LogSoftmaxPrimitiveExists() {
-  return user_op::HobCtxGetter<bool>("LogSoftmaxPrimitiveExists",
-                                     [](const user_op::KernelRegContext& ctx) {
-                                       return NewLogSoftmaxPrimitive(&ctx).operator bool();
-                                     });
+auto LogSoftmaxPrimitiveExists() {
+  return hob::make_custom("LogSoftmaxPrimitiveExists", [](const user_op::KernelRegContext& ctx) {
+    return NewLogSoftmaxPrimitive(&ctx).operator bool();
+  });
 }
 
-class SparseSoftmaxCrossEntropyOpKernelState final : public user_op::OpKernelState {
+class SparseSoftmaxCrossEntropyOpKernelCache final : public user_op::OpKernelCache {
  public:
-  SparseSoftmaxCrossEntropyOpKernelState(int64_t lower, int64_t upper)
+  SparseSoftmaxCrossEntropyOpKernelCache(int64_t lower, int64_t upper)
       : lower_(lower), upper_(upper) {}
-  ~SparseSoftmaxCrossEntropyOpKernelState() override = default;
+  ~SparseSoftmaxCrossEntropyOpKernelCache() override = default;
 
   int64_t lower() const { return lower_; }
   int64_t upper() const { return upper_; }
@@ -77,7 +76,7 @@ class SparseSoftmaxCrossEntropyKernel final : public user_op::OpKernel,
 
     std::unique_ptr<ep::primitive::LogSoftmax> primitive = NewLogSoftmaxPrimitive(ctx);
     CHECK(primitive);
-    primitive->Launch(ctx->stream_ctx(), num_instances, num_classes, prediction->dptr(),
+    primitive->Launch(ctx->stream(), num_instances, num_classes, prediction->dptr(),
                       prob->mut_dptr());
 
     const K* labels = label->dptr<K>();
@@ -112,10 +111,10 @@ class SparseSoftmaxCrossEntropyMsKernel final : public user_op::OpKernel {
   REGISTER_USER_KERNEL(kernel_name)                                                            \
       .SetCreateFn<kernel_class<device_type_v, OF_PP_PAIR_FIRST(dtype_pair),                   \
                                 OF_PP_PAIR_FIRST(ltype_pair)>>()                               \
-      .SetIsMatchedHob((user_op::HobDeviceTag() == device_type_v)                              \
-                       & (user_op::HobDataType("label", 0) == OF_PP_PAIR_SECOND(ltype_pair))   \
-                       & (user_op::HobDataType("out", 0) == OF_PP_PAIR_SECOND(dtype_pair))     \
-                       & (LogSoftmaxPrimitiveExists() == true));
+      .SetIsMatchedHob((user_op::HobDeviceType() == device_type_v)                             \
+                       && (user_op::HobDataType("label", 0) == OF_PP_PAIR_SECOND(ltype_pair))  \
+                       && (user_op::HobDataType("out", 0) == OF_PP_PAIR_SECOND(dtype_pair))    \
+                       && LogSoftmaxPrimitiveExists());
 
 OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(REGISTER_SPARSE_SOFTMAX_CROSS_ENTROPY_KERNEL,
                                  (SparseSoftmaxCrossEntropyKernel),
@@ -131,7 +130,7 @@ OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(REGISTER_SPARSE_SOFTMAX_CROSS_ENTROPY_KERNEL,
 OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(REGISTER_SPARSE_SOFTMAX_CROSS_ENTROPY_KERNEL,
                                  (SparseSoftmaxCrossEntropyMsKernel),
                                  ("sparse_softmax_cross_entropy_ms"),
-                                 OF_PP_MAKE_TUPLE_SEQ(DeviceType::kGPU),
+                                 OF_PP_MAKE_TUPLE_SEQ(DeviceType::kCUDA),
                                  FLOATING_DATA_TYPE_SEQ FLOAT16_DATA_TYPE_SEQ, INDEX_DATA_TYPE_SEQ)
 #endif
 
@@ -154,7 +153,7 @@ class SparseSoftmaxCrossEntropyGradKernel final : public user_op::OpKernel,
     const int64_t lower_bound = 0;
     const int64_t depth = ctx->Attr<int64_t>("depth");
     SparseSoftmaxCrossEntropyKernelUtil<device_type, T, K>::ComputeDiff(
-        ctx->device_ctx(), prediction_diff->shape().elem_cnt(), num_classes, depth, lower_bound,
+        ctx->stream(), prediction_diff->shape().elem_cnt(), num_classes, depth, lower_bound,
         prob->dptr<T>(), label->dptr<K>(), dy->dptr<T>(), prediction_diff->mut_dptr<T>());
   }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
@@ -165,24 +164,25 @@ class SparseSoftmaxCrossEntropyMsGradKernel final : public user_op::OpKernel {
  public:
   SparseSoftmaxCrossEntropyMsGradKernel() = default;
   ~SparseSoftmaxCrossEntropyMsGradKernel() = default;
-  std::shared_ptr<user_op::OpKernelState> CreateOpKernelState(
-      user_op::KernelInitContext* ctx) const override {
+  std::shared_ptr<user_op::OpKernelCache> InitOpKernelCache(
+      user_op::KernelCacheContext* ctx) const override {
     if (ctx->parallel_ctx().parallel_num() > 1) {
-      const cfg::NdSbp& nd_sbp = ctx->NdSbp4ArgNameAndIndex("prob", 0);
+      const NdSbp& nd_sbp = ctx->NdSbp4ArgNameAndIndex("prob", 0);
       const Shape& hierarchy = *ctx->parallel_desc().hierarchy();
       const TensorDesc* prob_logical_desc = ctx->LogicalTensorDesc4ArgNameAndIndex("prob", 0);
       const int64_t class_axis = prob_logical_desc->shape().NumAxes() - 1;
       TensorSliceView view = GetTensorSliceView4ParallelId(
           hierarchy, nd_sbp, prob_logical_desc->shape(), ctx->parallel_ctx().parallel_id());
-      return std::make_shared<SparseSoftmaxCrossEntropyOpKernelState>(view.At(class_axis).begin(),
+      return std::make_shared<SparseSoftmaxCrossEntropyOpKernelCache>(view.At(class_axis).begin(),
                                                                       view.At(class_axis).end());
     } else {
-      return std::shared_ptr<OpKernelState>(nullptr);
+      return nullptr;
     }
   }
 
  private:
-  void Compute(user_op::KernelComputeContext* ctx, user_op::OpKernelState* state) const override {
+  void Compute(user_op::KernelComputeContext* ctx, user_op::OpKernelState*,
+               const user_op::OpKernelCache* cache) const override {
     const user_op::Tensor* label = ctx->Tensor4ArgNameAndIndex("label", 0);
     const user_op::Tensor* dy = ctx->Tensor4ArgNameAndIndex("dy", 0);
     const user_op::Tensor* prob = ctx->Tensor4ArgNameAndIndex("prob", 0);
@@ -192,14 +192,14 @@ class SparseSoftmaxCrossEntropyMsGradKernel final : public user_op::OpKernel {
     const int64_t num_classes = prob->shape().elem_cnt() / num_instances;
     const int64_t depth = ctx->Attr<int64_t>("depth");
     int64_t lower_bound = 0;
-    if (state != nullptr) {
-      auto* kernel_state = dynamic_cast<SparseSoftmaxCrossEntropyOpKernelState*>(state);
-      CHECK_NOTNULL(kernel_state);
-      CHECK_EQ(num_classes, kernel_state->upper() - kernel_state->lower());
-      lower_bound = kernel_state->lower();
+    if (cache != nullptr) {
+      auto* kernel_cache = dynamic_cast<const SparseSoftmaxCrossEntropyOpKernelCache*>(cache);
+      CHECK_NOTNULL(kernel_cache);
+      CHECK_EQ(num_classes, kernel_cache->upper() - kernel_cache->lower());
+      lower_bound = kernel_cache->lower();
     }
     SparseCrossEntropyKernelUtil<device_type, T, K>::ComputeDiffWithSoftmax(
-        ctx->device_ctx(), prediction_diff->shape().elem_cnt(), num_classes, depth, lower_bound,
+        ctx->stream(), prediction_diff->shape().elem_cnt(), num_classes, depth, lower_bound,
         prob->dptr<T>(), label->dptr<K>(), dy->dptr<T>(), prediction_diff->mut_dptr<T>());
   }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
@@ -211,9 +211,9 @@ class SparseSoftmaxCrossEntropyMsGradKernel final : public user_op::OpKernel {
       .SetCreateFn<kernel_class<device_type_v, OF_PP_PAIR_FIRST(dtype_pair),                     \
                                 OF_PP_PAIR_FIRST(ltype_pair)>>()                                 \
       .SetIsMatchedHob(                                                                          \
-          (user_op::HobDeviceTag() == device_type_v)                                             \
-          & (user_op::HobDataType("label", 0) == OF_PP_PAIR_SECOND(ltype_pair))                  \
-          & (user_op::HobDataType("prediction_diff", 0) == OF_PP_PAIR_SECOND(dtype_pair)))       \
+          (user_op::HobDeviceType() == device_type_v)                                            \
+          && (user_op::HobDataType("label", 0) == OF_PP_PAIR_SECOND(ltype_pair))                 \
+          && (user_op::HobDataType("prediction_diff", 0) == OF_PP_PAIR_SECOND(dtype_pair)))      \
       .SetInplaceProposalFn([](const user_op::InferContext&,                                     \
                                user_op::AddInplaceArgPair AddInplaceArgPairFn) -> Maybe<void> {  \
         OF_RETURN_IF_ERROR(AddInplaceArgPairFn("prediction_diff", 0, "prob", 0, true));          \
@@ -229,7 +229,7 @@ OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(REGISTER_SPARSE_SOFTMAX_CROSS_ENTROPY_GRAD_KERN
 OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(REGISTER_SPARSE_SOFTMAX_CROSS_ENTROPY_GRAD_KERNEL,
                                  (SparseSoftmaxCrossEntropyGradKernel),
                                  ("sparse_softmax_cross_entropy_grad"),
-                                 OF_PP_MAKE_TUPLE_SEQ(DeviceType::kGPU),
+                                 OF_PP_MAKE_TUPLE_SEQ(DeviceType::kCUDA),
                                  FLOATING_DATA_TYPE_SEQ FLOAT16_DATA_TYPE_SEQ, INDEX_DATA_TYPE_SEQ)
 #endif
 OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(REGISTER_SPARSE_SOFTMAX_CROSS_ENTROPY_GRAD_KERNEL,
@@ -241,7 +241,7 @@ OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(REGISTER_SPARSE_SOFTMAX_CROSS_ENTROPY_GRAD_KERN
 OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(REGISTER_SPARSE_SOFTMAX_CROSS_ENTROPY_GRAD_KERNEL,
                                  (SparseSoftmaxCrossEntropyMsGradKernel),
                                  ("sparse_softmax_cross_entropy_ms_grad"),
-                                 OF_PP_MAKE_TUPLE_SEQ(DeviceType::kGPU),
+                                 OF_PP_MAKE_TUPLE_SEQ(DeviceType::kCUDA),
                                  FLOATING_DATA_TYPE_SEQ FLOAT16_DATA_TYPE_SEQ, INDEX_DATA_TYPE_SEQ)
 #endif
 }  // namespace user_op

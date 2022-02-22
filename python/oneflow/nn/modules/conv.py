@@ -14,6 +14,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 """
 import math
+import os
 
 import oneflow as flow
 from oneflow.nn import init
@@ -181,6 +182,7 @@ class Conv1d(Module):
         self.padding = _single(padding)
         self.dilation = _single(dilation)
         self.groups = groups
+        self.channel_pos = "channels_first"
         assert in_channels % groups == 0
         assert out_channels % groups == 0
         self.in_channels = in_channels
@@ -202,50 +204,16 @@ class Conv1d(Module):
             init.uniform_(self.bias, -bound, bound)
 
     def forward(self, x):
-        if x.device.type == "cpu" and self.groups > 1:
-            in_channel_axis = 1
-            weight_channel_axis = 0
-            bias_channel_axis = 0
-            in_split_list = ConvUtil.split(
-                x, axis=in_channel_axis, split_num=self.groups
-            )
-            out_list = []
-            for i in range(len(in_split_list)):
-                out_list.append(
-                    flow._C.conv1d(
-                        in_split_list[i],
-                        self.weight[
-                            i
-                            * self.out_channel_groups : (i + 1)
-                            * self.out_channel_groups,
-                            :,
-                            :,
-                        ],
-                        self.bias[
-                            i
-                            * self.out_channel_groups : (i + 1)
-                            * self.out_channel_groups
-                        ]
-                        if self.bias is not None
-                        else None,
-                        stride=self.stride,
-                        padding=self.padding,
-                        dilation=self.dilation,
-                        groups=1,
-                    )
-                )
-            res = flow.cat(out_list, dim=in_channel_axis)
-        else:
-            res = flow._C.conv1d(
-                x,
-                self.weight,
-                self.bias,
-                stride=self.stride,
-                padding=self.padding,
-                dilation=self.dilation,
-                groups=self.groups,
-            )
-        return res
+        return flow._C.conv1d(
+            x,
+            self.weight,
+            self.bias,
+            stride=self.stride,
+            padding=self.padding,
+            dilation=self.dilation,
+            groups=self.groups,
+            channel_pos=self.channel_pos,
+        )
 
     def extra_repr(self):
         s = "{in_channels}, {out_channels}, kernel_size={kernel_size}, stride={stride}"
@@ -399,13 +367,25 @@ class Conv2d(Module):
         self.padding = _pair(padding)
         self.dilation = _pair(dilation)
         self.groups = groups
+
+        if os.getenv("ONEFLOW_ENABLE_NHWC") == "1":
+            self.channel_pos = "channels_last"
+        else:
+            self.channel_pos = "channels_first"
+
         assert in_channels % groups == 0
         assert out_channels % groups == 0
         self.in_channels = in_channels
         self.out_channels = out_channels
-        self.weight = flow.nn.Parameter(
-            flow.Tensor(out_channels, in_channels // groups, *self.kernel_size)
-        )
+        if self.channel_pos == "channels_first":
+            self.weight = flow.nn.Parameter(
+                flow.Tensor(out_channels, in_channels // groups, *self.kernel_size)
+            )
+        else:
+            self.weight = flow.nn.Parameter(
+                flow.Tensor(out_channels, *self.kernel_size, in_channels // groups)
+            )
+
         self.out_channel_groups = out_channels // groups
         self.bias = None
         if bias:
@@ -420,54 +400,24 @@ class Conv2d(Module):
             init.uniform_(self.bias, -bound, bound)
 
     def forward(self, x):
-        if x.shape[1] != self.in_channels:
-            raise ValueError("The input channels should be equal to self.in_channels")
-        # TODO(zwx): Use `tensor.device_type()` method to help checking if x is on cpu.
-        # Using `if x.device == flow.device("cpu"):` will fail as consistent tensor has
-        # no device, however using `x.is_cuda` is not a good choice.
-        if not x.is_cuda and self.groups > 1:
+        if self.channel_pos == "channels_first":
             in_channel_axis = 1
-            in_split_list = ConvUtil.split(
-                x, axis=in_channel_axis, split_num=self.groups
-            )
-            out_list = []
-            for i in range(len(in_split_list)):
-                out_list.append(
-                    flow._C.conv2d(
-                        in_split_list[i],
-                        self.weight[
-                            i
-                            * self.out_channel_groups : (i + 1)
-                            * self.out_channel_groups,
-                            :,
-                            :,
-                            :,
-                        ],
-                        self.bias[
-                            i
-                            * self.out_channel_groups : (i + 1)
-                            * self.out_channel_groups
-                        ]
-                        if self.bias is not None
-                        else None,
-                        stride=self.stride,
-                        padding=self.padding,
-                        dilation=self.dilation,
-                        groups=1,
-                    )
-                )
-            res = flow.cat(out_list, dim=in_channel_axis)
         else:
-            res = flow._C.conv2d(
-                x,
-                self.weight,
-                self.bias,
-                stride=self.stride,
-                padding=self.padding,
-                dilation=self.dilation,
-                groups=self.groups,
+            in_channel_axis = 3
+        if x.shape[in_channel_axis] != self.in_channels:
+            raise ValueError(
+                f"The input channels {x.shape[in_channel_axis]} should be equal to self.in_channels {self.in_channels}."
             )
-        return res
+        return flow._C.conv2d(
+            x,
+            self.weight,
+            self.bias,
+            stride=self.stride,
+            padding=self.padding,
+            dilation=self.dilation,
+            groups=self.groups,
+            channel_pos=self.channel_pos,
+        )
 
     def extra_repr(self):
         s = "{in_channels}, {out_channels}, kernel_size={kernel_size}, stride={stride}"
@@ -594,11 +544,13 @@ class Conv3d(Module):
         super().__init__()
 
         assert padding_mode == "zeros"
+        self.padding_mode = padding_mode
         self.kernel_size = _triple(kernel_size)
         self.stride = _triple(stride)
         self.padding = _triple(padding)
         self.dilation = _triple(dilation)
         self.groups = groups
+        self.channel_pos = "channels_first"
         assert in_channels % groups == 0, "in_channels must be divisible by groups"
         assert out_channels % groups == 0, "out_channels must be divisible by groups"
         self.in_channels = in_channels
@@ -622,49 +574,16 @@ class Conv3d(Module):
     def forward(self, x):
         if x.shape[1] != self.in_channels:
             raise ValueError("The input channels should be equal to self.in_channels")
-        if x.device.type == "cpu" and self.groups > 1:
-            in_channel_axis = 1
-            in_split_list = ConvUtil.split(
-                x, axis=in_channel_axis, split_num=self.groups
-            )
-            out_list = []
-            for i in range(len(in_split_list)):
-                out_list.append(
-                    flow._C.conv3d(
-                        in_split_list[i],
-                        self.weight[
-                            i
-                            * self.out_channel_groups : (i + 1)
-                            * self.out_channel_groups,
-                            :,
-                            :,
-                            :,
-                        ],
-                        self.bias[
-                            i
-                            * self.out_channel_groups : (i + 1)
-                            * self.out_channel_groups
-                        ]
-                        if self.bias is not None
-                        else None,
-                        stride=self.stride,
-                        padding=self.padding,
-                        dilation=self.dilation,
-                        groups=1,
-                    )
-                )
-            res = flow.cat(out_list, dim=in_channel_axis)
-        else:
-            res = flow._C.conv3d(
-                x,
-                self.weight,
-                self.bias,
-                stride=self.stride,
-                padding=self.padding,
-                dilation=self.dilation,
-                groups=self.groups,
-            )
-        return res
+        return flow._C.conv3d(
+            x,
+            self.weight,
+            self.bias,
+            stride=self.stride,
+            padding=self.padding,
+            dilation=self.dilation,
+            groups=self.groups,
+            channel_pos=self.channel_pos,
+        )
 
     def extra_repr(self):
         s = "{in_channels}, {out_channels}, kernel_size={kernel_size}, stride={stride}"
@@ -792,7 +711,7 @@ class ConvTranspose1d(Module):
         self.weight = flow.nn.Parameter(
             flow.Tensor(in_channels, out_channels // groups, *self.kernel_size)
         )
-        self.filters = out_channels // groups
+        self.filters = out_channels
         self.bias = None
         self._bias_add_op = None
         if bias:
@@ -906,45 +825,24 @@ class ConvTranspose2d(Module):
     ) -> None:
         super().__init__()
         assert padding_mode == "zeros"
-        kernel_size = _pair(kernel_size)
-        stride = _pair(stride)
-        padding = _pair(padding)
-        output_padding = _pair(output_padding)
-        dilation = _pair(dilation)
+        self.kernel_size = _pair(kernel_size)
+        self.stride = _pair(stride)
+        self.padding = _pair(padding)
+        self.output_padding = _pair(output_padding)
+        self.dilation = _pair(dilation)
         self.groups = groups
         assert in_channels % groups == 0
         assert out_channels % groups == 0
         self.weight = flow.nn.Parameter(
-            flow.Tensor(in_channels, out_channels // groups, *kernel_size)
+            flow.Tensor(in_channels, out_channels // groups, *self.kernel_size)
         )
         self.in_channel_groups = in_channels // groups
+        self.filters = out_channels
         self.bias = None
         self._bias_add_op = None
         if bias:
             self.bias = flow.nn.Parameter(flow.Tensor(out_channels))
-            self._bias_add_op = (
-                flow.builtin_op("bias_add")
-                .Input("a")
-                .Input("b")
-                .Output("out")
-                .Attr("axis", 1)
-                .Build()
-            )
-        self._op = (
-            flow.builtin_op("deconv2d")
-            .Input("in")
-            .Input("weight")
-            .Attr("filters", out_channels // groups)
-            .Attr("padding_before", padding)
-            .Attr("data_format", "channels_first")
-            .Attr("kernel_size", kernel_size)
-            .Attr("strides", stride)
-            .Attr("dilation_rate", dilation)
-            .Attr("output_padding", output_padding)
-            .Attr("groups", 1)
-            .Output("out")
-            .Build()
-        )
+
         self.reset_parameters()
 
     def reset_parameters(self) -> None:
@@ -955,31 +853,19 @@ class ConvTranspose2d(Module):
             init.uniform_(self.bias, -bound, bound)
 
     def forward(self, x):
-        if self.groups > 1:
-            in_channel_axis = 1
-            in_split_list = ConvUtil.split(
-                x, axis=in_channel_axis, split_num=self.groups
-            )
-            out_list = []
-            for i in range(len(in_split_list)):
-                out_list.append(
-                    self._op(
-                        in_split_list[i],
-                        self.weight[
-                            i
-                            * self.in_channel_groups : (i + 1)
-                            * self.in_channel_groups,
-                            :,
-                            :,
-                            :,
-                        ],
-                    )[0]
-                )
-            res = flow.cat(out_list, dim=in_channel_axis)
-        else:
-            res = self._op(x, self.weight)[0]
-        if self._bias_add_op is not None:
-            res = self._bias_add_op(res, self.bias)[0]
+        res = flow._C.deconv2d(
+            x,
+            self.weight,
+            self.bias,
+            self.filters,
+            self.padding,
+            "channels_first",
+            self.kernel_size,
+            self.output_padding,
+            self.stride,
+            self.dilation,
+            self.groups,
+        )
         return res
 
 
@@ -1115,7 +1001,7 @@ class ConvTranspose3d(Module):
         self.weight = flow.nn.Parameter(
             flow.Tensor(in_channels, out_channels // groups, *self.kernel_size)
         )
-        self.filters = out_channels // groups
+        self.filters = out_channels
         self.bias = None
         self._bias_add_op = None
         if bias:

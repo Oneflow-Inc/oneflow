@@ -31,12 +31,12 @@ class BroadcastElementwiseBinary : public Primitive {
   BroadcastElementwiseBinary() = default;
   ~BroadcastElementwiseBinary() override = default;
 
-  virtual void Launch(StreamContext* stream_ctx, size_t num_src0_dims, const int64_t* src0_dims,
+  virtual void Launch(Stream* stream, size_t num_src0_dims, const int64_t* src0_dims,
                       const void* src0, size_t num_src1_dims, const int64_t* src1_dims,
                       const void* src1, void* dst) = 0;
-  virtual void Launch(StreamContext* stream_ctx, Scalar src0, size_t num_src1_dims,
-                      const int64_t* src1_dims, const void* src1, void* dst) = 0;
-  virtual void Launch(StreamContext* stream_ctx, size_t num_src0_dims, const int64_t* src0_dims,
+  virtual void Launch(Stream* stream, Scalar src0, size_t num_src1_dims, const int64_t* src1_dims,
+                      const void* src1, void* dst) = 0;
+  virtual void Launch(Stream* stream, size_t num_src0_dims, const int64_t* src0_dims,
                       const void* src0, Scalar src1, void* dst) = 0;
 };
 
@@ -47,7 +47,7 @@ class BroadcastElementwiseBinaryFactory : public Factory<BroadcastElementwiseBin
   ~BroadcastElementwiseBinaryFactory() override = default;
 
   virtual std::unique_ptr<BroadcastElementwiseBinary> New(BinaryOp op, DataType src_type,
-                                                          DeviceType dst_type,
+                                                          DataType dst_type,
                                                           size_t max_num_dims) = 0;
 };
 

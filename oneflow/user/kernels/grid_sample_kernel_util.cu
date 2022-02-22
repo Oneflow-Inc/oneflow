@@ -15,6 +15,7 @@ limitations under the License.
 */
 #include "oneflow/core/framework/framework.h"
 #include "oneflow/core/kernel/kernel_util.h"
+#include "oneflow/core/ep/cuda/cuda_stream.h"
 
 #include "grid_sample_kernel_util.h"
 
@@ -65,9 +66,9 @@ struct CudnnGridSampleKernelUtil {
     CudnnGridSampleDesc transfomer_desc(dtype, output_shape);
 
     OF_CUDNN_CHECK(cudnnSpatialTfSamplerForward(
-        ctx->device_ctx()->cudnn_handle(), transfomer_desc.Get(), CudnnSPOnePtr<T>(),
-        input_desc.Get(), input->dptr(), grid->dptr(), CudnnSPZeroPtr<T>(), output_desc.Get(),
-        output->mut_dptr()));
+        ctx->stream()->As<ep::CudaStream>()->cudnn_handle(), transfomer_desc.Get(),
+        CudnnSPOnePtr<T>(), input_desc.Get(), input->dptr(), grid->dptr(), CudnnSPZeroPtr<T>(),
+        output_desc.Get(), output->mut_dptr()));
   }
 
   static void BackwardCompute(user_op::KernelComputeContext* ctx) {
@@ -87,10 +88,10 @@ struct CudnnGridSampleKernelUtil {
     CudnnGridSampleDesc transfomer_desc(dtype, output_shape);
 
     OF_CUDNN_CHECK(cudnnSpatialTfSamplerBackward(
-        ctx->device_ctx()->cudnn_handle(), transfomer_desc.Get(), CudnnSPOnePtr<T>(),
-        input_desc.Get(), input->dptr(), CudnnSPZeroPtr<T>(), dinput_desc.Get(), dinput->mut_dptr(),
-        CudnnSPOnePtr<T>(), output_desc.Get(), doutput->dptr(), grid->dptr(), CudnnSPZeroPtr<T>(),
-        dgrid->mut_dptr()));
+        ctx->stream()->As<ep::CudaStream>()->cudnn_handle(), transfomer_desc.Get(),
+        CudnnSPOnePtr<T>(), input_desc.Get(), input->dptr(), CudnnSPZeroPtr<T>(), dinput_desc.Get(),
+        dinput->mut_dptr(), CudnnSPOnePtr<T>(), output_desc.Get(), doutput->dptr(), grid->dptr(),
+        CudnnSPZeroPtr<T>(), dgrid->mut_dptr()));
   }
 };
 
@@ -145,7 +146,7 @@ __launch_bounds__(256) __global__ void CUDAGridSampler5DBackwardKernel(
 }
 
 template<typename data_type, typename index_type>
-struct GridSampleKernelUtil<DeviceType::kGPU, data_type, index_type> final {
+struct GridSampleKernelUtil<DeviceType::kCUDA, data_type, index_type> final {
   static void Forward4D(user_op::KernelComputeContext* ctx, const user_op::Tensor* input,
                         const user_op::Tensor* grid, user_op::Tensor* output,
                         GridSamplerInterpolation interpolation, GridSamplerPadding padding,
@@ -157,7 +158,8 @@ struct GridSampleKernelUtil<DeviceType::kGPU, data_type, index_type> final {
     }
 
     CUDAGridSampler4DKernel<data_type, index_type>
-        <<<GridSampleGetBlocks(count, 256), 256, 0, ctx->device_ctx()->cuda_stream()>>>(
+        <<<GridSampleGetBlocks(count, 256), 256, 0,
+           ctx->stream()->As<ep::CudaStream>()->cuda_stream()>>>(
             count, input->dptr<data_type>(), grid->dptr<data_type>(), output->mut_dptr<data_type>(),
             input_shape.At(0), input_shape.At(1), input_shape.At(2), input_shape.At(3),
             output_shape.At(2), output_shape.At(3), interpolation, padding, align_corners);
@@ -168,7 +170,8 @@ struct GridSampleKernelUtil<DeviceType::kGPU, data_type, index_type> final {
                         const bool align_corners, const ShapeView& input_shape,
                         const ShapeView& grid_shape, const ShapeView& output_shape, int64_t count) {
     CUDAGridSampler5DKernel<data_type, index_type>
-        <<<GridSampleGetBlocks(count, 512), 512, 0, ctx->device_ctx()->cuda_stream()>>>(
+        <<<GridSampleGetBlocks(count, 512), 512, 0,
+           ctx->stream()->As<ep::CudaStream>()->cuda_stream()>>>(
             count, input->dptr<data_type>(), grid->dptr<data_type>(), output->mut_dptr<data_type>(),
             input_shape.At(0), input_shape.At(1), input_shape.At(2), input_shape.At(3),
             input_shape.At(4), output_shape.At(2), output_shape.At(3), output_shape.At(4),
@@ -188,7 +191,8 @@ struct GridSampleKernelUtil<DeviceType::kGPU, data_type, index_type> final {
     }
 
     CUDAGridSampler4DBackwardKernel<data_type, index_type>
-        <<<GridSampleGetBlocks(count, 256), 256, 0, ctx->device_ctx()->cuda_stream()>>>(
+        <<<GridSampleGetBlocks(count, 256), 256, 0,
+           ctx->stream()->As<ep::CudaStream>()->cuda_stream()>>>(
             count, doutput->dptr<data_type>(), input->dptr<data_type>(), grid->dptr<data_type>(),
             dinput->mut_dptr<data_type>(), dgrid->mut_dptr<data_type>(), input_shape.At(0),
             input_shape.At(1), input_shape.At(2), input_shape.At(3), output_shape.At(2),
@@ -202,7 +206,8 @@ struct GridSampleKernelUtil<DeviceType::kGPU, data_type, index_type> final {
                          const ShapeView& grid_shape, const ShapeView& output_shape,
                          int64_t count) {
     CUDAGridSampler5DBackwardKernel<data_type, index_type>
-        <<<GridSampleGetBlocks(count, 256), 256, 0, ctx->device_ctx()->cuda_stream()>>>(
+        <<<GridSampleGetBlocks(count, 256), 256, 0,
+           ctx->stream()->As<ep::CudaStream>()->cuda_stream()>>>(
             count, doutput->dptr<data_type>(), input->dptr<data_type>(), grid->dptr<data_type>(),
             dinput->mut_dptr<data_type>(), dgrid->mut_dptr<data_type>(), input_shape.At(0),
             input_shape.At(1), input_shape.At(2), input_shape.At(3), input_shape.At(4),
@@ -211,7 +216,7 @@ struct GridSampleKernelUtil<DeviceType::kGPU, data_type, index_type> final {
   }
 };
 
-OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(INSTANTIATE_GRID_SAMPLE_KERNEL_UTIL, (DeviceType::kGPU),
+OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(INSTANTIATE_GRID_SAMPLE_KERNEL_UTIL, (DeviceType::kCUDA),
                                  FLOATING_DATA_TYPE_SEQ, INDEX_DATA_TYPE_SEQ);
 
 }  // namespace oneflow

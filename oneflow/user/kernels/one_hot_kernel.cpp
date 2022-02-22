@@ -41,10 +41,10 @@ class CpuOneHotKernel final : public user_op::OpKernel {
     const K* indices_dptr = indices->dptr<K>();
     T* out_dptr = out->mut_dptr<T>();
     std::unique_ptr<ep::primitive::Fill> fill =
-        ep::primitive::NewPrimitive<ep::primitive::FillFactory>(ctx->stream_ctx()->device_type(),
+        ep::primitive::NewPrimitive<ep::primitive::FillFactory>(ctx->stream()->device_type(),
                                                                 out->data_type());
     CHECK(fill);
-    fill->Launch(ctx->stream_ctx(), out->mut_dptr(), off_value, out->shape().elem_cnt());
+    fill->Launch(ctx->stream(), out->mut_dptr(), off_value, out->shape().elem_cnt());
     FOR_RANGE(int64_t, i, 0, num_indices) {
       const int64_t idx = indices_dptr[i];
       CHECK_GE(idx, 0);
@@ -57,9 +57,9 @@ class CpuOneHotKernel final : public user_op::OpKernel {
 
 #define REGISTER_CPU_ONE_HOT_KERNEL(dtype, itype)                                               \
   REGISTER_USER_KERNEL("one_hot").SetCreateFn<CpuOneHotKernel<dtype, itype>>().SetIsMatchedHob( \
-      (user_op::HobDeviceTag() == "cpu")                                                        \
-      & (user_op::HobDataType("indices", 0) == GetDataType<itype>::value)                       \
-      & (user_op::HobDataType("out", 0) == GetDataType<dtype>::value));
+      (user_op::HobDeviceType() == DeviceType::kCPU)                                            \
+      && (user_op::HobDataType("indices", 0) == GetDataType<itype>::value)                      \
+      && (user_op::HobDataType("out", 0) == GetDataType<dtype>::value));
 
 REGISTER_CPU_ONE_HOT_KERNEL(int32_t, int32_t)
 REGISTER_CPU_ONE_HOT_KERNEL(int32_t, int64_t)

@@ -21,8 +21,8 @@ namespace user_op {
 
 template<typename T>
 struct CrossEntropyKernelUtil<DeviceType::kCPU, T> {
-  static void ComputeEntropy(DeviceCtx* ctx, const int64_t num_instances, const int64_t num_classes,
-                             const T* x, const T* labels, T* y) {
+  static void ComputeEntropy(ep::Stream* stream, const int64_t num_instances,
+                             const int64_t num_classes, const T* x, const T* labels, T* y) {
     FOR_RANGE(int64_t, i, 0, num_instances) {
       T tmp = 0;
       FOR_RANGE(int64_t, j, 0, num_classes) {
@@ -35,7 +35,7 @@ struct CrossEntropyKernelUtil<DeviceType::kCPU, T> {
     }
   }
 
-  static void ComputeDiffWithSoftmax(DeviceCtx* ctx, const int64_t elem_cnt,
+  static void ComputeDiffWithSoftmax(ep::Stream* stream, const int64_t elem_cnt,
                                      const int64_t num_classes, const T* prob, const T* labels,
                                      const T* dy, T* dx) {
     FOR_RANGE(int64_t, i, 0, elem_cnt) {

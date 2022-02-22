@@ -23,7 +23,7 @@ limitations under the License.
 #include "oneflow/user/image/random_crop_generator.h"
 #include "oneflow/user/image/image_util.h"
 #include "oneflow/user/kernels/random_crop_kernel_state.h"
-#include "oneflow/user/kernels/op_kernel_state_wrapper.h"
+#include "oneflow/user/kernels/op_kernel_wrapper.h"
 #include "oneflow/user/kernels/random_seed_util.h"
 
 #include <opencv2/opencv.hpp>
@@ -108,12 +108,12 @@ class OFRecordRawDecoderKernel final : public user_op::OpKernel {
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
 
-#define REGISTER_RAW_DECODER_KERNEL(dtype)                                      \
-  REGISTER_USER_KERNEL("ofrecord_raw_decoder")                                  \
-      .SetCreateFn<OFRecordRawDecoderKernel<dtype>>()                           \
-      .SetIsMatchedHob((user_op::HobDeviceTag() == "cpu")                       \
-                       & (user_op::HobDataType("in", 0) == DataType::kOFRecord) \
-                       & (user_op::HobDataType("out", 0) == GetDataType<dtype>::value));
+#define REGISTER_RAW_DECODER_KERNEL(dtype)                                       \
+  REGISTER_USER_KERNEL("ofrecord_raw_decoder")                                   \
+      .SetCreateFn<OFRecordRawDecoderKernel<dtype>>()                            \
+      .SetIsMatchedHob((user_op::HobDeviceType() == DeviceType::kCPU)            \
+                       && (user_op::HobDataType("in", 0) == DataType::kOFRecord) \
+                       && (user_op::HobDataType("out", 0) == GetDataType<dtype>::value));
 
 REGISTER_RAW_DECODER_KERNEL(char)
 REGISTER_RAW_DECODER_KERNEL(float)
@@ -157,9 +157,9 @@ class OFRecordBytesDecoderKernel final : public user_op::OpKernel {
 
 REGISTER_USER_KERNEL("ofrecord_bytes_decoder")
     .SetCreateFn<OFRecordBytesDecoderKernel>()
-    .SetIsMatchedHob((user_op::HobDeviceTag() == "cpu")
-                     & (user_op::HobDataType("in", 0) == DataType::kOFRecord)
-                     & (user_op::HobDataType("out", 0) == DataType::kTensorBuffer));
+    .SetIsMatchedHob((user_op::HobDeviceType() == DeviceType::kCPU)
+                     && (user_op::HobDataType("in", 0) == DataType::kOFRecord)
+                     && (user_op::HobDataType("out", 0) == DataType::kTensorBuffer));
 
 namespace {
 
@@ -229,7 +229,8 @@ class OFRecordImageDecoderRandomCropKernel final : public user_op::OpKernel {
   }
 
  private:
-  void Compute(user_op::KernelComputeContext* ctx, user_op::OpKernelState* state) const override {
+  void Compute(user_op::KernelComputeContext* ctx, user_op::OpKernelState* state,
+               const user_op::OpKernelCache*) const override {
     auto* crop_window_generators = dynamic_cast<RandomCropKernelState*>(state);
     CHECK_NOTNULL(crop_window_generators);
     user_op::Tensor* out_blob = ctx->Tensor4ArgNameAndIndex("out", 0);
@@ -254,9 +255,9 @@ class OFRecordImageDecoderRandomCropKernel final : public user_op::OpKernel {
 
 REGISTER_USER_KERNEL("ofrecord_image_decoder_random_crop")
     .SetCreateFn<OFRecordImageDecoderRandomCropKernel>()
-    .SetIsMatchedHob((user_op::HobDeviceTag() == "cpu")
-                     & (user_op::HobDataType("in", 0) == DataType::kOFRecord)
-                     & (user_op::HobDataType("out", 0) == DataType::kTensorBuffer));
+    .SetIsMatchedHob((user_op::HobDeviceType() == DeviceType::kCPU)
+                     && (user_op::HobDataType("in", 0) == DataType::kOFRecord)
+                     && (user_op::HobDataType("out", 0) == DataType::kTensorBuffer));
 
 class OFRecordImageDecoderKernel final : public user_op::OpKernel {
  public:
@@ -286,8 +287,8 @@ class OFRecordImageDecoderKernel final : public user_op::OpKernel {
 
 REGISTER_USER_KERNEL("ofrecord_image_decoder")
     .SetCreateFn<OFRecordImageDecoderKernel>()
-    .SetIsMatchedHob((user_op::HobDeviceTag() == "cpu")
-                     & (user_op::HobDataType("in", 0) == DataType::kOFRecord)
-                     & (user_op::HobDataType("out", 0) == DataType::kTensorBuffer));
+    .SetIsMatchedHob((user_op::HobDeviceType() == DeviceType::kCPU)
+                     && (user_op::HobDataType("in", 0) == DataType::kOFRecord)
+                     && (user_op::HobDataType("out", 0) == DataType::kTensorBuffer));
 
 }  // namespace oneflow

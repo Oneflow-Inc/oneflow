@@ -31,6 +31,7 @@ struct DeConvolutionNdCaptureState : public AutoGradCaptureState {
   std::vector<int32_t> kernel_size;
   std::vector<int32_t> strides;
   std::vector<int32_t> dilation_rate;
+  int32_t groups;
 };
 
 class DeConvolutionNd : public OpExprGradFunction<DeConvolutionNdCaptureState> {
@@ -69,6 +70,7 @@ Maybe<void> DeConvolutionNd::Capture(DeConvolutionNdCaptureState* ctx, const Ten
   ctx->kernel_size = JUST(composed_attrs.GetAttr<std::vector<int32_t>>("kernel_size"));
   ctx->strides = JUST(composed_attrs.GetAttr<std::vector<int32_t>>("strides"));
   ctx->dilation_rate = JUST(composed_attrs.GetAttr<std::vector<int32_t>>("dilation_rate"));
+  ctx->groups = JUST(composed_attrs.GetAttr<int32_t>("groups"));
   ctx->ndims = ctx->kernel_size.size();
   return Maybe<void>::Ok();
 }
@@ -80,27 +82,27 @@ Maybe<void> DeConvolutionNd::Apply(const DeConvolutionNdCaptureState* ctx,
     const auto& x = ctx->SavedTensors().at(1);
     std::vector<int64_t> start, stop, step;
     for (int i = 0; i < x->shape()->NumAxes(); i++) {
-      start.push_back(0);
-      stop.push_back(x->shape()->At(i));
-      step.push_back(1);
+      start.emplace_back(0);
+      stop.emplace_back(x->shape()->At(i));
+      step.emplace_back(1);
     }
     const auto& weight = ctx->SavedTensors().at(0);
     if (ctx->ndims == 1) {
-      std::shared_ptr<Tensor> result =
-          JUST(functional::Conv1d(out_grads.at(0), weight, Optional<Tensor>(), ctx->strides,
-                                  ctx->padding_before, ctx->dilation_rate, /*groups=*/1));
+      std::shared_ptr<Tensor> result = JUST(functional::Conv1d(
+          out_grads.at(0), weight, Optional<Tensor>(), ctx->strides, ctx->padding_before,
+          ctx->dilation_rate, ctx->groups, ctx->data_format));
       result = JUST(functional::Slice(result, start, stop, step));
       in_grads->at(0) = result;
     } else if (ctx->ndims == 2) {
-      std::shared_ptr<Tensor> result =
-          JUST(functional::Conv2d(out_grads.at(0), weight, Optional<Tensor>(), ctx->strides,
-                                  ctx->padding_before, ctx->dilation_rate, /*groups=*/1));
+      std::shared_ptr<Tensor> result = JUST(functional::Conv2d(
+          out_grads.at(0), weight, Optional<Tensor>(), ctx->strides, ctx->padding_before,
+          ctx->dilation_rate, ctx->groups, ctx->data_format));
       result = JUST(functional::Slice(result, start, stop, step));
       in_grads->at(0) = result;
     } else if (ctx->ndims == 3) {
-      std::shared_ptr<Tensor> result =
-          JUST(functional::Conv3d(out_grads.at(0), weight, Optional<Tensor>(), ctx->strides,
-                                  ctx->padding_before, ctx->dilation_rate, /*groups=*/1));
+      std::shared_ptr<Tensor> result = JUST(functional::Conv3d(
+          out_grads.at(0), weight, Optional<Tensor>(), ctx->strides, ctx->padding_before,
+          ctx->dilation_rate, ctx->groups, ctx->data_format));
       result = JUST(functional::Slice(result, start, stop, step));
       in_grads->at(0) = result;
     } else {
@@ -112,7 +114,7 @@ Maybe<void> DeConvolutionNd::Apply(const DeConvolutionNdCaptureState* ctx,
     const auto& x = ctx->SavedTensors().at(idx);
     in_grads->at(1) = JUST(functional::ConvFilterGrad(
         x, out_grads.at(0), ctx->ndims, ctx->kernel_size, ctx->strides, ctx->padding_before,
-        ctx->dilation_rate, /*groups=*/1, ctx->data_format));
+        ctx->dilation_rate, ctx->groups, ctx->data_format));
   }
   return Maybe<void>::Ok();
 }

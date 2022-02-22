@@ -29,7 +29,7 @@ class Memset : public Primitive {
   Memset() = default;
   ~Memset() override = default;
 
-  virtual void Launch(StreamContext* stream_ctx, void* ptr, int value, size_t count) = 0;
+  virtual void Launch(Stream* stream, void* ptr, int value, size_t count) = 0;
 };
 
 class MemsetFactory : public Factory<Memset> {

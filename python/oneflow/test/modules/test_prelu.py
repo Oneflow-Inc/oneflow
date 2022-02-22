@@ -28,10 +28,10 @@ import oneflow.unittest
 
 @flow.unittest.skip_unless_1n1d()
 class TestPReLU(flow.unittest.TestCase):
-    @autotest()
+    @autotest(n=30)
     def test_prelu_4dim_module_with_random_data(test_case):
         device = random_device()
-        x = random_pytorch_tensor(ndim=4, dim1=3).to(device)
+        x = random_tensor(ndim=4, dim1=3).to(device)
         m = torch.nn.PReLU(
             num_parameters=3 | nothing(), init=random().to(float) | nothing(),
         )
@@ -40,10 +40,20 @@ class TestPReLU(flow.unittest.TestCase):
         y = m(x)
         return y
 
-    @autotest()
+    @autotest(n=30)
+    def test_prelu_4dim_default_alpha_module_with_random_data(test_case):
+        device = random_device()
+        x = random_tensor(ndim=4, dim1=3).to(device)
+        m = torch.nn.PReLU(init=random().to(float) | nothing(),)
+        m.to(device)
+        m.train(random())
+        y = m(x)
+        return y
+
+    @autotest(n=30)
     def test_prelu_2dim_module_with_random_data(test_case):
         device = random_device()
-        x = random_pytorch_tensor(ndim=2, dim1=3).to(device)
+        x = random_tensor(ndim=2, dim1=3).to(device)
         m = torch.nn.PReLU(
             num_parameters=3 | nothing(), init=random().to(float) | nothing(),
         )

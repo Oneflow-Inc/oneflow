@@ -36,7 +36,7 @@ class Memcpy : public Primitive {
   Memcpy() = default;
   ~Memcpy() override = default;
 
-  virtual void Launch(StreamContext* stream_ctx, void* dst, const void* src, size_t count) = 0;
+  virtual void Launch(Stream* stream, void* dst, const void* src, size_t count) = 0;
 };
 
 class MemcpyFactory : public Factory<Memcpy> {

@@ -23,8 +23,8 @@ Maybe<SubTskGphBuilderStatus> B21SubTskGphBuilder::Build(
     std::vector<TaskNode*>* sorted_out_tasks,
     std::vector<std::vector<TaskNode*>>* sorted_ctrl_tasks, const ParallelDesc& in_parallel_desc,
     const ParallelDesc& out_parallel_desc, const LogicalBlobId& lbi,
-    const BlobDesc& logical_blob_desc, const cfg::SbpParallel& in_sbp_parallel,
-    const cfg::SbpParallel& out_sbp_parallel, const Shape& time_shape) const {
+    const BlobDesc& logical_blob_desc, const SbpParallel& in_sbp_parallel,
+    const SbpParallel& out_sbp_parallel, const Shape& time_shape) const {
   if ((in_parallel_desc.parallel_num() == 1 || in_sbp_parallel.has_broadcast_parallel())
       && out_parallel_desc.parallel_num() == 1) {
     const int64_t out_parallel_id = 0;
@@ -36,9 +36,9 @@ Maybe<SubTskGphBuilderStatus> B21SubTskGphBuilder::Build(
       if (i == nearest_in_parallel_id) {
         TaskNode* proxy =
             ctx->task_graph()->GetProxyNode(in_node, lbi, out_parallel_desc, out_parallel_id);
-        sorted_out_tasks->push_back(proxy);
+        sorted_out_tasks->emplace_back(proxy);
       } else {
-        sorted_ctrl_tasks->at(0).push_back(in_node);
+        sorted_ctrl_tasks->at(0).emplace_back(in_node);
       }
     }
     return TRY(BuildSubTskGphBuilderStatus("B21SubTskGphBuilder", ""));

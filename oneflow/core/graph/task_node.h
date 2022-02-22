@@ -17,7 +17,6 @@ limitations under the License.
 #define ONEFLOW_CORE_GRAPH_TASK_NODE_H_
 
 #include "oneflow/core/graph/exec_graph.h"
-#include "oneflow/core/job/id_manager.h"
 #include "oneflow/core/job/task.pb.h"
 #include "oneflow/core/operator/operator.h"
 #include "oneflow/core/common/auto_registration_factory.h"
@@ -95,7 +94,6 @@ class TaskNode : public Node<TaskNode, TaskEdge> {
   std::string VisualStr() const override;
   virtual bool IsMeaningLess();
   virtual void ToProto(TaskProto*) const;
-  virtual bool IsIndependent() const { return false; }
   void BindEdgeWithProducedRegst(TaskEdge*, const std::string& name);
   virtual MemZoneId MemZoneId121() const;
   bool BuildCtrlRegstDescIfNeed(TaskNode* dst_node, std::string* name);
@@ -178,28 +176,6 @@ class TaskEdge final : public Edge<TaskNode, TaskEdge> {
   HashSet<LogicalBlobId> lbis_;
   HashMap<std::string, std::shared_ptr<RegstDesc>> name_in_producer2regst_;
 };
-
-struct IndependentThreadNum4TaskType final {
-  explicit IndependentThreadNum4TaskType(size_t num) : has_func_(false), num_(num) {}
-  explicit IndependentThreadNum4TaskType(std::function<size_t()> get_num)
-      : has_func_(true), get_num_(std::move(get_num)) {}
-  explicit operator size_t() { return has_func_ ? get_num_() : num_; }
-
- private:
-  bool has_func_;
-  size_t num_{};
-  std::function<size_t()> get_num_;
-};
-
-#define REGISTER_INDEPENDENT_THREAD_NUM(task_type, ...)                     \
-  REGISTER_CLASS_CREATOR(int32_t, task_type, IndependentThreadNum4TaskType, \
-                         ([] { return new IndependentThreadNum4TaskType(__VA_ARGS__); }))
-
-struct TickTockTaskType final {};
-
-#define REGISTER_TICK_TOCK_TASK_TYPE(task_type)                \
-  REGISTER_CLASS_CREATOR(int32_t, task_type, TickTockTaskType, \
-                         ([] { return new TickTockTaskType; }))
 
 }  // namespace oneflow
 

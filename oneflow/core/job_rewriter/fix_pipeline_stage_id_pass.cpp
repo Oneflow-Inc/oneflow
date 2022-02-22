@@ -113,7 +113,7 @@ Maybe<void> FixPipelineStageIdPass::Apply(const OpGraph& op_graph, JobBuilder* j
     const std::string& op_name = this_node->op().op_name();
     op_name2node.emplace(op_name, this_node);
     std::string placement = ParallelDesc2HashString(this_node->parallel_desc());
-    placement2op_nodes[placement].push_back(this_node);
+    placement2op_nodes[placement].emplace_back(this_node);
   });
 
   for (auto& pair : placement2op_nodes) {
@@ -134,7 +134,7 @@ Maybe<void> FixPipelineStageIdPass::Apply(const OpGraph& op_graph, JobBuilder* j
         int64_t new_scope_symbol_id =
             JUST(NewScopeWithStageId(new_op_conf.scope_symbol_id(), max_stage_id));
         new_op_conf.set_scope_symbol_id(new_scope_symbol_id);
-        fix_stage_op_confs.push_back(std::move(new_op_conf));
+        fix_stage_op_confs.emplace_back(std::move(new_op_conf));
       }
     }
   }

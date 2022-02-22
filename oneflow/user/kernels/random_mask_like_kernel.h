@@ -49,7 +49,8 @@ class RandomMaskLikeKernel final : public user_op::OpKernel, public user_op::Cud
   }
 
  private:
-  void Compute(user_op::KernelComputeContext* ctx, user_op::OpKernelState* state) const override {
+  void Compute(user_op::KernelComputeContext* ctx, user_op::OpKernelState* state,
+               const user_op::OpKernelCache*) const override {
     const user_op::Tensor* like = ctx->Tensor4ArgNameAndIndex("like", 0);
     user_op::Tensor* out = ctx->Tensor4ArgNameAndIndex("out", 0);
     int64_t elem_cnt = like->shape().elem_cnt();
@@ -59,7 +60,7 @@ class RandomMaskLikeKernel final : public user_op::OpKernel, public user_op::Cud
     const auto& generator = random_mask_like_state->generator();
     CHECK_NOTNULL(generator);
     auto random_mask_like_gen = std::make_shared<RandomMaskGenerator<device_type>>(generator);
-    random_mask_like_gen->Generate(ctx->device_ctx(), elem_cnt, ctx->Attr<float>("rate"), mask);
+    random_mask_like_gen->Generate(ctx->stream(), elem_cnt, ctx->Attr<float>("rate"), mask);
   }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };

@@ -36,7 +36,7 @@ int RegstSlot::TryPushBackRegst(Regst* regst, int64_t regst_desc_id) {
   auto it = regst_desc_id2regsts_.find(regst_desc_id);
   if (it == regst_desc_id2regsts_.end()) { return -1; }
   if (it->second.empty()) { available_regst_desc_cnt_ += 1; }
-  it->second.push_back(regst);
+  it->second.emplace_back(regst);
   return 0;
 }
 

@@ -29,9 +29,8 @@ class Permute : public Primitive {
   Permute() = default;
   ~Permute() override = default;
 
-  virtual void Launch(StreamContext* stream_ctx, DataType data_type, size_t num_dims,
-                      const int64_t* src_dims, const void* src, const int* permutation,
-                      void* dst) = 0;
+  virtual void Launch(Stream* stream, DataType data_type, size_t num_dims, const int64_t* src_dims,
+                      const void* src, const int* permutation, void* dst) = 0;
 };
 
 class PermuteFactory : public Factory<Permute> {

@@ -19,10 +19,9 @@ limitations under the License.
 #include <functional>
 #include <memory>
 #include "oneflow/core/vm/phy_instr_operand.h"
+#include "oneflow/core/eager/local_dep_object.h"
 
 namespace oneflow {
-
-class LocalDepObject;
 
 namespace one {
 
@@ -37,13 +36,18 @@ class EagerBlobObject;
 class AccessBlobArgCbPhyInstrOperand : public PhyInstrOperand {
  public:
   AccessBlobArgCbPhyInstrOperand(const std::shared_ptr<vm::EagerBlobObject>& eager_blob_object,
-                                 LocalDepObject* compute_local_dep_object,
                                  const std::function<void(uint64_t)>& callback,
                                  const std::string& modifier)
       : eager_blob_object_(eager_blob_object),
         callback_(callback),
-        compute_local_dep_object_(compute_local_dep_object),
-        modifier_(modifier) {}
+        modifier_(modifier),
+        input_dependences_(),
+        output_dependences_() {
+    ForEachConstMirroredObject(SetInserter(&input_dependences_));
+    ForEachMutMirroredObject(SetInserter(&output_dependences_));
+    ForEachMut2MirroredObject(SetInserter(&output_dependences_));
+    stream_sequential_dependence_ = nullptr;
+  }
   ~AccessBlobArgCbPhyInstrOperand() = default;
 
   const std::function<void(uint64_t)>& callback() const { return callback_; }
@@ -51,20 +55,21 @@ class AccessBlobArgCbPhyInstrOperand : public PhyInstrOperand {
     return eager_blob_object_;
   }
 
-  void ForEachConstMirroredObject(
-      const std::function<void(MirroredObject* infer, MirroredObject* compute)>&) const override;
+  const DependenceVector& input_dependences() const override { return input_dependences_; }
+  const DependenceVector& output_dependences() const override { return output_dependences_; }
 
-  void ForEachMutMirroredObject(
-      const std::function<void(MirroredObject* infer, MirroredObject* compute)>&) const override;
+  void ForEachConstMirroredObject(const std::function<void(MirroredObject* compute)>&) const;
 
-  void ForEachMut2MirroredObject(
-      const std::function<void(MirroredObject* infer, MirroredObject* compute)>&) const override;
+  void ForEachMutMirroredObject(const std::function<void(MirroredObject* compute)>&) const;
+
+  void ForEachMut2MirroredObject(const std::function<void(MirroredObject* compute)>&) const;
 
  private:
   std::shared_ptr<vm::EagerBlobObject> eager_blob_object_;
   std::function<void(uint64_t)> callback_;
-  LocalDepObject* compute_local_dep_object_;
   const std::string modifier_;
+  DependenceVector input_dependences_;
+  DependenceVector output_dependences_;
 };
 
 }  // namespace vm

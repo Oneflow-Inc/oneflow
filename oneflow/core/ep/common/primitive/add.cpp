@@ -20,12 +20,11 @@ namespace oneflow {
 namespace ep {
 namespace primitive {
 
-void Add::Launch(StreamContext* stream_ctx, const void* src0, const void* src1, void* dst,
-                 size_t count) {
+void Add::Launch(Stream* stream, const void* src0, const void* src1, void* dst, size_t count) {
   const void* srcs[2];
   srcs[0] = src0;
   srcs[1] = src1;
-  Launch(stream_ctx, srcs, 2, dst, count);
+  Launch(stream, srcs, 2, dst, count);
 }
 
 }  // namespace primitive

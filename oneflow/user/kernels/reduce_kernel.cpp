@@ -25,7 +25,7 @@ namespace oneflow {
 
 namespace {
 
-template<template<typename> class BinaryFunc, DeviceType device_type, typename T>
+template<template<typename> class BinaryFunc, DeviceType device_type, typename T, typename K>
 class ReduceKernel final : public user_op::OpKernel, public user_op::CudaGraphSupport {
  public:
   ReduceKernel() = default;
@@ -41,7 +41,7 @@ class ReduceKernel final : public user_op::OpKernel, public user_op::CudaGraphSu
     if (input_tensor->shape().elem_cnt() == 0) {
       if (output_tensor->shape().elem_cnt() != 0) {
         Memset<device_type>(
-            ctx->device_ctx(), output_tensor->mut_dptr<T>(), 0,
+            ctx->stream(), output_tensor->mut_dptr<K>(), 0,
             output_tensor->shape().elem_cnt() * GetSizeOfDataType(output_tensor->data_type()));
       }
       return;
@@ -49,7 +49,7 @@ class ReduceKernel final : public user_op::OpKernel, public user_op::CudaGraphSu
     const Shape& reduced_shape =
         CreateReducedShape(input_tensor->shape(), {axis.begin(), axis.end()});
     NdarrayReduce<device_type, T, BinaryFunc>::Reduce(
-        ctx->device_ctx(), XpuVarNdarray<T>(reduced_shape, output_tensor->mut_dptr<T>()),
+        ctx->stream(), XpuVarNdarray<K>(reduced_shape, output_tensor->mut_dptr<K>()),
         XpuVarNdarray<const T>(input_tensor->shape(), input_tensor->dptr<T>()),
         XpuVarNdarray<T>(tmp_buffer->shape(), tmp_buffer->mut_dptr<T>()));
   }
@@ -58,14 +58,25 @@ class ReduceKernel final : public user_op::OpKernel, public user_op::CudaGraphSu
 
 }  // namespace
 
-#define REGISTER_REDUCE_XPU_KERNEL(op_name, binary_func, device, dtype)                           \
-  REGISTER_USER_KERNEL(op_name)                                                                   \
-      .SetCreateFn<ReduceKernel<binary_func, device, dtype>>()                                    \
-      .SetIsMatchedHob((user_op::HobDeviceTag() == device)                                        \
-                       & (user_op::HobDataType("output_tensor", 0) == GetDataType<dtype>::value)) \
-      .SetInferTmpSizeFn([](user_op::InferContext* ctx) {                                         \
-        const Shape& in_shape = ctx->InputShape("input_tensor", 0);                               \
-        return in_shape.elem_cnt() * sizeof(dtype);                                               \
+#define REGISTER_REDUCE_XPU_KERNEL(op_name, binary_func, device, dtype)                            \
+  REGISTER_USER_KERNEL(op_name)                                                                    \
+      .SetCreateFn<ReduceKernel<binary_func, device, dtype, dtype>>()                              \
+      .SetIsMatchedHob((user_op::HobDeviceType() == device)                                        \
+                       && (user_op::HobDataType("output_tensor", 0) == GetDataType<dtype>::value)) \
+      .SetInferTmpSizeFn([](user_op::InferContext* ctx) {                                          \
+        const Shape& in_shape = ctx->InputShape("input_tensor", 0);                                \
+        return in_shape.elem_cnt() * sizeof(dtype);                                                \
+      });
+
+#define REGISTER_REDUCE_LOGICAL_XPU_KERNEL(op_name, binary_func, device, dtype)                  \
+  REGISTER_USER_KERNEL(op_name)                                                                  \
+      .SetCreateFn<ReduceKernel<binary_func, device, dtype, bool>>()                             \
+      .SetIsMatchedHob((user_op::HobDeviceType() == device)                                      \
+                       && (user_op::HobDataType("input_tensor", 0) == GetDataType<dtype>::value) \
+                       && (user_op::HobDataType("output_tensor", 0) == DataType::kBool))         \
+      .SetInferTmpSizeFn([](user_op::InferContext* ctx) {                                        \
+        const Shape& in_shape = ctx->InputShape("input_tensor", 0);                              \
+        return in_shape.elem_cnt() * sizeof(dtype);                                              \
       });
 
 #define REGISTER_REDUCE_ARITHMETIC_KERNELS(device, dtype)                  \
@@ -84,16 +95,28 @@ class ReduceKernel final : public user_op::OpKernel, public user_op::CudaGraphSu
 
 REGISTER_REDUCE_ARITHMETIC_KERNELS_BY_DEVICE(DeviceType::kCPU)
 #ifdef WITH_CUDA
-REGISTER_REDUCE_ARITHMETIC_KERNELS_BY_DEVICE(DeviceType::kGPU)
+REGISTER_REDUCE_ARITHMETIC_KERNELS_BY_DEVICE(DeviceType::kCUDA)
 #endif
 
-#define REGISTER_REDUCE_LOGICAL_KERNELS(device)                           \
-  REGISTER_REDUCE_XPU_KERNEL("reduce_any", BinaryFuncAny, device, int8_t) \
-  REGISTER_REDUCE_XPU_KERNEL("reduce_all", BinaryFuncAll, device, int8_t)
+#define REGISTER_REDUCE_LOGICAL_KERNELS(device)                                    \
+  REGISTER_REDUCE_LOGICAL_XPU_KERNEL("reduce_any", BinaryFuncAny, device, bool)    \
+  REGISTER_REDUCE_LOGICAL_XPU_KERNEL("reduce_all", BinaryFuncAll, device, bool)    \
+  REGISTER_REDUCE_LOGICAL_XPU_KERNEL("reduce_any", BinaryFuncAny, device, float)   \
+  REGISTER_REDUCE_LOGICAL_XPU_KERNEL("reduce_all", BinaryFuncAll, device, float)   \
+  REGISTER_REDUCE_LOGICAL_XPU_KERNEL("reduce_any", BinaryFuncAny, device, double)  \
+  REGISTER_REDUCE_LOGICAL_XPU_KERNEL("reduce_all", BinaryFuncAll, device, double)  \
+  REGISTER_REDUCE_LOGICAL_XPU_KERNEL("reduce_any", BinaryFuncAny, device, int8_t)  \
+  REGISTER_REDUCE_LOGICAL_XPU_KERNEL("reduce_all", BinaryFuncAll, device, int8_t)  \
+  REGISTER_REDUCE_LOGICAL_XPU_KERNEL("reduce_any", BinaryFuncAny, device, uint8_t) \
+  REGISTER_REDUCE_LOGICAL_XPU_KERNEL("reduce_all", BinaryFuncAll, device, uint8_t) \
+  REGISTER_REDUCE_LOGICAL_XPU_KERNEL("reduce_any", BinaryFuncAny, device, int32_t) \
+  REGISTER_REDUCE_LOGICAL_XPU_KERNEL("reduce_all", BinaryFuncAll, device, int32_t) \
+  REGISTER_REDUCE_LOGICAL_XPU_KERNEL("reduce_any", BinaryFuncAny, device, int64_t) \
+  REGISTER_REDUCE_LOGICAL_XPU_KERNEL("reduce_all", BinaryFuncAll, device, int64_t)
 
 REGISTER_REDUCE_LOGICAL_KERNELS(DeviceType::kCPU)
 #ifdef WITH_CUDA
-REGISTER_REDUCE_LOGICAL_KERNELS(DeviceType::kGPU)
+REGISTER_REDUCE_LOGICAL_KERNELS(DeviceType::kCUDA)
 
 namespace {
 
@@ -116,21 +139,19 @@ void GetReduceSumLayout(const std::vector<int32_t>& axis, const ShapeView& in_sh
 
 class ReduceSumHalfKernel final : public user_op::OpKernel, public user_op::CudaGraphSupport {
  public:
-  explicit ReduceSumHalfKernel(user_op::KernelCreateContext* ctx) {
-    axis_ = RegularAxis(ctx->Attr<std::vector<int32_t>>("axis"));
-  }
+  ReduceSumHalfKernel() = default;
   ~ReduceSumHalfKernel() = default;
 
  private:
   void Compute(user_op::KernelComputeContext* ctx) const override {
+    std::vector<int32_t> axis = RegularAxis(ctx->Attr<std::vector<int32_t>>("axis"));
     const user_op::Tensor* input_tensor = ctx->Tensor4ArgNameAndIndex("input_tensor", 0);
     user_op::Tensor* output_tensor = ctx->Tensor4ArgNameAndIndex("output_tensor", 0);
     user_op::Tensor* tmp_buffer = ctx->Tensor4ArgNameAndIndex("tmp_buffer", 0);
     const ShapeView& in_shape = input_tensor->shape();
     bool is_axis_contiguous = false;
     int64_t outer_size = 0, inner_size = 0, reduce_size = 0;
-    GetReduceSumLayout(axis_, in_shape, &is_axis_contiguous, &outer_size, &inner_size,
-                       &reduce_size);
+    GetReduceSumLayout(axis, in_shape, &is_axis_contiguous, &outer_size, &inner_size, &reduce_size);
     if (is_axis_contiguous && (outer_size == 1 || inner_size == 1)) {
       CBLAS_TRANSPOSE trans_a = (inner_size == 1) ? CblasNoTrans : CblasTrans;
       CBLAS_TRANSPOSE trans_b = CblasNoTrans;
@@ -138,16 +159,16 @@ class ReduceSumHalfKernel final : public user_op::OpKernel, public user_op::Cuda
       const int32_t n = 1;
       const int32_t k = reduce_size;
       std::unique_ptr<ep::primitive::Fill> fill =
-          ep::primitive::NewPrimitive<ep::primitive::FillFactory>(ctx->stream_ctx()->device_type(),
+          ep::primitive::NewPrimitive<ep::primitive::FillFactory>(ctx->stream()->device_type(),
                                                                   DataType::kFloat16);
       CHECK(fill);
-      fill->Launch(ctx->stream_ctx(), tmp_buffer->mut_dptr(), 1.0, reduce_size);
-      NewKernelUtil<DeviceType::kGPU>::OFGemm(ctx->device_ctx(), trans_a, trans_b, m, n, k,
-                                              GetOneVal<float16>(), input_tensor->dptr<float16>(),
-                                              tmp_buffer->dptr<float16>(), GetZeroVal<float16>(),
-                                              output_tensor->mut_dptr<float16>());
+      fill->Launch(ctx->stream(), tmp_buffer->mut_dptr(), 1.0, reduce_size);
+      NewKernelUtil<DeviceType::kCUDA>::OFGemm(ctx->stream(), trans_a, trans_b, m, n, k,
+                                               GetOneVal<float16>(), input_tensor->dptr<float16>(),
+                                               tmp_buffer->dptr<float16>(), GetZeroVal<float16>(),
+                                               output_tensor->mut_dptr<float16>());
     } else {
-      const Shape& reduced_shape = CreateReducedShape(in_shape, {axis_.begin(), axis_.end()});
+      const Shape& reduced_shape = CreateReducedShape(in_shape, {axis.begin(), axis.end()});
       float* in_tmp_buffer = tmp_buffer->mut_dptr<float>();
       const size_t in_tmp_buffer_bytes = GetCudaAlignedSize(in_shape.elem_cnt() * sizeof(float));
       float* out_tmp_buffer =
@@ -166,28 +187,24 @@ class ReduceSumHalfKernel final : public user_op::OpKernel, public user_op::Cuda
       auto f2h = ep::primitive::NewPrimitive<ep::primitive::CastFactory>(
           ctx->device_type(), DataType::kFloat, DataType::kFloat16);
       CHECK(f2h);
-      h2f->Launch(ctx->stream_ctx(), input_tensor->dptr<float16>(), in_tmp_buffer,
-                  in_shape.elem_cnt());
+      h2f->Launch(ctx->stream(), input_tensor->dptr<float16>(), in_tmp_buffer, in_shape.elem_cnt());
 
-      NdarrayReduce<DeviceType::kGPU, float, BinaryFuncSum>::Reduce(
-          ctx->device_ctx(), XpuVarNdarray<float>(reduced_shape, out_tmp_buffer),
+      NdarrayReduce<DeviceType::kCUDA, float, BinaryFuncSum>::Reduce(
+          ctx->stream(), XpuVarNdarray<float>(reduced_shape, out_tmp_buffer),
           XpuVarNdarray<const float>(in_shape, in_tmp_buffer),
           XpuVarNdarray<float>(in_shape, reduce_tmp_buffer));
 
-      f2h->Launch(ctx->stream_ctx(), out_tmp_buffer, output_tensor->mut_dptr<float16>(),
+      f2h->Launch(ctx->stream(), out_tmp_buffer, output_tensor->mut_dptr<float16>(),
                   output_tensor->shape().elem_cnt());
     }
   }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
-
- private:
-  std::vector<int32_t> axis_;
 };
 
 REGISTER_USER_KERNEL("reduce_sum")
-    .SetCreateWithCtxFn<ReduceSumHalfKernel>()
-    .SetIsMatchedHob((user_op::HobDeviceTag() == "gpu")
-                     & (user_op::HobDataType("output_tensor", 0) == GetDataType<float16>::value))
+    .SetCreateFn<ReduceSumHalfKernel>()
+    .SetIsMatchedHob((user_op::HobDeviceType() == DeviceType::kCUDA)
+                     && (user_op::HobDataType("output_tensor", 0) == GetDataType<float16>::value))
     .SetInferTmpSizeFn([](user_op::InferContext* ctx) {
       const Shape& in_shape = ctx->InputTensorDesc("input_tensor", 0).shape();
       const Shape& out_shape = ctx->OutputTensorDesc("output_tensor", 0)->shape();

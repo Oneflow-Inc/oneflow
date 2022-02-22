@@ -19,6 +19,7 @@ limitations under the License.
 #include "oneflow/core/common/util.h"
 #include "oneflow/core/common/auto_registration_factory.h"
 #include "oneflow/core/common/device_type.h"
+#include "oneflow/core/ep/include/stream.h"
 
 namespace oneflow {
 
@@ -28,22 +29,9 @@ class StreamContext {
   StreamContext() = default;
   virtual ~StreamContext() = default;
 
-  template<typename T>
-  T* As() {
-    return static_cast<T*>(this);
-  }
+  virtual ep::Stream* stream() = 0;
   virtual Maybe<void> AddCallback(std::function<void()> callback) = 0;
-  virtual Maybe<void> Sync() = 0;
   virtual DeviceType device_type() const = 0;
-};
-
-class StreamContextProvider {
- public:
-  OF_DISALLOW_COPY_AND_MOVE(StreamContextProvider);
-  StreamContextProvider() = default;
-  virtual ~StreamContextProvider() = default;
-
-  virtual StreamContext* GetStreamContext() = 0;
 };
 
 #define REGISTER_STREAM_CONTEXT_CREATOR_WITH_STREAM_ID(device, creator) \

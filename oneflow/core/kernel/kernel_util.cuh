@@ -15,6 +15,7 @@ limitations under the License.
 */
 #ifndef ONEFLOW_CORE_KERNEL_KERNEL_UTIL_CUH_
 #define ONEFLOW_CORE_KERNEL_KERNEL_UTIL_CUH_
+#include "oneflow/core/device/cuda_pseudo_half.h"
 
 namespace oneflow {
 
@@ -31,14 +32,9 @@ OF_DEVICE_FUNC T MaxWithLogThreshold(T x) {
 
 #if defined(__CUDACC__)
 __device__ __forceinline__ half MaxWithLogThreshold(half x) {
-#if __CUDA_ARCH__ >= 530 || !defined(__CUDA_ARCH__)
   half threshold = hexp2(__float2half(-14.0));
   if (__hgt(x, threshold)) { return x; }
   return threshold;
-#else
-  printf("use half need nvcc arch >= 530");
-  assert(false);
-#endif /* __CUDA_ARCH__ >= 530 || !defined(__CUDA_ARCH__)*/
 }
 #endif
 
@@ -48,14 +44,7 @@ OF_DEVICE_FUNC T SafeLog(T x) {
 }
 
 #if defined(__CUDACC__)
-__device__ __forceinline__ half SafeLog(half x) {
-#if __CUDA_ARCH__ >= 530 || !defined(__CUDA_ARCH__)
-  return hlog(MaxWithLogThreshold(x));
-#else
-  printf("use half need nvcc arch >= 530");
-  assert(false);
-#endif /* __CUDA_ARCH__ >= 530 || !defined(__CUDA_ARCH__)*/
-}
+__device__ __forceinline__ half SafeLog(half x) { return hlog(MaxWithLogThreshold(x)); }
 #endif
 
 }  // namespace oneflow

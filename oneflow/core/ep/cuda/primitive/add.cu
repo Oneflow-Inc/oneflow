@@ -16,7 +16,7 @@ limitations under the License.
 #include "oneflow/core/ep/include/primitive/add.h"
 #include "oneflow/core/ep/cuda/primitive/type_seq.h"
 #include "oneflow/core/cuda/elementwise.cuh"
-#include "oneflow/core/stream/cuda/cuda_stream_context.h"
+#include "oneflow/core/ep/cuda/cuda_stream.h"
 #include "oneflow/core/device/cuda_pseudo_bfloat16.h"
 
 namespace oneflow {
@@ -92,9 +92,9 @@ class AddImpl : public Add {
   ~AddImpl() override = default;
 
   using Add::Launch;
-  void Launch(StreamContext* stream_ctx, const void* const* srcs, size_t arity, void* dst,
+  void Launch(Stream* stream, const void* const* srcs, size_t arity, void* dst,
               size_t count) override {
-    cudaStream_t cuda_stream = stream_ctx->As<CudaStreamContext>()->cuda_stream();
+    cudaStream_t cuda_stream = stream->As<CudaStream>()->cuda_stream();
     DispatchLaunch(cuda_stream, reinterpret_cast<const T* const*>(srcs), arity,
                    reinterpret_cast<T*>(dst), count);
   }
@@ -128,7 +128,7 @@ class AddFactoryImpl : public AddFactory {
   }
 };
 
-REGISTER_PRIMITIVE_FACTORY(DeviceType::kGPU, AddFactory, AddFactoryImpl);
+REGISTER_PRIMITIVE_FACTORY(DeviceType::kCUDA, AddFactory, AddFactoryImpl);
 
 }  // namespace
 

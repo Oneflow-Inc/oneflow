@@ -44,7 +44,6 @@ class ReshapeOpExprGrad : public OpExprGradFunction<ReshapeCaptureState> {
 
   Maybe<void> Apply(const ReshapeCaptureState* ctx, const TensorTuple& out_grads,
                     TensorTuple* in_grads) const override {
-    const auto& saved_tensors = ctx->SavedTensors();
     in_grads->resize(1);
     Shape shape(ctx->input_shape_vec);
     in_grads->at(0) = JUST(functional::Reshape(out_grads.at(0), shape));

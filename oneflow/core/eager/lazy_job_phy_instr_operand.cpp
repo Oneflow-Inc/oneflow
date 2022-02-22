@@ -24,7 +24,12 @@ namespace {
 
 #ifdef WITH_CUDA
 Maybe<LocalDepObject*> RawGetEagerNcclLocalDepObject(const std::string& type) {
-  const auto& device = JUST(Device::New(type));
+  // NOTE(chengcheng):
+  //   Lazy Job instruction need mutual exclusion nccl with Eager nccl. However, when the number of
+  //   processes is more than the number of physical GPUs, the following processes will make an
+  //   error when using local rank to create a EagerNcclLocalDepObject, but we only need an legal
+  //   device so we use device 0.
+  const auto& device = JUST(Device::New(type, 0));
   const auto& local_dep_object = device->mut_transport_local_dep_object();
   CHECK_OR_RETURN(local_dep_object.has_value());
   return JUST(local_dep_object);
@@ -37,39 +42,17 @@ static constexpr auto* GetEagerNcclLocalDepObject =
 }  // namespace
 
 void LaunchLazyJobPhyInstrOperand::ForEachMutMirroredObject(
-    const std::function<void(vm::MirroredObject* infer, vm::MirroredObject* compute)>& DoEach)
-    const {
-  DoEach(nullptr, inputs_local_dep_object_->mut_mirrored_object());
-  DoEach(nullptr, outputs_local_dep_object_->mut_mirrored_object());
-
+    const std::function<void(vm::MirroredObject* compute)>& DoEach) const {
   for (const auto& eager_blob_object : *param_blob_objects_) {
-    DoEach(nullptr,
-           CHECK_JUST(eager_blob_object->compute_local_dep_object())->mut_mirrored_object());
+    DoEach(CHECK_JUST(eager_blob_object->compute_local_dep_object()));
   }
 
 #ifdef WITH_CUDA
   auto* sync_launched_nccl = CHECK_JUST(GetEagerNcclLocalDepObject("sync_launched_nccl"));
   auto* async_launched_nccl = CHECK_JUST(GetEagerNcclLocalDepObject("async_launched_nccl"));
   CHECK_EQ(sync_launched_nccl, async_launched_nccl);
-  DoEach(nullptr, async_launched_nccl->mut_mirrored_object());
+  DoEach(async_launched_nccl);
 #endif  // WITH_CUDA
-}
-
-void LaunchLazyJobPhyInstrOperand::ForEachConstMirroredObject(
-    const std::function<void(vm::MirroredObject* infer, vm::MirroredObject* compute)>& DoEach)
-    const {
-  DoEach(nullptr, inputs_local_dep_object_->mut_mirrored_object());
-}
-
-void LaunchLazyJobPhyInstrOperand::ForEachMut2MirroredObject(
-    const std::function<void(vm::MirroredObject* infer, vm::MirroredObject* compute)>& DoEach)
-    const {
-  DoEach(nullptr, outputs_local_dep_object_->mut_mirrored_object());
-}
-
-Maybe<SharedEventRecord> LaunchLazyJobPhyInstrOperand::EndEventRecord4OpName(
-    const std::string& op_name) const {
-  return JUST(MapAt(*op_name2end_event_record_, op_name));
 }
 
 }  // namespace vm

@@ -35,29 +35,32 @@ class MaskedFillKernel final : public user_op::OpKernel {
       scalar_operand = static_cast<T>(ctx->Attr<int64_t>("int_operand"));
     } else if (ctx->Attr<bool>("has_float_operand")) {
       scalar_operand = static_cast<T>(ctx->Attr<double>("float_operand"));
+    } else if (ctx->Attr<bool>("has_bool_operand")) {
+      scalar_operand = static_cast<T>(ctx->Attr<bool>("bool_operand"));
     } else {
       UNIMPLEMENTED() << "The scalar in MaskedFill should be float or int.";
     }
-    WhereKernelUtil<device_type, T, CondT>::WhereXScalar(ctx->device_ctx(), out->shape().elem_cnt(),
+    WhereKernelUtil<device_type, T, CondT>::WhereXScalar(ctx->stream(), out->shape().elem_cnt(),
                                                          mask->dptr<CondT>(), scalar_operand,
                                                          x->dptr<T>(), out->mut_dptr<T>());
   }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
 
-#define REGISTER_MASKED_FILL_KERNEL(device_type_v, dtype_pair, ctype_pair)                  \
-  REGISTER_USER_KERNEL("masked_fill")                                                       \
-      .SetCreateFn<MaskedFillKernel<device_type_v, OF_PP_PAIR_FIRST(dtype_pair),            \
-                                    OF_PP_PAIR_FIRST(ctype_pair)>>()                        \
-      .SetIsMatchedHob((user_op::HobDeviceTag() == device_type_v)                           \
-                       & (user_op::HobDataType("mask", 0) == OF_PP_PAIR_SECOND(ctype_pair)) \
-                       & (user_op::HobDataType("out", 0) == OF_PP_PAIR_SECOND(dtype_pair)));
+#define REGISTER_MASKED_FILL_KERNEL(device_type_v, dtype_pair, ctype_pair)                   \
+  REGISTER_USER_KERNEL("masked_fill")                                                        \
+      .SetCreateFn<MaskedFillKernel<device_type_v, OF_PP_PAIR_FIRST(dtype_pair),             \
+                                    OF_PP_PAIR_FIRST(ctype_pair)>>()                         \
+      .SetIsMatchedHob((user_op::HobDeviceType() == device_type_v)                           \
+                       && (user_op::HobDataType("mask", 0) == OF_PP_PAIR_SECOND(ctype_pair)) \
+                       && (user_op::HobDataType("out", 0) == OF_PP_PAIR_SECOND(dtype_pair)));
 
 OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(REGISTER_MASKED_FILL_KERNEL, DEVICE_TYPE_SEQ,
-                                 ARITHMETIC_DATA_TYPE_SEQ, INT_DATA_TYPE_SEQ)
+                                 ARITHMETIC_DATA_TYPE_SEQ BOOL_DATA_TYPE_SEQ,
+                                 INT_DATA_TYPE_SEQ BOOL_DATA_TYPE_SEQ)
 #ifdef WITH_CUDA
-OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(REGISTER_MASKED_FILL_KERNEL, (DeviceType::kGPU),
-                                 FLOAT16_DATA_TYPE_SEQ, INT_DATA_TYPE_SEQ)
+OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(REGISTER_MASKED_FILL_KERNEL, (DeviceType::kCUDA),
+                                 FLOAT16_DATA_TYPE_SEQ, INT_DATA_TYPE_SEQ BOOL_DATA_TYPE_SEQ)
 #endif
 
 }  // namespace oneflow

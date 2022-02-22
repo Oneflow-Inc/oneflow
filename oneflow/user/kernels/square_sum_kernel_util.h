@@ -28,8 +28,9 @@ struct SquareSumParam {
 
 template<DeviceType device_type, typename T>
 struct SquareSumKernelUtil {
-  static void SquareSum(DeviceCtx* ctx, int64_t n, const T* x, T* y);
-  static void MultiSquareSum(DeviceCtx* ctx, const std::vector<SquareSumParam<T>>& params, T* y);
+  static void SquareSum(ep::Stream* stream, int64_t n, const T* x, T* y);
+  static void MultiSquareSum(ep::Stream* stream, const std::vector<SquareSumParam<T>>& params,
+                             T* y);
 };
 
 }  // namespace oneflow

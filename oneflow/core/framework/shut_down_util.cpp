@@ -32,10 +32,9 @@ bool IsShuttingDown() {
   return is_interpreter_shutdown;
 }
 
-void SetShuttingDown() {
+void SetShuttingDown(bool arg_shutting_down) {
   auto* shutting_down = GetShuttingDown();
-  CHECK_EQ(*shutting_down, false);
-  *shutting_down = true;
+  *shutting_down = arg_shutting_down;
 }
 
 }  // namespace oneflow

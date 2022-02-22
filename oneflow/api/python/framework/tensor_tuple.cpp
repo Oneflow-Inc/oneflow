@@ -47,7 +47,7 @@ struct TensorTupleUtil final {
 
   static void AppendTensor(std::shared_ptr<TensorTuple>& tensor_tuple,
                            const std::shared_ptr<Tensor>& tensor) {
-    tensor_tuple->push_back(tensor);
+    tensor_tuple->emplace_back(tensor);
   }
 };
 

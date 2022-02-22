@@ -16,7 +16,6 @@ limitations under the License.
 #include "oneflow/core/job/cluster.h"
 #include "oneflow/core/job/cluster_instruction.pb.h"
 #include "oneflow/core/job/cluster_instruction.h"
-#include "oneflow/core/eager/eager_oneflow.h"
 #include "oneflow/core/control/ctrl_client.h"
 #include "oneflow/core/control/global_process_ctx.h"
 #include "oneflow/core/job/oneflow.h"
@@ -77,15 +76,8 @@ Maybe<void> Cluster::WorkerLoop() {
       } else if (mut_cluster_instruction->has_cluster_ctrl_session_start()) {
         ClusterInstruction::NewSessionBarrier();
         auto wait_session_init = std::make_shared<BlockingCounter>(1);
-        wait_session_init_list.push_back(wait_session_init);
+        wait_session_init_list.emplace_back(wait_session_init);
         AsyncRunLazyJobSet(&lazy_runtime_thread, wait_session_init);
-      } else if (mut_cluster_instruction->has_eager_instruction()) {
-        while (!wait_session_init_list.empty()) {
-          wait_session_init_list.front()->WaitUntilCntEqualZero();
-          wait_session_init_list.pop_front();
-        }
-        JUST(Global<vm::EagerOneflow>::Get()->RunPhysicalInstruction(
-            std::const_pointer_cast<const ClusterInstructionProto>(mut_cluster_instruction)));
       } else {
         OF_UNIMPLEMENTED();
       }

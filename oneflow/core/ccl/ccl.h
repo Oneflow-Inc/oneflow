@@ -20,6 +20,7 @@ limitations under the License.
 #include "oneflow/core/common/device_type.h"
 #include "oneflow/core/common/symbol.h"
 #include "oneflow/core/common/switch_func.h"
+#include "oneflow/core/ep/include/stream.h"
 
 namespace oneflow {
 
@@ -46,31 +47,32 @@ enum ReduceType {
 
 template<DeviceType device_type>
 Maybe<void> AllReduce(const void* in, void* out, size_t elem_cnt, DataType dtype,
-                      ReduceType reduce_type, Symbol<ParallelDesc> parallel_desc, DeviceCtx* ctx);
+                      ReduceType reduce_type, Symbol<ParallelDesc> parallel_desc,
+                      ep::Stream* stream);
 
 template<DeviceType device_type>
 Maybe<void> ReduceScatter(const void* in, void* out, size_t elem_cnt, DataType dtype,
                           ReduceType reduce_type, Symbol<ParallelDesc> parallel_desc,
-                          DeviceCtx* ctx);
+                          ep::Stream* stream);
 
 template<DeviceType device_type>
 Maybe<void> AllGather(const void* in, void* out, size_t elem_cnt, DataType dtype,
-                      Symbol<ParallelDesc> parallel_desc, DeviceCtx* ctx);
+                      Symbol<ParallelDesc> parallel_desc, ep::Stream* stream);
 
 template<DeviceType device_type>
-Maybe<void> Send(const void* in, size_t elem_cnt, DataType dtype, int64_t dst, DeviceCtx* ctx);
+Maybe<void> Send(const void* in, size_t elem_cnt, DataType dtype, int64_t dst, ep::Stream* stream);
 
 template<DeviceType device_type>
-Maybe<void> Recv(void* out, size_t elem_cnt, DataType dtype, int64_t src, DeviceCtx* ctx);
+Maybe<void> Recv(void* out, size_t elem_cnt, DataType dtype, int64_t src, ep::Stream* stream);
 
 template<DeviceType device_type>
 Maybe<void> Broadcast(const void* in, void* out, size_t elem_cnt, DataType dtype, int64_t root,
-                      Symbol<ParallelDesc> parallel_desc, DeviceCtx* ctx);
+                      Symbol<ParallelDesc> parallel_desc, ep::Stream* stream);
 
 template<DeviceType device_type>
 Maybe<void> Reduce(const void* in, void* out, size_t elem_cnt, DataType dtype,
                    ReduceType reduce_type, int64_t root, Symbol<ParallelDesc> parallel_desc,
-                   DeviceCtx* ctx);
+                   ep::Stream* stream);
 
 Maybe<void> CpuBroadcast(const void* in, void* out, size_t buffer_size, int64_t root,
                          Symbol<ParallelDesc> parallel_desc, const TransportToken& transport_token);

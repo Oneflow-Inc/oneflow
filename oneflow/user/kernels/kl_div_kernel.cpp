@@ -38,12 +38,11 @@ void ComputeKLDivOut(int64_t elem_cnt, const T* input, const T* target, T* out,
 
 template<typename T>
 void ComputeKLDivGradOut(int64_t elem_cnt, const T* input, const T* target, const T* dy, T* dx,
-                         const ReductionType reduction_type, const bool log_target) {
+                         const bool log_target) {
   FOR_RANGE(int64_t, i, 0, elem_cnt) {
-    const T dy_val = reduction_type == ReductionType::kNone ? dy[i] : *dy;
+    const T dy_val = dy[i];
     dx[i] =
         log_target ? (-std::exp(target[i]) * dy_val) : (target[i] > 0 ? -target[i] * dy_val : 0);
-    if (reduction_type == ReductionType::kMean) { dx[i] /= elem_cnt; };
   }
 }
 
@@ -61,9 +60,9 @@ template<typename T>
 class KLDivGradKernel : public SimpleLossGradKernel<DeviceType::kCPU, T, KLDivGradKernel<T>> {
  public:
   void ComputeOut(user_op::KernelComputeContext* ctx, int64_t elem_cnt, const T* input,
-                  const T* target, const T* dy, T* dx, const ReductionType reduction) const {
+                  const T* target, const T* dy, T* dx) const {
     const bool log_target = ctx->Attr<bool>("log_target");
-    ComputeKLDivGradOut(elem_cnt, input, target, dy, dx, reduction, log_target);
+    ComputeKLDivGradOut(elem_cnt, input, target, dy, dx, log_target);
   }
 };
 

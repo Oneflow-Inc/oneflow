@@ -37,7 +37,7 @@ class CopyKernel final : public user_op::OpKernel {
       CHECK_ISNULL(in->raw_dptr());
       CHECK_ISNULL(out->mut_raw_dptr());
     } else {
-      AutoMemcpy(ctx->device_ctx(), out->mut_raw_dptr(), in->raw_dptr(),
+      AutoMemcpy(ctx->stream(), out->mut_raw_dptr(), in->raw_dptr(),
                  in_shape.elem_cnt() * GetSizeOfDataType(in_data_type), out->mem_case(),
                  in->mem_case());
     }

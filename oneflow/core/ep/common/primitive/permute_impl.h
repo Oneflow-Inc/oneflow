@@ -60,27 +60,25 @@ PermuteKernelParams<num_dims, IndexType> MakePermuteParams(const int64_t* src_di
 }
 
 template<size_t num_dims, size_t movement_size, typename IndexType>
-void LaunchKernel(StreamContext* stream_ctx, const int64_t* src_dims, const void* src,
-                  const int* permutation, void* dst, size_t count);
+void LaunchKernel(Stream* stream, const int64_t* src_dims, const void* src, const int* permutation,
+                  void* dst, size_t count);
 
 template<size_t num_dims, size_t movement_size>
-void DispatchIndexType(StreamContext* stream_ctx, const int64_t* src_dims, const void* src,
+void DispatchIndexType(Stream* stream, const int64_t* src_dims, const void* src,
                        const int* permutation, void* dst) {
   size_t count = 1;
   for (size_t i = 0; i < num_dims; ++i) { count *= src_dims[i]; }
   if (count < GetMaxVal<int32_t>()) {
-    LaunchKernel<num_dims, movement_size, int32_t>(stream_ctx, src_dims, src, permutation, dst,
-                                                   count);
+    LaunchKernel<num_dims, movement_size, int32_t>(stream, src_dims, src, permutation, dst, count);
   } else {
-    LaunchKernel<num_dims, movement_size, int64_t>(stream_ctx, src_dims, src, permutation, dst,
-                                                   count);
+    LaunchKernel<num_dims, movement_size, int64_t>(stream, src_dims, src, permutation, dst, count);
   }
 }
 
 template<size_t num_dims>
-void DispatchMovementSize(StreamContext* stream_ctx, size_t movement_size, const int64_t* src_dims,
+void DispatchMovementSize(Stream* stream, size_t movement_size, const int64_t* src_dims,
                           const void* src, const int* permutation, void* dst) {
-  void (*func)(StreamContext* /*stream_ctx*/, const int64_t* /*src_dims*/, const void* /*src*/,
+  void (*func)(Stream* /*stream*/, const int64_t* /*src_dims*/, const void* /*src*/,
                const int* /*permutation*/, void* /*dst*/) = nullptr;
   if (movement_size == 1) {
     func = DispatchIndexType<num_dims, 1>;
@@ -95,13 +93,13 @@ void DispatchMovementSize(StreamContext* stream_ctx, size_t movement_size, const
   } else {
     UNIMPLEMENTED();
   }
-  func(stream_ctx, src_dims, src, permutation, dst);
+  func(stream, src_dims, src, permutation, dst);
 }
 
-void LaunchWithSimplified(StreamContext* stream_ctx, size_t movement_size, size_t num_dims,
+void LaunchWithSimplified(Stream* stream, size_t movement_size, size_t num_dims,
                           const int64_t* src_dims, const void* src, const int* permutation,
                           void* dst) {
-  void (*func)(StreamContext* /*stream_ctx*/, size_t /*movement_size*/, const int64_t* /*src_dims*/,
+  void (*func)(Stream* /*stream*/, size_t /*movement_size*/, const int64_t* /*src_dims*/,
                const void* /*src*/, const int* /*permutation*/, void* /*dst*/) = nullptr;
   if (num_dims == 1) {
     func = DispatchMovementSize<1>;
@@ -122,10 +120,10 @@ void LaunchWithSimplified(StreamContext* stream_ctx, size_t movement_size, size_
   } else {
     UNIMPLEMENTED();
   }
-  func(stream_ctx, movement_size, src_dims, src, permutation, dst);
+  func(stream, movement_size, src_dims, src, permutation, dst);
 }
 
-void SimplifyThenLaunch(StreamContext* stream_ctx, DataType data_type, size_t num_dims,
+void SimplifyThenLaunch(Stream* stream, DataType data_type, size_t num_dims,
                         const int64_t* src_dims, const void* src, const int* permutation,
                         void* dst) {
   CHECK_LE(num_dims, kMaxNumDims);
@@ -137,7 +135,7 @@ void SimplifyThenLaunch(StreamContext* stream_ctx, DataType data_type, size_t nu
   SimplifyPermutation<kMaxNumDims, kMaxMovementSize>(
       num_dims, src_dims, permutation, &simplified_num_dims, simplified_src_dims,
       simplified_permutation, GetSizeOfDataType(data_type), src, dst, &movement_size);
-  LaunchWithSimplified(stream_ctx, movement_size, simplified_num_dims, simplified_src_dims, src,
+  LaunchWithSimplified(stream, movement_size, simplified_num_dims, simplified_src_dims, src,
                        simplified_permutation, dst);
 }
 

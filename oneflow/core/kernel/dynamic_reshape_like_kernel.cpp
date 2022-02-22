@@ -30,7 +30,7 @@ class DynamicReshapeLikeKernel final : public Kernel {
 void DynamicReshapeLikeKernel::ForwardDataContent(KernelContext* ctx) const {
   const Blob* in_blob = ctx->BnInOp2Blob("x");
   Blob* out_blob = ctx->BnInOp2Blob("y");
-  AutoMemcpy(ctx->stream_ctx(), out_blob, in_blob);
+  AutoMemcpy(ctx->stream(), out_blob, in_blob);
 }
 
 REGISTER_KERNEL(OperatorConf::kDynamicReshapeLikeConf, DynamicReshapeLikeKernel);

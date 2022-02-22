@@ -51,17 +51,17 @@ void CollectiveBoxingPackKernel::ForwardDataContent(KernelContext* ctx) const {
     transpose_in_dim_vec[dst_split_axis] = transpose_in_dim_vec.at(dst_split_axis) / num_ranks;
     transpose_in_dim_vec.insert(transpose_in_dim_vec.begin() + dst_split_axis, num_ranks);
     std::vector<int32_t> perm;
-    perm.push_back(dst_split_axis);
+    perm.emplace_back(dst_split_axis);
     FOR_RANGE(int64_t, i, 0, transpose_in_dim_vec.size()) {
-      if (i != dst_split_axis) { perm.push_back(i); }
+      if (i != dst_split_axis) { perm.emplace_back(i); }
     }
     auto transpose = ep::primitive::NewPrimitive<ep::primitive::PermuteFactory>(
-        ctx->stream_ctx()->device_type(), transpose_in_dim_vec.size());
+        ctx->stream()->device_type(), transpose_in_dim_vec.size());
     CHECK(transpose);
-    transpose->Launch(ctx->stream_ctx(), in->data_type(), transpose_in_dim_vec.size(),
+    transpose->Launch(ctx->stream(), in->data_type(), transpose_in_dim_vec.size(),
                       transpose_in_dim_vec.data(), in->dptr(), perm.data(), out->mut_dptr());
   } else {
-    AutoMemcpy(ctx->stream_ctx(), out, in);
+    AutoMemcpy(ctx->stream(), out, in);
   }
 }
 

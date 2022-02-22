@@ -15,7 +15,7 @@ limitations under the License.
 */
 #include "oneflow/core/ep/include/primitive/fill.h"
 #include "oneflow/core/ep/cuda/primitive/type_seq.h"
-#include "oneflow/core/stream/cuda/cuda_stream_context.h"
+#include "oneflow/core/ep/cuda/cuda_stream.h"
 
 namespace oneflow {
 
@@ -106,8 +106,8 @@ class FillImpl : public Fill {
   FillImpl() = default;
   ~FillImpl() override = default;
 
-  void Launch(StreamContext* stream_ctx, void* dst, Scalar value, size_t count) override {
-    cudaStream_t cuda_stream = stream_ctx->As<CudaStreamContext>()->cuda_stream();
+  void Launch(Stream* stream, void* dst, Scalar value, size_t count) override {
+    cudaStream_t cuda_stream = stream->As<CudaStream>()->cuda_stream();
     LaunchFill<T>(cuda_stream, reinterpret_cast<T*>(dst), GetValue<T>(value), count);
   }
 };
@@ -140,7 +140,7 @@ class FillFactoryImpl : public FillFactory {
   }
 };
 
-REGISTER_PRIMITIVE_FACTORY(DeviceType::kGPU, FillFactory, FillFactoryImpl);
+REGISTER_PRIMITIVE_FACTORY(DeviceType::kCUDA, FillFactory, FillFactoryImpl);
 
 }  // namespace
 

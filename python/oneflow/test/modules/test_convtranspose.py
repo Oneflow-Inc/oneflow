@@ -294,7 +294,31 @@ class TestConvTranspose(flow.unittest.TestCase):
         m.train(random())
         device = random_device()
         m.to(device)
-        x = random_pytorch_tensor(ndim=3, dim1=channels).to(device)
+        x = random_tensor(ndim=3, dim1=channels).to(device)
+        y = m(x)
+        return y
+
+    @unittest.skipIf(os.getenv("ONEFLOW_TEST_CPU_ONLY"), "only test cpu cases")
+    @autotest(n=30)
+    def test_deconv1d_group_with_random_data(test_case):
+        channels = 720  # lcm(1, 2, 3, 4, 5, 6)
+        m = torch.nn.ConvTranspose1d(
+            in_channels=channels,
+            out_channels=channels,
+            kernel_size=random(1, 4),
+            stride=random() | nothing(),
+            padding=random(1, 3).to(int) | nothing(),
+            dilation=random(1, 5) | nothing(),
+            groups=random(1, 7),
+            padding_mode=constant("zeros") | nothing(),
+        )
+        m.train(random())
+
+        device = random_device()
+        m.to(device)
+        m.pytorch.to("cuda")
+        x = random_tensor(ndim=3, dim1=channels).to(device)
+        x.pytorch = x.pytorch.to("cuda")
         y = m(x)
         return y
 
@@ -314,7 +338,31 @@ class TestConvTranspose(flow.unittest.TestCase):
         m.train(random())
         device = random_device()
         m.to(device)
-        x = random_pytorch_tensor(ndim=5, dim1=channels).to(device)
+        x = random_tensor(ndim=5, dim1=channels).to(device)
+        y = m(x)
+        return y
+
+    @unittest.skipIf(os.getenv("ONEFLOW_TEST_CPU_ONLY"), "only test cpu cases")
+    @autotest(n=30)
+    def test_deconv3d_group_with_random_data(test_case):
+        channels = 720  # lcm(1, 2, 3, 4, 5, 6)
+        m = torch.nn.ConvTranspose3d(
+            in_channels=channels,
+            out_channels=channels,
+            kernel_size=random(1, 4),
+            stride=random() | nothing(),
+            padding=random(1, 3).to(int) | nothing(),
+            dilation=random(1, 5) | nothing(),
+            groups=random(1, 7),
+            padding_mode=constant("zeros") | nothing(),
+        )
+        m.train(random())
+
+        device = random_device()
+        m.to(device)
+        m.pytorch.to("cuda")
+        x = random_tensor(ndim=5, dim1=channels).to(device)
+        x.pytorch = x.pytorch.to("cuda")
         y = m(x)
         return y
 

@@ -17,7 +17,7 @@ limitations under the License.
 #include "oneflow/core/ep/include/primitive/log_softmax_backward.h"
 #include "oneflow/core/ep/cuda/primitive/type_seq.h"
 #include "oneflow/core/cuda/softmax.cuh"
-#include "oneflow/core/stream/cuda/cuda_stream_context.h"
+#include "oneflow/core/ep/cuda/cuda_stream.h"
 
 namespace oneflow {
 
@@ -58,9 +58,9 @@ class SoftmaxBackwardImpl : public SoftmaxBackwardBase {
   SoftmaxBackwardImpl() = default;
   ~SoftmaxBackwardImpl() override = default;
 
-  void Launch(StreamContext* stream_ctx, size_t rows, size_t cols, const void* y, const void* dy,
+  void Launch(Stream* stream, size_t rows, size_t cols, const void* y, const void* dy,
               void* dx) override {
-    cudaStream_t cuda_stream = stream_ctx->As<CudaStreamContext>()->cuda_stream();
+    cudaStream_t cuda_stream = stream->As<CudaStream>()->cuda_stream();
     SoftmaxBackwardGpu<algorithm, T>(cuda_stream, rows, cols, reinterpret_cast<const T*>(y),
                                      reinterpret_cast<const T*>(dy), reinterpret_cast<T*>(dx));
   }
@@ -103,8 +103,8 @@ using SoftmaxBackwardFactoryImpl =
 using LogSoftmaxBackwardFactoryImpl =
     GenericSoftmaxBackwardFactoryImpl<LogSoftmaxBackwardFactory, LogSoftmaxBackward,
                                       Algorithm::kLogSoftmax>;
-REGISTER_PRIMITIVE_FACTORY(DeviceType::kGPU, SoftmaxBackwardFactory, SoftmaxBackwardFactoryImpl);
-REGISTER_PRIMITIVE_FACTORY(DeviceType::kGPU, LogSoftmaxBackwardFactory,
+REGISTER_PRIMITIVE_FACTORY(DeviceType::kCUDA, SoftmaxBackwardFactory, SoftmaxBackwardFactoryImpl);
+REGISTER_PRIMITIVE_FACTORY(DeviceType::kCUDA, LogSoftmaxBackwardFactory,
                            LogSoftmaxBackwardFactoryImpl);
 
 }  // namespace

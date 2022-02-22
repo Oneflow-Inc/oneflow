@@ -110,12 +110,12 @@ Maybe<const OpKernelRegistryResult*> UserOpRegistryMgr::GetOpKernelRegistryResul
 
   const OpKernelRegistryResult* ret = nullptr;
   for (const auto& reg_val : it->second) {
-    if (reg_val.is_matched_hob(ctx)) {
+    if (reg_val.is_matched_hob->get(ctx)) {
       if (ret != nullptr) {
         std::vector<std::string> debug_msgs;
         for (const auto& local_reg_val : it->second) {
-          if (local_reg_val.is_matched_hob(ctx)) {
-            debug_msgs.emplace_back(local_reg_val.is_matched_hob.DebugStr(ctx));
+          if (local_reg_val.is_matched_hob->get(ctx)) {
+            debug_msgs.emplace_back(local_reg_val.is_matched_hob->DebugStr(ctx));
           }
         }
         return Error::MultipleOpKernelsMatchedError(
@@ -128,7 +128,7 @@ Maybe<const OpKernelRegistryResult*> UserOpRegistryMgr::GetOpKernelRegistryResul
   if (ret == nullptr) {
     std::vector<std::string> debug_msgs;
     for (const auto& reg_val : it->second) {
-      debug_msgs.emplace_back(reg_val.is_matched_hob.DebugStr(ctx));
+      debug_msgs.emplace_back(reg_val.is_matched_hob->DebugStr(ctx));
     }
     return Error::OpKernelNotFoundError("Cannot find the kernel matching Current OperatorConf. ",
                                         debug_msgs)

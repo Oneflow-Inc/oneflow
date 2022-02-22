@@ -45,8 +45,8 @@ void PermuteKernel(PermuteKernelParams<num_dims, IndexType> params) {
 }
 
 template<size_t num_dims, size_t movement_size, typename IndexType>
-void LaunchKernel(StreamContext* stream_ctx, const int64_t* src_dims, const void* src,
-                  const int* permutation, void* dst, size_t count) {
+void LaunchKernel(Stream* stream, const int64_t* src_dims, const void* src, const int* permutation,
+                  void* dst, size_t count) {
   PermuteKernelParams<num_dims, IndexType> params =
       MakePermuteParams<num_dims, IndexType>(src_dims, src, permutation, dst, count);
   PermuteKernel<num_dims, movement_size, IndexType>(params);
@@ -58,10 +58,9 @@ class PermuteImpl : public Permute {
   ~PermuteImpl() override = default;
 
   using Permute::Launch;
-  void Launch(StreamContext* stream_ctx, DataType data_type, size_t num_dims,
-              const int64_t* src_dims, const void* src, const int* permutation,
-              void* dst) override {
-    SimplifyThenLaunch(stream_ctx, data_type, num_dims, src_dims, src, permutation, dst);
+  void Launch(Stream* stream, DataType data_type, size_t num_dims, const int64_t* src_dims,
+              const void* src, const int* permutation, void* dst) override {
+    SimplifyThenLaunch(stream, data_type, num_dims, src_dims, src, permutation, dst);
   }
 };
 

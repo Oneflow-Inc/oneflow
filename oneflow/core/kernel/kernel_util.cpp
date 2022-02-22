@@ -20,7 +20,6 @@ limitations under the License.
 #include "oneflow/core/memory/memory_case.pb.h"
 #include "oneflow/core/ep/include/primitive/memcpy.h"
 #include "oneflow/core/ep/include/primitive/memset.h"
-#include "oneflow/core/stream/include/stream_context_adapter.h"
 
 namespace oneflow {
 
@@ -230,21 +229,10 @@ void IntSequenceInitializer(const IntRangeInitializerConf& initializer_conf, uin
 
 }  // namespace
 
-void AutoMemcpy(DeviceCtx* ctx, void* dst, const void* src, size_t sz,
-                const MemoryCase& dst_mem_case, const MemoryCase& src_mem_case) {
-  std::unique_ptr<StreamContext> stream_ctx(NewStreamContextAdapter(ctx));
-  AutoMemcpy(stream_ctx.get(), dst, src, sz, dst_mem_case, src_mem_case);
-}
-
-void AutoMemcpy(DeviceCtx* ctx, Blob* dst, const Blob* src) {
-  std::unique_ptr<StreamContext> stream_ctx(NewStreamContextAdapter(ctx));
-  AutoMemcpy(stream_ctx.get(), dst, src);
-}
-
-void AutoMemcpy(StreamContext* stream_ctx, void* dst, const void* src, size_t sz,
+void AutoMemcpy(ep::Stream* stream, void* dst, const void* src, size_t sz,
                 const MemoryCase& dst_mem_case, const MemoryCase& src_mem_case) {
   ep::primitive::MemcpyKind kind{};
-  if (stream_ctx->device_type() == DeviceType::kCPU) {
+  if (stream->device_type() == DeviceType::kCPU) {
     CHECK(src_mem_case.has_host_mem());
     CHECK(dst_mem_case.has_host_mem());
     kind = ep::primitive::MemcpyKind::kDtoD;
@@ -260,35 +248,28 @@ void AutoMemcpy(StreamContext* stream_ctx, void* dst, const void* src, size_t sz
     }
   }
   std::unique_ptr<ep::primitive::Memcpy> primitive =
-      ep::primitive::NewPrimitive<ep::primitive::MemcpyFactory>(stream_ctx->device_type(), kind);
+      ep::primitive::NewPrimitive<ep::primitive::MemcpyFactory>(stream->device_type(), kind);
   CHECK(primitive);
-  primitive->Launch(stream_ctx, dst, src, sz);
+  primitive->Launch(stream, dst, src, sz);
 }
 
-void AutoMemcpy(StreamContext* stream_ctx, Blob* dst, const Blob* src) {
+void AutoMemcpy(ep::Stream* stream, Blob* dst, const Blob* src) {
   const size_t body_bytes = src->ByteSizeOfBlobBody();
   CHECK_EQ(dst->ByteSizeOfBlobBody(), body_bytes);
-  AutoMemcpy(stream_ctx, dst->mut_dptr(), src->dptr(), body_bytes, dst->mem_case(),
-             src->mem_case());
+  AutoMemcpy(stream, dst->mut_dptr(), src->dptr(), body_bytes, dst->mem_case(), src->mem_case());
 }
 
-void SyncAutoMemcpy(DeviceCtx* ctx, void* dst, const void* src, size_t sz,
+void SyncAutoMemcpy(ep::Stream* stream, void* dst, const void* src, size_t sz,
                     const MemoryCase& dst_mem_case, const MemoryCase& src_mem_case) {
-  AutoMemcpy(ctx, dst, src, sz, dst_mem_case, src_mem_case);
-  ctx->SyncDevice();
+  AutoMemcpy(stream, dst, src, sz, dst_mem_case, src_mem_case);
+  CHECK_JUST(stream->Sync());
 }
 
-void AutoMemset(DeviceCtx* ctx, void* dst, const char value, size_t sz,
-                const MemoryCase& dst_mem_case) {
-  std::unique_ptr<StreamContext> stream_ctx(NewStreamContextAdapter(ctx));
-  AutoMemset(stream_ctx.get(), dst, value, sz, dst_mem_case);
-}
-
-void AutoMemset(StreamContext* stream_ctx, void* dst, const char value, size_t sz,
+void AutoMemset(ep::Stream* stream, void* dst, const char value, size_t sz,
                 const MemoryCase& /*dst_mem_case*/) {
   std::unique_ptr<ep::primitive::Memset> primitive =
-      ep::primitive::NewPrimitive<ep::primitive::MemsetFactory>(stream_ctx->device_type());
-  primitive->Launch(stream_ctx, dst, value, sz);
+      ep::primitive::NewPrimitive<ep::primitive::MemsetFactory>(stream->device_type());
+  primitive->Launch(stream, dst, value, sz);
 }
 
 #define KU_IF_METHOD                     \
@@ -299,7 +280,7 @@ void AutoMemset(StreamContext* stream_ctx, void* dst, const char value, size_t s
   template<typename T>     \
   void KernelUtil<DeviceType::kCPU, T, typename std::enable_if<IsFloating<T>::value>::type>::
 
-KU_FLOATING_METHOD InitializeWithConf(DeviceCtx* ctx, const InitializerConf& initializer_conf,
+KU_FLOATING_METHOD InitializeWithConf(ep::Stream* stream, const InitializerConf& initializer_conf,
                                       uint32_t random_seed, Blob* blob) {
   if (initializer_conf.has_constant_conf()) {
     ConstantInitializer<T>(static_cast<T>(initializer_conf.constant_conf().value()), blob);
@@ -330,7 +311,7 @@ KU_FLOATING_METHOD InitializeWithConf(DeviceCtx* ctx, const InitializerConf& ini
   template<typename T>     \
   void KernelUtil<DeviceType::kCPU, T, typename std::enable_if<IsIntegral<T>::value>::type>::
 
-KU_INTEGRAL_METHOD InitializeWithConf(DeviceCtx* ctx, const InitializerConf& initializer_conf,
+KU_INTEGRAL_METHOD InitializeWithConf(ep::Stream* stream, const InitializerConf& initializer_conf,
                                       uint32_t random_seed, Blob* blob) {
   if (initializer_conf.has_constant_int_conf()) {
     ConstantInitializer<T>(static_cast<T>(initializer_conf.constant_int_conf().value()), blob);

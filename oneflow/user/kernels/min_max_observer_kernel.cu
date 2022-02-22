@@ -16,6 +16,7 @@ limitations under the License.
 #include "oneflow/core/device/cuda_util.h"
 #include "oneflow/core/framework/framework.h"
 #include "oneflow/core/cuda/atomic.cuh"
+#include "oneflow/core/ep/cuda/cuda_stream.h"
 
 #include <float.h>
 
@@ -161,11 +162,18 @@ __global__ void CalScaleZeroPointCambricon(const T* max_ptr, const T* min_ptr,
   }
 }
 
+ep::CudaLaunchConfig GetLaunchConfig(ep::CudaStream* stream, size_t thread_num,
+                                     size_t shared_mem_size) {
+  ep::CudaLaunchConfig config;
+  stream->InitLaunchConfigWithWaves(&config, thread_num, kCudaThreadsNumPerBlock, 1);
+  config.shared_mem_size = shared_mem_size;
+  return config;
+}
+
 }  // namespace
 
-#define LAUNCH_CUDA_KERNEL(func, device_ctx_ptr, thread_num, shared_mem_size, ...)     \
-  func<<<SMBlocksNum4ThreadsNum(thread_num), kCudaThreadsNumPerBlock, shared_mem_size, \
-         (device_ctx_ptr)->cuda_stream()>>>(__VA_ARGS__)
+#define LAUNCH_CUDA_KERNEL(func, stream, thread_num, shared_mem_size, ...) \
+  (stream)->LaunchKernel(func, GetLaunchConfig((stream), thread_num, shared_mem_size), __VA_ARGS__);
 
 template<typename T>
 class GpuMinMaxObserverKernel final : public user_op::OpKernel {
@@ -191,38 +199,38 @@ class GpuMinMaxObserverKernel final : public user_op::OpKernel {
     const int64_t panel_size = elements / channel;
     T* max_ptr = tmp_buffer->mut_dptr<T>();
     T* min_ptr = max_ptr + channel;
-
-    LAUNCH_CUDA_KERNEL((InitMaxMin<T>), ctx->device_ctx(), channel, 0, channel, max_ptr, min_ptr);
+    auto* cuda_stream = ctx->stream()->As<ep::CudaStream>();
+    LAUNCH_CUDA_KERNEL((InitMaxMin<T>), cuda_stream, channel, 0, channel, max_ptr, min_ptr);
 
     if (per_layer_quantization) {
-      LAUNCH_CUDA_KERNEL((ReduceMaxMinPerLayer<T>), ctx->device_ctx(), elements,
+      LAUNCH_CUDA_KERNEL((ReduceMaxMinPerLayer<T>), cuda_stream, elements,
                          kCudaThreadsNumPerBlock * 2 * sizeof(T), in->dptr<T>(), elements, max_ptr,
                          min_ptr);
     } else {  // per-channel quantization
       // NOTE(Liang Depeng): each block of threads will be responsible for
       //                     computing the max and min values of the whole channel.
-      LAUNCH_CUDA_KERNEL((ReduceMaxMinPerChannel<T>), ctx->device_ctx(),
+      LAUNCH_CUDA_KERNEL((ReduceMaxMinPerChannel<T>), cuda_stream,
                          channel * kCudaThreadsNumPerBlock, kCudaThreadsNumPerBlock * 2 * sizeof(T),
                          in->dptr<T>(), elements, channel, panel_size, max_ptr, min_ptr);
     }
 
     if (quantization_formula == "google") {
       if (quantization_scheme == "symmetric") {
-        LAUNCH_CUDA_KERNEL((CalScaleZeroPointSymmetric<T>), ctx->device_ctx(), channel, 0, max_ptr,
+        LAUNCH_CUDA_KERNEL((CalScaleZeroPointSymmetric<T>), cuda_stream, channel, 0, max_ptr,
                            min_ptr, channel, static_cast<double>(quantization_bit),
                            scale->mut_dptr<T>(), zero_point->mut_dptr<T>());
       } else {  // quantization_scheme == "affine"
-        LAUNCH_CUDA_KERNEL((CalScaleZeroPointAffine<T>), ctx->device_ctx(), channel, 0, max_ptr,
-                           min_ptr, channel, static_cast<double>(quantization_bit),
-                           scale->mut_dptr<T>(), zero_point->mut_dptr<T>());
+        LAUNCH_CUDA_KERNEL((CalScaleZeroPointAffine<T>), cuda_stream, channel, 0, max_ptr, min_ptr,
+                           channel, static_cast<double>(quantization_bit), scale->mut_dptr<T>(),
+                           zero_point->mut_dptr<T>());
       }
     } else if (quantization_formula == "cambricon") {
       if (!per_layer_quantization) {
         UNIMPLEMENTED() << " per-channel mode is not supported in cambricon scheme";
       }
-      LAUNCH_CUDA_KERNEL((CalScaleZeroPointCambricon<T>), ctx->device_ctx(), channel, 0, max_ptr,
-                         min_ptr, channel, static_cast<double>(quantization_bit),
-                         scale->mut_dptr<T>(), zero_point->mut_dptr<T>());
+      LAUNCH_CUDA_KERNEL((CalScaleZeroPointCambricon<T>), cuda_stream, channel, 0, max_ptr, min_ptr,
+                         channel, static_cast<double>(quantization_bit), scale->mut_dptr<T>(),
+                         zero_point->mut_dptr<T>());
     } else {
       UNIMPLEMENTED();
     }
@@ -231,18 +239,18 @@ class GpuMinMaxObserverKernel final : public user_op::OpKernel {
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
 
-#define REGISTER_MIN_MAX_OBSERVER_KERNEL(dtype)                                        \
-  REGISTER_USER_KERNEL("min_max_observer")                                             \
-      .SetCreateFn<GpuMinMaxObserverKernel<dtype>>()                                   \
-      .SetIsMatchedHob((user_op::HobDeviceTag() == DeviceType::kGPU)                   \
-                       & (user_op::HobDataType("in", 0) == GetDataType<dtype>::value)) \
-      .SetInferTmpSizeFn([](user_op::InferContext* ctx) -> size_t {                    \
-        size_t tmp_buffer_size = 1;                                                    \
-        if (ctx->Attr<bool>("per_layer_quantization") == false) {                      \
-          const Shape& in_shape = ctx->InputShape("in", 0);                            \
-          tmp_buffer_size = in_shape.At(0);                                            \
-        }                                                                              \
-        return 2 * tmp_buffer_size * sizeof(dtype);                                    \
+#define REGISTER_MIN_MAX_OBSERVER_KERNEL(dtype)                                         \
+  REGISTER_USER_KERNEL("min_max_observer")                                              \
+      .SetCreateFn<GpuMinMaxObserverKernel<dtype>>()                                    \
+      .SetIsMatchedHob((user_op::HobDeviceType() == DeviceType::kCUDA)                  \
+                       && (user_op::HobDataType("in", 0) == GetDataType<dtype>::value)) \
+      .SetInferTmpSizeFn([](user_op::InferContext* ctx) -> size_t {                     \
+        size_t tmp_buffer_size = 1;                                                     \
+        if (ctx->Attr<bool>("per_layer_quantization") == false) {                       \
+          const Shape& in_shape = ctx->InputShape("in", 0);                             \
+          tmp_buffer_size = in_shape.At(0);                                             \
+        }                                                                               \
+        return 2 * tmp_buffer_size * sizeof(dtype);                                     \
       })
 
 REGISTER_MIN_MAX_OBSERVER_KERNEL(float);

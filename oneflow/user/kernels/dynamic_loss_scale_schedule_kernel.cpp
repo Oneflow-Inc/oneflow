@@ -58,6 +58,6 @@ class DynamicLossScaleScheduleCpuKernel final : public user_op::OpKernel {
 
 REGISTER_USER_KERNEL("dynamic_loss_scale_schedule")
     .SetCreateFn<DynamicLossScaleScheduleCpuKernel>()
-    .SetIsMatchedHob((user_op::HobDeviceTag() == "cpu"));
+    .SetIsMatchedHob((user_op::HobDeviceType() == DeviceType::kCPU));
 
 }  // namespace oneflow

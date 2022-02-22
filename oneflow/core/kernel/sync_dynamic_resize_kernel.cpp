@@ -18,6 +18,7 @@ limitations under the License.
 #include "oneflow/core/framework/to_string.h"
 #include "oneflow/core/kernel/kernel.h"
 #include "oneflow/core/register/register_desc.h"
+#include "oneflow/core/lazy/actor/actor_context.h"
 
 #include <cstddef>
 #include <cstdint>
@@ -70,9 +71,9 @@ class SyncDynamicResizeGPUKernel final : public Kernel {
     const Blob* in = ctx->BnInOp2Blob("in");
     const Blob* size = ctx->BnInOp2Blob("size");
     Blob* out = ctx->BnInOp2Blob("out");
-    AutoMemcpy(ctx->device_ctx(), out->mut_dptr(), in->dptr(), in->ByteSizeOfBlobBody(),
+    AutoMemcpy(ctx->stream(), out->mut_dptr(), in->dptr(), in->ByteSizeOfBlobBody(),
                out->mem_case(), in->mem_case());
-    AutoMemcpy(ctx->device_ctx(), cuda_host_mem_ptr->Ptr(), size->dptr(), sizeof(SizeType),
+    AutoMemcpy(ctx->stream(), cuda_host_mem_ptr->Ptr(), size->dptr(), sizeof(SizeType),
                MakeHostMemCase(), size->mem_case());
     const auto& UpdateShape = [out, cuda_host_mem_ptr, conf, this]() {
       const int64_t new_size = *reinterpret_cast<SizeType*>(cuda_host_mem_ptr->Ptr());
@@ -88,10 +89,11 @@ class SyncDynamicResizeGPUKernel final : public Kernel {
       queue_.push(cuda_host_mem_ptr);
     };
     if (conf.eager()) {
-      OF_CUDA_CHECK(cudaStreamSynchronize(ctx->device_ctx()->cuda_stream()));
+      CHECK_JUST(ctx->stream()->Sync());
       UpdateShape();
     } else {
-      ctx->device_ctx()->AddCallBack(UpdateShape);
+      auto* actor_context_provider = CHECK_NOTNULL(dynamic_cast<ActorContextProvider*>(ctx));
+      actor_context_provider->GetActorContext()->AddCallback(UpdateShape);
     }
   }
 
@@ -127,7 +129,7 @@ class SyncDynamicResizeCPUKernel final : public Kernel {
     const Blob* in = ctx->BnInOp2Blob("in");
     const Blob* size = ctx->BnInOp2Blob("size");
     Blob* out = ctx->BnInOp2Blob("out");
-    AutoMemcpy(ctx->device_ctx(), out->mut_dptr(), in->dptr(), in->ByteSizeOfBlobBody(),
+    AutoMemcpy(ctx->stream(), out->mut_dptr(), in->dptr(), in->ByteSizeOfBlobBody(),
                out->mem_case(), in->mem_case());
     const SizeType new_size = *size->dptr<SizeType>();
     CHECK_GE(new_size, 0);

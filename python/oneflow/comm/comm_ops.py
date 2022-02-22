@@ -34,17 +34,17 @@ def all_reduce(tensor):
         >>> # We have 1 process groups, 2 ranks.
         >>> import oneflow as flow
 
-        >>> input = flow.tensor([[1, 2], [3, 4]], device="cuda") + flow.env.get_local_rank()
-        >>> # input on rank0
-        >>> input # doctest: +ONLY_CHECK_RANK_0
+        >>> tensor = flow.tensor([[1, 2], [3, 4]], device="cuda") + flow.env.get_local_rank()
+        >>> # tensor on rank0
+        >>> tensor # doctest: +ONLY_CHECK_RANK_0
         tensor([[1, 2],
                 [3, 4]], device='cuda:0', dtype=oneflow.int64)
-        >>> # input on rank1
-        >>> input # doctest: +ONLY_CHECK_RANK_1
+        >>> # tensor on rank1
+        >>> tensor # doctest: +ONLY_CHECK_RANK_1
         tensor([[2, 3],
                 [4, 5]], device='cuda:1', dtype=oneflow.int64)
-        >>> out = flow.comm.all_reduce(input)
-        >>> out.numpy()
+        >>> flow.comm.all_reduce(tensor)
+        >>> tensor.numpy()
         array([[3, 5],
                [7, 9]])
 
@@ -54,11 +54,11 @@ def all_reduce(tensor):
     assert tensor.is_local
     device_type = tensor.device.type
     placement = flow.env.all_device_placement(device_type)
-    tensor = tensor.to_consistent(
-        placement=placement, sbp=flow.sbp.partial_sum
-    ).to_consistent(placement=placement, sbp=flow.sbp.broadcast)
+    result = tensor.to_global(placement=placement, sbp=flow.sbp.partial_sum).to_global(
+        placement=placement, sbp=flow.sbp.broadcast
+    )
 
-    return tensor.to_local()
+    tensor.data = result.to_local()
 
 
 def all_gather(tensor_list, tensor):
@@ -105,15 +105,18 @@ def all_gather(tensor_list, tensor):
     assert len(tensor_list) == flow.env.get_world_size()
     assert tensor.device.index == flow.env.get_local_rank()
     assert tensor.is_local
-    tensor = tensor.expand([1] + list(tensor.shape))
+    tensor = tensor.expand(*([1] + list(tensor.shape)))
     device_type = tensor.device.type
-    tensor = tensor.to_consistent(
-        placement=flow.env.all_device_placement(device_type), sbp=flow.sbp.split(0)
+    placement = flow.env.all_device_placement(device_type)
+    tensor = (
+        tensor.to_global(placement=placement, sbp=flow.sbp.split(0))
+        .to_global(placement=placement, sbp=flow.sbp.broadcast)
+        .to_local()
     )
-    tensor = tensor.to_consistent(sbp=flow.sbp.broadcast)
     assert len(tensor_list) == flow.env.get_world_size()
+    # TODO(): getitem has bug on global tensor with size = [2, 1].
     for i in range(tensor.shape[0]):
-        tensor_list[i] = tensor[i].to_local()
+        tensor_list[i] = tensor[i]
 
 
 def broadcast(tensor, src):
@@ -203,9 +206,58 @@ def reduce(tensor, dst):
     assert isinstance(tensor, flow._oneflow_internal.Tensor)
     assert tensor.is_local
     assert isinstance(dst, int)
-    result = flow.comm.all_reduce(tensor)
-    if flow.env.get_rank() == dst:
-        tensor.data = result
+    original_tensor = flow._C.identity(tensor)
+    flow.comm.all_reduce(tensor)
+    if flow.env.get_rank() != dst:
+        tensor.data = original_tensor
+
+
+def all_to_all(output_tensor_list, input_tensor_list):
+    """
+    Each process scatters list of input tensors to all processes in a group and
+    return gathered list of tensors in output list.
+
+    Args:
+        output_tensor_list (list[Tensor]): List of tensors to be gathered one
+            per rank.
+        input_tensor_list (list[Tensor]): List of tensors to scatter one per rank.
+
+    """
+
+    def _check_list(tensor_list):
+        assert isinstance(tensor_list, list)
+        assert len(tensor_list) == flow.env.get_world_size()
+        shape = tensor_list[0].shape
+        dtype = tensor_list[0].dtype
+        device = tensor_list[0].device
+        for tensor in tensor_list:
+            assert isinstance(tensor, flow._oneflow_internal.Tensor)
+            assert tensor.is_local
+            assert shape == tensor.shape
+            assert dtype == tensor.dtype
+            assert device == tensor.device
+
+    _check_list(output_tensor_list)
+    _check_list(input_tensor_list)
+
+    assert input_tensor_list[0].shape == output_tensor_list[0].shape
+    assert input_tensor_list[0].dtype == output_tensor_list[0].dtype
+    assert input_tensor_list[0].device == output_tensor_list[0].device
+
+    for i in range(flow.env.get_world_size()):
+        flow.comm.scatter(
+            output_tensor_list[i],
+            input_tensor_list if i == flow.env.get_rank() else [],
+            src=i,
+        )
+
+
+def barrier():
+    """
+    Synchronizes all processes.
+
+    """
+    flow._oneflow_internal.eager.multi_client.Sync()
 
 
 def reduce_scatter(output, input_list):
@@ -228,9 +280,9 @@ def reduce_scatter(output, input_list):
     for tensor in input_list:
         assert tensor.is_local
         assert tensor.shape == output_shape
-        tensor = tensor.to_consistent(
+        tensor = tensor.to_global(
             placement=placement, sbp=flow.sbp.partial_sum
-        ).to_consistent(placement=placement, sbp=flow.sbp.broadcast)
+        ).to_global(placement=placement, sbp=flow.sbp.broadcast)
         reduced_tensor_list.append(tensor.to_local())
     output.data = reduced_tensor_list[flow.env.get_rank()]
 
@@ -251,12 +303,12 @@ def gather(tensor, gather_list=None, dst=0):
     assert tensor.is_local
     shape = tensor.shape
     dtype = tensor.dtype
-    tensor = tensor.expand([1] + list(shape))
+    tensor = tensor.expand(*([1] + list(shape)))
     device_type = tensor.device.type
     placement = flow.env.all_device_placement(device_type)
-    tensor = tensor.to_consistent(
-        placement=placement, sbp=flow.sbp.split(0)
-    ).to_consistent(placement=placement, sbp=flow.sbp.broadcast)
+    tensor = tensor.to_global(placement=placement, sbp=flow.sbp.split(0)).to_global(
+        placement=placement, sbp=flow.sbp.broadcast
+    )
 
     if gather_list is None:
         gather_list = [
@@ -266,7 +318,5 @@ def gather(tensor, gather_list=None, dst=0):
     assert gather_list is not None
     assert isinstance(gather_list, list)
     assert len(gather_list) == flow.env.get_world_size()
-    # "to_consistent(placement=flow.env.all_device_placement("cuda/cpu"), sbp=flow.sbp.broadcast)"
-    # after here will fail, if do getitem on some a rank
     for i in range(tensor.shape[0]):
         gather_list[i] = tensor[i].to_local()

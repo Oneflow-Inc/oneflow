@@ -15,7 +15,7 @@ limitations under the License.
 */
 #include "oneflow/core/ep/include/primitive/permute.h"
 #include "oneflow/core/ep/common/primitive/permute_impl.h"
-#include "oneflow/core/stream/cuda/cuda_stream_context.h"
+#include "oneflow/core/ep/cuda/cuda_stream.h"
 #include <cuda_runtime.h>
 
 namespace oneflow {
@@ -260,11 +260,11 @@ void InferBatchTransposeShape(const int64_t* src_dims, IndexType* num_batches, I
 }
 
 template<size_t num_dims, size_t movement_size, typename IndexType>
-void LaunchKernel(StreamContext* stream_ctx, const int64_t* src_dims, const void* src,
-                  const int* permutation, void* dst, size_t count) {
+void LaunchKernel(Stream* stream, const int64_t* src_dims, const void* src, const int* permutation,
+                  void* dst, size_t count) {
   PermuteKernelParams<num_dims, IndexType> params =
       MakePermuteParams<num_dims, IndexType>(src_dims, src, permutation, dst, count);
-  cudaStream_t cuda_stream = stream_ctx->As<CudaStreamContext>()->cuda_stream();
+  cudaStream_t cuda_stream = stream->As<CudaStream>()->cuda_stream();
 
   if (num_dims == 2 || num_dims == 3) {
     IndexType num_batches;
@@ -297,10 +297,9 @@ class PermuteImpl : public Permute {
   ~PermuteImpl() override = default;
 
   using Permute::Launch;
-  void Launch(StreamContext* stream_ctx, DataType data_type, size_t num_dims,
-              const int64_t* src_dims, const void* src, const int* permutation,
-              void* dst) override {
-    SimplifyThenLaunch(stream_ctx, data_type, num_dims, src_dims, src, permutation, dst);
+  void Launch(Stream* stream, DataType data_type, size_t num_dims, const int64_t* src_dims,
+              const void* src, const int* permutation, void* dst) override {
+    SimplifyThenLaunch(stream, data_type, num_dims, src_dims, src, permutation, dst);
   }
 };
 
@@ -319,7 +318,7 @@ class PermuteFactoryImpl : public PermuteFactory {
   }
 };
 
-REGISTER_PRIMITIVE_FACTORY(DeviceType::kGPU, PermuteFactory, PermuteFactoryImpl);
+REGISTER_PRIMITIVE_FACTORY(DeviceType::kCUDA, PermuteFactory, PermuteFactoryImpl);
 
 }  // namespace
 

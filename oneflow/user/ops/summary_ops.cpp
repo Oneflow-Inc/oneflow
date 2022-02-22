@@ -14,11 +14,11 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 #include "oneflow/core/framework/framework.h"
-#include "oneflow/core/framework/user_op_attr.pb.h"
+#include "oneflow/core/framework/op_generated.h"
 
 namespace oneflow {
 
-namespace summary {
+namespace {
 
 Maybe<void> CheckStepShape(const Shape* step) {
   CHECK_OR_RETURN(step->elem_cnt() == 1);
@@ -37,51 +37,85 @@ Maybe<void> CheckInAndStepScalar(user_op::InferContext* ctx) {
   return Maybe<void>::Ok();
 }
 
-REGISTER_NO_GRAD_CPU_ONLY_USER_OP("create_summary_writer")
-    .Attr<std::string>("logdir")
-    .SetTensorDescInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
-      return Maybe<void>::Ok();
-    })
-    .SetDataTypeInferFn([](user_op::InferContext* ctx) -> Maybe<void> { return Maybe<void>::Ok(); })
-    .SetGetSbpFn(user_op::GetSbpFnUtil::DefaultBroadcastToBroadcast);
+}  // namespace
 
-REGISTER_NO_GRAD_CPU_ONLY_USER_OP("flush_summary_writer")
-    .SetTensorDescInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
-      return Maybe<void>::Ok();
-    })
-    .SetDataTypeInferFn([](user_op::InferContext* ctx) -> Maybe<void> { return Maybe<void>::Ok(); })
-    .SetGetSbpFn(user_op::GetSbpFnUtil::DefaultBroadcastToBroadcast);
+/*static*/ Maybe<void> CreateSummaryWriterOp::GetSbp(user_op::SbpContext* ctx) {
+  return user_op::GetSbpFnUtil::DefaultBroadcastToBroadcast(ctx);
+}
+/*static*/ Maybe<void> CreateSummaryWriterOp::InferLogicalTensorDesc(user_op::InferContext* ctx) {
+  return Maybe<void>::Ok();
+}
+/*static*/ Maybe<void> CreateSummaryWriterOp::InferPhysicalTensorDesc(user_op::InferContext* ctx) {
+  return Maybe<void>::Ok();
+}
+/*static*/ Maybe<void> CreateSummaryWriterOp::InferDataType(user_op::InferContext* ctx) {
+  return Maybe<void>::Ok();
+}
 
-REGISTER_NO_GRAD_CPU_ONLY_USER_OP("summary_write_scalar")
-    .Input("in")
-    .Input("step")
-    .Input("tag")
-    .SetTensorDescInferFn(CheckInAndStepScalar)
-    .SetDataTypeInferFn([](user_op::InferContext* ctx) -> Maybe<void> { return Maybe<void>::Ok(); })
-    .SetGetSbpFn(user_op::GetSbpFnUtil::DefaultBroadcastToBroadcast);
+/*static*/ Maybe<void> FlushSummaryWriterOp::GetSbp(user_op::SbpContext* ctx) {
+  return user_op::GetSbpFnUtil::DefaultBroadcastToBroadcast(ctx);
+}
+/*static*/ Maybe<void> FlushSummaryWriterOp::InferLogicalTensorDesc(user_op::InferContext* ctx) {
+  return Maybe<void>::Ok();
+}
+/*static*/ Maybe<void> FlushSummaryWriterOp::InferPhysicalTensorDesc(user_op::InferContext* ctx) {
+  return Maybe<void>::Ok();
+}
+/*static*/ Maybe<void> FlushSummaryWriterOp::InferDataType(user_op::InferContext* ctx) {
+  return Maybe<void>::Ok();
+}
 
-REGISTER_NO_GRAD_CPU_ONLY_USER_OP("summary_write_histogram")
-    .Input("in")
-    .Input("step")
-    .Input("tag")
-    .SetTensorDescInferFn(CheckStepShapeInCtx)
-    .SetDataTypeInferFn([](user_op::InferContext* ctx) -> Maybe<void> { return Maybe<void>::Ok(); })
-    .SetGetSbpFn(user_op::GetSbpFnUtil::DefaultBroadcastToBroadcast);
+/*static*/ Maybe<void> SummaryWriteScalarOp::GetSbp(user_op::SbpContext* ctx) {
+  return user_op::GetSbpFnUtil::DefaultBroadcastToBroadcast(ctx);
+}
+/*static*/ Maybe<void> SummaryWriteScalarOp::InferLogicalTensorDesc(user_op::InferContext* ctx) {
+  return CheckInAndStepScalar(ctx);
+}
+/*static*/ Maybe<void> SummaryWriteScalarOp::InferPhysicalTensorDesc(user_op::InferContext* ctx) {
+  return InferLogicalTensorDesc(ctx);
+}
+/*static*/ Maybe<void> SummaryWriteScalarOp::InferDataType(user_op::InferContext* ctx) {
+  return Maybe<void>::Ok();
+}
 
-REGISTER_NO_GRAD_CPU_ONLY_USER_OP("summary_write_pb")
-    .Input("in")
-    .Input("step")
-    .SetTensorDescInferFn(CheckStepShapeInCtx)
-    .SetDataTypeInferFn([](user_op::InferContext* ctx) -> Maybe<void> { return Maybe<void>::Ok(); })
-    .SetGetSbpFn(user_op::GetSbpFnUtil::DefaultBroadcastToBroadcast);
+/*static*/ Maybe<void> SummaryWriteHistogramOp::GetSbp(user_op::SbpContext* ctx) {
+  return user_op::GetSbpFnUtil::DefaultBroadcastToBroadcast(ctx);
+}
+/*static*/ Maybe<void> SummaryWriteHistogramOp::InferLogicalTensorDesc(user_op::InferContext* ctx) {
+  return CheckStepShapeInCtx(ctx);
+}
+/*static*/ Maybe<void> SummaryWriteHistogramOp::InferPhysicalTensorDesc(
+    user_op::InferContext* ctx) {
+  return InferLogicalTensorDesc(ctx);
+}
+/*static*/ Maybe<void> SummaryWriteHistogramOp::InferDataType(user_op::InferContext* ctx) {
+  return Maybe<void>::Ok();
+}
 
-REGISTER_NO_GRAD_CPU_ONLY_USER_OP("summary_write_image")
-    .Input("in")
-    .Input("step")
-    .Input("tag")
-    .SetTensorDescInferFn(CheckStepShapeInCtx)
-    .SetDataTypeInferFn([](user_op::InferContext* ctx) -> Maybe<void> { return Maybe<void>::Ok(); })
-    .SetGetSbpFn(user_op::GetSbpFnUtil::DefaultBroadcastToBroadcast);
-}  // namespace summary
+/*static*/ Maybe<void> SummaryWritePbOp::GetSbp(user_op::SbpContext* ctx) {
+  return user_op::GetSbpFnUtil::DefaultBroadcastToBroadcast(ctx);
+}
+/*static*/ Maybe<void> SummaryWritePbOp::InferLogicalTensorDesc(user_op::InferContext* ctx) {
+  return CheckStepShapeInCtx(ctx);
+}
+/*static*/ Maybe<void> SummaryWritePbOp::InferPhysicalTensorDesc(user_op::InferContext* ctx) {
+  return InferLogicalTensorDesc(ctx);
+}
+/*static*/ Maybe<void> SummaryWritePbOp::InferDataType(user_op::InferContext* ctx) {
+  return Maybe<void>::Ok();
+}
+
+/*static*/ Maybe<void> SummaryWriteImageOp::GetSbp(user_op::SbpContext* ctx) {
+  return user_op::GetSbpFnUtil::DefaultBroadcastToBroadcast(ctx);
+}
+/*static*/ Maybe<void> SummaryWriteImageOp::InferLogicalTensorDesc(user_op::InferContext* ctx) {
+  return CheckStepShapeInCtx(ctx);
+}
+/*static*/ Maybe<void> SummaryWriteImageOp::InferPhysicalTensorDesc(user_op::InferContext* ctx) {
+  return InferLogicalTensorDesc(ctx);
+}
+/*static*/ Maybe<void> SummaryWriteImageOp::InferDataType(user_op::InferContext* ctx) {
+  return Maybe<void>::Ok();
+}
 
 }  // namespace oneflow

@@ -27,20 +27,19 @@ std::unique_ptr<ep::primitive::Softmax> NewSoftmaxPrimitive(Context* ctx) {
   return ep::primitive::NewPrimitive<ep::primitive::SoftmaxFactory>(ctx->device_type(), data_type);
 }
 
-hob::HobContextGetter<user_op::KernelRegContext, bool> SoftmaxPrimitiveExists() {
-  return user_op::HobCtxGetter<bool>("SoftmaxPrimitiveExists",
-                                     [](const user_op::KernelRegContext& ctx) {
-                                       return NewSoftmaxPrimitive(&ctx).operator bool();
-                                     });
+auto SoftmaxPrimitiveExists() {
+  return hob::make_custom("SoftmaxPrimitiveExists", [](const user_op::KernelRegContext& ctx) {
+    return NewSoftmaxPrimitive(&ctx).operator bool();
+  });
 }
 
 }  // namespace
 
 template<DeviceType device_type, typename T>
 struct CrossEntropyKernelUtil {
-  static void ComputeEntropy(DeviceCtx* ctx, const int64_t num_instances, const int64_t num_classes,
-                             const T* x, const T* labels, T* y);
-  static void ComputeDiffWithSoftmax(DeviceCtx* ctx, const int64_t elem_cnt,
+  static void ComputeEntropy(ep::Stream* stream, const int64_t num_instances,
+                             const int64_t num_classes, const T* x, const T* labels, T* y);
+  static void ComputeDiffWithSoftmax(ep::Stream* stream, const int64_t elem_cnt,
                                      const int64_t num_classes, const T* prob, const T* labels,
                                      const T* dy, T* dx);
 };
@@ -63,23 +62,23 @@ class SoftmaxCrossEntropyKernel final : public user_op::OpKernel {
     const int64_t num_classes = label->shape().At(num_axes - 1);
     std::unique_ptr<ep::primitive::Softmax> primitive = NewSoftmaxPrimitive(ctx);
     CHECK(primitive);
-    primitive->Launch(ctx->stream_ctx(), num_instances, num_classes, prediction->dptr(),
+    primitive->Launch(ctx->stream(), num_instances, num_classes, prediction->dptr(),
                       prob->mut_dptr());
 
-    CrossEntropyKernelUtil<device_type, T>::ComputeEntropy(ctx->device_ctx(), num_instances,
+    CrossEntropyKernelUtil<device_type, T>::ComputeEntropy(ctx->stream(), num_instances,
                                                            num_classes, prob->dptr<T>(),
                                                            label->dptr<T>(), out->mut_dptr<T>());
   }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
 
-#define REGISTER_SOFTMAX_CROSS_ENTROPY_KERNEL(device_type_v, dtype_pair)                     \
-  REGISTER_USER_KERNEL("softmax_cross_entropy")                                              \
-      .SetCreateFn<SoftmaxCrossEntropyKernel<device_type_v, OF_PP_PAIR_FIRST(dtype_pair)>>() \
-      .SetIsMatchedHob((user_op::HobDeviceTag() == device_type_v)                            \
-                       & (user_op::HobDataType("label", 0) == OF_PP_PAIR_SECOND(dtype_pair)) \
-                       & (user_op::HobDataType("out", 0) == OF_PP_PAIR_SECOND(dtype_pair))   \
-                       & (SoftmaxPrimitiveExists() == true));
+#define REGISTER_SOFTMAX_CROSS_ENTROPY_KERNEL(device_type_v, dtype_pair)                      \
+  REGISTER_USER_KERNEL("softmax_cross_entropy")                                               \
+      .SetCreateFn<SoftmaxCrossEntropyKernel<device_type_v, OF_PP_PAIR_FIRST(dtype_pair)>>()  \
+      .SetIsMatchedHob((user_op::HobDeviceType() == device_type_v)                            \
+                       && (user_op::HobDataType("label", 0) == OF_PP_PAIR_SECOND(dtype_pair)) \
+                       && (user_op::HobDataType("out", 0) == OF_PP_PAIR_SECOND(dtype_pair))   \
+                       && SoftmaxPrimitiveExists());
 
 template<DeviceType device_type, typename T>
 class SoftmaxCrossEntropyGradKernel final : public user_op::OpKernel {
@@ -99,7 +98,7 @@ class SoftmaxCrossEntropyGradKernel final : public user_op::OpKernel {
     const int64_t num_classes = prob->shape().elem_cnt() / num_instances;
 
     CrossEntropyKernelUtil<device_type, T>::ComputeDiffWithSoftmax(
-        ctx->device_ctx(), prediction_diff->shape().elem_cnt(), num_classes, prob->dptr<T>(),
+        ctx->stream(), prediction_diff->shape().elem_cnt(), num_classes, prob->dptr<T>(),
         label->dptr<T>(), dy->dptr<T>(), prediction_diff->mut_dptr<T>());
   }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
@@ -109,9 +108,9 @@ class SoftmaxCrossEntropyGradKernel final : public user_op::OpKernel {
   REGISTER_USER_KERNEL("softmax_cross_entropy_grad")                                             \
       .SetCreateFn<SoftmaxCrossEntropyGradKernel<device_type_v, OF_PP_PAIR_FIRST(dtype_pair)>>() \
       .SetIsMatchedHob(                                                                          \
-          (user_op::HobDeviceTag() == device_type_v)                                             \
-          & (user_op::HobDataType("label", 0) == OF_PP_PAIR_SECOND(dtype_pair))                  \
-          & (user_op::HobDataType("prediction_diff", 0) == OF_PP_PAIR_SECOND(dtype_pair)))       \
+          (user_op::HobDeviceType() == device_type_v)                                            \
+          && (user_op::HobDataType("label", 0) == OF_PP_PAIR_SECOND(dtype_pair))                 \
+          && (user_op::HobDataType("prediction_diff", 0) == OF_PP_PAIR_SECOND(dtype_pair)))      \
       .SetInplaceProposalFn([](const user_op::InferContext&,                                     \
                                user_op::AddInplaceArgPair AddInplaceArgPairFn) -> Maybe<void> {  \
         OF_RETURN_IF_ERROR(AddInplaceArgPairFn("prediction_diff", 0, "prob", 0, true));          \

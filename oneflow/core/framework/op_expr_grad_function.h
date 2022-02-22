@@ -34,7 +34,7 @@ class AutoGradCaptureState {
 
   size_t SaveTensorForBackward(const std::shared_ptr<Tensor>& tensor) {
     size_t offset = saved_tensors_.size();
-    saved_tensors_.push_back(tensor);
+    saved_tensors_.emplace_back(tensor);
     return offset;
   }
 

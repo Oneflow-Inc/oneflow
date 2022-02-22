@@ -24,7 +24,7 @@ namespace oneflow {
 namespace {
 template<DeviceType device_type, typename T>
 struct CTCGreedyDecoderFunctor final {
-  void operator()(DeviceCtx* ctx, int64_t* decoded_ptr, T* neg_sum_logits_ptr,
+  void operator()(ep::Stream* stream, int64_t* decoded_ptr, T* neg_sum_logits_ptr,
                   const T* log_probs_ptr, const int64_t* input_lengths_ptr,
                   const bool merge_repeated, const int64_t max_input_length,
                   const int64_t batch_size, const int64_t num_labels);
@@ -55,7 +55,7 @@ class CTCGreedyDecoderKernel final : public user_op::OpKernel {
     int64_t* decoded_ptr = decoded->mut_dptr<int64_t>();
     T* neg_sum_logits_ptr = neg_sum_logits->mut_dptr<T>();
 
-    CTCGreedyDecoderFunctor<device_type, T>()(ctx->device_ctx(), decoded_ptr, neg_sum_logits_ptr,
+    CTCGreedyDecoderFunctor<device_type, T>()(ctx->stream(), decoded_ptr, neg_sum_logits_ptr,
                                               log_probs_ptr, input_lengths_ptr, merge_repeated,
                                               max_input_length, batch_size, num_labels);
   }
@@ -65,8 +65,8 @@ class CTCGreedyDecoderKernel final : public user_op::OpKernel {
 #define REGISTER_CTC_GREEDY_DECODER_KERNELS(device, dtype)  \
   REGISTER_USER_KERNEL("ctc_greedy_decoder")                \
       .SetCreateFn<CTCGreedyDecoderKernel<device, dtype>>() \
-      .SetIsMatchedHob((user_op::HobDeviceTag() == device)  \
-                       & (user_op::HobDataType("log_probs", 0) == GetDataType<dtype>::value));
+      .SetIsMatchedHob((user_op::HobDeviceType() == device) \
+                       && (user_op::HobDataType("log_probs", 0) == GetDataType<dtype>::value));
 
 }  // namespace oneflow
 

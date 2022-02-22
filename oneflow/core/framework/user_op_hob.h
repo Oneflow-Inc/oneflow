@@ -16,7 +16,10 @@ limitations under the License.
 #ifndef ONEFLOW_CORE_FRAMEWORK_USER_OP_HOB_H_
 #define ONEFLOW_CORE_FRAMEWORK_USER_OP_HOB_H_
 
+#include <sstream>
+
 #include "oneflow/core/common/data_type.h"
+#include "oneflow/core/common/device_type.h"
 #include "oneflow/core/common/high_order_bool.h"
 #include "oneflow/core/framework/to_string.h"
 #include "oneflow/core/framework/user_op_registry_manager.h"
@@ -25,68 +28,45 @@ namespace oneflow {
 
 namespace user_op {
 
-hob::BoolFunctorPtr<KernelRegContext> HobTrue();
+ALWAYS_INLINE inline auto HobTrue() {
+  std::ostringstream string_stream;
+  string_stream << "\" always true \"";
+  return hob::LiteralBool<KernelRegContext>(string_stream.str(), true);
+}
 
-hob::BoolFunctorPtr<KernelRegContext> HobFalse();
+ALWAYS_INLINE inline auto HobFalse() {
+  std::ostringstream string_stream;
+  string_stream << "\" always false \"";
+  return hob::LiteralBool<KernelRegContext>(string_stream.str(), false);
+}
 
-hob::HobContextGetter<KernelRegContext, DataType> HobDataType(const std::string& tensor_name,
-                                                              int tensor_idx);
-
-template<typename T>
-hob::HobContextGetter<user_op::KernelRegContext, T> HobCtxGetter(
-    const std::string& debug_str,
-    const std::function<T(const user_op::KernelRegContext&)> hob_func) {
-  return hob::HobContextGetter<user_op::KernelRegContext, T>(debug_str, hob_func);
+ALWAYS_INLINE inline auto HobDataType(const std::string& tensor_name, int tensor_idx) {
+  std::ostringstream string_stream;
+  string_stream << "data_type of tensor \'" << tensor_name << "\'";
+  return hob::make_custom(
+      string_stream.str(), [tensor_name, tensor_idx](const KernelRegContext& ctx) -> DataType {
+        const user_op::TensorDesc* desc = ctx.TensorDesc4ArgNameAndIndex(tensor_name, tensor_idx);
+        return desc->data_type();
+      });
 }
 
 template<typename T>
-hob::HobContextGetter<user_op::KernelRegContext, T> HobAttr(const std::string& attr_name) {
-  return user_op::HobCtxGetter<T>(attr_name, [attr_name](const user_op::KernelRegContext& ctx) {
+ALWAYS_INLINE inline auto HobAttr(const std::string& attr_name) {
+  return hob::make_custom(attr_name, [attr_name](const user_op::KernelRegContext& ctx) -> const T& {
     return ctx.Attr<T>(attr_name);
   });
 }
 
-template<typename ContextT>
-class HobStringContextGetter final {
- public:
-  HobStringContextGetter(const DeviceType& device_type) {
-    auto str = ToString(device_type);
-    debug_str_ = str;
-    context_getter_ = [str](const ContextT&) -> std::string { return str; };
-  }
-  HobStringContextGetter(const char* const_value) {
-    auto str = std::string(const_value);
-    debug_str_ = str;
-    context_getter_ = [str](const ContextT&) -> std::string { return str; };
-  }
-  HobStringContextGetter(const std::string& str) {
-    debug_str_ = str;
-    context_getter_ = [str](const ContextT&) -> std::string { return str; };
-  }
+ALWAYS_INLINE inline auto HobDeviceType() {
+  return hob::make_custom(
+      "device_type", [](const KernelRegContext& ctx) -> DeviceType { return ctx.device_type(); });
+}
 
-  HobStringContextGetter(const std::string& debug_str,
-                         const std::function<std::string(const ContextT&)>& context_getter)
-      : debug_str_(debug_str), context_getter_(context_getter) {}
-
-  hob::BoolFunctorPtr<ContextT> operator==(const HobStringContextGetter& other) const {
-    std::ostringstream string_stream;
-    string_stream << debug_str_ << " == " << other.debug_str_;
-    std::function<std::string(const ContextT&)> l_fn = this->context_getter_;
-    std::function<std::string(const ContextT&)> r_fn = other.context_getter_;
-    std::shared_ptr<const hob::BoolFunctor<ContextT>> krbf_ptr =
-        std::make_shared<const hob::HighOrderBoolFunctor<ContextT>>(
-            string_stream.str(),
-            [l_fn, r_fn](const ContextT& ctx) { return l_fn(ctx) == r_fn(ctx); });
-    return krbf_ptr;
-  }
-
- private:
-  std::string debug_str_;
-  std::function<std::string(const ContextT&)> context_getter_;
-};
-
-HobStringContextGetter<KernelRegContext> HobDeviceTag();
-HobStringContextGetter<KernelRegContext> HobDeviceSubTag();
+ALWAYS_INLINE inline auto HobDeviceSubTag() {
+  return hob::make_custom("device_sub_tag", [](const KernelRegContext& ctx) -> const std::string& {
+    return ctx.Attr<std::string>("device_sub_tag");
+  });
+}
 
 }  // namespace user_op
 

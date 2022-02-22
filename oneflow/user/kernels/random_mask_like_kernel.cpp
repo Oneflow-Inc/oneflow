@@ -21,11 +21,11 @@ namespace {
 #define REGISTER_RANDOM_MASK_LIKE_KERNEL(device)   \
   REGISTER_USER_KERNEL("random_mask_like")         \
       .SetCreateFn<RandomMaskLikeKernel<device>>() \
-      .SetIsMatchedHob(user_op::HobDeviceTag() == device);
+      .SetIsMatchedHob(user_op::HobDeviceType() == device);
 
 REGISTER_RANDOM_MASK_LIKE_KERNEL(DeviceType::kCPU)
 #ifdef WITH_CUDA
-REGISTER_RANDOM_MASK_LIKE_KERNEL(DeviceType::kGPU)
+REGISTER_RANDOM_MASK_LIKE_KERNEL(DeviceType::kCUDA)
 #endif
 }  // namespace
 

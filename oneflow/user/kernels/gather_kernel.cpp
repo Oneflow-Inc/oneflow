@@ -28,10 +28,10 @@ Shape GetFlatShape(const ShapeView& shape, int64_t axis) {
   return Shape({shape.Count(0, axis), shape.At(axis), shape.Count(axis + 1)});
 }
 
-class GatherOpKernelState final : public user_op::OpKernelState {
+class GatherOpKernelCache final : public user_op::OpKernelCache {
  public:
-  GatherOpKernelState(int64_t lower, int64_t upper) : lower_(lower), upper_(upper) {}
-  ~GatherOpKernelState() override = default;
+  GatherOpKernelCache(int64_t lower, int64_t upper) : lower_(lower), upper_(upper) {}
+  ~GatherOpKernelCache() override = default;
 
   int64_t lower() const { return lower_; }
   int64_t upper() const { return upper_; }
@@ -41,8 +41,8 @@ class GatherOpKernelState final : public user_op::OpKernelState {
   const int64_t upper_;
 };
 
-void CheckNdSbp(const Shape& hierarchy, int64_t gather_axis, const cfg::NdSbp& in_nd_sbp,
-                const cfg::NdSbp& indices_nd_sbp, const cfg::NdSbp& out_nd_sbp) {
+void CheckNdSbp(const Shape& hierarchy, int64_t gather_axis, const NdSbp& in_nd_sbp,
+                const NdSbp& indices_nd_sbp, const NdSbp& out_nd_sbp) {
   CHECK_EQ(hierarchy.NumAxes(), in_nd_sbp.sbp_parallel_size());
   CHECK_EQ(hierarchy.NumAxes(), indices_nd_sbp.sbp_parallel_size());
   CHECK_EQ(hierarchy.NumAxes(), in_nd_sbp.sbp_parallel_size());
@@ -64,25 +64,26 @@ class GatherKernel final : public user_op::OpKernel, public user_op::CudaGraphSu
   GatherKernel() = default;
   ~GatherKernel() override = default;
 
-  std::shared_ptr<user_op::OpKernelState> CreateOpKernelState(
-      user_op::KernelInitContext* ctx) const override {
+  std::shared_ptr<user_op::OpKernelCache> InitOpKernelCache(
+      user_op::KernelCacheContext* ctx) const override {
     if (ctx->parallel_ctx().parallel_num() > 1) {
       const auto axis = ctx->Attr<int64_t>("axis");
-      const cfg::NdSbp& in_nd_sbp = ctx->NdSbp4ArgNameAndIndex("in", 0);
+      const NdSbp& in_nd_sbp = ctx->NdSbp4ArgNameAndIndex("in", 0);
       const Shape& hierarchy = *ctx->parallel_desc().hierarchy();
       CheckNdSbp(hierarchy, axis, in_nd_sbp, ctx->NdSbp4ArgNameAndIndex("indices", 0),
                  ctx->NdSbp4ArgNameAndIndex("out", 0));
       const TensorDesc* in_logical_desc = ctx->LogicalTensorDesc4ArgNameAndIndex("in", 0);
       TensorSliceView view = GetTensorSliceView4ParallelId(
           hierarchy, in_nd_sbp, in_logical_desc->shape(), ctx->parallel_ctx().parallel_id());
-      return std::make_shared<GatherOpKernelState>(view.At(axis).begin(), view.At(axis).end());
+      return std::make_shared<GatherOpKernelCache>(view.At(axis).begin(), view.At(axis).end());
     } else {
-      return std::shared_ptr<OpKernelState>(nullptr);
+      return nullptr;
     }
   }
 
  private:
-  void Compute(user_op::KernelComputeContext* ctx, user_op::OpKernelState* state) const override {
+  void Compute(user_op::KernelComputeContext* ctx, user_op::OpKernelState*,
+               const user_op::OpKernelCache* cache) const override {
     const user_op::Tensor* in = ctx->Tensor4ArgNameAndIndex("in", 0);
     const user_op::Tensor* indices = ctx->Tensor4ArgNameAndIndex("indices", 0);
     const int64_t axis = ctx->Attr<int64_t>("axis");
@@ -91,16 +92,16 @@ class GatherKernel final : public user_op::OpKernel, public user_op::CudaGraphSu
     if (out->shape().elem_cnt() == 0) { return; }
 
     int64_t offset = 0;
-    if (state != nullptr) {
-      auto* gather_state = dynamic_cast<GatherOpKernelState*>(state);
-      CHECK_NOTNULL(gather_state);
-      CHECK_EQ(in->shape().At(axis), gather_state->upper() - gather_state->lower());
-      offset = gather_state->lower();
+    if (cache != nullptr) {
+      auto* gather_cache = dynamic_cast<const GatherOpKernelCache*>(cache);
+      CHECK_NOTNULL(gather_cache);
+      CHECK_EQ(in->shape().At(axis), gather_cache->upper() - gather_cache->lower());
+      offset = gather_cache->lower();
     }
 
-    GatherKernelUtilImpl<device_type, T, K>::Forward(
-        ctx->device_ctx(), indices->dptr<K>(), num_indices, in->dptr<T>(),
-        GetFlatShape(in->shape(), axis), out->mut_dptr<T>(), offset);
+    GatherKernelUtilImpl<device_type, T, K>::Forward(ctx->stream(), indices->dptr<K>(), num_indices,
+                                                     in->dptr<T>(), GetFlatShape(in->shape(), axis),
+                                                     out->mut_dptr<T>(), offset);
   }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
@@ -109,9 +110,10 @@ class GatherKernel final : public user_op::OpKernel, public user_op::CudaGraphSu
   REGISTER_USER_KERNEL("gather")                                                             \
       .SetCreateFn<                                                                          \
           GatherKernel<device, OF_PP_PAIR_FIRST(in_type), OF_PP_PAIR_FIRST(indices_type)>>() \
-      .SetIsMatchedHob((user_op::HobDeviceTag() == device)                                   \
-                       & (user_op::HobDataType("in", 0) == OF_PP_PAIR_SECOND(in_type))       \
-                       & (user_op::HobDataType("indices", 0) == OF_PP_PAIR_SECOND(indices_type)));
+      .SetIsMatchedHob(                                                                      \
+          (user_op::HobDeviceType() == device)                                               \
+          && (user_op::HobDataType("in", 0) == OF_PP_PAIR_SECOND(in_type))                   \
+          && (user_op::HobDataType("indices", 0) == OF_PP_PAIR_SECOND(indices_type)));
 
 OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(REGISTER_GATHER_KERNEL, DEVICE_TYPE_SEQ, GATHER_DATA_TYPE_SEQ,
                                  INDEX_DATA_TYPE_SEQ)

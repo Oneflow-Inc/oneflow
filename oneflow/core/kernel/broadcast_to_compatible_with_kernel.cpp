@@ -44,7 +44,7 @@ void BroadcastToCompatibleWithKernel<device_type, T>::ForwardDataContent(KernelC
       CHECK_EQ(x_extend_shape.At(i), 1);
     }
   }
-  NdarrayUtil<device_type, T>::BroadcastTo(ctx->device_ctx(), XpuVarNdarray<T>(y, num_axes),
+  NdarrayUtil<device_type, T>::BroadcastTo(ctx->stream(), XpuVarNdarray<T>(y, num_axes),
                                            XpuVarNdarray<const T>(x, num_axes));
 }
 
@@ -54,10 +54,10 @@ void BroadcastToCompatibleWithKernel<device_type, T>::ForwardDataContent(KernelC
       BroadcastToCompatibleWithKernel<device_type_v, OF_PP_PAIR_FIRST(dtype_pair)>)
 
 OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(REGISTTER_BROADCAST_TO_COMPATIBLE_WITH_KERNEL, DEVICE_TYPE_SEQ,
-                                 ARITHMETIC_DATA_TYPE_SEQ)
+                                 ARITHMETIC_DATA_TYPE_SEQ BOOL_DATA_TYPE_SEQ)
 
 #if defined(WITH_CUDA)
-REGISTTER_BROADCAST_TO_COMPATIBLE_WITH_KERNEL(DeviceType::kGPU, (float16, DataType::kFloat16))
+REGISTTER_BROADCAST_TO_COMPATIBLE_WITH_KERNEL(DeviceType::kCUDA, (float16, DataType::kFloat16))
 #endif
 
 }  // namespace oneflow

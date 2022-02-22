@@ -30,13 +30,13 @@ class ElementwiseUnaryImpl : public ElementwiseUnary {
   ElementwiseUnaryImpl() = default;
   ~ElementwiseUnaryImpl() override = default;
 
-  void Launch(StreamContext* stream_ctx, const void* src, void* dst, size_t count) override {
-    auto* cuda_stream_ctx = stream_ctx->As<CudaStreamContext>();
+  void Launch(Stream* stream, const void* src, void* dst, size_t count) override {
+    auto* cuda_stream = stream->As<CudaStream>();
     OF_CUDA_CHECK(
-        (cuda::elementwise::Unary<UnaryFunctor<DeviceType::kGPU, unary_op, Dst, Src>, Dst, Src>(
-            UnaryFunctor<DeviceType::kGPU, unary_op, Dst, Src>(), count,
+        (cuda::elementwise::Unary<UnaryFunctor<DeviceType::kCUDA, unary_op, Dst, Src>, Dst, Src>(
+            UnaryFunctor<DeviceType::kCUDA, unary_op, Dst, Src>(), count,
             reinterpret_cast<Dst*>(dst), reinterpret_cast<const Src*>(src),
-            cuda_stream_ctx->cuda_stream())));
+            cuda_stream->cuda_stream())));
   }
 };
 
@@ -65,12 +65,17 @@ class ElementwiseUnaryFactoryImpl : public ElementwiseUnaryFactory {
     static const std::map<std::tuple<UnaryOp, DataType, DataType>,
                           std::function<std::unique_ptr<ElementwiseUnary>()>>
         new_elementwise_unary_handle{
+            // For All Type OP
             OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(MAKE_NEW_SAME_DTYPE_ELEMENTWISE_UNARY_ENTRY,
                                              UNARY_MATH_OP_SEQ, CUDA_PRIMITIVE_ALL_TYPE_SEQ)
-
-                OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(MAKE_NEW_DIFFERENT_DTYPE_ELEMENTWISE_UNARY_ENTRY,
-                                                 UNARY_LOGICAL_OP_SEQ, CUDA_PRIMITIVE_ALL_TYPE_SEQ,
-                                                 CUDA_PRIMITIVE_INT8_TYPE_SEQ)};
+            // For Float Type OP
+            OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(MAKE_NEW_SAME_DTYPE_ELEMENTWISE_UNARY_ENTRY,
+                                             UNARY_FLOATING_MATH_OP_SEQ,
+                                             CUDA_PRIMITIVE_FLOATING_TYPE_SEQ)
+            // For Logical OP
+            OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(MAKE_NEW_DIFFERENT_DTYPE_ELEMENTWISE_UNARY_ENTRY,
+                                             UNARY_LOGICAL_OP_SEQ, CUDA_PRIMITIVE_ALL_TYPE_SEQ,
+                                             CUDA_PRIMITIVE_BOOL_TYPE_SEQ)};
 
 #undef MAKE_NEW_DIFFERENT_DTYPE_ELEMENTWISE_UNARY_ENTRY
 
@@ -85,7 +90,7 @@ class ElementwiseUnaryFactoryImpl : public ElementwiseUnaryFactory {
   }
 };
 
-REGISTER_PRIMITIVE_FACTORY(DeviceType::kGPU, ElementwiseUnaryFactory, ElementwiseUnaryFactoryImpl);
+REGISTER_PRIMITIVE_FACTORY(DeviceType::kCUDA, ElementwiseUnaryFactory, ElementwiseUnaryFactoryImpl);
 
 }  // namespace
 }  // namespace primitive

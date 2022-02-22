@@ -29,11 +29,10 @@ std::unique_ptr<ep::primitive::LogSoftmax> NewLogSoftmaxPrimitive(Context* ctx) 
                                                                        data_type);
 }
 
-hob::HobContextGetter<user_op::KernelRegContext, bool> LogSoftmaxPrimitiveExists() {
-  return user_op::HobCtxGetter<bool>("LogSoftmaxPrimitiveExists",
-                                     [](const user_op::KernelRegContext& ctx) {
-                                       return NewLogSoftmaxPrimitive(&ctx).operator bool();
-                                     });
+auto LogSoftmaxPrimitiveExists() {
+  return hob::make_custom("LogSoftmaxPrimitiveExists", [](const user_op::KernelRegContext& ctx) {
+    return NewLogSoftmaxPrimitive(&ctx).operator bool();
+  });
 }
 
 template<typename Context>
@@ -43,11 +42,11 @@ std::unique_ptr<ep::primitive::LogSoftmaxBackward> NewLogSoftmaxBackwardPrimitiv
                                                                                data_type);
 }
 
-hob::HobContextGetter<user_op::KernelRegContext, bool> LogSoftmaxBackwardPrimitiveExists() {
-  return user_op::HobCtxGetter<bool>("LogSoftmaxBackwardPrimitiveExists",
-                                     [](const user_op::KernelRegContext& ctx) {
-                                       return NewLogSoftmaxBackwardPrimitive(&ctx).operator bool();
-                                     });
+auto LogSoftmaxBackwardPrimitiveExists() {
+  return hob::make_custom("LogSoftmaxBackwardPrimitiveExists",
+                          [](const user_op::KernelRegContext& ctx) {
+                            return NewLogSoftmaxBackwardPrimitive(&ctx).operator bool();
+                          });
 }
 
 class LogSoftmaxKernel final : public user_op::OpKernel, public user_op::CudaGraphSupport {
@@ -65,7 +64,7 @@ class LogSoftmaxKernel final : public user_op::OpKernel, public user_op::CudaGra
     const int64_t num_instances = in->shape().Count(0, in->shape().NumAxes() - 1);
     std::unique_ptr<ep::primitive::LogSoftmax> primitive = NewLogSoftmaxPrimitive(ctx);
     CHECK(primitive);
-    primitive->Launch(ctx->stream_ctx(), num_instances, num_classes, in->dptr(), prob->mut_dptr());
+    primitive->Launch(ctx->stream(), num_instances, num_classes, in->dptr(), prob->mut_dptr());
   }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
@@ -89,7 +88,7 @@ class LogSoftmaxGradKernel final : public user_op::OpKernel, public user_op::Cud
     std::unique_ptr<ep::primitive::LogSoftmaxBackward> primitive =
         NewLogSoftmaxBackwardPrimitive(ctx);
     CHECK(primitive);
-    primitive->Launch(ctx->stream_ctx(), num_instances, num_classes, prob->dptr(), dy->dptr(),
+    primitive->Launch(ctx->stream(), num_instances, num_classes, prob->dptr(), dy->dptr(),
                       dx->mut_dptr());
   }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }

@@ -15,7 +15,7 @@ limitations under the License.
 */
 #include "oneflow/core/framework/framework.h"
 #include "oneflow/user/kernels/distributions/common.h"
-#include "oneflow/user/kernels/op_kernel_state_wrapper.h"
+#include "oneflow/user/kernels/op_kernel_wrapper.h"
 #include "oneflow/user/kernels/random_seed_util.h"
 #include "oneflow/user/kernels/random_mask_generator.h"
 
@@ -35,7 +35,8 @@ class BernoulliKerenl final : public user_op::OpKernel {
   }
 
  private:
-  void Compute(user_op::KernelComputeContext* ctx, user_op::OpKernelState* state) const override {
+  void Compute(user_op::KernelComputeContext* ctx, user_op::OpKernelState* state,
+               const user_op::OpKernelCache*) const override {
     user_op::Tensor* in_blob = ctx->Tensor4ArgNameAndIndex("in", 0);
     user_op::Tensor* out_blob = ctx->Tensor4ArgNameAndIndex("out", 0);
     const T* in_dptr = in_blob->dptr<T>();
@@ -64,9 +65,9 @@ class BernoulliKerenl final : public user_op::OpKernel {
   REGISTER_USER_KERNEL("bernoulli")                                                             \
       .SetCreateFn<                                                                             \
           BernoulliKerenl<OF_PP_PAIR_FIRST(in_dtype_pair), OF_PP_PAIR_FIRST(out_dtype_pair)>>() \
-      .SetIsMatchedHob((user_op::HobDeviceTag() == "cpu")                                       \
-                       & (user_op::HobDataType("in", 0) == OF_PP_PAIR_SECOND(in_dtype_pair))    \
-                       & (user_op::HobDataType("out", 0) == OF_PP_PAIR_SECOND(out_dtype_pair)));
+      .SetIsMatchedHob((user_op::HobDeviceType() == DeviceType::kCPU)                           \
+                       && (user_op::HobDataType("in", 0) == OF_PP_PAIR_SECOND(in_dtype_pair))   \
+                       && (user_op::HobDataType("out", 0) == OF_PP_PAIR_SECOND(out_dtype_pair)));
 
 OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(REGISTER_BERNOULLI_KERNEL, FLOATING_DATA_TYPE_SEQ,
                                  ARITHMETIC_DATA_TYPE_SEQ)

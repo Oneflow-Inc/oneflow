@@ -67,14 +67,16 @@ Runtime::Runtime(const Plan& plan, const HashMap<std::string, Blob*>& variable_o
         Global<boxing::collective::Scheduler>::Get()->AddPlan(plan);
   }
   std::vector<const TaskProto*> source_tasks;
+  source_tasks.reserve(plan.task().size());
   std::vector<const TaskProto*> other_tasks;
+  other_tasks.reserve(plan.task().size());
   int64_t this_machine_task_num = 0;
   for (const TaskProto& task : plan.task()) {
     if (task.machine_id() != GlobalProcessCtx::Rank()) { continue; }
     if (!HasNonCtrlConsumedRegstDescId(task)) {
-      source_tasks.push_back(&task);
+      source_tasks.emplace_back(&task);
     } else {
-      other_tasks.push_back(&task);
+      other_tasks.emplace_back(&task);
     }
     auto it = job_id2actor_size_.find(task.job_id());
     if (it == job_id2actor_size_.end()) {

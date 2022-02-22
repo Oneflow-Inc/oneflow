@@ -16,29 +16,39 @@ limitations under the License.
 #ifndef ONEFLOW_CORE_COMMON_DATA_TYPE_H_
 #define ONEFLOW_CORE_COMMON_DATA_TYPE_H_
 
+#include <cfloat>
 #include <type_traits>
 #if defined(WITH_CUDA)
 #include <cuda_fp16.h>
 #endif
-#include "oneflow/core/common/fp16_data_type.h"
 #include "oneflow/core/common/data_type.pb.h"
 #include "oneflow/core/common/data_type_seq.h"
 #include "oneflow/core/record/record.pb.h"
 #include "oneflow/core/common/util.h"
 #include "oneflow/core/common/device_type.h"
+#include <half.hpp>
 
 namespace oneflow {
 
-#if defined(WITH_CUDA)
-#define DEVICE_TYPE_SEQ                  \
-  OF_PP_MAKE_TUPLE_SEQ(DeviceType::kCPU) \
-  OF_PP_MAKE_TUPLE_SEQ(DeviceType::kGPU)
-#else
-#define DEVICE_TYPE_SEQ OF_PP_MAKE_TUPLE_SEQ(DeviceType::kCPU)
-#endif
+typedef half_float::half float16;
+
+template<typename T>
+struct IsFloat16;
+
+template<>
+struct IsFloat16<float16> : std::true_type {};
+
+#ifdef WITH_CUDA
+
+template<>
+struct IsFloat16<half> : std::true_type {};
+
+#endif  // WITH_CUDA
+
+template<typename T>
+struct IsFloat16 : std::false_type {};
 
 // Type Trait: IsFloating
-
 template<typename T>
 struct IsFloating : std::integral_constant<bool, false> {};
 
@@ -131,7 +141,8 @@ OF_DEVICE_FUNC T GetMaxVal();
   APPLE_MAX_VAL_SEQ                          \
   OF_PP_MAKE_TUPLE_SEQ(uint64_t, UINT64_MAX) \
   OF_PP_MAKE_TUPLE_SEQ(float, FLT_MAX)       \
-  OF_PP_MAKE_TUPLE_SEQ(double, DBL_MAX)
+  OF_PP_MAKE_TUPLE_SEQ(double, DBL_MAX)      \
+  OF_PP_MAKE_TUPLE_SEQ(bool, true)
 
 #ifdef __APPLE__
 #define APPLE_MIN_VAL_SEQ OF_PP_MAKE_TUPLE_SEQ(unsigned long, 0)
@@ -150,7 +161,8 @@ OF_DEVICE_FUNC T GetMaxVal();
   APPLE_MIN_VAL_SEQ                        \
   OF_PP_MAKE_TUPLE_SEQ(uint64_t, 0)        \
   OF_PP_MAKE_TUPLE_SEQ(float, -FLT_MAX)    \
-  OF_PP_MAKE_TUPLE_SEQ(double, -DBL_MAX)
+  OF_PP_MAKE_TUPLE_SEQ(double, -DBL_MAX)   \
+  OF_PP_MAKE_TUPLE_SEQ(bool, false)
 
 #define SPECIALIZE_MAX_VAL(T, limit_value) \
   template<>                               \
@@ -211,7 +223,7 @@ struct DevDType {
 
 #if defined(WITH_CUDA)
 template<>
-struct DevDType<DeviceType::kGPU, float16> {
+struct DevDType<DeviceType::kCUDA, float16> {
   static_assert(sizeof(float16) == sizeof(half), "sizeof(float16) != sizeof(half)");
   typedef half type;
 };
@@ -219,10 +231,12 @@ struct DevDType<DeviceType::kGPU, float16> {
 
 // Func
 
+bool IsBoolDataType(DataType data_type);
 bool IsIntegralDataType(DataType data_type);
 bool IsFloatingDataType(DataType data_type);
 bool IsSupportRequireGradDataType(DataType data_type);
 bool IsPODDataType(DataType data_type);
+bool IsPODAndHalfDataType(DataType data_type);
 bool IsIndexDataType(DataType data_type);
 size_t GetSizeOfDataType(DataType data_type);
 

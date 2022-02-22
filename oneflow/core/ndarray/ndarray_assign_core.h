@@ -21,17 +21,23 @@ limitations under the License.
 
 namespace oneflow {
 
-template<DeviceType device_type, typename T, int NDIMS>
+template<DeviceType device_type, typename T, typename X, int NDIMS>
 struct NdarrayAssignCoreWrapper final {
-  static void Assign(DeviceCtx* ctx, const XpuVarNdarray<T>& y,
-                     const XpuReducedNdarray<T, NDIMS>& reduced);
+  static void Assign(ep::Stream* stream, const XpuVarNdarray<T>& y,
+                     const XpuReducedNdarray<X, NDIMS>& reduced);
+  static void Assign(ep::Stream* stream, const XpuVarNdarray<T>& y,
+                     const XpuVarNdarray<const X>& x);
 };
 
-template<typename T, int NDIMS>
+template<typename T, typename X, int NDIMS>
 struct NdarrayAssignCore final {
   OF_DEVICE_FUNC static void Assign(const XpuVarNdarray<T>& y,
-                                    const XpuReducedNdarray<T, NDIMS>& reduced) {
+                                    const XpuReducedNdarray<X, NDIMS>& reduced) {
     y.template Assign<NDIMS>(reduced);
+  }
+
+  OF_DEVICE_FUNC static void Assign(const XpuVarNdarray<T>& y, const XpuVarNdarray<const X>& x) {
+    y.template Assign<NDIMS>(x);
   }
 };
 

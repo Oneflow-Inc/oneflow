@@ -24,7 +24,7 @@ namespace {
 
 template<typename T>
 struct CTCGreedyDecoderFunctor<DeviceType::kCPU, T> final {
-  void operator()(DeviceCtx* ctx, int64_t* decoded_ptr, T* neg_sum_logits_ptr,
+  void operator()(ep::Stream* stream, int64_t* decoded_ptr, T* neg_sum_logits_ptr,
                   const T* log_probs_ptr, const int64_t* input_lengths_ptr,
                   const bool merge_repeated, const int64_t max_input_length,
                   const int64_t batch_size, const int64_t num_labels) {

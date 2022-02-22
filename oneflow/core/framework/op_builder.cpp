@@ -44,7 +44,7 @@ Maybe<OpBuilder&> OpBuilder::MaybeInput(const std::string& input_name, const int
     const std::string& tensor_name =
         op_name_ + "/" + PositionalPlaceholderPrefix + std::to_string(input_pos_++);
     input_list->mutable_s()->Add()->assign(tensor_name);
-    indexed_ibns_.push_back(input_name + "_" + std::to_string(i));
+    indexed_ibns_.emplace_back(input_name + "_" + std::to_string(i));
   }
   CHECK_EQ_OR_RETURN(proto_.input().size(), proto_.input_order().size());
   return *this;
@@ -66,7 +66,7 @@ Maybe<OpBuilder&> OpBuilder::MaybeOutput(const std::string& output_name, const i
   for (int i = 0; i < count; ++i) {
     const std::string& tensor_name = op_name_ + "/" + output_name + "_" + std::to_string(i);
     output_list->mutable_s()->Add()->assign(tensor_name);
-    indexed_obns_.push_back(output_name + "_" + std::to_string(i));
+    indexed_obns_.emplace_back(output_name + "_" + std::to_string(i));
   }
   CHECK_EQ_OR_RETURN(proto_.output().size(), proto_.output_order().size());
   return *this;

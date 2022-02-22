@@ -84,20 +84,21 @@ __global__ void GpuInplaceBroadcastBinaryFunc(const XpuVarNdarray<T> y,
 }  // namespace
 
 template<typename T, int NDIMS, template<typename> class binary_func>
-struct NdarrayApplyBroadcastBinaryCoreWrapper<DeviceType::kGPU, T, NDIMS, binary_func> final {
-  static void Apply(DeviceCtx* ctx,
+struct NdarrayApplyBroadcastBinaryCoreWrapper<DeviceType::kCUDA, T, NDIMS, binary_func> final {
+  static void Apply(ep::Stream* stream,
                     const XpuVarNdarray<typename BinaryFuncTrait<binary_func, T>::return_type>& y,
                     const XpuVarNdarray<const T>& a, const XpuVarNdarray<const T>& b) {
     size_t n = y.host_shape().HostElemNum();
     if (n == 0) { return; }
-    if (IsKernelSafeInt32(n) && PartialBroadcast<int32_t>(ctx, y, a, b)) { return; }
-    if (!IsKernelSafeInt32(n) && PartialBroadcast<int64_t>(ctx, y, a, b)) { return; }
-    RUN_CUDA_KERNEL((GpuBroadcastBinaryFunc<T, NDIMS, binary_func>), ctx, n, y, a, b);
+    if (IsKernelSafeInt32(n) && PartialBroadcast<int32_t>(stream, y, a, b)) { return; }
+    if (!IsKernelSafeInt32(n) && PartialBroadcast<int64_t>(stream, y, a, b)) { return; }
+    RUN_CUDA_KERNEL((GpuBroadcastBinaryFunc<T, NDIMS, binary_func>), stream, n, y, a, b);
   }
 
   template<typename K>
   static bool PartialBroadcast(
-      DeviceCtx* ctx, const XpuVarNdarray<typename BinaryFuncTrait<binary_func, T>::return_type>& y,
+      ep::Stream* stream,
+      const XpuVarNdarray<typename BinaryFuncTrait<binary_func, T>::return_type>& y,
       const XpuVarNdarray<const T>& a, const XpuVarNdarray<const T>& b) {
     size_t n = y.host_shape().HostElemNum();
     if (y.host_shape() == a.host_shape()) {
@@ -108,13 +109,13 @@ struct NdarrayApplyBroadcastBinaryCoreWrapper<DeviceType::kGPU, T, NDIMS, binary
         const K b_dim1 = b.host_shape().At(1);
         if (b_dim0 == y_dim0 && b_dim1 == 1) {
           XY2XFunctor<K> xy2x(y_dim1);
-          RUN_CUDA_KERNEL((PartialBroadcastGpu<T, K, binary_func, XY2XFunctor<K>>), ctx, n, n,
+          RUN_CUDA_KERNEL((PartialBroadcastGpu<T, K, binary_func, XY2XFunctor<K>>), stream, n, n,
                           y.host_ptr(), a.host_ptr(), b.host_ptr(), xy2x);
           return true;
         }
         if (b_dim0 == 1 && b_dim1 == y_dim1) {
           XY2YFunctor<K> xy2y(y_dim1);
-          RUN_CUDA_KERNEL((PartialBroadcastGpu<T, K, binary_func, XY2YFunctor<K>>), ctx, n, n,
+          RUN_CUDA_KERNEL((PartialBroadcastGpu<T, K, binary_func, XY2YFunctor<K>>), stream, n, n,
                           y.host_ptr(), a.host_ptr(), b.host_ptr(), xy2y);
           return true;
         }
@@ -128,13 +129,13 @@ struct NdarrayApplyBroadcastBinaryCoreWrapper<DeviceType::kGPU, T, NDIMS, binary
         const K b_dim2 = b.host_shape().At(2);
         if (b_dim0 == y_dim0 && b_dim1 == 1 && b_dim2 == y_dim2) {
           XYZ2XZFunctor<K> xyz2xz(y_dim1, y_dim2);
-          RUN_CUDA_KERNEL((PartialBroadcastGpu<T, K, binary_func, XYZ2XZFunctor<K>>), ctx, n, n,
+          RUN_CUDA_KERNEL((PartialBroadcastGpu<T, K, binary_func, XYZ2XZFunctor<K>>), stream, n, n,
                           y.host_ptr(), a.host_ptr(), b.host_ptr(), xyz2xz);
           return true;
         }
         if (b_dim0 == 1 && b_dim1 == y_dim1 && b_dim2 == 1) {
           XYZ2YFunctor<K> xyz2y(y_dim1, y_dim2);
-          RUN_CUDA_KERNEL((PartialBroadcastGpu<T, K, binary_func, XYZ2YFunctor<K>>), ctx, n, n,
+          RUN_CUDA_KERNEL((PartialBroadcastGpu<T, K, binary_func, XYZ2YFunctor<K>>), stream, n, n,
                           y.host_ptr(), a.host_ptr(), b.host_ptr(), xyz2y);
           return true;
         }
@@ -145,40 +146,44 @@ struct NdarrayApplyBroadcastBinaryCoreWrapper<DeviceType::kGPU, T, NDIMS, binary
 };
 
 template<typename T, int NDIMS, template<typename> class binary_func>
-struct NdarrayApplyBroadcastInplaceBinaryCoreWrapper<DeviceType::kGPU, T, NDIMS, binary_func>
+struct NdarrayApplyBroadcastInplaceBinaryCoreWrapper<DeviceType::kCUDA, T, NDIMS, binary_func>
     final {
-  static void InplaceApply(DeviceCtx* ctx, const XpuVarNdarray<T>& y,
+  static void InplaceApply(ep::Stream* stream, const XpuVarNdarray<T>& y,
                            const XpuVarNdarray<const T>& x) {
     size_t n = y.host_shape().HostElemNum();
     XpuVarNdarray<const T> a(y.host_shape(), y.host_ptr());
-    using NBB = NdarrayApplyBroadcastBinaryCoreWrapper<DeviceType::kGPU, T, NDIMS, binary_func>;
+    using NBB = NdarrayApplyBroadcastBinaryCoreWrapper<DeviceType::kCUDA, T, NDIMS, binary_func>;
     if (n == 0) { return; }
-    if (IsKernelSafeInt32(n) && NBB::template PartialBroadcast<int32_t>(ctx, y, a, x)) { return; }
-    if (!IsKernelSafeInt32(n) && NBB::template PartialBroadcast<int64_t>(ctx, y, a, x)) { return; }
-    RUN_CUDA_KERNEL((GpuInplaceBroadcastBinaryFunc<T, NDIMS, binary_func>), ctx, n, y, x);
+    if (IsKernelSafeInt32(n) && NBB::template PartialBroadcast<int32_t>(stream, y, a, x)) {
+      return;
+    }
+    if (!IsKernelSafeInt32(n) && NBB::template PartialBroadcast<int64_t>(stream, y, a, x)) {
+      return;
+    }
+    RUN_CUDA_KERNEL((GpuInplaceBroadcastBinaryFunc<T, NDIMS, binary_func>), stream, n, y, x);
   }
 };
 
 #define INSTANTIATE_BROADCAST_BINARY_FUNC(dtype_pair, NDIMS, binary_func) \
   template struct NdarrayApplyBroadcastBinaryCoreWrapper<                 \
-      DeviceType::kGPU, OF_PP_PAIR_FIRST(dtype_pair), NDIMS, binary_func>;
+      DeviceType::kCUDA, OF_PP_PAIR_FIRST(dtype_pair), NDIMS, binary_func>;
 OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(INSTANTIATE_BROADCAST_BINARY_FUNC,
                                  ARITHMETIC_DATA_TYPE_SEQ HALF_DATA_TYPE_SEQ
-                                     UNSIGNED_INT_DATA_TYPE_SEQ,
+                                     UNSIGNED_INT_DATA_TYPE_SEQ BOOL_DATA_TYPE_SEQ,
                                  DIM_SEQ, ARITHMETIC_BINARY_FUNC_SEQ);
 OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(INSTANTIATE_BROADCAST_BINARY_FUNC,
                                  ARITHMETIC_DATA_TYPE_SEQ HALF_DATA_TYPE_SEQ
-                                     UNSIGNED_INT_DATA_TYPE_SEQ,
+                                     UNSIGNED_INT_DATA_TYPE_SEQ BOOL_DATA_TYPE_SEQ,
                                  DIM_SEQ, LOGICAL_BINARY_FUNC_SEQ);
 
 #define INSTANTIATE_BROADCAST_INPLACE_BINARY_FUNC(dtype_pair, NDIMS, binary_func) \
   template struct NdarrayApplyBroadcastInplaceBinaryCoreWrapper<                  \
-      DeviceType::kGPU, OF_PP_PAIR_FIRST(dtype_pair), NDIMS, binary_func>;
+      DeviceType::kCUDA, OF_PP_PAIR_FIRST(dtype_pair), NDIMS, binary_func>;
 OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(INSTANTIATE_BROADCAST_INPLACE_BINARY_FUNC,
                                  ARITHMETIC_DATA_TYPE_SEQ HALF_DATA_TYPE_SEQ
-                                     UNSIGNED_INT_DATA_TYPE_SEQ,
+                                     UNSIGNED_INT_DATA_TYPE_SEQ BOOL_DATA_TYPE_SEQ,
                                  DIM_SEQ, ARITHMETIC_BINARY_FUNC_SEQ);
 OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(INSTANTIATE_BROADCAST_INPLACE_BINARY_FUNC,
-                                 ((int8_t, DataType::kInt8)), DIM_SEQ, LOGICAL_BINARY_FUNC_SEQ);
+                                 ((bool, DataType::kBool)), DIM_SEQ, LOGICAL_BINARY_FUNC_SEQ);
 
 }  // namespace oneflow

@@ -40,36 +40,59 @@ class AddFunctor {
         CHECK_JUST(one::OpBuilder("broadcast_add").Input("x").Input("y").Output("z").Build());
   }
 
-  Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x,
-                           const std::shared_ptr<one::Tensor>& y, bool inplace) const {
-    bool x_static_zeros = IsStaticZerosTensor(x);
-    if (x_static_zeros || IsStaticZerosTensor(y)) {
-      CHECK_OR_RETURN(JUST(x->device()) == JUST(y->device()));
-      CHECK_OR_RETURN(*x->shape() == *y->shape());
-      CHECK_OR_RETURN(x->dtype() == y->dtype());
-      if (x_static_zeros) { return y; }
-      return x;
+  Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& input,
+                           const std::shared_ptr<one::Tensor>& other, const Scalar& alpha,
+                           bool inplace) const {
+    if (IsIntegralDataType(input->dtype()->data_type())
+        && IsIntegralDataType(other->dtype()->data_type()) && alpha.IsFloatingPoint()) {
+      return Error::RuntimeError()
+             << "For integral input tensors, argument alpha must not be a floating point number.";
+    }
+    bool input_static_zeros = IsStaticZerosTensor(input);
+    if (input_static_zeros || IsStaticZerosTensor(other)) {
+      CHECK_OR_RETURN(JUST(input->device()) == JUST(other->device()));
+      CHECK_OR_RETURN(*input->shape() == *other->shape());
+      CHECK_OR_RETURN(input->dtype() == other->dtype());
+      if (input_static_zeros) {
+        if ((alpha.IsIntegral() && alpha.Value<int64_t>() == 1)
+            || (alpha.IsFloatingPoint()
+                && std::fabs(alpha.Value<double>() - 1.0)
+                       < std::numeric_limits<double>::epsilon())) {
+          return other;
+        } else {
+          return JUST(functional::ScalarMul(alpha, other));
+        }
+      }
+      return input;
     }
 
     const OpExpr* op = nullptr;
 
     TensorProcessor tensor_processor;
-    JUST(tensor_processor.PromoteInputsToCommonDtype(true).AddInputs({x, y}).Apply());
+    if ((alpha.IsIntegral() && alpha.Value<int64_t>() == 1)
+        || (alpha.IsFloatingPoint()
+            && std::fabs(alpha.Value<double>() - 1.0) < std::numeric_limits<double>::epsilon())) {
+      JUST(tensor_processor.PromoteInputsToCommonDtype(true).AddInputs({input, other}).Apply());
+    } else {
+      JUST(tensor_processor.PromoteInputsToCommonDtype(true)
+               .AddInputs({input, JUST(functional::ScalarMul(alpha, other))})
+               .Apply());
+    }
     TensorTuple input_vec = JUST(tensor_processor.GetInputs());
-    const std::shared_ptr<one::Tensor>& x_cast = input_vec[0];
-    const std::shared_ptr<one::Tensor>& y_cast = input_vec[1];
+    const std::shared_ptr<one::Tensor>& input_cast = input_vec[0];
+    const std::shared_ptr<one::Tensor>& other_cast = input_vec[1];
 
-    if (*x_cast->shape() == *y_cast->shape()) {
+    if (*input_cast->shape() == *other_cast->shape()) {
       op = add_op_.get();
     } else {
       op = broadcast_add_op_.get();
     }
     if (inplace) {
-      JUST(CheckInplaceCastValid(x, x_cast));
-      JUST(CheckInplaceValid(x));
-      JUST(CheckShapeCanExpandTo(*y_cast->shape(), *x_cast->shape()));
+      JUST(CheckInplaceCastValid(input, input_cast));
+      JUST(CheckInplaceValid(input));
+      JUST(CheckShapeCanExpandTo(*other_cast->shape(), *input_cast->shape()));
       std::shared_ptr<TensorTuple> outputs = std::make_shared<TensorTuple>(1);
-      outputs->at(0) = x_cast;
+      outputs->at(0) = input_cast;
       JUST(OpInterpUtil::Dispatch(*op, input_vec, outputs.get()));
       return outputs->at(0);
     }
@@ -88,7 +111,7 @@ class BroadcastPowFunctor : public BinaryFloatFunctor {
   }
 };
 
-class SubFunctor : public BinaryFunctor {
+class SubFunctor : public InplaceableBinaryFunctor {
  public:
   SubFunctor() {
     op_ = CHECK_JUST(one::OpBuilder("broadcast_sub").Input("x").Input("y").Output("z").Build());
@@ -117,6 +140,44 @@ class MulFunctor {
   std::shared_ptr<OpExpr> broadcast_mul_op_;
 };
 
+class InplaceMulFunctor {
+ public:
+  InplaceMulFunctor() {
+    mul_op_ = CHECK_JUST(one::OpBuilder("multiply").Input("x").Input("y").Output("out").Build());
+    broadcast_mul_op_ =
+        CHECK_JUST(one::OpBuilder("broadcast_mul").Input("x").Input("y").Output("z").Build());
+  }
+  Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x,
+                           const std::shared_ptr<one::Tensor>& y) const {
+    TensorProcessor tensor_processor;
+    if (y->requires_grad()) {
+      JUST(tensor_processor.PromoteInputsToCommonDtype(true)
+               .AddInputs({JUST(Identity(x)), y})
+               .Apply());
+    } else {
+      JUST(tensor_processor.PromoteInputsToCommonDtype(true).AddInputs({x, y}).Apply());
+    }
+    const TensorTuple& input_vec = JUST(tensor_processor.GetInputs());
+    const std::shared_ptr<one::Tensor>& x_cast = input_vec.at(0);
+    const std::shared_ptr<one::Tensor>& y_cast = input_vec.at(1);
+    JUST(CheckInplaceValid(x));
+    JUST(CheckInplaceCastValid(x, x_cast));
+    JUST(CheckShapeCanExpandTo(*y_cast->shape(), *x_cast->shape()));
+    std::shared_ptr<TensorTuple> outputs = std::make_shared<TensorTuple>(1);
+    outputs->at(0) = x;
+    if (*x_cast->shape() == *y_cast->shape()) {
+      JUST(OpInterpUtil::Dispatch(*mul_op_, input_vec, outputs.get()));
+    } else {
+      JUST(OpInterpUtil::Dispatch(*broadcast_mul_op_, input_vec, outputs.get()));
+    }
+    return outputs->at(0);
+  }
+
+ private:
+  std::shared_ptr<OpExpr> mul_op_;
+  std::shared_ptr<OpExpr> broadcast_mul_op_;
+};
+
 class DivFunctor : public BinaryFloatFunctor {
  public:
   DivFunctor() {
@@ -124,6 +185,37 @@ class DivFunctor : public BinaryFloatFunctor {
   }
 };
 
+class InplaceDivFunctor {
+ public:
+  InplaceDivFunctor() {
+    broadcast_div_op_ =
+        CHECK_JUST(one::OpBuilder("broadcast_div").Input("x").Input("y").Output("z").Build());
+  }
+  Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x,
+                           const std::shared_ptr<one::Tensor>& y) const {
+    TensorProcessor tensor_processor;
+    if (y->requires_grad()) {
+      JUST(tensor_processor.PromoteInputsToCommonDtype(true)
+               .AddInputs({JUST(Identity(x)), y})
+               .Apply());
+    } else {
+      JUST(tensor_processor.PromoteInputsToCommonDtype(true).AddInputs({x, y}).Apply());
+    }
+    const TensorTuple& input_vec = JUST(tensor_processor.GetInputs());
+    const std::shared_ptr<one::Tensor>& x_cast = input_vec.at(0);
+    const std::shared_ptr<one::Tensor>& y_cast = input_vec.at(1);
+    JUST(CheckInplaceValid(x));
+    JUST(CheckInplaceCastValid(x, x_cast));
+    JUST(CheckShapeCanExpandTo(*y_cast->shape(), *x_cast->shape()));
+    std::shared_ptr<TensorTuple> outputs = std::make_shared<TensorTuple>(1);
+    outputs->at(0) = x;
+    JUST(OpInterpUtil::Dispatch(*broadcast_div_op_, input_vec, outputs.get()));
+    return outputs->at(0);
+  }
+
+ private:
+  std::shared_ptr<OpExpr> broadcast_div_op_;
+};
 class Atan2Functor : public BinaryFloatFunctor {
  public:
   Atan2Functor() {
@@ -277,6 +369,8 @@ ONEFLOW_FUNCTION_LIBRARY(m) {
   m.add_functor<impl::Atan2Functor>("Atan2");
   m.add_functor<impl::SubFunctor>("Sub");
   m.add_functor<impl::MulFunctor>("Mul");
+  m.add_functor<impl::InplaceMulFunctor>("InplaceMul");
+  m.add_functor<impl::InplaceDivFunctor>("InplaceDiv");
   m.add_functor<impl::DivFunctor>("Div");
   m.add_functor<impl::PowFunctor>("Pow");
   m.add_functor<impl::BroadcastPowFunctor>("BroadcastPow");

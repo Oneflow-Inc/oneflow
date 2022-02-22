@@ -14,6 +14,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 #include "oneflow/core/kernel/random_generator.h"
+#include "oneflow/core/ep/cuda/cuda_stream.h"
 
 namespace oneflow {
 
@@ -34,25 +35,24 @@ void RngUniformGpu<double>(const curandGenerator_t& gen, int64_t n, double* ret)
 
 }  // namespace
 
-RandomGenerator<DeviceType::kGPU>::RandomGenerator(int64_t seed, DeviceCtx* device_ctx) {
-  CHECK_NOTNULL(device_ctx);
+RandomGenerator<DeviceType::kCUDA>::RandomGenerator(int64_t seed, ep::Stream* stream) {
   OF_CURAND_CHECK(curandCreateGenerator(&curand_generator_, CURAND_RNG_PSEUDO_DEFAULT));
   OF_CURAND_CHECK(curandSetPseudoRandomGeneratorSeed(curand_generator_, seed));
-  OF_CURAND_CHECK(curandSetStream(curand_generator_, device_ctx->cuda_stream()));
+  OF_CURAND_CHECK(curandSetStream(curand_generator_, stream->As<ep::CudaStream>()->cuda_stream()));
 }
 
-RandomGenerator<DeviceType::kGPU>::~RandomGenerator() {
+RandomGenerator<DeviceType::kCUDA>::~RandomGenerator() {
   OF_CURAND_CHECK(curandDestroyGenerator(curand_generator_));
 }
 
 template<typename T>
-void RandomGenerator<DeviceType::kGPU>::Uniform(const int64_t elem_cnt, T* dptr) {
+void RandomGenerator<DeviceType::kCUDA>::Uniform(const int64_t elem_cnt, T* dptr) {
   RngUniformGpu(curand_generator_, elem_cnt, dptr);
 }
 
-#define INITIATE_GPU_RANDOM_GENERATOR_UNIFORM(T, typeproto) \
-  template void RandomGenerator<DeviceType::kGPU>::Uniform<T>(const int64_t elem_cnt, T* dptr);
+#define INITIATE_CUDA_RANDOM_GENERATOR_UNIFORM(T, typeproto) \
+  template void RandomGenerator<DeviceType::kCUDA>::Uniform<T>(const int64_t elem_cnt, T* dptr);
 
-OF_PP_FOR_EACH_TUPLE(INITIATE_GPU_RANDOM_GENERATOR_UNIFORM, FLOATING_DATA_TYPE_SEQ);
+OF_PP_FOR_EACH_TUPLE(INITIATE_CUDA_RANDOM_GENERATOR_UNIFORM, FLOATING_DATA_TYPE_SEQ);
 
 }  // namespace oneflow

@@ -22,7 +22,7 @@ namespace user_op {
 
 template<typename IN_T, typename IDX_T, template<typename T> class Opt>
 struct DimScatterFunctor<DeviceType::kCPU, IN_T, IDX_T, Opt> final {
-  void operator()(DeviceCtx* ctx, const DimOpIndexNdHelper<IDX_T>& src_nd_helper,
+  void operator()(ep::Stream* stream, const DimOpIndexNdHelper<IDX_T>& src_nd_helper,
                   const DimOpIndexNdHelper<IDX_T>& idx_nd_helper,
                   const DimOpIndexNdHelper<IDX_T>& output_nd_helper, const int ndim,
                   const int64_t elem_cnt, const int32_t dim, const int64_t upper_bound,

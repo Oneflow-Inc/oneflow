@@ -66,7 +66,7 @@ void SliceBoxingKernel::VirtualKernelInit(KernelContext* ctx) {
   for (const TensorSliceViewProto& in_slice_proto : conf.in_slice()) {
     const TensorSliceView in_slice(in_slice_proto);
     tensor_slice_copier_vec_.emplace_back(new TensorSliceCopier(
-        out_slice, in_slice, this->kernel_conf().data_type(), ctx->stream_ctx()->device_type()));
+        out_slice, in_slice, this->kernel_conf().data_type(), ctx->stream()->device_type()));
   }
 }
 
@@ -83,7 +83,7 @@ void SliceBoxingCopyKernel::ForwardDataContent(KernelContext* ctx) const {
   Blob* out = ctx->BnInOp2Blob("out");
   FOR_RANGE(int64_t, i, 0, this->op_attribute().input_bns().size()) {
     const Blob* in_i = ctx->BnInOp2Blob(GenRepeatedBn("in", i));
-    this->tensor_slice_copier_vec().at(i)->Copy(ctx->stream_ctx(), out, in_i);
+    this->tensor_slice_copier_vec().at(i)->Copy(ctx->stream(), out, in_i);
   }
 }
 
@@ -94,25 +94,25 @@ const SliceBoxingConf& SliceBoxingAddKernel::GetCustomizedBoxingConf() const {
 void SliceBoxingAddKernel::ForwardDataContent(KernelContext* ctx) const {
   Blob* out = ctx->BnInOp2Blob("out");
   std::unique_ptr<ep::primitive::Add> primitive =
-      ep::primitive::NewPrimitive<ep::primitive::AddFactory>(ctx->stream_ctx()->device_type(),
+      ep::primitive::NewPrimitive<ep::primitive::AddFactory>(ctx->stream()->device_type(),
                                                              out->data_type());
   CHECK(primitive);
   FOR_RANGE(int64_t, i, 0, this->op_attribute().input_bns().size()) {
     const Blob* in_i = ctx->BnInOp2Blob(GenRepeatedBn("in", i));
     if (i == 0) {
       if (in_i->shape().NumAxes() == 0 && out->shape().NumAxes() == 0) {
-        AutoMemcpy(ctx->stream_ctx(), out, in_i);
+        AutoMemcpy(ctx->stream(), out, in_i);
       } else {
-        this->tensor_slice_copier_vec().at(i)->Copy(ctx->stream_ctx(), out, in_i);
+        this->tensor_slice_copier_vec().at(i)->Copy(ctx->stream(), out, in_i);
       }
     } else {
       if (in_i->shape() == out->shape()) {
-        primitive->Launch(ctx->stream_ctx(), in_i->dptr(), out->dptr(), out->mut_dptr(),
+        primitive->Launch(ctx->stream(), out->dptr(), in_i->dptr(), out->mut_dptr(),
                           out->shape().elem_cnt());
       } else {
         Blob* buf = ctx->BnInOp2Blob("buf");
-        this->tensor_slice_copier_vec().at(i)->Copy(ctx->stream_ctx(), buf, in_i);
-        primitive->Launch(ctx->stream_ctx(), buf->dptr(), out->dptr(), out->mut_dptr(),
+        this->tensor_slice_copier_vec().at(i)->Copy(ctx->stream(), buf, in_i);
+        primitive->Launch(ctx->stream(), out->dptr(), buf->dptr(), out->mut_dptr(),
                           out->shape().elem_cnt());
       }
     }

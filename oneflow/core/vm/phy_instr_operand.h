@@ -17,6 +17,9 @@ limitations under the License.
 #define ONEFLOW_CORE_VM_PHY_INSTR_OPERAND_H_
 
 #include <functional>
+#include <set>
+#include <vector>
+#include <memory>
 #include "oneflow/core/intrusive/intrusive.h"
 
 namespace oneflow {
@@ -24,22 +27,31 @@ namespace vm {
 
 struct MirroredObject;
 
+using DependenceVector = std::vector<MirroredObject*>;
+
 // physical instruction operand
 class PhyInstrOperand {
  public:
   virtual ~PhyInstrOperand() = default;
 
-  virtual void ForEachConstMirroredObject(
-      const std::function<void(MirroredObject* infer, MirroredObject* compute)>&) const = 0;
+  virtual const DependenceVector& input_dependences() const = 0;
+  virtual const DependenceVector& output_dependences() const = 0;
+  virtual MirroredObject* stream_sequential_dependence() const {
+    return stream_sequential_dependence_;
+  }
 
-  virtual void ForEachMutMirroredObject(
-      const std::function<void(MirroredObject* infer, MirroredObject* compute)>&) const = 0;
-
-  virtual void ForEachMut2MirroredObject(
-      const std::function<void(MirroredObject* infer, MirroredObject* compute)>&) const = 0;
+  static std::function<void(MirroredObject*)> SetInserter(DependenceVector* dependences) {
+    auto existed =
+        std::make_shared<std::set<MirroredObject*>>(dependences->begin(), dependences->end());
+    return [dependences, existed](MirroredObject* object) {
+      if (existed->insert(object).second) { dependences->push_back(object); }
+    };
+  }
 
  protected:
-  PhyInstrOperand() = default;
+  PhyInstrOperand() : stream_sequential_dependence_(nullptr) {}
+
+  MirroredObject* stream_sequential_dependence_;
 };
 
 }  // namespace vm

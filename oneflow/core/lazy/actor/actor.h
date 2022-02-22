@@ -18,7 +18,6 @@ limitations under the License.
 
 #include "oneflow/core/lazy/actor/actor_base.h"
 #include "oneflow/core/lazy/actor/actor_message_bus.h"
-#include "oneflow/core/device/cuda_stream_handle.h"
 #include "oneflow/core/job/task.pb.h"
 #include "oneflow/core/kernel/kernel.h"
 #include "oneflow/core/kernel/kernel_context.h"

@@ -31,11 +31,10 @@ Maybe<void> TensorDescInferFnUtil::Unchanged(InferContext* ctx) {
   for (size_t i = 0; i < ctx->inputs().size(); ++i) {
     const std::pair<std::string, int32_t>& input_arg = ctx->inputs().at(i);
     if (first_tensor_desc) {
-      const TensorDesc* tensor_desc =
-          ctx->TensorDesc4ArgNameAndIndex(input_arg.first, input_arg.second);
-      CHECK_EQ_OR_RETURN(tensor_desc->shape(), first_tensor_desc->shape());
+      const TensorDesc& tensor_desc = ctx->InputTensorDesc(input_arg.first, input_arg.second);
+      CHECK_EQ_OR_RETURN(tensor_desc.shape(), first_tensor_desc->shape());
     } else {
-      first_tensor_desc = ctx->TensorDesc4ArgNameAndIndex(input_arg.first, input_arg.second);
+      first_tensor_desc = &ctx->InputTensorDesc(input_arg.first, input_arg.second);
     }
   }
   for (size_t i = 0; i < ctx->outputs().size(); ++i) {
@@ -51,11 +50,10 @@ Maybe<void> TensorDescInferFnUtil::UnchangedDataType(InferContext* ctx) {
   for (size_t i = 0; i < ctx->inputs().size(); ++i) {
     const std::pair<std::string, int32_t>& input_arg = ctx->inputs().at(i);
     if (first_tensor_desc) {
-      const TensorDesc* tensor_desc =
-          ctx->TensorDesc4ArgNameAndIndex(input_arg.first, input_arg.second);
-      CHECK_EQ_OR_RETURN(tensor_desc->data_type(), first_tensor_desc->data_type());
+      const TensorDesc& tensor_desc = ctx->InputTensorDesc(input_arg.first, input_arg.second);
+      CHECK_EQ_OR_RETURN(tensor_desc.data_type(), first_tensor_desc->data_type());
     } else {
-      first_tensor_desc = ctx->TensorDesc4ArgNameAndIndex(input_arg.first, input_arg.second);
+      first_tensor_desc = &ctx->InputTensorDesc(input_arg.first, input_arg.second);
     }
   }
   for (size_t i = 0; i < ctx->outputs().size(); ++i) {
@@ -71,7 +69,7 @@ Maybe<void> TensorDescInferFnUtil::InOutCorrespond(InferContext* ctx) {
     const auto& input_arg = ctx->inputs().at(i);
     const auto& output_arg = ctx->outputs().at(i);
     *ctx->OutputTensorDesc(output_arg.first, output_arg.second) =
-        *ctx->TensorDesc4ArgNameAndIndex(input_arg.first, input_arg.second);
+        ctx->InputTensorDesc(input_arg.first, input_arg.second);
   }
   return Maybe<void>::Ok();
 }

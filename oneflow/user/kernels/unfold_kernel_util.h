@@ -16,7 +16,7 @@ limitations under the License.
 #ifndef ONEFLOW_USER_KERNELS_UNFOLD_KERNEL_UTIL_H_
 #define ONEFLOW_USER_KERNELS_UNFOLD_KERNEL_UTIL_H_
 
-#include "oneflow/core/device/device_context.h"
+#include "oneflow/core/ep/include/stream.h"
 #include "oneflow/core/common/shape.h"
 #include "oneflow/core/common/nd_index_offset_helper.h"
 #include "oneflow/core/common/switch_func.h"
@@ -110,7 +110,7 @@ OF_DEVICE_FUNC bool UnfoldIndexTransform(const UnfoldParams<INDEX_T, NDIM, SDIM>
 
 template<DeviceType device_type, typename T, typename INDEX_T, int NDIM, int SDIM>
 struct UnfoldKernelUtil {
-  static void Forward(DeviceCtx* ctx, const UnfoldParams<INDEX_T, NDIM, SDIM>* params,
+  static void Forward(ep::Stream* stream, const UnfoldParams<INDEX_T, NDIM, SDIM>* params,
                       const T* input_ptr, T* output_ptr);
 };
 

@@ -56,7 +56,7 @@ bool FindInNoCastRegisry(const std::string& op_type, const OpArg& op_arg) {
 std::function<bool(OpNode*)> MakePredicatorIsAllowedToRunWithHalf(const OpGraph& op_graph) {
   auto allowed_set = std::make_shared<HashSet<OpNode*>>();
   op_graph.ForEachNode([&](OpNode* node) {
-    if (node->parallel_desc().device_type() != DeviceType::kGPU) { return; }
+    if (node->parallel_desc().device_type() != DeviceType::kCUDA) { return; }
     if (node->op().output_bns().size() > 0) { INSERT_CHECK(allowed_set->insert(node)); }
   });
   return [allowed_set](OpNode* node) -> bool { return IsKeyFound(*allowed_set, node); };
@@ -91,7 +91,7 @@ void InsertCastOpImpl(bool f2h, const OpGraph& op_graph, const HashSet<OpNode*>&
     for (OpEdge* edge : white_set_edges) {
       CHECK_EQ(1, edge->lbis().size());
       std::string lbn = GenLogicalBlobName(edge->lbis().front());
-      edges_group_by_lbn[lbn].push_back(edge);
+      edges_group_by_lbn[lbn].emplace_back(edge);
     }
   }
 
@@ -148,7 +148,8 @@ void InsertCastOpImpl(bool f2h, const OpGraph& op_graph, const HashSet<OpNode*>&
   }
 
   std::vector<OperatorConf> dst_op_confs;
-  for (const auto& pair : dst_op_name2dst_op_confs) { dst_op_confs.push_back(pair.second); }
+  dst_op_confs.reserve(dst_op_name2dst_op_confs.size());
+  for (const auto& pair : dst_op_name2dst_op_confs) { dst_op_confs.emplace_back(pair.second); }
   // make sure an op_conf can only be udpated once, cuz later update will override before
   job_builder->MutOpsOnlyOnce(dst_op_confs);
 }

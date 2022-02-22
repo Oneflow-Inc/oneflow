@@ -38,7 +38,7 @@ void InitArgName2BnIndex2TensorTupleIndex(
     // vector is auto created by [] if arg_name doesn't exist in map
     auto* bn_index2tensor_tuple_index = &(*arg_name2bn_index2tensor_tuple_index)[arg_name];
     CHECK_EQ(bn_index2tensor_tuple_index->size(), bn_index);
-    bn_index2tensor_tuple_index->push_back(i);
+    bn_index2tensor_tuple_index->emplace_back(i);
   }
 }
 
@@ -46,7 +46,7 @@ void InitArgName2BnIndex2TensorTupleIndex(
 
 ArgTuple::ArgTuple(const std::vector<std::string>& indexed_bns) : indexed_bns_(indexed_bns) {
   indexed_arg_name_and_index_.reserve(indexed_bns.size());
-  for (const auto& bn : indexed_bns) { indexed_arg_name_and_index_.push_back(GetPair(bn)); }
+  for (const auto& bn : indexed_bns) { indexed_arg_name_and_index_.emplace_back(GetPair(bn)); }
   InitArgName2BnIndex2TensorTupleIndex(indexed_arg_name_and_index_,
                                        &arg_name2bn_index2tensor_tuple_index_);
   for (int i = 0; i < indexed_bns.size(); ++i) {

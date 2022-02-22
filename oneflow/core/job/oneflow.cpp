@@ -36,11 +36,11 @@ limitations under the License.
 #include "oneflow/core/operator/interface_op_util.h"
 #include "oneflow/core/job/critical_section_desc.h"
 #include "oneflow/core/job/global_for.h"
-#include "oneflow/core/vm/oneflow_vm.h"
+#include "oneflow/core/vm/virtual_machine.h"
 #include "oneflow/core/graph/plan_task_graph.h"
 #include "oneflow/core/graph/boxing/collective_boxing_util.h"
 #include "oneflow/core/profiler/profiler.h"
-#include "oneflow/core/job/sbp_parallel.cfg.h"
+#include "oneflow/core/job/sbp_parallel.h"
 
 namespace std {
 
@@ -56,22 +56,6 @@ struct hash<oneflow::ParallelBlobConf> {
 }  // namespace std
 
 namespace oneflow {
-
-bool operator==(const SbpParallel& lhs, const SbpParallel& rhs) {
-  return lhs.parallel_type_case() == rhs.parallel_type_case();
-}
-
-bool operator!=(const SbpParallel& lhs, const SbpParallel& rhs) { return !(lhs == rhs); }
-
-bool operator==(const NdSbp& lhs, const NdSbp& rhs) {
-  if (lhs.sbp_parallel().size() != rhs.sbp_parallel().size()) { return false; }
-  for (int i = 0; i < lhs.sbp_parallel().size(); ++i) {
-    if (lhs.sbp_parallel().Get(i) != rhs.sbp_parallel().Get(i)) { return false; }
-  }
-  return true;
-}
-
-bool operator!=(const NdSbp& lhs, const NdSbp& rhs) { return !(lhs == rhs); }
 
 bool operator==(const ParallelBlobConf& lhs, const ParallelBlobConf& rhs) {
   return BlobDesc(lhs.logical_blob_desc_conf()) == BlobDesc(rhs.logical_blob_desc_conf())
@@ -388,7 +372,7 @@ void GetMemSharingOpBlobInfo(const JobBuilder& job_builder, const std::string& o
   }
   const auto& job = job_builder.job();
   ParallelBlobConf ret;
-  *blob_conf->mutable_parallel_conf() = job_builder.ParallelConf4OpName(op_name);
+  *blob_conf->mutable_parallel_conf() = CHECK_JUST(job_builder.ParallelConf4OpName(op_name));
   *blob_conf->mutable_logical_blob_desc_conf() = job.helper().lbn2logical_blob_desc().at(lbn);
   *blob_conf->mutable_nd_sbp() =
       job.job_parallel_view_conf().op_name2nd_sbp_signature_conf().at(op_name).bn_in_op2nd_sbp().at(
@@ -432,10 +416,11 @@ void CheckNonDistributeOptimizerAvailable(const std::vector<std::shared_ptr<Job>
   FOR_RANGE(int64_t, job_id, 0, jobs.size()) {
     if (!IsEnabled(*jobs.at(job_id))) { continue; }
     for (const OperatorConf& op_conf : jobs.at(job_id)->net().op()) {
-      if (op_conf.op_type_case() == OperatorConf::kVariableConf) { continue; }
+      if (op_conf.op_type_case() != OperatorConf::kVariableConf) { continue; }
       if (var_names.find(op_conf.name()) == var_names.end()) {
         var_names.emplace(op_conf.name());
       } else {
+        // optimizer_placement_optimization jobs has a same variable in between them.
         LOG(FATAL)
             << "Only support optimizer_placement_optimization when jobs not sharing same variable";
       }
@@ -444,8 +429,9 @@ void CheckNonDistributeOptimizerAvailable(const std::vector<std::shared_ptr<Job>
   FOR_RANGE(int64_t, job_id, 0, jobs.size()) {
     if (IsEnabled(*jobs.at(job_id))) { continue; }
     for (const OperatorConf& op_conf : jobs.at(job_id)->net().op()) {
-      if (op_conf.op_type_case() == OperatorConf::kVariableConf) { continue; }
+      if (op_conf.op_type_case() != OperatorConf::kVariableConf) { continue; }
       if (var_names.find(op_conf.name()) != var_names.end()) {
+        // Other jobs has a same variable in optimizer_placement_optimization jobs.
         LOG(FATAL)
             << "Only support optimizer_placement_optimization when jobs not sharing same variable";
       }
@@ -487,6 +473,7 @@ Maybe<ReentrantLockBackEdge> MakeMainJobComponent(
   }
   const int64_t num_critial_sections = Global<CriticalSectionDesc>::Get()->CriticalSectionNum();
   std::vector<std::string> snk_tick_op_names;
+  snk_tick_op_names.reserve(num_critial_sections * machine_id_range.size());
   FOR_RANGE(int64_t, i, 0, num_critial_sections) {
     // source tick
     OperatorConf src_tick_op_conf;
@@ -536,7 +523,7 @@ Maybe<ReentrantLockBackEdge> MakeMainJobComponent(
         snk_tick_conf->add_tick(identity_tick_op_conf.name() + "/out");
         snk_tick_conf->set_out("out");
         JUST(job_builder->AddOp(parallel_conf, snk_tick_op_conf));
-        snk_tick_op_names.push_back(snk_tick_op_conf.name());
+        snk_tick_op_names.emplace_back(snk_tick_op_conf.name());
       }
     }
   }
@@ -644,7 +631,7 @@ Maybe<void> MakeMainJob(Job* main_job,
   for (int64_t machine_id : process_ranks) {
     Range sub_range(machine_id, machine_id + 1);
     const auto& in_lbn = wait_and_send_ids_op_conf.name() + "/out";
-    lock_back_edges->push_back(*JUST(MakeMainJobComponent(
+    lock_back_edges->emplace_back(*JUST(MakeMainJobComponent(
         in_lbn, sub_range, &job_builder, identity_tick_op_names, &cb_sink_tick_op_names)));
   }
   OperatorConf callback_notify_esac_op_conf;
@@ -912,6 +899,8 @@ REGISTER_FUNCTION_CONFIG_DEF().Bool("__is_user_function__", true, "is user defin
 Maybe<void> CompileJobsAndMergePlans(const PbRpf<Job>& job_confs, Plan& plan) {
   std::vector<std::shared_ptr<Job>> jobs(job_confs.size());
   FOR_RANGE(int, i, 0, jobs.size()) { jobs.at(i).reset(new Job(job_confs.Get(i))); }
+  // These checks donot work in nn.Graph API because there is only on job compile each time.
+  // And nn.Graph Support training and evaluation share the same variable.
   if (jobs.size() > 1) { CheckNonDistributeOptimizerAvailable(jobs); }
   HashMap<std::string, ParallelBlobConf> var_op_name2parallel_blob_conf;
   FilterOpName2ParallelBlobConf({OperatorConf::kVariableConf}, jobs,
@@ -933,7 +922,7 @@ Maybe<void> CompileJobsAndMergePlans(const PbRpf<Job>& job_confs, Plan& plan) {
   function_jobs.reserve(jobs.size());
   FOR_RANGE(int, i, 0, jobs.size()) {
     JobDesc job_desc(jobs.at(i)->job_conf(), i);
-    if (job_desc.Bool("__is_user_function__")) { function_jobs.push_back(jobs.at(i)); }
+    if (job_desc.Bool("__is_user_function__")) { function_jobs.emplace_back(jobs.at(i)); }
   }
   HashMap<std::string, ParallelBlobConf> push_op_name2parallel_blob_conf;
   FilterOpName2ParallelBlobConf({OperatorConf::kInputConf}, function_jobs,

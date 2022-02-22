@@ -45,20 +45,20 @@ std::unique_ptr<ep::primitive::Memset> NewMemsetPrimitive(Context* ctx) {
   return ep::primitive::NewPrimitive<ep::primitive::MemsetFactory>(ctx->device_type());
 }
 
-hob::HobContextGetter<KernelRegContext, bool> FillPrimitiveExists() {
-  return HobCtxGetter<bool>("FillPrimitiveExists", [](const KernelRegContext& ctx) {
+auto FillPrimitiveExists() {
+  return hob::make_custom("FillPrimitiveExists", [](const KernelRegContext& ctx) {
     return NewFillPrimitive(&ctx).operator bool();
   });
 }
 
-hob::HobContextGetter<KernelRegContext, bool> CopyNdPrimitiveExists() {
-  return HobCtxGetter<bool>("CopyNdPrimitiveExists", [](const KernelRegContext& ctx) {
+auto CopyNdPrimitiveExists() {
+  return hob::make_custom("CopyNdPrimitiveExists", [](const KernelRegContext& ctx) {
     return NewCopyNdPrimitive(&ctx).operator bool();
   });
 }
 
-hob::HobContextGetter<KernelRegContext, bool> MemsetPrimitiveExists() {
-  return HobCtxGetter<bool>("MemsetPrimitiveExists", [](const KernelRegContext& ctx) {
+auto MemsetPrimitiveExists() {
+  return hob::make_custom("MemsetPrimitiveExists", [](const KernelRegContext& ctx) {
     return NewMemsetPrimitive(&ctx).operator bool();
   });
 }
@@ -87,7 +87,7 @@ class PadKernel final : public OpKernel, public CudaGraphSupport {
     }
     std::unique_ptr<ep::primitive::Fill> fill_primitive = NewFillPrimitive(ctx);
     CHECK(fill_primitive);
-    fill_primitive->Launch(ctx->stream_ctx(), y->mut_dptr(), value, y->shape().elem_cnt());
+    fill_primitive->Launch(ctx->stream(), y->mut_dptr(), value, y->shape().elem_cnt());
 
     const auto& padding_before = ctx->Attr<std::vector<int64_t>>("padding_before");
     const auto& padding_after = ctx->Attr<std::vector<int64_t>>("padding_after");
@@ -120,16 +120,15 @@ class PadKernel final : public OpKernel, public CudaGraphSupport {
     }
     std::unique_ptr<ep::primitive::CopyNd> copy_nd_primitive = NewCopyNdPrimitive(ctx);
     CHECK(copy_nd_primitive);
-    copy_nd_primitive->Launch(ctx->stream_ctx(), x->data_type(), x->shape().NumAxes(),
-                              y->mut_dptr(), y->shape().ptr(), dst_pos_vec.data(), x->dptr(),
-                              x->shape().ptr(), src_pos_vec.data(), extent_vec.data());
+    copy_nd_primitive->Launch(ctx->stream(), x->data_type(), x->shape().NumAxes(), y->mut_dptr(),
+                              y->shape().ptr(), dst_pos_vec.data(), x->dptr(), x->shape().ptr(),
+                              src_pos_vec.data(), extent_vec.data());
   }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
 
-REGISTER_USER_KERNEL("pad").SetCreateFn<PadKernel>().SetIsMatchedHob((FillPrimitiveExists() == true)
-                                                                     & (CopyNdPrimitiveExists()
-                                                                        == true));
+REGISTER_USER_KERNEL("pad").SetCreateFn<PadKernel>().SetIsMatchedHob(FillPrimitiveExists()
+                                                                     && CopyNdPrimitiveExists());
 
 class PadGradKernel final : public OpKernel, public CudaGraphSupport {
  public:
@@ -146,7 +145,7 @@ class PadGradKernel final : public OpKernel, public CudaGraphSupport {
     std::unique_ptr<ep::primitive::Memset> memset_primitive =
         ep::primitive::NewPrimitive<ep::primitive::MemsetFactory>(ctx->device_type());
     CHECK(memset_primitive);
-    memset_primitive->Launch(ctx->stream_ctx(), dst, 0, out_bytes_size);
+    memset_primitive->Launch(ctx->stream(), dst, 0, out_bytes_size);
 
     if ((dy->shape().NumAxes() > 0 && dy->shape().elem_cnt() == 0)
         || (dx->shape().NumAxes() > 0 && dx->shape().elem_cnt() == 0)) {
@@ -183,7 +182,7 @@ class PadGradKernel final : public OpKernel, public CudaGraphSupport {
     std::unique_ptr<ep::primitive::CopyNd> copy_nd_primitive =
         ep::primitive::NewPrimitive<ep::primitive::CopyNdFactory>(ctx->device_type(), ndims);
     CHECK(copy_nd_primitive);
-    copy_nd_primitive->Launch(ctx->stream_ctx(), dy->data_type(), ndims, dst, dx->shape().ptr(),
+    copy_nd_primitive->Launch(ctx->stream(), dy->data_type(), ndims, dst, dx->shape().ptr(),
                               dst_pos_vec.data(), dy->dptr(), dy->shape().ptr(), src_pos_vec.data(),
                               extent_vec.data());
   }
@@ -192,7 +191,7 @@ class PadGradKernel final : public OpKernel, public CudaGraphSupport {
 
 REGISTER_USER_KERNEL("pad_grad")
     .SetCreateFn<PadGradKernel>()
-    .SetIsMatchedHob((MemsetPrimitiveExists() == true) & (CopyNdPrimitiveExists() == true));
+    .SetIsMatchedHob(MemsetPrimitiveExists() && CopyNdPrimitiveExists());
 
 }  // namespace user_op
 

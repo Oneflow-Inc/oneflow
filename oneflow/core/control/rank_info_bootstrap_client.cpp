@@ -21,7 +21,7 @@ RankInfoBootstrapClient::RankInfoBootstrapClient(const BootstrapConf& bootstrap_
   stubs_.reserve(bootstrap_conf.world_size());
   const auto& master_addr = bootstrap_conf.master_addr();
   const std::string& host = master_addr.host() + ":" + std::to_string(master_addr.port());
-  stubs_.push_back(CtrlService::NewStub(host));
+  stubs_.emplace_back(CtrlService::NewStub(host));
   LoadServerRequest request;
   request.set_addr(master_addr.host());
   request.set_rank(bootstrap_conf.rank());

@@ -35,7 +35,7 @@ class CastToStaticShapeKernel final : public user_op::OpKernel {
     CHECK_EQ(output_tensor->shape(), input_tensor->shape());
     size_t output_tensor_size =
         output_tensor->shape().elem_cnt() * GetSizeOfDataType(output_tensor->data_type());
-    Memcpy<device_type>(ctx->device_ctx(), output_tensor->mut_dptr(), input_tensor->dptr(),
+    Memcpy<device_type>(ctx->stream(), output_tensor->mut_dptr(), input_tensor->dptr(),
                         output_tensor_size);
   }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
@@ -46,7 +46,7 @@ class CastToStaticShapeKernel final : public user_op::OpKernel {
 #define REGISTER_CAST_TO_STATIC_SHAPE_KERNEL(device)                                            \
   REGISTER_USER_KERNEL("cast_to_static_shape")                                                  \
       .SetCreateFn<CastToStaticShapeKernel<device>>()                                           \
-      .SetIsMatchedHob(user_op::HobDeviceTag() == device)                                       \
+      .SetIsMatchedHob(user_op::HobDeviceType() == device)                                      \
       .SetInplaceProposalFn([](const user_op::InferContext&,                                    \
                                user_op::AddInplaceArgPair AddInplaceArgPairFn) -> Maybe<void> { \
         OF_RETURN_IF_ERROR(AddInplaceArgPairFn("output", 0, "input", 0, false));                \
@@ -55,7 +55,7 @@ class CastToStaticShapeKernel final : public user_op::OpKernel {
 
 REGISTER_CAST_TO_STATIC_SHAPE_KERNEL(DeviceType::kCPU)
 #ifdef WITH_CUDA
-REGISTER_CAST_TO_STATIC_SHAPE_KERNEL(DeviceType::kGPU)
+REGISTER_CAST_TO_STATIC_SHAPE_KERNEL(DeviceType::kCUDA)
 #endif
 
 }  // namespace oneflow

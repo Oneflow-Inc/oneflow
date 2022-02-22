@@ -23,6 +23,7 @@ limitations under the License.
 #include "oneflow/core/job_rewriter/group_boxing_by_dst_parallel.h"
 #include "oneflow/core/framework/config_def.h"
 #include "oneflow/core/job_rewriter/xrt_compilation.h"
+#include "oneflow/core/job_rewriter/boxing_with_middle_nodes.h"
 
 namespace oneflow {
 
@@ -92,13 +93,14 @@ Maybe<void> SetCtrlInOpName4VariableOp(const OpGraph& op_graph, JobBuilder* job_
     const LogicalBlobId& variable_lbi = variable_op.BnInOp2Lbi(variable_op.SoleObn());
     const OperatorConf* mutable_consumer = nullptr;
     std::vector<const OperatorConf*> naive_consumers;
+    naive_consumers.reserve(op_node->out_edges().size());
     for (OpEdge* edge : op_node->out_edges()) {
       const auto& op_conf = edge->dst_node()->op().op_conf();
       if (IsMutableConsumedLbi(edge->dst_node()->op(), variable_lbi)) {
         CHECK_OR_RETURN(mutable_consumer == nullptr);
         mutable_consumer = &op_conf;
       } else {
-        naive_consumers.push_back(&op_conf);
+        naive_consumers.emplace_back(&op_conf);
       }
     }
     if (mutable_consumer == nullptr) { return Maybe<void>::Ok(); }
@@ -128,6 +130,7 @@ Maybe<void> JobCompleter::Complete(Job* job) const {
   if (!Global<ResourceDesc, ForSession>::Get()->resource().disable_group_boxing_by_dst_parallel()) {
     JUST(WithOpGraphAndMutJobBuilder(job, &GroupBoxingByDstParallel));
   }
+  JUST(WithOpGraphAndMutJobBuilder(job, &BoxingWithMiddleNodes));
   JUST(WithOpGraphAndMutJobBuilder(job, &SetCtrlInOpName4VariableOp));
   // complete tick ops
   JUST(WithOpGraphAndMutJobBuilder(job, &AutoPrependTick));
@@ -136,6 +139,7 @@ Maybe<void> JobCompleter::Complete(Job* job) const {
   JUST(WithOpGraphAndMutJobBuilder(job, &SingleClientAddGlobalInputCriticalSections));
   JUST(WithOpGraphAndMutJobBuilder(job, &SingleClientAddGlobalOutputCriticalSections));
   JUST(WithOpGraphAndMutJob(job, &MultiClientAutoSourceAndSinkTick));
+  JUST(WithOpGraphAndMutJob(job, &MultiClientAutoInterfaceCriticalSectionTick));
   JUST(JobPass4Name("SystemOpFillJobNamePass")(job, &job_pass_ctx));
   JUST(JobPass4Name("DumpBlobParallelConfPass")(job, &job_pass_ctx));
   if (XrtCompilationEnabled(GlobalJobDesc())) {

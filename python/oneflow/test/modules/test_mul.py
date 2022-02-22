@@ -121,14 +121,82 @@ def _test_mul_impl(test_case, device):
     test_case.assertTrue(np.allclose(y.grad.numpy(), x.numpy(), 1e-05, 1e-05))
 
 
+def inplace_mul_tensors_helper(test_case, device, arr_0, arr_y):
+    of_x = flow.tensor(
+        arr_0, dtype=flow.float32, device=flow.device(device), requires_grad=True,
+    )
+    of_inplace_x = of_x + 1
+    of_y = flow.tensor(
+        arr_y, dtype=flow.float32, device=flow.device(device), requires_grad=True,
+    )
+    id_inpalce_x = id(of_inplace_x)
+    of_inplace_x.mul_(of_y)
+    test_case.assertTrue(
+        np.allclose(of_inplace_x.numpy(), np.multiply(arr_0 + 1, arr_y), 1e-05, 1e-05)
+    )
+    test_case.assertTrue(id_inpalce_x == id(of_inplace_x))
+    of_inplace_x = of_inplace_x.sum()
+    of_inplace_x.backward()
+    test_case.assertTrue(np.allclose(arr_y, of_x.grad.numpy(), 1e-05, 1e-05))
+    test_case.assertTrue(np.allclose(arr_0 + 1, of_y.grad.numpy(), 1e-05, 1e-05))
+
+
+def _test_inplace_mul_tensors(test_case, device):
+    arr_0 = np.random.rand(3, 5)
+    arr_y = np.random.rand(3, 5)
+    inplace_mul_tensors_helper(test_case, device, arr_0, arr_y)
+
+
+def _test_inplace_mul_scalar(test_case, device):
+    arr = np.random.rand(2, 3, 4)
+    of_x = flow.tensor(
+        arr, dtype=flow.float32, device=flow.device(device), requires_grad=True
+    )
+    y = 3.25
+    of_inplace_x = of_x + 1
+    id_x_before = id(of_inplace_x)
+    of_inplace_x.mul_(y)
+    test_case.assertTrue(id_x_before == id(of_inplace_x))
+    test_case.assertTrue(np.allclose(of_inplace_x.numpy(), np.multiply(arr + 1, y)))
+
+    of_x = flow.tensor(
+        arr, dtype=flow.float32, device=flow.device(device), requires_grad=True
+    )
+    of_inplace_x = of_x + 1
+    of_inplace_x_id_before = id(of_inplace_x)
+    of_inplace_x.mul_(y)
+    test_case.assertTrue(of_inplace_x_id_before == id(of_inplace_x))
+    test_case.assertTrue(
+        np.allclose(of_inplace_x.numpy(), np.multiply(arr + 1, y), 1e-05, 1e-05)
+    )
+    of_inplace_x = of_inplace_x.sum()
+    of_inplace_x.backward()
+    test_case.assertTrue(
+        np.allclose(np.full(arr.shape, y), of_x.grad.numpy(), 1e-05, 1e-05)
+    )
+
+
 @flow.unittest.skip_unless_1n1d()
 class TestMulModule(flow.unittest.TestCase):
     def test_mul(test_case):
         arg_dict = OrderedDict()
-        arg_dict["test_fun"] = [_test_mul_impl]
+        arg_dict["test_fun"] = [
+            _test_mul_impl,
+            _test_inplace_mul_tensors,
+            _test_inplace_mul_scalar,
+        ]
         arg_dict["device"] = ["cpu", "cuda"]
         for arg in GenArgList(arg_dict):
             arg[0](test_case, *arg[1:])
+
+    @autotest(check_graph=True)
+    def test_broadcast_mul(test_case):
+        device = random_device()
+        x_0 = random_tensor(ndim=3, dim0=4, dim1=2, dim2=3).to(device)
+        y = random_tensor(ndim=2, dim0=2, dim1=3).to(device)
+        x = x_0 + 1
+        x.mul_(y)
+        return x
 
 
 if __name__ == "__main__":

@@ -14,11 +14,11 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 #include "oneflow/core/framework/framework.h"
+#include "oneflow/core/framework/op_generated.h"
 
 namespace oneflow {
-namespace {
 
-Maybe<void> TensorDescInfer(user_op::InferContext* ctx) {
+Maybe<void> FusedCastScaleOp::InferLogicalTensorDesc(user_op::InferContext* ctx) {
   const user_op::TensorDesc& x = ctx->InputTensorDesc("x", 0);
   const user_op::TensorDesc& scale_by_tensor = ctx->InputTensorDesc("scale_by_tensor", 0);
   CHECK_EQ_OR_RETURN(scale_by_tensor.shape().NumAxes(), 1);
@@ -29,14 +29,18 @@ Maybe<void> TensorDescInfer(user_op::InferContext* ctx) {
   return Maybe<void>::Ok();
 }
 
-Maybe<void> DataTypeInfer(user_op::InferContext* ctx) {
+Maybe<void> FusedCastScaleOp::InferPhysicalTensorDesc(user_op::InferContext* ctx) {
+  return FusedCastScaleOp::InferLogicalTensorDesc(ctx);
+}
+
+Maybe<void> FusedCastScaleOp::InferDataType(user_op::InferContext* ctx) {
   const user_op::TensorDesc& scale_by_tensor = ctx->InputTensorDesc("scale_by_tensor", 0);
   user_op::TensorDesc* y = ctx->OutputTensorDesc("y", 0);
   *y->mut_data_type() = scale_by_tensor.data_type();
   return Maybe<void>::Ok();
 }
 
-Maybe<void> GetSbpSignatures(user_op::SbpContext* ctx) {
+Maybe<void> FusedCastScaleOp::GetSbp(user_op::SbpContext* ctx) {
   const auto& x = ctx->LogicalTensorDesc4InputArgNameAndIndex("x", 0);
   for (int i = 0; i < x.shape().NumAxes(); ++i) {
     ctx->NewBuilder()
@@ -58,14 +62,4 @@ Maybe<void> GetSbpSignatures(user_op::SbpContext* ctx) {
   return Maybe<void>::Ok();
 }
 
-REGISTER_USER_OP("fused_cast_scale")
-    .Input("x")
-    .Input("scale_by_tensor")
-    .Output("y")
-    .Attr<double>("scale", 1.0)
-    .SetTensorDescInferFn(TensorDescInfer)
-    .SetGetSbpFn(GetSbpSignatures)
-    .SetDataTypeInferFn(DataTypeInfer);
-
-}  // namespace
 }  // namespace oneflow

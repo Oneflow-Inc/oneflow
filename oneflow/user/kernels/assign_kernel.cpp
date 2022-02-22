@@ -35,7 +35,7 @@ class AssignKernel final : public user_op::OpKernel {
     size_t val_tensor_bytes_size =
         value_tensor->shape().elem_cnt() * GetSizeOfDataType(value_tensor->data_type());
     CHECK_EQ(tensor_bytes_size, val_tensor_bytes_size);
-    AutoMemcpy(ctx->device_ctx(), ref_tensor->mut_dptr(), value_tensor->dptr(), tensor_bytes_size,
+    AutoMemcpy(ctx->stream(), ref_tensor->mut_dptr(), value_tensor->dptr(), tensor_bytes_size,
                ref_tensor->mem_case(), value_tensor->mem_case());
   }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return true; }

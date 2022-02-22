@@ -22,7 +22,7 @@ namespace oneflow {
 
 bool IsShuttingDown();
 
-void SetShuttingDown();
+void SetShuttingDown(bool arg_shutting_down = true);
 
 }  // namespace oneflow
 

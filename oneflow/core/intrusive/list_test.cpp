@@ -17,6 +17,7 @@ limitations under the License.
 // caused by the following trick
 // reference: https://gcc.gnu.org/bugzilla/show_bug.cgi?id=65899
 #include <sstream>
+#include "gtest/gtest.h"
 #define private public
 #include "oneflow/core/common/util.h"
 #include "oneflow/core/intrusive/intrusive.h"
@@ -52,7 +53,7 @@ class TestListItem : public intrusive::Base {
   friend class intrusive::Ref;
   intrusive::Ref* mut_intrusive_ref() { return &intrusive_ref_; }
 
-  TestListItem() : intrusive_ref_(), cnt_(), foo_list_() {}
+  TestListItem() : foo_list_(), intrusive_ref_(), cnt_() {}
   intrusive::Ref intrusive_ref_;
   int* cnt_;
 };

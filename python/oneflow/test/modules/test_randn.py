@@ -78,8 +78,8 @@ def _test_with_generator(test_case, device, shape):
 
 @flow.unittest.skip_unless_1n1d()
 class TestRandnModule(flow.unittest.TestCase):
-    def test_consistent_naive(test_case):
-        placement = flow.placement("cpu", {0: [0]})
+    def test_global_naive(test_case):
+        placement = flow.placement("cpu", ranks=[0])
         sbp = (flow.sbp.broadcast,)
         x = flow.randn(16, 16, placement=placement, sbp=sbp)
         test_case.assertEqual(x.sbp, sbp)

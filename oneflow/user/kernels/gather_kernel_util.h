@@ -22,14 +22,15 @@ namespace oneflow {
 
 template<DeviceType device_type, typename T>
 struct GatherKernelUtil final {
-  static void Forward(DeviceCtx* ctx, const Blob* indices, const Blob* in, int64_t axis, Blob* out);
-  static void Forward(DeviceCtx* ctx, const Blob* indices, const Blob* in, int64_t axis, Blob* out,
-                      int64_t offset);
+  static void Forward(ep::Stream* stream, const Blob* indices, const Blob* in, int64_t axis,
+                      Blob* out);
+  static void Forward(ep::Stream* stream, const Blob* indices, const Blob* in, int64_t axis,
+                      Blob* out, int64_t offset);
 };
 
 template<DeviceType device_type, typename T, typename K>
 struct GatherKernelUtilImpl final {
-  static void Forward(DeviceCtx* ctx, const K* indices, int64_t num_indices, const T* in,
+  static void Forward(ep::Stream* stream, const K* indices, int64_t num_indices, const T* in,
                       const Shape& flat_in_shape, T* out, int64_t offset);
 };
 

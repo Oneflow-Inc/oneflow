@@ -44,25 +44,6 @@ struct hash<oneflow::BiasCorrectionFactorCacheKey> {
 
 namespace oneflow {
 
-namespace {
-
-std::string GenVariableOutputLbn(const OperatorConf& op_conf) {
-  CHECK(op_conf.has_variable_conf());
-  return GenLogicalBlobName(op_conf.name(), op_conf.variable_conf().out());
-}
-
-OperatorConf GenerateAdamHelperVariableOpConf(const VariableOp& op, const std::string& name,
-                                              const float initial_value) {
-  OperatorConf helper_variable_op(op.op_conf());
-  helper_variable_op.set_name(op.op_name() + "-" + name);
-  helper_variable_op.mutable_variable_conf()->set_out("out");
-  InitializerConf constant_initializer;
-  constant_initializer.mutable_constant_conf()->set_value(initial_value);
-  *(helper_variable_op.mutable_variable_conf()->mutable_initializer()) = constant_initializer;
-  helper_variable_op.set_scope_symbol_id(op.op_conf().scope_symbol_id());
-  return helper_variable_op;
-}
-
 class BiasCorrectionFactorState final : public JobPassState {
  public:
   BiasCorrectionFactorState() {}
@@ -87,6 +68,25 @@ class BiasCorrectionFactorState final : public JobPassState {
  private:
   HashMap<BiasCorrectionFactorCacheKey, std::string> key2lbn_;
 };
+
+namespace {
+
+std::string GenVariableOutputLbn(const OperatorConf& op_conf) {
+  CHECK(op_conf.has_variable_conf());
+  return GenLogicalBlobName(op_conf.name(), op_conf.variable_conf().out());
+}
+
+OperatorConf GenerateAdamHelperVariableOpConf(const VariableOp& op, const std::string& name,
+                                              const float initial_value) {
+  OperatorConf helper_variable_op(op.op_conf());
+  helper_variable_op.set_name(op.op_name() + "-" + name);
+  helper_variable_op.mutable_variable_conf()->set_out("out");
+  InitializerConf constant_initializer;
+  constant_initializer.mutable_constant_conf()->set_value(initial_value);
+  *(helper_variable_op.mutable_variable_conf()->mutable_initializer()) = constant_initializer;
+  helper_variable_op.set_scope_symbol_id(op.op_conf().scope_symbol_id());
+  return helper_variable_op;
+}
 
 void GenerateOptimizerOpConf(JobPassCtx* ctx, const OpNode& var_op_node,
                              const std::string& model_diff_lbn, const OptimizerConf& optimizer_conf,
@@ -136,9 +136,9 @@ void GenerateOptimizerOpConf(JobPassCtx* ctx, const OpNode& var_op_node,
     auto* state = CHECK_JUST(ctx->MutableState<BiasCorrectionFactorState>(job_pass_state_key));
     ParallelConf bias_correction_parallel_conf;
     const auto& lr_parallel_conf =
-        job_builder->ParallelConf4Lbi(GenLogicalBlobId(learning_rate_lbn));
+        CHECK_JUST(job_builder->ParallelConf4Lbi(GenLogicalBlobId(learning_rate_lbn)));
     const auto& train_step_parallel_conf =
-        job_builder->ParallelConf4Lbi(GenLogicalBlobId(train_step_lbn));
+        CHECK_JUST(job_builder->ParallelConf4Lbi(GenLogicalBlobId(train_step_lbn)));
     if (lr_parallel_conf == train_step_parallel_conf) {
       bias_correction_parallel_conf = lr_parallel_conf;
     } else {

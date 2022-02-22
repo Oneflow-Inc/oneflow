@@ -28,11 +28,10 @@ std::unique_ptr<ep::primitive::Softmax> NewSoftmaxPrimitive(Context* ctx) {
   return ep::primitive::NewPrimitive<ep::primitive::SoftmaxFactory>(ctx->device_type(), data_type);
 }
 
-hob::HobContextGetter<user_op::KernelRegContext, bool> SoftmaxPrimitiveExists() {
-  return user_op::HobCtxGetter<bool>("SoftmaxPrimitiveExists",
-                                     [](const user_op::KernelRegContext& ctx) {
-                                       return NewSoftmaxPrimitive(&ctx).operator bool();
-                                     });
+auto SoftmaxPrimitiveExists() {
+  return hob::make_custom("SoftmaxPrimitiveExists", [](const user_op::KernelRegContext& ctx) {
+    return NewSoftmaxPrimitive(&ctx).operator bool();
+  });
 }
 
 template<typename Context>
@@ -42,11 +41,11 @@ std::unique_ptr<ep::primitive::SoftmaxBackward> NewSoftmaxBackwardPrimitive(Cont
                                                                             data_type);
 }
 
-hob::HobContextGetter<user_op::KernelRegContext, bool> SoftmaxBackwardPrimitiveExists() {
-  return user_op::HobCtxGetter<bool>("SoftmaxBackwardPrimitiveExists",
-                                     [](const user_op::KernelRegContext& ctx) {
-                                       return NewSoftmaxBackwardPrimitive(&ctx).operator bool();
-                                     });
+auto SoftmaxBackwardPrimitiveExists() {
+  return hob::make_custom("SoftmaxBackwardPrimitiveExists",
+                          [](const user_op::KernelRegContext& ctx) {
+                            return NewSoftmaxBackwardPrimitive(&ctx).operator bool();
+                          });
 }
 
 }  // namespace
@@ -66,7 +65,7 @@ class SoftmaxKernel final : public user_op::OpKernel, public user_op::CudaGraphS
     const int64_t rows = in_shape.Count(0, in_shape.NumAxes() - 1);
     std::unique_ptr<ep::primitive::Softmax> primitive = NewSoftmaxPrimitive(ctx);
     CHECK(primitive);
-    primitive->Launch(ctx->stream_ctx(), rows, cols, in->dptr(), out->mut_dptr());
+    primitive->Launch(ctx->stream(), rows, cols, in->dptr(), out->mut_dptr());
   }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
@@ -91,7 +90,7 @@ class SoftmaxGradKernel final : public user_op::OpKernel, public user_op::CudaGr
 
     std::unique_ptr<ep::primitive::SoftmaxBackward> primitive = NewSoftmaxBackwardPrimitive(ctx);
     CHECK(primitive);
-    primitive->Launch(ctx->stream_ctx(), num_instances, num_classes, y->dptr(), dy->dptr(),
+    primitive->Launch(ctx->stream(), num_instances, num_classes, y->dptr(), dy->dptr(),
                       dx->mut_dptr());
   }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }

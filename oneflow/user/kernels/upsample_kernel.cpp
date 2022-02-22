@@ -138,7 +138,7 @@ class UpsampleNearestGradCPUKernel final : public user_op::OpKernel {
   void Compute(user_op::KernelComputeContext* ctx) const override {
     user_op::Tensor* dx_blob = ctx->Tensor4ArgNameAndIndex("dx", 0);
     if (dx_blob == nullptr) { return; }
-    Memset<DeviceType::kCPU>(ctx->device_ctx(), dx_blob->mut_dptr<T>(), 0,
+    Memset<DeviceType::kCPU>(ctx->stream(), dx_blob->mut_dptr<T>(), 0,
                              dx_blob->shape().elem_cnt() * sizeof(T));
     const user_op::Tensor* dy_blob = ctx->Tensor4ArgNameAndIndex("dy", 0);
     const float height_scale = ctx->Attr<float>("height_scale");
@@ -155,19 +155,19 @@ class UpsampleNearestGradCPUKernel final : public user_op::OpKernel {
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
 
-#define REGISTER_UPSAMPLE_NEAREST_CPU_KERNEL(dtype)                                      \
-  REGISTER_USER_KERNEL("upsample")                                                       \
-      .SetCreateFn<UpsampleNearestCPUKernel<dtype>>()                                    \
-      .SetIsMatchedHob(                                                                  \
-          (user_op::HobDeviceTag() == "cpu")                                             \
-          & (user_op::HobDataType("y", 0) == GetDataType<dtype>::value)                  \
-          & (user_op::HobAttr<std::string>("interpolation") == std::string("nearest"))); \
-  REGISTER_USER_KERNEL("upsample_grad")                                                  \
-      .SetCreateFn<UpsampleNearestGradCPUKernel<dtype>>()                                \
-      .SetIsMatchedHob(                                                                  \
-          (user_op::HobDeviceTag() == "cpu")                                             \
-          & (user_op::HobDataType("dx", 0) == GetDataType<dtype>::value)                 \
-          & (user_op::HobAttr<std::string>("interpolation") == std::string("nearest")));
+#define REGISTER_UPSAMPLE_NEAREST_CPU_KERNEL(dtype)                                       \
+  REGISTER_USER_KERNEL("upsample")                                                        \
+      .SetCreateFn<UpsampleNearestCPUKernel<dtype>>()                                     \
+      .SetIsMatchedHob(                                                                   \
+          (user_op::HobDeviceType() == DeviceType::kCPU)                                  \
+          && (user_op::HobDataType("y", 0) == GetDataType<dtype>::value)                  \
+          && (user_op::HobAttr<std::string>("interpolation") == std::string("nearest"))); \
+  REGISTER_USER_KERNEL("upsample_grad")                                                   \
+      .SetCreateFn<UpsampleNearestGradCPUKernel<dtype>>()                                 \
+      .SetIsMatchedHob(                                                                   \
+          (user_op::HobDeviceType() == DeviceType::kCPU)                                  \
+          && (user_op::HobDataType("dx", 0) == GetDataType<dtype>::value)                 \
+          && (user_op::HobAttr<std::string>("interpolation") == std::string("nearest")));
 
 REGISTER_UPSAMPLE_NEAREST_CPU_KERNEL(float)
 REGISTER_UPSAMPLE_NEAREST_CPU_KERNEL(double)
@@ -214,7 +214,7 @@ class UpsampleBilinearGradCPUKernel final : public user_op::OpKernel {
   void Compute(user_op::KernelComputeContext* ctx) const override {
     user_op::Tensor* dx_blob = ctx->Tensor4ArgNameAndIndex("dx", 0);
     if (dx_blob == nullptr) { return; }
-    Memset<DeviceType::kCPU>(ctx->device_ctx(), dx_blob->mut_dptr<T>(), 0,
+    Memset<DeviceType::kCPU>(ctx->stream(), dx_blob->mut_dptr<T>(), 0,
                              dx_blob->shape().elem_cnt() * sizeof(T));
     const user_op::Tensor* dy_blob = ctx->Tensor4ArgNameAndIndex("dy", 0);
     const float height_scale = ctx->Attr<float>("height_scale");
@@ -239,19 +239,19 @@ class UpsampleBilinearGradCPUKernel final : public user_op::OpKernel {
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
 
-#define REGISTER_UPSAMPLE_BILINEAR_CPU_KERNEL(dtype)                                      \
-  REGISTER_USER_KERNEL("upsample")                                                        \
-      .SetCreateFn<UpsampleBilinearCPUKernel<dtype>>()                                    \
-      .SetIsMatchedHob(                                                                   \
-          (user_op::HobDeviceTag() == "cpu")                                              \
-          & (user_op::HobDataType("y", 0) == GetDataType<dtype>::value)                   \
-          & (user_op::HobAttr<std::string>("interpolation") == std::string("bilinear"))); \
-  REGISTER_USER_KERNEL("upsample_grad")                                                   \
-      .SetCreateFn<UpsampleBilinearGradCPUKernel<dtype>>()                                \
-      .SetIsMatchedHob(                                                                   \
-          (user_op::HobDeviceTag() == "cpu")                                              \
-          & (user_op::HobDataType("dx", 0) == GetDataType<dtype>::value)                  \
-          & (user_op::HobAttr<std::string>("interpolation") == std::string("bilinear")));
+#define REGISTER_UPSAMPLE_BILINEAR_CPU_KERNEL(dtype)                                       \
+  REGISTER_USER_KERNEL("upsample")                                                         \
+      .SetCreateFn<UpsampleBilinearCPUKernel<dtype>>()                                     \
+      .SetIsMatchedHob(                                                                    \
+          (user_op::HobDeviceType() == DeviceType::kCPU)                                   \
+          && (user_op::HobDataType("y", 0) == GetDataType<dtype>::value)                   \
+          && (user_op::HobAttr<std::string>("interpolation") == std::string("bilinear"))); \
+  REGISTER_USER_KERNEL("upsample_grad")                                                    \
+      .SetCreateFn<UpsampleBilinearGradCPUKernel<dtype>>()                                 \
+      .SetIsMatchedHob(                                                                    \
+          (user_op::HobDeviceType() == DeviceType::kCPU)                                   \
+          && (user_op::HobDataType("dx", 0) == GetDataType<dtype>::value)                  \
+          && (user_op::HobAttr<std::string>("interpolation") == std::string("bilinear")));
 
 REGISTER_UPSAMPLE_BILINEAR_CPU_KERNEL(float)
 REGISTER_UPSAMPLE_BILINEAR_CPU_KERNEL(double)

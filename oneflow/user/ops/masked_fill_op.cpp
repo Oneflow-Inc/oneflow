@@ -14,6 +14,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 #include "oneflow/core/framework/framework.h"
+#include "oneflow/core/framework/op_generated.h"
 
 namespace oneflow {
 
@@ -21,14 +22,13 @@ namespace {
 
 Maybe<void> InferMaskedFillTensorDesc(user_op::InferContext* ctx) {
   const Shape& mask_shape = ctx->InputShape("mask", 0);
-  const Shape& x_shape = ctx->InputShape("x", 0);
   *ctx->OutputShape("out", 0) = mask_shape;
   return Maybe<void>::Ok();
 }
 
 Maybe<void> InferMaskedFillDataType(user_op::InferContext* ctx) {
   const DataType& mask_dtype = ctx->InputDType("mask", 0);
-  CHECK_OR_RETURN(IsIntegralDataType(mask_dtype));
+  CHECK_OR_RETURN(IsIntegralDataType(mask_dtype) || IsBoolDataType(mask_dtype));
   *ctx->OutputDType("out", 0) = ctx->InputDType("x", 0);
   return Maybe<void>::Ok();
 }
@@ -56,11 +56,6 @@ Maybe<void> GetMaskedFillSbpSignatures(user_op::SbpContext* ctx) {
       UNIMPLEMENTED();
     }
   }
-  ctx->NewBuilder()
-      .Broadcast(user_op::OpArg("mask", 0))
-      .PartialSum(user_op::OpArg("x", 0))
-      .PartialSum(user_op::OpArg("out", 0))
-      .Build();
   return Maybe<void>::Ok();
 }
 
@@ -73,17 +68,25 @@ Maybe<void> GetMaskedFillInputArgModify(const user_op::GetInputArgModifier& GetI
 
 }  // namespace
 
-REGISTER_USER_OP("masked_fill")
-    .Input("x")
-    .Input("mask")
-    .Output("out")
-    .Attr<bool>("has_int_operand")
-    .Attr<bool>("has_float_operand")
-    .Attr<int64_t>("int_operand")
-    .Attr<double>("float_operand")
-    .SetTensorDescInferFn(InferMaskedFillTensorDesc)
-    .SetInputArgModifyFn(GetMaskedFillInputArgModify)
-    .SetDataTypeInferFn(InferMaskedFillDataType)
-    .SetGetSbpFn(GetMaskedFillSbpSignatures);
+/* static */ Maybe<void> MaskedFillOp::InferLogicalTensorDesc(user_op::InferContext* ctx) {
+  return InferMaskedFillTensorDesc(ctx);
+}
+
+/*static*/ Maybe<void> MaskedFillOp::InferPhysicalTensorDesc(user_op::InferContext* ctx) {
+  return InferLogicalTensorDesc(ctx);
+}
+
+/* static */ Maybe<void> MaskedFillOp::GetSbp(user_op::SbpContext* ctx) {
+  return GetMaskedFillSbpSignatures(ctx);
+}
+
+/* static */ Maybe<void> MaskedFillOp::ModifyInputArg(
+    const GetInputArgModifier& GetInputArgModifierFn, const user_op::UserOpConfWrapper& conf) {
+  return GetMaskedFillInputArgModify(GetInputArgModifierFn, conf);
+}
+
+/* static */ Maybe<void> MaskedFillOp::InferDataType(user_op::InferContext* ctx) {
+  return InferMaskedFillDataType(ctx);
+}
 
 }  // namespace oneflow

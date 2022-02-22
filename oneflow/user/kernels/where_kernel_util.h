@@ -16,19 +16,20 @@ limitations under the License.
 #ifndef ONEFLOW_USER_KERNELS_WHERE_KERNEL_UTIL_H_
 #define ONEFLOW_USER_KERNELS_WHERE_KERNEL_UTIL_H_
 
-#include "oneflow/core/device/device_context.h"
+#include "oneflow/core/kernel/kernel_util.h"
+#include "oneflow/core/ep/include/stream.h"
 
 namespace oneflow {
 
 template<DeviceType device_type, typename T, typename CondT>
 struct WhereKernelUtil {
-  static void Where(DeviceCtx* ctx, const int64_t elem_cnt, const CondT* cond, const T* lhs,
+  static void Where(ep::Stream* stream, const int64_t elem_cnt, const CondT* cond, const T* lhs,
                     const T* rhs, T* out);
-  static void WhereXScalar(DeviceCtx* ctx, const int64_t elem_cnt, const CondT* cond,
+  static void WhereXScalar(ep::Stream* stream, const int64_t elem_cnt, const CondT* cond,
                            const T x_scalar, const T* rhs, T* out);
-  static void WhereYScalar(DeviceCtx* ctx, const int64_t elem_cnt, const CondT* cond, const T* lhs,
-                           const T y_scalar, T* out);
-  static void WhereXYScalar(DeviceCtx* ctx, const int64_t elem_cnt, const CondT* cond,
+  static void WhereYScalar(ep::Stream* stream, const int64_t elem_cnt, const CondT* cond,
+                           const T* lhs, const T y_scalar, T* out);
+  static void WhereXYScalar(ep::Stream* stream, const int64_t elem_cnt, const CondT* cond,
                             const T x_scalar, const T y_scalar, T* out);
 };
 

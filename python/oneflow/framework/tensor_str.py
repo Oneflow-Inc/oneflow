@@ -16,31 +16,96 @@ limitations under the License.
 """
 This file is mostly referenced from PyTorch v1.8.1 torch/_tensor_str.py
 """
-import numpy as np
-import math
-from typing import Optional
 
+
+import math
+import numpy as np
+from typing import Optional
 import oneflow as flow
+from oneflow.framework.tensor_str_util import slice_wrapper
+from oneflow.framework.tensor_str_util import _autoset_linewidth
+from oneflow.framework.tensor_str_util import _try_convert_to_local_tensor
 
 
 class __PrinterOptions(object):
     precision: int = 4
     threshold: float = 1000
     edgeitems: int = 3
-    linewidth: int = 80
+    userset_linewidth: int = None
     sci_mode: Optional[bool] = None
+
+    autoset_linewidth: bool = True
+
+    @property
+    def linewidth(self):
+        return (
+            _autoset_linewidth() if self.autoset_linewidth else self.userset_linewidth
+        )
+
+    @linewidth.setter
+    def linewidth(self, value):
+        self.userset_linewidth = value
 
 
 PRINT_OPTS = __PrinterOptions()
 
 
-def _try_convert_to_local_tensor(tensor):
-    if tensor.is_consistent:
-        tensor = tensor.to_consistent(
-            placement=flow.env.all_device_placement(tensor.placement.device_type),
-            sbp=flow.sbp.broadcast,
-        ).to_local()
-    return tensor
+def set_printoptions(
+    precision=None,
+    threshold=None,
+    edgeitems=None,
+    linewidth=None,
+    profile=None,
+    sci_mode=None,
+):
+    r"""Set options for printing. Items shamelessly taken from NumPy
+
+    Args:
+        precision: Number of digits of precision for floating point output
+            (default = 4).
+        threshold: Total number of array elements which trigger summarization
+            rather than full `repr` (default = 1000).
+        edgeitems: Number of array items in summary at beginning and end of
+            each dimension (default = 3).
+        linewidth: The number of characters per line for the purpose of
+            inserting line breaks (default = terminal_columns).
+        profile: Sane defaults for pretty printing. Can override with any of
+            the above options. (any one of `default`, `short`, `full`)
+        sci_mode: Enable (True) or disable (False) scientific notation. If
+            None (default) is specified, the value is defined by
+            `oneflow._tensor_str._Formatter`. This value is automatically chosen
+            by the framework.
+    .. note::
+        linewidth equals to terminal columns, manual setting will invalidate the default automatic setting.
+    """
+    if profile is not None:
+        if profile == "default":
+            PRINT_OPTS.precision = 4
+            PRINT_OPTS.threshold = 1000
+            PRINT_OPTS.edgeitems = 3
+            PRINT_OPTS.linewidth = 80
+        elif profile == "short":
+            PRINT_OPTS.precision = 2
+            PRINT_OPTS.threshold = 1000
+            PRINT_OPTS.edgeitems = 2
+            PRINT_OPTS.linewidth = 80
+        elif profile == "full":
+            PRINT_OPTS.precision = 4
+            PRINT_OPTS.threshold = math.inf
+            PRINT_OPTS.edgeitems = 3
+            PRINT_OPTS.linewidth = 80
+
+    if precision is not None:
+        PRINT_OPTS.precision = precision
+    if threshold is not None:
+        PRINT_OPTS.threshold = threshold
+    if edgeitems is not None:
+        PRINT_OPTS.edgeitems = edgeitems
+    if linewidth is not None:
+        PRINT_OPTS.linewidth = linewidth
+    PRINT_OPTS.sci_mode = sci_mode
+    if profile is not None or linewidth is not None:
+        PRINT_OPTS.autoset_linewidth = False
 
 
 class _Formatter(object):
@@ -145,17 +210,16 @@ def _vector_str(self, indent, summarize, formatter1):
     elements_per_line = max(
         1, int(math.floor((PRINT_OPTS.linewidth - indent) / (element_length)))
     )
-    char_per_line = element_length * elements_per_line
 
     def _val_formatter(val, formatter1=formatter1):
         return formatter1.format(val)
 
     if summarize and self.size(0) > 2 * PRINT_OPTS.edgeitems:
         left_values = _try_convert_to_local_tensor(
-            self[: PRINT_OPTS.edgeitems]
+            slice_wrapper(self, [0, PRINT_OPTS.edgeitems, 1])
         ).tolist()
         right_values = _try_convert_to_local_tensor(
-            self[-PRINT_OPTS.edgeitems :]
+            slice_wrapper(self, [self.size(0) - PRINT_OPTS.edgeitems, self.size(0), 1])
         ).tolist()
         data = (
             [_val_formatter(val) for val in left_values]
@@ -185,18 +249,30 @@ def _tensor_str_with_formatter(self, indent, summarize, formatter1):
     if summarize and self.size(0) > 2 * PRINT_OPTS.edgeitems:
         slices = (
             [
-                _tensor_str_with_formatter(self[i], indent + 1, summarize, formatter1)
+                _tensor_str_with_formatter(
+                    slice_wrapper(self, [i, i + 1, 1]),
+                    indent + 1,
+                    summarize,
+                    formatter1,
+                )
                 for i in range(0, PRINT_OPTS.edgeitems)
             ]
             + ["..."]
             + [
-                _tensor_str_with_formatter(self[i], indent + 1, summarize, formatter1)
+                _tensor_str_with_formatter(
+                    slice_wrapper(self, [i, i + 1, 1]),
+                    indent + 1,
+                    summarize,
+                    formatter1,
+                )
                 for i in range(self.shape[0] - PRINT_OPTS.edgeitems, self.shape[0])
             ]
         )
     else:
         slices = [
-            _tensor_str_with_formatter(self[i], indent + 1, summarize, formatter1)
+            _tensor_str_with_formatter(
+                slice_wrapper(self, [i, i + 1, 1]), indent + 1, summarize, formatter1
+            )
             for i in range(0, self.size(0))
         ]
 
@@ -210,7 +286,7 @@ def _tensor_str(self, indent):
         self = self.float()
 
     # TODO: not support nd sbp tensor for now
-    if self.is_consistent and len(self.placement.hierarchy) > 1:
+    if self.is_global and len(self.placement.ranks.shape) > 1:
         return "[...]"
 
     with flow.no_grad():
@@ -240,18 +316,31 @@ def get_summarized_data(self):
     if dim == 1:
         if self.size(0) > 2 * PRINT_OPTS.edgeitems:
             return flow.cat(
-                (self[: PRINT_OPTS.edgeitems], self[-PRINT_OPTS.edgeitems :])
+                (
+                    slice_wrapper(self, [0, PRINT_OPTS.edgeitems, 1]),
+                    slice_wrapper(
+                        self, [self.size(0) - PRINT_OPTS.edgeitems, self.size(0), 1]
+                    ),
+                )
             )
         else:
             return self
     if self.size(0) > 2 * PRINT_OPTS.edgeitems:
-        start = [self[i] for i in range(0, PRINT_OPTS.edgeitems)]
+        start = [
+            slice_wrapper(self, [i, i + 1, 1]) for i in range(0, PRINT_OPTS.edgeitems)
+        ]
         end = [
-            self[i] for i in range(self.shape[0] - PRINT_OPTS.edgeitems, self.shape[0])
+            slice_wrapper(self, [i, i + 1, 1])
+            for i in range(self.shape[0] - PRINT_OPTS.edgeitems, self.shape[0])
         ]
         return flow.stack([get_summarized_data(x) for x in (start + end)])
     else:
-        return flow.stack([get_summarized_data(x) for x in self])
+        return flow.stack(
+            [
+                get_summarized_data(slice_wrapper(self, [i, i + 1, 1]))
+                for i in range(len(self))
+            ]
+        )
 
 
 def _gen_tensor_str_template(tensor, is_meta):
@@ -260,8 +349,8 @@ def _gen_tensor_str_template(tensor, is_meta):
     indent = len(prefix)
     suffixes = []
 
-    # tensor is local or consistent
-    if tensor.is_consistent:
+    # tensor is local or global
+    if tensor.is_global:
         suffixes.append(f"placement={str(tensor.placement)}")
         suffixes.append(f"sbp={str(tensor.sbp)}")
     elif tensor.device.type == "cuda" or tensor.device.type == "gpu":

@@ -187,6 +187,18 @@ message TickOpConf {
   required string out = 2;
 }
 
+message CriticalSectionWaitTickOpConf {
+  repeated string tick = 1;
+  required string out = 2;
+  required string buffer_name = 3;
+}
+
+message CriticalSectionCallbackTickOpConf {
+  repeated string tick = 1;
+  required string out = 2;
+  required string buffer_name = 3;
+}
+
 message DeviceTickOpConf {
   repeated string tick = 1;
   required string out = 2;
@@ -470,8 +482,9 @@ message OperatorConf {
   optional string device_tag = 4 [default = "invalid_device"];
   repeated string ctrl_in_op_name = 7;
   optional int64 scope_symbol_id = 8;
-  optional uint32 stream_index_hint = 9;
+  optional string stream_name_hint = 9;
   optional string pass_tag = 10;
+  optional string loc = 11 [default = ""];
   oneof op_type {
     // system op
     DecodeRandomOpConf decode_random_conf = 102;
@@ -480,7 +493,9 @@ message OperatorConf {
     BoxingOpConf boxing_conf = 108;
     VariableOpConf variable_conf = 122;
     TickOpConf tick_conf = 124;
-    TotalLossInstanceNumOpConf total_loss_instance_num_conf = 126;
+    CriticalSectionWaitTickOpConf critical_section_wait_tick_conf = 125;
+    CriticalSectionCallbackTickOpConf critical_section_callback_tick_conf = 126;
+    TotalLossInstanceNumOpConf total_loss_instance_num_conf = 131;
     ShapeElemCntOpConf shape_elem_cnt_conf = 132;
     SrcSubsetTickOpConf src_subset_tick_conf = 133;
     DstSubsetTickOpConf dst_subset_tick_conf = 134;

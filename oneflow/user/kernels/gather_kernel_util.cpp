@@ -27,10 +27,10 @@ Shape GetFlatShape(const ShapeView& shape, int64_t axis) {
 }
 
 template<DeviceType device_type, typename T, typename K>
-void GatherForward(DeviceCtx* ctx, const Blob* indices, const Blob* in, int64_t axis, Blob* out,
+void GatherForward(ep::Stream* stream, const Blob* indices, const Blob* in, int64_t axis, Blob* out,
                    const int64_t offset) {
   const Shape& flat_in_shape = GetFlatShape(in->shape(), axis);
-  GatherKernelUtilImpl<device_type, T, K>::Forward(ctx, indices->dptr<K>(),
+  GatherKernelUtilImpl<device_type, T, K>::Forward(stream, indices->dptr<K>(),
                                                    indices->shape().elem_cnt(), in->dptr<T>(),
                                                    flat_in_shape, out->mut_dptr<T>(), offset);
 }
@@ -49,27 +49,27 @@ struct GatherSwitchUtil final {
 }  // namespace
 
 template<DeviceType device_type, typename T>
-void GatherKernelUtil<device_type, T>::Forward(DeviceCtx* ctx, const Blob* indices, const Blob* in,
-                                               const int64_t axis, Blob* out) {
-  GatherKernelUtil<device_type, T>::Forward(ctx, indices, in, axis, out, 0);
+void GatherKernelUtil<device_type, T>::Forward(ep::Stream* stream, const Blob* indices,
+                                               const Blob* in, const int64_t axis, Blob* out) {
+  GatherKernelUtil<device_type, T>::Forward(stream, indices, in, axis, out, 0);
 }
 
 template<DeviceType device_type, typename T>
-void GatherKernelUtil<device_type, T>::Forward(DeviceCtx* ctx, const Blob* indices, const Blob* in,
-                                               const int64_t axis, Blob* out,
+void GatherKernelUtil<device_type, T>::Forward(ep::Stream* stream, const Blob* indices,
+                                               const Blob* in, const int64_t axis, Blob* out,
                                                const int64_t offset) {
-  GatherSwitchUtil<device_type, T>::SwitchGatherForward(SwitchCase(indices->data_type()), ctx,
+  GatherSwitchUtil<device_type, T>::SwitchGatherForward(SwitchCase(indices->data_type()), stream,
                                                         indices, in, axis, out, offset);
 }
 
 template<typename T, typename K>
 struct GatherKernelUtilImpl<DeviceType::kCPU, T, K> final {
-  static void Forward(DeviceCtx* ctx, const K* indices, int64_t num_indices, const T* in,
+  static void Forward(ep::Stream* stream, const K* indices, int64_t num_indices, const T* in,
                       const Shape& flat_in_shape, T* out, const int64_t offset);
 };
 
 template<typename T, typename K>
-void GatherKernelUtilImpl<DeviceType::kCPU, T, K>::Forward(DeviceCtx* ctx, const K* indices,
+void GatherKernelUtilImpl<DeviceType::kCPU, T, K>::Forward(ep::Stream* stream, const K* indices,
                                                            int64_t num_indices, const T* in,
                                                            const Shape& flat_in_shape, T* out,
                                                            const int64_t offset) {

@@ -28,85 +28,87 @@ class Blob;
 class ConstantInitializerConf;
 
 template<>
-struct ArithemeticIf<DeviceType::kGPU> {
-  static void InitializeWithConstConf(DeviceCtx* ctx,
+struct ArithemeticIf<DeviceType::kCUDA> {
+  static void InitializeWithConstConf(ep::Stream* stream,
                                       const ConstantInitializerConf& initializer_conf, Blob* blob);
 
-  static void MulByScalar(DeviceCtx* ctx, const int64_t n, const float* x, const float y, float* z);
-  static void MulByScalar(DeviceCtx* ctx, const int64_t n, const double* x, const double y,
+  static void MulByScalar(ep::Stream* stream, const int64_t n, const float* x, const float y,
+                          float* z);
+  static void MulByScalar(ep::Stream* stream, const int64_t n, const double* x, const double y,
                           double* z);
-  static void MulByScalar(DeviceCtx* ctx, const int64_t n, const float16* x, const float16 y,
+  static void MulByScalar(ep::Stream* stream, const int64_t n, const float16* x, const float16 y,
                           float16* z);
-  static void MulByScalar(DeviceCtx* ctx, const int64_t n, const int8_t* x, const int8_t y,
+  static void MulByScalar(ep::Stream* stream, const int64_t n, const int8_t* x, const int8_t y,
                           int8_t* z);
-  static void MulByScalar(DeviceCtx* ctx, const int64_t n, const int32_t* x, const int32_t y,
+  static void MulByScalar(ep::Stream* stream, const int64_t n, const int32_t* x, const int32_t y,
                           int32_t* z);
-  static void MulByScalar(DeviceCtx* ctx, const int64_t n, const int64_t* x, const int64_t y,
+  static void MulByScalar(ep::Stream* stream, const int64_t n, const int64_t* x, const int64_t y,
                           int64_t* z);
 
-  static void AddByScalar(DeviceCtx* ctx, const int64_t n, const float* x, const float y, float* z);
-  static void AddByScalar(DeviceCtx* ctx, const int64_t n, const double* x, const double y,
+  static void AddByScalar(ep::Stream* stream, const int64_t n, const float* x, const float y,
+                          float* z);
+  static void AddByScalar(ep::Stream* stream, const int64_t n, const double* x, const double y,
                           double* z);
-  static void AddByScalar(DeviceCtx* ctx, const int64_t n, const float16* x, const float16 y,
+  static void AddByScalar(ep::Stream* stream, const int64_t n, const float16* x, const float16 y,
                           float16* z);
-  static void AddByScalar(DeviceCtx* ctx, const int64_t n, const int8_t* x, const int8_t y,
+  static void AddByScalar(ep::Stream* stream, const int64_t n, const int8_t* x, const int8_t y,
                           int8_t* z);
-  static void AddByScalar(DeviceCtx* ctx, const int64_t n, const int32_t* x, const int32_t y,
+  static void AddByScalar(ep::Stream* stream, const int64_t n, const int32_t* x, const int32_t y,
                           int32_t* z);
-  static void AddByScalar(DeviceCtx* ctx, const int64_t n, const int64_t* x, const int64_t y,
+  static void AddByScalar(ep::Stream* stream, const int64_t n, const int64_t* x, const int64_t y,
                           int64_t* z);
 
-  static void MulByScalarPtr(DeviceCtx* ctx, const int64_t n, const float* x, const float* y,
+  static void MulByScalarPtr(ep::Stream* stream, const int64_t n, const float* x, const float* y,
                              float* z);
-  static void MulByScalarPtr(DeviceCtx* ctx, const int64_t n, const double* x, const double* y,
+  static void MulByScalarPtr(ep::Stream* stream, const int64_t n, const double* x, const double* y,
                              double* z);
-  static void MulByScalarPtr(DeviceCtx* ctx, const int64_t n, const float16* x, const float16* y,
-                             float16* z);
-  static void MulByScalarPtr(DeviceCtx* ctx, const int64_t n, const int8_t* x, const int8_t* y,
+  static void MulByScalarPtr(ep::Stream* stream, const int64_t n, const float16* x,
+                             const float16* y, float16* z);
+  static void MulByScalarPtr(ep::Stream* stream, const int64_t n, const int8_t* x, const int8_t* y,
                              int8_t* z);
-  static void MulByScalarPtr(DeviceCtx* ctx, const int64_t n, const int32_t* x, const int32_t* y,
-                             int32_t* z);
-  static void MulByScalarPtr(DeviceCtx* ctx, const int64_t n, const int64_t* x, const int64_t* y,
-                             int64_t* z);
+  static void MulByScalarPtr(ep::Stream* stream, const int64_t n, const int32_t* x,
+                             const int32_t* y, int32_t* z);
+  static void MulByScalarPtr(ep::Stream* stream, const int64_t n, const int64_t* x,
+                             const int64_t* y, int64_t* z);
 
-  static void AddByScalarPtr(DeviceCtx* ctx, const int64_t n, const float* x, const float* y,
+  static void AddByScalarPtr(ep::Stream* stream, const int64_t n, const float* x, const float* y,
                              float* z);
-  static void AddByScalarPtr(DeviceCtx* ctx, const int64_t n, const double* x, const double* y,
+  static void AddByScalarPtr(ep::Stream* stream, const int64_t n, const double* x, const double* y,
                              double* z);
-  static void AddByScalarPtr(DeviceCtx* ctx, const int64_t n, const float16* x, const float16* y,
-                             float16* z);
-  static void AddByScalarPtr(DeviceCtx* ctx, const int64_t n, const int8_t* x, const int8_t* y,
+  static void AddByScalarPtr(ep::Stream* stream, const int64_t n, const float16* x,
+                             const float16* y, float16* z);
+  static void AddByScalarPtr(ep::Stream* stream, const int64_t n, const int8_t* x, const int8_t* y,
                              int8_t* z);
-  static void AddByScalarPtr(DeviceCtx* ctx, const int64_t n, const int32_t* x, const int32_t* y,
-                             int32_t* z);
-  static void AddByScalarPtr(DeviceCtx* ctx, const int64_t n, const int64_t* x, const int64_t* y,
-                             int64_t* z);
+  static void AddByScalarPtr(ep::Stream* stream, const int64_t n, const int32_t* x,
+                             const int32_t* y, int32_t* z);
+  static void AddByScalarPtr(ep::Stream* stream, const int64_t n, const int64_t* x,
+                             const int64_t* y, int64_t* z);
 
-  static void SubByScalarPtr(DeviceCtx* ctx, const int64_t n, const float* x, const float* y,
+  static void SubByScalarPtr(ep::Stream* stream, const int64_t n, const float* x, const float* y,
                              float* z);
-  static void SubByScalarPtr(DeviceCtx* ctx, const int64_t n, const double* x, const double* y,
+  static void SubByScalarPtr(ep::Stream* stream, const int64_t n, const double* x, const double* y,
                              double* z);
-  static void SubByScalarPtr(DeviceCtx* ctx, const int64_t n, const float16* x, const float16* y,
-                             float16* z);
-  static void SubByScalarPtr(DeviceCtx* ctx, const int64_t n, const int8_t* x, const int8_t* y,
+  static void SubByScalarPtr(ep::Stream* stream, const int64_t n, const float16* x,
+                             const float16* y, float16* z);
+  static void SubByScalarPtr(ep::Stream* stream, const int64_t n, const int8_t* x, const int8_t* y,
                              int8_t* z);
-  static void SubByScalarPtr(DeviceCtx* ctx, const int64_t n, const int32_t* x, const int32_t* y,
-                             int32_t* z);
-  static void SubByScalarPtr(DeviceCtx* ctx, const int64_t n, const int64_t* x, const int64_t* y,
-                             int64_t* z);
+  static void SubByScalarPtr(ep::Stream* stream, const int64_t n, const int32_t* x,
+                             const int32_t* y, int32_t* z);
+  static void SubByScalarPtr(ep::Stream* stream, const int64_t n, const int64_t* x,
+                             const int64_t* y, int64_t* z);
 
-  static void DivByScalarPtr(DeviceCtx* ctx, const int64_t n, const float* x, const float* y,
+  static void DivByScalarPtr(ep::Stream* stream, const int64_t n, const float* x, const float* y,
                              float* z);
-  static void DivByScalarPtr(DeviceCtx* ctx, const int64_t n, const double* x, const double* y,
+  static void DivByScalarPtr(ep::Stream* stream, const int64_t n, const double* x, const double* y,
                              double* z);
-  static void DivByScalarPtr(DeviceCtx* ctx, const int64_t n, const float16* x, const float16* y,
-                             float16* z);
-  static void DivByScalarPtr(DeviceCtx* ctx, const int64_t n, const int8_t* x, const int8_t* y,
+  static void DivByScalarPtr(ep::Stream* stream, const int64_t n, const float16* x,
+                             const float16* y, float16* z);
+  static void DivByScalarPtr(ep::Stream* stream, const int64_t n, const int8_t* x, const int8_t* y,
                              int8_t* z);
-  static void DivByScalarPtr(DeviceCtx* ctx, const int64_t n, const int32_t* x, const int32_t* y,
-                             int32_t* z);
-  static void DivByScalarPtr(DeviceCtx* ctx, const int64_t n, const int64_t* x, const int64_t* y,
-                             int64_t* z);
+  static void DivByScalarPtr(ep::Stream* stream, const int64_t n, const int32_t* x,
+                             const int32_t* y, int32_t* z);
+  static void DivByScalarPtr(ep::Stream* stream, const int64_t n, const int64_t* x,
+                             const int64_t* y, int64_t* z);
 };
 
 }  // namespace oneflow

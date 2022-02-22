@@ -16,6 +16,7 @@ limitations under the License.
 #include "oneflow/core/vm/stream.h"
 #include "oneflow/core/vm/thread_ctx.h"
 #include "oneflow/core/common/util.h"
+#include "oneflow/core/common/cpp_attribute.h"
 
 namespace oneflow {
 namespace vm {
@@ -41,14 +42,10 @@ const StreamType& Stream::stream_type() const {
   return thread_ctx().stream_rt_desc().stream_type();
 }
 
-const StreamTypeId& Stream::stream_type_id() const {
-  return thread_ctx().stream_rt_desc().stream_type_id();
-}
-
 intrusive::shared_ptr<Instruction> Stream::NewInstruction(
     InstructionMsg* instr_msg, const std::shared_ptr<const ParallelDesc>& parallel_desc) {
   intrusive::shared_ptr<Instruction> instruction;
-  if (free_instruction_list().empty()) {
+  if (unlikely(free_instruction_list().empty())) {
     instruction = intrusive::make_shared<Instruction>();
   } else {
     instruction = mut_free_instruction_list()->PopFront();
@@ -78,10 +75,8 @@ void Stream::MoveFromZombieListToFreeList() {
       // put `first` back to zombie_list because a worker is holding a reference to `first`
       zombie_list->EmplaceBack(std::move(first));
     } else {
-      InstructionProto proto;
-      first->instr_msg().ToProto(&proto);
       UNIMPLEMENTED() << "ref_cnt: " << ref_cnt << " first->ref_cnt():" << first->ref_cnt() << "\n"
-                      << proto.DebugString();
+                      << first->instr_msg().DebugName();
     }
   }
 }
@@ -98,11 +93,9 @@ void Stream::DeleteInstruction(intrusive::shared_ptr<Instruction>&& instruction)
     // a worker is holding a reference to `instruction`
     mut_zombie_instruction_list()->EmplaceBack(std::move(instruction));
   } else {
-    InstructionProto proto;
-    instruction->instr_msg().ToProto(&proto);
     UNIMPLEMENTED() << "ref_cnt: " << ref_cnt
                     << " instruction->ref_cnt():" << instruction->ref_cnt() << "\n"
-                    << proto.DebugString();
+                    << instruction->instr_msg().DebugName();
   }
   MoveFromZombieListToFreeList();
 }

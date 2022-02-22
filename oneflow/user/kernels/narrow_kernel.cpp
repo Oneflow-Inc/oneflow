@@ -33,15 +33,14 @@ std::unique_ptr<ep::primitive::Memset> NewMemsetPrimitive(Context* ctx) {
   return ep::primitive::NewPrimitive<ep::primitive::MemsetFactory>(ctx->device_type());
 }
 
-hob::HobContextGetter<user_op::KernelRegContext, bool> CopyNdPrimitiveExists() {
-  return user_op::HobCtxGetter<bool>("CopyNdPrimitiveExists",
-                                     [](const user_op::KernelRegContext& ctx) {
-                                       return NewCopyNdPrimitive(&ctx).operator bool();
-                                     });
+auto CopyNdPrimitiveExists() {
+  return hob::make_custom("CopyNdPrimitiveExists", [](const user_op::KernelRegContext& ctx) {
+    return NewCopyNdPrimitive(&ctx).operator bool();
+  });
 }
 
-hob::HobContextGetter<KernelRegContext, bool> MemsetPrimitiveExists() {
-  return HobCtxGetter<bool>("MemsetPrimitiveExists", [](const KernelRegContext& ctx) {
+auto MemsetPrimitiveExists() {
+  return hob::make_custom("MemsetPrimitiveExists", [](const KernelRegContext& ctx) {
     return NewMemsetPrimitive(&ctx).operator bool();
   });
 }
@@ -56,6 +55,7 @@ class NarrowKernel final : public user_op::OpKernel {
  private:
   void Compute(user_op::KernelComputeContext* ctx) const override {
     const user_op::Tensor* in = ctx->Tensor4ArgNameAndIndex("in", 0);
+    if (in->shape().elem_cnt() == 0) { return; }
     user_op::Tensor* out = ctx->Tensor4ArgNameAndIndex("out", 0);
     const int64_t& dim = ctx->Attr<int64_t>("dim");
     const int64_t& start = ctx->Attr<int64_t>("start");
@@ -74,9 +74,9 @@ class NarrowKernel final : public user_op::OpKernel {
     DimVector src_shape = {outer_dim, narrow_dim, inner_dim};
     DimVector src_pos_vec = {0, start, 0};
     DimVector extent_vec = {outer_dim, length, inner_dim};
-    copy_nd_primitive->Launch(ctx->stream_ctx(), out->data_type(), 3, out->mut_dptr(),
-                              dst_shape.data(), dst_pos_vec.data(), in->dptr(), src_shape.data(),
-                              src_pos_vec.data(), extent_vec.data());
+    copy_nd_primitive->Launch(ctx->stream(), out->data_type(), 3, out->mut_dptr(), dst_shape.data(),
+                              dst_pos_vec.data(), in->dptr(), src_shape.data(), src_pos_vec.data(),
+                              extent_vec.data());
   }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
@@ -99,7 +99,7 @@ class NarrowGradKernel final : public user_op::OpKernel {
     std::unique_ptr<ep::primitive::Memset> memset_primitive =
         ep::primitive::NewPrimitive<ep::primitive::MemsetFactory>(ctx->device_type());
     CHECK(memset_primitive);
-    memset_primitive->Launch(ctx->stream_ctx(), dst, 0, dx_byte_size);
+    memset_primitive->Launch(ctx->stream(), dst, 0, dx_byte_size);
 
     auto copy_nd_primitive = NewCopyNdPrimitive(ctx);
     CHECK(copy_nd_primitive);
@@ -116,7 +116,7 @@ class NarrowGradKernel final : public user_op::OpKernel {
     DimVector src_pos_vec = {0, 0, 0};
     DimVector extent_vec = {outer_dim, length, inner_dim};
 
-    copy_nd_primitive->Launch(ctx->stream_ctx(), dx->data_type(), 3, dst, dst_shape.data(),
+    copy_nd_primitive->Launch(ctx->stream(), dx->data_type(), 3, dst, dst_shape.data(),
                               dst_pos_vec.data(), dy->dptr(), src_shape.data(), src_pos_vec.data(),
                               extent_vec.data());
   }
@@ -127,7 +127,7 @@ REGISTER_USER_KERNEL("narrow").SetCreateFn<NarrowKernel>().SetIsMatchedHob(CopyN
                                                                            == true);
 REGISTER_USER_KERNEL("narrow_grad")
     .SetCreateFn<NarrowGradKernel>()
-    .SetIsMatchedHob((MemsetPrimitiveExists() == true) & (CopyNdPrimitiveExists() == true));
+    .SetIsMatchedHob(MemsetPrimitiveExists() && CopyNdPrimitiveExists());
 
 }  // namespace user_op
 

@@ -38,7 +38,8 @@ class UniformKernel final : public user_op::OpKernel {
   }
 
  private:
-  void Compute(user_op::KernelComputeContext* ctx, user_op::OpKernelState* state) const override {
+  void Compute(user_op::KernelComputeContext* ctx, user_op::OpKernelState* state,
+               const user_op::OpKernelCache*) const override {
     user_op::Tensor* out = ctx->Tensor4ArgNameAndIndex("out", 0);
     const double from = ctx->Attr<double>("from");
     const double to = ctx->Attr<double>("to");
@@ -50,7 +51,7 @@ class UniformKernel final : public user_op::OpKernel {
     const auto& generator = distribution_state->generator();
     CHECK_NOTNULL(generator);
     UniformDistribution<device_type, T> distribution(static_cast<T>(from), static_cast<T>(to));
-    distribution(ctx->device_ctx(), elem_cnt, out_dptr, generator);
+    distribution(ctx->stream(), elem_cnt, out_dptr, generator);
   }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };

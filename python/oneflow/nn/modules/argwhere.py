@@ -42,7 +42,7 @@ def argwhere_op(input, dtype: Optional[flow.dtype] = flow.int32):
         >>> import oneflow as flow
         >>> x = np.array([[0, 1, 0],
         ...            [2, 0, 2]]).astype(np.float32)
-        
+
         >>> input = flow.Tensor(x)
         >>> output = flow.argwhere(input)
         >>> output
@@ -52,30 +52,12 @@ def argwhere_op(input, dtype: Optional[flow.dtype] = flow.int32):
 
     """
 
-    if input.is_consistent:
-        raise ValueError(
-            "A consistent tensor can not be applied to argwhere, and use `tensor.to_local()` to convert it to local tensor first."
-        )
+    if input.is_lazy:
+        raise ValueError("A lazy tensor can not be applied to argwhere.")
 
     (res, size) = flow._C.argwhere(input, dtype=dtype)
-    if input.is_lazy:
-        raise NotImplementedError
-        # return flow._C.sync_dynamic_resize(res, size, dim=0)
-    else:
-        slice_tup_list = [(0, size.numpy().item(), 1)]
-        return flow.slice(res, slice_tup_list=slice_tup_list)
-
-
-@register_tensor_op("argwhere")
-def argwhere_tensor_op(input, dtype: Optional[flow.dtype] = flow.int32):
-    """
-
-    argwhere() -> Tensor
-
-    See :func:`oneflow.argwhere`
-
-    """
-    return argwhere_op(input, dtype)
+    slice_tup_list = [(0, size.numpy().item(), 1)]
+    return flow.slice(res, slice_tup_list=slice_tup_list)
 
 
 if __name__ == "__main__":

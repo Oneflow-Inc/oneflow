@@ -137,6 +137,37 @@ def test_advanced_indexing(test_case, numpy_x):
     test_case.assertTrue(np.allclose(numpy_x[mask > 1], x[y > 1].numpy()))
 
 
+def test_advanced_indexing_array(test_case, numpy_x, dtype):
+    x = flow.tensor(numpy_x)
+
+    idx = np.array([0, 1], dtype=dtype)
+    test_case.assertTrue(np.allclose(numpy_x[idx], x[idx].numpy()))
+
+    idx1 = np.array([0, 1], dtype=dtype)
+    idx2 = np.array([1, 0], dtype=dtype)
+    test_case.assertTrue(np.allclose(numpy_x[idx1, idx2], x[idx1, idx2].numpy()))
+
+    idx = np.array([[0, 1], [0, 1], [1, 0]], dtype=dtype)
+    test_case.assertTrue(np.allclose(numpy_x[idx, :, :], x[idx, :, :].numpy()))
+    test_case.assertTrue(np.allclose(numpy_x[idx, idx, :], x[idx, idx, :].numpy()))
+    test_case.assertTrue(np.allclose(numpy_x[idx, idx, idx], x[idx, idx, idx].numpy()))
+
+    idx1 = np.array([[1, 0, 1], [1, 1, 0]])
+    idx2 = np.array([[0], [1]])
+    test_case.assertTrue(
+        np.allclose(numpy_x[:, idx1, :, idx2].shape, x[:, idx1, :, idx2].shape)
+    )
+    test_case.assertTrue(
+        np.allclose(numpy_x[:, idx1, 1, idx2].shape, x[:, idx1, 1, idx2].shape)
+    )
+    test_case.assertTrue(
+        np.allclose(numpy_x[idx1, :, idx2, :].shape, x[idx1, :, idx2, :].shape)
+    )
+    test_case.assertTrue(
+        np.allclose(numpy_x[:, idx1, idx2, :].shape, x[:, idx1, idx2, :].shape)
+    )
+
+
 def test_combining_indexing(test_case, numpy_x):
     x = flow.tensor(numpy_x)
 
@@ -150,6 +181,23 @@ def test_combining_indexing(test_case, numpy_x):
     test_case.assertTrue(
         np.allclose(numpy_x[..., [0, 1], 1, [1, 0]], x[..., [0, 1], 1, [1, 0]].numpy())
     )
+
+
+def test_mask_getitem(test_case, numpy_x):
+    x = flow.tensor(numpy_x)
+
+    mask = np.random.rand(*numpy_x.shape).astype(np.float32)
+    y = flow.tensor(mask)
+    test_case.assertTrue(np.allclose(numpy_x[mask > 0.5], x[y > 0.5].numpy()))
+    test_case.assertTrue(np.allclose(numpy_x[mask > 1.0], x[y > 1.0].numpy()))
+
+    mask = np.random.rand(numpy_x.shape[0]).astype(np.float32)
+    y = flow.tensor(mask)
+    test_case.assertTrue(np.allclose(numpy_x[mask > 0.5], x[y > 0.5].numpy()))
+    test_case.assertTrue(np.allclose(numpy_x[mask > 1.0], x[y > 1.0].numpy()))
+
+    test_case.assertTrue(np.allclose(numpy_x[mask > 0.5, 1], x[y > 0.5, 1].numpy()))
+    test_case.assertTrue(np.allclose(numpy_x[mask > 1.0, 1], x[y > 1.0, 1].numpy()))
 
 
 def test_mask_setitem(test_case, numpy_x):
@@ -199,6 +247,19 @@ class TestTensorIndexing(flow.unittest.TestCase):
         numpy_x = np.arange(0, 720, 1).reshape([8, 9, 10]).astype(np.float32)
         test_advanced_indexing(test_case, numpy_x)
 
+    def test_advanced_indexing_array(test_case):
+        numpy_x = np.arange(0, 60, 1).reshape([3, 2, 2, 5]).astype(np.float32)
+        test_advanced_indexing_array(test_case, numpy_x, np.int32)
+        test_advanced_indexing_array(test_case, numpy_x, np.int64)
+
+        numpy_x = np.arange(0, 360, 1).reshape([3, 4, 5, 6]).astype(np.float32)
+        test_advanced_indexing_array(test_case, numpy_x, np.int32)
+        test_advanced_indexing_array(test_case, numpy_x, np.int64)
+
+        numpy_x = np.arange(0, 720, 1).reshape([5, 8, 9, 2]).astype(np.float32)
+        test_advanced_indexing_array(test_case, numpy_x, np.int32)
+        test_advanced_indexing_array(test_case, numpy_x, np.int64)
+
     def test_combining_indexing(test_case):
         numpy_x = np.arange(0, 60, 1).reshape([3, 4, 5]).astype(np.float32)
         test_combining_indexing(test_case, numpy_x)
@@ -209,6 +270,30 @@ class TestTensorIndexing(flow.unittest.TestCase):
         numpy_x = np.arange(0, 720, 1).reshape([8, 9, 10]).astype(np.float32)
         test_combining_indexing(test_case, numpy_x)
 
+    def test_mask_getitem(test_case):
+        numpy_x = np.arange(0, 60, 1).reshape([3, 4, 5]).astype(np.float32)
+        test_mask_getitem(test_case, numpy_x)
+
+        numpy_x = np.arange(0, 360, 1).reshape([3, 4, 5, 6]).astype(np.float32)
+        test_mask_getitem(test_case, numpy_x)
+
+        numpy_x = np.arange(0, 720, 1).reshape([8, 9, 10]).astype(np.float32)
+        test_mask_getitem(test_case, numpy_x)
+
+        numpy_x = np.arange(0, 27, 1).reshape(3, 3, 3)
+        x = flow.tensor(numpy_x)
+        test_case.assertTrue(
+            np.allclose(
+                numpy_x[[False, True, False], 1], x[[False, True, False], 1].numpy()
+            )
+        )
+        test_case.assertTrue(
+            np.allclose(
+                numpy_x[[False, True, False], [True, False, False]],
+                x[[False, True, False], [True, False, False]].numpy(),
+            )
+        )
+
     def test_mask_setitem(test_case):
         numpy_x = np.arange(0, 60, 1).reshape([3, 4, 5]).astype(np.float32)
         test_mask_setitem(test_case, numpy_x)
@@ -218,6 +303,12 @@ class TestTensorIndexing(flow.unittest.TestCase):
 
         numpy_x = np.arange(0, 720, 1).reshape([8, 9, 10]).astype(np.float32)
         test_mask_setitem(test_case, numpy_x)
+
+    def test_advanced_indexing_with_scalar_index(test_case):
+        index = flow.tensor([0, 2])
+        x = flow.randn(5)
+        x[index[0]] = 1
+        test_case.assertTrue(np.allclose(x[0].numpy(), 1))
 
 
 if __name__ == "__main__":

@@ -77,7 +77,7 @@ Maybe<void> PruneCastToStaticShapeOpsPass::Apply(const OpGraph& op_graph,
         }
       }
     }
-    del_op_names.push_back(op_conf.name());
+    del_op_names.emplace_back(op_conf.name());
   });
   for (const auto& pair : op_name2op_conf) { job_builder->MutOpsOnlyOnce({pair.second}); }
   job_builder->DelOps(del_op_names);

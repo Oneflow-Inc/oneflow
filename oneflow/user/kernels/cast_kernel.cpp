@@ -16,7 +16,7 @@ limitations under the License.
 #include "oneflow/core/framework/framework.h"
 #include "oneflow/core/kernel/cuda_graph_support.h"
 #include "oneflow/core/ep/include/primitive/cast.h"
-#include "oneflow/user/kernels/op_kernel_state_wrapper.h"
+#include "oneflow/user/kernels/op_kernel_wrapper.h"
 
 namespace oneflow {
 
@@ -38,29 +38,49 @@ class CastKernel final : public OpKernel, public user_op::CudaGraphSupport {
   ~CastKernel() = default;
 
  private:
-  void Compute(KernelComputeContext* ctx, OpKernelState* state) const override {
+  void Compute(KernelComputeContext* ctx) const override {
     const Tensor* input_tensor = ctx->Tensor4ArgNameAndIndex("in", 0);
     Tensor* output_tenor = ctx->Tensor4ArgNameAndIndex("out", 0);
     const int64_t elem_cnt = input_tensor->shape().elem_cnt();
     CHECK_EQ(output_tenor->shape().elem_cnt(), elem_cnt);
+    if (input_tensor->data_type() == output_tenor->data_type()
+        && input_tensor->dptr() == output_tenor->dptr()) {
+      return;
+    }
     auto primitive = NewCastPrimitive(ctx);
     CHECK(primitive);
-    primitive->Launch(ctx->stream_ctx(), input_tensor->dptr(), output_tenor->mut_dptr(), elem_cnt);
+    primitive->Launch(ctx->stream(), input_tensor->dptr(), output_tenor->mut_dptr(), elem_cnt);
   }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
 
-hob::HobContextGetter<user_op::KernelRegContext, bool> CastPrimitiveExists() {
-  return user_op::HobCtxGetter<bool>(
-      "CastPrimitiveExists",
-      [](const user_op::KernelRegContext& ctx) { return NewCastPrimitive(&ctx).operator bool(); });
+auto CastPrimitiveExists() {
+  return hob::make_custom("CastPrimitiveExists", [](const user_op::KernelRegContext& ctx) -> bool {
+    return NewCastPrimitive(&ctx).operator bool();
+  });
 }
 
-REGISTER_USER_KERNEL("cast").SetCreateFn<CastKernel>().SetIsMatchedHob(CastPrimitiveExists()
-                                                                       == true);
+REGISTER_USER_KERNEL("cast")
+    .SetCreateFn<CastKernel>()
+    .SetIsMatchedHob(CastPrimitiveExists() == true)
+    .SetInplaceProposalFn([](const user_op::InferContext& ctx,
+                             const user_op::AddInplaceArgPair& AddInplaceArgPairFn) -> Maybe<void> {
+      if (ctx.InputDType("in", 0) == ctx.Attr<DataType>("dtype")) {
+        OF_RETURN_IF_ERROR(AddInplaceArgPairFn("out", 0, "in", 0, false));
+      }
+      return Maybe<void>::Ok();
+    });
+
 REGISTER_USER_KERNEL("cast_like")
     .SetCreateFn<CastKernel>()
-    .SetIsMatchedHob(CastPrimitiveExists() == true);
+    .SetIsMatchedHob(CastPrimitiveExists() == true)
+    .SetInplaceProposalFn([](const user_op::InferContext& ctx,
+                             const user_op::AddInplaceArgPair& AddInplaceArgPairFn) -> Maybe<void> {
+      if (ctx.InputDType("in", 0) == ctx.InputDType("like", 0)) {
+        OF_RETURN_IF_ERROR(AddInplaceArgPairFn("out", 0, "in", 0, false));
+      }
+      return Maybe<void>::Ok();
+    });
 
 }  // namespace
 

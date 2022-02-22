@@ -14,7 +14,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 #include <pybind11/pybind11.h>
-#include "oneflow/api/python/framework/throw.h"
+#include "oneflow/core/common/throw.h"
 #include "oneflow/core/common/registry_error.h"
 #include "oneflow/extension/python/numpy_internal.h"
 
@@ -38,6 +38,7 @@ NumPyArrayInternal::~NumPyArrayInternal() {
 
 Maybe<int> OFDataTypeToNumpyType(DataType of_data_type) {
   switch (of_data_type) {
+    case DataType::kBool: return NPY_BOOL;
     case DataType::kFloat: return NPY_FLOAT32;
     case DataType::kDouble: return NPY_FLOAT64;
     case DataType::kInt8: return NPY_INT8;
@@ -53,11 +54,13 @@ Maybe<int> OFDataTypeToNumpyType(DataType of_data_type) {
 
 Maybe<DataType> NumpyTypeToOFDataType(int np_type) {
   switch (np_type) {
+    case NPY_BOOL: return DataType::kBool;
     case NPY_FLOAT32: return DataType::kFloat;
     case NPY_FLOAT64: return DataType::kDouble;
     case NPY_INT8: return DataType::kInt8;
     case NPY_INT32: return DataType::kInt32;
-    case NPY_INT64: return DataType::kInt64;
+    case NPY_INT64:
+    case NPY_LONGLONG: return DataType::kInt64;
     case NPY_UINT8: return DataType::kUInt8;
     case NPY_FLOAT16: return DataType::kFloat16;
     default:
@@ -69,6 +72,22 @@ Maybe<DataType> NumpyTypeToOFDataType(int np_type) {
 Maybe<DataType> GetOFDataTypeFromNpArray(PyArrayObject* array) {
   int np_array_type = PyArray_TYPE(array);
   return NumpyTypeToOFDataType(np_array_type);
+}
+
+std::vector<size_t> OFShapeToNumpyShape(const DimVector& fixed_vec) {
+  size_t ndim = fixed_vec.size();
+  auto result = std::vector<size_t>(ndim);
+  for (int i = 0; i < ndim; i++) { result[i] = fixed_vec.at(i); }
+  return result;
+}
+
+// NumPy strides use bytes. OneFlow strides use element counts.
+std::vector<size_t> OFStrideToNumpyStride(const StrideVector& fixed_vec, const DataType data_type) {
+  size_t ndim = fixed_vec.size();
+  auto result = std::vector<size_t>(ndim);
+  int byte_per_elem = GetSizeOfDataType(data_type);
+  for (int i = 0; i < ndim; i++) { result[i] = fixed_vec.at(i) * byte_per_elem; }
+  return result;
 }
 
 // Executing any numpy c api before _import_array() results in segfault

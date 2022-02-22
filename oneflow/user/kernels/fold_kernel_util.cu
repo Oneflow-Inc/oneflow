@@ -18,6 +18,7 @@ limitations under the License.
 #include "oneflow/core/framework/framework.h"
 #include "oneflow/core/cuda/elementwise.cuh"
 #include "oneflow/user/kernels/fold_kernel_util.h"
+#include "oneflow/core/ep/cuda/cuda_stream.h"
 
 namespace oneflow {
 
@@ -55,17 +56,18 @@ __global__ void CudaFoldForward(FoldParams<INDEX_T, NDIM, SDIM> params, const T*
 }  // namespace
 
 template<typename T, typename INDEX_T, int NDIM, int SDIM>
-struct FoldKernelUtil<DeviceType::kGPU, T, INDEX_T, NDIM, SDIM> {
+struct FoldKernelUtil<DeviceType::kCUDA, T, INDEX_T, NDIM, SDIM> {
   using ParamType = FoldParams<INDEX_T, NDIM, SDIM>;
-  static void Forward(DeviceCtx* ctx, const void* raw_params, const T* input_ptr, T* output_ptr) {
+  static void Forward(ep::Stream* stream, const void* raw_params, const T* input_ptr,
+                      T* output_ptr) {
     const auto* fold_params = static_cast<const ParamType*>(raw_params);
     CudaFoldForward<T, INDEX_T, NDIM, SDIM>
-        <<<GetNumBlocks(fold_params->in_elem_cnt), kBlockSize, 0, ctx->cuda_stream()>>>(
-            *fold_params, input_ptr, output_ptr);
+        <<<GetNumBlocks(fold_params->in_elem_cnt), kBlockSize, 0,
+           stream->As<ep::CudaStream>()->cuda_stream()>>>(*fold_params, input_ptr, output_ptr);
   }
 };
 
-INSTANTIATE_FOLD_KERNEL_UTIL_FOR_DEVICE(DeviceType::kGPU)
+INSTANTIATE_FOLD_KERNEL_UTIL_FOR_DEVICE(DeviceType::kCUDA)
 
 }  // namespace user_op
 }  // namespace oneflow

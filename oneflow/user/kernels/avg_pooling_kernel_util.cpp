@@ -22,9 +22,9 @@ std::vector<int32_t> GetAvg3DVec(const std::vector<int32_t>& original_vec, int32
   FOR_RANGE(uint8_t, dim, 0, 3) {
     int64_t index = static_cast<int64_t>(dim) - (3 - NDims);
     if (index < 0) {
-      vec.push_back(1);
+      vec.emplace_back(1);
     } else {
-      vec.push_back(original_vec.at(index));
+      vec.emplace_back(original_vec.at(index));
     }
   }
   return vec;
@@ -35,9 +35,9 @@ std::vector<int32_t> GetAvg3DPadVec(const std::vector<int32_t>& original_vec, in
   FOR_RANGE(uint8_t, dim, 0, 3) {
     int64_t index = static_cast<int64_t>(dim) - (3 - NDims);
     if (index < 0) {
-      vec.push_back(0);
+      vec.emplace_back(0);
     } else {
-      vec.push_back(original_vec.at(index));
+      vec.emplace_back(original_vec.at(index));
     }
   }
   return vec;
@@ -74,7 +74,7 @@ AvgPoolingParams3D::AvgPoolingParams3D(const int32_t dim, const ShapeView& x_sha
                                        const std::vector<int32_t>& padding,
                                        const std::vector<int32_t>& kernel_size,
                                        const std::vector<int32_t>& stride, const bool ceil_mode,
-                                       const bool count_include_pad, const int64_t divisor_override)
+                                       const bool count_include_pad, const int32_t divisor_override)
     : dim_(dim),
       data_format_(data_format),
       padding_(GetAvg3DPadVec(padding, dim)),

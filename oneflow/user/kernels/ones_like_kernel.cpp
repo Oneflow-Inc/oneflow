@@ -38,24 +38,24 @@ class OnesLikeKernel final : public user_op::OpKernel {
   void Compute(user_op::KernelComputeContext* ctx) const override {
     user_op::Tensor* out = ctx->Tensor4ArgNameAndIndex("out", 0);
     std::unique_ptr<ep::primitive::Fill> fill =
-        ep::primitive::NewPrimitive<ep::primitive::FillFactory>(ctx->stream_ctx()->device_type(),
+        ep::primitive::NewPrimitive<ep::primitive::FillFactory>(ctx->stream()->device_type(),
                                                                 out->data_type());
     CHECK(fill);
-    fill->Launch(ctx->stream_ctx(), out->mut_dptr(), 1, out->shape().elem_cnt());
+    fill->Launch(ctx->stream(), out->mut_dptr(), 1, out->shape().elem_cnt());
   }
 
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
 
-hob::HobContextGetter<user_op::KernelRegContext, bool> FillPrimitiveExists() {
-  return user_op::HobCtxGetter<bool>(
-      "FillPrimitiveExists",
-      [](const user_op::KernelRegContext& ctx) { return NewFillPrimitive(&ctx).operator bool(); });
+auto FillPrimitiveExists() {
+  return hob::make_custom("FillPrimitiveExists", [](const user_op::KernelRegContext& ctx) {
+    return NewFillPrimitive(&ctx).operator bool();
+  });
 }
 
 REGISTER_USER_KERNEL("ones_like")
     .SetCreateFn<OnesLikeKernel>()
-    .SetIsMatchedHob(FillPrimitiveExists() == true);
+    .SetIsMatchedHob(FillPrimitiveExists());
 
 }  // namespace
 

@@ -33,6 +33,7 @@ ONEFLOW_API_PYBIND11_MODULE("", m) {
   // multi-client lazy global session context
   m.def("CreateMultiClientSessionContext", &CreateMultiClientSessionContext);
   m.def("InitMultiClientSessionContext", &InitMultiClientSessionContext);
+  m.def("MultiClientSessionContextUpdateResource", &MultiClientSessionContextUpdateResource);
   m.def("MultiClientSessionContextAddCGraph", &MultiClientSessionContextAddCGraph);
   m.def("TryDestroyMultiClientSessionContext", &TryDestroyMultiClientSessionContext);
 

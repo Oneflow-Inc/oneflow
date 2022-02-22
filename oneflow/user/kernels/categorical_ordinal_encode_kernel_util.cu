@@ -19,6 +19,7 @@ limitations under the License.
 #include <assert.h>
 #include "oneflow/user/kernels/categorical_ordinal_encode_kernel_util.h"
 #include "oneflow/core/kernel/kernel_util.cuh"
+#include "oneflow/core/ep/cuda/cuda_stream.h"
 
 namespace oneflow {
 
@@ -106,17 +107,18 @@ __global__ void EncodeGpu(const size_t capacity, T* table, T* size, const int64_
 }  // namespace
 
 template<typename T>
-struct CategoricalOrdinalEncodeKernelUtil<DeviceType::kGPU, T> {
-  static void Encode(DeviceCtx* ctx, int64_t capacity, T* table, T* size, int64_t n, const T* hash,
-                     T* out) {
-    EncodeGpu<T><<<BlocksNum4ThreadsNum(n), kCudaThreadsNumPerBlock, 0, ctx->cuda_stream()>>>(
-        capacity, table, size, n, hash, out);
+struct CategoricalOrdinalEncodeKernelUtil<DeviceType::kCUDA, T> {
+  static void Encode(ep::Stream* stream, int64_t capacity, T* table, T* size, int64_t n,
+                     const T* hash, T* out) {
+    EncodeGpu<T>
+        <<<BlocksNum4ThreadsNum(n), kCudaThreadsNumPerBlock, 0,
+           stream->As<ep::CudaStream>()->cuda_stream()>>>(capacity, table, size, n, hash, out);
   }
 };
 
-#define INSTANTIATE_CATEGORICAL_ORDINAL_ENCODE_KERNEL_UTIL_GPU(type_cpp, type_proto) \
-  template struct CategoricalOrdinalEncodeKernelUtil<DeviceType::kGPU, type_cpp>;
-OF_PP_FOR_EACH_TUPLE(INSTANTIATE_CATEGORICAL_ORDINAL_ENCODE_KERNEL_UTIL_GPU, INDEX_DATA_TYPE_SEQ);
-#undef INSTANTIATE_CATEGORICAL_ORDINAL_ENCODE_KERNEL_UTIL_GPU
+#define INSTANTIATE_CATEGORICAL_ORDINAL_ENCODE_KERNEL_UTIL_CUDA(type_cpp, type_proto) \
+  template struct CategoricalOrdinalEncodeKernelUtil<DeviceType::kCUDA, type_cpp>;
+OF_PP_FOR_EACH_TUPLE(INSTANTIATE_CATEGORICAL_ORDINAL_ENCODE_KERNEL_UTIL_CUDA, INDEX_DATA_TYPE_SEQ);
+#undef INSTANTIATE_CATEGORICAL_ORDINAL_ENCODE_KERNEL_UTIL_CUDA
 
 }  // namespace oneflow
