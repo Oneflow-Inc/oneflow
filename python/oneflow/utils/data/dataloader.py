@@ -357,7 +357,7 @@ class DataLoader(Generic[T_co]):
         self._iterator = None
 
     def _get_iterator(self) -> "_BaseDataLoaderIter":
-        if self.num_workers == 0 :
+        if self.num_workers == 0:
             return _SingleProcessDataLoaderIter(self)
         else:
             self.check_worker_number_rationality()
