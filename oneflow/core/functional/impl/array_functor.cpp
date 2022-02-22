@@ -1010,13 +1010,14 @@ class ScatterNdLikeFunctor {
   std::shared_ptr<OpExpr> op_;
 };
 
-bool checkViewValid(const int64_t elem_count, const DimVector& shape, const StrideVector& stride,
+Optional<const Stride> computeStride(const int64_t elem_count, const DimVector& shape, const StrideVector& stride,
                     const DimVector& target_shape) {
-  if (elem_count == 0) { return false; }
+  if (elem_count == 0) { return NullOpt; }
 
   int64_t view_d = target_shape.size() - 1;
   int64_t chunk_base_stride = stride.back();
-  std::vector<int64_t> newstride(target_shape.size());
+  // std::vector<int64_t> newstride(target_shape.size());
+  DimVector newstride(target_shape.size());
   // stride for each subspace in the chunk
   // numel in current chunk
   int64_t tensor_numel = 1;
@@ -1031,7 +1032,7 @@ bool checkViewValid(const int64_t elem_count, const DimVector& shape, const Stri
         view_numel *= target_shape[view_d];
         view_d--;
       }
-      if (view_numel != tensor_numel) { return false; }
+      if (view_numel != tensor_numel) { return NullOpt; }
       if (tensor_d > 0) {
         chunk_base_stride = stride[tensor_d - 1];
         tensor_numel = 1;
@@ -1039,8 +1040,9 @@ bool checkViewValid(const int64_t elem_count, const DimVector& shape, const Stri
       }
     }
   }
-  if (view_d != -1) { return false; }
-  return true;
+  if (view_d != -1) { return NullOpt; }
+  Stride target_stride(newstride);
+  return target_stride;
 }
 
 class ReshapeFunctor {
@@ -1083,10 +1085,11 @@ class ReshapeFunctor {
       if (!(x->shape()->NumAxes() <= 1 || x->shape()->elem_cnt() <= 1)) {
         // in some case, view operate is not allowed, so need to check it's validation,
         // the check refer to torch(aten/src/ATen/native/TensorShape.cpp)
-        bool is_view_valid =
-            checkViewValid(x->shape()->elem_cnt(), x->shape()->dim_vec(),
+        Optional<const Stride> infered_stride = computeStride(x->shape()->elem_cnt(), x->shape()->dim_vec(),
                            JUST(x->stride())->StrideVec(), infered_shape.dim_vec());
-        if (is_view_valid) { return view::Reshape(x, infered_shape); }
+        if(infered_stride.has_value()){
+          return view::Reshape(x, infered_shape,  *JUST(infered_stride));
+        }
       }
     }
 
@@ -1134,12 +1137,11 @@ class ViewFunctor {
       if (!(x->shape()->NumAxes() <= 1 || x->shape()->elem_cnt() <= 1)) {
         // in some case, view operate is not allowed, so need to check it's validation,
         // the check refer to torch(aten/src/ATen/native/TensorShape.cpp)
-        bool is_view_valid =
-            checkViewValid(x->shape()->elem_cnt(), x->shape()->dim_vec(),
+        Optional<const Stride> infered_stride = computeStride(x->shape()->elem_cnt(), x->shape()->dim_vec(),
                            JUST(x->stride())->StrideVec(), infered_shape.dim_vec());
-        CHECK_OR_RETURN(is_view_valid)
-            << " >> view size is not compatible with input tensor's size and stride (at least one "
-               "dimension spans across two contiguous subspaces). Use .reshape(...) instead.";
+        CHECK_OR_RETURN(!(infered_stride.has_value()))
+        << " >> view size is not compatible with input tensor's size and stride (at least one "
+                "dimension spans across two contiguous subspaces). Use .reshape(...) instead.";
         return view::Reshape(x, infered_shape);
       }
     }
