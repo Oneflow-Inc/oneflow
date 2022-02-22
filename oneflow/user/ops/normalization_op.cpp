@@ -329,6 +329,7 @@ void InferCudnnReserveSpaceSize(DataType data_type, cudnnBatchNormOps_t ops, int
           split_num *= hierarchy.At(i);
         }
       }
+      CHECK_EQ_OR_RETURN(n % split_num, 0);
       n = n / split_num;
     }
     int64_t h = x_shape.Count(1, axis);
