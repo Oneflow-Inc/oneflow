@@ -171,7 +171,6 @@ REGISTER_USER_OP_GRAD("cublas_fused_mlp")
           op.BindGradTensorWithOpInput(bias_grad_op.output("output_tensor", 0), "biases",
                                     weight_num - 1);
         }
-        
         std::string dgrad;
         for (int32_t hidden_layer_idx = weight_num - 1; hidden_layer_idx > 0; hidden_layer_idx--) {
           if (hidden_layer_idx == weight_num - 1) {
@@ -188,9 +187,9 @@ REGISTER_USER_OP_GRAD("cublas_fused_mlp")
                     .Output("d_bias")
                     .Build();
             AddOp(cublas_bias_add_relu_matmul_grad_op);
-            if(op.NeedGenGradTensor4OpInput("biases", weight_num - 1 - 1)){
+            if(op.NeedGenGradTensor4OpInput("biases", hidden_layer_idx - 1)){
               op.BindGradTensorWithOpInput(cublas_bias_add_relu_matmul_grad_op.output("d_bias", 0),
-                                        "biases", weight_num - 1 - 1);  // previous layers bias grad
+                                        "biases", hidden_layer_idx - 1);  // previous layers bias grad
             }
             
             user_op::UserOpConfWrapperBuilder matmul_weight_grad_builder(
@@ -225,9 +224,9 @@ REGISTER_USER_OP_GRAD("cublas_fused_mlp")
                     .Output("d_bias")
                     .Build();
             AddOp(cublas_bias_add_relu_matmul_grad_op);
-            if(op.NeedGenGradTensor4OpInput("biases", weight_num - 1 - 1)){
+            if(op.NeedGenGradTensor4OpInput("biases", hidden_layer_idx - 1)){
               op.BindGradTensorWithOpInput(cublas_bias_add_relu_matmul_grad_op.output("d_bias", 0),
-                                        "biases", weight_num - 1 - 1);  // previous layers bias grad
+                                        "biases", hidden_layer_idx - 1);  // previous layers bias grad
             }
             
             user_op::UserOpConfWrapperBuilder matmul_weight_grad_builder(
@@ -260,7 +259,7 @@ REGISTER_USER_OP_GRAD("cublas_fused_mlp")
                                                                   .Input("a", dgrad)
                                                                   .Input("b", op.input("weights", 0))
                                                                   .Output("out")
-                                                                  .Attr<bool>("transpose_a", true)
+                                                                  .Attr<bool>("transpose_a", false)
                                                                   .Attr<bool>("transpose_b", false)
                                                                   .Attr<double>("alpha", 1.0)
                                                                   .Build();
@@ -271,7 +270,7 @@ REGISTER_USER_OP_GRAD("cublas_fused_mlp")
           }
           // dw:
           user_op::UserOpConfWrapperBuilder matmul_weight_grad_builder(op.op_name()
-                                                                      + "_matmul_input_grad");
+                                                                      + "_matmul_input_weight_grad");
           user_op::UserOpConfWrapper matmul_weight_grad_op = matmul_weight_grad_builder.Op("matmul")
                                                                 .Input("a", dgrad)
                                                                 .Input("b", op.input("x", 0))
@@ -295,7 +294,7 @@ REGISTER_USER_OP_GRAD("cublas_fused_mlp")
                                                                   .Input("a", last_grad)
                                                                   .Input("b", op.input("weights", 0))
                                                                   .Output("out")
-                                                                  .Attr<bool>("transpose_a", true)
+                                                                  .Attr<bool>("transpose_a", false)
                                                                   .Attr<bool>("transpose_b", false)
                                                                   .Attr<double>("alpha", 1.0)
                                                                   .Build();
@@ -306,7 +305,7 @@ REGISTER_USER_OP_GRAD("cublas_fused_mlp")
           }
           // dw:
           user_op::UserOpConfWrapperBuilder matmul_weight_grad_builder(op.op_name()
-                                                                      + "_matmul_input_grad");
+                                                                      + "_matmul_input_weight_grad");
           user_op::UserOpConfWrapper matmul_weight_grad_op = matmul_weight_grad_builder.Op("matmul")
                                                                 .Input("a", last_grad)
                                                                 .Input("b", op.input("x", 0))
