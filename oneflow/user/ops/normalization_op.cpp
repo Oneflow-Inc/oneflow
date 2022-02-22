@@ -255,6 +255,7 @@ user_op::DataTypeInferFn MakeFwDataTypeInferFn() {
           split_num *= hierarchy.At(i);
         }
       }
+      CHECK_EQ_OR_RETURN(reserve_space_bits % split_num, 0);
       reserve_space_bits = reserve_space_bits / split_num;
     }
     *reserve_space->mut_shape() =
