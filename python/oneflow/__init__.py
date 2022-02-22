@@ -161,6 +161,7 @@ from oneflow._C import squeeze
 from oneflow._C import narrow
 from oneflow._C import unsqueeze
 from oneflow._C import permute
+from oneflow._C import select
 from oneflow._C import tensor_split
 from oneflow._C import hsplit
 from oneflow._C import vsplit
