@@ -17,7 +17,6 @@ limitations under the License.
 #define ONEFLOW_CORE_VM_VIRTUAL_MACHINE_H_
 
 #include "oneflow/core/common/notifier.h"
-#include "oneflow/core/vm/vm_desc.h"
 #include "oneflow/core/vm/virtual_machine_engine.h"
 #include "oneflow/core/thread/thread_pool.h"
 
@@ -29,7 +28,7 @@ class VirtualMachine final {
  public:
   VirtualMachine(const VirtualMachine&) = delete;
   VirtualMachine(VirtualMachine&&) = delete;
-  VirtualMachine(const Resource& resource, int64_t this_machine_id);
+  VirtualMachine();
   ~VirtualMachine();
 
   static std::function<Maybe<bool>()> GetPredicatorNoMoreInstructionsFinished();

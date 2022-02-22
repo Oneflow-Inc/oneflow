@@ -48,8 +48,6 @@ class CudaCopyD2HStreamType final : public StreamType {
   bool QueryInstructionStatusDone(const Stream& stream,
                                   const InstructionStatusBuffer& status_buffer) const override;
   void Compute(Instruction* instruction) const override;
-  intrusive::shared_ptr<StreamDesc> MakeStreamDesc(const Resource& resource,
-                                                   int64_t this_machine_id) const override;
   bool OnSchedulerThread() const override { return true; }
   bool SupportingTransportInstructions() const override { return false; }
 };

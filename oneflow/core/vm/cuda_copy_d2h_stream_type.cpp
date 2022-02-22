@@ -64,18 +64,6 @@ void CudaCopyD2HStreamType::Compute(Instruction* instruction) const {
   CudaOptionalEventRecordStatusQuerier::MutCast(data_ptr)->SetLaunched(stream->device_ctx().get());
 }
 
-// Specifies copy_d2h stream description of the virtual machine to be used.
-intrusive::shared_ptr<StreamDesc> CudaCopyD2HStreamType::MakeStreamDesc(
-    const Resource& resource, int64_t this_machine_id) const {
-  if (!resource.has_gpu_device_num()) { return intrusive::shared_ptr<StreamDesc>(); }
-  std::size_t device_num = resource.gpu_device_num();
-  auto ret = intrusive::make_shared<StreamDesc>();
-  ret->set_stream_type(StaticGlobalStreamType<CudaCopyD2HStreamType>());
-  ret->set_num_streams_per_machine(device_num);
-  ret->set_num_streams_per_thread(device_num);
-  return ret;
-}
-
 }  // namespace vm
 }  // namespace oneflow
 

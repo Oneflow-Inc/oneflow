@@ -53,14 +53,5 @@ void CriticalSectionStreamType::Compute(Instruction* instruction) const {
   }
 }
 
-intrusive::shared_ptr<StreamDesc> CriticalSectionStreamType::MakeStreamDesc(
-    const Resource& resource, int64_t this_machine_id) const {
-  auto ret = intrusive::make_shared<StreamDesc>();
-  ret->set_stream_type(StaticGlobalStreamType<CriticalSectionStreamType>());
-  ret->set_num_streams_per_machine(1);
-  ret->set_num_streams_per_thread(1);
-  return ret;
-}
-
 }  // namespace vm
 }  // namespace oneflow

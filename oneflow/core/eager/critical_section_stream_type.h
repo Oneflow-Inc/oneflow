@@ -44,8 +44,6 @@ class CriticalSectionStreamType final : public StreamType {
   void Compute(Instruction* instruction) const override;
   bool OnSchedulerThread() const override { return false; }
   bool SupportingTransportInstructions() const override { return false; }
-  intrusive::shared_ptr<StreamDesc> MakeStreamDesc(const Resource& resource,
-                                                   int64_t this_machine_id) const override;
 };
 
 }  // namespace vm

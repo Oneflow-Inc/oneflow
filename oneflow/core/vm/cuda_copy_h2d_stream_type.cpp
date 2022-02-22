@@ -58,17 +58,6 @@ void CudaCopyH2DStreamType::Compute(Instruction* instruction) const {
   CudaOptionalEventRecordStatusQuerier::MutCast(data_ptr)->SetLaunched(stream->device_ctx().get());
 }
 
-intrusive::shared_ptr<StreamDesc> CudaCopyH2DStreamType::MakeStreamDesc(
-    const Resource& resource, int64_t this_machine_id) const {
-  if (!resource.has_gpu_device_num()) { return intrusive::shared_ptr<StreamDesc>(); }
-  std::size_t device_num = resource.gpu_device_num();
-  auto ret = intrusive::make_shared<StreamDesc>();
-  ret->set_stream_type(StaticGlobalStreamType<CudaCopyH2DStreamType>());
-  ret->set_num_streams_per_machine(device_num);
-  ret->set_num_streams_per_thread(device_num);
-  return ret;
-}
-
 }  // namespace vm
 }  // namespace oneflow
 

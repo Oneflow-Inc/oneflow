@@ -19,7 +19,6 @@ limitations under the License.
 #include <typeindex>
 #include "oneflow/core/intrusive/flat_msg.h"
 #include "oneflow/core/common/layout_standardize.h"
-#include "oneflow/core/vm/stream_desc.h"
 
 namespace oneflow {
 namespace vm {

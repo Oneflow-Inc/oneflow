@@ -16,14 +16,19 @@ limitations under the License.
 #ifndef ONEFLOW_CORE_VM_STREAM_H_
 #define ONEFLOW_CORE_VM_STREAM_H_
 
-#include "oneflow/core/vm/stream_desc.h"
 #include "oneflow/core/vm/instruction.h"
 #include "oneflow/core/device/device_context.h"
+#include "oneflow/core/common/symbol.h"
+#include "oneflow/core/common/stream_role.h"
 
 namespace oneflow {
+
+class Device;
+
 namespace vm {
 
 struct ThreadCtx;
+struct StreamType;
 
 class Stream final : public intrusive::Base {
  public:
@@ -32,7 +37,6 @@ class Stream final : public intrusive::Base {
       intrusive::List<INTRUSIVE_FIELD(Instruction, dispatched_instruction_hook_)>;
 
   // Getters
-  int64_t max_device_num_per_machine() const { return max_device_num_per_machine_; }
   const ThreadCtx& thread_ctx() const { return *thread_ctx_; }
   bool has_thread_ctx() const { return thread_ctx_ != nullptr; }
   const std::unique_ptr<DeviceCtx>& device_ctx() const { return device_ctx_; }
@@ -44,10 +48,8 @@ class Stream final : public intrusive::Base {
   const DispatchedInstructionList& running_instruction_list() const {
     return running_instruction_list_;
   }
-  const StreamId& stream_id() const { return stream_id_.key(); }
 
   // Setters
-  void set_max_device_num_per_machine(int64_t val) { max_device_num_per_machine_ = val; }
   ThreadCtx* mut_thread_ctx() { return thread_ctx_; }
   void set_thread_ctx(ThreadCtx* val) { thread_ctx_ = val; }
   void clear_thread_ctx() { thread_ctx_ = nullptr; }
@@ -55,17 +57,12 @@ class Stream final : public intrusive::Base {
   DispatchedInstructionList* mut_free_instruction_list() { return &free_instruction_list_; }
   DispatchedInstructionList* mut_zombie_instruction_list() { return &zombie_instruction_list_; }
   DispatchedInstructionList* mut_running_instruction_list() { return &running_instruction_list_; }
-  StreamId* mut_stream_id() { return stream_id_.mut_key(); }
 
   // methods
-  void __Init__();
-  void __Init__(ThreadCtx* thread_ctx, const StreamId& stream_id,
-                const int64_t max_device_num_per_machine);
+  void __Init__(ThreadCtx* thread_ctx, Symbol<Device> device, StreamRole stream_role);
   intrusive::shared_ptr<Instruction> NewInstruction(
       InstructionMsg* instr_msg, const std::shared_ptr<const ParallelDesc>& parallel_desc);
   void DeleteInstruction(intrusive::shared_ptr<Instruction>&&);
-  int64_t global_device_id() const { return stream_id().global_device_id(); }
-  int64_t machine_id() const;
   int64_t device_id() const;
   const StreamType& stream_type() const;
 
@@ -80,26 +77,25 @@ class Stream final : public intrusive::Base {
       : intrusive_ref_(),
         thread_ctx_(),
         device_ctx_(),
-        max_device_num_per_machine_(),
+        device_(),
+        stream_type_(),
         free_instruction_list_(),
         zombie_instruction_list_(),
         running_instruction_list_(),
-        stream_id_(),
         active_stream_hook_(),
         thread_ctx_stream_hook_() {}
   intrusive::Ref intrusive_ref_;
   // fields
   ThreadCtx* thread_ctx_;
+  Symbol<Device> device_;
+  const StreamType* stream_type_;
   std::unique_ptr<DeviceCtx> device_ctx_;
-  int64_t max_device_num_per_machine_;
   // lists
   DispatchedInstructionList free_instruction_list_;
   DispatchedInstructionList zombie_instruction_list_;
   DispatchedInstructionList running_instruction_list_;
 
  public:
-  // skiplist hooks
-  intrusive::SkipListHook<StreamId, 10> stream_id_;
   // list hooks
   intrusive::ListHook active_stream_hook_;
   intrusive::ListHook thread_ctx_stream_hook_;

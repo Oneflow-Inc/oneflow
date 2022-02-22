@@ -58,16 +58,5 @@ void CpuStreamType::Compute(Instruction* instruction) const {
   OF_PROFILER_RANGE_POP();
 }
 
-intrusive::shared_ptr<StreamDesc> CpuStreamType::MakeStreamDesc(const Resource& resource,
-                                                                int64_t this_machine_id) const {
-  if (!resource.has_cpu_device_num()) { return intrusive::shared_ptr<StreamDesc>(); }
-  std::size_t device_num = resource.cpu_device_num();
-  auto ret = intrusive::make_shared<StreamDesc>();
-  ret->set_stream_type(StaticGlobalStreamType<CpuStreamType>());
-  ret->set_num_streams_per_machine(device_num);
-  ret->set_num_streams_per_thread(device_num);
-  return ret;
-}
-
 }  // namespace vm
 }  // namespace oneflow

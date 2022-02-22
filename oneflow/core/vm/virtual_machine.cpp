@@ -114,13 +114,12 @@ void WorkerLoop(vm::ThreadCtx* thread_ctx, const std::function<void(vm::ThreadCt
 
 }  // namespace
 
-VirtualMachine::VirtualMachine(const Resource& resource, int64_t this_machine_id) {
+VirtualMachine::VirtualMachine() {
   // Class VirtualMachineEngine only cares the basic logical of vm, while class VirtualMachine
   // manages threads and condition variables.
   // In order to notify threads in VirtualMachineEngine, a notify callback lambda should be take as
   // an argument for VirtualMachineEngine's constructor.
-  vm_ = intrusive::make_shared<vm::VirtualMachineEngine>(
-      vm::MakeVmDesc(resource, this_machine_id).Get(), [this]() { callback_notifier_.Notify(); });
+  vm_ = intrusive::make_shared<vm::VirtualMachineEngine>([this]() { callback_notifier_.Notify(); });
   OF_PROFILER_NAME_THIS_HOST_THREAD("_Main");
   std::function<void(vm::ThreadCtx*)> WorkerInitializer;
   GetWorkerThreadInitializer(vm_, &WorkerInitializer);

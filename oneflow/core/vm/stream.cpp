@@ -17,29 +17,23 @@ limitations under the License.
 #include "oneflow/core/vm/thread_ctx.h"
 #include "oneflow/core/common/util.h"
 #include "oneflow/core/common/cpp_attribute.h"
+#include "oneflow/core/framework/device.h"
+#include "oneflow/core/framework/stream_get_stream_type.h"
 
 namespace oneflow {
 namespace vm {
 
-void Stream::__Init__() { clear_thread_ctx(); }
-
-void Stream::__Init__(ThreadCtx* thread_ctx, const StreamId& stream_id,
-                      const int64_t max_device_num_per_machine) {
-  __Init__();
+void Stream::__Init__(ThreadCtx* thread_ctx, Symbol<Device> device, StreamRole stream_role) {
   set_thread_ctx(thread_ctx);
-  mut_stream_id()->CopyFrom(stream_id);
-  // InitDeviceCtx may use max_device_num_per_machine,
-  // so max_device_num_per_machine must be set before InitDeviceCtx
-  set_max_device_num_per_machine(max_device_num_per_machine);
-  stream_type().InitDeviceCtx(mut_device_ctx(), this);
+  device_ = device;
+  stream_type_ = StreamRoleSwitch<GetStreamType>(stream_role, device->enum_type());
+  stream_type_->InitDeviceCtx(mut_device_ctx(), this);
 }
 
-int64_t Stream::machine_id() const { return global_device_id() / max_device_num_per_machine(); }
-
-int64_t Stream::device_id() const { return global_device_id() % max_device_num_per_machine(); }
+int64_t Stream::device_id() const { return device_->device_id(); }
 
 const StreamType& Stream::stream_type() const {
-  return thread_ctx().stream_rt_desc().stream_type();
+  return *stream_type_;
 }
 
 intrusive::shared_ptr<Instruction> Stream::NewInstruction(

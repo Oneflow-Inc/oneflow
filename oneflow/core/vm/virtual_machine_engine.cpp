@@ -14,7 +14,6 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 #include "oneflow/core/vm/virtual_machine_engine.h"
-#include "oneflow/core/vm/vm_desc.h"
 #include "oneflow/core/vm/instruction_type.h"
 #include "oneflow/core/vm/fuse_phy_instr_operand.h"
 #include "oneflow/core/common/util.h"
@@ -209,11 +208,6 @@ void VirtualMachineEngine::MoveToGarbageMsgListAndNotifyGC() {
   notify_callback_thread_();
 }
 
-int64_t VirtualMachineEngine::this_machine_id() const {
-  CHECK_EQ(machine_id_range().size(), 1);
-  return machine_id_range().begin();
-}
-
 void VirtualMachineEngine::MakeInstructions(InstructionMsg* instr_msg,
                                             /*out*/ InstructionList* new_instruction_list) {
   const auto& instruction_type = instr_msg->instr_type_id().instruction_type();
@@ -343,60 +337,6 @@ void VirtualMachineEngine::DispatchInstruction(Instruction* instruction) {
     stream->mut_thread_ctx()->mut_pending_instruction_list()->PushBack(instruction);
   }
 }
-
-void VirtualMachineEngine::__Init__(const VmDesc& vm_desc,
-                                    const std::function<void()>& notify_callback_thread) {
-  notify_callback_thread_ = notify_callback_thread;
-  mut_vm_resource_desc()->CopyFrom(vm_desc.vm_resource_desc());
-  CHECK_GT(vm_desc.machine_id_range().size(), 0);
-  *mut_machine_id_range() = vm_desc.machine_id_range();
-  INTRUSIVE_UNSAFE_FOR_EACH_PTR(stream_desc, &vm_desc.stream_type2desc()) {
-    if (stream_desc->num_threads() == 0) { continue; }
-    auto stream_rt_desc = intrusive::make_shared<StreamRtDesc>(stream_desc);
-    mut_stream_type2stream_rt_desc()->Insert(stream_rt_desc.Mutable());
-    BalancedSplitter bs(stream_desc->parallel_num(), stream_desc->num_threads());
-    for (int64_t i = 0, rel_global_device_id = 0; i < stream_desc->num_threads(); ++i) {
-      auto thread_ctx = intrusive::make_shared<ThreadCtx>(stream_rt_desc.Get());
-      mut_thread_ctx_list()->PushBack(thread_ctx.Mutable());
-      for (int j = bs.At(i).begin(); j < bs.At(i).end(); ++j, ++rel_global_device_id) {
-        StreamId stream_id;
-        stream_id.__Init__(&stream_desc->stream_type(),
-                           this_start_global_device_id() + rel_global_device_id);
-        auto stream = intrusive::make_shared<Stream>(
-            thread_ctx.Mutable(), stream_id, vm_resource_desc().max_device_num_per_machine());
-        stream_rt_desc->add_stream(stream);
-        thread_ctx->mut_stream_list()->PushBack(stream.Mutable());
-      }
-    }
-  }
-}
-
-void VirtualMachineEngine::GetCachedInstrTypeIdAndPhyInstrStream(const std::string& instr_type_name,
-                                                                 int device_id,
-                                                                 InstrTypeId* instr_type_id,
-                                                                 Stream** stream) {
-  auto* cache = &instr_type_name2rt_instr_type_id_;
-  auto iter = cache->find(instr_type_name);
-  if (unlikely(iter == cache->end())) {
-    const auto& instr_type_id_val = LookupInstrTypeId(instr_type_name);
-    const auto* stream_type = &instr_type_id_val.stream_type();
-    auto* stream_rt_desc = this->mut_stream_type2stream_rt_desc()->FindPtr(stream_type);
-    iter = cache->emplace(instr_type_name, RtInstrTypeId(instr_type_id_val, stream_rt_desc)).first;
-  }
-  instr_type_id->CopyFrom(iter->second.instr_type_id());
-  *stream = iter->second.GetStream(device_id);
-}
-
-void VirtualMachineEngine::GetInstrTypeIdAndSoleStream(const std::string& instr_type_name,
-                                                       InstrTypeId* instr_type_id,
-                                                       Stream** stream) {
-  instr_type_id->CopyFrom(LookupInstrTypeId(instr_type_name));
-  const auto* stream_type = &instr_type_id->stream_type();
-  auto* stream_rt_desc = this->mut_stream_type2stream_rt_desc()->FindPtr(stream_type);
-  *stream = stream_rt_desc->GetSoleStream();
-}
-
-int64_t InstructionMaxRunningSeconds() { return 60 * 5; }
 
 // Returns true if old pending_instruction_list is empty
 Maybe<bool> VirtualMachineEngine::Receive(InstructionMsgList* compute_instr_msg_list) {
