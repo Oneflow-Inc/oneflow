@@ -138,13 +138,15 @@ jobs:
             exit 0
           fi
           echo "is_secrets_accessible=1" >> $GITHUB_ENV
-      - uses: Oneflow-Inc/gh-action-scheduler-v2@fix-for-new-distributed
-        name: Wait for GPU slot
+      - name: Wait for GPU slot
+        uses: Oneflow-Inc/get-oneflow/wait-for-gpu@distributed-v2
         if: env.is_secrets_accessible == '1'
-        timeout-minutes: 45
+        timeout-minutes: 60
         continue-on-error: true
-        env:
-          CI_PERSONAL_ACCESS_TOKEN: ${{ secrets.CI_PERSONAL_ACCESS_TOKEN }}
+        with:
+          token: ${{ secrets.CI_PERSONAL_ACCESS_TOKEN }}
+          timeout-minutes: 2
+          max-try-times: 30
 
   find-build-cache:
     name: "Find build cache"
@@ -512,25 +514,10 @@ jobs:
           ls ${ONEFLOW_WHEEL_PATH}
           docker exec ${TEST_CONTAINER_NAME} python3 -m pip config set global.index-url https://pypi.tuna.tsinghua.edu.cn/simple
           docker exec ${TEST_CONTAINER_NAME} python3 -m pip install --find-links=${ONEFLOW_WHEEL_PATH} oneflow
-      - name: Module API test (distributed, 1st try)
-        timeout-minutes: 30
-        if: ${{ !fromJson(matrix.cache-hit) && matrix.test-type == 'module' && matrix.device == 'cuda' && fromJson(matrix.is-distributed) }}
-        continue-on-error: true
-        id: new_interface_distributed_try_1
-        run: |
-          docker exec -e ONEFLOW_TEST_DIR=$PWD/python/oneflow/test/modules ${{ env.TEST_CONTAINER_NAME }} bash ci/test/2node_op_test_multi_client.sh
-      - name: Module API test (distributed, 2nd try)
-        timeout-minutes: 30
-        if: ${{ !fromJson(matrix.cache-hit) && matrix.test-type == 'module' && matrix.device == 'cuda' && fromJson(matrix.is-distributed) && steps.new_interface_distributed_try_1.outcome=='failure' }}
-        continue-on-error: true
-        id: new_interface_distributed_try_2
-        run: |
-          docker exec -e ONEFLOW_TEST_DIR=$PWD/python/oneflow/test/modules ${{ env.TEST_CONTAINER_NAME }} bash ci/test/2node_op_test_multi_client.sh
-      - name: Module API test (distributed, 3rd try)
+      - name: Module API test (distributed)
         timeout-minutes: 60
-        if: ${{ !fromJson(matrix.cache-hit) && matrix.test-type == 'module' && matrix.device == 'cuda' && fromJson(matrix.is-distributed) && steps.new_interface_distributed_try_2.outcome=='failure' }}
+        if: ${{ !fromJson(matrix.cache-hit) && matrix.test-type == 'module' && matrix.device == 'cuda' && fromJson(matrix.is-distributed) }}
         continue-on-error: false
-        id: new_interface_distributed_try_3
         run: |
           docker exec -e ONEFLOW_TEST_DIR=$PWD/python/oneflow/test/modules ${{ env.TEST_CONTAINER_NAME }} bash ci/test/2node_op_test_multi_client.sh
       - name: Remove automerge
@@ -774,7 +761,7 @@ jobs:
       - name: Exception API test
         timeout-minutes: 45
         if: ${{ !fromJson(matrix.cache-hit) && matrix.test-type == 'misc' }}
-        run: docker exec -e ONEFLOW_TEST_DIR=$PWD/python/oneflow/test/exceptions ${{ env.TEST_CONTAINER_NAME }} bash ci/test/generic_test_multi_client.sh
+        run: docker exec ${{ env.TEST_CONTAINER_NAME }} bash ci/test/multi_client_exception_test.sh
       - name: Dataloader API test
         timeout-minutes: 45
         if: ${{ !fromJson(matrix.cache-hit) && matrix.test-type == 'misc' }}
