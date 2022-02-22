@@ -95,13 +95,18 @@ Maybe<Tensor> BasicView(const std::shared_ptr<Tensor>& input, const Shape& targe
 }
 
 Maybe<Tensor> Reshape(const std::shared_ptr<Tensor>& input, const Shape& target_shape) {
+  Stride target_stride(target_shape);
+  return Reshape(input, target_shape, target_stride);
+}
+
+Maybe<Tensor> Reshape(const std::shared_ptr<Tensor>& input, const Shape& target_shape, const Stride& target_stride) {
   // TODO:(zhaoluyang) check input tensor is contiguous
   CHECK_OR_RETURN(IsViewApplicable(input))
     << Error::RuntimeError() << "view::Reshape(): input should be eager local tensor, but got "
                                  << (input->is_lazy() ? "lazy tensor" : "consistent tensor");
 
   int64_t storage_offset = JUST(JUST(input->AsMirroredTensor())->storage_offset());
-  std::shared_ptr<Tensor> output = JUST(BasicView(input, target_shape, storage_offset));
+  std::shared_ptr<Tensor> output = JUST(BasicView(input, target_shape, target_stride, storage_offset));
 
   if (autograd::GradMode::is_enabled() && input->requires_grad()) {
     Shape input_shape(input->shape()->dim_vec());

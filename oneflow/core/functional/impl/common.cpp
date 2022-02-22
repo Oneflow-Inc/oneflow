@@ -80,7 +80,7 @@ Maybe<void> CheckShapeCanExpandTo(const Shape& shape, const Shape& expand_shape)
   return Maybe<void>::Ok();
 }
 
-bool CheckViewValid(const Shape& shape, const Stride& stride, const Shape& target_shape) {
+Optional<Stride> computeStride(const Shape& shape, const Stride& stride, const Shape& target_shape) {
   /*************************************************
    * Description: in some case, view operate is not allowed, so need to check it's validation,
    * the check refer to torch(aten/src/ATen/native/TensorShape.cpp)
@@ -91,11 +91,11 @@ bool CheckViewValid(const Shape& shape, const Stride& stride, const Shape& targe
   DimVector shape_vec = shape.dim_vec();
   DimVector tgt_shape_vec = target_shape.dim_vec();
   DimVector stride_vec = stride.StrideVec();
-  if (elem_count == 0) { return false; }
+  if (elem_count == 0) { return NullOpt; }
 
   int64_t view_d = tgt_ndim - 1;
   int64_t chunk_base_stride = stride_vec.back();
-  std::vector<int64_t> newstride(tgt_ndim);
+  DimVector newstride(tgt_ndim);
   // stride for each subspace in the chunk
   // numel in current chunk
   int64_t tensor_numel = 1;
@@ -111,7 +111,7 @@ bool CheckViewValid(const Shape& shape, const Stride& stride, const Shape& targe
         view_numel *= tgt_shape_vec[view_d];
         view_d--;
       }
-      if (view_numel != tensor_numel) { return false; }
+      if (view_numel != tensor_numel) { return NullOpt; }
       if (tensor_d > 0) {
         chunk_base_stride = stride_vec[tensor_d - 1];
         tensor_numel = 1;
@@ -119,8 +119,9 @@ bool CheckViewValid(const Shape& shape, const Stride& stride, const Shape& targe
       }
     }
   }
-  if (view_d != -1) { return false; }
-  return true;
+  if (view_d != -1) { return NullOpt; }
+  Stride target_stride(newstride);
+  return target_stride;
 }
 
 Maybe<Shape> InferShape(const std::shared_ptr<one::Tensor>& x, const Shape& shape) {
