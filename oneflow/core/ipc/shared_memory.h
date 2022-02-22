@@ -26,7 +26,7 @@ class SharedMemoryManager final {
  public:
   SharedMemoryManager() = delete;
   ~SharedMemoryManager();
-  Maybe<void> PushShmNames(const std::string& shm_name);
+  Maybe<void> AddShmNames(const std::string& shm_name);
   Maybe<void> DeleteShmNames(const std::string& shm_name);
 
  private:
