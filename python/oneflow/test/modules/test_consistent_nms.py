@@ -21,13 +21,27 @@ import oneflow.unittest
 from oneflow.test_utils.automated_test_util import *
 from test_nms import create_tensors_with_iou
 from test_nms import nms_np
+from oneflow.test_utils.automated_test_util.util import broadcast
 
 
 def _test_nms(test_case, placement, sbp):
     iou = 0.5
     boxes, scores = create_tensors_with_iou(800, iou)
-    boxes = flow.tensor(boxes, dtype=flow.float32).to_global(placement, sbp)
-    scores = flow.tensor(scores, dtype=flow.float32).to_global(placement, sbp)
+    boxes = (
+        broadcast(flow.tensor(boxes, dtype=flow.float32))
+        .to_global(
+            placement=flow.env.all_device_placement("cuda"), sbp=flow.sbp.broadcast
+        )
+        .to_global(placement, sbp)
+    )
+
+    scores = (
+        broadcast(flow.tensor(scores, dtype=flow.float32))
+        .to_global(
+            placement=flow.env.all_device_placement("cuda"), sbp=flow.sbp.broadcast
+        )
+        .to_global(placement, sbp)
+    )
     keep_np = nms_np(boxes.numpy(), scores.numpy(), iou)
     keep = flow.nms(boxes, scores, iou)
     test_case.assertTrue(np.allclose(keep.numpy(), keep_np))
