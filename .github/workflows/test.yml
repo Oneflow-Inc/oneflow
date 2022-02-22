@@ -158,7 +158,6 @@ jobs:
         timeout-minutes: 5
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
-          priority-pr-number: ${{ secrets.PRIORITY_PR }}
 
   find-build-cache:
     name: "Find build cache"
