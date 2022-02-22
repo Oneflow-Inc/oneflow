@@ -107,15 +107,17 @@ class MultiReduceXimumAbsKernel final : public user_op::OpKernel, public user_op
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
 
-#define REGISTER_MULTI_REDUCE_XIMUM_ABS_KERNELS(device, dtype)                          \
-  REGISTER_USER_KERNEL("multi_reduce_max_abs")                                          \
-      .SetCreateFn<MultiReduceXimumAbsKernel<device, dtype, Ximum::kMax>>()             \
-      .SetIsMatchedHob((user_op::HobDeviceType() == device)                             \
-                       && (user_op::HobDataType("y", 0) == GetDataType<dtype>::value)); \
-  REGISTER_USER_KERNEL("multi_reduce_min_abs")                                          \
-      .SetCreateFn<MultiReduceXimumAbsKernel<device, dtype, Ximum::kMin>>()             \
+#define REGISTER_MULTI_REDUCE_XIMUM_ABS_KERNEL(op_type_name, ximum_enum, device, dtype) \
+  REGISTER_USER_KERNEL(op_type_name)                                                    \
+      .SetCreateFn<MultiReduceXimumAbsKernel<device, dtype, ximum_enum>>()              \
       .SetIsMatchedHob((user_op::HobDeviceType() == device)                             \
                        && (user_op::HobDataType("y", 0) == GetDataType<dtype>::value));
+
+#define REGISTER_MULTI_REDUCE_XIMUM_ABS_KERNELS(device, dtype)                                     \
+  REGISTER_MULTI_REDUCE_XIMUM_ABS_KERNEL("multi_reduce_max_abs", Ximum::kMax, device, dtype)       \
+  REGISTER_MULTI_REDUCE_XIMUM_ABS_KERNEL("multi_reduce_min_abs", Ximum::kMin, device, dtype)       \
+  REGISTER_MULTI_REDUCE_XIMUM_ABS_KERNEL("local_multi_reduce_max_abs", Ximum::kMax, device, dtype) \
+  REGISTER_MULTI_REDUCE_XIMUM_ABS_KERNEL("local_multi_reduce_min_abs", Ximum::kMin, device, dtype)
 
 REGISTER_MULTI_REDUCE_XIMUM_ABS_KERNELS(DeviceType::kCPU, float)
 REGISTER_MULTI_REDUCE_XIMUM_ABS_KERNELS(DeviceType::kCPU, double)
