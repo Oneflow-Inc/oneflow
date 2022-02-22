@@ -13,16 +13,14 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 """
+from packaging import version
 import unittest
+from typing import Union, Tuple
+import torch as torch_original
 
 import oneflow as flow
 import oneflow.unittest
 from oneflow.nn.common_types import _size_1_t
-from packaging import version
-import torch as torch_original
-from typing import Union, Tuple
-
-
 from oneflow.test_utils.automated_test_util import *
 
 NoneType = type(None)
