@@ -60,6 +60,14 @@ Maybe<void> SbpConstructor::InitSbpGraph(const OpGraph& op_graph, const Job& job
   JUST(StealSbpSignatureFromOpNode(op_graph, job));
   ori_cost = sbp_graph_.ComputeCost();
   LOG(INFO) << "OpGraph cost: " << ori_cost;
+
+  // Only collect the statistics for the initial graph
+  if (GlobalProcessCtx::Rank() == 0) {
+    // Collect statistics for this sbp graph
+    SbpStatistics sbp_statistics;
+    sbp_statistics.CollectStatistics(sbp_graph_);
+    sbp_statistics.PrintStatistics();
+  }
   return Maybe<void>::Ok();
 }
 
@@ -79,13 +87,6 @@ Maybe<void> SbpConstructor::FindBestSbpSignature() {
   double final_cost = sbp_graph_.ComputeCost();
   LOG(INFO) << "Final cost: " << final_cost;
   if (ori_cost + 1.0 < final_cost) { LOG(WARNING) << "ori_cost less than final_cost!!!"; }
-
-  if (GlobalProcessCtx::Rank() == 0) {
-    // Collect statistics for this sbp graph
-    SbpStatistics sbp_statistics;
-    sbp_statistics.CollectStatistics(sbp_graph_);
-    sbp_statistics.PrintStatistics();
-  }
 
   // TODO: Restart searching with another original random strategy
   CHECK_LT_OR_RETURN(final_cost, cut_cost)

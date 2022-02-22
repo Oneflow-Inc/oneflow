@@ -57,6 +57,9 @@ Maybe<void> AutoParallelPass::Apply(const OpGraph& op_graph, Job* job) const {
   if (GlobalProcessCtx::Rank() == 0) {
     sbp_constructor.PrintSBPGraphDebugInfo();
     JUST(sbp_constructor.CheckSbpAgreement(*job));
+
+    const OpGraph op_graph4statistics(*job);
+    auto_parallel::SbpConstructor sbp_constructor4statistics(op_graph4statistics, job);
   }
   return Maybe<void>::Ok();
 }
