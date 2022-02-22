@@ -42,6 +42,7 @@ oneflow
             cos, 
             cosh, 
             diag, 
+            select,
             diagonal,
             movedim,
             tensor_split,

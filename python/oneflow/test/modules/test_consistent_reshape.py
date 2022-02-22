@@ -48,7 +48,7 @@ def _test_reshape_like_impl(test_case, pair, placement, in_sbp, like_sbp):
     ).to_global(placement=placement, sbp=like_sbp)
     z = flow._C.reshape_like(y, like)
     local_z = z.to_global(
-        placement, sbp=[flow.sbp.broadcast for _ in range(len(placement.hierarchy))]
+        placement, sbp=[flow.sbp.broadcast for _ in range(len(placement.ranks.shape))]
     ).to_local()
     if flow.env.get_rank() == 0:
         test_case.assertTrue(np.array_equal(np_out, local_z.numpy()))
