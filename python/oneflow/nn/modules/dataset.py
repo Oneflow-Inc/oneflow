@@ -179,15 +179,10 @@ class CoinFlip(Module):
 
         self.placement = placement
         if placement is None:
-            if device is None:
-                self.device = flow.device("cpu")
-            else:
-                self.device = (
-                    device if isinstance(device, flow.device) else flow.device(device)
-                )
-                assert (
-                    self.device.type != "cuda"
-                ), "CoinFlip doesn't support cuda device now."
+            self.device = device or flow.device("cpu")
+            assert self.device == "cpu" or self.device == flow.device(
+                "cpu"
+            ), "coin flip only supports cpu currently."
         else:
             assert device is None
 
