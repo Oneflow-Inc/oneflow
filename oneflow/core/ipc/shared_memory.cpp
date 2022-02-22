@@ -89,9 +89,7 @@ Maybe<void*> ShmSetUp(const std::string& shm_name, size_t* shm_size) {
 }
 }  // namespace
 
-SharedMemory::~SharedMemory() {
-  CHECK_JUST(Close());
-}
+SharedMemory::~SharedMemory() { CHECK_JUST(Close()); }
 
 Maybe<SharedMemory> SharedMemory::Open(size_t shm_size) {
   std::string shm_name;
