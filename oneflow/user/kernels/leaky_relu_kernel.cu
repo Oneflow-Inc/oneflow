@@ -31,7 +31,20 @@ __global__ void LeakyReluBackwardGpu(const int n, const float alpha, const T* x,
   CUDA_1D_KERNEL_LOOP(i, n) { dx[i] = x[i] > 0 ? dy[i] : dy[i] * alpha; }
 }
 
+template<>
+__global__ void LeakyReluForwardGpu(const int n, const float alpha, const half* x, half* y) {
+  CUDA_1D_KERNEL_LOOP(i, n) { y[i] = x[i] > static_cast<half>(0) ? x[i] : x[i] * static_cast<half>(alpha); }
+}
+
+template<>
+__global__ void LeakyReluBackwardGpu(const int n, const float alpha, const half* x, const half* dy,
+                                     half* dx) {
+  CUDA_1D_KERNEL_LOOP(i, n) { dx[i] = x[i] > static_cast<half>(0) ? dy[i] : dy[i] * static_cast<half>(alpha); }
+}
+
 }  // namespace
+
+
 
 template<typename T>
 class GpuLeakyReluKernel final : public user_op::OpKernel {
@@ -58,6 +71,7 @@ class GpuLeakyReluKernel final : public user_op::OpKernel {
       .SetIsMatchedHob((user_op::HobDeviceType() == DeviceType::kCUDA) \
                        && (user_op::HobDataType("y", 0) == GetDataType<dtype>::value));
 
+REGISTER_CUDA_LEAKY_RELU_KERNEL(half)
 REGISTER_CUDA_LEAKY_RELU_KERNEL(float)
 REGISTER_CUDA_LEAKY_RELU_KERNEL(double)
 
@@ -87,6 +101,7 @@ class GpuLeakyReluGradKernel final : public user_op::OpKernel {
       .SetIsMatchedHob((user_op::HobDeviceType() == DeviceType::kCUDA) \
                        && (user_op::HobDataType("dx", 0) == GetDataType<dtype>::value));
 
+REGISTER_CUDA_LEAKY_RELU_GRAD_KERNEL(half)
 REGISTER_CUDA_LEAKY_RELU_GRAD_KERNEL(float)
 REGISTER_CUDA_LEAKY_RELU_GRAD_KERNEL(double)
 

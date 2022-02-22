@@ -588,6 +588,17 @@ class TestLeakyReLUModule(flow.unittest.TestCase):
         return y
 
     @autotest()
+    def test_leakyrelu_module_with_half_random_data(test_case):
+        m = torch.nn.LeakyReLU(negative_slope=random() | nothing())
+        m.train(random())
+        device = random_device()
+        m.to(device)
+        x = random_tensor().to(device)
+        x = x.to(torch.float16)
+        y = m(x)
+        return y
+
+    @autotest()
     def test_leakyrelu_module_with_0dim_data(test_case):
         m = torch.nn.LeakyReLU(negative_slope=random() | nothing())
         m.train(random())
