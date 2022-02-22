@@ -75,7 +75,7 @@ class CosineAnnealingWarmRestarts(LRScheduler):
 
         super().__init__(optimizer, last_step, verbose)
 
-    def get_lr(self, step):
+    def get_lr(self, base_lr, step):
         if self.T_mult > 1:
             epoch = math.floor(
                 math.log(1 - step / self.T_0 * (1 - self.T_mult), self.T_mult)
@@ -93,17 +93,10 @@ class CosineAnnealingWarmRestarts(LRScheduler):
         if self.restart_limit == 0 or (
             self.restart_limit > 0 and epoch < self.restart_limit
         ):
-            lrs = [
-                self.eta_min
-                + 0.5
-                * (base_lr * gamma - self.eta_min)
-                * (1 + math.cos(math.pi * step_in_epoch / epoch_steps))
-                for base_lr in self.base_lrs
-            ]
-        else:
-            lrs = [self.eta_min for _ in self.base_lrs]
+            cos_decay = 0.5 * (1 + math.cos(math.pi * step_in_epoch / epoch_steps))
+            return self.eta_min + (base_lr * gamma - self.eta_min) * cos_decay
 
-        return lrs
+        return self.eta_min
 
     def _generate_conf_for_graph(self, lr_conf):
         cosa_warm_restarts_conf = lr_conf.mutable_cosine_annealing_warm_restarts_conf()

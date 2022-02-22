@@ -108,7 +108,7 @@ class SequentialLR(LRScheduler):
 
         scheduler = self.schedulers[s_i]
         scheduler.last_step = cur_step
-        lrs = scheduler.get_lr(cur_step)
+        lrs = [scheduler.get_lr(base_lr, cur_step) for base_lr in self.base_lrs]
         self.update_lrs(lrs)
 
     def state_dict(self):

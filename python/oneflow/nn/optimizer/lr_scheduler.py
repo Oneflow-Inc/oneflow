@@ -48,7 +48,7 @@ class LRScheduler(object):
         """
         self.__dict__.update(state_dict)
 
-    def get_lr(self, step):
+    def get_lr(self, base_lr, step):
         """Compute learning rate using chainable form of the scheduler"""
         raise NotImplementedError
 
@@ -65,7 +65,7 @@ class LRScheduler(object):
 
     def step(self):
         self.last_step += 1
-        lrs = self.get_lr(self.last_step)
+        lrs = [self.get_lr(base_lr, self.last_step) for base_lr in self.base_lrs]
         self.update_lrs(lrs)
 
     def update_lrs(self, lrs):

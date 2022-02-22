@@ -64,11 +64,10 @@ class ChainedScheduler(LRScheduler):
     def step(self):
         self.last_step += 1
         lrs = self.schedulers[0].base_lrs
-        for i, scheduler in enumerate(self.schedulers):
-            origin_lrs = scheduler.base_lrs
-            scheduler.base_lrs = lrs
-            lrs = scheduler.get_lr(self.last_step)
-            scheduler.base_lrs = origin_lrs
+        for scheduler in self.schedulers:
+            for i, lr in enumerate(lrs):
+                lrs[i] = scheduler.get_lr(lr, self.last_step)
+
             scheduler.last_step = self.last_step
 
         self.update_lrs(lrs)

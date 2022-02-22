@@ -80,14 +80,14 @@ class CosineDecayLR(LRScheduler):
         self.alpha = alpha
         super().__init__(optimizer, last_step, verbose)
 
-    def get_lr(self, step):
+    def get_lr(self, base_lr, step):
         if step < self.decay_steps:
             cos_decay = 0.5 * (1 + math.cos(math.pi * step / self.decay_steps))
             decay_factor = (1 - self.alpha) * cos_decay + self.alpha
         else:
             decay_factor = self.alpha
 
-        return [base_lr * decay_factor for base_lr in self.base_lrs]
+        return base_lr * decay_factor
 
     def _generate_conf_for_graph(self, lr_conf):
         # CosineDecayLR is the same as CosineDecayConf in nn.Graph

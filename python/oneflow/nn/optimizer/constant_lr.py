@@ -63,11 +63,11 @@ class ConstantLR(LRScheduler):
         self.total_iters = total_iters
         super().__init__(optimizer, last_step, verbose)
 
-    def get_lr(self, step):
+    def get_lr(self, base_lr, step):
         if step < self.total_iters:
-            return [base_lr * self.factor for base_lr in self.base_lrs]
-        else:
-            return [base_lr for base_lr in self.base_lrs]
+            return base_lr * self.factor
+
+        return base_lr
 
     def _generate_conf_for_graph(self, lr_conf):
         constant_lr_conf = lr_conf.mutable_constant_lr_conf()

@@ -148,17 +148,15 @@ class WarmupLR(SequentialLR):
 
         if self.warmup_method == "linear":
             if scheduler and self.warmup_prefix is False:
-                end_lrs = scheduler.get_lr(self.warmup_iters)
-                end_factor = [
-                    end_lr / base_lr for end_lr, base_lr in zip(end_lrs, self.base_lrs)
-                ]
-                assert len(end_factor) > 0
-                if not np.isclose(end_factor, end_factor[0]).all():
+                base_lr = self.base_lrs[0]
+                if not np.isclose(self.base_lrs, base_lr).all():
                     raise ValueError(
                         "The param_groups in optimizer have different warmup configs, please use different optimizers."
                     )
 
-                end_factor = end_factor[0]
+                end_lr = scheduler.get_lr(base_lr, self.warmup_iters)
+                end_factor = end_lr / base_lr
+                assert len(end_factor) > 0
             else:
                 end_factor = 1.0
 

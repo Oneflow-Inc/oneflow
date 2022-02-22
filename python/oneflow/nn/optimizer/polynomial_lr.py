@@ -80,7 +80,7 @@ class PolynomialLR(LRScheduler):
         self.cycle = cycle
         super().__init__(optimizer, last_step, verbose)
 
-    def get_lr(self, step):
+    def get_lr(self, base_lr, step):
         decay_batch = self.max_decay_steps
         cur_batch = step
         if self.cycle:
@@ -90,12 +90,8 @@ class PolynomialLR(LRScheduler):
         else:
             cur_batch = min(cur_batch, decay_batch)
 
-        return [
-            (base_lr - self.end_learning_rate)
-            * ((1 - cur_batch / decay_batch) ** (self.power))
-            + self.end_learning_rate
-            for base_lr in self.base_lrs
-        ]
+        factor = (1 - cur_batch / decay_batch) ** (self.power)
+        return (base_lr - self.end_learning_rate) * factor + self.end_learning_rate
 
     def _generate_conf_for_graph(self, lr_conf):
         polynomial_conf = lr_conf.mutable_polynomial_conf()

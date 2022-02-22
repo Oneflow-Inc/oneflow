@@ -74,15 +74,9 @@ class CosineAnnealingLR(LRScheduler):
         self.eta_min = eta_min
         super().__init__(optimizer, last_step, verbose)
 
-    def get_lr(self, step):
-        lrs = [
-            self.eta_min
-            + 0.5
-            * (base_lr - self.eta_min)
-            * (1 + math.cos(math.pi * step / self.T_max))
-            for base_lr in self.base_lrs
-        ]
-        return lrs
+    def get_lr(self, base_lr, step):
+        cos_decay = 0.5 * (1 + math.cos(math.pi * step / self.T_max))
+        return self.eta_min + (base_lr - self.eta_min) * cos_decay
 
     def _generate_conf_for_graph(self, lr_conf):
         cosine_annealing_conf = lr_conf.mutable_cosine_annealing_conf()
