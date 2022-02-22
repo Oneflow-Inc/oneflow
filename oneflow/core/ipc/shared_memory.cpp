@@ -104,6 +104,7 @@ Maybe<void> SharedMemoryManager::DeleteShmName(const std::string& shm_name) {
 }
 
 SharedMemoryManager::~SharedMemoryManager() {
+  // Here we deliberately do not handle unlink errors.
   for (auto x : shm_names_) {
     shm_unlink(x.c_str());
   }
