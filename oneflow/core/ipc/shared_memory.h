@@ -16,6 +16,7 @@ limitations under the License.
 #ifndef ONEFLOW_CORE_IPC_SHARED_MEMORY_H_
 #define ONEFLOW_CORE_IPC_SHARED_MEMORY_H_
 
+#include "oneflow/core/common/util.h"
 #include "oneflow/core/common/maybe.h"
 #include "oneflow/core/common/global.h"
 
@@ -24,13 +25,14 @@ namespace ipc {
 
 class SharedMemoryManager final {
  public:
+  OF_DISALLOW_COPY_AND_MOVE(SharedMemoryManager);
   SharedMemoryManager() = delete;
   ~SharedMemoryManager();
-  Maybe<void> AddShmNames(const std::string& shm_name);
-  Maybe<void> DeleteShmNames(const std::string& shm_name);
+  Maybe<void> AddShmName(const std::string& shm_name);
+  Maybe<void> DeleteShmName(const std::string& shm_name);
+  SharedMemoryManager(const std::vector <std::string>& shm_names):shm_names_(shm_names) {}
 
  private:
-  SharedMemoryManager(const std::vector <std::string>& shm_names):shm_names_(shm_names) {}
   std::vector <std::string> shm_names_;
 };
 
