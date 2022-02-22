@@ -14,10 +14,11 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 #include "oneflow/user/kernels/random_seed_util.h"
+#include "oneflow/core/common/container_util.h"
 
 namespace oneflow {
 
-int64_t GetOpKernelRandomSeed(const user_op::KernelInitContext* ctx) {
+Maybe<int64_t> GetOpKernelRandomSeed(const user_op::KernelInitContext* ctx) {
   int64_t seed = ctx->Attr<int64_t>("seed");
   if (!ctx->Attr<bool>("has_seed")) { seed = NewRandomSeed(); }
 
@@ -26,37 +27,33 @@ int64_t GetOpKernelRandomSeed(const user_op::KernelInitContext* ctx) {
   CHECK_EQ(outputs.size(), 1);
 
   if (parallel_num > 1) {
-    int64_t seed_num = 1;
     const Shape& hierarchy = *ctx->parallel_desc().hierarchy();
     int64_t parallel_id = ctx->parallel_ctx().parallel_id();
     const NdSbp& nd_sbp = ctx->NdSbp4ArgNameAndIndex(outputs.at(0).first, outputs.at(0).second);
     std::vector<int64_t> coordinate(hierarchy.NumAxes());
 
-    for (int32_t i = 0; i < nd_sbp.sbp_parallel_size(); ++i) {
-      // parallel coordinate
-      parallel_num /= hierarchy.At(i);
-      coordinate.at(i) = parallel_id / parallel_num;
-      parallel_id %= parallel_num;
-      // seed number
-      if (nd_sbp.sbp_parallel(i).has_split_parallel()) {
-        seed_num *= hierarchy.At(i);
+    int64_t seed_idx = 0;
+    int64_t stride = 1;
+    for (int i = nd_sbp.sbp_parallel_size() - 1; i >= 0; --i) {
+      // coordinate at axis i
+      int coord = parallel_id % hierarchy.At(i);
+      parallel_id = (parallel_id - coord) / hierarchy.At(i);
+      // coordinate reset to 0 if broadcast
+      if (nd_sbp.sbp_parallel(i).has_broadcast_parallel()) {
+        // do nothing
+      } else if (nd_sbp.sbp_parallel(i).has_split_parallel()) {
+        seed_idx += coord * stride;
+        stride *= hierarchy.At(i);
       } else {
-        CHECK(nd_sbp.sbp_parallel(i).has_broadcast_parallel());
+        // other sbp is not allowed
+        return Error::RuntimeError() << "random source op only support broadcast or split";
       }
     }
-    // Get seed index
-    int seed_idx = 0;
-    int weight = 1;
-    for (int32_t i = nd_sbp.sbp_parallel_size() - 1; i >= 0; --i) {
-      if (nd_sbp.sbp_parallel(i).has_split_parallel()) {
-        seed_idx += weight * coordinate.at(i);
-        weight *= hierarchy.At(i);
-      }
-    }
+
     std::seed_seq seq{seed};
-    std::vector<int64_t> seeds(seed_num);
+    std::vector<int64_t> seeds(stride);
     seq.generate(seeds.begin(), seeds.end());
-    seed = seeds.at(seed_idx);
+    seed = JUST(VectorAt(seeds, seed_idx));
   }
   return seed;
 }
