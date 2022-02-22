@@ -214,8 +214,7 @@ double CosineAnnealingWarmRestartsLearningRate(const CosineAnnealingWarmRestarts
   double lr = conf.eta_min();
   if (conf.restart_limit() == 0 || (conf.restart_limit() > 0 && epoch < conf.restart_limit())) {
     double gamma = std::pow(conf.decay_rate(), epoch);
-    const double PI = std::atan(1.0) * 4.0;
-    lr = lr + 0.5 * (base_lr * gamma - lr) * (1 + std::cos(PI * step_in_epoch / epoch_steps));
+    lr = lr + 0.5 * (base_lr * gamma - lr) * (1 + std::cos(M_PI * step_in_epoch / epoch_steps));
   }
   return lr;
 }
