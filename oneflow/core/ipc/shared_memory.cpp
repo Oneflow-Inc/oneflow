@@ -35,7 +35,7 @@ namespace {
 // return errno
 int ShmOpen(const std::string& shm_name, int* fd) {
   *fd = shm_open(shm_name.c_str(), O_CREAT | O_RDWR, S_IRUSR | S_IWUSR);
-  Global<SharedMemoryManager>::Get()->PutShmNames(shm_name);
+  Global<SharedMemoryManager>::Get()->PushShmNames(shm_name);
   return *fd == -1 ? errno : 0;
 }
 
@@ -90,7 +90,7 @@ Maybe<void*> ShmSetUp(const std::string& shm_name, size_t* shm_size) {
 }
 }  // namespace
 
-Maybe<void> SharedMemoryManager::PutShmNames(const std::string& shm_name) {
+Maybe<void> SharedMemoryManager::PushShmNames(const std::string& shm_name) {
   shm_names_.push_back(shm_name);
   return Maybe<void>::Ok();
 }
