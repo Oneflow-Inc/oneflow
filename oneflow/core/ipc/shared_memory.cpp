@@ -129,6 +129,7 @@ Maybe<void> SharedMemory::Unlink() {
   if (it != shm_names.end()){
     shm_names.erase(it);
   }
+  PCHECK_OR_RETURN(shm_unlink(name_.c_str()));
   return Maybe<void>::Ok();
 #else
   TODO_THEN_RETURN();
