@@ -156,7 +156,6 @@ class WarmupLR(SequentialLR):
 
                 end_lr = scheduler.get_lr(base_lr, self.warmup_iters)
                 end_factor = end_lr / base_lr
-                assert len(end_factor) > 0
             else:
                 end_factor = 1.0
 

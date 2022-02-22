@@ -63,7 +63,7 @@ class ChainedScheduler(LRScheduler):
 
     def step(self):
         self.last_step += 1
-        lrs = self.schedulers[0].base_lrs
+        lrs = self.schedulers[0].base_lrs.copy()
         for scheduler in self.schedulers:
             for i, lr in enumerate(lrs):
                 lrs[i] = scheduler.get_lr(lr, self.last_step)
