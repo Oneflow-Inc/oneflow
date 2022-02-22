@@ -35,7 +35,7 @@ namespace {
 // return errno
 int ShmOpen(const std::string& shm_name, int* fd) {
   *fd = shm_open(shm_name.c_str(), O_CREAT | O_RDWR, S_IRUSR | S_IWUSR);
-  Global<SharedMemoryManager>::Get()->get_shm_names().push_back(shm_name);
+  Global<SharedMemoryManager>::Get()->PutShmNames(shm_name);
   return *fd == -1 ? errno : 0;
 }
 
@@ -90,14 +90,27 @@ Maybe<void*> ShmSetUp(const std::string& shm_name, size_t* shm_size) {
 }
 }  // namespace
 
-SharedMemory::~SharedMemory() {
-  if (buf_ != nullptr) { CHECK_JUST(Close()); }
+Maybe<void> SharedMemoryManager::PutShmNames(const std::string& shm_name) {
+  shm_names_.push_back(shm_name);
+  return Maybe<void>::Ok();
+}
+
+Maybe<void> SharedMemoryManager::DeleteShmNames(const std::string& shm_name) {
+  auto it = std::find(shm_names_.begin(), shm_names_.end(), shm_name);
+  if (it != shm_names_.end()){
+    shm_names_.erase(it);
+  }
+  return Maybe<void>::Ok();
 }
 
 SharedMemoryManager::~SharedMemoryManager() {
   for (auto x : shm_names_) {
     shm_unlink(x.c_str());
   }
+}
+
+SharedMemory::~SharedMemory() {
+  if (buf_ != nullptr) { CHECK_JUST(Close()); }
 }
 
 Maybe<SharedMemory> SharedMemory::Open(size_t shm_size) {
@@ -124,11 +137,7 @@ Maybe<void> SharedMemory::Close() {
 
 Maybe<void> SharedMemory::Unlink() {
 #ifdef __linux__
-  auto shm_names = Global<SharedMemoryManager>::Get()->get_shm_names();
-  auto it = std::find(shm_names.begin(), shm_names.end(), name_);
-  if (it != shm_names.end()){
-    shm_names.erase(it);
-  }
+  Global<SharedMemoryManager>::Get()->DeleteShmNames(name_);
   PCHECK_OR_RETURN(shm_unlink(name_.c_str()));
   return Maybe<void>::Ok();
 #else
