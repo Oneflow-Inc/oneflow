@@ -188,15 +188,17 @@ Maybe<Tensor> Unsqueeze(const std::shared_ptr<Tensor>& input, const int32_t& exp
   DimVector target_dim_vec(ndim + 1);
   StrideVector target_stride_vec(ndim + 1);
 
-  int cnt = 0;
-  for (int i = 0; i < ndim; i++) {
-    if (i == expand_dim) { cnt++; }
-    target_dim_vec[cnt] = shape->At(i);
-    target_stride_vec[cnt] = strides->At(i);
-    cnt++;
+  {
+    int cnt = 0;
+    for (int i = 0; i < ndim; i++) {
+      if (i == expand_dim) { cnt++; }
+      target_dim_vec[cnt] = shape->At(i);
+      target_stride_vec[cnt] = strides->At(i);
+      cnt++;
+    }
+    target_dim_vec[expand_dim] = 1;
+    target_stride_vec[expand_dim] = strides->At(expand_dim);
   }
-  target_dim_vec[expand_dim] = 1;
-  target_stride_vec[expand_dim] = strides->At(expand_dim);
 
   int64_t storage_offset = JUST(JUST(input->AsMirroredTensor())->storage_offset());
   std::shared_ptr<Tensor> output =
@@ -235,12 +237,14 @@ Maybe<Tensor> Squeeze(const std::shared_ptr<Tensor>& input,
   DimVector target_dim_vec(target_ndim);
   StrideVector target_stride_vec(target_ndim);
 
-  int cnt = 0;
-  for (int i = 0; i < ndim; i++) {
-    if (find(squeeze_dims.begin(), squeeze_dims.end(), i) == squeeze_dims.end()) {
-      target_dim_vec[cnt] = shape->At(i);
-      target_stride_vec[cnt] = strides->At(i);
-      cnt++;
+  {
+    int cnt = 0;
+    for (int i = 0; i < ndim; i++) {
+      if (find(squeeze_dims.begin(), squeeze_dims.end(), i) == squeeze_dims.end()) {
+        target_dim_vec[cnt] = shape->At(i);
+        target_stride_vec[cnt] = strides->At(i);
+        cnt++;
+      }
     }
   }
 
