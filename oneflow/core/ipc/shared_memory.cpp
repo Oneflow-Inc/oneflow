@@ -100,6 +100,10 @@ Maybe<void> SharedMemoryManager::DeleteShmName(const std::string& shm_name) {
   if (it != shm_names_.end()){
     shm_names_.erase(it);
   }
+  else{
+    return Error::RuntimeError()
+             << "shared memory was not created but attempted to be freed.";
+  }
   return Maybe<void>::Ok();
 }
 
@@ -138,8 +142,8 @@ Maybe<void> SharedMemory::Close() {
 
 Maybe<void> SharedMemory::Unlink() {
 #ifdef __linux__
-  Global<SharedMemoryManager>::Get()->DeleteShmName(name_);
   PCHECK_OR_RETURN(shm_unlink(name_.c_str()));
+  Global<SharedMemoryManager>::Get()->DeleteShmName(name_);
   return Maybe<void>::Ok();
 #else
   TODO_THEN_RETURN();

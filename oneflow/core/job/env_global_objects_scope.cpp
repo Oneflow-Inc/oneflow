@@ -263,9 +263,9 @@ EnvGlobalObjectsScope::~EnvGlobalObjectsScope() {
   CHECK_NOTNULL(Global<CtrlClient>::Get());
   CHECK_NOTNULL(Global<EnvDesc>::Get());
   Global<RpcManager>::Delete();
+  Global<ipc::SharedMemoryManager>::Delete();
   Global<ProcessCtx>::Delete();
   Global<EnvDesc>::Delete();
-  Global<ipc::SharedMemoryManager>::Delete();
   ClearAllSymbolAndIdCache();
   google::ShutdownGoogleLogging();
 }
