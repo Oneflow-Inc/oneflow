@@ -67,7 +67,9 @@ void SetNdSbpSignatureHintByIdenticalSbpObaPairs(const OpGraph& op_graph,
     } else {
       UNIMPLEMENTED();
     }
-    job_builder->SetNdSbp4Oba(pair.first(), *nd_sbp);
+    // NOTE(strint): Remove hint to fix ZeRO bug for the moment.
+    // Reference: https://github.com/Oneflow-Inc/OneTeam/issues/1097
+    // job_builder->SetNdSbp4Oba(pair.first(), *nd_sbp);
     job_builder->SetNdSbp4Oba(pair.second(), *nd_sbp);
   }
 }

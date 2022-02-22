@@ -765,7 +765,7 @@ Maybe<void> Operator::InferSbpSignature(
   CHECK_GT_OR_RETURN(filtered_sbp_sigs_by_conf.sbp_signature_size(), 0)
     << op_name() << " has no maching sbp after flitering valid sbp list "
     << valid_sbp_sig_list.DebugString()
-    << " by sbp conf " << sbp_sig_conf.DebugString();
+    << " with sbp hint " << sbp_sig_conf.DebugString();
   if (filtered_sbp_sigs_by_conf.sbp_signature_size() == 1) {
     *sbp_signature = *filtered_sbp_sigs_by_conf.sbp_signature().begin();
     return Maybe<void>::Ok();
