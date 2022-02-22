@@ -29,7 +29,8 @@ Maybe<int64_t> GetOpKernelRandomSeed(const user_op::KernelInitContext* ctx) {
   if (parallel_num > 1) {
     const Shape& hierarchy = *ctx->parallel_desc().hierarchy();
     int64_t parallel_id = ctx->parallel_ctx().parallel_id();
-    const NdSbp& nd_sbp = ctx->NdSbp4ArgNameAndIndex(outputs.at(0).first, outputs.at(0).second);
+    const NdSbp& nd_sbp = ctx->NdSbp4ArgNameAndIndex(JUST(VectorAt(outputs, 0)).first,
+                                                     JUST(VectorAt(outputs, 0)).second);
     std::vector<int64_t> coordinate(hierarchy.NumAxes());
 
     int64_t seed_idx = 0;
