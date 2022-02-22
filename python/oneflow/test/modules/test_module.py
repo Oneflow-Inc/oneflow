@@ -212,7 +212,9 @@ class TestModule(flow.unittest.TestCase):
                 return self.param
 
         m1 = CustomModule()
-        m1 = m1.to_global(flow.placement("cuda", range(1, 3)), flow.sbp.broadcast).to_global(sbp=flow.sbp.split(1))
+        m1 = m1.to_global(
+            flow.placement("cuda", range(1, 3)), flow.sbp.broadcast
+        ).to_global(sbp=flow.sbp.split(1))
         m2 = CustomModule()
         m2 = m2.to_global(flow.placement("cuda", range(1, 3)), flow.sbp.broadcast)
         res1 = m1() + m2()
@@ -231,9 +233,15 @@ class TestModule(flow.unittest.TestCase):
                 test_case.assertEqual(len(os.listdir(f)), 0)
 
             m1 = CustomModule()
-            m1 = m1.to_global(flow.placement("cuda", [[0, 1], [2, 3]]), [flow.sbp.broadcast, flow.sbp.broadcast]).to_global(sbp=[flow.sbp.split(1), flow.sbp.broadcast])
+            m1 = m1.to_global(
+                flow.placement("cuda", [[0, 1], [2, 3]]),
+                [flow.sbp.broadcast, flow.sbp.broadcast],
+            ).to_global(sbp=[flow.sbp.split(1), flow.sbp.broadcast])
             m2 = CustomModule()
-            m2 = m2.to_global(flow.placement("cuda", [[0, 1], [2, 3]]), [flow.sbp.broadcast, flow.sbp.broadcast]).to_global(sbp=[flow.sbp.broadcast, flow.sbp.split(1)])
+            m2 = m2.to_global(
+                flow.placement("cuda", [[0, 1], [2, 3]]),
+                [flow.sbp.broadcast, flow.sbp.broadcast],
+            ).to_global(sbp=[flow.sbp.broadcast, flow.sbp.split(1)])
 
             with test_case.assertRaises(Exception):
                 loaded_state_dict = flow.load(f)
