@@ -104,7 +104,7 @@ class TensorInfo final {
 
   Maybe<Tensor> zeros() const;
   Optional<Symbol<ParallelDesc>> placement() { return parallel_desc_; }
-  Optional<Symbol<NdSbp>> sbp() { return nd_sbp_; }
+  Optional<Symbol<NdSbp>> sbp() const { return nd_sbp_; }
 
  private:
   std::shared_ptr<const Shape> shape_;
