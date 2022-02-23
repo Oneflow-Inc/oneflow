@@ -42,8 +42,7 @@ struct EluGradFunctor<half> {
 
 template<>
 struct LeakyReluFunctor<half> {
-  OF_DEVICE_FUNC explicit LeakyReluFunctor(float alpha)
-      : alpha(alpha) {}
+  OF_DEVICE_FUNC explicit LeakyReluFunctor(float alpha) : alpha(alpha) {}
   __device__ half operator()(half x) const {
     half zero = __float2half(0);
     return (x > zero) ? x : __float2half(alpha) * x;
@@ -53,11 +52,14 @@ struct LeakyReluFunctor<half> {
 
 template<>
 struct LeakyReluGradFunctor<half> {
-  OF_DEVICE_FUNC explicit LeakyReluGradFunctor(float alpha)
-      : alpha(alpha) {}
+  OF_DEVICE_FUNC explicit LeakyReluGradFunctor(float alpha) : alpha(alpha) {}
   __device__ half operator()(half x, half dy) const {
     half zero = __float2half(0);
-    return (x > zero) ? dy : __float2half(alpha) * dy;
+    if (alpha > 0) {
+      return (dy > zero) ? dy : __float2half(alpha) * dy;
+    } else {
+      return (x > zero) ? dy : __float2half(alpha) * dy;
+    }
   }
   const float alpha;
 };
