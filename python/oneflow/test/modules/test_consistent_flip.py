@@ -14,6 +14,10 @@ See the License for the specific language governing permissions and
 limitations under the License.
 """
 import unittest
+from collections import OrderedDict
+
+import numpy as np
+from test_util import GenArgList
 
 import oneflow as flow
 import oneflow.unittest
@@ -21,21 +25,24 @@ import oneflow.unittest
 from oneflow.test_utils.automated_test_util import *
 
 
-@autotest(n=5, auto_backward=False, check_graph=False)
-def _test_meshgrid(test_case, placement):
-    x_sbp = random_sbp(placement, max_dim=1)
-    x = random_tensor(ndim=1, dim0=8, requires_grad=False).to_global(placement, x_sbp)
-    y_sbp = random_sbp(placement, max_dim=1)
-    y = random_tensor(ndim=1, dim0=8, requires_grad=False).to_global(placement, y_sbp)
-    res = torch.meshgrid(x, y)
-    return res[0], res[1]
+@autotest(n=1, check_graph=False)
+def test_flip_impl(test_case, ndim, placement, sbp):
+    dims = [random(1, 4) * 8 for i in range(ndim)]
+    x = random_tensor(ndim, *dims)
+    y = x.to_global(placement=placement, sbp=sbp)
+    new_dim = random(0, ndim).to(int).value()
+    z = torch.flip(y, constant([i for i in range(new_dim)]))
+    return z
 
 
-class TestMeshGrid(flow.unittest.TestCase):
+class TestFlipConsistent(flow.unittest.TestCase):
     @globaltest
-    def test_meshgrid(test_case):
+    def test_flip(test_case):
+        # random ndim in range [1,4]
+        ndim = random(1, 5).to(int).value()
         for placement in all_placement():
-            _test_meshgrid(test_case, placement)
+            for sbp in all_sbp(placement, max_dim=ndim):
+                test_flip_impl(test_case, ndim, placement, sbp)
 
 
 if __name__ == "__main__":
