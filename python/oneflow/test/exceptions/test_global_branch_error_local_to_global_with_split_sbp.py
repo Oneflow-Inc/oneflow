@@ -35,7 +35,6 @@ class TestLocalToGlobalBranchError(flow.unittest.TestCase):
             data = flow.rand(2, dtype=flow.float32)
             placement = flow.env.all_device_placement("cuda")
             sbp = flow.sbp.split(0)
-            global_data = data.to_global(placement=placement, sbp=sbp)
             if flow.env.get_rank() == 0:
                 global_data = data.to_global(placement=placement, sbp=sbp)
             else:
