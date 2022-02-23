@@ -20,6 +20,24 @@ limitations under the License.
 namespace oneflow {
 
 template<typename T>
+struct LeakyReluFunctor {
+  OF_DEVICE_FUNC explicit LeakyReluFunctor(float alpha) : alpha(alpha) {}
+  OF_DEVICE_FUNC T operator()(T x) const {
+    return (x > static_cast<T>(0)) ? x : static_cast<T>(alpha * x);
+  }
+  const T alpha;
+};
+
+template<typename T>
+struct LeakyReluGradFunctor {
+  OF_DEVICE_FUNC explicit LeakyReluGradFunctor(float alpha) : alpha(alpha) {}
+  OF_DEVICE_FUNC T operator()(T x, T dy) const {
+    return (x > static_cast<T>(0)) ? dy : static_cast<T>(dy * alpha);
+  }
+  const T alpha;
+};
+
+template<typename T>
 struct EluFunctor {
   OF_DEVICE_FUNC explicit EluFunctor(float alpha) : alpha(alpha) {}
   OF_DEVICE_FUNC T operator()(T x) const {
@@ -230,6 +248,20 @@ struct ReluGradFunctor {
       [](user_op::KernelComputeContext* ctx) {                    \
         return EluGradFunctor<dtype>(ctx->Attr<double>("alpha")); \
       },                                                          \
+      "dx", "x", "dy");
+
+#define REGISTER_LEAKYRELU_KERNEL(device, dtype)                            \
+  REGISTER_UNARY_ELEMWISE_USER_KERNEL(                                      \
+      device, "leaky_relu", LeakyReluFunctor, dtype, dtype,                 \
+      [](user_op::KernelComputeContext* ctx) {                              \
+        return LeakyReluFunctor<dtype>(ctx->Attr<float>("alpha"));          \
+      },                                                                    \
+      "y", "x");                                                            \
+  REGISTER_BINARY_ELEMWISE_USER_KERNEL(                                     \
+      device, "leaky_relu_grad", LeakyReluGradFunctor, dtype, dtype, dtype, \
+      [](user_op::KernelComputeContext* ctx) {                              \
+        return LeakyReluGradFunctor<dtype>(ctx->Attr<float>("alpha"));      \
+      },                                                                    \
       "dx", "x", "dy");
 
 #define REGISTER_CELU_KERNEL(device, dtype)                        \
