@@ -53,7 +53,6 @@ limitations under the License.
 #endif  // WITH_RDMA
 #include "oneflow/core/ep/include/device_manager_registry.h"
 #include "oneflow/core/ep/cpu/cpu_device_manager.h"
-#include "oneflow/core/ipc/shared_memory.h"
 
 namespace oneflow {
 
@@ -143,7 +142,6 @@ Maybe<void> EnvGlobalObjectsScope::Init(const EnvProto& env_proto) {
   InitLogging(env_proto.cpp_logging_conf());
   Global<EnvDesc>::New(env_proto);
   Global<ProcessCtx>::New();
-  Global<ipc::SharedMemoryManager>::New();
   // Avoid dead lock by using CHECK_JUST instead of JUST. because it maybe be blocked in
   // ~CtrlBootstrap.
   if (Global<ResourceDesc, ForSession>::Get()->enable_dry_run()) {
@@ -263,7 +261,6 @@ EnvGlobalObjectsScope::~EnvGlobalObjectsScope() {
   CHECK_NOTNULL(Global<CtrlClient>::Get());
   CHECK_NOTNULL(Global<EnvDesc>::Get());
   Global<RpcManager>::Delete();
-  Global<ipc::SharedMemoryManager>::Delete();
   Global<ProcessCtx>::Delete();
   Global<EnvDesc>::Delete();
   ClearAllSymbolAndIdCache();

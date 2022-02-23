@@ -28,13 +28,17 @@ limitations under the License.
 namespace oneflow {
 namespace ipc {
 
+// Must be a global variable instead of Global<SharedMemoryManager>.
+// Subprocesses don't have chance to call `Global<SharedMemoryManager>::Delete()`
+SharedMemoryManager shared_memory_manager;
+
 namespace {
 
 #ifdef __linux__
 
 // return errno
 int ShmOpen(const std::string& shm_name, int* fd) {
-  CHECK_NOTNULL(Global<SharedMemoryManager>::Get())->AddShmName(shm_name);
+  shared_memory_manager.AddShmName(shm_name);
   *fd = shm_open(shm_name.c_str(), O_CREAT | O_RDWR, S_IRUSR | S_IWUSR);
   return *fd == -1 ? errno : 0;
 }
@@ -90,9 +94,8 @@ Maybe<void*> ShmSetUp(const std::string& shm_name, size_t* shm_size) {
 }
 }  // namespace
 
-Maybe<void> SharedMemoryManager::AddShmName(const std::string& shm_name) {
+void SharedMemoryManager::AddShmName(const std::string& shm_name) {
   shm_names_.push_back(shm_name);
-  return Maybe<void>::Ok();
 }
 
 Maybe<void> SharedMemoryManager::DeleteShmName(const std::string& shm_name) {
@@ -143,7 +146,7 @@ Maybe<void> SharedMemory::Close() {
 Maybe<void> SharedMemory::Unlink() {
 #ifdef __linux__
   PCHECK_OR_RETURN(shm_unlink(name_.c_str()));
-  Global<SharedMemoryManager>::Get()->DeleteShmName(name_);
+  JUST(shared_memory_manager.DeleteShmName(name_));
   return Maybe<void>::Ok();
 #else
   TODO_THEN_RETURN();

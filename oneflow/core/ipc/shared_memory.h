@@ -28,7 +28,7 @@ class SharedMemoryManager final {
   OF_DISALLOW_COPY_AND_MOVE(SharedMemoryManager);
   SharedMemoryManager() = default;
   ~SharedMemoryManager();
-  Maybe<void> AddShmName(const std::string& shm_name);
+  void AddShmName(const std::string& shm_name);
   Maybe<void> DeleteShmName(const std::string& shm_name);
 
  private:
