@@ -284,7 +284,9 @@ void LearningRateScheduleKernel::ForwardDataContent(KernelContext* ctx) const {
   const LearningRateScheduleOpConf& conf = this->op_conf().learning_rate_schedule_conf();
   const int64_t train_step = *ctx->BnInOp2Blob("train_step")->dptr<int64_t>();
   float learning_rate = conf.learning_rate();
-  learning_rate = GetDecayedLearningRate(conf.learning_rate_decay(), learning_rate, train_step);
+  if (conf.has_learning_rate_decay()) {
+    learning_rate = GetDecayedLearningRate(conf.learning_rate_decay(), learning_rate, train_step);
+  }
   *ctx->BnInOp2Blob("out")->mut_dptr<float>() = learning_rate;
   if (Global<ResourceDesc, ForSession>::Get()->enable_debug_mode()) {
     (*log_stream_) << std::to_string(train_step) << ", " << std::to_string(learning_rate) << "\n";
