@@ -778,7 +778,7 @@ class ConsistentArangeFunctor {
   Maybe<Tensor> operator()(const Scalar& start, const Scalar& limit, const Scalar& delta,
                            const Optional<Symbol<DType>>& dtype,
                            const Symbol<ParallelDesc>& placement,
-                           const std::vector<Symbol<cfg::SbpParallel>>& sbp_tuple) const {
+                           const std::vector<Symbol<SbpParallel>>& sbp_tuple) const {
     JUST(CheckDeviceIdsIsValid(placement));
     MutableAttrMap attrs;
     if (dtype.has_value()) {
@@ -828,7 +828,7 @@ class ConsistentArange2Functor {
  public:
   Maybe<Tensor> operator()(const Scalar& limit, const Symbol<DType>& dtype,
                            const Symbol<ParallelDesc>& placement,
-                           const std::vector<Symbol<cfg::SbpParallel>>& sbp_tuple) const {
+                           const std::vector<Symbol<SbpParallel>>& sbp_tuple) const {
     JUST(CheckDeviceIdsIsValid(placement));
     return ConsistentArange(Scalar(0), limit, Scalar(1), dtype, placement, sbp_tuple);
   }
@@ -1393,6 +1393,36 @@ class ClampGradFunctor {
   std::shared_ptr<OpExpr> clip_op_;
   std::shared_ptr<OpExpr> clip_min_op_;
   std::shared_ptr<OpExpr> clip_max_op_;
+};
+
+class SelectFunctor {
+ public:
+  SelectFunctor() = default;
+
+  Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& input, const int32_t& dim,
+                           const int32_t& index) const {
+    int32_t ndim = input->ndim();
+    CHECK_OR_RETURN(ndim > 0) << "select() cannot be applied to a 0-dim tensor.";
+    CHECK_OR_RETURN((dim >= -ndim) && (dim < ndim))
+        << "Dimension out of range (expected to be in range of [" << -ndim << "," << ndim - 1
+        << "], but got " << dim << ")";
+    int32_t pos_dim = dim >= 0 ? dim : dim + ndim;
+    auto size = input->dim(pos_dim);
+    CHECK_OR_RETURN((index >= -size) && (index < size))
+        << "Index out of range (expected to be in range of [" << -size << "," << size - 1
+        << "], but got " << index << ")";
+    int32_t pos_index = index >= 0 ? index : index + size;
+
+    std::vector<int32_t> sizes(input->shape()->dim_vec().begin(), input->shape()->dim_vec().end());
+    const auto& stride = JUST(input->stride())->StrideVec();
+    std::vector<int32_t> strides(stride.begin(), stride.end());
+    auto storage_offset = JUST(input->storage_offset()) + pos_index * strides[pos_dim];
+
+    sizes.erase(sizes.begin() + pos_dim);
+    strides.erase(strides.begin() + pos_dim);
+
+    return AsStrided(input, sizes, strides, storage_offset);
+  }
 };
 
 class SelectTopNFunctor {
@@ -2122,6 +2152,7 @@ ONEFLOW_FUNCTION_LIBRARY(m) {
   m.add_functor<NormFunctor, Norm2Functor>("Norm");
   m.add_functor<ScalarNormFunctor, ScalarNorm2Functor>("ScalarNorm");
   m.add_functor<ClampGradFunctor>("ClampGrad");
+  m.add_functor<SelectFunctor>("Select");
   m.add_functor<SelectTopNFunctor>("SelectTopN");
   m.add_functor<MinimumFunctor>("Minimum");
   m.add_functor<MaximumFunctor>("Maximum");
