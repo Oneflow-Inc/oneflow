@@ -35,6 +35,7 @@ def _test_fork_sub_process(id):
     print("%s child process done! process id: %d." % (id, os.getpid()))
 
 
+@flow.unittest.skip_unless_1n1d()
 class TestForkSubProcess(flow.unittest.TestCase):
     def test_fork_sub_process(test_case):
         flow._oneflow_internal.eager.multi_client.Sync()
