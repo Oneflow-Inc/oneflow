@@ -18,6 +18,7 @@ Base class for running neural networks in Static Graph Mode.
 
     :member-order: bysource
 
+
 .. autoclass:: oneflow.nn.graph.graph_config.GraphConfig
     :members: set_outputs_buffer_size,
             enable_amp,
