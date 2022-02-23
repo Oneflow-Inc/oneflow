@@ -159,9 +159,8 @@ Maybe<void> FunctionNode::AccGrad4LeafTensor(bool create_graph) {
         auto& tensor_info = output_tensor_infos_[i];
         const auto& placement = JUST(tensor_info.placement());
         const auto& nd_sbp = JUST(tensor_info.sbp());
-        functional::ToConsistent(acc_grad, placement, *JUST(GetSbpList(nd_sbp)), GetNoneSbpList());
-
-        JUST(out->set_acc_grad(acc_grad));
+        JUST(out->set_acc_grad(JUST(functional::ToConsistent(
+            acc_grad, placement, *JUST(GetSbpList(nd_sbp)), GetNoneSbpList()))));
       }
     }
   }
