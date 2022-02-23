@@ -43,7 +43,9 @@ def _test_graph_coin_flip(
     class ConsistentCoinFlipGraph(flow.nn.Graph):
         def __init__(self,):
             super().__init__()
-            self.m = flow.nn.CoinFlip(batch_size, random_seed, probability, placement=placement, sbp=sbp)
+            self.m = flow.nn.CoinFlip(
+                batch_size, random_seed, probability, placement=placement, sbp=sbp
+            )
 
         def build(self):
             return self.m()
