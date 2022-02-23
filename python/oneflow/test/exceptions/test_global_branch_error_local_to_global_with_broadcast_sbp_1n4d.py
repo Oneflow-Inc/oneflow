@@ -33,7 +33,7 @@ class TestLocalToGlobalBranchError(flow.unittest.TestCase):
         try:
             os.environ["ONEFLOW_TIMEOUT_SECONDS"] = "2"
             data = flow.rand(2, dtype=flow.float32)
-            placement = flow.placement(type="cpu", ranks=[0,1])
+            placement = flow.placement(type="cpu", ranks=[0, 1])
             sbp = flow.sbp.broadcast
             if flow.env.get_rank() == 0:
                 global_data = data.to_global(placement=placement, sbp=sbp)

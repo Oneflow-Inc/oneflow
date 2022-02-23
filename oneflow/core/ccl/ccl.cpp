@@ -27,7 +27,6 @@ limitations under the License.
 #include "oneflow/core/ep/cuda/cuda_stream.h"
 #include "oneflow/core/common/constant.h"
 
-
 namespace oneflow {
 namespace ccl {
 
