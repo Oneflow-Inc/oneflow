@@ -22,18 +22,14 @@ namespace oneflow {
 template<typename T>
 struct LeakyReluFunctor {
   OF_DEVICE_FUNC explicit LeakyReluFunctor(float alpha) : alpha(alpha) {}
-  OF_DEVICE_FUNC T operator()(T x) const {
-    return (x > 0) ? x : alpha * x;
-  }
+  OF_DEVICE_FUNC T operator()(T x) const { return (x > 0) ? x : alpha * x; }
   const T alpha;
 };
 
 template<typename T>
 struct LeakyReluGradFunctor {
   OF_DEVICE_FUNC explicit LeakyReluGradFunctor(float alpha) : alpha(alpha) {}
-  OF_DEVICE_FUNC T operator()(T x, T dy) const {
-    return (x > 0) ? dy : dy * alpha;
-  }
+  OF_DEVICE_FUNC T operator()(T x, T dy) const { return (x > 0) ? dy : dy * alpha; }
   const T alpha;
 };
 
