@@ -117,6 +117,10 @@ Maybe<void> SharedMemoryManager::DeleteShmName(const std::string& shm_name) {
   return Maybe<void>::Ok();
 }
 
+std::vector <std::string> SharedMemoryManager::GetShmName() {
+  return shm_names_;
+}
+
 SharedMemoryManager::~SharedMemoryManager() {
   unlink_all_shared_memory();
 }

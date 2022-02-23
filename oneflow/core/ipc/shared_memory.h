@@ -31,9 +31,7 @@ class SharedMemoryManager final {
   SharedMemoryManager() = default;
   ~SharedMemoryManager();
   void AddShmName(const std::string& shm_name);
-  std::vector <std::string> GetShmName() {
-    return shm_names_;
-  }
+  std::vector <std::string> GetShmName();
   Maybe<void> DeleteShmName(const std::string& shm_name);
 
  private:
