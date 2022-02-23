@@ -38,11 +38,11 @@ class AffineGridKernel final : public user_op::OpKernel {
     bool is_2d_grid = true;
     if (size.NumAxes() == 5) { is_2d_grid = false; }
 
+    int64_t N = theta->shape().At(0);
     int64_t theta_h = theta->shape().At(1);
     int64_t theta_w = theta->shape().At(2);
 
     if (is_2d_grid) {
-      int64_t N = size.At(0);
       int64_t H = size.At(2);
       int64_t W = size.At(3);
       // generate base grid
@@ -56,7 +56,6 @@ class AffineGridKernel final : public user_op::OpKernel {
                                            grid->mut_dptr<data_type>() + n * theta_h * H * W);
       }
     } else {
-      int64_t N = size.At(0);
       int64_t D = size.At(2);
       int64_t H = size.At(3);
       int64_t W = size.At(4);
@@ -109,11 +108,11 @@ class AffineGridGradKernel final : public user_op::OpKernel {
     bool is_2d_grid = true;
     if (size.NumAxes() == 5) { is_2d_grid = false; }
 
+    int64_t N = dtheta->shape().At(0);
     int64_t dtheta_h = dtheta->shape().At(1);
     int64_t dtheta_w = dtheta->shape().At(2);
 
     if (is_2d_grid) {
-      int64_t N = size.At(0);
       int64_t H = size.At(2);
       int64_t W = size.At(3);
       // generate base grid
@@ -127,7 +126,6 @@ class AffineGridGradKernel final : public user_op::OpKernel {
             dtheta->mut_dptr<data_type>() + n * dtheta_h * dtheta_w);
       }
     } else {
-      int64_t N = size.At(0);
       int64_t D = size.At(2);
       int64_t H = size.At(3);
       int64_t W = size.At(4);
