@@ -25,6 +25,7 @@ limitations under the License.
 #include "oneflow/core/thread/thread_manager.h"
 #include "oneflow/core/job/eager_nccl_comm_manager.h"
 #include "oneflow/core/ep/cuda/cuda_stream.h"
+#include "oneflow/core/common/constant.h"
 
 namespace oneflow {
 namespace ccl {
@@ -322,13 +323,13 @@ Maybe<void> CpuBroadcast(const void* in, void* out, size_t buffer_size, int64_t 
   {
     NaiveAsyncTransportCtx transport_ctx(transport_token, Send, Recv);
     JUST(TransportUtil::ReceiveDataFromParentInHeap(rank_heap, transport_token, &transport_ctx));
-    JUST(transport_ctx.WaitDone());
+    JUST_MSG(transport_ctx.WaitDone(), kAsymmetricCodeErrorMsg);
   }
   {
     NaiveAsyncTransportCtx transport_ctx(transport_token, Send, Recv);
     JUST(TransportUtil::SendDataToChildrenInHeap(rank_heap, transport_token, &transport_ctx));
     if (GlobalProcessCtx::Rank() == root && out != in) { std::memcpy(out, in, buffer_size); }
-    JUST(transport_ctx.WaitDone());
+    JUST_MSG(transport_ctx.WaitDone(), kAsymmetricCodeErrorMsg);
   }
   return Maybe<void>::Ok();
 }
