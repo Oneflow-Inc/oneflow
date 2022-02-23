@@ -119,5 +119,48 @@ class Testrandperm(flow.unittest.TestCase):
         return y
 
 
+def _test_consistent_randperm(test_case, N, placement, sbp, dtype):
+    x = flow.randperm(N, placement=placement, sbp=sbp, dtype=dtype)
+    test_case.assertEqual(x.dtype, dtype)
+    test_case.assertEqual(x.sbp, sbp)
+    test_case.assertEqual(x.placement, placement)
+
+
+def _test_consistent_randperm_graph(test_case, N, placement, sbp, dtype):
+    class ConsistentRandpermGraph(flow.nn.Graph):
+        def __init__(self,):
+            super().__init__()
+
+        def build(self):
+            x = flow.randperm(N, placement=placement, sbp=sbp, dtype=dtype)
+            return x
+
+    c_randperm_g = ConsistentRandpermGraph()
+    x = c_randperm_g()
+    test_case.assertEqual(x.dtype, dtype)
+    test_case.assertEqual(x.sbp, sbp)
+    test_case.assertEqual(x.placement, placement)
+
+
+@unittest.skipIf(os.getenv("ONEFLOW_TEST_CPU_ONLY"), "only test cpu cases")
+@flow.unittest.skip_unless_1n2d()
+class TestRandpermConsistent(flow.unittest.TestCase):
+    def test_randperm_consistent(test_case):
+        arg_dict = OrderedDict()
+        arg_dict["test_fun"] = [
+            _test_consistent_randperm,
+            _test_consistent_randperm_graph,
+        ]
+        arg_dict["N"] = [i for i in range(10, 100, 5)]
+        arg_dict["placement"] = [
+            flow.placement("cpu", {0: [0, 1]}),
+            flow.placement("cuda", {0: [0, 1]}),
+        ]
+        arg_dict["sbp"] = [(flow.sbp.broadcast,), (flow.sbp.split(0),)]
+        arg_dict["dtype"] = [flow.float32, flow.float64]
+        for arg in GenArgList(arg_dict):
+            arg[0](test_case, *arg[1:])
+
+
 if __name__ == "__main__":
     unittest.main()

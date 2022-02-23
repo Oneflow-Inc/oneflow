@@ -20,6 +20,8 @@ limitations under the License.
 #include "oneflow/core/framework/random_generator.h"
 #include "oneflow/user/kernels/arange_kernel_util.h"
 #include "oneflow/user/kernels/distributions/common.h"
+#include "oneflow/core/control/global_process_ctx.h"
+
 namespace oneflow {
 
 class CpuRandPermKernel final : public user_op::OpKernel {
@@ -29,7 +31,8 @@ class CpuRandPermKernel final : public user_op::OpKernel {
   std::shared_ptr<user_op::OpKernelState> CreateOpKernelState(
       user_op::KernelInitContext* ctx) const override {
     const auto& generator = CHECK_JUST(one::MakeGenerator(kCPU));
-    generator->set_current_seed(ctx->Attr<int64_t>("seed"));
+    int64_t rank_id = GlobalProcessCtx::Rank();
+    generator->set_current_seed(ctx->Attr<int64_t>("seed")+rank_id);
     return std::make_shared<DistributionKernelState>(generator);
   }
 

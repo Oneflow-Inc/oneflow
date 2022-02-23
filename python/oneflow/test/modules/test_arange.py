@@ -95,5 +95,44 @@ class TestArange(flow.unittest.TestCase):
         test_case.assertEqual(x.placement, placement)
 
 
+def _test_consistent_arange(test_case, start, end, step, placement, sbp):
+    x = flow.arange(start, end, step, placement=placement, sbp=sbp)
+    test_case.assertEqual(x.sbp, sbp)
+    test_case.assertEqual(x.placement, placement)
+
+
+def _test_consistent_arange_graph(test_case, start, end, step, placement, sbp):
+    class ConsistentArangeGraph(flow.nn.Graph):
+        def __init__(self,):
+            super().__init__()
+
+        def build(self):
+            x = flow.arange(start, end, step, placement=placement, sbp=sbp)
+            return x
+
+    c_arange_g = ConsistentArangeGraph()
+    x = c_arange_g()
+    test_case.assertEqual(x.sbp, sbp)
+    test_case.assertEqual(x.placement, placement)
+
+
+@unittest.skipIf(os.getenv("ONEFLOW_TEST_CPU_ONLY"), "only test cpu cases")
+@flow.unittest.skip_unless_1n2d()
+class TestArangeConsistent(flow.unittest.TestCase):
+    def test_arange_consistent(test_case):
+        arg_dict = OrderedDict()
+        arg_dict["test_fun"] = [_test_consistent_arange, _test_consistent_arange_graph]
+        arg_dict["start"] = [i for i in range(1, 5, 1)]
+        arg_dict["end"] = [i for i in range(10, 50, 10)]
+        arg_dict["step"] = [i for i in range(1, 5, 1)]
+        arg_dict["placement"] = [
+            flow.placement("cpu", {0: [0, 1]}),
+            flow.placement("cuda", {0: [0, 1]}),
+        ]
+        arg_dict["sbp"] = [(flow.sbp.broadcast,), (flow.sbp.split(0),)]
+        for arg in GenArgList(arg_dict):
+            arg[0](test_case, *arg[1:])
+
+
 if __name__ == "__main__":
     unittest.main()
