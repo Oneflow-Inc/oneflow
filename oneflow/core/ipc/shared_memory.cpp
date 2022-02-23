@@ -122,7 +122,7 @@ void SharedMemoryManagerFree(){
 }
 
 SharedMemoryManager::~SharedMemoryManager() {
-  SharedMemoryManagerFree();
+  UnlinkAllShms();
 }
 
 SharedMemory::~SharedMemory() { CHECK_JUST(Close()); }
