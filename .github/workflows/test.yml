@@ -573,6 +573,7 @@ jobs:
       SSH_TANK_HOST: 192.168.1.13
       SSH_TANK_PATH: /tank
       FLOW_VISION_SRC: flow_vision
+      LIBAI_SRC: libai
       METRICS_DIR: metrics
     steps:
       - name: Fix permissions
@@ -695,16 +696,25 @@ jobs:
           # please use a commit here
           ref: 1a19ffe7ffdc2fa11b806e98b70829fac3a0ba69
           path: ${{ env.FLOW_VISION_SRC}}
+      - name: Checkout Oneflow-Inc/libai
+        if: ${{ !fromJson(matrix.cache-hit) && contains(matrix.runs-on, 'self-hosted') }}
+        uses: actions/checkout@v2
+        with:
+          repository: Oneflow-Inc/libai
+          # please use a commit here
+          ref: dbdad6fac15f458c4873d6d629b24223a893d1db
+          path: ${{ env.LIBAI_SRC}}
       - name: Install OneFlow
         if: ${{ !fromJson(matrix.cache-hit) && contains(matrix.runs-on, 'self-hosted') }}
         run: |
           ls ${ONEFLOW_WHEEL_PATH}
           docker exec ${TEST_CONTAINER_NAME} python3 -m pip config set global.index-url https://pypi.tuna.tsinghua.edu.cn/simple
           docker exec ${TEST_CONTAINER_NAME} python3 -m pip install --find-links=${ONEFLOW_WHEEL_PATH} oneflow
-      - name: Install Flow Vision
+      - name: Install downstream libs
         if: ${{ !fromJson(matrix.cache-hit) && contains(matrix.runs-on, 'self-hosted') }}
         run: |
           docker exec ${TEST_CONTAINER_NAME} python3 -m pip install -e ${{ env.FLOW_VISION_SRC}}
+          docker exec ${TEST_CONTAINER_NAME} python3 -m pip install -e ${{ env.LIBAI_SRC}}
       - name: Run OneFlow doctor
         if: ${{ !fromJson(matrix.cache-hit) && contains(matrix.runs-on, 'self-hosted') }}
         run: |
@@ -790,6 +800,11 @@ jobs:
         run: |
           docker exec -e ONEFLOW_TEST_DIR=$PWD/python/oneflow/test/graph ${{ env.TEST_CONTAINER_NAME }} bash ci/test/generic_test_multi_client.sh
           docker exec ${{ env.TEST_CONTAINER_NAME }} python3 -m oneflow.distributed.launch --nproc_per_node 8 $PWD/python/oneflow/test/graph/test_neq_device_process_num.py
+      - name: libai test
+        timeout-minutes: 45
+        if: ${{ !fromJson(matrix.cache-hit) && matrix.test-type == 'misc' }}
+        run: |
+          docker exec ${{ env.TEST_CONTAINER_NAME }} python3 -m unittest discover ${{ env.LIBAI_SRC}} --failfast --verbose
       - name: Remove automerge
         if: ${{ failure() && contains(matrix.runs-on, 'self-hosted') && cancelled() == false && contains(github.event.pull_request.labels.*.name, 'automerge') }}
         uses: actions/github-script@v4
