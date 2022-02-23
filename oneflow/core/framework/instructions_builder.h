@@ -144,21 +144,21 @@ class InstructionsBuilder : public std::enable_shared_from_this<InstructionsBuil
   Maybe<void> LocalCallOpKernel(const std::shared_ptr<one::StatefulLocalOpKernel>& opkernel,
                                 const one::EagerBlobObjectListPtr& input_eager_blob_objects,
                                 const one::EagerBlobObjectListPtr& output_eager_blob_objects,
-                                const one::OpExprInterpContext& ctx, Symbol<Device> op_device);
+                                const one::OpExprInterpContext& ctx, Symbol<Stream> stream);
 
   Maybe<void> LocalCallOpKernel(
       const std::shared_ptr<one::StatefulLocalOpKernel>& opkernel,
       const one::EagerBlobObjectListPtr& input_eager_blob_objects,
       const one::EagerBlobObjectListPtr& output_eager_blob_objects,
       const std::shared_ptr<const one::ConsistentTensorInferResult>& consistent_tensor_infer_result,
-      const one::OpExprInterpContext& ctx, Symbol<Device> op_device);
+      const one::OpExprInterpContext& ctx, Symbol<Stream> stream);
 
  private:
   Maybe<void> SoftSyncStream(const one::EagerBlobObjectListPtr& eager_blob_objects,
-                             Symbol<Device> op_device);
+                             Symbol<Stream> stream);
   Maybe<void> SoftSyncStream(
       std::vector<intrusive::shared_ptr<LocalDepObject>>&& compute_local_dep_objects,
-      const std::string& modifier, Symbol<Device> op_device);
+      const std::string& modifier, Symbol<Stream> stream);
 
   vm::IdGenerator* mut_id_generator() { return id_generator_.get(); }
 
