@@ -23,7 +23,7 @@ limitations under the License.
 namespace oneflow {
 namespace ipc {
 
-void unlink_all_shared_memory(const std::vector<std::string>& shm_names);
+void unlink_all_shared_memory();
 
 class SharedMemoryManager final {
  public:
@@ -31,6 +31,9 @@ class SharedMemoryManager final {
   SharedMemoryManager() = default;
   ~SharedMemoryManager();
   void AddShmName(const std::string& shm_name);
+  std::vector <std::string> GetShmName() {
+    return shm_names_;
+  }
   Maybe<void> DeleteShmName(const std::string& shm_name);
 
  private:

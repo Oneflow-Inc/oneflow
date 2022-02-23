@@ -25,6 +25,7 @@ import queue
 from dataclasses import dataclass
 from typing import Union
 from oneflow.multiprocessing import _prctl_pr_set_pdeathsig  # type: ignore[attr-defined]
+from oneflow.multiprocessing import unlink_all_shared_memory
 import signal
 
 import oneflow as flow
@@ -399,3 +400,5 @@ def _worker_loop(
     if done_event.is_set():
         data_queue.cancel_join_thread()
         data_queue.close()
+
+    unlink_all_shared_memory()
