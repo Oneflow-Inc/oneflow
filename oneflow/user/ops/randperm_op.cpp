@@ -37,8 +37,7 @@ namespace oneflow {
   const Shape& parallel_hierarchy = *ctx->parallel_desc().hierarchy();
   const NdSbp& nd_sbp = ctx->NdSbp4ArgNameAndIndex("out", 0);
   int32_t n = ctx->Attr<int32_t>("n");
-  DimVector dim_vec{n};
-  const Shape& logical_shape = Shape(dim_vec);
+  const Shape& logical_shape = Shape({n});
   const int64_t parallel_id = ctx->parallel_ctx().parallel_id();
   const Shape& physical_shape =
       GetTensorSliceView4ParallelId(parallel_hierarchy, nd_sbp, logical_shape, parallel_id).shape();
