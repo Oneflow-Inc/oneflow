@@ -536,8 +536,7 @@ class GRU(Module):
 
         if h_0 is None:
             h_t = flow.zeros(
-                (D * num_layers, batch_size, self.hidden_size),
-                dtype=input.dtype,
+                (D * num_layers, batch_size, self.hidden_size), dtype=input.dtype,
             )
             if input.is_global:
                 h_t = h_t.to_global(
