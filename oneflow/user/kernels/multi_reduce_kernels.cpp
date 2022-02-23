@@ -102,6 +102,8 @@ class MultiReduceXimumAbsKernel final : public user_op::OpKernel, public user_op
     } else if (X == Ximum::kMin) {
       MultiReduce<device_type, T, decltype(abs), BinaryMin<T>> reduce_min{};
       reduce_min(ctx->stream(), abs, params, std::numeric_limits<T>::max(), y->mut_dptr<T>());
+    } else {
+      UNIMPLEMENTED();
     }
   }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }

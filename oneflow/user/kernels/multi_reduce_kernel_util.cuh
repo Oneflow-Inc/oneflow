@@ -46,7 +46,7 @@ __global__ void MultiReduceGpu(TransformFn transform, const MultiReduceParamsPac
   typedef cub::BlockReduce<T, kCudaThreadsNumPerBlock> BlockReduce;
   __shared__ typename BlockReduce::TempStorage temp_storage;
   T b_out = BlockReduce(temp_storage).Reduce(t_out, reduce_fn);
-  if (threadIdx.x == 0) { cuda::atomic::Add(out, b_sum); }
+  if (threadIdx.x == 0) { cuda::atomic::Add(out, b_out); }
 }
 
 }  // namespace

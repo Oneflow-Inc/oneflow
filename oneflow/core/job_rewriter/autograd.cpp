@@ -837,7 +837,6 @@ std::string GlobalNorm(const OpGraph& op_graph, JobBuilder* job_builder,
                                               : GenParallelConfOfCpuZeroOnMaster();
   const int64_t scope_symbol_id =
       MakeScopeSymbolId(job_builder->job().job_conf(), *out_parallel_conf);
-  // std::vector<std::string> square_sum_lbns_for_add;
   std::string global_reduce_sum_lbn;
   if (all_broadcast) {
     global_reduce_sum_lbn = AddLbns(job_builder, group_lbns, *out_parallel_conf, scope_symbol_id,
