@@ -181,7 +181,7 @@ REGISTER_USER_OP_GRAD("cublas_fused_mlp")
               + std::to_string(hidden_layer_idx));
           user_op::UserOpConfWrapper cublas_bias_add_relu_matmul_grad_op =
               cublas_bias_add_relu_matmul_grad_builder.Op("cublas_bias_add_relu_matmul_grad")
-                  .Input("dy", last_bias_grad)
+                  .Input("dy", cublas_dy)
                   .Input("weight", op.input("weights", hidden_layer_idx))
                   .Input("aux", op.output("cublas_aux", hidden_layer_idx - 1))
                   .Output("d_grad")
@@ -197,7 +197,7 @@ REGISTER_USER_OP_GRAD("cublas_fused_mlp")
               op.op_name() + "_matmul_a_grad_" + std::to_string(hidden_layer_idx));
           user_op::UserOpConfWrapper matmul_weight_grad_op =
               matmul_weight_grad_builder.Op("matmul")
-                  .Input("a", last_bias_grad)
+                  .Input("a", cublas_dy)
                   .Input("b", op.output("hidden", hidden_layer_idx - 1))
                   .Output("out")
                   .Attr<bool>("transpose_a", true)
