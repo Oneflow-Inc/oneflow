@@ -126,8 +126,8 @@ class TestArangeConsistent(flow.unittest.TestCase):
         arg_dict["end"] = [i for i in range(10, 50, 10)]
         arg_dict["step"] = [i for i in range(1, 5, 1)]
         arg_dict["placement"] = [
-            flow.placement("cpu", {0: [0, 1]}),
-            flow.placement("cuda", {0: [0, 1]}),
+            flow.placement("cpu", [0, 1]),
+            flow.placement("cuda", [0, 1]),
         ]
         arg_dict["sbp"] = [(flow.sbp.broadcast,), (flow.sbp.split(0),)]
         for arg in GenArgList(arg_dict):
