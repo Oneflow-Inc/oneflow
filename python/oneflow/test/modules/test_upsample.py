@@ -387,6 +387,7 @@ class TestUpsample2d(flow.unittest.TestCase):
     # The forward and backward result in cpu and cuda of bilinear interpolate operation in PyTorch is different
     # in some corner cases. OneFlow has the same cpu and cuda results with PyTorch's cuda result.
     # So here we only test cuda device forward result.
+    @unittest.skipIf(os.getenv("ONEFLOW_TEST_CPU_ONLY"), "only test cpu cases")
     @autotest(auto_backward=False, atol=1e-8)
     def test_upsample2d_bilinear(test_case):
         x = random_tensor(ndim=4).to("cuda")
