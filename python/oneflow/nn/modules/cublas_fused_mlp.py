@@ -28,7 +28,7 @@ class FusedMLP(Module):
     Args:
         in_features: size of each input sample
 
-        hidden_features_lists: A tuple of each Linear layer hidden size
+        hidden_features: A tuple of each Linear layer hidden size
 
         out_features: The final Linear layer hidden size
 
@@ -61,17 +61,17 @@ class FusedMLP(Module):
     def __init__(
         self,
         in_features: int,
-        hidden_features_lists: Tuple[int],
+        hidden_features: Tuple[int],
         out_features: int,
         skip_last_activation=False,
     ) -> None:
         super().__init__()
         self.in_features = in_features
-        self.hidden_features_lists = hidden_features_lists
+        self.hidden_features = hidden_features
         self.out_features = out_features
         # TODO(zzk): Add more activation support.
         self.skip_last_activation = skip_last_activation
-        self.hidden_layer_num = len(hidden_features_lists)
+        self.hidden_layer_num = len(hidden_features)
 
         self.add_parameters()
         self.reset_parameters()
@@ -80,12 +80,10 @@ class FusedMLP(Module):
         # First layer.
         self.register_parameter(
             f"weight_{0}",
-            flow.nn.Parameter(
-                flow.Tensor(self.hidden_features_lists[0], self.in_features)
-            ),
+            flow.nn.Parameter(flow.Tensor(self.hidden_features[0], self.in_features)),
         )
         self.register_parameter(
-            f"bias_{0}", flow.nn.Parameter(flow.Tensor(self.hidden_features_lists[0]))
+            f"bias_{0}", flow.nn.Parameter(flow.Tensor(self.hidden_features[0]))
         )
 
         # Middle Layer.
@@ -94,14 +92,13 @@ class FusedMLP(Module):
                 f"weight_{idx}",
                 flow.nn.Parameter(
                     flow.Tensor(
-                        self.hidden_features_lists[idx],
-                        self.hidden_features_lists[idx - 1],
+                        self.hidden_features[idx], self.hidden_features[idx - 1],
                     )
                 ),
             )
             self.register_parameter(
                 f"bias_{idx}",
-                flow.nn.Parameter(flow.Tensor(self.hidden_features_lists[idx])),
+                flow.nn.Parameter(flow.Tensor(self.hidden_features[idx])),
             )
 
         # Final Layer.
@@ -109,8 +106,7 @@ class FusedMLP(Module):
             f"weight_{self.hidden_layer_num}",
             flow.nn.Parameter(
                 flow.Tensor(
-                    self.out_features,
-                    self.hidden_features_lists[self.hidden_layer_num - 1],
+                    self.out_features, self.hidden_features[self.hidden_layer_num - 1],
                 )
             ),
         )
@@ -145,9 +141,9 @@ class FusedMLP(Module):
         return res
 
     def extra_repr(self) -> str:
-        return "in_features={}, hidden_features_lists={}, out_features={}, skip_final_activation={}".format(
+        return "in_features={}, hidden_features={}, out_features={}, skip_final_activation={}".format(
             self.in_features,
-            self.hidden_features_lists,
+            self.hidden_features,
             self.out_features,
             self.skip_last_activation,
         )
