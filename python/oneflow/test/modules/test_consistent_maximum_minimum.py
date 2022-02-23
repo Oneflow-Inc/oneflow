@@ -20,27 +20,22 @@ import oneflow.unittest
 
 from oneflow.test_utils.automated_test_util import *
 
+
 @autotest(check_graph=False)
 def _test_maximum(test_case, placement, x_sbp, y_sbp):
-    x = random_tensor(ndim=2, dim0=8, dim1=8).to_global(
-        placement, x_sbp
-    )
-    y = random_tensor(ndim=2, dim0=8, dim1=8).to_global(
-        placement, y_sbp
-    )
+    x = random_tensor(ndim=2, dim0=8, dim1=8).to_global(placement, x_sbp)
+    y = random_tensor(ndim=2, dim0=8, dim1=8).to_global(placement, y_sbp)
     z = torch.maximum(x, y)
     return z
 
+
 @autotest(check_graph=False)
 def _test_minimum(test_case, placement, x_sbp, y_sbp):
-    x = random_tensor(ndim=2, dim0=8, dim1=8).to_global(
-        placement, x_sbp
-    )
-    y = random_tensor(ndim=2, dim0=8, dim1=8).to_global(
-        placement, y_sbp
-    )
+    x = random_tensor(ndim=2, dim0=8, dim1=8).to_global(placement, x_sbp)
+    y = random_tensor(ndim=2, dim0=8, dim1=8).to_global(placement, y_sbp)
     z = torch.minimum(x, y)
     return z
+
 
 @autotest(check_graph=False)
 def _test_broadcast_maximum(test_case, placement, x_sbp, y_sbp):
@@ -56,6 +51,7 @@ def _test_broadcast_maximum(test_case, placement, x_sbp, y_sbp):
     )
     z = torch.maximum(x, y)
     return z
+
 
 @autotest(check_graph=False)
 def _test_broadcast_minimum(test_case, placement, x_sbp, y_sbp):
@@ -81,7 +77,7 @@ class TestMaximumMinimumOps(flow.unittest.TestCase):
                 for y_sbp in all_sbp(placement, max_dim=2):
                     _test_maximum(test_case, placement, x_sbp, y_sbp)
                     _test_minimum(test_case, placement, x_sbp, y_sbp)
-                    
+
     @globaltest
     def test_broadcast_maximum_minimum(test_case):
         for placement in all_placement():
