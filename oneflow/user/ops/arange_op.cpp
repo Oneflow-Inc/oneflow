@@ -51,7 +51,7 @@ namespace oneflow {
 }
 
 /*static*/ Maybe<void> ArangeOp::InferPhysicalTensorDesc(user_op::InferContext* ctx) {
-   DataType dtype = ctx->Attr<DataType>("dtype");
+  DataType dtype = ctx->Attr<DataType>("dtype");
   int64_t range_elem_cnt = 0;
   if (IsIntegralDataType(dtype)) {
     int64_t integer_delta = ctx->Attr<int64_t>("integer_delta");
@@ -64,7 +64,7 @@ namespace oneflow {
     double float_limit = ctx->Attr<double>("float_limit");
     range_elem_cnt = std::ceil(static_cast<double>(float_limit - float_start) / float_delta);
   }
-  
+
   DimVector dim_vec{range_elem_cnt};
   const Shape& logical_shape = Shape(dim_vec);
   const NdSbp& nd_sbp = ctx->NdSbp4ArgNameAndIndex("out", 0);
