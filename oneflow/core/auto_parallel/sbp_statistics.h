@@ -41,6 +41,14 @@ class SbpStatistics final {
   int32_t op_num_ = 0;
   // Total cost for varification, which should be the same as sbp_graph.ComputeCost()
   double total_cost_ = 0.0;
+  // Total cost for communication
+  double total_copy_cost_ = 0.0;
+  // Total cost for computation
+  double total_comp_cost_ = 0.0;
+  // Number of edge with communication
+  int32_t num_comm_ = 0;
+  // Number of edge with slight communication
+  int32_t num_slight_comm_ = 0;
 };
 
 }  // namespace auto_parallel

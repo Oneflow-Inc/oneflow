@@ -33,6 +33,7 @@ void SbpStatistics::CollectStatistics(const SbpNode<cfg::NdSbpSignature>& sbp_no
   if (sbp_node.op_node) {
     op_num_++;
     total_cost_ += sbp_node.GetCurrCost();
+    total_comp_cost_ += sbp_node.GetCurrCost();
   }
 
   // Collect statistics for children
@@ -55,7 +56,13 @@ void SbpStatistics::CollectStatistics(const SbpNode<cfg::NdSbpSignature>& sbp_no
 void SbpStatistics::CollectStatistics(const SbpEdge<cfg::NdSbpSignature>& sbp_edge) {
   if (sbp_edge.EdgeList.empty()) {
     // Collect statistics for this single edge
-    total_cost_ += sbp_edge.GetCurrCost();
+    double curr_cost = sbp_edge.GetCurrCost();
+    if (curr_cost > 0) {
+      total_cost_ += curr_cost;
+      total_copy_cost_ += curr_cost;
+      num_comm_++;
+      if (curr_cost < 1.65e5) { num_slight_comm_++; }
+    }
   } else {
     // Collect statistics for the middle node
     if (sbp_edge.MidNode) { CollectStatistics(*sbp_edge.MidNode); }
