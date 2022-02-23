@@ -102,7 +102,6 @@ Maybe<void> CublasFusedMLP::Apply(const CublasFusedMLPCaptureState* ctx,
                                   const TensorTuple& out_grads, TensorTuple* in_grads) const {
   int32_t weight_num = ctx->weight_num;
   in_grads->resize(1 + 2 * weight_num);
-  // std::shared_ptr<one::Tensor> last_bias_dy;
   std::shared_ptr<one::Tensor> last_bias_dy = out_grads.at(0);
   
   if(!ctx->x_requires_grad){
@@ -110,12 +109,9 @@ Maybe<void> CublasFusedMLP::Apply(const CublasFusedMLPCaptureState* ctx,
   }
 
   if (!ctx->skip_final_activation) {
-    printf("Here is !skip_final_activation \n"); 
     // step1: use dy and final output to get last layer's relu grad.
     last_bias_dy = JUST(functional::ReluGrad(
         JUST(VectorAt(out_grads, 0)), JUST(VectorAt(ctx->SavedTensors(), 1 + weight_num))));
-  } else {
-    printf("Here is skip_final_activation \n"); 
   }
 
   // step2: use reduce_sum to get last layer's bias grad.
@@ -135,8 +131,6 @@ Maybe<void> CublasFusedMLP::Apply(const CublasFusedMLPCaptureState* ctx,
   for (int32_t i = 0; i < weight_num; ++i) { weights[i] = ctx->SavedTensors().at(1 + i); }
 
   for (int32_t i = 0; i < weight_num; ++i) {
-    printf("I + 2 + weightnum is: %d \n", i+2+weight_num); 
-    printf("shape is: %ld, %ld", ctx->SavedTensors().at(i + 2 + weight_num)->shape()->At(0), ctx->SavedTensors().at(i + 2 + weight_num)->shape()->At(1)); 
     cublas_auxs[i] = ctx->SavedTensors().at(i + 2 + weight_num);
   }
 
@@ -148,10 +142,8 @@ Maybe<void> CublasFusedMLP::Apply(const CublasFusedMLPCaptureState* ctx,
     std::shared_ptr<one::Tensor> cublas_dy;
     // If it is final layer, we use out_grads[0] as dy.
     if (hidden_layer_idx == weight_num - 1) {
-      printf("hidden_layer_idx == weight_num - 1 \n");
       cublas_dy = last_bias_dy; 
     }else{
-      printf("dgrad.at \n");
       cublas_dy = dgrad.at(hidden_layer_idx + 1); 
     }
     /*
@@ -178,10 +170,8 @@ Maybe<void> CublasFusedMLP::Apply(const CublasFusedMLPCaptureState* ctx,
   // For first layer, we need to use 2 matmul to get grads.
   std::shared_ptr<one::Tensor> last_dy;
   if (weight_num != 1) {
-    printf("weight num != 1 \n");
     last_dy = dgrad.at(1); 
   }else{
-    printf("weight num == 1 \n");
     last_dy = last_bias_dy; 
   }
   
