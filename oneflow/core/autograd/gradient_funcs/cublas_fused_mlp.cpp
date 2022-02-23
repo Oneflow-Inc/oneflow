@@ -138,8 +138,8 @@ Maybe<void> CublasFusedMLP::Apply(const CublasFusedMLPCaptureState* ctx,
     hiddens[i] = ctx->SavedTensors().at(i + 2 + 2 * weight_num);
   }
 
+  std::shared_ptr<one::Tensor> cublas_dy;
   for (int32_t hidden_layer_idx = weight_num - 1; hidden_layer_idx > 0; hidden_layer_idx--) {
-    std::shared_ptr<one::Tensor> cublas_dy;
     // If it is final layer, we use out_grads[0] as dy.
     if (hidden_layer_idx == weight_num - 1) {
       cublas_dy = last_bias_dy; 
@@ -167,7 +167,7 @@ Maybe<void> CublasFusedMLP::Apply(const CublasFusedMLPCaptureState* ctx,
     }
   }
 
-  // For first layer, we need to use 2 matmul to get grads.
+  // For the first layer, we need to use 2 matmul to get grads.
   std::shared_ptr<one::Tensor> last_dy;
   if (weight_num != 1) {
     last_dy = dgrad.at(1); 
