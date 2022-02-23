@@ -195,7 +195,7 @@ class CoinFlip(Module):
                     assert isinstance(elem, flow.sbp.sbp), "sbp: %s" % sbp
             assert len(sbp) == len(placement.ranks.shape)
             assert (
-                self.placement.type != "cuda"
+                self.placement.type == "cpu"
             ), "coin flip only supports cpu currently."
         else:
             assert sbp is None, "sbp: %s" % sbp
