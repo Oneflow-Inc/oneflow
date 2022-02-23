@@ -167,6 +167,7 @@ class TestRandpermConsistent(flow.unittest.TestCase):
         for arg in GenArgList(arg_dict):
             arg[0](test_case, *arg[1:])
 
+
 def _test_consistent_randperm(test_case, N, placement, sbp, dtype):
     x = flow.randperm(N, placement=placement, sbp=sbp, dtype=dtype)
 
@@ -207,8 +208,8 @@ class TestRandConsistent(flow.unittest.TestCase):
         for N in RandNs:
             for placement in all_placement():
                 for sbp in all_sbp(placement, max_dim=1, except_partial_sum=True):
-                   for dtype in Dtypes:
-                       _test_consistent_randperm(test_case, N, placement, sbp, dtype)
+                    for dtype in Dtypes:
+                        _test_consistent_randperm(test_case, N, placement, sbp, dtype)
 
     @unittest.skipIf(os.getenv("ONEFLOW_TEST_CPU_ONLY"), "only test cpu cases")
     @flow.unittest.skip_unless_1n2d()
@@ -241,4 +242,3 @@ class TestRandConsistent(flow.unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
-
