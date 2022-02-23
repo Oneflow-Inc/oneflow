@@ -146,7 +146,6 @@ Maybe<void> FunctionNode::AccGrad4RetainGradTensor() {
 }
 
 Maybe<void> FunctionNode::AccGrad4LeafTensor(bool create_graph) {
-  // for (const std::shared_ptr<AutogradMeta>& out : output_meta_data_) {
   for (auto i = 0; i < output_meta_data_.size(); i++) {
     auto& out = output_meta_data_[i];
 
