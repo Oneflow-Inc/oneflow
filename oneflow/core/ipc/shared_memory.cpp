@@ -117,9 +117,7 @@ SharedMemoryManager::~SharedMemoryManager() {
   }
 }
 
-SharedMemory::~SharedMemory() {
-  if (buf_ != nullptr) { CHECK_JUST(Close()); }
-}
+SharedMemory::~SharedMemory() { CHECK_JUST(Close()); }
 
 Maybe<SharedMemory> SharedMemory::Open(size_t shm_size) {
   std::string shm_name;
@@ -135,8 +133,10 @@ Maybe<SharedMemory> SharedMemory::Open(const std::string& shm_name) {
 
 Maybe<void> SharedMemory::Close() {
 #ifdef __linux__
-  PCHECK_OR_RETURN(munmap(buf_, size_));
-  buf_ = nullptr;
+  if (buf_ != nullptr) {
+    PCHECK_OR_RETURN(munmap(buf_, size_));
+    buf_ = nullptr;
+  }
   return Maybe<void>::Ok();
 #else
   TODO_THEN_RETURN();
