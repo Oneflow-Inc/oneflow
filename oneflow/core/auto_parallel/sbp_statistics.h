@@ -24,9 +24,9 @@ namespace auto_parallel {
 
 class SbpStatistics final {
  public:
-  SbpStatistics() = default;
-
   ~SbpStatistics() = default;
+
+  explicit SbpStatistics(double transfer_cost, double wait_time);
 
   // Collect statistics
   void CollectStatistics(const SbpGraph<cfg::NdSbpSignature>& sbp_graph);
@@ -37,10 +37,15 @@ class SbpStatistics final {
   void PrintStatistics();
 
  private:
+  // Parameters for sbp graph
+  double transfer_cost_;
+  double wait_time_;
   // Total number of operators
   int32_t op_num_ = 0;
   // Total cost for varification, which should be the same as sbp_graph.ComputeCost()
   double total_cost_ = 0.0;
+  // Communication cost without fixed transfer_cost, but still have wait time
+  double real_copy_cost_ = 0.0;
   // Total cost for communication
   double total_copy_cost_ = 0.0;
   // Total cost for computation

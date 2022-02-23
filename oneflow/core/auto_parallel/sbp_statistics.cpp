@@ -20,6 +20,9 @@ limitations under the License.
 namespace oneflow {
 namespace auto_parallel {
 
+SbpStatistics::SbpStatistics(double transfer_cost, double wait_time)
+    : transfer_cost_(transfer_cost), wait_time_(wait_time) {}
+
 void SbpStatistics::CollectStatistics(const SbpGraph<cfg::NdSbpSignature>& sbp_graph) {
   for (const auto* this_node : sbp_graph.NodeList) {
     CollectStatistics(*this_node);
@@ -61,7 +64,10 @@ void SbpStatistics::CollectStatistics(const SbpEdge<cfg::NdSbpSignature>& sbp_ed
       total_cost_ += curr_cost;
       total_copy_cost_ += curr_cost;
       num_comm_++;
-      if (curr_cost < 1.65e5) { num_slight_comm_++; }
+
+      double real_cost = curr_cost - transfer_cost_;
+      real_copy_cost_ += real_cost;
+      if (real_cost < wait_time_) { num_slight_comm_++; }
     }
   } else {
     // Collect statistics for the middle node
@@ -72,8 +78,15 @@ void SbpStatistics::CollectStatistics(const SbpEdge<cfg::NdSbpSignature>& sbp_ed
 }
 
 void SbpStatistics::PrintStatistics() {
+  std::cout << "Fixed transfer cost: " << transfer_cost_ << std::endl;
+  std::cout << "Wait time: " << wait_time_ << std::endl;
   std::cout << "Number of operators: " << op_num_ << std::endl;
   std::cout << "Total cost: " << total_cost_ << std::endl;
+  std::cout << "Total cost for communication: " << total_copy_cost_ << std::endl;
+  std::cout << "Total cost for computation: " << total_comp_cost_ << std::endl;
+  std::cout << "Number of edge with communication: " << num_comm_ << std::endl;
+  std::cout << "Number of edge with slight communication: " << num_slight_comm_ << std::endl;
+  std::cout << "Communication cost without fixed transfer_cost: " << real_copy_cost_ << std::endl;
 }
 
 }  // namespace auto_parallel

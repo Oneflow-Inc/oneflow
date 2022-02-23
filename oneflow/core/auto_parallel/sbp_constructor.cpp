@@ -64,7 +64,7 @@ Maybe<void> SbpConstructor::InitSbpGraph(const OpGraph& op_graph, const Job& job
   // Only collect the statistics for the initial graph
   if (GlobalProcessCtx::Rank() == 0) {
     // Collect statistics for this sbp graph
-    SbpStatistics sbp_statistics;
+    SbpStatistics sbp_statistics(sbp_graph_.transfer_cost, sbp_graph_.wait_time);
     sbp_statistics.CollectStatistics(sbp_graph_);
     sbp_statistics.PrintStatistics();
   }
