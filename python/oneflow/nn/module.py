@@ -69,7 +69,7 @@ class Module(object):
 
     @contextmanager
     def global_param_grad_no_sync(self):
-        guard = oneflow._oneflow_internal.GlobalParamGradSyncMode(false)
+        guard = flow._oneflow_internal.GlobalParamGradSyncMode(False)
         try:
             yield
         finally:
