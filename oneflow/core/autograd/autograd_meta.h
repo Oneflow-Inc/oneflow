@@ -103,7 +103,7 @@ class TensorInfo final {
   explicit TensorInfo(const Tensor& tensor);
 
   Maybe<Tensor> zeros() const;
-  Optional<Symbol<ParallelDesc>> placement() { return parallel_desc_; }
+  Optional<Symbol<ParallelDesc>> placement() const { return parallel_desc_; }
   Optional<Symbol<NdSbp>> sbp() const { return nd_sbp_; }
 
  private:
