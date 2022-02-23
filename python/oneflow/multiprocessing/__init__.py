@@ -33,7 +33,7 @@ import sys
 from .reductions import init_reductions
 import multiprocessing
 
-__all__ = ["set_sharing_strategy", "get_sharing_strategy", "get_all_sharing_strategies"]
+__all__ = ["set_sharing_strategy", "get_sharing_strategy", "get_all_sharing_strategies", "unlink_all_shared_memory"]
 
 
 from multiprocessing import *  # noqa: F403
@@ -88,5 +88,7 @@ def get_all_sharing_strategies():
     """Returns a set of sharing strategies supported on a current system."""
     return _all_sharing_strategies
 
+def unlink_all_shared_memory(shm_names):
+    flow._oneflow_internal.multiprocessing.unlink_all_shared_memory(shm_names)
 
 init_reductions()
