@@ -1033,9 +1033,10 @@ class ReshapeFunctor {
     JUST(attrs.SetAttr<Shape>("shape", infered_shape));
 
     if (view::IsViewApplicable(x)) {
-      Optional<const Stride> infered_stride = computeStride(*(x->shape()), *JUST(x->stride()), infered_shape);
-      if(infered_stride.has_value()){
-        return view::Reshape(x, infered_shape,  *JUST(infered_stride));
+      Optional<const Stride> infered_stride =
+          computeStride(*(x->shape()), *JUST(x->stride()), infered_shape);
+      if (infered_stride.has_value()) {
+        return view::Reshape(x, infered_shape, *JUST(infered_stride));
       }
     }
     return OpInterpUtil::Dispatch<Tensor>(*op_, {x}, attrs);
@@ -1059,11 +1060,12 @@ class ViewFunctor {
       //     << " >> view size is not compatible with input tensor's size and stride (at least one "
       //        "dimension spans across two contiguous subspaces). Use .reshape(...) instead.";
       // return view::Reshape(x, infered_shape);
-      Optional<const Stride> infered_stride = computeStride(*(x->shape()), *JUST(x->stride()), infered_shape);
-        CHECK_OR_RETURN(infered_stride.has_value())
-        << " >> view size is not compatible with input tensor's size and stride (at least one "
-                "dimension spans across two contiguous subspaces). Use .reshape(...) instead.";
-        return view::Reshape(x, infered_shape,  *JUST(infered_stride));
+      Optional<const Stride> infered_stride =
+          computeStride(*(x->shape()), *JUST(x->stride()), infered_shape);
+      CHECK_OR_RETURN(infered_stride.has_value())
+          << " >> view size is not compatible with input tensor's size and stride (at least one "
+             "dimension spans across two contiguous subspaces). Use .reshape(...) instead.";
+      return view::Reshape(x, infered_shape, *JUST(infered_stride));
     }
 
     return OpInterpUtil::Dispatch<Tensor>(*op_, {x}, attrs);
