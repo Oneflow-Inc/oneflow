@@ -25,7 +25,6 @@ class CublasBiasAddReluMatmulGradKernel final : public user_op::OpKernel {
   CublasBiasAddReluMatmulGradKernel() = default;
   ~CublasBiasAddReluMatmulGradKernel() override = default;
 
-  bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
   std::shared_ptr<user_op::OpKernelCache> InitOpKernelCache(
       user_op::KernelCacheContext* ctx) const override {
     return CreateCublasFusedMLPKernelCache();
@@ -68,7 +67,7 @@ class CublasBiasAddReluMatmulGradKernel final : public user_op::OpKernel {
                          /*transpose_b=*/ep::primitive::BlasTransposeType::N, &cublas_m, &cublas_n,
                          &cublas_k, &cublas_lda, &cublas_ldb, &cublas_ldc);
 
-    SetCublasAttr(matmul_grad_cache, cublas_compute_dtype, cuda_data_type,
+    SetCublasAttr(matmul_grad_cache, cublas_compute_dtype, cuda_data_type, /*need_aux=*/true, 
                   /*transpose_a=*/ep::primitive::BlasTransposeType::N,
                   /*transpose_b=*/ep::primitive::BlasTransposeType::N, epilogue, d_bias->dptr(),
                   aux->dptr(), cublas_m, cublas_n, cublas_k, cublas_lda, cublas_ldb, cublas_ldc);
@@ -84,6 +83,8 @@ class CublasBiasAddReluMatmulGradKernel final : public user_op::OpKernel {
                        matmul_grad_cache->cublas_c_desc, nullptr, cuda_stream->cublas_workspace(),
                        cuda_stream->cublas_workspace_size(), cuda_stream->cuda_stream()));
   };
+
+  bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
 
 #define REGISTER_CUBLAS_BIAS_ADD_RELU_MATMUL_GRAD_KERNEL(dtype)        \

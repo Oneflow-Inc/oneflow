@@ -68,9 +68,6 @@ class CublasFusedMLPKernel final : public user_op::OpKernel {
     int64_t in_feature = ctx->Tensor4ArgNameAndIndex("x", 0)->shape().At(1);
 
     // // Currently only support 2D matmul.
-    // DimVector x_shape(2);
-    // x->shape().ToDimVector(&x_shape);
-    // tmp shape复用
     DimVector in_shape(2);
     // in_shape.at(0) = x_shape.at(0);
     x->shape().ToDimVector(&in_shape);
@@ -78,17 +75,18 @@ class CublasFusedMLPKernel final : public user_op::OpKernel {
     DimVector weight_shape(2);
 
     int64_t out_feature = 0;
-    void* in_buf_ptr = nullptr;
+    const void* in_buf_ptr = x->dptr(); // modify to const void*
     void* y_ptr = nullptr;
-
+    bool need_aux = true; 
+    cublasLtEpilogue_t epilogue = CUBLASLT_EPILOGUE_RELU_AUX_BIAS;
+                
     for (int idx = 0; idx < weight_size; idx++) {
       const user_op::Tensor* weight = ctx->Tensor4ArgNameAndIndex("weights", idx);
       const user_op::Tensor* bias = ctx->Tensor4ArgNameAndIndex("biases", idx);
       user_op::Tensor* cublas_aux = ctx->Tensor4ArgNameAndIndex("cublas_aux", idx);
-
+      
       out_feature = weight->shape().At(0);
       weight->shape().ToDimVector(&weight_shape);
-      cublasLtEpilogue_t epilogue = CUBLASLT_EPILOGUE_RELU_AUX_BIAS;
 
       InferMatmulCublasMNK(in_shape, weight_shape,
                             /*transpose_a=*/ep::primitive::BlasTransposeType::N,
@@ -97,32 +95,29 @@ class CublasFusedMLPKernel final : public user_op::OpKernel {
 
       if (idx == weight_size - 1) {
         y_ptr = ctx->Tensor4ArgNameAndIndex("out", 0)->mut_dptr();
-        if (skip_final_activation) { epilogue = CUBLASLT_EPILOGUE_BIAS; }
+        if (skip_final_activation) { 
+          epilogue = CUBLASLT_EPILOGUE_BIAS; 
+          need_aux = false; 
+        }
       } else {
         y_ptr = ctx->Tensor4ArgNameAndIndex("hidden", idx)->mut_dptr();
       }
-      SetCublasAttr(matmul_cache, cublas_compute_dtype, cuda_data_type,
+      // 
+      SetCublasAttr(matmul_cache, cublas_compute_dtype, cuda_data_type, need_aux, 
                     /*transpose_a=*/ep::primitive::BlasTransposeType::N,
                     /*transpose_b=*/ep::primitive::BlasTransposeType::T, epilogue, bias->dptr(),
                     cublas_aux->dptr(), cublas_m, cublas_n, cublas_k, cublas_lda, cublas_ldb,
                     cublas_ldc);
+
+      OF_CUBLAS_CHECK(cublasLtMatmul(
+            cuda_stream->cublas_lt_handle(), matmul_cache->operation_desc, &sp_alpha, weight->dptr(),
+            matmul_cache->cublas_a_desc, in_buf_ptr, matmul_cache->cublas_b_desc, &sp_beta, y_ptr,
+            matmul_cache->cublas_c_desc, y_ptr, matmul_cache->cublas_c_desc, nullptr,
+            cuda_stream->cublas_workspace(), cuda_stream->cublas_workspace_size(),
+            cuda_stream->cuda_stream()));
       
-      if(idx == 0){
-        OF_CUBLAS_CHECK(cublasLtMatmul(
-          cuda_stream->cublas_lt_handle(), matmul_cache->operation_desc, &sp_alpha, weight->dptr(),
-          matmul_cache->cublas_a_desc, x->dptr(), matmul_cache->cublas_b_desc, &sp_beta, y_ptr,
-          matmul_cache->cublas_c_desc, y_ptr, matmul_cache->cublas_c_desc, nullptr,
-          cuda_stream->cublas_workspace(), cuda_stream->cublas_workspace_size(),
-          cuda_stream->cuda_stream()));
-      }else{
-        OF_CUBLAS_CHECK(cublasLtMatmul(
-          cuda_stream->cublas_lt_handle(), matmul_cache->operation_desc, &sp_alpha, weight->dptr(),
-          matmul_cache->cublas_a_desc, in_buf_ptr, matmul_cache->cublas_b_desc, &sp_beta, y_ptr,
-          matmul_cache->cublas_c_desc, y_ptr, matmul_cache->cublas_c_desc, nullptr,
-          cuda_stream->cublas_workspace(), cuda_stream->cublas_workspace_size(),
-          cuda_stream->cuda_stream()));
-      }
-      
+      OF_CUDA_CHECK(cudaDeviceSynchronize()); 
+
       // Set hidden_layer ptr as next layer's input.
       in_buf_ptr = y_ptr;
       // Set hidden_layer shape as next layer's input shape.

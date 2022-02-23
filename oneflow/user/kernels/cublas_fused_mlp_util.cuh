@@ -167,6 +167,12 @@ void SetCublasEpilogue(const CublasFusedMLPKernelCache* matmul_cache, cublasLtEp
     OF_CUBLAS_CHECK(cublasLtMatmulDescSetAttribute(matmul_cache->operation_desc,
                                                    CUBLASLT_MATMUL_DESC_EPILOGUE_AUX_POINTER,
                                                    &aux_ptr, sizeof(aux_ptr)));
+  }else{
+    // Clear Aux ptr. 
+    aux_ptr = nullptr; 
+    OF_CUBLAS_CHECK(cublasLtMatmulDescSetAttribute(matmul_cache->operation_desc,
+      CUBLASLT_MATMUL_DESC_EPILOGUE_AUX_POINTER,
+      &aux_ptr, sizeof(aux_ptr)));
   }
 }
 
@@ -182,6 +188,7 @@ void AlignReluAuxLd(long* aux_ld) {
 void SetCublasAttr(const CublasFusedMLPKernelCache* matmul_grad_cache,
                    const cublasComputeType_t cublas_compute_dtype,
                    const cudaDataType_t cuda_data_type,
+                   bool need_aux, 
                    ep::primitive::BlasTransposeType transpose_a,
                    ep::primitive::BlasTransposeType transpose_b, cublasLtEpilogue_t epilogue,
                    const void* d_bias_ptr, const void* aux_ptr, size_t cublas_m, size_t cublas_n,
@@ -219,12 +226,13 @@ void SetCublasAttr(const CublasFusedMLPKernelCache* matmul_grad_cache,
   https://docs.nvidia.com/cuda/cublas/index.html#cublasLtMatmulDescAttributes_t
   `CUBLASLT_MATMUL_DESC_EPILOGUE_AUX_LD`.
   */
-  long aux_ld = cublas_ldc;
-  AlignReluAuxLd(&aux_ld);
-  OF_CUBLAS_CHECK(cublasLtMatmulDescSetAttribute(matmul_grad_cache->operation_desc,
-                                                 CUBLASLT_MATMUL_DESC_EPILOGUE_AUX_LD, &aux_ld,
-                                                 sizeof(aux_ld)));
-
+  if(need_aux){
+    long aux_ld = cublas_ldc;
+    AlignReluAuxLd(&aux_ld);
+    OF_CUBLAS_CHECK(cublasLtMatmulDescSetAttribute(matmul_grad_cache->operation_desc,
+                                                   CUBLASLT_MATMUL_DESC_EPILOGUE_AUX_LD, &aux_ld,
+                                                   sizeof(aux_ld)));
+  }
   // Set matrix layout
   SetCublasMatrixLayout(matmul_grad_cache->cublas_a_desc, cuda_data_type, cublas_trans_a, cublas_m,
                         cublas_k, cublas_lda);
