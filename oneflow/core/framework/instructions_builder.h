@@ -16,11 +16,10 @@ limitations under the License.
 #ifndef ONEFLOW_CORE_FRAMEWORK_INSTRUCTIONS_BUILDER_H_
 #define ONEFLOW_CORE_FRAMEWORK_INSTRUCTIONS_BUILDER_H_
 
-#include "oneflow/core/eager/local_call_opkernel_phy_instr_operand.h"
+#include "oneflow/core/eager/call_phy_instr_operand.h"
 #include "oneflow/core/eager/lazy_job_phy_instr_operand.h"
 #include "oneflow/core/vm/instruction.cfg.h"
 #include "oneflow/core/vm/instruction.h"
-#include "oneflow/core/vm/id_generator.h"
 #include "oneflow/core/job/job_desc.h"
 #include "oneflow/core/job/parallel_desc.h"
 #include "oneflow/core/job/scope.h"
@@ -56,12 +55,10 @@ class InstructionsBuilder : public std::enable_shared_from_this<InstructionsBuil
  public:
   InstructionsBuilder(const InstructionsBuilder&) = delete;
   InstructionsBuilder(InstructionsBuilder&&) = delete;
-  explicit InstructionsBuilder(const std::shared_ptr<vm::IdGenerator>& id_generator,
-                               vm::InstructionMsgList* instruction_list)
-      : id_generator_(id_generator), instruction_list_(instruction_list) {}
+  explicit InstructionsBuilder(vm::InstructionMsgList* instruction_list)
+      : instruction_list_(instruction_list) {}
   ~InstructionsBuilder() { instruction_list_->Clear(); }
 
-  const std::shared_ptr<vm::IdGenerator>& id_generator() const { return id_generator_; }
   const vm::InstructionMsgList& instruction_list() const { return *instruction_list_; }
 
   vm::InstructionMsgList* mut_instruction_list() { return instruction_list_; }
@@ -93,8 +90,7 @@ class InstructionsBuilder : public std::enable_shared_from_this<InstructionsBuil
 
   Maybe<OperatorConfSymbol> GetOpConfSymbol(const std::shared_ptr<cfg::OperatorConf>& op_conf);
 
-  Maybe<void> ReleaseTensor(const std::shared_ptr<vm::EagerBlobObject>& eager_blob_object,
-                            const std::shared_ptr<const ParallelDesc>& parallel_desc);
+  Maybe<void> ReleaseTensor(const std::shared_ptr<vm::EagerBlobObject>& eager_blob_object);
 
   template<typename T>
   Maybe<void> SyncAccessBlobByCallback(const T tensor, const std::shared_ptr<BlockingThenBusy>& btb,
@@ -108,9 +104,7 @@ class InstructionsBuilder : public std::enable_shared_from_this<InstructionsBuil
   template<typename T>
   Maybe<void> TensorView(const T input_tensor, const T view_tensor);
 
-  Maybe<void> ComputeRankFrontSeqCallback(const std::function<void()>& callback);
-
-  Maybe<void> ComputeGlobalFrontSeqBarrier();
+  Maybe<void> Barrier(const std::function<void()>& callback);
 
   Maybe<Scope> BuildInitialScope(int64_t session_id,
                                  const std::shared_ptr<cfg::JobConfigProto>& job_conf,
@@ -141,12 +135,12 @@ class InstructionsBuilder : public std::enable_shared_from_this<InstructionsBuil
     return id_cache->FindOrCreate(conf, [&] { return this->CreateSymbolId(conf); });
   }
 
-  Maybe<void> LocalCallOpKernel(const std::shared_ptr<one::StatefulLocalOpKernel>& opkernel,
+  Maybe<void> Call(const std::shared_ptr<one::StatefulLocalOpKernel>& opkernel,
                                 const one::EagerBlobObjectListPtr& input_eager_blob_objects,
                                 const one::EagerBlobObjectListPtr& output_eager_blob_objects,
                                 const one::OpExprInterpContext& ctx, Symbol<Stream> stream);
 
-  Maybe<void> LocalCallOpKernel(
+  Maybe<void> Call(
       const std::shared_ptr<one::StatefulLocalOpKernel>& opkernel,
       const one::EagerBlobObjectListPtr& input_eager_blob_objects,
       const one::EagerBlobObjectListPtr& output_eager_blob_objects,
@@ -160,8 +154,6 @@ class InstructionsBuilder : public std::enable_shared_from_this<InstructionsBuil
       std::vector<intrusive::shared_ptr<LocalDepObject>>&& compute_local_dep_objects,
       const std::string& modifier, Symbol<Stream> stream);
 
-  vm::IdGenerator* mut_id_generator() { return id_generator_.get(); }
-
  private:
   template<typename PhyInstrOperandT>
   Maybe<void> MakeCriticalSectionBegin(const std::shared_ptr<PhyInstrOperandT>& phy_instr_operand);
@@ -169,7 +161,6 @@ class InstructionsBuilder : public std::enable_shared_from_this<InstructionsBuil
   template<typename PhyInstrOperandT>
   Maybe<void> MakeCriticalSectionEnd(const std::shared_ptr<PhyInstrOperandT>& phy_instr_operand);
 
-  std::shared_ptr<vm::IdGenerator> id_generator_;
   vm::InstructionMsgList* instruction_list_;
 };
 

@@ -40,8 +40,7 @@ Maybe<void> Run(vm::InstructionMsgList* instr_msg_list) {
 Maybe<void> ClusterSync() {
   auto bc = std::make_shared<BlockingCounter>(1);
   JUST(PhysicalRun([bc](InstructionsBuilder* builder) -> Maybe<void> {
-    JUST(builder->ComputeGlobalFrontSeqBarrier());
-    JUST(builder->ComputeRankFrontSeqCallback([bc]() { bc->Decrease(); }));
+    JUST(builder->Barrier([bc]() { bc->Decrease(); }));
     return Maybe<void>::Ok();
   }));
   JUST(bc->WaitUntilCntEqualZero(VirtualMachine::GetPredicatorNoMoreInstructionsFinished()));
@@ -51,7 +50,7 @@ Maybe<void> ClusterSync() {
 Maybe<void> CurrentRankSync() {
   auto bc = std::make_shared<BlockingCounter>(1);
   JUST(PhysicalRun([bc](InstructionsBuilder* builder) -> Maybe<void> {
-    JUST(builder->ComputeRankFrontSeqCallback([bc]() { bc->Decrease(); }));
+    JUST(builder->Barrier([bc]() { bc->Decrease(); }));
     return Maybe<void>::Ok();
   }));
   JUST(bc->WaitUntilCntEqualZero(VirtualMachine::GetPredicatorNoMoreInstructionsFinished()));

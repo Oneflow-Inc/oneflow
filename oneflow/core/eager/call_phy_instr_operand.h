@@ -13,8 +13,8 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
-#ifndef ONEFLOW_CORE_EAGER_LOCAL_CALL_OPKERNEL_PHY_INSTR_OPERAND_H_
-#define ONEFLOW_CORE_EAGER_LOCAL_CALL_OPKERNEL_PHY_INSTR_OPERAND_H_
+#ifndef ONEFLOW_CORE_EAGER_CALL_PHY_INSTR_OPERAND_H_
+#define ONEFLOW_CORE_EAGER_CALL_PHY_INSTR_OPERAND_H_
 
 #include "oneflow/core/vm/phy_instr_operand.h"
 #include "oneflow/core/eager/dev_vm_dep_object_consume_mode.h"
@@ -42,17 +42,17 @@ class OpKernel;
 
 namespace vm {
 
-class LocalCallOpKernelPhyInstrOperand final : public vm::PhyInstrOperand {
+class CallPhyInstrOperand final : public vm::PhyInstrOperand {
  public:
-  LocalCallOpKernelPhyInstrOperand(const LocalCallOpKernelPhyInstrOperand&) = delete;
-  LocalCallOpKernelPhyInstrOperand(LocalCallOpKernelPhyInstrOperand&&) = delete;
-  ~LocalCallOpKernelPhyInstrOperand() override = default;
+  CallPhyInstrOperand(const CallPhyInstrOperand&) = delete;
+  CallPhyInstrOperand(CallPhyInstrOperand&&) = delete;
+  ~CallPhyInstrOperand() override = default;
 
   template<typename... Args>
-  static Maybe<LocalCallOpKernelPhyInstrOperand> New(Args&&... args) {
-    auto* ptr = new LocalCallOpKernelPhyInstrOperand(std::forward<Args>(args)...);
+  static Maybe<CallPhyInstrOperand> New(Args&&... args) {
+    auto* ptr = new CallPhyInstrOperand(std::forward<Args>(args)...);
     JUST(ptr->Init());
-    return std::shared_ptr<LocalCallOpKernelPhyInstrOperand>(ptr);
+    return std::shared_ptr<CallPhyInstrOperand>(ptr);
   }
 
   const one::StatefulLocalOpKernel& opkernel() const { return *opkernel_; }
@@ -90,7 +90,7 @@ class LocalCallOpKernelPhyInstrOperand final : public vm::PhyInstrOperand {
   }
 
  private:
-  LocalCallOpKernelPhyInstrOperand(
+  CallPhyInstrOperand(
       const std::shared_ptr<one::StatefulLocalOpKernel>& opkernel,
       const one::EagerBlobObjectListPtr& inputs, const one::EagerBlobObjectListPtr& outputs,
       const std::shared_ptr<const one::ConsistentTensorInferResult>& consistent_tensor_infer_result,
@@ -128,4 +128,4 @@ class LocalCallOpKernelPhyInstrOperand final : public vm::PhyInstrOperand {
 }  // namespace vm
 }  // namespace oneflow
 
-#endif  // ONEFLOW_CORE_EAGER_LOCAL_CALL_OPKERNEL_PHY_INSTR_OPERAND_H_
+#endif  // ONEFLOW_CORE_EAGER_CALL_PHY_INSTR_OPERAND_H_

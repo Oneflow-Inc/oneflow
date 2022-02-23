@@ -30,7 +30,9 @@ struct StreamIsTransport {
   static bool Case(StreamRoleCase<StreamRole::kDevice2Host>) { return false; }
   static bool Case(StreamRoleCase<StreamRole::kSyncedLaunchedCommNet>) { return true; }
   static bool Case(StreamRoleCase<StreamRole::kAsyncedLaunchedCommNet>) { return true; }
+  static bool Case(StreamRoleCase<StreamRole::kBarrier>) { return false; }
   static bool Case(StreamRoleCase<StreamRole::kCriticalSection>) { return false; }
+  static bool Case(StreamRoleCase<StreamRole::kLazyJobLauncher>) { return false; }
 };
 
 }  // namespace oneflow

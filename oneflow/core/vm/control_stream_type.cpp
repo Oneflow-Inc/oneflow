@@ -26,8 +26,7 @@ namespace oneflow {
 namespace vm {
 
 void ControlStreamType::Compute(Instruction* instruction) const {
-  const auto& instr_type_id = instruction->instr_msg().instr_type_id();
-  instr_type_id.instruction_type().Compute(instruction);
+  instruction->instr_msg().instruction_type().Compute(instruction);
   auto* status_buffer = instruction->mut_status_buffer();
   NaiveInstrStatusQuerier::MutCast(status_buffer->mut_buffer()->mut_data())->set_done();
 }

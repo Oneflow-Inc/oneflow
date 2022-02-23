@@ -15,12 +15,11 @@ limitations under the License.
 */
 #include "oneflow/core/vm/virtual_machine_engine.h"
 #include "oneflow/core/vm/instruction_type.h"
-#include "oneflow/core/vm/fuse_phy_instr_operand.h"
+#include "oneflow/core/vm/fuse_instruction_type.h"
 #include "oneflow/core/common/util.h"
 #include "oneflow/core/common/balanced_splitter.h"
 #include "oneflow/core/common/cpp_attribute.h"
 #include "oneflow/core/framework/device.h"
-#include "oneflow/core/job/parallel_desc.h"
 #include "oneflow/core/platform/include/pthread_fork.h"
 #include "oneflow/core/profiler/profiler.h"
 #include "oneflow/core/common/cpp_attribute.h"
@@ -79,16 +78,16 @@ namespace {
 
 bool FusableBetween(InstructionFuseType fuse_type, InstructionMsg* instr_msg,
                     InstructionMsg* prev_instr_msg) {
-  if (unlikely(instr_msg->instr_type_id().instruction_type().fuse_type() != fuse_type)) {
+  if (unlikely(instr_msg->instruction_type().fuse_type() != fuse_type)) {
     return false;
   }
-  auto* phy_instr_stream = instr_msg->phy_instr_stream();
-  if (unlikely(phy_instr_stream == nullptr)) { return false; }
+  auto* stream = instr_msg->mut_stream();
+  if (unlikely(stream == nullptr)) { return false; }
   auto* sequential_dep = instr_msg->phy_instr_operand()->stream_sequential_dependence();
   if (unlikely(sequential_dep == nullptr)) { return false; }
 
   if (unlikely(prev_instr_msg == nullptr)) { return true; }
-  if (unlikely(phy_instr_stream != prev_instr_msg->phy_instr_stream())) { return false; }
+  if (unlikely(stream != prev_instr_msg->mut_stream())) { return false; }
   if (unlikely(sequential_dep
                != prev_instr_msg->phy_instr_operand()->stream_sequential_dependence())) {
     return false;
@@ -107,9 +106,8 @@ void VirtualMachineEngine::MakeAndAppendFusedInstruction(
   }
   auto* begin = fused_instr_msg_list.Begin();
   auto phy_instr_operand = std::make_shared<FusePhyInstrOperand>(std::move(fused_instr_msg_list));
-  const auto* stream_tag = begin->phy_instr_stream()->stream_type().stream_tag();
   auto instr_msg = intrusive::make_shared<InstructionMsg>(
-      this, std::string(stream_tag) + ".Fuse", begin->phy_instr_parallel_desc(), phy_instr_operand);
+      begin->mut_stream(), SingletonPtr<FuseInstructionType>(), phy_instr_operand);
   pending_instr_msgs->EmplaceBack(std::move(instr_msg));
 }
 
@@ -210,11 +208,10 @@ void VirtualMachineEngine::MoveToGarbageMsgListAndNotifyGC() {
 
 void VirtualMachineEngine::MakeInstructions(InstructionMsg* instr_msg,
                                             /*out*/ InstructionList* new_instruction_list) {
-  const auto& instruction_type = instr_msg->instr_type_id().instruction_type();
+  const auto& instruction_type = instr_msg->instruction_type();
   bool is_barrier_instruction = instruction_type.IsFrontSequential();
-  Stream* stream = CHECK_NOTNULL(instr_msg->phy_instr_stream());
-  const auto& pd = instr_msg->phy_instr_parallel_desc();
-  intrusive::shared_ptr<Instruction> instr = stream->NewInstruction(instr_msg, pd);
+  Stream* stream = CHECK_NOTNULL(instr_msg->mut_stream());
+  intrusive::shared_ptr<Instruction> instr = stream->NewInstruction(instr_msg);
   LivelyInstructionListPushBack(instr.Mutable());
   if (unlikely(is_barrier_instruction)) {
     mut_barrier_instruction_list()->PushBack(instr.Mutable());
@@ -419,7 +416,7 @@ bool VirtualMachineEngine::OnSchedulerThread(const StreamType& stream_type) {
 // instructions are scarcely received by vm, there is no need for vm to run
 // VirtualMachineEngine::TryRunBarrierInstruction every time VirtualMachineEngine::Schedule run. On
 // the other hand, `barrier_instruction_hook_.size() == 0` is more lightweight than
-// `lively_instruction_list_.Begin()?->instr_msg().instr_type_id().instruction_type().IsFrontSequential()`
+// `lively_instruction_list_.Begin()?->instr_msg().instruction_type().IsFrontSequential()`
 //
 void VirtualMachineEngine::TryRunBarrierInstruction() {
   auto* sequnential_instruction = mut_barrier_instruction_list()->Begin();
@@ -428,10 +425,9 @@ void VirtualMachineEngine::TryRunBarrierInstruction() {
   // All instructions before `sequnential_instruction` are handled now, it's time to handle
   // `sequnential_instruction`.
   OF_PROFILER_RANGE_PUSH("RunBarrierInstruction");
-  const auto& instr_type_id = sequnential_instruction->instr_msg().instr_type_id();
-  const auto& instruction_type = instr_type_id.instruction_type();
+  const auto& instruction_type = sequnential_instruction->instr_msg().instruction_type();
   CHECK(instruction_type.IsFrontSequential());
-  const StreamType& stream_type = instr_type_id.stream_type();
+  const StreamType& stream_type = sequnential_instruction->instr_msg().stream().stream_type();
   CHECK(OnSchedulerThread(stream_type));
   stream_type.Run(sequnential_instruction);
   mut_barrier_instruction_list()->Erase(sequnential_instruction);

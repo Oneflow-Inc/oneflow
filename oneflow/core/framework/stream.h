@@ -22,13 +22,12 @@ limitations under the License.
 #include "oneflow/core/common/optional.h"
 #include "oneflow/core/common/maybe.h"
 #include "oneflow/core/framework/device.h"
-#include "oneflow/core/intrusive/intrusive.h"
-#include "oneflow/core/vm/stream.h"
 
 namespace oneflow {
 
 namespace vm {
 class MirroredObject;
+class Stream;
 }
 using LocalDepObject = vm::MirroredObject;
 
@@ -67,7 +66,7 @@ class Stream final {
 
   LocalDepObject* schedule_local_dep_object_;
   Optional<LocalDepObject*> transport_local_dep_object_;
-  intrusive::shared_ptr<vm::Stream> vm_stream_;
+  vm::Stream* vm_stream_;
 };
 
 LocalDepObject* GetStaticGlobalTransportLocalDepObject();

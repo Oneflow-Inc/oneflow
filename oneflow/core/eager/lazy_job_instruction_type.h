@@ -13,8 +13,9 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
+#ifndef ONEFLOW_CORE_EAGER_LAZY_JOB_INSTRUCTION_TYPE_H_
+#define ONEFLOW_CORE_EAGER_LAZY_JOB_INSTRUCTION_TYPE_H_
 
-#include "oneflow/core/eager/lazy_job_stream_type.h"
 #include "oneflow/core/eager/lazy_job_device_context.h"
 #include "oneflow/core/eager/lazy_job_phy_instr_operand.h"
 #include "oneflow/core/framework/nn_graph_if.h"
@@ -32,8 +33,6 @@ limitations under the License.
 #include "oneflow/core/kernel/kernel_util.h"
 
 namespace oneflow {
-
-namespace {
 
 class LazyJobInstance final : public JobInstance {
  public:
@@ -62,8 +61,6 @@ class LazyJobInstance final : public JobInstance {
   const std::function<void()> finish_cb_;
 };
 
-}  // namespace
-
 namespace vm {
 
 class LaunchLazyJobInstructionType final : public InstructionType {  // NOLINT
@@ -72,7 +69,8 @@ class LaunchLazyJobInstructionType final : public InstructionType {  // NOLINT
   LaunchLazyJobInstructionType(LaunchLazyJobInstructionType&&) = delete;
   LaunchLazyJobInstructionType() = default;
   ~LaunchLazyJobInstructionType() = default;
-  using stream_type = LazyJobStreamType;
+
+  std::string DebugName(const vm::InstructionMsg& instr_msg) const override { return "LaunchLazyJob"; }
   void Compute(vm::Instruction* instruction) const override {
     const auto& cur_nn_graph = GetCurNNGraph(instruction);
     auto* device_ctx = GetLazyJobDeviceCtx(instruction);
@@ -127,7 +125,6 @@ class LaunchLazyJobInstructionType final : public InstructionType {  // NOLINT
   }
 };
 
-COMMAND(RegisterInstructionType<LaunchLazyJobInstructionType>("LaunchLazyJob"));
-
 }  // namespace vm
 }  // namespace oneflow
+#endif  // ONEFLOW_CORE_EAGER_LAZY_JOB_INSTRUCTION_TYPE_H_

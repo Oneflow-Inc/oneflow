@@ -30,8 +30,6 @@ class CpuStreamType final : public StreamType {
   CpuStreamType() = default;
   ~CpuStreamType() override = default;
 
-  const char* stream_tag() const override { return "cpu"; }
-
   void InitDeviceCtx(std::unique_ptr<DeviceCtx>* device_ctx, Stream* stream) const override;
 
   void InitInstructionStatus(const Stream& stream,

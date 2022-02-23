@@ -14,8 +14,8 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-#ifndef ONEFLOW_CORE_EAGER_LAZY_JOB_STREAM_TYPE_H_
-#define ONEFLOW_CORE_EAGER_LAZY_JOB_STREAM_TYPE_H_
+#ifndef ONEFLOW_CORE_VM_LAZY_JOB_STREAM_TYPE_H_
+#define ONEFLOW_CORE_VM_LAZY_JOB_STREAM_TYPE_H_
 
 #include "oneflow/core/intrusive/flat_msg_view.h"
 #include "oneflow/core/vm/stream_type.h"
@@ -30,8 +30,6 @@ class LazyJobStreamType final : public StreamType {
  public:
   LazyJobStreamType() = default;
   virtual ~LazyJobStreamType() = default;
-
-  const char* stream_tag() const override { return "lazy_job"; }
 
   void InitDeviceCtx(std::unique_ptr<DeviceCtx>* device_ctx, Stream* stream) const override;
 
@@ -49,4 +47,4 @@ class LazyJobStreamType final : public StreamType {
 }  // namespace vm
 }  // namespace oneflow
 
-#endif  // ONEFLOW_CORE_EAGER_LAZY_JOB_STREAM_TYPE_H_
+#endif  // ONEFLOW_CORE_VM_LAZY_JOB_STREAM_TYPE_H_

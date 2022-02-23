@@ -14,7 +14,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-#include "oneflow/core/eager/lazy_job_stream_type.h"
+#include "oneflow/core/vm/lazy_job_stream_type.h"
 #include "oneflow/core/vm/instruction_type.h"
 #include "oneflow/core/vm/instruction.h"
 #include "oneflow/core/vm/thread_ctx.h"
@@ -48,10 +48,7 @@ bool LazyJobStreamType::QueryInstructionStatusDone(
 }
 
 void LazyJobStreamType::Compute(Instruction* instruction) const {
-  {
-    const auto& instr_type_id = instruction->mut_instr_msg()->instr_type_id();
-    instr_type_id.instruction_type().Compute(instruction);
-  }
+  instruction->instr_msg().instruction_type().Compute(instruction);
 }
 
 }  // namespace vm

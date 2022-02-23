@@ -16,13 +16,16 @@ limitations under the License.
 #ifndef ONEFLOW_CORE_VM_VIRTUAL_MACHINE_H_
 #define ONEFLOW_CORE_VM_VIRTUAL_MACHINE_H_
 
+#include <mutex>
 #include "oneflow/core/common/notifier.h"
 #include "oneflow/core/vm/virtual_machine_engine.h"
 #include "oneflow/core/thread/thread_pool.h"
+#include "oneflow/core/common/stream_role.h"
 
 namespace oneflow {
 
 class InstructionsBuilder;
+class Device;
 
 class VirtualMachine final {
  public:
@@ -32,6 +35,10 @@ class VirtualMachine final {
   ~VirtualMachine();
 
   static std::function<Maybe<bool>()> GetPredicatorNoMoreInstructionsFinished();
+
+  Maybe<vm::Stream*> CreateStream(Symbol<Device> device, StreamRole stream_role);
+  vm::MirroredObject* MakeScheduleLocalDepObject(Symbol<Device> device, StreamRole stream_role);
+  vm::MirroredObject* MakeTransportLocalDepObject();
 
   bool NoMoreErasedLivelyInstructions(size_t* last_total_erased_lively_instruction_cnt) const;
   std::string GetBlockingDebugString();
@@ -48,10 +55,25 @@ class VirtualMachine final {
 
   vm::VirtualMachineEngine* mut_vm() { return vm_.Mutable(); }
   void ControlSync();
+  Maybe<vm::ThreadCtx*> FindOrCreateThreadCtx(Symbol<Device> device, StreamRole stream_role);
+  Maybe<vm::ThreadCtx*> CreateThreadCtx(Symbol<Device> device, StreamRole stream_role);
+  Maybe<vm::Stream*> CreateStream(Symbol<Device> device, StreamRole stream_role);
+  Maybe<vm::Stream*> CreateStream(vm::ThreadCtx* thread_ctx, Symbol<Device> device, StreamRole stream_role);
 
   intrusive::shared_ptr<vm::VirtualMachineEngine> vm_;
+
   // for asynchronized execution
+  std::mutex worker_threads_mutex_;
   std::list<std::unique_ptr<std::thread>> worker_threads_;
+
+  // for creating vm::Stream and vm::ThreadCtx
+  std::recursive_mutex creating_stream_and_thread_ctx_mutex_;
+  HashMap<DeviceType, vm::ThreadCtx*> devcie_type2non_independent_thread_ctx_;
+  HashMap<std::pair<DeviceType, StreamRole>, vm::ThreadCtx*> devcie_type_stream_role_2independent_thread_ctx_;
+  HashMap<std::pair<Symbol<Device>, StreamRole>, intrusive::shared_ptr<vm::MirroredObject>> device_stream_role2local_dep_object_;
+  intrusive::shared_ptr<vm::MirroredObject> transport_local_dep_object_;
+
+
   std::thread schedule_thread_;
   Notifier pending_notifier_;
   std::thread callback_thread_;

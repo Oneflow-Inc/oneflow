@@ -19,7 +19,6 @@ limitations under the License.
 #include <string>
 #include <typeindex>
 #include <glog/logging.h>
-#include "oneflow/core/vm/instr_type_id.h"
 #include "oneflow/core/device/device_context.h"
 #include "oneflow/core/job/resource.pb.h"
 
@@ -38,8 +37,6 @@ class StreamType {
   virtual ~StreamType() = default;
 
   void Run(Instruction* instruction) const { Compute(instruction); }
-
-  virtual const char* stream_tag() const = 0;
 
   virtual void InitDeviceCtx(std::unique_ptr<DeviceCtx>* device_ctx, Stream* stream) const = 0;
 

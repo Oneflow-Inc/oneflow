@@ -60,10 +60,11 @@ class Stream final : public intrusive::Base {
 
   // methods
   void __Init__(ThreadCtx* thread_ctx, Symbol<Device> device, StreamRole stream_role);
-  intrusive::shared_ptr<Instruction> NewInstruction(
-      InstructionMsg* instr_msg, const std::shared_ptr<const ParallelDesc>& parallel_desc);
+  intrusive::shared_ptr<Instruction> NewInstruction(InstructionMsg* instr_msg);
   void DeleteInstruction(intrusive::shared_ptr<Instruction>&&);
   int64_t device_id() const;
+  Symbol<Device> device() const { return device_; }
+  StreamRole stream_role() const { return stream_role_; }
   const StreamType& stream_type() const;
 
  private:
@@ -78,6 +79,7 @@ class Stream final : public intrusive::Base {
         thread_ctx_(),
         device_ctx_(),
         device_(),
+        stream_role_(StreamRole::kInvalid),
         stream_type_(),
         free_instruction_list_(),
         zombie_instruction_list_(),
@@ -88,6 +90,7 @@ class Stream final : public intrusive::Base {
   // fields
   ThreadCtx* thread_ctx_;
   Symbol<Device> device_;
+  StreamRole stream_role_;
   const StreamType* stream_type_;
   std::unique_ptr<DeviceCtx> device_ctx_;
   // lists

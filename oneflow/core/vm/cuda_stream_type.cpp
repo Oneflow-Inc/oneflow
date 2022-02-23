@@ -55,11 +55,8 @@ void CudaStreamType::Compute(Instruction* instruction) const {
   OF_PROFILER_RANGE_PUSH("S:" + instruction->instr_msg().DebugName());
   auto* stream = instruction->mut_stream();
   cudaSetDevice(stream->device_id());
-  {
-    const auto& instr_type_id = instruction->mut_instr_msg()->instr_type_id();
-    instr_type_id.instruction_type().Compute(instruction);
-    OF_CUDA_CHECK(cudaGetLastError());
-  }
+  instruction->instr_msg().instruction_type().Compute(instruction);
+  OF_CUDA_CHECK(cudaGetLastError());
   char* data_ptr = instruction->mut_status_buffer()->mut_buffer()->mut_data();
   CudaOptionalEventRecordStatusQuerier::MutCast(data_ptr)->SetLaunched(stream->device_ctx().get());
   OF_PROFILER_RANGE_POP();

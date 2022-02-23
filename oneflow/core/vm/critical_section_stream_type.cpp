@@ -14,11 +14,11 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-#include "oneflow/core/eager/critical_section_stream_type.h"
+#include "oneflow/core/vm/critical_section_stream_type.h"
 #include "oneflow/core/vm/instruction_type.h"
 #include "oneflow/core/vm/instruction.h"
 #include "oneflow/core/vm/thread_ctx.h"
-#include "oneflow/core/eager/critical_section_status_querier.h"
+#include "oneflow/core/vm/critical_section_status_querier.h"
 #include "oneflow/core/common/util.h"
 
 namespace oneflow {
@@ -47,10 +47,7 @@ bool CriticalSectionStreamType::QueryInstructionStatusDone(
 }
 
 void CriticalSectionStreamType::Compute(Instruction* instruction) const {
-  {
-    const auto& instr_type_id = instruction->mut_instr_msg()->instr_type_id();
-    instr_type_id.instruction_type().Compute(instruction);
-  }
+  instruction->instr_msg().instruction_type().Compute(instruction);
 }
 
 }  // namespace vm

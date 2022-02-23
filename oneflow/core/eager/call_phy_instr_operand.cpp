@@ -13,7 +13,7 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
-#include "oneflow/core/eager/local_call_opkernel_phy_instr_operand.h"
+#include "oneflow/core/eager/call_phy_instr_operand.h"
 #include "oneflow/user/kernels/stateful_local_opkernel.h"
 #include "oneflow/core/eager/dev_vm_dep_object_consume_mode.h"
 #include "oneflow/core/framework/stream_is_transport.h"
@@ -21,13 +21,13 @@ limitations under the License.
 namespace oneflow {
 namespace vm {
 
-Maybe<void> LocalCallOpKernelPhyInstrOperand::Init() {
+Maybe<void> CallPhyInstrOperand::Init() {
   JUST(mut_opkernel()->ChooseOpKernel(&user_opkernel_, &need_temp_storage_, attrs(), inputs().get(),
                                       outputs().get(), consistent_tensor_infer_result().get()));
   return Maybe<void>::Ok();
 }
 
-void LocalCallOpKernelPhyInstrOperand::ForEachConstMirroredObject(
+void CallPhyInstrOperand::ForEachConstMirroredObject(
     const std::function<void(vm::MirroredObject* compute)>& DoEach) const {
   const auto& input_list = inputs();
   for (int64_t index : opkernel().input_tuple_indexes4const_ibns()) {
@@ -36,7 +36,7 @@ void LocalCallOpKernelPhyInstrOperand::ForEachConstMirroredObject(
   }
 }
 
-void LocalCallOpKernelPhyInstrOperand::InitStreamSequentialDependence() {
+void CallPhyInstrOperand::InitStreamSequentialDependence() {
   const auto& stream = opkernel().stream();
   auto* device_schedule_dep_object = stream->mut_schedule_local_dep_object();
   if (StreamRoleSwitch<StreamIsTransport>(stream->stream_role())) {
@@ -53,7 +53,7 @@ void LocalCallOpKernelPhyInstrOperand::InitStreamSequentialDependence() {
   }
 }
 
-void LocalCallOpKernelPhyInstrOperand::ForEachMutMirroredObject(
+void CallPhyInstrOperand::ForEachMutMirroredObject(
     const std::function<void(vm::MirroredObject* compute)>& DoEach) const {
   const auto& stream = opkernel().stream();
   const auto& opt_transport_dep_object = stream->mut_transport_local_dep_object();
@@ -71,7 +71,7 @@ void LocalCallOpKernelPhyInstrOperand::ForEachMutMirroredObject(
   }
 }
 
-void LocalCallOpKernelPhyInstrOperand::ForEachMut2MirroredObject(
+void CallPhyInstrOperand::ForEachMut2MirroredObject(
     const std::function<void(vm::MirroredObject* compute)>& DoEach) const {
   const auto& output_list = outputs();
   for (int64_t index : opkernel().output_tuple_indexes4mut2_obns()) {

@@ -18,7 +18,7 @@ limitations under the License.
 #include "oneflow/core/common/util.h"
 #include "oneflow/core/common/cpp_attribute.h"
 #include "oneflow/core/framework/device.h"
-#include "oneflow/core/framework/stream_get_stream_type.h"
+#include "oneflow/core/vm/stream_get_stream_type.h"
 
 namespace oneflow {
 namespace vm {
@@ -26,7 +26,8 @@ namespace vm {
 void Stream::__Init__(ThreadCtx* thread_ctx, Symbol<Device> device, StreamRole stream_role) {
   set_thread_ctx(thread_ctx);
   device_ = device;
-  stream_type_ = StreamRoleSwitch<GetStreamType>(stream_role, device->enum_type());
+  stream_role_ = stream_role;
+  stream_type_ = CHECK_JUST(StreamRoleSwitch<GetStreamType>(stream_role, device->enum_type()));
   stream_type_->InitDeviceCtx(mut_device_ctx(), this);
 }
 
@@ -36,15 +37,14 @@ const StreamType& Stream::stream_type() const {
   return *stream_type_;
 }
 
-intrusive::shared_ptr<Instruction> Stream::NewInstruction(
-    InstructionMsg* instr_msg, const std::shared_ptr<const ParallelDesc>& parallel_desc) {
+intrusive::shared_ptr<Instruction> Stream::NewInstruction(InstructionMsg* instr_msg) {
   intrusive::shared_ptr<Instruction> instruction;
   if (unlikely(free_instruction_list().empty())) {
     instruction = intrusive::make_shared<Instruction>();
   } else {
     instruction = mut_free_instruction_list()->PopFront();
   }
-  instruction->Init(instr_msg, this, parallel_desc);
+  instruction->Init(instr_msg);
   return instruction;
 }
 

@@ -13,68 +13,62 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
-#include "oneflow/core/intrusive/flat_msg_view.h"
-#include "oneflow/core/vm/instruction_type.h"
+#ifndef ONEFLOW_CORE_EAGER_RELEASE_TENSOR_INSTRUCTION_TYPE_H_
+#define ONEFLOW_CORE_EAGER_RELEASE_TENSOR_INSTRUCTION_TYPE_H_
+
+#include "oneflow/core/vm/instruction.h"
+#include "oneflow/core/eager/release_tensor_arg_phy_instr_operand.h"
+#include "oneflow/core/eager/eager_blob_object.h"
+#include "oneflow/core/vm/cuda_optional_event_record_status_querier.h"
 #include "oneflow/core/framework/stream_role.h"
 #include "oneflow/core/common/singleton_ptr.h"
 
 namespace oneflow {
+
 namespace vm {
 
-class TensorViewInstructionType final : public vm::InstructionType {
+class ReleaseTensorInstructionType : public vm::InstructionType {
  public:
-  TensorViewInstructionType() = default;
-  ~TensorViewInstructionType() override = default;
+  ReleaseTensorInstructionType() = default;
+  ~ReleaseTensorInstructionType() override = default;
 
-  std::string DebugName(const vm::InstructionMsg& instr_msg) const override { return "TensorView"; }
-  void Compute(vm::Instruction* instruction) const override;
-};
+  InstructionFuseType fuse_type() const override { return kEnableInstructionFuseAtAnyPosition; }
 
-class AccessBlobByCallbackInstructionType final : public vm::InstructionType {
- public:
-  AccessBlobByCallbackInstructionType() = default;
-  ~AccessBlobByCallbackInstructionType() override = default;
-
-  std::string DebugName(const vm::InstructionMsg& instr_msg) const override { return "AccessBlobByCallback"; }
-  void Compute(vm::Instruction* instruction) const override;
-};
-
-class CpuRecordEventInstructionType final : public vm::InstructionType {
- public:
-  CpuRecordEventInstructionType() = default;
-  ~CpuRecordEventInstructionType() override = default;
-
-  std::string DebugName(const vm::InstructionMsg& instr_msg) const override { return "RecordEvent"; }
-  void Compute(vm::Instruction* instruction) const override {}
+  void Release(const vm::InstructionMsg& instr_msg) const {
+    const auto& phy_instr_operand = instr_msg.phy_instr_operand();
+    CHECK(static_cast<bool>(phy_instr_operand));
+    const auto* ptr =
+        dynamic_cast<const vm::ReleaseTensorArgPhyInstrOperand*>(phy_instr_operand.get());
+    CHECK_NOTNULL(ptr);
+    CHECK_JUST(ptr->eager_blob_object()->DeallocateBlobDataPtr());
+  }
+  std::string DebugName(const vm::InstructionMsg& instr_msg) const override { return "ReleaseTensor"; }
+  void Compute(vm::Instruction* instruction) const override { Release(instruction->instr_msg()); }
+  void ComputeInFuseMode(vm::InstructionMsg* instr_msg) const override { Release(*instr_msg); }
 };
 
 #ifdef WITH_CUDA
 
-class CudaRecordEventInstructionType final : public vm::InstructionType {
+template<typename StreamT>
+class CudaReleaseTensorInstructionType : public ReleaseTensorInstructionType {
  public:
-  CudaRecordEventInstructionType() = default;
-  ~CudaRecordEventInstructionType() override = default;
-
-  InstructionFuseType fuse_type() const override { return kEnableInstructionFuseAsTailOnly; }
+  CudaReleaseTensorInstructionType() = default;
+  ~CudaReleaseTensorInstructionType() override = default;
 
   void InitInstructionStatus(Instruction* instruction) const override {
     auto* status_buffer = instruction->mut_status_buffer();
     auto* stream = instruction->mut_stream();
     instruction->stream_type().InitInstructionStatus(*stream, status_buffer);
-    auto* event_provider = dynamic_cast<QueryCudaEventProvider*>(stream->device_ctx().get());
-    const auto& cuda_event = CHECK_NOTNULL(event_provider)->GetCudaEvent();
     auto* data_ptr = status_buffer->mut_buffer()->mut_data();
-    CudaOptionalEventRecordStatusQuerier::MutCast(data_ptr)->reset_cuda_event(cuda_event);
+    CudaOptionalEventRecordStatusQuerier::MutCast(data_ptr)->reset_cuda_event(nullptr);
   }
-  std::string DebugName(const vm::InstructionMsg& instr_msg) const override { return "RecordEvent"; }
-  void Compute(vm::Instruction* instruction) const override {}
 };
 
 #endif
 
 }  // namespace vm
 
-struct GetRecordEventInstructionType {
+struct GetReleaseInstructionType {
   static Maybe<const vm::InstructionType*> Case(StreamRoleCase<StreamRole::kInvalid>,
                                                 DeviceType device_type) {  // NOLINT
     UNIMPLEMENTED_THEN_RETURN();
@@ -115,10 +109,10 @@ struct GetRecordEventInstructionType {
  private:
   static Maybe<const vm::InstructionType*> GetInstructionType(DeviceType device_type) {
     if (device_type == DeviceType::kCPU) {
-      return SingletonPtr<vm::CpuRecordEventInstructionType>();
+      return SingletonPtr<vm::ReleaseTensorInstructionType>();
     } else if (device_type == DeviceType::kCUDA) {
 #ifdef WITH_CUDA
-      return SingletonPtr<vm::CudaRecordEventInstructionType>();
+      return SingletonPtr<vm::CudaReleaseTensorInstructionType>();
 #else
       UNIMPLEMENTED_THEN_RETURN();
 #endif
@@ -129,3 +123,4 @@ struct GetRecordEventInstructionType {
 };
 
 }  // namespace oneflow
+#endif  // ONEFLOW_CORE_EAGER_RELEASE_TENSOR_INSTRUCTION_TYPE_H_

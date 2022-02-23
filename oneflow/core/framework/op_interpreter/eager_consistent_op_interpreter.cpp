@@ -141,7 +141,7 @@ Maybe<void> Interpret(const UserOpExpr& user_op_expr, const TensorTuple& inputs,
   if (unlikely(JUST(CachedIsAllZeroSizeTensorMeta(output_tensor_metas)))) {
     return Maybe<void>::Ok();
   }
-  // Run instruction LocalCallOpKernel
+  // Run instruction Call
   const auto& kernel = JUST(user_op_expr.MutKernel4Stream(result->stream()));
   CHECK_EQ_OR_RETURN(kernel->output_tuple_indexes4mut2_obns().size(), 0)
       << Error::UnimplementedError()
@@ -173,7 +173,7 @@ Maybe<void> Interpret(const UserOpExpr& user_op_expr, const TensorTuple& inputs,
     output_eager_blob_objects->at(i) = JUST(local_tensor->eager_blob_object());
   }
   JUST(PhysicalRun([&](InstructionsBuilder* builder) -> Maybe<void> {
-    return builder->LocalCallOpKernel(kernel, input_eager_blob_objects, output_eager_blob_objects,
+    return builder->Call(kernel, input_eager_blob_objects, output_eager_blob_objects,
                                       result, ctx, result->stream());
   }));
   return Maybe<void>::Ok();

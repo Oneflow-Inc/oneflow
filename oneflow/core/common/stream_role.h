@@ -28,7 +28,9 @@ namespace oneflow {
   OF_PP_MAKE_TUPLE_SEQ(kDevice2Host)            \
   OF_PP_MAKE_TUPLE_SEQ(kSyncedLaunchedCommNet)  \
   OF_PP_MAKE_TUPLE_SEQ(kAsyncedLaunchedCommNet) \
-  OF_PP_MAKE_TUPLE_SEQ(kCriticalSection)
+  OF_PP_MAKE_TUPLE_SEQ(kBarrier)        \
+  OF_PP_MAKE_TUPLE_SEQ(kCriticalSection)        \
+  OF_PP_MAKE_TUPLE_SEQ(kLazyJobLauncher)
 
 enum class StreamRole {
   kInvalid = 0,
