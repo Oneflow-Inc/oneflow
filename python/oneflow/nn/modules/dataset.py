@@ -196,7 +196,7 @@ class CoinFlip(Module):
             assert len(sbp) == len(placement.ranks.shape)
             assert (
                 self.placement.type != "cuda"
-            ), "CoinFlip doesn't support cuda device now."
+            ), "coin flip only supports cpu currently."
         else:
             assert sbp is None, "sbp: %s" % sbp
 
