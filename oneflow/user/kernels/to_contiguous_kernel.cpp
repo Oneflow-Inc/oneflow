@@ -20,7 +20,16 @@ limitations under the License.
 #include "oneflow/core/framework/stride.h"
 #include "oneflow/core/common/nd_index_offset_helper.h"
 
+#include "oneflow/core/ep/include/primitive/copy_nd_with_stride.h"
+
 namespace oneflow {
+
+namespace{
+  template<typename Context>
+  std::unique_ptr<ep::primitive::CopyNdWithStride> NewCopyNdWithStridePrimitive(Context* ctx) {
+    return ep::primitive::NewPrimitive<ep::primitive::CopyNdWithStrideFactory>(ctx->device_type(), 2);
+  }
+}
 
 template<typename T>
 struct ToContiguousUtil<DeviceType::kCPU, T> : ToContiguousUtilBase {
@@ -86,18 +95,28 @@ class ToContiguousKernel final : public user_op::OpKernel {
   void Compute(user_op::KernelComputeContext* ctx) const override {
     const user_op::Tensor* in = ctx->Tensor4ArgNameAndIndex("in", 0);
     user_op::Tensor* out = ctx->Tensor4ArgNameAndIndex("out", 0);
+    const auto& in_stride = ctx->Attr<std::vector<int64_t>>("stride");
 
     const ShapeView& in_shape = in->shape();
     CHECK_EQ(out->shape(), in_shape);
     const DataType in_data_type = in->data_type();
     CHECK_EQ(out->data_type(), in_data_type);
 
-    const auto& in_stride = ctx->Attr<std::vector<int64_t>>("stride");
-
     const char* in_dptr = static_cast<const char*>(in->raw_dptr());
     char* out_dptr = static_cast<char*>(out->mut_raw_dptr());
 
-    ToContiguousUtil<device_type, T>(ctx->stream(), in_shape, in_stride, in_dptr, out_dptr)();
+    int64_t ndim = in->shape().NumAxes();
+    DimVector src_pos_vec(ndim, 0);
+    DimVector dst_pos_vec(ndim, 0);
+    DimVector extent_vec(ndim, 1);
+
+    auto primitive = NewCopyNdWithStridePrimitive(ctx);
+    CHECK(primitive) << "Error in to_contiguous kernel NewCopyNdWithStridePrimitive! ";
+    primitive->Launch(ctx->stream(), in->data_type(), ndim, out->mut_dptr(),
+                          out->shape().ptr(), dst_pos_vec.data(), in->dptr(), in->shape().ptr(),
+                          src_pos_vec.data(), extent_vec.data(), in_stride.data());
+
+    // ToContiguousUtil<device_type, T>(ctx->stream(), in_shape, in_stride, in_dptr, out_dptr)();
   }
 
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }

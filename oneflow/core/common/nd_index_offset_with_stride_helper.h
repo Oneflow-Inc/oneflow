@@ -33,7 +33,7 @@ class NdIndexOffsetWithStrideHelper {
     InitStrides(dims_arr, n);
   }
 
-  OF_DEVICE_FUNC explicit NdIndexOffsetWithStrideHelper(const int64_t* strides) {
+  OF_DEVICE_FUNC explicit NdIndexOffsetWithStrideHelper(const T* strides) {
     InitStrides(strides, N);
   }
 
