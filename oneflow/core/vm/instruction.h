@@ -39,9 +39,9 @@ class InstructionMsg final : public intrusive::Base {
                 const std::shared_ptr<PhyInstrOperand>& phy_instr_operand);
 
   // Getters
-  const Stream& stream() const { return stream_; }
+  const Stream& stream() const { return *stream_; }
   Stream* mut_stream() { return stream_; }
-  const InstructionType* instruction_type() const { return instruction_type_; }
+  const InstructionType& instruction_type() const { return *instruction_type_; }
   const std::shared_ptr<PhyInstrOperand>& phy_instr_operand() const { return phy_instr_operand_; }
 
   std::string DebugName() const;
@@ -51,11 +51,7 @@ class InstructionMsg final : public intrusive::Base {
   intrusive::Ref* mut_intrusive_ref() { return &intrusive_ref_; }
 
   InstructionMsg()
-      : intrusive_ref_(),
-        stream_(),
-        instruction_type_(),
-        phy_instr_operand_(),
-        instr_msg_hook_() {}
+      : intrusive_ref_(), stream_(), instruction_type_(), phy_instr_operand_(), instr_msg_hook_() {}
   intrusive::Ref intrusive_ref_;
   // fields
   Stream* stream_;
@@ -136,7 +132,8 @@ class Instruction final : public intrusive::Base {
       intrusive::List<INTRUSIVE_FIELD(DependenceAccess, instruction_access_hook_)>;
 
   // Getters
-  const Stream& stream() const { return instr_msg->stream(); }
+  const Stream& stream() const { return instr_msg_->stream(); }
+  Stream* mut_stream() { return instr_msg_->mut_stream(); }
   const InstructionMsg& instr_msg() const { return instr_msg_.Get(); }
   const InstructionStatusBuffer& status_buffer() const { return status_buffer_.Get(); }
   const intrusive::ListHook& instruction_hook() const { return instruction_hook_; }
@@ -151,9 +148,7 @@ class Instruction final : public intrusive::Base {
   const DependenceAccessList& access_list() const { return access_list_; }
 
   // Setters
-  InstructionMsg* mut_instr_msg() {
-    return instr_msg_.Mutable();
-  }
+  InstructionMsg* mut_instr_msg() { return instr_msg_.Mutable(); }
   void clear_instr_msg() { instr_msg_.Reset(); }
   InstructionStatusBuffer* mut_status_buffer() { return status_buffer_.Mutable(); }
   InEdgeList* mut_in_edges() { return &in_edges_; }

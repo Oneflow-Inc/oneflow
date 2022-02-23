@@ -13,10 +13,16 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
+#ifndef ONEFLOW_CORE_EAGER_BLOB_INSTRUCTION_TYPE_H_
+#define ONEFLOW_CORE_EAGER_BLOB_INSTRUCTION_TYPE_H_
+
 #include "oneflow/core/intrusive/flat_msg_view.h"
 #include "oneflow/core/vm/instruction_type.h"
-#include "oneflow/core/framework/stream_role.h"
+#include "oneflow/core/common/stream_role.h"
 #include "oneflow/core/common/singleton_ptr.h"
+#include "oneflow/core/vm/cuda_optional_event_record_status_querier.h"
+#include "oneflow/core/vm/stream.h"
+#include "oneflow/core/device/cuda_event.h"
 
 namespace oneflow {
 namespace vm {
@@ -35,7 +41,9 @@ class AccessBlobByCallbackInstructionType final : public vm::InstructionType {
   AccessBlobByCallbackInstructionType() = default;
   ~AccessBlobByCallbackInstructionType() override = default;
 
-  std::string DebugName(const vm::InstructionMsg& instr_msg) const override { return "AccessBlobByCallback"; }
+  std::string DebugName(const vm::InstructionMsg& instr_msg) const override {
+    return "AccessBlobByCallback";
+  }
   void Compute(vm::Instruction* instruction) const override;
 };
 
@@ -44,7 +52,9 @@ class CpuRecordEventInstructionType final : public vm::InstructionType {
   CpuRecordEventInstructionType() = default;
   ~CpuRecordEventInstructionType() override = default;
 
-  std::string DebugName(const vm::InstructionMsg& instr_msg) const override { return "RecordEvent"; }
+  std::string DebugName(const vm::InstructionMsg& instr_msg) const override {
+    return "RecordEvent";
+  }
   void Compute(vm::Instruction* instruction) const override {}
 };
 
@@ -66,7 +76,9 @@ class CudaRecordEventInstructionType final : public vm::InstructionType {
     auto* data_ptr = status_buffer->mut_buffer()->mut_data();
     CudaOptionalEventRecordStatusQuerier::MutCast(data_ptr)->reset_cuda_event(cuda_event);
   }
-  std::string DebugName(const vm::InstructionMsg& instr_msg) const override { return "RecordEvent"; }
+  std::string DebugName(const vm::InstructionMsg& instr_msg) const override {
+    return "RecordEvent";
+  }
   void Compute(vm::Instruction* instruction) const override {}
 };
 
@@ -80,35 +92,35 @@ struct GetRecordEventInstructionType {
     UNIMPLEMENTED_THEN_RETURN();
   }
   static Maybe<const vm::InstructionType*> Case(StreamRoleCase<StreamRole::kCompute>,
-                                        DeviceType device_type) {
+                                                DeviceType device_type) {
     return GetInstructionType(device_type);
   }
   static Maybe<const vm::InstructionType*> Case(StreamRoleCase<StreamRole::kHost2Device>,
-                                        DeviceType device_type) {
+                                                DeviceType device_type) {
     return GetInstructionType(device_type);
   }
-  static Maybe<const std::string&> Case(StreamRoleCase<StreamRole::kDevice2Host>,
-                                        DeviceType device_type) {
+  static Maybe<const vm::InstructionType*> Case(StreamRoleCase<StreamRole::kDevice2Host>,
+                                                DeviceType device_type) {
     return GetInstructionType(device_type);
   }
-  static Maybe<const std::string&> Case(StreamRoleCase<StreamRole::kSyncedLaunchedCommNet>,
-                                        DeviceType device_type) {
+  static Maybe<const vm::InstructionType*> Case(StreamRoleCase<StreamRole::kSyncedLaunchedCommNet>,
+                                                DeviceType device_type) {
     return GetInstructionType(device_type);
   }
-  static Maybe<const std::string&> Case(StreamRoleCase<StreamRole::kAsyncedLaunchedCommNet>,
-                                        DeviceType device_type) {
+  static Maybe<const vm::InstructionType*> Case(StreamRoleCase<StreamRole::kAsyncedLaunchedCommNet>,
+                                                DeviceType device_type) {
     return GetInstructionType(device_type);
   }
-  static Maybe<const std::string&> Case(StreamRoleCase<StreamRole::kBarrier>,
-                                        DeviceType device_type) {
+  static Maybe<const vm::InstructionType*> Case(StreamRoleCase<StreamRole::kBarrier>,
+                                                DeviceType device_type) {
     UNIMPLEMENTED_THEN_RETURN();
   }
-  static Maybe<const std::string&> Case(StreamRoleCase<StreamRole::kCriticalSection>,
-                                        DeviceType device_type) {
+  static Maybe<const vm::InstructionType*> Case(StreamRoleCase<StreamRole::kCriticalSection>,
+                                                DeviceType device_type) {
     UNIMPLEMENTED_THEN_RETURN();
   }
-  static Maybe<const std::string&> Case(StreamRoleCase<StreamRole::kLazyJobLauncher>,
-                                        DeviceType device_type) {
+  static Maybe<const vm::InstructionType*> Case(StreamRoleCase<StreamRole::kLazyJobLauncher>,
+                                                DeviceType device_type) {
     UNIMPLEMENTED_THEN_RETURN();
   }
 
@@ -129,3 +141,4 @@ struct GetRecordEventInstructionType {
 };
 
 }  // namespace oneflow
+#endif  // ONEFLOW_CORE_EAGER_BLOB_INSTRUCTION_TYPE_H_

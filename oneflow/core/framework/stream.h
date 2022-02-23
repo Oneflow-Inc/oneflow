@@ -28,7 +28,7 @@ namespace oneflow {
 namespace vm {
 class MirroredObject;
 class Stream;
-}
+}  // namespace vm
 using LocalDepObject = vm::MirroredObject;
 
 class Stream final {
@@ -52,7 +52,7 @@ class Stream final {
     return transport_local_dep_object_;
   }
 
-  vm::Stream* mut_vm_stream() const { return vm_stream_.get(); }
+  vm::Stream* mut_vm_stream() const { return vm_stream_; }
 
  private:
   Stream(Symbol<Device> device, StreamRole stream_role);
@@ -68,8 +68,6 @@ class Stream final {
   Optional<LocalDepObject*> transport_local_dep_object_;
   vm::Stream* vm_stream_;
 };
-
-LocalDepObject* GetStaticGlobalTransportLocalDepObject();
 
 extern Maybe<Symbol<Stream>> (*GetDefaultStreamByDevice)(Symbol<Device>);
 class ParallelDesc;

@@ -30,13 +30,13 @@ Stream::Stream(Symbol<Device> device, StreamRole stream_role)
       stream_role_(stream_role),
       schedule_local_dep_object_(nullptr),
       transport_local_dep_object_(NullOpt),
-      vm_stream_(nullptr) { }
+      vm_stream_(nullptr) {}
 
 Maybe<void> Stream::Init() {
-  const auto* vm = JUST(GlobalMaybe<VirtualMachine>());
-  schedule_local_dep_object_ = vm->MakeScheduleLocalDepObject(device_, stream_role_);
+  auto* vm = JUST(GlobalMaybe<VirtualMachine>());
+  schedule_local_dep_object_ = vm->FindOrCreateScheduleLocalDepObject(device_, stream_role_);
   if (StreamRoleSwitch<StreamIsTransport>(stream_role_)) {
-    transport_local_dep_object_ = vm->MakeTransportLocalDepObject();
+    transport_local_dep_object_ = vm->FindOrCreateTransportLocalDepObject();
   }
   vm_stream_ = JUST(vm->CreateStream(device_, stream_role_));
   return Maybe<void>::Ok();

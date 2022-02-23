@@ -20,7 +20,6 @@ limitations under the License.
 #include "oneflow/core/common/maybe.h"
 #include "oneflow/core/vm/instruction.h"
 #include "oneflow/core/vm/stream.h"
-#include "oneflow/core/vm/stream_runtime_desc.h"
 #include "oneflow/core/vm/thread_ctx.h"
 #include "oneflow/core/vm/vm_object.h"
 #include "oneflow/core/vm/vm_resource_desc.h"

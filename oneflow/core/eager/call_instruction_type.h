@@ -25,6 +25,9 @@ namespace vm {
 
 class CallInstructionType final : public vm::InstructionType {
  public:
+  CallInstructionType() = default;
+  ~CallInstructionType() = default;
+
   void Compute(vm::Instruction* instruction) const override;
   void ComputeInFuseMode(vm::InstructionMsg* instr_msg) const override;
 
@@ -33,9 +36,6 @@ class CallInstructionType final : public vm::InstructionType {
   std::string DebugName(const vm::InstructionMsg& instr_msg) const override;
 
  protected:
-  CallInstructionType() = default;
-  virtual ~CallInstructionType() = default;
-
  private:
   Maybe<void> MaybeCompute(vm::Instruction* instruction) const;
 };

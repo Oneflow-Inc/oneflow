@@ -31,7 +31,6 @@ using PendingInstructionList =
 
 class ThreadCtx final : public intrusive::Base {
  public:
-
   // types
   using StreamList = intrusive::List<INTRUSIVE_FIELD(Stream, thread_ctx_stream_hook_)>;
 
@@ -53,11 +52,7 @@ class ThreadCtx final : public intrusive::Base {
   friend class intrusive::Ref;
   intrusive::Ref* mut_intrusive_ref() { return &intrusive_ref_; }
 
-  ThreadCtx()
-      : intrusive_ref_(),
-        stream_list_(),
-        pending_instruction_list_(),
-        thread_ctx_hook_() {}
+  ThreadCtx() : intrusive_ref_(), stream_list_(), pending_instruction_list_(), thread_ctx_hook_() {}
   intrusive::Ref intrusive_ref_;
   // lists
   StreamList stream_list_;

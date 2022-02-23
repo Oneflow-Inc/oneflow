@@ -28,20 +28,19 @@ namespace oneflow {
 namespace vm {
 
 std::string InstructionMsg::DebugName() const {
-  std::string op_type_name = instruction_type().DebugName(*this);
-  return op_type_name + ":" + StreamRoleSwitch<GetStreamRoleName>(stream().stream_role());
+  std::string instr_name = instruction_type().DebugName(*this);
+  return instr_name + ":" + StreamRoleSwitch<GetStreamRoleName>(stream().stream_role());
 }
 
-void InstructionMsg::__Init__(
-    Stream* stream, const InstructionType* instruction_type,
-    const std::shared_ptr<PhyInstrOperand>& phy_instr_operand) {
+void InstructionMsg::__Init__(Stream* stream, const InstructionType* instruction_type,
+                              const std::shared_ptr<PhyInstrOperand>& phy_instr_operand) {
   stream_ = stream;
   instruction_type_ = instruction_type;
   phy_instr_operand_ = phy_instr_operand;
 }
 
 void Instruction::Init(InstructionMsg* instr_msg) {
-  reset_instr_msg(instr_msg);
+  instr_msg_ = instr_msg;
   instr_msg->instruction_type().InitInstructionStatusIf(this);
 }
 

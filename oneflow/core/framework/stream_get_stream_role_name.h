@@ -20,37 +20,28 @@ limitations under the License.
 #include <string>
 #include "oneflow/core/common/stream_role.h"
 #include "oneflow/core/common/device_type.h"
-#include "oneflow/core/common/maybe.h"
 #include "oneflow/core/framework/to_string.h"
 
 namespace oneflow {
 
 struct GetStreamRoleName {
-  static Maybe<const char*> Case(StreamRoleCase<StreamRole::kInvalid>) {  // NOLINT
+  static const char* Case(StreamRoleCase<StreamRole::kInvalid>) {  // NOLINT
     return "invalid";
   }
-  static Maybe<const char*> Case(StreamRoleCase<StreamRole::kCompute>) {
-    return "compute";
-  }
-  static Maybe<const char*> Case(StreamRoleCase<StreamRole::kHost2Device>) {
-    return "h2d";
-  }
-  static Maybe<const char*> Case(StreamRoleCase<StreamRole::kDevice2Host>) {
-    return "d2h";
-  }
-  static Maybe<const char*> Case(StreamRoleCase<StreamRole::kSyncedLaunchedCommNet>) {
+  static const char* Case(StreamRoleCase<StreamRole::kCompute>) { return "compute"; }
+  static const char* Case(StreamRoleCase<StreamRole::kHost2Device>) { return "h2d"; }
+  static const char* Case(StreamRoleCase<StreamRole::kDevice2Host>) { return "d2h"; }
+  static const char* Case(StreamRoleCase<StreamRole::kSyncedLaunchedCommNet>) {
     return "synced_launched_comm_net";
   }
-  static Maybe<const char*> Case(StreamRoleCase<StreamRole::kAsyncedLaunchedCommNet>) {
+  static const char* Case(StreamRoleCase<StreamRole::kAsyncedLaunchedCommNet>) {
     return "asynced_launched_comm_net";
   }
-  static Maybe<const char*> Case(StreamRoleCase<StreamRole::kBarrier>) {
-    return "barrier";
-  }
-  static Maybe<const char*> Case(StreamRoleCase<StreamRole::kCriticalSection>) {
+  static const char* Case(StreamRoleCase<StreamRole::kBarrier>) { return "barrier"; }
+  static const char* Case(StreamRoleCase<StreamRole::kCriticalSection>) {
     return "critical_section";
   }
-  static Maybe<const char*> Case(StreamRoleCase<StreamRole::kLazyJobLauncher>) {
+  static const char* Case(StreamRoleCase<StreamRole::kLazyJobLauncher>) {
     return "lazy_job_launcher";
   }
 };

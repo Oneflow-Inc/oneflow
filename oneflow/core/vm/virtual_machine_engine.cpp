@@ -24,6 +24,7 @@ limitations under the License.
 #include "oneflow/core/profiler/profiler.h"
 #include "oneflow/core/common/cpp_attribute.h"
 #include "oneflow/core/common/global.h"
+#include "oneflow/core/common/singleton_ptr.h"
 
 namespace oneflow {
 namespace vm {
@@ -78,9 +79,7 @@ namespace {
 
 bool FusableBetween(InstructionFuseType fuse_type, InstructionMsg* instr_msg,
                     InstructionMsg* prev_instr_msg) {
-  if (unlikely(instr_msg->instruction_type().fuse_type() != fuse_type)) {
-    return false;
-  }
+  if (unlikely(instr_msg->instruction_type().fuse_type() != fuse_type)) { return false; }
   auto* stream = instr_msg->mut_stream();
   if (unlikely(stream == nullptr)) { return false; }
   auto* sequential_dep = instr_msg->phy_instr_operand()->stream_sequential_dependence();

@@ -33,9 +33,7 @@ void Stream::__Init__(ThreadCtx* thread_ctx, Symbol<Device> device, StreamRole s
 
 int64_t Stream::device_id() const { return device_->device_id(); }
 
-const StreamType& Stream::stream_type() const {
-  return *stream_type_;
-}
+const StreamType& Stream::stream_type() const { return *stream_type_; }
 
 intrusive::shared_ptr<Instruction> Stream::NewInstruction(InstructionMsg* instr_msg) {
   intrusive::shared_ptr<Instruction> instruction;

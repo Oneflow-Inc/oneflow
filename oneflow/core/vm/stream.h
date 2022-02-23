@@ -77,10 +77,10 @@ class Stream final : public intrusive::Base {
   Stream()
       : intrusive_ref_(),
         thread_ctx_(),
-        device_ctx_(),
         device_(),
         stream_role_(StreamRole::kInvalid),
         stream_type_(),
+        device_ctx_(),
         free_instruction_list_(),
         zombie_instruction_list_(),
         running_instruction_list_(),

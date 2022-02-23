@@ -17,10 +17,11 @@ limitations under the License.
 #define ONEFLOW_CORE_EAGER_RELEASE_TENSOR_INSTRUCTION_TYPE_H_
 
 #include "oneflow/core/vm/instruction.h"
+#include "oneflow/core/vm/instruction_type.h"
 #include "oneflow/core/eager/release_tensor_arg_phy_instr_operand.h"
 #include "oneflow/core/eager/eager_blob_object.h"
 #include "oneflow/core/vm/cuda_optional_event_record_status_querier.h"
-#include "oneflow/core/framework/stream_role.h"
+#include "oneflow/core/common/stream_role.h"
 #include "oneflow/core/common/singleton_ptr.h"
 
 namespace oneflow {
@@ -42,14 +43,15 @@ class ReleaseTensorInstructionType : public vm::InstructionType {
     CHECK_NOTNULL(ptr);
     CHECK_JUST(ptr->eager_blob_object()->DeallocateBlobDataPtr());
   }
-  std::string DebugName(const vm::InstructionMsg& instr_msg) const override { return "ReleaseTensor"; }
+  std::string DebugName(const vm::InstructionMsg& instr_msg) const override {
+    return "ReleaseTensor";
+  }
   void Compute(vm::Instruction* instruction) const override { Release(instruction->instr_msg()); }
   void ComputeInFuseMode(vm::InstructionMsg* instr_msg) const override { Release(*instr_msg); }
 };
 
 #ifdef WITH_CUDA
 
-template<typename StreamT>
 class CudaReleaseTensorInstructionType : public ReleaseTensorInstructionType {
  public:
   CudaReleaseTensorInstructionType() = default;
@@ -74,35 +76,35 @@ struct GetReleaseInstructionType {
     UNIMPLEMENTED_THEN_RETURN();
   }
   static Maybe<const vm::InstructionType*> Case(StreamRoleCase<StreamRole::kCompute>,
-                                        DeviceType device_type) {
+                                                DeviceType device_type) {
     return GetInstructionType(device_type);
   }
   static Maybe<const vm::InstructionType*> Case(StreamRoleCase<StreamRole::kHost2Device>,
-                                        DeviceType device_type) {
+                                                DeviceType device_type) {
     return GetInstructionType(device_type);
   }
-  static Maybe<const std::string&> Case(StreamRoleCase<StreamRole::kDevice2Host>,
-                                        DeviceType device_type) {
+  static Maybe<const vm::InstructionType*> Case(StreamRoleCase<StreamRole::kDevice2Host>,
+                                                DeviceType device_type) {
     return GetInstructionType(device_type);
   }
-  static Maybe<const std::string&> Case(StreamRoleCase<StreamRole::kSyncedLaunchedCommNet>,
-                                        DeviceType device_type) {
+  static Maybe<const vm::InstructionType*> Case(StreamRoleCase<StreamRole::kSyncedLaunchedCommNet>,
+                                                DeviceType device_type) {
     return GetInstructionType(device_type);
   }
-  static Maybe<const std::string&> Case(StreamRoleCase<StreamRole::kAsyncedLaunchedCommNet>,
-                                        DeviceType device_type) {
+  static Maybe<const vm::InstructionType*> Case(StreamRoleCase<StreamRole::kAsyncedLaunchedCommNet>,
+                                                DeviceType device_type) {
     return GetInstructionType(device_type);
   }
-  static Maybe<const std::string&> Case(StreamRoleCase<StreamRole::kBarrier>,
-                                        DeviceType device_type) {
+  static Maybe<const vm::InstructionType*> Case(StreamRoleCase<StreamRole::kBarrier>,
+                                                DeviceType device_type) {
     UNIMPLEMENTED_THEN_RETURN();
   }
-  static Maybe<const std::string&> Case(StreamRoleCase<StreamRole::kCriticalSection>,
-                                        DeviceType device_type) {
+  static Maybe<const vm::InstructionType*> Case(StreamRoleCase<StreamRole::kCriticalSection>,
+                                                DeviceType device_type) {
     UNIMPLEMENTED_THEN_RETURN();
   }
-  static Maybe<const std::string&> Case(StreamRoleCase<StreamRole::kLazyJobLauncher>,
-                                        DeviceType device_type) {
+  static Maybe<const vm::InstructionType*> Case(StreamRoleCase<StreamRole::kLazyJobLauncher>,
+                                                DeviceType device_type) {
     UNIMPLEMENTED_THEN_RETURN();
   }
 

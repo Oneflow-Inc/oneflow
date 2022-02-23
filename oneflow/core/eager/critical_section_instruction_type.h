@@ -16,7 +16,7 @@ limitations under the License.
 #ifndef ONEFLOW_CORE_EAGER_CRITICAL_SECTION_INSTRUCTION_TYPE_H_
 #define ONEFLOW_CORE_EAGER_CRITICAL_SECTION_INSTRUCTION_TYPE_H_
 
-#include "oneflow/core/eager/critical_section_status_querier.h"
+#include "oneflow/core/vm/critical_section_status_querier.h"
 #include "oneflow/core/eager/critical_section_phy_instr_operand.h"
 #include "oneflow/core/job/critical_section_instance.h"
 #include "oneflow/core/framework/nn_graph_if.h"
@@ -45,7 +45,9 @@ class CriticalSectionBeginInstructionType final : public InstructionType {
   CriticalSectionBeginInstructionType() = default;
   ~CriticalSectionBeginInstructionType() = default;
 
-  std::string DebugName(const vm::InstructionMsg& instr_msg) const override { return "CriticalSectionBegin"; }
+  std::string DebugName(const vm::InstructionMsg& instr_msg) const override {
+    return "CriticalSectionBegin";
+  }
   void Compute(vm::Instruction* instruction) const override {
     OF_PROFILER_RANGE_GUARD("CriticalSectionBegin");
     {
@@ -116,7 +118,9 @@ class CriticalSectionEndInstructionType final : public InstructionType {
   CriticalSectionEndInstructionType() = default;
   ~CriticalSectionEndInstructionType() = default;
 
-  std::string DebugName(const vm::InstructionMsg& instr_msg) const override { return "CriticalSectionEnd"; }
+  std::string DebugName(const vm::InstructionMsg& instr_msg) const override {
+    return "CriticalSectionEnd";
+  }
   void Compute(vm::Instruction* instruction) const override {
     const auto* ptr = instruction->instr_msg().phy_instr_operand().get();
     const auto* phy_instr_operand = dynamic_cast<const CriticalSectionEndPhyInstrOperand*>(ptr);

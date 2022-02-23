@@ -72,8 +72,7 @@ struct CallInstructionUtil final {
     return Maybe<void>::Ok();
   }
 
-  static inline CallPhyInstrOperand* GetCallPhyInstrOperand(
-      const vm::InstructionMsg& instr_msg) {
+  static inline CallPhyInstrOperand* GetCallPhyInstrOperand(const vm::InstructionMsg& instr_msg) {
     auto* operand = CHECK_NOTNULL(instr_msg.phy_instr_operand().get());
     return CHECK_NOTNULL(dynamic_cast<CallPhyInstrOperand*>(operand));
   }
@@ -121,13 +120,13 @@ struct CallInstructionUtil final {
     return Maybe<void>::Ok();
   }
 
-  static inline Maybe<void> TryAllocateTempStorageBlobMemory(
-      CallPhyInstrOperand* operand, DeviceCtx* device_ctx) {
+  static inline Maybe<void> TryAllocateTempStorageBlobMemory(CallPhyInstrOperand* operand,
+                                                             DeviceCtx* device_ctx) {
     return operand->mut_opkernel()->mut_temp_blob_object()->TryAllocateBlobBodyMemory(device_ctx);
   }
 
-  static inline void OpKernelCompute(CallPhyInstrOperand* operand,
-                                     DeviceCtx* device_ctx, user_op::OpKernelState* state,
+  static inline void OpKernelCompute(CallPhyInstrOperand* operand, DeviceCtx* device_ctx,
+                                     user_op::OpKernelState* state,
                                      const user_op::OpKernelCache* cache) {
     auto* opkernel = operand->mut_opkernel();
     auto* compute_ctx =
@@ -140,8 +139,8 @@ struct CallInstructionUtil final {
     opkernel->UpdateComputeContext(nullptr, nullptr, nullptr, nullptr);
   }
 
-  static inline Maybe<void> DeallocateTempStorageBlobMemory(
-      CallPhyInstrOperand* operand, DeviceCtx* device_ctx) {
+  static inline Maybe<void> DeallocateTempStorageBlobMemory(CallPhyInstrOperand* operand,
+                                                            DeviceCtx* device_ctx) {
     return operand->mut_opkernel()->mut_temp_blob_object()->DeallocateBlobDataPtr();
   }
 };
@@ -154,12 +153,10 @@ void CallInstructionType::ComputeInFuseMode(vm::InstructionMsg* instr_msg) const
   CHECK_JUST(CallInstructionUtil::Compute(*instr_msg));
 }
 
-std::string CallInstructionType::DebugName(
-    const vm::InstructionMsg& instr_msg) const {
+std::string CallInstructionType::DebugName(const vm::InstructionMsg& instr_msg) const {
   auto* operand = CHECK_NOTNULL(instr_msg.phy_instr_operand().get());
-  return CHECK_NOTNULL(dynamic_cast<CallPhyInstrOperand*>(operand))
-      ->opkernel()
-      .op_type_name() + ":Call";
+  return CHECK_NOTNULL(dynamic_cast<CallPhyInstrOperand*>(operand))->opkernel().op_type_name()
+         + ":Call";
 }
 
 }  // namespace vm

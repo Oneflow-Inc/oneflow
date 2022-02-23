@@ -18,7 +18,7 @@ limitations under the License.
 #include "oneflow/core/vm/instruction_type.h"
 #include "oneflow/core/vm/instruction.h"
 #include "oneflow/core/vm/thread_ctx.h"
-#include "oneflow/core/eager/lazy_job_device_context.h"
+#include "oneflow/core/vm/lazy_job_device_context.h"
 #include "oneflow/core/vm/naive_instruction_status_querier.h"
 #include "oneflow/core/common/util.h"
 

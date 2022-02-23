@@ -160,8 +160,7 @@ Maybe<void> NaiveInterpret(const UserOpExpr& user_op_expr, const TensorTuple& in
   }
 
   JUST(PhysicalRun([&](InstructionsBuilder* builder) -> Maybe<void> {
-    return builder->Call(kernel, input_eager_blob_objects, output_eager_blob_objects,
-                                      ctx, stream);
+    return builder->Call(kernel, input_eager_blob_objects, output_eager_blob_objects, ctx, stream);
   }));
   return Maybe<void>::Ok();
 }

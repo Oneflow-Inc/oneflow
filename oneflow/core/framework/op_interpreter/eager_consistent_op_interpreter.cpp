@@ -173,8 +173,8 @@ Maybe<void> Interpret(const UserOpExpr& user_op_expr, const TensorTuple& inputs,
     output_eager_blob_objects->at(i) = JUST(local_tensor->eager_blob_object());
   }
   JUST(PhysicalRun([&](InstructionsBuilder* builder) -> Maybe<void> {
-    return builder->Call(kernel, input_eager_blob_objects, output_eager_blob_objects,
-                                      result, ctx, result->stream());
+    return builder->Call(kernel, input_eager_blob_objects, output_eager_blob_objects, result, ctx,
+                         result->stream());
   }));
   return Maybe<void>::Ok();
 }

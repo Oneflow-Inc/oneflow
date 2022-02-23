@@ -16,7 +16,7 @@ limitations under the License.
 #ifndef ONEFLOW_CORE_EAGER_LAZY_JOB_INSTRUCTION_TYPE_H_
 #define ONEFLOW_CORE_EAGER_LAZY_JOB_INSTRUCTION_TYPE_H_
 
-#include "oneflow/core/eager/lazy_job_device_context.h"
+#include "oneflow/core/vm/lazy_job_device_context.h"
 #include "oneflow/core/eager/lazy_job_phy_instr_operand.h"
 #include "oneflow/core/framework/nn_graph_if.h"
 #include "oneflow/core/common/container_util.h"
@@ -70,7 +70,9 @@ class LaunchLazyJobInstructionType final : public InstructionType {  // NOLINT
   LaunchLazyJobInstructionType() = default;
   ~LaunchLazyJobInstructionType() = default;
 
-  std::string DebugName(const vm::InstructionMsg& instr_msg) const override { return "LaunchLazyJob"; }
+  std::string DebugName(const vm::InstructionMsg& instr_msg) const override {
+    return "LaunchLazyJob";
+  }
   void Compute(vm::Instruction* instruction) const override {
     const auto& cur_nn_graph = GetCurNNGraph(instruction);
     auto* device_ctx = GetLazyJobDeviceCtx(instruction);

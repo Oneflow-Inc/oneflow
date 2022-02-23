@@ -18,7 +18,6 @@ limitations under the License.
 
 #include "oneflow/core/eager/call_phy_instr_operand.h"
 #include "oneflow/core/eager/lazy_job_phy_instr_operand.h"
-#include "oneflow/core/vm/instruction.cfg.h"
 #include "oneflow/core/vm/instruction.h"
 #include "oneflow/core/job/job_desc.h"
 #include "oneflow/core/job/parallel_desc.h"
@@ -136,9 +135,9 @@ class InstructionsBuilder : public std::enable_shared_from_this<InstructionsBuil
   }
 
   Maybe<void> Call(const std::shared_ptr<one::StatefulLocalOpKernel>& opkernel,
-                                const one::EagerBlobObjectListPtr& input_eager_blob_objects,
-                                const one::EagerBlobObjectListPtr& output_eager_blob_objects,
-                                const one::OpExprInterpContext& ctx, Symbol<Stream> stream);
+                   const one::EagerBlobObjectListPtr& input_eager_blob_objects,
+                   const one::EagerBlobObjectListPtr& output_eager_blob_objects,
+                   const one::OpExprInterpContext& ctx, Symbol<Stream> stream);
 
   Maybe<void> Call(
       const std::shared_ptr<one::StatefulLocalOpKernel>& opkernel,
