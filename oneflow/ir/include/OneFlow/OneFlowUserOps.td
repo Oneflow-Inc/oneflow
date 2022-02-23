@@ -1876,7 +1876,7 @@ def OneFlow_EagerBToSOp : OneFlow_BaseOp<"eager_b_to_s", [NoSideEffect, NoGrad, 
   let has_physical_tensor_desc_infer_fn = 1;
   let has_get_sbp_fn = 1;
   let has_data_type_infer_fn = 1;
-  let has_device_infer_fn = 1;
+  let has_device_and_stream_infer_fn = 1;
   let has_nd_sbp_infer_fn = 1;
 }
 
@@ -1898,7 +1898,7 @@ def OneFlow_EagerNaiveSToSOp : OneFlow_BaseOp<"eager_naive_s_to_s", [NoSideEffec
   let has_physical_tensor_desc_infer_fn = 1;
   let has_get_sbp_fn = 1;
   let has_data_type_infer_fn = 1;
-  let has_device_infer_fn = 1;
+  let has_device_and_stream_infer_fn = 1;
   let has_nd_sbp_infer_fn = 1;
 }
 
@@ -1916,7 +1916,7 @@ def OneFlow_EagerNcclAllGatherOp : OneFlow_BaseOp<"eager_nccl_all_gather", [NoSi
   let has_physical_tensor_desc_infer_fn = 1;
   let has_get_sbp_fn = 1;
   let has_data_type_infer_fn = 1;
-  let has_device_infer_fn = 1;
+  let has_device_and_stream_infer_fn = 1;
   let has_nd_sbp_infer_fn = 1;
 }
 
@@ -1935,7 +1935,7 @@ def OneFlow_EagerNcclAllReduceOp : OneFlow_BaseOp<"eager_nccl_all_reduce", [NoSi
   let has_physical_tensor_desc_infer_fn = 1;
   let has_get_sbp_fn = 1;
   let has_data_type_infer_fn = 1;
-  let has_device_infer_fn = 1;
+  let has_device_and_stream_infer_fn = 1;
 }
 
 def OneFlow_EagerNcclBroadcastOp : OneFlow_BaseOp<"eager_nccl_broadcast", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
@@ -1954,7 +1954,7 @@ def OneFlow_EagerNcclBroadcastOp : OneFlow_BaseOp<"eager_nccl_broadcast", [NoSid
   let has_physical_tensor_desc_infer_fn = 1;
   let has_get_sbp_fn = 1;
   let has_data_type_infer_fn = 1;
-  let has_device_infer_fn = 1;
+  let has_device_and_stream_infer_fn = 1;
 }
 
 def OneFlow_EagerNcclTouchOp : OneFlow_BaseOp<"eager_nccl_touch", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
@@ -1968,7 +1968,7 @@ def OneFlow_EagerNcclTouchOp : OneFlow_BaseOp<"eager_nccl_touch", [NoSideEffect,
   let has_physical_tensor_desc_infer_fn = 1;
   let has_get_sbp_fn = 1;
   let has_data_type_infer_fn = 1;
-  let has_device_infer_fn = 1;
+  let has_device_and_stream_infer_fn = 1;
 }
 
 def OneFlow_EagerNcclReduceOp : OneFlow_BaseOp<"eager_nccl_reduce", [NoSideEffect, NoGrad, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
@@ -1986,7 +1986,7 @@ def OneFlow_EagerNcclReduceOp : OneFlow_BaseOp<"eager_nccl_reduce", [NoSideEffec
   let has_physical_tensor_desc_infer_fn = 1;
   let has_get_sbp_fn = 1;
   let has_data_type_infer_fn = 1;
-  let has_device_infer_fn = 1;
+  let has_device_and_stream_infer_fn = 1;
 }
 
 def OneFlow_EagerNcclReduceScatterOp : OneFlow_BaseOp<"eager_nccl_reduce_scatter", [NoSideEffect, NoGrad, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
@@ -2004,7 +2004,7 @@ def OneFlow_EagerNcclReduceScatterOp : OneFlow_BaseOp<"eager_nccl_reduce_scatter
   let has_physical_tensor_desc_infer_fn = 1;
   let has_get_sbp_fn = 1;
   let has_data_type_infer_fn = 1;
-  let has_device_infer_fn = 1;
+  let has_device_and_stream_infer_fn = 1;
   let has_nd_sbp_infer_fn = 1;
 }
 
@@ -2023,7 +2023,7 @@ def OneFlow_EagerNcclS2sOp : OneFlow_BaseOp<"eager_nccl_s2s", [NoSideEffect, NoG
   let has_logical_tensor_desc_infer_fn = 1;
   let has_get_sbp_fn = 1;
   let has_data_type_infer_fn = 1;
-  let has_device_infer_fn = 1;
+  let has_device_and_stream_infer_fn = 1;
   let has_nd_sbp_infer_fn = 1;
 }
 
@@ -2043,7 +2043,7 @@ def OneFlow_EagerPToBOp : OneFlow_BaseOp<"eager_p_to_b", [NoSideEffect, NoGrad, 
   let has_physical_tensor_desc_infer_fn = 1;
   let has_get_sbp_fn = 1;
   let has_data_type_infer_fn = 1;
-  let has_device_infer_fn = 1;
+  let has_device_and_stream_infer_fn = 1;
   let has_nd_sbp_infer_fn = 1;
 }
 
@@ -2064,7 +2064,7 @@ def OneFlow_EagerPToSOp : OneFlow_BaseOp<"eager_p_to_s", [NoSideEffect, NoGrad, 
   let has_physical_tensor_desc_infer_fn = 1;
   let has_get_sbp_fn = 1;
   let has_data_type_infer_fn = 1;
-  let has_device_infer_fn = 1;
+  let has_device_and_stream_infer_fn = 1;
   let has_nd_sbp_infer_fn = 1;
 }
 
@@ -2085,7 +2085,7 @@ def OneFlow_EagerSToBOp : OneFlow_BaseOp<"eager_s_to_b", [NoSideEffect, NoGrad, 
   let has_physical_tensor_desc_infer_fn = 1;
   let has_get_sbp_fn = 1;
   let has_data_type_infer_fn = 1;
-  let has_device_infer_fn = 1;
+  let has_device_and_stream_infer_fn = 1;
   let has_nd_sbp_infer_fn = 1;
 }
 
@@ -2106,7 +2106,7 @@ def OneFlow_EagerSToPOp : OneFlow_BaseOp<"eager_s_to_p", [NoSideEffect, NoGrad, 
   let has_physical_tensor_desc_infer_fn = 1;
   let has_get_sbp_fn = 1;
   let has_data_type_infer_fn = 1;
-  let has_device_infer_fn = 1;
+  let has_device_and_stream_infer_fn = 1;
   let has_nd_sbp_infer_fn = 1;
 }
 
@@ -2125,7 +2125,7 @@ def OneFlow_EagerSymmetricSToPOp : OneFlow_BaseOp<"eager_symmetric_s_to_p", [NoS
   let has_physical_tensor_desc_infer_fn = 1;
   let has_get_sbp_fn = 1;
   let has_data_type_infer_fn = 1;
-  let has_device_infer_fn = 1;
+  let has_device_and_stream_infer_fn = 1;
   let has_nd_sbp_infer_fn = 1;
 }
 
@@ -4692,7 +4692,7 @@ def OneFlow_RecvOp : OneFlow_BaseOp<"recv", [NoSideEffect, NoGrad, DeclareOpInte
   let has_physical_tensor_desc_infer_fn = 1;
   let has_get_sbp_fn = 1;
   let has_data_type_infer_fn = 1;
-  let has_device_infer_fn = 1;
+  let has_device_and_stream_infer_fn = 1;
 }
 
 def OneFlow_SendOp : OneFlow_BaseOp<"send", [NoSideEffect, NoGrad, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
@@ -4706,7 +4706,7 @@ def OneFlow_SendOp : OneFlow_BaseOp<"send", [NoSideEffect, NoGrad, DeclareOpInte
   let has_physical_tensor_desc_infer_fn = 1;
   let has_get_sbp_fn = 1;
   let has_data_type_infer_fn = 1;
-  let has_device_infer_fn = 1;
+  let has_device_and_stream_infer_fn = 1;
 }
 
 def OneFlow_SplitLikeOp : OneFlow_BaseOp<"split_like", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
@@ -4910,7 +4910,7 @@ def OneFlow__ncclLogical_2DSameDim0All2allOp : OneFlow_BaseOp<"_nccl_logical_2D_
   let has_logical_tensor_desc_infer_fn = 1;
   let has_get_sbp_fn = 1;
   let has_data_type_infer_fn = 1;
-  let has_device_infer_fn = 1;
+  let has_device_and_stream_infer_fn = 1;
   let has_nd_sbp_infer_fn = 1;
 }
 
@@ -4928,7 +4928,7 @@ def OneFlow__ncclLogical_2DSameDim0AllGatherOp : OneFlow_BaseOp<"_nccl_logical_2
   let has_logical_tensor_desc_infer_fn = 1;
   let has_get_sbp_fn = 1;
   let has_data_type_infer_fn = 1;
-  let has_device_infer_fn = 1;
+  let has_device_and_stream_infer_fn = 1;
   let has_nd_sbp_infer_fn = 1;
 }
 
@@ -4946,7 +4946,7 @@ def OneFlow__ncclLogical_2DSameDim0AllGatherNoncontinuousOp : OneFlow_BaseOp<"_n
   let has_logical_tensor_desc_infer_fn = 1;
   let has_get_sbp_fn = 1;
   let has_data_type_infer_fn = 1;
-  let has_device_infer_fn = 1;
+  let has_device_and_stream_infer_fn = 1;
   let has_nd_sbp_infer_fn = 1;
 }
 
@@ -4964,7 +4964,7 @@ def OneFlow__ncclLogical_2DSameDim0AllReduceOp : OneFlow_BaseOp<"_nccl_logical_2
   let has_logical_tensor_desc_infer_fn = 1;
   let has_get_sbp_fn = 1;
   let has_data_type_infer_fn = 1;
-  let has_device_infer_fn = 1;
+  let has_device_and_stream_infer_fn = 1;
   let has_nd_sbp_infer_fn = 1;
 }
 
@@ -4982,7 +4982,7 @@ def OneFlow__ncclLogical_2DSameDim1AllReduceOp : OneFlow_BaseOp<"_nccl_logical_2
   let has_logical_tensor_desc_infer_fn = 1;
   let has_get_sbp_fn = 1;
   let has_data_type_infer_fn = 1;
-  let has_device_infer_fn = 1;
+  let has_device_and_stream_infer_fn = 1;
   let has_nd_sbp_infer_fn = 1;
 }
 
@@ -5000,7 +5000,7 @@ def OneFlow__ncclLogicalAllGatherOp : OneFlow_BaseOp<"_nccl_logical_all_gather",
   let has_logical_tensor_desc_infer_fn = 1;
   let has_get_sbp_fn = 1;
   let has_data_type_infer_fn = 1;
-  let has_device_infer_fn = 1;
+  let has_device_and_stream_infer_fn = 1;
   let has_nd_sbp_infer_fn = 1;
 }
 
@@ -5018,7 +5018,7 @@ def OneFlow__ncclLogicalAllGatherNoncontinuousOp : OneFlow_BaseOp<"_nccl_logical
   let has_logical_tensor_desc_infer_fn = 1;
   let has_get_sbp_fn = 1;
   let has_data_type_infer_fn = 1;
-  let has_device_infer_fn = 1;
+  let has_device_and_stream_infer_fn = 1;
   let has_nd_sbp_infer_fn = 1;
 }
 
@@ -5036,7 +5036,7 @@ def OneFlow__ncclLogicalAllReduceOp : OneFlow_BaseOp<"_nccl_logical_all_reduce",
   let has_logical_tensor_desc_infer_fn = 1;
   let has_get_sbp_fn = 1;
   let has_data_type_infer_fn = 1;
-  let has_device_infer_fn = 1;
+  let has_device_and_stream_infer_fn = 1;
   let has_nd_sbp_infer_fn = 1;
 }
 
@@ -5054,7 +5054,7 @@ def OneFlow__ncclLogicalReduceScatterOp : OneFlow_BaseOp<"_nccl_logical_reduce_s
   let has_logical_tensor_desc_infer_fn = 1;
   let has_get_sbp_fn = 1;
   let has_data_type_infer_fn = 1;
-  let has_device_infer_fn = 1;
+  let has_device_and_stream_infer_fn = 1;
   let has_nd_sbp_infer_fn = 1;
 }
 
@@ -5072,7 +5072,7 @@ def OneFlow__ncclLogicalS2sOp : OneFlow_BaseOp<"_nccl_logical_s2s", [NoSideEffec
   let has_logical_tensor_desc_infer_fn = 1;
   let has_get_sbp_fn = 1;
   let has_data_type_infer_fn = 1;
-  let has_device_infer_fn = 1;
+  let has_device_and_stream_infer_fn = 1;
   let has_nd_sbp_infer_fn = 1;
 }
 
@@ -8071,7 +8071,7 @@ def OneFlow_CopyOp : OneFlow_BaseOp<"copy", [NoSideEffect, DeclareOpInterfaceMet
   let has_physical_tensor_desc_infer_fn = 1;
   let has_get_sbp_fn = 1;
   let has_data_type_infer_fn = 1;
-  let has_device_infer_fn = 1;
+  let has_device_and_stream_infer_fn = 1;
 }
 
 def OneFlow_CountNotFiniteOp : OneFlow_BaseOp<"count_not_finite", [NoSideEffect, NoGrad, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
