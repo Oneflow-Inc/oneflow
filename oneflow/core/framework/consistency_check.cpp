@@ -22,6 +22,7 @@ limitations under the License.
 #include "oneflow/core/framework/synced_symbol_map.h"
 #include "oneflow/core/framework/sync_symbol_nd_sbp.h"
 #include "oneflow/core/framework/sync_symbol_parallel_desc.h"
+#include "oneflow/core/common/constant.h"
 
 namespace oneflow {
 
@@ -173,8 +174,7 @@ Maybe<void> DataConsistencyCheck(const void* buffer_ptr, size_t buffer_size,
       });
   JUST(TransportUtil::SendToNextRankInRing(rank_group, transport_token, &ctx));
   JUST(TransportUtil::ReceiveFromPrevRankInRing(rank_group, transport_token, &ctx));
-  JUST_MSG(ctx.WaitDone(), "Maybe executing different code in different ranks, please check if "
-                           "the code is branched and operates on the global tensor.");
+  JUST_MSG(ctx.WaitDone(), kAsymmetricCodeErrorMsg);
   CHECK_OR_RETURN(std::memcmp(buffer_ptr, reinterpret_cast<const void*>(recv_ptr), buffer_size)
                   == 0)
       << "Each rank must have same input sequence or numpy array";
@@ -193,8 +193,7 @@ Maybe<void> MetaInfoConsistencyCheckUtil(const Symbol<ParallelDesc>& placement,
       transport_token, placement, nd_sbp, grad_nd_sbp);
   JUST(TransportUtil::SendToNextRankInRing(rank_group, transport_token, ctx.get()));
   JUST(TransportUtil::ReceiveFromPrevRankInRing(rank_group, transport_token, ctx.get()));
-  JUST_MSG(ctx->WaitDone(), "Maybe executing different code in different ranks, please check if "
-                            "the code is branched and operates on the global tensor.");
+  JUST_MSG(ctx->WaitDone(), kAsymmetricCodeErrorMsg);
   JUST(ctx->Check());
   return Maybe<void>::Ok();
 }
@@ -223,7 +222,7 @@ NonRecursiveMetaInfoConsistencyCheckScope::~NonRecursiveMetaInfoConsistencyCheck
 Maybe<void> MetaInfoConsistencyCheck(const Symbol<ParallelDesc>& placement,
                                      const Optional<Symbol<NdSbp>>& nd_sbp,
                                      const Optional<Symbol<NdSbp>>& grad_nd_sbp) {
-  if (!IsMetaInfoConsistencyCheckDisable()) {
+  if (std::getenv("ONEFLOW_DEBUG_MODE") != nullptr && !IsMetaInfoConsistencyCheckDisable()) {
     JUST(MetaInfoConsistencyCheckUtil(placement, nd_sbp, grad_nd_sbp));
   }
   return Maybe<void>::Ok();
@@ -231,7 +230,7 @@ Maybe<void> MetaInfoConsistencyCheck(const Symbol<ParallelDesc>& placement,
 
 Maybe<void> MetaInfoConsistencyCheck(const Symbol<ParallelDesc>& placement,
                                      const Optional<Symbol<NdSbp>>& nd_sbp) {
-  if (!IsMetaInfoConsistencyCheckDisable()) {
+  if (std::getenv("ONEFLOW_DEBUG_MODE") != nullptr && !IsMetaInfoConsistencyCheckDisable()) {
     JUST(MetaInfoConsistencyCheckUtil(placement, nd_sbp, Optional<Symbol<NdSbp>>()));
   }
   return Maybe<void>::Ok();
