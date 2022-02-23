@@ -407,4 +407,6 @@ def _worker_loop(
         data_queue.cancel_join_thread()
         data_queue.close()
 
+    # Python subprocess will be exited by os._exit(), which skips destructors of
+    # C++ objects, so we should explicitly call unlink_all_shared_memory() here
     unlink_all_shared_memory()

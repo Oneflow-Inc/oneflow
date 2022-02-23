@@ -94,13 +94,6 @@ Maybe<void*> ShmSetUp(const std::string& shm_name, size_t* shm_size) {
 }
 }  // namespace
 
-void unlink_all_shared_memory() {
-  // Here we deliberately do not handle unlink errors.
-  for (auto x : shared_memory_manager.GetShmName()) {
-    shm_unlink(x.c_str());
-  }
-}
-
 void SharedMemoryManager::AddShmName(const std::string& shm_name) {
   shm_names_.push_back(shm_name);
 }
@@ -117,12 +110,15 @@ Maybe<void> SharedMemoryManager::DeleteShmName(const std::string& shm_name) {
   return Maybe<void>::Ok();
 }
 
-std::vector <std::string> SharedMemoryManager::GetShmName() {
-  return shm_names_;
+void SharedMemoryManager::UnlinkAllShms() {
+  // Here we deliberately do not handle unlink errors.
+  for (const auto& shm : shm_names_) {
+    shm_unlink(shm.c_str());
+  }
 }
 
 SharedMemoryManager::~SharedMemoryManager() {
-  unlink_all_shared_memory();
+  UnlinkAllShms();
 }
 
 SharedMemory::~SharedMemory() { CHECK_JUST(Close()); }
