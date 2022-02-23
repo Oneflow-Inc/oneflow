@@ -23,7 +23,7 @@ template<typename T>
 struct LeakyReluFunctor {
   OF_DEVICE_FUNC explicit LeakyReluFunctor(float alpha) : alpha(alpha) {}
   OF_DEVICE_FUNC T operator()(T x) const {
-    return (x > static_cast<T>(0)) ? x : static_cast<T>(alpha * x);
+    return (x > 0) ? x : alpha * x;
   }
   const T alpha;
 };
@@ -32,7 +32,7 @@ template<typename T>
 struct LeakyReluGradFunctor {
   OF_DEVICE_FUNC explicit LeakyReluGradFunctor(float alpha) : alpha(alpha) {}
   OF_DEVICE_FUNC T operator()(T x, T dy) const {
-    return (x > static_cast<T>(0)) ? dy : static_cast<T>(dy * alpha);
+    return (x > 0) ? dy : dy * alpha;
   }
   const T alpha;
 };
