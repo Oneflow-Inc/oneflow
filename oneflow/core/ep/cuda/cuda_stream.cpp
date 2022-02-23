@@ -124,9 +124,9 @@ CudaStream::~CudaStream() {
   OF_CUDA_CHECK(cudaStreamSynchronize(cuda_stream_));
   OF_CUDNN_CHECK(cudnnDestroy(cudnn_handle_));
   OF_CUBLAS_CHECK(cublasDestroy(cublas_handle_));
-  #if CUDA_VERSION >= 10010
+#if CUDA_VERSION >= 10010
   OF_CUBLAS_CHECK(cublasLtDestroy(cublas_lt_handle_));
-  #endif
+#endif
   OF_CUDA_CHECK(cudaStreamDestroy(cuda_stream_));
   OF_CUDA_CHECK(cudaFree(workspace_));
 }
@@ -163,7 +163,7 @@ cublasHandle_t CudaStream::cublas_handle() const { return cublas_handle_; }
 
 #if CUDA_VERSION >= 10010
 cublasLtHandle_t CudaStream::cublas_lt_handle() const { return cublas_lt_handle_; }
-#endif 
+#endif
 
 void* CudaStream::cublas_workspace() const { return workspace_; }
 

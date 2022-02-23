@@ -39,7 +39,7 @@ def _test_fused_matmul_bias_add_relu(
     device,
 ):
     x = np.random.uniform(low=-1, high=1, size=(batchsize, in_feature))
-    
+
     fused_x = flow.tensor(x, dtype=dtype, device=device, requires_grad=True)
     naive_x = flow.tensor(x, dtype=dtype, device=device, requires_grad=True)
 
@@ -51,7 +51,9 @@ def _test_fused_matmul_bias_add_relu(
     hidden_num = len(hidden_size_list)
 
     if hidden_num != 0:
-        np_first_weight = np.random.uniform(low=-1, high=1, size=(hidden_size_list[0], in_feature))
+        np_first_weight = np.random.uniform(
+            low=-1, high=1, size=(hidden_size_list[0], in_feature)
+        )
         np_first_bias = np.random.uniform(low=-1, high=1, size=hidden_size_list[0])
 
         fused_weight_list.append(
@@ -68,10 +70,11 @@ def _test_fused_matmul_bias_add_relu(
         )
 
     for idx in range(1, hidden_num):
-        np_weight = np.random.uniform(low=-1, high=1, size=(hidden_size_list[idx], hidden_size_list[idx - 1]))
+        np_weight = np.random.uniform(
+            low=-1, high=1, size=(hidden_size_list[idx], hidden_size_list[idx - 1])
+        )
         np_bias = np.random.uniform(low=-1, high=1, size=hidden_size_list[idx])
 
-        
         fused_weight_list.append(
             flow.tensor(np_weight, dtype=dtype, device=device, requires_grad=True)
         )
@@ -86,12 +89,14 @@ def _test_fused_matmul_bias_add_relu(
         )
 
     np_final_weight = np.random.uniform(low=-1, high=1, size=(out_feature, in_feature))
-    
+
     if hidden_num != 0:
-        np_final_weight = np.random.uniform(low=-1, high=1, size=(out_feature, hidden_size_list[-1]))
+        np_final_weight = np.random.uniform(
+            low=-1, high=1, size=(out_feature, hidden_size_list[-1])
+        )
 
     np_final_bias = np.random.uniform(low=-1, high=1, size=(out_feature))
-    
+
     fused_weight_list.append(
         flow.tensor(np_final_weight, dtype=dtype, device=device, requires_grad=True)
     )
@@ -118,7 +123,7 @@ def _test_fused_matmul_bias_add_relu(
         naive_bias_list[0],
         False if hidden_num != 0 else skip_final_activation,
     )
-    
+
     for idx in range(1, hidden_num + 1):
         if idx == hidden_num:
             naive_out = _matmul_bias_relu(
@@ -131,7 +136,6 @@ def _test_fused_matmul_bias_add_relu(
             naive_out = _matmul_bias_relu(
                 naive_out, naive_weight_list[idx], naive_bias_list[idx], False
             )
-
 
     total_out = fused_out.sum() + naive_out.sum()
     total_out.backward()
@@ -162,6 +166,7 @@ def _test_fused_matmul_bias_add_relu(
     test_case.assertTrue(
         np.allclose(fused_x.grad.numpy(), naive_x.grad.numpy(), atol=1e-4, rtol=1e-4)
     )
+
 
 @flow.unittest.skip_unless_1n1d()
 class TestFusedMatmulBiasAddRelu(flow.unittest.TestCase):

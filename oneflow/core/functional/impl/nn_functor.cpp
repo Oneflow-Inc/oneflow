@@ -285,7 +285,7 @@ class CublasFusedMLPFunctor {
                            const TensorTuple& biases, bool skip_final_activation) const {
     const int64_t weight_size = weights.size();
     const int64_t bias_size = biases.size();
-    CHECK_GE_OR_RETURN(weight_size, 1) << "The number of weights should be greater equal than 1. "; 
+    CHECK_GE_OR_RETURN(weight_size, 1) << "The number of weights should be greater equal than 1. ";
     CHECK_EQ_OR_RETURN(weight_size, bias_size)
         << "The number of weights should be equal to biases. ";
     int64_t m = 0, n = 0, k = 0;
@@ -338,8 +338,9 @@ class CublasFusedMLPFunctor {
     // Fall back to matmul + bias_add + relu
     std::shared_ptr<one::Tensor> out = x;
     for (int32_t layer_idx = 0; layer_idx < weight_size; layer_idx++) {
-      out = JUST(functional::BiasAdd(JUST(functional::MatMul(out, weights[layer_idx], false, true, 1.0)),
-                                biases[layer_idx], 1));
+      out = JUST(
+          functional::BiasAdd(JUST(functional::MatMul(out, weights[layer_idx], false, true, 1.0)),
+                              biases[layer_idx], 1));
       if (layer_idx == weight_size - 1) {
         if (!skip_final_activation) { out = JUST(functional::Relu(out, false)); }
       } else {
