@@ -16,7 +16,6 @@ project(oneflow-ci-test)
 include(CMakeDependentOption)
 set(PYTHON_EXECUTABLE python3 CACHE STRING "python3 exe to run test, usually is the python3 installation oneflow is linked to")
 set(ONEFLOW_SRC_DIR ${CMAKE_SOURCE_DIR} CACHE STRING "source dir of oneflow")
-set(IS_DEV ON CACHE BOOL "")
 set(BUILD_CUDA ON CACHE BOOL "")
 # TODO: generate resource spec by running nvidia-smi
 set(CODEGEN_PYTHON_EXECUTABLE python3 CACHE STRING "Python executable to generate spec .json files")
@@ -24,7 +23,7 @@ set(CTEST_RESOURCE_SPEC_FILE "${PROJECT_BINARY_DIR}/gen-resource-spec.json" CACH
 if(BUILD_CUDA)
   set(CTEST_RESOURCE_SPEC_FILE_ARGS "--cuda")
 endif()
-
+message(STATUS "ONEFLOW_SRC_DIR: ${ONEFLOW_SRC_DIR}")
 execute_process(
   COMMAND ${CODEGEN_PYTHON_EXECUTABLE} ${PROJECT_SOURCE_DIR}/scripts/gen-resource-spec.py ${CTEST_RESOURCE_SPEC_FILE_ARGS}
   OUTPUT_FILE ${CTEST_RESOURCE_SPEC_FILE}
@@ -135,10 +134,11 @@ function(add_oneflow_python_test)
     else()
       message(FATAL_ERROR "unsupprted ONEFLOW_TEST_DEVICE_NUM: ${ONEFLOW_TEST_DEVICE_NUM}")
     endif()
+    set(PROXY_ENV_VAR "HTTP_PROXY=;HTTPS_PROXY=;http_proxy=;https_proxy=")
     set(resourceGroups "${resourceGroups},cpu:${ONEFLOW_TEST_DEVICE_NUM}")
     set_tests_properties(${TEST_NAME}
       PROPERTIES
-        ENVIRONMENT "$<$<NOT:$<BOOL:${BUILD_CUDA}>>:ONEFLOW_TEST_CPU_ONLY=1>;$<$<BOOL:${IS_DEV}>:PYTHONPATH=${ONEFLOW_SRC_DIR}/python:$ENV{PYTHONPATH}>;ONEFLOW_TEST_DEVICE_NUM=${ONEFLOW_TEST_DEVICE_NUM}"
+        ENVIRONMENT "${PROXY_ENV_VAR};$<$<NOT:$<BOOL:${BUILD_CUDA}>>:ONEFLOW_TEST_CPU_ONLY=1>;ONEFLOW_TEST_DEVICE_NUM=${ONEFLOW_TEST_DEVICE_NUM}"
         RESOURCE_GROUPS "${resourceGroups}"
         LABELS "${testLabels};"
         TIMEOUT 300 # 5 minutes
