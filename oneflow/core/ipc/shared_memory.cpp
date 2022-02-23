@@ -117,8 +117,12 @@ void SharedMemoryManager::UnlinkAllShms() {
   }
 }
 
+void SharedMemoryManagerFree(){
+  shared_memory_manager.UnlinkAllShms();
+}
+
 SharedMemoryManager::~SharedMemoryManager() {
-  UnlinkAllShms();
+  SharedMemoryManagerFree();
 }
 
 SharedMemory::~SharedMemory() { CHECK_JUST(Close()); }

@@ -37,7 +37,7 @@ class SharedMemoryManager final {
   std::vector <std::string> shm_names_;
 };
 
-extern SharedMemoryManager shared_memory_manager;
+void SharedMemoryManagerFree();
 
 class SharedMemory final {
  public:

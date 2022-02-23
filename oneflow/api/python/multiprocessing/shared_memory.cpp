@@ -37,7 +37,7 @@ ONEFLOW_API_PYBIND11_MODULE("multiprocessing", m) {
                              })
       .def_property_readonly("name", &ipc::SharedMemory::name)
       .def_property_readonly("size", &ipc::SharedMemory::size);
-  m.def("unlink_all_shared_memory", []() { return ipc::shared_memory_manager.UnlinkAllShms(); });
+  m.def("unlink_all_shared_memory", []() { return ipc::SharedMemoryManagerFree(); });
 }
 
 }  // namespace oneflow
