@@ -26,13 +26,13 @@ import oneflow.unittest
 from oneflow.test_utils.automated_test_util import *
 
 
-@autotest(n=5, check_graph=False)
+@autotest(n=1, check_graph=False)
 def _test_cat_with_random_data(test_case, placement, sbp):
     x = random_tensor(ndim=2, dim0=8, dim1=8).to_global(placement=placement, sbp=sbp)
     return torch.cat((x, x), random(0, 2).to(int))
 
 
-@autotest(n=5, auto_backward=False, check_graph=True)
+@autotest(n=1, auto_backward=False, check_graph=True)
 def _test_concat_with_input_0_size_data(test_case, placement, sbp):
     x = random_tensor(4, 8, 8, 2, 4).to_global(placement=placement, sbp=sbp)
     y = random_tensor(4, 8, 8, random(0, 3) * 8, 8).to_global(
@@ -42,7 +42,7 @@ def _test_concat_with_input_0_size_data(test_case, placement, sbp):
     return z
 
 
-@autotest(n=5, auto_backward=False, check_graph=True)
+@autotest(n=1, auto_backward=False, check_graph=True)
 def _test_concat_with_output_0_size_data(test_case, placement, sbp):
     x = random_tensor(4, 8, 0, 2, 4).to_global(placement=placement, sbp=sbp)
     y = random_tensor(4, 8, 0, 2, 4).to_global(placement=placement, sbp=sbp)
@@ -51,7 +51,7 @@ def _test_concat_with_output_0_size_data(test_case, placement, sbp):
     return z
 
 
-@autotest(n=5, check_graph=False)
+@autotest(n=1, check_graph=False)
 def _test_cat_only_one_tensor(test_case, placement, sbp):
     x = random_tensor(4, 8, 8, random(1, 3) * 8, 8).to_global(
         placement=placement, sbp=sbp
