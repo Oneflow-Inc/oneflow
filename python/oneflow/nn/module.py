@@ -23,6 +23,7 @@ import numpy as np
 import oneflow as flow
 from oneflow.framework.tensor import Tensor
 from oneflow.nn.parameter import Parameter
+from contextlib import contextmanager
 
 
 class _IncompatibleKeys(
@@ -66,6 +67,14 @@ class Module(object):
 
     def forward(self, *args, **kwargs):
         raise NotImplementedError()
+
+    @contextmanager
+    def global_param_grad_no_sync(self):
+        guard = flow._oneflow_internal.GlobalParamGradSyncMode(False)
+        try:
+            yield
+        finally:
+            del guard
 
     def __call__(self, *args, **kwargs):
         for hook in itertools.chain(self._forward_pre_hooks.values()):
