@@ -22,6 +22,8 @@ namespace oneflow {
 
 int64_t GetOpKernelRandomSeed(const user_op::KernelInitContext* ctx);
 
+int64_t GetOpKernelSeed(const user_op::KernelInitContext* ctx);
+
 }  // namespace oneflow
 
 #endif  // ONEFLOW_USER_KERNELS_RANDOM_SEED_UTIL_H_

@@ -46,7 +46,7 @@ class GpuRandPermKernel final : public user_op::OpKernel {
     const auto& generator = CHECK_JUST(one::MakeGenerator(kCUDA));
     /* each rank get a different seed to generate the same distribution,
        but different values of local tensor */
-    generator->set_current_seed(ctx->Attr<int64_t>("seed") + GetOpKernelRandomSeed(ctx));
+    generator->set_current_seed(ctx->Attr<int64_t>("seed") + GetOpKernelSeed(ctx));
     return std::make_shared<DistributionKernelState>(generator);
   }
 
