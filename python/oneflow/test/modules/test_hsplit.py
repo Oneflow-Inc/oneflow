@@ -21,7 +21,7 @@ import oneflow.unittest
 
 @flow.unittest.skip_unless_1n1d()
 class TestHsplitVec(flow.unittest.TestCase):
-    @autotest(check_graph=True)
+    @autotest(n=5, check_graph=True)
     def test_flow_hsplit_vec(test_case):
         device = random_device()
         x = random_tensor(
@@ -37,7 +37,7 @@ class TestHsplitVec(flow.unittest.TestCase):
 
 @flow.unittest.skip_unless_1n1d()
 class TestHsplitInt(flow.unittest.TestCase):
-    @autotest(check_graph=True)
+    @autotest(n=10, check_graph=True)
     def test_flow_hsplit_int(test_case):
         device = random_device()
         x = random_tensor(
