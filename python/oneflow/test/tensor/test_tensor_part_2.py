@@ -47,7 +47,7 @@ class TestTensor(flow.unittest.TestCase):
         y = x.transpose(dim0=random(1, 3).to(int), dim1=random(1, 3).to(int))
         return y
 
-    @autotest(check_graph=True)
+    @autotest(n=5, check_graph=True)
     def test_t_tensor_with_random_data(test_case):
         device = random_device()
         x = random_tensor(
