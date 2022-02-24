@@ -40,7 +40,7 @@ class TestTensor(flow.unittest.TestCase):
         )
         return y
 
-    @autotest(check_graph=True)
+    @autotest(n=5, check_graph=True)
     def test_transpose_tensor_with_random_data(test_case):
         device = random_device()
         x = random_tensor(ndim=4).to(device)
@@ -372,7 +372,7 @@ class TestTensor(flow.unittest.TestCase):
 
     # TODO(): 'var backward' is composed of several other ops,
     # reducemean doesn't support 0-shape for now
-    @autotest(auto_backward=False, check_graph=True)
+    @autotest(n=5, auto_backward=False, check_graph=True)
     def test_tensor_var_one_dim_with_random_data(test_case):
         device = random_device()
         x = random_tensor(ndim=4).to(device)
@@ -705,7 +705,7 @@ class TestTensor(flow.unittest.TestCase):
         return x.erfinv()
 
     @autotest(
-        check_graph=True, auto_backward=False
+        n=10, check_graph=True, auto_backward=False
     )  # Todo: After add gradient func, you should set `auto_backward` as True
     def test_erfinv_inplace_tensor_with_random_data(test_case):
         device = random_device()
@@ -867,7 +867,7 @@ class TestTensorNumpy(flow.unittest.TestCase):
         # x = ori_x.to_global(placement=placement, sbp=[flow.sbp.split(0), flow.sbp.broadcast])
 
     @flow.unittest.skip_unless_1n1d()
-    @autotest(check_graph=True)
+    @autotest(n=5, check_graph=True)
     def test_tensor_bmm(test_case):
         t = random(1, 5)
         k = random(1, 5)
@@ -877,7 +877,7 @@ class TestTensorNumpy(flow.unittest.TestCase):
         return of_out
 
     @flow.unittest.skip_unless_1n1d()
-    @autotest(check_graph=True)
+    @autotest(n=5, check_graph=True)
     def test_tensor_split(test_case):
         k0 = random(2, 6)
         k1 = random(2, 6)
@@ -889,7 +889,7 @@ class TestTensorNumpy(flow.unittest.TestCase):
         return torch.cat(res, rand_dim)
 
     @flow.unittest.skip_unless_1n1d()
-    @autotest(check_graph=True)
+    @autotest(n=5, check_graph=True)
     def test_tensor_split_sizes(test_case):
         k0 = random(2, 6)
         k1 = 7
@@ -900,7 +900,7 @@ class TestTensorNumpy(flow.unittest.TestCase):
         return torch.cat(res, dim=1)
 
     @flow.unittest.skip_unless_1n1d()
-    @autotest(check_graph=True)
+    @autotest(n=5, check_graph=True)
     def test_tensor_swapaxes(test_case):
         device = random_device()
         x = random_tensor(ndim=3).to(device)
