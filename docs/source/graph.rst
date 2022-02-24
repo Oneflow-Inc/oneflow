@@ -15,7 +15,6 @@ Base class for running neural networks in Static Graph Mode.
             debug,
             __repr__,
 
-    :member-order: bysource
 
 
 .. autoclass:: oneflow.nn.graph.graph_config.GraphConfig
@@ -31,6 +30,7 @@ Base class for running neural networks in Static Graph Mode.
             enable_tensorrt,
             enable_openvino,
             enable_cudnn_conv_heuristic_search_algo,
+
 
 
 .. autoclass:: oneflow.nn.graph.block_config.BlockConfig
