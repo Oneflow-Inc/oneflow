@@ -57,7 +57,7 @@ class ReflectionPad2d : public Pad2d {
     CHECK_EQ_OR_RETURN(out_grads.size(), 1);
     in_grads->resize(1);
     if (ctx->requires_grad) {
-      in_grads[0] =
+      (*in_grads)[0] =
           JUST(functional::PadGrad(JUST(VectorAt(out_grads, 0)), ctx->paddings, "reflect", 0));
     }
     return Maybe<void>::Ok();
@@ -71,7 +71,7 @@ class ReplicationPad2d : public Pad2d {
     CHECK_EQ_OR_RETURN(out_grads.size(), 1);
     in_grads->resize(1);
     if (ctx->requires_grad) {
-      in_grads[0] =
+      (*in_grads)[0] =
           JUST(functional::PadGrad(JUST(VectorAt(out_grads, 0)), ctx->paddings, "replicate", 0));
     }
     return Maybe<void>::Ok();
@@ -119,8 +119,8 @@ class ConstantPadNd : public OpExprGradFunction<ConstantPadNdCaptureState> {
     CHECK_EQ_OR_RETURN(out_grads.size(), 1);
     in_grads->resize(1);
     if (ctx->requires_grad) {
-      in_grads->at(0) = JUST(functional::PadGrad(JUST(VectorAt(out_grads, 0)), ctx->paddings,
-                                                 "constant", ctx->padding_value));
+      (*in_grads)[0] = JUST(functional::PadGrad(JUST(VectorAt(out_grads, 0)), ctx->paddings,
+                                                "constant", ctx->padding_value));
     }
     return Maybe<void>::Ok();
   }
