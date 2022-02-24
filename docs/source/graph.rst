@@ -14,7 +14,6 @@ Base class for running neural networks in Static Graph Mode.
             name,
             debug,
             __repr__,
-            _add_block,
 
     :member-order: bysource
 

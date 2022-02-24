@@ -56,35 +56,35 @@ class GraphConfig(object):
         self._outputs_buffer_size = value
 
     def enable_amp(self, mode: bool = True):
-        r"""If true, then graph will use mixed precision mode, it means use both float16 and float32 during model training.
+        r"""If set to true, then graph will use mixed precision mode, it means use both float16 and float32 during model training.
 
         Args:
-            mode (bool, optional): Default is True.
+            mode (bool, optional): The default vaule is true.
         """
         assert type(mode) is bool
         self.proto.set_enable_auto_mixed_precision(mode)
 
     def allow_fuse_model_update_ops(self, mode: bool = True):
-        r"""If true, try to fuse cast + scale + l1_l2_regularize_gradient + model_update to one op to improve performance.
+        r"""If set to true, try to fuse cast + scale + l1_l2_regularize_gradient + model_update to one op to improve performance.
 
         Args:
-            mode (bool, optional): Default is True.
+            mode (bool, optional): The default vaule is true.
         """
         self.proto.set_enable_fuse_model_update_ops(mode)
 
     def allow_fuse_add_to_output(self, mode: bool = True):
-        r"""If true, try to fuse a binary element-wise add operetor to one of the predecessors to improve performance.
+        r"""If set to true, try to fuse a binary element-wise add operetor to one of the predecessors to improve performance.
 
         Args:
-            mode (bool, optional): Default is True.
+            mode (bool, optional): The default vaule is true.
         """
         self.proto.set_enable_fuse_add_to_output(mode)
 
     def allow_fuse_cast_scale(self, mode: bool = True):
-        r"""If true, try to fuse cast and scalar_mul_by_tensor to improve performance.
+        r"""If set to true, try to fuse cast and scalar_mul_by_tensor to improve performance.
     
         Args:
-            mode (bool, optional): Default is True.
+            mode (bool, optional): The default vaule is true.
         """
         self.proto.set_enable_fuse_cast_scale(mode)
 
@@ -163,7 +163,7 @@ class GraphConfig(object):
     
         Args:
             mode (bool, optional): Whether enable cudnn conv operatioin to use heuristic
-                                   search algorithm. Default is True.
+                                   search algorithm. The default vaule is true.
         """
         self.proto.set_cudnn_conv_heuristic_search_algo(mode)
 
