@@ -25,6 +25,7 @@ limitations under the License.
 #include "oneflow/extension/python/numpy.h"
 #include "oneflow/core/common/decorator.h"
 #include "oneflow/core/framework/consistency_check.h"
+#include "oneflow/core/functional/impl/common.h"
 
 namespace py = pybind11;
 
@@ -32,6 +33,7 @@ namespace oneflow {
 namespace one {
 
 Maybe<void> EagerMirroredTensorZeros(const std::shared_ptr<Tensor>& t) {
+  JUST(functional::CheckInplaceValid(t));
   std::shared_ptr<MirroredTensor> local_tensor;
   if (t->is_local()) {
     local_tensor = JUST(t->AsMirroredTensor());
