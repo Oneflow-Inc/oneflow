@@ -37,7 +37,7 @@ class SharedMemoryManager final {
  private:
   SharedMemoryManager() = default;
   void FindAndDeleteOutdatedShmNames();
-  std::vector <std::string> shm_names_;
+  std::set<std::string> shm_names_;
 };
 
 class SharedMemory final {

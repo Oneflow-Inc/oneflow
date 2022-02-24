@@ -17,6 +17,7 @@ limitations under the License.
 #include "oneflow/core/common/util.h"
 #include "oneflow/core/common/pcheck.h"
 #include "oneflow/core/common/str_util.h"
+#include "oneflow/core/common/optional.h"
 #ifdef __linux__
 #include <sys/types.h>
 #include <sys/mman.h>
@@ -24,6 +25,7 @@ limitations under the License.
 #include <sys/stat.h>
 #include <fcntl.h>
 #include <error.h>
+#include <dirent.h>
 #endif
 
 namespace oneflow {
@@ -36,7 +38,7 @@ namespace {
 // return errno
 int ShmOpen(const std::string& shm_name, int* fd) {
   SharedMemoryManager::get().AddShmName(shm_name);
-  *fd = shm_open(shm_name.c_str(), O_CREAT | O_RDWR, S_IRUSR | S_IWUSR);
+  *fd = shm_open(("/" + shm_name).c_str(), O_CREAT | O_RDWR, S_IRUSR | S_IWUSR);
   return *fd == -1 ? errno : 0;
 }
 
@@ -45,7 +47,7 @@ int ShmOpen(std::string* shm_name, int* fd) {
   int err = EEXIST;
   while (true) {
     static constexpr int kNameLength = 8;
-    *shm_name = std::string("/aofshm_") + GenAlphaNumericString(kNameLength);
+    *shm_name = std::string("ofshm_") + GenAlphaNumericString(kNameLength);
     err = ShmOpen(*shm_name, fd);
     if (err != EEXIST) { return err; }
   }
@@ -89,6 +91,19 @@ Maybe<void*> ShmSetUp(const std::string& shm_name, size_t* shm_size) {
   TODO_THEN_RETURN();
 #endif
 }
+
+Optional<std::set<std::string>> GetContentsOfShmDirectory() {
+  if (auto dir = opendir("/dev/shm/")) {
+    std::set<std::string> contents;
+    while (auto f = readdir(dir)) {
+      if (f->d_name[0] == '.') continue;
+      contents.insert(f->d_name);
+    }
+    closedir(dir);
+    return contents;
+  }
+  return NullOpt;
+}
 }  // namespace
 
 SharedMemoryManager& SharedMemoryManager::get() {
@@ -103,26 +118,26 @@ void SharedMemoryManager::FindAndDeleteOutdatedShmNames() {
   const int delete_invalid_names_interval =
       ParseIntegerFromEnv("OF_DELETE_INVALID_NAMES_INTERVAL", 1000);
   if (counter % delete_invalid_names_interval == 0) {
-    shm_names_.erase(std::remove_if(shm_names_.begin(), shm_names_.end(),
-                                    [](const std::string& cur_shm_name) {
-                                      int fd = shm_open(cur_shm_name.c_str(), O_RDONLY, 0);
-                                      if (fd == -1) {
-                                        if (errno == ENOENT) {
-                                          return true;
-                                        }
-                                      } else {
-                                        close(fd);
-                                      }
-                                      return false;
-                                    }),
-                     shm_names_.end());
+    const auto& opt_existing_shm_names = GetContentsOfShmDirectory();
+    // TODO: update optional::map or optional::bind and use them instead
+    if (opt_existing_shm_names.has_value()) {
+      const auto& existing_shm_names = CHECK_JUST(opt_existing_shm_names);
+      // std::remove_if doesn't support std::map
+      for (auto it = shm_names_.begin(); it != shm_names_.end(); /* do nothing */) {
+        if (existing_shm_names->find(*it) == existing_shm_names->end()) {
+          it = shm_names_.erase(it);
+        } else {
+          it++;
+        }
+      }
+    }
   }
   counter++;
 }
 
 void SharedMemoryManager::AddShmName(const std::string& shm_name) {
   FindAndDeleteOutdatedShmNames();
-  shm_names_.push_back(shm_name);
+  shm_names_.insert(shm_name);
 }
 
 Maybe<void> SharedMemoryManager::DeleteShmName(const std::string& shm_name) {
@@ -140,7 +155,9 @@ void SharedMemoryManager::UnlinkAllShms() {
   for (const auto& shm : shm_names_) { shm_unlink(shm.c_str()); }
 }
 
-SharedMemoryManager::~SharedMemoryManager() { std::cout << "destructor" << std::endl; UnlinkAllShms(); }
+SharedMemoryManager::~SharedMemoryManager() {
+  UnlinkAllShms();
+}
 
 SharedMemory::~SharedMemory() { CHECK_JUST(Close()); }
 
