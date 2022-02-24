@@ -36,79 +36,95 @@ def generate_graph(func):
     return Graph()
 
 
-# graph need to be a new graph, due to the limit of nn.Graph
-def test_xrt_openvino(test_case, graph, input, ref_out, rtol=1e-3, atol=1e-4):
-    if os.getenv("ONEFLOW_TEST_FORCE_OPENVINO") and not flow.sysconfig.with_openvino():
-        test_case.assertTrue(False)
+@flow.unittest.skip_unless_1n1d()
+class TestXRT(flow.unittest.TestCase):
+    # graph need to be a new graph, due to the limit of nn.Graph
+    def test_xrt_openvino(test_case, graph, input, ref_out, rtol=1e-3, atol=1e-4):
+        if os.getenv("ONEFLOW_TEST_FORCE_OPENVINO") and not flow.sysconfig.with_openvino():
+        if (
+            os.getenv("ONEFLOW_TEST_FORCE_OPENVINO")
+            and not flow.sysconfig.with_openvino()
+        ):
 
-    if not flow.sysconfig.with_openvino():
-        return
+        if not flow.sysconfig.with_openvino():
+            return
 
-    graph.config.enable_openvino(True)
-    if len(input) == 1:
-        out = graph(input)
-    else:
-        out = graph(*input)
+        graph.config.enable_openvino(True)
+        if len(input) == 1:
+            out = graph(input)
+        else:
+            out = graph(*input)
 
-    if len(ref_out) == 1:
-        test_case.assertTrue(
-            np.allclose(ref_out[0].numpy(), out.numpy(), rtol=rtol, atol=atol)
-        )
-    else:
-        test_case.assertTrue(len(ref_out) == len(out))
-        for i in range(len(ref_out)):
+        if len(ref_out) == 1:
             test_case.assertTrue(
-                np.allclose(ref_out[i].numpy(), out[i].numpy(), rtol=rtol, atol=atol)
+                np.allclose(ref_out[0].numpy(), out.numpy(), rtol=rtol, atol=atol)
             )
+        else:
+            test_case.assertTrue(len(ref_out) == len(out))
+            for i in range(len(ref_out)):
+                test_case.assertTrue(
+                    np.allclose(ref_out[i].numpy(), out[i].numpy(), rtol=rtol, atol=atol)
+                    np.allclose(
+                        ref_out[i].numpy(), out[i].numpy(), rtol=rtol, atol=atol
+                    )
 
+    # graph need to be a new graph, due to the limit of nn.Graph
+    def test_xrt_tensorrt(test_case, graph, input, ref_out, rtol=1e-3, atol=1e-4):
+        if os.getenv("ONEFLOW_TEST_FORCE_TENSORRT") and not flow.sysconfig.with_tensorrt():
+        if (
+            os.getenv("ONEFLOW_TEST_FORCE_TENSORRT")
+            and not flow.sysconfig.with_tensorrt()
+        ):
 
-# graph need to be a new graph, due to the limit of nn.Graph
-def test_xrt_tensorrt(test_case, graph, input, ref_out, rtol=1e-3, atol=1e-4):
-    if os.getenv("ONEFLOW_TEST_FORCE_TENSORRT") and not flow.sysconfig.with_tensorrt():
-        test_case.assertTrue(False)
+        if not flow.sysconfig.with_tensorrt():
+            return
 
-    if not flow.sysconfig.with_tensorrt():
-        return
+        graph.config.enable_tensorrt(True)
+        if len(input) == 1:
+            out = graph(input)
+        else:
+            out = graph(*input)
 
-    graph.config.enable_tensorrt(True)
-    if len(input) == 1:
-        out = graph(input)
-    else:
-        out = graph(*input)
-
-    if len(ref_out) == 1:
-        test_case.assertTrue(
-            np.allclose(ref_out[0].numpy(), out.numpy(), rtol=rtol, atol=atol)
-        )
-    else:
-        test_case.assertTrue(len(ref_out) == len(out))
-        for i in range(len(ref_out)):
+        if len(ref_out) == 1:
             test_case.assertTrue(
-                np.allclose(ref_out[i].numpy(), out[i].numpy(), rtol=rtol, atol=atol)
+                np.allclose(ref_out[0].numpy(), out.numpy(), rtol=rtol, atol=atol)
             )
+        else:
+            test_case.assertTrue(len(ref_out) == len(out))
+            for i in range(len(ref_out)):
+                test_case.assertTrue(
+                    np.allclose(ref_out[i].numpy(), out[i].numpy(), rtol=rtol, atol=atol)
+                    np.allclose(
+                        ref_out[i].numpy(), out[i].numpy(), rtol=rtol, atol=atol
+                    )
 
+    # graph need to be a new graph, due to the limit of nn.Graph
+    def test_xrt_xla(test_case, graph, input, ref_out, rtol=1e-3, atol=1e-4):
+        if os.getenv("ONEFLOW_TEST_FORCE_XLA") and not flow.sysconfig.with_xla():
+            test_case.assertTrue(False)
 
-# graph need to be a new graph, due to the limit of nn.Graph
-def test_xrt_xla(test_case, graph, input, ref_out, rtol=1e-3, atol=1e-4):
-    if os.getenv("ONEFLOW_TEST_FORCE_XLA") and not flow.sysconfig.with_xla():
-        test_case.assertTrue(False)
+        if not flow.sysconfig.with_xla():
+            return
 
-    if not flow.sysconfig.with_xla():
-        return
+        graph.config.enable_xla_jit(True)
+        if len(input) == 1:
+            out = graph(input)
+        else:
+            out = graph(*input)
 
-    graph.config.enable_xla_jit(True)
-    if len(input) == 1:
-        out = graph(input)
-    else:
-        out = graph(*input)
-
-    if len(ref_out) == 1:
-        test_case.assertTrue(
-            np.allclose(ref_out[0].numpy(), out.numpy(), rtol=rtol, atol=atol)
-        )
-    else:
-        test_case.assertTrue(len(ref_out) == len(out))
-        for i in range(len(ref_out)):
+        if len(ref_out) == 1:
             test_case.assertTrue(
-                np.allclose(ref_out[i].numpy(), out[i].numpy(), rtol=rtol, atol=atol)
+                np.allclose(ref_out[0].numpy(), out.numpy(), rtol=rtol, atol=atol)
             )
+        else:
+            test_case.assertTrue(len(ref_out) == len(out))
+            for i in range(len(ref_out)):
+                test_case.assertTrue(
+                    np.allclose(ref_out[i].numpy(), out[i].numpy(), rtol=rtol, atol=atol)
+                    np.allclose(
+                        ref_out[i].numpy(), out[i].numpy(), rtol=rtol, atol=atol
+                    )
+
+
+if __name__ == "__main__":
+    unittest.main()
