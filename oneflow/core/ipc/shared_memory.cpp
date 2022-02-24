@@ -20,6 +20,7 @@ limitations under the License.
 #ifdef __linux__
 #include <sys/types.h>
 #include <sys/mman.h>
+#include <sys/shm.h>
 #include <sys/stat.h>
 #include <fcntl.h>
 #include <error.h>
@@ -28,17 +29,13 @@ limitations under the License.
 namespace oneflow {
 namespace ipc {
 
-// Must be a global variable instead of Global<SharedMemoryManager>.
-// Subprocesses don't have chance to call `Global<SharedMemoryManager>::Delete()`
-SharedMemoryManager shared_memory_manager;
-
 namespace {
 
 #ifdef __linux__
 
 // return errno
 int ShmOpen(const std::string& shm_name, int* fd) {
-  shared_memory_manager.AddShmName(shm_name);
+  SharedMemoryManager::get().AddShmName(shm_name);
   *fd = shm_open(shm_name.c_str(), O_CREAT | O_RDWR, S_IRUSR | S_IWUSR);
   return *fd == -1 ? errno : 0;
 }
@@ -48,7 +45,7 @@ int ShmOpen(std::string* shm_name, int* fd) {
   int err = EEXIST;
   while (true) {
     static constexpr int kNameLength = 8;
-    *shm_name = std::string("/ofshm_") + GenAlphaNumericString(kNameLength);
+    *shm_name = std::string("/aofshm_") + GenAlphaNumericString(kNameLength);
     err = ShmOpen(*shm_name, fd);
     if (err != EEXIST) { return err; }
   }
@@ -94,36 +91,56 @@ Maybe<void*> ShmSetUp(const std::string& shm_name, size_t* shm_size) {
 }
 }  // namespace
 
+SharedMemoryManager& SharedMemoryManager::get() {
+  // Must be a static singleton variable instead of Global<SharedMemoryManager>.
+  // Subprocesses don't have chance to call `Global<SharedMemoryManager>::Delete()`
+  static SharedMemoryManager shared_memory_manager;
+  return shared_memory_manager;
+}
+
+void SharedMemoryManager::FindAndDeleteOutdatedShmNames() {
+  static size_t counter = 0;
+  const int delete_invalid_names_interval =
+      ParseIntegerFromEnv("OF_DELETE_INVALID_NAMES_INTERVAL", 1000);
+  if (counter % delete_invalid_names_interval == 0) {
+    shm_names_.erase(std::remove_if(shm_names_.begin(), shm_names_.end(),
+                                    [](const std::string& cur_shm_name) {
+                                      int fd = shm_open(cur_shm_name.c_str(), O_RDONLY, 0);
+                                      if (fd == -1) {
+                                        if (errno == ENOENT) {
+                                          return true;
+                                        }
+                                      } else {
+                                        close(fd);
+                                      }
+                                      return false;
+                                    }),
+                     shm_names_.end());
+  }
+  counter++;
+}
+
 void SharedMemoryManager::AddShmName(const std::string& shm_name) {
+  FindAndDeleteOutdatedShmNames();
   shm_names_.push_back(shm_name);
 }
 
 Maybe<void> SharedMemoryManager::DeleteShmName(const std::string& shm_name) {
   auto it = std::find(shm_names_.begin(), shm_names_.end(), shm_name);
-  if (it != shm_names_.end()){
+  if (it != shm_names_.end()) {
     shm_names_.erase(it);
-  }
-  else{
-    return Error::RuntimeError()
-             << "shared memory was not created but attempted to be freed.";
+  } else {
+    return Error::RuntimeError() << "shared memory was not created but attempted to be freed.";
   }
   return Maybe<void>::Ok();
 }
 
 void SharedMemoryManager::UnlinkAllShms() {
   // Here we deliberately do not handle unlink errors.
-  for (const auto& shm : shm_names_) {
-    shm_unlink(shm.c_str());
-  }
+  for (const auto& shm : shm_names_) { shm_unlink(shm.c_str()); }
 }
 
-void SharedMemoryManagerFree(){
-  shared_memory_manager.UnlinkAllShms();
-}
-
-SharedMemoryManager::~SharedMemoryManager() {
-  UnlinkAllShms();
-}
+SharedMemoryManager::~SharedMemoryManager() { UnlinkAllShms(); }
 
 SharedMemory::~SharedMemory() { CHECK_JUST(Close()); }
 
@@ -154,7 +171,7 @@ Maybe<void> SharedMemory::Close() {
 Maybe<void> SharedMemory::Unlink() {
 #ifdef __linux__
   PCHECK_OR_RETURN(shm_unlink(name_.c_str()));
-  JUST(shared_memory_manager.DeleteShmName(name_));
+  JUST(SharedMemoryManager::get().DeleteShmName(name_));
   return Maybe<void>::Ok();
 #else
   TODO_THEN_RETURN();
