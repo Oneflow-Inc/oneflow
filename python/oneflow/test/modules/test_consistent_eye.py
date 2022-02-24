@@ -25,7 +25,7 @@ import oneflow.unittest
 from oneflow.test_utils.automated_test_util import *
 
 
-@autotest(n=3, auto_backward=False, check_graph=True)
+@autotest(n=3, auto_backward=False, check_graph=False)
 def test_eye_impl(test_case, placement, sbp):
     n = random(1, 5).to(int).value() * 8
     m = random(1, 5).to(int).value() * 8
