@@ -21,62 +21,55 @@ import oneflow.unittest
 from oneflow.test_utils.automated_test_util import *
 
 
-@autotest(check_graph=False)
-def _test_maximum(test_case, placement, x_sbp, y_sbp):
-    x = random_tensor(ndim=2, dim0=8, dim1=8).to_global(placement, x_sbp)
-    y = random_tensor(ndim=2, dim0=8, dim1=8).to_global(placement, y_sbp)
+@autotest(n=5, check_graph=False)
+def _test_broadcast_maximum(test_case, placement, x_sbp, y_sbp):
+    x = random_tensor(ndim=5, dim0=8, dim1=8, dim2=8, dim3=1, dim4=8).to_global(
+        placement, x_sbp
+    )
+    y = random_tensor(ndim=5, dim0=8, dim1=8, dim2=1, dim3=8, dim4=1).to_global(
+        placement, y_sbp
+    )
     z = torch.maximum(x, y)
     return z
 
 
-@autotest(check_graph=False)
-def _test_minimum(test_case, placement, x_sbp, y_sbp):
-    x = random_tensor(ndim=2, dim0=8, dim1=8).to_global(placement, x_sbp)
-    y = random_tensor(ndim=2, dim0=8, dim1=8).to_global(placement, y_sbp)
+@autotest(n=5, check_graph=False)
+def _test_broadcast_minimum(test_case, placement, x_sbp, y_sbp):
+    x = random_tensor(ndim=5, dim0=8, dim1=8, dim2=8, dim3=1, dim4=8).to_global(
+        placement, x_sbp
+    )
+    y = random_tensor(ndim=5, dim0=8, dim1=8, dim2=1, dim3=8, dim4=1).to_global(
+        placement, y_sbp
+    )
     z = torch.minimum(x, y)
     return z
 
 
-@autotest(check_graph=False)
-def _test_broadcast_maximum(test_case, placement, x_sbp, y_sbp):
-    k1 = random().to(int).value() * 8
-    k2 = random().to(int).value() * 8
-    k3 = random().to(int).value() * 8
-
-    x = random_tensor(ndim=5, dim0=8, dim1=8, dim2=k1, dim3=1, dim4=k3).to_global(
-        placement, x_sbp
-    )
-    y = random_tensor(ndim=5, dim0=8, dim1=8, dim2=1, dim3=k2, dim4=1).to_global(
-        placement, y_sbp
-    )
-    z = torch.maximum(x, y)
+@autotest(n=5, check_graph=False)
+def _test_maximum_with_same_input(test_case, placement, sbp):
+    x = random_tensor(ndim=4, dim0=8, dim1=8, dim2=8, dim3=8).to_global(placement, sbp)
+    y = x.detach().clone()
+    y.requires_grad = True
+    z = torch.minimum(x, y)
     return z
 
 
-@autotest(check_graph=False)
-def _test_broadcast_minimum(test_case, placement, x_sbp, y_sbp):
-    k1 = random().to(int).value() * 8
-    k2 = random().to(int).value() * 8
-    k3 = random().to(int).value() * 8
-
-    x = random_tensor(ndim=5, dim0=8, dim1=8, dim2=k1, dim3=1, dim4=k3).to_global(
-        placement, x_sbp
-    )
-    y = random_tensor(ndim=5, dim0=8, dim1=8, dim2=1, dim3=k2, dim4=1).to_global(
-        placement, y_sbp
-    )
+@autotest(n=5, check_graph=False)
+def _test_minimum_with_same_input(test_case, placement, sbp):
+    x = random_tensor(ndim=4, dim0=8, dim1=8, dim2=8, dim3=8).to_global(placement, sbp)
+    y = x.detach().clone()
+    y.requires_grad = True
     z = torch.minimum(x, y)
     return z
 
 
 class TestMaximumMinimumOps(flow.unittest.TestCase):
     @globaltest
-    def test_maximum_minimum(test_case):
+    def test_maximum_minimum_with_same_input(test_case):
         for placement in all_placement():
-            for x_sbp in all_sbp(placement, max_dim=2):
-                for y_sbp in all_sbp(placement, max_dim=2):
-                    _test_maximum(test_case, placement, x_sbp, y_sbp)
-                    _test_minimum(test_case, placement, x_sbp, y_sbp)
+            for sbp in all_sbp(placement, max_dim=2):
+                _test_maximum_with_same_input(test_case, placement, sbp)
+                _test_minimum_with_same_input(test_case, placement, sbp)
 
     @globaltest
     def test_broadcast_maximum_minimum(test_case):
