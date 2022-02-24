@@ -137,12 +137,10 @@ Maybe<void> CublasFusedMLP::Apply(const CublasFusedMLPCaptureState* ctx,
     hiddens[i] = JUST(VectorAt(ctx->SavedTensors(), i + 2 + 2 * weight_num));
   }
 
-  std::shared_ptr<one::Tensor> cublas_dy;
+  std::shared_ptr<one::Tensor> cublas_dy = last_bias_dy;
   for (int32_t hidden_layer_idx = weight_num - 1; hidden_layer_idx > 0; hidden_layer_idx--) {
     // If it is final layer, we use out_grads[0] as dy.
-    if (hidden_layer_idx == weight_num - 1) {
-      cublas_dy = last_bias_dy;
-    } else {
+    if (hidden_layer_idx != weight_num - 1) {
       cublas_dy = JUST(VectorAt(dgrad, hidden_layer_idx + 1));
     }
     /*

@@ -22,6 +22,9 @@ limitations under the License.
 
 #include <cublas_v2.h>
 #include <cuda.h>
+#if CUDA_VERSION >= 10010
+#include <cublasLt.h>
+#endif
 #include <cuda_runtime.h>
 #include <cudnn.h>
 #include <curand.h>
@@ -29,12 +32,6 @@ limitations under the License.
 #include <cuda_fp16.h>
 #include "oneflow/core/device/cuda_pseudo_half.h"
 #include "oneflow/core/ep/cuda/cuda_stream.h"
-
-#if CUDA_VERSION >= 10010
-
-#include <cublasLt.h>
-
-#endif
 
 #if CUDA_VERSION >= 10020
 
