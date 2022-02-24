@@ -50,7 +50,7 @@ def _test_maximum_with_same_input(test_case, placement, sbp):
     x = random_tensor(ndim=4, dim0=8, dim1=8, dim2=8, dim3=8).to_global(placement, sbp)
     y = x.detach().clone()
     y.requires_grad = True
-    z = torch.minimum(x, y)
+    z = torch.maximum(x, y)
     return z
 
 
