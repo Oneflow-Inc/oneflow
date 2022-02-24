@@ -178,7 +178,7 @@ class TestAddModule(flow.unittest.TestCase):
         out = x + y
         return out
 
-    @autotest(auto_backward=False, check_graph=True)
+    @autotest(n=3, auto_backward=False, check_graph=True)
     def test_0dim_inplace_add(test_case):
         device = random_device()
         x = random_tensor(2, 2, 3, requires_grad=False).to(device)
@@ -224,7 +224,7 @@ class TestAddModule(flow.unittest.TestCase):
         out = x + y
         return out
 
-    @autotest(auto_backward=False, check_graph=True)
+    @autotest(n=3, auto_backward=False, check_graph=True)
     def test_0dim_bool_inplace_add(test_case):
         device = random_device()
         x = random_tensor(2, 2, 3, requires_grad=False).to(device, torch.bool)

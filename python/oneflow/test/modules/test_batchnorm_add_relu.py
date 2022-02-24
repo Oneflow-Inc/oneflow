@@ -463,10 +463,10 @@ class TestBnAddRelu(flow.unittest.TestCase):
         arg_dict["device"] = ["cuda"]
         if os.getenv("ONEFLOW_TEST_CPU_ONLY"):
             arg_dict["device"] = ["cpu"]
-        arg_dict["batch"] = [1, 2, 5, 8]
-        arg_dict["channels"] = [4, 6, 8, 10]
-        arg_dict["height"] = [6, 8, 10, 16]
-        arg_dict["width"] = [12, 8, 4, 10]
+        arg_dict["batch"] = [1, 2, 8]
+        arg_dict["channels"] = [4, 6]
+        arg_dict["height"] = [6, 8]
+        arg_dict["width"] = [12, 8]
         for arg in GenArgList(arg_dict):
             arg[0](test_case, *arg[1:])
 

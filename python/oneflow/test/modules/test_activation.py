@@ -212,7 +212,7 @@ class TestCELUModule(flow.unittest.TestCase):
         y = m(x)
         return y
 
-    @autotest()
+    @autotest(n=10)
     def test_inplace_celu_module(test_case):
         m = torch.nn.CELU(alpha=random() | nothing(), inplace=True)
         device = random_device()
