@@ -15,11 +15,6 @@ limitations under the License.
 """
 
 import unittest
-from collections import OrderedDict
-
-import numpy as np
-from test_util import GenArgList
-
 import oneflow as flow
 import oneflow.unittest
 
@@ -27,11 +22,12 @@ from oneflow.test_utils.automated_test_util import *
 
 
 @autotest(n=1, check_graph=False)
-def _test_add_with_alpha(test_case, placement, sbp):
-    x1 = random_tensor(2, 8, 8).to_global(placement=placement, sbp=sbp).mean()
-    x2 = random_tensor(2, 8, 8).to_global(placement=placement, sbp=sbp).mean()
-    x3 = random_tensor(2, 8, 8).to_global(placement=placement, sbp=sbp).mean()
-    y = random_tensor(2, 8, 8).to_global(placement=placement, sbp=sbp)
+def _test_add_with_alpha(test_case, ndim, placement, sbp):
+    dims = [random(1, 4) * 8 for i in range(ndim)]
+    x1 = random_tensor(ndim, *dims).to_global(placement=placement, sbp=sbp).mean()
+    x2 = random_tensor(ndim, *dims).to_global(placement=placement, sbp=sbp).mean()
+    x3 = random_tensor(ndim, *dims).to_global(placement=placement, sbp=sbp).mean()
+    y = random_tensor(ndim, *dims).to_global(placement=placement, sbp=sbp)
     s = random().to(float)
     alpha = random().to(float)
     z1 = torch.add(x1, y, alpha=alpha)
@@ -40,12 +36,29 @@ def _test_add_with_alpha(test_case, placement, sbp):
     return z1, z2, z3
 
 
+@autotest(n=1, check_graph=False)
+def _test_add_with_0size(test_case, ndim, zerodim, placement, sbp):
+    dims = [random(1, 4) * 8 for i in range(ndim)]
+    dims[zerodim] = 1
+    x1 = random_tensor(ndim, *dims).to_global(placement=placement, sbp=sbp)
+    dims[zerodim] = 0
+    x2 = random_tensor(ndim, *dims).to_global(placement=placement, sbp=sbp)
+    return torch.add(x1, x2)
+
+
 class TestAddModule(flow.unittest.TestCase):
     @globaltest
     def test_add_with_alpha(test_case):
+        ndim = random(1, 4).to(int).value()
         for placement in all_placement():
-            for sbp in all_sbp(placement, max_dim=2):
-                _test_add_with_alpha(test_case, placement, sbp)
+            for sbp in all_sbp(placement, max_dim=ndim):
+                _test_add_with_alpha(test_case, ndim, placement, sbp)
+            zerodim = random(0, ndim).to(int).value()
+            valid_split_axis = [i for i in range(ndim) if i != zerodim]
+            for sbp in all_sbp(
+                placement, max_dim=ndim, valid_split_axis=valid_split_axis
+            ):
+                _test_add_with_0size(test_case, ndim, zerodim, placement, sbp)
 
 
 if __name__ == "__main__":

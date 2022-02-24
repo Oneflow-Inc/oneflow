@@ -23,17 +23,4 @@ intrusive::shared_ptr<LocalDepObject> NewLocalDepObject() {
   return intrusive::make_shared<LocalDepObject>();
 }
 
-namespace {
-
-intrusive::shared_ptr<LocalDepObject> RawGetLocalDepObject4Device(const Device& device) {
-  return NewLocalDepObject();
-}
-
-}  // namespace
-
-LocalDepObject* GetStaticLocalDepObject4Device(const Device& device) {
-  static constexpr auto* GetDep = DECORATE(&RawGetLocalDepObject4Device, StaticGlobalCopiable);
-  return GetDep(device).Mutable();
-}
-
 }  // namespace oneflow
