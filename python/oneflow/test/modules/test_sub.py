@@ -120,7 +120,7 @@ class TestSubModule(flow.unittest.TestCase):
         z = x - y
         return z
 
-    @autotest(auto_backward=False, check_graph=True)
+    @autotest(n=5, auto_backward=False, check_graph=True)
     def test_sub_with_0_size_data(test_case):
         device = random_device()
         x = random_tensor(2, 0, 3).to(device)
