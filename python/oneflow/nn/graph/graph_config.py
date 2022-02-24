@@ -59,7 +59,7 @@ class GraphConfig(object):
         r"""If set to true, then graph will use mixed precision mode, it means use both float16 and float32 during model training.
 
         Args:
-            mode (bool, optional): The default vaule is true.
+            mode (bool, optional): The default vaule is True.
         """
         assert type(mode) is bool
         self.proto.set_enable_auto_mixed_precision(mode)
@@ -68,7 +68,7 @@ class GraphConfig(object):
         r"""If set to true, try to fuse cast + scale + l1_l2_regularize_gradient + model_update to one op to improve performance.
 
         Args:
-            mode (bool, optional): The default vaule is true.
+            mode (bool, optional): The default vaule is True.
         """
         self.proto.set_enable_fuse_model_update_ops(mode)
 
@@ -76,7 +76,7 @@ class GraphConfig(object):
         r"""If set to true, try to fuse a binary element-wise add operetor to one of the predecessors to improve performance.
 
         Args:
-            mode (bool, optional): The default vaule is true.
+            mode (bool, optional): The default vaule is True.
         """
         self.proto.set_enable_fuse_add_to_output(mode)
 
@@ -84,7 +84,7 @@ class GraphConfig(object):
         r"""If set to true, try to fuse cast and scalar_mul_by_tensor to improve performance.
     
         Args:
-            mode (bool, optional): The default vaule is true.
+            mode (bool, optional): The default vaule is True.
         """
         self.proto.set_enable_fuse_cast_scale(mode)
 
@@ -163,7 +163,7 @@ class GraphConfig(object):
     
         Args:
             mode (bool, optional): Whether enable cudnn conv operatioin to use heuristic
-                                   search algorithm. The default vaule is true.
+                                   search algorithm. The default vaule is True.
         """
         self.proto.set_cudnn_conv_heuristic_search_algo(mode)
 
