@@ -24,9 +24,12 @@ class BlockConfig(object):
         self._stage_id = None
         self._activation_checkpointing = None
 
+    # NOTE(lixiang): For the normal display of docstr, the API Doc of the get and set methods are written together in the stage_id function.
     @property
     def stage_id(self):
-        r"""Get stage id of Block in pipeline parallelism.
+        r"""Get/Set stage id of Block in pipeline parallelism.
+        
+        When calling stage_id(value: int = None), set different module's stage id to hint the graph preparing right num of buffers in pipeline.
         """
         return self._stage_id
 
@@ -38,9 +41,10 @@ class BlockConfig(object):
         self._is_null = False
         self._stage_id = value
 
+    # NOTE(lixiang): For the normal display of docstr, the API Doc of the get and set methods are written together in the activation_checkpointing function.
     @property
     def activation_checkpointing(self):
-        r"""Get whether do activation checkpointing in this Block.
+        r"""Get/Set whether do activation checkpointing in this Block.
         """
         return self._activation_checkpointing
 
