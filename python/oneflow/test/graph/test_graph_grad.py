@@ -25,77 +25,67 @@ def _test_linear_train_graph(test_case, device):
     def train_with_module(iter_num=3):
         linear = flow.nn.Linear(3, 8)
         linear = linear.to(device)
-        flow.nn.init.constant_(linear.weight, 2.068758)
-        flow.nn.init.constant_(linear.bias, 0.23)
-        of_sgd = flow.optim.SGD(linear.parameters(), lr=0.001, momentum=0.9)
+        flow.nn.init.constant_(linear.weight, 2)
+        flow.nn.init.constant_(linear.bias, 0)
 
-        x = flow.tensor(
-            [
-                [-0.94630778, -0.83378579, -0.87060891],
-                [2.0289922, -0.28708987, -2.18369248],
-                [0.35217619, -0.67095644, -1.58943879],
-                [0.08086036, -1.81075924, 1.20752494],
-                [0.8901075, -0.49976737, -1.07153746],
-                [-0.44872912, -1.07275683, 0.06256855],
-                [-0.22556897, 0.74798368, 0.90416439],
-                [0.48339456, -2.32742195, -0.59321527],
-            ],
-            dtype=flow.float32,
-            device=device,
-            requires_grad=False,
-        )
+        x = flow.ones(8, 3).to(device)
+        x.requires_grad = True
 
-        def one_iter():
-            of_out = linear(x)
-            of_out = of_out.sum()
-
-            of_out.backward()
-            of_sgd.step()
-            of_sgd.zero_grad()
-
-            return of_out.numpy(), linear.weight.numpy()
-
-        check_list = []
-        for i in range(iter_num):
-            check_list.append(one_iter())
-        return check_list
-
-    def train_with_graph(iter_num=3):
-        linear = flow.nn.Linear(3, 8)
-        flow.nn.init.constant_(linear.weight, 2.068758)
-        flow.nn.init.constant_(linear.bias, 0.23)
-
-        x = flow.tensor(
-            [
-                [-0.94630778, -0.83378579, -0.87060891],
-                [2.0289922, -0.28708987, -2.18369248],
-                [0.35217619, -0.67095644, -1.58943879],
-                [0.08086036, -1.81075924, 1.20752494],
-                [0.8901075, -0.49976737, -1.07153746],
-                [-0.44872912, -1.07275683, 0.06256855],
-                [-0.22556897, 0.74798368, 0.90416439],
-                [0.48339456, -2.32742195, -0.59321527],
-            ],
-            dtype=flow.float32,
-            device=device,
-            requires_grad=False,
-        )
+        for param in linear.parameters():
+            param.requires_grad = False
 
         class LinearWithGrad(flow.nn.Module):
             def __init__(self):
                 super().__init__()
                 self.linear = linear
                 self.input_grad = flow.nn.Parameter(flow.zeros(8, 3))
-            
+
             def forward(self, input):
                 x = input + self.input_grad
                 x = self.linear(x)
                 return x
 
+        linear_with_grad = LinearWithGrad().to(device)
+
+        def one_iter():
+            of_out = linear_with_grad(x)
+            of_out = of_out.sum()
+            of_out.backward()
+
+            return {
+                "out": of_out.numpy(),
+                "weight": linear.weight.numpy(),
+                "input grad": x.grad,
+            }
+
+        for i in range(iter_num):
+            print("--- eager iter ", i)
+            print(one_iter())
+
+    def train_with_graph(iter_num=3):
+        linear = flow.nn.Linear(3, 8)
+        flow.nn.init.constant_(linear.weight, 2)
+        flow.nn.init.constant_(linear.bias, 0)
+
+        x = flow.ones(8, 3).to(device)
+
+        for param in linear.parameters():
+            param.requires_grad = False
+
+        class LinearWithGrad(flow.nn.Module):
+            def __init__(self):
+                super().__init__()
+                self.linear = linear
+                self.input_grad = flow.nn.Parameter(flow.zeros(8, 3))
+
+            def forward(self, input):
+                x = input + self.input_grad
+                x = self.linear(x)
+                return x
 
         linear_with_grad = LinearWithGrad().to(device)
 
-        of_sgd = flow.optim.SGD(linear_with_grad.parameters(), lr=0.001, momentum=0.9)
+        of_sgd = flow.optim.SGD(linear_with_grad.parameters(), lr=1.0, momentum=0.0)
 
         class LinearTrainGraph(flow.nn.Graph):
             def __init__(self):
@@ -110,15 +100,23 @@ def _test_linear_train_graph(test_case, device):
                 return out
 
         linear_t_g = LinearTrainGraph()
+        print("graph: ", linear_t_g)
+        print({"grad": linear_t_g.linear.input_grad.origin.numpy()})
 
         def one_iter():
             of_graph_out = linear_t_g(x)
-            return {"out": of_graph_out.numpy(), "weight":linear_t_g.linear.linear.weight.origin.numpy(), "grad":linear_t_g.linear.input_grad.origin.numpy()}
+            return {
+                "out": of_graph_out.numpy(),
+                "weight": linear_t_g.linear.linear.weight.origin.numpy(),
+                "input grad": linear_t_g.linear.input_grad.origin.numpy(),
+            }
 
         for i in range(iter_num):
+            print("+++ graph iter ", i)
             print(one_iter())
 
-    iter_num = 1
+    iter_num = 3
+    train_with_module(iter_num)
     train_with_graph(iter_num)
 
 
@@ -127,6 +125,7 @@ def _test_linear_train_graph(test_case, device):
 class TestLinearTrainGraph(oneflow.unittest.TestCase):
     def test_linear_train_graph_gpu(test_case):
         _test_linear_train_graph(test_case, flow.device("cuda"))
+
 
 if __name__ == "__main__":
     unittest.main()
