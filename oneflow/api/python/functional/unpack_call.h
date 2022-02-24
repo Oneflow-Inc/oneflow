@@ -54,6 +54,7 @@ inline py::object CastToPyObject<Maybe<Tensor>>(Maybe<Tensor>&& t) {
 template<>
 inline py::object CastToPyObject<Maybe<TensorTuple>>(Maybe<TensorTuple>&& t) {
   const auto& tensor_tuple = t.GetPtrOrThrow();
+  if (tensor_tuple->size() == 1) { return py::cast(tensor_tuple->at(0)); }
   py::tuple tup(tensor_tuple->size());
   for (int i = 0; i < tensor_tuple->size(); ++i) { tup[i] = py::cast(tensor_tuple->at(i)); }
   return py::cast<py::object>(tup);

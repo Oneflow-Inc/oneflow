@@ -165,16 +165,16 @@ def _cuda(self, device: Union[int, str, flow.device] = None):
     return self.to(device=device)
 
 
-def _norm(self, ord=None, dim=None, keepdim=False, dtype=None):
-    return flow._C.norm(self, ord, dim, keepdim, dtype=dtype)
+def _norm(self, p=None, dim=None, keepdim=False, dtype=None):
+    return flow._C.norm(self, p, dim, keepdim, dtype=dtype)
 
 
-def _vector_norm(self, ord=2, dim=None, keepdim=False, dtype=None):
-    return flow._C.vector_norm(self, ord, dim, keepdim, dtype=dtype)
+def _vector_norm(self, p=2, dim=None, keepdim=False, dtype=None):
+    return flow._C.vector_norm(self, p, dim, keepdim, dtype=dtype)
 
 
-def _matrix_norm(self, ord="fro", dim=(-2, -1), keepdim=False, dtype=None):
-    return flow._C.matrix_norm(self, ord, dim, keepdim, dtype=dtype)
+def _matrix_norm(self, p="fro", dim=(-2, -1), keepdim=False, dtype=None):
+    return flow._C.matrix_norm(self, p, dim, keepdim, dtype=dtype)
 
 
 def _transpose(self, dim0, dim1):
@@ -967,6 +967,10 @@ def _numpy(self):
     return self.to_numpy()
 
 
+def _zero_(self):
+    return self.zeros_()
+
+
 def _is_consistent(self):
     raise RuntimeError(".is_consistent has been removed, please use .is_global instead")
 
@@ -1176,6 +1180,7 @@ def RegisterMethods():
     Tensor.prod = _prod
     Tensor.sin = _sin
     Tensor.sin_ = _sin_inplace
+    Tensor.zero_ = _zero_
     Tensor.is_consistent = _is_consistent
     Tensor.to_consistent = _to_consistent
 
