@@ -703,9 +703,9 @@ Maybe<void> Operator::GreedilyFindMinCopyCostNdSbp(
       double total_copy_cost = 0.0;
       for (const auto& ibn : input_bns()) {
         const auto& blob_modifier_ = InputBlobModifier4Ibn(ibn);
-        bool is_same_sbp =
-            (blob_modifier_.has_is_mutable() && blob_modifier_.is_mutable())
-            || (!IsPODDataType(JUST(NdSbpInferHint4Ibn(ibn))->logical_blob_desc().data_type()));
+        bool is_same_sbp = (blob_modifier_.has_is_mutable() && blob_modifier_.is_mutable())
+                           || NotSupportBoxingDataType(
+                               JUST(NdSbpInferHint4Ibn(ibn))->logical_blob_desc().data_type());
         total_copy_cost += JUST(ComputeCopyCostBetweenNdSbp(
             JUST(NdSbpInferHint4Ibn(ibn))->nd_sbp(),
             JUST(VectorAt(nd_sbp_sig_list, i)).bn_in_op2nd_sbp().at(ibn),
