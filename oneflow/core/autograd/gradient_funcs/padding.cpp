@@ -99,7 +99,8 @@ class ConstantPadNd : public OpExprGradFunction<ConstantPadNdCaptureState> {
 
     ComposedAttrMap composed_attrs(attrs, base_attrs_);
     ctx->paddings = JUST(composed_attrs.GetAttr<std::vector<int64_t>>("padding"));
-    if (IsFloatingDataType(inputs.at(0)->dtype()->data_type())) {
+    if (IsFloatingDataType(inputs.at(0)->dtype()->data_type())
+        || inputs.at(0)->dtype()->data_type() == DataType::kFloat16) {
       ctx->padding_value = JUST(composed_attrs.GetAttr<double>("floating_constant_value"));
     } else if (IsIntegralDataType(inputs.at(0)->dtype()->data_type())) {
       ctx->padding_value = JUST(composed_attrs.GetAttr<int64_t>("integral_constant_value"));
