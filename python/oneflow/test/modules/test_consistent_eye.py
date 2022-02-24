@@ -40,7 +40,7 @@ def test_eye_impl(test_case, placement, sbp):
 
 
 class TestEyeConsistent(flow.unittest.TestCase):
-    @consistent
+    @globaltest
     def test_eye(test_case):
         shape = random_tensor().shape
         for placement in all_placement():

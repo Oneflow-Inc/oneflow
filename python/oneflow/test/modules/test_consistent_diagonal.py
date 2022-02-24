@@ -37,12 +37,12 @@ def test_flow_diagonal_impl(test_case, placement, sbp):
         dim3=random(1, 6)*8,
         dim4=random(1, 6)*8,
     )
-    y = x.to_consistent(placement=placement, sbp=sbp)
-    # z = torch.diagonal(y, offset, dim1, dim2)
-    return y
+    y = x.to_global(placement=placement, sbp=sbp)
+    z = torch.diagonal(y, offset, dim1, dim2)
+    return z
 
 class TestDiagonalConsistent(flow.unittest.TestCase):
-    @consistent
+    @globaltest
     def test_flow_diagonal_impl(test_case):
         # random ndim in range [1,4]
         ndim = random(1, 5).to(int).value()
