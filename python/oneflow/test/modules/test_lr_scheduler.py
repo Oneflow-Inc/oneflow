@@ -750,5 +750,90 @@ class LinearLRTestCase(flow.unittest.TestCase):
         )
 
 
+@flow.unittest.skip_unless_1n1d()
+class ChainedSchedulerTestCase(flow.unittest.TestCase):
+    def test(test_case):
+        param = flow.nn.Parameter(flow.ones(3, 4))
+        opt = flow.optim.SGD([param], lr=1)
+        s1 = flow.optim.lr_scheduler.ConstantLR(opt, factor=0.1, total_iters=3)
+        s2 = flow.optim.lr_scheduler.ExponentialLR(opt, gamma=0.9)
+        scheduler = flow.optim.lr_scheduler.ChainedScheduler([s1, s2])
+
+        expected_lrs = [0.1, 0.09, 0.081, 0.729, 0.6561, 0.59049]
+        lrs = [scheduler.get_last_lr()[0]]
+        for _ in range(len(expected_lrs)):
+            scheduler.step()
+            lrs.append(scheduler.get_last_lr()[0])
+
+        lrs = lrs[: len(expected_lrs)]
+        test_case.assertTrue(
+            np.allclose(lrs, expected_lrs),
+            f"\nexpected_lrs: {expected_lrs}\nvs.\ncalculated lrs: {lrs}",
+        )
+
+
+@flow.unittest.skip_unless_1n1d()
+class CosineAnnealingWarmRestartsTestCase(flow.unittest.TestCase):
+    def test_mult_1(test_case):
+        param = flow.nn.Parameter(flow.ones(3, 4))
+        optimizer = flow.optim.SGD([param], lr=0.1)
+        cosa_r_lr = flow.optim.lr_scheduler.CosineAnnealingWarmRestarts(
+            optimizer, T_0=10, eta_min=0.01,
+        )
+        # fmt: off
+        expected_lrs = [0.1, 0.09779754323328192, 0.09140576474687263, 0.08145033635316129, 0.06890576474687264, 0.05500000000000001, 0.04109423525312737, 0.028549663646838717, 0.01859423525312737, 0.012202456766718092, 0.1, 0.09779754323328192, 0.09140576474687263, 0.08145033635316129, 0.06890576474687264, 0.05500000000000001, 0.04109423525312737, 0.028549663646838717, 0.01859423525312737, 0.012202456766718092, 0.1, 0.09779754323328192, 0.09140576474687263, 0.08145033635316129, 0.06890576474687264, 0.05500000000000001, 0.04109423525312737, 0.028549663646838717, 0.01859423525312737, 0.012202456766718092, 0.1, 0.09779754323328192, 0.09140576474687263, 0.08145033635316129, 0.06890576474687264, 0.05500000000000001, 0.04109423525312737, 0.028549663646838717, 0.01859423525312737, 0.012202456766718092, 0.1, 0.09779754323328192, 0.09140576474687263, 0.08145033635316129, 0.06890576474687264, 0.05500000000000001, 0.04109423525312737, 0.028549663646838717, 0.01859423525312737, 0.012202456766718092]
+        # fmt: on
+        lrs = [cosa_r_lr.get_last_lr()[0]]
+        for _ in range(len(expected_lrs)):
+            cosa_r_lr.step()
+            lrs.append(cosa_r_lr.get_last_lr()[0])
+
+        lrs = lrs[: len(expected_lrs)]
+        test_case.assertTrue(
+            np.allclose(lrs, expected_lrs),
+            f"\nexpected_lrs: {expected_lrs}\nvs.\ncalculated lrs: {lrs}",
+        )
+
+    def test_mult_2(test_case):
+        param = flow.nn.Parameter(flow.ones(3, 4))
+        optimizer = flow.optim.SGD([param], lr=0.1)
+        cosa_r_lr = flow.optim.lr_scheduler.CosineAnnealingWarmRestarts(
+            optimizer, T_0=10, T_mult=2, eta_min=0.01,
+        )
+        # fmt: off
+        expected_lrs = [0.1, 0.09779754323328192, 0.09140576474687263, 0.08145033635316129, 0.06890576474687264, 0.05500000000000001, 0.04109423525312737, 0.028549663646838717, 0.01859423525312737, 0.012202456766718092, 0.1, 0.0994459753267812, 0.09779754323328192, 0.09509529358847656, 0.09140576474687263, 0.08681980515339464, 0.08145033635316129, 0.07542957248827961, 0.06890576474687264, 0.0620395509268104, 0.05500000000000001, 0.04796044907318963, 0.04109423525312737, 0.034570427511720396, 0.028549663646838717, 0.023180194846605363, 0.01859423525312737, 0.014904706411523451, 0.012202456766718092, 0.010554024673218806, 0.1, 0.09986128001799077, 0.0994459753267812, 0.09875664641789544, 0.09779754323328192, 0.0965745789630079, 0.09509529358847656, 0.09336880739593416, 0.09140576474687263, 0.0892182684520014, 0.08681980515339464, 0.08422516217485827, 0.08145033635316129, 0.0785124354122177, 0.07542957248827961, 0.07222075445642905, 0.06890576474687264, 0.06550504137351576, 0.0620395509268104, 0.05853065930775304, 0.05500000000000001, 0.05146934069224699, 0.04796044907318963, 0.04449495862648427, 0.04109423525312737, 0.03777924554357097, 0.034570427511720396, 0.031487564587782305, 0.028549663646838717, 0.02577483782514174, 0.023180194846605363, 0.02078173154799861, 0.01859423525312737, 0.016631192604065852, 0.014904706411523451, 0.013425421036992097, 0.012202456766718092, 0.011243353582104555, 0.010554024673218806, 0.010138719982009242]
+        # fmt: on
+        lrs = [cosa_r_lr.get_last_lr()[0]]
+        for _ in range(len(expected_lrs)):
+            cosa_r_lr.step()
+            lrs.append(cosa_r_lr.get_last_lr()[0])
+
+        lrs = lrs[: len(expected_lrs)]
+        test_case.assertTrue(
+            np.allclose(lrs, expected_lrs),
+            f"\nexpected_lrs: {expected_lrs}\nvs.\ncalculated lrs: {lrs}",
+        )
+
+    def test_mult_2_decay_half_limit_2(test_case):
+        param = flow.nn.Parameter(flow.ones(3, 4))
+        optimizer = flow.optim.SGD([param], lr=0.1)
+        cosa_r_lr = flow.optim.lr_scheduler.CosineAnnealingWarmRestarts(
+            optimizer, T_0=10, T_mult=2, decay_rate=0.5, restart_limit=2, eta_min=0.01,
+        )
+        # fmt: off
+        expected_lrs = [0.1, 0.09779754323328192, 0.09140576474687263, 0.08145033635316129, 0.06890576474687264, 0.05500000000000001, 0.04109423525312737, 0.028549663646838717, 0.01859423525312737, 0.012202456766718092, 0.05, 0.04975376681190276, 0.04902113032590308, 0.04782013048376736, 0.04618033988749895, 0.044142135623730955, 0.04175570504584947, 0.03907980999479094, 0.03618033988749895, 0.03312868930080462, 0.03, 0.02687131069919539, 0.023819660112501053, 0.020920190005209068, 0.018244294954150538, 0.01585786437626905, 0.013819660112501053, 0.012179869516232645, 0.01097886967409693, 0.010246233188097247, 0.01, 0.01, 0.01, 0.01, 0.01, 0.01, 0.01, 0.01, 0.01, 0.01, 0.01, 0.01, 0.01, 0.01, 0.01, 0.01, 0.01, 0.01, 0.01, 0.01]
+        # fmt: on
+        lrs = [cosa_r_lr.get_last_lr()[0]]
+        for _ in range(len(expected_lrs)):
+            cosa_r_lr.step()
+            lrs.append(cosa_r_lr.get_last_lr()[0])
+
+        lrs = lrs[: len(expected_lrs)]
+        test_case.assertTrue(
+            np.allclose(lrs, expected_lrs),
+            f"\nexpected_lrs: {expected_lrs}\nvs.\ncalculated lrs: {lrs}",
+        )
+
+
 if __name__ == "__main__":
     unittest.main()
