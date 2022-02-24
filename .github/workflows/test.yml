@@ -120,7 +120,7 @@ jobs:
 
   wait_for_gpu_slot:
     name: Wait for GPU slots
-    runs-on: ubuntu-latest
+    runs-on: [self-hosted, Linux, scheduler]
     concurrency:
       group: build-and-test-wait-for-gpu-slot
       cancel-in-progress: false
