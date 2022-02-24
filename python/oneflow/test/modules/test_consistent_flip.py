@@ -24,6 +24,7 @@ import oneflow.unittest
 
 from oneflow.test_utils.automated_test_util import *
 
+
 @autotest(n=1, check_graph=False)
 def test_flip_impl(test_case, ndim, placement, sbp):
     dims = [random(1, 4) * 8 for i in range(ndim)]
@@ -42,6 +43,7 @@ class TestFlipConsistent(flow.unittest.TestCase):
         for placement in all_placement():
             for sbp in all_sbp(placement, max_dim=ndim):
                 test_flip_impl(test_case, ndim, placement, sbp)
+
 
 if __name__ == "__main__":
     unittest.main()
