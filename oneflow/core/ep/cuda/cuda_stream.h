@@ -84,7 +84,13 @@ class CudaStream : public Stream {
 
   cudaStream_t cuda_stream() const;
   cublasHandle_t cublas_handle() const;
+
+#if CUDA_VERSION >= 10010
+
   cublasLtHandle_t cublas_lt_handle() const;
+
+#endif
+
   cudnnHandle_t cudnn_handle() const;
   void* cublas_workspace() const;
   size_t cublas_workspace_size() const;
@@ -135,7 +141,13 @@ class CudaStream : public Stream {
  private:
   cudaStream_t cuda_stream_{};
   cublasHandle_t cublas_handle_{};
+
+#if CUDA_VERSION >= 10010
+
   cublasLtHandle_t cublas_lt_handle_{};
+
+#endif
+
   cudnnHandle_t cudnn_handle_{};
   int device_index_;
   void* workspace_{};
