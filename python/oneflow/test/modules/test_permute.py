@@ -94,7 +94,7 @@ class TestPermute(flow.unittest.TestCase):
         y = torch.permute(x, dims=permute_list)
         return y
 
-    @autotest(check_graph=True)
+    @autotest(n=5, check_graph=True)
     def test_permute5d_tensor_with_random_data(test_case):
         device = random_device()
         ndim = 5
