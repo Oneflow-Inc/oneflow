@@ -342,7 +342,6 @@ message LearningRateScheduleOpConf {
   required string out = 2;
   required float learning_rate = 3;
   optional LearningRateDecayConf learning_rate_decay = 4;
-  optional WarmupConf warmup_conf = 5;
 }
 
 message SliceBoxingConf {
