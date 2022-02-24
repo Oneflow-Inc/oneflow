@@ -245,7 +245,7 @@ user_op::DataTypeInferFn MakeFwDataTypeInferFn() {
     int64_t parallel_num = ctx->parallel_num();
     if (parallel_num != 1) {
       // There no need to call SbpParallel4ArgNameAndIndex when parallel_num = 1 in local.
-      const cfg::SbpParallel& x_sbp = ctx->SbpParallel4ArgNameAndIndex("x", 0);
+      const SbpParallel& x_sbp = ctx->SbpParallel4ArgNameAndIndex("x", 0);
       if (x_sbp.has_split_parallel()) {
         CHECK_EQ_OR_RETURN(x_sbp.split_parallel().axis(), 0);
         reserve_space_bits = reserve_space_bits / ctx->parallel_num();

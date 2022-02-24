@@ -51,7 +51,6 @@ void CudaCopyH2DStreamType::Compute(Instruction* instruction) const {
   cudaSetDevice(stream->device_id());
   {
     const auto& instr_type_id = instruction->mut_instr_msg()->instr_type_id();
-    CHECK_EQ(instr_type_id.stream_type_id().interpret_type(), InterpretType::kCompute);
     instr_type_id.instruction_type().Compute(instruction);
     OF_CUDA_CHECK(cudaGetLastError());
   }
@@ -64,7 +63,7 @@ intrusive::shared_ptr<StreamDesc> CudaCopyH2DStreamType::MakeStreamDesc(
   if (!resource.has_gpu_device_num()) { return intrusive::shared_ptr<StreamDesc>(); }
   std::size_t device_num = resource.gpu_device_num();
   auto ret = intrusive::make_shared<StreamDesc>();
-  ret->mut_stream_type_id()->__Init__(LookupStreamType4TypeIndex<CudaCopyH2DStreamType>());
+  ret->set_stream_type(StaticGlobalStreamType<CudaCopyH2DStreamType>());
   ret->set_num_streams_per_machine(device_num);
   ret->set_num_streams_per_thread(device_num);
   return ret;

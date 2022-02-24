@@ -2,19 +2,6 @@
 cmake_minimum_required(VERSION 3.18.0)
 
 set(CMAKE_INSTALL_MESSAGE LAZY CACHE STRING "")
-if(NOT CMAKE_BUILD_TYPE)
-  message(STATUS "No build type selected, default to Release")
-  set(CMAKE_BUILD_TYPE "Release" CACHE STRING "Build type (default Release)" FORCE)
-endif()
-
-if(NOT CMAKE_BUILD_TYPE MATCHES "^(Debug|Release|RelWithDebInfo|MinSizeRel)$")
-  message(
-    FATAL_ERROR
-      "Expected CMAKE_BUILD_TYPE is Debug, Release, RelWithDebInfo or MinSizeRel, got ${CMAKE_BUILD_TYPE}"
-  )
-endif()
-message(STATUS "CMAKE_BUILD_TYPE: ${CMAKE_BUILD_TYPE}")
-
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON CACHE BOOL "")
 
 option(THIRD_PARTY "Build third party" ON)
@@ -73,6 +60,19 @@ endif()
 set(CUDNN_STATIC OFF CACHE BOOL "")
 
 project(oneflow C CXX)
+
+if(NOT CMAKE_BUILD_TYPE)
+  message(STATUS "No build type selected, default to Release")
+  set(CMAKE_BUILD_TYPE "Release" CACHE STRING "Build type (default Release)" FORCE)
+endif()
+
+if(NOT CMAKE_BUILD_TYPE MATCHES "^(Debug|Release|RelWithDebInfo|MinSizeRel)$")
+  message(
+    FATAL_ERROR
+      "Expected CMAKE_BUILD_TYPE is Debug, Release, RelWithDebInfo or MinSizeRel, got ${CMAKE_BUILD_TYPE}"
+  )
+endif()
+message(STATUS "CMAKE_BUILD_TYPE: ${CMAKE_BUILD_TYPE}")
 
 set(COMPILER_VERSION_ERROR_MSG "At least gcc 7, clang 5 or Apple clang 12 is supported.")
 if("${CMAKE_CXX_COMPILER_ID}" STREQUAL "GNU")
@@ -168,6 +168,8 @@ elseif(CPU_THREADING_RUNTIME STREQUAL "OMP")
   add_definitions(-DOF_CPU_THREADING_RUNTIME=OF_RUNTIME_OMP)
 elseif(CPU_THREADING_RUNTIME STREQUAL "SEQ")
   add_definitions(-DOF_CPU_THREADING_RUNTIME=OF_RUNTIME_SEQ)
+else()
+  message(FATAL_ERROR "CPU_THREADING_RUNTIME must be one of: TBB, OMP, SEQ")
 endif()
 
 if(OF_FORCE_COLORED_DIAGNOSTICS)

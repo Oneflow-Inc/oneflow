@@ -206,10 +206,11 @@ class InplaceScalarMulFunctor : public ScalarMathBaseFunctor {
   }
 };
 
-class ScalarDivFunctor {
+class ScalarDivFunctor : public ScalarMathBaseFunctor {
  public:
+  ScalarDivFunctor() : ScalarMathBaseFunctor(/*op_name=*/"scalar_div") {}
   Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x, const Scalar& scalar) const {
-    return ScalarMul(x, Scalar(1.0) / scalar, /*inplace=*/false);
+    return ScalarMathBaseFunctor::operator()(x, scalar, false);
   }
 };
 
@@ -777,7 +778,7 @@ class ConsistentArangeFunctor {
   Maybe<Tensor> operator()(const Scalar& start, const Scalar& limit, const Scalar& delta,
                            const Optional<Symbol<DType>>& dtype,
                            const Symbol<ParallelDesc>& placement,
-                           const std::vector<Symbol<cfg::SbpParallel>>& sbp_tuple) const {
+                           const std::vector<Symbol<SbpParallel>>& sbp_tuple) const {
     JUST(CheckDeviceIdsIsValid(placement));
     MutableAttrMap attrs;
     if (dtype.has_value()) {
@@ -827,7 +828,7 @@ class ConsistentArange2Functor {
  public:
   Maybe<Tensor> operator()(const Scalar& limit, const Symbol<DType>& dtype,
                            const Symbol<ParallelDesc>& placement,
-                           const std::vector<Symbol<cfg::SbpParallel>>& sbp_tuple) const {
+                           const std::vector<Symbol<SbpParallel>>& sbp_tuple) const {
     JUST(CheckDeviceIdsIsValid(placement));
     return ConsistentArange(Scalar(0), limit, Scalar(1), dtype, placement, sbp_tuple);
   }
@@ -1156,9 +1157,9 @@ class MatrixNormFunctor {
     std::vector<int32_t> dim_tmp(axis);
     for (int i = 0; i < axis; ++i) {
       if (input_dim[i] >= 0) {
-        dim_tmp.emplace_back(input_dim[i]);
+        dim_tmp[i] = input_dim[i];
       } else {
-        dim_tmp.emplace_back(input_dim[i] + num_dims);
+        dim_tmp[i] = input_dim[i] + num_dims;
       }
     }
     if (ord == "nuc") {
@@ -1392,6 +1393,36 @@ class ClampGradFunctor {
   std::shared_ptr<OpExpr> clip_op_;
   std::shared_ptr<OpExpr> clip_min_op_;
   std::shared_ptr<OpExpr> clip_max_op_;
+};
+
+class SelectFunctor {
+ public:
+  SelectFunctor() = default;
+
+  Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& input, const int32_t& dim,
+                           const int32_t& index) const {
+    int32_t ndim = input->ndim();
+    CHECK_OR_RETURN(ndim > 0) << "select() cannot be applied to a 0-dim tensor.";
+    CHECK_OR_RETURN((dim >= -ndim) && (dim < ndim))
+        << "Dimension out of range (expected to be in range of [" << -ndim << "," << ndim - 1
+        << "], but got " << dim << ")";
+    int32_t pos_dim = dim >= 0 ? dim : dim + ndim;
+    auto size = input->dim(pos_dim);
+    CHECK_OR_RETURN((index >= -size) && (index < size))
+        << "Index out of range (expected to be in range of [" << -size << "," << size - 1
+        << "], but got " << index << ")";
+    int32_t pos_index = index >= 0 ? index : index + size;
+
+    std::vector<int32_t> sizes(input->shape()->dim_vec().begin(), input->shape()->dim_vec().end());
+    const auto& stride = JUST(input->stride())->StrideVec();
+    std::vector<int32_t> strides(stride.begin(), stride.end());
+    auto storage_offset = JUST(input->storage_offset()) + pos_index * strides[pos_dim];
+
+    sizes.erase(sizes.begin() + pos_dim);
+    strides.erase(strides.begin() + pos_dim);
+
+    return AsStrided(input, sizes, strides, storage_offset);
+  }
 };
 
 class SelectTopNFunctor {
@@ -1916,12 +1947,12 @@ class HsplitIntFunctor {
                                 const int32_t& indices_or_sections) const {
     int32_t ndim = input->ndim();
     CHECK_OR_RETURN(ndim >= 1)
-        << "torch.hsplit requires a tensor with at least 1 dimension, but got a tensor with "
-        << ndim << " dimensions!";
+        << "flow.hsplit requires a tensor with at least 1 dimension, but got a tensor with " << ndim
+        << " dimensions!";
     CHECK_OR_RETURN(indices_or_sections > 0) << "indices_or_sections must greater than 0";
     int32_t dim = (ndim == 1) ? 0 : 1;
     CHECK_OR_RETURN(input->dim(dim) % indices_or_sections == 0)
-        << "torch.hsplit attempted to split along dimension " << dim
+        << "flow.hsplit attempted to split along dimension " << dim
         << ", but the size of the dimension " << input->shape()->At(dim)
         << " is not divisible by the split_size " << indices_or_sections << "!";
     return TensorSplitInt(input, indices_or_sections, dim);
@@ -1935,8 +1966,8 @@ class HsplitVecFunctor {
                                 const std::vector<int32_t>& indices_or_sections) const {
     int32_t ndim = input->ndim();
     CHECK_OR_RETURN(ndim >= 1)
-        << "torch.hsplit requires a tensor with at least 1 dimension, but got a tensor with "
-        << ndim << " dimensions!";
+        << "flow.hsplit requires a tensor with at least 1 dimension, but got a tensor with " << ndim
+        << " dimensions!";
     int32_t dim = (ndim == 1) ? 0 : 1;
     return TensorSplitVec(input, indices_or_sections, dim);
   }
@@ -1949,11 +1980,11 @@ class VsplitIntFunctor {
                                 const int32_t& indices_or_sections) const {
     int32_t ndim = input->ndim();
     CHECK_OR_RETURN(ndim >= 2)
-        << "torch.vsplit requires a tensor with at least 2 dimension, but got a tensor with "
-        << ndim << " dimensions!";
+        << "flow.vsplit requires a tensor with at least 2 dimension, but got a tensor with " << ndim
+        << " dimensions!";
     CHECK_OR_RETURN(indices_or_sections > 0) << "indices_or_sections must greater than 0";
     CHECK_OR_RETURN(input->dim(0) % indices_or_sections == 0)
-        << "torch.vsplit attempted to split along dimension " << 0
+        << "flow.vsplit attempted to split along dimension " << 0
         << ", but the size of the dimension " << input->dim(0)
         << " is not divisible by the split_size " << indices_or_sections << "!";
     return TensorSplitInt(input, indices_or_sections, 0);
@@ -1967,8 +1998,8 @@ class VsplitVecFunctor {
                                 const std::vector<int32_t>& indices_or_sections) const {
     int32_t ndim = input->shape()->NumAxes();
     CHECK_OR_RETURN(ndim >= 2)
-        << "torch.vsplit requires a tensor with at least 1 dimension, but got a tensor with "
-        << ndim << " dimensions!";
+        << "flow.vsplit requires a tensor with at least 1 dimension, but got a tensor with " << ndim
+        << " dimensions!";
     return TensorSplitVec(input, indices_or_sections, 0);
   }
 };
@@ -2121,6 +2152,7 @@ ONEFLOW_FUNCTION_LIBRARY(m) {
   m.add_functor<NormFunctor, Norm2Functor>("Norm");
   m.add_functor<ScalarNormFunctor, ScalarNorm2Functor>("ScalarNorm");
   m.add_functor<ClampGradFunctor>("ClampGrad");
+  m.add_functor<SelectFunctor>("Select");
   m.add_functor<SelectTopNFunctor>("SelectTopN");
   m.add_functor<MinimumFunctor>("Minimum");
   m.add_functor<MaximumFunctor>("Maximum");

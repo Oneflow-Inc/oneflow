@@ -32,7 +32,7 @@ jobs:
         with:
           ref: ${{ github.event.pull_request.head.sha }}
           repository: ${{github.event.pull_request.head.repo.full_name}}
-      - uses: Oneflow-Inc/get-oneflow/cache-complete/matrix/build@fix-oom
+      - uses: Oneflow-Inc/get-oneflow/cache-complete/matrix/build@priority-pr-support
         name: find cache
         id: find-cache
         timeout-minutes: 5
@@ -65,14 +65,14 @@ jobs:
     steps:
       - name: Fix permissions
         run: |
-          docker run --rm -v $PWD:/p -w /p busybox chmod -R o+w .
+          docker run --rm -v $PWD:/p -w /p busybox rm -rf *
       - name: Install dependencies
         run: |
           python3 -m pip config set global.index-url https://pypi.tuna.tsinghua.edu.cn/simple
           python3 -m pip install -U pip setuptools wheel --user
           python3 -m pip install oss2  --user
       - uses: actions/checkout@v2
-      - uses: Oneflow-Inc/get-oneflow@fix-oom
+      - uses: Oneflow-Inc/get-oneflow@priority-pr-support
         name: Build ${{ matrix.entry }}
         if: ${{ matrix.entry !='cpu' }}
         with:
@@ -96,7 +96,7 @@ jobs:
             3.8
             3.9
             3.10
-      - uses: Oneflow-Inc/get-oneflow@fix-oom
+      - uses: Oneflow-Inc/get-oneflow@priority-pr-support
         name: Build ${{ matrix.entry }}
         if: ${{ matrix.entry =='cpu' }}
         with:
@@ -139,7 +139,7 @@ jobs:
             --index_key=${{ env.OSS_DIR }}/index.html \
             --index_key=commit/${{ github.sha }}/${{ matrix.entry }}/index.html
       - name: Update API docs
-        if: github.ref == 'refs/heads/master' && matrix.entry == 'cpu' && contains(env.compute_platforms, matrix.entry)
+        if: github.ref == 'refs/heads/master' && matrix.entry == 'cpu'
         env:
           READTHEDOCS_TOKEN: ${{ secrets.READTHEDOCS_TOKEN }}
         run: |

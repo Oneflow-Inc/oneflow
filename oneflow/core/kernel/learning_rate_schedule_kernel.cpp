@@ -40,50 +40,30 @@ class LearningRateScheduleKernel final : public Kernel {
 
 namespace {
 
-double ConstantWarmupLearningRate(const ConstantWarmupConf& conf, double lr, int64_t train_step) {
-  CHECK_GE(conf.warmup_batches(), 0);
-  CHECK_GT(conf.multiplier(), 0);
-  CHECK_LT(conf.multiplier(), 1);
-  if (train_step < conf.warmup_batches()) {
-    return lr * conf.multiplier();
-  } else {
-    return lr;
-  }
+double GetDecayedLearningRate(const LearningRateDecayConf& conf, double base_lr, int64_t step);
+
+double ConstantLearningRate(double base_lr, double factor, int64_t total_step, int64_t cur_step) {
+  CHECK_GE(total_step, 0);
+  CHECK_GE(factor, 0.0);
+  CHECK_LE(factor, 1.0);
+  if (cur_step < total_step) { return base_lr * factor; }
+  return base_lr;
 }
 
-double LinearWarmupLearningRate(const LinearWarmupConf& conf, double lr, int64_t train_step) {
-  CHECK_GE(conf.warmup_batches(), 0);
-  CHECK_GE(conf.start_multiplier(), 0);
-  CHECK_LT(conf.start_multiplier(), 1);
-  double start_multiplier = conf.start_multiplier();
+double LinearLearningRate(double base_lr, double start_factor, double end_factor,
+                          int64_t total_step, int64_t cur_step) {
+  CHECK_GE(total_step, 0);
+  CHECK_GE(start_factor, 0.0);
+  CHECK_LE(start_factor, 1.0);
+  CHECK_GE(end_factor, 0.0);
+  CHECK_LE(end_factor, 1.0);
   double multiplier = 1.0;
-  if (train_step < conf.warmup_batches()) {
-    multiplier =
-        start_multiplier + (1.0 - start_multiplier) * (train_step * 1.0 / conf.warmup_batches());
+  double c_step_f = float(cur_step);
+  double t_step_f = float(total_step);
+  if (cur_step < total_step) {
+    multiplier = start_factor + (end_factor - start_factor) * (c_step_f / t_step_f);
   }
-  return lr * multiplier;
-}
-
-bool TriggerWarmup(const LearningRateScheduleOpConf& conf, double lr, int64_t train_step) {
-  if (!conf.has_warmup_conf()) { return false; }
-  const WarmupConf& warmup_conf = conf.warmup_conf();
-  if (warmup_conf.has_constant_conf()) {
-    return (train_step < warmup_conf.constant_conf().warmup_batches());
-  } else if (warmup_conf.has_linear_conf()) {
-    return (train_step < warmup_conf.linear_conf().warmup_batches());
-  } else {
-    UNIMPLEMENTED();
-  }
-}
-
-double GetWarmupLearningRate(const WarmupConf& conf, double lr, int64_t train_step) {
-  if (conf.has_constant_conf()) {
-    return ConstantWarmupLearningRate(conf.constant_conf(), lr, train_step);
-  } else if (conf.has_linear_conf()) {
-    return LinearWarmupLearningRate(conf.linear_conf(), lr, train_step);
-  } else {
-    UNIMPLEMENTED();
-  }
+  return base_lr * multiplier;
 }
 
 double ExponentialDecayedLearningRate(const ExponentialDecayConf& conf, double lr,
@@ -217,6 +197,47 @@ double MultiStepLearningRate(const MultiStepConf& conf, double lr, int64_t cur_b
   return lr * std::pow(gamma, i);
 }
 
+double CosineAnnealingWarmRestartsLearningRate(const CosineAnnealingWarmRestartsConf& conf,
+                                               const double base_lr, const int64_t step) {
+  int64_t epoch_steps = conf.t_initial();
+  int64_t epoch = step / epoch_steps;
+  int64_t step_in_epoch = step - (epoch_steps * epoch);
+  if (conf.t_mult() > 1) {
+    epoch = static_cast<int64_t>(std::floor(
+        std::log(1 - step / conf.t_initial() * (1 - conf.t_mult())) / std::log(conf.t_mult())));
+    int64_t interval = std::pow(conf.t_mult(), epoch);
+    epoch_steps = interval * conf.t_initial();
+    step_in_epoch = step
+                    - static_cast<int64_t>(std::floor(static_cast<double>(1 - interval)
+                                                      / (1 - conf.t_mult()) * conf.t_initial()));
+  }
+  double lr = conf.eta_min();
+  if (conf.restart_limit() == 0 || (conf.restart_limit() > 0 && epoch < conf.restart_limit())) {
+    double gamma = std::pow(conf.decay_rate(), epoch);
+    lr = lr + 0.5 * (base_lr * gamma - lr) * (1 + std::cos(M_PI * step_in_epoch / epoch_steps));
+  }
+  return lr;
+}
+
+double SequentialScheduler(const SequentialSchedulerConf& conf, const double base_lr,
+                           const int64_t step) {
+  CHECK_GE(conf.schedulers_size(), 1);
+  CHECK_EQ(conf.milestones_size(), conf.schedulers_size() - 1);
+  CHECK_EQ(conf.interval_rescaling_size(), conf.milestones_size());
+
+  int64_t cur_step = step;
+  size_t scheduler_idx = 0;
+  for (size_t i = 0; i < conf.milestones_size(); ++i) {
+    if (step < conf.milestones(i)) {
+      break;
+    } else {
+      if (conf.interval_rescaling(i)) { cur_step = step - conf.milestones(i); }
+      scheduler_idx++;
+    }
+  }
+  return GetDecayedLearningRate(conf.schedulers(scheduler_idx), base_lr, cur_step);
+}
+
 double GetDecayedLearningRate(const LearningRateDecayConf& conf, double lr, int64_t cur_batch_num) {
   if (conf.has_exponential_conf()) {
     return ExponentialDecayedLearningRate(conf.exponential_conf(), lr, cur_batch_num);
@@ -240,6 +261,18 @@ double GetDecayedLearningRate(const LearningRateDecayConf& conf, double lr, int6
     return StepLearningRate(conf.step_conf(), lr, cur_batch_num);
   } else if (conf.has_multi_step_conf()) {
     return MultiStepLearningRate(conf.multi_step_conf(), lr, cur_batch_num);
+  } else if (conf.has_constant_lr_conf()) {
+    return ConstantLearningRate(lr, conf.constant_lr_conf().factor(),
+                                conf.constant_lr_conf().total_iters(), cur_batch_num);
+  } else if (conf.has_linear_lr_conf()) {
+    return LinearLearningRate(lr, conf.linear_lr_conf().start_factor(),
+                              conf.linear_lr_conf().end_factor(),
+                              conf.linear_lr_conf().total_iters(), cur_batch_num);
+  } else if (conf.has_cosine_annealing_warm_restarts_conf()) {
+    return CosineAnnealingWarmRestartsLearningRate(conf.cosine_annealing_warm_restarts_conf(), lr,
+                                                   cur_batch_num);
+  } else if (conf.has_sequential_scheduler_conf()) {
+    return SequentialScheduler(conf.sequential_scheduler_conf(), lr, cur_batch_num);
   } else {
     UNIMPLEMENTED();
   }
@@ -251,13 +284,10 @@ void LearningRateScheduleKernel::ForwardDataContent(KernelContext* ctx) const {
   const LearningRateScheduleOpConf& conf = this->op_conf().learning_rate_schedule_conf();
   const int64_t train_step = *ctx->BnInOp2Blob("train_step")->dptr<int64_t>();
   float learning_rate = conf.learning_rate();
-  if (TriggerWarmup(conf, learning_rate, train_step)) {
-    learning_rate = GetWarmupLearningRate(conf.warmup_conf(), learning_rate, train_step);
-  } else if (conf.has_learning_rate_decay()) {
+  if (conf.has_learning_rate_decay()) {
     learning_rate = GetDecayedLearningRate(conf.learning_rate_decay(), learning_rate, train_step);
   }
   *ctx->BnInOp2Blob("out")->mut_dptr<float>() = learning_rate;
-
   if (Global<ResourceDesc, ForSession>::Get()->enable_debug_mode()) {
     (*log_stream_) << std::to_string(train_step) << ", " << std::to_string(learning_rate) << "\n";
     log_stream_->Flush();

@@ -30,15 +30,15 @@ struct SubTskGphBuilderUtil {
   static constexpr int64_t kDistanceMax = 3;
 
   static bool IsDeviceTypeCPUOrCUDA(const ParallelDesc& parallel_desc);
-  static bool HasEmptySliceIfSplit(int64_t parallel_num, const cfg::SbpParallel& sbp_parallel,
+  static bool HasEmptySliceIfSplit(int64_t parallel_num, const SbpParallel& sbp_parallel,
                                    const BlobDesc& blob_desc);
   static bool IsOnSameCUDADevice(const TaskNode* lhs, const TaskNode* rhs);
-  static bool IsBoxingS2S(const cfg::SbpParallel& src, const cfg::SbpParallel& dst);
-  static bool IsBoxingS2B(const cfg::SbpParallel& src, const cfg::SbpParallel& dst);
-  static bool IsBoxingP2S(const cfg::SbpParallel& src, const cfg::SbpParallel& dst);
-  static bool IsBoxingP2B(const cfg::SbpParallel& src, const cfg::SbpParallel& dst);
-  static bool IsBoxingB2B(const cfg::SbpParallel& src, const cfg::SbpParallel& dst);
-  static bool IsBoxingB2S(const cfg::SbpParallel& src, const cfg::SbpParallel& dst);
+  static bool IsBoxingS2S(const SbpParallel& src, const SbpParallel& dst);
+  static bool IsBoxingS2B(const SbpParallel& src, const SbpParallel& dst);
+  static bool IsBoxingP2S(const SbpParallel& src, const SbpParallel& dst);
+  static bool IsBoxingP2B(const SbpParallel& src, const SbpParallel& dst);
+  static bool IsBoxingB2B(const SbpParallel& src, const SbpParallel& dst);
+  static bool IsBoxingB2S(const SbpParallel& src, const SbpParallel& dst);
   static bool BlobHasDynamicShape(const BlobDesc& blob_desc);
   static bool IsErrorBoxingNotSupported(const cfg::ErrorProto& error);
   static int64_t GetDistance(int64_t src_machine_id, int64_t src_dev_phy_id,

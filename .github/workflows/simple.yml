@@ -12,18 +12,10 @@ on:
       placeholder:
         description: "placeholder, no effect"
         required: false
+concurrency:
+  group: simple-ci-${{ github.ref }}
+  cancel-in-progress: ${{ github.ref != 'refs/heads/master' }}
 jobs:
-  cancel_previous:
-    name: Cancel previous runs
-    runs-on: ubuntu-latest
-    if: ${{ github.ref == 'refs/heads/master' || (github.event.pull_request.draft == false && contains(github.event.pull_request.requested_reviewers.*.login, 'oneflow-ci-bot') && contains(github.event.pull_request.labels.*.name, 'need-simple-ci')) }}
-    steps:
-      - name: Cancel previous runs of outdated commit
-        uses: styfle/cancel-workflow-action@0.9.0
-        if: ${{ github.ref != 'refs/heads/master' }}
-        with:
-          access_token: ${{ github.token }}
-
   static_analysis_with_clang:
     name: Static analysis with clang
     runs-on: ubuntu-20.04
@@ -69,7 +61,6 @@ jobs:
     name: CPU-only
     if: github.ref == 'refs/heads/master' || (github.event.pull_request.draft == false && contains(github.event.pull_request.requested_reviewers.*.login, 'oneflow-ci-bot') && contains(github.event.pull_request.labels.*.name, 'need-simple-ci'))
     runs-on: ${{ matrix.os }}
-    needs: [cancel_previous]
     env:
       CFLAGS: "-w"
       CXXFLAGS: "-w"
@@ -141,6 +132,7 @@ jobs:
           cmake_flags+=" -DBUILD_SHARED_LIBS=${{ matrix.build_shared_libs }}"
           cmake_flags+=" -DCMAKE_MACOSX_RPATH=FALSE"
           cmake_flags+=" -DCMAKE_BUILD_WITH_INSTALL_RPATH=FALSE"
+          cmake_flags+=" -DCPU_THREADING_RUNTIME=SEQ"
           echo "cmake_flags=${cmake_flags}" >> $GITHUB_ENV
       - name: Build (third party)
         if: matrix.cmake_generator != 'Ninja'
@@ -232,7 +224,6 @@ jobs:
     name: Build with conda
     if: github.ref == 'refs/heads/master' || (github.event.pull_request.draft == false && contains(github.event.pull_request.requested_reviewers.*.login, 'oneflow-ci-bot') && contains(github.event.pull_request.labels.*.name, 'need-simple-ci'))
     runs-on: ubuntu-latest
-    needs: [cancel_previous]
     strategy:
       fail-fast: true
       max-parallel: 1
@@ -247,7 +238,7 @@ jobs:
           repository: Oneflow-Inc/conda-env
           ref: 30a7f00eb48ee9009d85a848e720823e5054c66b
           path: conda-env
-      - uses: Oneflow-Inc/get-oneflow@fix-oom
+      - uses: Oneflow-Inc/get-oneflow@priority-pr-support
         name: Build with gcc7
         if: ${{ matrix.build-type == 'gcc7'}}
         with:
@@ -256,7 +247,7 @@ jobs:
           oneflow-build-env: conda
           conda-env-file: conda-env/dev/gcc7/environment-v2.yml
           conda-env-name: oneflow-dev-gcc7-v2
-      - uses: Oneflow-Inc/get-oneflow@fix-oom
+      - uses: Oneflow-Inc/get-oneflow@priority-pr-support
         name: Build with clang10
         if: ${{ matrix.build-type == 'clang10'}}
         with:

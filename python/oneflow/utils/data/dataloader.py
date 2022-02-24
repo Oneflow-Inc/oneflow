@@ -222,8 +222,6 @@ class DataLoader(Generic[T_co]):
                 "num_workers option should be non-negative; "
                 "use num_workers=0 to disable multiprocessing."
             )
-        elif num_workers == 0 or num_workers == 1:
-            self.num_workers = 0
         else:
             self.num_workers = num_workers
 
@@ -359,7 +357,7 @@ class DataLoader(Generic[T_co]):
         self._iterator = None
 
     def _get_iterator(self) -> "_BaseDataLoaderIter":
-        if self.num_workers == 0 or self.num_workers == 1:
+        if self.num_workers == 0:
             return _SingleProcessDataLoaderIter(self)
         else:
             self.check_worker_number_rationality()

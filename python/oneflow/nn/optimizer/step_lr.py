@@ -13,10 +13,13 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 """
-from .lr_scheduler import LrScheduler
+import math
+
+from .optimizer import Optimizer
+from .lr_scheduler import LRScheduler
 
 
-class StepLR(LrScheduler):
+class StepLR(LRScheduler):
     """
     Decays the learning rate of each parameter group by gamma every step_size steps.
     Notice that such decay can happen simultaneously with other changes to the learning
@@ -44,7 +47,12 @@ class StepLR(LrScheduler):
     """
 
     def __init__(
-        self, optimizer, step_size: int, gamma: float = 0.1, last_step=-1, verbose=False
+        self,
+        optimizer: Optimizer,
+        step_size: int,
+        gamma: float = 0.1,
+        last_step: int = -1,
+        verbose: bool = False,
     ):
         assert step_size > 0, f"step_size must greater than zero, but got {step_size}"
         assert gamma > 0.0, f"gamma must greater than zero, but got {gamma}"
@@ -52,14 +60,12 @@ class StepLR(LrScheduler):
         self.gamma = gamma
         super().__init__(optimizer, last_step, verbose)
 
-    def get_lr(self):
-        if self.last_step == 0 or self.last_step % self.step_size != 0:
-            return [group["lr"] for group in self._optimizer.param_groups]
-        else:
-            return [group["lr"] * self.gamma for group in self._optimizer.param_groups]
+    def get_lr(self, base_lr, step):
+        step_stage = math.floor(step / self.step_size)
+        factor = self.gamma ** step_stage
+        return base_lr * factor
 
-    def _generate_conf_for_graph(self, opt_confs):
-        for opt_conf in opt_confs:
-            learning_rate_decay_conf = opt_conf.mutable_learning_rate_decay()
-            learning_rate_decay_conf.mutable_step_conf().set_step_size(self.step_size)
-            learning_rate_decay_conf.mutable_step_conf().set_gamma(self.gamma)
+    def _generate_conf_for_graph(self, lr_conf):
+        step_conf = lr_conf.mutable_step_conf()
+        step_conf.set_step_size(self.step_size)
+        step_conf.set_gamma(self.gamma)
