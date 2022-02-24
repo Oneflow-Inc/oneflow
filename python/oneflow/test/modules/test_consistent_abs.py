@@ -13,29 +13,29 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 """
+
 import unittest
 
 import oneflow as flow
+from oneflow.test_utils.automated_test_util import *
 import oneflow.unittest
 
-from oneflow.test_utils.automated_test_util import *
+
+@autotest(n=1, check_graph=False)
+def _test_abs_with_ndim_data(test_case, ndim, placement, sbp):
+    dims = [random(1, 3) * 8 for i in range(ndim)]
+    x = random_tensor(ndim, *dims).to_global(placement=placement, sbp=sbp)
+    y = torch.abs(x)
+    return y
 
 
-@autotest(n=5, auto_backward=False, check_graph=False)
-def _test_meshgrid(test_case, placement):
-    x_sbp = random_sbp(placement, max_dim=1)
-    x = random_tensor(ndim=1, dim0=8, requires_grad=False).to_global(placement, x_sbp)
-    y_sbp = random_sbp(placement, max_dim=1)
-    y = random_tensor(ndim=1, dim0=8, requires_grad=False).to_global(placement, y_sbp)
-    res = torch.meshgrid(x, y)
-    return res[0], res[1]
-
-
-class TestMeshGrid(flow.unittest.TestCase):
+class TestAbsModule(flow.unittest.TestCase):
     @globaltest
-    def test_meshgrid(test_case):
+    def test_abs_with_ndim_data(test_case):
         for placement in all_placement():
-            _test_meshgrid(test_case, placement)
+            ndim = random(0, 4).to(int).value()
+            for sbp in all_sbp(placement, max_dim=ndim):
+                _test_abs_with_ndim_data(test_case, ndim, placement, sbp)
 
 
 if __name__ == "__main__":

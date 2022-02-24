@@ -14,28 +14,35 @@ See the License for the specific language governing permissions and
 limitations under the License.
 """
 import unittest
-
 import oneflow as flow
 import oneflow.unittest
 
 from oneflow.test_utils.automated_test_util import *
 
 
-@autotest(n=5, auto_backward=False, check_graph=False)
-def _test_meshgrid(test_case, placement):
-    x_sbp = random_sbp(placement, max_dim=1)
-    x = random_tensor(ndim=1, dim0=8, requires_grad=False).to_global(placement, x_sbp)
-    y_sbp = random_sbp(placement, max_dim=1)
-    y = random_tensor(ndim=1, dim0=8, requires_grad=False).to_global(placement, y_sbp)
-    res = torch.meshgrid(x, y)
-    return res[0], res[1]
+@autotest(n=1, check_graph=False)
+def _test_0_dim_tensor(test_case, placement, sbp):
+    x1 = random_tensor(0).to_global(placement=placement, sbp=sbp)
+    x2 = random_tensor(0).to_global(placement=placement, sbp=sbp)
+    y1 = x1 * x2
+    y2 = x1 + x2
+    return y1 + y2
 
 
-class TestMeshGrid(flow.unittest.TestCase):
+@autotest(n=1, check_graph=False)
+def _test_1dim_slice(test_case, placement, sbp):
+    x = random_tensor(1, random(1, 4) * 8).to_global(placement=placement, sbp=sbp)
+    return x[5]
+
+
+class TestZeroDimensionTensor(flow.unittest.TestCase):
     @globaltest
-    def test_meshgrid(test_case):
+    def test_0_dim_tensor(test_case):
         for placement in all_placement():
-            _test_meshgrid(test_case, placement)
+            for sbp in all_sbp(placement, max_dim=0):
+                _test_0_dim_tensor(test_case, placement, sbp)
+            for sbp in all_sbp(placement, max_dim=1):
+                _test_1dim_slice(test_case, placement, sbp)
 
 
 if __name__ == "__main__":
