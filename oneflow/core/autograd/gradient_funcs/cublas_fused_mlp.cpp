@@ -61,7 +61,7 @@ Maybe<void> CublasFusedMLP::Capture(CublasFusedMLPCaptureState* ctx, const Tenso
   CHECK_OR_RETURN(inputs.size() % 2 == 1) << "Both weight and bias should be passed together. ";
   int32_t weight_num = (inputs.size() - 1) / 2;
   ctx->weight_num = weight_num;
-  ctx->x_requires_grad = inputs.at(0)->requires_grad();
+  ctx->x_requires_grad = JUST(VectorAt(inputs, 0))->requires_grad();
   ctx->weights_requires_grad.resize(weight_num);
   ctx->biases_requires_grad.resize(weight_num);
 
@@ -79,17 +79,17 @@ Maybe<void> CublasFusedMLP::Capture(CublasFusedMLPCaptureState* ctx, const Tenso
     }
   }
 
-  ctx->SaveTensorForBackward(inputs.at(0));  // x. idx_sum:1
+  ctx->SaveTensorForBackward(JUST(VectorAt(inputs, 0)));  // x. idx_sum:1
   for (int32_t i = 0; i < weight_num; i++) {
-    ctx->SaveTensorForBackward(inputs.at(i + 1));  // weights. idx_sum:1+w
+    ctx->SaveTensorForBackward(JUST(VectorAt(inputs, i+1)));  // weights. idx_sum:1+w
   }
 
-  ctx->SaveTensorForBackward(outputs.at(0));  // final layers output. idx_sum:2+w
+  ctx->SaveTensorForBackward(JUST(VectorAt(outputs, 0)));  // final layers output. idx_sum:2+w
   for (int32_t i = 0; i < weight_num; i++) {
-    ctx->SaveTensorForBackward(outputs.at(i + 1));  // cublas aux. need minus 1. idx_sum:2+2w
+    ctx->SaveTensorForBackward(JUST(VectorAt(outputs, i+1)));  // cublas aux. need minus 1. idx_sum:2+2w
   }
   for (int32_t i = 0; i < weight_num - 1; i++) {
-    ctx->SaveTensorForBackward(outputs.at(i + 1 + weight_num));  // hidden.
+    ctx->SaveTensorForBackward(JUST(VectorAt(outputs, i+1+weight_num)));  // hidden.
   }
 
   ComposedAttrMap composed_attrs(attrs, base_attrs_);
@@ -102,7 +102,7 @@ Maybe<void> CublasFusedMLP::Apply(const CublasFusedMLPCaptureState* ctx,
                                   const TensorTuple& out_grads, TensorTuple* in_grads) const {
   int32_t weight_num = ctx->weight_num;
   in_grads->resize(1 + 2 * weight_num);
-  std::shared_ptr<one::Tensor> last_bias_dy = out_grads.at(0);
+  std::shared_ptr<one::Tensor> last_bias_dy = JUST(VectorAt(out_grads, 0));
 
   if (!ctx->x_requires_grad) { return Maybe<void>::Ok(); }
 
@@ -129,11 +129,11 @@ Maybe<void> CublasFusedMLP::Apply(const CublasFusedMLPCaptureState* ctx,
   for (int32_t i = 0; i < weight_num; ++i) { weights[i] = ctx->SavedTensors().at(1 + i); }
 
   for (int32_t i = 0; i < weight_num; ++i) {
-    cublas_auxs[i] = ctx->SavedTensors().at(i + 2 + weight_num);
+    cublas_auxs[i] = JUST(VectorAt(ctx->SavedTensors(), i + 2 + weight_num)); 
   }
 
   for (int32_t i = 0; i < weight_num - 1; ++i) {
-    hiddens[i] = ctx->SavedTensors().at(i + 2 + 2 * weight_num);
+    hiddens[i] = JUST(VectorAt(ctx->SavedTensors(), i + 2 + 2 * weight_num)); 
   }
 
   std::shared_ptr<one::Tensor> cublas_dy;
@@ -142,14 +142,14 @@ Maybe<void> CublasFusedMLP::Apply(const CublasFusedMLPCaptureState* ctx,
     if (hidden_layer_idx == weight_num - 1) {
       cublas_dy = last_bias_dy;
     } else {
-      cublas_dy = dgrad.at(hidden_layer_idx + 1);
+      cublas_dy = JUST(VectorAt(dgrad, hidden_layer_idx + 1)); 
     }
     /*
     Here we use cublas to compute bias + relu + matmul grad.
     Then use Matmul to compute weight grad.
     */
     const auto& matmul_relu_bias_bgrad = JUST(functional::CublasBiasAddReluMatmulGrad(
-        cublas_dy, weights.at(hidden_layer_idx), cublas_auxs.at(hidden_layer_idx - 1)));
+        cublas_dy, JUST(VectorAt(weights, hidden_layer_idx)), JUST(VectorAt(cublas_auxs, hidden_layer_idx - 1))));  
 
     // dgrad
     dgrad.at(hidden_layer_idx) = matmul_relu_bias_bgrad->at(0);
@@ -160,26 +160,26 @@ Maybe<void> CublasFusedMLP::Apply(const CublasFusedMLPCaptureState* ctx,
     // dw
     if (ctx->weights_requires_grad.at(hidden_layer_idx)) {
       in_grads->at(1 + hidden_layer_idx) =
-          JUST(functional::MatMul(cublas_dy, hiddens.at(hidden_layer_idx - 1), true, false, 1.0));
+          JUST(functional::MatMul(cublas_dy, JUST(VectorAt(hiddens, hidden_layer_idx-1)), true, false, 1.0));
     }
   }
 
   // For the first layer, we need to use 2 matmul to get grads.
   std::shared_ptr<one::Tensor> last_dy;
   if (weight_num != 1) {
-    last_dy = dgrad.at(1);
+    last_dy = JUST(VectorAt(dgrad, 1)); 
   } else {
     last_dy = last_bias_dy;
   }
 
   if (ctx->x_requires_grad) {
     // dx:
-    in_grads->at(0) = JUST(functional::MatMul(last_dy, weights.at(0), false, false, 1.0));
+    in_grads->at(0) = JUST(functional::MatMul(last_dy, JUST(VectorAt(weights, 0)), false, false, 1.0));
   }
   if (ctx->weights_requires_grad.at(0)) {
     // dw:
     in_grads->at(1) =
-        JUST(functional::MatMul(last_dy, ctx->SavedTensors().at(0), true, false, 1.0));
+        JUST(functional::MatMul(last_dy, JUST(VectorAt(ctx->SavedTensors(), 0)), true, false, 1.0));
   }
 
   return Maybe<void>::Ok();
