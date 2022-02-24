@@ -53,7 +53,7 @@ Maybe<scalar_or_const_ref_t<typename VecT::value_type>> VectorAt(const VecT& vec
 }
 
 template<>
-Maybe<bool> VectorAt(const std::vector<bool>& vec, typename std::vector<bool>::size_type index) {
+inline Maybe<bool> VectorAt(const std::vector<bool>& vec, typename std::vector<bool>::size_type index) {
   CHECK_LT_OR_RETURN(index, vec.size());
   // convert vector bool proxy to bool
   return static_cast<bool>(vec[index]);
