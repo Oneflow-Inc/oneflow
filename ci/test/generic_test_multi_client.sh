@@ -4,24 +4,13 @@ set -xe
 export PYTHONUNBUFFERED=1
 
 src_dir=${ONEFLOW_SRC_DIR:-"$PWD"}
-test_dir=${ONEFLOW_TEST_DIR:-"$PWD/python/oneflow/test/modules"}
-test_tmp_dir=${ONEFLOW_TEST_TMP_DIR:-"./test_tmp_dir"}
-export ONEFLOW_TEST_UTILS_DIR=$src_dir/python/oneflow/test_utils
+ONEFLOW_TEST_DIR=${ONEFLOW_TEST_DIR:-"$PWD/python/oneflow/test/modules"}
 
-
-rm -rf $test_tmp_dir
-mkdir -p $test_tmp_dir
-cp -r $test_dir $test_tmp_dir
-cd ${test_tmp_dir}/$(basename $test_dir)
+cd $ONEFLOW_TEST_DIR
 
 gpu_num=$(nvidia-smi --query-gpu=name --format=csv,noheader | wc -l)
 export ONEFLOW_TEST_DEVICE_NUM=1
-python3 $src_dir/ci/test/parallel_run.py \
-    --gpu_num=${gpu_num} \
-    --dir=${PWD} \
-    --timeout=1 \
-    --verbose \
-    --chunk=1
+python3 -m pytest -n 4  ${PWD} --verbose --durations=50 -x
 if [[ "$(python3 -c 'import oneflow.sysconfig;print(oneflow.sysconfig.has_rpc_backend_grpc())')" == *"True"* ]]; then
     export ONEFLOW_TEST_DEVICE_NUM=2
     python3 -m oneflow.distributed.launch --nproc_per_node 2 -m unittest discover ${PWD} --failfast --verbose
