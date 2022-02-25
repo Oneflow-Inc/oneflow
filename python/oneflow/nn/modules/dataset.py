@@ -179,8 +179,10 @@ class CoinFlip(Module):
 
         self.placement = placement
         if placement is None:
-            if device is None:
-                self.device = flow.device("cpu")
+            self.device = device or flow.device("cpu")
+            assert self.device == "cpu" or self.device == flow.device(
+                "cpu"
+            ), "coin flip only supports cpu currently."
         else:
             assert device is None
 
@@ -192,6 +194,9 @@ class CoinFlip(Module):
                 for elem in sbp:
                     assert isinstance(elem, flow.sbp.sbp), "sbp: %s" % sbp
             assert len(sbp) == len(placement.ranks.shape)
+            assert (
+                self.placement.type == "cpu"
+            ), "coin flip only supports cpu currently."
         else:
             assert sbp is None, "sbp: %s" % sbp
 
