@@ -47,7 +47,7 @@ struct PreluForwardSingleAlphaPtrFunctor {
   const T* alpha_ptr;
 };
 
-template<typename T, typename IndexType, int pack_size, bool tail>
+template<typename T, typename IndexType, int pack_size, bool tail, bool alpha_requires_grad>
 __global__ void PReluBackwardSingleAlphaGpu(const IndexType elem_cnt, const int64_t n_tail,
                                             const T* x, const T* alpha, const T* dy, T* dx,
                                             T* alpha_diff, const T* tail_x, const T* tail_dy,
@@ -70,32 +70,46 @@ __global__ void PReluBackwardSingleAlphaGpu(const IndexType elem_cnt, const int6
     dy_vec.storage = *dy_load;
 
     LoadPack dx_vec;
-    LoadPack dalpha_vec;
-
     T zero_val = static_cast<T>(0.0);
-    T alpha_diff_i = 0;
-#pragma unroll
-    for (int i = 0; i < pack_size; i++) {
-      if (x_vec.elem[i] > zero_val) {
-        dx_vec.elem[i] = dy_vec.elem[i];
-        dalpha_vec.elem[i] = zero_val;
-      } else {
-        dx_vec.elem[i] = dy_vec.elem[i] * alpha_val;
-        dalpha_vec.elem[i] = dy_vec.elem[i] * x_vec.elem[i];
-      }
+    if(alpha_requires_grad){
+      LoadPack dalpha_vec;
+    #pragma unroll
+        for (int i = 0; i < pack_size; i++) {
+          if (x_vec.elem[i] > zero_val) {
+            dx_vec.elem[i] = dy_vec.elem[i];
+            dalpha_vec.elem[i] = zero_val;
+          } else {
+            dx_vec.elem[i] = dy_vec.elem[i] * alpha_val;
+            dalpha_vec.elem[i] = dy_vec.elem[i] * x_vec.elem[i];
+          }
+        }
+        *(reinterpret_cast<LoadType*>(dx + linear_index)) = dx_vec.storage;
+        *(reinterpret_cast<LoadType*>(alpha_diff + linear_index)) = dalpha_vec.storage;
+    }else{
+    #pragma unroll
+        for (int i = 0; i < pack_size; i++) {
+          if (x_vec.elem[i] > zero_val) {
+            dx_vec.elem[i] = dy_vec.elem[i];
+          } else {
+            dx_vec.elem[i] = dy_vec.elem[i] * alpha_val;
+          }
+        }
+        *(reinterpret_cast<LoadType*>(dx + linear_index)) = dx_vec.storage;
     }
-    *(reinterpret_cast<LoadType*>(dx + linear_index)) = dx_vec.storage;
-    *(reinterpret_cast<LoadType*>(alpha_diff + linear_index)) = dalpha_vec.storage;
   }
 
   if (tail && global_thread_id < n_tail) {
     const T tail_dy_val = tail_dy[global_thread_id];
     if (tail_x[global_thread_id] > zero_val) {
       tail_dx[global_thread_id] = tail_dy_val;
-      tail_alpha_diff[global_thread_id] = zero_val;
+      if(alpha_requires_grad){
+        tail_alpha_diff[global_thread_id] = zero_val;
+      }
     } else {
       tail_dx[global_thread_id] = alpha_val * tail_dy_val;
-      tail_alpha_diff[global_thread_id] = tail_x[global_thread_id] * tail_dy_val;
+      if(alpha_requires_grad){
+        tail_alpha_diff[global_thread_id] = tail_x[global_thread_id] * tail_dy_val;
+      }
     }
   }
 }
@@ -141,7 +155,7 @@ __global__ void PReluForwardMultiAlphaGpu(const IndexType elem_cnt, const IndexT
   }
 }
 
-template<typename T>
+template<typename T, bool alpha_requires_grad>
 __global__ void BroadcastPReluMultiAlphaNaiveBackwardGpu(const int32_t elem_cnt,
                                                          const int32_t alpha_size,
                                                          const int32_t inner_size, const T* x,
@@ -154,15 +168,19 @@ __global__ void BroadcastPReluMultiAlphaNaiveBackwardGpu(const int32_t elem_cnt,
     int32_t alpha_i = (i / inner_size) % alpha_size;
     if (x_i > zero_val) {
       dx[i] = dy_i;
-      alpha_diff[i] = zero_val;
+      if(alpha_requires_grad){
+        alpha_diff[i] = zero_val;
+      }
     } else {
       dx[i] = dy_i * alpha[alpha_i];
-      alpha_diff[i] = dy_i * x_i;
+      if(alpha_requires_grad){
+        alpha_diff[i] = dy_i * x_i;
+      }
     }
   }
 }
 
-template<typename T, typename IndexType, int pack_size>
+template<typename T, typename IndexType, int pack_size, bool alpha_requires_grad>
 __global__ void PReluBackwardMultiAlphaGpu(const IndexType elem_cnt, const IndexType alpha_size,
                                            const IndexType inner_size, const T* x, const T* alpha,
                                            const T* dy, T* dx, T* alpha_diff) {
@@ -184,23 +202,34 @@ __global__ void PReluBackwardMultiAlphaGpu(const IndexType elem_cnt, const Index
     dy_vec.storage = *dy_load;
 
     LoadPack dx_vec;
-    LoadPack dalpha_vec;
-
-    T zero_val = static_cast<T>(0.0);
     T alpha_val = alpha[alpha_idx];
-    T alpha_diff_i = 0;
-#pragma unroll
-    for (int i = 0; i < pack_size; i++) {
-      if (x_vec.elem[i] > zero_val) {
-        dx_vec.elem[i] = dy_vec.elem[i];
-        dalpha_vec.elem[i] = zero_val;
-      } else {
-        dx_vec.elem[i] = dy_vec.elem[i] * alpha_val;
-        dalpha_vec.elem[i] = dy_vec.elem[i] * x_vec.elem[i];
-      }
+    if(alpha_requires_grad){
+        LoadPack dalpha_vec;
+        T zero_val = static_cast<T>(0.0);
+    #pragma unroll
+        for (int i = 0; i < pack_size; i++) {
+          if (x_vec.elem[i] > zero_val) {
+            dx_vec.elem[i] = dy_vec.elem[i];
+            dalpha_vec.elem[i] = zero_val;
+          } else {
+            dx_vec.elem[i] = dy_vec.elem[i] * alpha_val;
+            dalpha_vec.elem[i] = dy_vec.elem[i] * x_vec.elem[i];
+          }
+        }
+        *(reinterpret_cast<LoadType*>(dx + linear_index)) = dx_vec.storage;
+        *(reinterpret_cast<LoadType*>(alpha_diff + linear_index)) = dalpha_vec.storage;
+    }else{
+      #pragma unroll
+          for (int i = 0; i < pack_size; i++) {
+            if (x_vec.elem[i] > zero_val) {
+              dx_vec.elem[i] = dy_vec.elem[i];
+            } else {
+              dx_vec.elem[i] = dy_vec.elem[i] * alpha_val;
+            }
+          }
+          *(reinterpret_cast<LoadType*>(dx + linear_index)) = dx_vec.storage;
     }
-    *(reinterpret_cast<LoadType*>(dx + linear_index)) = dx_vec.storage;
-    *(reinterpret_cast<LoadType*>(alpha_diff + linear_index)) = dalpha_vec.storage;
+
   }
 }
 
@@ -250,47 +279,73 @@ void DispatchPreluForwardIndex(ep::Stream* stream, const int64_t elem_cnt, const
 template<typename T, typename IndexType, int32_t pack_size>
 void DispatchPreluBackwardPackSize(ep::Stream* stream, const int64_t elem_cnt,
                                    const int64_t alpha_size, const int64_t inner_size, const T* x,
-                                   const T* alpha, const T* dy, T* dx, T* alpha_diff) {
+                                   const T* alpha, const T* dy, T* dx, T* alpha_diff, const bool alpha_requires_grad) {
   const int64_t pack_num = elem_cnt / pack_size;
   int grid_size;
   cudaError_t err = cuda::elementwise::GetNumBlocks(pack_num, &grid_size);
 
   if (pack_size >= 8 && inner_size % 8 == 0) {
-    PReluBackwardMultiAlphaGpu<T, IndexType, 8>
+    if(alpha_requires_grad){
+      PReluBackwardMultiAlphaGpu<T, IndexType, 8, true>
         <<<grid_size, kBlockSize, 0, stream->As<ep::CudaStream>()->cuda_stream()>>>(
             elem_cnt, alpha_size, inner_size, x, alpha, dy, dx, alpha_diff);
+    }else{
+      PReluBackwardMultiAlphaGpu<T, IndexType, 8, false>
+        <<<grid_size, kBlockSize, 0, stream->As<ep::CudaStream>()->cuda_stream()>>>(
+            elem_cnt, alpha_size, inner_size, x, alpha, dy, dx, alpha_diff);
+    }
   } else if (pack_size >= 4 && inner_size % 4 == 0) {
-    PReluBackwardMultiAlphaGpu<T, IndexType, 4>
+    if(alpha_requires_grad){
+      PReluBackwardMultiAlphaGpu<T, IndexType, 4, true>
         <<<grid_size, kBlockSize, 0, stream->As<ep::CudaStream>()->cuda_stream()>>>(
             elem_cnt, alpha_size, inner_size, x, alpha, dy, dx, alpha_diff);
+    }else{
+      PReluBackwardMultiAlphaGpu<T, IndexType, 4, false>
+        <<<grid_size, kBlockSize, 0, stream->As<ep::CudaStream>()->cuda_stream()>>>(
+            elem_cnt, alpha_size, inner_size, x, alpha, dy, dx, alpha_diff);
+    }
   } else if (pack_size >= 2 && inner_size % 2 == 0) {
-    PReluBackwardMultiAlphaGpu<T, IndexType, 2>
+    if(alpha_requires_grad){
+      PReluBackwardMultiAlphaGpu<T, IndexType, 2, true>
         <<<grid_size, kBlockSize, 0, stream->As<ep::CudaStream>()->cuda_stream()>>>(
             elem_cnt, alpha_size, inner_size, x, alpha, dy, dx, alpha_diff);
+    }else{
+      PReluBackwardMultiAlphaGpu<T, IndexType, 2, false>
+        <<<grid_size, kBlockSize, 0, stream->As<ep::CudaStream>()->cuda_stream()>>>(
+            elem_cnt, alpha_size, inner_size, x, alpha, dy, dx, alpha_diff);
+    }
+    
   } else {
-    BroadcastPReluMultiAlphaNaiveBackwardGpu<T>
+    if(alpha_requires_grad){
+      BroadcastPReluMultiAlphaNaiveBackwardGpu<T, true>
         <<<grid_size, kBlockSize, 0, stream->As<ep::CudaStream>()->cuda_stream()>>>(
             elem_cnt, alpha_size, inner_size, x, alpha, dy, dx, alpha_diff);
+    }else{
+      BroadcastPReluMultiAlphaNaiveBackwardGpu<T, false>
+        <<<grid_size, kBlockSize, 0, stream->As<ep::CudaStream>()->cuda_stream()>>>(
+            elem_cnt, alpha_size, inner_size, x, alpha, dy, dx, alpha_diff);
+    }
   }
 }
 
 template<typename T>
 void DispatchPreluBackwardIndex(ep::Stream* stream, const int64_t elem_cnt,
                                 const int64_t alpha_size, const int64_t inner_size, const T* x,
-                                const T* alpha, const T* dy, T* dx, T* alpha_diff) {
+                                const T* alpha, const T* dy, T* dx, T* alpha_diff, const bool alpha_requires_grad) {
   constexpr int pack_size = cuda::elementwise::PackSize<T>();
   if (elem_cnt < GetMaxVal<int32_t>()) {
     DispatchPreluBackwardPackSize<T, int32_t, pack_size>(stream, elem_cnt, alpha_size, inner_size,
-                                                         x, alpha, dy, dx, alpha_diff);
-  } else {
+                                                         x, alpha, dy, dx, alpha_diff, alpha_requires_grad);
+  }else{
     DispatchPreluBackwardPackSize<T, int64_t, pack_size>(stream, elem_cnt, alpha_size, inner_size,
-                                                         x, alpha, dy, dx, alpha_diff);
+                                                         x, alpha, dy, dx, alpha_diff, alpha_requires_grad);
   }
+    
 }
 
 template<typename T, typename IndexType>
 void DispatchPreluBackwardSingleAlphaTail(ep::Stream* stream, const IndexType elem_cnt, const T* x,
-                                          const T* alpha, const T* dy, T* dx, T* alpha_diff) {
+                                          const T* alpha, const T* dy, T* dx, T* alpha_diff, const bool alpha_requires_grad) {
   constexpr int pack_size = cuda::elementwise::PackSize<T>();
   const int64_t pack_num = elem_cnt / pack_size;
   int grid_size;
@@ -299,29 +354,45 @@ void DispatchPreluBackwardSingleAlphaTail(ep::Stream* stream, const IndexType el
   const int64_t n_tail = elem_cnt - tail_offset;
   const bool tail = n_tail > 0 ? true : false;
   if (tail) {
-    PReluBackwardSingleAlphaGpu<T, IndexType, pack_size, true>
+    if(alpha_requires_grad){
+      PReluBackwardSingleAlphaGpu<T, IndexType, pack_size, true, true>
         <<<grid_size, kBlockSize, 0, stream->As<ep::CudaStream>()->cuda_stream()>>>(
             elem_cnt, n_tail, x, alpha, dy, dx, alpha_diff, x + tail_offset, dy + tail_offset,
             dx + tail_offset, alpha_diff + tail_offset);
+    }else{
+      PReluBackwardSingleAlphaGpu<T, IndexType, pack_size, true, false>
+        <<<grid_size, kBlockSize, 0, stream->As<ep::CudaStream>()->cuda_stream()>>>(
+            elem_cnt, n_tail, x, alpha, dy, dx, alpha_diff, x + tail_offset, dy + tail_offset,
+            dx + tail_offset, alpha_diff + tail_offset);
+    }
   } else {
-    PReluBackwardSingleAlphaGpu<T, IndexType, pack_size, false>
-        <<<grid_size, kBlockSize, 0, stream->As<ep::CudaStream>()->cuda_stream()>>>(
-            elem_cnt, n_tail, x, alpha, dy, dx, alpha_diff, x + tail_offset, dy + tail_offset,
-            dx + tail_offset, alpha_diff + tail_offset);
+      if(alpha_requires_grad){
+      PReluBackwardSingleAlphaGpu<T, IndexType, pack_size, false, true>
+          <<<grid_size, kBlockSize, 0, stream->As<ep::CudaStream>()->cuda_stream()>>>(
+              elem_cnt, n_tail, x, alpha, dy, dx, alpha_diff, x + tail_offset, dy + tail_offset,
+              dx + tail_offset, alpha_diff + tail_offset);
+    }else{
+      PReluBackwardSingleAlphaGpu<T, IndexType, pack_size, false, false>
+          <<<grid_size, kBlockSize, 0, stream->As<ep::CudaStream>()->cuda_stream()>>>(
+              elem_cnt, n_tail, x, alpha, dy, dx, alpha_diff, x + tail_offset, dy + tail_offset,
+              dx + tail_offset, alpha_diff + tail_offset);
+    }
   }
+  
 }
 
 template<typename T>
 void DispatchPreluBackwardSingleAlphaIndex(ep::Stream* stream, const int64_t elem_cnt, const T* x,
-                                           const T* alpha, const T* dy, T* dx, T* alpha_diff) {
+                                           const T* alpha, const T* dy, T* dx, T* alpha_diff, const bool alpha_requires_grad) {
   if (elem_cnt < GetMaxVal<int32_t>()) {
     DispatchPreluBackwardSingleAlphaTail<T, int32_t>(stream, elem_cnt, x, alpha, dy, dx,
-                                                     alpha_diff);
+                                                     alpha_diff, alpha_requires_grad);
   } else {
     DispatchPreluBackwardSingleAlphaTail<T, int64_t>(stream, elem_cnt, x, alpha, dy, dx,
-                                                     alpha_diff);
+                                                     alpha_diff, alpha_requires_grad);
   }
 }
+
 }  // namespace
 
 template<typename T>
@@ -380,6 +451,7 @@ class GpuPReluGradKernel final : public user_op::OpKernel {
     user_op::Tensor* dx = ctx->Tensor4ArgNameAndIndex("dx", 0);
     user_op::Tensor* alpha_diff = ctx->Tensor4ArgNameAndIndex("alpha_diff", 0);
     user_op::Tensor* tmp_buffer = ctx->Tensor4ArgNameAndIndex("tmp_buffer", 0);
+    const bool alpha_requires_grad = ctx->Attr<bool>("alpha_requires_grad");
     const int32_t elem_cnt = x->shape().elem_cnt();
     T* broadcasted_alpha_diff = tmp_buffer->mut_dptr<T>();
     T* reduce_sum_tmp_buf = reinterpret_cast<T*>(tmp_buffer->mut_dptr<char>()
@@ -394,16 +466,18 @@ class GpuPReluGradKernel final : public user_op::OpKernel {
     if (alpha_size == 1) {
       DispatchPreluBackwardSingleAlphaIndex<T>(ctx->stream(), elem_cnt, x->dptr<T>(),
                                                alpha->dptr<T>(), dy->dptr<T>(), dx->mut_dptr<T>(),
-                                               broadcasted_alpha_diff);
+                                               broadcasted_alpha_diff, alpha_requires_grad);
     } else {
       DispatchPreluBackwardIndex<T>(ctx->stream(), elem_cnt, alpha_size, inner_size, x->dptr<T>(),
                                     alpha->dptr<T>(), dy->dptr<T>(), dx->mut_dptr<T>(),
-                                    broadcasted_alpha_diff);
+                                    broadcasted_alpha_diff, alpha_requires_grad);
     }
-    NdarrayUtil<DeviceType::kCUDA, T>::ReduceSum(
+    if(alpha_requires_grad){
+      NdarrayUtil<DeviceType::kCUDA, T>::ReduceSum(
         ctx->stream(), XpuVarNdarray<T>(left_extended_shape, alpha_diff->mut_dptr<T>()),
         XpuVarNdarray<const T>(x->shape(), broadcasted_alpha_diff),
         XpuVarNdarray<T>(x->shape(), reduce_sum_tmp_buf));
+    }
   }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };

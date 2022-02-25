@@ -120,6 +120,7 @@ REGISTER_USER_OP_GRAD("prelu").SetGenBackwardOpConfFn([](const user_op::UserOpWr
                                              .Input("alpha", op.input("alpha", 0))
                                              .Output("dx")
                                              .Output("alpha_diff")
+                                             .Attr("alpha_requires_grad", op.NeedGenGradTensor4OpInput("alpha", 0))
                                              .Build();
     AddOp(grad_op);
 
