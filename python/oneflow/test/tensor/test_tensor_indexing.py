@@ -226,11 +226,10 @@ def test_mask_setitem(test_case, numpy_x):
     test_case.assertTrue(np.allclose(numpy_x, x.numpy()))
 
 def _test_list_indexing_using_scalar_tensor(test_case, dtype):
-        num = 20
-        y = np.arange(num)
-        for i in range(num):
+        y = np.random.randint(0, 100, size=100)
+        for i in range(len(y)):
             x = flow.tensor(i, dtype=dtype)
-            test_case.assertTrue(np.allclose(i, y[x]))
+            test_case.assertEqual(y[i], y[x])
 
 @flow.unittest.skip_unless_1n1d()
 class TestTensorIndexing(flow.unittest.TestCase):
