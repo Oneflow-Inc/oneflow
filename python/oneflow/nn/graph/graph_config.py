@@ -159,6 +159,26 @@ class GraphConfig(object):
 
            TensorRT: https://developer.nvidia.com/tensorrt
 
+        Tutorial for build with TensorRT: 
+        
+        https://github.com/Oneflow-Inc/oneflow/blob/master/oneflow/xrt/README.md#build-with-tensorrt
+
+        For example:
+
+        .. code-block:: python
+
+            import oneflow as flow
+
+            class Graph(flow.nn.Graph):
+                def __init__(self):
+                    super().__init__()
+                    self.linear = flow.nn.Linear(3, 8, False)
+                    self.config.enable_tensorrt(True) # Use tensorrt in xrt.
+                def build(self, x):
+                    return self.linear(x)
+
+            graph = Graph()
+
         Args:
             value (bool, optional): The default vaule is True.
         """
