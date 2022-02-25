@@ -131,21 +131,21 @@ class StaticZerosTensor final : public Tensor {
   Symbol<DType> dtype() const override { return CHECK_JUST(DType::Get(dtype_)); }
   Maybe<TransportToken> transport_token() const override { RETURN_ERROR_WITH_BUG_PROMPT(); }
   Maybe<Symbol<NdSbp>> nd_sbp() const override {
-    if (is_consistent()) {
+    if (is_consistent() && ndsbp_.has_value()) {
       return JUST(ndsbp_);
     } else {
       RETURN_ERROR_WITH_BUG_PROMPT();
     }
   }
   Maybe<Symbol<ParallelDesc>> parallel_desc() const override {
-    if (is_consistent()) {
+    if (is_consistent() && placement_.has_value()) {
       return JUST(placement_);
     } else {
       RETURN_ERROR_WITH_BUG_PROMPT();
     }
   }
   Maybe<Symbol<Device>> device() const override {
-    if (is_local()) {
+    if (is_local() && device_.has_value()) {
       return JUST(device_);
     } else {
       RETURN_ERROR_WITH_BUG_PROMPT();
