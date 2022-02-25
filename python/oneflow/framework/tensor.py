@@ -502,11 +502,11 @@ def _fmod(self, other):
 
 def _index(self):
     assert self.numel() == 1 and self.dtype in (
-        flow.uint8, 
-        flow.int8, 
-        flow.int32, 
-        flow.int64, 
-        flow.bool
+        flow.uint8,
+        flow.int8,
+        flow.int32,
+        flow.int64,
+        flow.bool,
     ), "Only integer tensors of a single element can be converted to an index"
     return self.numpy().item()
 
