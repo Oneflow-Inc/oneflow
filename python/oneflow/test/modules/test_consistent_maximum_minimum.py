@@ -17,11 +17,18 @@ import unittest
 
 import oneflow as flow
 import oneflow.unittest
-
+import torch as torch_original
+from packaging import version
 from oneflow.test_utils.automated_test_util import *
 
 
-@autotest(n=5, check_graph=False)
+@autotest(
+    n=5,
+    auto_backward=(
+        version.parse(torch_original.__version__) >= version.parse("1.10.2")
+    ),
+    check_graph=False,
+)
 def _test_broadcast_maximum(test_case, placement, x_sbp, y_sbp):
     x = random_tensor(ndim=5, dim0=8, dim1=8, dim2=8, dim3=1, dim4=8).to_global(
         placement, x_sbp
@@ -33,7 +40,13 @@ def _test_broadcast_maximum(test_case, placement, x_sbp, y_sbp):
     return z
 
 
-@autotest(n=5, check_graph=False)
+@autotest(
+    n=5,
+    auto_backward=(
+        version.parse(torch_original.__version__) >= version.parse("1.10.2")
+    ),
+    check_graph=False,
+)
 def _test_broadcast_minimum(test_case, placement, x_sbp, y_sbp):
     x = random_tensor(ndim=5, dim0=8, dim1=8, dim2=8, dim3=1, dim4=8).to_global(
         placement, x_sbp
@@ -45,7 +58,13 @@ def _test_broadcast_minimum(test_case, placement, x_sbp, y_sbp):
     return z
 
 
-@autotest(n=5, check_graph=False)
+@autotest(
+    n=5,
+    auto_backward=(
+        version.parse(torch_original.__version__) >= version.parse("1.10.2")
+    ),
+    check_graph=False,
+)
 def _test_maximum_with_same_input(test_case, placement, sbp):
     x = random_tensor(ndim=4, dim0=8, dim1=8, dim2=8, dim3=8).to_global(placement, sbp)
     y = x.detach().clone()
@@ -54,7 +73,13 @@ def _test_maximum_with_same_input(test_case, placement, sbp):
     return z
 
 
-@autotest(n=5, check_graph=False)
+@autotest(
+    n=5,
+    auto_backward=(
+        version.parse(torch_original.__version__) >= version.parse("1.10.2")
+    ),
+    check_graph=False,
+)
 def _test_minimum_with_same_input(test_case, placement, sbp):
     x = random_tensor(ndim=4, dim0=8, dim1=8, dim2=8, dim3=8).to_global(placement, sbp)
     y = x.detach().clone()
