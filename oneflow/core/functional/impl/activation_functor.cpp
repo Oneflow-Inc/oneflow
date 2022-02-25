@@ -91,7 +91,13 @@ class PReluGradFunctor {
   }
   Maybe<TensorTuple> operator()(const std::shared_ptr<Tensor>& dy, const std::shared_ptr<Tensor>& x,
                                 const std::shared_ptr<Tensor>& alpha) const {
-    return OpInterpUtil::Dispatch<one::TensorTuple>(*op_, {dy, x, alpha});
+    MutableAttrMap attrs;
+    if(alpha->requires_grad()){
+      JUST(attrs.SetAttr<bool>("alpha_requires_grad", true));
+    }else{
+      JUST(attrs.SetAttr<bool>("alpha_requires_grad", false));
+    }
+    return OpInterpUtil::Dispatch<one::TensorTuple>(*op_, {dy, x, alpha}, attrs);
   }
 
  private:

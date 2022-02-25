@@ -380,6 +380,7 @@ class GpuPReluGradKernel final : public user_op::OpKernel {
     user_op::Tensor* dx = ctx->Tensor4ArgNameAndIndex("dx", 0);
     user_op::Tensor* alpha_diff = ctx->Tensor4ArgNameAndIndex("alpha_diff", 0);
     user_op::Tensor* tmp_buffer = ctx->Tensor4ArgNameAndIndex("tmp_buffer", 0);
+    const bool alpha_requires_grad = ctx->Attr<bool>("alpha_requires_grad");
     const int32_t elem_cnt = x->shape().elem_cnt();
     T* broadcasted_alpha_diff = tmp_buffer->mut_dptr<T>();
     T* reduce_sum_tmp_buf = reinterpret_cast<T*>(tmp_buffer->mut_dptr<char>()
@@ -400,10 +401,12 @@ class GpuPReluGradKernel final : public user_op::OpKernel {
                                     alpha->dptr<T>(), dy->dptr<T>(), dx->mut_dptr<T>(),
                                     broadcasted_alpha_diff);
     }
-    NdarrayUtil<DeviceType::kCUDA, T>::ReduceSum(
+    if(alpha_requires_grad){
+      NdarrayUtil<DeviceType::kCUDA, T>::ReduceSum(
         ctx->stream(), XpuVarNdarray<T>(left_extended_shape, alpha_diff->mut_dptr<T>()),
         XpuVarNdarray<const T>(x->shape(), broadcasted_alpha_diff),
         XpuVarNdarray<T>(x->shape(), reduce_sum_tmp_buf));
+    }
   }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
