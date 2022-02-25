@@ -44,11 +44,10 @@ class ExponentialLR(LRScheduler):
         self.gamma = gamma
         super().__init__(optimizer, last_step, verbose)
 
-    def get_lr(self):
-        return [base_lr * (self.gamma ** self.last_step) for base_lr in self.base_lrs]
+    def get_lr(self, base_lr, step):
+        return base_lr * (self.gamma ** step)
 
-    def _generate_conf_for_graph(self, opt_confs):
-        for opt_conf in opt_confs:
-            learning_rate_decay_conf = opt_conf.mutable_learning_rate_decay()
-            learning_rate_decay_conf.mutable_step_conf().set_step_size(1)
-            learning_rate_decay_conf.mutable_step_conf().set_gamma(self.gamma)
+    def _generate_conf_for_graph(self, lr_conf):
+        step_conf = lr_conf.mutable_step_conf()
+        step_conf.set_step_size(1)
+        step_conf.set_gamma(self.gamma)
