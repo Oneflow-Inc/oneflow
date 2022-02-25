@@ -161,6 +161,7 @@ from oneflow._C import squeeze
 from oneflow._C import narrow
 from oneflow._C import unsqueeze
 from oneflow._C import permute
+from oneflow._C import select
 from oneflow._C import tensor_split
 from oneflow._C import hsplit
 from oneflow._C import vsplit
@@ -303,6 +304,7 @@ from oneflow.framework.generator import (
 from oneflow.framework.scope_util import api_current_scope as current_scope
 from oneflow.framework.tensor import Tensor
 from oneflow.framework.tensor import is_nonzero
+from oneflow.framework.type_tensor import *
 
 from oneflow.nn.modules.pooling import (
     adaptive_avg_pool1d,

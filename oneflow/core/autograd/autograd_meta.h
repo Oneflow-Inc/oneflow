@@ -31,9 +31,7 @@ class Shape;
 
 class Device;
 class ParallelDesc;
-namespace cfg {
 class NdSbp;
-}
 
 namespace one {
 
@@ -105,13 +103,15 @@ class TensorInfo final {
   explicit TensorInfo(const Tensor& tensor);
 
   Maybe<Tensor> zeros() const;
+  Optional<Symbol<ParallelDesc>> placement() const { return parallel_desc_; }
+  Optional<Symbol<NdSbp>> sbp() const { return nd_sbp_; }
 
  private:
   std::shared_ptr<const Shape> shape_;
   Symbol<DType> dtype_;
   Optional<Symbol<Device>> device_;               // for local tensor
   Optional<Symbol<ParallelDesc>> parallel_desc_;  // for consistent tensor
-  Optional<Symbol<cfg::NdSbp>> nd_sbp_;           // for consistent tensor
+  Optional<Symbol<NdSbp>> nd_sbp_;                // for consistent tensor
 };
 
 }  // namespace one

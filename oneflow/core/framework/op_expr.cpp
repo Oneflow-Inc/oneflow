@@ -111,17 +111,17 @@ Maybe<void> BuiltinOpExprImpl<UserOpConf>::BuildOpConf(OperatorConf* op_conf,
   return Maybe<void>::Ok();
 }
 
-Maybe<StatefulLocalOpKernel> UserOpExpr::MutKernel4Device(Symbol<Device> device) const {
-  const auto& it = device2kernel_.find(device);
-  if (it != device2kernel_.end()) { return it->second; }
+Maybe<StatefulLocalOpKernel> UserOpExpr::MutKernel4Stream(Symbol<Stream> stream) const {
+  const auto& it = stream2kernel_.find(stream);
+  if (it != stream2kernel_.end()) { return it->second; }
 
   std::shared_ptr<OperatorConf> op_conf = std::make_shared<OperatorConf>();
   JUST(BuildOpConf(op_conf.get(), {}));
-  op_conf->set_device_tag(JUST(device->of_type()));
-  auto parallel_desc = JUST(Placement4Device(device)).shared_from_symbol();
+  op_conf->set_device_tag(JUST(stream->device()->of_type()));
+  auto parallel_desc = JUST(Placement4Device(stream->device())).shared_from_symbol();
   const auto& opkernel = JUST(StatefulLocalOpKernel::New(
-      op_conf, device, base_attrs(), parallel_desc, input_arg_tuple(), output_arg_tuple()));
-  device2kernel_.emplace(device, opkernel);
+      op_conf, stream, base_attrs(), parallel_desc, input_arg_tuple(), output_arg_tuple()));
+  stream2kernel_.emplace(stream, opkernel);
   return opkernel;
 }
 
@@ -297,13 +297,13 @@ class UserOpExprPhysicalInferContext final : public UserOpExprInferContext {
     UNIMPLEMENTED();
     return *(const ParallelDesc*)nullptr;
   }
-  const cfg::SbpParallel& SbpParallel4ArgNameAndIndex(const std::string&, int32_t) const override {
+  const SbpParallel& SbpParallel4ArgNameAndIndex(const std::string&, int32_t) const override {
     UNIMPLEMENTED();
-    return *(const cfg::SbpParallel*)nullptr;
+    return *(const SbpParallel*)nullptr;
   }
-  const cfg::NdSbp& NdSbp4ArgNameAndIndex(const std::string&, int32_t) const override {
+  const NdSbp& NdSbp4ArgNameAndIndex(const std::string&, int32_t) const override {
     UNIMPLEMENTED();
-    return *(const cfg::NdSbp*)nullptr;
+    return *(const NdSbp*)nullptr;
   }
   int64_t parallel_num() const override { return 1; }
 };
@@ -334,16 +334,16 @@ class UserOpExprLogicalInferContext final : public UserOpExprInferContext {
 
   const ParallelContext& parallel_ctx() const override { return parallel_ctx_; }
   const ParallelDesc& parallel_desc() const override { return *parallel_desc_; }
-  const cfg::SbpParallel& SbpParallel4ArgNameAndIndex(const std::string& name,
-                                                      int32_t index) const override {
+  const SbpParallel& SbpParallel4ArgNameAndIndex(const std::string& name,
+                                                 int32_t index) const override {
     auto* tensor_meta = dynamic_cast<ConsistentTensorMeta*>(
         const_cast<UserOpExprLogicalInferContext*>(this)->TensorDesc4ArgNameAndIndex(name, index));
     CHECK_NOTNULL(tensor_meta);
-    Symbol<cfg::NdSbp> nd_sbp = tensor_meta->nd_sbp();
+    Symbol<NdSbp> nd_sbp = tensor_meta->nd_sbp();
     CHECK_EQ(nd_sbp->sbp_parallel_size(), 1);
     return nd_sbp->sbp_parallel(0);
   }
-  const cfg::NdSbp& NdSbp4ArgNameAndIndex(const std::string& name, int32_t index) const override {
+  const NdSbp& NdSbp4ArgNameAndIndex(const std::string& name, int32_t index) const override {
     auto* tensor_meta = dynamic_cast<ConsistentTensorMeta*>(
         const_cast<UserOpExprLogicalInferContext*>(this)->TensorDesc4ArgNameAndIndex(name, index));
     CHECK_NOTNULL(tensor_meta);
@@ -356,10 +356,11 @@ class UserOpExprLogicalInferContext final : public UserOpExprInferContext {
   ParallelContext parallel_ctx_;
 };
 
-class UserOpExprDeviceInferContext final : public user_op::DeviceInferContext {
+class UserOpExprDeviceAndStreamInferContext final : public user_op::DeviceAndStreamInferContext {
  public:
-  UserOpExprDeviceInferContext(const UserOpExpr* user_op_expr, const AttrMap& attrs,
-                               const TensorTuple& input_tensors, TensorTuple* output_tensors)
+  UserOpExprDeviceAndStreamInferContext(const UserOpExpr* user_op_expr, const AttrMap& attrs,
+                                        const TensorTuple& input_tensors,
+                                        TensorTuple* output_tensors)
       : user_op_expr_(user_op_expr),
         composed_attrs_(attrs, user_op_expr->base_attrs()),
         input_tensors_(&input_tensors),
@@ -416,7 +417,9 @@ Maybe<void> UserOpExpr::Init(const std::shared_ptr<const UserOpExpr>& self) {
   CHECK_OR_RETURN(static_cast<bool>(shape_infer_fn_));
   dtype_infer_fn_ = registry->data_type_infer_fn;
   CHECK_OR_RETURN(static_cast<bool>(dtype_infer_fn_));
-  if (registry->device_infer_fn) { device_infer_fn_ = registry->device_infer_fn; }
+  if (registry->device_and_stream_infer_fn) {
+    device_and_stream_infer_fn_ = registry->device_and_stream_infer_fn;
+  }
   consistent_tensor_infer_cache_.reset(new ConsistentTensorInferCache(self));
   return Maybe<void>::Ok();
 }
@@ -454,20 +457,21 @@ Maybe<void> UserOpExpr::InferLogicalShapeAndDType(
   return Maybe<void>::Ok();
 }
 
-Maybe<Symbol<Device>> UserOpExpr::InferDevices(const AttrMap& attrs,
-                                               const TensorTuple& input_tensors,
-                                               TensorTuple* output_tensors) const {
-  CHECK_OR_RETURN(static_cast<bool>(device_infer_fn_));
-  UserOpExprDeviceInferContext device_infer_ctx(this, attrs, input_tensors, output_tensors);
-  return TRY(device_infer_fn_(&device_infer_ctx));
+Maybe<Symbol<Stream>> UserOpExpr::InferDeviceAndStream(const AttrMap& attrs,
+                                                       const TensorTuple& input_tensors,
+                                                       TensorTuple* output_tensors) const {
+  CHECK_OR_RETURN(static_cast<bool>(device_and_stream_infer_fn_));
+  UserOpExprDeviceAndStreamInferContext device_infer_ctx(this, attrs, input_tensors,
+                                                         output_tensors);
+  return TRY(device_and_stream_infer_fn_(&device_infer_ctx));
 }
 
 ConsistentToConsistentOpExpr::ConsistentToConsistentOpExpr(
-    const Optional<Symbol<cfg::NdSbp>>& grad_nd_sbp)
+    const Optional<Symbol<NdSbp>>& grad_nd_sbp)
     : grad_nd_sbp_(grad_nd_sbp) {}
 
 /* static */ Maybe<ConsistentToConsistentOpExpr> ConsistentToConsistentOpExpr::New(
-    const Optional<Symbol<cfg::NdSbp>>& grad_nd_sbp) {
+    const Optional<Symbol<NdSbp>>& grad_nd_sbp) {
   auto* ptr = new ConsistentToConsistentOpExpr(grad_nd_sbp);
   return std::shared_ptr<ConsistentToConsistentOpExpr>(ptr);
 }

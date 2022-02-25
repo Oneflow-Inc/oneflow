@@ -178,8 +178,8 @@ Maybe<Tensor> MakeLocalTensorFromData(PyObject* data, const Optional<Symbol<DTyp
 
 namespace {
 
-Maybe<Symbol<cfg::NdSbp>> GetAllBroadcastNdSbp(size_t ndim) {
-  cfg::NdSbp broadcast_nd_sbp;
+Maybe<Symbol<NdSbp>> GetAllBroadcastNdSbp(size_t ndim) {
+  NdSbp broadcast_nd_sbp;
   for (size_t i = 0; i < ndim; ++i) {
     broadcast_nd_sbp.mutable_sbp_parallel()->Add()->mutable_broadcast_parallel();
   }
@@ -192,7 +192,7 @@ auto* CachedGetAllBroadcastNdSbp = DECORATE(&GetAllBroadcastNdSbp, ThreadLocal);
 
 Maybe<Tensor> MakeConsistentTensorFromData(PyObject* data, const Optional<Symbol<DType>>& dtype,
                                            Symbol<ParallelDesc> placement,
-                                           const std::vector<Symbol<cfg::SbpParallel>>& sbp_tuple,
+                                           const std::vector<Symbol<SbpParallel>>& sbp_tuple,
                                            bool requires_grad) {
   PyObject* array = NULL;
   if (PyArray_Check(data)) {
@@ -239,12 +239,12 @@ Maybe<Tensor> MakeConsistentTensorFromData(PyObject* data, const Optional<Symbol
   if (dtype_) { local_tensor = JUST(functional::Cast(local_tensor, dtype_)); }
 
   size_t sbp_dims = sbp_tuple.size();
-  Symbol<cfg::NdSbp> broadcast_nd_sbp = JUST(CachedGetAllBroadcastNdSbp(sbp_dims));
+  Symbol<NdSbp> broadcast_nd_sbp = JUST(CachedGetAllBroadcastNdSbp(sbp_dims));
 
   std::shared_ptr<Tensor> broadcast_tensor = JUST(functional::LocalToConsistent(
       local_tensor, placement, *JUST(GetSbpList(broadcast_nd_sbp)), shape, local_tensor->dtype()));
 
-  std::vector<Symbol<cfg::SbpParallel>> grad_sbp_tuple;
+  std::vector<Symbol<SbpParallel>> grad_sbp_tuple;
   auto consistent_tensor =
       JUST(functional::ToConsistent(broadcast_tensor, placement, sbp_tuple, grad_sbp_tuple));
   JUST(consistent_tensor->set_requires_grad(requires_grad));
@@ -256,10 +256,10 @@ Maybe<Tensor> MakeTensorFromOtherTensor(const std::shared_ptr<Tensor>& other) {
     const Symbol<Device>& device = JUST(other->device());
     return functional::Copy(other, device->type(), device->device_id());
   } else {
-    const Symbol<cfg::NdSbp>& nd_sbp = JUST(other->nd_sbp());
-    std::vector<Symbol<cfg::SbpParallel>> sbp_tuple(nd_sbp->sbp_parallel().size());
+    const Symbol<NdSbp>& nd_sbp = JUST(other->nd_sbp());
+    std::vector<Symbol<SbpParallel>> sbp_tuple(nd_sbp->sbp_parallel().size());
     for (int i = 0; i < sbp_tuple.size(); ++i) { sbp_tuple[i] = nd_sbp->sbp_parallel().Get(i); }
-    std::vector<Symbol<cfg::SbpParallel>> grad_sbp_tuple;
+    std::vector<Symbol<SbpParallel>> grad_sbp_tuple;
     return functional::ToConsistent(other, JUST(other->parallel_desc()), sbp_tuple, grad_sbp_tuple);
   }
 }
@@ -290,9 +290,9 @@ Maybe<Tensor> MakeTensorFromOtherTensor(const std::shared_ptr<Tensor>& other,
 Maybe<Tensor> MakeTensorFromOtherTensor(const std::shared_ptr<Tensor>& other,
                                         const Optional<Symbol<DType>>& dtype,
                                         const Symbol<ParallelDesc>& placement,
-                                        const std::vector<Symbol<cfg::SbpParallel>>& sbp_tuple,
+                                        const std::vector<Symbol<SbpParallel>>& sbp_tuple,
                                         const bool& requires_grad) {
-  std::vector<Symbol<cfg::SbpParallel>> grad_sbp_tuple;
+  std::vector<Symbol<SbpParallel>> grad_sbp_tuple;
   std::shared_ptr<Tensor> tensor =
       JUST(functional::ToConsistent(other, placement, sbp_tuple, grad_sbp_tuple));
   if (dtype) {

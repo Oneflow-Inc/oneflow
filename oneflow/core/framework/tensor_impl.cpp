@@ -21,7 +21,7 @@ limitations under the License.
 #include "oneflow/core/framework/tensor.h"
 #include "oneflow/core/framework/stride.h"
 #include "oneflow/core/job/parallel_desc.h"
-#include "oneflow/core/job/sbp_parallel.cfg.h"
+#include "oneflow/core/job/sbp_parallel.h"
 #include "oneflow/core/functional/functional.h"
 #include "oneflow/core/framework/device.h"
 #include "oneflow/core/framework/dtype.h"
@@ -42,32 +42,21 @@ Maybe<void> TensorImpl::set_requires_grad(bool requires_grad) {
                     || tensor_dtype == DataType::kFloat16)
         << "RuntimeError: only Tensors of floating point can require gradients";
   }
-  requires_grad_ = requires_grad;
-  if (autograd_meta_) { autograd_meta_->set_requires_grad(requires_grad); }
+  autograd_meta_->set_requires_grad(requires_grad);
   return Maybe<void>::Ok();
 }
 
-Maybe<Tensor> TensorImpl::acc_grad() const {
-  CHECK_NOTNULL_OR_RETURN(autograd_meta_);
-  return autograd_meta_->acc_grad();
-}
+Maybe<Tensor> TensorImpl::acc_grad() const { return autograd_meta_->acc_grad(); }
 
-Maybe<TensorArg> TensorImpl::current_grad() const {
-  CHECK_NOTNULL_OR_RETURN(autograd_meta_);
-  return autograd_meta_->current_grad();
-}
+Maybe<TensorArg> TensorImpl::current_grad() const { return autograd_meta_->current_grad(); }
 
 Maybe<void> TensorImpl::set_acc_grad(const std::shared_ptr<Tensor>& grad) {
   return autograd_meta_->set_acc_grad(grad);
 }
 
-Maybe<Tensor> TensorImpl::mut_acc_grad() {
-  CHECK_NOTNULL_OR_RETURN(autograd_meta_);
-  return autograd_meta_->mut_acc_grad();
-}
+Maybe<Tensor> TensorImpl::mut_acc_grad() { return autograd_meta_->mut_acc_grad(); }
 
 Maybe<void> TensorImpl::set_retain_grad(bool retain_grad) {
-  CHECK_NOTNULL_OR_RETURN(autograd_meta_);
   autograd_meta_->set_retain_grad(retain_grad);
   return Maybe<void>::Ok();
 }
@@ -98,7 +87,7 @@ Maybe<void> EagerMirroredTensorImpl::UpdateTensorStorage() {
   tensor_storage_->set_releaser_hook(
       [eager_blob_object, parallel_desc](const std::shared_ptr<vm::TensorStorage>&) {
         CHECK_JUST(PhysicalRun([&](InstructionsBuilder* builder) -> Maybe<void> {
-          if (eager_blob_object->producer_op_device().has_value()) {
+          if (eager_blob_object->producer_stream().has_value()) {
             JUST(builder->ReleaseTensor(eager_blob_object, parallel_desc));
           }
           return Maybe<void>::Ok();
@@ -210,7 +199,7 @@ bool ConsistentTensorMeta::operator==(const ConsistentTensorMeta& other) const {
 
 size_t ConsistentTensorMeta::CalcHashValue() const {
   return std::hash<Shape>()(*shape_ptr()) ^ std::hash<DataType>()(dtype())
-         ^ std::hash<Symbol<cfg::NdSbp>>()(nd_sbp())
+         ^ std::hash<Symbol<NdSbp>>()(nd_sbp())
          ^ std::hash<Symbol<ParallelDesc>>()(parallel_desc());
 }
 
@@ -237,7 +226,7 @@ EagerConsistentTensorImpl::EagerConsistentTensorImpl(
 
 namespace {
 
-Maybe<Shape> GetPhysicalShape(const Shape& logical_shape, const cfg::NdSbp& nd_sbp,
+Maybe<Shape> GetPhysicalShape(const Shape& logical_shape, const NdSbp& nd_sbp,
                               const ParallelDesc& parallel_desc,
                               const Optional<int64_t>& parallel_id) {
   if (parallel_id.has_value()) {

@@ -363,10 +363,6 @@ class TestTensor(flow.unittest.TestCase):
         y = x.floor()
         return y
 
-    @unittest.skip(
-        "TODO: probably fail, skip for now and fix it in future."
-        "ref to: https://github.com/Oneflow-Inc/OneTeam/issues/1006#issuecomment-1022768858"
-    )
     @autotest(check_graph=True)
     def test_tensor_var_all_dim_with_random_data(test_case):
         device = random_device()
@@ -784,7 +780,7 @@ class TestTensor(flow.unittest.TestCase):
     @flow.unittest.skip_unless_1n4d()
     def test_construct_consistent_tensor_by_numpy(test_case):
         x = np.ones((4, 4), dtype=np.int32)
-        placement = flow.placement("cuda", {0: [0, 1, 2, 3]})
+        placement = flow.placement("cuda", [0, 1, 2, 3])
         y = flow.tensor(
             x,
             dtype=flow.float32,
@@ -832,7 +828,7 @@ class TestTensorNumpy(flow.unittest.TestCase):
     @flow.unittest.skip_unless_1n2d()
     def test_2d_sbp_tensor_numpy_1n2d(test_case):
         ori_x = flow.tensor(np.ones((2, 2))) + flow.env.get_rank()
-        placement = flow.placement("cuda", {0: range(2)}, hierarchy=(2, 1))
+        placement = flow.placement("cuda", [[0], [1]])
         x = ori_x.to_global(
             placement=placement, sbp=[flow.sbp.split(0), flow.sbp.split(1)]
         )
@@ -851,7 +847,7 @@ class TestTensorNumpy(flow.unittest.TestCase):
     @flow.unittest.skip_unless_1n4d()
     def test_2d_sbp_tensor_numpy_1n4d(test_case):
         ori_x = flow.tensor(np.ones((2, 2))) + flow.env.get_rank()
-        placement = flow.placement("cuda", {0: range(4)}, hierarchy=(2, 2))
+        placement = flow.placement("cuda", [[0, 1], [2, 3]])
 
         x = ori_x.to_global(
             placement=placement, sbp=[flow.sbp.split(0), flow.sbp.split(1)]
