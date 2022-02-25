@@ -19,8 +19,9 @@ import oneflow as flow
 import oneflow.unittest
 
 
+@flow.unittest.skip_unless_1n1d()
 class TestSelect(flow.unittest.TestCase):
-    @autotest(check_graph=False)
+    @autotest(check_graph=True)
     def test_flow_select(test_case):
         device = random_device()
         x = random_tensor(
@@ -35,7 +36,7 @@ class TestSelect(flow.unittest.TestCase):
         z = torch.select(x, dim, index)
         return z
 
-    @autotest(check_graph=False)
+    @autotest(check_graph=True)
     def test_flow_select_1dim(test_case):
         device = random_device()
         x = random_tensor(ndim=1, dim0=random(3, 6),).to(device)

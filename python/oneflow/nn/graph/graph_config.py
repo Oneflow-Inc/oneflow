@@ -127,8 +127,24 @@ class GraphConfig(object):
 
            XLA: https://www.tensorflow.org/xla
 
+        For example:
+
+        .. code-block:: python
+
+            import oneflow as flow
+
+            class Graph(flow.nn.Graph):
+                def __init__(self):
+                    super().__init__()
+                    self.linear = flow.nn.Linear(3, 8, False)
+                def build(self, x):
+                    return self.linear(x)
+
+            graph = Graph()
+            graph.config.enable_xla_jit(True)  # Use xla_jit in xrt.
+
         Args:
-            value (bool, optional): Defaults to True.
+            value (bool, optional): The default vaule is True.
         """
         self.proto.mutable_xrt_config().set_use_xla_jit(value)
 
@@ -140,7 +156,7 @@ class GraphConfig(object):
            TensorRT: https://developer.nvidia.com/tensorrt
 
         Args:
-            value (bool, optional): Defaults to True.
+            value (bool, optional): The default vaule is True.
         """
         self.proto.mutable_xrt_config().set_use_tensorrt(value)
 
@@ -154,7 +170,7 @@ class GraphConfig(object):
            OpenVINO: https://www.intel.com/content/www/us/en/developer/tools/openvino-toolkit/overview.html
 
         Args:
-            value (bool, optional): Defaults to True.
+            value (bool, optional): The default vaule is True.
         """
         self.proto.mutable_xrt_config().set_use_openvino(value)
 
