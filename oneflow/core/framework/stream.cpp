@@ -14,7 +14,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 #include "oneflow/core/framework/stream.h"
-#include "oneflow/core/framework/stream_is_transport.h"
+#include "oneflow/core/framework/stream_is_comm_net_stream.h"
 #include "oneflow/core/common/decorator.h"
 #include "oneflow/core/common/static_global.h"
 #include "oneflow/core/common/global.h"
@@ -35,7 +35,7 @@ Stream::Stream(Symbol<Device> device, StreamRole stream_role)
 Maybe<void> Stream::Init() {
   auto* vm = JUST(GlobalMaybe<VirtualMachine>());
   schedule_local_dep_object_ = vm->FindOrCreateScheduleLocalDepObject(device_, stream_role_);
-  if (StreamRoleSwitch<StreamIsTransport>(stream_role_)) {
+  if (StreamRoleSwitch<IsCommNetStream>(stream_role_)) {
     transport_local_dep_object_ = vm->FindOrCreateTransportLocalDepObject();
   }
   vm_stream_ = JUST(vm->CreateStream(device_, stream_role_));

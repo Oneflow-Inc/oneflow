@@ -51,7 +51,7 @@ limitations under the License.
 #include "oneflow/core/framework/device.h"
 #include "oneflow/core/framework/stream.h"
 #include "oneflow/core/framework/stream_need_soft_sync.h"
-#include "oneflow/core/framework/stream_is_transport.h"
+#include "oneflow/core/framework/stream_is_comm_net_stream.h"
 #include "oneflow/core/job/env_desc.h"
 #include "oneflow/core/profiler/profiler.h"
 #include "oneflow/core/vm/tensor_view_operand.h"
@@ -402,11 +402,11 @@ Maybe<void> InstructionsBuilder::ReleaseTensor(
   Optional<Symbol<Stream>> stream{};
   if (*one::CurrentDevVmDepObjectConsumeMode() == one::DevVmDepObjectConsumeMode::NONE) {
     stream = Optional<Symbol<Stream>>(NullOpt);
-  } else if (StreamRoleSwitch<StreamIsTransport>(last_used_stream->stream_role())) {
+  } else if (StreamRoleSwitch<IsCommNetStream>(last_used_stream->stream_role())) {
     // Disable inter-device instruction sequential for tensor used by communicative stream.
     // It's not acceptable for us that cuda compute stream is blocked by cuda nccl stream.
     stream = Optional<Symbol<Stream>>(NullOpt);
-  } else if (StreamRoleSwitch<StreamIsTransport>(producer_stream->stream_role())) {
+  } else if (StreamRoleSwitch<IsCommNetStream>(producer_stream->stream_role())) {
     // Disable inter-device instruction sequential for tensor produced by communicative stream.
     stream = Optional<Symbol<Stream>>(NullOpt);
   } else {

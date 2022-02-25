@@ -13,15 +13,15 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
-#ifndef ONEFLOW_CORE_FRAMEWORK_STREAM_IS_TRANSPORT_H_
-#define ONEFLOW_CORE_FRAMEWORK_STREAM_IS_TRANSPORT_H_
+#ifndef ONEFLOW_CORE_FRAMEWORK_STREAM_IS_COMM_NET_STREAM_H_
+#define ONEFLOW_CORE_FRAMEWORK_STREAM_IS_COMM_NET_STREAM_H_
 
 #include <glog/logging.h>
 #include "oneflow/core/common/stream_role.h"
 
 namespace oneflow {
 
-struct StreamIsTransport {
+struct IsCommNetStream {
   static bool Case(StreamRoleCase<StreamRole::kInvalid>) {  // NOLINT
     LOG(FATAL);
   }
@@ -37,4 +37,4 @@ struct StreamIsTransport {
 
 }  // namespace oneflow
 
-#endif  // ONEFLOW_CORE_FRAMEWORK_STREAM_IS_TRANSPORT_H_
+#endif  // ONEFLOW_CORE_FRAMEWORK_STREAM_IS_COMM_NET_STREAM_H_
