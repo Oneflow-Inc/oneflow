@@ -138,7 +138,7 @@ def FusedScaleTrilPattern : Pat<
 def FusePadAndConv2d :
   NativeCodeCall<"mlir::oneflow::CreateConv2dAndErasePad($_builder, $0, $1)">;
 
-def HasIdenticalPadding: Constraint<CPred<"$0.getValue().equals($1.getValue())">, "sync_padding">;
+def HasIdenticalPadding: Constraint<CPred<"$0.getValue().equals($1.getValue())">, "same padding">;
 
 def FusedPadConv2DPattern : Pat<
   (
