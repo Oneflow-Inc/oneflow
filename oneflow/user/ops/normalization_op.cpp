@@ -486,6 +486,46 @@ Maybe<void> BwGetSbpFn(user_op::SbpContext* ctx) {
 
 }  // namespace
 
+
+/* static */ Maybe<void> BnEvalBackwardOp::InferLogicalTensorDesc(user_op::InferContext* ctx) {
+  const Shape& dy_shape = ctx->InputShape("dy", 0);
+  const Shape& gamma_shape = ctx->InputShape("gamma", 0);
+  const Shape& moving_variance_shape = ctx->InputShape("moving_variance", 0);
+  const int32_t axis = ctx->Attr<int32_t>("axis");
+  CHECK_EQ_OR_RETURN(dy_shape.NumAxes(), 4);
+  CHECK_GE_OR_RETURN(axis, 0);
+  CHECK_LT_OR_RETURN(axis, dy_shape.NumAxes());
+  const int64_t param_size = dy_shape.At(axis);
+  CHECK_EQ_OR_RETURN(gamma_shape.NumAxes(), 1);
+  CHECK_EQ_OR_RETURN(moving_variance_shape.NumAxes(), 1);
+  CHECK_EQ_OR_RETURN(param_size, gamma_shape.At(0));
+  CHECK_EQ_OR_RETURN(param_size, moving_variance_shape.At(0));
+  *ctx->OutputShape("dx", 0) = dy_shape;
+  return Maybe<void>::Ok();
+}
+
+/*static*/ Maybe<void> BnEvalBackwardOp::InferPhysicalTensorDesc(user_op::InferContext* ctx) {
+  return InferLogicalTensorDesc(ctx);
+}
+
+/* static */ Maybe<void> BnEvalBackwardOp::GetSbp(user_op::SbpContext* ctx) {
+  ctx->NewBuilder()
+      .Split(user_op::OpArg("dy", 0), 0)
+      .Split(user_op::OpArg("dx", 0), 0)
+      .Broadcast(user_op::OpArg("gamma", 0))
+      .Broadcast(user_op::OpArg("moving_variance", 0))
+      .Build();
+  return Maybe<void>::Ok();
+}
+
+/* static */ Maybe<void> BnEvalBackwardOp::InferDataType(user_op::InferContext* ctx) {
+  const DataType dy_dtype = ctx->InputDType("dy", 0);
+  CHECK_OR_RETURN(DataType::kFloat == ctx->InputDType("gamma", 0));
+  CHECK_OR_RETURN(DataType::kFloat == ctx->InputDType("moving_variance", 0));
+  *ctx->OutputDType("dx", 0) = dy_dtype;
+  return Maybe<void>::Ok();
+}
+
 /* static */ Maybe<void> NormalizationGradOp::InferLogicalTensorDesc(user_op::InferContext* ctx) {
   return BwTensorDescInferFn(ctx);
 }
@@ -568,6 +608,31 @@ REGISTER_USER_OP_GRAD("normalization")
     .SetBackwardOpConfGenFn([](user_op::BackwardOpConfContext* ctx) -> Maybe<void> {
       const bool is_training = ctx->FwOp().attr<bool>("training");
       const bool is_fp16 = ctx->FwOp().arg_tensor_desc("y", 0).data_type() == DataType::kFloat16;
+
+      if (ctx->FwOp().user_op_conf().has_input("moving_variance", 0)
+          && ctx->FwOp().NeedGenGradTensor4OpInput("x", 0)
+          && !ctx->FwOp().NeedGenGradTensor4OpInput("gamma", 0)
+          && !ctx->FwOp().NeedGenGradTensor4OpInput("beta", 0) 
+          && ParseBooleanFromEnv("ONEFLOW_ENABLE_BN_EVAL_BACKWARD", true)) {
+        CHECK_EQ_OR_RETURN(is_training, false);
+        const auto bn_eval_backward_op_name =
+            "System-AutoGrad-" + ctx->FwOp().op_name() + "-BnEvalBackward";
+        ctx->DefineOp(bn_eval_backward_op_name, [&ctx](user_op::BackwardOpBuilder& builder) {
+          return builder.OpTypeName("bn_eval_backward")
+              .InputBind("dy", ctx->FwOp().output_grad("y", 0))
+              .InputBind("moving_variance", ctx->FwOp().input("moving_variance", 0))
+              .InputBind("gamma", ctx->FwOp().input("gamma", 0))
+              .Attr("axis", ctx->FwOp().attr<int32_t>("axis"))
+              .Attr("epsilon", ctx->FwOp().attr<float>("epsilon"))
+              .Output("dx")
+              .Build();
+        });
+        ctx->FwOp().InputGradBind(user_op::OpArg("x", 0),
+                                  [&ctx, &bn_eval_backward_op_name]() -> const std::string& {
+                                    return ctx->GetOp(bn_eval_backward_op_name).output("dx", 0);
+                                  });
+        return Maybe<void>::Ok();
+      }
 
       std::string mean;
       std::string inv_variance;
