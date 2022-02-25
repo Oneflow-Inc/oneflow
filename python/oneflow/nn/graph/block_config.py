@@ -30,6 +30,17 @@ class BlockConfig(object):
         r"""Get/Set stage id of Block in pipeline parallelism.
         
         When calling stage_id(value: int = None), set different module's stage id to hint the graph preparing right num of buffers in pipeline.
+
+        For example:
+
+        .. code-block:: python
+
+            # m_stage0 and m_stage1 are the two pipeline stages of the network, respectively.
+            # We can set Stage ID by setting the config.stage_id attribute of Module. 
+            # The Stage ID is numbered starting from 0 and increasing by 1.
+            self.module_pipeline.m_stage0.config.stage_id = 0
+            self.module_pipeline.m_stage1.config.stage_id = 1
+
         """
         return self._stage_id
 
@@ -45,6 +56,28 @@ class BlockConfig(object):
     @property
     def activation_checkpointing(self):
         r"""Get/Set whether do activation checkpointing in this Block.
+
+        For example:
+
+        .. code-block:: python
+
+            import oneflow as flow
+
+            class Graph(flow.nn.Graph):
+                def __init__(self):
+                    super().__init__()
+                    self.linear1 = flow.nn.Linear(3, 5, False)
+                    self.linear2 = flow.nn.Linear(5, 8, False)
+                    self.linear1.config.activation_checkpointing = True
+                    self.linear2.config.activation_checkpointing = True
+
+                def build(self, x):
+                    y_pred = self.linear1(x)
+                    y_pred = self.linear2(y_pred)
+                    return y_pred
+
+            graph = Graph()
+
         """
         return self._activation_checkpointing
 
