@@ -580,9 +580,6 @@ def OneFlow_PreluOp : OneFlow_BaseOp<"prelu", [NoSideEffect, DeclareOpInterfaceM
   let output = (outs
     OneFlow_Tensor:$y
   );
-  let attrs = (ins
-    DefaultValuedAttr<BoolAttr, "false">:$alpha_requires_grad
-  );
   let has_logical_tensor_desc_infer_fn = 1;
   let has_physical_tensor_desc_infer_fn = 1;
   let has_get_sbp_fn = 1;
@@ -4635,6 +4632,9 @@ def OneFlow_PreluGradOp : OneFlow_BaseOp<"prelu_grad", [NoSideEffect, DeclareOpI
   let output = (outs
     OneFlow_Tensor:$dx,
     OneFlow_Tensor:$alpha_diff
+  );
+  let attrs = (ins
+    DefaultValuedAttr<BoolAttr, "false">:$alpha_requires_grad
   );
   let has_logical_tensor_desc_infer_fn = 1;
   let has_physical_tensor_desc_infer_fn = 1;
