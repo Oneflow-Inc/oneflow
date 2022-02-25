@@ -21,20 +21,20 @@ import oneflow.unittest
 from oneflow.test_utils.automated_test_util import *
 
 
-@autotest(check_graph=False)
+@autotest(n=5, check_graph=False)
 def _test_min(test_case, placement, sbp):
     keepdim = random().to(bool)
     dim = random(0, 4).to(int)
     dim0 = random().to(int).value() * 8
     dim1 = random().to(int).value() * 8
-    x = random_tensor(ndim=4, dim0=dim0, dim1=dim1).to_consistent(placement, sbp)
+    x = random_tensor(ndim=4, dim0=dim0, dim1=dim1).to_global(placement, sbp)
     y = torch.min(x, dim=dim, keepdim=keepdim)
     min_value = y[0]
     return min_value
 
 
 class TestMinModule(flow.unittest.TestCase):
-    @consistent
+    @globaltest
     def test_min(test_case):
         for placement in all_placement():
             for sbp in all_sbp(placement, max_dim=2):
