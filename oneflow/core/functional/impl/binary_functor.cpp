@@ -16,6 +16,7 @@ limitations under the License.
 
 #include "oneflow/core/functional/impl/binary_functor.h"
 
+#include "oneflow/core/common/maybe.h"
 #include "oneflow/core/common/scalar.h"
 #include "oneflow/core/framework/attr_map.h"
 #include "oneflow/core/framework/op_builder.h"
@@ -48,12 +49,20 @@ class AddFunctor {
       return Error::RuntimeError()
              << "For integral input tensors, argument alpha must not be a floating point number.";
     }
-    CHECK_OR_RETURN(JUST(input->device()) == JUST(other->device()));
+
+    if (input->is_local()) {
+      CHECK_OR_RETURN(JUST(input->device()) == JUST(other->device()));
+      CHECK_OR_RETURN(other->is_local());
+    } else {
+      CHECK_OR_RETURN(other->is_consistent());
+      CHECK_OR_RETURN(JUST(input->parallel_desc()) == JUST(other->parallel_desc()));
+    }
+
     auto input_static_zeros = IsStaticZerosTensor(input);
     auto other_static_zeros = IsStaticZerosTensor(other);
     CHECK_OR_RETURN(!(input_static_zeros && other_static_zeros));
 
-    if (input_static_zeros || IsStaticZerosTensor(other)) {
+    if (input_static_zeros || other_static_zeros) {
       CHECK_OR_RETURN(*input->shape() == *other->shape());
       CHECK_OR_RETURN(input->dtype() == other->dtype());
       if (input_static_zeros) {
