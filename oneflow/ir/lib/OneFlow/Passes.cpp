@@ -283,6 +283,8 @@ bool IsScalarTensor(Value value) {
   return false;
 }
 
+bool IsChannelFirst(mlir::StringAttr data_format) { return data_format.str() == "channels_first"; }
+
 bool IsPaddingCouldBeAssimilatedIntoConv(::mlir::ArrayAttr padding_before,
                                          ::mlir::ArrayAttr padding_after) {
   if (padding_before.size() == 4 && padding_after.size() == 4) {
