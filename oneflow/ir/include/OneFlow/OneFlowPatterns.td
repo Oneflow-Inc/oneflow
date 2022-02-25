@@ -140,6 +140,7 @@ def FusePadAndConv2d :
 
 def HasIdenticalPadding: Constraint<CPred<"mlir::oneflow::IsPaddingCouldBeAssimilatedIntoConv($0, $1)">, "">;
 def IsChannelFirst: Constraint<CPred<"mlir::oneflow::IsChannelFirst($0)">, "">;
+def HasZeroPadding: Constraint<CPred<"mlir::oneflow::HasZeroPadding($0)">, "">;
 
 def FusedPadConv2DPattern : Pat<
   (
@@ -178,6 +179,7 @@ def FusedPadConv2DPattern : Pat<
   (FusePadAndConv2d $conv_2d_res, $pad_res),
   [
     (HasIdenticalPadding $pad_op_padding_before, $pad_op_padding_after),
+    (HasZeroPadding $padding_before),
     (IsChannelFirst $data_format)
   ]
   // pad_op padding_before, padding_after : (0, 0, X, X), (0, 0, X, X)
