@@ -298,7 +298,7 @@ bool IsScalarTensor(Value value) {
                      .create<oneflow::Conv2DOp>(conv_op->getLoc(), conv_op->getResultTypes(),
                                                 operands, attributes)
                      ->getResults();
-      // pad is expected to be erase if it is not used
+      // pad op is expected to be erased if it is not used
       return res;
     }
   }
