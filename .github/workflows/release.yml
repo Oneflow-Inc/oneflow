@@ -44,9 +44,7 @@ jobs:
             release
           oneflow-src: ${{ env.ONEFLOW_SRC }}
           entries: |
-            cu112
-            cu102
-            cpu
+            cu110
 
   staging_release:
     env:

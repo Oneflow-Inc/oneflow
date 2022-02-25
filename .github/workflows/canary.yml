@@ -33,8 +33,8 @@ jobs:
       ONEFLOW_SRC: .
       MANYLINUX_CACHE_DIR: ~/manylinux-cache-dir/canary-cu112
       WHEELHOUSE_DIR: manylinux-wheelhouse
-      COMPUTE_PLATFORM: cu110
-      CUDA_VERSION: "11.0"
+      COMPUTE_PLATFORM: cu112
+      CUDA_VERSION: "11.2"
       OSS_BUCKET: oneflow-staging
       OSS_WHEEL_HOUSE_DIR: ${{ matrix.entry }}/commit/${{ github.sha }}
       OSS_GITHUB_REF_DIR: ${{ matrix.entry }}/${{ github.ref }}
@@ -75,8 +75,6 @@ jobs:
             3.6
             3.7
             3.8
-            3.9
-            3.10
       - name: Upload wheelhouse
         uses: ./.github/actions/upload_oss
         with:
