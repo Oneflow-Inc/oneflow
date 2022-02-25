@@ -537,6 +537,12 @@ jobs:
         continue-on-error: false
         run: |
           docker exec -e ONEFLOW_TEST_DIR=$PWD/python/oneflow/test/modules ${{ env.TEST_CONTAINER_NAME }} bash ci/test/2node_op_test_multi_client.sh
+      - name: Module API test (distributed, without IB)
+        timeout-minutes: 60
+        if: ${{ !fromJson(matrix.cache-hit) && matrix.test-type == 'module' && matrix.device == 'cuda' && fromJson(matrix.is-distributed) }}
+        continue-on-error: false
+        run: |
+          docker exec -e ONEFLOW_TEST_DIR=$PWD/python/oneflow/test/modules -e ONEFLOW_LIBIBVERBS_PATH=invalid_lib ${{ env.TEST_CONTAINER_NAME }} bash ci/test/2node_op_test_multi_client.sh
       - name: Remove automerge
         if: ${{ failure() && contains(matrix.runs-on, 'self-hosted') && cancelled() == false && contains(github.event.pull_request.labels.*.name, 'automerge') }}
         uses: actions/github-script@v4
