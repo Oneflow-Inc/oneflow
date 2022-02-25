@@ -16,6 +16,7 @@ limitations under the License.
 #include "oneflow/core/framework/framework.h"
 #include "oneflow/core/common/balanced_splitter.h"
 #include "oneflow/core/framework/op_generated.h"
+#include "oneflow/core/job/nd_sbp_util.h"
 
 namespace oneflow {
 
@@ -153,14 +154,23 @@ REGISTER_USER_OP_GRAD("ccrelu").SetGenBackwardOpConfFn([](const user_op::UserOpW
 }
 /*static*/ Maybe<void> TestSourceMultiGpuFixedOutNumOp::InferPhysicalTensorDesc(
     user_op::InferContext* ctx) {
-  Shape* out_shape = ctx->OutputShape("out", 0);
-  int64_t out_num = ctx->Attr<int64_t>("out_num");
-  const ParallelContext& parallel_ctx = ctx->parallel_ctx();
-  BalancedSplitter bs(out_num, parallel_ctx.parallel_num());
-  *out_shape = Shape({bs.At(parallel_ctx.parallel_id()).size()});
+  const NdSbp& out_sbp = ctx->NdSbp4ArgNameAndIndex("out", 0);
+  // check all sbp are S(0)
+  for (int i = 0; i < out_sbp.sbp_parallel_size(); ++i) {
+    const SbpParallel& sbp = out_sbp.sbp_parallel(i);
+    CHECK_OR_RETURN(sbp.has_split_parallel() && sbp.split_parallel().axis() == 0)
+        << "blob out in TestSourceMultiGpuFixedOutNumOp must be S(0)";
+  }
 
-  const SbpParallel& out_sbp = ctx->SbpParallel4ArgNameAndIndex("out", 0);
-  CHECK_OR_RETURN(out_sbp.has_split_parallel() && out_sbp.split_parallel().axis() == 0);
+  const Shape& parallel_hierarchy = *ctx->parallel_desc().hierarchy();
+  int64_t out_num = ctx->Attr<int64_t>("out_num");
+  const int64_t parallel_id = ctx->parallel_ctx().parallel_id();
+  Shape logical_shape({out_num});
+  const Shape& physical_shape =
+      GetTensorSliceView4ParallelId(parallel_hierarchy, out_sbp, logical_shape, parallel_id)
+          .shape();
+
+  *ctx->OutputShape("out", 0) = physical_shape;
   return Maybe<void>::Ok();
 }
 /*static*/ Maybe<void> TestSourceMultiGpuFixedOutNumOp::InferDataType(user_op::InferContext* ctx) {
