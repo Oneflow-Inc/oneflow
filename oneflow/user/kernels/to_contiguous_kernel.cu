@@ -25,8 +25,8 @@ namespace oneflow {
 namespace {
 
 constexpr int kBlockSize = cuda::elementwise::kBlockSize;
-__constant__ unsigned long int in_stride_vec[16];
-__constant__ unsigned long int out_stride_vec[16];
+__constant__ unsigned int in_stride_vec[16];
+__constant__ unsigned int out_stride_vec[16];
 
 int GetMinThreadNum(int64_t elem_cnt) { return std::min<int64_t>(elem_cnt, kBlockSize); }
 
@@ -90,16 +90,16 @@ void LaunchToContiguousKernel(ep::Stream* stream, IndexType count, const size_t 
                               const StrideVector& out_stride, const char* in_dptr, char* out_dptr) {
   const int num_blocks = GetNumBlocks(count);
   const int num_threads = GetMinThreadNum(count);
-  unsigned long int tmp_in_stride[ndim] = {0};
-  unsigned long int tmp_out_stride[ndim] = {0};
+  unsigned int tmp_in_stride[ndim] = {0};
+  unsigned int tmp_out_stride[ndim] = {0};
   for (size_t i = 0; i < ndim; ++i) {
-    tmp_in_stride[i] = in_stride.at(i);
-    tmp_out_stride[i] = out_stride.at(i);
+    tmp_in_stride[i] = static_cast<unsigned int>(in_stride.at(i));
+    tmp_out_stride[i] = static_cast<unsigned int>(out_stride.at(i));
   }
 
-  OF_CUDA_CHECK(cudaMemcpyToSymbol(in_stride_vec, tmp_in_stride, ndim * sizeof(unsigned long int)));
+  OF_CUDA_CHECK(cudaMemcpyToSymbol(in_stride_vec, tmp_in_stride, ndim * sizeof(unsigned int)));
   OF_CUDA_CHECK(
-      cudaMemcpyToSymbol(out_stride_vec, tmp_out_stride, ndim * sizeof(unsigned long int)));
+      cudaMemcpyToSymbol(out_stride_vec, tmp_out_stride, ndim * sizeof(unsigned int)));
 
   if (pack_size == 16 && block_size % 16 == 0) {
     ToContiguousForwardGpu<T, IndexType, 16>
