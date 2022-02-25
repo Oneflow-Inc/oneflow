@@ -5,6 +5,7 @@ export PYTHONUNBUFFERED=1
 
 src_dir=${ONEFLOW_SRC_DIR:-"$PWD"}
 ONEFLOW_TEST_DIR=${ONEFLOW_TEST_DIR:-"$PWD/python/oneflow/test/modules"}
+ONEFLOW_TEST_TASKS_PER_GPU=${ONEFLOW_TEST_TASKS_PER_GPU:-"4"}
 
 cd $ONEFLOW_TEST_DIR
 
@@ -12,8 +13,9 @@ if [ -z "$ONEFLOW_TEST_CPU_ONLY" ]
 then
     gpu_num=$(nvidia-smi --query-gpu=name --format=csv,noheader | wc -l)
     for ((i=0;i<gpu_num;i++)); do
-        parallel_spec="$parallel_spec --tx popen//env:CUDA_VISIBLE_DEVICES=${i}"
-        parallel_spec="$parallel_spec --tx popen//env:CUDA_VISIBLE_DEVICES=${i}"
+        for ((j=0;j<ONEFLOW_TEST_TASKS_PER_GPU;j++)); do
+            parallel_spec="$parallel_spec --tx popen//env:CUDA_VISIBLE_DEVICES=${i}"
+        done
     done
 else
     parallel_spec="-n auto"
@@ -25,7 +27,7 @@ unset http_proxy
 unset https_proxy
 
 export ONEFLOW_TEST_DEVICE_NUM=1
-python3 -m pytest ${PWD} --durations=50 -x --verbose --dist loadfile ${parallel_spec}
+python3 -m pytest ${PWD} --durations=50 --capture=sys --failed-first --dist loadfile ${parallel_spec}
 if [[ "$(python3 -c 'import oneflow.sysconfig;print(oneflow.sysconfig.has_rpc_backend_grpc())')" == *"True"* ]]; then
     export ONEFLOW_TEST_DEVICE_NUM=2
     python3 -m oneflow.distributed.launch --nproc_per_node 2 -m unittest discover ${PWD} --failfast --verbose
