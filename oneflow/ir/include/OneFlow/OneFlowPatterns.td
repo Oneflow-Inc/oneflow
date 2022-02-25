@@ -135,6 +135,63 @@ def FusedScaleTrilPattern : Pat<
   ]
 >;
 
+def PaddingEqual: Constraint<CPred<"$0.getValue().equals($1.getValue())">, "sync_padding">;
+
+def FusedPadConv2DPattern : Pat<
+  (
+    OneFlow_Conv2DOp
+    (
+      OneFlow_PadOp
+        $x,
+        $pad_op_name,
+        $pad_device_tag,
+        $pad_device_name,
+        $pad_scope_symbol_id,
+        $pad_hierarchy,
+        $pad_op_padding_before,
+        $pad_op_padding_after,
+        $pad_op_padding,
+        $floating_constant_value,
+        $integral_constant_value
+    ),
+    $weight,
+    $bias,
+    $bias_multiplier,
+    $conv2d_op_name,
+    $conv2d_device_tag,
+    $conv2d_device_name,
+    $conv2d_scope_symbol_id,
+    $conv2d_hierarchy,
+    $operand_segment_sizes,
+    $filters,
+    $padding_before,
+    $data_format,
+    $kernel_size,
+    $strides,
+    $dilation_rate,
+    $groups
+  ),
+  (OneFlow_Conv2DOp $x,
+    $weight,
+    $bias,
+    $bias_multiplier,
+    $conv2d_op_name,
+    $conv2d_device_tag,
+    $conv2d_device_name,
+    $conv2d_scope_symbol_id,
+    $conv2d_hierarchy,
+    $operand_segment_sizes,
+    $filters,
+    $pad_op_padding_before,
+    $data_format,
+    $kernel_size,
+    $strides,
+    $dilation_rate,
+    $groups
+  ),
+  [(PaddingEqual $pad_op_padding_before,$padding_before)]
+>;
+
 // TODO: use either to merge two patterns
 def FusedScaleTrilPattern2 : Pat<
   (
