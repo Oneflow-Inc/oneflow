@@ -105,7 +105,7 @@ void SetCpuDeviceManagerNumThreads() {
   int64_t cpu_logic_core = std::thread::hardware_concurrency();
   int64_t default_num_threads =
       (cpu_logic_core / GlobalProcessCtx::NumOfProcessPerNode()) - kDefaultUsedNumThreads;
-  int64_t num_threads = ParseIntegerFromEnv("ONEFLOW_EP_CPU_NUM_THREADS", default_num_threads);
+  int64_t num_threads = ParseIntegerFromEnv("OMP_NUM_THREADS", default_num_threads);
   cpu_device_manager->SetDeviceNumThreads(num_threads);
 }
 
