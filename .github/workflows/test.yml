@@ -765,6 +765,19 @@ jobs:
               repo: context.repo.repo,
               body: "<details>\n <summary>Speed stats:</summary>\n\n ``` \n${{ steps.speed.outputs.stats }}\n ``` \n\n</details>".replace(/\\n/g, '\n')
             })
+      - name: Checkout Oneflow-Inc/insightface
+        if: ${{ !fromJson(matrix.cache-hit) && matrix.test-type == 'speed-test' && matrix.device == 'cuda' }}
+        uses: actions/checkout@v2
+        with:
+          repository: Oneflow-Inc/insightface
+          ref: 4591b051b8017a0c6c32cae427ec294f965cb830
+          path: insightface
+      - name: IResNet50 Graph DDP test
+        id: models-iresnet50
+        timeout-minutes: 30
+        if: ${{ !fromJson(matrix.cache-hit) && matrix.test-type == 'speed-test' && matrix.device == 'cuda' }}
+        run: |
+          docker exec -e INSIGHTFACE_DIR=$PWD/insightface/recognition/arcface_oneflow ${{ env.TEST_CONTAINER_NAME }} bash ci/run_graph_ddp.sh           
       - name: Module API test
         timeout-minutes: 45
         if: ${{ !fromJson(matrix.cache-hit) && matrix.test-type == 'module' && !fromJson(matrix.is-distributed) }}
