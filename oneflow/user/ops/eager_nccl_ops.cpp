@@ -19,6 +19,7 @@ limitations under the License.
 #include "oneflow/core/framework/device.h"
 #include "oneflow/user/ops/comm_net_device_infer_util.h"
 #include "oneflow/core/framework/op_generated.h"
+#include "oneflow/core/job/nd_sbp_util.h"
 
 namespace oneflow {
 
@@ -125,21 +126,19 @@ namespace oneflow {
 
 /* static */ Maybe<void> EagerNcclReduceScatterOp::InferPhysicalTensorDesc(
     user_op::InferContext* ctx) {
+  const Shape& in_shape = ctx->InputShape("in", 0);
   Shape* out_shape = ctx->OutputShape("out", 0);
-  const Shape& shape = ctx->InputShape("in", 0);
-  DimVector dim_vec;
-  if (shape.NumAxes() > 0) {
-    dim_vec.insert(dim_vec.end(), shape.dim_vec().cbegin(), shape.dim_vec().cend());
-  }
-  const SbpParallel& out_sbp_para = ctx->SbpParallel4ArgNameAndIndex("out", 0);
   const int64_t& parallel_num = ctx->parallel_ctx().parallel_num();
   if (parallel_num > 1) {
-    const int64_t& split_axis = out_sbp_para.split_parallel().axis();
-    CHECK_LT_OR_RETURN(split_axis, dim_vec.size());
-    BalancedSplitter bs(shape.At(split_axis), parallel_num);
-    dim_vec[split_axis] = bs.At(ctx->parallel_ctx().parallel_id()).size();
+    const Shape& parallel_hierarchy = *ctx->parallel_desc().hierarchy();
+    const NdSbp& nd_sbp = ctx->NdSbp4ArgNameAndIndex("out", 0);
+    const int64_t parallel_id = ctx->parallel_ctx().parallel_id();
+    const Shape& physical_shape =
+        GetTensorSliceView4ParallelId(parallel_hierarchy, nd_sbp, in_shape, parallel_id).shape();
+    *out_shape = physical_shape;
+  } else {
+    *out_shape = in_shape;
   }
-  *out_shape = Shape(dim_vec);
   return Maybe<void>::Ok();
 }
 
