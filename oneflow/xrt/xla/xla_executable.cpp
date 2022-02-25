@@ -48,7 +48,8 @@ bool XlaExecutable::Run(const std::vector<Parameter>& inputs,
     options.set_rng_seed(run_context.rng_seed());
 
     auto result = executable_->RunAsync(input_buffers, options);
-    if (block_until_done) { run_context.stream()->BlockHostUntilDone(); }
+    if (block_until_done) { 
+      auto a = run_context.stream()->BlockHostUntilDone(); }
     return result;
   }());
 

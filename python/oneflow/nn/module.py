@@ -22,7 +22,7 @@ import numpy as np
 import oneflow as flow
 from oneflow.framework.tensor import Tensor
 from oneflow.nn.parameter import Parameter
-
+import warnings
 
 class _IncompatibleKeys(
     namedtuple("IncompatibleKeys", ["missing_keys", "unexpected_keys"])
@@ -238,6 +238,32 @@ class Module(object):
                     buffers[name] = value
                 else:
                     object.__setattr__(self, name, value)
+
+    def zero_grad(self, set_to_none: bool = False) -> None:
+        r"""Sets gradients of all model parameters to zero. See similar function
+        under :class:`oneflow.optim.Optimizer` for more context.
+        Args:
+            set_to_none (bool): instead of setting to zero, set the grads to None.
+                See :meth:`oneflow.optim.Optimizer.zero_grad` for details.
+        """
+        if getattr(self, "_is_replica", False):
+            warnings.warn(
+                "Calling .zero_grad() from a module created with nn.DataParallel() has no effect. "
+                "The parameters are copied (in a differentiable manner) from the original module. "
+                "This means they are not leaf nodes in autograd and so don't accumulate gradients. "
+                "If you need gradients in your forward method, consider using autograd.grad instead."
+            )
+
+        for p in self.parameters():
+            if p.grad is not None:
+                if set_to_none:
+                    p.grad = None
+                else:
+                    if p.grad.grad_fn is not None:
+                        p.grad.detach_()
+                    else:
+                        p.grad.requires_grad_(False)
+                    p.grad.zeros_()
 
     def _named_members(self, get_members_fn, prefix="", recurse=True):
         memo = set()

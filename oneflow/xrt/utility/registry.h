@@ -63,7 +63,7 @@ class Registry : public RegistryBase {
     return factories_.at(key).factory;
   }
 
-  const Attribute& LookupAttr(const Any& key) const { return LookupAttr(any_cast<Key>(key)); }
+  const Attribute& LookupAttr(const Any& key) const override { return LookupAttr(any_cast<Key>(key)); }
 
   const Attribute& LookupAttr(const Key& key) const {
     CHECK_GT(factories_.count(key), 0) << "Factory (" << key << ") has not been registered.";

@@ -71,7 +71,7 @@ const std::vector<xla::ShapedBuffer*>& XlaExecutableRunContext::PopulateInputs(
 void XlaExecutableRunContext::PopulateResultBuffers(const std::vector<Parameter>& outputs,
                                                     xla::LocalExecutable* executable) {
   std::vector<int64_t> allocation_indices;
-  xla::ResultAllocationIndices(executable, &allocation_indices);
+  auto a = xla::ResultAllocationIndices(executable, &allocation_indices);
   CHECK_EQ(outputs.size(), allocation_indices.size());
 
   std::vector<se::DeviceMemoryBase> device_buffers;
