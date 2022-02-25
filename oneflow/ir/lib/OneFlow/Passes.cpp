@@ -283,13 +283,26 @@ bool IsScalarTensor(Value value) {
   return false;
 }
 
-Value getfirstvalue(ValueRange x) {
-  if (x.empty()) {
-    std::cout << "operand empty" << std::endl;
-    return Value();
-  } else {
-    return *x.begin();
+::llvm::SmallVector<::mlir::Value, 4> CreateConv2dAndErasePad(::mlir::PatternRewriter& rewriter,
+                                                              OpResult conv_result,
+                                                              OpResult pad_result) {
+  if (auto conv_op = llvm::dyn_cast<oneflow::Conv2DOp>(conv_result.getDefiningOp())) {
+    if (auto pad_op = llvm::dyn_cast<oneflow::PadOp>(pad_result.getDefiningOp())) {
+      NamedAttrList attributes = conv_op->getAttrs();
+      SmallVector<Value, 4> operands;
+      operands.push_back(pad_op.x());
+      operands.push_back(conv_op.weight());
+      if (conv_op.bias()) operands.push_back(conv_op.bias());
+      if (conv_op.bias_multiplier()) operands.push_back(conv_op.bias_multiplier());
+      auto res = rewriter
+                     .create<oneflow::Conv2DOp>(conv_op->getLoc(), conv_op->getResultTypes(),
+                                                operands, attributes)
+                     ->getResults();
+      // pad op is expected to be erased if it is not used
+      return res;
+    }
   }
+  return {};
 }
 
 }  // namespace oneflow

@@ -114,12 +114,12 @@ class OneFlow_ConvolutionBaseOp<string mnemonic, list<Trait> traits = []> :
     "computes the output."
     }];
     let input = (ins
-      AnyType:$in,
-      AnyType:$weight,
-      Optional<AnyType>:$bias,
-      Optional<AnyType>:$bias_multiplier
+      OneFlow_Tensor:$in,
+      OneFlow_Tensor:$weight,
+      Optional<OneFlow_Tensor>:$bias,
+      Optional<OneFlow_Tensor>:$bias_multiplier
     );
-    let output = (outs AnyType:$out);
+    let output = (outs OneFlow_Tensor:$out);
     let attrs = (ins
       DefaultValuedAttr<SI32Attr, "0">:$filters,
       SI32ArrayAttr:$padding_before,
