@@ -2499,7 +2499,7 @@ def OneFlow_FusedDotFeatureInteractionGradOp : OneFlow_BaseOp<"fused_dot_feature
   let input = (ins
     OneFlow_Tensor:$dy,
     OneFlow_Tensor:$padded_concated_features,
-    Variadic<OneFlow_Tensor>:$features_grad_like    
+    Variadic<OneFlow_Tensor>:$features_grad_like
   );
   let output = (outs
     Variadic<OneFlow_Tensor>:$features_grad,
@@ -2532,6 +2532,8 @@ def OneFlow_FloorOp : OneFlow_IdempotentBaseOp<"floor", [NoSideEffect, DeclareOp
 def OneFlow_OnesLikeOp : OneFlow_IdempotentBaseOp<"ones_like", [NoSideEffect, NoGrad, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let same_output_regst_num = 1;
   let has_nd_sbp_infer_fn = 1;
+  let input = (ins AnyType:$like);
+  let output = (outs AnyType:$out);
 }
 
 def OneFlow_ReluOp : OneFlow_IdempotentBaseOp<"relu", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {}
