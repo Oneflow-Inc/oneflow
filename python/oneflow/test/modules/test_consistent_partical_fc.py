@@ -24,7 +24,6 @@ class TestParitalFC(flow.unittest.TestCase):
         test_case.assertTrue(out[0].shape == flow.Size([512]))
         test_case.assertTrue(out[1].shape == flow.Size([500]))
         test_case.assertTrue(out[2].shape == flow.Size([500, 128]))
-        out[0].numpy()
 
 if __name__ == "__main__":
     unittest.main()
