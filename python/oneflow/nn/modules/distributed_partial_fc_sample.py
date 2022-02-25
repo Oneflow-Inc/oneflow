@@ -53,5 +53,5 @@ class DistributedPariticalFCSample(Module):
 
 
 def distributed_partial_fc_sample_op(weight, label, num_sample):
-    warnings.warn("the function of distributed_partial_fc_sample is deprecated,advise to use nn.DistributedPariticalFCSample", DeprecationWarning)
+    warnings.warn("oneflow.distributed_partial_fc_sample is deprecated. Please use nn.DistributedPariticalFCSample module instead.", DeprecationWarning)
     return DistributedPariticalFCSample(num_sample)(weight, label)
