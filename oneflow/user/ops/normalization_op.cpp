@@ -502,7 +502,6 @@ Maybe<void> BwGetSbpFn(user_op::SbpContext* ctx) {
 
 }  // namespace
 
-
 /* static */ Maybe<void> BnEvalBackwardOp::InferLogicalTensorDesc(user_op::InferContext* ctx) {
   const Shape& dy_shape = ctx->InputShape("dy", 0);
   const Shape& gamma_shape = ctx->InputShape("gamma", 0);
@@ -620,16 +619,31 @@ Maybe<void> BwGetSbpFn(user_op::SbpContext* ctx) {
 
 #endif
 
+bool SupportBnEvalBackward(user_op::BackwardOpConfContext* ctx) {
+  if (!ParseBooleanFromEnv("ONEFLOW_ENABLE_BN_EVAL_BACKWARD", true)) { return false; }
+  if (!ctx->FwOp().user_op_conf().has_input("moving_variance", 0)) { return false; }
+  if (!ctx->FwOp().user_op_conf().has_input("gamma", 0)) { return false; }
+  if (!ctx->FwOp().user_op_conf().has_input("beta", 0)) { return false; }
+  if (!ctx->FwOp().NeedGenGradTensor4OpInput("x", 0)) { return false; }
+  if (ctx->FwOp().NeedGenGradTensor4OpInput("gamma", 0)
+      || ctx->FwOp().NeedGenGradTensor4OpInput("beta", 0)) {
+    return false;
+  }
+  if (ctx->FwOp().arg_tensor_desc("y", 0).shape().NumAxes() != 4) { return false; }
+  if (ctx->FwOp().arg_tensor_desc("gamma", 0).shape().NumAxes() != 1) { return false; }
+  if (ctx->FwOp().arg_tensor_desc("moving_variance", 0).shape().NumAxes() != 1) { return false; }
+  if (ctx->FwOp().arg_tensor_desc("moving_variance", 0).data_type() != DataType::kFloat) {
+    return false;
+  }
+  if (ctx->FwOp().attr<int32_t>("axis") < 0) { return false; }
+  return true;
+}
+
 REGISTER_USER_OP_GRAD("normalization")
     .SetBackwardOpConfGenFn([](user_op::BackwardOpConfContext* ctx) -> Maybe<void> {
       const bool is_training = ctx->FwOp().attr<bool>("training");
       const bool is_fp16 = ctx->FwOp().arg_tensor_desc("y", 0).data_type() == DataType::kFloat16;
-
-      if (ctx->FwOp().user_op_conf().has_input("moving_variance", 0)
-          && ctx->FwOp().NeedGenGradTensor4OpInput("x", 0)
-          && !ctx->FwOp().NeedGenGradTensor4OpInput("gamma", 0)
-          && !ctx->FwOp().NeedGenGradTensor4OpInput("beta", 0) 
-          && ParseBooleanFromEnv("ONEFLOW_ENABLE_BN_EVAL_BACKWARD", true)) {
+      if (SupportBnEvalBackward(ctx)) {
         CHECK_EQ_OR_RETURN(is_training, false);
         const auto bn_eval_backward_op_name =
             "System-AutoGrad-" + ctx->FwOp().op_name() + "-BnEvalBackward";
