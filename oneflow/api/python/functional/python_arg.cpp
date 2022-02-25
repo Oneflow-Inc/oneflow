@@ -146,16 +146,16 @@ Maybe<Symbol<ParallelDesc>> PythonArg::ObjectAs<Symbol<ParallelDesc>>() const {
 }
 
 template<>
-Maybe<Symbol<cfg::SbpParallel>> PythonArg::ObjectAs<Symbol<cfg::SbpParallel>>() const {
+Maybe<Symbol<SbpParallel>> PythonArg::ObjectAs<Symbol<SbpParallel>>() const {
   return PyUnpackSbpParallel(object_);
 }
 
 template<>
-Maybe<std::vector<Symbol<cfg::SbpParallel>>>
-PythonArg::ObjectAs<std::vector<Symbol<cfg::SbpParallel>>>() const {
+Maybe<std::vector<Symbol<SbpParallel>>> PythonArg::ObjectAs<std::vector<Symbol<SbpParallel>>>()
+    const {
   if (PySbpParallelCheck(object_)) {
-    return std::make_shared<std::vector<Symbol<cfg::SbpParallel>>>(
-        1, JUST(PyUnpackSbpParallel(object_)));
+    return std::make_shared<std::vector<Symbol<SbpParallel>>>(1,
+                                                              JUST(PyUnpackSbpParallel(object_)));
   }
   return PyUnpackSbpParallelSequence(object_);
 }

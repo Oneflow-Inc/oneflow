@@ -33,11 +33,17 @@ namespace oneflow {
   user_op::TensorDesc* image_tensor = ctx->OutputTensorDesc("image", 0);
   user_op::TensorDesc* label_tensor = ctx->OutputTensorDesc("label", 0);
   int32_t local_batch_size = ctx->Attr<int32_t>("batch_size");
-  const cfg::SbpParallel& sbp = ctx->SbpParallel4ArgNameAndIndex("image", 0);
   int64_t parallel_num = ctx->parallel_ctx().parallel_num();
-  if (sbp.has_split_parallel() && parallel_num > 1) {
-    CHECK_EQ_OR_RETURN(local_batch_size % parallel_num, 0);
-    local_batch_size /= parallel_num;
+
+  if (parallel_num > 1) {
+    int64_t split_num = 1;
+    const NdSbp& nd_sbp = ctx->NdSbp4ArgNameAndIndex("image", 0);
+    const Shape& hierarchy = *ctx->parallel_desc().hierarchy();
+    for (int32_t i = 0; i < nd_sbp.sbp_parallel_size(); ++i) {
+      if (nd_sbp.sbp_parallel(i).has_split_parallel()) { split_num *= hierarchy.At(i); }
+    }
+    CHECK_EQ_OR_RETURN(local_batch_size % split_num, 0);
+    local_batch_size /= split_num;
   }
   *image_tensor->mut_shape() = Shape({local_batch_size});
   *label_tensor->mut_shape() = Shape({local_batch_size});

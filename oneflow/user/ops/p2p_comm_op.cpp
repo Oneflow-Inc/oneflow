@@ -31,13 +31,14 @@ namespace oneflow {
   // Do nothing.
   return Maybe<void>::Ok();
 }
-/*static*/ Maybe<Symbol<Device>> SendOp::InferDevice(user_op::DeviceInferContext* ctx) {
-  return DeviceInferFn<&SyncLaunched>(ctx);
+/*static*/ Maybe<Symbol<Stream>> SendOp::InferDeviceAndStream(
+    user_op::DeviceAndStreamInferContext* ctx) {
+  return DeviceAndStreamInferFn<&SyncLaunched>(ctx);
 }
 
 namespace {
 
-Maybe<Symbol<Device>> GetRecvOutputDeivce(user_op::DeviceInferContext* ctx) {
+Maybe<Symbol<Device>> GetRecvOutputDeivce(user_op::DeviceAndStreamInferContext* ctx) {
   const std::string& device_type = ctx->Attr<std::string>("device_type");
   const int device_id = ctx->Attr<int64_t>("device_id");
   return Device::New(device_type, device_id);
@@ -57,8 +58,9 @@ Maybe<Symbol<Device>> GetRecvOutputDeivce(user_op::DeviceInferContext* ctx) {
   *ctx->OutputDType("out", 0) = ctx->Attr<DataType>("dtype");
   return Maybe<void>::Ok();
 }
-/*static*/ Maybe<Symbol<Device>> RecvOp::InferDevice(user_op::DeviceInferContext* ctx) {
-  return DeviceInferFn<&SyncLaunched, &GetRecvOutputDeivce>(ctx);
+/*static*/ Maybe<Symbol<Stream>> RecvOp::InferDeviceAndStream(
+    user_op::DeviceAndStreamInferContext* ctx) {
+  return DeviceAndStreamInferFn<&SyncLaunched, &GetRecvOutputDeivce>(ctx);
 }
 
 }  // namespace oneflow

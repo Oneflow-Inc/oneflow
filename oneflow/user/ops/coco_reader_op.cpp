@@ -38,20 +38,25 @@ namespace oneflow {
 }
 
 /* static */ Maybe<void> COCOReaderOp::InferPhysicalTensorDesc(user_op::InferContext* ctx) {
-  const cfg::SbpParallel& sbp = ctx->SbpParallel4ArgNameAndIndex("image", 0);
-  CHECK_OR_RETURN(sbp == ctx->SbpParallel4ArgNameAndIndex("image_id", 0));
-  CHECK_OR_RETURN(sbp == ctx->SbpParallel4ArgNameAndIndex("image_size", 0));
-  CHECK_OR_RETURN(sbp == ctx->SbpParallel4ArgNameAndIndex("gt_bbox", 0));
-  CHECK_OR_RETURN(sbp == ctx->SbpParallel4ArgNameAndIndex("gt_label", 0));
-  CHECK_OR_RETURN(sbp == ctx->SbpParallel4ArgNameAndIndex("gt_segm", 0));
-  CHECK_OR_RETURN(sbp == ctx->SbpParallel4ArgNameAndIndex("gt_segm_index", 0));
+  const NdSbp& nd_sbp = ctx->NdSbp4ArgNameAndIndex("image", 0);
+  CHECK_OR_RETURN(nd_sbp == ctx->NdSbp4ArgNameAndIndex("image_id", 0));
+  CHECK_OR_RETURN(nd_sbp == ctx->NdSbp4ArgNameAndIndex("image_size", 0));
+  CHECK_OR_RETURN(nd_sbp == ctx->NdSbp4ArgNameAndIndex("gt_bbox", 0));
+  CHECK_OR_RETURN(nd_sbp == ctx->NdSbp4ArgNameAndIndex("gt_label", 0));
+  CHECK_OR_RETURN(nd_sbp == ctx->NdSbp4ArgNameAndIndex("gt_segm", 0));
+  CHECK_OR_RETURN(nd_sbp == ctx->NdSbp4ArgNameAndIndex("gt_segm_index", 0));
 
   int64_t batch_size = ctx->Attr<int64_t>("batch_size");
   int64_t parallel_num = ctx->parallel_ctx().parallel_num();
   int64_t device_batch_size = batch_size;
-  if (sbp.has_split_parallel() && parallel_num > 1) {
-    CHECK_EQ_OR_RETURN(device_batch_size % parallel_num, 0);
-    device_batch_size /= parallel_num;
+  if (parallel_num > 1) {
+    int64_t split_num = 1;
+    const Shape& hierarchy = *ctx->parallel_desc().hierarchy();
+    for (int32_t i = 0; i < nd_sbp.sbp_parallel_size(); ++i) {
+      if (nd_sbp.sbp_parallel(i).has_split_parallel()) { split_num *= hierarchy.At(i); }
+    }
+    CHECK_EQ_OR_RETURN(device_batch_size % split_num, 0);
+    device_batch_size /= split_num;
   }
 
   user_op::TensorDesc* image_desc = ctx->OutputTensorDesc("image", 0);
@@ -109,7 +114,7 @@ namespace oneflow {
 }
 
 /* static */ Maybe<void> COCOReaderOp::InferNdSbp(user_op::InferNdSbpFnContext* ctx) {
-  cfg::SbpParallel default_sbp;
+  SbpParallel default_sbp;
   default_sbp.mutable_split_parallel()->set_axis(0);
   return user_op::InferNdSbp4SrcOp(ctx, default_sbp);
 }

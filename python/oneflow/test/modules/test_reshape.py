@@ -118,7 +118,7 @@ class TestModule(flow.unittest.TestCase):
         )
         return y
 
-    @autotest(auto_backward=False, check_graph=False)
+    @autotest(auto_backward=False, check_graph=True)
     def test_reshape_flow_bool_with_random_data(test_case):
         device = random_device()
         x = random_tensor(ndim=4).to(device=device, dtype=torch.bool)

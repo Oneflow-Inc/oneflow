@@ -26,7 +26,7 @@ import torch
 
 import oneflow as flow
 
-from .consistent_scope import *
+from .global_scope import *
 from .util import broadcast
 
 py_tuple = tuple
@@ -101,7 +101,7 @@ class generator:
     def value(self):
         if not self._has_value:
             self._value = self._calc_value()
-            if is_consistent():
+            if is_global():
                 self._value = broadcast(self._value)
             self._has_value = True
         return self._value
@@ -415,15 +415,12 @@ class all_placement(generator):
 
     def _calc_all_placement(self):
         all_device = self._calc_device()
-        device_ids = [i for i in range(self.num_rank_for_each_node)]
         all_hierarchy = [
             (self.world_size,),
             (self.node_size, self.num_rank_for_each_node),
         ]
         return [
-            flow.placement(
-                device, {i: device_ids for i in range(self.node_size)}, hierarchy
-            )
+            flow.placement(device, np.array(range(self.world_size)).reshape(hierarchy))
             for device, hierarchy in list(product(all_device, all_hierarchy))
         ]
 
@@ -469,9 +466,9 @@ class all_sbp(generator):
         super().__init__([])
         if placement is not None:
             if isinstance(placement, random_placement):
-                self.dim = len(placement.value().hierarchy)
+                self.dim = len(placement.value().ranks.shape)
             elif isinstance(placement, flow.placement):
-                self.dim = len(placement.hierarchy)
+                self.dim = len(placement.ranks.shape)
             else:
                 raise RuntimeError(
                     f"placement should be instance of random_placement or oneflow.placement"

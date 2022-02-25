@@ -80,7 +80,7 @@ class OFRecordReader(Module):
             else:
                 for elem in sbp:
                     assert isinstance(elem, flow.sbp.sbp), "sbp: %s" % sbp
-            assert len(sbp) == len(placement.hierarchy)
+            assert len(sbp) == len(placement.ranks.shape)
         else:
             assert sbp is None, "sbp: %s" % sbp
 
@@ -179,8 +179,10 @@ class CoinFlip(Module):
 
         self.placement = placement
         if placement is None:
-            if device is None:
-                self.device = flow.device("cpu")
+            self.device = device or flow.device("cpu")
+            assert self.device == "cpu" or self.device == flow.device(
+                "cpu"
+            ), "coin flip only supports cpu currently."
         else:
             assert device is None
 
@@ -191,7 +193,10 @@ class CoinFlip(Module):
             else:
                 for elem in sbp:
                     assert isinstance(elem, flow.sbp.sbp), "sbp: %s" % sbp
-            assert len(sbp) == len(placement.hierarchy)
+            assert len(sbp) == len(placement.ranks.shape)
+            assert (
+                self.placement.type == "cpu"
+            ), "coin flip only supports cpu currently."
         else:
             assert sbp is None, "sbp: %s" % sbp
 
@@ -955,7 +960,7 @@ class OneRecReader(Module):
         shuffle_after_epoch (bool): if shuffle after each epoch
         verify_example (bool): if verify example, defaults to True
         placement (Optional[oneflow._oneflow_internal.placement]): The placement attribute allows you to specify which physical device the output tensor is stored on.
-        sbp (Optional[Union[oneflow._oneflow_internal.sbp.sbp, List[oneflow._oneflow_internal.sbp.sbp]]]): When creating a consistent tensor, specify the SBP of the output tensor.
+        sbp (Optional[Union[oneflow._oneflow_internal.sbp.sbp, List[oneflow._oneflow_internal.sbp.sbp]]]): When creating a global tensor, specify the SBP of the output tensor.
 
     For example:
 
@@ -1150,10 +1155,10 @@ def _handle_distributed_args(module, device, placement, sbp):
         else:
             raise ValueError(f"invalid 'sbp' argument: {sbp}")
 
-        if len(sbp) != len(placement.hierarchy):
+        if len(sbp) != len(placement.ranks.shape):
             raise ValueError(
-                "Number of SBP's dimensions of sbp and number of placement hierarchy'dimensions must equal."
-                f" {len(sbp)} vs. {len(placement.hierarchy)}"
+                "Number of SBP's dimensions of sbp and number of placement ranks'dimensions must equal."
+                f" {len(sbp)} vs. {len(placement.ranks)}"
             )
 
     module.sbp = sbp

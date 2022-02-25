@@ -21,18 +21,16 @@ limitations under the License.
 #include "oneflow/core/vm/instruction.cfg.h"
 #include "oneflow/core/vm/instruction.h"
 #include "oneflow/core/vm/id_generator.h"
-#include "oneflow/core/vm/string_symbol.h"
 #include "oneflow/core/job/job_desc.h"
 #include "oneflow/core/job/parallel_desc.h"
 #include "oneflow/core/job/scope.h"
 #include "oneflow/core/job/scope.cfg.h"
 #include "oneflow/core/job/scope.pb.h"
-#include "oneflow/core/eager/eager_symbol.cfg.h"
 #include "oneflow/core/framework/symbol_id_cache.h"
 #include "oneflow/core/common/global.h"
 #include "oneflow/core/common/maybe.h"
 #include "oneflow/core/common/shape.h"
-#include "oneflow/core/common/spin_counter.h"
+#include "oneflow/core/common/blocking_then_busy.h"
 #include "oneflow/core/framework/object.h"
 #include "oneflow/core/operator/op_conf_symbol.h"
 #include "oneflow/core/framework/opkernel_object.h"
@@ -59,26 +57,12 @@ class InstructionsBuilder : public std::enable_shared_from_this<InstructionsBuil
   InstructionsBuilder(const InstructionsBuilder&) = delete;
   InstructionsBuilder(InstructionsBuilder&&) = delete;
   explicit InstructionsBuilder(const std::shared_ptr<vm::IdGenerator>& id_generator,
-                               vm::InstructionMsgList* instruction_list,
-                               vm::cfg::EagerSymbolList* eager_symbol_list)
-      : id_generator_(id_generator),
-        instruction_list_(instruction_list),
-        eager_symbol_list_(eager_symbol_list) {}
-  InstructionsBuilder(const std::shared_ptr<vm::IdGenerator>& id_generator,
-                      vm::InstructionMsgList* instruction_list,
-                      vm::cfg::EagerSymbolList* eager_symbol_list,
-                      const std::function<void(compatible_py::Object*)>& release_object)
-      : id_generator_(id_generator),
-        instruction_list_(instruction_list),
-        eager_symbol_list_(eager_symbol_list) {}
-  ~InstructionsBuilder() {
-    instruction_list_->Clear();
-    eager_symbol_list_->clear_eager_symbol();
-  }
+                               vm::InstructionMsgList* instruction_list)
+      : id_generator_(id_generator), instruction_list_(instruction_list) {}
+  ~InstructionsBuilder() { instruction_list_->Clear(); }
 
   const std::shared_ptr<vm::IdGenerator>& id_generator() const { return id_generator_; }
   const vm::InstructionMsgList& instruction_list() const { return *instruction_list_; }
-  const vm::cfg::EagerSymbolList& eager_symbol_list() const { return *eager_symbol_list_; }
 
   vm::InstructionMsgList* mut_instruction_list() { return instruction_list_; }
 
@@ -113,9 +97,8 @@ class InstructionsBuilder : public std::enable_shared_from_this<InstructionsBuil
                             const std::shared_ptr<const ParallelDesc>& parallel_desc);
 
   template<typename T>
-  Maybe<void> SyncAccessBlobByCallback(const T tensor,
-                                       const std::shared_ptr<SpinCounter>& spin_counter,
-                                       std::shared_ptr<std::function<void(uint64_t)>> callback,
+  Maybe<void> SyncAccessBlobByCallback(const T tensor, const std::shared_ptr<BlockingThenBusy>& btb,
+                                       const std::function<void(uint64_t)>& Callback,
                                        const std::string& modifier);
 
   template<typename T>
@@ -161,23 +144,21 @@ class InstructionsBuilder : public std::enable_shared_from_this<InstructionsBuil
   Maybe<void> LocalCallOpKernel(const std::shared_ptr<one::StatefulLocalOpKernel>& opkernel,
                                 const one::EagerBlobObjectListPtr& input_eager_blob_objects,
                                 const one::EagerBlobObjectListPtr& output_eager_blob_objects,
-                                const one::OpExprInterpContext& ctx, Symbol<Device> op_device);
+                                const one::OpExprInterpContext& ctx, Symbol<Stream> stream);
 
   Maybe<void> LocalCallOpKernel(
       const std::shared_ptr<one::StatefulLocalOpKernel>& opkernel,
       const one::EagerBlobObjectListPtr& input_eager_blob_objects,
       const one::EagerBlobObjectListPtr& output_eager_blob_objects,
       const std::shared_ptr<const one::ConsistentTensorInferResult>& consistent_tensor_infer_result,
-      const one::OpExprInterpContext& ctx, Symbol<Device> op_device);
+      const one::OpExprInterpContext& ctx, Symbol<Stream> stream);
 
  private:
   Maybe<void> SoftSyncStream(const one::EagerBlobObjectListPtr& eager_blob_objects,
-                             Symbol<Device> op_device);
+                             Symbol<Stream> stream);
   Maybe<void> SoftSyncStream(
       std::vector<intrusive::shared_ptr<LocalDepObject>>&& compute_local_dep_objects,
-      const std::string& modifier, Symbol<Device> op_device);
-
-  vm::cfg::EagerSymbolList* mut_eager_symbol_list() { return eager_symbol_list_; }
+      const std::string& modifier, Symbol<Stream> stream);
 
   vm::IdGenerator* mut_id_generator() { return id_generator_.get(); }
 
@@ -190,7 +171,6 @@ class InstructionsBuilder : public std::enable_shared_from_this<InstructionsBuil
 
   std::shared_ptr<vm::IdGenerator> id_generator_;
   vm::InstructionMsgList* instruction_list_;
-  vm::cfg::EagerSymbolList* eager_symbol_list_;
 };
 
 // Make VM instructions with instruction builder and run instructions with physical/local view.

@@ -15,6 +15,7 @@ limitations under the License.
 */
 #include "oneflow/core/eager/critical_section_phy_instr_operand.h"
 #include "oneflow/core/framework/device.h"
+#include "oneflow/core/framework/stream.h"
 #include "oneflow/core/kernel/kernel_util.h"
 #include "oneflow/core/common/decorator.h"
 #include "oneflow/core/device/device_context.h"
@@ -40,7 +41,8 @@ void CriticalSectionEndPhyInstrOperand::ForEachMirroredObject(
 namespace {
 
 Maybe<LocalDepObject*> RawCriticalSectionLocalDepObject() {
-  return JUST(Device::New("critical_section"))->mut_schedule_local_dep_object();
+  const auto& device = JUST(Device::New("cpu"));
+  return Stream::New(device, StreamRole::kCriticalSection)->mut_schedule_local_dep_object();
 }
 
 constexpr auto* CriticalSectionLocalDepObject =

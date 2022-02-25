@@ -25,6 +25,7 @@ limitations under the License.
 #include "oneflow/core/thread/thread_manager.h"
 #include "oneflow/core/job/eager_nccl_comm_manager.h"
 #include "oneflow/core/ep/cuda/cuda_stream.h"
+#include "oneflow/core/common/constant.h"
 
 namespace oneflow {
 namespace ccl {
@@ -112,7 +113,7 @@ struct DtypeAllReduce<T, kSum> {
       if (recv_size > 0) {
         JUST(TransportUtil::ReceiveFromPrevRankInRing(rank_group, transport_token, &ctx));
       }
-      JUST(TransportUtil::WaitUntilDoneOrTimeout(ctx, TransportUtil::TimeoutSeconds()));
+      JUST(ctx.WaitDone());
       const T* cur_in = &in[bs.At(recv_part_id).begin()];
       T* cur_out = &out[bs.At(recv_part_id).begin()];
       if (recv_size > 0) { VecAdd(recv_size, cur_out, cur_in, recv_ptr); }
@@ -145,7 +146,7 @@ struct DtypeAllReduce<T, kSum> {
       if (recv_size > 0) {
         JUST(TransportUtil::ReceiveFromPrevRankInRing(rank_group, transport_token, &ctx));
       }
-      JUST(TransportUtil::WaitUntilDoneOrTimeout(ctx, TransportUtil::TimeoutSeconds()));
+      JUST(ctx.WaitDone());
     }
     return Maybe<void>::Ok();
   }
@@ -219,7 +220,7 @@ struct DtypeReduceScatter<T, kSum> {
       if (recv_size > 0) {
         JUST(TransportUtil::ReceiveFromPrevRankInRing(rank_group, transport_token, &ctx));
       }
-      JUST(TransportUtil::WaitUntilDoneOrTimeout(ctx, TransportUtil::TimeoutSeconds()));
+      JUST(ctx.WaitDone());
       const T* cur_in = &in[bs.At(recv_part_id).begin()];
       if (recv_size > 0) { VecAdd(recv_size, out, cur_in, recv_ptr); }
     }
@@ -286,7 +287,7 @@ Maybe<void> AllGather<DeviceType::kCPU>(const void* in, void* out, size_t elem_c
     if (recv_size > 0) {
       JUST(TransportUtil::ReceiveFromPrevRankInRing(rank_group, transport_token, &ctx));
     }
-    JUST(TransportUtil::WaitUntilDoneOrTimeout(ctx, TransportUtil::TimeoutSeconds()));
+    JUST(ctx.WaitDone());
   }
   return Maybe<void>::Ok();
 }
@@ -307,25 +308,29 @@ Maybe<void> CpuBroadcast(const void* in, void* out, size_t buffer_size, int64_t 
                          const TransportToken& transport_token) {
   static thread_local std::vector<int64_t> rank_heap{};
   JUST(InitBroadcastRankHeap(&rank_heap, *parallel_desc, root));
-  NaiveAsyncTransportCtx transport_ctx(
-      transport_token,
-      [&](void** buffer, std::size_t* size, std::function<void()>* Cb) -> Maybe<void> {
-        *buffer = (root == GlobalProcessCtx::Rank() ? const_cast<void*>(in) : out);
-        *size = buffer_size;
-        *Cb = [] {};
-        return Maybe<void>::Ok();
-      },
-      [&](void** buffer, std::size_t* size, std::function<void()>* Cb) -> Maybe<void> {
-        *buffer = out;
-        *size = buffer_size;
-        *Cb = [] {};
-        return Maybe<void>::Ok();
-      });
-  JUST(TransportUtil::ReceiveDataFromParentInHeap(rank_heap, transport_token, &transport_ctx));
-  JUST(TransportUtil::WaitUntilDoneOrTimeout(transport_ctx, TransportUtil::TimeoutSeconds()));
-  JUST(TransportUtil::SendDataToChildrenInHeap(rank_heap, transport_token, &transport_ctx));
-  if (GlobalProcessCtx::Rank() == root && out != in) { std::memcpy(out, in, buffer_size); }
-  JUST(TransportUtil::WaitUntilDoneOrTimeout(transport_ctx, TransportUtil::TimeoutSeconds()));
+  auto Send = [&](void** buffer, std::size_t* size, std::function<void()>* Cb) -> Maybe<void> {
+    *buffer = (root == GlobalProcessCtx::Rank() ? const_cast<void*>(in) : out);
+    *size = buffer_size;
+    *Cb = [] {};
+    return Maybe<void>::Ok();
+  };
+  auto Recv = [&](void** buffer, std::size_t* size, std::function<void()>* Cb) -> Maybe<void> {
+    *buffer = out;
+    *size = buffer_size;
+    *Cb = [] {};
+    return Maybe<void>::Ok();
+  };
+  {
+    NaiveAsyncTransportCtx transport_ctx(transport_token, Send, Recv);
+    JUST(TransportUtil::ReceiveDataFromParentInHeap(rank_heap, transport_token, &transport_ctx));
+    JUST_MSG(transport_ctx.WaitDone(), kAsymmetricCodeErrorMsg);
+  }
+  {
+    NaiveAsyncTransportCtx transport_ctx(transport_token, Send, Recv);
+    JUST(TransportUtil::SendDataToChildrenInHeap(rank_heap, transport_token, &transport_ctx));
+    if (GlobalProcessCtx::Rank() == root && out != in) { std::memcpy(out, in, buffer_size); }
+    JUST_MSG(transport_ctx.WaitDone(), kAsymmetricCodeErrorMsg);
+  }
   return Maybe<void>::Ok();
 }
 
@@ -393,7 +398,7 @@ struct DtypeReduce<T, kSum> {
       if (recv_size > 0) {
         JUST(TransportUtil::ReceiveFromPrevRankInRing(rank_group, transport_token, &ctx));
       }
-      JUST(TransportUtil::WaitUntilDoneOrTimeout(ctx, TransportUtil::TimeoutSeconds()));
+      JUST(ctx.WaitDone());
       const T* cur_in = &in[bs.At(recv_part_id).begin()];
       if (recv_size > 0) { VecAdd(recv_size, tmp_out, cur_in, recv_ptr); }
     }
@@ -426,7 +431,7 @@ struct DtypeReduce<T, kSum> {
               UNIMPLEMENTED_THEN_RETURN();
             });
         JUST(TransportUtil::SendDataToRank(root, transport_token, &ctx));
-        JUST(TransportUtil::WaitUntilDoneOrTimeout(ctx, TransportUtil::TimeoutSeconds()));
+        JUST(ctx.WaitDone());
       }
       if (recv_size > 0 && root == GlobalProcessCtx::Rank()) {
         NaiveAsyncTransportCtx ctx(
@@ -441,7 +446,7 @@ struct DtypeReduce<T, kSum> {
               return Maybe<void>::Ok();
             });
         JUST(TransportUtil::ReceiveDataFromRank(src_rank, transport_token, &ctx));
-        JUST(TransportUtil::WaitUntilDoneOrTimeout(ctx, TransportUtil::TimeoutSeconds()));
+        JUST(ctx.WaitDone());
       }
     }
     return Maybe<void>::Ok();
@@ -493,7 +498,7 @@ Maybe<void> Send<DeviceType::kCPU>(const void* in, size_t elem_cnt, DataType dty
         UNIMPLEMENTED_THEN_RETURN();
       });
   JUST(TransportUtil::SendDataToRank(dst, transport_token, &transport_ctx));
-  JUST(TransportUtil::WaitUntilDoneOrTimeout(transport_ctx, TransportUtil::TimeoutSeconds()));
+  JUST(transport_ctx.WaitDone());
   return Maybe<void>::Ok();
 }
 
@@ -532,7 +537,7 @@ Maybe<void> Recv<DeviceType::kCPU>(void* out, size_t elem_cnt, DataType dtype, i
         return Maybe<void>::Ok();
       });
   JUST(TransportUtil::ReceiveDataFromRank(src, transport_token, &transport_ctx));
-  JUST(TransportUtil::WaitUntilDoneOrTimeout(transport_ctx, TransportUtil::TimeoutSeconds()));
+  JUST(transport_ctx.WaitDone());
   return Maybe<void>::Ok();
 }
 

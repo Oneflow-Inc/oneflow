@@ -201,8 +201,8 @@ class TestModule(flow.unittest.TestCase):
         res2 = m()
         test_case.assertTrue(np.array_equal(res1.numpy(), res2.numpy()))
 
-    @flow.unittest.skip_unless_1n2d()
-    def test_save_and_load_consistent_from_nested_dict(test_case):
+    @flow.unittest.skip_unless_1n4d()
+    def test_save_and_load_global_from_nested_dict(test_case):
         class CustomModule(flow.nn.Module):
             def __init__(self):
                 super().__init__()
@@ -212,9 +212,11 @@ class TestModule(flow.unittest.TestCase):
                 return self.param
 
         m1 = CustomModule()
-        m1 = m1.to_consistent(flow.placement("cuda", {0: range(2)}), flow.sbp.broadcast)
+        m1 = m1.to_global(
+            flow.placement("cuda", range(1, 3)), flow.sbp.broadcast
+        ).to_global(sbp=flow.sbp.split(1))
         m2 = CustomModule()
-        m2 = m2.to_consistent(flow.placement("cuda", {0: range(2)}), flow.sbp.broadcast)
+        m2 = m2.to_global(flow.placement("cuda", range(1, 3)), flow.sbp.broadcast)
         res1 = m1() + m2()
         state_dict1 = m1.state_dict()
         state_dict2 = m2.state_dict()
@@ -224,39 +226,34 @@ class TestModule(flow.unittest.TestCase):
             with test_case.assertRaises(Exception):
                 flow.save(state_dict, f)
 
-            consistent_src_dst_rank = 0
-            flow.save(state_dict, f, consistent_dst_rank=consistent_src_dst_rank)
+            global_src_dst_rank = 0
+            flow.save(state_dict, f, global_dst_rank=global_src_dst_rank)
             rank = flow.env.get_rank()
-            if rank != consistent_src_dst_rank:
+            if rank != global_src_dst_rank:
                 test_case.assertEqual(len(os.listdir(f)), 0)
 
             m1 = CustomModule()
-            m1 = m1.to_consistent(
-                flow.placement("cuda", {0: range(2)}), flow.sbp.broadcast
-            )
+            m1 = m1.to_global(
+                flow.placement("cuda", [[0, 1], [2, 3]]),
+                [flow.sbp.broadcast, flow.sbp.broadcast],
+            ).to_global(sbp=[flow.sbp.split(1), flow.sbp.broadcast])
             m2 = CustomModule()
-            m2 = m2.to_consistent(
-                flow.placement("cuda", {0: range(2)}), flow.sbp.broadcast
-            )
+            m2 = m2.to_global(
+                flow.placement("cuda", [[0, 1], [2, 3]]),
+                [flow.sbp.broadcast, flow.sbp.broadcast],
+            ).to_global(sbp=[flow.sbp.broadcast, flow.sbp.split(1)])
 
             with test_case.assertRaises(Exception):
                 loaded_state_dict = flow.load(f)
                 m1.load_state_dict(loaded_state_dict["m1"])
 
-            loaded_state_dict = flow.load(
-                f, consistent_src_rank=consistent_src_dst_rank
-            )
+            loaded_state_dict = flow.load(f, global_src_rank=global_src_dst_rank)
             test_case.assertEqual(len(loaded_state_dict), 2)
             m1.load_state_dict(loaded_state_dict["m1"])
             m2.load_state_dict(loaded_state_dict["m2"])
             res2 = m1() + m2()
 
-        test_case.assertTrue(
-            np.array_equal(
-                res1.to_consistent(sbp=flow.sbp.broadcast).to_local().numpy(),
-                res2.to_consistent(sbp=flow.sbp.broadcast).to_local().numpy(),
-            )
-        )
+        test_case.assertTrue(np.array_equal(res1.numpy(), res2.numpy()))
 
     @flow.unittest.skip_unless_1n1d()
     @unittest.skipIf(os.getenv("ONEFLOW_TEST_CPU_ONLY"), "only test cpu cases")
