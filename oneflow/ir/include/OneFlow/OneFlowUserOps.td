@@ -3492,8 +3492,8 @@ def OneFlow_SmoothL1LossGradOp : OneFlow_BaseOp<"smooth_l1_loss_grad", [NoSideEf
 #endif // GET_ONEFLOW_LOSS_OP_DEFINITIONS
 
 // Group: MATH
-// abs_grad, ceil_grad, erf, erf_grad, exp, exp_grad, expand_grad, expm1, expm1_grad, floor_grad, floordiv_x_grad, floordiv_y_grad, lgamma, lgamma_grad, log, log1p, log1p_grad, log2_grad, log_grad, log_sigmoid, log_sigmoid_grad, negative_grad, reciprocal_grad, reciprocal_no_nan, reciprocal_no_nan_grad, rint_grad, round_grad, rsqrt, rsqrt_grad, sigmoid_v2, sigmoid_v2_grad, sign_grad, softplus, softplus_grad, softsign_grad, sqrt, sqrt_grad, square, square_grad, xlogy_x_grad, xlogy_y_grad, cumsum, cumsum_grad, erfinv
-// Total: 44
+// abs_grad, ceil_grad, erf, erf_grad, exp, exp_grad, expand_grad, expm1, expm1_grad, floor_grad, floordiv_x_grad, floordiv_y_grad, lgamma, lgamma_grad, log, log1p, log1p_grad, log2_grad, log_grad, log_sigmoid, log_sigmoid_grad, negative_grad, reciprocal_grad, reciprocal_no_nan, reciprocal_no_nan_grad, rint_grad, round_grad, rsqrt, rsqrt_grad, sigmoid_v2, sigmoid_v2_grad, sign_grad, softplus, softplus_grad, softsign_grad, var, sqrt, sqrt_grad, square, square_grad, xlogy_x_grad, xlogy_y_grad, cumsum, cumsum_grad, erfinv
+// Total: 45
 
 #ifdef GET_ONEFLOW_MATH_OP_DEFINITIONS
 
@@ -3899,6 +3899,8 @@ def OneFlow_RsqrtGradOp : OneFlow_BaseOp<"rsqrt_grad", [NoSideEffect, DeclareOpI
   let has_data_type_infer_fn = 1;
 }
 
+
+
 def OneFlow_SigmoidV2Op : OneFlow_BaseOp<"sigmoid_v2", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
     OneFlow_Tensor:$x
@@ -3980,6 +3982,26 @@ def OneFlow_SoftsignGradOp : OneFlow_BaseOp<"softsign_grad", [NoSideEffect, Decl
   let has_get_sbp_fn = 1;
   let has_data_type_infer_fn = 1;
 }
+
+def OneFlow_VarOp : OneFlow_BaseOp<"var", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
+  let input = (ins
+    OneFlow_Tensor:$input
+  );
+  let output = (outs
+    OneFlow_Tensor:$output
+  );
+  let attrs = (ins
+    SI32ArrayAttr:$dim,
+    DefaultValuedAttr<BoolAttr, "true">:$unbiased,
+    DefaultValuedAttr<BoolAttr, "false">:$keepdim,
+    OneFlow_DataType:$dtype
+  );
+  let has_logical_tensor_desc_infer_fn = 1;
+  let has_physical_tensor_desc_infer_fn = 1;
+  let has_get_sbp_fn = 1;
+  let has_data_type_infer_fn = 1;
+}
+
 
 def OneFlow_SqrtOp : OneFlow_BaseOp<"sqrt", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
@@ -5769,6 +5791,7 @@ def OneFlow_PadOp : OneFlow_BaseOp<"pad", [NoSideEffect, DeclareOpInterfaceMetho
   let attrs = (ins
     SI64ArrayAttr:$padding_before,
     SI64ArrayAttr:$padding_after,
+    SI64ArrayAttr:$padding,
     DefaultValuedAttr<F64Attr, "0.">:$floating_constant_value,
     DefaultValuedAttr<SI64Attr, "0">:$integral_constant_value
   );

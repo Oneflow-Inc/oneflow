@@ -59,6 +59,11 @@ def OneFlow_SystemOp : OneFlow_Op<"system", [OneFlow_IsImportCompatible]> {
   let hasCanonicalizer = 1;
 }
 
+def OneFlow_LossMarkerOp : OneFlow_IROp<"loss_marker", []> {
+  let summary = "mark a result as loss to prevent its defining op from optimized away";
+  let arguments = (ins Variadic<AnyType>:$loss);
+}
+
 def OneFlow_Add2Op : OneFlow_BaseOp<"add_n2", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>, DeclareOpInterfaceMethods<AlternativeOpTypeNameInterface>]> {
   let summary = "";
   let input = (ins
@@ -131,6 +136,8 @@ def OneFlow_VariableOp : OneFlow_ConcreteSystemOp<"variable", [OneFlow_TensorSou
     DefaultValuedAttr<F32Attr, "0.0f">:$l1_regularization,
     DefaultValuedAttr<F32Attr, "0.0f">:$l2_regularization,
     DefaultValuedAttr<BoolAttr, "true">:$trainable,
+    OptionalAttr<F32Attr>:$float_initializer,
+    OptionalAttr<SI64Attr>:$integer_initializer,
     StrArrayAttr:$nd_sbp
   );
 }

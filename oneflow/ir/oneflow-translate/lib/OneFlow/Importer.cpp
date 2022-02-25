@@ -344,6 +344,7 @@ llvm::Optional<Type> Importer::GetTypeFromOneFlowDataType(::oneflow::DataType dt
     if (dt == ::oneflow::DataType::kUInt8) { return GetBuilder().getIntegerType(8, false); }
     if (dt == ::oneflow::DataType::kOFRecord) { return llvm::None; }
     if (dt == ::oneflow::DataType::kFloat16) { return GetBuilder().getF16Type(); }
+    if (dt == ::oneflow::DataType::kBool) { return GetBuilder().getI8Type(); }
     if (dt == ::oneflow::DataType::kTensorBuffer) { return llvm::None; }
     return llvm::None;
   }
@@ -679,6 +680,7 @@ LogicalResult ConvertDT(::mlir::oneflow::DataType data_type_mlir, ::oneflow::Dat
       DEFINE_ONE_CASE(OFRecord)
       DEFINE_ONE_CASE(Float16)
       DEFINE_ONE_CASE(TensorBuffer)
+      DEFINE_ONE_CASE(Bool)
 #undef DEFINE_ONE_CASE
     default: return failure();
   }
@@ -867,9 +869,16 @@ LogicalResult ConvertVariableOpConf(Operation* op, oneflow::VariableOpAdaptor& a
     op_conf->add_ctrl_in_op_name(
         operand.getDefiningOp()->getAttrOfType<StringAttr>("op_name").getValue().str());
   }
-
-  // empty initializer
-  var_op_conf->mutable_initializer()->mutable_empty_conf();
+  if (auto floatInit = adaptor.float_initializer()) {
+    var_op_conf->mutable_initializer()->mutable_constant_conf()->set_value(
+        floatInit.getValue().convertToFloat());
+  } else if (auto integerInit = adaptor.integer_initializer()) {
+    var_op_conf->mutable_initializer()->mutable_constant_int_conf()->set_value(
+        integerInit.getValue());
+  } else {
+    // empty initializer
+    var_op_conf->mutable_initializer()->mutable_empty_conf();
+  }
 
   return success();
 }
