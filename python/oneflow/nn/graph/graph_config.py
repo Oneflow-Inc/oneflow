@@ -50,6 +50,22 @@ class GraphConfig(object):
         
         The default outputs buffer size is 2.
 
+        For example:
+
+        .. code-block:: python
+
+            import oneflow as flow
+
+            class Graph(flow.nn.Graph):
+                def __init__(self):
+                    super().__init__()
+                    self.linear = flow.nn.Linear(3, 8, False)
+                    self.config.set_outputs_buffer_size(5) # Set the output buffer size of nn.Graph to 5.
+                def build(self, x):
+                    return self.linear(x)
+
+            graph = Graph()
+
         Args:
             value (int): graph ouputs buffer size.
         """
@@ -57,6 +73,22 @@ class GraphConfig(object):
 
     def enable_amp(self, mode: bool = True):
         r"""If set to true, then graph will use mixed precision mode, it means use both float16 and float32 during model training.
+
+        For example:
+
+        .. code-block:: python
+
+            import oneflow as flow
+
+            class Graph(flow.nn.Graph):
+                def __init__(self):
+                    super().__init__()
+                    self.linear = flow.nn.Linear(3, 8, False)
+                    self.config.enable_amp(True) # Use mixed precision mode.
+                def build(self, x):
+                    return self.linear(x)
+
+            graph = Graph()
 
         Args:
             mode (bool, optional): The default vaule is True.
@@ -67,6 +99,22 @@ class GraphConfig(object):
     def allow_fuse_model_update_ops(self, mode: bool = True):
         r"""If set to true, try to fuse cast + scale + l1_l2_regularize_gradient + model_update to one op to improve performance.
 
+        For example:
+
+        .. code-block:: python
+
+            import oneflow as flow
+
+            class Graph(flow.nn.Graph):
+                def __init__(self):
+                    super().__init__()
+                    self.linear = flow.nn.Linear(3, 8, False)
+                    self.config.allow_fuse_model_update_ops(True)
+                def build(self, x):
+                    return self.linear(x)
+
+            graph = Graph()
+
         Args:
             mode (bool, optional): The default vaule is True.
         """
@@ -74,6 +122,22 @@ class GraphConfig(object):
 
     def allow_fuse_add_to_output(self, mode: bool = True):
         r"""If set to true, try to fuse a binary element-wise add operetor to one of the predecessors to improve performance.
+
+        For example:
+
+        .. code-block:: python
+
+            import oneflow as flow
+
+            class Graph(flow.nn.Graph):
+                def __init__(self):
+                    super().__init__()
+                    self.linear = flow.nn.Linear(3, 8, False)
+                    self.config.allow_fuse_add_to_output(True)
+                def build(self, x):
+                    return self.linear(x)
+
+            graph = Graph()
 
         Args:
             mode (bool, optional): The default vaule is True.
@@ -83,6 +147,22 @@ class GraphConfig(object):
     def allow_fuse_cast_scale(self, mode: bool = True):
         r"""If set to true, try to fuse cast and scalar_mul_by_tensor to improve performance.
     
+        For example:
+
+        .. code-block:: python
+
+            import oneflow as flow
+
+            class Graph(flow.nn.Graph):
+                def __init__(self):
+                    super().__init__()
+                    self.linear = flow.nn.Linear(3, 8, False)
+                    self.config.allow_fuse_cast_scale(True)
+                def build(self, x):
+                    return self.linear(x)
+
+            graph = Graph()
+
         Args:
             mode (bool, optional): The default vaule is True.
         """
@@ -90,6 +170,23 @@ class GraphConfig(object):
 
     def set_gradient_accumulation_steps(self, value):
         r"""Set num of steps to accumulate gradient.
+
+        For example:
+
+        .. code-block:: python
+
+            import oneflow as flow
+
+            class Graph(flow.nn.Graph):
+                def __init__(self):
+                    super().__init__()
+                    self.linear = flow.nn.Linear(3, 8, False)
+                    # Let graph do gradient accumulation, such as pipelining parallelism depends on gradient accumulation.
+                    self.config.set_gradient_accumulation_steps(4)
+                def build(self, x):
+                    return self.linear(x)
+
+            graph = Graph()
 
         Args:
             value (int): num of steps.
@@ -101,6 +198,21 @@ class GraphConfig(object):
         This optimzation will reduce optimizer states memory consumption as described
         by ZeRO https://arxiv.org/abs/1910.02054 .
 
+        For example:
+
+        .. code-block:: python
+
+            import oneflow as flow
+
+            class Graph(flow.nn.Graph):
+                def __init__(self):
+                    super().__init__()
+                    self.linear = flow.nn.Linear(3, 8, False)
+                    self.config.set_zero_redundancy_optimizer_mode("distributed_split")
+                def build(self, x):
+                    return self.linear(x)
+
+            graph = Graph()
 
         Args:
             mode (str): "distributed_split" or "non_distributed". "distributed_split" mode
@@ -112,6 +224,22 @@ class GraphConfig(object):
 
     def set_zero_redundancy_optimizer_min_size_after_split(self, value):
         r"""Set the min size of optimizer state/grad/parameter after split.
+
+        For example:
+
+        .. code-block:: python
+
+            import oneflow as flow
+
+            class Graph(flow.nn.Graph):
+                def __init__(self):
+                    super().__init__()
+                    self.linear = flow.nn.Linear(3, 8, False)
+                    self.config.set_zero_redundancy_optimizer_min_size_after_split(1)
+                def build(self, x):
+                    return self.linear(x)
+
+            graph = Graph()
 
         Args:
             value (int): min size value.
@@ -127,6 +255,8 @@ class GraphConfig(object):
 
            XLA: https://www.tensorflow.org/xla
 
+        If you need to use XLA to optimize the model running speed, you need to compile the XLA version of oneflow. 
+        
         Tutorial for build with XLA: 
         
         https://github.com/Oneflow-Inc/oneflow/blob/master/oneflow/xrt/README.md#build-with-xla
@@ -158,6 +288,8 @@ class GraphConfig(object):
         When this option enable, oneflow will check all operators is supported by tensorrt or not. Clustering supported operators as subgraph, then runing subgraph by tensorrt.
 
            TensorRT: https://developer.nvidia.com/tensorrt
+
+        If you need to use TensorRT to optimize the model running speed, you need to compile the TensorRT version of oneflow. 
 
         Tutorial for build with TensorRT: 
         
@@ -193,6 +325,24 @@ class GraphConfig(object):
 
            OpenVINO: https://www.intel.com/content/www/us/en/developer/tools/openvino-toolkit/overview.html
 
+        It is also necessary to compile the XLA or TensorRT version of oneflow, tutorial: https://github.com/Oneflow-Inc/oneflow/tree/master/oneflow/xrt#readme
+
+        For example:
+
+        .. code-block:: python
+
+            import oneflow as flow
+
+            class Graph(flow.nn.Graph):
+                def __init__(self):
+                    super().__init__()
+                    self.linear = flow.nn.Linear(3, 8, False)
+                    self.config.enable_openvino(True) # Use openvino in xrt.
+                def build(self, x):
+                    return self.linear(x)
+
+            graph = Graph()
+
         Args:
             value (bool, optional): The default vaule is True.
         """
@@ -200,10 +350,26 @@ class GraphConfig(object):
 
     def enable_cudnn_conv_heuristic_search_algo(self, mode: bool = True):
         r""" Whether enable cudnn conv operatioin to use heuristic search algorithm.
+
+        For example:
+
+        .. code-block:: python
+
+            import oneflow as flow
+
+            class Graph(flow.nn.Graph):
+                def __init__(self):
+                    super().__init__()
+                    self.linear = flow.nn.Linear(3, 8, False)
+                    # Do not enable the cudnn conv operation to use the heuristic search algorithm.
+                    self.config.enable_cudnn_conv_heuristic_search_algo(False)
+                def build(self, x):
+                    return self.linear(x)
+
+            graph = Graph()
     
         Args:
-            mode (bool, optional): Whether enable cudnn conv operatioin to use heuristic
-                                   search algorithm. The default vaule is True.
+            mode (bool, optional): The default vaule is True.
         """
         self.proto.set_cudnn_conv_heuristic_search_algo(mode)
 
