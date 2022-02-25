@@ -121,11 +121,10 @@ class StaticZerosTensor final : public Tensor {
     return std::shared_ptr<StaticZerosTensor>(new StaticZerosTensor(shape, dtype, device));
   }
   static Maybe<StaticZerosTensor> MakeTensor(const std::shared_ptr<const Shape>& shape,
-                                             DataType dtype, Symbol<Device> device,
-                                             const Symbol<ParallelDesc>& placement,
+                                             DataType dtype, const Symbol<ParallelDesc>& placement,
                                              const Symbol<NdSbp>& ndsbp) {
     return std::shared_ptr<StaticZerosTensor>(
-        new StaticZerosTensor(shape, dtype, device, placement, ndsbp));
+        new StaticZerosTensor(shape, dtype, placement, ndsbp));
   }
   // Getters
   const std::shared_ptr<const Shape>& shape() const override { return shape_; }
@@ -145,7 +144,13 @@ class StaticZerosTensor final : public Tensor {
       RETURN_ERROR_WITH_BUG_PROMPT();
     }
   }
-  Maybe<Symbol<Device>> device() const override { return device_; }
+  Maybe<Symbol<Device>> device() const override {
+    if (is_local()) {
+      return JUST(device_);
+    } else {
+      RETURN_ERROR_WITH_BUG_PROMPT();
+    }
+  }
   Maybe<Symbol<Device>*> mut_device() override { RETURN_ERROR_WITH_BUG_PROMPT(); }
   bool is_cuda() const override {
     PRINT_BUG_PROMPT_AND_ABORT();
@@ -259,12 +264,11 @@ class StaticZerosTensor final : public Tensor {
                     Symbol<Device> device)
       : shape_(shape), dtype_(dtype), device_(device) {}
   StaticZerosTensor(const std::shared_ptr<const Shape>& shape, DataType dtype,
-                    Symbol<Device> device, const Symbol<ParallelDesc>& placement,
-                    const Symbol<NdSbp>& ndsbp)
-      : shape_(shape), dtype_(dtype), device_(device), placement_(placement), ndsbp_(ndsbp) {}
+                    const Symbol<ParallelDesc>& placement, const Symbol<NdSbp>& ndsbp)
+      : shape_(shape), dtype_(dtype), placement_(placement), ndsbp_(ndsbp) {}
   const std::shared_ptr<const Shape> shape_;
   DataType dtype_;
-  Symbol<Device> device_;
+  Optional<Symbol<Device>> device_;
   Optional<Symbol<ParallelDesc>> placement_;
   Optional<Symbol<NdSbp>> ndsbp_;
 };

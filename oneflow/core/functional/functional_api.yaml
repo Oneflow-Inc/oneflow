@@ -646,6 +646,7 @@
 - name: "static_zeros"
   signature:
     [
+      "Tensor (Shape shape, *, DataType dtype, Device device) => LocalStaticZeros",
       "Tensor (Shape shape, *, DataType dtype, Placement placement, SbpList sbp) => ConsistentStaticZeros",
     ]
   bind_python: True

@@ -22,6 +22,7 @@ limitations under the License.
 #include "oneflow/core/common/optional.h"
 #include "oneflow/core/common/protobuf.h"
 #include "oneflow/core/common/container_util.h"
+#include "oneflow/core/common/symbol.h"
 #include "oneflow/core/control/global_process_ctx.h"
 #include "oneflow/core/device/cuda_util.h"
 #include "oneflow/core/framework/attr_map.h"
@@ -208,17 +209,30 @@ class EmptyFunctor {
   std::shared_ptr<OpExpr> op_;
 };
 
+class LocalStaticZerosFunctor {
+ public:
+  LocalStaticZerosFunctor() = default;
+  ~LocalStaticZerosFunctor() = default;
+
+  Maybe<Tensor> operator()(const Shape& shape, const Symbol<DType>& dtype,
+                           const Symbol<Device>& device) const {
+    auto tensor = JUST(StaticZerosTensor::MakeTensor(std::make_shared<const Shape>(shape),
+                                                     dtype->data_type(), device));
+    return static_cast<std::shared_ptr<Tensor>>(tensor);
+  }
+};
+
 class ConsistentStaticZerosFunctor {
  public:
   ConsistentStaticZerosFunctor() = default;
   ~ConsistentStaticZerosFunctor() = default;
 
-  Maybe<Tensor> operator()(const Shape& shape, const Symbol<DType>& dtype, Symbol<Device> device,
+  Maybe<Tensor> operator()(const Shape& shape, const Symbol<DType>& dtype,
                            const Symbol<ParallelDesc>& placement,
                            const std::vector<Symbol<SbpParallel>>& sbp_tuple) const {
     auto nd_sbp = JUST(GetNdSbp(sbp_tuple));
-    auto tensor = JUST(StaticZerosTensor::MakeTensor(
-        std::make_shared<const Shape>(shape), dtype->data_type(), device, placement, nd_sbp));
+    auto tensor = JUST(StaticZerosTensor::MakeTensor(std::make_shared<const Shape>(shape),
+                                                     dtype->data_type(), placement, nd_sbp));
     return static_cast<std::shared_ptr<Tensor>>(tensor);
   }
 };
@@ -2705,6 +2719,7 @@ ONEFLOW_FUNCTION_LIBRARY(m) {
   m.add_functor<impl::ArgMinFunctor>("ArgMin");
   m.add_functor<impl::ConsistentConstantFunctor>("ConsistentConstant");
   m.add_functor<impl::ConstantFunctor>("Constant");
+  m.add_functor<impl::LocalStaticZerosFunctor>("LocalStaticZeros");
   m.add_functor<impl::ConsistentStaticZerosFunctor>("ConsistentStaticZeros");
   m.add_functor<impl::ConsistentEmptyFunctor>("ConsistentEmpty");
   m.add_functor<impl::EmptyFunctor>("Empty");
