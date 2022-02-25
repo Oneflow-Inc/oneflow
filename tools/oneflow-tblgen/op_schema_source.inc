@@ -82,8 +82,8 @@ REGISTER_USER_OP("{{op.name}}")
 {%- if op.has_data_type_infer_fn -%}
     .SetDataTypeInferFn(&{{opname}}::InferDataType)
 {%- endif -%}
-{%- if op.has_device_infer_fn -%}
-    .SetDeviceInferFn(&{{opname}}::InferDevice)
+{%- if op.has_device_and_stream_infer_fn -%}
+    .SetDeviceAndStreamInferFn(&{{opname}}::InferDeviceAndStream)
 {%- endif -%}
 {%- if op.has_sbp_signature_infer_fn -%}
     .SetSbpSignatureInferFn(&{{opname}}::InferSbpSignature)
