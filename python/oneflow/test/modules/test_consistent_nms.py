@@ -25,18 +25,23 @@ from oneflow.test_utils.automated_test_util.util import broadcast
 
 
 def _test_nms(test_case, placement, sbp):
+    placement = flow.env.all_device_placement("cuda")
     iou = 0.5
     boxes, scores = create_tensors_with_iou(2, iou)
 
     boxes = flow.tensor(boxes, dtype=flow.float32)
     flow._C.broadcast(boxes, src_rank=0, inplace=True)
     np_boxes = boxes.numpy()
-    global_boxes = boxes.to_global(placement=flow.env.all_device_placement("cuda"), sbp=flow.sbp.broadcast)
+    global_boxes = boxes.to_global(
+        placement=placement, sbp=flow.sbp.broadcast
+    ).to_global(placement, sbp)
 
     scores = flow.tensor(scores, dtype=flow.float32)
     flow._C.broadcast(scores, src_rank=0, inplace=True)
     np_scores = scores.numpy()
-    global_scores = scores.to_global(placement=flow.env.all_device_placement("cuda"), sbp=flow.sbp.broadcast)
+    global_scores = scores.to_global(
+        placement=placement, sbp=flow.sbp.broadcast
+    ).to_global(placement, sbp)
 
     keep_np = nms_np(np_boxes, np_scores, iou)
 
