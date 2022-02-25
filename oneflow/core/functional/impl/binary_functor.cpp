@@ -48,9 +48,12 @@ class AddFunctor {
       return Error::RuntimeError()
              << "For integral input tensors, argument alpha must not be a floating point number.";
     }
-    bool input_static_zeros = IsStaticZerosTensor(input);
+    CHECK_OR_RETURN(JUST(input->device()) == JUST(other->device()));
+    auto input_static_zeros = IsStaticZerosTensor(input);
+    auto other_static_zeros = IsStaticZerosTensor(other);
+    CHECK_OR_RETURN(!(input_static_zeros && other_static_zeros));
+
     if (input_static_zeros || IsStaticZerosTensor(other)) {
-      CHECK_OR_RETURN(JUST(input->device()) == JUST(other->device()));
       CHECK_OR_RETURN(*input->shape() == *other->shape());
       CHECK_OR_RETURN(input->dtype() == other->dtype());
       if (input_static_zeros) {

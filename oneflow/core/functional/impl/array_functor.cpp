@@ -14,6 +14,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
+#include <memory>
 #include "oneflow/core/autograd/autograd_mode.h"
 #include "oneflow/core/common/maybe.h"
 #include "oneflow/core/common/scalar.h"
@@ -205,6 +206,21 @@ class EmptyFunctor {
 
  private:
   std::shared_ptr<OpExpr> op_;
+};
+
+class ConsistentStaticZerosFunctor {
+ public:
+  ConsistentStaticZerosFunctor() = default;
+  ~ConsistentStaticZerosFunctor() = default;
+
+  Maybe<Tensor> operator()(const Shape& shape, const Symbol<DType>& dtype, Symbol<Device> device,
+                           const Symbol<ParallelDesc>& placement,
+                           const std::vector<Symbol<SbpParallel>>& sbp_tuple) const {
+    auto nd_sbp = JUST(GetNdSbp(sbp_tuple));
+    auto tensor = JUST(StaticZerosTensor::MakeTensor(
+        std::make_shared<const Shape>(shape), dtype->data_type(), device, placement, nd_sbp));
+    return static_cast<std::shared_ptr<Tensor>>(tensor);
+  }
 };
 
 class ConsistentEmptyFunctor {
@@ -2689,6 +2705,7 @@ ONEFLOW_FUNCTION_LIBRARY(m) {
   m.add_functor<impl::ArgMinFunctor>("ArgMin");
   m.add_functor<impl::ConsistentConstantFunctor>("ConsistentConstant");
   m.add_functor<impl::ConstantFunctor>("Constant");
+  m.add_functor<impl::ConsistentStaticZerosFunctor>("ConsistentStaticZeros");
   m.add_functor<impl::ConsistentEmptyFunctor>("ConsistentEmpty");
   m.add_functor<impl::EmptyFunctor>("Empty");
   m.add_functor<impl::ZerosLikeFunctor>("ZerosLike");

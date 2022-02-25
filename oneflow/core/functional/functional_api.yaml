@@ -643,6 +643,13 @@
     ["Tensor (Shape shape, *, DataType dtype, Device device=None) => Empty"]
   bind_python: True
 
+- name: "static_zeros"
+  signature:
+    [
+      "Tensor (Shape shape, *, DataType dtype, Placement placement, SbpList sbp) => ConsistentStaticZeros",
+    ]
+  bind_python: True
+
 - name: "global_empty"
   signature:
     [
