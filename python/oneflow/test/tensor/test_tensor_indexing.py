@@ -315,7 +315,7 @@ class TestTensorIndexing(flow.unittest.TestCase):
         index = flow.tensor([0, 2])
         x = flow.randn(5)
         x[index[0]] = 1
-        test_case.assertTrue(np.allclose(x[0].numpy(), 1))
+        test_case.assertTrue(np.equal(x[0].numpy(), 1))
 
     def test_list_indexing_using_scalar_tensor(test_case):
         arg_dict = OrderedDict()
