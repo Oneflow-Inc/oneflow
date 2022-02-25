@@ -78,6 +78,7 @@ static std::unordered_map<std::string, std::string> user_op_type_name2string_map
     {"normalization", "Normalization"},
     {"bias_add", "BiasAdd"},
     {"broadcast_add", "BcastAdd"},
+    {"broadcast_sub", "BcastSub"},
     {"broadcast_mul", "BcastMul"},
     {"broadcast_div", "BcastDiv"},
     {"broadcast_min", "BcastMin"},
@@ -104,9 +105,12 @@ static std::unordered_map<std::string, std::string> user_op_type_name2string_map
     {"layer_norm_grad", "LayerNormGrad"},
     {"scalar_add", "ScalarAdd"},
     {"scalar_mul", "ScalarMul"},
+    {"scalar_div", "ScalarDiv"},
+    {"scalar_pow", "ScalarPow"},
     {"leaky_relu", "LeakyRelu"},
     {"adam_update", "AdamOptimizer"},
     {"rsqrt", "Rsqrt"},
+    {"sqrt", "Sqrt"},
     {"square_sum", "SquareSum"},
 };
 

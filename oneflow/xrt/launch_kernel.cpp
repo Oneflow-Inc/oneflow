@@ -109,6 +109,9 @@ xrt::Executable* XrtLaunchKernel<device_type>::BuildExecutable(
     xrt::XrtEngine engine = xrt::StringToXrtEngine(launch_conf.engine());
     xrt::XrtDevice device = xrt::DeviceTypeToXrtDevice(device_type);
     xrt::GraphCompiler compiler(this->op_conf().name(), engine, device, device_ordinal);
+
+    VLOG(2) << "graph " << this->op_conf().name();
+    VLOG(2) << graph->ToDot();
     auto result = compiler.Compile(graph.get(), entry_params, return_params, aliases);
     // Record new compilation result
     compilation_cache_->Record(signature, result);
@@ -178,6 +181,7 @@ void XrtLaunchKernel<device_type>::ForwardDataContent(KernelContext* ctx) const 
   MakeInputOutputAlias(entry_params, &return_params, &aliases);
   // Mapping parameter names to function input and output names.
   MappingParamsToFunctionNames(&entry_params, &return_params);
+  if (return_params.empty()) { return; }
   // Build executable.
   auto executable = BuildExecutable(entry_params, return_params, aliases, device_ordinal);
   if (!executable) { LOG(FATAL) << "Executable is built failed."; }

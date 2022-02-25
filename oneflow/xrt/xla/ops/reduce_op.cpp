@@ -56,7 +56,7 @@ class ReduceOp : public XlaOpKernel {
     } else {
       // Reshape to 1-d array if output is scalar in order to
       // keep consistent with oneflow.
-      if (axis.size() == in_shape.NumAxes()) { output = Reshape(output, Shape({1})); }
+      // if (axis.size() == in_shape.NumAxes()) { output = Reshape(output, Shape({1})); }
     }
     ctx->SetSoleOutput(output);
   }
