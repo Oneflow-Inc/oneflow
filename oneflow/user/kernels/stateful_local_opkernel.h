@@ -20,7 +20,7 @@ limitations under the License.
 #include "oneflow/core/framework/tensor_meta.h"
 #include "oneflow/core/kernel/kernel.h"
 #include "oneflow/core/framework/op_kernel.h"
-#include "oneflow/core/framework/device.h"
+#include "oneflow/core/framework/stream.h"
 #include "oneflow/core/framework/user_op_kernel_registry.h"
 #include "oneflow/core/framework/arg_tuple.h"
 #include "oneflow/core/framework/op_interpreter.h"
@@ -377,13 +377,13 @@ class StatefulLocalOpKernel final {
  public:
   OF_DISALLOW_COPY_AND_MOVE(StatefulLocalOpKernel);
   static Maybe<StatefulLocalOpKernel> New(const std::shared_ptr<OperatorConf>& op_conf,
-                                          const Symbol<Device>& device, const AttrMap& base_attrs,
+                                          const Symbol<Stream>& stream, const AttrMap& base_attrs,
                                           const std::shared_ptr<const ParallelDesc>& parallel_desc,
                                           const std::shared_ptr<const ArgTuple>& input_arg_tuple,
                                           const std::shared_ptr<const ArgTuple>& output_arg_tuple);
   ~StatefulLocalOpKernel();
-  const Symbol<Device>& device() const { return device_; }
-  const std::shared_ptr<MemoryCase>& mem_case() const { return device_->mem_case(); }
+  const Symbol<Stream>& stream() const { return stream_; }
+  const std::shared_ptr<MemoryCase>& mem_case() const { return stream_->device()->mem_case(); }
   const std::string& op_type_name() const { return op_conf_->user_conf().op_type_name(); }
   const std::vector<int64_t>& input_tuple_indexes4const_ibns() const {
     return input_tuple_indexes4const_ibns_;
@@ -449,7 +449,7 @@ class StatefulLocalOpKernel final {
   std::unique_ptr<ComposedAttrMap> composed_attrs_for_scheduler_thread_;
   std::unique_ptr<ComposedAttrMap> composed_attrs_for_main_thread_;
   std::unique_ptr<user_op::UserOpConfWrapper> user_op_conf_;
-  Symbol<Device> device_;
+  Symbol<Stream> stream_;
   std::unique_ptr<LocalUserKernelRegContext> reg_ctx_;
   std::unique_ptr<LocalUserOpInferContext> op_infer_ctx_for_scheduler_thread_;
   std::unique_ptr<LocalUserKernelComputeContext> compute_ctx_;
