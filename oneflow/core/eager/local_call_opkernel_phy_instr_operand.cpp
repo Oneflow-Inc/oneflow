@@ -16,7 +16,7 @@ limitations under the License.
 #include "oneflow/core/eager/local_call_opkernel_phy_instr_operand.h"
 #include "oneflow/user/kernels/stateful_local_opkernel.h"
 #include "oneflow/core/eager/dev_vm_dep_object_consume_mode.h"
-#include "oneflow/core/framework/stream_is_transport.h"
+#include "oneflow/core/framework/stream_is_comm_net_stream.h"
 
 namespace oneflow {
 namespace vm {
@@ -39,7 +39,7 @@ void LocalCallOpKernelPhyInstrOperand::ForEachConstMirroredObject(
 void LocalCallOpKernelPhyInstrOperand::InitStreamSequentialDependence() {
   const auto& stream = opkernel().stream();
   auto* device_schedule_dep_object = stream->mut_schedule_local_dep_object();
-  if (StreamRoleSwitch<StreamIsTransport>(stream->stream_role())) {
+  if (StreamRoleSwitch<IsCommNetStream>(stream->stream_role())) {
     // Sequantialize nccl instructions to avoid deadlock
     stream_sequential_dependence_ = device_schedule_dep_object;
   } else {

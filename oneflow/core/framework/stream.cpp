@@ -14,7 +14,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 #include "oneflow/core/framework/stream.h"
-#include "oneflow/core/framework/stream_is_transport.h"
+#include "oneflow/core/framework/stream_is_comm_net_stream.h"
 #include "oneflow/core/common/decorator.h"
 #include "oneflow/core/common/static_global.h"
 #include "oneflow/core/job/parallel_desc.h"
@@ -48,7 +48,7 @@ Stream::Stream(Symbol<Device> device, StreamRole stream_role)
       transport_local_dep_object_(NullOpt) {
   static constexpr auto* GetComputeDep = DECORATE(&RawNewComputeDepObject, StaticGlobalCopiable);
   schedule_local_dep_object_ = GetComputeDep(device, stream_role).Mutable();
-  if (StreamRoleSwitch<StreamIsTransport>(stream_role)) {
+  if (StreamRoleSwitch<IsCommNetStream>(stream_role)) {
     transport_local_dep_object_ = GetStaticGlobalTransportLocalDepObject();
   }
 }
