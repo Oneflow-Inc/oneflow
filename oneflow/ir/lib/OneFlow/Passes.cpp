@@ -283,6 +283,15 @@ bool IsScalarTensor(Value value) {
   return false;
 }
 
+Value getfirstvalue(ValueRange x) {
+  if (x.empty()) {
+    std::cout << "operand empty" << std::endl;
+    return Value();
+  } else {
+    return *x.begin();
+  }
+}
+
 }  // namespace oneflow
 
 }  // namespace mlir
@@ -363,6 +372,7 @@ void populateFuserForExistingOp(::mlir::RewritePatternSet& patterns) {
   patterns.add<FusedBiasAddGeluPattern>(patterns.getContext());
   patterns.add<FusedScaleTrilPattern>(patterns.getContext());
   patterns.add<FusedScaleTrilPattern2>(patterns.getContext());
+  patterns.add<FusedPadConv2DPattern>(patterns.getContext());
   patterns.add<NormalizationAddReluPattern>(patterns.getContext());
 }
 
