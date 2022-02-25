@@ -135,6 +135,9 @@ def FusedScaleTrilPattern : Pat<
   ]
 >;
 
+def GetFirstValueOrCreateEmpty :
+  NativeCodeCall<"mlir::oneflow::getfirstvalue($0)">;
+
 def PaddingEqual: Constraint<CPred<"$0.getValue().equals($1.getValue())">, "sync_padding">;
 
 def FusedPadConv2DPattern : Pat<
@@ -173,8 +176,8 @@ def FusedPadConv2DPattern : Pat<
   ),
   (OneFlow_Conv2DOp $x,
     $weight,
-    $bias,
-    $bias_multiplier,
+    (GetFirstValueOrCreateEmpty $bias),
+    (GetFirstValueOrCreateEmpty $bias_multiplier),
     $conv2d_op_name,
     $conv2d_device_tag,
     $conv2d_device_name,
@@ -189,7 +192,7 @@ def FusedPadConv2DPattern : Pat<
     $dilation_rate,
     $groups
   ),
-  [(PaddingEqual $pad_op_padding_before,$padding_before)]
+  []
 >;
 
 // TODO: use either to merge two patterns

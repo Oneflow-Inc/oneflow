@@ -283,6 +283,15 @@ bool IsScalarTensor(Value value) {
   return false;
 }
 
+Value getfirstvalue(ValueRange x) {
+  if (x.empty()) {
+    std::cout << "operand empty" << std::endl;
+    return Value();
+  } else {
+    return *x.begin();
+  }
+}
+
 }  // namespace oneflow
 
 }  // namespace mlir
