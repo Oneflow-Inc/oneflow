@@ -43,6 +43,7 @@ limitations under the License.
 #include "oneflow/core/common/optional.h"
 #include "oneflow/core/common/cpp_attribute.h"
 #include "oneflow/core/ccl/ccl.h"
+#include "oneflow/core/common/constant.h"
 
 namespace oneflow {
 namespace one {
@@ -112,7 +113,7 @@ Maybe<HashMap<int64_t, std::shared_ptr<FlatShapeAndDataType>>> BroadcastGatherSh
   const auto& dst_ranks = JUST(RankGroupScope::CurrentRankGroup());
   JUST(TransportUtil::BroadcastToOtherRanks(src_ranks, dst_ranks, transport_token, &ctx));
   JUST(TransportUtil::CollectFromOtherRanks(src_ranks, dst_ranks, transport_token, &ctx));
-  JUST(ctx.WaitDone());
+  JUST_MSG(ctx.WaitDone(), kAsymmetricCodeErrorMsg);
   return map;
 }
 

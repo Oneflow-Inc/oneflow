@@ -160,6 +160,7 @@ __global__ void ComputeVarScalarOut(const T* in_ptr, T* out_ptr, T* tmp_buffer_p
     if (threadIdx.x == 0) {
       *out_ptr =
           cuda::layer_norm::Div(final_m2, (var_param.unbiased ? final_count - 1 : final_count));
+      done_block_count = 0;
     }
   }
 }

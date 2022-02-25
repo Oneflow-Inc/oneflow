@@ -109,8 +109,6 @@ Maybe<void> CheckTensorMatchAttr(const std::shared_ptr<Tensor>& tensor,
   return Maybe<void>::Ok();
 }
 
-}  // namespace
-
 Maybe<const std::string&> GetDeviceTagOfTensor(const std::shared_ptr<Tensor>& tensor) {
   if (tensor->is_consistent()) { return JUST(tensor->parallel_desc())->device_tag(); }
   return JUST(tensor->device())->type();
