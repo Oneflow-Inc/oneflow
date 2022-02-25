@@ -127,6 +127,10 @@ class GraphConfig(object):
 
            XLA: https://www.tensorflow.org/xla
 
+        Tutorial for build with XLA: 
+        
+        https://github.com/Oneflow-Inc/oneflow/blob/master/oneflow/xrt/README.md#build-with-xla
+
         For example:
 
         .. code-block:: python
@@ -137,11 +141,11 @@ class GraphConfig(object):
                 def __init__(self):
                     super().__init__()
                     self.linear = flow.nn.Linear(3, 8, False)
+                    self.config.enable_xla_jit(True) # Use xla_jit in xrt.
                 def build(self, x):
                     return self.linear(x)
 
             graph = Graph()
-            graph.config.enable_xla_jit(True)  # Use xla_jit in xrt.
 
         Args:
             value (bool, optional): The default vaule is True.
