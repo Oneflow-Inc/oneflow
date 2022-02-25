@@ -15,6 +15,7 @@ limitations under the License.
 """
 import random
 import unittest
+from oneflow.test.modules.test_util import GenArgList
 from collections import OrderedDict
 
 import numpy as np
@@ -224,6 +225,12 @@ def test_mask_setitem(test_case, numpy_x):
     numpy_x[mask > 1.0] = 1.0
     test_case.assertTrue(np.allclose(numpy_x, x.numpy()))
 
+def _test_list_indexing_using_scalar_tensor(test_case, dtype):
+        num = 20
+        y = np.arange(num)
+        for i in range(num):
+            x = flow.tensor(i, dtype=dtype)
+            test_case.assertTrue(np.allclose(i, y[x]))
 
 @flow.unittest.skip_unless_1n1d()
 class TestTensorIndexing(flow.unittest.TestCase):
@@ -310,6 +317,14 @@ class TestTensorIndexing(flow.unittest.TestCase):
         x[index[0]] = 1
         test_case.assertTrue(np.allclose(x[0].numpy(), 1))
 
+    def test_list_indexing_using_scalar_tensor(test_case):
+        arg_dict = OrderedDict()
+        arg_dict["function_test"] = [
+            _test_list_indexing_using_scalar_tensor,
+        ]
+        arg_dict["dtype"] = [flow.uint8, flow.int8, flow.int32, flow.int64]
+        for arg in GenArgList(arg_dict):
+            arg[0](test_case, *arg[1:])
 
 if __name__ == "__main__":
     unittest.main()
