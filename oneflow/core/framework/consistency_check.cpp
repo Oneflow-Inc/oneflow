@@ -222,37 +222,9 @@ NonRecursiveMetaInfoConsistencyCheckScope::~NonRecursiveMetaInfoConsistencyCheck
 Maybe<void> MetaInfoConsistencyCheck(const Symbol<ParallelDesc>& placement,
                                      const Optional<Symbol<NdSbp>>& nd_sbp,
                                      const Optional<Symbol<NdSbp>>& grad_nd_sbp) {
-  if (std::getenv("ONEFLOW_DEBUG_MODE") != nullptr && !IsMetaInfoConsistencyCheckDisable()) {
+  if (!IsMetaInfoConsistencyCheckDisable()) {
     JUST(MetaInfoConsistencyCheckUtil(placement, nd_sbp, grad_nd_sbp));
   }
-  return Maybe<void>::Ok();
-}
-
-Maybe<void> MetaInfoConsistencyCheck(const Symbol<ParallelDesc>& placement,
-                                     const Optional<Symbol<NdSbp>>& nd_sbp) {
-  if (std::getenv("ONEFLOW_DEBUG_MODE") != nullptr && !IsMetaInfoConsistencyCheckDisable()) {
-    JUST(MetaInfoConsistencyCheckUtil(placement, nd_sbp, Optional<Symbol<NdSbp>>()));
-  }
-  return Maybe<void>::Ok();
-}
-
-Maybe<void> MetaInfoConsistencyCheck(const Symbol<ParallelDesc>& placement,
-                                     const std::vector<Symbol<SbpParallel>>& sbp_tuple,
-                                     const std::vector<Symbol<SbpParallel>>& grad_sbp_tuple) {
-  Optional<Symbol<NdSbp>> nd_sbp;
-  Optional<Symbol<NdSbp>> grad_nd_sbp;
-  if (!sbp_tuple.empty()) { grad_nd_sbp = JUST(GetNdSbp(sbp_tuple)); }
-  if (!grad_sbp_tuple.empty()) { grad_nd_sbp = JUST(GetNdSbp(grad_sbp_tuple)); }
-  JUST(MetaInfoConsistencyCheck(placement, nd_sbp, grad_nd_sbp));
-  return Maybe<void>::Ok();
-}
-
-Maybe<void> MetaInfoConsistencyCheck(const Symbol<ParallelDesc>& placement,
-                                     const std::vector<Symbol<SbpParallel>>& sbp_tuple) {
-  Optional<Symbol<NdSbp>> nd_sbp;
-  Optional<Symbol<NdSbp>> grad_nd_sbp;
-  if (!sbp_tuple.empty()) { grad_nd_sbp = JUST(GetNdSbp(sbp_tuple)); }
-  JUST(MetaInfoConsistencyCheck(placement, nd_sbp, grad_nd_sbp));
   return Maybe<void>::Ok();
 }
 

@@ -44,6 +44,7 @@ limitations under the License.
 #include "oneflow/core/common/cpp_attribute.h"
 #include "oneflow/core/ccl/ccl.h"
 #include "oneflow/core/common/constant.h"
+#include "oneflow/core/common/debug.h"
 
 namespace oneflow {
 namespace one {
@@ -306,7 +307,13 @@ class LocalToConsistentFunctor {
                            const Shape& shape, const Symbol<DType>& dtype) const {
     JUST(CheckDeviceIdsIsValid(parallel_desc));
     NonRecursiveMetaInfoConsistencyCheckScope no_recursive_meta_info_conisitency_check_scope;
-    JUST(MetaInfoConsistencyCheck(parallel_desc, sbp_parallels));
+    // MetaInforCheck
+    {
+      Optional<Symbol<NdSbp>> nd_sbp;
+      Optional<Symbol<NdSbp>> grad_nd_sbp;
+      if (!sbp_parallels.empty()) { grad_nd_sbp = JUST(GetNdSbp(sbp_parallels)); }
+      JUST(DEBUG(OF_WARNING, &MetaInfoConsistencyCheck)(parallel_desc, nd_sbp, grad_nd_sbp));
+    }
     CHECK_OR_RETURN(x->is_local());
     std::shared_ptr<one::Tensor> input = x;
     // copy to right device first if input's device type is wrong
@@ -351,7 +358,13 @@ class ToConsistentFunctor {
                            const std::vector<Symbol<SbpParallel>>& grad_sbp_parallels) const {
     JUST(CheckDeviceIdsIsValid(parallel_desc));
     NonRecursiveMetaInfoConsistencyCheckScope scope;
-    JUST(MetaInfoConsistencyCheck(parallel_desc, sbp_parallels, grad_sbp_parallels));
+    {
+      Optional<Symbol<NdSbp>> nd_sbp;
+      Optional<Symbol<NdSbp>> grad_nd_sbp;
+      if (!sbp_parallels.empty()) { grad_nd_sbp = JUST(GetNdSbp(sbp_parallels)); }
+      if (!grad_sbp_parallels.empty()) { grad_nd_sbp = JUST(GetNdSbp(grad_sbp_parallels)); }
+      JUST(DEBUG(OF_WARNING, &MetaInfoConsistencyCheck)(parallel_desc, nd_sbp, grad_nd_sbp));
+    }
     std::shared_ptr<Tensor> tensor;
     if (x->is_consistent()) {
       tensor = JUST(ConsistentToConsistent(x, parallel_desc, sbp_parallels, grad_sbp_parallels));
