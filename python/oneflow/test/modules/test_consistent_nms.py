@@ -26,24 +26,21 @@ from oneflow.test_utils.automated_test_util.util import broadcast
 
 def _test_nms(test_case, placement, sbp):
     iou = 0.5
-    boxes, scores = create_tensors_with_iou(800, iou)
-    boxes = (
-        broadcast(flow.tensor(boxes, dtype=flow.float32))
-        .to_global(
-            placement=flow.env.all_device_placement("cuda"), sbp=flow.sbp.broadcast
-        )
-        .to_global(placement, sbp)
-    )
+    boxes, scores = create_tensors_with_iou(2, iou)
 
-    scores = (
-        broadcast(flow.tensor(scores, dtype=flow.float32))
-        .to_global(
-            placement=flow.env.all_device_placement("cuda"), sbp=flow.sbp.broadcast
-        )
-        .to_global(placement, sbp)
-    )
-    keep_np = nms_np(boxes.numpy(), scores.numpy(), iou)
-    keep = flow.nms(boxes, scores, iou)
+    boxes = flow.tensor(boxes, dtype=flow.float32)
+    flow._C.broadcast(boxes, src_rank=0, inplace=True)
+    np_boxes = boxes.numpy()
+    global_boxes = boxes.to_global(placement=flow.env.all_device_placement("cuda"), sbp=flow.sbp.broadcast)
+
+    scores = flow.tensor(scores, dtype=flow.float32)
+    flow._C.broadcast(scores, src_rank=0, inplace=True)
+    np_scores = scores.numpy()
+    global_scores = scores.to_global(placement=flow.env.all_device_placement("cuda"), sbp=flow.sbp.broadcast)
+
+    keep_np = nms_np(np_boxes, np_scores, iou)
+
+    keep = flow.nms(global_boxes.to_local(), global_scores.to_local(), iou)
     test_case.assertTrue(np.allclose(keep.numpy(), keep_np))
 
 
