@@ -699,19 +699,24 @@ Maybe<void> Operator::GreedilyFindMinCopyCostNdSbp(
   if (nd_sbp_sig_list.size() == 1) {
     select_sbp_idx = 0;
   } else {
+    std::vector<bool> is_same_sbp(input_bns().size());
+    for (int32_t ibn_id = 0; ibn_id < input_bns().size(); ibn_id++) {
+      const auto& ibn = input_bns().at(ibn_id);
+      const auto& blob_modifier_ = InputBlobModifier4Ibn(ibn);
+      is_same_sbp[ibn_id] = (blob_modifier_.has_is_mutable() && blob_modifier_.is_mutable())
+                            || NotSupportBoxingDataType(
+                                JUST(NdSbpInferHint4Ibn(ibn))->logical_blob_desc().data_type());
+    }
     for (int32_t i = 0; i < nd_sbp_sig_list.size(); ++i) {
       double total_copy_cost = 0.0;
-      for (const auto& ibn : input_bns()) {
-        const auto& blob_modifier_ = InputBlobModifier4Ibn(ibn);
-        bool is_same_sbp =
-            (blob_modifier_.has_is_mutable() && blob_modifier_.is_mutable())
-            || (!IsPODDataType(JUST(NdSbpInferHint4Ibn(ibn))->logical_blob_desc().data_type()));
+      for (int32_t ibn_id = 0; ibn_id < input_bns().size(); ibn_id++) {
+        const auto& ibn = input_bns().at(ibn_id);
+        const auto& producer_infer_hint4ibn = JUST(NdSbpInferHint4Ibn(ibn));
         total_copy_cost += JUST(ComputeCopyCostBetweenNdSbp(
-            JUST(NdSbpInferHint4Ibn(ibn))->nd_sbp(),
+            producer_infer_hint4ibn->nd_sbp(),
             JUST(VectorAt(nd_sbp_sig_list, i)).bn_in_op2nd_sbp().at(ibn),
-            JUST(NdSbpInferHint4Ibn(ibn))->logical_blob_desc(),
-            JUST(NdSbpInferHint4Ibn(ibn))->parallel_desc(), *JUST(GetParallelDesc4BnInOp(ibn)),
-            is_same_sbp));
+            producer_infer_hint4ibn->logical_blob_desc(), producer_infer_hint4ibn->parallel_desc(),
+            *JUST(GetParallelDesc4BnInOp(ibn)), is_same_sbp[ibn_id]));
         // Reduce inquiries
         if (total_copy_cost > min_copy_cost) { break; }
       }
@@ -729,9 +734,12 @@ Maybe<void> Operator::GreedilyFindMinCopyCostNdSbp(
       err << "candidate nd sbp signature are: "
           << *JUST(NdSbpSignatureListAsString(nd_sbp_sig_list, input_bns(), output_bns()));
       err << ", but inputs sbp are:";
-      for (const auto& ibn : input_bns()) {
+      for (int32_t ibn_id = 0; ibn_id < input_bns().size(); ibn_id++) {
+        const auto& ibn = input_bns().at(ibn_id);
         const NdSbp& nd_sbp = JUST(NdSbpInferHint4Ibn(ibn))->nd_sbp();
-        err << " " << ibn << ": " << NdSbpToString(nd_sbp) << ";";
+        err << " " << ibn << ": " << NdSbpToString(nd_sbp);
+        if (!is_same_sbp[ibn_id]) { err << " [ transfer disabled ]"; }
+        err << ";";
       }
 
       return Error::RuntimeError() << err.str();
@@ -762,7 +770,8 @@ Maybe<void> Operator::InferSbpSignature(
   // filter sbp signatures by sbp signature conf
   SbpSignatureList filtered_sbp_sigs_by_conf;
   FilterSbpSignatureList(valid_sbp_sig_list, sbp_sig_conf, &filtered_sbp_sigs_by_conf);
-  CHECK_GT_OR_RETURN(filtered_sbp_sigs_by_conf.sbp_signature_size(), 0);
+  CHECK_GT_OR_RETURN(filtered_sbp_sigs_by_conf.sbp_signature_size(), 0)
+      << op_name() << " has no sbp after filtering.";
   if (filtered_sbp_sigs_by_conf.sbp_signature_size() == 1) {
     *sbp_signature = *filtered_sbp_sigs_by_conf.sbp_signature().begin();
     return Maybe<void>::Ok();
