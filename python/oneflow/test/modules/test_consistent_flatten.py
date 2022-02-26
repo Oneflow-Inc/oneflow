@@ -21,19 +21,21 @@ import oneflow.unittest
 from oneflow.test_utils.automated_test_util import *
 
 
-@autotest(n=1, check_graph=False)
-def test_flatten_impl(test_case, ndim, placement, sbp):
-    dims = [random(1, 4) * 8 for i in range(ndim)]
-    x = random_tensor(ndim, *dims)
-    y = x.to_global(placement=placement, sbp=sbp)
-    start_dim = random(0, ndim).to(int).value()
-    end_dim = random(start_dim, ndim).to(int).value()
-
-    z = torch.flatten(x, start_dim, end_dim)
-    return z
 
 
 class TestFlattenConsistent(flow.unittest.TestCase):
+    @autotest(n=1, check_graph=False)
+    def test_flatten_impl(test_case, ndim, placement, sbp):
+        dims = [random(1, 4) * 8 for i in range(ndim)]
+        x = random_tensor(ndim, *dims)
+        y = x.to_global(placement=placement, sbp=sbp)
+        start_dim = random(0, ndim).to(int).value()
+        end_dim = random(start_dim, ndim).to(int).value()
+
+        z = torch.flatten(x, start_dim, end_dim)
+        return z
+
+
     @globaltest
     def test_flatten(test_case):
         # random ndim in range [1,4]

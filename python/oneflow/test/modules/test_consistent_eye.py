@@ -20,21 +20,22 @@ import oneflow.unittest
 from oneflow.test_utils.automated_test_util import *
 
 
-@autotest(n=1, auto_backward=False, check_graph=False)
-def test_eye_impl(test_case, placement, sbp):
-    n = random(1, 5).to(int).value() * 8
-    m = random(1, 5).to(int).value() * 8
-    x = torch.eye(n, m)
-    x.oneflow = flow.tensor(
-        x.pytorch.cpu().detach().numpy(),
-        requires_grad=x.pytorch.requires_grad,
-        placement=placement,
-        sbp=sbp,
-    )
-    return x
 
 
 class TestEyeConsistent(flow.unittest.TestCase):
+    @autotest(n=1, auto_backward=False, check_graph=False)
+    def test_eye_impl(test_case, placement, sbp):
+        n = random(1, 5).to(int).value() * 8
+        m = random(1, 5).to(int).value() * 8
+        x = torch.eye(n, m)
+        x.oneflow = flow.tensor(
+            x.pytorch.cpu().detach().numpy(),
+            requires_grad=x.pytorch.requires_grad,
+            placement=placement,
+            sbp=sbp,
+        )
+        return x
+
     @globaltest
     def test_eye(test_case):
         shape = random_tensor().shape

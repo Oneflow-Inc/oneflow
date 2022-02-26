@@ -21,19 +21,21 @@ import oneflow.unittest
 from oneflow.test_utils.automated_test_util import *
 
 
-@autotest(n=1, auto_backward=False, check_graph=False)
-def test_eq_impl(test_case, ndim, placement, sbp):
-    dims = [random(1, 4) * 8 for i in range(ndim)]
-    x = random_tensor(ndim, *dims)
-    x = x.to_global(placement=placement, sbp=sbp)
-    y = random_tensor(ndim, *dims)
-    y = y.to_global(placement=placement, sbp=sbp)
 
-    z = torch.eq(x, y)
-    return z
 
 
 class TestEqConsistent(flow.unittest.TestCase):
+    @autotest(n=1, auto_backward=False, check_graph=False)
+    def test_eq_impl(test_case, ndim, placement, sbp):
+        dims = [random(1, 4) * 8 for i in range(ndim)]
+        x = random_tensor(ndim, *dims)
+        x = x.to_global(placement=placement, sbp=sbp)
+        y = random_tensor(ndim, *dims)
+        y = y.to_global(placement=placement, sbp=sbp)
+
+        z = torch.eq(x, y)
+        return z
+
     @globaltest
     def test_eq(test_case):
         # random ndim in range [1,4]

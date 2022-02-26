@@ -21,16 +21,17 @@ import oneflow.unittest
 from oneflow.test_utils.automated_test_util import *
 
 
-@autotest(n=1, check_graph=False)
-def test_expm1_impl(test_case, ndim, placement, sbp):
-    dims = [random(1, 4) * 8 for i in range(ndim)]
-    x = random_tensor(ndim, *dims)
-    y = x.to_global(placement=placement, sbp=sbp)
-    z = torch.expm1(y)
-    return z
 
 
 class TestExpm1Consistent(flow.unittest.TestCase):
+
+    @autotest(n=1, check_graph=False)
+    def test_expm1_impl(test_case, ndim, placement, sbp):
+        dims = [random(1, 4) * 8 for i in range(ndim)]
+        x = random_tensor(ndim, *dims)
+        y = x.to_global(placement=placement, sbp=sbp)
+        z = torch.expm1(y)
+        return z
     @globaltest
     def test_expm1(test_case):
         # random ndim in range [1,4]
