@@ -38,6 +38,7 @@ class SharedMemoryManager final {
   SharedMemoryManager() = default;
   void FindAndDeleteOutdatedShmNames();
   std::set<std::string> shm_names_;
+  std::mutex mutex_;
 };
 
 class SharedMemory final {
