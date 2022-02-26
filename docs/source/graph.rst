@@ -14,4 +14,26 @@ Base class for running neural networks in Static Graph Mode.
             name,
             debug,
             __repr__,
-    :member-order: bysource
+
+
+
+.. autoclass:: oneflow.nn.graph.graph_config.GraphConfig
+    :members: set_outputs_buffer_size,
+            enable_amp,
+            allow_fuse_model_update_ops,
+            allow_fuse_add_to_output,
+            allow_fuse_cast_scale,
+            set_gradient_accumulation_steps,
+            set_zero_redundancy_optimizer_mode,
+            set_zero_redundancy_optimizer_min_size_after_split,
+            enable_xla_jit,
+            enable_tensorrt,
+            enable_openvino,
+            enable_cudnn_conv_heuristic_search_algo,
+
+
+
+.. autoclass:: oneflow.nn.graph.block_config.BlockConfig
+    :members: stage_id,
+            activation_checkpointing,
+
