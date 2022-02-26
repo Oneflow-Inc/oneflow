@@ -138,7 +138,7 @@ def FusedScaleTrilPattern : Pat<
 def FusePadAndConv2d :
   NativeCodeCall<"mlir::oneflow::CreateConv2dAndErasePad($_builder, $0, $1)">;
 
-def HasIdenticalPadding: Constraint<CPred<"mlir::oneflow::IsPaddingCouldBeAssimilatedIntoConv($0, $1)">, "">;
+def HasIdenticalPadding: Constraint<CPred<"mlir::oneflow::IsPaddingCouldBeAssimilatedIntoConv($0, $1, $2)">, "">;
 def IsChannelFirst: Constraint<CPred<"mlir::oneflow::IsChannelFirst($0)">, "">;
 def HasZeroPadding: Constraint<CPred<"mlir::oneflow::HasZeroPadding($0)">, "">;
 
