@@ -46,7 +46,7 @@ class BnEvalBackwardKernel final : public user_op::OpKernel {
     const int32_t axis = ctx->Attr<int32_t>("axis");
     const float epsilon = ctx->Attr<float>("epsilon");
     CHECK_GE(axis, 0);
-    const int64_t inner_dim_size = dy->shape().Count(axis);
+    const int64_t inner_dim_size = dy->shape().Count(axis + 1);
     const int64_t param_size = dy->shape().At(axis);
     const int64_t elem_cnt = dy->shape().elem_cnt();
     ComputeDxGpu<T, ComputeType><<<BlocksNum4ThreadsNum(elem_cnt), kCudaThreadsNumPerBlock, 0,

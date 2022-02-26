@@ -1988,3 +1988,7 @@
 - name: "cumprod_grad"
   signature: "Tensor (Tensor input, Tensor y, Tensor x, Int64 dim) => CumprodGrad"
   bind_python: False
+
+- name: "bn_eval_backward"
+  signature: "Tensor (Tensor dy, Tensor gamma, Tensor moving_variance, Int32 axis, Float epsilon) => BnEvalBackward"
+  bind_python: True
