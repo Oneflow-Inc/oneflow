@@ -381,9 +381,7 @@ class StatefulLocalOpKernel final {
 
   const AttrMap& base_attrs() const { return base_attrs_; }
 
-  LocalUserOpInferContext* op_infer_ctx_for_scheduler_thread() const {
-    return op_infer_ctx_for_scheduler_thread_.get();
-  }
+  LocalUserOpInferContext* op_infer_ctx() const { return op_infer_ctx_.get(); }
 
   void set_need_check_mem_case(bool value) { need_check_mem_case_ = value; }
 
@@ -417,7 +415,7 @@ class StatefulLocalOpKernel final {
   std::unique_ptr<user_op::UserOpConfWrapper> user_op_conf_;
   Symbol<Stream> stream_;
   std::unique_ptr<LocalUserKernelRegContext> reg_ctx_;
-  std::unique_ptr<LocalUserOpInferContext> op_infer_ctx_for_scheduler_thread_;
+  std::unique_ptr<LocalUserOpInferContext> op_infer_ctx_;
   std::unique_ptr<LocalUserKernelComputeContext> compute_ctx_;
   std::shared_ptr<const ArgTuple> input_arg_tuple_;
   std::shared_ptr<const ArgTuple> output_arg_tuple_;

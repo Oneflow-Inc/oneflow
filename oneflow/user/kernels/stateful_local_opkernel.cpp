@@ -378,7 +378,7 @@ Maybe<void> InitTensorTupleIndexes4Bns(const std::shared_ptr<const OperatorConf>
 
   const std::string& device_tag = op_conf->device_tag();
   const user_op::UserOpConfWrapper* user_op_conf = opkernel->user_op_conf_.get();
-  opkernel->op_infer_ctx_for_scheduler_thread_.reset(
+  opkernel->op_infer_ctx_.reset(
       new LocalUserOpInferContext(user_op_conf, input_arg_tuple, output_arg_tuple));
   opkernel->compute_ctx_.reset(new LocalUserKernelComputeContext(nullptr, device_tag, user_op_conf,
                                                                  input_arg_tuple, output_arg_tuple,

@@ -83,8 +83,7 @@ struct LocalCallOpKernelUtil final {
     const auto& InferTmpSizeFn = operand->infer_tmp_size_fn();
     auto* temp_blob_desc = operand->mut_opkernel()->mut_temp_blob_object()->mut_blob_desc();
     CHECK(temp_blob_desc->data_type() == DataType::kChar);
-    one::LocalUserOpInferContext* op_infer_ctx =
-        operand->opkernel().op_infer_ctx_for_scheduler_thread();
+    one::LocalUserOpInferContext* op_infer_ctx = operand->opkernel().op_infer_ctx();
     size_t temp_size = InferTmpSizeFn(op_infer_ctx);
     temp_blob_desc->mut_shape() = Shape({static_cast<int64_t>(temp_size)});
     temp_blob_desc->set_is_dynamic(true);
