@@ -22,6 +22,10 @@ def OneFlow_IsOpConfCompatible : NativeOpTrait<"IsOpConfCompatible">;
 def OneFlow_IsImportCompatible : NativeOpTrait<"IsImportCompatible">;
 def OneFlow_AlternativeOp : NativeOpTrait<"IsAlternative">;
 def OneFlow_TensorSource : NativeOpTrait<"TensorSource">;
+def OneFlow_OnlyExistsInIR : NativeOpTrait<"OnlyExistsInIR">;
+
+class OneFlow_IROp<string mnemonic, list<Trait> traits = []> :
+        Op<OneFlow_Dialect, mnemonic, !listconcat(traits, [OneFlow_OnlyExistsInIR])> {}
 
 class OneFlow_BaseOp<string mnemonic, list<Trait> traits = []> :
         Op<OneFlow_Dialect, mnemonic, !listconcat(traits, [OneFlow_IsOpConfCompatible])> {
