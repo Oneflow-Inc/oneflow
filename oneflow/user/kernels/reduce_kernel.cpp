@@ -252,6 +252,14 @@ class ReduceSumFloatKernel final : public user_op::OpKernel, public user_op::Cud
     user_op::Tensor* output_tensor = ctx->Tensor4ArgNameAndIndex("output_tensor", 0);
     user_op::Tensor* tmp_buffer = ctx->Tensor4ArgNameAndIndex("tmp_buffer", 0);
     const ShapeView& in_shape = input_tensor->shape();
+    if (input_tensor->shape().elem_cnt() == 0) {
+      if (output_tensor->shape().elem_cnt() != 0) {
+        Memset<DeviceType::kCUDA>(
+            ctx->stream(), output_tensor->mut_dptr<float>(), 0,
+            output_tensor->shape().elem_cnt() * GetSizeOfDataType(output_tensor->data_type()));
+      }
+      return;
+    }
     bool is_axis_contiguous = false;
     int64_t outer_size = 0, inner_size = 0, reduce_size = 0;
     GetReduceSumLayout(axis, in_shape, &is_axis_contiguous, &outer_size, &inner_size, &reduce_size);
