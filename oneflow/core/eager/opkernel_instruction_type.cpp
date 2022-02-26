@@ -20,6 +20,7 @@ limitations under the License.
 #include "oneflow/core/operator/operator.h"
 #include "oneflow/core/eager/eager_blob_object.h"
 #include "oneflow/core/vm/stream.h"
+#include "oneflow/core/vm/allocator.h"
 #include "oneflow/core/vm/thread_ctx.h"
 #include "oneflow/core/vm/cuda_stream_type.h"
 #include "oneflow/core/eager/opkernel_instruction_type.h"
@@ -41,19 +42,19 @@ namespace oneflow {
 namespace vm {
 
 struct LocalCallOpKernelUtil final {
-  static inline Maybe<void> Compute(const vm::InstructionMsg& instr_msg) {
+  static inline void Compute(const vm::InstructionMsg& instr_msg) {
     OF_PROFILER_RANGE_PUSH("ResetPrior");
     auto* operand = LocalCallOpKernelUtil::GetLocalCallOpKernelPhyInstrOperand(instr_msg);
     DeviceCtx* device_ctx = instr_msg.phy_instr_stream()->device_ctx().get();
+    operand->mut_call_ctx()->device_ctx = device_ctx;
     OF_PROFILER_RANGE_POP();
     OF_PROFILER_RANGE_PUSH("AllocateOutputBlobsMemory");
-    JUST(AllocateOutputBlobsMemory(operand, device_ctx));
+    AllocateOutputBlobsMemory(operand, device_ctx);
     OF_PROFILER_RANGE_POP();
     if (unlikely(operand->need_temp_storage())) {
-      OF_PROFILER_RANGE_PUSH("TryAllocateTempStorageBlobMemory");
-      InferTempStorageBlobDesc(operand);
-      JUST(ResetTempStorageBlob(operand));
-      JUST(TryAllocateTempStorageBlobMemory(operand, device_ctx));
+      OF_PROFILER_RANGE_PUSH("TryAllocateTempStorage");
+      InferTempStorageSize(operand);
+      TryAllocateTempStorage(operand, device_ctx);
       OF_PROFILER_RANGE_POP();
     }
     user_op::OpKernelState* state = nullptr;
@@ -65,11 +66,11 @@ struct LocalCallOpKernelUtil final {
     }
     OpKernelCompute(operand, device_ctx, state, cache);
     if (unlikely(operand->need_temp_storage())) {
-      OF_PROFILER_RANGE_PUSH("DeallocateTempStorageBlobMemory");
-      JUST(DeallocateTempStorageBlobMemory(operand, device_ctx));
+      OF_PROFILER_RANGE_PUSH("DeallocateTempStorage");
+      DeallocateTempStorage(operand, device_ctx);
       OF_PROFILER_RANGE_POP();
     }
-    return Maybe<void>::Ok();
+    operand->mut_call_ctx()->device_ctx = nullptr;
   }
 
   static inline LocalCallOpKernelPhyInstrOperand* GetLocalCallOpKernelPhyInstrOperand(
@@ -79,18 +80,11 @@ struct LocalCallOpKernelUtil final {
   }
 
  private:
-  static inline void InferTempStorageBlobDesc(LocalCallOpKernelPhyInstrOperand* operand) {
+  static inline void InferTempStorageSize(LocalCallOpKernelPhyInstrOperand* operand) {
     const auto& InferTmpSizeFn = operand->infer_tmp_size_fn();
-    auto* temp_blob_desc = operand->mut_opkernel()->mut_temp_blob_object()->mut_blob_desc();
-    CHECK(temp_blob_desc->data_type() == DataType::kChar);
-    one::LocalUserOpInferContext* op_infer_ctx = operand->opkernel().op_infer_ctx();
-    size_t temp_size = InferTmpSizeFn(op_infer_ctx);
-    temp_blob_desc->mut_shape() = Shape({static_cast<int64_t>(temp_size)});
-    temp_blob_desc->set_is_dynamic(true);
-  }
-
-  static inline Maybe<void> ResetTempStorageBlob(LocalCallOpKernelPhyInstrOperand* operand) {
-    return operand->mut_opkernel()->mut_temp_blob_object()->InitBlob();
+    CHECK(static_cast<bool>(InferTmpSizeFn))
+        << operand->opkernel().op_conf().user_conf().op_type_name();
+    operand->mut_call_ctx()->tmp_buffer_size = InferTmpSizeFn(operand->opkernel().op_infer_ctx());
   }
 
   static inline void TryInitOpKernelStateAndCache(LocalCallOpKernelPhyInstrOperand* operand,
@@ -103,53 +97,56 @@ struct LocalCallOpKernelUtil final {
       // skipped.
       state = nullptr;
     }
-    operand->mut_opkernel()->TryInitOpKernelStateAndCache(operand->user_opkernel(), device_ctx,
-                                                          state, cache);
+    operand->mut_opkernel()->TryInitOpKernelStateAndCache(operand->user_opkernel(), state, cache);
   }
 
-  static inline Maybe<void> AllocateOutputBlobsMemory(LocalCallOpKernelPhyInstrOperand* operand,
-                                                      DeviceCtx* device_ctx) {
+  static inline void AllocateOutputBlobsMemory(LocalCallOpKernelPhyInstrOperand* operand,
+                                               DeviceCtx* device_ctx) {
     for (const auto& blob_object : *operand->outputs()) {
-      JUST(blob_object->TryInitBlob());
-      JUST(blob_object->TryAllocateBlobBodyMemory(device_ctx));
+      blob_object->TryInitBlob();
+      blob_object->TryAllocateBlobBodyMemory(device_ctx);
     }
-    return Maybe<void>::Ok();
   }
 
-  static inline Maybe<void> TryAllocateTempStorageBlobMemory(
-      LocalCallOpKernelPhyInstrOperand* operand, DeviceCtx* device_ctx) {
-    return operand->mut_opkernel()->mut_temp_blob_object()->TryAllocateBlobBodyMemory(device_ctx);
+  static inline void TryAllocateTempStorage(LocalCallOpKernelPhyInstrOperand* operand,
+                                            DeviceCtx* device_ctx) {
+    if (operand->mut_call_ctx()->tmp_buffer_size > 0) {
+      device_ctx->mut_allocator()->Allocate(&operand->mut_call_ctx()->tmp_buffer_ptr,
+                                            operand->mut_call_ctx()->tmp_buffer_size);
+    }
   }
 
   static inline void OpKernelCompute(LocalCallOpKernelPhyInstrOperand* operand,
                                      DeviceCtx* device_ctx, user_op::OpKernelState* state,
                                      const user_op::OpKernelCache* cache) {
     auto* opkernel = operand->mut_opkernel();
-    auto* compute_ctx = opkernel->UpdateComputeContext(device_ctx);
+    auto* compute_ctx = opkernel->GetComputeContext();
     OF_PROFILER_RANGE_PUSH("Compute");
     operand->user_opkernel()->Compute(compute_ctx, state, cache);
     OF_PROFILER_RANGE_POP();
-    // tensor tuples are not allowed to be hold by StatefulLocalOpKernel
-    opkernel->UpdateComputeContext(nullptr);
   }
 
-  static inline Maybe<void> DeallocateTempStorageBlobMemory(
-      LocalCallOpKernelPhyInstrOperand* operand, DeviceCtx* device_ctx) {
-    return operand->mut_opkernel()->mut_temp_blob_object()->DeallocateBlobDataPtr();
+  static inline void DeallocateTempStorage(LocalCallOpKernelPhyInstrOperand* operand,
+                                           DeviceCtx* device_ctx) {
+    if (operand->mut_call_ctx()->tmp_buffer_size > 0) {
+      CHECK_NOTNULL(operand->mut_call_ctx()->tmp_buffer_ptr);
+      device_ctx->mut_allocator()->Deallocate(operand->mut_call_ctx()->tmp_buffer_ptr,
+                                              operand->mut_call_ctx()->tmp_buffer_size);
+    }
+    operand->mut_call_ctx()->tmp_buffer_ptr = nullptr;
   }
 };
 
 void LocalCallOpKernelInstructionType::Compute(vm::Instruction* instruction) const {
   auto* ptr = instruction->instr_msg().phy_instr_operand().get();
   auto* operand = CHECK_NOTNULL(dynamic_cast<LocalCallOpKernelPhyInstrOperand*>(ptr));
-  operand->WithThisCallContext(
-      [&] { CHECK_JUST(LocalCallOpKernelUtil::Compute(instruction->instr_msg())); });
+  operand->WithThisCallContext([&] { LocalCallOpKernelUtil::Compute(instruction->instr_msg()); });
 }
 
 void LocalCallOpKernelInstructionType::ComputeInFuseMode(vm::InstructionMsg* instr_msg) const {
   auto* ptr = instr_msg->phy_instr_operand().get();
   auto* operand = CHECK_NOTNULL(dynamic_cast<LocalCallOpKernelPhyInstrOperand*>(ptr));
-  operand->WithThisCallContext([&] { CHECK_JUST(LocalCallOpKernelUtil::Compute(*instr_msg)); });
+  operand->WithThisCallContext([&] { LocalCallOpKernelUtil::Compute(*instr_msg); });
 }
 
 std::string LocalCallOpKernelInstructionType::DebugOpTypeName(

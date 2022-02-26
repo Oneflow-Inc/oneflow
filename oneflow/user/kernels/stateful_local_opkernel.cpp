@@ -36,13 +36,28 @@ int32_t TryGetTensorTupleIndex(const std::unordered_map<std::string, std::vector
   return -1;
 }
 
-ZeroCopyBaseContext::ZeroCopyBaseContext(const std::shared_ptr<const ArgTuple>& input_arg_tuple,
-                                         const std::shared_ptr<const ArgTuple>& output_arg_tuple)
-    : ZeroCopyBaseContext(input_arg_tuple, output_arg_tuple, nullptr) {}
+const ShapeView& ThreadLocalTmpTensorView::shape() const {
+  return eager::ThreadLocalCallContextScope::Current()->shape_view;
+}
+
+MutShapeView* ThreadLocalTmpTensorView::mut_shape() {
+  return &eager::ThreadLocalCallContextScope::Current()->mut_shape_view;
+}
+
+const MemoryCase& ThreadLocalTmpTensorView::mem_case() const {
+  return *eager::ThreadLocalCallContextScope::Current()->opkernel->mem_case();
+}
+
+const void* ThreadLocalTmpTensorView::raw_dptr() const {
+  return CHECK_NOTNULL(eager::ThreadLocalCallContextScope::Current()->tmp_buffer_ptr);
+}
+
+void* ThreadLocalTmpTensorView::mut_raw_dptr() {
+  return CHECK_NOTNULL(eager::ThreadLocalCallContextScope::Current()->tmp_buffer_ptr);
+}
 
 ZeroCopyBaseContext::ZeroCopyBaseContext(const std::shared_ptr<const ArgTuple>& input_arg_tuple,
-                                         const std::shared_ptr<const ArgTuple>& output_arg_tuple,
-                                         vm::EagerBlobObject* tmp_buffer)
+                                         const std::shared_ptr<const ArgTuple>& output_arg_tuple)
     : input_arg_tuple_(input_arg_tuple), output_arg_tuple_(output_arg_tuple) {
   for (int i = 0; i < input_arg_tuple->size(); i++) {
     input_tensor_views_.emplace_back(
@@ -78,9 +93,7 @@ ZeroCopyBaseContext::ZeroCopyBaseContext(const std::shared_ptr<const ArgTuple>& 
               .at(i);
         }));
   }
-  if (tmp_buffer != nullptr) {
-    tmp_buffer_view_.reset(new EagerBlobObjectTensorView([tmp_buffer]() { return tmp_buffer; }));
-  }
+  tmp_buffer_view_.reset(new ThreadLocalTmpTensorView());
 }
 
 Optional<Symbol<ParallelDesc>> ZeroCopyBaseContext::parallel_desc() const {
@@ -159,15 +172,9 @@ ZeroCopyBaseContext::ConsistentTensorMetaView4ArgNameAndIndex(const std::string&
 LocalUserKernelBaseContext::LocalUserKernelBaseContext(
     const std::string& device_tag, const std::shared_ptr<const ArgTuple>& input_arg_tuple,
     const std::shared_ptr<const ArgTuple>& output_arg_tuple)
-    : LocalUserKernelBaseContext(device_tag, input_arg_tuple, output_arg_tuple, nullptr) {}
-
-LocalUserKernelBaseContext::LocalUserKernelBaseContext(
-    const std::string& device_tag, const std::shared_ptr<const ArgTuple>& input_arg_tuple,
-    const std::shared_ptr<const ArgTuple>& output_arg_tuple, vm::EagerBlobObject* tmp_buffer)
-    : ZeroCopyBaseContext(input_arg_tuple, output_arg_tuple, tmp_buffer),
+    : ZeroCopyBaseContext(input_arg_tuple, output_arg_tuple),
       device_tag_(device_tag),
-      device_type_(CHECK_JUST(DeviceType4DeviceTag(device_tag_))),
-      tmp_buffer_(tmp_buffer) {}
+      device_type_(CHECK_JUST(DeviceType4DeviceTag(device_tag_))) {}
 
 class LocalUserKernelRegContext final : public user_op::KernelRegContext {
  public:
@@ -204,19 +211,15 @@ class LocalUserKernelInitAndCacheContext final : public user_op::KernelInitConte
                                                  public user_op::KernelCacheContext {
  public:
   explicit LocalUserKernelInitAndCacheContext(
-      DeviceCtx* device_ctx, const std::string& device_tag,
-      const user_op::UserOpConfWrapper* user_op_conf,
+      const std::string& device_tag, const user_op::UserOpConfWrapper* user_op_conf,
       const std::shared_ptr<const ArgTuple>& input_arg_tuple,
       const std::shared_ptr<const ArgTuple>& output_arg_tuple)
-      : user_op_conf_(user_op_conf),
-        device_ctx_(device_ctx),
-        base_ctx_(device_tag, input_arg_tuple, output_arg_tuple) {}
+      : user_op_conf_(user_op_conf), base_ctx_(device_tag, input_arg_tuple, output_arg_tuple) {}
 
   ~LocalUserKernelInitAndCacheContext() override = default;
 
   ep::Stream* stream() override {
-    CHECK(device_ctx_);
-    return device_ctx_->stream();
+    return CHECK_NOTNULL(eager::ThreadLocalCallContextScope::Current()->device_ctx)->stream();
   }
 
   DeviceType device_type() const override { return base_ctx_.device_type(); }
@@ -256,7 +259,6 @@ class LocalUserKernelInitAndCacheContext final : public user_op::KernelInitConte
   const user_op::UserOpConfWrapper& user_op_conf() const override { return *user_op_conf_; }
 
   const user_op::UserOpConfWrapper* user_op_conf_;
-  DeviceCtx* device_ctx_;
   LocalUserKernelBaseContext base_ctx_;
 };
 
@@ -277,20 +279,15 @@ const std::shared_ptr<const user_op::AttrVal>& LocalUserOpInferContext::Attr4Nam
 }
 
 LocalUserKernelComputeContext::LocalUserKernelComputeContext(
-    DeviceCtx* device_ctx, const std::string& device_tag,
-    const user_op::UserOpConfWrapper* user_op_conf,
+    const std::string& device_tag, const user_op::UserOpConfWrapper* user_op_conf,
     const std::shared_ptr<const ArgTuple>& input_arg_tuple,
-    const std::shared_ptr<const ArgTuple>& output_arg_tuple, vm::EagerBlobObject* tmp_buffer)
-    : user_op_conf_(user_op_conf),
-      device_ctx_(device_ctx),
-      base_ctx_(device_tag, input_arg_tuple, output_arg_tuple, tmp_buffer) {}
+    const std::shared_ptr<const ArgTuple>& output_arg_tuple)
+    : user_op_conf_(user_op_conf), base_ctx_(device_tag, input_arg_tuple, output_arg_tuple) {}
 
 const std::shared_ptr<const user_op::AttrVal>& LocalUserKernelComputeContext::Attr4Name(
     const std::string& attr_name) const {
   return eager::ThreadLocalCallContextScope::Current()->composed_attrs.Attr4Name(attr_name);
 }
-
-void LocalUserKernelComputeContext::Update(DeviceCtx* device_ctx) { device_ctx_ = device_ctx; }
 
 Maybe<void> InitTensorTupleIndexes4Bns(const std::shared_ptr<const OperatorConf>& op_conf,
                                        const ArgVec& indexed_input_pairs,
@@ -372,17 +369,12 @@ Maybe<void> InitTensorTupleIndexes4Bns(const std::shared_ptr<const OperatorConf>
   opkernel->output_arg_tuple_ = output_arg_tuple;
   opkernel->need_check_mem_case_ = true;
 
-  opkernel->tmp_blob_object_.reset(
-      new vm::EagerBlobObject(opkernel->mem_case(), std::make_shared<Shape>(), DataType::kChar,
-                              std::make_shared<vm::TensorStorage>()));
-
   const std::string& device_tag = op_conf->device_tag();
   const user_op::UserOpConfWrapper* user_op_conf = opkernel->user_op_conf_.get();
   opkernel->op_infer_ctx_.reset(
       new LocalUserOpInferContext(user_op_conf, input_arg_tuple, output_arg_tuple));
-  opkernel->compute_ctx_.reset(new LocalUserKernelComputeContext(nullptr, device_tag, user_op_conf,
-                                                                 input_arg_tuple, output_arg_tuple,
-                                                                 opkernel->mut_temp_blob_object()));
+  opkernel->compute_ctx_.reset(new LocalUserKernelComputeContext(
+      device_tag, user_op_conf, input_arg_tuple, output_arg_tuple));
   opkernel->reg_ctx_.reset(
       new LocalUserKernelRegContext(device_tag, user_op_conf, input_arg_tuple, output_arg_tuple));
   const auto* op_reg_val =
@@ -423,6 +415,7 @@ Maybe<void> StatefulLocalOpKernel::ChooseOpKernel(const user_op::OpKernel** user
 
   for (const auto& pair : dtype2cached_kernels_[primary_dtype]) {
     if (likely(pair.first->is_matched_hob->get(*reg_ctx_))) {
+      *infer_tmp_size_fn = &pair.first->infer_tmp_size_fn;
       *need_temp_storage = pair.first->need_temp_storage;
       *user_opkernel = pair.second.get();
       return Maybe<void>::Ok();
@@ -446,11 +439,10 @@ Maybe<void> StatefulLocalOpKernel::ChooseOpKernel(const user_op::OpKernel** user
 }
 
 void StatefulLocalOpKernel::TryInitOpKernelStateAndCache(const user_op::OpKernel* op_kernel,
-                                                         DeviceCtx* device_ctx,
                                                          user_op::OpKernelState** state,
                                                          user_op::OpKernelCache** cache) {
-  LocalUserKernelInitAndCacheContext init_and_cache_ctx(
-      device_ctx, op_conf_->device_tag(), user_op_conf_.get(), input_arg_tuple_, output_arg_tuple_);
+  LocalUserKernelInitAndCacheContext init_and_cache_ctx(op_conf_->device_tag(), user_op_conf_.get(),
+                                                        input_arg_tuple_, output_arg_tuple_);
   if (state != nullptr) {
     auto it = op_kernel_state_map_.find(op_kernel);
     if (it != op_kernel_state_map_.end()) {
@@ -470,10 +462,6 @@ void StatefulLocalOpKernel::TryInitOpKernelStateAndCache(const user_op::OpKernel
   }
 }
 
-vm::EagerBlobObject* StatefulLocalOpKernel::mut_temp_blob_object() {
-  return tmp_blob_object_.get();
-}
-
 user_op::TensorDescInferFn StatefulLocalOpKernel::TensorDescInferFn() const {
   return tensor_desc_infer_fn_;
 }
@@ -482,9 +470,12 @@ user_op::DataTypeInferFn StatefulLocalOpKernel::DataTypeInferFn() const {
   return data_type_infer_fn_;
 }
 
-LocalUserKernelComputeContext* StatefulLocalOpKernel::UpdateComputeContext(DeviceCtx* device_ctx) {
-  compute_ctx_->Update(device_ctx);
+LocalUserKernelComputeContext* StatefulLocalOpKernel::GetComputeContext() {
   return compute_ctx_.get();
+}
+
+ep::Stream* LocalUserKernelComputeContext::stream() {
+  return CHECK_NOTNULL(eager::ThreadLocalCallContextScope::Current()->device_ctx)->stream();
 }
 
 }  // namespace one

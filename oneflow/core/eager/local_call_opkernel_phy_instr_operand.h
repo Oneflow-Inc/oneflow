@@ -90,6 +90,8 @@ class LocalCallOpKernelPhyInstrOperand final : public vm::PhyInstrOperand {
     return call_ctx_.consistent_tensor_infer_result;
   }
 
+  eager::CallContext* mut_call_ctx() { return &call_ctx_; }
+
  private:
   LocalCallOpKernelPhyInstrOperand(
       const std::shared_ptr<one::StatefulLocalOpKernel>& opkernel,

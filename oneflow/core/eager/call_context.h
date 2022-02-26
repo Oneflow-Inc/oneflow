@@ -19,6 +19,7 @@ limitations under the License.
 #include "oneflow/core/framework/attr_map.h"
 #include "oneflow/core/eager/eager_blob_object.h"
 #include "oneflow/core/framework/op_interpreter.h"
+#include "oneflow/core/common/shape_view.h"
 
 namespace oneflow {
 
@@ -33,15 +34,40 @@ using EagerBlobObjectListPtr =
 
 }  // namespace one
 
+class DeviceCtx;
+
 namespace eager {
 
 struct CallContext {
+  CallContext(
+      ComposedAttrMap&& composed_attrs, const one::EagerBlobObjectListPtr& inputs,
+      const one::EagerBlobObjectListPtr& outputs,
+      const std::shared_ptr<const one::ConsistentTensorInferResult>& consistent_tensor_infer_result,
+      const one::OpExprInterpContext& op_interp_ctx,
+      const std::shared_ptr<one::StatefulLocalOpKernel> opkernel)
+      : composed_attrs(composed_attrs),
+        inputs(inputs),
+        outputs(outputs),
+        consistent_tensor_infer_result(consistent_tensor_infer_result),
+        op_interp_ctx(op_interp_ctx),
+        opkernel(opkernel),
+        tmp_buffer_ptr(nullptr),
+        tmp_buffer_size(0),
+        shape_view(&tmp_buffer_size, 1),
+        mut_shape_view(&tmp_buffer_size, 1),
+        device_ctx(nullptr) {}
+
   ComposedAttrMap composed_attrs;
   one::EagerBlobObjectListPtr inputs;
   one::EagerBlobObjectListPtr outputs;
   std::shared_ptr<const one::ConsistentTensorInferResult> consistent_tensor_infer_result;
   const one::OpExprInterpContext op_interp_ctx;
   const std::shared_ptr<one::StatefulLocalOpKernel> opkernel;
+  char* tmp_buffer_ptr;
+  int64_t tmp_buffer_size;
+  ShapeView shape_view;
+  MutShapeView mut_shape_view;
+  DeviceCtx* device_ctx;
 };
 
 class ThreadLocalCallContextScope final {
