@@ -13,15 +13,22 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
-#ifndef ONEFLOW_USER_KERNELS_RANDOM_SEED_UTIL_H_
-#define ONEFLOW_USER_KERNELS_RANDOM_SEED_UTIL_H_
 
-#include "oneflow/core/framework/op_kernel.h"
+#include "oneflow/core/framework/global_param_grad_sync_mode.h"
 
 namespace oneflow {
 
-Maybe<int64_t> GetOpKernelRandomSeed(const user_op::KernelInitContext* ctx);
+namespace {
+
+bool* GetThreadLocalGradSyncMode() {
+  static thread_local bool g_grad_mode = true;
+  return &g_grad_mode;
+}
+
+}  // namespace
+
+bool GlobalGradSyncMode::is_enabled() { return *GetThreadLocalGradSyncMode(); }
+
+void GlobalGradSyncMode::set_enabled(bool enabled) { *GetThreadLocalGradSyncMode() = enabled; }
 
 }  // namespace oneflow
-
-#endif  // ONEFLOW_USER_KERNELS_RANDOM_SEED_UTIL_H_

@@ -106,12 +106,14 @@ Optional<std::set<std::string>> GetContentsOfShmDirectory() {
 }
 }  // namespace
 
+
 SharedMemoryManager& SharedMemoryManager::get() {
   // Must be a static singleton variable instead of Global<SharedMemoryManager>.
   // Subprocesses don't have chance to call `Global<SharedMemoryManager>::Delete()`
   static SharedMemoryManager shared_memory_manager;
   return shared_memory_manager;
 }
+
 
 void SharedMemoryManager::FindAndDeleteOutdatedShmNames() {
   static size_t counter = 0;
