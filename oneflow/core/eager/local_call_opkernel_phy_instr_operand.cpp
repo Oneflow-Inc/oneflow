@@ -21,10 +21,33 @@ limitations under the License.
 namespace oneflow {
 namespace vm {
 
+LocalCallOpKernelPhyInstrOperand::LocalCallOpKernelPhyInstrOperand(
+    const std::shared_ptr<one::StatefulLocalOpKernel>& opkernel,
+    const one::EagerBlobObjectListPtr& inputs, const one::EagerBlobObjectListPtr& outputs,
+    const std::shared_ptr<const one::ConsistentTensorInferResult>& consistent_tensor_infer_result,
+    const one::OpExprInterpContext& op_interp_ctx,
+    const one::DevVmDepObjectConsumeMode dev_vm_dep_object_consume_mode)
+    : call_ctx_{
+        .composed_attrs = ComposedAttrMap(op_interp_ctx.attrs, opkernel->base_attrs()),
+        .inputs = inputs,
+        .outputs = outputs,
+        .consistent_tensor_infer_result = consistent_tensor_infer_result,
+        .op_interp_ctx = op_interp_ctx,
+      },
+      opkernel_(opkernel),
+      dev_vm_dep_object_consume_mode_(dev_vm_dep_object_consume_mode),
+      input_dependences_(),
+      output_dependences_() {
+  ForEachConstMirroredObject(SetInserter(&input_dependences_));
+  ForEachMutMirroredObject(SetInserter(&output_dependences_));
+  ForEachMut2MirroredObject(SetInserter(&output_dependences_));
+  InitStreamSequentialDependence();
+}
+
 Maybe<void> LocalCallOpKernelPhyInstrOperand::Init() {
-  JUST(mut_opkernel()->ChooseOpKernel(&user_opkernel_, &need_temp_storage_, attrs(), inputs().get(),
-                                      outputs().get(), consistent_tensor_infer_result().get()));
-  return Maybe<void>::Ok();
+  return WithThisCallContext([this]() -> Maybe<void> {
+    return mut_opkernel()->ChooseOpKernel(&user_opkernel_, &need_temp_storage_);
+  });
 }
 
 void LocalCallOpKernelPhyInstrOperand::ForEachConstMirroredObject(

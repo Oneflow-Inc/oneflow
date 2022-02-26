@@ -160,9 +160,6 @@ class ZeroCopyBaseContext {
   const ArgVec& inputs() const { return input_arg_tuple_->indexed_arg_name_and_index(); }
   const ArgVec& outputs() const { return output_arg_tuple_->indexed_arg_name_and_index(); }
 
-  void Update(EagerBlobObjectListRawPtr inputs, EagerBlobObjectListRawPtr outputs,
-              ConsistentTensorInferResultRawPtr consistent_tensor_infer_result);
-
  private:
   std::shared_ptr<const ArgTuple> input_arg_tuple_;
   std::shared_ptr<const ArgTuple> output_arg_tuple_;
@@ -171,9 +168,6 @@ class ZeroCopyBaseContext {
   std::vector<std::unique_ptr<EagerBlobObjectTensorDescView>> input_tensor_desc_views_;
   std::vector<std::unique_ptr<EagerBlobObjectTensorDescView>> output_tensor_desc_views_;
   std::unique_ptr<EagerBlobObjectTensorView> tmp_buffer_view_;
-  EagerBlobObjectListRawPtr input_tensors_;
-  EagerBlobObjectListRawPtr output_tensors_;
-  ConsistentTensorInferResultRawPtr consistent_tensor_infer_result_;
   std::vector<std::unique_ptr<ConsistentTensorMetaTensorDescView>>
       input_consistent_tensor_meta_views_;
   std::vector<std::unique_ptr<ConsistentTensorMetaTensorDescView>>
@@ -208,7 +202,6 @@ class LocalUserKernelBaseContext : public ZeroCopyBaseContext {
 class LocalUserOpInferContext : public user_op::InferContext {
  public:
   LocalUserOpInferContext(const user_op::UserOpConfWrapper* user_op_conf,
-                          const ComposedAttrMap* composed_attrs,
                           const std::shared_ptr<const ArgTuple>& input_arg_tuple,
                           const std::shared_ptr<const ArgTuple>& output_arg_tuple);
   ~LocalUserOpInferContext() override = default;
@@ -283,9 +276,6 @@ class LocalUserOpInferContext : public user_op::InferContext {
 
   int64_t parallel_num() const override { return parallel_ctx().parallel_num(); }
 
-  void Update(EagerBlobObjectListRawPtr inputs, EagerBlobObjectListRawPtr outputs,
-              ConsistentTensorInferResultRawPtr consistent_tensor_infer_result);
-
   const std::string& input(const std::string& arg_name, int32_t index) const override {
     return user_op_conf().input(arg_name, index);
   }
@@ -318,12 +308,9 @@ class LocalUserOpInferContext : public user_op::InferContext {
   }
   const user_op::UserOpConfWrapper& user_op_conf() const { return *user_op_conf_; }
   const std::shared_ptr<const user_op::AttrVal>& Attr4Name(
-      const std::string& attr_name) const override {
-    return composed_attrs_->Attr4Name(attr_name);
-  }
+      const std::string& attr_name) const override;
 
   const user_op::UserOpConfWrapper* user_op_conf_;
-  const ComposedAttrMap* composed_attrs_;
   ZeroCopyBaseContext zero_copy_base_ctx_;
 };
 
@@ -331,7 +318,6 @@ class LocalUserKernelComputeContext final : public user_op::KernelComputeContext
  public:
   explicit LocalUserKernelComputeContext(DeviceCtx* device_ctx, const std::string& device_tag,
                                          const user_op::UserOpConfWrapper* user_op_conf,
-                                         const ComposedAttrMap* composed_attrs,
                                          const std::shared_ptr<const ArgTuple>& input_arg_tuple,
                                          const std::shared_ptr<const ArgTuple>& output_arg_tuple,
                                          vm::EagerBlobObject* tmp_buffer);
@@ -356,19 +342,14 @@ class LocalUserKernelComputeContext final : public user_op::KernelComputeContext
   const ArgVec& inputs() const override { return base_ctx_.inputs(); };
   const ArgVec& outputs() const override { return base_ctx_.outputs(); };
 
-  void Update(EagerBlobObjectListRawPtr inputs, EagerBlobObjectListRawPtr outputs,
-              ConsistentTensorInferResultRawPtr consistent_tensor_infer_result,
-              DeviceCtx* device_ctx);
+  void Update(DeviceCtx* device_ctx);
 
  private:
   const user_op::UserOpConfWrapper& user_op_conf() const override { return *user_op_conf_; }
   const std::shared_ptr<const user_op::AttrVal>& Attr4Name(
-      const std::string& attr_name) const override {
-    return composed_attrs_->Attr4Name(attr_name);
-  }
+      const std::string& attr_name) const override;
 
   const user_op::UserOpConfWrapper* user_op_conf_;
-  const ComposedAttrMap* composed_attrs_;
   DeviceCtx* device_ctx_;
   LocalUserKernelBaseContext base_ctx_;
 };
@@ -398,13 +379,7 @@ class StatefulLocalOpKernel final {
     return output_tuple_indexes4mut2_obns_;
   }
 
-  ComposedAttrMap* composed_attrs_for_scheduler_thread() const {
-    return composed_attrs_for_scheduler_thread_.get();
-  }
-
-  ComposedAttrMap* composed_attrs_for_main_thread() const {
-    return composed_attrs_for_main_thread_.get();
-  }
+  const AttrMap& base_attrs() const { return base_attrs_; }
 
   LocalUserOpInferContext* op_infer_ctx_for_scheduler_thread() const {
     return op_infer_ctx_for_scheduler_thread_.get();
@@ -412,28 +387,20 @@ class StatefulLocalOpKernel final {
 
   void set_need_check_mem_case(bool value) { need_check_mem_case_ = value; }
 
-  Maybe<void> ChooseOpKernel(const user_op::OpKernel** user_opkernel, bool* need_temp_storage,
-                             const AttrMap& attrs, EagerBlobObjectListRawPtr inputs,
-                             EagerBlobObjectListRawPtr outputs,
-                             ConsistentTensorInferResultRawPtr consistent_tensor_infer_result);
+  Maybe<void> ChooseOpKernel(const user_op::OpKernel** user_opkernel, bool* need_temp_storage);
 
   const OperatorConf& op_conf() const { return *op_conf_; }
 
  private:
   friend struct vm::LocalCallOpKernelUtil;
   StatefulLocalOpKernel() = default;
-  LocalUserKernelComputeContext* UpdateComputeContext(
-      EagerBlobObjectListRawPtr inputs, EagerBlobObjectListRawPtr outputs,
-      ConsistentTensorInferResultRawPtr consistent_tensor_infer_result, DeviceCtx* device_ctx);
+  LocalUserKernelComputeContext* UpdateComputeContext(DeviceCtx* device_ctx);
 
   user_op::TensorDescInferFn TensorDescInferFn() const;
   user_op::DataTypeInferFn DataTypeInferFn() const;
 
-  void TryInitOpKernelStateAndCache(
-      const user_op::OpKernel* op_kernel, DeviceCtx* device_ctx, EagerBlobObjectListRawPtr inputs,
-      EagerBlobObjectListRawPtr outputs,
-      ConsistentTensorInferResultRawPtr consistent_tensor_infer_result,
-      user_op::OpKernelState** state, user_op::OpKernelCache** cache);
+  void TryInitOpKernelStateAndCache(const user_op::OpKernel* op_kernel, DeviceCtx* device_ctx,
+                                    user_op::OpKernelState** state, user_op::OpKernelCache** cache);
 
   vm::EagerBlobObject* mut_temp_blob_object();
 
@@ -446,8 +413,7 @@ class StatefulLocalOpKernel final {
   const user_op::InferTmpSizeFn& GetInferTmpSizeFn(const user_op::OpKernel* op_kernel) const;
 
   std::shared_ptr<OperatorConf> op_conf_;
-  std::unique_ptr<ComposedAttrMap> composed_attrs_for_scheduler_thread_;
-  std::unique_ptr<ComposedAttrMap> composed_attrs_for_main_thread_;
+  AttrMap base_attrs_;
   std::unique_ptr<user_op::UserOpConfWrapper> user_op_conf_;
   Symbol<Stream> stream_;
   std::unique_ptr<LocalUserKernelRegContext> reg_ctx_;
