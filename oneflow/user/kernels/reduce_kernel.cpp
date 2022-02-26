@@ -290,7 +290,7 @@ REGISTER_USER_KERNEL("reduce_sum")
       GetReduceSumLayout(axis, ShapeView(in_shape), &is_axis_contiguous, &outer_size, &inner_size,
                          &reduce_size);
       size_t tmp_bytes = 0;
-      if (is_axis_contiguous && (outer_size == 1 || inner_size == 1)) {
+      if (in_shape.NumAxes() > 0 && is_axis_contiguous && (outer_size == 1 || inner_size == 1)) {
         tmp_bytes = GetCudaAlignedSize(reduce_size * sizeof(float));
       } else {
         tmp_bytes = GetCudaAlignedSize(in_shape.elem_cnt() * sizeof(float));
