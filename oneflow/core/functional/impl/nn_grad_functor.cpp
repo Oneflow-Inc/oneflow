@@ -975,6 +975,30 @@ class FusedDotFeatureInteractionGradFunctor {
   std::vector<std::shared_ptr<OpExpr>> ops_no_output_concat_grad_;
 };
 
+class BnEvalBackwardFunctor {
+ public:
+  BnEvalBackwardFunctor() {
+    op_ = CHECK_JUST(one::OpBuilder("bn_eval_backward")
+                         .Input("dy")
+                         .Input("gamma")
+                         .Input("moving_variance")
+                         .Output("dx")
+                         .Build());
+  }
+  Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& dy,
+                           const std::shared_ptr<one::Tensor>& gamma,
+                           const std::shared_ptr<one::Tensor>& moving_variance, const int32_t& axis,
+                           const float& epsilon) const {
+    MutableAttrMap attrs_;
+    JUST(attrs_.SetAttr<int32_t>("axis", axis));
+    JUST(attrs_.SetAttr<float>("epsilon", epsilon));
+    return OpInterpUtil::Dispatch<Tensor>(*op_, {dy, gamma, moving_variance}, attrs_);
+  }
+
+ private:
+  std::shared_ptr<OpExpr> op_;
+};
+
 }  // namespace impl
 
 ONEFLOW_FUNCTION_LIBRARY(m) {
@@ -1010,6 +1034,7 @@ ONEFLOW_FUNCTION_LIBRARY(m) {
   m.add_functor<impl::FusedScaleMaskSoftmaxGradFunctor>("FusedScaleMaskSoftmaxGrad");
   m.add_functor<impl::FusedScaleMaskSoftmaxDropoutGradFunctor>("FusedScaleMaskSoftmaxDropoutGrad");
   m.add_functor<impl::FusedDotFeatureInteractionGradFunctor>("FusedDotFeatureInteractionGrad");
+  m.add_functor<impl::BnEvalBackwardFunctor>("BnEvalBackward");
 };
 
 }  // namespace functional

@@ -493,6 +493,11 @@ jobs:
           set -x
           EXTRA_DOCKER_ARGS+=" --network host "
           echo "EXTRA_DOCKER_ARGS=${EXTRA_DOCKER_ARGS}" >> $GITHUB_ENV
+      - name: Enable ONEFLOW_TEST_VERBOSE
+        if: ${{ contains(github.event.pull_request.labels.*.name, 'need-test-verbose') }}
+        run: |
+          EXTRA_DOCKER_ARGS+=" --env ONEFLOW_TEST_VERBOSE=1"
+          echo "EXTRA_DOCKER_ARGS=${EXTRA_DOCKER_ARGS}" >> $GITHUB_ENV
       - name: Start container
         if: ${{ !fromJson(matrix.cache-hit) && contains(matrix.runs-on, 'self-hosted') }}
         working-directory: ${{ env.ONEFLOW_SRC }}
@@ -636,12 +641,17 @@ jobs:
 
           echo "ONEFLOW_WHEEL_PATH=${{ steps.download-digest.outputs.entry-dir }}/whl" >> $GITHUB_ENV
           echo "ONEFLOW_CPACK_PATH=${{ steps.download-digest.outputs.entry-dir }}/cpack" >> $GITHUB_ENV
-      - name: Set environment variables (environmental flags)
+      - name: Set environment variables (experimental flags)
         if: ${{ !fromJson(matrix.cache-hit) && contains(matrix.runs-on, 'self-hosted') && fromJson(matrix.is-experimental) }}
         run: |
           EXTRA_DOCKER_ARGS+=" --env ONEFLOW_KERNEL_ENABLE_CUDA_GRAPH=1"
           EXTRA_DOCKER_ARGS+=" --env ONEFLOW_THREAD_ENABLE_LOCAL_MESSAGE_QUEUE=1"
           EXTRA_DOCKER_ARGS+=" --env ONEFLOW_KERNEL_DISABLE_BLOB_ACCESS_CHECKER=1"
+          echo "EXTRA_DOCKER_ARGS=${EXTRA_DOCKER_ARGS}" >> $GITHUB_ENV
+      - name: Enable ONEFLOW_TEST_VERBOSE
+        if: ${{ contains(github.event.pull_request.labels.*.name, 'need-test-verbose') }}
+        run: |
+          EXTRA_DOCKER_ARGS+=" --env ONEFLOW_TEST_VERBOSE=1"
           echo "EXTRA_DOCKER_ARGS=${EXTRA_DOCKER_ARGS}" >> $GITHUB_ENV
       - name: Pull image
         continue-on-error: true

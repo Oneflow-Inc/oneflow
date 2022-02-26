@@ -372,6 +372,45 @@ class PReLU : public OpExprGradFunction<PReLUCaptureState> {
   std::shared_ptr<OpExpr> grad_op_;
 };
 
+struct TfPReLUCaptureState : public AutoGradCaptureState {
+  bool input_requires_grad;
+  bool alpha_requires_grad;
+};
+
+class TfPReLU : public OpExprGradFunction<TfPReLUCaptureState> {
+ public:
+  Maybe<void> Init(const OpExpr& op) override { return Maybe<void>::Ok(); }
+
+  Maybe<void> Capture(TfPReLUCaptureState* ctx, const TensorTuple& inputs,
+                      const TensorTuple& outputs, const AttrMap& attrs) const override {
+    CHECK_EQ_OR_RETURN(inputs.size(), 2);
+    ctx->input_requires_grad = inputs.at(0)->requires_grad();  // input
+    ctx->alpha_requires_grad = inputs.at(1)->requires_grad();  // alpha
+    ctx->SaveTensorForBackward(inputs.at(0));
+    ctx->SaveTensorForBackward(inputs.at(1));
+
+    return Maybe<void>::Ok();
+  }
+
+  Maybe<void> Apply(const TfPReLUCaptureState* ctx, const TensorTuple& out_grads,
+                    TensorTuple* in_grads) const override {
+    CHECK_EQ_OR_RETURN(out_grads.size(), 1);
+    const auto& dy = out_grads.at(0);
+    const auto& x = ctx->SavedTensors().at(0);
+    const auto& alpha = ctx->SavedTensors().at(1);
+    in_grads->resize(2);
+    if (ctx->input_requires_grad || ctx->alpha_requires_grad) {
+      const auto& grads = JUST(functional::TfPReluGrad(dy, x, alpha));
+      if (ctx->input_requires_grad) { in_grads->at(0) = grads->at(0); }
+      if (ctx->alpha_requires_grad) { in_grads->at(1) = grads->at(1); }
+    }
+    return Maybe<void>::Ok();
+  }
+
+ private:
+  std::shared_ptr<OpExpr> grad_op_;
+};
+
 REGISTER_OP_EXPR_GRAD_FUNCTION("silu", Silu);
 REGISTER_OP_EXPR_GRAD_FUNCTION("mish", Mish);
 REGISTER_OP_EXPR_GRAD_FUNCTION("selu", Selu);
@@ -385,6 +424,7 @@ REGISTER_OP_EXPR_GRAD_FUNCTION("hardtanh", HardTanh);
 REGISTER_OP_EXPR_GRAD_FUNCTION("elu", Elu);
 REGISTER_OP_EXPR_GRAD_FUNCTION("celu", Celu);
 REGISTER_OP_EXPR_GRAD_FUNCTION("prelu", PReLU);
+REGISTER_OP_EXPR_GRAD_FUNCTION("tf_prelu", TfPReLU);
 
 }  // namespace one
 }  // namespace oneflow

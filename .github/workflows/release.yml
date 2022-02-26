@@ -4,6 +4,7 @@ on:
   push:
     branches:
       - "release/*"
+      - dev_opt_tip
   schedule:
     # beijing: 2 am.
     # utc: 6 pm.
@@ -44,9 +45,7 @@ jobs:
             release
           oneflow-src: ${{ env.ONEFLOW_SRC }}
           entries: |
-            cu112
-            cu102
-            cpu
+            cu110
 
   staging_release:
     env:
