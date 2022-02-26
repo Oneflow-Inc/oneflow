@@ -238,6 +238,7 @@ bool IsSupportRequireGradDataType(DataType data_type);
 bool IsPODDataType(DataType data_type);
 bool IsPODAndHalfDataType(DataType data_type);
 bool IsIndexDataType(DataType data_type);
+bool NotSupportBoxingDataType(DataType data_type);
 size_t GetSizeOfDataType(DataType data_type);
 
 inline bool operator==(const OptInt64& lhs, const OptInt64& rhs) {
