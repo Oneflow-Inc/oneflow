@@ -13,6 +13,8 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 """
+import os
+
 from collections import OrderedDict
 
 from oneflow.nn.graph.optimizer import OptDict
@@ -63,6 +65,16 @@ class GraphConfig(object):
         """
         assert type(mode) is bool
         self.proto.set_enable_auto_mixed_precision(mode)
+    
+    def enable_mlir(self, mode: bool = True):
+        r"""If set to true, then graph will do mlir roundtrip in forward and backward.
+
+        Args:
+            mode (bool, optional): The default vaule is True.
+        """
+        assert type(mode) is bool
+        if mode == False:
+            os.environ["ONEFLOW_MLIR_ENABLE_ROUND_TRIP"] = "0"
 
     def allow_fuse_model_update_ops(self, mode: bool = True):
         r"""If set to true, try to fuse cast + scale + l1_l2_regularize_gradient + model_update to one op to improve performance.
