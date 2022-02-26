@@ -1472,7 +1472,8 @@ class PadFunctor {
     if (mode == "constant") {
       CHECK_EQ_OR_RETURN(pad.size() % 2, 0)
           << "Length of pad must be even but instead it equals " << pad.size();
-      if (IsFloatingDataType(x->dtype()->data_type())) {
+      if (IsFloatingDataType(x->dtype()->data_type())
+          || x->dtype()->data_type() == DataType::kFloat16) {
         JUST(attrs.SetAttr<double>("floating_constant_value", JUST(value.As<double>())));
         JUST(attrs.SetAttr<int64_t>("integral_constant_value", 0));
       } else if (IsIntegralDataType(x->dtype()->data_type())) {

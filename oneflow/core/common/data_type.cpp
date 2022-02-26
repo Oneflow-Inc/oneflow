@@ -82,6 +82,15 @@ bool IsSupportRequireGradDataType(DataType data_type) {
   }
 #undef REQUIRE_GRAD_CASE
 }
+bool NotSupportBoxingDataType(DataType data_type) {
+  switch (data_type) {
+#define NO_BOXING_CASE(type_cpp, type_proto) \
+  case type_proto: return true;
+    OF_PP_FOR_EACH_TUPLE(NO_BOXING_CASE, NO_BOXING_DATA_TYPE_SEQ)
+    default: return false;
+  }
+#undef NO_BOXING_CASE
+}
 
 size_t GetSizeOfDataType(DataType data_type) {
   switch (data_type) {

@@ -20,7 +20,7 @@ limitations under the License.
 
 namespace oneflow {
 
-int64_t GetOpKernelRandomSeed(const user_op::KernelInitContext* ctx);
+Maybe<int64_t> GetOpKernelRandomSeed(const user_op::KernelInitContext* ctx);
 
 }  // namespace oneflow
 

@@ -653,7 +653,8 @@ class PadGradFunctor {
       JUST(attrs.SetAttr<std::vector<int64_t>>("padding_before", pad_before));
       JUST(attrs.SetAttr<std::vector<int64_t>>("padding_after", pad_after));
 
-      if (IsFloatingDataType(dy->dtype()->data_type())) {
+      if (IsFloatingDataType(dy->dtype()->data_type())
+          || dy->dtype()->data_type() == DataType::kFloat16) {
         JUST(attrs.SetAttr<double>("floating_constant_value", JUST(value.As<double>())));
         JUST(attrs.SetAttr<int64_t>("integral_constant_value", 0));
       } else if (IsIntegralDataType(dy->dtype()->data_type())) {
