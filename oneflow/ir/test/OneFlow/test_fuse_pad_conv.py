@@ -27,9 +27,9 @@ import oneflow as flow
 import oneflow.unittest
 
 
-def do_pad_conv_graph(test_case, with_cuda):
+def do_pad_conv_graph(test_case, with_cuda, with_bias):
     x = flow.randn(2, 3, 4, 5)
-    conv = flow.nn.Conv2d(3, 3, 2, 1, bias=False)
+    conv = flow.nn.Conv2d(3, 3, 2, 1, bias=with_bias)
     if with_cuda:
         x = x.cuda()
         conv.to("cuda")
@@ -54,7 +54,10 @@ def do_pad_conv_graph(test_case, with_cuda):
 @flow.unittest.skip_unless_1n1d()
 class TestFusePadConv(oneflow.unittest.TestCase):
     def test_pad_conv_graph(test_case):
-        do_pad_conv_graph(test_case, True)
+        do_pad_conv_graph(test_case, True, True)
+        do_pad_conv_graph(test_case, False, True)
+        do_pad_conv_graph(test_case, True, False)
+        do_pad_conv_graph(test_case, False, False)
 
 
 if __name__ == "__main__":
