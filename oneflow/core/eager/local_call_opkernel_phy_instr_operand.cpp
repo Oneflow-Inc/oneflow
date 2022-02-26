@@ -33,8 +33,8 @@ LocalCallOpKernelPhyInstrOperand::LocalCallOpKernelPhyInstrOperand(
         .outputs = outputs,
         .consistent_tensor_infer_result = consistent_tensor_infer_result,
         .op_interp_ctx = op_interp_ctx,
+        .opkernel = opkernel,
       },
-      opkernel_(opkernel),
       dev_vm_dep_object_consume_mode_(dev_vm_dep_object_consume_mode),
       input_dependences_(),
       output_dependences_() {

@@ -24,6 +24,7 @@ namespace oneflow {
 
 namespace one {
 
+class StatefulLocalOpKernel;
 class ConsistentTensorInferResult;
 
 using EagerBlobObjectList = std::vector<std::shared_ptr<vm::EagerBlobObject>>;
@@ -40,6 +41,7 @@ struct CallContext {
   one::EagerBlobObjectListPtr outputs;
   std::shared_ptr<const one::ConsistentTensorInferResult> consistent_tensor_infer_result;
   const one::OpExprInterpContext op_interp_ctx;
+  const std::shared_ptr<one::StatefulLocalOpKernel> opkernel;
 };
 
 class ThreadLocalCallContextScope final {

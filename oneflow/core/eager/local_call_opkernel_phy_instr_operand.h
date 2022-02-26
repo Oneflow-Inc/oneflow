@@ -55,7 +55,7 @@ class LocalCallOpKernelPhyInstrOperand final : public vm::PhyInstrOperand {
     return std::shared_ptr<LocalCallOpKernelPhyInstrOperand>(ptr);
   }
 
-  const one::StatefulLocalOpKernel& opkernel() const { return *opkernel_; }
+  const one::StatefulLocalOpKernel& opkernel() const { return *call_ctx_.opkernel; }
   const one::EagerBlobObjectListPtr& inputs() const { return call_ctx_.inputs; }
   const one::EagerBlobObjectListPtr& outputs() const { return call_ctx_.outputs; }
   const AttrMap& attrs() const { return call_ctx_.op_interp_ctx.attrs; }
@@ -64,7 +64,7 @@ class LocalCallOpKernelPhyInstrOperand final : public vm::PhyInstrOperand {
     return dev_vm_dep_object_consume_mode_;
   }
 
-  one::StatefulLocalOpKernel* mut_opkernel() { return opkernel_.get(); }
+  one::StatefulLocalOpKernel* mut_opkernel() { return call_ctx_.opkernel.get(); }
 
   template<typename DoEachT>
   Maybe<void> ForEachOutputTensor(const DoEachT& DoEach) {
@@ -102,7 +102,6 @@ class LocalCallOpKernelPhyInstrOperand final : public vm::PhyInstrOperand {
   void InitStreamSequentialDependence();
 
   eager::CallContext call_ctx_;
-  std::shared_ptr<one::StatefulLocalOpKernel> opkernel_;
   const user_op::OpKernel* user_opkernel_;
   const user_op::InferTmpSizeFn* infer_tmp_size_fn_;
   bool need_temp_storage_;
