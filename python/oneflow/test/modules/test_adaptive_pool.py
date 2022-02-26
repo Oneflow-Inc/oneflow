@@ -35,7 +35,7 @@ _size_3_opt_t_not_none = Union[
 
 @flow.unittest.skip_unless_1n1d()
 class TestAdaptiveAvgPool(flow.unittest.TestCase):
-    @autotest()
+    @autotest(n=5)
     def test_adaptive_avgpool1d(test_case):
         m = torch.nn.AdaptiveAvgPool1d(output_size=random().to(_size_1_t))
         m.train(random())
