@@ -16,6 +16,7 @@ limitations under the License.
 
 import os
 import unittest
+from threading import Thread
 
 import numpy as np
 
@@ -274,6 +275,26 @@ class TestGraph(flow.unittest.TestCase):
 
         g = OptCreatedInGraph()
         print(g)
+
+    def test_graph_in_subthread(test_case):
+        class TinyGraph(flow.nn.Graph):
+            def __init__(self):
+                super().__init__()
+
+            def build(self, input):
+                return input + 1
+
+        def f():
+            tiny_graph = TinyGraph()
+            input = flow.randn(1, 4)
+            return tiny_graph(input)
+
+        f()
+
+        new_thread = Thread(target=f)
+
+        new_thread.start()
+        new_thread.join()
 
 
 if __name__ == "__main__":
