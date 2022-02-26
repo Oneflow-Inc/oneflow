@@ -117,13 +117,13 @@ void SharedMemoryManager::FindAndDeleteOutdatedShmNames() {
   static size_t counter = 0;
   const int delete_invalid_names_interval =
       ParseIntegerFromEnv("OF_DELETE_INVALID_NAMES_INTERVAL", 1000);
-  std::unique_lock<std::mutex> lock(mutex_);
   if (counter % delete_invalid_names_interval == 0) {
     const auto& opt_existing_shm_names = GetContentsOfShmDirectory();
     // TODO: update optional::map or optional::bind and use them instead
     if (opt_existing_shm_names.has_value()) {
       const auto& existing_shm_names = CHECK_JUST(opt_existing_shm_names);
       // std::remove_if doesn't support std::map
+      std::unique_lock<std::mutex> lock(mutex_);
       for (auto it = shm_names_.begin(); it != shm_names_.end(); /* do nothing */) {
         if (existing_shm_names->find(*it) == existing_shm_names->end()) {
           it = shm_names_.erase(it);
@@ -138,6 +138,7 @@ void SharedMemoryManager::FindAndDeleteOutdatedShmNames() {
 
 void SharedMemoryManager::AddShmName(const std::string& shm_name) {
   FindAndDeleteOutdatedShmNames();
+  std::unique_lock<std::mutex> lock(mutex_);
   shm_names_.insert(shm_name);
 }
 
@@ -156,6 +157,7 @@ void SharedMemoryManager::UnlinkAllShms() {
   // Here we deliberately do not handle unlink errors.
   std::unique_lock<std::mutex> lock(mutex_);
   for (const auto& shm : shm_names_) { shm_unlink(shm.c_str()); }
+  shm_names_.clear();
 }
 
 SharedMemoryManager::~SharedMemoryManager() { UnlinkAllShms(); }

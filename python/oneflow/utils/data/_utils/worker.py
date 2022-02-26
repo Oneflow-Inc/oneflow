@@ -290,6 +290,8 @@ def _worker_loop(
     try:
         def cleanup_shm_at_exit(num, frame):
             unlink_all_shared_memory()
+            # Use os._exit() to handle the exit of the subprocess to avoid share memory leaks 
+            # caused by the subprocess continuing for a period of time after the parent process ends.
             os._exit(0)
 
         _prctl_pr_set_pdeathsig(signal.SIGINT)
