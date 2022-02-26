@@ -47,7 +47,6 @@ def do_pad_conv_graph(test_case, with_cuda, with_bias):
 
     graph_to_run = GraphToRun()
     lazy_conv_x = graph_to_run(x)
-    # TODO: xiaoyu, investigate when the assert fails here
     test_case.assertTrue(np.array_equal(eager_conv_x.numpy(), lazy_conv_x.numpy()))
 
 
