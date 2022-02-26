@@ -32,7 +32,7 @@ void Logger::log(ILogger::Severity severity, const char* msg) TRT_OPTIONAL_NOEXC
       break;
     }
     case ILogger::Severity::kWARNING: {
-      LOG(WARNING) << name_ << ": " << msg;
+      LOG(INFO) << name_ << ": " << msg;
       break;
     }
     case ILogger::Severity::kERROR: {

@@ -15,6 +15,7 @@ limitations under the License.
 */
 #include "oneflow/xrt/tensorrt/ops/op_context.h"
 #include "oneflow/xrt/tensorrt/ops/op_kernel.h"
+#include "oneflow/xrt/tensorrt/trt_helpers.h"
 
 namespace oneflow {
 namespace xrt {
@@ -29,7 +30,8 @@ class NormalizationOp : public TrtOpKernel {
  public:
   void Compile(TrtOpContext* ctx) override {
     Shape in_shape = ctx->InputShape("x_0");
-    CHECK_GE(in_shape.NumAxes(), 2);
+    CHECK(in_shape.NumAxes() >= 2 && in_shape.NumAxes() < 5)
+        << "Only support 2, 3 or 4 dimension input, but got " << in_shape.NumAxes();
 
     float epsilon = ctx->Attr<float>("epsilon");
 
@@ -54,14 +56,20 @@ class NormalizationOp : public TrtOpKernel {
 
     nvinfer1::Weights power{nvinfer1::DataType::kFLOAT, nullptr, 0};
 
+    // IScaleLayer only support 3 dim or 4 dim input
     nvinfer1::ITensor* input = ctx->Input("x_0");
+    if (in_shape.NumAxes() == 2) {
+      input = helpers::Reshape(ctx, input, Shape{in_shape.At(0), in_shape.At(1), 1, 1});
+    }
 
     nvinfer1::ScaleMode mode = nvinfer1::ScaleMode::kCHANNEL;
     nvinfer1::IScaleLayer* layer =  // NOLINT
-        ctx->builder()->addScale(*input, mode, beta, gamma, power);
+      ctx->builder()->addScale(*input, mode, beta, gamma, power);
     layer->setName(ctx->op_name().c_str());
     nvinfer1::ITensor* out = layer->getOutput(0);
-
+    if (in_shape.NumAxes() == 2) {
+      out = helpers::Reshape(ctx, out, in_shape);
+    }
     if (ctx->HasInput("_add_to_output_0")) {
       auto* add_layer = ctx->builder()->addElementWise(  // NOLINT
           *out, *ctx->Input("_add_to_output_0"), nvinfer1::ElementWiseOperation::kSUM);

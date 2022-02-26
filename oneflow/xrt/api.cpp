@@ -75,6 +75,7 @@ static std::unordered_map<std::string, std::string> user_op_type_name2string_map
     {"gelu_grad", "GeluGrad"},
     {"sigmoid", "Sigmoid"},
     {"relu", "Relu"},
+    {"prelu", "PRelu"},
     {"normalization", "Normalization"},
     {"bias_add", "BiasAdd"},
     {"broadcast_add", "BcastAdd"},
@@ -107,11 +108,14 @@ static std::unordered_map<std::string, std::string> user_op_type_name2string_map
     {"scalar_mul", "ScalarMul"},
     {"scalar_div", "ScalarDiv"},
     {"scalar_pow", "ScalarPow"},
+    {"scalar_pow_grad", "ScalarPowGrad"},
     {"leaky_relu", "LeakyRelu"},
     {"adam_update", "AdamOptimizer"},
     {"rsqrt", "Rsqrt"},
     {"sqrt", "Sqrt"},
+    {"sqrt_grad", "SqrtGrad"},
     {"square_sum", "SquareSum"},
+    {"pad", "Padding"},
 };
 
 std::string ExtractOpTypeAsString(const OperatorConf& conf) {

@@ -72,6 +72,8 @@ void TrtOpContext::SetOutput(const std::string& name, const TrtValue& value) {
   Argument arg = ArgumentFromKey(name);
   outputs_[arg] = value;
   nvinfer1::ITensor* tensor = builder()->GetTensor(value.handle());
+  Shape shape = XrtDimsToShape(tensor->getDimensions());
+  CHECK_EQ(arg.shape(), shape) << "output shape should be " << arg.shape().ToString() << ", but got " << shape.ToString();
   tensor->setName(arg.name().c_str());
 }
 
