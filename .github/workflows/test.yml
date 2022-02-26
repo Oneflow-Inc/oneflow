@@ -776,6 +776,14 @@ jobs:
         if: ${{ !fromJson(matrix.cache-hit) && matrix.test-type == 'module' && !fromJson(matrix.is-distributed) }}
         run: |
           docker exec -e ONEFLOW_TEST_DIR=$PWD/python/oneflow/test/modules ${{ env.TEST_CONTAINER_NAME }} bash ci/test/generic_test_multi_client.sh
+      - name: Expensive tests (models, cases require exclusive access to GPU)
+        timeout-minutes: 45
+        if: ${{ !fromJson(matrix.cache-hit) && matrix.test-type == 'module' && !fromJson(matrix.is-distributed) }}
+        run: |
+          docker exec \
+            -e ONEFLOW_TEST_DIR=$PWD/python/oneflow/test/expensive \
+            -e ONEFLOW_TEST_TASKS_PER_GPU=1 \
+            ${{ env.TEST_CONTAINER_NAME }} bash ci/test/generic_test_multi_client.sh
       - name: Exception API test
         timeout-minutes: 45
         if: ${{ !fromJson(matrix.cache-hit) && matrix.test-type == 'misc' }}
