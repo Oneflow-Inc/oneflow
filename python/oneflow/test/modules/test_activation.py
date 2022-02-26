@@ -587,7 +587,6 @@ class TestLeakyReLUModule(flow.unittest.TestCase):
         y = m(x)
         return y
 
-
     @autotest()
     @unittest.skipIf(os.getenv("ONEFLOW_TEST_CPU_ONLY"), "only test cpu cases")
     def test_leakyrelu_module_with_half_random_data(test_case):
