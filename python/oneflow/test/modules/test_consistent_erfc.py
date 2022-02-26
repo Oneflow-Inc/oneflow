@@ -21,17 +21,16 @@ import oneflow.unittest
 from oneflow.test_utils.automated_test_util import *
 
 
+@autotest(n=1, auto_backward=True, rtol=1e-3, atol=1e-3, check_graph=False)
+def test_erfc_impl(test_case, ndim, placement, sbp):
+    dims = [random(1, 3) * 8 for i in range(ndim)]
+    x = random_tensor(ndim, *dims)
+    y = x.to_global(placement=placement, sbp=sbp)
+    z = torch.erfc(y)
+    return z
+
 
 class TestErfcConsistent(flow.unittest.TestCase):
-
-    @autotest(n=1, auto_backward=True, rtol=1e-3, atol=1e-3, check_graph=False)
-    def test_erfc_impl(test_case, ndim, placement, sbp):
-        dims = [random(1, 3) * 8 for i in range(ndim)]
-        x = random_tensor(ndim, *dims)
-        y = x.to_global(placement=placement, sbp=sbp)
-        z = torch.erfc(y)
-        return z
-
     @globaltest
     def test_erfc(test_case):
         # random ndim in range [1,4]

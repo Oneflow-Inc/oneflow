@@ -21,15 +21,16 @@ import oneflow.unittest
 from oneflow.test_utils.automated_test_util import *
 
 
-class TestErfConsistent(flow.unittest.TestCase):
-    @autotest(n=1, check_graph=False)
-    def test_erf_impl(test_case, ndim, placement, sbp):
-        dims = [random(1, 4) * 8 for i in range(ndim)]
-        x = random_tensor(ndim, *dims)
-        y = x.to_global(placement=placement, sbp=sbp)
-        z = torch.erf(y)
-        return z
+@autotest(n=1, check_graph=False)
+def test_erf_impl(test_case, ndim, placement, sbp):
+    dims = [random(1, 4) * 8 for i in range(ndim)]
+    x = random_tensor(ndim, *dims)
+    y = x.to_global(placement=placement, sbp=sbp)
+    z = torch.erf(y)
+    return z
 
+
+class TestErfConsistent(flow.unittest.TestCase):
     @globaltest
     def test_erf(test_case):
         # random ndim in range [1,4]
