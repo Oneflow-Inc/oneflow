@@ -942,7 +942,7 @@ def autotest(
     rtol=0.0001,
     atol=1e-05,
     check_graph=True,
-    check_mlir=True,
+    check_mlir=False,
     check_allclose=True,
 ):
     verbose = os.getenv("ONEFLOW_TEST_VERBOSE") is not None
