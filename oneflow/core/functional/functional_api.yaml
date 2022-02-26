@@ -1107,6 +1107,14 @@
   signature: "TensorTuple (Tensor dy, Tensor x, Tensor alpha) => PReluGrad"
   bind_python: False
 
+- name: "tf_prelu"
+  signature: "Tensor (Tensor x, Tensor alpha) => TfPRelu"
+  bind_python: True
+
+- name: "tf_prelu_grad"
+  signature: "TensorTuple (Tensor dy, Tensor x, Tensor alpha) => TfPReluGrad"
+  bind_python: False
+
 - name: "reshape"
   signature: "Tensor (Tensor x, Shape shape) => Reshape"
   bind_python: True

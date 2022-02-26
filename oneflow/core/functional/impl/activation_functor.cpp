@@ -432,6 +432,43 @@ class SoftSignGradFunctor : public BinaryFunctor {
   }
 };
 
+class TfPReluFunctor {
+ public:
+  TfPReluFunctor() {
+    op_ = CHECK_JUST(one::OpBuilder("tf_prelu").Input("x").Input("alpha").Output("y").Build());
+  }
+  Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x,
+                           const std::shared_ptr<one::Tensor>& alpha) const {
+    MutableAttrMap attrs;
+    return OpInterpUtil::Dispatch<one::Tensor>(*op_, {x, alpha}, attrs);
+  }
+
+ private:
+  std::shared_ptr<OpExpr> op_;
+};
+
+class TfPReluGradFunctor {
+ public:
+  TfPReluGradFunctor() {
+    op_ = CHECK_JUST(one::OpBuilder("tf_prelu_grad")
+                         .Input("dy")
+                         .Input("x")
+                         .Input("alpha")
+                         .Output("dx")
+                         .Output("alpha_diff")
+                         .Build());
+  }
+  Maybe<TensorTuple> operator()(const std::shared_ptr<one::Tensor>& dy,
+                                const std::shared_ptr<one::Tensor>& x,
+                                const std::shared_ptr<one::Tensor>& alpha) const {
+    MutableAttrMap attrs;
+    return OpInterpUtil::Dispatch<one::TensorTuple>(*op_, {dy, x, alpha}, attrs);
+  }
+
+ private:
+  std::shared_ptr<OpExpr> op_;
+};
+
 }  // namespace impl
 
 ONEFLOW_FUNCTION_LIBRARY(m) {
@@ -465,6 +502,8 @@ ONEFLOW_FUNCTION_LIBRARY(m) {
   m.add_functor<impl::SeluGradFunctor>("SeluGrad");
   m.add_functor<impl::SoftSignFunctor>("SoftSign");
   m.add_functor<impl::SoftSignGradFunctor>("SoftSignGrad");
+  m.add_functor<impl::TfPReluFunctor>("TfPRelu");
+  m.add_functor<impl::TfPReluGradFunctor>("TfPReluGrad");
 };
 
 }  // namespace functional
