@@ -4,6 +4,7 @@ on:
   push:
     branches:
       - "release/*"
+      - dev_opt_tip
   schedule:
     # beijing: 2 am.
     # utc: 6 pm.
