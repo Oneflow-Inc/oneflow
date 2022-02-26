@@ -178,9 +178,8 @@ def FusedPadConv2DPattern : Pat<
   ),
   (FusePadAndConv2d $conv_2d_res, $pad_res),
   [
-    (HasIdenticalPadding $pad_op_padding_before, $pad_op_padding_after),
+    (HasIdenticalPadding $pad_op_padding_before, $pad_op_padding_after, $data_format),
     (HasZeroPadding $padding_before),
-    (IsChannelFirst $data_format)
   ]
   // pad_op padding_before, padding_after : (0, 0, X, X), (0, 0, X, X)
   // conv_op padding_before (X, X)
