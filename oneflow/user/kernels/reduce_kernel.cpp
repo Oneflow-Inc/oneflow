@@ -144,10 +144,12 @@ std::vector<int32_t> RegularAxis(const std::vector<int32_t>& axis) {
 void GetReduceSumLayout(const std::vector<int32_t>& axis, const ShapeView& in_shape,
                         bool* is_axis_contiguous, int64_t* outer_size, int64_t* inner_size,
                         int64_t* reduce_size) {
-  *is_axis_contiguous = ((axis.back() - axis.front() + 1) == axis.size());
-  *outer_size = in_shape.Count(0, axis.front());
-  *inner_size = in_shape.Count(axis.back() + 1);
-  *reduce_size = in_shape.Count(axis.front(), axis.back() + 1);
+  if (!axis.empty()) {
+    *is_axis_contiguous = ((axis.back() - axis.front() + 1) == axis.size());
+    *outer_size = in_shape.Count(0, axis.front());
+    *inner_size = in_shape.Count(axis.back() + 1);
+    *reduce_size = in_shape.Count(axis.front(), axis.back() + 1);
+  }
 }
 
 }  // namespace
@@ -253,7 +255,8 @@ class ReduceSumFloatKernel final : public user_op::OpKernel, public user_op::Cud
     bool is_axis_contiguous = false;
     int64_t outer_size = 0, inner_size = 0, reduce_size = 0;
     GetReduceSumLayout(axis, in_shape, &is_axis_contiguous, &outer_size, &inner_size, &reduce_size);
-    if (in_shape.NumAxes() > 0 && is_axis_contiguous && (outer_size == 1 || inner_size == 1)) {
+    if ((!axis.empty()) && in_shape.NumAxes() > 0 && is_axis_contiguous
+        && (outer_size == 1 || inner_size == 1)) {
       CBLAS_TRANSPOSE trans_a = (inner_size == 1) ? CblasNoTrans : CblasTrans;
       CBLAS_TRANSPOSE trans_b = CblasNoTrans;
       const int32_t m = (inner_size == 1) ? outer_size : inner_size;
@@ -290,7 +293,8 @@ REGISTER_USER_KERNEL("reduce_sum")
       GetReduceSumLayout(axis, ShapeView(in_shape), &is_axis_contiguous, &outer_size, &inner_size,
                          &reduce_size);
       size_t tmp_bytes = 0;
-      if (in_shape.NumAxes() > 0 && is_axis_contiguous && (outer_size == 1 || inner_size == 1)) {
+      if ((!axis.empty()) && in_shape.NumAxes() > 0 && is_axis_contiguous
+          && (outer_size == 1 || inner_size == 1)) {
         tmp_bytes = GetCudaAlignedSize(reduce_size * sizeof(float));
       } else {
         tmp_bytes = GetCudaAlignedSize(in_shape.elem_cnt() * sizeof(float));
