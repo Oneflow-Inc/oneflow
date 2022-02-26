@@ -253,7 +253,7 @@ class ReduceSumFloatKernel final : public user_op::OpKernel, public user_op::Cud
     bool is_axis_contiguous = false;
     int64_t outer_size = 0, inner_size = 0, reduce_size = 0;
     GetReduceSumLayout(axis, in_shape, &is_axis_contiguous, &outer_size, &inner_size, &reduce_size);
-    if (is_axis_contiguous && (outer_size == 1 || inner_size == 1)) {
+    if (in_shape.NumAxes() > 0 && is_axis_contiguous && (outer_size == 1 || inner_size == 1)) {
       CBLAS_TRANSPOSE trans_a = (inner_size == 1) ? CblasNoTrans : CblasTrans;
       CBLAS_TRANSPOSE trans_b = CblasNoTrans;
       const int32_t m = (inner_size == 1) ? outer_size : inner_size;
@@ -284,7 +284,6 @@ REGISTER_USER_KERNEL("reduce_sum")
                      && (user_op::HobDataType("output_tensor", 0) == DataType::kFloat))
     .SetInferTmpSizeFn([](user_op::InferContext* ctx) {
       const Shape& in_shape = ctx->InputTensorDesc("input_tensor", 0).shape();
-      const Shape& out_shape = ctx->OutputTensorDesc("output_tensor", 0)->shape();
       const auto& axis = RegularAxis(ctx->Attr<std::vector<int32_t>>("axis"));
       bool is_axis_contiguous = false;
       int64_t outer_size = 0, inner_size = 0, reduce_size = 0;
