@@ -65,7 +65,7 @@ class GraphConfig(object):
         """
         assert type(mode) is bool
         self.proto.set_enable_auto_mixed_precision(mode)
-    
+
     def enable_mlir(self, mode: bool = True):
         r"""If set to true, then graph will do mlir roundtrip in forward and backward.
 
