@@ -13,15 +13,21 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
-#ifndef ONEFLOW_USER_KERNELS_RANDOM_SEED_UTIL_H_
-#define ONEFLOW_USER_KERNELS_RANDOM_SEED_UTIL_H_
 
-#include "oneflow/core/framework/op_kernel.h"
+#include <pybind11/pybind11.h>
+#include "oneflow/api/python/of_api_registry.h"
+#include "oneflow/core/framework/dtype.h"
+#include "oneflow/core/common/util.h"
+#include "oneflow/core/framework/global_param_grad_sync_mode.h"
+
+namespace py = pybind11;
 
 namespace oneflow {
 
-Maybe<int64_t> GetOpKernelRandomSeed(const user_op::KernelInitContext* ctx);
+ONEFLOW_API_PYBIND11_MODULE("", m) {
+  py::class_<GlobalParamGradSyncMode, std::shared_ptr<GlobalParamGradSyncMode>>(
+      m, "GlobalParamGradSyncMode")
+      .def(py::init([](bool flag) { return std::make_shared<GlobalParamGradSyncMode>(flag); }));
+}
 
 }  // namespace oneflow
-
-#endif  // ONEFLOW_USER_KERNELS_RANDOM_SEED_UTIL_H_

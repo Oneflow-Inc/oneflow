@@ -32,6 +32,9 @@ struct MaximumGradFunctor {
     T dy_val = 0;
     if (x > y) {
       dx_val = dz;
+    } else if (x == y) {
+      dx_val = dz / 2;
+      dy_val = dz / 2;
     } else {
       dy_val = dz;
     }
@@ -52,6 +55,9 @@ struct MinimumGradFunctor {
     T dy_val = 0;
     if (x < y) {
       dx_val = dz;
+    } else if (x == y) {
+      dx_val = dz / 2;
+      dy_val = dz / 2;
     } else {
       dy_val = dz;
     }

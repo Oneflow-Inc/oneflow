@@ -14,26 +14,47 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 #include "oneflow/user/kernels/random_seed_util.h"
+#include "oneflow/core/common/container_util.h"
 
 namespace oneflow {
 
-int64_t GetOpKernelRandomSeed(const user_op::KernelInitContext* ctx) {
+Maybe<int64_t> GetOpKernelRandomSeed(const user_op::KernelInitContext* ctx) {
   int64_t seed = ctx->Attr<int64_t>("seed");
   if (!ctx->Attr<bool>("has_seed")) { seed = NewRandomSeed(); }
+
   int64_t parallel_num = ctx->parallel_ctx().parallel_num();
   const auto& outputs = ctx->outputs();
   CHECK_EQ(outputs.size(), 1);
+
   if (parallel_num > 1) {
-    const SbpParallel& out_sbp =
-        ctx->SbpParallel4ArgNameAndIndex(outputs.at(0).first, outputs.at(0).second);
-    if (out_sbp.has_split_parallel()) {
-      std::seed_seq seq{seed};
-      std::vector<int64_t> seeds(parallel_num);
-      seq.generate(seeds.begin(), seeds.end());
-      seed = seeds.at(ctx->parallel_ctx().parallel_id());
-    } else {
-      CHECK(out_sbp.has_broadcast_parallel());
+    const Shape& hierarchy = *ctx->parallel_desc().hierarchy();
+    int64_t parallel_id = ctx->parallel_ctx().parallel_id();
+    const NdSbp& nd_sbp = ctx->NdSbp4ArgNameAndIndex(JUST(VectorAt(outputs, 0)).first,
+                                                     JUST(VectorAt(outputs, 0)).second);
+    std::vector<int64_t> coordinate(hierarchy.NumAxes());
+
+    int64_t seed_idx = 0;
+    int64_t stride = 1;
+    for (int i = nd_sbp.sbp_parallel_size() - 1; i >= 0; --i) {
+      // coordinate at axis i
+      int coord = parallel_id % hierarchy.At(i);
+      parallel_id = (parallel_id - coord) / hierarchy.At(i);
+      // coordinate reset to 0 if broadcast
+      if (nd_sbp.sbp_parallel(i).has_broadcast_parallel()) {
+        // do nothing
+      } else if (nd_sbp.sbp_parallel(i).has_split_parallel()) {
+        seed_idx += coord * stride;
+        stride *= hierarchy.At(i);
+      } else {
+        // other sbp is not allowed
+        return Error::RuntimeError() << "random source op only support broadcast or split";
+      }
     }
+
+    std::seed_seq seq{seed};
+    std::vector<int64_t> seeds(stride);
+    seq.generate(seeds.begin(), seeds.end());
+    seed = JUST(VectorAt(seeds, seed_idx));
   }
   return seed;
 }
