@@ -80,7 +80,7 @@ struct LocalCallOpKernelUtil final {
 
  private:
   static inline void InferTempStorageBlobDesc(LocalCallOpKernelPhyInstrOperand* operand) {
-    const auto& InferTmpSizeFn = operand->opkernel().GetInferTmpSizeFn(operand->user_opkernel());
+    const auto& InferTmpSizeFn = operand->infer_tmp_size_fn();
     auto* temp_blob_desc = operand->mut_opkernel()->mut_temp_blob_object()->mut_blob_desc();
     CHECK(temp_blob_desc->data_type() == DataType::kChar);
     one::LocalUserOpInferContext* op_infer_ctx =

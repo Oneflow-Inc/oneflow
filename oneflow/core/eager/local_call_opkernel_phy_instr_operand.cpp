@@ -46,7 +46,8 @@ LocalCallOpKernelPhyInstrOperand::LocalCallOpKernelPhyInstrOperand(
 
 Maybe<void> LocalCallOpKernelPhyInstrOperand::Init() {
   return WithThisCallContext([this]() -> Maybe<void> {
-    return mut_opkernel()->ChooseOpKernel(&user_opkernel_, &need_temp_storage_);
+    return mut_opkernel()->ChooseOpKernel(&user_opkernel_, &infer_tmp_size_fn_,
+                                          &need_temp_storage_);
   });
 }
 

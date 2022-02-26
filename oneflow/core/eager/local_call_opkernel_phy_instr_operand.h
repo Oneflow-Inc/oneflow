@@ -19,6 +19,7 @@ limitations under the License.
 #include "oneflow/core/vm/phy_instr_operand.h"
 #include "oneflow/core/eager/call_context.h"
 #include "oneflow/core/eager/dev_vm_dep_object_consume_mode.h"
+#include "oneflow/core/framework/user_op_kernel_registry.h"
 
 namespace oneflow {
 
@@ -82,6 +83,7 @@ class LocalCallOpKernelPhyInstrOperand final : public vm::PhyInstrOperand {
 
   bool need_temp_storage() const { return need_temp_storage_; }
   const user_op::OpKernel* user_opkernel() const { return user_opkernel_; }
+  const user_op::InferTmpSizeFn& infer_tmp_size_fn() const { return *infer_tmp_size_fn_; }
 
   const std::shared_ptr<const one::ConsistentTensorInferResult>& consistent_tensor_infer_result()
       const {
@@ -102,6 +104,7 @@ class LocalCallOpKernelPhyInstrOperand final : public vm::PhyInstrOperand {
   eager::CallContext call_ctx_;
   std::shared_ptr<one::StatefulLocalOpKernel> opkernel_;
   const user_op::OpKernel* user_opkernel_;
+  const user_op::InferTmpSizeFn* infer_tmp_size_fn_;
   bool need_temp_storage_;
   const one::DevVmDepObjectConsumeMode dev_vm_dep_object_consume_mode_;
   DependenceVector input_dependences_;

@@ -387,7 +387,9 @@ class StatefulLocalOpKernel final {
 
   void set_need_check_mem_case(bool value) { need_check_mem_case_ = value; }
 
-  Maybe<void> ChooseOpKernel(const user_op::OpKernel** user_opkernel, bool* need_temp_storage);
+  Maybe<void> ChooseOpKernel(const user_op::OpKernel** user_opkernel,
+                             const user_op::InferTmpSizeFn** infer_tmp_size_fn,
+                             bool* need_temp_storage);
 
   const OperatorConf& op_conf() const { return *op_conf_; }
 
@@ -410,8 +412,6 @@ class StatefulLocalOpKernel final {
 
   bool need_check_mem_case() const { return need_check_mem_case_; }
 
-  const user_op::InferTmpSizeFn& GetInferTmpSizeFn(const user_op::OpKernel* op_kernel) const;
-
   std::shared_ptr<OperatorConf> op_conf_;
   AttrMap base_attrs_;
   std::unique_ptr<user_op::UserOpConfWrapper> user_op_conf_;
@@ -432,7 +432,6 @@ class StatefulLocalOpKernel final {
       dtype2cached_kernels_;
   HashMap<const user_op::OpKernel*, std::shared_ptr<user_op::OpKernelState>> op_kernel_state_map_;
   HashMap<const user_op::OpKernel*, std::shared_ptr<user_op::OpKernelCache>> op_kernel_cache_map_;
-  HashMap<const user_op::OpKernel*, const user_op::InferTmpSizeFn*> infer_tmp_size_fn_map_;
   std::unique_ptr<vm::EagerBlobObject> tmp_blob_object_;
   std::vector<int64_t> input_tuple_indexes4const_ibns_;
   std::vector<int64_t> input_tuple_indexes4mut_ibns_;

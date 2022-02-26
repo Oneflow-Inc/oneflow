@@ -407,6 +407,7 @@ Maybe<void> InitTensorTupleIndexes4Bns(const std::shared_ptr<const OperatorConf>
 StatefulLocalOpKernel::~StatefulLocalOpKernel() = default;
 
 Maybe<void> StatefulLocalOpKernel::ChooseOpKernel(const user_op::OpKernel** user_opkernel,
+                                                  const user_op::InferTmpSizeFn** infer_tmp_size_fn,
                                                   bool* need_temp_storage) {
   OF_PROFILER_RANGE_GUARD("ChooseOpKernel");
   DataType primary_dtype = kInvalidDataType;
@@ -438,7 +439,7 @@ Maybe<void> StatefulLocalOpKernel::ChooseOpKernel(const user_op::OpKernel** user
   dtype2cached_kernels_[primary_dtype].push_back(
       {kernel_reg_val, std::shared_ptr<const user_op::OpKernel>(kernel)});
 
-  infer_tmp_size_fn_map_.emplace(kernel, &kernel_reg_val->infer_tmp_size_fn);
+  *infer_tmp_size_fn = &kernel_reg_val->infer_tmp_size_fn;
   *need_temp_storage = kernel_reg_val->need_temp_storage;
   *user_opkernel = kernel;
   return Maybe<void>::Ok();
@@ -467,11 +468,6 @@ void StatefulLocalOpKernel::TryInitOpKernelStateAndCache(const user_op::OpKernel
                                           user_op::OpKernelCache::kAllMayChanged, &cache_in_map);
     *cache = cache_in_map.get();
   }
-}
-
-const user_op::InferTmpSizeFn& StatefulLocalOpKernel::GetInferTmpSizeFn(
-    const user_op::OpKernel* op_kernel) const {
-  return *infer_tmp_size_fn_map_.at(op_kernel);
 }
 
 vm::EagerBlobObject* StatefulLocalOpKernel::mut_temp_blob_object() {
