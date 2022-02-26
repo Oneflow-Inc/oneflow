@@ -21,7 +21,7 @@ from collections import OrderedDict
 import oneflow as flow
 import oneflow.unittest
 
-from test_util import GenArgList
+from oneflow.test_utils.test_util import GenArgList
 
 
 def _run_functional_doctest(

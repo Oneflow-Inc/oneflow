@@ -20,7 +20,7 @@ from collections import OrderedDict
 import numpy as np
 
 import oneflow as flow
-from test_util import GenArgList
+from oneflow.test_utils.test_util import GenArgList
 
 
 def _clip_grad_norm_np(input, max_norm, norm_type):

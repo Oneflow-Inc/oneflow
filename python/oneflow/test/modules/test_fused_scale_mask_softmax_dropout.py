@@ -20,7 +20,7 @@ from collections import OrderedDict
 import os
 
 import numpy as np
-from test_util import GenArgList
+from oneflow.test_utils.test_util import GenArgList
 
 import oneflow as flow
 import oneflow.unittest

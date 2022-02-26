@@ -21,7 +21,7 @@ import numpy as np
 import oneflow as flow
 import oneflow.unittest
 
-from test_util import GenArgList
+from oneflow.test_utils.test_util import GenArgList
 
 
 def _test_randint(test_case, device, shape, low, high):

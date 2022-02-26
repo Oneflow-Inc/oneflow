@@ -19,7 +19,7 @@ import oneflow as flow
 from oneflow.nn.parallel import DistributedDataParallel as ddp
 import oneflow.unittest
 from collections import OrderedDict
-from test_util import GenArgDict
+from oneflow.test_utils.test_util import GenArgDict
 
 train_x = [
     flow.tensor([[1, 2], [2, 3]], dtype=flow.float32),

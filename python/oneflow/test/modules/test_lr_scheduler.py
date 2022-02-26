@@ -26,7 +26,7 @@ import oneflow.unittest
 import torch
 from oneflow.nn.parameter import Parameter
 
-from test_util import GenArgDict
+from oneflow.test_utils.test_util import GenArgDict
 
 
 def compare_with_torch_reduce_lr(

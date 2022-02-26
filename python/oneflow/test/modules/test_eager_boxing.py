@@ -22,7 +22,7 @@ import oneflow as flow
 import os
 
 import oneflow.unittest
-from test_util import GenArgList
+from oneflow.test_utils.test_util import GenArgList
 
 
 def _test_eager_boxing_with_non_overlapping_placement_p_to_s1(
