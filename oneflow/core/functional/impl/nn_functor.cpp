@@ -1437,10 +1437,19 @@ class PadFunctor {
       std::vector<int64_t> pad_before(ndim, 0);
       std::vector<int64_t> pad_after(ndim, 0);
       const int64_t pad_pair = pad.size() / 2;
-      for (int64_t i = 0; i < pad_pair; ++i) {
-        pad_before[ndim - i - 1] = pad[2 * i];
-        pad_after[ndim - i - 1] = pad[2 * i + 1];
+      if (!oneflow::ParseBooleanFromEnv("ONEFLOW_ENABLE_NHWC", false)) {
+        for (int64_t i = 0; i < pad_pair; ++i) {
+          pad_before[ndim - i - 1] = pad[2 * i];
+          pad_after[ndim - i - 1] = pad[2 * i + 1];
+        }
       }
+      else{
+        for (int64_t i = 0; i < pad_pair; ++i) {
+          pad_before[ndim - i - 2] = pad[2 * i];
+          pad_after[ndim - i - 2] = pad[2 * i + 1];
+        }
+      }
+
       JUST(attrs.SetAttr<std::vector<int64_t>>("padding_before", pad_before));
       JUST(attrs.SetAttr<std::vector<int64_t>>("padding_after", pad_after));
       return OpInterpUtil::Dispatch<Tensor>(*pad_, {x}, attrs);
