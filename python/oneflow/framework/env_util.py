@@ -101,7 +101,8 @@ def env_init():
     c_api_util.InitEnv(default_env_proto, is_multi_client)
     if not is_multi_client:
         if oneflow._oneflow_internal.CurrentMachineId() == 0:
-            scope_util.InitScopeStack()
+            # do nothing
+            pass
         else:
             exit(0)
     return True

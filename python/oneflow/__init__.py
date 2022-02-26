@@ -215,7 +215,6 @@ oneflow._oneflow_internal.InitDefaultConsistentTransportTokenScope()
 session_ctx.OpenDefaultSession(
     MultiClientSession(oneflow._oneflow_internal.NewSessionId())
 )
-scope_util.InitScopeStack()
 oneflow._oneflow_internal.EnableEagerEnvironment(True)
 del env_util
 from oneflow.framework import python_callback, register_python_callback
