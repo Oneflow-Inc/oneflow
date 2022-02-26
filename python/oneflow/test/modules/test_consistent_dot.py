@@ -21,7 +21,7 @@ from oneflow.test_utils.automated_test_util import *
 
 
 @autotest(n=1, check_graph=False)
-def test_dot_impl(test_case, placement, sbp):
+def do_test_dot_impl(test_case, placement, sbp):
     k = random(100, 1000) * 8
     x = random_tensor(ndim=1, dim0=k).to_global(placement=placement, sbp=sbp)
     y = random_tensor(ndim=1, dim0=k).to_global(placement=placement, sbp=sbp)
@@ -34,7 +34,7 @@ class TestDotConsistent(flow.unittest.TestCase):
     def test_dot(test_case):
         for placement in all_placement():
             for sbp in all_sbp(placement, max_dim=1):
-                test_dot_impl(test_case, placement, sbp)
+                do_test_dot_impl(test_case, placement, sbp)
 
 
 if __name__ == "__main__":
