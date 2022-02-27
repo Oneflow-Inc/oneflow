@@ -141,7 +141,9 @@ class Instruction final : public intrusive::Base {
     return dispatched_instruction_hook_;
   }
   const intrusive::ListHook& lively_instruction_hook() const { return lively_instruction_hook_; }
-  const intrusive::ListHook& pending_instruction_hook() const { return pending_instruction_hook_; }
+  const intrusive::ListHook& worker_pending_instruction_hook() const {
+    return worker_pending_instruction_hook_;
+  }
   const intrusive::ListHook& barrier_instruction_hook() const { return barrier_instruction_hook_; }
   const InEdgeList& in_edges() const { return in_edges_; }
   const OutEdgeList& out_edges() const { return out_edges_; }
@@ -177,7 +179,7 @@ class Instruction final : public intrusive::Base {
         instruction_hook_(),
         dispatched_instruction_hook_(),
         lively_instruction_hook_(),
-        pending_instruction_hook_(),
+        worker_pending_instruction_hook_(),
         barrier_instruction_hook_() {}
   intrusive::Ref intrusive_ref_;
   // fields
@@ -196,7 +198,7 @@ class Instruction final : public intrusive::Base {
   // valid during vm processing
   intrusive::ListHook lively_instruction_hook_;
   // pending to ThreadCtx
-  intrusive::ListHook pending_instruction_hook_;
+  intrusive::ListHook worker_pending_instruction_hook_;
   intrusive::ListHook barrier_instruction_hook_;
 };
 

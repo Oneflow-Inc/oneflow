@@ -24,10 +24,10 @@ limitations under the License.
 namespace oneflow {
 namespace vm {
 
-using PendingInstructionChannel =
-    intrusive::Channel<INTRUSIVE_FIELD(Instruction, pending_instruction_hook_)>;
-using PendingInstructionList =
-    intrusive::List<INTRUSIVE_FIELD(Instruction, pending_instruction_hook_)>;
+using WorkerPendingInstructionChannel =
+    intrusive::Channel<INTRUSIVE_FIELD(Instruction, worker_pending_instruction_hook_)>;
+using WorkerPendingInstructionList =
+    intrusive::List<INTRUSIVE_FIELD(Instruction, worker_pending_instruction_hook_)>;
 
 class ThreadCtx final : public intrusive::Base {
  public:
@@ -39,24 +39,28 @@ class ThreadCtx final : public intrusive::Base {
 
   // Setters
   StreamList* mut_stream_list() { return &stream_list_; }
-  PendingInstructionChannel* mut_pending_instruction_list() { return &pending_instruction_list_; }
+  WorkerPendingInstructionChannel* mut_worker_pending_instruction_list() {
+    return &worker_pending_instruction_list_;
+  }
 
   // methods
   size_t TryReceiveAndRun();
   intrusive::ChannelStatus ReceiveAndRun();
 
  private:
-  template<intrusive::ChannelStatus (PendingInstructionChannel::*Move)(PendingInstructionList*)>
+  template<intrusive::ChannelStatus (WorkerPendingInstructionChannel::*Move)(
+      WorkerPendingInstructionList*)>
   intrusive::ChannelStatus MoveAndRun(size_t* cnt);
 
   friend class intrusive::Ref;
   intrusive::Ref* mut_intrusive_ref() { return &intrusive_ref_; }
 
-  ThreadCtx() : intrusive_ref_(), stream_list_(), pending_instruction_list_(), thread_ctx_hook_() {}
+  ThreadCtx()
+      : intrusive_ref_(), stream_list_(), worker_pending_instruction_list_(), thread_ctx_hook_() {}
   intrusive::Ref intrusive_ref_;
   // lists
   StreamList stream_list_;
-  PendingInstructionChannel pending_instruction_list_;
+  WorkerPendingInstructionChannel worker_pending_instruction_list_;
 
  public:
   // list hooks

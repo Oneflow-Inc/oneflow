@@ -75,7 +75,7 @@ void Stream::MoveFromZombieListToFreeList() {
 
 void Stream::DeleteInstruction(intrusive::shared_ptr<Instruction>&& instruction) {
   CHECK(instruction->instruction_hook().empty());
-  CHECK(instruction->pending_instruction_hook().empty());
+  CHECK(instruction->worker_pending_instruction_hook().empty());
   CHECK(instruction->dispatched_instruction_hook().empty());
   // the value of instruction->ref_cnt() may be updated by a worker thread
   size_t ref_cnt = instruction->ref_cnt();

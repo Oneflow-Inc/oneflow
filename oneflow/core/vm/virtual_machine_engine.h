@@ -77,9 +77,9 @@ class VirtualMachineEngine final : public intrusive::Base {
   void __Init__(const std::function<void()>& notify_callback_thread) {
     notify_callback_thread_ = notify_callback_thread;
   }
-  // Returns true if old pending_instruction_list is empty
+  // Returns true if old scheduler_pending_instruction_list is empty
   Maybe<bool> Receive(InstructionMsgList* instr_list);
-  // Returns true if old pending_instruction_list is empty
+  // Returns true if old scheduler_pending_instruction_list is empty
   Maybe<bool> Receive(intrusive::shared_ptr<InstructionMsg>&& instruction_msg);
   void Schedule();
   void Callback();

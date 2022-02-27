@@ -184,7 +184,7 @@ Maybe<void> VirtualMachine::Receive(vm::InstructionMsgList* instr_list) {
       }));
     }
     if (JUST(vm_->Receive(instr_list))) {
-      // old pending_instruction_list is empty.
+      // old scheduler_pending_instruction_list is empty.
       pending_notifier_.Notify();
     }
   }
@@ -230,7 +230,7 @@ void VirtualMachine::ScheduleLoop(const std::function<void()>& Initializer) {
     vm->NotifyCallback();
   }
   CHECK_JUST(ForEachThreadCtx(vm_.Mutable(), [&](vm::ThreadCtx* thread_ctx) -> Maybe<void> {
-    thread_ctx->mut_pending_instruction_list()->Close();
+    thread_ctx->mut_worker_pending_instruction_list()->Close();
     return Maybe<void>::Ok();
   }));
   {

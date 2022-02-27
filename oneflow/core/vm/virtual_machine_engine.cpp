@@ -330,11 +330,11 @@ void VirtualMachineEngine::DispatchInstruction(Instruction* instruction) {
   if (OnSchedulerThread(stream_type)) {
     stream_type.Run(instruction);
   } else {
-    stream->mut_thread_ctx()->mut_pending_instruction_list()->PushBack(instruction);
+    stream->mut_thread_ctx()->mut_worker_pending_instruction_list()->PushBack(instruction);
   }
 }
 
-// Returns true if old pending_instruction_list is empty
+// Returns true if old scheduler_pending_instruction_list is empty
 Maybe<bool> VirtualMachineEngine::Receive(InstructionMsgList* compute_instr_msg_list) {
   OF_PROFILER_RANGE_PUSH("vm:Receive");
   INTRUSIVE_UNSAFE_FOR_EACH_PTR(compute_instr_msg, compute_instr_msg_list) {
