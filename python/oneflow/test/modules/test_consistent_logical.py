@@ -21,7 +21,7 @@ from oneflow.test_utils.automated_test_util import *
 
 
 @autotest(n=1, auto_backward=False, check_graph=False)
-def test_logical_binary_impl(test_case, ndim, placement, sbp, f):
+def _test_logical_binary_impl(test_case, ndim, placement, sbp, f):
     dims = [random(1, 4) * 8 for i in range(ndim)]
     x1 = random_tensor(ndim, *dims)
     x2 = x1.to_global(placement=placement, sbp=sbp)
@@ -32,7 +32,7 @@ def test_logical_binary_impl(test_case, ndim, placement, sbp, f):
 
 
 @autotest(n=1, auto_backward=False, check_graph=False)
-def test_logical_not_impl(test_case, ndim, placement, sbp):
+def _test_logical_not_impl(test_case, ndim, placement, sbp):
     dims = [random(1, 4) * 8 for i in range(ndim)]
     x1 = random_tensor(ndim, *dims)
     x2 = x1.to_global(placement=placement, sbp=sbp)
@@ -41,7 +41,7 @@ def test_logical_not_impl(test_case, ndim, placement, sbp):
 
 
 @autotest(n=1, auto_backward=False, check_graph=False)
-def test_logical_reduce_impl(test_case, ndim, placement, sbp, f):
+def _test_logical_reduce_impl(test_case, ndim, placement, sbp, f):
     dims = [random(1, 4) * 8 for i in range(ndim)]
     x1 = random_tensor(ndim, *dims, requires_grad=False)
     x2 = x1.to_global(placement=placement, sbp=sbp)
@@ -50,7 +50,7 @@ def test_logical_reduce_impl(test_case, ndim, placement, sbp, f):
 
 
 @autotest(n=1, auto_backward=False, check_graph=False)
-def test_logical_reduce_with_dim_impl(test_case, ndim, placement, sbp, f):
+def _test_logical_reduce_with_dim_impl(test_case, ndim, placement, sbp, f):
     dims = [random(1, 4) * 8 for i in range(ndim)]
     x1 = random_tensor(ndim, *dims, requires_grad=False)
     x2 = x1.to_global(placement=placement, sbp=sbp)
@@ -59,7 +59,7 @@ def test_logical_reduce_with_dim_impl(test_case, ndim, placement, sbp, f):
 
 
 @autotest(n=1, auto_backward=False, check_graph=False)
-def test_logical_reduce_keepdim_impl(test_case, placement, sbp, f):
+def _test_logical_reduce_keepdim_impl(test_case, placement, sbp, f):
     dims = [random(1, 4) * 8 for i in range(4)]
     x1 = random_tensor(4, *dims, requires_grad=False)
     x2 = x1.to_global(placement=placement, sbp=sbp)
@@ -74,14 +74,14 @@ class TestLogicalConsistent(flow.unittest.TestCase):
         for placement in all_placement():
             for sbp in all_sbp(placement, max_dim=ndim):
                 for f in [torch.logical_and, torch.logical_or, torch.logical_xor]:
-                    test_logical_binary_impl(test_case, ndim, placement, sbp, f)
+                    _test_logical_binary_impl(test_case, ndim, placement, sbp, f)
 
     @globaltest
     def test_logical_not(test_case):
         ndim = random(1, 5).to(int).value()
         for placement in all_placement():
             for sbp in all_sbp(placement, max_dim=ndim):
-                test_logical_not_impl(test_case, ndim, placement, sbp)
+                _test_logical_not_impl(test_case, ndim, placement, sbp)
 
     @globaltest
     def test_logical_reduce(test_case):
@@ -89,11 +89,11 @@ class TestLogicalConsistent(flow.unittest.TestCase):
         for placement in all_placement():
             for sbp in all_sbp(placement, max_dim=ndim):
                 for f in [torch.all, torch.any]:
-                    test_logical_reduce_impl(test_case, ndim, placement, sbp, f)
-                    test_logical_reduce_with_dim_impl(
+                    _test_logical_reduce_impl(test_case, ndim, placement, sbp, f)
+                    _test_logical_reduce_with_dim_impl(
                         test_case, ndim, placement, sbp, f
                     )
-                    test_logical_reduce_keepdim_impl(test_case, placement, sbp, f)
+                    _test_logical_reduce_keepdim_impl(test_case, placement, sbp, f)
 
 
 if __name__ == "__main__":
