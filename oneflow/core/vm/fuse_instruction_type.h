@@ -46,7 +46,7 @@ class FuseInstructionType : public vm::InstructionType {
     auto* instruction_list = CHECK_NOTNULL(ptr)->mut_instruction_list();
     INTRUSIVE_UNSAFE_FOR_EACH_PTR(instruction, instruction_list) {
       OF_PROFILER_RANGE_PUSH("F:" + instruction->DebugName());
-      instruction->instruction_type().ComputeInFuseMode(instruction);
+      instruction->instruction_type().Compute(instruction);
       OF_PROFILER_RANGE_POP();
     }
   }

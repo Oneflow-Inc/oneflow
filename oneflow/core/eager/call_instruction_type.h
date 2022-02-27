@@ -29,7 +29,6 @@ class CallInstructionType final : public vm::InstructionType {
   ~CallInstructionType() = default;
 
   void Compute(vm::Instruction* instruction) const override;
-  void ComputeInFuseMode(vm::Instruction* instruction) const override;
 
   InstructionFuseType fuse_type() const override { return kEnableInstructionFuseAtAnyPosition; }
 

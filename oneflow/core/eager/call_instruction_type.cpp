@@ -149,10 +149,6 @@ void CallInstructionType::Compute(vm::Instruction* instruction) const {
   CHECK_JUST(CallInstructionUtil::Compute(*instruction));
 }
 
-void CallInstructionType::ComputeInFuseMode(vm::Instruction* instruction) const {
-  CHECK_JUST(CallInstructionUtil::Compute(*instruction));
-}
-
 std::string CallInstructionType::DebugName(const vm::Instruction& instruction) const {
   auto* operand = CHECK_NOTNULL(instruction.phy_instr_operand().get());
   return CHECK_NOTNULL(dynamic_cast<CallPhyInstrOperand*>(operand))->opkernel().op_type_name()

@@ -39,8 +39,6 @@ class InstructionType {
   virtual bool IsFrontSequential() const { return false; }
   virtual InstructionFuseType fuse_type() const { return kDisableInstructionFuse; }
   virtual void Compute(Instruction* instruction) const = 0;
-
-  virtual void ComputeInFuseMode(Instruction* instruction) const { LOG(FATAL) << "UNIMPLEMENTED"; }
   void InitInstructionStatusIf(Instruction* instruction) const {
     InitInstructionStatus(instruction);
   }

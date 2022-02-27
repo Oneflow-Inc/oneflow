@@ -47,7 +47,6 @@ class ReleaseTensorInstructionType : public vm::InstructionType {
     return "ReleaseTensor";
   }
   void Compute(vm::Instruction* instruction) const override { Release(*instruction); }
-  void ComputeInFuseMode(vm::Instruction* instruction) const override { Release(*instruction); }
 };
 
 #ifdef WITH_CUDA
