@@ -27,13 +27,13 @@ unset http_proxy
 unset https_proxy
 
 export ONEFLOW_TEST_DEVICE_NUM=1
-python3 -m pytest --durations=50 --capture=sys --failed-first -x --dist loadfile ${parallel_spec} --max-worker-restart=0 ${PWD}
+# python3 -m pytest --durations=50 --capture=sys --failed-first -x --dist loadfile ${parallel_spec} --max-worker-restart=0 ${PWD}
 if [[ "$(python3 -c 'import oneflow.sysconfig;print(oneflow.sysconfig.has_rpc_backend_grpc())')" == *"True"* ]]; then
     export ONEFLOW_TEST_DEVICE_NUM=2
-    python3 -m oneflow.distributed.launch --nproc_per_node 2 -m unittest discover ${PWD} --failfast --verbose
+    python3 -m oneflow.distributed.launch --nproc_per_node 2 -m pytest -x --durations=50 ${PWD}
 
     export ONEFLOW_TEST_DEVICE_NUM=4
-    python3 -m oneflow.distributed.launch --nproc_per_node 4 -m unittest discover ${PWD} --failfast --verbose
+    python3 -m oneflow.distributed.launch --nproc_per_node 4 -m pytest -x --durations=50 ${PWD}
 else
     python3 -c 'import oneflow.sysconfig;assert(oneflow.sysconfig.has_rpc_backend_grpc() == False)'
 fi
