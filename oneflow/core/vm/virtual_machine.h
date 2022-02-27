@@ -44,7 +44,7 @@ class VirtualMachine final {
   bool NoMoreErasedLivelyInstructions(size_t* last_total_erased_lively_instruction_cnt) const;
   std::string GetBlockingDebugString();
 
-  Maybe<void> Receive(vm::InstructionMsgList* instr_list);
+  Maybe<void> Receive(vm::InstructionList* instr_list);
 
   const vm::VirtualMachineEngine& vm() const { return *vm_; }
 

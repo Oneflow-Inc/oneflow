@@ -98,11 +98,11 @@ Maybe<Symbol<Stream>> GetBarrierStream() {
   return Stream::New(device, StreamRole::kBarrier);
 }
 
-void MakeBarrierInstructions(vm::InstructionMsgList* list,
+void MakeBarrierInstructions(vm::InstructionList* list,
                              const std::function<void()>& ComputeCallback) {
   const auto& phy_instr_operand = std::make_shared<vm::NoArgCbPhyInstrOperand>(ComputeCallback);
   auto stream = CHECK_JUST(GetBarrierStream());
-  auto instruction = intrusive::make_shared<vm::InstructionMsg>(
+  auto instruction = intrusive::make_shared<vm::Instruction>(
       stream->mut_vm_stream(), SingletonPtr<vm::BarrierInstructionType>(), phy_instr_operand);
   list->EmplaceBack(std::move(instruction));
 }
@@ -111,7 +111,7 @@ void MakeBarrierInstructions(vm::InstructionMsgList* list,
 
 void VirtualMachine::ControlSync() {
   auto bc = std::make_shared<BlockingCounter>(1);
-  vm::InstructionMsgList list;
+  vm::InstructionList list;
   MakeBarrierInstructions(&list, [bc] { bc->Decrease(); });
   CHECK_JUST(Receive(&list));
   CHECK_JUST(bc->WaitUntilCntEqualZero(VirtualMachine::GetPredicatorNoMoreInstructionsFinished()));
@@ -153,20 +153,20 @@ std::string VirtualMachine::GetBlockingDebugString() {
   return vm_->GetLivelyInstructionListDebugString(limit);
 }
 
-Maybe<void> VirtualMachine::Receive(vm::InstructionMsgList* instr_list) {
+Maybe<void> VirtualMachine::Receive(vm::InstructionList* instruction_list) {
   if (unlikely(pthread_fork::IsForkedSubProcess())) {
     CHECK_OR_RETURN(JUST(IsMultiClient()));
-    INTRUSIVE_FOR_EACH_PTR(instr_msg, instr_list) {
-      const auto& device = instr_msg->stream().device();
+    INTRUSIVE_FOR_EACH_PTR(instruction, instruction_list) {
+      const auto& device = instruction->stream().device();
       CHECK_OR_RETURN(device->enum_type() == DeviceType::kCPU)
           << pthread_fork::kOfCudaNotSupportInForkedSubProcess;
     }
-    JUST(vm_->Receive(instr_list));
+    JUST(vm_->Receive(instruction_list));
     while (!vm_->Empty()) { vm_->Schedule(); }
     vm_->Callback();
     // no scheduler processing gc, we must do it in current thread.
-    vm::InstructionMsgList garbage_msg_list;
-    vm_->mut_garbage_msg_list()->MoveTo(&garbage_msg_list);
+    vm::InstructionList garbage_instruction_list;
+    vm_->mut_garbage_instruction_list()->MoveTo(&garbage_instruction_list);
   } else {
     const int64_t kHighWaterMark = GetInstructionHighWaterMark();
     if (vm_->flying_instruction_cnt() > kHighWaterMark) {
@@ -183,7 +183,7 @@ Maybe<void> VirtualMachine::Receive(vm::InstructionMsgList* instr_list) {
         return Maybe<void>::Ok();
       }));
     }
-    if (JUST(vm_->Receive(instr_list))) {
+    if (JUST(vm_->Receive(instruction_list))) {
       // old scheduler_pending_instruction_list is empty.
       pending_notifier_.Notify();
     }

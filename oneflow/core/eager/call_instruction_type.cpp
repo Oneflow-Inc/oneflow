@@ -40,11 +40,11 @@ namespace oneflow {
 namespace vm {
 
 struct CallInstructionUtil final {
-  static inline Maybe<void> Compute(const vm::InstructionMsg& instr_msg) {
+  static inline Maybe<void> Compute(const vm::Instruction& instruction) {
     OF_PROFILER_RANGE_PUSH("ResetPrior");
-    auto* operand = CallInstructionUtil::GetCallPhyInstrOperand(instr_msg);
+    auto* operand = CallInstructionUtil::GetCallPhyInstrOperand(instruction);
     operand->mut_opkernel()->composed_attrs_for_scheduler_thread()->ResetPrior(operand->attrs());
-    DeviceCtx* device_ctx = instr_msg.stream().device_ctx().get();
+    DeviceCtx* device_ctx = instruction.stream().device_ctx().get();
     OF_PROFILER_RANGE_POP();
     OF_PROFILER_RANGE_PUSH("AllocateOutputBlobsMemory");
     JUST(AllocateOutputBlobsMemory(operand, device_ctx));
@@ -72,8 +72,8 @@ struct CallInstructionUtil final {
     return Maybe<void>::Ok();
   }
 
-  static inline CallPhyInstrOperand* GetCallPhyInstrOperand(const vm::InstructionMsg& instr_msg) {
-    auto* operand = CHECK_NOTNULL(instr_msg.phy_instr_operand().get());
+  static inline CallPhyInstrOperand* GetCallPhyInstrOperand(const vm::Instruction& instruction) {
+    auto* operand = CHECK_NOTNULL(instruction.phy_instr_operand().get());
     return CHECK_NOTNULL(dynamic_cast<CallPhyInstrOperand*>(operand));
   }
 
@@ -146,15 +146,15 @@ struct CallInstructionUtil final {
 };
 
 void CallInstructionType::Compute(vm::Instruction* instruction) const {
-  CHECK_JUST(CallInstructionUtil::Compute(instruction->instr_msg()));
+  CHECK_JUST(CallInstructionUtil::Compute(*instruction));
 }
 
-void CallInstructionType::ComputeInFuseMode(vm::InstructionMsg* instr_msg) const {
-  CHECK_JUST(CallInstructionUtil::Compute(*instr_msg));
+void CallInstructionType::ComputeInFuseMode(vm::Instruction* instruction) const {
+  CHECK_JUST(CallInstructionUtil::Compute(*instruction));
 }
 
-std::string CallInstructionType::DebugName(const vm::InstructionMsg& instr_msg) const {
-  auto* operand = CHECK_NOTNULL(instr_msg.phy_instr_operand().get());
+std::string CallInstructionType::DebugName(const vm::Instruction& instruction) const {
+  auto* operand = CHECK_NOTNULL(instruction.phy_instr_operand().get());
   return CHECK_NOTNULL(dynamic_cast<CallPhyInstrOperand*>(operand))->opkernel().op_type_name()
          + ":Call";
 }

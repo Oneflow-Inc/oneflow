@@ -32,43 +32,6 @@ class Stream;
 
 namespace vm {
 
-class InstructionMsg final : public intrusive::Base {
- public:
-  // methods
-  void __Init__(Stream* stream, const InstructionType* instruction_type,
-                const std::shared_ptr<PhyInstrOperand>& phy_instr_operand);
-
-  // Getters
-  const Stream& stream() const { return *stream_; }
-  Stream* mut_stream() { return stream_; }
-  const InstructionType& instruction_type() const { return *instruction_type_; }
-  const std::shared_ptr<PhyInstrOperand>& phy_instr_operand() const { return phy_instr_operand_; }
-
-  std::string DebugName() const;
-
- private:
-  friend class intrusive::Ref;
-  intrusive::Ref* mut_intrusive_ref() { return &intrusive_ref_; }
-
-  InstructionMsg()
-      : intrusive_ref_(),
-        stream_(),
-        instruction_type_(),
-        phy_instr_operand_(),
-        main_instruction_hook_() {}
-  intrusive::Ref intrusive_ref_;
-  // fields
-  Stream* stream_;
-  const InstructionType* instruction_type_;
-  std::shared_ptr<PhyInstrOperand> phy_instr_operand_;
-
- public:
-  // list hooks
-  intrusive::ListHook main_instruction_hook_;
-};
-
-using InstructionMsgList = intrusive::List<INTRUSIVE_FIELD(InstructionMsg, main_instruction_hook_)>;
-
 static const int kInstructionStatusBufferBytes = 64;
 
 // clang-format off
@@ -135,10 +98,16 @@ class Instruction final : public intrusive::Base {
   using DependenceAccessList =
       intrusive::List<INTRUSIVE_FIELD(DependenceAccess, instruction_access_hook_)>;
 
+  void __Init__(Stream* stream, const InstructionType* instruction_type,
+                const std::shared_ptr<PhyInstrOperand>& phy_instr_operand);
+
   // Getters
-  const Stream& stream() const { return instr_msg_->stream(); }
-  Stream* mut_stream() { return instr_msg_->mut_stream(); }
-  const InstructionMsg& instr_msg() const { return instr_msg_.Get(); }
+  const Stream& stream() const { return *stream_; }
+  Stream* mut_stream() { return stream_; }
+  const InstructionType& instruction_type() const { return *instruction_type_; }
+  const std::shared_ptr<PhyInstrOperand>& phy_instr_operand() const { return phy_instr_operand_; }
+  std::string DebugName() const;
+
   const InstructionStatusBuffer& status_buffer() const { return status_buffer_.Get(); }
   const intrusive::ListHook& main_instruction_hook() const { return main_instruction_hook_; }
   const intrusive::ListHook& dispatched_instruction_hook() const {
@@ -154,16 +123,14 @@ class Instruction final : public intrusive::Base {
   const DependenceAccessList& access_list() const { return access_list_; }
 
   // Setters
-  InstructionMsg* mut_instr_msg() { return instr_msg_.Mutable(); }
-  void clear_instr_msg() { instr_msg_.Reset(); }
   InstructionStatusBuffer* mut_status_buffer() { return status_buffer_.Mutable(); }
   InEdgeList* mut_in_edges() { return &in_edges_; }
   OutEdgeList* mut_out_edges() { return &out_edges_; }
   DependenceAccessList* mut_access_list() { return &access_list_; }
 
   // methods
-  void Init(InstructionMsg* instr_msg);
-  void Delete();
+  void InitStatus();
+  void DeleteStatusAndClearEdges();
   bool Done() const;
   const StreamType& stream_type() const;
 
@@ -175,8 +142,10 @@ class Instruction final : public intrusive::Base {
 
   Instruction()
       : intrusive_ref_(),
+        stream_(),
+        instruction_type_(),
+        phy_instr_operand_(),
         status_buffer_(),
-        instr_msg_(),
         access_list_(),
         in_edges_(),
         out_edges_(),
@@ -187,8 +156,10 @@ class Instruction final : public intrusive::Base {
         barrier_instruction_hook_() {}
   intrusive::Ref intrusive_ref_;
   // fields
+  Stream* stream_;
+  const InstructionType* instruction_type_;
+  std::shared_ptr<PhyInstrOperand> phy_instr_operand_;
   FlatMsg<InstructionStatusBuffer> status_buffer_;
-  intrusive::shared_ptr<InstructionMsg> instr_msg_;
   // lists
   DependenceAccessList access_list_;
   InEdgeList in_edges_;
@@ -207,6 +178,8 @@ class Instruction final : public intrusive::Base {
   // for barr
   intrusive::ListHook barrier_instruction_hook_;
 };
+
+using InstructionList = intrusive::List<INTRUSIVE_FIELD(Instruction, main_instruction_hook_)>;
 
 }  // namespace vm
 }  // namespace oneflow

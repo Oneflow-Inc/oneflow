@@ -35,19 +35,19 @@ class ReleaseTensorInstructionType : public vm::InstructionType {
 
   InstructionFuseType fuse_type() const override { return kEnableInstructionFuseAtAnyPosition; }
 
-  void Release(const vm::InstructionMsg& instr_msg) const {
-    const auto& phy_instr_operand = instr_msg.phy_instr_operand();
+  void Release(const vm::Instruction& instruction) const {
+    const auto& phy_instr_operand = instruction.phy_instr_operand();
     CHECK(static_cast<bool>(phy_instr_operand));
     const auto* ptr =
         dynamic_cast<const vm::ReleaseTensorArgPhyInstrOperand*>(phy_instr_operand.get());
     CHECK_NOTNULL(ptr);
     CHECK_JUST(ptr->eager_blob_object()->DeallocateBlobDataPtr());
   }
-  std::string DebugName(const vm::InstructionMsg& instr_msg) const override {
+  std::string DebugName(const vm::Instruction& instruction) const override {
     return "ReleaseTensor";
   }
-  void Compute(vm::Instruction* instruction) const override { Release(instruction->instr_msg()); }
-  void ComputeInFuseMode(vm::InstructionMsg* instr_msg) const override { Release(*instr_msg); }
+  void Compute(vm::Instruction* instruction) const override { Release(*instruction); }
+  void ComputeInFuseMode(vm::Instruction* instruction) const override { Release(*instruction); }
 };
 
 #ifdef WITH_CUDA

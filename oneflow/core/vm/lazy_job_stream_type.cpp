@@ -48,7 +48,7 @@ bool LazyJobStreamType::QueryInstructionStatusDone(
 }
 
 void LazyJobStreamType::Compute(Instruction* instruction) const {
-  instruction->instr_msg().instruction_type().Compute(instruction);
+  instruction->instruction_type().Compute(instruction);
 }
 
 }  // namespace vm
