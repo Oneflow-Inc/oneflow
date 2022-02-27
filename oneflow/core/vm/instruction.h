@@ -51,7 +51,11 @@ class InstructionMsg final : public intrusive::Base {
   intrusive::Ref* mut_intrusive_ref() { return &intrusive_ref_; }
 
   InstructionMsg()
-      : intrusive_ref_(), stream_(), instruction_type_(), phy_instr_operand_(), instr_msg_hook_() {}
+      : intrusive_ref_(),
+        stream_(),
+        instruction_type_(),
+        phy_instr_operand_(),
+        main_instruction_hook_() {}
   intrusive::Ref intrusive_ref_;
   // fields
   Stream* stream_;
@@ -60,10 +64,10 @@ class InstructionMsg final : public intrusive::Base {
 
  public:
   // list hooks
-  intrusive::ListHook instr_msg_hook_;
+  intrusive::ListHook main_instruction_hook_;
 };
 
-using InstructionMsgList = intrusive::List<INTRUSIVE_FIELD(InstructionMsg, instr_msg_hook_)>;
+using InstructionMsgList = intrusive::List<INTRUSIVE_FIELD(InstructionMsg, main_instruction_hook_)>;
 
 static const int kInstructionStatusBufferBytes = 64;
 
@@ -136,7 +140,7 @@ class Instruction final : public intrusive::Base {
   Stream* mut_stream() { return instr_msg_->mut_stream(); }
   const InstructionMsg& instr_msg() const { return instr_msg_.Get(); }
   const InstructionStatusBuffer& status_buffer() const { return status_buffer_.Get(); }
-  const intrusive::ListHook& instruction_hook() const { return instruction_hook_; }
+  const intrusive::ListHook& main_instruction_hook() const { return main_instruction_hook_; }
   const intrusive::ListHook& dispatched_instruction_hook() const {
     return dispatched_instruction_hook_;
   }
@@ -176,7 +180,7 @@ class Instruction final : public intrusive::Base {
         access_list_(),
         in_edges_(),
         out_edges_(),
-        instruction_hook_(),
+        main_instruction_hook_(),
         dispatched_instruction_hook_(),
         lively_instruction_hook_(),
         worker_pending_instruction_hook_(),
@@ -191,14 +195,16 @@ class Instruction final : public intrusive::Base {
   OutEdgeList out_edges_;
 
  public:
-  // pending or waiting list hooks
-  intrusive::ListHook instruction_hook_;
+  // used for instructions building, pending to scheduler, constructing DAG, pending to callback
+  // thread and so on.
+  intrusive::ListHook main_instruction_hook_;
   // dispatched to Stream
   intrusive::ListHook dispatched_instruction_hook_;
   // valid during vm processing
   intrusive::ListHook lively_instruction_hook_;
   // pending to ThreadCtx
   intrusive::ListHook worker_pending_instruction_hook_;
+  // for barr
   intrusive::ListHook barrier_instruction_hook_;
 };
 

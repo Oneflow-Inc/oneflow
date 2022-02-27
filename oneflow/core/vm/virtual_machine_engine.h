@@ -37,13 +37,13 @@ class VirtualMachineEngine final : public intrusive::Base {
   // types
   using ActiveStreamList = intrusive::List<INTRUSIVE_FIELD(Stream, active_stream_hook_)>;
   using ThreadCtxList = intrusive::List<INTRUSIVE_FIELD(ThreadCtx, thread_ctx_hook_)>;
-  using InstructionList = intrusive::List<INTRUSIVE_FIELD(Instruction, instruction_hook_)>;
+  using InstructionList = intrusive::List<INTRUSIVE_FIELD(Instruction, main_instruction_hook_)>;
   using LivelyInstructionList =
       intrusive::List<INTRUSIVE_FIELD(Instruction, lively_instruction_hook_)>;
   using BarrierInstructionList =
       intrusive::List<INTRUSIVE_FIELD(Instruction, barrier_instruction_hook_)>;
-  using InstructionMsgMutexedList =
-      intrusive::MutexedList<INTRUSIVE_FIELD(InstructionMsg, InstructionMsg::instr_msg_hook_)>;
+  using InstructionMsgMutexedList = intrusive::MutexedList<INTRUSIVE_FIELD(
+      InstructionMsg, InstructionMsg::main_instruction_hook_)>;
 
   // Getters
   std::size_t flying_instruction_cnt() const {
