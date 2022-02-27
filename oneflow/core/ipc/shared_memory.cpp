@@ -96,13 +96,13 @@ Maybe<void*> ShmSetUp(const std::string& shm_name, size_t* shm_size) {
 Maybe<std::set<std::string>> GetContentsOfShmDirectory() {
 #ifdef __linux__
   std::set<std::string> contents;
-  if (DIR* dir = opendir("/dev/shm/")) {
-    while (dirent* f = readdir(dir)) {
-      if (f->d_name[0] == '.') continue;
-      contents.insert(f->d_name);
-    }
-    closedir(dir);
+  DIR* dir = opendir("/dev/shm/");
+  CHECK_NOTNULL_OR_RETURN(dir) << "/dev/shm directory does not exist, there may be a problem with your machine!";
+  while (dirent* f = readdir(dir)) {
+    if (f->d_name[0] == '.') continue;
+    contents.insert(f->d_name);
   }
+  closedir(dir);
   return contents;
 #else
   TODO_THEN_RETURN();
@@ -125,16 +125,13 @@ void SharedMemoryManager::FindAndDeleteOutdatedShmNames() {
   const int delete_invalid_names_interval =
       EnvInteger<ONEFLOW_DELETE_OUTDATED_SHM_NAMES_INTERVAL>();
   if (counter % delete_invalid_names_interval == 0) {
-    const auto& opt_existing_shm_names = CHECK_JUST(GetContentsOfShmDirectory());
-    // TODO: update optional::map or optional::bind and use them instead
-    if (opt_existing_shm_names->size()) {
-      // std::remove_if doesn't support std::map
-      for (auto it = shm_names_.begin(); it != shm_names_.end(); /* do nothing */) {
-        if (opt_existing_shm_names->find(*it) == opt_existing_shm_names->end()) {
-          it = shm_names_.erase(it);
-        } else {
-          it++;
-        }
+    const auto& maybe_existing_shm_names = CHECK_JUST(GetContentsOfShmDirectory());
+    // std::remove_if doesn't support std::map
+    for (auto it = shm_names_.begin(); it != shm_names_.end(); /* do nothing */) {
+      if (maybe_existing_shm_names->find(*it) == maybe_existing_shm_names->end()) {
+        it = shm_names_.erase(it);
+      } else {
+        it++;
       }
     }
   }
