@@ -35,20 +35,19 @@ void CudaStreamType::InitDeviceCtx(std::unique_ptr<DeviceCtx>* device_ctx, Strea
 void CudaStreamType::InitInstructionStatus(const Stream& stream,
                                            InstructionStatusBuffer* status_buffer) const {
   static_assert(sizeof(CudaOptionalEventRecordStatusQuerier) < kInstructionStatusBufferBytes, "");
-  auto* data_ptr = status_buffer->mut_buffer()->mut_data();
+  auto* data_ptr = status_buffer->mut_buffer();
   CudaOptionalEventRecordStatusQuerier::PlacementNew(data_ptr, nullptr);
 }
 
 void CudaStreamType::DeleteInstructionStatus(const Stream& stream,
                                              InstructionStatusBuffer* status_buffer) const {
-  auto* ptr =
-      CudaOptionalEventRecordStatusQuerier::MutCast(status_buffer->mut_buffer()->mut_data());
+  auto* ptr = CudaOptionalEventRecordStatusQuerier::MutCast(status_buffer->mut_buffer());
   ptr->~CudaOptionalEventRecordStatusQuerier();
 }
 
 bool CudaStreamType::QueryInstructionStatusDone(
     const Stream& stream, const InstructionStatusBuffer& status_buffer) const {
-  return CudaOptionalEventRecordStatusQuerier::Cast(status_buffer.buffer().data())->done();
+  return CudaOptionalEventRecordStatusQuerier::Cast(status_buffer.buffer())->done();
 }
 
 void CudaStreamType::Compute(Instruction* instruction) const {
@@ -57,7 +56,7 @@ void CudaStreamType::Compute(Instruction* instruction) const {
   cudaSetDevice(stream->device_id());
   instruction->instruction_type().Compute(instruction);
   OF_CUDA_CHECK(cudaGetLastError());
-  char* data_ptr = instruction->mut_status_buffer()->mut_buffer()->mut_data();
+  char* data_ptr = instruction->mut_status_buffer()->mut_buffer();
   CudaOptionalEventRecordStatusQuerier::MutCast(data_ptr)->SetLaunched(stream->device_ctx().get());
   OF_PROFILER_RANGE_POP();
 }

@@ -28,24 +28,24 @@ namespace vm {
 void ControlStreamType::Compute(Instruction* instruction) const {
   instruction->instruction_type().Compute(instruction);
   auto* status_buffer = instruction->mut_status_buffer();
-  NaiveInstrStatusQuerier::MutCast(status_buffer->mut_buffer()->mut_data())->set_done();
+  NaiveInstrStatusQuerier::MutCast(status_buffer->mut_buffer())->set_done();
 }
 
 void ControlStreamType::InitInstructionStatus(const Stream& stream,
                                               InstructionStatusBuffer* status_buffer) const {
   static_assert(sizeof(NaiveInstrStatusQuerier) < kInstructionStatusBufferBytes, "");
-  NaiveInstrStatusQuerier::PlacementNew(status_buffer->mut_buffer()->mut_data());
+  NaiveInstrStatusQuerier::PlacementNew(status_buffer->mut_buffer());
 }
 
 void ControlStreamType::DeleteInstructionStatus(const Stream& stream,
                                                 InstructionStatusBuffer* status_buffer) const {
-  auto* ptr = NaiveInstrStatusQuerier::MutCast(status_buffer->mut_buffer()->mut_data());
+  auto* ptr = NaiveInstrStatusQuerier::MutCast(status_buffer->mut_buffer());
   ptr->~NaiveInstrStatusQuerier();
 }
 
 bool ControlStreamType::QueryInstructionStatusDone(
     const Stream& stream, const InstructionStatusBuffer& status_buffer) const {
-  return NaiveInstrStatusQuerier::Cast(status_buffer.buffer().data())->done();
+  return NaiveInstrStatusQuerier::Cast(status_buffer.buffer())->done();
 }
 
 }  // namespace vm

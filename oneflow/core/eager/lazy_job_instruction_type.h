@@ -119,7 +119,7 @@ class LaunchLazyJobInstructionType final : public InstructionType {  // NOLINT
       auto* device_ctx = GetLazyJobDeviceCtx(instruction);
       device_ctx->DequeueNNGraph();
       auto* status_buffer = instruction->mut_status_buffer();
-      NaiveInstrStatusQuerier::MutCast(status_buffer->mut_buffer()->mut_data())->set_done();
+      NaiveInstrStatusQuerier::MutCast(status_buffer->mut_buffer())->set_done();
     };
     return std::make_shared<LazyJobInstance>(nn_graph->job_name(), FinishCb);
   }

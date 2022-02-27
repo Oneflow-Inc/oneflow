@@ -19,7 +19,6 @@ limitations under the License.
 #include <cstring>
 #include <mutex>
 #include "oneflow/core/common/symbol.h"
-#include "oneflow/core/intrusive/flat_msg.h"
 #include "oneflow/core/intrusive/intrusive.h"
 #include "oneflow/core/intrusive/object_pool.h"
 #include "oneflow/core/vm/vm_object.h"
@@ -34,11 +33,17 @@ namespace vm {
 
 static const int kInstructionStatusBufferBytes = 64;
 
-// clang-format off
-FLAT_MSG_BEGIN(InstructionStatusBuffer);
-  FLAT_MSG_DEFINE_REPEATED(char, buffer, kInstructionStatusBufferBytes);
-FLAT_MSG_END(InstructionStatusBuffer);
-// clang-format on
+class InstructionStatusBuffer final {
+ public:
+  InstructionStatusBuffer() = default;
+  ~InstructionStatusBuffer() = default;
+
+  const char* buffer() const { return &buffer_[0]; }
+  char* mut_buffer() { return &buffer_[0]; }
+
+ private:
+  char buffer_[kInstructionStatusBufferBytes];
+};
 
 struct Instruction;
 class InstructionEdge final
@@ -108,7 +113,7 @@ class Instruction final : public intrusive::Base {
   const std::shared_ptr<PhyInstrOperand>& phy_instr_operand() const { return phy_instr_operand_; }
   std::string DebugName() const;
 
-  const InstructionStatusBuffer& status_buffer() const { return status_buffer_.Get(); }
+  const InstructionStatusBuffer& status_buffer() const { return status_buffer_; }
   const intrusive::ListHook& main_instruction_hook() const { return main_instruction_hook_; }
   const intrusive::ListHook& dispatched_instruction_hook() const {
     return dispatched_instruction_hook_;
@@ -123,7 +128,7 @@ class Instruction final : public intrusive::Base {
   const DependenceAccessList& access_list() const { return access_list_; }
 
   // Setters
-  InstructionStatusBuffer* mut_status_buffer() { return status_buffer_.Mutable(); }
+  InstructionStatusBuffer* mut_status_buffer() { return &status_buffer_; }
   InEdgeList* mut_in_edges() { return &in_edges_; }
   OutEdgeList* mut_out_edges() { return &out_edges_; }
   DependenceAccessList* mut_access_list() { return &access_list_; }
@@ -159,7 +164,7 @@ class Instruction final : public intrusive::Base {
   Stream* stream_;
   const InstructionType* instruction_type_;
   std::shared_ptr<PhyInstrOperand> phy_instr_operand_;
-  FlatMsg<InstructionStatusBuffer> status_buffer_;
+  InstructionStatusBuffer status_buffer_;
   // lists
   DependenceAccessList access_list_;
   InEdgeList in_edges_;

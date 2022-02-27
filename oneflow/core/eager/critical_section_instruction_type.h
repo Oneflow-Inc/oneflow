@@ -73,7 +73,7 @@ class CriticalSectionBeginInstructionType final : public InstructionType {
       buffer_mgr->Get(wait_buffer_name)->Push(critical_section_instance);
     }
     {
-      auto* status_buffer_data = instruction->mut_status_buffer()->mut_buffer()->mut_data();
+      auto* status_buffer_data = instruction->mut_status_buffer()->mut_buffer();
       auto* status_querier = CriticalSectionStatusQuerier::MutCast(status_buffer_data);
       status_querier->SetLaunched(std::make_shared<NaiveEventRecord>());
     }
@@ -125,7 +125,7 @@ class CriticalSectionEndInstructionType final : public InstructionType {
     const auto* ptr = instruction->phy_instr_operand().get();
     const auto* phy_instr_operand = dynamic_cast<const CriticalSectionEndPhyInstrOperand*>(ptr);
     CHECK_NOTNULL(phy_instr_operand);
-    auto* status_buffer_data = instruction->mut_status_buffer()->mut_buffer()->mut_data();
+    auto* status_buffer_data = instruction->mut_status_buffer()->mut_buffer();
     auto* status_querier = CriticalSectionStatusQuerier::MutCast(status_buffer_data);
     status_querier->SetLaunched(phy_instr_operand->event_record());
   }

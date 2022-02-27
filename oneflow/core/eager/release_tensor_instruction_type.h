@@ -60,7 +60,7 @@ class CudaReleaseTensorInstructionType : public ReleaseTensorInstructionType {
     auto* status_buffer = instruction->mut_status_buffer();
     auto* stream = instruction->mut_stream();
     instruction->stream_type().InitInstructionStatus(*stream, status_buffer);
-    auto* data_ptr = status_buffer->mut_buffer()->mut_data();
+    auto* data_ptr = status_buffer->mut_buffer();
     CudaOptionalEventRecordStatusQuerier::MutCast(data_ptr)->reset_cuda_event(nullptr);
   }
 };

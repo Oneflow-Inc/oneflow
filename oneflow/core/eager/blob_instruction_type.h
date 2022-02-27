@@ -71,7 +71,7 @@ class CudaRecordEventInstructionType final : public vm::InstructionType {
     instruction->stream_type().InitInstructionStatus(*stream, status_buffer);
     auto* event_provider = dynamic_cast<QueryCudaEventProvider*>(stream->device_ctx().get());
     const auto& cuda_event = CHECK_NOTNULL(event_provider)->GetCudaEvent();
-    auto* data_ptr = status_buffer->mut_buffer()->mut_data();
+    auto* data_ptr = status_buffer->mut_buffer();
     CudaOptionalEventRecordStatusQuerier::MutCast(data_ptr)->reset_cuda_event(cuda_event);
   }
   std::string DebugName(const vm::Instruction& instruction) const override { return "RecordEvent"; }

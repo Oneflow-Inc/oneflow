@@ -33,25 +33,25 @@ void CpuStreamType::InitDeviceCtx(std::unique_ptr<DeviceCtx>* device_ctx, Stream
 void CpuStreamType::InitInstructionStatus(const Stream& stream,
                                           InstructionStatusBuffer* status_buffer) const {
   static_assert(sizeof(NaiveInstrStatusQuerier) < kInstructionStatusBufferBytes, "");
-  NaiveInstrStatusQuerier::PlacementNew(status_buffer->mut_buffer()->mut_data());
+  NaiveInstrStatusQuerier::PlacementNew(status_buffer->mut_buffer());
 }
 
 void CpuStreamType::DeleteInstructionStatus(const Stream& stream,
                                             InstructionStatusBuffer* status_buffer) const {
-  auto* ptr = NaiveInstrStatusQuerier::MutCast(status_buffer->mut_buffer()->mut_data());
+  auto* ptr = NaiveInstrStatusQuerier::MutCast(status_buffer->mut_buffer());
   ptr->~NaiveInstrStatusQuerier();
 }
 
 bool CpuStreamType::QueryInstructionStatusDone(const Stream& stream,
                                                const InstructionStatusBuffer& status_buffer) const {
-  return NaiveInstrStatusQuerier::Cast(status_buffer.buffer().data())->done();
+  return NaiveInstrStatusQuerier::Cast(status_buffer.buffer())->done();
 }
 
 void CpuStreamType::Compute(Instruction* instruction) const {
   OF_PROFILER_RANGE_PUSH("S:" + instruction->DebugName());
   instruction->instruction_type().Compute(instruction);
   auto* status_buffer = instruction->mut_status_buffer();
-  NaiveInstrStatusQuerier::MutCast(status_buffer->mut_buffer()->mut_data())->set_done();
+  NaiveInstrStatusQuerier::MutCast(status_buffer->mut_buffer())->set_done();
   OF_PROFILER_RANGE_POP();
 }
 
