@@ -18,7 +18,7 @@ then
         done
     done
 else
-    parallel_spec="-n auto"
+    parallel_spec="-n 10"
 fi
 
 unset HTTP_PROXY
