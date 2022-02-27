@@ -34,7 +34,7 @@ class ScalarBinaryOp : public TrtOpKernel {
       value = ctx->Attr<int64_t>("int_operand");
     } else if (ctx->Attr<bool>("has_float_operand")) {
       value = ctx->Attr<double>("float_operand");
-    }    
+    }
     DataType data_type = ctx->SoleInputType();
     Shape shape(DimVector(in_shape.NumAxes(), 1));
     std::string name = ctx->op_name() + "_scalar";
@@ -64,7 +64,6 @@ REGISTER_TRT_OP_KERNEL(ScalarPow, ScalarBinaryOp<nvinfer1::ElementWiseOperation:
     .EnableTrainPhase()
     .Finalize();
 
-
 class ScalarPowGradOp : public TrtOpKernel {
  public:
   void Compile(TrtOpContext* ctx) override {
@@ -93,11 +92,14 @@ class ScalarPowGradOp : public TrtOpKernel {
       scalar_sub_1 = constant_layer->getOutput(0);
     }
     // x^(scalar - 1)
-    auto* pow_layer = ctx->builder()->addElementWise(*(ctx->Input("x_0")), *scalar_sub_1, nvinfer1::ElementWiseOperation::kPOW);
+    auto* pow_layer = ctx->builder()->addElementWise(*(ctx->Input("x_0")), *scalar_sub_1,
+                                                     nvinfer1::ElementWiseOperation::kPOW);
     // scalar * x^(scalar - 1)
-    auto* mul_layer = ctx->builder()->addElementWise(*(pow_layer->getOutput(0)), *scalar, nvinfer1::ElementWiseOperation::kPROD);
+    auto* mul_layer = ctx->builder()->addElementWise(*(pow_layer->getOutput(0)), *scalar,
+                                                     nvinfer1::ElementWiseOperation::kPROD);
     // dy * scalar * x^(scalar - 1)
-    auto* layer = ctx->builder()->addElementWise(*(mul_layer->getOutput(0)), *(ctx->Input("dy_0")), nvinfer1::ElementWiseOperation::kPROD);
+    auto* layer = ctx->builder()->addElementWise(*(mul_layer->getOutput(0)), *(ctx->Input("dy_0")),
+                                                 nvinfer1::ElementWiseOperation::kPROD);
     ctx->SetSoleOutput(layer->getOutput(0));
   }
 };

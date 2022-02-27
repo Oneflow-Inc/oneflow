@@ -40,7 +40,8 @@ class RsqrtOp : public TrtOpKernel {
   void Compile(TrtOpContext* ctx) override {
     nvinfer1::ITensor* x = ctx->SoleInput();
     auto* sqrt_layer = ctx->builder()->addUnary(*x, nvinfer1::UnaryOperation::kSQRT);
-    auto* layer = ctx->builder()->addUnary(*(sqrt_layer->getOutput(0)), nvinfer1::UnaryOperation::kRECIP);
+    auto* layer =
+        ctx->builder()->addUnary(*(sqrt_layer->getOutput(0)), nvinfer1::UnaryOperation::kRECIP);
     ctx->SetSoleOutput(layer->getOutput(0));
   }
 };
@@ -63,10 +64,13 @@ class SqrtGradOp : public TrtOpKernel {
     std::string name = ctx->op_name() + "_2";
     nvinfer1::Weights constant = helpers::Constant(ctx, 2, shape, data_type, name);
     auto* constant_layer = ctx->builder()->addConstant(ShapeToXrtDims(shape), constant);
-    auto* mul_layer = ctx->builder()->addElementWise(*(sqrt_layer->getOutput(0)), *(constant_layer->getOutput(0)), nvinfer1::ElementWiseOperation::kPROD);
+    auto* mul_layer =
+        ctx->builder()->addElementWise(*(sqrt_layer->getOutput(0)), *(constant_layer->getOutput(0)),
+                                       nvinfer1::ElementWiseOperation::kPROD);
 
     // 1 / (2 * x^0.5)
-    auto* layer = ctx->builder()->addUnary(*(mul_layer->getOutput(0)), nvinfer1::UnaryOperation::kRECIP);
+    auto* layer =
+        ctx->builder()->addUnary(*(mul_layer->getOutput(0)), nvinfer1::UnaryOperation::kRECIP);
     ctx->SetSoleOutput(layer->getOutput(0));
   }
 };

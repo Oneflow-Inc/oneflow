@@ -54,7 +54,6 @@ REGISTER_TRT_OP_KERNEL(BcastDiv, BcastBinaryOp<nvinfer1::ElementWiseOperation::k
     .EnableTrainPhase()
     .Finalize();
 
-
 }  // namespace tensorrt
 }  // namespace xrt
 }  // namespace oneflow

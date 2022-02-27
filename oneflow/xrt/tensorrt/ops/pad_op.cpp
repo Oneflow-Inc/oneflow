@@ -38,17 +38,17 @@ class PaddingOp : public TrtOpKernel {
     const auto& padding_after = ctx->Attr<std::vector<int64_t>>("padding_after");
     CHECK_EQ(padding_before.size(), padding_after.size());
     CHECK_EQ(padding_before.size(), 4);
-    if (padding_before[0] != 0 || padding_before[1] != 0 || padding_after[0] != 0 || padding_after[1] != 0) {
+    if (padding_before[0] != 0 || padding_before[1] != 0 || padding_after[0] != 0
+        || padding_after[1] != 0) {
       UNIMPLEMENTED() << "TensorRT does not support padding batch and channel dimension";
     }
-    
+
     nvinfer1::ITensor* x = ctx->SoleInput();
     nvinfer1::DimsHW prePadding{static_cast<int32_t>(padding_before[2]),
                                 static_cast<int32_t>(padding_before[3])};
     nvinfer1::DimsHW postPadding{static_cast<int32_t>(padding_after[2]),
                                  static_cast<int32_t>(padding_after[3])};
-    auto* layer =
-        ctx->builder()->addPaddingNd(*x, prePadding, postPadding);
+    auto* layer = ctx->builder()->addPaddingNd(*x, prePadding, postPadding);
     layer->setName(ctx->op_name().c_str());
     ctx->SetSoleOutput(layer->getOutput(0));
   }

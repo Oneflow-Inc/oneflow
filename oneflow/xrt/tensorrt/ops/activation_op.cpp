@@ -71,10 +71,9 @@ class PReluOp : public TrtOpKernel {
     if (alpha_shape.NumAxes() != x_shape.NumAxes()) {
       CHECK_EQ(alpha_shape.NumAxes(), 1) << "alpha rank should be 1";
       int64_t channels = 1;
-      if (x_shape.NumAxes() > 1) {
-        channels = x_shape.At(1);
-      }
-      CHECK_EQ(alpha_shape.elem_cnt(), channels) << "alpha element count should be equal to channels";
+      if (x_shape.NumAxes() > 1) { channels = x_shape.At(1); }
+      CHECK_EQ(alpha_shape.elem_cnt(), channels)
+          << "alpha element count should be equal to channels";
       DimVector shape(x_shape.NumAxes(), 1);
       shape[1] = channels;
       alpha = helpers::Reshape(ctx, alpha, Shape(shape));
@@ -86,7 +85,6 @@ class PReluOp : public TrtOpKernel {
 };
 
 REGISTER_TRT_OP_KERNEL(PRelu, PReluOp).EnableTrainPhase().Finalize();
-
 
 }  // namespace tensorrt
 }  // namespace xrt

@@ -64,12 +64,10 @@ class NormalizationOp : public TrtOpKernel {
 
     nvinfer1::ScaleMode mode = nvinfer1::ScaleMode::kCHANNEL;
     nvinfer1::IScaleLayer* layer =  // NOLINT
-      ctx->builder()->addScale(*input, mode, beta, gamma, power);
+        ctx->builder()->addScale(*input, mode, beta, gamma, power);
     layer->setName(ctx->op_name().c_str());
     nvinfer1::ITensor* out = layer->getOutput(0);
-    if (in_shape.NumAxes() == 2) {
-      out = helpers::Reshape(ctx, out, in_shape);
-    }
+    if (in_shape.NumAxes() == 2) { out = helpers::Reshape(ctx, out, in_shape); }
     if (ctx->HasInput("_add_to_output_0")) {
       auto* add_layer = ctx->builder()->addElementWise(  // NOLINT
           *out, *ctx->Input("_add_to_output_0"), nvinfer1::ElementWiseOperation::kSUM);
@@ -80,7 +78,8 @@ class NormalizationOp : public TrtOpKernel {
   }
 };
 
-REGISTER_TRT_OP_KERNEL(Normalization, NormalizationOp).Finalize();
+// REGISTER_TRT_OP_KERNEL(Normalization, NormalizationOp).Finalize();
+REGISTER_TRT_OP_KERNEL(Normalization, NormalizationOp).EnableTrainPhase().Finalize();
 
 }  // namespace tensorrt
 }  // namespace xrt

@@ -143,14 +143,12 @@ bool TrtExecutable::Run(const std::vector<Parameter>& inputs,
   // TODO(hjchen2): Check batch size is same for all binding parameters.
   int batch_size = 1;
   for (int i = 0; i < num_bindings; ++i) {
-    if (binding_params[i]->shape().NumAxes() > 0) {
-      batch_size = binding_params[i]->shape().At(0);
-    }
+    if (binding_params[i]->shape().NumAxes() > 0) { batch_size = binding_params[i]->shape().At(0); }
   }
   if (batch_size > engine_->getMaxBatchSize()) {
     LOG(INFO) << "Rebuild engine since the maximum batch size "  // NOLINT
-                 << engine_->getMaxBatchSize()                      // NOLINT
-                 << " is less than the input batch size " << batch_size;
+              << engine_->getMaxBatchSize()                      // NOLINT
+              << " is less than the input batch size " << batch_size;
     engine_.reset(CreateExecutableEngine(run_options, batch_size,  // NOLINT
                                          calibrator_.get()));
     CHECK(engine_) << "Failed to create engine with batch size " << batch_size;
