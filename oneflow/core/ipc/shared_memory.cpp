@@ -97,7 +97,8 @@ Maybe<std::set<std::string>> GetContentsOfShmDirectory() {
 #ifdef __linux__
   std::set<std::string> contents;
   DIR* dir = opendir("/dev/shm/");
-  CHECK_NOTNULL_OR_RETURN(dir) << "/dev/shm directory does not exist, there may be a problem with your machine!";
+  CHECK_NOTNULL_OR_RETURN(dir)
+      << "/dev/shm directory does not exist, there may be a problem with your machine!";
   while (dirent* f = readdir(dir)) {
     if (f->d_name[0] == '.') continue;
     contents.insert(f->d_name);
@@ -110,14 +111,12 @@ Maybe<std::set<std::string>> GetContentsOfShmDirectory() {
 }
 }  // namespace
 
-
 SharedMemoryManager& SharedMemoryManager::get() {
   // Must be a static singleton variable instead of Global<SharedMemoryManager>.
   // Subprocesses don't have chance to call `Global<SharedMemoryManager>::Delete()`
   static SharedMemoryManager shared_memory_manager;
   return shared_memory_manager;
 }
-
 
 void SharedMemoryManager::FindAndDeleteOutdatedShmNames() {
   std::unique_lock<std::recursive_mutex> lock(mutex_);

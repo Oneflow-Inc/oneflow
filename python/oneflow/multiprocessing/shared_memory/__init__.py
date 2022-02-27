@@ -15,9 +15,7 @@ limitations under the License.
 """
 import oneflow as flow
 
-__all__ = [
-    "SharedMemory"
-]
+__all__ = ["SharedMemory"]
 
 
 class SharedMemory:
@@ -72,4 +70,3 @@ class SharedMemory:
         called once (and only once) across all processes which have access
         to the shared memory block."""
         return self.shm_.unlink()
-
