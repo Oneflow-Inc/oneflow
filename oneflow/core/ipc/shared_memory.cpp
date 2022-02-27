@@ -18,6 +18,7 @@ limitations under the License.
 #include "oneflow/core/common/pcheck.h"
 #include "oneflow/core/common/str_util.h"
 #include "oneflow/core/common/optional.h"
+#include "oneflow/core/common/env_var.h"
 #ifdef __linux__
 #include <sys/types.h>
 #include <sys/mman.h>
@@ -92,17 +93,20 @@ Maybe<void*> ShmSetUp(const std::string& shm_name, size_t* shm_size) {
 #endif
 }
 
-Optional<std::set<std::string>> GetContentsOfShmDirectory() {
-  if (auto dir = opendir("/dev/shm/")) {
-    std::set<std::string> contents;
-    while (auto f = readdir(dir)) {
+std::set<std::string> GetContentsOfShmDirectory() {
+#ifdef __linux__
+  std::set<std::string> contents;
+  if (DIR* dir = opendir("/dev/shm/")) {
+    while (dirent* f = readdir(dir)) {
       if (f->d_name[0] == '.') continue;
       contents.insert(f->d_name);
     }
     closedir(dir);
-    return contents;
   }
-  return NullOpt;
+  return contents;
+#else
+  TODO_THEN_RETURN();
+#endif
 }
 }  // namespace
 
@@ -116,18 +120,17 @@ SharedMemoryManager& SharedMemoryManager::get() {
 
 
 void SharedMemoryManager::FindAndDeleteOutdatedShmNames() {
+  std::unique_lock<std::recursive_mutex> lock(mutex_);
   static size_t counter = 0;
   const int delete_invalid_names_interval =
-      ParseIntegerFromEnv("OF_DELETE_INVALID_NAMES_INTERVAL", 1000);
+      EnvInteger<ONEFLOW_DELETE_OUTDATED_SHM_NAMES_INTERVAL>();
   if (counter % delete_invalid_names_interval == 0) {
     const auto& opt_existing_shm_names = GetContentsOfShmDirectory();
     // TODO: update optional::map or optional::bind and use them instead
-    if (opt_existing_shm_names.has_value()) {
-      const auto& existing_shm_names = CHECK_JUST(opt_existing_shm_names);
+    if (opt_existing_shm_names.size()) {
       // std::remove_if doesn't support std::map
-      std::unique_lock<std::mutex> lock(mutex_);
       for (auto it = shm_names_.begin(); it != shm_names_.end(); /* do nothing */) {
-        if (existing_shm_names->find(*it) == existing_shm_names->end()) {
+        if (opt_existing_shm_names.find(*it) == opt_existing_shm_names.end()) {
           it = shm_names_.erase(it);
         } else {
           it++;
@@ -140,12 +143,12 @@ void SharedMemoryManager::FindAndDeleteOutdatedShmNames() {
 
 void SharedMemoryManager::AddShmName(const std::string& shm_name) {
   FindAndDeleteOutdatedShmNames();
-  std::unique_lock<std::mutex> lock(mutex_);
+  std::unique_lock<std::recursive_mutex> lock(mutex_);
   shm_names_.insert(shm_name);
 }
 
 Maybe<void> SharedMemoryManager::DeleteShmName(const std::string& shm_name) {
-  std::unique_lock<std::mutex> lock(mutex_);
+  std::unique_lock<std::recursive_mutex> lock(mutex_);
   auto it = std::find(shm_names_.begin(), shm_names_.end(), shm_name);
   if (it != shm_names_.end()) {
     shm_names_.erase(it);
@@ -157,7 +160,7 @@ Maybe<void> SharedMemoryManager::DeleteShmName(const std::string& shm_name) {
 
 void SharedMemoryManager::UnlinkAllShms() {
   // Here we deliberately do not handle unlink errors.
-  std::unique_lock<std::mutex> lock(mutex_);
+  std::unique_lock<std::recursive_mutex> lock(mutex_);
   for (const auto& shm : shm_names_) { shm_unlink(shm.c_str()); }
   shm_names_.clear();
 }
