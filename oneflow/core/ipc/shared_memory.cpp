@@ -93,7 +93,7 @@ Maybe<void*> ShmSetUp(const std::string& shm_name, size_t* shm_size) {
 #endif
 }
 
-std::set<std::string> GetContentsOfShmDirectory() {
+Maybe<std::set<std::string>> GetContentsOfShmDirectory() {
 #ifdef __linux__
   std::set<std::string> contents;
   if (DIR* dir = opendir("/dev/shm/")) {
@@ -125,12 +125,12 @@ void SharedMemoryManager::FindAndDeleteOutdatedShmNames() {
   const int delete_invalid_names_interval =
       EnvInteger<ONEFLOW_DELETE_OUTDATED_SHM_NAMES_INTERVAL>();
   if (counter % delete_invalid_names_interval == 0) {
-    const auto& opt_existing_shm_names = GetContentsOfShmDirectory();
+    const auto& opt_existing_shm_names = CHECK_JUST(GetContentsOfShmDirectory());
     // TODO: update optional::map or optional::bind and use them instead
-    if (opt_existing_shm_names.size()) {
+    if (opt_existing_shm_names->size()) {
       // std::remove_if doesn't support std::map
       for (auto it = shm_names_.begin(); it != shm_names_.end(); /* do nothing */) {
-        if (opt_existing_shm_names.find(*it) == opt_existing_shm_names.end()) {
+        if (opt_existing_shm_names->find(*it) == opt_existing_shm_names->end()) {
           it = shm_names_.erase(it);
         } else {
           it++;
