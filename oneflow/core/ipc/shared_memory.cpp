@@ -125,10 +125,10 @@ void SharedMemoryManager::FindAndDeleteOutdatedShmNames() {
   const int delete_invalid_names_interval =
       EnvInteger<ONEFLOW_DELETE_OUTDATED_SHM_NAMES_INTERVAL>();
   if (counter % delete_invalid_names_interval == 0) {
-    const auto& maybe_existing_shm_names = CHECK_JUST(GetContentsOfShmDirectory());
+    const auto& existing_shm_names = CHECK_JUST(GetContentsOfShmDirectory());
     // std::remove_if doesn't support std::map
     for (auto it = shm_names_.begin(); it != shm_names_.end(); /* do nothing */) {
-      if (maybe_existing_shm_names->find(*it) == maybe_existing_shm_names->end()) {
+      if (existing_shm_names->find(*it) == existing_shm_names->end()) {
         it = shm_names_.erase(it);
       } else {
         it++;
