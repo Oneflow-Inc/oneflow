@@ -23,7 +23,7 @@ namespace oneflow {
 
 #define PCHECK_OR_RETURN(expr)                                             \
   for (int __err = (expr), *__cond = nullptr; __cond == nullptr; ++__cond) \
-  CHECK_EQ_OR_RETURN(__err, 0) << strerror(__err) << " "
+  CHECK_EQ_OR_RETURN(__err, 0) << strerror(errno) << " "
 
 }  // namespace oneflow
 
