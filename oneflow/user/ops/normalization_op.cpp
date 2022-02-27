@@ -620,6 +620,7 @@ Maybe<void> BwGetSbpFn(user_op::SbpContext* ctx) {
 #endif
 
 bool SupportBnEvalBackward(user_op::BackwardOpConfContext* ctx) {
+  return false;
   if (!ParseBooleanFromEnv("ONEFLOW_ENABLE_BN_EVAL_BACKWARD", true)) { return false; }
   if (!ctx->FwOp().user_op_conf().has_input("moving_variance", 0)) { return false; }
   if (!ctx->FwOp().user_op_conf().has_input("gamma", 0)) { return false; }

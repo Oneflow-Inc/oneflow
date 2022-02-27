@@ -83,6 +83,7 @@ static std::unordered_map<std::string, std::string> user_op_type_name2string_map
     {"broadcast_mul", "BcastMul"},
     {"broadcast_div", "BcastDiv"},
     {"broadcast_min", "BcastMin"},
+    {"broadcast_like", "BcastLike"},
     {"cast", "Cast"},
     {"concat", "Concat"},
     {"conv2d", "Conv2D"},
@@ -116,6 +117,10 @@ static std::unordered_map<std::string, std::string> user_op_type_name2string_map
     {"sqrt_grad", "SqrtGrad"},
     {"square_sum", "SquareSum"},
     {"pad", "Padding"},
+    {"pad_grad", "PaddingGrad"},
+    {"prelu_grad", "PReluGrad"},
+    {"conv_data_grad", "ConvDataGrad"},
+    {"broadcast_div_grad", "BcastDivGrad"},
 };
 
 std::string ExtractOpTypeAsString(const OperatorConf& conf) {
