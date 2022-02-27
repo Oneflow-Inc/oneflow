@@ -15,27 +15,30 @@ limitations under the License.
 """
 
 import unittest
-
+import numpy as np
 import oneflow as flow
-from oneflow.test_utils.automated_test_util import *
 import oneflow.unittest
+from oneflow.test_utils.automated_test_util import *
 
 
-@autotest(n=1, check_graph=False)
-def _test_log1p_impl(test_case, ndim, placement, sbp):
-    dims = [random(1, 3) * 8 for i in range(ndim)]
-    x = random_tensor(ndim, *dims).to_global(placement=placement, sbp=sbp)
-    y = torch.log1p(x)
+@autotest(n=1, auto_backward=False, check_graph=False)
+def _test_interpolate_impl(test_case, ndim, placement, sbp):
+    dims = [random(1, 4) * 8 for i in range(ndim)]
+    x = random_tensor(ndim, *dims, requires_grad=False)
+    x = x.to_global(placement=placement, sbp=sbp)
+    y = torch.nn.functional.interpolate(
+        x, scale_factor=2.0, mode=oneof("linear", "bicubic", "area")
+    )
     return y
 
 
-class TestLog1pModule(flow.unittest.TestCase):
+class TestInterpolateConsistent(flow.unittest.TestCase):
     @globaltest
-    def test_log1p(test_case):
+    def test_interpolate(test_case):
+        ndim = random(1, 5).to(int).value()
         for placement in all_placement():
-            ndim = random(0, 4).to(int).value()
             for sbp in all_sbp(placement, max_dim=ndim):
-                _test_log1p_impl(test_case, ndim, placement, sbp)
+                _test_interpolate_impl(test_case, ndim, placement, sbp)
 
 
 if __name__ == "__main__":
