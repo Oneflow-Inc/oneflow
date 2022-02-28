@@ -34,7 +34,7 @@ class TestReluGraph(oneflow.unittest.TestCase):
             def __init__(self):
                 super().__init__()
                 self.cc_relu = MyRelu
-                self.config.enable_mlir_round_trip(True) # Use MLIR mode.
+                self.config.enable_mlir_round_trip(False) # Use MLIR mode.
 
             def build(self, x):
                 return self.cc_relu(x)

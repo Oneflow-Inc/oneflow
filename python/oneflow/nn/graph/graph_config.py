@@ -85,7 +85,7 @@ class GraphConfig(object):
             mode (bool, optional): The default vaule is True.
         """
         assert type(mode) is bool
-        self.proto.mlir_enable_round_trip(mode)
+        self.proto.set_mlir_enable_round_trip(mode)
 
 
     def allow_fuse_model_update_ops(self, mode: bool = True):
