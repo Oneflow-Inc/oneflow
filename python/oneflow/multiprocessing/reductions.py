@@ -37,7 +37,10 @@ except ImportError:
 def rebuild_shm_tensor(shm, shape, dtype, requires_grad):
     def delete_shm():
         shm.close()
-        shm.unlink()
+        try:
+            shm.unlink()
+        except:
+            pass
 
     arr = np.ndarray(shape, dtype=dtype, buffer=shm.buf)
     t = flow.from_numpy(arr)
