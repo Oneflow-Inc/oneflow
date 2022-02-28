@@ -17,6 +17,7 @@ limitations under the License.
 #include "oneflow/core/framework/rank_group_rpc_util.h"
 #include "oneflow/core/job/rank_group_scope.h"
 #include "oneflow/core/job/parallel_desc.h"
+#include "oneflow/core/common/constant.h"
 
 namespace oneflow {
 
@@ -89,8 +90,7 @@ Maybe<void> SyncSymbolParallelDesc(uint64_t symbol_id, Symbol<ParallelDesc> para
   const auto& rank_group = JUST(RankGroupScope::CurrentRankGroup());
   JUST(TransportUtil::SendToNextRankInRing(rank_group, transport_token, &ctx));
   JUST(TransportUtil::ReceiveFromPrevRankInRing(rank_group, transport_token, &ctx));
-  JUST_MSG(ctx.WaitDone(), "Maybe executing different code in different ranks, please check if "
-                           "the code is branched and operates on the global tensor.");
+  JUST_MSG(ctx.WaitDone(), kAsymmetricCodeErrorMsg);
   JUST(recv_buffer->Check(symbol_id, parallel_desc));
   return Maybe<void>::Ok();
 }
