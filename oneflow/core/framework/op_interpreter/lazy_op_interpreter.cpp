@@ -731,8 +731,8 @@ Maybe<void> LazyInterpreterApplyImplForSourceUserOpExpr(const UserOpExpr& op_exp
     CHECK_OR_RETURN(!ctx.device.has_value());
     const auto& parallel_desc_sym = JUST(ctx.parallel_desc);
     parallel_desc = parallel_desc_sym.shared_from_symbol();
-    JUST(DEBUG(OF_WARNING, &MetaInfoConsistencyCheck)(parallel_desc_sym, ctx.nd_sbp,
-                                                      Optional<Symbol<NdSbp>>()));
+    JUST(DEBUG(1, &MetaInfoConsistencyCheck)(parallel_desc_sym, ctx.nd_sbp,
+                                             Optional<Symbol<NdSbp>>()));
     is_local = false;
   } else {
     // NOTE(chengcheng): local

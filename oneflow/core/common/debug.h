@@ -21,12 +21,7 @@ limitations under the License.
 
 namespace oneflow {
 
-const int OF_INFO = 0;
-const int OF_WARNING = 1;
-const int OF_ERROR = 2;
-const int OF_FATAL = 3;
-
-struct WithEnvCheck {
+struct WithDebugCheck {
   static bool env_check(int32_t level) {
     const char* env_debug_level = std::getenv("ONEFOW_DEBUG_LEVEL");
     const char* env_debug_mode = std::getenv("ONEFLOW_DEBUG_MODE");
@@ -35,20 +30,20 @@ struct WithEnvCheck {
   }
 
   template<typename T, typename = void>
-  struct EnvCheck;
+  struct DebugCheck;
 
   template<typename T, typename... Args>
-  struct EnvCheck<T (*)(Args...)> final {
+  struct DebugCheck<T (*)(Args...)> final {
     template<int32_t debug_level, T (*func)(Args...)>
-    static Maybe<void> Call(Args... args) {
-      if (env_check(debug_level)) JUST(func(std::forward<Args>(args)...));
+    static T Call(Args... args) {
+      if (env_check(debug_level)) return func(std::forward<Args>(args)...);
       return Maybe<void>::Ok();
     }
   };
 };
 
 #define DEBUG(debug_level, fn_ptr) \
-  (&WithEnvCheck::EnvCheck<decltype(fn_ptr)>::Call<debug_level, fn_ptr>)
+  (&WithDebugCheck::DebugCheck<decltype(fn_ptr)>::Call<debug_level, fn_ptr>)
 
 }  // namespace oneflow
 
