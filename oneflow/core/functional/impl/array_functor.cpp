@@ -14,7 +14,6 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-#include <memory>
 #include "oneflow/core/autograd/autograd_mode.h"
 #include "oneflow/core/common/maybe.h"
 #include "oneflow/core/common/scalar.h"
@@ -22,7 +21,6 @@ limitations under the License.
 #include "oneflow/core/common/optional.h"
 #include "oneflow/core/common/protobuf.h"
 #include "oneflow/core/common/container_util.h"
-#include "oneflow/core/common/symbol.h"
 #include "oneflow/core/control/global_process_ctx.h"
 #include "oneflow/core/device/cuda_util.h"
 #include "oneflow/core/framework/attr_map.h"
@@ -216,9 +214,9 @@ class LocalStaticZerosFunctor {
 
   Maybe<Tensor> operator()(const Shape& shape, const Symbol<DType>& dtype,
                            const Symbol<Device>& device) const {
-    auto tensor = JUST(StaticZerosTensor::MakeTensor(std::make_shared<const Shape>(shape),
-                                                     dtype->data_type(), device));
-    return static_cast<std::shared_ptr<Tensor>>(tensor);
+    std::shared_ptr<Tensor> tensor = JUST(StaticZerosTensor::MakeTensor(
+        std::make_shared<const Shape>(shape), dtype->data_type(), device));
+    return tensor;
   }
 };
 
@@ -231,9 +229,9 @@ class ConsistentStaticZerosFunctor {
                            const Symbol<ParallelDesc>& placement,
                            const std::vector<Symbol<SbpParallel>>& sbp_tuple) const {
     auto nd_sbp = JUST(GetNdSbp(sbp_tuple));
-    auto tensor = JUST(StaticZerosTensor::MakeTensor(std::make_shared<const Shape>(shape),
-                                                     dtype->data_type(), placement, nd_sbp));
-    return static_cast<std::shared_ptr<Tensor>>(tensor);
+    std::shared_ptr<Tensor> tensor = JUST(StaticZerosTensor::MakeTensor(
+        std::make_shared<const Shape>(shape), dtype->data_type(), placement, nd_sbp));
+    return tensor;
   }
 };
 
