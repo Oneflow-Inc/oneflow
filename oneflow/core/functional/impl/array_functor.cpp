@@ -42,6 +42,7 @@ limitations under the License.
 #include "oneflow/core/job/sbp_parallel.h"
 #include "oneflow/core/job/global_for.h"
 #include "oneflow/core/job/lazy_mode.h"
+#include "oneflow/core/framework/consistency_check.h"
 
 namespace oneflow {
 namespace one {
@@ -230,10 +231,10 @@ class ConsistentStaticZerosFunctor {
                            const std::vector<Symbol<SbpParallel>>& sbp_tuple) const {
     JUST(CheckDeviceIdsIsValid(placement));
     CHECK_EQ_OR_RETURN(sbp_tuple.size(), placement->hierarchy()->NumAxes())
-        << "len(sbp_tuple) == len(placement.hierarchy) required, but "
-        << "len(sbp_tuple)==" << sbp_tuple.size() << ", "
-        << "len(placement.hierarchy)==" << placement->hierarchy()->NumAxes();
+        << "The dimension of device shape of placement must be the same as sbp. "
+        << placement->hierarchy()->NumAxes() << " vs " << sbp_tuple.size();
     auto nd_sbp = JUST(GetNdSbp(sbp_tuple));
+    JUST(MetaInfoConsistencyCheck(placement, nd_sbp));
     std::shared_ptr<Tensor> tensor = JUST(StaticZerosTensor::MakeTensor(
         std::make_shared<const Shape>(shape), dtype->data_type(), placement, nd_sbp));
     return tensor;
