@@ -20,12 +20,12 @@ from oneflow.test_utils.oneflow_pytorch_compatiblity import *
 @unittest.skipIf(os.getenv("ONEFLOW_TEST_CPU_ONLY"), "only test gpu cases")
 class TestApiCompatiblity(flow.unittest.TestCase):
     def test_alexnet_compatiblity(test_case):
-        test_train_loss_oneflow_pytorch(
+        do_test_train_loss_oneflow_pytorch(
             test_case, "pytorch_alexnet.py", "alexnet", "cuda"
         )
 
     def test_resnet50_compatiblity(test_case):
-        test_train_loss_oneflow_pytorch(
+        do_test_train_loss_oneflow_pytorch(
             test_case, "pytorch_resnet.py", "resnet50", "cuda"
         )
 

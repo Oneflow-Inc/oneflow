@@ -236,13 +236,10 @@ class ModuleBlock(Block):
         args, kwargs = self.__pre_forward_map(*args, **kwargs)
         with self.scope_context():
             result = self._origin.__class__.forward(self, *args, **kwargs)
-            outputs = ()
-            if not (type(result) is tuple or type(result) is list):
-                outputs = (result,)
-            else:
-                outputs = result
+            # Always pack outputs to remain type of outputs
+            outputs = (result,)
         result = self.__post_forward_map(*outputs)
-        result = seq_to_func_return(result)
+        result = seq_to_func_return(result, True)
         self._is_executing_forward = False
         return result
 
@@ -338,7 +335,7 @@ class ModuleBlock(Block):
                 return arg
 
         out = io_node.map_leaf(leaf_node_fn)
-        mapped_args = tuple(out[0])
+        mapped_args = out[0]
         mapped_kwargs = out[1]
         return mapped_args, mapped_kwargs
 
