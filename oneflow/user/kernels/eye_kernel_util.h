@@ -21,7 +21,7 @@ limitations under the License.
 namespace oneflow {
 namespace user_op {
 
-#define RANGE_DATA_TYPE_SEQ  \
+#define EYE_DATA_TYPE_SEQ    \
   FLOATING_DATA_TYPE_SEQ     \
   INT_DATA_TYPE_SEQ          \
   UNSIGNED_INT_DATA_TYPE_SEQ \
