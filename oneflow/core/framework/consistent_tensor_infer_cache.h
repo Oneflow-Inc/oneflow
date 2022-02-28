@@ -21,6 +21,7 @@ limitations under the License.
 #include "oneflow/core/common/optional.h"
 #include "oneflow/core/framework/attr_map.h"
 #include "oneflow/core/framework/device.h"
+#include "oneflow/core/framework/stream.h"
 #include "oneflow/core/framework/tensor_meta.h"
 #include "oneflow/core/register/blob_desc.h"
 #include "oneflow/core/job/nd_sbp_infer_hint.h"
@@ -195,13 +196,13 @@ class ConsistentTensorInferResult final {
     return &output_tensor_metas_;
   }
 
-  const Symbol<Device>& op_device() const { return op_device_; }
-  void set_op_device(const Symbol<Device>& op_device) { op_device_ = op_device; }
+  const Symbol<Stream>& stream() const { return stream_; }
+  void set_stream(const Symbol<Stream>& stream) { stream_ = stream; }
 
  private:
   std::vector<Symbol<ConsistentTensorMeta>> input_tensor_metas_;
   std::vector<Symbol<ConsistentTensorMeta>> output_tensor_metas_;
-  Symbol<Device> op_device_;
+  Symbol<Stream> stream_;
 };
 
 class ConsistentTensorInferCache final {
@@ -222,8 +223,8 @@ class ConsistentTensorInferCache final {
       const UserOpExpr& user_op_expr, const SrcOpConsistentTensorMetaInferArgs& infer_args);
 
  private:
-  static Maybe<Symbol<Device>> InferOpDevice(const UserOpExpr& user_op_expr,
-                                             const ConsistentTensorMetaInferArgs& infer_args);
+  static Maybe<Symbol<Stream>> InferDeviceAndStream(
+      const UserOpExpr& user_op_expr, const ConsistentTensorMetaInferArgs& infer_args);
 
   std::weak_ptr<const UserOpExpr> user_op_expr_;
   HashMap<ConsistentTensorMetaInferArgs, std::shared_ptr<const ConsistentTensorInferResult>> cache_;

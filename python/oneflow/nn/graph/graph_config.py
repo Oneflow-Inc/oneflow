@@ -13,6 +13,8 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 """
+import os
+
 from collections import OrderedDict
 
 from oneflow.nn.graph.optimizer import OptDict
@@ -45,8 +47,8 @@ class GraphConfig(object):
 
     def set_outputs_buffer_size(self, value: int = 2):
         r"""Set the outputs buffer size of ``nn.Graph``.
-        When graph's outputs buffer size is greater than 2, multiple call on the
-        graph can work like a pipeline. This makes multiple call takes less time.
+
+        When graph's outputs buffer size is greater than 2, multiple call on the graph can work like a pipeline. This makes multiple call takes less time.
         
         The default outputs buffer size is 2.
 
@@ -56,40 +58,50 @@ class GraphConfig(object):
         self._outputs_buffer_size = value
 
     def enable_amp(self, mode: bool = True):
-        """If true, then graph will use mixed precision mode, it means use both float16 and float32 during model training.
+        r"""If set to true, then graph will use mixed precision mode, it means use both float16 and float32 during model training.
 
         Args:
-            mode (bool, optional): [description]. Default is True.
+            mode (bool, optional): The default vaule is True.
         """
         assert type(mode) is bool
         self.proto.set_enable_auto_mixed_precision(mode)
 
-    def allow_fuse_model_update_ops(self, mode: bool = True):
-        """If true, try to fuse cast + scale + l1_l2_regularize_gradient + model_update to one op to improve performance.
+    def enable_mlir(self, mode: bool = True):
+        r"""If set to true, then graph will do mlir roundtrip in forward and backward.
 
         Args:
-            mode (bool, optional): [description]. Default is True.
+            mode (bool, optional): The default vaule is True.
+        """
+        assert type(mode) is bool
+        if mode == False:
+            os.environ["ONEFLOW_MLIR_ENABLE_ROUND_TRIP"] = "0"
+
+    def allow_fuse_model_update_ops(self, mode: bool = True):
+        r"""If set to true, try to fuse cast + scale + l1_l2_regularize_gradient + model_update to one op to improve performance.
+
+        Args:
+            mode (bool, optional): The default vaule is True.
         """
         self.proto.set_enable_fuse_model_update_ops(mode)
 
     def allow_fuse_add_to_output(self, mode: bool = True):
-        """If true, try to fuse a binary element-wise add to one of the predecessors to improve performance.
+        r"""If set to true, try to fuse a binary element-wise add operetor to one of the predecessors to improve performance.
 
         Args:
-            mode (bool, optional): [description]. Default is True.
+            mode (bool, optional): The default vaule is True.
         """
         self.proto.set_enable_fuse_add_to_output(mode)
 
     def allow_fuse_cast_scale(self, mode: bool = True):
-        """If true, try to fuse cast and scalar_mul_by_tensor to improve performance.
+        r"""If set to true, try to fuse cast and scalar_mul_by_tensor to improve performance.
     
         Args:
-            mode (bool, optional): [description]. Default is True.
+            mode (bool, optional): The default vaule is True.
         """
         self.proto.set_enable_fuse_cast_scale(mode)
 
     def set_gradient_accumulation_steps(self, value):
-        """Set num of steps to accumulate gradient.
+        r"""Set num of steps to accumulate gradient.
 
         Args:
             value (int): num of steps.
@@ -97,7 +109,7 @@ class GraphConfig(object):
         self.proto.set_num_gradient_accumulation_steps(value)
 
     def set_zero_redundancy_optimizer_mode(self, mode: str = "distributed_split"):
-        """Set mode to remove redundancy of optimizer states.
+        r"""Set mode to remove redundancy of optimizer states.
         This optimzation will reduce optimizer states memory consumption as described
         by ZeRO https://arxiv.org/abs/1910.02054 .
 
@@ -111,7 +123,7 @@ class GraphConfig(object):
         self.proto.set_optimizer_placement_optimization_mode(mode)
 
     def set_zero_redundancy_optimizer_min_size_after_split(self, value):
-        """Set the min size of optimizer state/grad/parameter after split.
+        r"""Set the min size of optimizer state/grad/parameter after split.
 
         Args:
             value (int): min size value.
@@ -121,46 +133,49 @@ class GraphConfig(object):
         self.proto.set_optimizer_placement_optimization_threshold(value)
 
     def enable_xla_jit(self, value=True):
-        """Whether use xla_jit in xrt or not. When this option enable, oneflow will check all operators is supported by 
-           xla_jit or not. Clustering supported operators as subgraph, then runing subgraph by xla_jit.
+        r"""Whether use xla_jit in xrt or not. 
+
+        When this option enable, oneflow will check all operators is supported by xla_jit or not. Clustering supported operators as subgraph, then runing subgraph by xla_jit.
 
            XLA: https://www.tensorflow.org/xla
 
         Args:
-            value (bool, optional): [description]. Defaults to True.
+            value (bool, optional): Defaults to True.
         """
         self.proto.mutable_xrt_config().set_use_xla_jit(value)
 
     def enable_tensorrt(self, value=True):
-        """Whether use tensorrt in xrt or not. When this option enable, oneflow will check all operators is supported by 
-           tensorrt or not. Clustering supported operators as subgraph, then runing subgraph by tensorrt.
+        r"""Whether use tensorrt in xrt or not. 
+        
+        When this option enable, oneflow will check all operators is supported by tensorrt or not. Clustering supported operators as subgraph, then runing subgraph by tensorrt.
 
            TensorRT: https://developer.nvidia.com/tensorrt
 
         Args:
-            value (bool, optional): [description]. Defaults to True.
+            value (bool, optional): Defaults to True.
         """
         self.proto.mutable_xrt_config().set_use_tensorrt(value)
 
     def enable_openvino(self, value=True):
-        """Whether use openvino in xrt or not. When this option enable, oneflow will check all operators is supported by 
-           openvino or not. Clustering supported operators as subgraph, then runing subgraph by openvino.
+        r"""Whether use openvino in xrt or not. 
+
+        When this option enable, oneflow will check all operators is supported by openvino or not. Clustering supported operators as subgraph, then runing subgraph by openvino.
 
            Please note that, openvino only support inference mode.
 
            OpenVINO: https://www.intel.com/content/www/us/en/developer/tools/openvino-toolkit/overview.html
 
         Args:
-            value (bool, optional): [description]. Defaults to True.
+            value (bool, optional): Defaults to True.
         """
         self.proto.mutable_xrt_config().set_use_openvino(value)
 
     def enable_cudnn_conv_heuristic_search_algo(self, mode: bool = True):
-        """ Whether enable cudnn conv operatioin to use heuristic search algorithm.
+        r""" Whether enable cudnn conv operatioin to use heuristic search algorithm.
     
         Args:
             mode (bool, optional): Whether enable cudnn conv operatioin to use heuristic
-                                   search algorithm. Default is True.
+                                   search algorithm. The default vaule is True.
         """
         self.proto.set_cudnn_conv_heuristic_search_algo(mode)
 
