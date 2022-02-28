@@ -130,9 +130,9 @@ class BoxingCollector final {
                                             BoxingCollector* boxing_collector_consumer,
                                             const std::vector<std::vector<int32_t>>& diag_nodes);
   // Stores all the possible SbpParallel.
-  HashMap<::oneflow::SbpParallel, int32_t> SbpParallelUniverse_;
+  HashMap<::oneflow::SbpParallel, int32_t> sbp_parallel_universe_;
   // Relationship between id and Sbp Parallel
-  std::vector<::oneflow::SbpParallel> id2SbpParallel_;
+  std::vector<::oneflow::SbpParallel> id2sbp_parallel_;
   // minimum cost
   // minimum_copy_cost[producer][consumer]
   std::vector<std::vector<double>> minimum_copy_cost_;
@@ -142,7 +142,7 @@ class BoxingCollector final {
   // nodes that needs to be inserted
   std::vector<std::vector<std::vector<std::vector<int32_t>>>> middle_nodes_;
   // Stores all the possible NdSbp.
-  std::unordered_map<::oneflow::NdSbp, int32_t> NdSbpUniverse_;
+  std::unordered_map<::oneflow::NdSbp, int32_t> nd_sbp_universe_;
   // Relationship between id and Nd Sbp
   std::vector<NdSbp> nd_sbp_lists_;
   // The diagonal middle node for differe placements

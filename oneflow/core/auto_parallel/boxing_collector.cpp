@@ -34,14 +34,14 @@ namespace oneflow {
 namespace {
 void DfsSetNdSbp(std::vector<::oneflow::SbpParallel>& id2SbpParallel, int32_t depth,
                  int32_t max_depth, NdSbp& nd_sbp, std::vector<NdSbp>& nd_sbp_lists_,
-                 std::unordered_map<::oneflow::NdSbp, int32_t>& NdSbpUniverse_) {
+                 std::unordered_map<::oneflow::NdSbp, int32_t>& nd_sbp_universe_) {
   if (depth == max_depth) {
-    NdSbpUniverse_[nd_sbp] = nd_sbp_lists_.size();
+    nd_sbp_universe_[nd_sbp] = nd_sbp_lists_.size();
     nd_sbp_lists_.push_back(nd_sbp);
   } else {
     for (int32_t i = 0; i < id2SbpParallel.size(); i++) {
       *nd_sbp.mutable_sbp_parallel(depth) = id2SbpParallel[i];
-      DfsSetNdSbp(id2SbpParallel, depth + 1, max_depth, nd_sbp, nd_sbp_lists_, NdSbpUniverse_);
+      DfsSetNdSbp(id2SbpParallel, depth + 1, max_depth, nd_sbp, nd_sbp_lists_, nd_sbp_universe_);
     }
   }
 }
@@ -60,6 +60,7 @@ Maybe<NdSbp> SetNdSbpDim(NdSbp nd_sbp, int32_t hierarchy_num) {
     return new_sbp;
   }
   // S0 -> (S0, S0)
+  CHECK_EQ_OR_RETURN(nd_sbp.sbp_parallel_size(), 1) << "Illegal nd sbp transform.";
   NdSbp new_sbp;
   for (int32_t i = 0; i < hierarchy_num; i++) {
     new_sbp.add_sbp_parallel();
@@ -100,10 +101,10 @@ Maybe<void> BoxingCollector::Init(const BlobDesc& logical_blob_desc,
 
 // Collect Sbp Parallel
 void BoxingCollector::CollectUniverse(const SbpParallel& sbp) {
-  if (SbpParallelUniverse_.find(sbp) == SbpParallelUniverse_.end()) {
-    int32_t curr_size = SbpParallelUniverse_.size();
-    SbpParallelUniverse_[sbp] = curr_size;
-    id2SbpParallel_.push_back(sbp);
+  if (sbp_parallel_universe_.find(sbp) == sbp_parallel_universe_.end()) {
+    int32_t curr_size = sbp_parallel_universe_.size();
+    sbp_parallel_universe_[sbp] = curr_size;
+    id2sbp_parallel_.push_back(sbp);
   }
 }
 
@@ -111,8 +112,8 @@ void BoxingCollector::CollectUniverse(const SbpParallel& sbp) {
 int32_t BoxingCollector::FindId4NdSbp(const NdSbp& nd_sbp) {
   // Directly search on the nd_sbp_list
   if (nd_sbp.sbp_parallel_size() == hierarchy_num_) {
-    const auto& it_nd_sbp = NdSbpUniverse_.find(nd_sbp);
-    if (it_nd_sbp != NdSbpUniverse_.end()) {
+    const auto& it_nd_sbp = nd_sbp_universe_.find(nd_sbp);
+    if (it_nd_sbp != nd_sbp_universe_.end()) {
       return it_nd_sbp->second;
     } else {
       return -1;
@@ -121,8 +122,8 @@ int32_t BoxingCollector::FindId4NdSbp(const NdSbp& nd_sbp) {
 
   // Find the diagonal node if it could be converted to a 1D sbp
   if (Is1dSbp(nd_sbp)) {
-    const auto& it_nd_sbp = SbpParallelUniverse_.find(nd_sbp.sbp_parallel(0));
-    if (it_nd_sbp != SbpParallelUniverse_.end()) { return id_1d_2_nd_[it_nd_sbp->second]; }
+    const auto& it_nd_sbp = sbp_parallel_universe_.find(nd_sbp.sbp_parallel(0));
+    if (it_nd_sbp != sbp_parallel_universe_.end()) { return id_1d_2_nd_[it_nd_sbp->second]; }
   }
 
   // Can not be converted to a 1D sbp or not found in the 1D sbp list
@@ -151,13 +152,13 @@ void BoxingCollector::GenerateNdSbpList(int32_t hierarchy_num) {
   // Generate possible nd_sbp lists
   NdSbp nd_sbp;
   for (int32_t dim_sbp = 0; dim_sbp < hierarchy_num; dim_sbp++) { nd_sbp.add_sbp_parallel(); }
-  DfsSetNdSbp(id2SbpParallel_, 0, hierarchy_num, nd_sbp, nd_sbp_lists_, NdSbpUniverse_);
+  DfsSetNdSbp(id2sbp_parallel_, 0, hierarchy_num, nd_sbp, nd_sbp_lists_, nd_sbp_universe_);
 }
 
 // Generate the map from 1d sbp to 2d sbp
 void BoxingCollector::GenerateMap1d2nd() {
   // Number of 1d sbp
-  int32_t m = id2SbpParallel_.size();
+  int32_t m = id2sbp_parallel_.size();
 
   // Generate the id Map from 1d sbp to nd sbp
   NdSbp nd_sbp;
@@ -165,20 +166,20 @@ void BoxingCollector::GenerateMap1d2nd() {
   id_1d_2_nd_.resize(m, -1);
   for (int32_t id_1d = 0; id_1d < m; id_1d++) {
     for (int32_t dim_sbp = 0; dim_sbp < hierarchy_num_; dim_sbp++) {
-      *nd_sbp.mutable_sbp_parallel(dim_sbp) = id2SbpParallel_[id_1d];
+      *nd_sbp.mutable_sbp_parallel(dim_sbp) = id2sbp_parallel_[id_1d];
     }
     // NOTE: The 2d sbp might be filtered out already.
-    const auto& it_ = NdSbpUniverse_.find(nd_sbp);
-    if (it_ != NdSbpUniverse_.end()) { id_1d_2_nd_[id_1d] = it_->second; }
+    const auto& it_ = nd_sbp_universe_.find(nd_sbp);
+    if (it_ != nd_sbp_universe_.end()) { id_1d_2_nd_[id_1d] = it_->second; }
   }
 }
 
-// Generate the transfer rule for different combinations with the same hierarchie
+// Generate the transfer rule for different combinations with the same hierarchy
 Maybe<void> BoxingCollector::GenerateCombination4SamePlacement(int32_t max_middle_node_num) {
   // other parameters
   // NOTE: The performance of this function are all the same with different hierarchy
-  int32_t kWorldSize = GlobalProcessCtx::WorldSize();
-  Shape hierarchy44({4 * kWorldSize, 4 * kWorldSize});
+  int32_t world_size = GlobalProcessCtx::WorldSize();
+  Shape hierarchy44({4 * world_size, 4 * world_size});
   std::shared_ptr<Shape> virtual_hierarchy = std::make_shared<Shape>(hierarchy44);
   auto parallel_desc = JUST(ParallelDesc::New(
       "cpu", {"0:0-" + std::to_string(hierarchy44.elem_cnt() - 1)}, virtual_hierarchy));
@@ -187,7 +188,7 @@ Maybe<void> BoxingCollector::GenerateCombination4SamePlacement(int32_t max_middl
   return Maybe<void>::Ok();
 }
 
-// Generate the transfer rule for different combinations with the same hierarchie
+// Generate the transfer rule for different combinations with the same hierarchy
 Maybe<void> BoxingCollector::GenerateCombination4SamePlacement(int32_t max_middle_node_num,
                                                                const BlobDesc& blob_desc,
                                                                const ParallelDesc& parallel_desc) {
@@ -299,15 +300,15 @@ Maybe<void> BoxingCollector::GenerateCombination4DiffHierarchy(
 Maybe<void> BoxingCollector::GenerateCombination4DiffPlacement(
     BoxingCollector* boxing_collector_producer, BoxingCollector* boxing_collector_consumer) {
   // Virtual parallel and blob description
-  int32_t kWorldSize = GlobalProcessCtx::WorldSize();
+  int32_t world_size = GlobalProcessCtx::WorldSize();
   BlobDesc blob_desc({16, 16, 16, 16}, DataType::kInt8, /*is_dynamic=*/false);
   // Virtual placements before transfer
-  Shape in_hierarchy44({4 * kWorldSize + 1, 4 * kWorldSize});
+  Shape in_hierarchy44({4 * world_size + 1, 4 * world_size});
   std::shared_ptr<Shape> in_hierarchy = std::make_shared<Shape>(in_hierarchy44);
   auto in_parallel_desc = JUST(ParallelDesc::New(
       "cpu", {"0:0-" + std::to_string(in_hierarchy44.elem_cnt() - 1)}, in_hierarchy));
   // Virtual placements after transfer
-  Shape out_hierarchy44({4 * kWorldSize, 4 * kWorldSize});
+  Shape out_hierarchy44({4 * world_size, 4 * world_size});
   std::shared_ptr<Shape> out_hierarchy = std::make_shared<Shape>(out_hierarchy44);
   auto out_parallel_desc = JUST(ParallelDesc::New(
       "cpu", {"0:0-" + std::to_string(out_hierarchy44.elem_cnt() - 1)}, out_hierarchy));
@@ -323,7 +324,7 @@ Maybe<void> BoxingCollector::ComputeCostFor1DSbpDiffPlacement(
     const ParallelDesc& out_parallel_desc,
     std::vector<std::vector<double>>& cost_4_diff_placement) {
   // Number of 1d sbp
-  int32_t m = id2SbpParallel_.size();
+  int32_t m = id2sbp_parallel_.size();
   // Compute the cost while transferring a 1D sbp between different placements
   cost_4_diff_placement.resize(m);
   for (int32_t id_1d_producer = 0; id_1d_producer < m; id_1d_producer++) {
@@ -706,7 +707,7 @@ Maybe<void> BoxingCollector::Generate1Combination4DiffHierarchy(
     int32_t id_producer, int32_t id_consumer, BoxingCollector* boxing_collector_producer,
     BoxingCollector* boxing_collector_consumer, std::vector<std::vector<int32_t>>& diag_nodes) {
   // Number of 1d sbp
-  int32_t m = id2SbpParallel_.size();
+  int32_t m = id2sbp_parallel_.size();
 
   // Search the path that contains one of the diagonal sbp
 
@@ -872,7 +873,7 @@ Maybe<void> BoxingCollector::Generate1Combination4DiffPlacement(
     const std::vector<std::vector<double>>& cost_4_diff_placement,
     std::vector<std::vector<int32_t>>& diag_nodes) {
   // Number of 1d sbp
-  int32_t m = id2SbpParallel_.size();
+  int32_t m = id2sbp_parallel_.size();
   // minimum number of node
   int32_t min_path_length = 100;
   // minimum cost
@@ -956,8 +957,8 @@ Maybe<void> BoxingCollector::FilterNdSbpList4LogicalShape(const BlobDesc& logica
                                        parallel_hierarchy))) {
       // Change the value before erasing
       // This might be true: nd_sbp_lists_.size() - 1 == middle_sbp_id
-      NdSbpUniverse_[nd_sbp_lists_[nd_sbp_lists_.size() - 1]] = middle_sbp_id;
-      NdSbpUniverse_.erase(nd_sbp_lists_[middle_sbp_id]);
+      nd_sbp_universe_[nd_sbp_lists_[nd_sbp_lists_.size() - 1]] = middle_sbp_id;
+      nd_sbp_universe_.erase(nd_sbp_lists_[middle_sbp_id]);
       nd_sbp_lists_[middle_sbp_id] = nd_sbp_lists_[nd_sbp_lists_.size() - 1];
       nd_sbp_lists_.pop_back();
     }
