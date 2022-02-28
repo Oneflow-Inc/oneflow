@@ -185,7 +185,7 @@ Maybe<Tensor> Slice(const std::shared_ptr<Tensor>& input, const std::vector<int6
 
 Maybe<Tensor> Unsqueeze(const std::shared_ptr<Tensor>& input, const int32_t& expand_dim) {
   CHECK_OR_RETURN(IsViewApplicable(input))
-      << Error::RuntimeError() << "view::UnSqueeze(): input should be eager local tensor, but got "
+      << Error::RuntimeError() << "view::Unsqueeze(): input should be eager local tensor, but got "
       << (input->is_lazy() ? "lazy tensor" : "consistent tensor") << " with shape: " <<input->shape()->ToString() << "; element count: " << input->nelement() ;
 
   const auto& shape = input->shape();

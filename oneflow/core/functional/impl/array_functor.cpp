@@ -671,7 +671,7 @@ class SqueezeFunctor {
     int32_t ndim = x->shape()->NumAxes();
     std::vector<int32_t> squeeze_dims;
     squeeze_dims.reserve(ndim);
-    if (dim.has_value() == true) {
+    if (dim.has_value()) {
       std::vector<int32_t> dims = *JUST(dim);
       for (int32_t dim_i : dims) {
         CHECK_OR_RETURN((dim_i >= -ndim) && (dim_i <= ndim))
