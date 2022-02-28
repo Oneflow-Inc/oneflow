@@ -55,7 +55,7 @@ class TestSplit(flow.unittest.TestCase):
         res = torch.split(x, [1, 2, 3, 1], dim=-2)
         return torch.cat(res, dim=1)
 
-    @autotest(auto_backward=False, check_graph=False)
+    @autotest(auto_backward=False, check_graph=True)
     def test_flow_split_bool_with_random_data(test_case):
         k0 = random(2, 6)
         k1 = random(2, 6)

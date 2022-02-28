@@ -1291,6 +1291,35 @@ add_docstr(
 )
 
 add_docstr(
+    oneflow.select,
+    r"""
+    Slices the self tensor along the selected dimension at the given index. This function returns 
+    a view of the original tensor with the given dimension removed.
+
+    Args:
+        input (Tensor): the input tensor.
+        dim  (int):  the dimension to slice.
+        select (int): the index to select with.
+
+    Returns:
+        oneflow.Tensor: the output Tensor.
+
+    For example:
+    
+    .. code-block:: python
+    
+        >>> import oneflow as flow
+        >>> input = flow.rand(3, 4, 5)
+        >>> out = flow.select(input, 0, 1)
+        >>> out.size()
+        oneflow.Size([4, 5])
+        >>> out = flow.select(input, 1, 1)
+        >>> out.size()
+        oneflow.Size([3, 5])
+    """,
+)
+
+add_docstr(
     oneflow.movedim,
     r"""
     Moves the dimension(s) of input at the position(s) in source to the position(s) in destination.
@@ -1366,7 +1395,7 @@ add_docstr(
         device(Union[flow.device, str], optional): the desired device of returned tensor. Default: if None, uses the current device for the default tensor.
         requires_grad(bool, optional): If autograd should record operations on the returned tensor. Default: `False`.
         placement(oneflow._oneflow_internal.placement, optional): The placement attribute allows you to specify which physical device the tensor is stored on.
-        sbp(Union[oneflow._oneflow_internal.sbp.sbp, List[oneflow._oneflow_internal.sbp.sbp]], optional): When creating a consistent tensor, specify the SBP of the tensor.
+        sbp(Union[oneflow._oneflow_internal.sbp.sbp, List[oneflow._oneflow_internal.sbp.sbp]], optional): When creating a global tensor, specify the SBP of the tensor.
 
     Returns:
         oneflow.Tensor: The result tensor with ones on the diagonal and zeros elsewhere.
@@ -1410,7 +1439,7 @@ add_docstr(
         dim (int): dimension along which to split the tensor.
 
     Returns:
-        oneflow.TensorTuple: the output Tensor.
+        oneflow.TensorTuple: the output TensorTuple.
 
     For example:
 
@@ -1438,6 +1467,8 @@ add_docstr(
     (the split dimension is zero), and if input has two or more dimensions it’s equivalent to calling 
     torch.tensor_split(input, indices_or_sections, dim=1) (the split dimension is 1), except that if indices_or_sections
     is an integer it must evenly divide the split dimension or a runtime error will be thrown.
+    The documentation is referenced from:
+    https://pytorch.org/docs/stable/generated/torch.hsplit.html#torch.hsplit
 
     Args:
         input (Tensor): the input tensor.
@@ -1451,7 +1482,7 @@ add_docstr(
             one-dimensional long tensor on the CPU.
 
     Returns:
-        oneflow.TensorTuple: the output Tensor.
+        oneflow.TensorTuple: the output TensorTuple.
 
     For example:
 
@@ -1477,6 +1508,8 @@ add_docstr(
     Each split is a view of input.
     This is equivalent to calling torch.tensor_split(input, indices_or_sections, dim=0) (the split dimension is 0),
     except that if indices_or_sections is an integer it must evenly divide the split dimension or a runtime error will be thrown.
+    The documentation is referenced from:
+    https://pytorch.org/docs/stable/generated/torch.vsplit.html#torch.vsplit
 
     Args:
         input (Tensor): the input tensor.
@@ -1490,7 +1523,7 @@ add_docstr(
             one-dimensional long tensor on the CPU.
 
     Returns:
-        oneflow.TensorTuple: the output Tensor.
+        oneflow.TensorTuple: the output TensorTuple.
 
     For example:
 

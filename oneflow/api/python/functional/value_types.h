@@ -37,8 +37,8 @@ class ParallelDesc;
 
 namespace cfg {
 class AttrValue;
-class SbpParallel;
 }  // namespace cfg
+class SbpParallel;
 
 namespace one {
 class Tensor;
@@ -165,8 +165,8 @@ VALUE_TYPE_OF_IMPL(Maybe<one::Generator>, kGENERATOR_MAYBE);
 VALUE_TYPE_OF_IMPL(TensorIndex, kTENSOR_INDEX);
 VALUE_TYPE_OF_IMPL(Symbol<Device>, kDEVICE);
 VALUE_TYPE_OF_IMPL(Symbol<ParallelDesc>, kPARALLEL_DESC);
-VALUE_TYPE_OF_IMPL(Symbol<cfg::SbpParallel>, kSBP_PARALLEL);
-VALUE_TYPE_OF_IMPL(std::vector<Symbol<cfg::SbpParallel>>, kSBP_PARALLEL_LIST);
+VALUE_TYPE_OF_IMPL(Symbol<SbpParallel>, kSBP_PARALLEL);
+VALUE_TYPE_OF_IMPL(std::vector<Symbol<SbpParallel>>, kSBP_PARALLEL_LIST);
 
 VALUE_TYPE_OF_IMPL(one::OpExpr, kOPEXPR);
 VALUE_TYPE_OF_IMPL(std::shared_ptr<one::OpExpr>, kOPEXPR_REF);

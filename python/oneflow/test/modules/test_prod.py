@@ -42,7 +42,7 @@ class TestReduceProd(flow.unittest.TestCase):
 
         return y
 
-    @autotest(auto_backward=False, check_graph=False)
+    @autotest(auto_backward=False, check_graph=True)
     def test_reduce_prod_bool_without_dim(test_case):
         device = random_device()
         ndim = random(1, 5).to(int)

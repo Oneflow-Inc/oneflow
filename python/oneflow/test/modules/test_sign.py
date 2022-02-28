@@ -18,7 +18,7 @@ import unittest
 from collections import OrderedDict
 
 import numpy as np
-from test_util import GenArgList
+from oneflow.test_utils.test_util import GenArgList
 
 import oneflow as flow
 import oneflow.unittest
@@ -63,7 +63,7 @@ class TestSign(flow.unittest.TestCase):
         y = torch.sign(x)
         return y
 
-    @autotest(auto_backward=False, check_graph=False)
+    @autotest(auto_backward=False, check_graph=True)
     def test_sign_with_random_data(test_case):
         device = random_device()
         x = random_tensor().to(device=device, dtype=torch.bool)

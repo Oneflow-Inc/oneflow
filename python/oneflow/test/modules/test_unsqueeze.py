@@ -20,7 +20,7 @@ from collections import OrderedDict
 import numpy as np
 
 from oneflow.test_utils.automated_test_util import *
-from test_util import GenArgList
+from oneflow.test_utils.test_util import GenArgList
 
 import oneflow as flow
 import oneflow.unittest
@@ -91,7 +91,7 @@ class TestUnsqueeze(flow.unittest.TestCase):
         y = torch.unsqueeze(x, random(0, 2).to(int))
         return y
 
-    @autotest(auto_backward=False, check_graph=False)
+    @autotest(auto_backward=False, check_graph=True)
     def test_flow_unsqueeze_bool_with_random_data(test_case):
         device = random_device()
         x = random_tensor().to(device=device, dtype=torch.bool)

@@ -20,7 +20,7 @@ from collections import OrderedDict
 import numpy as np
 
 from oneflow.test_utils.automated_test_util import *
-from test_util import GenArgList
+from oneflow.test_utils.test_util import GenArgList
 
 import oneflow as flow
 import oneflow.unittest
@@ -28,7 +28,7 @@ import oneflow.unittest
 
 @flow.unittest.skip_unless_1n1d()
 class TestTransposeAllDimFunction(flow.unittest.TestCase):
-    @autotest(check_graph=False)
+    @autotest(check_graph=True)
     def test_t_flow_with_random_data(test_case):
         device = random_device()
         x = random_tensor(

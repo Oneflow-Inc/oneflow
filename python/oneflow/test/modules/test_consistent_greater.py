@@ -18,7 +18,7 @@ import unittest
 from collections import OrderedDict
 
 import numpy as np
-from test_util import GenArgList
+from oneflow.test_utils.test_util import GenArgList
 
 import oneflow as flow
 import oneflow.unittest
@@ -27,12 +27,12 @@ from oneflow.test_utils.automated_test_util import *
 
 
 @autotest(n=10, auto_backward=False, check_graph=False)
-def test_greater_impl(test_case, ndim, placement, sbp):
+def _test_greater_impl(test_case, ndim, placement, sbp):
     dims = [random(1, 4) * 8 for i in range(ndim)]
     x1 = random_tensor(ndim, *dims)
-    x2 = x1.to_consistent(placement=placement, sbp=sbp)
+    x2 = x1.to_global(placement=placement, sbp=sbp)
     y1 = random_tensor(ndim, *dims)
-    y2 = y1.to_consistent(placement=placement, sbp=sbp)
+    y2 = y1.to_global(placement=placement, sbp=sbp)
 
     z = torch.gt(x2, y2)
     return z
@@ -40,13 +40,13 @@ def test_greater_impl(test_case, ndim, placement, sbp):
 
 @unittest.skip("TODO: houjiang, yushun. this test might fail")
 class TestGreaterConsistent(flow.unittest.TestCase):
-    @consistent
+    @globaltest
     def test_greater(test_case):
         # random ndim in range [1,4]
         ndim = random(1, 5).to(int).value()
         for placement in all_placement():
             for sbp in all_sbp(placement, max_dim=ndim):
-                test_greater_impl(test_case, ndim, placement, sbp)
+                _test_greater_impl(test_case, ndim, placement, sbp)
 
 
 if __name__ == "__main__":

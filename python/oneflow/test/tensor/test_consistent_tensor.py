@@ -28,46 +28,46 @@ from oneflow.test_utils.automated_test_util import *
 @unittest.skipIf(os.getenv("ONEFLOW_TEST_CPU_ONLY"), "only test cpu cases")
 class TestTensor(flow.unittest.TestCase):
     @flow.unittest.skip_unless_1n1d()
-    def test_creating_consistent_tensor(test_case):
-        placement = flow.placement("cuda", {0: 0})
+    def test_creating_global_tensor(test_case):
+        placement = flow.placement("cuda", [0])
         sbp = flow.sbp.broadcast
         shape = (2, 3)
 
-        # Shape -> ConsistentTensor
+        # Shape -> GlobalTensor
         x = flow.Tensor(*shape, placement=placement, sbp=sbp)
-        test_case.assertTrue(x.is_consistent)
+        test_case.assertTrue(x.is_global)
 
-        # LocalTensor -> ConsistentTensor
+        # LocalTensor -> GlobalTensor
         x = flow.Tensor(*shape, device="cpu")
         test_case.assertTrue(x.is_local)
         y = flow.Tensor(x, placement=placement, sbp=sbp)
-        test_case.assertTrue(y.is_consistent)
+        test_case.assertTrue(y.is_global)
 
-        # ConsistentTensor -> ConsistentTensor
+        # GlobalTensor -> GlobalTensor
         z = flow.Tensor(y, placement=placement, sbp=sbp)
-        test_case.assertTrue(z.is_consistent)
+        test_case.assertTrue(z.is_global)
 
-        # TODO: ndarray -> ConsistentTensor
+        # TODO: ndarray -> GlobalTensor
 
     @flow.unittest.skip_unless_1n1d()
-    def test_construct_local_from_consistent_tensor(test_case):
-        placement = flow.placement("cuda", {0: 0})
+    def test_construct_local_from_global_tensor(test_case):
+        placement = flow.placement("cuda", [0])
         sbp = flow.sbp.broadcast
         shape = (2, 3)
         x = flow.Tensor(*shape, placement=placement, sbp=sbp)
-        test_case.assertTrue(x.is_consistent)
-        # ConsistentTensor -> LocalTensor
+        test_case.assertTrue(x.is_global)
+        # GlobalTensor -> LocalTensor
         y = flow.Tensor(x, device="cpu")
         test_case.assertTrue(y.is_local)
         y = flow.Tensor(x, device="cuda")
         test_case.assertTrue(y.is_local)
 
     @flow.unittest.skip_unless_1n1d()
-    def test_consistent_set_data(test_case):
-        x_placement = flow.placement("cpu", {0: 0})
+    def test_global_set_data(test_case):
+        x_placement = flow.placement("cpu", [0])
         x_sbp = flow.sbp.broadcast
         x = flow.ones(2, 3, placement=x_placement, sbp=x_sbp)
-        y_placement = flow.placement("cuda", {0: 0})
+        y_placement = flow.placement("cuda", [0])
         y_sbp = flow.sbp.split(0)
         y = flow.ones(4, 5, placement=y_placement, sbp=y_sbp)
         old_id = id(x)
@@ -78,8 +78,8 @@ class TestTensor(flow.unittest.TestCase):
         test_case.assertTrue(x.sbp[0] == y_sbp)
 
     @flow.unittest.skip_unless_1n1d()
-    def test_consistent_tensor_autograd_related_methods(test_case):
-        placement = flow.placement("cuda", {0: 0})
+    def test_global_tensor_autograd_related_methods(test_case):
+        placement = flow.placement("cuda", [0])
         sbp = flow.sbp.split(0)
         shape = (2, 3, 4, 5)
         l_x = flow.Tensor(*shape)
@@ -91,9 +91,9 @@ class TestTensor(flow.unittest.TestCase):
         test_case.assertTrue(l_y.requires_grad)
         test_case.assertTrue(l_y.is_leaf)
 
-        x = l_x.to_consistent(placement=placement, sbp=sbp)
+        x = l_x.to_global(placement=placement, sbp=sbp)
         test_case.assertTrue(x.is_leaf)
-        y = l_y.to_consistent(placement=placement, sbp=sbp)
+        y = l_y.to_global(placement=placement, sbp=sbp)
         test_case.assertFalse(y.is_leaf)
 
         z = x + y
@@ -108,13 +108,13 @@ class TestTensor(flow.unittest.TestCase):
 
         l_v = flow.Tensor(*shape)
         l_v.requires_grad = True
-        v = l_v.to_consistent(placement=placement, sbp=sbp)
+        v = l_v.to_global(placement=placement, sbp=sbp)
 
         z.retain_grad()
         w = v + z
 
         l_grad = flow.ones(*shape)
-        grad = l_grad.to_consistent(placement=placement, sbp=sbp)
+        grad = l_grad.to_global(placement=placement, sbp=sbp)
         w.backward(gradient=grad)
 
         test_case.assertTrue(
@@ -125,7 +125,7 @@ class TestTensor(flow.unittest.TestCase):
         )
         test_case.assertTrue(
             np.allclose(
-                z.grad.to_consistent(sbp=flow.sbp.broadcast).to_local().numpy(),
+                z.grad.to_global(sbp=flow.sbp.broadcast).to_local().numpy(),
                 np.ones(shape),
                 atol=1e-4,
                 rtol=1e-4,
@@ -134,14 +134,14 @@ class TestTensor(flow.unittest.TestCase):
         test_case.assertIsNone(l_x.grad)
 
     @flow.unittest.skip_unless_1n1d()
-    def test_consistent_tensor_unsupported_property(test_case):
+    def test_global_tensor_unsupported_property(test_case):
 
         shape = (2, 3)
-        placement = flow.placement("cuda", {0: 0})
+        placement = flow.placement("cuda", [0])
         sbp = flow.sbp.split(0)
         a = flow.Tensor(*shape)
-        b = a.to_consistent(placement=placement, sbp=sbp)
-        test_case.assertTrue(b.is_consistent)
+        b = a.to_global(placement=placement, sbp=sbp)
+        test_case.assertTrue(b.is_global)
 
         with test_case.assertRaises(
             oneflow._oneflow_internal.exception.RuntimeException
@@ -154,12 +154,12 @@ class TestTensor(flow.unittest.TestCase):
             b._tensor_buffer_shapes_and_dtypes
 
     @flow.unittest.skip_unless_1n4d()
-    def test_consistent_tensor_2d_sbp_init(test_case):
+    def test_global_tensor_2d_sbp_init(test_case):
         V = 10
         H = 4
         S = 6
 
-        P = flow.placement("cuda", {0: [0, 1, 2, 3]}, (2, 2))
+        P = flow.placement("cuda", [[0, 1], [2, 3]])
 
         wte = flow.nn.Parameter(
             flow.empty(

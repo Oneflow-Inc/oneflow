@@ -44,7 +44,7 @@ class TestNarrow(flow.unittest.TestCase):
         x = random_tensor(ndim=3, dim0=k0, dim1=k1, dim3=k2).to(device)
         return torch.narrow(x, dim=rand_dim, start=0, length=2)
 
-    @autotest(auto_backward=False, check_graph=False)
+    @autotest(auto_backward=False, check_graph=True)
     def test_flow_narrow_start_bool_with_random_data(test_case):
         k0 = random(2, 6)
         k1 = random(2, 6)

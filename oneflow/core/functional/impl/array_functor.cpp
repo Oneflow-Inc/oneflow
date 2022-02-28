@@ -20,6 +20,7 @@ limitations under the License.
 #include "oneflow/core/common/global.h"
 #include "oneflow/core/common/optional.h"
 #include "oneflow/core/common/protobuf.h"
+#include "oneflow/core/common/container_util.h"
 #include "oneflow/core/control/global_process_ctx.h"
 #include "oneflow/core/device/cuda_util.h"
 #include "oneflow/core/framework/attr_map.h"
@@ -130,7 +131,7 @@ class ConsistentConstantFunctor {
   }
   Maybe<Tensor> operator()(const Shape& shape, const Scalar& value, const Symbol<DType>& dtype,
                            const Symbol<ParallelDesc>& placement,
-                           const std::vector<Symbol<cfg::SbpParallel>>& sbp_tuple) const {
+                           const std::vector<Symbol<SbpParallel>>& sbp_tuple) const {
     JUST(CheckDeviceIdsIsValid(placement));
     MutableAttrMap attrs;
     JUST(attrs.SetAttr<Shape>("shape", shape));
@@ -211,7 +212,7 @@ class ConsistentEmptyFunctor {
   ConsistentEmptyFunctor() { op_ = CHECK_JUST(one::OpBuilder("empty").Output("out").Build()); }
   Maybe<Tensor> operator()(const Shape& shape, const Symbol<DType>& dtype,
                            const Symbol<ParallelDesc>& placement,
-                           const std::vector<Symbol<cfg::SbpParallel>>& sbp_tuple) const {
+                           const std::vector<Symbol<SbpParallel>>& sbp_tuple) const {
     JUST(CheckDeviceIdsIsValid(placement));
     MutableAttrMap attrs;
     JUST(attrs.SetAttr<Shape>("shape", shape));
@@ -1750,6 +1751,16 @@ class DiagonalGradFunctor {
   std::shared_ptr<OpExpr> op_;
 };
 
+// Only for ddp gradient grouping
+class SliceView1dContiguousFunctor {
+ public:
+  SliceView1dContiguousFunctor() = default;
+  Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x, int64_t start,
+                           int64_t end) const {
+    return JUST(view::Slice(x, {start}, {end}, {1}));
+  }
+};
+
 class TensorGetItemFunctor {
  public:
   TensorGetItemFunctor() {}
@@ -1841,7 +1852,11 @@ class TensorSetItemFunctor {
                              << target_shape.ToString()
                              << ", value sizes: " << value_shape->ToString();
     std::shared_ptr<one::Tensor> value_tensor(value);
-
+    // TODO: replace reshape by unsqueeze with view mechanism.
+    // after here, each scalar tensor will be one with one dimension.
+    for (auto& tensor : tensor_indices) {
+      if (tensor->ndim() == 0) { tensor = JUST(functional::Reshape(tensor, Shape({1}))); }
+    }
     if (tensor_indices.size() == ndims) {  // advance indexing
       std::shared_ptr<Tensor> indices = JUST(functional::Stack(tensor_indices, 0));
       if (indices->shape()->elem_cnt() == 0) { return Maybe<void>::Ok(); }
@@ -2293,12 +2308,22 @@ class MeshgridFunctor {
   Maybe<TensorTuple> operator()(const TensorTuple& tensors, const std::string& indexing) const {
     int size = tensors.size();
     CHECK_GT_OR_RETURN(size, 0) << "meshgrid expects a non-empty TensorList";
-
     for (int i = 0; i < size - 1; ++i) {
-      CHECK_OR_RETURN(
-          (tensors[i]->dtype() == tensors[i + 1]->dtype())
-          && (JUST(tensors[i]->device())->type() == JUST(tensors[i + 1]->device())->type()))
-          << "meshgrid expects all tensors to have the same dtype and device";
+      const auto& cur_tensor = JUST(VectorAt(tensors, i));
+      const auto& next_tensor = JUST(VectorAt(tensors, i + 1));
+      CHECK_OR_RETURN(cur_tensor->dtype() == next_tensor->dtype())
+          << "Meshgrid expects all tensors have the same dtype.";
+      if (cur_tensor->is_local()) {
+        CHECK_OR_RETURN(next_tensor->is_local())
+            << "Meshgrid expects all tensors are local tensor.";
+        CHECK_OR_RETURN(JUST(cur_tensor->device())->type() == JUST(next_tensor->device())->type())
+            << "Meshgrid expects all tensors have the same device.";
+      } else {
+        CHECK_OR_RETURN(!next_tensor->is_local())
+            << "Meshgrid expects all tensors are global tensor.";
+        CHECK_OR_RETURN(JUST(cur_tensor->parallel_desc()) == JUST(next_tensor->parallel_desc()))
+            << "Meshgrid expects all tensors have the same placement.";
+      }
     }
 
     std::vector<std::shared_ptr<Tensor>> tensor_consts(tensors.begin(), tensors.end());
@@ -2384,7 +2409,7 @@ Maybe<Tensor> ConsistentTensorTo(const std::shared_ptr<Tensor>& x, const std::st
     auto old_placement = JUST(x->parallel_desc());
     auto placement = JUST(ReplacePlacementDeviceTag(input_placement, device_type));
     auto nd_sbp = JUST(x->nd_sbp());
-    std::vector<Symbol<cfg::SbpParallel>> sbp_tuple(nd_sbp->sbp_parallel().size());
+    std::vector<Symbol<SbpParallel>> sbp_tuple(nd_sbp->sbp_parallel().size());
     for (int i = 0; i < sbp_tuple.size(); ++i) { sbp_tuple[i] = nd_sbp->sbp_parallel().Get(i); }
     tensor = JUST(ConsistentToLocal(x));
     Symbol<Device> device = JUST(Device::New(device_type));
@@ -2698,6 +2723,7 @@ ONEFLOW_FUNCTION_LIBRARY(m) {
   m.add_functor<impl::LogicalSliceAssignFunctor>("LogicalSliceAssign");
   m.add_functor<impl::LogicalSliceFunctor>("LogicalSlice");
   m.add_functor<impl::SliceUpdateFunctor>("SliceUpdate");
+  m.add_functor<impl::SliceView1dContiguousFunctor>("SliceView1dContiguous");
   m.add_functor<impl::SqueezeFunctor>("Squeeze");
   m.add_functor<impl::CopyFunctor>("Copy");
   m.add_functor<impl::FlipFunctor>("Flip");

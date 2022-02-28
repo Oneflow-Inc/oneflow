@@ -21,38 +21,37 @@ limitations under the License.
 #include "oneflow/core/common/symbol.h"
 #include "oneflow/core/common/maybe.h"
 #include "oneflow/core/common/decorator.h"
-#include "oneflow/core/job/sbp_parallel.cfg.h"
+#include "oneflow/core/job/sbp_parallel.h"
 
 namespace oneflow {
 
-Maybe<Symbol<cfg::NdSbp>> GetDualNdSbp(Symbol<cfg::NdSbp> nd_sbp);
+Maybe<Symbol<NdSbp>> GetDualNdSbp(Symbol<NdSbp> nd_sbp);
 
-Maybe<Symbol<cfg::NdSbp>> GetDualNdSbp(Symbol<cfg::NdSbp> sbp_list);
+Maybe<Symbol<NdSbp>> GetDualNdSbp(Symbol<NdSbp> sbp_list);
 
-Maybe<std::vector<std::string>> GetNdSbpStrList(
-    const std::vector<Symbol<cfg::SbpParallel>>& sbp_list);
+Maybe<std::vector<std::string>> GetNdSbpStrList(const std::vector<Symbol<SbpParallel>>& sbp_list);
 
-Maybe<std::vector<std::string>> GetNdSbpStrList(Symbol<cfg::NdSbp> nd_sbp);
+Maybe<std::vector<std::string>> GetNdSbpStrList(Symbol<NdSbp> nd_sbp);
 
-Maybe<std::vector<std::string>> GetDualNdSbpStrList(Symbol<cfg::NdSbp> nd_sbp);
+Maybe<std::vector<std::string>> GetDualNdSbpStrList(Symbol<NdSbp> nd_sbp);
 
-Maybe<std::vector<std::string>> GetDualNdSbpStrList(Symbol<cfg::NdSbp> nd_sbp);
+Maybe<std::vector<std::string>> GetDualNdSbpStrList(Symbol<NdSbp> nd_sbp);
 
 namespace private_details {
 
-Maybe<Symbol<cfg::NdSbp>> RawGetNdSbp(const std::vector<Symbol<cfg::SbpParallel>>& sbp_list);
-Maybe<std::vector<Symbol<cfg::SbpParallel>>> RawGetSbpList(Symbol<cfg::NdSbp> nd_sbp);
+Maybe<Symbol<NdSbp>> RawGetNdSbp(const std::vector<Symbol<SbpParallel>>& sbp_list);
+Maybe<std::vector<Symbol<SbpParallel>>> RawGetSbpList(Symbol<NdSbp> nd_sbp);
 
 }  // namespace private_details
 
 static constexpr auto* GetNdSbp = DECORATE(&private_details::RawGetNdSbp, ThreadLocalCopiable);
 static constexpr auto* GetSbpList = DECORATE(&private_details::RawGetSbpList, ThreadLocal);
-const std::vector<Symbol<cfg::SbpParallel>>& GetNoneSbpList();
+const std::vector<Symbol<SbpParallel>>& GetNoneSbpList();
 
-std::string SbpToString(Symbol<cfg::SbpParallel> sbp_sym);
-std::string NdSbpToString(Symbol<cfg::NdSbp> nd_sbp_sym);
-std::string SbpToString(const cfg::SbpParallel& sbp);
-std::string NdSbpToString(const cfg::NdSbp& nd_sbp);
+std::string SbpToString(Symbol<SbpParallel> sbp_sym);
+std::string NdSbpToString(Symbol<NdSbp> nd_sbp_sym);
+std::string SbpToString(const SbpParallel& sbp);
+std::string NdSbpToString(const NdSbp& nd_sbp);
 
 }  // namespace oneflow
 

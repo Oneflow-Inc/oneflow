@@ -7,6 +7,7 @@ include "OneFlow/OneFlowInterfaces.td"
 include "OneFlow/OneFlowBase.td"
 
 include "mlir/Interfaces/SideEffectInterfaces.td"
+include "mlir/IR/FunctionInterfaces.td"
 include "mlir/Interfaces/CallInterfaces.td"
 include "mlir/Interfaces/ControlFlowInterfaces.td"
 include "mlir/Pass/PassBase.td"
@@ -58,6 +59,11 @@ def OneFlow_SystemOp : OneFlow_Op<"system", [OneFlow_IsImportCompatible]> {
   let hasCanonicalizer = 1;
 }
 
+def OneFlow_LossMarkerOp : OneFlow_IROp<"loss_marker", []> {
+  let summary = "mark a result as loss to prevent its defining op from optimized away";
+  let arguments = (ins Variadic<AnyType>:$loss);
+}
+
 def OneFlow_Add2Op : OneFlow_BaseOp<"add_n2", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>, DeclareOpInterfaceMethods<AlternativeOpTypeNameInterface>]> {
   let summary = "";
   let input = (ins
@@ -102,7 +108,7 @@ def OneFlow_MlirJitOp : OneFlow_BaseOp<"mlir_jit", [ CallOpInterface, DeclareOpI
   }];
 }
 
-class OneFlow_ConcreteSystemOp<string mnemonic, list<OpTrait> traits = []> :
+class OneFlow_ConcreteSystemOp<string mnemonic, list<Trait> traits = []> :
         OneFlow_BaseOp<mnemonic, !listconcat(traits, [OneFlow_IsOpConfCompatible,
         OneFlow_IsImportCompatible,
         DeclareOpInterfaceMethods<ControlEdgeCompatibleInterface>])> {
@@ -130,6 +136,8 @@ def OneFlow_VariableOp : OneFlow_ConcreteSystemOp<"variable", [OneFlow_TensorSou
     DefaultValuedAttr<F32Attr, "0.0f">:$l1_regularization,
     DefaultValuedAttr<F32Attr, "0.0f">:$l2_regularization,
     DefaultValuedAttr<BoolAttr, "true">:$trainable,
+    OptionalAttr<F32Attr>:$float_initializer,
+    OptionalAttr<SI64Attr>:$integer_initializer,
     StrArrayAttr:$nd_sbp
   );
 }
@@ -165,7 +173,7 @@ def OneFlow_OutputOp : OneFlow_ConcreteSystemOp<"output", [OneFlow_TensorSource]
   );
 }
 
-def OneFlow_Job : Op<OneFlow_Dialect, "job", [FunctionLike, IsolatedFromAbove, Symbol]>  {
+def OneFlow_Job : Op<OneFlow_Dialect, "job", [FunctionOpInterface, IsolatedFromAbove, Symbol]>  {
   let regions = (region AnyRegion:$body);
 
   let arguments = (ins
@@ -181,12 +189,15 @@ def OneFlow_Job : Op<OneFlow_Dialect, "job", [FunctionLike, IsolatedFromAbove, S
   let extraClassDeclaration = [{
     bool isDeclaration() { return isExternal(); }
 
-  private:
-    friend class OpTrait::FunctionLike<Job>;
+    /// Returns the type of this function.
+    /// TODO: use the ODS `type`
+    FunctionType getType() {
+      return getTypeAttr().getValue().cast<FunctionType>();
+    }
 
-    unsigned getNumFuncArguments() { return getType().getInputs().size(); }
+    ArrayRef<Type> getArgumentTypes() { return getType().getInputs(); }
 
-    unsigned getNumFuncResults() { return getType().getResults().size(); }
+    ArrayRef<Type> getResultTypes() { return getType().getResults(); }
 
     LogicalResult verifyType() {
       auto type = getTypeAttr().getValue();
@@ -251,10 +262,16 @@ def MapSCFToGPUPass : Pass<"gpu-greedy-parallel-loop-mapping", "ModuleOp"> {
   let dependentDialects = ["scf::SCFDialect"];
 }
 
-def BufferHostRegisterPass : FunctionPass<"buffer-host-register"> {
+def BufferHostRegisterPass : Pass<"buffer-host-register", "FuncOp"> {
   let summary = "";
   let constructor = "mlir::oneflow::createBufferHostRegisterPass()";
   let dependentDialects = ["gpu::GPUDialect"];
+}
+
+def GpuCopyArgPass : Pass<"gpu-copy-arg", "FuncOp"> {
+  let summary = "";
+  let constructor = "mlir::oneflow::createGpuCopyArgPass()";
+  let dependentDialects = ["memref::MemRefDialect", "gpu::GPUDialect"];
 }
 
 def OutlineJitFunctionPass : Pass<"outline-jit-function", "ModuleOp"> {
