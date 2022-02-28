@@ -52,6 +52,9 @@ __device__ __host__ __forceinline__ uint64_t xxh64_uint64(uint64_t v, uint64_t s
 
 struct XXH64 {
   __device__ __host__ __forceinline__ size_t operator()(uint64_t v) { return xxh64_uint64(v, 0); }
+  __device__ __host__ __forceinline__ size_t operator()(uint64_t v, size_t seed) {
+    return xxh64_uint64(v, seed);
+  }
 };
 
 #endif  // ONEFLOW_CORE_EMBEDDING_HASH_FUNCTION_H_
