@@ -37,7 +37,7 @@ def _test_different_dtype(test_case, device, shape):
 
 @flow.unittest.skip_unless_1n1d()
 class TestConstantModule(flow.unittest.TestCase):
-    @autotest(auto_backward=False, check_graph=True)
+    @autotest(n=10, auto_backward=False, check_graph=True)
     def test_flow_zeros_list_with_random_data(test_case):
         device = random_device()
         y1 = torch.zeros(random().to(int)).to(device)
@@ -50,7 +50,7 @@ class TestConstantModule(flow.unittest.TestCase):
         ).to(device)
         return y1, y2, y3, y4
 
-    @autotest(auto_backward=False, check_graph=True)
+    @autotest(n=10, auto_backward=False, check_graph=True)
     def test_flow_ones_list_with_random_data(test_case):
         device = random_device()
         y1 = torch.ones(random().to(int)).to(device)
