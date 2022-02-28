@@ -277,6 +277,8 @@ def get_module_graph_test(graph_train_oneflow, oneflow, *args):
             self.test_module = graph_train_oneflow
             if global_backward and graph_train_parameters_len:
                 self.add_optimizer(of_sgd)
+            if global_check_mlir:
+                self.config.enable_mlir_round_trip(True)
 
         def build(self, *args):
             res = self.test_module(*args)
@@ -306,6 +308,8 @@ def get_functional_graph_res(
     class TestGraphOfFunctional(flow.nn.Graph):
         def __init__(self):
             super().__init__()
+            if global_check_mlir:
+                self.config.enable_mlir_round_trip(True)
 
         def build(self):
             return graph_functional_oneflow(*graph_args, **graph_kwargs)
@@ -364,6 +368,8 @@ def get_tensor_graph_res(
     class TestGraphOfTensorMethod(flow.nn.Graph):
         def __init__(self):
             super().__init__()
+            if global_check_mlir:
+                self.config.enable_mlir_round_trip(True)
 
         def build(self):
             return graph_tensor_oneflow(*tensor_graph_args, **tensor_graph_kwargs)
@@ -950,9 +956,6 @@ def autotest(
     if check_graph == "ValidatedFlase":
         # check graph is intentionally closed and threre is a validated reason.
         check_graph = False
-
-    if check_mlir:
-        os.environ["ONEFLOW_MLIR_ENABLE_ROUND_TRIP"] = "1"
 
     if check_mlir and verbose:
         os.environ["ONEFLOW_MLIR_STDOUT"] = "1"
