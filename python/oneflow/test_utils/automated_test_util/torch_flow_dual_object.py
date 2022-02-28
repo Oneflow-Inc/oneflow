@@ -43,8 +43,7 @@ from .generators import Nothing, generator, random_pytorch_tensor
 postulate = [".rand", ".Tensor"]
 
 testing = False
-esting_graph_mlir = False
-testing_graph_mlir = False
+testing_graph = False
 global_check_allclose = True
 global_atol = 1e-5
 global_rtol = 1e-5
@@ -216,7 +215,7 @@ counter = 0
 align_exception = os.getenv("ONEFLOW_TEST_ALIGN_EXCEPTION") is not None
 
 
-def check_eager_graph_mlir_tensor(eager_res, graph_res):
+def check_eager_graph_tensor(eager_res, graph_res):
     if (
         global_check_allclose
         and isinstance(eager_res, flow.Tensor)
@@ -408,9 +407,9 @@ def get_oneflow_eager_res(
 
 # NOTE(lixiang): Check if the results of eager and graph are equal when oneflow is of type nn.Module or functional.
 def oneflow_eager_run_with_graph_check(
-    oneflow, oneflow_args, oneflow_kwargs, testing_graph_mlir, verbose, *args
+    oneflow, oneflow_args, oneflow_kwargs, testing_graph, verbose, *args
 ):
-    if testing_graph_mlir:
+    if testing_graph:
         graph_args, graph_kwargs = get_args_copy(oneflow_args, oneflow_kwargs)
 
         if isinstance(oneflow, flow.nn.Module):
@@ -426,7 +425,7 @@ def oneflow_eager_run_with_graph_check(
             graph_functional_oneflow = copy.deepcopy(oneflow)
 
     oneflow_res = get_oneflow_eager_res(oneflow, oneflow_args, oneflow_kwargs, verbose)
-    if testing_graph_mlir:
+    if testing_graph:
         if verbose:
             print(
                 "After running eager module or functional: ", repr(oneflow),
@@ -471,17 +470,17 @@ def oneflow_eager_run_with_graph_check(
         if find_check_module_func:
             if isinstance(test_g_res, tuple):
                 for _, g_res in enumerate(test_g_res):
-                    check_eager_graph_mlir_tensor(oneflow_res, g_res)
+                    check_eager_graph_tensor(oneflow_res, g_res)
             else:
-                check_eager_graph_mlir_tensor(oneflow_res, test_g_res)
+                check_eager_graph_tensor(oneflow_res, test_g_res)
     return oneflow_res
 
 
 # NOTE(lixiang): Check if the results of eager and graph are equal when oneflow is of type tensor.
 def oneflow_tensor_eager_run_with_graph_check(
-    oneflow, oneflow_method, oneflow_args, oneflow_kwargs, testing_graph_mlir, verbose
+    oneflow, oneflow_method, oneflow_args, oneflow_kwargs, testing_graph, verbose
 ):
-    if testing_graph_mlir:
+    if testing_graph:
         tensor_graph_args, tensor_graph_kwargs = get_args_copy(
             oneflow_args, oneflow_kwargs
         )
@@ -491,7 +490,7 @@ def oneflow_tensor_eager_run_with_graph_check(
         oneflow_method, oneflow_args, oneflow_kwargs, verbose, is_tesnor_method=True
     )
 
-    if testing_graph_mlir:
+    if testing_graph:
         if verbose:
             print(
                 "After running eager tensor method: ", repr(oneflow_method),
@@ -507,9 +506,9 @@ def oneflow_tensor_eager_run_with_graph_check(
 
         if isinstance(test_g_res, tuple):
             for _, g_res in enumerate(test_g_res):
-                check_eager_graph_mlir_tensor(oneflow_res, g_res)
+                check_eager_graph_tensor(oneflow_res, g_res)
         else:
-            check_eager_graph_mlir_tensor(oneflow_res, test_g_res)
+            check_eager_graph_tensor(oneflow_res, test_g_res)
     return oneflow_res
 
 
@@ -522,7 +521,7 @@ def get_pytorch_oneflow_res(
     oneflow_kwargs,
     name,
     verbose,
-    testing_graph_mlir,
+    testing_graph,
     *args,
 ):
     try:
@@ -562,7 +561,7 @@ def get_pytorch_oneflow_res(
         oneflow_res = torch_tensor_to_flow(pytorch_res)
     else:
         oneflow_res = oneflow_eager_run_with_graph_check(
-            oneflow, oneflow_args, oneflow_kwargs, testing_graph_mlir, verbose, *args,
+            oneflow, oneflow_args, oneflow_kwargs, testing_graph, verbose, *args,
         )
     return pytorch_res, oneflow_res
 
@@ -575,7 +574,7 @@ def get_pytorch_oneflow_tensor_res(
     pytorch_kwargs,
     oneflow_args,
     oneflow_kwargs,
-    testing_graph_mlir,
+    testing_graph,
     verbose,
 ):
     try:
@@ -597,7 +596,7 @@ def get_pytorch_oneflow_tensor_res(
         oneflow_method,
         oneflow_args,
         oneflow_kwargs,
-        testing_graph_mlir,
+        testing_graph,
         verbose,
     )
     return pytorch_res, oneflow_res
@@ -650,7 +649,7 @@ def GetDualObject(name, pytorch, oneflow):
                             oneflow_kwargs,
                             name,
                             verbose,
-                            testing_graph_mlir,
+                            testing_graph,
                             *args,
                         )
                         return GetDualObject("unused", pytorch_res, oneflow_res)
@@ -674,7 +673,7 @@ def GetDualObject(name, pytorch, oneflow):
                             pytorch_kwargs,
                             oneflow_args,
                             oneflow_kwargs,
-                            testing_graph_mlir,
+                            testing_graph,
                             verbose,
                         )
                         return GetDualObject("unused", pytorch_res, oneflow_res)
@@ -966,15 +965,15 @@ def autotest(
                 global_backward = auto_backward
 
                 try:
-                    global testing_graph_mlir
+                    global testing_graph
                     # for generate fake program input tensor
                     global testing
                     testing = True
                     if check_graph:
-                        testing_graph_mlir = True
+                        testing_graph = True
                     res = f(test_case, *args, **kwargs)
                     testing = False
-                    testing_graph_mlir = False
+                    testing_graph = False
                 except (PyTorchDoesNotSupportError, BothDoNotSupportError) as e:
                     if verbose:
                         print(f"{f.__name__}")
