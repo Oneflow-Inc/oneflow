@@ -22,7 +22,7 @@ import oneflow as flow
 import os
 
 import oneflow.unittest
-from test_util import GenArgList
+from oneflow.test_utils.test_util import GenArgList
 
 
 def _test_eager_boxing_with_non_overlapping_placement_p_to_s1(
@@ -3395,6 +3395,65 @@ class TestEagerNaiveBoxingSToS(flow.unittest.TestCase):
         ]
         for arg in GenArgList(arg_dict):
             _test_eager_consistent_with_0_size_data(test_case, *arg)
+
+
+def _test_eager_boxing_one_to_n_with_diff_dim(
+    test_case, in_device_type, out_device_type
+):
+    x = flow.tensor(
+        [1, 2, 3, 4],
+        sbp=flow.sbp.broadcast,
+        placement=flow.placement(in_device_type, ranks=[0]),
+    )
+    y = x.to_global(
+        sbp=[flow.sbp.broadcast, flow.sbp.split(0)],
+        placement=flow.placement(out_device_type, ranks=[[0, 1], [2, 3]]),
+    )
+
+    rank = flow.env.get_rank()
+    if rank == 0 or rank == 2:
+        test_case.assertTrue(np.array_equal(y.to_local().numpy(), np.array([1, 2]),))
+    elif rank == 1 or rank == 3:
+        test_case.assertTrue(np.array_equal(y.to_local().numpy(), np.array([3, 4]),))
+
+
+def _test_eager_boxing_n_to_one_with_diff_dim(
+    test_case, in_device_type, out_device_type
+):
+    x = flow.tensor(
+        [1, 2, 3, 4],
+        sbp=[flow.sbp.broadcast, flow.sbp.split(0)],
+        placement=flow.placement(in_device_type, ranks=[[0, 1], [2, 3]]),
+    )
+    y = x.to_global(
+        sbp=flow.sbp.broadcast, placement=flow.placement(out_device_type, ranks=[0])
+    )
+
+    rank = flow.env.get_rank()
+    if rank == 0:
+        test_case.assertTrue(
+            np.array_equal(y.to_local().numpy(), np.array([1, 2, 3, 4]),)
+        )
+
+
+@flow.unittest.skip_unless_1n4d()
+class TestEagerBoxingOneToNWithDiffDim(flow.unittest.TestCase):
+    def test_eager_boxing_one_to_n_with_diff_dim(test_case):
+        arg_dict = OrderedDict()
+        arg_dict["in_device_type"] = ["cpu", "cuda"]
+        arg_dict["out_device_type"] = ["cpu", "cuda"]
+        for arg in GenArgList(arg_dict):
+            _test_eager_boxing_one_to_n_with_diff_dim(test_case, *arg)
+
+
+@flow.unittest.skip_unless_1n4d()
+class TestEagerBoxingNToOneWithDiffDim(flow.unittest.TestCase):
+    def test_eager_boxing_n_to_one_with_diff_dim(test_case):
+        arg_dict = OrderedDict()
+        arg_dict["in_device_type"] = ["cpu", "cuda"]
+        arg_dict["out_device_type"] = ["cpu", "cuda"]
+        for arg in GenArgList(arg_dict):
+            _test_eager_boxing_one_to_n_with_diff_dim(test_case, *arg)
 
 
 if __name__ == "__main__":

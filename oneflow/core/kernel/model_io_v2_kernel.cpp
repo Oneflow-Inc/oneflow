@@ -40,11 +40,11 @@ struct InitializeWithConfUtil final {
 #undef MAKE_INITIALIZE_SWITCH_ENTRY
 };
 
-cfg::NdSbp GetNdSbp(const KernelConf& kernel_conf, const std::string& bn_in_op) {
+NdSbp GetNdSbp(const KernelConf& kernel_conf, const std::string& bn_in_op) {
   const auto& nd_sbp_map = kernel_conf.op_attribute().nd_sbp_signature().bn_in_op2nd_sbp();
   const auto& it = nd_sbp_map.find(bn_in_op);
   CHECK(it != nd_sbp_map.end());
-  return cfg::NdSbp(it->second);
+  return NdSbp(it->second);
 }
 
 class OnDemandHostBlob final {
@@ -227,9 +227,9 @@ class ModelInitV2Kernel final : public Kernel {
       int64_t seed_num = 1;
       int64_t seed_offset = 0;
       const auto& original_variable_conf = model_init_v2_conf.original_variable_conf(i);
-      const cfg::NdSbp& nd_sbp = GetNdSbp(this->kernel_conf(), GenRepeatedBn("ref", i));
+      const NdSbp& nd_sbp = GetNdSbp(this->kernel_conf(), GenRepeatedBn("ref", i));
       FOR_RANGE(int64_t, j, 0, hierarchy->NumAxes()) {
-        const cfg::SbpParallel& sbp_parallel = nd_sbp.sbp_parallel(j);
+        const SbpParallel& sbp_parallel = nd_sbp.sbp_parallel(j);
         CHECK(sbp_parallel.has_split_parallel() || sbp_parallel.has_broadcast_parallel());
         if (sbp_parallel.has_split_parallel()) {
           seed_num *= hierarchy->At(j);
@@ -298,7 +298,7 @@ class ModelLoadV2Kernel final : public Kernel {
     CHECK_EQ(model_load_v2_conf.original_variable_conf_size(), num_var);
     tensor_slice_views_.reserve(num_var);
     FOR_RANGE(int64_t, i, 0, num_var) {
-      const cfg::NdSbp& nd_sbp = GetNdSbp(this->kernel_conf(), GenRepeatedBn("ref", i));
+      const NdSbp& nd_sbp = GetNdSbp(this->kernel_conf(), GenRepeatedBn("ref", i));
       const Shape logical_blob_shape(model_load_v2_conf.original_variable_conf(i).shape());
       tensor_slice_views_.emplace_back(
           GetTensorSliceView4ParallelId(*hierarchy, nd_sbp, logical_blob_shape,
@@ -340,9 +340,9 @@ class ModelSaveV2Kernel final : public Kernel {
             this->kernel_conf().op_attribute().parallel_conf_signature().op_parallel_conf())
             .hierarchy();
     const auto NeedDoSave = [&](const std::vector<int64_t>& parallel_rank,
-                                const cfg::NdSbp& nd_sbp) -> bool {
+                                const NdSbp& nd_sbp) -> bool {
       FOR_RANGE(int64_t, j, 0, hierarchy->NumAxes()) {
-        const cfg::SbpParallel& sbp_parallel = nd_sbp.sbp_parallel(j);
+        const SbpParallel& sbp_parallel = nd_sbp.sbp_parallel(j);
         if (sbp_parallel.has_broadcast_parallel() && parallel_rank.at(j) != 0) { return false; }
       }
       return true;
@@ -360,7 +360,7 @@ class ModelSaveV2Kernel final : public Kernel {
     part_ids_.reserve(num_var);
     FOR_RANGE(int64_t, i, 0, num_var) {
       counters_.emplace_back(new int64_t(0));
-      const cfg::NdSbp& nd_sbp = GetNdSbp(this->kernel_conf(), GenRepeatedBn("in", i));
+      const NdSbp& nd_sbp = GetNdSbp(this->kernel_conf(), GenRepeatedBn("in", i));
       const Shape logical_blob_shape(model_save_v2_conf.original_variable_conf(i).shape());
       bool variable_need_do_save = false;
       int64_t variable_part_id = 0;

@@ -53,18 +53,18 @@ class UserOp final : public Operator {
   LogicalBlobId lbi4ibn(const std::string& input_bn) const override;
   LogicalBlobId lbi4obn(const std::string& output_bn) const override;
   Maybe<void> InferSbpSignature(
-      cfg::SbpSignature* sbp_signature, const cfg::SbpSignature& sbp_sig_conf,
-      const std::function<int32_t(const cfg::SbpSignature&)>& CalcOrderValue4SbpSig,
+      SbpSignature* sbp_signature, const SbpSignature& sbp_sig_conf,
+      const std::function<int32_t(const SbpSignature&)>& CalcOrderValue4SbpSig,
       std::function<Maybe<const SbpInferHint*>(const std::string&)> SbpInferHint4Ibn,
       const ParallelDesc& parallel_desc) const override;
   Maybe<void> GetSbpSignatures(
       const std::function<Maybe<const BlobDesc&>(const std::string&)>& LogicalBlobDesc4Ibn,
-      const ParallelDesc& parallel_desc, cfg::SbpSignatureList* sbp_sig_list) const override;
+      const ParallelDesc& parallel_desc, SbpSignatureList* sbp_sig_list) const override;
   Maybe<void> InferOpTimeShape(
       const std::function<Maybe<const Shape>(const std::string&)>& GetTimeShape4BnInOp,
       std::shared_ptr<const Shape>* time_shape) const override;
-  Maybe<void> InferNdSbpSignature(cfg::NdSbpSignature* nd_sbp_signature,
-                                  const cfg::NdSbpSignature& nd_sbp_constraints,
+  Maybe<void> InferNdSbpSignature(NdSbpSignature* nd_sbp_signature,
+                                  const NdSbpSignature& nd_sbp_constraints,
                                   const ParallelDesc& parallel_desc,
                                   std::function<Maybe<const NdSbpInferHint*>(const std::string&)>
                                       NdSbpInferHint4Ibn) const override;

@@ -48,7 +48,7 @@ Maybe<void> SinkTickOp::InferOutBlobDescs(
   return InferBlobDescs(GetBlobDesc4BnInOp);
 }
 
-Maybe<void> SinkTickOp::GetSbpSignatures(cfg::SbpSignatureList* sbp_sig_list) const {
+Maybe<void> SinkTickOp::GetSbpSignatures(SbpSignatureList* sbp_sig_list) const {
   SbpSignatureBuilder().Broadcast(input_bns()).Build(sbp_sig_list->mutable_sbp_signature()->Add());
   return Maybe<void>::Ok();
 }

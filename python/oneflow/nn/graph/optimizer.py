@@ -44,7 +44,7 @@ class OptDict(object):
                     'opt_dict["lr_sch"] is not an instance of LRScheduler.'
                 )
 
-            if opt_dict["lr_sch"]._optimizer is not self._optimizer:
+            if opt_dict["lr_sch"].optimizer is not self._optimizer:
                 raise ValueError("lr_scheduler doesn't match optimizer.")
 
             self._lr_scheduler = opt_dict["lr_sch"]
@@ -52,20 +52,25 @@ class OptDict(object):
     def generate_optimizer_and_variable_configs(self, job_conf, vars_conf):
         train_conf = job_conf.mutable_train_conf()
 
-        if self._optimizer is not None:
-            # Check first
-            self._optimizer._check_variables_in_graph(vars_conf)
-            self._optimizer._check_variables_optimizer_bound(vars_conf)
+        if self._optimizer is None:
+            return
 
-            opt_confs = self._optimizer._generate_conf_for_graph(train_conf, vars_conf)
+        # Check first
+        self._optimizer._check_variables_in_graph(vars_conf)
+        self._optimizer._check_variables_optimizer_bound(vars_conf)
 
-            if self._is_sparse:
-                self._optimizer._generate_indexed_slices_optimizer_conf(
-                    job_conf, vars_conf
-                )
+        opt_confs = self._optimizer._generate_conf_for_graph(train_conf, vars_conf)
 
-        if self._lr_scheduler is not None:
-            self._lr_scheduler._generate_conf_for_graph(opt_confs)
+        if self._is_sparse:
+            self._optimizer._generate_indexed_slices_optimizer_conf(job_conf, vars_conf)
+
+        if self._lr_scheduler is None:
+            return
+
+        for opt_conf in opt_confs:
+            self._lr_scheduler._generate_conf_for_graph(
+                opt_conf.mutable_learning_rate_decay()
+            )
 
 
 class VariableConfig(object):

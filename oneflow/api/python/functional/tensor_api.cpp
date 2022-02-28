@@ -21,6 +21,7 @@ limitations under the License.
 #include "oneflow/api/python/functional/tensor_api.yaml.h"
 #include "oneflow/core/common/optional.h"
 #include "oneflow/core/common/scalar.h"
+#include "oneflow/core/framework/stream.h"
 #include "oneflow/core/framework/op_builder.h"
 #include "oneflow/core/framework/op_expr.h"
 #include "oneflow/core/framework/op_interpreter/op_interpreter_util.h"
@@ -72,7 +73,7 @@ class ConsistentTensorWithDataFunctor {
  public:
   Maybe<Tensor> operator()(PyObject* data, const Optional<Symbol<DType>>& dtype,
                            const Symbol<ParallelDesc>& placement,
-                           const std::vector<Symbol<cfg::SbpParallel>>& sbp_tuple,
+                           const std::vector<Symbol<SbpParallel>>& sbp_tuple,
                            const bool& requires_grad) const {
     // NOTE(chengcheng): flow.Tensor or flow.tensor ONLY created by EagerTensor now.
     LazyMode::Guard lazy_mode_disabled_guard(/*is_enabled*/ false);
@@ -107,7 +108,7 @@ class TensorEmptyCtorFunctor {
 class ConsistentTensorEmptyCtorFunctor {
  public:
   Maybe<Tensor> operator()(const Symbol<ParallelDesc>& placement,
-                           const std::vector<Symbol<cfg::SbpParallel>>& sbp_tuple) const {
+                           const std::vector<Symbol<SbpParallel>>& sbp_tuple) const {
     Shape shape(DimVector{0});
     JUST(CheckDeviceIdsIsValid(placement));
     return ConsistentTensorWithShapeCtor(shape, placement, sbp_tuple);
@@ -150,7 +151,7 @@ class TensorWithDataCtorFunctor {
 class ConsistentTensorWithDataCtorFunctor {
  public:
   Maybe<Tensor> operator()(PyObject* data, const Symbol<ParallelDesc>& placement,
-                           const std::vector<Symbol<cfg::SbpParallel>>& sbp_tuple) const {
+                           const std::vector<Symbol<SbpParallel>>& sbp_tuple) const {
     JUST(CheckDeviceIdsIsValid(placement));
     // Treat the single long as shape.
     if (PyLong_Check(data)) {
@@ -191,7 +192,7 @@ class TensorWithShapeCtorFunctor {
 class ConsistentTensorWithShapeCtorFunctor {
  public:
   Maybe<Tensor> operator()(const Shape& shape, const Symbol<ParallelDesc>& placement,
-                           const std::vector<Symbol<cfg::SbpParallel>>& sbp_tuple) const {
+                           const std::vector<Symbol<SbpParallel>>& sbp_tuple) const {
     // NOTE(chengcheng): flow.Tensor or flow.tensor ONLY created by EagerTensor now.
     LazyMode::Guard lazy_mode_disabled_guard(/*is_enabled*/ false);
     JUST(CheckDeviceIdsIsValid(placement));
@@ -271,7 +272,8 @@ class LocalTensorSharedNumpyDataFunctor {
 
     // Init blob
     JUST(tensor_impl->InitEagerBlobObject(NewLocalDepObject()));
-    JUST(tensor_impl->eager_blob_object())->set_last_used_device(device);
+    const auto& stream = GetDefaultStreamByDevice(device);
+    JUST(tensor_impl->eager_blob_object())->set_last_used_stream(stream);
     JUST(JUST(tensor_impl->eager_blob_object())->TryInitBlob());
     JUST(tensor_impl->eager_blob_object())->mut_blob()->reset_dptr(static_cast<char*>(data_ptr));
     std::shared_ptr<Tensor> out(new MirroredTensor(tensor_impl));

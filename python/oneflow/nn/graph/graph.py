@@ -150,15 +150,18 @@ class Graph(object):
         .. code-block:: python
 
             >>> import oneflow as flow
+            >>> linear = flow.nn.Linear(3, 8, False)
             >>> class MyGraph(flow.nn.Graph):
             ...     def __init__(self):
             ...         super().__init__()
-            ...         self.linear = flow.nn.Linear(3, 8, False)
+            ...         self.model = linear
             ...     def build(self, x):
-            ...         return self.linear(x)
+            ...         return self.model(x)
 
             >>> linear_graph = MyGraph()
             >>> x = flow.randn(4, 3)
+            >>> linear.eval() # make linear module executing in evaluation mode
+            Linear(in_features=3, out_features=8, bias=False)
             >>> y = linear_graph(x) # The build() method is called implicitly
 
         Note:
@@ -217,8 +220,8 @@ class Graph(object):
         * learn rate scheduler's ``step()``.
 
         Also note that only scalar tensor are allowed to call ``backward()``
-        in ``nn.Graph.build()`` for the moment. So you may call ``Tensor.sum()``
-        or ``Tensor.mean()`` to make the loss tensor a scalar tensor.
+        in ``nn.Graph.build()`` for the moment. So you may call methods such as ``Tensor.mean()``
+        to make the loss tensor a scalar tensor.
 
         .. code-block:: python
 
@@ -243,6 +246,11 @@ class Graph(object):
             >>> linear_graph = LinearTrainGraph()
             >>> x = flow.randn(10, 3)
             >>> y = flow.randn(10)
+            >>> model.train() # make model executing in training mode
+            Sequential(
+              (0): Linear(in_features=3, out_features=1, bias=True)
+              (1): Flatten(start_dim=0, end_dim=1)
+            )
             >>> for t in range(3):
             ...     loss = linear_graph(x, y)
 
@@ -259,7 +267,7 @@ class Graph(object):
         if lr_sch is not None:
             assert isinstance(lr_sch, LRScheduler)
             assert (
-                lr_sch._optimizer is optim
+                lr_sch.optimizer is optim
             ), "lr_scheduler's optimizer must be the same optimizer in add_optimizer."
             opt_dict["lr_sch"] = lr_sch
         self._opts.append(opt_dict)
@@ -710,11 +718,8 @@ class Graph(object):
 
             # Deal with outputs
             self.__print(0, 1, self._shallow_repr() + " start building graph outputs.")
-            if not (type(outputs) is tuple or type(outputs) is list):
-                if outputs is None:
-                    outputs = ()
-                else:
-                    outputs = (outputs,)
+            # Always pack output to remain type of outputs
+            outputs = (outputs,)
 
             (
                 output_op_names,
@@ -769,7 +774,8 @@ class Graph(object):
                 state_op_names, self._state_tensor_tuple
             )
 
-        return seq_to_func_return(self._eager_outputs_buffer[0])
+        # Always pack outputs to remain type of outputs
+        return seq_to_func_return(self._eager_outputs_buffer[0], True)
 
     def __rebuild_outputs(self, out2name=None):
         # NOTE(chengcheng):
@@ -896,7 +902,8 @@ class Graph(object):
         oneflow._oneflow_internal.nn.graph.SoftSyncNNGraphBuffers(
             outputs_tensor_tuple, self._c_nn_graph
         )
-        return seq_to_func_return(eager_outputs)
+        # Always pack outputs to remain type of outputs
+        return seq_to_func_return(eager_outputs, True)
 
     def __build_io(self, io_type, build_func, *args, **kwargs):
         assert io_type in ("input", "output")
@@ -941,7 +948,7 @@ class Graph(object):
                 )
 
         out = io_node.map_leaf(leaf_node_fn)
-        build_args = list(out[0])
+        build_args = out[0]
         build_kwargs = out[1]
 
         return op_names, build_args, build_kwargs, args_repr, tensor2op_name
@@ -1007,7 +1014,7 @@ class Graph(object):
                 )
 
         out = io_node.map_leaf(leaf_node_fn)
-        mapped_args = list(out[0])
+        mapped_args = out[0]
         mapped_kwargs = out[1]
         return mapped_args, mapped_kwargs
 

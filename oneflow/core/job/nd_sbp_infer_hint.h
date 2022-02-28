@@ -25,7 +25,7 @@ namespace oneflow {
 class NdSbpInferHint final {
  public:
   NdSbpInferHint(const ParallelDesc* parallel_desc, const BlobDesc* logical_blob_desc,
-                 const cfg::NdSbp* nd_sbp)
+                 const NdSbp* nd_sbp)
       : parallel_desc_(parallel_desc), logical_blob_desc_(logical_blob_desc), nd_sbp_(nd_sbp) {}
   NdSbpInferHint(const NdSbpInferHint&) = default;
   ~NdSbpInferHint() = default;
@@ -33,12 +33,12 @@ class NdSbpInferHint final {
   // Getters
   const ParallelDesc& parallel_desc() const { return *parallel_desc_; }
   const BlobDesc& logical_blob_desc() const { return *logical_blob_desc_; }
-  const cfg::NdSbp& nd_sbp() const { return *nd_sbp_; }
+  const NdSbp& nd_sbp() const { return *nd_sbp_; }
 
  private:
   const ParallelDesc* parallel_desc_;
   const BlobDesc* logical_blob_desc_;
-  const cfg::NdSbp* nd_sbp_;
+  const NdSbp* nd_sbp_;
 };
 
 }  // namespace oneflow

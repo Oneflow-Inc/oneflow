@@ -85,7 +85,6 @@ message WeightDecayConf {
 message OptimizerConf {
   repeated string variable_op_names = 1;
   optional float base_learning_rate = 2;
-  optional WarmupConf warmup_conf = 3;
   optional LearningRateDecayConf learning_rate_decay = 4;
   optional string learning_rate_lbn = 5;
   optional ClipConf clip_conf = 6;
@@ -104,7 +103,6 @@ message OptimizerConf {
 
 message NormalModelUpdateOpUserConf {
   optional LearningRateDecayConf learning_rate_decay = 1;
-  optional WarmupConf warmup_conf = 2;
   optional ClipConf clip_conf = 3;
   optional WeightDecayConf weight_decay_conf = 4;
   oneof normal_mdupdt {
