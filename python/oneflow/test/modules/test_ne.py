@@ -101,7 +101,7 @@ class TestNe(flow.unittest.TestCase):
         for arg in GenArgList(arg_dict):
             arg[0](test_case, *arg[1:])
 
-    @autotest(auto_backward=False, check_graph=True)
+    @autotest(n=5, auto_backward=False, check_graph=True)
     def test_ne_with_0_size_data(test_case):
         device = random_device()
         x1 = random_tensor(4, 2, 3, 0, 5).to(device)
@@ -111,7 +111,7 @@ class TestNe(flow.unittest.TestCase):
         y3 = torch.ne(x1, 2.0)
         return (y1, y2, y3)
 
-    @autotest(auto_backward=False)
+    @autotest(n=5, auto_backward=False)
     def test_ne_with_0dim_data(test_case):
         device = random_device()
         x1 = random_tensor(ndim=0).to(device)

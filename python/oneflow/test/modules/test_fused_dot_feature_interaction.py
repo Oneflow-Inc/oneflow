@@ -113,7 +113,7 @@ def _test_fused_dot_feature_interaction(
             atol=1e-4,
         )
     )
-    test_case.assertTrue(np.allclose(fused_R.numpy(), R.numpy(), rtol=1e-4, atol=1e-4))
+    test_case.assertTrue(np.allclose(fused_R.numpy(), R.numpy(), rtol=1e-3, atol=1e-3))
 
 
 @unittest.skipIf(os.getenv("ONEFLOW_TEST_CPU_ONLY"), "only test cpu cases")
