@@ -53,6 +53,8 @@ class GraphConfig(object):
         The default outputs buffer size is 2.
 
         # TODO (lixiang): Explain the meaning of the size of buffer size and add sample code.
+        # The size of the buffer size indicates the maximum number of iterations that the output of the Graph and the Graph actually executed asynchronously can overlap.
+        # If the buffer size is 1, there is no pipeline. A size of 2 means that it can execute 1 iter ahead of time. A size of 3 means that two iters can be executed ahead of time.
 
         Args:
             value (int): graph ouputs buffer size.
