@@ -21,7 +21,6 @@ import numpy as np
 import oneflow as flow
 import oneflow.unittest
 
-from test_util import GenArgList
 from oneflow.test_utils.automated_test_util import *
 
 
