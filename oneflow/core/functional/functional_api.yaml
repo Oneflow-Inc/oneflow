@@ -230,14 +230,16 @@
 
 - name: "max"
   signature: [
-    "TensorTuple (Tensor input, Int32 dim=None, Bool keepdim=False) => Max",
+    "Tensor (Tensor input) => Max",
+    "TensorTuple (Tensor input, Int32 dim, Bool keepdim=False) => Max",
     "Tensor (Tensor input, Tensor other) => Max"
   ]
   bind_python: True
 
 - name: "min"
   signature: [
-    "TensorTuple (Tensor input, Int32 dim=None, Bool keepdim=False) => Min",
+    "Tensor (Tensor input) => Min",
+    "TensorTuple (Tensor input, Int32 dim, Bool keepdim=False) => Min",
     "Tensor (Tensor input, Tensor other) => Min"
   ]
   bind_python: True

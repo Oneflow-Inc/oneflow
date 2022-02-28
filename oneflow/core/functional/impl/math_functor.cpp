@@ -320,52 +320,54 @@ class ReduceMinFunctor {
 
 class MaxFunctor {
  public:
-  Maybe<TensorTuple> operator()(const std::shared_ptr<one::Tensor>& x, const Optional<int32_t>& dim,
+  Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x) const {
+    std::vector<int32_t> axis(x->ndim());
+    std::iota(axis.begin(), axis.end(), 0);
+    return ReduceMax(x, axis, /*keepdims=*/false);
+  }
+};
+
+class Max2Functor {
+ public:
+  Maybe<TensorTuple> operator()(const std::shared_ptr<one::Tensor>& x, const int32_t& dim,
                                 const bool& keepdims) const {
-    auto outputs = std::make_shared<TensorTuple>();
-    std::vector<int32_t> axis;
-    if (dim) {
-      int32_t d = JUST(dim);
-      if (d < -x->ndim() || d >= x->ndim()) {
-        return Error::IndexError()
-               << "Dimension out of range (expected to be in range of [" << -x->ndim() << ", "
-               << x->ndim() - 1 << "], but got " << d << ")";
-      }
-      if (d < 0) { d += x->ndim(); }
-      axis.emplace_back(d);
-      outputs->emplace_back(JUST(ReduceMax(x, axis, keepdims)));
-      outputs->emplace_back(JUST(ArgMax(x, dim, keepdims, NullOpt)));
-    } else {
-      axis.resize(x->ndim());
-      std::iota(axis.begin(), axis.end(), 0);
-      outputs->emplace_back(JUST(ReduceMax(x, axis, keepdims)));
+    auto outputs = std::make_shared<TensorTuple>(2);
+    int32_t axis = dim;
+    if (axis < -x->ndim() || axis >= x->ndim()) {
+      return Error::IndexError() << "Dimension out of range (expected to be in range of ["
+                                 << -x->ndim() << ", " << x->ndim() - 1 << "], but got " << axis
+                                 << ")";
     }
+    if (axis < 0) { axis += x->ndim(); }
+    (*outputs)[0] = JUST(ReduceMax(x, {axis}, keepdims));
+    (*outputs)[1] = JUST(ArgMax(x, dim, keepdims, NullOpt));
     return outputs;
   }
 };
 
 class MinFunctor {
  public:
-  Maybe<TensorTuple> operator()(const std::shared_ptr<one::Tensor>& x, const Optional<int32_t>& dim,
+  Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x) const {
+    std::vector<int32_t> axis(x->ndim());
+    std::iota(axis.begin(), axis.end(), 0);
+    return ReduceMin(x, axis, /*keepdims=*/false);
+  }
+};
+
+class Min2Functor {
+ public:
+  Maybe<TensorTuple> operator()(const std::shared_ptr<one::Tensor>& x, const int32_t& dim,
                                 const bool& keepdims) const {
-    auto outputs = std::make_shared<TensorTuple>();
-    std::vector<int32_t> axis;
-    if (dim) {
-      int32_t d = JUST(dim);
-      if (d < -x->ndim() || d >= x->ndim()) {
-        return Error::IndexError()
-               << "Dimension out of range (expected to be in range of [" << -x->ndim() << ", "
-               << x->ndim() - 1 << "], but got " << d << ")";
-      }
-      if (d < 0) { d += x->ndim(); }
-      axis.emplace_back(d);
-      outputs->emplace_back(JUST(ReduceMin(x, axis, keepdims)));
-      outputs->emplace_back(JUST(ArgMin(x, dim, keepdims, NullOpt)));
-    } else {
-      axis.resize(x->ndim());
-      std::iota(axis.begin(), axis.end(), 0);
-      outputs->emplace_back(JUST(ReduceMin(x, axis, keepdims)));
+    auto outputs = std::make_shared<TensorTuple>(2);
+    int32_t axis = dim;
+    if (axis < -x->ndim() || axis >= x->ndim()) {
+      return Error::IndexError() << "Dimension out of range (expected to be in range of ["
+                                 << -x->ndim() << ", " << x->ndim() - 1 << "], but got " << axis
+                                 << ")";
     }
+    if (axis < 0) { axis += x->ndim(); }
+    (*outputs)[0] = JUST(ReduceMin(x, {axis}, keepdims));
+    (*outputs)[1] = JUST(ArgMin(x, dim, keepdims, NullOpt));
     return outputs;
   }
 };
@@ -2171,10 +2173,10 @@ ONEFLOW_FUNCTION_LIBRARY(m) {
   m.add_functor<ScalarPowFunctor>("ScalarPow");
   m.add_functor<ScalarPowGradFunctor>("ScalarPowGrad");
   m.add_functor<ReduceMaxFunctor>("ReduceMax");
-  m.add_functor<MaxFunctor>("Max");
+  m.add_functor<MaxFunctor, Max2Functor>("Max");
   m.add_functor<ReduceMeanFunctor>("ReduceMean");
   m.add_functor<ReduceMinFunctor>("ReduceMin");
-  m.add_functor<MinFunctor>("Min");
+  m.add_functor<MinFunctor, Min2Functor>("Min");
   m.add_functor<ReduceSumFunctor>("ReduceSum");
   m.add_functor<ReduceAllFunctor>("ReduceAll");
   m.add_functor<ReduceAnyFunctor>("ReduceAny");

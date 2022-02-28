@@ -1486,7 +1486,7 @@ class DropoutFunctor {
     auto outputs = std::make_shared<TensorTuple>(1);
     if (inplace) {
       JUST(CheckInplaceValid(x));
-      outputs->at(0) = x;
+      (*outputs)[0] = x;
     }
     const auto gen = generator.value_or(JUST(one::DefaultAutoGenerator()));
     const auto& dropout_state = std::make_shared<FusedDropoutKernelState>(gen);
@@ -1509,7 +1509,7 @@ class DropoutFunctor {
                                     OpExprInterpContext(dropout_attrs, dropout_state)));
       }
     }
-    return outputs->at(0);
+    return (*outputs)[0];
   }
 
  private:
