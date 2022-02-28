@@ -77,43 +77,56 @@ class FusedMLP(Module):
         self.reset_parameters()
 
     def add_parameters(self) -> None:
-        # First layer.
-        self.register_parameter(
-            f"weight_{0}",
-            flow.nn.Parameter(flow.Tensor(self.hidden_features[0], self.in_features)),
-        )
-        self.register_parameter(
-            f"bias_{0}", flow.nn.Parameter(flow.Tensor(self.hidden_features[0]))
-        )
-
-        # Middle Layer.
-        for idx in range(1, self.hidden_layer_num):
+        if self.hidden_layer_num != 0:
+            # First layer.
             self.register_parameter(
-                f"weight_{idx}",
+                f"weight_{0}",
+                flow.nn.Parameter(
+                    flow.Tensor(self.hidden_features[0], self.in_features)
+                ),
+            )
+            self.register_parameter(
+                f"bias_{0}", flow.nn.Parameter(flow.Tensor(self.hidden_features[0]))
+            )
+
+            # Middle Layer.
+            for idx in range(1, self.hidden_layer_num):
+                self.register_parameter(
+                    f"weight_{idx}",
+                    flow.nn.Parameter(
+                        flow.Tensor(
+                            self.hidden_features[idx], self.hidden_features[idx - 1],
+                        )
+                    ),
+                )
+                self.register_parameter(
+                    f"bias_{idx}",
+                    flow.nn.Parameter(flow.Tensor(self.hidden_features[idx])),
+                )
+
+            # Final Layer.
+            self.register_parameter(
+                f"weight_{self.hidden_layer_num}",
                 flow.nn.Parameter(
                     flow.Tensor(
-                        self.hidden_features[idx], self.hidden_features[idx - 1],
+                        self.out_features,
+                        self.hidden_features[self.hidden_layer_num - 1],
                     )
                 ),
             )
             self.register_parameter(
-                f"bias_{idx}",
-                flow.nn.Parameter(flow.Tensor(self.hidden_features[idx])),
+                f"bias_{self.hidden_layer_num}",
+                flow.nn.Parameter(flow.Tensor(self.out_features)),
             )
-
-        # Final Layer.
-        self.register_parameter(
-            f"weight_{self.hidden_layer_num}",
-            flow.nn.Parameter(
-                flow.Tensor(
-                    self.out_features, self.hidden_features[self.hidden_layer_num - 1],
-                )
-            ),
-        )
-        self.register_parameter(
-            f"bias_{self.hidden_layer_num}",
-            flow.nn.Parameter(flow.Tensor(self.out_features)),
-        )
+        else:
+            # there is only 1 layer.
+            self.register_parameter(
+                f"weight_{0}",
+                flow.nn.Parameter(flow.Tensor(self.out_features, self.in_features)),
+            )
+            self.register_parameter(
+                f"bias_{0}", flow.nn.Parameter(flow.Tensor(self.out_features))
+            )
 
     def weight(self, i):
         return getattr(self, f"weight_{i}")
