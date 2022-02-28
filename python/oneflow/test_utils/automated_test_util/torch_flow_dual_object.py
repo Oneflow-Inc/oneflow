@@ -945,7 +945,6 @@ def autotest(
         # check graph is intentionally closed and threre is a validated reason.
         check_graph = False
 
-
     def deco(f):
         @functools.wraps(f)
         def new_f(test_case, *args, **kwargs):
