@@ -139,15 +139,15 @@ class GraphConfig(object):
 
         .. code-block:: python
 
-            import oneflow as flow
-
             class Graph(flow.nn.Graph):
                 def __init__(self):
                     super().__init__()
-                    self.linear = flow.nn.Linear(3, 8, False)
+                    self.bn1 = flow.nn.BatchNorm1d(100)
                     self.config.allow_fuse_add_to_output(True)
                 def build(self, x):
-                    return self.linear(x)
+                    bn = self.bn1(x) 
+                    out = bn + x
+                    return out
 
             graph = Graph()
 
@@ -165,13 +165,16 @@ class GraphConfig(object):
 
             import oneflow as flow
 
+            def model(x):
+                return flow.mul(1,flow.cast(x,flow.int8))
+
             class Graph(flow.nn.Graph):
                 def __init__(self):
                     super().__init__()
-                    self.linear = flow.nn.Linear(3, 8, False)
+                    self.m=model
                     self.config.allow_fuse_cast_scale(True)
-                def build(self, x):
-                    return self.linear(x)
+                def build(self,x):
+                    return self.m(x)
 
             graph = Graph()
 
@@ -374,11 +377,11 @@ class GraphConfig(object):
             class Graph(flow.nn.Graph):
                 def __init__(self):
                     super().__init__()
-                    self.linear = flow.nn.Linear(3, 8, False)
+                    self.m = flow.nn.Conv2d(16, 32, (3, 5), stride=(2, 1), padding=(4, 2), dilation=(3, 1))
                     # Do not enable the cudnn conv operation to use the heuristic search algorithm.
                     self.config.enable_cudnn_conv_heuristic_search_algo(False)
                 def build(self, x):
-                    return self.linear(x)
+                    return self.m(x)
 
             graph = Graph()
     
