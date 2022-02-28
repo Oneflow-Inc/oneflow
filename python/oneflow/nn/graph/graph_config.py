@@ -175,7 +175,7 @@ class GraphConfig(object):
                     super().__init__()
                     self.m=model
                     self.config.allow_fuse_cast_scale(True)
-                def build(self,x):
+                def build(self, x):
                     return self.m(x)
 
             graph = Graph()
