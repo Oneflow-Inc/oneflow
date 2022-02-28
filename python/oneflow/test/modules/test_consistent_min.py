@@ -51,10 +51,10 @@ def _test_min(test_case, placement, sbp, np_out, np_out_grad, input_arr, shape, 
     test_case.assertTrue(np.allclose(global_x.grad.numpy(), np_out_grad, 0.0001, 0.0001))
 
 
-class TestMaxModule(flow.unittest.TestCase):
+class TestMinModule(flow.unittest.TestCase):
     # backward formula is different from one of torch.
     @globaltest
-    def test_eager_global_max(test_case):
+    def test_eager_global_min(test_case):
         arg_dict = OrderedDict()
         arg_dict["test_fun"] = [_test_min]
         arg_dict["shape"] = [(8,), (8, 8), (8, 8, 8, 8)]
