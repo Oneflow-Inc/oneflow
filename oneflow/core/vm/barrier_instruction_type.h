@@ -36,12 +36,12 @@ class BarrierInstructionType : public InstructionType {
 
   bool IsFrontSequential() const override { return true; }
 
-  std::string DebugName(const vm::InstructionMsg& instr_msg) const override { return "Barrier"; }
-  void Compute(Instruction* instruction) const override { Run(instruction->instr_msg()); }
+  std::string DebugName(const vm::Instruction& instruction) const override { return "Barrier"; }
+  void Compute(Instruction* instruction) const override { Run(*instruction); }
 
  protected:
-  void Run(const InstructionMsg& instr_msg) const {
-    const auto& phy_instr_operand = instr_msg.phy_instr_operand();
+  void Run(const Instruction& instruction) const {
+    const auto& phy_instr_operand = instruction.phy_instr_operand();
     CHECK(static_cast<bool>(phy_instr_operand));
     const auto* ptr = dynamic_cast<const NoArgCbPhyInstrOperand*>(phy_instr_operand.get());
     CHECK_NOTNULL(ptr);

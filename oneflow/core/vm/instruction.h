@@ -19,7 +19,6 @@ limitations under the License.
 #include <cstring>
 #include <mutex>
 #include "oneflow/core/common/symbol.h"
-#include "oneflow/core/intrusive/flat_msg.h"
 #include "oneflow/core/intrusive/intrusive.h"
 #include "oneflow/core/intrusive/object_pool.h"
 #include "oneflow/core/vm/vm_object.h"
@@ -32,46 +31,19 @@ class Stream;
 
 namespace vm {
 
-class InstructionMsg final : public intrusive::Base {
- public:
-  // methods
-  void __Init__(Stream* stream, const InstructionType* instruction_type,
-                const std::shared_ptr<PhyInstrOperand>& phy_instr_operand);
-
-  // Getters
-  const Stream& stream() const { return *stream_; }
-  Stream* mut_stream() { return stream_; }
-  const InstructionType& instruction_type() const { return *instruction_type_; }
-  const std::shared_ptr<PhyInstrOperand>& phy_instr_operand() const { return phy_instr_operand_; }
-
-  std::string DebugName() const;
-
- private:
-  friend class intrusive::Ref;
-  intrusive::Ref* mut_intrusive_ref() { return &intrusive_ref_; }
-
-  InstructionMsg()
-      : intrusive_ref_(), stream_(), instruction_type_(), phy_instr_operand_(), instr_msg_hook_() {}
-  intrusive::Ref intrusive_ref_;
-  // fields
-  Stream* stream_;
-  const InstructionType* instruction_type_;
-  std::shared_ptr<PhyInstrOperand> phy_instr_operand_;
-
- public:
-  // list hooks
-  intrusive::ListHook instr_msg_hook_;
-};
-
-using InstructionMsgList = intrusive::List<INTRUSIVE_FIELD(InstructionMsg, instr_msg_hook_)>;
-
 static const int kInstructionStatusBufferBytes = 64;
 
-// clang-format off
-FLAT_MSG_BEGIN(InstructionStatusBuffer);
-  FLAT_MSG_DEFINE_REPEATED(char, buffer, kInstructionStatusBufferBytes);
-FLAT_MSG_END(InstructionStatusBuffer);
-// clang-format on
+class InstructionStatusBuffer final {
+ public:
+  InstructionStatusBuffer() = default;
+  ~InstructionStatusBuffer() = default;
+
+  const char* buffer() const { return &buffer_[0]; }
+  char* mut_buffer() { return &buffer_[0]; }
+
+ private:
+  char buffer_[kInstructionStatusBufferBytes];
+};
 
 struct Instruction;
 class InstructionEdge final
@@ -131,33 +103,39 @@ class Instruction final : public intrusive::Base {
   using DependenceAccessList =
       intrusive::List<INTRUSIVE_FIELD(DependenceAccess, instruction_access_hook_)>;
 
+  void __Init__(Stream* stream, const InstructionType* instruction_type,
+                const std::shared_ptr<PhyInstrOperand>& phy_instr_operand);
+
   // Getters
-  const Stream& stream() const { return instr_msg_->stream(); }
-  Stream* mut_stream() { return instr_msg_->mut_stream(); }
-  const InstructionMsg& instr_msg() const { return instr_msg_.Get(); }
-  const InstructionStatusBuffer& status_buffer() const { return status_buffer_.Get(); }
-  const intrusive::ListHook& instruction_hook() const { return instruction_hook_; }
+  const Stream& stream() const { return *stream_; }
+  Stream* mut_stream() { return stream_; }
+  const InstructionType& instruction_type() const { return *instruction_type_; }
+  const std::shared_ptr<PhyInstrOperand>& phy_instr_operand() const { return phy_instr_operand_; }
+  std::string DebugName() const;
+
+  const InstructionStatusBuffer& status_buffer() const { return status_buffer_; }
+  const intrusive::ListHook& main_instruction_hook() const { return main_instruction_hook_; }
   const intrusive::ListHook& dispatched_instruction_hook() const {
     return dispatched_instruction_hook_;
   }
   const intrusive::ListHook& lively_instruction_hook() const { return lively_instruction_hook_; }
-  const intrusive::ListHook& pending_instruction_hook() const { return pending_instruction_hook_; }
+  const intrusive::ListHook& worker_pending_instruction_hook() const {
+    return worker_pending_instruction_hook_;
+  }
   const intrusive::ListHook& barrier_instruction_hook() const { return barrier_instruction_hook_; }
   const InEdgeList& in_edges() const { return in_edges_; }
   const OutEdgeList& out_edges() const { return out_edges_; }
   const DependenceAccessList& access_list() const { return access_list_; }
 
   // Setters
-  InstructionMsg* mut_instr_msg() { return instr_msg_.Mutable(); }
-  void clear_instr_msg() { instr_msg_.Reset(); }
-  InstructionStatusBuffer* mut_status_buffer() { return status_buffer_.Mutable(); }
+  InstructionStatusBuffer* mut_status_buffer() { return &status_buffer_; }
   InEdgeList* mut_in_edges() { return &in_edges_; }
   OutEdgeList* mut_out_edges() { return &out_edges_; }
   DependenceAccessList* mut_access_list() { return &access_list_; }
 
   // methods
-  void Init(InstructionMsg* instr_msg);
-  void Delete();
+  void InitStatus();
+  void DeleteStatusAndClearEdges();
   bool Done() const;
   const StreamType& stream_type() const;
 
@@ -169,36 +147,44 @@ class Instruction final : public intrusive::Base {
 
   Instruction()
       : intrusive_ref_(),
+        stream_(),
+        instruction_type_(),
+        phy_instr_operand_(),
         status_buffer_(),
-        instr_msg_(),
         access_list_(),
         in_edges_(),
         out_edges_(),
-        instruction_hook_(),
+        main_instruction_hook_(),
         dispatched_instruction_hook_(),
         lively_instruction_hook_(),
-        pending_instruction_hook_(),
+        worker_pending_instruction_hook_(),
         barrier_instruction_hook_() {}
   intrusive::Ref intrusive_ref_;
   // fields
-  FlatMsg<InstructionStatusBuffer> status_buffer_;
-  intrusive::shared_ptr<InstructionMsg> instr_msg_;
+  Stream* stream_;
+  const InstructionType* instruction_type_;
+  std::shared_ptr<PhyInstrOperand> phy_instr_operand_;
+  InstructionStatusBuffer status_buffer_;
   // lists
   DependenceAccessList access_list_;
   InEdgeList in_edges_;
   OutEdgeList out_edges_;
 
  public:
-  // pending or waiting list hooks
-  intrusive::ListHook instruction_hook_;
+  // used for instructions building, pending to scheduler, constructing DAG, pending to callback
+  // thread and so on.
+  intrusive::ListHook main_instruction_hook_;
   // dispatched to Stream
   intrusive::ListHook dispatched_instruction_hook_;
   // valid during vm processing
   intrusive::ListHook lively_instruction_hook_;
   // pending to ThreadCtx
-  intrusive::ListHook pending_instruction_hook_;
+  intrusive::ListHook worker_pending_instruction_hook_;
+  // for barr
   intrusive::ListHook barrier_instruction_hook_;
 };
+
+using InstructionList = intrusive::List<INTRUSIVE_FIELD(Instruction, main_instruction_hook_)>;
 
 }  // namespace vm
 }  // namespace oneflow

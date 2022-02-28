@@ -22,7 +22,6 @@ limitations under the License.
 namespace oneflow {
 namespace vm {
 
-struct InstructionMsg;
 struct Instruction;
 
 enum InstructionFuseType {
@@ -40,8 +39,6 @@ class InstructionType {
   virtual bool IsFrontSequential() const { return false; }
   virtual InstructionFuseType fuse_type() const { return kDisableInstructionFuse; }
   virtual void Compute(Instruction* instruction) const = 0;
-
-  virtual void ComputeInFuseMode(InstructionMsg* instr_msg) const { LOG(FATAL) << "UNIMPLEMENTED"; }
   void InitInstructionStatusIf(Instruction* instruction) const {
     InitInstructionStatus(instruction);
   }
@@ -49,7 +46,7 @@ class InstructionType {
     DeleteInstructionStatus(instruction);
   }
 
-  virtual std::string DebugName(const InstructionMsg&) const = 0;
+  virtual std::string DebugName(const Instruction&) const = 0;
 
  protected:
   InstructionType() = default;

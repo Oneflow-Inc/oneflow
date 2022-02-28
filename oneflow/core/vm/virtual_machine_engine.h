@@ -37,13 +37,13 @@ class VirtualMachineEngine final : public intrusive::Base {
   // types
   using ActiveStreamList = intrusive::List<INTRUSIVE_FIELD(Stream, active_stream_hook_)>;
   using ThreadCtxList = intrusive::List<INTRUSIVE_FIELD(ThreadCtx, thread_ctx_hook_)>;
-  using InstructionList = intrusive::List<INTRUSIVE_FIELD(Instruction, instruction_hook_)>;
+  using InstructionList = intrusive::List<INTRUSIVE_FIELD(Instruction, main_instruction_hook_)>;
   using LivelyInstructionList =
       intrusive::List<INTRUSIVE_FIELD(Instruction, lively_instruction_hook_)>;
   using BarrierInstructionList =
       intrusive::List<INTRUSIVE_FIELD(Instruction, barrier_instruction_hook_)>;
-  using InstructionMsgMutexedList =
-      intrusive::MutexedList<INTRUSIVE_FIELD(InstructionMsg, InstructionMsg::instr_msg_hook_)>;
+  using InstructionMutexedList =
+      intrusive::MutexedList<INTRUSIVE_FIELD(Instruction, Instruction::main_instruction_hook_)>;
 
   // Getters
   std::size_t flying_instruction_cnt() const {
@@ -62,25 +62,25 @@ class VirtualMachineEngine final : public intrusive::Base {
   const BarrierInstructionList& barrier_instruction_list() const {
     return barrier_instruction_list_;
   }
-  const InstructionMsgMutexedList& pending_msg_list() const { return pending_msg_list_; }
-  const InstructionMsgList& local_pending_msg_list() const { return local_pending_msg_list_; }
+  const InstructionMutexedList& pending_msg_list() const { return pending_msg_list_; }
+  const InstructionList& local_pending_msg_list() const { return local_pending_msg_list_; }
   // Setters
   ActiveStreamList* mut_active_stream_list() { return &active_stream_list_; }
   ThreadCtxList* mut_thread_ctx_list() { return &thread_ctx_list_; }
   LivelyInstructionList* mut_lively_instruction_list() { return &lively_instruction_list_; }
   BarrierInstructionList* mut_barrier_instruction_list() { return &barrier_instruction_list_; }
-  InstructionMsgMutexedList* mut_pending_msg_list() { return &pending_msg_list_; }
-  InstructionMsgList* mut_local_pending_msg_list() { return &local_pending_msg_list_; }
-  InstructionMsgMutexedList* mut_garbage_msg_list() { return &garbage_msg_list_; }
+  InstructionMutexedList* mut_pending_msg_list() { return &pending_msg_list_; }
+  InstructionList* mut_local_pending_msg_list() { return &local_pending_msg_list_; }
+  InstructionMutexedList* mut_garbage_instruction_list() { return &garbage_instruction_list_; }
 
   // methods
   void __Init__(const std::function<void()>& notify_callback_thread) {
     notify_callback_thread_ = notify_callback_thread;
   }
-  // Returns true if old pending_instruction_list is empty
-  Maybe<bool> Receive(InstructionMsgList* instr_list);
-  // Returns true if old pending_instruction_list is empty
-  Maybe<bool> Receive(intrusive::shared_ptr<InstructionMsg>&& instruction_msg);
+  // Returns true if old scheduler_pending_instruction_list is empty
+  Maybe<bool> Receive(InstructionList* instr_list);
+  // Returns true if old scheduler_pending_instruction_list is empty
+  Maybe<bool> Receive(intrusive::shared_ptr<Instruction>&& instruction_msg);
   void Schedule();
   void Callback();
   void NotifyCallback();
@@ -96,19 +96,19 @@ class VirtualMachineEngine final : public intrusive::Base {
   ReadyInstructionList* mut_ready_instruction_list() { return &ready_instruction_list_; }
 
   void ReleaseFinishedInstructions();
-  void MoveInstructionMsgToGarbageMsgList(intrusive::shared_ptr<InstructionMsg>&& instr_msg);
-  void MoveToGarbageMsgListAndNotifyGC();
+  void MoveInstructionToGarbageList(intrusive::shared_ptr<Instruction>&& instruction);
+  void MoveToGarbageListAndNotifyGC();
   void HandleLocalPending();
   void GetRewritedPendingInstructionsByWindowSize(size_t window_size,
-                                                  InstructionMsgList* /*out*/ pending_instr_msgs);
-  void MakeAndAppendFusedInstruction(InstructionMsgList&& fused_instr_msg_list,
-                                     InstructionMsgList* /*out*/ pending_instr_msgs);
+                                                  InstructionList* /*out*/ pending_instructions);
+  void MakeAndAppendFusedInstruction(InstructionList&& fused_instruction_list,
+                                     InstructionList* /*out*/ pending_instructions);
   void TryRunBarrierInstruction();
   void DispatchAndPrescheduleInstructions();
   bool OnSchedulerThread(const StreamType& stream_type);
 
   void ReleaseInstruction(Instruction* instruction);
-  void MakeInstructions(InstructionMsg*, /*out*/ InstructionList* ret_instruction_list);
+  void InitInstructions(InstructionList* pending_instructions);
 
   void TryConnectInstruction(Instruction* src_instruction, Instruction* dst_instruction);
   void ConnectInstructionsByWrite(DependenceAccess* dst_access);
@@ -138,8 +138,8 @@ class VirtualMachineEngine final : public intrusive::Base {
         pending_msg_list_(&pending_msg_mutex_),
         local_pending_msg_list_(),
         callback_msg_mutex_(),
-        garbage_msg_list_(&callback_msg_mutex_),
-        local_garbage_msg_list_(),
+        garbage_instruction_list_(&callback_msg_mutex_),
+        local_garbage_instruction_list_(),
         notify_callback_thread_([]() {}),
         ready_instruction_list_(),
         lively_instruction_list_(),
@@ -157,13 +157,13 @@ class VirtualMachineEngine final : public intrusive::Base {
   ActiveStreamList active_stream_list_;
   ThreadCtxList thread_ctx_list_;
   std::mutex pending_msg_mutex_;
-  InstructionMsgMutexedList pending_msg_list_;
+  InstructionMutexedList pending_msg_list_;
   // local_pending_msg_list_ should be consider as the cache of pending_msg_list_.
-  InstructionMsgList local_pending_msg_list_;
+  InstructionList local_pending_msg_list_;
   std::mutex callback_msg_mutex_;
-  InstructionMsgMutexedList garbage_msg_list_;
-  // local_garbage_msg_list_ should be consider as the cache of garbage_msg_list_.
-  InstructionMsgList local_garbage_msg_list_;
+  InstructionMutexedList garbage_instruction_list_;
+  // local_garbage_instruction_list_ should be consider as the cache of garbage_instruction_list_.
+  InstructionList local_garbage_instruction_list_;
   std::function<void()> notify_callback_thread_;
   ReadyInstructionList ready_instruction_list_;
   LivelyInstructionList lively_instruction_list_;

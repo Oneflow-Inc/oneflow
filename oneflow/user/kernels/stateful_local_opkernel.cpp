@@ -49,11 +49,11 @@ const MemoryCase& ThreadLocalTmpTensorView::mem_case() const {
 }
 
 const void* ThreadLocalTmpTensorView::raw_dptr() const {
-  return CHECK_NOTNULL(eager::ThreadLocalCallContextScope::Current()->tmp_buffer_ptr);
+  return eager::ThreadLocalCallContextScope::Current()->tmp_buffer_ptr;
 }
 
 void* ThreadLocalTmpTensorView::mut_raw_dptr() {
-  return CHECK_NOTNULL(eager::ThreadLocalCallContextScope::Current()->tmp_buffer_ptr);
+  return eager::ThreadLocalCallContextScope::Current()->tmp_buffer_ptr;
 }
 
 ZeroCopyBaseContext::ZeroCopyBaseContext(const std::shared_ptr<const ArgTuple>& input_arg_tuple,

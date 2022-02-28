@@ -33,22 +33,22 @@ void LazyJobStreamType::InitDeviceCtx(std::unique_ptr<DeviceCtx>* device_ctx,
 void LazyJobStreamType::InitInstructionStatus(const Stream& stream,
                                               InstructionStatusBuffer* status_buffer) const {
   static_assert(sizeof(NaiveInstrStatusQuerier) < kInstructionStatusBufferBytes, "");
-  NaiveInstrStatusQuerier::PlacementNew(status_buffer->mut_buffer()->mut_data());
+  NaiveInstrStatusQuerier::PlacementNew(status_buffer->mut_buffer());
 }
 
 void LazyJobStreamType::DeleteInstructionStatus(const Stream& stream,
                                                 InstructionStatusBuffer* status_buffer) const {
-  auto* ptr = NaiveInstrStatusQuerier::MutCast(status_buffer->mut_buffer()->mut_data());
+  auto* ptr = NaiveInstrStatusQuerier::MutCast(status_buffer->mut_buffer());
   ptr->~NaiveInstrStatusQuerier();
 }
 
 bool LazyJobStreamType::QueryInstructionStatusDone(
     const Stream& stream, const InstructionStatusBuffer& status_buffer) const {
-  return NaiveInstrStatusQuerier::Cast(status_buffer.buffer().data())->done();
+  return NaiveInstrStatusQuerier::Cast(status_buffer.buffer())->done();
 }
 
 void LazyJobStreamType::Compute(Instruction* instruction) const {
-  instruction->instr_msg().instruction_type().Compute(instruction);
+  instruction->instruction_type().Compute(instruction);
 }
 
 }  // namespace vm

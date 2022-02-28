@@ -19,10 +19,11 @@ limitations under the License.
 namespace oneflow {
 namespace vm {
 
-template<intrusive::ChannelStatus (PendingInstructionChannel::*Move)(PendingInstructionList*)>
+template<intrusive::ChannelStatus (WorkerPendingInstructionChannel::*Move)(
+    WorkerPendingInstructionList*)>
 intrusive::ChannelStatus ThreadCtx::MoveAndRun(size_t* cnt) {
-  intrusive::List<INTRUSIVE_FIELD(Instruction, pending_instruction_hook_)> tmp_list;
-  intrusive::ChannelStatus status = (mut_pending_instruction_list()->*Move)(&tmp_list);
+  intrusive::List<INTRUSIVE_FIELD(Instruction, worker_pending_instruction_hook_)> tmp_list;
+  intrusive::ChannelStatus status = (mut_worker_pending_instruction_list()->*Move)(&tmp_list);
   *cnt = tmp_list.size();
   if (*cnt == 0) { return status; }
   INTRUSIVE_FOR_EACH(instruction, &tmp_list) {
@@ -35,12 +36,12 @@ intrusive::ChannelStatus ThreadCtx::MoveAndRun(size_t* cnt) {
 
 intrusive::ChannelStatus ThreadCtx::ReceiveAndRun() {
   size_t cnt = 0;
-  return MoveAndRun<&PendingInstructionChannel::MoveTo>(&cnt);
+  return MoveAndRun<&WorkerPendingInstructionChannel::MoveTo>(&cnt);
 }
 
 size_t ThreadCtx::TryReceiveAndRun() {
   size_t cnt = 0;
-  MoveAndRun<&PendingInstructionChannel::TryMoveTo>(&cnt);
+  MoveAndRun<&WorkerPendingInstructionChannel::TryMoveTo>(&cnt);
   return cnt;
 }
 
