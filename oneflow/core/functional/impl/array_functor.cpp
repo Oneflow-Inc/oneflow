@@ -1034,7 +1034,7 @@ class ReshapeFunctor {
 
     if (view::IsViewApplicable(x)) {
       Optional<Stride> infered_stride =
-          computeStride(*(x->shape()), *JUST(x->stride()), infered_shape);
+          ComputeStride(*(x->shape()), *JUST(x->stride()), infered_shape);
       if (infered_stride.has_value()) {
         return view::Reshape(x, infered_shape, *JUST(infered_stride));
       }
@@ -1056,7 +1056,7 @@ class ViewFunctor {
 
     if (view::IsViewApplicable(x)) {
       Optional<Stride> infered_stride =
-          computeStride(*(x->shape()), *JUST(x->stride()), infered_shape);
+          ComputeStride(*(x->shape()), *JUST(x->stride()), infered_shape);
       CHECK_OR_RETURN(infered_stride.has_value())
           << " >> view size is not compatible with input tensor's size and stride (at least one "
              "dimension spans across two contiguous subspaces). Use .reshape(...) instead.";
