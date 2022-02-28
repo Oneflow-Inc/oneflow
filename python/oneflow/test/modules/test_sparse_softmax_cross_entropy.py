@@ -23,7 +23,11 @@ import torch
 
 import oneflow as flow
 import oneflow.unittest
-from test_util import GenArgList, type_name_to_flow_type, type_name_to_np_type
+from oneflow.test_utils.test_util import (
+    GenArgList,
+    type_name_to_flow_type,
+    type_name_to_np_type,
+)
 
 
 def compare_with_torch(
