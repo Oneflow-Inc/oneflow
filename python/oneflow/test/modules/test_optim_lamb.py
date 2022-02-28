@@ -20,7 +20,7 @@ from collections import OrderedDict
 
 import numpy as np
 from optimizer_test_util import clip_grad_norm_np
-from test_util import GenArgList
+from oneflow.test_utils.test_util import GenArgList
 
 import oneflow as flow
 
