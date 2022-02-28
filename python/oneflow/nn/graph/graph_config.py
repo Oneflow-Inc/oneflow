@@ -139,6 +139,8 @@ class GraphConfig(object):
 
         .. code-block:: python
 
+            import oneflow as flow
+
             class Graph(flow.nn.Graph):
                 def __init__(self):
                     super().__init__()
