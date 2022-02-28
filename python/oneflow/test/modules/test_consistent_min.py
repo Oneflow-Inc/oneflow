@@ -34,13 +34,21 @@ def _np_min(shape, dim, keepdims):
     else:
         arg_min = np.expand_dims(np.argmin(input_arr, axis=dim), axis=dim)
         np.put_along_axis(np_out_grad, arg_min, 1, axis=dim)
-    
+
     return np_out, np_out_grad, input_arr
 
-def _test_min(test_case, placement, sbp, np_out, np_out_grad, input_arr, shape, dim, keepdims):
+
+def _test_min(
+    test_case, placement, sbp, np_out, np_out_grad, input_arr, shape, dim, keepdims
+):
     # of result
     global_x = flow.tensor(
-        input_arr, dtype=flow.float32, requires_grad=True, placement=flow.env.all_device_placement("cpu"), sbp=flow.sbp.broadcast)
+        input_arr,
+        dtype=flow.float32,
+        requires_grad=True,
+        placement=flow.env.all_device_placement("cpu"),
+        sbp=flow.sbp.broadcast,
+    )
     of_out = flow.min(global_x, dim, keepdims)
     if dim != None:
         of_out = of_out[0]
@@ -48,7 +56,9 @@ def _test_min(test_case, placement, sbp, np_out, np_out_grad, input_arr, shape, 
     of_out = of_out.sum()
     of_out.backward()
 
-    test_case.assertTrue(np.allclose(global_x.grad.numpy(), np_out_grad, 0.0001, 0.0001))
+    test_case.assertTrue(
+        np.allclose(global_x.grad.numpy(), np_out_grad, 0.0001, 0.0001)
+    )
 
 
 class TestMaxModule(flow.unittest.TestCase):
@@ -62,12 +72,41 @@ class TestMaxModule(flow.unittest.TestCase):
         arg_dict["keepdims"] = [False, True]
         for arg in GenArgList(arg_dict):
             np_out, np_out_grad, input_arr = _np_min(*arg[1:])
-            np_out = flow.tensor(np_out).to_global(placement=flow.env.all_device_placement("cpu"), sbp=flow.sbp.broadcast).numpy()
-            np_out_grad = flow.tensor(np_out_grad).to_global(placement=flow.env.all_device_placement("cpu"), sbp=flow.sbp.broadcast).numpy()
-            input_arr = flow.tensor(input_arr).to_global(placement=flow.env.all_device_placement("cpu"), sbp=flow.sbp.broadcast).numpy()
+            np_out = (
+                flow.tensor(np_out)
+                .to_global(
+                    placement=flow.env.all_device_placement("cpu"),
+                    sbp=flow.sbp.broadcast,
+                )
+                .numpy()
+            )
+            np_out_grad = (
+                flow.tensor(np_out_grad)
+                .to_global(
+                    placement=flow.env.all_device_placement("cpu"),
+                    sbp=flow.sbp.broadcast,
+                )
+                .numpy()
+            )
+            input_arr = (
+                flow.tensor(input_arr)
+                .to_global(
+                    placement=flow.env.all_device_placement("cpu"),
+                    sbp=flow.sbp.broadcast,
+                )
+                .numpy()
+            )
             for placement in all_placement():
                 for sbp in all_sbp(placement, max_dim=len(*arg[1:2])):
-                    arg[0](test_case, placement, sbp, np_out, np_out_grad, input_arr, *arg[1:])
+                    arg[0](
+                        test_case,
+                        placement,
+                        sbp,
+                        np_out,
+                        np_out_grad,
+                        input_arr,
+                        *arg[1:]
+                    )
 
 
 if __name__ == "__main__":
