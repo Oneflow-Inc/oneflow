@@ -166,7 +166,6 @@ llvm::Optional<OpResult> GetCtrlOutputResult(Operation* op) {
 
 llvm::Optional<mlir::oneflow::DataTypeAttr> GetDataTypeAttr(MLIRContext* context,
                                                             ::oneflow::DataType oneflow_value) {
-  // stringified = stringifyEnum(oneflow::DataType::DT_##datatype).str();
   switch (oneflow_value) {
     case ::oneflow::DataType::kInvalidDataType:
       return oneflow::DataTypeAttr::get(context, mlir::oneflow::DataType::DT_InvalidDataType);
@@ -188,7 +187,7 @@ llvm::Optional<mlir::oneflow::DataTypeAttr> GetDataTypeAttr(MLIRContext* context
       DEFINE_ONE_ELIF(BFloat16)
       DEFINE_ONE_ELIF(Bool)
 #undef DEFINE_ONE_ELIF
-    default: return llvm::None;
+    default: llvm::errs() << "unsupported data type: " << oneflow_value << "\n"; return llvm::None;
   }
 }
 
@@ -345,7 +344,10 @@ llvm::Optional<Type> Importer::GetTypeFromOneFlowDataType(::oneflow::DataType dt
     if (dt == ::oneflow::DataType::kOFRecord) { return llvm::None; }
     if (dt == ::oneflow::DataType::kFloat16) { return GetBuilder().getF16Type(); }
     if (dt == ::oneflow::DataType::kBool) { return GetBuilder().getI8Type(); }
-    if (dt == ::oneflow::DataType::kTensorBuffer) { return llvm::None; }
+    if (dt == ::oneflow::DataType::kTensorBuffer) {
+      llvm::errs() << "unsupported data type: " << dt << "\n";
+      return llvm::None;
+    }
     return llvm::None;
   }
 }
