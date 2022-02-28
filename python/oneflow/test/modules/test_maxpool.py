@@ -58,7 +58,7 @@ def _test_maxpool2d_channel_last(
 
 @flow.unittest.skip_unless_1n1d()
 class TestMaxPooling(flow.unittest.TestCase):
-    @autotest(auto_backward=True, check_graph=True)
+    @autotest(n=5, auto_backward=True, check_graph=True)
     def test_maxpool1d_with_random_data(test_case):
         return_indices = random().to(bool).value()
         m = torch.nn.MaxPool1d(
@@ -82,7 +82,7 @@ class TestMaxPooling(flow.unittest.TestCase):
         else:
             return y
 
-    @autotest(auto_backward=True, check_graph=True)
+    @autotest(n=10, auto_backward=True, check_graph=True)
     def test_maxpool2d_with_random_data(test_case):
         return_indices = random().to(bool).value()
         m = torch.nn.MaxPool2d(
@@ -106,7 +106,7 @@ class TestMaxPooling(flow.unittest.TestCase):
         else:
             return y
 
-    @autotest(auto_backward=True, check_graph=True)
+    @autotest(n=5, auto_backward=True, check_graph=True)
     def test_maxpool3d_with_random_data(test_case):
         return_indices = random().to(bool).value()
         m = torch.nn.MaxPool3d(
@@ -135,8 +135,11 @@ class TestMaxPooling(flow.unittest.TestCase):
     def test_maxpool2d_channel_last(test_case):
         arg_dict = OrderedDict()
         arg_dict["test_fun"] = [_test_maxpool2d_channel_last]
-        arg_dict["device"] = ["cpu", "cuda"]
-        arg_dict["shape"] = [(2, 14, 27, 3), (7, 9, 14, 10), (16, 224, 224, 3)]
+        arg_dict["device"] = ["cuda"]
+        # CPU pool is very slow, so don't run it with CUDA
+        if os.getenv("ONEFLOW_TEST_CPU_ONLY"):
+            arg_dict["device"] = ["cpu"]
+        arg_dict["shape"] = [(3, 14, 27, 3), (5, 9, 14, 10), (2, 224, 224, 3)]
         arg_dict["kernel_size"] = [3, (2, 3), (3, 4)]
         arg_dict["stride"] = [1, (1, 2), 2]
         arg_dict["padding"] = [0, (0, 1)]
@@ -148,7 +151,7 @@ class TestMaxPooling(flow.unittest.TestCase):
 
 @flow.unittest.skip_unless_1n1d()
 class TestMaxPoolingFunctional(flow.unittest.TestCase):
-    @autotest(auto_backward=True, check_graph=True)
+    @autotest(n=5, auto_backward=True, check_graph=True)
     def test_maxpool1d_with_random_data(test_case):
         return_indices = random().to(bool).value()
         device = random_device()
@@ -170,7 +173,7 @@ class TestMaxPoolingFunctional(flow.unittest.TestCase):
         else:
             return y
 
-    @autotest(auto_backward=True, check_graph=True)
+    @autotest(n=5, auto_backward=True, check_graph=True)
     def test_maxpool2d_with_random_data(test_case):
         return_indices = random().to(bool).value()
         device = random_device()
