@@ -37,23 +37,26 @@ struct alignas(2 * std::max(sizeof(Key), sizeof(Index))) TableEntry {
 template<typename Key, typename Index>
 __device__ bool TryGetOrInsert(Key* entry_key, volatile Index* entry_index, uint64_t* table_size,
                                Key key, uint64_t* out) {
-  Key old_entry_key = cuda::atomic::CAS(entry_key, static_cast<Key>(0), key);
+  Key key_hi = (key | 0x1); 
+  Key key_lo = (key & 0x1); 
+  Key old_entry_key = cuda::atomic::CAS(entry_key, static_cast<Key>(0), key_hi);
+  
   if (old_entry_key == 0) {
-    Index index = cuda::atomic::Add(table_size, static_cast<uint64_t>(1)) + 1;
-    *entry_index = index;
+    Index index = cuda::atomic::Add(table_size, static_cast<uint64_t>(1));
+    *entry_index = ((index << 1U) | key_lo);
     *out = index;
     return true;
   } else if (old_entry_key == key) {
-    while (true) {
-      Index index = *entry_index;
-      if (index != 0) {
-        *out = index;
-        break;
+    Index entry_index_val = *entry_index; 
+    if ((entry_index_val & 0x1) == key_lo){
+      *out = (entry_index_val >> 1U);
+      return true; 
       }
+    } else {
+      return false; 
     }
-    return true;
   } else {
-    return false;
+    return false; 
   }
 }
 
