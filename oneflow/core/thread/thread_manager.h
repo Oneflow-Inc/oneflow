@@ -36,7 +36,8 @@ class ThreadMgr final {
   ThreadMgr() = default;
   ~ThreadMgr();
 
-  void AddPlan(const Plan& plan);
+  void AddThreads(const std::vector<int64_t>& thread_ids);
+  void TryDeleteThreads(const std::vector<int64_t>& thread_ids);
   Thread* GetThrd(int64_t thrd_id);
 
  private:

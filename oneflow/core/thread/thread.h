@@ -34,6 +34,7 @@ class Thread {
   virtual ~Thread();
 
   void AddTask(const TaskProto&);
+  bool Empty() const;
 
   Channel<ActorMsg>* GetMsgChannelPtr() { return &msg_channel_; }
 
