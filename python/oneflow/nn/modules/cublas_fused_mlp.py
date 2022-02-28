@@ -63,14 +63,14 @@ class FusedMLP(Module):
         in_features: int,
         hidden_features: Tuple[int],
         out_features: int,
-        skip_last_activation=False,
+        skip_final_activation=False,
     ) -> None:
         super().__init__()
         self.in_features = in_features
         self.hidden_features = hidden_features
         self.out_features = out_features
         # TODO(zzk): Add more activation support.
-        self.skip_last_activation = skip_last_activation
+        self.skip_final_activation = skip_final_activation
         self.hidden_layer_num = len(hidden_features)
 
         self.add_parameters()
@@ -136,7 +136,7 @@ class FusedMLP(Module):
 
     def forward(self, x):
         res = flow._C.cublas_fused_mlp(
-            x, self.weights(), self.biases(), self.skip_last_activation
+            x, self.weights(), self.biases(), self.skip_final_activation
         )
         return res
 
@@ -145,7 +145,7 @@ class FusedMLP(Module):
             self.in_features,
             self.hidden_features,
             self.out_features,
-            self.skip_last_activation,
+            self.skip_final_activation,
         )
 
 
