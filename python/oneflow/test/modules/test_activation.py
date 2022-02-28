@@ -212,7 +212,7 @@ class TestCELUModule(flow.unittest.TestCase):
         y = m(x)
         return y
 
-    @autotest()
+    @autotest(n=10)
     def test_inplace_celu_module(test_case):
         m = torch.nn.CELU(alpha=random() | nothing(), inplace=True)
         device = random_device()
@@ -372,7 +372,7 @@ class TestHardsigmoidModule(flow.unittest.TestCase):
         return y
 
 
-def test_softmax(batch_size: int, log_softmax: bool = False):
+def do_test_softmax(batch_size: int, log_softmax: bool = False):
     num_dims = random(low=1, high=5).to(int)
     m = torch.nn.Softmax(dim=random(low=0, high=num_dims).to(int) | nothing())
     if log_softmax:
@@ -393,38 +393,38 @@ def test_softmax(batch_size: int, log_softmax: bool = False):
 class TestSoftmax(flow.unittest.TestCase):
     @autotest(check_graph=True)
     def test_softmax_module_with_random_data(test_case):
-        return test_softmax(batch_size=-1, log_softmax=False)
+        return do_test_softmax(batch_size=-1, log_softmax=False)
 
     @autotest(check_graph=True)
     def test_softmax_module_with_batch_size_equal_1024(test_case):
-        return test_softmax(batch_size=1024, log_softmax=False)
+        return do_test_softmax(batch_size=1024, log_softmax=False)
 
     @autotest(n=5, check_graph=True)
     def test_softmax_module_with_batch_size_equal_5120(test_case):
-        return test_softmax(batch_size=5120, log_softmax=False)
+        return do_test_softmax(batch_size=5120, log_softmax=False)
 
     @autotest(n=2, check_graph=True)
     def test_softmax_module_with_batch_size_equal_10240(test_case):
-        return test_softmax(batch_size=10240, log_softmax=False)
+        return do_test_softmax(batch_size=10240, log_softmax=False)
 
 
 @flow.unittest.skip_unless_1n1d()
 class TestLogSoftmaxModule(flow.unittest.TestCase):
     @autotest(check_graph=True)
     def test_logsoftmax_module_with_random_data(test_case):
-        return test_softmax(batch_size=-1, log_softmax=True)
+        return do_test_softmax(batch_size=-1, log_softmax=True)
 
     @autotest()
     def test_softmax_module_with_batch_size_equal_1024(test_case):
-        return test_softmax(batch_size=1024, log_softmax=True)
+        return do_test_softmax(batch_size=1024, log_softmax=True)
 
     @autotest(n=5, check_graph=True)
     def test_softmax_module_with_batch_size_equal_5120(test_case):
-        return test_softmax(batch_size=5120, log_softmax=True)
+        return do_test_softmax(batch_size=5120, log_softmax=True)
 
     @autotest(n=2, check_graph=True)
     def test_softmax_module_with_batch_size_equal_10240(test_case):
-        return test_softmax(batch_size=10240, log_softmax=True)
+        return do_test_softmax(batch_size=10240, log_softmax=True)
 
 
 @flow.unittest.skip_unless_1n1d()
@@ -584,6 +584,18 @@ class TestLeakyReLUModule(flow.unittest.TestCase):
         device = random_device()
         m.to(device)
         x = random_tensor().to(device)
+        y = m(x)
+        return y
+
+    @autotest()
+    @unittest.skipIf(os.getenv("ONEFLOW_TEST_CPU_ONLY"), "only test cpu cases")
+    def test_leakyrelu_module_with_half_random_data(test_case):
+        m = torch.nn.LeakyReLU(negative_slope=random() | nothing())
+        m.train(random())
+        device = random_device()
+        m.to(device)
+        x = random_tensor().to(device)
+        x = x.to(torch.float16)
         y = m(x)
         return y
 
