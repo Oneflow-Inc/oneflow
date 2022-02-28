@@ -24,7 +24,7 @@ from oneflow.test_utils.automated_test_util import *
 
 @flow.unittest.skip_unless_1n1d()
 class TestNegativeModule(flow.unittest.TestCase):
-    @autotest(auto_backward=False, check_graph=True)
+    @autotest(n=5, auto_backward=False, check_graph=True)
     def test_ne_with_0_size_data(test_case):
         device = random_device()
         x = random_tensor(4, 2, 3, 0, 5).to(device)

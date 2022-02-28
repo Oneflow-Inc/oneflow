@@ -221,10 +221,10 @@ TEST(DecomposeIntoNaiveTransformations, decompose_two_axes) {
   GlobaProcessCtxScope scope(2, 8);
   ParallelConf parallel_conf;
   parallel_conf.set_device_tag("cpu");
-  parallel_conf.add_device_name("0:0-3");
-  parallel_conf.add_device_name("1:0-3");
+  parallel_conf.add_device_name("0:0-1");
+  parallel_conf.add_device_name("1:0-1");
   parallel_conf.mutable_hierarchy()->add_dim(2);
-  parallel_conf.mutable_hierarchy()->add_dim(4);
+  parallel_conf.mutable_hierarchy()->add_dim(2);
   const auto& parallel_desc = SymbolOf(ParallelDesc(parallel_conf));
   const auto& src_nd_sbp = GetNdSbp("S0", "P");
   const auto& dst_nd_sbp = GetNdSbp("B", "S0");
@@ -249,7 +249,7 @@ TEST(DecomposeIntoNaiveTransformations, decompose_two_axes) {
   {
     ParallelConf expected_parallel_conf;
     expected_parallel_conf.set_device_tag("cpu");
-    expected_parallel_conf.add_device_name("0:0-3");
+    expected_parallel_conf.add_device_name("0:0-1");
     const auto& expected_parallel_desc = SymbolOf(ParallelDesc(expected_parallel_conf));
     const auto& ctensor_meta = transformations->at(1).consistent_tensor_meta;
     ASSERT_TRUE(ctensor_meta->parallel_desc() == expected_parallel_desc);
@@ -287,48 +287,6 @@ TEST(CalcDecomposableEquivalentShapeAndNdSbpPair, expand_src) {
   ASSERT_TRUE(*std::get<0>(*tuple) == Shape(DimVector{4, 4, 4}));
   ASSERT_TRUE(std::get<1>(*tuple) == GetNdSbp("S0", "S1"));
   ASSERT_TRUE(std::get<2>(*tuple) == dst_nd_sbp);
-}
-
-TEST(CalcDecomposableEquivalentShapeAndNdSbpPair, expand_dst) {
-  Shape shape(DimVector{16, 4});
-  Shape hierarchy(DimVector{4, 4});
-  const auto& src_nd_sbp = GetNdSbp("P", "S0");
-  const auto& dst_nd_sbp = GetNdSbp("S0", "S0");
-  const auto& maybe_tuple = TRY(private_details::CalcDecomposableEquivalentShapeAndNdSbpPair(
-      shape, hierarchy, src_nd_sbp, dst_nd_sbp));
-  ASSERT_TRUE(maybe_tuple.IsOk());
-  const auto& tuple = CHECK_JUST(maybe_tuple);
-  ASSERT_TRUE(*std::get<0>(*tuple) == Shape(DimVector{4, 4, 4}));
-  ASSERT_TRUE(std::get<1>(*tuple) == GetNdSbp("P", "S0"));
-  ASSERT_TRUE(std::get<2>(*tuple) == GetNdSbp("S0", "S1"));
-}
-
-TEST(CalcDecomposableEquivalentShapeAndNdSbpPair, expand_dst_3d) {
-  Shape shape(DimVector{128, 4});
-  Shape hierarchy(DimVector{4, 4, 4});
-  const auto& src_nd_sbp = GetNdSbp("P", "S0", "S1");
-  const auto& dst_nd_sbp = GetNdSbp("S0", "S0", "S0");
-  const auto& maybe_tuple = TRY(private_details::CalcDecomposableEquivalentShapeAndNdSbpPair(
-      shape, hierarchy, src_nd_sbp, dst_nd_sbp));
-  ASSERT_TRUE(maybe_tuple.IsOk());
-  const auto& tuple = CHECK_JUST(maybe_tuple);
-  ASSERT_TRUE(*std::get<0>(*tuple) == Shape(DimVector{4, 4, 8, 4}));
-  ASSERT_TRUE(std::get<1>(*tuple) == GetNdSbp("P", "S0", "S3"));
-  ASSERT_TRUE(std::get<2>(*tuple) == GetNdSbp("S0", "S1", "S2"));
-}
-
-TEST(CalcDecomposableEquivalentShapeAndNdSbpPair, expand_src_3d) {
-  Shape shape(DimVector{128, 4});
-  Shape hierarchy(DimVector{4, 4, 4});
-  const auto& src_nd_sbp = GetNdSbp("S0", "S0", "S0");
-  const auto& dst_nd_sbp = GetNdSbp("P", "S0", "S1");
-  const auto& maybe_tuple = TRY(private_details::CalcDecomposableEquivalentShapeAndNdSbpPair(
-      shape, hierarchy, src_nd_sbp, dst_nd_sbp));
-  ASSERT_TRUE(maybe_tuple.IsOk());
-  const auto& tuple = CHECK_JUST(maybe_tuple);
-  ASSERT_TRUE(*std::get<0>(*tuple) == Shape(DimVector{4, 4, 8, 4}));
-  ASSERT_TRUE(std::get<1>(*tuple) == GetNdSbp("S0", "S1", "S2"));
-  ASSERT_TRUE(std::get<2>(*tuple) == GetNdSbp("P", "S0", "S3"));
 }
 
 TEST(CalcDecomposableEquivalentShapeAndNdSbpPair, expand_failed) {
