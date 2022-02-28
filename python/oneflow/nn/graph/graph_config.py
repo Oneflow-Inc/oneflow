@@ -87,7 +87,6 @@ class GraphConfig(object):
         assert type(mode) is bool
         self.proto.set_mlir_enable_round_trip(mode)
 
-
     def allow_fuse_model_update_ops(self, mode: bool = True):
         r"""If set to true, try to fuse cast + scale + l1_l2_regularize_gradient + model_update to one op to improve performance.
 

@@ -60,7 +60,7 @@ class DataLoaderGraph(flow.nn.Graph):
     def __init__(self, loader):
         super().__init__()
         self.loader_ = loader
-        self.config.enable_mlir(False)
+        self.config.enable_mlir_round_trip(False)
 
     def build(self):
         return self.loader_()
