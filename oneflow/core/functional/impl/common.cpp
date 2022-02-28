@@ -84,7 +84,7 @@ Optional<Stride> ComputeStride(const Shape& shape, const Stride& stride,
                                const Shape& target_shape) {
   /*************************************************
    * Description: in some case, view operate is not allowed, so need to check it's validation,
-   * the check refer to torch(aten/src/ATen/native/TensorShape.cpp)
+   * the check refers to torch(aten/src/ATen/native/TensorShape.cpp)
    *************************************************/
   int64_t elem_count = shape.elem_cnt();
   int64_t ndim = shape.NumAxes();
