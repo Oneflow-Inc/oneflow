@@ -21,6 +21,7 @@ jobs:
     runs-on: [self-hosted, linux, release]
     if: github.repository == 'Oneflow-Inc/oneflow'
     strategy:
+      max-parallel: 1
       fail-fast: false
       matrix:
         entry: ["canary", "profiler"]
