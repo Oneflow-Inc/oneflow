@@ -228,6 +228,11 @@ class ConsistentStaticZerosFunctor {
   Maybe<Tensor> operator()(const Shape& shape, const Symbol<DType>& dtype,
                            const Symbol<ParallelDesc>& placement,
                            const std::vector<Symbol<SbpParallel>>& sbp_tuple) const {
+    JUST(CheckDeviceIdsIsValid(placement));
+    CHECK_EQ_OR_RETURN(sbp_tuple.size(), placement->hierarchy()->NumAxes())
+        << "len(sbp_tuple) == len(placement.hierarchy) required, but "
+        << "len(sbp_tuple)==" << sbp_tuple.size() << ", "
+        << "len(placement.hierarchy)==" << placement->hierarchy()->NumAxes();
     auto nd_sbp = JUST(GetNdSbp(sbp_tuple));
     std::shared_ptr<Tensor> tensor = JUST(StaticZerosTensor::MakeTensor(
         std::make_shared<const Shape>(shape), dtype->data_type(), placement, nd_sbp));
@@ -2434,7 +2439,6 @@ Maybe<Tensor> ConsistentTensorTo(const std::shared_ptr<Tensor>& x, const std::st
     return tensor;
   } else {
     CheckMetaConsistency(x).GetOrThrow();
-    auto old_placement = JUST(x->parallel_desc());
     auto placement = JUST(ReplacePlacementDeviceTag(input_placement, device_type));
     auto nd_sbp = JUST(x->nd_sbp());
     std::vector<Symbol<SbpParallel>> sbp_tuple(nd_sbp->sbp_parallel().size());
