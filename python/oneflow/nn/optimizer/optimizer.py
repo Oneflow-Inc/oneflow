@@ -278,7 +278,12 @@ class Optimizer(object):
                     if set_to_none:
                         param.grad = None
                     else:
-                        param.grad.zeros_()
+                        # param.grad.zeros_()
+                        if param.grad.is_global:
+                            param.grad = flow._C.static_zeros(param.grad.shape, param.grad.dtype, param.grad.placement, param.grad.sbp)
+                        else:
+                            param.grad = flow._C.static_zeros(param.grad.shape, param.grad.dtype, param.grad.device)
+
 
     def _parse_input_parameters(self, parameters):
         """
