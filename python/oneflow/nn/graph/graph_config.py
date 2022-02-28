@@ -52,21 +52,7 @@ class GraphConfig(object):
         
         The default outputs buffer size is 2.
 
-        For example:
-
-        .. code-block:: python
-
-            import oneflow as flow
-
-            class Graph(flow.nn.Graph):
-                def __init__(self):
-                    super().__init__()
-                    self.linear = flow.nn.Linear(3, 8, False)
-                    self.config.set_outputs_buffer_size(5) # Set the output buffer size of nn.Graph to 5.
-                def build(self, x):
-                    return self.linear(x)
-
-            graph = Graph()
+        # TODO (lixiang): Explain the meaning of the size of buffer size and add sample code.
 
         Args:
             value (int): graph ouputs buffer size.
