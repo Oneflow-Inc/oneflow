@@ -159,7 +159,7 @@ class TestLayerNorm(flow.unittest.TestCase):
         y = m(x)
         return y
 
-    @autotest(n=20, auto_backward=True, rtol=1e-3, atol=1e-3)
+    @autotest(n=10, auto_backward=True, rtol=1e-3, atol=1e-3)
     def test_layernorm_with_random_data_shared_mem(test_case):
         device = random_device()
         channel = random(1, 200).to(int)
@@ -178,7 +178,7 @@ class TestLayerNorm(flow.unittest.TestCase):
         y = m(x)
         return y
 
-    @autotest(n=20, auto_backward=True, rtol=1e-3, atol=1e-3)
+    @autotest(n=5, auto_backward=True, rtol=1e-3, atol=1e-3)
     def test_layernorm_with_random_data_uncached(test_case):
         device = random_device()
         channel = random(1, 200).to(int)
@@ -197,7 +197,7 @@ class TestLayerNorm(flow.unittest.TestCase):
         y = m(x)
         return y
 
-    @autotest(n=20, auto_backward=True, rtol=1e-3, atol=1e-3)
+    @autotest(n=10, auto_backward=True, rtol=1e-3, atol=1e-3)
     def test_layernorm_without_affine(test_case):
         device = random_device()
         channel = random(1, 200).to(int)
