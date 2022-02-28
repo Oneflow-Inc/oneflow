@@ -16,34 +16,36 @@ limitations under the License.
 #ifndef ONEFLOW_CORE_COMMON_DEBUG_H_
 #define ONEFLOW_CORE_COMMON_DEBUG_H_
 
+#include <type_traits>
 #include "oneflow/core/common/just.h"
 #include "oneflow/core/common/maybe.h"
 
 namespace oneflow {
 
-struct WithDebugCheck {
-  static bool env_check(int32_t level) {
-    const char* env_debug_level = std::getenv("ONEFOW_DEBUG_LEVEL");
+struct WithCheck {
+  static bool env_check(int32_t check_level) {
+    const char* env_check_level = std::getenv("ONEFOW_CHECK_LEVEL");
     const char* env_debug_mode = std::getenv("ONEFLOW_DEBUG_MODE");
     return env_debug_mode != nullptr
-           || (env_debug_level != nullptr && std::atoi(env_debug_level) >= level);
+           || (env_check_level != nullptr && std::atoi(env_check_level) >= check_level);
   }
 
   template<typename T, typename = void>
-  struct DebugCheck;
+  struct Check;
 
   template<typename T, typename... Args>
-  struct DebugCheck<T (*)(Args...)> final {
-    template<int32_t debug_level, T (*func)(Args...)>
+  struct Check<T (*)(Args...)> final {
+    template<int32_t check_level, T (*func)(Args...)>
     static T Call(Args... args) {
-      if (env_check(debug_level)) return func(std::forward<Args>(args)...);
+      static_assert(std::is_same<T, Maybe<void>>::value,
+                    "returned value type must be Maybe<void>.");
+      if (env_check(check_level)) JUST(func(std::forward<Args>(args)...));
       return Maybe<void>::Ok();
     }
   };
 };
 
-#define DEBUG(debug_level, fn_ptr) \
-  (&WithDebugCheck::DebugCheck<decltype(fn_ptr)>::Call<debug_level, fn_ptr>)
+#define DEBUG(CHECK_LEVEL, fn_ptr) (&WithCheck::Check<decltype(fn_ptr)>::Call<CHECK_LEVEL, fn_ptr>)
 
 }  // namespace oneflow
 

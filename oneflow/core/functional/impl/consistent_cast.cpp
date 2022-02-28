@@ -44,7 +44,7 @@ limitations under the License.
 #include "oneflow/core/common/cpp_attribute.h"
 #include "oneflow/core/ccl/ccl.h"
 #include "oneflow/core/common/constant.h"
-#include "oneflow/core/common/debug.h"
+#include "oneflow/core/common/check.h"
 
 namespace oneflow {
 namespace one {
