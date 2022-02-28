@@ -105,7 +105,7 @@ bool IsSbpSignatureContaining(const SbpSignature& bigger, const SbpSignature& sm
   auto& bn2sbp = bigger.bn_in_op2sbp_parallel();
   for (const auto& pair : smaller.bn_in_op2sbp_parallel()) {
     if (pair.second.parallel_type_case() == SbpParallel::PARALLEL_TYPE_NOT_SET) { continue; }
-    CHECK(bn2sbp.find(pair.first) != bn2sbp.end());
+    CHECK(bn2sbp.find(pair.first) != bn2sbp.end()) << pair.first;
     if (bn2sbp.at(pair.first) != pair.second) { return false; }
   }
   return true;
@@ -226,6 +226,21 @@ bool ParseSbpParallelFromString(const std::string& sbp_str, SbpParallel* sbp_par
 
 std::string SbpParallelToString(const SbpParallel& sbp_parallel) {
   return SbpToString(sbp_parallel);
+}
+
+bool ParseNdSbpFromStringList(const std::vector<std::string>& sbp_str_list, NdSbp* nd_sbp) {
+  for (const auto& sbp_str : sbp_str_list) {
+    if (!ParseSbpParallelFromString(sbp_str, nd_sbp->add_sbp_parallel())) { return false; }
+  }
+  return true;
+}
+
+std::vector<std::string> NdSbpToStringList(const NdSbp& nd_sbp) {
+  std::vector<std::string> sbp_str_list(nd_sbp.sbp_parallel_size());
+  for (size_t i = 0; i < sbp_str_list.size(); ++i) {
+    sbp_str_list[i] = SbpToString(nd_sbp.sbp_parallel(i));
+  }
+  return sbp_str_list;
 }
 
 void SbpSignatureToNdSbpSignature(const SbpSignature& sbp_signature,
