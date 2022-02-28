@@ -18,13 +18,13 @@ import unittest
 from collections import OrderedDict
 
 import numpy as np
-from test_util import GenArgList
+from oneflow.test_utils.test_util import GenArgList
 
 import oneflow as flow
 import oneflow.unittest
 
 
-def test_fused_self_attention(test_case, batch_size, seq_len, num_heads, head_size):
+def _test_fused_self_attention(test_case, batch_size, seq_len, num_heads, head_size):
     hidden_size = num_heads * 3 * head_size
 
     x = np.random.randn(seq_len, batch_size, hidden_size)
@@ -89,9 +89,9 @@ def test_fused_self_attention(test_case, batch_size, seq_len, num_heads, head_si
 @flow.unittest.skip_unless_1n1d()
 @unittest.skipIf(os.getenv("ONEFLOW_TEST_CPU_ONLY"), "only test cpu cases")
 class TestFusedSelfAttention(flow.unittest.TestCase):
-    def test_fused_self_attention(test_case):
+    def _test_fused_self_attention(test_case):
         arg_dict = OrderedDict()
-        arg_dict["test_fun"] = [test_fused_self_attention]
+        arg_dict["test_fun"] = [_test_fused_self_attention]
         arg_dict["batch_size"] = [1, 4, 6, 8]
         arg_dict["seq_len"] = [5, 10, 12]
         arg_dict["num_heads"] = [4, 8, 16]
