@@ -27,7 +27,7 @@ from oneflow.test_utils.automated_test_util import *
 
 
 @autotest(n=10, auto_backward=False, check_graph=False)
-def test_greater_impl(test_case, ndim, placement, sbp):
+def _test_greater_impl(test_case, ndim, placement, sbp):
     dims = [random(1, 4) * 8 for i in range(ndim)]
     x1 = random_tensor(ndim, *dims)
     x2 = x1.to_global(placement=placement, sbp=sbp)
@@ -46,7 +46,7 @@ class TestGreaterConsistent(flow.unittest.TestCase):
         ndim = random(1, 5).to(int).value()
         for placement in all_placement():
             for sbp in all_sbp(placement, max_dim=ndim):
-                test_greater_impl(test_case, ndim, placement, sbp)
+                _test_greater_impl(test_case, ndim, placement, sbp)
 
 
 if __name__ == "__main__":
