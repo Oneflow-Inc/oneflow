@@ -152,7 +152,8 @@ class RoundTripOneFlowJobWrapper : public mlir::oneflow::RoundTripOneFlowJobWrap
 
 template<IRPassType ir_pass_type>
 bool IRRoundTrip<ir_pass_type>::IsEnabled(const JobPassCtx& ctx) const {
-  return ParseBooleanFromEnv("ONEFLOW_MLIR_ENABLE_ROUND_TRIP", false);
+  return ParseBooleanFromEnv("ONEFLOW_MLIR_ENABLE_ROUND_TRIP", false)
+         || ctx.job_desc().enable_auto_mixed_precision();
 }
 
 template<IRPassType ir_pass_type>

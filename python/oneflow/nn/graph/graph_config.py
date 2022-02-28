@@ -66,15 +66,27 @@ class GraphConfig(object):
         assert type(mode) is bool
         self.proto.set_enable_auto_mixed_precision(mode)
 
-    def enable_mlir(self, mode: bool = True):
-        r"""If set to true, then graph will do mlir roundtrip in forward and backward.
+    def enable_mlir_round_trip(self, mode: bool = True):
+        r"""If set to true, then graph will do MLIR round-trip, it is not enabled by default.
+
+        For example:
+        .. code-block:: python
+            import oneflow as flow
+            class Graph(flow.nn.Graph):
+                def __init__(self):
+                    super().__init__()
+                    self.linear = flow.nn.Linear(3, 8, False)
+                    self.config.enable_mlir_round_trip(True) # Use MLIR mode.
+                def build(self, x):
+                    return self.linear(x)
+            graph = Graph()
 
         Args:
             mode (bool, optional): The default vaule is True.
         """
         assert type(mode) is bool
-        if mode == False:
-            os.environ["ONEFLOW_MLIR_ENABLE_ROUND_TRIP"] = "0"
+        self.proto.mlir_enable_round_trip(mode)
+
 
     def allow_fuse_model_update_ops(self, mode: bool = True):
         r"""If set to true, try to fuse cast + scale + l1_l2_regularize_gradient + model_update to one op to improve performance.
