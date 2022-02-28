@@ -22,8 +22,8 @@ limitations under the License.
 
 namespace oneflow {
 
-struct WithCheck {
-  static bool env_check(int32_t check_level) {
+struct WithCheckLevel {
+  static bool is_enabled_check(int32_t check_level) {
     const char* env_check_level = std::getenv("ONEFOW_CHECK_LEVEL");
     const char* env_debug_mode = std::getenv("ONEFLOW_DEBUG_MODE");
     return env_debug_mode != nullptr
@@ -39,13 +39,14 @@ struct WithCheck {
     static T Call(Args... args) {
       static_assert(std::is_same<T, Maybe<void>>::value,
                     "returned value type must be Maybe<void>.");
-      if (env_check(check_level)) JUST(func(std::forward<Args>(args)...));
+      if (is_enabled_check(check_level)) JUST(func(std::forward<Args>(args)...));
       return Maybe<void>::Ok();
     }
   };
 };
 
-#define DEBUG(CHECK_LEVEL, fn_ptr) (&WithCheck::Check<decltype(fn_ptr)>::Call<CHECK_LEVEL, fn_ptr>)
+#define CHECK_LEVEL(check_level, fn_ptr) \
+  (&WithCheckLevel::Check<decltype(fn_ptr)>::Call<check_level, fn_ptr>)
 
 }  // namespace oneflow
 

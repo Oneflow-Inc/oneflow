@@ -44,7 +44,7 @@ limitations under the License.
 #include "oneflow/core/common/cpp_attribute.h"
 #include "oneflow/core/ccl/ccl.h"
 #include "oneflow/core/common/constant.h"
-#include "oneflow/core/common/check.h"
+#include "oneflow/core/common/check_level.h"
 
 namespace oneflow {
 namespace one {
@@ -312,7 +312,7 @@ class LocalToConsistentFunctor {
       Optional<Symbol<NdSbp>> nd_sbp;
       Optional<Symbol<NdSbp>> grad_nd_sbp;
       if (!sbp_parallels.empty()) { grad_nd_sbp = JUST(GetNdSbp(sbp_parallels)); }
-      JUST(DEBUG(1, &MetaInfoConsistencyCheck)(parallel_desc, nd_sbp, grad_nd_sbp));
+      JUST(CHECK_LEVEL(1, &MetaInfoConsistencyCheck)(parallel_desc, nd_sbp, grad_nd_sbp));
     }
     CHECK_OR_RETURN(x->is_local());
     std::shared_ptr<one::Tensor> input = x;
@@ -363,7 +363,7 @@ class ToConsistentFunctor {
       Optional<Symbol<NdSbp>> grad_nd_sbp;
       if (!sbp_parallels.empty()) { grad_nd_sbp = JUST(GetNdSbp(sbp_parallels)); }
       if (!grad_sbp_parallels.empty()) { grad_nd_sbp = JUST(GetNdSbp(grad_sbp_parallels)); }
-      JUST(DEBUG(1, &MetaInfoConsistencyCheck)(parallel_desc, nd_sbp, grad_nd_sbp));
+      JUST(CHECK_LEVEL(1, &MetaInfoConsistencyCheck)(parallel_desc, nd_sbp, grad_nd_sbp));
     }
     std::shared_ptr<Tensor> tensor;
     if (x->is_consistent()) {
