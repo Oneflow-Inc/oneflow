@@ -674,7 +674,7 @@ class SqueezeFunctor {
     if (dim.has_value()) {
       std::vector<int32_t> dims = *JUST(dim);
       for (int32_t dim_i : dims) {
-        CHECK_OR_RETURN((dim_i >= -ndim) && (dim_i <= ndim))
+        CHECK_OR_RETURN((dim_i >= -ndim) && (dim_i <= ndim - 1))
             << "Dimension out of range (expected to be in range of  [" << -ndim << "," << ndim - 1
             << "], but got " << dim_i;
         if (dim_i < 0) { dim_i += ndim; }
