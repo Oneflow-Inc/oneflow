@@ -33,15 +33,15 @@ namespace oneflow {
 
 namespace {
 void DfsSetNdSbp(std::vector<::oneflow::SbpParallel>& id2SbpParallel, int32_t depth,
-                 int32_t max_depth, NdSbp& nd_sbp, std::vector<NdSbp>& nd_sbp_lists_,
-                 std::unordered_map<::oneflow::NdSbp, int32_t>& nd_sbp_universe_) {
+                 int32_t max_depth, NdSbp& nd_sbp, std::vector<NdSbp>& nd_sbp_lists,
+                 std::unordered_map<::oneflow::NdSbp, int32_t>& nd_sbp_universe) {
   if (depth == max_depth) {
-    nd_sbp_universe_[nd_sbp] = nd_sbp_lists_.size();
-    nd_sbp_lists_.push_back(nd_sbp);
+    nd_sbp_universe[nd_sbp] = nd_sbp_lists.size();
+    nd_sbp_lists.push_back(nd_sbp);
   } else {
     for (int32_t i = 0; i < id2SbpParallel.size(); i++) {
       *nd_sbp.mutable_sbp_parallel(depth) = id2SbpParallel[i];
-      DfsSetNdSbp(id2SbpParallel, depth + 1, max_depth, nd_sbp, nd_sbp_lists_, nd_sbp_universe_);
+      DfsSetNdSbp(id2SbpParallel, depth + 1, max_depth, nd_sbp, nd_sbp_lists, nd_sbp_universe);
     }
   }
 }
@@ -714,7 +714,7 @@ Maybe<void> BoxingCollector::Generate1Combination4DiffHierarchy(
   // minimum number of node
   int32_t min_path_length = 100;
   // minimum cost
-  double min_cost = GetMaxVal<float>();
+  double min_cost = GetValidMaxCopyCost();
 
   for (int32_t id_1d = 0; id_1d < m; id_1d++) {
     // We do not support [2, 3]: (S0, S1) -> [6]: S0 for a tensor with shape (14, 21)
@@ -877,7 +877,7 @@ Maybe<void> BoxingCollector::Generate1Combination4DiffPlacement(
   // minimum number of node
   int32_t min_path_length = 100;
   // minimum cost
-  double min_cost = GetMaxVal<float>();
+  double min_cost = GetValidMaxCopyCost();
 
   // Search the path that contains two of the diagonal sbp
   // From the producer to the first diagonal node
