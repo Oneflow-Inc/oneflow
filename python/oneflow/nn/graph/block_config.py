@@ -16,7 +16,9 @@ limitations under the License.
 
 
 class BlockConfig(object):
-    r"""Configurations on Block in nn.Graph.
+    r"""Configurations on Module Block in nn.Graph.
+
+    When an nn.Module is added into an nn.Graph, it is wrapped into a ModuleBlock. You can set or get optimization configs on an nn.Module with it's `ModuleBlock.config`. 
     """
 
     def __init__(self):
@@ -27,7 +29,7 @@ class BlockConfig(object):
     # NOTE(lixiang): For the normal display of docstr, the API Doc of the get and set methods are written together in the stage_id function.
     @property
     def stage_id(self):
-        r"""Get/Set stage id of Block in pipeline parallelism.
+        r"""Set/Get stage id of nn.Module/ModuleBlock in pipeline parallelism.
         
         When calling stage_id(value: int = None), set different module's stage id to hint the graph preparing right num of buffers in pipeline.
 
@@ -55,7 +57,7 @@ class BlockConfig(object):
     # NOTE(lixiang): For the normal display of docstr, the API Doc of the get and set methods are written together in the activation_checkpointing function.
     @property
     def activation_checkpointing(self):
-        r"""Get/Set whether do activation checkpointing in this Block.
+        r"""Set/Get whether do activation checkpointing in this nn.Module.
 
         For example:
 
