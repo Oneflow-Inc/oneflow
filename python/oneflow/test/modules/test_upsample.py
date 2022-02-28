@@ -379,7 +379,7 @@ class TestUpsample2d(flow.unittest.TestCase):
     @autotest()
     def test_upsample2d(test_case):
         device = random_device()
-        x = random_pytorch_tensor().to(device)
+        x = random_tensor().to(device)
         m = torch.nn.Upsample(scale_factor=random().to(float), mode="nearest")
         y = m(x)
         return y
@@ -390,7 +390,7 @@ class TestUpsample2d(flow.unittest.TestCase):
     @autotest()
     def test_upsample2d_bilinear(test_case):
         device = random_device()
-        x = random_pytorch_tensor(ndim=4).to(device)
+        x = random_tensor(ndim=4).to(device)
         m = torch.nn.Upsample(
             scale_factor=random().to(float),
             mode="bilinear",

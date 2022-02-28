@@ -143,7 +143,10 @@ class TestWeightNorm(flow.unittest.TestCase):
         for arg in GenArgList(arg_dict):
             arg[0](test_case, *arg[1:])
 
-    @autotest(n=10, auto_backward=True, check_graph=False)
+    # Not check graph because of one reason:
+    # Reason 1, Graph's build input nn.modules.linear.Linear type is not supported.
+    # Please refer to issue: https://github.com/Oneflow-Inc/oneflow/issues/7466
+    @autotest(n=10, auto_backward=True, check_graph="ValidatedFlase")
     def test_weight_norm_with_random_data(test_case):
         device = random_device()
 

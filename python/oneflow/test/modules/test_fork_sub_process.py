@@ -37,6 +37,7 @@ def _test_fork_sub_process(id):
 
 class TestForkSubProcess(flow.unittest.TestCase):
     def test_fork_sub_process(test_case):
+        flow._oneflow_internal.eager.multi_client.Sync()
         print("=============main process start=============")
         # process pool
         num_process = 4

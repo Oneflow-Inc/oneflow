@@ -31,13 +31,19 @@ class Test_Diag_module(flow.unittest.TestCase):
     @autotest(check_graph=True)
     def test_diag_one_dim(test_case):
         device = random_device()
-        x = random_pytorch_tensor(ndim=1, dim0=random()).to(device)
+        x = random_tensor(ndim=1, dim0=random()).to(device)
         return torch.diag(x)
 
     @autotest(check_graph=True)
     def test_diag_other_dim(test_case):
         device = random_device()
-        x = random_pytorch_tensor(ndim=2, dim0=random(), dim1=random()).to(device)
+        x = random_tensor(ndim=2, dim0=random(), dim1=random()).to(device)
+        return torch.diag(x)
+
+    @autotest(auto_backward=False, check_graph=True)
+    def test_diag_one_dim(test_case):
+        device = random_device()
+        x = random_tensor(ndim=1, dim0=random()).to(device, torch.bool)
         return torch.diag(x)
 
 

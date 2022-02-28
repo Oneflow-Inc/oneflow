@@ -44,8 +44,8 @@ def api_all_device_placement(device_type: str) -> oneflow._oneflow_internal.plac
         # world_size = 4, node_size = 1
         import oneflow as flow
         
-        p = flow.env.all_device_placement("cuda") # oneflow.placement(device_type="cuda", machine_device_ids={0 : [0, 1, 2, 3]}, hierarchy=(4,))
-        p = flow.env.all_device_placement("cpu") # oneflow.placement(device_type="cpu", machine_device_ids={0 : [0, 1, 2, 3]}, hierarchy=(4,))
+        p = flow.env.all_device_placement("cuda") # oneflow.placement(device_type="cuda", ranks=[0, 1, 2, 3])
+        p = flow.env.all_device_placement("cpu") # oneflow.placement(device_type="cpu", ranks=[0, 1, 2, 3])
 
     """
     return oneflow._oneflow_internal.AllDevicePlacement(device_type)

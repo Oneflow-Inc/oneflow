@@ -44,10 +44,12 @@ class TestGenerator(flow.unittest.TestCase):
 
     def test_generator_in_dropout(test_case):
         tgt = flow.ones(2000000)
-        output = flow._C.dropout(tgt, None, 0.1, True, flow.Generator())
+        output = flow._C.dropout(tgt, 0.1, True, flow.Generator(), addend=None)
         output.numpy()
         if not os.getenv("ONEFLOW_TEST_CPU_ONLY"):
-            output = flow._C.dropout(tgt.cuda(), None, 0.1, True, flow.Generator())
+            output = flow._C.dropout(
+                tgt.cuda(), 0.1, True, flow.Generator(), addend=None
+            )
             output.numpy()
 
 

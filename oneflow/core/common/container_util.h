@@ -16,6 +16,7 @@ limitations under the License.
 #ifndef ONEFLOW_CORE_COMMON_CONTAINER_UTIL_H_
 #define ONEFLOW_CORE_COMMON_CONTAINER_UTIL_H_
 
+#include <vector>
 #include "oneflow/core/common/hash_container.h"
 #include "oneflow/core/common/type_traits.h"
 #include "oneflow/core/common/maybe.h"
@@ -54,7 +55,7 @@ Maybe<scalar_or_const_ref_t<typename VecT::value_type>> VectorAt(const VecT& vec
 template<typename VecT>
 Maybe<typename VecT::value_type*> VectorAt(VecT* vec, typename VecT::size_type index) {
   CHECK_LT_OR_RETURN(index, vec->size());
-  return &vec[index];
+  return &(*vec)[index];
 }
 
 template<typename T>
@@ -69,6 +70,18 @@ std::string Join(const T& con, const std::string& delimiter) {
   if (b != e) { os << *b; }
 
   return os.str();
+}
+
+template<typename T>
+using SmallSet = std::vector<T>;
+
+template<typename T>
+std::pair<typename SmallSet<T>::iterator, bool> SmallSetInsert(SmallSet<T>* vec, const T& elem) {
+  for (auto iter = vec->begin(); iter != vec->end(); ++iter) {
+    if (*iter == elem) { return std::make_pair(iter, false); }
+  }
+  vec->push_back(elem);
+  return std::make_pair(--vec->end(), true);
 }
 
 }  // namespace oneflow

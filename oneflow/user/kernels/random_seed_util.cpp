@@ -24,7 +24,7 @@ int64_t GetOpKernelRandomSeed(const user_op::KernelInitContext* ctx) {
   const auto& outputs = ctx->outputs();
   CHECK_EQ(outputs.size(), 1);
   if (parallel_num > 1) {
-    const cfg::SbpParallel& out_sbp =
+    const SbpParallel& out_sbp =
         ctx->SbpParallel4ArgNameAndIndex(outputs.at(0).first, outputs.at(0).second);
     if (out_sbp.has_split_parallel()) {
       std::seed_seq seq{seed};

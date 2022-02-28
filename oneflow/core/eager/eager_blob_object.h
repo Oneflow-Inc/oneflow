@@ -35,6 +35,10 @@ class TensorStorage {
         producer_op_device_(NullOpt),
         last_used_device_(NullOpt) {}
 
+  ~TensorStorage() {
+    for (const auto& hook : storage_delete_hooks_) { hook(); }
+  }
+
   size_t blob_bytes() const { return blob_bytes_; }
 
   char* blob_dptr() { return blob_dptr_.get(); }
@@ -58,12 +62,22 @@ class TensorStorage {
     last_used_device_ = last_used_device;
   }
 
+  void Release() {
+    non_pod_allocator_.reset();
+    blob_dptr_.reset();
+  }
+
+  void RegisterStorageDeleteHook(const std::function<void()>& hook) {
+    storage_delete_hooks_.emplace_back(hook);
+  }
+
  private:
   size_t blob_bytes_;
   std::unique_ptr<char, std::function<void(char*)>> blob_dptr_;
   std::unique_ptr<MemoryAllocator> non_pod_allocator_;
   Optional<Symbol<Device>> producer_op_device_;
   Optional<Symbol<Device>> last_used_device_;
+  std::vector<std::function<void()>> storage_delete_hooks_;
 };
 
 class EagerBlobObject final : public BlobObject {
@@ -72,13 +86,11 @@ class EagerBlobObject final : public BlobObject {
   EagerBlobObject(EagerBlobObject&&) = delete;
   EagerBlobObject(const std::shared_ptr<MemoryCase>& mem_case, const std::shared_ptr<Shape>& shape,
                   DataType data_type, const std::shared_ptr<TensorStorage>& tensor_storage)
-      : EagerBlobObject(mem_case, shape, data_type, tensor_storage, Optional<LocalDepObject*>()) {}
-
+      : EagerBlobObject(mem_case, shape, data_type, tensor_storage,
+                        intrusive::shared_ptr<LocalDepObject>()) {}
   EagerBlobObject(const std::shared_ptr<MemoryCase>& mem_case, const std::shared_ptr<Shape>& shape,
                   DataType data_type, const std::shared_ptr<TensorStorage>& tensor_storage,
-                  LocalDepObject* dep_object)
-      : EagerBlobObject(mem_case, shape, data_type, tensor_storage,
-                        Optional<LocalDepObject*>(dep_object)) {}
+                  const intrusive::shared_ptr<LocalDepObject>& dep_object);
 
   ~EagerBlobObject() override {
     tensor_storage_.reset();
@@ -93,15 +105,21 @@ class EagerBlobObject final : public BlobObject {
 
   Maybe<void> TryInitBlob() override;
   Maybe<void> InitBlob();
+  Maybe<void> InitBlobWithOffset(const int64_t offset);
 
   Maybe<void> TryAllocateBlobBodyMemory(DeviceCtx* device_ctx) override;
   Maybe<void> DeallocateBlobDataPtr() override {
+    tensor_storage_->Release();
     tensor_storage_.reset(new TensorStorage);
     return Maybe<void>::Ok();
   }
+  void RegisterStorageDeleteHook(const std::function<void()>& hook) {
+    tensor_storage_->RegisterStorageDeleteHook(hook);
+  }
 
   Maybe<LocalDepObject*> compute_local_dep_object() const {
-    return JUST(compute_local_dep_object_);
+    CHECK_NOTNULL_OR_RETURN(compute_local_dep_object_.get());
+    return compute_local_dep_object_.get();
   }
 
   std::shared_ptr<TensorStorage>& tensor_storage() { return tensor_storage_; }
@@ -109,10 +127,6 @@ class EagerBlobObject final : public BlobObject {
   bool is_shape_synced() const { return is_shape_synced_; }
 
   void set_is_shape_synced(bool val) { is_shape_synced_ = val; }
-
-  int64_t storage_offset() const { return storage_offset_; }
-
-  void set_storage_offset(int64_t storage_offset) { storage_offset_ = storage_offset; }
 
   const Optional<Symbol<Device>>& producer_op_device() const {
     return tensor_storage_->producer_op_device();
@@ -129,15 +143,11 @@ class EagerBlobObject final : public BlobObject {
   }
 
  private:
-  EagerBlobObject(const std::shared_ptr<MemoryCase>& mem_case, const std::shared_ptr<Shape>& shape,
-                  DataType data_type, const std::shared_ptr<TensorStorage>& tensor_storage,
-                  const Optional<LocalDepObject*>& dep_object);
   std::unique_ptr<Blob> blob_;
   std::unique_ptr<char[]> header_buffer_;
   std::shared_ptr<TensorStorage> tensor_storage_;
   std::atomic<bool> is_shape_synced_;
-  int64_t storage_offset_;
-  Optional<LocalDepObject*> compute_local_dep_object_;
+  intrusive::shared_ptr<LocalDepObject> compute_local_dep_object_;
 };
 
 }  // namespace vm

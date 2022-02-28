@@ -15,10 +15,10 @@ limitations under the License.
 """
 import types
 
-from .lr_scheduler import LrScheduler
+from .lr_scheduler import LRScheduler
 
 
-class LambdaLR(LrScheduler):
+class LambdaLR(LRScheduler):
     """
     Sets the learning rate of each parameter group to the initial lr times a given function.
     When last_step=-1, sets initial lr as lr.

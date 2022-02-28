@@ -31,8 +31,8 @@ Maybe<void> BoxingWithMiddleNodes(const OpGraph& op_graph, JobBuilder* job_build
   // We assemble the boxing table from S(0) to S(5).
   // Those splitting in higher axes are considered in the customized boxing.
   constexpr int32_t kRegularMaxSplitAxes = 6;
-  boxing_collector.Init(kRegularMaxSplitAxes);
-  std::vector<cfg::NdSbp> middle_sbps;
+  JUST(boxing_collector.Init(kRegularMaxSplitAxes));
+  std::vector<NdSbp> middle_sbps;
   HashMap<const OpNode*, OperatorConf> op_node2op_conf;
   // Fill other unsupported combinations
   op_graph.ForEachNode([&](const OpNode* node) -> Maybe<void> {
@@ -43,16 +43,16 @@ Maybe<void> BoxingWithMiddleNodes(const OpGraph& op_graph, JobBuilder* job_build
     for (const std::string& ibn : node->op().input_bns()) {
       const LogicalBlobId& lbi = node->op().BnInOp2Lbi(ibn);
       const OpNode& producer = node->ProducerOpNode4Lbi(lbi);
-      const cfg::NdSbp& producer_nd_sbp = producer.NdSbp4Lbi(lbi);
-      const cfg::NdSbp& consumer_nd_sbp = node->NdSbp4BnInOp(ibn);
+      const NdSbp& producer_nd_sbp = producer.NdSbp4Lbi(lbi);
+      const NdSbp& consumer_nd_sbp = node->NdSbp4BnInOp(ibn);
 
       // Needs more effort if dealing with different placement
       if (node->parallel_desc().parallel_num() != 1 && producer_nd_sbp != consumer_nd_sbp) {
         const auto& logical_blob_desc = producer.LogicalBlobDesc4Lbi(lbi);
         // Ask for middle nodes
-        boxing_collector.AskSbpCombination(
+        JUST(boxing_collector.AskSbpCombination(
             producer_nd_sbp, consumer_nd_sbp, logical_blob_desc, producer.parallel_desc(),
-            node->parallel_desc(), /*is_customized=*/false, middle_sbps, /*compute_cost=*/false);
+            node->parallel_desc(), /*is_customized=*/false, middle_sbps, /*compute_cost=*/false));
         // move to the next ibn if no middle nodes needed
         if (middle_sbps.size() <= 0) { continue; }
         LogicalBlobId middle_node_lbi = lbi;
@@ -64,7 +64,7 @@ Maybe<void> BoxingWithMiddleNodes(const OpGraph& op_graph, JobBuilder* job_build
           identity_conf->set_in(GenLogicalBlobName(middle_node_lbi));
           identity_conf->set_out("out");
           job_builder->AddOps(node->parallel_desc().parallel_conf(), {identity_op_conf});
-          cfg::NdSbpSignature identity_nd_sbp_signature;
+          NdSbpSignature identity_nd_sbp_signature;
           (*identity_nd_sbp_signature.mutable_bn_in_op2nd_sbp())["in"] =
               middle_sbps[middle_node_id];
           (*identity_nd_sbp_signature.mutable_bn_in_op2nd_sbp())["out"] =

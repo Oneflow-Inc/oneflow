@@ -39,7 +39,7 @@ def _test_eye_backward(test_case, device, n, m):
 
 
 def _test_eye_with_1n2d(test_case, n, m, device):
-    placement = flow.placement(device, {0: range(2)})
+    placement = flow.placement(device, range(2))
     x = flow.eye(n, m, placement=placement, sbp=flow.sbp.broadcast)
     test_case.assertTrue(x.placement, placement)
     test_case.assertTrue(x.sbp, flow.sbp.broadcast)
@@ -73,6 +73,26 @@ class TestEye(flow.unittest.TestCase):
         n = random(low=0, high=1).to(int)
         m = random(low=0, high=2).to(int)
         x = torch.eye(n=n, m=m, device=random_device())
+        return x
+
+    @autotest(check_graph=True)
+    def test_eye_bool_with_random_data(test_case):
+        n = random().to(int)
+        m = random().to(int)
+        x = torch.eye(n=n, m=m)
+        device = random_device()
+        x.to(device=device, dtype=torch.bool)
+        x = random_tensor().to(device)
+        return x
+
+    @autotest(check_graph=True, auto_backward=False)
+    def test_eye_with_0dim_data(test_case):
+        n = random().to(int)
+        m = random().to(int)
+        x = torch.eye(n=n, m=m)
+        device = random_device()
+        x.to(device)
+        x = random_tensor(ndim=0).to(device)
         return x
 
 

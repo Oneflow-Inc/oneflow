@@ -67,8 +67,8 @@ Maybe<void> InputOp::InferOutBlobDescs(
 }
 
 Maybe<void> InputOp::InferSbpSignature(
-    cfg::SbpSignature* sbp_signature, const cfg::SbpSignature& sbp_sig_conf,
-    const std::function<int32_t(const cfg::SbpSignature&)>& CalcOrderValue4SbpSig,
+    SbpSignature* sbp_signature, const SbpSignature& sbp_sig_conf,
+    const std::function<int32_t(const SbpSignature&)>& CalcOrderValue4SbpSig,
     std::function<Maybe<const SbpInferHint*>(const std::string&)> SbpInferHint4Ibn,
     const ParallelDesc& parallel_desc) const {
   JUST(InterfaceOpUtil::GetInputLikeOpSbpSignature(op_conf().input_conf().blob_conf(), input_bns(),
@@ -76,7 +76,7 @@ Maybe<void> InputOp::InferSbpSignature(
   return Maybe<void>::Ok();
 }
 
-Maybe<void> InputOp::GetSbpSignatures(cfg::SbpSignatureList* sbp_sig_list) const {
+Maybe<void> InputOp::GetSbpSignatures(SbpSignatureList* sbp_sig_list) const {
   JUST(InterfaceOpUtil::GetInputLikeOpSbpSignature(op_conf().input_conf().blob_conf(), input_bns(),
                                                    output_bns(),
                                                    sbp_sig_list->mutable_sbp_signature()->Add()));
@@ -93,7 +93,7 @@ Maybe<void> InputOp::GetNdSbpSignatureList(
 }
 
 Maybe<void> InputOp::InferNdSbpSignature(
-    cfg::NdSbpSignature* nd_sbp_signature, const cfg::NdSbpSignature& nd_sbp_constraints,
+    NdSbpSignature* nd_sbp_signature, const NdSbpSignature& nd_sbp_constraints,
     const ParallelDesc& parallel_desc,
     std::function<Maybe<const NdSbpInferHint*>(const std::string&)> NdSbpInferHint4Ibn) const {
   JUST(InferInputOpNdSbpSignature(nd_sbp_signature, parallel_desc, op_conf()));

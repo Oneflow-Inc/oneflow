@@ -16,6 +16,7 @@ limitations under the License.
 import itertools
 from collections import OrderedDict, namedtuple
 from typing import Callable, Dict, Iterator, List, Optional, Set, Tuple, TypeVar, Union
+import traceback
 
 import numpy as np
 import oneflow as flow
@@ -51,7 +52,6 @@ T = TypeVar("T", bound="Module")
 class Module(object):
     def __init__(self):
         self.training = True
-        self._consistent = False
         self._parameters = OrderedDict()
         self._buffers = OrderedDict()
         self._non_persistent_buffers_set = set()
@@ -62,10 +62,6 @@ class Module(object):
         self._state_dict_hooks = OrderedDict()
         self._load_state_dict_pre_hooks = OrderedDict()
         self._modules = OrderedDict()
-
-    @property
-    def consistent(self):
-        return self._consistent
 
     def forward(self, *args, **kwargs):
         raise NotImplementedError()
@@ -371,8 +367,14 @@ class Module(object):
                         param.copy_(input_param)
                 except Exception as ex:
                     error_msgs.append(
-                        'While copying the parameter named "{}", whose dimensions in the model are {} and whose dimensions in the checkpoint are {}, an exception occurred : {}.'.format(
-                            key, param.shape, input_param.shape, ex.args
+                        'While copying the parameter "{}", an exception occurred : \n\n{}.'.format(
+                            key,
+                            "".join(
+                                map(
+                                    lambda line: "\t" + line,
+                                    traceback.format_exc().splitlines(True),
+                                )
+                            ),
                         )
                     )
             elif strict:
@@ -534,9 +536,14 @@ class Module(object):
 
         return self._apply(convert)
 
-    def to_consistent(self, placement=None, sbp=None):
+    def to_consistent(self, *args, **kwargs):
+        raise RuntimeError(
+            ".to_consistent has been removed, please use .to_global instead"
+        )
+
+    def to_global(self, placement=None, sbp=None):
         def convert(t):
-            return t.to_consistent(placement=placement, sbp=sbp)
+            return t.to_global(placement=placement, sbp=sbp)
 
         return self._apply(convert)
 

@@ -130,7 +130,7 @@ class ConsistentTensorMetaTensorDescView final : public user_op::TensorDesc {
 
   void set_is_dynamic(bool val) override { UNIMPLEMENTED(); }
 
-  Symbol<cfg::NdSbp> nd_sbp() { return consistent_tensor_meta_()->nd_sbp(); }
+  Symbol<NdSbp> nd_sbp() { return consistent_tensor_meta_()->nd_sbp(); }
 
  private:
   const std::function<Symbol<ConsistentTensorMeta>()> consistent_tensor_meta_;
@@ -270,14 +270,13 @@ class LocalUserOpInferContext : public user_op::InferContext {
   const ParallelDesc& parallel_desc() const override {
     return *CHECK_JUST(zero_copy_base_ctx_.parallel_desc());
   }
-  const cfg::SbpParallel& SbpParallel4ArgNameAndIndex(const std::string& arg_name,
-                                                      int32_t index) const override {
+  const SbpParallel& SbpParallel4ArgNameAndIndex(const std::string& arg_name,
+                                                 int32_t index) const override {
     const auto& nd_sbp = NdSbp4ArgNameAndIndex(arg_name, index);
     CHECK_EQ(nd_sbp.sbp_parallel_size(), 1);
     return nd_sbp.sbp_parallel(0);
   }
-  const cfg::NdSbp& NdSbp4ArgNameAndIndex(const std::string& arg_name,
-                                          int32_t index) const override {
+  const NdSbp& NdSbp4ArgNameAndIndex(const std::string& arg_name, int32_t index) const override {
     return *CHECK_NOTNULL(zero_copy_base_ctx_.ConsistentTensorMeta4ArgNameAndIndex(arg_name, index))
                 ->nd_sbp();
   }
@@ -417,6 +416,8 @@ class StatefulLocalOpKernel final {
                              const AttrMap& attrs, EagerBlobObjectListRawPtr inputs,
                              EagerBlobObjectListRawPtr outputs,
                              ConsistentTensorInferResultRawPtr consistent_tensor_infer_result);
+
+  const OperatorConf& op_conf() const { return *op_conf_; }
 
  private:
   friend struct vm::LocalCallOpKernelUtil;

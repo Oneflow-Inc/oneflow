@@ -38,6 +38,15 @@ Shape CreateLeftExtendedShape(const ShapeView& shape, int ndims_left_extend_to) 
   return Shape(std::move(dim_vec));
 }
 
+Shape ZeroDimCompatiableShape(const Shape& shape) {
+  if (shape.NumAxes() == 0 && shape.elem_cnt() == 1) {
+    DimVector dim_vec;
+    dim_vec.emplace_back(1);
+    return Shape(dim_vec);
+  }
+  return shape;
+}
+
 Shape CreateReducedShapeOrOnesShape(const ShapeView& shape, const AxisVector& axis_vec) {
   if (axis_vec.empty()) { return Shape::Ones(shape.NumAxes()); }
   return CreateReducedShape(shape, axis_vec);

@@ -92,37 +92,37 @@ def _test_local_tensor_str(test_case, device):
     test_case.assertTrue("..." in tensor_str)
 
 
-def _test_consistent_tensor_str(test_case, device):
-    placement = flow.placement(device, {0: range(1)})
-    # split consistent tensor
+def _test_global_tensor_str(test_case, device):
+    placement = flow.placement(device, range(1))
+    # split global tensor
     x = flow.ones((10, 10), placement=placement, sbp=[flow.sbp.split(0)])
     tensor_str = str(x)
     test_case.assertTrue("1." in tensor_str)
 
-    # broadcast consistent tensor
+    # broadcast global tensor
     x = flow.ones((10, 10), placement=placement, sbp=[flow.sbp.broadcast])
     tensor_str = str(x)
     test_case.assertTrue("1." in tensor_str)
 
-    # partial_sum consistent tensor
+    # partial_sum global tensor
     x = flow.ones((10, 10), placement=placement, sbp=[flow.sbp.partial_sum])
     tensor_str = str(x)
     test_case.assertTrue("1." in tensor_str)
 
-    # summarized consistent tensor
+    # summarized global tensor
     x = flow.ones((100, 100), placement=placement, sbp=[flow.sbp.split(0)])
     tensor_str = str(x)
     test_case.assertTrue("1." in tensor_str)
     test_case.assertTrue("..." in tensor_str)
 
-    # empty consistent tensor
+    # empty global tensor
     x = flow.ones((0, 10), placement=placement, sbp=[flow.sbp.split(0)])
     tensor_str = str(x)
     test_case.assertTrue("[]" in tensor_str)
 
 
-def _test_consistent_tensor_str_2d(test_case, device):
-    placement = flow.placement(device, {0: range(2)})
+def _test_global_tensor_str_2d(test_case, device):
+    placement = flow.placement(device, range(2))
     x = flow.ones((10, 10), placement=placement, sbp=[flow.sbp.split(0)])
     tensor_str = str(x)
     test_case.assertTrue("1." in tensor_str)
@@ -150,7 +150,7 @@ def _test_consistent_tensor_str_2d(test_case, device):
     # test_case.assertTrue("..." in tensor_str)
 
     x = flow.ones(
-        (10, 10), placement=flow.placement(device, {0: [0]}), sbp=[flow.sbp.broadcast]
+        (10, 10), placement=flow.placement(device, ranks=[0]), sbp=[flow.sbp.broadcast]
     )
     tensor_str = str(x)
     test_case.assertTrue("1." in tensor_str)
@@ -173,10 +173,10 @@ class TestTensorStrModule(flow.unittest.TestCase):
 
     @unittest.skipIf(os.getenv("ONEFLOW_TEST_CPU_ONLY"), "only test cpu cases")
     @flow.unittest.skip_unless_1n1d()
-    def test_consistent_tensor_str_1n1d(test_case):
+    def test_global_tensor_str_1n1d(test_case):
         arg_dict = OrderedDict()
         arg_dict["test_fun"] = [
-            _test_consistent_tensor_str,
+            _test_global_tensor_str,
         ]
         arg_dict["device"] = ["cuda"]
         for arg in GenArgList(arg_dict):
@@ -187,7 +187,7 @@ class TestTensorStrModule(flow.unittest.TestCase):
     def test_tensor_str_1n2d(test_case):
         arg_dict = OrderedDict()
         arg_dict["test_fun"] = [
-            _test_consistent_tensor_str_2d,
+            _test_global_tensor_str_2d,
         ]
         arg_dict["device"] = ["cuda", "cpu"]
         for arg in GenArgList(arg_dict):

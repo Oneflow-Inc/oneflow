@@ -63,6 +63,7 @@ class CpuExpandKernel final : public user_op::OpKernel {
 
 REGISTER_EXPAND_KERNEL(float);
 REGISTER_EXPAND_KERNEL(double);
+REGISTER_EXPAND_KERNEL(bool);
 REGISTER_EXPAND_KERNEL(uint8_t);
 REGISTER_EXPAND_KERNEL(int8_t);
 REGISTER_EXPAND_KERNEL(int32_t);

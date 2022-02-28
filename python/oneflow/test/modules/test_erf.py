@@ -32,7 +32,14 @@ class TestErfModule(flow.unittest.TestCase):
     @autotest(check_graph=True)
     def test_flow_erf_with_random_data(test_case):
         device = random_device()
-        x = random_pytorch_tensor().to(device)
+        x = random_tensor().to(device)
+        y = torch.erf(x)
+        return y
+
+    @autotest(check_graph=True)
+    def test_flow_erf_with_0dim_data(test_case):
+        device = random_device()
+        x = random_tensor(ndim=0).to(device)
         y = torch.erf(x)
         return y
 

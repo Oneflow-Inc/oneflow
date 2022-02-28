@@ -374,11 +374,6 @@ Maybe<double> GetComputationCostFn(user_op::ComputeComplexityFnContext* ctx) {
   return InferDataType4Matmul(ctx);
 }
 
-/*static*/ Maybe<double> BroadcastMatmulOp::GetComputeComplexity(
-    user_op::ComputeComplexityFnContext* ctx) {
-  return GetComputationCostFn(ctx);
-}
-
 /* static */ Maybe<void> BroadcastMatmulGradBOp::InferLogicalTensorDesc(
     user_op::InferContext* ctx) {
   const user_op::TensorDesc& a = ctx->InputTensorDesc("a", 0);

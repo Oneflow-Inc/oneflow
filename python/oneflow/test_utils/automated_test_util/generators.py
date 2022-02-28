@@ -18,12 +18,16 @@ import os
 import random as random_util
 import typing
 from collections import namedtuple
-from typing import Any, Dict, Optional, Tuple, Union
+from typing import Any, Dict, Optional, Tuple, Sequence, Union
+from itertools import product
 
 import numpy as np
 import torch
 
 import oneflow as flow
+
+from .global_scope import *
+from .util import broadcast
 
 py_tuple = tuple
 NoneType = type(None)
@@ -79,9 +83,11 @@ class generator:
     def __init__(self, children):
         self.children = children
         self._value = None
+        self._has_value = False
 
     def _init(self):
         self._value = None
+        self._has_value = False
         for x in self.children:
             x._init()
 
@@ -93,8 +99,11 @@ class generator:
         raise NotImplementedError()
 
     def value(self):
-        if self._value is None:
+        if not self._has_value:
             self._value = self._calc_value()
+            if is_global():
+                self._value = broadcast(self._value)
+            self._has_value = True
         return self._value
 
     def size(self):
@@ -267,7 +276,7 @@ def random_or_nothing(low, high):
 
 
 @data_generator(torch.Tensor)
-class random_tensor(generator):
+class random_pytorch_tensor(generator):
     def __init__(
         self,
         ndim=None,
@@ -325,8 +334,11 @@ class random_tensor(generator):
         low = self.low.value()
         high = self.high.value()
         dtype = self.dtype.value()
+
         shape = rng.integers(low=1, high=8, size=ndim)
-        if dim0 is not None:
+        if ndim == 0:
+            shape = []
+        if ndim >= 1 and dim0 is not None:
             shape[0] = dim0
         if ndim >= 2:
             shape[1] = dim1
@@ -336,6 +348,8 @@ class random_tensor(generator):
             shape[3] = dim3
         if ndim == 5:
             shape[4] = dim4
+
+        pytorch_tensor = None
         if dtype == float:
             np_arr = rng.uniform(low=low, high=high, size=shape)
             return torch.Tensor(np_arr)
@@ -378,301 +392,170 @@ class gpu_device(generator):
         return random_util.choice(["cuda"])
 
 
-def test_against_pytorch(
-    test_case,
-    callable_name,
-    extra_annotations: Optional[Dict[str, Any]] = None,
-    extra_generators: Optional[Dict[str, Any]] = None,
-    extra_defaults: Optional[Dict[str, Any]] = None,
-    device: str = "cuda",
-    training: bool = True,
-    backward: bool = True,
-    rtol=0.0001,
-    atol=1e-05,
-    n=20,
-    pytorch_callable_name=None,
-    api_flag: int = TEST_MODULE,
-):
-    assert device in ["cuda", "cpu"]
-    if os.getenv("ONEFLOW_TEST_CPU_ONLY"):
-        device = "cpu"
-    if not training:
-        assert not backward
-    if extra_annotations is None:
-        extra_annotations = {}
-    if extra_generators is None:
-        extra_generators = {}
-    if extra_defaults is None:
-        extra_defaults = {}
-    if pytorch_callable_name is None:
-        pytorch_callable_name = callable_name
-    verbose = os.getenv("ONEFLOW_TEST_VERBOSE") is not None
+class all_placement(generator):
+    def __init__(self):
+        super().__init__([])
+        self.node_size = flow.env.get_node_size()
+        self.world_size = flow.env.get_world_size()
+        self.num_rank_for_each_node = self.world_size // self.node_size
 
-    def has_full_args_spec(callable):
-        try:
-            inspect.getfullargspec(callable)
-            return True
-        except Exception:
-            return False
+    def __len__(self):
+        return len(self.value())
 
-    if api_flag == TEST_TENSOR:
-        pytorch_tensor = torch.Tensor(1)
-        pytorch_call = eval(f"pytorch_tensor.{pytorch_callable_name}")
-    else:
-        pytorch_call = eval(f"torch.{pytorch_callable_name}")
-    Spec = namedtuple(
-        "spec",
-        "args, varargs, varkw, defaults, kwonlyargs, kwonlydefaults, annotations",
-    )
-    if has_full_args_spec(pytorch_call):
-        tmp_spec = inspect.getfullargspec(pytorch_call)
-        new_defaults = tmp_spec.defaults
-        if new_defaults is None:
-            new_defaults = []
-        new_kwonlydefaults = tmp_spec.kwonlydefaults
-        if new_kwonlydefaults is None:
-            new_kwonlydefaults = []
-        spec = Spec(
-            tmp_spec.args,
-            tmp_spec.varargs,
-            tmp_spec.varkw,
-            new_defaults,
-            tmp_spec.kwonlyargs,
-            new_kwonlydefaults,
-            tmp_spec.annotations,
-        )
-    else:
-        args = list(extra_annotations.keys()) + list(extra_defaults.keys())
-        spec = Spec(args, None, None, [], [], {}, {})
-    annotations = spec.annotations
-    annotations.update(extra_annotations)
-    if "return" in annotations:
-        del annotations["return"]
-    args = (set(spec.args) | set(spec.kwonlyargs)) - {"self"}
-    assert args == set(
-        annotations.keys()
-    ), f"args = {args}, annotations = {annotations.keys()}"
-    if "input" not in annotations:
-        annotations.update({"input": torch.Tensor})
+    def __getitem__(self, key):
+        return self.value()[key]
 
-    def has_default(name):
-        if name in spec.args:
-            return len(spec.args) - spec.args.index(name) <= len(spec.defaults)
+    def _calc_device(self):
+        if os.getenv("ONEFLOW_TEST_CPU_ONLY"):
+            return [
+                "cpu",
+            ]
         else:
-            assert name in spec.kwonlyargs
-            return len(spec.kwonlyargs) - spec.kwonlyargs.index(name) <= len(
-                spec.kwonlydefaults
-            )
+            return ["cuda", "cpu"]
 
-    def get_generator(name):
-        annotation = annotations[name]
-        if name in extra_generators:
-            generator = extra_generators[name]
-        else:
-            generator = annotation2default_generator[annotation]()
-        generator = generator.to(annotation)
-        return generator
+    def _calc_all_placement(self):
+        all_device = self._calc_device()
+        all_hierarchy = [
+            (self.world_size,),
+            (self.node_size, self.num_rank_for_each_node),
+        ]
+        return [
+            flow.placement(device, np.array(range(self.world_size)).reshape(hierarchy))
+            for device, hierarchy in list(product(all_device, all_hierarchy))
+        ]
 
-    while n > 0:
-        flow_attr_dict = {}
-        torch_attr_dict = {}
-        generator_tuple = tuple(
-            *[get_generator(name) for name in args] + [get_generator("input")]
-        )
-        values = generator_tuple.eval()
-        for (i, name) in enumerate(args):
-            torch_data = values[i]
-            if isinstance(torch_data, Nothing):
-                continue
-            flow_data = convert_torch_object_to_flow(torch_data)
-            if isinstance(torch_data, torch.Tensor):
-                torch_data = torch_data.to(device)
-            if isinstance(flow_data, flow.Tensor):
-                flow_data = flow_data.to(device)
-            flow_attr_dict[name] = flow_data
-            torch_attr_dict[name] = torch_data
-        if verbose:
-            print(f"attr = {torch_attr_dict}, device = {device}")
-        torch_input_original = values[-1]
-        flow_input_original = convert_torch_object_to_flow(torch_input_original)
-        flow_input_original.requires_grad_(backward)
-        torch_input_original.requires_grad_(backward)
-        (flow_input, torch_input) = (
-            flow_input_original.to(device),
-            torch_input_original.to(device),
-        )
-        try:
-            if api_flag == TEST_MODULE:
-                torch_call = pytorch_call(**torch_attr_dict)
-                torch_call = torch_call.to(device)
-                torch_call.train(training)
-                torch_res = torch_call(torch_input)
-                state_dict = torch_call.state_dict()
-                state_dict = {
-                    k: v.detach().cpu().numpy() for (k, v) in state_dict.items()
-                }
-            elif api_flag == TEST_FLOW:
-                torch_xxx_func = eval(f"torch.{pytorch_callable_name}")
-                torch_res = torch_xxx_func(torch_input, **torch_attr_dict)
+    def _calc_value(self):
+        return self._calc_all_placement()
+
+
+class random_placement(all_placement):
+    def __init__(self):
+        super().__init__()
+
+    def _calc_value(self):
+        return random_util.choice(self._calc_all_placement())
+
+
+class random_cpu_placement(random_placement):
+    def __init__(self):
+        super().__init__()
+
+    def _calc_device(self):
+        return "cpu"
+
+
+class random_gpu_placement(random_placement):
+    def __init__(self):
+        super().__init__()
+
+    def _calc_device(self):
+        return "cuda"
+
+
+class all_sbp(generator):
+    def __init__(
+        self,
+        placement=None,
+        dim=1,
+        max_dim=0,
+        except_split=False,
+        excpet_broadcast=False,
+        except_partial_sum=False,
+        valid_split_axis: Optional[Union[int, Sequence[int]]] = None,
+    ):
+        super().__init__([])
+        if placement is not None:
+            if isinstance(placement, random_placement):
+                self.dim = len(placement.value().ranks.shape)
+            elif isinstance(placement, flow.placement):
+                self.dim = len(placement.ranks.shape)
             else:
-                torch_tensor_xxx_func = eval(f"torch_input.{pytorch_callable_name}")
-                torch_res = torch_tensor_xxx_func(**torch_attr_dict)
-            loss = torch_res.sum()
-            loss.backward()
-            if api_flag == TEST_MODULE:
-                state_dict = torch_call.state_dict()
-                state_dict = {
-                    k: v.detach().cpu().numpy() for (k, v) in state_dict.items()
-                }
-        except Exception as e:
-            if verbose:
-                print(f"PyTorch error: {e}")
-            continue
-        if api_flag == TEST_MODULE:
-            flow_call_class = eval(f"flow.{callable_name}")
-            flow_call = flow_call_class(**flow_attr_dict)
-            flow_call = flow_call.to(device)
-            flow_call.train(training)
-            flow_call.load_state_dict(state_dict)
-            flow_res = flow_call(flow_input)
-        elif api_flag == TEST_FLOW:
-            flow_xxx_func = eval(f"flow.{callable_name}")
-            flow_res = flow_xxx_func(flow_input, **flow_attr_dict)
+                raise RuntimeError(
+                    f"placement should be instance of random_placement or oneflow.placement"
+                )
         else:
-            flow_tensor_xxx_func = eval(f"flow_input.{callable_name}")
-            flow_res = flow_tensor_xxx_func(**flow_attr_dict)
-        loss = flow_res.sum()
-        loss.backward()
+            self.dim = dim
+        self.max_dim = max_dim
+        self.except_split = except_split
+        self.excpet_broadcast = excpet_broadcast
+        self.except_partial_sum = except_partial_sum
+        if valid_split_axis is not None:
+            if isinstance(valid_split_axis, int):
+                self.valid_split_axis = [
+                    valid_split_axis,
+                ]
+            else:
+                self.valid_split_axis = list(valid_split_axis)
+        else:
+            self.valid_split_axis = [i for i in range(self.max_dim)]
 
-        def allclose_or_fail(flow_tensor, torch_tensor):
-            is_allclose = np.allclose(
-                flow_tensor.numpy(),
-                torch_tensor.detach().cpu().numpy(),
-                rtol=rtol,
-                atol=atol,
-            )
-            test_case.assertTrue(
-                is_allclose,
-                f"flow_tensor = {flow_tensor},\ntorch_tensor = {torch_tensor},\nattr_dict = {torch_attr_dict},\nflow_input_tensor = {flow_input_original}",
-            )
+    def __len__(self):
+        return len(self.value())
 
-        allclose_or_fail(flow_res, torch_res)
-        allclose_or_fail(flow_input_original.grad, torch_input_original.grad)
-        if api_flag == TEST_MODULE:
-            flow_parameters = dict(flow_call.named_parameters())
-            for (name, torch_param) in torch_call.named_parameters():
-                flow_param = flow_parameters[name]
-                allclose_or_fail(flow_param.grad, torch_param.grad)
-        if verbose:
-            print("test passed")
-        n -= 1
+    def __getitem__(self, key):
+        return self.value()[key]
 
+    def _calc_all_sbp(self):
+        # scalar only use broadcast sbp
+        if self.max_dim == 0:
+            return [
+                [flow.sbp.broadcast for i in range(self.dim)],
+            ]
+        all_sbps = []
+        if not self.except_split:
+            for i in range(self.max_dim):
+                if i in self.valid_split_axis:
+                    all_sbps.append(flow.sbp.split(i))
+        if not self.excpet_broadcast:
+            all_sbps.append(flow.sbp.broadcast)
+        if not self.except_partial_sum:
+            all_sbps.append(flow.sbp.partial_sum)
+        return list(product(all_sbps, repeat=self.dim))
 
-def test_module_against_pytorch(
-    test_case,
-    callable_name,
-    extra_annotations: Optional[Dict[str, Any]] = None,
-    extra_generators: Optional[Dict[str, Any]] = None,
-    extra_defaults: Optional[Dict[str, Any]] = None,
-    device: str = "cuda",
-    training: bool = True,
-    backward: bool = True,
-    rtol=0.0001,
-    atol=1e-05,
-    n=20,
-    pytorch_callable_name=None,
-):
-    return test_against_pytorch(
-        test_case=test_case,
-        callable_name=callable_name,
-        extra_annotations=extra_annotations,
-        extra_generators=extra_generators,
-        extra_defaults=extra_defaults,
-        device=device,
-        training=training,
-        backward=backward,
-        rtol=rtol,
-        atol=atol,
-        n=n,
-        pytorch_callable_name=pytorch_callable_name,
-        api_flag=TEST_MODULE,
-    )
+    def _calc_value(self):
+        return self._calc_all_sbp()
 
 
-def test_flow_against_pytorch(
-    test_case,
-    callable_name,
-    extra_annotations: Optional[Dict[str, Any]] = None,
-    extra_generators: Optional[Dict[str, Any]] = None,
-    extra_defaults: Optional[Dict[str, Any]] = None,
-    device: str = "cuda",
-    training: bool = True,
-    backward: bool = True,
-    rtol=0.0001,
-    atol=1e-05,
-    n=20,
-    pytorch_callable_name=None,
-):
-    return test_against_pytorch(
-        test_case=test_case,
-        callable_name=callable_name,
-        extra_annotations=extra_annotations,
-        extra_generators=extra_generators,
-        extra_defaults=extra_defaults,
-        device=device,
-        training=training,
-        backward=backward,
-        rtol=rtol,
-        atol=atol,
-        n=n,
-        pytorch_callable_name=pytorch_callable_name,
-        api_flag=TEST_FLOW,
-    )
+class random_sbp(all_sbp):
+    def __init__(
+        self,
+        placement=None,
+        dim=1,
+        max_dim=0,
+        except_split=False,
+        excpet_broadcast=False,
+        except_partial_sum=False,
+        valid_split_axis: Optional[Union[int, Sequence[int]]] = None,
+    ):
+        super().__init__(
+            placement,
+            dim,
+            max_dim,
+            except_split,
+            excpet_broadcast,
+            except_partial_sum,
+            valid_split_axis,
+        )
 
-
-def test_tensor_against_pytorch(
-    test_case,
-    callable_name,
-    extra_annotations: Optional[Dict[str, Any]] = None,
-    extra_generators: Optional[Dict[str, Any]] = None,
-    extra_defaults: Optional[Dict[str, Any]] = None,
-    device: str = "cuda",
-    training: bool = True,
-    backward: bool = True,
-    rtol=0.0001,
-    atol=1e-05,
-    n=20,
-    pytorch_callable_name=None,
-):
-    return test_against_pytorch(
-        test_case=test_case,
-        callable_name=callable_name,
-        extra_annotations=extra_annotations,
-        extra_generators=extra_generators,
-        extra_defaults=extra_defaults,
-        device=device,
-        training=training,
-        backward=backward,
-        rtol=rtol,
-        atol=atol,
-        n=n,
-        pytorch_callable_name=pytorch_callable_name,
-        api_flag=TEST_TENSOR,
-    )
+    def _calc_value(self):
+        return random_util.choice(self._calc_all_sbp())
 
 
 __all__ = [
-    "random_tensor",
+    "random_pytorch_tensor",
     "random_bool",
     "random_device",
     "cpu_device",
     "gpu_device",
+    "random_placement",
+    "random_cpu_placement",
+    "random_gpu_placement",
+    "all_placement",
+    "random_sbp",
+    "all_sbp",
     "random",
     "random_or_nothing",
     "oneof",
     "constant",
     "nothing",
-    "test_module_against_pytorch",
-    "test_flow_against_pytorch",
-    "test_tensor_against_pytorch",
 ]

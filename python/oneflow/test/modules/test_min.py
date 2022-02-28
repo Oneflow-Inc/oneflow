@@ -84,13 +84,6 @@ class TestMinModule(flow.unittest.TestCase):
         for arg in GenArgList(arg_dict):
             arg[0](test_case, *arg[1:])
 
-    def test_min_against_pytorch(test_case):
-        arg_dict = OrderedDict()
-        arg_dict["test_type"] = [test_flow_against_pytorch, test_tensor_against_pytorch]
-        arg_dict["device"] = ["cpu", "cuda"]
-        for arg in GenArgList(arg_dict):
-            arg[0](test_case, "min", device=arg[1])
-
 
 if __name__ == "__main__":
     unittest.main()

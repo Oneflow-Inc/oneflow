@@ -22,7 +22,7 @@ namespace oneflow {
 namespace {
 
 Maybe<void> ParseNdSbpFromConf(const VariableOpConf& conf, const ParallelDesc& parallel_desc,
-                               cfg::NdSbp* nd_sbp) {
+                               NdSbp* nd_sbp) {
   const bool has_nd_sbp_conf = (conf.nd_sbp_size() != 0);
   const int64_t num_axes = parallel_desc.hierarchy()->NumAxes();
   if (has_nd_sbp_conf) { CHECK_EQ(conf.nd_sbp_size(), num_axes); }
@@ -66,7 +66,7 @@ Maybe<void> VariableOp::InferOutBlobDescs(
   BlobDesc* out_blob_desc = GetBlobDesc4BnInOp("out");
   CHECK_OR_RETURN(variable_conf.has_data_type());
   out_blob_desc->set_data_type(variable_conf.data_type());
-  cfg::NdSbp nd_sbp;
+  NdSbp nd_sbp;
   JUST(ParseNdSbpFromConf(variable_conf, parallel_desc, &nd_sbp));
   out_blob_desc->mut_shape() =
       *JUST(GetPhysicalShape(Shape(variable_conf.shape()), nd_sbp, parallel_desc, *parallel_ctx));
@@ -93,7 +93,7 @@ Maybe<void> VariableOp::InferSbpSignature(
   SbpSignatureBuilder sbp_sig_builder;
   if (op_conf().variable_conf().nd_sbp_size() != 0) {
     CHECK_EQ_OR_RETURN(op_conf().variable_conf().nd_sbp_size(), 1);
-    cfg::SbpParallel sbp_parallel;
+    SbpParallel sbp_parallel;
     CHECK_OR_RETURN(ParseSbpParallelFromString(op_conf().variable_conf().nd_sbp(0), &sbp_parallel));
     if (sbp_parallel.has_split_parallel()) {
       sbp_sig_builder.Split(output_bns(), sbp_parallel.split_parallel().axis());
@@ -103,7 +103,7 @@ Maybe<void> VariableOp::InferSbpSignature(
   } else {
     sbp_sig_builder.Broadcast(output_bns());
   }
-  sbp_sig_builder.Broadcast(input_bns()).Build(sbp_signature);
+  sbp_sig_builder.Broadcast(input_bns()).Build(sbp_sig_list->mutable_sbp_signature()->Add());
   return Maybe<void>::Ok();
 }
 
@@ -112,15 +112,15 @@ Symbol<OperatorConf> VariableOp::GetOpConfWithoutOpNameAndLbn() const {
 }
 
 Maybe<void> VariableOp::InferNdSbpSignature(
-    cfg::NdSbpSignature* nd_sbp_signature, const cfg::NdSbpSignature& nd_sbp_constraints,
+    NdSbpSignature* nd_sbp_signature, const NdSbpSignature& nd_sbp_constraints,
     const ParallelDesc& parallel_desc,
     std::function<Maybe<const NdSbpInferHint*>(const std::string&)> NdSbpInferHint4Ibn) const {
   const auto& parallel_hierarchy = parallel_desc.hierarchy();
   const VariableOpConf& conf = this->op_conf().variable_conf();
-  cfg::NdSbp& out_nd_sbp = (*nd_sbp_signature->mutable_bn_in_op2nd_sbp())["out"];
+  NdSbp& out_nd_sbp = (*nd_sbp_signature->mutable_bn_in_op2nd_sbp())["out"];
   JUST(ParseNdSbpFromConf(conf, parallel_desc, &out_nd_sbp));
   if (conf.has_tick()) {
-    cfg::NdSbp& tick_nd_sbp = (*nd_sbp_signature->mutable_bn_in_op2nd_sbp())["tick"];
+    NdSbp& tick_nd_sbp = (*nd_sbp_signature->mutable_bn_in_op2nd_sbp())["tick"];
     for (int64_t i = 0; i < parallel_hierarchy->NumAxes(); ++i) {
       tick_nd_sbp.mutable_sbp_parallel()->Add()->mutable_broadcast_parallel();
     }

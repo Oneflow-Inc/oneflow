@@ -1,6 +1,5 @@
 #include <iostream>
 #include <string>
-#include "OneFlow/Passes.h"
 #include "llvm/ADT/STLExtras.h"
 #include "mlir/IR/BuiltinAttributes.h"
 #include "mlir/IR/OpImplementation.h"

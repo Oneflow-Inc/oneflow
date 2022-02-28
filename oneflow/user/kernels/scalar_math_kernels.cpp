@@ -73,6 +73,8 @@ class ScalarMathKernel final : public user_op::OpKernel {
                                                   dtype_pair);                                   \
   REGISTER_UNARY_MATH_SCALAR_ELEMWISE_USER_KERNEL(device, "scalar_mul", BinaryFuncMul,           \
                                                   dtype_pair);                                   \
+  REGISTER_UNARY_MATH_SCALAR_ELEMWISE_USER_KERNEL(device, "scalar_div", BinaryFuncDiv,           \
+                                                  dtype_pair);                                   \
   REGISTER_UNARY_MATH_SCALAR_ELEMWISE_USER_KERNEL(device, "scalar_pow", BinaryFuncPow, dtype_pair);
 
 // we register uint8_t, int8_t, int32_t, int64_t, float, double, float16.

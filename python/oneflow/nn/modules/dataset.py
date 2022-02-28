@@ -80,7 +80,7 @@ class OFRecordReader(Module):
             else:
                 for elem in sbp:
                     assert isinstance(elem, flow.sbp.sbp), "sbp: %s" % sbp
-            assert len(sbp) == len(placement.hierarchy)
+            assert len(sbp) == len(placement.ranks.shape)
         else:
             assert sbp is None, "sbp: %s" % sbp
 
@@ -191,7 +191,7 @@ class CoinFlip(Module):
             else:
                 for elem in sbp:
                     assert isinstance(elem, flow.sbp.sbp), "sbp: %s" % sbp
-            assert len(sbp) == len(placement.hierarchy)
+            assert len(sbp) == len(placement.ranks.shape)
         else:
             assert sbp is None, "sbp: %s" % sbp
 
@@ -803,40 +803,16 @@ class COCOReader(Module):
         sbp: Union[flow.sbp.sbp, List[flow.sbp.sbp]] = None,
     ):
         super().__init__()
+
+        _handle_shuffle_args(self, shuffle, random_seed)
+        _handle_distributed_args(self, device, placement, sbp)
+
         self.annotation_file = annotation_file
         self.image_dir = image_dir
         self.batch_size = batch_size
-        self.shuffle = shuffle
         self.group_by_aspect_ratio = group_by_aspect_ratio
         self.remove_images_without_annotations = remove_images_without_annotations
         self.stride_partition = stride_partition
-        if random_seed is None:
-            random_seed = random.randrange(sys.maxsize)
-        self.random_seed = random_seed
-
-        self.placement = placement
-        if placement is None:
-            self.device = device or flow.device("cpu")
-        else:
-            if device is not None:
-                raise ValueError(
-                    "when param sbp is specified, param device should not be specified"
-                )
-
-            if isinstance(sbp, (tuple, list)):
-                for sbp_item in sbp:
-                    if not isinstance(sbp_item, flow.sbp.sbp):
-                        raise ValueError(f"invalid sbp item: {sbp_item}")
-            elif isinstance(sbp, flow.sbp.sbp):
-                sbp = (sbp,)
-            else:
-                raise ValueError(f"invalid param sbp: {sbp}")
-
-            if len(sbp) != len(placement.hierarchy):
-                raise ValueError(
-                    "dimensions of sbp and dimensions of hierarchy of placement don't equal"
-                )
-        self.sbp = sbp
 
         self._op = (
             flow.stateful_op("COCOReader")
@@ -966,6 +942,112 @@ class OFRecordBytesDecoder(Module):
         return _C.dispatch_ofrecord_bytes_decoder(self._op, input, name=self.blob_name)
 
 
+class OneRecReader(Module):
+    r"""
+    nn.OneRecReader read from OneRec format files into a Tensor carrying TensorBuffer which can be decoded by decode_onerec API afterwards.
+
+    Parameters:
+        files (List[str]): The file list to be read from filesystem
+        batch_size (int): batch size
+        shuffle (bool): shuffle or not
+        shuffle_mode (str): can be "batch" or "instance"
+        shuffle_buffer_size (int): shuffle buffer size, default to 1024
+        shuffle_after_epoch (bool): if shuffle after each epoch
+        verify_example (bool): if verify example, defaults to True
+        placement (Optional[oneflow._oneflow_internal.placement]): The placement attribute allows you to specify which physical device the output tensor is stored on.
+        sbp (Optional[Union[oneflow._oneflow_internal.sbp.sbp, List[oneflow._oneflow_internal.sbp.sbp]]]): When creating a global tensor, specify the SBP of the output tensor.
+
+    For example:
+
+    .. code-block:: python
+
+        import oneflow as flow
+        files = ['file01.onerec', 'file02.onerec']
+        onerec_reader = flow.nn.OneRecReader(files, 10, True, "batch")
+        readdata_1 = onerec_reader()
+
+        # then decode readdata_1 ...
+
+    .. code-block:: python
+
+        import oneflow as flow
+        files = ['file01.onerec', 'file02.onerec']
+        onerec_reader2 = flow.nn.OneRecReader(
+            files,
+            batch_size=10,
+            shuffle=True,
+            shuffle_mode="batch",
+            placement=flow.env.all_device_placement("cpu") ,
+            sbp=[flow.sbp.split(0)],
+        )
+        readdata_2 = onerec_reader2()
+
+        # then decode readdata_2 ...
+
+    """
+
+    def __init__(
+        self,
+        files: List[str],
+        batch_size: int,
+        shuffle: bool,
+        shuffle_mode: str,
+        random_seed: Optional[int] = None,
+        shuffle_buffer_size: int = 1024,
+        shuffle_after_epoch: bool = False,
+        verify_example: bool = True,
+        placement: flow.placement = None,
+        sbp: Union[flow.sbp.sbp, List[flow.sbp.sbp]] = None,
+    ):
+
+        super().__init__()
+
+        _handle_shuffle_args(self, shuffle, random_seed)
+        _handle_distributed_args(self, None, placement, sbp)
+
+        if shuffle_mode not in ["batch", "instance"]:
+            raise ValueError("shuffle_mode should be 'batch' or 'instance'")
+
+        self.files = files
+        self.batch_size = batch_size
+        self.shuffle_mode = shuffle_mode
+        self.shuffle_buffer_size = shuffle_buffer_size
+        self.shuffle_after_epoch = shuffle_after_epoch
+        self.verify_example = verify_example
+
+        self.op = flow.stateful_op("OneRecReader").Output("out").Build()
+
+    def forward(self):
+        if self.placement is None:
+            output = _C.dispatch_onerec_reader(
+                self.op,
+                files=self.files,
+                batch_size=self.batch_size,
+                random_shuffle=self.shuffle,
+                shuffle_mode=self.shuffle_mode,
+                shuffle_buffer_size=self.shuffle_buffer_size,
+                shuffle_after_epoch=self.shuffle_after_epoch,
+                random_seed=self.random_seed,
+                verify_example=self.verify_example,
+                device=self.device,
+            )
+        else:
+            output = _C.dispatch_onerec_reader(
+                self.op,
+                files=self.files,
+                batch_size=self.batch_size,
+                random_shuffle=self.shuffle,
+                shuffle_mode=self.shuffle_mode,
+                shuffle_buffer_size=self.shuffle_buffer_size,
+                shuffle_after_epoch=self.shuffle_after_epoch,
+                random_seed=self.random_seed,
+                verify_example=self.verify_example,
+                placement=self.placement,
+                sbp=self.sbp,
+            )
+        return output
+
+
 class GPTIndexedBinDataReader(Module):
     def __init__(
         self,
@@ -984,39 +1066,14 @@ class GPTIndexedBinDataReader(Module):
     ):
         super().__init__()
 
+        _handle_shuffle_args(self, shuffle, random_seed)
+        _handle_distributed_args(self, device, placement, sbp)
+
         self.data_file_prefix = data_file_prefix
-        self.seq_length = seq_length
-        self.num_samples = num_samples
         self.batch_size = batch_size
+        self.num_samples = num_samples
+        self.seq_length = seq_length
         self.dtype = dtype
-        self.shuffle = shuffle
-        self.placement = placement
-        if placement is None:
-            self.device = device or flow.device("cpu")
-        else:
-            if device is not None:
-                raise ValueError(
-                    "when param sbp is specified, param device should not be specified"
-                )
-
-            if isinstance(sbp, (tuple, list)):
-                for sbp_item in sbp:
-                    if not isinstance(sbp_item, flow.sbp.sbp):
-                        raise ValueError(f"invalid sbp item: {sbp_item}")
-            elif isinstance(sbp, flow.sbp.sbp):
-                sbp = (sbp,)
-            else:
-                raise ValueError(f"invalid param sbp: {sbp}")
-
-            if len(sbp) != len(placement.hierarchy):
-                raise ValueError(
-                    "dimensions of sbp and dimensions of hierarchy of placement don't equal"
-                )
-        self.sbp = sbp
-
-        if random_seed is None:
-            random_seed = random.randrange(sys.maxsize)
-        self.random_seed = random_seed
 
         if split_index is None:
             split_index = 0
@@ -1070,6 +1127,48 @@ class GPTIndexedBinDataReader(Module):
                 sbp=self.sbp,
             )
         return output
+
+
+def _handle_distributed_args(module, device, placement, sbp):
+    module.placement = placement
+    if placement is None:
+        module.device = device or flow.device("cpu")
+    else:
+        if device is not None:
+            raise ValueError(
+                "The 'device' and 'placement' arguments can't be specified at the same time."
+            )
+
+        module.device = None
+
+        if isinstance(sbp, (tuple, list)):
+            for sbp_item in sbp:
+                if not isinstance(sbp_item, flow.sbp.sbp):
+                    raise ValueError(f"invalid sbp item: {sbp_item}")
+        elif isinstance(sbp, flow.sbp.sbp):
+            sbp = (sbp,)
+        else:
+            raise ValueError(f"invalid 'sbp' argument: {sbp}")
+
+        if len(sbp) != len(placement.ranks.shape):
+            raise ValueError(
+                "Number of SBP's dimensions of sbp and number of placement ranks'dimensions must equal."
+                f" {len(sbp)} vs. {len(placement.ranks)}"
+            )
+
+    module.sbp = sbp
+
+
+def _handle_shuffle_args(module, shuffle, random_seed):
+    module.shuffle = shuffle
+    if random_seed is None:
+        if shuffle:
+            module.random_seed = random.randrange(sys.maxsize)
+        else:
+            module.random_seed = -1
+    else:
+        assert isinstance(random_seed, int)
+        module.random_seed = random_seed
 
 
 if __name__ == "__main__":

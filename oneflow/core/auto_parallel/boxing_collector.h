@@ -14,13 +14,13 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-#ifndef ONEFLOW_CORE_AUTO_PARALLEL_BOXING_COLLECTOR_
-#define ONEFLOW_CORE_AUTO_PARALLEL_BOXING_COLLECTOR_
+#ifndef ONEFLOW_CORE_AUTO_PARALLEL_BOXING_COLLECTOR_H_
+#define ONEFLOW_CORE_AUTO_PARALLEL_BOXING_COLLECTOR_H_
 
 #include "oneflow/core/common/hash_container.h"
 #include "oneflow/core/job/parallel_desc.h"
-#include "oneflow/core/job/sbp_parallel.cfg.h"
-#include "sbp_util.h"
+#include "oneflow/core/job/sbp_parallel.h"
+#include "oneflow/core/framework/sbp_infer_util.h"
 
 namespace oneflow {
 
@@ -37,7 +37,7 @@ class BoxingCollector final {
   void CollectUniverse(int32_t max_axis);
 
   // Construct a boxing collector with given maximum number of axis
-  void Init(int32_t max_axis);
+  Maybe<void> Init(int32_t max_axis);
 
   // Generate nd sbp list
   void GenerateNdSbpList();
@@ -49,36 +49,36 @@ class BoxingCollector final {
   // If is_customized is true and we can not find a middle node list with
   // resonable cost, error occurs.
   // If compute_cost is true, then no error occur even if no suitable middle nodes paths found.
-  Maybe<void> AskSbpCombination(const cfg::NdSbp& sbp_producer, const cfg::NdSbp& sbp_consumer,
+  Maybe<void> AskSbpCombination(const NdSbp& sbp_producer, const NdSbp& sbp_consumer,
                                 const BlobDesc& logical_blob_desc,
                                 const ParallelDesc& producer_parallel_desc,
                                 const ParallelDesc& consumer_parallel_desc, bool is_customized,
-                                std::vector<cfg::NdSbp>& middle_sbps, bool compute_cost);
-  // Filter nd sbp from nd_sbp_lists with given logical shape
+                                std::vector<NdSbp>& middle_sbps, bool compute_cost);
+  // Filter nd sbp from nd_sbp_lists_ with given logical shape
   Maybe<void> FilterNdSbpList4LogicalShape(const BlobDesc& logical_blob_desc,
                                            const Shape& parallel_hierarchy);
 
  private:
   // Collect Sbp Parallel
-  void CollectUniverse(const cfg::SbpParallel& sbp);
-  // Stores all the possible cfg::SbpParallel.
-  HashMap<::oneflow::cfg::SbpParallel, int32_t> SbpParallelUniverse_;
+  void CollectUniverse(const SbpParallel& sbp);
+  // Stores all the possible SbpParallel.
+  HashMap<::oneflow::SbpParallel, int32_t> SbpParallelUniverse_;
   // Relationship between id and Sbp Parallel
-  std::vector<::oneflow::cfg::SbpParallel> id2SbpParallel;
+  std::vector<::oneflow::SbpParallel> id2SbpParallel_;
   // minimum cost
   // minimum_copy_cost[producer][consumer]
-  std::vector<std::vector<double>> minimum_copy_cost;
+  std::vector<std::vector<double>> minimum_copy_cost_;
   // middle nodes
-  // middle_nodes[producer][consumer][different choices] is a vector of middle nodes
-  // middle_nodes[producer][consumer][different choices].size() is the minimum number of middle
+  // middle_nodes_[producer][consumer][different choices] is a vector of middle nodes
+  // middle_nodes_[producer][consumer][different choices].size() is the minimum number of middle
   // nodes that needs to be inserted
-  std::vector<std::vector<std::vector<std::vector<int32_t>>>> middle_nodes;
-  // Stores all the possible cfg::NdSbp.
-  std::unordered_map<::oneflow::cfg::NdSbp, int32_t> NdSbpUniverse;
+  std::vector<std::vector<std::vector<std::vector<int32_t>>>> middle_nodes_;
+  // Stores all the possible NdSbp.
+  std::unordered_map<::oneflow::NdSbp, int32_t> NdSbpUniverse_;
   // Relationship between id and Nd Sbp
-  std::vector<cfg::NdSbp> nd_sbp_lists;
+  std::vector<NdSbp> nd_sbp_lists_;
 };  // class BoxingCollector
 
 }  // namespace oneflow
 
-#endif  // ONEFLOW_CORE_AUTO_PARALLEL_BOXING_COLLECTOR_
+#endif  // ONEFLOW_CORE_AUTO_PARALLEL_BOXING_COLLECTOR_H_

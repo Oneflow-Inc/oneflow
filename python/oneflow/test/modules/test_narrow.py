@@ -22,26 +22,39 @@ import oneflow as flow
 import oneflow.unittest
 
 
+@flow.unittest.skip_unless_1n1d()
 class TestNarrow(flow.unittest.TestCase):
-    @autotest(check_graph=False)
+    @autotest(check_graph=True)
     def test_flow_narrow_start_with_random_data(test_case):
         k0 = random(2, 6)
         k1 = random(2, 6)
         k2 = random(2, 6)
         rand_dim = random(0, 3).to(int)
         device = random_device()
-        x = random_pytorch_tensor(ndim=3, dim0=k0, dim1=k1, dim3=k2).to(device)
+        x = random_tensor(ndim=3, dim0=k0, dim1=k1, dim3=k2).to(device)
         return torch.narrow(x, dim=rand_dim, start=2, length=1)
 
-    @autotest(check_graph=False)
+    @autotest(check_graph=True)
     def test_flow_narrow_length_with_random_data(test_case):
         k0 = random(2, 6)
         k1 = random(2, 6)
         k2 = random(2, 6)
         rand_dim = random(0, 3).to(int)
         device = random_device()
-        x = random_pytorch_tensor(ndim=3, dim0=k0, dim1=k1, dim3=k2).to(device)
+        x = random_tensor(ndim=3, dim0=k0, dim1=k1, dim3=k2).to(device)
         return torch.narrow(x, dim=rand_dim, start=0, length=2)
+
+    @autotest(auto_backward=False, check_graph=True)
+    def test_flow_narrow_start_bool_with_random_data(test_case):
+        k0 = random(2, 6)
+        k1 = random(2, 6)
+        k2 = random(2, 6)
+        rand_dim = random(0, 3).to(int)
+        device = random_device()
+        x = random_tensor(ndim=3, dim0=k0, dim1=k1, dim3=k2).to(
+            device=device, dtype=torch.bool
+        )
+        return torch.narrow(x, dim=rand_dim, start=2, length=1)
 
 
 if __name__ == "__main__":

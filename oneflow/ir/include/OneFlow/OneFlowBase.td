@@ -5,6 +5,7 @@ include "OneFlow/OneFlowDialect.td"
 include "OneFlow/OneFlowInterfaces.td"
 include "mlir/IR/SymbolInterfaces.td"
 include "mlir/Interfaces/SideEffectInterfaces.td"
+include "/mlir/Interfaces/InferTypeOpInterface.td"
 
 def OneFlow_Tensor : TensorOf<[AnyType]>;
 def SI32ArrayAttr : TypedArrayAttrBase<SI32Attr, "signed 32-bit integer array attribute"> {}
@@ -22,7 +23,7 @@ def OneFlow_IsImportCompatible : NativeOpTrait<"IsImportCompatible">;
 def OneFlow_AlternativeOp : NativeOpTrait<"IsAlternative">;
 def OneFlow_TensorSource : NativeOpTrait<"TensorSource">;
 
-class OneFlow_BaseOp<string mnemonic, list<OpTrait> traits = []> :
+class OneFlow_BaseOp<string mnemonic, list<Trait> traits = []> :
         Op<OneFlow_Dialect, mnemonic, !listconcat(traits, [OneFlow_IsOpConfCompatible])> {
   dag op_conf_attrs = (ins
     StrAttr:$op_name,
@@ -67,7 +68,7 @@ class OneFlow_BaseOp<string mnemonic, list<OpTrait> traits = []> :
   bit has_get_nd_sbp_fn = 0;
 }
 
-class OneFlow_Op<string mnemonic, list<OpTrait> traits = []> :
+class OneFlow_Op<string mnemonic, list<Trait> traits = []> :
         OneFlow_BaseOp<mnemonic, !listconcat(traits, [AttrSizedOperandSegments, AttrSizedResultSegments, DeclareOpInterfaceMethods<ControlEdgeCompatibleInterface>])> {
   let ctrl_input = (ins Variadic<AnyType>:$ctrl_inputs);
   let ctrl_output = (outs Optional<AnyType>:$ctrl_output);
@@ -77,7 +78,7 @@ class OneFlow_Op<string mnemonic, list<OpTrait> traits = []> :
   );
 }
 
-class OneFlow_UserBaseOp<string mnemonic, list<OpTrait> traits = [OneFlow_AlternativeOp]> :
+class OneFlow_UserBaseOp<string mnemonic, list<Trait> traits = [OneFlow_AlternativeOp]> :
         OneFlow_BaseOp<mnemonic, traits> {
     let summary = "";
     let user_op_attrs = (ins
@@ -91,7 +92,7 @@ class OneFlow_UserBaseOp<string mnemonic, list<OpTrait> traits = [OneFlow_Altern
 // Why don't we merge ctrl in/out and data in/out into operand_segment/result_segment_sizes?
 // 1. We only need to erase operand_segment/result_segment_sizes when we are creating a concrete user op
 // 2. Isolating data and ctrl make debug easier and produced IR more human-readable
-class OneFlow_UserBaseWithCtrlOp<string mnemonic, list<OpTrait> traits = []> :
+class OneFlow_UserBaseWithCtrlOp<string mnemonic, list<Trait> traits = []> :
         OneFlow_UserBaseOp<mnemonic, !listconcat(traits, [AttrSizedOperandSegments, AttrSizedResultSegments, DeclareOpInterfaceMethods<ControlEdgeCompatibleInterface>])> {
     let summary = "";
     let ctrl_input = (ins Variadic<AnyType>:$ctrl_inputs);
@@ -103,7 +104,7 @@ class OneFlow_UserBaseWithCtrlOp<string mnemonic, list<OpTrait> traits = []> :
 }
 
 
-class OneFlow_ConvolutionBaseOp<string mnemonic, list<OpTrait> traits = []> :
+class OneFlow_ConvolutionBaseOp<string mnemonic, list<Trait> traits = []> :
         OneFlow_BaseOp<mnemonic, !listconcat(traits, [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>])> {
     let summary = "OneFlow convolution operation";
     let description = [{
@@ -137,7 +138,7 @@ class OneFlow_ConvolutionBaseOp<string mnemonic, list<OpTrait> traits = []> :
     let has_compute_complexity_fn = 1;
 }
 
-class OneFlow_TFPoolBaseOp<string mnemonic, list<OpTrait> traits = []> :
+class OneFlow_TFPoolBaseOp<string mnemonic, list<Trait> traits = []> :
         OneFlow_BaseOp<mnemonic, !listconcat(traits, [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>])> {
     let summary = "OneFlow pooling operation, align with TensorFlow";
     let input = (ins AnyType:$x);
@@ -158,7 +159,7 @@ class OneFlow_TFPoolBaseOp<string mnemonic, list<OpTrait> traits = []> :
   let has_compute_complexity_fn = 1;
 }
 
-class OneFlow_TFPoolGradBaseOp<string mnemonic, list<OpTrait> traits = []> :
+class OneFlow_TFPoolGradBaseOp<string mnemonic, list<Trait> traits = []> :
         OneFlow_BaseOp<mnemonic, !listconcat(traits, [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>])> {
   let summary = "OneFlow pooling grad operation, align with TensorFlow";
   let input = (ins
@@ -184,7 +185,7 @@ class OneFlow_TFPoolGradBaseOp<string mnemonic, list<OpTrait> traits = []> :
 }
 
 
-class OneFlow_MaxPoolBaseOp<string mnemonic, list<OpTrait> traits = []> :
+class OneFlow_MaxPoolBaseOp<string mnemonic, list<Trait> traits = []> :
         OneFlow_BaseOp<mnemonic, !listconcat(traits, [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>])> {
   let summary = "OneFlow Max Pooling operation";
   let input = (ins
@@ -210,7 +211,7 @@ class OneFlow_MaxPoolBaseOp<string mnemonic, list<OpTrait> traits = []> :
   let has_compute_complexity_fn = 1;
 }
 
-class OneFlow_AvgPoolBaseOp<string mnemonic, list<OpTrait> traits = []> :
+class OneFlow_AvgPoolBaseOp<string mnemonic, list<Trait> traits = []> :
         OneFlow_BaseOp<mnemonic, !listconcat(traits, [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>])> {
   let summary = "OneFlow Average Pooling operation";
   let input = (ins
@@ -226,7 +227,7 @@ class OneFlow_AvgPoolBaseOp<string mnemonic, list<OpTrait> traits = []> :
     SI32ArrayAttr:$stride,
     DefaultValuedAttr<BoolAttr, "false">:$ceil_mode,
     DefaultValuedAttr<BoolAttr, "false">:$count_include_pad,
-    DefaultValuedAttr<SI64Attr, "0">:$divisor_override
+    DefaultValuedAttr<SI32Attr, "0">:$divisor_override
   );
   let has_logical_tensor_desc_infer_fn = 1;
   let has_physical_tensor_desc_infer_fn = 1;
@@ -235,7 +236,7 @@ class OneFlow_AvgPoolBaseOp<string mnemonic, list<OpTrait> traits = []> :
   let has_compute_complexity_fn = 1;
 }
 
-class OneFlow_MaxPoolGradBaseOp<string mnemonic, list<OpTrait> traits = []> :
+class OneFlow_MaxPoolGradBaseOp<string mnemonic, list<Trait> traits = []> :
         OneFlow_BaseOp<mnemonic, !listconcat(traits, [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>])> {
   let summary = "OneFlow Max Pooling Grad operation";
   let input = (ins
@@ -263,7 +264,7 @@ class OneFlow_MaxPoolGradBaseOp<string mnemonic, list<OpTrait> traits = []> :
   let has_compute_complexity_fn = 1;
 }
 
-class OneFlow_AvgPoolGradBaseOp<string mnemonic, list<OpTrait> traits = []> :
+class OneFlow_AvgPoolGradBaseOp<string mnemonic, list<Trait> traits = []> :
         OneFlow_BaseOp<mnemonic, !listconcat(traits, [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>])> {
   let summary = "OneFlow Average Pooling Grad operation";
   let input = (ins
@@ -281,7 +282,7 @@ class OneFlow_AvgPoolGradBaseOp<string mnemonic, list<OpTrait> traits = []> :
     SI32ArrayAttr:$stride,
     DefaultValuedAttr<BoolAttr, "false">:$ceil_mode,
     DefaultValuedAttr<BoolAttr, "false">:$count_include_pad,
-    DefaultValuedAttr<SI64Attr, "0">:$divisor_override
+    DefaultValuedAttr<SI32Attr, "0">:$divisor_override
   );
   let has_logical_tensor_desc_infer_fn = 1;
   let has_physical_tensor_desc_infer_fn = 1;
@@ -290,7 +291,7 @@ class OneFlow_AvgPoolGradBaseOp<string mnemonic, list<OpTrait> traits = []> :
   let has_compute_complexity_fn = 1;
 }
 
-class OneFlow_AdaptivePoolBaseOp<string mnemonic, list<OpTrait> traits = []> :
+class OneFlow_AdaptivePoolBaseOp<string mnemonic, list<Trait> traits = []> :
        OneFlow_BaseOp<mnemonic, !listconcat(traits, [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>])> {
   let summary = "OneFlow adaptive pool operation";
   let input = (ins
@@ -306,7 +307,7 @@ class OneFlow_AdaptivePoolBaseOp<string mnemonic, list<OpTrait> traits = []> :
   let has_data_type_infer_fn = 1;
 }
 
-class OneFlow_AdaptivePoolGradBaseOp<string mnemonic, list<OpTrait> traits = []> :
+class OneFlow_AdaptivePoolGradBaseOp<string mnemonic, list<Trait> traits = []> :
        OneFlow_BaseOp<mnemonic, !listconcat(traits, [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>])> {
   let summary = "OneFlow adaptive pool operation";
   let input = (ins
@@ -323,7 +324,7 @@ class OneFlow_AdaptivePoolGradBaseOp<string mnemonic, list<OpTrait> traits = []>
   let has_data_type_infer_fn = 1;
 }
 
-class OneFlow_UnaryBaseOp<string mnemonic, list<OpTrait> traits = []> :
+class OneFlow_UnaryBaseOp<string mnemonic, list<Trait> traits = []> :
         OneFlow_BaseOp<mnemonic, !listconcat(traits, [SameOperandsAndResultType, NoSideEffect])> {
   let summary = "";
   let input = (ins AnyType:$x);
@@ -336,12 +337,12 @@ class OneFlow_UnaryBaseOp<string mnemonic, list<OpTrait> traits = []> :
 
 def OneFlow_Idempotent : NativeOpTrait<"IsIdempotentOfIdenticalPlacement">;
 
-class OneFlow_IdempotentBaseOp<string mnemonic, list<OpTrait> traits = []> :
+class OneFlow_IdempotentBaseOp<string mnemonic, list<Trait> traits = []> :
         OneFlow_UnaryBaseOp<mnemonic, !listconcat(traits, [OneFlow_Idempotent])> {}
 
 def OneFlow_Involution : NativeOpTrait<"IsInvolutionOfIdenticalPlacement">;
 
-class OneFlow_InvolutionBaseOp<string mnemonic, list<OpTrait> traits = []> :
+class OneFlow_InvolutionBaseOp<string mnemonic, list<Trait> traits = []> :
         OneFlow_UnaryBaseOp<mnemonic, !listconcat(traits, [OneFlow_Involution])> {}
 
 #define GET_ONEFLOW_BASE_OP_DEFINITIONS

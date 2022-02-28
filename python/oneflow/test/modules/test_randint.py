@@ -19,8 +19,8 @@ from collections import OrderedDict
 
 import numpy as np
 import oneflow as flow
-
 import oneflow.unittest
+
 from test_util import GenArgList
 
 
@@ -81,14 +81,7 @@ def _test_0rank(test_case, device, shape, low, high):
 
 @flow.unittest.skip_unless_1n1d()
 class TestRandint(flow.unittest.TestCase):
-    def test_consistent_naive(test_case):
-        placement = flow.placement("cpu", {0: [0]})
-        sbp = (flow.sbp.broadcast,)
-        x = flow.randint(0, 16, (10, 1), placement=placement, sbp=sbp)
-        test_case.assertEqual(x.sbp, sbp)
-        test_case.assertEqual(x.placement, placement)
-
-    def test_consistent_different_types(test_case):
+    def test_global_different_types(test_case):
         for dtype in [
             flow.int8,
             flow.int32,
@@ -96,7 +89,7 @@ class TestRandint(flow.unittest.TestCase):
             flow.float32,
             flow.float64,
         ]:
-            placement = flow.placement("cpu", {0: [0]})
+            placement = flow.placement("cpu", ranks=[0])
             sbp = (flow.sbp.broadcast,)
             x = flow.randint(0, 16, (10, 1), placement=placement, sbp=sbp, dtype=dtype)
             test_case.assertEqual(x.dtype, dtype)

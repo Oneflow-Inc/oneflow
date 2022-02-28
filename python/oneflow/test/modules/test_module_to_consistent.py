@@ -27,9 +27,9 @@ import oneflow.unittest
 @flow.unittest.skip_unless_1n2d()
 @unittest.skipIf(os.getenv("ONEFLOW_TEST_CPU_ONLY"), "only test cpu cases")
 class TestModuleToCosistent(flow.unittest.TestCase):
-    def test_module_to_consistent(test_case):
+    def test_module_to_global(test_case):
         rank = flow.env.get_rank()
-        P = flow.placement("cuda", {0: [0, 1]})
+        P = flow.placement("cuda", ranks=[0, 1])
         B = flow.sbp.broadcast
 
         class ReuseVarModule(flow.nn.Module):
@@ -49,7 +49,7 @@ class TestModuleToCosistent(flow.unittest.TestCase):
         test_case.assertTrue(reuse_var_m.linear1.bias is not reuse_var_m.linear2.bias)
         test_case.assertEqual(reuse_var_m.linear1.bias.device, flow.device("cpu", rank))
 
-        reuse_var_m.to_consistent(placement=P, sbp=B)
+        reuse_var_m.to_global(placement=P, sbp=B)
 
         test_case.assertTrue(reuse_var_m.linear1.weight is reuse_var_m.linear2.weight)
         test_case.assertEqual(reuse_var_m.linear1.weight.placement, P)

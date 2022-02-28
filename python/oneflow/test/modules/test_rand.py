@@ -19,11 +19,10 @@ from collections import OrderedDict
 
 import numpy as np
 import oneflow as flow
-
 import oneflow.unittest
-from test_util import GenArgList
-
 from oneflow.test_utils.automated_test_util import *
+
+from test_util import GenArgList
 
 
 def _test_rand(test_case, device, shape):
@@ -76,14 +75,7 @@ def _test_with_generator(test_case, device, shape):
 
 
 @flow.unittest.skip_unless_1n1d()
-class TestConstantModule(flow.unittest.TestCase):
-    def test_consistent_naive(test_case):
-        placement = flow.placement("cpu", {0: [0]})
-        sbp = (flow.sbp.broadcast,)
-        x = flow.rand(16, 16, placement=placement, sbp=sbp)
-        test_case.assertEqual(x.sbp, sbp)
-        test_case.assertEqual(x.placement, placement)
-
+class TestRandModule(flow.unittest.TestCase):
     def test_0d_randint(test_case):
         arg_dict = OrderedDict()
         arg_dict["test_fun"] = [_test_0d_rand]

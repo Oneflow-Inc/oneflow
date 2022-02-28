@@ -63,6 +63,17 @@ message MultiStepConf {
   optional double gamma = 2 [default = 0.1];
 }
 
+message LinearLRConf {
+  required double start_factor = 1;
+  required double end_factor = 2;
+  required int64 total_iters = 3;
+}
+
+message ConstantLRConf {
+  required double factor = 1;
+  required int64 total_iters = 2;
+}
+
 message LearningRateDecayConf {
   oneof type {
     ExponentialDecayConf exponential_conf = 2000;
@@ -76,17 +87,16 @@ message LearningRateDecayConf {
     MultiStepConf multi_step_conf = 2008;
     StepConf step_conf = 2009;
     CosineAnnealingDecayConf cosine_annealing_conf = 2010;
+    LinearLRConf linear_lr_conf = 2011;
+    ConstantLRConf constant_lr_conf = 2012;
   }
+  optional bool interval_rescaling = 100 [default = false];
 }
 
 message ConstantWarmupConf {
-  required int64 warmup_batches = 1;
-  required double multiplier = 2;
 }
 
 message LinearWarmupConf {
-  required int64 warmup_batches = 1;
-  required double start_multiplier = 2;
 }
 
 message WarmupConf {
@@ -94,4 +104,7 @@ message WarmupConf {
     ConstantWarmupConf constant_conf = 3000;
     LinearWarmupConf linear_conf = 3001;
   }
+  required int64 warmup_batches = 1;
+  required double warmup_factor = 2;
+  optional bool prefix = 3 [default = true];
 }

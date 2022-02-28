@@ -31,9 +31,7 @@ class Shape;
 
 class Device;
 class ParallelDesc;
-namespace cfg {
 class NdSbp;
-}
 
 namespace one {
 
@@ -48,24 +46,33 @@ class AutogradMeta final {
       : is_leaf_(is_leaf),
         requires_grad_(requires_grad),
         retain_grad_(false),
+        is_grad_acc_inplace_(false),
         current_grad_(new TensorArg) {}
 
   // Getters
   const std::shared_ptr<Tensor>& acc_grad() const { return acc_grad_; }
   const std::shared_ptr<TensorArg>& current_grad() const { return current_grad_; }
+  bool is_grad_acc_inplace() const { return is_grad_acc_inplace_; }
   bool requires_grad() const { return requires_grad_; }
   bool is_leaf() const { return is_leaf_; }
   bool retain_grad() const { return retain_grad_; }
   using Hook = std::function<std::shared_ptr<Tensor>(const std::shared_ptr<const Tensor>&)>;
   const std::vector<Hook>& hooks() const { return hooks_; }
+  const std::vector<Hook>& post_grad_accumulation_hooks() const {
+    return post_grad_accumulation_hooks_;
+  }
 
   // Setters
   Maybe<void> set_acc_grad(const std::shared_ptr<Tensor>& grad);
   std::shared_ptr<Tensor> mut_acc_grad() { return acc_grad_; }
+  void set_is_grad_acc_inplace(bool is_inplace) { is_grad_acc_inplace_ = is_inplace; }
   void set_requires_grad(bool requires_grad) { requires_grad_ = requires_grad; }
   void set_retain_grad(bool retain_grad) { retain_grad_ = retain_grad; }
   void set_is_leaf(bool is_leaf) { is_leaf_ = is_leaf; }
   void add_hook(const Hook& hook) { hooks_.emplace_back(hook); }
+  void add_post_grad_accumulation_hook(const Hook& hook) {
+    post_grad_accumulation_hooks_.emplace_back(hook);
+  }
 
  private:
   bool is_leaf_;
@@ -73,12 +80,17 @@ class AutogradMeta final {
   // Only meaningful on leaf Tensors (must be false otherwise)
   bool requires_grad_;
 
-  // Oney meaningful on non_leaf Tensors (must be false otherwise)
+  // Only meaningful on non_leaf Tensors (must be false otherwise)
   bool retain_grad_;
+
+  // Control whether grad accumulation is inplace. Don't change it
+  // unless you know what you are doing
+  bool is_grad_acc_inplace_;
 
   std::shared_ptr<Tensor> acc_grad_;
   std::shared_ptr<TensorArg> current_grad_;
   std::vector<Hook> hooks_;
+  std::vector<Hook> post_grad_accumulation_hooks_;
 };
 
 inline std::shared_ptr<AutogradMeta> NewAutogradMeta(bool requires_grad, bool is_leaf) {
@@ -97,7 +109,7 @@ class TensorInfo final {
   Symbol<DType> dtype_;
   Optional<Symbol<Device>> device_;               // for local tensor
   Optional<Symbol<ParallelDesc>> parallel_desc_;  // for consistent tensor
-  Optional<Symbol<cfg::NdSbp>> nd_sbp_;           // for consistent tensor
+  Optional<Symbol<NdSbp>> nd_sbp_;                // for consistent tensor
 };
 
 }  // namespace one

@@ -38,6 +38,7 @@ limitations under the License.
 #include "oneflow/core/framework/nd_sbp.h"
 #include "oneflow/core/common/decorator.h"
 #include "oneflow/core/boxing/eager_boxing_logger.h"
+#include "oneflow/core/common/cpp_attribute.h"
 
 namespace oneflow {
 namespace one {
@@ -67,15 +68,36 @@ std::string GetDynamicOpConsistentFailedDebugString(const UserOpExpr& user_op_ex
   return ss.str();
 }
 
-Maybe<Tensor> CalcBoxingOutput(const std::shared_ptr<Tensor>& input, Symbol<cfg::NdSbp> out_nd_sbp,
+Maybe<bool> IsAllZeroSizeTensorMeta(const std::vector<Symbol<ConsistentTensorMeta>>& tensor_metas) {
+  if (tensor_metas.empty()) { return false; }
+  for (const auto& tensor_meta : tensor_metas) {
+    if (tensor_meta->shape().elem_cnt() != 0) { return false; }
+  }
+  return true;
+}
+
+constexpr auto* CachedIsAllZeroSizeTensorMeta =
+    DECORATE(&IsAllZeroSizeTensorMeta, ThreadLocalCopiable);
+
+Maybe<Tensor> CalcBoxingOutput(const std::shared_ptr<Tensor>& input, Symbol<NdSbp> out_nd_sbp,
                                Symbol<ParallelDesc> out_parallel_desc,
                                bool current_rank_local_is_valid) {
+  const auto& logical_shape = input->shape();
+  // If the input is a tensor of size 0, construct the output directly.
+  if (unlikely(logical_shape->elem_cnt() == 0)) {
+    ConsistentTensorMeta tensor_meta(logical_shape, input->dtype()->data_type(), out_nd_sbp,
+                                     out_parallel_desc);
+    const auto& tensor_impl =
+        JUST(EagerConsistentTensorImpl::New(SymbolOf(tensor_meta), input->requires_grad(), false));
+    std::shared_ptr<Tensor> output = std::make_shared<ConsistentTensor>(tensor_impl);
+    return output;
+  }
   const auto* mgr = Global<EagerBoxingInterpreterManager>::Get();
   // Eager boxing
   const auto& in_nd_sbp = JUST(input->nd_sbp());
   const auto& in_parallel_desc = JUST(input->parallel_desc());
   const auto& boxing_interpreter = JUST(mgr->GetEagerBoxingInterpreter(
-      in_nd_sbp, out_nd_sbp, in_parallel_desc, out_parallel_desc, *input->shape()));
+      in_nd_sbp, out_nd_sbp, in_parallel_desc, out_parallel_desc, *logical_shape));
   Global<const EagerBoxingLogger>::Get()->Log(
       *JUST(boxing_interpreter->boxing_interpreter_status()), /* prefix */ "");
   if (!current_rank_local_is_valid) { return input; }
@@ -94,7 +116,7 @@ Maybe<void> Interpret(const UserOpExpr& user_op_expr, const TensorTuple& inputs,
   std::shared_ptr<const ConsistentTensorInferResult> result;
   NonRecursiveMetaInfoConsistencyCheckScope scope;
   if (inputs.empty()) {
-    // check consistency placment and nd_sbp, do not check in non-src op because it is assumed that
+    // check consistency placement and nd_sbp, do not check in non-src op because it is assumed that
     // InferSbp in op is a deterministic algorithm
     JUST(MetaInfoConsistencyCheck(parallel_desc, ctx.nd_sbp));
     const auto& infer_args =
@@ -108,9 +130,16 @@ Maybe<void> Interpret(const UserOpExpr& user_op_expr, const TensorTuple& inputs,
   Optional<int64_t> parallel_id;
   const auto& tensor_device = JUST(GetTensorDevice4CurrentProcessCtx(parallel_desc, &parallel_id));
   for (int i = 0; i < outputs->size(); ++i) {
-    const auto& tensor_impl = JUST(EagerConsistentTensorImpl::New(
-        output_tensor_metas.at(i), tensor_device, parallel_id, false, false));
-    outputs->at(i).reset(new ConsistentTensor(tensor_impl));
+    if (!outputs->at(i)) {
+      const auto& tensor_impl = JUST(EagerConsistentTensorImpl::New(
+          output_tensor_metas.at(i), tensor_device, parallel_id, false, false));
+      outputs->at(i).reset(new ConsistentTensor(tensor_impl));
+    }
+  }
+  // Do nothing if output_tensors has 0-size shape. Since the input of some ops is 0-size but the
+  // output is not 0-size, it cannot be judged based on the input, such as flow.cat
+  if (unlikely(JUST(CachedIsAllZeroSizeTensorMeta(output_tensor_metas)))) {
+    return Maybe<void>::Ok();
   }
   // Run instruction LocalCallOpKernel
   const auto& kernel = JUST(user_op_expr.MutKernel4Device(result->op_device()));

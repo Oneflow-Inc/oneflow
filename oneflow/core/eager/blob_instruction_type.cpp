@@ -18,11 +18,10 @@ limitations under the License.
 #include "oneflow/core/job/parallel_desc.h"
 #include "oneflow/core/vm/instruction.h"
 #include "oneflow/core/vm/instruction_type.h"
-#include "oneflow/core/vm/string_object.h"
 #include "oneflow/core/eager/blob_instruction_type.h"
 #include "oneflow/core/eager/blob_object.h"
 #include "oneflow/core/vm/control_stream_type.h"
-#include "oneflow/core/vm/device_helper_stream_type.h"
+#include "oneflow/core/vm/stream.h"
 #include "oneflow/core/device/cuda_util.h"
 #include "oneflow/core/register/register_manager.h"
 #include "oneflow/core/eager/lazy_ref_blob_object.h"
@@ -35,90 +34,6 @@ limitations under the License.
 namespace oneflow {
 namespace vm {
 
-namespace {
-
-// clang-format off
-FLAT_MSG_VIEW_BEGIN(PinBlobInstruction);
-  FLAT_MSG_VIEW_DEFINE_PATTERN(vm::MutOperand, blob);
-FLAT_MSG_VIEW_END(PinBlobInstruction);
-// clang-format on
-
-}  // namespace
-
-#ifdef WITH_CUDA
-class CudaHostRegisterBlobInstructionType final : public vm::InstructionType {
- public:
-  CudaHostRegisterBlobInstructionType() = default;
-  ~CudaHostRegisterBlobInstructionType() override = default;
-
-  using stream_type = vm::DeviceHelperStreamType;
-
-  void Infer(vm::Instruction* instruction) const override {
-    // do nothing
-  }
-  void Compute(vm::Instruction* instruction) const override {
-    FlatMsgView<PinBlobInstruction> args(instruction->instr_msg().operand());
-    auto* blob_obj = CHECK_JUST(instruction->mut_operand_type(args->blob())->Mut<BlobObject>());
-    auto* blob = blob_obj->mut_blob();
-    CHECK(blob->mem_case().has_host_mem());
-    if (blob->mem_case().host_mem().has_cuda_pinned_mem()) { return; }
-    void* dptr = blob->mut_dptr();
-    CHECK_NOTNULL(dptr);
-    size_t size = blob->AlignedByteSizeOfBlobBody();
-    cudaError_t cuda_error = cudaHostRegister(dptr, size, cudaHostRegisterDefault);
-    if (cuda_error == cudaErrorHostMemoryAlreadyRegistered) {
-      cudaGetLastError();
-      return;
-    }
-    OF_CUDA_CHECK(cuda_error);
-  }
-};
-COMMAND(vm::RegisterInstructionType<CudaHostRegisterBlobInstructionType>("CudaHostRegisterBlob"));
-
-class CudaHostUnregisterBlobInstructionType final : public vm::InstructionType {
- public:
-  CudaHostUnregisterBlobInstructionType() = default;
-  ~CudaHostUnregisterBlobInstructionType() override = default;
-
-  using stream_type = vm::DeviceHelperStreamType;
-
-  void Infer(vm::Instruction* instruction) const override {
-    // do nothing
-  }
-  void Compute(vm::Instruction* instruction) const override {
-    FlatMsgView<PinBlobInstruction> args(instruction->instr_msg().operand());
-    auto* blob_obj = CHECK_JUST(instruction->mut_operand_type(args->blob())->Mut<BlobObject>());
-    auto* blob = blob_obj->mut_blob();
-    CHECK(blob->mem_case().has_host_mem());
-    if (blob->mem_case().host_mem().has_cuda_pinned_mem()) { return; }
-    void* dptr = blob->mut_dptr();
-    CHECK_NOTNULL(dptr);
-    cudaError_t cuda_error = cudaHostUnregister(dptr);
-    if (cuda_error == cudaErrorHostMemoryNotRegistered) {
-      cudaGetLastError();
-      return;
-    }
-    OF_CUDA_CHECK(cuda_error);
-  }
-};
-COMMAND(
-    vm::RegisterInstructionType<CudaHostUnregisterBlobInstructionType>("CudaHostUnregisterBlob"));
-#endif
-
-Maybe<void> LazyReferenceInstructionType::Run(vm::Instruction* instruction) const {
-  FlatMsgView<LazyReferenceInstruction> args(instruction->instr_msg().operand());
-  vm::RwMutexedObject* eager_blob_rw = instruction->mut_operand_type(args->eager_blob());
-  const auto* lbn_operand = instruction->operand_type(args->lbn_sym_id());
-  const auto lbn = JUST(lbn_operand->template Get<vm::StringObject>()).str();
-  ParallelContext parallel_ctx;
-  JUST(instruction->parallel_desc()->GetParallelContext(
-      &parallel_ctx, instruction->stream().machine_id(), instruction->stream().device_id()));
-  Blob* blob = Global<RegstMgr>::Get()->Blob4LbiAndParallelId(GenLogicalBlobId(lbn),
-                                                              parallel_ctx.parallel_id());
-  eager_blob_rw->Init<vm::LazyRefBlobObject>(blob);
-  return Maybe<void>::Ok();
-}
-
 void TensorViewInstructionType::Compute(vm::Instruction* instruction) const {
   const vm::InstructionMsg& instr_msg = instruction->instr_msg();
   const auto& phy_instr_operand = instr_msg.phy_instr_operand();
@@ -129,7 +44,7 @@ void TensorViewInstructionType::Compute(vm::Instruction* instruction) const {
   OfBlob input_ofblob(device_ctx->stream(), ptr->eager_blob_object()->mut_blob());
   OfBlob view_ofblob(device_ctx->stream(), ptr->view_eager_blob_object()->mut_blob());
 
-  void* input_ptr = input_ofblob.mut_blob()->mut_dptr();
+  void* input_ptr = input_ofblob.mut_blob()->mut_raw_dptr();
   view_ofblob.mut_blob()->reset_dptr(static_cast<char*>(input_ptr));
 }
 
@@ -144,21 +59,6 @@ void AccessBlobByCallbackInstructionType::Compute(vm::Instruction* instruction) 
   OfBlob ofblob(device_ctx->stream(), ptr->eager_blob_object()->mut_blob());
   ptr->callback()(reinterpret_cast<uint64_t>(&ofblob));
 }
-
-class TouchInstructionType : public vm::InstructionType {
- public:
-  TouchInstructionType() = default;
-  ~TouchInstructionType() = default;
-  using stream_type = vm::ControlStreamType;
-
-  void Infer(VirtualMachineEngine* vm, Instruction* instruction) const override { UNIMPLEMENTED(); }
-  void Compute(VirtualMachineEngine* vm, Instruction* instruction) const override {
-    // do nothing
-  }
-  void Infer(Instruction*) const override { UNIMPLEMENTED(); }
-  void Compute(Instruction*) const override { UNIMPLEMENTED(); }
-};
-COMMAND(vm::RegisterInstructionType<TouchInstructionType>("Touch"));
 
 }  // namespace vm
 }  // namespace oneflow

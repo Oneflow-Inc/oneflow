@@ -70,9 +70,9 @@ class TestAddmm(flow.unittest.TestCase):
     @autotest(check_graph=True)
     def test_addmm_flow_with_random_data(test_case):
         device = random_device()
-        input = random_pytorch_tensor(ndim=2, dim0=2, dim1=3).to(device)
-        mat1 = random_pytorch_tensor(ndim=2, dim0=2, dim1=4).to(device)
-        mat2 = random_pytorch_tensor(ndim=2, dim0=4, dim1=3).to(device)
+        input = random_tensor(ndim=2, dim0=2, dim1=3).to(device)
+        mat1 = random_tensor(ndim=2, dim0=2, dim1=4).to(device)
+        mat2 = random_tensor(ndim=2, dim0=4, dim1=3).to(device)
         y = torch.addmm(
             input,
             mat1,
@@ -85,9 +85,9 @@ class TestAddmm(flow.unittest.TestCase):
     @autotest(check_graph=True)
     def test_addmm_broadcast_flow_with_random_data(test_case):
         device = random_device()
-        input = random_pytorch_tensor(ndim=2, dim0=1, dim1=1).to(device)
-        mat1 = random_pytorch_tensor(ndim=2, dim0=2, dim1=4).to(device)
-        mat2 = random_pytorch_tensor(ndim=2, dim0=4, dim1=3).to(device)
+        input = random_tensor(ndim=2, dim0=1, dim1=1).to(device)
+        mat1 = random_tensor(ndim=2, dim0=2, dim1=4).to(device)
+        mat2 = random_tensor(ndim=2, dim0=4, dim1=3).to(device)
         y = torch.addmm(
             input,
             mat1,

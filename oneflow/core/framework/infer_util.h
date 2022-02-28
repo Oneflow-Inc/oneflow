@@ -21,7 +21,7 @@ limitations under the License.
 #include "oneflow/core/framework/tensor_desc.h"
 #include "oneflow/core/framework/attr_value.h"
 #include "oneflow/core/job/placement.pb.h"
-#include "oneflow/core/job/sbp_parallel.cfg.h"
+#include "oneflow/core/job/sbp_parallel.h"
 #include "oneflow/core/job/parallel_desc.h"
 
 namespace oneflow {
@@ -73,10 +73,9 @@ class InferContext {
     UNIMPLEMENTED();
     return nullptr;
   };
-  virtual const cfg::SbpParallel& SbpParallel4ArgNameAndIndex(const std::string&,
-                                                              int32_t) const = 0;
+  virtual const SbpParallel& SbpParallel4ArgNameAndIndex(const std::string&, int32_t) const = 0;
 
-  virtual const cfg::NdSbp& NdSbp4ArgNameAndIndex(const std::string&, int32_t) const = 0;
+  virtual const NdSbp& NdSbp4ArgNameAndIndex(const std::string&, int32_t) const = 0;
 
   virtual bool InputIsDynamic(const std::string&, int32_t) const = 0;
   virtual bool* OutputIsDynamic(const std::string&, int32_t) = 0;

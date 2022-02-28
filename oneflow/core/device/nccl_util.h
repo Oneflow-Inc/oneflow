@@ -45,6 +45,7 @@ inline ncclDataType_t GetNcclDataType(const DataType& dt) {
     NCCL_DATA_TYPE_CASE(Int32);
     NCCL_DATA_TYPE_CASE(Int64);
     NCCL_DATA_TYPE_CASE(Float16);
+    case DataType::kBool: return ncclDataType_t::ncclUint8;
 #if defined(__CUDA_BF16_TYPES_EXIST__) && NCCL_VERSION_CODE >= 21003
     case DataType::kBFloat16: return ncclBfloat16;
 #endif

@@ -23,13 +23,11 @@ namespace oneflow {
 
 namespace {
 
-bool RawIsSplitSbp(Symbol<cfg::SbpParallel> sbp_parallel) {
-  return sbp_parallel->has_split_parallel();
-}
+bool RawIsSplitSbp(Symbol<SbpParallel> sbp_parallel) { return sbp_parallel->has_split_parallel(); }
 
 static constexpr auto* IsSplitSbp = DECORATE(&RawIsSplitSbp, ThreadLocal);
 
-bool RawIsBroadcastSbp(Symbol<cfg::SbpParallel> sbp_parallel) {
+bool RawIsBroadcastSbp(Symbol<SbpParallel> sbp_parallel) {
   return sbp_parallel->has_broadcast_parallel();
 }
 

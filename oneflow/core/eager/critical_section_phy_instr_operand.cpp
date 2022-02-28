@@ -28,13 +28,13 @@ namespace vm {
 void CriticalSectionBeginPhyInstrOperand::ForEachMirroredObject(
     const std::function<void(vm::MirroredObject* compute)>& DoEach) const {
   for (const auto& eager_blob_object : *eager_blob_objects_) {
-    DoEach(CHECK_JUST(eager_blob_object->compute_local_dep_object())->mut_mirrored_object());
+    DoEach(CHECK_JUST(eager_blob_object->compute_local_dep_object()));
   }
 }
 
 void CriticalSectionEndPhyInstrOperand::ForEachMirroredObject(
     const std::function<void(vm::MirroredObject* compute)>& DoEach) const {
-  DoEach(CHECK_JUST(eager_blob_object_->compute_local_dep_object())->mut_mirrored_object());
+  DoEach(CHECK_JUST(eager_blob_object_->compute_local_dep_object()));
 }
 
 namespace {
@@ -50,7 +50,7 @@ constexpr auto* CriticalSectionLocalDepObject =
 
 void CriticalSectionBeginPhyInstrOperand::ForEachMutMirroredObject(
     const std::function<void(vm::MirroredObject* compute)>& DoEach) const {
-  DoEach(CHECK_JUST(CriticalSectionLocalDepObject())->mut_mirrored_object());
+  DoEach(CHECK_JUST(CriticalSectionLocalDepObject()));
 }
 
 void CriticalSectionBeginPhyInstrOperand::FinishInvalidInterfaceEventRecords() {
@@ -108,7 +108,7 @@ void OutputCriticalSectionBeginPhyInstrOperand::AccessBlobByOpName(uint64_t of_b
 
 void CriticalSectionEndPhyInstrOperand::ForEachMutMirroredObject(
     const std::function<void(vm::MirroredObject* compute)>& DoEach) const {
-  DoEach(CHECK_JUST(CriticalSectionLocalDepObject())->mut_mirrored_object());
+  DoEach(CHECK_JUST(CriticalSectionLocalDepObject()));
 }
 
 }  // namespace vm

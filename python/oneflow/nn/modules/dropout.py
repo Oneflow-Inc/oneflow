@@ -54,15 +54,21 @@ class Dropout(_DropoutNd):
     training. This means that during evaluation the module simply computes an
     identity function.
 
+    Additionally, we can pass an extra Tensor `addend` which shape is consistent with input Tensor. 
+    The `addend` Tensor will be add in result after dropout, it is very useful in model's residual connection structure.
+
     Args:
         p: probability of an element to be zeroed. Default: 0.5
         inplace: If set to ``True``, will do this operation in-place. Default: ``False``
+        generator:  A pseudorandom number generator for sampling
 
     Shape:
         - Input: :math:`(*)`. Input can be of any shape
         - Output: :math:`(*)`. Output is of the same shape as input
 
     For example:
+
+    example 1: 
 
     .. code-block:: python
 
@@ -83,8 +89,29 @@ class Dropout(_DropoutNd):
         tensor([[-0.7797,  0.2264,  0.2458,  0.4163],
                 [ 0.4299,  0.3626, -0.4892,  0.4141],
                 [-1.4115,  1.2183, -0.5503,  0.6520]], dtype=oneflow.float32)
- 
+    
+    example 2: 
+    
+    .. code-block:: python
 
+        >>> import numpy as np
+        >>> import oneflow as flow
+        
+        >>> m = flow.nn.Dropout(p=0)
+        >>> arr = np.array(
+        ...    [
+        ...        [-0.7797, 0.2264, 0.2458, 0.4163],
+        ...        [0.4299, 0.3626, -0.4892, 0.4141],
+        ...        [-1.4115, 1.2183, -0.5503, 0.6520],
+        ...    ]
+        ... )
+        >>> x = flow.Tensor(arr)
+        >>> addend = flow.ones((3, 4), dtype=flow.float32)
+        >>> y = m(x, addend=addend)
+        >>> y #doctest: +ELLIPSIS
+        tensor([[ 0.2203,  1.2264,  1.2458,  1.4163],
+                [ 1.4299,  1.3626,  0.5108,  1.4141],
+                [-0.4115,  2.2183,  0.4497,  1.6520]], dtype=oneflow.float32)
     """
 
     def __init__(self, p: float = 0.5, inplace: bool = False, generator=None):
@@ -97,10 +124,10 @@ class Dropout(_DropoutNd):
     def forward(self, x, addend=None):
         return flow._C.dropout(
             x,
-            addend if addend is not None else None,
             self.p,
             self.training,
             self.generator,
+            addend=addend if addend is not None else None,
         )
 
 

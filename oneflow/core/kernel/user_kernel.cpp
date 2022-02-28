@@ -118,9 +118,9 @@ class UserKernelInitAndCacheContext final : public user_op::KernelInitContext,
         stream_(stream),
         base_ctx_(UserKernelBaseContext(kernel_conf)),
         parallel_desc_(kernel_conf.op_attribute().parallel_conf_signature().op_parallel_conf()) {
-    nd_sbp_signature_ = cfg::NdSbpSignature(kernel_conf.op_attribute().nd_sbp_signature());
+    nd_sbp_signature_ = NdSbpSignature(kernel_conf.op_attribute().nd_sbp_signature());
     if (kernel_conf.op_attribute().has_sbp_signature()) {
-      sbp_signature_ = cfg::SbpSignature(kernel_conf.op_attribute().sbp_signature());
+      sbp_signature_ = SbpSignature(kernel_conf.op_attribute().sbp_signature());
     }
     bool is_dynamic = false;
     for (const auto& pair : kernel_conf.user_conf().bn_in_op2blob_desc()) {
@@ -166,8 +166,8 @@ class UserKernelInitAndCacheContext final : public user_op::KernelInitContext,
       return &(it->second);
     }
   }
-  const cfg::SbpParallel& SbpParallel4ArgNameAndIndex(const std::string& arg_name,
-                                                      int32_t index) const override {
+  const SbpParallel& SbpParallel4ArgNameAndIndex(const std::string& arg_name,
+                                                 int32_t index) const override {
     CHECK_EQ(parallel_desc_.hierarchy()->NumAxes(), 1);
     const auto& bn2sbp = sbp_signature_.bn_in_op2sbp_parallel();
     std::string bn = GenRepeatedBn(arg_name, index);
@@ -176,8 +176,7 @@ class UserKernelInitAndCacheContext final : public user_op::KernelInitContext,
     return it->second;
   }
 
-  const cfg::NdSbp& NdSbp4ArgNameAndIndex(const std::string& arg_name,
-                                          int32_t index) const override {
+  const NdSbp& NdSbp4ArgNameAndIndex(const std::string& arg_name, int32_t index) const override {
     const auto& bn2nd_sbp = nd_sbp_signature_.bn_in_op2nd_sbp();
     std::string bn = GenRepeatedBn(arg_name, index);
     auto it = bn2nd_sbp.find(bn);
@@ -200,10 +199,10 @@ class UserKernelInitAndCacheContext final : public user_op::KernelInitContext,
   user_op::UserOpConfWrapper user_op_conf_;
   ep::Stream* stream_;
   UserKernelBaseContext base_ctx_;
-  cfg::SbpSignature sbp_signature_;
+  SbpSignature sbp_signature_;
   HashMap<std::pair<std::string, int32_t>, user_op::NaiveTensorDesc> arg2logical_tensor_desc_;
   ParallelDesc parallel_desc_;
-  cfg::NdSbpSignature nd_sbp_signature_;
+  NdSbpSignature nd_sbp_signature_;
 };
 
 using UserKernelInitContext = UserKernelInitAndCacheContext;
@@ -217,7 +216,7 @@ class UserKernelOpInferContext : public user_op::InferContext {
         nd_sbp_signature_(kernel_conf.op_attribute().nd_sbp_signature()),
         parallel_desc_(kernel_conf.op_attribute().parallel_conf_signature().op_parallel_conf()) {
     if (kernel_conf.op_attribute().has_sbp_signature()) {
-      sbp_signature_ = cfg::SbpSignature(kernel_conf.op_attribute().sbp_signature());
+      sbp_signature_ = SbpSignature(kernel_conf.op_attribute().sbp_signature());
     }
     auto InitTensorDesc = [&](const PbMap<std::string, UserOpConf::ListString>& arg_map,
                               ArgVec* arg_vec) {
@@ -293,8 +292,8 @@ class UserKernelOpInferContext : public user_op::InferContext {
   const ArgVec& outputs() const override { return outputs_; }
   const ParallelContext& parallel_ctx() const override { return parallel_ctx_; };
   const ParallelDesc& parallel_desc() const override { return parallel_desc_; }
-  const cfg::SbpParallel& SbpParallel4ArgNameAndIndex(const std::string& arg_name,
-                                                      int32_t index) const override {
+  const SbpParallel& SbpParallel4ArgNameAndIndex(const std::string& arg_name,
+                                                 int32_t index) const override {
     CHECK_EQ(parallel_desc_.hierarchy()->NumAxes(), 1);
     const auto& bn2sbp = sbp_signature_.bn_in_op2sbp_parallel();
     std::string bn = GenRepeatedBn(arg_name, index);
@@ -302,8 +301,7 @@ class UserKernelOpInferContext : public user_op::InferContext {
     CHECK(it != bn2sbp.end());
     return it->second;
   }
-  const cfg::NdSbp& NdSbp4ArgNameAndIndex(const std::string& arg_name,
-                                          int32_t index) const override {
+  const NdSbp& NdSbp4ArgNameAndIndex(const std::string& arg_name, int32_t index) const override {
     const auto& bn2nd_sbp = nd_sbp_signature_.bn_in_op2nd_sbp();
     std::string bn = GenRepeatedBn(arg_name, index);
     auto it = bn2nd_sbp.find(bn);
@@ -361,8 +359,8 @@ class UserKernelOpInferContext : public user_op::InferContext {
   ArgVec inputs_;
   ArgVec outputs_;
   ParallelContext parallel_ctx_;
-  cfg::SbpSignature sbp_signature_;
-  cfg::NdSbpSignature nd_sbp_signature_;
+  SbpSignature sbp_signature_;
+  NdSbpSignature nd_sbp_signature_;
   ParallelDesc parallel_desc_;
   HashMap<std::pair<std::string, int32_t>, std::unique_ptr<user_op::NaiveTensorDesc>>
       arg2tensor_desc_;
@@ -626,8 +624,8 @@ void UserKernel::ForwardUserKernel(const std::function<Blob*(const std::string&)
 
   if (updated) {
     cache_ctx_->UpdateTensorWithCorrBlob(BnInOp2Blob);
-    kernel_->InitOpKernelCache(cache_ctx_.get(), user_op::OpKernelCache::kAttrNotChanged,
-                               &opkernel_cache_);
+    kernel_->InitOpKernelCacheWithFlags(cache_ctx_.get(), user_op::OpKernelCache::kAttrNotChanged,
+                                        &opkernel_cache_);
   } else {
     // do nothing
   }
@@ -669,8 +667,8 @@ void UserKernel::VirtualKernelInit(KernelContext* ctx) {
   InitUserKernel(ctx->stream());
   CHECK(opkernel_state_.get() == nullptr);
   opkernel_state_ = CreateOpKernelState(ctx);
-  kernel_->InitOpKernelCache(cache_ctx_.get(), user_op::OpKernelCache::kAllMayChanged,
-                             &opkernel_cache_);
+  kernel_->InitOpKernelCacheWithFlags(cache_ctx_.get(), user_op::OpKernelCache::kAllMayChanged,
+                                      &opkernel_cache_);
 #ifdef WITH_CUDA_GRAPHS
   if (ParseBooleanFromEnv("ONEFLOW_KERNEL_ENABLE_CUDA_GRAPH", false)) {
     UserKernelInitContext init_ctx(ctx->stream(), kernel_conf());
@@ -767,7 +765,8 @@ std::shared_ptr<user_op::OpKernelState> EagerKernel::EagerForward(
   } else {
     new_opkernel_state = kernel_->CreateOpKernelState(&init_and_cache_ctx);
   }
-  kernel_->InitOpKernelCache(&init_and_cache_ctx, user_op::OpKernelCache::kAllMayChanged, &cache_);
+  kernel_->InitOpKernelCacheWithFlags(&init_and_cache_ctx, user_op::OpKernelCache::kAllMayChanged,
+                                      &cache_);
 
   if (IsAllBlobEmpty(op_attribute().output_bns(), BnInOp2Blob)
       && !kernel_->AlwaysComputeWhenAllOutputsEmpty()) {

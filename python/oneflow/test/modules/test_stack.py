@@ -27,9 +27,21 @@ class TestStackModule(flow.unittest.TestCase):
     @autotest(check_graph=True)
     def test_stack_with_random_data(test_case):
         device = random_device()
-        x = random_pytorch_tensor(ndim=4, dim1=3, dim2=4, dim3=5).to(device)
-        y = random_pytorch_tensor(ndim=4, dim1=3, dim2=4, dim3=5).to(device)
+        x = random_tensor(ndim=4, dim1=3, dim2=4, dim3=5).to(device)
+        y = random_tensor(ndim=4, dim1=3, dim2=4, dim3=5).to(device)
         out = torch.stack((x, y), dim=random(low=-5, high=5).to(int))
+        return out
+
+    @autotest(auto_backward=False, check_graph=True)
+    def test_stack_bool_with_random_data(test_case):
+        device = random_device()
+        x = random_tensor(ndim=4, dim1=3, dim2=4, dim3=5).to(
+            device=device, dtype=torch.bool
+        )
+        y = random_tensor(ndim=4, dim1=3, dim2=4, dim3=5).to(
+            device=device, dtype=torch.bool
+        )
+        out = torch.stack((x, y), dim=random(low=1, high=4).to(int))
         return out
 
 

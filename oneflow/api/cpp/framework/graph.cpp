@@ -208,6 +208,9 @@ Graph Graph::Load(const std::string& model_path, const Device& device) {
 Graph::GraphImpl::GraphImpl(const std::string& model_path, const Device& device)
     : model_path_(model_path), device_(device) {
   CHECK_JUST(of::LoadJobFromIR(&job_, model_path + "/model.mlir"));
+  if (oneflow::ParseBooleanFromEnv("ONEFLOW_SERVING_DEBUG", false)) {
+    LOG(ERROR) << job_.DebugString();
+  }
   job_.mutable_job_conf()->mutable_predict_conf();
   job_.mutable_job_conf()->set_job_name(job_.mutable_job_conf()->job_name() + of::NewUniqueId());
   graph_ = std::make_shared<of::NNGraph>(job_.job_conf().job_name());
@@ -352,13 +355,12 @@ of::Maybe<void> Graph::GraphImpl::LoadCheckpoint() {
       ss << variable_file.rdbuf();
       return ss.str();
     }();
-    const auto& callback =
-        std::make_shared<std::function<void(uint64_t)>>([&](uint64_t of_blob_ptr) {
-          CHECK_JUST(of::BlobBufferCopyUtil<void>::From(
-              of_blob_ptr, buffer.data(),
-              variable_tensor->shape()->elem_cnt()
-                  * of::GetSizeOfDataType(variable_tensor->dtype()->data_type())));
-        });
+    const auto& callback = [&](uint64_t of_blob_ptr) {
+      CHECK_JUST(of::BlobBufferCopyUtil<void>::From(
+          of_blob_ptr, buffer.data(),
+          variable_tensor->shape()->elem_cnt()
+              * of::GetSizeOfDataType(variable_tensor->dtype()->data_type())));
+    };
     JUST(of::one::SyncAccessTensorWithTimeOut(variable_tensor, callback, "mut"));
   }
 

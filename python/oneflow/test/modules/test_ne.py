@@ -104,8 +104,18 @@ class TestNe(flow.unittest.TestCase):
     @autotest(auto_backward=False, check_graph=True)
     def test_ne_with_0_size_data(test_case):
         device = random_device()
-        x1 = random_pytorch_tensor(4, 2, 3, 0, 5).to(device)
-        x2 = random_pytorch_tensor(4, 2, 3, 0, 5).to(device)
+        x1 = random_tensor(4, 2, 3, 0, 5).to(device)
+        x2 = random_tensor(4, 2, 3, 0, 5).to(device)
+        y1 = torch.ne(x1, x2)
+        y2 = torch.ne(x1, 2)
+        y3 = torch.ne(x1, 2.0)
+        return (y1, y2, y3)
+
+    @autotest(auto_backward=False)
+    def test_ne_with_0dim_data(test_case):
+        device = random_device()
+        x1 = random_tensor(ndim=0).to(device)
+        x2 = random_tensor(ndim=0).to(device)
         y1 = torch.ne(x1, x2)
         y2 = torch.ne(x1, 2)
         y3 = torch.ne(x1, 2.0)

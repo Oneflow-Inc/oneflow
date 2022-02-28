@@ -27,7 +27,12 @@ from oneflow.nn.modules.container import *
 from oneflow.nn.utils.container import *
 from oneflow.nn.parameter import Parameter
 from oneflow.nn.graph.block_config import BlockConfig
-from oneflow.nn.graph.util import add_indent, seq_to_func_return
+from oneflow.nn.graph.util import (
+    add_indent,
+    seq_to_func_return,
+    IONodeType,
+    IONode,
+)
 
 
 def get_block_cls(item):
@@ -168,36 +173,31 @@ class ModuleBlock(Block):
 
                 _set_child(self._modules)
 
-    def __call__(self, *args):
+    def __call__(self, *args, **kwargs):
         assert self._type == BlockType.MODULE
-        self._print(0, 1, self._shallow_repr())
+        self.__print(0, 1, self._shallow_repr())
 
-        for idx, arg in enumerate(args):
-            meta_repr_str = (
-                arg._meta_repr() if isinstance(arg, Tensor) else str(type(arg))
-            )
-            in_str = (
-                "(INPUT:_"
-                + self.name_prefix
-                + self.name
-                + "-input_"
-                + str(idx)
-                + ":"
-                + meta_repr_str
-                + ")"
-            )
-            if not isinstance(arg, Tensor):
-                in_str = "[WARNING]" + in_str
-            self._args_repr.append(in_str)
+        in_node = IONode(
+            None, 0, (args, kwargs), "_" + self.name_prefix + self.name + "_input"
+        )
+        for (name, node) in list(in_node.named_nodes()):
+            if node._is_leaf:
+                arg = node._value
+                meta_repr_str = (
+                    arg._meta_repr() if isinstance(arg, Tensor) else str(type(arg))
+                )
+                in_str = "(INPUT:" + name + ":" + meta_repr_str + ")"
+                if not isinstance(arg, Tensor):
+                    in_str = "[WARNING]" + in_str
+                self._args_repr.append(in_str)
+                self.__print(0, 1, in_str)
 
-            self._print(0, 1, in_str)
+        def _print_state(d):
+            for (_, n) in d.items():
+                self.__print(0, 1, n._shallow_repr())
 
-            def _print_state(d):
-                for (_, n) in d.items():
-                    self._print(0, 1, n._shallow_repr())
-
-            _print_state(self._parameters)
-            _print_state(self._buffers)
+        _print_state(self._parameters)
+        _print_state(self._buffers)
 
         # NOTE: The original nn.Moudle's __call__ method is ignored, which means
         # that hooks of nn.Modules are ignored. It is not recommended
@@ -206,7 +206,7 @@ class ModuleBlock(Block):
         with graph_build_util.GLogScopeContext(
             self._debug_min_s_level, self._debug_max_v_level
         ):
-            result = self.__block_forward(*args)
+            result = self.__block_forward(*args, **kwargs)
 
         outputs = ()
         if not (type(result) is tuple or type(result) is list):
@@ -214,37 +214,39 @@ class ModuleBlock(Block):
         else:
             outputs = result
 
-        for idx, out in enumerate(outputs):
-            out_repr = out._meta_repr() if isinstance(out, Tensor) else str(type(out))
-            out_str = (
-                "(OUTPUT:_"
-                + self.name_prefix
-                + self.name
-                + "-output_"
-                + str(idx)
-                + ":"
-                + out_repr
-                + ")"
-            )
-            if not isinstance(out, Tensor):
-                out_str = "[WARNING]" + out_str
-
-            self._outs_repr.append(out_str)
-            self._print(0, 1, out_str)
+        out_node = IONode(
+            None, 0, (outputs, {}), "_" + self.name_prefix + self.name + "_output"
+        )
+        for (name, node) in list(out_node.named_nodes()):
+            if node._is_leaf:
+                arg = node._value
+                meta_repr_str = (
+                    arg._meta_repr() if isinstance(arg, Tensor) else str(type(arg))
+                )
+                out_str = "(OUTPUT:" + name + ":" + meta_repr_str + ")"
+                if not isinstance(arg, Tensor):
+                    out_str = "[WARNING]" + out_str
+                self._outs_repr.append(out_str)
+                self.__print(0, 1, out_str)
 
         return result
 
-    def __block_forward(self, *args):
+    def __block_forward(self, *args, **kwargs):
         self._is_executing_forward = True
-        args = self.__pre_forward_mapping_out_scope(*args)
+        args, kwargs = self.__pre_forward_map(*args, **kwargs)
         with self.scope_context():
-            result = self._origin.__class__.forward(self, *args)
-        result = self.__post_forward_mapping_out_scope(result)
+            result = self._origin.__class__.forward(self, *args, **kwargs)
+            outputs = ()
+            if not (type(result) is tuple or type(result) is list):
+                outputs = (result,)
+            else:
+                outputs = result
+        result = self.__post_forward_map(*outputs)
         result = seq_to_func_return(result)
         self._is_executing_forward = False
         return result
 
-    def __pre_forward_mapping_out_scope(self, *args):
+    def __pre_forward_map(self, *args, **kwargs):
         # Insert identity op when doing activation checkpointing or pipeline execution.
         # Identity op outside activation checkpointing scope will be the endpoint of an activation checkpointing segment.
         # Identity op as the first op of a pipeline stage will make backward op depends on the identity op within the stage,
@@ -257,13 +259,13 @@ class ModuleBlock(Block):
                 assert isinstance(t, Tensor)
                 return oneflow._C.identity(t)
 
-            args = self.__mapping_io(
-                "input", insert_identity, "insert_identity", *args,
+            args, kwargs = self.__map_io(
+                "input", insert_identity, "insert_identity", *args, **kwargs
             )
 
-        return args
+        return args, kwargs
 
-    def __post_forward_mapping_out_scope(self, *args):
+    def __post_forward_map(self, *args):
         # Insert identity op when doing activation checkpointing or pipeline execution.
         if self.config.activation_checkpointing or (
             self.config.stage_id is not None and self.config.stage_id >= 0
@@ -273,7 +275,7 @@ class ModuleBlock(Block):
                 assert isinstance(t, Tensor)
                 return oneflow._C.identity(t)
 
-            args = self.__mapping_io(
+            args, _ = self.__map_io(
                 "output", insert_identity, "insert_identity", *args,
             )
         return args
@@ -303,79 +305,50 @@ class ModuleBlock(Block):
                 for m in module.modules(memo):
                     yield m
 
-    def __mapping_io(self, io_type, func, func_desc, *args):
+    def __map_io(self, io_type, func, func_desc, *args, **kwargs):
         assert isinstance(func_desc, str)
         assert io_type in ("input", "output")
         mapped_args = []
 
-        def mapping_tensor(item):
+        def map_tensor(item):
             assert isinstance(item, Tensor)
             return func(item)
 
-        for idx, arg in enumerate(args):
-            if isinstance(arg, list):
-                seq_args = list()
-                for i in range(len(arg)):
-                    is_tensor, name, repr_str = self.__io_tensor_check_and_gen(
-                        arg[i], io_type, idx, i
-                    )
-                    if is_tensor:
-                        seq_args.append(mapping_tensor(arg[i]))
-                        self._print(
-                            0,
-                            1,
-                            f"{repr_str} is a Tensor, {func_desc} transformation has been done.",
-                        )
-                    else:
-                        self._print(
-                            0,
-                            0,
-                            f"{repr_str} is not a Tensor, {func_desc} transformation will be ignored.",
-                        )
-                        seq_args.append(arg[i])
-                mapped_args.append(seq_args)
-            elif isinstance(arg, Tensor):
-                is_tensor, name, repr_str = self.__io_tensor_check_and_gen(
-                    arg, io_type, idx
-                )
-                assert is_tensor
-                mapped_args.append(mapping_tensor(arg))
-                self._print(
+        io_node = IONode(
+            None, 0, (args, kwargs), "_" + self.name_prefix + self.name + "_" + io_type
+        )
+
+        def leaf_node_fn(leaf_node):
+            arg = leaf_node._value
+            name = leaf_node._prefix + "_" + leaf_node._name
+            is_tensor, repr_str = self.__io_tensor_check_and_gen(arg, io_type, name)
+            if is_tensor:
+                self.__print(
                     0,
                     1,
                     f"{repr_str} is a Tensor, {func_desc} transformation has been done.",
                 )
+                return map_tensor(arg)
             else:
-                is_tensor, name, repr_str = self.__io_tensor_check_and_gen(
-                    arg, io_type, idx
-                )
-                assert not is_tensor
-                mapped_args.append(arg)
-                self._print(
+                self.__print(
                     0,
                     0,
-                    f"{repr_str} is not a Tensor or a list of Tensor, {func_desc} transformation will be ignored.",
+                    f"{repr_str} is not a Tensor, {func_desc} transformation will be ignored.",
                 )
+                return arg
 
-        return tuple(mapped_args)
+        out = io_node.map_leaf(leaf_node_fn)
+        mapped_args = tuple(out[0])
+        mapped_kwargs = out[1]
+        return mapped_args, mapped_kwargs
 
-    def __io_tensor_check_and_gen(self, item, io_type, idx, second_idx=None):
+    def __io_tensor_check_and_gen(self, item, io_type, name):
         assert io_type in ("input", "output")
-        name = (
-            "_"
-            + self.name_prefix
-            + self.name
-            + "-"
-            + io_type
-            + "_"
-            + str(idx)
-            + ("" if second_idx is None else "_" + str(second_idx))
-        )
         if isinstance(item, Tensor):
             repr_str = (
                 "(" + io_type.upper() + ":" + name + ":" + item._meta_repr() + ")"
             )
-            return True, name, repr_str
+            return True, repr_str
         else:
             repr_str = (
                 "[WARNING]("
@@ -386,7 +359,7 @@ class ModuleBlock(Block):
                 + str(type(item))
                 + ")"
             )
-            return False, name, repr_str
+            return False, repr_str
 
     def __members(self, get_members_fn, recurse=True) -> Iterator["Block"]:
         assert self._type == BlockType.MODULE
@@ -547,7 +520,7 @@ class ModuleBlock(Block):
         )
         return shallow_repr
 
-    def _print(self, s_level=2, v_level=0, msg: str = ""):
+    def __print(self, s_level=2, v_level=0, msg: str = ""):
         r"""Do print according to info level.
         """
         assert isinstance(s_level, int)

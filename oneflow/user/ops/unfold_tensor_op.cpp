@@ -39,7 +39,8 @@ namespace oneflow {
   const Shape& in_shape = ctx->InputShape("x", 0);
   const int32_t in_dim = in_shape.NumAxes();
   CHECK_GE_OR_RETURN(dimension, 0);
-  CHECK_LE_OR_RETURN(dimension, in_dim - 1);
+  // NOTE(lixiang): remove -1 for 0-dim tensor
+  CHECK_LE_OR_RETURN(dimension, in_dim);
 
   const int32_t max_size = in_dim == 0 ? 1 : in_shape.At(dimension);
   CHECK_GT_OR_RETURN(size, 0);

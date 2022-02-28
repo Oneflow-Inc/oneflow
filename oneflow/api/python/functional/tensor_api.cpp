@@ -31,6 +31,7 @@ limitations under the License.
 #include "oneflow/core/functional/impl/common.h"
 #include "oneflow/core/job/lazy_mode.h"
 #include "oneflow/core/framework/nd_sbp.h"
+#include "oneflow/core/common/foreign_lock_helper.h"
 
 namespace oneflow {
 namespace one {
@@ -71,7 +72,7 @@ class ConsistentTensorWithDataFunctor {
  public:
   Maybe<Tensor> operator()(PyObject* data, const Optional<Symbol<DType>>& dtype,
                            const Symbol<ParallelDesc>& placement,
-                           const std::vector<Symbol<cfg::SbpParallel>>& sbp_tuple,
+                           const std::vector<Symbol<SbpParallel>>& sbp_tuple,
                            const bool& requires_grad) const {
     // NOTE(chengcheng): flow.Tensor or flow.tensor ONLY created by EagerTensor now.
     LazyMode::Guard lazy_mode_disabled_guard(/*is_enabled*/ false);
@@ -106,7 +107,7 @@ class TensorEmptyCtorFunctor {
 class ConsistentTensorEmptyCtorFunctor {
  public:
   Maybe<Tensor> operator()(const Symbol<ParallelDesc>& placement,
-                           const std::vector<Symbol<cfg::SbpParallel>>& sbp_tuple) const {
+                           const std::vector<Symbol<SbpParallel>>& sbp_tuple) const {
     Shape shape(DimVector{0});
     JUST(CheckDeviceIdsIsValid(placement));
     return ConsistentTensorWithShapeCtor(shape, placement, sbp_tuple);
@@ -149,7 +150,7 @@ class TensorWithDataCtorFunctor {
 class ConsistentTensorWithDataCtorFunctor {
  public:
   Maybe<Tensor> operator()(PyObject* data, const Symbol<ParallelDesc>& placement,
-                           const std::vector<Symbol<cfg::SbpParallel>>& sbp_tuple) const {
+                           const std::vector<Symbol<SbpParallel>>& sbp_tuple) const {
     JUST(CheckDeviceIdsIsValid(placement));
     // Treat the single long as shape.
     if (PyLong_Check(data)) {
@@ -190,7 +191,7 @@ class TensorWithShapeCtorFunctor {
 class ConsistentTensorWithShapeCtorFunctor {
  public:
   Maybe<Tensor> operator()(const Shape& shape, const Symbol<ParallelDesc>& placement,
-                           const std::vector<Symbol<cfg::SbpParallel>>& sbp_tuple) const {
+                           const std::vector<Symbol<SbpParallel>>& sbp_tuple) const {
     // NOTE(chengcheng): flow.Tensor or flow.tensor ONLY created by EagerTensor now.
     LazyMode::Guard lazy_mode_disabled_guard(/*is_enabled*/ false);
     JUST(CheckDeviceIdsIsValid(placement));
@@ -247,8 +248,10 @@ class LocalTensorSharedNumpyDataFunctor {
 
     // Build TensorBuffer
     const auto& Free = [obj](char* dptr) {
-      py::gil_scoped_acquire gil;
-      Py_DECREF(obj);
+      CHECK_JUST(Global<ForeignLockHelper>::Get()->WithScopedAcquire([&]() -> Maybe<void> {
+        Py_DECREF(obj);
+        return Maybe<void>::Ok();
+      }));
     };
     Py_INCREF(obj);  // make TensorBuffer hold ndarray
     void* data_ptr = PyArray_DATA(array);
@@ -267,7 +270,7 @@ class LocalTensorSharedNumpyDataFunctor {
                                                                  /*ls_leaf=*/true);
 
     // Init blob
-    JUST(tensor_impl->InitEagerBlobObject(JUST(GetLocalDepObject4Device(*device))));
+    JUST(tensor_impl->InitEagerBlobObject(NewLocalDepObject()));
     JUST(tensor_impl->eager_blob_object())->set_last_used_device(device);
     JUST(JUST(tensor_impl->eager_blob_object())->TryInitBlob());
     JUST(tensor_impl->eager_blob_object())->mut_blob()->reset_dptr(static_cast<char*>(data_ptr));

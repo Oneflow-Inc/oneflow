@@ -113,7 +113,7 @@ class TestReplicationPad2dModule(flow.unittest.TestCase):
         m.train(random())
         device = random_device()
         m.to(device)
-        x = random_pytorch_tensor(ndim=4, dim1=c, dim2=h, dim3=w).to(device)
+        x = random_tensor(ndim=4, dim1=c, dim2=h, dim3=w).to(device)
         y = m(x)
         return y
 

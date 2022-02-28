@@ -83,7 +83,7 @@ class TestMean(flow.unittest.TestCase):
     def test_mean_with_random_data(test_case):
         device = random_device()
         dim = random(1, 4).to(int)
-        x = random_pytorch_tensor(ndim=4, dtype=float).to(device)
+        x = random_tensor(ndim=4, dtype=float).to(device)
         return torch.mean(x, dim)
 
 

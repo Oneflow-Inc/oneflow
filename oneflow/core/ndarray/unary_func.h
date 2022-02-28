@@ -67,6 +67,17 @@ struct UnaryFuncExp final {
 #endif  // defined(__CUDA_ARCH__)
   }
 };
+
+template<>
+struct UnaryFuncExp<bool> final {
+  static OF_DEVICE_FUNC bool Invoke(const bool x) {
+#if defined(__CUDA_ARCH__)
+    return static_cast<bool>(exp(static_cast<float>(x)));
+#else
+    return static_cast<bool>(std::exp(static_cast<float>(x)));
+#endif  // defined(__CUDA_ARCH__)
+  }
+};
 SPECIALIZE_CONST_TYPE_UNARY_FUNC(UnaryFuncExp);
 
 template<>

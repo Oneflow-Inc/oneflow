@@ -26,7 +26,14 @@ class TestAbsModule(flow.unittest.TestCase):
     @autotest(check_graph=True)
     def test_abs_with_0_size_data(test_case):
         device = random_device()
-        x = random_pytorch_tensor().to(device)
+        x = random_tensor().to(device)
+        y = torch.abs(x)
+        return y
+
+    @autotest(check_graph=True)
+    def test_abs_with_0dim_data(test_case):
+        device = random_device()
+        x = random_tensor(ndim=0).to(device)
         y = torch.abs(x)
         return y
 

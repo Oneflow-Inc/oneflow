@@ -48,12 +48,9 @@ bool CpuStreamType::QueryInstructionStatusDone(const Stream& stream,
 }
 
 void CpuStreamType::Compute(Instruction* instruction) const {
-  OF_PROFILER_RANGE_PUSH(
-      "S:"
-      + instruction->instr_msg().instr_type_id().instruction_type().DebugOpTypeName(instruction));
+  OF_PROFILER_RANGE_PUSH("S:" + instruction->instr_msg().DebugName());
   {
     const auto& instr_type_id = instruction->mut_instr_msg()->instr_type_id();
-    CHECK_EQ(instr_type_id.stream_type_id().interpret_type(), InterpretType::kCompute);
     instr_type_id.instruction_type().Compute(instruction);
   }
   auto* status_buffer = instruction->mut_status_buffer();
@@ -66,7 +63,7 @@ intrusive::shared_ptr<StreamDesc> CpuStreamType::MakeStreamDesc(const Resource& 
   if (!resource.has_cpu_device_num()) { return intrusive::shared_ptr<StreamDesc>(); }
   std::size_t device_num = resource.cpu_device_num();
   auto ret = intrusive::make_shared<StreamDesc>();
-  ret->mut_stream_type_id()->__Init__(LookupStreamType4TypeIndex<CpuStreamType>());
+  ret->set_stream_type(StaticGlobalStreamType<CpuStreamType>());
   ret->set_num_streams_per_machine(device_num);
   ret->set_num_streams_per_thread(device_num);
   return ret;

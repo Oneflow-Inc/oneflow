@@ -24,7 +24,7 @@ namespace {
 
 Maybe<void> InferReduceDeviceStageDtypeFn(user_op::InferContext* ctx) {
   *ctx->OutputDType("out", 0) = ctx->InputDType("in", 0);
-  *ctx->OutputDType("mask", 0) = DataType::kInt8;
+  *ctx->OutputDType("mask", 0) = DataType::kBool;
   *ctx->OutputDType("count", 0) = DataType::kInt32;
   return Maybe<void>::Ok();
 }
@@ -38,7 +38,7 @@ Maybe<void> InferReduceDeviceStageLogicalTensorDescFn(user_op::InferContext* ctx
     *output_shape = Shape::Ones(num_axes);
   } else {
     const ParallelDesc& parallel_desc = ctx->parallel_desc();
-    const cfg::NdSbp& in_nd_sbp = ctx->NdSbp4ArgNameAndIndex("in", 0);
+    const NdSbp& in_nd_sbp = ctx->NdSbp4ArgNameAndIndex("in", 0);
     DimVector dim_vec = input_shape.dim_vec();
     if (parallel_desc.hierarchy()->NumAxes() == 1) {
       const auto& input_sbp = in_nd_sbp.sbp_parallel(0);
@@ -88,7 +88,7 @@ Maybe<void> InferReduceDeviceStagePhysicalTensorDescFn(user_op::InferContext* ct
 }
 
 Maybe<void> InferReduceDeviceStageGradDtypeFn(user_op::InferContext* ctx) {
-  CHECK_EQ_OR_RETURN(ctx->InputDType("mask", 0), DataType::kInt8);
+  CHECK_EQ_OR_RETURN(ctx->InputDType("mask", 0), DataType::kBool);
   CHECK_EQ_OR_RETURN(ctx->InputDType("count", 0), DataType::kInt32);
   *ctx->OutputDType("in_diff", 0) = ctx->InputDType("out_diff", 0);
   return Maybe<void>::Ok();
@@ -103,7 +103,7 @@ Maybe<void> InferReduceDeviceStageGradTensorDescFn(user_op::InferContext* ctx) {
 Maybe<void> InferReduceGlobalStageDtypeFn(user_op::InferContext* ctx) {
   CHECK_EQ_OR_RETURN(ctx->InputDType("device_count", 0), DataType::kInt32);
   *ctx->OutputDType("out", 0) = ctx->InputDType("in", 0);
-  *ctx->OutputDType("mask", 0) = DataType::kInt8;
+  *ctx->OutputDType("mask", 0) = DataType::kBool;
 
   return Maybe<void>::Ok();
 }
@@ -137,7 +137,7 @@ Maybe<void> InferReduceGlobalStageTensorDescFn(user_op::InferContext* ctx) {
 }
 
 Maybe<void> InferReduceGlobalStageGradDtypeFn(user_op::InferContext* ctx) {
-  CHECK_EQ_OR_RETURN(ctx->InputDType("mask", 0), DataType::kInt8);
+  CHECK_EQ_OR_RETURN(ctx->InputDType("mask", 0), DataType::kBool);
   CHECK_EQ_OR_RETURN(ctx->InputDType("device_count", 0), DataType::kInt32);
 
   *ctx->OutputDType("in_diff", 0) = ctx->InputDType("out_diff", 0);

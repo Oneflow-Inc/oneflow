@@ -33,7 +33,7 @@
 - name: "sub"
   signature:
     [
-      "Tensor (Tensor input, Tensor other) => Sub",
+      "Tensor (Tensor input, Tensor other, *, Bool inplace=False) => Sub",
       "Tensor (Tensor input, Scalar other, *, Bool inplace=False) => ScalarSub",
       "Tensor (Scalar input, Tensor other) =>  ScalarSub",
     ]
@@ -62,6 +62,14 @@
       "Tensor (Tensor input, Tensor other) => Div",
       "Tensor (Tensor input, Scalar other) => ScalarDiv",
       "Tensor (Scalar input, Tensor other) => ScalarDiv",
+    ]
+  bind_python: true
+
+- name: "div_"
+  signature:
+    [
+      "Tensor (Tensor input, Tensor other) => InplaceDiv",
+      "Tensor (Tensor input, Scalar other) => InplaceScalarDiv",
     ]
   bind_python: true
 
@@ -288,6 +296,18 @@
     ]
   bind_python: True
 
+- name: "as_strided"
+  signature: "Tensor (Tensor input, Int32List size, Int32List stride, Int32 storage_offset=0) => AsStrided"
+  bind_python: True
+
+- name: "as_strided_grad"
+  signature: "Tensor (Tensor dy, Tensor input, Int32List size, Int32List stride, Int32 storage_offset=0) => AsStridedGrad"
+  bind_python: False
+
+- name: "select"
+  signature: "Tensor (Tensor input, Int32 dim, Int32 index) => Select"
+  bind_python: True
+
 - name: "swapaxes"
   signature:
     [
@@ -298,6 +318,14 @@
 - name: "permute"
   signature: "Tensor (Tensor input, Int32List dims) => Permute"
   bind_python: True
+
+- name: "T"
+  signature: "Tensor (Tensor input) => TransposeAllDimProperty"
+  bind_python: True
+
+- name: "t"
+  signature: "Tensor (Tensor input) => TransposeAllDimFunction"
+  bind_python: True 
 
 - name: "reciprocal"
   signature: "Tensor (Tensor x) => Reciprocal"
@@ -564,7 +592,7 @@
     ]
   bind_python: True
 
-- name: "consistent_arange"
+- name: "global_arange"
   signature: [
       "Tensor (Scalar start, Scalar end, Scalar step=1, *, DataType dtype=None,
       Placement placement, SbpList sbp) => ConsistentArange",
@@ -603,7 +631,7 @@
     ]
   bind_python: True
 
-- name: "consistent_constant"
+- name: "global_constant"
   signature:
     [
       "Tensor (Shape shape, Scalar value, *, DataType dtype, Placement placement, SbpList sbp) => ConsistentConstant",
@@ -615,7 +643,7 @@
     ["Tensor (Shape shape, *, DataType dtype, Device device=None) => Empty"]
   bind_python: True
 
-- name: "consistent_empty"
+- name: "global_empty"
   signature:
     [
       "Tensor (Shape shape, *, DataType dtype, Placement placement, SbpList sbp) => ConsistentEmpty",
@@ -739,6 +767,14 @@
 - name: "expand_grad"
   signature: "Tensor (Tensor dy, Int32List out, Int32List expand) => ExpandGrad"
   bind_python: False
+
+- name: "repeat"
+  signature: "Tensor (Tensor input, Shape repeat_shape) => Repeat"
+  bind_python: True
+
+- name: "tile"
+  signature: "Tensor (Tensor input, Shape dims) => Tile"
+  bind_python: True
 
 - name: "roll"
   signature: "Tensor (Tensor x, Int32List[1] shifts, Int32List[1] dims=None) => Roll"
@@ -946,6 +982,27 @@
   ]
   bind_python: True
 
+- name: "tensor_split"
+  signature: [
+    "TensorTuple (Tensor input, Int32 indices_or_sections, Int32 dim=0) => TensorSplitInt",
+    "TensorTuple (Tensor input, Int32List indices_or_sections, Int32 dim=0) => TensorSplitVec",
+  ]
+  bind_python: True
+
+- name: "hsplit"
+  signature: [
+    "TensorTuple (Tensor input, Int32 indices_or_sections) => HsplitInt",
+    "TensorTuple (Tensor input, Int32List indices_or_sections) => HsplitVec",
+  ]
+  bind_python: True
+
+- name: "vsplit"
+  signature: [
+    "TensorTuple (Tensor input, Int32 indices_or_sections) => VsplitInt",
+    "TensorTuple (Tensor input, Int32List indices_or_sections) => VsplitVec",
+  ]
+  bind_python: True
+
 - name: "negative"
   signature: "Tensor (Tensor x) => Negative"
   bind_python: True
@@ -965,15 +1022,15 @@
   bind_python: True
 
 - name: "layer_norm_grad"
-  signature: "Tensor (Tensor x, Tensor mean, Tensor inv_variance, Tensor dy, Int64 begin_norm_axis, Double epsilon) => LayerNormGrad"
+  signature: "Tensor (Tensor dy, Tensor x, Tensor mean, Tensor inv_variance, Int64 begin_norm_axis, Double epsilon) => LayerNormGrad"
+  bind_python: False
+
+- name: "layer_norm_affine_grad"
+  signature: "Tensor (Tensor dy, Tensor x, Tensor mean, Tensor inv_variance, Tensor gamma, Int64 begin_norm_axis, Double epsilon) => LayerNormAffineGrad"
   bind_python: False
 
 - name: "layer_norm_param_grad"
-  signature: "Tensor (Tensor dy, Int64 begin_params_axis, Double epsilon) => LayerNormParamGrad"
-  bind_python: False
-
-- name: "layer_norm_affine_param_grad"
-  signature: "TensorTuple (Tensor dy, Tensor gamma, Tensor normalized, Int64 begin_params_axis, Double epsilon) => LayerNormAffineParamGrad"
+  signature: "TensorTuple (Tensor dy, Tensor x, Tensor mean, Tensor inv_variance, Int64 begin_params_axis, Double epsilon) => LayerNormParamGrad"
   bind_python: False
 
 - name: "avg_pool2d_nhwc"
@@ -981,13 +1038,6 @@
     'Tensor (Tensor x, Int32List kernel_size, Int32List stride, String padding,
     Int32List padding_before, Int32List padding_after,
     String data_format="channels_first", Bool ceil_mode=False) => AvgPool2D'
-  bind_python: True
-
-- name: "max_pool2d_nhwc"
-  signature:
-    'Tensor (Tensor x, Int32List kernel_size, Int32List stride, String padding,
-    Int32List padding_before, Int32List padding_after,
-    String data_format="channels_first", Bool ceil_mode=False) => MaxPool2D'
   bind_python: True
 
 - name: "ctc_loss_grad"
@@ -1061,6 +1111,10 @@
   signature: "Tensor (Tensor x, Shape shape) => Reshape"
   bind_python: True
 
+- name: "slice_view_1d_contiguous"
+  signature: "Tensor (Tensor x, Int64 start, Int64 end) => SliceView1dContiguous"
+  bind_python: True
+
 - name: "slice"
   signature: "Tensor (Tensor x, Int64List start, Int64List stop, Int64List step) => Slice"
   bind_python: True
@@ -1101,7 +1155,7 @@
 
 - name: "to"
   signature: [
-    # type of device must be string for consistent tensor to perform argument validation
+    # type of device must be string for global tensor to perform argument validation
     "Tensor (Tensor x, String device=None, DataType dtype=None, Bool copy=False) => To",
     "Tensor (Tensor x, Device device=None, DataType dtype=None, Bool copy=False) => To",
     "Tensor (Tensor x, DataType dtype=None, Bool copy=False) => To",
@@ -1452,7 +1506,7 @@
   bind_python: True
 
 - name: "dropout"
-  signature: "Tensor (Tensor x, Tensor addend=None, Float p=0.5, Bool training=True, Generator generator=None) => Dropout"
+  signature: "Tensor (Tensor x, Float p=0.5, Bool training=True, Generator generator=None, *, Tensor addend=None) => Dropout"
   bind_python: True
 
 - name: "dropout_grad"
@@ -1547,28 +1601,28 @@
   signature:
     'Tensor (Tensor input, Int32List[1] kernel_size, Int32List[1] stride=None, 
              Int32List[1] padding=0, Bool ceil_mode=False, Bool count_include_pad=True,
-             Int64 divisor_override=0, String data_format="channels_first") => Avgpool1D'
+             Int32 divisor_override=0, String data_format="channels_first") => Avgpool1D'
   bind_python: True
 
 - name: "avg_pool2d"
   signature:
     'Tensor (Tensor input, Int32List[2] kernel_size, Int32List[2] stride=None, 
              Int32List[2] padding=0, Bool ceil_mode=False, Bool count_include_pad=True,
-             Int64 divisor_override=0, String data_format="channels_first") => Avgpool2D'
+             Int32 divisor_override=0, String data_format="channels_first") => Avgpool2D'
   bind_python: True
 
 - name: "avg_pool3d"
   signature:
     'Tensor (Tensor input, Int32List[3] kernel_size, Int32List[3] stride=None, 
              Int32List[3] padding=0, Bool ceil_mode=False, Bool count_include_pad=True,
-             Int64 divisor_override=0, String data_format="channels_first") => Avgpool3D'
+             Int32 divisor_override=0, String data_format="channels_first") => Avgpool3D'
   bind_python: True
 
 - name: "avg_pooling_grad"
   signature:
     "Tensor (Tensor x, Tensor y, Tensor dy, Int32 ndims, String data_format, Int32List padding,
     Int32List kernel_size, Int32List stride, Bool ceil_mode, Bool count_include_pad,
-    Int64 divisor_override=0) => AvgPoolingNdGrad"
+    Int32 divisor_override=0) => AvgPoolingNdGrad"
   bind_python: False
 
 - name: "minimum"
@@ -1595,11 +1649,11 @@
   signature: "TensorTuple (Tensor x, TensorTuple like, Int64 axis) => StackGrad"
   bind_python: False
 
-- name: "local_to_consistent"
+- name: "local_to_global"
   signature: "Tensor (Tensor x, Placement placement, SbpList sbp, Shape shape, DataType dtype) => LocalToConsistent"
   bind_python: False
 
-- name: "to_consistent"
+- name: "to_global"
   signature: "Tensor (Tensor x, Placement placement, SbpList sbp, SbpList grad_sbp) => ToConsistent"
   bind_python: True
 
@@ -1607,12 +1661,16 @@
   signature: "Tensor (Tensor x) => ConsistentToLocal"
   bind_python: True
 
+- name: "stream_touch"
+  signature: "Void (TensorTuple x) => StreamTouch"
+  bind_python: True
+
 - name: "broadcast"
   signature: "Tensor (Tensor x, *, Int64 src_rank=0, Bool inplace=True) => Broadcast"
   bind_python: True
 
 - name: "local_all_reduce"
-  signature: "Tensor (Tensor x) => LocalAllReduce"
+  signature: "Tensor (Tensor x, Bool inplace=False) => LocalAllReduce"
   bind_python: True
 
 - name: "local_reduce"
@@ -1639,19 +1697,23 @@
   signature: "Tensor (Tensor x, Placement in_placement, Placement out_placement, SbpList out_sbp, Shape shape) => EagerPToS"
   bind_python: False
 
-- name: "consistent_all_reduce"
+- name: "eager_s_to_p"
+  signature: "Tensor (Tensor x, Placement in_placement, Placement out_placement, SbpList out_sbp, Shape shape) => EagerSToP"
+  bind_python: False
+
+- name: "global_all_reduce"
   signature: "Tensor (Tensor x) => ConsistentAllReduce"
   bind_python: False
 
-- name: "consistent_reduce_scatter"
+- name: "global_reduce_scatter"
   signature: "Tensor (Tensor x, String op_type) => ConsistentReduceScatter"
   bind_python: False
 
-- name: "consistent_all_gather"
+- name: "global_all_gather"
   signature: "Tensor (Tensor x) => ConsistentAllGather"
   bind_python: False
 
-- name: "consistent_s2s"
+- name: "global_s2s"
   signature: "Tensor (Tensor x, SbpList out_sbp) => ConsistentS2S"
   bind_python: False
 
@@ -1746,8 +1808,8 @@
 
 - name: "split"
   signature: [
-    "TensorTuple (Tensor x, Int64 split_size, Int64 dim=0) => Split",
-    "TensorTuple (Tensor x, Int64List split_size, Int64 dim=0) => SplitWithSize",
+    "TensorTuple (Tensor x, Int64 split_size_or_sections, Int64 dim=0) => Split",
+    "TensorTuple (Tensor x, Int64List split_size_or_sections, Int64 dim=0) => SplitWithSize",
   ]
   bind_python: True
 
@@ -1762,12 +1824,12 @@
   bind_python: True
 
 - name: "normalize"
-  signature: "Tensor (Tensor input, Float p=2.0, Int32 dim=1, Float eps=1e-12) => Normalize"
+  signature: "Tensor (Tensor input, Float p=2.0, Int32 dim=1, Float eps=1e-12, Bool use_l2_norm_kernel=True) => Normalize"
   bind_python: True
 
 - name: "l2_normalize"
   signature: "Tensor (Tensor input, Int32 axis=0, Float epsilon=1e-12) => L2Normalize"
-  bind_python: True
+  bind_python: False
 
 - name: "l2_normalize_grad"
   signature: "Tensor (Tensor dy, Tensor y, Tensor square_x_sum, Int32 axis, Float epsilon) => L2NormalizeGrad"
@@ -1879,13 +1941,17 @@
   signature: "Tensor (Tensor input, String key, DataType dtype, Shape shape, Bool is_dynamic=False, Shape reshape=None, Shape batch_padding=None) => DecodeOneRec"
   bind_python: True
 
-- name: "read_onerec"
-  signature: "Tensor (StringList files, Int32 batch_size, Bool random_shuffle, String shuffle_mode, Int32 shuffle_buffer_size=1024, Bool shuffle_after_epoch=False, Bool verify_example=True, Placement placement=None, SbpList sbp=None) => ReadOneRec"
-  bind_python: True
-
 - name: "dot"
   signature: "Tensor (Tensor input, Tensor other) => Dot"
   bind_python: True
+
+- name: "fused_dot_feature_interaction"
+  signature: "Tensor (TensorTuple features, Tensor output_concat=None, Bool self_interaction=False, Int32 output_padding=0) => FusedDotFeatureInteraction"
+  bind_python: True
+
+- name: "fused_dot_feature_interaction_grad"
+  signature: "TensorTuple (Tensor dy, Tensor padded_concated_features, TensorTuple features_grad_like, Bool has_output_concat_grad=False, Bool self_interaction=False, Int32 output_concat_grad_dim=0) => FusedDotFeatureInteractionGrad"
+  bind_python: False
 
 - name: "tensor_buffer_to_tensor"
   signature: "Tensor (Tensor input, Shape instance_shape, DataType dtype) => TensorBufferToTensor"
@@ -1914,3 +1980,11 @@
 - name: "cumsum_grad"
   signature: "Tensor (Tensor input, Int64 dim) => CumsumGrad"
   bind_python: False 
+
+- name: "cumprod"
+  signature: "Tensor (Tensor input, Int64 dim) => Cumprod"
+  bind_python: True
+
+- name: "cumprod_grad"
+  signature: "Tensor (Tensor input, Tensor y, Tensor x, Int64 dim) => CumprodGrad"
+  bind_python: False

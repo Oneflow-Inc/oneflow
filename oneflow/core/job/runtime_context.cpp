@@ -32,7 +32,7 @@ void RuntimeCtx::DecreaseCounter(const std::string& name) {
 void RuntimeCtx::WaitUntilCntEqualZero(const std::string& name) {
   auto it = counters_.find(name);
   CHECK(it != counters_.end());
-  it->second->WaitUntilCntEqualZero();
+  it->second->WaitForeverUntilCntEqualZero();
   counters_.erase(it);
 }
 

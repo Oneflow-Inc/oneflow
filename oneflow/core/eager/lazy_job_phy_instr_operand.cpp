@@ -44,14 +44,14 @@ static constexpr auto* GetEagerNcclLocalDepObject =
 void LaunchLazyJobPhyInstrOperand::ForEachMutMirroredObject(
     const std::function<void(vm::MirroredObject* compute)>& DoEach) const {
   for (const auto& eager_blob_object : *param_blob_objects_) {
-    DoEach(CHECK_JUST(eager_blob_object->compute_local_dep_object())->mut_mirrored_object());
+    DoEach(CHECK_JUST(eager_blob_object->compute_local_dep_object()));
   }
 
 #ifdef WITH_CUDA
   auto* sync_launched_nccl = CHECK_JUST(GetEagerNcclLocalDepObject("sync_launched_nccl"));
   auto* async_launched_nccl = CHECK_JUST(GetEagerNcclLocalDepObject("async_launched_nccl"));
   CHECK_EQ(sync_launched_nccl, async_launched_nccl);
-  DoEach(async_launched_nccl->mut_mirrored_object());
+  DoEach(async_launched_nccl);
 #endif  // WITH_CUDA
 }
 
