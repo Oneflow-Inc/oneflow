@@ -80,11 +80,8 @@ class TestRandintConsistent(flow.unittest.TestCase):
         arg_dict["shape"] = [(8,), (8, 8,), (8, 8, 8)]
         arg_dict["dtype"] = [
             flow.uint8,
-            flow.int8,
             flow.int32,
-            flow.int64,
             flow.float32,
-            flow.float64,
         ]
         arg_dict["placement"] = [
             # 1d

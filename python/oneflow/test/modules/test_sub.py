@@ -100,7 +100,7 @@ class TestSubModule(flow.unittest.TestCase):
         for arg in GenArgList(arg_dict):
             _test_sub_impl(test_case, *arg)
 
-    @autotest(auto_backward=False, check_graph=True)
+    @autotest(n=5, auto_backward=False, check_graph=True)
     def test_random_dim_sub(test_case):
         device = random_device()
         dim0 = random(low=1, high=4).to(int)
@@ -110,7 +110,7 @@ class TestSubModule(flow.unittest.TestCase):
         z = x - y
         return z
 
-    @autotest(auto_backward=False, check_graph=True)
+    @autotest(n=5, auto_backward=False, check_graph=True)
     def test_random_dim_scalar_sub(test_case):
         device = random_device()
         dim0 = random(low=1, high=4).to(int)
@@ -120,7 +120,7 @@ class TestSubModule(flow.unittest.TestCase):
         z = x - y
         return z
 
-    @autotest(auto_backward=False, check_graph=True)
+    @autotest(n=5, auto_backward=False, check_graph=True)
     def test_sub_with_0_size_data(test_case):
         device = random_device()
         x = random_tensor(2, 0, 3).to(device)
@@ -131,7 +131,7 @@ class TestSubModule(flow.unittest.TestCase):
         out4 = torch.sub(x, y)
         return out1, out2, out3, out4
 
-    @autotest(auto_backward=False, check_graph=True)
+    @autotest(n=5, auto_backward=False, check_graph=True)
     def test_sub_with_0dim_data(test_case):
         device = random_device()
         x = random_tensor(ndim=0).to(device)
