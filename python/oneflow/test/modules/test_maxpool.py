@@ -22,7 +22,7 @@ import torch as pytorch
 import oneflow as flow
 import oneflow.unittest
 from oneflow.test_utils.automated_test_util import *
-from test_util import GenArgList
+from oneflow.test_utils.test_util import GenArgList
 from oneflow.nn.common_types import _size_1_t, _size_2_t, _size_3_t
 
 
