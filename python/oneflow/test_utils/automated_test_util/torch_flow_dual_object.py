@@ -231,14 +231,9 @@ def check_eager_graph_mlir_tensor(eager_res, graph_res):
         )
         if equality_res == False:
             print_note_fake_program()
-            if global_check_mlir:
-                print("===================Wrong MLIR Tensor Shape=====================")
-                print(eager_res.shape)
-                print(graph_res.shape)
-            else:
-                print("===================Wrong nn.Graph Tensor Shape=================")
-                print(eager_res.shape)
-                print(graph_res.shape)
+            print("===================Wrong nn.Graph Tensor Shape=================")
+            print(eager_res.shape)
+            print(graph_res.shape)
         assert (
             equality_res
         ), f"Check graph failed: graph result {graph_res.numpy()} not equals to eager result {eager_res.numpy()}."
@@ -942,7 +937,6 @@ def autotest(
     rtol=0.0001,
     atol=1e-05,
     check_graph=True,
-    check_mlir=False,
     check_allclose=True,
 ):
     verbose = os.getenv("ONEFLOW_TEST_VERBOSE") is not None
@@ -951,11 +945,6 @@ def autotest(
         # check graph is intentionally closed and threre is a validated reason.
         check_graph = False
 
-    if check_mlir:
-        os.environ["ONEFLOW_MLIR_ENABLE_ROUND_TRIP"] = "1"
-
-    if check_mlir and verbose:
-        os.environ["ONEFLOW_MLIR_STDOUT"] = "1"
 
     def deco(f):
         @functools.wraps(f)
@@ -971,12 +960,11 @@ def autotest(
                     )
                 dual_modules_to_test.clear()
                 dual_objects_to_test.clear()
-                global global_check_allclose, global_rtol, global_atol, global_backward, global_check_mlir
+                global global_check_allclose, global_rtol, global_atol, global_backward
                 global_check_allclose = check_allclose
                 global_rtol = rtol
                 global_atol = atol
                 global_backward = auto_backward
-                global_check_mlir = check_mlir
 
                 try:
                     global testing_graph_mlir
