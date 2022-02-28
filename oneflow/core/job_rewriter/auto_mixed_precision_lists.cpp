@@ -26,6 +26,7 @@ const AMPList& AutoMixedPrecisionLists::WhiteList() {
                                "fused_self_attention_query_mul_key_and_value",
                                "prelu",
                                "tf_prelu",
+                               "leaky_relu",
                                "fused_dot_feature_interaction"};
   return white_list;
 }
@@ -55,7 +56,7 @@ const AMPList& AutoMixedPrecisionLists::GrayList() {
                               "layer_norm",
                               "dropout",
                               "softmax",
-                              "gelu",
+                              "gelu",                             
                               "normalization",
                               "normalization_add_relu",
                               "sparse_softmax_cross_entropy",
