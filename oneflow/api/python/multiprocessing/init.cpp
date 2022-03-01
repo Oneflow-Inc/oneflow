@@ -18,6 +18,7 @@ limitations under the License.
 #include "oneflow/api/python/multiprocessing/object_ptr.h"
 #include "oneflow/core/ep/cpu/cpu_device_manager.h"
 #include "oneflow/core/ep/include/device_manager_registry.h"
+#include "oneflow/core/ep/cpu/cpu_device.h"
 #include <csignal>
 
 #include <stdexcept>
@@ -67,9 +68,9 @@ void set_num_threads(int num) {
     num = cpu_logic_core;
   }
 
-  ep::CpuDeviceManager* cpu_device_manager = dynamic_cast<ep::CpuDeviceManager*>(
-      Global<ep::DeviceManagerRegistry>::Get()->GetDeviceManager(DeviceType::kCPU));
-  cpu_device_manager->SetDeviceNumThreads(num);
+  auto cpu_device = std::static_pointer_cast<ep::CpuDevice>(
+      Global<ep::DeviceManagerRegistry>::Get()->GetDevice(DeviceType::kCPU, 0));
+  cpu_device->SetNumThreads(num);
 }
 
 ONEFLOW_API_PYBIND11_MODULE("", m) {
