@@ -142,11 +142,11 @@ class CudaStream : public Stream {
   cudaStream_t cuda_stream_{};
   cublasHandle_t cublas_handle_{};
 
-  // #if CUDA_VERSION >= 10010
+#if CUDA_VERSION >= 10010
 
   cublasLtHandle_t cublas_lt_handle_{};
 
-  // #endif
+#endif
 
   cudnnHandle_t cudnn_handle_{};
   int device_index_;
