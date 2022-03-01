@@ -172,7 +172,10 @@ def tensor_getstate(self):
             rel_dir_name = f"global_tensor_{self.global_id()}"
             abs_dir_name = save_load_path / rel_dir_name
 
-            tensor = self.to_global(sbp=[flow.sbp.broadcast] * len(self.sbp)).to_local()
+            tensor = self.to_global(
+                sbp=flow.sbp.broadcast,
+                placement=flow.placement("cpu", [global_src_dsk_rank]),
+            ).to_local()
         if global_src_dsk_rank is None or global_src_dsk_rank == flow.env.get_rank():
             _save_tensor_to_disk(tensor, abs_dir_name)
 

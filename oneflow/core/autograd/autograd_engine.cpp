@@ -25,6 +25,8 @@ limitations under the License.
 #include "oneflow/core/autograd/autograd_mode.h"
 #include "oneflow/core/eager/dev_vm_dep_object_consume_mode.h"
 #include "oneflow/core/functional/functional.h"
+#include "oneflow/core/framework/nd_sbp.h"
+#include "oneflow/core/framework/global_param_grad_sync_mode.h"
 
 namespace oneflow {
 namespace one {
@@ -144,9 +146,21 @@ Maybe<void> FunctionNode::AccGrad4RetainGradTensor() {
 }
 
 Maybe<void> FunctionNode::AccGrad4LeafTensor(bool create_graph) {
-  for (const std::shared_ptr<AutogradMeta>& out : output_meta_data_) {
+  for (auto i = 0; i < output_meta_data_.size(); i++) {
+    auto& out = output_meta_data_[i];
+
     if (out->is_leaf() && out->requires_grad()) {
       JUST(CopyOrAccGrad(out.get(), /*autograd_mode=*/false));
+
+      // control acc_grad to do boxing conditionally
+      const auto& acc_grad = out->acc_grad();
+      if (GlobalGradSyncMode::is_enabled() && acc_grad->is_consistent()) {
+        auto& tensor_info = output_tensor_infos_[i];
+        const auto& placement = JUST(tensor_info.placement());
+        const auto& nd_sbp = JUST(tensor_info.sbp());
+        JUST(out->set_acc_grad(JUST(functional::ToConsistent(
+            acc_grad, placement, *JUST(GetSbpList(nd_sbp)), GetNoneSbpList()))));
+      }
     }
   }
   return Maybe<void>::Ok();

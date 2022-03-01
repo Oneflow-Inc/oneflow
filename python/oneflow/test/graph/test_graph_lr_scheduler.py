@@ -324,6 +324,44 @@ class TestGraphLRSchedulerWithEager(flow.unittest.TestCase):
             warmup_iters=0,
         )
 
+    def test_cosine_annealing_warm_restarts(self):
+        _compare_graph_lr_scheduler_with_eager(
+            self,
+            base_lr=0.1,
+            iters=50,
+            lr_scheduler=flow.optim.lr_scheduler.CosineAnnealingWarmRestarts,
+            T_0=10,
+            T_mult=1,
+            eta_min=0.01,
+            atol=1e-5,
+        )
+
+    def test_cosine_annealing_warm_restarts_mult_2(self):
+        _compare_graph_lr_scheduler_with_eager(
+            self,
+            base_lr=0.1,
+            iters=70,
+            lr_scheduler=flow.optim.lr_scheduler.CosineAnnealingWarmRestarts,
+            T_0=10,
+            T_mult=2,
+            eta_min=0.01,
+            atol=1e-5,
+        )
+
+    def test_cosine_annealing_warm_restarts_limit(self):
+        _compare_graph_lr_scheduler_with_eager(
+            self,
+            base_lr=0.1,
+            iters=50,
+            lr_scheduler=flow.optim.lr_scheduler.CosineAnnealingWarmRestarts,
+            T_0=10,
+            T_mult=2,
+            eta_min=0.01,
+            decay_rate=0.5,
+            restart_limit=2,
+            atol=1e-5,
+        )
+
 
 if __name__ == "__main__":
     unittest.main()

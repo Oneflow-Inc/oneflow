@@ -56,9 +56,9 @@ namespace oneflow {
   return Maybe<void>::Ok();
 }
 
-/* static */ Maybe<Symbol<Device>> _ncclLogicalAllReduceOp::InferDevice(
-    user_op::DeviceInferContext* ctx) {
-  return DeviceInferFn<&SyncLaunched>(ctx);
+/* static */ Maybe<Symbol<Stream>> _ncclLogicalAllReduceOp::InferDeviceAndStream(
+    user_op::DeviceAndStreamInferContext* ctx) {
+  return DeviceAndStreamInferFn<&SyncLaunched>(ctx);
 }
 
 /* static */ Maybe<void> _ncclLogicalReduceScatterOp::InferLogicalTensorDesc(
@@ -97,9 +97,9 @@ namespace oneflow {
   return Maybe<void>::Ok();
 }
 
-/* static */ Maybe<Symbol<Device>> _ncclLogicalReduceScatterOp::InferDevice(
-    user_op::DeviceInferContext* ctx) {
-  return DeviceInferFn<&SyncLaunched>(ctx);
+/* static */ Maybe<Symbol<Stream>> _ncclLogicalReduceScatterOp::InferDeviceAndStream(
+    user_op::DeviceAndStreamInferContext* ctx) {
+  return DeviceAndStreamInferFn<&SyncLaunched>(ctx);
 }
 
 /* static */ Maybe<void> _ncclLogicalAllGatherOp::InferLogicalTensorDesc(
@@ -137,9 +137,9 @@ namespace oneflow {
   return Maybe<void>::Ok();
 }
 
-/* static */ Maybe<Symbol<Device>> _ncclLogicalAllGatherOp::InferDevice(
-    user_op::DeviceInferContext* ctx) {
-  return DeviceInferFn<&SyncLaunched>(ctx);
+/* static */ Maybe<Symbol<Stream>> _ncclLogicalAllGatherOp::InferDeviceAndStream(
+    user_op::DeviceAndStreamInferContext* ctx) {
+  return DeviceAndStreamInferFn<&SyncLaunched>(ctx);
 }
 
 /* static */ Maybe<void> _ncclLogicalAllGatherNoncontinuousOp::InferLogicalTensorDesc(
@@ -179,9 +179,9 @@ namespace oneflow {
   return Maybe<void>::Ok();
 }
 
-/* static */ Maybe<Symbol<Device>> _ncclLogicalAllGatherNoncontinuousOp::InferDevice(
-    user_op::DeviceInferContext* ctx) {
-  return DeviceInferFn<&SyncLaunched>(ctx);
+/* static */ Maybe<Symbol<Stream>> _ncclLogicalAllGatherNoncontinuousOp::InferDeviceAndStream(
+    user_op::DeviceAndStreamInferContext* ctx) {
+  return DeviceAndStreamInferFn<&SyncLaunched>(ctx);
 }
 
 /* static */ Maybe<void> _ncclLogicalS2sOp::InferLogicalTensorDesc(user_op::InferContext* ctx) {
@@ -217,9 +217,9 @@ namespace oneflow {
   return Maybe<void>::Ok();
 }
 
-/* static */ Maybe<Symbol<Device>> _ncclLogicalS2sOp::InferDevice(
-    user_op::DeviceInferContext* ctx) {
-  return DeviceInferFn<&SyncLaunched>(ctx);
+/* static */ Maybe<Symbol<Stream>> _ncclLogicalS2sOp::InferDeviceAndStream(
+    user_op::DeviceAndStreamInferContext* ctx) {
+  return DeviceAndStreamInferFn<&SyncLaunched>(ctx);
 }
 
 }  // namespace oneflow

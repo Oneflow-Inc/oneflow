@@ -22,7 +22,7 @@ import oneflow as flow
 import os
 
 import oneflow.unittest
-from test_util import GenArgList
+from oneflow.test_utils.test_util import GenArgList
 
 
 def _test_eager_boxing_with_non_overlapping_placement_p_to_s1(
@@ -3456,142 +3456,110 @@ class TestEagerBoxingNToOneWithDiffDim(flow.unittest.TestCase):
             _test_eager_boxing_one_to_n_with_diff_dim(test_case, *arg)
 
 
-@flow.unittest.skip_unless_1n4d()
-@unittest.skipIf(os.getenv("ONEFLOW_TEST_CPU_ONLY"), "only test cpu cases")
-class TestEagerConsistentCast1DTo2DSBP(flow.unittest.TestCase):
-    def test_eager_consistent_cast_1d_to_2d_sbp(test_case):
-        x = np.ones((4, 8), dtype=np.int32)
-        placement1 = flow.placement("cuda", {0: range(4)})
-        placement2 = flow.placement("cuda", {0: range(4)}, (2, 2))
-        y = flow.tensor(
-            x,
-            dtype=flow.float32,
-            placement=placement1,
-            sbp=[flow.sbp.split(0)],
-            requires_grad=False,
-        )
-        z = y.to_consistent(
-            placement=placement2, sbp=[flow.sbp.broadcast, flow.sbp.split(0)]
-        )
-        test_case.assertEqual(z.placement, placement2)
-        test_case.assertTrue(
-            np.array_equal(z.to_local().numpy(), np.ones((2, 8), dtype=np.int32),)
-        )
-
-
-@flow.unittest.skip_unless_1n4d()
-@unittest.skipIf(os.getenv("ONEFLOW_TEST_CPU_ONLY"), "only test cpu cases")
-class TestEagerConsistentCast2DTo1DSBP(flow.unittest.TestCase):
-    def test_eager_consistent_cast_2d_to_1d_sbp(test_case):
-        x = np.ones((4, 8), dtype=np.int32)
-        placement1 = flow.placement("cuda", {0: range(4)})
-        placement2 = flow.placement("cuda", {0: range(4)}, (2, 2))
-        y = flow.tensor(
-            x,
-            dtype=flow.float32,
-            placement=placement2,
-            sbp=[flow.sbp.broadcast, flow.sbp.split(0)],
-            requires_grad=False,
-        )
-        z = y.to_consistent(placement=placement1, sbp=[flow.sbp.split(0)])
-        test_case.assertEqual(z.placement, placement1)
-        test_case.assertTrue(
-            np.array_equal(z.to_local().numpy(), np.ones((1, 8), dtype=np.int32),)
-        )
-
-
-def _test_eager_consistent_cast_1d_uneven_split(test_case, device_type, shape):
+def _test_asymmetric_mix_1d_2d_eager_boxing_with_random_placement(
+    test_case,
+    in_sbp,
+    out_sbp,
+    shape,
+    in_device_type,
+    out_device_type,
+    in_device_list,
+    out_device_list,
+):
+    if not isinstance(in_sbp, tuple):
+        in_sbp = (in_sbp,)
+    if not isinstance(out_sbp, tuple):
+        out_sbp = (out_sbp,)
+    in_placement = flow.placement(type=in_device_type, ranks=in_device_list)
+    out_placement = flow.placement(type=out_device_type, ranks=out_device_list)
     np_arr = np.random.uniform(-1e-05, 1e-05, shape)
-    placement = flow.placement(device_type, {0: range(flow.env.get_world_size())})
     x = flow.tensor(
-        np_arr, dtype=flow.float32, device=device_type, requires_grad=False,
+        np_arr, dtype=flow.float32, device=in_device_type, requires_grad=False,
     )
-    x = x.to_consistent(placement=placement, sbp=[flow.sbp.broadcast])
-    # B To S(0)
-    y = x.to_consistent(placement=placement, sbp=[flow.sbp.split(0)])
-    from oneflow.framework import balanced_splitter as balanced_splitter
-
-    s0_balanced_ranges = balanced_splitter.BalancedRanges(
-        shape[0], flow.env.get_world_size()
-    )
-    s0_range_of_this_rank = s0_balanced_ranges[flow.env.get_rank()]
-    test_case.assertEqual(y.placement, placement)
-    test_case.assertTrue(
-        np.array_equal(
-            y.to_local().numpy(),
-            x.to_local().numpy()[s0_range_of_this_rank[0] : s0_range_of_this_rank[1]],
-        )
-    )
-
-    # S(0) To S(1)
-    z = y.to_consistent(placement=placement, sbp=[flow.sbp.split(1)])
-    s1_balanced_ranges = flow.framework.balanced_splitter.BalancedRanges(
-        shape[1], flow.env.get_world_size()
-    )
-    s1_range_of_this_rank = s1_balanced_ranges[flow.env.get_rank()]
-
-    test_case.assertEqual(z.placement, placement)
-    test_case.assertTrue(
-        np.allclose(
-            z.to_local().numpy(),
-            x.to_local().numpy()[
-                ..., s1_range_of_this_rank[0] : s1_range_of_this_rank[1]
-            ],
-        )
-    )
-
-    # S(1) To B
-    w = z.to_consistent(placement=placement, sbp=[flow.sbp.broadcast])
-    test_case.assertEqual(w.placement, placement)
-
-    test_case.assertTrue(np.allclose(w.to_local().numpy(), x.to_local().numpy()))
+    x = x.to_global(in_placement, in_sbp)
+    y = x.to_global(out_placement, out_sbp)
+    test_case.assertTrue(y.sbp == out_sbp)
+    test_case.assertTrue(y.placement == out_placement)
+    test_case.assertTrue(np.allclose(x.numpy(), y.numpy()))
 
 
 @flow.unittest.skip_unless_1n4d()
 @unittest.skipIf(os.getenv("ONEFLOW_TEST_CPU_ONLY"), "only test cpu cases")
-class TestEagerConsistentCastOneDUnevenSplit(flow.unittest.TestCase):
-    def test_eager_consistent_cast_1d_uneven_split(test_case):
+class TestEagerBoxingAsymmetricMix1d2dWithRandomPlacement(flow.unittest.TestCase):
+    def test_eager_boxing_asymmetric_mix_1d_2d_with_random_placement(test_case):
         arg_dict = OrderedDict()
-        arg_dict["device_type"] = ["cpu", "cuda"]
-        arg_dict["shape"] = [(25, 33), (13, 17)]
+        sbp_dict = OrderedDict()
+        arg_dict["shape"] = [(12, 24), (12, 24, 12)]
+
+        arg_dict["in_device_type"] = ["cpu", "cuda"]
+        arg_dict["out_device_type"] = ["cpu", "cuda"]
+        arg_dict["in_device_list"] = [
+            [2],
+            [0, 1],
+            [1, 2, 3],
+            [0, 1, 2, 3],
+            [[0, 1, 2, 3]],
+            [[0, 1], [2, 3]],
+        ]
+        arg_dict["out_device_list"] = [
+            [1],
+            [3],
+            [2, 3],
+            [0, 1, 3],
+            [0, 1, 2, 3],
+            [[2], [3]],
+            [[0, 1], [2, 3]],
+        ]
+        sbp_1d = [
+            flow.sbp.split(0),
+            flow.sbp.split(1),
+            flow.sbp.broadcast,
+            flow.sbp.partial_sum,
+        ]
+        sbp_dict["in_sbp_1d"] = sbp_1d
+        sbp_dict["out_sbp_1d"] = sbp_1d
+
+        import itertools
+
+        sbp_2d = list(itertools.product(sbp_1d, sbp_1d))
+        sbp_dict["in_sbp_2d"] = sbp_2d
+        sbp_dict["out_sbp_2d"] = sbp_2d
+
+        is_2d_device_list = lambda x: isinstance(x[0], list)
+
         for arg in GenArgList(arg_dict):
-            _test_eager_consistent_cast_1d_uneven_split(test_case, *arg)
 
+            in_device_list = arg[-2]
+            out_device_list = arg[-1]
 
-def _test_eager_consistent_n_dim_reduce(test_case, device_type, src_sbp, dst_sbp):
-    np.random.seed(10)
-    np_arr = np.random.uniform(-1e-05, 1e-05, (16, 32))
-    placement0 = flow.placement(device_type, {0: [0]}, (1, 1))
-    placement1 = flow.placement(device_type, {0: range(4)}, (2, 2))
-
-    # oneflow.placement(device_type="cuda", machine_device_ids={0 : [0]}, hierarchy=(1, 1))
-    # (src_sbp, src_sbp)
-    x = flow.tensor(
-        np_arr, placement=placement0, sbp=[src_sbp, src_sbp], requires_grad=False,
-    )
-
-    # oneflow.placement(device_type="cuda", machine_device_ids={0 : [0, 1, 2, 3]}, hierarchy=(2, 2))
-    # (dst_sbp, dst_sbp)
-    y = x.to_consistent(placement=placement1, sbp=[dst_sbp, dst_sbp])
-
-    z = y.to_consistent(
-        placement=placement1, sbp=[flow.sbp.broadcast, flow.sbp.broadcast]
-    )
-    test_case.assertEqual(z.placement, placement1)
-
-    test_case.assertTrue(np.allclose(z.to_local().numpy(), np_arr))
-
-
-@flow.unittest.skip_unless_1n4d()
-@unittest.skipIf(os.getenv("ONEFLOW_TEST_CPU_ONLY"), "only test cpu cases")
-class TestEagerConsistentCastNDimReduceBoxing(flow.unittest.TestCase):
-    def test_eager_consistent_n_dim_reduce(test_case):
-        arg_dict = OrderedDict()
-        arg_dict["device_type"] = ["cpu", "cuda"]
-        arg_dict["src_sbp"] = [flow.sbp.broadcast, flow.sbp.split(0), flow.sbp.split(1)]
-        arg_dict["dst_sbp"] = [flow.sbp.broadcast, flow.sbp.split(0), flow.sbp.split(1)]
-        for arg in GenArgList(arg_dict):
-            _test_eager_consistent_n_dim_reduce(test_case, *arg)
+            is_in_2d_n_device_list = is_2d_device_list(in_device_list)
+            is_out_2d_n_device_list = is_2d_device_list(out_device_list)
+            if is_in_2d_n_device_list and is_out_2d_n_device_list:
+                for in_sbp in sbp_dict["in_sbp_2d"]:
+                    for out_sbp in sbp_dict["out_sbp_2d"]:
+                        _test_asymmetric_mix_1d_2d_eager_boxing_with_random_placement(
+                            test_case, in_sbp, out_sbp, *arg
+                        )
+            elif is_in_2d_n_device_list and not is_out_2d_n_device_list:
+                for in_sbp in sbp_dict["in_sbp_2d"]:
+                    for out_sbp in sbp_dict["out_sbp_1d"]:
+                        _test_asymmetric_mix_1d_2d_eager_boxing_with_random_placement(
+                            test_case, in_sbp, out_sbp, *arg
+                        )
+            elif not is_in_2d_n_device_list and is_out_2d_n_device_list:
+                for in_sbp in sbp_dict["in_sbp_1d"]:
+                    for out_sbp in sbp_dict["out_sbp_2d"]:
+                        _test_asymmetric_mix_1d_2d_eager_boxing_with_random_placement(
+                            test_case, in_sbp, out_sbp, *arg
+                        )
+            elif not is_in_2d_n_device_list and not is_out_2d_n_device_list:
+                for in_sbp in sbp_dict["in_sbp_1d"]:
+                    for out_sbp in sbp_dict["out_sbp_1d"]:
+                        _test_asymmetric_mix_1d_2d_eager_boxing_with_random_placement(
+                            test_case, in_sbp, out_sbp, *arg
+                        )
+            else:
+                raise NotImplementedError
 
 
 if __name__ == "__main__":
