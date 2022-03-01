@@ -234,7 +234,7 @@ class ConsistentStaticZerosFunctor {
         << "The dimension of device shape of placement must be the same as sbp. "
         << placement->hierarchy()->NumAxes() << " vs " << sbp_tuple.size();
     auto nd_sbp = JUST(GetNdSbp(sbp_tuple));
-    JUST(MetaInfoConsistencyCheck(placement, nd_sbp));
+    JUST(MetaInfoConsistencyCheck(placement, nd_sbp, 0));
     std::shared_ptr<Tensor> tensor = JUST(StaticZerosTensor::MakeTensor(
         std::make_shared<const Shape>(shape), dtype->data_type(), placement, nd_sbp));
     return tensor;
