@@ -513,13 +513,6 @@ class Graph(object):
             if (s_level > 0) or (s_level == 0 and v_level <= self._debug_max_v_level):
                 print(msg, flush=True)
 
-    # def _print_lr(self):
-    #     print("------test-------")
-    #     msg = "lr: " + str(
-    #         self._opts[0]["optim"].state_dict()["param_groups"][0]["_options"]["lr"]
-    #     )
-    #     self.__print(0, 0, msg)
-
     @property
     def _config_proto(self):
         return self.config.proto

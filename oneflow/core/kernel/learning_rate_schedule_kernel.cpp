@@ -287,8 +287,10 @@ void LearningRateScheduleKernel::ForwardDataContent(KernelContext* ctx) const {
   if (conf.has_learning_rate_decay()) {
     learning_rate = GetDecayedLearningRate(conf.learning_rate_decay(), learning_rate, train_step);
   }
-  std::cout << "Last step " << train_step << " adjusting learning rate to " << learning_rate
-            << std::endl;
+  if (std::getenv("GRAPH_DEBUG_STEP_LR") != nullptr && train_step % 100 == 0) {
+    std::cout << "Last step " << train_step << " adjusting learning rate to " << learning_rate
+              << std::endl;
+  }
   *ctx->BnInOp2Blob("out")->mut_dptr<float>() = learning_rate;
   if (Global<ResourceDesc, ForSession>::Get()->enable_debug_mode()) {
     (*log_stream_) << std::to_string(train_step) << ", " << std::to_string(learning_rate) << "\n";
