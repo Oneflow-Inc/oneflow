@@ -26,12 +26,16 @@ from test_nms import nms_np
 def _test_nms(test_case, placement, sbp):
     iou = 0.5
     boxes, scores = create_tensors_with_iou(800, iou)
-    
-    global_boxes = flow.tensor(boxes, dtype=flow.float32).to_global(placement=flow.env.all_device_placement("cpu"), sbp=flow.sbp.broadcast)
+
+    global_boxes = flow.tensor(boxes, dtype=flow.float32).to_global(
+        placement=flow.env.all_device_placement("cpu"), sbp=flow.sbp.broadcast
+    )
     np_boxes = global_boxes.numpy()
     global_boxes = global_boxes.to_global(placement=placement, sbp=sbp)
 
-    global_scores = flow.tensor(scores, dtype=flow.float32).to_global(placement=flow.env.all_device_placement("cpu"), sbp=flow.sbp.broadcast)
+    global_scores = flow.tensor(scores, dtype=flow.float32).to_global(
+        placement=flow.env.all_device_placement("cpu"), sbp=flow.sbp.broadcast
+    )
     np_scores = global_scores.numpy()
     global_scores = global_scores.to_global(placement=placement, sbp=sbp)
 
@@ -48,7 +52,7 @@ class TestNMS(flow.unittest.TestCase):
             # TODO: nms only has cuda kernel at now.
             if placement.type == "cpu":
                 continue
-            for sbp in all_sbp(placement, max_dim=1):
+            for sbp in all_sbp(placement, except_split=True):
                 _test_nms(test_case, placement, sbp)
 
 
