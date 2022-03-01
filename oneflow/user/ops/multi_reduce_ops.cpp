@@ -45,7 +45,6 @@ Maybe<void> GetMultiReduceOpSbp(user_op::SbpContext* ctx) {
   for (int64_t i = 0; i < min_num_axes; ++i) {
     ctx->NewBuilder().Split(user_op::OpArg("x", 0), i).PartialSum(user_op::OpArg("y", 0)).Build();
   }
-  ctx->NewBuilder().PartialSum(user_op::OpArg("x", 0)).PartialSum(user_op::OpArg("y", 0)).Build();
   return Maybe<void>::Ok();
 }
 
@@ -80,7 +79,6 @@ Maybe<void> GetLocalMultiReduceOpSbp(user_op::SbpContext* ctx) {
   for (int64_t i = 0; i < min_num_axes; ++i) {
     ctx->NewBuilder().Split(user_op::OpArg("x", 0), i).Split(user_op::OpArg("y", 0), 0).Build();
   }
-  ctx->NewBuilder().PartialSum(user_op::OpArg("x", 0)).PartialSum(user_op::OpArg("y", 0)).Build();
   return Maybe<void>::Ok();
 }
 
