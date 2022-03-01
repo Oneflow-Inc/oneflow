@@ -22,6 +22,38 @@ from oneflow.test_utils.automated_test_util import *
 from oneflow.test_utils.test_util import GenArgDict
 
 
+@autotest(n=1, auto_backward=False, check_graph=False)
+def _test_arange_with_random_data(test_case, placement, sbp):
+    start = random(0, 10).to(int).value()
+    end = start + random(0, 10).to(int).value()
+    step = random(1, max(2, end - start)).to(int).value()
+    start = start * 8
+    end = end * 8
+    x = torch.arange(start=start, end=end, step=step)
+    x.oneflow = flow.arange(
+        start=start, end=end, step=step, placement=placement, sbp=sbp
+    )
+    return x
+
+
+@autotest(n=1, auto_backward=True, check_graph=False)
+def _test_arange_with_float_delta(test_case, placement, sbp):
+    start = random(0, 10).to(int).value()
+    end = start + random(0, 10).to(int).value()
+    step = random(1, max(2, end - start)).to(float).value()
+    start = start * 8
+    end = end * 8
+    x = torch.arange(start=start, end=end, step=step, requires_grad=True)
+    x.oneflow = flow.arange(
+        start=start,
+        end=end,
+        step=step,
+        placement=placement,
+        sbp=sbp,
+        requires_grad=True,
+    )
+    return x
+
 def _test_consistent_arange(test_case, start, end, step, placement, sbp):
     x = flow.arange(start, end, step, placement=placement, sbp=sbp)
 
@@ -60,6 +92,8 @@ class TestRandConsistent(flow.unittest.TestCase):
                     _test_consistent_arange(
                         test_case,**args, placement = placement, sbp = sbp
                     )
+                    _test_arange_with_random_data(test_case, placement, sbp)
+                    _test_arange_with_float_delta(test_case, placement, sbp)
 
     @unittest.skipIf(os.getenv("ONEFLOW_TEST_CPU_ONLY"), "only test cpu cases")
     @flow.unittest.skip_unless_1n2d()
