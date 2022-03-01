@@ -19,6 +19,7 @@ limitations under the License.
 #include "oneflow/core/framework/framework.h"
 #include "oneflow/user/kernels/distributions/common.h"
 #include "oneflow/user/kernels/distributions/uniform_distribution.h"
+#include "oneflow/user/kernels/random_seed_util.h"
 
 namespace oneflow {
 
@@ -33,7 +34,9 @@ class UniformKernel final : public user_op::OpKernel {
   std::shared_ptr<user_op::OpKernelState> CreateOpKernelState(
       user_op::KernelInitContext* ctx) const override {
     const auto& generator = CHECK_JUST(one::MakeGenerator(device_type));
-    generator->set_current_seed(ctx->Attr<int64_t>("seed"));
+    /* each rank get a different seed to generate the same distribution,
+       but different values of local tensor */
+    generator->set_current_seed(ctx->Attr<int64_t>("seed") + GetOpKernelSeed(ctx));
     return std::make_shared<DistributionKernelState>(generator);
   }
 
