@@ -858,7 +858,7 @@ Maybe<void> Operator::InferMirroredSignatureIf(
 // Compute time complexity for given blob description and sbp signature.
 // Use function to replace the HashMap from logical blob id to blob description pointer.
 Maybe<double> Operator::GetComputeComplexity(
-    cfg::NdSbpSignature* sbp_signature,
+    NdSbpSignature* sbp_signature,
     std::function<const BlobDesc&(const std::string& bn)> logical_blob_desc4bn,
     const ParallelDesc& parallel_desc) const {
   const auto& sbp_bn_in_op2nd_sbp = sbp_signature->bn_in_op2nd_sbp();
@@ -868,7 +868,7 @@ Maybe<double> Operator::GetComputeComplexity(
   auto ComputeComplexity4Blobs = [&](const PbRpf<std::string>& bns) -> Maybe<void> {
     for (const auto& bn : bns) {
       const BlobDesc& logical_blob_desc = logical_blob_desc4bn(bn);
-      const cfg::NdSbp& nd_sbp = sbp_bn_in_op2nd_sbp[bn];
+      const NdSbp& nd_sbp = sbp_bn_in_op2nd_sbp.at(bn);
       CHECK_EQ_OR_RETURN(nd_sbp.sbp_parallel_size(), parallel_hierarchy.NumAxes())
           << "At this moment, the dimension of nd SBP should be equal to the depth of hierarchy in "
           << "parallel description.";
@@ -1326,7 +1326,7 @@ Maybe<void> Operator::ToOpAttribute(OpAttribute* op_attribute) const {
           const auto parallel_conf =
               std::make_shared<cfg::ParallelConf>(pair.second->parallel_conf());
           const auto MakeParallelDescSymbol = [&parallel_conf]() -> Maybe<int64_t> {
-            int64_t symbol_id;
+            int64_t symbol_id = 0;
             const auto BuildInstruction =
                 [&symbol_id, &parallel_conf](InstructionsBuilder* builder) -> Maybe<void> {
               symbol_id = JUST(JUST(builder->GetParallelDescSymbol(parallel_conf))->symbol_id());

@@ -33,7 +33,7 @@ class GetNdSbpSignatureListContext {
  public:
   virtual ~GetNdSbpSignatureListContext() = default;
 
-  virtual void AddNdSbpSignature(cfg::NdSbpSignature&) = 0;
+  virtual void AddNdSbpSignature(NdSbpSignature&) = 0;
   virtual const Shape& parallel_hierarchy() = 0;
   virtual const Shape& BlobShape4InputArgNameAndIndex(const std::string& arg_name,
                                                       int32_t index) const = 0;

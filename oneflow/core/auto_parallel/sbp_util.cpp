@@ -17,7 +17,6 @@ limitations under the License.
 #include <memory>
 #include "sbp_util.h"
 #include "oneflow/core/common/data_type.h"
-#include "oneflow/core/job/sbp_parallel.cfg.h"
 #include "oneflow/core/job/sbp_parallel.h"
 #include "oneflow/core/graph/boxing/hierarchical_sub_task_graph_builder_impl.h"
 

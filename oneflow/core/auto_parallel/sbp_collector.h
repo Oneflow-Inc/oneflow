@@ -36,10 +36,10 @@ namespace auto_parallel {
 
 class SbpCollector {
  public:
-  // Stores all the possible cfg::NdSbp.
-  std::unordered_map<::oneflow::cfg::NdSbp, int32_t> SbpParallelUniverse;
+  // Stores all the possible NdSbp.
+  std::unordered_map<::oneflow::NdSbp, int32_t> SbpParallelUniverse;
   // Relationship between id and Sbp Parallel
-  std::vector<::oneflow::cfg::NdSbp> id2SbpParallel;
+  std::vector<::oneflow::NdSbp> id2SbpParallel;
   // Calculate number of downstream sbp
   std::vector<int32_t> accumulator;
   // A binary set buffer to indicate sets of downstream sbp
@@ -49,32 +49,32 @@ class SbpCollector {
 
   ~SbpCollector() {}
 
-  // Collect all the possible Sbp Parallel from a cfg::NdSbpSignature
-  void CollectUniverse(cfg::NdSbpSignature& sbp_);
+  // Collect all the possible Sbp Parallel from a NdSbpSignature
+  void CollectUniverse(NdSbpSignature& sbp_);
   // Collect all the possible Sbp Parallel from a SbpNode
-  void CollectUniverse(SbpNode<cfg::NdSbpSignature>* sbp_node);
+  void CollectUniverse(SbpNode<NdSbpSignature>* sbp_node);
   // Collect all the possible Sbp Parallel from a SbpGraph
-  void CollectUniverse(SbpGraph<cfg::NdSbpSignature>& sbp_graph);
+  void CollectUniverse(SbpGraph<NdSbpSignature>& sbp_graph);
   // Initialize sbp proxy with given parallel candidates of a blob
-  SbpNode<cfg::NdSbpSignature>* InitializePorxy(
-      SbpGraph<cfg::NdSbpSignature>& sbp_graph,
+  SbpNode<NdSbpSignature>* InitializePorxy(
+      SbpGraph<NdSbpSignature>& sbp_graph,
       std::unordered_set<BinarySet, BinarySetHasher>& ParallelCandidates);
 
   // Initialize copy cost from producer to proxy of producer
-  void InitializeCopyCostFromNode2Proxy(SbpNode<cfg::NdSbpSignature>* sbp_proxy,
+  void InitializeCopyCostFromNode2Proxy(SbpNode<NdSbpSignature>* sbp_proxy,
                                         const LogicalBlobId& lbi);
 
   // Initialize copy cost from proxy of producer to consumers
   void InitializeCopyCostFromProxy2Consumer(
-      SbpNode<cfg::NdSbpSignature>* sbp_proxy,
+      SbpNode<NdSbpSignature>* sbp_proxy,
       HashMap<std::pair<std::string, std::string>, std::unordered_set<int32_t>>&
           consumer_bn2sbp_set,
-      HashMap<std::string, SbpNode<cfg::NdSbpSignature>*>& op_name2sbp_node);
+      HashMap<std::string, SbpNode<NdSbpSignature>*>& op_name2sbp_node);
 
   // Export list of possible combination of Sbp Parallels
   void ProxySbpCandidate(const OpGraph& op_graph,
-                         HashMap<std::string, SbpNode<cfg::NdSbpSignature>*>& op_name2sbp_node,
-                         SbpGraph<cfg::NdSbpSignature>& sbp_graph);
+                         HashMap<std::string, SbpNode<NdSbpSignature>*>& op_name2sbp_node,
+                         SbpGraph<NdSbpSignature>& sbp_graph);
 
  private:
   // Depth first search to collect Sbp Parallel information for different lbis
@@ -82,7 +82,7 @@ class SbpCollector {
       HashMap<std::pair<std::string, std::string>, std::unordered_set<int32_t>>::iterator it,
       HashMap<std::pair<std::string, std::string>, std::unordered_set<int32_t>>&
           consumer_bn2sbp_set,
-      HashMap<std::string, SbpNode<cfg::NdSbpSignature>*>& op_name2sbp_node,
+      HashMap<std::string, SbpNode<NdSbpSignature>*>& op_name2sbp_node,
       std::unordered_set<BinarySet, BinarySetHasher>& ParallelCandidates);
 };  // class SbpCollector
 

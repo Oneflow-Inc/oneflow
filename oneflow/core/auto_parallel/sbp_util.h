@@ -17,7 +17,6 @@ limitations under the License.
 #define ONEFLOW_CORE_AUTO_PARALLEL_SBP_UTIL_H_
 
 #include "oneflow/core/graph/op_graph.h"
-#include "oneflow/core/job/sbp_parallel.pb.h"
 
 namespace oneflow {
 namespace auto_parallel {

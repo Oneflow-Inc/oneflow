@@ -23,12 +23,12 @@ limitations under the License.
 namespace oneflow {
 
 namespace {
-Maybe<void> InferOutputOpNdSbpSignature(cfg::NdSbpSignature* nd_sbp_signature,
+Maybe<void> InferOutputOpNdSbpSignature(NdSbpSignature* nd_sbp_signature,
                                         const ParallelDesc& parallel_desc,
                                         const OperatorConf& op_conf) {
   const InterfaceBlobConf& blob_conf = op_conf.output_conf().blob_conf();
-  cfg::NdSbp& in_nd_sbp = (*nd_sbp_signature->mutable_bn_in_op2nd_sbp())["in"];
-  cfg::NdSbp& out_nd_sbp = (*nd_sbp_signature->mutable_bn_in_op2nd_sbp())["out"];
+  NdSbp& in_nd_sbp = (*nd_sbp_signature->mutable_bn_in_op2nd_sbp())["in"];
+  NdSbp& out_nd_sbp = (*nd_sbp_signature->mutable_bn_in_op2nd_sbp())["out"];
   JUST(InterfaceOpUtil::ParseNdSbpFromBlobConf(blob_conf, parallel_desc, &in_nd_sbp));
   JUST(InterfaceOpUtil::ParseNdSbpFromBlobConf(blob_conf, parallel_desc, &out_nd_sbp));
   return Maybe<void>::Ok();
@@ -79,15 +79,15 @@ Maybe<void> OutputOp::InferOutBlobDescs(
   return Maybe<void>::Ok();
 }
 
-Maybe<void> OutputOp::GetSbpSignatures(cfg::SbpSignatureList* sbp_sig_list) const {
-  cfg::SbpSignature* sbp = sbp_sig_list->mutable_sbp_signature()->Add();
+Maybe<void> OutputOp::GetSbpSignatures(SbpSignatureList* sbp_sig_list) const {
+  SbpSignature* sbp = sbp_sig_list->mutable_sbp_signature()->Add();
   CHECK_EQ_OR_RETURN(JUST(GetOpParallelDesc())->hierarchy()->NumAxes(), 1)
       << "Only support 1d sbp now.";
   // Get sbp from BlobConf
   const InterfaceBlobConf& blob_conf = op_conf().output_conf().blob_conf();
   // TODO: make sure blob_conf must set nd_sbp
   CHECK_OR_RETURN(blob_conf.has_nd_sbp());
-  const cfg::SbpParallel& sbp_parallel = cfg::SbpParallel(blob_conf.nd_sbp().sbp_parallel(0));
+  const SbpParallel& sbp_parallel = SbpParallel(blob_conf.nd_sbp().sbp_parallel(0));
   if (sbp_parallel.has_broadcast_parallel()) {
     SbpSignatureBuilder().Broadcast("in").Broadcast("out").Build(sbp);
   } else if (sbp_parallel.has_partial_sum_parallel()) {
@@ -103,8 +103,8 @@ Maybe<void> OutputOp::GetSbpSignatures(cfg::SbpSignatureList* sbp_sig_list) cons
 
 Maybe<void> OutputOp::GetNdSbpSignatureList(
     const std::function<Maybe<const BlobDesc&>(const std::string&)>& LogicalBlobDesc4Ibn,
-    const ParallelDesc& parallel_desc, std::vector<cfg::NdSbpSignature>* nd_sbp_sig_list) const {
-  cfg::NdSbpSignature nd_sbp_signature;
+    const ParallelDesc& parallel_desc, std::vector<NdSbpSignature>* nd_sbp_sig_list) const {
+  NdSbpSignature nd_sbp_signature;
   JUST(InferOutputOpNdSbpSignature(&nd_sbp_signature, parallel_desc, op_conf()));
   nd_sbp_sig_list->emplace_back(nd_sbp_signature);
   return Maybe<void>::Ok();

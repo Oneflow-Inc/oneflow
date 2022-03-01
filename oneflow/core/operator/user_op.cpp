@@ -488,7 +488,7 @@ class UserOpComputeComplexityFnContext : public user_op::ComputeComplexityFnCont
 
   UserOpComputeComplexityFnContext(
       const OperatorConf& op_conf, const ParallelDesc& parallel_desc,
-      const cfg::NdSbpSignature* sbp_signature,
+      const NdSbpSignature* sbp_signature,
       std::function<const BlobDesc&(const std::string& bn)> logical_blob_desc4bn)
       : user_op::ComputeComplexityFnContext(user_op::UserOpConfWrapper(op_conf)),
         parallel_desc_(parallel_desc),
@@ -532,8 +532,7 @@ class UserOpComputeComplexityFnContext : public user_op::ComputeComplexityFnCont
     return it->second.mut_is_dynamic();
   }
 
-  const cfg::NdSbp NdSbp4ArgNameAndIndex(const std::string& arg_name,
-                                         int32_t index) const override {
+  const NdSbp NdSbp4ArgNameAndIndex(const std::string& arg_name, int32_t index) const override {
     const auto& bn2sbp = sbp_signature_->bn_in_op2nd_sbp();
     std::string bn = GenRepeatedBn(arg_name, index);
     CHECK(bn2sbp.find(bn) != bn2sbp.end());
@@ -543,13 +542,13 @@ class UserOpComputeComplexityFnContext : public user_op::ComputeComplexityFnCont
   const ArgVec& inputs() const override { return inputs_; }
   const ArgVec& outputs() const override { return outputs_; }
   const ParallelDesc& parallel_desc() const override { return parallel_desc_; };
-  const cfg::NdSbpSignature* GetNdSbpSignature() const override { return sbp_signature_; }
+  const NdSbpSignature* GetNdSbpSignature() const override { return sbp_signature_; }
 
  private:
   ArgVec inputs_;
   ArgVec outputs_;
   const ParallelDesc parallel_desc_;
-  const cfg::NdSbpSignature* sbp_signature_;
+  const NdSbpSignature* sbp_signature_;
   HashMap<std::pair<std::string, int32_t>, user_op::NaiveTensorDesc> arg2tensor_desc_;
 };
 
@@ -558,7 +557,7 @@ class UserOpGetNdSbpSignatureListContext : public user_op::GetNdSbpSignatureList
   UserOpGetNdSbpSignatureListContext(
       const UserOp* op,
       std::function<Maybe<const BlobDesc&>(const std::string&)> LogicalBlobDesc4Ibn,
-      const ParallelDesc& parallel_desc, std::vector<cfg::NdSbpSignature>* nd_sbp_sig_list)
+      const ParallelDesc& parallel_desc, std::vector<NdSbpSignature>* nd_sbp_sig_list)
       : user_op::GetNdSbpSignatureListContext(user_op::UserOpConfWrapper(op->user_op_conf())),
         op_(op),
         logical_blob_desc4ibn_(std::move(LogicalBlobDesc4Ibn)),
@@ -566,7 +565,7 @@ class UserOpGetNdSbpSignatureListContext : public user_op::GetNdSbpSignatureList
         nd_sbp_sig_list_(nd_sbp_sig_list) {}
   ~UserOpGetNdSbpSignatureListContext() override = default;
 
-  void AddNdSbpSignature(cfg::NdSbpSignature& nd_sbp_sig) override {
+  void AddNdSbpSignature(NdSbpSignature& nd_sbp_sig) override {
     nd_sbp_sig_list_->emplace_back(nd_sbp_sig);
   }
 
@@ -583,7 +582,7 @@ class UserOpGetNdSbpSignatureListContext : public user_op::GetNdSbpSignatureList
   const UserOp* op_;
   std::function<Maybe<const BlobDesc&>(const std::string&)> logical_blob_desc4ibn_;
   const ParallelDesc parallel_desc_;
-  std::vector<cfg::NdSbpSignature>* nd_sbp_sig_list_;
+  std::vector<NdSbpSignature>* nd_sbp_sig_list_;
 };
 
 Maybe<void> UserOp::InitFromOpConf() {
@@ -832,7 +831,7 @@ Maybe<void> UserOp::GetSbpSignatures(
 }
 
 Maybe<double> UserOp::GetComputeComplexity(
-    cfg::NdSbpSignature* sbp_signature,
+    NdSbpSignature* sbp_signature,
     std::function<const BlobDesc&(const std::string& bn)> logical_blob_desc4bn,
     const ParallelDesc& parallel_desc) const {
   if (val_->compute_complexity_fn) {
@@ -894,9 +893,9 @@ Maybe<void> UserOp::InferNdSbpSignature(
 
 Maybe<void> UserOp::GetNdSbpSignatureList(
     const std::function<Maybe<const BlobDesc&>(const std::string&)>& LogicalBlobDesc4Ibn,
-    const ParallelDesc& parallel_desc, std::vector<cfg::NdSbpSignature>* nd_sbp_sig_list) const {
+    const ParallelDesc& parallel_desc, std::vector<NdSbpSignature>* nd_sbp_sig_list) const {
   if (val_->get_nd_sbp_list_fn) {
-    cfg::NdSbpSignature empty_sbp_signature;
+    NdSbpSignature empty_sbp_signature;
     UserOpGetNdSbpSignatureListContext user_op_get_nd_sbp_list_context(
         this, LogicalBlobDesc4Ibn, parallel_desc, nd_sbp_sig_list);
     return val_->get_nd_sbp_list_fn(&user_op_get_nd_sbp_list_context);

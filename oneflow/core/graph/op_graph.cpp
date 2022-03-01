@@ -18,6 +18,8 @@ limitations under the License.
 #include "oneflow/core/job/job_builder.h"
 #include "oneflow/core/job/mirrored_sig_infer_hint.h"
 #include "oneflow/core/job/lazy_mode.h"
+#include "oneflow/core/auto_parallel/algorithm_util.h"
+#include "oneflow/core/framework/nd_sbp.h"
 
 namespace oneflow {
 
@@ -582,7 +584,7 @@ void OpGraph::PrintSBPGraphDebugInfo() const {
       auto producer_node = op_node->MutSrcNode4Ibn(ibn);
       std::cout << "Pre Op:" << producer_node->op().op_name() << ": " << ibn;
       const auto& this_sbp_parallel = op_node->NdSbp4BnInOp(ibn);
-      std::cout << ", " << NdSbpParallelToString(this_sbp_parallel);
+      std::cout << ", " << NdSbpToString(this_sbp_parallel);
       const auto input_blob_modifier_ = op_node->op().InputBlobModifier4Ibn(ibn);
       bool is_same_sbp = input_blob_modifier_.has_is_mutable() && input_blob_modifier_.is_mutable();
       if (is_same_sbp) std::cout << ", same SBP";
@@ -598,7 +600,7 @@ void OpGraph::PrintSBPGraphDebugInfo() const {
       const auto& obn = op_output_bns[j];
       std::cout << "Out Op:" << obn;
       const auto& this_sbp_parallel = op_node->NdSbp4BnInOp(obn);
-      std::cout << ", " << NdSbpParallelToString(this_sbp_parallel);
+      std::cout << ", " << NdSbpToString(this_sbp_parallel);
       std::cout << ", "
                 << op_node->LogicalBlobDesc4Lbi(op_node->op().BnInOp2Lbi(obn)).shape().elem_cnt();
       std::cout << std::endl;
