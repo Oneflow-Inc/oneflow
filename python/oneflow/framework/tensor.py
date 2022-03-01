@@ -886,12 +886,12 @@ def _nonzero(self, as_tuple=False):
     return flow.nonzero(self, as_tuple)
 
 
-def _max(self, dim=None, keepdim=False):
-    return flow.max(self, dim, keepdim)
+def _max(self, *args, **kwargs):
+    return flow.max(self, *args, **kwargs)
 
 
-def _min(self, dim=None, keepdim=False):
-    return flow.min(self, dim, keepdim)
+def _min(self, *args, **kwargs):
+    return flow.min(self, *args, **kwargs)
 
 
 def _sum(self, dim=None, keepdim=False):
