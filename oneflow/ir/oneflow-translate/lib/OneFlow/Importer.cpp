@@ -334,20 +334,15 @@ LogicalResult Importer::AddOpConf(const ::oneflow::OperatorConf& op,
 llvm::Optional<Type> Importer::GetTypeFromOneFlowDataType(::oneflow::DataType dt) {
   {
     if (dt == ::oneflow::DataType::kInvalidDataType) { return llvm::None; }
-    if (dt == ::oneflow::DataType::kChar) { return llvm::None; }
     if (dt == ::oneflow::DataType::kFloat) { return GetBuilder().getF32Type(); }
     if (dt == ::oneflow::DataType::kDouble) { return GetBuilder().getF64Type(); }
     if (dt == ::oneflow::DataType::kInt8) { return GetBuilder().getIntegerType(8, true); }
     if (dt == ::oneflow::DataType::kInt32) { return GetBuilder().getI32Type(); }
     if (dt == ::oneflow::DataType::kInt64) { return GetBuilder().getI64Type(); }
     if (dt == ::oneflow::DataType::kUInt8) { return GetBuilder().getIntegerType(8, false); }
-    if (dt == ::oneflow::DataType::kOFRecord) { return llvm::None; }
     if (dt == ::oneflow::DataType::kFloat16) { return GetBuilder().getF16Type(); }
     if (dt == ::oneflow::DataType::kBool) { return GetBuilder().getI8Type(); }
-    if (dt == ::oneflow::DataType::kTensorBuffer) {
-      llvm::errs() << "unsupported data type: " << dt << "\n";
-      return llvm::None;
-    }
+    llvm::errs() << "unsupported data type: " << dt << "\n";
     return llvm::None;
   }
 }
