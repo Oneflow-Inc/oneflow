@@ -181,8 +181,6 @@ class OneDnnBroadcastElementwiseBinaryImpl : public BroadcastElementwiseBinary {
     CpuStream* cpu_stream = stream->As<CpuStream>();
     size_t num_threads = static_cast<CpuDevice*>(cpu_stream->device())->GetNumThreads();
     CpuNumThreadsGuard guard(num_threads);
-    printf("thread = %ld\n",
-           tbb::global_control::active_value(tbb::global_control::max_allowed_parallelism));
 
     dnnl::engine* onednn_engine = stream->As<CpuStream>()->onednn_engine();
     dnnl::stream* onednn_stream = stream->As<CpuStream>()->onednn_stream();
