@@ -785,7 +785,7 @@ std::string GlobalNorm(const OpGraph& op_graph, JobBuilder* job_builder,
   std::vector<std::string> group_lbns;
   std::vector<ParallelConf> group_parallel_confs;
   group_lbns.reserve(lbi2diff_lbi.size());
-  group_lbns.reserve(lbi2diff_lbi.size());
+  group_parallel_confs.reserve(lbi2diff_lbi.size());
 
   auto GroupNorm = [&](const ParallelDesc& parallel_desc, const NdSbp& nd_sbp,
                        const std::vector<LogicalBlobId>& lbis) {
@@ -927,7 +927,7 @@ void ClipGradientByGlobalNorm(const OpGraph& op_graph, JobBuilder* job_builder,
           .Build();
   job_builder->AddOps(parallel_conf, {clamp_coeff_op.op_conf()});
 
-  const std::string& coeff_lbn = clamp_coeff_op.output("z", 0);
+  const std::string& coeff_lbn = clamp_coeff_op.output("y", 0);
   for (auto& pair : *lbi2diff_lbi) {
     const LogicalBlobId& lbi = pair.first;
     LogicalBlobId& diff_lbi = pair.second;
