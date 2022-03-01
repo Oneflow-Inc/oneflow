@@ -105,8 +105,6 @@ Maybe<void> CublasFusedMLP::Apply(const CublasFusedMLPCaptureState* ctx,
   in_grads->resize(1 + 2 * weight_num);
   std::shared_ptr<one::Tensor> last_bias_dy = JUST(VectorAt(out_grads, 0));
 
-  if (!ctx->x_requires_grad) { return Maybe<void>::Ok(); }
-
   if (!ctx->skip_final_activation) {
     // step1: use dy and final output to get last layer's relu grad.
     last_bias_dy = JUST(functional::ReluGrad(JUST(VectorAt(out_grads, 0)),
