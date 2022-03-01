@@ -22,6 +22,10 @@ def OneFlow_IsOpConfCompatible : NativeOpTrait<"IsOpConfCompatible">;
 def OneFlow_IsImportCompatible : NativeOpTrait<"IsImportCompatible">;
 def OneFlow_AlternativeOp : NativeOpTrait<"IsAlternative">;
 def OneFlow_TensorSource : NativeOpTrait<"TensorSource">;
+def OneFlow_OnlyExistsInIR : NativeOpTrait<"OnlyExistsInIR">;
+
+class OneFlow_IROp<string mnemonic, list<Trait> traits = []> :
+        Op<OneFlow_Dialect, mnemonic, !listconcat(traits, [OneFlow_OnlyExistsInIR])> {}
 
 class OneFlow_BaseOp<string mnemonic, list<Trait> traits = []> :
         Op<OneFlow_Dialect, mnemonic, !listconcat(traits, [OneFlow_IsOpConfCompatible])> {
@@ -59,7 +63,7 @@ class OneFlow_BaseOp<string mnemonic, list<Trait> traits = []> :
   bit has_get_sbp_fn = 0;
   bit has_sbp_signature_infer_fn = 0;
   bit has_data_type_infer_fn = 0;
-  bit has_device_infer_fn = 0;
+  bit has_device_and_stream_infer_fn = 0;
   bit has_input_arg_modify_fn = 0;
   bit has_output_arg_modify_fn = 0;
   bit has_output_blob_time_shape_infer_fn = 0;
@@ -110,12 +114,12 @@ class OneFlow_ConvolutionBaseOp<string mnemonic, list<Trait> traits = []> :
     "computes the output."
     }];
     let input = (ins
-      AnyType:$in,
-      AnyType:$weight,
-      Optional<AnyType>:$bias,
-      Optional<AnyType>:$bias_multiplier
+      OneFlow_Tensor:$in,
+      OneFlow_Tensor:$weight,
+      Optional<OneFlow_Tensor>:$bias,
+      Optional<OneFlow_Tensor>:$bias_multiplier
     );
-    let output = (outs AnyType:$out);
+    let output = (outs OneFlow_Tensor:$out);
     let attrs = (ins
       DefaultValuedAttr<SI32Attr, "0">:$filters,
       SI32ArrayAttr:$padding_before,
