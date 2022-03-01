@@ -141,16 +141,6 @@ Maybe<void> MultiClientSessionContext::TryClose() {
         JUST(sh_graph_ptr->Close());
       }
     }
-
-    /*
-    // sync before NNGraph release to ensure LaunchLazyJob instruction was completed and released
-    JUST(vm::ClusterSync());
-    for (const auto& graph : graphs_) {
-      VLOG(2) << "Try to close graph: " << graph->job_name() << std::endl;
-      JUST(graph->Close());
-    }
-    graphs_.clear();
-    */
     {
       // NOTE(chengcheng): delete runtime global objects
       Global<boxing::collective::Scheduler>::Delete();

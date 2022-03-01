@@ -21,10 +21,8 @@ limitations under the License.
 namespace oneflow {
 
 ThreadMgr::~ThreadMgr() {
-  for (auto& thread_pair : threads_) {
-    LOG(FATAL) << " Runtime Error! thread id " << thread_pair.first
-               << " not delete with graph, and it's empty is " << thread_pair.second->Empty();
-  }
+  CHECK(threads_.empty()) << " Runtime Error! num = " << threads_.size()
+                          << " threads did not destroy with graph.";
 }
 
 Thread* ThreadMgr::GetThrd(int64_t thrd_id) {
@@ -39,7 +37,7 @@ void ThreadMgr::AddThreads(const HashSet<int64_t>& thread_ids) {
     const auto& it = threads_.find(thrd_id);
     if (it != threads_.end()) {
       // NOTE(chengcheng): check thread is not null.
-      CHECK(it->second);
+      CHECK(it->second) << " Runtime Error! Thread: " << thrd_id << " in manager must be NOT null.";
       continue;
     }
     StreamId stream_id = DecodeStreamIdFromInt64(thrd_id);
@@ -61,7 +59,7 @@ void ThreadMgr::TryDeleteThreads(const HashSet<int64_t>& thread_ids) {
       ActorMsg msg = ActorMsg::BuildCommandMsg(-1, ActorCmd::kStopThread);
       thread->GetMsgChannelPtr()->Send(msg);
       thread.reset();
-      LOG(INFO) << " actor thread " << thrd_id << " finish.";
+      VLOG(2) << " actor thread " << thrd_id << " finish.";
       threads_.erase(it);
     } else {
       LOG(INFO) << " actor thread " << thrd_id << " not delete because it is not empty.";
