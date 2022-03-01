@@ -58,15 +58,11 @@ __device__ __forceinline__ IndexType compute_index(IndexType out_offset, StrideP
   IndexType remaining = out_offset;
 
 #pragma unroll
-  // compute coords(output offset to coords)
   for (int i = 0; i < ndim; ++i) {
     const IndexType idx = static_cast<IndexType>(remaining / out_params.stride[i]);
     out_params.coordinates[i] = idx;
-    remaining = remaining - idx * out_params.stride[i];
-  }
-  // compute input offset
-  for (int dim = 0; dim < ndim; ++dim) {
-    in_offset = in_offset + out_params.coordinates[dim] * in_params.stride[dim];
+    remaining -=  idx * out_params.stride[i];
+    in_offset +=  out_params.coordinates[i] * in_params.stride[i];
   }
   return in_offset;
 }
