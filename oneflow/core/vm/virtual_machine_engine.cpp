@@ -61,11 +61,16 @@ void VirtualMachineEngine::HandleLocalPending() {
   OF_PROFILER_RANGE_PUSH("HandleLocalPending");
   InstructionMsgList pending_instr_msgs;
   constexpr static int kPendingHandleWindow = 10;
+  OF_PROFILER_RANGE_PUSH("GetRewritedPendingInstructionsByWindowSize");
   GetRewritedPendingInstructionsByWindowSize(kPendingHandleWindow, &pending_instr_msgs);
+  OF_PROFILER_RANGE_POP();
+  OF_PROFILER_RANGE_PUSH("MakeInstructions");
   InstructionList new_instruction_list;
   INTRUSIVE_FOR_EACH_PTR(instr_msg, &pending_instr_msgs) {
     MakeInstructions(instr_msg, /*out*/ &new_instruction_list);
   }
+  OF_PROFILER_RANGE_POP();
+  OF_PROFILER_RANGE_PUSH("ConsumeMirroredObjects");
   INTRUSIVE_FOR_EACH_PTR(instruction, &new_instruction_list) {
     ConsumeMirroredObjects(instruction);
     if (likely(Dispatchable(instruction))) {
@@ -73,6 +78,7 @@ void VirtualMachineEngine::HandleLocalPending() {
       new_instruction_list.Erase(instruction);
     }
   }
+  OF_PROFILER_RANGE_POP();
   OF_PROFILER_RANGE_POP();
 }
 
