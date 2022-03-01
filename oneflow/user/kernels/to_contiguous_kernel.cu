@@ -51,7 +51,7 @@ __device__ IndexType compute_index(IndexType out_offset, const size_t ndim) {
 }
 
 template<typename T, typename IndexType>
-__global__ void ToContiguousForwardGpu(IndexType count, size_t ndim, const T* in_dptr,
+__global__ void ToContiguousForwardGpuPack(IndexType count, size_t ndim, const T* in_dptr,
                                        T* out_dptr) {
   for (IndexType out_idx = blockIdx.x * blockDim.x + threadIdx.x, step = blockDim.x * gridDim.x;
        out_idx < count; out_idx += step) {
@@ -61,7 +61,7 @@ __global__ void ToContiguousForwardGpu(IndexType count, size_t ndim, const T* in
 }
 
 template<typename T, typename IndexType, size_t pack_size>
-__global__ void ToContiguousForwardGpu(IndexType count, size_t ndim, const T* in_dptr,
+__global__ void ToContiguousForwardGpuPack(IndexType count, size_t ndim, const T* in_dptr,
                                        T* out_dptr) {
   IndexType global_thread_id = blockIdx.x * blockDim.x + threadIdx.x;
   for (IndexType out_idx = global_thread_id * pack_size; out_idx < count;
@@ -73,7 +73,7 @@ __global__ void ToContiguousForwardGpu(IndexType count, size_t ndim, const T* in
 }
 
 template<typename T, typename IndexType>
-__global__ void ToContiguousForwardGpu(IndexType count, IndexType block_size, size_t ndim,
+__global__ void ToContiguousForwardGpuPack(IndexType count, IndexType block_size, size_t ndim,
                                        const T* in_dptr, T* out_dptr) {
   IndexType global_thread_id = blockIdx.x * blockDim.x + threadIdx.x;
   for (IndexType out_idx = global_thread_id * block_size; out_idx < count;
@@ -81,6 +81,23 @@ __global__ void ToContiguousForwardGpu(IndexType count, IndexType block_size, si
     IndexType in_idx = compute_index<IndexType>(out_idx, ndim);
 #pragma unroll
     for (size_t i = 0; i < block_size; i++) { out_dptr[out_idx + i] = in_dptr[in_idx + i]; }
+  }
+}
+
+
+template<typename T, typename IndexType>
+__global__ void ToContiguousForwardGpuParallel(IndexType count, size_t ndim, const T* in_dptr,
+                                            T* out_dptr) {
+  IndexType remaining = count - 512 * blockIdx.x;
+  IndexType idx = blockIdx.x;
+  IndexType thread_idx = threadIdx.x;
+#pragma unroll
+  for (IndexType i = 0; i < 4; i++) {
+    if (thread_idx >= remaining) { return; }
+    IndexType out_idx = thread_idx + 512 * idx;
+    IndexType in_idx = compute_index<IndexType>(out_idx, ndim);
+    out_dptr[out_idx] = in_dptr[in_idx];
+    thread_idx += 128;
   }
 }
 
@@ -100,29 +117,37 @@ void LaunchToContiguousKernel(ep::Stream* stream, IndexType count, const size_t 
   OF_CUDA_CHECK(cudaMemcpyToSymbol(in_stride_vec, tmp_in_stride, ndim * sizeof(unsigned int)));
   OF_CUDA_CHECK(
       cudaMemcpyToSymbol(out_stride_vec, tmp_out_stride, ndim * sizeof(unsigned int)));
+  
+  ToContiguousForwardGpuParallel<T, IndexType>
+      <<<num_blocks, num_threads, 0, stream->As<ep::CudaStream>()->cuda_stream()>>>(
+          count, ndim, reinterpret_cast<const T*>(in_dptr), reinterpret_cast<T*>(out_dptr));
 
-  if (pack_size == 16 && block_size % 16 == 0) {
-    ToContiguousForwardGpu<T, IndexType, 16>
-        <<<num_blocks, num_threads, 0, stream->As<ep::CudaStream>()->cuda_stream()>>>(
-            count, ndim, reinterpret_cast<const T*>(in_dptr), reinterpret_cast<T*>(out_dptr));
-  } else if (pack_size == 8 && block_size % 8 == 0) {
-    ToContiguousForwardGpu<T, IndexType, 8>
-        <<<num_blocks, num_threads, 0, stream->As<ep::CudaStream>()->cuda_stream()>>>(
-            count, ndim, reinterpret_cast<const T*>(in_dptr), reinterpret_cast<T*>(out_dptr));
-  } else if (pack_size == 4 && block_size % 4 == 0) {
-    ToContiguousForwardGpu<T, IndexType, 4>
-        <<<num_blocks, num_threads, 0, stream->As<ep::CudaStream>()->cuda_stream()>>>(
-            count, ndim, reinterpret_cast<const T*>(in_dptr), reinterpret_cast<T*>(out_dptr));
-  } else if (pack_size == 2 && block_size % 2 == 0) {
-    ToContiguousForwardGpu<T, IndexType, 2>
-        <<<num_blocks, num_threads, 0, stream->As<ep::CudaStream>()->cuda_stream()>>>(
-            count, ndim, reinterpret_cast<const T*>(in_dptr), reinterpret_cast<T*>(out_dptr));
-  } else {
-    ToContiguousForwardGpu<T, IndexType>
-        <<<num_blocks, num_threads, 0, stream->As<ep::CudaStream>()->cuda_stream()>>>(
-            count, block_size, ndim, reinterpret_cast<const T*>(in_dptr),
-            reinterpret_cast<T*>(out_dptr));
-  }
+  // if (pack_size == 16 && block_size % 16 == 0) {
+  //   ToContiguousForwardGpuPack<T, IndexType, 16>
+  //       <<<num_blocks, num_threads, 0, stream->As<ep::CudaStream>()->cuda_stream()>>>(
+  //           count, ndim, reinterpret_cast<const T*>(in_dptr), reinterpret_cast<T*>(out_dptr));
+  // } else if (pack_size == 8 && block_size % 8 == 0) {
+  //   ToContiguousForwardGpuPack<T, IndexType, 8>
+  //       <<<num_blocks, num_threads, 0, stream->As<ep::CudaStream>()->cuda_stream()>>>(
+  //           count, ndim, reinterpret_cast<const T*>(in_dptr), reinterpret_cast<T*>(out_dptr));
+  // } else if (pack_size == 4 && block_size % 4 == 0) {
+  //   ToContiguousForwardGpuPack<T, IndexType, 4>
+  //       <<<num_blocks, num_threads, 0, stream->As<ep::CudaStream>()->cuda_stream()>>>(
+  //           count, ndim, reinterpret_cast<const T*>(in_dptr), reinterpret_cast<T*>(out_dptr));
+  // } else if (pack_size == 2 && block_size % 2 == 0) {
+  //   ToContiguousForwardGpuPack<T, IndexType, 2>
+  //       <<<num_blocks, num_threads, 0, stream->As<ep::CudaStream>()->cuda_stream()>>>(
+  //           count, ndim, reinterpret_cast<const T*>(in_dptr), reinterpret_cast<T*>(out_dptr));
+  // } else {
+  //   // ToContiguousForwardGpuPack<T, IndexType>
+  //   //     <<<num_blocks, num_threads, 0, stream->As<ep::CudaStream>()->cuda_stream()>>>(
+  //   //         count, block_size, ndim, reinterpret_cast<const T*>(in_dptr),
+  //   //         reinterpret_cast<T*>(out_dptr));
+  //   ToContiguousForwardGpuParallel<T, IndexType>
+  //     <<<num_blocks, num_threads, 0, stream->As<ep::CudaStream>()->cuda_stream()>>>(
+  //         count, ndim, reinterpret_cast<const T*>(in_dptr), reinterpret_cast<T*>(out_dptr));
+    
+  // }
 }
 
 }  // namespace
