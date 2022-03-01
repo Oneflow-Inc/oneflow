@@ -26,9 +26,9 @@ namespace oneflow {
 
 struct WithCheckLevel {
   static bool IsCheckEnabled(int32_t check_level) {
-    static const char * env_check_level = std::getenv("ONEFOW_CHECK_LEVEL");
-    static bool env_debug_mode = EnvToBool(ONEFLOW_DEBUG_MODE, false);
-    return env_debug_mode || (env_check_level != nullptr && std::atoi(env_check_level) >= check_level);
+    static const int env_check_level = EnvToInt(ONEFOW_CHECK_LEVEL, -1);
+    static const bool env_debug_mode = EnvToBool(ONEFLOW_DEBUG_MODE, false);
+    return env_debug_mode || env_check_level >= check_level;
   }
 
   template<typename T, typename = void>
