@@ -32,16 +32,16 @@ limitations under the License.
 namespace oneflow {
 
 namespace {
-void DfsSetNdSbp(std::vector<::oneflow::SbpParallel>& id2SbpParallel, int32_t depth,
+void DfsSetNdSbp(const std::vector<::oneflow::SbpParallel>& id2sbp_parallel, int32_t depth,
                  int32_t max_depth, NdSbp& nd_sbp, std::vector<NdSbp>& nd_sbp_lists,
                  std::unordered_map<::oneflow::NdSbp, int32_t>& nd_sbp_universe) {
   if (depth == max_depth) {
     nd_sbp_universe[nd_sbp] = nd_sbp_lists.size();
     nd_sbp_lists.push_back(nd_sbp);
   } else {
-    for (int32_t i = 0; i < id2SbpParallel.size(); i++) {
-      *nd_sbp.mutable_sbp_parallel(depth) = id2SbpParallel[i];
-      DfsSetNdSbp(id2SbpParallel, depth + 1, max_depth, nd_sbp, nd_sbp_lists, nd_sbp_universe);
+    for (int32_t i = 0; i < id2sbp_parallel.size(); i++) {
+      *nd_sbp.mutable_sbp_parallel(depth) = id2sbp_parallel[i];
+      DfsSetNdSbp(id2sbp_parallel, depth + 1, max_depth, nd_sbp, nd_sbp_lists, nd_sbp_universe);
     }
   }
 }
