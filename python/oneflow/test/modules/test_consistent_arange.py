@@ -17,10 +17,9 @@ import unittest
 from collections import OrderedDict
 
 import oneflow as flow
-import oneflow.unittest
 from oneflow.test_utils.automated_test_util import *
 
-from test_util import GenArgDict
+from oneflow.test_utils.test_util import GenArgDict
 
 
 def _test_consistent_arange(test_case, start, end, step, placement, sbp):
@@ -49,19 +48,18 @@ def _test_graph_arange(test_case, start, end, step, placement, sbp):
 class TestRandConsistent(flow.unittest.TestCase):
     @globaltest
     def test_arange_consistent(test_case):
-        start_list = [i for i in range(1, 5, 1)]
-        end_list = [i for i in range(10, 50, 10)]
-        step_list = [i for i in range(1, 5, 1)]
-        for start in start_list:
-            for end in end_list:
-                for step in step_list:
-                    for placement in all_placement():
-                        for sbp in all_sbp(
-                            placement, max_dim=1, except_partial_sum=True
-                        ):
-                            _test_consistent_arange(
-                                test_case, start, end, step, placement, sbp
-                            )
+        arg_dict = OrderedDict()
+        arg_dict["start"] = [i for i in range(1, 5, 1)]
+        arg_dict["end"] = [i for i in range(10, 50, 10)]
+        arg_dict["step"] = [i for i in range(1, 5, 1)]
+        for args in GenArgDict(arg_dict):
+            for placement in all_placement():
+                for sbp in all_sbp(
+                    placement, max_dim=1, except_partial_sum=True
+                ):
+                    _test_consistent_arange(
+                        test_case,**args, placement = placement, sbp = sbp
+                    )
 
     @unittest.skipIf(os.getenv("ONEFLOW_TEST_CPU_ONLY"), "only test cpu cases")
     @flow.unittest.skip_unless_1n2d()
