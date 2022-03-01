@@ -25,8 +25,8 @@ namespace oneflow {
 namespace {
 
 constexpr int kBlockSize = cuda::elementwise::kBlockSize;
-__constant__ unsigned int in_stride_vec[16];
-__constant__ unsigned int out_stride_vec[16];
+// __constant__ unsigned int in_stride_vec[16];
+// __constant__ unsigned int out_stride_vec[16];
 
 int GetMinThreadNum(int64_t elem_cnt) { return std::min<int64_t>(elem_cnt, kBlockSize); }
 
@@ -36,24 +36,60 @@ int GetNumBlocks(int64_t elem_cnt) {
   return num_blocks;
 }
 
+
+struct StrideParam {
+  int64_t stride[SHAPE_MAX_AXIS_SIZE];
+  int64_t coordinates[SHAPE_MAX_AXIS_SIZE];
+
+  // NOLINTNEXTLINE
+  StrideParam(const int64_t* stride_vec, const size_t ndim) {
+    for (size_t i = 0; i <ndim; ++i) {
+      stride[i] = stride_vec[i];
+      coordinates[i] = 0;
+    }
+  }
+};
+
+
 template<typename IndexType>
-__device__ IndexType compute_index(IndexType out_offset, const size_t ndim) {
+__device__ __forceinline__ IndexType compute_index(IndexType out_offset, StrideParam out_params,
+                                                 const StrideParam& in_params, int ndim) {
   IndexType in_offset = 0;
   IndexType remaining = out_offset;
 
 #pragma unroll
-  for (size_t i = 0; i < ndim; ++i) {
-    const IndexType idx = remaining / out_stride_vec[i];
-    remaining = remaining - idx * out_stride_vec[i];
-    in_offset = in_offset + idx * in_stride_vec[i];
+  // compute coords(output offset to coords)
+  for (int i = 0; i < ndim; ++i) {
+    const IndexType idx = static_cast<IndexType>(remaining / out_params.stride[i]);
+    out_params.coordinates[i] = idx;
+    remaining = remaining - idx * out_params.stride[i];
+  }
+  // compute input offset
+  for (int dim = 0; dim < ndim; ++dim) {
+    in_offset = in_offset + out_params.coordinates[dim] * in_params.stride[dim];
   }
   return in_offset;
 }
 
+// template<typename IndexType>
+// __device__ IndexType compute_index(IndexType out_offset, const size_t ndim) {
+//   IndexType in_offset = 0;
+//   IndexType remaining = out_offset;
+
+// #pragma unroll
+//   for (size_t i = 0; i < ndim; ++i) {
+//     const IndexType idx = remaining / out_stride_vec[i];
+//     remaining = remaining - idx * out_stride_vec[i];
+//     in_offset = in_offset + idx * in_stride_vec[i];
+//   }
+//   return in_offset;
+// }
+
+
 
 template<typename T, typename IndexType>
-__global__ void ToContiguousForwardGpuParallel(IndexType count, size_t ndim, const T* in_dptr,
-                                            T* out_dptr) {
+__global__ void ToContiguousForwardGpuParallel(IndexType count,  size_t ndim,
+StrideParam in_stride, StrideParam out_stride, const T* in_dptr, T* out_dptr) {
   IndexType remaining = count - 512 * blockIdx.x;
   IndexType idx = blockIdx.x;
   IndexType thread_idx = threadIdx.x;
@@ -61,11 +97,28 @@ __global__ void ToContiguousForwardGpuParallel(IndexType count, size_t ndim, con
   for (IndexType i = 0; i < 4; i++) {
     if (thread_idx >= remaining) { return; }
     IndexType out_idx = thread_idx + 512 * idx;
-    IndexType in_idx = compute_index<IndexType>(out_idx, ndim);
+    IndexType in_idx = compute_index<IndexType>(out_idx, out_stride, in_stride, ndim);
     out_dptr[out_idx] = in_dptr[in_idx];
     thread_idx += 128;
   }
 }
+
+
+// template<typename T, typename IndexType>
+// __global__ void ToContiguousForwardGpuParallel(IndexType count, size_t ndim, const T* in_dptr,
+//                                             T* out_dptr) {
+//   IndexType remaining = count - 512 * blockIdx.x;
+//   IndexType idx = blockIdx.x;
+//   IndexType thread_idx = threadIdx.x;
+// #pragma unroll
+//   for (IndexType i = 0; i < 4; i++) {
+//     if (thread_idx >= remaining) { return; }
+//     IndexType out_idx = thread_idx + 512 * idx;
+//     IndexType in_idx = compute_index<IndexType>(out_idx, ndim);
+//     out_dptr[out_idx] = in_dptr[in_idx];
+//     thread_idx += 128;
+//   }
+// }
 
 
 template<typename T, typename IndexType, size_t pack_size>
@@ -74,21 +127,26 @@ void LaunchToContiguousKernel(ep::Stream* stream, IndexType count, const size_t 
                               const StrideVector& out_stride, const char* in_dptr, char* out_dptr) {
   const int num_blocks = GetNumBlocks(count);
   const int num_threads = GetMinThreadNum(count);
-  unsigned int tmp_in_stride[ndim] = {0};
-  unsigned int tmp_out_stride[ndim] = {0};
-  for (size_t i = 0; i < ndim; ++i) {
-    tmp_in_stride[i] = static_cast<unsigned int>(in_stride.at(i));
-    tmp_out_stride[i] = static_cast<unsigned int>(out_stride.at(i));
-  }
 
+  // unsigned int tmp_in_stride[ndim] = {0};
+  // unsigned int tmp_out_stride[ndim] = {0};
+  // for (size_t i = 0; i < ndim; ++i) {
+  //   tmp_in_stride[i] = static_cast<unsigned int>(in_stride.at(i));
+  //   tmp_out_stride[i] = static_cast<unsigned int>(out_stride.at(i));
+  // }
 
-  OF_CUDA_CHECK(cudaMemcpyToSymbol(in_stride_vec, tmp_in_stride, ndim * sizeof(unsigned int)));
-  OF_CUDA_CHECK(
-      cudaMemcpyToSymbol(out_stride_vec, tmp_out_stride, ndim * sizeof(unsigned int)));
+  // OF_CUDA_CHECK(cudaMemcpyToSymbol(in_stride_vec, tmp_in_stride, ndim * sizeof(unsigned int)));
+  // OF_CUDA_CHECK(
+  //     cudaMemcpyToSymbol(out_stride_vec, tmp_out_stride, ndim * sizeof(unsigned int)));
   
-  ToContiguousForwardGpuParallel<T, IndexType>
+  // ToContiguousForwardGpuParallel<T, IndexType>
+  //     <<<num_blocks, num_threads, 0, stream->As<ep::CudaStream>()->cuda_stream()>>>(
+  //         count, ndim, reinterpret_cast<const T*>(in_dptr), reinterpret_cast<T*>(out_dptr));
+
+  StrideParam param_in_stride(in_stride.data(), ndim), param_out_stride(out_stride.data(), ndim);
+    ToContiguousForwardGpuParallel<T, IndexType>
       <<<num_blocks, num_threads, 0, stream->As<ep::CudaStream>()->cuda_stream()>>>(
-          count, ndim, reinterpret_cast<const T*>(in_dptr), reinterpret_cast<T*>(out_dptr));
+          count, ndim, param_in_stride, param_out_stride, reinterpret_cast<const T*>(in_dptr), reinterpret_cast<T*>(out_dptr));
 
 }
 
