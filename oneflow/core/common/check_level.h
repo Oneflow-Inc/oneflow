@@ -13,8 +13,8 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
-#ifndef ONEFLOW_CORE_COMMON_DEBUG_H_
-#define ONEFLOW_CORE_COMMON_DEBUG_H_
+#ifndef ONEFLOW_CORE_CHECK_LEVEL_H_
+#define ONEFLOW_CORE_CHECK_LEVEL_H_
 
 #include <type_traits>
 #include "oneflow/core/common/just.h"
@@ -50,4 +50,4 @@ struct WithCheckLevel {
 
 }  // namespace oneflow
 
-#endif  // ONEFLOW_CORE_COMMON_DEBUG_H_
+#endif  // ONEFLOW_CORE_CHECK_LEVEL_H_

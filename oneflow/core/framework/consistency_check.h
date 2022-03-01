@@ -33,7 +33,6 @@ class NonRecursiveMetaInfoConsistencyCheckScope final {
 Maybe<void> DataConsistencyCheck(const void* buffer_ptr, size_t buffer_size,
                                  Symbol<ParallelDesc> placement);
 
-// Optional<Symbol<NdSbp>>()
 Maybe<void> MetaInfoConsistencyCheck(const Symbol<ParallelDesc>& placement,
                                      const Optional<Symbol<NdSbp>>& nd_sbp,
                                      const Optional<Symbol<NdSbp>>& grad_nd_sbp);

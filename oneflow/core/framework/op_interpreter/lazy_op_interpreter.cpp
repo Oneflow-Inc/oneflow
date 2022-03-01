@@ -39,7 +39,6 @@ limitations under the License.
 #include "oneflow/core/job/sbp_parallel.h"
 #include "oneflow/core/job/job_build_and_infer_ctx_mgr.h"
 #include "oneflow/core/vm/vm_util.h"
-#include "oneflow/core/framework/consistency_check.h"
 #include "oneflow/core/common/check_level.h"
 
 namespace oneflow {
