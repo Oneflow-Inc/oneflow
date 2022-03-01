@@ -59,7 +59,7 @@ Maybe<int64_t> GetOpKernelRandomSeed(const user_op::KernelInitContext* ctx) {
   return seed;
 }
 
-Maybe<int64_t> GetOpKernelSeed(const user_op::KernelInitContext* ctx) {
+int64_t GetOpKernelSeed(const user_op::KernelInitContext* ctx) {
   int64_t seed = ctx->Attr<int64_t>("seed");
   int64_t parallel_num = ctx->parallel_ctx().parallel_num();
   const auto& outputs = ctx->outputs();
