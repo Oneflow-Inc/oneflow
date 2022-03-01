@@ -87,6 +87,7 @@ static std::unordered_map<std::string, std::string> user_op_type_name2string_map
     {"cast", "Cast"},
     {"concat", "Concat"},
     {"conv2d", "Conv2D"},
+    {"deconv2d", "DeConv2D"},
     {"multiply", "Multiply"},
     {"add_n", "Add"},
     {"matmul", "MatMul"},
