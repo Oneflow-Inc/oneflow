@@ -33,6 +33,13 @@ class Device;
 
 namespace one {
 
+enum class TensorType {
+  kParameterTensor,
+  kStaticZerosTensor,
+  kMirroredTensor,
+  kConsistentTensor,
+};
+
 class FunctionNode;
 
 class ConsistentTensor;
@@ -47,6 +54,7 @@ class Tensor : public std::enable_shared_from_this<Tensor> {
   int64_t nelement() const { return shape()->elem_cnt(); }
   int64_t ndim() const { return shape()->NumAxes(); }
 
+  virtual TensorType tensor_type() const = 0;
   virtual const std::shared_ptr<const Shape>& shape() const = 0;
   virtual Symbol<DType> dtype() const = 0;
   virtual Maybe<TransportToken> transport_token() const = 0;
@@ -127,6 +135,7 @@ class StaticZerosTensor final : public Tensor {
         new StaticZerosTensor(shape, dtype, placement, ndsbp));
   }
   // Getters
+  TensorType tensor_type() const override { return TensorType::kStaticZerosTensor; }
   const std::shared_ptr<const Shape>& shape() const override { return shape_; }
   Symbol<DType> dtype() const override { return CHECK_JUST(DType::Get(dtype_)); }
   Maybe<TransportToken> transport_token() const override { RETURN_ERROR_WITH_BUG_PROMPT(); }
@@ -301,6 +310,7 @@ class Parameter final : public TensorIf<Parameter> {
     CHECK_JUST(this->tensor_->set_requires_grad(requires_grad));
   }
 
+  TensorType tensor_type() const override { return TensorType::kParameterTensor; }
   const std::shared_ptr<const Shape>& shape() const override { return tensor_->shape(); }
   Symbol<DType> dtype() const override { return tensor_->dtype(); }
   Maybe<Symbol<NdSbp>> nd_sbp() const override { return tensor_->nd_sbp(); }
@@ -420,6 +430,7 @@ class MirroredTensor final : public TensorIf<MirroredTensor> {
   ~MirroredTensor() override = default;
 
   // Getters
+  TensorType tensor_type() const override { return TensorType::kMirroredTensor; }
   const std::shared_ptr<const Shape>& shape() const override { return impl_->shape(); }
   Symbol<DType> dtype() const override { return CHECK_JUST(DType::Get(impl_->dtype())); }
   Maybe<TransportToken> transport_token() const override {
@@ -534,6 +545,7 @@ class ConsistentTensor final : public TensorIf<ConsistentTensor> {
   ~ConsistentTensor() override = default;
 
   // Getters
+  TensorType tensor_type() const override { return TensorType::kConsistentTensor; }
   const std::shared_ptr<const Shape>& shape() const override { return impl_->shape(); }
   Symbol<DType> dtype() const override { return CHECK_JUST(DType::Get(impl_->dtype())); }
   Maybe<TransportToken> transport_token() const override { return impl_->transport_token(); }
