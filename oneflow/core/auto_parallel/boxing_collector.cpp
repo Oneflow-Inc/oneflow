@@ -39,8 +39,8 @@ void DfsSetNdSbp(const std::vector<::oneflow::SbpParallel>& id2sbp_parallel, int
     nd_sbp_universe[nd_sbp] = nd_sbp_lists.size();
     nd_sbp_lists.push_back(nd_sbp);
   } else {
-    for (int32_t i = 0; i < id2sbp_parallel.size(); i++) {
-      *nd_sbp.mutable_sbp_parallel(depth) = id2sbp_parallel[i];
+    for (const auto& sbp_parallel : id2sbp_parallel) {
+      *nd_sbp.mutable_sbp_parallel(depth) = sbp_parallel;
       DfsSetNdSbp(id2sbp_parallel, depth + 1, max_depth, nd_sbp, nd_sbp_lists, nd_sbp_universe);
     }
   }
