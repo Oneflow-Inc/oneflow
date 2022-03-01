@@ -372,7 +372,7 @@ Maybe<void> BoxingCollector::GenerateCombination4DiffPlacement(
 // Print the cost and middle nodes
 void BoxingCollector::PrintBoxingTables() {
   if (GlobalProcessCtx::Rank() == 0) {
-    LOG(INFO) << "===================minimum copy cost==================" << std::endl;
+    std::cout << "===================minimum copy cost==================" << std::endl;
     // other parameters
     // To be noted that the performance of this function are all the same with different hierarchy
     Shape hierarchy44({4, 4});
@@ -380,58 +380,58 @@ void BoxingCollector::PrintBoxingTables() {
     double logical_blob_size = 1024.0;
     int32_t n = nd_sbp_lists_.size();
     // Print the origin copy cost table
-    LOG(INFO) << "Cost\t";
-    for (int32_t j = 0; j < n; j++) { LOG(INFO) << NdSbpToString(nd_sbp_lists_[j]) << "\t"; }
-    LOG(INFO) << std::endl;
+    std::cout << "Cost\t";
+    for (int32_t j = 0; j < n; j++) { std::cout << NdSbpToString(nd_sbp_lists_[j]) << "\t"; }
+    std::cout << std::endl;
     for (int32_t i = 0; i < n; i++) {
-      LOG(INFO) << NdSbpToString(nd_sbp_lists_[i]) << "\t";
+      std::cout << NdSbpToString(nd_sbp_lists_[i]) << "\t";
       for (int32_t j = 0; j < n; j++) {
         if (minimum_copy_cost_[i][j] > GetValidMaxCopyCost()) {
-          LOG(INFO) << "X\t";
+          std::cout << "X\t";
         } else {
-          LOG(INFO) << minimum_copy_cost_[i][j] << "\t";
+          std::cout << minimum_copy_cost_[i][j] << "\t";
         }
       }
-      LOG(INFO) << std::endl;
+      std::cout << std::endl;
     }
 
-    LOG(INFO) << std::endl;
-    LOG(INFO) << "Original Copy Cost" << std::endl;
-    LOG(INFO) << "logical blob size: " << logical_blob_size << std::endl;
-    LOG(INFO) << "hierarchy: " << *in_hierarchy << std::endl;
+    std::cout << std::endl;
+    std::cout << "Original Copy Cost" << std::endl;
+    std::cout << "logical blob size: " << logical_blob_size << std::endl;
+    std::cout << "hierarchy: " << *in_hierarchy << std::endl;
 
-    LOG(INFO) << "============================middle nodes===========================" << std::endl;
+    std::cout << "============================middle nodes===========================" << std::endl;
 
     // Print the middle nodes
-    LOG(INFO) << "Middle Sbp\t";
-    for (int32_t j = 0; j < n; j++) { LOG(INFO) << NdSbpToString(nd_sbp_lists_[j]) << "\t"; }
-    LOG(INFO) << std::endl;
+    std::cout << "Middle Sbp\t";
+    for (int32_t j = 0; j < n; j++) { std::cout << NdSbpToString(nd_sbp_lists_[j]) << "\t"; }
+    std::cout << std::endl;
     for (int32_t i = 0; i < n; i++) {
-      LOG(INFO) << NdSbpToString(nd_sbp_lists_[i]) << "\t";
+      std::cout << NdSbpToString(nd_sbp_lists_[i]) << "\t";
       for (int32_t j = 0; j < n; j++) {
         if (minimum_copy_cost_[i][j] > GetValidMaxCopyCost()) {
-          LOG(INFO) << "X";
+          std::cout << "X";
         } else if (middle_nodes_[i][j].size() > 0) {
           for (int32_t k = 0; k < middle_nodes_[i][j].size(); k++) {
-            LOG(INFO) << NdSbpToString(nd_sbp_lists_[middle_nodes_[i][j][k][0]]);
+            std::cout << NdSbpToString(nd_sbp_lists_[middle_nodes_[i][j][k][0]]);
             for (int32_t l = 1; l < middle_nodes_[i][j][k].size(); l++) {
-              LOG(INFO) << "->" << NdSbpToString(nd_sbp_lists_[middle_nodes_[i][j][k][l]]);
+              std::cout << "->" << NdSbpToString(nd_sbp_lists_[middle_nodes_[i][j][k][l]]);
             }
-            LOG(INFO) << "; ";
+            std::cout << "; ";
           }
         }
 
-        LOG(INFO) << "\t";
+        std::cout << "\t";
       }
-      LOG(INFO) << std::endl;
+      std::cout << std::endl;
     }
 
-    LOG(INFO) << std::endl;
-    LOG(INFO) << "Minimum Copy Cost after second search" << std::endl;
-    LOG(INFO) << "logical blob size: " << logical_blob_size << std::endl;
-    LOG(INFO) << "hierarchy: " << *in_hierarchy << std::endl;
+    std::cout << std::endl;
+    std::cout << "Minimum Copy Cost after second search" << std::endl;
+    std::cout << "logical blob size: " << logical_blob_size << std::endl;
+    std::cout << "hierarchy: " << *in_hierarchy << std::endl;
 
-    LOG(INFO) << "====================middle nodes for different placement===================="
+    std::cout << "====================middle nodes for different placement===================="
               << std::endl;
 
     std::cout << "Middle nodes for different placement\t";
