@@ -224,7 +224,7 @@ Maybe<void> MetaInfoConsistencyCheck(const Symbol<ParallelDesc>& placement,
                                      const Optional<Symbol<NdSbp>>& nd_sbp,
                                      const Optional<Symbol<NdSbp>>& grad_nd_sbp,
                                      const size_t debug_level) {
-  if (WithCheckLevel::IsCheckEnabled(debug_level) && !IsMetaInfoConsistencyCheckDisable()) {
+  if (IsEnvEnabled(debug_level) && !IsMetaInfoConsistencyCheckDisable()) {
     JUST(MetaInfoConsistencyCheckUtil(placement, nd_sbp, grad_nd_sbp));
   }
   return Maybe<void>::Ok();
@@ -233,7 +233,7 @@ Maybe<void> MetaInfoConsistencyCheck(const Symbol<ParallelDesc>& placement,
 Maybe<void> MetaInfoConsistencyCheck(const Symbol<ParallelDesc>& placement,
                                      const Optional<Symbol<NdSbp>>& nd_sbp,
                                      const size_t debug_level) {
-  if (WithCheckLevel::IsCheckEnabled(debug_level) && !IsMetaInfoConsistencyCheckDisable()) {
+  if (IsEnvEnabled(debug_level) && !IsMetaInfoConsistencyCheckDisable()) {
     JUST(MetaInfoConsistencyCheckUtil(placement, nd_sbp, Optional<Symbol<NdSbp>>()));
   }
   return Maybe<void>::Ok();
