@@ -16,6 +16,7 @@ limitations under the License.
 #ifndef ONEFLOW_CORE_CHECK_LEVEL_H_
 #define ONEFLOW_CORE_CHECK_LEVEL_H_
 
+#include <cstdlib>
 #include <type_traits>
 #include "oneflow/core/common/just.h"
 #include "oneflow/core/common/maybe.h"
@@ -25,9 +26,9 @@ namespace oneflow {
 
 struct WithCheckLevel {
   static bool IsCheckEnabled(int32_t check_level) {
-    static bool env_check_level = EnvToBool(ONEFOW_CHECK_LEVEL, false);
+    static const char * env_check_level = std::getenv("ONEFOW_CHECK_LEVEL");
     static bool env_debug_mode = EnvToBool(ONEFLOW_DEBUG_MODE, false);
-    return env_check_level || env_debug_mode;
+    return env_debug_mode || (env_check_level != nullptr && std::atoi(env_check_level) >= check_level);
   }
 
   template<typename T, typename = void>
