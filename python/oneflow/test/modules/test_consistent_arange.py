@@ -54,6 +54,18 @@ def _test_arange_with_float_delta(test_case, placement, sbp):
     )
     return x
 
+
+class TestArange(flow.unittest.TestCase):
+    @globaltest
+    def test_arange(test_case):
+        for placement in all_placement():
+            # arange does not support split and partial_sum currently.
+            for sbp in all_sbp(
+                placement, max_dim=1, except_split=True, except_partial_sum=True
+            ):
+                _test_arange_with_random_data(test_case, placement, sbp)
+                _test_arange_with_float_delta(test_case, placement, sbp)
+
 def _test_consistent_arange(test_case, start, end, step, placement, sbp):
     x = flow.arange(start, end, step, placement=placement, sbp=sbp)
 
@@ -92,8 +104,6 @@ class TestRandConsistent(flow.unittest.TestCase):
                     _test_consistent_arange(
                         test_case,**args, placement = placement, sbp = sbp
                     )
-                    _test_arange_with_random_data(test_case, placement, sbp)
-                    _test_arange_with_float_delta(test_case, placement, sbp)
 
     @unittest.skipIf(os.getenv("ONEFLOW_TEST_CPU_ONLY"), "only test cpu cases")
     @flow.unittest.skip_unless_1n2d()
