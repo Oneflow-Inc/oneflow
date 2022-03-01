@@ -13,6 +13,7 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 """
+import os
 import unittest
 from collections import OrderedDict
 
@@ -236,12 +237,14 @@ def compare_with_numpy_rmsprop_clip_grad(
 class TestRMSprop(flow.unittest.TestCase):
     def test_rmsprop(test_case):
         args_dict = OrderedDict()
-        args_dict["device"] = ["cpu", "cuda"]
+        args_dict["device"] = ["cuda"]
+        if os.getenv("ONEFLOW_TEST_CPU_ONLY"):
+            args_dict["device"] = ["cpu"]
         args_dict["x_shape"] = [(1,), (10,)]
-        args_dict["learning_rate"] = [1, 10]
+        args_dict["learning_rate"] = [1]
         args_dict["momentum"] = [0.0]  # not supported momentum > 0
         args_dict["train_iters"] = [10]
-        args_dict["alpha"] = [0.9, 0.99]
+        args_dict["alpha"] = [0.9]
         args_dict["eps"] = [1e-8, 1e-5]
         args_dict["weight_decay"] = [0.1, 0.9]
         args_dict["centered"] = [False, True]
