@@ -23,6 +23,7 @@ limitations under the License.
 #include "oneflow/core/framework/sync_symbol_nd_sbp.h"
 #include "oneflow/core/framework/sync_symbol_parallel_desc.h"
 #include "oneflow/core/common/constant.h"
+#include "oneflow/core/common/check_level.h"
 
 namespace oneflow {
 
@@ -221,10 +222,42 @@ NonRecursiveMetaInfoConsistencyCheckScope::~NonRecursiveMetaInfoConsistencyCheck
 
 Maybe<void> MetaInfoConsistencyCheck(const Symbol<ParallelDesc>& placement,
                                      const Optional<Symbol<NdSbp>>& nd_sbp,
-                                     const Optional<Symbol<NdSbp>>& grad_nd_sbp) {
-  if (!IsMetaInfoConsistencyCheckDisable()) {
+                                     const Optional<Symbol<NdSbp>>& grad_nd_sbp,
+                                     const size_t debug_level) {
+  if (WithCheckLevel::IsCheckEnabled(debug_level) && !IsMetaInfoConsistencyCheckDisable()) {
     JUST(MetaInfoConsistencyCheckUtil(placement, nd_sbp, grad_nd_sbp));
   }
+  return Maybe<void>::Ok();
+}
+
+Maybe<void> MetaInfoConsistencyCheck(const Symbol<ParallelDesc>& placement,
+                                     const Optional<Symbol<NdSbp>>& nd_sbp,
+                                     const size_t debug_level) {
+  if (WithCheckLevel::IsCheckEnabled(debug_level) && !IsMetaInfoConsistencyCheckDisable()) {
+    JUST(MetaInfoConsistencyCheckUtil(placement, nd_sbp, Optional<Symbol<NdSbp>>()));
+  }
+  return Maybe<void>::Ok();
+}
+
+Maybe<void> MetaInfoConsistencyCheck(const Symbol<ParallelDesc>& placement,
+                                     const std::vector<Symbol<SbpParallel>>& sbp_tuple,
+                                     const std::vector<Symbol<SbpParallel>>& grad_sbp_tuple,
+                                     const size_t debug_level) {
+  Optional<Symbol<NdSbp>> nd_sbp;
+  Optional<Symbol<NdSbp>> grad_nd_sbp;
+  if (!sbp_tuple.empty()) { grad_nd_sbp = JUST(GetNdSbp(sbp_tuple)); }
+  if (!grad_sbp_tuple.empty()) { grad_nd_sbp = JUST(GetNdSbp(grad_sbp_tuple)); }
+  JUST(MetaInfoConsistencyCheck(placement, nd_sbp, grad_nd_sbp, debug_level));
+  return Maybe<void>::Ok();
+}
+
+Maybe<void> MetaInfoConsistencyCheck(const Symbol<ParallelDesc>& placement,
+                                     const std::vector<Symbol<SbpParallel>>& sbp_tuple,
+                                     const size_t debug_level) {
+  Optional<Symbol<NdSbp>> nd_sbp;
+  Optional<Symbol<NdSbp>> grad_nd_sbp;
+  if (!sbp_tuple.empty()) { grad_nd_sbp = JUST(GetNdSbp(sbp_tuple)); }
+  JUST(MetaInfoConsistencyCheck(placement, nd_sbp, grad_nd_sbp, debug_level));
   return Maybe<void>::Ok();
 }
 

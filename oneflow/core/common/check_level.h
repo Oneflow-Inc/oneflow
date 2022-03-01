@@ -30,24 +30,7 @@ struct WithCheckLevel {
     static const bool env_debug_mode = EnvToBool(ONEFLOW_DEBUG_MODE, false);
     return env_debug_mode || env_check_level >= check_level;
   }
-
-  template<typename T, typename = void>
-  struct DebugChecker;
-
-  template<typename T, typename... Args>
-  struct DebugChecker<T (*)(Args...)> final {
-    template<int32_t check_level, T (*func)(Args...)>
-    static T Call(Args... args) {
-      static_assert(std::is_same<T, Maybe<void>>::value,
-                    "returned value type must be Maybe<void>.");
-      if (IsCheckEnabled(check_level)) JUST(func(std::forward<Args>(args)...));
-      return Maybe<void>::Ok();
-    }
-  };
 };
-
-#define VCHECK(check_level, fn_ptr) \
-  (&WithCheckLevel::DebugChecker<decltype(fn_ptr)>::Call<check_level, fn_ptr>)
 
 }  // namespace oneflow
 
