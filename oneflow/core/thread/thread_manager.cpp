@@ -22,9 +22,8 @@ namespace oneflow {
 
 ThreadMgr::~ThreadMgr() {
   for (auto& thread_pair : threads_) {
-    CHECK(!thread_pair.second) << " Runtime Error! thread id " << thread_pair.first
-                               << " not delete with graph, and it's empty is "
-                               << thread_pair.second->Empty();
+    LOG(FATAL) << " Runtime Error! thread id " << thread_pair.first
+               << " not delete with graph, and it's empty is " << thread_pair.second->Empty();
   }
 }
 
@@ -37,7 +36,12 @@ Thread* ThreadMgr::GetThrd(int64_t thrd_id) {
 void ThreadMgr::AddThreads(const HashSet<int64_t>& thread_ids) {
   const int64_t this_rank = GlobalProcessCtx::Rank();
   for (int64_t thrd_id : thread_ids) {
-    if (threads_.find(thrd_id) != threads_.end()) { continue; }
+    const auto& it = threads_.find(thrd_id);
+    if (it != threads_.end()) {
+      // NOTE(chengcheng): check thread is not null.
+      CHECK(it->second);
+      continue;
+    }
     StreamId stream_id = DecodeStreamIdFromInt64(thrd_id);
     if (stream_id.rank() != this_rank) { continue; }
     Thread* thread = new Thread(stream_id);
@@ -58,6 +62,7 @@ void ThreadMgr::TryDeleteThreads(const HashSet<int64_t>& thread_ids) {
       thread->GetMsgChannelPtr()->Send(msg);
       thread.reset();
       LOG(INFO) << " actor thread " << thrd_id << " finish.";
+      threads_.erase(it);
     } else {
       LOG(INFO) << " actor thread " << thrd_id << " not delete because it is not empty.";
     }
