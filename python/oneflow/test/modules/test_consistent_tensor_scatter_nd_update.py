@@ -93,12 +93,14 @@ def _test_global_tensor_scatter_nd_update_t(
 
 def _test_eager_global_tensor_scatter_nd_update_backward(test_case, placement, sbp):
     origin = random_tensor(1, 16,).to_global(placement, sbp)
+    origin.retain_grad()
     indices = choice_tensor(16, (8, 1), replace=False).to_global(
         placement, [flow.sbp.broadcast for _ in range(len(placement.ranks.shape))]
     )
     update = random_tensor(1, 8).to_global(
         placement, [flow.sbp.broadcast for _ in range(len(placement.ranks.shape))]
     )
+    update.retain_grad()
 
     np_origin = origin.oneflow.numpy()
     np_indices = indices.oneflow.numpy().reshape(8)
