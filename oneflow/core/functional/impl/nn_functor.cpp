@@ -2293,6 +2293,32 @@ class EmbeddingShuffleFunctor {
   std::shared_ptr<OpExpr> op_;
 };
 
+class EmbeddingGradientShuffleFunctor {
+ public:
+  EmbeddingGradientShuffleFunctor() {
+    op_ = CHECK_JUST(one::OpBuilder("embedding_gradient_shuffle")
+                         .Input("embedding_diff")
+                         .Input("num_unique_matrix")
+                         .Input("cur_rank_inverse_indices")
+                         .Input("inverse_unique_partion_indices")
+                         .Output("cur_rank_unique_embedding_diff")
+                         .Build());
+  }
+
+  Maybe<Tensor> operator()(
+      const std::shared_ptr<one::Tensor>& embedding_diff,
+      const std::shared_ptr<one::Tensor>& num_unique_matrix,
+      const std::shared_ptr<one::Tensor>& cur_rank_inverse_indices,
+      const std::shared_ptr<one::Tensor>& inverse_unique_partion_indices) const {
+    return OpInterpUtil::Dispatch<Tensor>(
+        *op_, {embedding_diff, num_unique_matrix, cur_rank_inverse_indices,
+               inverse_unique_partion_indices});
+  }
+
+ private:
+  std::shared_ptr<OpExpr> op_;
+};
+
 }  // namespace impl
 
 ONEFLOW_FUNCTION_LIBRARY(m) {
@@ -2365,6 +2391,7 @@ ONEFLOW_FUNCTION_LIBRARY(m) {
   m.add_functor<impl::FusedDotFeatureInteractionFunctor>("FusedDotFeatureInteraction");
   m.add_functor<impl::IdShuffleFunctor>("IdShuffle");
   m.add_functor<impl::EmbeddingShuffleFunctor>("EmbeddingShuffle");
+  m.add_functor<impl::EmbeddingGradientShuffleFunctor>("EmbeddingGradientShuffle");
 };
 
 }  // namespace functional

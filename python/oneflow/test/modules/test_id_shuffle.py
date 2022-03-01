@@ -42,7 +42,7 @@ def _test_id_shuffle(test_case):
             super().__init__()
 
         def build(self, ids, column_ids):
-            return flow._C.id_shuffle(ids_tensor, column_ids_tensor, num_columns)
+            return flow._C.id_shuffle(ids, column_ids, num_columns)
 
     graph = TestGraph()
     (
@@ -93,7 +93,7 @@ def _test_embedding_shuffle(test_case):
                 cur_rank_unique_ids,
                 _,
                 cur_rank_inverse_indices,
-            ) = flow._C.id_shuffle(ids_tensor, column_ids_tensor, num_columns)
+            ) = flow._C.id_shuffle(ids, column_ids, num_columns)
             unique_embeddings = flow._C.gather(data, cur_rank_unique_ids, axis=0)
             embeddings = flow._C.embedding_shuffle(
                 unique_embeddings,
@@ -110,6 +110,83 @@ def _test_embedding_shuffle(test_case):
     test_case.assertTrue(np.array_equal(embeddings.numpy(), np_embeddings))
 
 
+def _test_embedding_gradient_shuffle(test_case):
+    batch_size = 2000
+    num_columns = 26
+    embedding_size = 128
+    ids = np.random.randint(0, 2000, (batch_size, num_columns), dtype=np.int64)
+    column_ids = (
+        ids % num_columns
+    )  # same id must have same column id, so in this case get column_ids from ids
+    embedding_diff = np.random.rand(batch_size, num_columns, embedding_size).astype(
+        np.float32
+    )
+    ids_tensor = flow.tensor(ids, requires_grad=False).to("cuda")
+    column_ids_tensor = flow.tensor(
+        column_ids.astype(np.int32), requires_grad=False
+    ).to("cuda")
+    embedding_diff_tensor = flow.tensor(embedding_diff, requires_grad=False).to("cuda")
+
+    class TestGraph(flow.nn.Graph):
+        def __init__(self):
+            super().__init__()
+
+        def build(self, ids, column_ids, embedding_diff):
+            (
+                num_unique_matrix,
+                inverse_unique_partion_indices,
+                _,
+                cur_rank_unique_ids,
+                _,
+                cur_rank_inverse_indices,
+            ) = flow._C.id_shuffle(ids_tensor, column_ids_tensor, num_columns)
+            cur_rank_unique_embedding_diff = flow._C.embedding_gradient_shuffle(
+                embedding_diff,
+                num_unique_matrix,
+                cur_rank_inverse_indices,
+                inverse_unique_partion_indices,
+            )
+            return (
+                cur_rank_unique_embedding_diff,
+                cur_rank_unique_ids,
+                cur_rank_inverse_indices,
+                inverse_unique_partion_indices,
+            )
+
+    graph = TestGraph()
+    (
+        cur_rank_unique_embedding_diff,
+        cur_rank_unique_ids,
+        cur_rank_inverse_indices,
+        inverse_unique_partion_indices,
+    ) = graph(ids_tensor, column_ids_tensor, embedding_diff_tensor)
+    np_unique_ids, np_inverse = np.unique(ids, return_inverse=True)
+    np_num_unique = np_unique_ids.size
+    np_cur_rank_unique_embedding_diff = np.zeros(
+        cur_rank_unique_embedding_diff.shape
+    ).reshape(-1, embedding_size)
+    for k in range(np_num_unique):
+        np_cur_rank_unique_embedding_diff[k, :] = sum(
+            embedding_diff.reshape(-1, embedding_size)[
+                np.where(ids.flatten() == np_unique_ids[k])[0]
+            ]
+        )
+    reversed_ids = cur_rank_unique_ids[cur_rank_inverse_indices][
+        inverse_unique_partion_indices
+    ]
+    test_case.assertTrue(np.array_equal(reversed_ids.numpy(), ids))
+    test_case.assertTrue(
+        np.allclose(
+            cur_rank_unique_embedding_diff[cur_rank_inverse_indices][
+                inverse_unique_partion_indices
+            ]
+            .numpy()
+            .flatten(),
+            np_cur_rank_unique_embedding_diff[np_inverse].flatten(),
+        )
+    )
+
+
 @unittest.skipIf(os.getenv("ONEFLOW_TEST_CPU_ONLY"), "only test cpu cases")
 @flow.unittest.skip_unless_1n1d()
 class FusedDotFeatureInteractionTestCase(flow.unittest.TestCase):
@@ -122,6 +199,11 @@ class FusedDotFeatureInteractionTestCase(flow.unittest.TestCase):
         arg_dict = OrderedDict()
         for kwargs in GenArgDict(arg_dict):
             _test_embedding_shuffle(test_case, **kwargs)
+
+    def test_embedding_gradient_shuffle(test_case):
+        arg_dict = OrderedDict()
+        for kwargs in GenArgDict(arg_dict):
+            _test_embedding_gradient_shuffle(test_case, **kwargs)
 
 
 if __name__ == "__main__":

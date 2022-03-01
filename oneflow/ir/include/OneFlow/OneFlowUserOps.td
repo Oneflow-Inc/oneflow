@@ -9043,6 +9043,23 @@ def OneFlow_EmbeddingShuffleOp : OneFlow_BaseOp<"embedding_shuffle", [NoSideEffe
   let has_data_type_infer_fn = 1;
 }
 
+def OneFlow_EmbeddingGradientShuffleOp : OneFlow_BaseOp<"embedding_gradient_shuffle", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
+  let input = (ins
+    OneFlow_Tensor:$embedding_diff,
+    OneFlow_Tensor:$num_unique_matrix,
+    OneFlow_Tensor:$cur_rank_inverse_indices,
+    OneFlow_Tensor:$inverse_unique_partion_indices
+  );
+  let output = (outs
+    OneFlow_Tensor:$cur_rank_unique_embedding_diff
+  );
+  let same_output_regst_num = 1;
+  let has_logical_tensor_desc_infer_fn = 1;
+  let has_physical_tensor_desc_infer_fn = 1;
+  let has_get_sbp_fn = 1;
+  let has_data_type_infer_fn = 1;
+}
+
 #endif // GET_ONEFLOW_UPSAMPLE_OP_DEFINITIONS
 
 // Group: Embedding TODO
