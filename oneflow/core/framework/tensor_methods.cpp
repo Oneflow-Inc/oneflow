@@ -121,7 +121,7 @@ Maybe<Tensor> Reshape(const std::shared_ptr<Tensor>& input, const Shape& target_
               autograd::AutoGradMode mode(create_graph);
               CHECK_EQ_OR_RETURN(out_grads.size(), 1);
               in_grads->resize(1);
-              in_grads->at(0) = JUST(functional::Reshape(out_grads.at(0), input_shape));
+              *JUST(oneflow::VectorAt(in_grads, 0)) = JUST(functional::Reshape(JUST(oneflow::VectorAt(out_grads, 0)), input_shape));
               return Maybe<void>::Ok();
             });
     TensorTuple outputs{output};
@@ -223,7 +223,7 @@ Maybe<Tensor> Unsqueeze(const std::shared_ptr<Tensor>& input, const int32_t& exp
               autograd::AutoGradMode mode(create_graph);
               CHECK_EQ_OR_RETURN(out_grads.size(), 1);
               in_grads->resize(1);
-              in_grads->at(0) = JUST(functional::Reshape(out_grads.at(0), *shape));
+              *JUST(oneflow::VectorAt(in_grads, 0)) = JUST(functional::Reshape(JUST(oneflow::VectorAt(out_grads, 0)), *shape));
               return Maybe<void>::Ok();
             });
     TensorTuple outputs{output};
