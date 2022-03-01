@@ -23,6 +23,20 @@ namespace oneflow {
 
 namespace vm {
 
+TensorViewOperand::TensorViewOperand(
+    const std::shared_ptr<vm::EagerBlobObject>& eager_blob_object,
+    const std::shared_ptr<vm::EagerBlobObject>& view_eager_blob_object)
+    : eager_blob_object_(eager_blob_object),
+      view_eager_blob_object_(view_eager_blob_object),
+      input_dependences_(),
+      output_dependences_() {
+  ForEachConstMirroredObject(SetInserter(&input_dependences_));
+  ForEachMutMirroredObject(SetInserter(&output_dependences_));
+  ForEachMut2MirroredObject(SetInserter(&output_dependences_));
+  stream_sequential_dependence_ =
+      CHECK_JUST(eager_blob_object->producer_stream())->mut_schedule_local_dep_object();
+}
+
 void TensorViewOperand::ForEachConstMirroredObject(
     const std::function<void(MirroredObject* compute)>& DoEach) const {}
 

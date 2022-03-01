@@ -24,6 +24,8 @@ class TensorViewInstructionType : public vm::InstructionType {
   TensorViewInstructionType() = default;
   ~TensorViewInstructionType() override = default;
 
+  InstructionFuseType fuse_type() const override { return kEnableInstructionFuseAtAnyPosition; }
+
   void Compute(vm::Instruction* instruction) const override;
 };
 
