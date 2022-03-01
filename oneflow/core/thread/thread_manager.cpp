@@ -56,6 +56,9 @@ void ThreadMgr::TryDeleteThreads(const HashSet<int64_t>& thread_ids) {
     CHECK(thread) << " actor thread " << thrd_id << " non-existent but want to delete";
     if (thread->Empty()) {
       // NOTE(chengcheng):  Only delete thread when it is empty.
+      //   We need send Stop msg to exit the main loop of the thread. Here we can safely call reset
+      //   directly, because the thread destructor will specify actor_thread_.join() to blocking
+      //   wait for the end of the thread real execution.
       ActorMsg msg = ActorMsg::BuildCommandMsg(-1, ActorCmd::kStopThread);
       thread->GetMsgChannelPtr()->Send(msg);
       thread.reset();
