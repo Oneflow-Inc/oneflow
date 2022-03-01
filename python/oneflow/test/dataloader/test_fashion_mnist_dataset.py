@@ -67,7 +67,7 @@ def evaluate_accuracy(data_iter, net, device=None):
     return acc_sum / n
 
 
-def test(test_case):
+def _test(test_case):
     num_inputs, num_outputs, num_hiddens = 784, 10, 256
     net = nn.Sequential(
         FlattenLayer(),
@@ -134,7 +134,7 @@ def test(test_case):
 @flow.unittest.skip_unless_1n1d()
 class TestFashionMnistDataset(flow.unittest.TestCase):
     def test_fashion_mnist_dataset(test_case):
-        test(test_case)
+        _test(test_case)
 
 
 if __name__ == "__main__":

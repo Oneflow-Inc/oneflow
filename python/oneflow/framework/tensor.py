@@ -500,6 +500,17 @@ def _fmod(self, other):
     return flow.fmod(self, other)
 
 
+def _index(self):
+    assert self.numel() == 1 and self.dtype in (
+        flow.uint8,
+        flow.int8,
+        flow.int32,
+        flow.int64,
+        flow.bool,
+    ), "Only integer tensors of a single element can be converted to an index"
+    return self.numpy().item()
+
+
 def _flatten(self, start_dim: int = 0, end_dim: int = -1):
     return flow._C.flatten(self, start_dim=start_dim, end_dim=end_dim)
 
@@ -971,7 +982,7 @@ def _is_consistent(self):
     raise RuntimeError(".is_consistent has been removed, please use .is_global instead")
 
 
-def _to_consistent(self):
+def _to_consistent(self, *args, **kwargs):
     raise RuntimeError(".to_consistent has been removed, please use .to_global instead")
 
 
@@ -1020,6 +1031,7 @@ def RegisterMethods():
     Tensor.__floordiv__ = _floor_divide
     Tensor.__len__ = _len
     Tensor.__mod__ = _fmod
+    Tensor.__index__ = _index
     Tensor.uniform_ = _uniform
     Tensor.trunc_normal_ = _trunc_normal_
     Tensor.kaiming_uniform_ = _kaiming_uniform

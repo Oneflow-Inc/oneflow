@@ -29,8 +29,8 @@ class BoxingLogger {
 
   virtual void Log(const SubTskGphBuilderStatus& status, const std::string& src_op_name,
                    const std::string& dst_op_name, const ParallelDesc& src_parallel_desc,
-                   const ParallelDesc& dst_parallel_desc, const cfg::NdSbp& src_nd_sbp,
-                   const cfg::NdSbp& dst_nd_sbp, const LogicalBlobId& lbi,
+                   const ParallelDesc& dst_parallel_desc, const NdSbp& src_nd_sbp,
+                   const NdSbp& dst_nd_sbp, const LogicalBlobId& lbi,
                    const BlobDesc& logical_blob_desc) = 0;
 };
 
@@ -42,9 +42,8 @@ class NullBoxingLogger final : public BoxingLogger {
 
   void Log(const SubTskGphBuilderStatus& status, const std::string& src_op_name,
            const std::string& dst_op_name, const ParallelDesc& src_parallel_desc,
-           const ParallelDesc& dst_parallel_desc, const cfg::NdSbp& src_nd_sbp,
-           const cfg::NdSbp& dst_nd_sbp, const LogicalBlobId& lbi,
-           const BlobDesc& logical_blob_desc) override{};
+           const ParallelDesc& dst_parallel_desc, const NdSbp& src_nd_sbp, const NdSbp& dst_nd_sbp,
+           const LogicalBlobId& lbi, const BlobDesc& logical_blob_desc) override{};
 };
 
 class CsvBoxingLogger final : public BoxingLogger {
@@ -56,9 +55,8 @@ class CsvBoxingLogger final : public BoxingLogger {
 
   void Log(const SubTskGphBuilderStatus& status, const std::string& src_op_name,
            const std::string& dst_op_name, const ParallelDesc& src_parallel_desc,
-           const ParallelDesc& dst_parallel_desc, const cfg::NdSbp& src_nd_sbp,
-           const cfg::NdSbp& dst_nd_sbp, const LogicalBlobId& lbi,
-           const BlobDesc& logical_blob_desc) override;
+           const ParallelDesc& dst_parallel_desc, const NdSbp& src_nd_sbp, const NdSbp& dst_nd_sbp,
+           const LogicalBlobId& lbi, const BlobDesc& logical_blob_desc) override;
 
  private:
   std::unique_ptr<TeePersistentLogStream> log_stream_;

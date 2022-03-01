@@ -39,7 +39,7 @@ limitations under the License.
 #include "oneflow/core/vm/symbol_storage.h"
 #include "oneflow/core/framework/multi_client_session_context.h"
 #include "oneflow/core/framework/symbol_id_cache.h"
-#include "oneflow/core/operator/op_node_signature.cfg.h"
+#include "oneflow/core/operator/op_node_signature.pb.h"
 #include "oneflow/core/operator/op_conf.cfg.h"
 #include "oneflow/core/comm_network/comm_network.h"
 #include "oneflow/core/comm_network/epoll/epoll_comm_network.h"
@@ -110,9 +110,6 @@ void SetCpuDeviceManagerNumThreads() {
 }
 
 void ClearAllSymbolAndIdCache() {
-  Global<symbol::Storage<StringSymbol>>::Get()->ClearAll();
-  Global<symbol::IdCache<std::string>>::Get()->ClearAll();
-
   Global<symbol::Storage<Scope>>::Get()->ClearAll();
   Global<symbol::IdCache<cfg::ScopeProto>>::Get()->ClearAll();
 
@@ -124,8 +121,6 @@ void ClearAllSymbolAndIdCache() {
 
   Global<symbol::Storage<OperatorConfSymbol>>::Get()->ClearAll();
   Global<symbol::IdCache<cfg::OperatorConf>>::Get()->ClearAll();
-  Global<symbol::Storage<OpNodeSignatureDesc>>::Get()->ClearAll();
-  Global<symbol::IdCache<cfg::OpNodeSignature>>::Get()->ClearAll();
 }
 
 #if defined(__linux__) && defined(WITH_RDMA)

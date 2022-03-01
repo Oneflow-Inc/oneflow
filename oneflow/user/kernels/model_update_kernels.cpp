@@ -93,7 +93,7 @@ class IndexedSlicesUpdateOpKernelCache final : public user_op::OpKernelCache {
 
 std::shared_ptr<user_op::OpKernelCache> CreateIndexedSlicesUpdateOpKernelCache(
     user_op::KernelCacheContext* ctx) {
-  const cfg::SbpParallel& model_sbp = ctx->SbpParallel4ArgNameAndIndex("model", 0);
+  const SbpParallel& model_sbp = ctx->SbpParallel4ArgNameAndIndex("model", 0);
   const user_op::TensorDesc* model_logical_desc =
       ctx->LogicalTensorDesc4ArgNameAndIndex("model", 0);
   const int64_t num_model_instances = model_logical_desc->shape().At(0);
