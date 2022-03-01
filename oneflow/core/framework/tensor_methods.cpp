@@ -271,8 +271,7 @@ Maybe<Tensor> Squeeze(const std::shared_ptr<Tensor>& input,
               autograd::AutoGradMode mode(create_graph);
               CHECK_EQ_OR_RETURN(out_grads.size(), 1);
               in_grads->resize(1);
-              in_grads->at(0) =
-                  JUST(functional::Reshape(out_grads.at(0), Shape(input->shape()->dim_vec())));
+              *JUST(oneflow::VectorAt(in_grads, 0) )= JUST(functional::Reshape(JUST(oneflow::VectorAt(out_grads, 0) ), Shape(input->shape()->dim_vec())));
               return Maybe<void>::Ok();
             });
     TensorTuple outputs{output};
