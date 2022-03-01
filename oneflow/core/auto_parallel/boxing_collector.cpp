@@ -499,7 +499,7 @@ Maybe<void> BoxingCollector::AskSbpCombination(const NdSbp& sbp_producer, const 
         // TODO: Please implement S -> P directly.
         // We do not support [3]: P <--> [2, 2]: (P, P) as well.
 
-        int32_t hierarchy_size;
+        int32_t hierarchy_size = 0;
         if (producer_parallel_desc.hierarchy()->elem_cnt()
             < consumer_parallel_desc.hierarchy()->elem_cnt()) {
           // The diagonal node uses the parallel description from producer
@@ -526,9 +526,9 @@ Maybe<void> BoxingCollector::AskSbpCombination(const NdSbp& sbp_producer, const 
 
   // Middle nodes algorithm supports transfer for different machines or devices or hierarchies
   if (producer_parallel_desc != consumer_parallel_desc) {
-    AskSbpCombination4DiffPlacement(sbp_producer, sbp_consumer, logical_blob_desc,
-                                    producer_parallel_desc, consumer_parallel_desc, is_customized,
-                                    middle_sbps, diag_node_pos, compute_cost);
+    JUST(AskSbpCombination4DiffPlacement(sbp_producer, sbp_consumer, logical_blob_desc,
+                                         producer_parallel_desc, consumer_parallel_desc,
+                                         is_customized, middle_sbps, diag_node_pos, compute_cost));
 
     return Maybe<void>::Ok();
   }
@@ -542,9 +542,9 @@ Maybe<void> BoxingCollector::AskSbpCombination(const NdSbp& sbp_producer, const 
     return Maybe<void>::Ok();
   }
   // Ask for sbp combination with the same 2-D hierarchy and placement
-  AskSbpCombination4Same2DPlacement(sbp_producer, sbp_consumer, logical_blob_desc,
-                                    producer_parallel_desc, consumer_parallel_desc, is_customized,
-                                    middle_sbps, diag_node_pos, compute_cost);
+  JUST(AskSbpCombination4Same2DPlacement(sbp_producer, sbp_consumer, logical_blob_desc,
+                                         producer_parallel_desc, consumer_parallel_desc,
+                                         is_customized, middle_sbps, diag_node_pos, compute_cost));
 
   return Maybe<void>::Ok();
 }

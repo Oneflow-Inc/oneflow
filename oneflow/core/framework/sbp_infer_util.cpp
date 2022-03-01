@@ -478,7 +478,7 @@ Maybe<double> ComputeCopyCostWithMiddleNodes(const NdSbp& producer_sbp_parallel,
   static thread_local BoxingCollector boxing_collector(kRegularMaxSplitAxes);
   std::vector<NdSbp> middle_sbps;
   // Ask for middle nodes
-  int32_t diag_node;
+  int32_t diag_node = 0;
   JUST(boxing_collector.AskSbpCombination(
       producer_sbp_parallel, consumer_sbp_parallel, logical_blob_desc, producer_parallel_desc,
       consumer_parallel_desc, /*is_customized=*/false, middle_sbps, &diag_node,
