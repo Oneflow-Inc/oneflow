@@ -80,6 +80,7 @@ void TrtOpContext::SetOutput(const std::string& name, const TrtValue& value) {
 }
 
 void TrtOpContext::SetSoleOutput(nvinfer1::ITensor* tensor) {
+  if (!HasOutput(name)) { return; }
   CHECK_EQ(outputs_.size(), 0);
   SetOutput(SoleOutputName(), tensor);
 }
