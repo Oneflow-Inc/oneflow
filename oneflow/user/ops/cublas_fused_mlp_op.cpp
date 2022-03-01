@@ -219,21 +219,19 @@ REGISTER_USER_OP_GRAD("cublas_fused_mlp")
         last_dy = last_bias_grad;
       }
       // dx:
+      user_op::UserOpConfWrapperBuilder matmul_input_grad_builder(op.op_name()
+                                                                  + "_matmul_input_grad");
+      user_op::UserOpConfWrapper matmul_input_grad_op = matmul_input_grad_builder.Op("matmul")
+                                                            .Input("a", last_dy)
+                                                            .Input("b", op.input("weights", 0))
+                                                            .Output("out")
+                                                            .Attr<bool>("transpose_a", false)
+                                                            .Attr<bool>("transpose_b", false)
+                                                            .Attr<double>("alpha", 1.0)
+                                                            .Build();
+      AddOp(matmul_input_grad_op);
       if (op.NeedGenGradTensor4OpInput("x", 0)) {
-        user_op::UserOpConfWrapperBuilder matmul_input_grad_builder(op.op_name()
-                                                                    + "_matmul_input_grad");
-        user_op::UserOpConfWrapper matmul_input_grad_op = matmul_input_grad_builder.Op("matmul")
-                                                              .Input("a", last_dy)
-                                                              .Input("b", op.input("weights", 0))
-                                                              .Output("out")
-                                                              .Attr<bool>("transpose_a", false)
-                                                              .Attr<bool>("transpose_b", false)
-                                                              .Attr<double>("alpha", 1.0)
-                                                              .Build();
-        AddOp(matmul_input_grad_op);
-        if (op.NeedGenGradTensor4OpInput("x", 0)) {
-          op.BindGradTensorWithOpInput(matmul_input_grad_op.output("out", 0), "x", 0);
-        }
+        op.BindGradTensorWithOpInput(matmul_input_grad_op.output("out", 0), "x", 0);
       }
       // dw:
       user_op::UserOpConfWrapperBuilder matmul_weight_grad_builder(op.op_name()
