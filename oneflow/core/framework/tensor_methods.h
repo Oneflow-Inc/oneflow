@@ -27,6 +27,8 @@ class Tensor;
 
 namespace view {
 
+bool IsViewApplicable(const std::shared_ptr<Tensor>& input);
+
 Maybe<Tensor> BasicView(const std::shared_ptr<Tensor>& input, const Shape& target_shape,
                         int64_t storage_offset);
 
@@ -37,16 +39,16 @@ Maybe<Tensor> Reshape(const std::shared_ptr<Tensor>& input, const Shape& target_
 
 Maybe<Tensor> Reshape(const std::shared_ptr<Tensor>& input, const Shape& target_shape, const Stride& target_stride);
 
-Maybe<Tensor> Expand(const std::shared_ptr<Tensor>& input, const std::vector<int32_t>& in_shape,
-                     const std::vector<int32_t>& expand_shape);
+Maybe<Tensor> Slice(const std::shared_ptr<Tensor>& input, const std::vector<int64_t>& starts,
+                    const std::vector<int64_t>& ends, const std::vector<int64_t>& steps);
+
+Maybe<Tensor> Unsqueeze(const std::shared_ptr<Tensor>& input, const int32_t& expand_dim);
 
 Maybe<Tensor> Squeeze(const std::shared_ptr<Tensor>& input,
                       const std::vector<int32_t>& squeeze_dims);
 
-Maybe<Tensor> ExpandDims(const std::shared_ptr<Tensor>& input, const int32_t& expand_dim);
-
-Maybe<Tensor> Slice(const std::shared_ptr<Tensor>& input, const std::vector<int64_t>& starts,
-                    const std::vector<int64_t>& ends, const std::vector<int64_t>& steps);
+Maybe<Tensor> Expand(const std::shared_ptr<Tensor>& input, const std::vector<int32_t>& in_shape,
+                     const std::vector<int32_t>& expand_shape);
 
 Maybe<Tensor> Narrow(const std::shared_ptr<Tensor>& input, const int64_t& dim, const int64_t& start,
                      const int64_t& length);

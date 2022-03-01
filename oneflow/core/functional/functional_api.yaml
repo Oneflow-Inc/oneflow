@@ -788,6 +788,12 @@
   signature: "Tensor (Tensor input, Int32 dim) => Unsqueeze"
   bind_python: True
 
+- name: "squeeze"
+  signature: [
+    "Tensor (Tensor x, Int32List[1] dim=None) => Squeeze",
+  ]
+  bind_python: True
+
 - name: "exp"
   signature: "Tensor (Tensor x) => Exp"
   bind_python: True
@@ -1149,12 +1155,6 @@
 
 - name: "logical_slice_assign"
   signature: "Void (Tensor ref, Tensor value, Int64List start, Int64List stop, Int64List step) => LogicalSliceAssign"
-  bind_python: True
-
-- name: "squeeze"
-  signature: [
-    "Tensor (Tensor x, Int32List[1] dim=None) => Squeeze",
-  ]
   bind_python: True
 
 - name: "copy"
