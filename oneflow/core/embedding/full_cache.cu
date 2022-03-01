@@ -37,25 +37,25 @@ struct alignas(2 * std::max(sizeof(Key), sizeof(Index))) TableEntry {
 template<typename Key, typename Index>
 __device__ bool TryGetOrInsert(Key* entry_key, volatile Index* entry_index, uint64_t* table_size,
                                Key key, uint64_t* out) {
-  Key key_hi = (key | 0x1); 
-  Key key_lo = (key & 0x1); 
+  Key key_hi = (key | 0x1);
+  Key key_lo = (key & 0x1);
   Key old_entry_key = cuda::atomic::CAS(entry_key, static_cast<Key>(0), key_hi);
-  
+
   if (old_entry_key == 0) {
     Index index = cuda::atomic::Add(table_size, static_cast<uint64_t>(1));
     *entry_index = ((index << 1U) | key_lo);
     *out = index;
     return true;
-  } else if (old_entry_key == key) {
-    Index entry_index_val = *entry_index; 
-    if ((entry_index_val & 0x1) == key_lo){
+  } else if (old_entry_key == key_hi) {
+    Index entry_index_val = *entry_index;
+    if ((entry_index_val & 0x1) == key_lo) {
       *out = (entry_index_val >> 1U);
-      return true; 
+      return true;
     } else {
-      return false; 
+      return false;
     }
   } else {
-    return false; 
+    return false;
   }
 }
 
@@ -63,14 +63,6 @@ template<typename Key, typename Index>
 __device__ bool GetOrInsertOne(const size_t capacity, TableEntry<Key, Index>* table,
                                uint64_t* table_size, Key key, size_t hash, uint64_t* out) {
   const size_t start_idx = hash % capacity;
-  // fast path
-  {
-    TableEntry<Key, Index> entry = table[start_idx];
-    if (entry.key == key && entry.index != 0) {
-      *out = entry.index;
-      return true;
-    }
-  }
   for (size_t count = 0; count < capacity; ++count) {
     const size_t idx = (start_idx + count) % capacity;
     Key* entry_key = &table[idx].key;
@@ -87,10 +79,14 @@ __device__ bool GetOne(const size_t capacity, TableEntry<Key, Index>* table, Key
   for (size_t count = 0; count < capacity; ++count) {
     const size_t idx = (start_idx + count) % capacity;
     TableEntry<Key, Index> entry = table[idx];
+    Key key_hi = (key | 0x1);
+    Key key_lo = (key & 0x1);
     if (entry.key == 0) { break; }
-    if (entry.key == key) {
-      *out = entry.index;
-      return true;
+    if (entry.key == key_hi) {
+      if ((entry.index & 0x1) == key_lo) {
+        *out = (entry.index >> 1U);
+        return true;
+      }
     }
   }
   *out = 0;
