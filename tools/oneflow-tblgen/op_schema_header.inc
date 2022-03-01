@@ -23,10 +23,9 @@ class SbpContext;
 class InferSbpSignatureFnContext;
 class InferOutputBlobTimeShapeFnContext;
 class InferNdSbpFnContext;
-class DeviceInferContext;
+class DeviceAndStreamInferContext;
 class ComputeComplexityFnContext;
 class GetNdSbpSignatureListContext;
-class DeviceAndStreamInferContext;
 }  // namespace user_op
 
 using GetInputArgModifier =

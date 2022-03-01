@@ -14,8 +14,6 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 #include "oneflow/core/job/sbp_parallel.h"
-#include "oneflow/core/auto_parallel/sbp_node.h"
-#include "oneflow/core/auto_parallel/sbp_util.h"
 #include "oneflow/core/common/protobuf.h"
 #include "oneflow/core/framework/nd_sbp.h"
 

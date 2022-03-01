@@ -39,10 +39,9 @@ class SbpContext;
 class InferSbpSignatureFnContext;
 class InferOutputBlobTimeShapeFnContext;
 class InferNdSbpFnContext;
-class DeviceInferContext;
+class DeviceAndStreamInferContext;
 class ComputeComplexityFnContext;
 class GetNdSbpSignatureListContext;
-class DeviceAndStreamInferContext;
 
 using CheckAttrFn = std::function<Maybe<void>(const UserOpDefWrapper&, const UserOpConfWrapper&)>;
 using TensorDescInferFn = std::function<Maybe<void>(InferContext*)>;
@@ -134,10 +133,9 @@ class OpRegistry final {
   OpRegistry& SetNdSbpInferFn(NdSbpInferFn fn);
   OpRegistry& SetCheckAttrFn(CheckAttrFn fn);
   OpRegistry& SetDataTypeInferFn(DataTypeInferFn fn);
-  OpRegistry& SetDeviceInferFn(DeviceInferFn fn);
+  OpRegistry& SetDeviceAndStreamInferFn(DeviceAndStreamInferFn fn);
   OpRegistry& SetComputeComplexityFn(ComputeComplexityFn fn);
   OpRegistry& SetGetNdSbpSignatureListFn(GetNdSbpSignatureListFn fn);
-  OpRegistry& SetDeviceAndStreamInferFn(DeviceAndStreamInferFn fn);
 
   Maybe<OpRegistry&> Finish();
   OpRegistryResult GetResult() { return result_; }

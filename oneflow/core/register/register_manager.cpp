@@ -85,8 +85,7 @@ void RegstMgr::AddPlan(const Plan& plan,
         CHECK(mem_block.mem_case().has_host_mem());
       } else {
         CHECK_GE(var_blob->blob_desc().AlignedByteSizeOfBlobBody(), mem_block.mem_size());
-        CHECK_GE(mem_block.mem_size(), var_blob->blob_desc().ByteSizeOfBlobBody())
-            << "var name: " << var_name;
+        CHECK_GE(mem_block.mem_size(), var_blob->blob_desc().ByteSizeOfBlobBody());
         CHECK(mem_block_id2ptr_.emplace(mem_block_id, var_blob->ForceMutDptr<char>()).second);
         // NOTE(chengcheng):
         //   CPU eager var tensor mem case is host_mem WITHOUT cuda pinned, but Lazy Complier

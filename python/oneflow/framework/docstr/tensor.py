@@ -811,6 +811,7 @@ add_docstr(
     oneflow.Tensor.size,
     """
     The interface is consistent with PyTorch.
+
     Returns the size of the self tensor. If dim is not specified, the returned value is a oneflow.Size, a subclass of tuple. If dim is specified, returns an int holding the size of that dimension.
 
     Args:

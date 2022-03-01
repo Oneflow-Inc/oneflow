@@ -14,7 +14,6 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 #include "oneflow/core/framework/framework.h"
-#include "oneflow/core/job/sbp_parallel.h"
 #include "oneflow/user/ops/nn_util.h"
 #include "oneflow/core/framework/op_generated.h"
 

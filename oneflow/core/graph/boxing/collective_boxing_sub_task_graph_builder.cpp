@@ -139,7 +139,6 @@ class NcclCollectiveBoxingReduceScatterSubTskGphBuilder final : public SubTskGph
         && out_parallel_desc.parallel_num() > 1 && logical_blob_desc.shape().NumAxes() > 0
         && logical_blob_desc.shape().At(0) % out_parallel_desc.parallel_num() == 0
         && SubTskGphBuilderUtil::IsBoxingP2S(in_sbp_parallel, out_sbp_parallel)
-        && logical_blob_desc.shape().At(0) % out_parallel_desc.parallel_num() == 0
         && out_sbp_parallel.split_parallel().axis() == 0) {
       const std::string op_name =
           "System-Boxing-NcclCollectiveBoxingReduceScatter-" + NewUniqueId();
@@ -238,7 +237,6 @@ class NcclCollectiveBoxingAllGatherSubTskGphBuilder final : public SubTskGphBuil
         && out_parallel_desc.parallel_num() > 1 && logical_blob_desc.shape().NumAxes() > 0
         && logical_blob_desc.shape().At(0) % out_parallel_desc.parallel_num() == 0
         && SubTskGphBuilderUtil::IsBoxingS2B(in_sbp_parallel, out_sbp_parallel)
-        && logical_blob_desc.shape().At(0) % out_parallel_desc.parallel_num() == 0
         && in_sbp_parallel.split_parallel().axis() == 0) {
       const std::string op_name = "System-Boxing-NcclCollectiveBoxingAllGather-" + NewUniqueId();
       FOR_RANGE(int64_t, i, 0, in_parallel_desc.parallel_num()) {

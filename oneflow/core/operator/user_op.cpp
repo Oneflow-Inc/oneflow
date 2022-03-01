@@ -17,7 +17,6 @@ limitations under the License.
 #include "oneflow/core/framework/sbp_context.h"
 #include "oneflow/core/framework/tensor_desc.h"
 #include "oneflow/core/framework/to_string.h"
-#include "oneflow/core/job/sbp_parallel.cfg.h"
 #include "oneflow/core/operator/user_op.h"
 #include "oneflow/core/framework/infer_output_blob_time_shape_fn_context.h"
 #include "oneflow/core/framework/infer_nd_sbp_fn_context.h"

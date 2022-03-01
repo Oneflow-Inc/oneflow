@@ -17,6 +17,7 @@ limitations under the License.
 #include "oneflow/core/framework/op_generated.h"
 
 namespace oneflow {
+
 /* static */ Maybe<void> OFRecordReaderOp::InferLogicalTensorDesc(user_op::InferContext* ctx) {
   user_op::TensorDesc* out_tensor = ctx->OutputTensorDesc("out", 0);
   *out_tensor->mut_shape() = Shape({ctx->Attr<int32_t>("batch_size")});

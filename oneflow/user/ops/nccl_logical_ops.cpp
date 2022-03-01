@@ -18,7 +18,6 @@ limitations under the License.
 #include "oneflow/core/operator/operator.h"
 #include "oneflow/user/ops/nccl_logical_util.h"
 #include "oneflow/user/ops/comm_net_device_infer_util.h"
-#include "oneflow/core/framework/op_generated.h"
 
 namespace oneflow {
 

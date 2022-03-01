@@ -14,7 +14,6 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 #include "oneflow/core/common/multi_client.h"
-#include "oneflow/core/job/sbp_parallel.cfg.h"
 #include "oneflow/core/operator/interface_op_util.h"
 #include "oneflow/core/operator/output_op.h"
 #include "oneflow/core/job/sbp_signature_builder.h"

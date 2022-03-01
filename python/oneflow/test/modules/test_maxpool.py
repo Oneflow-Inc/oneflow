@@ -56,36 +56,6 @@ def _test_maxpool2d_channel_last(
     os.environ["ONEFLOW_ENABLE_NHWC"] = "0"
 
 
-def _test_maxpool2d_channel_last(
-    test_case, device, shape, kernel_size, stride, padding, dilation, ceil_mode
-):
-    os.environ["ONEFLOW_ENABLE_NHWC"] = "1"
-    arr = np.random.randn(*shape)
-    x1 = flow.tensor(arr, dtype=flow.float64, device=device)
-    m1 = flow.nn.MaxPool2d(
-        kernel_size=kernel_size,
-        stride=stride,
-        padding=padding,
-        dilation=dilation,
-        ceil_mode=ceil_mode,
-    )
-    y1 = m1(x1)
-
-    x2 = pytorch.tensor(arr.transpose(0, 3, 1, 2), dtype=pytorch.float64, device=device)
-    m2 = pytorch.nn.MaxPool2d(
-        kernel_size=kernel_size,
-        stride=stride,
-        padding=padding,
-        dilation=dilation,
-        ceil_mode=ceil_mode,
-    )
-    y2 = m2(x2).permute(0, 2, 3, 1)
-    test_case.assertTrue(
-        np.allclose(y1.detach().cpu().numpy(), y2.detach().cpu().numpy(), 1e-4, 1e-4)
-    )
-    os.environ["ONEFLOW_ENABLE_NHWC"] = "0"
-
-
 @flow.unittest.skip_unless_1n1d()
 class TestMaxPooling(flow.unittest.TestCase):
     @autotest(n=5, auto_backward=True, check_graph=True)
@@ -170,19 +140,6 @@ class TestMaxPooling(flow.unittest.TestCase):
         if os.getenv("ONEFLOW_TEST_CPU_ONLY"):
             arg_dict["device"] = ["cpu"]
         arg_dict["shape"] = [(3, 14, 27, 3), (5, 9, 14, 10), (2, 224, 224, 3)]
-        arg_dict["kernel_size"] = [3, (2, 3), (3, 4)]
-        arg_dict["stride"] = [1, (1, 2), 2]
-        arg_dict["padding"] = [0, (0, 1)]
-        arg_dict["dilation"] = [1, (1, 2), 2]
-        arg_dict["ceil_mode"] = [True, False]
-        for arg in GenArgList(arg_dict):
-            arg[0](test_case, *arg[1:])
-
-    def test_maxpool2d_channel_last(test_case):
-        arg_dict = OrderedDict()
-        arg_dict["test_fun"] = [_test_maxpool2d_channel_last]
-        arg_dict["device"] = ["cpu", "cuda"]
-        arg_dict["shape"] = [(2, 14, 27, 3), (7, 9, 14, 10), (16, 224, 224, 3)]
         arg_dict["kernel_size"] = [3, (2, 3), (3, 4)]
         arg_dict["stride"] = [1, (1, 2), 2]
         arg_dict["padding"] = [0, (0, 1)]

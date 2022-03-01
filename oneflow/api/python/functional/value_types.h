@@ -171,9 +171,6 @@ VALUE_TYPE_OF_IMPL(std::vector<Symbol<SbpParallel>>, kSBP_PARALLEL_LIST);
 VALUE_TYPE_OF_IMPL(one::OpExpr, kOPEXPR);
 VALUE_TYPE_OF_IMPL(std::shared_ptr<one::OpExpr>, kOPEXPR_REF);
 
-VALUE_TYPE_OF_IMPL(one::OpExpr, kOPEXPR);
-VALUE_TYPE_OF_IMPL(std::shared_ptr<one::OpExpr>, kOPEXPR_REF);
-
 VALUE_TYPE_OF_IMPL(PyObject*, kPY_OBJECT);
 VALUE_TYPE_OF_IMPL(const PyObject*, kPY_OBJECT);
 

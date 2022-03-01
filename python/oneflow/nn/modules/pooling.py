@@ -547,6 +547,7 @@ class AvgPool2d(Module):
             )
             self._padding_before = [pad[0] for pad in _pads_list]
             self._padding_after = [pad[1] for pad in _pads_list]
+
         else:
             self.data_format = "NCHW"
             self.channel_pos = "channels_first"

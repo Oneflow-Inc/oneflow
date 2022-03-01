@@ -75,14 +75,6 @@ class TestFloor(flow.unittest.TestCase):
         y = torch.floor(x)
         return y
 
-    @autotest(check_graph=False)
-    def test_flow_floor_inplace_with_random_data(test_case):
-        device = random_device()
-        x = random_pytorch_tensor().to(device)
-        y = x + 1
-        y.floor_()
-        return y
-
 
 if __name__ == "__main__":
     unittest.main()

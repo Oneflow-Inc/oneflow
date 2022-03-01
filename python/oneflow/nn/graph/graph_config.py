@@ -17,8 +17,8 @@ import os
 
 from collections import OrderedDict
 
-import oneflow._oneflow_internal.oneflow.core.job.job_conf as job_conf_cfg
 from oneflow.nn.graph.optimizer import OptDict
+import oneflow._oneflow_internal.oneflow.core.job.job_conf as job_conf_cfg
 
 
 class GraphConfig(object):

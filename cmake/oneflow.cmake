@@ -444,7 +444,6 @@ if(BUILD_TESTING)
   endif()
 endif()
 
-
 # build include
 add_custom_target(of_include_copy ALL)
 

@@ -242,11 +242,6 @@ def RegisterMethods():
     flow._oneflow_internal.placement.__setstate__ = placement_setstate
 
 
-def RegisterMethods():
-    Tensor.__setstate__ = tensor_setstate
-    Tensor.__getstate__ = tensor_getstate
-
-
 def legacy_load(
     path: Union[str, Path], global_src_rank: Optional[int] = None,
 ) -> Dict[str, "flow.Tensor"]:
