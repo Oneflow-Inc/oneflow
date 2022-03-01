@@ -15,7 +15,6 @@ limitations under the License.
 */
 #include "oneflow/xrt/tensorrt/ops/op_context.h"
 #include "oneflow/xrt/tensorrt/ops/op_kernel.h"
-#include "oneflow/xrt/tensorrt/plugin/padding_grad_plugin.h"
 
 namespace oneflow {
 namespace xrt {
@@ -24,13 +23,29 @@ namespace tensorrt {
 class PaddingGradOp : public TrtOpKernel {
  public:
   void Compile(TrtOpContext* ctx) override {
-    auto* dy = ctx->Input("dy_0");
     const auto& padding_before = ctx->Attr<std::vector<int64_t>>("padding_before");
-    const auto& padding_after = ctx->Attr<std::vector<int64_t>>("padding_before");
+    const auto& padding_after = ctx->Attr<std::vector<int64_t>>("padding_after");
+    const auto& shape = ctx->InputShape("dy_0");
+    CHECK_EQ(shape.NumAxes(), padding_before.size());
+    CHECK_EQ(shape.NumAxes(), padding_after.size());
+    nvinfer1::Dims start, size, stride;
+    start.nbDims = padding_before.size();
+    size.nbDims = start.nbDims;
+    stride.nbDims = start.nbDims;
+    for (int i = 0; i < start.nbDims; ++i) {
+      start.d[i] = padding_before[i];
+      size.d[i] = shape.At(i) - padding_before[i] - padding_after[i];
+      stride.d[i] = 1;
+    }
+    auto* layer = ctx->builder()->addSlice(*(ctx->Input("dy_0")), start, size, stride);
+    layer->setName(ctx->op_name().c_str());
 
-    PaddingGradPlugin plugin(ctx->op_name(), padding_before, padding_after);
-    auto* layer = ctx->builder()->addPluginV2(&dy, 1, plugin);
-    ctx->SetOutput("dx_0", layer->getOutput(0));
+    // add identity layer after slice to bypass some internal error,
+    // refer to https://github.com/NVIDIA/TensorRT/issues/1821
+    auto* identity_layer = ctx->builder()->addIdentity(*(layer->getOutput(0)));
+    std::string name = ctx->op_name() + "_identity";
+    identity_layer->setName(name.c_str());
+    ctx->SetOutput("dx_0", identity_layer->getOutput(0));
   }
 };
 
