@@ -273,6 +273,11 @@ Maybe<void> GenerateBackwardOpConf4Conv(const user_op::UserOpWrapper& op, user_o
   return GetSbpSignatures4Conv(ctx);
 }
 
+/* static */ Maybe<double> Conv1DOp::GetComputeComplexity(
+    user_op::ComputeComplexityFnContext* ctx) {
+  return ConvComputationCost(ctx);
+}
+
 /* static */ Maybe<void> Conv1DOp::CheckAttr(const user_op::UserOpDefWrapper& def,
                                              const user_op::UserOpConfWrapper& conf) {
   return CheckAttr_<1>(def, conf);
@@ -295,6 +300,11 @@ Maybe<void> GenerateBackwardOpConf4Conv(const user_op::UserOpWrapper& op, user_o
   return GetSbpSignatures4Conv(ctx);
 }
 
+/* static */ Maybe<double> Conv2DOp::GetComputeComplexity(
+    user_op::ComputeComplexityFnContext* ctx) {
+  return ConvComputationCost(ctx);
+}
+
 /* static */ Maybe<void> Conv2DOp::CheckAttr(const user_op::UserOpDefWrapper& def,
                                              const user_op::UserOpConfWrapper& conf) {
   return CheckAttr_<2>(def, conf);
@@ -315,6 +325,11 @@ Maybe<void> GenerateBackwardOpConf4Conv(const user_op::UserOpWrapper& op, user_o
 
 /* static */ Maybe<void> Conv3DOp::GetSbp(user_op::SbpContext* ctx) {
   return GetSbpSignatures4Conv(ctx);
+}
+
+/* static */ Maybe<double> Conv3DOp::GetComputeComplexity(
+    user_op::ComputeComplexityFnContext* ctx) {
+  return ConvComputationCost(ctx);
 }
 
 /* static */ Maybe<void> Conv3DOp::CheckAttr(const user_op::UserOpDefWrapper& def,
