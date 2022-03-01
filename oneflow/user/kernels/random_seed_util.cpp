@@ -79,5 +79,4 @@ int64_t GetOpKernelSeed(const user_op::KernelInitContext* ctx) {
   return seed;
 }
 
-
 }  // namespace oneflow
