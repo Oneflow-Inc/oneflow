@@ -51,7 +51,6 @@ __device__ bool TryGetOrInsert(Key* entry_key, volatile Index* entry_index, uint
     if ((entry_index_val & 0x1) == key_lo){
       *out = (entry_index_val >> 1U);
       return true; 
-      }
     } else {
       return false; 
     }
