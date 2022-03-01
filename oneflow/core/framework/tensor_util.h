@@ -27,4 +27,3 @@ Maybe<void> SyncAccessTensorWithTimeOut(const std::shared_ptr<Tensor>& tensor,
                                         const std::string& modifier);
 }  // namespace one
 }  // namespace oneflow
-

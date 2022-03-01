@@ -4236,6 +4236,7 @@ def OneFlow_BroadcastMatmulGradBOp : OneFlow_BaseOp<"broadcast_matmul_grad_b", [
   let has_physical_tensor_desc_infer_fn = 1;
   let has_get_sbp_fn = 1;
   let has_data_type_infer_fn = 1;
+  let has_compute_complexity_fn = 1;
 }
 
 def OneFlow_DistributedPartialFcSampleOp : OneFlow_BaseOp<"distributed_partial_fc_sample", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
