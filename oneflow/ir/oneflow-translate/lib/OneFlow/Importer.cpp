@@ -341,6 +341,7 @@ llvm::Optional<Type> Importer::GetTypeFromOneFlowDataType(::oneflow::DataType dt
     if (dt == ::oneflow::DataType::kInt32) { return GetBuilder().getI32Type(); }
     if (dt == ::oneflow::DataType::kInt64) { return GetBuilder().getI64Type(); }
     if (dt == ::oneflow::DataType::kUInt8) { return GetBuilder().getIntegerType(8, false); }
+    if (dt == ::oneflow::DataType::kOFRecord) { return OFRecordElementType::get(GetMLIRContext()); }
     if (dt == ::oneflow::DataType::kFloat16) { return GetBuilder().getF16Type(); }
     if (dt == ::oneflow::DataType::kTensorBuffer) {
       return TensorBufferElementType::get(GetMLIRContext());
