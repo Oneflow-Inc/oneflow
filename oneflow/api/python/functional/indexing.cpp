@@ -89,11 +89,11 @@ Maybe<void> ParseScalar(PyObject* object, char* data, const DataType& dtype) {
     CHECK_OR_RETURN(PyLong_Check(object)) << "Expected a long value.";
     *(reinterpret_cast<int64_t*>(data)) = PyLong_AsLongLong(object);
     return Maybe<void>::Ok();
-  } else if (dtype == DataType::kUInt8) {
+  } else if (dtype == DataType::kUInt8 || dtype == DataType::kBool) {
     CHECK_OR_RETURN(PyBool_Check(object) || PyLong_Check(object))
         << "Expected a boolean or long value.";
     if (PyBool_Check(object)) {
-      *(reinterpret_cast<uint8_t*>(data)) = (object == Py_True);
+      *(reinterpret_cast<bool*>(data)) = (object == Py_True);
     } else {
       int64_t value = PyLong_AsLongLong(object);
       CHECK_OR_RETURN(value >= 0 && value <= 255) << "Out of range 0-255.";
