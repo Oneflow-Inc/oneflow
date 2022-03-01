@@ -1984,3 +1984,11 @@
 - name: "cumprod_grad"
   signature: "Tensor (Tensor input, Tensor y, Tensor x, Int64 dim) => CumprodGrad"
   bind_python: False
+
+- name: "id_shuffle"
+  signature: "TensorTuple (Tensor ids, Tensor column_ids, Int32 num_columns) => IdShuffle"
+  bind_python: True
+
+- name: "embedding_shuffle"
+  signature: "Tensor (Tensor cur_rank_embeddings, Tensor num_unique_matrix, Tensor cur_rank_inverse_indices, Tensor inverse_unique_partion_indices) => EmbeddingShuffle"
+  bind_python: True
