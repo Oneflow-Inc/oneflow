@@ -20,6 +20,7 @@ from collections import OrderedDict
 import numpy as np
 
 from oneflow.test_utils.automated_test_util import *
+from oneflow.test_utils.test_util import GenArgList
 
 import oneflow as flow
 import oneflow.unittest
@@ -60,6 +61,7 @@ def _test_global_transpose_backward(test_case, placement, sbp):
         np.random.randn(8, 16, 8, 16), dtype=flow.float32, requires_grad=True,
     ).to_global(flow.env.all_device_placement("cpu"), flow.sbp.broadcast)
     x = x.to_global(placement, sbp)
+    x.retain_grad()
     y = flow.transpose(x, 0, 1).sum()
     y.backward()
     test_case.assertTrue(
@@ -72,6 +74,7 @@ def _test_global_transpose_backward_v2(test_case, placement, sbp):
         np.random.randn(8, 16, 8, 16), dtype=flow.float32, requires_grad=True,
     ).to_global(flow.env.all_device_placement("cpu"), flow.sbp.broadcast)
     x = x.to_global(placement, sbp)
+    x.retain_grad()
     y = flow.transpose(x, 3, 1).sum()
     y.backward()
     test_case.assertTrue(
