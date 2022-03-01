@@ -19,34 +19,34 @@ limitations under the License.
 #include <type_traits>
 #include "oneflow/core/common/just.h"
 #include "oneflow/core/common/maybe.h"
+#include "oneflow/xrt/utility/env.h"
 
 namespace oneflow {
 
 struct WithCheckLevel {
-  static bool is_enabled_check(int32_t check_level) {
-    const char* env_check_level = std::getenv("ONEFOW_CHECK_LEVEL");
-    const char* env_debug_mode = std::getenv("ONEFLOW_DEBUG_MODE");
-    return env_debug_mode != nullptr
-           || (env_check_level != nullptr && std::atoi(env_check_level) >= check_level);
+  static bool IsCheckEnabled(int32_t check_level) {
+    static bool env_check_level = EnvToBool(ONEFOW_CHECK_LEVEL, false);
+    static bool env_debug_mode = EnvToBool(ONEFLOW_DEBUG_MODE, false);
+    return env_check_level || env_debug_mode;
   }
 
   template<typename T, typename = void>
-  struct Check;
+  struct DebugChecker;
 
   template<typename T, typename... Args>
-  struct Check<T (*)(Args...)> final {
+  struct DebugChecker<T (*)(Args...)> final {
     template<int32_t check_level, T (*func)(Args...)>
     static T Call(Args... args) {
       static_assert(std::is_same<T, Maybe<void>>::value,
                     "returned value type must be Maybe<void>.");
-      if (is_enabled_check(check_level)) JUST(func(std::forward<Args>(args)...));
+      if (IsCheckEnabled(check_level)) JUST(func(std::forward<Args>(args)...));
       return Maybe<void>::Ok();
     }
   };
 };
 
-#define CHECK_LEVEL(check_level, fn_ptr) \
-  (&WithCheckLevel::Check<decltype(fn_ptr)>::Call<check_level, fn_ptr>)
+#define VCHECK(check_level, fn_ptr) \
+  (&WithCheckLevel::DebugChecker<decltype(fn_ptr)>::Call<check_level, fn_ptr>)
 
 }  // namespace oneflow
 
