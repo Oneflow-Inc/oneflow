@@ -22,9 +22,9 @@ namespace oneflow {
 
 ThreadMgr::~ThreadMgr() {
   for (auto& thread_pair : threads_) {
-    CHECK(thread_pair.second) << " Runtime Error! thread id " << thread_pair.first
-                              << " not delete with graph, and it's empty is "
-                              << thread_pair.second->Empty();
+    CHECK(!thread_pair.second) << " Runtime Error! thread id " << thread_pair.first
+                               << " not delete with graph, and it's empty is "
+                               << thread_pair.second->Empty();
   }
 }
 
@@ -34,7 +34,7 @@ Thread* ThreadMgr::GetThrd(int64_t thrd_id) {
   return iter->second.get();
 }
 
-void ThreadMgr::AddThreads(const std::vector<int64_t>& thread_ids) {
+void ThreadMgr::AddThreads(const HashSet<int64_t>& thread_ids) {
   const int64_t this_rank = GlobalProcessCtx::Rank();
   for (int64_t thrd_id : thread_ids) {
     if (threads_.find(thrd_id) != threads_.end()) { continue; }
@@ -46,11 +46,12 @@ void ThreadMgr::AddThreads(const std::vector<int64_t>& thread_ids) {
   }
 }
 
-void ThreadMgr::TryDeleteThreads(const std::vector<int64_t>& thread_ids) {
+void ThreadMgr::TryDeleteThreads(const HashSet<int64_t>& thread_ids) {
   for (int64_t thrd_id : thread_ids) {
-    auto it = threads_.find(thrd_id);
+    const auto& it = threads_.find(thrd_id);
     if (it == threads_.end()) { continue; }
     auto& thread = it->second;
+    CHECK(thread) << " actor thread " << thrd_id << " non-existent but want to delete";
     if (thread->Empty()) {
       // NOTE(chengcheng):  Only delete thread when it is empty.
       ActorMsg msg = ActorMsg::BuildCommandMsg(-1, ActorCmd::kStopThread);

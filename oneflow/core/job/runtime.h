@@ -33,10 +33,10 @@ class Runtime final {
   Runtime(const Plan& plan, const HashMap<std::string, Blob*>& variable_op_name2eager_blob);
 
  private:
-  void GetThreadIdsFromPlan(const Plan& plan);
+  void DumpThreadIdsFromPlan(const Plan& plan);
 
   HashMap<int64_t, int64_t> job_id2actor_size_;
-  std::vector<int64_t> thread_ids_;
+  HashSet<int64_t> thread_ids_;
 
   boxing::collective::SchedulerPlanToken* collective_boxing_scheduler_plan_token_;
 };
