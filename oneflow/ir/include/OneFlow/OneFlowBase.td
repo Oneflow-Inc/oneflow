@@ -7,6 +7,11 @@ include "mlir/IR/SymbolInterfaces.td"
 include "mlir/Interfaces/SideEffectInterfaces.td"
 include "/mlir/Interfaces/InferTypeOpInterface.td"
 
+def OneFlow_TensorBufferElement: TypeDef<OneFlow_Dialect, "TensorBufferElement"> {
+  let mnemonic = "tensor_buffer_element";
+}
+
+def OneFlow_TensorBufferTensor : TensorOf<[OneFlow_TensorBufferElement]>;
 def OneFlow_Tensor : TensorOf<[AnyType]>;
 def SI32ArrayAttr : TypedArrayAttrBase<SI32Attr, "signed 32-bit integer array attribute"> {}
 

@@ -1,0 +1,9 @@
+#ifndef ONEFLOW_IR_INCLUDE_ONEFLOW_ONEFLOWTYPES_H_
+#define ONEFLOW_IR_INCLUDE_ONEFLOW_ONEFLOWTYPES_H_
+
+#include "mlir/IR/Types.h"
+
+#define GET_TYPEDEF_CLASSES
+#include "OneFlow/OneFlowOpsTypes.h.inc"
+
+#endif  // ONEFLOW_IR_INCLUDE_ONEFLOW_ONEFLOWTYPES_H_

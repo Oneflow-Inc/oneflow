@@ -22,6 +22,7 @@ limitations under the License.
 
 #include "OneFlow/OneFlowDialect.h"
 #include "OneFlow/OneFlowOps.h"
+#include "OneFlow/OneFlowTypes.h"
 #include "OneFlow/OneFlowSupport.h"
 #include "OneFlow/Passes.h"
 #include "OneFlow/MLIROneFlowTranslation.h"
@@ -341,6 +342,9 @@ llvm::Optional<Type> Importer::GetTypeFromOneFlowDataType(::oneflow::DataType dt
     if (dt == ::oneflow::DataType::kInt64) { return GetBuilder().getI64Type(); }
     if (dt == ::oneflow::DataType::kUInt8) { return GetBuilder().getIntegerType(8, false); }
     if (dt == ::oneflow::DataType::kFloat16) { return GetBuilder().getF16Type(); }
+    if (dt == ::oneflow::DataType::kTensorBuffer) {
+      return TensorBufferElementType::get(GetMLIRContext());
+    }
     if (dt == ::oneflow::DataType::kBool) { return GetBuilder().getI8Type(); }
     llvm::errs() << "unsupported data type: " << dt << "\n";
     return llvm::None;
