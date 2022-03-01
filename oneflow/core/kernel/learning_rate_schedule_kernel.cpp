@@ -287,7 +287,7 @@ void LearningRateScheduleKernel::ForwardDataContent(KernelContext* ctx) const {
   if (conf.has_learning_rate_decay()) {
     learning_rate = GetDecayedLearningRate(conf.learning_rate_decay(), learning_rate, train_step);
   }
-  if (std::getenv("GRAPH_DEBUG_STEP_LR") != nullptr) {
+  if (std::getenv("ONEFLOW_DEBUG_GRAPH_STEP_LR") != nullptr) {
     std::cout << "Last step " << train_step << " adjusting learning rate to " << learning_rate
               << std::endl;
   }
