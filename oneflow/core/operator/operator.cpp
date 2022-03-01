@@ -1527,6 +1527,7 @@ Maybe<Shape> GetNdHierarchyPhysicalShape(const Shape& logical_shape, const NdSbp
     const auto& sbp_parallel = nd_sbp.sbp_parallel(i);
     if (sbp_parallel.has_split_parallel()) {
       const int64_t split_axis = sbp_parallel.split_parallel().axis();
+      CHECK_LE_OR_RETURN(physical->At(split_axis) % parallel_hierarchy.At(i), 1);
       physical->Set(split_axis, physical->At(split_axis) / parallel_hierarchy.At(i));
     }
   }
