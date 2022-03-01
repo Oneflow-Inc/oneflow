@@ -408,3 +408,5 @@ if oneflow._oneflow_internal.flags.with_mlir():
     if os.getenv("ONEFLOW_MLIR_ENABLE_CODEGEN_FUSERS"):
         print("MLIR JIT engine will load:", oneflow_internal_path, file=sys.stderr)
         oneflow._oneflow_internal.ir.load_jit_shared_lib(oneflow_internal_path)
+
+from oneflow._oneflow_internal import _set_num_threads  as set_num_threads

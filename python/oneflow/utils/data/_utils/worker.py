@@ -295,7 +295,7 @@ def _worker_loop(
         # https://docs.python.org/3/library/signal.html#execution-of-python-signal-handlers
         signal_handling._set_worker_signal_handlers()
 
-        # TODO:flow.set_num_threads(1)
+        flow.set_num_threads(1)
         seed = base_seed + worker_id
         random.seed(seed)
         generator.manual_seed(seed)
