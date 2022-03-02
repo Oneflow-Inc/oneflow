@@ -90,18 +90,16 @@ Maybe<void> SbpConstructor::DumpNdSbpSignatureForJob(const OpGraph& op_graph, Jo
     // sbp_node->FinalSbpSignature()->ToProto(
     //     &(*job->mutable_job_parallel_view_conf()
     //            ->mutable_op_name2nd_sbp_signature_conf())[node->op().op_name()]);
-    job->mutable_job_parallel_view_conf()
-        ->mutable_op_name2nd_sbp_signature_conf()
-        ->at(node->op().op_name())
+    (*job->mutable_job_parallel_view_conf()
+          ->mutable_op_name2nd_sbp_signature_conf())[node->op().op_name()]
         .CopyFrom(*sbp_node->FinalSbpSignature());
     // If we have 1D SbpSignature Conf
     if (node->parallel_desc().hierarchy()->NumAxes() == 1) {
       // Update SbpSignature
       SbpSignature sbp_signature;
       NdSbpSignatureToSbpSignature(*sbp_node->FinalSbpSignature(), &sbp_signature);
-      job->mutable_job_parallel_view_conf()
-          ->mutable_op_name2sbp_signature_conf()
-          ->at(node->op().op_name())
+      (*job->mutable_job_parallel_view_conf()
+            ->mutable_op_name2sbp_signature_conf())[node->op().op_name()]
           .CopyFrom(sbp_signature);
     }
     // TODO: Specially update sbp conf by using polymorphism function
