@@ -632,7 +632,7 @@ LogicalResult ConvertUserOpInputs(Operation* op, oneflow::UserOpAdaptor& user_op
     if (input_size <= 0)
       return op->emitError("input_size <= 0, op: " + op->getName().getStringRef());
     for (int32_t i = 0; i < input_size; i++) {
-      if (auto result = op->getOperand(input_idx).dyn_cast<mlir::OpResult>()) {
+      if (auto result = GetDataInputOperands(op)[input_idx].dyn_cast<mlir::OpResult>()) {
         auto input_s_ptr = (*user_conf->mutable_input())[input_key].mutable_s()->Add();
         *(input_s_ptr) = GetOutputLbn(result).getValue();
         input_idx += 1;
