@@ -630,8 +630,10 @@ LogicalResult JobImporter::TryToUpdateJob() {
   auto ConvertOp = [&](Operation* op) -> WalkResult {
     if (op->hasTrait<OpTrait::IsOpConfCompatible>()) {
       if (llvm::dyn_cast<oneflow::UserOp>(op)) {
-        op->emitError("excepted concrete UserOp, but got generic UserOp: ") << *op;
-        return WalkResult::interrupt();
+        if (failed(ConvertUserOp(op, new_job))) {
+          op->emitError("failed to process generic UserOp: ") << *op;
+          return WalkResult::interrupt();
+        }
       } else if (llvm::dyn_cast<oneflow::SystemOp>(op)) {
         if (failed(ConvertSystemOp(op, new_job))) {
           op->emitError("failed to process SystemOp: ") << *op;
