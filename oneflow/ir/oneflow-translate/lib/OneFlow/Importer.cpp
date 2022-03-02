@@ -134,37 +134,6 @@ LogicalResult Importer::AddUserOpInputOutputSegments(const ::oneflow::OperatorCo
   return success();
 }
 
-OperandRange GetDataInputOperands(Operation* op) {
-  if (auto cec = dyn_cast<ControlEdgeCompatible>(op)) {
-    return cec.dataInputOperands();
-  } else {
-    return op->getOperands();
-  }
-}
-
-llvm::Optional<OperandRange> GetCtrlIntputOperands(Operation* op) {
-  if (auto cec = dyn_cast<ControlEdgeCompatible>(op)) {
-    return cec.ctrlInputOperands();
-  } else {
-    return llvm::None;
-  }
-}
-
-ResultRange GetDataOutputResults(Operation* op) {
-  if (auto cec = dyn_cast<ControlEdgeCompatible>(op)) {
-    return cec.dataOutputResults();
-  } else {
-    return op->getResults();
-  }
-}
-
-llvm::Optional<OpResult> GetCtrlOutputResult(Operation* op) {
-  if (auto cec = dyn_cast<ControlEdgeCompatible>(op)) {
-    if (auto ctrl_out = cec.ctrlOutputResult()) { return ctrl_out.cast<OpResult>(); }
-  }
-  return llvm::None;
-}
-
 llvm::Optional<mlir::oneflow::DataTypeAttr> GetDataTypeAttr(MLIRContext* context,
                                                             ::oneflow::DataType oneflow_value) {
   switch (oneflow_value) {
@@ -628,7 +597,6 @@ LogicalResult GetFilteredSegmentKeyAndSizes(Operation* op, std::vector<std::stri
   return success();
 }
 
-
 llvm::Optional<std::string> GetOutputLbn(OpResult result) {
   const auto def_op = result.getDefiningOp();
   if (def_op->hasTrait<OpTrait::IsImportCompatible>()) {
@@ -667,8 +635,7 @@ LogicalResult ConvertUserOpInputs(Operation* op, oneflow::UserOpAdaptor& user_op
                                   ::oneflow::UserOpConf* user_conf) {
   std::vector<std::string> keys{};
   std::vector<int32_t> sizes{};
-  if (failed(GetFilteredSegmentKeyAndSizes<OpTrait::AttrSizedOperandSegments>(op, keys,
-                                                                                     sizes))) {
+  if (failed(GetFilteredSegmentKeyAndSizes<OpTrait::AttrSizedOperandSegments>(op, keys, sizes))) {
     op->emitError("fail to convert user op inputs");
     return failure();
   }
@@ -698,8 +665,7 @@ LogicalResult ConvertUserOpOutputs(Operation* op, oneflow::UserOpAdaptor& user_o
                                    ::oneflow::UserOpConf* user_conf) {
   std::vector<std::string> keys{};
   std::vector<int32_t> sizes{};
-  if (failed(GetFilteredSegmentKeyAndSizes<OpTrait::AttrSizedResultSegments>(op, keys,
-                                                                                    sizes))) {
+  if (failed(GetFilteredSegmentKeyAndSizes<OpTrait::AttrSizedResultSegments>(op, keys, sizes))) {
     op->emitError("fail to convert user op outputs");
     return failure();
   }

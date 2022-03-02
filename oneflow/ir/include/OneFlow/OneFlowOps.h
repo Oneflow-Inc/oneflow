@@ -44,6 +44,8 @@ class FuncOp;
 
 namespace mlir {
 
+namespace oneflow {
+
 template<typename T>
 inline std::string GetOpTypeName(T op) {
   std::string op_type_name = op->getName().stripDialect().str();
@@ -58,6 +60,12 @@ inline std::string GetOpTypeName(T op) {
   if (auto user_op = dyn_cast<oneflow::UserOp>(op)) { op_type_name = user_op.op_type_name().str(); }
   return op_type_name;
 }
+ResultRange GetDataOutputResults(Operation* op);
+OperandRange GetDataInputOperands(Operation* op);
+llvm::Optional<OperandRange> GetCtrlIntputOperands(Operation* op);
+llvm::Optional<OpResult> GetCtrlOutputResult(Operation* op);
+
+}  // namespace oneflow
 
 }  // namespace mlir
 

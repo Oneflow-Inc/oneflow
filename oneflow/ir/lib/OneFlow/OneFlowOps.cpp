@@ -72,24 +72,25 @@ static ParseResult parseConstantOp(OpAsmParser& parser, OperationState& result) 
 
 namespace {
 
-template<typename OpType>
-LogicalResult TrimRedundantCtrl(OpType& op, PatternRewriter& rewriter) {
-  if (op.ctrl_output() && op.ctrl_output().use_empty()) {
-    const int32_t num_data_outputs =
-        *(op.result_segment_sizes().template getValues<uint32_t>()).begin();
+LogicalResult TrimRedundantCtrl(Operation* op, PatternRewriter& rewriter) {
+  auto ctrl_out = GetCtrlOutputResult(op);
+  auto data_outputs = GetDataOutputResults(op);
+  if (ctrl_out && ctrl_out.getValue().use_empty()) {
+    const int32_t num_data_outputs = data_outputs.size();
     NamedAttrList attributes(op->getAttrDictionary());
     attributes.erase(OpTrait::AttrSizedResultSegments<void>::getResultSegmentSizeAttr());
     attributes.append(OpTrait::AttrSizedResultSegments<void>::getResultSegmentSizeAttr(),
                       rewriter.getI32VectorAttr({num_data_outputs, 0}));
-    if (auto created =
-            rewriter.create<OpType>(op->getLoc(), op.getODSResults(0 /* data out */).getTypes(),
-                                    op->getOperands(), attributes)) {
-      for (auto out : op.data_output()) {
-        out.replaceAllUsesWith(created->getResult(out.getResultNumber()));
-      }
-      op->erase();
-      return success();
+    OperationState state(op->getLoc(), op->getName());
+    state.addAttributes(attributes);
+    state.addOperands(op->getOperands());
+    state.addTypes(data_outputs.getTypes());
+    auto created = rewriter.createOperation(state);
+    for (auto data_output : data_outputs) {
+      data_output.replaceAllUsesWith(created->getOpResult(data_output.getResultNumber()));
     }
+    op->erase();
+    return success();
   }
   return failure();
 }
@@ -337,6 +338,37 @@ static LogicalResult verify(mlir::oneflow::ReturnOp op) {
                             << " in function @" << job.getName();
 
   return success();
+}
+
+ResultRange GetDataOutputResults(Operation* op) {
+  if (auto cec = dyn_cast<ControlEdgeCompatible>(op)) {
+    return cec.dataOutputResults();
+  } else {
+    return op->getResults();
+  }
+}
+
+OperandRange GetDataInputOperands(Operation* op) {
+  if (auto cec = dyn_cast<ControlEdgeCompatible>(op)) {
+    return cec.dataInputOperands();
+  } else {
+    return op->getOperands();
+  }
+}
+
+llvm::Optional<OperandRange> GetCtrlIntputOperands(Operation* op) {
+  if (auto cec = dyn_cast<ControlEdgeCompatible>(op)) {
+    return cec.ctrlInputOperands();
+  } else {
+    return llvm::None;
+  }
+}
+
+llvm::Optional<OpResult> GetCtrlOutputResult(Operation* op) {
+  if (auto cec = dyn_cast<ControlEdgeCompatible>(op)) {
+    if (auto ctrl_out = cec.ctrlOutputResult()) { return ctrl_out.cast<OpResult>(); }
+  }
+  return llvm::None;
 }
 
 }  // namespace oneflow
