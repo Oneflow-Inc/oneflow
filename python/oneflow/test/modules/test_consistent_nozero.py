@@ -16,7 +16,7 @@ import oneflow.unittest
 from oneflow.test_utils.automated_test_util import *
 
 
-@autotest(n=5, auto_backward=False, check_graph=False)
+@autotest(n=1, auto_backward=False, check_graph=False)
 def _test_nonzero(test_case, placement, sbp, ndim):
     shape = [8 for _ in range(ndim)]
     x = random_tensor(ndim, *shape).to_global(placement, sbp)
