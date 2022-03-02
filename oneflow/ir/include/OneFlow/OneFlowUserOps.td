@@ -4418,6 +4418,9 @@ def OneFlow_ConcatOp : OneFlow_BaseOp<"concat", [NoSideEffect, DeclareOpInterfac
 }
 
 def OneFlow_ConstantOp : OneFlow_BaseOp<"constant", [NoSideEffect, NoGrad, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
+  let input = (ins
+    Optional<OneFlow_Tensor>:$UserSourceOpTickInput
+  );
   let output = (outs
     OneFlow_Tensor:$out
   );

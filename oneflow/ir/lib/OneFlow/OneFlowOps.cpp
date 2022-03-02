@@ -77,16 +77,15 @@ LogicalResult TrimRedundantCtrl(Operation* op, PatternRewriter& rewriter) {
   auto data_outputs = GetDataOutputResults(op);
   if (ctrl_out && ctrl_out.getValue().use_empty()) {
     const int32_t num_data_outputs = data_outputs.size();
-    NamedAttrList attributes(op->getAttrDictionary());
+    NamedAttrList attributes(op->getAttrs());
     if (op->hasTrait<OpTrait::AttrSizedResultSegments>()) {
       attributes.erase(OpTrait::AttrSizedResultSegments<void>::getResultSegmentSizeAttr());
-      attributes.append(OpTrait::AttrSizedResultSegments<void>::getResultSegmentSizeAttr(),
-                        rewriter.getI32VectorAttr({num_data_outputs, 0}));
+      attributes.push_back(
+          rewriter.getNamedAttr(OpTrait::AttrSizedResultSegments<void>::getResultSegmentSizeAttr(),
+                                rewriter.getI32VectorAttr({num_data_outputs, 0})));
     }
-    OperationState state(op->getLoc(), op->getName());
-    state.addAttributes(attributes);
-    state.addOperands(op->getOperands());
-    state.addTypes(data_outputs.getTypes());
+    OperationState state(op->getLoc(), op->getName(), op->getOperands(), data_outputs.getTypes(),
+                         attributes);
     auto created = rewriter.createOperation(state);
     for (auto data_output : data_outputs) {
       data_output.replaceAllUsesWith(created->getOpResult(data_output.getResultNumber()));
