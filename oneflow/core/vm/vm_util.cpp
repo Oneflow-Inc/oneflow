@@ -31,10 +31,6 @@ limitations under the License.
 namespace oneflow {
 namespace vm {
 
-intrusive::shared_ptr<InstructionMsg> NewInstruction(const std::string& instr_type_name) {
-  return intrusive::make_shared<InstructionMsg>(instr_type_name);
-}
-
 Maybe<void> Run(vm::InstructionMsgList* instr_msg_list) {
   auto* virtual_machine = JUST(GlobalMaybe<VirtualMachine>());
   JUST(virtual_machine->Receive(instr_msg_list));

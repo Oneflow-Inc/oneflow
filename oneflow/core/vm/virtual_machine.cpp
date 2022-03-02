@@ -45,7 +45,7 @@ int MicrosecondsFrom(const T& start) {
 Maybe<void> ForEachThreadCtx(vm::VirtualMachineEngine* vm,
                              const std::function<Maybe<void>(vm::ThreadCtx*)>& DoEach) {
   INTRUSIVE_UNSAFE_FOR_EACH_PTR(thread_ctx, vm->mut_thread_ctx_list()) {
-    const auto& stream_type = thread_ctx->stream_rt_desc().stream_type_id().stream_type();
+    const auto& stream_type = thread_ctx->stream_rt_desc().stream_type();
     if (stream_type.OnSchedulerThread()) { continue; }
     JUST(DoEach(thread_ctx));
   }
@@ -69,8 +69,7 @@ void GetCallbackThreadInitializer(std::function<void()>* Initializer) {
 
 std::type_index GetStreamTypeIndex(const vm::ThreadCtx* thread_ctx) {
   const auto& stream_rt_desc = thread_ctx->stream_rt_desc();
-  const auto& stream_type_id = stream_rt_desc.stream_type_id();
-  const auto& stream_type = stream_type_id.stream_type();
+  const auto& stream_type = stream_rt_desc.stream_type();
   return typeid(stream_type);
 }
 
@@ -87,7 +86,7 @@ void GetWorkerThreadInitializer(intrusive::shared_ptr<vm::VirtualMachineEngine> 
                                 std::function<void(vm::ThreadCtx*)>* Initializer) {
   std::set<std::type_index> stream_type_indexes;
   INTRUSIVE_UNSAFE_FOR_EACH_PTR(thread_ctx, vm->mut_thread_ctx_list()) {
-    const auto& stream_type = thread_ctx->stream_rt_desc().stream_type_id().stream_type();
+    const auto& stream_type = thread_ctx->stream_rt_desc().stream_type();
     if (!stream_type.SupportingTransportInstructions()) { continue; }
     stream_type_indexes.insert(GetStreamTypeIndex(thread_ctx));
   }
@@ -146,7 +145,6 @@ void MakeCtrlSeqInstructions(vm::VirtualMachineEngine* vm, vm::InstructionMsgLis
   auto instruction = intrusive::make_shared<vm::InstructionMsg>(
       vm, "CtrlComputeRankFrontSeqCallback", std::shared_ptr<const ParallelDesc>(),
       phy_instr_operand);
-  instruction->add_int64_operand(GlobalProcessCtx::Rank());
   list->EmplaceBack(std::move(instruction));
 }
 
