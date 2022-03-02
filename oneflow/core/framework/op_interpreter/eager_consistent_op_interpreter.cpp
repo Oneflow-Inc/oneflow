@@ -118,7 +118,7 @@ Maybe<void> Interpret(const UserOpExpr& user_op_expr, const TensorTuple& inputs,
   if (inputs.empty()) {
     // check consistency placement and nd_sbp, do not check in non-src op because it is assumed that
     // InferSbp in op is a deterministic algorithm
-    JUST(MetaInfoConsistencyCheck(parallel_desc, ctx.nd_sbp));
+    JUST(MetaInfoConsistencyCheck(parallel_desc, ctx.nd_sbp, 1));
     const auto& infer_args =
         JUST(SrcOpConsistentTensorMetaInferArgs::New(ctx.attrs, parallel_desc, JUST(ctx.nd_sbp)));
     result = JUST(user_op_expr.mut_consistent_tensor_infer_cache()->GetOrInfer(*infer_args));
@@ -142,7 +142,7 @@ Maybe<void> Interpret(const UserOpExpr& user_op_expr, const TensorTuple& inputs,
     return Maybe<void>::Ok();
   }
   // Run instruction LocalCallOpKernel
-  const auto& kernel = JUST(user_op_expr.MutKernel4Device(result->op_device()));
+  const auto& kernel = JUST(user_op_expr.MutKernel4Stream(result->stream()));
   CHECK_EQ_OR_RETURN(kernel->output_tuple_indexes4mut2_obns().size(), 0)
       << Error::UnimplementedError()
       << GetDynamicOpConsistentFailedDebugString(user_op_expr, *kernel);
@@ -174,7 +174,7 @@ Maybe<void> Interpret(const UserOpExpr& user_op_expr, const TensorTuple& inputs,
   }
   JUST(PhysicalRun([&](InstructionsBuilder* builder) -> Maybe<void> {
     return builder->LocalCallOpKernel(kernel, input_eager_blob_objects, output_eager_blob_objects,
-                                      result, ctx, result->op_device());
+                                      result, ctx, result->stream());
   }));
   return Maybe<void>::Ok();
 }
