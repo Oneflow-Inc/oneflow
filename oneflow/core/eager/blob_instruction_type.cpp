@@ -35,27 +35,26 @@ namespace oneflow {
 namespace vm {
 
 struct TensorViewUtil final {
-  static inline Maybe<void> Compute(const vm::InstructionMsg& instr_msg) {
+  static inline void Compute(const vm::InstructionMsg& instr_msg) {
     const auto& phy_instr_operand = instr_msg.phy_instr_operand();
-    CHECK_OR_RETURN(static_cast<bool>(phy_instr_operand));
+    CHECK(static_cast<bool>(phy_instr_operand));
     const auto* ptr = dynamic_cast<const vm::TensorViewOperand*>(phy_instr_operand.get());
-    CHECK_NOTNULL_OR_RETURN(ptr);
+    CHECK_NOTNULL(ptr);
     DeviceCtx* device_ctx = instr_msg.phy_instr_stream()->device_ctx().get();
     OfBlob input_ofblob(device_ctx->stream(), ptr->eager_blob_object()->mut_blob());
     OfBlob view_ofblob(device_ctx->stream(), ptr->view_eager_blob_object()->mut_blob());
     void* input_ptr = input_ofblob.mut_blob()->mut_raw_dptr();
     view_ofblob.mut_blob()->reset_dptr(static_cast<char*>(input_ptr));
-    return Maybe<void>::Ok();
   }
   
 };
 
 void TensorViewInstructionType::Compute(vm::Instruction* instruction) const {
-  CHECK_JUST(TensorViewUtil::Compute(instruction->instr_msg()));
+  TensorViewUtil::Compute(instruction->instr_msg());
 }
 
 void TensorViewInstructionType::ComputeInFuseMode(vm::InstructionMsg* instr_msg) const {
-  CHECK_JUST(TensorViewUtil::Compute(*instr_msg));
+  TensorViewUtil::Compute(instruction->instr_msg());
 }
 
 void AccessBlobByCallbackInstructionType::Compute(vm::Instruction* instruction) const {
