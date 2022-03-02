@@ -53,11 +53,14 @@ def _test_id_shuffle(test_case):
     (
         num_unique_matrix,
         inverse_unique_partion_indices,
-        cur_rank_num_unique,
+        local_cur_rank_num_unique,
         cur_rank_unique_ids,
         cur_rank_unique_column_ids,
         cur_rank_inverse_indices,
     ) = graph(ids_tensor, column_ids_tensor)
+    cur_rank_num_unique = local_cur_rank_num_unique.to_local().to_global(
+        placement=placement, sbp=flow.sbp.split(0)
+    )
 
     cur_rank_num_unique_0 = cur_rank_num_unique.numpy()[0]
     cur_rank_num_unique_1 = cur_rank_num_unique.numpy()[1]
@@ -198,8 +201,13 @@ def _test_embedding_gradient_shuffle(test_case):
             )
 
     graph = TestGraph()
-    cur_rank_unique_embedding_diff, cur_rank_num_unique, cur_rank_unique_ids = graph(
-        ids_tensor, column_ids_tensor, embedding_diff_tensor
+    (
+        cur_rank_unique_embedding_diff,
+        local_cur_rank_num_unique,
+        cur_rank_unique_ids,
+    ) = graph(ids_tensor, column_ids_tensor, embedding_diff_tensor)
+    cur_rank_num_unique = local_cur_rank_num_unique.to_local().to_global(
+        placement=placement, sbp=flow.sbp.split(0)
     )
     global_ids = ids_tensor.numpy()
     global_embedding_diff = embedding_diff_tensor.numpy()

@@ -26,21 +26,6 @@ namespace oneflow {
   const int64_t parallel_num = ctx->parallel_num();
   *ctx->OutputShape("num_unique_matrix", 0) = Shape({parallel_num * parallel_num});
   *ctx->OutputShape("inverse_unique_partion_indices", 0) = ids_shape;
-  *ctx->OutputShape("cur_rank_num_unique", 0) = Shape({parallel_num});
-  *ctx->OutputShape("cur_rank_unique_ids", 0) = Shape({num_ids * parallel_num});
-  *ctx->OutputShape("cur_rank_unique_column_ids", 0) = Shape({num_ids * parallel_num});
-  *ctx->OutputShape("cur_rank_inverse_indices", 0) = Shape({num_ids * parallel_num});
-  return Maybe<void>::Ok();
-}
-
-/* static */ Maybe<void> IdShuffleOp::InferPhysicalTensorDesc(user_op::InferContext* ctx) {
-  const Shape& ids_shape = ctx->InputShape("ids", 0);
-  const Shape& column_ids_shape = ctx->InputShape("column_ids", 0);
-  CHECK_EQ_OR_RETURN(ids_shape, column_ids_shape);
-  const int64_t num_ids = ids_shape.elem_cnt();
-  const int64_t parallel_num = ctx->parallel_num();
-  *ctx->OutputShape("num_unique_matrix", 0) = Shape({parallel_num * parallel_num});
-  *ctx->OutputShape("inverse_unique_partion_indices", 0) = ids_shape;
   *ctx->OutputShape("cur_rank_num_unique", 0) = Shape({1});
   *ctx->OutputShape("cur_rank_unique_ids", 0) = Shape({num_ids * parallel_num});
   *ctx->OutputShape("cur_rank_unique_column_ids", 0) = Shape({num_ids * parallel_num});
@@ -48,11 +33,16 @@ namespace oneflow {
   return Maybe<void>::Ok();
 }
 
+/* static */ Maybe<void> IdShuffleOp::InferPhysicalTensorDesc(user_op::InferContext* ctx) {
+  return InferLogicalTensorDesc(ctx);
+}
+
 /* static */ Maybe<void> IdShuffleOp::GetSbp(user_op::SbpContext* ctx) {
   ctx->NewBuilder()
       .Split(ctx->inputs(), 0)
       .Split(ctx->outputs(), 0)
       .Broadcast(user_op::OpArg("num_unique_matrix", 0))
+      .Broadcast(user_op::OpArg("cur_rank_num_unique", 0))
       .Build();
   return Maybe<void>::Ok();
 }
