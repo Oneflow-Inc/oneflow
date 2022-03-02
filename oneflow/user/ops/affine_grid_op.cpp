@@ -15,6 +15,7 @@ limitations under the License.
 */
 #include "oneflow/core/framework/framework.h"
 #include "oneflow/core/framework/op_generated.h"
+#include "oneflow/core/operator/operator.h"
 
 namespace oneflow {
 
@@ -83,7 +84,51 @@ Maybe<void> CheckAttr_(const user_op::UserOpDefWrapper& def,
 }
 
 /*static*/ Maybe<void> AffineGridOp::InferPhysicalTensorDesc(user_op::InferContext* ctx) {
-  return InferLogicalTensorDesc(ctx);
+  const user_op::TensorDesc& theta = ctx->InputTensorDesc("theta", 0);
+  user_op::TensorDesc* grid = ctx->OutputTensorDesc("grid", 0);
+  const Shape& size = ctx->Attr<Shape>("size");
+  // Only support 2D or 3D affine grid with NCHW layout
+  // For 2D grid: theta = { N, 2, 3 },
+  //              size  = { N, C, H, W }
+  //              grid  = { N, H, W, 2 }
+  // For 3D grid: theta = { N, 3, 4 },
+  //              size  = { N, C, D, H, W }
+  //              grid  = { N, D, H, W, 3 }
+  const Shape& theta_shape = theta.shape();
+  bool is_2d_grid = true;
+  if (theta_shape.At(1) == 2) {
+    CHECK_EQ_OR_RETURN(theta_shape.At(2), 3) << "Theta shape  MUST be (N, 2, 3) or (N, 3, 4)";
+    CHECK_EQ_OR_RETURN(size.NumAxes(), 4) << "Dimension of size MUST be 4, when 2d affine grid";
+    is_2d_grid = true;
+  } else if (theta_shape.At(1) == 3) {
+    CHECK_EQ_OR_RETURN(theta_shape.At(2), 4) << "Theta shape  MUST be (N, 2, 3) or (N, 3, 4)";
+    CHECK_EQ_OR_RETURN(size.NumAxes(), 5) "Dimension of size MUST be 4, when 3d affine grid";
+    is_2d_grid = false;
+  } else {
+    CHECK_OR_RETURN(false) << "Theta MUST be 2D or 3D grid";
+  }
+
+  int64_t N = size.At(0);
+  const int64_t& parallel_num = ctx->parallel_ctx().parallel_num();
+  if (parallel_num > 1) {
+    const NdSbp& nd_sbp = ctx->NdSbp4ArgNameAndIndex("theta", 0);
+    Shape logical_shape = theta_shape;
+    logical_shape.Set(0, size.At(0));
+    const auto& physical_shape =
+        JUST(GetPhysicalShape(logical_shape, nd_sbp, ctx->parallel_desc(), ctx->parallel_ctx()));
+    N = physical_shape->At(0);
+  }
+  CHECK_EQ_OR_RETURN(theta_shape.At(0), size.At(0))
+      << "The dimension 0 size of theta shape should be " << N << ", but got " << theta_shape.At(0);
+
+  *grid->mut_is_dynamic() = theta.is_dynamic();
+  Shape& grid_shape = *grid->mut_shape();
+  if (is_2d_grid) {
+    grid_shape = {N, size.At(2), size.At(3), 2};
+  } else {
+    grid_shape = {N, size.At(2), size.At(3), size.At(4), 3};
+  }
+  return Maybe<void>::Ok();
 }
 
 /* static */ Maybe<void> AffineGridOp::GetSbp(user_op::SbpContext* ctx) {
@@ -105,12 +150,12 @@ Maybe<void> CheckAttr_(const user_op::UserOpDefWrapper& def,
 }
 
 /* static */ Maybe<void> AffineGridGradOp::InferLogicalTensorDesc(user_op::InferContext* ctx) {
+  const user_op::TensorDesc& dgrid = ctx->InputTensorDesc("dgrid", 0);
   const Shape& size = ctx->Attr<Shape>("size");
-
   if (size.NumAxes() == 4) {
-    *(ctx->OutputTensorDesc("dtheta", 0)->mut_shape()) = {size.At(0), 2, 3};
+    *(ctx->OutputTensorDesc("dtheta", 0)->mut_shape()) = {dgrid.shape().At(0), 2, 3};
   } else if (size.NumAxes() == 5) {
-    *(ctx->OutputTensorDesc("dtheta", 0)->mut_shape()) = {size.At(0), 3, 4};
+    *(ctx->OutputTensorDesc("dtheta", 0)->mut_shape()) = {dgrid.shape().At(0), 3, 4};
   } else {
     CHECK_OR_RETURN(false) << "size MUST be 4D or 5D";
   }
