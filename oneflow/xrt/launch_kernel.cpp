@@ -96,11 +96,9 @@ xrt::Executable* XrtLaunchKernel<device_type>::BuildExecutable(
       std::unordered_map<std::string, BlobDesc> entry_blob_descs;
       desc_getter_.DumpEntryBlobDescTo(&entry_blob_descs);
       auto options = xrt::CreateDefaultXrtPassOptions();
-      xrt::util::PbMap<std::string, cfg::SbpSignature> cfg_sbp_signatures;
-      for (auto& pair : sbp_signatures) {
-        cfg_sbp_signatures.insert({pair.first, cfg::SbpSignature(pair.second)});
-      }
-      const xrt::util::PbMap<std::string, cfg::SbpSignature>* const_cfg_sbp_signatures_ptr =
+      xrt::util::PbMap<std::string, SbpSignature> cfg_sbp_signatures;
+      for (auto& pair : sbp_signatures) { cfg_sbp_signatures.insert({pair.first, pair.second}); }
+      const xrt::util::PbMap<std::string, SbpSignature>* const_cfg_sbp_signatures_ptr =
           &cfg_sbp_signatures;
       xrt::RunXrtPass("InferShape", graph.get(), options, &parallel_ctx, &parallel_desc,
                       const_cfg_sbp_signatures_ptr, &lbn2logical_blob_desc, &entry_blob_descs);
@@ -118,7 +116,7 @@ xrt::Executable* XrtLaunchKernel<device_type>::BuildExecutable(
     executable = compilation_cache_->GetRecord(signature);
   }
 
-  return std::move(executable);
+  return executable;
 }
 
 template<DeviceType device_type>

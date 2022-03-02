@@ -136,6 +136,8 @@ from oneflow._C import log
 from oneflow._C import log2
 from oneflow._C import minimum
 from oneflow._C import maximum
+from oneflow._C import max
+from oneflow._C import min
 from oneflow._C import pow
 from oneflow._C import rsqrt
 from oneflow._C import sqrt
@@ -161,6 +163,7 @@ from oneflow._C import squeeze
 from oneflow._C import narrow
 from oneflow._C import unsqueeze
 from oneflow._C import permute
+from oneflow._C import select
 from oneflow._C import tensor_split
 from oneflow._C import hsplit
 from oneflow._C import vsplit
@@ -187,6 +190,9 @@ from oneflow._C import less as lt
 from oneflow._C import less_equal as le
 
 from . import sbp
+
+sbp.sbp.__call__ = lambda self: self
+
 import atexit
 
 import oneflow.framework.c_api_util
@@ -300,6 +306,9 @@ from oneflow.framework.generator import (
 from oneflow.framework.scope_util import api_current_scope as current_scope
 from oneflow.framework.tensor import Tensor
 from oneflow.framework.tensor import is_nonzero
+from oneflow.framework.type_tensor import *
+
+from oneflow.framework.tensor import zero_
 
 from oneflow.nn.modules.pooling import (
     adaptive_avg_pool1d,
@@ -337,8 +346,6 @@ from oneflow.nn.modules.random_ops import rand_op as rand
 from oneflow.nn.modules.random_ops import randn_op as randn
 from oneflow.nn.modules.random_ops import randint_op as randint
 from oneflow.nn.modules.random_ops import randperm_op as randperm
-from oneflow.nn.modules.reduce_ops import max_op as max
-from oneflow.nn.modules.reduce_ops import min_op as min
 from oneflow.nn.modules.reduce_ops import sum_op as sum
 from oneflow.nn.modules.reduce_ops import mean_op as mean
 from oneflow.nn.modules.reduce_ops import prod_op as prod
@@ -357,8 +364,8 @@ from oneflow.nn.modules.tensor_buffer import (
 )
 from oneflow.nn.modules.as_tensor import as_tensor
 from oneflow.nn.modules.tensor_buffer import tensor_to_tensor_buffer
-from oneflow.nn.modules.consistent_cast import to_consistent_op as to_consistent
-from oneflow.nn.modules.consistent_cast import to_local_op as to_local
+from oneflow.nn.modules.global_cast import to_global_op as to_global
+from oneflow.nn.modules.global_cast import to_local_op as to_local
 from oneflow.nn.modules.where import where_op as where
 from oneflow.nn.modules.scatter import *
 from oneflow.ops.stateful_ops import StatefulOp as stateful_op

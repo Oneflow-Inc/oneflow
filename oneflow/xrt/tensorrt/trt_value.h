@@ -63,21 +63,21 @@ TrtValue TrtValue::Parameter(TrtBuilder* builder, const xrt::Parameter& param) {
   TrtValue trt_value;
   trt_value.handle_ = builder->AddParameter(param);
   trt_value.builder_ = builder;
-  return std::move(trt_value);
+  return trt_value;
 }
 
 TrtValue TrtValue::Tensor(TrtBuilder* builder, nvinfer1::ITensor* tensor) {
   TrtValue trt_value;
   trt_value.handle_ = builder->AddTensor(tensor);
   trt_value.builder_ = builder;
-  return std::move(trt_value);
+  return trt_value;
 }
 
 TrtValue TrtValue::Weight(TrtBuilder* builder, nvinfer1::Weights& weight) {
   TrtValue trt_value;
   trt_value.handle_ = builder->AddWeight(weight);
   trt_value.builder_ = builder;
-  return std::move(trt_value);
+  return trt_value;
 }
 
 }  // namespace tensorrt

@@ -56,11 +56,6 @@ Maybe<void> GetMaskedFillSbpSignatures(user_op::SbpContext* ctx) {
       UNIMPLEMENTED();
     }
   }
-  ctx->NewBuilder()
-      .Broadcast(user_op::OpArg("mask", 0))
-      .PartialSum(user_op::OpArg("x", 0))
-      .PartialSum(user_op::OpArg("out", 0))
-      .Build();
   return Maybe<void>::Ok();
 }
 

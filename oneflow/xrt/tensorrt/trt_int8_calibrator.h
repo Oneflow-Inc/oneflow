@@ -23,6 +23,7 @@ limitations under the License.
 
 #include "NvInfer.h"
 #include "oneflow/xrt/parameter.h"
+#include "oneflow/xrt/tensorrt/common.h"
 #include "oneflow/xrt/tensorrt/trt_unique_ptr.h"
 
 namespace oneflow {
@@ -43,10 +44,10 @@ class TRTInt8Calibrator : public nvinfer1::IInt8EntropyCalibrator2 {
 
   ~TRTInt8Calibrator();
 
-  int getBatchSize() const override;
+  int getBatchSize() const TRT_OPTIONAL_NOEXCEPT override;
 
   bool getBatch(void* bindings[], const char* names[],  // NOLINT
-                int num_bindings) override;
+                int num_bindings) TRT_OPTIONAL_NOEXCEPT override;
 
   void setBatchSize(const int batch_size);
 
@@ -68,9 +69,9 @@ class TRTInt8Calibrator : public nvinfer1::IInt8EntropyCalibrator2 {
   void ReleaseDevBuffers();
 
   // If not null, calibration is skipped.
-  const void* readCalibrationCache(std::size_t& length) override;
+  const void* readCalibrationCache(std::size_t& length) TRT_OPTIONAL_NOEXCEPT override;
 
-  void writeCalibrationCache(const void* ptr, std::size_t length) override;
+  void writeCalibrationCache(const void* ptr, std::size_t length) TRT_OPTIONAL_NOEXCEPT override;
 
   const std::string& getCalibrationTableAsString() {  // NOLINT
     return calibration_table_;

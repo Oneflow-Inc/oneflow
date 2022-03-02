@@ -20,7 +20,7 @@ from collections import OrderedDict
 import numpy as np
 
 from oneflow.test_utils.automated_test_util import *
-from test_util import GenArgList
+from oneflow.test_utils.test_util import GenArgList
 
 import oneflow as flow
 import oneflow.unittest
@@ -46,7 +46,7 @@ class TestFlip(flow.unittest.TestCase):
         y = torch.flip(x, constant((0, 1, 2)))
         return y
 
-    @autotest(auto_backward=False, check_graph=False)
+    @autotest(auto_backward=False, check_graph=True)
     def test_flow_flip_bool_tuple_with_random_data(test_case):
         device = random_device()
         x = random_tensor(

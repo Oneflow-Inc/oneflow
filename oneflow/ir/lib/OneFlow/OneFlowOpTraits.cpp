@@ -70,7 +70,7 @@ LogicalResult VerifyIsOpConfCompatible(Operation* op) {
 LogicalResult VerifyIsImportCompatible(Operation* op) {
   if (auto output_lbns =
           op->getAttrOfType<ArrayAttr>(IsImportCompatible<void>::getOutputLBNsAttr())) {
-    if (auto cec = dyn_cast<ControlEdgeCompatible>(op)) {
+    if (auto cec = dyn_cast<oneflow::ControlEdgeCompatible>(op)) {
       if (cec.dataOutputResults().size() != output_lbns.size()) {
         return op->emitError("expected number of data output results to be "
                              + std::to_string(output_lbns.size()) + " but got "

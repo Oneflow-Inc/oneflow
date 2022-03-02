@@ -26,7 +26,7 @@ import torch
 
 import oneflow as flow
 
-from .consistent_scope import *
+from .global_scope import *
 from .util import broadcast
 
 py_tuple = tuple
@@ -101,7 +101,7 @@ class generator:
     def value(self):
         if not self._has_value:
             self._value = self._calc_value()
-            if is_consistent():
+            if is_global():
                 self._value = broadcast(self._value)
             self._has_value = True
         return self._value
@@ -415,15 +415,12 @@ class all_placement(generator):
 
     def _calc_all_placement(self):
         all_device = self._calc_device()
-        device_ids = [i for i in range(self.num_rank_for_each_node)]
         all_hierarchy = [
             (self.world_size,),
             (self.node_size, self.num_rank_for_each_node),
         ]
         return [
-            flow.placement(
-                device, {i: device_ids for i in range(self.node_size)}, hierarchy
-            )
+            flow.placement(device, np.array(range(self.world_size)).reshape(hierarchy))
             for device, hierarchy in list(product(all_device, all_hierarchy))
         ]
 
@@ -469,9 +466,9 @@ class all_sbp(generator):
         super().__init__([])
         if placement is not None:
             if isinstance(placement, random_placement):
-                self.dim = len(placement.value().hierarchy)
+                self.dim = len(placement.value().ranks.shape)
             elif isinstance(placement, flow.placement):
-                self.dim = len(placement.hierarchy)
+                self.dim = len(placement.ranks.shape)
             else:
                 raise RuntimeError(
                     f"placement should be instance of random_placement or oneflow.placement"
@@ -544,6 +541,25 @@ class random_sbp(all_sbp):
         return random_util.choice(self._calc_all_sbp())
 
 
+@data_generator(torch.Tensor)
+class choice_pytorch_tensor(generator):
+    def __init__(self, a, size=None, replace=True, p=None, dtype=int):
+        self.a = a
+        self.size = size
+        self.replace = replace
+        self.p = p
+        self.dtype = dtype
+        super().__init__(
+            [self.a, self.size, self.replace, self.p, self.dtype,]
+        )
+
+    def _calc_value(self):
+        pytorch_tensor = None
+        np_arr = np.random.choice(self.a, self.size, self.replace, self.p)
+        torch_dtype = None
+        return torch.tensor(np_arr.astype(self.dtype))
+
+
 __all__ = [
     "random_pytorch_tensor",
     "random_bool",
@@ -561,4 +577,5 @@ __all__ = [
     "oneof",
     "constant",
     "nothing",
+    "choice_pytorch_tensor",
 ]

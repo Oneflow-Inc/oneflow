@@ -40,7 +40,7 @@ static constexpr auto* GetLocalToConsistentOpExpr =
 Maybe<one::Tensor> ReinterpterConsistentTensor(const std::shared_ptr<one::Tensor>& tensor,
                                                const Shape& shape,
                                                Symbol<ParallelDesc> parallel_desc,
-                                               Symbol<cfg::NdSbp> nd_sbp) {
+                                               Symbol<NdSbp> nd_sbp) {
   const auto& op = JUST(GetLocalToConsistentOpExpr());
   MutableAttrMap attrs;
   JUST(attrs.SetAttr<Shape>("shape", shape));
@@ -54,9 +54,8 @@ Maybe<one::Tensor> ReinterpterConsistentTensor(const std::shared_ptr<one::Tensor
       *op, {x}, one::OpExprInterpContext(attrs, parallel_desc, nd_sbp)));
 }
 
-Maybe<one::Tensor> Apply1DBoxing(const std::shared_ptr<one::Tensor>& input,
-                                 Symbol<cfg::NdSbp> in_nd_sbp, Symbol<cfg::NdSbp> out_nd_sbp,
-                                 Symbol<ParallelDesc> in_parallel_desc,
+Maybe<one::Tensor> Apply1DBoxing(const std::shared_ptr<one::Tensor>& input, Symbol<NdSbp> in_nd_sbp,
+                                 Symbol<NdSbp> out_nd_sbp, Symbol<ParallelDesc> in_parallel_desc,
                                  Symbol<ParallelDesc> out_parallel_desc) {
   const auto& boxing_interpreter =
       JUST(Global<EagerBoxingInterpreterManager>::Get()->GetEagerBoxingInterpreter(
@@ -86,20 +85,32 @@ Maybe<one::Tensor> SymmetricAcyclicNdSbpBoxing(const std::shared_ptr<one::Tensor
   const auto& in_parallel_desc = in->placement();
   const auto& out_parallel_desc = out->placement();
   CHECK_OR_RETURN(in_parallel_desc == out_parallel_desc);
-  const auto& tensor_meta = JUST(input->consistent_tensor_meta());
-  const auto& naive_transformations =
-      JUST(DecomposeIntoNaiveTransformations(tensor_meta, out_nd_sbp));
-  std::shared_ptr<one::Tensor> tensor = input;
-  for (const auto& naive_transformation : *naive_transformations) {
-    const auto& sub_tensor_meta = naive_transformation.consistent_tensor_meta;
-    tensor = JUST(ReinterpterConsistentTensor(tensor, sub_tensor_meta->shape(),
-                                              sub_tensor_meta->parallel_desc(),
-                                              sub_tensor_meta->nd_sbp()));
-    tensor =
-        JUST(Apply1DBoxing(tensor, sub_tensor_meta->nd_sbp(), naive_transformation.dst_nd_sbp,
-                           sub_tensor_meta->parallel_desc(), sub_tensor_meta->parallel_desc()));
+  std::shared_ptr<one::Tensor> output;
+  const auto& out_parallel_id = JUST(GetParallelId4CurrentProcessCtx(out_parallel_desc));
+  if (out_parallel_id->has_value()) {
+    const auto& tensor_meta = JUST(input->consistent_tensor_meta());
+    const auto& naive_transformations =
+        JUST(DecomposeIntoNaiveTransformations(tensor_meta, out_nd_sbp));
+    std::shared_ptr<one::Tensor> tensor = input;
+    for (const auto& naive_transformation : *naive_transformations) {
+      const auto& sub_tensor_meta = naive_transformation.consistent_tensor_meta;
+      tensor = JUST(ReinterpterConsistentTensor(tensor, sub_tensor_meta->shape(),
+                                                sub_tensor_meta->parallel_desc(),
+                                                sub_tensor_meta->nd_sbp()));
+      tensor =
+          JUST(Apply1DBoxing(tensor, sub_tensor_meta->nd_sbp(), naive_transformation.dst_nd_sbp,
+                             sub_tensor_meta->parallel_desc(), sub_tensor_meta->parallel_desc()));
+    }
+    output =
+        JUST(ReinterpterConsistentTensor(tensor, *input->shape(), out_parallel_desc, out_nd_sbp));
+  } else {
+    one::ConsistentTensorMeta tensor_meta(input->shape(), input->dtype()->data_type(), out_nd_sbp,
+                                          out_parallel_desc);
+    const auto& tensor_impl = JUST(
+        one::EagerConsistentTensorImpl::New(SymbolOf(tensor_meta), input->requires_grad(), false));
+    output = std::make_shared<one::ConsistentTensor>(tensor_impl);
   }
-  return JUST(ReinterpterConsistentTensor(tensor, *input->shape(), out_parallel_desc, out_nd_sbp));
+  return output;
 }
 
 COMMAND(RegisterBoxingFunction("symmetric-acyclic-nd-sbp-to-nd-sbp",
