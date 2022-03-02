@@ -40,7 +40,6 @@ void UpdateJobHelperConfProducedLbi2ConsumedDiffLbi(
   }
 }
 
-
 class GenerateBackwardAndOptimizerOpConfs final : public JobPass {
  public:
   OF_DISALLOW_COPY_AND_MOVE(GenerateBackwardAndOptimizerOpConfs);
