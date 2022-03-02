@@ -44,9 +44,9 @@ namespace oneflow {
   return Maybe<void>::Ok();
 }
 /*static*/ Maybe<void> ZeroLikeOp::InferNdSbp(user_op::InferNdSbpFnContext* ctx) {
-  const cfg::NdSbp& in_sbp = ctx->NdSbpHint4InputArgNameAndIndex("like", 0);
-  cfg::NdSbp* like_distribution = ctx->NdSbp4ArgNameAndIndex("like", 0);
-  cfg::NdSbp* out_distribution = ctx->NdSbp4ArgNameAndIndex("out", 0);
+  const NdSbp& in_sbp = ctx->NdSbpHint4InputArgNameAndIndex("like", 0);
+  NdSbp* like_distribution = ctx->NdSbp4ArgNameAndIndex("like", 0);
+  NdSbp* out_distribution = ctx->NdSbp4ArgNameAndIndex("out", 0);
   *like_distribution = in_sbp;
   *out_distribution = in_sbp;
   return Maybe<void>::Ok();

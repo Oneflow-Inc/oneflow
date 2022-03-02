@@ -57,6 +57,11 @@ class JobBuilder final {
   void AddOps(const ParallelConf& parallel_conf, const std::vector<OperatorConf>& op_confs);
   Maybe<void> MutOpOnlyOnce(const OperatorConf& op_conf);
   void MutOpsOnlyOnce(const std::vector<OperatorConf>& op_confs);
+  // Mut op with transaction
+  Maybe<bool> IsInMutOpTransaction(const std::string& op_name) const;
+  Maybe<OperatorConf*> MutOpTransactionGet(const std::string& op_name);
+  Maybe<void> MutOpTransactionMut(const OperatorConf& op_conf);
+  Maybe<void> MutOpTransactionCommit();
   void MutParallelConfOnlyOnce(const std::string& op_name, const ParallelConf& parallel_conf);
   void AddOrMutOpsOnlyOnce(const ParallelConf& parallel_conf,
                            const std::vector<OperatorConf>& op_confs);
@@ -67,19 +72,18 @@ class JobBuilder final {
   void DelOps(const std::vector<OperatorConf>& op_confs);
 
   SbpParallel* MutSbpParallel4Oba(const OpBlobArg& oba) const;
-  void SetSbpParallel4Oba(const OpBlobArg& oba, const cfg::SbpParallel& sbp_parallel);
-  void SetNdSbp4Oba(const OpBlobArg& oba, const cfg::NdSbp& nd_sbp);
+  void SetSbpParallel4Oba(const OpBlobArg& oba, const SbpParallel& sbp_parallel);
+  void SetNdSbp4Oba(const OpBlobArg& oba, const NdSbp& nd_sbp);
   Maybe<void> ForEachOperator(const std::function<Maybe<void>(const Operator&)>& Handler) const;
 
   Maybe<const ParallelConf&> ParallelConf4Lbi(const LogicalBlobId& lbi) const;
   Maybe<const ParallelConf&> ParallelConf4OpName(const std::string& op_name) const;
 
-  const cfg::SbpSignature SbpSignature4OpName(const std::string& op_name) const;
-  void AddSbpSignature4OpName(const std::string& op_name, const cfg::SbpSignature& sbp_signature);
+  const SbpSignature SbpSignature4OpName(const std::string& op_name) const;
+  void AddSbpSignature4OpName(const std::string& op_name, const SbpSignature& sbp_signature);
 
   const NdSbpSignature& NdSbpSignature4OpName(const std::string& op_name) const;
-  void AddNdSbpSignature4OpName(const std::string& op_name,
-                                const cfg::NdSbpSignature& nd_sbp_signature);
+  void AddNdSbpSignature4OpName(const std::string& op_name, const NdSbpSignature& nd_sbp_signature);
 
  private:
   void AddOpNamesToPlacementGroup(const std::vector<std::string>& op_names,
@@ -94,6 +98,7 @@ class JobBuilder final {
 
   HashMap<std::string, NdSbpSignature*> op_name2nd_sbp_signature_conf_;
   HashMap<ParallelConf, PlacementGroup*> parallel_conf2placement_group_;
+  HashMap<std::string, OperatorConf> mut_op_transaction_name2op_conf_;
 };
 
 }  // namespace oneflow
