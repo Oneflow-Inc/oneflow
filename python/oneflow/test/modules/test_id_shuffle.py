@@ -171,8 +171,7 @@ def _test_embedding_gradient_shuffle(test_case):
             )
             return (
                 cur_rank_unique_embedding_diff,
-                cur_rank_unique_ids,
-                flow.int32,
+                flow.cast(cur_rank_unique_ids, flow.int32),
                 flow.cast(cur_rank_inverse_indices, flow.int32),
                 flow.cast(inverse_unique_partion_indices, flow.int32),
             )
