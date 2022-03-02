@@ -12,7 +12,7 @@ function clean_artifacts {
     git clean -nXd -e \!dist -e \!dist/**
     git clean -fXd -e \!dist -e \!dist/**
     rm -rf oneflow/include
-    rm oneflow/version.py
+    rm -f oneflow/version.py
 }
 
 clean_artifacts
