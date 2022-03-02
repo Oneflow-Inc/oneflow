@@ -31,8 +31,8 @@ Maybe<void> CheckEagerBoxingDataType(DataType val) {
 }  // namespace
 
 Maybe<one::Tensor> EagerBoxingInterpreter::Interpret(const std::shared_ptr<one::Tensor>& input,
-                                                     Symbol<cfg::NdSbp> in_nd_sbp,
-                                                     Symbol<cfg::NdSbp> out_nd_sbp,
+                                                     Symbol<NdSbp> in_nd_sbp,
+                                                     Symbol<NdSbp> out_nd_sbp,
                                                      Symbol<ParallelDesc> in_parallel_desc,
                                                      Symbol<ParallelDesc> out_parallel_desc) const {
   JUST(CheckEagerBoxingDataType(input->dtype()->data_type()));

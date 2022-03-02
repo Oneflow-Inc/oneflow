@@ -88,7 +88,6 @@ class TestGraphIOCheck(flow.unittest.TestCase):
                 return t, lt, n, dic
 
         g = CustomGraphIOCheck()
-        g.debug(1)
 
         x = flow.tensor(np.random.randn(1,), dtype=flow.float32)
 
@@ -127,6 +126,61 @@ class TestGraphIOCheck(flow.unittest.TestCase):
         test_case.assertTrue(np.array_equal(odic["kw0"].numpy(), t4.numpy()))
         test_case.assertTrue(np.array_equal(odic["kw1"][0].numpy(), t5.numpy()))
         test_case.assertTrue(np.array_equal(odic["kw1"][1].numpy(), t6.numpy()))
+
+    def test_graph_return_size_0_tuple(test_case):
+        def test_output(input, output_type):
+            print(input)
+            input = (input,)
+            print(input)
+
+            class CustomModule(flow.nn.Module):
+                def __init__(self):
+                    super().__init__()
+
+                def forward(self, t):
+                    return t[0]
+
+            class CustomGraph(flow.nn.Graph):
+                def __init__(self):
+                    super().__init__()
+                    self.m = CustomModule()
+
+                def build(self, t):
+                    temp = flow.zeros(2, 2, dtype=flow.int64)
+                    rt = self.m(t)
+                    return rt
+
+            model = CustomModule()
+            graph = CustomGraph()
+
+            model_out = model(input)
+            graph_out = graph(input)
+
+            if output_type is None:
+                test_case.assertTrue(model_out is output_type)
+                test_case.assertTrue(graph_out is output_type)
+            else:
+                test_case.assertTrue(isinstance(model_out, output_type))
+                test_case.assertTrue(isinstance(graph_out, output_type))
+
+        x = np.ones((1, 10))
+        x = flow.tensor(x, dtype=flow.float32)
+
+        # test size 1 tuple
+        x_tuple = (x,)
+        test_output(x_tuple, tuple)
+
+        # test size 1 list
+        x_list = [
+            x,
+        ]
+        test_output(x_list, list)
+
+        # test tensor
+        test_output(x, Tensor)
+
+        # test None
+        test_output(None, None)
 
     def test_graph_outputs_buffer(test_case):
         class CustomModuleIOCheck(flow.nn.Module):

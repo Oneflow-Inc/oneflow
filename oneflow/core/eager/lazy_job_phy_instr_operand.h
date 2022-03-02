@@ -16,7 +16,6 @@ limitations under the License.
 #ifndef ONEFLOW_CORE_EAGER_LAZY_JOB_PHY_INSTR_OPERAND_H_
 #define ONEFLOW_CORE_EAGER_LAZY_JOB_PHY_INSTR_OPERAND_H_
 
-#include "oneflow/core/vm/instruction_operand.h"
 #include "oneflow/core/eager/eager_blob_object.h"
 #include "oneflow/core/eager/local_dep_object.h"
 #include "oneflow/core/device/event_record.h"
