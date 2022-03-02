@@ -20,6 +20,7 @@ add_docstr(
     oneflow.set_num_threads,
     """
     Sets the number of threads used for intraop parallelism on CPU.
+    
     .. WARNING::
         To ensure that the correct number of threads is used, 
         set_num_threads must be called before running eager, eager globe or ddp.
