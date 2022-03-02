@@ -59,8 +59,7 @@ void set_num_threads(int num) {
   if (num <= 0) {
     py::print("Warning : ", num, " less than 1 will be set to 1.");
     num = 1;
-  }
-  if (num >= cpu_logic_core) {
+  } else if (num >= cpu_logic_core) {
     py::print("Warning : ", num,
               " is greater than the number of logical cores and will be set to the maximum number "
               "of logical cores ",
