@@ -32,6 +32,7 @@ class LearningRateScheduleKernel final : public Kernel {
       log_stream_ = TeePersistentLogStream::Create("train_step2lr.csv");
       (*log_stream_) << "train_step, lr\n";
     }
+    // if (FLAGS_v >= 1) { print_step_lr_ = true; }
   }
   void ForwardDataContent(KernelContext* ctx) const override;
 
@@ -287,7 +288,8 @@ void LearningRateScheduleKernel::ForwardDataContent(KernelContext* ctx) const {
   if (conf.has_learning_rate_decay()) {
     learning_rate = GetDecayedLearningRate(conf.learning_rate_decay(), learning_rate, train_step);
   }
-  if (std::getenv("ONEFLOW_DEBUG_GRAPH_STEP_LR") != nullptr) {
+  // nn.Graph.debug(1) will print step and lr
+  if (print_step_lr_) {
     std::cout << "Last step " << train_step << " adjusting learning rate to " << learning_rate
               << std::endl;
   }
