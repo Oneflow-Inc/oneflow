@@ -54,7 +54,7 @@ void TensorViewInstructionType::Compute(vm::Instruction* instruction) const {
 }
 
 void TensorViewInstructionType::ComputeInFuseMode(vm::InstructionMsg* instr_msg) const {
-  TensorViewUtil::Compute(instruction->instr_msg());
+  TensorViewUtil::Compute(*instr_msg);
 }
 
 void AccessBlobByCallbackInstructionType::Compute(vm::Instruction* instruction) const {
