@@ -131,9 +131,10 @@ class TestTensorScatterNdUpdate(flow.unittest.TestCase):
                 _test_global_tensor_scatter_nd_update(
                     test_case, placement, sbp, False
                 )  # eager global
-                _test_global_tensor_scatter_nd_update(
-                    test_case, placement, sbp, True
-                )  # nn graph
+                # skip lazy test
+                # _test_global_tensor_scatter_nd_update(
+                #     test_case, placement, sbp, True
+                # )  # nn graph
 
     @globaltest
     def test_global_tensor_scatter_nd_update_t(test_case):
@@ -142,9 +143,10 @@ class TestTensorScatterNdUpdate(flow.unittest.TestCase):
                 _test_global_tensor_scatter_nd_update_t(
                     test_case, placement, sbp, False
                 )  # eager global
-                _test_global_tensor_scatter_nd_update_t(
-                    test_case, placement, sbp, True
-                )  # nn graph
+                # skip lazy test
+                # _test_global_tensor_scatter_nd_update_t(
+                #     test_case, placement, sbp, True
+                # )  # nn graph
 
     @globaltest
     def test_global_tensor_scatter_nd_update_backward(test_case):
