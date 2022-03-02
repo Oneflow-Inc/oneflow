@@ -52,6 +52,15 @@ bool IsViewApplicable(const std::shared_ptr<Tensor>& input) {
 }
 
 
+bool IsViewApplicable(const std::shared_ptr<Tensor>& input) {
+  // NOTE: only eager local tensor support view for now
+  // elem_cnt() > 1  used to excluding 0 shape tensor
+  if (input->is_local() && !(LazyMode::is_enabled()) && input->shape()->elem_cnt() >= 1) {
+    return true;
+  }
+  return false;
+}
+
 Maybe<Tensor> BasicView(const std::shared_ptr<Tensor>& input, const Shape& target_shape,
                         int64_t storage_offset) {
   /**
@@ -89,15 +98,14 @@ Maybe<Tensor> BasicView(const std::shared_ptr<Tensor>& input, const Shape& targe
   return output;
 }
 
-
 Maybe<Tensor> Reshape(const std::shared_ptr<Tensor>& input, const Shape& target_shape) {
   Stride target_stride(target_shape);
   return Reshape(input, target_shape, target_stride);
 }
 
-
 Maybe<Tensor> Reshape(const std::shared_ptr<Tensor>& input, const Shape& target_shape,
                       const Stride& target_stride) {
+  // TODO:(zhaoluyang) check input tensor is contiguous
   CHECK_OR_RETURN(IsViewApplicable(input))
       << Error::RuntimeError()
       << "view::Reshape(): input should be eager local tensor with element count >=1 , but got "
@@ -186,7 +194,10 @@ Maybe<Tensor> Slice(const std::shared_ptr<Tensor>& input, const std::vector<int6
   return output;
 }
 
+<<<<<<< HEAD
 
+=======
+>>>>>>> master
 Maybe<Tensor> Unsqueeze(const std::shared_ptr<Tensor>& input, const int32_t& expand_dim) {
   CHECK_OR_RETURN(IsViewApplicable(input))
       << Error::RuntimeError() << "view::Unsqueeze(): input should be eager local tensor, but got "
