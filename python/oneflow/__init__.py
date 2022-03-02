@@ -186,6 +186,7 @@ from oneflow._C import not_equal
 from oneflow._C import not_equal as ne
 from oneflow._C import less as lt
 from oneflow._C import less_equal as le
+from oneflow._oneflow_internal import _set_num_threads as set_num_threads
 
 from . import sbp
 
@@ -386,7 +387,6 @@ from oneflow.ops.initializer_util import (
     zeros_initializer,
 )
 
-
 from . import (
     autograd,
     distributed,
@@ -408,5 +408,3 @@ if oneflow._oneflow_internal.flags.with_mlir():
     if os.getenv("ONEFLOW_MLIR_ENABLE_CODEGEN_FUSERS"):
         print("MLIR JIT engine will load:", oneflow_internal_path, file=sys.stderr)
         oneflow._oneflow_internal.ir.load_jit_shared_lib(oneflow_internal_path)
-
-from oneflow._oneflow_internal import _set_num_threads as set_num_threads
