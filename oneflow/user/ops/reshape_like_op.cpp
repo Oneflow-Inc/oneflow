@@ -19,11 +19,6 @@ limitations under the License.
 
 namespace oneflow {
 
-/*static*/ Maybe<void> ReshapeLikeOp::InferNdSbp(user_op::InferNdSbpFnContext* ctx) {
-  const Shape& in_shape = ctx->LogicalTensorDesc4InputArgNameAndIndex("in", 0).shape();
-  const Shape& out_shape = ctx->LogicalTensorDesc4InputArgNameAndIndex("like", 0).shape();
-  return ReshapeUserOpUtil::InferNdSbp(ctx, in_shape, out_shape);
-}
 /*static*/ Maybe<void> ReshapeLikeOp::GetSbp(user_op::SbpContext* ctx) {
   const auto& in_shape = ctx->LogicalTensorDesc4InputArgNameAndIndex("in", 0).shape();
   const auto& like_shape = ctx->LogicalTensorDesc4InputArgNameAndIndex("like", 0).shape();

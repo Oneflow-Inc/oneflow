@@ -34,7 +34,7 @@ class StreamRtDesc final : public intrusive::Base {
     static const auto default_val = intrusive::make_shared<StreamDesc>();
     return default_val.Get();
   }
-  const StreamTypeId& stream_type_id() const { return stream_type_id_.key().Get(); }
+  const StreamType& stream_type() const { return *stream_type_key_.key(); }
   const std::vector<intrusive::shared_ptr<Stream>>& device_id2stream() const {
     return device_id2stream_;
   }
@@ -54,7 +54,7 @@ class StreamRtDesc final : public intrusive::Base {
     return stream_desc_.Mutable();
   }
   void reset_stream_desc(StreamDesc* stream_desc) { stream_desc_.Reset(stream_desc); }
-  StreamTypeId* mut_stream_type_id() { return stream_type_id_.mut_key()->Mutable(); }
+  void set_stream_type(const StreamType* stream_type) { *stream_type_key_.mut_key() = stream_type; }
   void add_stream(intrusive::shared_ptr<Stream> stream) {
     CHECK_EQ(stream->device_id(), device_id2stream_.size());
     device_id2stream_.emplace_back(stream);
@@ -62,13 +62,12 @@ class StreamRtDesc final : public intrusive::Base {
 
   // methods
   void __Init__(StreamDesc* stream_desc);
-  const StreamType& stream_type() const;
 
  private:
   friend class intrusive::Ref;
   intrusive::Ref* mut_intrusive_ref() { return &intrusive_ref_; }
 
-  StreamRtDesc() : intrusive_ref_(), stream_desc_(), device_id2stream_(), stream_type_id_() {}
+  StreamRtDesc() : intrusive_ref_(), stream_desc_(), device_id2stream_(), stream_type_key_() {}
   intrusive::Ref intrusive_ref_;
   // fields
   intrusive::shared_ptr<StreamDesc> stream_desc_;
@@ -77,7 +76,7 @@ class StreamRtDesc final : public intrusive::Base {
 
  public:
   // skiplist hooks
-  intrusive::SkipListHook<FlatMsg<StreamTypeId>, 7> stream_type_id_;
+  intrusive::SkipListHook<const StreamType*, 7> stream_type_key_;
 };
 
 }  // namespace vm

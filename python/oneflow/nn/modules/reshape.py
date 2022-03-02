@@ -65,7 +65,7 @@ def view_op(input, *shape):
             new_shape = (new_shape,)
     else:
         new_shape = shape
-    return flow._C.reshape(input, new_shape)
+    return flow._C.view(input, new_shape)
 
 
 if __name__ == "__main__":
