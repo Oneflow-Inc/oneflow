@@ -40,7 +40,7 @@ template<typename Key, typename Elem>
 struct LruCacheContext {
   Key* keys;
   Elem* lines;
-  uint8_t* lru_queue;
+  uint8_t* ages;
   cuda::binary_semaphore<cuda::thread_scope_device>* mutex;
   uint64_t n_set;
   uint32_t line_size;
@@ -55,7 +55,7 @@ __global__ void InitCacheSetMutex(uint32_t n_set,
 template<typename Key, typename Elem>
 void ClearLruCacheContext(LruCacheContext<Key, Elem>* ctx) {
   OF_CUDA_CHECK(cudaMemset(ctx->keys, 0, ctx->n_set * kWarpSize * sizeof(Key)));
-  OF_CUDA_CHECK(cudaMemset(ctx->lru_queue, 0, ctx->n_set * kWarpSize * sizeof(uint8_t)));
+  OF_CUDA_CHECK(cudaMemset(ctx->ages, 0, ctx->n_set * kWarpSize * sizeof(uint8_t)));
   InitCacheSetMutex<<<(ctx->n_set - 1 + 256) / 256, 256>>>(ctx->n_set, ctx->mutex);
 }
 
@@ -76,8 +76,8 @@ void InitLruCacheContext(const CacheOptions& options, LruCacheContext<Key, Elem>
   OF_CUDA_CHECK(cudaMalloc(&(ctx->keys), keys_size));
   const size_t lines_size = n_set * lines_size_per_set;
   OF_CUDA_CHECK(cudaMalloc(&(ctx->lines), lines_size));
-  const size_t lru_queue_size = n_set * lru_size_per_set;
-  OF_CUDA_CHECK(cudaMalloc(&(ctx->lru_queue), lru_queue_size));
+  const size_t ages_size = n_set * lru_size_per_set;
+  OF_CUDA_CHECK(cudaMalloc(&(ctx->ages), ages_size));
   const size_t mutex_size = n_set * mutex_size_per_set;
   OF_CUDA_CHECK(cudaMalloc(&(ctx->mutex), mutex_size));
 
@@ -88,7 +88,7 @@ template<typename Key, typename Elem>
 void DestroyLruCacheContext(LruCacheContext<Key, Elem>* ctx) {
   OF_CUDA_CHECK(cudaFree(ctx->keys));
   OF_CUDA_CHECK(cudaFree(ctx->lines));
-  OF_CUDA_CHECK(cudaFree(ctx->lru_queue));
+  OF_CUDA_CHECK(cudaFree(ctx->ages));
   OF_CUDA_CHECK(cudaFree(ctx->mutex));
 }
 
@@ -112,12 +112,14 @@ struct SetContext {
   __device__ SetContext(const LruCacheContext<Key, Elem>& ctx, uint32_t set_id) {
     keys = ctx.keys + set_id * kWarpSize;
     lines = ctx.lines + set_id * kWarpSize * ctx.line_size;
-    lru_queue = ctx.lru_queue + set_id * kWarpSize;
+    ages = ctx.ages + set_id * kWarpSize;
     mutex = ctx.mutex + set_id;
   }
 
   __device__ int Lookup(const ThreadContext& thread_ctx, Key key) {
-    const bool lane_hit = (keys[thread_ctx.lane_id] == key);
+    const Key lane_key = keys[thread_ctx.lane_id];
+    const int lane_age = ages[thread_ctx.lane_id];
+    const bool lane_hit = (lane_key == key && lane_age != 0);
     const unsigned hit_mask = __ballot_sync(kFullMask, lane_hit);
     if (hit_mask != 0) {
       return __ffs(static_cast<int>(hit_mask)) - 1;
@@ -136,52 +138,51 @@ struct SetContext {
 
   __device__ int InsertWithoutEvicting(const LruCacheContext<Key, Elem>& cache_ctx,
                                        const ThreadContext& thread_ctx, Key key) {
-    int lru_way_idx = -1;
     int insert_way = -1;
     const Key lane_key = keys[thread_ctx.lane_id];
-    const unsigned hit_mask = __ballot_sync(kFullMask, lane_key == key);
+    int lane_age = ages[thread_ctx.lane_id];
+    const unsigned hit_mask = __ballot_sync(kFullMask, lane_key == key && lane_age != 0);
     if (hit_mask != 0) {
-      lru_way_idx = lru_queue[thread_ctx.lane_id];
       insert_way = __ffs(static_cast<int>(hit_mask)) - 1;
-      int lru_lane_id = __ffs(__ballot_sync(kFullMask, lru_way_idx == insert_way)) - 1;
-      if (thread_ctx.lane_id <= lru_lane_id) {
-        lru_way_idx = __shfl_up_sync(__activemask(), lru_way_idx, 1);
+      const int insert_way_age = __shfl_sync(kFullMask, lane_age, insert_way);
+      if (lane_age > insert_way_age) {
+        lane_age -= 1;
+      } else if (thread_ctx.lane_id == insert_way) {
+        lane_age = kWarpSize;
       }
-      if (thread_ctx.lane_id == 0) { lru_way_idx = insert_way; }
       __syncwarp();
     }
     if (insert_way == -1) {
-      const unsigned valid_mask = __ballot_sync(kFullMask, lane_key != 0);
+      const unsigned valid_mask = __ballot_sync(kFullMask, lane_age != 0);
       if (valid_mask != kFullMask) {
-        lru_way_idx = lru_queue[thread_ctx.lane_id];
         insert_way = __popc(static_cast<int>(valid_mask));
-        lru_way_idx = __shfl_up_sync(kFullMask, lru_way_idx, 1);
-        if (thread_ctx.lane_id == 0) {
-          lru_way_idx = insert_way;
+        if (lane_age > 0) {
+          lane_age -= 1;
+        } else if (thread_ctx.lane_id == insert_way) {
+          lane_age = kWarpSize;
           keys[insert_way] = key;
         }
         __syncwarp();
       }
     }
-    if (lru_way_idx != -1) { lru_queue[thread_ctx.lane_id] = lru_way_idx; }
+    if (insert_way != -1) { ages[thread_ctx.lane_id] = lane_age; }
     return insert_way;
   }
 
   __device__ void Evict(const LruCacheContext<Key, Elem>& cache_ctx,
                         const ThreadContext& thread_ctx, Key key, int* way, Key* evicted_key) {
-    int lru_way_idx = lru_queue[thread_ctx.lane_id];
     const Key lane_key = keys[thread_ctx.lane_id];
-    int insert_way = -1;
-    const unsigned hit_mask = __ballot_sync(kFullMask, lane_key == key);
-    insert_way = __shfl_sync(kFullMask, lru_way_idx, kWarpSize - 1);
-    lru_way_idx = __shfl_up_sync(kFullMask, lru_way_idx, 1);
+    int lane_age = ages[thread_ctx.lane_id];
+    const int insert_way = __ffs(__ballot_sync(kFullMask, lane_age == 1)) - 1;
     *evicted_key = __shfl_sync(kFullMask, lane_key, insert_way);
-    if (thread_ctx.lane_id == 0) {
-      lru_way_idx = insert_way;
+    if (thread_ctx.lane_id == insert_way) {
       keys[insert_way] = key;
+      lane_age = kWarpSize;
+    } else if (lane_age > 1) {
+      lane_age -= 1;
     }
     __syncwarp();
-    lru_queue[thread_ctx.lane_id] = lru_way_idx;
+    ages[thread_ctx.lane_id] = lane_age;
     *way = insert_way;
   }
 
@@ -205,19 +206,9 @@ struct SetContext {
 
   Key* keys;
   Elem* lines;
-  uint8_t* lru_queue;
+  uint8_t* ages;
   cuda::binary_semaphore<cuda::thread_scope_device>* mutex;
 };
-
-template<typename Elem>
-__device__ Elem Zero() {
-  return 0;
-}
-
-template<>
-__device__ ulonglong2 Zero<ulonglong2>() {
-  return ulonglong2{0, 0};
-}
 
 template<typename Key, typename Elem, bool test_only>
 __global__ void GetKernel(LruCacheContext<Key, Elem> cache_ctx, uint32_t num_keys, const Key* keys,
@@ -243,14 +234,6 @@ __global__ void GetKernel(LruCacheContext<Key, Elem> cache_ctx, uint32_t num_key
     for (uint32_t i = 0; i < n_batch_keys; ++i) {
       const uint32_t key_idx = batch_offset + i;
       const Key key = block_keys[thread_ctx.warp_id_in_block][i];
-      if (key == 0) {
-        if (!test_only) {
-          for (int j = thread_ctx.lane_id; j < cache_ctx.line_size; j += kWarpSize) {
-            *(values + key_idx * cache_ctx.line_size + j) = Zero<Elem>();
-          }
-        }
-        continue;
-      }
       const size_t set_id = block_set_ids[thread_ctx.warp_id_in_block][i];
       SetContext<Key, Elem> set_ctx(cache_ctx, set_id);
       const int way = set_ctx.Lookup(thread_ctx, key);
@@ -304,7 +287,6 @@ __global__ void PutWithoutEvictingKernel(LruCacheContext<Key, Elem> cache_ctx, u
     for (uint32_t i = 0; i < n_batch_keys; ++i) {
       const uint32_t key_idx = batch_offset + i;
       const Key key = block_keys[thread_ctx.warp_id_in_block][i];
-      if (key == 0) { continue; }
       const size_t set_id = block_set_ids[thread_ctx.warp_id_in_block][i];
       SetContext<Key, Elem> set_ctx(cache_ctx, set_id);
       set_ctx.Lock(thread_ctx);
@@ -397,7 +379,6 @@ __global__ void DumpKernel(LruCacheContext<Key, Elem> cache_ctx, size_t start_ke
     __syncwarp();
     for (uint32_t i = 0; i < kWarpSize; ++i) {
       const Key key = warp_keys[thread_ctx.warp_id_in_block][i];
-      if (key == 0) { continue; }
       if (thread_ctx.lane_id == 0) { keys[offset] = key; }
       __syncwarp();
       for (uint32_t j = thread_ctx.lane_id; j < cache_ctx.line_size; j += kWarpSize) {
