@@ -721,7 +721,7 @@ jobs:
         with:
           repository: Oneflow-Inc/libai
           # please use a commit here
-          ref: d89ed14fb28d220e80d6c95e533c3383f482fa6c
+          ref: 21b7150836fd7c887348ddfe7ccdd1892e06c237
           path: ${{ env.LIBAI_SRC}}
       - name: Install OneFlow
         if: ${{ !fromJson(matrix.cache-hit) && contains(matrix.runs-on, 'self-hosted') }}
