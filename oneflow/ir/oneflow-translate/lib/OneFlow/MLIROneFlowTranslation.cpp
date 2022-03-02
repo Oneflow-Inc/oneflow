@@ -631,12 +631,12 @@ LogicalResult JobImporter::TryToUpdateJob() {
     if (op->hasTrait<OpTrait::IsOpConfCompatible>()) {
       if (llvm::dyn_cast<oneflow::UserOp>(op)) {
         if (failed(ConvertUserOp(op, new_job))) {
-          op->emitError("failed to process generic UserOp: ") << *op;
+          op->emitError("failed to convert generic UserOp: ") << *op;
           return WalkResult::interrupt();
         }
       } else if (llvm::dyn_cast<oneflow::SystemOp>(op)) {
         if (failed(ConvertSystemOp(op, new_job))) {
-          op->emitError("failed to process SystemOp: ") << *op;
+          op->emitError("failed to convert SystemOp: ") << *op;
           return WalkResult::interrupt();
         }
       } else if (llvm::dyn_cast<oneflow::VariableOp>(op)) {
@@ -697,10 +697,22 @@ LogicalResult JobImporter::ConvertUserOp(Operation* op, ::oneflow::Job& job) {
 
   auto* op_conf = job.mutable_net()->add_op();
   auto* user_conf = op_conf->mutable_user_conf();
-  if (!succeeded(ConvertUserOpInputs(op, user_op_adaptor, user_conf))) { return failure(); }
-  if (!succeeded(ConvertUserOpOutputs(op, user_op_adaptor, user_conf))) { return failure(); }
-  if (!succeeded(ConvertUserOpAttributes(op, user_op_adaptor, *op_conf))) { return failure(); }
-  if (!succeeded(ConvertCtrlInputs(op, *op_conf))) { return failure(); }
+  if (!succeeded(ConvertUserOpInputs(op, user_op_adaptor, user_conf))) {
+    op->emitError("fail to convert user op inputs");
+    return failure();
+  }
+  if (!succeeded(ConvertUserOpOutputs(op, user_op_adaptor, user_conf))) {
+    op->emitError("fail to convert user op outputs");
+    return failure();
+  }
+  if (!succeeded(ConvertUserOpAttributes(op, user_op_adaptor, *op_conf))) {
+    op->emitError("fail to convert user op attributes");
+    return failure();
+  }
+  if (!succeeded(ConvertCtrlInputs(op, *op_conf))) {
+    op->emitError("fail to convert user op control inputs");
+    return failure();
+  }
   return success();
 }
 

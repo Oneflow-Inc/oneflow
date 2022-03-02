@@ -480,6 +480,8 @@ LogicalResult ConvertCtrlInputs(Operation* op, ::oneflow::OperatorConf& op_conf)
 
 template<template<typename T> class Trait>
 const std::vector<std::string>* GetFullKeys(UserOpCompatible& uc, Operation* op);
+template<template<typename T> class Trait>
+std::vector<std::string> GetFullKeys(UserOp op);
 
 template<>
 const std::vector<std::string>* GetFullKeys<OpTrait::AttrSizedOperandSegments>(UserOpCompatible& uc,
@@ -497,6 +499,16 @@ const std::vector<std::string>* GetFullKeys<OpTrait::AttrSizedResultSegments>(Us
     return alternative_name.outputKeys();
   }
   return uc.outputKeys();
+}
+
+template<>
+std::vector<std::string> GetFullKeys<OpTrait::AttrSizedOperandSegments>(UserOp op) {
+  return mlir::oneflow::support::GetInputKeys(op.op_type_name().str());
+}
+
+template<>
+std::vector<std::string> GetFullKeys<OpTrait::AttrSizedResultSegments>(UserOp op) {
+  return mlir::oneflow::support::GetOutputKeys(op.op_type_name().str());
 }
 
 template<template<typename T> class Trait>
@@ -541,8 +553,27 @@ int32_t GetSingleSegmentSize<OpTrait::AttrSizedResultSegments>(Operation* op) {
 }
 
 template<template<typename T> class Trait>
+LogicalResult GetUserOpFilteredSegmentKeyAndSizes(UserOp op, std::vector<std::string>& keys,
+                                                  std::vector<int32_t>& sizes) {
+  auto full_keys = GetFullKeys<Trait>(op);
+  for (const auto& key_size_tuple : llvm::zip(full_keys, GetUserOpArgSizes<Trait>(op).getValue())) {
+    const std::string& key = std::get<0>(key_size_tuple);
+    const int32_t size =
+        std::get<1>(key_size_tuple).template cast<IntegerAttr>().getValue().getSExtValue();
+    if (size > 0) {
+      keys.push_back(key);
+      sizes.push_back(size);
+    }
+  }
+  return success();
+}
+
+template<template<typename T> class Trait>
 LogicalResult GetFilteredSegmentKeyAndSizes(Operation* op, std::vector<std::string>& keys,
                                             std::vector<int32_t>& sizes) {
+  if (auto user_op = dyn_cast<UserOp>(op)) {
+    return GetUserOpFilteredSegmentKeyAndSizes<Trait>(user_op, keys, sizes);
+  }
   const std::vector<std::string>* full_keys = nullptr;
   std::vector<int32_t> full_sizes{};
   auto uc = dyn_cast<UserOpCompatible>(op);
@@ -584,6 +615,21 @@ LogicalResult GetFilteredSegmentKeyAndSizes(Operation* op, std::vector<std::stri
   return success();
 }
 
+template<template<typename T> class Trait>
+ArrayAttr GetUserOpArgSizes(UserOp);
+
+template<>
+ArrayAttr GetUserOpArgSizes<OpTrait::AttrSizedOperandSegments>(UserOp op) {
+  return op.input_sizes();
+}
+
+template<>
+ArrayAttr GetUserOpArgSizes<OpTrait::AttrSizedResultSegments>(UserOp op) {
+  return op.output_sizes();
+}
+
+
+
 llvm::Optional<std::string> GetOutputLbn(OpResult result) {
   const auto def_op = result.getDefiningOp();
   if (def_op->hasTrait<OpTrait::IsImportCompatible>()) {
@@ -598,6 +644,7 @@ llvm::Optional<std::string> GetOutputLbn(OpResult result) {
     std::vector<int32_t> def_op_sizes{};
     if (failed(GetFilteredSegmentKeyAndSizes<OpTrait::AttrSizedResultSegments>(def_op, def_op_keys,
                                                                                def_op_sizes))) {
+      def_op->emitError("fail to get output lbn");
       return llvm::None;
     }
     const auto result_number = result.getResultNumber();
@@ -621,7 +668,9 @@ LogicalResult ConvertUserOpInputs(Operation* op, oneflow::UserOpAdaptor& user_op
                                   ::oneflow::UserOpConf* user_conf) {
   std::vector<std::string> keys{};
   std::vector<int32_t> sizes{};
-  if (failed(GetFilteredSegmentKeyAndSizes<OpTrait::AttrSizedOperandSegments>(op, keys, sizes))) {
+  if (failed(GetFilteredSegmentKeyAndSizes<OpTrait::AttrSizedOperandSegments>(op, keys,
+                                                                                     sizes))) {
+    op->emitError("fail to convert user op inputs");
     return failure();
   }
   const std::string op_name = user_op_adaptor.op_name().str();
@@ -650,8 +699,11 @@ LogicalResult ConvertUserOpOutputs(Operation* op, oneflow::UserOpAdaptor& user_o
                                    ::oneflow::UserOpConf* user_conf) {
   std::vector<std::string> keys{};
   std::vector<int32_t> sizes{};
-  auto result = GetFilteredSegmentKeyAndSizes<OpTrait::AttrSizedResultSegments>(op, keys, sizes);
-  if (result.failed()) { return failure(); }
+  if (failed(GetFilteredSegmentKeyAndSizes<OpTrait::AttrSizedResultSegments>(op, keys,
+                                                                                    sizes))) {
+    op->emitError("fail to convert user op outputs");
+    return failure();
+  }
   const std::string op_name = user_op_adaptor.op_name().str();
   for (auto tuple : llvm::zip(keys, sizes)) {
     auto name = std::get<0>(tuple);
@@ -713,6 +765,8 @@ LogicalResult Importer::ConvertUserOpAttributes(Operation* op,
             mlir::OpTrait::AttrSizedOperandSegments<void>::getOperandSegmentSizeAttr())
         || id.strref().equals(
             mlir::OpTrait::AttrSizedResultSegments<void>::getResultSegmentSizeAttr())) {
+      continue;
+    } else if (id.strref().equals("input_sizes") || id.strref().equals("output_sizes")) {
       continue;
     }
     // convert op conf attributes
@@ -808,6 +862,7 @@ LogicalResult Importer::ConvertUserOpAttributes(Operation* op,
     std::vector<std::string> keys{};
     std::vector<int32_t> sizes{};
     if (failed(GetFilteredSegmentKeyAndSizes<OpTrait::AttrSizedOperandSegments>(op, keys, sizes))) {
+      op->emitError("fail to convert user op input order");
       return failure();
     }
     for (const auto& s : keys) { op_conf.mutable_user_conf()->add_input_order(s); }
@@ -816,6 +871,7 @@ LogicalResult Importer::ConvertUserOpAttributes(Operation* op,
     std::vector<std::string> keys{};
     std::vector<int32_t> sizes{};
     if (failed(GetFilteredSegmentKeyAndSizes<OpTrait::AttrSizedResultSegments>(op, keys, sizes))) {
+      op->emitError("fail to convert user op output order");
       return failure();
     }
     for (const auto& s : keys) { op_conf.mutable_user_conf()->add_output_order(s); }

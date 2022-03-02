@@ -35,6 +35,15 @@ namespace mlir {
 
 class FuncOp;
 
+}
+
+#define GET_OP_CLASSES
+#include "OneFlow/OneFlowOps.h.inc"
+#define GET_OP_CLASSES
+#include "OneFlow/OneFlow.gen_ops.h.inc"
+
+namespace mlir {
+
 template<typename T>
 inline std::string GetOpTypeName(T op) {
   std::string op_type_name = op->getName().stripDialect().str();
@@ -46,14 +55,10 @@ inline std::string GetOpTypeName(T op) {
   if (auto alternative_name = dyn_cast<oneflow::HasAlternativeOpTypeName>(op)) {
     op_type_name = alternative_name.getOriginalOpTypeName();
   }
+  if (auto user_op = dyn_cast<oneflow::UserOp>(op)) { op_type_name = user_op.op_type_name().str(); }
   return op_type_name;
 }
 
 }  // namespace mlir
-
-#define GET_OP_CLASSES
-#include "OneFlow/OneFlowOps.h.inc"
-#define GET_OP_CLASSES
-#include "OneFlow/OneFlow.gen_ops.h.inc"
 
 #endif  // ONEFLOW_IR_INCLUDE_ONEFLOW_ONEFLOWOPS_H_
