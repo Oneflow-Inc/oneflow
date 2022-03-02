@@ -107,7 +107,7 @@ LogicalResult JobImporter::AppendCtrlInOperand(const ::oneflow::OperatorConf& op
   for (auto& ctrl_in_op_name : op.ctrl_in_op_name()) {
     auto it = op_name2ctrl_result_.find(ctrl_in_op_name);
     if (it == op_name2ctrl_result_.end()) {
-      GetModule().emitError("IR result not found for ctrl in op: " + ctrl_in_op_name);
+      GetModule().emitError("ctrl edge result of this op not found: " + ctrl_in_op_name);
       return failure();
     } else {
       operand_vec.push_back(it->second);
