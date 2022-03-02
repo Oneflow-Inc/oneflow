@@ -47,7 +47,8 @@ Maybe<void> BoxingWithMiddleNodes(const OpGraph& op_graph, JobBuilder* job_build
       const NdSbp& consumer_nd_sbp = node->NdSbp4BnInOp(ibn);
 
       // If dealing with different placement
-      if (producer.parallel_desc().parallel_num()!=1 || node->parallel_desc().parallel_num() != 1) {
+      if (producer.parallel_desc().parallel_num() != 1
+          || node->parallel_desc().parallel_num() != 1) {
         const auto& logical_blob_desc = producer.LogicalBlobDesc4Lbi(lbi);
         // Ask for middle nodes
         int32_t diag_node = 0;
