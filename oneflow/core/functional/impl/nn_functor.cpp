@@ -2241,30 +2241,24 @@ class IdShuffleFunctor {
                                                   .Output("cur_rank_unique_column_ids")
                                                   .Output("cur_rank_inverse_indices")
                                                   .Build());
-    op_column_ids_no_in_no_out_ = CHECK_JUST(one::OpBuilder("id_shuffle")
-                                                 .Input("ids")
-                                                 .Output("num_unique_matrix")
-                                                 .Output("inverse_unique_partion_indices")
-                                                 .Output("cur_rank_num_unique")
-                                                 .Output("cur_rank_unique_ids")
-                                                 .Output("cur_rank_inverse_indices")
-                                                 .Build());
   }
 
   Maybe<TensorTuple> operator()(const std::shared_ptr<one::Tensor>& ids,
-                                const std::shared_ptr<one::Tensor>& column_ids,
+                                const Optional<one::Tensor>& column_ids,
                                 const int32_t& num_columns) const {
     MutableAttrMap attrs;
     JUST(attrs.SetAttr<int32_t>("num_columns", num_columns));
-    // TODO : process no column ids
-    return OpInterpUtil::Dispatch<TensorTuple>(*op_column_ids_has_in_out_, {ids, column_ids},
-                                               attrs);
+    if (column_ids) {
+      return OpInterpUtil::Dispatch<TensorTuple>(*op_column_ids_has_in_out_,
+                                                 {ids, JUST(column_ids)}, attrs);
+    } else {
+      return OpInterpUtil::Dispatch<TensorTuple>(*op_column_ids_no_in_has_out_, {ids}, attrs);
+    }
   }
 
  private:
   std::shared_ptr<OpExpr> op_column_ids_has_in_out_;
   std::shared_ptr<OpExpr> op_column_ids_no_in_has_out_;
-  std::shared_ptr<OpExpr> op_column_ids_no_in_no_out_;
 };
 
 class EmbeddingShuffleFunctor {

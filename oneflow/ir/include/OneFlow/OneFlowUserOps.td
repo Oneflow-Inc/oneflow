@@ -9006,7 +9006,7 @@ def OneFlow_UpsampleTrilinear3DGradOp : OneFlow_BaseOp<"upsample_trilinear_3d_gr
 def OneFlow_IdShuffleOp : OneFlow_BaseOp<"id_shuffle", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
     OneFlow_Tensor:$ids,
-    OneFlow_Tensor:$column_ids
+    Optional<OneFlow_Tensor>:$column_ids
   );
   let output = (outs
     OneFlow_Tensor:$num_unique_matrix,
@@ -9017,7 +9017,7 @@ def OneFlow_IdShuffleOp : OneFlow_BaseOp<"id_shuffle", [NoSideEffect, DeclareOpI
     OneFlow_Tensor:$cur_rank_inverse_indices
   );
   let attrs = (ins
-    DefaultValuedAttr<SI32Attr, "0">:$num_columns
+    DefaultValuedAttr<SI32Attr, "1">:$num_columns
   );
   let same_output_regst_num = 1;
   let has_logical_tensor_desc_infer_fn = 1;

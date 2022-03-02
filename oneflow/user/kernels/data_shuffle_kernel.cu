@@ -52,7 +52,8 @@ __global__ void HashTableUniqueAndPartitionPairs(const uint32_t table_capacity,
                                                  size_t seed, IDX* table_sizes,
                                                  TableEntry<K>* table, const K* keys,
                                                  const V* values, K* partioned_unique_keys,
-                                                 V* partioned_unique_values, IDX* reverse_index) {
+                                                 V* partioned_unique_values, IDX* reverse_index,
+                                                 bool need_process_values) {
   CUDA_1D_KERNEL_LOOP(i, num_keys) {
     IDX r_index_plus_one = 0;
     const K key = keys[i];
@@ -60,7 +61,6 @@ __global__ void HashTableUniqueAndPartitionPairs(const uint32_t table_capacity,
     uint32_t partition_id = hash_key % num_partition;
     IDX* table_size = table_sizes + partition_id;
     K* unique_keys = partioned_unique_keys + partition_id * num_keys;
-    V* unique_values = partioned_unique_values + partition_id * num_keys;
     uint32_t pos = hash_key % table_capacity;
     const K key_hi = (key | 0x1);
     const K key_lo = (key & 0x1);
@@ -90,7 +90,9 @@ __global__ void HashTableUniqueAndPartitionPairs(const uint32_t table_capacity,
             IDX unique_pos = cuda::atomic::Add(table_size, 1);
             r_index_plus_one = unique_pos + 1;
             unique_keys[unique_pos] = key;
-            unique_values[unique_pos] = values[i];
+            if (need_process_values) {
+              partioned_unique_values[partition_id * num_keys + unique_pos] = values[i];
+            }
             *value_ptr = ((r_index_plus_one << 1U) | key_lo);
           } else if (old_key == key_hi) {
             const int32_t value = *value_ptr;
@@ -119,12 +121,17 @@ __global__ void HashTableUniqueAndPartitionPairs(const uint32_t table_capacity,
   }
 }
 
+template<typename U>
+__global__ void GenerateColumnIds(int32_t elem_cnt, int32_t num_columns, U* column_ids) {
+  CUDA_1D_KERNEL_LOOP(i, elem_cnt) { column_ids[i] = i % num_columns; }
+}
+
 template<typename K, typename V, typename IDX>
 void UniqueAndPartition(cudaStream_t cuda_stream, int64_t num_ids, size_t capacity,
                         int64_t num_partition, size_t seed, const K* ids, const V* column_ids,
                         IDX* num_partitioned_unique_ids_ptr, K* partitioned_unique_ids,
                         V* partitioned_unique_column_ids, IDX* inverse_unique_partion_indices,
-                        void* workspace_ptr, size_t workspace_bytes) {
+                        void* workspace_ptr, size_t workspace_bytes, bool need_process_column_ids) {
   CHECK_GE(workspace_bytes, capacity * sizeof(TableEntry<K>));
   cudaMemsetAsync(workspace_ptr, 0, capacity * sizeof(TableEntry<K>), cuda_stream);
   cudaMemsetAsync(num_partitioned_unique_ids_ptr, 0, num_partition * sizeof(IDX), cuda_stream);
@@ -132,7 +139,7 @@ void UniqueAndPartition(cudaStream_t cuda_stream, int64_t num_ids, size_t capaci
       <<<BlocksNum4ThreadsNum(capacity), kCudaThreadsNumPerBlock, 0, cuda_stream>>>(
           capacity, num_ids, num_partition, seed, num_partitioned_unique_ids_ptr,
           reinterpret_cast<TableEntry<K>*>(workspace_ptr), ids, column_ids, partitioned_unique_ids,
-          partitioned_unique_column_ids, inverse_unique_partion_indices);
+          partitioned_unique_column_ids, inverse_unique_partion_indices, need_process_column_ids);
 }
 
 template<typename K, typename U, typename IDX>
@@ -140,7 +147,8 @@ void SendRecvIdsAndColumns(cudaStream_t cuda_stream, ncclComm_t comm, int64_t pa
                            int64_t parallel_num, int64_t num_ids, DataType ids_data_type,
                            DataType column_ids_data_type, IDX* host_num_unique_matrix,
                            K* partitioned_unique_ids, U* partitioned_unique_column_ids,
-                           K* received_ids, U* received_column_ids, int64_t* received_elem_cnt) {
+                           K* received_ids, U* received_column_ids, int64_t* received_elem_cnt,
+                           bool need_process_column_ids) {
   {
     // send recv unique ids
     int64_t recv_offset = 0;
@@ -160,6 +168,7 @@ void SendRecvIdsAndColumns(cudaStream_t cuda_stream, ncclComm_t comm, int64_t pa
     *received_elem_cnt = recv_offset;
   }
   {
+    if (!need_process_column_ids) { return; }
     // send recv column_ids
     int64_t recv_offset = 0;
     OF_NCCL_CHECK(ncclGroupStart());
@@ -183,19 +192,24 @@ template<typename K, typename U, typename IDX>
 class IdShuffleTmpBufferManager final {
  public:
   OF_DISALLOW_COPY_AND_MOVE(IdShuffleTmpBufferManager);
-  IdShuffleTmpBufferManager(void* ptr, const int64_t num_ids, const int64_t parallel_num)
+  IdShuffleTmpBufferManager(void* ptr, const int64_t num_ids, const int64_t parallel_num,
+                            bool need_column_ids, bool need_process_column_ids)
       : ptr_(ptr) {
+    const int64_t num_column_ids = need_process_column_ids ? num_ids : 0;
+    const size_t column_ids_bytes = need_column_ids ? GetCudaAlignedSize(num_ids * sizeof(U)) : 0;
     const size_t num_partitioned_bytes = GetCudaAlignedSize(parallel_num * sizeof(IDX));
     const size_t partitioned_unique_ids_bytes =
         GetCudaAlignedSize(parallel_num * num_ids * sizeof(K));
     const size_t partitioned_unique_column_ids_bytes =
-        GetCudaAlignedSize(parallel_num * num_ids * sizeof(U));
+        GetCudaAlignedSize(parallel_num * num_column_ids * sizeof(U));
     const size_t received_ids_bytes = GetCudaAlignedSize(parallel_num * num_ids * sizeof(K));
-    const size_t received_column_ids_bytes = GetCudaAlignedSize(parallel_num * num_ids * sizeof(U));
+    const size_t received_column_ids_bytes =
+        GetCudaAlignedSize(parallel_num * num_column_ids * sizeof(U));
     const size_t hash_capacity = parallel_num * num_ids;
     workspace_bytes_ = GetCudaAlignedSize(hash_capacity * sizeof(TableEntry<K>));
 
-    num_partitioned_unique_offset_ = 0;
+    column_ids_offset_ = 0;
+    num_partitioned_unique_offset_ = column_ids_offset_ + column_ids_bytes;
     partitioned_unique_ids_offset_ = num_partitioned_unique_offset_ + num_partitioned_bytes;
     partitioned_unique_column_ids_offset_ =
         partitioned_unique_ids_offset_ + partitioned_unique_ids_bytes;
@@ -204,7 +218,7 @@ class IdShuffleTmpBufferManager final {
     received_column_ids_offset_ = received_ids_offset_ + received_ids_bytes;
     workspace_offset_ = received_column_ids_offset_ + received_column_ids_bytes;
     CHECK_GE(workspace_bytes_, 0);
-    total_buffer_size_ = num_partitioned_bytes + partitioned_unique_ids_bytes
+    total_buffer_size_ = column_ids_bytes + num_partitioned_bytes + partitioned_unique_ids_bytes
                          + partitioned_unique_column_ids_bytes + received_ids_bytes
                          + received_column_ids_bytes + workspace_bytes_;
   }
@@ -213,6 +227,10 @@ class IdShuffleTmpBufferManager final {
   int64_t WorkspaceBytes() const { return workspace_bytes_; }
   size_t TotalBufferSize() const { return total_buffer_size_; }
 
+  U* ColumnIds() const {
+    CHECK(ptr_ != nullptr);
+    return reinterpret_cast<IDX*>(reinterpret_cast<char*>(ptr_) + column_ids_offset_);
+  }
   IDX* NumPartitionedUnique() const {
     CHECK(ptr_ != nullptr);
     return reinterpret_cast<IDX*>(reinterpret_cast<char*>(ptr_) + num_partitioned_unique_offset_);
@@ -240,6 +258,7 @@ class IdShuffleTmpBufferManager final {
   }
 
  private:
+  size_t column_ids_offset_;
   size_t num_partitioned_unique_offset_;
   size_t partitioned_unique_ids_offset_;
   size_t partitioned_unique_column_ids_offset_;
@@ -324,7 +343,6 @@ class IdShuffleKernel final : public user_op::OpKernel {
     auto* kernel_state = dynamic_cast<DataShuffleKernelState<IDX>*>(state);
     CHECK(kernel_state != nullptr);
     const user_op::Tensor* ids = ctx->Tensor4ArgNameAndIndex("ids", 0);
-    const user_op::Tensor* column_ids = ctx->Tensor4ArgNameAndIndex("column_ids", 0);
     user_op::Tensor* num_unique_matrix = ctx->Tensor4ArgNameAndIndex("num_unique_matrix", 0);
     user_op::Tensor* inverse_unique_partion_indices =
         ctx->Tensor4ArgNameAndIndex("inverse_unique_partion_indices", 0);
@@ -335,16 +353,30 @@ class IdShuffleKernel final : public user_op::OpKernel {
     user_op::Tensor* cur_rank_inverse_indices =
         ctx->Tensor4ArgNameAndIndex("cur_rank_inverse_indices", 0);
     user_op::Tensor* tmp_buffer = ctx->Tensor4ArgNameAndIndex("tmp_buffer", 0);
+    const int32_t num_columns = ctx->Attr<int32_t>("num_columns");
+    const bool has_column_ids = ctx->has_input("column_ids", 0);
+    const bool need_gen_column_ids = (!has_column_ids && num_columns > 1);
+    const bool need_process_column_ids = (has_column_ids || num_columns > 1);
     const int64_t num_ids = ids->shape().elem_cnt();
-    const int64_t num_column_ids = column_ids->shape().elem_cnt();
-    CHECK_EQ(num_ids, num_column_ids);
     const int64_t parallel_num = ctx->parallel_ctx().parallel_num();
     const int64_t parallel_id = ctx->parallel_ctx().parallel_id();
     cudaStream_t cuda_stream = ctx->stream()->As<ep::CudaStream>()->cuda_stream();
     IdShuffleTmpBufferManager<K, U, IDX> buffer_manager(tmp_buffer->mut_dptr(), num_ids,
-                                                        parallel_num);
+                                                        parallel_num, need_gen_column_ids,
+                                                        need_process_column_ids);
     CHECK_GE(tmp_buffer->shape().elem_cnt(), buffer_manager.TotalBufferSize());
 
+    const U* column_ids_ptr;
+    if (has_column_ids) {
+      const user_op::Tensor* column_ids = ctx->Tensor4ArgNameAndIndex("column_ids", 0);
+      column_ids_ptr = column_ids->dptr<U>();
+    } else if (need_gen_column_ids) {
+      GenerateColumnIds<<<BlocksNum4ThreadsNum(num_ids), kCudaThreadsNumPerBlock, 0, cuda_stream>>>(
+          num_ids, num_columns, buffer_manager.ColumnIds());
+      column_ids_ptr = buffer_manager.ColumnIds();
+    } else {
+      column_ids_ptr = nullptr;
+    }
     IDX* num_partitioned_unique = buffer_manager.NumPartitionedUnique();
     K* partitioned_unique_ids = buffer_manager.PartitionedUniqueIds();
     U* partitioned_unique_column_ids = buffer_manager.PartitionedUniqueColumnIds();
@@ -354,10 +386,10 @@ class IdShuffleKernel final : public user_op::OpKernel {
     void* workspace_ptr = buffer_manager.WorkspacePtr();
     size_t workspace_size = buffer_manager.WorkspaceBytes();
     UniqueAndPartition(cuda_stream, num_ids, hash_capacity, parallel_num, seed, ids->dptr<K>(),
-                       column_ids->dptr<U>(), num_partitioned_unique, partitioned_unique_ids,
+                       column_ids_ptr, num_partitioned_unique, partitioned_unique_ids,
                        partitioned_unique_column_ids,
                        inverse_unique_partion_indices->mut_dptr<IDX>(), workspace_ptr,
-                       workspace_size);
+                       workspace_size, need_process_column_ids);
     ncclComm_t comm = kernel_state->comm();
     OF_NCCL_CHECK(ncclAllGather(reinterpret_cast<const void*>(num_partitioned_unique),
                                 reinterpret_cast<void*>(num_unique_matrix_ptr), parallel_num,
@@ -373,15 +405,15 @@ class IdShuffleKernel final : public user_op::OpKernel {
     U* received_column_ids = buffer_manager.ReceivedColumnIds();
     int64_t received_elem_cnt = 0;
     SendRecvIdsAndColumns(cuda_stream, comm, parallel_id, parallel_num, num_ids, ids->data_type(),
-                          column_ids->data_type(), host_num_unique_matrix, partitioned_unique_ids,
-                          partitioned_unique_column_ids, received_ids, received_column_ids,
-                          &received_elem_cnt);
+                          cur_rank_unique_column_ids->data_type(), host_num_unique_matrix,
+                          partitioned_unique_ids, partitioned_unique_column_ids, received_ids,
+                          received_column_ids, &received_elem_cnt, need_process_column_ids);
 
-    UniqueAndPartition(cuda_stream, received_elem_cnt, hash_capacity, 1, seed, received_ids,
-                       received_column_ids, cur_rank_num_unique->mut_dptr<IDX>(),
-                       cur_rank_unique_ids->mut_dptr<K>(),
-                       cur_rank_unique_column_ids->mut_dptr<U>(),
-                       cur_rank_inverse_indices->mut_dptr<IDX>(), workspace_ptr, workspace_size);
+    UniqueAndPartition(
+        cuda_stream, received_elem_cnt, hash_capacity, 1, seed, received_ids, received_column_ids,
+        cur_rank_num_unique->mut_dptr<IDX>(), cur_rank_unique_ids->mut_dptr<K>(),
+        cur_rank_unique_column_ids->mut_dptr<U>(), cur_rank_inverse_indices->mut_dptr<IDX>(),
+        workspace_ptr, workspace_size, need_process_column_ids);
   }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
@@ -392,12 +424,18 @@ class IdShuffleKernel final : public user_op::OpKernel {
       .SetIsMatchedHob(                                                                       \
           (user_op::HobDeviceType() == DeviceType::kCUDA)                                     \
           && (user_op::HobDataType("ids", 0) == GetDataType<k_dtype>::value)                  \
-          && (user_op::HobDataType("column_ids", 0) == GetDataType<column_dtype>::value)      \
+          && (user_op::HobDataType("cur_rank_unique_column_ids", 0)                           \
+              == GetDataType<column_dtype>::value)                                            \
           && (user_op::HobDataType("num_unique_matrix", 0) == GetDataType<idx_dtype>::value)) \
       .SetInferTmpSizeFn([](user_op::InferContext* ctx) {                                     \
         const user_op::TensorDesc& ids = ctx->InputTensorDesc("ids", 0);                      \
+        const bool has_column_ids = ctx->has_input("column_ids", 0);                          \
+        const int32_t num_columns = ctx->Attr<int32_t>("num_columns");                        \
+        const bool need_gen_column_ids = (!has_column_ids && num_columns > 1);                \
+        const bool need_process_column_ids = (has_column_ids || num_columns > 1);             \
         IdShuffleTmpBufferManager<k_dtype, column_dtype, idx_dtype> buffer_manager(           \
-            nullptr, ids.shape().elem_cnt(), ctx->parallel_desc().parallel_num());            \
+            nullptr, ids.shape().elem_cnt(), ctx->parallel_desc().parallel_num(),             \
+            need_gen_column_ids, need_process_column_ids);                                    \
         return buffer_manager.TotalBufferSize();                                              \
       });
 
@@ -493,7 +531,7 @@ class EmbeddingShuffleKernel final : public user_op::OpKernel {
                        data_type, host_num_unique_matrix, reverse_unique_cur_rank_embeddings,
                        received_embeddings);
 
-    // reverse unique_partition 
+    // reverse unique_partition
     GatherKernelUtilImpl<DeviceType::kCUDA, T, IDX>::Forward(
         ctx->stream(), inverse_unique_partion_indices->dptr<IDX>(),
         inverse_unique_partion_indices->shape().elem_cnt(), received_embeddings,

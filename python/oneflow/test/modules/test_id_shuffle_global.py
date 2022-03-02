@@ -27,26 +27,27 @@ from test_util import GenArgList
 placement = flow.placement(type="cuda", ranks=[0, 1])
 
 
-def _test_id_shuffle(test_case):
+def _test_id_shuffle(test_case, has_column_id, num_columns):
     batch_size = int(16384 / 2)
-    num_columns = 26
     ids = np.random.randint(0, 200000, (batch_size, num_columns), dtype=np.int64)
-    column_ids = (
-        ids % num_columns
-    )  # same id must have same column id, so in this case get column_ids from ids
     ids_tensor = flow.tensor(ids, requires_grad=False).to_global(
         placement=placement, sbp=flow.sbp.split(0)
     )
-    column_ids_tensor = flow.tensor(
-        column_ids.astype(np.int32), requires_grad=False
-    ).to_global(placement=placement, sbp=flow.sbp.split(0))
+    if has_column_id:
+        column_ids = (
+            ids % num_columns
+        )  # same id must have same column id, so in this case get column_ids from ids
+        column_ids_tensor = flow.tensor(
+            column_ids.astype(np.int32), requires_grad=False
+        ).to_global(placement=placement, sbp=flow.sbp.split(0))
+    else:
+        column_ids_tensor = None
 
     class TestGraph(flow.nn.Graph):
         def __init__(self):
             super().__init__()
 
         def build(self, ids, column_ids):
-            print("ids", ids)
             return flow._C.id_shuffle(ids, column_ids, num_columns)
 
     graph = TestGraph()
@@ -73,7 +74,6 @@ def _test_id_shuffle(test_case):
     cur_rank_unique_column_ids_1 = cur_rank_unique_column_ids.numpy()[cur_rank_num_ids:]
 
     global_ids = ids_tensor.numpy()
-    global_column_ids = column_ids_tensor.numpy()
     np_unique_ids, np_unique_index, np_inverse = np.unique(
         global_ids, return_index=True, return_inverse=True
     )
@@ -92,17 +92,19 @@ def _test_id_shuffle(test_case):
     unique_ids.sort()
     np_unique_ids.sort()
     test_case.assertTrue(np.array_equal(unique_ids, np_unique_ids))
-    # test unique column ids
-    unique_column_ids = np.concatenate(
-        [
-            cur_rank_unique_column_ids_0[0:cur_rank_num_unique_0],
-            cur_rank_unique_column_ids_1[0:cur_rank_num_unique_1],
-        ]
-    )
-    unique_column_ids.sort()
-    np_unique_column_ids = global_column_ids.flatten()[np_unique_index]
-    np_unique_column_ids.sort()
-    test_case.assertTrue(np.array_equal(unique_column_ids, np_unique_column_ids))
+    if has_column_id:
+        # test unique column ids
+        unique_column_ids = np.concatenate(
+            [
+                cur_rank_unique_column_ids_0[0:cur_rank_num_unique_0],
+                cur_rank_unique_column_ids_1[0:cur_rank_num_unique_1],
+            ]
+        )
+        unique_column_ids.sort()
+        global_column_ids = column_ids_tensor.numpy()
+        np_unique_column_ids = global_column_ids.flatten()[np_unique_index]
+        np_unique_column_ids.sort()
+        test_case.assertTrue(np.array_equal(unique_column_ids, np_unique_column_ids))
 
 
 def _test_embedding_shuffle(test_case):
@@ -251,6 +253,8 @@ def _test_embedding_gradient_shuffle(test_case):
 class FusedDotFeatureInteractionTestCase(flow.unittest.TestCase):
     def test_id_shuffle(test_case):
         arg_dict = OrderedDict()
+        arg_dict["has_column_id"] = [True, False]
+        arg_dict["num_columns"] = [1, 26]
         for kwargs in GenArgDict(arg_dict):
             _test_id_shuffle(test_case, **kwargs)
 
