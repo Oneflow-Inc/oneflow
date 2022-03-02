@@ -102,7 +102,7 @@ class TestGraph(nn.Graph):
         return x
 
 
-@flow.unittest.skip_unless_2n8d()
+@flow.unittest.skip_unless_2n4d()
 @unittest.skipIf(os.getenv("ONEFLOW_TEST_CPU_ONLY"), "only test cpu cases")
 class TestLazyAllSbpCombinationTesting(flow.unittest.TestCase):
     def test_lazy_boxing_2d_all_combination(test_case):
