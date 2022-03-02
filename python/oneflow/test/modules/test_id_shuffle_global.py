@@ -107,13 +107,18 @@ def _test_id_shuffle(test_case, has_column_id, num_columns):
         test_case.assertTrue(np.array_equal(unique_column_ids, np_unique_column_ids))
 
 
-def _test_embedding_shuffle(test_case):
+def _test_embedding_shuffle(test_case, dtype):
     batch_size = int(16384 / 2)
     num_columns = 26
     ids = np.random.randint(0, 20000, (batch_size, num_columns), dtype=np.int64)
     column_ids = (
         ids % num_columns
     )  # same id must have same column id, so in this case get column_ids from ids
+    if dtype == flow.float16:
+        np_dtype = np.float16
+    else:
+        np_dtype = np.float32
+    data = np.random.rand(200000, 128).astype(np_dtype)
     ids_tensor = flow.tensor(ids, requires_grad=False).to_global(
         placement=placement, sbp=flow.sbp.split(0)
     )
@@ -250,7 +255,7 @@ def _test_embedding_gradient_shuffle(test_case):
 
 @unittest.skipIf(os.getenv("ONEFLOW_TEST_CPU_ONLY"), "only test cpu cases")
 @flow.unittest.skip_unless_1n2d()
-class FusedDotFeatureInteractionTestCase(flow.unittest.TestCase):
+class DataShuffleTestCase(flow.unittest.TestCase):
     def test_id_shuffle(test_case):
         arg_dict = OrderedDict()
         arg_dict["has_column_id"] = [True, False]
@@ -260,6 +265,7 @@ class FusedDotFeatureInteractionTestCase(flow.unittest.TestCase):
 
     def test_embedding_shuffle(test_case):
         arg_dict = OrderedDict()
+        arg_dict["dtype"] = [flow.float32, flow.float16]
         for kwargs in GenArgDict(arg_dict):
             _test_embedding_shuffle(test_case, **kwargs)
 

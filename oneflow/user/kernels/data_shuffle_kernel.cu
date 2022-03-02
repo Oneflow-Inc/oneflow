@@ -559,7 +559,7 @@ class EmbeddingShuffleKernel final : public user_op::OpKernel {
       });
 
 REGISTER_CUDA_EMBEDDING_SHUFFLE_KERNEL(float, int32_t)
-// TODO: add more dtype
+REGISTER_CUDA_EMBEDDING_SHUFFLE_KERNEL(float16, int32_t)
 
 template<typename T, typename IDX>
 void SendRecvEmbeddingsDiff(cudaStream_t cuda_stream, ncclComm_t comm, int64_t parallel_id,
@@ -675,5 +675,6 @@ class EmbeddingGradientShuffleKernel final : public user_op::OpKernel {
       });
 
 REGISTER_CUDA_EMBEDDING_GRADIENT_SHUFFLE_KERNEL(float, int32_t)
+REGISTER_CUDA_EMBEDDING_GRADIENT_SHUFFLE_KERNEL(half, int32_t)
 
 }  // namespace oneflow
