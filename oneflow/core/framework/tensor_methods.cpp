@@ -42,14 +42,6 @@ void CheckIsPerm(const std::vector<int32_t>& perm) {
 }
 } // namespace
 
-bool IsViewApplicable(const std::shared_ptr<Tensor>& input) {
-  // NOTE: only eager local tensor support view for now
-  // elem_cnt() > 1  used to excluding 0 shape tensor
-  if (input->is_local() && !(LazyMode::is_enabled()) && input->shape()->elem_cnt() >= 1) {
-    return true;
-  }
-  return false;
-}
 
 
 bool IsViewApplicable(const std::shared_ptr<Tensor>& input) {
