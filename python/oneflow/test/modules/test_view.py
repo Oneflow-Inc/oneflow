@@ -74,6 +74,7 @@ def _test_view_flow_size(test_case, device):
 
 @flow.unittest.skip_unless_1n1d()
 class TestView(flow.unittest.TestCase):
+    # TODO:(zhaoluyang) add test case that trigger tensor.view's check
     def test_view(test_case):
         arg_dict = OrderedDict()
         arg_dict["test_fun"] = [
