@@ -533,6 +533,7 @@ Maybe<void> BoxingCollector::AskSbpCombination(const NdSbp& sbp_producer, const 
     return Maybe<void>::Ok();
   }
   // Transfer for the same machines, devices and hierarchy.
+  if (sbp_producer == sbp_consumer) { return Maybe<void>::Ok(); }
   const auto& parallel_hierarchy = producer_parallel_desc.hierarchy();
   *diag_node_pos = 0;
   // Dealing with nD sbp, n>2
