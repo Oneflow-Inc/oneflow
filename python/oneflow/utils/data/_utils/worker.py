@@ -25,6 +25,7 @@ import queue
 from dataclasses import dataclass
 from typing import Union
 from oneflow.multiprocessing import _prctl_pr_set_pdeathsig  # type: ignore[attr-defined]
+from oneflow.multiprocessing import unlink_all_shared_memory
 import signal
 
 import oneflow as flow
@@ -287,14 +288,23 @@ def _worker_loop(
     # See NOTE [ Data Loader Multiprocessing Shutdown Logic ] for details on the
     # logic of this function.
     try:
+
+        def cleanup_shm_at_exit(num, frame):
+            unlink_all_shared_memory()
+            # Use os._exit() to handle the exit of the subprocess to avoid share memory leaks
+            # caused by the subprocess continuing for a period of time after the parent process ends.
+            os._exit(0)
+
         _prctl_pr_set_pdeathsig(signal.SIGINT)
+
         # Initialize C side signal handlers for SIGBUS and SIGSEGV. Python signal
         # module's handlers are executed after Python returns from C low-level
         # handlers, likely when the same fatal signal had already happened
         # again.
         # https://docs.python.org/3/library/signal.html#execution-of-python-signal-handlers
         signal_handling._set_worker_signal_handlers()
-
+        signal.signal(signal.SIGTERM, cleanup_shm_at_exit)
+        signal.signal(signal.SIGINT, cleanup_shm_at_exit)
         # TODO:flow.set_num_threads(1)
         seed = base_seed + worker_id
         random.seed(seed)
@@ -399,3 +409,7 @@ def _worker_loop(
     if done_event.is_set():
         data_queue.cancel_join_thread()
         data_queue.close()
+
+    # Python subprocess will be exited by os._exit(), which skips destructors of
+    # C++ objects, so we should explicitly call unlink_all_shared_memory() here
+    unlink_all_shared_memory()
