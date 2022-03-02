@@ -155,10 +155,14 @@ Maybe<void> SharedMemoryManager::DeleteShmName(const std::string& shm_name) {
 }
 
 void SharedMemoryManager::UnlinkAllShms() {
+#ifdef __linux__
   // Here we deliberately do not handle unlink errors.
   std::unique_lock<std::recursive_mutex> lock(mutex_);
   for (const auto& shm : shm_names_) { shm_unlink(shm.c_str()); }
   shm_names_.clear();
+#else
+  TODO_THEN_RETURN();
+#endif
 }
 
 SharedMemoryManager::~SharedMemoryManager() { UnlinkAllShms(); }
