@@ -21,27 +21,19 @@ import oneflow.unittest
 from oneflow.test_utils.automated_test_util import *
 
 
-@autotest(check_graph=False)
+@autotest(n=1, check_graph=False)
 def _test_matmul(test_case, placement, x_sbp, y_sbp):
-    m = random().to(int).value() * 8
-    k = random().to(int).value() * 8
-    n = random().to(int).value() * 8
-    x = random_tensor(ndim=2, dim0=m, dim1=k).to_global(placement=placement, sbp=x_sbp)
-    y = random_tensor(ndim=2, dim0=k, dim1=n).to_global(placement=placement, sbp=y_sbp)
+    x = random_tensor(ndim=2, dim0=8, dim1=16).to_global(placement=placement, sbp=x_sbp)
+    y = random_tensor(ndim=2, dim0=16, dim1=8).to_global(placement=placement, sbp=y_sbp)
     return torch.matmul(x, y)
 
 
-@autotest(check_graph=False)
+@autotest(n=1, check_graph=False)
 def _test_tensor_broadcast_matmul(test_case, placement, x_sbp, y_sbp):
-    dim0 = random().to(int).value() * 8
-    dim1 = random().to(int).value() * 8
-    m = random().to(int).value() * 8
-    k = random().to(int).value() * 8
-    n = random().to(int).value() * 8
-    x = random_tensor(ndim=4, dim0=dim0, dim1=dim1, dim2=m, dim3=k).to_global(
+    x = random_tensor(ndim=3, dim0=8, dim1=8, dim2=16).to_global(
         placement=placement, sbp=x_sbp
     )
-    y = random_tensor(ndim=2, dim0=k, dim1=n).to_global(placement=placement, sbp=y_sbp)
+    y = random_tensor(ndim=2, dim0=16, dim1=8).to_global(placement=placement, sbp=y_sbp)
     return x.matmul(y)
 
 
@@ -56,8 +48,8 @@ class TestMatMulModule(flow.unittest.TestCase):
     @globaltest
     def test_broadcast_matmul(test_case):
         for placement in all_placement():
-            for x_sbp in all_sbp(placement, max_dim=4):
-                for y_sbp in all_sbp(placement, max_dim=2):
+            for x_sbp in all_sbp(placement, valid_split_axis=[0, 1, 2, 3]):
+                for y_sbp in all_sbp(placement, valid_split_axis=[0, 1]):
                     _test_tensor_broadcast_matmul(test_case, placement, x_sbp, y_sbp)
 
 
