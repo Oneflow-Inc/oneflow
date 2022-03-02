@@ -48,7 +48,22 @@ def _test_id_shuffle(test_case, has_column_id, num_columns):
             super().__init__()
 
         def build(self, ids, column_ids):
-            return flow._C.id_shuffle(ids, column_ids, num_columns)
+            (
+                num_unique_matrix,
+                inverse_unique_partion_indices,
+                cur_rank_num_unique,
+                cur_rank_unique_ids,
+                cur_rank_unique_column_ids,
+                cur_rank_inverse_indices,
+            ) = flow._C.id_shuffle(ids, column_ids, num_columns)
+            return (
+                flow.cast(num_unique_matrix, flow.int32),
+                flow.cast(inverse_unique_partion_indices, flow.int32),
+                flow.cast(cur_rank_num_unique, flow.int32),
+                flow.cast(cur_rank_unique_ids, flow.int32),
+                flow.cast(cur_rank_unique_column_ids, flow.int32),
+                flow.cast(cur_rank_inverse_indices, flow.int32),
+            )
 
     graph = TestGraph()
     (
@@ -203,7 +218,7 @@ def _test_embedding_gradient_shuffle(test_case):
             )
             return (
                 cur_rank_unique_embedding_diff,
-                cur_rank_num_unique,
+                flow.cast(cur_rank_num_unique, flow.int32),
                 cur_rank_unique_ids,
             )
 
