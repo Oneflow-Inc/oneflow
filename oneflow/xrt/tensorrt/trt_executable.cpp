@@ -71,6 +71,10 @@ nvinfer1::ICudaEngine* TrtExecutable::CreateExecutableEngine(
 
   // flags |= (1U << int(nvinfer1::BuilderFlag::kREFIT));
   build_config->setFlags(flags);
+  if (run_options.stream) {
+    cudaStream_t stream = run_options.stream->As<ep::CudaStream>()->cuda_stream();
+    build_config->setProfileStream(stream);
+  }
 
   int32_t max_batch_size = std::max(run_options.tensorrt_max_batch_size, batch_size);
   builder_->setMaxBatchSize(max_batch_size);
@@ -78,17 +82,16 @@ nvinfer1::ICudaEngine* TrtExecutable::CreateExecutableEngine(
   return builder_->buildEngineWithConfig(*network_, *build_config);
 }
 
-bool TrtExecutable::ExecuteEngine(int batch_size, void** buffers, void* stream,
+bool TrtExecutable::ExecuteEngine(int batch_size, void** buffers, cudaStream_t stream,
                                   bool block_until_done) {
   if (!execution_context_) {  // NOLINT
     execution_context_.reset(engine_->createExecutionContext());
   }
-  cudaStream_t cu_stream = reinterpret_cast<cudaStream_t>(stream);
   bool status =
-      // execution_context_->enqueue(batch_size, buffers, cu_stream, nullptr);
-      execution_context_->enqueueV2(buffers, cu_stream, nullptr);
+      // execution_context_->enqueue(batch_size, buffers, stream, nullptr);
+      execution_context_->enqueueV2(buffers, stream, nullptr);
   if (block_until_done) {  // NOLINT
-    CHECK_EQ(cudaSuccess, cudaStreamSynchronize(cu_stream));
+    CHECK_EQ(cudaSuccess, cudaStreamSynchronize(stream));
   }
   return status;
 }
@@ -180,8 +183,7 @@ bool TrtExecutable::Run(const std::vector<Parameter>& inputs,
     }
 
     if (res->calibrator_->isDone()) {
-      CHECK_EQ(cudaSuccess, cudaStreamSynchronize(                         // NOLINT
-                                reinterpret_cast<cudaStream_t>(stream)));  // NOLINT
+      CHECK_EQ(cudaSuccess, cudaStreamSynchronize(stream));
       calibrator_ = res->calibrator_;
       execution_context_.reset(res->engine_->createExecutionContext());
     } else {
@@ -189,8 +191,7 @@ bool TrtExecutable::Run(const std::vector<Parameter>& inputs,
     }
   }
 
-  return ExecuteEngine(batch_size, buffers.data(), stream,  // NOLINT
-                       block_until_done);
+  return ExecuteEngine(batch_size, buffers.data(), stream, block_until_done);
 }
 
 }  // namespace tensorrt
