@@ -553,6 +553,19 @@ int32_t GetSingleSegmentSize<OpTrait::AttrSizedResultSegments>(Operation* op) {
 }
 
 template<template<typename T> class Trait>
+ArrayAttr GetUserOpArgSizes(UserOp);
+
+template<>
+ArrayAttr GetUserOpArgSizes<OpTrait::AttrSizedOperandSegments>(UserOp op) {
+  return op.input_sizes();
+}
+
+template<>
+ArrayAttr GetUserOpArgSizes<OpTrait::AttrSizedResultSegments>(UserOp op) {
+  return op.output_sizes();
+}
+
+template<template<typename T> class Trait>
 LogicalResult GetUserOpFilteredSegmentKeyAndSizes(UserOp op, std::vector<std::string>& keys,
                                                   std::vector<int32_t>& sizes) {
   auto full_keys = GetFullKeys<Trait>(op);
@@ -614,20 +627,6 @@ LogicalResult GetFilteredSegmentKeyAndSizes(Operation* op, std::vector<std::stri
   }
   return success();
 }
-
-template<template<typename T> class Trait>
-ArrayAttr GetUserOpArgSizes(UserOp);
-
-template<>
-ArrayAttr GetUserOpArgSizes<OpTrait::AttrSizedOperandSegments>(UserOp op) {
-  return op.input_sizes();
-}
-
-template<>
-ArrayAttr GetUserOpArgSizes<OpTrait::AttrSizedResultSegments>(UserOp op) {
-  return op.output_sizes();
-}
-
 
 
 llvm::Optional<std::string> GetOutputLbn(OpResult result) {
