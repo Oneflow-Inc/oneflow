@@ -478,9 +478,10 @@ Maybe<double> ComputeCopyCostWithMiddleNodes(const NdSbp& producer_sbp_parallel,
   static thread_local BoxingCollector boxing_collector(kRegularMaxSplitAxes);
   std::vector<NdSbp> middle_sbps;
   // Ask for middle nodes
+  int32_t diag_node = 0;
   JUST(boxing_collector.AskSbpCombination(
       producer_sbp_parallel, consumer_sbp_parallel, logical_blob_desc, producer_parallel_desc,
-      consumer_parallel_desc, /*is_customized=*/false, middle_sbps,
+      consumer_parallel_desc, /*is_customized=*/false, middle_sbps, &diag_node,
       /*compute_cost=*/true));
   // Parameters
   double total_cost = 0.0;
@@ -488,18 +489,25 @@ Maybe<double> ComputeCopyCostWithMiddleNodes(const NdSbp& producer_sbp_parallel,
   // Set up the information of the first node in the first connection
   const NdSbp* pre_nd_sbp = &producer_sbp_parallel;
   const ParallelDesc* pre_parallel_desc = &producer_parallel_desc;
+  const ParallelDesc* middle_parallel_desc = nullptr;
   // Connection for the next middle node
-  for (const auto& middle_sbp : middle_sbps) {
+  for (int32_t middle_node_id = 0; middle_node_id < middle_sbps.size(); middle_node_id++) {
+    const auto& middle_sbp = middle_sbps[middle_node_id];
+    if (middle_node_id < diag_node) {
+      middle_parallel_desc = &producer_parallel_desc;
+    } else {
+      middle_parallel_desc = &consumer_parallel_desc;
+    }
     // We use the parallel description of consumer as the parallel description for all the middle
     // nodes, following the same procedure in boxing_with_middle_nodes.cpp
     // TODO: Needs more effort if dealing with different placement
     total_cost += JUST(ComputeLazyCopyCostBetweenNdSbp(*pre_nd_sbp, middle_sbp, logical_blob_desc,
-                                                       *pre_parallel_desc, consumer_parallel_desc,
+                                                       *pre_parallel_desc, *middle_parallel_desc,
                                                        requires_same_sbp))
                   + transfer_cost;
     // Set up the information of the first node in the next connection
     pre_nd_sbp = &middle_sbp;
-    pre_parallel_desc = &consumer_parallel_desc;
+    pre_parallel_desc = middle_parallel_desc;
   }
   // Connection between the last middle node and consumer
   total_cost += JUST(ComputeLazyCopyCostBetweenNdSbp(*pre_nd_sbp, consumer_sbp_parallel,
