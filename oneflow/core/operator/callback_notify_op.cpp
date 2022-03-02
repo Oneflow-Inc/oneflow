@@ -48,7 +48,7 @@ Maybe<void> CallbackNotifyOp::InferOutBlobDescs(
   return InferBlobDescs(GetBlobDesc4BnInOp);
 }
 
-Maybe<void> CallbackNotifyOp::GetSbpSignatures(cfg::SbpSignatureList* sbp_sig_list) const {
+Maybe<void> CallbackNotifyOp::GetSbpSignatures(SbpSignatureList* sbp_sig_list) const {
   return Maybe<void>::Ok();
 }
 

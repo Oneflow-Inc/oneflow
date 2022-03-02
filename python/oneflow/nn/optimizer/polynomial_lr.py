@@ -80,30 +80,22 @@ class PolynomialLR(LRScheduler):
         self.cycle = cycle
         super().__init__(optimizer, last_step, verbose)
 
-    def get_lr(self):
+    def get_lr(self, base_lr, step):
         decay_batch = self.max_decay_steps
-        cur_batch = self.last_step
+        cur_batch = step
         if self.cycle:
             if cur_batch == 0:
                 cur_batch = 1
             decay_batch = decay_batch * math.ceil(cur_batch / decay_batch)
         else:
             cur_batch = min(cur_batch, decay_batch)
-        return [
-            (base_lr - self.end_learning_rate)
-            * ((1 - cur_batch / decay_batch) ** (self.power))
-            + self.end_learning_rate
-            for base_lr in self.base_lrs
-        ]
 
-    def _generate_conf_for_graph(self, opt_confs):
-        for opt_conf in opt_confs:
-            learning_rate_decay_conf = opt_conf.mutable_learning_rate_decay()
-            learning_rate_decay_conf.mutable_polynomial_conf().set_decay_batches(
-                self.max_decay_steps
-            )
-            learning_rate_decay_conf.mutable_polynomial_conf().set_end_learning_rate(
-                self.end_learning_rate
-            )
-            learning_rate_decay_conf.mutable_polynomial_conf().set_power(self.power)
-            learning_rate_decay_conf.mutable_polynomial_conf().set_cycle(self.cycle)
+        factor = (1 - cur_batch / decay_batch) ** (self.power)
+        return (base_lr - self.end_learning_rate) * factor + self.end_learning_rate
+
+    def _generate_conf_for_graph(self, lr_conf):
+        polynomial_conf = lr_conf.mutable_polynomial_conf()
+        polynomial_conf.set_decay_batches(self.max_decay_steps)
+        polynomial_conf.set_end_learning_rate(self.end_learning_rate)
+        polynomial_conf.set_power(self.power)
+        polynomial_conf.set_cycle(self.cycle)

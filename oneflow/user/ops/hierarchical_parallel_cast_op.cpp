@@ -36,13 +36,13 @@ namespace oneflow {
 }
 
 /* static */ Maybe<void> HierarchicalParallelCastOp::InferNdSbp(user_op::InferNdSbpFnContext* ctx) {
-  cfg::NdSbp* in_distribution = ctx->NdSbp4ArgNameAndIndex("in", 0);
-  cfg::NdSbp* out_distribution = ctx->NdSbp4ArgNameAndIndex("out", 0);
+  NdSbp* in_distribution = ctx->NdSbp4ArgNameAndIndex("in", 0);
+  NdSbp* out_distribution = ctx->NdSbp4ArgNameAndIndex("out", 0);
   const Shape& parallel_hierarchy = ctx->parallel_hierarchy();
   const auto& conf = ctx->user_op_conf().attr<std::vector<std::string>>("nd_sbp");
   CHECK_EQ_OR_RETURN(conf.size(), parallel_hierarchy.NumAxes());
   for (const std::string& sbp_str : conf) {
-    cfg::SbpParallel sbp_parallel;
+    SbpParallel sbp_parallel;
     CHECK_OR_RETURN(ParseSbpParallelFromString(sbp_str, &sbp_parallel));
     *in_distribution->add_sbp_parallel() = sbp_parallel;
     *out_distribution->add_sbp_parallel() = sbp_parallel;
@@ -73,10 +73,10 @@ namespace oneflow {
 
 /* static */ Maybe<void> HierarchicalParallelCastLikeOp::InferNdSbp(
     user_op::InferNdSbpFnContext* ctx) {
-  cfg::NdSbp* in_distribution = ctx->NdSbp4ArgNameAndIndex("in", 0);
-  cfg::NdSbp* out_distribution = ctx->NdSbp4ArgNameAndIndex("out", 0);
-  cfg::NdSbp* like_distribution = ctx->NdSbp4ArgNameAndIndex("like", 0);
-  const cfg::NdSbp& hint_distribution = ctx->NdSbpHint4InputArgNameAndIndex("like", 0);
+  NdSbp* in_distribution = ctx->NdSbp4ArgNameAndIndex("in", 0);
+  NdSbp* out_distribution = ctx->NdSbp4ArgNameAndIndex("out", 0);
+  NdSbp* like_distribution = ctx->NdSbp4ArgNameAndIndex("like", 0);
+  const NdSbp& hint_distribution = ctx->NdSbpHint4InputArgNameAndIndex("like", 0);
   *in_distribution = hint_distribution;
   *out_distribution = hint_distribution;
   *like_distribution = hint_distribution;
