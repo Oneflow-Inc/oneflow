@@ -107,6 +107,10 @@ std::string TrtExecutable::LoadCalibrationTable(  // NOLINT
 bool TrtExecutable::Run(const std::vector<Parameter>& inputs,
                         const ExecutableRunOptions& run_options,  // NOLINT
                         bool block_until_done) {
+  CHECK(run_options.stream) << "stream is required for TrtExecutable";
+  cudaStream_t stream = run_options.stream->As<ep::CudaStream>()->cuda_stream();
+  RecordStream(reinterpret_cast<uint64_t>(stream), run_options.stream);
+
   // TODO(hjchen2): Refactor
   if (run_options.tensorrt_int8 && !calibrator_ &&  // NOLINT
       run_options.tensorrt_int8_calibration.size()) {
@@ -156,10 +160,6 @@ bool TrtExecutable::Run(const std::vector<Parameter>& inputs,
     CHECK(engine_) << "Failed to create engine with batch size " << batch_size;
     execution_context_.reset(engine_->createExecutionContext());
   }
-  CHECK(run_options.stream) << "stream is required for TrtExecutable";
-  cudaStream_t stream = run_options.stream->As<ep::CudaStream>()->cuda_stream();
-  RecordStream(reinterpret_cast<uint64_t>(stream), run_options.stream);
-
   if (run_options.tensorrt_int8 && !calibrator_) {
     auto* res = TRTInt8CalibratorResource::LookupOrCreate(this->name());
     {
