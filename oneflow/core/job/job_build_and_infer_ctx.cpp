@@ -1037,6 +1037,10 @@ Maybe<void> LazyJobBuildAndInferCtx::Complete() {
     JUST(DoPass("IRRoundTripBeforeAD"));
 #endif  // WITH_MLIR
     JUST(DoPass("GenerateBackwardAndOptimizerOpConfs"));
+    JUST(DoPass("AddSspVariableProxy"));
+    JUST(DoPass("CheckpointingPass"));
+    JUST(DoPass("CudnnFusedNormalizationAddReluPass"));
+    JUST(DoPass("PruneCastToStaticShapeOpsPass"));
     if (Global<ResourceDesc, ForSession>::Get()->enable_debug_mode()
         || Global<ResourceDesc, ForSession>::Get()->enable_dry_run()) {
       TeePersistentLogStream::Create(StrCat("ad_graph", job_id()))->Write(job());
@@ -1045,10 +1049,6 @@ Maybe<void> LazyJobBuildAndInferCtx::Complete() {
                                                 + "_op_graph.dot");
       Global<OpGraph>::Delete();
     }
-    JUST(DoPass("AddSspVariableProxy"));
-    JUST(DoPass("CheckpointingPass"));
-    JUST(DoPass("CudnnFusedNormalizationAddReluPass"));
-    JUST(DoPass("PruneCastToStaticShapeOpsPass"));
 #ifdef WITH_MLIR
     JUST(DoPass("IRRoundTrip"));
 #endif  // WITH_MLIR
