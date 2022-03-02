@@ -65,7 +65,7 @@ inline static Maybe<py::array> EagerTensorToNumpy(const py::handle& py_tensor) {
 
   std::shared_ptr<MirroredTensor> tensor = JUST(t->AsMirroredTensor());
   CHECK_OR_RETURN(JUST(tensor->device()) == JUST(Device::New("cpu")));
-  CHECK_OR_RETURN(tensor->is_eager()) << "eager tensors supported only";
+  CHECK_OR_RETURN(tensor->is_eager()) << "eager tensors supported only.";
   // set base object attr
   py::handle handle = py::handle(py_tensor.ptr());
 
@@ -94,23 +94,8 @@ inline Maybe<void> CopyBetweenMirroredTensorAndNumpy(
     const std::shared_ptr<Tensor>& t, PyObject* array,
     Maybe<void> (*Copy)(uint64_t, const NumPyArrayPtr&), const std::string& modifier,
     bool block_host_until_done) {
-  std::shared_ptr<MirroredTensor> tensor;
-  CHECK_OR_RETURN(t->is_eager()) << "eager tensors supported only";
-  if (t->is_local()) {
-    tensor = JUST(t->AsMirroredTensor());
-  } else {
-    const Symbol<ConsistentTensorMeta>& tensor_meta = JUST(t->consistent_tensor_meta());
-    const Symbol<NdSbp>& nd_sbp = tensor_meta->nd_sbp();
-    CHECK_OR_RETURN(!nd_sbp->sbp_parallel().empty());
-    SbpParallel broadcast_sbp;
-    broadcast_sbp.mutable_broadcast_parallel();
-    std::vector<Symbol<SbpParallel>> sbp_tuple(nd_sbp->sbp_parallel_size(),
-                                               SymbolOf(broadcast_sbp));
-    std::vector<Symbol<SbpParallel>> none;
-    const auto& consistent_tensor =
-        JUST(functional::ToConsistent(t, tensor_meta->parallel_desc(), sbp_tuple, none));
-    tensor = JUST(consistent_tensor->cur_rank_phy_tensor());
-  }
+  auto tensor = JUST(t->AsMirroredTensor());
+  CHECK_OR_RETURN(tensor->is_eager()) << "eager tensors supported only.";
 
   if (block_host_until_done) {
     NumPyArrayPtr array_ptr(array);
