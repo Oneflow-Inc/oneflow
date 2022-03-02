@@ -1037,6 +1037,14 @@ Maybe<void> LazyJobBuildAndInferCtx::Complete() {
     JUST(DoPass("IRRoundTripBeforeAD"));
 #endif  // WITH_MLIR
     JUST(DoPass("GenerateBackwardAndOptimizerOpConfs"));
+    if (Global<ResourceDesc, ForSession>::Get()->enable_debug_mode()
+        || Global<ResourceDesc, ForSession>::Get()->enable_dry_run()) {
+      TeePersistentLogStream::Create(StrCat("ad_graph", job_id()))->Write(job());
+      Global<OpGraph>::New(job());
+      Global<OpGraph>::Get()->ToDotWithFilePath("ad_dlnet_" + std::to_string(job_id())
+                                                + "_op_graph.dot");
+      Global<OpGraph>::Delete();
+    }
     JUST(DoPass("AddSspVariableProxy"));
     JUST(DoPass("CheckpointingPass"));
     JUST(DoPass("CudnnFusedNormalizationAddReluPass"));
