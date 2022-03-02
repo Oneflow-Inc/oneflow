@@ -74,21 +74,18 @@ class LinearLR(LRScheduler):
         self.total_iters = total_iters
         super().__init__(optimizer, last_step, verbose)
 
-    def get_lr(self):
-        if self.last_step < self.total_iters:
+    def get_lr(self, base_lr, step):
+        if step < self.total_iters:
             multiplier = self.start_factor + (self.end_factor - self.start_factor) * (
-                self.last_step / self.total_iters
+                step / self.total_iters
             )
-            lrs = [base_lr * multiplier for base_lr in self.base_lrs]
         else:
-            lrs = [base_lr for base_lr in self.base_lrs]
+            multiplier = 1
 
-        return lrs
+        return base_lr * multiplier
 
-    def _generate_conf_for_graph(self, opt_confs):
-        for opt_conf in opt_confs:
-            learning_rate_decay_conf = opt_conf.mutable_learning_rate_decay()
-            linear_lr_conf = learning_rate_decay_conf.mutable_linear_lr_conf()
-            linear_lr_conf.set_start_factor(self.start_factor)
-            linear_lr_conf.set_end_factor(self.end_factor)
-            linear_lr_conf.set_total_iters(self.total_iters)
+    def _generate_conf_for_graph(self, lr_conf):
+        linear_lr_conf = lr_conf.mutable_linear_lr_conf()
+        linear_lr_conf.set_start_factor(self.start_factor)
+        linear_lr_conf.set_end_factor(self.end_factor)
+        linear_lr_conf.set_total_iters(self.total_iters)
