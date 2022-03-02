@@ -160,16 +160,8 @@ def _cuda(self, device: Union[int, str, flow.device] = None):
     return self.to(device=device)
 
 
-def _norm(self, ord=None, dim=None, keepdim=False, dtype=None):
-    return flow._C.norm(self, ord, dim, keepdim, dtype=dtype)
-
-
-def _vector_norm(self, ord=2, dim=None, keepdim=False, dtype=None):
-    return flow._C.vector_norm(self, ord, dim, keepdim, dtype=dtype)
-
-
-def _matrix_norm(self, ord="fro", dim=(-2, -1), keepdim=False, dtype=None):
-    return flow._C.matrix_norm(self, ord, dim, keepdim, dtype=dtype)
+def _norm(self, p=None, dim=None, keepdim=False, dtype=None):
+    return flow._C.norm(self, p, dim, keepdim, dtype=dtype)
 
 
 def _transpose(self, dim0, dim1):
@@ -887,12 +879,12 @@ def _nonzero(self, as_tuple=False):
     return flow.nonzero(self, as_tuple)
 
 
-def _max(self, dim=None, keepdim=False):
-    return flow.max(self, dim, keepdim)
+def _max(self, *args, **kwargs):
+    return flow.max(self, *args, **kwargs)
 
 
-def _min(self, dim=None, keepdim=False):
-    return flow.min(self, dim, keepdim)
+def _min(self, *args, **kwargs):
+    return flow.min(self, *args, **kwargs)
 
 
 def _sum(self, dim=None, keepdim=False):
@@ -983,6 +975,15 @@ def _numpy(self):
     if self.device != flow.device("cpu"):
         self = self.cpu()
     return self.to_numpy()
+
+
+def _zero_(self):
+    return self.zeros_()
+
+
+def zero_(self):
+    self.zero_()
+    return self
 
 
 def _is_consistent(self):
@@ -1138,8 +1139,6 @@ def RegisterMethods():
     Tensor.where = _where
     Tensor.contiguous = _contiguous
     Tensor.norm = _norm
-    Tensor.vector_norm = _vector_norm
-    Tensor.matrix_norm = _matrix_norm
     Tensor.transpose = _transpose
     Tensor.permute = _permute
     Tensor.to_global = _to_global
@@ -1195,6 +1194,7 @@ def RegisterMethods():
     Tensor.prod = _prod
     Tensor.sin = _sin
     Tensor.sin_ = _sin_inplace
+    Tensor.zero_ = _zero_
     Tensor.is_consistent = _is_consistent
     Tensor.to_consistent = _to_consistent
 

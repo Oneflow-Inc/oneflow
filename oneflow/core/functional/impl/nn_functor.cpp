@@ -1528,29 +1528,36 @@ class DropoutFunctor {
     add_op_ = CHECK_JUST(one::OpBuilder("add_n").Input("in", 2).Output("out").Build());
   }
   Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x, const float& p,
-                           const bool& training, const Optional<one::Generator>& generator,
+                           const bool& training, const bool& inplace,
+                           const Optional<one::Generator>& generator,
                            const Optional<one::Tensor>& addend) const {
+    auto outputs = std::make_shared<TensorTuple>(1);
+    if (inplace) {
+      JUST(CheckInplaceValid(x));
+      (*outputs)[0] = x;
+    }
     const auto gen = generator.value_or(JUST(one::DefaultAutoGenerator()));
     const auto& dropout_state = std::make_shared<FusedDropoutKernelState>(gen);
     MutableAttrMap dropout_attrs;
     JUST(dropout_attrs.SetAttr<float>("rate", p));
     if (addend) {
       if ((!training) || p == 0.0) {
-        return OpInterpUtil::Dispatch<Tensor>(*add_op_,
-                                              {x->contiguous(), JUST(addend)->contiguous()});
+        JUST(OpInterpUtil::Dispatch(*add_op_, {x->contiguous(), JUST(addend)->contiguous()}, outputs.get()));
       } else {
-        return OpInterpUtil::Dispatch<Tensor>(*dropout_addend_op_,
-                                              {x->contiguous(), JUST(addend)->contiguous()},
-                                              OpExprInterpContext(dropout_attrs, dropout_state));
+        outputs->resize(2);
+        JUST(OpInterpUtil::Dispatch(*dropout_addend_op_, {x->contiguous(), JUST(addend)->contiguous()}, outputs.get(),
+                                    OpExprInterpContext(dropout_attrs, dropout_state)));
       }
     } else {
       if (!training || p == 0.0) {
         return x;
       } else {
-        return OpInterpUtil::Dispatch<Tensor>(*dropout_op_, {x->contiguous()},
-                                              OpExprInterpContext(dropout_attrs, dropout_state));
+        outputs->resize(2);
+        JUST(OpInterpUtil::Dispatch(*dropout_op_, {x->contiguous()}, outputs.get(),
+                                    OpExprInterpContext(dropout_attrs, dropout_state)));
       }
     }
+    return (*outputs)[0];
   }
 
  private:
