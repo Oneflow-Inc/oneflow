@@ -169,14 +169,6 @@ def _norm(self, p=None, dim=None, keepdim=False, dtype=None):
     return flow._C.norm(self, p, dim, keepdim, dtype=dtype)
 
 
-def _vector_norm(self, p=2, dim=None, keepdim=False, dtype=None):
-    return flow._C.vector_norm(self, p, dim, keepdim, dtype=dtype)
-
-
-def _matrix_norm(self, p="fro", dim=(-2, -1), keepdim=False, dtype=None):
-    return flow._C.matrix_norm(self, p, dim, keepdim, dtype=dtype)
-
-
 def _transpose(self, dim0, dim1):
     return flow._C.transpose(self, dim0, dim1)
 
@@ -1146,8 +1138,6 @@ def RegisterMethods():
     Tensor.where = _where
     Tensor.contiguous = _contiguous
     Tensor.norm = _norm
-    Tensor.vector_norm = _vector_norm
-    Tensor.matrix_norm = _matrix_norm
     Tensor.transpose = _transpose
     Tensor.to_global = _to_global
     Tensor.relu = _relu
