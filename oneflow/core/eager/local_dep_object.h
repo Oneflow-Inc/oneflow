@@ -29,8 +29,6 @@ using LocalDepObject = vm::MirroredObject;
 
 intrusive::shared_ptr<LocalDepObject> NewLocalDepObject();
 
-LocalDepObject* GetStaticLocalDepObject4Device(const Device& device);
-
 }  // namespace oneflow
 
 #endif  // ONEFLOW_CORE_FRAMEWORK_LOCAL_DEP_OBJECT_H_
