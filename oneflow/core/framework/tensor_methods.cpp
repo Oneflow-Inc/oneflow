@@ -194,10 +194,6 @@ Maybe<Tensor> Slice(const std::shared_ptr<Tensor>& input, const std::vector<int6
   return output;
 }
 
-<<<<<<< HEAD
-
-=======
->>>>>>> master
 Maybe<Tensor> Unsqueeze(const std::shared_ptr<Tensor>& input, const int32_t& expand_dim) {
   CHECK_OR_RETURN(IsViewApplicable(input))
       << Error::RuntimeError() << "view::Unsqueeze(): input should be eager local tensor, but got "
