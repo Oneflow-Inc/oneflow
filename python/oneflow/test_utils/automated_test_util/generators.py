@@ -359,9 +359,9 @@ class random_pytorch_tensor(generator):
             return torch.Tensor(np_arr)
         elif dtype == int:
             if low is None:
-                low = -10000
+                low = -10
             if high is None:
-                high = 10001
+                high = 11
             np_arr = rng.integers(low=low, high=high, size=shape)
             return torch.tensor(np_arr, dtype=torch.int64)
         else:
