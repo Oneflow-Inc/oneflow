@@ -30,7 +30,7 @@ namespace oneflow {
 namespace one {
 namespace view {
 
-namespace{
+namespace {
 void CheckIsPerm(const std::vector<int32_t>& perm) {
   std::vector<bool> is_used(perm.size(), false);
   FOR_RANGE(size_t, i, 0, perm.size()) {
@@ -40,9 +40,7 @@ void CheckIsPerm(const std::vector<int32_t>& perm) {
     is_used[perm[i]] = true;
   }
 }
-} // namespace
-
-
+}  // namespace
 
 bool IsViewApplicable(const std::shared_ptr<Tensor>& input) {
   // NOTE: only eager local tensor support view for now
@@ -65,7 +63,6 @@ Maybe<Tensor> BasicView(const std::shared_ptr<Tensor>& input, const Shape& targe
   Stride target_stride(target_shape);
   return BasicView(input, target_shape, target_stride, storage_offset);
 }
-
 
 Maybe<Tensor> BasicView(const std::shared_ptr<Tensor>& input, const Shape& target_shape,
                         const Stride& target_stride, int64_t storage_offset) {
@@ -128,7 +125,6 @@ Maybe<Tensor> Reshape(const std::shared_ptr<Tensor>& input, const Shape& target_
   return output;
 }
 
-
 Maybe<Tensor> Slice(const std::shared_ptr<Tensor>& input, const std::vector<int64_t>& starts,
                     const std::vector<int64_t>& ends, const std::vector<int64_t>& steps) {
   CHECK_OR_RETURN(IsViewApplicable(input))
@@ -146,7 +142,7 @@ Maybe<Tensor> Slice(const std::shared_ptr<Tensor>& input, const std::vector<int6
   CHECK_OR_RETURN(ends.size() == ndim && steps.size() == ndim)
       << Error::RuntimeError() << "view::Slice(): " << (ends.size() != ndim ? "ends" : "steps")
       << " size is not equal to start.";
-    
+
   DimVector target_dims(ndim);
   StrideVector target_strides(ndim);
   int64_t storage_offset = JUST(JUST(input->AsMirroredTensor())->storage_offset());
@@ -234,7 +230,6 @@ Maybe<Tensor> Unsqueeze(const std::shared_ptr<Tensor>& input, const int32_t& exp
   return output;
 }
 
-
 Maybe<Tensor> Squeeze(const std::shared_ptr<Tensor>& input,
                       const std::vector<int32_t>& squeeze_dims) {
   CHECK_OR_RETURN(IsViewApplicable(input))
@@ -283,8 +278,6 @@ Maybe<Tensor> Squeeze(const std::shared_ptr<Tensor>& input,
   }
   return output;
 }
-
-
 
 Maybe<Tensor> Expand(const std::shared_ptr<Tensor>& input, const std::vector<int32_t>& in_shape,
                      const std::vector<int32_t>& expand_shape) {
@@ -355,7 +348,6 @@ Maybe<Tensor> Expand(const std::shared_ptr<Tensor>& input, const std::vector<int
   return output;
 }
 
-
 Maybe<Tensor> Narrow(const std::shared_ptr<Tensor>& input, const int64_t& dim, const int64_t& start,
                      const int64_t& length) {
   const auto& shape = input->shape();
@@ -402,7 +394,6 @@ Maybe<Tensor> Narrow(const std::shared_ptr<Tensor>& input, const int64_t& dim, c
   }
   return output;
 }
-
 
 Maybe<Tensor> Transpose(const std::shared_ptr<Tensor>& input, const std::vector<int32_t>& permute) {
   const auto& shape = input->shape();

@@ -90,7 +90,9 @@ class InplaceableBinaryFunctor {
   Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x,
                            const std::shared_ptr<one::Tensor>& y, bool inplace) const {
     TensorProcessor tensor_processor;
-    JUST(tensor_processor.PromoteInputsToCommonDtype(true).AddInputs({x->contiguous(), y->contiguous()}).Apply());
+    JUST(tensor_processor.PromoteInputsToCommonDtype(true)
+             .AddInputs({x->contiguous(), y->contiguous()})
+             .Apply());
     TensorTuple input_tuple = JUST(tensor_processor.GetInputs());
     if (inplace) {
       std::shared_ptr<one::Tensor>& x_cast = input_tuple.at(0);

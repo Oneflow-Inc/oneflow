@@ -34,20 +34,18 @@ int GetNumBlocks(int64_t elem_cnt) {
   return (elem_cnt + block_work_size() - 1) / block_work_size();
 }
 
-
 struct StrideParam {
   int32_t stride[SHAPE_MAX_AXIS_SIZE];
 
   // NOLINTNEXTLINE
   StrideParam(const int64_t* stride_vec, const size_t ndim) {
-    for (size_t i = 0; i < ndim; ++i) {
-      stride[i] = stride_vec[i];
-    }
+    for (size_t i = 0; i < ndim; ++i) { stride[i] = stride_vec[i]; }
   }
 };
 
 template<typename IndexType, int ndim>
-__device__ __forceinline__ IndexType compute_index(IndexType out_offset, const StrideParam& out_params,
+__device__ __forceinline__ IndexType compute_index(IndexType out_offset,
+                                                   const StrideParam& out_params,
                                                    const StrideParam& in_params) {
   IndexType in_offset = 0;
   IndexType remaining = out_offset;
@@ -56,11 +54,10 @@ __device__ __forceinline__ IndexType compute_index(IndexType out_offset, const S
   for (int i = 0; i < ndim; ++i) {
     const IndexType idx = static_cast<IndexType>(remaining / out_params.stride[i]);
     remaining -= idx * out_params.stride[i];
-    in_offset += idx* in_params.stride[i];
+    in_offset += idx * in_params.stride[i];
   }
   return in_offset;
 }
-
 
 template<typename T, typename IndexType, int ndim>
 __global__ void ToContiguousForwardGpuParallel(IndexType count, const StrideParam in_stride,
@@ -79,12 +76,10 @@ __global__ void ToContiguousForwardGpuParallel(IndexType count, const StridePara
   }
 }
 
-
 template<typename T, typename IndexType, size_t pack_size>
 void LaunchToContiguousKernel(ep::Stream* stream, IndexType count, const size_t ndim,
                               IndexType block_size, const std::vector<int64_t>& in_stride,
                               const StrideVector& out_stride, const char* in_dptr, char* out_dptr) {
-
   const int num_blocks = GetNumBlocks(count);
   const int num_threads = GetMinThreadNum(count);
   StrideParam param_in_stride(in_stride.data(), ndim), param_out_stride(out_stride.data(), ndim);
@@ -215,7 +210,7 @@ struct ToContiguousUtil<DeviceType::kCUDA, T> : ToContiguousUtilBase {
         // if input tensor's strides equals to output's, than just copy one memory-contiguous tensor
         OF_CUDA_CHECK(cudaMemcpyAsync(out_dptr, in_dptr, element_count * dsize,
                                       cudaMemcpyDeviceToDevice,
-                                      stream->As<ep::CudaStream>()->cuda_stream()));                     
+                                      stream->As<ep::CudaStream>()->cuda_stream()));
       } else {
         constexpr size_t pack_size = cuda::elementwise::PackSize<T>();
         if (element_count < GetMaxVal<int32_t>()) {

@@ -1542,10 +1542,12 @@ class DropoutFunctor {
     JUST(dropout_attrs.SetAttr<float>("rate", p));
     if (addend) {
       if ((!training) || p == 0.0) {
-        JUST(OpInterpUtil::Dispatch(*add_op_, {x->contiguous(), JUST(addend)->contiguous()}, outputs.get()));
+        JUST(OpInterpUtil::Dispatch(*add_op_, {x->contiguous(), JUST(addend)->contiguous()},
+                                    outputs.get()));
       } else {
         outputs->resize(2);
-        JUST(OpInterpUtil::Dispatch(*dropout_addend_op_, {x->contiguous(), JUST(addend)->contiguous()}, outputs.get(),
+        JUST(OpInterpUtil::Dispatch(*dropout_addend_op_,
+                                    {x->contiguous(), JUST(addend)->contiguous()}, outputs.get(),
                                     OpExprInterpContext(dropout_attrs, dropout_state)));
       }
     } else {

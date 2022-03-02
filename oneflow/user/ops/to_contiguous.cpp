@@ -16,7 +16,6 @@ limitations under the License.
 #include "oneflow/core/framework/framework.h"
 #include "oneflow/core/framework/op_generated.h"
 
-
 namespace oneflow {
 
 // TODO(zhaoluyang): register use mlir in oneflow/oneflow/ir/include/OneFlow/OneFlowUserOps.td
@@ -35,6 +34,5 @@ namespace oneflow {
   *ctx->OutputDType("out", 0) = ctx->InputDType("in", 0);
   return Maybe<void>::Ok();
 }
-
 
 }  // namespace oneflow
