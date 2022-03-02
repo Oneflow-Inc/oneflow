@@ -135,7 +135,7 @@ void GenerateOriginDiffLbi(JobPassCtx* ctx, const OpGraph& op_graph, JobBuilder*
     constant_like_conf->set_float_operand(origin_grad);
   }
   AddOp(constant_like_op);
-  cfg::NdSbp broadcast_nd_sbp;
+  NdSbp broadcast_nd_sbp;
   for (int32_t i = 0; i < parallel_desc.hierarchy()->NumAxes(); ++i) {
     broadcast_nd_sbp.add_sbp_parallel()->mutable_broadcast_parallel();
   }
@@ -361,7 +361,7 @@ Maybe<void> MakeGetterLossOpNode4OpName(
   return Maybe<void>::Ok();
 }
 
-bool AllSplitDistribution(const cfg::NdSbp& nd_sbp) {
+bool AllSplitDistribution(const NdSbp& nd_sbp) {
   for (int64_t i = 0; i < nd_sbp.sbp_parallel_size(); ++i) {
     if (!nd_sbp.sbp_parallel(i).has_split_parallel()) { return false; }
   }
@@ -503,15 +503,15 @@ void CalcOutLbi2OutDiffLbi(const OpGraph& op_graph,
 
 void ForEachAggregatedParamGroup(
     const OpGraph& op_graph, const HashMap<LogicalBlobId, LogicalBlobId>& lbi2diff_lbi,
-    const std::function<void(const ParallelDesc& parallel_desc, const cfg::NdSbp& nd_sbp,
+    const std::function<void(const ParallelDesc& parallel_desc, const NdSbp& nd_sbp,
                              const std::vector<LogicalBlobId>& libs)>& Handler) {
   HashMap<LogicalBlobId, const ParallelDesc*> lbi2parallel_desc;
-  HashMap<std::pair<ParallelDesc, cfg::NdSbp>, std::vector<LogicalBlobId>> group;
+  HashMap<std::pair<ParallelDesc, NdSbp>, std::vector<LogicalBlobId>> group;
   for (auto& pair : lbi2diff_lbi) {
     const LogicalBlobId& lbi = pair.first;
     const OpNode* model_op_node = op_graph.OpNode4OpName(lbi.op_name());
     const ParallelDesc& parallel_desc = model_op_node->parallel_desc();
-    const cfg::NdSbp& nd_sbp = model_op_node->NdSbp4Lbi(lbi);
+    const NdSbp& nd_sbp = model_op_node->NdSbp4Lbi(lbi);
     group[std::make_pair(parallel_desc, nd_sbp)].emplace_back(lbi);
   }
   for (const auto& pair : group) { Handler(pair.first.first, pair.first.second, pair.second); }
@@ -563,7 +563,7 @@ std::string AddCastToP(JobBuilder* job_builder, const std::string& in_lbn,
   return parallel_cast_op.output("out", 0);
 }
 
-bool IsBroadcast(const cfg::NdSbp& nd_sbp, const ParallelDesc& parallel_desc) {
+bool IsBroadcast(const NdSbp& nd_sbp, const ParallelDesc& parallel_desc) {
   if (parallel_desc.parallel_num() == 1) { return true; }
   for (int64_t i = 0; i < nd_sbp.sbp_parallel_size(); ++i) {
     if (!nd_sbp.sbp_parallel(i).has_broadcast_parallel()) { return false; }
@@ -587,7 +587,7 @@ void ClipGradientByGlobalNorm(const OpGraph& op_graph, JobBuilder* job_builder,
   param_group_parallel_confs.reserve(loop_size);
   ForEachAggregatedParamGroup(
       op_graph, *lbi2diff_lbi,
-      [&](const ParallelDesc& parallel_desc, const cfg::NdSbp& nd_sbp,
+      [&](const ParallelDesc& parallel_desc, const NdSbp& nd_sbp,
           const std::vector<LogicalBlobId>& lbis) {
         if (!parallel_desc.EqualsIgnoringHierarchy(any_parallel_desc)) {
           all_same_parallel_desc = false;
@@ -1095,7 +1095,7 @@ Maybe<void> CountNotFiniteIfNeeded(JobPassCtx* ctx, const OpGraph& op_graph,
   std::vector<ParallelConf> param_group_parallel_confs;
   ForEachAggregatedParamGroup(
       op_graph, lbi2diff_lbi,
-      [&](const ParallelDesc& parallel_desc, const cfg::NdSbp& nd_sbp,
+      [&](const ParallelDesc& parallel_desc, const NdSbp& nd_sbp,
           const std::vector<LogicalBlobId>& lbis) {
         if (!parallel_desc.EqualsIgnoringHierarchy(any_parallel_desc)) {
           all_same_parallel_desc = false;

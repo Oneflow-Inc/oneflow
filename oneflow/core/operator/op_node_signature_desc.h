@@ -17,7 +17,6 @@ limitations under the License.
 #define ONEFLOW_CORE_OPERATOR_SIG_DESC_H_
 
 #include "oneflow/core/operator/op_node_signature.pb.h"
-#include "oneflow/core/operator/op_node_signature.cfg.h"
 #include "oneflow/core/job/sbp_parallel.pb.h"
 #include "oneflow/core/job/parallel_signature.pb.h"
 #include "oneflow/core/register/blob_desc.h"
@@ -32,11 +31,9 @@ class OpNodeSignatureDesc final {
   OpNodeSignatureDesc(int64_t symbol_id, const OpNodeSignature& op_node_signature);
 
   const Optional<int64_t>& symbol_id() const { return symbol_id_; }
-  const std::shared_ptr<cfg::OpNodeSignature>& op_node_signature() const {
-    return op_node_signature_;
-  }
-  const cfg::SbpSignature& sbp_signature() const { return op_node_signature_->sbp_signature(); }
-  const cfg::ParallelSignature& parallel_signature() const {
+  const std::shared_ptr<OpNodeSignature>& op_node_signature() const { return op_node_signature_; }
+  const SbpSignature& sbp_signature() const { return op_node_signature_->sbp_signature(); }
+  const ParallelSignature& parallel_signature() const {
     return op_node_signature_->parallel_signature();
   }
 
@@ -44,7 +41,7 @@ class OpNodeSignatureDesc final {
 
  private:
   Optional<int64_t> symbol_id_;
-  std::shared_ptr<cfg::OpNodeSignature> op_node_signature_;
+  std::shared_ptr<OpNodeSignature> op_node_signature_;
   HashMap<std::string, std::unique_ptr<BlobDesc>> bn_in_op2blob_desc_;
 };
 

@@ -62,7 +62,7 @@ class SyncDynamicResizeOp : public Operator {
 
   Maybe<void> GetSbpSignatures(
       const std::function<Maybe<const BlobDesc&>(const std::string&)>& LogicalBlobDesc4Ibn,
-      cfg::SbpSignatureList* sbp_sig_list) const override {
+      SbpSignatureList* sbp_sig_list) const override {
     return Maybe<void>::Ok();
   }
 

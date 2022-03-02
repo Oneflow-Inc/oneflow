@@ -38,16 +38,16 @@ class ModelSaveOp final : public Operator {
  private:
   Maybe<void> GetSbpSignatures(
       const std::function<Maybe<const BlobDesc&>(const std::string&)>& LogicalBlobDesc4Ibn,
-      cfg::SbpSignatureList* sbp_sig_list) const override {
+      SbpSignatureList* sbp_sig_list) const override {
     return Maybe<void>::Ok();
   };
 
-  Maybe<void> InferNdSbpSignature(cfg::NdSbpSignature* nd_sbp_signature,
-                                  const cfg::NdSbpSignature& nd_sbp_constraints,
+  Maybe<void> InferNdSbpSignature(NdSbpSignature* nd_sbp_signature,
+                                  const NdSbpSignature& nd_sbp_constraints,
                                   const ParallelDesc& parallel_desc,
                                   std::function<Maybe<const NdSbpInferHint*>(const std::string&)>
                                       NdSbpInferHint4Ibn) const override {
-    cfg::NdSbp broadcast_distribution;
+    NdSbp broadcast_distribution;
     for (int64_t i = 0; i < parallel_desc.hierarchy()->NumAxes(); ++i) {
       broadcast_distribution.add_sbp_parallel()->mutable_broadcast_parallel();
     }

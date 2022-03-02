@@ -19,7 +19,7 @@ limitations under the License.
 #include "oneflow/core/common/util.h"
 #include "oneflow/core/common/maybe.h"
 #include "oneflow/core/framework/user_op_tensor.h"
-#include "oneflow/core/job/sbp_parallel.cfg.h"
+#include "oneflow/core/job/sbp_parallel.h"
 #include "oneflow/core/job/placement.cfg.h"
 #include "oneflow/core/register/logical_blob_id.cfg.h"
 #include "oneflow/core/framework/py_distribute.h"

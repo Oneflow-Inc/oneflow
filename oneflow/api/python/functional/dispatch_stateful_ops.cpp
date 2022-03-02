@@ -71,7 +71,7 @@ ONEFLOW_FUNCTION_LIBRARY(m) {
          const std::string& part_name_prefix, int32_t part_name_suffix_length, int32_t batch_size,
          int32_t shuffle_buffer_size, bool random_shuffle, bool shuffle_after_epoch, int64_t seed,
          const Symbol<ParallelDesc>& placement,
-         const std::vector<Symbol<cfg::SbpParallel>>& sbp_tuple) -> Maybe<Tensor> {
+         const std::vector<Symbol<SbpParallel>>& sbp_tuple) -> Maybe<Tensor> {
         MutableAttrMap attrs;
         JUST(attrs.SetAttr("data_dir", data_dir));
         JUST(attrs.SetAttr("data_part_num", data_part_num));
@@ -113,7 +113,7 @@ ONEFLOW_FUNCTION_LIBRARY(m) {
   m.add_functor("DispatchCoinFlip",
                 [](const std::shared_ptr<OpExpr>& op, int64_t batch_size, Scalar probability,
                    int64_t seed, bool has_seed, const Symbol<ParallelDesc>& placement,
-                   const std::vector<Symbol<cfg::SbpParallel>>& sbp_tuple) -> Maybe<Tensor> {
+                   const std::vector<Symbol<SbpParallel>>& sbp_tuple) -> Maybe<Tensor> {
                   MutableAttrMap attrs;
                   JUST(attrs.SetAttr("probability", JUST(probability.As<float>())));
                   JUST(attrs.SetAttr("batch_size", batch_size));
@@ -287,7 +287,7 @@ ONEFLOW_FUNCTION_LIBRARY(m) {
          const std::string& annotation_file, int64_t batch_size, bool shuffle_after_epoch,
          int64_t random_seed, bool group_by_ratio, bool remove_images_without_annotations,
          bool stride_partition, int64_t session_id, const Symbol<ParallelDesc>& placement,
-         const std::vector<Symbol<cfg::SbpParallel>>& sbp_tuple) -> Maybe<TensorTuple> {
+         const std::vector<Symbol<SbpParallel>>& sbp_tuple) -> Maybe<TensorTuple> {
         MutableAttrMap attrs;
         JUST(attrs.SetAttr("session_id", session_id));
         JUST(attrs.SetAttr("annotation_file", annotation_file));
@@ -344,7 +344,7 @@ ONEFLOW_FUNCTION_LIBRARY(m) {
          const int64_t batch_size, const bool random_shuffle, const std::string& shuffle_mode,
          const int32_t shuffle_buffer_size, const bool shuffle_after_epoch, int64_t random_seed,
          const bool verify_example, const Symbol<ParallelDesc>& placement,
-         const std::vector<Symbol<cfg::SbpParallel>>& sbp_tuple) -> Maybe<Tensor> {
+         const std::vector<Symbol<SbpParallel>>& sbp_tuple) -> Maybe<Tensor> {
         MutableAttrMap attrs;
         JUST(attrs.SetAttr<std::vector<std::string>>("files", files));
         JUST(attrs.SetAttr<int64_t>("batch_size", batch_size));
@@ -384,7 +384,7 @@ ONEFLOW_FUNCTION_LIBRARY(m) {
          int64_t label_length, int64_t num_samples, int64_t batch_size, const Symbol<DType>& dtype,
          const std::vector<int64_t>& split_sizes, int64_t split_index, bool shuffle,
          int64_t random_seed, const Symbol<ParallelDesc>& placement,
-         const std::vector<Symbol<cfg::SbpParallel>>& sbp_tuple) -> Maybe<Tensor> {
+         const std::vector<Symbol<SbpParallel>>& sbp_tuple) -> Maybe<Tensor> {
         MutableAttrMap attrs;
         JUST(attrs.SetAttr("data_file_prefix", data_file_prefix));
         JUST(attrs.SetAttr("seq_length", seq_length));

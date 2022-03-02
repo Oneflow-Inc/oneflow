@@ -26,9 +26,9 @@ limitations under the License.
 namespace oneflow {
 
 namespace {
-void DfsSetNdSbp(std::vector<::oneflow::cfg::SbpParallel>& id2SbpParallel, int32_t depth,
-                 int32_t max_depth, cfg::NdSbp& nd_sbp, std::vector<cfg::NdSbp>& nd_sbp_lists_,
-                 std::unordered_map<::oneflow::cfg::NdSbp, int32_t>& NdSbpUniverse_) {
+void DfsSetNdSbp(std::vector<::oneflow::SbpParallel>& id2SbpParallel, int32_t depth,
+                 int32_t max_depth, NdSbp& nd_sbp, std::vector<NdSbp>& nd_sbp_lists_,
+                 std::unordered_map<::oneflow::NdSbp, int32_t>& NdSbpUniverse_) {
   if (depth == max_depth) {
     NdSbpUniverse_[nd_sbp] = nd_sbp_lists_.size();
     nd_sbp_lists_.push_back(nd_sbp);
@@ -55,7 +55,7 @@ Maybe<void> BoxingCollector::Init(int32_t max_axis) {
 }
 
 // Collect Sbp Parallel
-void BoxingCollector::CollectUniverse(const cfg::SbpParallel& sbp) {
+void BoxingCollector::CollectUniverse(const SbpParallel& sbp) {
   if (SbpParallelUniverse_.find(sbp) == SbpParallelUniverse_.end()) {
     int32_t curr_size = SbpParallelUniverse_.size();
     SbpParallelUniverse_[sbp] = curr_size;
@@ -65,7 +65,7 @@ void BoxingCollector::CollectUniverse(const cfg::SbpParallel& sbp) {
 
 // Set default Sbp list
 void BoxingCollector::CollectUniverse(int32_t max_axis) {
-  cfg::SbpParallel sbp;
+  SbpParallel sbp;
   sbp.mutable_broadcast_parallel();
   CollectUniverse(sbp);
   for (int32_t axis = 0; axis < max_axis; axis++) {
@@ -83,7 +83,7 @@ void BoxingCollector::GenerateNdSbpList() {
   int32_t hierarchy_num = 2;
 
   // Generate possible nd_sbp lists
-  cfg::NdSbp nd_sbp;
+  NdSbp nd_sbp;
   for (int32_t dim_sbp = 0; dim_sbp < hierarchy_num; dim_sbp++) { nd_sbp.add_sbp_parallel(); }
   DfsSetNdSbp(id2SbpParallel_, 0, hierarchy_num, nd_sbp, nd_sbp_lists_, NdSbpUniverse_);
 }
@@ -246,11 +246,12 @@ void BoxingCollector::PrintBoxingTables() {
 }
 
 // Ask if the boxing algorithm accepts the current sbp combination
-Maybe<void> BoxingCollector::AskSbpCombination(
-    const cfg::NdSbp& sbp_producer, const cfg::NdSbp& sbp_consumer,
-    const BlobDesc& logical_blob_desc, const ParallelDesc& producer_parallel_desc,
-    const ParallelDesc& consumer_parallel_desc, bool is_customized,
-    std::vector<cfg::NdSbp>& middle_sbps, bool compute_cost) {
+Maybe<void> BoxingCollector::AskSbpCombination(const NdSbp& sbp_producer, const NdSbp& sbp_consumer,
+                                               const BlobDesc& logical_blob_desc,
+                                               const ParallelDesc& producer_parallel_desc,
+                                               const ParallelDesc& consumer_parallel_desc,
+                                               bool is_customized, std::vector<NdSbp>& middle_sbps,
+                                               bool compute_cost) {
   middle_sbps.clear();
   // At this moment, we do not support [2, 3] -> [3, 2]
   // TODO: support [2, 3] -> [3, 2]
