@@ -46,7 +46,6 @@ limitations under the License.
 namespace oneflow {
 namespace one {
 namespace functional {
-
 namespace impl {
 
 class ArgMaxFunctor {
@@ -652,7 +651,47 @@ class ExpandDimsFunctor {
     if (dim < 0) { expand_dim = dim + ndim + 1; }
     MutableAttrMap attrs;
     JUST(attrs.SetAttr<int32_t>("axis", expand_dim));
+
+    if (view::IsViewApplicable(input)) { return view::Unsqueeze(input, expand_dim); }
+
     return OpInterpUtil::Dispatch<Tensor>(*op_, {input}, attrs);
+  }
+
+ private:
+  std::shared_ptr<OpExpr> op_;
+};
+
+class SqueezeFunctor {
+ public:
+  SqueezeFunctor() {
+    op_ = CHECK_JUST(one::OpBuilder("squeeze").Input("in").Output("out").Build());
+  }
+  Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x,
+                           const Optional<std::vector<int32_t>>& dim) const {
+    int32_t ndim = x->shape()->NumAxes();
+    std::vector<int32_t> squeeze_dims;
+    squeeze_dims.reserve(ndim);
+    if (dim.has_value()) {
+      std::vector<int32_t> dims = *JUST(dim);
+      for (int32_t dim_i : dims) {
+        CHECK_OR_RETURN((dim_i >= -ndim) && (dim_i <= ndim - 1))
+            << "Dimension out of range (expected to be in range of  [" << -ndim << "," << ndim - 1
+            << "], but got " << dim_i;
+        if (dim_i < 0) { dim_i += ndim; }
+        if (x->shape()->At(dim_i) == 1) { squeeze_dims.emplace_back(dim_i); }
+      }
+    } else {
+      for (int i = 0; i < ndim; ++i) {
+        if (x->shape()->At(i) == 1) { squeeze_dims.emplace_back(i); }
+      }
+    }
+
+    MutableAttrMap attrs;
+    JUST(attrs.SetAttr<std::vector<int32_t>>("axes", squeeze_dims));
+
+    if (view::IsViewApplicable(x)) { return view::Squeeze(x, squeeze_dims); }
+
+    return OpInterpUtil::Dispatch<Tensor>(*op_, {x}, attrs);
   }
 
  private:
@@ -989,36 +1028,41 @@ class ReshapeFunctor {
     op_ = CHECK_JUST(one::OpBuilder("reshape").Input("in").Output("out").Build());
   }
   Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x, const Shape& shape) const {
-    // if input tensor is eager local, than return tensor's view
-    if (x->is_local() && !(LazyMode::is_enabled())) { return view::Reshape(x, shape); }
-    int need_infer_axis = -1;
-    size_t count = 1;
-    for (int i = 0; i < shape.NumAxes(); ++i) {
-      if (shape.At(i) < -1) {
-        return Error::RuntimeError() << "Invalid shape dimension " << shape.At(i);
-      } else if (shape.At(i) == -1) {
-        CHECK_EQ_OR_RETURN(need_infer_axis, -1)
-            << "Shape " << shape.ToString() << " has more than 1 axis that needs to be infered.";
-        need_infer_axis = i;
-      } else {
-        count *= shape.At(i);
+    Shape infered_shape = *JUST(InferShape(x, shape));
+    MutableAttrMap attrs;
+    JUST(attrs.SetAttr<Shape>("shape", infered_shape));
+
+    if (view::IsViewApplicable(x)) {
+      Optional<Stride> infered_stride =
+          ComputeStride(*(x->shape()), *JUST(x->stride()), infered_shape);
+      if (infered_stride.has_value()) {
+        return view::Reshape(x, infered_shape, *JUST(infered_stride));
       }
     }
-    size_t x_count = x->shape()->Count(0);
+    return OpInterpUtil::Dispatch<Tensor>(*op_, {x}, attrs);
+  }
+
+ private:
+  std::shared_ptr<OpExpr> op_;
+};
+
+class ViewFunctor {
+ public:
+  ViewFunctor() { op_ = CHECK_JUST(one::OpBuilder("reshape").Input("in").Output("out").Build()); }
+  Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x, const Shape& shape) const {
+    Shape infered_shape = *JUST(InferShape(x, shape));
     MutableAttrMap attrs;
-    if (need_infer_axis == -1) {
-      CHECK_EQ_OR_RETURN(shape.Count(0), x_count)
-          << "\n Shape " << shape.ToString() << " is invalid for input shape "
-          << x->shape()->ToString();
-      JUST(attrs.SetAttr<Shape>("shape", shape));
-    } else {
-      Shape infered_shape = shape;
-      infered_shape.Set(need_infer_axis, x_count / count);
-      CHECK_EQ_OR_RETURN(infered_shape.Count(0), x_count)
-          << "\n Shape " << shape.ToString() << " is invalid for input shape "
-          << x->shape()->ToString();
-      JUST(attrs.SetAttr<Shape>("shape", infered_shape));
+    JUST(attrs.SetAttr<Shape>("shape", infered_shape));
+
+    if (view::IsViewApplicable(x)) {
+      Optional<Stride> infered_stride =
+          ComputeStride(*(x->shape()), *JUST(x->stride()), infered_shape);
+      CHECK_OR_RETURN(infered_stride.has_value())
+          << " >> view size is not compatible with input tensor's size and stride (at least one "
+             "dimension spans across two contiguous subspaces). Use .reshape(...) instead.";
+      return view::Reshape(x, infered_shape, *JUST(infered_stride));
     }
+
     return OpInterpUtil::Dispatch<Tensor>(*op_, {x}, attrs);
   }
 
@@ -1166,40 +1210,6 @@ class SliceUpdateFunctor {
     } else {
       return OpInterpUtil::Dispatch<Tensor>(*op_, {x, update}, attrs);
     }
-  }
-
- private:
-  std::shared_ptr<OpExpr> op_;
-};
-
-class SqueezeFunctor {
- public:
-  SqueezeFunctor() {
-    op_ = CHECK_JUST(one::OpBuilder("squeeze").Input("in").Output("out").Build());
-  }
-  Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x,
-                           const Optional<std::vector<int32_t>>& dim) const {
-    int32_t ndim = x->shape()->NumAxes();
-    std::vector<int32_t> squeeze_dims;
-    squeeze_dims.reserve(ndim);
-    if (dim.has_value() == true) {
-      std::vector<int32_t> dims = *JUST(dim);
-      for (int32_t dim_i : dims) {
-        CHECK_OR_RETURN((dim_i >= -(ndim + 1)) && (dim_i <= ndim))
-            << "Dimension out of range (expected to be in range of  [" << -ndim << "," << ndim - 1
-            << "], but got " << dim_i;
-        if (dim_i < 0) { dim_i += ndim; }
-        if (x->shape()->At(dim_i) == 1) { squeeze_dims.emplace_back(dim_i); }
-      }
-    } else {
-      for (int i = 0; i < ndim; ++i) {
-        if (x->shape()->At(i) == 1) { squeeze_dims.emplace_back(i); }
-      }
-    }
-
-    MutableAttrMap attrs;
-    JUST(attrs.SetAttr<std::vector<int32_t>>("axes", squeeze_dims));
-    return OpInterpUtil::Dispatch<Tensor>(*op_, {x}, attrs);
   }
 
  private:
@@ -2707,6 +2717,7 @@ ONEFLOW_FUNCTION_LIBRARY(m) {
   m.add_functor<impl::ExpandGradFunctor>("ExpandGrad");
   m.add_functor<impl::ExpandDimsFunctor>("ExpandDims");
   m.add_functor<impl::ExpandDimsFunctor>("Unsqueeze");
+  m.add_functor<impl::SqueezeFunctor>("Squeeze");
   m.add_functor<impl::RollFunctor>("Roll");
   m.add_functor<impl::GatherFunctor>("Gather");
   m.add_functor<impl::DimGatherFunctor>("DimGather");
@@ -2716,6 +2727,7 @@ ONEFLOW_FUNCTION_LIBRARY(m) {
   m.add_functor<impl::TensorScatterNdUpdateFunctor>("TensorScatterNdUpdate");
   m.add_functor<impl::ScatterNdLikeFunctor>("ScatterNdLike");
   m.add_functor<impl::ReshapeFunctor>("Reshape");
+  m.add_functor<impl::ViewFunctor>("View");
   m.add_functor<impl::SliceFunctor>("Slice");
   m.add_functor<impl::SliceGradFunctor>("SliceGrad");
   m.add_functor<impl::NarrowFunctor>("Narrow");
@@ -2724,7 +2736,6 @@ ONEFLOW_FUNCTION_LIBRARY(m) {
   m.add_functor<impl::LogicalSliceFunctor>("LogicalSlice");
   m.add_functor<impl::SliceUpdateFunctor>("SliceUpdate");
   m.add_functor<impl::SliceView1dContiguousFunctor>("SliceView1dContiguous");
-  m.add_functor<impl::SqueezeFunctor>("Squeeze");
   m.add_functor<impl::CopyFunctor>("Copy");
   m.add_functor<impl::FlipFunctor>("Flip");
   m.add_functor<impl::FlipGradFunctor>("FlipGrad");
