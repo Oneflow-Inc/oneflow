@@ -336,7 +336,7 @@ Maybe<void> BoxingCollector::ComputeCostFor1DSbpDiffPlacement(
       int32_t diag_consumer = id_1d_2_nd_[id_1d_consumer];
       if (diag_consumer < 0) { continue; }
       cost_4_diff_placement[id_1d_producer][id_1d_consumer] = JUST(ComputeLazyCopyCostBetweenNdSbp(
-          nd_sbp_lists_[id_1d_producer], nd_sbp_lists_[diag_consumer], blob_desc, in_parallel_desc,
+          nd_sbp_lists_[diag_producer], nd_sbp_lists_[diag_consumer], blob_desc, in_parallel_desc,
           out_parallel_desc, false));
     }
   }
