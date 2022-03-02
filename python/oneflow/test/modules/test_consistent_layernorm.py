@@ -20,34 +20,52 @@ import oneflow.unittest
 from oneflow.test_utils.automated_test_util import *
 
 
-@autotest(n=1, auto_backward=False, rtol=1.0, atol=1.0)
-def _test_layernorm_wrap(test_case, placement, sbp):
+@autotest(n=1, check_graph=False, auto_backward=False)
+def _test_layernorm_impl(test_case, placement, sbp, get_width):
     batch = 8
-    channel = (random(1, 16) * 8).to(int)
+    channel = 8
     height = random(1, 2).to(int)
-    width = random(1, 1024).to(int)
+    width = get_width().to(int)
 
     def get_random_norm_shape():
         begin_axis = random(1, 3).to(int).value()
-        return tuple((channel.value(), height.value(), width.value())[begin_axis:])
+        return tuple((channel, height.value(), width.value())[begin_axis:])
 
+    norm_shape = get_random_norm_shape()
     x = random_tensor(4, batch, channel, height, width).to_global(
         placement=placement, sbp=sbp
     )
     m = torch.nn.LayerNorm(
-        normalized_shape=get_random_norm_shape(), elementwise_affine=False,
+        normalized_shape=norm_shape, elementwise_affine=oneof(True, False)
     )
-
+    if m.weight is not None:
+        m.weight = torch.nn.Parameter(
+            m.weight.to_global(
+                placement=placement, sbp=random_sbp(placement, max_dim=len(norm_shape))
+            )
+        )
+    if m.bias is not None:
+        m.bias = torch.nn.Parameter(
+            m.bias.to_global(
+                placement=placement, sbp=random_sbp(placement, max_dim=len(norm_shape))
+            )
+        )
     y = m(x)
     return y
 
 
-# class TestLayerNormConsistent(flow.unittest.TestCase):
-#     @globaltest
-#     def test_instancenorm1d(test_case):
-#         for placement in all_placement():
-#             for sbp in all_sbp(placement, max_dim=1):
-#                 _test_layernorm_wrap(test_case, placement, sbp)
+class TestLayerNormConsistent(flow.unittest.TestCase):
+    @globaltest
+    def test_layernorm(test_case):
+        for placement in all_placement():
+            for sbp in all_sbp(placement, max_dim=4):
+                _test_layernorm_impl(test_case, placement, sbp, lambda: random(1, 1024))
+                _test_layernorm_impl(
+                    test_case, placement, sbp, lambda: random(1024, 8192)
+                )
+                _test_layernorm_impl(
+                    test_case, placement, sbp, lambda: random(8192, 32768)
+                )
 
 
 if __name__ == "__main__":
