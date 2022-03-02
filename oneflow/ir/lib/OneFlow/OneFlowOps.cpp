@@ -78,9 +78,11 @@ LogicalResult TrimRedundantCtrl(Operation* op, PatternRewriter& rewriter) {
   if (ctrl_out && ctrl_out.getValue().use_empty()) {
     const int32_t num_data_outputs = data_outputs.size();
     NamedAttrList attributes(op->getAttrDictionary());
-    attributes.erase(OpTrait::AttrSizedResultSegments<void>::getResultSegmentSizeAttr());
-    attributes.append(OpTrait::AttrSizedResultSegments<void>::getResultSegmentSizeAttr(),
-                      rewriter.getI32VectorAttr({num_data_outputs, 0}));
+    if (op->hasTrait<OpTrait::AttrSizedResultSegments>()) {
+      attributes.erase(OpTrait::AttrSizedResultSegments<void>::getResultSegmentSizeAttr());
+      attributes.append(OpTrait::AttrSizedResultSegments<void>::getResultSegmentSizeAttr(),
+                        rewriter.getI32VectorAttr({num_data_outputs, 0}));
+    }
     OperationState state(op->getLoc(), op->getName());
     state.addAttributes(attributes);
     state.addOperands(op->getOperands());
