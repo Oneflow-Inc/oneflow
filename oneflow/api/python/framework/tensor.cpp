@@ -161,7 +161,7 @@ ONEFLOW_API_PYBIND11_MODULE("", m) {
           [](const Tensor& t) -> std::shared_ptr<Tensor> { return t.acc_grad().GetPtrOrThrow(); },
           [](Tensor& t, const std::shared_ptr<Tensor>& grad) {
             if (t.is_leaf()) {
-              if (grad != nullptr && grad->tensor_type() != one::TensorType::kStaticZerosTensor) {
+              if (grad != nullptr) {
                 t.set_acc_grad(grad->detach().GetPtrOrThrow()).GetOrThrow();
               } else {
                 t.set_acc_grad(nullptr).GetOrThrow();
