@@ -15,7 +15,9 @@ limitations under the License.
 */
 #include "oneflow/xrt/tensorrt/trt_executable.h"
 #include "oneflow/xrt/tensorrt/trt_int8_calibrator.h"
+#include "oneflow/xrt/tensorrt/trt_stream.h"
 #include "oneflow/xrt/platform.h"
+#include "oneflow/core/ep/cuda/cuda_stream.h"
 
 #include <iostream>
 #include <sstream>
@@ -70,7 +72,7 @@ nvinfer1::ICudaEngine* TrtExecutable::CreateExecutableEngine(
   // flags |= (1U << int(nvinfer1::BuilderFlag::kREFIT));
   build_config->setFlags(flags);
 
-  int32_t max_batch_size = std::max(run_options.max_batch_size, batch_size);
+  int32_t max_batch_size = std::max(run_options.tensorrt_max_batch_size, batch_size);
   builder_->setMaxBatchSize(max_batch_size);
   // builder_->setGpuAllocator();
   return builder_->buildEngineWithConfig(*network_, *build_config);
@@ -154,6 +156,9 @@ bool TrtExecutable::Run(const std::vector<Parameter>& inputs,
     CHECK(engine_) << "Failed to create engine with batch size " << batch_size;
     execution_context_.reset(engine_->createExecutionContext());
   }
+  CHECK(run_options.stream) << "stream is required for TrtExecutable";
+  cudaStream_t stream = run_options.stream->As<ep::CudaStream>()->cuda_stream();
+  RecordStream(reinterpret_cast<uint64_t>(stream), run_options.stream);
 
   if (run_options.tensorrt_int8 && !calibrator_) {
     auto* res = TRTInt8CalibratorResource::LookupOrCreate(this->name());
@@ -175,17 +180,16 @@ bool TrtExecutable::Run(const std::vector<Parameter>& inputs,
     }
 
     if (res->calibrator_->isDone()) {
-      CHECK_EQ(cudaSuccess, cudaStreamSynchronize(                                     // NOLINT
-                                reinterpret_cast<cudaStream_t>(run_options.stream)));  // NOLINT
+      CHECK_EQ(cudaSuccess, cudaStreamSynchronize(                         // NOLINT
+                                reinterpret_cast<cudaStream_t>(stream)));  // NOLINT
       calibrator_ = res->calibrator_;
-      // engine_ = std::move(res->engine_);
       execution_context_.reset(res->engine_->createExecutionContext());
     } else {
       res->calibrator_->setBatch(binding_params);
     }
   }
 
-  return ExecuteEngine(batch_size, buffers.data(), run_options.stream,  // NOLINT
+  return ExecuteEngine(batch_size, buffers.data(), stream,  // NOLINT
                        block_until_done);
 }
 

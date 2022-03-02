@@ -28,21 +28,19 @@ int64_t FLAGS_max_workspace_bytes = EnvToInt64(FLAGS_max_workspace_bytes, -1);
 
 // TENSORRT executable setup.
 // Maximum batch size for builder of TENSORRT engine.
-int32_t FLAGS_max_batch_size = EnvToInt(FLAGS_max_batch_size, 1);
+int32_t FLAGS_tensorrt_max_batch_size = EnvToInt(FLAGS_tensorrt_max_batch_size, 1);
 
 extern bool FLAGS_tensorrt_fp16;
 extern bool FLAGS_tensorrt_int8;
 extern std::string FLAGS_int8_calibration;
 
 namespace oneflow {
-namespace xrt {
-static Parameter BuildParameter(const Blob& blob, const std::string& name) {
-  const auto& desc = blob.blob_desc();
-  return Parameter(name, const_cast<void*>(blob.dptr<void>()), desc.shape(), desc.data_type());
-}
-}  // namespace xrt
-
 namespace {
+
+static xrt::Parameter BuildParameter(const Blob& blob, const std::string& name) {
+  const auto& desc = blob.blob_desc();
+  return xrt::Parameter(name, const_cast<void*>(blob.dptr<void>()), desc.shape(), desc.data_type());
+}
 
 const LogicalBlobId& BnInOp2Lbi(const Kernel& kernel, const std::string& bn_in_op) {
   return kernel.op_attribute().arg_signature().bn_in_op2lbi().at(bn_in_op);
@@ -102,16 +100,10 @@ xrt::Executable* XrtLaunchKernel<device_type>::BuildExecutable(
           &cfg_sbp_signatures;
       xrt::RunXrtPass("InferShape", graph.get(), options, &parallel_ctx, &parallel_desc,
                       const_cfg_sbp_signatures_ptr, &lbn2logical_blob_desc, &entry_blob_descs);
-      // Update argument meta data
-      // xrt::RunXrtPass("UpdateArgMetaData", graph.get(), options,
-      //                 &this->job_desc());
     }
     xrt::XrtEngine engine = xrt::StringToXrtEngine(launch_conf.engine());
     xrt::XrtDevice device = xrt::DeviceTypeToXrtDevice(device_type);
     xrt::GraphCompiler compiler(this->op_conf().name(), engine, device, device_ordinal);
-
-    VLOG(2) << "graph " << this->op_conf().name();
-    VLOG(2) << graph->ToDot();
     auto result = compiler.Compile(graph.get(), entry_params, return_params, aliases);
     // Record new compilation result
     compilation_cache_->Record(signature, result);
@@ -145,15 +137,8 @@ void XrtLaunchKernel<device_type>::MappingParamsToFunctionNames(
     std::vector<xrt::Parameter>* entry_params, std::vector<xrt::Parameter>* return_params) const {
   const auto& launch_conf = this->op_conf().xrt_launch_conf();
   const auto& io_mapping = launch_conf.input_output_mapping();
-
-  for (xrt::Parameter& param : *entry_params) {
-    // CHECK_GT(io_mapping.count(param.name()), 0);
-    param.set_name(io_mapping.at(param.name()));
-  }
-  for (xrt::Parameter& param : *return_params) {
-    // CHECK_GT(io_mapping.count(param.name()), 0);
-    param.set_name(io_mapping.at(param.name()));
-  }
+  for (xrt::Parameter& param : *entry_params) { param.set_name(io_mapping.at(param.name())); }
+  for (xrt::Parameter& param : *return_params) { param.set_name(io_mapping.at(param.name())); }
 }
 
 template<DeviceType device_type>
@@ -165,13 +150,13 @@ void XrtLaunchKernel<device_type>::ForwardDataContent(KernelContext* ctx) const 
   for (const std::string& bn : this->op_attribute().input_bns()) {
     const LogicalBlobId& lbi = BnInOp2Lbi(*this, bn);
     std::string blob_name = xrt::BlobIdToName(lbi);
-    xrt::Parameter input = xrt::BuildParameter(*BnInOp2Blob(bn), blob_name);
+    xrt::Parameter input = BuildParameter(*BnInOp2Blob(bn), blob_name);
     entry_params.emplace_back(input);
   }
   for (const std::string& bn : this->op_attribute().output_bns()) {
     const LogicalBlobId& lbi = BnInOp2Lbi(*this, bn);
     std::string blob_name = xrt::BlobIdToName(lbi);
-    xrt::Parameter output = xrt::BuildParameter(*BnInOp2Blob(bn), blob_name);
+    xrt::Parameter output = BuildParameter(*BnInOp2Blob(bn), blob_name);
     return_params.emplace_back(output);
   }
 
@@ -184,30 +169,22 @@ void XrtLaunchKernel<device_type>::ForwardDataContent(KernelContext* ctx) const 
   if (return_params.empty()) { return; }
   // Build executable.
   auto executable = BuildExecutable(entry_params, return_params, aliases, device_ordinal);
-  if (!executable) { LOG(FATAL) << "Executable is built failed."; }
+  if (!executable) { LOG(FATAL) << "Failed to build executable."; }
   // Run executable.
   xrt::ExecutableRunOptions run_options;
   run_options.device_ordinal = device_ordinal;
   run_options.return_params = return_params;
+  // run_options.stream = ctx->stream()->As<ep::CudaStream>()->cuda_stream();
+  run_options.stream = ctx->stream();
+  run_options.device_memory_limit = FLAGS_max_workspace_bytes;
+  run_options.tensorrt_max_batch_size = FLAGS_tensorrt_max_batch_size;
+  run_options.tensorrt_fp16 = FLAGS_tensorrt_fp16;
+  run_options.tensorrt_int8 = FLAGS_tensorrt_int8;
+  run_options.tensorrt_int8_calibration = FLAGS_int8_calibration;
   bool block_until_done = true;
-  if (device_type == DeviceType::kCUDA) {
-#ifdef WITH_CUDA
-    run_options.stream = ctx->stream()->As<ep::CudaStream>()->cuda_stream();
-    run_options.device_memory_limit = FLAGS_max_workspace_bytes;
-    block_until_done = false;
-#else
-    UNIMPLEMENTED() << "wasn't compile with CUDA";
-#endif  // WITH_CUDA
-  }
-  if (executable->engine() == xrt::XrtEngine::TENSORRT) {
-    CHECK_EQ(device_type, DeviceType::kCUDA);
-    run_options.max_batch_size = FLAGS_max_batch_size;
-    run_options.tensorrt_fp16 = FLAGS_tensorrt_fp16;
-    run_options.tensorrt_int8 = FLAGS_tensorrt_int8;
-    run_options.tensorrt_int8_calibration = FLAGS_int8_calibration;
-  }
+  if (device_type == DeviceType::kCUDA) { block_until_done = false; }
   bool status = executable->Run(entry_params, run_options, block_until_done);
-  CHECK(status) << "Executable is running failed.";
+  CHECK(status) << "Failed to run the executable.";
 
   const std::vector<xrt::Parameter>& results = executable->Results();
   CHECK_EQ(results.size(), return_params.size());

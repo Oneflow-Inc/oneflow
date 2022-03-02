@@ -134,7 +134,7 @@ Executable执行时会分别调用所属的后端引擎提供的执行接口，�
   TensorRT在执行时需要设置最大支持的batch size，XRT支持用户通过环境变量来设置，
 
   ```shell
-  export FLAGS_max_batch_size=10
+  export FLAGS_tensorrt_max_batch_size=10
   ```
 
   当然，如果在运行时实际的batch size超过了设置的最大batch size，则XRT允许TensorRT Executable自动调整max batch size并正确执行（自动调整max batch size会带来一定的开销）。

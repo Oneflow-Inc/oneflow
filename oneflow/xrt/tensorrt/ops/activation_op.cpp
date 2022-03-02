@@ -65,19 +65,17 @@ class PReluOp : public TrtOpKernel {
   void Compile(TrtOpContext* ctx) override {
     nvinfer1::ITensor* x = ctx->Input("x_0");
     nvinfer1::ITensor* alpha = ctx->Input("alpha_0");
-
     Shape x_shape = ctx->InputShape("x_0");
     Shape alpha_shape = ctx->InputShape("alpha_0");
-    if (alpha_shape.NumAxes() != x_shape.NumAxes()) {
-      CHECK_EQ(alpha_shape.NumAxes(), 1) << "alpha rank should be 1";
-      int64_t channels = 1;
-      if (x_shape.NumAxes() > 1) { channels = x_shape.At(1); }
-      CHECK_EQ(alpha_shape.elem_cnt(), channels)
-          << "alpha element count should be equal to channels";
-      DimVector shape(x_shape.NumAxes(), 1);
-      shape[1] = channels;
-      alpha = helpers::Reshape(ctx, alpha, Shape(shape));
-    }
+    CHECK_GE(x_shape.NumAxes(), 2) << "input rank should >= 2";
+    CHECK_EQ(alpha_shape.NumAxes(), 1) << "alpha rank should be 1";
+
+    int64_t channels = x_shape.At(1);
+    CHECK_EQ(alpha_shape.elem_cnt(), channels) << "alpha element count should be equal to channels";
+    DimVector shape(x_shape.NumAxes(), 1);
+    shape[1] = channels;
+    alpha = helpers::Reshape(ctx, alpha, Shape(shape));
+
     auto* layer = ctx->builder()->addParametricReLU(*x, *alpha);
     layer->setName(ctx->op_name().c_str());
     ctx->SetSoleOutput(layer->getOutput(0));

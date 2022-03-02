@@ -35,6 +35,10 @@ class PreluGradPlugin : public TrtPlugin {
                                           int nb_inputs, nvinfer1::IExprBuilder& expr_builder)
       TRT_NOEXCEPT override;
 
+  size_t getWorkspaceSize(const nvinfer1::PluginTensorDesc* inputs, int nb_inputs,
+                          const nvinfer1::PluginTensorDesc* outputs,
+                          int nb_outputs) const TRT_NOEXCEPT override;
+
   bool supportsFormatCombination(int pos, const nvinfer1::PluginTensorDesc* in_out, int nb_inputs,
                                  int nb_outputs) TRT_NOEXCEPT override;
 

@@ -17,19 +17,26 @@ limitations under the License.
 #define ONEFLOW_XRT_XLA_XLA_EXECUTABLE_SCOPE_H_
 
 #include "oneflow/xrt/xla/xla_executable_context.h"
+#include "oneflow/core/ep/cuda/cuda_stream.h"
 #include "tensorflow/compiler/jit/xla_lib/xla_runtime_util.h"
 
 namespace oneflow {
 namespace xrt {
 namespace mola {
 
-inline bool SupportMultiStream(const XrtDevice& device) {
+static void SwapStream(const XrtDevice& device, ep::Stream* stream, se::Stream* xla_stream) {
   switch (device) {
-    case XrtDevice::CPU_X86: return false;
-    case XrtDevice::GPU_CUDA: return true;
+    case XrtDevice::GPU_CUDA: {
+#ifdef WITH_CUDA
+      auto* cuda_stream = stream->As<ep::CudaStream>()->cuda_stream();
+      xla::SwapGpuStreamHandle(xla_stream, &cuda_stream);
+#else
+      LOG(FATAL) << "CUDA is not supported, please recompile oneflow with WITH_CUDA=ON" << device;
+#endif  // WITH_CUDA
+      break;
+    }
     default: {
-      LOG(FATAL) << "Unknow device " << device;
-      return false;
+      break;
     }
   }
 }
@@ -42,7 +49,7 @@ class XlaExecutableRunScope {
   inline virtual ~XlaExecutableRunScope();
 
  private:
-  void* launch_stream_ = nullptr;
+  ep::Stream* stream_ = nullptr;
   XlaExecutableRunContext& run_context_;
 };
 
@@ -52,24 +59,15 @@ XlaExecutableRunScope::XlaExecutableRunScope(xla::LocalExecutable* executable,
   // Swap cuda stream between the backend stream and context, so XLA could
   // launch kernel on the specified cuda stream of the context. Note that it
   // should do nothing for single stream device such as CPU.
-  launch_stream_ = run_context_.run_options().stream;
-#ifdef WITH_CUDA
-  if (SupportMultiStream(run_context_.device())) {
-    xla::SwapGpuStreamHandle(run_context_.stream(), &launch_stream_);
-  }
-#endif  // WITH_CUDA
-
+  stream_ = run_context_.run_options().stream;
+  if (stream_) { SwapStream(run_context_.device(), stream_, run_context_.stream()); }
   size_t workspace_size = xla::CalcWorkspaceByteSize(executable);
   run_context_.ReserveWorkspace(workspace_size);
   run_context_.LockWorkspace();
 }
 
 XlaExecutableRunScope::~XlaExecutableRunScope() {
-#ifdef WITH_CUDA
-  if (SupportMultiStream(run_context_.device())) {
-    xla::SwapGpuStreamHandle(run_context_.stream(), &launch_stream_);
-  }
-#endif  // WITH_CUDA
+  if (stream_) { SwapStream(run_context_.device(), stream_, run_context_.stream()); }
   run_context_.UnlockWorkspace();
 }
 

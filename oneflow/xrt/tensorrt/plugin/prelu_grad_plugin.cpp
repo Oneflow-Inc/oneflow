@@ -35,6 +35,12 @@ nvinfer1::DataType PreluGradPlugin::getOutputDataType(int index,
   return input_types[0];
 }
 
+size_t PreluGradPlugin::getWorkspaceSize(const nvinfer1::PluginTensorDesc* inputs, int nb_inputs,
+                                         const nvinfer1::PluginTensorDesc* outputs,
+                                         int nb_outputs) const TRT_NOEXCEPT {
+  return 0;
+}
+
 bool PreluGradPlugin::supportsFormatCombination(int pos, const nvinfer1::PluginTensorDesc* in_out,
                                                 int nb_inputs, int nb_outputs) TRT_NOEXCEPT {
   const auto& desc = in_out[pos];
@@ -47,6 +53,7 @@ int PreluGradPlugin::enqueue(const nvinfer1::PluginTensorDesc* input_desc,
                              const void* const* inputs, void* const* outputs, void* workspace,
                              cudaStream_t stream) TRT_NOEXCEPT {
   // TODO(hjchen2)
+  UNIMPLEMENTED();
   return 0;
 }
 
