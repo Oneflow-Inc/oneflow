@@ -73,8 +73,11 @@ void set_num_threads(int num) {
 }
 
 ONEFLOW_API_PYBIND11_MODULE("", m) {
+  py::options options;
+  options.disable_function_signatures();
   m.def("_multiprocessing_init", &multiprocessing_init);
   m.def("_set_num_threads", &set_num_threads);
+  options.disable_function_signatures();
 }
 
 }  // namespace multiprocessing
