@@ -53,6 +53,9 @@ std::string NdSbpToString(Symbol<NdSbp> nd_sbp_sym);
 std::string SbpToString(const SbpParallel& sbp);
 std::string NdSbpToString(const NdSbp& nd_sbp);
 
+// If an nd sbp can be converted to a 1d sbp.
+bool Is1dSbp(const NdSbp& nd_sbp);
+
 }  // namespace oneflow
 
 #endif  // ONEFLOW_CORE_FRAMEWORK_ND_SBP_H_
