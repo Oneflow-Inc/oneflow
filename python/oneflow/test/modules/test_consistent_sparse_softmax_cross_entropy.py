@@ -22,7 +22,7 @@ import torch
 
 import oneflow as flow
 import oneflow.unittest
-from test_util import GenArgList, type_name_to_flow_type
+from oneflow.test_utils.test_util import GenArgList, type_name_to_flow_type
 
 from oneflow.test_utils.automated_test_util.generators import *
 from oneflow.test_utils.automated_test_util.torch_flow_dual_object import globaltest
@@ -140,20 +140,20 @@ class TestConsistentSparseSoftmaxCrossEntropyWithLogits(flow.unittest.TestCase):
                             placement, logits_sbp, labels_sbp, *arg
                         )
 
-    @globaltest
-    def test_lazy_global_sparse_softmax_cross_entropy(test_case):
-        arg_dict = OrderedDict()
-        arg_dict["data_type"] = ["float32", "double"]
-        arg_dict["label_type"] = ["int32", "int64"]
-        arg_dict["batch_size"] = [64]
-        arg_dict["num_classes"] = [1024]
-        for arg in GenArgList(arg_dict):
-            for placement in all_placement():
-                for logits_sbp in all_sbp(placement, max_dim=2):
-                    for labels_sbp in all_sbp(placement, max_dim=1):
-                        _compare_lazy_global_with_torch(
-                            placement, logits_sbp, labels_sbp, *arg
-                        )
+    # @globaltest
+    # def test_lazy_global_sparse_softmax_cross_entropy(test_case):
+    #     arg_dict = OrderedDict()
+    #     arg_dict["data_type"] = ["float32", "double"]
+    #     arg_dict["label_type"] = ["int32", "int64"]
+    #     arg_dict["batch_size"] = [64]
+    #     arg_dict["num_classes"] = [1024]
+    #     for arg in GenArgList(arg_dict):
+    #         for placement in all_placement():
+    #             for logits_sbp in all_sbp(placement, max_dim=2):
+    #                 for labels_sbp in all_sbp(placement, max_dim=1):
+    #                     _compare_lazy_global_with_torch(
+    #                         placement, logits_sbp, labels_sbp, *arg
+    #                     )
 
 
 if __name__ == "__main__":
