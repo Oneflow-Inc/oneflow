@@ -671,10 +671,10 @@ class SqueezeFunctor {
     int32_t ndim = x->shape()->NumAxes();
     std::vector<int32_t> squeeze_dims;
     squeeze_dims.reserve(ndim);
-    if (dim.has_value() == true) {
+    if (dim.has_value()) {
       std::vector<int32_t> dims = *JUST(dim);
       for (int32_t dim_i : dims) {
-        CHECK_OR_RETURN((dim_i >= -(ndim + 1)) && (dim_i <= ndim))
+        CHECK_OR_RETURN((dim_i >= -ndim) && (dim_i <= ndim - 1))
             << "Dimension out of range (expected to be in range of  [" << -ndim << "," << ndim - 1
             << "], but got " << dim_i;
         if (dim_i < 0) { dim_i += ndim; }
@@ -1028,13 +1028,16 @@ class ReshapeFunctor {
     op_ = CHECK_JUST(one::OpBuilder("reshape").Input("in").Output("out").Build());
   }
   Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x, const Shape& shape) const {
-    Shape infered_shape = *JUST(ComputeShape(x, shape));
+    Shape infered_shape = *JUST(InferShape(x, shape));
     MutableAttrMap attrs;
     JUST(attrs.SetAttr<Shape>("shape", infered_shape));
 
     if (view::IsViewApplicable(x)) {
-      bool is_view_valid = CheckViewValid(*(x->shape()), *JUST(x->stride()), infered_shape);
-      if (is_view_valid) { return view::Reshape(x, infered_shape); }
+      Optional<Stride> infered_stride =
+          ComputeStride(*(x->shape()), *JUST(x->stride()), infered_shape);
+      if (infered_stride.has_value()) {
+        return view::Reshape(x, infered_shape, *JUST(infered_stride));
+      }
     }
     return OpInterpUtil::Dispatch<Tensor>(*op_, {x}, attrs);
   }
@@ -1047,16 +1050,17 @@ class ViewFunctor {
  public:
   ViewFunctor() { op_ = CHECK_JUST(one::OpBuilder("reshape").Input("in").Output("out").Build()); }
   Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x, const Shape& shape) const {
-    Shape infered_shape = *JUST(ComputeShape(x, shape));
+    Shape infered_shape = *JUST(InferShape(x, shape));
     MutableAttrMap attrs;
     JUST(attrs.SetAttr<Shape>("shape", infered_shape));
 
     if (view::IsViewApplicable(x)) {
-      bool is_view_valid = CheckViewValid(*(x->shape()), *JUST(x->stride()), infered_shape);
-      CHECK_OR_RETURN(is_view_valid)
+      Optional<Stride> infered_stride =
+          ComputeStride(*(x->shape()), *JUST(x->stride()), infered_shape);
+      CHECK_OR_RETURN(infered_stride.has_value())
           << " >> view size is not compatible with input tensor's size and stride (at least one "
              "dimension spans across two contiguous subspaces). Use .reshape(...) instead.";
-      return view::Reshape(x, infered_shape);
+      return view::Reshape(x, infered_shape, *JUST(infered_stride));
     }
 
     return OpInterpUtil::Dispatch<Tensor>(*op_, {x}, attrs);

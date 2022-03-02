@@ -15,9 +15,7 @@ limitations under the License.
 """
 import oneflow as flow
 
-__all__ = [
-    "SharedMemory",
-]
+__all__ = ["SharedMemory"]
 
 
 class SharedMemory:

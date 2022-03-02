@@ -13,6 +13,8 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 """
+import os
+
 from collections import OrderedDict
 
 from oneflow.nn.graph.optimizer import OptDict
@@ -47,7 +49,7 @@ class GraphConfig(object):
         r"""Set the outputs buffer size of ``nn.Graph``.
 
         When graph's outputs buffer size is greater than 2, multiple call on the graph can work like a pipeline. This makes multiple call takes less time.
-        
+
         The default outputs buffer size is 2.
 
         Args:
@@ -82,7 +84,7 @@ class GraphConfig(object):
 
     def allow_fuse_cast_scale(self, mode: bool = True):
         r"""If set to true, try to fuse cast and scalar_mul_by_tensor to improve performance.
-    
+
         Args:
             mode (bool, optional): The default vaule is True.
         """
@@ -121,7 +123,7 @@ class GraphConfig(object):
         self.proto.set_optimizer_placement_optimization_threshold(value)
 
     def enable_xla_jit(self, value=True):
-        r"""Whether use xla_jit in xrt or not. 
+        r"""Whether use xla_jit in xrt or not.
 
         When this option enable, oneflow will check all operators is supported by xla_jit or not. Clustering supported operators as subgraph, then runing subgraph by xla_jit.
 
@@ -133,8 +135,8 @@ class GraphConfig(object):
         self.proto.mutable_xrt_config().set_use_xla_jit(value)
 
     def enable_tensorrt(self, value=True):
-        r"""Whether use tensorrt in xrt or not. 
-        
+        r"""Whether use tensorrt in xrt or not.
+
         When this option enable, oneflow will check all operators is supported by tensorrt or not. Clustering supported operators as subgraph, then runing subgraph by tensorrt.
 
            TensorRT: https://developer.nvidia.com/tensorrt
@@ -145,7 +147,7 @@ class GraphConfig(object):
         self.proto.mutable_xrt_config().set_use_tensorrt(value)
 
     def enable_openvino(self, value=True):
-        r"""Whether use openvino in xrt or not. 
+        r"""Whether use openvino in xrt or not.
 
         When this option enable, oneflow will check all operators is supported by openvino or not. Clustering supported operators as subgraph, then runing subgraph by openvino.
 
@@ -160,7 +162,7 @@ class GraphConfig(object):
 
     def enable_cudnn_conv_heuristic_search_algo(self, mode: bool = True):
         r""" Whether enable cudnn conv operatioin to use heuristic search algorithm.
-    
+
         Args:
             mode (bool, optional): Whether enable cudnn conv operatioin to use heuristic
                                    search algorithm. The default vaule is True.
