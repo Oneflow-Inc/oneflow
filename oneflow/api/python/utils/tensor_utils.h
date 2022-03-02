@@ -60,7 +60,7 @@ namespace one {
 Maybe<void> EagerMirroredTensorZeros(const std::shared_ptr<Tensor>& t);
 
 template<typename T>
-inline static Maybe<py::array> EagerTensorToNumpy(const py::handle& py_tensor) {
+inline static Maybe<py::array> EagerMirroredTensorToNumpy(const py::handle& py_tensor) {
   const std::shared_ptr<Tensor> t = py::cast<const std::shared_ptr<Tensor>>(py_tensor);
 
   std::shared_ptr<MirroredTensor> tensor = JUST(t->AsMirroredTensor());
