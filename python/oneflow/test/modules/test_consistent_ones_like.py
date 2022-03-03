@@ -33,7 +33,7 @@ def _test_ones_like_float(test_case, placement, sbp, shape, device):
     test_case.assertTrue(y.dtype is flow.float32)
     test_case.assertTrue(y.shape == x.shape)
     test_case.assertTrue(y.placement == placement)
-    y_numpy = np.ones_like(x.numpy())
+    y_numpy = np.ones(x.numpy().shape)
     test_case.assertTrue(np.array_equal(y.numpy(), y_numpy))
 
 def _test_ones_like_int(test_case, placement, sbp, shape, device):
@@ -43,7 +43,7 @@ def _test_ones_like_int(test_case, placement, sbp, shape, device):
     test_case.assertTrue(y.dtype is flow.int)
     test_case.assertTrue(y.shape == x.shape)
     test_case.assertTrue(y.placement == placement)
-    y_numpy = np.ones_like(x.numpy())
+    y_numpy = np.ones(x.numpy().shape)
     test_case.assertTrue(np.array_equal(y.numpy(), y_numpy))
 
 class TestModule(flow.unittest.TestCase):
