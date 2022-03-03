@@ -130,27 +130,9 @@ class StaticZerosTensor final : public Tensor {
   const std::shared_ptr<const Shape>& shape() const override { return shape_; }
   Symbol<DType> dtype() const override { return CHECK_JUST(DType::Get(dtype_)); }
   Maybe<TransportToken> transport_token() const override { RETURN_ERROR_WITH_BUG_PROMPT(); }
-  Maybe<Symbol<NdSbp>> nd_sbp() const override {
-    if (is_consistent() && ndsbp_.has_value()) {
-      return JUST(ndsbp_);
-    } else {
-      RETURN_ERROR_WITH_BUG_PROMPT();
-    }
-  }
-  Maybe<Symbol<ParallelDesc>> parallel_desc() const override {
-    if (is_consistent() && placement_.has_value()) {
-      return JUST(placement_);
-    } else {
-      RETURN_ERROR_WITH_BUG_PROMPT();
-    }
-  }
-  Maybe<Symbol<Device>> device() const override {
-    if (is_local() && device_.has_value()) {
-      return JUST(device_);
-    } else {
-      RETURN_ERROR_WITH_BUG_PROMPT();
-    }
-  }
+  Maybe<Symbol<NdSbp>> nd_sbp() const override { return JUST(ndsbp_); }
+  Maybe<Symbol<ParallelDesc>> parallel_desc() const override { return JUST(placement_); }
+  Maybe<Symbol<Device>> device() const override { return JUST(device_); }
   Maybe<Symbol<Device>*> mut_device() override { RETURN_ERROR_WITH_BUG_PROMPT(); }
   bool is_cuda() const override {
     PRINT_BUG_PROMPT_AND_ABORT();
