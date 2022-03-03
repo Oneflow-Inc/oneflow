@@ -196,8 +196,13 @@ class StaticZerosTensor final : public Tensor {
   Maybe<Tensor> acc_grad() const override { RETURN_ERROR_WITH_BUG_PROMPT(); }
   Maybe<TensorArg> current_grad() const override { RETURN_ERROR_WITH_BUG_PROMPT(); }
   Maybe<Tensor> detach() const override {
-    auto tensor = shared_from_this();
-    return std::const_pointer_cast<Tensor>(tensor);
+    std::shared_ptr<Tensor> tensor;
+    if (is_consistent()) {
+      tensor = JUST(MakeTensor(shape_, dtype_, JUST(placement_), JUST(ndsbp_)));
+    } else {
+      tensor = JUST(MakeTensor(shape_, dtype_, JUST(device_)));
+    }
+    return tensor;
   }
   Maybe<Tensor> clone() const override { RETURN_ERROR_WITH_BUG_PROMPT(); }
 
