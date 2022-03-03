@@ -112,7 +112,7 @@ __global__ void HashTableUniqueAndPartitionPairs(const uint32_t table_capacity,
         if (counter >= table_capacity) { __trap(); }
       }
     }
-    reverse_index[i] = r_index_plus_one - 1;
+    reverse_index[i] = partition_id * num_keys + r_index_plus_one - 1;
   }
 }
 
