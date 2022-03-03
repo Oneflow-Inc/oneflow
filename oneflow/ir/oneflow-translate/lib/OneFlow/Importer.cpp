@@ -368,7 +368,8 @@ Attribute ConvertNdSbpToAttr(Builder& builder, const ::oneflow::NdSbp& nd_sbp) {
   return builder.getStrArrayAttr(makeArrayRef(sbp_strrefs));
 }
 
-LogicalResult validateOpConf(UserOpArgs args, UserOpArgDefs arg_defs) {
+LogicalResult validateOpConf(const ::oneflow::OperatorConf& op_conf, UserOpArgs args,
+                             UserOpArgDefs arg_defs) {
   for (const auto& input_arg : args) {
     const bool found = std::find_if(arg_defs.begin(), arg_defs.end(),
                                     [&](const ::oneflow::UserOpDef_ArgDef& arg_def) {
@@ -377,7 +378,8 @@ LogicalResult validateOpConf(UserOpArgs args, UserOpArgDefs arg_defs) {
                        != arg_defs.end();
     if (!found) {
       llvm::errs() << "fail to validate user op conf, arg def of arg not found: " << input_arg.first
-                   << "\n";
+                   << ", op: \n"
+                   << op_conf.DebugString() << "\n";
       return failure();
     }
   }
@@ -398,8 +400,8 @@ LogicalResult Importer::ProcessUserOp(const ::oneflow::OperatorConf& op) {
   std::vector<::mlir::Value> operand_vec;
   if (failed(namedAttributesFromUserOp(op, attr_vec))) { return failure(); }
   const auto& op_def = GetUserOpDef(op.user_conf().op_type_name());
-  if (failed(validateOpConf(op.user_conf().input(), op_def.input()))) { return failure(); }
-  if (failed(validateOpConf(op.user_conf().output(), op_def.output()))) { return failure(); }
+  if (failed(validateOpConf(op, op.user_conf().input(), op_def.input()))) { return failure(); }
+  if (failed(validateOpConf(op, op.user_conf().output(), op_def.output()))) { return failure(); }
   for (const auto& arg_def : op_def.input()) {
     const auto& key = arg_def.name();
     auto it = op.user_conf().input().find(key);
