@@ -1929,7 +1929,7 @@ def OneFlow_EagerNcclAllReduceOp : OneFlow_BaseOp<"eager_nccl_all_reduce", [NoSi
   );
   let attrs = (ins
     StrAttr:$parallel_conf,
-    DefaultValuedAttr<BoolAttr, "false">:$async_launch
+    DefaultValuedAttr<BoolAttr, "true">:$async_launch
   );
   let has_logical_tensor_desc_infer_fn = 1;
   let has_physical_tensor_desc_infer_fn = 1;
