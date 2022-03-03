@@ -912,7 +912,7 @@ class TestTensorNumpy(flow.unittest.TestCase):
     def test_tensor_swapdimst(test_case):
         device = random_device()
         x = random_tensor(ndim=3).to(device)
-        y = x.swapdims(random(0, 2).to(int), random(0, 2).to(int))
+        y = x.swapdims(random(0, 3).to(int), random(0, 3).to(int))
         return y
 
 
