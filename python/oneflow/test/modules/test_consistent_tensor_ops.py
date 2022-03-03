@@ -102,14 +102,14 @@ def _test_global_double(test_case, placement, sbp):
     return y
 
 
-@autotest(n=1, auto_backward=False, rtol=1e-4, atol=1e-4, check_graph=False)
+@autotest(n=1, auto_backward=False, check_graph=False)
 def _test_global_item(test_case, placement, sbp):
     x = random_tensor(ndim=1, dim0=1, dtype=int).to_global(placement, sbp)
     y = torch.tensor(x.item())
     return y
 
 
-@autotest(n=1, auto_backward=False, rtol=1e-4, atol=1e-4, check_graph=False)
+@autotest(n=1, auto_backward=False, check_graph=False)
 def _test_global_tolist(test_case, placement, sbp):
     x = random_tensor(
         ndim=4, dim0=8, dim1=16, dim2=24, dim3=32, dtype=int
