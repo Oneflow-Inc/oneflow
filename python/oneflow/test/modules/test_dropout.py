@@ -302,21 +302,21 @@ class TestModule(flow.unittest.TestCase):
     def autotest_dropout_p0(test_case):
         device = random_device()
         x = random_tensor(ndim=random(), dim0=random(1, 8)).to(device)
-        m = torch.nn.Dropout(p=0)
+        m = torch.nn.Dropout(p=0, inplace=random_bool())
         return m(x)
 
     @autotest()
     def autotest_dropout_p1(test_case):
         device = random_device()
         x = random_tensor(ndim=random(), dim0=random(1, 8)).to(device)
-        m = torch.nn.Dropout(p=1.0)
+        m = torch.nn.Dropout(p=1.0, inplace=random_bool())
         return m(x)
 
     @autotest()
     def autotest_dropout_eval(test_case):
         device = random_device()
         x = random_tensor(ndim=random(), dim0=random(1, 8)).to(device)
-        m = torch.nn.Dropout(p=1.0)
+        m = torch.nn.Dropout(p=1.0, inplace=random_bool())
         m.eval()
         return m(x)
 
@@ -324,7 +324,7 @@ class TestModule(flow.unittest.TestCase):
     def autotest_0dim_dropout_eval(test_case):
         device = random_device()
         x = random_tensor(ndim=0).to(device)
-        m = torch.nn.Dropout(p=1.0)
+        m = torch.nn.Dropout(p=1.0, inplace=random_bool())
         m.eval()
         return m(x)
 
