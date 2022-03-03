@@ -104,6 +104,7 @@ void XlaOpContext::SetOutput(const std::string& name, const xla::XlaOp& handle) 
 }
 
 void XlaOpContext::SetOutput(const std::string& name, const XlaValue& handle) {
+  if (!HasOutput(name)) { return; }
   Argument arg = ArgumentFromKey(name);
   CHECK_EQ(arg.shape(), XlaShapeToOfShape(handle.shape_));
   CHECK_EQ(DataTypeToPrimitiveType(arg.data_type()), handle.shape_.element_type());
@@ -151,7 +152,7 @@ Shape XlaOpContext::OutputShape(const std::string& name) const {
 Shape XlaOpContext::SoleOutputShape() const { return ArgumentFromKey(SoleOutputName()).shape(); }
 
 Argument XlaOpContext::ArgumentFromKey(const std::string& key) const {
-  CHECK_GT(param_.arguments.count(key), 0);
+  CHECK_GT(param_.arguments.count(key), 0) << "argument " << key << " is missing";
   return param_.arguments.at(key);
 }
 

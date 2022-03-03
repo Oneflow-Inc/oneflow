@@ -52,6 +52,7 @@ class ScalarBinaryOp : public XlaOpKernel {
 REGISTER_XLA_OP_KERNEL(ScalarAdd, ScalarBinaryOp<op::Add>).Finalize();
 REGISTER_XLA_OP_KERNEL(ScalarMul, ScalarBinaryOp<op::Mul>).Finalize();
 REGISTER_XLA_OP_KERNEL(ScalarDiv, ScalarBinaryOp<op::Div>).Finalize();
+REGISTER_XLA_OP_KERNEL(ScalarPow, ScalarBinaryOp<op::Pow>).Finalize();
 
 }  // namespace mola
 }  // namespace xrt
