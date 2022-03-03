@@ -1454,6 +1454,9 @@ def OneFlow_COCOReaderOp : OneFlow_BaseOp<"COCOReader", [NoSideEffect, NoGrad, C
 }
 
 def OneFlow_OFRecordReaderOp : OneFlow_BaseOp<"OFRecordReader", [NoSideEffect, NoGrad, CpuOnly, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
+  let input = (ins
+    Optional<OneFlow_Tensor>:$UserSourceOpTickInput
+  );
   let output = (outs
     OneFlow_Tensor:$out
   );
