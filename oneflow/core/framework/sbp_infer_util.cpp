@@ -346,9 +346,10 @@ Maybe<double> ComputeLazyCopyCostBetweenNdSbp(const NdSbp& producer_sbp_parallel
 
   // We support different hierarchy for 1D sbp
   if (in_dim == 1 && out_dim == 1) {
-    return ComputCopyCostBetweenTwoSbpParallel(
-        reduced_in_nd_sbp.sbp_parallel(0), reduced_out_nd_sbp.sbp_parallel(0), logical_blob_desc,
-        reduced_in_parallel_desc, reduced_out_parallel_desc);
+    return GetTransferCost()
+           + JUST(ComputCopyCostBetweenTwoSbpParallel(
+               reduced_in_nd_sbp.sbp_parallel(0), reduced_out_nd_sbp.sbp_parallel(0),
+               logical_blob_desc, reduced_in_parallel_desc, reduced_out_parallel_desc));
   }
   // Not supporting different hierarchy
   // TODO: Support it in the future
@@ -363,19 +364,22 @@ Maybe<double> ComputeLazyCopyCostBetweenNdSbp(const NdSbp& producer_sbp_parallel
     // Not supporting different hierarchy
     // TODO: Support it in the future
     if (*in_hierarchy != *out_hierarchy) { return kUnsupportedBoxing; }
-    return ComputCopyCostBetweenTwoNdSbp(reduced_in_nd_sbp, reduced_out_nd_sbp, logical_blob_size,
-                                         in_hierarchy, on_same_devices);
+    return GetTransferCost()
+           + JUST(ComputCopyCostBetweenTwoNdSbp(reduced_in_nd_sbp, reduced_out_nd_sbp,
+                                                logical_blob_size, in_hierarchy, on_same_devices));
   }
 
   // (in_dim == 2 && out_dim == 1) || (in_dim == 1 && out_dim == 2)
   if (in_dim == 2 && out_dim == 1) {
-    return ComputCopyCostBetweenTwoNdSbp(reduced_in_nd_sbp, reduced_out_nd_sbp, logical_blob_size,
-                                         in_hierarchy, on_same_devices);
+    return GetTransferCost()
+           + JUST(ComputCopyCostBetweenTwoNdSbp(reduced_in_nd_sbp, reduced_out_nd_sbp,
+                                                logical_blob_size, in_hierarchy, on_same_devices));
   }
 
   if (in_dim == 1 && out_dim == 2) {
-    return ComputCopyCostBetweenTwoNdSbp(reduced_in_nd_sbp, reduced_out_nd_sbp, logical_blob_size,
-                                         out_hierarchy, on_same_devices);
+    return GetTransferCost()
+           + JUST(ComputCopyCostBetweenTwoNdSbp(reduced_in_nd_sbp, reduced_out_nd_sbp,
+                                                logical_blob_size, out_hierarchy, on_same_devices));
   }
 
   return Error::RuntimeError()
@@ -387,6 +391,13 @@ double GetValidMaxCopyCost() {
   // We suppose that valid copy cost range is [0, FloatMax*0.8]
   static const double kValidMaxCopyCost = kUnsupportedBoxing * 0.8;
   return kValidMaxCopyCost;
+}
+
+double GetTransferCost() {
+  // Each transfer would have cost.
+  // Except for same parallel description and sbp
+  static const double kTransferCost = ParseFloatFromEnv("AUTO_PARALLEL_TRANSFER_COST", 1.65e8);
+  return kTransferCost;
 }
 
 void ResizeNdSbpSignature(NdSbpSignature& nd_sbp_sig, int32_t size) {
@@ -485,7 +496,6 @@ Maybe<double> ComputeCopyCostWithMiddleNodes(const NdSbp& producer_sbp_parallel,
       /*compute_cost=*/true));
   // Parameters
   double total_cost = 0.0;
-  double transfer_cost = ParseFloatFromEnv("AUTO_PARALLEL_TRANSFER_COST", 1.65e7);
   // Set up the information of the first node in the first connection
   const NdSbp* pre_nd_sbp = &producer_sbp_parallel;
   const ParallelDesc* pre_parallel_desc = &producer_parallel_desc;
@@ -503,8 +513,7 @@ Maybe<double> ComputeCopyCostWithMiddleNodes(const NdSbp& producer_sbp_parallel,
     // TODO: Needs more effort if dealing with different placement
     total_cost += JUST(ComputeLazyCopyCostBetweenNdSbp(*pre_nd_sbp, middle_sbp, logical_blob_desc,
                                                        *pre_parallel_desc, *middle_parallel_desc,
-                                                       requires_same_sbp))
-                  + transfer_cost;
+                                                       requires_same_sbp));
     // Set up the information of the first node in the next connection
     pre_nd_sbp = &middle_sbp;
     pre_parallel_desc = middle_parallel_desc;
