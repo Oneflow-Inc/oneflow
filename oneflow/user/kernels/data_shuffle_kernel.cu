@@ -94,7 +94,7 @@ __global__ void HashTableUniqueAndPartitionPairs(const uint32_t table_capacity,
         }
         *value_ptr = ((r_index_plus_one << 1U) | key_lo);
       } else if (old_key == key_hi) {
-        const int32_t value = *value_ptr;
+        const uint32_t value = *value_ptr;
         if (value == 0) {
           // do nothing
         } else if ((value & 0x1) == key_lo) {
