@@ -108,10 +108,6 @@ Optional<Stride> ComputeStride(const Shape& shape, const Stride& stride,
     if ((tensor_d == 0)
         || (shape_vec[tensor_d - 1] != 1
             && stride_vec[tensor_d - 1] != tensor_numel * chunk_base_stride)) {
-<<<<<<< HEAD
-
-=======
->>>>>>> master
       while (view_d >= 0 && (view_numel < tensor_numel || tgt_shape_vec[view_d] == 1)) {
         newstride[view_d] = view_numel * chunk_base_stride;
         view_numel *= tgt_shape_vec[view_d];

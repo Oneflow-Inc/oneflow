@@ -86,7 +86,7 @@ struct ToContiguousUtil : ToContiguousUtilBase {
 }  // namespace oneflow
 
 #define TO_CONTIGUOUS_TYPES     \
-  OF_PP_MAKE_TUPLE_SEQ(bool)   \
+  OF_PP_MAKE_TUPLE_SEQ(bool)    \
   OF_PP_MAKE_TUPLE_SEQ(float)   \
   OF_PP_MAKE_TUPLE_SEQ(double)  \
   OF_PP_MAKE_TUPLE_SEQ(int32_t) \

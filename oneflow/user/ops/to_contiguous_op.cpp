@@ -16,10 +16,8 @@ limitations under the License.
 #include "oneflow/core/framework/framework.h"
 #include "oneflow/core/framework/op_generated.h"
 
-
 namespace oneflow {
 
-// TODO(zhaoluyang): register use mlir in oneflow/oneflow/ir/include/OneFlow/OneFlowUserOps.td
 /*static*/ Maybe<void> ToContiguousOp::GetSbp(user_op::SbpContext* ctx) {
   ctx->NewBuilder().PartialSum(ctx->inputs()).PartialSum(ctx->outputs()).Build();
   return Maybe<void>::Ok();

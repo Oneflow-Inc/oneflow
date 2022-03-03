@@ -590,16 +590,6 @@ def _permute(self, view=False, *dims):
     return flow._C.permute(self, new_dims)
 
 
-def _view_permute(self, *dims):
-    if len(dims) == 1:
-        new_dims = dims[0]
-        if isinstance(new_dims, int):
-            new_dims = (new_dims,)
-    else:
-        new_dims = dims
-    return flow._C.permute(self, dims=new_dims, view=True)
-
-
 def _matmul(self, other):
     return flow.matmul(self, other)
 
@@ -1172,7 +1162,6 @@ def RegisterMethods():
     Tensor.narrow = _narrow
     Tensor.unsqueeze = _unsqueeze
     Tensor.permute = _permute
-    Tensor.view_permute = _view_permute
     Tensor.to = _to
     Tensor.gather = _gather
     Tensor.all = _all

@@ -15,7 +15,6 @@ limitations under the License.
 */
 #include <type_traits>
 #include "oneflow/core/common/device_type.pb.h"
-#include "oneflow/core/graph/task_node.h"
 #include "oneflow/user/kernels/to_contiguous_kernel.h"
 #include "oneflow/core/ep/cuda/cuda_stream.h"
 #include "oneflow/core/cuda/elementwise.cuh"
@@ -25,62 +24,53 @@ namespace oneflow {
 namespace {
 
 constexpr int kBlockSize = cuda::elementwise::kBlockSize;
-__constant__ unsigned long int in_stride_vec[16];
-__constant__ unsigned long int out_stride_vec[16];
-
-int GetMinThreadNum(int64_t elem_cnt) { return std::min<int64_t>(elem_cnt, kBlockSize); }
-
+constexpr int kThreadWorkSize = 4;
+constexpr int kNumThreads = 32 * 4;
+int block_work_size() { return kThreadWorkSize * kNumThreads; }
+int GetMinThreadNum() { return kNumThreads; }
 int GetNumBlocks(int64_t elem_cnt) {
-  int num_blocks = 0;
-  OF_CUDA_CHECK(cuda::elementwise::GetNumBlocks(elem_cnt, &num_blocks));
-  return num_blocks;
+  return (elem_cnt + block_work_size() - 1) / block_work_size();
 }
 
-template<typename IndexType>
-__device__ IndexType compute_index(IndexType out_offset, const size_t ndim) {
+struct StrideParam {
+  int32_t stride[SHAPE_MAX_AXIS_SIZE];
+
+  // NOLINTNEXTLINE
+  StrideParam(const int64_t* stride_vec, const size_t ndim) {
+    for (size_t i = 0; i < ndim; ++i) { stride[i] = stride_vec[i]; }
+  }
+};
+
+template<typename IndexType, int ndim>
+__device__ __forceinline__ IndexType compute_index(IndexType out_offset,
+                                                   const StrideParam& out_params,
+                                                   const StrideParam& in_params) {
   IndexType in_offset = 0;
   IndexType remaining = out_offset;
 
 #pragma unroll
-  for (size_t i = 0; i < ndim; ++i) {
-    const IndexType idx = remaining / out_stride_vec[i];
-    remaining = remaining - idx * out_stride_vec[i];
-    in_offset = in_offset + idx * in_stride_vec[i];
+  for (int i = 0; i < ndim; ++i) {
+    const IndexType idx = static_cast<IndexType>(remaining / out_params.stride[i]);
+    remaining -= idx * out_params.stride[i];
+    in_offset += idx * in_params.stride[i];
   }
   return in_offset;
 }
 
-template<typename T, typename IndexType>
-__global__ void ToContiguousForwardGpu(IndexType count, size_t ndim, const T* in_dptr,
-                                       T* out_dptr) {
-  for (IndexType out_idx = blockIdx.x * blockDim.x + threadIdx.x, step = blockDim.x * gridDim.x;
-       out_idx < count; out_idx += step) {
-    IndexType in_idx = compute_index<IndexType>(out_idx, ndim);
+template<typename T, typename IndexType, int ndim>
+__global__ void ToContiguousForwardGpuParallel(IndexType count, const StrideParam in_stride,
+                                               const StrideParam out_stride, const T* in_dptr,
+                                               T* out_dptr) {
+  IndexType remaining = count - 512 * blockIdx.x;
+  IndexType idx = blockIdx.x;
+  IndexType thread_idx = threadIdx.x;
+#pragma unroll
+  for (IndexType i = 0; i < 4; i++) {
+    if (thread_idx >= remaining) { return; }
+    IndexType out_idx = thread_idx + 512 * idx;
+    IndexType in_idx = compute_index<IndexType, ndim>(out_idx, out_stride, in_stride);
     out_dptr[out_idx] = in_dptr[in_idx];
-  }
-}
-
-template<typename T, typename IndexType, size_t pack_size>
-__global__ void ToContiguousForwardGpu(IndexType count, size_t ndim, const T* in_dptr,
-                                       T* out_dptr) {
-  IndexType global_thread_id = blockIdx.x * blockDim.x + threadIdx.x;
-  for (IndexType out_idx = global_thread_id * pack_size; out_idx < count;
-       out_idx += gridDim.x * blockDim.x * pack_size) {
-    IndexType in_idx = compute_index<IndexType>(out_idx, ndim);
-#pragma unroll
-    for (size_t i = 0; i < pack_size; i++) { out_dptr[out_idx + i] = in_dptr[in_idx + i]; }
-  }
-}
-
-template<typename T, typename IndexType>
-__global__ void ToContiguousForwardGpu(IndexType count, IndexType block_size, size_t ndim,
-                                       const T* in_dptr, T* out_dptr) {
-  IndexType global_thread_id = blockIdx.x * blockDim.x + threadIdx.x;
-  for (IndexType out_idx = global_thread_id * block_size; out_idx < count;
-       out_idx += gridDim.x * blockDim.x * block_size) {
-    IndexType in_idx = compute_index<IndexType>(out_idx, ndim);
-#pragma unroll
-    for (size_t i = 0; i < block_size; i++) { out_dptr[out_idx + i] = in_dptr[in_idx + i]; }
+    thread_idx += 128;
   }
 }
 
@@ -89,39 +79,107 @@ void LaunchToContiguousKernel(ep::Stream* stream, IndexType count, const size_t 
                               IndexType block_size, const std::vector<int64_t>& in_stride,
                               const StrideVector& out_stride, const char* in_dptr, char* out_dptr) {
   const int num_blocks = GetNumBlocks(count);
-  const int num_threads = GetMinThreadNum(count);
-  unsigned long int tmp_in_stride[ndim] = {0};
-  unsigned long int tmp_out_stride[ndim] = {0};
-  for (size_t i = 0; i < ndim; ++i) {
-    tmp_in_stride[i] = in_stride.at(i);
-    tmp_out_stride[i] = out_stride.at(i);
-  }
+  const int num_threads = GetMinThreadNum();
+  StrideParam param_in_stride(in_stride.data(), ndim), param_out_stride(out_stride.data(), ndim);
 
-  OF_CUDA_CHECK(cudaMemcpyToSymbol(in_stride_vec, tmp_in_stride, ndim * sizeof(unsigned long int)));
-  OF_CUDA_CHECK(
-      cudaMemcpyToSymbol(out_stride_vec, tmp_out_stride, ndim * sizeof(unsigned long int)));
-
-  if (pack_size == 16 && block_size % 16 == 0) {
-    ToContiguousForwardGpu<T, IndexType, 16>
-        <<<num_blocks, num_threads, 0, stream->As<ep::CudaStream>()->cuda_stream()>>>(
-            count, ndim, reinterpret_cast<const T*>(in_dptr), reinterpret_cast<T*>(out_dptr));
-  } else if (pack_size == 8 && block_size % 8 == 0) {
-    ToContiguousForwardGpu<T, IndexType, 8>
-        <<<num_blocks, num_threads, 0, stream->As<ep::CudaStream>()->cuda_stream()>>>(
-            count, ndim, reinterpret_cast<const T*>(in_dptr), reinterpret_cast<T*>(out_dptr));
-  } else if (pack_size == 4 && block_size % 4 == 0) {
-    ToContiguousForwardGpu<T, IndexType, 4>
-        <<<num_blocks, num_threads, 0, stream->As<ep::CudaStream>()->cuda_stream()>>>(
-            count, ndim, reinterpret_cast<const T*>(in_dptr), reinterpret_cast<T*>(out_dptr));
-  } else if (pack_size == 2 && block_size % 2 == 0) {
-    ToContiguousForwardGpu<T, IndexType, 2>
-        <<<num_blocks, num_threads, 0, stream->As<ep::CudaStream>()->cuda_stream()>>>(
-            count, ndim, reinterpret_cast<const T*>(in_dptr), reinterpret_cast<T*>(out_dptr));
-  } else {
-    ToContiguousForwardGpu<T, IndexType>
-        <<<num_blocks, num_threads, 0, stream->As<ep::CudaStream>()->cuda_stream()>>>(
-            count, block_size, ndim, reinterpret_cast<const T*>(in_dptr),
-            reinterpret_cast<T*>(out_dptr));
+  switch (ndim) {
+    case 1:
+      ToContiguousForwardGpuParallel<T, IndexType, 1>
+          <<<num_blocks, num_threads, 0, stream->As<ep::CudaStream>()->cuda_stream()>>>(
+              count, param_in_stride, param_out_stride, reinterpret_cast<const T*>(in_dptr),
+              reinterpret_cast<T*>(out_dptr));
+      break;
+    case 2:
+      ToContiguousForwardGpuParallel<T, IndexType, 2>
+          <<<num_blocks, num_threads, 0, stream->As<ep::CudaStream>()->cuda_stream()>>>(
+              count, param_in_stride, param_out_stride, reinterpret_cast<const T*>(in_dptr),
+              reinterpret_cast<T*>(out_dptr));
+      break;
+    case 3:
+      ToContiguousForwardGpuParallel<T, IndexType, 3>
+          <<<num_blocks, num_threads, 0, stream->As<ep::CudaStream>()->cuda_stream()>>>(
+              count, param_in_stride, param_out_stride, reinterpret_cast<const T*>(in_dptr),
+              reinterpret_cast<T*>(out_dptr));
+      break;
+    case 4:
+      ToContiguousForwardGpuParallel<T, IndexType, 4>
+          <<<num_blocks, num_threads, 0, stream->As<ep::CudaStream>()->cuda_stream()>>>(
+              count, param_in_stride, param_out_stride, reinterpret_cast<const T*>(in_dptr),
+              reinterpret_cast<T*>(out_dptr));
+      break;
+    case 5:
+      ToContiguousForwardGpuParallel<T, IndexType, 5>
+          <<<num_blocks, num_threads, 0, stream->As<ep::CudaStream>()->cuda_stream()>>>(
+              count, param_in_stride, param_out_stride, reinterpret_cast<const T*>(in_dptr),
+              reinterpret_cast<T*>(out_dptr));
+      break;
+    case 6:
+      ToContiguousForwardGpuParallel<T, IndexType, 6>
+          <<<num_blocks, num_threads, 0, stream->As<ep::CudaStream>()->cuda_stream()>>>(
+              count, param_in_stride, param_out_stride, reinterpret_cast<const T*>(in_dptr),
+              reinterpret_cast<T*>(out_dptr));
+      break;
+    case 7:
+      ToContiguousForwardGpuParallel<T, IndexType, 7>
+          <<<num_blocks, num_threads, 0, stream->As<ep::CudaStream>()->cuda_stream()>>>(
+              count, param_in_stride, param_out_stride, reinterpret_cast<const T*>(in_dptr),
+              reinterpret_cast<T*>(out_dptr));
+      break;
+    case 8:
+      ToContiguousForwardGpuParallel<T, IndexType, 8>
+          <<<num_blocks, num_threads, 0, stream->As<ep::CudaStream>()->cuda_stream()>>>(
+              count, param_in_stride, param_out_stride, reinterpret_cast<const T*>(in_dptr),
+              reinterpret_cast<T*>(out_dptr));
+      break;
+    case 9:
+      ToContiguousForwardGpuParallel<T, IndexType, 9>
+          <<<num_blocks, num_threads, 0, stream->As<ep::CudaStream>()->cuda_stream()>>>(
+              count, param_in_stride, param_out_stride, reinterpret_cast<const T*>(in_dptr),
+              reinterpret_cast<T*>(out_dptr));
+      break;
+    case 10:
+      ToContiguousForwardGpuParallel<T, IndexType, 10>
+          <<<num_blocks, num_threads, 0, stream->As<ep::CudaStream>()->cuda_stream()>>>(
+              count, param_in_stride, param_out_stride, reinterpret_cast<const T*>(in_dptr),
+              reinterpret_cast<T*>(out_dptr));
+      break;
+    case 11:
+      ToContiguousForwardGpuParallel<T, IndexType, 11>
+          <<<num_blocks, num_threads, 0, stream->As<ep::CudaStream>()->cuda_stream()>>>(
+              count, param_in_stride, param_out_stride, reinterpret_cast<const T*>(in_dptr),
+              reinterpret_cast<T*>(out_dptr));
+      break;
+    case 12:
+      ToContiguousForwardGpuParallel<T, IndexType, 12>
+          <<<num_blocks, num_threads, 0, stream->As<ep::CudaStream>()->cuda_stream()>>>(
+              count, param_in_stride, param_out_stride, reinterpret_cast<const T*>(in_dptr),
+              reinterpret_cast<T*>(out_dptr));
+      break;
+    case 13:
+      ToContiguousForwardGpuParallel<T, IndexType, 13>
+          <<<num_blocks, num_threads, 0, stream->As<ep::CudaStream>()->cuda_stream()>>>(
+              count, param_in_stride, param_out_stride, reinterpret_cast<const T*>(in_dptr),
+              reinterpret_cast<T*>(out_dptr));
+      break;
+    case 14:
+      ToContiguousForwardGpuParallel<T, IndexType, 14>
+          <<<num_blocks, num_threads, 0, stream->As<ep::CudaStream>()->cuda_stream()>>>(
+              count, param_in_stride, param_out_stride, reinterpret_cast<const T*>(in_dptr),
+              reinterpret_cast<T*>(out_dptr));
+      break;
+    case 15:
+      ToContiguousForwardGpuParallel<T, IndexType, 15>
+          <<<num_blocks, num_threads, 0, stream->As<ep::CudaStream>()->cuda_stream()>>>(
+              count, param_in_stride, param_out_stride, reinterpret_cast<const T*>(in_dptr),
+              reinterpret_cast<T*>(out_dptr));
+      break;
+    case 16:
+      ToContiguousForwardGpuParallel<T, IndexType, 16>
+          <<<num_blocks, num_threads, 0, stream->As<ep::CudaStream>()->cuda_stream()>>>(
+              count, param_in_stride, param_out_stride, reinterpret_cast<const T*>(in_dptr),
+              reinterpret_cast<T*>(out_dptr));
+      break;
+    default: break;
   }
 }
 
@@ -133,8 +191,6 @@ struct ToContiguousUtil<DeviceType::kCUDA, T> : ToContiguousUtilBase {
   static constexpr size_t dsize = sizeof(T);
   void operator()() {
     int constant_memory_size = 0;
-    // get device constant memory capacity, for RTX 2080, constant_memory_size is 65536(64kb)
-    cudaDeviceGetAttribute(&constant_memory_size, cudaDevAttrTotalConstantMemory, 0);
     const size_t ndims = contiguous_dim + 1;
     if (ndims == 0) {
       // 0-dim tensor
