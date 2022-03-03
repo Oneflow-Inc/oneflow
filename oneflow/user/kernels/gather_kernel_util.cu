@@ -116,7 +116,7 @@ struct GatherKernelUtilImpl<DeviceType::kCUDA, T, K> final {
   template struct GatherKernelUtilImpl<DeviceType::kCUDA, OF_PP_PAIR_FIRST(in_type_pair), \
                                        OF_PP_PAIR_FIRST(index_type_pair)>;
 OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(INITIATE_GATHER_KERNEL_UTIL_CUDA_IMPL, GATHER_DATA_TYPE_SEQ,
-                                 INDEX_DATA_TYPE_SEQ);
+                                 GATHER_INDEX_TYPE_SEQ);
 #undef INITIATE_GATHER_KERNEL_UTIL_CUDA_IMPL
 
 }  // namespace oneflow
