@@ -33,9 +33,11 @@ class LearningRateScheduleKernel final : public Kernel {
       log_stream_ = TeePersistentLogStream::Create("train_step2lr.csv");
       (*log_stream_) << "train_step, lr\n";
     }
+
     const int64_t FLAGS_v = oneflow::GetFLAGS_v().GetOrThrow();
     if (FLAGS_v >= 1) { print_step_lr_ = true; }
   }
+
   void ForwardDataContent(KernelContext* ctx) const override;
   bool print_step_lr_ = false;
   std::unique_ptr<TeePersistentLogStream> log_stream_;
