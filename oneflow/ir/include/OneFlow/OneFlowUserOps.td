@@ -4498,6 +4498,9 @@ def OneFlow_ElementwiseMinimumBackwardOp : OneFlow_BaseOp<"elementwise_minimum_b
 }
 
 def OneFlow_EmptyOp : OneFlow_BaseOp<"empty", [NoSideEffect, NoGrad, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
+  let input = (ins
+    Optional<OneFlow_Tensor>:$UserSourceOpTickInput
+  );
   let output = (outs
     OneFlow_Tensor:$out
   );
