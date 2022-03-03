@@ -756,24 +756,6 @@ class AsStridedGradFunctor {
   std::shared_ptr<OpExpr> op_;
 };
 
-class SwapaxesFunctor {
- public:
-  SwapaxesFunctor() {}
-  Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x, const int32_t dim0,
-                           const int32_t dim1) const {
-    return Transpose2dim(x, dim0, dim1);
-  }
-};
-
-class SwapDimsFunctor {
- public:
-  SwapDimsFunctor() {}
-  Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x, const int32_t dim0,
-                           const int32_t dim1) const {
-    return Transpose2dim(x, dim0, dim1);
-  }
-};
-
 class ArangeFunctor {
  public:
   ArangeFunctor() { op_ = CHECK_JUST(one::OpBuilder("arange").Output("out").Build()); }
@@ -2192,8 +2174,8 @@ ONEFLOW_FUNCTION_LIBRARY(m) {
   m.add_functor<Transpose2dimFunctor>("Transpose2dim");
   m.add_functor<AsStridedFunctor>("AsStrided");
   m.add_functor<AsStridedGradFunctor>("AsStridedGrad");
-  m.add_functor<SwapaxesFunctor>("Swapaxes");
-  m.add_functor<SwapDimsFunctor>("Swapdims");
+  m.add_functor<Transpose2dimFunctor>("Swapaxes");
+  m.add_functor<Transpose2dimFunctor>("Swapdims");
   m.add_functor<ArangeFunctor, Arange2Functor>("Arange");
   m.add_functor<ConsistentArangeFunctor, ConsistentArange2Functor>("ConsistentArange");
   m.add_functor<CastFunctor>("Cast");
