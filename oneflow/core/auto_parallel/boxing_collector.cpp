@@ -81,6 +81,8 @@ Maybe<void> BoxingCollector::Init(int32_t max_axis) {
   CollectUniverse(max_axis);
   GenerateNdSbpList(2);
   GenerateMap1d2nd();
+  // Get copy cost in lazy mode
+  LazyMode::Guard enable_lazy_mode(true);
   JUST(GenerateCombination4SamePlacement(3));
   JUST(GenerateCombination4DiffHierarchy(this, this));
   JUST(GenerateCombination4DiffPlacement(this, this));
@@ -95,6 +97,8 @@ Maybe<void> BoxingCollector::Init(const BlobDesc& logical_blob_desc,
   // Filter out unsuitable middle nodes before computing minimum cost.
   JUST(FilterNdSbpList4LogicalShape(logical_blob_desc, *parallel_desc.hierarchy()));
   GenerateMap1d2nd();
+  // Get copy cost in lazy mode
+  LazyMode::Guard enable_lazy_mode(true);
   JUST(GenerateCombination4SamePlacement(5, logical_blob_desc, parallel_desc));
   return Maybe<void>::Ok();
 }
@@ -200,8 +204,6 @@ Maybe<void> BoxingCollector::GenerateCombination4SamePlacement(int32_t max_middl
     minimum_copy_cost_[i].resize(n);
     middle_nodes_[i].resize(n);
     for (int32_t j = 0; j < n; j++) {
-      // Get copy cost in lazy mode
-      LazyMode::Guard enable_lazy_mode(true);
       minimum_copy_cost_[i][j] = JUST(ComputeLazyCopyCostBetweenNdSbp(
           nd_sbp_lists_[i], nd_sbp_lists_[j], blob_desc, parallel_desc, parallel_desc,
           /*is_same_sbp=*/false));
@@ -908,6 +910,15 @@ Maybe<void> BoxingCollector::Generate1Combination4DiffPlacement(
       int32_t diag_consumer = boxing_collector_consumer->id_1d_2_nd_[id_1d_consumer];
       // The diagonal sbp is not supported or no paths exist from the diagonal sbp to the
       // consumer or between the two diagonal sbps.
+      if (GlobalProcessCtx::Rank() == 0) {
+        std::cout << "Consumer: "
+                  << NdSbpToString(boxing_collector_consumer->nd_sbp_lists_[diag_consumer]) << ", ";
+        if (diag_consumer >= 0) {
+          std::cout << boxing_collector_consumer->minimum_copy_cost_[diag_consumer][id_consumer];
+          std::cout << ", diag cost: " << cost_4_diff_placement[id_1d_producer][id_1d_consumer]
+                    << std::endl;
+        }
+      }
       if (diag_consumer < 0
           || boxing_collector_consumer->minimum_copy_cost_[diag_consumer][id_consumer]
                  > GetValidMaxCopyCost()
@@ -916,20 +927,21 @@ Maybe<void> BoxingCollector::Generate1Combination4DiffPlacement(
       }
 
       // Transfer from diag_consumer to id_consumer
+      int32_t curr_path_length = path_length;
       if (boxing_collector_consumer->middle_nodes_[diag_consumer][id_consumer].size() > 0) {
-        path_length +=
+        curr_path_length +=
             boxing_collector_consumer->middle_nodes_[diag_consumer][id_consumer][0].size() + 1;
       } else if (diag_consumer != id_consumer) {
-        path_length++;
+        curr_path_length++;
       }
       // Pick the path with minimum copy cost
-      if (path_length <= min_path_length) {
+      if (curr_path_length <= min_path_length) {
         double curr_cost =
             boxing_collector_producer->minimum_copy_cost_[id_producer][diag_producer]
             + cost_4_diff_placement[id_1d_producer][id_1d_consumer]
             + boxing_collector_consumer->minimum_copy_cost_[diag_consumer][id_consumer];
 
-        min_path_length = path_length;
+        min_path_length = curr_path_length;
         // Find a candidate with small cost
         if (curr_cost < min_cost * 1.0000001) {
           // Find a smaller cost, clear the previous path.
