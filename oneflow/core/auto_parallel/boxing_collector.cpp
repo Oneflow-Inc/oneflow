@@ -76,6 +76,10 @@ BoxingCollector::BoxingCollector(int32_t max_axis) { CHECK_JUST(Init(max_axis));
 
 // Construct a boxing collector with given maximum number of axis
 Maybe<void> BoxingCollector::Init(int32_t max_axis) {
+  // Not allowed two-step boxing and disable checking for debugging
+  if (ParseBooleanFromEnv("ONEFLOW_BOXING_DISABLE_MIDDLE_NODE_AND_CHECK", false)) {
+    return Maybe<void>::Ok();
+  }
   // Set up at least two split for op graph.
   // For a negative example: Resnet50 only have B, P, S(0)
   CollectUniverse(max_axis);
@@ -484,6 +488,10 @@ Maybe<void> BoxingCollector::AskSbpCombination(const NdSbp& sbp_producer, const 
                                                bool is_customized, std::vector<NdSbp>& middle_sbps,
                                                int32_t* diag_node_pos, bool compute_cost) {
   middle_sbps.clear();
+  // Not allowed two-step boxing and disable checking for debugging
+  if (ParseBooleanFromEnv("ONEFLOW_BOXING_DISABLE_MIDDLE_NODE_AND_CHECK", false)) {
+    return Maybe<void>::Ok();
+  }
   // Dealing with 1D sbp to 1D sbp
   // Specifically, S -> P.
   if (Is1dSbp(sbp_producer) && Is1dSbp(sbp_consumer)) {
