@@ -46,44 +46,35 @@ namespace ep {
 class CpuNumThreadsGuard {
  public:
   OF_DISALLOW_COPY_AND_MOVE(CpuNumThreadsGuard);
+#if OF_CPU_THREADING_RUNTIME == OF_RUNTIME_TBB
+  explicit CpuNumThreadsGuard(size_t num_threads)
+      : global_thread_limit(tbb::global_control::max_allowed_parallelism, num_threads) {}
+  ~CpuNumThreadsGuard() {}
+#elif OF_CPU_THREADING_RUNTIME == OF_RUNTIME_OMP
   explicit CpuNumThreadsGuard(size_t num_threads) : set_num_threads_(num_threads) {
-#if OF_CPU_THREADING_RUNTIME == OF_RUNTIME_OMP
     saved_num_threads_ = omp_get_max_threads();
     omp_set_num_threads(set_num_threads_);
-#elif OF_CPU_THREADING_RUNTIME == OF_RUNTIME_TBB
-    saved_num_threads_ =
-        tbb::global_control::active_value(tbb::global_control::max_allowed_parallelism);
-    if (set_num_threads_ != saved_num_threads_) {
-      tbb::global_control global_thread_limit(tbb::global_control::max_allowed_parallelism,
-                                              set_num_threads_);
-    }
+  }
+  ~CpuNumThreadsGuard() { omp_set_num_threads(saved_num_threads_); }
 
 #elif OF_CPU_THREADING_RUNTIME == OF_RUNTIME_SEQ
-// Nothing
+  explicit CpuNumThreadsGuard(size_t num_threads) {}
+  ~CpuNumThreadsGuard() {}
 #else
 #error OF_CPU_THREADING_RUNTIME Error setting
 #endif
-  }
-
-  ~CpuNumThreadsGuard() {
-#if OF_CPU_THREADING_RUNTIME == OF_RUNTIME_OMP
-    omp_set_num_threads(saved_num_threads_);
-#elif OF_CPU_THREADING_RUNTIME == OF_RUNTIME_TBB
-    if (set_num_threads_ != saved_num_threads_) {
-      tbb::global_control global_thread_limit(tbb::global_control::max_allowed_parallelism,
-                                              saved_num_threads_);
-    }
-
-#elif OF_CPU_THREADING_RUNTIME == OF_RUNTIME_SEQ
-// Nothing
-#else
-#error OF_CPU_THREADING_RUNTIME Error setting
-#endif
-  }
 
  private:
+#if OF_CPU_THREADING_RUNTIME == OF_RUNTIME_TBB
+  tbb::global_control global_thread_limit;
+#elif OF_CPU_THREADING_RUNTIME == OF_RUNTIME_OMP
   size_t set_num_threads_;
   size_t saved_num_threads_;
+#elif OF_CPU_THREADING_RUNTIME == OF_RUNTIME_SEQ
+
+#else
+#error OF_CPU_THREADING_RUNTIME Error setting
+#endif
 };
 
 class CpuStream : public Stream {

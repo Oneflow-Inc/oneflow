@@ -161,7 +161,7 @@ void SharedMemoryManager::UnlinkAllShms() {
   for (const auto& shm : shm_names_) { shm_unlink(shm.c_str()); }
   shm_names_.clear();
 #else
-  TODO_THEN_RETURN();
+  UNIMPLEMENTED();
 #endif
 }
 
