@@ -285,6 +285,9 @@ def _tensor_str(self, indent):
     if self.dtype is flow.float16:
         self = self.float()
 
+    if self.is_static_zeros:
+        return "[...0...]"
+
     # TODO: not support nd sbp tensor for now
     if self.is_global and len(self.placement.ranks.shape) > 1:
         return "[...]"

@@ -36,6 +36,7 @@ limitations under the License.
 #include "oneflow/core/framework/placement_utils.h"
 #include "oneflow/core/autograd/autograd_engine.h"
 #include "oneflow/core/common/decorator.h"
+#include "oneflow/core/functional/impl/common.h"
 
 namespace py = pybind11;
 
@@ -208,6 +209,7 @@ ONEFLOW_API_PYBIND11_MODULE("", m) {
       .def_property_readonly("is_eager", &Tensor::is_eager)
       .def_property_readonly("is_global", &Tensor::is_consistent)
       .def_property_readonly("is_local", &Tensor::is_local)
+      .def_property_readonly("is_static_zeros", &functional::IsStaticZerosTensor)
       .def("zeros_", &ApiEagerMirroredTensorZeros)
       .def("register_hook", &ApiRegisterTensorHook)
       .def("_register_post_grad_accumulation_hook", &ApiRegisterTensorPostGradAccumulationHook)
