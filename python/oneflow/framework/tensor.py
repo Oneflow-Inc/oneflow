@@ -392,6 +392,10 @@ def _swapaxes(self, dim0, dim1):
     return flow._C.swapaxes(self, dim0, dim1)
 
 
+def _swapdims(self, dim0, dim1):
+    return flow._C.swapdims(self, dim0, dim1)
+
+
 def _cast(self, dtype):
     return flow.cast(self, dtype)
 
@@ -1155,6 +1159,7 @@ def RegisterMethods():
     Tensor.split = _split
     Tensor.squeeze = _squeeze
     Tensor.swapaxes = _swapaxes
+    Tensor.swapdims = _swapdims
     Tensor.unfold = _unfold
     Tensor.narrow = _narrow
     Tensor.unsqueeze = _unsqueeze

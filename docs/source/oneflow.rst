@@ -142,6 +142,7 @@ oneflow
             sqrt, 
             square,  
             swapaxes, 
+            swapdims, 
             tan, 
             tanh, 
             tensor, 
