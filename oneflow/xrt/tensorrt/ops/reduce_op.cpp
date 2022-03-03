@@ -25,16 +25,9 @@ class ReduceOp : public TrtOpKernel {
  public:
   void Compile(TrtOpContext* ctx) override {
     const auto& axis = ctx->Attr<std::vector<int32_t>>("axis");
-
     int32_t reduce_axis = 0;
     for (int i = 0; i < axis.size(); ++i) { reduce_axis = reduce_axis | (1U << axis[i]); }
     bool keepDimensions = ctx->Attr<bool>("keepdims");
-    // TensorRT does not support full reduce without keepDimensions.
-    // Shape in_shape = ctx->SoleInputShape();
-    // if (!keepDimensions) {
-    //   CHECK_NE(reduce_axis, (1U << in_shape.NumAxes()) - 1)
-    //       << "TensorRT does not support full reduce without keepDimensions.";
-    // }
 
     nvinfer1::ITensor* in = ctx->SoleInput();
     auto* layer = ctx->builder()->addReduce(*in, reduce_op, reduce_axis, keepDimensions);

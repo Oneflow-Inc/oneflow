@@ -29,7 +29,7 @@ static void SwapStream(const XrtDevice& device, ep::Stream* stream, se::Stream* 
     case XrtDevice::GPU_CUDA: {
 #ifdef WITH_CUDA
       auto* cuda_stream = stream->As<ep::CudaStream>()->cuda_stream();
-      xla::SwapGpuStreamHandle(xla_stream, &cuda_stream);
+      xla::SwapGpuStreamHandle(xla_stream, (void**)&cuda_stream);
 #else
       LOG(FATAL) << "CUDA is not supported, please recompile oneflow with WITH_CUDA=ON" << device;
 #endif  // WITH_CUDA

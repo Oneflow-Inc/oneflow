@@ -37,13 +37,15 @@ class ScalarBinaryOp : public TrtOpKernel {
     }
     DataType data_type = ctx->SoleInputType();
     Shape shape(DimVector(in_shape.NumAxes(), 1));
-    std::string name = ctx->op_name() + "_scalar";
+    std::string name = ctx->op_name() + ".scalar";
     nvinfer1::Weights constant = helpers::Constant(ctx, value, shape, data_type, name);
     auto* constant_layer = ctx->builder()->addConstant(ShapeToXrtDims(shape), constant);
+    constant_layer->setName(name.c_str());
 
     nvinfer1::ITensor* scalar = constant_layer->getOutput(0);
     nvinfer1::ITensor* in = ctx->SoleInput();
     auto* layer = ctx->builder()->addElementWise(*in, *scalar, element_wise_op);
+    layer->setName(ctx->op_name().c_str());
     ctx->SetSoleOutput(layer->getOutput(0));
   }
 };
@@ -80,26 +82,33 @@ class ScalarPowGradOp : public TrtOpKernel {
     nvinfer1::ITensor* scalar = nullptr;
     nvinfer1::ITensor* scalar_sub_1 = nullptr;
     {
-      std::string name = ctx->op_name() + "_scalar";
+      std::string name = ctx->op_name() + ".scalar";
       nvinfer1::Weights constant = helpers::Constant(ctx, value, shape, data_type, name);
       auto* constant_layer = ctx->builder()->addConstant(ShapeToXrtDims(shape), constant);
+      constant_layer->setName(name.c_str());
       scalar = constant_layer->getOutput(0);
     }
     {
-      std::string name = ctx->op_name() + "_scalar_sub_1";
+      std::string name = ctx->op_name() + ".scalar_sub_1";
       nvinfer1::Weights constant = helpers::Constant(ctx, value - 1, shape, data_type, name);
       auto* constant_layer = ctx->builder()->addConstant(ShapeToXrtDims(shape), constant);
+      constant_layer->setName(name.c_str());
       scalar_sub_1 = constant_layer->getOutput(0);
     }
     // x^(scalar - 1)
     auto* pow_layer = ctx->builder()->addElementWise(*(ctx->Input("x_0")), *scalar_sub_1,
                                                      nvinfer1::ElementWiseOperation::kPOW);
+    std::string pow_name = ctx->op_name() + ".pow";
+    pow_layer->setName(pow_name.c_str());
     // scalar * x^(scalar - 1)
     auto* mul_layer = ctx->builder()->addElementWise(*(pow_layer->getOutput(0)), *scalar,
                                                      nvinfer1::ElementWiseOperation::kPROD);
+    std::string mul_name = ctx->op_name() + ".mul";
+    mul_layer->setName(mul_name.c_str());
     // dy * scalar * x^(scalar - 1)
     auto* layer = ctx->builder()->addElementWise(*(mul_layer->getOutput(0)), *(ctx->Input("dy_0")),
                                                  nvinfer1::ElementWiseOperation::kPROD);
+    layer->setName(ctx->op_name().c_str());
     ctx->SetSoleOutput(layer->getOutput(0));
   }
 };

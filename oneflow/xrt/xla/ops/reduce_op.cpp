@@ -53,10 +53,6 @@ class ReduceOp : public XlaOpKernel {
     if (keep_dims) {
       for (int i = 0; i < axis.size(); ++i) { in_shape.Set(axis[i], 1); }
       output = Reshape(output, in_shape);
-    } else {
-      // Reshape to 1-d array if output is scalar in order to
-      // keep consistent with oneflow.
-      // if (axis.size() == in_shape.NumAxes()) { output = Reshape(output, Shape({1})); }
     }
     ctx->SetSoleOutput(output);
   }

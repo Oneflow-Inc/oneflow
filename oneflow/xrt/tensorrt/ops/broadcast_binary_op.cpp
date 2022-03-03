@@ -37,6 +37,7 @@ class BcastBinaryOp : public TrtOpKernel {
     nvinfer1::ITensor* x = helpers::Reshape(ctx, ctx->Input("x_0"), shape_a);
     nvinfer1::ITensor* y = helpers::Reshape(ctx, ctx->Input("y_0"), shape_b);
     auto* layer = ctx->builder()->addElementWise(*x, *y, element_wise_op);
+    layer->setName(ctx->op_name().c_str());
     ctx->SetSoleOutput(layer->getOutput(0));
   }
 };

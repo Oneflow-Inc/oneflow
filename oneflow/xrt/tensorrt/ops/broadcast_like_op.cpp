@@ -30,6 +30,7 @@ class BroadcastLikeOp : public TrtOpKernel {
     inputs[1] = ctx->Input("like_0");
     BroadcastLikePlugin plugin(ctx->op_name(), broadcast_axes);
     auto* layer = ctx->builder()->addPluginV2(inputs.data(), 2, plugin);
+    layer->setName(ctx->op_name().c_str());
     ctx->SetOutput("y_0", layer->getOutput(0));
   }
 };

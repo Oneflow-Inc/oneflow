@@ -27,6 +27,7 @@ class UnaryOp : public TrtOpKernel {
   void Compile(TrtOpContext* ctx) override {
     nvinfer1::ITensor* x = ctx->SoleInput();
     auto* layer = ctx->builder()->addUnary(*x, unary_op);
+    layer->setName(ctx->op_name().c_str());
     ctx->SetSoleOutput(layer->getOutput(0));
   }
 };
@@ -40,8 +41,12 @@ class RsqrtOp : public TrtOpKernel {
   void Compile(TrtOpContext* ctx) override {
     nvinfer1::ITensor* x = ctx->SoleInput();
     auto* sqrt_layer = ctx->builder()->addUnary(*x, nvinfer1::UnaryOperation::kSQRT);
+    std::string sqrt_name = ctx->op_name() + ".sqrt";
+    sqrt_layer->setName(sqrt_name.c_str());
     auto* layer =
         ctx->builder()->addUnary(*(sqrt_layer->getOutput(0)), nvinfer1::UnaryOperation::kRECIP);
+    std::string name = ctx->op_name() + ".recip";
+    layer->setName(name.c_str());
     ctx->SetSoleOutput(layer->getOutput(0));
   }
 };
@@ -55,22 +60,29 @@ class SqrtGradOp : public TrtOpKernel {
     nvinfer1::ITensor* dy = ctx->Input("dy_0");
     // x^0.5
     auto* sqrt_layer = ctx->builder()->addUnary(*x, nvinfer1::UnaryOperation::kSQRT);
+    std::string sqrt_name = ctx->op_name() + ".sqrt";
+    sqrt_layer->setName(sqrt_name.c_str());
 
     // 2 * x^0.5
     const Shape& x_shape = ctx->InputShape("x_0");
     Shape shape(DimVector(x_shape.NumAxes(), 1));
 
     DataType data_type = ctx->InputType("x_0");
-    std::string name = ctx->op_name() + "_2";
+    std::string name = ctx->op_name() + ".2";
     nvinfer1::Weights constant = helpers::Constant(ctx, 2, shape, data_type, name);
     auto* constant_layer = ctx->builder()->addConstant(ShapeToXrtDims(shape), constant);
+    constant_layer->setName(name.c_str());
     auto* mul_layer =
         ctx->builder()->addElementWise(*(sqrt_layer->getOutput(0)), *(constant_layer->getOutput(0)),
                                        nvinfer1::ElementWiseOperation::kPROD);
+    std::string mul_name = ctx->op_name() + ".mul";
+    mul_layer->setName(mul_name.c_str());
 
     // 1 / (2 * x^0.5)
     auto* layer =
         ctx->builder()->addUnary(*(mul_layer->getOutput(0)), nvinfer1::UnaryOperation::kRECIP);
+    std::string recip_name = ctx->op_name() + ".recip";
+    layer->setName(recip_name.c_str());
     ctx->SetSoleOutput(layer->getOutput(0));
   }
 };

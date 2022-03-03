@@ -35,6 +35,7 @@ class ElementWiseOp : public TrtOpKernel {
       std::string name = absl::StrCat("in_", i);
       CHECK_EQ(in_shape, ctx->InputShape(name));
       auto* layer = ctx->builder()->addElementWise(*ctx->Input(name), *result, element_wise_op);
+      layer->setName(absl::StrCat(ctx->op_name(), ".", i).c_str());
       result = layer->getOutput(0);
     }
     ctx->SetSoleOutput(result);

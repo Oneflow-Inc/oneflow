@@ -32,8 +32,14 @@ class TrtPlugin : public nvinfer1::IPluginV2DynamicExt {
 
   virtual ~TrtPlugin() = default;
 
-  virtual const char* getPluginVersion() const TRT_NOEXCEPT { return "v2"; }
   virtual const char* getPluginType() const TRT_NOEXCEPT = 0;
+  virtual const char* getPluginVersion() const TRT_NOEXCEPT { return "v2"; }
+
+  virtual int initialize() TRT_NOEXCEPT { return 0; }
+  virtual void terminate() TRT_NOEXCEPT {}
+  virtual void destroy() TRT_NOEXCEPT = 0;
+
+  virtual nvinfer1::IPluginV2DynamicExt* clone() const TRT_NOEXCEPT = 0;
 
   virtual int getNbOutputs() const TRT_NOEXCEPT = 0;
 
@@ -67,18 +73,11 @@ class TrtPlugin : public nvinfer1::IPluginV2DynamicExt {
 
   const char* getPluginNamespace() const TRT_NOEXCEPT override { return namespace_.c_str(); }
 
-  virtual int initialize() TRT_NOEXCEPT { return 0; }
-  virtual void terminate() TRT_NOEXCEPT {}
-
   virtual size_t getSerializationSize() const TRT_NOEXCEPT {
     UNIMPLEMENTED();
     return 0;
   }
   virtual void serialize(void* buffer) const TRT_NOEXCEPT { UNIMPLEMENTED(); }
-
-  virtual void destroy() TRT_NOEXCEPT = 0;
-
-  virtual nvinfer1::IPluginV2DynamicExt* clone() const TRT_NOEXCEPT = 0;
 
  private:
   std::string namespace_;
