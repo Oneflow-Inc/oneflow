@@ -33,6 +33,9 @@ class AccessBlobByCallbackInstructionType : public vm::InstructionType {
   ~AccessBlobByCallbackInstructionType() override = default;
 
   void Compute(vm::Instruction* instruction) const override;
+  void ComputeInFuseMode(vm::InstructionMsg* instruction_msg) const override;
+ private:
+  void ComputeInstrMsg(const vm::InstructionMsg& instruction_msg) const;
 };
 
 class RecordEventInstructionType : public vm::InstructionType {

@@ -49,13 +49,20 @@ void TensorViewInstructionType::Compute(vm::Instruction* instruction) const {
 }
 
 void AccessBlobByCallbackInstructionType::Compute(vm::Instruction* instruction) const {
-  const vm::InstructionMsg& instr_msg = instruction->instr_msg();
+  return ComputeInstrMsg(instruction->instr_msg());
+}
+
+void AccessBlobByCallbackInstructionType::ComputeInFuseMode(vm::InstructionMsg* instr_msg) const {
+  return ComputeInstrMsg(*instr_msg);
+}
+
+void AccessBlobByCallbackInstructionType::ComputeInstrMsg(const vm::InstructionMsg& instr_msg) const {
   const auto& phy_instr_operand = instr_msg.phy_instr_operand();
   CHECK(static_cast<bool>(phy_instr_operand));
   const auto* ptr =
       dynamic_cast<const vm::AccessBlobArgCbPhyInstrOperand*>(phy_instr_operand.get());
   CHECK_NOTNULL(ptr);
-  DeviceCtx* device_ctx = instruction->stream().device_ctx().get();
+  DeviceCtx* device_ctx = instr_msg.phy_instr_stream()->device_ctx().get();
   OfBlob ofblob(device_ctx->stream(), ptr->eager_blob_object()->mut_blob());
   ptr->callback()(reinterpret_cast<uint64_t>(&ofblob));
 }
