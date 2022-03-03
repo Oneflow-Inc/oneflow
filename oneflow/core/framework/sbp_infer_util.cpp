@@ -88,6 +88,14 @@ Maybe<double> ComputCopyCostBetweenTwoSbpParallel(const SbpParallel& producer_sb
     // P->B
     return 2 * logical_blob_size * (producer_parallel_desc.parallel_num() - 1);
   } else {
+    // Not supporting P->P for different placement
+    if (LazyMode::is_enabled() || /*single_client=*/(!JUST(IsMultiClient()))) {
+      if (consumer_sbp_parallel.has_partial_sum_parallel()
+          && producer_sbp_parallel.has_partial_sum_parallel()) {
+        return kUnsupportedBoxing;
+      }
+    }
+
     double logical_blob_size =
         logical_blob_desc.shape().elem_cnt() * GetSizeOfDataType(logical_blob_desc.data_type());
     double overall_cost = logical_blob_size;
