@@ -70,7 +70,7 @@ def _test_global_cpu(test_case, placement, sbp):
 
 # PyTorch error if open auto_backward:
 # element 0 of tensors does not require grad and does not have a grad_fn
-@autotest(n=1, auto_backward=True, check_graph=False)
+@autotest(n=1, auto_backward=False, check_graph=False)
 def _test_global_long(test_case, placement, sbp):
     x = random_tensor(2, 8, 16, requires_grad=False).to_global(
         placement, sbp
