@@ -40,22 +40,27 @@ __device__ bool TryGetOrInsert(Key* entry_key, volatile Index* entry_index, uint
   Key key_hi = (key | 0x1);
   Key key_lo = (key & 0x1);
   Key old_entry_key = cuda::atomic::CAS(entry_key, static_cast<Key>(0), key_hi);
-
-  if (old_entry_key == 0) {
-    Index index = cuda::atomic::Add(table_size, static_cast<uint64_t>(1));
-    *entry_index = ((index << 1U) | key_lo);
-    *out = index;
-    return true;
-  } else if (old_entry_key == key_hi) {
-    Index entry_index_val = *entry_index;
-    if ((entry_index_val & 0x1) == key_lo) {
-      *out = (entry_index_val >> 1U);
+  Index index_plus_one = 0;
+  while (index_plus_one == 0) {
+    if (old_entry_key == static_cast<Key>(0)) {
+      Index index = cuda::atomic::Add(table_size, static_cast<uint64_t>(1));
+      index_plus_one = index + 1;
+      *entry_index = ((index_plus_one << 1U) | key_lo);
+      *out = index;
       return true;
+    } else if (old_entry_key == key_hi) {
+      const Index entry_index_val = *entry_index;
+      if ((entry_index_val & 0x1) == key_lo) {
+        *out = (entry_index_val >> 1U) - 1;
+        return true;
+      } else if (entry_index_val == 0) {
+        // do nothing
+      } else {
+        return false;
+      }
     } else {
       return false;
     }
-  } else {
-    return false;
   }
 }
 
@@ -84,7 +89,7 @@ __device__ bool GetOne(const size_t capacity, TableEntry<Key, Index>* table, Key
     if (entry.key == 0) { break; }
     if (entry.key == key_hi) {
       if ((entry.index & 0x1) == key_lo) {
-        *out = (entry.index >> 1U);
+        *out = (entry.index >> 1U) - 1;
         return true;
       }
     }
