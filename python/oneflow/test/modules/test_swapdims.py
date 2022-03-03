@@ -32,7 +32,7 @@ class Testswapdims(flow.unittest.TestCase):
     def test_swapdims_flow_with_random_data(test_case):
         device = random_device()
         x = random_tensor(ndim=3).to(device)
-        y = torch.swapdims(x, random(0, 2).to(int), random(0, 2).to(int))
+        y = torch.swapdims(x, np.random.randint(0, 3), np.random.randint(0, 3))
         return y
 
 
