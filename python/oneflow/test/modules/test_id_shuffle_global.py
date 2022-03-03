@@ -23,11 +23,12 @@ import oneflow.unittest
 
 from oneflow.test_utils.automated_test_util import *
 
-placement = flow.placement(type="cuda", ranks=[0, 1])
+parallel_num = 2
+placement = flow.placement(type="cuda", ranks=list(range(parallel_num)))
 
 
 def _test_id_shuffle(test_case, has_column_id, num_columns):
-    batch_size = int(16384 / 2)
+    batch_size = int(16384 / parallel_num)
     ids = np.random.randint(0, 200000, (batch_size, num_columns), dtype=np.int64)
     ids_tensor = flow.tensor(ids, requires_grad=False).to_global(
         placement=placement, sbp=flow.sbp.split(0)
@@ -76,16 +77,23 @@ def _test_id_shuffle(test_case, has_column_id, num_columns):
     cur_rank_num_unique = local_cur_rank_num_unique.to_local().to_global(
         placement=placement, sbp=flow.sbp.split(0)
     )
-
-    cur_rank_num_unique_0 = cur_rank_num_unique.numpy()[0]
-    cur_rank_num_unique_1 = cur_rank_num_unique.numpy()[1]
-    cur_rank_num_ids = batch_size * num_columns * 2
-    cur_rank_unique_ids_0 = cur_rank_unique_ids.numpy()[0:cur_rank_num_ids]
-    cur_rank_unique_ids_1 = cur_rank_unique_ids.numpy()[cur_rank_num_ids:]
-    cur_rank_unique_column_ids_0 = cur_rank_unique_column_ids.numpy()[
-        0:cur_rank_num_ids
-    ]
-    cur_rank_unique_column_ids_1 = cur_rank_unique_column_ids.numpy()[cur_rank_num_ids:]
+    cur_rank_num_unique_list = []
+    cur_rank_unique_ids_list = []
+    cur_rank_unique_column_ids_list = []
+    cur_rank_num_ids = batch_size * num_columns * parallel_num
+    for i in range(parallel_num):
+        num_unique_i = cur_rank_num_unique.numpy()[i]
+        unique_ids_i = cur_rank_unique_ids.numpy()[
+            cur_rank_num_ids * i : cur_rank_num_ids * (i + 1)
+        ]
+        unique_column_ids_i = cur_rank_unique_column_ids.numpy()[
+            cur_rank_num_ids * i : cur_rank_num_ids * (i + 1)
+        ]
+        cur_rank_num_unique_list.append(num_unique_i)
+        cur_rank_unique_ids_list.append(np.array(unique_ids_i[0:num_unique_i]))
+        cur_rank_unique_column_ids_list.append(
+            np.array(unique_column_ids_i[0:num_unique_i])
+        )
 
     global_ids = ids_tensor.numpy()
     np_unique_ids, np_unique_index, np_inverse = np.unique(
@@ -94,26 +102,16 @@ def _test_id_shuffle(test_case, has_column_id, num_columns):
     np_num_unique = np_unique_ids.size
     # test num unique
     test_case.assertTrue(
-        np.array_equal(np_num_unique, cur_rank_num_unique_0 + cur_rank_num_unique_1)
+        np.array_equal(np_num_unique, np.array(cur_rank_num_unique_list).sum())
     )
     # test unique ids
-    unique_ids = np.concatenate(
-        [
-            cur_rank_unique_ids_0[0:cur_rank_num_unique_0],
-            cur_rank_unique_ids_1[0:cur_rank_num_unique_1],
-        ]
-    )
+    unique_ids = np.concatenate(cur_rank_unique_ids_list)
     unique_ids.sort()
     np_unique_ids.sort()
     test_case.assertTrue(np.array_equal(unique_ids, np_unique_ids))
     if has_column_id:
         # test unique column ids
-        unique_column_ids = np.concatenate(
-            [
-                cur_rank_unique_column_ids_0[0:cur_rank_num_unique_0],
-                cur_rank_unique_column_ids_1[0:cur_rank_num_unique_1],
-            ]
-        )
+        unique_column_ids = np.concatenate(cur_rank_unique_column_ids_list)
         unique_column_ids.sort()
         global_column_ids = column_ids_tensor.numpy()
         np_unique_column_ids = global_column_ids.flatten()[np_unique_index]
@@ -175,7 +173,7 @@ def _test_embedding_shuffle(test_case, dtype):
 
 
 def _test_embedding_gradient_shuffle(test_case):
-    batch_size = int(16384 / 2)
+    batch_size = int(16384 / parallel_num)
     num_columns = 26
     embedding_size = 128
     max_id = 10000
@@ -242,26 +240,21 @@ def _test_embedding_gradient_shuffle(test_case):
                 np.where(global_ids.flatten() == unique_id)[0]
             ]
         )
-    cur_rank_num_ids = batch_size * num_columns * 2
-    of_cur_rank_unique_embedding_diff_0 = cur_rank_unique_embedding_diff.numpy()[
-        0:cur_rank_num_ids
-    ]
-    of_cur_rank_unique_embedding_diff_1 = cur_rank_unique_embedding_diff.numpy()[
-        cur_rank_num_ids:
-    ]
-    cur_rank_unique_ids_0 = cur_rank_unique_ids.numpy()[0:cur_rank_num_ids]
-    cur_rank_unique_ids_1 = cur_rank_unique_ids.numpy()[cur_rank_num_ids:]
+
+    cur_rank_num_ids = batch_size * num_columns * parallel_num
     of_unique_embedding_diff = np.zeros((max_id, embedding_size))
-    for i in range(cur_rank_num_unique.numpy()[0]):
-        unique_id = cur_rank_unique_ids_0[i]
-        of_unique_embedding_diff[unique_id, :] = of_cur_rank_unique_embedding_diff_0[
-            i, :
+    for i in range(parallel_num):
+        num_unique_i = cur_rank_num_unique.numpy()[i]
+        unique_ids_i = cur_rank_unique_ids.numpy()[
+            cur_rank_num_ids * i : cur_rank_num_ids * (i + 1)
         ]
-    for i in range(cur_rank_num_unique.numpy()[1]):
-        unique_id = cur_rank_unique_ids_1[i]
-        of_unique_embedding_diff[unique_id, :] = of_cur_rank_unique_embedding_diff_1[
-            i, :
+        unique_embedding_diff_i = cur_rank_unique_embedding_diff.numpy()[
+            cur_rank_num_ids * i : cur_rank_num_ids * (i + 1)
         ]
+        for j in range(num_unique_i):
+            unique_id = unique_ids_i[j]
+            of_unique_embedding_diff[unique_id, :] = unique_embedding_diff_i[j, :]
+
     test_case.assertTrue(
         np.allclose(of_unique_embedding_diff, np_cur_rank_unique_embedding_diff)
     )
