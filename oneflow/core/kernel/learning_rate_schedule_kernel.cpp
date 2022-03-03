@@ -34,7 +34,7 @@ class LearningRateScheduleKernel final : public Kernel {
       (*log_stream_) << "train_step, lr\n";
     }
 
-    const int64_t FLAGS_v = oneflow::GetFLAGS_v().GetOrThrow();
+    const int32_t FLAGS_v = oneflow::GetFLAGS_v().GetOrThrow();
     if (FLAGS_v >= 1) { print_step_lr_ = true; }
   }
 
@@ -293,7 +293,7 @@ void LearningRateScheduleKernel::ForwardDataContent(KernelContext* ctx) const {
     learning_rate = GetDecayedLearningRate(conf.learning_rate_decay(), learning_rate, train_step);
   }
   // NOTE(lixiang): nn.Graph.debug(1) will print step and lr.
-  if (print_step_lr_ && train_step != 0) {
+  if (print_step_lr_) {
     std::cout << "Last step " << train_step << " adjusting learning rate to " << learning_rate
               << std::endl;
   }
