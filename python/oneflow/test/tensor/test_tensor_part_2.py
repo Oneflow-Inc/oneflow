@@ -909,7 +909,7 @@ class TestTensorNumpy(flow.unittest.TestCase):
 
     @flow.unittest.skip_unless_1n1d()
     @autotest(n=5, check_graph=True)
-    def test_tensor_swapdims(test_case):
+    def test_tensor_swapdimst(test_case):
         device = random_device()
         x = random_tensor(ndim=3).to(device)
         y = x.swapdims(random(0, 2).to(int), random(0, 2).to(int))
