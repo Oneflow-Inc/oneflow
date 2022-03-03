@@ -182,3 +182,4 @@ oneflow
             LongTensor,
 
 .. autofunction:: oneflow.relu
+.. autofunction:: oneflow.set_num_threads
