@@ -17,7 +17,6 @@ limitations under the License.
 #include "oneflow/core/job/resource_desc.h"
 #include "oneflow/core/job/global_for.h"
 #include "oneflow/core/persistence/tee_persistent_log_stream.h"
-#include "oneflow/api/python/env/env_api.h"
 
 namespace oneflow {
 
