@@ -400,6 +400,160 @@ class TestEinsum(flow.unittest.TestCase):
         z = torch.einsum("bqa,ahc->bqhc", x, y)
         return z
 
+    @autotest(n=20, check_graph=True)
+    def test_einsum_ellipsis_usecase1(test_case):
+        device = random_device()
+        dim0 = random(1, 6)
+        x = random_tensor(ndim=3, dim0=random(1, 6), dim1=random(1, 6), dim2=dim0,).to(
+            device
+        )
+        y = random_tensor(ndim=3, dim0=random(1, 6), dim1=random(1, 6), dim2=dim0,).to(
+            device
+        )
+        z = torch.einsum("...lc, ...c -> ...l", x, y)
+        return z
+
+    @autotest(n=20, check_graph=True)
+    def test_einsum_ellipsis_usecase2(test_case):
+        device = random_device()
+        dim0 = random(1, 6)
+        dim1 = random(1, 6)
+        x = random_tensor(ndim=3, dim0=random(1, 6), dim1=dim0, dim2=dim1,).to(device)
+        y = random_tensor(ndim=3, dim0=random(1, 6), dim1=dim0, dim2=dim1).to(device)
+        z = torch.einsum("...lc, ...lc -> ...l", x, y)
+        return z
+
+    @autotest(n=20, check_graph=True)
+    def test_einsum_ellipsis_usecase3(test_case):
+        device = random_device()
+        dim0 = random(1, 6)
+        x = random_tensor(ndim=3, dim0=random(1, 6), dim1=random(1, 6), dim2=dim0,).to(
+            device
+        )
+        y = random_tensor(ndim=3, dim0=random(1, 6), dim1=random(1, 6), dim2=dim0).to(
+            device
+        )
+        z = torch.einsum("...id,...jd->...ij", x, y)
+        return z
+
+    @autotest(n=20, check_graph=True)
+    def test_einsum_ellipsis_usecase4(test_case):
+        device = random_device()
+        dim0 = random(1, 6)
+        dim1 = random(1, 6)
+        x = random_tensor(
+            ndim=4, dim0=random(1, 6), dim1=dim0, dim2=random(1, 6), dim3=dim1
+        ).to(device)
+        y = random_tensor(ndim=3, dim0=dim0, dim1=dim1, dim2=random(1, 6)).to(device)
+        z = torch.einsum("...klm,kmn->...kln", x, y)
+        return z
+
+    @autotest(n=20, check_graph=True)
+    def test_einsum_ellipsis_usecase5(test_case):
+        device = random_device()
+        dim0 = random(1, 6)
+        x = random_tensor(
+            ndim=4, dim0=random(1, 6), dim1=random(1, 6), dim2=dim0, dim3=random(1, 6)
+        ).to(device)
+        y = random_tensor(ndim=3, dim0=random(1, 6), dim1=random(1, 6), dim2=dim0).to(
+            device
+        )
+        z = torch.einsum("...ikl, ...jk -> ...ijl", x, y)
+        return z
+
+    @autotest(n=20, check_graph=True)
+    def test_einsum_ellipsis_usecase6(test_case):
+        device = random_device()
+        dim0 = random(1, 6)
+        x = random_tensor(ndim=3, dim0=random(1, 6), dim1=random(1, 6), dim2=dim0).to(
+            device
+        )
+        y = random_tensor(ndim=3, dim0=random(1, 6), dim1=random(1, 6), dim2=dim0).to(
+            device
+        )
+        z = torch.einsum("...l,...l->...", x, y)
+        return z
+
+    @autotest(n=20, check_graph=True)
+    def test_einsum_ellipsis_usecase7(test_case):
+        device = random_device()
+        dim0 = random(1, 6)
+        dim1 = random(1, 6)
+        dim2 = random(1, 6)
+        x = random_tensor(ndim=3, dim0=dim0, dim1=dim1, dim2=dim2).to(device)
+        y = random_tensor(
+            ndim=4, dim0=dim0, dim1=dim1, dim2=dim2, dim3=random(1, 6)
+        ).to(device)
+        z = torch.einsum("ijk,ijk...->ij...", x, y)
+        return z
+
+    @autotest(n=20, check_graph=True)
+    def test_einsum_other_usecase1(test_case):
+        device = random_device()
+        dim0 = random(1, 6)
+        dim1 = random(1, 6)
+        dim2 = random(1, 6)
+        x = random_tensor(ndim=3, dim0=dim0, dim1=random(1, 6), dim2=dim1).to(device)
+        y = random_tensor(ndim=3, dim0=random(1, 6), dim1=dim1, dim2=dim2).to(device)
+        w = random_tensor(ndim=3, dim0=dim0, dim1=random(1, 6), dim2=dim2).to(device)
+        z = torch.einsum("bxi,oij,byj->boxy", x, y, w)
+        return z
+
+    @autotest(n=20, check_graph=True)
+    def test_einsum_other_usecase2(test_case):
+        device = random_device()
+        dim0 = random(1, 6)
+        dim1 = random(1, 6)
+        x = random_tensor(
+            ndim=4, dim0=dim0, dim1=dim1, dim2=random(1, 6), dim3=random(1, 6)
+        ).to(device)
+        y = random_tensor(
+            ndim=4, dim0=dim0, dim1=dim1, dim2=random(1, 6), dim3=random(1, 6)
+        ).to(device)
+        z = torch.einsum("ijac,ijkp->ijakcp", x, y)
+        return z
+
+    @autotest(n=20, check_graph=True)
+    def test_einsum_other_usecase3(test_case):
+        device = random_device()
+        dim0 = random(1, 6)
+        dim1 = random(1, 6)
+        x = random_tensor(
+            ndim=4, dim0=dim0, dim1=random(1, 6), dim2=dim1, dim3=random(1, 6)
+        ).to(device)
+        y = random_tensor(ndim=3, dim0=dim0, dim1=random(1, 6), dim2=dim1).to(device)
+        z = torch.einsum("cdij,cbi->cdbj", x, y)
+        return z
+
+    @autotest(n=20, check_graph=True)
+    def test_einsum_fastfold_usecase1(test_case):
+        device = random_device()
+        dim0 = random(1, 6)
+        dim1 = random(1, 6)
+        dim2 = random(1, 6)
+        x = random_tensor(
+            ndim=4, dim0=dim0, dim1=dim1, dim2=random(1, 6), dim3=dim2
+        ).to(device)
+        y = random_tensor(
+            ndim=4, dim0=dim0, dim1=dim1, dim2=random(1, 6), dim3=dim2
+        ).to(device)
+        z = torch.einsum("bsid,bsjd->bijd", x, y)
+        return z
+
+    @autotest(n=20, check_graph=True)
+    def test_einsum_fastfold_usecase2(test_case):
+        device = random_device()
+        dim0 = random(1, 6)
+        dim1 = random(1, 6)
+        x = random_tensor(
+            ndim=4, dim0=dim0, dim1=dim1, dim2=random(1, 6), dim3=random(1, 6)
+        ).to(device)
+        y = random_tensor(
+            ndim=4, dim0=dim0, dim1=dim1, dim2=random(1, 6), dim3=random(1, 6)
+        ).to(device)
+        z = torch.einsum("bsid,bsje->bijde", x, y)
+        return z
+
 
 if __name__ == "__main__":
     unittest.main()
