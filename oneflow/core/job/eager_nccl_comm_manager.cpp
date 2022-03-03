@@ -67,7 +67,7 @@ void CreateNcclComm(ncclComm_t* comm, const int dev, const std::string& key,
       memcpy(nccl_unique_id.internal, val.data(), NCCL_UNIQUE_ID_BYTES);
     });
   }
-  VLOG(3) << " EagerNcclCommMgr::ncclCommInitRank device_vec.size() = " << device_vec.size()
+  VLOG(2) << " EagerNcclCommMgr::ncclCommInitRank device_vec.size() = " << device_vec.size()
           << ", nccl_unique_id = " << NcclUniqueId2String(nccl_unique_id) << ", rank = " << rank
           << ", key = {" << key << "}\n";
   OF_NCCL_CHECK(ncclCommInitRank(comm, device_vec.size(), nccl_unique_id, rank));

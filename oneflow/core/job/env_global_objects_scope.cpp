@@ -146,26 +146,26 @@ Maybe<void> EnvGlobalObjectsScope::Init(const EnvProto& env_proto) {
   // ~CtrlBootstrap.
   if (Global<ResourceDesc, ForSession>::Get()->enable_dry_run()) {
 #ifdef RPC_BACKEND_LOCAL
-    LOG(INFO) << "using rpc backend: dry-run";
+    LOG(INFO) << "Using rpc backend: dry-run";
     Global<RpcManager>::SetAllocated(new DryRunRpcManager());
 #else
-    static_assert(false, "requires rpc backend dry-run to dry run oneflow");
+    static_assert(false, "Requires rpc backend dry-run to dry run oneflow");
 #endif  // RPC_BACKEND_LOCAL
   } else if ((env_proto.machine_size() == 1 && env_proto.has_ctrl_bootstrap_conf() == false)
              || (env_proto.has_ctrl_bootstrap_conf()
                  && env_proto.ctrl_bootstrap_conf().world_size() == 1)) /*single process*/ {
 #ifdef RPC_BACKEND_LOCAL
-    LOG(INFO) << "using rpc backend: local";
+    LOG(INFO) << "Using rpc backend: local";
     Global<RpcManager>::SetAllocated(new LocalRpcManager());
 #else
-    static_assert(false, "requires rpc backend local to run oneflow in single processs");
+    static_assert(false, "Requires rpc backend local to run oneflow in single processs");
 #endif  // RPC_BACKEND_LOCAL
   } else /*multi process, multi machine*/ {
 #ifdef RPC_BACKEND_GRPC
-    LOG(INFO) << "using rpc backend: gRPC";
+    LOG(INFO) << "Using rpc backend: gRPC";
     Global<RpcManager>::SetAllocated(new GrpcRpcManager());
 #else
-    UNIMPLEMENTED() << "to run distributed oneflow, you must enable at least one multi-node rpc "
+    UNIMPLEMENTED() << "To run distributed oneflow, you must enable at least one multi-node rpc "
                        "backend by adding cmake argument, for instance: -DRPC_BACKEND=GRPC";
 #endif  // RPC_BACKEND_GRPC
   }

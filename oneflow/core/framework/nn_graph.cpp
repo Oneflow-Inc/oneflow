@@ -70,18 +70,18 @@ Maybe<std::string> GetTensorMetaString(const std::shared_ptr<one::Tensor>& tenso
 }  // namespace
 
 NNGraph::~NNGraph() {
-  VLOG(2) << "Graph destructor Try to close c nn graph name " << name_ << "." << std::endl;
+  VLOG(1) << "Graph destructor Try to close c nn graph name " << name_ << "." << std::endl;
   CHECK_JUST(Close());
 }
 
 Maybe<void> NNGraph::Close() {
   if (!is_closed_) {
-    VLOG(2) << "Try to close c nn graph name " << name_ << "." << std::endl;
+    VLOG(1) << "Try to close c nn graph name " << name_ << "." << std::endl;
     CloseRuntimeBuffers();
     runtime_.reset();
     Global<MultiClientSessionContext>::Get()->RemoveGraphFreeEagerTensors(name_);
     is_closed_ = true;
-    VLOG(2) << "Finish close c nn graph name " << name_ << "." << std::endl;
+    VLOG(1) << "Finish close c nn graph name " << name_ << "." << std::endl;
   }
   return Maybe<void>::Ok();
 }

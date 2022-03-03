@@ -60,7 +60,7 @@ int SockListen(int listen_sockfd, int32_t* listen_port, int32_t total_machine_nu
   }
   if (bind_result == 0) {
     PCHECK(listen(listen_sockfd, total_machine_num) == 0);
-    VLOG(2) << "CommNet:Epoll listening on "
+    VLOG(1) << "CommNet:Epoll listening on "
             << "0.0.0.0:" + std::to_string(*listen_port);
   } else {
     PCHECK(errno == EACCES || errno == EADDRINUSE) << "SockListen errno: " << errno;
@@ -84,7 +84,7 @@ uint16_t PullPort(int64_t machine_id) {
 
 EpollCommNet::~EpollCommNet() {
   for (size_t i = 0; i < pollers_.size(); ++i) {
-    VLOG(3) << "CommNet Thread " << i << " finish";
+    VLOG(1) << "CommNet Thread " << i << " finish";
     pollers_[i]->Stop();
   }
   OF_ENV_BARRIER();
@@ -194,7 +194,7 @@ void EpollCommNet::InitSockets() {
 
   // useful log
   FOR_RANGE(int64_t, machine_id, 0, total_machine_num) {
-    VLOG(3) << "machine " << machine_id << " sockfd " << machine_id2sockfd_[machine_id];
+    VLOG(2) << "machine " << machine_id << " sockfd " << machine_id2sockfd_[machine_id];
   }
 }
 

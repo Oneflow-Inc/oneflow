@@ -108,7 +108,7 @@ void BlobRegister::TryClearObject4BlobName(const std::string& blob_name) {
 
 void BlobRegister::ForceReleaseAll() {
   for (const auto& pair : *blob_name2object_) {
-    VLOG(3) << "Forcely release blob " << (pair.first);
+    VLOG(2) << "Forcely release blob " << (pair.first);
     pair.second->ForceReleaseAll();
   }
 }
