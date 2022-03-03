@@ -1,4 +1,4 @@
-"""
+/*
 Copyright 2020 The OneFlow Authors. All rights reserved.
 
 Licensed under the Apache License, Version 2.0 (the "License");
@@ -12,17 +12,24 @@ distributed under the License is distributed on an "AS IS" BASIS,
 WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
-"""
-import oneflow as flow
+*/
+#ifndef ONEFLOW_CORE_CHECK_LEVEL_H_
+#define ONEFLOW_CORE_CHECK_LEVEL_H_
 
+#include <cstdlib>
+#include <type_traits>
+#include "oneflow/core/common/just.h"
+#include "oneflow/core/common/maybe.h"
+#include "oneflow/xrt/utility/env.h"
 
-def norm(self, ord=None, dim=None, keepdim=False, dtype=None):
-    return flow._C.norm(self, ord, dim, keepdim, dtype=dtype)
+namespace oneflow {
 
+bool IsEnvEnabled(int32_t check_level) {
+  static const int env_check_level = EnvToInt(ONEFOW_CHECK_LEVEL, -1);
+  static const bool env_debug_mode = EnvToBool(ONEFLOW_DEBUG_MODE, false);
+  return env_debug_mode || env_check_level >= check_level;
+}
 
-def vector_norm(self, ord=2, dim=None, keepdim=False, dtype=None):
-    return flow._C.vector_norm(self, ord, dim, keepdim, dtype=dtype)
+}  // namespace oneflow
 
-
-def matrix_norm(self, ord="fro", dim=(-2, -1), keepdim=False, dtype=None):
-    return flow._C.matrix_norm(self, ord, dim, keepdim, dtype=dtype)
+#endif  // ONEFLOW_CORE_CHECK_LEVEL_H_

@@ -35,7 +35,8 @@ class UniformKernel final : public user_op::OpKernel {
       user_op::KernelInitContext* ctx) const override {
     const auto& generator = CHECK_JUST(one::MakeGenerator(device_type));
     // Each rank get seed depend on SBP,when SBP is Spit, use different seeds,when SBP is B and P, use the same seed;
-    generator->set_current_seed(GetOpKernelRandomSeedInCurrentRank(ctx, ctx->Attr<int64_t>("seed")));
+    generator->set_current_seed(
+        CHECK_JUST(GetOpKernelRandomSeedInCurrentRank(ctx, ctx->Attr<int64_t>("seed"))));
     return std::make_shared<DistributionKernelState>(generator);
   }
 
