@@ -13,23 +13,10 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 """
-from operator import mod
-import os
-import random
-import sys
-import traceback
-from typing import List, Optional, Sequence, Tuple, Union
-import warnings
-
-from numpy import int64
-
 import oneflow as flow
+import warnings
 import oneflow._oneflow_internal._C as _C
-from oneflow.framework.tensor import Tensor
-from oneflow.nn.common_types import _size_1_t, _size_2_t, _size_3_t, _size_any_t
 from oneflow.nn.module import Module
-from oneflow.nn.modules.utils import _pair, _reverse_repeat_tuple, _single, _triple
-import oneflow.framework.id_util as id_util
 
 
 class DistributedPariticalFCSample(Module):
