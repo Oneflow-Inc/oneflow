@@ -60,12 +60,10 @@ void VirtualMachineEngine::HandleLocalPending() {
   OF_PROFILER_RANGE_PUSH("HandleLocalPending");
   InstructionList pending_instructions;
   constexpr static int kPendingHandleWindow = 10;
-  OF_PROFILER_RANGE_PUSH("GetRewritedPendingInstructionsByWindowSize");
   GetRewritedPendingInstructionsByWindowSize(kPendingHandleWindow, &pending_instructions);
-  OF_PROFILER_RANGE_POP(); // "GetRewritedPendingInstructionsByWindowSize"
   OF_PROFILER_RANGE_PUSH("InitInstructions");
   InitInstructions(&pending_instructions);
-  OF_PROFILER_RANGE_POP(); // "InitInstructions"
+  OF_PROFILER_RANGE_POP();  // "InitInstructions"
   OF_PROFILER_RANGE_PUSH("ConsumeMirroredObjects");
   INTRUSIVE_FOR_EACH_PTR(instruction, &pending_instructions) {
     ConsumeMirroredObjects(instruction);
@@ -74,7 +72,7 @@ void VirtualMachineEngine::HandleLocalPending() {
       pending_instructions.Erase(instruction);
     }
   }
-  OF_PROFILER_RANGE_POP(); // "ConsumeMirroredObjects"
+  OF_PROFILER_RANGE_POP();  // "ConsumeMirroredObjects"
   OF_PROFILER_RANGE_POP();
 }
 
@@ -115,9 +113,11 @@ void VirtualMachineEngine::MakeAndAppendFusedInstruction(
 
 void VirtualMachineEngine::GetRewritedPendingInstructionsByWindowSize(
     size_t window_size, InstructionList* /*out*/ pending_instructions) {
+  OF_PROFILER_RANGE_PUSH("GetRewritedPendingInstructionsByWindowSize");
   InstructionList fused_instruction_list;
   INTRUSIVE_FOR_EACH_PTR(instruction, mut_local_pending_msg_list()) {
     if (window_size-- <= 0) { break; }
+    OF_PROFILER_RANGE_PUSH("Iteration");
     auto* fuse_begin = fused_instruction_list.Begin();
     if (likely(FusableBetween(kEnableInstructionFuseAtAnyPosition, instruction, fuse_begin))) {
       // fuse
@@ -131,8 +131,10 @@ void VirtualMachineEngine::GetRewritedPendingInstructionsByWindowSize(
       MakeAndAppendFusedInstruction(std::move(fused_instruction_list), pending_instructions);
       mut_local_pending_msg_list()->MoveToDstBack(instruction, pending_instructions);
     }
+    OF_PROFILER_RANGE_POP();
   }
   MakeAndAppendFusedInstruction(std::move(fused_instruction_list), pending_instructions);
+  OF_PROFILER_RANGE_POP();
 }
 
 std::string VirtualMachineEngine::GetLivelyInstructionListDebugString(int64_t debug_cnt) {
