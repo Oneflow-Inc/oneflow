@@ -36,22 +36,26 @@ class DistributedPariticalFCSample(Module):
     def __init__(self, num_sample):
         super().__init__()
         self.num_sample = num_sample
-        self._op = flow.stateful_op("distributed_partial_fc_sample").Input("weight")          \
-                                                                    .Input("label")           \
-                                                                    .Output("mapped_label")   \
-                                                                    .Output("sampled_label")  \
-                                                                    .Output("sampled_weight").Build()
+        self._op = (
+            flow.stateful_op("distributed_partial_fc_sample")
+            .Input("weight")
+            .Input("label")
+            .Output("mapped_label")
+            .Output("sampled_label")
+            .Output("sampled_weight")
+            .Build()
+        )
 
     def forward(self, weight, label):
         res = _C.dispatch_distributed_partial_fc_sample(
-            self._op,
-            weight = weight,
-            label = label,
-            num_sample = self.num_sample
+            self._op, weight=weight, label=label, num_sample=self.num_sample
         )
         return res
 
 
 def distributed_partial_fc_sample_op(weight, label, num_sample):
-    warnings.warn("oneflow.distributed_partial_fc_sample is deprecated. Please use nn.DistributedPariticalFCSample module instead.", DeprecationWarning)
+    warnings.warn(
+        "oneflow.distributed_partial_fc_sample is deprecated. Please use nn.DistributedPariticalFCSample module instead.",
+        DeprecationWarning,
+    )
     return DistributedPariticalFCSample(num_sample)(weight, label)

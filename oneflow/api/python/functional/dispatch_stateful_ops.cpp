@@ -126,7 +126,7 @@ ONEFLOW_FUNCTION_LIBRARY(m) {
                 });
   m.add_functor(
       "DispatchDistributedPariticalFCSample",
-      [](const std::shared_ptr<OpExpr>& op, const std::shared_ptr<Tensor>& weight, 
+      [](const std::shared_ptr<OpExpr>& op, const std::shared_ptr<Tensor>& weight,
          const std::shared_ptr<Tensor>& label, const int64_t& num_sample) -> Maybe<TensorTuple> {
         MutableAttrMap attrs;
         JUST(attrs.SetAttr<int64_t>("num_sample", num_sample));
