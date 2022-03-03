@@ -46,7 +46,6 @@ struct TensorViewUtil final {
     void* input_ptr = input_ofblob.mut_blob()->mut_raw_dptr();
     view_ofblob.mut_blob()->reset_dptr(static_cast<char*>(input_ptr));
   }
-  
 };
 
 void TensorViewInstructionType::Compute(vm::Instruction* instruction) const {

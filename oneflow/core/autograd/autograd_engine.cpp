@@ -45,8 +45,8 @@ Maybe<bool> OnSameStream(const Tensor& lhs, const Tensor& rhs) {
   const auto lhs_maybe_eager_blob_object = TRY(lhs.eager_blob_object());
   const auto rhs_maybe_eager_blob_object = TRY(rhs.eager_blob_object());
   if (lhs_maybe_eager_blob_object.IsOk() && rhs_maybe_eager_blob_object.IsOk()) {
-    return ProducedOnSameStream(JUST(lhs_maybe_eager_blob_object),
-                                JUST(rhs_maybe_eager_blob_object));
+    return ProducedAndLastUsedOnSameStream(JUST(lhs_maybe_eager_blob_object),
+                                           JUST(rhs_maybe_eager_blob_object));
   }
   return false;
 }

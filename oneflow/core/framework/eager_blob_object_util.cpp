@@ -18,9 +18,10 @@ limitations under the License.
 
 namespace oneflow {
 
-Maybe<bool> ProducedOnSameStream(const std::shared_ptr<vm::EagerBlobObject>& lhs,
-                                 const std::shared_ptr<vm::EagerBlobObject>& rhs) {
-  return JUST(lhs->producer_stream()) == JUST(rhs->producer_stream());
+Maybe<bool> ProducedAndLastUsedOnSameStream(const std::shared_ptr<vm::EagerBlobObject>& lhs,
+                                            const std::shared_ptr<vm::EagerBlobObject>& rhs) {
+  return JUST(lhs->producer_stream()) == JUST(rhs->producer_stream())
+         && JUST(lhs->last_used_stream()) == JUST(rhs->last_used_stream());
 }
 
 }  // namespace oneflow

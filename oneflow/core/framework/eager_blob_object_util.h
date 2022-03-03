@@ -27,8 +27,8 @@ class EagerBlobObject;
 
 }
 
-Maybe<bool> ProducedOnSameStream(const std::shared_ptr<vm::EagerBlobObject>& lhs,
-                                 const std::shared_ptr<vm::EagerBlobObject>& rhs);
+Maybe<bool> ProducedAndLastUsedOnSameStream(const std::shared_ptr<vm::EagerBlobObject>& lhs,
+                                            const std::shared_ptr<vm::EagerBlobObject>& rhs);
 
 }  // namespace oneflow
 
