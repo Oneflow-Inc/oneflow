@@ -776,9 +776,9 @@ class SwapaxesFunctor {
   }
 };
 
-class SwapdimsFunctor {
+class SwapDimsFunctor {
  public:
-  SwapdimsFunctor() {}
+  SwapDimsFunctor() {}
   Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x, const int32_t dim0,
                            const int32_t dim1) const {
     const int64_t ndim = x->shape()->NumAxes();
@@ -2217,7 +2217,7 @@ ONEFLOW_FUNCTION_LIBRARY(m) {
   m.add_functor<AsStridedFunctor>("AsStrided");
   m.add_functor<AsStridedGradFunctor>("AsStridedGrad");
   m.add_functor<SwapaxesFunctor>("Swapaxes");
-  m.add_functor<SwapdimsFunctor>("Swapdims");
+  m.add_functor<SwapDimsFunctor>("Swapdims");
   m.add_functor<ArangeFunctor, Arange2Functor>("Arange");
   m.add_functor<ConsistentArangeFunctor, ConsistentArange2Functor>("ConsistentArange");
   m.add_functor<CastFunctor>("Cast");
