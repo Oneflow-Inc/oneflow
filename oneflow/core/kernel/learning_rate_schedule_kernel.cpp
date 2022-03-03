@@ -17,6 +17,7 @@ limitations under the License.
 #include "oneflow/core/job/resource_desc.h"
 #include "oneflow/core/job/global_for.h"
 #include "oneflow/core/persistence/tee_persistent_log_stream.h"
+#include "oneflow/api/python/env/env_api.h"
 
 namespace oneflow {
 
@@ -32,10 +33,11 @@ class LearningRateScheduleKernel final : public Kernel {
       log_stream_ = TeePersistentLogStream::Create("train_step2lr.csv");
       (*log_stream_) << "train_step, lr\n";
     }
-    // if (FLAGS_v >= 1) { print_step_lr_ = true; }
+    const int64_t FLAGS_v = oneflow::GetFLAGS_v().GetOrThrow();
+    if (FLAGS_v >= 1) { print_step_lr_ = true; }
   }
   void ForwardDataContent(KernelContext* ctx) const override;
-
+  bool print_step_lr_ = false;
   std::unique_ptr<TeePersistentLogStream> log_stream_;
 };
 
@@ -288,8 +290,8 @@ void LearningRateScheduleKernel::ForwardDataContent(KernelContext* ctx) const {
   if (conf.has_learning_rate_decay()) {
     learning_rate = GetDecayedLearningRate(conf.learning_rate_decay(), learning_rate, train_step);
   }
-  // nn.Graph.debug(1) will print step and lr
-  if (print_step_lr_) {
+  // NOTE(lixiang): nn.Graph.debug(1) will print step and lr.
+  if (print_step_lr_ && train_step != 0) {
     std::cout << "Last step " << train_step << " adjusting learning rate to " << learning_rate
               << std::endl;
   }
