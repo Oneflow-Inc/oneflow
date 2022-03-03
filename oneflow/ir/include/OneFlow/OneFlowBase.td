@@ -7,6 +7,12 @@ include "mlir/IR/SymbolInterfaces.td"
 include "mlir/Interfaces/SideEffectInterfaces.td"
 include "/mlir/Interfaces/InferTypeOpInterface.td"
 
+def OneFlow_InvalidElement: TypeDef<OneFlow_Dialect, "InvalidElement"> {
+  let mnemonic = "invalid_element";
+}
+def OneFlow_CharElement: TypeDef<OneFlow_Dialect, "CharElement"> {
+  let mnemonic = "char_element";
+}
 def OneFlow_TensorBufferElement: TypeDef<OneFlow_Dialect, "TensorBufferElement"> {
   let mnemonic = "tensor_buffer_element";
 }

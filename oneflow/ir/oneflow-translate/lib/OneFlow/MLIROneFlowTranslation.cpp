@@ -176,10 +176,12 @@ LogicalResult JobImporter::AddDeviceName(const ::oneflow::OperatorConf& op,
 Type JobImporter::GetTensorTypeOfLbn(const std::string& lbn) {
   Type ret = this->GetBuilder().getNoneType();
   job_wrapper_.QueryLogicalBlob(
-      lbn,
-      [this, &ret](const int64_t* shape_begin, const int64_t* shape_end, ::oneflow::DataType dt) {
+      lbn, [this, &ret, &lbn](const int64_t* shape_begin, const int64_t* shape_end,
+                              ::oneflow::DataType dt) {
         if (auto t = this->GetTypeFromOneFlowDataType(dt)) {
           ret = RankedTensorType::get(ArrayRef<int64_t>(shape_begin, shape_end), t.getValue());
+        } else {
+          llvm::errs() << "fail to get data type for: " << lbn << "\n";
         }
       });
   return ret;
