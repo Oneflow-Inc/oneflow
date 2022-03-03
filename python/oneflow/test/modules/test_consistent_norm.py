@@ -15,11 +15,6 @@ limitations under the License.
 """
 
 import unittest
-from collections import OrderedDict
-
-import numpy as np
-from oneflow.test_utils.test_util import GenArgList
-
 import oneflow as flow
 import oneflow.unittest
 
@@ -39,14 +34,14 @@ def _test_one_dim_norm_with_random_data(test_case, placement, sbp):
 
 @autotest(n=1, check_graph=False)
 def _test_tuple_dim_norm_with_random_data(test_case, placement, sbp):
-        input = random_tensor(ndim=2,dim0=8,dim1=8)
-        input = input.to_global(placement=placement, sbp=sbp)   
-        k = random(low=-2, high=1).to(int)
-        dim = oneof((-2, -1), (0, 1), (-1, 0))
-        ord = oneof(float("inf"), float("-inf"), "fro", 1, -1, None)
-        keepdim = random().to(bool)
-        m = torch.linalg.norm(input, ord=ord, dim=dim, keepdim=keepdim)
-        return m
+    input = random_tensor(ndim=2,dim0=8,dim1=8)
+    input = input.to_global(placement=placement, sbp=sbp)   
+    k = random(low=-2, high=1).to(int)
+    dim = oneof((-2, -1), (0, 1), (-1, 0))
+    ord = oneof(float("inf"), float("-inf"), "fro", 1, -1, None)
+    keepdim = random().to(bool)
+    m = torch.linalg.norm(input, ord=ord, dim=dim, keepdim=keepdim)
+    return m
 
 class TestNormModule(flow.unittest.TestCase):
     @globaltest

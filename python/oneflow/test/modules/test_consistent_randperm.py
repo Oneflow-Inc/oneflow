@@ -16,11 +16,8 @@ limitations under the License.
 
 import unittest
 from collections import OrderedDict
-
-from random import shuffle
 import numpy as np
 from oneflow.test_utils.test_util import GenArgList
-
 import oneflow as flow
 import oneflow.unittest
 

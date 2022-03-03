@@ -16,8 +16,6 @@ limitations under the License.
 
 import unittest
 from collections import OrderedDict
-
-from random import shuffle
 import numpy as np
 from oneflow.test_utils.test_util import GenArgList
 
@@ -51,6 +49,7 @@ def _test_pixel_shuffle_impl(
     test_case, placement, sbp, device, shape, h_upscale_factor, w_upscale_factor
 ):
     x = np.random.randn(*shape)
+    np_out = _np_pixel_shuffle(x, h_upscale_factor, w_upscale_factor)
     input = flow.tensor(x, dtype=flow.float32, device=flow.device(device)).to_global(placement=placement, sbp=sbp)
     input.requires_grad = True
     m = flow.nn.PixelShuffle(h_upscale_factor=h_upscale_factor, w_upscale_factor=w_upscale_factor)
@@ -72,8 +71,8 @@ class TestPixelShuffleModule(flow.unittest.TestCase):
         arg_dict["test_fun"] = [_test_pixel_shuffle_impl]
         arg_dict["device"] = ["cpu", "cuda"]
         arg_dict["shape"] = [(8, 144, 5, 5), (8, 144, 1, 1)]
-        arg_dict["h_upscale_factor"] = [2, 3, 4]
-        arg_dict["w_upscale_factor"] = [2, 3, 4]
+        arg_dict["h_upscale_factor"] = [2, 3]
+        arg_dict["w_upscale_factor"] = [2, 3]
         for arg in GenArgList(arg_dict):
             for placement in all_placement():
                 for sbp in all_sbp(placement, max_dim=2):
