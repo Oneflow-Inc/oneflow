@@ -142,14 +142,17 @@ void MultiClientSessionContext::DecreaseGraphCountWithRuntimeInited() { graph_cn
 Maybe<void> MultiClientSessionContext::TryClose() {
   if (is_inited_) {
     VLOG(2) << "Try to delete multi client session context." << std::endl;
+
+    for (const auto& wk_graph_ptr : graphs_) {
+      if (const auto& sh_graph_ptr = wk_graph_ptr.lock()) {
+        VLOG(2) << "grap name " << sh_graph_ptr->job_name() << " not closed, try to close it.";
+        JUST(sh_graph_ptr->Close());
+      }
+    }
     // NOTE(chengcheng): graph cnt need decrease first for initial with val 1.
     graph_cnt_->Decrease();
     graph_cnt_->WaitForeverUntilCntEqualZero();
-    for (const auto& wk_graph_ptr : graphs_) {
-      const auto& sh_graph_ptr = wk_graph_ptr.lock();
-      CHECK_OR_RETURN(!sh_graph_ptr)
-          << "grap name " << sh_graph_ptr->job_name() << " not closed before env close.";
-    }
+
     {
       // NOTE(chengcheng): delete runtime global objects
       Global<boxing::collective::Scheduler>::Delete();
