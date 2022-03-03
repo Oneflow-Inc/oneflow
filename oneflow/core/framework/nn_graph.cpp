@@ -70,7 +70,7 @@ Maybe<std::string> GetTensorMetaString(const std::shared_ptr<one::Tensor>& tenso
 }  // namespace
 
 NNGraph::~NNGraph() {
-  VLOG(2) << "graph destructor Try to close c nn graph name " << name_ << "." << std::endl;
+  VLOG(2) << "Graph destructor Try to close c nn graph name " << name_ << "." << std::endl;
   CHECK_JUST(Close());
 }
 
@@ -262,7 +262,7 @@ Maybe<void> NNGraph::CompileAndInitRuntime() {
     Compiler().Compile(&job_, &plan_, /* need_job_complete */ true);
     PlanUtil::GenMemBlockAndChunkWithVariableOpNames4Plan(&plan_, variable_op_names_);
 
-    LOG(INFO) << "\njob_id: " << job_ctx->job_id() << " , job_name: " << name_
+    VLOG(1) << "\njob_id: " << job_ctx->job_id() << " , job_name: " << name_
               << " , compile time: " << (GetCurTime() - start) / 1000000000.0 << " seconds.\n";
     if (Global<ResourceDesc, ForSession>::Get()->enable_debug_mode()) {
       TeePersistentLogStream::Create("job_" + name_ + "_plan")->Write(plan_);

@@ -65,7 +65,7 @@ inline Maybe<void> InitEnv(const std::string& env_proto_str, bool is_multi_clien
       << "failed to parse env_proto" << env_proto_str;
   CHECK_ISNULL_OR_RETURN(Global<EnvGlobalObjectsScope>::Get());
   // Global<T>::New is not allowed to be called here
-  // because glog is not constructed yet and LOG(INFO) has bad bahavior
+  // because glog is not constructed yet and has bad bahavior.
   Global<EnvGlobalObjectsScope>::SetAllocated(new EnvGlobalObjectsScope());
   JUST(Global<EnvGlobalObjectsScope>::Get()->Init(env_proto));
   if (!GlobalProcessCtx::IsThisProcessMaster() && !is_multi_client) { JUST(Cluster::WorkerLoop()); }

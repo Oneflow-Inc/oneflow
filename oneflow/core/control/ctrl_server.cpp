@@ -37,7 +37,7 @@ CtrlServer::CtrlServer(int ctrl_port) : RpcServer(), port_(ctrl_port) {
     port_ = bound_port;
     CHECK_NE(port(), 0);
   }
-  LOG(INFO) << "CtrlServer listening on "
+  VLOG(3) << "CtrlServer listening on "
             << "0.0.0.0:" + std::to_string(port());
   loop_thread_ = std::thread(&CtrlServer::HandleRpcs, this);
 }

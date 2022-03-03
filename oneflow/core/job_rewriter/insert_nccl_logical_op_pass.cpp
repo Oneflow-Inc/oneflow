@@ -455,7 +455,7 @@ void InsertNcclLogicalOpsAsCloseAsPossibleToSrcNode(
         }
 
         if (Global<ResourceDesc, ForSession>::Get()->enable_debug_mode()) {
-          LOG(INFO) << " insert nccl op: " << nccl_op.name() << " from: [" << src_op_name
+          VLOG(3) << " insert nccl op: " << nccl_op.name() << " from: [" << src_op_name
                     << "](order=" << src_order
                     << ", nd_sbp=" << NdSbpToString(src_node->NdSbp4Lbi(lbi)) << ")->["
                     << dst_op_name << "](order=" << node2subgraph_order.at(dst_node)
@@ -522,7 +522,7 @@ void InsertNcclLogicalOpsAsCloseAsPossibleToDstNode(
         }
 
         if (Global<ResourceDesc, ForSession>::Get()->enable_debug_mode()) {
-          LOG(INFO) << " insert nccl op: " << nccl_op.name() << " from: [" << src_op_name << "]("
+          VLOG(3) << " insert nccl op: " << nccl_op.name() << " from: [" << src_op_name << "]("
                     << node2subgraph_order.at(src_node) << ")->[" << dst_op_name << "]("
                     << dst_order << ") and after: [" << pre_op_name << "](" << dst_order - 1
                     << ")\n";
@@ -644,7 +644,7 @@ void InsertNcclLogicalOpsAfterAcc(const OpGraph& op_graph,
     }
     nccl_op_confs->emplace_back(info.nccl_op_conf);
     nccl_op_parallel_confs->emplace_back(info.nccl_parallel_conf);
-    LOG(INFO) << info.debug_str;
+    VLOG(3) << info.debug_str;
   }
 }
 
@@ -700,7 +700,7 @@ void InsertNcclLogicalOpsInSubGraph(
   }
 
   if (Global<ResourceDesc, ForSession>::Get()->enable_debug_mode()) {
-    LOG(INFO) << " Try insert nccl logical ops into job: "
+    VLOG(3) << " Try insert nccl logical ops into job: "
               << job_builder->job().job_conf().job_name() << ". Begin...\n";
   }
 
@@ -736,7 +736,7 @@ void InsertNcclLogicalOpsInSubGraph(
   }
 
   if (Global<ResourceDesc, ForSession>::Get()->enable_debug_mode()) {
-    LOG(INFO) << " Try insert nccl logical ops into job: "
+    VLOG(3) << " Try insert nccl logical ops into job: "
               << job_builder->job().job_conf().job_name() << ". ...End\n\n";
   }
 
@@ -781,7 +781,7 @@ void InsertBwSinkAccTickAndNcclLogicalOpsInPlacementGroupAfterAcc(
   const OpNode* first_acc_op = ordered_acc_op_nodes.front();
   std::shared_ptr<const Shape> time_shape_before_acc = GetOpNodeTimeShape(bw_sink_op);
   std::shared_ptr<const Shape> time_shape_after_acc = GetOpNodeTimeShape(first_acc_op);
-  LOG(INFO) << " Find acc ops (num=" << ordered_acc_op_nodes.size()
+  VLOG(3) << " Find acc ops (num=" << ordered_acc_op_nodes.size()
             << ") in Job: " << job_builder->job().job_conf().job_name()
             << ", we will try insert special identity and ctrl for "
             << " UNSAFE handle ALL nccl ops between different time shape: "
@@ -801,7 +801,7 @@ void InsertBwSinkAccTickAndNcclLogicalOpsInPlacementGroupAfterAcc(
   CHECK(!obns.empty());
   const std::string bw_sink_op_out_lbn =
       GenLogicalBlobName(bw_sink_op->op().BnInOp2Lbi(obns.Get(0)));
-  LOG(INFO) << " bw_sink_op : " << bw_sink_op->op().op_conf().DebugString();
+  VLOG(3) << " bw_sink_op : " << bw_sink_op->op().op_conf().DebugString();
 
   user_op::UserOpConfWrapper cast_to_tick_op =
       user_op::UserOpConfWrapperBuilder("System-CastToTick-" + NewUniqueId())
@@ -840,15 +840,15 @@ void InsertBwSinkAccTickAndNcclLogicalOpsInPlacementGroupAfterAcc(
     // insert bw sink acc tick ops
     CHECK_JUST(
         job_builder->AddOp(bw_sink_op->parallel_desc().parallel_conf(), cast_to_tick_op.op_conf()));
-    LOG(INFO) << " Insert cast_to_tick_op : " << cast_to_tick_op.op_conf().DebugString();
+    VLOG(3) << " Insert cast_to_tick_op : " << cast_to_tick_op.op_conf().DebugString();
 
     CHECK_JUST(
         job_builder->AddOp(bw_sink_op->parallel_desc().parallel_conf(), bw_sink_acc_tick_conf));
-    LOG(INFO) << " Insert bw_sink_acc_tick_op : " << bw_sink_acc_tick_conf.DebugString();
+    VLOG(3) << " Insert bw_sink_acc_tick_op : " << bw_sink_acc_tick_conf.DebugString();
 
     CHECK_JUST(
         job_builder->AddOp(bw_sink_op->parallel_desc().parallel_conf(), bw_sink_final_tick_conf));
-    LOG(INFO) << " Insert bw_sink_final_tick_op : " << bw_sink_final_tick_conf.DebugString();
+    VLOG(3) << " Insert bw_sink_final_tick_op : " << bw_sink_final_tick_conf.DebugString();
 
     // insert nccl ops after acc
     for (const auto& pair : mut_consumer_name2op) {

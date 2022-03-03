@@ -39,7 +39,7 @@ class DynamicLossScaleScheduleCpuKernel final : public user_op::OpKernel {
             std::min(old_loss_scale * multiplier, static_cast<double>(FLT_MAX));
         *loss_scale = static_cast<float>(new_loss_scale);
         cur_good_step_counter = 0;
-        LOG(INFO) << "In past " << increment_period
+        VLOG(3) << "In past " << increment_period
                   << " steps, there are no nan or inf in gradients, so we increase loss_scale from "
                   << old_loss_scale << " to " << new_loss_scale;
       }
@@ -49,7 +49,7 @@ class DynamicLossScaleScheduleCpuKernel final : public user_op::OpKernel {
       const double old_loss_scale = *loss_scale;
       const double new_loss_scale = std::max(old_loss_scale / multiplier, 1.0);
       *loss_scale = static_cast<float>(new_loss_scale);
-      LOG(INFO) << "There are nan or inf in gradients, so we decrease loss_scale from "
+      VLOG(3) << "There are nan or inf in gradients, so we decrease loss_scale from "
                 << old_loss_scale << " to " << new_loss_scale;
     }
   }
