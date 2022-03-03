@@ -22,7 +22,7 @@ namespace oneflow {
 
 Maybe<int64_t> GetOpKernelRandomSeed(const user_op::KernelInitContext* ctx);
 
-int64_t GetOpKernelSeed(const user_op::KernelInitContext* ctx);
+Maybe<int64_t> GetOpKernelRandomSeedInCurrentRank(const user_op::KernelInitContext* ctx, const int64_t& init_seed);
 
 }  // namespace oneflow
 
