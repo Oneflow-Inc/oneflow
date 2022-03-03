@@ -22,32 +22,6 @@ from oneflow.nn.module import Module
 from oneflow.nn.modules.utils import _check_axis
 
 
-def max_op(input, dim=None, keepdim=False):
-    axis_checked = _check_axis(dim, input.shape)
-    if len(axis_checked) == 0:
-        return input
-    if dim == None:
-        return flow._C.reduce_max(input, axis=axis_checked, keepdims=keepdim)
-    else:
-        return (
-            flow._C.reduce_max(input, axis=axis_checked, keepdims=keepdim),
-            input.argmax(dim=dim, keepdim=keepdim),
-        )
-
-
-def min_op(input, dim=None, keepdim=False):
-    axis_checked = _check_axis(dim, input.shape)
-    if len(axis_checked) == 0:
-        return input
-    if dim == None:
-        return flow._C.reduce_min(input, axis=axis_checked, keepdims=keepdim)
-    else:
-        return (
-            flow._C.reduce_min(input, axis=axis_checked, keepdims=keepdim),
-            input.argmin(dim=dim, keepdim=keepdim),
-        )
-
-
 def sum_op(input, dim=None, keepdim=False):
     axis_checked = _check_axis(dim, input.shape)
     if len(axis_checked) == 0:
