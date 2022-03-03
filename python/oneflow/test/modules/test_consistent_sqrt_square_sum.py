@@ -35,7 +35,7 @@ def _test_sqrt_sum_with_cpu_random_data(test_case, placement, sbp):
 
 
 @autotest(n=1, check_graph=False)
-def _test_scalar_print_random_data(test_case, placement, sbp):
+def _test_scalar_random_data(test_case, placement, sbp):
     x = random_tensor(
         ndim=4, dim0=8, dim1=24, dim2=16, dim3=40
     ).to_global(placement=placement, sbp=sbp)
@@ -51,10 +51,10 @@ class TestConsistentLinalgVectorNorm2D(flow.unittest.TestCase):
                 _test_sqrt_sum_with_cpu_random_data(test_case, placement, sbp)
 
     @globaltest
-    def test_scalar_print_random_data(test_case):
+    def test_scalar_random_data(test_case):
         for placement in all_placement():
             for sbp in all_sbp(placement, max_dim=2):
-                _test_scalar_print_random_data(test_case, placement, sbp)
+                _test_scalar_random_data(test_case, placement, sbp)
 
 
 if __name__ == "__main__":
