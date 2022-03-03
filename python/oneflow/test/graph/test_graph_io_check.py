@@ -146,7 +146,6 @@ class TestGraphIOCheck(flow.unittest.TestCase):
                     self.m = CustomModule()
 
                 def build(self, t):
-                    temp = flow.zeros(2, 2, dtype=flow.int64)
                     rt = self.m(t)
                     return rt
 
