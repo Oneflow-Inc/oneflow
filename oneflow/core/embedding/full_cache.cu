@@ -39,22 +39,22 @@ __device__ bool TryGetOrInsert(Key* entry_key, volatile Index* entry_index, uint
                                Key key, uint64_t* out) {
   Key key_hi = (key | 0x1);
   Key key_lo = (key & 0x1);
-  Key old_entry_key = cuda::atomic::CAS(entry_key, static_cast<Key>(0), key_hi);
   Index index_plus_one = 0;
+  Key old_entry_key = cuda::atomic::CAS(entry_key, static_cast<Key>(0), key_hi);
   while (index_plus_one == 0) {
     if (old_entry_key == static_cast<Key>(0)) {
       Index index = cuda::atomic::Add(table_size, static_cast<uint64_t>(1));
       index_plus_one = index + 1;
       *entry_index = ((index_plus_one << 1U) | key_lo);
-      *out = index;
+      *out = index_plus_one;
       return true;
     } else if (old_entry_key == key_hi) {
       const Index entry_index_val = *entry_index;
-      if ((entry_index_val & 0x1) == key_lo) {
-        *out = (entry_index_val >> 1U) - 1;
-        return true;
-      } else if (entry_index_val == 0) {
+      if (entry_index_val == 0) {
         // do nothing
+      } else if ((entry_index_val & 0x1) == key_lo) {
+        *out = (entry_index_val >> 1U);
+        return true;
       } else {
         return false;
       }
@@ -89,7 +89,7 @@ __device__ bool GetOne(const size_t capacity, TableEntry<Key, Index>* table, Key
     if (entry.key == 0) { break; }
     if (entry.key == key_hi) {
       if ((entry.index & 0x1) == key_lo) {
-        *out = (entry.index >> 1U) - 1;
+        *out = (entry.index >> 1U);
         return true;
       }
     }
@@ -128,8 +128,8 @@ __global__ void OrdinalEncodeDumpKernel(const TableEntry<Key, Index>* table,
     TableEntry<Key, Index> entry = table[i + start_key_index];
     if (entry.index != 0) {
       uint32_t index = cuda::atomic::Add(n_dumped, static_cast<uint32_t>(1));
-      keys[index] = entry.key;
-      context[index] = entry.index;
+      keys[index] = ((entry.key ^ 0x1) | (entry.index & 0x1));
+      context[index] = (entry.index >> 1U);
     }
   }
 }
