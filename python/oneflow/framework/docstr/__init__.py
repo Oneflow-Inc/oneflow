@@ -60,5 +60,5 @@ from .index_select import *
 from .global_cast import *
 from .sort import *
 from .is_floating_point import *
-from .where import *
 from .swapdims import *
+from .where import *

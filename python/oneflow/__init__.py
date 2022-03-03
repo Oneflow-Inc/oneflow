@@ -180,6 +180,7 @@ from oneflow._C import erfinv, erfinv_
 from oneflow._C import cumsum
 from oneflow._C import cumprod
 from oneflow._C import swapaxes
+from oneflow._C import swapdims
 from oneflow._C import t
 from oneflow._C import masked_fill
 from oneflow._C import equal
@@ -188,7 +189,6 @@ from oneflow._C import not_equal
 from oneflow._C import not_equal as ne
 from oneflow._C import less as lt
 from oneflow._C import less_equal as le
-from oneflow._C import swapdims
 
 from . import sbp
 
