@@ -261,7 +261,7 @@ hook = ExitHook()
 def atexit_hook(hook):
     if hook.is_normal_exit():
         if oneflow._oneflow_internal.IsEnvInited():
-            oneflow._oneflow_internal.eager.multi_client.Sync()
+            oneflow._oneflow_internal.eager.Sync()
     oneflow.framework.session_context.TryCloseDefaultSession()
     if hook.is_normal_exit():
         oneflow._oneflow_internal.DestroyEnv()

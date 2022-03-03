@@ -29,7 +29,6 @@ void WaitAndSendIdsKernel<T>::VirtualKernelInit(KernelContext* ctx) {
 template<typename T>
 void WaitAndSendIdsKernel<T>::ForwardDataContent(KernelContext* ctx) const {
   auto* status = CHECK_NOTNULL(dynamic_cast<WaitAndSendIdsStatus*>(ctx->state().get()));
-  const auto& conf = this->op_conf().wait_and_send_ids_conf();
   if (status->out_idx_ >= status->out_num_) {
       CHECK(this->op_conf().wait_and_send_ids_conf().has_job_name());
       const auto& job_name = this->op_conf().wait_and_send_ids_conf().job_name();
