@@ -580,7 +580,7 @@ def _unsqueeze(self, dim):
     return flow._C.unsqueeze(self, dim=dim)
 
 
-def _permute(self, view=False, *dims):
+def _permute(self, *dims):
     if len(dims) == 1:
         new_dims = dims[0]
         if isinstance(new_dims, int):
