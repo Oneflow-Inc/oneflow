@@ -679,10 +679,10 @@ void UserKernel::VirtualKernelInit(KernelContext* ctx) {
           && cuda_graph_support->IsCudaGraphSupported(&init_ctx, opkernel_state_.get())) {
         cuda_graph_exec_.reset(new ep::CudaGraphExecutable());
         VLOG(3) << "CUDA Graphs Kernel: " << op_conf().name() << " ("
-                  << op_conf().user_conf().op_type_name() << ")";
+                << op_conf().user_conf().op_type_name() << ")";
       } else {
         VLOG(3) << "CUDA Graphs not supported: " << op_conf().name() << " ("
-                  << op_conf().user_conf().op_type_name() << ")";
+                << op_conf().user_conf().op_type_name() << ")";
       }
     }
   }

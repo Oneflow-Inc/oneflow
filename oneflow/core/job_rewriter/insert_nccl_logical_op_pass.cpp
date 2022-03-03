@@ -456,11 +456,11 @@ void InsertNcclLogicalOpsAsCloseAsPossibleToSrcNode(
 
         if (Global<ResourceDesc, ForSession>::Get()->enable_debug_mode()) {
           VLOG(3) << " insert nccl op: " << nccl_op.name() << " from: [" << src_op_name
-                    << "](order=" << src_order
-                    << ", nd_sbp=" << NdSbpToString(src_node->NdSbp4Lbi(lbi)) << ")->["
-                    << dst_op_name << "](order=" << node2subgraph_order.at(dst_node)
-                    << ", nd_sbp=" << NdSbpToString(dst_node->NdSbp4Lbi(lbi)) << ") and before: ["
-                    << next_op_name << "](order=" << src_order + 1 << ")\n";
+                  << "](order=" << src_order
+                  << ", nd_sbp=" << NdSbpToString(src_node->NdSbp4Lbi(lbi)) << ")->[" << dst_op_name
+                  << "](order=" << node2subgraph_order.at(dst_node)
+                  << ", nd_sbp=" << NdSbpToString(dst_node->NdSbp4Lbi(lbi)) << ") and before: ["
+                  << next_op_name << "](order=" << src_order + 1 << ")\n";
         }
         nccl_op_confs->emplace_back(nccl_op);
         nccl_op_parallel_confs->emplace_back(src_reduced_parallel_desc.parallel_conf());
@@ -523,9 +523,8 @@ void InsertNcclLogicalOpsAsCloseAsPossibleToDstNode(
 
         if (Global<ResourceDesc, ForSession>::Get()->enable_debug_mode()) {
           VLOG(3) << " insert nccl op: " << nccl_op.name() << " from: [" << src_op_name << "]("
-                    << node2subgraph_order.at(src_node) << ")->[" << dst_op_name << "]("
-                    << dst_order << ") and after: [" << pre_op_name << "](" << dst_order - 1
-                    << ")\n";
+                  << node2subgraph_order.at(src_node) << ")->[" << dst_op_name << "](" << dst_order
+                  << ") and after: [" << pre_op_name << "](" << dst_order - 1 << ")\n";
         }
         nccl_op_confs->emplace_back(nccl_op);
         // NOTE(chengcheng, guoran): set nccl op as src_node parallel_conf (hierarchy) may check
@@ -700,8 +699,8 @@ void InsertNcclLogicalOpsInSubGraph(
   }
 
   if (Global<ResourceDesc, ForSession>::Get()->enable_debug_mode()) {
-    VLOG(3) << " Try insert nccl logical ops into job: "
-              << job_builder->job().job_conf().job_name() << ". Begin...\n";
+    VLOG(3) << " Try insert nccl logical ops into job: " << job_builder->job().job_conf().job_name()
+            << ". Begin...\n";
   }
 
   HashSet<std::string> mut_op_names;
@@ -736,8 +735,8 @@ void InsertNcclLogicalOpsInSubGraph(
   }
 
   if (Global<ResourceDesc, ForSession>::Get()->enable_debug_mode()) {
-    VLOG(3) << " Try insert nccl logical ops into job: "
-              << job_builder->job().job_conf().job_name() << ". ...End\n\n";
+    VLOG(3) << " Try insert nccl logical ops into job: " << job_builder->job().job_conf().job_name()
+            << ". ...End\n\n";
   }
 
   // NOTE(chengcheng): For NCCL logical correct exec order in pipeline multi-subgraph.
@@ -782,11 +781,11 @@ void InsertBwSinkAccTickAndNcclLogicalOpsInPlacementGroupAfterAcc(
   std::shared_ptr<const Shape> time_shape_before_acc = GetOpNodeTimeShape(bw_sink_op);
   std::shared_ptr<const Shape> time_shape_after_acc = GetOpNodeTimeShape(first_acc_op);
   VLOG(3) << " Find acc ops (num=" << ordered_acc_op_nodes.size()
-            << ") in Job: " << job_builder->job().job_conf().job_name()
-            << ", we will try insert special identity and ctrl for "
-            << " UNSAFE handle ALL nccl ops between different time shape: "
-            << time_shape_before_acc->DebugStr() << "->acc->" << time_shape_after_acc->DebugStr()
-            << "\n\n";
+          << ") in Job: " << job_builder->job().job_conf().job_name()
+          << ", we will try insert special identity and ctrl for "
+          << " UNSAFE handle ALL nccl ops between different time shape: "
+          << time_shape_before_acc->DebugStr() << "->acc->" << time_shape_after_acc->DebugStr()
+          << "\n\n";
   CHECK_GT(time_shape_before_acc->elem_cnt(), time_shape_after_acc->elem_cnt());
   CHECK_EQ(time_shape_before_acc->elem_cnt() % time_shape_after_acc->elem_cnt(), 0);
 

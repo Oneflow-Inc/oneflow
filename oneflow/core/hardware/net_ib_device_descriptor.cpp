@@ -112,8 +112,7 @@ std::shared_ptr<const NetIBDeviceDescriptor> NetIBDeviceDescriptor::Query(int32_
   }
   if (port_attr.link_layer != IBV_LINK_LAYER_INFINIBAND
       && port_attr.link_layer != IBV_LINK_LAYER_ETHERNET) {
-    VLOG(3) << "Link layer is not supported: device " << context->device->name << " port "
-              << port;
+    VLOG(3) << "Link layer is not supported: device " << context->device->name << " port " << port;
     return std::shared_ptr<const NetIBDeviceDescriptor>();
   }
   auto* desc = new NetIBDeviceDescriptor();

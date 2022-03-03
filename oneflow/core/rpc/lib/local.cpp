@@ -178,7 +178,7 @@ class DryRunCtrlClient : public CtrlClient {
   }
   void Barrier(const std::string& barrier_name, int32_t barrier_num) override {
     VLOG(3) << "skipping barrier in dry run, barrier name: " << barrier_name
-              << ", barrier num: " << barrier_num;
+            << ", barrier num: " << barrier_num;
   }
 
   TryLockResult TryLock(const std::string& name) override {

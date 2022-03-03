@@ -262,8 +262,8 @@ Maybe<void> NNGraph::CompileAndInitRuntime() {
     Compiler().Compile(&job_, &plan_, /* need_job_complete */ true);
     PlanUtil::GenMemBlockAndChunkWithVariableOpNames4Plan(&plan_, variable_op_names_);
 
-    VLOG(1) << "\njob_id: " << job_ctx->job_id() << " , job_name: " << name_
-              << " , compile time: " << (GetCurTime() - start) / 1000000000.0 << " seconds.\n";
+    VLOG(1) << "Graph name: " << name_ << " compile time: " << (GetCurTime() - start) / 1000000000.0
+            << " seconds.";
     if (Global<ResourceDesc, ForSession>::Get()->enable_debug_mode()) {
       TeePersistentLogStream::Create("job_" + name_ + "_plan")->Write(plan_);
       PlanUtil::ToDotFile(plan_, "job_" + name_ + "_plan.dot");

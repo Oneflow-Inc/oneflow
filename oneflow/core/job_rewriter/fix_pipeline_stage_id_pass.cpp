@@ -126,10 +126,10 @@ Maybe<void> FixPipelineStageIdPass::Apply(const OpGraph& op_graph, JobBuilder* j
       int64_t this_stage_id = GetStageIdHint(this_node);
       if (this_stage_id != max_stage_id) {
         VLOG(3) << " In FixPipelineStageIdPass, op_name: " << this_node->op().op_name()
-                  << " origin_stage_id = " << this_stage_id
-                  << " is different with same placement : " << pair.first
-                  << " max_stage_id: " << max_stage_id
-                  << " , so change this op to the max stage id.\n";
+                << " origin_stage_id = " << this_stage_id
+                << " is different with same placement : " << pair.first
+                << " max_stage_id: " << max_stage_id
+                << " , so change this op to the max stage id.\n";
         OperatorConf new_op_conf = this_node->op().op_conf();
         int64_t new_scope_symbol_id =
             JUST(NewScopeWithStageId(new_op_conf.scope_symbol_id(), max_stage_id));

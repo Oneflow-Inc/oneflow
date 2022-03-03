@@ -115,10 +115,10 @@ void TryInsertOrUseBufferOpToDstNode(
                 .second);
 
       VLOG(3) << "\n Insert buffer op : [" << buffer_op_name << "](buffer_size:" << buffer_size
-                << ") \n from [" << src_node->op().op_name()
-                << "] (stage_id:" << std::to_string(src_stage_id) << ") -> ["
-                << dst_node->op().op_name() << "] (stage_id:" << std::to_string(dst_stage_id)
-                << ") \n";
+              << ") \n from [" << src_node->op().op_name()
+              << "] (stage_id:" << std::to_string(src_stage_id) << ") -> ["
+              << dst_node->op().op_name() << "] (stage_id:" << std::to_string(dst_stage_id)
+              << ") \n";
     }
 
     auto mut_op_it = mut_op_name2conf->find(dst_op_name);
@@ -210,11 +210,10 @@ void TryInsertOrUseBufferOpBothSrcDst(
     }
 
     VLOG(3) << "\n Insert buffer op pair : src_buffer = <" << src_buffer_op_name
-              << ">(buffer_size:" << src_buffer_size << ") , dst_buffer = <" << dst_buffer_op_name
-              << ">(buffer_size:" << dst_buffer_size << ") \n from [" << src_node->op().op_name()
-              << "] (stage_id:" << std::to_string(src_stage_id) << ") -> ["
-              << dst_node->op().op_name() << "] (stage_id:" << std::to_string(dst_stage_id)
-              << ") \n";
+            << ">(buffer_size:" << src_buffer_size << ") , dst_buffer = <" << dst_buffer_op_name
+            << ">(buffer_size:" << dst_buffer_size << ") \n from [" << src_node->op().op_name()
+            << "] (stage_id:" << std::to_string(src_stage_id) << ") -> ["
+            << dst_node->op().op_name() << "] (stage_id:" << std::to_string(dst_stage_id) << ") \n";
 
     const std::string dst_buffer_out = user_op::UserOpConfWrapper(dst_conf).output("out", 0);
     for (const std::string& ibn : op_edge->lbi2ibns().at(lbi)) {

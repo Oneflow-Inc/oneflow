@@ -61,7 +61,7 @@ int SockListen(int listen_sockfd, int32_t* listen_port, int32_t total_machine_nu
   if (bind_result == 0) {
     PCHECK(listen(listen_sockfd, total_machine_num) == 0);
     VLOG(2) << "CommNet:Epoll listening on "
-              << "0.0.0.0:" + std::to_string(*listen_port);
+            << "0.0.0.0:" + std::to_string(*listen_port);
   } else {
     PCHECK(errno == EACCES || errno == EADDRINUSE) << "SockListen errno: " << errno;
   }

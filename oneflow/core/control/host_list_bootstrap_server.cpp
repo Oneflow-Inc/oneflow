@@ -33,7 +33,7 @@ HostListBootstrapServer::HostListBootstrapServer(const EnvDesc& env_desc)
   grpc_server_ = server_builder.BuildAndStart();
   CHECK_EQ(port, bound_port) << "Port " << port << " is unavailable";
   VLOG(3) << "HostListBootstrapServer listening on "
-            << "0.0.0.0:" + std::to_string(port);
+          << "0.0.0.0:" + std::to_string(port);
   loop_thread_ = std::thread(&HostListBootstrapServer::HandleRpcs, this);
 }
 

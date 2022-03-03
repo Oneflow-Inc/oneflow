@@ -56,7 +56,7 @@ void TensorToNumpy(const user_op::Tensor* tensor, PyObject** arg_ptr) {
   }
   int type_num = CHECK_JUST(numpy::OFDataTypeToNumpyType(tensor->data_type()));
   VLOG(3) << "Tensor data type " << DataType_Name(tensor->data_type()) << " Numpy type "
-            << type_num;
+          << type_num;
   int dim_size = tensor->shape().NumAxes();
   npy_intp dims[dim_size];
   FOR_RANGE(size_t, i, 0, dim_size) { dims[i] = tensor->shape().At(i); }
