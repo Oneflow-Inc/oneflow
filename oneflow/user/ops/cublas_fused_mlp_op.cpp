@@ -24,13 +24,16 @@ namespace oneflow {
 
 namespace {
 
-void AlignReluAuxLd(long* aux_ld) {
+constexpr int32_t kAuxReluLdAlignRequirement = 128;
+
+long AlignReluAuxLd(long aux_ld) {
   /*
   ReLu bit-mask matrix leading dimension in elements.
   Must be divisible by 128 and be no less than the number of rows in the output matrix.
   */
-  long old_aux_ld = *aux_ld;
-  *aux_ld = ((old_aux_ld + 128 - 1) / 128) * 128;
+  long old_aux_ld = aux_ld;
+  return ((old_aux_ld + kAuxReluLdAlignRequirement - 1) / kAuxReluLdAlignRequirement)
+         * kAuxReluLdAlignRequirement;
 }
 
 Maybe<void> InferTensorDesc4FusedMatmul(user_op::InferContext* ctx) {
@@ -59,17 +62,17 @@ Maybe<void> InferTensorDesc4FusedMatmul(user_op::InferContext* ctx) {
     CHECK_EQ_OR_RETURN(bias_desc.shape().At(0), n);
     CHECK_EQ_OR_RETURN(weight_desc.shape().At(1), k);
 
+    cublas_aux_ld = n;
+    // Set Middle result shape.
+    long cublas_aligned_aux_ld = AlignReluAuxLd(cublas_aux_ld);
+    int64_t aux_size =
+        cublas_aligned_aux_ld / GetSizeOfDataType(DataType::kInt8);  // Cause we use int8_t as dtype
+    *ctx->OutputShape("cublas_aux", idx) = Shape({m, aux_size});
+    *ctx->OutputShape("hidden", idx) = Shape({m, n});
     // Set for next layer.
     k = n;
-    cublas_aux_ld = k;
-    // Set Middle result shape.
-    AlignReluAuxLd(&cublas_aux_ld);
-    int64_t aux_size = cublas_aux_ld / 8;  // Cause we use int8_t as dtype
-    *ctx->OutputShape("cublas_aux", idx) = Shape({m, aux_size});
-    *ctx->OutputShape("hidden", idx) = Shape({m, k});
   }
-  *ctx->OutputShape("out", 0) = x_desc.shape();
-  out->mut_shape()->Set(1, n);
+  *ctx->OutputShape("out", 0) = {m, n};
   return Maybe<void>::Ok();
 }
 
@@ -167,6 +170,7 @@ REGISTER_USER_OP_GRAD("cublas_fused_mlp")
                                                     .Build();
       AddOp(bias_grad_op);
       if (op.NeedGenGradTensor4OpInput("biases", weight_num - 1)) {
+        printf("final bias requires grad \n");
         op.BindGradTensorWithOpInput(bias_grad_op.output("output_tensor", 0), "biases",
                                      weight_num - 1);
       }
@@ -186,6 +190,7 @@ REGISTER_USER_OP_GRAD("cublas_fused_mlp")
                 .Build();
         AddOp(cublas_bias_add_relu_matmul_grad_op);
         if (op.NeedGenGradTensor4OpInput("biases", hidden_layer_idx - 1)) {
+          printf("Bias %d requires grad \n", hidden_layer_idx - 1);
           op.BindGradTensorWithOpInput(cublas_bias_add_relu_matmul_grad_op.output("d_bias", 0),
                                        "biases",
                                        hidden_layer_idx - 1);  // previous layers bias grad
@@ -193,6 +198,7 @@ REGISTER_USER_OP_GRAD("cublas_fused_mlp")
 
         user_op::UserOpConfWrapperBuilder matmul_weight_grad_builder(
             op.op_name() + "_matmul_a_grad_" + std::to_string(hidden_layer_idx));
+        printf("Here hidden index is: %d \n", hidden_layer_idx - 1);
         user_op::UserOpConfWrapper matmul_weight_grad_op =
             matmul_weight_grad_builder.Op("matmul")
                 .Input("a", cublas_dy)
@@ -204,6 +210,7 @@ REGISTER_USER_OP_GRAD("cublas_fused_mlp")
                 .Build();
         AddOp(matmul_weight_grad_op);
         if (op.NeedGenGradTensor4OpInput("weights", hidden_layer_idx)) {
+          printf("weights %d requires grad \n", hidden_layer_idx);
           op.BindGradTensorWithOpInput(matmul_weight_grad_op.output("out", 0), "weights",
                                        hidden_layer_idx);
         }
@@ -231,6 +238,7 @@ REGISTER_USER_OP_GRAD("cublas_fused_mlp")
                                                             .Build();
       AddOp(matmul_input_grad_op);
       if (op.NeedGenGradTensor4OpInput("x", 0)) {
+        printf("X requires grad \n");
         op.BindGradTensorWithOpInput(matmul_input_grad_op.output("out", 0), "x", 0);
       }
       // dw:
@@ -246,6 +254,7 @@ REGISTER_USER_OP_GRAD("cublas_fused_mlp")
                                                              .Build();
       AddOp(matmul_weight_grad_op);
       if (op.NeedGenGradTensor4OpInput("weights", 0)) {
+        printf("weight0 requires grad \n");
         op.BindGradTensorWithOpInput(matmul_weight_grad_op.output("out", 0), "weights", 0);
       }
 

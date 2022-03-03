@@ -159,6 +159,8 @@ void SetCublasEpilogue(const CublasFusedMLPKernelCache* matmul_cache, cublasLtEp
     OF_CUBLAS_CHECK(cublasLtMatmulDescSetAttribute(matmul_cache->operation_desc,
                                                    CUBLASLT_MATMUL_DESC_BIAS_POINTER, &bias_ptr,
                                                    sizeof(bias_ptr)));
+  } else {
+    Error::UnimplementedError() << "Unsupported Epilogue. ";
   }
 
   // TODO: Support GELU_AUX_BIAS

@@ -73,24 +73,23 @@ class CublasFusedMLPKernel final : public user_op::OpKernel {
 
     DimVector weight_shape(2);
 
-    int64_t out_feature = 0;
     const void* in_buf_ptr = x->dptr();  // modify to const void*
-    void* y_ptr = nullptr;
-    bool need_aux = true;
-    cublasLtEpilogue_t epilogue = CUBLASLT_EPILOGUE_RELU_AUX_BIAS;
-
     for (int idx = 0; idx < weight_size; idx++) {
       const user_op::Tensor* weight = ctx->Tensor4ArgNameAndIndex("weights", idx);
       const user_op::Tensor* bias = ctx->Tensor4ArgNameAndIndex("biases", idx);
       user_op::Tensor* cublas_aux = ctx->Tensor4ArgNameAndIndex("cublas_aux", idx);
 
-      out_feature = weight->shape().At(0);
+      int64_t out_feature = weight->shape().At(0);
       weight->shape().ToDimVector(&weight_shape);
 
       InferMatmulCublasMNK(in_shape, weight_shape,
                            /*transpose_a=*/ep::primitive::BlasTransposeType::N,
                            /*transpose_b=*/ep::primitive::BlasTransposeType::T, &cublas_m,
                            &cublas_n, &cublas_k, &cublas_lda, &cublas_ldb, &cublas_ldc);
+
+      cublasLtEpilogue_t epilogue = CUBLASLT_EPILOGUE_RELU_AUX_BIAS;
+      bool need_aux = true;
+      void* y_ptr = nullptr;
 
       if (idx == weight_size - 1) {
         y_ptr = ctx->Tensor4ArgNameAndIndex("out", 0)->mut_dptr();
@@ -101,7 +100,6 @@ class CublasFusedMLPKernel final : public user_op::OpKernel {
       } else {
         y_ptr = ctx->Tensor4ArgNameAndIndex("hidden", idx)->mut_dptr();
       }
-      //
       SetCublasAttr(matmul_cache, cublas_compute_dtype, cuda_data_type, need_aux,
                     /*transpose_a=*/ep::primitive::BlasTransposeType::N,
                     /*transpose_b=*/ep::primitive::BlasTransposeType::T, epilogue, bias->dptr(),
@@ -114,8 +112,6 @@ class CublasFusedMLPKernel final : public user_op::OpKernel {
           matmul_cache->cublas_c_desc, y_ptr, matmul_cache->cublas_c_desc, nullptr,
           cuda_stream->cublas_workspace(), cuda_stream->cublas_workspace_size(),
           cuda_stream->cuda_stream()));
-
-      OF_CUDA_CHECK(cudaDeviceSynchronize());
 
       // Set hidden_layer ptr as next layer's input.
       in_buf_ptr = y_ptr;

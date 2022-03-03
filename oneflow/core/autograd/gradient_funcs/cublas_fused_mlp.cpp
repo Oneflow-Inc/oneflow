@@ -66,17 +66,8 @@ Maybe<void> CublasFusedMLP::Capture(CublasFusedMLPCaptureState* ctx, const Tenso
   ctx->biases_requires_grad.resize(weight_num);
 
   for (int32_t i = 0; i < weight_num; i++) {
-    if (inputs.at(i + 1)->requires_grad()) {
-      ctx->weights_requires_grad.at(i) = true;
-    } else {
-      ctx->weights_requires_grad.at(i) = false;
-    }
-
-    if (inputs.at(i + 1 + weight_num)->requires_grad()) {
-      ctx->biases_requires_grad.at(i) = true;
-    } else {
-      ctx->biases_requires_grad.at(i) = false;
-    }
+    ctx->weights_requires_grad.at(i) = inputs.at(i + 1)->requires_grad();
+    ctx->biases_requires_grad.at(i) = inputs.at(i + 1 + weight_num)->requires_grad();
   }
 
   ctx->SaveTensorForBackward(JUST(VectorAt(inputs, 0)));  // x. idx_sum:1
