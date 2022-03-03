@@ -693,9 +693,11 @@ class Transpose2dimFunctor {
     if (dim1 < 0) { dim_1 += ndim; }
 
     CHECK_OR_RETURN(dim_0 >= 0 && dim0 < ndim)
-        << "Invalid dim0:" << dim_0 << " len(shape):" << ndim;
+        << "Dimension out of range (expected to be in range of [" << -ndim << ", " << ndim - 1
+        << "], but got " << dim_0 << ")";
     CHECK_OR_RETURN(dim_1 >= 0 && dim1 < ndim)
-        << "Invalid dim1:" << dim_1 << " len(shape):" << ndim;
+        << "Dimension out of range (expected to be in range of [" << -ndim << ", " << ndim - 1
+        << "], but got " << dim_1 << ")";
     for (int32_t i = 0; i < ndim; ++i) { permute.emplace_back(i); }
     std::swap(permute[dim_0], permute[dim_1]);
 
@@ -759,19 +761,6 @@ class SwapaxesFunctor {
   SwapaxesFunctor() {}
   Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x, const int32_t dim0,
                            const int32_t dim1) const {
-    const int64_t ndim = x->shape()->NumAxes();
-    int32_t dim_0 = dim0;
-    int32_t dim_1 = dim1;
-
-    if (dim0 < 0) { dim_0 += ndim; }
-    if (dim1 < 0) { dim_1 += ndim; }
-
-    CHECK_OR_RETURN(dim_0 >= 0 && dim0 < ndim)
-        << "Dimension out of range (expected to be in range of [" << -ndim << ", " << ndim - 1
-        << "], but got " << dim_0 << ")";
-    CHECK_OR_RETURN(dim_1 >= 0 && dim1 < ndim)
-        << "Dimension out of range (expected to be in range of [" << -ndim << ", " << ndim - 1
-        << "], but got " << dim_1 << ")";
     return Transpose2dim(x, dim0, dim1);
   }
 };
@@ -781,19 +770,6 @@ class SwapDimsFunctor {
   SwapDimsFunctor() {}
   Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x, const int32_t dim0,
                            const int32_t dim1) const {
-    const int64_t ndim = x->shape()->NumAxes();
-    int32_t dim_0 = dim0;
-    int32_t dim_1 = dim1;
-
-    if (dim0 < 0) { dim_0 += ndim; }
-    if (dim1 < 0) { dim_1 += ndim; }
-
-    CHECK_OR_RETURN(dim_0 >= 0 && dim0 < ndim)
-        << "Dimension out of range (expected to be in range of [" << -ndim << ", " << ndim - 1
-        << "], but got " << dim_0 << ")";
-    CHECK_OR_RETURN(dim_1 >= 0 && dim1 < ndim)
-        << "Dimension out of range (expected to be in range of [" << -ndim << ", " << ndim - 1
-        << "], but got " << dim_1 << ")";
     return Transpose2dim(x, dim0, dim1);
   }
 };
