@@ -150,13 +150,13 @@ class CpuDecodeHandle final : public DecodeHandle {
 };
 
 JpegReturnType JpegDecodeRandomCropResize(const unsigned char* data, size_t length,
-                                 RandomCropGenerator* crop_generator, unsigned char* workspace,
-                                 size_t workspace_size, unsigned char* dst, int target_width,
-                                 int target_height) {
+                                          RandomCropGenerator* crop_generator,
+                                          unsigned char* workspace, size_t workspace_size,
+                                          unsigned char* dst, int target_width, int target_height) {
   cv::Mat image_mat;
   JpegDecoder jpeg_decode;
-  if (jpeg_decode.PartialDecode((const unsigned char*)(data), length, crop_generator,
-                        workspace, workspace_size, image_mat)
+  if (jpeg_decode.PartialDecode((const unsigned char*)(data), length, crop_generator, workspace,
+                                workspace_size, image_mat)
       != JpegReturnType::kOk) {
     return JpegReturnType::kError;
   }
@@ -167,8 +167,8 @@ JpegReturnType JpegDecodeRandomCropResize(const unsigned char* data, size_t leng
 }
 
 void OpencvDecodeRandomCropResize(const unsigned char* data, size_t length,
-                         RandomCropGenerator* crop_generator, unsigned char* dst, int target_width,
-                         int target_height) {
+                                  RandomCropGenerator* crop_generator, unsigned char* dst,
+                                  int target_width, int target_height) {
   cv::Mat image =
       cv::imdecode(cv::Mat(1, length, CV_8UC1, const_cast<unsigned char*>(data)), cv::IMREAD_COLOR);
   cv::Mat cropped;
@@ -191,8 +191,8 @@ void CpuDecodeHandle::DecodeRandomCropResize(const unsigned char* data, size_t l
                                              unsigned char* workspace, size_t workspace_size,
                                              unsigned char* dst, int target_width,
                                              int target_height) {
-  if (JpegDecodeRandomCropResize(data, length, crop_generator, workspace, workspace_size, dst, target_width,
-                        target_height)
+  if (JpegDecodeRandomCropResize(data, length, crop_generator, workspace, workspace_size, dst,
+                                 target_width, target_height)
       == JpegReturnType::kOk) {
     return;
   }

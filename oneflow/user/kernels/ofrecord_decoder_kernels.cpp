@@ -166,9 +166,8 @@ REGISTER_USER_KERNEL("ofrecord_bytes_decoder")
 namespace {
 
 void OpenCvPartialDecode(const unsigned char* data, size_t length,
-                                 RandomCropGenerator* random_crop_gen,
-                                 const std::string& color_space, cv::Mat &out_mat)
-{
+                         RandomCropGenerator* random_crop_gen, const std::string& color_space,
+                         cv::Mat& out_mat) {
   cv::Mat image =
       cv::imdecode(cv::Mat(1, length, CV_8UC1, (void*)data),  // NOLINT
                    ImageUtil::IsColor(color_space) ? cv::IMREAD_COLOR : cv::IMREAD_GRAYSCALE);
@@ -193,7 +192,7 @@ void OpenCvPartialDecode(const unsigned char* data, size_t length,
     H = out_mat.rows;
     CHECK(W == newW);
     CHECK(H == newH);
-  }else{
+  } else {
     image.copyTo(out_mat);
   }
 }
@@ -209,16 +208,16 @@ void DecodeRandomCropImageFromOneRecord(const OFRecord& record, TensorBuffer* bu
 
   cv::Mat image_mat;
   JpegDecoder jpeg_decode;
-  
-  if (jpeg_decode.PartialDecode((const unsigned char*)(src_data.data()), src_data.size(), random_crop_gen,
-                        nullptr, 0, image_mat)
+
+  if (jpeg_decode.PartialDecode((const unsigned char*)(src_data.data()), src_data.size(),
+                                random_crop_gen, nullptr, 0, image_mat)
       == JpegReturnType::kOk) {
-    // convert color space 
+    // convert color space
     // jpeg decode output RGB
     if (ImageUtil::IsColor(color_space) && color_space != "RGB") {
       ImageUtil::ConvertColor("RGB", image_mat, color_space, image_mat);
-  }
-  }else{
+    }
+  } else {
     OpenCvPartialDecode((const unsigned char*)(src_data.data()), src_data.size(), random_crop_gen,
                         color_space, image_mat);
     // convert color space
@@ -226,7 +225,6 @@ void DecodeRandomCropImageFromOneRecord(const OFRecord& record, TensorBuffer* bu
     if (ImageUtil::IsColor(color_space) && color_space != "BGR") {
       ImageUtil::ConvertColor("BGR", image_mat, color_space, image_mat);
     }
-    
   }
 
   int W = image_mat.cols;
