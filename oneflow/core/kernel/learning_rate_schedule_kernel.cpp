@@ -34,7 +34,6 @@ class LearningRateScheduleKernel final : public Kernel {
       (*log_stream_) << "train_step, lr\n";
     }
 
-    const int32_t FLAGS_v = oneflow::GetFLAGS_v().GetOrThrow();
     if (FLAGS_v >= 1) { print_step_lr_ = true; }
   }
 
