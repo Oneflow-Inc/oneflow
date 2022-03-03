@@ -11,6 +11,7 @@ concurrency:
 env:
   OSS_ACCESS_KEY_ID: ${{ secrets.OSS_ACCESS_KEY_ID }}
   OSS_ACCESS_KEY_SECRET: ${{ secrets.OSS_ACCESS_KEY_SECRET }}
+  TEST_WITH_TORCH_IMG_TAG: registry.cn-beijing.aliyuncs.com/oneflow/test-with-pytorch-1.9.0-cuda10.2-cudnn7-runtime:3902a918aafa519779a487eead34cda217f37fc4
 
 jobs:
   mirror_third_party:
@@ -424,7 +425,6 @@ jobs:
     env:
       ONEFLOW_SRC: .
       TEST_CONTAINER_NAME: "ci-test-distributed"
-      TEST_IMG_TAG: registry.cn-beijing.aliyuncs.com/oneflow/test-with-pytorch-1.9.0:e7a497b41d8b7f1bce055b1f23d027f93b1557ae
       SSH_TANK_HOST: 192.168.1.13
       SSH_TANK_PATH: /tank
     steps:
@@ -503,6 +503,7 @@ jobs:
         working-directory: ${{ env.ONEFLOW_SRC }}
         run: |
           docker run -d --rm --privileged --shm-size=8g \
+            --pids-limit -1 \
             --cap-add=SYS_PTRACE --security-opt seccomp=unconfined \
             --runtime=nvidia \
             -v /dataset:/dataset:ro -v /model_zoo:/model_zoo:ro \
@@ -519,7 +520,7 @@ jobs:
             -e ONEFLOW_TEST_CACHE_DIR=${ONEFLOW_TEST_CACHE_DIR} \
             --name ${TEST_CONTAINER_NAME} \
             ${{ env.EXTRA_DOCKER_ARGS }} \
-            ${{ env.TEST_IMG_TAG }} \
+            ${{ env.TEST_WITH_TORCH_IMG_TAG }} \
             sleep 5400
       - name: Test container
         if: ${{ !fromJson(matrix.cache-hit) && contains(matrix.runs-on, 'self-hosted') }}
@@ -542,7 +543,10 @@ jobs:
         if: ${{ !fromJson(matrix.cache-hit) && matrix.test-type == 'module' && matrix.device == 'cuda' && fromJson(matrix.is-distributed) }}
         continue-on-error: false
         run: |
-          docker exec -e ONEFLOW_TEST_DIR=$PWD/python/oneflow/test/modules -e ONEFLOW_LIBIBVERBS_PATH=invalid_lib ${{ env.TEST_CONTAINER_NAME }} bash ci/test/2node_op_test_multi_client.sh
+          docker exec -e ONEFLOW_TEST_DIR=$PWD/python/oneflow/test/modules \
+            -e ONEFLOW_LIBIBVERBS_PATH=invalid_lib \
+            -e ONEFLOW_CI_DEVICE_NUMS="4" \
+            ${{ env.TEST_CONTAINER_NAME }} bash ci/test/2node_op_test_multi_client.sh
       - name: Remove automerge
         if: ${{ failure() && contains(matrix.runs-on, 'self-hosted') && cancelled() == false && contains(github.event.pull_request.labels.*.name, 'automerge') }}
         uses: actions/github-script@v4
@@ -580,7 +584,6 @@ jobs:
       ONEFLOW_SRC: .
       TEST_CONTAINER_NAME: "pr-${{ github.event.pull_request.number }}-run-id-${{ github.run_id }}-${{ matrix.entry }}-test"
       TEST_WITH_TF_IMG_TAG: registry.cn-beijing.aliyuncs.com/oneflow/test-with-tf-2.3.0:2f831e9354298a11447578e869d983959feb046f
-      TEST_WITH_TORCH_IMG_TAG: registry.cn-beijing.aliyuncs.com/oneflow/test-with-pytorch-1.9.0:e7a497b41d8b7f1bce055b1f23d027f93b1557ae
       SSH_TANK_HOST: 192.168.1.13
       SSH_TANK_PATH: /tank
       FLOW_VISION_SRC: flow_vision
@@ -786,6 +789,14 @@ jobs:
         if: ${{ !fromJson(matrix.cache-hit) && matrix.test-type == 'module' && !fromJson(matrix.is-distributed) }}
         run: |
           docker exec -e ONEFLOW_TEST_DIR=$PWD/python/oneflow/test/modules ${{ env.TEST_CONTAINER_NAME }} bash ci/test/generic_test_multi_client.sh
+      - name: Expensive tests (models, cases require exclusive access to GPU)
+        timeout-minutes: 45
+        if: ${{ !fromJson(matrix.cache-hit) && (matrix.test-type == 'speed-test' || (matrix.test-type == 'misc' && matrix.device == 'cpu')) && !fromJson(matrix.is-distributed) }}
+        run: |
+          docker exec \
+            -e ONEFLOW_TEST_DIR=$PWD/python/oneflow/test/expensive \
+            -e ONEFLOW_TEST_TASKS_PER_GPU=1 \
+            ${{ env.TEST_CONTAINER_NAME }} bash ci/test/generic_test_multi_client.sh
       - name: Exception API test
         timeout-minutes: 45
         if: ${{ !fromJson(matrix.cache-hit) && matrix.test-type == 'misc' }}
