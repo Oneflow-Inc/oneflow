@@ -31,18 +31,18 @@ class InputKernel final : public Kernel {
 
  private:
   void ForwardDataContent(KernelContext* ctx) const override {
-      CHECK(this->op_conf().input_conf().has_job_name());
-      const auto& job_name = this->op_conf().input_conf().job_name();
-      const auto& op_name = this->op_conf().name();
-      auto* buffer_mgr = Global<BufferMgr<std::shared_ptr<CriticalSectionInstance>>>::Get();
-      auto* buffer = buffer_mgr->Get(GetInputBufferName(job_name, op_name));
-      std::shared_ptr<CriticalSectionInstance> critical_section_instance;
-      BufferStatus buffer_status = buffer->TryReceive(&critical_section_instance);
-      CHECK_NE(buffer_status, kBufferStatusEmpty);
-      if (buffer_status == kBufferStatusSuccess) {
-        OfBlob ofblob(ctx->stream(), ctx->BnInOp2Blob("out"));
-        critical_section_instance->AccessBlobByOpName(reinterpret_cast<uint64_t>(&ofblob), op_name);
-      }
+    CHECK(this->op_conf().input_conf().has_job_name());
+    const auto& job_name = this->op_conf().input_conf().job_name();
+    const auto& op_name = this->op_conf().name();
+    auto* buffer_mgr = Global<BufferMgr<std::shared_ptr<CriticalSectionInstance>>>::Get();
+    auto* buffer = buffer_mgr->Get(GetInputBufferName(job_name, op_name));
+    std::shared_ptr<CriticalSectionInstance> critical_section_instance;
+    BufferStatus buffer_status = buffer->TryReceive(&critical_section_instance);
+    CHECK_NE(buffer_status, kBufferStatusEmpty);
+    if (buffer_status == kBufferStatusSuccess) {
+      OfBlob ofblob(ctx->stream(), ctx->BnInOp2Blob("out"));
+      critical_section_instance->AccessBlobByOpName(reinterpret_cast<uint64_t>(&ofblob), op_name);
+    }
   }
   void ForwardHeader(KernelContext* ctx) const override {}
 };

@@ -59,9 +59,7 @@ void GetSchedulerThreadInitializer(std::function<void()>* Initializer) {
 }
 
 void GetCallbackThreadInitializer(std::function<void()>* Initializer) {
-  *Initializer = [&]() {
-    OF_PROFILER_NAME_THIS_HOST_THREAD("_VM::Callback");
-  };
+  *Initializer = [&]() { OF_PROFILER_NAME_THIS_HOST_THREAD("_VM::Callback"); };
 }
 
 std::type_index GetStreamTypeIndex(const vm::ThreadCtx* thread_ctx) {

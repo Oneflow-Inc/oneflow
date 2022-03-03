@@ -160,9 +160,7 @@ void CublasMathModeGuard::SetMathMode(cublasMath_t new_mode) {
   if (new_mode_ != saved_mode_) { OF_CUBLAS_CHECK(cublasSetMathMode(handle_, saved_mode_)); }
 }
 
-int GetCudaDeviceIndex() {
-  return GlobalProcessCtx::LocalRank();
-}
+int GetCudaDeviceIndex() { return GlobalProcessCtx::LocalRank(); }
 
 int GetCudaDeviceCount() {
   /* static */ int cuda_device_count = 0;

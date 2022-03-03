@@ -30,18 +30,18 @@ template<typename T>
 void WaitAndSendIdsKernel<T>::ForwardDataContent(KernelContext* ctx) const {
   auto* status = CHECK_NOTNULL(dynamic_cast<WaitAndSendIdsStatus*>(ctx->state().get()));
   if (status->out_idx_ >= status->out_num_) {
-      CHECK(this->op_conf().wait_and_send_ids_conf().has_job_name());
-      const auto& job_name = this->op_conf().wait_and_send_ids_conf().job_name();
-      auto* buffer_mgr = Global<BufferMgr<std::shared_ptr<JobInstance>>>::Get();
-      auto* buffer = buffer_mgr->Get(GetSourceTickBufferName(job_name));
-      status->in_id_ = 0;
-      {
-        std::shared_ptr<JobInstance> job_instance;
-        status->buffer_status_ = buffer->Pull(&job_instance);
-      }
-      if (status->buffer_status_ == kBufferStatusErrorClosed) { return; }
-      status->out_idx_ = 0;
-      status->out_num_ = 1;
+    CHECK(this->op_conf().wait_and_send_ids_conf().has_job_name());
+    const auto& job_name = this->op_conf().wait_and_send_ids_conf().job_name();
+    auto* buffer_mgr = Global<BufferMgr<std::shared_ptr<JobInstance>>>::Get();
+    auto* buffer = buffer_mgr->Get(GetSourceTickBufferName(job_name));
+    status->in_id_ = 0;
+    {
+      std::shared_ptr<JobInstance> job_instance;
+      status->buffer_status_ = buffer->Pull(&job_instance);
+    }
+    if (status->buffer_status_ == kBufferStatusErrorClosed) { return; }
+    status->out_idx_ = 0;
+    status->out_num_ = 1;
   }
 
   *ctx->BnInOp2Blob("out")->mut_dptr<T>() = 0;

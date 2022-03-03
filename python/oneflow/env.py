@@ -67,4 +67,3 @@ def get_world_size():
 
     """
     return oneflow._oneflow_internal.GetWorldSize()
-

@@ -32,16 +32,12 @@ Maybe<void> CheckOpGraph(const OpGraph& op_graph) {
   JUST(op_graph.MaybeForEachNode([&](OpNode* op_node) -> Maybe<void> {
     size_t in_cnt = 0;
     op_graph.ForEachDataAndCtrlInNode(op_node, [&](OpNode*) { ++in_cnt; });
-    if (in_cnt == 0) {
-      CHECK_OR_RETURN(op_node->op().op_conf().has_wait_and_send_ids_conf());
-    }
+    if (in_cnt == 0) { CHECK_OR_RETURN(op_node->op().op_conf().has_wait_and_send_ids_conf()); }
 
     size_t out_cnt = 0;
     op_graph.ForEachDataAndCtrlOutNode(op_node, [&](OpNode*) { ++out_cnt; });
 
-    if (out_cnt == 0) {
-      CHECK_OR_RETURN(op_node->op().op_conf().has_callback_notify_conf());
-    }
+    if (out_cnt == 0) { CHECK_OR_RETURN(op_node->op().op_conf().has_callback_notify_conf()); }
     return Maybe<void>::Ok();
   }));
   return Maybe<void>::Ok();
