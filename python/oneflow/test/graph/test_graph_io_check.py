@@ -179,9 +179,6 @@ class TestGraphIOCheck(flow.unittest.TestCase):
         # test tensor
         test_output(x, Tensor)
 
-        # test None
-        test_output(None, None)
-
     def test_graph_outputs_buffer(test_case):
         class CustomModuleIOCheck(flow.nn.Module):
             def __init__(self):
