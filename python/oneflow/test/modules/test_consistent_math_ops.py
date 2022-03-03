@@ -168,7 +168,7 @@ def _test_atan2(test_case, placement, sbp, ndim):
     return z
 
 
-class TestUnaryMathOps(flow.unittest.TestCase):
+class TestMathOps(flow.unittest.TestCase):
     @globaltest
     def test_math_ops(test_case):
         ndim = random().to(int).value()
