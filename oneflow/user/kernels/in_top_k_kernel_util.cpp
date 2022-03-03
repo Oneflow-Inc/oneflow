@@ -21,7 +21,7 @@ namespace oneflow {
 template<typename T>
 struct InTopkKernelUtil<DeviceType::kCPU, T> {
   static void InTopk(ep::Stream* stream, const int instance_num, const int classes_num,
-                     const T* targets, const float* predictions, const int k, int8_t* out) {
+                     const T* targets, const float* predictions, const int k, bool* out) {
     FOR_RANGE(int32_t, idx, 0, instance_num) {
       T target = targets[idx];
       bool cannot_say =
