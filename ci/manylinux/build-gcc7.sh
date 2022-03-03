@@ -11,7 +11,6 @@ cd python
 function clean_artifacts {
     git clean -nXd -e \!dist -e \!dist/**
     git clean -fXd -e \!dist -e \!dist/**
-    rm -rf oneflow/include
 }
 
 clean_artifacts
