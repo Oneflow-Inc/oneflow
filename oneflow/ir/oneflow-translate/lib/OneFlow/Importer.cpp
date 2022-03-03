@@ -376,8 +376,8 @@ LogicalResult validateOpConf(UserOpArgs args, UserOpArgDefs arg_defs) {
                                     })
                        != arg_defs.end();
     if (!found) {
-      llvm::errs() << "fail to validate user op conf, arg def of arg not found: "
-                   << input_arg.first;
+      llvm::errs() << "fail to validate user op conf, arg def of arg not found: " << input_arg.first
+                   << "\n";
       return failure();
     }
   }
