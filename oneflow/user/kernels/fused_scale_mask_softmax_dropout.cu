@@ -21,16 +21,15 @@ namespace oneflow {
 
 template<typename SRC, typename DST>
 struct ScaleMaskLoad {
-  ScaleMaskLoad(const SRC* src, const int8_t* mask, int64_t row_size, SRC fill, SRC scale)
+  ScaleMaskLoad(const SRC* src, const bool* mask, int64_t row_size, SRC fill, SRC scale)
       : src(src), mask(mask), row_size(row_size), fill(fill), scale(scale) {}
   template<int N>
   __device__ void load(DST* dst, int64_t row, int64_t col) {
     cuda::softmax::Pack<SRC, N> pack;
     const int64_t offset = (row * row_size + col) / N;
     pack.storage = *(reinterpret_cast<const cuda::softmax::PackType<SRC, N>*>(src) + offset);
-    cuda::softmax::Pack<int8_t, N> mask_pack;
-    mask_pack.storage =
-        *(reinterpret_cast<const cuda::softmax::PackType<int8_t, N>*>(mask) + offset);
+    cuda::softmax::Pack<bool, N> mask_pack;
+    mask_pack.storage = *(reinterpret_cast<const cuda::softmax::PackType<bool, N>*>(mask) + offset);
 #pragma unroll
     for (int i = 0; i < N; ++i) {
       if (mask_pack.elem[i] == 0) {
@@ -41,7 +40,7 @@ struct ScaleMaskLoad {
     }
   }
   const SRC* src;
-  const int8_t* mask;
+  const bool* mask;
   int64_t row_size;
   SRC fill;
   SRC scale;
@@ -49,15 +48,14 @@ struct ScaleMaskLoad {
 
 template<typename SRC, typename DST>
 struct ScaleMaskStore {
-  ScaleMaskStore(DST* dst, const int8_t* mask, int64_t row_size, DST fill, DST scale)
+  ScaleMaskStore(DST* dst, const bool* mask, int64_t row_size, DST fill, DST scale)
       : dst(dst), mask(mask), row_size(row_size), fill(fill), scale(scale) {}
   template<int N>
   __device__ void store(const SRC* src, int64_t row, int64_t col) {
     cuda::softmax::Pack<DST, N> pack;
     const int64_t offset = (row * row_size + col) / N;
-    cuda::softmax::Pack<int8_t, N> mask_pack;
-    mask_pack.storage =
-        *(reinterpret_cast<const cuda::softmax::PackType<int8_t, N>*>(mask) + offset);
+    cuda::softmax::Pack<bool, N> mask_pack;
+    mask_pack.storage = *(reinterpret_cast<const cuda::softmax::PackType<bool, N>*>(mask) + offset);
 #pragma unroll
     for (int i = 0; i < N; ++i) {
       if (mask_pack.elem[i] == 0) {
@@ -69,7 +67,7 @@ struct ScaleMaskStore {
     *(reinterpret_cast<cuda::softmax::PackType<DST, N>*>(dst) + offset) = pack.storage;
   }
   DST* dst;
-  const int8_t* mask;
+  const bool* mask;
   int64_t row_size;
   DST fill;
   DST scale;
@@ -77,16 +75,15 @@ struct ScaleMaskStore {
 
 template<typename SRC, typename DST>
 struct DropoutLoad {
-  DropoutLoad(const SRC* src, const int8_t* mask, int64_t row_size, SRC scale)
+  DropoutLoad(const SRC* src, const bool* mask, int64_t row_size, SRC scale)
       : src(src), mask(mask), row_size(row_size), scale(scale) {}
   template<int N>
   __device__ void load(DST* dst, int64_t row, int64_t col) const {
     cuda::softmax::Pack<SRC, N> pack;
     const int64_t offset = (row * row_size + col) / N;
     pack.storage = *(reinterpret_cast<const cuda::softmax::PackType<SRC, N>*>(src) + offset);
-    cuda::softmax::Pack<int8_t, N> mask_pack;
-    mask_pack.storage =
-        *(reinterpret_cast<const cuda::softmax::PackType<int8_t, N>*>(mask) + offset);
+    cuda::softmax::Pack<bool, N> mask_pack;
+    mask_pack.storage = *(reinterpret_cast<const cuda::softmax::PackType<bool, N>*>(mask) + offset);
 #pragma unroll
     for (int i = 0; i < N; ++i) {
       dst[i] = static_cast<DST>(pack.elem[i]) * static_cast<DST>(mask_pack.elem[i])
@@ -94,23 +91,22 @@ struct DropoutLoad {
     }
   }
   const SRC* src;
-  const int8_t* mask;
+  const bool* mask;
   int64_t row_size;
   SRC scale;
 };
 
 template<typename SRC, typename DST>
 struct DropoutStore {
-  DropoutStore(DST* dst, DST* softmax_y, const int8_t* mask, int64_t row_size, DST scale)
+  DropoutStore(DST* dst, DST* softmax_y, const bool* mask, int64_t row_size, DST scale)
       : dst(dst), softmax_y(softmax_y), mask(mask), row_size(row_size), scale(scale) {}
   template<int N>
   __device__ void store(const SRC* src, int64_t row, int64_t col) {
     cuda::softmax::Pack<DST, N> softmax_y_pack;
     cuda::softmax::Pack<DST, N> dst_pack;
     const int64_t offset = (row * row_size + col) / N;
-    cuda::softmax::Pack<int8_t, N> mask_pack;
-    mask_pack.storage =
-        *(reinterpret_cast<const cuda::softmax::PackType<int8_t, N>*>(mask) + offset);
+    cuda::softmax::Pack<bool, N> mask_pack;
+    mask_pack.storage = *(reinterpret_cast<const cuda::softmax::PackType<bool, N>*>(mask) + offset);
 #pragma unroll
     for (int i = 0; i < N; ++i) {
       softmax_y_pack.elem[i] = static_cast<DST>(src[i]);
@@ -123,7 +119,7 @@ struct DropoutStore {
   }
   DST* dst;
   DST* softmax_y;
-  const int8_t* mask;
+  const bool* mask;
   int64_t row_size;
   DST scale;
 };
@@ -147,11 +143,11 @@ class FusedScaleMaskSoftmaxDropoutKernel final : public user_op::OpKernel {
     const int64_t cols = x_shape.At(x_shape.NumAxes() - 1);
     const int64_t rows = x_shape.Count(0, x_shape.NumAxes() - 1);
     using ComputeType = typename cuda::softmax::DefaultComputeType<T>::type;
-    ScaleMaskLoad<T, ComputeType> load(x->dptr<T>(), mask->dptr<int8_t>(), cols,
+    ScaleMaskLoad<T, ComputeType> load(x->dptr<T>(), mask->dptr<bool>(), cols,
                                        ctx->Attr<float>("mask_fill_value"),
                                        ctx->Attr<float>("scale_value"));
     DropoutStore<ComputeType, T> store(y->mut_dptr<T>(), softmax_y->mut_dptr<T>(),
-                                       dropout_mask->dptr<int8_t>(), cols,
+                                       dropout_mask->dptr<bool>(), cols,
                                        ctx->Attr<float>("dropout_scale_value"));
     OF_CUDA_CHECK((cuda::softmax::DispatchSoftmax<decltype(load), decltype(store), ComputeType>(
         ctx->stream()->As<ep::CudaStream>()->cuda_stream(), load, store, rows, cols)));
@@ -190,9 +186,9 @@ class FusedScaleMaskSoftmaxDropoutGradKernel final : public user_op::OpKernel {
     const int64_t rows = dy_shape.Count(0, dy_shape.NumAxes() - 1);
     using ComputeType = typename cuda::softmax::DefaultComputeType<T>::type;
     cuda::softmax::DirectLoad<T, ComputeType> load_softmax_y(softmax_y->dptr<T>(), cols);
-    DropoutLoad<T, ComputeType> load_dy(dy->dptr<T>(), dropout_mask->dptr<int8_t>(), cols,
+    DropoutLoad<T, ComputeType> load_dy(dy->dptr<T>(), dropout_mask->dptr<bool>(), cols,
                                         ctx->Attr<float>("dropout_scale_value"));
-    ScaleMaskStore<ComputeType, T> store(dx->mut_dptr<T>(), mask->dptr<int8_t>(), cols,
+    ScaleMaskStore<ComputeType, T> store(dx->mut_dptr<T>(), mask->dptr<bool>(), cols,
                                          static_cast<T>(0.0), ctx->Attr<float>("scale_value"));
     OF_CUDA_CHECK((cuda::softmax::DispatchSoftmaxGrad<decltype(load_softmax_y), decltype(load_dy),
                                                       decltype(store), ComputeType>(
