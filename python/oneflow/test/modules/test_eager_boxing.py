@@ -22,7 +22,7 @@ import oneflow as flow
 import os
 
 import oneflow.unittest
-from test_util import GenArgList
+from oneflow.test_utils.test_util import GenArgList
 
 
 def _test_eager_boxing_with_non_overlapping_placement_p_to_s1(
@@ -3454,6 +3454,112 @@ class TestEagerBoxingNToOneWithDiffDim(flow.unittest.TestCase):
         arg_dict["out_device_type"] = ["cpu", "cuda"]
         for arg in GenArgList(arg_dict):
             _test_eager_boxing_one_to_n_with_diff_dim(test_case, *arg)
+
+
+def _test_asymmetric_mix_1d_2d_eager_boxing_with_random_placement(
+    test_case,
+    in_sbp,
+    out_sbp,
+    shape,
+    in_device_type,
+    out_device_type,
+    in_device_list,
+    out_device_list,
+):
+    if not isinstance(in_sbp, tuple):
+        in_sbp = (in_sbp,)
+    if not isinstance(out_sbp, tuple):
+        out_sbp = (out_sbp,)
+    in_placement = flow.placement(type=in_device_type, ranks=in_device_list)
+    out_placement = flow.placement(type=out_device_type, ranks=out_device_list)
+    np_arr = np.random.uniform(-1e-05, 1e-05, shape)
+    x = flow.tensor(
+        np_arr, dtype=flow.float32, device=in_device_type, requires_grad=False,
+    )
+    x = x.to_global(in_placement, in_sbp)
+    y = x.to_global(out_placement, out_sbp)
+    test_case.assertTrue(y.sbp == out_sbp)
+    test_case.assertTrue(y.placement == out_placement)
+    test_case.assertTrue(np.allclose(x.numpy(), y.numpy()))
+
+
+@flow.unittest.skip_unless_1n4d()
+@unittest.skipIf(os.getenv("ONEFLOW_TEST_CPU_ONLY"), "only test cpu cases")
+class TestEagerBoxingAsymmetricMix1d2dWithRandomPlacement(flow.unittest.TestCase):
+    def test_eager_boxing_asymmetric_mix_1d_2d_with_random_placement(test_case):
+        arg_dict = OrderedDict()
+        sbp_dict = OrderedDict()
+        arg_dict["shape"] = [(12, 24), (12, 24, 12)]
+
+        arg_dict["in_device_type"] = ["cpu", "cuda"]
+        arg_dict["out_device_type"] = ["cpu", "cuda"]
+        arg_dict["in_device_list"] = [
+            [2],
+            [0, 1],
+            [1, 2, 3],
+            [0, 1, 2, 3],
+            [[0, 1, 2, 3]],
+            [[0, 1], [2, 3]],
+        ]
+        arg_dict["out_device_list"] = [
+            [1],
+            [3],
+            [2, 3],
+            [0, 1, 3],
+            [0, 1, 2, 3],
+            [[2], [3]],
+            [[0, 1], [2, 3]],
+        ]
+        sbp_1d = [
+            flow.sbp.split(0),
+            flow.sbp.split(1),
+            flow.sbp.broadcast,
+            flow.sbp.partial_sum,
+        ]
+        sbp_dict["in_sbp_1d"] = sbp_1d
+        sbp_dict["out_sbp_1d"] = sbp_1d
+
+        import itertools
+
+        sbp_2d = list(itertools.product(sbp_1d, sbp_1d))
+        sbp_dict["in_sbp_2d"] = sbp_2d
+        sbp_dict["out_sbp_2d"] = sbp_2d
+
+        is_2d_device_list = lambda x: isinstance(x[0], list)
+
+        for arg in GenArgList(arg_dict):
+
+            in_device_list = arg[-2]
+            out_device_list = arg[-1]
+
+            is_in_2d_n_device_list = is_2d_device_list(in_device_list)
+            is_out_2d_n_device_list = is_2d_device_list(out_device_list)
+            if is_in_2d_n_device_list and is_out_2d_n_device_list:
+                for in_sbp in sbp_dict["in_sbp_2d"]:
+                    for out_sbp in sbp_dict["out_sbp_2d"]:
+                        _test_asymmetric_mix_1d_2d_eager_boxing_with_random_placement(
+                            test_case, in_sbp, out_sbp, *arg
+                        )
+            elif is_in_2d_n_device_list and not is_out_2d_n_device_list:
+                for in_sbp in sbp_dict["in_sbp_2d"]:
+                    for out_sbp in sbp_dict["out_sbp_1d"]:
+                        _test_asymmetric_mix_1d_2d_eager_boxing_with_random_placement(
+                            test_case, in_sbp, out_sbp, *arg
+                        )
+            elif not is_in_2d_n_device_list and is_out_2d_n_device_list:
+                for in_sbp in sbp_dict["in_sbp_1d"]:
+                    for out_sbp in sbp_dict["out_sbp_2d"]:
+                        _test_asymmetric_mix_1d_2d_eager_boxing_with_random_placement(
+                            test_case, in_sbp, out_sbp, *arg
+                        )
+            elif not is_in_2d_n_device_list and not is_out_2d_n_device_list:
+                for in_sbp in sbp_dict["in_sbp_1d"]:
+                    for out_sbp in sbp_dict["out_sbp_1d"]:
+                        _test_asymmetric_mix_1d_2d_eager_boxing_with_random_placement(
+                            test_case, in_sbp, out_sbp, *arg
+                        )
+            else:
+                raise NotImplementedError
 
 
 if __name__ == "__main__":

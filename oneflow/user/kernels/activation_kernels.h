@@ -29,13 +29,7 @@ struct LeakyReluFunctor {
 template<typename T>
 struct LeakyReluGradFunctor {
   OF_DEVICE_FUNC explicit LeakyReluGradFunctor(float alpha) : alpha(alpha) {}
-  OF_DEVICE_FUNC T operator()(T x, T dy) const {
-    if (alpha > 0) {
-      return dy > 0 ? dy : dy * alpha;
-    } else {
-      return (x > 0) ? dy : dy * alpha;
-    }
-  }
+  OF_DEVICE_FUNC T operator()(T x, T dy) const { return (x > 0) ? dy : dy * alpha; }
   const T alpha;
 };
 
