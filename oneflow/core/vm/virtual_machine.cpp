@@ -204,6 +204,7 @@ Maybe<void> VirtualMachine::Receive(vm::InstructionMsgList* instr_list) {
           << pthread_fork::kOfCudaNotSupportInForkedSubProcess;
       // NOTE: operate `vm_` in forked subprocesses causes mysterious problems.
       // `ComputeInFuseMode` will be replaced by `Compute` soon.
+      std::cout << typeid(instr_msg->mut_instr_type_id()->instruction_type()).name() << std::endl;
       instr_msg->mut_instr_type_id()->instruction_type().ComputeInFuseMode(instr_msg);
     }
   } else {
