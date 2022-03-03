@@ -20,7 +20,6 @@ limitations under the License.
 #include "oneflow/core/framework/random_generator.h"
 #include "oneflow/user/kernels/arange_kernel_util.h"
 #include "oneflow/user/kernels/distributions/common.h"
-
 namespace oneflow {
 
 class CpuRandPermKernel final : public user_op::OpKernel {

@@ -22,7 +22,6 @@ namespace oneflow {
 
 Maybe<int64_t> GetOpKernelRandomSeed(const user_op::KernelInitContext* ctx);
 
-
 }  // namespace oneflow
 
 #endif  // ONEFLOW_USER_KERNELS_RANDOM_SEED_UTIL_H_
