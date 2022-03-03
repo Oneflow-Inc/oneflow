@@ -487,7 +487,7 @@ Maybe<Tensor> UnfoldTensor(const std::shared_ptr<Tensor>& input, const MutableAt
   return output;
 }
 
-Maybe<Tensor> Diagonal(const std::shared_ptr<Tensor>& input, const std::shared_ptr<Tensor>& dx,
+Maybe<Tensor> Diagonal(const std::shared_ptr<Tensor>& input,
                        const int32_t offset, const int32_t dim1, const int32_t dim2) {
   const auto& shape = input->shape();
   const auto& stride = JUST(input->stride());
@@ -524,6 +524,12 @@ Maybe<Tensor> Diagonal(const std::shared_ptr<Tensor>& input, const std::shared_p
   auto output = JUST(BasicView(input, Shape(out_shape), Stride(out_stride), storage_offset));
   // autograd
   if (input->requires_grad()) {
+    std::vector<int32_t> input_index{dim1, dim2};
+    for (int32_t i = 0; i < ndim; i++) {
+      if (i != dim1 && i != dim2) { input_index.push_back(i); }
+    }
+    std::shared_ptr<one::Tensor> d_x = JUST(functional::Transpose(input, input_index));
+
     auto backward_fn =
         std::make_shared<std::function<Maybe<void>(const TensorTuple&, TensorTuple*, bool)>>(
             [=](const TensorTuple& out_grads, TensorTuple* in_grads,
@@ -531,12 +537,12 @@ Maybe<Tensor> Diagonal(const std::shared_ptr<Tensor>& input, const std::shared_p
               autograd::AutoGradMode mode(create_graph);
               CHECK_EQ_OR_RETURN(out_grads.size(), 1);
               in_grads->resize(1);
-              in_grads->at(0) = JUST(functional::DiagonalGrad(out_grads.at(0), dx, offset));
+              in_grads->at(0) = JUST(functional::DiagonalGrad(out_grads.at(0), d_x, offset));
               return Maybe<void>::Ok();
             });
     TensorTuple outputs{output};
     JUST(GetThreadLocalAutogradEngine()->AddBackwardFuncPtr("view::diagonal_backward", backward_fn,
-                                                            {dx}, &outputs));
+                                                            {d_x}, &outputs));
   }
 
   return output;

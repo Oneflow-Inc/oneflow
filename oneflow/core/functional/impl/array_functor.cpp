@@ -1823,22 +1823,19 @@ class DiagonalFunctor {
     CHECK_NE_OR_RETURN(p_dim1, p_dim2)
         << ", diagonal dimensions cannot be identical " << dim1 << ", " << dim2;
 
-    std::vector<int32_t> input_index{p_dim1, p_dim2};
-    for (int32_t i = 0; i < ndims; i++) {
-      if (i != p_dim1 && i != p_dim2) { input_index.push_back(i); }
-    }
-
     MutableAttrMap attrs;
     JUST(attrs.SetAttr<int32_t>("offset", offset));
-    std::shared_ptr<one::Tensor> d_x = JUST(Transpose(x, input_index));
 
-    // if input tensor is eager local, than try return tensor's view
-    if (x->is_local() && !(LazyMode::is_enabled())) {
-      if (!(x->shape()->NumAxes() <= 1 || x->shape()->elem_cnt() <= 1)) {
-        return view::Diagonal(x, d_x, offset, p_dim1, p_dim2);
+    if (view::IsViewApplicable(x)){
+      return view::Diagonal(x, offset, p_dim1, p_dim2);
+    }else{
+      std::vector<int32_t> input_index{p_dim1, p_dim2};
+      for (int32_t i = 0; i < ndims; i++) {
+        if (i != p_dim1 && i != p_dim2) { input_index.push_back(i); }
       }
-    }
-    return OpInterpUtil::Dispatch<Tensor>(*op_, {d_x->contiguous()}, attrs);
+      std::shared_ptr<one::Tensor> d_x = JUST(Transpose(x, input_index));
+      return OpInterpUtil::Dispatch<Tensor>(*op_, {d_x->contiguous()}, attrs);
+      }
   }
 
  private:
@@ -1854,7 +1851,7 @@ class DiagonalGradFunctor {
                            const std::shared_ptr<one::Tensor>& x, const int32_t& offset) const {
     MutableAttrMap attrs;
     JUST(attrs.SetAttr<int32_t>("offset", offset));
-    return OpInterpUtil::Dispatch<Tensor>(*op_, {dy, x}, attrs);
+    return OpInterpUtil::Dispatch<Tensor>(*op_, {dy->contiguous(), x->contiguous()}, attrs);
   }
 
  private:
