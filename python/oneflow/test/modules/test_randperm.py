@@ -119,6 +119,5 @@ class Testrandperm(flow.unittest.TestCase):
         return y
 
 
-
 if __name__ == "__main__":
     unittest.main()
