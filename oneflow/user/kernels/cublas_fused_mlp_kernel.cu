@@ -63,17 +63,13 @@ class CublasFusedMLPKernel final : public user_op::OpKernel {
     const double beta = 0.0;
     const auto sp_beta = GetCublasScalarParameter(beta, cublas_compute_dtype);
 
-    const int64_t batch_size = ctx->Tensor4ArgNameAndIndex("x", 0)->shape().At(0);
-    int64_t in_feature = ctx->Tensor4ArgNameAndIndex("x", 0)->shape().At(1);
-
-    // // Currently only support 2D matmul.
+    // Currently only support 2D matmul.
     DimVector in_shape(2);
-    // in_shape.at(0) = x_shape.at(0);
     x->shape().ToDimVector(&in_shape);
 
     DimVector weight_shape(2);
 
-    const void* in_buf_ptr = x->dptr();  // modify to const void*
+    const void* in_buf_ptr = x->dptr();
     for (int idx = 0; idx < weight_size; idx++) {
       const user_op::Tensor* weight = ctx->Tensor4ArgNameAndIndex("weights", idx);
       const user_op::Tensor* bias = ctx->Tensor4ArgNameAndIndex("biases", idx);
