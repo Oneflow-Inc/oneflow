@@ -528,7 +528,6 @@ Maybe<Tensor> Diagonal(const std::shared_ptr<Tensor>& input,
     for (int32_t i = 0; i < ndim; i++) {
       if (i != dim1 && i != dim2) { input_index.push_back(i); }
     }
-    std::shared_ptr<one::Tensor> d_x = JUST(functional::Transpose(input, input_index));
 
     auto backward_fn =
         std::make_shared<std::function<Maybe<void>(const TensorTuple&, TensorTuple*, bool)>>(
@@ -537,12 +536,16 @@ Maybe<Tensor> Diagonal(const std::shared_ptr<Tensor>& input,
               autograd::AutoGradMode mode(create_graph);
               CHECK_EQ_OR_RETURN(out_grads.size(), 1);
               in_grads->resize(1);
-              in_grads->at(0) = JUST(functional::DiagonalGrad(out_grads.at(0), d_x, offset));
+              // diagonal grad(align to torch)
+              std::shared_ptr<Tensor> grad_input =  JUST(functional::Empty(*input->shape(), input->dtype(), JUST(input->device())));
+              auto diag = JUST(functional::Diagonal(grad_input, offset, dim1, dim2));
+              diag = JUST(functional::Copy(out_grads.at(0), JUST(input->device())->type(), JUST(input->device())->device_id()));
+               in_grads->at(0) = grad_input;
               return Maybe<void>::Ok();
             });
     TensorTuple outputs{output};
     JUST(GetThreadLocalAutogradEngine()->AddBackwardFuncPtr("view::diagonal_backward", backward_fn,
-                                                            {d_x}, &outputs));
+                                                            {input}, &outputs));
   }
 
   return output;
