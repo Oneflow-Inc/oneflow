@@ -69,7 +69,7 @@ __global__ void HashTableUniqueAndPartitionPairs(const uint32_t table_capacity,
                                                  const V* values, K* partioned_unique_keys,
                                                  V* partioned_unique_values, IDX* reverse_index,
                                                  bool need_process_values) {
-  CUDA_1D_KERNEL_LOOP(i, num_keys) {
+  CUDA_1D_KERNEL_LOOP_T(uint32_t, i, num_keys) {
     IDX r_index_plus_one = 0;
     const K key = keys[i];
     size_t hash_key = XXH64()(key, hash_func_seed);
@@ -80,59 +80,39 @@ __global__ void HashTableUniqueAndPartitionPairs(const uint32_t table_capacity,
     const K key_hi = (key | 0x1);
     const K key_lo = (key & 0x1);
     uint32_t counter = 0;
-    while (true) {
-      const unsigned mask = __activemask();
-      if (__all_sync(mask, r_index_plus_one != 0)) { break; }
+    while (r_index_plus_one == 0) {
       bool prob_next = false;
-      if (r_index_plus_one == 0) {
-        const TableEntry<K> entry = table[pos];
-        K* key_ptr = &table[pos].key;
-        volatile uint32_t* value_ptr = &table[pos].value;
-        if (entry.key == key_hi) {
-          const uint32_t val = (entry.value == 0) ? *value_ptr : entry.value;
-          if (entry.value != 0) {
-            if ((entry.value & 0x1) == key_lo) {
-              r_index_plus_one = (entry.value >> 1U);
-            } else {
-              prob_next = true;
-            }
-          }
-        } else if (entry.key != 0) {
-          prob_next = true;
-        } else {  // entry.key == 0
-          const K old_key = cuda::atomic::CAS(key_ptr, 0, key_hi);
-          if (old_key == 0) {
-            IDX unique_pos = cuda::atomic::Add(table_size, 1);
-            r_index_plus_one = unique_pos + 1;
-            unique_keys[unique_pos] = key;
-            if (need_process_values) {
-              partioned_unique_values[partition_id * num_keys + unique_pos] = values[i];
-            }
-            *value_ptr = ((r_index_plus_one << 1U) | key_lo);
-          } else if (old_key == key_hi) {
-            const uint32_t value = *value_ptr;
-            if (value == 0) {
-              // do nothing
-            } else if ((value & 0x1) == key_lo) {
-              r_index_plus_one = (value >> 1U);
-            } else {
-              prob_next = true;
-            }
-          } else {
-            prob_next = true;
-          }
+      K* key_ptr = &table[pos].key;
+      volatile uint32_t* value_ptr = &table[pos].value;
+      const K old_key = cuda::atomic::CAS(key_ptr, 0, key_hi);
+      if (old_key == 0) {
+        IDX unique_pos = cuda::atomic::Add(table_size, 1);
+        r_index_plus_one = unique_pos + 1;
+        unique_keys[unique_pos] = key;
+        if (need_process_values) {
+          partioned_unique_values[partition_id * num_keys + unique_pos] = values[i];
         }
+        *value_ptr = ((r_index_plus_one << 1U) | key_lo);
+      } else if (old_key == key_hi) {
+        const uint32_t value = *value_ptr;
+        if (value == 0) {
+          // do nothing
+        } else if ((value & 0x1) == key_lo) {
+          r_index_plus_one = (value >> 1U);
+        } else {
+          prob_next = true;
+        }
+      } else {
+        prob_next = true;
       }
-      __syncwarp(mask);
       if (prob_next) {
         pos += 1;
         counter += 1;
         if (pos >= table_capacity) { pos -= table_capacity; }
         if (counter >= table_capacity) { __trap(); }
       }
-      __syncwarp(mask);
     }
-    reverse_index[i] = partition_id * num_keys + r_index_plus_one - 1;
+    reverse_index[i] = r_index_plus_one - 1;
   }
 }
 
