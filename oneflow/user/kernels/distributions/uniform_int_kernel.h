@@ -78,7 +78,7 @@ class UniformIntKernel final : public user_op::OpKernel {
     const auto& generator = CHECK_JUST(one::MakeAutoGenerator());
     /* each rank get a different seed to generate the same distribution,
       but different values of local tensor */
-    generator->set_current_seed(GetOpKernelRandomSeedInCurrentRank(ctx, ctx->Attr<int64_t>("seed")));
+    generator->set_current_seed(CHECK_JUST(GetOpKernelRandomSeedInCurrentRank(ctx, ctx->Attr<int64_t>("seed"))));
     return std::make_shared<DistributionKernelState>(generator);
   }
 
