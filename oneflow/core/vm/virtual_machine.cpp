@@ -202,7 +202,8 @@ Maybe<void> VirtualMachine::Receive(vm::InstructionMsgList* instr_list) {
       const auto& parallel_desc = instr_msg->phy_instr_parallel_desc();
       CHECK_OR_RETURN(!parallel_desc || parallel_desc->device_type() == DeviceType::kCPU)
           << pthread_fork::kOfCudaNotSupportInForkedSubProcess;
-      // NOTE: operate `vm_` in forked subprocesses causes mysterious problems
+      // NOTE: operate `vm_` in forked subprocesses causes mysterious problems.
+      // `ComputeInFuseMode` will be replaced by `Compute` soon.
       instr_msg->mut_instr_type_id()->instruction_type().ComputeInFuseMode(instr_msg);
     }
   } else {
