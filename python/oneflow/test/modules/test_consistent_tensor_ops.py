@@ -72,18 +72,14 @@ def _test_global_cpu(test_case, placement, sbp):
 # element 0 of tensors does not require grad and does not have a grad_fn
 @autotest(n=1, auto_backward=False, check_graph=False)
 def _test_global_long(test_case, placement, sbp):
-    x = random_tensor(2, 8, 16, requires_grad=False).to_global(
-        placement, sbp
-    )
+    x = random_tensor(2, 8, 16, requires_grad=False).to_global(placement, sbp)
     y = x.long()
     return y
 
 
 @autotest(n=1, auto_backward=False, check_graph=False)
 def _test_global_int(test_case, placement, sbp):
-    x = random_tensor(2, 8, 16, requires_grad=False).to_global(
-        placement, sbp
-    )
+    x = random_tensor(2, 8, 16, requires_grad=False).to_global(placement, sbp)
     y = x.int()
     return y
 
@@ -111,9 +107,9 @@ def _test_global_item(test_case, placement, sbp):
 
 @autotest(n=1, auto_backward=False, check_graph=False)
 def _test_global_tolist(test_case, placement, sbp):
-    x = random_tensor(
-        ndim=4, dim0=8, dim1=16, dim2=24, dim3=32, dtype=int
-    ).to_global(placement, sbp)
+    x = random_tensor(ndim=4, dim0=8, dim1=16, dim2=24, dim3=32, dtype=int).to_global(
+        placement, sbp
+    )
     y = torch.tensor(x.tolist())
     return y
 
