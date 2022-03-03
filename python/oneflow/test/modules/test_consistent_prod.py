@@ -19,12 +19,14 @@ import oneflow.unittest
 
 from oneflow.test_utils.automated_test_util import *
 
+
 @autotest(n=1, check_graph=False)
 def test_prod_without_dim(test_case, placement, sbp, device, ndim):
-     x = random_tensor(ndim=ndim, dim0=8, dim1=8).to(device=device)
-     x = x.to_global(placement=placement, sbp=sbp)
-     y = torch.prod(x)
-     return y
+    x = random_tensor(ndim=ndim, dim0=8, dim1=8).to(device=device)
+    x = x.to_global(placement=placement, sbp=sbp)
+    y = torch.prod(x)
+    return y
+
 
 class TestReduceProd(flow.unittest.TestCase):
     @globaltest
@@ -34,6 +36,7 @@ class TestReduceProd(flow.unittest.TestCase):
         for placement in all_placement():
             for sbp in all_sbp(placement, max_dim=2):
                 test_prod_without_dim(test_case, placement, sbp, device, ndim)
-        
+
+
 if __name__ == "__main__":
     unittest.main()

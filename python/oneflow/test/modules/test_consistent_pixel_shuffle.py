@@ -37,6 +37,7 @@ def _np_pixel_shuffle(input, h_factor, w_factor):
     out = np.reshape(out, [_batch, _new_c, _height * h_factor, _width * w_factor])
     return out
 
+
 def _np_pixel_shuffle_grad(input, h_factor, w_factor):
     (_batch, _new_channel, _height_mul_factor, _width_mul_factor) = input.shape
     _channel = _new_channel * (h_factor * w_factor)
@@ -45,22 +46,28 @@ def _np_pixel_shuffle_grad(input, h_factor, w_factor):
     out = np.ones(shape=(_batch, _channel, _height, _width))
     return out
 
+
 def _test_pixel_shuffle_impl(
     test_case, placement, sbp, device, shape, h_upscale_factor, w_upscale_factor
-):  
+):
     input = random_tensor(len(shape), *shape).to_global(placement=placement, sbp=sbp)
     input.retain_grad()
-    m = flow.nn.PixelShuffle(h_upscale_factor=h_upscale_factor, w_upscale_factor=w_upscale_factor)
+    m = flow.nn.PixelShuffle(
+        h_upscale_factor=h_upscale_factor, w_upscale_factor=w_upscale_factor
+    )
     m = m.to(device)
     of_out = m(input.oneflow)
 
-    np_out = _np_pixel_shuffle(input.oneflow.numpy(), h_upscale_factor, w_upscale_factor)
+    np_out = _np_pixel_shuffle(
+        input.oneflow.numpy(), h_upscale_factor, w_upscale_factor
+    )
     test_case.assertTrue(np.allclose(of_out.numpy(), np_out, 1e-05, 1e-05))
-    
+
     of_out = of_out.sum()
     of_out.backward()
     np_grad = _np_pixel_shuffle_grad(np_out, h_upscale_factor, w_upscale_factor)
     test_case.assertTrue(np.allclose(input.oneflow.grad.numpy(), np_grad, 1e-05, 1e-05))
+
 
 class TestPixelShuffleModule(flow.unittest.TestCase):
     @globaltest
@@ -75,6 +82,7 @@ class TestPixelShuffleModule(flow.unittest.TestCase):
             for placement in all_placement():
                 for sbp in all_sbp(placement, max_dim=2):
                     arg[0](test_case, placement, sbp, *arg[1:])
+
 
 if __name__ == "__main__":
     unittest.main()

@@ -25,12 +25,11 @@ from oneflow.test_utils.automated_test_util import *
 def test_functional_normalize(test_case, placement, sbp):
     ndim = random(low=2).to(int).value()
     shape = [random(low=2, high=4) * 8 for i in range(ndim)]
-    x = random_tensor(len(shape), *shape).to_global(
-        placement=placement, sbp=sbp
-    )
+    x = random_tensor(len(shape), *shape).to_global(placement=placement, sbp=sbp)
     dim = random(low=0, high=ndim).to(int).value()
     y = torch.nn.functional.normalize(x, oneof(2, 3, 4), dim, 1e-12)
     return y
+
 
 class TestModule(flow.unittest.TestCase):
     @globaltest
@@ -38,6 +37,7 @@ class TestModule(flow.unittest.TestCase):
         for placement in all_placement():
             for sbp in all_sbp(placement, max_dim=2):
                 test_functional_normalize(test_case, placement, sbp)
+
 
 if __name__ == "__main__":
     unittest.main()

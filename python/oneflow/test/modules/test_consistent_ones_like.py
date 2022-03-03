@@ -28,7 +28,7 @@ def _test_ones_like_float(test_case, placement, sbp, shape, device):
     x = flow.tensor(
         np.random.randn(*shape), dtype=flow.float32, device=flow.device(device)
     )
-    x = x.to_global(placement=placement, sbp=sbp)   
+    x = x.to_global(placement=placement, sbp=sbp)
     y = flow.ones_like(x)
     test_case.assertTrue(y.dtype is flow.float32)
     test_case.assertTrue(y.shape == x.shape)
@@ -36,9 +36,10 @@ def _test_ones_like_float(test_case, placement, sbp, shape, device):
     y_numpy = np.ones(x.numpy().shape)
     test_case.assertTrue(np.array_equal(y.numpy(), y_numpy))
 
+
 def _test_ones_like_int(test_case, placement, sbp, shape, device):
     x = flow.tensor(np.random.randn(*shape), dtype=flow.int, device=flow.device(device))
-    x = x.to_global(placement=placement, sbp=sbp)   
+    x = x.to_global(placement=placement, sbp=sbp)
     y = flow.ones_like(x)
     test_case.assertTrue(y.dtype is flow.int)
     test_case.assertTrue(y.shape == x.shape)
@@ -46,20 +47,19 @@ def _test_ones_like_int(test_case, placement, sbp, shape, device):
     y_numpy = np.ones(x.numpy().shape)
     test_case.assertTrue(np.array_equal(y.numpy(), y_numpy))
 
+
 class TestModule(flow.unittest.TestCase):
     @globaltest
     def test_ones_like(test_case):
         arg_dict = OrderedDict()
-        arg_dict["test_fun"] = [
-            _test_ones_like_float,
-             _test_ones_like_int
-             ]
+        arg_dict["test_fun"] = [_test_ones_like_float, _test_ones_like_int]
         arg_dict["shape"] = [(8, 8), (8, 8, 4), (8, 8, 5, 6)]
         arg_dict["device"] = ["cpu", "cuda"]
         for arg in GenArgList(arg_dict):
             for placement in all_placement():
                 for sbp in all_sbp(placement, max_dim=2):
                     arg[0](test_case, placement, sbp, *arg[1:])
+
 
 if __name__ == "__main__":
     unittest.main()

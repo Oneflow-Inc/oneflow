@@ -26,16 +26,11 @@ def _test_permute4d_tensor_with_random_data(test_case, placement, sbp):
     ndim = 4
     permute_list = [1, 2, 3, 0]
     x = random_tensor(
-        ndim=ndim,
-        dim0=8,
-        dim1=8,
-        dim2=random(2, 8).to(int),
-        dim3=random(2, 8).to(int),
-    ).to_global(
-        placement=placement, sbp=sbp
-    )
+        ndim=ndim, dim0=8, dim1=8, dim2=random(2, 8).to(int), dim3=random(2, 8).to(int),
+    ).to_global(placement=placement, sbp=sbp)
     y = x.permute(permute_list)
     return y
+
 
 class TestModule(flow.unittest.TestCase):
     @globaltest
@@ -43,6 +38,7 @@ class TestModule(flow.unittest.TestCase):
         for placement in all_placement():
             for sbp in all_sbp(placement, max_dim=2):
                 _test_permute4d_tensor_with_random_data(test_case, placement, sbp)
+
 
 if __name__ == "__main__":
     unittest.main()
