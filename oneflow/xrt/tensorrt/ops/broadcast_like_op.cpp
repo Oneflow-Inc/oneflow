@@ -15,33 +15,27 @@ limitations under the License.
 */
 #include "oneflow/xrt/tensorrt/ops/op_context.h"
 #include "oneflow/xrt/tensorrt/ops/op_kernel.h"
+#include "oneflow/xrt/tensorrt/plugin/broadcast_like_plugin.h"
 
 namespace oneflow {
 namespace xrt {
 namespace tensorrt {
 
-template<nvinfer1::ReduceOperation reduce_op>
-class ReduceOp : public TrtOpKernel {
+class BroadcastLikeOp : public TrtOpKernel {
  public:
   void Compile(TrtOpContext* ctx) override {
-    const auto& axis = ctx->Attr<std::vector<int32_t>>("axis");
-    int32_t reduce_axis = 0;
-    for (int i = 0; i < axis.size(); ++i) { reduce_axis = reduce_axis | (1U << axis[i]); }
-    bool keepDimensions = ctx->Attr<bool>("keepdims");
-
-    nvinfer1::ITensor* in = ctx->SoleInput();
-    auto* layer = ctx->builder()->addReduce(*in, reduce_op, reduce_axis, keepDimensions);
+    const auto& broadcast_axes = ctx->Attr<std::vector<int32_t>>("broadcast_axes");
+    std::vector<nvinfer1::ITensor*> inputs(2);
+    inputs[0] = ctx->Input("x_0");
+    inputs[1] = ctx->Input("like_0");
+    BroadcastLikePlugin plugin(ctx->op_name(), broadcast_axes);
+    auto* layer = ctx->builder()->addPluginV2(inputs.data(), 2, plugin);
     layer->setName(ctx->op_name().c_str());
-    ctx->SetSoleOutput(layer->getOutput(0));
+    ctx->SetOutput("y_0", layer->getOutput(0));
   }
 };
 
-REGISTER_TRT_OP_KERNEL(ReduceSum, ReduceOp<nvinfer1::ReduceOperation::kSUM>)
-    .EnableTrainPhase()
-    .Finalize();
-REGISTER_TRT_OP_KERNEL(ReduceMean, ReduceOp<nvinfer1::ReduceOperation::kAVG>)
-    .EnableTrainPhase()
-    .Finalize();
+REGISTER_TRT_OP_KERNEL(BcastLike, BroadcastLikeOp).EnableTrainPhase().Finalize();
 
 }  // namespace tensorrt
 }  // namespace xrt

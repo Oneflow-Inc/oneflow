@@ -47,6 +47,12 @@ inline nvinfer1::Dims ShapeToXrtDims(const Shape& shape) {
   return dims;
 }
 
+inline Shape XrtDimsToShape(const nvinfer1::Dims& dims) {
+  DimVector shape(dims.nbDims);
+  for (int i = 0; i < dims.nbDims; ++i) { shape[i] = dims.d[i]; }
+  return Shape(shape);
+}
+
 class TrtShape {
  public:
   TrtShape() = default;

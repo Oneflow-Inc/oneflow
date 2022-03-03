@@ -16,7 +16,7 @@ XRT是一个同时支持多个计算引擎的运行时加速库，目前已经�
 
 - #### Install Bazel
 
-  Download and install bazel from [here](https://docs.bazel.build/versions/1.0.0/bazel-overview.html) , and version 3.1.0 is recommended. You can confirm bazel is installed successfully by running the following command:
+  Download and install bazel from [here](https://docs.bazel.build/versions/1.0.0/bazel-overview.html) , and version 0.24.1 is recommended. You can confirm bazel is installed successfully by running the following command:
 
   ```shell
   bazel version
@@ -134,7 +134,7 @@ Executable执行时会分别调用所属的后端引擎提供的执行接口，�
   TensorRT在执行时需要设置最大支持的batch size，XRT支持用户通过环境变量来设置，
 
   ```shell
-  export FLAGS_max_batch_size=10
+  export FLAGS_tensorrt_max_batch_size=10
   ```
 
   当然，如果在运行时实际的batch size超过了设置的最大batch size，则XRT允许TensorRT Executable自动调整max batch size并正确执行（自动调整max batch size会带来一定的开销）。

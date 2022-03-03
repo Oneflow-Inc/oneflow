@@ -58,7 +58,8 @@ class TrtExecutable : public Executable {
                                                 const int batch_size = 1,
                                                 TRTInt8Calibrator* calibrator = nullptr);
 
-  bool ExecuteEngine(const int batch_size, void** buffers, void* stream, bool block_until_done);
+  bool ExecuteEngine(const int batch_size, void** buffers, cudaStream_t stream,
+                     bool block_until_done);
 
   std::string LoadCalibrationTable(const std::string& calibration_path);
 

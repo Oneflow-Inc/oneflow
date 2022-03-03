@@ -48,6 +48,8 @@ class MatMulOp : public TrtOpKernel {
     if (ctx->HasInput("_add_to_output_0")) {
       auto* add_layer = ctx->builder()->addElementWise(  // NOLINT
           *out, *ctx->Input("_add_to_output_0"), nvinfer1::ElementWiseOperation::kSUM);
+      std::string add_name = ctx->op_name() + ".add_to_output";
+      add_layer->setName(add_name.c_str());
       ctx->SetSoleOutput(add_layer->getOutput(0));
     } else {
       ctx->SetSoleOutput(out);

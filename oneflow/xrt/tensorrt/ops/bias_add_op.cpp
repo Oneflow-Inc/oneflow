@@ -38,7 +38,6 @@ class BiasAddOp : public TrtOpKernel {
     dims[axis] = bias_shape.At(0);
 
     nvinfer1::ITensor* in = ctx->Input("a_0");
-    ;
     nvinfer1::Weights bias = ctx->Weight("b_0");
     nvinfer1::ITensor* reshaped_bias = helpers::Reshape(ctx, bias, AsShape(dims));
     // Add bias to input by ElementWise layer.
@@ -50,7 +49,7 @@ class BiasAddOp : public TrtOpKernel {
   }
 };
 
-REGISTER_TRT_OP_KERNEL(BiasAdd, BiasAddOp).EnableTrainPhase().Finalize();
+REGISTER_TRT_OP_KERNEL(BiasAdd, BiasAddOp).Finalize();
 
 }  // namespace tensorrt
 }  // namespace xrt

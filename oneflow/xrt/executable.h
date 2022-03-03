@@ -20,6 +20,7 @@ limitations under the License.
 
 #include "oneflow/xrt/parameter.h"
 #include "oneflow/xrt/xrt.pb.h"
+#include "oneflow/core/ep/include/stream.h"
 
 namespace oneflow {
 namespace xrt {
@@ -27,7 +28,7 @@ namespace xrt {
 struct ExecutableRunOptions {
   // Specify stream if the engine supports multiple computation streams.
   // It will use the default computation stream if `stream` is not set.
-  void* stream = nullptr;
+  ep::Stream* stream = nullptr;
 
   int32_t device_ordinal = -1;
 
@@ -42,7 +43,7 @@ struct ExecutableRunOptions {
   int64_t random_seed = -1;
 
   // Maximum batch size for TensorRT.
-  int32_t max_batch_size = 1;
+  int32_t tensorrt_max_batch_size = 1;
 
   // Enable TensorRT Mixed-Precision.
   // Enable TensorRT fp16

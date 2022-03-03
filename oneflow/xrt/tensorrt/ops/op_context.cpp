@@ -69,13 +69,18 @@ void TrtOpContext::SetOutput(const std::string& name, nvinfer1::ITensor* tensor)
 }
 
 void TrtOpContext::SetOutput(const std::string& name, const TrtValue& value) {
+  if (!HasOutput(name)) { return; }
   Argument arg = ArgumentFromKey(name);
   outputs_[arg] = value;
   nvinfer1::ITensor* tensor = builder()->GetTensor(value.handle());
+  Shape shape = XrtDimsToShape(tensor->getDimensions());
+  CHECK_EQ(arg.shape(), shape) << "output shape should be " << arg.shape().ToString()
+                               << ", but got " << shape.ToString();
   tensor->setName(arg.name().c_str());
 }
 
 void TrtOpContext::SetSoleOutput(nvinfer1::ITensor* tensor) {
+  if (!num_outputs()) { return; }
   CHECK_EQ(outputs_.size(), 0);
   SetOutput(SoleOutputName(), tensor);
 }
@@ -115,6 +120,10 @@ Shape TrtOpContext::OutputShape(const std::string& name) const {
 Shape TrtOpContext::SoleOutputShape() const { return ArgumentFromKey(SoleOutputName()).shape(); }
 
 bool TrtOpContext::HasInput(const std::string& name) const {
+  return param_.arguments.count(name) > 0;
+}
+
+bool TrtOpContext::HasOutput(const std::string& name) const {
   return param_.arguments.count(name) > 0;
 }
 

@@ -15,7 +15,9 @@ limitations under the License.
 */
 #include "oneflow/xrt/tensorrt/trt_executable.h"
 #include "oneflow/xrt/tensorrt/trt_int8_calibrator.h"
+#include "oneflow/xrt/tensorrt/trt_stream.h"
 #include "oneflow/xrt/platform.h"
+#include "oneflow/core/ep/cuda/cuda_stream.h"
 
 #include <iostream>
 #include <sstream>
@@ -69,24 +71,27 @@ nvinfer1::ICudaEngine* TrtExecutable::CreateExecutableEngine(
 
   // flags |= (1U << int(nvinfer1::BuilderFlag::kREFIT));
   build_config->setFlags(flags);
+  if (run_options.stream) {
+    cudaStream_t stream = run_options.stream->As<ep::CudaStream>()->cuda_stream();
+    build_config->setProfileStream(stream);
+  }
 
-  int32_t max_batch_size = std::max(run_options.max_batch_size, batch_size);
+  int32_t max_batch_size = std::max(run_options.tensorrt_max_batch_size, batch_size);
   builder_->setMaxBatchSize(max_batch_size);
   // builder_->setGpuAllocator();
   return builder_->buildEngineWithConfig(*network_, *build_config);
 }
 
-bool TrtExecutable::ExecuteEngine(int batch_size, void** buffers, void* stream,
+bool TrtExecutable::ExecuteEngine(int batch_size, void** buffers, cudaStream_t stream,
                                   bool block_until_done) {
   if (!execution_context_) {  // NOLINT
     execution_context_.reset(engine_->createExecutionContext());
   }
-  cudaStream_t cu_stream = reinterpret_cast<cudaStream_t>(stream);
   bool status =
-      // execution_context_->enqueue(batch_size, buffers, cu_stream, nullptr);
-      execution_context_->enqueueV2(buffers, cu_stream, nullptr);
+      // execution_context_->enqueue(batch_size, buffers, stream, nullptr);
+      execution_context_->enqueueV2(buffers, stream, nullptr);
   if (block_until_done) {  // NOLINT
-    CHECK_EQ(cudaSuccess, cudaStreamSynchronize(cu_stream));
+    CHECK_EQ(cudaSuccess, cudaStreamSynchronize(stream));
   }
   return status;
 }
@@ -105,6 +110,10 @@ std::string TrtExecutable::LoadCalibrationTable(  // NOLINT
 bool TrtExecutable::Run(const std::vector<Parameter>& inputs,
                         const ExecutableRunOptions& run_options,  // NOLINT
                         bool block_until_done) {
+  CHECK(run_options.stream) << "stream is required for TrtExecutable";
+  cudaStream_t stream = run_options.stream->As<ep::CudaStream>()->cuda_stream();
+  RecordStream(reinterpret_cast<uint64_t>(stream), run_options.stream);
+
   // TODO(hjchen2): Refactor
   if (run_options.tensorrt_int8 && !calibrator_ &&  // NOLINT
       run_options.tensorrt_int8_calibration.size()) {
@@ -141,17 +150,19 @@ bool TrtExecutable::Run(const std::vector<Parameter>& inputs,
     buffers[i] = binding_params[i]->data();
   }
   // TODO(hjchen2): Check batch size is same for all binding parameters.
-  const int batch_size = binding_params[0]->shape().At(0);
+  int batch_size = 1;
+  for (int i = 0; i < num_bindings; ++i) {
+    if (binding_params[i]->shape().NumAxes() > 0) { batch_size = binding_params[i]->shape().At(0); }
+  }
   if (batch_size > engine_->getMaxBatchSize()) {
-    LOG(WARNING) << "Rebuild engine since the maximum batch size "  // NOLINT
-                 << engine_->getMaxBatchSize()                      // NOLINT
-                 << " is less than the input batch size " << batch_size;
+    LOG(INFO) << "Rebuild engine since the maximum batch size "  // NOLINT
+              << engine_->getMaxBatchSize()                      // NOLINT
+              << " is less than the input batch size " << batch_size;
     engine_.reset(CreateExecutableEngine(run_options, batch_size,  // NOLINT
                                          calibrator_.get()));
     CHECK(engine_) << "Failed to create engine with batch size " << batch_size;
     execution_context_.reset(engine_->createExecutionContext());
   }
-
   if (run_options.tensorrt_int8 && !calibrator_) {
     auto* res = TRTInt8CalibratorResource::LookupOrCreate(this->name());
     {
@@ -172,18 +183,15 @@ bool TrtExecutable::Run(const std::vector<Parameter>& inputs,
     }
 
     if (res->calibrator_->isDone()) {
-      CHECK_EQ(cudaSuccess, cudaStreamSynchronize(                                     // NOLINT
-                                reinterpret_cast<cudaStream_t>(run_options.stream)));  // NOLINT
+      CHECK_EQ(cudaSuccess, cudaStreamSynchronize(stream));
       calibrator_ = res->calibrator_;
-      // engine_ = std::move(res->engine_);
       execution_context_.reset(res->engine_->createExecutionContext());
     } else {
       res->calibrator_->setBatch(binding_params);
     }
   }
 
-  return ExecuteEngine(batch_size, buffers.data(), run_options.stream,  // NOLINT
-                       block_until_done);
+  return ExecuteEngine(batch_size, buffers.data(), stream, block_until_done);
 }
 
 }  // namespace tensorrt

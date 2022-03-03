@@ -102,6 +102,7 @@ class TrtOpContext : public OpContext {
   DataType SoleOutputType() const;
 
   bool HasInput(const std::string& name) const;
+  bool HasOutput(const std::string& name) const;
 
  private:
   TrtOpContext() = delete;
