@@ -107,7 +107,6 @@ TEST(JPEG, decoder) {
     cv::Mat libjpeg_image_mat;
     JpegDecoder jpeg_decode;
 
-
     RandomCropGenerator libjpeg_random_crop_gen({0.1, 0.9}, {0.4, 0.6}, seeds[i], 1);
     RandomCropGenerator opencv_random_crop_gen({0.1, 0.9}, {0.4, 0.6}, seeds[i], 1);
     jpeg_decode.PartialDecode((const unsigned char*)(jpg.data()), jpg.size(),
