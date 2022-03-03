@@ -114,12 +114,15 @@ Maybe<void> MultiClientSessionContext::TryInit(const ConfigProto& config_proto) 
       Global<boxing::collective::Scheduler>::New();
     }
 
+    // NOTE(chengcheng): val need > 0 for check. So we need decrease first when session close.
+    graph_cnt_.reset(new BlockingCounter(1));
     is_inited_ = true;
   }
   return Maybe<void>::Ok();
 }
 
 Maybe<void> MultiClientSessionContext::UpdateResource(const Resource& reso_proto) {
+  CHECK_OR_RETURN(is_inited_);
   CHECK_NOTNULL_OR_RETURN((Global<ResourceDesc, ForSession>::Get()));
   Global<ResourceDesc, ForSession>::Get()->Update(reso_proto);
   return Maybe<void>::Ok();
@@ -127,19 +130,25 @@ Maybe<void> MultiClientSessionContext::UpdateResource(const Resource& reso_proto
 
 Maybe<void> MultiClientSessionContext::AddCGraph(
     const std::shared_ptr<oneflow::NNGraph>& c_graph_ptr) {
+  CHECK_OR_RETURN(is_inited_);
   graphs_.emplace_back(c_graph_ptr);
   return Maybe<void>::Ok();
 }
 
+void MultiClientSessionContext::IncreaseGraphCountWithRuntimeInited() { graph_cnt_->Increase(); }
+
+void MultiClientSessionContext::DecreaseGraphCountWithRuntimeInited() { graph_cnt_->Decrease(); }
+
 Maybe<void> MultiClientSessionContext::TryClose() {
   if (is_inited_) {
     VLOG(2) << "Try to delete multi client session context." << std::endl;
-
+    // NOTE(chengcheng): graph cnt need decrease first for initial with val 1.
+    graph_cnt_->Decrease();
+    graph_cnt_->WaitForeverUntilCntEqualZero();
     for (const auto& wk_graph_ptr : graphs_) {
-      if (const auto& sh_graph_ptr = wk_graph_ptr.lock()) {
-        VLOG(2) << "grap name " << sh_graph_ptr->job_name() << " not closed, try to close it.";
-        JUST(sh_graph_ptr->Close());
-      }
+      const auto& sh_graph_ptr = wk_graph_ptr.lock();
+      CHECK_OR_RETURN(!sh_graph_ptr)
+          << "grap name " << sh_graph_ptr->job_name() << " not closed before env close.";
     }
     {
       // NOTE(chengcheng): delete runtime global objects

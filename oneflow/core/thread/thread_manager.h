@@ -16,6 +16,7 @@ limitations under the License.
 #ifndef ONEFLOW_CORE_THREAD_THREAD_MANAGER_H_
 #define ONEFLOW_CORE_THREAD_THREAD_MANAGER_H_
 
+#include <mutex>
 #include "oneflow/core/common/channel.h"
 #include "oneflow/core/common/protobuf.h"
 #include "oneflow/core/common/auto_registration_factory.h"
@@ -44,6 +45,7 @@ class ThreadMgr final {
   friend class Global<ThreadMgr>;
 
   HashMap<int64_t, std::unique_ptr<Thread>> threads_;
+  std::mutex mutex4del_threads_;
 };
 
 void SingleThreadLoop(size_t num, std::function<void(size_t i)> Callback);

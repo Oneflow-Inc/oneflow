@@ -49,6 +49,7 @@ void ThreadMgr::AddThreads(const HashSet<int64_t>& thread_ids) {
 }
 
 void ThreadMgr::TryDeleteThreads(const HashSet<int64_t>& thread_ids) {
+  std::unique_lock<std::mutex> lock(mutex4del_threads_);
   for (int64_t thrd_id : thread_ids) {
     const auto& it = threads_.find(thrd_id);
     if (it == threads_.end()) { continue; }

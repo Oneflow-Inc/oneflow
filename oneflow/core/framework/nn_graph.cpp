@@ -77,8 +77,11 @@ NNGraph::~NNGraph() {
 Maybe<void> NNGraph::Close() {
   if (!is_closed_) {
     VLOG(2) << "Try to close c nn graph name " << name_ << "." << std::endl;
-    CloseRuntimeBuffers();
-    runtime_.reset();
+    if (runtime_inited_) {
+      CloseRuntimeBuffers();
+      runtime_.reset();
+      Global<MultiClientSessionContext>::Get()->DecreaseGraphCountWithRuntimeInited();
+    }
     Global<MultiClientSessionContext>::Get()->RemoveGraphFreeEagerTensors(name_);
     is_closed_ = true;
     VLOG(2) << "Finish close c nn graph name " << name_ << "." << std::endl;
@@ -295,6 +298,7 @@ Maybe<void> NNGraph::CompileAndInitRuntime() {
   JUST(GetVariableRealBlobAfterSyncPlan());
   runtime_.reset(new Runtime(plan_, variable_op_name2eager_blob_));
   runtime_inited_ = true;
+  Global<MultiClientSessionContext>::Get()->IncreaseGraphCountWithRuntimeInited();
   return Maybe<void>::Ok();
 }
 
@@ -428,25 +432,23 @@ void NNGraph::NewRuntimeBuffers() {
 }
 
 void NNGraph::CloseRuntimeBuffers() {
-  if (runtime_inited_) {
-    {
-      auto* buffer_mgr = Global<BufferMgr<std::shared_ptr<CriticalSectionInstance>>>::Get();
-      for (const std::string& output_op_name : outputs_op_names_) {
-        buffer_mgr->Get(GetOutputBufferName(name_, output_op_name))->Close();
-      }
-      for (const std::string& input_op_name : inputs_op_names_) {
-        buffer_mgr->Get(GetInputBufferName(name_, input_op_name))->Close();
-      }
-      buffer_mgr->Get(GetOutputCriticalSectionCallbackBufferName(name_))->Close();
-      buffer_mgr->Get(GetOutputCriticalSectionWaitBufferName(name_))->Close();
-      buffer_mgr->Get(GetInputCriticalSectionCallbackBufferName(name_))->Close();
-      buffer_mgr->Get(GetInputCriticalSectionWaitBufferName(name_))->Close();
+  {
+    auto* buffer_mgr = Global<BufferMgr<std::shared_ptr<CriticalSectionInstance>>>::Get();
+    for (const std::string& output_op_name : outputs_op_names_) {
+      buffer_mgr->Get(GetOutputBufferName(name_, output_op_name))->Close();
     }
-    {
-      auto* buffer_mgr = Global<BufferMgr<std::shared_ptr<JobInstance>>>::Get();
-      buffer_mgr->Get(GetCallbackNotifierBufferName(name_))->Close();
-      buffer_mgr->Get(GetSourceTickBufferName(name_))->Close();
+    for (const std::string& input_op_name : inputs_op_names_) {
+      buffer_mgr->Get(GetInputBufferName(name_, input_op_name))->Close();
     }
+    buffer_mgr->Get(GetOutputCriticalSectionCallbackBufferName(name_))->Close();
+    buffer_mgr->Get(GetOutputCriticalSectionWaitBufferName(name_))->Close();
+    buffer_mgr->Get(GetInputCriticalSectionCallbackBufferName(name_))->Close();
+    buffer_mgr->Get(GetInputCriticalSectionWaitBufferName(name_))->Close();
+  }
+  {
+    auto* buffer_mgr = Global<BufferMgr<std::shared_ptr<JobInstance>>>::Get();
+    buffer_mgr->Get(GetCallbackNotifierBufferName(name_))->Close();
+    buffer_mgr->Get(GetSourceTickBufferName(name_))->Close();
   }
 }
 

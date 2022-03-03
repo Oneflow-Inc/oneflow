@@ -18,6 +18,7 @@ limitations under the License.
 
 #include "oneflow/core/common/util.h"
 #include "oneflow/core/job/job_set.pb.h"
+#include "oneflow/core/common/blocking_counter.h"
 #include "oneflow/core/common/maybe.h"
 #include "oneflow/core/framework/nn_graph.h"
 #include "oneflow/core/framework/tensor.h"
@@ -34,6 +35,10 @@ class MultiClientSessionContext {
   Maybe<void> UpdateResource(const Resource& reso_proto);
   Maybe<void> AddCGraph(const std::shared_ptr<oneflow::NNGraph>& c_graph_ptr);
   Maybe<void> TryClose();
+
+  // TODO(chengcheng): refactor interface of session ctx.
+  void IncreaseGraphCountWithRuntimeInited();
+  void DecreaseGraphCountWithRuntimeInited();
 
   // NOTE(chengcheng): for nn.Graph catch free EagerTensor in Graph.build().
   //   NNGraph should NOT hold ANY shared_ptr<Tensor> because NNGraph will send to VM stream in
@@ -52,6 +57,7 @@ class MultiClientSessionContext {
   HashMap<std::string, std::vector<std::pair<std::string, std::shared_ptr<one::Tensor>>>>
       graph_name2free_eager_tensors_;
   std::vector<std::weak_ptr<NNGraph>> graphs_;
+  std::unique_ptr<BlockingCounter> graph_cnt_;
 };
 
 }  // namespace oneflow
