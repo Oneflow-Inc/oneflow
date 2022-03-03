@@ -64,5 +64,6 @@ class TestFromNumpy(flow.unittest.TestCase):
         # TODO(wyg): support non-contiguous input
         test_case.assertTrue(tensor.is_contiguous())
 
+
 if __name__ == "__main__":
     unittest.main()
