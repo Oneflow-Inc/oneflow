@@ -18,6 +18,7 @@ import unittest
 from collections import OrderedDict
 
 import numpy as np
+from oneflow.test_utils.test_util import GenArgList
 
 import oneflow as flow
 import oneflow.unittest
@@ -43,7 +44,7 @@ def _test_is_floating_point(test_case, shape, dtype, placement, sbp):
         test_case.assertEqual(output, False)
 
 
-@autotest(n=1, auto_backward=True, rtol=1e-4, atol=1e-4, check_graph=True)
+@autotest(n=1, check_graph=False)
 def _test_global_cuda(test_case, placement, sbp):
     x = random_tensor(2, 8, 16).to_global(placement, sbp)
     x = x.cuda()
@@ -59,7 +60,7 @@ class TestConsistentCuda(flow.unittest.TestCase):
                 _test_global_cuda(test_case, placement, sbp)
 
 
-@autotest(n=1, auto_backward=True, rtol=1e-4, atol=1e-4, check_graph=True)
+@autotest(n=1, check_graph=False)
 def _test_global_cpu(test_case, placement, sbp):
     x = random_tensor(2, 8, 16).to_global(placement, sbp)
     x = x.cpu()
@@ -69,7 +70,7 @@ def _test_global_cpu(test_case, placement, sbp):
 
 # PyTorch error if open auto_backward:
 # element 0 of tensors does not require grad and does not have a grad_fn
-@autotest(n=1, auto_backward=False, rtol=1e-4, atol=1e-4, check_graph=True)
+@autotest(n=1, auto_backward=True, check_graph=False)
 def _test_global_long(test_case, placement, sbp):
     x = random_tensor(2, 8, 16, requires_grad=False).to_global(
         placement, sbp
@@ -78,7 +79,7 @@ def _test_global_long(test_case, placement, sbp):
     return y
 
 
-@autotest(n=1, auto_backward=False, rtol=1e-4, atol=1e-4, check_graph=True)
+@autotest(n=1, auto_backward=False, check_graph=False)
 def _test_global_int(test_case, placement, sbp):
     x = random_tensor(2, 8, 16, requires_grad=False).to_global(
         placement, sbp
@@ -87,14 +88,14 @@ def _test_global_int(test_case, placement, sbp):
     return y
 
 
-@autotest(n=1, auto_backward=False, rtol=1e-4, atol=1e-4, check_graph=True)
+@autotest(n=1, auto_backward=False, check_graph=False)
 def _test_global_float(test_case, placement, sbp):
     x = random_tensor(2, 8, 16, dtype=int).to_global(placement, sbp)
     y = x.float()
     return y
 
 
-@autotest(n=1, auto_backward=False, rtol=1e-4, atol=1e-4, check_graph=True)
+@autotest(n=1, auto_backward=False, check_graph=False)
 def _test_global_double(test_case, placement, sbp):
     x = random_tensor(2, 8, 16, dtype=int).to_global(placement, sbp)
     y = x.double()
