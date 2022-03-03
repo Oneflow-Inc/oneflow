@@ -2254,6 +2254,100 @@ class FusedDotFeatureInteractionFunctor {
   std::vector<std::shared_ptr<OpExpr>> ops_no_output_concat_;
 };
 
+class IdShuffleFunctor {
+ public:
+  IdShuffleFunctor() {
+    op_column_ids_has_in_out_ = CHECK_JUST(one::OpBuilder("id_shuffle")
+                                               .Input("ids")
+                                               .Input("column_ids")
+                                               .Output("num_unique_matrix")
+                                               .Output("inverse_unique_partion_indices")
+                                               .Output("cur_rank_num_unique")
+                                               .Output("cur_rank_unique_ids")
+                                               .Output("cur_rank_unique_column_ids")
+                                               .Output("cur_rank_inverse_indices")
+                                               .Build());
+    op_column_ids_no_in_has_out_ = CHECK_JUST(one::OpBuilder("id_shuffle")
+                                                  .Input("ids")
+                                                  .Output("num_unique_matrix")
+                                                  .Output("inverse_unique_partion_indices")
+                                                  .Output("cur_rank_num_unique")
+                                                  .Output("cur_rank_unique_ids")
+                                                  .Output("cur_rank_unique_column_ids")
+                                                  .Output("cur_rank_inverse_indices")
+                                                  .Build());
+  }
+
+  Maybe<TensorTuple> operator()(const std::shared_ptr<one::Tensor>& ids,
+                                const Optional<one::Tensor>& column_ids,
+                                const int32_t& num_columns) const {
+    MutableAttrMap attrs;
+    JUST(attrs.SetAttr<int32_t>("num_columns", num_columns));
+    if (column_ids) {
+      return OpInterpUtil::Dispatch<TensorTuple>(*op_column_ids_has_in_out_,
+                                                 {ids, JUST(column_ids)}, attrs);
+    } else {
+      return OpInterpUtil::Dispatch<TensorTuple>(*op_column_ids_no_in_has_out_, {ids}, attrs);
+    }
+  }
+
+ private:
+  std::shared_ptr<OpExpr> op_column_ids_has_in_out_;
+  std::shared_ptr<OpExpr> op_column_ids_no_in_has_out_;
+};
+
+class EmbeddingShuffleFunctor {
+ public:
+  EmbeddingShuffleFunctor() {
+    op_ = CHECK_JUST(one::OpBuilder("embedding_shuffle")
+                         .Input("cur_rank_embeddings")
+                         .Input("num_unique_matrix")
+                         .Input("cur_rank_inverse_indices")
+                         .Input("inverse_unique_partion_indices")
+                         .Output("embeddings")
+                         .Build());
+  }
+
+  Maybe<Tensor> operator()(
+      const std::shared_ptr<one::Tensor>& cur_rank_embeddings,
+      const std::shared_ptr<one::Tensor>& num_unique_matrix,
+      const std::shared_ptr<one::Tensor>& cur_rank_inverse_indices,
+      const std::shared_ptr<one::Tensor>& inverse_unique_partion_indices) const {
+    return OpInterpUtil::Dispatch<Tensor>(
+        *op_, {cur_rank_embeddings, num_unique_matrix, cur_rank_inverse_indices,
+               inverse_unique_partion_indices});
+  }
+
+ private:
+  std::shared_ptr<OpExpr> op_;
+};
+
+class EmbeddingGradientShuffleFunctor {
+ public:
+  EmbeddingGradientShuffleFunctor() {
+    op_ = CHECK_JUST(one::OpBuilder("embedding_gradient_shuffle")
+                         .Input("embedding_diff")
+                         .Input("num_unique_matrix")
+                         .Input("cur_rank_inverse_indices")
+                         .Input("inverse_unique_partion_indices")
+                         .Output("cur_rank_unique_embedding_diff")
+                         .Build());
+  }
+
+  Maybe<Tensor> operator()(
+      const std::shared_ptr<one::Tensor>& embedding_diff,
+      const std::shared_ptr<one::Tensor>& num_unique_matrix,
+      const std::shared_ptr<one::Tensor>& cur_rank_inverse_indices,
+      const std::shared_ptr<one::Tensor>& inverse_unique_partion_indices) const {
+    return OpInterpUtil::Dispatch<Tensor>(
+        *op_, {embedding_diff, num_unique_matrix, cur_rank_inverse_indices,
+               inverse_unique_partion_indices});
+  }
+
+ private:
+  std::shared_ptr<OpExpr> op_;
+};
+
 }  // namespace impl
 
 ONEFLOW_FUNCTION_LIBRARY(m) {
@@ -2325,6 +2419,9 @@ ONEFLOW_FUNCTION_LIBRARY(m) {
   m.add_functor<impl::RoiAlignGradFunctor>("RoiAlignGrad");
   m.add_functor<impl::EmbeddingLookupFunctor>("OneEmbeddingLookup");
   m.add_functor<impl::FusedDotFeatureInteractionFunctor>("FusedDotFeatureInteraction");
+  m.add_functor<impl::IdShuffleFunctor>("IdShuffle");
+  m.add_functor<impl::EmbeddingShuffleFunctor>("EmbeddingShuffle");
+  m.add_functor<impl::EmbeddingGradientShuffleFunctor>("EmbeddingGradientShuffle");
 };
 
 }  // namespace functional
