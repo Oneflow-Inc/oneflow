@@ -1454,9 +1454,6 @@ def OneFlow_COCOReaderOp : OneFlow_BaseOp<"COCOReader", [NoSideEffect, NoGrad, C
 }
 
 def OneFlow_OFRecordReaderOp : OneFlow_BaseOp<"OFRecordReader", [NoSideEffect, NoGrad, CpuOnly, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
-  let input = (ins
-    Optional<OneFlow_Tensor>:$UserSourceOpTickInput
-  );
   let output = (outs
     OneFlow_Tensor:$out
   );
@@ -4421,9 +4418,6 @@ def OneFlow_ConcatOp : OneFlow_BaseOp<"concat", [NoSideEffect, DeclareOpInterfac
 }
 
 def OneFlow_ConstantOp : OneFlow_BaseOp<"constant", [NoSideEffect, NoGrad, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
-  let input = (ins
-    Optional<OneFlow_Tensor>:$UserSourceOpTickInput
-  );
   let output = (outs
     OneFlow_Tensor:$out
   );
@@ -4501,9 +4495,6 @@ def OneFlow_ElementwiseMinimumBackwardOp : OneFlow_BaseOp<"elementwise_minimum_b
 }
 
 def OneFlow_EmptyOp : OneFlow_BaseOp<"empty", [NoSideEffect, NoGrad, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
-  let input = (ins
-    Optional<OneFlow_Tensor>:$UserSourceOpTickInput
-  );
   let output = (outs
     OneFlow_Tensor:$out
   );
