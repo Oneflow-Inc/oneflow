@@ -17,7 +17,6 @@ limitations under the License.
 #include "oneflow/core/kernel/kernel.h"
 #include "oneflow/core/common/buffer_manager.h"
 #include "oneflow/core/job/critical_section_instance.h"
-#include "oneflow/core/common/multi_client.h"
 #include "oneflow/core/job/global_for.h"
 
 namespace oneflow {
@@ -32,7 +31,6 @@ class InputKernel final : public Kernel {
 
  private:
   void ForwardDataContent(KernelContext* ctx) const override {
-    if (CHECK_JUST(IsMultiClient())) {
       CHECK(this->op_conf().input_conf().has_job_name());
       const auto& job_name = this->op_conf().input_conf().job_name();
       const auto& op_name = this->op_conf().name();
@@ -45,7 +43,6 @@ class InputKernel final : public Kernel {
         OfBlob ofblob(ctx->stream(), ctx->BnInOp2Blob("out"));
         critical_section_instance->AccessBlobByOpName(reinterpret_cast<uint64_t>(&ofblob), op_name);
       }
-    }
   }
   void ForwardHeader(KernelContext* ctx) const override {}
 };

@@ -18,7 +18,6 @@ limitations under the License.
 #include "oneflow/core/auto_parallel/boxing_collector.h"
 #include "oneflow/core/graph/boxing/hierarchical_sub_task_graph_builder_impl.h"
 #include "oneflow/core/boxing/eager_boxing_interpreter_mgr.h"
-#include "oneflow/core/common/multi_client.h"
 #include "oneflow/core/common/util.h"
 #include "oneflow/core/job/lazy_mode.h"
 #include "oneflow/core/job/parallel_desc.h"
@@ -54,7 +53,7 @@ Maybe<double> ComputCopyCostBetweenTwoSbpParallel(const SbpParallel& producer_sb
   }
 
   // Not supporting S->P for lazy boxing now.
-  if (LazyMode::is_enabled() || /*single_client=*/(!JUST(IsMultiClient()))) {
+  if (LazyMode::is_enabled()) {
     if (consumer_sbp_parallel.has_partial_sum_parallel()
         && producer_sbp_parallel.has_split_parallel()) {
       return kUnsupportedBoxing;
@@ -303,7 +302,7 @@ Maybe<double> ComputeEagerCopyCostBetweenNdSbp(const NdSbp& producer_sbp_paralle
 using CopyCostFunc = Maybe<double>(const NdSbp&, const NdSbp&, const BlobDesc&, const ParallelDesc&,
                                    const ParallelDesc&, bool);
 Maybe<CopyCostFunc*> GetComputeCopyCostFunc() {
-  if (LazyMode::is_enabled() || /*single_client=*/(!JUST(IsMultiClient()))) {
+  if (LazyMode::is_enabled()) {
     return &ComputeCopyCostWithMiddleNodes;
   } else {
     return &ComputeEagerCopyCostBetweenNdSbp;

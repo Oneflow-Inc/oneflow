@@ -16,7 +16,6 @@ limitations under the License.
 
 #include "oneflow/core/common/buffer_manager.h"
 #include "oneflow/core/common/maybe.h"
-#include "oneflow/core/common/multi_client.h"
 #include "oneflow/core/framework/multi_client_session_context.h"
 #include "oneflow/core/framework/load_library.h"
 #include "oneflow/core/job/resource.pb.h"
@@ -61,7 +60,6 @@ int32_t GetCpuDeviceNum() { return std::thread::hardware_concurrency(); }
 
 Maybe<void> MultiClientSessionContext::TryInit(const ConfigProto& config_proto) {
   if (!is_inited_) {
-    CHECK_OR_RETURN(JUST(IsMultiClient()));
     DumpVersionInfo();
 
     Resource resource = config_proto.resource();

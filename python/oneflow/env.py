@@ -68,12 +68,3 @@ def get_world_size():
     """
     return oneflow._oneflow_internal.GetWorldSize()
 
-
-def is_multi_client():
-    """Returns whether it is currently in multi client mode.
-
-    Returns:
-        True if currently in multi client mode, otherwise returns Flase.
-
-    """
-    return oneflow._oneflow_internal.IsMultiClient()

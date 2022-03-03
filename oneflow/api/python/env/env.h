@@ -18,7 +18,6 @@ limitations under the License.
 
 #include <string>
 #include <google/protobuf/text_format.h>
-#include "oneflow/core/common/multi_client.h"
 #include "oneflow/core/common/protobuf.h"
 #include "oneflow/core/job/cluster.h"
 #include "oneflow/core/job/cluster_instruction.h"
@@ -50,16 +49,12 @@ inline Maybe<bool> IsEnvInited() { return Global<EnvGlobalObjectsScope>::Get() !
 
 inline Maybe<void> DestroyEnv() {
   if (Global<EnvGlobalObjectsScope>::Get() == nullptr) { return Maybe<void>::Ok(); }
-  if (JUST(IsMultiClient())) {
-    OF_ENV_BARRIER();
-  } else {
-    if (GlobalProcessCtx::IsThisProcessMaster()) { ClusterInstruction::MasterSendHalt(); }
-  }
+  OF_ENV_BARRIER();
   Global<EnvGlobalObjectsScope>::Delete();
   return Maybe<void>::Ok();
 }
 
-inline Maybe<void> InitEnv(const std::string& env_proto_str, bool is_multi_client) {
+inline Maybe<void> InitEnv(const std::string& env_proto_str) {
   EnvProto env_proto;
   CHECK_OR_RETURN(TxtString2PbMessage(env_proto_str, &env_proto))
       << "failed to parse env_proto" << env_proto_str;
@@ -68,7 +63,6 @@ inline Maybe<void> InitEnv(const std::string& env_proto_str, bool is_multi_clien
   // because glog is not constructed yet and LOG(INFO) has bad bahavior
   Global<EnvGlobalObjectsScope>::SetAllocated(new EnvGlobalObjectsScope());
   JUST(Global<EnvGlobalObjectsScope>::Get()->Init(env_proto));
-  if (!GlobalProcessCtx::IsThisProcessMaster() && !is_multi_client) { JUST(Cluster::WorkerLoop()); }
   return Maybe<void>::Ok();
 }
 
