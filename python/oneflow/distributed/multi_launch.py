@@ -16,6 +16,7 @@ limitations under the License.
 """
 This file is mostly copied from PyTorch v1.8.1 torch/distributed/launch.py
 """
+import asyncio
 import os
 import signal
 import subprocess
@@ -78,16 +79,24 @@ def parse_args():
     return parser.parse_args()
 
 
-class ProcessWrapper(object):
-    def __init__(self, prefix=None, cmd=None, **kwargs) -> None:
-        self.process = subprocess.Popen(cmd, **kwargs)
-        self.prefix = prefix
+async def run_and_capture(cmd=None, prefix=None, **kwargs):
+    proc = await asyncio.create_subprocess_exec(
+        *cmd, stdout=asyncio.subprocess.PIPE, stderr=asyncio.subprocess.STDOUT, **kwargs
+    )
+    data = await proc.stdout.readline()
+    while data:
+        line = data.decode().rstrip()
+        print(prefix, line)
+        try:
+            data = await asyncio.wait_for(proc.stdout.readline(), 3)
+        except asyncio.TimeoutError:
+            pass
 
-    def __hash__(self) -> int:
-        return hash(self.process)
+    await proc.wait()
+    assert proc.returncode == 0, prefix
 
 
-def launch_multiple(cmds=None, group_size=None, auto_cuda_env=False):
+async def launch_multiple(cmds=None, group_size=None, auto_cuda_env=False):
     gpu_num = 4
     visible_groups = [
         [str(x) for x in range(gpu_num)[i : i + group_size]]  # to get ["0", "1"]
@@ -99,15 +108,11 @@ def launch_multiple(cmds=None, group_size=None, auto_cuda_env=False):
         cuda_visible_devices = ",".join(visible_groups[group_idx])
         print(cuda_visible_devices, cmd, "\n")
         env = dict(os.environ, CUDA_VISIBLE_DEVICES=cuda_visible_devices)
-        process = ProcessWrapper(
-            cmd=cmd,
-            prefix=f"[wg={i}][device={cuda_visible_devices}]",
-            env=env,
-            stdout=subprocess.PIPE,
-            stderr=subprocess.STDOUT,
+        process = run_and_capture(
+            cmd=cmd, prefix=f"[wg={i}][device={cuda_visible_devices}]", env=env,
         )
         spawns.append(process)
-    return spawns
+    await asyncio.gather(*spawns)
 
 
 def main():
@@ -130,38 +135,13 @@ def main():
         + chunck
         for (master_port, chunck) in zip(args.master_port, chunks)
     ]
+    loop = asyncio.get_event_loop()
     processes = launch_multiple(
         cmds=cmds,
         auto_cuda_env=args.auto_cuda_visible_devices,
         group_size=args.group_size,
     )
-    alive_processes = set(processes)
-    while len(alive_processes):
-        finished_processes = []
-        for w in processes:
-            process = w.process
-            prefix = w.prefix
-            if process.poll() is None:
-                # i = 0
-                # while i < 20:
-                #     line = process.stdout.readline()
-                #     print(prefix, line.decode().strip())
-                #     if not line:
-                #         break
-                #     i += 1
-                # continue
-                from select import select
-
-                rlist = select([w.process.stdout for w in processes], [], [], 1)[0]
-                for f in rlist:
-                    print(f.readline().decode(), end="")
-
-            elif process.returncode != 0:
-                raise ValueError(f"{w.prefix} fails")
-            else:
-                finished_processes.append(w)
-            alive_processes = set(alive_processes) - set(finished_processes)
-            time.sleep(0.5)
+    loop.run_until_complete(processes)
 
 
 if __name__ == "__main__":
