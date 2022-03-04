@@ -180,6 +180,7 @@ bool BinAllocator::AllocateBlockToExtendTotalMem(size_t aligned_size) {
 
   char* mem_ptr = nullptr;
   backend_->Allocate(&mem_ptr, final_allocate_bytes);
+  if (mem_ptr == nullptr) { return false; }
 
   // extend sucess
   total_memory_bytes_ += final_allocate_bytes;
