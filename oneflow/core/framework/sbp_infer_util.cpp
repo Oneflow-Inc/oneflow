@@ -54,7 +54,7 @@ Maybe<double> ComputCopyCostBetweenTwoSbpParallel(const SbpParallel& producer_sb
   }
 
   // Not supporting S->P for lazy boxing now.
-  if (LazyMode::is_enabled() || /*single_client=*/(!JUST(IsMultiClient()))) {
+  if (LazyMode::is_enabled()) {
     if (consumer_sbp_parallel.has_partial_sum_parallel()
         && producer_sbp_parallel.has_split_parallel()) {
       return kUnsupportedBoxing;
@@ -89,7 +89,7 @@ Maybe<double> ComputCopyCostBetweenTwoSbpParallel(const SbpParallel& producer_sb
     return 2 * logical_blob_size * (producer_parallel_desc.parallel_num() - 1);
   } else {
     // Not supporting P->P for different placement
-    if (LazyMode::is_enabled() || /*single_client=*/(!JUST(IsMultiClient()))) {
+    if (LazyMode::is_enabled()) {
       if (consumer_sbp_parallel.has_partial_sum_parallel()
           && producer_sbp_parallel.has_partial_sum_parallel()) {
         return kUnsupportedBoxing;
@@ -311,7 +311,7 @@ Maybe<double> ComputeEagerCopyCostBetweenNdSbp(const NdSbp& producer_sbp_paralle
 using CopyCostFunc = Maybe<double>(const NdSbp&, const NdSbp&, const BlobDesc&, const ParallelDesc&,
                                    const ParallelDesc&, bool);
 Maybe<CopyCostFunc*> GetComputeCopyCostFunc() {
-  if (LazyMode::is_enabled() || /*single_client=*/(!JUST(IsMultiClient()))) {
+  if (LazyMode::is_enabled()) {
     return &ComputeCopyCostWithMiddleNodes;
   } else {
     return &ComputeEagerCopyCostBetweenNdSbp;
