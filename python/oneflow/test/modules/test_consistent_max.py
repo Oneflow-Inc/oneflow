@@ -49,9 +49,10 @@ def _test_max(
         placement=flow.env.all_device_placement("cpu"),
         sbp=flow.sbp.broadcast,
     )
-    of_out = flow.max(global_x, dim, keepdims)
-    if dim != None:
-        of_out = of_out[0]
+    if dim is None:
+        of_out = flow.max(global_x)
+    else:
+        of_out = flow.max(global_x, dim, keepdims)[0]
     test_case.assertTrue(np.allclose(of_out.numpy(), np_out, 1e-05, 1e-05))
     of_out = of_out.sum()
     of_out.backward()

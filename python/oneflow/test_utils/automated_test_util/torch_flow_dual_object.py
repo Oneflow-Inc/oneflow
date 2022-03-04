@@ -38,7 +38,7 @@ except ImportError:
 
 from .util import broadcast
 from .global_scope import *
-from .generators import Nothing, generator, random_pytorch_tensor
+from .generators import Nothing, generator, random_pytorch_tensor, choice_pytorch_tensor
 
 postulate = [".rand", ".Tensor"]
 
@@ -1079,5 +1079,35 @@ def random_tensor(
     return GetDualObject("unused", pytorch_tensor, flow_tensor)
 
 
+def choice_tensor(
+    a, size=None, replace=True, p=None, dtype=int, requires_grad=False,
+):
+    """Generates a random sample from a given 1-D array, which aligns with numpy.random.choice
+    see https://numpy.org/doc/stable/reference/random/generated/numpy.random.choice.html for details
+
+    """
+    if isinstance(requires_grad, generator):
+        requires_grad = requires_grad.value()
+    pytorch_tensor = (
+        choice_pytorch_tensor(a, size, replace, p, dtype)
+        .value()
+        .requires_grad_(requires_grad and dtype != int)
+    )
+    if is_global():
+        flow_tensor = flow.tensor(
+            pytorch_tensor.detach().cpu().numpy(),
+            requires_grad=(requires_grad and dtype != int),
+            placement=flow.env.all_device_placement("cpu"),
+            sbp=flow.sbp.broadcast,
+        )
+    else:
+        flow_tensor = flow.tensor(
+            pytorch_tensor.detach().cpu().numpy(),
+            requires_grad=(requires_grad and dtype != int),
+        )
+
+    return GetDualObject("unused", pytorch_tensor, flow_tensor)
+
+
 torch = GetDualObject("", torch_original, flow)
-__all__ = ["autotest", "globaltest", "random_tensor"]
+__all__ = ["autotest", "globaltest", "random_tensor", "choice_tensor"]
