@@ -15,21 +15,19 @@ limitations under the License.
 */
 #include <type_traits>
 #include "oneflow/core/common/device_type.pb.h"
-#include "oneflow/core/graph/task_node.h"
 #include "oneflow/user/kernels/to_contiguous_kernel.h"
 #include "oneflow/core/ep/cuda/cuda_stream.h"
 #include "oneflow/core/cuda/elementwise.cuh"
-#include "oneflow/core/profiler/profiler.h"
 
 namespace oneflow {
 
 namespace {
 
 constexpr int kBlockSize = cuda::elementwise::kBlockSize;
-int num_threads() { return 32 * 4; }
-int thread_work_size() { return 4; }
-int block_work_size() { return thread_work_size() * num_threads(); }
-int GetMinThreadNum(int64_t elem_cnt) { return num_threads(); }
+constexpr int kThreadWorkSize = 4;
+constexpr int kNumThreads = 32 * 4;
+int block_work_size() { return kThreadWorkSize * kNumThreads; }
+int GetMinThreadNum() { return kNumThreads; }
 int GetNumBlocks(int64_t elem_cnt) {
   return (elem_cnt + block_work_size() - 1) / block_work_size();
 }
@@ -81,7 +79,7 @@ void LaunchToContiguousKernel(ep::Stream* stream, IndexType count, const size_t 
                               IndexType block_size, const std::vector<int64_t>& in_stride,
                               const StrideVector& out_stride, const char* in_dptr, char* out_dptr) {
   const int num_blocks = GetNumBlocks(count);
-  const int num_threads = GetMinThreadNum(count);
+  const int num_threads = GetMinThreadNum();
   StrideParam param_in_stride(in_stride.data(), ndim), param_out_stride(out_stride.data(), ndim);
 
   switch (ndim) {
