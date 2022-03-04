@@ -15,9 +15,9 @@ limitations under the License.
 """
 
 import unittest
-from oneflow.test_utils.automated_test_util import *
 import oneflow as flow
 import oneflow.unittest
+from oneflow.test_utils.automated_test_util import *
 
 
 @autotest(n=1, check_graph=False)
