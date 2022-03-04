@@ -771,7 +771,8 @@ Maybe<void> Operator::InferSbpSignature(
   SbpSignatureList filtered_sbp_sigs_by_conf;
   FilterSbpSignatureList(valid_sbp_sig_list, sbp_sig_conf, &filtered_sbp_sigs_by_conf);
   CHECK_GT_OR_RETURN(filtered_sbp_sigs_by_conf.sbp_signature_size(), 0)
-      << op_name() << " has no sbp after filtering.";
+      << op_name() << " has no maching sbp after flitering valid sbp list "
+      << valid_sbp_sig_list.DebugString() << " with sbp hint " << sbp_sig_conf.DebugString();
   if (filtered_sbp_sigs_by_conf.sbp_signature_size() == 1) {
     *sbp_signature = *filtered_sbp_sigs_by_conf.sbp_signature().begin();
     return Maybe<void>::Ok();
@@ -802,13 +803,6 @@ Maybe<void> Operator::InferNdSbpSignature(
     NdSbpSignature* nd_sbp_signature, const NdSbpSignature& nd_sbp_constraints,
     const ParallelDesc& parallel_desc,
     std::function<Maybe<const NdSbpInferHint*>(const std::string&)> NdSbpInferHint4Ibn) const {
-  const auto IsBroadcast = [](const NdSbp& nd_sbp, const ParallelDesc& parallel_desc) -> bool {
-    if (parallel_desc.parallel_num() == 1) { return true; }
-    for (int64_t i = 0; i < nd_sbp.sbp_parallel_size(); ++i) {
-      if (!nd_sbp.sbp_parallel(i).has_broadcast_parallel()) { return false; }
-    }
-    return true;
-  };
   const auto& parallel_hierarchy = parallel_desc.hierarchy();
   CHECK_GT(parallel_hierarchy->NumAxes(), 0);
   if (parallel_hierarchy->NumAxes() == 1) {
@@ -817,7 +811,7 @@ Maybe<void> Operator::InferNdSbpSignature(
     for (const auto& ibn : input_bns()) {
       const NdSbpInferHint* hint = JUST(NdSbpInferHint4Ibn(ibn));
       if (hint->nd_sbp().sbp_parallel_size() != 1) {
-        CHECK_OR_RETURN(IsBroadcast(hint->nd_sbp(), hint->parallel_desc()));
+        CHECK_OR_RETURN(Is1dSbp(hint->nd_sbp()) || hint->parallel_desc().parallel_num() == 1);
       }
       ibn2sbp_infer_hint.emplace(ibn,
                                  SbpInferHint(&hint->parallel_desc(), &hint->logical_blob_desc(),
