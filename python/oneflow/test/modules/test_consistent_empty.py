@@ -21,7 +21,7 @@ import oneflow as flow
 import oneflow.unittest
 from oneflow.test_utils.automated_test_util import *
 
-from test_util import GenArgDict
+from oneflow.test_utils.test_util import GenArgDict
 
 
 def _test_consistent_empty(test_case, shape, placement, sbp):

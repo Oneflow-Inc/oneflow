@@ -13,21 +13,25 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 """
-from oneflow.test_utils.oneflow_pytorch_compatiblity import *
+import unittest
+import oneflow as flow
+import oneflow.unittest
+from oneflow.test_utils.automated_test_util import *
 
 
-@flow.unittest.skip_unless_1n1d()
-@unittest.skipIf(os.getenv("ONEFLOW_TEST_CPU_ONLY"), "only test gpu cases")
-class TestApiCompatiblity(flow.unittest.TestCase):
-    def test_alexnet_compatiblity(test_case):
-        test_train_loss_oneflow_pytorch(
-            test_case, "pytorch_alexnet.py", "alexnet", "cuda"
-        )
+@autotest(n=1, auto_backward=False, check_graph=False)
+def _test_ne(test_case, placement, sbp):
+    x1 = random_tensor(ndim=2, dim0=8, dim1=8).to_global(placement, sbp)
+    x2 = random_tensor(ndim=2, dim0=8, dim1=8).to_global(placement, sbp)
+    return torch.ne(x1, x2)
 
-    def test_resnet50_compatiblity(test_case):
-        test_train_loss_oneflow_pytorch(
-            test_case, "pytorch_resnet.py", "resnet50", "cuda"
-        )
+
+class TestNe(flow.unittest.TestCase):
+    @globaltest
+    def test_ne(test_case):
+        for placement in all_placement():
+            for sbp in all_sbp(placement, max_dim=2):
+                _test_ne(test_case, placement, sbp)
 
 
 if __name__ == "__main__":

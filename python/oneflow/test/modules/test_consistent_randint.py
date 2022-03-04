@@ -21,7 +21,7 @@ import oneflow as flow
 import oneflow.unittest
 from oneflow.test_utils.automated_test_util import *
 
-from test_util import GenArgDict
+from oneflow.test_utils.test_util import GenArgDict
 
 
 def _test_consistent_randint(test_case, shape, placement, sbp, dtype):
@@ -80,11 +80,8 @@ class TestRandintConsistent(flow.unittest.TestCase):
         arg_dict["shape"] = [(8,), (8, 8,), (8, 8, 8)]
         arg_dict["dtype"] = [
             flow.uint8,
-            flow.int8,
             flow.int32,
-            flow.int64,
             flow.float32,
-            flow.float64,
         ]
         arg_dict["placement"] = [
             # 1d

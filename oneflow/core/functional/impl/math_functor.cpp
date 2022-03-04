@@ -318,6 +318,60 @@ class ReduceMinFunctor {
   std::shared_ptr<OpExpr> op_;
 };
 
+class MaxFunctor {
+ public:
+  Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x) const {
+    std::vector<int32_t> axis(x->ndim());
+    std::iota(axis.begin(), axis.end(), 0);
+    return ReduceMax(x, axis, /*keepdims=*/false);
+  }
+};
+
+class Max2Functor {
+ public:
+  Maybe<TensorTuple> operator()(const std::shared_ptr<one::Tensor>& x, const int32_t& dim,
+                                const bool& keepdims) const {
+    auto outputs = std::make_shared<TensorTuple>(2);
+    int32_t axis = dim;
+    if (axis < -x->ndim() || axis >= x->ndim()) {
+      return Error::IndexError() << "Dimension out of range (expected to be in range of ["
+                                 << -x->ndim() << ", " << x->ndim() - 1 << "], but got " << axis
+                                 << ")";
+    }
+    if (axis < 0) { axis += x->ndim(); }
+    (*outputs)[0] = JUST(ReduceMax(x, {axis}, keepdims));
+    (*outputs)[1] = JUST(ArgMax(x, dim, keepdims, NullOpt));
+    return outputs;
+  }
+};
+
+class MinFunctor {
+ public:
+  Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x) const {
+    std::vector<int32_t> axis(x->ndim());
+    std::iota(axis.begin(), axis.end(), 0);
+    return ReduceMin(x, axis, /*keepdims=*/false);
+  }
+};
+
+class Min2Functor {
+ public:
+  Maybe<TensorTuple> operator()(const std::shared_ptr<one::Tensor>& x, const int32_t& dim,
+                                const bool& keepdims) const {
+    auto outputs = std::make_shared<TensorTuple>(2);
+    int32_t axis = dim;
+    if (axis < -x->ndim() || axis >= x->ndim()) {
+      return Error::IndexError() << "Dimension out of range (expected to be in range of ["
+                                 << -x->ndim() << ", " << x->ndim() - 1 << "], but got " << axis
+                                 << ")";
+    }
+    if (axis < 0) { axis += x->ndim(); }
+    (*outputs)[0] = JUST(ReduceMin(x, {axis}, keepdims));
+    (*outputs)[1] = JUST(ArgMin(x, dim, keepdims, NullOpt));
+    return outputs;
+  }
+};
+
 class ReduceSumFunctor {
  public:
   ReduceSumFunctor() {
@@ -1395,6 +1449,36 @@ class ClampGradFunctor {
   std::shared_ptr<OpExpr> clip_max_op_;
 };
 
+class SelectFunctor {
+ public:
+  SelectFunctor() = default;
+
+  Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& input, const int32_t& dim,
+                           const int32_t& index) const {
+    int32_t ndim = input->ndim();
+    CHECK_OR_RETURN(ndim > 0) << "select() cannot be applied to a 0-dim tensor.";
+    CHECK_OR_RETURN((dim >= -ndim) && (dim < ndim))
+        << "Dimension out of range (expected to be in range of [" << -ndim << "," << ndim - 1
+        << "], but got " << dim << ")";
+    int32_t pos_dim = dim >= 0 ? dim : dim + ndim;
+    auto size = input->dim(pos_dim);
+    CHECK_OR_RETURN((index >= -size) && (index < size))
+        << "Index out of range (expected to be in range of [" << -size << "," << size - 1
+        << "], but got " << index << ")";
+    int32_t pos_index = index >= 0 ? index : index + size;
+
+    std::vector<int32_t> sizes(input->shape()->dim_vec().begin(), input->shape()->dim_vec().end());
+    const auto& stride = JUST(input->stride())->StrideVec();
+    std::vector<int32_t> strides(stride.begin(), stride.end());
+    auto storage_offset = JUST(input->storage_offset()) + pos_index * strides[pos_dim];
+
+    sizes.erase(sizes.begin() + pos_dim);
+    strides.erase(strides.begin() + pos_dim);
+
+    return AsStrided(input, sizes, strides, storage_offset);
+  }
+};
+
 class SelectTopNFunctor {
  public:
   SelectTopNFunctor() { op_ = CHECK_JUST(one::SelectTopNOpExpr::New()); }
@@ -2089,8 +2173,10 @@ ONEFLOW_FUNCTION_LIBRARY(m) {
   m.add_functor<ScalarPowFunctor>("ScalarPow");
   m.add_functor<ScalarPowGradFunctor>("ScalarPowGrad");
   m.add_functor<ReduceMaxFunctor>("ReduceMax");
+  m.add_functor<MaxFunctor, Max2Functor>("Max");
   m.add_functor<ReduceMeanFunctor>("ReduceMean");
   m.add_functor<ReduceMinFunctor>("ReduceMin");
+  m.add_functor<MinFunctor, Min2Functor>("Min");
   m.add_functor<ReduceSumFunctor>("ReduceSum");
   m.add_functor<ReduceAllFunctor>("ReduceAll");
   m.add_functor<ReduceAnyFunctor>("ReduceAny");
@@ -2122,9 +2208,12 @@ ONEFLOW_FUNCTION_LIBRARY(m) {
   m.add_functor<NormFunctor, Norm2Functor>("Norm");
   m.add_functor<ScalarNormFunctor, ScalarNorm2Functor>("ScalarNorm");
   m.add_functor<ClampGradFunctor>("ClampGrad");
+  m.add_functor<SelectFunctor>("Select");
   m.add_functor<SelectTopNFunctor>("SelectTopN");
   m.add_functor<MinimumFunctor>("Minimum");
+  m.add_functor<MinimumFunctor>("Min");
   m.add_functor<MaximumFunctor>("Maximum");
+  m.add_functor<MaximumFunctor>("Max");
   m.add_functor<ScalarFModFunctor>("ScalarFMod");
   m.add_functor<ScalarFloorDivFunctor>("ScalarFloorDiv");
   m.add_functor<ScalarLogicalEqualFunctor, ScalarLogicalEqual2Functor>("ScalarLogicalEqual");
