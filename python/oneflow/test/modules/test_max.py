@@ -24,7 +24,7 @@ import oneflow.unittest
 
 @flow.unittest.skip_unless_1n1d()
 class TestMaxModule(flow.unittest.TestCase):
-    @autotest(n=5, check_allclose=False, check_graph=False)
+    @autotest(n=5, check_allclose=False, check_graph=True)
     def test_max_reduce_random_dim(test_case):
         device = random_device()
         ndim = random().to(int).value()
@@ -63,14 +63,14 @@ class TestMaxModule(flow.unittest.TestCase):
             )
         )
 
-    @autotest(n=5, check_graph=False)
+    @autotest(n=5, check_graph=True)
     def test_max_reduce_all_dim(test_case):
         device = random_device()
         ndim = random().to(int).value()
         x = random_tensor(ndim=ndim, dim0=random(1, 8)).to(device)
         return torch.max(x)
 
-    @autotest(n=5, check_graph=False)
+    @autotest(n=5, check_graph=True)
     def test_max_elementwise(test_case):
         device = random_device()
         ndim = random().to(int).value()

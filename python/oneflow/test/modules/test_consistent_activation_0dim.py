@@ -59,11 +59,10 @@ def build_module(act_type):
 
 
 @autotest(n=1, check_graph=True)
-def _test_activation_module_with_random_data(test_case, act_type, ndim, placement, sbp):
+def _test_activation_module_with_0dim_data(test_case, act_type, placement, sbp):
     m = build_module(act_type)
     m.train(random())
-    dims = [random(1, 3) * 8 for i in range(ndim)]
-    x = random_tensor(ndim, *dims).to_global(placement=placement, sbp=sbp)
+    x = random_tensor(ndim=0).to_global(placement=placement, sbp=sbp)
     y = m(x)
     return y
 
@@ -72,10 +71,8 @@ def _test_activation_module_with_random_data(test_case, act_type, ndim, placemen
 def _test_activation_module(test_case, act_type):
     for placement in all_placement():
         ndim = random(1, 4).to(int).value()
-        for sbp in all_sbp(placement, max_dim=ndim):
-            _test_activation_module_with_random_data(
-                test_case, act_type, ndim, placement, sbp
-            )
+        for sbp in all_sbp(placement, max_dim=0):
+            _test_activation_module_with_0dim_data(test_case, act_type, placement, sbp)
 
 
 class TestReLUModule(flow.unittest.TestCase):

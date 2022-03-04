@@ -21,7 +21,7 @@ from oneflow.test_utils.automated_test_util import *
 import oneflow.unittest
 
 
-@autotest(n=1, check_graph=False)
+@autotest(n=1, check_graph=True)
 def _test_abs_with_ndim_data(test_case, ndim, placement, sbp):
     dims = [random(1, 3) * 8 for i in range(ndim)]
     x = random_tensor(ndim, *dims).to_global(placement=placement, sbp=sbp)
