@@ -416,6 +416,9 @@ class Graph(object):
         info of each operation. ``v_level`` 3 will additionally print more detailed info of each
         operation.
 
+        In addition, during the training process, when ``v_level`` is greater than or equal to 1, 
+        the learning rate information of each step will be printed.
+
         Use ``ranks`` to choose which rank to print the debug information.
 
         For example:
