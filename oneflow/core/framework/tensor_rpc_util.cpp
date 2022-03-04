@@ -25,6 +25,7 @@ limitations under the License.
 #include "oneflow/core/intrusive/flat_msg.h"
 #include "oneflow/core/job/rank_group.h"
 #include "oneflow/core/job/rank_group_scope.h"
+#include "oneflow/core/common/constant.h"
 
 namespace oneflow {
 namespace private_details {
@@ -171,7 +172,7 @@ Maybe<CheckConsistencyAsyncTransportCtx> LaunchTensorMetaConsistencyCheck(
 }
 
 Maybe<void> BusyWaitAndCheck(std::shared_ptr<CheckConsistencyAsyncTransportCtx>& ctx) {
-  JUST(ctx->WaitDone());
+  JUST_MSG(ctx->WaitDone(), kAsymmetricCodeErrorMsg);
   JUST(ctx->Check());
   return Maybe<void>::Ok();
 }

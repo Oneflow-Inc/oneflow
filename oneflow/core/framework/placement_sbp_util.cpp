@@ -14,6 +14,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 #include <tuple>
+#include <algorithm>
 #include "oneflow/core/framework/placement_sbp_util.h"
 #include "oneflow/core/framework/placed_nd_sbp.h"
 #include "oneflow/core/framework/tensor_meta.h"
@@ -175,6 +176,28 @@ Maybe<void> InitShapeAxis2NdSbpIndexes(
   return Maybe<void>::Ok();
 }
 
+Maybe<void> CheckSplitAxisExpandable(
+    const Shape& hierarchy, const std::vector<std::vector<int64_t>>& shape_axis2src_nd_sbp_indexes,
+    const std::vector<std::vector<int64_t>>& shape_axis2dst_nd_sbp_indexes) {
+  const auto& GetHierarchyDim = [&](int64_t axis) { return hierarchy.At(axis); };
+  for (int i = 0; i < shape_axis2src_nd_sbp_indexes.size(); ++i) {
+    const auto& src_nd_sbp_indexes = JUST(VectorAt(shape_axis2src_nd_sbp_indexes, i));
+    if (src_nd_sbp_indexes.empty()) { continue; }
+    const auto& dst_nd_sbp_indexes = JUST(VectorAt(shape_axis2dst_nd_sbp_indexes, i));
+    if (dst_nd_sbp_indexes.empty()) { continue; }
+    std::vector<int64_t> src_nd_sbp_dims{};
+    src_nd_sbp_dims.reserve(src_nd_sbp_indexes.size());
+    std::transform(src_nd_sbp_indexes.begin(), src_nd_sbp_indexes.end(),
+                   std::back_inserter(src_nd_sbp_dims), GetHierarchyDim);
+    std::vector<int64_t> dst_nd_sbp_dims{};
+    dst_nd_sbp_dims.reserve(dst_nd_sbp_indexes.size());
+    std::transform(dst_nd_sbp_indexes.begin(), dst_nd_sbp_indexes.end(),
+                   std::back_inserter(dst_nd_sbp_dims), GetHierarchyDim);
+    CHECK_OR_RETURN(src_nd_sbp_dims == dst_nd_sbp_dims) << Error::BoxingNotSupportedError();
+  }
+  return Maybe<void>::Ok();
+}
+
 Maybe<void> InitShapAxis2ExpandedDim(
     std::vector<DimVector>* shape_axis2expanded_dims, const Shape& shape, const Shape& hierarchy,
     const std::vector<std::vector<int64_t>>& shape_axis2src_nd_sbp_indexes,
@@ -266,6 +289,8 @@ CalcDecomposableEquivalentShapeAndNdSbpPair(const Shape& shape, const Shape& hie
   JUST(InitShapeAxis2NdSbpIndexes(dst_nd_sbp, &shape_axis2dst_nd_sbp_indexes));
   std::vector<DimVector> shape_axis2expanded_dims(shape.NumAxes());
   CHECK_EQ_OR_RETURN(hierarchy.NumAxes(), src_nd_sbp->sbp_parallel_size());
+  JUST(CheckSplitAxisExpandable(hierarchy, shape_axis2src_nd_sbp_indexes,
+                                shape_axis2dst_nd_sbp_indexes));
   JUST(InitShapAxis2ExpandedDim(&shape_axis2expanded_dims, shape, hierarchy,
                                 shape_axis2src_nd_sbp_indexes, shape_axis2dst_nd_sbp_indexes));
   std::shared_ptr<const Shape> new_shape = JUST(Flatten(shape_axis2expanded_dims));

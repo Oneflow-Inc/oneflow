@@ -35,6 +35,8 @@ limitations under the License.
 #include "oneflow/user/kernels/random_mask_like_kernel.h"
 #include "oneflow/user/kernels/dropout_kernel.h"
 #include "oneflow/core/register/ofblob.h"
+#include "oneflow/core/common/container_util.h"
+
 namespace oneflow {
 namespace one {
 namespace functional {
@@ -1422,7 +1424,8 @@ class PadFunctor {
     if (mode == "constant") {
       CHECK_EQ_OR_RETURN(pad.size() % 2, 0)
           << "Length of pad must be even but instead it equals " << pad.size();
-      if (IsFloatingDataType(x->dtype()->data_type())) {
+      if (IsFloatingDataType(x->dtype()->data_type())
+          || x->dtype()->data_type() == DataType::kFloat16) {
         JUST(attrs.SetAttr<double>("floating_constant_value", JUST(value.As<double>())));
         JUST(attrs.SetAttr<int64_t>("integral_constant_value", 0));
       } else if (IsIntegralDataType(x->dtype()->data_type())) {
@@ -1477,27 +1480,36 @@ class DropoutFunctor {
     add_op_ = CHECK_JUST(one::OpBuilder("add_n").Input("in", 2).Output("out").Build());
   }
   Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x, const float& p,
-                           const bool& training, const Optional<one::Generator>& generator,
+                           const bool& training, const bool& inplace,
+                           const Optional<one::Generator>& generator,
                            const Optional<one::Tensor>& addend) const {
+    auto outputs = std::make_shared<TensorTuple>(1);
+    if (inplace) {
+      JUST(CheckInplaceValid(x));
+      (*outputs)[0] = x;
+    }
     const auto gen = generator.value_or(JUST(one::DefaultAutoGenerator()));
     const auto& dropout_state = std::make_shared<FusedDropoutKernelState>(gen);
     MutableAttrMap dropout_attrs;
     JUST(dropout_attrs.SetAttr<float>("rate", p));
     if (addend) {
       if ((!training) || p == 0.0) {
-        return OpInterpUtil::Dispatch<Tensor>(*add_op_, {x, JUST(addend)});
+        JUST(OpInterpUtil::Dispatch(*add_op_, {x, JUST(addend)}, outputs.get()));
       } else {
-        return OpInterpUtil::Dispatch<Tensor>(*dropout_addend_op_, {x, JUST(addend)},
-                                              OpExprInterpContext(dropout_attrs, dropout_state));
+        outputs->resize(2);
+        JUST(OpInterpUtil::Dispatch(*dropout_addend_op_, {x, JUST(addend)}, outputs.get(),
+                                    OpExprInterpContext(dropout_attrs, dropout_state)));
       }
     } else {
       if (!training || p == 0.0) {
         return x;
       } else {
-        return OpInterpUtil::Dispatch<Tensor>(*dropout_op_, {x},
-                                              OpExprInterpContext(dropout_attrs, dropout_state));
+        outputs->resize(2);
+        JUST(OpInterpUtil::Dispatch(*dropout_op_, {x}, outputs.get(),
+                                    OpExprInterpContext(dropout_attrs, dropout_state)));
       }
     }
+    return (*outputs)[0];
   }
 
  private:
@@ -1531,7 +1543,7 @@ class AvgPoolingNDFunctor {
                            const std::vector<int32_t>& kernel_size,
                            const Optional<std::vector<int32_t>>& stride,
                            const std::vector<int32_t>& padding, const bool& ceil_mode,
-                           const bool& count_include_pad, const int64_t& divisor_override,
+                           const bool& count_include_pad, const int32_t& divisor_override,
                            const std::string& data_format) const {
     MutableAttrMap attrs;
     JUST(attrs.SetAttr<std::string>("data_format", data_format));
@@ -1545,7 +1557,7 @@ class AvgPoolingNDFunctor {
     }
     JUST(attrs.SetAttr<bool>("ceil_mode", ceil_mode));
     JUST(attrs.SetAttr<bool>("count_include_pad", count_include_pad));
-    JUST(attrs.SetAttr<int64_t>("divisor_override", divisor_override));
+    JUST(attrs.SetAttr<int32_t>("divisor_override", divisor_override));
     return OpInterpUtil::Dispatch<Tensor>(*op_, {x}, attrs);
   }
 
@@ -2146,6 +2158,54 @@ class RoiAlignGradFunctor {
   std::shared_ptr<OpExpr> op_;
 };
 
+class FusedDotFeatureInteractionFunctor {
+ public:
+  FusedDotFeatureInteractionFunctor() {
+    ops_has_output_concat_.resize(kMaxInputCount);
+    ops_no_output_concat_.resize(kMaxInputCount);
+    for (int n = 0; n < ops_has_output_concat_.size(); ++n) {
+      ops_has_output_concat_[n] = CHECK_JUST(one::OpBuilder("fused_dot_feature_interaction")
+                                                 .Input("features", n + 1)
+                                                 .Input("output_concat")
+                                                 .Output("out")
+                                                 .Output("padded_concated_features")
+                                                 .Build());
+    }
+    for (int n = 0; n < ops_no_output_concat_.size(); ++n) {
+      ops_no_output_concat_[n] = CHECK_JUST(one::OpBuilder("fused_dot_feature_interaction")
+                                                .Input("features", n + 1)
+                                                .Output("out")
+                                                .Output("padded_concated_features")
+                                                .Build());
+    }
+  }
+
+  Maybe<Tensor> operator()(const TensorTuple& features, const Optional<one::Tensor>& output_concat,
+                           const bool& self_interaction, const int32_t& output_padding) const {
+    MutableAttrMap attrs;
+    JUST(attrs.SetAttr<bool>("self_interaction", self_interaction));
+    JUST(attrs.SetAttr<int32_t>("output_padding", output_padding));
+    const int64_t n_features = features.size();
+    CHECK_LE_OR_RETURN(n_features, kMaxInputCount);
+    if (output_concat) {
+      JUST(attrs.SetAttr<bool>("has_output_concat", true));
+      TensorTuple inputs(n_features + 1);
+      for (int64_t i = 0; i < n_features; ++i) { inputs[i] = JUST(oneflow::VectorAt(features, i)); }
+      inputs[n_features] = JUST(output_concat);
+      return OpInterpUtil::Dispatch<Tensor>(
+          *JUST(oneflow::VectorAt(ops_has_output_concat_, n_features - 1)), inputs, attrs);
+    } else {
+      JUST(attrs.SetAttr<bool>("has_output_concat", false));
+      return OpInterpUtil::Dispatch<Tensor>(
+          *JUST(oneflow::VectorAt(ops_no_output_concat_, n_features - 1)), features, attrs);
+    }
+  }
+
+ private:
+  std::vector<std::shared_ptr<OpExpr>> ops_has_output_concat_;
+  std::vector<std::shared_ptr<OpExpr>> ops_no_output_concat_;
+};
+
 }  // namespace impl
 
 ONEFLOW_FUNCTION_LIBRARY(m) {
@@ -2214,6 +2274,7 @@ ONEFLOW_FUNCTION_LIBRARY(m) {
   m.add_functor<impl::NmsFunctor>("Nms");
   m.add_functor<impl::RoiAlignFunctor>("RoiAlign");
   m.add_functor<impl::RoiAlignGradFunctor>("RoiAlignGrad");
+  m.add_functor<impl::FusedDotFeatureInteractionFunctor>("FusedDotFeatureInteraction");
 };
 
 }  // namespace functional
