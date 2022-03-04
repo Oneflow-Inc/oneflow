@@ -32,7 +32,7 @@ class OFRecordDataLoader(flow.nn.Module):
             part_name_suffix_length=5,
             random_shuffle=True,
             shuffle_after_epoch=True,
-            # placement=flow.placement("cpu", {0: [0]}),
+            # placement=flow.placement("cpu", ranks=[0]),
             # sbp=[flow.sbp.broadcast]
         )
 
@@ -50,7 +50,7 @@ class OFRecordDataLoader(flow.nn.Module):
 
         self.flip = flow.nn.CoinFlip(
             batch_size=batch_size,
-            # placement=flow.placement("cpu", {0: [0]}),
+            # placement=flow.placement("cpu", ranks=[0]),
             # sbp=[flow.sbp.broadcast]
         )
 

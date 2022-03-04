@@ -16,7 +16,7 @@ limitations under the License.
 #ifndef ONEFLOW_CORE_JOB_SBP_SIGNATURE_BUILDER_H_
 #define ONEFLOW_CORE_JOB_SBP_SIGNATURE_BUILDER_H_
 
-#include "oneflow/core/job/sbp_parallel.cfg.h"
+#include "oneflow/core/job/sbp_parallel.h"
 #include "oneflow/core/common/util.h"
 #include "oneflow/core/common/protobuf.h"
 
@@ -25,19 +25,19 @@ namespace oneflow {
 class SplitSbpSignatureListBuilder final {
  public:
   SplitSbpSignatureListBuilder(const SplitSbpSignatureListBuilder&) = default;
-  explicit SplitSbpSignatureListBuilder(const cfg::SbpSignature& sbp_signature_template)
+  explicit SplitSbpSignatureListBuilder(const SbpSignature& sbp_signature_template)
       : sbp_signature_template_(sbp_signature_template), num_axes_(0) {
     CheckTemplate();
   }
   ~SplitSbpSignatureListBuilder() = default;
 
   SplitSbpSignatureListBuilder&& SetNumAxes(int64_t num_axes);
-  void Build(cfg::SbpSignatureList* list) const;
+  void Build(SbpSignatureList* list) const;
 
  private:
   void CheckTemplate();
 
-  cfg::SbpSignature sbp_signature_template_;
+  SbpSignature sbp_signature_template_;
   int64_t num_axes_;
 };
 
@@ -63,10 +63,10 @@ class SbpSignatureBuilder final {
   SbpSignatureBuilder&& PartialSum(const std::initializer_list<std::string>& bns);
 
   SplitSbpSignatureListBuilder MakeSplitSignatureListBuilder(int64_t num_axes) const;
-  void Build(cfg::SbpSignature* ret) const { *ret = sbp_signature_; }
+  void Build(SbpSignature* ret) const { *ret = sbp_signature_; }
 
  private:
-  cfg::SbpSignature sbp_signature_;
+  SbpSignature sbp_signature_;
 };
 
 }  // namespace oneflow

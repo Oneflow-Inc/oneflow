@@ -17,7 +17,7 @@ import oneflow as flow
 from collections import OrderedDict
 
 from oneflow.test_utils.automated_test_util import *
-from test_util import GenArgList
+from oneflow.test_utils.test_util import GenArgList
 import numpy as np
 import unittest
 
@@ -54,7 +54,7 @@ def _test_randperm_randomness(test_case, N, device, dtype):
 @flow.unittest.skip_unless_1n1d()
 class Testrandperm(flow.unittest.TestCase):
     def test_global_naive(test_case):
-        placement = flow.placement("cpu", {0: [0]})
+        placement = flow.placement("cpu", ranks=[0])
         sbp = (flow.sbp.broadcast,)
         x = flow.randperm(10, placement=placement, sbp=sbp)
         test_case.assertEqual(x.sbp, sbp)
@@ -69,7 +69,7 @@ class Testrandperm(flow.unittest.TestCase):
             flow.float32,
             flow.float64,
         ]:
-            placement = flow.placement("cpu", {0: [0]})
+            placement = flow.placement("cpu", ranks=[0])
             sbp = (flow.sbp.broadcast,)
             x = flow.randperm(10, placement=placement, sbp=sbp, dtype=dtype)
             test_case.assertEqual(x.dtype, dtype)

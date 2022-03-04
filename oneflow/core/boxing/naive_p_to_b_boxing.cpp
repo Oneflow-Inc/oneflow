@@ -23,13 +23,13 @@ namespace oneflow {
 
 namespace {
 
-bool RawIsPartialSumSbp(Symbol<cfg::SbpParallel> sbp_parallel) {
+bool RawIsPartialSumSbp(Symbol<SbpParallel> sbp_parallel) {
   return sbp_parallel->has_partial_sum_parallel();
 }
 
 static constexpr auto* IsPartialSumSbp = DECORATE(&RawIsPartialSumSbp, ThreadLocal);
 
-bool RawIsBroadcastSbp(Symbol<cfg::SbpParallel> sbp_parallel) {
+bool RawIsBroadcastSbp(Symbol<SbpParallel> sbp_parallel) {
   return sbp_parallel->has_broadcast_parallel();
 }
 

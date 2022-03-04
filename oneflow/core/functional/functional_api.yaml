@@ -228,6 +228,22 @@
   signature: "Tensor (Tensor dz, Tensor x, Tensor y) => XlogyYGrad"
   bind_python: False
 
+- name: "max"
+  signature: [
+    "Tensor (Tensor input) => Max",
+    "TensorTuple (Tensor input, Int32 dim, Bool keepdim=False) => Max",
+    "Tensor (Tensor input, Tensor other) => Max"
+  ]
+  bind_python: True
+
+- name: "min"
+  signature: [
+    "Tensor (Tensor input) => Min",
+    "TensorTuple (Tensor input, Int32 dim, Bool keepdim=False) => Min",
+    "Tensor (Tensor input, Tensor other) => Min"
+  ]
+  bind_python: True
+
 - name: "reduce_max"
   signature: "Tensor (Tensor x, Int32List axis, Bool keepdims=False) => ReduceMax"
   bind_python: True
@@ -303,6 +319,10 @@
 - name: "as_strided_grad"
   signature: "Tensor (Tensor dy, Tensor input, Int32List size, Int32List stride, Int32 storage_offset=0) => AsStridedGrad"
   bind_python: False
+
+- name: "select"
+  signature: "Tensor (Tensor input, Int32 dim, Int32 index) => Select"
+  bind_python: True
 
 - name: "swapaxes"
   signature:
@@ -671,22 +691,22 @@
 
 - name: "conv1d"
   signature:
-    "Tensor (Tensor x, Tensor weight, Tensor bias=None, Int32List stride,
-    Int32List padding, Int32List dilation, Int32 groups=1,
+    "Tensor (Tensor x, Tensor weight, Tensor bias=None, Int32List[1] stride,
+    Int32List[1] padding, Int32List[1] dilation, Int32 groups=1,
     String channel_pos) => Conv1d"
   bind_python: True
 
 - name: "conv2d"
   signature:
-    "Tensor (Tensor x, Tensor weight, Tensor bias=None, Int32List stride,
-    Int32List padding, Int32List dilation, Int32 groups=1,
+    "Tensor (Tensor x, Tensor weight, Tensor bias=None, Int32List[2] stride,
+    Int32List[2] padding, Int32List[2] dilation, Int32 groups=1,
     String channel_pos) => Conv2d"
   bind_python: True
 
 - name: "conv3d"
   signature:
-    "Tensor (Tensor x, Tensor weight, Tensor bias=None, Int32List stride,
-    Int32List padding, Int32List dilation, Int32 groups=1,
+    "Tensor (Tensor x, Tensor weight, Tensor bias=None, Int32List[3] stride,
+    Int32List[3] padding, Int32List[3] dilation, Int32 groups=1,
     String channel_pos) => Conv3d"
   bind_python: True
 
@@ -782,6 +802,12 @@
 
 - name: "unsqueeze"
   signature: "Tensor (Tensor input, Int32 dim) => Unsqueeze"
+  bind_python: True
+
+- name: "squeeze"
+  signature: [
+    "Tensor (Tensor x, Int32List[1] dim=None) => Squeeze",
+  ]
   bind_python: True
 
 - name: "exp"
@@ -1107,6 +1133,10 @@
   signature: "Tensor (Tensor x, Shape shape) => Reshape"
   bind_python: True
 
+- name: "view"
+  signature: "Tensor (Tensor x, Shape shape) => View"
+  bind_python: True
+
 - name: "slice_view_1d_contiguous"
   signature: "Tensor (Tensor x, Int64 start, Int64 end) => SliceView1dContiguous"
   bind_python: True
@@ -1137,12 +1167,6 @@
 
 - name: "logical_slice_assign"
   signature: "Void (Tensor ref, Tensor value, Int64List start, Int64List stop, Int64List step) => LogicalSliceAssign"
-  bind_python: True
-
-- name: "squeeze"
-  signature: [
-    "Tensor (Tensor x, Int32List[1] dim=None) => Squeeze",
-  ]
   bind_python: True
 
 - name: "copy"
@@ -1502,7 +1526,7 @@
   bind_python: True
 
 - name: "dropout"
-  signature: "Tensor (Tensor x, Float p=0.5, Bool training=True, Generator generator=None, *, Tensor addend=None) => Dropout"
+  signature: "Tensor (Tensor input, Float p=0.5, Bool training=True, Bool inplace=False, Generator generator=None, *, Tensor addend=None) => Dropout"
   bind_python: True
 
 - name: "dropout_grad"
@@ -1597,36 +1621,36 @@
   signature:
     'Tensor (Tensor input, Int32List[1] kernel_size, Int32List[1] stride=None, 
              Int32List[1] padding=0, Bool ceil_mode=False, Bool count_include_pad=True,
-             Int64 divisor_override=0, String data_format="channels_first") => Avgpool1D'
+             Int32 divisor_override=0, String data_format="channels_first") => Avgpool1D'
   bind_python: True
 
 - name: "avg_pool2d"
   signature:
     'Tensor (Tensor input, Int32List[2] kernel_size, Int32List[2] stride=None, 
              Int32List[2] padding=0, Bool ceil_mode=False, Bool count_include_pad=True,
-             Int64 divisor_override=0, String data_format="channels_first") => Avgpool2D'
+             Int32 divisor_override=0, String data_format="channels_first") => Avgpool2D'
   bind_python: True
 
 - name: "avg_pool3d"
   signature:
     'Tensor (Tensor input, Int32List[3] kernel_size, Int32List[3] stride=None, 
              Int32List[3] padding=0, Bool ceil_mode=False, Bool count_include_pad=True,
-             Int64 divisor_override=0, String data_format="channels_first") => Avgpool3D'
+             Int32 divisor_override=0, String data_format="channels_first") => Avgpool3D'
   bind_python: True
 
 - name: "avg_pooling_grad"
   signature:
     "Tensor (Tensor x, Tensor y, Tensor dy, Int32 ndims, String data_format, Int32List padding,
     Int32List kernel_size, Int32List stride, Bool ceil_mode, Bool count_include_pad,
-    Int64 divisor_override=0) => AvgPoolingNdGrad"
+    Int32 divisor_override=0) => AvgPoolingNdGrad"
   bind_python: False
 
 - name: "minimum"
-  signature: "Tensor (Tensor x, Tensor y) => Minimum"
+  signature: "Tensor (Tensor input, Tensor other) => Minimum"
   bind_python: True
 
 - name: "maximum"
-  signature: "Tensor (Tensor x, Tensor y) => Maximum"
+  signature: "Tensor (Tensor input, Tensor other) => Maximum"
   bind_python: True
 
 - name: "elementwise_min_grad"
@@ -1940,6 +1964,14 @@
 - name: "dot"
   signature: "Tensor (Tensor input, Tensor other) => Dot"
   bind_python: True
+
+- name: "fused_dot_feature_interaction"
+  signature: "Tensor (TensorTuple features, Tensor output_concat=None, Bool self_interaction=False, Int32 output_padding=0) => FusedDotFeatureInteraction"
+  bind_python: True
+
+- name: "fused_dot_feature_interaction_grad"
+  signature: "TensorTuple (Tensor dy, Tensor padded_concated_features, TensorTuple features_grad_like, Bool has_output_concat_grad=False, Bool self_interaction=False, Int32 output_concat_grad_dim=0) => FusedDotFeatureInteractionGrad"
+  bind_python: False
 
 - name: "tensor_buffer_to_tensor"
   signature: "Tensor (Tensor input, Shape instance_shape, DataType dtype) => TensorBufferToTensor"

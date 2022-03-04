@@ -172,7 +172,10 @@ def tensor_getstate(self):
             rel_dir_name = f"global_tensor_{self.global_id()}"
             abs_dir_name = save_load_path / rel_dir_name
 
-            tensor = self.to_global(sbp=[flow.sbp.broadcast] * len(self.sbp)).to_local()
+            tensor = self.to_global(
+                sbp=flow.sbp.broadcast,
+                placement=flow.placement("cpu", [global_src_dsk_rank]),
+            ).to_local()
         if global_src_dsk_rank is None or global_src_dsk_rank == flow.env.get_rank():
             _save_tensor_to_disk(tensor, abs_dir_name)
 
@@ -181,7 +184,11 @@ def tensor_getstate(self):
         # save_load_path is None means setstate/getstate is called inside
         # methods other than flow.save/load, for example, copy.deepcopy
         if self.is_local:
-            return {"data": self.numpy(), "dtype": self.dtype}
+            if self.is_cuda:
+                device = "cuda"
+            else:
+                device = "cpu"
+            return {"data": self.numpy(), "dtype": self.dtype, "device": device}
         else:
             return {
                 "data": self.numpy(),
@@ -209,20 +216,23 @@ def tensor_setstate(self, pickle_dict):
             )
         else:
             return self.__init__(
-                flow.tensor(pickle_dict["data"], dtype=pickle_dict["dtype"])
+                flow.tensor(
+                    pickle_dict["data"],
+                    dtype=pickle_dict["dtype"],
+                    device=pickle_dict["device"],
+                )
             )
 
 
 def placement_getstate(self):
     return {
-        "device_type": self.device_type,
-        "device_ids": self.device_ids,
-        "hierarchy": self.hierarchy,
+        "type": self.type,
+        "ranks": self.ranks,
     }
 
 
 def placement_setstate(self, state):
-    return self.__init__(state["device_type"], state["device_ids"], state["hierarchy"])
+    return self.__init__(state["type"], state["ranks"])
 
 
 def RegisterMethods():
