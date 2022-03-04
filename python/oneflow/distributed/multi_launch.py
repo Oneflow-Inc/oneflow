@@ -1,0 +1,168 @@
+"""
+Copyright 2020 The OneFlow Authors. All rights reserved.
+
+Licensed under the Apache License, Version 2.0 (the "License");
+you may not use this file except in compliance with the License.
+You may obtain a copy of the License at
+
+    http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+See the License for the specific language governing permissions and
+limitations under the License.
+"""
+"""
+This file is mostly copied from PyTorch v1.8.1 torch/distributed/launch.py
+"""
+import os
+import signal
+import subprocess
+import sys
+import time
+from argparse import REMAINDER, ArgumentParser
+from typing import IO, Any, List, Optional
+import glob
+import random
+
+stdout_filename = "stdout"
+stderr_filename = "stderr"
+
+
+def parse_args():
+    """
+    Helper function parsing the command line options
+    @retval ArgumentParser
+    """
+    parser = ArgumentParser(
+        description="helper to start multiple distributed launches in parallel"
+    )
+    parser.add_argument(
+        "--files", type=str, help="files to run, support pattern", required=True,
+    )
+    parser.add_argument(
+        "--group_size",
+        type=int,
+        help="for one command, how many duplications to run",
+        required=True,
+    )
+    parser.add_argument(
+        "--auto_cuda_visible_devices",
+        action="store_true",
+        required=False,
+        default=False,
+    )
+    parser.add_argument(
+        "--shuffle", action="store_true", required=False, default=False,
+    )
+    parser.add_argument(
+        "--master_port",
+        default=[29500],
+        action="append",
+        help="Master node (rank 0)'s free port, pass this multiple `--master_port` to launch more instances",
+    )
+    parser.add_argument(
+        "-m",
+        "--module",
+        default=False,
+        action="store_true",
+        help="Changes each process to interpret the launch script as a python module, executing with the same behavior as'python -m'.",
+    )
+    parser.add_argument(
+        "training_script",
+        type=str,
+        help="The full path to the single GPU training program/script to be launched in parallel, followed by all the arguments for the training script",
+    )
+    parser.add_argument("training_script_args", nargs=REMAINDER)
+    return parser.parse_args()
+
+
+class ProcessWrapper(object):
+    def __init__(self, prefix=None, cmd=None, **kwargs) -> None:
+        self.process = subprocess.Popen(cmd, **kwargs)
+        self.prefix = prefix
+
+    def __hash__(self) -> int:
+        return hash(self.process)
+
+
+def launch_multiple(cmds=None, group_size=None, auto_cuda_env=False):
+    gpu_num = 4
+    visible_groups = [
+        [str(x) for x in range(gpu_num)[i : i + group_size]]  # to get ["0", "1"]
+        for i in range(0, gpu_num, group_size)
+    ]
+    spawns = []
+    for i, cmd in enumerate(cmds):
+        group_idx = i % len(visible_groups)
+        cuda_visible_devices = ",".join(visible_groups[group_idx])
+        print(cuda_visible_devices, cmd, "\n")
+        env = dict(os.environ, CUDA_VISIBLE_DEVICES=cuda_visible_devices)
+        process = ProcessWrapper(
+            cmd=cmd,
+            prefix=f"[wg={i}][device={cuda_visible_devices}]",
+            env=env,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.STDOUT,
+        )
+        spawns.append(process)
+    return spawns
+
+
+def main():
+    args = parse_args()
+    # find files and chuck them
+    files = glob.glob(args.files, recursive=True)
+    if args.shuffle:
+        random.shuffle(files)
+    parallel_num = len(args.master_port)
+    chunk_size = len(files) // parallel_num
+    chunks = [files[i : i + chunk_size] for i in range(0, len(files), chunk_size)]
+
+    # check args
+    assert args.training_script == "oneflow.distributed.launch"
+
+    # generate commands
+    cmds = [
+        [sys.executable, "-m", args.training_script, "--master_port", str(master_port)]
+        + args.training_script_args
+        + chunck
+        for (master_port, chunck) in zip(args.master_port, chunks)
+    ]
+    processes = launch_multiple(
+        cmds=cmds,
+        auto_cuda_env=args.auto_cuda_visible_devices,
+        group_size=args.group_size,
+    )
+    alive_processes = set(processes)
+    while len(alive_processes):
+        finished_processes = []
+        for w in processes:
+            process = w.process
+            prefix = w.prefix
+            if process.poll() is None:
+                # i = 0
+                # while i < 20:
+                #     line = process.stdout.readline()
+                #     print(prefix, line.decode().strip())
+                #     if not line:
+                #         break
+                #     i += 1
+                # continue
+                from select import select
+
+                rlist = select([w.process.stdout for w in processes], [], [], 1)[0]
+                for f in rlist:
+                    print(f.readline().decode(), end="")
+
+            elif process.returncode != 0:
+                raise ValueError(f"{w.prefix} fails")
+            else:
+                finished_processes.append(w)
+            alive_processes = set(alive_processes) - set(finished_processes)
+            time.sleep(0.5)
+
+
+if __name__ == "__main__":
+    main()
