@@ -368,96 +368,6 @@ bool AllSplitDistribution(const NdSbp& nd_sbp) {
   return true;
 }
 
-void BindFwBwObaPairs(const OpGraph& op_graph, const OpBlobArgPairs& fw_bw_oba_pairs,
-                      OpBlobArgPairs* identical_sbp_oba_pairs) {
-  HashSet<OpBlobArg> split_paralleled_obas;
-  op_graph.ForEachNode([&](OpNode* op_node) {
-    if (op_node->op().op_conf().has_user_conf()
-        && (op_node->op().op_conf().user_conf().op_type_name() == "hierarchical_parallel_cast"
-            || op_node->op().op_conf().user_conf().op_type_name() == "parallel_cast")) {
-      return;
-    }
-    auto TryInserSplitParalleledObas = [&](const std::string& bn) {
-      const auto& lbi = op_node->op().BnInOp2Lbi(bn);
-      const auto& fw_nd_sbp = op_node->NdSbp4Lbi(lbi);
-      if (AllSplitDistribution(fw_nd_sbp)) {
-        split_paralleled_obas.insert(GenOpBlobArg(op_node->op().op_name(), bn));
-      }
-    };
-    for (const auto& ibn : op_node->op().input_bns()) { TryInserSplitParalleledObas(ibn); }
-    for (const auto& obn : op_node->op().output_bns()) { TryInserSplitParalleledObas(obn); }
-  });
-  for (const auto& pair : fw_bw_oba_pairs.pair()) {
-    CHECK(split_paralleled_obas.find(pair.first()) == split_paralleled_obas.end());
-    if (split_paralleled_obas.find(pair.second()) != split_paralleled_obas.end()) {
-      auto* oba_pair = identical_sbp_oba_pairs->mutable_pair()->Add();
-      *oba_pair->mutable_first() = pair.first();
-      *oba_pair->mutable_second() = pair.second();
-    }
-  }
-}
-
-Maybe<void> CalcFwBwObaPairs(const OpGraph& op_graph,
-                             const HashMap<OpBlobArg, LogicalBlobId>& in_oba2in_diff_lbi,
-                             const HashMap<OpBlobArg, LogicalBlobId>& out_oba2out_diff_lbi,
-                             const HashMap<OpBlobArg, LogicalBlobId>& out_oba2clone_bw_add_out_lbi,
-                             const JobBuilder& job_builder, OpBlobArgPairs* fw_bw_oba_pairs) {
-  HashMap<LogicalBlobId, OpBlobArg> in_diff_lbi2in_oba;
-  op_graph.ReverseTopoForEachNode([&](OpNode* op_node) {
-    const auto& op = op_node->op();
-    for (const auto& ibn : op.input_bns()) {
-      const auto& in_diff_lbi_it = in_oba2in_diff_lbi.find(GenOpBlobArg(op.op_name(), ibn));
-      if (in_diff_lbi_it == in_oba2in_diff_lbi.end()) { continue; }
-      if (in_diff_lbi2in_oba.find(in_diff_lbi_it->second) == in_diff_lbi2in_oba.end()) {
-        in_diff_lbi2in_oba[in_diff_lbi_it->second] = in_diff_lbi_it->first;
-      }
-    }
-  });
-  HashMap<LogicalBlobId, OpBlobArg> out_diff_lbi2out_oba;
-  op_graph.TopoForEachNode([&](OpNode* op_node) {
-    const auto& op = op_node->op();
-    for (const auto& obn : op.output_bns()) {
-      const auto& out_diff_lbi_it = out_oba2out_diff_lbi.find(GenOpBlobArg(op.op_name(), obn));
-      if (out_diff_lbi_it == out_oba2out_diff_lbi.end()) { continue; }
-      if (out_diff_lbi2out_oba.find(out_diff_lbi_it->second) == out_diff_lbi2out_oba.end()) {
-        out_diff_lbi2out_oba[out_diff_lbi_it->second] = out_diff_lbi_it->first;
-      }
-    }
-  });
-  HashMap<LogicalBlobId, OpBlobArg> clone_bw_add_out_lbi2out_oba;
-  for (const auto& pair : out_oba2clone_bw_add_out_lbi) {
-    CHECK(clone_bw_add_out_lbi2out_oba.emplace(pair.second, pair.first).second);
-  }
-  JUST(job_builder.ForEachOperator([&](const Operator& op) -> Maybe<void> {
-    for (const auto& ibn : op.input_bns()) {
-      const auto& out_oba_it = out_diff_lbi2out_oba.find(op.BnInOp2Lbi(ibn));
-      if (out_oba_it == out_diff_lbi2out_oba.end()) { continue; }
-      auto* pair = fw_bw_oba_pairs->mutable_pair()->Add();
-      *pair->mutable_first() = GenOpBlobArg(op.op_name(), ibn);
-      *pair->mutable_second() = out_oba_it->second;
-    }
-    for (const auto& obn : op.output_bns()) {
-      const auto& lbi = op.BnInOp2Lbi(obn);
-      {
-        const auto& in_oba_it = in_diff_lbi2in_oba.find(lbi);
-        if (in_oba_it == in_diff_lbi2in_oba.end()) { continue; }
-        auto* pair = fw_bw_oba_pairs->mutable_pair()->Add();
-        *pair->mutable_first() = GenOpBlobArg(op.op_name(), obn);
-        *pair->mutable_second() = in_oba_it->second;
-      }
-      {
-        const auto& clone_out_oba_it = clone_bw_add_out_lbi2out_oba.find(lbi);
-        if (clone_out_oba_it == clone_bw_add_out_lbi2out_oba.end()) { continue; }
-        auto* pair = fw_bw_oba_pairs->mutable_pair()->Add();
-        *pair->mutable_first() = GenOpBlobArg(op.op_name(), obn);
-        *pair->mutable_second() = clone_out_oba_it->second;
-      }
-    }
-    return Maybe<void>::Ok();
-  }));
-  return Maybe<void>::Ok();
-}
-
 void InitOutOba2OutDiffLbi(JobPassCtx* ctx, const OpGraph& op_graph,
                            const std::list<OpNode*>& loss_nodes,
                            HashMap<OpBlobArg, LogicalBlobId>* out_oba2out_diff_lbi,
@@ -835,10 +745,6 @@ Maybe<void> AutoGrad(JobPassCtx* ctx, const OpGraph& op_graph, JobBuilder* job_b
       job_builder->AddOps(op_node->parallel_desc().parallel_conf(), ops);
     }
   }
-  OpBlobArgPairs fw_bw_oba_pairs;
-  JUST(CalcFwBwObaPairs(op_graph, in_oba2in_diff_lbi, out_oba2out_diff_lbi,
-                        out_oba2clone_bw_add_out_lbi, *job_builder, &fw_bw_oba_pairs));
-  BindFwBwObaPairs(op_graph, fw_bw_oba_pairs, identical_sbp_oba_pairs);
   CalcOutLbi2OutDiffLbi(op_graph, out_oba2out_diff_lbi, out_lbi2out_diff_lbi);
   return Maybe<void>::Ok();
 }
