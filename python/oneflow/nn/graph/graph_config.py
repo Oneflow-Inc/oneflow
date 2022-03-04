@@ -204,7 +204,6 @@ class GraphConfig(object):
                     super().__init__()
                     self.linear = flow.nn.Linear(3, 8, False)
                     self.config.set_zero_redundancy_optimizer_mode("distributed_split")
-                    self.config.set_zero_redundancy_optimizer_min_size_after_split(1)
                 def build(self, x):
                     return self.linear(x)
 
