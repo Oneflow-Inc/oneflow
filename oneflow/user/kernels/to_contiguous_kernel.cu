@@ -82,37 +82,34 @@ void LaunchToContiguousKernel(ep::Stream* stream, IndexType count, const size_t 
   const int num_threads = GetMinThreadNum();
   StrideParam param_in_stride(in_stride.data(), ndim), param_out_stride(out_stride.data(), ndim);
 
+  switch (ndim) {
+#define TO_CONTIGUOUS_FORWARD_GPU_PARALLEL(dim)                                            \
+  case dim:                                                                                \
+    ToContiguousForwardGpuParallel<T, IndexType, dim>                                      \
+        <<<num_blocks, num_threads, 0, stream->As<ep::CudaStream>()->cuda_stream()>>>(     \
+            count, param_in_stride, param_out_stride, reinterpret_cast<const T*>(in_dptr), \
+            reinterpret_cast<T*>(out_dptr));                                               \
+    break;
 
-
-    switch (ndim) { 
-      #define TO_CONTIGUOUS_FORWARD_GPU_PARALLEL(dim)                                                                        \
-        case dim:                                                                                                                                                                                  \
-          ToContiguousForwardGpuParallel<T, IndexType, dim>                                                                                  \
-                  <<<num_blocks, num_threads, 0, stream->As<ep::CudaStream>()->cuda_stream()>>>(      \
-                      count, param_in_stride, param_out_stride, reinterpret_cast<const T*>(in_dptr),                \
-                      reinterpret_cast<T*>(out_dptr));                                                                                                                    \
-            break;  
-        
-        TO_CONTIGUOUS_FORWARD_GPU_PARALLEL(1)
-        TO_CONTIGUOUS_FORWARD_GPU_PARALLEL(2)
-        TO_CONTIGUOUS_FORWARD_GPU_PARALLEL(3)
-        TO_CONTIGUOUS_FORWARD_GPU_PARALLEL(4)
-        TO_CONTIGUOUS_FORWARD_GPU_PARALLEL(5)
-        TO_CONTIGUOUS_FORWARD_GPU_PARALLEL(6)
-        TO_CONTIGUOUS_FORWARD_GPU_PARALLEL(7)
-        TO_CONTIGUOUS_FORWARD_GPU_PARALLEL(8)
-        TO_CONTIGUOUS_FORWARD_GPU_PARALLEL(9)
-        TO_CONTIGUOUS_FORWARD_GPU_PARALLEL(10)
-        TO_CONTIGUOUS_FORWARD_GPU_PARALLEL(11)
-        TO_CONTIGUOUS_FORWARD_GPU_PARALLEL(12)
-        TO_CONTIGUOUS_FORWARD_GPU_PARALLEL(13)
-        TO_CONTIGUOUS_FORWARD_GPU_PARALLEL(14)
-        TO_CONTIGUOUS_FORWARD_GPU_PARALLEL(15)
-        TO_CONTIGUOUS_FORWARD_GPU_PARALLEL(16)
-      default: break;
-    #undef TO_CONTIGUOUS_FORWARD_GPU_PARALLEL
+    TO_CONTIGUOUS_FORWARD_GPU_PARALLEL(1)
+    TO_CONTIGUOUS_FORWARD_GPU_PARALLEL(2)
+    TO_CONTIGUOUS_FORWARD_GPU_PARALLEL(3)
+    TO_CONTIGUOUS_FORWARD_GPU_PARALLEL(4)
+    TO_CONTIGUOUS_FORWARD_GPU_PARALLEL(5)
+    TO_CONTIGUOUS_FORWARD_GPU_PARALLEL(6)
+    TO_CONTIGUOUS_FORWARD_GPU_PARALLEL(7)
+    TO_CONTIGUOUS_FORWARD_GPU_PARALLEL(8)
+    TO_CONTIGUOUS_FORWARD_GPU_PARALLEL(9)
+    TO_CONTIGUOUS_FORWARD_GPU_PARALLEL(10)
+    TO_CONTIGUOUS_FORWARD_GPU_PARALLEL(11)
+    TO_CONTIGUOUS_FORWARD_GPU_PARALLEL(12)
+    TO_CONTIGUOUS_FORWARD_GPU_PARALLEL(13)
+    TO_CONTIGUOUS_FORWARD_GPU_PARALLEL(14)
+    TO_CONTIGUOUS_FORWARD_GPU_PARALLEL(15)
+    TO_CONTIGUOUS_FORWARD_GPU_PARALLEL(16)
+    default: break;
+#undef TO_CONTIGUOUS_FORWARD_GPU_PARALLEL
   }
-
 }
 
 }  // namespace
