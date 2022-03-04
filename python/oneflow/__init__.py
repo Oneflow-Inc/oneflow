@@ -136,6 +136,8 @@ from oneflow._C import log
 from oneflow._C import log2
 from oneflow._C import minimum
 from oneflow._C import maximum
+from oneflow._C import max
+from oneflow._C import min
 from oneflow._C import pow
 from oneflow._C import rsqrt
 from oneflow._C import sqrt
@@ -186,6 +188,7 @@ from oneflow._C import not_equal
 from oneflow._C import not_equal as ne
 from oneflow._C import less as lt
 from oneflow._C import less_equal as le
+from oneflow._oneflow_internal import _set_num_threads as set_num_threads
 
 from . import sbp
 
@@ -306,6 +309,8 @@ from oneflow.framework.tensor import Tensor
 from oneflow.framework.tensor import is_nonzero
 from oneflow.framework.type_tensor import *
 
+from oneflow.framework.tensor import zero_
+
 from oneflow.nn.modules.pooling import (
     adaptive_avg_pool1d,
     adaptive_avg_pool2d,
@@ -342,8 +347,6 @@ from oneflow.nn.modules.random_ops import rand_op as rand
 from oneflow.nn.modules.random_ops import randn_op as randn
 from oneflow.nn.modules.random_ops import randint_op as randint
 from oneflow.nn.modules.random_ops import randperm_op as randperm
-from oneflow.nn.modules.reduce_ops import max_op as max
-from oneflow.nn.modules.reduce_ops import min_op as min
 from oneflow.nn.modules.reduce_ops import sum_op as sum
 from oneflow.nn.modules.reduce_ops import mean_op as mean
 from oneflow.nn.modules.reduce_ops import prod_op as prod
@@ -385,7 +388,6 @@ from oneflow.ops.initializer_util import (
     variance_scaling_initializer,
     zeros_initializer,
 )
-
 
 from . import (
     autograd,

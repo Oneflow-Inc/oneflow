@@ -19,7 +19,7 @@ import numpy as np
 import oneflow as flow
 import oneflow.unittest
 from collections import OrderedDict
-from test_util import GenArgList
+from oneflow.test_utils.test_util import GenArgList
 
 
 def get_sbp(device: str):
