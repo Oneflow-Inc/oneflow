@@ -78,8 +78,8 @@ class MirroredTensorMeta : public TensorMeta {
   int64_t storage_offset() const { return storage_offset_; }
 
   Symbol<Device>* mut_device() { return &device_; }
-  void set_stride(const std::shared_ptr<const Stride>& stride) { 
-    stride_ = stride; 
+  void set_stride(const std::shared_ptr<const Stride>& stride) {
+    stride_ = stride;
     is_contiguous_ = IsContiguous(shape(), *stride_);
   }
   void set_storage_offset(int64_t offset) { storage_offset_ = offset; }

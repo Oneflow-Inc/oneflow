@@ -905,10 +905,12 @@ def _masked_fill(self, mask, fill_value):
 def _masked_select(self, mask):
     return flow.masked_select(self, mask)
 
+
 def _contiguous(self):
     if self.is_contiguous():
         return self
     return flow._C.contiguous(self)
+
 
 def _reshape(self, *shape):
     if len(shape) == 1:

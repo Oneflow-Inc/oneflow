@@ -30,7 +30,6 @@ namespace oneflow {
 namespace one {
 namespace view {
 
-
 bool IsViewApplicable(const std::shared_ptr<Tensor>& input) {
   // NOTE: only eager local tensor support view for now
   // elem_cnt() > 1  used to excluding 0 shape tensor
