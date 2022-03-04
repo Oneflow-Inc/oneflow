@@ -181,7 +181,7 @@ Type JobImporter::GetTensorTypeOfLbn(const std::string& lbn) {
         if (auto t = this->GetTypeFromOneFlowDataType(dt)) {
           ret = RankedTensorType::get(ArrayRef<int64_t>(shape_begin, shape_end), t.getValue());
         } else {
-          llvm::errs() << "fail to get data type for: " << lbn << "\n";
+          llvm::errs() << "fail to get data tensor type for: " << lbn << "\n";
         }
       });
   return ret;
