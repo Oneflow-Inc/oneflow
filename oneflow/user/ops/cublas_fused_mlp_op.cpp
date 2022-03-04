@@ -170,7 +170,6 @@ REGISTER_USER_OP_GRAD("cublas_fused_mlp")
                                                     .Build();
       AddOp(bias_grad_op);
       if (op.NeedGenGradTensor4OpInput("biases", weight_num - 1)) {
-        printf("final bias requires grad \n");
         op.BindGradTensorWithOpInput(bias_grad_op.output("output_tensor", 0), "biases",
                                      weight_num - 1);
       }
@@ -190,7 +189,6 @@ REGISTER_USER_OP_GRAD("cublas_fused_mlp")
                 .Build();
         AddOp(cublas_bias_add_relu_matmul_grad_op);
         if (op.NeedGenGradTensor4OpInput("biases", hidden_layer_idx - 1)) {
-          printf("Bias %d requires grad \n", hidden_layer_idx - 1);
           op.BindGradTensorWithOpInput(cublas_bias_add_relu_matmul_grad_op.output("d_bias", 0),
                                        "biases",
                                        hidden_layer_idx - 1);  // previous layers bias grad
@@ -198,7 +196,6 @@ REGISTER_USER_OP_GRAD("cublas_fused_mlp")
 
         user_op::UserOpConfWrapperBuilder matmul_weight_grad_builder(
             op.op_name() + "_matmul_a_grad_" + std::to_string(hidden_layer_idx));
-        printf("Here hidden index is: %d \n", hidden_layer_idx - 1);
         user_op::UserOpConfWrapper matmul_weight_grad_op =
             matmul_weight_grad_builder.Op("matmul")
                 .Input("a", cublas_dy)
@@ -210,7 +207,6 @@ REGISTER_USER_OP_GRAD("cublas_fused_mlp")
                 .Build();
         AddOp(matmul_weight_grad_op);
         if (op.NeedGenGradTensor4OpInput("weights", hidden_layer_idx)) {
-          printf("weights %d requires grad \n", hidden_layer_idx);
           op.BindGradTensorWithOpInput(matmul_weight_grad_op.output("out", 0), "weights",
                                        hidden_layer_idx);
         }
@@ -238,7 +234,6 @@ REGISTER_USER_OP_GRAD("cublas_fused_mlp")
                                                             .Build();
       AddOp(matmul_input_grad_op);
       if (op.NeedGenGradTensor4OpInput("x", 0)) {
-        printf("X requires grad \n");
         op.BindGradTensorWithOpInput(matmul_input_grad_op.output("out", 0), "x", 0);
       }
       // dw:
@@ -254,7 +249,6 @@ REGISTER_USER_OP_GRAD("cublas_fused_mlp")
                                                              .Build();
       AddOp(matmul_weight_grad_op);
       if (op.NeedGenGradTensor4OpInput("weights", 0)) {
-        printf("weight0 requires grad \n");
         op.BindGradTensorWithOpInput(matmul_weight_grad_op.output("out", 0), "weights", 0);
       }
 
