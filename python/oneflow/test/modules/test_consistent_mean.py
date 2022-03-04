@@ -27,22 +27,20 @@ import oneflow.unittest
 
 
 @autotest(n=1, check_graph=False)
-def _test_mean(test_case, placement, sbp):
-    dim = random(1, 4).to(int).value()
-    dim0 = random().to(int).value() * 8
-    dim1 = random().to(int).value() * 8
-    x = random_tensor(ndim=4, dim0=dim0, dim1=dim1, dtype=float).to_global(
-        placement, sbp
-    )
+def _test_mean(test_case, placement, sbp, ndim):
+    dim = random(1, ndim).to(int).value()
+    dim_list = [random(1, 3).to(int).value() * 8 for _ in range(ndim)]
+    x = random_tensor(ndim, *dim_list, dtype=float).to_global(placement, sbp)
     return torch.mean(x, dim)
 
 
 class TestMean(flow.unittest.TestCase):
     @globaltest
     def test_mean(test_case):
+        ndim = random(2, 5).to(int).value()
         for placement in all_placement():
-            for sbp in all_sbp(placement, max_dim=2):
-                _test_mean(test_case, placement, sbp)
+            for sbp in all_sbp(placement, max_dim=ndim):
+                _test_mean(test_case, placement, sbp, ndim)
 
 
 if __name__ == "__main__":
