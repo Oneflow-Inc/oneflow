@@ -910,15 +910,6 @@ Maybe<void> BoxingCollector::Generate1Combination4DiffPlacement(
       int32_t diag_consumer = boxing_collector_consumer->id_1d_2_nd_[id_1d_consumer];
       // The diagonal sbp is not supported or no paths exist from the diagonal sbp to the
       // consumer or between the two diagonal sbps.
-      if (GlobalProcessCtx::Rank() == 0) {
-        std::cout << "Consumer: "
-                  << NdSbpToString(boxing_collector_consumer->nd_sbp_lists_[diag_consumer]) << ", ";
-        if (diag_consumer >= 0) {
-          std::cout << boxing_collector_consumer->minimum_copy_cost_[diag_consumer][id_consumer];
-          std::cout << ", diag cost: " << cost_4_diff_placement[id_1d_producer][id_1d_consumer]
-                    << std::endl;
-        }
-      }
       if (diag_consumer < 0
           || boxing_collector_consumer->minimum_copy_cost_[diag_consumer][id_consumer]
                  > GetValidMaxCopyCost()
