@@ -31,7 +31,7 @@ class SharedMemory:
 
     def __del__(self):
         try:
-            if hasattr(self, 'shm_'):
+            if hasattr(self, "shm_"):
                 self.close()
         except OSError:
             pass
