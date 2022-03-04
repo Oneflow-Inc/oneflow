@@ -21,7 +21,7 @@ import oneflow.unittest
 
 from oneflow.test_utils.automated_test_util import *
 
-
+@unittest.skipIf(os.getenv("ONEFLOW_TEST_CPU_ONLY"), "only test cpu cases")
 class TestParitalFC(flow.unittest.TestCase):
     @globaltest
     def test_parital_fc(test_case):
