@@ -63,31 +63,46 @@ class ReluGradFunctor : public BinaryFunctor {
 class PReluFunctor {
  public:
   PReluFunctor() {
-    op_ = CHECK_JUST(one::OpBuilder("prelu").Input("x").Input("alpha").Output("y").Build());
+    channel_first_op_ =
+        CHECK_JUST(one::OpBuilder("prelu").Input("x").Input("alpha").Output("y").Build());
+    legacy_op_ =
+        CHECK_JUST(one::OpBuilder("tf_prelu").Input("x").Input("alpha").Output("y").Build());
   }
 
   Maybe<Tensor> operator()(const std::shared_ptr<Tensor>& x,
                            const std::shared_ptr<Tensor>& alpha) const {
-    int num_params = alpha->dim(0);
-    CHECK_OR_RETURN(((num_params == 1) || (num_params == x->shape()->At(1))))
-        << "num_parameters in prelu must be 1 or " << x->shape()->At(1);
-    return OpInterpUtil::Dispatch<Tensor>(*op_, {x, alpha});
+    if (alpha->shape()->NumAxes() > 1) {
+      return OpInterpUtil::Dispatch<Tensor>(*legacy_op_, {x, alpha});
+    } else {
+      int num_params = alpha->dim(0);
+      CHECK_OR_RETURN(((num_params == 1) || (num_params == x->shape()->At(1))))
+          << "num_parameters in prelu must be 1 or " << x->shape()->At(1);
+      return OpInterpUtil::Dispatch<Tensor>(*channel_first_op_, {x, alpha});
+    }
   }
 
  private:
-  std::shared_ptr<OpExpr> op_;
+  std::shared_ptr<OpExpr> channel_first_op_;
+  std::shared_ptr<OpExpr> legacy_op_;
 };
 
 class PReluGradFunctor {
  public:
   PReluGradFunctor() {
-    op_ = CHECK_JUST(one::OpBuilder("prelu_grad")
-                         .Input("dy")
-                         .Input("x")
-                         .Input("alpha")
-                         .Output("dx")
-                         .Output("alpha_diff")
-                         .Build());
+    channel_first_op_ = CHECK_JUST(one::OpBuilder("prelu_grad")
+                                       .Input("dy")
+                                       .Input("x")
+                                       .Input("alpha")
+                                       .Output("dx")
+                                       .Output("alpha_diff")
+                                       .Build());
+    legacy_op_ = CHECK_JUST(one::OpBuilder("tf_prelu_grad")
+                                .Input("dy")
+                                .Input("x")
+                                .Input("alpha")
+                                .Output("dx")
+                                .Output("alpha_diff")
+                                .Build());
   }
   Maybe<TensorTuple> operator()(const std::shared_ptr<Tensor>& dy, const std::shared_ptr<Tensor>& x,
                                 const std::shared_ptr<Tensor>& alpha) const {
@@ -97,11 +112,17 @@ class PReluGradFunctor {
     } else {
       JUST(attrs.SetAttr<bool>("alpha_requires_grad", false));
     }
-    return OpInterpUtil::Dispatch<one::TensorTuple>(*op_, {dy, x, alpha}, attrs);
+
+    if (alpha->shape()->NumAxes() > 1) {
+      return OpInterpUtil::Dispatch<one::TensorTuple>(*legacy_op_, {dy, x, alpha}, attrs);
+    } else {
+      return OpInterpUtil::Dispatch<one::TensorTuple>(*channel_first_op_, {dy, x, alpha}, attrs);
+    }
   }
 
  private:
-  std::shared_ptr<OpExpr> op_;
+  std::shared_ptr<OpExpr> channel_first_op_;
+  std::shared_ptr<OpExpr> legacy_op_;
 };
 
 class HardTanhFunctor {

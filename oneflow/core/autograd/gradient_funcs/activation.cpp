@@ -385,6 +385,7 @@ REGISTER_OP_EXPR_GRAD_FUNCTION("hardtanh", HardTanh);
 REGISTER_OP_EXPR_GRAD_FUNCTION("elu", Elu);
 REGISTER_OP_EXPR_GRAD_FUNCTION("celu", Celu);
 REGISTER_OP_EXPR_GRAD_FUNCTION("prelu", PReLU);
+REGISTER_OP_EXPR_GRAD_FUNCTION("tf_prelu", PReLU);
 
 }  // namespace one
 }  // namespace oneflow
