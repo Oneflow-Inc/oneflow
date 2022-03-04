@@ -57,6 +57,8 @@ class Graph(object):
     4. Define computation logical in ``build()`` method.
     5. Instantiate your graph then call it.
 
+    For example:
+
     .. code-block:: python
 
         >>> import oneflow as flow
@@ -92,6 +94,8 @@ class Graph(object):
     def __init__(self):
         """
         Initializes internal Graph states. It MUST be called in ``__init__`` method of subclass.
+
+        For example:
 
         .. code-block:: python
 
@@ -147,6 +151,8 @@ class Graph(object):
         first call of your graph to make the module executing the right
         training or evaluation logic if needed.
 
+        For example:
+
         .. code-block:: python
 
             >>> import oneflow as flow
@@ -178,6 +184,8 @@ class Graph(object):
         r"""Call nn.Graph subclass instance to run your customized graph.
 
         Call your customized graph after the instantiation:
+
+        For example:
 
         .. code-block:: python
 
@@ -222,6 +230,8 @@ class Graph(object):
         Also note that only scalar tensor are allowed to call ``backward()``
         in ``nn.Graph.build()`` for the moment. So you may call methods such as ``Tensor.mean()``
         to make the loss tensor a scalar tensor.
+
+        For example:
 
         .. code-block:: python
 
@@ -406,7 +416,12 @@ class Graph(object):
         info of each operation. ``v_level`` 3 will additionally print more detailed info of each
         operation.
 
+        In addition, during the training process, when ``v_level`` is greater than or equal to 1, 
+        the learning rate information of each step will be printed.
+
         Use ``ranks`` to choose which rank to print the debug information.
+
+        For example:
 
         .. code-block:: python
 
@@ -451,6 +466,8 @@ class Graph(object):
 
         After the first call of graph, inputs and outputs will be added to
         the graph structure.
+
+        For example:
 
         .. code-block:: python
 
@@ -1078,6 +1095,8 @@ class Graph(object):
 
         Just assign nn.Module in nn.Graph, _add_block will be called to add the
         module as a Block:
+
+        For example:
 
         .. code-block:: python
 
