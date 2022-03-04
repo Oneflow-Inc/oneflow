@@ -24,6 +24,7 @@ namespace oneflow {
 namespace vm {
 
 void CudaBackendAllocator::Allocate(char** mem_ptr, std::size_t size) {
+  cudaSetDevice(device_id_);
   if (cudaMalloc(mem_ptr, size) != cudaSuccess) {
     // NOTE(chengcheng): In some corner case on ubuntu, cuda memory not released even if OOM.
     //   So there need release all cuda memory allocated by this process before core dump.
@@ -34,6 +35,7 @@ void CudaBackendAllocator::Allocate(char** mem_ptr, std::size_t size) {
 }
 
 void CudaBackendAllocator::Deallocate(char* mem_ptr, std::size_t size) {
+  cudaSetDevice(device_id_);
   OF_CUDA_CHECK(cudaFree(mem_ptr));
 }
 
