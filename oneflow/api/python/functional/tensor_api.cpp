@@ -225,6 +225,12 @@ class LocalTensorSharedNumpyDataFunctor {
       return Error::TypeError() << "expected np.ndarray, but got " << Py_TYPE(obj)->tp_name;
     }
     auto* array = reinterpret_cast<PyArrayObject*>(obj);
+    // TODO(wyg): support non-contiguous array.
+    if (!PyArray_IS_C_CONTIGUOUS(array)) {
+      OF_LOG_ONCE(LOG(WARNING) << "OneFlow don't support non-contiguous array now, "
+                                  "and we will copy the array to a contiguous one.");
+      array = PyArray_GETCONTIGUOUS(array);
+    }
 
     // Build TensorMeta
     int32_t dim = PyArray_NDIM(array);
