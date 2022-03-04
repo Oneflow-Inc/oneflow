@@ -17,6 +17,7 @@ limitations under the License.
 #include "oneflow/core/common/cpp_attribute.h"
 #include "oneflow/core/common/maybe.h"
 #include "oneflow/core/common/cpp_attribute.h"
+#include "oneflow/core/common/container_util.h"
 #include "oneflow/core/framework/consistency_check.h"
 #include "oneflow/core/framework/user_op_conf.h"
 #include "oneflow/core/framework/op_expr.h"
@@ -857,9 +858,9 @@ Maybe<void> LazyInterpreter::ApplyImpl(const UserOpExpr& op_expr, const TensorTu
   //   Normal UserOp inputs size >= 1 for infer parallel_desc.
   CHECK_GE_OR_RETURN(inputs.size(), 1);
   auto op_conf = JUST(OpInterpUtil::GenBuiltinOpConf(op_expr, ctx.attrs));
-  std::shared_ptr<Scope> scope = JUST(NewScopeWithParallelDescByTensor(inputs.at(0)));
+  std::shared_ptr<Scope> scope = JUST(NewScopeWithParallelDescByTensor(JUST(VectorAt(inputs, 0))));
   op_conf->set_scope_symbol_id(JUST(scope->symbol_id()));
-  const std::string device_tag = JUST(GetDeviceTagOfTensor(inputs.at(0)));
+  const std::string device_tag = JUST(GetDeviceTagOfTensor(JUST(VectorAt(inputs, 0))));
   const bool is_local = inputs.at(0)->is_local();
   const std::shared_ptr<const ParallelDesc> parallel_desc =
       JUST(GetParallelDescOfTensor(inputs.at(0)));
