@@ -32,7 +32,7 @@ int GenerateImage(std::vector<uint8_t>& jpg, int w, int h) {
 
   for (int i = 0; i < w; i++) {
     for (int j = 0; j < h; j++) {
-      uint8_t r, g, b;
+      uint8_t r = 0, g = 0, b = 0;
       if (i < w / 2 && j < h / 2) {
         r = 255;
         g = 0;
@@ -106,7 +106,6 @@ TEST(JPEG, decoder) {
   for (int i = 0; i < test_num; i++) {
     cv::Mat libjpeg_image_mat;
     JpegDecoder jpeg_decode;
-
 
     RandomCropGenerator libjpeg_random_crop_gen({0.1, 0.9}, {0.4, 0.6}, seeds[i], 1);
     RandomCropGenerator opencv_random_crop_gen({0.1, 0.9}, {0.4, 0.6}, seeds[i], 1);
