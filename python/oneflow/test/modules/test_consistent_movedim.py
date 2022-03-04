@@ -24,13 +24,13 @@ def _test_movedim(test_case, placement, sbp):
         dim2=random(1, 3) * 8,
         dim3=random(1, 3) * 8,
         dim4=random(1, 3) * 8,
-    ).to_consistent(placement, sbp)
+    ).to_global(placement, sbp)
     z = torch.movedim(x, (0, 1), (2, 3))
     return z
 
 
 class TestMovedim(flow.unittest.TestCase):
-    @consistent
+    @globaltest
     def test_movedim(test_case):
         for placement in all_placement():
             for sbp in all_sbp(placement):
