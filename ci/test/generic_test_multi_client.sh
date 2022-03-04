@@ -29,9 +29,8 @@ unset https_proxy
 export ONEFLOW_TEST_DEVICE_NUM=1
 
 COMMON_PYTEST_ARGS="--max-worker-restart=0 -x --durations=50 --capture=sys"
-# python3 -m pytest ${COMMON_PYTEST_ARGS} --failed-first --dist loadfile ${parallel_spec} ${PWD}
+time python3 -m pytest ${COMMON_PYTEST_ARGS} --failed-first --dist loadfile ${parallel_spec} ${PWD}
 if [[ "$(python3 -c 'import oneflow.sysconfig;print(oneflow.sysconfig.has_rpc_backend_grpc())')" == *"True"* ]]; then
-    # python3 -m oneflow.distributed.launch --nproc_per_node 2 -m pytest ${COMMON_PYTEST_ARGS} ${PWD}
     export ONEFLOW_TEST_DEVICE_NUM=2
     time python3 ${src_dir}/python/oneflow/distributed/multi_launch.py \
         --files "${PWD}/**/test_*.py" \
@@ -53,8 +52,7 @@ if [[ "$(python3 -c 'import oneflow.sysconfig;print(oneflow.sysconfig.has_rpc_ba
         -m oneflow.distributed.launch --nproc_per_node 2 -m pytest ${COMMON_PYTEST_ARGS}
 
     export ONEFLOW_TEST_DEVICE_NUM=4
-    exit 0
-    time python3 /home/caishenghang/oneflow/python/oneflow/distributed/multi_launch.py \
+    time python3 ${src_dir}/python/oneflow/distributed/multi_launch.py \
         --files "${PWD}/**/test_*.py" \
         --master_port 29500 \
         --master_port 29501 \
@@ -68,7 +66,6 @@ if [[ "$(python3 -c 'import oneflow.sysconfig;print(oneflow.sysconfig.has_rpc_ba
         --group_size 4 \
         --auto_cuda_visible_devices \
         -m oneflow.distributed.launch --nproc_per_node 4 -m pytest ${COMMON_PYTEST_ARGS}
-    # python3 -m oneflow.distributed.launch --nproc_per_node 4 -m pytest ${COMMON_PYTEST_ARGS} ${PWD}
 else
     python3 -c 'import oneflow.sysconfig;assert(oneflow.sysconfig.has_rpc_backend_grpc() == False)'
 fi
