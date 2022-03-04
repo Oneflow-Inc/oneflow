@@ -52,7 +52,6 @@ class TestNMS(flow.unittest.TestCase):
             # TODO: nms only has cuda kernel at now.
             if placement.type == "cpu":
                 continue
-            # TODO: nms with split tensor results in program freezing.
             for sbp in all_sbp(placement, max_dim=1):
                 _test_nms(test_case, placement, sbp)
 
