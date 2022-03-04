@@ -554,6 +554,72 @@ class TestEinsum(flow.unittest.TestCase):
         z = torch.einsum("bsid,bsje->bijde", x, y)
         return z
 
+    @autotest(n=20, check_graph=True)
+    def test_einsum_openfold_usecase1(test_case):
+        device = random_device()
+        dim0 = random(1, 6)
+        x = random_tensor(
+            ndim=4, dim0=random(1, 6), dim1=random(1, 6), dim2=dim0, dim3=random(1, 6)
+        ).to(device)
+        y = random_tensor(
+            ndim=4, dim0=random(1, 6), dim1=random(1, 6), dim2=dim0, dim3=random(1, 6)
+        ).to(device)
+        z = torch.einsum("...bac,...dae->...bdce", x, y)
+        return z
+
+    @autotest(n=20, check_graph=True)
+    def test_einsum_openfold_usecase2(test_case):
+        device = random_device()
+        dim0 = random(1, 6)
+        dim1 = random(1, 6)
+        x = random_tensor(
+            ndim=4, dim0=random(1, 6), dim1=dim0, dim2=random(1, 6), dim3=dim1
+        ).to(device)
+        y = random_tensor(
+            ndim=4, dim0=random(1, 6), dim1=dim0, dim2=random(1, 6), dim3=dim1
+        ).to(device)
+        z = torch.einsum("...abc,...adc->...bdc", x, y)
+        return z
+
+    @autotest(n=20, check_graph=True)
+    def test_einsum_openfold_usecase3(test_case):
+        device = random_device()
+        dim0 = random(1, 6)
+        dim1 = random(1, 6)
+        x = random_tensor(
+            ndim=4, dim0=random(1, 6), dim1=random(1, 6), dim2=dim0, dim3=dim1
+        ).to(device)
+        y = random_tensor(
+            ndim=4, dim0=random(1, 6), dim1=random(1, 6), dim2=dim0, dim3=dim1
+        ).to(device)
+        z = torch.einsum("...qhd,...khd->...hqk", x, y)
+        return z
+
+    @autotest(n=20, check_graph=True)
+    def test_einsum_openfold_usecase4(test_case):
+        device = random_device()
+        dim0 = random(1, 6)
+        dim1 = random(1, 6)
+        x = random_tensor(
+            ndim=4, dim0=random(1, 6), dim1=dim0, dim2=dim1, dim3=random(1, 6)
+        ).to(device)
+        y = random_tensor(
+            ndim=4, dim0=random(1, 6), dim1=random(1, 6), dim2=dim1, dim3=dim0
+        ).to(device)
+        z = torch.einsum("...vhf,...qhv->...qhf", x, y)
+        return z
+
+    @autotest(n=20, check_graph=True)
+    def test_einsum_openfold_usecase5(test_case):
+        device = random_device()
+        dim0 = random(1, 6)
+        x = random_tensor(
+            ndim=4, dim0=random(1, 6), dim1=random(1, 6), dim2=random(1, 6), dim3=dim0
+        ).to(device)
+        y = random_tensor(ndim=2, dim0=dim0, dim1=random(1, 6)).to(device)
+        z = torch.einsum("...ij,jk->ik", x, y)
+        return z
+
 
 if __name__ == "__main__":
     unittest.main()
