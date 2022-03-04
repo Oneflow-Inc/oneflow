@@ -162,7 +162,6 @@ REGISTER_DECONV_KERNEL(deconv1d, float16, 1);
 REGISTER_DECONV_KERNEL(deconv2d, float16, 2);
 REGISTER_DECONV_KERNEL(deconv3d, float16, 3);
 
-
 }  // namespace oneflow
 
 #endif
