@@ -25,13 +25,7 @@ namespace vm {
 
 void CudaBackendAllocator::Allocate(char** mem_ptr, std::size_t size) {
   cudaSetDevice(device_id_);
-  if (cudaMalloc(mem_ptr, size) != cudaSuccess) {
-    // NOTE(chengcheng): In some corner case on ubuntu, cuda memory not released even if OOM.
-    //   So there need release all cuda memory allocated by this process before core dump.
-    LOG(INFO) << " OOM error is detected, process will exit. And it will start to reset CUDA "
-              << "device for release device memory.";
-    OF_CUDA_CHECK(cudaDeviceReset());
-  }
+  if (cudaMalloc(mem_ptr, size) != cudaSuccess) { *mem_ptr = nullptr; }
 }
 
 void CudaBackendAllocator::Deallocate(char* mem_ptr, std::size_t size) {

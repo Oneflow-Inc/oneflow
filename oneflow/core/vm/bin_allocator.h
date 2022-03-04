@@ -25,7 +25,7 @@ namespace vm {
 
 class BinAllocator final : public Allocator {
  public:
-  explicit BinAllocator(std::unique_ptr<Allocator>&& backend);
+  explicit BinAllocator(size_t alignment, std::unique_ptr<Allocator>&& backend);
   ~BinAllocator() override;
 
   void Allocate(char** mem_ptr, std::size_t size) override;
@@ -113,7 +113,8 @@ class BinAllocator final : public Allocator {
   bool AllocateBlockToExtendTotalMem(size_t aligned_size);
   void DeallocateFreeBlockForGarbageCollection();
 
-  std::unique_ptr<Allocator> backend_;
+  const size_t alignment_;
+  const std::unique_ptr<Allocator> backend_;
   size_t total_memory_bytes_;
   HashMap<char*, Block> mem_ptr2block_;
 

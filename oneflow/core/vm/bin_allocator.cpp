@@ -18,33 +18,35 @@ limitations under the License.
 
 #include "oneflow/core/vm/bin_allocator.h"
 #include <iostream>
+#include <cmath>
 
 namespace oneflow {
 namespace vm {
 
 namespace {
 
-static constexpr int kAlignSize = kCudaMemAllocAlignSize;
+inline size_t MemAlignedBytes(size_t bytes, size_t alignment) { return RoundUp(bytes, alignment); }
 
-inline size_t CudaMemAlignedBytes(size_t bytes) { return RoundUp(bytes, kAlignSize); }
-
-inline bool IsAlignedSize(size_t size) { return size % kAlignSize == 0; }
+inline bool IsAlignedSize(size_t size, size_t alignment) { return size % alignment == 0; }
 
 static const size_t kPieceSplitThreshold = 128 << 20;  // 128MiB
 
 }  // namespace
 
-BinAllocator::BinAllocator(std::unique_ptr<Allocator>&& backend)
+BinAllocator::BinAllocator(size_t alignment, std::unique_ptr<Allocator>&& backend)
     : Allocator(),
+      alignment_(alignment),
       backend_(std::move(backend)),
       total_memory_bytes_(0),
       recycle_piece_list_(nullptr) {
+  CHECK_GE(alignment, 1);
+  CHECK_EQ(1 << static_cast<int>(std::log2(alignment)), alignment);
   bins_.resize(kBinNumSize);
   for (int i = 0; i < kBinNumSize; ++i) {
     size_t bin_size = BinSize4BinNum(i);
     bins_.at(i).size = bin_size;
     CHECK_EQ(BinNum4BinSize(bin_size), i);
-    CHECK_EQ(BinNum4BinSize(bin_size + kAlignSize - 1), i);
+    CHECK_EQ(BinNum4BinSize(bin_size + alignment_ - 1), i);
     CHECK_EQ(BinNum4BinSize(bin_size * 2 - 1), i);
     CHECK_EQ(BinNum4BinSize(bin_size * 2), i == (kBinNumSize - 1) ? i : i + 1);
   }
@@ -105,7 +107,7 @@ void BinAllocator::UnMarkPiece(Piece* piece) {
 }
 
 BinAllocator::Piece* BinAllocator::FindPiece(size_t aligned_size) {
-  CHECK(IsAlignedSize(aligned_size));
+  CHECK(IsAlignedSize(aligned_size, alignment_));
   for (int32_t bin_num = BinNum4BinSize(aligned_size); bin_num < kBinNumSize; ++bin_num) {
     Bin* bin = &bins_.at(bin_num);
     for (auto it = bin->pieces.begin(); it != bin->pieces.end(); ++it) {
@@ -113,7 +115,7 @@ BinAllocator::Piece* BinAllocator::FindPiece(size_t aligned_size) {
       CHECK(piece->is_free);
       CHECK_NOTNULL(piece->ptr);
       CHECK_EQ(piece->bin_num, bin_num);
-      CHECK(IsAlignedSize(piece->size));
+      CHECK(IsAlignedSize(piece->size, alignment_));
       if (piece->size >= aligned_size) {
         bin->pieces.erase(it);
         piece->bin_num = kInvalidBinNum;
@@ -132,8 +134,8 @@ BinAllocator::Piece* BinAllocator::FindPiece(size_t aligned_size) {
 
           new_piece->is_free = true;
           new_piece->bin_num = kInvalidBinNum;
-          CHECK(IsAlignedSize(piece->size));
-          CHECK(IsAlignedSize(new_piece->size));
+          CHECK(IsAlignedSize(piece->size, alignment_));
+          CHECK(IsAlignedSize(new_piece->size, alignment_));
           InsertPiece2Bin(new_piece);
           MarkPiece(new_piece);
         }
@@ -159,7 +161,7 @@ void BinAllocator::MergeNeighbourFreePiece(Piece* lhs, Piece* rhs) {
 }
 
 bool BinAllocator::AllocateBlockToExtendTotalMem(size_t aligned_size) {
-  CHECK(IsAlignedSize(aligned_size));
+  CHECK(IsAlignedSize(aligned_size, alignment_));
 
   size_t allocate_bytes = aligned_size;
   if (allocate_bytes < 1048576) {
@@ -172,7 +174,7 @@ bool BinAllocator::AllocateBlockToExtendTotalMem(size_t aligned_size) {
     // Round up to 2MB if `allocate_bytes` is larger than 10MB
     allocate_bytes = RoundUp(allocate_bytes, 2097152);
   }
-  const size_t final_allocate_bytes = CudaMemAlignedBytes(allocate_bytes);
+  const size_t final_allocate_bytes = MemAlignedBytes(allocate_bytes, alignment_);
 
   if (final_allocate_bytes < aligned_size) { return false; }
 
@@ -252,20 +254,19 @@ void BinAllocator::Allocate(char** mem_ptr, std::size_t size) {
     *mem_ptr = nullptr;
     return;
   }
-  size_t aligned_size = CudaMemAlignedBytes(size);
+  size_t aligned_size = MemAlignedBytes(size, alignment_);
 
   Piece* piece = FindPiece(aligned_size);
+
+  if (piece == nullptr) {
+    if (AllocateBlockToExtendTotalMem(aligned_size)) { piece = FindPiece(aligned_size); }
+  }
 
   if (piece == nullptr) {
     DeallocateFreeBlockForGarbageCollection();
     if (AllocateBlockToExtendTotalMem(aligned_size)) { piece = FindPiece(aligned_size); }
   }
-
-  if (piece == nullptr) {
-    LOG(FATAL) << "Error! : Out of memory when allocate size : " << size
-               << ".\n The total_memory_bytes allocated by this BinAllocator is : "
-               << total_memory_bytes_;
-  }
+  if (piece == nullptr) { LOG(FATAL) << "Error! : Out of memory when allocate size : " << size; }
   CHECK_NOTNULL(piece->ptr);
   CHECK(ptr2piece_.find(piece->ptr) != ptr2piece_.end());
   *mem_ptr = piece->ptr;

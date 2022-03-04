@@ -48,8 +48,8 @@ class CudaStreamHandleDeviceCtx : public DeviceCtx, public SingleThreadQueryCuda
       : DeviceCtx(),
         SingleThreadQueryCudaEventProvider(device_id),
         stream_(nullptr),
-        cuda_allocator_(new ThreadSafeAllocator(
-            std::make_unique<BinAllocator>(std::make_unique<CudaBackendAllocator>(device_id)))),
+        cuda_allocator_(new ThreadSafeAllocator(std::make_unique<BinAllocator>(
+            kCudaMemAllocAlignSize, std::make_unique<CudaBackendAllocator>(device_id)))),
         device_id_(device_id) {}
 
   cudaStream_t cuda_stream() const override { return GetOrCreateCudaStream()->cuda_stream(); }
