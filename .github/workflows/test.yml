@@ -797,7 +797,7 @@ jobs:
         timeout-minutes: 30
         if: ${{ !fromJson(matrix.cache-hit) && matrix.test-type == 'speed-test' && matrix.device == 'cuda' }}
         run: |
-          docker exec -e INSIGHTFACE_DIR=${{ env.INSIGHT_FACE_SRC }}/recognition/arcface_oneflow \
+          docker exec -e INSIGHT_FACE_TEST_DIR=${{ env.INSIGHT_FACE_SRC }}/recognition/arcface_oneflow \
             ${{ env.TEST_CONTAINER_NAME }} \
             bash ${{ env.INSIGHT_FACE_SRC }}/recognition/arcface_oneflow/ci/run_eager_graph.sh
       - name: Module API test
