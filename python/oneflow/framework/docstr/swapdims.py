@@ -25,6 +25,7 @@ add_docstr(
     .. code-block:: python
     
         >>> import oneflow as flow
+
         >>> x = flow.tensor([[[0,1],[2,3]],[[4,5],[6,7]]])
         >>> x
         tensor([[[0, 1],
