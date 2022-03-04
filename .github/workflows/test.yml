@@ -796,7 +796,7 @@ jobs:
         timeout-minutes: 30
         if: ${{ !fromJson(matrix.cache-hit) && matrix.test-type == 'speed-test' && matrix.device == 'cuda' }}
         run: |
-          docker exec -e INSIGHTFACE_DIR=$PWD/insightface/recognition/arcface_oneflow -w $PWD/insightface/recognition/arcface_oneflow ${{ env.TEST_CONTAINER_NAME }} bash ci/run_graph_ddp.sh           
+          docker exec -e INSIGHTFACE_DIR=$PWD/insightface/recognition/arcface_oneflow  ${{ env.TEST_CONTAINER_NAME }} bash "cd $PWD/insightface/recognition/arcface_oneflow&&bash ci/run_graph_ddp.sh"          
       - name: Module API test
         timeout-minutes: 45
         if: ${{ !fromJson(matrix.cache-hit) && matrix.test-type == 'module' && !fromJson(matrix.is-distributed) }}
