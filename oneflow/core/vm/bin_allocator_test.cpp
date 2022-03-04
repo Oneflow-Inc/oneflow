@@ -36,7 +36,8 @@ TEST(CudaBinAllocator, cuda_allocator) {
   const size_t remain_bytes = 50 * 1048576;
   ASSERT_TRUE(cudaSuccess == cudaMemGetInfo(&free_bytes, &total_bytes));
   if (free_bytes <= remain_bytes || free_bytes - remain_bytes < remain_bytes) {
-    LOG(INFO) << "CudaBinAllocator Test: Skip because of allocator mem bytes less than 50MiB in GPU 0";
+    LOG(INFO)
+        << "CudaBinAllocator Test: Skip because of allocator mem bytes less than 50MiB in GPU 0";
     return;
   }
   std::unique_ptr<Allocator> allo(new BinAllocator(std::make_unique<CudaBackendAllocator>(0)));

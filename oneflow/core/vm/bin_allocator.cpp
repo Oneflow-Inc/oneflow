@@ -35,7 +35,10 @@ static const size_t kPieceSplitThreshold = 128 << 20;  // 128MiB
 }  // namespace
 
 BinAllocator::BinAllocator(std::unique_ptr<Allocator>&& backend)
-    : Allocator(), backend_(backend), total_memory_bytes_(0), recycle_piece_list_(nullptr) {
+    : Allocator(),
+      backend_(std::move(backend)),
+      total_memory_bytes_(0),
+      recycle_piece_list_(nullptr) {
   bins_.resize(kBinNumSize);
   for (int i = 0; i < kBinNumSize; ++i) {
     size_t bin_size = BinSize4BinNum(i);
@@ -52,9 +55,7 @@ BinAllocator::~BinAllocator() {
     CHECK_EQ(mem_ptr2block_.size(), 0);
     return;
   }
-  for (auto& pair : mem_ptr2block_) {
-    backend_->Deallocate(pair.first, pair.second.size);
-  }
+  for (auto& pair : mem_ptr2block_) { backend_->Deallocate(pair.first, pair.second.size); }
 }
 
 void BinAllocator::InsertPiece2Bin(Piece* piece) {
@@ -196,7 +197,7 @@ bool BinAllocator::AllocateBlockToExtendTotalMem(size_t aligned_size) {
   return true;
 }
 
-bool BinAllocator::DeallocateFreeBlockForGarbageCollection() {
+void BinAllocator::DeallocateFreeBlockForGarbageCollection() {
   size_t total_free_bytes = 0;
   HashSet<char*> free_block_ptrs;
   for (const auto& pair : mem_ptr2block_) {
@@ -244,8 +245,6 @@ bool BinAllocator::DeallocateFreeBlockForGarbageCollection() {
       backend_->Deallocate(ptr, block.size);
     }
   }
-
-  return total_free_bytes > 0;
 }
 
 void BinAllocator::Allocate(char** mem_ptr, std::size_t size) {
@@ -258,9 +257,8 @@ void BinAllocator::Allocate(char** mem_ptr, std::size_t size) {
   Piece* piece = FindPiece(aligned_size);
 
   if (piece == nullptr) {
-    if (DeallocateFreeBlockForGarbageCollection() && AllocateBlockToExtendTotalMem(aligned_size)) {
-      piece = FindPiece(aligned_size);
-    }
+    DeallocateFreeBlockForGarbageCollection();
+    if (AllocateBlockToExtendTotalMem(aligned_size)) { piece = FindPiece(aligned_size); }
   }
 
   if (piece == nullptr) {
