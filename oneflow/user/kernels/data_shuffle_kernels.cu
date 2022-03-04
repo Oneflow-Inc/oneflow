@@ -632,7 +632,7 @@ user_op::InferTmpSizeFn GenEmbeddingShuffleInferTmpSizeFn() {
       .SetInferTmpSizeFn(GenEmbeddingShuffleInferTmpSizeFn<t_dtype, idx_dtype>());
 
 REGISTER_CUDA_EMBEDDING_SHUFFLE_KERNEL(float, int32_t)
-REGISTER_CUDA_EMBEDDING_SHUFFLE_KERNEL(half, int32_t)
+REGISTER_CUDA_EMBEDDING_SHUFFLE_KERNEL(float16, int32_t)
 
 namespace {
 
