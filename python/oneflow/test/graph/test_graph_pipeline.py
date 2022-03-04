@@ -81,10 +81,10 @@ class OFRecordDataLoader(flow.nn.Module):
 
 def _train_with_graph(iter_num=3):
     B = [flow.sbp.broadcast]
-    P0 = flow.placement("cuda", {0: [0]})
-    P1 = flow.placement("cuda", {0: [1]})
-    P2 = flow.placement("cuda", {0: [2]})
-    P3 = flow.placement("cuda", {0: [3]})
+    P0 = flow.placement("cuda", ranks=[0])
+    P1 = flow.placement("cuda", ranks=[1])
+    P2 = flow.placement("cuda", ranks=[2])
+    P3 = flow.placement("cuda", ranks=[3])
 
     train_data_loader = OFRecordDataLoader(
         ofrecord_root="/dataset/ImageNet/ofrecord",

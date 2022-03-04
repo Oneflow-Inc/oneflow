@@ -45,6 +45,19 @@ std::unique_ptr<Cast> NewCast() {
   return std::unique_ptr<Cast>(new CastImpl<From, To>());
 }
 
+#define CPU_PRIMITIVE_CAST_TYPE_SEQ \
+  CPU_PRIMITIVE_BOOL_TYPE_SEQ       \
+  CPU_PRIMITIVE_CHAR_TYPE_SEQ       \
+  CPU_PRIMITIVE_INT8_TYPE_SEQ       \
+  CPU_PRIMITIVE_UINT8_TYPE_SEQ      \
+  CPU_PRIMITIVE_INT32_TYPE_SEQ      \
+  CPU_PRIMITIVE_UINT32_TYPE_SEQ     \
+  CPU_PRIMITIVE_INT64_TYPE_SEQ      \
+  CPU_PRIMITIVE_UINT64_TYPE_SEQ     \
+  CPU_PRIMITIVE_FLOAT_TYPE_SEQ      \
+  CPU_PRIMITIVE_DOUBLE_TYPE_SEQ     \
+  CPU_PRIMITIVE_FLOAT16_TYPE_SEQ
+
 class CastFactoryImpl : public CastFactory {
  public:
   OF_DISALLOW_COPY_AND_MOVE(CastFactoryImpl);
@@ -58,7 +71,7 @@ class CastFactoryImpl : public CastFactory {
 
     static const std::map<std::pair<DataType, DataType>, std::function<std::unique_ptr<Cast>()>>
         new_cast_handle{OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(
-            MAKE_NEW_CAST_ENTRY, CPU_PRIMITIVE_ALL_TYPE_SEQ, CPU_PRIMITIVE_ALL_TYPE_SEQ)};
+            MAKE_NEW_CAST_ENTRY, CPU_PRIMITIVE_CAST_TYPE_SEQ, CPU_PRIMITIVE_CAST_TYPE_SEQ)};
 
 #undef MAKE_NEW_CAST_ENTRY
 
