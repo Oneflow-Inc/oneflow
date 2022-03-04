@@ -29,11 +29,13 @@ static void SetIsForkedSubProcess() { is_fork = true; }
 
 namespace {
 void CurrentRankVmSync() {
-  if (Global<VirtualMachine>::Get() != nullptr) { CHECK_JUST(vm::CurrentRankSync()); }
+  // Instructions in forked subprocesses are not dispatched to vm,
+  // so no need to sync vm in these processes.
+  if (!is_fork && Global<VirtualMachine>::Get() != nullptr) { CHECK_JUST(vm::CurrentRankSync()); }
 }
 }  // namespace
 
-void RegisterForkCallback() { pthread_atfork(CurrentRankVmSync, nullptr, SetIsForkedSubProcess); }
+void RegisterForkCallback() { pthread_atfork(&CurrentRankVmSync, nullptr, &SetIsForkedSubProcess); }
 COMMAND(RegisterForkCallback());
 
 const char* kOfCudaNotSupportInForkedSubProcess =
