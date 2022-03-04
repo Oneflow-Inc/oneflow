@@ -57,6 +57,11 @@ bool FLAGS_tensorrt_int8 = EnvToBool(FLAGS_tensorrt_int8, false);
 // tensorrt_int8 flag is true.
 std::string FLAGS_int8_calibration = EnvToString(FLAGS_int8_calibration, "");
 
+// Forced inference mode enables the training operators to be accelerated by the
+// tensorrt engine even if in train mode.
+// Note: This option should only used when all parameters are not to be updated.
+bool FLAGS_force_inference_mode = EnvToBool(FLAGS_force_inference_mode, false);
+
 namespace oneflow {
 namespace xrt {
 
@@ -250,6 +255,7 @@ XrtPassOptions CreateDefaultXrtPassOptions(bool train_phase) {
 void RunCompilationTimeXrtPasses(const OpGraph& op_graph, Job* job, bool train_phase) {
   auto graph = BuildXrtGraph(&op_graph);
   // Create options to run xrt passes.
+  train_phase = train_phase && !FLAGS_force_inference_mode;
   auto options = CreateDefaultXrtPassOptions(train_phase);
 
   RunXrtPass("MarkClusterId", graph.get(), options);

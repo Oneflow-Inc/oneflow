@@ -57,8 +57,7 @@ class ConvolutionOp : public TrtOpKernel {
   }
 };
 
-// REGISTER_TRT_OP_KERNEL(Conv2D, ConvolutionOp).Finalize();
-REGISTER_TRT_OP_KERNEL(Conv2D, ConvolutionOp).EnableTrainPhase().Finalize();
+REGISTER_TRT_OP_KERNEL(Conv2D, ConvolutionOp).Finalize();
 
 }  // namespace tensorrt
 }  // namespace xrt

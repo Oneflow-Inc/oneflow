@@ -80,8 +80,7 @@ class ConvDataGradOp : public TrtOpKernel {
   }
 };
 
-// REGISTER_TRT_OP_KERNEL(ConvDataGrad, ConvDataGradOp).Finalize();
-REGISTER_TRT_OP_KERNEL(ConvDataGrad, ConvDataGradOp).EnableTrainPhase().Finalize();
+REGISTER_TRT_OP_KERNEL(ConvDataGrad, ConvDataGradOp).Finalize();
 
 }  // namespace tensorrt
 }  // namespace xrt

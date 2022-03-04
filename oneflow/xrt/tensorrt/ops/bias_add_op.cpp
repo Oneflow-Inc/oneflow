@@ -50,7 +50,7 @@ class BiasAddOp : public TrtOpKernel {
   }
 };
 
-REGISTER_TRT_OP_KERNEL(BiasAdd, BiasAddOp).EnableTrainPhase().Finalize();
+REGISTER_TRT_OP_KERNEL(BiasAdd, BiasAddOp).Finalize();
 
 }  // namespace tensorrt
 }  // namespace xrt
