@@ -527,13 +527,15 @@ class EmbeddingShuffleKernel final : public user_op::OpKernel {
       cur_rank_num_ids += host_num_unique_matrix[i * parallel_num + parallel_id];
     }
 
+    CHECK_EQ(parallel_num * num_ids * embedding_size, cur_rank_embeddings->shape().elem_cnt());
     size_t reverse_unique_cur_rank_embeddings_size =
-        GetCudaAlignedSize(cur_rank_num_ids * embedding_size * sizeof(T));
-    size_t received_embeddings_size =
-        GetCudaAlignedSize(embeddings->shape().elem_cnt() * sizeof(T));
+        GetCudaAlignedSize(parallel_num * num_ids * embedding_size * sizeof(T));
+    size_t received_embeddings_size = GetCudaAlignedSize(parallel_num * num_ids * sizeof(T));
     T* reverse_unique_cur_rank_embeddings = reinterpret_cast<T*>(tmp_buffer->mut_dptr());
     T* received_embeddings = reinterpret_cast<T*>(tmp_buffer->mut_dptr<char>()
                                                   + reverse_unique_cur_rank_embeddings_size);
+    CHECK_GE(tmp_buffer->shape().elem_cnt(),
+             reverse_unique_cur_rank_embeddings_size + received_embeddings_size);
 
     // reverse cur_rank unique
     GatherKernelUtilImpl<DeviceType::kCUDA, T, IDX>::Forward(
@@ -572,7 +574,7 @@ class EmbeddingShuffleKernel final : public user_op::OpKernel {
         size_t reverse_cur_rank_embeddings_size = GetCudaAlignedSize(                             \
             cur_rank_embeddings.shape().elem_cnt() * sizeof(OF_PP_PAIR_FIRST(t_dtype_pair)));     \
         size_t recv_unique_embeddings = GetCudaAlignedSize(                                       \
-            embeddings.shape().elem_cnt() * sizeof(OF_PP_PAIR_FIRST(t_dtype_pair)));              \
+            cur_rank_embeddings.shape().elem_cnt() * sizeof(OF_PP_PAIR_FIRST(t_dtype_pair)));     \
         return reverse_cur_rank_embeddings_size + recv_unique_embeddings;                         \
       });
 
@@ -651,10 +653,12 @@ class EmbeddingGradientShuffleKernel final : public user_op::OpKernel {
     T* unique_partition_embedding_diff = reinterpret_cast<T*>(tmp_buffer->mut_dptr());
     T* received_embedding_diff =
         reinterpret_cast<T*>(tmp_buffer->mut_dptr<char>() + unique_partition_embedding_diff_size);
+    CHECK_GE(tmp_buffer->shape().elem_cnt(),
+             unique_partition_embedding_diff_size + received_embedding_diff_size);
 
     // unique and partion embedding diff
     OF_CUDA_CHECK(cudaMemsetAsync(unique_partition_embedding_diff, 0,
-                                  parallel_num * num_ids * embedding_size, cuda_stream));
+                                  unique_partition_embedding_diff_size, cuda_stream));
     UnsortedSegmentSumKernelUtil<DeviceType::kCUDA, T, IDX, T>::UnsortedSegmentSum(
         ctx->stream(), reinterpret_cast<const IDX*>(inverse_unique_partion_indices->dptr()),
         embedding_diff->dptr<T>(), num_ids, parallel_num * num_ids, 1, embedding_size, 0,
@@ -668,7 +672,8 @@ class EmbeddingGradientShuffleKernel final : public user_op::OpKernel {
 
     // unique cur_rank embedding diff
     OF_CUDA_CHECK(cudaMemsetAsync(cur_rank_unique_embedding_diff->mut_dptr<T>(), 0,
-                                  parallel_num * num_ids * embedding_size, cuda_stream));
+                                  cur_rank_unique_embedding_diff->shape().elem_cnt() * sizeof(T),
+                                  cuda_stream));
     UnsortedSegmentSumKernelUtil<DeviceType::kCUDA, T, IDX, T>::UnsortedSegmentSum(
         ctx->stream(), reinterpret_cast<const IDX*>(cur_rank_inverse_indices->dptr()),
         received_embedding_diff, cur_rank_num_ids, cur_rank_num_ids, 1, embedding_size, 0,
