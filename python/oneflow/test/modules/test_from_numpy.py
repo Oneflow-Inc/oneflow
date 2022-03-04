@@ -57,6 +57,13 @@ class TestFromNumpy(flow.unittest.TestCase):
             if tensor.dtype not in [flow.float16]:
                 test_case.assertTrue(np.array_equal(np_arr, tensor.numpy()))
 
+    def test_non_contiguous_input(test_case):
+        np_arr = np.random.randn(4, 5)
+        np_arr = np_arr.transpose(1, 0)
+        tensor = flow.from_numpy(np_arr)
+        # TODO(wyg): support non-contiguous input
+        test_case.assertTrue(tensor.is_contiguous())
+
 
 if __name__ == "__main__":
     unittest.main()
