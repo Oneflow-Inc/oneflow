@@ -256,8 +256,6 @@ REGISTER_USER_KERNEL("reduce_sum")
       return tmp_bytes;
     });
 
-#ifdef WITH_CUDA
-
 class ReduceSumFloatCudaKernel final : public user_op::OpKernel, public user_op::CudaGraphSupport {
  public:
   ReduceSumFloatCudaKernel() = default;
@@ -316,8 +314,6 @@ class ReduceSumFloatCudaKernel final : public user_op::OpKernel, public user_op:
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
 
-#endif  // WITH_CUDA
-
 REGISTER_USER_KERNEL("reduce_sum")
     .SetCreateFn<ReduceSumFloatCudaKernel>()
     .SetIsMatchedHob((user_op::HobDeviceType() == DeviceType::kCUDA)
@@ -327,6 +323,6 @@ REGISTER_USER_KERNEL("reduce_sum")
       return GetCudaAlignedSize(in_shape.elem_cnt() * sizeof(float));
     });
 
-#endif
+#endif  // WITH_CUDA
 
 }  // namespace oneflow
