@@ -14,6 +14,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 """
 from contextlib import contextmanager
+import os
 
 from google.protobuf import text_format
 import oneflow
@@ -89,6 +90,24 @@ class BlockScopeContext(object):
             return False
 
 
+class GLogScopeContext(object):
+    def __init__(self, s_level, v_level=0):
+        self._prev_v = oneflow._oneflow_internal.GetFLAGS_v()
+        self._prev_logtostderr = oneflow._oneflow_internal.GetFLAGS_alsologtostderr()
+        self._v = v_level
+        self._s = s_level
+
+    def __enter__(self):
+        oneflow._oneflow_internal.SetFLAGS_v(self._v)
+        if self._s == 0 and self._v >= 1:
+            oneflow._oneflow_internal.SetFLAGS_alsologtostderr(True)
+
+    def __exit__(self, exc_type, exc_val, exc_tb):
+        if self._s == 0 and self._v >= 1:
+            oneflow._oneflow_internal.SetFLAGS_alsologtostderr(self._prev_logtostderr)
+        oneflow._oneflow_internal.SetFLAGS_v(self._prev_v)
+
+
 def make_new_block_scope(prev_scope, block):
     assert prev_scope is not None
     assert block is not None
@@ -121,7 +140,7 @@ def make_new_block_scope(prev_scope, block):
         new_scope = builder.BuildScopeByProtoSetter(prev_scope, scope_proto_setter)
         assert new_scope is not None
 
-    oneflow._oneflow_internal.deprecated.LogicalRun(build_scope)
+    oneflow._oneflow_internal.deprecated.PhysicalRun(build_scope)
     oneflow._oneflow_internal.eager.multi_client.Sync()
     return new_scope
 
@@ -164,7 +183,6 @@ def build_graph_state(op_name, state_tensor, state_config):
 
 def build_graph_output(op_name, out):
     assert isinstance(out, Tensor)
-    assert out.is_lazy
 
     output_conf = (
         oneflow._oneflow_internal.oneflow.core.operator.op_conf.FetchOutputOpConf()

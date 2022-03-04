@@ -253,10 +253,6 @@ Maybe<void> InferLambUpdateTensorDesc(user_op::InferContext* ctx) {
   const user_op::TensorDesc& v = ctx->InputTensorDesc("v", 0);
   JUST(CheckShapeLike(&v, &model));
   JUST(CheckLearningRateShape(ctx));
-  const user_op::TensorDesc& beta1_t = ctx->InputTensorDesc("beta1_t", 0);
-  const user_op::TensorDesc& beta2_t = ctx->InputTensorDesc("beta2_t", 0);
-  JUST(CheckScalarShape(&beta1_t));
-  JUST(CheckScalarShape(&beta2_t));
   if (ctx->has_input("scale_by_tensor", 0)) {
     const auto& scale_by_tensor = ctx->InputTensorDesc("scale_by_tensor", 0);
     JUST(CheckScalarShape(&scale_by_tensor));
@@ -270,11 +266,6 @@ Maybe<void> InferLambUpdateDataType(user_op::InferContext* ctx) {
   JUST(CheckDataTypeLike(&m, &model));
   const user_op::TensorDesc& v = ctx->InputTensorDesc("v", 0);
   JUST(CheckDataTypeLike(&v, &model));
-  const DataType data_type = model.data_type();
-  const user_op::TensorDesc& beta1_t = ctx->InputTensorDesc("beta1_t", 0);
-  const user_op::TensorDesc& beta2_t = ctx->InputTensorDesc("beta2_t", 0);
-  JUST(CheckScalarDataType(&beta1_t, data_type));
-  JUST(CheckScalarDataType(&beta2_t, data_type));
   JUST(CheckLearningRateDataType(ctx));
   if (ctx->has_input("scale_by_tensor", 0)) {
     const auto& scale_by_tensor = ctx->InputTensorDesc("scale_by_tensor", 0);
@@ -282,6 +273,7 @@ Maybe<void> InferLambUpdateDataType(user_op::InferContext* ctx) {
   }
   return Maybe<void>::Ok();
 }
+
 Maybe<void> SetInputArgModifierMutable(const user_op::GetInputArgModifier& GetInputArgModifierFn,
                                        const std::string& arg_name, int32_t arg_index) {
   user_op::InputArgModifier* arg_modifier = GetInputArgModifierFn(arg_name, arg_index);
@@ -311,8 +303,6 @@ Maybe<void> LambInputArgModifyFn(const user_op::GetInputArgModifier& GetInputArg
   JUST(SetInputArgModifierMutable(GetInputArgModifierFn, "model", 0));
   JUST(SetInputArgModifierMutable(GetInputArgModifierFn, "m", 0));
   JUST(SetInputArgModifierMutable(GetInputArgModifierFn, "v", 0));
-  JUST(SetInputArgModifierMutable(GetInputArgModifierFn, "beta1_t", 0));
-  JUST(SetInputArgModifierMutable(GetInputArgModifierFn, "beta2_t", 0));
   return Maybe<void>::Ok();
 }
 

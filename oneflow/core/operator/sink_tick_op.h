@@ -35,7 +35,7 @@ class SinkTickOp final : public Operator {
       const ParallelContext* parallel_ctx) const override;
 
  private:
-  Maybe<void> GetSbpSignatures(cfg::SbpSignatureList* sbp_sig_list) const override;
+  Maybe<void> GetSbpSignatures(SbpSignatureList* sbp_sig_list) const override;
 };
 
 }  // namespace oneflow

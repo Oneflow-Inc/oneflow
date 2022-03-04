@@ -54,7 +54,7 @@ struct Expr : public BaseExpr<Context, ValueT> {
 
 template<typename Context, typename ValueT>
 struct Literal final : public Expr<Context, ValueT, Literal<Context, ValueT>> {
-  Literal(const ValueT& val) : Literal("", val) {}  // NOLINT
+  Literal(const ValueT& val) : Literal(ToString(val), val) {}  // NOLINT
   Literal(const std::string& debug_str, const ValueT& val) : val_(val), debug_str_(debug_str) {}
   ALWAYS_INLINE scalar_or_const_ref_t<ValueT> get(const Context&) const override { return val_; }
   std::string DebugStr(const Context&, bool display_result) const override { return debug_str_; }
@@ -169,7 +169,7 @@ DEFINE_BINARY_FUNCTOR(EqualOrLess, <=)
     std::string l_str = lhs_.DebugStr(ctx, display_result);                                 \
     std::string r_str = rhs_.DebugStr(ctx, display_result);                                 \
     std::ostringstream string_stream;                                                       \
-    string_stream << "(" << l_str << " OF_PP_STRINGIZE(op) " << r_str << ")";               \
+    string_stream << "(" << l_str << " " << OF_PP_STRINGIZE(op) << " " << r_str << ")";     \
     return string_stream.str();                                                             \
   }
 

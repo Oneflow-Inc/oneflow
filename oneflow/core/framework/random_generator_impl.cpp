@@ -75,10 +75,10 @@ Maybe<Tensor> CPUGeneratorImpl::GetState() const {
   }
   state.seed = current_seed();
 
-  const auto& callback = std::make_shared<std::function<void(uint64_t)>>([&](uint64_t of_blob_ptr) {
+  const auto& callback = [&](uint64_t of_blob_ptr) {
     auto* of_blob = reinterpret_cast<OfBlob*>(of_blob_ptr);
     memcpy(of_blob->mut_blob()->mut_dptr<uint8_t>(), &state, sizeof(state));
-  });
+  };
   JUST(SyncAccessTensorWithTimeOut(tensor_state, callback, "mut"));
   return tensor_state;
 }
@@ -98,10 +98,10 @@ Maybe<void> CPUGeneratorImpl::SetState(const std::shared_ptr<Tensor>& tensor_sta
                                  << sizeof(state) << ", but got "
                                  << tensor_state->shape()->elem_cnt();
   }
-  const auto& callback = std::make_shared<std::function<void(uint64_t)>>([&](uint64_t of_blob_ptr) {
+  const auto& callback = [&](uint64_t of_blob_ptr) {
     auto* of_blob = reinterpret_cast<OfBlob*>(of_blob_ptr);
     memcpy(reinterpret_cast<void*>(&state), of_blob->blob().dptr<uint8_t>(), sizeof(state));
-  });
+  };
   JUST(SyncAccessTensorWithTimeOut(tensor_state, callback, "const"));
 
   // set_current_seed(state.seed);
@@ -181,12 +181,12 @@ Maybe<Tensor> CUDAGeneratorImpl::GetState() const {
   const auto& device = JUST(Device::New("cpu"));
   const auto& tensor_state = JUST(functional::Empty(Shape{total_size}, DType::UInt8(), device));
 
-  const auto& callback = std::make_shared<std::function<void(uint64_t)>>([&](uint64_t of_blob_ptr) {
+  const auto& callback = [&](uint64_t of_blob_ptr) {
     auto* of_blob = reinterpret_cast<OfBlob*>(of_blob_ptr);
     OF_CUDA_CHECK(cudaMemcpy(of_blob->mut_blob()->mut_dptr<uint8_t>(), curand_states_, state_size,
                              cudaMemcpyDefault));
     memcpy(of_blob->mut_blob()->mut_dptr<uint8_t>() + state_size, &seed_, sizeof(int64_t));
-  });
+  };
   JUST(SyncAccessTensorWithTimeOut(tensor_state, callback, "mut"));
   return tensor_state;
 }
@@ -208,13 +208,13 @@ Maybe<void> CUDAGeneratorImpl::SetState(const std::shared_ptr<Tensor>& tensor_st
 
   CudaCurrentDeviceGuard dev_guard(this->device_index());
   JUST(CUDASynchronize());
-  const auto& callback = std::make_shared<std::function<void(uint64_t)>>([&](uint64_t of_blob_ptr) {
+  const auto& callback = [&](uint64_t of_blob_ptr) {
     auto* of_blob = reinterpret_cast<OfBlob*>(of_blob_ptr);
     const uint8_t* data = of_blob->blob().dptr<uint8_t>();
     // Do not use set_current_seed() since synchronization will lead to deadlock.
     seed_ = *((uint64_t*)(data + state_size));
     OF_CUDA_CHECK(cudaMemcpy(curand_states_, data, state_size, cudaMemcpyDefault));
-  });
+  };
   JUST(SyncAccessTensorWithTimeOut(tensor_state, callback, "const"));
   return Maybe<void>::Ok();
 }
@@ -279,22 +279,20 @@ Maybe<Tensor> AutoGeneratorImpl::GetState() const {
     data += state.device_tag_length;
     for (int i = 0; i < tensor_states.size(); ++i) {
       const auto& tensor = tensor_states.at(i);
-      const auto& callback = std::make_shared<std::function<void(uint64_t)>>(
-          [&data, &state_sizes, i](uint64_t of_blob_ptr) {
-            auto* of_blob = reinterpret_cast<OfBlob*>(of_blob_ptr);
-            memcpy(data, of_blob->blob().dptr<uint8_t>(), state_sizes.at(i));
-          });
+      const auto& callback = [&data, &state_sizes, i](uint64_t of_blob_ptr) {
+        auto* of_blob = reinterpret_cast<OfBlob*>(of_blob_ptr);
+        memcpy(data, of_blob->blob().dptr<uint8_t>(), state_sizes.at(i));
+      };
       JUST(SyncAccessTensorWithTimeOut(tensor, callback, "const"));
       data += state_sizes.at(i);
     }
   }
   const auto& device = JUST(Device::New("cpu"));
   const auto& tensor_state = JUST(functional::Empty(Shape{total_size}, DType::UInt8(), device));
-  const auto& callback =
-      std::make_shared<std::function<void(uint64_t)>>([&buffer, &total_size](uint64_t of_blob_ptr) {
-        auto* of_blob = reinterpret_cast<OfBlob*>(of_blob_ptr);
-        memcpy(of_blob->mut_blob()->mut_dptr<uint8_t>(), buffer.data(), total_size);
-      });
+  const auto& callback = [&buffer, &total_size](uint64_t of_blob_ptr) {
+    auto* of_blob = reinterpret_cast<OfBlob*>(of_blob_ptr);
+    memcpy(of_blob->mut_blob()->mut_dptr<uint8_t>(), buffer.data(), total_size);
+  };
   JUST(SyncAccessTensorWithTimeOut(tensor_state, callback, "mut"));
   return tensor_state;
 }
@@ -310,11 +308,10 @@ Maybe<void> AutoGeneratorImpl::SetState(const std::shared_ptr<Tensor>& tensor_st
   AutoGeneratorState state;
   int64_t total_size = tensor_state->shape()->elem_cnt();
   std::vector<uint8_t> buffer(total_size);
-  const auto& callback =
-      std::make_shared<std::function<void(uint64_t)>>([&buffer, &total_size](uint64_t of_blob_ptr) {
-        auto* of_blob = reinterpret_cast<OfBlob*>(of_blob_ptr);
-        memcpy(buffer.data(), of_blob->blob().dptr<uint8_t>(), total_size);
-      });
+  const auto& callback = [&buffer, &total_size](uint64_t of_blob_ptr) {
+    auto* of_blob = reinterpret_cast<OfBlob*>(of_blob_ptr);
+    memcpy(buffer.data(), of_blob->blob().dptr<uint8_t>(), total_size);
+  };
   JUST(SyncAccessTensorWithTimeOut(tensor_state, callback, "const"));
 
   const uint8_t* data = buffer.data();
@@ -336,11 +333,10 @@ Maybe<void> AutoGeneratorImpl::SetState(const std::shared_ptr<Tensor>& tensor_st
   for (int i = 0; i < state.num; ++i) {
     int64_t state_size = state_sizes.at(i);
     tensor_states[i] = JUST(functional::Empty(Shape{state_size}, DType::UInt8(), device));
-    const auto& callback =
-        std::make_shared<std::function<void(uint64_t)>>([&data, &state_size](uint64_t of_blob_ptr) {
-          auto* of_blob = reinterpret_cast<OfBlob*>(of_blob_ptr);
-          memcpy(of_blob->mut_blob()->mut_dptr<uint8_t>(), data, state_size);
-        });
+    const auto& callback = [&data, &state_size](uint64_t of_blob_ptr) {
+      auto* of_blob = reinterpret_cast<OfBlob*>(of_blob_ptr);
+      memcpy(of_blob->mut_blob()->mut_dptr<uint8_t>(), data, state_size);
+    };
     JUST(SyncAccessTensorWithTimeOut(tensor_states[i], callback, "mut"));
     data += state_size;
   }

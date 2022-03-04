@@ -26,19 +26,18 @@ namespace oneflow {
 
 namespace {
 
-bool RawIsBroadcastSbp(Symbol<cfg::SbpParallel> sbp_parallel) {
+bool RawIsBroadcastSbp(Symbol<SbpParallel> sbp_parallel) {
   return sbp_parallel->has_broadcast_parallel();
 }
 
 static constexpr auto* IsBroadcastSbp = DECORATE(&RawIsBroadcastSbp, ThreadLocal);
 
-bool RawIsSplitSbp(Symbol<cfg::SbpParallel> sbp_parallel) {
-  return sbp_parallel->has_split_parallel();
-}
+bool RawIsSplitSbp(Symbol<SbpParallel> sbp_parallel) { return sbp_parallel->has_split_parallel(); }
 
 static constexpr auto* IsSplitSbp = DECORATE(&RawIsSplitSbp, ThreadLocal);
 
-Maybe<void> RawCheckSymmetricB2S(Symbol<PlacedNdSbp> in, Symbol<PlacedNdSbp> out) {
+Maybe<void> RawCheckSymmetricB2S(Symbol<PlacedNdSbp> in, Symbol<PlacedNdSbp> out,
+                                 const Shape& logical_shape) {
   CHECK_EQ_OR_RETURN(in->nd_sbp()->sbp_parallel_size(), 1);
   CHECK_EQ_OR_RETURN(out->nd_sbp()->sbp_parallel_size(), 1);
   CHECK_OR_RETURN(IsBroadcastSbp(SymbolOf(in->nd_sbp()->sbp_parallel(0))));
@@ -48,7 +47,7 @@ Maybe<void> RawCheckSymmetricB2S(Symbol<PlacedNdSbp> in, Symbol<PlacedNdSbp> out
   return Maybe<void>::Ok();
 }
 
-static constexpr auto* CheckSymmetricB2S = DECORATE(&RawCheckSymmetricB2S, ThreadLocal);
+static constexpr auto* CheckSymmetricB2S = DECORATE(&RawCheckSymmetricB2S, ThreadLocalCopiable);
 
 }  // namespace
 

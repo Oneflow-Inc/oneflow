@@ -15,7 +15,9 @@ limitations under the License.
 */
 #include "oneflow/api/python/functional/indexing.h"
 
+#include <object.h>
 #include <pybind11/pybind11.h>
+#include "oneflow/api/python/functional/common.h"
 #include "oneflow/extension/python/numpy.h"
 #include "oneflow/core/eager/eager_blob_object.h"
 #include "oneflow/core/register/ofblob.h"
@@ -23,6 +25,7 @@ limitations under the License.
 #include "oneflow/core/framework/instructions_builder.h"
 #include "oneflow/core/functional/functional.h"
 #include "oneflow/api/python/functional/tensor_api.yaml.h"
+#include "oneflow/core/common/foreign_lock_helper.h"
 
 namespace oneflow {
 namespace one {
@@ -36,7 +39,7 @@ Maybe<void> PySliceUnpack(PyObject* object, Py_ssize_t* start, Py_ssize_t* stop,
     *step = 1;
   } else {
     CHECK_OR_RETURN(_PyEval_SliceIndex(obj->step, step))
-        << "Invalid slice " << JUST(PyStringAsString(PyObject_Repr(object)));
+        << "Invalid slice " << *JUST(PyObjectToReprStr(object));
     CHECK_NE_OR_RETURN(*step, 0) << "slice step cannot be zero.";
     if (*step < -PY_SSIZE_T_MAX) *step = -PY_SSIZE_T_MAX;
   }
@@ -44,20 +47,20 @@ Maybe<void> PySliceUnpack(PyObject* object, Py_ssize_t* start, Py_ssize_t* stop,
     *start = *step < 0 ? PY_SSIZE_T_MAX : 0;
   } else {
     CHECK_OR_RETURN(_PyEval_SliceIndex(obj->start, start))
-        << "Invalid slice " << JUST(PyStringAsString(PyObject_Repr(object)));
+        << "Invalid slice " << *JUST(PyObjectToReprStr(object));
   }
   if (obj->stop == Py_None) {
     *stop = *step < 0 ? PY_SSIZE_T_MIN : PY_SSIZE_T_MAX;
   } else {
     CHECK_OR_RETURN(_PyEval_SliceIndex(obj->stop, stop))
-        << "Invalid slice " << JUST(PyStringAsString(PyObject_Repr(object)));
+        << "Invalid slice " << *JUST(PyObjectToReprStr(object));
   }
   return Maybe<void>::Ok();
 }
 
 Maybe<DataType> InferScalarType(PyObject* object) {
   if (PyBool_Check(object)) {
-    return DataType::kUInt8;
+    return DataType::kBool;
   } else if (PyLong_Check(object)) {
     return DataType::kInt64;
   } else if (PyArray_Check(object)) {
@@ -86,11 +89,11 @@ Maybe<void> ParseScalar(PyObject* object, char* data, const DataType& dtype) {
     CHECK_OR_RETURN(PyLong_Check(object)) << "Expected a long value.";
     *(reinterpret_cast<int64_t*>(data)) = PyLong_AsLongLong(object);
     return Maybe<void>::Ok();
-  } else if (dtype == DataType::kUInt8) {
+  } else if (dtype == DataType::kUInt8 || dtype == DataType::kBool) {
     CHECK_OR_RETURN(PyBool_Check(object) || PyLong_Check(object))
         << "Expected a boolean or long value.";
     if (PyBool_Check(object)) {
-      *(reinterpret_cast<uint8_t*>(data)) = (object == Py_True);
+      *(reinterpret_cast<bool*>(data)) = (object == Py_True);
     } else {
       int64_t value = PyLong_AsLongLong(object);
       CHECK_OR_RETURN(value >= 0 && value <= 255) << "Out of range 0-255.";
@@ -153,7 +156,7 @@ Maybe<Tensor> ConvertToIndexingTensor(PyObject* object) {
   const auto& device = JUST(Device::New("cpu"));
 
   // index type must be integers
-  if (!IsIntegralDataType(dtype)) {
+  if (!(IsIntegralDataType(dtype) || (IsBoolDataType(dtype)))) {
     return Error::IndexError() << "only integers, slices (`:`), ellipsis (`...`), numpy.newaxis "
                                   "(`None`) and integer or boolean arrays are valid indices";
   }
@@ -171,8 +174,10 @@ Maybe<Tensor> ConvertToIndexingTensor(PyObject* object) {
         JUST(tensor->AsMirroredTensor()),
         [handle](uint64_t ofblob_ptr) {
           auto* of_blob = reinterpret_cast<OfBlob*>(ofblob_ptr);
-          py::gil_scoped_acquire acquire;
-          CHECK_JUST(ParseArrayToBlob(handle.get(), of_blob->mut_blob()));
+          CHECK_JUST(Global<ForeignLockHelper>::Get()->WithScopedAcquire([&]() -> Maybe<void> {
+            JUST(ParseArrayToBlob(handle.get(), of_blob->mut_blob()));
+            return Maybe<void>::Ok();
+          }));
         },
         "mut");
   }));

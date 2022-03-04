@@ -107,8 +107,8 @@ def _test_linear_train_graph(test_case, device):
         return check_list
 
     iter_num = 3
-    module_check_list = train_with_module()
-    graph_check_list = train_with_graph()
+    module_check_list = train_with_module(iter_num)
+    graph_check_list = train_with_graph(iter_num)
     for i in range(iter_num):
         # check equal on loss
         test_case.assertTrue(

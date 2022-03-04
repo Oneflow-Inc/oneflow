@@ -31,7 +31,7 @@ const Shape OutputTimeShape(const OpNode* op_node) {
   return *CHECK_JUST(op_node->op().GetOpTimeShape());
 }
 
-const cfg::SbpParallel& BlobSbpPolicy(const OpNode* op_node, const std::string& name) {
+const SbpParallel& BlobSbpPolicy(const OpNode* op_node, const std::string& name) {
   CHECK_NOTNULL(op_node);
   LogicalBlobId lbi = BlobNameToId(name);
   return op_node->SbpParallel4Lbi(lbi);
@@ -126,7 +126,7 @@ void GraphBuilder::SetupGraphEdges() {
     time_shape.emplace_back(InputTimeShape(dst));
     edge->Attr("time_shape", time_shape);
     // Set sbp policy
-    std::vector<cfg::SbpParallel> sbp_policy;
+    std::vector<SbpParallel> sbp_policy;
     sbp_policy.emplace_back(BlobSbpPolicy(src, name));
     sbp_policy.emplace_back(BlobSbpPolicy(dst, name));
     edge->Attr("sbp_policy", sbp_policy);

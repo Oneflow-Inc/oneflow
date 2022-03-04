@@ -16,11 +16,14 @@ limitations under the License.
 import itertools
 from collections import OrderedDict, namedtuple
 from typing import Callable, Dict, Iterator, List, Optional, Set, Tuple, TypeVar, Union
+import traceback
+import warnings
 
 import numpy as np
 import oneflow as flow
 from oneflow.framework.tensor import Tensor
 from oneflow.nn.parameter import Parameter
+from contextlib import contextmanager
 
 
 class _IncompatibleKeys(
@@ -64,6 +67,14 @@ class Module(object):
 
     def forward(self, *args, **kwargs):
         raise NotImplementedError()
+
+    @contextmanager
+    def global_param_grad_no_sync(self):
+        guard = flow._oneflow_internal.GlobalParamGradSyncMode(False)
+        try:
+            yield
+        finally:
+            del guard
 
     def __call__(self, *args, **kwargs):
         for hook in itertools.chain(self._forward_pre_hooks.values()):
@@ -313,6 +324,33 @@ class Module(object):
     def eval(self: T) -> T:
         return self.train(False)
 
+    def zero_grad(self, set_to_none: bool = False) -> None:
+        r"""Sets gradients of all model parameters to zero. See similar function
+        under :class:`oneflow.optim.Optimizer` for more context.
+
+        Args:
+            set_to_none (bool): instead of setting to zero, set the grads to None.
+                See :meth:`oneflow.optim.Optimizer.zero_grad` for details.
+        """
+        if getattr(self, "_is_replica", False):
+            warnings.warn(
+                "Calling .zero_grad() from a module created with nn.DataParallel() has no effect. "
+                "The parameters are copied (in a differentiable manner) from the original module. "
+                "This means they are not leaf nodes in autograd and so don't accumulate gradients. "
+                "If you need gradients in your forward method, consider using autograd.grad instead."
+            )
+
+        for p in self.parameters():
+            if p.grad is not None:
+                if set_to_none:
+                    p.grad = None
+                else:
+                    if p.grad.grad_fn is not None:
+                        p.grad.detach_()
+                    else:
+                        p.grad.requires_grad_(False)
+                    p.grad.zeros_()
+
     def _save_to_state_dict(self, destination, prefix, keep_vars):
         for (name, param) in self._parameters.items():
             if param is not None:
@@ -366,8 +404,14 @@ class Module(object):
                         param.copy_(input_param)
                 except Exception as ex:
                     error_msgs.append(
-                        'While copying the parameter named "{}", whose dimensions in the model are {} and whose dimensions in the checkpoint are {}, an exception occurred : {}.'.format(
-                            key, param.shape, input_param.shape, ex.args
+                        'While copying the parameter "{}", an exception occurred : \n\n{}.'.format(
+                            key,
+                            "".join(
+                                map(
+                                    lambda line: "\t" + line,
+                                    traceback.format_exc().splitlines(True),
+                                )
+                            ),
                         )
                     )
             elif strict:
@@ -529,9 +573,14 @@ class Module(object):
 
         return self._apply(convert)
 
-    def to_consistent(self, placement=None, sbp=None):
+    def to_consistent(self, *args, **kwargs):
+        raise RuntimeError(
+            ".to_consistent has been removed, please use .to_global instead"
+        )
+
+    def to_global(self, placement=None, sbp=None):
         def convert(t):
-            return t.to_consistent(placement=placement, sbp=sbp)
+            return t.to_global(placement=placement, sbp=sbp)
 
         return self._apply(convert)
 

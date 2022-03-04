@@ -20,7 +20,7 @@ namespace oneflow {
 
 namespace {
 
-Maybe<void> GenGrapOp(const user_op::UserOpWrapper& op, const user_op::AddOpFn& AddOp) {
+Maybe<void> GenGradOp(const user_op::UserOpWrapper& op, const user_op::AddOpFn& AddOp) {
   bool need_grad = false;
   const int32_t in_size = op.input_size("in");
   FOR_RANGE(int32_t, i, 0, in_size) {
@@ -118,6 +118,6 @@ Maybe<void> GenGrapOp(const user_op::UserOpWrapper& op, const user_op::AddOpFn& 
   return Maybe<void>::Ok();
 }
 
-REGISTER_USER_OP_GRAD("concat").SetGenBackwardOpConfFn(GenGrapOp);
+REGISTER_USER_OP_GRAD("concat").SetGenBackwardOpConfFn(GenGradOp);
 
 }  // namespace oneflow

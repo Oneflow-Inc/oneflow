@@ -18,30 +18,27 @@ limitations under the License.
 
 namespace oneflow {
 
+/*static*/ Maybe<void> OneRecReaderOp::InferLogicalTensorDesc(user_op::InferContext* ctx) {
+  user_op::TensorDesc* out_tensor = ctx->OutputTensorDesc("out", 0);
+  int64_t batch_size = ctx->Attr<int64_t>("batch_size");
+  *out_tensor->mut_shape() = Shape({batch_size});
+  return Maybe<void>::Ok();
+}
+
+/*static*/ Maybe<void> OneRecReaderOp::InferDataType(user_op::InferContext* ctx) {
+  *ctx->OutputDType("out", 0) = DataType::kTensorBuffer;
+  return Maybe<void>::Ok();
+}
+
 /*static*/ Maybe<void> OneRecReaderOp::GetSbp(user_op::SbpContext* ctx) {
   ctx->NewBuilder().Split(ctx->outputs(), 0).Build();
   return Maybe<void>::Ok();
 }
-/*static*/ Maybe<void> OneRecReaderOp::InferLogicalTensorDesc(user_op::InferContext* ctx) {
-  user_op::TensorDesc* out_tensor = ctx->OutputTensorDesc("out", 0);
-  int32_t batch_size = ctx->Attr<int32_t>("batch_size");
-  *out_tensor->mut_shape() = Shape({batch_size});
-  return Maybe<void>::Ok();
-}
-/*static*/ Maybe<void> OneRecReaderOp::InferPhysicalTensorDesc(user_op::InferContext* ctx) {
-  user_op::TensorDesc* out_tensor = ctx->OutputTensorDesc("out", 0);
-  int32_t local_batch_size = ctx->Attr<int32_t>("batch_size");
-  const cfg::SbpParallel& sbp = ctx->SbpParallel4ArgNameAndIndex("out", 0);
-  int64_t parallel_num = ctx->parallel_ctx().parallel_num();
-  CHECK_OR_RETURN(parallel_num == 1 || sbp.has_split_parallel());
-  CHECK_EQ_OR_RETURN(local_batch_size % parallel_num, 0);
-  local_batch_size /= parallel_num;
-  *out_tensor->mut_shape() = Shape({local_batch_size});
-  return Maybe<void>::Ok();
-}
-/*static*/ Maybe<void> OneRecReaderOp::InferDataType(user_op::InferContext* ctx) {
-  *ctx->OutputDType("out", 0) = DataType::kTensorBuffer;
-  return Maybe<void>::Ok();
+
+/*static*/ Maybe<void> OneRecReaderOp::InferNdSbp(user_op::InferNdSbpFnContext* ctx) {
+  SbpParallel default_sbp;
+  default_sbp.mutable_split_parallel()->set_axis(0);
+  return user_op::InferNdSbp4SrcOp(ctx, default_sbp);
 }
 
 }  // namespace oneflow

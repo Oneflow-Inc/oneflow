@@ -79,7 +79,7 @@ def MakeScope(build_func):
         scope = build_func(old_scope, builder)
         assert scope is not None
 
-    oneflow._oneflow_internal.deprecated.LogicalRun(BuildScope)
+    oneflow._oneflow_internal.deprecated.PhysicalRun(BuildScope)
     return scope
 
 
@@ -93,7 +93,7 @@ def MakeInitialScope(job_conf, device_tag, machine_device_ids, hierarchy, is_mir
             session_id, job_conf, device_tag, machine_device_ids, hierarchy, is_mirrored
         )
 
-    oneflow._oneflow_internal.deprecated.LogicalRun(BuildInitialScope)
+    oneflow._oneflow_internal.deprecated.PhysicalRun(BuildInitialScope)
     return scope
 
 

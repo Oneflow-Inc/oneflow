@@ -20,7 +20,7 @@ limitations under the License.
 #include "mlir/IR/OpDefinition.h"
 #include "mlir/IR/OpImplementation.h"
 #include "mlir/IR/Builders.h"
-#include "mlir/IR/FunctionSupport.h"
+#include "mlir/IR/FunctionInterfaces.h"
 #include "mlir/Interfaces/CallInterfaces.h"
 #include "mlir/Interfaces/SideEffectInterfaces.h"
 #include "mlir/Interfaces/ControlFlowInterfaces.h"
@@ -43,7 +43,7 @@ inline std::string GetOpTypeName(T op) {
         op->template getAttrOfType<StringAttr>(OpTrait::IsAlternative<void>::getOpTypeNameAttr())
             .str();
   }
-  if (auto alternative_name = dyn_cast<HasAlternativeOpTypeName>(op)) {
+  if (auto alternative_name = dyn_cast<oneflow::HasAlternativeOpTypeName>(op)) {
     op_type_name = alternative_name.getOriginalOpTypeName();
   }
   return op_type_name;

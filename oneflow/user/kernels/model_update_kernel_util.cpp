@@ -272,30 +272,38 @@ template struct AdagradUpdateKernelUtil<DeviceType::kCPU, double, double>;
 template<typename T, typename G>
 struct LambUpdateKernelUtil<DeviceType::kCPU, T, G> {
   static void Update(ep::Stream* stream, int64_t n, float scale, float l1, float l2, float beta1,
-                     float beta2, float epsilon, float weight_decay, const float* learning_rate,
+                     float beta2, float epsilon, float weight_decay, float learning_rate_val,
+                     bool do_bias_correction, float bias_correction1_val,
+                     float bias_correction2_val, const float* learning_rate_ptr,
+                     const float* bias_correction1_ptr, const float* bias_correction2_ptr,
                      const T* scale_by_ptr, const int64_t* skip_if, const G* model_diff,
-                     T* adam_diff, T* model, T* m, T* v, T* norm_buffer, T* beta1_t, T* beta2_t);
+                     T* adam_diff, T* model, T* m, T* v, T* norm_buffer);
 };
 
 template<typename T, typename G>
 void LambUpdateKernelUtil<DeviceType::kCPU, T, G>::Update(
     ep::Stream* stream, int64_t n, float scale, float l1, float l2, float beta1, float beta2,
-    float epsilon, float weight_decay, const float* learning_rate, const T* scale_by_ptr,
-    const int64_t* skip_if, const G* model_diff, T* adam_diff, T* model, T* m, T* v, T* norm_buffer,
-    T* beta1_t, T* beta2_t) {
+    float epsilon, float weight_decay, float learning_rate_val, bool do_bias_correction,
+    float bias_correction1_val, float bias_correction2_val, const float* learning_rate_ptr,
+    const float* bias_correction1_ptr, const float* bias_correction2_ptr, const T* scale_by_ptr,
+    const int64_t* skip_if, const G* model_diff, T* adam_diff, T* model, T* m, T* v,
+    T* norm_buffer) {
   if (skip_if != nullptr && *skip_if != 0) { return; }
-  *beta1_t *= beta1;
-  *beta2_t *= beta2;
+  if (learning_rate_ptr != nullptr) { learning_rate_val = *learning_rate_ptr; }
   if (scale_by_ptr != nullptr) { scale *= *scale_by_ptr; }
+  if (bias_correction1_ptr != nullptr) { bias_correction1_val = *bias_correction1_ptr; }
+  if (bias_correction2_ptr != nullptr) { bias_correction2_val = *bias_correction2_ptr; }
+
   FOR_RANGE(int64_t, i, 0, n) {
-    LambGradFunctor<T, G>()(beta1_t, beta2_t, model_diff + i, adam_diff + i, model + i, m + i,
-                            v + i, scale, l1, l2, beta1, beta2, epsilon);
+    LambGradFunctor<T, G>()(model_diff + i, adam_diff + i, model + i, m + i, v + i, scale, l1, l2,
+                            beta1, beta2, epsilon, do_bias_correction, bias_correction1_val,
+                            bias_correction2_val);
   }
   T* w_norm_2 = norm_buffer;
   T* g_norm_2 = norm_buffer + 1;
   Memset<DeviceType::kCPU>(stream, norm_buffer, 0, 2 * sizeof(T));
   SumSquares2(n, model, w_norm_2, adam_diff, g_norm_2);
-  const float lr = LambLRFunctor<T>()(*learning_rate, w_norm_2, g_norm_2);
+  const float lr = LambLRFunctor<T>()(learning_rate_val, w_norm_2, g_norm_2);
   FOR_RANGE(int64_t, i, 0, n) {
     LambUpdateFunctor<T>()(lr, weight_decay, adam_diff + i, model + i);
   }

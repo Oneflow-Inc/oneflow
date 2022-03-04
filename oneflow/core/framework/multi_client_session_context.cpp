@@ -15,9 +15,11 @@ limitations under the License.
 */
 
 #include "oneflow/core/common/buffer_manager.h"
+#include "oneflow/core/common/maybe.h"
 #include "oneflow/core/common/multi_client.h"
 #include "oneflow/core/framework/multi_client_session_context.h"
 #include "oneflow/core/framework/load_library.h"
+#include "oneflow/core/job/resource.pb.h"
 #include "oneflow/core/job/version.h"
 #include "oneflow/core/job/global_for.h"
 #include "oneflow/core/job/id_manager.h"
@@ -114,6 +116,12 @@ Maybe<void> MultiClientSessionContext::TryInit(const ConfigProto& config_proto) 
 
     is_inited_ = true;
   }
+  return Maybe<void>::Ok();
+}
+
+Maybe<void> MultiClientSessionContext::UpdateResource(const Resource& reso_proto) {
+  CHECK_NOTNULL_OR_RETURN((Global<ResourceDesc, ForSession>::Get()));
+  Global<ResourceDesc, ForSession>::Get()->Update(reso_proto);
   return Maybe<void>::Ok();
 }
 

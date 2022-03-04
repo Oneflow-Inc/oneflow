@@ -32,7 +32,7 @@ std::shared_ptr<AvgPoolingOpKernelCache> CreateAvgOpKernelCache(user_op::KernelC
   const std::vector<int32_t>& stride = ctx->Attr<std::vector<int32_t>>("stride");
   const bool ceil_mode = ctx->Attr<bool>("ceil_mode");
   const bool count_include_pad = ctx->Attr<bool>("count_include_pad");
-  const int64_t divisor_override = ctx->Attr<int64_t>("divisor_override");
+  const int32_t divisor_override = ctx->Attr<int32_t>("divisor_override");
 
   AvgPoolingParams3D params_3d =
       AvgPoolingParams3D(dim, x_shape, data_format, padding, kernel_size, stride, ceil_mode,
@@ -41,77 +41,67 @@ std::shared_ptr<AvgPoolingOpKernelCache> CreateAvgOpKernelCache(user_op::KernelC
   return cache;
 }
 
-template<typename T>
-struct AvgPoolingKernelUtil<DeviceType::kCPU, T> {
-  static void Avgpool1dForward(ep::Stream* stream,
-                               const NdIndexOffsetHelper<int64_t, 3>& index_helper,
-                               const int64_t elem_num, const T* src, T* dest,
+template<typename T, typename IDX>
+struct AvgPoolingKernelUtil<DeviceType::kCPU, T, IDX> {
+  static void Avgpool1dForward(ep::Stream* stream, const NdIndexOffsetHelper<IDX, 2>& index_helper,
+                               const IDX elem_num, const T* src, T* dest,
                                const AvgPoolingParams3D& params_3d) {
-    Avgpool1dForwardCompute<T>(index_helper, elem_num, src, dest, params_3d.padding()[2],
-                               params_3d.num_batch(), params_3d.num_channel(),
-                               params_3d.GetXShape5D().At(4), params_3d.GetYShape5D().At(4),
-                               params_3d.pooling_size_3d()[2], params_3d.stride_3d()[2],
-                               params_3d.count_include_pad(), params_3d.divisor_override());
-  }
-
-  static void Avgpool1dBackward(ep::Stream* stream,
-                                const NdIndexOffsetHelper<int64_t, 3>& index_helper,
-                                const int64_t elem_num, const T* src, T* dest,
-                                const AvgPoolingParams3D& params_3d) {
-    Avgpool1dBackwardCompute<T>(index_helper, elem_num, src, dest, params_3d.padding()[2],
-                                params_3d.num_batch(), params_3d.num_channel(),
-                                params_3d.GetXShape5D().At(4), params_3d.GetYShape5D().At(4),
-                                params_3d.pooling_size_3d()[2], params_3d.stride_3d()[2],
-                                params_3d.count_include_pad(), params_3d.divisor_override());
-  }
-
-  static void Avgpool2dForward(ep::Stream* stream,
-                               const NdIndexOffsetHelper<int64_t, 4>& index_helper,
-                               const int64_t elem_num, const T* src, T* dest,
-                               const AvgPoolingParams3D& params_3d) {
-    Avgpool2dForwardCompute<T>(
-        index_helper, elem_num, src, dest, params_3d.padding()[1], params_3d.padding()[2],
-        params_3d.num_batch(), params_3d.num_channel(), params_3d.GetXShape5D().At(3),
-        params_3d.GetXShape5D().At(4), params_3d.GetYShape5D().At(3), params_3d.GetYShape5D().At(4),
-        params_3d.pooling_size_3d()[1], params_3d.pooling_size_3d()[2], params_3d.stride_3d()[1],
+    Avgpool1dForwardCompute<T, IDX>(
+        index_helper, elem_num, src, dest, params_3d.padding()[2], params_3d.num_batch(),
+        params_3d.num_channel(), params_3d.GetXShape5D().At(4), params_3d.pooling_size_3d()[2],
         params_3d.stride_3d()[2], params_3d.count_include_pad(), params_3d.divisor_override());
   }
 
-  static void Avgpool2dBackward(ep::Stream* stream,
-                                const NdIndexOffsetHelper<int64_t, 4>& index_helper,
-                                const int64_t elem_num, const T* src, T* dest,
+  static void Avgpool1dBackward(ep::Stream* stream, const NdIndexOffsetHelper<IDX, 2>& index_helper,
+                                const IDX elem_num, const T* src, T* dest,
                                 const AvgPoolingParams3D& params_3d) {
-    Avgpool2dBackwardCompute<T>(
-        index_helper, elem_num, src, dest, params_3d.padding()[1], params_3d.padding()[2],
-        params_3d.num_batch(), params_3d.num_channel(), params_3d.GetXShape5D().At(3),
-        params_3d.GetXShape5D().At(4), params_3d.GetYShape5D().At(3), params_3d.GetYShape5D().At(4),
-        params_3d.pooling_size_3d()[1], params_3d.pooling_size_3d()[2], params_3d.stride_3d()[1],
+    Avgpool1dBackwardCompute<T, IDX>(
+        index_helper, elem_num, src, dest, params_3d.padding()[2], params_3d.num_batch(),
+        params_3d.num_channel(), params_3d.GetXShape5D().At(4), params_3d.pooling_size_3d()[2],
         params_3d.stride_3d()[2], params_3d.count_include_pad(), params_3d.divisor_override());
   }
 
-  static void Avgpool3dForward(ep::Stream* stream,
-                               const NdIndexOffsetHelper<int64_t, 5>& index_helper,
-                               const int64_t elem_num, const T* src, T* dest,
+  static void Avgpool2dForward(ep::Stream* stream, const NdIndexOffsetHelper<IDX, 3>& index_helper,
+                               const IDX elem_num, const T* src, T* dest,
                                const AvgPoolingParams3D& params_3d) {
-    Avgpool3dForwardCompute<T>(
+    Avgpool2dForwardCompute<T, IDX>(
+        index_helper, elem_num, src, dest, params_3d.padding()[1], params_3d.padding()[2],
+        params_3d.num_batch(), params_3d.num_channel(), params_3d.GetXShape5D().At(3),
+        params_3d.GetXShape5D().At(4), params_3d.pooling_size_3d()[1],
+        params_3d.pooling_size_3d()[2], params_3d.stride_3d()[1], params_3d.stride_3d()[2],
+        params_3d.count_include_pad(), params_3d.divisor_override());
+  }
+
+  static void Avgpool2dBackward(ep::Stream* stream, const NdIndexOffsetHelper<IDX, 3>& index_helper,
+                                const IDX elem_num, const T* src, T* dest,
+                                const AvgPoolingParams3D& params_3d) {
+    Avgpool2dBackwardCompute<T, IDX>(
+        index_helper, elem_num, src, dest, params_3d.padding()[1], params_3d.padding()[2],
+        params_3d.num_batch(), params_3d.num_channel(), params_3d.GetXShape5D().At(3),
+        params_3d.GetXShape5D().At(4), params_3d.pooling_size_3d()[1],
+        params_3d.pooling_size_3d()[2], params_3d.stride_3d()[1], params_3d.stride_3d()[2],
+        params_3d.count_include_pad(), params_3d.divisor_override());
+  }
+
+  static void Avgpool3dForward(ep::Stream* stream, const NdIndexOffsetHelper<IDX, 4>& index_helper,
+                               const IDX elem_num, const T* src, T* dest,
+                               const AvgPoolingParams3D& params_3d) {
+    Avgpool3dForwardCompute<T, IDX>(
         index_helper, elem_num, src, dest, params_3d.padding()[0], params_3d.padding()[1],
         params_3d.padding()[2], params_3d.num_batch(), params_3d.num_channel(),
         params_3d.GetXShape5D().At(2), params_3d.GetXShape5D().At(3), params_3d.GetXShape5D().At(4),
-        params_3d.GetYShape5D().At(2), params_3d.GetYShape5D().At(3), params_3d.GetYShape5D().At(4),
         params_3d.pooling_size_3d()[0], params_3d.pooling_size_3d()[1],
         params_3d.pooling_size_3d()[2], params_3d.stride_3d()[0], params_3d.stride_3d()[1],
         params_3d.stride_3d()[2], params_3d.count_include_pad(), params_3d.divisor_override());
   }
 
-  static void Avgpool3dBackward(ep::Stream* stream,
-                                const NdIndexOffsetHelper<int64_t, 5>& index_helper,
+  static void Avgpool3dBackward(ep::Stream* stream, const NdIndexOffsetHelper<IDX, 4>& index_helper,
                                 const int64_t elem_num, const T* src, T* dest,
                                 const AvgPoolingParams3D& params_3d) {
-    Avgpool3dBackwardCompute<T>(
+    Avgpool3dBackwardCompute<T, IDX>(
         index_helper, elem_num, src, dest, params_3d.padding()[0], params_3d.padding()[1],
         params_3d.padding()[2], params_3d.num_batch(), params_3d.num_channel(),
         params_3d.GetXShape5D().At(2), params_3d.GetXShape5D().At(3), params_3d.GetXShape5D().At(4),
-        params_3d.GetYShape5D().At(2), params_3d.GetYShape5D().At(3), params_3d.GetYShape5D().At(4),
         params_3d.pooling_size_3d()[0], params_3d.pooling_size_3d()[1],
         params_3d.pooling_size_3d()[2], params_3d.stride_3d()[0], params_3d.stride_3d()[1],
         params_3d.stride_3d()[2], params_3d.count_include_pad(), params_3d.divisor_override());
@@ -124,13 +114,13 @@ class AvgPool1dKernel final : public user_op::OpKernel {
   AvgPool1dKernel() = default;
   ~AvgPool1dKernel() = default;
 
- private:
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
   std::shared_ptr<user_op::OpKernelCache> InitOpKernelCache(
       user_op::KernelCacheContext* ctx) const override {
     return CreateAvgOpKernelCache(ctx, 1);
   }
 
+ private:
   void Compute(user_op::KernelComputeContext* ctx, user_op::OpKernelState*,
                const user_op::OpKernelCache* cache) const override {
     const user_op::Tensor* x = ctx->Tensor4ArgNameAndIndex("x", 0);
@@ -143,11 +133,18 @@ class AvgPool1dKernel final : public user_op::OpKernel {
     const T* src = x->dptr<T>();
     T* dest = y->mut_dptr<T>();
 
-    DimVector y_vector;
-    y->shape().ToDimVector(&y_vector);
-    NdIndexOffsetHelper<int64_t, 3> index_helper(y_vector.data());
-    AvgPoolingKernelUtil<device_type, T>::Avgpool1dForward(ctx->stream(), index_helper, elem_num,
-                                                           src, dest, params_3d);
+    DimVector y_vector(2);
+    y_vector.at(0) = y->shape().At(0) * y->shape().At(1);
+    y_vector.at(1) = y->shape().At(2);
+    if (elem_num < GetMaxVal<int32_t>()) {
+      NdIndexOffsetHelper<int32_t, 2> index_helper(y_vector.data());
+      AvgPoolingKernelUtil<device_type, T, int32_t>::Avgpool1dForward(
+          ctx->stream(), index_helper, elem_num, src, dest, params_3d);
+    } else {
+      NdIndexOffsetHelper<int64_t, 2> index_helper(y_vector.data());
+      AvgPoolingKernelUtil<device_type, T, int64_t>::Avgpool1dForward(
+          ctx->stream(), index_helper, elem_num, src, dest, params_3d);
+    }
   };
 };
 
@@ -157,13 +154,13 @@ class AvgPool1dGradKernel final : public user_op::OpKernel {
   AvgPool1dGradKernel() = default;
   ~AvgPool1dGradKernel() = default;
 
- private:
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
   std::shared_ptr<user_op::OpKernelCache> InitOpKernelCache(
       user_op::KernelCacheContext* ctx) const override {
     return CreateAvgOpKernelCache(ctx, 1);
   }
 
+ private:
   void Compute(user_op::KernelComputeContext* ctx, user_op::OpKernelState*,
                const user_op::OpKernelCache* cache) const override {
     const user_op::Tensor* dy = ctx->Tensor4ArgNameAndIndex("dy", 0);
@@ -175,14 +172,21 @@ class AvgPool1dGradKernel final : public user_op::OpKernel {
     const int64_t elem_num = dy->shape().elem_cnt();
     const T* src = dy->dptr<T>();
     T* dest = dx->mut_dptr<T>();
-    DimVector dy_vector;
-    dy->shape().ToDimVector(&dy_vector);
-    NdIndexOffsetHelper<int64_t, 3> index_helper(dy_vector.data());
-
     size_t out_bytes_size = dx->shape().elem_cnt() * GetSizeOfDataType(dx->data_type());
     Memset<device_type>(ctx->stream(), dest, 0, out_bytes_size);
-    AvgPoolingKernelUtil<device_type, T>::Avgpool1dBackward(ctx->stream(), index_helper, elem_num,
-                                                            src, dest, params_3d);
+
+    DimVector dy_vector(2);
+    dy_vector.at(0) = dy->shape().At(0) * dy->shape().At(1);
+    dy_vector.at(1) = dy->shape().At(2);
+    if (elem_num < GetMaxVal<int32_t>()) {
+      NdIndexOffsetHelper<int32_t, 2> index_helper(dy_vector.data());
+      AvgPoolingKernelUtil<device_type, T, int32_t>::Avgpool1dBackward(
+          ctx->stream(), index_helper, elem_num, src, dest, params_3d);
+    } else {
+      NdIndexOffsetHelper<int64_t, 2> index_helper(dy_vector.data());
+      AvgPoolingKernelUtil<device_type, T, int64_t>::Avgpool1dBackward(
+          ctx->stream(), index_helper, elem_num, src, dest, params_3d);
+    }
   };
 };
 
@@ -192,13 +196,13 @@ class AvgPool2dKernel final : public user_op::OpKernel {
   AvgPool2dKernel() = default;
   ~AvgPool2dKernel() = default;
 
- private:
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
   std::shared_ptr<user_op::OpKernelCache> InitOpKernelCache(
       user_op::KernelCacheContext* ctx) const override {
     return CreateAvgOpKernelCache(ctx, 2);
   }
 
+ private:
   void Compute(user_op::KernelComputeContext* ctx, user_op::OpKernelState*,
                const user_op::OpKernelCache* cache) const override {
     const user_op::Tensor* x = ctx->Tensor4ArgNameAndIndex("x", 0);
@@ -211,11 +215,19 @@ class AvgPool2dKernel final : public user_op::OpKernel {
     const T* src = x->dptr<T>();
     T* dest = y->mut_dptr<T>();
 
-    DimVector y_vector;
-    y->shape().ToDimVector(&y_vector);
-    NdIndexOffsetHelper<int64_t, 4> index_helper(y_vector.data());
-    AvgPoolingKernelUtil<device_type, T>::Avgpool2dForward(ctx->stream(), index_helper, elem_num,
-                                                           src, dest, params_3d);
+    DimVector y_vector(3);
+    y_vector.at(0) = y->shape().At(0) * y->shape().At(1);
+    y_vector.at(1) = y->shape().At(2);
+    y_vector.at(2) = y->shape().At(3);
+    if (elem_num < GetMaxVal<int32_t>()) {
+      NdIndexOffsetHelper<int32_t, 3> index_helper(y_vector.data());
+      AvgPoolingKernelUtil<device_type, T, int32_t>::Avgpool2dForward(
+          ctx->stream(), index_helper, elem_num, src, dest, params_3d);
+    } else {
+      NdIndexOffsetHelper<int64_t, 3> index_helper(y_vector.data());
+      AvgPoolingKernelUtil<device_type, T, int64_t>::Avgpool2dForward(
+          ctx->stream(), index_helper, elem_num, src, dest, params_3d);
+    }
   };
 };
 
@@ -225,13 +237,13 @@ class AvgPool2dGradKernel final : public user_op::OpKernel {
   AvgPool2dGradKernel() = default;
   ~AvgPool2dGradKernel() = default;
 
- private:
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
   std::shared_ptr<user_op::OpKernelCache> InitOpKernelCache(
       user_op::KernelCacheContext* ctx) const override {
     return CreateAvgOpKernelCache(ctx, 2);
   }
 
+ private:
   void Compute(user_op::KernelComputeContext* ctx, user_op::OpKernelState*,
                const user_op::OpKernelCache* cache) const override {
     const user_op::Tensor* dy = ctx->Tensor4ArgNameAndIndex("dy", 0);
@@ -243,14 +255,23 @@ class AvgPool2dGradKernel final : public user_op::OpKernel {
     const int64_t elem_num = dy->shape().elem_cnt();
     const T* src = dy->dptr<T>();
     T* dest = dx->mut_dptr<T>();
-    DimVector dy_vector;
-    dy->shape().ToDimVector(&dy_vector);
-    NdIndexOffsetHelper<int64_t, 4> index_helper(dy_vector.data());
 
     size_t out_bytes_size = dx->shape().elem_cnt() * GetSizeOfDataType(dx->data_type());
     Memset<device_type>(ctx->stream(), dest, 0, out_bytes_size);
-    AvgPoolingKernelUtil<device_type, T>::Avgpool2dBackward(ctx->stream(), index_helper, elem_num,
-                                                            src, dest, params_3d);
+
+    DimVector dy_vector(3);
+    dy_vector.at(0) = dy->shape().At(0) * dy->shape().At(1);
+    dy_vector.at(1) = dy->shape().At(2);
+    dy_vector.at(2) = dy->shape().At(3);
+    if (elem_num < GetMaxVal<int32_t>()) {
+      NdIndexOffsetHelper<int32_t, 3> index_helper(dy_vector.data());
+      AvgPoolingKernelUtil<device_type, T, int32_t>::Avgpool2dBackward(
+          ctx->stream(), index_helper, elem_num, src, dest, params_3d);
+    } else {
+      NdIndexOffsetHelper<int64_t, 3> index_helper(dy_vector.data());
+      AvgPoolingKernelUtil<device_type, T, int64_t>::Avgpool2dBackward(
+          ctx->stream(), index_helper, elem_num, src, dest, params_3d);
+    }
   };
 };
 
@@ -260,13 +281,13 @@ class AvgPool3dKernel final : public user_op::OpKernel {
   AvgPool3dKernel() = default;
   ~AvgPool3dKernel() = default;
 
- private:
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
   std::shared_ptr<user_op::OpKernelCache> InitOpKernelCache(
       user_op::KernelCacheContext* ctx) const override {
     return CreateAvgOpKernelCache(ctx, 3);
   }
 
+ private:
   void Compute(user_op::KernelComputeContext* ctx, user_op::OpKernelState*,
                const user_op::OpKernelCache* cache) const override {
     const user_op::Tensor* x = ctx->Tensor4ArgNameAndIndex("x", 0);
@@ -279,11 +300,20 @@ class AvgPool3dKernel final : public user_op::OpKernel {
     const T* src = x->dptr<T>();
     T* dest = y->mut_dptr<T>();
 
-    DimVector y_vector;
-    y->shape().ToDimVector(&y_vector);
-    NdIndexOffsetHelper<int64_t, 5> index_helper(y_vector.data());
-    AvgPoolingKernelUtil<device_type, T>::Avgpool3dForward(ctx->stream(), index_helper, elem_num,
-                                                           src, dest, params_3d);
+    DimVector y_vector(4);
+    y_vector.at(0) = y->shape().At(0) * y->shape().At(1);
+    y_vector.at(1) = y->shape().At(2);
+    y_vector.at(2) = y->shape().At(3);
+    y_vector.at(3) = y->shape().At(4);
+    if (elem_num < GetMaxVal<int32_t>()) {
+      NdIndexOffsetHelper<int32_t, 4> index_helper(y_vector.data());
+      AvgPoolingKernelUtil<device_type, T, int32_t>::Avgpool3dForward(
+          ctx->stream(), index_helper, elem_num, src, dest, params_3d);
+    } else {
+      NdIndexOffsetHelper<int64_t, 4> index_helper(y_vector.data());
+      AvgPoolingKernelUtil<device_type, T, int64_t>::Avgpool3dForward(
+          ctx->stream(), index_helper, elem_num, src, dest, params_3d);
+    }
   };
 };
 
@@ -293,13 +323,13 @@ class AvgPool3dGradKernel final : public user_op::OpKernel {
   AvgPool3dGradKernel() = default;
   ~AvgPool3dGradKernel() = default;
 
- private:
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
   std::shared_ptr<user_op::OpKernelCache> InitOpKernelCache(
       user_op::KernelCacheContext* ctx) const override {
     return CreateAvgOpKernelCache(ctx, 3);
   }
 
+ private:
   void Compute(user_op::KernelComputeContext* ctx, user_op::OpKernelState*,
                const user_op::OpKernelCache* cache) const override {
     const user_op::Tensor* dy = ctx->Tensor4ArgNameAndIndex("dy", 0);
@@ -311,14 +341,24 @@ class AvgPool3dGradKernel final : public user_op::OpKernel {
     const int64_t elem_num = dy->shape().elem_cnt();
     const T* src = dy->dptr<T>();
     T* dest = dx->mut_dptr<T>();
-    DimVector dy_vector;
-    dy->shape().ToDimVector(&dy_vector);
-    NdIndexOffsetHelper<int64_t, 5> index_helper(dy_vector.data());
 
     size_t out_bytes_size = dx->shape().elem_cnt() * GetSizeOfDataType(dx->data_type());
     Memset<device_type>(ctx->stream(), dest, 0, out_bytes_size);
-    AvgPoolingKernelUtil<device_type, T>::Avgpool3dBackward(ctx->stream(), index_helper, elem_num,
-                                                            src, dest, params_3d);
+
+    DimVector dy_vector(4);
+    dy_vector.at(0) = dy->shape().At(0) * dy->shape().At(1);
+    dy_vector.at(1) = dy->shape().At(2);
+    dy_vector.at(2) = dy->shape().At(3);
+    dy_vector.at(3) = dy->shape().At(4);
+    if (elem_num < GetMaxVal<int32_t>()) {
+      NdIndexOffsetHelper<int32_t, 4> index_helper(dy_vector.data());
+      AvgPoolingKernelUtil<device_type, T, int32_t>::Avgpool3dBackward(
+          ctx->stream(), index_helper, elem_num, src, dest, params_3d);
+    } else {
+      NdIndexOffsetHelper<int64_t, 4> index_helper(dy_vector.data());
+      AvgPoolingKernelUtil<device_type, T, int64_t>::Avgpool3dBackward(
+          ctx->stream(), index_helper, elem_num, src, dest, params_3d);
+    }
   };
 };
 
@@ -360,6 +400,6 @@ REGISTER_AVG_POOLING_WITH_DEVICE(DeviceType::kCUDA)
 #endif
 
 OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(INSTANTIATE_AVG_POOLING_KERNEL_UTIL, (DeviceType::kCPU),
-                                 AVG_POOLING_DATA_TYPE_CPU_SEQ);
+                                 AVG_POOLING_DATA_TYPE_CPU_SEQ, AVG_POOLING_IDX_DATA_TYPE_SEQ);
 
 }  // namespace oneflow

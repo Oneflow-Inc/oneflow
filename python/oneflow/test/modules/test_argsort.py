@@ -18,7 +18,7 @@ import unittest
 from collections import OrderedDict
 
 import numpy as np
-from test_util import GenArgList, type_name_to_flow_type
+from oneflow.test_utils.test_util import GenArgList, type_name_to_flow_type
 
 import oneflow as flow
 import oneflow.unittest
@@ -64,10 +64,18 @@ class TestArgsort(flow.unittest.TestCase):
         for arg in GenArgList(arg_dict):
             arg[0](test_case, *arg[1:])
 
-    @autotest(auto_backward=False, check_graph=False)
+    @autotest(auto_backward=False, check_graph=True)
     def test_argsort_with_random_data(test_case):
         device = random_device()
-        x = random_pytorch_tensor(ndim=4).to(device)
+        x = random_tensor(ndim=4).to(device)
+        y = torch.argsort(
+            x, dim=random(low=-4, high=4).to(int), descending=random_bool()
+        )
+        return y
+
+    @autotest(auto_backward=False, check_graph=True)
+    def test_argsort_bool_with_random_data(test_case):
+        x = random_tensor(ndim=4).to("cpu", torch.bool)
         y = torch.argsort(
             x, dim=random(low=-4, high=4).to(int), descending=random_bool()
         )

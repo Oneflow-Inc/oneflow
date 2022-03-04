@@ -236,15 +236,14 @@ class LocalUserKernelInitAndCacheContext final : public user_op::KernelInitConte
                                                                int32_t index) const override {
     return base_ctx_.ConsistentTensorMetaView4ArgNameAndIndex(arg_name, index);
   }
-  const cfg::SbpParallel& SbpParallel4ArgNameAndIndex(const std::string& arg_name,
-                                                      int32_t index) const override {
+  const SbpParallel& SbpParallel4ArgNameAndIndex(const std::string& arg_name,
+                                                 int32_t index) const override {
     const auto& nd_sbp = NdSbp4ArgNameAndIndex(arg_name, index);
     CHECK_EQ(nd_sbp.sbp_parallel_size(), 1);
     return nd_sbp.sbp_parallel(0);
   }
 
-  const cfg::NdSbp& NdSbp4ArgNameAndIndex(const std::string& arg_name,
-                                          int32_t index) const override {
+  const NdSbp& NdSbp4ArgNameAndIndex(const std::string& arg_name, int32_t index) const override {
     return *CHECK_NOTNULL(base_ctx_.ConsistentTensorMeta4ArgNameAndIndex(arg_name, index))
                 ->nd_sbp();
   }
@@ -372,14 +371,14 @@ Maybe<void> InitTensorTupleIndexes4Bns(const std::shared_ptr<const OperatorConf>
 }
 
 /* static */ Maybe<StatefulLocalOpKernel> StatefulLocalOpKernel::New(
-    const std::shared_ptr<OperatorConf>& op_conf, const Symbol<Device>& device,
+    const std::shared_ptr<OperatorConf>& op_conf, const Symbol<Stream>& stream,
     const AttrMap& base_attrs, const std::shared_ptr<const ParallelDesc>& parallel_desc,
     const std::shared_ptr<const ArgTuple>& input_arg_tuple,
     const std::shared_ptr<const ArgTuple>& output_arg_tuple) {
   auto opkernel = std::shared_ptr<StatefulLocalOpKernel>(new StatefulLocalOpKernel());
   opkernel->op_conf_ = op_conf;
   opkernel->user_op_conf_.reset(new user_op::UserOpConfWrapper(op_conf));
-  opkernel->device_ = device;
+  opkernel->stream_ = stream;
   opkernel->composed_attrs_for_scheduler_thread_.reset(new ComposedAttrMap(base_attrs));
   opkernel->composed_attrs_for_main_thread_.reset(new ComposedAttrMap(base_attrs));
   opkernel->input_arg_tuple_ = input_arg_tuple;
@@ -485,8 +484,8 @@ void StatefulLocalOpKernel::TryInitOpKernelStateAndCache(
 
   {
     auto& cache_in_map = op_kernel_cache_map_[op_kernel];
-    op_kernel->InitOpKernelCache(&init_and_cache_ctx, user_op::OpKernelCache::kAllMayChanged,
-                                 &cache_in_map);
+    op_kernel->InitOpKernelCacheWithFlags(&init_and_cache_ctx,
+                                          user_op::OpKernelCache::kAllMayChanged, &cache_in_map);
     *cache = cache_in_map.get();
   }
 }

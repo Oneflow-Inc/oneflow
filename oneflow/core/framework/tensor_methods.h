@@ -28,10 +28,26 @@ Maybe<bool> IsContiguous(const std::shared_ptr<Tensor>& tensor);
 
 namespace view {
 
-Maybe<Tensor> BasicView(const std::shared_ptr<Tensor>& input, const Shape& target_shape,
-                        const Stride& target_strides, int64_t storage_offset);
+bool IsViewApplicable(const std::shared_ptr<Tensor>& input);
 
-Maybe<Tensor> Reshape(const std::shared_ptr<Tensor>& input, const Shape& shape);
+Maybe<Tensor> BasicView(const std::shared_ptr<Tensor>& input, const Shape& target_shape,
+                        int64_t storage_offset);
+
+Maybe<Tensor> BasicView(const std::shared_ptr<Tensor>& input, const Shape& target_shape,
+                        const Stride& target_stride, int64_t storage_offset);
+
+Maybe<Tensor> Reshape(const std::shared_ptr<Tensor>& input, const Shape& target_shape);
+
+Maybe<Tensor> Reshape(const std::shared_ptr<Tensor>& input, const Shape& target_shape,
+                      const Stride& target_stride);
+
+Maybe<Tensor> Slice(const std::shared_ptr<Tensor>& input, const std::vector<int64_t>& starts,
+                    const std::vector<int64_t>& ends, const std::vector<int64_t>& steps);
+
+Maybe<Tensor> Unsqueeze(const std::shared_ptr<Tensor>& input, const int32_t& expand_dim);
+
+Maybe<Tensor> Squeeze(const std::shared_ptr<Tensor>& input,
+                      const std::vector<int32_t>& squeeze_dims);
 
 }  // namespace view
 }  // namespace one

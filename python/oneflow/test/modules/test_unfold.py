@@ -35,7 +35,7 @@ class TestUnfold(flow.unittest.TestCase):
         m.train(random())
         device = random_device()
         m.to(device)
-        x = random_pytorch_tensor(
+        x = random_tensor(
             ndim=4,
             dim0=random(1, 5),
             dim1=random(1, 5),

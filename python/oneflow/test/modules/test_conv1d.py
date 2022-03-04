@@ -18,7 +18,7 @@ import unittest
 from collections import OrderedDict
 
 import numpy as np
-from test_util import GenArgList
+from oneflow.test_utils.test_util import GenArgList
 from oneflow.test_utils.automated_test_util import *
 
 import oneflow as flow
@@ -451,7 +451,7 @@ class TestConv1d(flow.unittest.TestCase):
         m.train(random())
         device = random_device()
         m.to(device)
-        x = random_pytorch_tensor(ndim=3, dim1=channels).to(device)
+        x = random_tensor(ndim=3, dim1=channels).to(device)
         y = m(x)
         return y
 
@@ -474,7 +474,7 @@ class TestConv1d(flow.unittest.TestCase):
         device = random_device()
         m.to(device)
         m.pytorch.to("cuda")
-        x = random_pytorch_tensor(ndim=3, dim1=channels).to(device)
+        x = random_tensor(ndim=3, dim1=channels).to(device)
         x.pytorch = x.pytorch.to("cuda")
         y = m(x)
         return y

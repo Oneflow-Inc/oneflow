@@ -17,11 +17,18 @@ limitations under the License.
 #define ONEFLOW_API_PYTHON_FUNCTIONAL_PY_FUNCTION_H_
 
 #include <pybind11/pybind11.h>
+#include <Python.h>
+#include <string>
 
+#include "oneflow/api/python/functional/common.h"
 #include "oneflow/api/python/functional/function_def.h"
 #include "oneflow/api/python/functional/python_arg.h"
 #include "oneflow/api/python/functional/unpack_call.h"
+#include "oneflow/core/common/just.h"
 #include "oneflow/core/common/throw.h"
+#include "oneflow/core/common/util.h"
+#include "oneflow/core/job/lazy_mode.h"
+#include "oneflow/core/framework/op_interpreter/dispatch_frame.h"
 
 namespace py = pybind11;
 
@@ -70,6 +77,8 @@ class PyFunctionDispatcher {
     return py::none();
   }
 
+  std::string func_name() { return func_name_; }
+
  private:
   template<size_t... I>
   void InitSignatures(std::index_sequence<I...>) {
@@ -83,10 +92,44 @@ class PyFunctionDispatcher {
   std::vector<const char*> signatures_;
 };
 
+namespace {
+PyFrameObject* get_frame_back(PyFrameObject* frame) {
+  assert(frame != NULL);
+  PyFrameObject* back = frame->f_back;
+  if (back != NULL) { Py_XINCREF(back); }
+  return back;
+}
+
+std::string get_cur_frame_stack_str() {
+  PyFrameObject* cur_frame = PyEval_GetFrame();
+  if (cur_frame == NULL) return "";
+  std::string cur_f_str =
+      "Python stack[-1]: " + PyObjectToReprStr((PyObject*)cur_frame).GetOrThrow();
+
+  PyFrameObject* back_frame = get_frame_back(cur_frame);
+  if (back_frame == NULL) return cur_f_str;
+  std::string back_f_str = PyObjectToReprStr((PyObject*)back_frame).GetOrThrow();
+  cur_f_str = "Python stack[-2]: " + back_f_str + "; " + cur_f_str;
+  Py_XDECREF(back_frame);
+
+  return cur_f_str;
+}
+}  // namespace
+
 template<typename... SchemaT>
 inline py::object PyFunction(const py::args& args, const py::kwargs& kwargs) {
   static PyFunctionDispatcher<SchemaT...> dispatcher;
-  return dispatcher.call(args, kwargs, std::make_index_sequence<sizeof...(SchemaT)>{});
+
+  if (OF_PREDICT_FALSE(LazyMode::is_enabled())) {
+    // Create the last 2 frame stack string in Python Interpreter.
+    std::string cur_f_str =
+        get_cur_frame_stack_str() + "; C API: <func " + dispatcher.func_name() + ">";
+    // User DispathFram to pass frame info to OpExpr or Interpreter.
+    DispatchFrame::Guard f_guard(cur_f_str);
+    return dispatcher.call(args, kwargs, std::make_index_sequence<sizeof...(SchemaT)>{});
+  } else {
+    return dispatcher.call(args, kwargs, std::make_index_sequence<sizeof...(SchemaT)>{});
+  }
 }
 
 }  // namespace functional

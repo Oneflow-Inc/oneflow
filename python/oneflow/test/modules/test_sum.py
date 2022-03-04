@@ -20,7 +20,7 @@ from collections import OrderedDict
 import numpy as np
 
 from oneflow.test_utils.automated_test_util import *
-from test_util import GenArgList
+from oneflow.test_utils.test_util import GenArgList
 
 import oneflow as flow
 import oneflow.unittest
@@ -70,18 +70,25 @@ class TestSumModule(flow.unittest.TestCase):
         for arg in GenArgList(arg_dict):
             _test_sum_impl(test_case, *arg)
 
-    @autotest(check_graph=False)
+    @autotest(check_graph=True)
     def test_sum_against_pytorch(test_case):
         device = random_device()
-        x = random_pytorch_tensor(4, random(0, 5), 2).to(device)
+        x = random_tensor(4, random(0, 5), 2).to(device)
         y = torch.sum(x)
         return y
 
     @autotest(auto_backward=False, check_graph=True)
     def test_sum_with_0_size_tensor(test_case):
         device = random_device()
-        x = random_pytorch_tensor(4, 4, 3, 0, 2).to(device)
+        x = random_tensor(4, 4, 3, 0, 2).to(device)
         y = torch.sum(x, dim=np.random.randint(0, 3))
+        return y
+
+    @autotest(auto_backward=False, check_graph=True)
+    def test_sum_with_0dim_tensor(test_case):
+        device = random_device()
+        x = random_tensor(ndim=0).to(device)
+        y = torch.sum(x)
         return y
 
 

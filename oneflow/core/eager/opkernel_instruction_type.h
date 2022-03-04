@@ -16,7 +16,6 @@ limitations under the License.
 #ifndef ONEFLOW_CORE_EAGER_CALL_OPKERNEL_INSTRUCTION_H_
 #define ONEFLOW_CORE_EAGER_CALL_OPKERNEL_INSTRUCTION_H_
 
-#include "oneflow/core/eager/opkernel_instruction.h"
 #include "oneflow/core/vm/instr_type_id.h"
 #include "oneflow/core/vm/instruction.h"
 #include "oneflow/core/vm/instruction_type.h"
@@ -27,123 +26,19 @@ namespace vm {
 
 class LocalCallOpKernelInstructionType : public vm::InstructionType {
  public:
-  void Infer(vm::Instruction* instruction) const override;
   void Compute(vm::Instruction* instruction) const override;
+  void ComputeInFuseMode(vm::InstructionMsg* instr_msg) const override;
 
-  const std::string& DebugOpTypeName(vm::Instruction* instruction) const override;
+  InstructionFuseType fuse_type() const override { return kEnableInstructionFuseAtAnyPosition; }
+
+  std::string DebugOpTypeName(const vm::InstructionMsg& instr_msg) const override;
 
  protected:
   LocalCallOpKernelInstructionType() = default;
   virtual ~LocalCallOpKernelInstructionType() = default;
 
  private:
-  Maybe<void> MaybeInfer(vm::Instruction* instruction) const;
   Maybe<void> MaybeCompute(vm::Instruction* instruction) const;
-  virtual const char* device_tag() const = 0;
-};
-
-class CallOpKernelInstructionType : public vm::InstructionType {
- public:
-  void Infer(vm::Instruction* instruction) const override;
-  void Compute(vm::Instruction* instruction) const override;
-
- protected:
-  CallOpKernelInstructionType() = default;
-  virtual ~CallOpKernelInstructionType() = default;
-
- private:
-  Maybe<void> MaybeInfer(vm::Instruction* instruction, const CallOpKernelInstrOperand& args) const;
-  Maybe<void> MaybeCompute(vm::Instruction* instruction,
-                           const CallOpKernelInstrOperand& args) const;
-  virtual const char* device_tag() const = 0;
-};
-
-class UserStatelessCallOpKernelInstructionType : public vm::InstructionType {
- public:
-  void Infer(vm::Instruction* instruction) const override;
-  void Compute(vm::Instruction* instruction) const override;
-
-  using vm::InstructionType::Compute;
-  using vm::InstructionType::Infer;
-
- protected:
-  UserStatelessCallOpKernelInstructionType() = default;
-  virtual ~UserStatelessCallOpKernelInstructionType() = default;
-
- private:
-  Maybe<void> Infer(vm::Instruction* instruction,
-                    const StatelessCallOpKernelInstrOperand& args) const;
-  Maybe<void> Compute(vm::Instruction* instruction,
-                      const StatelessCallOpKernelInstrOperand& args) const;
-  virtual const char* device_tag() const = 0;
-};
-
-class SystemStatelessCallOpKernelInstructionType : public vm::InstructionType {
- public:
-  void Infer(vm::Instruction* instruction) const override;
-  void Compute(vm::Instruction* instruction) const override;
-
-  virtual std::shared_ptr<MemoryCase> GetOutBlobMemCase(const DeviceType device_type,
-                                                        const int64_t device_id) const;
-
-  using vm::InstructionType::Compute;
-  using vm::InstructionType::Infer;
-
- protected:
-  SystemStatelessCallOpKernelInstructionType() = default;
-  virtual ~SystemStatelessCallOpKernelInstructionType() = default;
-
- private:
-  Maybe<void> Infer(vm::Instruction* instruction,
-                    const StatelessCallOpKernelInstrOperand& args) const;
-  Maybe<void> Compute(vm::Instruction* instruction,
-                      const StatelessCallOpKernelInstrOperand& args) const;
-  virtual const char* device_tag() const = 0;
-};
-
-class FetchBlobHeaderInstructionType : public vm::InstructionType {
- public:
-  void Infer(vm::Instruction* instruction) const override;
-  void Compute(vm::Instruction* instruction) const override {
-    // do nothing
-  }
-
- protected:
-  FetchBlobHeaderInstructionType() = default;
-  virtual ~FetchBlobHeaderInstructionType() = default;
-
- private:
-  virtual const char* device_tag() const = 0;
-};
-
-class FetchBlobBodyInstructionType : public vm::InstructionType {
- public:
-  void Infer(vm::Instruction* instruction) const override {
-    // do nothing
-  }
-  void Compute(vm::Instruction* instruction) const override;
-
- protected:
-  FetchBlobBodyInstructionType() = default;
-  virtual ~FetchBlobBodyInstructionType() = default;
-
- private:
-  virtual const char* device_tag() const = 0;
-};
-
-class FeedBlobInstructionType : public vm::InstructionType {
- public:
-  void Infer(vm::Instruction* instruction) const override {
-    // do nothing
-  }
-  void Compute(vm::Instruction* instruction) const override;
-
- protected:
-  FeedBlobInstructionType() = default;
-  virtual ~FeedBlobInstructionType() = default;
-
- private:
-  virtual const char* device_tag() const = 0;
 };
 
 }  // namespace vm

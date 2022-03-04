@@ -1,6 +1,6 @@
-// RUN: oneflow-opt -lower-oneflow-to-tosa -tosa-to-linalg -cse --linalg-fuse-elementwise-ops -linalg-detensorize=aggressive-mode -linalg-bufferize -tensor-bufferize -func-bufferize --tensor-constant-bufferize -buffer-results-to-out-params -convert-linalg-to-loops -convert-scf-to-std -convert-linalg-to-llvm -convert-memref-to-llvm -convert-std-to-llvm  %s | FileCheck %s
-// RUN: oneflow-opt -lower-oneflow-to-tosa -tosa-to-linalg -cse --linalg-fuse-elementwise-ops  -linalg-bufferize -tensor-bufferize -func-bufferize --tensor-constant-bufferize -buffer-results-to-out-params  -finalizing-bufferize -canonicalize %s | FileCheck %s
-// CHECK: return
+// RUN: oneflow-opt -lower-oneflow-to-tosa -tosa-to-linalg -cse --linalg-fuse-elementwise-ops -linalg-bufferize -tensor-bufferize -func-bufferize -buffer-results-to-out-params -convert-linalg-to-loops -convert-scf-to-cf -convert-linalg-to-llvm -convert-std-to-llvm -convert-memref-to-llvm -reconcile-unrealized-casts --print-ir-after-all %s
+// RUN: oneflow-opt -lower-oneflow-to-tosa -tosa-to-linalg -cse --linalg-fuse-elementwise-ops  -linalg-bufferize -tensor-bufferize -func-bufferize -buffer-results-to-out-params  -finalizing-bufferize -canonicalize %s
+
 module  {
   func @Cast_1__FUSE__ScalarMulByTensor_2(%arg0: tensor<96x96xi64>, %arg1: tensor<1xf32>) -> tensor<96x96xf32> {
     %0 = "oneflow.cast"(%arg0) {device_name = ["0:0"], device_tag = "cpu", dtype = 2 : i32, hierarchy = [1], op_name = "Cast_1", op_type_name = "cast", scope_symbol_id = 4611686018427416574 : i64} : (tensor<96x96xi64>) -> tensor<96x96xf32>

@@ -38,12 +38,12 @@ class TestConv3DModule(flow.unittest.TestCase):
         m.train(random())
         device = random_device()
         m.to(device)
-        x = random_pytorch_tensor(ndim=5, dim0=2, dim1=channels).to(device)
+        x = random_tensor(ndim=5, dim0=2, dim1=channels).to(device)
         y = m(x)
         return y
 
     @unittest.skipIf(os.getenv("ONEFLOW_TEST_CPU_ONLY"), "only test cpu cases")
-    @autotest(n=30, check_allclose=False)
+    @autotest(n=5, check_allclose=False)
     def test_conv3d_group_with_random_data(test_case):
         channels = 720  # lcm(1, 2, 3, 4, 5, 6)
         m = torch.nn.Conv3d(
@@ -61,7 +61,7 @@ class TestConv3DModule(flow.unittest.TestCase):
         device = random_device()
         m.to(device)
         m.pytorch.to("cuda")
-        x = random_pytorch_tensor(ndim=5, dim1=channels).to(device)
+        x = random_tensor(ndim=5, dim1=channels).to(device)
         x.pytorch = x.pytorch.to("cuda")
         y = m(x)
         return y

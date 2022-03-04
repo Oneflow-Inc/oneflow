@@ -32,14 +32,3 @@ def MakeScopeSymbol(job_conf, parallel_conf, is_mirrored):
         parallel_hierarchy,
         is_mirrored,
     ).symbol_id
-
-
-def MakeParallelDescSymbol(parallel_conf):
-    symbol_id = None
-
-    def BuildInstruction(builder):
-        nonlocal symbol_id
-        symbol_id = builder.GetParallelDescSymbol(parallel_conf).symbol_id
-
-    oneflow._oneflow_internal.deprecated.LogicalRun(BuildInstruction)
-    return symbol_id
