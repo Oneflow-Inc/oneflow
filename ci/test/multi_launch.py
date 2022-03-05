@@ -103,6 +103,7 @@ async def run_and_capture(cmd=None, prefix=None, **kwargs):
 
     await proc.wait()
     assert proc.returncode == 0, prefix
+    print(f"{prefix}succeed")
 
 
 async def launch_multiple(
