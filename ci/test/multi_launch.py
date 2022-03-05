@@ -90,11 +90,13 @@ async def run_and_capture(cmd=None, prefix=None, **kwargs):
     proc = await asyncio.create_subprocess_exec(
         *cmd, stdout=asyncio.subprocess.PIPE, stderr=asyncio.subprocess.STDOUT, **kwargs
     )
-    while proc.stdout.at_eof() == False:
-        data = await proc.stdout.readline()
-        line = data.decode().rstrip()
-        print(prefix, line)
-
+    while proc.stdout.at_eof() == False and proc.returncode == None:
+        try:
+            data = await asyncio.wait_for(proc.stdout.readline(), 3)
+            line = data.decode().rstrip()
+            print(prefix, line)
+        except asyncio.TimeoutError:
+            pass
     await proc.wait()
     assert proc.returncode == 0, prefix
     print(f"{prefix} succeed")
@@ -132,7 +134,9 @@ def main():
     if args.shuffle:
         random.shuffle(files)
     files_hash = hash(str(files))
-    print(f"::warning file=testFilesHash,line=1,col=5,endColumn=7::{files_hash}")
+    print(
+        f"::warning file=testFilesHash,line={len(files)},col=0,endColumn=0::{files_hash}"
+    )
     if args.parallel_num == "master_port":
         parallel_num = len(args.master_port)
         master_ports = args.master_port
