@@ -19,5 +19,5 @@ do
         --auto_cuda_visible_devices \
         -m oneflow.distributed.launch \
         --nproc_per_node $device_num --nnodes=2 --node_rank=$NODE_RANK --master_addr $_MASTER_ADDR \
-        -m pytest --max-worker-restart=0 -x --durations=50 --capture=sys --verbose -p no:cacheprovider
+        -m pytest --max-worker-restart=0 -x --durations=50 --capture=sys -p no:cacheprovider
 done
