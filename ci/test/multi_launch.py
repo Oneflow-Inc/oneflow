@@ -24,6 +24,7 @@ from argparse import REMAINDER, ArgumentParser
 from typing import IO, Any, List, Optional
 import glob
 import base64
+from math import ceil
 
 stdout_filename = "stdout"
 stderr_filename = "stderr"
@@ -167,7 +168,7 @@ def main():
         )
     assert parallel_num > 0
     assert len(master_ports) == parallel_num
-    chunk_size = len(files) // parallel_num
+    chunk_size = ceil(len(files) / parallel_num)
     global PARALLEL_NUM
     PARALLEL_NUM = parallel_num
     chunks = [files[i : i + chunk_size] for i in range(0, len(files), chunk_size)]
