@@ -96,7 +96,7 @@ async def run_and_capture(cmd=None, prefix=None, **kwargs):
     proc = await asyncio.create_subprocess_exec(
         *cmd, stdout=asyncio.subprocess.PIPE, stderr=asyncio.subprocess.STDOUT, **kwargs
     )
-    while proc.returncode == None:
+    while not proc.stdout.at_eof() and proc.returncode == None:
         try:
             await asyncio.wait_for(proc.wait(), 1)
         except asyncio.TimeoutError:
