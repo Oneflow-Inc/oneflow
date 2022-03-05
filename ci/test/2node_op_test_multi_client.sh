@@ -14,7 +14,6 @@ do
     time python3 ${src_dir}/ci/test/multi_launch.py \
         --files "${ONEFLOW_TEST_DIR}/**/test_*.py" \
         -n 8 \
-        --shuffle \
         --group_size $device_num \
         --device_num 4 \
         --auto_cuda_visible_devices \
