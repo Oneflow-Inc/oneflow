@@ -133,7 +133,7 @@ def main():
     random.seed(6628309)
     if args.shuffle:
         random.shuffle(files)
-    files_hash = hash(str(files))
+    files_hash = hash([os.path.basename(x) for x in files])
     print(
         f"::warning file=testFilesHash,line={len(files)},col=0,endColumn=0::{files_hash}"
     )
