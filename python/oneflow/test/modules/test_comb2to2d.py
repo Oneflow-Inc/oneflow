@@ -31,8 +31,6 @@ class TestModuleDiffHierarchy(nn.Module):
             flow.sbp.partial_sum,
             flow.sbp.split(0),
             flow.sbp.split(1),
-            flow.sbp.split(2),
-            flow.sbp.split(3),
         ]
 
         for sbp1 in sbp_1ds:
@@ -65,8 +63,6 @@ class TestModuleDiffPlacement(nn.Module):
             flow.sbp.partial_sum,
             flow.sbp.split(0),
             flow.sbp.split(1),
-            flow.sbp.split(2),
-            flow.sbp.split(3),
         ]
 
         for sbp1 in sbp_1ds:
@@ -108,8 +104,6 @@ class TestLazyAllSbpCombinationTesting(flow.unittest.TestCase):
     def test_lazy_boxing_2d_all_combination(test_case):
 
         x = flow.ones(
-            12,
-            12,
             12,
             12,
             sbp=[flow.sbp.broadcast, flow.sbp.broadcast],
