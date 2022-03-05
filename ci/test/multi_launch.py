@@ -91,12 +91,9 @@ async def run_and_capture(cmd=None, prefix=None, **kwargs):
         *cmd, stdout=asyncio.subprocess.PIPE, stderr=asyncio.subprocess.STDOUT, **kwargs
     )
     while proc.stdout.at_eof() == False:
-        try:
-            data = await proc.stdout.readline()
-            line = data.decode().rstrip()
-            print(prefix, line)
-        except asyncio.TimeoutError:
-            pass
+        data = await proc.stdout.readline()
+        line = data.decode().rstrip()
+        print(prefix, line)
 
     await proc.wait()
     assert proc.returncode == 0, prefix
