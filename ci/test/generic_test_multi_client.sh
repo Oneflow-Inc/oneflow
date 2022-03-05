@@ -7,8 +7,6 @@ src_dir=${ONEFLOW_SRC_DIR:-"$PWD"}
 ONEFLOW_TEST_DIR=${ONEFLOW_TEST_DIR:-"$PWD/python/oneflow/test/modules"}
 ONEFLOW_TEST_TASKS_PER_GPU=${ONEFLOW_TEST_TASKS_PER_GPU:-"4"}
 
-cd $ONEFLOW_TEST_DIR
-
 if [ -z "$ONEFLOW_TEST_CPU_ONLY" ]
 then
     gpu_num=$(nvidia-smi --query-gpu=name --format=csv,noheader | wc -l)
@@ -31,11 +29,11 @@ unset https_proxy
 export ONEFLOW_TEST_DEVICE_NUM=1
 
 COMMON_PYTEST_ARGS="--max-worker-restart=0 -x --durations=50 --capture=sys"
-time python3 -m pytest ${COMMON_PYTEST_ARGS} --failed-first --dist loadfile ${parallel_spec} ${PWD}
+time python3 -m pytest ${COMMON_PYTEST_ARGS} --failed-first --dist loadfile ${parallel_spec} ${ONEFLOW_TEST_DIR}
 if [[ "$(python3 -c 'import oneflow.sysconfig;print(oneflow.sysconfig.has_rpc_backend_grpc())')" == *"True"* ]]; then
     export ONEFLOW_TEST_DEVICE_NUM=2
     time python3 ${src_dir}/ci/test/multi_launch.py \
-        --files "${PWD}/**/test_*.py" \
+        --files "${ONEFLOW_TEST_DIR}/**/test_*.py" \
         --master_port 29500 \
         --master_port 29501 \
         --master_port 29502 \
@@ -57,7 +55,7 @@ if [[ "$(python3 -c 'import oneflow.sysconfig;print(oneflow.sysconfig.has_rpc_ba
 
     export ONEFLOW_TEST_DEVICE_NUM=4
     time python3 ${src_dir}/ci/test/multi_launch.py \
-        --files "${PWD}/**/test_*.py" \
+        --files "${ONEFLOW_TEST_DIR}/**/test_*.py" \
         -n 8 \
         --shuffle \
         --group_size 4 \
