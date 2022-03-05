@@ -47,7 +47,6 @@ if [[ "$(python3 -c 'import oneflow.sysconfig;print(oneflow.sysconfig.has_rpc_ba
         --master_port 29510 \
         --master_port 29511 \
         -n master_port \
-        --shuffle \
         --group_size 2 \
         --auto_cuda_visible_devices \
         --device_num $multi_launch_device_num \
@@ -57,7 +56,6 @@ if [[ "$(python3 -c 'import oneflow.sysconfig;print(oneflow.sysconfig.has_rpc_ba
     time python3 ${src_dir}/ci/test/multi_launch.py \
         --files "${ONEFLOW_TEST_DIR}/**/test_*.py" \
         -n 8 \
-        --shuffle \
         --group_size 4 \
         --device_num $multi_launch_device_num \
         --auto_cuda_visible_devices \
