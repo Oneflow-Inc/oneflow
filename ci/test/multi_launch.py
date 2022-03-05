@@ -23,6 +23,7 @@ import sys
 from argparse import REMAINDER, ArgumentParser
 from typing import IO, Any, List, Optional
 import glob
+import base64
 
 stdout_filename = "stdout"
 stderr_filename = "stderr"
@@ -129,13 +130,18 @@ def main():
     # find files and chuck them
     files = glob.glob(args.files, recursive=True)
     print("total files:", len(files))
-    files = sorted(files, key=lambda x: hash(os.path.basename(x)))
+    files = sorted(
+        files, key=lambda x: base64.b64encode(os.path.basename(x.encode("ascii")))
+    )
     if args.shuffle:
         random.shuffle(files)
-    files_hash = hash(str([os.path.basename(x) for x in files]))
-    print(
-        f"::warning file=testFilesHash,line={len(files)},col=0,endColumn=0::group_size-{args.group_size}-hash-{files_hash}"
+    files_hash = base64.b64encode(
+        "".join([os.path.basename(x) for x in files]).encode()
     )
+    print(
+        f"::warning file=testFilesHash,line={len(files)},col=0,endColumn=0::shuffle-{args.shuffle}-group_size-{args.group_size}-base64-{files_hash}"
+    )
+    exit(0)
     if args.parallel_num == "master_port":
         parallel_num = len(args.master_port)
         master_ports = args.master_port
