@@ -263,7 +263,7 @@ class InferenceSession(object):
 
     def compile(self, op_list):
         self._check_status(self.SessionStatus.OPEN)
-        scope = flow.current_scope()
+        scope = scope_util.current_scope()
         device_tag = scope.device_parallel_desc_symbol.device_tag
         for op_conf in op_list:
             if _need_check_device_tag(op_conf) and op_conf.device_tag != device_tag:
