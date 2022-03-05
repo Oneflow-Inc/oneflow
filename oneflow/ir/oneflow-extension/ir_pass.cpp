@@ -134,7 +134,8 @@ class RoundTripOneFlowJobWrapper : public mlir::oneflow::RoundTripOneFlowJobWrap
 
   void TopoForEachOpConf(
       std::function<void(const ::oneflow::OperatorConf*)> Handler) const override {
-    op_graph_.TopoForEachNode([&](OpNode* op_node) { Handler(&op_node->op().op_conf()); });
+    op_graph_.TopoForEachNodeWithCtrlEdge(
+        [&](OpNode* op_node) { Handler(&op_node->op().op_conf()); });
   }
 
   std::string LogDir() {

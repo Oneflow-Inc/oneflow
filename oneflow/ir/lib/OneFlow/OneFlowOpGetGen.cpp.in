@@ -12,6 +12,7 @@
 #include "OneFlow/OneFlowEnums.h.inc"
 #include "OneFlow/OneFlowSupport.h"
 #include "OneFlow/OneFlowInterfaces.h.inc"
+#include "OneFlow/OneFlowTypes.h"
 
 #define GET_OP_CLASSES
 #include "OneFlow/OneFlow.@OP_GROUP_NAME_LOWER@_ops.h.inc"
