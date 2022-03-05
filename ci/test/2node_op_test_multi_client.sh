@@ -4,13 +4,14 @@ set -xeu
 
 export PYTHONUNBUFFERED=1
 
+src_dir=${ONEFLOW_SRC_DIR:-"$PWD"}
 ONEFLOW_CI_DEVICE_NUMS=${ONEFLOW_CI_DEVICE_NUMS:-"1 2 4"}
 
 for device_num in ${ONEFLOW_CI_DEVICE_NUMS}
 do
     export ONEFLOW_TEST_NODE_NUM=2
     export ONEFLOW_TEST_DEVICE_NUM=$device_num
-    time python3 ${src_dir}/python/oneflow/distributed/multi_launch.py \
+    time python3 ${src_dir}/ci/test/multi_launch.py \
         --files "${PWD}/**/test_*.py" \
         -n 8 \
         --shuffle \
