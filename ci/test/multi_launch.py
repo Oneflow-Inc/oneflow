@@ -126,6 +126,9 @@ def main():
     args = parse_args()
     # find files and chuck them
     files = glob.glob(args.files, recursive=True)
+    print("total files:", len(files))
+    files = sorted(files)
+    print("hash:", hash(frozenset(files)))
     random.seed(6628309)
     if args.shuffle:
         random.shuffle(files)
