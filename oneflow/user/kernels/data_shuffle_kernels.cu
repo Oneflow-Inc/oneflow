@@ -72,7 +72,7 @@ __global__ void HashTableUnique(const uint32_t table_capacity, int32_t* table_si
         *value_ptr = ((r_index_plus_one << 1U) | key_lo);
       } else if (old_key == key_hi) {
         const int32_t value = *value_ptr;
-        if (value == 0){
+        if (value == 0) {
           // do nothing
         } else if ((value & 0x1) == key_lo) {
           r_index_plus_one = (value >> 1U);
