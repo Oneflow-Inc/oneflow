@@ -280,7 +280,7 @@ void CudaAllocator::Allocate(char** mem_ptr, std::size_t size) {
     // NOTE(chengcheng): In some corner case on ubuntu, cuda memory not released even if OOM.
     //   So there need release all cuda memory allocated by this process before core dump.
     LOG(WARNING) << "OOM error is detected, process will exit. And it will start to reset CUDA "
-              << "device for releasing device memory.";
+                 << "device for releasing device memory.";
     OF_CUDA_CHECK(cudaDeviceReset());
     LOG(FATAL) << "Error! : Out of memory when allocate size : " << size
                << ".\n The total_memory_bytes allocated by this CudaAllocator is : "
