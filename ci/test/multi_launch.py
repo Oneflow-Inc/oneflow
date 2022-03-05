@@ -134,7 +134,7 @@ def main():
         random.shuffle(files)
     files_hash = hash(str([os.path.basename(x) for x in files]))
     print(
-        f"::warning file=testFilesHash,line={len(files)},col=0,endColumn=0::{files_hash}"
+        f"::warning file=testFilesHash,line={len(files)},col=0,endColumn=0::group_size-{args.group_size}-hash-{files_hash}"
     )
     if args.parallel_num == "master_port":
         parallel_num = len(args.master_port)
