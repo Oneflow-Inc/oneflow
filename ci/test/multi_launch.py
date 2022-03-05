@@ -18,10 +18,7 @@ This file is mostly copied from PyTorch v1.8.1 torch/distributed/launch.py
 """
 import asyncio
 import os
-import signal
-import subprocess
 import sys
-import time
 from argparse import REMAINDER, ArgumentParser
 from typing import IO, Any, List, Optional
 import glob
