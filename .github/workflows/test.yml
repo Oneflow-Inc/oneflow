@@ -1,9 +1,8 @@
 name: Build and Test CI
 on:
   pull_request:
-    types: [review_requested]
-    branches:
-      - "*"
+    types: [opened, review_requested, ready_for_review, auto_merge_enabled, synchronize, review_requested, unlocked]
+
 concurrency:
   group: build-and-test-${{ github.ref }}
   cancel-in-progress: true
@@ -17,7 +16,7 @@ jobs:
   mirror_third_party:
     name: Mirror third party dependencies
     runs-on: ubuntu-18.04
-    if: github.event.pull_request.draft == false && github.base_ref == 'master' && contains(github.event.pull_request.requested_reviewers.*.login, 'oneflow-ci-bot')
+    if: github.event.pull_request.draft == false && github.base_ref == 'master'
     steps:
       - uses: actions/checkout@v2
       - name: Mirror dependencies to aliyun
@@ -35,7 +34,7 @@ jobs:
   check_license_and_format:
     name: License and format
     runs-on: ubuntu-18.04
-    if: github.event.pull_request.draft == false && contains(github.event.pull_request.requested_reviewers.*.login, 'oneflow-ci-bot')
+    if: github.event.pull_request.draft == false
     steps:
       - uses: actions/checkout@v2
         with:
@@ -126,7 +125,7 @@ jobs:
       group: build-and-test-wait-for-gpu-slot
       cancel-in-progress: false
     needs: [build-oneflow]
-    if: github.event.pull_request.draft == false && github.base_ref == 'master' && contains(github.event.pull_request.requested_reviewers.*.login, 'oneflow-ci-bot')
+    if: github.event.pull_request.draft == false && github.base_ref == 'master'
     continue-on-error: true
     steps:
       - name: Check if secrets accessible
@@ -163,7 +162,7 @@ jobs:
 
   find-build-cache:
     name: "Find build cache"
-    if: github.event.pull_request.draft == false && github.base_ref == 'master' && contains(github.event.pull_request.requested_reviewers.*.login, 'oneflow-ci-bot')
+    if: github.event.pull_request.draft == false && github.base_ref == 'master'
     runs-on: ubuntu-latest
     needs: [check-priority-pr]
     env:
@@ -195,7 +194,7 @@ jobs:
 
   build-oneflow:
     name: "Build OneFlow"
-    if: github.event.pull_request.draft == false && github.base_ref == 'master' && contains(github.event.pull_request.requested_reviewers.*.login, 'oneflow-ci-bot')
+    if: github.event.pull_request.draft == false && github.base_ref == 'master'
     runs-on: ${{ matrix.runs-on }}
     needs: [find-build-cache]
     timeout-minutes: 60
@@ -361,7 +360,7 @@ jobs:
 
   find-test-cache-distributed:
     name: "Find test cache (distributed)"
-    if: github.event.pull_request.draft == false && github.base_ref == 'master' && contains(github.event.pull_request.requested_reviewers.*.login, 'oneflow-ci-bot')
+    if: github.event.pull_request.draft == false && github.base_ref == 'master'
     runs-on: ubuntu-latest
     needs: [build-oneflow]
     env:
@@ -388,7 +387,7 @@ jobs:
 
   find-test-cache:
     name: "Find test cache"
-    if: github.event.pull_request.draft == false && github.base_ref == 'master' && contains(github.event.pull_request.requested_reviewers.*.login, 'oneflow-ci-bot')
+    if: github.event.pull_request.draft == false && github.base_ref == 'master'
     runs-on: ubuntu-latest
     needs: [build-oneflow]
     env:
@@ -415,7 +414,7 @@ jobs:
     name: Distributed test suite
     needs: [wait_for_gpu_slot, find-test-cache-distributed]
     runs-on: ${{ matrix.runs-on }}
-    if: github.event.pull_request.draft == false && github.base_ref == 'master' && contains(github.event.pull_request.requested_reviewers.*.login, 'oneflow-ci-bot')
+    if: github.event.pull_request.draft == false && github.base_ref == 'master'
     concurrency:
       group: distributed-test-${{ matrix.entry }}-rank-${{ matrix.rank }}
       cancel-in-progress: false
@@ -578,7 +577,7 @@ jobs:
     name: Test suite
     needs: [wait_for_gpu_slot, find-test-cache, test-distributed]
     runs-on: ${{ matrix.runs-on }}
-    if: github.event.pull_request.draft == false && github.base_ref == 'master' && contains(github.event.pull_request.requested_reviewers.*.login, 'oneflow-ci-bot')
+    if: github.event.pull_request.draft == false && github.base_ref == 'master'
     strategy:
       fail-fast: ${{ !contains(github.event.pull_request.labels.*.name, 'need-all-tests-even-fail') }}
       max-parallel: 5
@@ -859,7 +858,7 @@ jobs:
   static_analysis_with_clang_on_diff:
     name: Static analysis with clang on diff
     runs-on: ubuntu-20.04
-    if: github.event.pull_request.draft == false && github.base_ref == 'master' && contains(github.event.pull_request.requested_reviewers.*.login, 'oneflow-ci-bot')
+    if: github.event.pull_request.draft == false && github.base_ref == 'master'
     steps:
       - name: Check out OneFlow
         uses: actions/checkout@v2
