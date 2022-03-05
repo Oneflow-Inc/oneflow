@@ -176,3 +176,99 @@ class OneEmbeddingLookup(Module):
         return flow._C.embedding_lookup_placeholder(
             self.shadow, ids, column_ids, self.value_type, self.embedding_options,
         )
+
+
+def _get_defaut_options():
+    options = {
+        "key_type": flow.int64,
+        "value_type": flow.float,
+        "kv_store": {
+            "caches": None,
+            "persistent_table": {"path": "", "physical_block_size": 512,},
+        },
+        "default_initializer": {"type": "normal", "mean": 0, "std": 0.05},
+    }
+    return options
+
+
+def CreateGpuOnlyOption(
+    name, embedding_dim, optimizer_type, storage_dim, persistent_path, gpu_memory_mb
+):
+    options = _get_defaut_options()
+    options["kv_store"]["caches"] = [
+        {
+            "policy": "full",
+            "cache_memory_budget_mb": gpu_memory_mb,
+            "value_memory_kind": "device",
+        }
+    ]
+    options["name"] = name
+    options["kv_store"]["persistent_table"]["path"] = persistent_path
+    options["embedding_dim"] = embedding_dim
+    options["storage_dim"] = storage_dim
+    return options
+
+
+def CreateCpuOnlyOption(
+    name, embedding_dim, optimizer_type, storage_dim, persistent_path, cpu_memory_mb
+):
+    options = _get_defaut_options()
+    options["kv_store"]["caches"] = [
+        {
+            "policy": "full",
+            "cache_memory_budget_mb": cpu_memory_mb,
+            "value_memory_kind": "host",
+        }
+    ]
+    options["name"] = name
+    options["kv_store"]["persistent_table"]["path"] = persistent_path
+    options["embedding_dim"] = embedding_dim
+    options["storage_dim"] = storage_dim
+    return options
+
+
+def CreateGpuCpuOption(
+    name,
+    embedding_dim,
+    optimizer_type,
+    storage_dim,
+    persistent_path,
+    gpu_memory_mb,
+    cpu_memory_mb,
+):
+    options = _get_defaut_options()
+    options["kv_store"]["caches"] = [
+        {
+            "policy": "lru",
+            "cache_memory_budget_mb": gpu_memory_mb,
+            "value_memory_kind": "device",
+        },
+        {
+            "policy": "full",
+            "cache_memory_budget_mb": cpu_memory_mb,
+            "value_memory_kind": "host",
+        },
+    ]
+    options["name"] = name
+    options["kv_store"]["persistent_table"]["path"] = persistent_path
+    options["embedding_dim"] = embedding_dim
+    options["storage_dim"] = storage_dim
+    return options
+
+
+def CreateGpuSSDOption(
+    name, embedding_dim, optimizer_type, storage_dim, persistent_path, gpu_memory_mb
+):
+    options = _get_defaut_options()
+    options["kv_store"]["caches"] = [
+        {
+            "policy": "lru",
+            "cache_memory_budget_mb": gpu_memory_mb,
+            "value_memory_kind": "device",
+        }
+    ]
+    options["name"] = name
+    options["kv_store"]["persistent_table"]["path"] = persistent_path
+    options["embedding_dim"] = embedding_dim
+    options["storage_dim"] = storage_dim
+    return options

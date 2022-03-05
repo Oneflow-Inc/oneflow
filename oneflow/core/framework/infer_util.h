@@ -89,9 +89,9 @@ class InferContext {
   virtual const std::shared_ptr<const AttrVal>& Attr4Name(const std::string& attr_name) const = 0;
 };
 
-class DeviceInferContext {
+class DeviceAndStreamInferContext {
  public:
-  virtual ~DeviceInferContext() = default;
+  virtual ~DeviceAndStreamInferContext() = default;
 
   template<typename T>
   const T& Attr(const std::string& attr_name) const {
@@ -106,7 +106,7 @@ class DeviceInferContext {
   virtual Symbol<Device> InputTensorDevice4ArgNameAndIndex(const std::string&, int64_t) const = 0;
 
  protected:
-  DeviceInferContext() = default;
+  DeviceAndStreamInferContext() = default;
   virtual const std::shared_ptr<const AttrVal>& Attr4Name(const std::string& attr_name) const = 0;
 };
 

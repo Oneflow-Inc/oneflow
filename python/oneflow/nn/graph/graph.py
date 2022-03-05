@@ -57,6 +57,8 @@ class Graph(object):
     4. Define computation logical in ``build()`` method.
     5. Instantiate your graph then call it.
 
+    For example:
+
     .. code-block:: python
 
         >>> import oneflow as flow
@@ -92,6 +94,8 @@ class Graph(object):
     def __init__(self):
         """
         Initializes internal Graph states. It MUST be called in ``__init__`` method of subclass.
+
+        For example:
 
         .. code-block:: python
 
@@ -147,6 +151,8 @@ class Graph(object):
         first call of your graph to make the module executing the right
         training or evaluation logic if needed.
 
+        For example:
+
         .. code-block:: python
 
             >>> import oneflow as flow
@@ -178,6 +184,8 @@ class Graph(object):
         r"""Call nn.Graph subclass instance to run your customized graph.
 
         Call your customized graph after the instantiation:
+
+        For example:
 
         .. code-block:: python
 
@@ -223,6 +231,8 @@ class Graph(object):
         in ``nn.Graph.build()`` for the moment. So you may call methods such as ``Tensor.mean()``
         to make the loss tensor a scalar tensor.
 
+        For example:
+
         .. code-block:: python
 
             >>> import oneflow as flow
@@ -267,7 +277,7 @@ class Graph(object):
         if lr_sch is not None:
             assert isinstance(lr_sch, LRScheduler)
             assert (
-                lr_sch._optimizer is optim
+                lr_sch.optimizer is optim
             ), "lr_scheduler's optimizer must be the same optimizer in add_optimizer."
             opt_dict["lr_sch"] = lr_sch
         self._opts.append(opt_dict)
@@ -406,7 +416,12 @@ class Graph(object):
         info of each operation. ``v_level`` 3 will additionally print more detailed info of each
         operation.
 
+        In addition, during the training process, when ``v_level`` is greater than or equal to 1, 
+        the learning rate information of each step will be printed.
+
         Use ``ranks`` to choose which rank to print the debug information.
+
+        For example:
 
         .. code-block:: python
 
@@ -451,6 +466,8 @@ class Graph(object):
 
         After the first call of graph, inputs and outputs will be added to
         the graph structure.
+
+        For example:
 
         .. code-block:: python
 
@@ -718,11 +735,8 @@ class Graph(object):
 
             # Deal with outputs
             self.__print(0, 1, self._shallow_repr() + " start building graph outputs.")
-            if not (type(outputs) is tuple or type(outputs) is list):
-                if outputs is None:
-                    outputs = ()
-                else:
-                    outputs = (outputs,)
+            # Always pack output to remain type of outputs
+            outputs = (outputs,)
 
             (
                 output_op_names,
@@ -777,7 +791,8 @@ class Graph(object):
                 state_op_names, self._state_tensor_tuple
             )
 
-        return seq_to_func_return(self._eager_outputs_buffer[0])
+        # Always pack outputs to remain type of outputs
+        return seq_to_func_return(self._eager_outputs_buffer[0], True)
 
     def __rebuild_outputs(self, out2name=None):
         # NOTE(chengcheng):
@@ -904,7 +919,8 @@ class Graph(object):
         oneflow._oneflow_internal.nn.graph.SoftSyncNNGraphBuffers(
             outputs_tensor_tuple, self._c_nn_graph
         )
-        return seq_to_func_return(eager_outputs)
+        # Always pack outputs to remain type of outputs
+        return seq_to_func_return(eager_outputs, True)
 
     def __build_io(self, io_type, build_func, *args, **kwargs):
         assert io_type in ("input", "output")
@@ -949,7 +965,7 @@ class Graph(object):
                 )
 
         out = io_node.map_leaf(leaf_node_fn)
-        build_args = list(out[0])
+        build_args = out[0]
         build_kwargs = out[1]
 
         return op_names, build_args, build_kwargs, args_repr, tensor2op_name
@@ -1015,7 +1031,7 @@ class Graph(object):
                 )
 
         out = io_node.map_leaf(leaf_node_fn)
-        mapped_args = list(out[0])
+        mapped_args = out[0]
         mapped_kwargs = out[1]
         return mapped_args, mapped_kwargs
 
@@ -1079,6 +1095,8 @@ class Graph(object):
 
         Just assign nn.Module in nn.Graph, _add_block will be called to add the
         module as a Block:
+
+        For example:
 
         .. code-block:: python
 

@@ -42,6 +42,7 @@ oneflow
             cos, 
             cosh, 
             diag, 
+            select,
             diagonal,
             movedim,
             tensor_split,
@@ -181,3 +182,4 @@ oneflow
             LongTensor,
 
 .. autofunction:: oneflow.relu
+.. autofunction:: oneflow.set_num_threads

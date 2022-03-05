@@ -72,10 +72,10 @@ __global__ void HashTableUnique(const uint32_t table_capacity, int32_t* table_si
         *value_ptr = ((r_index_plus_one << 1U) | key_lo);
       } else if (old_key == key_hi) {
         const int32_t value = *value_ptr;
-        if ((value & 0x1) == key_lo) {
-          r_index_plus_one = (value >> 1U);
-        } else if (value == 0) {
+        if (value == 0){
           // do nothing
+        } else if ((value & 0x1) == key_lo) {
+          r_index_plus_one = (value >> 1U);
         } else {
           prob_next = true;
         }
@@ -632,7 +632,7 @@ user_op::InferTmpSizeFn GenEmbeddingShuffleInferTmpSizeFn() {
       .SetInferTmpSizeFn(GenEmbeddingShuffleInferTmpSizeFn<t_dtype, idx_dtype>());
 
 REGISTER_CUDA_EMBEDDING_SHUFFLE_KERNEL(float, int32_t)
-REGISTER_CUDA_EMBEDDING_SHUFFLE_KERNEL(half, int32_t)
+REGISTER_CUDA_EMBEDDING_SHUFFLE_KERNEL(float16, int32_t)
 
 namespace {
 
