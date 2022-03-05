@@ -93,6 +93,10 @@ async def run_and_capture(cmd=None, prefix=None, **kwargs):
     )
     while proc.stdout.at_eof() == False and proc.returncode == None:
         try:
+            await asyncio.wait_for(proc.wait(), 1)
+        except asyncio.TimeoutError:
+            pass
+        try:
             data = await asyncio.wait_for(proc.stdout.readline(), 3)
             line = data.decode().rstrip()
             print(prefix, line)
