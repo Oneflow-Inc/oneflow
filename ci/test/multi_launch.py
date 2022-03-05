@@ -73,7 +73,7 @@ def parse_args():
     )
     parser.add_argument(
         "--master_port",
-        default=[29500],
+        default=[],
         action="append",
         help="Master node (rank 0)'s free port, pass this multiple `--master_port` to launch more instances",
     )
@@ -164,8 +164,9 @@ def main():
             print(
                 "warning", "parallel_num != len(args.master_port)", "will auto generate"
             )
+        default_master_port = 29500
         master_ports = list(
-            range(args.master_port[0], args.master_port[0] + parallel_num)
+            range(default_master_port, default_master_port + parallel_num)
         )
     assert parallel_num > 0
     assert len(master_ports) == parallel_num
