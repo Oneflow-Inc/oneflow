@@ -97,8 +97,8 @@ void TraceKernelForwardDataContentEnd(KernelContext* kernel_ctx, const Kernel* k
             double bandwidth =
                 static_cast<double>(memory_size) / (1024.0 * 1024.0 * 1024.0) / (elapsed_ms / 1000);
             LOG(INFO) << "PROFILER::KERNEL::CUDA_MEMORY_BANDWIDTH op_name: " << op_name
-                    << " elapsed(ms): " << elapsed_ms << " memory_size(Byte): " << memory_size
-                    << " bandwidth(GB/s): " << bandwidth;
+                      << " elapsed(ms): " << elapsed_ms << " memory_size(Byte): " << memory_size
+                      << " bandwidth(GB/s): " << bandwidth;
           });
     }
   }

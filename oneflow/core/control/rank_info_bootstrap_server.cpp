@@ -45,7 +45,7 @@ RankInfoBootstrapServer::RankInfoBootstrapServer(const BootstrapConf& bootstrap_
   grpc_server_ = server_builder.BuildAndStart();
   if (bootstrap_conf.rank() == 0) { CHECK_EQ(p, port()) << "Port " << p << " is unavailable"; }
   LOG(INFO) << "RankInfoBootstrapServer listening on "
-          << "0.0.0.0:" + std::to_string(port());
+            << "0.0.0.0:" + std::to_string(port());
   loop_thread_ = std::thread(&RankInfoBootstrapServer::HandleRpcs, this);
 }
 
