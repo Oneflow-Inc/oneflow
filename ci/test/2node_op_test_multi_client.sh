@@ -13,7 +13,7 @@ do
     export ONEFLOW_TEST_DEVICE_NUM=$device_num
     time python3 ${src_dir}/ci/test/multi_launch.py \
         --files "${ONEFLOW_TEST_DIR}/**/test_*.py" \
-        -n 8 \
+        -n 4 \
         --group_size $device_num \
         --device_num 4 \
         --auto_cuda_visible_devices \
