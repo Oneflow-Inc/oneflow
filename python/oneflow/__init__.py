@@ -209,9 +209,9 @@ import oneflow.framework.session_context as session_ctx
 from oneflow.framework.tensor_str import set_printoptions
 
 env_util.GetEnvHolder()
+session_ctx.NewDefaultSession()
 oneflow._oneflow_internal.RegisterGILForeignLockHelper()
 oneflow._oneflow_internal.InitDefaultConsistentTransportTokenScope()
-session_ctx.NewDefaultSession()
 
 scope_util.InitScopeStack()
 oneflow._oneflow_internal.EnableEagerEnvironment(True)
@@ -281,9 +281,6 @@ import oneflow.nn.image
 from oneflow.framework.check_point_v2 import load
 from oneflow.framework.check_point_v2 import save
 from oneflow.framework.dtype import convert_oneflow_dtype_to_numpy_dtype, dtypes
-from oneflow.framework.env_util import (
-    api_enable_eager_execution as enable_eager_execution,
-)
 from oneflow.framework.function_util import FunctionConfig
 from oneflow.framework.function_util import FunctionConfig as function_config
 from oneflow.framework.generator import create_generator as Generator

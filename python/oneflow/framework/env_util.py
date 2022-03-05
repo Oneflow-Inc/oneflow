@@ -51,22 +51,8 @@ def api_all_device_placement(device_type: str) -> oneflow._oneflow_internal.plac
     return oneflow._oneflow_internal.AllDevicePlacement(device_type)
 
 
-def api_enable_eager_execution(val: bool = True) -> None:
-    """If True, job will execute in eager mode, else use lazy mode(static graph).
-
-    Args:
-        val (bool, optional): Whether  eager execution or not.  Defaults to True.
-    """
-    return enable_if.unique([enable_eager_environment])(val)
-
-
-@enable_if.condition(hob.in_normal_mode & ~hob.any_global_function_defined)
-def enable_eager_environment(val=True):
-    return oneflow._oneflow_internal.EnableEagerEnvironment(val)
-
-
 def api_env_init() -> bool:
-    """Init environment for job
+    """Init environment
 
     Returns:
         bool: [description]
@@ -90,20 +76,17 @@ def check_non_localhost_proxy_and_print_warning():
             break
 
 
-@enable_if.condition(hob.in_normal_mode & ~hob.env_initialized)
+@enable_if.condition(~hob.env_initialized)
 def env_init():
     global default_env_proto
     is_multi_client = oneflow._oneflow_internal.IsMultiClient()
+    if not is_multi_client:
+        exit(0)
     assert len(default_env_proto.machine) > 0
     CompleteEnvProto(default_env_proto, is_multi_client)
     if default_env_proto.ctrl_bootstrap_conf.world_size > 1:
         check_non_localhost_proxy_and_print_warning()
     c_api_util.InitEnv(default_env_proto, is_multi_client)
-    if not is_multi_client:
-        if oneflow._oneflow_internal.CurrentMachineId() == 0:
-            scope_util.InitScopeStack()
-        else:
-            exit(0)
     return True
 
 

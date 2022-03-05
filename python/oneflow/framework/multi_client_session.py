@@ -34,6 +34,7 @@ class MultiClientSession(object):
         self._env_holder = env_util.GetEnvHolder()
         assert self._env_holder is not None
         self.sess_ = oneflow._oneflow_internal.RegsiterSession(sess_id)
+        self._id = sess_id
         oneflow._oneflow_internal.CreateMultiClientSessionContext()
         self.config_proto_ = self._make_config_proto()
         self.function_flag_name2default_val_ = {}
@@ -65,7 +66,7 @@ class MultiClientSession(object):
 
     @property
     def id(self):
-        return self.sess_.id
+        return self._id
 
     @property
     def config_proto(self):
