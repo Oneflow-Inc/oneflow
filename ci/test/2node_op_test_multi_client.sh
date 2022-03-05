@@ -12,7 +12,7 @@ do
     export ONEFLOW_TEST_NODE_NUM=2
     export ONEFLOW_TEST_DEVICE_NUM=$device_num
     time python3 ${src_dir}/ci/test/multi_launch.py \
-        --files "${PWD}/**/test_*.py" \
+        --files "${ONEFLOW_TEST_DIR}/**/test_*.py" \
         -n 8 \
         --shuffle \
         --group_size $device_num \
@@ -20,5 +20,5 @@ do
         --auto_cuda_visible_devices \
         -m oneflow.distributed.launch \
         --nproc_per_node $device_num --nnodes=2 --node_rank=$NODE_RANK --master_addr $_MASTER_ADDR \
-        -m pytest --max-worker-restart=0 -x --durations=50 --capture=sys ${ONEFLOW_TEST_DIR}
+        -m pytest --max-worker-restart=0 -x --durations=50 --capture=sys
 done
