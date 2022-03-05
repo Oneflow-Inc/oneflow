@@ -7,8 +7,6 @@ pull_request_rules:
       - label="automerge"
     actions:
       update:
-
-pull_request_rules:
   - name: automatic request ci-bot for PR with label “automerge“
     conditions:
       - "#approved-reviews-by>=2"
