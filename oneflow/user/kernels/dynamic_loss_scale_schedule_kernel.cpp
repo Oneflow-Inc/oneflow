@@ -40,8 +40,8 @@ class DynamicLossScaleScheduleCpuKernel final : public user_op::OpKernel {
         *loss_scale = static_cast<float>(new_loss_scale);
         cur_good_step_counter = 0;
         LOG(INFO) << "In past " << increment_period
-                << " steps, there are no nan or inf in gradients, so we increase loss_scale from "
-                << old_loss_scale << " to " << new_loss_scale;
+                  << " steps, there are no nan or inf in gradients, so we increase loss_scale from "
+                  << old_loss_scale << " to " << new_loss_scale;
       }
       *good_step_counter = cur_good_step_counter;
     } else {
@@ -50,7 +50,7 @@ class DynamicLossScaleScheduleCpuKernel final : public user_op::OpKernel {
       const double new_loss_scale = std::max(old_loss_scale / multiplier, 1.0);
       *loss_scale = static_cast<float>(new_loss_scale);
       LOG(INFO) << "There are nan or inf in gradients, so we decrease loss_scale from "
-              << old_loss_scale << " to " << new_loss_scale;
+                << old_loss_scale << " to " << new_loss_scale;
     }
   }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return true; }
