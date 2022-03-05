@@ -128,10 +128,11 @@ def main():
     files = glob.glob(args.files, recursive=True)
     print("total files:", len(files))
     files = sorted(files)
-    print("hash:", hash(frozenset(files)))
     random.seed(6628309)
     if args.shuffle:
         random.shuffle(files)
+    files_hash = hash(str(files))
+    print(f"::warning file=testFilesHash,line=1,col=5,endColumn=7::{files_hash}")
     if args.parallel_num == "master_port":
         parallel_num = len(args.master_port)
         master_ports = args.master_port
