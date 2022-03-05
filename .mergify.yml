@@ -16,6 +16,7 @@ pull_request_rules:
       - -draft # skip draft PRs
       - label="automerge"
       - "#commits-behind==0"
+      - -closed
     actions:
         request_reviews:
             users:
