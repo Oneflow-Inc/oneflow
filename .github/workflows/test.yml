@@ -2,8 +2,7 @@ name: Build and Test CI
 on:
   pull_request:
     types: [opened, review_requested, ready_for_review, auto_merge_enabled, synchronize, review_requested, unlocked]
-    branches-ignore:
-      - 'master'
+
 concurrency:
   group: build-and-test-${{ github.ref }}
   cancel-in-progress: true
