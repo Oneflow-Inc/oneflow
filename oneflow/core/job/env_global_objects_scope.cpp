@@ -216,7 +216,7 @@ Maybe<void> EnvGlobalObjectsScope::Init(const EnvProto& env_proto) {
              "value, it will impact performance";
       kernel_observers.emplace_back(new SyncCheckKernelObserver());
     }
-    if (!ParseBooleanFromEnv("ONEFLOW_KERNEL_DISABLE_BLOB_ACCESS_CHECKER", false)) {
+    if (!ParseBooleanFromEnv("ONEFLOW_KERNEL_DISABLE_BLOB_ACCESS_CHECKER", true)) {
       kernel_observers.emplace_back(new BlobAccessCheckerKernelObserver());
     }
     kernel_observers.emplace_back(new ProfilerKernelObserver());
