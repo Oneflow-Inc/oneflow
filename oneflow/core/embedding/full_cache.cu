@@ -62,7 +62,7 @@ __device__ bool TryGetOrInsert(Key* entry_key, volatile Index* entry_index, uint
       return false;
     }
   }
-  return false
+  return false;
 }
 
 template<typename Key, typename Index>
