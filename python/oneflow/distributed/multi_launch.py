@@ -49,6 +49,16 @@ def parse_args():
         required=True,
     )
     parser.add_argument(
+        "--device_num", type=int, help="how many devices to run on", required=True,
+    )
+    parser.add_argument(
+        "-n",
+        "--parallel_num",
+        type=str,
+        help="how many launches, could be a number, or 'master_port'",
+        required=True,
+    )
+    parser.add_argument(
         "--auto_cuda_visible_devices",
         action="store_true",
         required=False,
@@ -96,18 +106,21 @@ async def run_and_capture(cmd=None, prefix=None, **kwargs):
     assert proc.returncode == 0, prefix
 
 
-async def launch_multiple(cmds=None, group_size=None, auto_cuda_env=False):
-    gpu_num = 4
+async def launch_multiple(
+    cmds=None, group_size=None, auto_cuda_env=False, device_num=None
+):
     visible_groups = [
-        [str(x) for x in range(gpu_num)[i : i + group_size]]  # to get ["0", "1"]
-        for i in range(0, gpu_num, group_size)
+        [str(x) for x in range(device_num)[i : i + group_size]]  # to get ["0", "1"]
+        for i in range(0, device_num, group_size)
     ]
     spawns = []
     for i, cmd in enumerate(cmds):
         group_idx = i % len(visible_groups)
         cuda_visible_devices = ",".join(visible_groups[group_idx])
         print(cuda_visible_devices, cmd, "\n")
-        env = dict(os.environ, CUDA_VISIBLE_DEVICES=cuda_visible_devices)
+        env = os.environ
+        if auto_cuda_env:
+            env = dict(env, CUDA_VISIBLE_DEVICES=cuda_visible_devices)
         process = run_and_capture(
             cmd=cmd, prefix=f"[wg={i}][device={cuda_visible_devices}]", env=env,
         )
@@ -121,7 +134,19 @@ def main():
     files = glob.glob(args.files, recursive=True)
     if args.shuffle:
         random.shuffle(files)
-    parallel_num = len(args.master_port)
+    if args.parallel_num == "master_port":
+        parallel_num = len(args.master_port)
+        master_ports = args.master_port
+    else:
+        parallel_num = int(args.parallel_num)
+        if parallel_num != len(args.master_port):
+            print(
+                "warning", "parallel_num != len(args.master_port)", "will auto generate"
+            )
+        master_ports = list(
+            range(args.master_port[0], args.master_port[0] + parallel_num)
+        )
+    assert parallel_num > 0
     chunk_size = len(files) // parallel_num
     chunks = [files[i : i + chunk_size] for i in range(0, len(files), chunk_size)]
 
@@ -133,13 +158,14 @@ def main():
         [sys.executable, "-m", args.training_script, "--master_port", str(master_port)]
         + args.training_script_args
         + chunck
-        for (master_port, chunck) in zip(args.master_port, chunks)
+        for (master_port, chunck) in zip(master_ports, chunks)
     ]
     loop = asyncio.get_event_loop()
     processes = launch_multiple(
         cmds=cmds,
         auto_cuda_env=args.auto_cuda_visible_devices,
         group_size=args.group_size,
+        device_num=args.device_num,
     )
     loop.run_until_complete(processes)
 

@@ -17,8 +17,10 @@ then
             parallel_spec="$parallel_spec --tx popen//env:CUDA_VISIBLE_DEVICES=${i}"
         done
     done
+    multi_launch_device_num=${gpu_num}
 else
     parallel_spec="-n auto"
+    multi_launch_device_num=$(nproc)
 fi
 
 unset HTTP_PROXY
@@ -29,7 +31,7 @@ unset https_proxy
 export ONEFLOW_TEST_DEVICE_NUM=1
 
 COMMON_PYTEST_ARGS="--max-worker-restart=0 -x --durations=50 --capture=sys"
-time python3 -m pytest ${COMMON_PYTEST_ARGS} --failed-first --dist loadfile ${parallel_spec} ${PWD}
+# time python3 -m pytest ${COMMON_PYTEST_ARGS} --failed-first --dist loadfile ${parallel_spec} ${PWD}
 if [[ "$(python3 -c 'import oneflow.sysconfig;print(oneflow.sysconfig.has_rpc_backend_grpc())')" == *"True"* ]]; then
     export ONEFLOW_TEST_DEVICE_NUM=2
     time python3 ${src_dir}/python/oneflow/distributed/multi_launch.py \
@@ -46,24 +48,20 @@ if [[ "$(python3 -c 'import oneflow.sysconfig;print(oneflow.sysconfig.has_rpc_ba
         --master_port 29509 \
         --master_port 29510 \
         --master_port 29511 \
+        -n master_port \
         --shuffle \
         --group_size 2 \
         --auto_cuda_visible_devices \
+        --device_num $multi_launch_device_num \
         -m oneflow.distributed.launch --nproc_per_node 2 -m pytest ${COMMON_PYTEST_ARGS}
 
     export ONEFLOW_TEST_DEVICE_NUM=4
     time python3 ${src_dir}/python/oneflow/distributed/multi_launch.py \
         --files "${PWD}/**/test_*.py" \
-        --master_port 29500 \
-        --master_port 29501 \
-        --master_port 29502 \
-        --master_port 29503 \
-        --master_port 29504 \
-        --master_port 29505 \
-        --master_port 29506 \
-        --master_port 29507 \
+        -n 8 \
         --shuffle \
         --group_size 4 \
+        --device_num $multi_launch_device_num
         --auto_cuda_visible_devices \
         -m oneflow.distributed.launch --nproc_per_node 4 -m pytest ${COMMON_PYTEST_ARGS}
 else
