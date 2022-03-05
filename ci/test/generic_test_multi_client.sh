@@ -19,6 +19,8 @@ then
 else
     parallel_spec="-n auto"
     multi_launch_device_num=$(nproc)
+    multi_launch_device_num=$((${multi_launch_device_num}/4))
+    echo $multi_launch_device_num
 fi
 
 unset HTTP_PROXY
@@ -29,7 +31,7 @@ unset https_proxy
 export ONEFLOW_TEST_DEVICE_NUM=1
 
 COMMON_PYTEST_ARGS="--max-worker-restart=0 -x --durations=50 --capture=sys"
-time python3 -m pytest ${COMMON_PYTEST_ARGS} --failed-first --dist loadfile ${parallel_spec} ${ONEFLOW_TEST_DIR}
+# time python3 -m pytest ${COMMON_PYTEST_ARGS} --failed-first --dist loadfile ${parallel_spec} ${ONEFLOW_TEST_DIR}
 if [[ "$(python3 -c 'import oneflow.sysconfig;print(oneflow.sysconfig.has_rpc_backend_grpc())')" == *"True"* ]]; then
     export ONEFLOW_TEST_DEVICE_NUM=2
     time python3 ${src_dir}/ci/test/multi_launch.py \
