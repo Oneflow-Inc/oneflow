@@ -151,6 +151,7 @@ jobs:
   check-priority-pr:
     name: "Check priority PR"
     runs-on: ubuntu-latest
+    if: github.event.pull_request.draft == false && github.base_ref == 'master' && contains(github.event.pull_request.requested_reviewers.*.login, 'oneflow-ci-bot')
     steps:
       - uses: Oneflow-Inc/get-oneflow/priority-pr@priority-pr-support
         name: Check priority PR closed
@@ -518,6 +519,7 @@ jobs:
             -w $PWD \
             -v ${ONEFLOW_TEST_CACHE_DIR}:${ONEFLOW_TEST_CACHE_DIR} \
             -e ONEFLOW_TEST_CACHE_DIR=${ONEFLOW_TEST_CACHE_DIR} \
+            -e ONEFLOW_MLIR_ENABLE_ROUND_TRIP=1 \
             --name ${TEST_CONTAINER_NAME} \
             ${{ env.EXTRA_DOCKER_ARGS }} \
             ${{ env.TEST_WITH_TORCH_IMG_TAG }} \
@@ -689,6 +691,7 @@ jobs:
             -w $PWD \
             -v ${ONEFLOW_TEST_CACHE_DIR}:${ONEFLOW_TEST_CACHE_DIR} \
             -e ONEFLOW_TEST_CACHE_DIR=${ONEFLOW_TEST_CACHE_DIR} \
+            -e ONEFLOW_MLIR_ENABLE_ROUND_TRIP=1 \
             --name ${TEST_CONTAINER_NAME} \
             ${{ env.EXTRA_DOCKER_ARGS }} \
             ${{ env.TEST_IMG_TAG }} \
