@@ -7,7 +7,7 @@ pull_request_rules:
       - label="automerge"
     actions:
       update:
-  - name: automatic request ci-bot for PR with label “automerge“
+  - name: automatic merge
     conditions:
       - "#approved-reviews-by>=2"
       - -conflict # skip conflicts
@@ -16,6 +16,4 @@ pull_request_rules:
       - "#commits-behind==0"
       - -closed
     actions:
-        request_reviews:
-            users:
-              - oneflow-ci-bot
+        merge:
