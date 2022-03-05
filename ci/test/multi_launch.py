@@ -23,7 +23,7 @@ import sys
 from argparse import REMAINDER, ArgumentParser
 from typing import IO, Any, List, Optional
 import glob
-import base64
+import hashlib
 from math import ceil
 
 stdout_filename = "stdout"
@@ -144,13 +144,14 @@ def main():
     files = glob.glob(args.files, recursive=True)
     print("total files:", len(files))
     files = sorted(
-        files, key=lambda x: base64.b64encode(os.path.basename(x.encode("ascii")))
+        files,
+        key=lambda x: hashlib.md5(os.path.basename(x.encode("ascii"))).hexdigest(),
     )
     if args.shuffle:
         random.shuffle(files)
-    files_hash = base64.b64encode(
+    files_hash = hashlib.md5(
         "".join([os.path.basename(x) for x in files]).encode()
-    )
+    ).hexdigest()
     print(
         f"::warning file=testFilesHash,line={len(files)},col=0,endColumn=0::shuffle-{args.shuffle}-group_size-{args.group_size}-base64-{files_hash}"
     )
