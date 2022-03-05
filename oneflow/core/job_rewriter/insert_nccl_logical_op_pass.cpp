@@ -863,22 +863,12 @@ void InsertBwSinkAccTickAndNcclLogicalOpsInPlacementGroupAfterAcc(
 }
 
 Maybe<void> InsertNcclLogicalOpPass::Apply(const OpGraph& op_graph, JobBuilder* job_builder) const {
-  auto OpGraphForEachInDataAndCtrlNode = [&](OpNode* node,
-                                             const std::function<void(OpNode*)>& Handler) {
-    op_graph.ForEachDataAndCtrlInNode(node, Handler);
-  };
-  auto OpGraphForEachOutDataAndCtrlNode = [&](OpNode* node,
-                                              const std::function<void(OpNode*)>& Handler) {
-    op_graph.ForEachDataAndCtrlOutNode(node, Handler);
-  };
-
   std::vector<const OpNode*> ordered_op_nodes;
   HashMap<const OpNode*, int64_t> op_node2global_order;
-  op_graph.TopoForEachNode(op_graph.DataOrCtrlSourceNodes(), OpGraphForEachInDataAndCtrlNode,
-                           OpGraphForEachOutDataAndCtrlNode, [&](const OpNode* node) {
-                             ordered_op_nodes.emplace_back(node);
-                             op_node2global_order.emplace(node, ordered_op_nodes.size() - 1);
-                           });
+  op_graph.TopoForEachNodeWithCtrlEdge([&](const OpNode* node) {
+    ordered_op_nodes.emplace_back(node);
+    op_node2global_order.emplace(node, ordered_op_nodes.size() - 1);
+  });
 
   std::vector<HashSet<const OpNode*>> subgraph_list;
   FindAllConnectedSubgraphForGpuExecOrder(&subgraph_list, op_graph, ordered_op_nodes);
