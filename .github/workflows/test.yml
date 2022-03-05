@@ -541,7 +541,7 @@ jobs:
           docker exec -e ONEFLOW_TEST_DIR=$PWD/python/oneflow/test/modules ${{ env.TEST_CONTAINER_NAME }} bash ci/test/2node_op_test_multi_client.sh
       - name: Module API test (distributed, without IB)
         timeout-minutes: 60
-        if: ${{ !fromJson(matrix.cache-hit) && matrix.test-type == 'module' && matrix.device == 'cuda' && fromJson(matrix.is-distributed) }}
+        if: ${{ !fromJson(matrix.cache-hit) && matrix.test-type == 'module' && matrix.device == 'cuda' && fromJson(matrix.is-distributed) && contains(github.event.pull_request.labels.*.name, 'need-distributed-without-ib')}}
         continue-on-error: false
         run: |
           docker exec -e ONEFLOW_TEST_DIR=$PWD/python/oneflow/test/modules \
