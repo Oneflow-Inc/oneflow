@@ -61,7 +61,7 @@ if [[ "$(python3 -c 'import oneflow.sysconfig;print(oneflow.sysconfig.has_rpc_ba
         -n 8 \
         --shuffle \
         --group_size 4 \
-        --device_num $multi_launch_device_num
+        --device_num $multi_launch_device_num \
         --auto_cuda_visible_devices \
         -m oneflow.distributed.launch --nproc_per_node 4 -m pytest ${COMMON_PYTEST_ARGS}
 else
