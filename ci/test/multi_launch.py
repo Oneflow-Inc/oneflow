@@ -28,6 +28,11 @@ import base64
 stdout_filename = "stdout"
 stderr_filename = "stderr"
 
+global PARALLEL_NUM
+global SUCCESS_NUM
+PARALLEL_NUM = 0
+SUCCESS_NUM = 0
+
 
 def parse_args():
     """
@@ -91,7 +96,7 @@ async def run_and_capture(cmd=None, prefix=None, **kwargs):
     proc = await asyncio.create_subprocess_exec(
         *cmd, stdout=asyncio.subprocess.PIPE, stderr=asyncio.subprocess.STDOUT, **kwargs
     )
-    while proc.stdout.at_eof() == False and proc.returncode == None:
+    while proc.returncode == None:
         try:
             await asyncio.wait_for(proc.wait(), 1)
         except asyncio.TimeoutError:
@@ -104,7 +109,10 @@ async def run_and_capture(cmd=None, prefix=None, **kwargs):
             pass
     await proc.wait()
     assert proc.returncode == 0, prefix
-    print(f"{prefix} succeed")
+    global PARALLEL_NUM
+    global SUCCESS_NUM
+    SUCCESS_NUM += 1
+    print(f"{prefix} succeed ({SUCCESS_NUM}/{PARALLEL_NUM})")
 
 
 async def launch_multiple(
@@ -158,7 +166,10 @@ def main():
             range(args.master_port[0], args.master_port[0] + parallel_num)
         )
     assert parallel_num > 0
+    assert len(master_ports) == parallel_num
     chunk_size = len(files) // parallel_num
+    global PARALLEL_NUM
+    PARALLEL_NUM = parallel_num
     chunks = [files[i : i + chunk_size] for i in range(0, len(files), chunk_size)]
 
     # check args
