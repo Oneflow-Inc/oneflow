@@ -21,6 +21,7 @@ from google.protobuf import text_format
 import oneflow._oneflow_internal
 import oneflow.core.job.job_set_pb2 as job_set_util
 import oneflow.framework.c_api_util as c_api_util
+import oneflow.framework.env_util as env_util
 
 
 class MultiClientSession(object):
@@ -29,8 +30,9 @@ class MultiClientSession(object):
         INITED = 2
         CLOSED = 3
 
-    def __init__(self, sess_id, env_holder):
-        self._env_holder = env_holder
+    def __init__(self, sess_id):
+        self._env_holder = env_util.GetEnvHolder()
+        assert self._env_holder is not None
         self.sess_ = oneflow._oneflow_internal.RegsiterSession(sess_id)
         oneflow._oneflow_internal.CreateMultiClientSessionContext()
         self.config_proto_ = self._make_config_proto()

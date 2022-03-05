@@ -206,17 +206,13 @@ register_class_method_util.RegisterMethod4Class()
 import oneflow.framework.env_util as env_util
 import oneflow.framework.scope_util as scope_util
 import oneflow.framework.session_context as session_ctx
-from oneflow.framework.multi_client_session import MultiClientSession
 from oneflow.framework.tensor_str import set_printoptions
 
 env_util.GetEnvHolder()
 oneflow._oneflow_internal.RegisterGILForeignLockHelper()
 oneflow._oneflow_internal.InitDefaultConsistentTransportTokenScope()
-session_ctx.OpenDefaultSession(
-    MultiClientSession(
-        oneflow._oneflow_internal.NewSessionId(), env_util.GetEnvHolder()
-    )
-)
+session_ctx.NewDefaultSession()
+
 scope_util.InitScopeStack()
 oneflow._oneflow_internal.EnableEagerEnvironment(True)
 from oneflow.framework import python_callback, register_python_callback
