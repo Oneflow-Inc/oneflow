@@ -18,11 +18,11 @@ This file is mostly copied from PyTorch v1.8.1 torch/distributed/launch.py
 """
 import asyncio
 import os
+import random
 import sys
 from argparse import REMAINDER, ArgumentParser
 from typing import IO, Any, List, Optional
 import glob
-import random
 
 stdout_filename = "stdout"
 stderr_filename = "stderr"
@@ -129,11 +129,10 @@ def main():
     # find files and chuck them
     files = glob.glob(args.files, recursive=True)
     print("total files:", len(files))
-    files = sorted(files)
-    random.seed(6628309)
+    files = sorted(files, key=lambda x: hash(os.path.basename(x)))
     if args.shuffle:
         random.shuffle(files)
-    files_hash = hash([os.path.basename(x) for x in files])
+    files_hash = hash(str([os.path.basename(x) for x in files]))
     print(
         f"::warning file=testFilesHash,line={len(files)},col=0,endColumn=0::{files_hash}"
     )
