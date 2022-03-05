@@ -141,7 +141,6 @@ def main():
     print(
         f"::warning file=testFilesHash,line={len(files)},col=0,endColumn=0::shuffle-{args.shuffle}-group_size-{args.group_size}-base64-{files_hash}"
     )
-    exit(0)
     if args.parallel_num == "master_port":
         parallel_num = len(args.master_port)
         master_ports = args.master_port
