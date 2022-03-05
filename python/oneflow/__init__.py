@@ -209,18 +209,16 @@ import oneflow.framework.session_context as session_ctx
 from oneflow.framework.multi_client_session import MultiClientSession
 from oneflow.framework.tensor_str import set_printoptions
 
-if not env_util.HasAllMultiClientEnvVars():
-    env_util.SetDefaultMultiClientEnvVars()
-oneflow._oneflow_internal.SetIsMultiClient(True)
-env_util.api_env_init()
+env_util.GetEnvHolder()
 oneflow._oneflow_internal.RegisterGILForeignLockHelper()
 oneflow._oneflow_internal.InitDefaultConsistentTransportTokenScope()
 session_ctx.OpenDefaultSession(
-    MultiClientSession(oneflow._oneflow_internal.NewSessionId())
+    MultiClientSession(
+        oneflow._oneflow_internal.NewSessionId(), env_util.GetEnvHolder()
+    )
 )
 scope_util.InitScopeStack()
 oneflow._oneflow_internal.EnableEagerEnvironment(True)
-del env_util
 from oneflow.framework import python_callback, register_python_callback
 
 oneflow._oneflow_internal.RegisterGlobalForeignCallback(
@@ -267,9 +265,7 @@ def atexit_hook(hook):
             elif oneflow.env.get_rank() == 0:
                 oneflow._oneflow_internal.eager.single_client.Sync()
     oneflow.framework.session_context.TryCloseDefaultSession()
-    if hook.is_normal_exit():
-        oneflow._oneflow_internal.DestroyEnv()
-    oneflow._oneflow_internal.SetShuttingDown()
+    env_util.DelEnvHolder(hook.is_normal_exit())
 
 
 atexit.register(atexit_hook, hook)

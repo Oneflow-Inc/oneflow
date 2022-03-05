@@ -394,6 +394,41 @@ def _UpdateDefaultEnvProtoByMultiClientEnvVars(env_proto):
         cpp_logging_conf.logbuflevel = os.getenv("GLOG_logbuflevel")
     env_proto.cpp_logging_conf.CopyFrom(cpp_logging_conf)
 
+class EnvHolder(object):
+    def __init__(self):
+        self._is_normal_exit = True
+        if not HasAllMultiClientEnvVars():
+            SetDefaultMultiClientEnvVars()
+        oneflow._oneflow_internal.SetIsMultiClient(True)
+        api_env_init()
+    
+    def set_is_normal_exit(self, is_normal_exit):
+        self._is_normal_exit = is_normal_exit
+
+    def __del__(self):
+        if self._is_normal_exit:
+            oneflow._oneflow_internal.DestroyEnv()
+        oneflow._oneflow_internal.SetShuttingDown()
+        print("oneflow env del")
+
+
+def GetEnvHolder():
+    global _env_holder
+    if _env_holder is not None:
+        return _env_holder
+    else:
+        _env_holder = EnvHolder()
+        return _env_holder
+
+
+def DelEnvHolder(is_normal_exit):
+    global _env_holder
+    assert _env_holder is not None
+    _env_holder.set_is_normal_exit(is_normal_exit)
+    del _env_holder
+
+
+_env_holder = None
 
 device_tag2default_parallel_conf = {}
 default_env_proto = _DefaultEnvProto()

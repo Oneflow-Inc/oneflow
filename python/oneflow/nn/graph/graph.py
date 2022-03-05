@@ -131,10 +131,10 @@ class Graph(object):
         self._cur_index_of_ouputs_buffer = 0
 
         self._c_nn_graph = oneflow._oneflow_internal.nn.graph.CNNGraph(self._name)
-        session = session_ctx.GetDefaultSession()
-        assert type(session) is MultiClientSession
-        session.TryInit()
-        session.AddCGraph(self._c_nn_graph)
+        self._session = session_ctx.GetDefaultSession()
+        assert type(self._session) is MultiClientSession
+        self._session.TryInit()
+        self._session.AddCGraph(self._c_nn_graph)
 
     def build(self, *args, **kwargs):
         r"""The ``build()`` method must be overridden to define neural network
@@ -522,9 +522,7 @@ class Graph(object):
 
     @property
     def _optimization_conf_proto(self):
-        session = session_ctx.GetDefaultSession()
-        assert type(session) is MultiClientSession
-        return session.resource
+        return self._session.resource
 
     @property
     def _graph_proto(self):
@@ -697,9 +695,6 @@ class Graph(object):
         return eager_outputs
 
     def __build_graph(self, *args, **kwargs):
-        session = session_ctx.GetDefaultSession()
-        assert type(session) is MultiClientSession
-
         # Filter to get unique states in graph
         state_op_names = self._filter_states()
 
@@ -720,7 +715,7 @@ class Graph(object):
             + " end building graph builders of parameters and buffers.",
         )
 
-        with graph_build_util.graph_build_context(self.config.proto, session):
+        with graph_build_util.graph_build_context(self.config.proto, self._session):
             # Deal with inputs
             self.__print(0, 1, self._shallow_repr() + " start building graph inputs.")
             arg_op_names, lazy_args, lazy_kwargs, self._args_repr, _ = self.__build_io(
@@ -1166,6 +1161,9 @@ class Graph(object):
         raise AttributeError(
             "'{}' object has no attribute '{}'".format(type(self).__name__, name)
         )
+
+    def __del__(self):
+        print(f"oneflow graph {self.name} del")
 
 
 if __name__ == "__main__":
