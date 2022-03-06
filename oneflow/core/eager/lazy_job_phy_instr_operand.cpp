@@ -15,6 +15,7 @@ limitations under the License.
 */
 #include "oneflow/core/eager/lazy_job_phy_instr_operand.h"
 #include "oneflow/core/common/container_util.h"
+#include "oneflow/core/common/env_var.h"
 #include "oneflow/core/framework/device.h"
 #include "oneflow/core/framework/stream.h"
 
@@ -43,12 +44,16 @@ static constexpr auto* GetEagerNcclLocalDepObject =
 
 }  // namespace
 
+DEFINE_CONST_ENV_BOOLEAN(ONEFLOW_ENABLE_SEQUENTIALIZE_NCCL_BETWEEN_EAGER_AND_LAZY, false);
+
 void LaunchLazyJobPhyInstrOperand::ForEachMutMirroredObject(
     const std::function<void(vm::MirroredObject* compute)>& DoEach) const {
   for (const auto& eager_blob_object : *param_blob_objects_) {
     DoEach(CHECK_JUST(eager_blob_object->compute_local_dep_object()));
   }
-  DoEach(GetStaticGlobalTransportLocalDepObject());
+  if (ConstEnvBoolean<ONEFLOW_ENABLE_SEQUENTIALIZE_NCCL_BETWEEN_EAGER_AND_LAZY>()) {
+    DoEach(GetStaticGlobalTransportLocalDepObject());
+  }
 }
 
 }  // namespace vm

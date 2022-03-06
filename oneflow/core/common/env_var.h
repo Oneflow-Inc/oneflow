@@ -20,15 +20,17 @@ limitations under the License.
 
 namespace oneflow {
 
-template<typename env_var>
-int64_t EnvInteger();
+template<typename EnvVar>
+int64_t EnvInteger() {
+  return EnvVar::GetEnvInteger();
+}
 
-#define DEFINE_ENV_INTEGER(env_var, default_value)                       \
-  struct env_var {};                                                     \
-  template<>                                                             \
-  inline int64_t EnvInteger<env_var>() {                                 \
-    return ParseIntegerFromEnv(OF_PP_STRINGIZE(env_var), default_value); \
-  }
+#define DEFINE_ENV_INTEGER(EnvVar, default_value)                         \
+  struct EnvVar {                                                         \
+    static int64_t GetEnvInteger() {                                      \
+      return ParseIntegerFromEnv(OF_PP_STRINGIZE(EnvVar), default_value); \
+    }                                                                     \
+  };
 
 DEFINE_ENV_INTEGER(ONEFLOW_TIMEOUT_SECONDS, 7200);
 DEFINE_ENV_INTEGER(ONEFLOW_CHECK_TIMEOUT_SLEEP_SECONDS, EnvInteger<ONEFLOW_TIMEOUT_SECONDS>());
@@ -36,16 +38,31 @@ DEFINE_ENV_INTEGER(ONEFLOW_CHECK_TIMEOUT_SLEEP_SECONDS, EnvInteger<ONEFLOW_TIMEO
 DEFINE_ENV_INTEGER(ONEFLOW_VM_BLOCKING_DEBUG_INSTRUCTIONS_DISPLAY_LIMIT, 100);
 DEFINE_ENV_INTEGER(ONEFLOW_DELETE_OUTDATED_SHM_NAMES_INTERVAL, 1000);
 
-template<typename env_var>
-int64_t ThreadLocalEnvInteger();
+template<typename EnvVar>
+int64_t ConstEnvInteger() {
+  return EnvVar::GetConstEnvInteger();
+}
 
-#define DEFINE_THREAD_LOCAL_ENV_INTEGER(env_var, default_value)                                \
-  struct env_var {};                                                                           \
-  template<>                                                                                   \
-  inline int64_t ThreadLocalEnvInteger<env_var>() {                                            \
-    thread_local int64_t value = ParseIntegerFromEnv(OF_PP_STRINGIZE(env_var), default_value); \
-    return value;                                                                              \
-  }
+#define DEFINE_CONST_ENV_INTEGER(EnvVar, default_value)                                         \
+  struct EnvVar {                                                                               \
+    static int64_t GetConstEnvInteger() {                                                       \
+      thread_local int64_t value = ParseIntegerFromEnv(OF_PP_STRINGIZE(EnvVar), default_value); \
+      return value;                                                                             \
+    }                                                                                           \
+  };
+
+template<typename EnvVar>
+bool ConstEnvBoolean() {
+  return EnvVar::GetConstEnvBoolean();
+}
+
+#define DEFINE_CONST_ENV_BOOLEAN(EnvVar, default_value)                                      \
+  struct EnvVar {                                                                            \
+    static bool GetConstEnvBoolean() {                                                       \
+      thread_local bool value = ParseBooleanFromEnv(OF_PP_STRINGIZE(EnvVar), default_value); \
+      return value;                                                                          \
+    }                                                                                        \
+  };
 
 }  // namespace oneflow
 
