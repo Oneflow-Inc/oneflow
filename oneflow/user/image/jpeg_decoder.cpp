@@ -78,11 +78,10 @@ JpegReturnType JpegDecoder::PartialDecodeRandomCropImage(const unsigned char* da
   while (compress_info_.output_scanline < u_crop_y + u_crop_h) {
     unsigned char* buffer_array[1];
     buffer_array[0] = decode_output_buf;
+    unsigned int read_line_index = compress_info_.output_scanline;
     jpeg_read_scanlines(&compress_info_, buffer_array, 1);
-    memcpy(out_mat->data + (compress_info_.output_scanline - u_crop_y) * out_row_stride,
+    memcpy(out_mat->data + (read_line_index - u_crop_y) * out_row_stride,
            decode_output_buf + row_offset, out_row_stride);
-
-    printf("line = %d \n", compress_info_.output_scanline);
   }
 
   jpeg_skip_scanlines(&compress_info_, height - u_crop_y - u_crop_h);
