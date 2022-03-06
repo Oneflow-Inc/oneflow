@@ -20,7 +20,7 @@ limitations under the License.
 
 namespace oneflow {
 
-JpegDecoder::JpegDecoder() : compress_info_(), jpeg_err_(), tmp_buf_() {
+JpegDecoder::JpegDecoder() : compress_info_(), jpeg_err_(), decode_output_buf_() {
   compress_info_.err = jpeg_std_error(&jpeg_err_);
   jpeg_create_decompress(&compress_info_);
 }
@@ -28,9 +28,9 @@ JpegDecoder::JpegDecoder() : compress_info_(), jpeg_err_(), tmp_buf_() {
 JpegDecoder::~JpegDecoder() { jpeg_destroy_decompress(&compress_info_); }
 
 JpegReturnType JpegDecoder::PartialDecodeRandomCropImage(const unsigned char* data, size_t length,
-                                          RandomCropGenerator* random_crop_gen,
-                                          unsigned char* workspace, size_t workspace_size,
-                                          cv::Mat* out_mat) {
+                                                         RandomCropGenerator* random_crop_gen,
+                                                         unsigned char* workspace,
+                                                         size_t workspace_size, cv::Mat* out_mat) {
   if (compress_info_.err->msg_code != 0) { return JpegReturnType::kError; }
 
   jpeg_mem_src(&compress_info_, data, length);
@@ -43,15 +43,6 @@ JpegReturnType JpegDecoder::PartialDecodeRandomCropImage(const unsigned char* da
   int width = compress_info_.output_width;
   int height = compress_info_.output_height;
   int pixel_size = compress_info_.output_components;
-
-  unsigned char* crop_buf = nullptr;
-  size_t image_space_size = width * height * pixel_size;
-  if (image_space_size > workspace_size) {
-    tmp_buf_.resize(image_space_size);
-    crop_buf = tmp_buf_.data();
-  } else {
-    crop_buf = workspace;
-  }
 
   unsigned int u_crop_x = 0, u_crop_y = 0, u_crop_w = 0, u_crop_h = 0;
   if (random_crop_gen) {
@@ -68,32 +59,34 @@ JpegReturnType JpegDecoder::PartialDecodeRandomCropImage(const unsigned char* da
     u_crop_w = width;
   }
 
+  unsigned char* decode_output_buf = nullptr;
+  size_t image_space_size = width * pixel_size;
+  if (image_space_size > workspace_size) {
+    decode_output_buf_.resize(image_space_size);
+    decode_output_buf = decode_output_buf_.data();
+  } else {
+    decode_output_buf = workspace;
+  }
+  out_mat->create(u_crop_h, u_crop_w, CV_8UC3);
+
   unsigned int tmp_w = u_crop_w;
   jpeg_crop_scanline(&compress_info_, &u_crop_x, &tmp_w);
-  int row_stride = tmp_w * pixel_size;
   if (jpeg_skip_scanlines(&compress_info_, u_crop_y) != u_crop_y) { return JpegReturnType::kError; }
+  int row_offset = (tmp_w - u_crop_w) * pixel_size;
+  int out_row_stride = u_crop_w * pixel_size;
 
   while (compress_info_.output_scanline < u_crop_y + u_crop_h) {
     unsigned char* buffer_array[1];
-    buffer_array[0] = crop_buf + (compress_info_.output_scanline - u_crop_y) * row_stride;
+    buffer_array[0] = decode_output_buf;
     jpeg_read_scanlines(&compress_info_, buffer_array, 1);
+    memcpy(out_mat->data + (compress_info_.output_scanline - u_crop_y) * out_row_stride,
+           decode_output_buf + row_offset, out_row_stride);
+
+    printf("line = %d \n", compress_info_.output_scanline);
   }
 
-  jpeg_skip_scanlines(&compress_info_, compress_info_.output_height - u_crop_y - u_crop_h);
+  jpeg_skip_scanlines(&compress_info_, height - u_crop_y - u_crop_h);
   jpeg_finish_decompress(&compress_info_);
-
-  cv::Mat image(u_crop_h, tmp_w, CV_8UC3, crop_buf, cv::Mat::AUTO_STEP);
-  cv::Rect roi;
-
-  if (u_crop_w != tmp_w) {
-    roi.x = tmp_w - u_crop_w;
-    roi.y = 0;
-    roi.width = u_crop_w;
-    roi.height = u_crop_h;
-    image(roi).copyTo(*out_mat);
-  } else {
-    image.copyTo(*out_mat);
-  }
 
   return JpegReturnType::kOk;
 }

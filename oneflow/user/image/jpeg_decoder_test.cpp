@@ -109,8 +109,9 @@ TEST(JPEG, decoder) {
 
     RandomCropGenerator libjpeg_random_crop_gen({0.1, 0.9}, {0.4, 0.6}, seeds[i], 1);
     RandomCropGenerator opencv_random_crop_gen({0.1, 0.9}, {0.4, 0.6}, seeds[i], 1);
-    jpeg_decode.PartialDecode((const unsigned char*)(jpg.data()), jpg.size(),
-                              &libjpeg_random_crop_gen, nullptr, 0, libjpeg_image_mat);
+    jpeg_decode.PartialDecodeRandomCropImage((const unsigned char*)(jpg.data()), jpg.size(),
+                                             &libjpeg_random_crop_gen, nullptr, 0,
+                                             &libjpeg_image_mat);
 
     cv::Mat opencv_image_mat;
     std::string color_space("RGB");
