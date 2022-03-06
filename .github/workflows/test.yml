@@ -1,9 +1,8 @@
 name: Build and Test CI
 on:
   pull_request:
-    types: [review_requested]
-    branches:
-      - "*"
+    types: [opened, review_requested, ready_for_review, auto_merge_enabled, synchronize, review_requested, unlocked]
+
 concurrency:
   group: build-and-test-${{ github.ref }}
   cancel-in-progress: true
@@ -17,7 +16,7 @@ jobs:
   mirror_third_party:
     name: Mirror third party dependencies
     runs-on: ubuntu-18.04
-    if: github.event.pull_request.draft == false && github.base_ref == 'master' && contains(github.event.pull_request.requested_reviewers.*.login, 'oneflow-ci-bot')
+    if: github.event.pull_request.draft == false && github.base_ref == 'master'
     steps:
       - uses: actions/checkout@v2
       - name: Mirror dependencies to aliyun
@@ -35,7 +34,7 @@ jobs:
   check_license_and_format:
     name: License and format
     runs-on: ubuntu-18.04
-    if: github.event.pull_request.draft == false && contains(github.event.pull_request.requested_reviewers.*.login, 'oneflow-ci-bot')
+    if: github.event.pull_request.draft == false
     steps:
       - uses: actions/checkout@v2
         with:
@@ -126,7 +125,7 @@ jobs:
       group: build-and-test-wait-for-gpu-slot
       cancel-in-progress: false
     needs: [build-oneflow]
-    if: github.event.pull_request.draft == false && github.base_ref == 'master' && contains(github.event.pull_request.requested_reviewers.*.login, 'oneflow-ci-bot')
+    if: github.event.pull_request.draft == false && github.base_ref == 'master'
     continue-on-error: true
     steps:
       - name: Check if secrets accessible
@@ -152,6 +151,7 @@ jobs:
   check-priority-pr:
     name: "Check priority PR"
     runs-on: ubuntu-latest
+    if: github.event.pull_request.draft == false && github.base_ref == 'master' && contains(github.event.pull_request.requested_reviewers.*.login, 'oneflow-ci-bot')
     steps:
       - uses: Oneflow-Inc/get-oneflow/priority-pr@priority-pr-support
         name: Check priority PR closed
@@ -162,7 +162,7 @@ jobs:
 
   find-build-cache:
     name: "Find build cache"
-    if: github.event.pull_request.draft == false && github.base_ref == 'master' && contains(github.event.pull_request.requested_reviewers.*.login, 'oneflow-ci-bot')
+    if: github.event.pull_request.draft == false && github.base_ref == 'master'
     runs-on: ubuntu-latest
     needs: [check-priority-pr]
     env:
@@ -194,7 +194,7 @@ jobs:
 
   build-oneflow:
     name: "Build OneFlow"
-    if: github.event.pull_request.draft == false && github.base_ref == 'master' && contains(github.event.pull_request.requested_reviewers.*.login, 'oneflow-ci-bot')
+    if: github.event.pull_request.draft == false && github.base_ref == 'master'
     runs-on: ${{ matrix.runs-on }}
     needs: [find-build-cache]
     timeout-minutes: 60
@@ -360,7 +360,7 @@ jobs:
 
   find-test-cache-distributed:
     name: "Find test cache (distributed)"
-    if: github.event.pull_request.draft == false && github.base_ref == 'master' && contains(github.event.pull_request.requested_reviewers.*.login, 'oneflow-ci-bot')
+    if: github.event.pull_request.draft == false && github.base_ref == 'master'
     runs-on: ubuntu-latest
     needs: [build-oneflow]
     env:
@@ -387,7 +387,7 @@ jobs:
 
   find-test-cache:
     name: "Find test cache"
-    if: github.event.pull_request.draft == false && github.base_ref == 'master' && contains(github.event.pull_request.requested_reviewers.*.login, 'oneflow-ci-bot')
+    if: github.event.pull_request.draft == false && github.base_ref == 'master'
     runs-on: ubuntu-latest
     needs: [build-oneflow]
     env:
@@ -414,7 +414,7 @@ jobs:
     name: Distributed test suite
     needs: [wait_for_gpu_slot, find-test-cache-distributed]
     runs-on: ${{ matrix.runs-on }}
-    if: github.event.pull_request.draft == false && github.base_ref == 'master' && contains(github.event.pull_request.requested_reviewers.*.login, 'oneflow-ci-bot')
+    if: github.event.pull_request.draft == false && github.base_ref == 'master'
     concurrency:
       group: distributed-test-${{ matrix.entry }}-rank-${{ matrix.rank }}
       cancel-in-progress: false
@@ -433,6 +433,7 @@ jobs:
         run: |
           set -x
           docker run --rm -v $PWD:$PWD -w $PWD busybox rm -rf *
+          docker run --rm -v $PWD:$PWD -w $PWD busybox rm -rf .pytest_cache
       - name: Checkout Oneflow-Inc/oneflow
         uses: actions/checkout@v2
         with:
@@ -518,6 +519,7 @@ jobs:
             -w $PWD \
             -v ${ONEFLOW_TEST_CACHE_DIR}:${ONEFLOW_TEST_CACHE_DIR} \
             -e ONEFLOW_TEST_CACHE_DIR=${ONEFLOW_TEST_CACHE_DIR} \
+            -e ONEFLOW_MLIR_ENABLE_ROUND_TRIP=1 \
             --name ${TEST_CONTAINER_NAME} \
             ${{ env.EXTRA_DOCKER_ARGS }} \
             ${{ env.TEST_WITH_TORCH_IMG_TAG }} \
@@ -540,7 +542,7 @@ jobs:
           docker exec -e ONEFLOW_TEST_DIR=$PWD/python/oneflow/test/modules ${{ env.TEST_CONTAINER_NAME }} bash ci/test/2node_op_test_multi_client.sh
       - name: Module API test (distributed, without IB)
         timeout-minutes: 60
-        if: ${{ !fromJson(matrix.cache-hit) && matrix.test-type == 'module' && matrix.device == 'cuda' && fromJson(matrix.is-distributed) }}
+        if: ${{ !fromJson(matrix.cache-hit) && matrix.test-type == 'module' && matrix.device == 'cuda' && fromJson(matrix.is-distributed) && contains(github.event.pull_request.labels.*.name, 'need-distributed-without-ib')}}
         continue-on-error: false
         run: |
           docker exec -e ONEFLOW_TEST_DIR=$PWD/python/oneflow/test/modules \
@@ -575,7 +577,7 @@ jobs:
     name: Test suite
     needs: [wait_for_gpu_slot, find-test-cache, test-distributed]
     runs-on: ${{ matrix.runs-on }}
-    if: github.event.pull_request.draft == false && github.base_ref == 'master' && contains(github.event.pull_request.requested_reviewers.*.login, 'oneflow-ci-bot')
+    if: github.event.pull_request.draft == false && github.base_ref == 'master'
     strategy:
       fail-fast: ${{ !contains(github.event.pull_request.labels.*.name, 'need-all-tests-even-fail') }}
       max-parallel: 5
@@ -594,6 +596,7 @@ jobs:
         run: |
           set -x
           docker run --rm -v $PWD:$PWD -w $PWD busybox rm -rf *
+          docker run --rm -v $PWD:$PWD -w $PWD busybox rm -rf .pytest_cache
       - name: Checkout Oneflow-Inc/oneflow
         uses: actions/checkout@v2
         with:
@@ -688,6 +691,7 @@ jobs:
             -w $PWD \
             -v ${ONEFLOW_TEST_CACHE_DIR}:${ONEFLOW_TEST_CACHE_DIR} \
             -e ONEFLOW_TEST_CACHE_DIR=${ONEFLOW_TEST_CACHE_DIR} \
+            -e ONEFLOW_MLIR_ENABLE_ROUND_TRIP=1 \
             --name ${TEST_CONTAINER_NAME} \
             ${{ env.EXTRA_DOCKER_ARGS }} \
             ${{ env.TEST_IMG_TAG }} \
@@ -795,8 +799,7 @@ jobs:
         run: |
           docker exec \
             -e ONEFLOW_TEST_DIR=$PWD/python/oneflow/test/expensive \
-            -e ONEFLOW_TEST_TASKS_PER_GPU=1 \
-            ${{ env.TEST_CONTAINER_NAME }} bash ci/test/generic_test_multi_client.sh
+            ${{ env.TEST_CONTAINER_NAME }} bash ci/test/expensive_generic_test_multi_client.sh
       - name: Exception API test
         timeout-minutes: 45
         if: ${{ !fromJson(matrix.cache-hit) && matrix.test-type == 'misc' }}
@@ -855,7 +858,7 @@ jobs:
   static_analysis_with_clang_on_diff:
     name: Static analysis with clang on diff
     runs-on: ubuntu-20.04
-    if: github.event.pull_request.draft == false && github.base_ref == 'master' && contains(github.event.pull_request.requested_reviewers.*.login, 'oneflow-ci-bot')
+    if: github.event.pull_request.draft == false && github.base_ref == 'master'
     steps:
       - name: Check out OneFlow
         uses: actions/checkout@v2
