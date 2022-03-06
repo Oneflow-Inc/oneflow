@@ -16,4 +16,4 @@ pull_request_rules:
       - "#commits-behind==0"
       - -closed
     actions:
-        merge:
+      squash:
