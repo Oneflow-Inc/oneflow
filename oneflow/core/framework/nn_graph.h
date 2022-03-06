@@ -36,7 +36,7 @@ class NNGraph final : public NNGraphIf {
       : name_(name), runtime_inited_(false), is_closed_(false) {}
   explicit NNGraph(const std::string& name,
                    const std::shared_ptr<MultiClientSessionContext>& sessioin_ctx)
-      : name_(name), ctx_(sessioin_ctx), runtime_inited_(false), is_closed_(false) {}
+      : name_(name), session_ctx_(sessioin_ctx), runtime_inited_(false), is_closed_(false) {}
   OF_DISALLOW_COPY_AND_MOVE(NNGraph);
   ~NNGraph();
 
@@ -75,7 +75,7 @@ class NNGraph final : public NNGraphIf {
   void CloseRuntimeBuffers();
 
   std::string name_;
-  std::shared_ptr<MultiClientSessionContext> ctx_;
+  std::shared_ptr<MultiClientSessionContext> session_ctx_;
   std::vector<std::string> inputs_op_names_;
   std::vector<std::string> outputs_op_names_;
   std::vector<bool> input_tensors_valid_;

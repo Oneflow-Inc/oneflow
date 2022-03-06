@@ -51,7 +51,7 @@ def api_all_device_placement(device_type: str) -> oneflow._oneflow_internal.plac
     return oneflow._oneflow_internal.AllDevicePlacement(device_type)
 
 
-def api_env_init() -> bool:
+def api_env_init():
     """Init environment
 
     Returns:
@@ -86,8 +86,7 @@ def env_init():
     CompleteEnvProto(default_env_proto, is_multi_client)
     if default_env_proto.ctrl_bootstrap_conf.world_size > 1:
         check_non_localhost_proxy_and_print_warning()
-    c_api_util.InitEnv(default_env_proto, is_multi_client)
-    return True
+    return c_api_util.GetEnvContext(default_env_proto)
 
 
 def api_machine(*val: list) -> None:
@@ -384,19 +383,20 @@ class EnvHolder(object):
         if not HasAllMultiClientEnvVars():
             SetDefaultMultiClientEnvVars()
         oneflow._oneflow_internal.SetIsMultiClient(True)
-        api_env_init()
+        self._env_cxt = api_env_init()
 
     def set_is_normal_exit(self, is_normal_exit):
         self._is_normal_exit = is_normal_exit
 
     def __del__(self):
-        if self._is_normal_exit:
-            oneflow._oneflow_internal.DestroyEnv()
+        # TODO(strint): deal with abnormal exit
+        # if self._is_normal_exit:
+        #     del self._env_cxt
         oneflow._oneflow_internal.SetShuttingDown()
         print("oneflow env del")
 
 
-def GetEnvHolder():
+def GetEnv():
     global _env_holder
     if _env_holder is not None:
         return _env_holder
@@ -405,7 +405,7 @@ def GetEnvHolder():
         return _env_holder
 
 
-def DelEnvHolder(is_normal_exit):
+def DelEnv(is_normal_exit):
     global _env_holder
     assert _env_holder is not None
     _env_holder.set_is_normal_exit(is_normal_exit)

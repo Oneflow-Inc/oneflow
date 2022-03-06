@@ -61,6 +61,19 @@ int32_t GetCpuDeviceNum() { return std::thread::hardware_concurrency(); }
 
 }  // namespace
 
+MultiClientSessionContext::MultiClientSessionContext(const std::shared_ptr<EnvGlobalObjectsScope>& env_ctx) {
+  env_ctx_ = env_ctx;
+  CHECK(Global<MultiClientSessionContext>::Get() == nullptr);
+  Global<MultiClientSessionContext>::SetAllocated(this);
+}
+
+MultiClientSessionContext::~MultiClientSessionContext() { 
+  CHECK_JUST(TryClose()); 
+  if (Global<MultiClientSessionContext>::Get() != nullptr) {
+    Global<MultiClientSessionContext>::SetAllocated(nullptr);
+  }
+}
+
 Maybe<void> MultiClientSessionContext::TryInit(const ConfigProto& config_proto) {
   if (!is_inited_) {
     CHECK_OR_RETURN(JUST(IsMultiClient()));

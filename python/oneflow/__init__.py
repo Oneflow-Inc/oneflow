@@ -208,8 +208,9 @@ import oneflow.framework.scope_util as scope_util
 import oneflow.framework.session_context as session_ctx
 from oneflow.framework.tensor_str import set_printoptions
 
-env_util.GetEnvHolder()
-session_ctx.NewDefaultSession()
+_env = env_util.GetEnv()
+session_ctx.NewDefaultSession(_env)
+del _env
 oneflow._oneflow_internal.RegisterGILForeignLockHelper()
 oneflow._oneflow_internal.InitDefaultConsistentTransportTokenScope()
 
@@ -261,7 +262,7 @@ def atexit_hook(hook):
             elif oneflow.env.get_rank() == 0:
                 oneflow._oneflow_internal.eager.single_client.Sync()
     oneflow.framework.session_context.TryCloseDefaultSession()
-    env_util.DelEnvHolder(hook.is_normal_exit())
+    env_util.DelEnv(hook.is_normal_exit())
 
 
 atexit.register(atexit_hook, hook)

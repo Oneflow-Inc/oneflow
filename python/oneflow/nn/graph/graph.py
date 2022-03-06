@@ -134,7 +134,7 @@ class Graph(object):
         assert type(self._session) is MultiClientSession
         self._session.TryInit()
         self._c_nn_graph = oneflow._oneflow_internal.nn.graph.CNNGraph(
-            self._name, self._session._graph_ctx
+            self._name, self._session._session_ctx
         )
 
     def build(self, *args, **kwargs):

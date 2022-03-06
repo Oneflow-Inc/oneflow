@@ -33,8 +33,8 @@ def GetDefaultSession():
     return _sess_id2sess[default_sess_id]
 
 
-def NewDefaultSession():
-    new_default_sess = MultiClientSession(oneflow._oneflow_internal.NewSessionId())
+def NewDefaultSession(env):
+    new_default_sess = MultiClientSession(env, oneflow._oneflow_internal.NewSessionId())
     global _sess_id2sess
     assert new_default_sess.id not in _sess_id2sess
     _sess_id2sess[new_default_sess.id] = new_default_sess

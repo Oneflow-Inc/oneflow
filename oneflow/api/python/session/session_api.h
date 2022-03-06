@@ -35,20 +35,4 @@ inline void StartLazyGlobalSession() { return oneflow::StartLazyGlobalSession().
 
 inline void StopLazyGlobalSession() { return oneflow::StopLazyGlobalSession().GetOrThrow(); }
 
-inline void CreateMultiClientSessionContext() {
-  return oneflow::CreateMultiClientSessionContext().GetOrThrow();
-}
-
-inline void InitMultiClientSessionContext(const std::string& config_proto_str) {
-  return oneflow::InitMultiClientSessionContext(config_proto_str).GetOrThrow();
-}
-
-inline void MultiClientSessionContextUpdateResource(const std::string& resource_proto_str) {
-  return oneflow::MultiClientSessionContextUpdateResource(resource_proto_str).GetOrThrow();
-}
-
-inline void TryDestroyMultiClientSessionContext() {
-  return oneflow::TryDestroyMultiClientSessionContext().GetOrThrow();
-}
-
 #endif  // ONEFLOW_API_PYTHON_SESSION_SESSION_API_H_

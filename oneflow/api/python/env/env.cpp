@@ -16,6 +16,7 @@ limitations under the License.
 #include <pybind11/pybind11.h>
 #include "oneflow/api/python/of_api_registry.h"
 #include "oneflow/api/python/env/env_api.h"
+#include "oneflow/core/job/env_global_objects_scope.h"
 
 namespace py = pybind11;
 
@@ -24,10 +25,15 @@ ONEFLOW_API_PYBIND11_MODULE("", m) {
   m.def("EnvResource", &EnvResource);
   m.def("EnableEagerEnvironment", &EnableEagerEnvironment);
 
-  m.def("IsEnvInited", &IsEnvInited);
-  m.def("InitEnv", &InitEnv);
-  m.def("DestroyEnv", &DestroyEnv, py::call_guard<py::gil_scoped_release>());
+  py::class_<oneflow::EnvGlobalObjectsScope, std::shared_ptr<oneflow::EnvGlobalObjectsScope>>(
+      m, "EnvContext")
+      .def(py::init<>())
+      .def("init",
+           [](oneflow::EnvGlobalObjectsScope& env, const std::string& env_proto_str) {
+             return env.Init(env_proto_str).GetOrThrow();
+           });
 
+  m.def("IsEnvInited", &IsEnvInited);
   m.def("CurrentMachineId", &CurrentMachineId);
 
   m.def("GetRank", &GetRank);

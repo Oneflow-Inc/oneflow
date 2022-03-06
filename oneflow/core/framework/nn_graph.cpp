@@ -78,7 +78,7 @@ Maybe<void> NNGraph::Close() {
     VLOG(2) << "Try to close c nn graph name " << name_ << "." << std::endl;
     CloseRuntimeBuffers();
     runtime_.reset();
-    ctx_->RemoveGraphFreeEagerTensors(name_);
+    session_ctx_->RemoveGraphFreeEagerTensors(name_);
     is_closed_ = true;
     VLOG(2) << "Finish close c nn graph name " << name_ << "." << std::endl;
   }
@@ -175,7 +175,7 @@ Maybe<void> NNGraph::RegisterVariableOpNamesAndTensors(
 
 Maybe<void> NNGraph::RegisterFreeEagerTensorsToVariableOpNames() {
   JUST(vm::CurrentRankSync());
-  const auto& free_eager_tensors = ctx_->GetFreeEagerTensorNamePairByGraphName(name_);
+  const auto& free_eager_tensors = session_ctx_->GetFreeEagerTensorNamePairByGraphName(name_);
   for (const auto& pair : free_eager_tensors) {
     const std::string& var_name = pair.first;
     const std::shared_ptr<one::Tensor>& var = pair.second;
@@ -356,7 +356,7 @@ Maybe<void> NNGraph::GetVariableRealBlobAfterSyncPlan() {
       *JUST(MapAt(&variable_op_name2tensor_, var_name)) = tensor;
       // NOTE(chengcheng): Just for tensor lifetime hold by session context in graph lifetime
       // valid.
-      ctx_->StoreFreeEagerTensorWithNameByGraphName(name_, tensor, var_name);
+      session_ctx_->StoreFreeEagerTensorWithNameByGraphName(name_, tensor, var_name);
 
       const std::shared_ptr<one::MirroredTensor> local_var = JUST(tensor->cur_rank_phy_tensor());
       var_blob = JUST(local_var->eager_blob_object())->mut_blob();

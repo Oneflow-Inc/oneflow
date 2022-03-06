@@ -27,10 +27,11 @@ class ParallelDesc;
 class EnvGlobalObjectsScope final {
  public:
   OF_DISALLOW_COPY_AND_MOVE(EnvGlobalObjectsScope);
-  EnvGlobalObjectsScope() = default;
+  EnvGlobalObjectsScope();
   ~EnvGlobalObjectsScope();
 
   Maybe<void> Init(const EnvProto& env_proto);
+  Maybe<void> Init(const std::string& env_proto_str);
 };
 
 }  // namespace oneflow

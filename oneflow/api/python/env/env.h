@@ -48,6 +48,7 @@ inline Maybe<void> EnableEagerEnvironment(bool enable_eager_execution) {
 
 inline Maybe<bool> IsEnvInited() { return Global<EnvGlobalObjectsScope>::Get() != nullptr; }
 
+// TODO(strint): rm
 inline Maybe<void> DestroyEnv() {
   if (Global<EnvGlobalObjectsScope>::Get() == nullptr) { return Maybe<void>::Ok(); }
   if (JUST(IsMultiClient())) {
@@ -59,6 +60,7 @@ inline Maybe<void> DestroyEnv() {
   return Maybe<void>::Ok();
 }
 
+// TODO(strint): rm
 inline Maybe<void> InitEnv(const std::string& env_proto_str, bool is_multi_client) {
   EnvProto env_proto;
   CHECK_OR_RETURN(TxtString2PbMessage(env_proto_str, &env_proto))

@@ -16,26 +16,20 @@ limitations under the License.
 #ifndef ONEFLOW_CORE_FRAMEWORK_MULTI_CLIENT_SESSION_CONTEXT_H_
 #define ONEFLOW_CORE_FRAMEWORK_MULTI_CLIENT_SESSION_CONTEXT_H_
 
+#include <memory>
 #include "oneflow/core/common/util.h"
 #include "oneflow/core/job/job_set.pb.h"
 #include "oneflow/core/common/maybe.h"
 #include "oneflow/core/framework/tensor.h"
+#include "oneflow/core/job/env_global_objects_scope.h"
 
 namespace oneflow {
 
 class MultiClientSessionContext {
  public:
   OF_DISALLOW_COPY_AND_MOVE(MultiClientSessionContext);
-  MultiClientSessionContext() : is_inited_(false) {
-    CHECK(Global<MultiClientSessionContext>::Get() == nullptr);
-    Global<MultiClientSessionContext>::SetAllocated(this);
-  }
-  ~MultiClientSessionContext() { 
-    CHECK_JUST(TryClose()); 
-    if (Global<MultiClientSessionContext>::Get() != nullptr) {
-      Global<MultiClientSessionContext>::SetAllocated(nullptr);
-    }
-  }
+  explicit MultiClientSessionContext(const std::shared_ptr<EnvGlobalObjectsScope>&);
+  ~MultiClientSessionContext();
 
   Maybe<void> TryInit(const ConfigProto& config_proto);
   Maybe<void> TryInit(const std::string& config_proto_str);
@@ -56,7 +50,8 @@ class MultiClientSessionContext {
   void RemoveGraphFreeEagerTensors(const std::string& graph_name);
 
  private:
-  bool is_inited_;
+  bool is_inited_ = false;
+  std::shared_ptr<EnvGlobalObjectsScope> env_ctx_;
   HashMap<std::string, std::vector<std::pair<std::string, std::shared_ptr<one::Tensor>>>>
       graph_name2free_eager_tensors_;
 };
