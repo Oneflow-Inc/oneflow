@@ -17,9 +17,12 @@ limitations under the License.
 #ifndef ONEFLOW_API_CPP_GRAPH_H_
 #define ONEFLOW_API_CPP_GRAPH_H_
 
+#include "shape.h"
 #include "device.h"
 #include "ivalue.h"
 #include "tensor.h"
+#include <string>
+#include <unordered_map>
 
 namespace oneflow {
 
@@ -40,6 +43,8 @@ class Graph {
   Graph& operator=(const Graph& graph) = delete;
   Graph& operator=(Graph&& graph) noexcept;
 
+  std::unordered_map<std::string, std::pair<Shape, DType>> GetInputInfos();
+  std::unordered_map<std::string, std::pair<Shape, DType>> GetOutputInfos();
   IValue Forward(const IValue& inputs);
   void set_batch_size(int batch_size);
   void enable_tensorrt();

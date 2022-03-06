@@ -14,9 +14,11 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
+#include <bits/stdint-intn.h>
 #include "oneflow/api/common/ofblob.h"
 #include "oneflow/api/common/scope.h"
 #include "oneflow/api/cpp/framework/device.h"
+#include "oneflow/api/cpp/framework/dtype.h"
 #include "oneflow/api/cpp/framework/graph.h"
 #include "oneflow/api/cpp/framework/ivalue.h"
 #include "oneflow/api/cpp/framework/shape.h"
@@ -120,6 +122,14 @@ const std::pair<std::vector<T1>, std::vector<T2>> Unzip(const of::HashMap<T1, T2
   return std::make_pair(vec1, vec2);
 }
 
+Shape OfShapeToOfApiShape(const of::Shape& of_shape) {
+  std::vector<int64_t> dims;
+  for (int i = 0; i < of_shape.NumAxes(); ++i) {
+    dims.emplace_back(of_shape.At(i));
+  }
+  return Shape(dims);
+}
+
 }  // namespace
 
 class Graph::GraphImpl final {
@@ -134,31 +144,36 @@ class Graph::GraphImpl final {
   GraphImpl& operator=(const GraphImpl& graph) = delete;
   GraphImpl& operator=(GraphImpl&& graph) noexcept;
 
+  std::unordered_map<std::string, std::pair<Shape, DType>> GetInputInfos();
+  std::unordered_map<std::string, std::pair<Shape, DType>> GetOutputInfos();
   std::vector<Tensor> Forward(const std::vector<Tensor>& inputs);
   void set_batch_size(int batch_size) { batch_size_ = batch_size; }
   void enable_tensorrt() { xrt_kind_ = XrtKind::kTensorRT; }
 
  private:
-  oneflow::Maybe<void> Compile(const std::vector<Tensor>& inputs);
-  oneflow::Maybe<std::vector<Tensor>> Run(const std::vector<Tensor>& inputs) const;
-  oneflow::Maybe<void> AddOp(oneflow::OperatorConf op_conf);
-  oneflow::Maybe<void> BuildGraph(const std::vector<Tensor>& inputs);
-  oneflow::Maybe<void> LoadCheckpoint();
-  oneflow::Maybe<void> RegisterTensors(const std::vector<Tensor>& inputs);
+  of::Maybe<void> ParseInputOutputInfos();
+  of::Maybe<void> Compile(const std::vector<Tensor>& inputs);
+  of::Maybe<std::vector<Tensor>> Run(const std::vector<Tensor>& inputs) const;
+  of::Maybe<void> AddOp(of::OperatorConf op_conf);
+  of::Maybe<void> BuildGraph();
+  of::Maybe<void> LoadCheckpoint();
+  of::Maybe<void> RegisterTensors(const std::vector<Tensor>& inputs);
 
-  std::shared_ptr<oneflow::NNGraph> graph_ = nullptr;
+  std::shared_ptr<of::NNGraph> graph_ = nullptr;
   std::string model_path_;
   bool is_compiled_ = false;
   int batch_size_ = 0;
   XrtKind xrt_kind_ = XrtKind::kNone;
   Device device_;
-  oneflow::Job job_;
+  of::Job job_;
 
-  oneflow::HashMap<std::string, int> input_name_to_order_;
-  oneflow::HashMap<std::string, std::shared_ptr<oneflow::one::Tensor>> output_name_to_tensor_;
-  oneflow::HashMap<std::string, std::shared_ptr<oneflow::one::Tensor>> variable_op_name_to_tensor_;
-  std::shared_ptr<oneflow::one::TensorTuple> output_tensor_tuple_;
-  std::shared_ptr<oneflow::one::TensorTuple> parameter_tensor_tuple_;
+  std::unordered_map<std::string, std::pair<Shape, DType>> input_shape_;
+  std::unordered_map<std::string, std::pair<Shape, DType>> output_shape_;
+  of::HashMap<std::string, int> input_name_to_order_;
+  of::HashMap<std::string, std::shared_ptr<of::one::Tensor>> output_name_to_tensor_;
+  of::HashMap<std::string, std::shared_ptr<of::one::Tensor>> variable_op_name_to_tensor_;
+  std::shared_ptr<of::one::TensorTuple> output_tensor_tuple_;
+  std::shared_ptr<of::one::TensorTuple> parameter_tensor_tuple_;
 };
 
 Graph::Graph(const std::string& model_path, const Device& device)
@@ -172,6 +187,14 @@ Graph& Graph::operator=(Graph&& graph) noexcept {
   if (&graph == this) { return *this; }
   graph_ = std::move(graph.graph_);
   return *this;
+}
+
+std::unordered_map<std::string, std::pair<Shape, DType>> Graph::GetInputInfos() {
+  return graph_->GetInputInfos();
+}
+
+std::unordered_map<std::string, std::pair<Shape, DType>> Graph::GetOutputInfos() {
+  return graph_->GetOutputInfos();
 }
 
 IValue Graph::Forward(const IValue& inputs) {
@@ -208,7 +231,8 @@ Graph Graph::Load(const std::string& model_path, const Device& device) {
 Graph::GraphImpl::GraphImpl(const std::string& model_path, const Device& device)
     : model_path_(model_path), device_(device) {
   CHECK_JUST(of::LoadJobFromIR(&job_, model_path + "/model.mlir"));
-  if (oneflow::ParseBooleanFromEnv("ONEFLOW_SERVING_DEBUG", false)) {
+  ParseInputOutputInfos();
+  if (of::ParseBooleanFromEnv("ONEFLOW_SERVING_DEBUG", false)) {
     LOG(ERROR) << job_.DebugString();
   }
   job_.mutable_job_conf()->mutable_predict_conf();
@@ -248,6 +272,30 @@ Graph::GraphImpl& Graph::GraphImpl::operator=(Graph::GraphImpl&& graph) noexcept
   return *this;
 }
 
+std::unordered_map<std::string, std::pair<Shape, DType>> Graph::GraphImpl::GetInputInfos() {
+  return input_shape_;
+}
+
+std::unordered_map<std::string, std::pair<Shape, DType>> Graph::GraphImpl::GetOutputInfos() {
+  return output_shape_;
+}
+
+of::Maybe<void> Graph::GraphImpl::ParseInputOutputInfos() {
+  const of::OpGraph op_graph(job_);
+  op_graph.TopoForEachNode([&](const of::OpNode* node) -> of::Maybe<void> {
+    const of::OperatorConf& op_conf = node->op().op_conf();
+    if (op_conf.has_input_conf()) {
+      of::InterfaceBlobConf blob_conf = op_conf.input_conf().blob_conf();
+      input_shape_[op_conf.name()] = {OfShapeToOfApiShape(of::Shape(blob_conf.shape())), static_cast<DType>(blob_conf.data_type())};
+    } else if (op_conf.has_output_conf()) {
+      of::InterfaceBlobConf blob_conf = op_conf.output_conf().blob_conf();
+      output_shape_[op_conf.name()] = {OfShapeToOfApiShape(of::Shape(blob_conf.shape())), static_cast<DType>(blob_conf.data_type())};
+    }
+    return of::Maybe<void>::Ok();
+  });
+  return of::Maybe<void>::Ok();
+}
+
 std::vector<Tensor> Graph::GraphImpl::Forward(const std::vector<Tensor>& inputs) {
   if (!is_compiled_) {
     static std::mutex mtx;
@@ -259,7 +307,7 @@ std::vector<Tensor> Graph::GraphImpl::Forward(const std::vector<Tensor>& inputs)
 }
 
 of::Maybe<void> Graph::GraphImpl::Compile(const std::vector<Tensor>& inputs) {
-  JUST(BuildGraph(inputs));
+  JUST(BuildGraph());
   JUST(LoadCheckpoint());
   JUST(RegisterTensors(inputs));
   JUST(graph_->CompileAndInitRuntime());
@@ -294,7 +342,7 @@ of::Maybe<void> Graph::GraphImpl::AddOp(of::OperatorConf op_conf) {
   return of::Maybe<void>::Ok();
 }
 
-of::Maybe<void> Graph::GraphImpl::BuildGraph(const std::vector<Tensor>& inputs) {
+of::Maybe<void> Graph::GraphImpl::BuildGraph() {
   CompileScope build_graph_scope(job_.job_conf(), *device_.device_->shared_from_symbol(),
                                  xrt_kind_);
   {
