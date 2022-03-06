@@ -297,12 +297,31 @@ def get_functional_graph_res(
 ):
     test_g_res = []
 
+    if global_backward and flow.is_tensor(oneflow_res) and oneflow_res.ndim > 1:
+        # The output of functiona or method without parameters is connected to a  LayerNorm module for backward and optimize in nn.Graph.
+        graph_functional_layernorm = flow.nn.LayerNorm(oneflow_res.shape[-1])
+        graph_functional_layernorm = graph_functional_layernorm.to(
+            oneflow_res.device.type
+        )
+        of_sgd = flow.optim.SGD(
+            graph_functional_layernorm.parameters(), lr=0.001, momentum=0.9,
+        )
+
     class TestGraphOfFunctional(flow.nn.Graph):
         def __init__(self):
             super().__init__()
+            if global_backward and flow.is_tensor(oneflow_res) and oneflow_res.ndim > 1:
+                self.m = graph_functional_layernorm
+                self.add_optimizer(of_sgd)
 
         def build(self):
-            return graph_functional_oneflow(*graph_args, **graph_kwargs)
+            res = graph_functional_oneflow(*graph_args, **graph_kwargs)
+            forward_res = res
+            if global_backward and flow.is_tensor(oneflow_res) and oneflow_res.ndim > 1:
+                res = self.m(res)
+                res = res.sum()
+                res.backward()
+            return forward_res
 
     try:
         # When the tensor on the cpu executes to to the cpu in nn.Graph, a check error will be reported.
@@ -355,12 +374,31 @@ def get_tensor_graph_res(
 ):
     test_g_res = []
 
+    if global_backward and flow.is_tensor(oneflow_res) and oneflow_res.ndim > 1:
+        # The output of functiona or method without parameters is connected to a  LayerNorm module for backward and optimize in nn.Graph.
+        graph_functional_layernorm = flow.nn.LayerNorm(oneflow_res.shape[-1])
+        graph_functional_layernorm = graph_functional_layernorm.to(
+            oneflow_res.device.type
+        )
+        of_sgd = flow.optim.SGD(
+            graph_functional_layernorm.parameters(), lr=0.001, momentum=0.9,
+        )
+
     class TestGraphOfTensorMethod(flow.nn.Graph):
         def __init__(self):
             super().__init__()
+            if global_backward and flow.is_tensor(oneflow_res) and oneflow_res.ndim > 1:
+                self.m = graph_functional_layernorm
+                self.add_optimizer(of_sgd)
 
         def build(self):
-            return graph_tensor_oneflow(*tensor_graph_args, **tensor_graph_kwargs)
+            res = graph_tensor_oneflow(*tensor_graph_args, **tensor_graph_kwargs)
+            forward_res = res
+            if global_backward and flow.is_tensor(oneflow_res) and oneflow_res.ndim > 1:
+                res = self.m(res)
+                res = res.sum()
+                res.backward()
+            return forward_res
 
     try:
         test_g = TestGraphOfTensorMethod()
