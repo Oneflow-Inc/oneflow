@@ -36,7 +36,7 @@ def compare_with_numpy_sgd(
     x_shape,
     momentum,
     weight_decay,
-    learning_rate, 
+    learning_rate,
     train_iters,
     reload_state_step,
     save_load_by_pickle,
@@ -58,8 +58,9 @@ def compare_with_numpy_sgd(
                 }
             ]
         )
+
         def train_one_iter(grad_tensor):
-            grad_tensor = grad_tensor.clone().to_global(placement,sbp)
+            grad_tensor = grad_tensor.clone().to_global(placement, sbp)
             loss = flow.sum(x * grad_tensor)
             loss.backward()
             sgd.step()
@@ -70,14 +71,14 @@ def compare_with_numpy_sgd(
             # test state_dict/load_state_dict
             if i == reload_state_step:
                 state_dict = sgd.state_dict()
-                #print(state_dict)
+                # print(state_dict)
                 sgd = flow.optim.SGD([x])
-                #if flow.env.get_rank() == 0:
+                # if flow.env.get_rank() == 0:
                 print(save_load_by_pickle)
                 if save_load_by_pickle:
                     with tempfile.TemporaryDirectory() as save_dir:
-                        flow.save(state_dict, save_dir, global_dst_rank = 0)
-                        state_dict = flow.load(save_dir, global_src_rank = 0)
+                        flow.save(state_dict, save_dir, global_dst_rank=0)
+                        state_dict = flow.load(save_dir, global_src_rank=0)
                 sgd.load_state_dict(state_dict)
         return x
 
@@ -94,7 +95,6 @@ def compare_with_numpy_sgd(
         for i in range(train_iters):
             (x, vt) = train_one_iter(random_grad_seq[i].numpy())
         return x
-    
 
     oneflow_res = train_by_oneflow()
     numpy_res = train_by_numpy()
@@ -141,7 +141,7 @@ def compare_with_numpy_sgd_clip_grad(
         )
 
         def train_one_iter(grad):
-            grad_tensor = grad.clone().to_global(placement,sbp)
+            grad_tensor = grad.clone().to_global(placement, sbp)
             loss = flow.sum(x * grad_tensor)
             loss.backward()
             sgd.clip_grad()
@@ -156,8 +156,8 @@ def compare_with_numpy_sgd_clip_grad(
                 sgd = flow.optim.SGD([x])
                 if save_load_by_pickle:
                     with tempfile.TemporaryDirectory() as save_dir:
-                        flow.save(state_dict, save_dir, global_dst_rank = 0)
-                        state_dict = flow.load(save_dir, global_src_rank = 0)
+                        flow.save(state_dict, save_dir, global_dst_rank=0)
+                        state_dict = flow.load(save_dir, global_src_rank=0)
                 sgd.load_state_dict(state_dict)
         return x
 
@@ -188,14 +188,12 @@ def compare_with_numpy_sgd_clip_grad(
     )
 
 
-
-
 class TestOptimizers(flow.unittest.TestCase):
     @globaltest
     def test_sgd(test_case):
         arg_dict = OrderedDict()
-        arg_dict["device"] = ["cpu","cuda"]
-        arg_dict["x_shape"] = [(4,4)]
+        arg_dict["device"] = ["cpu", "cuda"]
+        arg_dict["x_shape"] = [(4, 4)]
         arg_dict["momentum"] = [0.0, 0.9]
         arg_dict["weight_decay"] = [0.0, 0.9]
         arg_dict["learning_rate"] = [1]
@@ -204,14 +202,14 @@ class TestOptimizers(flow.unittest.TestCase):
         arg_dict["save_load_by_pickle"] = [False, True]
         for arg in GenArgDict(arg_dict):
             for placement in all_placement():
-                for sbp in all_sbp(placement, max_dim=1,except_partial_sum=True):
+                for sbp in all_sbp(placement, max_dim=1, except_partial_sum=True):
                     compare_with_numpy_sgd(test_case, placement, sbp, **arg)
-    
+
     @globaltest
     def test_sgd_clip_grad(test_case):
         arg_dict = OrderedDict()
         arg_dict["device"] = ["cpu", "cuda"]
-        arg_dict["x_shape"] = [(4,4)]
+        arg_dict["x_shape"] = [(4, 4)]
         arg_dict["momentum"] = [0.0, 0.9]
         arg_dict["weight_decay"] = [0.0, 0.9]
         arg_dict["learning_rate"] = [0.2]
@@ -222,9 +220,9 @@ class TestOptimizers(flow.unittest.TestCase):
         arg_dict["save_load_by_pickle"] = [False, True]
         for arg in GenArgDict(arg_dict):
             for placement in all_placement():
-                for sbp in all_sbp(placement, max_dim=1,except_partial_sum=True):
-                    compare_with_numpy_sgd_clip_grad(test_case,placement,sbp ,**arg)
+                for sbp in all_sbp(placement, max_dim=1, except_partial_sum=True):
+                    compare_with_numpy_sgd_clip_grad(test_case, placement, sbp, **arg)
+
 
 if __name__ == "__main__":
     unittest.main()
-

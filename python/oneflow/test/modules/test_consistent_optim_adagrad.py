@@ -64,7 +64,7 @@ def compare_with_numpy_adagrad(
         )
 
         def train_one_iter(grad):
-            grad_tensor = grad.clone().to_global(placement,sbp)
+            grad_tensor = grad.clone().to_global(placement, sbp)
             loss = flow.sum(x * grad_tensor)
             loss.backward()
             adagrad.step()
@@ -77,8 +77,8 @@ def compare_with_numpy_adagrad(
                 adagrad = flow.optim.Adagrad([x])
                 if save_load_by_pickle:
                     with tempfile.TemporaryDirectory() as save_dir:
-                        flow.save(state_dict, save_dir, global_dst_rank = 0)
-                        state_dict = flow.load(save_dir, global_src_rank = 0)
+                        flow.save(state_dict, save_dir, global_dst_rank=0)
+                        state_dict = flow.load(save_dir, global_src_rank=0)
                 adagrad.load_state_dict(state_dict)
         return x
 
@@ -100,7 +100,9 @@ def compare_with_numpy_adagrad(
     oneflow_res = train_by_oneflow()
     numpy_res = train_by_numpy()
     test_case.assertTrue(
-        np.allclose(oneflow_res.numpy().flatten(), numpy_res.flatten(), rtol=1e-3, atol=1e-3)
+        np.allclose(
+            oneflow_res.numpy().flatten(), numpy_res.flatten(), rtol=1e-3, atol=1e-3
+        )
     )
 
 
@@ -144,7 +146,7 @@ def compare_with_numpy_adam_clip_grad(
         )
 
         def train_one_iter(grad):
-            grad_tensor = grad.clone().to_global(placement,sbp)
+            grad_tensor = grad.clone().to_global(placement, sbp)
             loss = flow.sum(x * grad_tensor)
             loss.backward()
             adagrad.clip_grad()
@@ -158,8 +160,8 @@ def compare_with_numpy_adam_clip_grad(
                 adagrad = flow.optim.Adagrad([x])
                 if save_load_by_pickle:
                     with tempfile.TemporaryDirectory() as save_dir:
-                        flow.save(state_dict, save_dir, global_dst_rank = 0)
-                        state_dict = flow.load(save_dir, global_src_rank = 0)
+                        flow.save(state_dict, save_dir, global_dst_rank=0)
+                        state_dict = flow.load(save_dir, global_src_rank=0)
                 adagrad.load_state_dict(state_dict)
         return x
 
@@ -188,7 +190,9 @@ def compare_with_numpy_adam_clip_grad(
     numpy_res = train_by_numpy()
 
     test_case.assertTrue(
-        np.allclose(oneflow_res.numpy().flatten(), numpy_res.flatten(), rtol=1e-3, atol=1e-3)
+        np.allclose(
+            oneflow_res.numpy().flatten(), numpy_res.flatten(), rtol=1e-3, atol=1e-3
+        )
     )
 
 
@@ -197,11 +201,11 @@ class TestAdagrad(flow.unittest.TestCase):
     def test_adagrad(test_case):
         arg_dict = OrderedDict()
         arg_dict["device"] = ["cpu", "cuda"]
-        arg_dict["x_shape"] = [(4,4)]
+        arg_dict["x_shape"] = [(4, 4)]
         arg_dict["learning_rate"] = [0.3]
         arg_dict["train_iters"] = [10]
-        arg_dict["lr_decay"] = [ 0.75]
-        arg_dict["weight_decay"] = [ 0.1]
+        arg_dict["lr_decay"] = [0.75]
+        arg_dict["weight_decay"] = [0.1]
         arg_dict["initial_accumulator_value"] = [1.0]
         arg_dict["eps"] = [1e-07]
         arg_dict["reload_state_step"] = [5]  # save and load optim state
@@ -209,9 +213,9 @@ class TestAdagrad(flow.unittest.TestCase):
 
         for arg in GenArgList(arg_dict):
             for placement in all_placement():
-                for sbp in all_sbp(placement, max_dim=1,except_partial_sum=True):
+                for sbp in all_sbp(placement, max_dim=1, except_partial_sum=True):
                     compare_with_numpy_adagrad(test_case, placement, sbp, *arg)
-    
+
     @globaltest
     def test_adagrad_clip_grad(test_case):
         arg_dict = OrderedDict()
@@ -220,7 +224,7 @@ class TestAdagrad(flow.unittest.TestCase):
         arg_dict["learning_rate"] = [0.03]
         arg_dict["train_iters"] = [10]
         arg_dict["lr_decay"] = [0.75]
-        arg_dict["weight_decay"] = [ 0.1]
+        arg_dict["weight_decay"] = [0.1]
         arg_dict["initial_accumulator_value"] = [1.0]
         arg_dict["eps"] = [1e-07]
         arg_dict["clip_grad_max_norm"] = [1.0]
@@ -230,8 +234,9 @@ class TestAdagrad(flow.unittest.TestCase):
 
         for arg in GenArgList(arg_dict):
             for placement in all_placement():
-                for sbp in all_sbp(placement, max_dim=1,except_partial_sum=True):
+                for sbp in all_sbp(placement, max_dim=1, except_partial_sum=True):
                     compare_with_numpy_adam_clip_grad(test_case, placement, sbp, *arg)
+
 
 if __name__ == "__main__":
     unittest.main()

@@ -66,7 +66,7 @@ def compare_with_numpy_adam(
         )
 
         def train_one_iter(grad):
-            grad_tensor = grad.clone().to_global(placement,sbp)
+            grad_tensor = grad.clone().to_global(placement, sbp)
             loss = flow.sum(x * grad_tensor)
             loss.backward()
             adam.step()
@@ -81,8 +81,8 @@ def compare_with_numpy_adam(
                 )
                 if save_load_by_pickle:
                     with tempfile.TemporaryDirectory() as save_dir:
-                        flow.save(state_dict, save_dir, global_dst_rank = 0)
-                        state_dict = flow.load(save_dir, global_src_rank = 0)
+                        flow.save(state_dict, save_dir, global_dst_rank=0)
+                        state_dict = flow.load(save_dir, global_src_rank=0)
                 adam.load_state_dict(state_dict)
         return x
 
@@ -124,7 +124,9 @@ def compare_with_numpy_adam(
     oneflow_res = train_by_oneflow()
     numpy_res = train_by_numpy()
     test_case.assertTrue(
-        np.allclose(oneflow_res.numpy().flatten(), numpy_res.flatten(), rtol=1e-3, atol=1e-3)
+        np.allclose(
+            oneflow_res.numpy().flatten(), numpy_res.flatten(), rtol=1e-3, atol=1e-3
+        )
     )
 
 
@@ -170,7 +172,7 @@ def compare_with_numpy_adam_clip_grad(
         )
 
         def train_one_iter(grad):
-            grad_tensor = grad.clone().to_global(placement,sbp)
+            grad_tensor = grad.clone().to_global(placement, sbp)
             loss = flow.sum(x * grad_tensor)
             loss.backward()
             adam.clip_grad()
@@ -186,8 +188,8 @@ def compare_with_numpy_adam_clip_grad(
                 )
                 if save_load_by_pickle:
                     with tempfile.TemporaryDirectory() as save_dir:
-                        flow.save(state_dict, save_dir, global_dst_rank = 0)
-                        state_dict = flow.load(save_dir, global_src_rank = 0)
+                        flow.save(state_dict, save_dir, global_dst_rank=0)
+                        state_dict = flow.load(save_dir, global_src_rank=0)
                 adam.load_state_dict(state_dict)
         return x
 
@@ -241,7 +243,7 @@ class TestAdam(flow.unittest.TestCase):
     def test_adam(test_case):
         arg_dict = OrderedDict()
         arg_dict["device"] = ["cuda", "cpu"]
-        arg_dict["x_shape"] = [(4,4)]
+        arg_dict["x_shape"] = [(4, 4)]
         arg_dict["learning_rate"] = [1e-3]
         arg_dict["train_iters"] = [3]
         arg_dict["betas"] = [(0.99, 0.9)]
@@ -253,10 +255,10 @@ class TestAdam(flow.unittest.TestCase):
         arg_dict["save_load_by_pickle"] = [False, True]
 
         for arg in GenArgList(arg_dict):
-             for placement in all_placement():
-                for sbp in all_sbp(placement, max_dim=1,except_partial_sum=True):
+            for placement in all_placement():
+                for sbp in all_sbp(placement, max_dim=1, except_partial_sum=True):
                     compare_with_numpy_adam(test_case, placement, sbp, *arg)
-    
+
     @globaltest
     def test_adam_clip_grad(test_case):
         arg_dict = OrderedDict()
@@ -265,7 +267,9 @@ class TestAdam(flow.unittest.TestCase):
         arg_dict["learning_rate"] = [1e-3]
         arg_dict["train_iters"] = [5]
         arg_dict["betas"] = [(0.99, 0.9)]
-        arg_dict["weight_decay"] = [0.1,]
+        arg_dict["weight_decay"] = [
+            0.1,
+        ]
         arg_dict["eps"] = [1e-08]
         arg_dict["do_bias_correction"] = [True, False]
         arg_dict["amsgrad"] = [True]
@@ -276,7 +280,7 @@ class TestAdam(flow.unittest.TestCase):
 
         for arg in GenArgList(arg_dict):
             for placement in all_placement():
-                for sbp in all_sbp(placement, max_dim=1,except_partial_sum=True):
+                for sbp in all_sbp(placement, max_dim=1, except_partial_sum=True):
                     compare_with_numpy_adam_clip_grad(test_case, placement, sbp, *arg)
 
 

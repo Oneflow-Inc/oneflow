@@ -27,6 +27,7 @@ from oneflow.nn.parameter import Parameter
 
 from oneflow.test_utils.automated_test_util import *
 
+
 def compare_with_numpy_adamw(
     test_case,
     placement,
@@ -66,7 +67,7 @@ def compare_with_numpy_adamw(
         )
 
         def train_one_iter(grad):
-            grad_tensor = grad.clone().to_global(placement,sbp)
+            grad_tensor = grad.clone().to_global(placement, sbp)
             loss = flow.sum(x * grad_tensor)
             loss.backward()
             adam.step()
@@ -79,8 +80,8 @@ def compare_with_numpy_adamw(
                 adam = flow.optim.AdamW([x])
                 if save_load_by_pickle:
                     with tempfile.TemporaryDirectory() as save_dir:
-                        flow.save(state_dict, save_dir, global_dst_rank = 0)
-                        state_dict = flow.load(save_dir, global_src_rank = 0)
+                        flow.save(state_dict, save_dir, global_dst_rank=0)
+                        state_dict = flow.load(save_dir, global_src_rank=0)
                 adam.load_state_dict(state_dict)
         return x
 
@@ -122,7 +123,9 @@ def compare_with_numpy_adamw(
     oneflow_res = train_by_oneflow()
     numpy_res = train_by_numpy()
     test_case.assertTrue(
-        np.allclose(oneflow_res.numpy().flatten(), numpy_res.flatten(), rtol=1e-3, atol=1e-3)
+        np.allclose(
+            oneflow_res.numpy().flatten(), numpy_res.flatten(), rtol=1e-3, atol=1e-3
+        )
     )
 
 
@@ -168,7 +171,7 @@ def compare_with_numpy_adamw_clip_grad(
         )
 
         def train_one_iter(grad):
-            grad_tensor = grad.clone().to_global(placement,sbp)
+            grad_tensor = grad.clone().to_global(placement, sbp)
             loss = flow.sum(x * grad_tensor)
             loss.backward()
             adam.clip_grad()
@@ -182,8 +185,8 @@ def compare_with_numpy_adamw_clip_grad(
                 adam = flow.optim.AdamW([x])
                 if save_load_by_pickle:
                     with tempfile.TemporaryDirectory() as save_dir:
-                        flow.save(state_dict, save_dir, global_dst_rank = 0)
-                        state_dict = flow.load(save_dir, global_src_rank = 0)
+                        flow.save(state_dict, save_dir, global_dst_rank=0)
+                        state_dict = flow.load(save_dir, global_src_rank=0)
                 adam.load_state_dict(state_dict)
         return x
 
@@ -232,15 +235,16 @@ def compare_with_numpy_adamw_clip_grad(
         np.allclose(oneflow_res.flatten(), numpy_res.flatten(), rtol=1e-3, atol=1e-3)
     )
 
+
 class TestAdamW(flow.unittest.TestCase):
     @globaltest
     def test_adamw(test_case):
         arg_dict = OrderedDict()
         arg_dict["device"] = ["cpu", "cuda"]
-        arg_dict["x_shape"] = [(4,4)]
+        arg_dict["x_shape"] = [(4, 4)]
         arg_dict["learning_rate"] = [1]
         arg_dict["train_iters"] = [10]
-        arg_dict["betas"] = [(0.9,0.999)]
+        arg_dict["betas"] = [(0.9, 0.999)]
         arg_dict["weight_decay"] = [0.01]
         arg_dict["eps"] = [1e-8]
         arg_dict["do_bias_correction"] = [True, False]
@@ -250,8 +254,7 @@ class TestAdamW(flow.unittest.TestCase):
         for arg in GenArgList(arg_dict):
             for placement in all_placement():
                 for sbp in all_sbp(placement, max_dim=1, except_partial_sum=True):
-                    compare_with_numpy_adamw(test_case, placement,sbp,*arg)
-    
+                    compare_with_numpy_adamw(test_case, placement, sbp, *arg)
 
     @globaltest
     def test_adamw_clip_grad(test_case):
@@ -272,7 +275,8 @@ class TestAdamW(flow.unittest.TestCase):
         for arg in GenArgList(arg_dict):
             for placement in all_placement():
                 for sbp in all_sbp(placement, max_dim=1, except_partial_sum=True):
-                    compare_with_numpy_adamw_clip_grad(test_case,placement,sbp, *arg)
+                    compare_with_numpy_adamw_clip_grad(test_case, placement, sbp, *arg)
+
 
 if __name__ == "__main__":
     unittest.main()
