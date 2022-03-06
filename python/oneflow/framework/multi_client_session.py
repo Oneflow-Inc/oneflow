@@ -31,11 +31,12 @@ class MultiClientSession(object):
         CLOSED = 3
 
     def __init__(self, sess_id):
+        self._id = sess_id
         self._env_holder = env_util.GetEnvHolder()
         assert self._env_holder is not None
-        self.sess_ = oneflow._oneflow_internal.RegsiterSession(sess_id)
-        self._id = sess_id
-        oneflow._oneflow_internal.CreateMultiClientSessionContext()
+        self._internal_sess = oneflow._oneflow_internal.RegsiterSession(sess_id)
+        # New a MultiClientSessionContext
+        self._graph_ctx = oneflow._oneflow_internal.SessionContext()
         self.config_proto_ = self._make_config_proto()
         self.function_flag_name2default_val_ = {}
         self._update_function_flag_name2defaultVal()
@@ -47,18 +48,15 @@ class MultiClientSession(object):
         self._check_status(self.Status.CREATED, self.Status.INITED)
         if self.status_ == self.Status.CREATED:
             config_proto_str = text_format.MessageToString(self.config_proto)
-            oneflow._oneflow_internal.InitMultiClientSessionContext(config_proto_str)
+            # oneflow._oneflow_internal.InitMultiClientSessionContext(config_proto_str)
+            self._graph_ctx.try_init(config_proto_str)
             self.status_ = self.Status.INITED
 
     def _TryClose(self):
         if self.status_ != self.Status.CLOSED:
-            oneflow._oneflow_internal.TryDestroyMultiClientSessionContext()
+            # oneflow._oneflow_internal.TryDestroyMultiClientSessionContext()
             oneflow._oneflow_internal.ClearSessionById(self.id)
         self.status_ = self.Status.CLOSED
-
-    def AddCGraph(self, graph):
-        self._check_status(self.Status.INITED)
-        oneflow._oneflow_internal.MultiClientSessionContextAddCGraph(graph)
 
     @property
     def status(self):
@@ -124,11 +122,11 @@ class MultiClientSession(object):
     def update_resource_eagerly(self, resource_config):
         self._check_status(self.Status.INITED)
         config_proto_str = text_format.MessageToString(resource_config)
-        oneflow._oneflow_internal.MultiClientSessionContextUpdateResource(
-            config_proto_str
-        )
+        # oneflow._oneflow_internal.MultiClientSessionContextUpdateResource(
+        #    config_proto_str
+        # )
+        self._graph_ctx.update_resource(config_proto_str)
 
     def __del__(self):
         self._TryClose()
         print("oneflow session del")
-

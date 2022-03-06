@@ -14,9 +14,11 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
+#include <string>
 #include "oneflow/core/common/buffer_manager.h"
 #include "oneflow/core/common/maybe.h"
 #include "oneflow/core/common/multi_client.h"
+#include "oneflow/core/common/protobuf.h"
 #include "oneflow/core/framework/multi_client_session_context.h"
 #include "oneflow/core/framework/load_library.h"
 #include "oneflow/core/job/resource.pb.h"
@@ -119,16 +121,24 @@ Maybe<void> MultiClientSessionContext::TryInit(const ConfigProto& config_proto) 
   return Maybe<void>::Ok();
 }
 
+Maybe<void> MultiClientSessionContext::TryInit(const std::string& config_proto_str) {
+  ConfigProto config_proto;
+  CHECK_OR_RETURN(TxtString2PbMessage(config_proto_str, &config_proto))
+      << "failed to parse config_proto: " << config_proto_str;
+  return TryInit(config_proto);
+}
+
 Maybe<void> MultiClientSessionContext::UpdateResource(const Resource& reso_proto) {
   CHECK_NOTNULL_OR_RETURN((Global<ResourceDesc, ForSession>::Get()));
   Global<ResourceDesc, ForSession>::Get()->Update(reso_proto);
   return Maybe<void>::Ok();
 }
 
-Maybe<void> MultiClientSessionContext::AddCGraph(
-    const std::shared_ptr<oneflow::NNGraph>& c_graph_ptr) {
-  graphs_.emplace_back(c_graph_ptr);
-  return Maybe<void>::Ok();
+Maybe<void> MultiClientSessionContext::UpdateResource(const std::string& reso_proto_str) {
+  Resource reso_proto;
+  CHECK_OR_RETURN(TxtString2PbMessage(reso_proto_str, &reso_proto))
+      << "failed to parse config_proto: " << reso_proto_str;
+  return UpdateResource(reso_proto);
 }
 
 Maybe<void> MultiClientSessionContext::TryClose() {
@@ -137,11 +147,6 @@ Maybe<void> MultiClientSessionContext::TryClose() {
 
     // sync before NNGraph release to ensure LaunchLazyJob instruction was completed and released
     JUST(vm::ClusterSync());
-    for (const auto& graph : graphs_) {
-      VLOG(2) << "Try to close graph: " << graph->job_name() << std::endl;
-      JUST(graph->Close());
-    }
-    graphs_.clear();
     {
       // NOTE(chengcheng): delete runtime global objects
       Global<boxing::collective::Scheduler>::Delete();
@@ -166,6 +171,7 @@ Maybe<void> MultiClientSessionContext::TryClose() {
     // NOTE(chengcheng): New after delete because in EnvGlobalObjectScope once created ResourceDesc.
     Global<ResourceDesc, ForSession>::New(Global<ResourceDesc, ForEnv>::Get()->resource(),
                                           GlobalProcessCtx::NumOfProcessPerNode());
+    is_inited_ = false;
   }
   VLOG(2) << "Finish delete multi client session context." << std::endl;
   return Maybe<void>::Ok();

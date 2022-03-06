@@ -130,11 +130,12 @@ class Graph(object):
         self._outputs_buffer_size = 2
         self._cur_index_of_ouputs_buffer = 0
 
-        self._c_nn_graph = oneflow._oneflow_internal.nn.graph.CNNGraph(self._name)
         self._session = session_ctx.GetDefaultSession()
         assert type(self._session) is MultiClientSession
         self._session.TryInit()
-        self._session.AddCGraph(self._c_nn_graph)
+        self._c_nn_graph = oneflow._oneflow_internal.nn.graph.CNNGraph(
+            self._name, self._session._graph_ctx
+        )
 
     def build(self, *args, **kwargs):
         r"""The ``build()`` method must be overridden to define neural network

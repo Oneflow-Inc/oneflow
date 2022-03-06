@@ -377,6 +377,7 @@ def _UpdateDefaultEnvProtoByMultiClientEnvVars(env_proto):
         cpp_logging_conf.logbuflevel = os.getenv("GLOG_logbuflevel")
     env_proto.cpp_logging_conf.CopyFrom(cpp_logging_conf)
 
+
 class EnvHolder(object):
     def __init__(self):
         self._is_normal_exit = True
@@ -384,7 +385,7 @@ class EnvHolder(object):
             SetDefaultMultiClientEnvVars()
         oneflow._oneflow_internal.SetIsMultiClient(True)
         api_env_init()
-    
+
     def set_is_normal_exit(self, is_normal_exit):
         self._is_normal_exit = is_normal_exit
 

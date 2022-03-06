@@ -138,13 +138,6 @@ inline Maybe<void> MultiClientSessionContextUpdateResource(const std::string& re
   return Maybe<void>::Ok();
 }
 
-inline Maybe<void> MultiClientSessionContextAddCGraph(
-    const std::shared_ptr<oneflow::NNGraph>& c_graph_ptr) {
-  CHECK_NOTNULL_OR_RETURN(Global<MultiClientSessionContext>::Get());
-  JUST(Global<MultiClientSessionContext>::Get()->AddCGraph(c_graph_ptr));
-  return Maybe<void>::Ok();
-}
-
 inline Maybe<void> TryDestroyMultiClientSessionContext() {
   // Global<T>::Delete is not allowed to be called here
   // because glog is not constructed yet and LOG(INFO) has bad bahavior

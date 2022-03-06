@@ -214,7 +214,8 @@ Graph::GraphImpl::GraphImpl(const std::string& model_path, const Device& device)
   job_.mutable_job_conf()->mutable_predict_conf();
   job_.mutable_job_conf()->set_job_name(job_.mutable_job_conf()->job_name() + of::NewUniqueId());
   graph_ = std::make_shared<of::NNGraph>(job_.job_conf().job_name());
-  of::Global<of::MultiClientSessionContext>::Get()->AddCGraph(graph_).GetOrThrow();
+  // TODO(strint): rm
+  // of::Global<of::MultiClientSessionContext>::Get()->AddCGraph(graph_).GetOrThrow();
 }
 
 Graph::GraphImpl::GraphImpl(GraphImpl&& graph) noexcept
