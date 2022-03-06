@@ -155,8 +155,8 @@ JpegReturnType JpegDecodeRandomCropResize(const unsigned char* data, size_t leng
                                           unsigned char* dst, int target_width, int target_height) {
   cv::Mat image_mat;
   JpegDecoder jpeg_decode;
-  if (jpeg_decode.PartialDecode((const unsigned char*)(data), length, crop_generator, workspace,
-                                workspace_size, image_mat)
+  if (jpeg_decode.PartialDecodeRandomCropImage((const unsigned char*)(data), length, crop_generator, workspace,
+                                workspace_size, &image_mat)
       != JpegReturnType::kOk) {
     return JpegReturnType::kError;
   }

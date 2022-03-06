@@ -18,7 +18,6 @@ limitations under the License.
 #include <jpeglib.h>
 #include <opencv2/core/mat.hpp>
 #include <opencv2/opencv.hpp>
-
 #include "oneflow/user/image/random_crop_generator.h"
 
 namespace oneflow {
@@ -34,16 +33,15 @@ class JpegDecoder {
   ~JpegDecoder();
   OF_DISALLOW_COPY_AND_MOVE(JpegDecoder);
 
-  JpegReturnType PartialDecode(const unsigned char* data, size_t length,
+  JpegReturnType PartialDecodeRandomCropImage(const unsigned char* data, size_t length,
                                RandomCropGenerator* random_crop_gen, unsigned char* workspace,
-                               size_t workspace_size, cv::Mat& out);
+                               size_t workspace_size, cv::Mat* out);
 
  private:
-  struct jpeg_decompress_struct cinfo_;
-  struct jpeg_error_mgr jerr_;
-
+  struct jpeg_decompress_struct compress_info_;
+  struct jpeg_error_mgr jpeg_err_;
   std::vector<unsigned char> tmp_buf_;
 };
 
-#endif
 }  // namespace oneflow
+#endif // ONEFLOW_USER_IMAGE_JPEG_DECODER_H_

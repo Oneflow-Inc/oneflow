@@ -13,38 +13,41 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
+#include <cstddef>
 #include <iostream>
 
 #include "oneflow/user/image/jpeg_decoder.h"
 
 namespace oneflow {
 
-JpegDecoder::JpegDecoder() : cinfo_(), jerr_(), tmp_buf_() {}
+JpegDecoder::JpegDecoder() : compress_info_(), jpeg_err_(), tmp_buf_() {
+  compress_info_.err = jpeg_std_error(&jpeg_err_);
+  jpeg_create_decompress(&compress_info_);
+}
 
-JpegDecoder::~JpegDecoder() { jpeg_destroy_decompress(&cinfo_); }
+JpegDecoder::~JpegDecoder() { jpeg_destroy_decompress(&compress_info_); }
 
-JpegReturnType JpegDecoder::PartialDecode(const unsigned char* data, size_t length,
+JpegReturnType JpegDecoder::PartialDecodeRandomCropImage(const unsigned char* data, size_t length,
                                           RandomCropGenerator* random_crop_gen,
                                           unsigned char* workspace, size_t workspace_size,
-                                          cv::Mat& out_mat) {
-  cinfo_.err = jpeg_std_error(&jerr_);
-  jpeg_create_decompress(&cinfo_);
-  if (cinfo_.err->msg_code != 0) { return JpegReturnType::kError; }
+                                          cv::Mat* out_mat) {
+  if (compress_info_.err->msg_code != 0) { return JpegReturnType::kError; }
 
-  jpeg_mem_src(&cinfo_, data, length);
-  if (cinfo_.err->msg_code != 0) { return JpegReturnType::kError; }
+  jpeg_mem_src(&compress_info_, data, length);
+  if (compress_info_.err->msg_code != 0) { return JpegReturnType::kError; }
 
-  int rc = jpeg_read_header(&cinfo_, TRUE);
-  if (rc != 1) { return JpegReturnType::kError; }
+  int rc = jpeg_read_header(&compress_info_, TRUE);
+  if (rc != JPEG_HEADER_OK) { return JpegReturnType::kError; }
 
-  jpeg_start_decompress(&cinfo_);
-  int width = cinfo_.output_width;
-  int height = cinfo_.output_height;
-  int pixel_size = cinfo_.output_components;
+  jpeg_start_decompress(&compress_info_);
+  int width = compress_info_.output_width;
+  int height = compress_info_.output_height;
+  int pixel_size = compress_info_.output_components;
 
   unsigned char* crop_buf = nullptr;
-  if (width * height * pixel_size > workspace_size) {
-    tmp_buf_.resize(width * height * pixel_size);
+  size_t image_space_size = width * height * pixel_size;
+  if (image_space_size > workspace_size) {
+    tmp_buf_.resize(image_space_size);
     crop_buf = tmp_buf_.data();
   } else {
     crop_buf = workspace;
@@ -66,18 +69,18 @@ JpegReturnType JpegDecoder::PartialDecode(const unsigned char* data, size_t leng
   }
 
   unsigned int tmp_w = u_crop_w;
-  jpeg_crop_scanline(&cinfo_, &u_crop_x, &tmp_w);
+  jpeg_crop_scanline(&compress_info_, &u_crop_x, &tmp_w);
   int row_stride = tmp_w * pixel_size;
-  if (jpeg_skip_scanlines(&cinfo_, u_crop_y) != u_crop_y) { return JpegReturnType::kError; }
+  if (jpeg_skip_scanlines(&compress_info_, u_crop_y) != u_crop_y) { return JpegReturnType::kError; }
 
-  while (cinfo_.output_scanline < u_crop_y + u_crop_h) {
+  while (compress_info_.output_scanline < u_crop_y + u_crop_h) {
     unsigned char* buffer_array[1];
-    buffer_array[0] = crop_buf + (cinfo_.output_scanline - u_crop_y) * row_stride;
-    jpeg_read_scanlines(&cinfo_, buffer_array, 1);
+    buffer_array[0] = crop_buf + (compress_info_.output_scanline - u_crop_y) * row_stride;
+    jpeg_read_scanlines(&compress_info_, buffer_array, 1);
   }
 
-  jpeg_skip_scanlines(&cinfo_, cinfo_.output_height - u_crop_y - u_crop_h);
-  jpeg_finish_decompress(&cinfo_);
+  jpeg_skip_scanlines(&compress_info_, compress_info_.output_height - u_crop_y - u_crop_h);
+  jpeg_finish_decompress(&compress_info_);
 
   cv::Mat image(u_crop_h, tmp_w, CV_8UC3, crop_buf, cv::Mat::AUTO_STEP);
   cv::Rect roi;
@@ -87,9 +90,9 @@ JpegReturnType JpegDecoder::PartialDecode(const unsigned char* data, size_t leng
     roi.y = 0;
     roi.width = u_crop_w;
     roi.height = u_crop_h;
-    image(roi).copyTo(out_mat);
+    image(roi).copyTo(*out_mat);
   } else {
-    image.copyTo(out_mat);
+    image.copyTo(*out_mat);
   }
 
   return JpegReturnType::kOk;
