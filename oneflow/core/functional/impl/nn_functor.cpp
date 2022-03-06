@@ -1480,27 +1480,36 @@ class DropoutFunctor {
     add_op_ = CHECK_JUST(one::OpBuilder("add_n").Input("in", 2).Output("out").Build());
   }
   Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x, const float& p,
-                           const bool& training, const Optional<one::Generator>& generator,
+                           const bool& training, const bool& inplace,
+                           const Optional<one::Generator>& generator,
                            const Optional<one::Tensor>& addend) const {
+    auto outputs = std::make_shared<TensorTuple>(1);
+    if (inplace) {
+      JUST(CheckInplaceValid(x));
+      (*outputs)[0] = x;
+    }
     const auto gen = generator.value_or(JUST(one::DefaultAutoGenerator()));
     const auto& dropout_state = std::make_shared<FusedDropoutKernelState>(gen);
     MutableAttrMap dropout_attrs;
     JUST(dropout_attrs.SetAttr<float>("rate", p));
     if (addend) {
       if ((!training) || p == 0.0) {
-        return OpInterpUtil::Dispatch<Tensor>(*add_op_, {x, JUST(addend)});
+        JUST(OpInterpUtil::Dispatch(*add_op_, {x, JUST(addend)}, outputs.get()));
       } else {
-        return OpInterpUtil::Dispatch<Tensor>(*dropout_addend_op_, {x, JUST(addend)},
-                                              OpExprInterpContext(dropout_attrs, dropout_state));
+        outputs->resize(2);
+        JUST(OpInterpUtil::Dispatch(*dropout_addend_op_, {x, JUST(addend)}, outputs.get(),
+                                    OpExprInterpContext(dropout_attrs, dropout_state)));
       }
     } else {
       if (!training || p == 0.0) {
         return x;
       } else {
-        return OpInterpUtil::Dispatch<Tensor>(*dropout_op_, {x},
-                                              OpExprInterpContext(dropout_attrs, dropout_state));
+        outputs->resize(2);
+        JUST(OpInterpUtil::Dispatch(*dropout_op_, {x}, outputs.get(),
+                                    OpExprInterpContext(dropout_attrs, dropout_state)));
       }
     }
+    return (*outputs)[0];
   }
 
  private:
@@ -2062,29 +2071,6 @@ class CtcGreedyDecoderFunctor {
   std::shared_ptr<OpExpr> op_;
 };
 
-class PartialFCSampleFunctor {
- public:
-  PartialFCSampleFunctor() {
-    op_ = CHECK_JUST(one::OpBuilder("distributed_partial_fc_sample")
-                         .Input("weight")
-                         .Input("label")
-                         .Output("mapped_label")
-                         .Output("sampled_label")
-                         .Output("sampled_weight")
-                         .Build());
-  }
-  Maybe<TensorTuple> operator()(const std::shared_ptr<one::Tensor>& wegiht,
-                                const std::shared_ptr<one::Tensor>& label,
-                                const int64_t& num_sample) const {
-    MutableAttrMap attrs;
-    JUST(attrs.SetAttr<int64_t>("num_sample", num_sample));
-    return OpInterpUtil::Dispatch<TensorTuple>(*op_, {wegiht, label}, attrs);
-  }
-
- private:
-  std::shared_ptr<OpExpr> op_;
-};
-
 class PariticalFCSampleDisableBoxing {
  public:
   PariticalFCSampleDisableBoxing() {
@@ -2284,7 +2270,6 @@ ONEFLOW_FUNCTION_LIBRARY(m) {
   m.add_functor<impl::FusedScaleTrilSoftmaxMaskScaleFunctor>("FusedScaleTrilSoftmaxMaskScale");
   m.add_functor<impl::FusedScaleTrilFunctor>("FusedScaleTril");
   m.add_functor<impl::CtcGreedyDecoderFunctor>("CtcGreedyDecoder");
-  m.add_functor<impl::PartialFCSampleFunctor>("DistributedPariticalFCSample");
   m.add_functor<impl::PariticalFCSampleDisableBoxing>("DistributedPariticalFCSampleDisableBoxing");
   m.add_functor<impl::NmsFunctor>("Nms");
   m.add_functor<impl::RoiAlignFunctor>("RoiAlign");
