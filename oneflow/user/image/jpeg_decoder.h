@@ -34,8 +34,9 @@ class JpegDecoder {
   OF_DISALLOW_COPY_AND_MOVE(JpegDecoder);
 
   JpegReturnType PartialDecodeRandomCropImage(const unsigned char* data, size_t length,
-                               RandomCropGenerator* random_crop_gen, unsigned char* workspace,
-                               size_t workspace_size, cv::Mat* out);
+                                              RandomCropGenerator* random_crop_gen,
+                                              unsigned char* workspace, size_t workspace_size,
+                                              cv::Mat* out);
 
  private:
   struct jpeg_decompress_struct compress_info_;
@@ -44,4 +45,4 @@ class JpegDecoder {
 };
 
 }  // namespace oneflow
-#endif // ONEFLOW_USER_IMAGE_JPEG_DECODER_H_
+#endif  // ONEFLOW_USER_IMAGE_JPEG_DECODER_H_

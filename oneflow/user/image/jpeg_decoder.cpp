@@ -28,9 +28,9 @@ JpegDecoder::JpegDecoder() : compress_info_(), jpeg_err_(), tmp_buf_() {
 JpegDecoder::~JpegDecoder() { jpeg_destroy_decompress(&compress_info_); }
 
 JpegReturnType JpegDecoder::PartialDecodeRandomCropImage(const unsigned char* data, size_t length,
-                                          RandomCropGenerator* random_crop_gen,
-                                          unsigned char* workspace, size_t workspace_size,
-                                          cv::Mat* out_mat) {
+                                                         RandomCropGenerator* random_crop_gen,
+                                                         unsigned char* workspace,
+                                                         size_t workspace_size, cv::Mat* out_mat) {
   if (compress_info_.err->msg_code != 0) { return JpegReturnType::kError; }
 
   jpeg_mem_src(&compress_info_, data, length);

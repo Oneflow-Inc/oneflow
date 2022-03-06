@@ -166,8 +166,8 @@ REGISTER_USER_KERNEL("ofrecord_bytes_decoder")
 namespace {
 
 void OpenCvPartialDecodeRandomCropImage(const unsigned char* data, size_t length,
-                         RandomCropGenerator* random_crop_gen, const std::string& color_space,
-                         cv::Mat& out_mat) {
+                                        RandomCropGenerator* random_crop_gen,
+                                        const std::string& color_space, cv::Mat& out_mat) {
   cv::Mat image =
       cv::imdecode(cv::Mat(1, length, CV_8UC1, (void*)data),  // NOLINT
                    ImageUtil::IsColor(color_space) ? cv::IMREAD_COLOR : cv::IMREAD_GRAYSCALE);
@@ -209,8 +209,8 @@ void DecodeRandomCropImageFromOneRecord(const OFRecord& record, TensorBuffer* bu
   cv::Mat image;
   JpegDecoder jpeg_decode;
 
-  if (jpeg_decode.PartialDecodeRandomCropImage((const unsigned char*)(src_data.data()), src_data.size(),
-                                random_crop_gen, nullptr, 0, &image)
+  if (jpeg_decode.PartialDecodeRandomCropImage((const unsigned char*)(src_data.data()),
+                                               src_data.size(), random_crop_gen, nullptr, 0, &image)
       == JpegReturnType::kOk) {
     // convert color space
     // jpeg decode output RGB
@@ -218,8 +218,8 @@ void DecodeRandomCropImageFromOneRecord(const OFRecord& record, TensorBuffer* bu
       ImageUtil::ConvertColor("RGB", image, color_space, image);
     }
   } else {
-    OpenCvPartialDecodeRandomCropImage((const unsigned char*)(src_data.data()), src_data.size(), random_crop_gen,
-                        color_space, image);
+    OpenCvPartialDecodeRandomCropImage((const unsigned char*)(src_data.data()), src_data.size(),
+                                       random_crop_gen, color_space, image);
     // convert color space
     // opencv decode output BGR
     if (ImageUtil::IsColor(color_space) && color_space != "BGR") {
