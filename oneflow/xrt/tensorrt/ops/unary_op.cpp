@@ -78,11 +78,11 @@ class SqrtGradOp : public TrtOpKernel {
     std::string mul_name = ctx->op_name() + ".mul";
     mul_layer->setName(mul_name.c_str());
 
-    // 1 / (2 * x^0.5)
-    auto* layer =
-        ctx->builder()->addUnary(*(mul_layer->getOutput(0)), nvinfer1::UnaryOperation::kRECIP);
-    std::string recip_name = ctx->op_name() + ".recip";
-    layer->setName(recip_name.c_str());
+    // dy / (2 * x^0.5)
+    auto* layer = ctx->builder()->addElementWise(*dy, *(mul_layer->getOutput(0)),
+                                                 nvinfer1::ElementWiseOperation::kDIV);
+    std::string div_name = ctx->op_name() + ".div";
+    layer->setName(div_name.c_str());
     ctx->SetSoleOutput(layer->getOutput(0));
   }
 };
