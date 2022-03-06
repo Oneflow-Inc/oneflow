@@ -129,7 +129,8 @@ class VirtualMachineEngine final : public intrusive::Base {
   ReadyInstructionList* mut_ready_instruction_list() { return &ready_instruction_list_; }
 
   void ReleaseFinishedInstructions();
-  void MoveInstructionMsgToGarbageMsgList(intrusive::shared_ptr<InstructionMsg>&& instr_msg);
+  void MoveInstructionMsgToGarbageMsgList(int flush_window_size,
+                                          intrusive::shared_ptr<InstructionMsg>&& instr_msg);
   void MoveToGarbageMsgListAndNotifyGC();
   void HandleLocalPending();
   void GetRewritedPendingInstructionsByWindowSize(size_t window_size,
