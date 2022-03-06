@@ -16,6 +16,7 @@ do
         -n 4 \
         --group_size $device_num \
         --device_num 4 \
+        --verbose \
         --auto_cuda_visible_devices \
         -m oneflow.distributed.launch \
         --nproc_per_node $device_num --nnodes=2 --node_rank=$NODE_RANK --master_addr $_MASTER_ADDR \
