@@ -295,8 +295,7 @@ void RandomMaskLikeOp::build(mlir::OpBuilder& odsBuilder, mlir::OperationState& 
   if (hierarchy) { odsState.addAttribute(hierarchyAttrName(odsState.name), hierarchy); }
   odsState.addAttribute(rateAttrName(odsState.name), rate);
   odsState.addAttribute(seedAttrName(odsState.name), seed);
-  auto y = like.getType();
-  odsState.addTypes(y);
+  odsState.addTypes(like.getType());
 }
 
 std::string Add2Op::getOriginalOpTypeName() { return "add_n"; }

@@ -362,11 +362,6 @@ mlir::IntegerAttr GetDefaultSeed(::mlir::PatternRewriter& rewriter) {
   return getSI64IntegerAttr(rewriter, (int64_t)gen->current_seed());
 }
 
-mlir::Value GetDropoutValue(::mlir::PatternRewriter& rewriter, ValueRange value) {
-  if (value.size()) { return *value.begin(); }
-  return mlir::Value();
-}
-
 }  // namespace oneflow
 
 }  // namespace mlir

@@ -2234,8 +2234,7 @@ def OneFlow_FusedBiasAddMaskScaleOp : OneFlow_BaseOp<"fused_bias_add_mask_scale"
   let input = (ins
     OneFlow_Tensor:$a,
     OneFlow_Tensor:$b,
-    OneFlow_Tensor:$mask,
-    Optional<OneFlow_Tensor>:$_add_to_output
+    OneFlow_Tensor:$mask
   );
   let output = (outs
     OneFlow_Tensor:$out
