@@ -293,7 +293,7 @@ void GenSortedCompTaskNodes(const OpNode* op_node, std::vector<CompTaskNode*>* s
       StreamId::stream_index_t stream_index = 0;
       if (op_node->op().op_conf().has_stream_name_hint()) {
         const std::string& stream_name_hint = op_node->op().op_conf().stream_name_hint();
-        LOG(INFO) << "set op: " << op_node->op().op_name() << " to stream: " << stream_name_hint;
+        VLOG(3) << "set op: " << op_node->op().op_name() << " to stream: " << stream_name_hint;
         stream_index = Global<TaskStreamIndexManager>::Get()->GetNamedTaskStreamIndex(
             device_id, stream_name_hint);
       } else {

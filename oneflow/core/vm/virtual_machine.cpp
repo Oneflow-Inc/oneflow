@@ -94,7 +94,7 @@ void GetWorkerThreadInitializer(intrusive::shared_ptr<vm::VirtualMachineEngine> 
   HashMap<std::type_index, int64_t> stream_type_index2consistent_id;
   int64_t thread_consistent_id = kThreadConsistentIdScheduler + 1;
   for (const auto& stream_type_index : stream_type_indexes) {
-    LOG(INFO) << "transport stream type: " << stream_type_index.name();
+    VLOG(3) << "transport stream type: " << stream_type_index.name();
     stream_type_index2consistent_id[stream_type_index] = thread_consistent_id++;
   }
   *Initializer = [stream_type_index2consistent_id](vm::ThreadCtx* thread_ctx) {
