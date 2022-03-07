@@ -37,38 +37,38 @@ struct alignas(2 * std::max(sizeof(Key), sizeof(Index))) TableEntry {
 template<typename Key, typename Index>
 __device__ bool TryGetOrInsert(Key* entry_key, volatile Index* entry_index, uint64_t* table_size,
                                Key key, uint64_t* out) {
-  Key old_entry_key = cuda::atomic::CAS(entry_key, static_cast<Key>(0), key);
-  if (old_entry_key == 0) {
-    Index index = cuda::atomic::Add(table_size, static_cast<uint64_t>(1)) + 1;
-    *entry_index = index;
-    *out = index;
-    return true;
-  } else if (old_entry_key == key) {
-    while (true) {
-      Index index = *entry_index;
-      if (index != 0) {
-        *out = index;
-        break;
+  Key key_hi = (key | 0x1);
+  Key key_lo = (key & 0x1);
+  Index index_plus_one = 0;
+  Key old_entry_key = cuda::atomic::CAS(entry_key, static_cast<Key>(0), key_hi);
+  while (index_plus_one == 0) {
+    if (old_entry_key == static_cast<Key>(0)) {
+      Index index = cuda::atomic::Add(table_size, static_cast<uint64_t>(1));
+      index_plus_one = index + 1;
+      *entry_index = ((index_plus_one << 1U) | key_lo);
+      *out = index_plus_one;
+      return true;
+    } else if (old_entry_key == key_hi) {
+      const Index entry_index_val = *entry_index;
+      if (entry_index_val == 0) {
+        // do nothing
+      } else if ((entry_index_val & 0x1) == key_lo) {
+        *out = (entry_index_val >> 1U);
+        return true;
+      } else {
+        return false;
       }
+    } else {
+      return false;
     }
-    return true;
-  } else {
-    return false;
   }
+  return false;
 }
 
 template<typename Key, typename Index>
 __device__ bool GetOrInsertOne(const size_t capacity, TableEntry<Key, Index>* table,
                                uint64_t* table_size, Key key, size_t hash, uint64_t* out) {
   const size_t start_idx = hash % capacity;
-  // fast path
-  {
-    TableEntry<Key, Index> entry = table[start_idx];
-    if (entry.key == key && entry.index != 0) {
-      *out = entry.index;
-      return true;
-    }
-  }
   for (size_t count = 0; count < capacity; ++count) {
     const size_t idx = (start_idx + count) % capacity;
     Key* entry_key = &table[idx].key;
@@ -85,10 +85,14 @@ __device__ bool GetOne(const size_t capacity, TableEntry<Key, Index>* table, Key
   for (size_t count = 0; count < capacity; ++count) {
     const size_t idx = (start_idx + count) % capacity;
     TableEntry<Key, Index> entry = table[idx];
+    Key key_hi = (key | 0x1);
+    Key key_lo = (key & 0x1);
     if (entry.key == 0) { break; }
-    if (entry.key == key) {
-      *out = entry.index;
-      return true;
+    if (entry.key == key_hi) {
+      if ((entry.index & 0x1) == key_lo) {
+        *out = (entry.index >> 1U);
+        return true;
+      }
     }
   }
   *out = 0;
@@ -125,8 +129,8 @@ __global__ void OrdinalEncodeDumpKernel(const TableEntry<Key, Index>* table,
     TableEntry<Key, Index> entry = table[i + start_key_index];
     if (entry.index != 0) {
       uint32_t index = cuda::atomic::Add(n_dumped, static_cast<uint32_t>(1));
-      keys[index] = entry.key;
-      context[index] = entry.index;
+      keys[index] = ((entry.key ^ 0x1) | (entry.index & 0x1));
+      context[index] = (entry.index >> 1U);
     }
   }
 }
