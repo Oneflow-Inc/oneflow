@@ -24,7 +24,7 @@ from test_util import GenArgList
 from oneflow.nn.common_types import _size_1_t, _size_2_t, _size_3_t
 
 
-@autotest(n=1, auto_backward=True, check_graph=False)
+@autotest(n=1, check_graph=False)
 def _test_maxpool1d_functional(test_case, placement, sbp):
     return_indices = random().to(bool).value()
     dim0 = random().to(int).value() * 8
@@ -47,7 +47,7 @@ def _test_maxpool1d_functional(test_case, placement, sbp):
         return y
 
 
-@autotest(n=1, auto_backward=True, check_graph=False)
+@autotest(n=1, check_graph=False)
 def _test_maxpool2d_functional(test_case, placement, sbp):
     return_indices = random().to(bool).value()
     dim0 = random().to(int).value() * 8
@@ -72,7 +72,7 @@ def _test_maxpool2d_functional(test_case, placement, sbp):
         return y
 
 
-@autotest(n=1, auto_backward=True, check_graph=False)
+@autotest(n=1, check_graph=False)
 def _test_maxpool3d_functional(test_case, placement, sbp):
     return_indices = random().to(bool).value()
     dim0 = random().to(int).value() * 8
@@ -102,7 +102,7 @@ def _test_maxpool3d_functional(test_case, placement, sbp):
         return y
 
 
-@autotest(n=1, auto_backward=True, check_graph=False)
+@autotest(n=1, check_graph=False)
 def _test_maxpool1d(test_case, placement, sbp):
     return_indices = random().to(bool).value()
     dim0 = random().to(int).value() * 8
@@ -126,7 +126,7 @@ def _test_maxpool1d(test_case, placement, sbp):
         return y
 
 
-@autotest(n=1, auto_backward=True, check_graph=False)
+@autotest(n=1, check_graph=False)
 def _test_maxpool2d(test_case, placement, sbp):
     return_indices = random().to(bool).value()
     dim0 = random(1, 3).to(int).value() * 8
@@ -150,7 +150,7 @@ def _test_maxpool2d(test_case, placement, sbp):
         return y
 
 
-@autotest(n=1, auto_backward=True, check_graph=False)
+@autotest(n=1, check_graph=False)
 def _test_maxpool3d(test_case, placement, sbp):
     return_indices = random().to(bool).value()
     dim0 = random().to(int).value() * 8
@@ -181,11 +181,13 @@ def _test_maxpool3d(test_case, placement, sbp):
 
 
 def _test_maxpool2d_channel_last(
-    test_case, placement, sbp, shape, kernel_size, stride, padding, dilation, ceil_mode):
+    test_case, placement, sbp, shape, kernel_size, stride, padding, dilation, ceil_mode
+):
     os.environ["ONEFLOW_ENABLE_NHWC"] = "1"
 
-    tensor = random_tensor(len(shape), *shape, requires_grad=False).to_global(placement, sbp)
-    # tensor = random_tensor(len(shape), *shape, requires_grad=False)
+    tensor = random_tensor(len(shape), *shape, requires_grad=False).to_global(
+        placement, sbp
+    )
     # oneflow result
     x1 = tensor.oneflow
     m1 = flow.nn.MaxPool2d(
@@ -198,13 +200,7 @@ def _test_maxpool2d_channel_last(
     y1 = m1(x1)
 
     # pytorch result
-    x2 = tensor.pytorch.permute(0, 3, 1, 2).type(ori_torch.float64)
-
-    np1 = x1.numpy()
-    print("x2 shape = ", x2.shape)
-    np2 = x2.numpy().transpose(0, 2, 3, 1)
-    print("np2 shape = ", np2.shape)
-    print("diff input = ", np.max(np1 - np2))
+    x2 = tensor.pytorch.permute(0, 3, 1, 2).to(placement.type)
     m2 = ori_torch.nn.MaxPool2d(
         kernel_size=kernel_size,
         stride=stride,
@@ -214,16 +210,8 @@ def _test_maxpool2d_channel_last(
     )
     y2 = m2(x2).permute(0, 2, 3, 1)
 
-
-    print("y1 shape  = ", y1.shape)
-    print("y2 shape  = ", y2.shape)
-    y1_numpy = y1.detach().cpu().numpy()
-    y2_numpy = y2.detach().cpu().numpy()
-    print("y1 - y2 max = ", np.max(y1_numpy - y2_numpy))
     test_case.assertTrue(
-        np.allclose(
-            y1.detach().cpu().numpy(), y2.detach().cpu().numpy(), 1e-4, 1e-4
-        )
+        np.allclose(y1.detach().cpu().numpy(), y2.detach().cpu().numpy(), 1e-4, 1e-4)
     )
     os.environ["ONEFLOW_ENABLE_NHWC"] = "0"
 
@@ -245,18 +233,16 @@ class TestMaxPool(flow.unittest.TestCase):
     def test_maxpool2d_channel_last(test_case):
         arg_dict = OrderedDict()
         arg_dict["test_fun"] = [_test_maxpool2d_channel_last]
-        arg_dict["shape"] = [(3, 16, 24, 3), (2, 224, 224, 3)]
-        arg_dict["kernel_size"] = [3, (2, 3), (3, 4)]
-        arg_dict["stride"] = [1, (1, 2), 2]
-        arg_dict["padding"] = [0, (0, 1)]
-        arg_dict["dilation"] = [1, (1, 2), 2]
-        arg_dict["ceil_mode"] = [True, False]
+        arg_dict["shape"] = [(1, 5, 5, 3)]
+        arg_dict["kernel_size"] = [3]
+        arg_dict["stride"] = [1]
+        arg_dict["padding"] = [0]
+        arg_dict["dilation"] = [2]
+        arg_dict["ceil_mode"] = [True]
         for arg in GenArgList(arg_dict):
             for placement in all_placement():
                 for sbp in all_sbp(placement, valid_split_axis=[1, 2]):
-                    arg[0](test_case, placement, flow.sbp.broadcast, *arg[1:])
-                    break
-                break
+                    arg[0](test_case, placement, sbp, *arg[1:])
 
 
 if __name__ == "__main__":
