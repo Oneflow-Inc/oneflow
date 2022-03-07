@@ -136,6 +136,8 @@ from oneflow._C import log
 from oneflow._C import log2
 from oneflow._C import minimum
 from oneflow._C import maximum
+from oneflow._C import max
+from oneflow._C import min
 from oneflow._C import pow
 from oneflow._C import rsqrt
 from oneflow._C import sqrt
@@ -147,7 +149,6 @@ from oneflow._C import softplus
 from oneflow._C import tril
 from oneflow._C import triu
 from oneflow._C import pad
-from oneflow._C import distributed_partial_fc_sample
 from oneflow._C import transpose
 from oneflow._C import relu
 from oneflow._C import softmax
@@ -186,6 +187,7 @@ from oneflow._C import not_equal
 from oneflow._C import not_equal as ne
 from oneflow._C import less as lt
 from oneflow._C import less_equal as le
+from oneflow._oneflow_internal import _set_num_threads as set_num_threads
 
 from . import sbp
 
@@ -306,11 +308,14 @@ from oneflow.framework.tensor import Tensor
 from oneflow.framework.tensor import is_nonzero
 from oneflow.framework.type_tensor import *
 
+from oneflow.framework.tensor import zero_
+
 from oneflow.nn.modules.pooling import (
     adaptive_avg_pool1d,
     adaptive_avg_pool2d,
     adaptive_avg_pool3d,
 )
+from oneflow.nn.modules.einsum import einsum_op as einsum
 from oneflow.nn.modules.is_tensor import is_tensor_op as is_tensor
 from oneflow.nn.modules.arange import arange_op as arange
 from oneflow.nn.modules.linspace import linspace_op as linspace
@@ -324,6 +329,9 @@ from oneflow.nn.modules.empty import empty_op as empty
 from oneflow.nn.modules.dataset import tensor_buffer_to_list_of_tensors
 from oneflow._C import movedim
 from oneflow.nn.modules.expand import expand_op as expand
+from oneflow.nn.modules.distributed_partial_fc_sample import (
+    distributed_partial_fc_sample_op as distributed_partial_fc_sample,
+)
 from oneflow.nn.modules.roll import roll_op as roll
 from oneflow.nn.modules.flip import flip_op as flip
 from oneflow.nn.modules.logical_ops import logical_and_op as logical_and
@@ -342,8 +350,6 @@ from oneflow.nn.modules.random_ops import rand_op as rand
 from oneflow.nn.modules.random_ops import randn_op as randn
 from oneflow.nn.modules.random_ops import randint_op as randint
 from oneflow.nn.modules.random_ops import randperm_op as randperm
-from oneflow.nn.modules.reduce_ops import max_op as max
-from oneflow.nn.modules.reduce_ops import min_op as min
 from oneflow.nn.modules.reduce_ops import sum_op as sum
 from oneflow.nn.modules.reduce_ops import mean_op as mean
 from oneflow.nn.modules.reduce_ops import prod_op as prod
@@ -385,7 +391,6 @@ from oneflow.ops.initializer_util import (
     variance_scaling_initializer,
     zeros_initializer,
 )
-
 
 from . import (
     autograd,
