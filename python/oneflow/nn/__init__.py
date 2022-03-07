@@ -67,6 +67,9 @@ from oneflow.nn.modules.moving_average_min_max_observer import (
 )
 from oneflow.nn.modules.fake_quantization import FakeQuantization
 from oneflow.nn.modules.quantization import Quantization
+from oneflow.nn.modules.distributed_partial_fc_sample import (
+    DistributedPariticalFCSample,
+)
 
 from oneflow.nn.modules.dataset import (
     COCOReader,

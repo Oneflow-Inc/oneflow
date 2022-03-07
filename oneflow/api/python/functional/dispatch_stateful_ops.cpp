@@ -125,6 +125,14 @@ ONEFLOW_FUNCTION_LIBRARY(m) {
                       *op, {}, OpExprInterpContext(attrs, placement, nd_sbp));
                 });
   m.add_functor(
+      "DispatchDistributedPariticalFCSample",
+      [](const std::shared_ptr<OpExpr>& op, const std::shared_ptr<Tensor>& weight,
+         const std::shared_ptr<Tensor>& label, const int64_t& num_sample) -> Maybe<TensorTuple> {
+        MutableAttrMap attrs;
+        JUST(attrs.SetAttr<int64_t>("num_sample", num_sample));
+        return OpInterpUtil::Dispatch<TensorTuple>(*op, {weight, label}, attrs);
+      });
+  m.add_functor(
       "DispatchCropMirrorNormalizeFromUint8",
       [](const std::shared_ptr<OpExpr>& op, const TensorTuple& input, int64_t crop_h,
          int64_t crop_w, float crop_pos_x, float crop_pos_y, const std::vector<float>& mean,
