@@ -43,7 +43,7 @@ class PaddingGradOp : public TrtOpKernel {
     // add identity layer after slice to bypass some internal error,
     // refer to https://github.com/NVIDIA/TensorRT/issues/1821
     auto* identity_layer = ctx->builder()->addIdentity(*(layer->getOutput(0)));
-    std::string name = ctx->op_name() + "_identity";
+    std::string name = ctx->op_name() + ".identity";
     identity_layer->setName(name.c_str());
     ctx->SetOutput("dx_0", identity_layer->getOutput(0));
   }
