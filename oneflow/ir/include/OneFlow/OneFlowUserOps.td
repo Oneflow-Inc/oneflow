@@ -8405,7 +8405,7 @@ def OneFlow_RandomMaskLikeOp : OneFlow_BaseOp<"random_mask_like", [NoSideEffect,
     DefaultValuedAttr<F32Attr, "0.">:$rate,
     DefaultValuedAttr<SI64Attr, "0">:$seed
   );
-    let builders = [
+  let builders = [
     OpBuilder<(ins
       "Value":$like,
       "StringRef":$op_name,

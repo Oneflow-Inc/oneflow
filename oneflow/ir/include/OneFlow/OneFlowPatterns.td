@@ -225,18 +225,18 @@ def FusedBiasAddDropoutPattern : Pattern<
           $dropout_op_rate,
           (GetDefaultSeed)
       ),
-      (GetDropoutValue $_add_to_output), // TODO: write a function like GetFirstValue to check _add_to_output is empty
+      (GetDropoutValue $_add_to_output),
       $bias_add_op_name,
       $bias_add_device_tag,
       $bias_add_device_name,
       $bias_add_scope_symbol_id,
       $bias_add_hierarchy,
       $bias_add_op_axis,
-      $dropout_op_rate // TODO: scale
+      $dropout_op_rate
     ),
     (replaceWithValue $mask)
   ],
-  [] // TODO: check _add_to_output doesn't exist
+  []
 >;
 
 // TODO: use either to merge two patterns
