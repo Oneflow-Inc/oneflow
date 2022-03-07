@@ -271,7 +271,6 @@ class LazyConsistentTensorImpl final : public ConsistentTensorImpl {
 
   // Getters
   bool is_lazy() const override { return true; }
-
   bool is_contiguous() const override {
     // TODO:(zhaoluyang) default return true for now,
     // but should return real status while stride/view mechanism is ready in lazy-consistent mode
@@ -288,12 +287,6 @@ class EagerConsistentTensorImpl final : public ConsistentTensorImpl {
 
   // Getters
   bool is_lazy() const override { return false; }
-  bool is_contiguous() const override {
-    // TODO:(zhaoluyang) default return true for now,
-    // but should return real status while stride/view mechanism is ready in eager-consistent mode
-    return true;
-  }
-
   bool is_contiguous() const override {
     // TODO:(zhaoluyang) default return true for now,
     // but should return real status while stride/view mechanism is ready in eager-consistent mode
