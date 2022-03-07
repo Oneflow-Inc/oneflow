@@ -46,7 +46,7 @@ struct ToContiguousUtil<DeviceType::kCPU, T> : ToContiguousUtilBase {
                     element_count * dsize);
       } else {
         const int64_t ndim = contiguous_dim + 1;
-        int64_t* coordinates = new int64_t[ndim];
+        int64_t coordinates[ndim];
         for (int64_t i = 0; i < element_count; i += block_size) {
           memset(coordinates, 0, sizeof(int64_t) * ndim);
           out_offset = i;
@@ -67,7 +67,6 @@ struct ToContiguousUtil<DeviceType::kCPU, T> : ToContiguousUtilBase {
           std::memcpy(out_dptr + out_offset * dsize, in_dptr + in_offset * dsize,
                       block_size * dsize);
         }
-        delete[] coordinates;
       }
     }
   }
