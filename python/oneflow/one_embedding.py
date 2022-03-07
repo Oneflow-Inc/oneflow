@@ -230,7 +230,7 @@ def make_device_mem_cached_ssd_store_option(
     return option
 
 
-def host_mem_cached_ssd_store_option(
+def make_host_mem_cached_ssd_store_option(
     host_memory_mb, persistent_path, size_factor=1, physical_block_size=512
 ):
     option = {
