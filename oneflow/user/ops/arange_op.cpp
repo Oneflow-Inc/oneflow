@@ -29,7 +29,7 @@ namespace oneflow {
     int64_t integer_start = ctx->Attr<int64_t>("integer_start");
     int64_t integer_limit = ctx->Attr<int64_t>("integer_limit");
     // CHECK when limit > start, delta > 0; limit < start, delta < 0;
-    CHECK_GT_OR_RETURN((integer_limit - integer_start) / integer_delta, static_cast<int64_t>(0))
+    CHECK_GE_OR_RETURN((integer_limit - integer_start) / integer_delta, static_cast<int64_t>(0))
         << "RuntimeError: upper bound and larger bound inconsistent with step sign";
     range_elem_cnt = std::ceil(static_cast<double>(integer_limit - integer_start) / integer_delta);
   } else {

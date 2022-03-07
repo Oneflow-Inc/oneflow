@@ -131,4 +131,16 @@ std::string NdSbpToString(const NdSbp& nd_sbp) {
   return ss.str();
 }
 
+// If an nd sbp can be converted to a 1d sbp.
+bool Is1dSbp(const NdSbp& nd_sbp) {
+  if (nd_sbp.sbp_parallel_size() == 0) { return false; }
+  // Equivalent to
+  // return std::all_of(nd_sbp.sbp_parallel().begin() + 1, nd_sbp.sbp_parallel().end(),
+  //                    [&](const auto& sbp) { return sbp == nd_sbp.sbp_parallel(0); });
+  for (int32_t i = 1; i < nd_sbp.sbp_parallel_size(); i++) {
+    if (nd_sbp.sbp_parallel(0) != nd_sbp.sbp_parallel(i)) { return false; }
+  }
+  return true;
+}
+
 }  // namespace oneflow

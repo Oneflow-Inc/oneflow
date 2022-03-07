@@ -228,6 +228,22 @@
   signature: "Tensor (Tensor dz, Tensor x, Tensor y) => XlogyYGrad"
   bind_python: False
 
+- name: "max"
+  signature: [
+    "Tensor (Tensor input) => Max",
+    "TensorTuple (Tensor input, Int32 dim, Bool keepdim=False) => Max",
+    "Tensor (Tensor input, Tensor other) => Max"
+  ]
+  bind_python: True
+
+- name: "min"
+  signature: [
+    "Tensor (Tensor input) => Min",
+    "TensorTuple (Tensor input, Int32 dim, Bool keepdim=False) => Min",
+    "Tensor (Tensor input, Tensor other) => Min"
+  ]
+  bind_python: True
+
 - name: "reduce_max"
   signature: "Tensor (Tensor x, Int32List axis, Bool keepdims=False) => ReduceMax"
   bind_python: True
@@ -675,22 +691,22 @@
 
 - name: "conv1d"
   signature:
-    "Tensor (Tensor x, Tensor weight, Tensor bias=None, Int32List stride,
-    Int32List padding, Int32List dilation, Int32 groups=1,
+    "Tensor (Tensor x, Tensor weight, Tensor bias=None, Int32List[1] stride,
+    Int32List[1] padding, Int32List[1] dilation, Int32 groups=1,
     String channel_pos) => Conv1d"
   bind_python: True
 
 - name: "conv2d"
   signature:
-    "Tensor (Tensor x, Tensor weight, Tensor bias=None, Int32List stride,
-    Int32List padding, Int32List dilation, Int32 groups=1,
+    "Tensor (Tensor x, Tensor weight, Tensor bias=None, Int32List[2] stride,
+    Int32List[2] padding, Int32List[2] dilation, Int32 groups=1,
     String channel_pos) => Conv2d"
   bind_python: True
 
 - name: "conv3d"
   signature:
-    "Tensor (Tensor x, Tensor weight, Tensor bias=None, Int32List stride,
-    Int32List padding, Int32List dilation, Int32 groups=1,
+    "Tensor (Tensor x, Tensor weight, Tensor bias=None, Int32List[3] stride,
+    Int32List[3] padding, Int32List[3] dilation, Int32 groups=1,
     String channel_pos) => Conv3d"
   bind_python: True
 
@@ -786,6 +802,12 @@
 
 - name: "unsqueeze"
   signature: "Tensor (Tensor input, Int32 dim) => Unsqueeze"
+  bind_python: True
+
+- name: "squeeze"
+  signature: [
+    "Tensor (Tensor x, Int32List[1] dim=None) => Squeeze",
+  ]
   bind_python: True
 
 - name: "exp"
@@ -1111,6 +1133,10 @@
   signature: "Tensor (Tensor x, Shape shape) => Reshape"
   bind_python: True
 
+- name: "view"
+  signature: "Tensor (Tensor x, Shape shape) => View"
+  bind_python: True
+
 - name: "slice_view_1d_contiguous"
   signature: "Tensor (Tensor x, Int64 start, Int64 end) => SliceView1dContiguous"
   bind_python: True
@@ -1141,12 +1167,6 @@
 
 - name: "logical_slice_assign"
   signature: "Void (Tensor ref, Tensor value, Int64List start, Int64List stop, Int64List step) => LogicalSliceAssign"
-  bind_python: True
-
-- name: "squeeze"
-  signature: [
-    "Tensor (Tensor x, Int32List[1] dim=None) => Squeeze",
-  ]
   bind_python: True
 
 - name: "copy"
@@ -1506,7 +1526,7 @@
   bind_python: True
 
 - name: "dropout"
-  signature: "Tensor (Tensor x, Float p=0.5, Bool training=True, Generator generator=None, *, Tensor addend=None) => Dropout"
+  signature: "Tensor (Tensor input, Float p=0.5, Bool training=True, Bool inplace=False, Generator generator=None, *, Tensor addend=None) => Dropout"
   bind_python: True
 
 - name: "dropout_grad"
@@ -1626,11 +1646,11 @@
   bind_python: False
 
 - name: "minimum"
-  signature: "Tensor (Tensor x, Tensor y) => Minimum"
+  signature: "Tensor (Tensor input, Tensor other) => Minimum"
   bind_python: True
 
 - name: "maximum"
-  signature: "Tensor (Tensor x, Tensor y) => Maximum"
+  signature: "Tensor (Tensor input, Tensor other) => Maximum"
   bind_python: True
 
 - name: "elementwise_min_grad"
@@ -1907,12 +1927,6 @@
   signature: "TensorTuple (Tensor log_probs, Tensor input_lengths, Bool merge_repeated=True) => CtcGreedyDecoder"
   bind_python: True
 
-
-- name: "distributed_partial_fc_sample"
-  signature:
-    "TensorTuple (Tensor weight, Tensor label, Int64 num_sample) => DistributedPariticalFCSample"
-  bind_python: True
-
 - name: "distributed_partial_fc_sample_disable_boxing"
   signature:
     "TensorTuple (Tensor sampled_weight_diff, Tensor sampled_label) => DistributedPariticalFCSampleDisableBoxing"
@@ -1988,3 +2002,7 @@
 - name: "cumprod_grad"
   signature: "Tensor (Tensor input, Tensor y, Tensor x, Int64 dim) => CumprodGrad"
   bind_python: False
+
+- name: "einsum"
+  signature: "Tensor (String equation, TensorTuple operands) => EinSum"
+  bind_python: True

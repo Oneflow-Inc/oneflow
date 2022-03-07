@@ -30,6 +30,9 @@ limitations under the License.
 #include "oneflow/core/job/sbp_parallel.h"
 #include "oneflow/core/functional/tensor_processor.h"
 
+#include <sstream>
+#include <bitset>
+
 namespace oneflow {
 namespace one {
 namespace functional {
@@ -316,6 +319,60 @@ class ReduceMinFunctor {
 
  private:
   std::shared_ptr<OpExpr> op_;
+};
+
+class MaxFunctor {
+ public:
+  Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x) const {
+    std::vector<int32_t> axis(x->ndim());
+    std::iota(axis.begin(), axis.end(), 0);
+    return ReduceMax(x, axis, /*keepdims=*/false);
+  }
+};
+
+class Max2Functor {
+ public:
+  Maybe<TensorTuple> operator()(const std::shared_ptr<one::Tensor>& x, const int32_t& dim,
+                                const bool& keepdims) const {
+    auto outputs = std::make_shared<TensorTuple>(2);
+    int32_t axis = dim;
+    if (axis < -x->ndim() || axis >= x->ndim()) {
+      return Error::IndexError() << "Dimension out of range (expected to be in range of ["
+                                 << -x->ndim() << ", " << x->ndim() - 1 << "], but got " << axis
+                                 << ")";
+    }
+    if (axis < 0) { axis += x->ndim(); }
+    (*outputs)[0] = JUST(ReduceMax(x, {axis}, keepdims));
+    (*outputs)[1] = JUST(ArgMax(x, dim, keepdims, NullOpt));
+    return outputs;
+  }
+};
+
+class MinFunctor {
+ public:
+  Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x) const {
+    std::vector<int32_t> axis(x->ndim());
+    std::iota(axis.begin(), axis.end(), 0);
+    return ReduceMin(x, axis, /*keepdims=*/false);
+  }
+};
+
+class Min2Functor {
+ public:
+  Maybe<TensorTuple> operator()(const std::shared_ptr<one::Tensor>& x, const int32_t& dim,
+                                const bool& keepdims) const {
+    auto outputs = std::make_shared<TensorTuple>(2);
+    int32_t axis = dim;
+    if (axis < -x->ndim() || axis >= x->ndim()) {
+      return Error::IndexError() << "Dimension out of range (expected to be in range of ["
+                                 << -x->ndim() << ", " << x->ndim() - 1 << "], but got " << axis
+                                 << ")";
+    }
+    if (axis < 0) { axis += x->ndim(); }
+    (*outputs)[0] = JUST(ReduceMin(x, {axis}, keepdims));
+    (*outputs)[1] = JUST(ArgMin(x, dim, keepdims, NullOpt));
+    return outputs;
+  }
 };
 
 class ReduceSumFunctor {
@@ -2104,6 +2161,576 @@ class CumProdGradFunctor : public CumGradBaseFunctor {
   }
 };
 
+// NOTE(Liang Depeng): The implementation of sumproduct_pair are mostly taken from pytorch.
+//                     For more details pls refer to:
+//                     https://github.com/pytorch/pytorch/blob/master/aten/src/ATen/native/Linear.cpp#L65
+
+// sumproduct_pair computes `(left*right).sum(sumdims)` by means of permutation and
+// batch matrix multiplication
+// its main purpose is to provide a pairwise reduction for einsum
+static Maybe<one::Tensor> sumproduct_pair(const std::shared_ptr<one::Tensor>& left_,
+                                          const std::shared_ptr<one::Tensor>& right_,
+                                          const std::vector<int32_t>& sum_dims_, bool keepdim) {
+  // assumes that tensors have been pre-unsqueezed (so that all dimensions match - after
+  // broadcasting) but makes no other assumptions on the order of dimensions
+  CHECK_OR_RETURN(left_->ndim() == right_->ndim()) << "number of dimensions must match";
+  if (sum_dims_.size() == 0) return functional::Mul(left_, right_);
+  int64_t dim = left_->ndim();
+
+  constexpr size_t dim_bitset_size = 64;
+  CHECK_OR_RETURN(dim <= (int64_t)dim_bitset_size)
+      << "only tensors with up to " << dim_bitset_size << " dims are supported";
+  std::bitset<dim_bitset_size> sum_dims;
+  for (int i = 0; i < sum_dims_.size(); ++i) {
+    size_t d = sum_dims_[i];
+    CHECK_OR_RETURN(!sum_dims[d]) << "dim " << d << " appears multiple times in the list of dims";
+    sum_dims[d] = true;
+  }
+
+  // dimensions that will be part of the output (i.e. not summed over) in three vectors
+  // dims in lro appear in left, right and output, similarly lo: left and output, ro: right and
+  // output also the sizes are kept track of for reshaping
+  std::vector<int32_t> lro, lo, ro;
+  int32_t lro_size = 1, lo_size = 1, ro_size = 1, sum_size = 1;
+  std::shared_ptr<one::Tensor> left = left_;
+  std::shared_ptr<one::Tensor> right = right_;
+  for (int i = 0; i < dim; ++i) {
+    auto sl = left->shape()->At(i) > 1;
+    auto sr = right->shape()->At(i) > 1;
+    if (sum_dims[i]) {  // first dimensions that will be summed over after multiplication
+      if (sl && sr) {   // dimensions nontrivially in both left and right must be of the same size
+        CHECK_OR_RETURN(left->shape()->At(i) == right->shape()->At(i))
+            << "non-broadcast dimensions must match";
+        sum_size *= left->shape()->At(i);
+      } else if (sl) {  // if it is only in one of left and right, we can sum right away
+        left = JUST(functional::ReduceSum(left, {i}, true));
+      } else if (sr) {
+        right = JUST(functional::ReduceSum(right, {i}, true));
+      }
+    } else if (sl && sr) {  // now deal with dimensions  dimensions that will be in the output
+      // dimensions nontrivially in both left and right must be of the same size
+      CHECK_OR_RETURN(left->shape()->At(i) == right->shape()->At(i))
+          << "non-broadcast dimensions must match";
+      lro.push_back(i);
+      lro_size *= left->shape()->At(i);
+    } else if (sl) {  // keep track of dimensions appearing only once
+      lo.push_back(i);
+      lo_size *= left->shape()->At(i);
+    } else {
+      ro.push_back(i);
+      ro_size *= right->shape()->At(i);
+    }
+  }
+
+  // we now work with the following permutations / shapes.
+  // the pipeline is permute inputs -> reshape inputs -> batch matrix mul -> reshape(view) output ->
+  // permute output output: "lro, lo, 1-for-summed-dims, ro" with orgiginal shape dimensions left:
+  // "lro, lo, summed" permuted with lpermutation and the three flattened right:  "lro, summed, ro"
+  // permuted with rpermutation and the three flattened then the permuted output is a view of
+  // bmm(left, right) finally, opermutation reverts the permutation to the original order of
+  // dimensions
+  std::vector<int32_t> out_size;
+  for (auto& d : lro) out_size.push_back(left->shape()->At(d));
+  for (auto& d : lo) out_size.push_back(left->shape()->At(d));
+  for (auto& d : sum_dims_) {
+    out_size.push_back(1);
+    (void)(d);
+  };  // avoid warining about not using d
+  for (auto& d : ro) out_size.push_back(right->shape()->At(d));
+
+  std::vector<int32_t> lpermutation(lro);
+  lpermutation.insert(lpermutation.end(), lo.begin(), lo.end());
+  lpermutation.insert(lpermutation.end(), sum_dims_.begin(), sum_dims_.end());
+  lpermutation.insert(lpermutation.end(), ro.begin(), ro.end());
+
+  std::vector<int32_t> rpermutation(lro);
+  rpermutation.insert(rpermutation.end(), sum_dims_.begin(), sum_dims_.end());
+  rpermutation.insert(rpermutation.end(), ro.begin(), ro.end());
+  rpermutation.insert(rpermutation.end(), lo.begin(), lo.end());
+
+  std::vector<int32_t> opermutation(lro.size() + lo.size() + sum_dims_.size() + ro.size(), -1);
+  {
+    int32_t i = 0;
+
+    for (auto it = lro.cbegin(); it != lro.cend(); i++, it++) { opermutation[*it] = i; }
+    for (auto it = lo.cbegin(); it != lo.cend(); i++, it++) { opermutation[*it] = i; }
+    for (auto it = sum_dims_.cbegin(); it != sum_dims_.cend(); i++, it++) { opermutation[*it] = i; }
+    for (auto it = ro.cbegin(); it != ro.cend(); i++, it++) { opermutation[*it] = i; }
+  }
+
+  // now we can execute the operations above
+  left = JUST(functional::Permute(left, lpermutation));
+  DimVector lsv(3);
+  lsv[0] = lro_size;
+  lsv[1] = lo_size;
+  lsv[2] = sum_size;
+  const Shape ls(lsv);
+
+  left = JUST(functional::Reshape(left, ls));
+
+  right = JUST(functional::Permute(right, rpermutation));
+  DimVector rsv(3);
+  rsv[0] = lro_size;
+  rsv[1] = sum_size;
+  rsv[2] = ro_size;
+  const Shape rs(rsv);
+  right = JUST(functional::Reshape(right, rs));
+
+  std::shared_ptr<one::Tensor> result =
+      JUST(functional::BatchMatMul(left, right, false, false, 1.0));
+  DimVector osv(out_size.size());
+  for (int i = 0; i < out_size.size(); ++i) { osv[i] = out_size[i]; }
+  const Shape os(osv);
+  // TODO(Liang Depeng): change reshape to veiw
+  result = JUST(functional::Reshape(result, os));
+  result = JUST(functional::Permute(result, opermutation));
+
+  // finally squeeze summed dimensions if desired
+  if (!keepdim) {
+    auto sizes = result->shape()->dim_vec();
+    for (int i = dim - 1; i >= 0; i--) {
+      if (sum_dims[i]) { sizes.erase(sizes.begin() + i); }
+    }
+    // TODO(Liang Depeng): change reshape to veiw
+    const Shape s(sizes);
+    result = JUST(functional::Reshape(result, s));
+  }
+  return result;
+}
+
+namespace {
+
+bool einsum_check_label(unsigned char label) { return std::isalpha(label); }
+
+uint8_t einsum_label_to_index(unsigned char label) {
+  constexpr uint8_t NUM_OF_LETTERS = 'z' - 'a' + 1;
+  return std::isupper(label) ? label - 'A' : NUM_OF_LETTERS + (label - 'a');
+}
+
+unsigned char einsum_index_to_label(uint8_t index) {
+  constexpr uint8_t NUM_OF_LETTERS = 'z' - 'a' + 1;
+  return index < NUM_OF_LETTERS ? index + 'A' : index - NUM_OF_LETTERS + 'a';
+}
+
+}  // namespace
+
+// NOTE(Liang Depeng): The implementation of EinSumFunctor are mostly taken from pytorch.
+//                     For more details pls refer to:
+//                     https://github.com/pytorch/pytorch/blob/master/aten/src/ATen/native/Linear.cpp#L190
+
+// There are roughly three parts to compute einsum:
+// 1. Parse equation to extract the labels for each input operand and output
+// 2. Unsqueeze missing dimensions from input operands and permute to align them
+// 3. Compute result by multiplying input operands and summing contraction
+//    dimensions We do the last part by reducing to batch matmul.
+class EinSumFunctor {
+ public:
+  EinSumFunctor() {}
+  Maybe<Tensor> operator()(const std::string& equation, const one::TensorTuple& operands) const {
+    CHECK_OR_RETURN(operands.size() > 0) << "einsum(): must provide at least one input tensor.";
+    // NOTE(Liang Depeng): In order to better understand what einsum is doing,
+    //                     the following comments will give a detailed explaination of
+    //                     how the operands of equation "ik,jkl,il->ij" (bilinear)
+    //                     are transformed during the computation.
+    //                     Assume that the size of each operands "ik", "jkl" and "il" are
+    //                     [2, 3], [4, 3, 5], [2, 5] respectively.
+
+    // Code used to identify ELLIPSIS ("...")
+    constexpr uint8_t ELLIPSIS = 52;
+
+    // Find arrow (->) to split equation into lhs (input equations) and rhs (output equation)
+    const auto arrow_pos = equation.find("->");
+    const auto lhs = equation.substr(0, arrow_pos);
+
+    const auto num_ops = operands.size();
+
+    // Convert each input equations into indexes in range [0, 52] and store
+    // them in op_labels for each operand along with ELLIPSIS if present.
+    std::vector<std::vector<uint8_t>> op_labels(num_ops);
+    // NOTE(Liang Depeng): Continue explaining the equation "ik,jkl,il->ij".
+    //                     After running the following for loop, `op_labels` contains 3 vectors.
+    //                     The contents of each vectors are:
+    //                     op_labels[0]: [34('i'-'a'+26), 36('k'-'a'+26)]
+    //                     op_labels[1]: [35('j'-'a'+26), 36('k'-'a'+26), 37('l'-'a'+26)]
+    //                     op_labels[2]: [34('i'-'a'+26), 37('l'-'a'+26)]
+    bool found_ell = false;
+    std::size_t curr_op = 0;
+    for (auto i = decltype(lhs.length()){0}; i < lhs.length(); ++i) {
+      const unsigned char label = lhs[i];
+      switch (label) {
+        case ' ':
+          // Ignore spaces
+          break;
+
+        case '.':
+          // process ellipsis
+          CHECK_OR_RETURN(
+              // Only one ellipsis per operand can be given
+              !found_ell)
+              << "einsum(): found \'.\' for operand " << curr_op
+              << " for which an ellipsis was already found";
+          CHECK_OR_RETURN(
+              // Ensure it's a valid ellipsis
+              i + 2 < lhs.length() && lhs[++i] == '.' && lhs[++i] == '.')
+              << "einsum(): found \'.\' for operand " << curr_op
+              << " that is not part of any ellipsis";
+          op_labels[curr_op].push_back(ELLIPSIS);
+          found_ell = true;
+          break;
+
+        case ',':
+          // Move onto next operand
+          ++curr_op;
+          CHECK_OR_RETURN(curr_op < num_ops)
+              << "einsum(): fewer operands were provided than specified in the equation";
+          found_ell = false;
+          break;
+
+        default:
+          // Parse label
+          CHECK_OR_RETURN(einsum_check_label(label))
+              << "einsum(): invalid subscript given at index  " << i
+              << " in the equation string, subscripts must be in [a-zA-Z]";
+          op_labels[curr_op].push_back(einsum_label_to_index(label));
+      }
+    }
+
+    CHECK_OR_RETURN(curr_op == num_ops - 1)
+        << "einsum(): more operands were provided than specified in the equation";
+
+    // Labels must be within [a-zA-Z].
+    constexpr uint8_t TOTAL_LABELS = 52;
+    std::vector<int32_t> label_count(TOTAL_LABELS, 0);
+
+    // The maximum number of dimensions covered by any ellipsis, needed when
+    // unsqueezing missing dimensions from operands to permute and broadcast
+    int32_t ell_num_dim = 0;
+    // NOTE(Liang Depeng): Continue explaining the equation "ik,jkl,il->ij".
+    //                     After running the following for loop,
+    //                     the none zero indexes of `label_count` are:
+    //                     op_labels[34] = 2
+    //                     op_labels[35] = 1
+    //                     op_labels[36] = 2
+    //                     op_labels[37] = 2
+    //                     `ell_num_dim` equals to 0 because no ellipsis in equation
+
+    // Compute label frequency and number of dimensions covered by ellipsis
+    // We do this after parsing labels to make it more readable and simpler
+    // to compute the number of dimensions covered by ellipsis.
+    for (auto i = 0; i < num_ops; i++) {
+      const auto operand = operands[i];
+      const auto labels = op_labels[i];
+      const int ndims = operand->ndim();
+      int32_t nlabels = static_cast<int32_t>(labels.size());
+      bool has_ellipsis = false;
+
+      for (const auto& label : labels) {
+        if (label == ELLIPSIS) {
+          --nlabels;
+          has_ellipsis = true;
+          ell_num_dim = std::max(ell_num_dim, ndims - nlabels);
+        } else {
+          ++label_count[label];
+        }
+      }
+      if (has_ellipsis) {
+        CHECK_OR_RETURN(nlabels <= ndims)
+            << "einsum() the number of subscripts in the equation (" << nlabels
+            << ") is more than the number of dimensions (" << ndims << ") for operand " << i;
+      } else {
+        CHECK_OR_RETURN(nlabels == ndims)
+            << "einsum(): the number of subscripts in the equation (" << nlabels
+            << ") does not match the number of dimensions (" << ndims << ") for operand " << i
+            << " and no ellipsis was given";
+      }
+    }
+
+    // We want to align the dimensions of every input tensor to have
+    // shape out_dims + sum_dims. For this, we create a mapping of label
+    // to index into the permuted shape.
+    std::vector<int32_t> label_perm_index(TOTAL_LABELS, -1);
+
+    // Current index in the permuted shape
+    int32_t perm_index = 0;
+
+    // Start index of ellipsis dimensions in the permuted shape
+    int32_t ell_index = 0;
+    found_ell = false;
+
+    // NOTE(Liang Depeng): Continue explaining the equation "ik,jkl,il->ij".
+    //                     After running the following if-else code block,
+    //                     the none -1 indexes of `label_perm_index` are:
+    //                     label_perm_index[34] = 0
+    //                     label_perm_index[35] = 1
+    //                     `perm_index` equals to 2
+    //                     `ell_index` equals to 0 because no ellipsis in equation
+    //                     `found_ell` equals to false because no ellipsis in equation
+    if (arrow_pos == std::string::npos) {
+      // Implicit output is ellipsis (...) + labels seen only once
+      perm_index = ell_num_dim;
+      found_ell = true;
+      for (auto label = 0; label < TOTAL_LABELS; label++) {
+        if (label_count[label] == 1) { label_perm_index[label] = perm_index++; }
+      }
+    } else {
+      // Parse explicit output
+      const auto rhs = equation.substr(arrow_pos + 2);
+      for (auto i = decltype(rhs.length()){0}; i < rhs.length(); ++i) {
+        const unsigned char label = rhs[i];
+        switch (label) {
+          case ' ':
+            // Ignore spaces
+            break;
+
+          case '.':
+            // process ellipsis
+            CHECK_OR_RETURN(
+                // There can only be one ellipsis in the output
+                !found_ell)
+                << "einsum(): found \'.\' for output but an ellipsis (...) was already found";
+            CHECK_OR_RETURN(
+                // Ensure ellipsis is correct
+                i + 2 < rhs.length() && rhs[++i] == '.' && rhs[++i] == '.')
+            "einsum(): found \'.\' for output that is not part of any ellipsis (...)";
+            ell_index = perm_index;
+            perm_index += ell_num_dim;
+            found_ell = true;
+            break;
+
+          default:
+            CHECK_OR_RETURN(einsum_check_label(label))
+                << "einsum(): invalid subscript given at index " << lhs.size() + 2 + i
+                << " in the equation string, subscripts must be in [a-zA-Z]";
+            const auto index = einsum_label_to_index(label);
+            CHECK_OR_RETURN(
+                // Ensure label appeared at least once for some input operand
+                // and at most once for the output
+                label_count[index] > 0 && label_perm_index[index] == -1)
+                << "einsum(): output subscript " << label
+                << (label_perm_index[index] > -1
+                        ? " appears more than once in the output"
+                        : " does not appear in the equation for any input operand");
+            label_perm_index[index] = perm_index++;
+        }
+      }
+    }
+
+    // Save output size before adding contraction dims (dims to sum out)
+    const int32_t out_size = perm_index;
+
+    // If ellipsis is not part of the output, add to contraction dimensions
+    if (!found_ell) {
+      ell_index = perm_index;
+      perm_index += ell_num_dim;
+    }
+
+    // NOTE(Liang Depeng): Continue explaining the equation "ik,jkl,il->ij".
+    //                     After running the following foor loop,
+    //                     the none -1 indexes of `label_perm_index` are:
+    //                     label_perm_index[34] = 0 ('i')
+    //                     label_perm_index[35] = 1 ('j')
+    //                     label_perm_index[36] = 2 ('k')
+    //                     label_perm_index[37] = 3 ('l')
+    //                     `out_size` equals to 2
+    //                     `perm_index` equals to 4
+
+    // Add contraction labels (labels not present in output)
+    for (auto label = 0; label < TOTAL_LABELS; label++) {
+      if (label_count[label] > 0 && label_perm_index[label] == -1) {
+        label_perm_index[label] = perm_index++;
+      }
+    }
+
+    // Here we unsqueeze missing dimensions to make all operands have the same
+    // number of dimensions. We take diagonals for repeated labels within the
+    // same operand. Finally we permute the operands to align dimensions as
+    // per the perm_out_index we computed above.
+    TensorTuple permuted_operands;
+    for (auto i = 0; i < num_ops; i++) {
+      std::vector<int32_t> perm_shape(perm_index, -1);
+      std::vector<int32_t> label_dim(TOTAL_LABELS, -1);
+      std::shared_ptr<Tensor> operand = operands[i];
+      const auto labels = op_labels[i];
+      const auto original_sizes = operand->shape()->dim_vec();
+
+      int32_t j = 0;
+      for (const auto& label : labels) {
+        if (label == ELLIPSIS) {
+          // Add missing dimensions covered by the ellipsis
+          const auto num_missing_dim = ell_num_dim - (original_sizes.size() - labels.size() + 1);
+          for (auto k = 0; k < num_missing_dim; k++) {
+            operand = JUST(functional::Unsqueeze(operand, j));
+          }
+          for (auto k = 0; k < ell_num_dim; k++) { perm_shape[ell_index + k] = j++; }
+        } else if (label_dim[label] != -1) {
+          // Repeated label, take diagonal
+          const auto dim = label_dim[label];
+          CHECK_OR_RETURN(operand->dim(j) == operand->dim(dim))
+              << "einsum() subscript " << einsum_index_to_label(label)
+              << " is repeated for operand " << i << " but the sizes don't match, "
+              << operand->dim(j) << " != " << operand->dim(dim);
+
+          operand = JUST(functional::Diagonal(operand, 0, dim, j));
+          operand = JUST(functional::MovedimInt(operand, -1, dim));
+        } else {
+          // Lookup output index for label
+          label_dim[label] = j;
+          perm_shape[label_perm_index[label]] = j++;
+        }
+      }
+
+      // Add dimensions for missing labels
+      for (int32_t& index : perm_shape) {
+        if (index == -1) {
+          operand = JUST(functional::Unsqueeze(operand, -1));
+          index = j++;
+        }
+      }
+      permuted_operands.emplace_back(JUST(functional::Permute(operand, perm_shape)));
+
+      // NOTE(Liang Depeng): Continue explaining the equation "ik,jkl,il->ij".
+      //                     What is going on within this foor loop?
+      //                     For operand "ik" size = [2, 3]:
+      //                        `perm_shape` equals to [0, 2, 1, 3]
+      //                        first unsqueeze "ik" to 4 dim, from [2, 3] to [2, 3, 1, 1]
+      //                        then permute with `perm_shape`, from [2, 3, 1, 1] to [2, 1, 3, 1]
+      //
+      //                     For operand "jkl" size = [4, 3, 5]:
+      //                        `perm_shape` equals to [3, 0, 1, 2]
+      //                        first unsqueeze "jkl" to 4 dim, from [4, 3, 5] to [4, 3, 5, 1]
+      //                        then permute with `perm_shape`, from [4, 3, 5, 1] to [1, 4, 3, 5]
+      //
+      //                     For operand "il" size = [2, 5]:
+      //                        `perm_shape` equals to [0, 2, 3, 1]
+      //                        first unsqueeze "ik" to 4 dim, from [2, 5] to [2, 5, 1, 1]
+      //                        then permute with `perm_shape`, from [2, 5, 1, 1] to [2, 1, 1, 5]
+    }
+
+    // Check if operands broadcast and keep track of last operand with
+    // dimension size != 1 for optimizing reductions
+    std::vector<std::size_t> dim_last_op(perm_index, 0);
+    bool has_zero_size_dim = false;
+    // NOTE(Liang Depeng): Continue explaining the equation "ik,jkl,il->ij".
+    //                     After running the following foor loop,
+    //                     The contents of `dim_last_op` are:
+    //                     dim_last_op[0] = 2
+    //                     dim_last_op[1] = 1
+    //                     dim_last_op[2] = 1
+    //                     dim_last_op[3] = 2
+    //                     `has_zero_size_dim` equals to false
+    for (auto dim = 0; dim < perm_index; dim++) {
+      auto broadcast_size = permuted_operands[0]->dim(dim);
+      for (auto i = 1; i < num_ops; i++) {
+        const auto dim_size = permuted_operands[i]->dim(dim);
+        if (broadcast_size != dim_size && broadcast_size != 1 && dim_size != 1) {
+          std::ostringstream msg;
+          msg << "einsum(): operands do not broadcast with remapped shapes [original->remapped]:";
+          for (auto j = 0; j < num_ops; j++) {
+            msg << " " << operands[j]->shape()->DebugStr() << "->"
+                << permuted_operands[j]->shape()->DebugStr();
+          }
+          CHECK_OR_RETURN(false) << msg.str();
+        }
+        if (dim_size != 1) {
+          broadcast_size = dim_size;
+          dim_last_op[dim] = i;
+        }
+      }
+      has_zero_size_dim |= broadcast_size == 0;
+    }
+
+    // Compute result
+    std::shared_ptr<Tensor> result = permuted_operands[0];
+
+    // Fast path for when an operand has zero sized dim
+    if (has_zero_size_dim) {
+      DimVector out_shape(out_size);
+      for (auto i = 0; i < out_size; i++) {
+        out_shape[i] = permuted_operands[dim_last_op[i]]->dim(i);
+      }
+
+      const Shape shape(out_shape);
+      return functional::Constant(shape, Scalar(0), *permuted_operands[0]->dtype(), NullOpt);
+    }
+
+    // Sum out or squeeze dimensions that are size 1 for all later operands
+    int dim = out_size;
+    for (int i = dim; i < perm_index; ++i, ++dim) {
+      if (dim_last_op[i] == 0) {
+        if (result->dim(dim) == 1) {
+          std::vector<int32_t> dims = {dim--};
+          result = JUST(functional::Squeeze(result, dims));
+        } else {
+          result = JUST(functional::ReduceSum(result, {dim--}, false));
+        }
+      }
+    }
+
+    for (auto i = 1; i < num_ops; i++) {
+      auto operand = permuted_operands[i];
+      std::vector<int32_t> sum_dims;
+
+      // Sum out or squeeze dimensions that are size 1 for all later operands
+      dim = out_size;
+      for (int j = dim; j < perm_index; ++j, ++dim) {
+        if (dim_last_op[j] < i) {
+          std::vector<int32_t> dims = {dim--};
+          operand = JUST(functional::Squeeze(operand, dims));
+        } else if (dim_last_op[j] == i) {
+          if (result->dim(dim) == 1) {
+            operand = JUST(functional::ReduceSum(operand, {dim}, false));
+            std::vector<int32_t> dims = {dim--};
+            result = JUST(functional::Squeeze(result, dims));
+          } else {
+            sum_dims.push_back(dim);
+          }
+        }
+      }
+
+      // Multiply tensors and sum out dimensions in sum_dims
+      if (sum_dims.empty()) {
+        result = JUST(functional::Mul(result, operand));
+      } else if (sum_dims.size() == result->shape()->NumAxes()) {
+        auto flatten_result = JUST(functional::Flatten(result, 0, -1));
+        auto flatten_operand = JUST(functional::Flatten(operand, 0, -1));
+        result = JUST(functional::Dot(flatten_result, flatten_operand));
+      } else {
+        result = JUST(sumproduct_pair(result, operand, sum_dims, false));
+      }
+
+      // NOTE(Liang Depeng): Continue explaining the equation "ik,jkl,il->ij".
+      //                     What is going on within this foor loop?
+      //                     For iter i = 1:
+      //                        result = permuted_operands[0], size = [2, 1, 3, 1]
+      //                        operand = permuted_operands[1], size = [1, 4, 3, 5]
+      //                        sum_dims = [2, ]
+      //                        what happened in `sumproduct_pair` ?
+      //                            result [2, 1, 3, 1] will be permuted to [2, 3, 1, 1] then
+      //                                reshaped to [1, 2, 3]
+      //                            operand [1, 4, 3, 5] will be permuted to [3, 4, 5, 1] then
+      //                                reshape to [1, 3, 4 * 5]
+      //                            perform batch_matmul(result, operand) => [1, 2, 4 * 5]
+      //                            then reshape to [2, 1, 4, 5] then permute to
+      //                            [2, 4, 1, 5], at last reshape to [2, 4, 5]
+      //
+      //                     For iter i = 2:
+      //                        result, size = [2, 4, 5]
+      //                        operand = permuted_operands[2], size = [2, 1, 1, 5]
+      //                        squeeze operand from [2, 1, 1, 5] to [2, 1, 5]
+      //                        sum_dims = [2,]
+      //                        what happened in `sumproduct_pair` ?
+      //                            result [2, 4, 5] will be permuted to [2, 4, 5] then
+      //                                reshaped to [2, 4, 5]
+      //                            operand [2, 1, 5] will be permuted to [2, 5, 1] then
+      //                                reshape to [2, 5, 1]
+      //                            perform batch_matmul(result, operand)=>[2, 4, 1]
+      //                            then reshape to [2, 4, 1] then permute to [2, 4, 1]
+      //                            at last reshape to [2, 4]
+    }
+    return result;
+  }
+};
+
 }  // namespace impl
 
 using namespace impl;
@@ -2119,8 +2746,10 @@ ONEFLOW_FUNCTION_LIBRARY(m) {
   m.add_functor<ScalarPowFunctor>("ScalarPow");
   m.add_functor<ScalarPowGradFunctor>("ScalarPowGrad");
   m.add_functor<ReduceMaxFunctor>("ReduceMax");
+  m.add_functor<MaxFunctor, Max2Functor>("Max");
   m.add_functor<ReduceMeanFunctor>("ReduceMean");
   m.add_functor<ReduceMinFunctor>("ReduceMin");
+  m.add_functor<MinFunctor, Min2Functor>("Min");
   m.add_functor<ReduceSumFunctor>("ReduceSum");
   m.add_functor<ReduceAllFunctor>("ReduceAll");
   m.add_functor<ReduceAnyFunctor>("ReduceAny");
@@ -2155,7 +2784,9 @@ ONEFLOW_FUNCTION_LIBRARY(m) {
   m.add_functor<SelectFunctor>("Select");
   m.add_functor<SelectTopNFunctor>("SelectTopN");
   m.add_functor<MinimumFunctor>("Minimum");
+  m.add_functor<MinimumFunctor>("Min");
   m.add_functor<MaximumFunctor>("Maximum");
+  m.add_functor<MaximumFunctor>("Max");
   m.add_functor<ScalarFModFunctor>("ScalarFMod");
   m.add_functor<ScalarFloorDivFunctor>("ScalarFloorDiv");
   m.add_functor<ScalarLogicalEqualFunctor, ScalarLogicalEqual2Functor>("ScalarLogicalEqual");
@@ -2187,6 +2818,7 @@ ONEFLOW_FUNCTION_LIBRARY(m) {
   m.add_functor<CumsumGradFunctor>("CumsumGrad");
   m.add_functor<CumProdFunctor>("Cumprod");
   m.add_functor<CumProdGradFunctor>("CumprodGrad");
+  m.add_functor<EinSumFunctor>("EinSum");
 };
 
 }  // namespace functional
