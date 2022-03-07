@@ -236,6 +236,10 @@ IntegerAttr getIntegerAttr(::mlir::PatternRewriter& rewriter, int32_t values) {
   return rewriter.getI32IntegerAttr(values);
 }
 
+IntegerAttr getUI32IntegerAttr(::mlir::PatternRewriter& rewriter, uint32_t values) {
+  return rewriter.getUI32IntegerAttr(values);
+}
+
 struct FuseBiasAddDropoutPattern : public OpRewritePattern<DropoutOp> {
   explicit FuseBiasAddDropoutPattern(MLIRContext* context)
       : OpRewritePattern<DropoutOp>(context, /*benefit=*/1) {}
@@ -247,8 +251,9 @@ struct FuseBiasAddDropoutPattern : public OpRewritePattern<DropoutOp> {
     const auto gen = CHECK_JUST(::oneflow::one::DefaultAutoGenerator());
     SmallVector<Value, 4> random_mask_like_operands;
     NamedAttrList random_mask_like_op_attributes = biasAddInputOp->getAttrs();
-    random_mask_like_op_attributes.append((llvm::StringRef("rate"), op.rateAttr()));
-    random_mask_like_op_attributes.append((llvm::StringRef("seed", gen->current_seed())));
+    random_mask_like_op_attributes.append(llvm::StringRef("rate"), op.rateAttr());
+    random_mask_like_op_attributes.append(llvm::StringRef("seed"),
+                                          getUI32IntegerAttr(rewriter, gen->current_seed()));
     random_mask_like_op_attributes.erase(biasAddInputOp.axisAttrName());
     random_mask_like_operands.push_back(biasAddInputOp.a());
     auto random_mask_like_res = rewriter
@@ -256,15 +261,19 @@ struct FuseBiasAddDropoutPattern : public OpRewritePattern<DropoutOp> {
                                         op->getLoc(), op->getResultTypes(),
                                         random_mask_like_operands, random_mask_like_op_attributes)
                                     ->getResults();
-    // fused_bias_add_mask_scale_op
+    // // fused_bias_add_mask_scale_op
     NamedAttrList fused_bias_add_dropout_attributes = op->getAttrs();
     fused_bias_add_dropout_attributes.set(llvm::StringRef("axis"), biasAddInputOp.axisAttr());
-    fused_bias_add_dropout_attributes.append((llvm::StringRef("scale"), op.rateAttr()));
+    fused_bias_add_dropout_attributes.append(llvm::StringRef("scale"), op.rateAttr());
     fused_bias_add_dropout_attributes.erase(op.rateAttrName());
+    SmallVector<Value, 4> fused_bias_add_dropout_operands;
+    fused_bias_add_dropout_operands.push_back(biasAddInputOp.a());
+    fused_bias_add_dropout_operands.push_back(biasAddInputOp.b());
+    fused_bias_add_dropout_operands.push_back(random_mask_like_res.front());
     rewriter.replaceOpWithNewOp<oneflow::FusedBiasAddMaskScaleOp>(
-        op, op.out().getType(), biasAddInputOp.a(), biasAddInputOp.b(),
-        random_mask_like_res.front(), fused_bias_add_dropout_attributes);
-    rewriter.eraseOp(biasAddInputOp);
+        op, op->getResultTypes(), fused_bias_add_dropout_operands,
+        fused_bias_add_dropout_attributes);
+    // rewriter.eraseOp(biasAddInputOp);
     return success();
   }
 };
