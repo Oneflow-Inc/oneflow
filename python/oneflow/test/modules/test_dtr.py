@@ -26,12 +26,20 @@ import oneflow.unittest
 
 # @unittest.skipUnless(os.getenv("OF_DTR"), "only test while DTR is on")
 class TestDTR(flow.unittest.TestCase):
-    flow.enable_dtr(True, "20KB", 0, "eq")
+    def setUp(self):
+        super().setUp()
+        # wait for all previous operations to finish and 
+        # check the memory is empty at the beginning of every test case
+        flow._oneflow_internal.eager.multi_client.Sync()
+        self.assertEqual(flow._oneflow_internal.dtr.allocated_memory(), 0)
 
     def test_dtr_enabled(test_case):
+        flow.enable_dtr(True, "20KB", 0, "eq")
         test_case.assertTrue(flow.check_dtr())
 
-    def test_dtr_work_on_simple_case(test_case):
+    def test_dtr_work_on_simple_case_1(test_case):
+        flow.enable_dtr(True, "20KB", 0, "eq")
+
         x1 = flow.ones(1024).to('cuda') # x1 = 1, total memory: 1024 * 4 = 4096 bytes = 4KB
         x2 = x1 + 3                     # x2 = 4, total memory: 8KB
         x3 = x1 * x2                    # x3 = 4, total memory: 12KB
@@ -45,11 +53,35 @@ class TestDTR(flow.unittest.TestCase):
         # check if there are 2 tensors are evicted
         not_in_memory_num = sum(0 if x._is_in_memory else 1 for x in [x1, x2, x3, x4, x5, x6, x7])
         test_case.assertEqual(not_in_memory_num, 2)
+        # check if the memory is full
+        test_case.assertEqual(flow._oneflow_internal.dtr.allocated_memory(), 20 * 1024)
 
         # trigger recomputation and check the result
         y = x1 + x2 + x3 + x4 + x5 + x6 + x7
 
         test_case.assertTrue(np.array_equal(y.numpy(), 25 * np.ones(y.shape)))
+
+    def test_dtr_work_on_simple_case_2(test_case):
+        flow.enable_dtr(True, "16KB", 0, "eq")
+
+        x1 = flow.ones(1024).to('cuda') # x1 = 1, total memory: 1024 * 4 = 4096 bytes = 4KB
+        x2 = x1 + 3                     # x2 = 4, total memory: 8KB
+        x3 = x2 - 5                     # x3 = -1, total memory: 12KB
+        x4 = x3.relu()                  # x4 = 0, evict a tensor
+        x5 = x2.square()                # x5 = 16, evict a tensor
+
+        # wait for the operations to finish
+        flow._oneflow_internal.eager.multi_client.Sync()
+        # check if there is 1 tensors are evicted
+        not_in_memory_num = sum(0 if x._is_in_memory else 1 for x in [x1, x2, x3, x4, x5])
+        test_case.assertEqual(not_in_memory_num, 1)
+        # check if the memory is full
+        test_case.assertEqual(flow._oneflow_internal.dtr.allocated_memory(), 16 * 1024)
+
+        # trigger recomputation and check the result
+        y = x1 + x2 + x3 + x4 + x5
+
+        test_case.assertTrue(np.array_equal(y.numpy(), 20 * np.ones(y.shape)))
 
     # def test_dtr_threshold(test_case):
     #     regex = re.compile(r"(\d+(?:\.\d+)?)\s*([kmg]?b)", re.IGNORECASE)

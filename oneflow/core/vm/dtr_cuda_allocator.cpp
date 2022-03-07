@@ -33,8 +33,6 @@ inline size_t CudaMemAlignedBytes(size_t bytes) { return RoundUp(bytes, kCudaMem
 
 inline bool IsAlignedSize(size_t size) { return size % kCudaMemAllocAlignSize == 0; }
 
-static const size_t kPieceSplitThreshold = 128 << 20;  // 128MiB
-
 inline double bytes2Mb(size_t bytes) { return bytes * 1. / 1024 / 1024; }
 
 }  // namespace
@@ -447,6 +445,11 @@ void DtrCudaAllocator::Deallocate(char* mem_ptr, std::size_t size) {
   //             << "MB, total deallocate bytes: " << (total_deallocate_bytes_ / 1024. / 1024.)
   //             << std::endl;
   // }
+}
+
+size_t DtrCudaAllocator::allocated_memory() {
+  CHECK_GE(total_allocate_bytes_, total_deallocate_bytes_);
+  return total_allocate_bytes_ - total_deallocate_bytes_;
 }
 
 }  // namespace vm

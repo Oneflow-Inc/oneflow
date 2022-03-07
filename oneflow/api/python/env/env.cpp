@@ -16,6 +16,7 @@ limitations under the License.
 #include <pybind11/pybind11.h>
 #include "oneflow/api/python/of_api_registry.h"
 #include "oneflow/api/python/env/env_api.h"
+#include "oneflow/core/vm/dtr_cuda_allocator.h"
 
 namespace py = pybind11;
 
@@ -24,6 +25,10 @@ Maybe<void> EnableDTRStrategy(bool enable_dtr, size_t thres, int debug_level,
                               const std::string& heuristic) {
   CHECK_NOTNULL_OR_RETURN((Global<DTRConfig>::Get()));
   *Global<DTRConfig>::Get() = DTRConfig(enable_dtr, thres, debug_level, heuristic);
+  CHECK_EQ_OR_RETURN(Global<vm::DtrCudaAllocator>::Get()->allocated_memory(), 0);
+  Global<vm::DtrCudaAllocator>::Delete();
+  // re-init the allocator using the new config
+  Global<vm::DtrCudaAllocator>::SetAllocated(new vm::DtrCudaAllocator(0));
   return Maybe<void>::Ok();
 }
 

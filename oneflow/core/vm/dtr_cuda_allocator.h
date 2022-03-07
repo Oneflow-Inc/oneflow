@@ -35,6 +35,7 @@ class DtrCudaAllocator final : public Allocator {
   void Deallocate(char* mem_ptr, std::size_t size) override;
   void Mark(DTREagerBlobObject* ebo, char* mem_ptr);
   void DisplayAllPieces();
+  size_t allocated_memory();
 
  private:
   bool left_ = true;

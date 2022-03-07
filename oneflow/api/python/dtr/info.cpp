@@ -16,11 +16,20 @@ limitations under the License.
 #include <pybind11/pybind11.h>
 #include "oneflow/api/python/of_api_registry.h"
 #include "oneflow/core/framework/tensor_pool.h"
+#include "oneflow/core/vm/dtr_cuda_allocator.h"
 
 namespace py = pybind11;
 
+using namespace oneflow;
+
 ONEFLOW_API_PYBIND11_MODULE("dtr", m) {
+  m.def("allocated_memory", []() -> size_t {
+    return Global<vm::DtrCudaAllocator>::Get()->allocated_memory();
+  });
+  m.def("display_all_pieces", []() -> void {
+    return Global<vm::DtrCudaAllocator>::Get()->DisplayAllPieces();
+  });
   m.def("display", []() -> void {
-    oneflow::Global<oneflow::one::DTRTensorPool>::Get()->display().GetOrThrow();
+    Global<one::DTRTensorPool>::Get()->display().GetOrThrow();
   });
 }
