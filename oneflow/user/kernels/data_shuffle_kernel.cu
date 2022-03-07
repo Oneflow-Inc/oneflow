@@ -718,8 +718,8 @@ class UniqueKeyValuePairKernel final : public user_op::OpKernel {
     cudaStream_t cuda_stream = ctx->stream()->As<ep::CudaStream>()->cuda_stream();
 
     bool need_process_column_ids = true;
-    UniqueAndPartition<K, IDX, IDX>(
-        cuda_stream, num_keys, hash_capacity, 1, kCurRankUniqueHashFuncSeed, keys->dptr<K>(),
+    UniqueAndPartition<K, IDX, IDX, GlobalUniqueHash>(
+        cuda_stream, num_keys, hash_capacity, 1, keys->dptr<K>(),
         values->dptr<IDX>(), reinterpret_cast<IDX*>(num_unique->mut_dptr()),
         unique_keys->mut_dptr<K>(), unique_values->mut_dptr<IDX>(), reverse_index->mut_dptr<IDX>(),
         reinterpret_cast<TableEntry<K>*>(tmp_buffer->mut_dptr()), workspace_bytes,
