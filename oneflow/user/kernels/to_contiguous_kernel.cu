@@ -26,10 +26,10 @@ namespace {
 constexpr int kBlockSize = cuda::elementwise::kBlockSize;
 constexpr int kThreadWorkSize = 4;
 constexpr int kNumThreads = 32 * 4;
-int block_work_size() { return kThreadWorkSize * kNumThreads; }
-int GetMinThreadNum() { return kNumThreads; }
-int GetNumBlocks(int64_t elem_cnt) {
-  return (elem_cnt + block_work_size() - 1) / block_work_size();
+constexpr int get_min_threads_num() { return kNumThreads; }
+constexpr int get_block_work_size() { return kThreadWorkSize * kNumThreads; }
+constexpr int get_num_blocks(int64_t elem_cnt) {
+  return (elem_cnt + get_block_work_size() - 1) / get_block_work_size();
 }
 
 struct StrideParam {
@@ -59,18 +59,18 @@ __device__ __forceinline__ IndexType compute_index(IndexType out_offset,
 
 template<typename T, typename IndexType, int ndim>
 __global__ void ToContiguousForwardGpuParallel(IndexType count, const StrideParam in_stride,
-                                               const StrideParam out_stride, const T* in_dptr,
-                                               T* out_dptr) {
-  IndexType remaining = count - 512 * blockIdx.x;
+                                               const StrideParam out_stride, const T* in_dptr, T* out_dptr,
+                                               const int num_block_threads, const int thread_work_size, const int block_work_size) {
+  IndexType remaining = count - block_work_size * blockIdx.x;
   IndexType idx = blockIdx.x;
   IndexType thread_idx = threadIdx.x;
 #pragma unroll
-  for (IndexType i = 0; i < 4; i++) {
+  for (IndexType i = 0; i < thread_work_size; i++) {
     if (thread_idx >= remaining) { return; }
-    IndexType out_idx = thread_idx + 512 * idx;
+    IndexType out_idx = thread_idx + block_work_size * idx;
     IndexType in_idx = compute_index<IndexType, ndim>(out_idx, out_stride, in_stride);
     out_dptr[out_idx] = in_dptr[in_idx];
-    thread_idx += 128;
+    thread_idx += num_block_threads;
   }
 }
 
@@ -78,17 +78,18 @@ template<typename T, typename IndexType, size_t pack_size>
 void LaunchToContiguousKernel(ep::Stream* stream, IndexType count, const size_t ndim,
                               IndexType block_size, const std::vector<int64_t>& in_stride,
                               const StrideVector& out_stride, const char* in_dptr, char* out_dptr) {
-  const int num_blocks = GetNumBlocks(count);
-  const int num_threads = GetMinThreadNum();
+  const int num_blocks = get_num_blocks(count);
+  constexpr int num_threads = get_min_threads_num();
+  constexpr int block_work_size = get_block_work_size();
   StrideParam param_in_stride(in_stride.data(), ndim), param_out_stride(out_stride.data(), ndim);
 
   switch (ndim) {
-#define TO_CONTIGUOUS_FORWARD_GPU_PARALLEL(dim)                                            \
-  case dim:                                                                                \
-    ToContiguousForwardGpuParallel<T, IndexType, dim>                                      \
+#define TO_CONTIGUOUS_FORWARD_GPU_PARALLEL(dim)                                                                     \
+  case dim:                                                                                                                                                                            \
+    ToContiguousForwardGpuParallel<T, IndexType, dim>                                                                             \
         <<<num_blocks, num_threads, 0, stream->As<ep::CudaStream>()->cuda_stream()>>>(     \
-            count, param_in_stride, param_out_stride, reinterpret_cast<const T*>(in_dptr), \
-            reinterpret_cast<T*>(out_dptr));                                               \
+            count, param_in_stride, param_out_stride, reinterpret_cast<const T*>(in_dptr),              \
+            reinterpret_cast<T*>(out_dptr), num_threads, kThreadWorkSize, block_work_size);      \
     break;
 
     TO_CONTIGUOUS_FORWARD_GPU_PARALLEL(1)
