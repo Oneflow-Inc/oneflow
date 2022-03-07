@@ -282,7 +282,7 @@ void OutputOp::getCanonicalizationPatterns(RewritePatternSet& results, MLIRConte
 }
 
 void DropoutOp::getCanonicalizationPatterns(RewritePatternSet& results, MLIRContext* context) {
-  results.insert<FuseBiasAddDropoutPattern<DropoutOp>>(context);
+  results.insert<FuseBiasAddDropoutPattern>(context);
 }
 
 void NormalizationAddReluOp::build(::mlir::OpBuilder& odsBuilder, ::mlir::OperationState& odsState,
