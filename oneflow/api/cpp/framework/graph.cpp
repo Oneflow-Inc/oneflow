@@ -355,13 +355,12 @@ of::Maybe<void> Graph::GraphImpl::LoadCheckpoint() {
       ss << variable_file.rdbuf();
       return ss.str();
     }();
-    const auto& callback =
-        std::make_shared<std::function<void(uint64_t)>>([&](uint64_t of_blob_ptr) {
-          CHECK_JUST(of::BlobBufferCopyUtil<void>::From(
-              of_blob_ptr, buffer.data(),
-              variable_tensor->shape()->elem_cnt()
-                  * of::GetSizeOfDataType(variable_tensor->dtype()->data_type())));
-        });
+    const auto& callback = [&](uint64_t of_blob_ptr) {
+      CHECK_JUST(of::BlobBufferCopyUtil<void>::From(
+          of_blob_ptr, buffer.data(),
+          variable_tensor->shape()->elem_cnt()
+              * of::GetSizeOfDataType(variable_tensor->dtype()->data_type())));
+    };
     JUST(of::one::SyncAccessTensorWithTimeOut(variable_tensor, callback, "mut"));
   }
 

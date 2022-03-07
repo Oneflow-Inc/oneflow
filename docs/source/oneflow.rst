@@ -42,6 +42,7 @@ oneflow
             cos, 
             cosh, 
             diag, 
+            select,
             diagonal,
             movedim,
             tensor_split,
@@ -50,7 +51,8 @@ oneflow
             as_strided,
             div, 
             dot, 
-            eq, 
+            eq,
+            einsum,
             equal, 
             expand, 
             eye,
@@ -171,5 +173,14 @@ oneflow
             topk,
             nms,
             cumprod,
+            HalfTensor,
+            FloatTensor,
+            DoubleTensor,
+            BoolTensor,
+            ByteTensor,
+            CharTensor,
+            IntTensor,
+            LongTensor,
 
 .. autofunction:: oneflow.relu
+.. autofunction:: oneflow.set_num_threads

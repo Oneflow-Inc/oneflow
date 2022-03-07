@@ -19,23 +19,67 @@ limitations under the License.
 
 #ifdef WITH_CUDA
 
+#include <cuda.h>
+#include <cuda_fp16.h>
+
+#if CUDA_VERSION >= 11000
+#include <cuda_bf16.h>
+#endif
+
 namespace oneflow {
 
 namespace ep {
 
+namespace {
+
+constexpr size_t kDefaultConstBufElementCount = 1024 * 1024;
+
+template<typename T>
+void CreateConstBuffer(void** buf, T value, size_t n) {
+  OF_CUDA_CHECK(cudaMalloc(buf, n * sizeof(T)));
+  std::vector<T> host(n, value);
+  OF_CUDA_CHECK(cudaMemcpy(*buf, host.data(), n * sizeof(T), cudaMemcpyDefault));
+}
+
+}  // namespace
+
 CudaDevice::CudaDevice(int device_index, DeviceManager* device_manager)
-    : device_index_(device_index), event_flags_{}, properties_{}, device_manager_(device_manager) {
+    : device_index_(device_index),
+      event_flags_{},
+      properties_{},
+      device_manager_(device_manager),
+      const_buf_elem_cnt_(0),
+      const_zeros_buffer_(nullptr),
+      const_ones_buffer_fp32_(nullptr),
+      const_ones_buffer_fp16_(nullptr),
+      const_ones_buffer_bf16_(nullptr) {
   CudaCurrentDeviceGuard guard(device_index_);
   OF_CUDA_CHECK(cudaGetDeviceProperties(&properties_, device_index_));
   event_flags_ = cudaEventDisableTiming;
   if (ParseBooleanFromEnv("ONEFLOW_STREAM_CUDA_EVENT_FLAG_BLOCKING_SYNC", false)) {
     event_flags_ |= cudaEventBlockingSync;
   }
+  const_buf_elem_cnt_ = ParseIntegerFromEnv("ONEFLOW_EP_CUDA_CONST_BUFFER_ELEMENT_COUNT",
+                                            kDefaultConstBufElementCount);
+  if (const_buf_elem_cnt_ > 0) {
+    CreateConstBuffer<float>(&const_zeros_buffer_, static_cast<float>(0), const_buf_elem_cnt_);
+    CreateConstBuffer<float>(&const_ones_buffer_fp32_, static_cast<float>(1.0),
+                             const_buf_elem_cnt_);
+    CreateConstBuffer<half>(&const_ones_buffer_fp16_, static_cast<half>(1.0), const_buf_elem_cnt_);
+#if CUDA_VERSION >= 11000
+    CreateConstBuffer<nv_bfloat16>(&const_ones_buffer_bf16_, static_cast<nv_bfloat16>(1.0),
+                                   const_buf_elem_cnt_);
+#endif
+  }
 }
 
 CudaDevice::~CudaDevice() {
   CudaCurrentDeviceGuard guard(device_index_);
   for (auto* event : events_) { delete event; }
+  OF_CUDA_CHECK(cudaFree(const_zeros_buffer_));
+  OF_CUDA_CHECK(cudaFree(const_ones_buffer_fp32_));
+  OF_CUDA_CHECK(cudaFree(const_ones_buffer_fp16_));
+  OF_CUDA_CHECK(cudaFree(const_ones_buffer_bf16_));
 }
 
 void CudaDevice::SetAsActiveDevice() { OF_CUDA_CHECK(cudaSetDevice(device_index_)); }
@@ -102,6 +146,31 @@ void CudaDevice::FreePinned(const AllocationOptions& options, void* ptr) {
 }
 
 const cudaDeviceProp& CudaDevice::properties() const { return properties_; }
+
+const void* CudaDevice::GetConstZeros(DataType data_type, size_t n) const {
+  if (GetSizeOfDataType(data_type) * n
+      <= GetSizeOfDataType(DataType::kFloat) * const_buf_elem_cnt_) {
+    return const_zeros_buffer_;
+  } else {
+    return nullptr;
+  }
+}
+
+const void* CudaDevice::GetConstOnes(DataType data_type, size_t n) const {
+  if (n <= const_buf_elem_cnt_) {
+    if (data_type == DataType::kFloat) {
+      return const_ones_buffer_fp32_;
+    } else if (data_type == DataType::kFloat16) {
+      return const_ones_buffer_fp16_;
+    } else if (data_type == DataType::kBFloat16) {
+      return const_ones_buffer_bf16_;
+    } else {
+      return nullptr;
+    }
+  } else {
+    return nullptr;
+  }
+}
 
 }  // namespace ep
 

@@ -60,7 +60,7 @@ def _backward(self, gradient=None, retain_graph=False, create_graph=False):
         ), "nn.Graph only accept lazy tensor to call backward() in lazy mode."
         assert (
             self.shape.numel() == 1
-        ), " loss_tensor.backward(), loss_tensor must be a scalar in nn.Graph, please use loss_tesnor.sum() or loss_tensor.mean() to make it a scalar tensor."
+        ), " loss_tensor.backward(), loss_tensor must be a scalar in nn.Graph, please use loss_tensor.sum() or loss_tensor.mean() to make it a scalar tensor."
         assert (
             gradient is None
         ), "nn.Graph donot accept 'gradient' argument in backward() at the moment."
@@ -165,16 +165,8 @@ def _cuda(self, device: Union[int, str, flow.device] = None):
     return self.to(device=device)
 
 
-def _norm(self, ord=None, dim=None, keepdim=False, dtype=None):
-    return flow._C.norm(self, ord, dim, keepdim, dtype=dtype)
-
-
-def _vector_norm(self, ord=2, dim=None, keepdim=False, dtype=None):
-    return flow._C.vector_norm(self, ord, dim, keepdim, dtype=dtype)
-
-
-def _matrix_norm(self, ord="fro", dim=(-2, -1), keepdim=False, dtype=None):
-    return flow._C.matrix_norm(self, ord, dim, keepdim, dtype=dtype)
+def _norm(self, p=None, dim=None, keepdim=False, dtype=None):
+    return flow._C.norm(self, p, dim, keepdim, dtype=dtype)
 
 
 def _transpose(self, dim0, dim1):
@@ -498,6 +490,17 @@ def _expm1(self):
 
 def _fmod(self, other):
     return flow.fmod(self, other)
+
+
+def _index(self):
+    assert self.numel() == 1 and self.dtype in (
+        flow.uint8,
+        flow.int8,
+        flow.int32,
+        flow.int64,
+        flow.bool,
+    ), "Only integer tensors of a single element can be converted to an index"
+    return self.numpy().item()
 
 
 def _flatten(self, start_dim: int = 0, end_dim: int = -1):
@@ -875,12 +878,12 @@ def _nonzero(self, as_tuple=False):
     return flow.nonzero(self, as_tuple)
 
 
-def _max(self, dim=None, keepdim=False):
-    return flow.max(self, dim, keepdim)
+def _max(self, *args, **kwargs):
+    return flow.max(self, *args, **kwargs)
 
 
-def _min(self, dim=None, keepdim=False):
-    return flow.min(self, dim, keepdim)
+def _min(self, *args, **kwargs):
+    return flow.min(self, *args, **kwargs)
 
 
 def _sum(self, dim=None, keepdim=False):
@@ -914,7 +917,13 @@ def _reshape(self, *shape):
 
 
 def _view(self, *shape):
-    return flow.view(self, *shape)
+    if len(shape) == 1:
+        new_shape = shape[0]
+        if isinstance(new_shape, int):
+            new_shape = (new_shape,)
+    else:
+        new_shape = shape
+    return flow._C.view(self, new_shape)
 
 
 def _sort(self, dim: int = -1, descending: bool = False):
@@ -967,12 +976,21 @@ def _numpy(self):
     return self.to_numpy()
 
 
+def _zero_(self):
+    return self.zeros_()
+
+
+def zero_(self):
+    self.zero_()
+    return self
+
+
 def _is_consistent(self):
-    raise RuntimeError("is_consistent is removed. Please use is_global instead")
+    raise RuntimeError(".is_consistent has been removed, please use .is_global instead")
 
 
-def _to_consistent(self):
-    raise RuntimeError("to_consistent is removed. Please use to_global instead")
+def _to_consistent(self, *args, **kwargs):
+    raise RuntimeError(".to_consistent has been removed, please use .to_global instead")
 
 
 def RegisterMethods():
@@ -1020,6 +1038,7 @@ def RegisterMethods():
     Tensor.__floordiv__ = _floor_divide
     Tensor.__len__ = _len
     Tensor.__mod__ = _fmod
+    Tensor.__index__ = _index
     Tensor.uniform_ = _uniform
     Tensor.trunc_normal_ = _trunc_normal_
     Tensor.kaiming_uniform_ = _kaiming_uniform
@@ -1119,8 +1138,6 @@ def RegisterMethods():
     Tensor.where = _where
     Tensor.contiguous = _contiguous
     Tensor.norm = _norm
-    Tensor.vector_norm = _vector_norm
-    Tensor.matrix_norm = _matrix_norm
     Tensor.transpose = _transpose
     Tensor.to_global = _to_global
     Tensor.relu = _relu
@@ -1176,6 +1193,7 @@ def RegisterMethods():
     Tensor.prod = _prod
     Tensor.sin = _sin
     Tensor.sin_ = _sin_inplace
+    Tensor.zero_ = _zero_
     Tensor.is_consistent = _is_consistent
     Tensor.to_consistent = _to_consistent
 

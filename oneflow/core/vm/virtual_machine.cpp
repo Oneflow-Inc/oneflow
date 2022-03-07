@@ -16,6 +16,7 @@ limitations under the License.
 #include <typeinfo>
 #include "oneflow/core/vm/virtual_machine.h"
 #include "oneflow/core/vm/instruction.h"
+#include "oneflow/core/vm/instruction_type.h"
 #include "oneflow/core/vm/no_arg_cb_phy_instr_operand.h"
 #include "oneflow/core/vm/vm_util.h"
 #include "oneflow/core/common/blocking_counter.h"
@@ -23,11 +24,13 @@ limitations under the License.
 #include "oneflow/core/common/cpp_attribute.h"
 #include "oneflow/core/control/global_process_ctx.h"
 #include "oneflow/core/job/global_for.h"
+#include "oneflow/core/common/foreign_lock_helper.h"
 #include "oneflow/core/thread/thread_consistent_id.h"
 #include "oneflow/core/framework/transport_token.h"
 #include "oneflow/core/profiler/profiler.h"
 #include "oneflow/core/platform/include/pthread_fork.h"
 #include "oneflow/core/common/env_var.h"
+#include "oneflow/core/framework/device.h"
 
 namespace oneflow {
 
@@ -43,7 +46,7 @@ int MicrosecondsFrom(const T& start) {
 Maybe<void> ForEachThreadCtx(vm::VirtualMachineEngine* vm,
                              const std::function<Maybe<void>(vm::ThreadCtx*)>& DoEach) {
   INTRUSIVE_UNSAFE_FOR_EACH_PTR(thread_ctx, vm->mut_thread_ctx_list()) {
-    const auto& stream_type = thread_ctx->stream_rt_desc().stream_type_id().stream_type();
+    const auto& stream_type = thread_ctx->stream_rt_desc().stream_type();
     if (stream_type.OnSchedulerThread()) { continue; }
     JUST(DoEach(thread_ctx));
   }
@@ -67,8 +70,7 @@ void GetCallbackThreadInitializer(std::function<void()>* Initializer) {
 
 std::type_index GetStreamTypeIndex(const vm::ThreadCtx* thread_ctx) {
   const auto& stream_rt_desc = thread_ctx->stream_rt_desc();
-  const auto& stream_type_id = stream_rt_desc.stream_type_id();
-  const auto& stream_type = stream_type_id.stream_type();
+  const auto& stream_type = stream_rt_desc.stream_type();
   return typeid(stream_type);
 }
 
@@ -85,14 +87,14 @@ void GetWorkerThreadInitializer(intrusive::shared_ptr<vm::VirtualMachineEngine> 
                                 std::function<void(vm::ThreadCtx*)>* Initializer) {
   std::set<std::type_index> stream_type_indexes;
   INTRUSIVE_UNSAFE_FOR_EACH_PTR(thread_ctx, vm->mut_thread_ctx_list()) {
-    const auto& stream_type = thread_ctx->stream_rt_desc().stream_type_id().stream_type();
+    const auto& stream_type = thread_ctx->stream_rt_desc().stream_type();
     if (!stream_type.SupportingTransportInstructions()) { continue; }
     stream_type_indexes.insert(GetStreamTypeIndex(thread_ctx));
   }
   HashMap<std::type_index, int64_t> stream_type_index2consistent_id;
   int64_t thread_consistent_id = kThreadConsistentIdScheduler + 1;
   for (const auto& stream_type_index : stream_type_indexes) {
-    LOG(INFO) << "transport stream type: " << stream_type_index.name();
+    VLOG(3) << "transport stream type: " << stream_type_index.name();
     stream_type_index2consistent_id[stream_type_index] = thread_consistent_id++;
   }
   *Initializer = [stream_type_index2consistent_id](vm::ThreadCtx* thread_ctx) {
@@ -144,19 +146,17 @@ void MakeCtrlSeqInstructions(vm::VirtualMachineEngine* vm, vm::InstructionMsgLis
   auto instruction = intrusive::make_shared<vm::InstructionMsg>(
       vm, "CtrlComputeRankFrontSeqCallback", std::shared_ptr<const ParallelDesc>(),
       phy_instr_operand);
-  instruction->add_int64_operand(GlobalProcessCtx::Rank());
   list->EmplaceBack(std::move(instruction));
 }
 
 }  // namespace
 
 void VirtualMachine::ControlSync() {
-  BlockingCounter bc(1);
+  auto bc = std::make_shared<BlockingCounter>(1);
   vm::InstructionMsgList list;
-  MakeCtrlSeqInstructions(mut_vm(), &list, [&] { bc.Decrease(); });
+  MakeCtrlSeqInstructions(mut_vm(), &list, [bc] { bc->Decrease(); });
   CHECK_JUST(Receive(&list));
-  CHECK_JUST(
-      bc.WaitUntilCntEqualZero(VirtualMachine::GetPredicatorNoMoreErasedLivelyInstructions()));
+  CHECK_JUST(bc->WaitUntilCntEqualZero(VirtualMachine::GetPredicatorNoMoreInstructionsFinished()));
 }
 
 VirtualMachine::~VirtualMachine() {
@@ -168,7 +168,7 @@ VirtualMachine::~VirtualMachine() {
   callback_thread_.join();
 }
 
-std::function<Maybe<bool>()> VirtualMachine::GetPredicatorNoMoreErasedLivelyInstructions() {
+std::function<Maybe<bool>()> VirtualMachine::GetPredicatorNoMoreInstructionsFinished() {
   auto last_total_erased = std::make_shared<size_t>(0);
   auto* vm = Global<VirtualMachine>::Get();
   if (vm != nullptr) { *last_total_erased = vm->vm().total_erased_lively_instruction_cnt(); }
@@ -191,7 +191,7 @@ bool VirtualMachine::NoMoreErasedLivelyInstructions(
 }
 
 std::string VirtualMachine::GetBlockingDebugString() {
-  size_t limit = ThreadLocalEnvInteger<ONEFLOW_VM_BLOCKING_DEBUG_INSTRUCTIONS_DISPLAY_LIMIT>();
+  size_t limit = EnvInteger<ONEFLOW_VM_BLOCKING_DEBUG_INSTRUCTIONS_DISPLAY_LIMIT>();
   return vm_->GetLivelyInstructionListDebugString(limit);
 }
 
@@ -200,16 +200,28 @@ Maybe<void> VirtualMachine::Receive(vm::InstructionMsgList* instr_list) {
     CHECK_OR_RETURN(JUST(IsMultiClient()));
     INTRUSIVE_FOR_EACH_PTR(instr_msg, instr_list) {
       const auto& parallel_desc = instr_msg->phy_instr_parallel_desc();
-      CHECK(!parallel_desc || parallel_desc->device_type() == DeviceType::kCPU)
+      CHECK_OR_RETURN(!parallel_desc || parallel_desc->device_type() == DeviceType::kCPU)
           << pthread_fork::kOfCudaNotSupportInForkedSubProcess;
+      // NOTE: operate `vm_` in forked subprocesses causes mysterious problems.
+      // `ComputeInFuseMode` will be replaced by `Compute` soon.
+      instr_msg->mut_instr_type_id()->instruction_type().ComputeInFuseMode(instr_msg);
     }
-    JUST(vm_->Receive(instr_list));
-    while (!vm_->Empty()) { vm_->Schedule(); }
-    vm_->Callback();
-    // no scheduler processing gc, we must do it in current thread.
-    vm::InstructionMsgList garbage_msg_list;
-    vm_->mut_garbage_msg_list()->MoveTo(&garbage_msg_list);
   } else {
+    const int64_t kHighWaterMark = GetInstructionHighWaterMark();
+    if (vm_->flying_instruction_cnt() > kHighWaterMark) {
+      JUST(Global<ForeignLockHelper>::Get()->WithScopedRelease([&, this]() -> Maybe<void> {
+        auto bc = std::make_shared<BlockingCounter>(1);
+        vm_->InsertProbe([bc](vm::VirtualMachineEngine* vm) {
+          const int64_t kLowWaterMark = GetInstructionLowWaterMark();
+          if (vm->flying_instruction_cnt() > kLowWaterMark) { return false; }
+          bc->Decrease();
+          return true;
+        });
+        pending_notifier_.Notify();
+        JUST(bc->WaitUntilCntEqualZero(VirtualMachine::GetPredicatorNoMoreInstructionsFinished()));
+        return Maybe<void>::Ok();
+      }));
+    }
     if (JUST(vm_->Receive(instr_list))) {
       // old pending_instruction_list is empty.
       pending_notifier_.Notify();

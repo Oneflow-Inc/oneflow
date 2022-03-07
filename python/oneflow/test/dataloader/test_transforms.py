@@ -46,7 +46,7 @@ class Net(nn.Module):
         return x
 
 
-def test(test_case):
+def _test(test_case):
     if os.getenv("ONEFLOW_TEST_CPU_ONLY"):
         device = flow.device("cpu")
     else:
@@ -118,7 +118,7 @@ def test(test_case):
 @flow.unittest.skip_unless_1n1d()
 class TestCifarDataset(flow.unittest.TestCase):
     def test_cifar_dataset(test_case):
-        test(test_case)
+        _test(test_case)
 
 
 if __name__ == "__main__":

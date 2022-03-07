@@ -22,7 +22,7 @@ limitations under the License.
 #include "oneflow/core/framework/tensor.h"
 #include "oneflow/core/framework/placed_nd_sbp.h"
 #include "oneflow/core/job/parallel_desc.h"
-#include "oneflow/core/job/sbp_parallel.cfg.h"
+#include "oneflow/core/job/sbp_parallel.h"
 #include "oneflow/core/boxing/boxing_interpreter_status.h"
 
 namespace oneflow {
@@ -33,16 +33,14 @@ class EagerBoxingInterpreter {
   EagerBoxingInterpreter() = default;
   virtual ~EagerBoxingInterpreter() = default;
 
-  Maybe<one::Tensor> Interpret(const std::shared_ptr<one::Tensor>& input,
-                               Symbol<cfg::NdSbp> in_nd_sbp, Symbol<cfg::NdSbp> out_nd_sbp,
-                               Symbol<ParallelDesc> in_parallel_desc,
+  Maybe<one::Tensor> Interpret(const std::shared_ptr<one::Tensor>& input, Symbol<NdSbp> in_nd_sbp,
+                               Symbol<NdSbp> out_nd_sbp, Symbol<ParallelDesc> in_parallel_desc,
                                Symbol<ParallelDesc> out_parallel_desc) const;
   virtual Maybe<BoxingInterpreterStatus> boxing_interpreter_status() const = 0;
 
  protected:
   virtual Maybe<one::Tensor> InterpretImpl(const std::shared_ptr<one::Tensor>& input,
-                                           Symbol<cfg::NdSbp> in_nd_sbp,
-                                           Symbol<cfg::NdSbp> out_nd_sbp,
+                                           Symbol<NdSbp> in_nd_sbp, Symbol<NdSbp> out_nd_sbp,
                                            Symbol<ParallelDesc> in_parallel_desc,
                                            Symbol<ParallelDesc> out_parallel_desc) const = 0;
 };
@@ -80,7 +78,7 @@ class NaiveEagerBoxingInterpreter : public EagerBoxingInterpreter {
 
  private:
   Maybe<one::Tensor> InterpretImpl(const std::shared_ptr<one::Tensor>& input,
-                                   Symbol<cfg::NdSbp> in_nd_sbp, Symbol<cfg::NdSbp> out_nd_sbp,
+                                   Symbol<NdSbp> in_nd_sbp, Symbol<NdSbp> out_nd_sbp,
                                    Symbol<ParallelDesc> in_parallel_desc,
                                    Symbol<ParallelDesc> out_parallel_desc) const override {
     const auto& in_placed_nd_sbp = JUST(PlacedNdSbp::New(in_nd_sbp, in_parallel_desc));

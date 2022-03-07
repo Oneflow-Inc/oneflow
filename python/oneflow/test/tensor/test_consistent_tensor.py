@@ -29,7 +29,7 @@ from oneflow.test_utils.automated_test_util import *
 class TestTensor(flow.unittest.TestCase):
     @flow.unittest.skip_unless_1n1d()
     def test_creating_global_tensor(test_case):
-        placement = flow.placement("cuda", {0: 0})
+        placement = flow.placement("cuda", [0])
         sbp = flow.sbp.broadcast
         shape = (2, 3)
 
@@ -51,7 +51,7 @@ class TestTensor(flow.unittest.TestCase):
 
     @flow.unittest.skip_unless_1n1d()
     def test_construct_local_from_global_tensor(test_case):
-        placement = flow.placement("cuda", {0: 0})
+        placement = flow.placement("cuda", [0])
         sbp = flow.sbp.broadcast
         shape = (2, 3)
         x = flow.Tensor(*shape, placement=placement, sbp=sbp)
@@ -64,10 +64,10 @@ class TestTensor(flow.unittest.TestCase):
 
     @flow.unittest.skip_unless_1n1d()
     def test_global_set_data(test_case):
-        x_placement = flow.placement("cpu", {0: 0})
+        x_placement = flow.placement("cpu", [0])
         x_sbp = flow.sbp.broadcast
         x = flow.ones(2, 3, placement=x_placement, sbp=x_sbp)
-        y_placement = flow.placement("cuda", {0: 0})
+        y_placement = flow.placement("cuda", [0])
         y_sbp = flow.sbp.split(0)
         y = flow.ones(4, 5, placement=y_placement, sbp=y_sbp)
         old_id = id(x)
@@ -79,7 +79,7 @@ class TestTensor(flow.unittest.TestCase):
 
     @flow.unittest.skip_unless_1n1d()
     def test_global_tensor_autograd_related_methods(test_case):
-        placement = flow.placement("cuda", {0: 0})
+        placement = flow.placement("cuda", [0])
         sbp = flow.sbp.split(0)
         shape = (2, 3, 4, 5)
         l_x = flow.Tensor(*shape)
@@ -137,7 +137,7 @@ class TestTensor(flow.unittest.TestCase):
     def test_global_tensor_unsupported_property(test_case):
 
         shape = (2, 3)
-        placement = flow.placement("cuda", {0: 0})
+        placement = flow.placement("cuda", [0])
         sbp = flow.sbp.split(0)
         a = flow.Tensor(*shape)
         b = a.to_global(placement=placement, sbp=sbp)
@@ -159,7 +159,7 @@ class TestTensor(flow.unittest.TestCase):
         H = 4
         S = 6
 
-        P = flow.placement("cuda", {0: [0, 1, 2, 3]}, (2, 2))
+        P = flow.placement("cuda", [[0, 1], [2, 3]])
 
         wte = flow.nn.Parameter(
             flow.empty(

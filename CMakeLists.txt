@@ -2,19 +2,6 @@
 cmake_minimum_required(VERSION 3.18.0)
 
 set(CMAKE_INSTALL_MESSAGE LAZY CACHE STRING "")
-if(NOT CMAKE_BUILD_TYPE)
-  message(STATUS "No build type selected, default to Release")
-  set(CMAKE_BUILD_TYPE "Release" CACHE STRING "Build type (default Release)" FORCE)
-endif()
-
-if(NOT CMAKE_BUILD_TYPE MATCHES "^(Debug|Release|RelWithDebInfo|MinSizeRel)$")
-  message(
-    FATAL_ERROR
-      "Expected CMAKE_BUILD_TYPE is Debug, Release, RelWithDebInfo or MinSizeRel, got ${CMAKE_BUILD_TYPE}"
-  )
-endif()
-message(STATUS "CMAKE_BUILD_TYPE: ${CMAKE_BUILD_TYPE}")
-
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON CACHE BOOL "")
 
 option(THIRD_PARTY "Build third party" ON)
@@ -37,7 +24,7 @@ option(WITH_TENSORRT "Option to build with TensorRT" OFF)
 option(WITH_OPENVINO "Option to build with OpenVINO" OFF)
 option(WITH_COCOAPI "Option to build with COCO API" ON)
 option(WITH_ZLIB "" ON)
-option(WITH_ONEDNN "" OFF)
+option(WITH_ONEDNN "" ON)
 option(WITH_MLIR "" OFF)
 option(WITH_MLIR_CUDA_CODEGEN "" OFF)
 option(OF_SOFTMAX_USE_FAST_MATH "" ON)
@@ -73,6 +60,19 @@ endif()
 set(CUDNN_STATIC OFF CACHE BOOL "")
 
 project(oneflow C CXX)
+
+if(NOT CMAKE_BUILD_TYPE)
+  message(STATUS "No build type selected, default to Release")
+  set(CMAKE_BUILD_TYPE "Release" CACHE STRING "Build type (default Release)" FORCE)
+endif()
+
+if(NOT CMAKE_BUILD_TYPE MATCHES "^(Debug|Release|RelWithDebInfo|MinSizeRel)$")
+  message(
+    FATAL_ERROR
+      "Expected CMAKE_BUILD_TYPE is Debug, Release, RelWithDebInfo or MinSizeRel, got ${CMAKE_BUILD_TYPE}"
+  )
+endif()
+message(STATUS "CMAKE_BUILD_TYPE: ${CMAKE_BUILD_TYPE}")
 
 set(COMPILER_VERSION_ERROR_MSG "At least gcc 7, clang 5 or Apple clang 12 is supported.")
 if("${CMAKE_CXX_COMPILER_ID}" STREQUAL "GNU")

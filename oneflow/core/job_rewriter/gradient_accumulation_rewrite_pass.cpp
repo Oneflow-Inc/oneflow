@@ -35,6 +35,10 @@ Maybe<void> GradientAccumulationRewritePass::Apply(Job* job, JobPassCtx* ctx) co
     return Maybe<void>::Ok();
   }
   const bool is_multi_client = CHECK_JUST(IsMultiClient());
+  if (is_multi_client) {
+    // GradientAccumulationRewritePass has been re-implemented in op interpreter in multi client.
+    return Maybe<void>::Ok();
+  }
   const OpGraph op_graph(*job);
   JobBuilder job_builder(job);
   HashMap<std::string, OperatorConf> name2op_conf;
@@ -176,8 +180,8 @@ Maybe<void> GradientAccumulationRewritePass::Apply(Job* job, JobPassCtx* ctx) co
         ShapeProto* shape_conf = attr_val->mutable_at_shape();
         CHECK_GT(shape_conf->dim_size(), 0);
         shape_conf->set_dim(0, -1);
-        LOG(INFO) << " Replace ReshapeOpConf from: " << op_conf.DebugString() << " to "
-                  << new_reshape_op_conf->DebugString() << " for dynamic infer by insert unpack.";
+        VLOG(3) << " Replace ReshapeOpConf from: " << op_conf.DebugString() << " to "
+                << new_reshape_op_conf->DebugString() << " for dynamic infer by insert unpack.";
       }
       return Maybe<void>::Ok();
     } else {

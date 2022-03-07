@@ -19,7 +19,7 @@ from collections import OrderedDict
 import numpy as np
 
 from oneflow.test_utils.automated_test_util import *
-from test_util import GenArgList
+from oneflow.test_utils.test_util import GenArgList
 
 import oneflow as flow
 
@@ -39,7 +39,7 @@ def _test_eye_backward(test_case, device, n, m):
 
 
 def _test_eye_with_1n2d(test_case, n, m, device):
-    placement = flow.placement(device, {0: range(2)})
+    placement = flow.placement(device, range(2))
     x = flow.eye(n, m, placement=placement, sbp=flow.sbp.broadcast)
     test_case.assertTrue(x.placement, placement)
     test_case.assertTrue(x.sbp, flow.sbp.broadcast)

@@ -23,7 +23,7 @@ import oneflow.unittest
 
 def _test_linear_train_graph_with_zero(test_case, zero_stage=1):
     def train_with_graph(iter_num=1):
-        P = flow.placement("cuda", {0: [0, 1]})
+        P = flow.placement("cuda", ranks=[0, 1])
         B = flow.sbp.broadcast
         S0 = flow.sbp.split(0)
         linear = flow.nn.Linear(8, 4)
