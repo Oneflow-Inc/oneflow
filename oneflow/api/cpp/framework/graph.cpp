@@ -123,7 +123,7 @@ const std::pair<std::vector<T1>, std::vector<T2>> Unzip(const of::HashMap<T1, T2
 }
 
 Shape OfShapeToOfApiShape(const of::Shape& of_shape) {
-  std::vector<int64_t> dims;
+  std::vector<int64_t> dims(of_shape.dim_vec().begin(),of_shape.dim_vec().end());
   for (int i = 0; i < of_shape.NumAxes(); ++i) {
     dims.emplace_back(of_shape.At(i));
   }
