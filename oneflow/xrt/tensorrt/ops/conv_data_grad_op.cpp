@@ -26,57 +26,71 @@ class ConvDataGradOp : public TrtOpKernel {
   void Compile(TrtOpContext* ctx) override {
     nvinfer1::ITensor* input = ctx->Input("dy_0");
     nvinfer1::Weights weight = ctx->Weight("filter_0");
+    const auto& dy_shape = ctx->InputShape("dy_0");
+    const auto& like_shape = ctx->InputShape("x_like_0");
 
     CHECK_EQ(ctx->Attr<std::string>("data_format"), "channels_first");
     const auto& kernel_size = ctx->Attr<std::vector<int32_t>>("kernel_size");
-    const int groups = ctx->Attr<int32_t>("groups");
-
-    // int num_spatial_dims = ctx->Attr<int32_t>("num_spatial_dims");
-    const Shape& weight_shape = ctx->InputShape("filter_0");
-    int32_t filters = weight_shape.At(1);
-
-    nvinfer1::Weights bias{nvinfer1::DataType::kFLOAT /* type */, nullptr /* values */,
-                           0 /* count */};
-    auto* layer = ctx->builder()->addDeconvolution(
-        *input, filters, nvinfer1::DimsHW(kernel_size[0], kernel_size[1]), weight, bias);
-    layer->setName(ctx->op_name().c_str());
-
+    const auto& paddings = ctx->Attr<std::vector<int32_t>>("padding_before");
     const auto& strides = ctx->Attr<std::vector<int32_t>>("strides");
     const auto& dilation = ctx->Attr<std::vector<int32_t>>("dilation_rate");
+    const int groups = ctx->Attr<int32_t>("groups");
 
-    layer->setStride(nvinfer1::DimsHW(strides[0], strides[1]));
-    layer->setDilationNd(nvinfer1::DimsHW(dilation[0], dilation[1]));
-    layer->setNbGroups(groups);
-
-    auto pads = ctx->Attr<std::vector<int32_t>>("padding_before");
-    const auto& dy_shape = ctx->InputShape("dy_0");
-    const auto& like_shape = ctx->InputShape("x_like_0");
-    std::vector<int32_t> output_pads(pads.size(), 0);
-    bool need_output_pad = false;
-    for (int i = 0; i < pads.size(); ++i) {
-      int32_t output_size = (dy_shape.At(2 + i) - 1) * strides[i] - 2 * pads[i]
+    bool need_pad_input = false;
+    std::vector<int32_t> input_paddings(paddings.size(), 0);
+    for (int i = 0; i < paddings.size(); ++i) {
+      int32_t output_size = (dy_shape.At(2 + i) - 1) * strides[i] - 2 * paddings[i]
                             + dilation[i] * (kernel_size[i] - 1) + 1;
-      pads[i] -= (like_shape.At(2 + i) - output_size + 1) / 2;
-      if (pads[i] < 0) {
-        output_pads[i] = -pads[i];
-        pads[i] = 0;
-        need_output_pad = true;
+      if (output_size < like_shape.At(2 + i)) {
+        input_paddings[i] = 1;
+        need_pad_input = true;
       }
     }
-    layer->setPaddingMode(nvinfer1::PaddingMode::kEXPLICIT_ROUND_DOWN);
-    layer->setPrePadding(nvinfer1::DimsHW(pads[0], pads[1]));
-    layer->setPostPadding(nvinfer1::DimsHW(pads[0], pads[1]));
-
-    if (need_output_pad) {
-      auto* pad_layer = ctx->builder()->addPaddingNd(
-          *(layer->getOutput(0)), nvinfer1::DimsHW(output_pads[0], output_pads[1]),
-          nvinfer1::DimsHW(0, 0));
-      std::string name = ctx->op_name() + "_output_padding";
-      pad_layer->setName(name.c_str());
-      ctx->SetOutput("dx_0", pad_layer->getOutput(0));
-    } else {
-      ctx->SetOutput("dx_0", layer->getOutput(0));
+    if (need_pad_input) {
+      auto* pad_input = ctx->builder()->addPadding(
+          *input, nvinfer1::DimsHW(0, 0), nvinfer1::DimsHW(input_paddings[0], input_paddings[1]));
+      std::string name = ctx->op_name() + ".pad_input";
+      pad_input->setName(name.c_str());
+      input = pad_input->getOutput(0);
     }
+    const Shape& weight_shape = ctx->InputShape("filter_0");
+    int32_t filters = weight_shape.At(1);
+    nvinfer1::Weights bias{nvinfer1::DataType::kFLOAT /* type */, nullptr /* values */,
+                           0 /* count */};
+    auto* deconv = ctx->builder()->addDeconvolution(
+        *input, filters, nvinfer1::DimsHW(kernel_size[0], kernel_size[1]), weight, bias);
+    deconv->setName(ctx->op_name().c_str());
+
+    deconv->setPaddingMode(nvinfer1::PaddingMode::kEXPLICIT_ROUND_DOWN);
+    deconv->setPrePadding(nvinfer1::DimsHW(paddings[0], paddings[1]));
+    deconv->setPostPadding(nvinfer1::DimsHW(paddings[0], paddings[1]));
+    deconv->setStride(nvinfer1::DimsHW(strides[0], strides[1]));
+    deconv->setDilationNd(nvinfer1::DimsHW(dilation[0], dilation[1]));
+    deconv->setNbGroups(groups);
+
+    nvinfer1::ITensor* output = deconv->getOutput(0);
+    if (need_pad_input) {
+      nvinfer1::Dims start, size, stride;
+      start.nbDims = like_shape.NumAxes();
+      size.nbDims = start.nbDims;
+      stride.nbDims = start.nbDims;
+      for (int i = 0; i < start.nbDims; ++i) {
+        start.d[i] = 0;
+        size.d[i] = like_shape.At(i);
+        stride.d[i] = 1;
+      }
+      auto* slice_output = ctx->builder()->addSlice(*output, start, size, stride);
+      std::string name = ctx->op_name() + ".slice_output";
+      slice_output->setName(name.c_str());
+
+      // add identity layer after slice to bypass some internal error,
+      // refer to https://github.com/NVIDIA/TensorRT/issues/1821
+      auto* identity = ctx->builder()->addIdentity(*(slice_output->getOutput(0)));
+      std::string identity_name = ctx->op_name() + ".identity";
+      identity->setName(identity_name.c_str());
+      output = identity->getOutput(0);
+    }
+    ctx->SetOutput("dx_0", output);
   }
 };
 
