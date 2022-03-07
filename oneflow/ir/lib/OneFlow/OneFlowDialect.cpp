@@ -15,6 +15,7 @@ limitations under the License.
 */
 #include "OneFlow/OneFlowDialect.h"
 #include "OneFlow/OneFlowOps.h"
+#include "OneFlow/OneFlowTypes.h"
 #include "OneFlow/OneFlowOpsDialect.cpp.inc"
 
 namespace mlir {
@@ -130,6 +131,10 @@ void OneFlowDialect::initialize() {
       ,
 #define GET_OP_LIST
 #include "OneFlow/OneFlow.upsample_ops.cpp.inc"
+      >();
+  addTypes<
+#define GET_TYPEDEF_LIST
+#include "OneFlow/OneFlowOpsTypes.cpp.inc"
       >();
 }
 

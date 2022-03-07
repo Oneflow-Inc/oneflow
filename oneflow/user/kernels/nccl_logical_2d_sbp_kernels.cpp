@@ -192,7 +192,7 @@ class NcclLogical2DSameDim0AllGatherNoncontinuous final : public user_op::OpKern
   void Compute(user_op::KernelComputeContext* ctx, user_op::OpKernelState* state,
                const user_op::OpKernelCache*) const override {
     auto* kernel_state =
-        static_cast<NcclLogical2DSameDim0AllGatherNoncontinuousKernelState*>(state);
+        dynamic_cast<NcclLogical2DSameDim0AllGatherNoncontinuousKernelState*>(state);
     CHECK_NOTNULL(kernel_state);
     const user_op::Tensor* in = ctx->Tensor4ArgNameAndIndex("in", 0);
     user_op::Tensor* out = ctx->Tensor4ArgNameAndIndex("out", 0);
@@ -266,7 +266,7 @@ class NcclLogical2DSameDim0All2All final : public user_op::OpKernel {
  private:
   void Compute(user_op::KernelComputeContext* ctx, user_op::OpKernelState* state,
                const user_op::OpKernelCache*) const override {
-    auto* kernel_state = static_cast<NcclLogical2DSameDim0All2AllKernelState*>(state);
+    auto* kernel_state = dynamic_cast<NcclLogical2DSameDim0All2AllKernelState*>(state);
     CHECK_NOTNULL(kernel_state);
     const user_op::Tensor* in = ctx->Tensor4ArgNameAndIndex("in", 0);
     user_op::Tensor* out = ctx->Tensor4ArgNameAndIndex("out", 0);

@@ -7,6 +7,22 @@ include "mlir/IR/SymbolInterfaces.td"
 include "mlir/Interfaces/SideEffectInterfaces.td"
 include "/mlir/Interfaces/InferTypeOpInterface.td"
 
+def OneFlow_InvalidElement: TypeDef<OneFlow_Dialect, "InvalidElement"> {
+  let mnemonic = "invalid_element";
+}
+def OneFlow_CharElement: TypeDef<OneFlow_Dialect, "CharElement"> {
+  let mnemonic = "char_element";
+}
+def OneFlow_TensorBufferElement: TypeDef<OneFlow_Dialect, "TensorBufferElement"> {
+  let mnemonic = "tensor_buffer_element";
+}
+def OneFlow_OFRecordElement: TypeDef<OneFlow_Dialect, "OFRecordElement"> {
+  let mnemonic = "of_record_element";
+}
+
+def OneFlow_OFRecordTensor : TensorOf<[OneFlow_OFRecordElement]>;
+def OneFlow_TensorBufferTensor : TensorOf<[OneFlow_TensorBufferElement]>;
+
 def OneFlow_Tensor : TensorOf<[AnyType]>;
 def SI32ArrayAttr : TypedArrayAttrBase<SI32Attr, "signed 32-bit integer array attribute"> {}
 
@@ -39,7 +55,9 @@ class OneFlow_BaseOp<string mnemonic, list<Trait> traits = []> :
   dag attrs = (ins);
   dag trait_attrs = (ins);
   dag user_op_attrs = (ins);
-  dag input = (ins);
+  dag input = (ins
+    Optional<OneFlow_Tensor>:$UserSourceOpTickInput
+  );
   dag output = (outs);
   dag ctrl_input = (ins);
   dag ctrl_output = (outs);
