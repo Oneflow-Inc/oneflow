@@ -224,7 +224,7 @@ def FusedBiasAddDropoutPattern : Pattern<
           $dropout_op_rate,
           (GetDefaultSeed)
       ),
-      $_add_to_output,
+      $_add_to_output, // TODO: write a function like GetFirstValue to check _add_to_output is empty
       $bias_add_op_name,
       $bias_add_device_tag,
       $bias_add_device_name,
@@ -235,7 +235,7 @@ def FusedBiasAddDropoutPattern : Pattern<
     ),
     (replaceWithValue $mask)
   ],
-  []
+  [] // TODO: check _add_to_output doesn't exist
 >;
 
 // TODO: use either to merge two patterns
