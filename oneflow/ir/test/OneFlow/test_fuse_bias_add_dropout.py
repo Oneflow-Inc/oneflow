@@ -14,7 +14,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 """
 # RUN: python3 %s | FileCheck %s
-# CHECK-NOT: oneflow.pad
+# CHECK-NOT: oneflow.bias_add
 
 import unittest
 import numpy as np
