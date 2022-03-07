@@ -206,7 +206,7 @@ def FusedBiasAddDropoutPattern : Pat<
     $dropout_hierarchy,
     $dropout_op_rate
   ),
-  (FuseBiasAddDropout $conv_2d_res, $pad_res),
+  (FuseBiasAddDropout $dropout_res, $bias_add_res),
   []
 >;
 
