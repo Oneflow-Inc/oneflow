@@ -480,6 +480,7 @@ void populateFuserForExistingOp(::mlir::RewritePatternSet& patterns) {
   patterns.add<FusedScaleTrilPattern>(patterns.getContext());
   patterns.add<FusedScaleTrilPattern2>(patterns.getContext());
   patterns.add<FusedPadConv2DPattern>(patterns.getContext());
+  patterns.add<FusedBiasAddDropoutPattern>(patterns.getContext());
   patterns.add<NormalizationAddReluPattern>(patterns.getContext());
 }
 
