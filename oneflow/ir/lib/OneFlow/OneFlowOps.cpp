@@ -273,7 +273,7 @@ struct FuseBiasAddDropoutPattern : public OpRewritePattern<DropoutOp> {
     rewriter.replaceOpWithNewOp<oneflow::FusedBiasAddMaskScaleOp>(
         op, op->getResultTypes(), fused_bias_add_dropout_operands,
         fused_bias_add_dropout_attributes);
-    // rewriter.eraseOp(biasAddInputOp);
+    rewriter.eraseOp(biasAddInputOp);
     return success();
   }
 };

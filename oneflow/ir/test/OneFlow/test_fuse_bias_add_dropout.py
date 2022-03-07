@@ -32,6 +32,7 @@ def do_bias_add_dropout_graph(test_case, with_cuda, prob):
     dropout = flow.nn.Dropout(p=prob)
     if with_cuda:
         x = x.cuda()
+        bias = bias.to("cuda")
         dropout.to("cuda")
 
     eager_res = dropout(flow._C.bias_add(x, bias, axis=3))
@@ -52,4 +53,7 @@ def do_bias_add_dropout_graph(test_case, with_cuda, prob):
 class TestBiasAddDropout(oneflow.unittest.TestCase):
     def test_bias_add_dropout_graph(test_case):
         do_bias_add_dropout_graph(test_case, True, 1.0)
+
+if __name__ == "__main__":
+    unittest.main()
 
