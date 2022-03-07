@@ -43,7 +43,6 @@ from oneflow.nn.graph.util import (
 from oneflow.nn.module import Module
 from oneflow.nn.optimizer.lr_scheduler import LRScheduler
 from oneflow.nn.optimizer.optimizer import Optimizer
-from oneflow.nn.optimizer.sparse_optimizer import SparseOptimizer
 
 
 class Graph(object):
@@ -211,7 +210,7 @@ class Graph(object):
         return self.__run(*args, **kwargs)
 
     def add_optimizer(
-        self, optim: Optimizer, *, lr_sch: LRScheduler = None,
+        self, optim: Optimizer, *, lr_sch: LRScheduler = None, is_sparse: bool = False,
     ):
         r"""Add an optimizer, an learning rate scheduler to the graph.
 
@@ -267,13 +266,16 @@ class Graph(object):
         Args:
             optim (oneflow.optim.Optimizer): The optimizer.
             lr_sch : The learning rate scheduler, see oneflow.optim.lr_scheduler.
+            is_sparse: When set to be True, treat optim as a sparse optimizer. Default is False.
         """
         opt_dict = dict()
         assert optim is not None, "optimizer cannot be None"
         assert isinstance(
-            optim, (Optimizer, SparseOptimizer)
+            optim, Optimizer
         ), "optimizer must be an instance of Optimizer"
+
         opt_dict["optim"] = optim
+        opt_dict["is_sparse"] = bool(is_sparse)
         if lr_sch is not None:
             assert isinstance(lr_sch, LRScheduler)
             assert (
@@ -415,6 +417,9 @@ class Graph(object):
         print graph build info of each nn.Module. ``v_level`` 2 will additionally print graph build
         info of each operation. ``v_level`` 3 will additionally print more detailed info of each
         operation.
+
+        In addition, during the training process, when ``v_level`` is greater than or equal to 1, 
+        the learning rate information of each step will be printed.
 
         Use ``ranks`` to choose which rank to print the debug information.
 
