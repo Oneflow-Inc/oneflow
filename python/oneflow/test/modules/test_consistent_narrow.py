@@ -19,7 +19,7 @@ import oneflow.unittest
 from oneflow.test_utils.automated_test_util import *
 
 
-@autotest(n=1, check_graph=False)
+@autotest(n=1, check_graph=True)
 def _test_narrow(test_case, placement, sbp):
     dim_size = random(2, 6).to(int).value() * 8
     rand_dim = random(0, 3).to(int).value() * 8

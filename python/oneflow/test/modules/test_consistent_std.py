@@ -20,7 +20,7 @@ import oneflow as flow
 import oneflow.unittest
 
 
-@autotest(n=1, auto_backward=True, check_graph=False)
+@autotest(n=1, auto_backward=True, check_graph=True)
 def _test_global_std_flow_with_random_data(test_case, placement, sbp):
     dim = random(low=0, high=4).to(int)
     x = random_tensor(
@@ -34,7 +34,7 @@ def _test_global_std_flow_with_random_data(test_case, placement, sbp):
     return z
 
 
-@autotest(n=1, auto_backward=True, check_graph=False)
+@autotest(n=1, auto_backward=True, check_graph=True)
 def _test_global_std_tensor_with_random_data(test_case, placement, sbp):
     dim = random(low=0, high=4).to(int)
     x = random_tensor(
