@@ -83,103 +83,32 @@ void LaunchToContiguousKernel(ep::Stream* stream, IndexType count, const size_t 
   StrideParam param_in_stride(in_stride.data(), ndim), param_out_stride(out_stride.data(), ndim);
 
   switch (ndim) {
-    case 1:
-      ToContiguousForwardGpuParallel<T, IndexType, 1>
-          <<<num_blocks, num_threads, 0, stream->As<ep::CudaStream>()->cuda_stream()>>>(
-              count, param_in_stride, param_out_stride, reinterpret_cast<const T*>(in_dptr),
-              reinterpret_cast<T*>(out_dptr));
-      break;
-    case 2:
-      ToContiguousForwardGpuParallel<T, IndexType, 2>
-          <<<num_blocks, num_threads, 0, stream->As<ep::CudaStream>()->cuda_stream()>>>(
-              count, param_in_stride, param_out_stride, reinterpret_cast<const T*>(in_dptr),
-              reinterpret_cast<T*>(out_dptr));
-      break;
-    case 3:
-      ToContiguousForwardGpuParallel<T, IndexType, 3>
-          <<<num_blocks, num_threads, 0, stream->As<ep::CudaStream>()->cuda_stream()>>>(
-              count, param_in_stride, param_out_stride, reinterpret_cast<const T*>(in_dptr),
-              reinterpret_cast<T*>(out_dptr));
-      break;
-    case 4:
-      ToContiguousForwardGpuParallel<T, IndexType, 4>
-          <<<num_blocks, num_threads, 0, stream->As<ep::CudaStream>()->cuda_stream()>>>(
-              count, param_in_stride, param_out_stride, reinterpret_cast<const T*>(in_dptr),
-              reinterpret_cast<T*>(out_dptr));
-      break;
-    case 5:
-      ToContiguousForwardGpuParallel<T, IndexType, 5>
-          <<<num_blocks, num_threads, 0, stream->As<ep::CudaStream>()->cuda_stream()>>>(
-              count, param_in_stride, param_out_stride, reinterpret_cast<const T*>(in_dptr),
-              reinterpret_cast<T*>(out_dptr));
-      break;
-    case 6:
-      ToContiguousForwardGpuParallel<T, IndexType, 6>
-          <<<num_blocks, num_threads, 0, stream->As<ep::CudaStream>()->cuda_stream()>>>(
-              count, param_in_stride, param_out_stride, reinterpret_cast<const T*>(in_dptr),
-              reinterpret_cast<T*>(out_dptr));
-      break;
-    case 7:
-      ToContiguousForwardGpuParallel<T, IndexType, 7>
-          <<<num_blocks, num_threads, 0, stream->As<ep::CudaStream>()->cuda_stream()>>>(
-              count, param_in_stride, param_out_stride, reinterpret_cast<const T*>(in_dptr),
-              reinterpret_cast<T*>(out_dptr));
-      break;
-    case 8:
-      ToContiguousForwardGpuParallel<T, IndexType, 8>
-          <<<num_blocks, num_threads, 0, stream->As<ep::CudaStream>()->cuda_stream()>>>(
-              count, param_in_stride, param_out_stride, reinterpret_cast<const T*>(in_dptr),
-              reinterpret_cast<T*>(out_dptr));
-      break;
-    case 9:
-      ToContiguousForwardGpuParallel<T, IndexType, 9>
-          <<<num_blocks, num_threads, 0, stream->As<ep::CudaStream>()->cuda_stream()>>>(
-              count, param_in_stride, param_out_stride, reinterpret_cast<const T*>(in_dptr),
-              reinterpret_cast<T*>(out_dptr));
-      break;
-    case 10:
-      ToContiguousForwardGpuParallel<T, IndexType, 10>
-          <<<num_blocks, num_threads, 0, stream->As<ep::CudaStream>()->cuda_stream()>>>(
-              count, param_in_stride, param_out_stride, reinterpret_cast<const T*>(in_dptr),
-              reinterpret_cast<T*>(out_dptr));
-      break;
-    case 11:
-      ToContiguousForwardGpuParallel<T, IndexType, 11>
-          <<<num_blocks, num_threads, 0, stream->As<ep::CudaStream>()->cuda_stream()>>>(
-              count, param_in_stride, param_out_stride, reinterpret_cast<const T*>(in_dptr),
-              reinterpret_cast<T*>(out_dptr));
-      break;
-    case 12:
-      ToContiguousForwardGpuParallel<T, IndexType, 12>
-          <<<num_blocks, num_threads, 0, stream->As<ep::CudaStream>()->cuda_stream()>>>(
-              count, param_in_stride, param_out_stride, reinterpret_cast<const T*>(in_dptr),
-              reinterpret_cast<T*>(out_dptr));
-      break;
-    case 13:
-      ToContiguousForwardGpuParallel<T, IndexType, 13>
-          <<<num_blocks, num_threads, 0, stream->As<ep::CudaStream>()->cuda_stream()>>>(
-              count, param_in_stride, param_out_stride, reinterpret_cast<const T*>(in_dptr),
-              reinterpret_cast<T*>(out_dptr));
-      break;
-    case 14:
-      ToContiguousForwardGpuParallel<T, IndexType, 14>
-          <<<num_blocks, num_threads, 0, stream->As<ep::CudaStream>()->cuda_stream()>>>(
-              count, param_in_stride, param_out_stride, reinterpret_cast<const T*>(in_dptr),
-              reinterpret_cast<T*>(out_dptr));
-      break;
-    case 15:
-      ToContiguousForwardGpuParallel<T, IndexType, 15>
-          <<<num_blocks, num_threads, 0, stream->As<ep::CudaStream>()->cuda_stream()>>>(
-              count, param_in_stride, param_out_stride, reinterpret_cast<const T*>(in_dptr),
-              reinterpret_cast<T*>(out_dptr));
-      break;
-    case 16:
-      ToContiguousForwardGpuParallel<T, IndexType, 16>
-          <<<num_blocks, num_threads, 0, stream->As<ep::CudaStream>()->cuda_stream()>>>(
-              count, param_in_stride, param_out_stride, reinterpret_cast<const T*>(in_dptr),
-              reinterpret_cast<T*>(out_dptr));
-      break;
+#define TO_CONTIGUOUS_FORWARD_GPU_PARALLEL(dim)                                            \
+  case dim:                                                                                \
+    ToContiguousForwardGpuParallel<T, IndexType, dim>                                      \
+        <<<num_blocks, num_threads, 0, stream->As<ep::CudaStream>()->cuda_stream()>>>(     \
+            count, param_in_stride, param_out_stride, reinterpret_cast<const T*>(in_dptr), \
+            reinterpret_cast<T*>(out_dptr));                                               \
+    break;
+
+    TO_CONTIGUOUS_FORWARD_GPU_PARALLEL(1)
+    TO_CONTIGUOUS_FORWARD_GPU_PARALLEL(2)
+    TO_CONTIGUOUS_FORWARD_GPU_PARALLEL(3)
+    TO_CONTIGUOUS_FORWARD_GPU_PARALLEL(4)
+    TO_CONTIGUOUS_FORWARD_GPU_PARALLEL(5)
+    TO_CONTIGUOUS_FORWARD_GPU_PARALLEL(6)
+    TO_CONTIGUOUS_FORWARD_GPU_PARALLEL(7)
+    TO_CONTIGUOUS_FORWARD_GPU_PARALLEL(8)
+    TO_CONTIGUOUS_FORWARD_GPU_PARALLEL(9)
+    TO_CONTIGUOUS_FORWARD_GPU_PARALLEL(10)
+    TO_CONTIGUOUS_FORWARD_GPU_PARALLEL(11)
+    TO_CONTIGUOUS_FORWARD_GPU_PARALLEL(12)
+    TO_CONTIGUOUS_FORWARD_GPU_PARALLEL(13)
+    TO_CONTIGUOUS_FORWARD_GPU_PARALLEL(14)
+    TO_CONTIGUOUS_FORWARD_GPU_PARALLEL(15)
+    TO_CONTIGUOUS_FORWARD_GPU_PARALLEL(16)
     default: break;
+#undef TO_CONTIGUOUS_FORWARD_GPU_PARALLEL
   }
 }
 

@@ -294,6 +294,12 @@ class EagerConsistentTensorImpl final : public ConsistentTensorImpl {
     return true;
   }
 
+  bool is_contiguous() const override {
+    // TODO:(zhaoluyang) default return true for now,
+    // but should return real status while stride/view mechanism is ready in eager-consistent mode
+    return true;
+  }
+
   Maybe<MirroredTensor> cur_rank_phy_tensor() const override { return cur_rank_phy_tensor_; }
   void reset_cur_rank_phy_tensor(const std::shared_ptr<MirroredTensor>& val) {
     cur_rank_phy_tensor_ = val;
