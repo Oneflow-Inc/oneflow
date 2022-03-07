@@ -46,6 +46,8 @@ from oneflow.nn.modules.batchnorm_fused import (
     FusedBatchNorm2d,
     FusedBatchNorm3d,
 )
+from oneflow.nn.modules.fused_mlp import FusedMLP
+
 from oneflow.nn.modules.container import (
     ModuleDict,
     ModuleList,
@@ -137,7 +139,6 @@ from oneflow.nn.modules.upsampling import (
     UpsamplingNearest2d,
 )
 from oneflow.nn.modules.fold import Fold, Unfold
-from oneflow.nn.modules.embedding import OneEmbeddingLookup
 
 from oneflow.nn.parameter import Parameter
 from oneflow.nn import utils
