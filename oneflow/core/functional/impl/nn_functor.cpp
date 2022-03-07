@@ -887,6 +887,8 @@ class SparseSoftmaxCrossEntropyFunctor {
                                const std::shared_ptr<one::Tensor>& label) const {
     if (!(logits->is_consistent() && label->is_consistent())) { return false; }
 
+    if (JUST(logits->parallel_desc())->parallel_num() == 1) { return false; }
+
     if (logits->shape()->NumAxes() != 2) { return false; }
 
     const NdSbp& logits_nd_sbp = *(JUST(logits->nd_sbp()));
