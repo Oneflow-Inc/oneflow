@@ -61,6 +61,7 @@ namespace oneflow {
 #define GET_SEQ_3 GET_SEQ_2 OF_PP_MAKE_TUPLE_SEQ(3)
 #define GET_SEQ_4 GET_SEQ_3 OF_PP_MAKE_TUPLE_SEQ(4)
 #define GET_SEQ_5 GET_SEQ_4 OF_PP_MAKE_TUPLE_SEQ(5)
+#define GET_SEQ_6 GET_SEQ_5 OF_PP_MAKE_TUPLE_SEQ(6)
 
 }  // namespace oneflow
 
