@@ -186,6 +186,7 @@ ONEFLOW_API_PYBIND11_MODULE("", m) {
              return py::tuple(py::make_iterator(stride.begin(), stride.end()));
            })
       .def("is_contiguous", &Tensor::is_contiguous)
+      .def("contiguous", &Tensor::contiguous)
       .def_property_readonly("grad_fn", &Tensor::grad_fn_node)
       .def_property_readonly("is_leaf", &Tensor::is_leaf)
       .def_property("requires_grad", &Tensor::requires_grad, &ApiSetRequiresGrad)
