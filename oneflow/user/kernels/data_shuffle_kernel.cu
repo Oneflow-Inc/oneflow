@@ -31,9 +31,6 @@ namespace oneflow {
 
 namespace {
 
-const size_t kUniquePartitionHashFuncSeed = 0;
-const size_t kCurRankUniqueHashFuncSeed = 1;
-
 template<typename K>
 struct TableEntry;
 
@@ -61,18 +58,15 @@ struct TableEntry<uint32_t> {
   uint32_t value;
 };
 
-template<typename K, typename V, typename IDX>
-__global__ void HashTableUniqueAndPartitionPairs(const uint32_t table_capacity,
-                                                 const uint32_t num_keys, int32_t num_partition,
-                                                 size_t hash_func_seed, IDX* table_sizes,
-                                                 TableEntry<K>* table, const K* keys,
-                                                 const V* values, K* partioned_unique_keys,
-                                                 V* partioned_unique_values, IDX* reverse_index,
-                                                 bool need_process_values) {
+template<typename K, typename V, typename IDX, typename HASH>
+__global__ void HashTableUniqueAndPartitionPairs(
+    const uint32_t table_capacity, const uint32_t num_keys, int32_t num_partition, IDX* table_sizes,
+    TableEntry<K>* table, const K* keys, const V* values, K* partioned_unique_keys,
+    V* partioned_unique_values, IDX* reverse_index, bool need_process_values) {
   CUDA_1D_KERNEL_LOOP_T(uint32_t, i, num_keys) {
     IDX r_index_plus_one = 0;
     const K key = keys[i];
-    size_t hash_key = XXH64()(key, hash_func_seed);
+    size_t hash_key = HASH()(key);
     uint32_t partition_id = hash_key % num_partition;
     IDX* table_size = table_sizes + partition_id;
     K* unique_keys = partioned_unique_keys + partition_id * num_keys;
@@ -121,20 +115,19 @@ __global__ void GenerateColumnIds(int32_t elem_cnt, int32_t num_columns, U* colu
   CUDA_1D_KERNEL_LOOP(i, elem_cnt) { column_ids[i] = i % num_columns; }
 }
 
-template<typename K, typename V, typename IDX>
+template<typename K, typename V, typename IDX, typename HASH>
 void UniqueAndPartition(cudaStream_t cuda_stream, int64_t num_ids, size_t capacity,
-                        int64_t num_partition, size_t hash_func_seed, const K* ids,
-                        const V* column_ids, IDX* num_partitioned_unique_ids_ptr,
-                        K* partitioned_unique_ids, V* partitioned_unique_column_ids,
-                        IDX* inverse_unique_partion_indices, void* workspace_ptr,
-                        size_t workspace_bytes, bool need_process_column_ids) {
+                        int64_t num_partition, const K* ids, const V* column_ids,
+                        IDX* num_partitioned_unique_ids_ptr, K* partitioned_unique_ids,
+                        V* partitioned_unique_column_ids, IDX* inverse_unique_partion_indices,
+                        void* workspace_ptr, size_t workspace_bytes, bool need_process_column_ids) {
   CHECK_GE(workspace_bytes, capacity * sizeof(TableEntry<K>));
   OF_CUDA_CHECK(cudaMemsetAsync(workspace_ptr, 0, capacity * sizeof(TableEntry<K>), cuda_stream));
   OF_CUDA_CHECK(
       cudaMemsetAsync(num_partitioned_unique_ids_ptr, 0, num_partition * sizeof(IDX), cuda_stream));
-  HashTableUniqueAndPartitionPairs<K, V, IDX>
+  HashTableUniqueAndPartitionPairs<K, V, IDX, HASH>
       <<<BlocksNum4ThreadsNum(capacity), kCudaThreadsNumPerBlock, 0, cuda_stream>>>(
-          capacity, num_ids, num_partition, hash_func_seed, num_partitioned_unique_ids_ptr,
+          capacity, num_ids, num_partition, num_partitioned_unique_ids_ptr,
           reinterpret_cast<TableEntry<K>*>(workspace_ptr), ids, column_ids, partitioned_unique_ids,
           partitioned_unique_column_ids, inverse_unique_partion_indices, need_process_column_ids);
 }
@@ -383,10 +376,10 @@ class IdShuffleKernel final : public user_op::OpKernel {
     size_t hash_capacity = parallel_num * num_ids;
     void* workspace_ptr = buffer_manager.WorkspacePtr();
     size_t workspace_size = buffer_manager.WorkspaceBytes();
-    UniqueAndPartition<K, U, IDX>(
-        cuda_stream, num_ids, hash_capacity, parallel_num, kUniquePartitionHashFuncSeed,
-        reinterpret_cast<const K*>(ids->dptr()), column_ids_ptr, num_partitioned_unique,
-        partitioned_unique_ids, partitioned_unique_column_ids,
+    UniqueAndPartition<K, U, IDX, ShardingHash>(
+        cuda_stream, num_ids, hash_capacity, parallel_num, reinterpret_cast<const K*>(ids->dptr()),
+        column_ids_ptr, num_partitioned_unique, partitioned_unique_ids,
+        partitioned_unique_column_ids,
         reinterpret_cast<IDX*>(inverse_unique_partion_indices->mut_dptr()), workspace_ptr,
         workspace_size, need_process_column_ids);
     ncclComm_t comm = kernel_state->comm();
@@ -407,13 +400,13 @@ class IdShuffleKernel final : public user_op::OpKernel {
                           cur_rank_unique_column_ids->data_type(), host_num_unique_matrix,
                           partitioned_unique_ids, partitioned_unique_column_ids, received_ids,
                           received_column_ids, &received_elem_cnt, need_process_column_ids);
-    UniqueAndPartition<K, U, IDX>(cuda_stream, received_elem_cnt, hash_capacity, 1,
-                                  kCurRankUniqueHashFuncSeed, received_ids, received_column_ids,
-                                  reinterpret_cast<IDX*>(cur_rank_num_unique->mut_dptr()),
-                                  reinterpret_cast<K*>(cur_rank_unique_ids->mut_dptr()),
-                                  reinterpret_cast<U*>(cur_rank_unique_column_ids->mut_dptr()),
-                                  reinterpret_cast<IDX*>(cur_rank_inverse_indices->mut_dptr()),
-                                  workspace_ptr, workspace_size, need_process_column_ids);
+    UniqueAndPartition<K, U, IDX, LocalUniqueHash>(
+        cuda_stream, received_elem_cnt, hash_capacity, 1, received_ids, received_column_ids,
+        reinterpret_cast<IDX*>(cur_rank_num_unique->mut_dptr()),
+        reinterpret_cast<K*>(cur_rank_unique_ids->mut_dptr()),
+        reinterpret_cast<U*>(cur_rank_unique_column_ids->mut_dptr()),
+        reinterpret_cast<IDX*>(cur_rank_inverse_indices->mut_dptr()), workspace_ptr, workspace_size,
+        need_process_column_ids);
     if (!need_process_column_ids) {
       OF_CUDA_CHECK(cudaMemsetAsync(cur_rank_unique_column_ids->mut_dptr(), 0,
                                     cur_rank_unique_column_ids->shape().elem_cnt() * sizeof(U),
