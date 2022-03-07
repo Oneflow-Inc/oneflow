@@ -52,26 +52,21 @@ def _check_cache(cache):
 
 
 class OneEmbeddingLookup(Module):
-    def __init__(self, embedding_options):
+    def __init__(self, name, embedding_dim, dtype, key_type, intializer, store_options):
         super().__init__()
-        assert embedding_options.__contains__("name")
-        self.emb_name = embedding_options["name"]
-        assert embedding_options.__contains__("embedding_dim")
-        embedding_dim = embedding_options["embedding_dim"]
-        assert embedding_options.__contains__(
-            "storage_dim"
-        ), "you must set storage_dim, if optimizer is sgd, set to embedding_dim * 1, momentum set to  embedding_dim * 2, adam set  embedding_dim * 3"
-        storage_dim = embedding_options["storage_dim"]
+        embedding_options = {}
+        embedding_options["name"] = name
         assert embedding_dim > 0
-        assert storage_dim in (
-            embedding_dim,
-            embedding_dim * 2,
-            embedding_dim * 3,
-        ), "you must set storage_dim to embedding_dim * 1 when optimizer is sgd, to embedding_dim * 2 when momentum, set to embedding_dim * 3 when adam"
+        embedding_options["embedding_dim"] = embedding_dim
+        self.dtype = dtype
+        self.key_type = key_type
+
+        scale_factor = store_options["size_factor"]
+        embedding_options["storage_dim"] = scale_factor * embedding_dim
 
         # kv store
-        assert embedding_options.__contains__("kv_store")
-        kv_store = embedding_options["kv_store"]
+        assert store_options.__contains__("kv_store")
+        kv_store = store_options["kv_store"]
         assert isinstance(kv_store, dict)
         if kv_store.__contains__("caches"):
             caches = kv_store["caches"]
@@ -100,29 +95,20 @@ class OneEmbeddingLookup(Module):
             assert persistent_table["physical_block_size"] in [512, 4096]
         else:
             persistent_table["physical_block_size"] = 4096
+        embedding_options["kv_store"] = kv_store
 
         # initializer
-        assert embedding_options.__contains__("default_initializer")
-        _check_initializer(embedding_options["default_initializer"])
-        if embedding_options.__contains__("columns"):
-            columns = embedding_options["columns"]
+        assert intializer.__contains__("default_initializer")
+        _check_initializer(intializer["default_initializer"])
+        if intializer.__contains__("columns"):
+            columns = intializer["columns"]
             assert isinstance(columns, (list, tuple))
             for column in columns:
                 assert isinstance(column, dict)
                 assert column.__contains__("initializer")
                 _check_initializer(column["initializer"])
-
-        if embedding_options.__contains__("key_type"):
-            self.key_type = embedding_options["key_type"]
-            del embedding_options["key_type"]
-        else:
-            self.key_type = flow.int64
-
-        if embedding_options.__contains__("value_type"):
-            self.value_type = embedding_options["value_type"]
-            del embedding_options["value_type"]
-        else:
-            self.value_type = flow.float
+        embedding_options["default_initializer"] = intializer["default_initializer"]
+        embedding_options["columns"] = intializer["columns"]
 
         self.embedding_options = json.dumps(embedding_options)
         # TODO(zzk): Support placement configuration. Currently OneEmbedding is placed in all gpu.
@@ -174,5 +160,97 @@ class OneEmbeddingLookup(Module):
     def forward(self, ids, column_ids):
         assert self.key_type == ids.dtype, "ids data_type must equals key_type"
         return flow._C.embedding_lookup_placeholder(
-            self.shadow, ids, column_ids, self.value_type, self.embedding_options,
+            self.shadow, ids, column_ids, self.dtype, self.embedding_options,
         )
+
+
+def DeviceMemStoreOption(size_factor, gpu_memory_mb, persistent_path):
+    option = {
+        "kv_store": {
+            "caches": [
+                {
+                    "policy": "full",
+                    "cache_memory_budget_mb": gpu_memory_mb,
+                    "value_memory_kind": "device",
+                }
+            ],
+            "persistent_table": {"path": persistent_path, "physical_block_size": 512,},
+        },
+        "size_factor": size_factor,
+    }
+    return option
+
+
+def HostMemStoreOption(size_factor, cpu_memory_mb, persistent_path):
+    option = {
+        "kv_store": {
+            "caches": [
+                {
+                    "policy": "full",
+                    "cache_memory_budget_mb": cpu_memory_mb,
+                    "value_memory_kind": "host",
+                }
+            ],
+            "persistent_table": {"path": persistent_path, "physical_block_size": 512,},
+        },
+        "size_factor": size_factor,
+    }
+    return option
+
+
+def DeviceMemCachedSSDStoreOption(size_factor, gpu_memory_mb, persistent_path):
+    option = {
+        "kv_store": {
+            "caches": [
+                {
+                    "policy": "lru",
+                    "cache_memory_budget_mb": gpu_memory_mb,
+                    "value_memory_kind": "device",
+                }
+            ],
+            "persistent_table": {"path": persistent_path, "physical_block_size": 512,},
+        },
+        "size_factor": size_factor,
+    }
+    return option
+
+
+def HostMemCachedSSDStoreOption(size_factor, cpu_memory_mb, persistent_path):
+    option = {
+        "kv_store": {
+            "caches": [
+                {
+                    "policy": "lru",
+                    "cache_memory_budget_mb": cpu_memory_mb,
+                    "value_memory_kind": "host",
+                }
+            ],
+            "persistent_table": {"path": persistent_path, "physical_block_size": 512,},
+        },
+        "size_factor": size_factor,
+    }
+    return option
+
+
+def DeviceMemCachedHostMemStoreOption(
+    size_factor, gpu_memory_mb, cpu_memory_mb, persistent_path
+):
+    option = {
+        "kv_store": {
+            "caches": [
+                {
+                    "policy": "lru",
+                    "cache_memory_budget_mb": gpu_memory_mb,
+                    "value_memory_kind": "device",
+                },
+                {
+                    "policy": "full",
+                    "cache_memory_budget_mb": cpu_memory_mb,
+                    "value_memory_kind": "host",
+                },
+            ],
+            "persistent_table": {"path": persistent_path, "physical_block_size": 512,},
+        },
+        "size_factor": size_factor,
+    }
+    return option

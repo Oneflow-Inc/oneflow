@@ -123,6 +123,7 @@ const std::shared_ptr<oneflow::one::Tensor>& Tensor::__internal_tensor() const {
 
 REGISTER_TENSOR_COPY_TO(float)
 REGISTER_TENSOR_COPY_TO(double)
+REGISTER_TENSOR_COPY_TO(bool)
 REGISTER_TENSOR_COPY_TO(int8_t)
 REGISTER_TENSOR_COPY_TO(int32_t)
 REGISTER_TENSOR_COPY_TO(int64_t)
