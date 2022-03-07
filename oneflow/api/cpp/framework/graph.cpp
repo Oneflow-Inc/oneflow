@@ -280,7 +280,7 @@ InputOutputInfos Graph::GraphImpl::GetOutputInfos() {
   return output_infos_;
 }
 
-of::Maybe<void> Graph::GraphImpl::ParseInputOutputInfos() {
+of::Maybe<void> Graph::GraphImpl::CollectInputOutputInfos() {
   const of::OpGraph op_graph(job_);
   size_t input_order = 0;
   size_t output_order = 0;
