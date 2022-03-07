@@ -23,7 +23,6 @@ namespace oneflow {
 
 namespace {
 
-constexpr int32_t kBlockSize = cuda::elementwise::kBlockSize;
 constexpr int32_t kThreadWorkSize = 4;
 constexpr int32_t kNumThreads = 32 * 4;
 constexpr int32_t get_min_threads_num() { return kNumThreads; }
