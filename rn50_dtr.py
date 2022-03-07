@@ -71,7 +71,7 @@ import oneflow.nn as nn
 import resnet50_model
 
 # run forward, backward and update parameters
-WARMUP_ITERS = 2
+WARMUP_ITERS = 5
 ALL_ITERS = args.iters
 
 # NOTE: it has not effect for dtr allocator

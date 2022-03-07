@@ -24,8 +24,6 @@ limitations under the License.
 #include "oneflow/core/device/cuda_util.h"
 #include "oneflow/core/common/util.h"
 #include "oneflow/core/profiler/profiler.h"
-#include "oneflow/core/framework/tensor_pool.h"
-#include "oneflow/core/job/env_global_objects_scope.h"
 
 namespace oneflow {
 namespace vm {
@@ -57,10 +55,6 @@ void CudaStreamType::Compute(Instruction* instruction) const {
   OF_PROFILER_RANGE_PUSH(
       "S:"
       + instruction->instr_msg().instr_type_id().instruction_type().DebugOpTypeName(instruction));
-  // if (oneflow::DTRDebugEnabled()) {
-  //   std::cout << "Begin cuda_stream_type.cpp:CudaStreamType::Compute " << std::endl;
-  //   Global<one::DTRTensorPool>::Get()->display();
-  // }
   auto* stream = instruction->mut_stream();
   cudaSetDevice(stream->device_id());
   {
@@ -72,10 +66,6 @@ void CudaStreamType::Compute(Instruction* instruction) const {
   char* data_ptr = instruction->mut_status_buffer()->mut_buffer()->mut_data();
   CudaOptionalEventRecordStatusQuerier::MutCast(data_ptr)->SetLaunched(stream->device_ctx().get());
   OF_PROFILER_RANGE_POP();
-  // if (oneflow::DTRDebugEnabled()) {
-  //   std::cout << "End cuda_stream_type.cpp:CudaStreamType::Compute " << std::endl;
-  //   Global<one::DTRTensorPool>::Get()->display();
-  // }
 }
 
 intrusive::shared_ptr<StreamDesc> CudaStreamType::MakeStreamDesc(const Resource& resource,
