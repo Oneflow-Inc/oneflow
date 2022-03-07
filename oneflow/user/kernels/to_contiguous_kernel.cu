@@ -85,12 +85,12 @@ void LaunchToContiguousKernel(ep::Stream* stream, IndexType count, const size_t 
   StrideParam param_in_stride(in_stride.data(), ndim), param_out_stride(out_stride.data(), ndim);
 
   switch (ndim) {
-#define TO_CONTIGUOUS_FORWARD_GPU_PARALLEL(dim)                                                                      \
-  case dim:                                                                                                                                                                             \
-    ToContiguousForwardGpuParallel<T, IndexType, dim>                                                                              \
+#define TO_CONTIGUOUS_FORWARD_GPU_PARALLEL(dim)                                             \
+  case dim:                                                                                 \
+    ToContiguousForwardGpuParallel<T, IndexType, dim>                                       \
         <<<num_blocks, num_threads, 0, stream->As<ep::CudaStream>()->cuda_stream()>>>(      \
-            count, param_in_stride, param_out_stride, reinterpret_cast<const T*>(in_dptr),               \
-            reinterpret_cast<T*>(out_dptr), num_threads, kThreadWorkSize, block_work_size);       \
+            count, param_in_stride, param_out_stride, reinterpret_cast<const T*>(in_dptr),  \
+            reinterpret_cast<T*>(out_dptr), num_threads, kThreadWorkSize, block_work_size); \
     break;
 
     TO_CONTIGUOUS_FORWARD_GPU_PARALLEL(1)
@@ -142,11 +142,11 @@ struct ToContiguousUtil<DeviceType::kCUDA, T> : ToContiguousUtilBase {
                                       stream->As<ep::CudaStream>()->cuda_stream()));
       } else {
         if (element_count < GetMaxVal<int32_t>()) {
-          LaunchToContiguousKernel<T, int32_t>(stream, element_count, ndims, block_size,
-                                                          in_stride, out_stride, in_dptr, out_dptr);
+          LaunchToContiguousKernel<T, int32_t>(stream, element_count, ndims, block_size, in_stride,
+                                               out_stride, in_dptr, out_dptr);
         } else {
-          LaunchToContiguousKernel<T, int64_t>(stream, element_count, ndims, block_size,
-                                                          in_stride, out_stride, in_dptr, out_dptr);
+          LaunchToContiguousKernel<T, int64_t>(stream, element_count, ndims, block_size, in_stride,
+                                               out_stride, in_dptr, out_dptr);
         }
       }
     }
