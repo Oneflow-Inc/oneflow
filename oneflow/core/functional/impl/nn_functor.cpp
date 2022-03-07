@@ -263,9 +263,9 @@ class BatchMatMulFunctor {
   std::shared_ptr<OpExpr> batch_matmul_op_;
 };
 
-class CublasFusedMLPFunctor {
+class FusedMLPFunctor {
  public:
-  CublasFusedMLPFunctor() {
+  FusedMLPFunctor() {
 #if CUDA_VERSION >= 11040
     fused_op_.resize(kMaxInputCount /*the maximum number of inputs*/);
     for (int n = 1; n < fused_op_.size(); ++n) {
@@ -340,9 +340,11 @@ class CublasFusedMLPFunctor {
       out = JUST(
           functional::BiasAdd(JUST(functional::MatMul(out, weights[layer_idx], false, true, 1.0)),
                               biases[layer_idx], 1));
-      if (layer_idx == weight_size - 1) {
-        if (!skip_final_activation) { out = JUST(functional::Relu(out, false)); }
-      } else {
+      if ((layer_idx != weight_size - 1) || (!skip_final_activation)) {
+        /*
+        When it is not finaly dense layer, or it is final dense layer and skip_final_activate=False,
+        we add relu Layer.
+        */
         out = JUST(functional::Relu(out, false));
       }
     }
@@ -2323,7 +2325,7 @@ ONEFLOW_FUNCTION_LIBRARY(m) {
   m.add_functor<impl::DeConv3dFunctor>("Deconv3d");
   m.add_functor<impl::MatMulFunctor>("MatMul");
   m.add_functor<impl::BatchMatMulFunctor>("BatchMatMul");
-  m.add_functor<impl::CublasFusedMLPFunctor>("CublasFusedMLP");
+  m.add_functor<impl::FusedMLPFunctor>("CublasFusedMLP");
   m.add_functor<impl::LayerNormFunctor>("LayerNorm");
   m.add_functor<impl::LayerNormAffineFunctor>("LayerNormAffine");
   m.add_functor<impl::TFAvgPool2DFunctor>("AvgPool2D");
