@@ -232,6 +232,11 @@ struct ConcreteSystemOpPattern : public OpRewritePattern<OpType> {
   }
 };
 
+IntegerAttr getSI64IntegerAttr(::mlir::PatternRewriter& rewriter, int64_t value) {
+  return IntegerAttr::get(rewriter.getIntegerType(64, /*isSigned=*/true),
+                          APInt(64, value, /*isSigned=*/true));
+}
+
 struct FuseBiasAddDropoutPattern : public OpRewritePattern<DropoutOp> {
   explicit FuseBiasAddDropoutPattern(MLIRContext* context)
       : OpRewritePattern<DropoutOp>(context, /*benefit=*/1) {}
@@ -244,8 +249,8 @@ struct FuseBiasAddDropoutPattern : public OpRewritePattern<DropoutOp> {
     SmallVector<Value, 4> random_mask_like_operands;
     NamedAttrList random_mask_like_op_attributes = biasAddInputOp->getAttrs();
     random_mask_like_op_attributes.append(llvm::StringRef("rate"), op.rateAttr());
-    random_mask_like_op_attributes.append(llvm::StringRef("seed"),
-                                          rewriter.getI64IntegerAttr((int64_t)gen->current_seed()));
+    random_mask_like_op_attributes.append(
+        llvm::StringRef("seed"), getSI64IntegerAttr(rewriter, (int64_t)gen->current_seed()));
     random_mask_like_op_attributes.erase(biasAddInputOp.axisAttrName());
     random_mask_like_operands.push_back(biasAddInputOp.a());
     auto random_mask_like_res = rewriter
@@ -263,7 +268,7 @@ struct FuseBiasAddDropoutPattern : public OpRewritePattern<DropoutOp> {
     fused_bias_add_dropout_operands.push_back(biasAddInputOp.b());
     fused_bias_add_dropout_operands.push_back(random_mask_like_res.front());
     rewriter.replaceOpWithNewOp<oneflow::FusedBiasAddMaskScaleOp>(
-        op, op->getResultTypes(), fused_bias_add_dropout_operands,
+        op, op->getResultTypes().front(), fused_bias_add_dropout_operands,
         fused_bias_add_dropout_attributes);
     rewriter.eraseOp(biasAddInputOp);
     return success();
