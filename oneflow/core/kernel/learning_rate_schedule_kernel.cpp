@@ -108,17 +108,16 @@ double PiecewiseConstantLearningRate(const PiecewiseConstantConf& conf, double l
 double PolynomialDecayedLearningRate(const PolynomialDecayConf& conf, double lr,
                                      int64_t cur_batch_num) {
   CHECK_GT(conf.decay_batches(), 0);
-  double decay_start = ParseIntegerFromEnv("DECAY_START", 0);
-  double cur_batch = static_cast<double>(cur_batch_num) - decay_start;
+  double cur_batch = static_cast<double>(cur_batch_num);
   double decay_batches = static_cast<double>(conf.decay_batches());
-  if (cur_batch <= 0) {
-    return lr;
-  } else if (cur_batch <= decay_batches) {
-    double lr_factor = std::pow(1.0 - (cur_batch / decay_batches), conf.power());
-    return lr * lr_factor;
+  if (conf.cycle()) {
+    if (cur_batch_num == 0) { cur_batch = 1.0; }
+    decay_batches = decay_batches * std::ceil(cur_batch / decay_batches);
   } else {
-    return conf.end_learning_rate();
+    cur_batch = std::min(cur_batch, decay_batches);
   }
+  return (lr - conf.end_learning_rate()) * std::pow(1.0 - (cur_batch / decay_batches), conf.power())
+         + conf.end_learning_rate();
 }
 
 double CosineDecayedLearningRate(const CosineDecayConf& conf, double lr, int64_t cur_batch_num) {
@@ -291,7 +290,11 @@ void LearningRateScheduleKernel::ForwardDataContent(KernelContext* ctx) const {
   if (conf.has_learning_rate_decay()) {
     learning_rate = GetDecayedLearningRate(conf.learning_rate_decay(), learning_rate, train_step);
   }
-  LOG(INFO) << " iter: " << train_step << " learning_rate: " << learning_rate;
+  // NOTE(lixiang): nn.Graph.debug(1) will print step and lr.
+  if (print_step_lr_) {
+    std::cout << "Last step " << train_step << " adjusting learning rate to " << learning_rate
+              << std::endl;
+  }
   *ctx->BnInOp2Blob("out")->mut_dptr<float>() = learning_rate;
   if (Global<ResourceDesc, ForSession>::Get()->enable_debug_mode()) {
     (*log_stream_) << std::to_string(train_step) << ", " << std::to_string(learning_rate) << "\n";
