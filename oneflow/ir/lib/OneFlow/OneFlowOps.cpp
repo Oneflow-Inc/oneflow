@@ -281,6 +281,14 @@ void NormalizationAddReluOp::build(::mlir::OpBuilder& odsBuilder, ::mlir::Operat
   /*inv_variance */ odsState.addTypes(x.getType());
 }
 
+void RandomMaskLikeOp::build(mlir::OpBuilder& odsBuilder, mlir::OperationState& odsState,
+                             mlir::Value like, StringRef op_name, StringRef device_tag,
+                             ArrayAttr device_name, IntegerAttr scope_symbol_id,
+                             ArrayAttr hierarchy, mlir::FloatAttr, mlir::IntegerAttr) {
+  odsState.addOperands(like);
+  // TODO: finish this
+}
+
 std::string Add2Op::getOriginalOpTypeName() { return "add_n"; }
 
 void Job::build(OpBuilder& builder, OperationState& state, StringRef name, FunctionType type) {
