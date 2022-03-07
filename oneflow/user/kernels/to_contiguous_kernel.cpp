@@ -51,7 +51,6 @@ struct ToContiguousUtil<DeviceType::kCPU, T> : ToContiguousUtilBase {
           memset(coordinates, 0, sizeof(int64_t) * ndim);
           out_offset = i;
           in_offset = 0;
-          // int64_t coordinates[ndim] = {0};
           // compute coords(output offset to coords)
           int64_t remaining = out_offset;
           for (int i = 0; i < ndim; ++i) {

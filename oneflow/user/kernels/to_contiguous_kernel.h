@@ -40,7 +40,6 @@ class ToContiguousUtilParam {
   char* out_dptr;
 };
 
-class ToContiguousUtilAttach;
 
 class ToContiguousUtilBase : public ToContiguousUtilParam {
  public:
