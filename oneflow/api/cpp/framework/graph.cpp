@@ -14,6 +14,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
+#include "glog/logging.h"
 #include "oneflow/api/common/ofblob.h"
 #include "oneflow/api/common/scope.h"
 #include "oneflow/api/cpp/framework/device.h"
@@ -133,12 +134,12 @@ class Graph::GraphImpl final {
   explicit GraphImpl(const std::string& model_path, const Device& device = Device("cpu"));
 
   GraphImpl(const GraphImpl& graph) = delete;
-  GraphImpl(GraphImpl&& graph) noexcept;
+  GraphImpl(GraphImpl&& graph) = default;
 
   ~GraphImpl() = default;
 
   GraphImpl& operator=(const GraphImpl& graph) = delete;
-  GraphImpl& operator=(GraphImpl&& graph) noexcept;
+  GraphImpl& operator=(GraphImpl&& graph) = default;
 
   InputOutputInfos GetInputInfos();
   InputOutputInfos GetOutputInfos();
@@ -165,7 +166,6 @@ class Graph::GraphImpl final {
 
   InputOutputInfos input_infos_;
   InputOutputInfos output_infos_;
-  of::HashMap<std::string, int> input_name_to_order_;
   of::HashMap<std::string, std::shared_ptr<of::one::Tensor>> output_name_to_tensor_;
   of::HashMap<std::string, std::shared_ptr<of::one::Tensor>> variable_op_name_to_tensor_;
   std::shared_ptr<of::one::TensorTuple> output_tensor_tuple_;
@@ -235,37 +235,6 @@ Graph::GraphImpl::GraphImpl(const std::string& model_path, const Device& device)
   job_.mutable_job_conf()->set_job_name(job_.mutable_job_conf()->job_name() + of::NewUniqueId());
   graph_ = std::make_shared<of::NNGraph>(job_.job_conf().job_name());
   of::Global<of::MultiClientSessionContext>::Get()->AddCGraph(graph_).GetOrThrow();
-}
-
-Graph::GraphImpl::GraphImpl(GraphImpl&& graph) noexcept
-    : graph_(std::move(graph.graph_)),
-      model_path_(std::move(graph.model_path_)),
-      is_compiled_(graph.is_compiled_),
-      batch_size_(graph.batch_size_),
-      xrt_kind_(graph.xrt_kind_),
-      device_(std::move(graph.device_)),
-      job_(std::move(graph.job_)),
-      input_name_to_order_(std::move(graph.input_name_to_order_)),
-      output_name_to_tensor_(std::move(graph.output_name_to_tensor_)),
-      variable_op_name_to_tensor_(std::move(graph.variable_op_name_to_tensor_)),
-      output_tensor_tuple_(std::move(graph.output_tensor_tuple_)),
-      parameter_tensor_tuple_(std::move(graph.parameter_tensor_tuple_)) {}
-
-Graph::GraphImpl& Graph::GraphImpl::operator=(Graph::GraphImpl&& graph) noexcept {
-  if (&graph == this) { return *this; }
-  graph_ = std::move(graph.graph_);
-  model_path_ = std::move(graph.model_path_);
-  is_compiled_ = graph.is_compiled_;
-  batch_size_ = graph.batch_size_;
-  xrt_kind_ = graph.xrt_kind_;
-  device_ = std::move(graph.device_);
-  job_ = std::move(graph.job_);
-  input_name_to_order_ = std::move(graph.input_name_to_order_);
-  output_name_to_tensor_ = std::move(graph.output_name_to_tensor_);
-  variable_op_name_to_tensor_ = std::move(graph.variable_op_name_to_tensor_);
-  output_tensor_tuple_ = std::move(graph.output_tensor_tuple_);
-  parameter_tensor_tuple_ = std::move(graph.parameter_tensor_tuple_);
-  return *this;
 }
 
 InputOutputInfos Graph::GraphImpl::GetInputInfos() {
@@ -346,15 +315,11 @@ of::Maybe<void> Graph::GraphImpl::BuildGraph() {
   CompileScope build_graph_scope(job_.job_conf(), *device_.device_->shared_from_symbol(),
                                  xrt_kind_);
   {
-    int input_tensor_order = 0;
     const of::OpGraph op_graph(job_);
     op_graph.TopoForEachNode([&](const of::OpNode* node) -> of::Maybe<void> {
       const of::OperatorConf& op_conf = node->op().op_conf();
       JUST(AddOp(op_conf));
-      if (op_conf.has_input_conf()) {
-        input_name_to_order_[op_conf.name()] = input_tensor_order;
-        input_tensor_order += 1;
-      } else if (op_conf.has_variable_conf()) {
+      if (op_conf.has_variable_conf()) {
         const of::LazyMode::Guard lazy_mode_disabled_guard{false};
         const of::VariableOpConf& variable_conf = op_conf.variable_conf();
         variable_op_name_to_tensor_[op_conf.name()] = JUST(of::one::functional::Empty(
@@ -419,9 +384,10 @@ of::Maybe<void> Graph::GraphImpl::RegisterTensors(const std::vector<Tensor>& inp
   {
     std::vector<std::string> input_op_names(inputs.size());
     std::vector<std::shared_ptr<of::one::Tensor>> input_tensors(inputs.size());
-    for (const auto& name_order : input_name_to_order_) {
-      input_op_names[name_order.second] = name_order.first;
-      input_tensors[name_order.second] = inputs.at(name_order.second).tensor_;
+    for (const auto& input_info : input_infos_) {
+      size_t index = input_info.second.input_output_index_;
+      input_op_names[index] = input_info.first;
+      input_tensors[index] = inputs.at(index).tensor_;
     }
     JUST(graph_->RegisterInputOpNamesAndTensors(input_op_names, input_tensors));
   }
