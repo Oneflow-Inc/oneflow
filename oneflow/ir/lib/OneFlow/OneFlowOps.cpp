@@ -19,7 +19,6 @@ limitations under the License.
 #include "OneFlow/Passes.h"
 
 #include "llvm/ADT/STLExtras.h"
-#include "llvm/ADT/StringRef.h"
 #include "llvm/ADT/StringSet.h"
 
 #include "mlir/IR/BuiltinAttributes.h"
