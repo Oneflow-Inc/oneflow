@@ -87,7 +87,7 @@ Maybe<void> EagerBlobObject::TryAllocateBlobBodyMemory(DeviceCtx* device_ctx) {
     };
     char* dptr = nullptr;
     allocator->Allocate(&dptr, required_body_bytes);
-    if (ParseBooleanFromEnv("OF_DTR_ALLO", true)) {
+    if (ParseBooleanFromEnv("OF_DTR", false) && ParseBooleanFromEnv("OF_DTR_ALLO", true)) {
       if (auto* b_allocator = dynamic_cast<vm::ThreadSafeAllocator*>(allocator)) {
         if (auto* dtr_allocator =
                 dynamic_cast<vm::DtrCudaAllocator*>(b_allocator->backend_allocator())) {

@@ -69,6 +69,14 @@ Maybe<void> Parameter::set_data(const std::shared_ptr<Tensor>& other) {
   return Maybe<void>::Ok();
 }
 
+bool DTRMirroredTensor::is_dtr_tensor() const { return true; }
+
+bool DTRMirroredTensor::is_in_memory() const {
+  return std::dynamic_pointer_cast<vm::DTREagerBlobObject>(CHECK_JUST(eager_blob_object()))
+      ->is_in_memory();
+  ;
+}
+
 Maybe<void> DTRMirroredTensor::set_tensor_inputs(const TensorTuple& inputs) {
   if (oneflow::DTRDebugEnabled()) {
     std::stringstream ss;

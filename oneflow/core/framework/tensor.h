@@ -64,6 +64,8 @@ class Tensor {
   virtual bool is_local() const { return !is_consistent(); }
   virtual bool is_lazy() const = 0;
   virtual bool is_eager() const { return !is_lazy(); }
+  virtual bool is_dtr_tensor() const { return false; }
+  virtual bool is_in_memory() const { return true; }
   virtual const TensorMeta& tensor_meta() const = 0;
   virtual Maybe<Tensor> data() = 0;
   virtual Maybe<Symbol<ConsistentTensorMeta>> consistent_tensor_meta() const { OF_UNIMPLEMENTED(); }
@@ -497,6 +499,9 @@ class DTRMirroredTensor final : public MirroredTensor {
   explicit DTRMirroredTensor(const std::shared_ptr<DTREagerMirroredTensorImpl>& impl)
       : MirroredTensor(impl) {}
   ~DTRMirroredTensor() = default;
+
+  bool is_dtr_tensor() const override;
+  bool is_in_memory() const override;
 
   Maybe<void> set_tensor_inputs(const TensorTuple& inputs);
 
