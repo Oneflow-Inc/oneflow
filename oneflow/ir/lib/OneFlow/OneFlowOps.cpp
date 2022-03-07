@@ -245,12 +245,12 @@ struct FuseBiasAddDropoutPattern : public OpRewritePattern<DropoutOp> {
     NamedAttrList random_mask_like_op_attributes = biasAddInputOp->getAttrs();
     random_mask_like_op_attributes.append(llvm::StringRef("rate"), op.rateAttr());
     random_mask_like_op_attributes.append(llvm::StringRef("seed"),
-                                          rewriter.getUI32IntegerAttr(gen->current_seed()));
+                                          rewriter.getI64IntegerAttr((int64_t)gen->current_seed()));
     random_mask_like_op_attributes.erase(biasAddInputOp.axisAttrName());
     random_mask_like_operands.push_back(biasAddInputOp.a());
     auto random_mask_like_res = rewriter
                                     .create<oneflow::RandomMaskLikeOp>(
-                                        op->getLoc(), op->getResultTypes(),
+                                        op->getLoc(), op->getResultTypes().front(),
                                         random_mask_like_operands, random_mask_like_op_attributes)
                                     ->getResults();
     // // fused_bias_add_mask_scale_op
