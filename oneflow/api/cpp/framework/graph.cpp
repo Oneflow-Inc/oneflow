@@ -144,8 +144,8 @@ class Graph::GraphImpl final {
   GraphImpl& operator=(const GraphImpl& graph) = delete;
   GraphImpl& operator=(GraphImpl&& graph) noexcept;
 
-  std::unordered_map<std::string, std::pair<Shape, DType>> GetInputInfos();
-  std::unordered_map<std::string, std::pair<Shape, DType>> GetOutputInfos();
+  InputOutputInfos GetInputInfos();
+  InputOutputInfos GetOutputInfos();
   std::vector<Tensor> Forward(const std::vector<Tensor>& inputs);
   void set_batch_size(int batch_size) { batch_size_ = batch_size; }
   void enable_tensorrt() { xrt_kind_ = XrtKind::kTensorRT; }
@@ -167,8 +167,8 @@ class Graph::GraphImpl final {
   Device device_;
   of::Job job_;
 
-  std::unordered_map<std::string, std::pair<Shape, DType>> input_shape_;
-  std::unordered_map<std::string, std::pair<Shape, DType>> output_shape_;
+  InputOutputInfos input_infos_;
+  InputOutputInfos output_infos_;
   of::HashMap<std::string, int> input_name_to_order_;
   of::HashMap<std::string, std::shared_ptr<of::one::Tensor>> output_name_to_tensor_;
   of::HashMap<std::string, std::shared_ptr<of::one::Tensor>> variable_op_name_to_tensor_;
@@ -189,11 +189,11 @@ Graph& Graph::operator=(Graph&& graph) noexcept {
   return *this;
 }
 
-std::unordered_map<std::string, std::pair<Shape, DType>> Graph::GetInputInfos() {
+InputOutputInfos Graph::GetInputInfos() {
   return graph_->GetInputInfos();
 }
 
-std::unordered_map<std::string, std::pair<Shape, DType>> Graph::GetOutputInfos() {
+InputOutputInfos Graph::GetOutputInfos() {
   return graph_->GetOutputInfos();
 }
 
@@ -272,24 +272,28 @@ Graph::GraphImpl& Graph::GraphImpl::operator=(Graph::GraphImpl&& graph) noexcept
   return *this;
 }
 
-std::unordered_map<std::string, std::pair<Shape, DType>> Graph::GraphImpl::GetInputInfos() {
-  return input_shape_;
+InputOutputInfos Graph::GraphImpl::GetInputInfos() {
+  return input_infos_;
 }
 
-std::unordered_map<std::string, std::pair<Shape, DType>> Graph::GraphImpl::GetOutputInfos() {
-  return output_shape_;
+InputOutputInfos Graph::GraphImpl::GetOutputInfos() {
+  return output_infos_;
 }
 
 of::Maybe<void> Graph::GraphImpl::ParseInputOutputInfos() {
   const of::OpGraph op_graph(job_);
+  size_t input_order = 0;
+  size_t output_order = 0;
   op_graph.TopoForEachNode([&](const of::OpNode* node) -> of::Maybe<void> {
     const of::OperatorConf& op_conf = node->op().op_conf();
     if (op_conf.has_input_conf()) {
       of::InterfaceBlobConf blob_conf = op_conf.input_conf().blob_conf();
-      input_shape_[op_conf.name()] = {OfShapeToOfApiShape(of::Shape(blob_conf.shape())), static_cast<DType>(blob_conf.data_type())};
+      input_infos_[op_conf.name()] = InputOutputAttribute(static_cast<DType>(blob_conf.data_type()), OfShapeToOfApiShape(of::Shape(blob_conf.shape())), input_order);
+      input_order += 1;
     } else if (op_conf.has_output_conf()) {
       of::InterfaceBlobConf blob_conf = op_conf.output_conf().blob_conf();
-      output_shape_[op_conf.name()] = {OfShapeToOfApiShape(of::Shape(blob_conf.shape())), static_cast<DType>(blob_conf.data_type())};
+      output_infos_[op_conf.name()] = InputOutputAttribute(static_cast<DType>(blob_conf.data_type()), OfShapeToOfApiShape(of::Shape(blob_conf.shape())), output_order);
+      output_order += 1;
     }
     return of::Maybe<void>::Ok();
   });

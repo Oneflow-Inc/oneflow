@@ -208,16 +208,24 @@ TEST(Api, graph_input_output_infos_test) {
   ASSERT_EQ(output_infos.size(), 1);
 
   auto it = input_infos.begin();
-  Shape shape = it->second.first;
+  DType dtype = it->second.datatype_;
+  Shape shape = it->second.input_output_shape_;
+  size_t order = it->second.input_output_index_;
+  ASSERT_EQ(dtype, DType::kFloat);
   ASSERT_EQ(shape.NumAxes(), 2);
   ASSERT_EQ(shape.At(0), 1);
   ASSERT_EQ(shape.At(1), 3);
-  
+  ASSERT_EQ(order, 0);
+
   it = output_infos.begin();
-  shape = it->second.first;
+  dtype = it->second.datatype_;
+  shape = it->second.input_output_shape_;
+  order = it->second.input_output_index_;
+  ASSERT_EQ(dtype, DType::kFloat);
   ASSERT_EQ(shape.NumAxes(), 2);
   ASSERT_EQ(shape.At(0), 1);
   ASSERT_EQ(shape.At(1), 4);
+  ASSERT_EQ(order, 0);
 }
 
 }  // namespace oneflow_api

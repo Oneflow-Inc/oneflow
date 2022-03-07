@@ -17,10 +17,12 @@ limitations under the License.
 #ifndef ONEFLOW_API_CPP_GRAPH_H_
 #define ONEFLOW_API_CPP_GRAPH_H_
 
+#include "dtype.h"
 #include "shape.h"
 #include "device.h"
 #include "ivalue.h"
 #include "tensor.h"
+#include <cstddef>
 #include <string>
 #include <unordered_map>
 
@@ -31,6 +33,20 @@ class NNGraph;
 }  // namespace oneflow
 
 namespace oneflow_api {
+
+struct InputOutputAttribute {
+  InputOutputAttribute() : datatype_(DType::kInvalidDataType), input_output_shape_(), input_output_index_(0) {}
+  InputOutputAttribute(DType datatype, const Shape& input_output_shape, size_t input_output_index) :
+    datatype_(datatype), input_output_index_(input_output_index) {
+      input_output_shape_ = input_output_shape;
+    }
+
+  DType datatype_;
+  Shape input_output_shape_;
+  size_t input_output_index_;
+};
+
+using InputOutputInfos = std::unordered_map<std::string, InputOutputAttribute>;
 
 class Graph {
  public:
@@ -43,8 +59,8 @@ class Graph {
   Graph& operator=(const Graph& graph) = delete;
   Graph& operator=(Graph&& graph) noexcept;
 
-  std::unordered_map<std::string, std::pair<Shape, DType>> GetInputInfos();
-  std::unordered_map<std::string, std::pair<Shape, DType>> GetOutputInfos();
+  InputOutputInfos GetInputInfos();
+  InputOutputInfos GetOutputInfos();
   IValue Forward(const IValue& inputs);
   void set_batch_size(int batch_size);
   void enable_tensorrt();
