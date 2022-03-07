@@ -157,6 +157,12 @@ class Embedding(Module):
                     )
                 )
 
+    def save_snapshot(self, snapshot_name):
+        self.handler.SaveSnapshot(snapshot_name)
+
+    def load_snapshot(self, snapshot_name):
+        self.handler.LoadSnapshot(snapshot_name)
+
     def forward(self, ids, column_ids):
         assert self.key_type == ids.dtype, "ids data_type must equals key_type"
         return flow._C.embedding_lookup_placeholder(
