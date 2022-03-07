@@ -17,7 +17,6 @@ limitations under the License.
 #include "OneFlow/OneFlowDialect.h"
 #include "OneFlow/OneFlowSupport.h"
 #include "OneFlow/Passes.h"
-#include "oneflow/core/framework/random_generator.h"
 
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/StringRef.h"
@@ -232,49 +231,6 @@ struct ConcreteSystemOpPattern : public OpRewritePattern<OpType> {
   }
 };
 
-IntegerAttr getSI64IntegerAttr(::mlir::PatternRewriter& rewriter, int64_t value) {
-  return IntegerAttr::get(rewriter.getIntegerType(64, /*isSigned=*/true),
-                          APInt(64, value, /*isSigned=*/true));
-}
-
-struct FuseBiasAddDropoutPattern : public OpRewritePattern<DropoutOp> {
-  explicit FuseBiasAddDropoutPattern(MLIRContext* context)
-      : OpRewritePattern<DropoutOp>(context, /*benefit=*/1) {}
-  LogicalResult matchAndRewrite(oneflow::DropoutOp op, PatternRewriter& rewriter) const override {
-    Value dropoutInput = op->getOperand(0);
-    BiasAddOp biasAddInputOp = dropoutInput.getDefiningOp<BiasAddOp>();
-    if (!biasAddInputOp) { return failure(); }
-    // random_mask_like op
-    const auto gen = CHECK_JUST(::oneflow::one::DefaultAutoGenerator());
-    SmallVector<Value, 4> random_mask_like_operands;
-    NamedAttrList random_mask_like_op_attributes = biasAddInputOp->getAttrs();
-    random_mask_like_op_attributes.append(llvm::StringRef("rate"), op.rateAttr());
-    random_mask_like_op_attributes.append(
-        llvm::StringRef("seed"), getSI64IntegerAttr(rewriter, (int64_t)gen->current_seed()));
-    random_mask_like_op_attributes.erase(biasAddInputOp.axisAttrName());
-    random_mask_like_operands.push_back(biasAddInputOp.a());
-    auto random_mask_like_res = rewriter
-                                    .create<oneflow::RandomMaskLikeOp>(
-                                        op->getLoc(), op->getResultTypes().front(),
-                                        random_mask_like_operands, random_mask_like_op_attributes)
-                                    ->getResults();
-    // // fused_bias_add_mask_scale_op
-    NamedAttrList fused_bias_add_dropout_attributes = op->getAttrs();
-    fused_bias_add_dropout_attributes.set(llvm::StringRef("axis"), biasAddInputOp.axisAttr());
-    fused_bias_add_dropout_attributes.append(llvm::StringRef("scale"), op.rateAttr());
-    fused_bias_add_dropout_attributes.erase(op.rateAttrName());
-    SmallVector<Value, 4> fused_bias_add_dropout_operands;
-    fused_bias_add_dropout_operands.push_back(biasAddInputOp.a());
-    fused_bias_add_dropout_operands.push_back(biasAddInputOp.b());
-    fused_bias_add_dropout_operands.push_back(random_mask_like_res.front());
-    rewriter.replaceOpWithNewOp<oneflow::FusedBiasAddMaskScaleOp>(
-        op, op->getResultTypes().front(), fused_bias_add_dropout_operands,
-        fused_bias_add_dropout_attributes);
-    rewriter.eraseOp(biasAddInputOp);
-    return success();
-  }
-};
-
 void VariableOp::getCanonicalizationPatterns(RewritePatternSet& results, MLIRContext* context) {
   results.insert<ConcreteSystemOpPattern<VariableOp>>(context);
 }
@@ -285,10 +241,6 @@ void InputOp::getCanonicalizationPatterns(RewritePatternSet& results, MLIRContex
 
 void OutputOp::getCanonicalizationPatterns(RewritePatternSet& results, MLIRContext* context) {
   results.insert<ConcreteSystemOpPattern<OutputOp>>(context);
-}
-
-void DropoutOp::getCanonicalizationPatterns(RewritePatternSet& results, MLIRContext* context) {
-  results.insert<FuseBiasAddDropoutPattern>(context);
 }
 
 void NormalizationAddReluOp::build(::mlir::OpBuilder& odsBuilder, ::mlir::OperationState& odsState,

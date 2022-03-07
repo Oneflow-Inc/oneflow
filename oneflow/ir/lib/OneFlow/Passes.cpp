@@ -16,6 +16,7 @@ limitations under the License.
 #include "OneFlow/OneFlowOps.h"
 #include "OneFlow/OneFlowDialect.h"
 #include "OneFlow/Passes.h"
+#include "oneflow/core/framework/random_generator.h"
 
 #include "mlir/Conversion/LinalgToLLVM/LinalgToLLVM.h"
 #include "mlir/Conversion/MemRefToLLVM/MemRefToLLVM.h"
@@ -314,6 +315,11 @@ ArrayAttr getSI32ArrayAttr(::mlir::PatternRewriter& rewriter, ArrayRef<int32_t> 
   return rewriter.getArrayAttr(attrs);
 }
 
+IntegerAttr getSI64IntegerAttr(::mlir::PatternRewriter& rewriter, int64_t value) {
+  return IntegerAttr::get(rewriter.getIntegerType(64, /*isSigned=*/true),
+                          APInt(64, value, /*isSigned=*/true));
+}
+
 ::llvm::SmallVector<::mlir::Value, 4> CreateConv2dAndErasePad(::mlir::PatternRewriter& rewriter,
                                                               OpResult conv_result,
                                                               OpResult pad_result) {
@@ -343,6 +349,50 @@ ArrayAttr getSI32ArrayAttr(::mlir::PatternRewriter& rewriter, ArrayRef<int32_t> 
                                                 operands, attributes)
                      ->getResults();
       // pad op is expected to be erased if it is not used
+      return res;
+    }
+  }
+  return {};
+}
+
+::llvm::SmallVector<::mlir::Value, 4> CreateFuseBiasAddDropout(::mlir::PatternRewriter& rewriter,
+                                                               OpResult dropout_result,
+                                                               OpResult bias_add_result) {
+  if (auto dropout_op = llvm::dyn_cast<oneflow::DropoutOp>(dropout_result.getDefiningOp())) {
+    if (auto bias_add_op = llvm::dyn_cast<oneflow::BiasAddOp>(bias_add_result.getDefiningOp())) {
+      // random_mask_like op
+      const auto gen = CHECK_JUST(::oneflow::one::DefaultAutoGenerator());
+      SmallVector<Value, 4> random_mask_like_operands;
+      NamedAttrList random_mask_like_op_attributes = bias_add_op->getAttrs();
+      random_mask_like_op_attributes.append(llvm::StringRef("rate"), dropout_op.rateAttr());
+      random_mask_like_op_attributes.append(
+          llvm::StringRef("seed"), getSI64IntegerAttr(rewriter, (int64_t)gen->current_seed()));
+      random_mask_like_op_attributes.erase(bias_add_op.axisAttrName());
+      random_mask_like_operands.push_back(bias_add_op.a());
+      auto random_mask_like_res =
+          rewriter
+              .create<oneflow::RandomMaskLikeOp>(
+                  dropout_op->getLoc(), dropout_op->getResultTypes().front(),
+                  random_mask_like_operands, random_mask_like_op_attributes)
+              ->getResults();
+      // // fused_bias_add_mask_scale_op
+      NamedAttrList fused_bias_add_dropout_attributes = dropout_op->getAttrs();
+      fused_bias_add_dropout_attributes.set(llvm::StringRef("axis"), bias_add_op.axisAttr());
+      fused_bias_add_dropout_attributes.append(llvm::StringRef("scale"), dropout_op.rateAttr());
+      fused_bias_add_dropout_attributes.erase(dropout_op.rateAttrName());
+      SmallVector<Value, 4> fused_bias_add_dropout_operands;
+      fused_bias_add_dropout_operands.push_back(bias_add_op.a());
+      fused_bias_add_dropout_operands.push_back(bias_add_op.b());
+      fused_bias_add_dropout_operands.push_back(random_mask_like_res.front());
+      auto fused_bias_add_dropout_res =
+          rewriter
+              .create<oneflow::FusedBiasAddMaskScaleOp>(
+                  dropout_op->getLoc(), dropout_op->getResultTypes(),
+                  fused_bias_add_dropout_operands, fused_bias_add_dropout_attributes)
+              ->getResults();
+      SmallVector<Value, 4> res;
+      res.push_back(fused_bias_add_dropout_res.front());
+      res.push_back(random_mask_like_res.front());
       return res;
     }
   }

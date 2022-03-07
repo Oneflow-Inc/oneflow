@@ -181,6 +181,35 @@ def FusedPadConv2DPattern : Pat<
   ]
 >;
 
+def FuseBiasAddDropout :
+  NativeCodeCall<"mlir::oneflow::CreateFuseBiasAddDropout($_builder, $0, $1)">;
+
+def FusedBiasAddDropoutPattern : Pat<
+  (
+    OneFlow_DropoutOp : $dropout_res
+    (
+      OneFlow_BiasAddOp : $bias_add_res
+        $a,
+        $b,
+        $bias_add_op_name,
+        $bias_add_device_tag,
+        $bias_add_device_name,
+        $bias_add_scope_symbol_id,
+        $bias_add_hierarchy,
+        $bias_add_op_axis
+    ),
+    $_add_to_output,
+    $dropout_op_name,
+    $dropout_device_tag,
+    $dropout_device_name,
+    $dropout_scope_symbol_id,
+    $dropout_hierarchy,
+    $dropout_op_rate
+  ),
+  (FuseBiasAddDropout $conv_2d_res, $pad_res),
+  []
+>;
+
 // TODO: use either to merge two patterns
 def FusedScaleTrilPattern2 : Pat<
   (
