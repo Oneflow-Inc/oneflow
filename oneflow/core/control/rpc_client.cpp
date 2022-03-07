@@ -184,11 +184,11 @@ void RpcClient::LoadServer(const LoadServerRequest& request, CtrlService::Stub* 
     LoadServerResponse response;
     grpc::Status st = stub->CallMethod<CtrlMethod::kLoadServer>(&client_ctx, request, &response);
     if (st.error_code() == grpc::StatusCode::OK) {
-      LOG(INFO) << "LoadServer " << request.addr() << " Successful at " << retry_idx << " times";
+      VLOG(3) << "LoadServer " << request.addr() << " Successful at " << retry_idx << " times";
       break;
     } else if (st.error_code() == grpc::StatusCode::UNAVAILABLE) {
-      LOG(INFO) << "LoadServer " << request.addr() << " Failed at " << retry_idx << " times"
-                << " error_code " << st.error_code() << " error_message " << st.error_message();
+      LOG(WARNING) << "LoadServer " << request.addr() << " Failed at " << retry_idx << " times"
+                   << " error_code " << st.error_code() << " error_message " << st.error_message();
       std::this_thread::sleep_for(std::chrono::seconds(sleep_seconds));
       continue;
     } else {

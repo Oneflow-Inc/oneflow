@@ -13,4 +13,14 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 """
-from oneflow.nn.optimizer.sparse_optimizer import SparseOptimizer
+import oneflow as flow
+
+
+def einsum_op(equation, *operands):
+    return flow._C.einsum(equation, operands)
+
+
+if __name__ == "__main__":
+    import doctest
+
+    doctest.testmod(raise_on_error=True)
