@@ -283,7 +283,6 @@ bool IsScalarTensor(Value value) {
   return false;
 }
 
-bool IsChannelFirst(mlir::StringAttr data_format) { return data_format.str() == "channels_first"; }
 bool HasZeroPadding(mlir::ArrayAttr padding) {
   for (auto val : padding.getValue()) {
     if (val.cast<IntegerAttr>().getValue().getSExtValue() != 0) return false;
@@ -292,11 +291,18 @@ bool HasZeroPadding(mlir::ArrayAttr padding) {
 }
 
 bool IsPaddingCouldBeAssimilatedIntoConv(::mlir::ArrayAttr padding_before,
-                                         ::mlir::ArrayAttr padding_after) {
+                                         ::mlir::ArrayAttr padding_after,
+                                         ::mlir::StringAttr data_format) {
   if (padding_before.size() == 4 && padding_after.size() == 4) {
     if (padding_before.getValue().equals(padding_after.getValue())) {
-      return padding_before.getValue()[0].cast<IntegerAttr>().getValue().getSExtValue() == 0
-             && padding_before.getValue()[1].cast<IntegerAttr>().getValue().getSExtValue() == 0;
+      if (data_format.str() == "channels_first") {
+        return padding_before.getValue()[0].cast<IntegerAttr>().getValue().getSExtValue() == 0
+               && padding_before.getValue()[1].cast<IntegerAttr>().getValue().getSExtValue() == 0;
+      }
+      if (data_format.str() == "channels_last") {
+        return padding_before.getValue()[0].cast<IntegerAttr>().getValue().getSExtValue() == 0
+               && padding_before.getValue()[3].cast<IntegerAttr>().getValue().getSExtValue() == 0;
+      }
     }
   }
   return false;
@@ -320,8 +326,15 @@ ArrayAttr getSI32ArrayAttr(::mlir::PatternRewriter& rewriter, ArrayRef<int32_t> 
       if (conv_op.bias()) operands.push_back(conv_op.bias());
       if (conv_op.bias_multiplier()) operands.push_back(conv_op.bias_multiplier());
       llvm::SmallVector<int32_t> padding_before_array;
-      for (auto val : pad_op.padding_before().getValue().take_back(2)) {
-        padding_before_array.push_back(val.cast<IntegerAttr>().getValue().getSExtValue());
+      if (conv_op.data_formatAttr().getValue().str() == "channels_first") {
+        for (auto val : pad_op.padding_before().getValue().take_back(2)) {
+          padding_before_array.push_back(val.cast<IntegerAttr>().getValue().getSExtValue());
+        }
+      } else {
+        padding_before_array.push_back(
+            pad_op.padding_before().getValue()[1].cast<IntegerAttr>().getValue().getSExtValue());
+        padding_before_array.push_back(
+            pad_op.padding_before().getValue()[2].cast<IntegerAttr>().getValue().getSExtValue());
       }
       attributes.set(conv_op.padding_beforeAttrName(),
                      getSI32ArrayAttr(rewriter, padding_before_array));
