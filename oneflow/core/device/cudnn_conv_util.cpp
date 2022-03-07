@@ -539,7 +539,6 @@ perf_t FindCudnnConvAlgorithmWithResource(CudnnConvArgs* args, CudnnConvResource
     }
     return GetBestAlgorithm<perf_t>(*args, res, perf_vec);
   };
-  const auto& params = args->params;
   return Global<CudnnConvAlgoCache>::Get()->Remember<perf_t>(args->params, Infer);
 }
 
