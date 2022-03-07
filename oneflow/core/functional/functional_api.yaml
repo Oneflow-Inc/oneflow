@@ -1927,12 +1927,6 @@
   signature: "TensorTuple (Tensor log_probs, Tensor input_lengths, Bool merge_repeated=True) => CtcGreedyDecoder"
   bind_python: True
 
-
-- name: "distributed_partial_fc_sample"
-  signature:
-    "TensorTuple (Tensor weight, Tensor label, Int64 num_sample) => DistributedPariticalFCSample"
-  bind_python: True
-
 - name: "distributed_partial_fc_sample_disable_boxing"
   signature:
     "TensorTuple (Tensor sampled_weight_diff, Tensor sampled_label) => DistributedPariticalFCSampleDisableBoxing"
@@ -2023,4 +2017,8 @@
 
 - name: "embedding_gradient_shuffle"
   signature: "Tensor (Tensor embedding_diff, Tensor num_unique_matrix, Tensor cur_rank_inverse_indices, Tensor inverse_unique_partion_indices) => EmbeddingGradientShuffle"
+  bind_python: True
+
+- name: "einsum"
+  signature: "Tensor (String equation, TensorTuple operands) => EinSum"
   bind_python: True
