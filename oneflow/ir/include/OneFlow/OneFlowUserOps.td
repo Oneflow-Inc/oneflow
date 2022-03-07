@@ -4449,6 +4449,7 @@ def OneFlow_DropoutOp : OneFlow_BaseOp<"dropout", [NoSideEffect, DeclareOpInterf
   let attrs = (ins
     DefaultValuedAttr<F32Attr, "0.">:$rate
   );
+  let hasCanonicalizer = 1;
   let has_check_fn = 1;
   let has_logical_tensor_desc_infer_fn = 1;
   let has_physical_tensor_desc_infer_fn = 1;
