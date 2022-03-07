@@ -487,8 +487,8 @@ Maybe<Tensor> UnfoldTensor(const std::shared_ptr<Tensor>& input, const MutableAt
   return output;
 }
 
-Maybe<Tensor> Diagonal(const std::shared_ptr<Tensor>& input,
-                       const int32_t offset, const int32_t dim1, const int32_t dim2) {
+Maybe<Tensor> Diagonal(const std::shared_ptr<Tensor>& input, const int32_t offset,
+                       const int32_t dim1, const int32_t dim2) {
   const auto& shape = input->shape();
   const auto& stride = JUST(input->stride());
   const int64_t ndim = shape->NumAxes();
@@ -537,10 +537,12 @@ Maybe<Tensor> Diagonal(const std::shared_ptr<Tensor>& input,
               CHECK_EQ_OR_RETURN(out_grads.size(), 1);
               in_grads->resize(1);
               // diagonal grad(align to torch)
-              std::shared_ptr<Tensor> grad_input =  JUST(functional::Empty(*input->shape(), input->dtype(), JUST(input->device())));
+              std::shared_ptr<Tensor> grad_input =
+                  JUST(functional::Empty(*input->shape(), input->dtype(), JUST(input->device())));
               auto diag = JUST(functional::Diagonal(grad_input, offset, dim1, dim2));
-              diag = JUST(functional::Copy(out_grads.at(0), JUST(input->device())->type(), JUST(input->device())->device_id()));
-               in_grads->at(0) = grad_input;
+              diag = JUST(functional::Copy(out_grads.at(0), JUST(input->device())->type(),
+                                           JUST(input->device())->device_id()));
+              in_grads->at(0) = grad_input;
               return Maybe<void>::Ok();
             });
     TensorTuple outputs{output};

@@ -58,7 +58,8 @@ Maybe<Tensor> Transpose(const std::shared_ptr<Tensor>& input, const std::vector<
 
 Maybe<Tensor> UnfoldTensor(const std::shared_ptr<Tensor>& input, const MutableAttrMap& attrs);
 
-Maybe<Tensor> Diagonal(const std::shared_ptr<Tensor>& input, const int32_t offset, const int32_t dim1, const int32_t dim2);
+Maybe<Tensor> Diagonal(const std::shared_ptr<Tensor>& input, const int32_t offset,
+                       const int32_t dim1, const int32_t dim2);
 
 }  // namespace view
 }  // namespace one

@@ -1826,16 +1826,16 @@ class DiagonalFunctor {
     MutableAttrMap attrs;
     JUST(attrs.SetAttr<int32_t>("offset", offset));
 
-    if (view::IsViewApplicable(x)){
+    if (view::IsViewApplicable(x)) {
       return view::Diagonal(x, offset, p_dim1, p_dim2);
-    }else{
+    } else {
       std::vector<int32_t> input_index{p_dim1, p_dim2};
       for (int32_t i = 0; i < ndims; i++) {
         if (i != p_dim1 && i != p_dim2) { input_index.push_back(i); }
       }
       std::shared_ptr<one::Tensor> d_x = JUST(Transpose(x, input_index));
       return OpInterpUtil::Dispatch<Tensor>(*op_, {d_x->contiguous()}, attrs);
-      }
+    }
   }
 
  private:
