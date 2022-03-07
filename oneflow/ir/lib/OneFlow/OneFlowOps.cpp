@@ -232,14 +232,6 @@ struct ConcreteSystemOpPattern : public OpRewritePattern<OpType> {
   }
 };
 
-IntegerAttr getIntegerAttr(::mlir::PatternRewriter& rewriter, int32_t values) {
-  return rewriter.getI32IntegerAttr(values);
-}
-
-IntegerAttr getUI32IntegerAttr(::mlir::PatternRewriter& rewriter, uint32_t values) {
-  return rewriter.getUI32IntegerAttr(values);
-}
-
 struct FuseBiasAddDropoutPattern : public OpRewritePattern<DropoutOp> {
   explicit FuseBiasAddDropoutPattern(MLIRContext* context)
       : OpRewritePattern<DropoutOp>(context, /*benefit=*/1) {}
@@ -253,7 +245,7 @@ struct FuseBiasAddDropoutPattern : public OpRewritePattern<DropoutOp> {
     NamedAttrList random_mask_like_op_attributes = biasAddInputOp->getAttrs();
     random_mask_like_op_attributes.append(llvm::StringRef("rate"), op.rateAttr());
     random_mask_like_op_attributes.append(llvm::StringRef("seed"),
-                                          getUI32IntegerAttr(rewriter, gen->current_seed()));
+                                          rewriter.getUI32IntegerAttr(gen->current_seed()));
     random_mask_like_op_attributes.erase(biasAddInputOp.axisAttrName());
     random_mask_like_operands.push_back(biasAddInputOp.a());
     auto random_mask_like_res = rewriter
