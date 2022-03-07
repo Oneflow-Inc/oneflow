@@ -35,11 +35,9 @@ class NNGraph;
 namespace oneflow_api {
 
 struct InputOutputAttribute {
-  InputOutputAttribute() : datatype_(DType::kInvalidDataType), input_output_shape_(), input_output_index_(0) {}
   InputOutputAttribute(DType datatype, const Shape& input_output_shape, size_t input_output_index) :
-    datatype_(datatype), input_output_index_(input_output_index) {
-      input_output_shape_ = input_output_shape;
-    }
+    datatype_(datatype),input_output_shape_(input_output_shape), input_output_index_(input_output_index) {}
+  InputOutputAttribute() : InputOutputAttribute(DType::kInvalidDataType, Shape(), 0) {}
 
   DType datatype_;
   Shape input_output_shape_;

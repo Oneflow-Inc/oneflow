@@ -14,7 +14,6 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-#include <bits/stdint-intn.h>
 #include "oneflow/api/common/ofblob.h"
 #include "oneflow/api/common/scope.h"
 #include "oneflow/api/cpp/framework/device.h"
@@ -124,9 +123,6 @@ const std::pair<std::vector<T1>, std::vector<T2>> Unzip(const of::HashMap<T1, T2
 
 Shape OfShapeToOfApiShape(const of::Shape& of_shape) {
   std::vector<int64_t> dims(of_shape.dim_vec().begin(),of_shape.dim_vec().end());
-  for (int i = 0; i < of_shape.NumAxes(); ++i) {
-    dims.emplace_back(of_shape.At(i));
-  }
   return Shape(dims);
 }
 
@@ -151,7 +147,7 @@ class Graph::GraphImpl final {
   void enable_tensorrt() { xrt_kind_ = XrtKind::kTensorRT; }
 
  private:
-  of::Maybe<void> ParseInputOutputInfos();
+  of::Maybe<void> CollectInputOutputInfos();
   of::Maybe<void> Compile(const std::vector<Tensor>& inputs);
   of::Maybe<std::vector<Tensor>> Run(const std::vector<Tensor>& inputs) const;
   of::Maybe<void> AddOp(of::OperatorConf op_conf);
@@ -231,7 +227,7 @@ Graph Graph::Load(const std::string& model_path, const Device& device) {
 Graph::GraphImpl::GraphImpl(const std::string& model_path, const Device& device)
     : model_path_(model_path), device_(device) {
   CHECK_JUST(of::LoadJobFromIR(&job_, model_path + "/model.mlir"));
-  ParseInputOutputInfos();
+  CollectInputOutputInfos();
   if (of::ParseBooleanFromEnv("ONEFLOW_SERVING_DEBUG", false)) {
     LOG(ERROR) << job_.DebugString();
   }
