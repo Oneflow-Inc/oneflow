@@ -35,7 +35,7 @@ class TestDTR(flow.unittest.TestCase):
 
     def test_dtr_enabled(test_case):
         flow.enable_dtr(True, "20KB", 0, "eq")
-        test_case.assertTrue(flow.check_dtr())
+        test_case.assertTrue(flow.is_dtr_enabled())
 
     def test_dtr_work_on_simple_case_1(test_case):
         flow.enable_dtr(True, "20KB", 0, "eq")

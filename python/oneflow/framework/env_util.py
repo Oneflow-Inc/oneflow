@@ -72,13 +72,13 @@ def api_enable_dtr(val: bool = False, thres: str = "1500MB", debug_level: int = 
     return enable_if.unique([enable_dtr])(val, thres, debug_level, heuristic)
 
 
-def api_check_dtr() -> bool:
+def api_is_dtr_enabled() -> bool:
     """Return whether enabled DTR or not
 
     Returns:
         bool: [description]
     """
-    return enable_if.unique([check_dtr])()
+    return enable_if.unique([is_dtr_enabled])()
 
 
 @enable_if.condition(hob.in_normal_mode & ~hob.any_global_function_defined)
@@ -108,7 +108,7 @@ def enable_dtr(val=False, thres="1500MB", debug=False, heuristic="full"):
     return oneflow._oneflow_internal.EnableDTRStrategy(val, out, debug, heuristic)
 
 @enable_if.condition(hob.in_normal_mode)
-def check_dtr() -> bool:
+def is_dtr_enabled() -> bool:
     return oneflow._oneflow_internal.CheckDTRStrategy()
 
 
