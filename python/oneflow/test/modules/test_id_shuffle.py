@@ -161,7 +161,7 @@ def _test_embedding_gradient_shuffle(test_case):
                 cur_rank_unique_ids,
                 _,
                 cur_rank_inverse_indices,
-            ) = flow._C.id_shuffle(ids_tensor, column_ids_tensor, num_columns)
+            ) = flow._C.id_shuffle(ids, column_ids, num_columns)
             cur_rank_unique_embedding_diff = flow._C.embedding_gradient_shuffle(
                 embedding_diff,
                 num_unique_matrix,
