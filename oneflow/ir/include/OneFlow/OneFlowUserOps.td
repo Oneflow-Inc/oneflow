@@ -9128,20 +9128,22 @@ def OneFlow_UniqueKeyValuePairOp : OneFlow_BaseOp<"unique_key_value_pair", [NoSi
   let has_data_type_infer_fn = 1;
 }
 
+
 def OneFlow_IdShuffleOp : OneFlow_BaseOp<"id_shuffle", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
-    AnyType:$ids,
-    AnyType:$column_ids
+    OneFlow_Tensor:$ids,
+    Optional<OneFlow_Tensor>:$column_ids
   );
   let output = (outs
-    AnyType:$num_unique_ids,
-    AnyType:$ids_reverse_idx,
-    AnyType:$cur_rank_num_unique_ids,
-    AnyType:$cur_rank_unique_ids,
-    AnyType:$cur_rank_column_ids,
-    AnyType:$cur_rank_reverse_idx,
-    AnyType:$num_unique_ids_matrix,
-    AnyType:$partition_index
+    OneFlow_Tensor:$num_unique_matrix,
+    OneFlow_Tensor:$inverse_unique_partion_indices,
+    OneFlow_Tensor:$cur_rank_num_unique,
+    OneFlow_Tensor:$cur_rank_unique_ids,
+    OneFlow_Tensor:$cur_rank_unique_column_ids,
+    OneFlow_Tensor:$cur_rank_inverse_indices
+  );
+  let attrs = (ins
+    DefaultValuedAttr<SI32Attr, "1">:$num_columns
   );
   let same_output_regst_num = 1;
   let has_logical_tensor_desc_infer_fn = 1;
@@ -9152,14 +9154,13 @@ def OneFlow_IdShuffleOp : OneFlow_BaseOp<"id_shuffle", [NoSideEffect, DeclareOpI
 
 def OneFlow_EmbeddingShuffleOp : OneFlow_BaseOp<"embedding_shuffle", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
-    AnyType:$cur_rank_embeddings,
-    AnyType:$cur_rank_reverse_idx,
-    AnyType:$ids_reverse_idx,
-    AnyType:$num_unique_ids_matrix,
-    AnyType:$partition_index
+    OneFlow_Tensor:$cur_rank_embeddings,
+    OneFlow_Tensor:$num_unique_matrix,
+    OneFlow_Tensor:$cur_rank_inverse_indices,
+    OneFlow_Tensor:$inverse_unique_partion_indices
   );
   let output = (outs
-    AnyType:$embeddings
+    OneFlow_Tensor:$embeddings
   );
   let same_output_regst_num = 1;
   let has_logical_tensor_desc_infer_fn = 1;
@@ -9170,14 +9171,13 @@ def OneFlow_EmbeddingShuffleOp : OneFlow_BaseOp<"embedding_shuffle", [NoSideEffe
 
 def OneFlow_EmbeddingGradientShuffleOp : OneFlow_BaseOp<"embedding_gradient_shuffle", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
-    AnyType:$embedding_diff,
-    AnyType:$cur_rank_reverse_idx,
-    AnyType:$ids_reverse_idx,
-    AnyType:$num_unique_ids_matrix,
-    AnyType:$partition_index
+    OneFlow_Tensor:$embedding_diff,
+    OneFlow_Tensor:$num_unique_matrix,
+    OneFlow_Tensor:$cur_rank_inverse_indices,
+    OneFlow_Tensor:$inverse_unique_partion_indices
   );
   let output = (outs
-    AnyType:$cur_rank_unique_embedding_diff
+    OneFlow_Tensor:$cur_rank_unique_embedding_diff
   );
   let same_output_regst_num = 1;
   let has_logical_tensor_desc_infer_fn = 1;
