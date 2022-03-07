@@ -40,8 +40,6 @@ class ToContiguousUtilParam {
   char* out_dptr;
 };
 
-class ToContiguousUtilAttach;
-
 class ToContiguousUtilBase : public ToContiguousUtilParam {
  public:
   ToContiguousUtilBase(ep::Stream* stream, const ShapeView& in_shape,
