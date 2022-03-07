@@ -122,7 +122,7 @@ const std::pair<std::vector<T1>, std::vector<T2>> Unzip(const of::HashMap<T1, T2
 }
 
 Shape OfShapeToOfApiShape(const of::Shape& of_shape) {
-  std::vector<int64_t> dims(of_shape.dim_vec().begin(),of_shape.dim_vec().end());
+  std::vector<int64_t> dims(of_shape.dim_vec().begin(), of_shape.dim_vec().end());
   return Shape(dims);
 }
 
@@ -184,13 +184,9 @@ Graph& Graph::operator=(Graph&& graph) noexcept {
   return *this;
 }
 
-InputOutputInfos Graph::GetInputInfos() {
-  return graph_->GetInputInfos();
-}
+InputOutputInfos Graph::GetInputInfos() { return graph_->GetInputInfos(); }
 
-InputOutputInfos Graph::GetOutputInfos() {
-  return graph_->GetOutputInfos();
-}
+InputOutputInfos Graph::GetOutputInfos() { return graph_->GetOutputInfos(); }
 
 IValue Graph::Forward(const IValue& inputs) {
   std::vector<Tensor> input_tensors;
@@ -227,22 +223,16 @@ Graph::GraphImpl::GraphImpl(const std::string& model_path, const Device& device)
     : model_path_(model_path), device_(device) {
   CHECK_JUST(of::LoadJobFromIR(&job_, model_path + "/model.mlir"));
   CollectInputOutputInfos();
-  if (of::ParseBooleanFromEnv("ONEFLOW_SERVING_DEBUG", false)) {
-    LOG(ERROR) << job_.DebugString();
-  }
+  if (of::ParseBooleanFromEnv("ONEFLOW_SERVING_DEBUG", false)) { LOG(ERROR) << job_.DebugString(); }
   job_.mutable_job_conf()->mutable_predict_conf();
   job_.mutable_job_conf()->set_job_name(job_.mutable_job_conf()->job_name() + of::NewUniqueId());
   graph_ = std::make_shared<of::NNGraph>(job_.job_conf().job_name());
   of::Global<of::MultiClientSessionContext>::Get()->AddCGraph(graph_).GetOrThrow();
 }
 
-InputOutputInfos Graph::GraphImpl::GetInputInfos() {
-  return input_infos_;
-}
+InputOutputInfos Graph::GraphImpl::GetInputInfos() { return input_infos_; }
 
-InputOutputInfos Graph::GraphImpl::GetOutputInfos() {
-  return output_infos_;
-}
+InputOutputInfos Graph::GraphImpl::GetOutputInfos() { return output_infos_; }
 
 of::Maybe<void> Graph::GraphImpl::CollectInputOutputInfos() {
   const of::OpGraph op_graph(job_);
@@ -252,11 +242,15 @@ of::Maybe<void> Graph::GraphImpl::CollectInputOutputInfos() {
     const of::OperatorConf& op_conf = node->op().op_conf();
     if (op_conf.has_input_conf()) {
       of::InterfaceBlobConf blob_conf = op_conf.input_conf().blob_conf();
-      input_infos_[op_conf.name()] = InputOutputAttribute(static_cast<DType>(blob_conf.data_type()), OfShapeToOfApiShape(of::Shape(blob_conf.shape())), input_order);
+      input_infos_[op_conf.name()] =
+          InputOutputAttribute(static_cast<DType>(blob_conf.data_type()),
+                               OfShapeToOfApiShape(of::Shape(blob_conf.shape())), input_order);
       input_order += 1;
     } else if (op_conf.has_output_conf()) {
       of::InterfaceBlobConf blob_conf = op_conf.output_conf().blob_conf();
-      output_infos_[op_conf.name()] = InputOutputAttribute(static_cast<DType>(blob_conf.data_type()), OfShapeToOfApiShape(of::Shape(blob_conf.shape())), output_order);
+      output_infos_[op_conf.name()] =
+          InputOutputAttribute(static_cast<DType>(blob_conf.data_type()),
+                               OfShapeToOfApiShape(of::Shape(blob_conf.shape())), output_order);
       output_order += 1;
     }
     return of::Maybe<void>::Ok();

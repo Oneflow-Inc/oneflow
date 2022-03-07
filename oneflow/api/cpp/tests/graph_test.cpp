@@ -200,7 +200,7 @@ TEST(Api, graph_input_output_infos_test) {
   EnvScope scope;
   Device device("cpu");
   Graph graph = LoadGraph(device);
-  
+
   auto input_infos = graph.GetInputInfos();
   auto output_infos = graph.GetOutputInfos();
 
