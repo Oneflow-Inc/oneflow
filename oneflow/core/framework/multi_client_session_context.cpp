@@ -133,12 +133,12 @@ Maybe<void> MultiClientSessionContext::AddCGraph(
 
 Maybe<void> MultiClientSessionContext::TryClose() {
   if (is_inited_) {
-    VLOG(2) << "Try to delete multi client session context." << std::endl;
+    VLOG(1) << "Try to delete multi client session context." << std::endl;
 
     // sync before NNGraph release to ensure LaunchLazyJob instruction was completed and released
     JUST(vm::ClusterSync());
     for (const auto& graph : graphs_) {
-      VLOG(2) << "Try to close graph: " << graph->job_name() << std::endl;
+      VLOG(1) << "Try to close graph: " << graph->job_name() << std::endl;
       JUST(graph->Close());
     }
     graphs_.clear();
@@ -167,7 +167,7 @@ Maybe<void> MultiClientSessionContext::TryClose() {
     Global<ResourceDesc, ForSession>::New(Global<ResourceDesc, ForEnv>::Get()->resource(),
                                           GlobalProcessCtx::NumOfProcessPerNode());
   }
-  VLOG(2) << "Finish delete multi client session context." << std::endl;
+  VLOG(1) << "Finish delete multi client session context." << std::endl;
   return Maybe<void>::Ok();
 }
 
