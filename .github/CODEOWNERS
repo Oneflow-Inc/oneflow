@@ -2,7 +2,7 @@
 *.py @BBuf @daquexian @jackalcooper
 /oneflow/core/cuda @liujuncheng
 /oneflow/core/eager @lixinqi @daquexian
-/oneflow/core/framework @chengtbf
+/oneflow/core/framework @chengtbf @strint
 /oneflow/core/functional @hjchen2
 /oneflow/core/graph @chengtbf
 /oneflow/core/ndarray @lixinqi
