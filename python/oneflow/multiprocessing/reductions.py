@@ -34,6 +34,11 @@ except ImportError:
     pass
 
 
+def rebuild_empty_tensor(dtype, requires_grad):
+    t = flow.tensor([], dtype=dtype)
+    t.requires_grad = requires_grad
+    return t
+
 def rebuild_shm_tensor(shm, shape, dtype, requires_grad):
     def delete_shm():
         shm.close()
@@ -49,6 +54,9 @@ def rebuild_shm_tensor(shm, shape, dtype, requires_grad):
 
     return t
 
+def rebuild_empty_parameter(dtype, requires_grad):
+    t = flow.tensor([], dtype=dtype)
+    return Parameter(t, requires_grad=requires_grad)
 
 def rebuild_shm_parameter(shm, shape, dtype, requires_grad):
     def delete_shm():
@@ -63,30 +71,37 @@ def rebuild_shm_parameter(shm, shape, dtype, requires_grad):
 
 def reduce_tensor(tensor):
     tensor_data = tensor.numpy()
-
-    shm = shared_memory.SharedMemory(create=True, size=tensor_data.nbytes)
-    shm_numpy = np.ndarray(tensor_data.shape, dtype=tensor_data.dtype, buffer=shm.buf)
-    shm_numpy[:] = tensor_data[:]
-
     requires_grad = tensor.requires_grad
-    return (
-        rebuild_shm_tensor,
-        (shm, tensor_data.shape, tensor_data.dtype, requires_grad),
-    )
+
+    if(tensor_data.nbytes == 0):
+        return (rebuild_empty_tensor, (tensor_data.dtype, requires_grad))
+    else:
+        shm = shared_memory.SharedMemory(create=True, size=tensor_data.nbytes)
+        shm_numpy = np.ndarray(tensor_data.shape, dtype=tensor_data.dtype, buffer=shm.buf)
+        shm_numpy[:] = tensor_data[:]
+
+        return (
+            rebuild_shm_tensor,
+            (shm, tensor_data.shape, tensor_data.dtype, requires_grad),
+        )
 
 
 def reduce_parameter(tensor):
     tensor_data = tensor.numpy()
     requires_grad = tensor.requires_grad
 
-    shm = shared_memory.SharedMemory(create=True, size=tensor_data.nbytes)
-    shm_numpy = np.ndarray(tensor_data.shape, dtype=tensor_data.dtype, buffer=shm.buf)
-    shm_numpy[:] = tensor_data[:]
+    if(tensor_data.nbytes == 0):
+        return (rebuild_empty_parameter, (tensor_data.dtype, requires_grad))
+    else:
 
-    return (
-        rebuild_shm_parameter,
-        (shm, tensor_data.shape, tensor_data.dtype, requires_grad),
-    )
+        shm = shared_memory.SharedMemory(create=True, size=tensor_data.nbytes)
+        shm_numpy = np.ndarray(tensor_data.shape, dtype=tensor_data.dtype, buffer=shm.buf)
+        shm_numpy[:] = tensor_data[:]
+
+        return (
+            rebuild_shm_parameter,
+            (shm, tensor_data.shape, tensor_data.dtype, requires_grad),
+        )
 
 
 def init_reductions():
