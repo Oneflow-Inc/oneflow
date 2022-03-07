@@ -325,7 +325,7 @@ Maybe<double> ComputeLazyCopyCostBetweenNdSbp(const NdSbp& producer_sbp_parallel
                                               const BlobDesc& logical_blob_desc,
                                               const ParallelDesc& producer_parallel_desc,
                                               const ParallelDesc& consumer_parallel_desc,
-                                              bool requires_same_sbp) {
+                                              bool requires_same_sbp, double transfer_cost) {
   if (!(CheckNdSbp(producer_sbp_parallel) && CheckNdSbp(consumer_sbp_parallel))) {
     return Error::RuntimeError() << "Illegal sbp parallel has been found.";
   }
@@ -354,7 +354,7 @@ Maybe<double> ComputeLazyCopyCostBetweenNdSbp(const NdSbp& producer_sbp_parallel
 
   // We support different hierarchy for 1D sbp
   if (in_dim == 1 && out_dim == 1) {
-    return GetTransferCost()
+    return transfer_cost
            + JUST(ComputCopyCostBetweenTwoSbpParallel(
                reduced_in_nd_sbp.sbp_parallel(0), reduced_out_nd_sbp.sbp_parallel(0),
                logical_blob_desc, reduced_in_parallel_desc, reduced_out_parallel_desc));
@@ -372,20 +372,20 @@ Maybe<double> ComputeLazyCopyCostBetweenNdSbp(const NdSbp& producer_sbp_parallel
     // Not supporting different hierarchy
     // TODO: Support it in the future
     if (*in_hierarchy != *out_hierarchy) { return kUnsupportedBoxing; }
-    return GetTransferCost()
+    return transfer_cost
            + JUST(ComputCopyCostBetweenTwoNdSbp(reduced_in_nd_sbp, reduced_out_nd_sbp,
                                                 logical_blob_size, in_hierarchy, on_same_devices));
   }
 
   // (in_dim == 2 && out_dim == 1) || (in_dim == 1 && out_dim == 2)
   if (in_dim == 2 && out_dim == 1) {
-    return GetTransferCost()
+    return transfer_cost
            + JUST(ComputCopyCostBetweenTwoNdSbp(reduced_in_nd_sbp, reduced_out_nd_sbp,
                                                 logical_blob_size, in_hierarchy, on_same_devices));
   }
 
   if (in_dim == 1 && out_dim == 2) {
-    return GetTransferCost()
+    return transfer_cost
            + JUST(ComputCopyCostBetweenTwoNdSbp(reduced_in_nd_sbp, reduced_out_nd_sbp,
                                                 logical_blob_size, out_hierarchy, on_same_devices));
   }
