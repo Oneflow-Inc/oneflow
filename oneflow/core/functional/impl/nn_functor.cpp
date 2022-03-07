@@ -287,14 +287,13 @@ class CublasFusedMLPFunctor {
     CHECK_GE_OR_RETURN(weight_size, 1) << "The number of weights should be greater equal than 1. ";
     CHECK_EQ_OR_RETURN(weight_size, bias_size)
         << "The number of weights should be equal to biases. ";
-    int64_t m = 0, n = 0, k = 0;
+    int64_t n = 0, k = 0;
     /*
     x: (m, k)
     weight: (n, k) need transpose
     bias: (n)
     */
     const auto& x_shape = x->shape();
-    m = x_shape->At(0);
     k = x_shape->At(1);
     for (int64_t i = 0; i < weight_size; i++) {
       const auto& weight_shape = weights[i]->shape();
