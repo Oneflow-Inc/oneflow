@@ -52,6 +52,28 @@ __device__ __host__ __forceinline__ uint64_t xxh64_uint64(uint64_t v, uint64_t s
   return acc;
 }
 
+static const size_t kShardingHashSeed = 1;
+static const size_t kLocalUniqueHashSeed = 2;
+static const size_t kGlobalUniqueHashSeed = 3;
+
+struct ShardingHash {
+  __device__ __host__ __forceinline__ size_t operator()(uint64_t v) {
+    return xxh64_uint64(v, kShardingHashSeed);
+  }
+};
+
+struct LocalUniqueHash {
+  __device__ __host__ __forceinline__ size_t operator()(uint64_t v) {
+    return xxh64_uint64(v, kLocalUniqueHashSeed);
+  }
+};
+
+struct GlobalUniqueHash {
+  __device__ __host__ __forceinline__ size_t operator()(uint64_t v) {
+    return xxh64_uint64(v, kGlobalUniqueHashSeed);
+  }
+};
+
 struct XXH64 {
   __device__ __host__ __forceinline__ size_t operator()(uint64_t v) { return xxh64_uint64(v, 0); }
   __device__ __host__ __forceinline__ size_t operator()(uint64_t v, size_t seed) {

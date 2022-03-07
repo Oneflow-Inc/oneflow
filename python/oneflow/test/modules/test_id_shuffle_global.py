@@ -24,24 +24,27 @@ import oneflow.unittest
 from oneflow.test_utils.automated_test_util import *
 
 parallel_num = 2
-placement = flow.placement(type="cuda", ranks=list(range(parallel_num)))
+max_id = 10000
+
+
+def get_tensors(batch_size, num_columns):
+    placement = flow.placement(type="cuda", ranks=list(range(parallel_num)))
+    ids = np.random.randint(0, max_id, (batch_size, num_columns), dtype=np.int64)
+    ids_tensor = flow.tensor(ids, requires_grad=False).to_global(
+        placement=placement, sbp=flow.sbp.split(0)
+    )
+    column_ids = (
+        ids % num_columns
+    )  # same id must have same column id, so in this case get column_ids from ids
+    column_ids_tensor = flow.tensor(
+        column_ids.astype(np.int32), requires_grad=False
+    ).to_global(placement=placement, sbp=flow.sbp.split(0))
+    return ids_tensor, column_ids_tensor
 
 
 def _test_id_shuffle(test_case, has_column_id, num_columns):
     batch_size = int(16384 / parallel_num)
-    ids = np.random.randint(0, 200000, (batch_size, num_columns), dtype=np.int64)
-    ids_tensor = flow.tensor(ids, requires_grad=False).to_global(
-        placement=placement, sbp=flow.sbp.split(0)
-    )
-    if has_column_id:
-        column_ids = (
-            ids % num_columns
-        )  # same id must have same column id, so in this case get column_ids from ids
-        column_ids_tensor = flow.tensor(
-            column_ids.astype(np.int32), requires_grad=False
-        ).to_global(placement=placement, sbp=flow.sbp.split(0))
-    else:
-        column_ids_tensor = None
+    placement = flow.placement(type="cuda", ranks=list(range(parallel_num)))
 
     class TestGraph(flow.nn.Graph):
         def __init__(self):
@@ -66,6 +69,11 @@ def _test_id_shuffle(test_case, has_column_id, num_columns):
             )
 
     graph = TestGraph()
+    for i in range(10):
+        ids_tensor, column_ids_tensor = get_tensors(batch_size, num_columns)
+        if not has_column_id:
+            column_ids_tensor = None
+        graph(ids_tensor, column_ids_tensor)
     (
         num_unique_matrix,
         inverse_unique_partion_indices,
@@ -121,23 +129,13 @@ def _test_id_shuffle(test_case, has_column_id, num_columns):
 
 def _test_embedding_shuffle(test_case, dtype):
     batch_size = int(16384 / 2)
+    placement = flow.placement(type="cuda", ranks=list(range(parallel_num)))
     num_columns = 26
-    ids = np.random.randint(0, 20000, (batch_size, num_columns), dtype=np.int64)
-    column_ids = (
-        ids % num_columns
-    )  # same id must have same column id, so in this case get column_ids from ids
     if dtype == flow.float16:
         np_dtype = np.float16
     else:
         np_dtype = np.float32
-    data = np.random.rand(200000, 128).astype(np_dtype)
-    ids_tensor = flow.tensor(ids, requires_grad=False).to_global(
-        placement=placement, sbp=flow.sbp.split(0)
-    )
-    column_ids_tensor = flow.tensor(
-        column_ids.astype(np.int32), requires_grad=False
-    ).to_global(placement=placement, sbp=flow.sbp.split(0))
-    data = np.random.rand(20000, 2).astype(np.float32)
+    data = np.random.rand(max_id, 128).astype(np_dtype)
     data_tensor = flow.tensor(data, requires_grad=False).to_global(
         placement=placement, sbp=flow.sbp.broadcast()
     )
@@ -165,6 +163,9 @@ def _test_embedding_shuffle(test_case, dtype):
             return embeddings
 
     graph = TestGraph()
+    for i in range(10):
+        ids_tensor, column_ids_tensor = get_tensors(batch_size, num_columns)
+        graph(ids_tensor, column_ids_tensor, data_tensor)
     embeddings = graph(ids_tensor, column_ids_tensor, data_tensor)
     global_ids = ids_tensor.numpy()
     global_data = data_tensor.numpy()
@@ -174,19 +175,9 @@ def _test_embedding_shuffle(test_case, dtype):
 
 def _test_embedding_gradient_shuffle(test_case):
     batch_size = int(16384 / parallel_num)
+    placement = flow.placement(type="cuda", ranks=list(range(parallel_num)))
     num_columns = 26
     embedding_size = 128
-    max_id = 10000
-    ids = np.random.randint(0, max_id, (batch_size, num_columns), dtype=np.int64)
-    column_ids = (
-        ids % num_columns
-    )  # same id must have same column id, so in this case get column_ids from ids
-    ids_tensor = flow.tensor(ids, requires_grad=False).to_global(
-        placement=placement, sbp=flow.sbp.split(0)
-    )
-    column_ids_tensor = flow.tensor(
-        column_ids.astype(np.int32), requires_grad=False
-    ).to_global(placement=placement, sbp=flow.sbp.split(0))
     embedding_diff = np.random.rand(batch_size, num_columns, embedding_size).astype(
         np.float32
     )
@@ -206,7 +197,7 @@ def _test_embedding_gradient_shuffle(test_case):
                 cur_rank_unique_ids,
                 _,
                 cur_rank_inverse_indices,
-            ) = flow._C.id_shuffle(ids_tensor, column_ids_tensor, num_columns)
+            ) = flow._C.id_shuffle(ids, column_ids, num_columns)
             cur_rank_unique_embedding_diff = flow._C.embedding_gradient_shuffle(
                 embedding_diff,
                 num_unique_matrix,
@@ -220,6 +211,10 @@ def _test_embedding_gradient_shuffle(test_case):
             )
 
     graph = TestGraph()
+    for i in range(10):
+        ids_tensor, column_ids_tensor = get_tensors(batch_size, num_columns)
+        graph(ids_tensor, column_ids_tensor, embedding_diff_tensor)
+    ids_tensor, column_ids_tensor = get_tensors(batch_size, num_columns)
     (
         cur_rank_unique_embedding_diff,
         local_cur_rank_num_unique,
@@ -254,6 +249,8 @@ def _test_embedding_gradient_shuffle(test_case):
         for j in range(num_unique_i):
             unique_id = unique_ids_i[j]
             of_unique_embedding_diff[unique_id, :] = unique_embedding_diff_i[j, :]
+            unique_embedding_diff_i[j, :] = 0
+        test_case.assertTrue(unique_embedding_diff_i.sum() == 0)
 
     test_case.assertTrue(
         np.allclose(of_unique_embedding_diff, np_cur_rank_unique_embedding_diff)
