@@ -51,7 +51,7 @@ def _check_cache(cache):
     assert cache["value_memory_kind"] in ["device", "host"]
 
 
-class OneEmbeddingLookup(Module):
+class Embedding(Module):
     def __init__(self, name, embedding_dim, dtype, key_type, intializer, store_options):
         super().__init__()
         embedding_options = {}
@@ -164,92 +164,119 @@ class OneEmbeddingLookup(Module):
         )
 
 
-def DeviceMemStoreOption(size_factor, gpu_memory_mb, persistent_path):
+def make_device_mem_store_option(
+    device_memory_mb, persistent_path, size_factor=1, physical_block_size=512
+):
     option = {
         "kv_store": {
             "caches": [
                 {
                     "policy": "full",
-                    "cache_memory_budget_mb": gpu_memory_mb,
+                    "cache_memory_budget_mb": device_memory_mb,
                     "value_memory_kind": "device",
                 }
             ],
-            "persistent_table": {"path": persistent_path, "physical_block_size": 512,},
+            "persistent_table": {
+                "path": persistent_path,
+                "physical_block_size": physical_block_size,
+            },
         },
         "size_factor": size_factor,
     }
     return option
 
 
-def HostMemStoreOption(size_factor, cpu_memory_mb, persistent_path):
+def make_host_mem_store_option(
+    host_memory_mb, persistent_path, size_factor=1, physical_block_size=512
+):
     option = {
         "kv_store": {
             "caches": [
                 {
                     "policy": "full",
-                    "cache_memory_budget_mb": cpu_memory_mb,
+                    "cache_memory_budget_mb": host_memory_mb,
                     "value_memory_kind": "host",
                 }
             ],
-            "persistent_table": {"path": persistent_path, "physical_block_size": 512,},
+            "persistent_table": {
+                "path": persistent_path,
+                "physical_block_size": physical_block_size,
+            },
         },
         "size_factor": size_factor,
     }
     return option
 
 
-def DeviceMemCachedSSDStoreOption(size_factor, gpu_memory_mb, persistent_path):
-    option = {
-        "kv_store": {
-            "caches": [
-                {
-                    "policy": "lru",
-                    "cache_memory_budget_mb": gpu_memory_mb,
-                    "value_memory_kind": "device",
-                }
-            ],
-            "persistent_table": {"path": persistent_path, "physical_block_size": 512,},
-        },
-        "size_factor": size_factor,
-    }
-    return option
-
-
-def HostMemCachedSSDStoreOption(size_factor, cpu_memory_mb, persistent_path):
-    option = {
-        "kv_store": {
-            "caches": [
-                {
-                    "policy": "lru",
-                    "cache_memory_budget_mb": cpu_memory_mb,
-                    "value_memory_kind": "host",
-                }
-            ],
-            "persistent_table": {"path": persistent_path, "physical_block_size": 512,},
-        },
-        "size_factor": size_factor,
-    }
-    return option
-
-
-def DeviceMemCachedHostMemStoreOption(
-    size_factor, gpu_memory_mb, cpu_memory_mb, persistent_path
+def make_device_mem_cached_ssd_store_option(
+    device_memory_mb, persistent_path, size_factor=1, physical_block_size=512
 ):
     option = {
         "kv_store": {
             "caches": [
                 {
                     "policy": "lru",
-                    "cache_memory_budget_mb": gpu_memory_mb,
+                    "cache_memory_budget_mb": device_memory_mb,
+                    "value_memory_kind": "device",
+                }
+            ],
+            "persistent_table": {
+                "path": persistent_path,
+                "physical_block_size": physical_block_size,
+            },
+        },
+        "size_factor": size_factor,
+    }
+    return option
+
+
+def host_mem_cached_ssd_store_option(
+    host_memory_mb, persistent_path, size_factor=1, physical_block_size=512
+):
+    option = {
+        "kv_store": {
+            "caches": [
+                {
+                    "policy": "lru",
+                    "cache_memory_budget_mb": host_memory_mb,
+                    "value_memory_kind": "host",
+                }
+            ],
+            "persistent_table": {
+                "path": persistent_path,
+                "physical_block_size": physical_block_size,
+            },
+        },
+        "size_factor": size_factor,
+    }
+    return option
+
+
+def make_device_mem_cached_host_store_option(
+    device_memory_mb,
+    host_memory_mb,
+    persistent_path,
+    size_factor=1,
+    physical_block_size=512,
+):
+    option = {
+        "kv_store": {
+            "caches": [
+                {
+                    "policy": "lru",
+                    "cache_memory_budget_mb": device_memory_mb,
                     "value_memory_kind": "device",
                 },
                 {
                     "policy": "full",
-                    "cache_memory_budget_mb": cpu_memory_mb,
+                    "cache_memory_budget_mb": host_memory_mb,
                     "value_memory_kind": "host",
                 },
             ],
-            "persistent_table": {"path": persistent_path, "physical_block_size": 512,},
+            "persistent_table": {
+                "path": persistent_path,
+                "physical_block_size": physical_block_size,
+            },
         },
         "size_factor": size_factor,
     }

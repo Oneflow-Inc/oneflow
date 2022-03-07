@@ -372,17 +372,6 @@ from oneflow.nn.modules.global_cast import to_global_op as to_global
 from oneflow.nn.modules.global_cast import to_local_op as to_local
 from oneflow.nn.modules.where import where_op as where
 from oneflow.nn.modules.scatter import *
-from oneflow.nn.modules.embedding import DeviceMemStoreOption as device_mem_store_option
-from oneflow.nn.modules.embedding import HostMemStoreOption as host_mem_store_option
-from oneflow.nn.modules.embedding import (
-    DeviceMemCachedSSDStoreOption as device_mem_cached_ssd_store_option,
-)
-from oneflow.nn.modules.embedding import (
-    HostMemCachedSSDStoreOption as host_mem_cached_ssd_store_option,
-)
-from oneflow.nn.modules.embedding import (
-    DeviceMemCachedHostMemStoreOption as device_mem_cached_host_store_option,
-)
 from oneflow.ops.stateful_ops import StatefulOp as stateful_op
 from oneflow.ops.initializer_util import constant_initializer
 from oneflow.ops.initializer_util import glorot_normal_initializer
@@ -418,6 +407,7 @@ import oneflow.comm
 import oneflow.framework.docstr as docstr
 import oneflow.cuda
 import oneflow.multiprocessing
+import oneflow.one_embedding
 
 if oneflow._oneflow_internal.flags.with_mlir():
     oneflow_internal_path = oneflow._oneflow_internal.__file__
