@@ -1425,13 +1425,13 @@ def OneFlow_NvtxStartOp : OneFlow_BaseOp<"nvtx_start", [NoSideEffect, DeclareOpI
 
 def OneFlow_COCOReaderOp : OneFlow_BaseOp<"COCOReader", [NoSideEffect, NoGrad, CpuOnly, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let output = (outs
-    OneFlow_Tensor:$image,
+    OneFlow_TensorBufferTensor:$image,
     OneFlow_Tensor:$image_id,
     OneFlow_Tensor:$image_size,
-    OneFlow_Tensor:$gt_bbox,
-    OneFlow_Tensor:$gt_label,
-    OneFlow_Tensor:$gt_segm,
-    OneFlow_Tensor:$gt_segm_index
+    OneFlow_TensorBufferTensor:$gt_bbox,
+    OneFlow_TensorBufferTensor:$gt_label,
+    OneFlow_TensorBufferTensor:$gt_segm,
+    OneFlow_TensorBufferTensor:$gt_segm_index
   );
   let attrs = (ins
     DefaultValuedAttr<SI64Attr, "0">:$session_id,
