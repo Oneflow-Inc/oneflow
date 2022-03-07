@@ -521,8 +521,7 @@ class EmbeddingShuffleKernel final : public user_op::OpKernel {
     CHECK_EQ(parallel_num * num_ids * embedding_size, cur_rank_embeddings->shape().elem_cnt());
     size_t reverse_unique_cur_rank_embeddings_size =
         GetCudaAlignedSize(parallel_num * num_ids * embedding_size * sizeof(T));
-    size_t received_embeddings_size =
-        GetCudaAlignedSize(parallel_num * num_ids * embedding_size * sizeof(T));
+    size_t received_embeddings_size = reverse_unique_cur_rank_embeddings_size;
     T* reverse_unique_cur_rank_embeddings = reinterpret_cast<T*>(tmp_buffer->mut_dptr());
     T* received_embeddings = reinterpret_cast<T*>(tmp_buffer->mut_dptr<char>()
                                                   + reverse_unique_cur_rank_embeddings_size);
@@ -565,8 +564,7 @@ class EmbeddingShuffleKernel final : public user_op::OpKernel {
         const user_op::TensorDesc& embeddings = ctx->InputTensorDesc("embeddings", 0);            \
         size_t reverse_cur_rank_embeddings_size = GetCudaAlignedSize(                             \
             cur_rank_embeddings.shape().elem_cnt() * sizeof(OF_PP_PAIR_FIRST(t_dtype_pair)));     \
-        size_t recv_unique_embeddings = GetCudaAlignedSize(                                       \
-            cur_rank_embeddings.shape().elem_cnt() * sizeof(OF_PP_PAIR_FIRST(t_dtype_pair)));     \
+        size_t recv_unique_embeddings = reverse_cur_rank_embeddings_size;                         \
         return reverse_cur_rank_embeddings_size + recv_unique_embeddings;                         \
       });
 
@@ -640,8 +638,7 @@ class EmbeddingGradientShuffleKernel final : public user_op::OpKernel {
 
     size_t unique_partition_embedding_diff_size =
         GetCudaAlignedSize(parallel_num * num_ids * embedding_size * sizeof(T));
-    size_t received_embedding_diff_size =
-        GetCudaAlignedSize(parallel_num * num_ids * embedding_size * sizeof(T));
+    size_t received_embedding_diff_size = unique_partition_embedding_diff_size;
     T* unique_partition_embedding_diff = reinterpret_cast<T*>(tmp_buffer->mut_dptr());
     T* received_embedding_diff =
         reinterpret_cast<T*>(tmp_buffer->mut_dptr<char>() + unique_partition_embedding_diff_size);
