@@ -181,13 +181,11 @@ class ReduceSumHalfKernel final : public user_op::OpKernel, public user_op::Cuda
       const int32_t n = 1;
       const int32_t k = reduce_size;
       const float16* ones = nullptr;
-#ifdef WITH_CUDA
       auto* cuda_device = dynamic_cast<ep::CudaDevice*>(ctx->stream()->device());
       if (cuda_device != nullptr) {
         ones =
             static_cast<const float16*>(cuda_device->GetConstOnes(DataType::kFloat16, reduce_size));
       }
-#endif  // WITH_CUDA
       if (ones == nullptr) {
         std::unique_ptr<ep::primitive::Fill> fill =
             ep::primitive::NewPrimitive<ep::primitive::FillFactory>(ctx->stream()->device_type(),
