@@ -21,6 +21,10 @@ limitations under the License.
 #include "oneflow/core/ep/include/primitive/cast.h"
 #include "oneflow/core/ep/include/primitive/fill.h"
 
+#ifdef WITH_CUDA
+#include "oneflow/core/ep/cuda/cuda_device.h"
+#endif  // WITH_CUDA
+
 namespace oneflow {
 
 namespace {
@@ -158,14 +162,23 @@ class ReduceSumHalfKernel final : public user_op::OpKernel, public user_op::Cuda
       const int32_t m = (inner_size == 1) ? outer_size : inner_size;
       const int32_t n = 1;
       const int32_t k = reduce_size;
-      std::unique_ptr<ep::primitive::Fill> fill =
-          ep::primitive::NewPrimitive<ep::primitive::FillFactory>(ctx->stream()->device_type(),
-                                                                  DataType::kFloat16);
-      CHECK(fill);
-      fill->Launch(ctx->stream(), tmp_buffer->mut_dptr(), 1.0, reduce_size);
+      const float16* ones = nullptr;
+      auto* cuda_device = dynamic_cast<ep::CudaDevice*>(ctx->stream()->device());
+      if (cuda_device != nullptr) {
+        ones =
+            static_cast<const float16*>(cuda_device->GetConstOnes(DataType::kFloat16, reduce_size));
+      }
+      if (ones == nullptr) {
+        std::unique_ptr<ep::primitive::Fill> fill =
+            ep::primitive::NewPrimitive<ep::primitive::FillFactory>(ctx->stream()->device_type(),
+                                                                    DataType::kFloat16);
+        CHECK(fill);
+        fill->Launch(ctx->stream(), tmp_buffer->mut_dptr(), 1.0, reduce_size);
+        ones = tmp_buffer->dptr<float16>();
+      }
       NewKernelUtil<DeviceType::kCUDA>::OFGemm(ctx->stream(), trans_a, trans_b, m, n, k,
                                                GetOneVal<float16>(), input_tensor->dptr<float16>(),
-                                               tmp_buffer->dptr<float16>(), GetZeroVal<float16>(),
+                                               ones, GetZeroVal<float16>(),
                                                output_tensor->mut_dptr<float16>());
     } else {
       const Shape& reduced_shape = CreateReducedShape(in_shape, {axis.begin(), axis.end()});
