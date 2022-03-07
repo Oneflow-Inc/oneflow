@@ -181,10 +181,11 @@ def FusedPadConv2DPattern : Pat<
   ]
 >;
 
+def GetDropoutValue :
+  NativeCodeCall<"mlir::oneflow::GetDropoutValue($_builder, $0)">;
+
 def GetDefaultSeed :
   NativeCodeCall<"mlir::oneflow::GetDefaultSeed($_builder)">;
-def FuseBiasAddDropout :
-  NativeCodeCall<"mlir::oneflow::CreateFuseBiasAddDropout($_builder, $0, $1)">;
 
 def FusedBiasAddDropoutPattern : Pattern<
   (
@@ -224,14 +225,14 @@ def FusedBiasAddDropoutPattern : Pattern<
           $dropout_op_rate,
           (GetDefaultSeed)
       ),
-      $_add_to_output, // TODO: write a function like GetFirstValue to check _add_to_output is empty
+      (GetDropoutValue $_add_to_output), // TODO: write a function like GetFirstValue to check _add_to_output is empty
       $bias_add_op_name,
       $bias_add_device_tag,
       $bias_add_device_name,
       $bias_add_scope_symbol_id,
       $bias_add_hierarchy,
       $bias_add_op_axis,
-      $bias_add_op_axis // TODO: scale
+      $dropout_op_rate // TODO: scale
     ),
     (replaceWithValue $mask)
   ],
