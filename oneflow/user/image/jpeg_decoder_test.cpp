@@ -27,7 +27,7 @@ limitations under the License.
 namespace oneflow {
 
 // generate image
-int GenerateImage(std::vector<uint8_t>& jpg, int w, int h) {
+void GenerateImage(std::vector<uint8_t>& jpg, int w, int h) {
   std::vector<uint8_t> raw_data(w * h * 3);
 
   for (int i = 0; i < w; i++) {
@@ -59,40 +59,6 @@ int GenerateImage(std::vector<uint8_t>& jpg, int w, int h) {
 
   cv::Mat raw(h, w, CV_8UC3, (void*)raw_data.data(), cv::Mat::AUTO_STEP);
   cv::imencode(".jpg", raw, jpg);
-
-  return 0;
-}
-
-void OpenCvPartialDecode(const unsigned char* data, size_t length,
-                         RandomCropGenerator* random_crop_gen, const std::string& color_space,
-                         cv::Mat& out_mat) {
-  cv::Mat image =
-      cv::imdecode(cv::Mat(1, length, CV_8UC1, (void*)data),  // NOLINT
-                   ImageUtil::IsColor(color_space) ? cv::IMREAD_COLOR : cv::IMREAD_GRAYSCALE);
-
-  // random crop
-  if (random_crop_gen != nullptr) {
-    CHECK(image.data != nullptr);
-    cv::Mat image_roi;
-    CropWindow crop;
-    int W = image.cols;
-    int H = image.rows;
-    random_crop_gen->GenerateCropWindow({H, W}, &crop);
-    const int y = crop.anchor.At(0);
-    const int x = crop.anchor.At(1);
-    const int newH = crop.shape.At(0);
-    const int newW = crop.shape.At(1);
-    CHECK(newW > 0 && newW <= W);
-    CHECK(newH > 0 && newH <= H);
-    cv::Rect roi(x, y, newW, newH);
-    image(roi).copyTo(out_mat);
-    W = out_mat.cols;
-    H = out_mat.rows;
-    CHECK(W == newW);
-    CHECK(H == newH);
-  } else {
-    image.copyTo(out_mat);
-  }
 }
 
 TEST(JPEG, decoder) {
@@ -116,7 +82,7 @@ TEST(JPEG, decoder) {
     cv::Mat opencv_image_mat;
     std::string color_space("RGB");
 
-    OpenCvPartialDecode(jpg.data(), jpg.size(), &opencv_random_crop_gen,
+    OpenCvPartialDecodeRandomCropImage(jpg.data(), jpg.size(), &opencv_random_crop_gen,
                         color_space, opencv_image_mat);
     ImageUtil::ConvertColor("BGR", opencv_image_mat, color_space, opencv_image_mat);
 

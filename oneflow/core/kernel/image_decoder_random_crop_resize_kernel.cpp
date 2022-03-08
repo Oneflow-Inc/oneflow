@@ -149,7 +149,7 @@ class CpuDecodeHandle final : public DecodeHandle {
   }
 };
 
-bool JpegDecodeRandomCropResize(const unsigned char* data, size_t length,
+bool CpuJpegDecodeRandomCropResize(const unsigned char* data, size_t length,
                                 RandomCropGenerator* crop_generator, unsigned char* workspace,
                                 size_t workspace_size, unsigned char* dst, int target_width,
                                 int target_height) {
@@ -189,7 +189,7 @@ void CpuDecodeHandle::DecodeRandomCropResize(const unsigned char* data, size_t l
                                              unsigned char* workspace, size_t workspace_size,
                                              unsigned char* dst, int target_width,
                                              int target_height) {
-  if (JpegDecodeRandomCropResize(data, length, crop_generator, workspace, workspace_size, dst,
+  if (CpuJpegDecodeRandomCropResize(data, length, crop_generator, workspace, workspace_size, dst,
                                  target_width, target_height)) {
     return;
   }

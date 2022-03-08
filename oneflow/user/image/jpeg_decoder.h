@@ -27,5 +27,9 @@ bool JpegPartialDecodeRandomCropImage(const unsigned char* data, size_t length,
                                       unsigned char* workspace, size_t workspace_size,
                                       cv::Mat* out_mat);
 
+void OpenCvPartialDecodeRandomCropImage(const unsigned char* data, size_t length,
+                                        RandomCropGenerator* random_crop_gen,
+                                        const std::string& color_space, cv::Mat& out_mat);
+
 }  // namespace oneflow
 #endif  // ONEFLOW_USER_IMAGE_JPEG_DECODER_H_

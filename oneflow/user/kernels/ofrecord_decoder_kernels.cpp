@@ -165,38 +165,6 @@ REGISTER_USER_KERNEL("ofrecord_bytes_decoder")
 
 namespace {
 
-void OpenCvPartialDecodeRandomCropImage(const unsigned char* data, size_t length,
-                                        RandomCropGenerator* random_crop_gen,
-                                        const std::string& color_space, cv::Mat& out_mat) {
-  cv::Mat image =
-      cv::imdecode(cv::Mat(1, length, CV_8UC1, (void*)data),  // NOLINT
-                   ImageUtil::IsColor(color_space) ? cv::IMREAD_COLOR : cv::IMREAD_GRAYSCALE);
-  int W = image.cols;
-  int H = image.rows;
-
-  // random crop
-  if (random_crop_gen != nullptr) {
-    CHECK(image.data != nullptr);
-    cv::Mat image_roi;
-    CropWindow crop;
-    random_crop_gen->GenerateCropWindow({H, W}, &crop);
-    const int y = crop.anchor.At(0);
-    const int x = crop.anchor.At(1);
-    const int newH = crop.shape.At(0);
-    const int newW = crop.shape.At(1);
-    CHECK(newW > 0 && newW <= W);
-    CHECK(newH > 0 && newH <= H);
-    cv::Rect roi(x, y, newW, newH);
-    image(roi).copyTo(out_mat);
-    W = out_mat.cols;
-    H = out_mat.rows;
-    CHECK(W == newW);
-    CHECK(H == newH);
-  } else {
-    image.copyTo(out_mat);
-  }
-}
-
 void DecodeRandomCropImageFromOneRecord(const OFRecord& record, TensorBuffer* buffer,
                                         const std::string& name, const std::string& color_space,
                                         RandomCropGenerator* random_crop_gen) {
