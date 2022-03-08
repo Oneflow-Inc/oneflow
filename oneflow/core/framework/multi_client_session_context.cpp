@@ -156,7 +156,7 @@ Maybe<void> MultiClientSessionContext::UpdateResource(const std::string& reso_pr
 
 Maybe<void> MultiClientSessionContext::TryClose() {
   if (is_inited_) {
-    VLOG(2) << "Try to delete multi client session context." << std::endl;
+    VLOG(1) << "Try to delete multi client session context." << std::endl;
 
     // sync before NNGraph release to ensure LaunchLazyJob instruction was completed and released
     JUST(vm::ClusterSync());
@@ -186,7 +186,7 @@ Maybe<void> MultiClientSessionContext::TryClose() {
                                           GlobalProcessCtx::NumOfProcessPerNode());
     is_inited_ = false;
   }
-  VLOG(2) << "Finish delete multi client session context." << std::endl;
+  VLOG(1) << "Finish delete multi client session context." << std::endl;
   return Maybe<void>::Ok();
 }
 

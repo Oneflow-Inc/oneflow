@@ -126,8 +126,8 @@ AttrMap MakeAttrMapFromUserOpConf(const UserOpConf& user_op_conf) {
     if (cpp_attr_value.IsOk()) {
       attrs->emplace(kv.first, CHECK_JUST(cpp_attr_value));
     } else {
-      LOG(ERROR) << user_op_conf.DebugString();
-      LOG(ERROR) << "fail to convert to cpp attr value, key: " << kv.first;
+      LOG(ERROR) << user_op_conf.DebugString()
+                 << " failed to convert to cpp attr value, key: " << kv.first;
     }
   }
   return AttrMap(attrs);
