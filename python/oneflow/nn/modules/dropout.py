@@ -126,6 +126,7 @@ class Dropout(_DropoutNd):
             x,
             self.p,
             self.training,
+            self.inplace,
             self.generator,
             addend=addend if addend is not None else None,
         )
