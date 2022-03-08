@@ -153,7 +153,6 @@ class TestGraph(flow.unittest.TestCase):
                 )
                 return x
 
-        test_case.assertTrue(oneflow._oneflow_internal.IsMultiClient())
         g = CustomGraphGraphBuildCtx()
         test_case.assertEqual(graph_build_util.lazy_mode.is_enabled(), False)
         data = np.array([2.0, 1.0, 0.0, -1.0, -2.0])
