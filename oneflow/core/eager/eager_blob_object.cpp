@@ -184,7 +184,7 @@ void DTREagerBlobObject::update_access_time() {
   if (oneflow::DTRDebugEnabled()) { LOG(INFO) << "update_access_time to " << last_access_time_; }
 }
 
-void DTREagerBlobObject::update_user_ops(
+void DTREagerBlobObject::append_user_op(
     std::shared_ptr<vm::LocalCallOpKernelPhyInstrOperand>& operand) {
   // TODO unique_ptr
   user_ops_.emplace_back(std::make_unique<DTRInstrOperand>(

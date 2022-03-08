@@ -216,7 +216,7 @@ class DTREagerBlobObject final : public EagerBlobObject {
   void pin();
   void unpin();
   void update_access_time();
-  void update_user_ops(std::shared_ptr<LocalCallOpKernelPhyInstrOperand>& operand);
+  void append_user_op(std::shared_ptr<LocalCallOpKernelPhyInstrOperand>& operand);
   Maybe<void> evict();
   Maybe<double> parent_cost(bool is_bp_required=false) const;
   Maybe<double> child_cost(bool is_bp_required=false) const;
