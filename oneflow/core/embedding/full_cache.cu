@@ -221,7 +221,8 @@ class OrdinalEncoder {
                                     cudaMemcpyDefault,
                                     stream->As<ep::CudaStream>()->cuda_stream()));
       CHECK_JUST(stream->Sync());
-      CHECK_LT(*table_size_host_, capacity_);
+      CHECK_LT(*table_size_host_, capacity_)
+          << "The number of key is larger than cache size, please enlarge cache_memory_budget. ";
     } else {
       RUN_CUDA_KERNEL((OrdinalEncodeLookupKernel<Key, uint64_t>), stream, num_keys, table_capacity_,
                       table_, num_keys, keys, context);
