@@ -101,7 +101,7 @@ void OpenCvPartialDecodeRandomCropImage(const unsigned char* data, size_t length
                                         RandomCropGenerator* random_crop_gen,
                                         const std::string& color_space, cv::Mat& out_mat) {
   cv::Mat image =
-      cv::imdecode(cv::Mat(1, length, CV_8UC1, const_cast<unsigned char*>(data)), 
+      cv::imdecode(cv::Mat(1, length, CV_8UC1, const_cast<unsigned char*>(data)),
                    ImageUtil::IsColor(color_space) ? cv::IMREAD_COLOR : cv::IMREAD_GRAYSCALE);
   int W = image.cols;
   int H = image.rows;

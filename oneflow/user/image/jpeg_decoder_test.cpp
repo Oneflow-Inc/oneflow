@@ -81,8 +81,8 @@ TEST(JPEG, decoder) {
     cv::Mat opencv_image_mat;
     std::string color_space("RGB");
 
-    OpenCvPartialDecodeRandomCropImage(jpg.data(), jpg.size(), &opencv_random_crop_gen,
-                        color_space, opencv_image_mat);
+    OpenCvPartialDecodeRandomCropImage(jpg.data(), jpg.size(), &opencv_random_crop_gen, color_space,
+                                       opencv_image_mat);
     ImageUtil::ConvertColor("BGR", opencv_image_mat, color_space, opencv_image_mat);
 
     cv::Mat checkout = libjpeg_image_mat - opencv_image_mat;
