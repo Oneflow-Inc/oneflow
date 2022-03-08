@@ -16,7 +16,7 @@ limitations under the License.
 #ifndef ONEFLOW_EMBEDDING_KEY_VALUE_STORE_H_
 #define ONEFLOW_EMBEDDING_KEY_VALUE_STORE_H_
 
-#include "oneflow/core/embedding/kv_base.h"
+#include "oneflow/core/embedding/kv_iterator.h"
 #include "oneflow/core/common/util.h"
 #include "oneflow/core/ep/include/stream.h"
 
@@ -24,7 +24,7 @@ namespace oneflow {
 
 namespace embedding {
 
-class KeyValueStore : public KVBase {
+class KeyValueStore {
  public:
   OF_DISALLOW_COPY_AND_MOVE(KeyValueStore);
   KeyValueStore() = default;
@@ -41,7 +41,7 @@ class KeyValueStore : public KVBase {
   virtual bool SnapshotExists(const std::string& name) = 0;
   virtual void LoadSnapshot(const std::string& name) = 0;
   virtual void LoadSnapshot(const std::string& name,
-                            const std::function<void(KVBaseIterator* iter)>& Hook) = 0;
+                            const std::function<void(KVIterator* iter)>& Hook) = 0;
   virtual void SaveSnapshot(const std::string& name) = 0;
 };
 

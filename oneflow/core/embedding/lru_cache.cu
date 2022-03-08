@@ -362,16 +362,20 @@ __global__ void DumpKernel(LruCacheContext<Key, Elem> cache_ctx, size_t start_ke
                            size_t end_key_index, uint32_t* n_dumped, Key* keys, Elem* values) {
   ThreadContext thread_ctx{};
   __shared__ Key warp_keys[kNumWarpPerBlock][kWarpSize];
+  __shared__ uint8_t warp_ages[kNumWarpPerBlock][kWarpSize];
   for (uint32_t warp_start_key_index = start_key_index + thread_ctx.global_warp_id * kWarpSize;
        warp_start_key_index < end_key_index;
        warp_start_key_index += thread_ctx.num_warps * kWarpSize) {
     Key lane_key = 0;
+    uint8_t lane_age = 0;
     if (warp_start_key_index + thread_ctx.lane_id < end_key_index) {
       lane_key = cache_ctx.keys[warp_start_key_index + thread_ctx.lane_id];
+      lane_age = cache_ctx.ages[warp_start_key_index + thread_ctx.lane_id];
     }
     __syncwarp();
     warp_keys[thread_ctx.warp_id_in_block][thread_ctx.lane_id] = lane_key;
-    const int key_count = __popc(__ballot_sync(kFullMask, lane_key != 0));
+    warp_ages[thread_ctx.warp_id_in_block][thread_ctx.lane_id] = lane_age;
+    const int key_count = __popc(__ballot_sync(kFullMask, lane_age != 0));
     if (key_count == 0) { continue; }
     uint32_t offset = 0;
     if (thread_ctx.lane_id == 0) { offset = atomicAdd(n_dumped, key_count); }
@@ -379,6 +383,8 @@ __global__ void DumpKernel(LruCacheContext<Key, Elem> cache_ctx, size_t start_ke
     __syncwarp();
     for (uint32_t i = 0; i < kWarpSize; ++i) {
       const Key key = warp_keys[thread_ctx.warp_id_in_block][i];
+      const Key age = warp_ages[thread_ctx.warp_id_in_block][i];
+      if (age == 0) { continue; }
       if (thread_ctx.lane_id == 0) { keys[offset] = key; }
       __syncwarp();
       for (uint32_t j = thread_ctx.lane_id; j < cache_ctx.line_size; j += kWarpSize) {

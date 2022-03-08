@@ -168,8 +168,9 @@ void TestCache(Cache* cache, uint32_t line_size) {
     for (size_t i = 0; i < n_keys; ++i) { in_cache.emplace(keys[i]); }
     for (size_t i = 0; i < *n_evicted; ++i) { in_cache.erase(evicted_keys[i]); }
   }
-  for (size_t start_key_index = 0; start_key_index < cache->Capacity(); start_key_index += n_keys) {
-    cache->Dump(stream, start_key_index, std::min(start_key_index + n_keys, cache->Capacity()),
+  const uint64_t dump_capacity = cache->DumpCapacity();
+  for (size_t start_key_index = 0; start_key_index < dump_capacity; start_key_index += n_keys) {
+    cache->Dump(stream, start_key_index, std::min(start_key_index + n_keys, dump_capacity),
                 d_n_evicted, d_evicted_keys, d_evicted_values);
     OF_CUDA_CHECK(cudaDeviceSynchronize());
     OF_CUDA_CHECK(cudaMemcpy(n_evicted, d_n_evicted, sizeof(uint32_t), cudaMemcpyDefault));

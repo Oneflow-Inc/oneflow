@@ -96,7 +96,7 @@ class CacheKeyValueStoreImpl : public KeyValueStore {
   void LoadSnapshot(const std::string& name) override;
   void SaveSnapshot(const std::string& name) override;
   void LoadSnapshot(const std::string& name,
-                    const std::function<void(KVBaseIterator* iter)>& Hook) override;
+                    const std::function<void(KVIterator* iter)>& Hook) override;
 
  private:
   void SyncCacheToStore();
@@ -174,11 +174,11 @@ void CacheKeyValueStoreImpl<Key, Elem>::LoadSnapshot(const std::string& name) {
 
 template<typename Key, typename Elem>
 void CacheKeyValueStoreImpl<Key, Elem>::LoadSnapshot(
-    const std::string& name, const std::function<void(KVBaseIterator* iter)>& Hook) {
+    const std::string& name, const std::function<void(KVIterator* iter)>& Hook) {
   CudaCurrentDeviceGuard guard(device_index_);
   std::lock_guard<std::recursive_mutex> lock(mutex_);
   cache_->Clear();
-  store_->LoadSnapshot(name, [&](KVBaseIterator* iter) {
+  store_->LoadSnapshot(name, [&](KVIterator* iter) {
     if (cache_->Policy() == CacheOptions::Policy::kFull) {
       auto device =
           Global<ep::DeviceManagerRegistry>::Get()->GetDevice(DeviceType::kCUDA, device_index_);
@@ -226,11 +226,11 @@ void CacheKeyValueStoreImpl<Key, Elem>::SyncCacheToStore() {
   CHECK(device);
   auto* stream = device->CreateStream();
   auto* cuda_stream = stream->As<ep::CudaStream>();
-  uint64_t cache_capacity = cache_->Capacity();
-  for (uint64_t start_key_index = 0; start_key_index < cache_capacity;
+  const uint64_t dump_capacity = cache_->DumpCapacity();
+  for (uint64_t start_key_index = 0; start_key_index < dump_capacity;
        start_key_index += max_query_length_) {
     cache_->Dump(stream, start_key_index,
-                 std::min(start_key_index + max_query_length_, cache_capacity), num_buffer_,
+                 std::min(start_key_index + max_query_length_, dump_capacity), num_buffer_,
                  keys_buffer_, values_buffer_);
     OF_CUDA_CHECK(cudaMemcpyAsync(host_num_buffer_, num_buffer_, sizeof(uint32_t),
                                   cudaMemcpyDefault, cuda_stream->cuda_stream()));

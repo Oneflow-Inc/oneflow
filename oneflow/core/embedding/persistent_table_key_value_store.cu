@@ -29,7 +29,7 @@ namespace embedding {
 
 namespace {
 
-class IteratorImpl : public KVBaseIterator {
+class IteratorImpl : public KVIterator {
  public:
   OF_DISALLOW_COPY_AND_MOVE(IteratorImpl);
   IteratorImpl(PersistentTable::Iterator* base_iter, uint32_t key_size, uint32_t value_size,
@@ -134,7 +134,7 @@ class KeyValueStoreImpl : public KeyValueStore {
   bool SnapshotExists(const std::string& name) override;
   void LoadSnapshot(const std::string& name) override;
   void LoadSnapshot(const std::string& name,
-                    const std::function<void(KVBaseIterator* iter)>& Hook) override;
+                    const std::function<void(KVIterator* iter)>& Hook) override;
   void SaveSnapshot(const std::string& name) override;
 
  private:
@@ -206,7 +206,7 @@ void KeyValueStoreImpl<Key>::LoadSnapshot(const std::string& name) {
 
 template<typename Key>
 void KeyValueStoreImpl<Key>::LoadSnapshot(const std::string& name,
-                                          const std::function<void(KVBaseIterator* iter)>& Hook) {
+                                          const std::function<void(KVIterator* iter)>& Hook) {
   CudaCurrentDeviceGuard guard(device_index_);
   if (Hook) {
     table_->LoadSnapshot(name, [&](PersistentTable::Iterator* chunk_iterator) {

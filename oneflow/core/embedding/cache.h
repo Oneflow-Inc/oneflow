@@ -16,7 +16,7 @@ limitations under the License.
 #ifndef ONEFLOW_EMBEDDING_CACHE_H_
 #define ONEFLOW_EMBEDDING_CACHE_H_
 
-#include "oneflow/core/embedding/kv_base.h"
+#include "oneflow/core/embedding/kv_iterator.h"
 #include "oneflow/core/common/util.h"
 #include "oneflow/core/ep/include/stream.h"
 
@@ -41,7 +41,7 @@ struct CacheOptions {
   float load_factor = 0.75;
 };
 
-class Cache : public KVBase {
+class Cache {
  public:
   OF_DISALLOW_COPY_AND_MOVE(Cache);
   Cache() = default;
@@ -52,6 +52,7 @@ class Cache : public KVBase {
   virtual uint32_t MaxQueryLength() const = 0;
   virtual void ReserveQueryLength(uint32_t query_length) = 0;
   virtual uint64_t Capacity() const = 0;
+  virtual uint64_t DumpCapacity() const { return Capacity(); }
   virtual CacheOptions::Policy Policy() const = 0;
   virtual void Test(ep::Stream* stream, uint32_t n_keys, const void* keys, uint32_t* n_missing,
                     void* missing_keys, uint32_t* missing_indices) = 0;

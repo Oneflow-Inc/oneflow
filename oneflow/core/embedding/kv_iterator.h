@@ -13,8 +13,8 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
-#ifndef ONEFLOW_EMBEDDING_KV_BASE_H_
-#define ONEFLOW_EMBEDDING_KV_BASE_H_
+#ifndef ONEFLOW_EMBEDDING_KV_ITERATOR_H_
+#define ONEFLOW_EMBEDDING_KV_ITERATOR_H_
 
 #include "oneflow/core/common/util.h"
 #include "oneflow/core/ep/include/stream.h"
@@ -23,26 +23,19 @@ namespace oneflow {
 
 namespace embedding {
 
-class KVBaseIterator {
+class KVIterator {
  public:
-  OF_DISALLOW_COPY_AND_MOVE(KVBaseIterator);
-  KVBaseIterator() = default;
-  virtual ~KVBaseIterator() = default;
+  OF_DISALLOW_COPY_AND_MOVE(KVIterator);
+  KVIterator() = default;
+  virtual ~KVIterator() = default;
 
   virtual void NextN(ep::Stream* stream, uint32_t n_request, uint32_t* n_result, void* keys,
                      void* values) = 0;
   virtual void Reset() = 0;
 };
 
-class KVBase {
- public:
-  OF_DISALLOW_COPY_AND_MOVE(KVBase);
-  KVBase() = default;
-  virtual ~KVBase() = default;
-};
-
 }  // namespace embedding
 
 }  // namespace oneflow
 
-#endif  // ONEFLOW_EMBEDDING_KV_BASE_H_
+#endif  // ONEFLOW_EMBEDDING_KV_ITERATOR_H_

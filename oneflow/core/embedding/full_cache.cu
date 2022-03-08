@@ -135,16 +135,6 @@ __global__ void OrdinalEncodeDumpKernel(const TableEntry<Key, Index>* table,
   }
 }
 
-template<typename Elem>
-__device__ Elem Zero() {
-  return 0;
-}
-
-template<>
-__device__ ulonglong2 Zero<ulonglong2>() {
-  return ulonglong2{0, 0};
-}
-
 template<typename Key, typename Elem, bool return_value>
 __global__ void LookupKernel(uint32_t value_length, uint64_t capacity, const Elem* cache_values,
                              uint32_t values_elem_cnt, const Key* keys, const uint64_t* context,
@@ -157,9 +147,7 @@ __global__ void LookupKernel(uint32_t value_length, uint64_t capacity, const Ele
     const uint64_t col_id = i - key_id * value_length;
     if (ctx == 0) {
       const Key missing_key = keys[key_id];
-      if (missing_key == 0) {
-        if (return_value) { values[col_id] = Zero<Elem>(); }
-      } else if (col_id == 0) {
+      if (col_id == 0) {
         const uint32_t old_n_missing = cuda::atomic::Add(n_missing, static_cast<uint32_t>(1));
         missing_keys[old_n_missing] = missing_key;
         missing_indices[old_n_missing] = key_id;
@@ -168,11 +156,7 @@ __global__ void LookupKernel(uint32_t value_length, uint64_t capacity, const Ele
     }
     if (return_value) {
       Elem elem{};
-      if (row_id < capacity) {
-        elem = cache_values[row_id * value_length + col_id];
-      } else {
-        elem = Zero<Elem>();
-      }
+      if (row_id < capacity) { elem = cache_values[row_id * value_length + col_id]; }
       values[i] = elem;
     }
   }
@@ -213,25 +197,33 @@ template<typename Key, typename Index>
 class OrdinalEncoder {
  public:
   OF_DISALLOW_COPY_AND_MOVE(OrdinalEncoder);
-  explicit OrdinalEncoder(uint64_t capacity) : capacity_(capacity) {
+  explicit OrdinalEncoder(uint64_t capacity, float load_factor)
+      : capacity_(capacity), table_capacity_(capacity / load_factor) {
     OF_CUDA_CHECK(cudaGetDevice(&device_index_));
     OF_CUDA_CHECK(cudaMalloc(&table_size_, sizeof(uint64_t)));
-    OF_CUDA_CHECK(cudaMalloc(&table_, capacity_ * sizeof(TableEntry<Key, Index>)));
+    OF_CUDA_CHECK(cudaMallocHost(&table_size_host_, sizeof(uint64_t)));
+    OF_CUDA_CHECK(cudaMalloc(&table_, table_capacity_ * sizeof(TableEntry<Key, Index>)));
     Clear();
   }
   ~OrdinalEncoder() {
     CudaCurrentDeviceGuard guard(device_index_);
     OF_CUDA_CHECK(cudaFree(table_size_));
+    OF_CUDA_CHECK(cudaFreeHost(table_size_host_));
     OF_CUDA_CHECK(cudaFree(table_));
   }
 
   template<bool insert>
   void Encode(ep::Stream* stream, uint32_t num_keys, const Key* keys, uint64_t* context) {
     if (insert) {
-      RUN_CUDA_KERNEL((OrdinalEncodeKernel<Key, uint64_t>), stream, num_keys, capacity_, table_,
-                      table_size_, num_keys, keys, context);
+      RUN_CUDA_KERNEL((OrdinalEncodeKernel<Key, uint64_t>), stream, num_keys, table_capacity_,
+                      table_, table_size_, num_keys, keys, context);
+      OF_CUDA_CHECK(cudaMemcpyAsync(table_size_host_, table_size_, sizeof(uint64_t),
+                                    cudaMemcpyDefault,
+                                    stream->As<ep::CudaStream>()->cuda_stream()));
+      CHECK_JUST(stream->Sync());
+      CHECK_LT(*table_size_host_, capacity_);
     } else {
-      RUN_CUDA_KERNEL((OrdinalEncodeLookupKernel<Key, uint64_t>), stream, num_keys, capacity_,
+      RUN_CUDA_KERNEL((OrdinalEncodeLookupKernel<Key, uint64_t>), stream, num_keys, table_capacity_,
                       table_, num_keys, keys, context);
     }
   }
@@ -247,14 +239,18 @@ class OrdinalEncoder {
 
   void Clear() {
     OF_CUDA_CHECK(cudaMemset(table_size_, 0, sizeof(uint64_t)));
-    OF_CUDA_CHECK(cudaMemset(table_, 0, capacity_ * sizeof(TableEntry<Key, Index>)));
+    OF_CUDA_CHECK(cudaMemset(table_, 0, table_capacity_ * sizeof(TableEntry<Key, Index>)));
   }
+
+  uint64_t TableCapacity() const { return table_capacity_; }
 
  private:
   int device_index_{};
   TableEntry<Key, Index>* table_;
   uint64_t capacity_;
+  uint64_t table_capacity_;
   uint64_t* table_size_{};
+  uint64_t* table_size_host_{};
 };
 
 template<typename Key, typename Elem>
@@ -262,7 +258,10 @@ class CacheImpl : public Cache {
  public:
   OF_DISALLOW_COPY_AND_MOVE(CacheImpl);
   explicit CacheImpl(const CacheOptions& options)
-      : encoder_(options.capacity), device_index_(-1), options_(options), max_query_length_(0) {
+      : encoder_(options.capacity, options.load_factor),
+        device_index_(-1),
+        options_(options),
+        max_query_length_(0) {
     OF_CUDA_CHECK(cudaGetDevice(&device_index_));
     if (options.value_memory_kind == CacheOptions::MemoryKind::kDevice) {
       OF_CUDA_CHECK(cudaMalloc(&values_, options.capacity * options.value_size));
@@ -287,7 +286,7 @@ class CacheImpl : public Cache {
   }
 
   uint64_t Capacity() const override { return options_.capacity; }
-
+  uint64_t DumpCapacity() const override { return encoder_.TableCapacity(); }
   uint32_t KeySize() const override { return options_.key_size; }
 
   uint32_t ValueSize() const override { return options_.value_size; }
