@@ -62,28 +62,6 @@ def BroadcastMulToScalarMulPattern : Pat<
   ]
 >;
 
-def OutlineBatchMatMul : NativeCodeCall<"::mlir::oneflow::OutlineBatchMatMul($_builder, $0)">;
-def BatchMatmulPattern : Pat<
-  (
-    OneFlow_BatchMatmulOp : $batch_matmul_op
-    $a,
-    $b,
-    $_add_to_output,
-    $transpose_a,
-    $transpose_b,
-    $alpha,
-    $batch_matmul_op_name,
-    $matmul_device_tag,
-    $matmul_device_name,
-    $matmul_scope_symbol_id,
-    $matmul_hierarchy
-  ),
-  (OutlineBatchMatMul $batch_matmul_op),
-  [
-    (IsNotNestedInJit $batch_matmul_op)
-  ]
->;
-
 def GetFirstValue :
   NativeCodeCall<"*$0.begin()">;
 
@@ -217,7 +195,7 @@ def FusedBiasAddDropoutPattern : Pattern<
       (
         OneFlow_RandomMaskLikeOp : $mask
           $a,
-          $dropout_op_name,
+          $bias_add_op_name,
           $dropout_device_tag,
           $dropout_device_name,
           $dropout_scope_symbol_id,

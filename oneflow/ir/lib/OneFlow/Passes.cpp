@@ -145,28 +145,6 @@ NamedAttrList GetJitOpAttributes(::mlir::PatternRewriter& rewriter, StringRef op
   return attributes;
 }
 
-::llvm::SmallVector<::mlir::Value, 4> OutlineBatchMatMul(::mlir::PatternRewriter& rewriter,
-                                                         mlir::OpResult matmul_res) {
-  if (auto batch_matmul_op = llvm::dyn_cast<BatchMatmulOp>(matmul_res.getDefiningOp())) {
-    auto op_name = batch_matmul_op.op_name();
-    SmallVector<::mlir::Value, 2> operands;
-    operands.push_back(batch_matmul_op.a());
-    operands.push_back(batch_matmul_op.b());
-    SmallVector<::mlir::Value, 1> results;
-    results.push_back(batch_matmul_op.out());
-    NamedAttrList attributes =
-        GetJitOpAttributes(rewriter, op_name, operands.size(), results.size(), batch_matmul_op);
-    SmallVector<Operation*, 4> ops = {batch_matmul_op};
-    auto function =
-        GetOrInsertFuncOp(rewriter, batch_matmul_op->getLoc(), op_name, operands, results, ops);
-    auto created =
-        rewriter.create<MlirJitOp>(batch_matmul_op.getLoc(), function, attributes, operands);
-    if (failed(DumpAssembly(rewriter, created))) exit(1);
-    return created->getResults();
-  }
-  return {};
-}
-
 static StringRef sanitizeIdentifier(StringRef name, SmallString<16>& buffer,
                                     StringRef allowedPunctChars = "$._",
                                     bool allowTrailingDigit = true) {
@@ -373,7 +351,7 @@ IntegerAttr getSI64IntegerAttr(::mlir::PatternRewriter& rewriter, int64_t value)
       fused_bias_add_dropout_attributes.erase(dropout_op.rateAttrName());
       auto res = rewriter
                      .create<oneflow::FusedBiasAddMaskScaleOp>(
-                         bias_add_op->getLoc(), bias_add_op->getResultTypes(), operands,
+                         dropout_op->getLoc(), dropout_op->getResultTypes().front(), operands,
                          fused_bias_add_dropout_attributes)
                      ->getResults();
       // pad op is expected to be erased if it is not used
@@ -461,7 +439,6 @@ LogicalResult LowerModuleToCUDALLVM(mlir::MLIRContext* context, ModuleOp module)
 
 void populateFuserPasses(::mlir::RewritePatternSet& patterns) {
   patterns.add<MulCastPattern>(patterns.getContext());
-  patterns.add<BatchMatmulPattern>(patterns.getContext());
 }
 
 void populateFuserForExistingOp(::mlir::RewritePatternSet& patterns) {
