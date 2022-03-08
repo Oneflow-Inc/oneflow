@@ -14,7 +14,6 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 #include "oneflow/core/common/constant.h"
-#include "oneflow/core/common/multi_client.h"
 #include "oneflow/core/common/str_util.h"
 #include "oneflow/core/job/plan_util.h"
 #include "oneflow/core/job/global_for.h"
@@ -69,44 +68,6 @@ void PlanUtil::GenMemBlockAndChunk4Plan(Plan* plan) {
 }
 
 namespace {
-
-void GenChunkInSingleClient(
-    Plan* plan, HashMap<int64_t, std::unique_ptr<MemBlockProto>>* mem_block_id2mem_block) {
-  // mzuid = memory zone unique id
-  HashMap<int64_t, ChunkProto> mzuid2chunk;
-  auto GenChunk4ReusedMemBlockIfNeed = [&](MemBlockProto* mem_block) {
-    int64_t mzuid =
-        MemoryCaseUtil::GenMemZoneUniqueId(mem_block->machine_id(), mem_block->mem_case());
-    if (mzuid2chunk.find(mzuid) == mzuid2chunk.end()) {
-      ChunkProto chunk;
-      chunk.set_chunk_id(Global<IDMgr>::Get()->NewChunkId());
-      chunk.add_job_id(mem_block->job_id(0));
-      chunk.set_machine_id(mem_block->machine_id());
-      *(chunk.mutable_mem_case()) = mem_block->mem_case();
-      chunk.set_mem_size(mem_block->mem_size());
-      CHECK(mzuid2chunk.emplace(mzuid, chunk).second);
-      mem_block->set_chunk_id(chunk.chunk_id());
-      mem_block->set_chunk_offset(0);
-    } else {
-      ChunkProto* chunk = &(mzuid2chunk.at(mzuid));
-      CHECK_EQ(chunk->job_id(0), mem_block->job_id(0));
-      mem_block->set_chunk_id(chunk->chunk_id());
-      mem_block->set_chunk_offset(chunk->mem_size());
-      chunk->set_mem_size(chunk->mem_size() + mem_block->mem_size());
-    }
-  };
-
-  for (auto& pair : *mem_block_id2mem_block) {
-    MemBlockProto* mem_block = pair.second.get();
-    CHECK(mem_block->has_chunk_id() == false);
-    CHECK(mem_block->has_chunk_offset() == false);
-    if (mem_block->enable_reuse_mem()) { GenChunk4ReusedMemBlockIfNeed(mem_block); }
-  }
-
-  for (const auto& pair : mzuid2chunk) {
-    *(plan->mutable_block_chunk_list()->add_chunk()) = pair.second;
-  }
-}
 
 void GenChunkForMultiNNGraphMemoryReuseInMultiClient(
     Plan* plan, HashMap<int64_t, std::unique_ptr<MemBlockProto>>* mem_block_id2mem_block) {
@@ -325,12 +286,7 @@ void PlanUtil::GenMemBlockAndChunkWithVariableOpNames4Plan(
     }
   }
 
-  if (CHECK_JUST(IsMultiClient())) {
-    GenChunkForMultiNNGraphMemoryReuseInMultiClient(plan, &mem_block_id2mem_block);
-  } else {
-    CHECK(variable_op_names.empty());
-    GenChunkInSingleClient(plan, &mem_block_id2mem_block);
-  }
+  GenChunkForMultiNNGraphMemoryReuseInMultiClient(plan, &mem_block_id2mem_block);
 
   for (const auto& pair : mem_block_id2mem_block) {
     *(plan->mutable_block_chunk_list()->add_mem_block()) = *(pair.second);

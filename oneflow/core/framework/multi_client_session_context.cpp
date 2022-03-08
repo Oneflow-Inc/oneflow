@@ -17,7 +17,6 @@ limitations under the License.
 #include <string>
 #include "oneflow/core/common/buffer_manager.h"
 #include "oneflow/core/common/maybe.h"
-#include "oneflow/core/common/multi_client.h"
 #include "oneflow/core/common/protobuf.h"
 #include "oneflow/core/framework/multi_client_session_context.h"
 #include "oneflow/core/framework/load_library.h"
@@ -76,7 +75,6 @@ MultiClientSessionContext::~MultiClientSessionContext() {
 
 Maybe<void> MultiClientSessionContext::TryInit(const ConfigProto& config_proto) {
   if (!is_inited_) {
-    CHECK_OR_RETURN(JUST(IsMultiClient()));
     DumpVersionInfo();
 
     Resource resource = config_proto.resource();
