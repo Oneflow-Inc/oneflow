@@ -378,7 +378,6 @@ class EnvHolder(object):
         self._is_normal_exit = True
         if not HasAllMultiClientEnvVars():
             SetDefaultMultiClientEnvVars()
-        oneflow._oneflow_internal.SetIsMultiClient(True)
         self._env_cxt = api_env_init()
 
     def set_is_normal_exit(self, is_normal_exit):
