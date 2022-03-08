@@ -13,11 +13,9 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 """
-
 import unittest
 import numpy as np
 import oneflow as flow
-import oneflow.unittest
 from collections import OrderedDict
 from oneflow.test_utils.automated_test_util import *
 from oneflow.nn.modules import min_max_observer
