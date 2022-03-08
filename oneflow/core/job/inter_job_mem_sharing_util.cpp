@@ -179,8 +179,8 @@ void MergeReusedChunk(HashMap<int64_t, ChunkProto>* chunk_id2chunk,
   for (const auto& pair : *chunk_id2chunk) {
     const ChunkProto& chunk = pair.second;
     const MemoryCase& mem_case = chunk.mem_case();
-    // only reused mem in cuda device
-    if (mem_case.has_host_mem()) { continue; }
+    // NOTE(zwx): do not reuse mem on cpu
+    if (memcase::IsHostMem(mem_case)) { continue; }
     int64_t mzuid = memcase::GetUniqueMemCaseId(chunk.machine_id(), mem_case);
     CHECK_EQ(chunk.job_id_size(), 1);
     CHECK(job_id2mzuid2chunk_id[chunk.job_id(0)].emplace(mzuid, chunk.chunk_id()).second);

@@ -13,13 +13,14 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
+#include "oneflow/core/framework/framework.h"
 #include "oneflow/core/common/balanced_splitter.h"
 #include "oneflow/core/common/switch_func.h"
-#include "oneflow/core/framework/framework.h"
-#include "oneflow/user/kernels/slice_util.h"
 #include "oneflow/core/kernel/kernel_util.h"
-#include "oneflow/user/kernels/op_kernel_wrapper.h"
 #include "oneflow/core/kernel/cuda_graph_support.h"
+#include "oneflow/user/kernels/op_kernel_wrapper.h"
+#include "oneflow/user/kernels/slice_util.h"
+#include "oneflow/core/ep/include/primitive/memset.h"
 
 namespace oneflow {
 
@@ -331,19 +332,12 @@ class LogicalSliceKernel final : public user_op::OpKernel {
     const user_op::Tensor* x_tensor = ctx->Tensor4ArgNameAndIndex("x", 0);
     const SliceContext& slice_ctx =
         dynamic_cast<const OpKernelCacheWrapper<SliceContext>*>(cache)->Get();
-    if (y_tensor->mem_case().has_host_mem()) {
-      memset(y_tensor->mut_dptr(), 0,
-             y_tensor->shape().elem_cnt() * GetSizeOfDataType(y_tensor->data_type()));
-    } else if (y_tensor->mem_case().has_device_cuda_mem()) {
-#if defined(WITH_CUDA)
-      cudaMemset(y_tensor->mut_dptr(), 0,
-                 y_tensor->shape().elem_cnt() * GetSizeOfDataType(y_tensor->data_type()));
-#else
-      UNIMPLEMENTED();
-#endif
-    } else {
-      UNIMPLEMENTED();
-    }
+    std::unique_ptr<ep::primitive::Memset> memset_primitive =
+        ep::primitive::NewPrimitive<ep::primitive::MemsetFactory>(
+            y_tensor->mem_case().device_type());
+    CHECK(memset_primitive);
+    size_t out_bytes_size = y_tensor->shape().elem_cnt() * GetSizeOfDataType(y_tensor->data_type());
+    memset_primitive->Launch(ctx->stream(), y_tensor->mut_dptr(), 0, out_bytes_size);
     SwitchWriteSlice(SwitchCase(y_tensor->shape().NumAxes(), y_tensor->data_type()), ctx, x_tensor,
                      y_tensor, slice_ctx, true);
   }

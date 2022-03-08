@@ -120,7 +120,7 @@ void GenChunkForMultiNNGraphMemoryReuseInMultiClient(
     // NOTE(chengcheng):
     //   only reused mem in cuda device.
     //   special cpu memory like OFRecord pb and TensorBuffer CANNOT reused by another plan.
-    if (mem_block->mem_case().has_host_mem()) { continue; }
+    if (memcase::IsHostMem(mem_block->mem_case())) { continue; }
     int64_t mem_zone_uid =
         memcase::GetUniqueMemCaseId(mem_block->machine_id(), mem_block->mem_case());
     auto it = mzuid2mem_blocks.find(mem_zone_uid);
@@ -903,19 +903,15 @@ void PlanUtil::PlanMemoryLog(Plan* plan, const std::string& plan_name) {
   };
 
   for (const ChunkProto& chunk : plan->block_chunk_list().chunk()) {
-    if (chunk.mem_case().has_device_cuda_mem()) {
-      AddMemSizeByRankDeviceIds(chunk.machine_id(), chunk.mem_case().device_cuda_mem().device_id(),
-                                chunk.mem_size());
-    }
+    if (memcase::IsHostMem(chunk.mem_case())) { continue; }
+    AddMemSizeByRankDeviceIds(chunk.machine_id(), chunk.mem_case().device_id(), chunk.mem_size());
   }
 
   for (const MemBlockProto& mem_block : plan->block_chunk_list().mem_block()) {
     if (mem_block.has_chunk_id() || mem_block.has_chunk_offset()) { continue; }
-    if (mem_block.mem_case().has_device_cuda_mem()) {
-      AddMemSizeByRankDeviceIds(mem_block.machine_id(),
-                                mem_block.mem_case().device_cuda_mem().device_id(),
-                                mem_block.mem_size());
-    }
+    if (memcase::IsHostMem(mem_block.mem_case())) { continue; }
+    AddMemSizeByRankDeviceIds(mem_block.machine_id(), mem_block.mem_case().device_id(),
+                              mem_block.mem_size());
   }
 
   for (auto pair : rank_device2size) {

@@ -14,8 +14,8 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 #include "oneflow/core/memory/memory_case_util.h"
-#include <bits/stdint-uintn.h>
-#include "oneflow/core/common/device_type.pb.h"
+
+#include <google/protobuf/util/message_differencer.h>
 
 namespace oneflow {
 
@@ -84,13 +84,27 @@ int64_t GetUniqueMemCaseId(int64_t machine_id, const MemoryCase& mem_case) {
   return id;
 }
 
-std::shared_ptr<MemoryCase> MakeMemCase(const DeviceType device_type, const int64_t device_id) {
+std::shared_ptr<MemoryCase> MakeMemCaseShared(const DeviceType device_type,
+                                              const int64_t device_id) {
   auto mem_case_ptr = std::make_shared<MemoryCase>();
   mem_case_ptr->set_device_type(device_type);
   mem_case_ptr->set_device_id(device_id);
   return mem_case_ptr;
 }
 
+MemoryCase MakeHostMemCase() {
+  MemoryCase mem_case;
+  mem_case.set_device_type(DeviceType::kCPU);
+  mem_case.set_device_id(0);
+  return mem_case;
+}
+
+bool IsHostMem(const MemoryCase& mem_case) { return mem_case.device_type() == DeviceType::kCPU; }
+
 }  // namespace memcase
+
+bool operator==(const MemoryCase& lhs, const MemoryCase& rhs) {
+  return google::protobuf::util::MessageDifferencer::Equals(lhs, rhs);
+}
 
 }  // namespace oneflow

@@ -54,7 +54,7 @@ Device::Device(const std::string& type, int64_t device_id)
 Maybe<void> Device::Init() {
   if (type_ == "auto") { return Maybe<void>::Ok(); }
   enum_type_ = JUST(DeviceType4DeviceTag(JUST(of_type())));
-  mem_case_ = memcase::MakeMemCase(enum_type_, device_id_);
+  mem_case_ = memcase::MakeMemCaseShared(enum_type_, device_id_);
   return Maybe<void>::Ok();
 }
 

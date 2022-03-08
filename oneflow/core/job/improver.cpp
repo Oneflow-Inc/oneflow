@@ -313,11 +313,7 @@ uint64_t Improver::AvailableMemSize(int64_t machine_id, int64_t memory_zone_id) 
 }
 
 int64_t Improver::GetMemoryZoneId(const MemoryCase& mem_case) const {
-  if (mem_case.has_device_cuda_mem()) {
-    return mem_case.device_cuda_mem().device_id();
-  } else {
-    return Global<ResourceDesc, ForSession>::Get()->GpuDeviceNum();
-  }
+  return memcase::GetMemCaseId(mem_case);
 }
 
 void Improver::MakeMemZoneRegstDescs(const Plan& plan, MemZoneRegstDescs* mz2regst_desc) const {

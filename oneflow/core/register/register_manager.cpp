@@ -82,7 +82,7 @@ void RegstMgr::AddPlan(const Plan& plan,
         CHECK_GE(var_blob->blob_desc().AlignedByteSizeOfBlobHeader(), mem_block.mem_size());
         CHECK_GE(mem_block.mem_size(), var_blob->blob_desc().ByteSizeOfBlobHeader());
         CHECK(mem_block_id2ptr_.emplace(mem_block_id, var_blob->mut_header_ptr()).second);
-        CHECK(mem_block.mem_case().has_host_mem());
+        CHECK(memcase::IsHostMem(mem_block.mem_case()));
       } else {
         CHECK_GE(var_blob->blob_desc().AlignedByteSizeOfBlobBody(), mem_block.mem_size());
         CHECK_GE(mem_block.mem_size(), var_blob->blob_desc().ByteSizeOfBlobBody());
@@ -93,8 +93,7 @@ void RegstMgr::AddPlan(const Plan& plan,
         //   blob has GPU op consume. We can JUST ignore this diff because it ONLY has little
         //   perf loss but correct.
         //   And this problem is NOT tensor.to("cuda") or tensor.to_global().
-        CHECK((mem_block.mem_case().has_host_mem() && var_blob->mem_case().has_host_mem())
-              || (mem_block.mem_case() == var_blob->mem_case()))
+        CHECK(memcase::EqualsIgnorePinnedDevice(mem_block.mem_case(), var_blob->mem_case()))
             << " variable op name: " << var_name << " in rank: " << this_machine_id
             << " bind eager tensor failed. The eager var tensor mem_case is : "
             << var_blob->mem_case().DebugString()
@@ -207,8 +206,7 @@ void RegstMgr::NewBlobsInOneRegst(const std::vector<LbiBlobDescPair>& lbis, Regs
   char* cur_body_pointer = nullptr;
   char* cur_header_pointer = nullptr;
   if (separated_header_mem_size > 0) {
-    MemoryCase host_mem_case;
-    host_mem_case.mutable_host_mem();
+    MemoryCase host_mem_case = memcase::MakeHostMemCase();
     if (separated_header_mem_ptr == nullptr) {
       separated_header_mem_ptr =
           Global<MemoryAllocator>::Get()->Allocate(host_mem_case, separated_header_mem_size);

@@ -16,9 +16,9 @@ limitations under the License.
 #ifndef ONEFLOW_CORE_MEMORY_MEMORY_CASE_UTIL_H_
 #define ONEFLOW_CORE_MEMORY_MEMORY_CASE_UTIL_H_
 
+#include "oneflow/core/common/util.h"
 #include "oneflow/core/common/device_type.h"
 #include "oneflow/core/memory/memory_case.pb.h"
-#include "oneflow/core/common/util.h"
 
 namespace oneflow {
 
@@ -29,9 +29,14 @@ void GetPinnedHostMemoryCase(const MemoryCase& mem_case, MemoryCase* ret);
 MemoryCase GetPinnedHostMemoryCase(const MemoryCase& mem_case);
 int64_t GetMemCaseId(const MemoryCase& mem_case);
 int64_t GetUniqueMemCaseId(int64_t machine_id, const MemoryCase& mem_case);
-std::shared_ptr<MemoryCase> MakeMemCase(const DeviceType device_type, const int64_t device_id);
+std::shared_ptr<MemoryCase> MakeMemCaseShared(const DeviceType device_type,
+                                              const int64_t device_id);
+MemoryCase MakeHostMemCase();
+bool IsHostMem(const MemoryCase& mem_case);
 
 }  // namespace memcase
+
+bool operator==(const MemoryCase& lhs, const MemoryCase& rhs);
 
 }  // namespace oneflow
 

@@ -233,15 +233,15 @@ void AutoMemcpy(ep::Stream* stream, void* dst, const void* src, size_t sz,
                 const MemoryCase& dst_mem_case, const MemoryCase& src_mem_case) {
   ep::primitive::MemcpyKind kind{};
   if (stream->device_type() == DeviceType::kCPU) {
-    CHECK(src_mem_case.has_host_mem());
-    CHECK(dst_mem_case.has_host_mem());
+    CHECK_EQ(src_mem_case.device_type(), DeviceType::kCPU);
+    CHECK_EQ(dst_mem_case.device_type(), DeviceType::kCPU);
     kind = ep::primitive::MemcpyKind::kDtoD;
   } else {
-    if (src_mem_case.has_host_mem()) {
-      CHECK(!dst_mem_case.has_host_mem());
+    if (src_mem_case.device_type() == DeviceType::kCPU) {
+      CHECK_NE(dst_mem_case.device_type(), DeviceType::kCPU);
       kind = ep::primitive::MemcpyKind::kHtoD;
-    } else if (dst_mem_case.has_host_mem()) {
-      CHECK(!src_mem_case.has_host_mem());
+    } else if (dst_mem_case.device_type() == DeviceType::kCPU) {
+      CHECK_NE(src_mem_case.device_type(), DeviceType::kCPU);
       kind = ep::primitive::MemcpyKind::kDtoH;
     } else {
       kind = ep::primitive::MemcpyKind::kDtoD;

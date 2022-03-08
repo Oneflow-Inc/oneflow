@@ -23,6 +23,7 @@ limitations under the License.
 #include "oneflow/core/ep/cuda/cuda_stream.h"
 #include "oneflow/core/ep/cpu/cpu_stream.h"
 #include "oneflow/core/ep/include/device_manager_registry.h"
+#include "oneflow/core/memory/memory_case_util.h"
 
 namespace oneflow {
 
@@ -72,8 +73,7 @@ class OnDemandHostBlob final {
   void Init() {
     header.resize(blob_desc_->AlignedByteSizeOfBlobHeader());
     data.resize(blob_desc_->AlignedByteSizeOfBlobBody());
-    MemoryCase host_mem_case;
-    host_mem_case.mutable_host_mem();
+    MemoryCase host_mem_case = memcase::MakeHostMemCase();
     blob_.reset(new Blob(host_mem_case, blob_desc_.get(), header.data(), data.data()));
   }
 

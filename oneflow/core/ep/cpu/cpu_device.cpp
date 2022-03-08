@@ -51,6 +51,7 @@ Maybe<void> CpuDevice::Alloc(const AllocationOptions& options, void** ptr, size_
       return Maybe<void>::Ok();
     }
   }
+  memset(*ptr, 0, size);
 }
 
 void CpuDevice::Free(const AllocationOptions& options, void* ptr) {

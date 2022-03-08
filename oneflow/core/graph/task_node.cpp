@@ -308,20 +308,15 @@ void TaskNode::InitProducedRegstMemCase(RegstDesc* regst) {
 }
 
 void TaskNode::InitProducedRegstMemCase(MemoryCase* mem_case) {
-  if (device_type() == DeviceType::kCPU) {
-    mem_case->mutable_host_mem();
-  } else if (device_type() == DeviceType::kCUDA) {
-    mem_case->mutable_device_cuda_mem()->set_device_id(stream_id().device_id().device_index());
-  } else {
-    UNIMPLEMENTED();
-  }
+  mem_case->set_device_type(device_type());
+  mem_case->set_device_id(stream_id().device_id().device_index());
 }
 
 void TaskNode::PinConsumedRegstMemCase(MemoryCase* mem_case) {
-  if (mem_case->has_host_mem() && device_type() == DeviceType::kCUDA) {
-    mem_case->mutable_host_mem()->mutable_cuda_pinned_mem()->set_device_id(
-        stream_id().device_id().device_index());
-  }
+  if (mem_case->device_type() == DeviceType::kCPU) { return; }
+  if (device_type() == DeviceType::kCPU) { return; }
+  mem_case->set_pinned_device_type(device_type());
+  mem_case->set_pinned_device_id(stream_id().device_id().device_index());
 }
 
 void TaskNode::ConsumeRegst(const std::string& name) {
