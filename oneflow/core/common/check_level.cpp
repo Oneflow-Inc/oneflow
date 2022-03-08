@@ -13,13 +13,15 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
-#ifndef ONEFLOW_CORE_COMMON_CHECK_LEVEL_H_
-#define ONEFLOW_CORE_COMMON_CHECK_LEVEL_H_
+#include "oneflow/xrt/utility/env.h"
+#include "oneflow/core/common/check_level.h"
 
 namespace oneflow {
 
-bool IsEnvEnabled(int32_t check_level);
+bool IsEnvEnabled(int32_t check_level) {
+  static const int env_check_level = EnvToInt(ONEFOW_CHECK_LEVEL, -1);
+  static const bool env_debug_mode = EnvToBool(ONEFLOW_DEBUG_MODE, false);
+  return env_debug_mode || env_check_level >= check_level;
+}
 
 }  // namespace oneflow
-
-#endif  // ONEFLOW_CORE_COMMON_CHECK_LEVEL_H_
