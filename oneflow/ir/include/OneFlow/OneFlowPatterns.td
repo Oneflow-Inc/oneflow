@@ -222,7 +222,7 @@ def FusedBiasAddDropoutPattern : Pattern<
           $dropout_op_rate,
           (GetDefaultSeed)
       ),
-      // TODO: add _add_to_output here
+      $_add_to_output,
       $bias_add_op_name,
       $bias_add_device_tag,
       $bias_add_device_name,

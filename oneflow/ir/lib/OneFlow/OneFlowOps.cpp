@@ -298,6 +298,27 @@ void RandomMaskLikeOp::build(mlir::OpBuilder& odsBuilder, mlir::OperationState& 
   odsState.addTypes(like.getType());
 }
 
+void FusedBiasAddMaskScaleOp::build(mlir::OpBuilder& odsBuilder, mlir::OperationState& odsState,
+                                    mlir::Value a, mlir::Value b, mlir::Value mask,
+                                    mlir::Value _add_to_output, StringRef op_name,
+                                    StringRef device_tag, ArrayAttr device_name,
+                                    IntegerAttr scope_symbol_id, ArrayAttr hierarchy,
+                                    mlir::IntegerAttr axis, mlir::FloatAttr scale) {
+  odsState.addOperands(a);
+  odsState.addOperands(b);
+  odsState.addOperands(mask);
+  odsState.addAttribute(op_nameAttrName(odsState.name), odsBuilder.getStringAttr(op_name));
+  odsState.addAttribute(device_tagAttrName(odsState.name), odsBuilder.getStringAttr(device_tag));
+  odsState.addAttribute(device_nameAttrName(odsState.name), device_name);
+  if (scope_symbol_id) {
+    odsState.addAttribute(scope_symbol_idAttrName(odsState.name), scope_symbol_id);
+  }
+  if (hierarchy) { odsState.addAttribute(hierarchyAttrName(odsState.name), hierarchy); }
+  odsState.addAttribute(axisAttrName(odsState.name), axis);
+  odsState.addAttribute(scaleAttrName(odsState.name), scale);
+  odsState.addTypes(a.getType());
+}
+
 std::string Add2Op::getOriginalOpTypeName() { return "add_n"; }
 
 void Job::build(OpBuilder& builder, OperationState& state, StringRef name, FunctionType type) {
