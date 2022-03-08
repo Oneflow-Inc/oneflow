@@ -313,7 +313,7 @@ void TaskNode::InitProducedRegstMemCase(MemoryCase* mem_case) {
 }
 
 void TaskNode::PinConsumedRegstMemCase(MemoryCase* mem_case) {
-  if (mem_case->device_type() == DeviceType::kCPU) { return; }
+  if (mem_case->device_type() != DeviceType::kCPU) { return; }
   if (device_type() == DeviceType::kCPU) { return; }
   mem_case->set_pinned_device_type(device_type());
   mem_case->set_pinned_device_id(stream_id().device_id().device_index());
