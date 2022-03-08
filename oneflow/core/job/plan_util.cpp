@@ -75,8 +75,7 @@ void GenChunkInSingleClient(
   // mzuid = memory zone unique id
   HashMap<int64_t, ChunkProto> mzuid2chunk;
   auto GenChunk4ReusedMemBlockIfNeed = [&](MemBlockProto* mem_block) {
-    int64_t mzuid =
-        MemoryCaseUtil::GenMemZoneUniqueId(mem_block->machine_id(), mem_block->mem_case());
+    int64_t mzuid = memcase::GetUniqueMemCaseId(mem_block->machine_id(), mem_block->mem_case());
     if (mzuid2chunk.find(mzuid) == mzuid2chunk.end()) {
       ChunkProto chunk;
       chunk.set_chunk_id(Global<IDMgr>::Get()->NewChunkId());
@@ -123,7 +122,7 @@ void GenChunkForMultiNNGraphMemoryReuseInMultiClient(
     //   special cpu memory like OFRecord pb and TensorBuffer CANNOT reused by another plan.
     if (mem_block->mem_case().has_host_mem()) { continue; }
     int64_t mem_zone_uid =
-        MemoryCaseUtil::GenMemZoneUniqueId(mem_block->machine_id(), mem_block->mem_case());
+        memcase::GetUniqueMemCaseId(mem_block->machine_id(), mem_block->mem_case());
     auto it = mzuid2mem_blocks.find(mem_zone_uid);
     if (it == mzuid2mem_blocks.end()) {
       it = mzuid2mem_blocks.emplace(mem_zone_uid, HashSet<MemBlockProto*>()).first;
@@ -303,8 +302,7 @@ void PlanUtil::GenMemBlockAndChunkWithVariableOpNames4Plan(
       mem_block.set_mem_block_id(separated_mem_block_id);
       mem_block.add_job_id(job_id);
       mem_block.set_machine_id(machine_id);
-      *(mem_block.mutable_mem_case()) =
-          MemoryCaseUtil::GetHostMemoryCaseForRegstSeparatedHeader(regst_desc->mem_case());
+      *(mem_block.mutable_mem_case()) = memcase::GetPinnedHostMemoryCase(regst_desc->mem_case());
       mem_block.set_enable_reuse_mem(false);
       mem_block.set_mem_size(regst_separated_size);
       mem_block.set_thrd_id_hint(thrd_id);
@@ -386,8 +384,7 @@ void PlanUtil::CleanUselessMemBlockAndCheckValid(Plan* plan) {
         const MemBlockProto& header_mem_block = mem_block_id2mem_block.at(header_block_id);
         CHECK_EQ(header_mem_block.mem_size(), separated_header_mem_size);
         CHECK_EQ(task.machine_id(), header_mem_block.machine_id());
-        CHECK(header_mem_block.mem_case()
-              == MemoryCaseUtil::GetHostMemoryCaseForRegstSeparatedHeader(regst.mem_case()));
+        CHECK(header_mem_block.mem_case() == memcase::GetPinnedHostMemoryCase(regst.mem_case()));
         CHECK(header_mem_block.enable_reuse_mem() == false);
         const auto& header_block_job_ids = mem_block_id2job_ids[header_block_id];
         CHECK(header_block_job_ids.find(task.job_id()) != header_block_job_ids.end());

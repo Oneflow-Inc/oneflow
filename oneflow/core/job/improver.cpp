@@ -243,8 +243,7 @@ void GenMemBlockAndChunk4Plan(Plan* plan) {
       mem_block.set_mem_block_id(separated_mem_block_id);
       mem_block.add_job_id(job_id);
       mem_block.set_machine_id(machine_id);
-      *(mem_block.mutable_mem_case()) =
-          MemoryCaseUtil::GetHostMemoryCaseForRegstSeparatedHeader(regst_desc->mem_case());
+      *(mem_block.mutable_mem_case()) = memcase::GetPinnedHostMemoryCase(regst_desc->mem_case());
       mem_block.set_enable_reuse_mem(false);
       mem_block.set_mem_size(regst_separated_size);
       mem_block.set_thrd_id_hint(thrd_id);
@@ -253,8 +252,7 @@ void GenMemBlockAndChunk4Plan(Plan* plan) {
   };
 
   auto GenChunk4ReusedMemBlockIfNeed = [&](MemBlockProto* mem_block) {
-    int64_t mzuid =
-        MemoryCaseUtil::GenMemZoneUniqueId(mem_block->machine_id(), mem_block->mem_case());
+    int64_t mzuid = memcase::GetUniqueMemCaseId(mem_block->machine_id(), mem_block->mem_case());
     if (mzuid2chunk.find(mzuid) == mzuid2chunk.end()) {
       ChunkProto chunk;
       chunk.set_chunk_id(Global<IDMgr>::Get()->NewChunkId());

@@ -101,7 +101,7 @@ void RegstMgr::AddPlan(const Plan& plan,
             << " but graph expected_mem block mem_case is : " << mem_block.mem_case().DebugString();
       }
     } else {
-      int64_t zone_id = MemoryCaseUtil::GenMemZoneId(mem_block.mem_case());
+      int64_t zone_id = memcase::GetMemCaseId(mem_block.mem_case());
       if (zone_id2packed_chunk.find(zone_id) == zone_id2packed_chunk.end()) {
         zone_id2packed_chunk.emplace(zone_id, PackedChunkInfo(mem_block.mem_case()));
       }
