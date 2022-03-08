@@ -140,6 +140,7 @@ class TestConsistentSparseSoftmaxCrossEntropyWithLogits(flow.unittest.TestCase):
                             placement, logits_sbp, labels_sbp, *arg
                         )
 
+    # TODO: Too many streams will cause bugs, open the graph mode after solving
     # @globaltest
     # def test_lazy_global_sparse_softmax_cross_entropy(test_case):
     #     arg_dict = OrderedDict()
