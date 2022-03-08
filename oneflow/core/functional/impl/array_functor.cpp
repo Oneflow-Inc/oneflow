@@ -615,12 +615,9 @@ class ExpandFunctor {
     JUST(attrs.SetAttr<std::vector<int32_t>>("logical_expand_shape", expand_shape));
 
     // if input tensor is eager local, then try return tensor's view
-    if (x->is_local() && !(LazyMode::is_enabled())) {
-      if (!(x->shape()->NumAxes() <= 1 || x->shape()->elem_cnt() <= 1)) {
-        return view::Expand(x, in_shape, expand_shape);
-      }
+    if(view::IsViewApplicable(x)){
+      return view::Expand(x, in_shape, expand_shape);
     }
-
     return OpInterpUtil::Dispatch<Tensor>(*op_, {x->contiguous()}, attrs);
   }
 
@@ -1148,11 +1145,8 @@ class SliceBaseFunctor {
   Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x, const std::vector<int64_t>& start,
                            const std::vector<int64_t>& stop,
                            const std::vector<int64_t>& step) const {
-    if (x->is_local() && !(LazyMode::is_enabled())) {
-      // TODO: view support 0-dim tensor
-      if (!(x->shape()->NumAxes() <= 1 || x->shape()->elem_cnt() <= 1)) {
-        return view::Slice(x, start, stop, step);
-      }
+    if (view::IsViewApplicable(x)){
+       return view::Slice(x, start, stop, step);
     }
 
     MutableAttrMap attrs;
@@ -1208,10 +1202,9 @@ class NarrowFunctor {
         << " (Dimension out of range, expected to be in range of [" << -ndim << ", " << ndim - 1
         << "], but got:" << dim << ")";
     if (narrow_dim < 0) { narrow_dim += ndim; }
-    if (input->is_local() && !(LazyMode::is_enabled())) {
-      if (!(input->shape()->NumAxes() <= 1 || input->shape()->elem_cnt() <= 1)) {
-        return JUST(view::Narrow(input, narrow_dim, start, length));
-      }
+  
+    if (view::IsViewApplicable(input)){
+      return JUST(view::Narrow(input, narrow_dim, start, length));
     }
     MutableAttrMap attrs;
     JUST(attrs.SetAttr<int64_t>("dim", narrow_dim));
@@ -1385,10 +1378,8 @@ class UnfoldTensorFunctor {
     JUST(attrs.SetAttr<int32_t>("size", size));
     JUST(attrs.SetAttr<int32_t>("step", step));
     // if input tensor is eager local, than try return tensor's view
-    if (x->is_local() && !(LazyMode::is_enabled())) {
-      if (!(x->shape()->NumAxes() <= 1 || x->shape()->elem_cnt() <= 1)) {
-        return view::UnfoldTensor(x, attrs);
-      }
+    if (view::IsViewApplicable(x)){
+      return view::UnfoldTensor(x, attrs);
     }
     return OpInterpUtil::Dispatch<Tensor>(*op_, {x->contiguous()}, attrs);
   }
