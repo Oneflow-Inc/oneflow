@@ -24,9 +24,10 @@ add_docstr(
 
     Returns a tuple of all slices along a given dimension, already without it.
         
-        Parameters
-            input (Tensor) – the tensor to unbind
-            dim (int) – dimension to remove
+    Args:
+        x(Tensor): the tensor to unbind
+        dim(int): dimension to remove
+
     For example:
 
     .. code-block:: python
