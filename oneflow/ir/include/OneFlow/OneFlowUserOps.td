@@ -6955,7 +6955,7 @@ def OneFlow_ScalarPowGradOp : OneFlow_BaseOp<"scalar_pow_grad", [NoSideEffect, D
   let has_data_type_infer_fn = 1;
 }
 
-def OneFlow_ScalarTensorPowOp : OneFlow_BaseOp<"scalar_tensor_pow", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
+def OneFlow_ScalarTensorPowOp : OneFlow_BaseOp<"scalar_tensor_pow", [NoSideEffect, NoGrad, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
     OneFlow_Tensor:$in
   );
