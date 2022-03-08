@@ -115,6 +115,23 @@ Maybe<void> EagerBlobObject::TryAllocateBlobBodyMemory(DeviceCtx* device_ctx) {
   return Maybe<void>::Ok();
 }
 
+DTREagerBlobObject::DTREagerBlobObject(const std::shared_ptr<MemoryCase>& mem_case,
+                                       const std::shared_ptr<Shape>& shape, DataType data_type,
+                                       const std::shared_ptr<TensorBuffer>& tensor_buffer,
+                                       LocalDepObject* dep_object)
+    : EagerBlobObject(mem_case, shape, data_type, tensor_buffer, dep_object),
+      could_evict_(true),
+      is_bp_required_(false),
+      compute_time_(0),
+      last_access_time_(0),
+      pinned_(0),
+      recompute_mode_(1),
+      compute_op_(nullptr) {
+  node = std::make_shared<DisjNode>(0);
+  auto pesudo_node = std::make_shared<DisjNode>(0);
+  node->set_pesudo_node(pesudo_node);  // might induce some problems
+}
+
 DTREagerBlobObject::~DTREagerBlobObject() {
   clear_invalid_object();
   non_pod_initer_.reset();
@@ -152,16 +169,9 @@ void DTREagerBlobObject::clear_invalid_object() {
   CHECK_JUST(Global<one::DTRTensorPool>::Get()->clear());
 }
 
-Maybe<void> DTREagerBlobObject::InitBlobAttrs(
+void DTREagerBlobObject::SetComputeOp(
     std::shared_ptr<LocalCallOpKernelPhyInstrOperand>& operand) {
-  // reset DTREageBlobObject properties
-  compute_time_ = 0;
-  // pinned_ = 0;
-
-  // current time
   update_access_time();
-  // last_access_time_ = Global<one::DTRTensorPool>::Get()->duration();
-  // TODO: unique_ptr
   compute_op_ = std::make_unique<DTRInstrOperand>(
       operand->shared_opkernel(), operand->inputs(), operand->outputs(),
       operand->consistent_tensor_infer_result(), operand->op_interp_ctx(),
@@ -169,14 +179,7 @@ Maybe<void> DTREagerBlobObject::InitBlobAttrs(
   if (oneflow::DTRDebugEnabled()) {
     LOG(INFO) << "set compute_op_ of " << this << " to " << compute_op_.get();
   }
-  // compute_op_ = operand;
   could_evict_ = (input_size() > 0) && could_evict_;
-
-  node = std::make_shared<DisjNode>(0);
-  auto pesudo_node = std::make_shared<DisjNode>(0);
-  node->set_pesudo_node(pesudo_node);  // might induce some problems
-
-  return Maybe<void>::Ok();
 }
 
 void DTREagerBlobObject::update_access_time() {
@@ -184,9 +187,8 @@ void DTREagerBlobObject::update_access_time() {
   if (oneflow::DTRDebugEnabled()) { LOG(INFO) << "update_access_time to " << last_access_time_; }
 }
 
-void DTREagerBlobObject::append_user_op(
+void DTREagerBlobObject::AppendUserOp(
     std::shared_ptr<vm::LocalCallOpKernelPhyInstrOperand>& operand) {
-  // TODO unique_ptr
   user_ops_.emplace_back(std::make_unique<DTRInstrOperand>(
       operand->shared_opkernel(), operand->inputs(), operand->outputs(),
       operand->consistent_tensor_infer_result(), operand->op_interp_ctx(),

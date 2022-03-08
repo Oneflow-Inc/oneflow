@@ -171,18 +171,10 @@ class DTREagerBlobObject final : public EagerBlobObject {
       : DTREagerBlobObject(mem_case, shape, data_type, tensor_buffer, nullptr) {}
   DTREagerBlobObject(const std::shared_ptr<MemoryCase>& mem_case,
                      const std::shared_ptr<Shape>& shape, DataType data_type,
-                     const std::shared_ptr<TensorBuffer>& tensor_buffer, LocalDepObject* dep_object)
-      : EagerBlobObject(mem_case, shape, data_type, tensor_buffer, dep_object),
-        could_evict_(true),
-        is_bp_required_(false),
-        compute_time_(0),
-        last_access_time_(0),
-        pinned_(0),
-        recompute_mode_(1),
-        compute_op_(nullptr) {}
+                     const std::shared_ptr<TensorBuffer>& tensor_buffer, LocalDepObject* dep_object);
   ~DTREagerBlobObject() override;
 
-  Maybe<void> InitBlobAttrs(std::shared_ptr<LocalCallOpKernelPhyInstrOperand>& operand);
+  void SetComputeOp(std::shared_ptr<LocalCallOpKernelPhyInstrOperand>& operand);
 
   int parent_depth() const;
   int child_depth() const;
@@ -216,7 +208,7 @@ class DTREagerBlobObject final : public EagerBlobObject {
   void pin();
   void unpin();
   void update_access_time();
-  void append_user_op(std::shared_ptr<LocalCallOpKernelPhyInstrOperand>& operand);
+  void AppendUserOp(std::shared_ptr<LocalCallOpKernelPhyInstrOperand>& operand);
   Maybe<void> evict();
   Maybe<double> parent_cost(bool is_bp_required=false) const;
   Maybe<double> child_cost(bool is_bp_required=false) const;
