@@ -53,7 +53,6 @@ def do_bias_add_dropout_graph(test_case, with_cuda, prob):
 class TestBiasAddDropout(oneflow.unittest.TestCase):
     def test_bias_add_dropout_graph(test_case):
         do_bias_add_dropout_graph(test_case, True, 1.0)
-        do_bias_add_dropout_graph(test_case, True, 0.0)
 
 if __name__ == "__main__":
     unittest.main()
