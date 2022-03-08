@@ -18,12 +18,9 @@ import unittest
 from collections import OrderedDict
 
 import numpy as np
-from test_util import GenArgList
 
 import oneflow as flow
 import oneflow.unittest
-
-from oneflow.test_utils.automated_test_util import *
 
 
 @flow.unittest.skip_unless_1n1d()
