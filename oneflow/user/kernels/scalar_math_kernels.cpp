@@ -24,6 +24,13 @@ struct ScalarMathFunctor<DeviceType::kCPU, BIN_OP, T> final {
   }
 };
 
+template<template<typename> class BIN_OP, typename T>
+struct ScalarTensorMathFunctor<DeviceType::kCPU, BIN_OP, T> final {
+  void operator()(ep::Stream* stream, const int64_t elem_cnt, const T scalar, const T* in, T* out) {
+    DoScalarTensorMath<BIN_OP, T>(elem_cnt, scalar, in, out);
+  }
+};
+
 template<DeviceType device_type, template<typename> class BIN_OP, typename T>
 class ScalarMathKernel final : public user_op::OpKernel {
  public:
@@ -57,6 +64,41 @@ class ScalarMathKernel final : public user_op::OpKernel {
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
 
+
+template<DeviceType device_type, template<typename> class BIN_OP, typename T>
+class ScalarTensorPowKernel final : public user_op::OpKernel {
+ public:
+  ScalarTensorPowKernel() = default;
+  ~ScalarTensorPowKernel() = default;
+
+ private:
+  void Compute(user_op::KernelComputeContext* ctx) const override {
+    const user_op::Tensor* in = ctx->Tensor4ArgNameAndIndex("in", 0);
+    user_op::Tensor* out = ctx->Tensor4ArgNameAndIndex("out", 0);
+    T scalar_operand = static_cast<T>(0);
+    if (ctx->Attr<bool>("has_int_operand")) {
+      scalar_operand = static_cast<T>(ctx->Attr<int64_t>("int_operand"));
+    } else if (ctx->Attr<bool>("has_float_operand")) {
+      scalar_operand = static_cast<T>(ctx->Attr<double>("float_operand"));
+    } else {
+      UNIMPLEMENTED();
+    }
+    const T* in_ptr = in->dptr<T>();
+    T* out_ptr = out->mut_dptr<T>();
+
+    int64_t elem_cnt = out->shape().elem_cnt();
+    if (elem_cnt != 0) {
+      ScalarTensorMathFunctor<device_type, BIN_OP, T>()(ctx->stream(), elem_cnt, scalar_operand, in_ptr,
+                                                  out_ptr);
+    } else {
+      // For 0-d Tensor
+      return;
+    }
+  }
+  bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
+};
+
+
 #define REGISTER_UNARY_MATH_SCALAR_ELEMWISE_USER_KERNEL(device, kernel_name, binary_op,       \
                                                         input_dtype_pair)                     \
   REGISTER_USER_KERNEL(kernel_name)                                                           \
@@ -75,15 +117,33 @@ class ScalarMathKernel final : public user_op::OpKernel {
                                                   dtype_pair);                                   \
   REGISTER_UNARY_MATH_SCALAR_ELEMWISE_USER_KERNEL(device, "scalar_div", BinaryFuncDiv,           \
                                                   dtype_pair);                                   \
-  REGISTER_UNARY_MATH_SCALAR_ELEMWISE_USER_KERNEL(device, "scalar_pow", BinaryFuncPow, dtype_pair);
+  REGISTER_UNARY_MATH_SCALAR_ELEMWISE_USER_KERNEL(device, "scalar_pow", BinaryFuncPow, dtype_pair); 
+
+
+#define REGISTER_UNARY_MATH_SCALAR_TENSOR_ELEMWISE_USER_KERNEL(device, kernel_name, binary_op,       \
+                                                        input_dtype_pair)                     \
+  REGISTER_USER_KERNEL(kernel_name)                                                           \
+      .SetCreateFn<ScalarTensorPowKernel<device, binary_op, OF_PP_PAIR_FIRST(input_dtype_pair)>>() \
+      .SetIsMatchedHob((user_op::HobDeviceType() == device)                                   \
+                       && (user_op::HobDataType("in", 0) == OF_PP_PAIR_SECOND(input_dtype_pair)));
+
+  #define REGISTER_SCALAR_TENSOR_POW_KERNEL(device, dtype_pair)                                          \
+  REGISTER_UNARY_MATH_SCALAR_TENSOR_ELEMWISE_USER_KERNEL(device, "scalar_tensor_pow", BinaryFuncPow,  dtype_pair);
+
 
 // we register uint8_t, int8_t, int32_t, int64_t, float, double, float16.
 OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(REGISTER_SCALAR_MATH_KERNEL, (DeviceType::kCPU),
                                  ARITHMETIC_DATA_TYPE_SEQ UNSIGNED_INT_DATA_TYPE_SEQ
                                      FLOAT16_DATA_TYPE_SEQ)
+OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(REGISTER_SCALAR_TENSOR_POW_KERNEL, (DeviceType::kCPU),
+                                 ARITHMETIC_DATA_TYPE_SEQ UNSIGNED_INT_DATA_TYPE_SEQ
+                                     FLOAT16_DATA_TYPE_SEQ)
 
 #ifdef WITH_CUDA
 OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(REGISTER_SCALAR_MATH_KERNEL, (DeviceType::kCUDA),
+                                 ARITHMETIC_DATA_TYPE_SEQ UNSIGNED_INT_DATA_TYPE_SEQ
+                                     FLOAT16_DATA_TYPE_SEQ)
+OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(REGISTER_SCALAR_TENSOR_POW_KERNEL, (DeviceType::kCUDA),
                                  ARITHMETIC_DATA_TYPE_SEQ UNSIGNED_INT_DATA_TYPE_SEQ
                                      FLOAT16_DATA_TYPE_SEQ)
 #endif  // WITH_CUDA

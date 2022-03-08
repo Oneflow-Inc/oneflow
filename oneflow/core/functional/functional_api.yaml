@@ -168,6 +168,7 @@
       "Tensor (Tensor input, Tensor exponent) => Pow",
       "Tensor (Tensor input, Scalar exponent, *, Bool inplace=False) => ScalarPow",
       "Tensor (Tensor input, Scalar exponent) => ScalarPow",
+      "Tensor (Scalar exponent, Tensor input) => ScalarTensorPow",
     ]
   bind_python: True
 

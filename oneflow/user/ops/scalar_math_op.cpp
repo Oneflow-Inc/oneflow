@@ -60,6 +60,7 @@ IMPLEMENT_SCALAR_MATH_OP_FUNCS(ScalarFmod, GetSbp4ScalarMath)
 IMPLEMENT_SCALAR_MATH_OP_FUNCS(ScalarMul, GetSbp4ScalarMul)
 IMPLEMENT_SCALAR_MATH_OP_FUNCS(ScalarDiv, GetSbp4ScalarMul)
 IMPLEMENT_SCALAR_MATH_OP_FUNCS(ScalarPow, GetSbp4ScalarMath)
+IMPLEMENT_SCALAR_MATH_OP_FUNCS(ScalarTensorPow, GetSbp4ScalarMath)
 #undef IMPLEMENT_SCALAR_MATH_OP_FUNCS
 
 /*static*/ Maybe<void> ScalarPowGradOp::GetSbp(user_op::SbpContext* ctx) {
