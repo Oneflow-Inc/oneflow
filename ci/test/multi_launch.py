@@ -72,6 +72,9 @@ def parse_args():
         "--shuffle", action="store_true", required=False, default=False,
     )
     parser.add_argument(
+        "--verbose", action="store_true", required=False, default=False,
+    )
+    parser.add_argument(
         "--master_port",
         default=[],
         action="append",
@@ -97,17 +100,11 @@ async def run_and_capture(cmd=None, prefix=None, **kwargs):
     proc = await asyncio.create_subprocess_exec(
         *cmd, stdout=asyncio.subprocess.PIPE, stderr=asyncio.subprocess.STDOUT, **kwargs
     )
-    while not proc.stdout.at_eof() and proc.returncode == None:
-        try:
-            await asyncio.wait_for(proc.wait(), 1)
-        except asyncio.TimeoutError:
-            pass
-        try:
-            data = await asyncio.wait_for(proc.stdout.readline(), 3)
-            line = data.decode().rstrip()
-            print(prefix, line)
-        except asyncio.TimeoutError:
-            pass
+    while True:
+        line = await proc.stdout.readline()
+        print(prefix, line.decode(), end="")
+        if not line:
+            break
     await proc.wait()
     assert proc.returncode == 0, prefix
     global PARALLEL_NUM
@@ -151,10 +148,11 @@ def main():
         random.shuffle(files)
     files_hash = hashlib.md5(
         "".join([os.path.basename(x) for x in files]).encode()
-    ).hexdigest()
-    print(
-        f"::warning file=testFilesHash,line={len(files)},col=0,endColumn=0::shuffle-{args.shuffle}-group_size-{args.group_size}-base64-{files_hash}"
-    )
+    ).hexdigest()[:8]
+    if args.verbose:
+        print(
+            f"::warning file=testFilesHash,line={len(files)},col=0,endColumn=0::shuffle-{args.shuffle}-group_size-{args.group_size}-md5-{files_hash}"
+        )
     if args.parallel_num == "master_port":
         parallel_num = len(args.master_port)
         master_ports = args.master_port
