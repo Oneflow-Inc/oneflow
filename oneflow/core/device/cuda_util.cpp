@@ -158,7 +158,7 @@ CublasMathModeGuard::~CublasMathModeGuard() {
 
 void CublasMathModeGuard::SetMathMode(cublasMath_t new_mode) {
   new_mode_ = new_mode;
-  if (new_mode_ != saved_mode_) { OF_CUBLAS_CHECK(cublasSetMathMode(handle_, saved_mode_)); }
+  if (new_mode_ != saved_mode_) { OF_CUBLAS_CHECK(cublasSetMathMode(handle_, new_mode_)); }
 }
 
 int GetCudaDeviceIndex() {

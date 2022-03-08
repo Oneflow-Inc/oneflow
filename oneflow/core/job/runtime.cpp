@@ -92,9 +92,9 @@ Runtime::Runtime(const Plan& plan, const HashMap<std::string, Blob*>& variable_o
   HandoutTasks(source_tasks);
   HandoutTasks(other_tasks);
   runtime_ctx->WaitUntilCntEqualZero("constructing_actor_cnt");
-  LOG(INFO) << "Actors on this machine constructed";
+  VLOG(3) << "Actors on this machine constructed";
   OF_SESSION_BARRIER();
-  LOG(INFO) << "Actors on every machine constructed";
+  VLOG(3) << "Actors on every machine constructed";
   for (auto pair : job_id2actor_size_) {
     runtime_ctx->NewCounter(GetRunningActorCountKeyByJobId(pair.first), pair.second);
   }
