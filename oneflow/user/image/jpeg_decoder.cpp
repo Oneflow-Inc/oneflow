@@ -27,7 +27,11 @@ class LibjpegCtx {
       : compress_info_(compress_info) {}
   ~LibjpegCtx() { jpeg_destroy_decompress(compress_info_); }
   OF_DISALLOW_COPY_AND_MOVE(LibjpegCtx);
+  struct jpeg_decompress_struct* compress_info() {
+    return compress_info_;
+  }
 
+ private:
   struct jpeg_decompress_struct* compress_info_;
 };
 
@@ -43,16 +47,16 @@ bool JpegPartialDecodeRandomCropImage(const unsigned char* data, size_t length,
 
   LibjpegCtx ctx_guard(&compress_info);
 
-  jpeg_mem_src(&compress_info, data, length);
-  if (compress_info.err->msg_code != 0) { return false; }
+  jpeg_mem_src(ctx_guard.compress_info(), data, length);
+  if (ctx_guard.compress_info()->err->msg_code != 0) { return false; }
 
-  int rc = jpeg_read_header(&compress_info, TRUE);
+  int rc = jpeg_read_header(ctx_guard.compress_info(), TRUE);
   if (rc != JPEG_HEADER_OK) { return false; }
 
-  jpeg_start_decompress(&compress_info);
-  int width = compress_info.output_width;
-  int height = compress_info.output_height;
-  int pixel_size = compress_info.output_components;
+  jpeg_start_decompress(ctx_guard.compress_info());
+  int width = ctx_guard.compress_info()->output_width;
+  int height = ctx_guard.compress_info()->output_height;
+  int pixel_size = ctx_guard.compress_info()->output_components;
 
   unsigned int u_crop_x = 0, u_crop_y = 0, u_crop_w = width, u_crop_h = height;
   if (random_crop_gen) {
@@ -65,8 +69,8 @@ bool JpegPartialDecodeRandomCropImage(const unsigned char* data, size_t length,
   }
 
   unsigned int tmp_w = u_crop_w;
-  jpeg_crop_scanline(&compress_info, &u_crop_x, &tmp_w);
-  if (jpeg_skip_scanlines(&compress_info, u_crop_y) != u_crop_y) { return false; }
+  jpeg_crop_scanline(ctx_guard.compress_info(), &u_crop_x, &tmp_w);
+  if (jpeg_skip_scanlines(ctx_guard.compress_info(), u_crop_y) != u_crop_y) { return false; }
 
   int row_offset = (tmp_w - u_crop_w) * pixel_size;
   int out_row_stride = u_crop_w * pixel_size;
@@ -82,17 +86,17 @@ bool JpegPartialDecodeRandomCropImage(const unsigned char* data, size_t length,
   }
   out_mat->create(u_crop_h, u_crop_w, CV_8UC3);
 
-  while (compress_info.output_scanline < u_crop_y + u_crop_h) {
+  while (ctx_guard.compress_info()->output_scanline < u_crop_y + u_crop_h) {
     unsigned char* buffer_array[1];
     buffer_array[0] = decode_output_pointer;
-    unsigned int read_line_index = compress_info.output_scanline;
-    jpeg_read_scanlines(&compress_info, buffer_array, 1);
+    unsigned int read_line_index = ctx_guard.compress_info()->output_scanline;
+    jpeg_read_scanlines(ctx_guard.compress_info(), buffer_array, 1);
     memcpy(out_mat->data + (read_line_index - u_crop_y) * out_row_stride,
            decode_output_pointer + row_offset, out_row_stride);
   }
 
-  jpeg_skip_scanlines(&compress_info, height - u_crop_y - u_crop_h);
-  jpeg_finish_decompress(&compress_info);
+  jpeg_skip_scanlines(ctx_guard.compress_info(), height - u_crop_y - u_crop_h);
+  jpeg_finish_decompress(ctx_guard.compress_info());
 
   return true;
 }
@@ -101,7 +105,7 @@ void OpenCvPartialDecodeRandomCropImage(const unsigned char* data, size_t length
                                         RandomCropGenerator* random_crop_gen,
                                         const std::string& color_space, cv::Mat& out_mat) {
   cv::Mat image =
-      cv::imdecode(cv::Mat(1, length, CV_8UC1, const_cast<unsigned char*>(data)), 
+      cv::imdecode(cv::Mat(1, length, CV_8UC1, const_cast<unsigned char*>(data)),
                    ImageUtil::IsColor(color_space) ? cv::IMREAD_COLOR : cv::IMREAD_GRAYSCALE);
   int W = image.cols;
   int H = image.rows;
