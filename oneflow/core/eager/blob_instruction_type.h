@@ -28,6 +28,9 @@ class TensorViewInstructionType : public vm::InstructionType {
 
   void Compute(vm::Instruction* instruction) const override;
   void ComputeInFuseMode(vm::InstructionMsg* instr_msg) const override;
+
+ private:
+  void ComputeInstrMsg(const vm::InstructionMsg& instr_msg) const;
 };
 
 class AccessBlobByCallbackInstructionType : public vm::InstructionType {
@@ -36,6 +39,10 @@ class AccessBlobByCallbackInstructionType : public vm::InstructionType {
   ~AccessBlobByCallbackInstructionType() override = default;
 
   void Compute(vm::Instruction* instruction) const override;
+  void ComputeInFuseMode(vm::InstructionMsg* instruction_msg) const override;
+
+ private:
+  void ComputeInstrMsg(const vm::InstructionMsg& instruction_msg) const;
 };
 
 class RecordEventInstructionType : public vm::InstructionType {
