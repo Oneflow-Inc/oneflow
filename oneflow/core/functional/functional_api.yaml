@@ -1833,6 +1833,12 @@
   ]
   bind_python: True
 
+- name: "unbind"
+  signature: [
+    "TensorTuple (Tensor x, Int64 dim=0) => Unbind",
+  ]
+  bind_python: True
+
 - name: "chunk"
   signature: [
     "TensorTuple (Tensor x, Int64 chunks, Int64 dim=0) => Chunk",
