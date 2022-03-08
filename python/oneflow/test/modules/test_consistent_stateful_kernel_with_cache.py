@@ -56,7 +56,7 @@ class TestStatefulKernelWithInpersistentState(flow.unittest.TestCase):
     def test_global_stateful_kernel_with_inpersistent_state(test_case):
         for placement in all_placement():
             # logical_slice only support 1d sbp
-            if len(placement.hierarchy) != 1:
+            if len(placement.ranks.shape) != 1:
                 continue
             for sbp in all_sbp(placement, max_dim=2):
                 _test_global_stateful_kernel_with_inpersistent_state(
