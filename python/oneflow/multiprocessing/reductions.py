@@ -34,10 +34,10 @@ except ImportError:
     pass
 
 
-def rebuild_empty_tensor(dtype, requires_grad):
+def rebuild_empty_tensor(shape, dtype, requires_grad):
     t = flow.tensor([], dtype=dtype)
     t.requires_grad = requires_grad
-    return t
+    return t.reshape(*shape)
 
 
 def rebuild_shm_tensor(shm, shape, dtype, requires_grad):
@@ -56,8 +56,9 @@ def rebuild_shm_tensor(shm, shape, dtype, requires_grad):
     return t
 
 
-def rebuild_empty_parameter(dtype, requires_grad):
+def rebuild_empty_parameter(shape, dtype, requires_grad):
     t = flow.tensor([], dtype=dtype)
+    t = t.reshape(*shape)
     return Parameter(t, requires_grad=requires_grad)
 
 
@@ -77,7 +78,7 @@ def reduce_tensor(tensor):
     requires_grad = tensor.requires_grad
 
     if tensor_data.nbytes == 0:
-        return (rebuild_empty_tensor, (tensor.dtype, requires_grad))
+        return (rebuild_empty_tensor, (tensor.shape, tensor.dtype, requires_grad))
     else:
         shm = shared_memory.SharedMemory(create=True, size=tensor_data.nbytes)
         shm_numpy = np.ndarray(
@@ -95,7 +96,7 @@ def reduce_parameter(tensor):
     requires_grad = tensor.requires_grad
 
     if tensor_data.nbytes == 0:
-        return (rebuild_empty_parameter, (tensor.dtype, requires_grad))
+        return (rebuild_empty_parameter, (tensor,shape, tensor.dtype, requires_grad))
     else:
         shm = shared_memory.SharedMemory(create=True, size=tensor_data.nbytes)
         shm_numpy = np.ndarray(
