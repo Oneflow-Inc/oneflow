@@ -19,22 +19,23 @@ limitations under the License.
 #include "oneflow/core/framework/framework.h"
 #include "oneflow/core/framework/infer_util.h"
 #include "oneflow/core/framework/op_generated.h"
+#include "oneflow/user/kernels/cublas_fused_mlp_util.cuh"
 
 namespace oneflow {
 
 namespace {
 
-constexpr int32_t kAuxReluLdAlignRequirement = 128;
+// constexpr int32_t kAuxReluLdAlignRequirement = 128;
 
-long AlignReluAuxLd(long aux_ld) {
-  /*
-  ReLu bit-mask matrix leading dimension in elements.
-  Must be divisible by 128 and be no less than the number of rows in the output matrix.
-  */
-  long old_aux_ld = aux_ld;
-  return ((old_aux_ld + kAuxReluLdAlignRequirement - 1) / kAuxReluLdAlignRequirement)
-         * kAuxReluLdAlignRequirement;
-}
+// long AlignReluAuxLd(long aux_ld) {
+//   /*
+//   ReLu bit-mask matrix leading dimension in elements.
+//   Must be divisible by 128 and be no less than the number of rows in the output matrix.
+//   */
+//   long old_aux_ld = aux_ld;
+//   return ((old_aux_ld + kAuxReluLdAlignRequirement - 1) / kAuxReluLdAlignRequirement)
+//          * kAuxReluLdAlignRequirement;
+// }
 
 Maybe<void> InferTensorDesc4FusedMatmul(user_op::InferContext* ctx) {
   const user_op::TensorDesc& x_desc = ctx->InputTensorDesc("x", 0);
@@ -173,10 +174,9 @@ REGISTER_USER_OP_GRAD("cublas_fused_mlp")
         op.BindGradTensorWithOpInput(bias_grad_op.output("output_tensor", 0), "biases",
                                      weight_num - 1);
       }
-      std::string cublas_dy;
+      std::string cublas_dy = last_bias_grad;
+      ;
       for (int32_t hidden_layer_idx = weight_num - 1; hidden_layer_idx > 0; hidden_layer_idx--) {
-        if (hidden_layer_idx == weight_num - 1) { cublas_dy = last_bias_grad; }
-
         user_op::UserOpConfWrapperBuilder cublas_bias_add_relu_matmul_grad_builder(
             op.op_name() + "_cublas_bias_add_relu_matmul_grad_" + std::to_string(hidden_layer_idx));
         user_op::UserOpConfWrapper cublas_bias_add_relu_matmul_grad_op =
@@ -216,11 +216,7 @@ REGISTER_USER_OP_GRAD("cublas_fused_mlp")
 
       // For the first layer, we need to use 2 matmul to get grads.
       std::string last_dy;
-      if (weight_num != 1) {
-        last_dy = cublas_dy;
-      } else {
-        last_dy = last_bias_grad;
-      }
+      if (weight_num != 1) { last_dy = cublas_dy; }
       // dx:
       user_op::UserOpConfWrapperBuilder matmul_input_grad_builder(op.op_name()
                                                                   + "_matmul_input_grad");

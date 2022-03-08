@@ -148,7 +148,7 @@ class FusedMLP(Module):
             flow.nn.init.uniform_(self.bias(layer_idx), -bound, bound)
 
     def forward(self, x):
-        res = flow._C.cublas_fused_mlp(
+        res = flow._C.fused_mlp(
             x, self.weights(), self.biases(), self.skip_final_activation
         )
         return res

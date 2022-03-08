@@ -26,6 +26,8 @@ namespace oneflow {
 
 namespace {
 
+constexpr int32_t kAuxReluLdAlignRequirement = 128;
+
 class CublasFusedMLPKernelCache final : public user_op::OpKernelCache {
  public:
   CublasFusedMLPKernelCache() {
@@ -178,13 +180,14 @@ void SetCublasEpilogue(const CublasFusedMLPKernelCache* matmul_cache, cublasLtEp
   }
 }
 
-void AlignReluAuxLd(long* aux_ld) {
+long AlignReluAuxLd(long aux_ld) {
   /*
   ReLu bit-mask matrix leading dimension in elements.
   Must be divisible by 128 and be no less than the number of rows in the output matrix.
   */
-  long old_aux_ld = *aux_ld;
-  *aux_ld = ((old_aux_ld + 128 - 1) / 128) * 128;
+  long old_aux_ld = aux_ld;
+  return ((old_aux_ld + kAuxReluLdAlignRequirement - 1) / kAuxReluLdAlignRequirement)
+         * kAuxReluLdAlignRequirement;
 }
 
 void SetCublasAttr(const CublasFusedMLPKernelCache* matmul_grad_cache,
@@ -228,11 +231,10 @@ void SetCublasAttr(const CublasFusedMLPKernelCache* matmul_grad_cache,
   `CUBLASLT_MATMUL_DESC_EPILOGUE_AUX_LD`.
   */
   if (need_aux) {
-    long aux_ld = cublas_ldc;
-    AlignReluAuxLd(&aux_ld);
+    long aligned_aux_ld = AlignReluAuxLd(cublas_ldc);
     OF_CUBLAS_CHECK(cublasLtMatmulDescSetAttribute(matmul_grad_cache->operation_desc,
-                                                   CUBLASLT_MATMUL_DESC_EPILOGUE_AUX_LD, &aux_ld,
-                                                   sizeof(aux_ld)));
+                                                   CUBLASLT_MATMUL_DESC_EPILOGUE_AUX_LD,
+                                                   &aligned_aux_ld, sizeof(aligned_aux_ld)));
   }
   // Set matrix layout
   SetCublasMatrixLayout(matmul_grad_cache->cublas_a_desc, cuda_data_type, cublas_trans_a, cublas_m,
