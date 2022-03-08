@@ -50,11 +50,11 @@ Maybe<bool> IsContiguous(const std::shared_ptr<Tensor>& tensor) {
 namespace view {
 
 bool IsViewApplicable(const std::shared_ptr<Tensor>& input) {
-  // NOTE: use env variable 'ONEFLOW_VIEW_MECHANISM_OFF' control use view ops or not
-  // If  set, then do not use view mechanism
+  // NOTE: use env variable 'ONEFLOW_VIEW_MECHANISM_OFF' control use view mechanism or not
+  // If  set, then do not use view mechanism(and view ops)
   if(std::getenv("ONEFLOW_VIEW_MECHANISM_OFF") == nullptr){
     // Only eager local tensor support view for now
-    // elem_cnt() > 1  used to excluding 0 shape tensor
+    // elem_cnt() >= 1  used to excluding 0 shape tensor
     if (input->is_local() && !(LazyMode::is_enabled()) && input->shape()->elem_cnt() >= 1) {
       return true;
     }
