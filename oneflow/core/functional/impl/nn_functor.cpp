@@ -2213,7 +2213,7 @@ class IdShuffleFunctor {
                                                .Input("ids")
                                                .Input("column_ids")
                                                .Output("num_unique_matrix")
-                                               .Output("inverse_unique_partion_indices")
+                                               .Output("inverse_unique_partition_indices")
                                                .Output("cur_rank_num_unique")
                                                .Output("cur_rank_unique_ids")
                                                .Output("cur_rank_unique_column_ids")
@@ -2222,7 +2222,7 @@ class IdShuffleFunctor {
     op_column_ids_no_in_has_out_ = CHECK_JUST(one::OpBuilder("id_shuffle")
                                                   .Input("ids")
                                                   .Output("num_unique_matrix")
-                                                  .Output("inverse_unique_partion_indices")
+                                                  .Output("inverse_unique_partition_indices")
                                                   .Output("cur_rank_num_unique")
                                                   .Output("cur_rank_unique_ids")
                                                   .Output("cur_rank_unique_column_ids")
@@ -2255,7 +2255,7 @@ class EmbeddingShuffleFunctor {
                          .Input("cur_rank_embeddings")
                          .Input("num_unique_matrix")
                          .Input("cur_rank_inverse_indices")
-                         .Input("inverse_unique_partion_indices")
+                         .Input("inverse_unique_partition_indices")
                          .Output("embeddings")
                          .Build());
   }
@@ -2264,10 +2264,10 @@ class EmbeddingShuffleFunctor {
       const std::shared_ptr<one::Tensor>& cur_rank_embeddings,
       const std::shared_ptr<one::Tensor>& num_unique_matrix,
       const std::shared_ptr<one::Tensor>& cur_rank_inverse_indices,
-      const std::shared_ptr<one::Tensor>& inverse_unique_partion_indices) const {
+      const std::shared_ptr<one::Tensor>& inverse_unique_partition_indices) const {
     return OpInterpUtil::Dispatch<Tensor>(
         *op_, {cur_rank_embeddings, num_unique_matrix, cur_rank_inverse_indices,
-               inverse_unique_partion_indices});
+               inverse_unique_partition_indices});
   }
 
  private:
@@ -2281,7 +2281,7 @@ class EmbeddingGradientShuffleFunctor {
                          .Input("embedding_diff")
                          .Input("num_unique_matrix")
                          .Input("cur_rank_inverse_indices")
-                         .Input("inverse_unique_partion_indices")
+                         .Input("inverse_unique_partition_indices")
                          .Output("cur_rank_unique_embedding_diff")
                          .Build());
   }
@@ -2290,10 +2290,10 @@ class EmbeddingGradientShuffleFunctor {
       const std::shared_ptr<one::Tensor>& embedding_diff,
       const std::shared_ptr<one::Tensor>& num_unique_matrix,
       const std::shared_ptr<one::Tensor>& cur_rank_inverse_indices,
-      const std::shared_ptr<one::Tensor>& inverse_unique_partion_indices) const {
+      const std::shared_ptr<one::Tensor>& inverse_unique_partition_indices) const {
     return OpInterpUtil::Dispatch<Tensor>(
         *op_, {embedding_diff, num_unique_matrix, cur_rank_inverse_indices,
-               inverse_unique_partion_indices});
+               inverse_unique_partition_indices});
   }
 
  private:

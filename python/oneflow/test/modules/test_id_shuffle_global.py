@@ -53,7 +53,7 @@ def _test_id_shuffle(test_case, has_column_id, num_columns):
         def build(self, ids, column_ids):
             (
                 num_unique_matrix,
-                inverse_unique_partion_indices,
+                inverse_unique_partition_indices,
                 cur_rank_num_unique,
                 cur_rank_unique_ids,
                 cur_rank_unique_column_ids,
@@ -61,7 +61,7 @@ def _test_id_shuffle(test_case, has_column_id, num_columns):
             ) = flow._C.id_shuffle(ids, column_ids, num_columns)
             return (
                 flow.cast(num_unique_matrix, flow.int32),
-                flow.cast(inverse_unique_partion_indices, flow.int32),
+                flow.cast(inverse_unique_partition_indices, flow.int32),
                 flow.cast(cur_rank_num_unique, flow.int32),
                 flow.cast(cur_rank_unique_ids, flow.int32),
                 flow.cast(cur_rank_unique_column_ids, flow.int32),
@@ -76,7 +76,7 @@ def _test_id_shuffle(test_case, has_column_id, num_columns):
         graph(ids_tensor, column_ids_tensor)
     (
         num_unique_matrix,
-        inverse_unique_partion_indices,
+        inverse_unique_partition_indices,
         local_cur_rank_num_unique,
         cur_rank_unique_ids,
         cur_rank_unique_column_ids,
@@ -147,7 +147,7 @@ def _test_embedding_shuffle(test_case, dtype):
         def build(self, ids, column_ids, data):
             (
                 num_unique_matrix,
-                inverse_unique_partion_indices,
+                inverse_unique_partition_indices,
                 _,
                 cur_rank_unique_ids,
                 _,
@@ -158,7 +158,7 @@ def _test_embedding_shuffle(test_case, dtype):
                 unique_embeddings,
                 flow._C.identity(num_unique_matrix),
                 flow._C.identity(cur_rank_inverse_indices),
-                flow._C.identity(inverse_unique_partion_indices),
+                flow._C.identity(inverse_unique_partition_indices),
             )
             return embeddings
 
@@ -192,7 +192,7 @@ def _test_embedding_gradient_shuffle(test_case):
         def build(self, ids, column_ids, embedding_diff):
             (
                 num_unique_matrix,
-                inverse_unique_partion_indices,
+                inverse_unique_partition_indices,
                 cur_rank_num_unique,
                 cur_rank_unique_ids,
                 _,
@@ -202,7 +202,7 @@ def _test_embedding_gradient_shuffle(test_case):
                 embedding_diff,
                 num_unique_matrix,
                 cur_rank_inverse_indices,
-                inverse_unique_partion_indices,
+                inverse_unique_partition_indices,
             )
             return (
                 cur_rank_unique_embedding_diff,

@@ -2008,11 +2008,11 @@
   bind_python: True
 
 - name: "embedding_shuffle"
-  signature: "Tensor (Tensor cur_rank_embeddings, Tensor num_unique_matrix, Tensor cur_rank_inverse_indices, Tensor inverse_unique_partion_indices) => EmbeddingShuffle"
+  signature: "Tensor (Tensor cur_rank_embeddings, Tensor num_unique_matrix, Tensor cur_rank_inverse_indices, Tensor inverse_unique_partition_indices) => EmbeddingShuffle"
   bind_python: True
 
 - name: "embedding_gradient_shuffle"
-  signature: "Tensor (Tensor embedding_diff, Tensor num_unique_matrix, Tensor cur_rank_inverse_indices, Tensor inverse_unique_partion_indices) => EmbeddingGradientShuffle"
+  signature: "Tensor (Tensor embedding_diff, Tensor num_unique_matrix, Tensor cur_rank_inverse_indices, Tensor inverse_unique_partition_indices) => EmbeddingGradientShuffle"
   bind_python: True
 
 - name: "einsum"

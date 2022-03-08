@@ -9038,7 +9038,7 @@ def OneFlow_IdShuffleOp : OneFlow_BaseOp<"id_shuffle", [NoSideEffect, DeclareOpI
   );
   let output = (outs
     OneFlow_Tensor:$num_unique_matrix,
-    OneFlow_Tensor:$inverse_unique_partion_indices,
+    OneFlow_Tensor:$inverse_unique_partition_indices,
     OneFlow_Tensor:$cur_rank_num_unique,
     OneFlow_Tensor:$cur_rank_unique_ids,
     OneFlow_Tensor:$cur_rank_unique_column_ids,
@@ -9059,7 +9059,7 @@ def OneFlow_EmbeddingShuffleOp : OneFlow_BaseOp<"embedding_shuffle", [NoSideEffe
     OneFlow_Tensor:$cur_rank_embeddings,
     OneFlow_Tensor:$num_unique_matrix,
     OneFlow_Tensor:$cur_rank_inverse_indices,
-    OneFlow_Tensor:$inverse_unique_partion_indices
+    OneFlow_Tensor:$inverse_unique_partition_indices
   );
   let output = (outs
     OneFlow_Tensor:$embeddings
@@ -9076,7 +9076,7 @@ def OneFlow_EmbeddingGradientShuffleOp : OneFlow_BaseOp<"embedding_gradient_shuf
     OneFlow_Tensor:$embedding_diff,
     OneFlow_Tensor:$num_unique_matrix,
     OneFlow_Tensor:$cur_rank_inverse_indices,
-    OneFlow_Tensor:$inverse_unique_partion_indices
+    OneFlow_Tensor:$inverse_unique_partition_indices
   );
   let output = (outs
     OneFlow_Tensor:$cur_rank_unique_embedding_diff

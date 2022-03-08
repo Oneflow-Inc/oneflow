@@ -33,7 +33,7 @@ namespace oneflow {
   const int64_t num_ids = ids_shape.elem_cnt();
   const int64_t parallel_num = ctx->parallel_num();
   *ctx->OutputShape("num_unique_matrix", 0) = Shape({parallel_num * parallel_num});
-  *ctx->OutputShape("inverse_unique_partion_indices", 0) = ids_shape;
+  *ctx->OutputShape("inverse_unique_partition_indices", 0) = ids_shape;
   *ctx->OutputShape("cur_rank_num_unique", 0) = Shape({1});
   *ctx->OutputShape("cur_rank_unique_ids", 0) = Shape({num_ids * parallel_num});
   *ctx->OutputShape("cur_rank_inverse_indices", 0) = Shape({num_ids * parallel_num});
@@ -57,7 +57,7 @@ namespace oneflow {
 
 /* static */ Maybe<void> IdShuffleOp::InferDataType(user_op::InferContext* ctx) {
   *ctx->OutputDType("num_unique_matrix", 0) = DataType::kUInt32;
-  *ctx->OutputDType("inverse_unique_partion_indices", 0) = DataType::kUInt32;
+  *ctx->OutputDType("inverse_unique_partition_indices", 0) = DataType::kUInt32;
   *ctx->OutputDType("cur_rank_num_unique", 0) = DataType::kUInt32;
   *ctx->OutputDType("cur_rank_unique_ids", 0) = ctx->InputDType("ids", 0);
   *ctx->OutputDType("cur_rank_inverse_indices", 0) = DataType::kUInt32;
@@ -73,16 +73,16 @@ namespace oneflow {
   const Shape& cur_rank_embeddings_shape = ctx->InputShape("cur_rank_embeddings", 0);
   const Shape& num_unique_matrix_shape = ctx->InputShape("num_unique_matrix", 0);
   const Shape& cur_rank_inverse_indices_shape = ctx->InputShape("cur_rank_inverse_indices", 0);
-  const Shape& inverse_unique_partion_indices_shape =
-      ctx->InputShape("inverse_unique_partion_indices", 0);
-  const int64_t num_ids = inverse_unique_partion_indices_shape.elem_cnt();
+  const Shape& inverse_unique_partition_indices_shape =
+      ctx->InputShape("inverse_unique_partition_indices", 0);
+  const int64_t num_ids = inverse_unique_partition_indices_shape.elem_cnt();
   const int64_t parallel_num = ctx->parallel_num();
   CHECK_EQ_OR_RETURN(cur_rank_embeddings_shape.NumAxes(), 2);
   CHECK_EQ_OR_RETURN(cur_rank_embeddings_shape.At(0), parallel_num * num_ids);
   const int64_t embedding_size = cur_rank_embeddings_shape.At(1);
   CHECK_EQ_OR_RETURN(num_unique_matrix_shape.elem_cnt(), parallel_num * parallel_num);
   CHECK_EQ_OR_RETURN(cur_rank_inverse_indices_shape.elem_cnt(), parallel_num * num_ids);
-  DimVector out_dim_vec = inverse_unique_partion_indices_shape.dim_vec();
+  DimVector out_dim_vec = inverse_unique_partition_indices_shape.dim_vec();
   out_dim_vec.push_back(embedding_size);
   *ctx->OutputShape("embeddings", 0) = Shape(out_dim_vec);
   return Maybe<void>::Ok();
@@ -104,7 +104,7 @@ namespace oneflow {
 /* static */ Maybe<void> EmbeddingShuffleOp::InferDataType(user_op::InferContext* ctx) {
   CHECK_OR_RETURN(ctx->InputDType("num_unique_matrix", 0) == DataType::kUInt32);
   CHECK_OR_RETURN(ctx->InputDType("cur_rank_inverse_indices", 0) == DataType::kUInt32);
-  CHECK_OR_RETURN(ctx->InputDType("inverse_unique_partion_indices", 0) == DataType::kUInt32);
+  CHECK_OR_RETURN(ctx->InputDType("inverse_unique_partition_indices", 0) == DataType::kUInt32);
   *ctx->OutputDType("embeddings", 0) = ctx->InputDType("cur_rank_embeddings", 0);
   return Maybe<void>::Ok();
 }
@@ -114,9 +114,9 @@ namespace oneflow {
   const Shape& embedding_diff_shape = ctx->InputShape("embedding_diff", 0);
   const Shape& num_unique_matrix_shape = ctx->InputShape("num_unique_matrix", 0);
   const Shape& cur_rank_inverse_indices_shape = ctx->InputShape("cur_rank_inverse_indices", 0);
-  const Shape& inverse_unique_partion_indices_shape =
-      ctx->InputShape("inverse_unique_partion_indices", 0);
-  const int64_t num_ids = inverse_unique_partion_indices_shape.elem_cnt();
+  const Shape& inverse_unique_partition_indices_shape =
+      ctx->InputShape("inverse_unique_partition_indices", 0);
+  const int64_t num_ids = inverse_unique_partition_indices_shape.elem_cnt();
   const int64_t parallel_num = ctx->parallel_num();
   const int64_t embedding_size = embedding_diff_shape.elem_cnt() / num_ids;
   CHECK_EQ_OR_RETURN(num_unique_matrix_shape.elem_cnt(), parallel_num * parallel_num);
@@ -144,7 +144,7 @@ namespace oneflow {
 /* static */ Maybe<void> EmbeddingGradientShuffleOp::InferDataType(user_op::InferContext* ctx) {
   CHECK_OR_RETURN(ctx->InputDType("num_unique_matrix", 0) == DataType::kUInt32);
   CHECK_OR_RETURN(ctx->InputDType("cur_rank_inverse_indices", 0) == DataType::kUInt32);
-  CHECK_OR_RETURN(ctx->InputDType("inverse_unique_partion_indices", 0) == DataType::kUInt32);
+  CHECK_OR_RETURN(ctx->InputDType("inverse_unique_partition_indices", 0) == DataType::kUInt32);
   *ctx->OutputDType("cur_rank_unique_embedding_diff", 0) = ctx->InputDType("embedding_diff", 0);
   return Maybe<void>::Ok();
 }
