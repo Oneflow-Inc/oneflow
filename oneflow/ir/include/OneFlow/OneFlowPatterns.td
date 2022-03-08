@@ -212,7 +212,7 @@ def FusedBiasAddDropoutPattern : Pattern<
   [
     (
       FusedBiasAddMaskScale
-      $dropout_res,
+      $dropout_res__0,
       $bias_add_res,
       (
         OneFlow_RandomMaskLikeOp : $mask
