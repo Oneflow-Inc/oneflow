@@ -31,7 +31,6 @@ class LibjpegCtx {
   struct jpeg_decompress_struct* compress_info_;
 };
 
-
 bool JpegPartialDecodeRandomCropImage(const unsigned char* data, size_t length,
                                       RandomCropGenerator* random_crop_gen,
                                       unsigned char* workspace, size_t workspace_size,

@@ -154,8 +154,8 @@ bool CpuJpegDecodeRandomCropResize(const unsigned char* data, size_t length,
                                 size_t workspace_size, unsigned char* dst, int target_width,
                                 int target_height) {
   cv::Mat image_mat;
-  if (JpegPartialDecodeRandomCropImage(data, length, crop_generator,
-                                       workspace, workspace_size, &image_mat)) {
+  if (JpegPartialDecodeRandomCropImage(data, length, crop_generator, workspace, workspace_size,
+                                       &image_mat)) {
     return false;
   }
 

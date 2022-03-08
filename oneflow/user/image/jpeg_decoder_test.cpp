@@ -74,9 +74,8 @@ TEST(JPEG, decoder) {
 
     RandomCropGenerator libjpeg_random_crop_gen({0.1, 0.9}, {0.4, 0.6}, seeds[i], 1);
     RandomCropGenerator opencv_random_crop_gen({0.1, 0.9}, {0.4, 0.6}, seeds[i], 1);
-    auto status =
-        JpegPartialDecodeRandomCropImage(jpg.data(), jpg.size(),
-                                         &libjpeg_random_crop_gen, nullptr, 0, &libjpeg_image_mat);
+    auto status = JpegPartialDecodeRandomCropImage(jpg.data(), jpg.size(), &libjpeg_random_crop_gen,
+                                                   nullptr, 0, &libjpeg_image_mat);
     ASSERT_EQ(status, true);
 
     cv::Mat opencv_image_mat;
