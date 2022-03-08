@@ -244,7 +244,9 @@ Maybe<Tensor> Broadcast(const std::shared_ptr<Tensor>& tensor, int64_t src_rank,
 namespace {
 
 Maybe<Tensor> GetSyncedTensorIfBroadcast(const std::shared_ptr<Tensor>& tensor,
-                                         Symbol<ParallelDesc> parallel_desc, Symbol<NdSbp> nd_sbp) {
+                                         Symbol<ParallelDesc> parallel_desc, Symbol<NdSbp> nd_sbp,
+                                         bool is_balanced) {
+  if (is_balanced) { return tensor; }
   Optional<int64_t> parallel_id;
   JUST(GetTensorDevice4CurrentProcessCtx(parallel_desc, &parallel_id));
   if (!parallel_id.has_value()) { return tensor; }
@@ -333,6 +335,7 @@ Maybe<void> EagerMirroredInterpreter::ApplyImpl(const CastToConsistentOpExpr& op
                                                 const TensorTuple& inputs, TensorTuple* outputs,
                                                 const OpExprInterpContext& ctx) const {
   JUST(LocalToConsistent(op_expr, inputs, outputs, ctx));
+  bool is_balanced = JUST(ctx.attrs.GetAttr<bool>("is_balanced"));
   const auto& consistent_tensor = JUST(outputs->at(0)->AsConsistentTensor());
   JUST(WithConsistencyChecked(consistent_tensor, [&]() -> Maybe<void> {
     if (IsConsistentTensorMetaCheckDisabled()) { return Maybe<void>::Ok(); }
@@ -344,7 +347,7 @@ Maybe<void> EagerMirroredInterpreter::ApplyImpl(const CastToConsistentOpExpr& op
     const auto& local_tensor = JUST(consistent_tensor->cur_rank_phy_tensor());
     const auto& reshaped_tensor = JUST(TryReshapeTensor(local_tensor, tensor_meta));
     const auto& synced_tensor =
-        JUST(GetSyncedTensorIfBroadcast(reshaped_tensor, parallel_desc, nd_sbp));
+        JUST(GetSyncedTensorIfBroadcast(reshaped_tensor, parallel_desc, nd_sbp, is_balanced));
     auto* consistent_tensor_impl =
         reinterpret_cast<EagerConsistentTensorImpl*>(consistent_tensor->mut_impl());
     CHECK_NOTNULL_OR_RETURN(consistent_tensor_impl);

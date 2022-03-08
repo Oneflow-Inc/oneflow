@@ -570,9 +570,9 @@ class Module(object):
             ".to_consistent has been removed, please use .to_global instead"
         )
 
-    def to_global(self, placement=None, sbp=None):
+    def to_global(self, placement=None, sbp=None, is_balanced=False):
         def convert(t):
-            return t.to_global(placement=placement, sbp=sbp)
+            return t.to_global(placement=placement, sbp=sbp, is_balanced=is_balanced)
 
         return self._apply(convert)
 

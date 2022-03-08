@@ -187,7 +187,12 @@ Maybe<void> GetConcatenatedShapeAndCheckDtype(
 
 Maybe<void> GetLogicalShapeAndDataType(Shape* logical_shape, DataType* /* in and out */ dtype,
                                        std::shared_ptr<const Shape> physical_shape,
-                                       Symbol<ParallelDesc> parallel_desc, Symbol<NdSbp> nd_sbp) {
+                                       Symbol<ParallelDesc> parallel_desc, Symbol<NdSbp> nd_sbp,
+                                       bool is_balanced) {
+  if (is_balanced) {
+    *logical_shape = *JUST(GetLogicalShape(*physical_shape, *nd_sbp, *parallel_desc));
+    return Maybe<void>::Ok();
+  }
   if (nd_sbp->sbp_parallel_size() == 1 && nd_sbp->sbp_parallel(0).has_split_parallel()) {
     const auto& rank2flat_shape_dtype =
         JUST(BroadcastGatherShapeAndDataType(*physical_shape, *dtype, parallel_desc));
@@ -254,7 +259,7 @@ Maybe<Tensor> ConsistentToConsistent(const std::shared_ptr<Tensor>& x,
 Maybe<Tensor> LocalToConsistent(const std::shared_ptr<Tensor>& x,
                                 Symbol<ParallelDesc> parallel_desc,
                                 const std::vector<Symbol<SbpParallel>>& sbp_parallels,
-                                const std::shared_ptr<OpExpr>& op) {
+                                const std::shared_ptr<OpExpr>& op, bool is_balanced) {
   CHECK_OR_RETURN(!x->is_lazy())
       << "local_tensor.to_global() is not supported within nn.Graph for now";
   CHECK_OR_RETURN(x->is_local()) << Error::UnimplementedError() << "local tensors supported only";
@@ -282,10 +287,12 @@ Maybe<Tensor> LocalToConsistent(const std::shared_ptr<Tensor>& x,
   Symbol<NdSbp> nd_sbp = JUST(GetNdSbp(sbp_parallels));
   const auto& shape = std::make_shared<Shape>();
   DataType dtype = x->dtype()->data_type();
-  JUST(GetLogicalShapeAndDataType(shape.get(), &dtype, x->shape(), parallel_desc, nd_sbp));
+  JUST(GetLogicalShapeAndDataType(shape.get(), &dtype, x->shape(), parallel_desc, nd_sbp,
+                                  is_balanced));
   MutableAttrMap attrs;
   JUST(attrs.SetAttr<Shape>("shape", *shape));
   JUST(attrs.SetAttr<DataType>("dtype", dtype));
+  JUST(attrs.SetAttr<bool>("is_balanced", is_balanced));
   const auto& output = JUST(OpInterpUtil::Dispatch<one::Tensor>(
       *op, {input}, OpExprInterpContext(attrs, parallel_desc, nd_sbp)));
   return output;
@@ -328,6 +335,7 @@ class LocalToConsistentFunctor {
     MutableAttrMap attrs;
     JUST(attrs.SetAttr<Shape>("shape", shape));
     JUST(attrs.SetAttr<DataType>("dtype", dtype->data_type()));
+    JUST(attrs.SetAttr<bool>("is_balanced", false));
     DisableCheckConsistentTensorMetaScope scope{};
     const auto& tensor = JUST(OpInterpUtil::Dispatch<one::Tensor>(
         *op_, {input}, OpExprInterpContext(attrs, parallel_desc, nd_sbp)));
@@ -348,7 +356,8 @@ class ToConsistentFunctor {
   Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x,
                            Symbol<ParallelDesc> parallel_desc,
                            const std::vector<Symbol<SbpParallel>>& sbp_parallels,
-                           const std::vector<Symbol<SbpParallel>>& grad_sbp_parallels) const {
+                           const std::vector<Symbol<SbpParallel>>& grad_sbp_parallels,
+                           bool is_balanced) const {
     JUST(CheckDeviceIdsIsValid(parallel_desc));
     NonRecursiveMetaInfoConsistencyCheckScope scope;
     JUST(MetaInfoConsistencyCheck(parallel_desc, sbp_parallels, grad_sbp_parallels, 1));
@@ -356,7 +365,8 @@ class ToConsistentFunctor {
     if (x->is_consistent()) {
       tensor = JUST(ConsistentToConsistent(x, parallel_desc, sbp_parallels, grad_sbp_parallels));
     } else {
-      tensor = JUST(LocalToConsistent(x, parallel_desc, sbp_parallels, local_to_consistent_op_));
+      tensor = JUST(
+          LocalToConsistent(x, parallel_desc, sbp_parallels, local_to_consistent_op_, is_balanced));
     }
     return tensor;
   }

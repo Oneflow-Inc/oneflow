@@ -194,6 +194,7 @@ Maybe<void> CheckSplitAxisExpandable(
     std::transform(dst_nd_sbp_indexes.begin(), dst_nd_sbp_indexes.end(),
                    std::back_inserter(dst_nd_sbp_dims), GetHierarchyDim);
     CHECK_OR_RETURN(src_nd_sbp_dims == dst_nd_sbp_dims) << Error::BoxingNotSupportedError();
+    LOG(ERROR) << "CheckSplitAxisExpandable Check success";
   }
   return Maybe<void>::Ok();
 }

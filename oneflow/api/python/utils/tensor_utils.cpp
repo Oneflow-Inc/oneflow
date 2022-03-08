@@ -249,8 +249,8 @@ Maybe<Tensor> MakeConsistentTensorFromData(PyObject* data, const Optional<Symbol
       local_tensor, placement, *JUST(GetSbpList(broadcast_nd_sbp)), shape, local_tensor->dtype()));
 
   std::vector<Symbol<SbpParallel>> grad_sbp_tuple;
-  auto consistent_tensor =
-      JUST(functional::ToConsistent(broadcast_tensor, placement, sbp_tuple, grad_sbp_tuple));
+  auto consistent_tensor = JUST(functional::ToConsistent(broadcast_tensor, placement, sbp_tuple,
+                                                         grad_sbp_tuple, /* is_balanced */ false));
   JUST(consistent_tensor->set_requires_grad(requires_grad));
   return consistent_tensor;
 }
@@ -264,7 +264,8 @@ Maybe<Tensor> MakeTensorFromOtherTensor(const std::shared_ptr<Tensor>& other) {
     std::vector<Symbol<SbpParallel>> sbp_tuple(nd_sbp->sbp_parallel().size());
     for (int i = 0; i < sbp_tuple.size(); ++i) { sbp_tuple[i] = nd_sbp->sbp_parallel().Get(i); }
     std::vector<Symbol<SbpParallel>> grad_sbp_tuple;
-    return functional::ToConsistent(other, JUST(other->parallel_desc()), sbp_tuple, grad_sbp_tuple);
+    return functional::ToConsistent(other, JUST(other->parallel_desc()), sbp_tuple, grad_sbp_tuple,
+                                    /* is_balanced */ false);
   }
 }
 
@@ -297,8 +298,8 @@ Maybe<Tensor> MakeTensorFromOtherTensor(const std::shared_ptr<Tensor>& other,
                                         const std::vector<Symbol<SbpParallel>>& sbp_tuple,
                                         const bool& requires_grad) {
   std::vector<Symbol<SbpParallel>> grad_sbp_tuple;
-  std::shared_ptr<Tensor> tensor =
-      JUST(functional::ToConsistent(other, placement, sbp_tuple, grad_sbp_tuple));
+  std::shared_ptr<Tensor> tensor = JUST(functional::ToConsistent(
+      other, placement, sbp_tuple, grad_sbp_tuple, /* is_balanced */ false));
   if (dtype) {
     const Symbol<DType>& dtype_ = JUST(dtype);
     if (tensor->dtype() != dtype_) { tensor = JUST(functional::Cast(tensor, dtype_)); }
