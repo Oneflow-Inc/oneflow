@@ -22,8 +22,8 @@ from oneflow.test_utils.automated_test_util import *
 @autotest(n=1, check_graph=False)
 def _test_broadcast_mul(test_case, placement, sbp):
     x = random_tensor(ndim=3, dim0=16, dim1=8, dim2=24).to_global(placement, sbp)
-    random_sbp = random_sbp(placement, max_dim=2)
-    y = random_tensor(ndim=2, dim0=8, dim1=24).to_global(placement, random_sbp)
+    y_sbp = random_sbp(placement, max_dim=2)
+    y = random_tensor(ndim=2, dim0=8, dim1=24).to_global(placement, y_sbp)
     z = torch.mul(x, y)
     return z
 
@@ -41,7 +41,7 @@ class TestMulModule(flow.unittest.TestCase):
     def test_broadcast_mul(test_case):
         for placement in all_placement():
             for sbp in all_sbp(placement, max_dim=3):
-                _test_broadcast_mul(test_case, placement)
+                _test_broadcast_mul(test_case, placement, sbp)
 
     @globaltest
     def test_mul_with_scalar(test_case):
