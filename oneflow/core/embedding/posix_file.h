@@ -184,11 +184,11 @@ class PosixFileLockGuard final {
   }
   PosixFileLockGuard(PosixFileLockGuard&& other) noexcept { *this = std::move(other); }
   PosixFileLockGuard& operator=(PosixFileLockGuard&& other) noexcept {
-    UnLock();
+    Unlock();
     file_ = std::move(other.file_);
     return *this;
   }
-  ~PosixFileLockGuard() { UnLock(); }
+  ~PosixFileLockGuard() { Unlock(); }
 
  private:
   void Lock() {
@@ -201,7 +201,7 @@ class PosixFileLockGuard final {
       PCHECK(fcntl(file_.fd(), F_SETLK, &f) == 0);
     }
   }
-  void UnLock() {
+  void Unlock() {
     if (file_.fd() != -1) {
       struct flock f {};
       f.l_type = F_UNLCK;
