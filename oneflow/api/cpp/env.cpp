@@ -29,6 +29,7 @@ limitations under the License.
 #include "oneflow/core/common/multi_client.h"
 #include "oneflow/core/common/optional.h"
 #include "oneflow/core/framework/multi_client_session_context.h"
+#include "oneflow/core/framework/session_util.h"
 #include "oneflow/core/framework/shut_down_util.h"
 #include "oneflow/core/job/cluster_instruction.h"
 #include "oneflow/core/job/env.pb.h"
@@ -120,7 +121,9 @@ of::Maybe<void> initEnv() {
 
   of::ConfigProto config_proto;
   config_proto.mutable_resource()->set_cpu_device_num(1);  // useless, will be set in TryInit
-  config_proto.set_session_id(of::NewSessionId());
+  const int64_t session_id = of::NewSessionId();
+  JUST(of::RegsiterSession(session_id));
+  config_proto.set_session_id(session_id);
   of::Global<of::MultiClientSessionContext>::New();
   of::Global<of::MultiClientSessionContext>::Get()->TryInit(config_proto).GetOrThrow();
   return of::Maybe<void>::Ok();

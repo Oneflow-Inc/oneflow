@@ -99,11 +99,7 @@ def env_init():
     if default_env_proto.ctrl_bootstrap_conf.world_size > 1:
         check_non_localhost_proxy_and_print_warning()
     c_api_util.InitEnv(default_env_proto, is_multi_client)
-    if not is_multi_client:
-        if oneflow._oneflow_internal.CurrentMachineId() == 0:
-            scope_util.InitScopeStack()
-        else:
-            exit(0)
+    assert is_multi_client
     return True
 
 
