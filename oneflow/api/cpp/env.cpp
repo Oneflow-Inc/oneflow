@@ -26,7 +26,6 @@ limitations under the License.
 #include "oneflow/api/cpp/env.h"
 #include "oneflow/core/common/global.h"
 #include "oneflow/core/common/just.h"
-#include "oneflow/core/common/multi_client.h"
 #include "oneflow/core/common/optional.h"
 #include "oneflow/core/framework/multi_client_session_context.h"
 #include "oneflow/core/framework/session_util.h"
@@ -132,7 +131,6 @@ of::Maybe<void> initEnv() {
 }  // namespace
 
 void initialize() {
-  of::SetIsMultiClient(true).GetOrThrow();
   if (!IsEnvInited()) { initEnv().GetOrThrow(); }
   of::SetShuttingDown(false);
 }
@@ -144,11 +142,7 @@ void release() {
     of::Global<of::MultiClientSessionContext>::Get()->TryClose().GetOrThrow();
     of::Global<of::MultiClientSessionContext>::Delete();
     // destory env
-    if (of::IsMultiClient().GetOrThrow()) {
-      OF_ENV_BARRIER();
-    } else {
-      of::ClusterInstruction::MasterSendHalt();
-    }
+    OF_ENV_BARRIER();
     of::Global<of::EnvGlobalObjectsScope>::Delete();
   }
   of::SetShuttingDown();
