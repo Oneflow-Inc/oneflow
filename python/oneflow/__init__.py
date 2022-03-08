@@ -210,7 +210,6 @@ from oneflow.framework.tensor_str import set_printoptions
 
 if not env_util.HasAllMultiClientEnvVars():
     env_util.SetDefaultMultiClientEnvVars()
-oneflow._oneflow_internal.SetIsMultiClient(True)
 env_util.api_env_init()
 oneflow._oneflow_internal.RegisterGILForeignLockHelper()
 oneflow._oneflow_internal.InitDefaultConsistentTransportTokenScope()
@@ -260,10 +259,7 @@ hook = ExitHook()
 def atexit_hook(hook):
     if hook.is_normal_exit():
         if oneflow._oneflow_internal.IsEnvInited():
-            if oneflow.env.is_multi_client():
-                oneflow._oneflow_internal.eager.multi_client.Sync()
-            elif oneflow.env.get_rank() == 0:
-                oneflow._oneflow_internal.eager.single_client.Sync()
+            oneflow._oneflow_internal.eager.Sync()
     oneflow.framework.session_context.TryCloseDefaultSession()
     if hook.is_normal_exit():
         oneflow._oneflow_internal.DestroyEnv()
