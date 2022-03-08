@@ -48,6 +48,13 @@ Maybe<bool> IsContiguous(const std::shared_ptr<Tensor>& tensor) {
 
 namespace view {
 
+// NOTE: use env variable 'ONEFLOW_DISABLE_VIEW' control use view mechanism or not
+// If  set true, then do not use view mechanism(and view ops)
+static bool IsEnvViewDisabled() {
+  static const bool env_view_disabled = EnvToBool(ONEFLOW_DISABLE_VIEW, false);
+  return env_view_disabled;
+}
+
 bool IsViewApplicable(const std::shared_ptr<Tensor>& input) {
   if(IsEnvViewDisabled()) { return false;  }
   // NOTE: only eager local tensor support view for now
