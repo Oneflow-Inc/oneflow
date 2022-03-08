@@ -52,7 +52,6 @@ def _test_maxpool2d_functional(test_case, placement, sbp):
     return_indices = random().to(bool).value()
     dim0 = random().to(int).value() * 8
     dim1 = random().to(int).value() * 8
-    device = random_device()
     x = random_tensor(
         ndim=4, dim0=dim0, dim1=dim1, dim2=random(20, 22), dim3=random(20, 22)
     ).to_global(placement, sbp)
@@ -77,7 +76,6 @@ def _test_maxpool3d_functional(test_case, placement, sbp):
     return_indices = random().to(bool).value()
     dim0 = random().to(int).value() * 8
     dim1 = random().to(int).value() * 8
-    device = random_device()
     x = random_tensor(
         ndim=5,
         dim0=dim0,
@@ -227,7 +225,6 @@ class TestMaxPool(flow.unittest.TestCase):
                 _test_maxpool1d(test_case, placement, sbp)
                 _test_maxpool2d(test_case, placement, sbp)
                 _test_maxpool3d(test_case, placement, sbp)
-
 
     @globaltest
     def test_maxpool2d_channel_last(test_case):
