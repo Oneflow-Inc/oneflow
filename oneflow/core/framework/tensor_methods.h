@@ -18,7 +18,6 @@ limitations under the License.
 #define ONEFLOW_CORE_FRAMEWORK_TENSOR_METHODS_H_
 
 #include "oneflow/core/framework/tensor.h"
-#include "oneflow/xrt/utility/env.h"
 
 namespace oneflow {
 namespace one {
@@ -29,7 +28,7 @@ Maybe<bool> IsContiguous(const std::shared_ptr<Tensor>& tensor);
 
 namespace view {
 
-static bool IsEnvViewDisabled();
+bool IsEnvViewDisabled();
 
 bool IsViewApplicable(const std::shared_ptr<Tensor>& input);
 
