@@ -184,11 +184,14 @@ def FusedPadConv2DPattern : Pat<
 def GetDefaultSeed :
   NativeCodeCall<"mlir::oneflow::GetDefaultSeed($_builder)">;
 
+def FusedBiasAddMaskScale :
+  NativeCodeCall<"mlir::oneflow::CreateFusedBiasAddMaskScale($_builder, $0, $1, $2)">;
+
 def FusedBiasAddDropoutPattern : Pattern<
   (
-    OneFlow_DropoutOp
+    OneFlow_DropoutOp: $dropout_res
     (
-      OneFlow_BiasAddOp
+      OneFlow_BiasAddOp: $bias_add_res
         $a,
         $b,
         $bias_add_op_name,
@@ -208,9 +211,9 @@ def FusedBiasAddDropoutPattern : Pattern<
   ),
   [
     (
-      OneFlow_FusedBiasAddMaskScaleOp
-      $a,
-      $b,
+      FusedBiasAddMaskScale
+      $dropout_res,
+      $bias_add_res,
       (
         OneFlow_RandomMaskLikeOp : $mask
           $a,
@@ -221,14 +224,7 @@ def FusedBiasAddDropoutPattern : Pattern<
           $dropout_hierarchy,
           $dropout_op_rate,
           (GetDefaultSeed)
-      ),
-      $bias_add_op_name,
-      $bias_add_device_tag,
-      $bias_add_device_name,
-      $bias_add_scope_symbol_id,
-      $bias_add_hierarchy,
-      $bias_add_op_axis,
-      $dropout_op_rate
+      )
     ),
     (replaceWithValue $mask)
   ],

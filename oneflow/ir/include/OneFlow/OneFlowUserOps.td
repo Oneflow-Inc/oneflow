@@ -2244,41 +2244,11 @@ def OneFlow_FusedBiasAddMaskScaleOp : OneFlow_BaseOp<"fused_bias_add_mask_scale"
     DefaultValuedAttr<SI32Attr, "0">:$axis,
     DefaultValuedAttr<F32Attr, "0.">:$scale
   );
-  let builders = [
-    OpBuilder<(ins
-      "Value":$a,
-      "Value":$b,
-      "Value":$mask,
-      "Value":$_add_to_output,
-      "StringRef":$op_name,
-      "StringRef":$device_tag,
-      "ArrayAttr":$device_name,
-      "IntegerAttr":$scope_symbol_id,
-      "ArrayAttr":$hierarchy,
-      "IntegerAttr":$axis,
-      "FloatAttr":$scale
-    )>
-  ];
   let has_logical_tensor_desc_infer_fn = 1;
   let has_physical_tensor_desc_infer_fn = 1;
   let has_get_sbp_fn = 1;
   let has_data_type_infer_fn = 1;
   let has_input_arg_modify_fn = 1;
-  let builders = [
-    OpBuilder<(ins
-      "Type":$out_type,
-      "Value":$a,
-      "Value":$b,
-      "Value":$mask,
-      "StringRef":$op_name,
-      "StringRef":$device_tag,
-      "ArrayAttr":$device_name,
-      "IntegerAttr":$scope_symbol_id,
-      "ArrayAttr":$hierarchy,
-      "IntegerAttr":$axis,
-      "FloatAttr":$scale
-    )>
-  ];
 }
 
 def OneFlow_FusedCastScaleOp : OneFlow_BaseOp<"fused_cast_scale", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
