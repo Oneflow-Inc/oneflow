@@ -789,12 +789,24 @@ class DualObject:
                 pytorch.load_state_dict(broadcast(pytorch).state_dict())
             state_dict = pytorch.state_dict()
             state_dict = {k: v.detach().cpu().numpy() for (k, v) in state_dict.items()}
+            oneflow_state_dict = oneflow.state_dict()
+            oneflow_state_dict = {k: v.detach() for (k, v) in oneflow_state_dict.items()}
+            already_global = False
+            for (k, v) in oneflow_state_dict.items():
+                if v.is_global:
+                    already_global = True
             oneflow.load_state_dict(state_dict, strict=False)
             if is_global():
-                oneflow = oneflow.to_global(
-                    placement=flow.env.all_device_placement("cpu"),
-                    sbp=[flow.sbp.broadcast,],
-                )
+                if already_global:
+                    for (k, v) in oneflow_state_dict.items():
+                        if v.is_global:
+                            t = getattr(oneflow, k)
+                            setattr(oneflow, k, t.to_global(placement=v.placement, sbp=v.sbp))
+                else:
+                    oneflow = oneflow.to_global(
+                        placement=flow.env.all_device_placement("cpu"),
+                        sbp=[flow.sbp.broadcast,],
+                    )
             if testing:
                 dual_modules_to_test.append(self)
         if isinstance(pytorch, torch_original.Tensor):
