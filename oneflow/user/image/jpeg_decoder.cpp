@@ -30,7 +30,6 @@ class LibjpegHandle {
   struct jpeg_decompress_struct* compress_info_;
 };
 
-
 bool JpegPartialDecodeRandomCropImage(const unsigned char* data, size_t length,
                                       RandomCropGenerator* random_crop_gen,
                                       unsigned char* workspace, size_t workspace_size,
@@ -73,7 +72,7 @@ bool JpegPartialDecodeRandomCropImage(const unsigned char* data, size_t length,
   std::vector<unsigned char> decode_output_buf;
   unsigned char* decode_output_pointer = nullptr;
   size_t image_space_size = width * pixel_size;
-  
+
   if (image_space_size > workspace_size) {
     decode_output_buf.resize(image_space_size);
     decode_output_pointer = decode_output_buf.data();
