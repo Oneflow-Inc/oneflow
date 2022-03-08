@@ -69,14 +69,14 @@ void OpenCvPartialDecode(const unsigned char* data, size_t length,
   cv::Mat image =
       cv::imdecode(cv::Mat(1, length, CV_8UC1, (void*)data),  // NOLINT
                    ImageUtil::IsColor(color_space) ? cv::IMREAD_COLOR : cv::IMREAD_GRAYSCALE);
-  int W = image.cols;
-  int H = image.rows;
 
   // random crop
   if (random_crop_gen != nullptr) {
     CHECK(image.data != nullptr);
     cv::Mat image_roi;
     CropWindow crop;
+    int W = image.cols;
+    int H = image.rows;
     random_crop_gen->GenerateCropWindow({H, W}, &crop);
     const int y = crop.anchor.At(0);
     const int x = crop.anchor.At(1);
@@ -97,7 +97,7 @@ void OpenCvPartialDecode(const unsigned char* data, size_t length,
 
 TEST(JPEG, decoder) {
   constexpr size_t test_num = 3;
-  std::vector<uint8_t> jpg;
+  std::vector<unsigned char> jpg;
   GenerateImage(jpg, 192, 192);
   std::seed_seq seq{1, 2, 3};
   std::vector<int64_t> seeds(test_num);
@@ -109,14 +109,14 @@ TEST(JPEG, decoder) {
     RandomCropGenerator libjpeg_random_crop_gen({0.1, 0.9}, {0.4, 0.6}, seeds[i], 1);
     RandomCropGenerator opencv_random_crop_gen({0.1, 0.9}, {0.4, 0.6}, seeds[i], 1);
     auto status =
-        JpegPartialDecodeRandomCropImage((const unsigned char*)(jpg.data()), jpg.size(),
+        JpegPartialDecodeRandomCropImage(jpg.data(), jpg.size(),
                                          &libjpeg_random_crop_gen, nullptr, 0, &libjpeg_image_mat);
     ASSERT_EQ(status, true);
 
     cv::Mat opencv_image_mat;
     std::string color_space("RGB");
 
-    OpenCvPartialDecode((const unsigned char*)(jpg.data()), jpg.size(), &opencv_random_crop_gen,
+    OpenCvPartialDecode(jpg.data(), jpg.size(), &opencv_random_crop_gen,
                         color_space, opencv_image_mat);
     ImageUtil::ConvertColor("BGR", opencv_image_mat, color_space, opencv_image_mat);
 

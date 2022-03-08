@@ -207,7 +207,7 @@ void DecodeRandomCropImageFromOneRecord(const OFRecord& record, TensorBuffer* bu
   const std::string& src_data = feature.bytes_list().value(0);
   cv::Mat image;
 
-  if (JpegPartialDecodeRandomCropImage((const unsigned char*)(src_data.data()), src_data.size(),
+  if (JpegPartialDecodeRandomCropImage(reinterpret_cast<const unsigned char*>(src_data.data()), src_data.size(),
                                        random_crop_gen, nullptr, 0, &image)) {
     // convert color space
     // jpeg decode output RGB
@@ -215,7 +215,7 @@ void DecodeRandomCropImageFromOneRecord(const OFRecord& record, TensorBuffer* bu
       ImageUtil::ConvertColor("RGB", image, color_space, image);
     }
   } else {
-    OpenCvPartialDecodeRandomCropImage((const unsigned char*)(src_data.data()), src_data.size(),
+    OpenCvPartialDecodeRandomCropImage(reinterpret_cast<const unsigned char*>(src_data.data()), src_data.size(),
                                        random_crop_gen, color_space, image);
     // convert color space
     // opencv decode output BGR
