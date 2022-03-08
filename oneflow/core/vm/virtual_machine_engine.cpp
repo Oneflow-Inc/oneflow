@@ -543,10 +543,24 @@ void VirtualMachineEngine::Callback() {
   InstructionMsgList garbage_msg_list;
   mut_garbage_msg_list()->MoveTo(&garbage_msg_list);
   INTRUSIVE_FOR_EACH(garbage, &garbage_msg_list) {
-    CHECK_JUST(Global<ForeignLockHelper>::Get()->WithScopedAcquire([&, this]() -> Maybe<void> {
+    CHECK_JUST(Global<ForeignLockHelper>::Get()->WithScopedAcquire([&]() -> Maybe<void> {
       garbage_msg_list.Erase(garbage.Mutable());
+      // There may be a tiny gap between appending `garbage` to garbage_list and dereferencing
+      // `garbage` in scheduler thread or work thread.
+      //  e.g.
+      //
+      //   void Foo() {
+      //     auto garbage = GetGarbage();
+      //     AppendToGarbageList(garbage);
+      //
+      //     // **Callback thread maybe handle garbage in the same time**. From it's point view,
+      //     ref_cnt > 1.
+      //
+      //     garbage.reset(); // explicitly dereference garbage for better understood.
+      //   }
+      //
       while (garbage->ref_cnt() > 1) {
-        // Do nothing. wait until all other threads ref_cnts released.
+        // Do nothing. Wait until all other threads ref_cnts released.
       }
       CHECK_NOTNULL(garbage->phy_instr_operand());
       CHECK_EQ(garbage->phy_instr_operand().use_count(), 1) << garbage->DebugName();
