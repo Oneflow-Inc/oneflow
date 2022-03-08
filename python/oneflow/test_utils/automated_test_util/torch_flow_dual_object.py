@@ -297,7 +297,7 @@ def get_functional_graph_res(
 ):
     test_g_res = []
 
-    if global_backward and flow.is_tensor(oneflow_res) and oneflow_res.ndim > 1:
+    if global_backward and flow.is_tensor(oneflow_res) and oneflow_res.ndim > 1 and oneflow_res.nelement() > 0:
         # The output of functiona or method without parameters is connected to a  LayerNorm module for backward and optimize in nn.Graph.
         graph_functional_layernorm = flow.nn.LayerNorm(oneflow_res.shape[-1])
         graph_functional_layernorm = graph_functional_layernorm.to(
@@ -310,14 +310,14 @@ def get_functional_graph_res(
     class TestGraphOfFunctional(flow.nn.Graph):
         def __init__(self):
             super().__init__()
-            if global_backward and flow.is_tensor(oneflow_res) and oneflow_res.ndim > 1:
+            if global_backward and flow.is_tensor(oneflow_res) and oneflow_res.ndim > 1 and oneflow_res.nelement() > 0:
                 self.m = graph_functional_layernorm
                 self.add_optimizer(of_sgd)
 
         def build(self):
             res = graph_functional_oneflow(*graph_args, **graph_kwargs)
             forward_res = res
-            if global_backward and flow.is_tensor(oneflow_res) and oneflow_res.ndim > 1:
+            if global_backward and flow.is_tensor(oneflow_res) and oneflow_res.ndim > 1 and oneflow_res.nelement() > 0:
                 res = self.m(res)
                 res = res.sum()
                 res.backward()
@@ -370,11 +370,11 @@ def get_functional_graph_res(
 # NOTE(lixiang): When oneflow is of tensor type, build the following Graph for testing, and return the test results in Graph mode.
 #   graph_tensor_oneflow is a deepcopy of oneflow.
 def get_tensor_graph_res(
-    graph_tensor_oneflow, oneflow, verbose, *tensor_graph_args, **tensor_graph_kwargs
+    graph_tensor_oneflow, oneflow, oneflow_res, verbose, *tensor_graph_args, **tensor_graph_kwargs
 ):
     test_g_res = []
 
-    if global_backward and flow.is_tensor(oneflow_res) and oneflow_res.ndim > 1:
+    if global_backward and flow.is_tensor(oneflow_res) and oneflow_res.ndim > 1 and oneflow_res.nelement() > 0:
         # The output of functiona or method without parameters is connected to a  LayerNorm module for backward and optimize in nn.Graph.
         graph_functional_layernorm = flow.nn.LayerNorm(oneflow_res.shape[-1])
         graph_functional_layernorm = graph_functional_layernorm.to(
@@ -387,14 +387,14 @@ def get_tensor_graph_res(
     class TestGraphOfTensorMethod(flow.nn.Graph):
         def __init__(self):
             super().__init__()
-            if global_backward and flow.is_tensor(oneflow_res) and oneflow_res.ndim > 1:
+            if global_backward and flow.is_tensor(oneflow_res) and oneflow_res.ndim > 1 and oneflow_res.nelement() > 0:
                 self.m = graph_functional_layernorm
                 self.add_optimizer(of_sgd)
 
         def build(self):
             res = graph_tensor_oneflow(*tensor_graph_args, **tensor_graph_kwargs)
             forward_res = res
-            if global_backward and flow.is_tensor(oneflow_res) and oneflow_res.ndim > 1:
+            if global_backward and flow.is_tensor(oneflow_res) and oneflow_res.ndim > 1 and oneflow_res.nelement() > 0:
                 res = self.m(res)
                 res = res.sum()
                 res.backward()
@@ -537,6 +537,7 @@ def oneflow_tensor_eager_run_with_graph_check(
         test_g_res = get_tensor_graph_res(
             graph_tensor_oneflow,
             oneflow,
+            oneflow_res,
             verbose,
             *tensor_graph_args,
             **tensor_graph_kwargs,
