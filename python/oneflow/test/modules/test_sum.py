@@ -26,21 +26,23 @@ import oneflow as flow
 import oneflow.unittest
 
 
-def _test_sum_impl(test_case, device):
+def _test_sum_impl(test_case, device, data_type):
+    if device == "cpu" and data_type == flow.float16:
+        return
     input = flow.tensor(
-        np.random.randn(2, 3), dtype=flow.float32, device=flow.device(device)
+        np.random.randn(2, 3) - 0.5, dtype=data_type, device=flow.device(device)
     )
     of_out = flow.sum(input, dim=0)
     np_out = np.sum(input.numpy(), axis=0)
     test_case.assertTrue(np.allclose(of_out.numpy(), np_out, 1e-05, 1e-05))
     input = flow.tensor(
-        np.random.randn(2, 3), dtype=flow.float32, device=flow.device(device)
+        np.random.randn(2, 3), dtype=data_type, device=flow.device(device)
     )
     of_out = flow.sum(input, dim=0)
     np_out = np.sum(input.numpy(), axis=0)
     test_case.assertTrue(np.allclose(of_out.numpy(), np_out, 1e-05, 1e-05))
     input = flow.tensor(
-        np.random.randn(2, 3), dtype=flow.float32, device=flow.device(device)
+        np.random.randn(2, 3), dtype=data_type, device=flow.device(device)
     )
     of_out = flow.sum(input, dim=1)
     of_out2 = input.sum(dim=1)
@@ -48,8 +50,8 @@ def _test_sum_impl(test_case, device):
     test_case.assertTrue(np.allclose(of_out2.numpy(), of_out.numpy(), 1e-05, 1e-05))
     test_case.assertTrue(np.allclose(of_out.numpy(), np_out, 1e-05, 1e-05))
     input = flow.tensor(
-        np.random.randn(4, 5, 6),
-        dtype=flow.float32,
+        np.random.randn(4, 5, 6) - 0.5,
+        dtype=data_type,
         device=flow.device(device),
         requires_grad=True,
     )
@@ -67,6 +69,7 @@ class TestSumModule(flow.unittest.TestCase):
     def test_sum(test_case):
         arg_dict = OrderedDict()
         arg_dict["device"] = ["cpu", "cuda"]
+        arg_dict["data_type"] = [flow.float16, flow.float32]
         for arg in GenArgList(arg_dict):
             _test_sum_impl(test_case, *arg)
 

@@ -419,7 +419,7 @@ Maybe<void> Improver::ForEachImprovedRegstNum(
     ii = JUST(
         BinarySearchII(ii, PathDurations4RegstDescId, PathIIScales4RegstDescId, mz_regst_descs));
   }
-  LOG(INFO) << "memory " << (is_memory_limited ? "limited" : "unlimited") << " ii: " << ii;
+  VLOG(1) << "Memory is " << (is_memory_limited ? "limited" : "unlimited") << " ii: " << ii;
   for (const auto& task_proto : plan.task()) {
     for (const auto& pair : task_proto.produced_regst_desc()) {
       uint64_t regst_num = 0;
