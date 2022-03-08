@@ -360,13 +360,13 @@ IntegerAttr getSI64IntegerAttr(::mlir::PatternRewriter& rewriter, int64_t value)
 ::llvm::SmallVector<::mlir::Value, 4> CreateFusedBiasAddMaskScale(::mlir::PatternRewriter& rewriter,
                                                                   OpResult dropout_result,
                                                                   OpResult bias_add_result,
-                                                                  OpResult mask) {
+                                                                  Operation* mask) {
   if (auto dropout_op = llvm::dyn_cast<oneflow::DropoutOp>(dropout_result.getDefiningOp())) {
     if (auto bias_add_op = llvm::dyn_cast<oneflow::BiasAddOp>(bias_add_result.getDefiningOp())) {
       SmallVector<Value, 4> operands;
       operands.push_back(bias_add_op.a());
       operands.push_back(bias_add_op.b());
-      operands.push_back(mask);
+      operands.push_back(mask->getResults()[0]);
       NamedAttrList fused_bias_add_dropout_attributes = dropout_op->getAttrs();
       fused_bias_add_dropout_attributes.append(llvm::StringRef("axis"), bias_add_op.axisAttr());
       fused_bias_add_dropout_attributes.append(llvm::StringRef("scale"), dropout_op.rateAttr());
