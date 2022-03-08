@@ -26,6 +26,7 @@ limitations under the License.
 #include "oneflow/core/register/ofblob.h"
 #include "oneflow/core/framework/instructions_builder.h"
 
+
 namespace oneflow {
 namespace one {
 
@@ -49,15 +50,17 @@ Maybe<bool> IsContiguous(const std::shared_ptr<Tensor>& tensor) {
 
 namespace view {
 
+bool IsEnvViewDisabled() {
+  static const bool env_view_disabled = EnvToBool(ONEFLOW_DISABLE_VIEW, false);
+  return env_view_disabled;
+}
+
 bool IsViewApplicable(const std::shared_ptr<Tensor>& input) {
-  // NOTE: use env variable 'ONEFLOW_VIEW_MECHANISM_OFF' control use view mechanism or not
-  // If  set, then do not use view mechanism(and view ops)
-  if(std::getenv("ONEFLOW_VIEW_MECHANISM_OFF") == nullptr){
-    // Only eager local tensor support view for now
-    // elem_cnt() >= 1  used to excluding 0 shape tensor
-    if (input->is_local() && !(LazyMode::is_enabled()) && input->shape()->elem_cnt() >= 1) {
-      return true;
-    }
+  if(IsEnvViewDisabled()) { return false;  }
+  // NOTE: only eager local tensor support view for now
+  // elem_cnt() >= 1  used to excluding 0 shape tensor
+  if (input->is_local() && !(LazyMode::is_enabled()) && input->shape()->elem_cnt() >= 1) {
+    return true;
   }
   return false;
 }
