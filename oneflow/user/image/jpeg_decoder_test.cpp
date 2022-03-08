@@ -105,13 +105,13 @@ TEST(JPEG, decoder) {
 
   for (int i = 0; i < test_num; i++) {
     cv::Mat libjpeg_image_mat;
-    JpegDecoder jpeg_decode;
 
     RandomCropGenerator libjpeg_random_crop_gen({0.1, 0.9}, {0.4, 0.6}, seeds[i], 1);
     RandomCropGenerator opencv_random_crop_gen({0.1, 0.9}, {0.4, 0.6}, seeds[i], 1);
-    jpeg_decode.PartialDecodeRandomCropImage((const unsigned char*)(jpg.data()), jpg.size(),
-                                             &libjpeg_random_crop_gen, nullptr, 0,
-                                             &libjpeg_image_mat);
+    auto status =
+        JpegPartialDecodeRandomCropImage((const unsigned char*)(jpg.data()), jpg.size(),
+                                         &libjpeg_random_crop_gen, nullptr, 0, &libjpeg_image_mat);
+    ASSERT_EQ(status, true);
 
     cv::Mat opencv_image_mat;
     std::string color_space("RGB");

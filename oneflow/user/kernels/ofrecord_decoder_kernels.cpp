@@ -205,13 +205,10 @@ void DecodeRandomCropImageFromOneRecord(const OFRecord& record, TensorBuffer* bu
   CHECK(feature.has_bytes_list());
   CHECK(feature.bytes_list().value_size() == 1);
   const std::string& src_data = feature.bytes_list().value(0);
-
   cv::Mat image;
-  JpegDecoder jpeg_decode;
 
-  if (jpeg_decode.PartialDecodeRandomCropImage((const unsigned char*)(src_data.data()),
-                                               src_data.size(), random_crop_gen, nullptr, 0, &image)
-      == JpegReturnType::kOk) {
+  if (JpegPartialDecodeRandomCropImage((const unsigned char*)(src_data.data()), src_data.size(),
+                                       random_crop_gen, nullptr, 0, &image)) {
     // convert color space
     // jpeg decode output RGB
     if (ImageUtil::IsColor(color_space) && color_space != "RGB") {

@@ -22,27 +22,10 @@ limitations under the License.
 
 namespace oneflow {
 
-enum class JpegReturnType {
-  kOk = 0,
-  kError = 1,
-};
-
-class JpegDecoder {
- public:
-  JpegDecoder();
-  ~JpegDecoder();
-  OF_DISALLOW_COPY_AND_MOVE(JpegDecoder);
-
-  JpegReturnType PartialDecodeRandomCropImage(const unsigned char* data, size_t length,
-                                              RandomCropGenerator* random_crop_gen,
-                                              unsigned char* workspace, size_t workspace_size,
-                                              cv::Mat* out);
-
- private:
-  struct jpeg_decompress_struct compress_info_;
-  struct jpeg_error_mgr jpeg_err_;
-  std::vector<unsigned char> decode_output_buf_;
-};
+bool JpegPartialDecodeRandomCropImage(const unsigned char* data, size_t length,
+                                      RandomCropGenerator* random_crop_gen,
+                                      unsigned char* workspace, size_t workspace_size,
+                                      cv::Mat* out_mat);
 
 }  // namespace oneflow
 #endif  // ONEFLOW_USER_IMAGE_JPEG_DECODER_H_

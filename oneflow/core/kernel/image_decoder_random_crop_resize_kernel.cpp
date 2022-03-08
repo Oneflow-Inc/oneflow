@@ -149,21 +149,19 @@ class CpuDecodeHandle final : public DecodeHandle {
   }
 };
 
-JpegReturnType JpegDecodeRandomCropResize(const unsigned char* data, size_t length,
-                                          RandomCropGenerator* crop_generator,
-                                          unsigned char* workspace, size_t workspace_size,
-                                          unsigned char* dst, int target_width, int target_height) {
+bool JpegDecodeRandomCropResize(const unsigned char* data, size_t length,
+                                RandomCropGenerator* crop_generator, unsigned char* workspace,
+                                size_t workspace_size, unsigned char* dst, int target_width,
+                                int target_height) {
   cv::Mat image_mat;
-  JpegDecoder jpeg_decode;
-  if (jpeg_decode.PartialDecodeRandomCropImage((const unsigned char*)(data), length, crop_generator,
-                                               workspace, workspace_size, &image_mat)
-      != JpegReturnType::kOk) {
-    return JpegReturnType::kError;
+  if (JpegPartialDecodeRandomCropImage((const unsigned char*)(data), length, crop_generator,
+                                       workspace, workspace_size, &image_mat)) {
+    return false;
   }
 
   cv::Mat dst_mat(target_height, target_width, CV_8UC3, dst, cv::Mat::AUTO_STEP);
   cv::resize(image_mat, dst_mat, cv::Size(target_width, target_height), 0, 0, cv::INTER_LINEAR);
-  return JpegReturnType::kOk;
+  return true;
 }
 
 void OpencvDecodeRandomCropResize(const unsigned char* data, size_t length,
@@ -192,8 +190,7 @@ void CpuDecodeHandle::DecodeRandomCropResize(const unsigned char* data, size_t l
                                              unsigned char* dst, int target_width,
                                              int target_height) {
   if (JpegDecodeRandomCropResize(data, length, crop_generator, workspace, workspace_size, dst,
-                                 target_width, target_height)
-      == JpegReturnType::kOk) {
+                                 target_width, target_height)) {
     return;
   }
 
