@@ -907,12 +907,6 @@ def _masked_select(self, mask):
     return flow.masked_select(self, mask)
 
 
-def _contiguous(self):
-    if self.is_contiguous():
-        return self
-    return flow._C.contiguous(self)
-
-
 def _reshape(self, *shape):
     if len(shape) == 1:
         new_shape = shape[0]
@@ -1179,7 +1173,6 @@ def RegisterMethods():
     Tensor.lt = _lt
     Tensor.le = _le
     Tensor.to_local = _to_local
-    Tensor.contiguous = _contiguous
     Tensor.reshape = _reshape
     Tensor.view = _view
     Tensor.sort = _sort

@@ -38,10 +38,7 @@ Maybe<MirroredTensor> StaticZerosTensor::AsMirroredTensor() {
       JUST(functional::Constant(*shape_, Scalar(0), CHECK_JUST(DType::Get(dtype_)), device_)));
 }
 
-std::shared_ptr<Tensor> Parameter::contiguous() const {
-  if (tensor_->is_contiguous()) { return std::const_pointer_cast<Tensor>(shared_from_this()); }
-  return std::make_shared<Parameter>(tensor_->contiguous(), this->requires_grad());
-}
+std::shared_ptr<Tensor> Parameter::contiguous() const { return tensor_->contiguous(); }
 
 /* static */ Maybe<MirroredTensor> MirroredTensor::MakeTensor(
     const std::shared_ptr<const Shape>& shape, DataType dtype, const Symbol<Device>& device,
