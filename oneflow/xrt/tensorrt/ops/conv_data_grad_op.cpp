@@ -16,6 +16,7 @@ limitations under the License.
 #include "NvInfer.h"
 #include "oneflow/xrt/tensorrt/ops/op_context.h"
 #include "oneflow/xrt/tensorrt/ops/op_kernel.h"
+#include "oneflow/xrt/tensorrt/trt_helpers.h"
 
 namespace oneflow {
 namespace xrt {
@@ -27,7 +28,7 @@ class ConvDataGradOp : public TrtOpKernel {
     nvinfer1::ITensor* input = ctx->Input("dy_0");
     nvinfer1::Weights weight = ctx->Weight("filter_0");
     const auto& dy_shape = ctx->InputShape("dy_0");
-    const auto& like_shape = ctx->InputShape("x_like_0");
+    const auto& x_shape = ctx->InputShape("x_like_0");
 
     CHECK_EQ(ctx->Attr<std::string>("data_format"), "channels_first");
     const auto& kernel_size = ctx->Attr<std::vector<int32_t>>("kernel_size");
@@ -36,23 +37,6 @@ class ConvDataGradOp : public TrtOpKernel {
     const auto& dilation = ctx->Attr<std::vector<int32_t>>("dilation_rate");
     const int groups = ctx->Attr<int32_t>("groups");
 
-    bool need_pad_input = false;
-    std::vector<int32_t> input_paddings(paddings.size(), 0);
-    for (int i = 0; i < paddings.size(); ++i) {
-      int32_t output_size = (dy_shape.At(2 + i) - 1) * strides[i] - 2 * paddings[i]
-                            + dilation[i] * (kernel_size[i] - 1) + 1;
-      if (output_size < like_shape.At(2 + i)) {
-        input_paddings[i] = 1;
-        need_pad_input = true;
-      }
-    }
-    if (need_pad_input) {
-      auto* pad_input = ctx->builder()->addPadding(
-          *input, nvinfer1::DimsHW(0, 0), nvinfer1::DimsHW(input_paddings[0], input_paddings[1]));
-      std::string name = ctx->op_name() + ".pad_input";
-      pad_input->setName(name.c_str());
-      input = pad_input->getOutput(0);
-    }
     const Shape& weight_shape = ctx->InputShape("filter_0");
     int32_t filters = weight_shape.At(1);
     nvinfer1::Weights bias{nvinfer1::DataType::kFLOAT /* type */, nullptr /* values */,
@@ -63,23 +47,24 @@ class ConvDataGradOp : public TrtOpKernel {
 
     deconv->setPaddingMode(nvinfer1::PaddingMode::kEXPLICIT_ROUND_DOWN);
     deconv->setPrePadding(nvinfer1::DimsHW(paddings[0], paddings[1]));
-    deconv->setPostPadding(nvinfer1::DimsHW(paddings[0], paddings[1]));
+    deconv->setPostPadding(nvinfer1::DimsHW(0, 0));
     deconv->setStride(nvinfer1::DimsHW(strides[0], strides[1]));
     deconv->setDilationNd(nvinfer1::DimsHW(dilation[0], dilation[1]));
     deconv->setNbGroups(groups);
 
     nvinfer1::ITensor* output = deconv->getOutput(0);
-    if (need_pad_input) {
-      nvinfer1::Dims start, size, stride;
-      start.nbDims = like_shape.NumAxes();
-      size.nbDims = start.nbDims;
-      stride.nbDims = start.nbDims;
-      for (int i = 0; i < start.nbDims; ++i) {
-        start.d[i] = 0;
-        size.d[i] = like_shape.At(i);
-        stride.d[i] = 1;
-      }
+    nvinfer1::Dims start, size, stride;
+    start.nbDims = x_shape.NumAxes();
+    size.nbDims = start.nbDims;
+    stride.nbDims = start.nbDims;
+    for (int i = 0; i < start.nbDims; ++i) {
+      start.d[i] = 0;
+      size.d[i] = x_shape.At(i);
+      stride.d[i] = 1;
+    }
+    if (!helpers::DimsEqual(size, output->getDimensions())) {
       auto* slice_output = ctx->builder()->addSlice(*output, start, size, stride);
+      slice_output->setMode(nvinfer1::SliceMode::kFILL);
       std::string name = ctx->op_name() + ".slice_output";
       slice_output->setName(name.c_str());
 
