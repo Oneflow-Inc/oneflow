@@ -36,7 +36,6 @@ class TestContiguous(flow.unittest.TestCase):
         z = y.contiguous()
         return y
 
-    
     @autotest(n=10, check_graph=True)
     def test_permute2d_tensor_with_random_data(test_case):
         device = random_device()
@@ -44,14 +43,11 @@ class TestContiguous(flow.unittest.TestCase):
         permute_list = [0, 1]
         shuffle(permute_list)
         x = random_tensor(
-            ndim=ndim,
-            dim0=random(1, 32).to(int),
-            dim1=random(1, 59).to(int),
+            ndim=ndim, dim0=random(1, 32).to(int), dim1=random(1, 59).to(int),
         ).to(device)
         y = x.permute(permute_list)
         z = y.contiguous()
         return z
-
 
     @autotest(n=10, check_graph=True)
     def test_permute3d_tensor_with_random_data(test_case):
@@ -68,7 +64,6 @@ class TestContiguous(flow.unittest.TestCase):
         y = x.permute(permute_list)
         z = y.contiguous()
         return z
-
 
     @autotest(n=10, check_graph=True)
     def test_permute4d_tensor_with_random_data(test_case):
