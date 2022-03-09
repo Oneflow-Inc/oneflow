@@ -72,7 +72,7 @@ class TestDTR(flow.unittest.TestCase):
 
         # wait for the operations to finish
         flow._oneflow_internal.eager.multi_client.Sync()
-        # check if there is 1 tensors are evicted
+        # check if there is 1 tensor evicted
         not_in_memory_num = sum(0 if x._is_in_memory else 1 for x in [x1, x2, x3, x4, x5])
         test_case.assertEqual(not_in_memory_num, 1)
         # check if the memory is full
@@ -83,11 +83,23 @@ class TestDTR(flow.unittest.TestCase):
 
         test_case.assertTrue(np.array_equal(y.numpy(), 20 * np.ones(y.shape)))
 
-    # def test_dtr_threshold(test_case):
-    #     regex = re.compile(r"(\d+(?:\.\d+)?)\s*([kmg]?b)", re.IGNORECASE)
-    #     magnitude = ["b", "kb", "mb", "gb"]
-    #     out = regex.findall(TestDTR.THRES)
-    #     test_case.assertEqual(len(out), 1)
+    def test_dtr_work_on_inplace_case_1(test_case):
+        flow.enable_dtr(True, "12KB", 0, "eq")
+
+        x1 = flow.ones(1024, requires_grad=True).to('cuda')     # 4KB (x1=1)
+        x2 = x1 * 2                         # 8KB (x1=1, x2=2)
+        y = x2 + 1                          # 12KB (x1=1, x2=2, y=3)
+        x2.add_(1)                          # 12KB (x1=1, x2=3, y=3)
+        test_case.assertEqual(x2.grad_fn.name(), 'scalar_add_backward')
+
+        x3 = x2 + 1                         # evict x1 (x2=3, x3=4, y=3)
+        x4 = x2 + 1                         # evict y (x2=3, x3=4, x4=4)
+        flow._oneflow_internal.eager.multi_client.Sync()
+        test_case.assertFalse(y._is_in_memory)   # make sure y is evicted
+        x5 = y + 1                          # evict x3, x4, y (x2, x5)
+
+        # If inplace right in DTR, y should be recomputed as 3 and x5 should be 4. Otherwise, y could be 4 and x5 could be 5
+        test_case.assertTrue(np.array_equal(x5.numpy(), 4 * np.ones(x5.shape)))
         
 
 if __name__ == "__main__":

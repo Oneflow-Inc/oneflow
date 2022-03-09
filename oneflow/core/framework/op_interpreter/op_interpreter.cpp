@@ -90,10 +90,21 @@ Maybe<void> AutogradInterpreter::Apply(const OpExpr& op_expr, const TensorTuple&
         std::any_of(inputs.begin(), inputs.end(),
                     [](const std::shared_ptr<Tensor>& tensor) { return tensor->requires_grad(); });
   }
+
+  auto original_outputs = TensorTuple(op_expr.output_size());
+  if (requires_grad) {
+    for (int i = 0; i < outputs->size(); ++i) {
+      if (outputs->at(i)) {
+        original_outputs.at(i) = outputs->at(i);
+      }
+    }
+  }
+
   {
     autograd::AutoGradMode mode(false);
     JUST(internal_->Apply(op_expr, inputs, outputs, ctx));
   }
+
   if (requires_grad) {
     const auto& grad_closure = JUST(op_expr.GetOrCreateOpGradClosure());
     JUST(grad_closure->Capture(inputs, *outputs, ctx));
@@ -117,6 +128,12 @@ Maybe<void> AutogradInterpreter::Apply(const OpExpr& op_expr, const TensorTuple&
             });
     JUST(GetThreadLocalAutogradEngine()->AddBackwardFuncPtr(op_expr.op_type_name() + "_backward",
                                                             backward_fn, inputs, outputs));
+  
+    // If inplace, set grad_fn_node for inputs(original_outputs) the same as the outputs
+    for (int i = 0; i < outputs->size(); ++i) {
+      if (original_outputs.at(i))
+        original_outputs.at(i)->set_grad_fn_node(outputs->at(i)->mut_grad_fn_node());
+    }
   }
   for (auto& output : *outputs) {
     output->set_is_leaf(inputs.size() == 0 || !requires_grad);

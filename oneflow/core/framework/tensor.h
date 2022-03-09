@@ -467,7 +467,7 @@ class MirroredTensor : public TensorIf<MirroredTensor>,
     CHECK_NOTNULL_OR_RETURN(mirrored_tensor);
     bool old_requires_grad = requires_grad();
     impl_ = mirrored_tensor->impl_;
-    set_requires_grad(old_requires_grad);
+    JUST(set_requires_grad(old_requires_grad));
     grad_fn_node_ = nullptr;
     return Maybe<void>::Ok();
   }
@@ -508,6 +508,15 @@ class DTRMirroredTensor final : public MirroredTensor {
   Maybe<Tensor> detach() const override;
 
   std::shared_ptr<Holder> holder() const { return holder_; }
+  Maybe<void> set_data(const std::shared_ptr<Tensor>& other) override {
+    const auto& dtr_mirrored_tensor = std::dynamic_pointer_cast<DTRMirroredTensor>(JUST(other->detach()));
+    CHECK_NOTNULL_OR_RETURN(dtr_mirrored_tensor);
+    bool old_requires_grad = requires_grad();
+    impl_ = dtr_mirrored_tensor->impl_;
+    JUST(set_requires_grad(old_requires_grad));
+    // grad_fn_node_ = nullptr;
+    return Maybe<void>::Ok();
+  }
 
   Maybe<void> set_blob_object_bp_required();
 
@@ -618,7 +627,7 @@ class ConsistentTensor final : public TensorIf<ConsistentTensor>,
     CHECK_NOTNULL_OR_RETURN(consistent_tensor);
     bool old_requires_grad = requires_grad();
     impl_ = consistent_tensor->impl_;
-    set_requires_grad(old_requires_grad);
+    JUST(set_requires_grad(old_requires_grad));
     grad_fn_node_ = nullptr;
     return Maybe<void>::Ok();
   }

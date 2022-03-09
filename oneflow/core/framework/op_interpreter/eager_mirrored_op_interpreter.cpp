@@ -102,26 +102,27 @@ Maybe<void> NaiveInterpret(const UserOpExpr& user_op_expr, const TensorTuple& in
   auto* output_tensor_metas = ThreadLocalDefaultOutputMutTensorMetas(outputs->size());
   std::vector<bool> inplace_flag(outputs->size());
   for (int i = 0; i < outputs->size(); i++) {
-    if (!outputs->at(i)) {
-      if (oneflow::DTREnabled()) {
-        const auto& tensor_impl = std::make_shared<DTREagerMirroredTensorImpl>();
-        outputs->at(i) = std::make_shared<DTRMirroredTensor>(tensor_impl);
-        output_tensor_metas->at(i) = tensor_impl->mut_tensor_meta();
-        // if (inputs.size() > 0) {
-        //   auto dtr_mirrored_tensor = dynamic_cast<one::DTRMirroredTensor*>(outputs->at(i).get());
-        //   CHECK_NOTNULL_OR_RETURN(dtr_mirrored_tensor);
-        //   dtr_mirrored_tensor->set_tensor_inputs(inputs);
-        // }
+    if (oneflow::DTREnabled()) {
+      if (!outputs->at(i)) {
+        inplace_flag[i] = false;
       } else {
+        CHECK_EQ_OR_RETURN(outputs->size(), inputs.size());
+        inplace_flag[i] = true;
+      }
+      const auto& tensor_impl = std::make_shared<DTREagerMirroredTensorImpl>();
+      outputs->at(i) = std::make_shared<DTRMirroredTensor>(tensor_impl);
+      output_tensor_metas->at(i) = tensor_impl->mut_tensor_meta();
+      } else {
+        if (!outputs->at(i)) {
         const auto& tensor_impl = std::make_shared<EagerMirroredTensorImpl>();
         outputs->at(i) = std::make_shared<MirroredTensor>(tensor_impl);
         output_tensor_metas->at(i) = tensor_impl->mut_tensor_meta();
+      } else {
+        bool has_eager_blob_object = JUST(outputs->at(i)->has_eager_blob_object());
+        CHECK_OR_RETURN(has_eager_blob_object);
+        output_eager_blob_objects->at(i) = JUST(outputs->at(i)->eager_blob_object());
       }
-    } else {
-      bool has_eager_blob_object = JUST(outputs->at(i)->has_eager_blob_object());
-      CHECK_OR_RETURN(has_eager_blob_object);
-      output_eager_blob_objects->at(i) = JUST(outputs->at(i)->eager_blob_object());
-    }
+    }  
   }
   Symbol<Device> op_device;
   bool need_check_mem_case = true;
@@ -194,6 +195,16 @@ Maybe<void> NaiveInterpret(const UserOpExpr& user_op_expr, const TensorTuple& in
     return builder->LocalCallOpKernel(kernel, input_eager_blob_objects, output_eager_blob_objects,
                                       ctx, op_device);
   }));
+
+  // if inplace: outputs.size() should equal to inputs.size()
+  if (oneflow::DTREnabled()) {
+    for (int i = 0; i < outputs->size(); i++) {
+      if (inplace_flag[i]) {
+        CHECK_NOTNULL_OR_RETURN(inputs.at(i));
+        JUST(inputs.at(i)->set_data(outputs->at(i)));
+      }
+    }
+  }
   return Maybe<void>::Ok();
 }
 
