@@ -39,7 +39,8 @@ def _test_flow_squeeze_with_random_data(test_case, placement, sbp):
     return y
 
 
-@autotest(n=1, check_graph=False)
+# ReshapeLike op does not support 0 dim tensor
+@autotest(n=1, auto_backward=False, check_graph=False)
 def _test_squeeze_with_0_size_data(test_case, placement, sbp):
     x = random_tensor(3, 8, 16, 0).to_global(placement, sbp)
     y = torch.squeeze(x)
