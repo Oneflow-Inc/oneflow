@@ -97,14 +97,6 @@ def MakeInitialScope(job_conf, device_tag, machine_device_ids, hierarchy, is_mir
     return scope
 
 
-def InitScopeStack():
-    job_conf = job_conf_cfg.JobConfigProto()
-    job_conf.mutable_predict_conf()
-    job_conf.set_job_name("")
-    scope = MakeInitialScope(job_conf, "cpu", ["0:0"], None, is_mirrored=False)
-    oneflow._oneflow_internal.InitGlobalScopeStack(scope)
-
-
 @contextmanager
 def ScopeContext(scope):
     old_scope = oneflow._oneflow_internal.GetCurrentScope()

@@ -257,7 +257,7 @@ def barrier():
     Synchronizes all processes.
 
     """
-    flow._oneflow_internal.eager.multi_client.Sync()
+    flow._oneflow_internal.eager.Sync()
 
 
 def reduce_scatter(output, input_list):
