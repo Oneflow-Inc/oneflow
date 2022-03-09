@@ -26,6 +26,8 @@ class Tensor;
 
 namespace view {
 
+bool IsEnvViewDisabled();
+
 bool IsViewApplicable(const std::shared_ptr<Tensor>& input);
 
 Maybe<Tensor> BasicView(const std::shared_ptr<Tensor>& input, const Shape& target_shape,
