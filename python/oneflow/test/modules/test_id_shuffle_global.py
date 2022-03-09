@@ -249,8 +249,6 @@ def _test_embedding_gradient_shuffle(test_case):
         for j in range(num_unique_i):
             unique_id = unique_ids_i[j]
             of_unique_embedding_grad[unique_id, :] = unique_embedding_grad_i[j, :]
-            unique_embedding_grad_i[j, :] = 0
-        test_case.assertTrue(unique_embedding_grad_i.sum() == 0)
 
     test_case.assertTrue(
         np.allclose(of_unique_embedding_grad, np_cur_rank_unique_embedding_grad)
