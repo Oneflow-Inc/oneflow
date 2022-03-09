@@ -128,8 +128,9 @@ void GenChunkForMultiNNGraphMemoryReuseInMultiClient(
           mem_block->set_chunk_id(chunk->chunk_id());
           mem_block->set_chunk_offset(current_chunk_offset);
           current_chunk_offset += mem_block->mem_size();
-          VLOG(3) << "Lazy nn.Graph Reused MemBlock :[" << mem_block->DebugString()
-                  << "] to old Chunk :[" << chunk->DebugString() << "]\n";
+          LOG(WARNING) << "Lazy nn.Graph Reused MemBlock :[\n"
+                       << mem_block->DebugString() << "\n] to old Chunk :[\n"
+                       << chunk->DebugString() << "\n]\n";
         } else {
           // NOTE(chengcheng): sad, no chunk can used, so this mem block need to insert in remain.
           CHECK(remain_blocks.insert(*mem_block_it).second);
@@ -153,7 +154,7 @@ void GenChunkForMultiNNGraphMemoryReuseInMultiClient(
       first_block->set_chunk_id(new_chunk.chunk_id());
       first_block->set_chunk_offset(0);
       ++remain_block_it;
-      VLOG(3) << "Lazy nn.Graph Add MemBlock :[" << first_block->DebugString() << "] to NewChunk :["
+      VLOG(2) << "Lazy nn.Graph Add MemBlock :[" << first_block->DebugString() << "] to NewChunk :["
               << new_chunk.DebugString() << "]\n";
 
       while (remain_block_it != remain_blocks.end()) {
@@ -163,7 +164,7 @@ void GenChunkForMultiNNGraphMemoryReuseInMultiClient(
         this_block->set_chunk_id(new_chunk.chunk_id());
         this_block->set_chunk_offset(new_chunk.mem_size());
         new_chunk.set_mem_size(new_chunk.mem_size() + this_block->mem_size());
-        VLOG(3) << "Lazy nn.Graph Add MemBlock :[" << this_block->DebugString()
+        VLOG(2) << "Lazy nn.Graph Add MemBlock :[" << this_block->DebugString()
                 << "] to NewChunk :[" << new_chunk.DebugString() << "]\n";
         ++remain_block_it;
       }

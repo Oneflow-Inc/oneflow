@@ -116,6 +116,10 @@ void RegstMgr::AddPlan(const Plan& plan,
     PackedChunkInfo* packed_chunk = &pair.second;
     char* ptr =
         Global<MemoryAllocator>::Get()->Allocate(packed_chunk->mem_case, packed_chunk->size);
+    if (packed_chunk->mem_case.has_device_cuda_mem()) {
+      Global<ChunkMgr>::Get()->RecordAllocatedSize(
+          packed_chunk->mem_case.device_cuda_mem().device_id(), packed_chunk->size);
+    }
     // sort blocks as thrd id
     std::vector<const MemBlockProto*>* blocks = &(packed_chunk->blocks);
     std::sort(blocks->begin(), blocks->end(),

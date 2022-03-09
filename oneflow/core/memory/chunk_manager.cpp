@@ -53,6 +53,11 @@ char* ChunkMgr::FindOrCreateChunk(const ChunkProto& chunk) {
   if (it == chunk_id2chunk_.end()) {
     char* chunk_ptr = Global<MemoryAllocator>::Get()->Allocate(chunk.mem_case(), chunk.mem_size());
     it = chunk_id2chunk_.emplace(chunk.chunk_id(), ChunkWithPtr(chunk_ptr, chunk)).first;
+    if (chunk.mem_case().has_device_cuda_mem()) {
+      RecordAllocatedSize(chunk.mem_case().device_cuda_mem().device_id(), chunk.mem_size());
+    }
+    // LOG(INFO) << " Lazy nn.Graph need allocate [ " << (chunk.mem_size() * 1.0 / 1000000.0)
+    //          << " MiB ]  for new chunk with proto: " << chunk.DebugString();
   } else {
     const ChunkProto& store_proto = it->second.chunk_proto;
     CHECK_EQ(chunk.chunk_id(), store_proto.chunk_id());
@@ -61,6 +66,13 @@ char* ChunkMgr::FindOrCreateChunk(const ChunkProto& chunk) {
     CHECK_EQ(chunk.mem_size(), store_proto.mem_size());
   }
   return it->second.ptr;
+}
+
+void ChunkMgr::RecordAllocatedSize(int64_t device_id, int64_t mem_size) {
+  device_id2mem_size_[device_id] += mem_size;
+  LOG(INFO) << " Lazy allocate [ " << (mem_size * 1.0 / 1000000.0)
+            << " MiB ] in device : " << device_id << " , and total memory used by nn.Graph is: [ "
+            << (device_id2mem_size_[device_id] * 1.0 / 1000000.0) << " MiB ]\n";
 }
 
 }  // namespace oneflow

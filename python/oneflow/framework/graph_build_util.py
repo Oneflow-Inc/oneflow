@@ -94,8 +94,9 @@ class GLogScopeContext(object):
     def __init__(self, s_level, v_level=0):
         self._prev_v = oneflow._oneflow_internal.GetFLAGS_v()
         self._prev_logtostderr = oneflow._oneflow_internal.GetFLAGS_alsologtostderr()
-        self._v = v_level
-        self._s = s_level
+        # NOTE(chengcheng, xuxiaoyu): glog level need consider env var config.
+        self._v = max(self._prev_v, v_level)
+        self._s = min(self._prev_v, s_level)
 
     def __enter__(self):
         oneflow._oneflow_internal.SetFLAGS_v(self._v)

@@ -188,6 +188,12 @@ bool CudaAllocator::AllocateBlockToExtendTotalMem(size_t aligned_size) {
   // extend sucess
   total_memory_bytes_ += final_allocate_bytes;
 
+  // TODO(chengcheng): VLOG(2)
+  LOG(INFO) << " CudaAllocator id: " << this << " need allocate new block with [ "
+            << (final_allocate_bytes * 1.0 / 1000000.0)
+            << " MiB ]. \n And total size used by this CudaAllocator is : [ "
+            << (total_memory_bytes_ * 1.0 / 1000000.0) << " MiB ]. \n";
+
   Piece* piece = AllocatePiece();
   piece->size = final_allocate_bytes;
   piece->ptr = mem_ptr;

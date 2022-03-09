@@ -37,6 +37,7 @@ class ChunkMgr final {
 
   // Runtime
   char* FindOrCreateChunk(const ChunkProto& chunk);
+  void RecordAllocatedSize(int64_t device_id, int64_t mem_size);
 
  private:
   // for master compiler in PlanUtil::GenMemBlockAndChunkWithVariableOpNames4Plan
@@ -51,7 +52,7 @@ class ChunkMgr final {
 
   // for runtime
   HashMap<int64_t, ChunkWithPtr> chunk_id2chunk_;
-  std::mutex mutex_;
+  HashMap<int64_t, int64_t> device_id2mem_size_;
 };
 
 }  // namespace oneflow
