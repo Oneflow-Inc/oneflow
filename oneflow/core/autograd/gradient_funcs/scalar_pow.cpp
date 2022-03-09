@@ -103,7 +103,7 @@ class ScalarTensorPow : public OpExprGradFunction<ScalarPowCaptureState> {
     MutableAttrMap attrs;
     in_grads->resize(1);
     if (ctx->requires_grad) {
-      (*in_grads)[0]= JUST(functional::ScalarTensorPowGrad(x, out_grads[0], ctx->operand));
+      (*in_grads)[0] = JUST(functional::ScalarTensorPowGrad(x, out_grads[0], ctx->operand));
     }
     return Maybe<void>::Ok();
   }
