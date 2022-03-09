@@ -730,6 +730,9 @@ class AsStridedFunctor {
           << "as_strided: Negative strides are not supported at the moment, got strides:"
           << stride[i];
     }
+    if (view::IsViewApplicable(input)) {
+      return JUST(view::AsStrided(input, size, stride, storage_offset));
+    }
     MutableAttrMap attrs;
     JUST(attrs.SetAttr<std::vector<int32_t>>("size", size));
     JUST(attrs.SetAttr<std::vector<int32_t>>("stride", stride));
@@ -755,7 +758,7 @@ class AsStridedGradFunctor {
     JUST(attrs.SetAttr<std::vector<int32_t>>("size", size));
     JUST(attrs.SetAttr<std::vector<int32_t>>("stride", stride));
     JUST(attrs.SetAttr<int32_t>("storage_offset", storage_offset));
-    return OpInterpUtil::Dispatch<Tensor>(*op_, {dy, input}, attrs);
+    return OpInterpUtil::Dispatch<Tensor>(*op_, {dy->contiguous(), input->contiguous()}, attrs);
   }
 
  private:

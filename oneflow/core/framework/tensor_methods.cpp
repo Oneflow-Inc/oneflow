@@ -404,6 +404,37 @@ Maybe<Tensor> Narrow(const std::shared_ptr<Tensor>& input, const int64_t& dim, c
   return output;
 }
 
+Maybe<Tensor> AsStrided(const std::shared_ptr<one::Tensor>& input,
+                        const std::vector<int32_t>& size, const std::vector<int32_t>& stride,
+                        const int32_t& storage_offset) {
+  DimVector dim_vec;
+  dim_vec.insert(dim_vec.end(), size.begin(), size.end());
+  Shape target_shape(dim_vec);
+  StrideVector stride_vec(stride.size());
+  for (int i = 0; i < stride.size(); ++i) {
+    stride_vec[i] = stride[i];
+  }
+  auto output = JUST(view::BasicView(input, target_shape, Stride(stride_vec),  storage_offset));
+  if (input->requires_grad()) {
+    auto backward_fn =
+        std::make_shared<std::function<Maybe<void>(const TensorTuple&, TensorTuple*, bool)>>(
+            [=](const TensorTuple& out_grads, TensorTuple* in_grads,
+                bool create_graph) -> Maybe<void> {
+              autograd::AutoGradMode mode(create_graph);
+              CHECK_EQ_OR_RETURN(out_grads.size(), 1);
+              auto like = JUST(functional::Empty(Shape(input->shape()->dim_vec()), input->dtype(),
+              JUST(input->device())));
+              in_grads->resize(1);
+              in_grads->at(0) =
+                  JUST(functional::AsStridedGrad(out_grads.at(0), input, size, stride, storage_offset));
+              return Maybe<void>::Ok();
+            });
+    TensorTuple outputs{output};
+    JUST(GetThreadLocalAutogradEngine()->AddBackwardFuncPtr("view::as_strided_backward", backward_fn, {input}, &outputs));
+  }
+  return output;
+}
+
 Maybe<Tensor> Transpose(const std::shared_ptr<Tensor>& input, const std::vector<int32_t>& permute) {
   const auto& shape = input->shape();
   const auto& strides = JUST(input->stride());
