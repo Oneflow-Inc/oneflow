@@ -365,10 +365,7 @@ mlir::IntegerAttr GetDefaultSeed(::mlir::PatternRewriter& rewriter) {
   return getSI64IntegerAttr(rewriter, (int64_t)gen->current_seed());
 }
 
-bool IsAddToOutputNone(ValueRange value) {
-  if (value.size()) { return false; }
-  return true;
-}
+bool IsAddToOutputNone(ValueRange value) { return value.size() > 0 ? false : true; }
 
 }  // namespace oneflow
 
