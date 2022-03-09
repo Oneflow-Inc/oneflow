@@ -111,19 +111,19 @@ namespace oneflow {
 
 /* static */ Maybe<void> EmbeddingGradientShuffleOp::InferLogicalTensorDesc(
     user_op::InferContext* ctx) {
-  const Shape& embedding_diff_shape = ctx->InputShape("embedding_diff", 0);
+  const Shape& embedding_grad_shape = ctx->InputShape("embedding_grad", 0);
   const Shape& num_unique_matrix_shape = ctx->InputShape("num_unique_matrix", 0);
   const Shape& cur_rank_inverse_indices_shape = ctx->InputShape("cur_rank_inverse_indices", 0);
   const Shape& inverse_unique_partition_indices_shape =
       ctx->InputShape("inverse_unique_partition_indices", 0);
   const int64_t num_ids = inverse_unique_partition_indices_shape.elem_cnt();
   const int64_t parallel_num = ctx->parallel_num();
-  const int64_t embedding_size = embedding_diff_shape.elem_cnt() / num_ids;
+  const int64_t embedding_size = embedding_grad_shape.elem_cnt() / num_ids;
   CHECK_EQ_OR_RETURN(num_unique_matrix_shape.elem_cnt(), parallel_num * parallel_num);
   CHECK_EQ_OR_RETURN(cur_rank_inverse_indices_shape.elem_cnt(), parallel_num * num_ids);
   DimVector out_dim_vec = cur_rank_inverse_indices_shape.dim_vec();
   out_dim_vec.push_back(embedding_size);
-  *ctx->OutputShape("cur_rank_unique_embedding_diff", 0) = Shape(out_dim_vec);
+  *ctx->OutputShape("cur_rank_unique_embedding_grad", 0) = Shape(out_dim_vec);
   return Maybe<void>::Ok();
 }
 
@@ -145,7 +145,7 @@ namespace oneflow {
   CHECK_OR_RETURN(ctx->InputDType("num_unique_matrix", 0) == DataType::kUInt32);
   CHECK_OR_RETURN(ctx->InputDType("cur_rank_inverse_indices", 0) == DataType::kUInt32);
   CHECK_OR_RETURN(ctx->InputDType("inverse_unique_partition_indices", 0) == DataType::kUInt32);
-  *ctx->OutputDType("cur_rank_unique_embedding_diff", 0) = ctx->InputDType("embedding_diff", 0);
+  *ctx->OutputDType("cur_rank_unique_embedding_grad", 0) = ctx->InputDType("embedding_grad", 0);
   return Maybe<void>::Ok();
 }
 

@@ -554,10 +554,10 @@ OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(REGISTER_CUDA_EMBEDDING_SHUFFLE_KERNEL,
                                  FLOATING_DATA_TYPE_SEQ FLOAT16_DATA_TYPE_SEQ, IDX_DATA_TYPE_SEQ)
 
 template<typename T, typename IDX>
-void ShuffleEmbeddingsDiff(cudaStream_t cuda_stream, ncclComm_t comm, int64_t parallel_id,
+void ShuffleEmbeddingsGrad(cudaStream_t cuda_stream, ncclComm_t comm, int64_t parallel_id,
                            int64_t parallel_num, int64_t num_ids, int64_t embedding_size,
                            DataType data_type, IDX* host_num_unique_matrix,
-                           T* unique_partition_embedding_diff, T* received_embeddings_diff) {
+                           T* unique_partition_embedding_grad, T* received_embeddings_grad) {
   std::vector<int64_t> send_offset;
   std::vector<int64_t> send_elem_cnt;
   std::vector<int64_t> recv_offset;
@@ -569,8 +569,8 @@ void ShuffleEmbeddingsDiff(cudaStream_t cuda_stream, ncclComm_t comm, int64_t pa
   MakeShuffleGatherParams(host_num_unique_matrix, num_ids, embedding_size, parallel_id,
                           parallel_num, &send_offset, &send_elem_cnt, &recv_offset, &recv_elem_cnt);
   ShuffleData(cuda_stream, comm, data_type, send_offset, send_elem_cnt,
-              unique_partition_embedding_diff, recv_offset, recv_elem_cnt,
-              received_embeddings_diff);
+              unique_partition_embedding_grad, recv_offset, recv_elem_cnt,
+              received_embeddings_grad);
 }
 
 template<typename T, typename IDX>
@@ -590,17 +590,17 @@ class EmbeddingGradientShuffleKernel final : public user_op::OpKernel {
                const user_op::OpKernelCache*) const override {
     auto* kernel_state = dynamic_cast<DataShuffleKernelState<IDX>*>(state);
     CHECK(kernel_state != nullptr);
-    const user_op::Tensor* embedding_diff = ctx->Tensor4ArgNameAndIndex("embedding_diff", 0);
+    const user_op::Tensor* embedding_grad = ctx->Tensor4ArgNameAndIndex("embedding_grad", 0);
     const user_op::Tensor* num_unique_matrix = ctx->Tensor4ArgNameAndIndex("num_unique_matrix", 0);
     const user_op::Tensor* cur_rank_inverse_indices =
         ctx->Tensor4ArgNameAndIndex("cur_rank_inverse_indices", 0);
     const user_op::Tensor* inverse_unique_partition_indices =
         ctx->Tensor4ArgNameAndIndex("inverse_unique_partition_indices", 0);
-    user_op::Tensor* cur_rank_unique_embedding_diff =
-        ctx->Tensor4ArgNameAndIndex("cur_rank_unique_embedding_diff", 0);
-    const int64_t embedding_size = cur_rank_unique_embedding_diff->shape().At(1);
+    user_op::Tensor* cur_rank_unique_embedding_grad =
+        ctx->Tensor4ArgNameAndIndex("cur_rank_unique_embedding_grad", 0);
+    const int64_t embedding_size = cur_rank_unique_embedding_grad->shape().At(1);
     IDX* host_num_unique_matrix = kernel_state->HostNumUniqueMatrix();
-    DataType data_type = embedding_diff->data_type();
+    DataType data_type = embedding_grad->data_type();
     const int64_t num_ids = inverse_unique_partition_indices->shape().elem_cnt();
     const int64_t parallel_num = ctx->parallel_ctx().parallel_num();
     const int64_t parallel_id = ctx->parallel_ctx().parallel_id();
@@ -616,36 +616,36 @@ class EmbeddingGradientShuffleKernel final : public user_op::OpKernel {
       cur_rank_num_ids += host_num_unique_matrix[i * parallel_num + parallel_id];
     }
 
-    size_t unique_partition_embedding_diff_size =
+    size_t unique_partition_embedding_grad_size =
         GetCudaAlignedSize(parallel_num * num_ids * embedding_size * sizeof(T));
-    size_t received_embedding_diff_size = unique_partition_embedding_diff_size;
-    T* unique_partition_embedding_diff = reinterpret_cast<T*>(tmp_buffer->mut_dptr());
-    T* received_embedding_diff =
-        reinterpret_cast<T*>(tmp_buffer->mut_dptr<char>() + unique_partition_embedding_diff_size);
+    size_t received_embedding_grad_size = unique_partition_embedding_grad_size;
+    T* unique_partition_embedding_grad = reinterpret_cast<T*>(tmp_buffer->mut_dptr());
+    T* received_embedding_grad =
+        reinterpret_cast<T*>(tmp_buffer->mut_dptr<char>() + unique_partition_embedding_grad_size);
     CHECK_GE(tmp_buffer->shape().elem_cnt(),
-             unique_partition_embedding_diff_size + received_embedding_diff_size);
+             unique_partition_embedding_grad_size + received_embedding_grad_size);
 
-    // unique and partition embedding diff
-    OF_CUDA_CHECK(cudaMemsetAsync(unique_partition_embedding_diff, 0,
-                                  unique_partition_embedding_diff_size, cuda_stream));
+    // unique and partition embedding grad
+    OF_CUDA_CHECK(cudaMemsetAsync(unique_partition_embedding_grad, 0,
+                                  unique_partition_embedding_grad_size, cuda_stream));
     UnsortedSegmentSumKernelUtil<DeviceType::kCUDA, T, IDX, T>::UnsortedSegmentSum(
         ctx->stream(), reinterpret_cast<const IDX*>(inverse_unique_partition_indices->dptr()),
-        embedding_diff->dptr<T>(), num_ids, parallel_num * num_ids, 1, embedding_size, 0,
-        unique_partition_embedding_diff);
+        embedding_grad->dptr<T>(), num_ids, parallel_num * num_ids, 1, embedding_size, 0,
+        unique_partition_embedding_grad);
 
     ncclComm_t comm = kernel_state->comm();
-    ShuffleEmbeddingsDiff(cuda_stream, comm, parallel_id, parallel_num, num_ids, embedding_size,
-                          data_type, host_num_unique_matrix, unique_partition_embedding_diff,
-                          received_embedding_diff);
+    ShuffleEmbeddingsGrad(cuda_stream, comm, parallel_id, parallel_num, num_ids, embedding_size,
+                          data_type, host_num_unique_matrix, unique_partition_embedding_grad,
+                          received_embedding_grad);
 
-    // unique cur_rank embedding diff
-    OF_CUDA_CHECK(cudaMemsetAsync(cur_rank_unique_embedding_diff->mut_dptr(), 0,
-                                  cur_rank_unique_embedding_diff->shape().elem_cnt() * sizeof(T),
+    // unique cur_rank embedding grad
+    OF_CUDA_CHECK(cudaMemsetAsync(cur_rank_unique_embedding_grad->mut_dptr(), 0,
+                                  cur_rank_unique_embedding_grad->shape().elem_cnt() * sizeof(T),
                                   cuda_stream));
     UnsortedSegmentSumKernelUtil<DeviceType::kCUDA, T, IDX, T>::UnsortedSegmentSum(
         ctx->stream(), reinterpret_cast<const IDX*>(cur_rank_inverse_indices->dptr()),
-        received_embedding_diff, cur_rank_num_ids, cur_rank_num_ids, 1, embedding_size, 0,
-        cur_rank_unique_embedding_diff->mut_dptr<T>());
+        received_embedding_grad, cur_rank_num_ids, cur_rank_num_ids, 1, embedding_size, 0,
+        cur_rank_unique_embedding_grad->mut_dptr<T>());
   }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
@@ -656,15 +656,15 @@ class EmbeddingGradientShuffleKernel final : public user_op::OpKernel {
                                                   OF_PP_PAIR_FIRST(idx_dtype_pair)>>()            \
       .SetIsMatchedHob(                                                                           \
           (user_op::HobDeviceType() == DeviceType::kCUDA)                                         \
-          && (user_op::HobDataType("embedding_diff", 0) == OF_PP_PAIR_SECOND(t_dtype_pair))       \
+          && (user_op::HobDataType("embedding_grad", 0) == OF_PP_PAIR_SECOND(t_dtype_pair))       \
           && (user_op::HobDataType("num_unique_matrix", 0) == OF_PP_PAIR_SECOND(idx_dtype_pair))) \
       .SetInferTmpSizeFn([](user_op::InferContext* ctx) {                                         \
-        const user_op::TensorDesc& cur_rank_unique_embedding_diff =                               \
-            ctx->InputTensorDesc("cur_rank_unique_embedding_diff", 0);                            \
-        size_t cur_rank_embedding_diff_size =                                                     \
-            GetCudaAlignedSize(cur_rank_unique_embedding_diff.shape().elem_cnt()                  \
+        const user_op::TensorDesc& cur_rank_unique_embedding_grad =                               \
+            ctx->InputTensorDesc("cur_rank_unique_embedding_grad", 0);                            \
+        size_t cur_rank_embedding_grad_size =                                                     \
+            GetCudaAlignedSize(cur_rank_unique_embedding_grad.shape().elem_cnt()                  \
                                * sizeof(OF_PP_PAIR_FIRST(t_dtype_pair)));                         \
-        return 2 * cur_rank_embedding_diff_size;                                                  \
+        return 2 * cur_rank_embedding_grad_size;                                                  \
       });
 
 OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(REGISTER_CUDA_EMBEDDING_GRADIENT_SHUFFLE_KERNEL,

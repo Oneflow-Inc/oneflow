@@ -178,10 +178,10 @@ def _test_embedding_gradient_shuffle(test_case):
     placement = flow.placement(type="cuda", ranks=list(range(parallel_num)))
     num_columns = 26
     embedding_size = 128
-    embedding_diff = np.random.rand(batch_size, num_columns, embedding_size).astype(
+    embedding_grad = np.random.rand(batch_size, num_columns, embedding_size).astype(
         np.float32
     )
-    embedding_diff_tensor = flow.tensor(embedding_diff, requires_grad=False).to_global(
+    embedding_grad_tensor = flow.tensor(embedding_grad, requires_grad=False).to_global(
         placement=placement, sbp=flow.sbp.split(0)
     )
 
@@ -189,7 +189,7 @@ def _test_embedding_gradient_shuffle(test_case):
         def __init__(self):
             super().__init__()
 
-        def build(self, ids, column_ids, embedding_diff):
+        def build(self, ids, column_ids, embedding_grad):
             (
                 num_unique_matrix,
                 inverse_unique_partition_indices,
@@ -198,14 +198,14 @@ def _test_embedding_gradient_shuffle(test_case):
                 _,
                 cur_rank_inverse_indices,
             ) = flow._C.id_shuffle(ids, column_ids, num_columns)
-            cur_rank_unique_embedding_diff = flow._C.embedding_gradient_shuffle(
-                embedding_diff,
+            cur_rank_unique_embedding_grad = flow._C.embedding_gradient_shuffle(
+                embedding_grad,
                 num_unique_matrix,
                 cur_rank_inverse_indices,
                 inverse_unique_partition_indices,
             )
             return (
-                cur_rank_unique_embedding_diff,
+                cur_rank_unique_embedding_grad,
                 flow.cast(cur_rank_num_unique, flow.int32),
                 cur_rank_unique_ids,
             )
@@ -213,47 +213,47 @@ def _test_embedding_gradient_shuffle(test_case):
     graph = TestGraph()
     for i in range(10):
         ids_tensor, column_ids_tensor = get_tensors(batch_size, num_columns)
-        graph(ids_tensor, column_ids_tensor, embedding_diff_tensor)
+        graph(ids_tensor, column_ids_tensor, embedding_grad_tensor)
     ids_tensor, column_ids_tensor = get_tensors(batch_size, num_columns)
     (
-        cur_rank_unique_embedding_diff,
+        cur_rank_unique_embedding_grad,
         local_cur_rank_num_unique,
         cur_rank_unique_ids,
-    ) = graph(ids_tensor, column_ids_tensor, embedding_diff_tensor)
+    ) = graph(ids_tensor, column_ids_tensor, embedding_grad_tensor)
     cur_rank_num_unique = local_cur_rank_num_unique.to_local().to_global(
         placement=placement, sbp=flow.sbp.split(0)
     )
     global_ids = ids_tensor.numpy()
-    global_embedding_diff = embedding_diff_tensor.numpy()
+    global_embedding_grad = embedding_grad_tensor.numpy()
     np_unique_ids = np.unique(global_ids)
     np_num_unique = np_unique_ids.size
-    np_cur_rank_unique_embedding_diff = np.zeros((max_id, embedding_size))
+    np_cur_rank_unique_embedding_grad = np.zeros((max_id, embedding_size))
     for k in range(np_num_unique):
         unique_id = np_unique_ids[k]
-        np_cur_rank_unique_embedding_diff[unique_id, :] = sum(
-            global_embedding_diff.reshape(-1, embedding_size)[
+        np_cur_rank_unique_embedding_grad[unique_id, :] = sum(
+            global_embedding_grad.reshape(-1, embedding_size)[
                 np.where(global_ids.flatten() == unique_id)[0]
             ]
         )
 
     cur_rank_num_ids = batch_size * num_columns * parallel_num
-    of_unique_embedding_diff = np.zeros((max_id, embedding_size))
+    of_unique_embedding_grad = np.zeros((max_id, embedding_size))
     for i in range(parallel_num):
         num_unique_i = cur_rank_num_unique.numpy()[i]
         unique_ids_i = cur_rank_unique_ids.numpy()[
             cur_rank_num_ids * i : cur_rank_num_ids * (i + 1)
         ]
-        unique_embedding_diff_i = cur_rank_unique_embedding_diff.numpy()[
+        unique_embedding_grad_i = cur_rank_unique_embedding_grad.numpy()[
             cur_rank_num_ids * i : cur_rank_num_ids * (i + 1)
         ]
         for j in range(num_unique_i):
             unique_id = unique_ids_i[j]
-            of_unique_embedding_diff[unique_id, :] = unique_embedding_diff_i[j, :]
-            unique_embedding_diff_i[j, :] = 0
-        test_case.assertTrue(unique_embedding_diff_i.sum() == 0)
+            of_unique_embedding_grad[unique_id, :] = unique_embedding_grad_i[j, :]
+            unique_embedding_grad_i[j, :] = 0
+        test_case.assertTrue(unique_embedding_grad_i.sum() == 0)
 
     test_case.assertTrue(
-        np.allclose(of_unique_embedding_diff, np_cur_rank_unique_embedding_diff)
+        np.allclose(of_unique_embedding_grad, np_cur_rank_unique_embedding_grad)
     )
 
 

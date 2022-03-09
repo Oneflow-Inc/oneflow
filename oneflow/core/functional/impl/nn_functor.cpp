@@ -2278,21 +2278,21 @@ class EmbeddingGradientShuffleFunctor {
  public:
   EmbeddingGradientShuffleFunctor() {
     op_ = CHECK_JUST(one::OpBuilder("embedding_gradient_shuffle")
-                         .Input("embedding_diff")
+                         .Input("embedding_grad")
                          .Input("num_unique_matrix")
                          .Input("cur_rank_inverse_indices")
                          .Input("inverse_unique_partition_indices")
-                         .Output("cur_rank_unique_embedding_diff")
+                         .Output("cur_rank_unique_embedding_grad")
                          .Build());
   }
 
   Maybe<Tensor> operator()(
-      const std::shared_ptr<one::Tensor>& embedding_diff,
+      const std::shared_ptr<one::Tensor>& embedding_grad,
       const std::shared_ptr<one::Tensor>& num_unique_matrix,
       const std::shared_ptr<one::Tensor>& cur_rank_inverse_indices,
       const std::shared_ptr<one::Tensor>& inverse_unique_partition_indices) const {
     return OpInterpUtil::Dispatch<Tensor>(
-        *op_, {embedding_diff, num_unique_matrix, cur_rank_inverse_indices,
+        *op_, {embedding_grad, num_unique_matrix, cur_rank_inverse_indices,
                inverse_unique_partition_indices});
   }
 
