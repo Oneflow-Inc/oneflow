@@ -257,15 +257,20 @@ template<typename IDX>
 class DataShuffleKernelState final : public user_op::OpKernelState {
  public:
   explicit DataShuffleKernelState(user_op::KernelInitContext* ctx)
-      : has_independent_stream_(ctx->op_conf().has_stream_name_hint()),
+      : device_index_(-1),
+        has_independent_stream_(ctx->op_conf().has_stream_name_hint()),
         stream_name_(""),
         parallel_desc_(ctx->parallel_desc()) {
+    OF_CUDA_CHECK(cudaGetDevice(&device_index_));
     if (has_independent_stream_) { stream_name_ = ctx->op_conf().stream_name_hint(); }
     OF_CUDA_CHECK(cudaMallocHost(
         &host_num_unique_matrix_,
         parallel_desc_.parallel_num() * parallel_desc_.parallel_num() * sizeof(IDX)));
   }
-  ~DataShuffleKernelState() { OF_CUDA_CHECK(cudaFreeHost(host_num_unique_matrix_)); }
+  ~DataShuffleKernelState() {
+    CudaCurrentDeviceGuard guard(device_index_);
+    OF_CUDA_CHECK(cudaFreeHost(host_num_unique_matrix_));
+  }
 
   ncclComm_t comm() { return GetOrCreate().comm; }
 
@@ -299,6 +304,7 @@ class DataShuffleKernelState final : public user_op::OpKernelState {
     comm_.reset(new Comm(comm));
   }
 
+  int device_index_;
   bool has_independent_stream_;
   std::string stream_name_;
   ParallelDesc parallel_desc_;
