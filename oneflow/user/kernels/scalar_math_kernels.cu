@@ -115,6 +115,15 @@ struct ScalarPowGradFunctor<half> {
   const half exponent;
 };
 
+template<typename T>
+struct ScalarTensorPowGradFunctor {
+  OF_DEVICE_FUNC explicit ScalarTensorPowGradFunctor(T exponent) : exponent(exponent) {}
+  __device__ T operator()(T x, T dy) const {
+    return pow(exponent, x) * log(static_cast<double>(exponent)) * dy;
+  }
+  const T exponent;
+};
+
 template<>
 struct ScalarTensorPowGradFunctor<float> {
   OF_DEVICE_FUNC explicit ScalarTensorPowGradFunctor(float exponent) : exponent(exponent) {}
@@ -132,15 +141,6 @@ struct ScalarTensorPowGradFunctor<half> {
     return __float2half(exp * __powf(exp, __half2float(x)) * __logf(exp) * __half2float(dy));
   }
   const half exponent;
-};
-
-template<typename T>
-struct ScalarTensorPowGradFunctor {
-  OF_DEVICE_FUNC explicit ScalarTensorPowGradFunctor(T exponent) : exponent(exponent) {}
-  __device__ T operator()(T x, T dy) const {
-    return pow(exponent, x) * log(static_cast<double>(exponent)) * dy;
-  }
-  const T exponent;
 };
 
 template<DeviceType device_type, typename T>
@@ -179,7 +179,6 @@ class GpuScalarPowGradKernel final : public user_op::OpKernel {
       .SetCreateFn<GpuScalarPowGradKernel<device, dtype>>()     \
       .SetIsMatchedHob((user_op::HobDeviceType() == device)     \
                        && (user_op::HobDataType("dx", 0) == GetDataType<dtype>::value));
-
 
 REGISTER_CUDA_SCALAR_POW_BACKWARD_KERNEL(DeviceType::kCUDA, float);
 REGISTER_CUDA_SCALAR_POW_BACKWARD_KERNEL(DeviceType::kCUDA, double);
@@ -220,7 +219,6 @@ class GpuScalarTensorPowGradKernel final : public user_op::OpKernel {
       .SetCreateFn<GpuScalarTensorPowGradKernel<device, dtype>>()      \
       .SetIsMatchedHob((user_op::HobDeviceType() == device)            \
                        && (user_op::HobDataType("dx", 0) == GetDataType<dtype>::value));
-
 
 REGISTER_CUDA_SCALAR_TENSOR_POW_BACKWARD_KERNEL(DeviceType::kCUDA, float);
 REGISTER_CUDA_SCALAR_TENSOR_POW_BACKWARD_KERNEL(DeviceType::kCUDA, double);
