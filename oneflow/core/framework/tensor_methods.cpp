@@ -29,6 +29,21 @@ namespace oneflow {
 namespace one {
 namespace view {
 
+namespace {
+
+void CheckIsPerm(const std::vector<int32_t>& perm) {
+  std::vector<bool> is_used(perm.size(), false);
+  FOR_RANGE(size_t, i, 0, perm.size()) {
+    CHECK_GE(perm[i], 0);
+    CHECK_LE(perm[i], perm.size());
+    CHECK_EQ(is_used[perm[i]], false);
+    is_used[perm[i]] = true;
+  }
+}
+
+} // namespace
+
+
 // NOTE: use env variable 'ONEFLOW_DISABLE_VIEW' control use view mechanism or not
 // If  set true, then do not use view mechanism(and view ops)
 bool IsEnvViewDisabled() {
