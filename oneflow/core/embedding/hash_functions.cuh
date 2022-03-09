@@ -18,6 +18,12 @@ limitations under the License.
 
 #include <stdint.h>
 
+namespace oneflow {
+
+namespace embedding {
+
+namespace {
+
 static const uint64_t PRIME64_1 =
     0x9E3779B185EBCA87ULL;  // 0b1001111000110111011110011011000110000101111010111100101010000111
 static const uint64_t PRIME64_2 =
@@ -56,6 +62,8 @@ static const size_t kShardingHashSeed = 1;
 static const size_t kLocalUniqueHashSeed = 2;
 static const size_t kGlobalUniqueHashSeed = 3;
 
+}  // namespace
+
 struct ShardingHash {
   __device__ __host__ __forceinline__ size_t operator()(uint64_t v) {
     return xxh64_uint64(v, kShardingHashSeed);
@@ -81,4 +89,6 @@ struct XXH64 {
   }
 };
 
+}  // namespace embedding
+}  // namespace oneflow
 #endif  // ONEFLOW_CORE_EMBEDDING_HASH_FUNCTION_H_

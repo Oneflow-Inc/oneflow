@@ -361,7 +361,7 @@ class IdShuffleKernel final : public user_op::OpKernel {
     size_t hash_capacity = parallel_num * num_ids;
     void* workspace_ptr = buffer_manager.Ptr(IdShuffleBufferType::kWorkspace);
     size_t workspace_size = buffer_manager.WorkspaceBytes();
-    UniqueAndPartition<K, U, IDX, ShardingHash>(
+    UniqueAndPartition<K, U, IDX, embedding::ShardingHash>(
         cuda_stream, num_ids, hash_capacity, parallel_num, reinterpret_cast<const K*>(ids->dptr()),
         column_ids_ptr, num_partitioned_unique, partitioned_unique_ids,
         partitioned_unique_column_ids,
@@ -386,7 +386,7 @@ class IdShuffleKernel final : public user_op::OpKernel {
                          cur_rank_unique_column_ids->data_type(), host_num_unique_matrix,
                          partitioned_unique_ids, partitioned_unique_column_ids, received_ids,
                          received_column_ids, &received_elem_cnt, need_process_column_ids);
-    UniqueAndPartition<K, U, IDX, LocalUniqueHash>(
+    UniqueAndPartition<K, U, IDX, embedding::LocalUniqueHash>(
         cuda_stream, received_elem_cnt, hash_capacity, 1, received_ids, received_column_ids,
         reinterpret_cast<IDX*>(cur_rank_num_unique->mut_dptr()),
         reinterpret_cast<K*>(cur_rank_unique_ids->mut_dptr()),
@@ -519,7 +519,6 @@ class EmbeddingShuffleKernel final : public user_op::OpKernel {
         reverse_unique_cur_rank_embeddings, 0);
 
     ncclComm_t comm = kernel_state->comm();
-    // send recv embeddings
     ShuffleEmbeddings(cuda_stream, comm, parallel_id, parallel_num, num_ids, embedding_size,
                       data_type, host_num_unique_matrix, reverse_unique_cur_rank_embeddings,
                       received_embeddings);
@@ -635,7 +634,6 @@ class EmbeddingGradientShuffleKernel final : public user_op::OpKernel {
         unique_partition_embedding_diff);
 
     ncclComm_t comm = kernel_state->comm();
-    // send recv embeddings diff
     ShuffleEmbeddingsDiff(cuda_stream, comm, parallel_id, parallel_num, num_ids, embedding_size,
                           data_type, host_num_unique_matrix, unique_partition_embedding_diff,
                           received_embedding_diff);
