@@ -2206,9 +2206,9 @@ class FusedDotFeatureInteractionFunctor {
   std::vector<std::shared_ptr<OpExpr>> ops_no_output_concat_;
 };
 
-class IdShuffleFunctor {
+class OneEmbeddingIdShuffleFunctor {
  public:
-  IdShuffleFunctor() {
+  OneEmbeddingIdShuffleFunctor() {
     op_column_ids_has_in_out_ = CHECK_JUST(one::OpBuilder("id_shuffle")
                                                .Input("ids")
                                                .Input("column_ids")
@@ -2248,9 +2248,9 @@ class IdShuffleFunctor {
   std::shared_ptr<OpExpr> op_column_ids_no_in_has_out_;
 };
 
-class EmbeddingShuffleFunctor {
+class OneEmbeddingEmbeddingShuffleFunctor {
  public:
-  EmbeddingShuffleFunctor() {
+  OneEmbeddingEmbeddingShuffleFunctor() {
     op_ = CHECK_JUST(one::OpBuilder("embedding_shuffle")
                          .Input("cur_rank_embeddings")
                          .Input("num_unique_matrix")
@@ -2274,9 +2274,9 @@ class EmbeddingShuffleFunctor {
   std::shared_ptr<OpExpr> op_;
 };
 
-class EmbeddingGradientShuffleFunctor {
+class OneEmbeddingEmbeddingGradientShuffleFunctor {
  public:
-  EmbeddingGradientShuffleFunctor() {
+  OneEmbeddingEmbeddingGradientShuffleFunctor() {
     op_ = CHECK_JUST(one::OpBuilder("embedding_gradient_shuffle")
                          .Input("embedding_grad")
                          .Input("num_unique_matrix")
@@ -2369,9 +2369,10 @@ ONEFLOW_FUNCTION_LIBRARY(m) {
   m.add_functor<impl::RoiAlignFunctor>("RoiAlign");
   m.add_functor<impl::RoiAlignGradFunctor>("RoiAlignGrad");
   m.add_functor<impl::FusedDotFeatureInteractionFunctor>("FusedDotFeatureInteraction");
-  m.add_functor<impl::IdShuffleFunctor>("IdShuffle");
-  m.add_functor<impl::EmbeddingShuffleFunctor>("EmbeddingShuffle");
-  m.add_functor<impl::EmbeddingGradientShuffleFunctor>("EmbeddingGradientShuffle");
+  m.add_functor<impl::OneEmbeddingIdShuffleFunctor>("OneEmbeddingIdShuffle");
+  m.add_functor<impl::OneEmbeddingEmbeddingShuffleFunctor>("OneEmbeddingEmbeddingShuffle");
+  m.add_functor<impl::OneEmbeddingEmbeddingGradientShuffleFunctor>(
+      "OneEmbeddingEmbeddingGradientShuffle");
 };
 
 }  // namespace functional

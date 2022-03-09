@@ -238,9 +238,6 @@ class IdShuffleTmpBufferManager final {
   int64_t Size(IdShuffleBufferType type) { return sizes_.at(static_cast<size_t>(type)); }
 
   size_t TotalBufferSize() const { return offset_; }
-  size_t WorkspaceBytes() const {
-    return sizes_.at(static_cast<size_t>(IdShuffleBufferType::kWorkspace));
-  }
 
  private:
   void AllocBuffer(IdShuffleBufferType type, size_t size) {

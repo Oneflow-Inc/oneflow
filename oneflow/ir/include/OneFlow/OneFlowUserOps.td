@@ -9030,6 +9030,13 @@ def OneFlow_UpsampleTrilinear3DGradOp : OneFlow_BaseOp<"upsample_trilinear_3d_gr
   let has_get_sbp_fn = 1;
   let has_data_type_infer_fn = 1;
 }
+#endif // GET_ONEFLOW_UPSAMPLE_OP_DEFINITIONS
+
+// Group: OneEmbedding
+// id_shuffle, embedding_shuffle, embedding_gradient_shuffle
+// Total: 3
+
+#ifdef GET_ONEFLOW_ONE_EMBEDDING_OP_DEFINITIONS
 
 def OneFlow_IdShuffleOp : OneFlow_BaseOp<"id_shuffle", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
@@ -9088,5 +9095,4 @@ def OneFlow_EmbeddingGradientShuffleOp : OneFlow_BaseOp<"embedding_gradient_shuf
   let has_data_type_infer_fn = 1;
 }
 
-#endif // GET_ONEFLOW_UPSAMPLE_OP_DEFINITIONS
-
+#endif // GET_ONEFLOW_ONE_EMBEDDING_OP_DEFINITIONS

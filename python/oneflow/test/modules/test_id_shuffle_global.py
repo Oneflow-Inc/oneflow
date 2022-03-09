@@ -58,7 +58,7 @@ def _test_id_shuffle(test_case, has_column_id, num_columns):
                 cur_rank_unique_ids,
                 cur_rank_unique_column_ids,
                 cur_rank_inverse_indices,
-            ) = flow._C.id_shuffle(ids, column_ids, num_columns)
+            ) = flow._C.one_embedding_id_shuffle(ids, column_ids, num_columns)
             return (
                 flow.cast(num_unique_matrix, flow.int32),
                 flow.cast(inverse_unique_partition_indices, flow.int32),
@@ -152,9 +152,9 @@ def _test_embedding_shuffle(test_case, dtype):
                 cur_rank_unique_ids,
                 _,
                 cur_rank_inverse_indices,
-            ) = flow._C.id_shuffle(ids, column_ids, num_columns)
+            ) = flow._C.one_embedding_id_shuffle(ids, column_ids, num_columns)
             unique_embeddings = flow._C.gather(data, cur_rank_unique_ids, axis=0)
-            embeddings = flow._C.embedding_shuffle(
+            embeddings = flow._C.one_embedding_embedding_shuffle(
                 unique_embeddings,
                 flow._C.identity(num_unique_matrix),
                 flow._C.identity(cur_rank_inverse_indices),
@@ -197,8 +197,8 @@ def _test_embedding_gradient_shuffle(test_case):
                 cur_rank_unique_ids,
                 _,
                 cur_rank_inverse_indices,
-            ) = flow._C.id_shuffle(ids, column_ids, num_columns)
-            cur_rank_unique_embedding_grad = flow._C.embedding_gradient_shuffle(
+            ) = flow._C.one_embedding_id_shuffle(ids, column_ids, num_columns)
+            cur_rank_unique_embedding_grad = flow._C.one_embedding_embedding_gradient_shuffle(
                 embedding_grad,
                 num_unique_matrix,
                 cur_rank_inverse_indices,
