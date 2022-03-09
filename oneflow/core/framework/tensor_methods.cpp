@@ -41,8 +41,7 @@ void CheckIsPerm(const std::vector<int32_t>& perm) {
   }
 }
 
-} // namespace
-
+}  // namespace
 
 // NOTE: use env variable 'ONEFLOW_DISABLE_VIEW' control use view mechanism or not
 // If  set true, then do not use view mechanism(and view ops)
