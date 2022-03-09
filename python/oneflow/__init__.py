@@ -213,7 +213,6 @@ del _env
 oneflow._oneflow_internal.RegisterGILForeignLockHelper()
 oneflow._oneflow_internal.InitDefaultConsistentTransportTokenScope()
 
-scope_util.InitScopeStack()
 oneflow._oneflow_internal.EnableEagerEnvironment(True)
 from oneflow.framework import python_callback, register_python_callback
 

@@ -83,12 +83,7 @@ def env_init():
     CompleteEnvProto(default_env_proto)
     if default_env_proto.ctrl_bootstrap_conf.world_size > 1:
         check_non_localhost_proxy_and_print_warning()
-<<<<<<< HEAD
     return c_api_util.GetEnvContext(default_env_proto)
-=======
-    c_api_util.InitEnv(default_env_proto)
-    return True
->>>>>>> a81140cecf79f240e55fdf95b6e21132d1257600
 
 
 def api_machine(*val: list) -> None:
