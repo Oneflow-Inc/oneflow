@@ -70,7 +70,6 @@ class ScalarPow : public OpExprGradFunction<ScalarPowCaptureState> {
 
 REGISTER_OP_EXPR_GRAD_FUNCTION("scalar_pow", ScalarPow);
 
-
 class ScalarTensorPow : public OpExprGradFunction<ScalarPowCaptureState> {
  public:
   Maybe<void> Init(const OpExpr& op) override {

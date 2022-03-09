@@ -41,7 +41,6 @@ struct UnaryByScalarFunctor<Op, float16> {
   const half scalar;
 };
 
-
 template<template<typename> class Op>
 struct UnaryByScalarTensorFunctor<Op, float16> {
   __host__ __device__ explicit UnaryByScalarTensorFunctor(half scalar) : scalar(scalar) {}
@@ -68,12 +67,11 @@ struct ScalarMathFunctor<DeviceType::kCUDA, BIN_OP, float16> final {
   }
 };
 
-
 template<template<typename> class BIN_OP, typename T>
 struct ScalarTensorMathFunctor<DeviceType::kCUDA, BIN_OP, T> final {
   void operator()(ep::Stream* stream, const int64_t elem_cnt, const T scalar, const T* in, T* out) {
-    OF_CUDA_CHECK(cuda::elementwise::Unary(UnaryByScalarTensorFunctor<BIN_OP, T>(scalar), elem_cnt, out,
-                                           in, stream->As<ep::CudaStream>()->cuda_stream()));
+    OF_CUDA_CHECK(cuda::elementwise::Unary(UnaryByScalarTensorFunctor<BIN_OP, T>(scalar), elem_cnt,
+                                           out, in, stream->As<ep::CudaStream>()->cuda_stream()));
   }
 };
 
@@ -95,7 +93,6 @@ INSTANTIATE_SCALAR_MATH_FUNCTORS(DeviceType::kCUDA, BinaryFuncMul);
 INSTANTIATE_SCALAR_MATH_FUNCTORS(DeviceType::kCUDA, BinaryFuncDiv);
 INSTANTIATE_SCALAR_MATH_FUNCTORS(DeviceType::kCUDA, BinaryFuncPow);
 INSTANTIATE_SCALAR_TENSOR_MATH_FUNCTORS(DeviceType::kCUDA, BinaryFuncPow);
-
 
 template<typename T>
 struct ScalarPowGradFunctor {
@@ -132,9 +129,8 @@ struct ScalarTensorPowGradFunctor<half> {
   OF_DEVICE_FUNC explicit ScalarTensorPowGradFunctor(half exponent) : exponent(exponent) {}
   __device__ half operator()(half x, half dy) const {
     const float exp = __half2float(exponent);
-    return __float2half(
-        exp * __powf(exp, __half2float(x)) * log(static_cast<float>(exp))
-        * __half2float(dy));
+    return __float2half(exp * __powf(exp, __half2float(x)) * log(static_cast<float>(exp))
+                        * __half2float(dy));
   }
   const half exponent;
 };
@@ -183,8 +179,6 @@ REGISTER_CUDA_SCALAR_POW_BACKWARD_KERNEL(DeviceType::kCUDA, int64_t);
 REGISTER_CUDA_SCALAR_POW_BACKWARD_KERNEL(DeviceType::kCUDA, float);
 REGISTER_CUDA_SCALAR_POW_BACKWARD_KERNEL(DeviceType::kCUDA, double);
 
-
-
 template<DeviceType device_type, typename T>
 class GpuScalarTensorPowGradKernel final : public user_op::OpKernel {
  public:
@@ -218,8 +212,8 @@ class GpuScalarTensorPowGradKernel final : public user_op::OpKernel {
 
 #define REGISTER_CUDA_SCALAR_TENSOR_POW_BACKWARD_KERNEL(device, dtype) \
   REGISTER_USER_KERNEL("scalar_tensor_pow_grad")                       \
-      .SetCreateFn<GpuScalarTensorPowGradKernel<device, dtype>>()     \
-      .SetIsMatchedHob((user_op::HobDeviceType() == device)     \
+      .SetCreateFn<GpuScalarTensorPowGradKernel<device, dtype>>()      \
+      .SetIsMatchedHob((user_op::HobDeviceType() == device)            \
                        && (user_op::HobDataType("dx", 0) == GetDataType<dtype>::value));
 
 REGISTER_CUDA_SCALAR_TENSOR_POW_BACKWARD_KERNEL(DeviceType::kCUDA, uint8_t);

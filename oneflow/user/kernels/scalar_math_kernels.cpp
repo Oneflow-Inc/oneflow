@@ -64,7 +64,6 @@ class ScalarMathKernel final : public user_op::OpKernel {
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
 
-
 template<DeviceType device_type, template<typename> class BIN_OP, typename T>
 class ScalarTensorPowKernel final : public user_op::OpKernel {
  public:
@@ -88,8 +87,8 @@ class ScalarTensorPowKernel final : public user_op::OpKernel {
 
     int64_t elem_cnt = out->shape().elem_cnt();
     if (elem_cnt != 0) {
-      ScalarTensorMathFunctor<device_type, BIN_OP, T>()(ctx->stream(), elem_cnt, scalar_operand, in_ptr,
-                                                  out_ptr);
+      ScalarTensorMathFunctor<device_type, BIN_OP, T>()(ctx->stream(), elem_cnt, scalar_operand,
+                                                        in_ptr, out_ptr);
     } else {
       // For 0-d Tensor
       return;
@@ -97,7 +96,6 @@ class ScalarTensorPowKernel final : public user_op::OpKernel {
   }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
-
 
 #define REGISTER_UNARY_MATH_SCALAR_ELEMWISE_USER_KERNEL(device, kernel_name, binary_op,       \
                                                         input_dtype_pair)                     \
@@ -117,19 +115,18 @@ class ScalarTensorPowKernel final : public user_op::OpKernel {
                                                   dtype_pair);                                   \
   REGISTER_UNARY_MATH_SCALAR_ELEMWISE_USER_KERNEL(device, "scalar_div", BinaryFuncDiv,           \
                                                   dtype_pair);                                   \
-  REGISTER_UNARY_MATH_SCALAR_ELEMWISE_USER_KERNEL(device, "scalar_pow", BinaryFuncPow, dtype_pair); 
+  REGISTER_UNARY_MATH_SCALAR_ELEMWISE_USER_KERNEL(device, "scalar_pow", BinaryFuncPow, dtype_pair);
 
-
-#define REGISTER_UNARY_MATH_SCALAR_TENSOR_ELEMWISE_USER_KERNEL(device, kernel_name, binary_op,       \
-                                                        input_dtype_pair)                     \
-  REGISTER_USER_KERNEL(kernel_name)                                                           \
+#define REGISTER_UNARY_MATH_SCALAR_TENSOR_ELEMWISE_USER_KERNEL(device, kernel_name, binary_op,     \
+                                                               input_dtype_pair)                   \
+  REGISTER_USER_KERNEL(kernel_name)                                                                \
       .SetCreateFn<ScalarTensorPowKernel<device, binary_op, OF_PP_PAIR_FIRST(input_dtype_pair)>>() \
-      .SetIsMatchedHob((user_op::HobDeviceType() == device)                                   \
+      .SetIsMatchedHob((user_op::HobDeviceType() == device)                                        \
                        && (user_op::HobDataType("in", 0) == OF_PP_PAIR_SECOND(input_dtype_pair)));
 
-  #define REGISTER_SCALAR_TENSOR_POW_KERNEL(device, dtype_pair)                                          \
-  REGISTER_UNARY_MATH_SCALAR_TENSOR_ELEMWISE_USER_KERNEL(device, "scalar_tensor_pow", BinaryFuncPow,  dtype_pair);
-
+#define REGISTER_SCALAR_TENSOR_POW_KERNEL(device, dtype_pair)                         \
+  REGISTER_UNARY_MATH_SCALAR_TENSOR_ELEMWISE_USER_KERNEL(device, "scalar_tensor_pow", \
+                                                         BinaryFuncPow, dtype_pair);
 
 // we register uint8_t, int8_t, int32_t, int64_t, float, double, float16.
 OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(REGISTER_SCALAR_MATH_KERNEL, (DeviceType::kCPU),
@@ -173,7 +170,8 @@ class CpuScalarPowGradKernel final : public user_op::OpKernel {
 
     const int32_t elem_cnt = x_tensor->shape().elem_cnt();
     FOR_RANGE(int32_t, i, 0, elem_cnt) {
-      dx_ptr[i] = scalar_operand * (std::pow(x_ptr[i], scalar_operand - static_cast<T>(1))) * dy_ptr[i];
+      dx_ptr[i] =
+          scalar_operand * (std::pow(x_ptr[i], scalar_operand - static_cast<T>(1))) * dy_ptr[i];
     }
   }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
@@ -218,16 +216,16 @@ class CpuScalarTensorPowGradKernel final : public user_op::OpKernel {
     const int32_t elem_cnt = x_tensor->shape().elem_cnt();
     // NOTE: y = a^x    ==>>   dy/dx = a^x * lna
     FOR_RANGE(int32_t, i, 0, elem_cnt) {
-      dx_ptr[i] =  std::pow(scalar_operand, x_ptr[i]) * std::log(scalar_operand) * dy_ptr[i];
+      dx_ptr[i] = std::pow(scalar_operand, x_ptr[i]) * std::log(scalar_operand) * dy_ptr[i];
     }
   }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
 
-#define REGISTER_CPU_SCALAR_TENSOR_POW_GRAD_KERNEL(device, dtype)  \
-  REGISTER_USER_KERNEL("scalar_tensor_pow_grad")                   \
+#define REGISTER_CPU_SCALAR_TENSOR_POW_GRAD_KERNEL(device, dtype) \
+  REGISTER_USER_KERNEL("scalar_tensor_pow_grad")                  \
       .SetCreateFn<CpuScalarTensorPowGradKernel<device, dtype>>() \
-      .SetIsMatchedHob((user_op::HobDeviceType() == device) \
+      .SetIsMatchedHob((user_op::HobDeviceType() == device)       \
                        && (user_op::HobDataType("dx", 0) == GetDataType<dtype>::value));
 
 REGISTER_CPU_SCALAR_TENSOR_POW_GRAD_KERNEL(DeviceType::kCPU, uint8_t);

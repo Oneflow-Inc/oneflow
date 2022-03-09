@@ -237,7 +237,6 @@ class ScalarPowFunctor : public ScalarMathBaseFunctor {
   ScalarPowFunctor() : ScalarMathBaseFunctor(/*op_name=*/"scalar_pow") {}
 };
 
-
 class ScalarTensorPowFunctor : public ScalarMathBaseFunctor {
  public:
   ScalarTensorPowFunctor() : ScalarMathBaseFunctor(/*op_name=*/"scalar_tensor_pow") {}
@@ -272,11 +271,11 @@ class ScalarPowGradFunctor {
   std::shared_ptr<OpExpr> op_;
 };
 
-
 class ScalarTensorPowGradFunctor {
  public:
   ScalarTensorPowGradFunctor() {
-    op_ = CHECK_JUST(one::OpBuilder("scalar_tensor_pow_grad").Input("x").Input("dy").Output("dx").Build());
+    op_ = CHECK_JUST(
+        one::OpBuilder("scalar_tensor_pow_grad").Input("x").Input("dy").Output("dx").Build());
   }
   Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x,
                            const std::shared_ptr<one::Tensor>& dy, const Scalar& scalar) const {

@@ -83,7 +83,6 @@ IMPLEMENT_SCALAR_MATH_OP_FUNCS(ScalarTensorPow, GetSbp4ScalarMath)
   return Maybe<void>::Ok();
 }
 
-
 /*static*/ Maybe<void> ScalarTensorPowGradOp::GetSbp(user_op::SbpContext* ctx) {
   const user_op::TensorDesc& x_tensor = ctx->LogicalTensorDesc4InputArgNameAndIndex("x", 0);
   FOR_RANGE(int64_t, i, 0, x_tensor.shape().NumAxes()) {
