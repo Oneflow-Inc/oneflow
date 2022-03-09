@@ -138,8 +138,7 @@ struct ScalarTensorPowGradFunctor<half> {
   OF_DEVICE_FUNC explicit ScalarTensorPowGradFunctor(half exponent) : exponent(exponent) {}
   __device__ half operator()(half x, half dy) const {
     const float exp = __half2float(exponent);
-    return __float2half(exp * __powf(exp, __half2float(x)) * __logf(exp)
-                        * __half2float(dy));
+    return __float2half(exp * __powf(exp, __half2float(x)) * __logf(exp) * __half2float(dy));
   }
   const half exponent;
 };
