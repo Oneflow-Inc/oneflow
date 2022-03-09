@@ -24,6 +24,7 @@ namespace embedding {
 
 namespace {
 
+//From https://github.com/Cyan4973/xxHash/blob/dev/xxhash.h
 static const uint64_t PRIME64_1 =
     0x9E3779B185EBCA87ULL;  // 0b1001111000110111011110011011000110000101111010111100101010000111
 static const uint64_t PRIME64_2 =
