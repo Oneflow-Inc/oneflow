@@ -294,6 +294,7 @@ Maybe<void> NNGraph::CompileAndInitRuntime() {
   NewRuntimeBuffers();
 
   JUST(GetVariableRealBlobAfterSyncPlan());
+  JUST(RecordEagerVariableSize());
   runtime_.reset(new Runtime(plan_, variable_op_name2eager_blob_));
   runtime_inited_ = true;
   return Maybe<void>::Ok();
@@ -400,6 +401,17 @@ Maybe<void> NNGraph::GetVariableRealBlobAfterSyncPlan() {
   }
   // Clear after load additional variable is finished.
   additional_variable_op_tobe_loaded_name2tensor_.clear();
+  return Maybe<void>::Ok();
+}
+
+Maybe<void> NNGraph::RecordEagerVariableSize() {
+  int64_t total_eager_var_size = 0;
+  for (const auto& pair : variable_op_name2eager_blob_) {
+    total_eager_var_size += pair.second->AlignedTotalByteSize();
+  }
+  LOG(INFO) << " nn.Graph : " << name_ << " use " << variable_op_name2eager_blob_.size()
+            << " eager tensors and total memory used by these tensors is [ "
+            << (total_eager_var_size * 1.0 / 1000000.0) << " MiB ]. \n";
   return Maybe<void>::Ok();
 }
 
