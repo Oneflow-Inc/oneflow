@@ -320,7 +320,7 @@ class FusedMLPFunctor {
       device_type = JUST(x->device())->enum_type();
     }
 
-#if CUDA_VERSION >= 11040
+#if CUDA_VERSION >= 11050
     if ((device_type == DeviceType::kCUDA) && (weight_size <= kMaxInputCount)
         && (!ParseBooleanFromEnv("ONEFLOW_FUNCTOR_DISABLE_FUSED_MLP", false))) {
       TensorTuple input(2 * weight_size + 1);
