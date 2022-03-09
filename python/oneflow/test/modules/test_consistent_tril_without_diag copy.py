@@ -42,5 +42,6 @@ class TestConsistentTril(flow.unittest.TestCase):
             for sbp in all_sbp(placement, max_dim=4):
                 _test_global_tril_without_diag(test_case, placement, sbp)
 
+
 if __name__ == "__main__":
     unittest.main()

@@ -20,7 +20,6 @@ import oneflow as flow
 import oneflow.unittest
 
 
-
 @autotest(n=2, check_graph=False)
 def _test_global_tril_with_diag(test_case, placement, sbp):
     diagonal = random(-3, 3).to(int)
