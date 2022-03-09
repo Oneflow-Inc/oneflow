@@ -173,8 +173,7 @@ class CpuScalarPowGradKernel final : public user_op::OpKernel {
 
     const int32_t elem_cnt = x_tensor->shape().elem_cnt();
     FOR_RANGE(int32_t, i, 0, elem_cnt) {
-      dx_ptr[i] =
-          scalar_operand * (std::pow(x_ptr[i], scalar_operand - static_cast<T>(1))) * dy_ptr[i];
+      dx_ptr[i] = scalar_operand * (std::pow(x_ptr[i], scalar_operand - static_cast<T>(1))) * dy_ptr[i];
     }
   }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
@@ -192,5 +191,50 @@ REGISTER_CPU_SCALAR_POW_GRAD_KERNEL(DeviceType::kCPU, int32_t);
 REGISTER_CPU_SCALAR_POW_GRAD_KERNEL(DeviceType::kCPU, int64_t);
 REGISTER_CPU_SCALAR_POW_GRAD_KERNEL(DeviceType::kCPU, float);
 REGISTER_CPU_SCALAR_POW_GRAD_KERNEL(DeviceType::kCPU, double);
+
+template<DeviceType device_type, typename T>
+class CpuScalarTensorPowGradKernel final : public user_op::OpKernel {
+ public:
+  CpuScalarTensorPowGradKernel() = default;
+  ~CpuScalarTensorPowGradKernel() = default;
+
+ private:
+  void Compute(user_op::KernelComputeContext* ctx) const override {
+    const user_op::Tensor* x_tensor = ctx->Tensor4ArgNameAndIndex("x", 0);
+    const user_op::Tensor* dy_tensor = ctx->Tensor4ArgNameAndIndex("dy", 0);
+    user_op::Tensor* dx_tensor = ctx->Tensor4ArgNameAndIndex("dx", 0);
+    const T* x_ptr = x_tensor->dptr<T>();
+    const T* dy_ptr = dy_tensor->dptr<T>();
+    T* dx_ptr = dx_tensor->mut_dptr<T>();
+    T scalar_operand = static_cast<T>(0);
+    if (ctx->Attr<bool>("has_int_operand")) {
+      scalar_operand = static_cast<T>(ctx->Attr<int64_t>("int_operand"));
+    } else if (ctx->Attr<bool>("has_float_operand")) {
+      scalar_operand = static_cast<T>(ctx->Attr<double>("float_operand"));
+    } else {
+      UNIMPLEMENTED();
+    }
+
+    const int32_t elem_cnt = x_tensor->shape().elem_cnt();
+    // NOTE: y = a^x    ==>>   dy/dx = a^x * lna
+    FOR_RANGE(int32_t, i, 0, elem_cnt) {
+      dx_ptr[i] =  std::pow(scalar_operand, x_ptr[i]) * std::log(scalar_operand) * dy_ptr[i];
+    }
+  }
+  bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
+};
+
+#define REGISTER_CPU_SCALAR_TENSOR_POW_GRAD_KERNEL(device, dtype)  \
+  REGISTER_USER_KERNEL("scalar_tensor_pow_grad")                   \
+      .SetCreateFn<CpuScalarTensorPowGradKernel<device, dtype>>() \
+      .SetIsMatchedHob((user_op::HobDeviceType() == device) \
+                       && (user_op::HobDataType("dx", 0) == GetDataType<dtype>::value));
+
+REGISTER_CPU_SCALAR_TENSOR_POW_GRAD_KERNEL(DeviceType::kCPU, uint8_t);
+REGISTER_CPU_SCALAR_TENSOR_POW_GRAD_KERNEL(DeviceType::kCPU, int8_t);
+REGISTER_CPU_SCALAR_TENSOR_POW_GRAD_KERNEL(DeviceType::kCPU, int32_t);
+REGISTER_CPU_SCALAR_TENSOR_POW_GRAD_KERNEL(DeviceType::kCPU, int64_t);
+REGISTER_CPU_SCALAR_TENSOR_POW_GRAD_KERNEL(DeviceType::kCPU, float);
+REGISTER_CPU_SCALAR_TENSOR_POW_GRAD_KERNEL(DeviceType::kCPU, double);
 
 }  // namespace oneflow

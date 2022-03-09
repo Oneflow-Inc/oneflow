@@ -118,6 +118,27 @@ struct ScalarPowGradFunctor<half> {
   const half exponent;
 };
 
+template<typename T>
+struct ScalarTensorPowGradFunctor {
+  OF_DEVICE_FUNC explicit ScalarTensorPowGradFunctor(T exponent) : exponent(exponent) {}
+  __device__ T operator()(T x, T dy) const {
+    return pow(exponent, x) * log(static_cast<double>(exponent)) * dy;
+  }
+  const T exponent;
+};
+
+template<>
+struct ScalarTensorPowGradFunctor<half> {
+  OF_DEVICE_FUNC explicit ScalarTensorPowGradFunctor(half exponent) : exponent(exponent) {}
+  __device__ half operator()(half x, half dy) const {
+    const float exp = __half2float(exponent);
+    return __float2half(
+        exp * __powf(exp, __half2float(x)) * log(static_cast<float>(exp))
+        * __half2float(dy));
+  }
+  const half exponent;
+};
+
 template<DeviceType device_type, typename T>
 class GpuScalarPowGradKernel final : public user_op::OpKernel {
  public:
@@ -161,5 +182,51 @@ REGISTER_CUDA_SCALAR_POW_BACKWARD_KERNEL(DeviceType::kCUDA, int32_t);
 REGISTER_CUDA_SCALAR_POW_BACKWARD_KERNEL(DeviceType::kCUDA, int64_t);
 REGISTER_CUDA_SCALAR_POW_BACKWARD_KERNEL(DeviceType::kCUDA, float);
 REGISTER_CUDA_SCALAR_POW_BACKWARD_KERNEL(DeviceType::kCUDA, double);
+
+
+
+template<DeviceType device_type, typename T>
+class GpuScalarTensorPowGradKernel final : public user_op::OpKernel {
+ public:
+  GpuScalarTensorPowGradKernel() = default;
+  ~GpuScalarTensorPowGradKernel() = default;
+
+ private:
+  using user_op::OpKernel::Compute;
+  void Compute(user_op::KernelComputeContext* ctx) const override {
+    const user_op::Tensor* x_tensor = ctx->Tensor4ArgNameAndIndex("x", 0);
+    const user_op::Tensor* dy_tensor = ctx->Tensor4ArgNameAndIndex("dy", 0);
+    user_op::Tensor* dx_tensor = ctx->Tensor4ArgNameAndIndex("dx", 0);
+    const T* x_ptr = x_tensor->dptr<T>();
+    const T* dy_ptr = dy_tensor->dptr<T>();
+    T* dx_ptr = dx_tensor->mut_dptr<T>();
+    T scalar_operand = static_cast<T>(0);
+    if (ctx->Attr<bool>("has_int_operand")) {
+      scalar_operand = static_cast<T>(ctx->Attr<int64_t>("int_operand"));
+    } else if (ctx->Attr<bool>("has_float_operand")) {
+      scalar_operand = static_cast<T>(ctx->Attr<double>("float_operand"));
+    } else {
+      UNIMPLEMENTED();
+    }
+    const int32_t elem_cnt = x_tensor->shape().elem_cnt();
+    OF_CUDA_CHECK((oneflow::cuda::elementwise::Binary(
+        ScalarTensorPowGradFunctor<T>(scalar_operand), elem_cnt, dx_ptr, x_ptr, dy_ptr,
+        ctx->stream()->As<ep::CudaStream>()->cuda_stream())));
+  }
+  bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
+};
+
+#define REGISTER_CUDA_SCALAR_TENSOR_POW_BACKWARD_KERNEL(device, dtype) \
+  REGISTER_USER_KERNEL("scalar_tensor_pow_grad")                       \
+      .SetCreateFn<GpuScalarTensorPowGradKernel<device, dtype>>()     \
+      .SetIsMatchedHob((user_op::HobDeviceType() == device)     \
+                       && (user_op::HobDataType("dx", 0) == GetDataType<dtype>::value));
+
+REGISTER_CUDA_SCALAR_TENSOR_POW_BACKWARD_KERNEL(DeviceType::kCUDA, uint8_t);
+REGISTER_CUDA_SCALAR_TENSOR_POW_BACKWARD_KERNEL(DeviceType::kCUDA, int8_t);
+REGISTER_CUDA_SCALAR_TENSOR_POW_BACKWARD_KERNEL(DeviceType::kCUDA, int32_t);
+REGISTER_CUDA_SCALAR_TENSOR_POW_BACKWARD_KERNEL(DeviceType::kCUDA, int64_t);
+REGISTER_CUDA_SCALAR_TENSOR_POW_BACKWARD_KERNEL(DeviceType::kCUDA, float);
+REGISTER_CUDA_SCALAR_TENSOR_POW_BACKWARD_KERNEL(DeviceType::kCUDA, double);
 
 }  // namespace oneflow

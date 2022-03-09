@@ -83,6 +83,27 @@ IMPLEMENT_SCALAR_MATH_OP_FUNCS(ScalarTensorPow, GetSbp4ScalarMath)
   return Maybe<void>::Ok();
 }
 
+
+/*static*/ Maybe<void> ScalarTensorPowGradOp::GetSbp(user_op::SbpContext* ctx) {
+  const user_op::TensorDesc& x_tensor = ctx->LogicalTensorDesc4InputArgNameAndIndex("x", 0);
+  FOR_RANGE(int64_t, i, 0, x_tensor.shape().NumAxes()) {
+    ctx->NewBuilder().Split(ctx->inputs(), i).Split(ctx->outputs(), i).Build();
+  }
+  return Maybe<void>::Ok();
+}
+/*static*/ Maybe<void> ScalarTensorPowGradOp::InferLogicalTensorDesc(user_op::InferContext* ctx) {
+  *ctx->OutputShape("dx", 0) = ctx->InputShape("x", 0);
+  return Maybe<void>::Ok();
+}
+/*static*/ Maybe<void> ScalarTensorPowGradOp::InferPhysicalTensorDesc(user_op::InferContext* ctx) {
+  return InferLogicalTensorDesc(ctx);
+}
+/*static*/ Maybe<void> ScalarTensorPowGradOp::InferDataType(user_op::InferContext* ctx) {
+  CHECK_EQ_OR_RETURN(ctx->InputDType("x", 0), ctx->InputDType("dy", 0));
+  *ctx->OutputDType("dx", 0) = ctx->InputDType("x", 0);
+  return Maybe<void>::Ok();
+}
+
 REGISTER_USER_OP_GRAD("scalar_add")
     .SetGenBackwardOpConfFn([](const user_op::UserOpWrapper& op,
                                const user_op::AddOpFn& AddOp) -> Maybe<void> {
@@ -139,6 +160,27 @@ REGISTER_USER_OP_GRAD("scalar_pow")
         user_op::UserOpConfWrapperBuilder builder(op.op_name() + "_grad");
         user_op::UserOpConfWrapper grad_op =
             builder.Op("scalar_pow_grad")
+                .Input("x", op.input("in", 0))
+                .Input("dy", op.GetGradTensorWithOpOutput("out", 0))
+                .Output("dx")
+                .Attr("has_int_operand", op.attr<bool>("has_int_operand"))
+                .Attr("int_operand", op.attr_or_default<int64_t>("int_operand", 0))
+                .Attr("has_float_operand", op.attr<bool>("has_float_operand"))
+                .Attr("float_operand", op.attr_or_default<double>("float_operand", 0.0))
+                .Build();
+        op.BindGradTensorWithOpInput(grad_op.output("dx", 0), "in", 0);
+        AddOp(grad_op);
+      }
+      return Maybe<void>::Ok();
+    });
+
+REGISTER_USER_OP_GRAD("scalar_tensor_pow")
+    .SetGenBackwardOpConfFn([](const user_op::UserOpWrapper& op,
+                               const user_op::AddOpFn& AddOp) -> Maybe<void> {
+      if (op.NeedGenGradTensor4OpInput("in", 0)) {
+        user_op::UserOpConfWrapperBuilder builder(op.op_name() + "_grad");
+        user_op::UserOpConfWrapper grad_op =
+            builder.Op("scalar_tensor_pow_grad")
                 .Input("x", op.input("in", 0))
                 .Input("dy", op.GetGradTensorWithOpOutput("out", 0))
                 .Output("dx")

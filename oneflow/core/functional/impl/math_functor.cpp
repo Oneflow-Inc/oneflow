@@ -272,6 +272,33 @@ class ScalarPowGradFunctor {
   std::shared_ptr<OpExpr> op_;
 };
 
+
+class ScalarTensorPowGradFunctor {
+ public:
+  ScalarTensorPowGradFunctor() {
+    op_ = CHECK_JUST(one::OpBuilder("scalar_tensor_pow_grad").Input("x").Input("dy").Output("dx").Build());
+  }
+  Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x,
+                           const std::shared_ptr<one::Tensor>& dy, const Scalar& scalar) const {
+    MutableAttrMap attrs;
+    if (scalar.IsFloatingPoint()) {
+      JUST(attrs.SetAttr<bool>("has_float_operand", true));
+      JUST(attrs.SetAttr<bool>("has_int_operand", false));
+      JUST(attrs.SetAttr<double>("float_operand", JUST(scalar.As<double>())));
+    } else if (scalar.IsIntegral()) {
+      JUST(attrs.SetAttr<bool>("has_float_operand", false));
+      JUST(attrs.SetAttr<bool>("has_int_operand", true));
+      JUST(attrs.SetAttr<int64_t>("int_operand", JUST(scalar.As<int64_t>())));
+    } else {
+      UNIMPLEMENTED_THEN_RETURN() << "The scalar in ScalarTensorPowGrad should be float or int.";
+    }
+    return OpInterpUtil::Dispatch<Tensor>(*op_, {x, dy}, attrs);
+  }
+
+ private:
+  std::shared_ptr<OpExpr> op_;
+};
+
 class ScalarFloorDivFunctor : public ScalarMathBaseFunctor {
  public:
   ScalarFloorDivFunctor() : ScalarMathBaseFunctor(/*op_name=*/"scalar_floordiv") {}
@@ -2755,6 +2782,7 @@ ONEFLOW_FUNCTION_LIBRARY(m) {
   m.add_functor<ScalarPowFunctor>("ScalarPow");
   m.add_functor<ScalarTensorPowFunctor>("ScalarTensorPow");
   m.add_functor<ScalarPowGradFunctor>("ScalarPowGrad");
+  m.add_functor<ScalarTensorPowGradFunctor>("ScalarTensorPowGrad");
   m.add_functor<ReduceMaxFunctor>("ReduceMax");
   m.add_functor<MaxFunctor, Max2Functor>("Max");
   m.add_functor<ReduceMeanFunctor>("ReduceMean");
