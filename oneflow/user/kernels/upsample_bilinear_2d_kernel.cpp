@@ -40,9 +40,9 @@ static void UpsampleBilinear2DForward(const int64_t elem_cnt, const T* in_dptr,
     const T top_right = in_dptr[top_offset + params.right_w_index];
     const T bottom_left = in_dptr[bottom_offset + params.left_w_index];
     const T bottom_right = in_dptr[bottom_offset + params.right_w_index];
-    const T top = top_left + (top_right - top_left) * params.w_lerp;
-    const T bottom = bottom_left + (bottom_right - bottom_left) * params.w_lerp;
-    out_dptr[index] = top + (bottom - top) * params.h_lerp;
+    out_dptr[index] =
+        (1 - params.h_lerp) * ((1 - params.w_lerp) * top_left + params.w_lerp * top_right)
+        + params.h_lerp * ((1 - params.w_lerp) * bottom_left + params.w_lerp * bottom_right);
   }
 }
 

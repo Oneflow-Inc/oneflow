@@ -959,7 +959,6 @@ add_docstr(
 
     .. code-block:: python
 
-        >>> import numpy as np
         >>> import oneflow as flow
 
         >>> x = flow.tensor((1, 2, -1), dtype=flow.float32)
@@ -982,7 +981,6 @@ add_docstr(
 
     .. code-block:: python
 
-        >>> import numpy as np
         >>> import oneflow as flow
 
         >>> x = flow.tensor((1, 2, -1), dtype=flow.float32)
@@ -1250,13 +1248,12 @@ add_docstr(
 
     .. code-block:: python
 
-        >>> import numpy as np
         >>> import oneflow as flow
 
         >>> input = flow.tensor([1, 0, -1], dtype=flow.float32)
         >>> out = flow.logical_not(input)
         >>> out
-        tensor([0, 1, 0], dtype=oneflow.int8)
+        tensor([False,  True, False], dtype=oneflow.bool)
 
     """,
 )
@@ -1287,6 +1284,35 @@ add_docstr(
         >>> flow.dot(flow.Tensor([2, 3]), flow.Tensor([2, 1]))
         tensor(7., dtype=oneflow.float32)
 
+    """,
+)
+
+add_docstr(
+    oneflow.select,
+    r"""
+    Slices the self tensor along the selected dimension at the given index. This function returns 
+    a view of the original tensor with the given dimension removed.
+
+    Args:
+        input (Tensor): the input tensor.
+        dim  (int):  the dimension to slice.
+        select (int): the index to select with.
+
+    Returns:
+        oneflow.Tensor: the output Tensor.
+
+    For example:
+    
+    .. code-block:: python
+    
+        >>> import oneflow as flow
+        >>> input = flow.rand(3, 4, 5)
+        >>> out = flow.select(input, 0, 1)
+        >>> out.size()
+        oneflow.Size([4, 5])
+        >>> out = flow.select(input, 1, 1)
+        >>> out.size()
+        oneflow.Size([3, 5])
     """,
 )
 

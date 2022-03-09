@@ -25,6 +25,9 @@ limitations under the License.
 #include "oneflow/core/autograd/autograd_mode.h"
 #include "oneflow/core/eager/dev_vm_dep_object_consume_mode.h"
 #include "oneflow/core/functional/functional.h"
+#include "oneflow/core/framework/nd_sbp.h"
+#include "oneflow/core/framework/global_param_grad_sync_mode.h"
+#include "oneflow/core/common/container_util.h"
 
 namespace oneflow {
 namespace one {
@@ -40,12 +43,8 @@ bool IsReadyToRun(const std::vector<std::shared_ptr<AutogradMeta>>& out_meta_dat
 
 Maybe<void> CopyOrAccGrad(AutogradMeta* autograd_meta, bool autograd_mode) {
   autograd::AutoGradMode mode(autograd_mode);
-  auto current_grad = JUST(autograd_meta->current_grad()->GetAccTensor());
+  auto current_grad = JUST(autograd_meta->current_grad()->GetAccTensor({}));
   if (!current_grad) { return Maybe<void>::Ok(); }
-  for (const auto& hook : autograd_meta->hooks()) {
-    auto new_grad = hook(current_grad);
-    if (new_grad) { current_grad = new_grad; }
-  }
   if (autograd_meta->acc_grad()) {
     DevVmDepObjectConsumeModeGuard guard(DevVmDepObjectConsumeMode::NONE);
     // Should not inplace accumulate grad. For example,
@@ -144,9 +143,21 @@ Maybe<void> FunctionNode::AccGrad4RetainGradTensor() {
 }
 
 Maybe<void> FunctionNode::AccGrad4LeafTensor(bool create_graph) {
-  for (const std::shared_ptr<AutogradMeta>& out : output_meta_data_) {
+  for (auto i = 0; i < output_meta_data_.size(); i++) {
+    auto& out = output_meta_data_[i];
+
     if (out->is_leaf() && out->requires_grad()) {
       JUST(CopyOrAccGrad(out.get(), /*autograd_mode=*/false));
+
+      // control acc_grad to do boxing conditionally
+      const auto& acc_grad = out->acc_grad();
+      if (GlobalGradSyncMode::is_enabled() && acc_grad->is_consistent()) {
+        auto& tensor_info = output_tensor_infos_[i];
+        const auto& placement = JUST(tensor_info.placement());
+        const auto& nd_sbp = JUST(tensor_info.sbp());
+        JUST(out->set_acc_grad(JUST(functional::ToConsistent(
+            acc_grad, placement, *JUST(GetSbpList(nd_sbp)), GetNoneSbpList()))));
+      }
     }
   }
   return Maybe<void>::Ok();
@@ -175,7 +186,9 @@ Maybe<bool> FunctionNode::Apply(bool create_graph) {
     if (output_meta_data_.at(i)->current_grad()->Empty()) {
       output_grads.at(i) = JUST(output_tensor_infos_.at(i).zeros());
     } else {
-      output_grads.at(i) = JUST(output_meta_data_.at(i)->current_grad()->GetAccTensor());
+      const auto& hooks = JUST(oneflow::VectorAt(output_meta_data_, i))->hooks();
+      *JUST(oneflow::VectorAt(&output_grads, i)) =
+          JUST(JUST(oneflow::VectorAt(output_meta_data_, i))->current_grad()->GetAccTensor(hooks));
     }
   }
   JUST((*backward_fn_)(output_grads, &input_grads, create_graph));

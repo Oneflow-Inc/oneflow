@@ -13,9 +13,7 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
-
 #include "oneflow/core/framework/tensor_methods.h"
-
 #include "oneflow/core/autograd/autograd_engine.h"
 #include "oneflow/core/autograd/autograd_mode.h"
 #include "oneflow/core/common/container_util.h"
@@ -25,6 +23,7 @@ limitations under the License.
 #include "oneflow/core/functional/functional.h"
 #include "oneflow/core/register/ofblob.h"
 #include "oneflow/core/framework/instructions_builder.h"
+#include "oneflow/xrt/utility/env.h"
 
 namespace oneflow {
 namespace one {
@@ -49,6 +48,23 @@ Maybe<bool> IsContiguous(const std::shared_ptr<Tensor>& tensor) {
 
 namespace view {
 
+// NOTE: use env variable 'ONEFLOW_DISABLE_VIEW' control use view mechanism or not
+// If  set true, then do not use view mechanism(and view ops)
+bool IsEnvViewDisabled() {
+  static const bool env_view_disabled = EnvToBool(ONEFLOW_DISABLE_VIEW, false);
+  return env_view_disabled;
+}
+
+bool IsViewApplicable(const std::shared_ptr<Tensor>& input) {
+  if (IsEnvViewDisabled()) { return false; }
+  // NOTE: only eager local tensor support view for now
+  // elem_cnt() >= 1  used to excluding 0 shape tensor
+  if (input->is_local() && !(LazyMode::is_enabled()) && input->shape()->elem_cnt() >= 1) {
+    return true;
+  }
+  return false;
+}
+
 Maybe<Tensor> BasicView(const std::shared_ptr<Tensor>& input, const Shape& target_shape,
                         int64_t storage_offset) {
   /**
@@ -64,7 +80,6 @@ Maybe<Tensor> BasicView(const std::shared_ptr<Tensor>& input, const Shape& targe
 
 Maybe<Tensor> BasicView(const std::shared_ptr<Tensor>& input, const Shape& target_shape,
                         const Stride& target_stride, int64_t storage_offset) {
-  storage_offset = storage_offset + JUST(JUST(input->AsMirroredTensor())->storage_offset());
   // TODO(): Check shape compatible.
   auto device = JUST(input->device());
   auto tensor_meta = std::make_shared<MirroredTensorMeta>(
@@ -86,38 +101,23 @@ Maybe<Tensor> BasicView(const std::shared_ptr<Tensor>& input, const Shape& targe
   return output;
 }
 
-Maybe<Tensor> Reshape(const std::shared_ptr<Tensor>& input, const Shape& shape) {
-  if (!(input->is_eager() && input->is_local())) {
-    return Error::RuntimeError() << "view::Reshape(): input should be eager local tensor, but got "
-                                 << (input->is_lazy() ? "lazy" : "consistent");
-  }
-  int need_infer_axis = -1;
-  size_t count = 1;
-  for (int i = 0; i < shape.NumAxes(); ++i) {
-    if (shape.At(i) < -1) {
-      return Error::RuntimeError() << "Invalid shape dimension " << shape.At(i);
-    } else if (shape.At(i) == -1) {
-      CHECK_EQ_OR_RETURN(need_infer_axis, -1)
-          << "Shape " << shape.ToString() << " has more than 1 axis that needs to be infered.";
-      need_infer_axis = i;
-    } else {
-      count *= shape.At(i);
-    }
-  }
+Maybe<Tensor> Reshape(const std::shared_ptr<Tensor>& input, const Shape& target_shape) {
+  Stride target_stride(target_shape);
+  return Reshape(input, target_shape, target_stride);
+}
 
-  std::shared_ptr<Tensor> output;
-  size_t x_count = input->shape()->Count(0);
-  if (need_infer_axis == -1) {
-    CHECK_EQ_OR_RETURN(shape.Count(0), x_count);
-    output = JUST(BasicView(input, shape, 0));
-  } else {
-    Shape infered_shape = shape;
-    infered_shape.Set(need_infer_axis, x_count / count);
-    CHECK_EQ_OR_RETURN(infered_shape.Count(0), x_count)
-        << "Shape " << shape.ToString() << " is invalid for input of shape "
-        << input->shape()->ToString();
-    output = JUST(BasicView(input, infered_shape, 0));
-  }
+Maybe<Tensor> Reshape(const std::shared_ptr<Tensor>& input, const Shape& target_shape,
+                      const Stride& target_stride) {
+  // TODO:(zhaoluyang) check input tensor is contiguous
+  CHECK_OR_RETURN(IsViewApplicable(input))
+      << Error::RuntimeError()
+      << "view::Reshape(): input should be eager local tensor with element count >=1 , but got "
+      << (input->is_lazy() ? "lazy tensor" : "consistent tensor")
+      << " with shape: " << input->shape()->ToString() << "; element count: " << input->nelement();
+
+  int64_t storage_offset = JUST(JUST(input->AsMirroredTensor())->storage_offset());
+  std::shared_ptr<Tensor> output =
+      JUST(BasicView(input, target_shape, target_stride, storage_offset));
 
   if (autograd::GradMode::is_enabled() && input->requires_grad()) {
     Shape input_shape(input->shape()->dim_vec());
@@ -128,7 +128,8 @@ Maybe<Tensor> Reshape(const std::shared_ptr<Tensor>& input, const Shape& shape) 
               autograd::AutoGradMode mode(create_graph);
               CHECK_EQ_OR_RETURN(out_grads.size(), 1);
               in_grads->resize(1);
-              in_grads->at(0) = JUST(functional::Reshape(out_grads.at(0), input_shape));
+              *JUST(oneflow::VectorAt(in_grads, 0)) =
+                  JUST(functional::Reshape(JUST(oneflow::VectorAt(out_grads, 0)), input_shape));
               return Maybe<void>::Ok();
             });
     TensorTuple outputs{output};
@@ -140,9 +141,10 @@ Maybe<Tensor> Reshape(const std::shared_ptr<Tensor>& input, const Shape& shape) 
 
 Maybe<Tensor> Slice(const std::shared_ptr<Tensor>& input, const std::vector<int64_t>& starts,
                     const std::vector<int64_t>& ends, const std::vector<int64_t>& steps) {
-  CHECK_OR_RETURN(input->is_eager() && input->is_local())
+  CHECK_OR_RETURN(IsViewApplicable(input))
       << Error::RuntimeError() << "view::Slice(): input should be eager local tensor, but is "
-      << (input->is_lazy() ? "lazy" : "consistent");
+      << (input->is_lazy() ? "lazy tensor" : "consistent tensor")
+      << " with shape: " << input->shape()->ToString() << "; element count: " << input->nelement();
   const auto& shape = input->shape();
   const auto& strides = JUST(input->stride());
   const int64_t ndim = starts.size();
@@ -187,6 +189,103 @@ Maybe<Tensor> Slice(const std::shared_ptr<Tensor>& input, const std::vector<int6
             });
     TensorTuple outputs{output};
     JUST(GetThreadLocalAutogradEngine()->AddBackwardFuncPtr("view::slice_backward", backward_fn,
+                                                            {input}, &outputs));
+  }
+  return output;
+}
+
+Maybe<Tensor> Unsqueeze(const std::shared_ptr<Tensor>& input, const int32_t& expand_dim) {
+  CHECK_OR_RETURN(IsViewApplicable(input))
+      << Error::RuntimeError() << "view::Unsqueeze(): input should be eager local tensor, but got "
+      << (input->is_lazy() ? "lazy tensor" : "consistent tensor")
+      << " with shape: " << input->shape()->ToString() << "; element count: " << input->nelement();
+
+  const auto& shape = input->shape();
+  const auto& strides = JUST(input->stride());
+  const auto& ndim = shape->NumAxes();
+
+  DimVector target_dim_vec(ndim + 1);
+  StrideVector target_stride_vec(ndim + 1);
+
+  {
+    int cnt = 0;
+    for (int i = 0; i < ndim; i++) {
+      if (i == expand_dim) { cnt++; }
+      target_dim_vec[cnt] = shape->At(i);
+      target_stride_vec[cnt] = strides->At(i);
+      cnt++;
+    }
+    target_dim_vec[expand_dim] = 1;
+    target_stride_vec[expand_dim] = strides->At(expand_dim);
+  }
+
+  int64_t storage_offset = JUST(JUST(input->AsMirroredTensor())->storage_offset());
+  std::shared_ptr<Tensor> output =
+      JUST(BasicView(input, Shape(target_dim_vec), Stride(target_stride_vec), storage_offset));
+
+  if (autograd::GradMode::is_enabled() && input->requires_grad()) {
+    auto backward_fn =
+        std::make_shared<std::function<Maybe<void>(const TensorTuple&, TensorTuple*, bool)>>(
+            [=](const TensorTuple& out_grads, TensorTuple* in_grads,
+                bool create_graph) -> Maybe<void> {
+              autograd::AutoGradMode mode(create_graph);
+              CHECK_EQ_OR_RETURN(out_grads.size(), 1);
+              in_grads->resize(1);
+              *JUST(oneflow::VectorAt(in_grads, 0)) =
+                  JUST(functional::Reshape(JUST(oneflow::VectorAt(out_grads, 0)), *shape));
+              return Maybe<void>::Ok();
+            });
+    TensorTuple outputs{output};
+    JUST(GetThreadLocalAutogradEngine()->AddBackwardFuncPtr("view::unsqueeze_backward", backward_fn,
+                                                            {input}, &outputs));
+  }
+  return output;
+}
+
+Maybe<Tensor> Squeeze(const std::shared_ptr<Tensor>& input,
+                      const std::vector<int32_t>& squeeze_dims) {
+  CHECK_OR_RETURN(IsViewApplicable(input))
+      << Error::RuntimeError() << "view::Squeeze(): input should be eager local tensor, but got "
+      << (input->is_lazy() ? "lazy tensor" : "consistent tensor")
+      << " with shape: " << input->shape()->ToString() << "; element count: " << input->nelement();
+
+  const auto& shape = input->shape();
+  const auto& strides = JUST(input->stride());
+  const int64_t ndim = shape->NumAxes();
+
+  const int target_ndim = ndim - squeeze_dims.size();
+  DimVector target_dim_vec(target_ndim);
+  StrideVector target_stride_vec(target_ndim);
+
+  {
+    int cnt = 0;
+    for (int i = 0; i < ndim; i++) {
+      if (find(squeeze_dims.begin(), squeeze_dims.end(), i) == squeeze_dims.end()) {
+        target_dim_vec[cnt] = shape->At(i);
+        target_stride_vec[cnt] = strides->At(i);
+        cnt++;
+      }
+    }
+  }
+
+  int64_t storage_offset = JUST(JUST(input->AsMirroredTensor())->storage_offset());
+  std::shared_ptr<Tensor> output =
+      JUST(BasicView(input, Shape(target_dim_vec), Stride(target_stride_vec), storage_offset));
+
+  if (autograd::GradMode::is_enabled() && input->requires_grad()) {
+    auto backward_fn =
+        std::make_shared<std::function<Maybe<void>(const TensorTuple&, TensorTuple*, bool)>>(
+            [=](const TensorTuple& out_grads, TensorTuple* in_grads,
+                bool create_graph) -> Maybe<void> {
+              autograd::AutoGradMode mode(create_graph);
+              CHECK_EQ_OR_RETURN(out_grads.size(), 1);
+              in_grads->resize(1);
+              *JUST(oneflow::VectorAt(in_grads, 0)) = JUST(functional::Reshape(
+                  JUST(oneflow::VectorAt(out_grads, 0)), Shape(input->shape()->dim_vec())));
+              return Maybe<void>::Ok();
+            });
+    TensorTuple outputs{output};
+    JUST(GetThreadLocalAutogradEngine()->AddBackwardFuncPtr("view::squeeze_backward", backward_fn,
                                                             {input}, &outputs));
   }
   return output;

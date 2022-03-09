@@ -23,7 +23,11 @@ import torch
 
 import oneflow as flow
 import oneflow.unittest
-from test_util import GenArgList, type_name_to_flow_type, type_name_to_np_type
+from oneflow.test_utils.test_util import (
+    GenArgList,
+    type_name_to_flow_type,
+    type_name_to_np_type,
+)
 
 
 def compare_with_torch(
@@ -216,7 +220,7 @@ def compare_lazy_global_with_torch(
     of_output = of_output.to_global(placement=placement, sbp=[flow.sbp.broadcast])
     of_output = of_output.to_local()
 
-    flow._oneflow_internal.eager.multi_client.Sync()
+    flow._oneflow_internal.eager.Sync()
 
     if rank == 0:
         assert np.allclose(

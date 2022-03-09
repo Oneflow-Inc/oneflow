@@ -105,7 +105,7 @@ void SetCpuDeviceManagerNumThreads() {
   int64_t cpu_logic_core = std::thread::hardware_concurrency();
   int64_t default_num_threads =
       (cpu_logic_core / GlobalProcessCtx::NumOfProcessPerNode()) - kDefaultUsedNumThreads;
-  int64_t num_threads = ParseIntegerFromEnv("ONEFLOW_EP_CPU_NUM_THREADS", default_num_threads);
+  int64_t num_threads = ParseIntegerFromEnv("OMP_NUM_THREADS", default_num_threads);
   cpu_device_manager->SetDeviceNumThreads(num_threads);
 }
 
@@ -146,26 +146,26 @@ Maybe<void> EnvGlobalObjectsScope::Init(const EnvProto& env_proto) {
   // ~CtrlBootstrap.
   if (Global<ResourceDesc, ForSession>::Get()->enable_dry_run()) {
 #ifdef RPC_BACKEND_LOCAL
-    LOG(INFO) << "using rpc backend: dry-run";
+    LOG(INFO) << "Using rpc backend: dry-run";
     Global<RpcManager>::SetAllocated(new DryRunRpcManager());
 #else
-    static_assert(false, "requires rpc backend dry-run to dry run oneflow");
+    static_assert(false, "Requires rpc backend dry-run to dry run oneflow");
 #endif  // RPC_BACKEND_LOCAL
   } else if ((env_proto.machine_size() == 1 && env_proto.has_ctrl_bootstrap_conf() == false)
              || (env_proto.has_ctrl_bootstrap_conf()
                  && env_proto.ctrl_bootstrap_conf().world_size() == 1)) /*single process*/ {
 #ifdef RPC_BACKEND_LOCAL
-    LOG(INFO) << "using rpc backend: local";
+    LOG(INFO) << "Using rpc backend: local";
     Global<RpcManager>::SetAllocated(new LocalRpcManager());
 #else
-    static_assert(false, "requires rpc backend local to run oneflow in single processs");
+    static_assert(false, "Requires rpc backend local to run oneflow in single processs");
 #endif  // RPC_BACKEND_LOCAL
   } else /*multi process, multi machine*/ {
 #ifdef RPC_BACKEND_GRPC
-    LOG(INFO) << "using rpc backend: gRPC";
+    LOG(INFO) << "Using rpc backend: gRPC";
     Global<RpcManager>::SetAllocated(new GrpcRpcManager());
 #else
-    UNIMPLEMENTED() << "to run distributed oneflow, you must enable at least one multi-node rpc "
+    UNIMPLEMENTED() << "To run distributed oneflow, you must enable at least one multi-node rpc "
                        "backend by adding cmake argument, for instance: -DRPC_BACKEND=GRPC";
 #endif  // RPC_BACKEND_GRPC
   }
@@ -216,7 +216,7 @@ Maybe<void> EnvGlobalObjectsScope::Init(const EnvProto& env_proto) {
              "value, it will impact performance";
       kernel_observers.emplace_back(new SyncCheckKernelObserver());
     }
-    if (!ParseBooleanFromEnv("ONEFLOW_KERNEL_DISABLE_BLOB_ACCESS_CHECKER", false)) {
+    if (!ParseBooleanFromEnv("ONEFLOW_KERNEL_DISABLE_BLOB_ACCESS_CHECKER", true)) {
       kernel_observers.emplace_back(new BlobAccessCheckerKernelObserver());
     }
     kernel_observers.emplace_back(new ProfilerKernelObserver());
@@ -229,7 +229,7 @@ Maybe<void> EnvGlobalObjectsScope::Init(const EnvProto& env_proto) {
 EnvGlobalObjectsScope::~EnvGlobalObjectsScope() {
   auto session_ctx = Global<MultiClientSessionContext>::Get();
   if (session_ctx != nullptr) {
-    VLOG(2) << "Multi client session has not closed , env close it at env scope destruction.";
+    VLOG(1) << "Multi client session has not closed , env close it at env scope destruction.";
     CHECK_JUST(session_ctx->TryClose());
   }
   TensorBufferPool::Delete();
