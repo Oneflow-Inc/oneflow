@@ -115,15 +115,6 @@ struct ScalarPowGradFunctor<half> {
   const half exponent;
 };
 
-template<typename T>
-struct ScalarTensorPowGradFunctor {
-  OF_DEVICE_FUNC explicit ScalarTensorPowGradFunctor(T exponent) : exponent(exponent) {}
-  __device__ T operator()(T x, T dy) const {
-    return pow(exponent, x) * log(static_cast<double>(exponent)) * dy;
-  }
-  const T exponent;
-};
-
 template<>
 struct ScalarTensorPowGradFunctor<float> {
   OF_DEVICE_FUNC explicit ScalarTensorPowGradFunctor(float exponent) : exponent(exponent) {}
@@ -138,10 +129,18 @@ struct ScalarTensorPowGradFunctor<half> {
   OF_DEVICE_FUNC explicit ScalarTensorPowGradFunctor(half exponent) : exponent(exponent) {}
   __device__ half operator()(half x, half dy) const {
     const float exp = __half2float(exponent);
-    return __float2half(exp * __powf(exp, __half2float(x)) * __logf(exp)
-                        * __half2float(dy));
+    return __float2half(exp * __powf(exp, __half2float(x)) * __logf(exp) * __half2float(dy));
   }
   const half exponent;
+};
+
+template<typename T>
+struct ScalarTensorPowGradFunctor {
+  OF_DEVICE_FUNC explicit ScalarTensorPowGradFunctor(T exponent) : exponent(exponent) {}
+  __device__ T operator()(T x, T dy) const {
+    return pow(exponent, x) * log(static_cast<double>(exponent)) * dy;
+  }
+  const T exponent;
 };
 
 template<DeviceType device_type, typename T>
