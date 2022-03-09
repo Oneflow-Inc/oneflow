@@ -117,7 +117,6 @@ def FusePadAndConv2d :
   NativeCodeCall<"mlir::oneflow::CreateConv2dAndErasePad($_builder, $0, $1)">;
 
 def HasIdenticalPadding: Constraint<CPred<"mlir::oneflow::IsPaddingCouldBeAssimilatedIntoConv($0, $1, $2)">, "">;
-def IsChannelFirst: Constraint<CPred<"mlir::oneflow::IsChannelFirst($0)">, "">;
 
 def FusedPadConv2DPattern : Pat<
   (
@@ -165,6 +164,8 @@ def GetDefaultSeed :
 def FusedBiasAddMaskScale :
   NativeCodeCall<"mlir::oneflow::CreateFusedBiasAddMaskScale($_builder, $0, $1, $2)">;
 
+def IsAddToOutputNone: Constraint<CPred<"mlir::oneflow::IsAddToOutputNone($0)">, "">;
+
 def FusedBiasAddDropoutPattern : Pattern<
   (
     OneFlow_DropoutOp: $dropout_res
@@ -206,7 +207,7 @@ def FusedBiasAddDropoutPattern : Pattern<
     ),
     (replaceWithValue $mask)
   ],
-  []
+  [(IsAddToOutputNone $_add_to_output)]
 >;
 
 // TODO: use either to merge two patterns

@@ -16,6 +16,7 @@ limitations under the License.
 #include "OneFlow/OneFlowOps.h"
 #include "OneFlow/OneFlowDialect.h"
 #include "OneFlow/Passes.h"
+#include "mlir/IR/OperationSupport.h"
 #include "oneflow/core/framework/random_generator.h"
 
 #include "mlir/Conversion/LinalgToLLVM/LinalgToLLVM.h"
@@ -362,6 +363,11 @@ IntegerAttr getSI64IntegerAttr(::mlir::PatternRewriter& rewriter, int64_t value)
 mlir::IntegerAttr GetDefaultSeed(::mlir::PatternRewriter& rewriter) {
   const auto gen = CHECK_JUST(::oneflow::one::DefaultAutoGenerator());
   return getSI64IntegerAttr(rewriter, (int64_t)gen->current_seed());
+}
+
+bool IsAddToOutputNone(ValueRange value) {
+  if (value.size()) { return false; }
+  return true;
 }
 
 }  // namespace oneflow
