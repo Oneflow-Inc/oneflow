@@ -22,7 +22,7 @@ import oneflow.unittest
 from oneflow.test_utils.automated_test_util import *
 
 
-@autotest(n=2, check_graph=False)
+@autotest(n=2, check_graph=True)
 def _test_einsum_batch_permute(test_case, placement, sbp):
     x = random_tensor(
         ndim=5,
