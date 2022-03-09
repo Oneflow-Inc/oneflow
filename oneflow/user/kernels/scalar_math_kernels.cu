@@ -180,10 +180,7 @@ class GpuScalarPowGradKernel final : public user_op::OpKernel {
       .SetIsMatchedHob((user_op::HobDeviceType() == device)     \
                        && (user_op::HobDataType("dx", 0) == GetDataType<dtype>::value));
 
-REGISTER_CUDA_SCALAR_POW_BACKWARD_KERNEL(DeviceType::kCUDA, uint8_t);
-REGISTER_CUDA_SCALAR_POW_BACKWARD_KERNEL(DeviceType::kCUDA, int8_t);
-REGISTER_CUDA_SCALAR_POW_BACKWARD_KERNEL(DeviceType::kCUDA, int32_t);
-REGISTER_CUDA_SCALAR_POW_BACKWARD_KERNEL(DeviceType::kCUDA, int64_t);
+
 REGISTER_CUDA_SCALAR_POW_BACKWARD_KERNEL(DeviceType::kCUDA, float);
 REGISTER_CUDA_SCALAR_POW_BACKWARD_KERNEL(DeviceType::kCUDA, double);
 
@@ -224,10 +221,7 @@ class GpuScalarTensorPowGradKernel final : public user_op::OpKernel {
       .SetIsMatchedHob((user_op::HobDeviceType() == device)            \
                        && (user_op::HobDataType("dx", 0) == GetDataType<dtype>::value));
 
-REGISTER_CUDA_SCALAR_TENSOR_POW_BACKWARD_KERNEL(DeviceType::kCUDA, uint8_t);
-REGISTER_CUDA_SCALAR_TENSOR_POW_BACKWARD_KERNEL(DeviceType::kCUDA, int8_t);
-REGISTER_CUDA_SCALAR_TENSOR_POW_BACKWARD_KERNEL(DeviceType::kCUDA, int32_t);
-REGISTER_CUDA_SCALAR_TENSOR_POW_BACKWARD_KERNEL(DeviceType::kCUDA, int64_t);
+
 REGISTER_CUDA_SCALAR_TENSOR_POW_BACKWARD_KERNEL(DeviceType::kCUDA, float);
 REGISTER_CUDA_SCALAR_TENSOR_POW_BACKWARD_KERNEL(DeviceType::kCUDA, double);
 
