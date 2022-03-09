@@ -13,9 +13,7 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
-
 #include "oneflow/core/framework/tensor_methods.h"
-
 #include "oneflow/core/autograd/autograd_engine.h"
 #include "oneflow/core/autograd/autograd_mode.h"
 #include "oneflow/core/common/container_util.h"
@@ -25,6 +23,7 @@ limitations under the License.
 #include "oneflow/core/functional/functional.h"
 #include "oneflow/core/register/ofblob.h"
 #include "oneflow/core/framework/instructions_builder.h"
+#include "oneflow/xrt/utility/env.h"
 
 namespace oneflow {
 namespace one {
@@ -49,9 +48,17 @@ Maybe<bool> IsContiguous(const std::shared_ptr<Tensor>& tensor) {
 
 namespace view {
 
+// NOTE: use env variable 'ONEFLOW_DISABLE_VIEW' control use view mechanism or not
+// If  set true, then do not use view mechanism(and view ops)
+bool IsEnvViewDisabled() {
+  static const bool env_view_disabled = EnvToBool(ONEFLOW_DISABLE_VIEW, false);
+  return env_view_disabled;
+}
+
 bool IsViewApplicable(const std::shared_ptr<Tensor>& input) {
+  if (IsEnvViewDisabled()) { return false; }
   // NOTE: only eager local tensor support view for now
-  // elem_cnt() > 1  used to excluding 0 shape tensor
+  // elem_cnt() >= 1  used to excluding 0 shape tensor
   if (input->is_local() && !(LazyMode::is_enabled()) && input->shape()->elem_cnt() >= 1) {
     return true;
   }
