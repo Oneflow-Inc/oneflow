@@ -160,9 +160,8 @@ class ChunkIteratorImpl : public PersistentTable::Iterator {
         n_(n),
         chunk_keys_(chunk_keys),
         chunk_indices_(chunk_indices),
-        chunk_values_(chunk_values) {
-    chunk_index_offset_ = chunk_id * num_values_per_chunk_;
-  }
+        chunk_values_(chunk_values),
+        chunk_index_offset_(chunk_id * num_values_per_chunk_) {}
   ~ChunkIteratorImpl() override = default;
 
   void Next(uint32_t num_keys, uint32_t* return_keys, void* keys, void* values) override {
@@ -413,13 +412,13 @@ PersistentTableImpl<Key, Engine>::PersistentTableImpl(const PersistentTableOptio
     : root_dir_(options.path),
       key_size_(options.key_size),
       value_size_(options.value_size),
+      logical_block_size_(GetLogicalBlockSize(options.physical_block_size, value_size_)),
       blocks_buffer_(options.physical_block_size),
       writable_key_file_chunk_id_(-1) {
   PosixFile::RecursiveCreateDirectory(options.path, 0755);
   const std::string lock_filename = PosixFile::JoinPath(options.path, kLockFileName);
   const bool init = !PosixFile::FileExists(lock_filename);
   lock_ = PosixFileLockGuard(PosixFile(lock_filename, O_CREAT | O_RDWR, 0644));
-  logical_block_size_ = GetLogicalBlockSize(options.physical_block_size, value_size_);
   const uint64_t target_chunk_size = options.target_chunk_size_mb * 1024 * 1024;
   CHECK_GE(target_chunk_size, logical_block_size_);
   num_logical_blocks_per_chunk_ = target_chunk_size / logical_block_size_,
