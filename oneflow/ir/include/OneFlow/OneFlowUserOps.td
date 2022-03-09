@@ -9090,10 +9090,3 @@ def OneFlow_EmbeddingGradientShuffleOp : OneFlow_BaseOp<"embedding_gradient_shuf
 
 #endif // GET_ONEFLOW_UPSAMPLE_OP_DEFINITIONS
 
-// Group: Embedding TODO
-// id_shuffle
-// Total: 1
-
-#ifdef GET_ONEFLOW_EMBEDDING_OP_DEFINITIONS
-
-#endif // GET_ONEFLOW_EMBEDDING_OP_DEFINITIONS

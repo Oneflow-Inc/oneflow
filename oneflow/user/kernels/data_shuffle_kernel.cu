@@ -200,7 +200,7 @@ enum class IdShuffleBufferType {
   kPartitionedUniqueColumnIds,
   kReceivedColumnIds,
   kWorkspace,
-  kEnd
+  kMaxType
 };
 
 template<typename K, typename U, typename IDX>
@@ -209,11 +209,12 @@ class IdShuffleTmpBufferManager final {
   OF_DISALLOW_COPY_AND_MOVE(IdShuffleTmpBufferManager);
   IdShuffleTmpBufferManager(void* ptr, const int64_t num_ids, const int64_t parallel_num,
                             bool need_column_ids, bool need_process_column_ids)
-      : ptr_(ptr) {
+      : offset_(0),
+        offsets_(static_cast<size_t>(IdShuffleBufferType::kMaxType), -1),
+        sizes_(static_cast<size_t>(IdShuffleBufferType::kMaxType)),
+        ptr_(ptr) {
     const int64_t num_column_ids = need_process_column_ids ? num_ids : 0;
     const size_t column_ids_bytes = need_column_ids ? num_ids * sizeof(U) : 0;
-    offset_ = 0;
-    offsets_.resize(int(IdShuffleBufferType::kEnd));
     AllocBuffer(IdShuffleBufferType::kNumPartitionedUnique, parallel_num * sizeof(IDX));
     size_t partitioned_ids_bytes = parallel_num * num_ids * sizeof(K);
     AllocBuffer(IdShuffleBufferType::kPartitionedUniqueIds, partitioned_ids_bytes);
@@ -228,19 +229,30 @@ class IdShuffleTmpBufferManager final {
 
   template<typename T = void>
   T* Ptr(IdShuffleBufferType type) {
-    return reinterpret_cast<T*>(reinterpret_cast<char*>(ptr_) + offsets_.at(int(type)));
+    CHECK(ptr_ != nullptr);
+    int64_t offset = offsets_.at(static_cast<size_t>(type));
+    CHECK_NE(offset, -1);
+    return reinterpret_cast<T*>(reinterpret_cast<char*>(ptr_) + offset);
   }
 
+  int64_t Size(IdShuffleBufferType type) { return sizes_.at(static_cast<size_t>(type)); }
+
   size_t TotalBufferSize() const { return offset_; }
-  size_t WorkspaceBytes() const { return offsets_.at(int(IdShuffleBufferType::kWorkspace)); }
+  size_t WorkspaceBytes() const {
+    return sizes_.at(static_cast<size_t>(IdShuffleBufferType::kWorkspace));
+  }
 
  private:
   void AllocBuffer(IdShuffleBufferType type, size_t size) {
-    offsets_.at(int(type)) = offset_;
+    const size_t type_id = static_cast<size_t>(type);
+    CHECK_EQ(offsets_.at(type_id), -1);
+    offsets_.at(type_id) = offset_;
+    sizes_.at(type_id) = size;
     offset_ += GetCudaAlignedSize(size);
   }
   size_t offset_;
-  std::vector<size_t> offsets_;
+  std::vector<int64_t> offsets_;
+  std::vector<int64_t> sizes_;
   void* ptr_;
 };
 
@@ -360,7 +372,7 @@ class IdShuffleKernel final : public user_op::OpKernel {
     IDX* num_unique_matrix_ptr = reinterpret_cast<IDX*>(num_unique_matrix->mut_dptr());
     size_t hash_capacity = parallel_num * num_ids;
     void* workspace_ptr = buffer_manager.Ptr(IdShuffleBufferType::kWorkspace);
-    size_t workspace_size = buffer_manager.WorkspaceBytes();
+    size_t workspace_size = buffer_manager.Size(IdShuffleBufferType::kWorkspace);
     UniqueAndPartition<K, U, IDX, embedding::ShardingHash>(
         cuda_stream, num_ids, hash_capacity, parallel_num, reinterpret_cast<const K*>(ids->dptr()),
         column_ids_ptr, num_partitioned_unique, partitioned_unique_ids,
