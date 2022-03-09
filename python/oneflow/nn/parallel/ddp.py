@@ -81,7 +81,9 @@ def DistributedDataParallel(
     if all_grad_size > 0:
         device = list(module.parameters())[0].device
         assert all(x.device == device for x in module.parameters())
-    reversed_param_list = list(reversed(list(module.parameters())))
+    reversed_param_list = list(
+        reversed(list([param for param in module.parameters() if param.requires_grad]))
+    )
     module._param_grad_offset_in_bucket = {}
 
     def numel_in_bucket(tensor: flow.Tensor):
@@ -136,9 +138,10 @@ def DistributedDataParallel(
         return None
 
     for param in module.parameters():
-        param.register_hook(grad_setting_fn(module, param))
-        param._register_post_grad_accumulation_hook(inplace_mul_and_return_none)
-        param._register_post_grad_accumulation_hook(allreduce_fn(module, param))
+        if param.requires_grad:
+            param.register_hook(grad_setting_fn(module, param))
+            param._register_post_grad_accumulation_hook(inplace_mul_and_return_none)
+            param._register_post_grad_accumulation_hook(allreduce_fn(module, param))
 
     def post_forward_hook(module, input, output):
         ddp_state_for_reversed_params = module._ddp_state_for_reversed_params
