@@ -15,6 +15,7 @@ limitations under the License.
 */
 
 #include "oneflow/api/common/ofblob.h"
+#include "oneflow/api/cpp/env_impl.h"
 #include "oneflow/api/cpp/framework/device.h"
 #include "oneflow/api/cpp/framework/graph.h"
 #include "oneflow/api/cpp/framework/ivalue.h"
@@ -212,9 +213,8 @@ Graph::GraphImpl::GraphImpl(const std::string& model_path, const Device& device)
   }
   job_.mutable_job_conf()->mutable_predict_conf();
   job_.mutable_job_conf()->set_job_name(job_.mutable_job_conf()->job_name() + of::NewUniqueId());
-  graph_ = std::make_shared<of::NNGraph>(job_.job_conf().job_name());
-  // TODO(strint): rm
-  // of::Global<of::MultiClientSessionContext>::Get()->AddCGraph(graph_).GetOrThrow();
+  CHECK(of::Global<OneFlowEnv>::Get() != nullptr);
+  graph_ = std::make_shared<of::NNGraph>(job_.job_conf().job_name(), of::Global<OneFlowEnv>::Get()->GetSessionCtx());
 }
 
 Graph::GraphImpl::GraphImpl(GraphImpl&& graph) noexcept

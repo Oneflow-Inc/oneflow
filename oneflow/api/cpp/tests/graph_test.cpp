@@ -65,9 +65,11 @@ TEST(Api, graph_cpu_test) {
 #ifdef WITH_CUDA
 TEST(Api, graph_gpu_test) {
   EnvScope scope;
-  Device device("cuda", 0);
-  Graph graph = LoadGraph(device);
-  Forward(graph, device);
+  {
+    Device device("cuda", 0);
+    Graph graph = LoadGraph(device);
+    Forward(graph, device);
+  }
 }
 
 TEST(Api, graph_multi_gpu_test) {

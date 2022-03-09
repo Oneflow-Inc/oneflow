@@ -32,8 +32,6 @@ class Blob;
 
 class NNGraph final : public NNGraphIf {
  public:
-  explicit NNGraph(const std::string& name)
-      : name_(name), runtime_inited_(false), is_closed_(false) {}
   explicit NNGraph(const std::string& name,
                    const std::shared_ptr<MultiClientSessionContext>& sessioin_ctx)
       : name_(name), session_ctx_(sessioin_ctx), runtime_inited_(false), is_closed_(false) {}
