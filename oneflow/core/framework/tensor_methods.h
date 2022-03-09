@@ -56,9 +56,8 @@ Maybe<Tensor> Expand(const std::shared_ptr<Tensor>& input, const std::vector<int
 Maybe<Tensor> Narrow(const std::shared_ptr<Tensor>& input, const int64_t& dim, const int64_t& start,
                      const int64_t& length);
 
-Maybe<Tensor> AsStrided(const std::shared_ptr<one::Tensor>& input,
-                        const std::vector<int32_t>& size, const std::vector<int32_t>& stride,
-                        const int32_t& storage_offset);
+Maybe<Tensor> AsStrided(const std::shared_ptr<one::Tensor>& input, const std::vector<int32_t>& size,
+                        const std::vector<int32_t>& stride, const int32_t& storage_offset);
 
 Maybe<Tensor> Transpose(const std::shared_ptr<Tensor>& input, const std::vector<int32_t>& permute);
 
