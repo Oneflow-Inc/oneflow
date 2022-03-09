@@ -113,6 +113,8 @@ MaybeGetTensorBufferShapesAndDTypes(const std::shared_ptr<Tensor>& t) {
 
 Maybe<void> RegisterTensorHook(const std::shared_ptr<Tensor>& self,
                                const AutogradMeta::Hook& hook) {
+  CHECK_OR_RETURN(self->requires_grad())
+      << "cannot register a hook on a tensor that doesn't require gradient";
   if (!self->grad_fn_node()) { JUST(AddAccumulateFunctionNode(self)); }
   self->mut_autograd_meta()->add_hook(hook);
   return Maybe<void>::Ok();
