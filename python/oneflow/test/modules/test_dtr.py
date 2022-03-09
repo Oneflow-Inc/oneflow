@@ -83,7 +83,7 @@ class TestDTR(flow.unittest.TestCase):
 
         test_case.assertTrue(np.array_equal(y.numpy(), 20 * np.ones(y.shape)))
 
-    def test_dtr_work_on_inplace_case_1(test_case):
+    def test_dtr_work_on_inplace(test_case):
         flow.enable_dtr(True, "12KB", 0, "eq")
 
         x1 = flow.ones(1024, requires_grad=True).to('cuda')     # 4KB (x1=1)

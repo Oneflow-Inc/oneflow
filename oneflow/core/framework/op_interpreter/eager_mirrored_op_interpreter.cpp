@@ -106,13 +106,12 @@ Maybe<void> NaiveInterpret(const UserOpExpr& user_op_expr, const TensorTuple& in
       if (!outputs->at(i)) {
         inplace_flag[i] = false;
       } else {
-        CHECK_EQ_OR_RETURN(outputs->size(), inputs.size());
         inplace_flag[i] = true;
       }
       const auto& tensor_impl = std::make_shared<DTREagerMirroredTensorImpl>();
       outputs->at(i) = std::make_shared<DTRMirroredTensor>(tensor_impl);
       output_tensor_metas->at(i) = tensor_impl->mut_tensor_meta();
-      } else {
+    } else {
         if (!outputs->at(i)) {
         const auto& tensor_impl = std::make_shared<EagerMirroredTensorImpl>();
         outputs->at(i) = std::make_shared<MirroredTensor>(tensor_impl);

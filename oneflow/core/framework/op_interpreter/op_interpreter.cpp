@@ -91,11 +91,11 @@ Maybe<void> AutogradInterpreter::Apply(const OpExpr& op_expr, const TensorTuple&
                     [](const std::shared_ptr<Tensor>& tensor) { return tensor->requires_grad(); });
   }
 
-  auto original_outputs = TensorTuple(op_expr.output_size());
+  TensorTuple mut_inputs(op_expr.output_size());
   if (requires_grad) {
     for (int i = 0; i < outputs->size(); ++i) {
       if (outputs->at(i)) {
-        original_outputs.at(i) = outputs->at(i);
+        mut_inputs.at(i) = outputs->at(i);
       }
     }
   }
@@ -129,10 +129,11 @@ Maybe<void> AutogradInterpreter::Apply(const OpExpr& op_expr, const TensorTuple&
     JUST(GetThreadLocalAutogradEngine()->AddBackwardFuncPtr(op_expr.op_type_name() + "_backward",
                                                             backward_fn, inputs, outputs));
   
-    // If inplace, set grad_fn_node for inputs(original_outputs) the same as the outputs
+    // If inplace, set grad_fn_node for inputs(mut_inputs) the same as the outputs
     for (int i = 0; i < outputs->size(); ++i) {
-      if (original_outputs.at(i))
-        original_outputs.at(i)->set_grad_fn_node(outputs->at(i)->mut_grad_fn_node());
+      if (mut_inputs.at(i)) {
+        mut_inputs.at(i)->set_grad_fn_node(outputs->at(i)->mut_grad_fn_node());
+      }
     }
   }
   for (auto& output : *outputs) {
