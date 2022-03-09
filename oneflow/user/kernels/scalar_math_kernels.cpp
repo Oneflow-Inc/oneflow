@@ -183,10 +183,6 @@ class CpuScalarPowGradKernel final : public user_op::OpKernel {
       .SetIsMatchedHob((user_op::HobDeviceType() == device) \
                        && (user_op::HobDataType("dx", 0) == GetDataType<dtype>::value));
 
-REGISTER_CPU_SCALAR_POW_GRAD_KERNEL(DeviceType::kCPU, uint8_t);
-REGISTER_CPU_SCALAR_POW_GRAD_KERNEL(DeviceType::kCPU, int8_t);
-REGISTER_CPU_SCALAR_POW_GRAD_KERNEL(DeviceType::kCPU, int32_t);
-REGISTER_CPU_SCALAR_POW_GRAD_KERNEL(DeviceType::kCPU, int64_t);
 REGISTER_CPU_SCALAR_POW_GRAD_KERNEL(DeviceType::kCPU, float);
 REGISTER_CPU_SCALAR_POW_GRAD_KERNEL(DeviceType::kCPU, double);
 
@@ -228,10 +224,6 @@ class CpuScalarTensorPowGradKernel final : public user_op::OpKernel {
       .SetIsMatchedHob((user_op::HobDeviceType() == device)       \
                        && (user_op::HobDataType("dx", 0) == GetDataType<dtype>::value));
 
-REGISTER_CPU_SCALAR_TENSOR_POW_GRAD_KERNEL(DeviceType::kCPU, uint8_t);
-REGISTER_CPU_SCALAR_TENSOR_POW_GRAD_KERNEL(DeviceType::kCPU, int8_t);
-REGISTER_CPU_SCALAR_TENSOR_POW_GRAD_KERNEL(DeviceType::kCPU, int32_t);
-REGISTER_CPU_SCALAR_TENSOR_POW_GRAD_KERNEL(DeviceType::kCPU, int64_t);
 REGISTER_CPU_SCALAR_TENSOR_POW_GRAD_KERNEL(DeviceType::kCPU, float);
 REGISTER_CPU_SCALAR_TENSOR_POW_GRAD_KERNEL(DeviceType::kCPU, double);
 
