@@ -21,6 +21,7 @@ namespace oneflow {
 /* static */ Maybe<void> IdShuffleOp::InferLogicalTensorDesc(user_op::InferContext* ctx) {
   const Shape& ids_shape = ctx->InputShape("ids", 0);
   const int32_t num_columns = ctx->Attr<int32_t>("num_columns");
+  CHECK_GE_OR_RETURN(num_columns, 1);
   if (ctx->has_input("column_ids", 0)) {
     const Shape& column_ids_shape = ctx->InputShape("column_ids", 0);
     CHECK_EQ_OR_RETURN(ids_shape, column_ids_shape);
@@ -118,6 +119,7 @@ namespace oneflow {
       ctx->InputShape("inverse_unique_partition_indices", 0);
   const int64_t num_ids = inverse_unique_partition_indices_shape.elem_cnt();
   const int64_t parallel_num = ctx->parallel_num();
+  CHECK_EQ_OR_RETURN(embedding_grad_shape.elem_cnt() % num_ids, 0);
   const int64_t embedding_size = embedding_grad_shape.elem_cnt() / num_ids;
   CHECK_EQ_OR_RETURN(num_unique_matrix_shape.elem_cnt(), parallel_num * parallel_num);
   CHECK_EQ_OR_RETURN(cur_rank_inverse_indices_shape.elem_cnt(), parallel_num * num_ids);
