@@ -482,7 +482,7 @@ Maybe<Tensor> UnfoldTensor(const std::shared_ptr<Tensor>& input, const MutableAt
   const int32_t size = JUST(attr_map.GetAttr<int32_t>("size"));
   const int32_t step = JUST(attr_map.GetAttr<int32_t>("step"));
   CHECK_GE_OR_RETURN(dimension, 0);
-  CHECK_LE_OR_RETURN(dimension, ndim - 1);
+  CHECK_LE_OR_RETURN(dimension, ndim);
 
   const int32_t max_size = ndim == 0 ? 1 : shape->At(dimension);
   CHECK_GT_OR_RETURN(size, 0);
