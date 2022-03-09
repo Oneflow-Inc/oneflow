@@ -13,4 +13,17 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 """
-from oneflow.nn.optimizer.sparse_optimizer import SparseOptimizer
+import oneflow
+from oneflow.framework.docstr.utils import add_docstr
+
+add_docstr(
+    oneflow.set_num_threads,
+    """
+    Sets the number of threads used for intraop parallelism on CPU.
+    
+    .. WARNING::
+        To ensure that the correct number of threads is used, 
+        set_num_threads must be called before running eager, eager globe or ddp.
+
+    """,
+)

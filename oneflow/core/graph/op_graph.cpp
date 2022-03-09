@@ -457,6 +457,19 @@ void OpGraph::ForEachDataAndCtrlOutNode(OpNode* node,
   }
 }
 
+void OpGraph::TopoForEachNodeWithCtrlEdge(const std::function<void(OpNode*)>& NodeHandler) const {
+  auto OpGraphForEachInDataAndCtrlNode = [&](OpNode* node,
+                                             const std::function<void(OpNode*)>& Handler) {
+    ForEachDataAndCtrlInNode(node, Handler);
+  };
+  auto OpGraphForEachOutDataAndCtrlNode = [&](OpNode* node,
+                                              const std::function<void(OpNode*)>& Handler) {
+    ForEachDataAndCtrlOutNode(node, Handler);
+  };
+  TopoForEachNode(DataOrCtrlSourceNodes(), OpGraphForEachInDataAndCtrlNode,
+                  OpGraphForEachOutDataAndCtrlNode, NodeHandler);
+}
+
 std::function<bool(const std::string&, const std::string&)>
 OpGraph::MakePredicatorIsOpNameDataOrCtrlReachable() const {
   auto IsDataOrCtrlReachable = MakePredicatorIsDataOrCtrlReachable();

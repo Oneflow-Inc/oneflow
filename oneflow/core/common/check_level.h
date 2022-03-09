@@ -13,24 +13,23 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
-#ifndef ONEFLOW_CORE_COMMON_MULTICLIENT_H_
-#define ONEFLOW_CORE_COMMON_MULTICLIENT_H_
+#ifndef ONEFLOW_CORE_CHECK_LEVEL_H_
+#define ONEFLOW_CORE_CHECK_LEVEL_H_
 
+#include <cstdlib>
+#include <type_traits>
+#include "oneflow/core/common/just.h"
 #include "oneflow/core/common/maybe.h"
-#include "oneflow/core/common/optional.h"
-#include "oneflow/core/job/global_for.h"
+#include "oneflow/xrt/utility/env.h"
 
 namespace oneflow {
 
-inline Optional<bool>* IsMultiClientPtr() { return Global<Optional<bool>, MultiClient>::Get(); }
-
-inline Maybe<bool> IsMultiClient() { return JUST(*Global<Optional<bool>, MultiClient>::Get()); }
-
-inline Maybe<void> SetIsMultiClient(bool is_multi_client) {
-  CHECK_NOTNULL_OR_RETURN(IsMultiClientPtr());
-  *IsMultiClientPtr() = is_multi_client;
-  return Maybe<void>::Ok();
+bool IsEnvEnabled(int32_t check_level) {
+  static const int env_check_level = EnvToInt(ONEFOW_CHECK_LEVEL, -1);
+  static const bool env_debug_mode = EnvToBool(ONEFLOW_DEBUG_MODE, false);
+  return env_debug_mode || env_check_level >= check_level;
 }
+
 }  // namespace oneflow
 
-#endif
+#endif  // ONEFLOW_CORE_CHECK_LEVEL_H_

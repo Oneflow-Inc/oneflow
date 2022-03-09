@@ -23,6 +23,8 @@ namespace oneflow {
 
 double GetValidMaxCopyCost();
 
+double GetTransferCost();
+
 void ResizeNdSbpSignature(NdSbpSignature& nd_sbp_sig, int32_t size);
 
 void SetNdSbpSignature(NdSbpSignature* nd_sbp_signature, const SbpSignature& sbp_signature,
