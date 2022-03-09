@@ -16,10 +16,10 @@ limitations under the License.
 #include <typeinfo>
 #include "oneflow/core/vm/virtual_machine.h"
 #include "oneflow/core/vm/instruction.h"
+#include "oneflow/core/vm/instruction_type.h"
 #include "oneflow/core/vm/no_arg_cb_phy_instr_operand.h"
 #include "oneflow/core/vm/vm_util.h"
 #include "oneflow/core/common/blocking_counter.h"
-#include "oneflow/core/common/multi_client.h"
 #include "oneflow/core/common/cpp_attribute.h"
 #include "oneflow/core/control/global_process_ctx.h"
 #include "oneflow/core/job/global_for.h"
@@ -54,17 +54,13 @@ Maybe<void> ForEachThreadCtx(vm::VirtualMachineEngine* vm,
 
 void GetSchedulerThreadInitializer(std::function<void()>* Initializer) {
   *Initializer = [&]() {
-    if (!CHECK_JUST(IsMultiClient())) { return; }
     CHECK_JUST(InitThisThreadUniqueConsistentId(kThreadConsistentIdScheduler, "scheduler"));
     OF_PROFILER_NAME_THIS_HOST_THREAD("_VM::Scheduler");
   };
 }
 
 void GetCallbackThreadInitializer(std::function<void()>* Initializer) {
-  *Initializer = [&]() {
-    if (!CHECK_JUST(IsMultiClient())) { return; }
-    OF_PROFILER_NAME_THIS_HOST_THREAD("_VM::Callback");
-  };
+  *Initializer = [&]() { OF_PROFILER_NAME_THIS_HOST_THREAD("_VM::Callback"); };
 }
 
 std::type_index GetStreamTypeIndex(const vm::ThreadCtx* thread_ctx) {
@@ -93,11 +89,10 @@ void GetWorkerThreadInitializer(intrusive::shared_ptr<vm::VirtualMachineEngine> 
   HashMap<std::type_index, int64_t> stream_type_index2consistent_id;
   int64_t thread_consistent_id = kThreadConsistentIdScheduler + 1;
   for (const auto& stream_type_index : stream_type_indexes) {
-    LOG(INFO) << "transport stream type: " << stream_type_index.name();
+    VLOG(3) << "transport stream type: " << stream_type_index.name();
     stream_type_index2consistent_id[stream_type_index] = thread_consistent_id++;
   }
   *Initializer = [stream_type_index2consistent_id](vm::ThreadCtx* thread_ctx) {
-    if (!CHECK_JUST(IsMultiClient())) { return; }
     const auto& stream_type_index = GetStreamTypeIndex(thread_ctx);
     const auto& iter = stream_type_index2consistent_id.find(stream_type_index);
     if (iter != stream_type_index2consistent_id.end()) {
@@ -196,18 +191,14 @@ std::string VirtualMachine::GetBlockingDebugString() {
 
 Maybe<void> VirtualMachine::Receive(vm::InstructionMsgList* instr_list) {
   if (unlikely(pthread_fork::IsForkedSubProcess())) {
-    CHECK_OR_RETURN(JUST(IsMultiClient()));
     INTRUSIVE_FOR_EACH_PTR(instr_msg, instr_list) {
       const auto& parallel_desc = instr_msg->phy_instr_parallel_desc();
-      CHECK(!parallel_desc || parallel_desc->device_type() == DeviceType::kCPU)
+      CHECK_OR_RETURN(!parallel_desc || parallel_desc->device_type() == DeviceType::kCPU)
           << pthread_fork::kOfCudaNotSupportInForkedSubProcess;
+      // NOTE: operate `vm_` in forked subprocesses causes mysterious problems.
+      // `ComputeInFuseMode` will be replaced by `Compute` soon.
+      instr_msg->mut_instr_type_id()->instruction_type().ComputeInFuseMode(instr_msg);
     }
-    JUST(vm_->Receive(instr_list));
-    while (!vm_->Empty()) { vm_->Schedule(); }
-    vm_->Callback();
-    // no scheduler processing gc, we must do it in current thread.
-    vm::InstructionMsgList garbage_msg_list;
-    vm_->mut_garbage_msg_list()->MoveTo(&garbage_msg_list);
   } else {
     const int64_t kHighWaterMark = GetInstructionHighWaterMark();
     if (vm_->flying_instruction_cnt() > kHighWaterMark) {
