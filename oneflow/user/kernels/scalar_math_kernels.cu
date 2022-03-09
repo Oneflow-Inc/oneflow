@@ -125,11 +125,20 @@ struct ScalarTensorPowGradFunctor {
 };
 
 template<>
+struct ScalarTensorPowGradFunctor<float> {
+  OF_DEVICE_FUNC explicit ScalarTensorPowGradFunctor(float exponent) : exponent(exponent) {}
+  __device__ float operator()(float x, float dy) const {
+    return __powf(exponent, x) * __logf(exponent) * dy;
+  }
+  const float exponent;
+};
+
+template<>
 struct ScalarTensorPowGradFunctor<half> {
   OF_DEVICE_FUNC explicit ScalarTensorPowGradFunctor(half exponent) : exponent(exponent) {}
   __device__ half operator()(half x, half dy) const {
     const float exp = __half2float(exponent);
-    return __float2half(exp * __powf(exp, __half2float(x)) * log(static_cast<float>(exp))
+    return __float2half(exp * __powf(exp, __half2float(x)) * __logf(exp)
                         * __half2float(dy));
   }
   const half exponent;
