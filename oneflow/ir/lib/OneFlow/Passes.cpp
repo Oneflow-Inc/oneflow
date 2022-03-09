@@ -16,8 +16,6 @@ limitations under the License.
 #include "OneFlow/OneFlowOps.h"
 #include "OneFlow/OneFlowDialect.h"
 #include "OneFlow/Passes.h"
-#include "mlir/IR/OperationSupport.h"
-#include "mlir/IR/Value.h"
 #include "oneflow/core/framework/random_generator.h"
 
 #include "mlir/Conversion/LinalgToLLVM/LinalgToLLVM.h"
@@ -354,7 +352,7 @@ IntegerAttr getSI64IntegerAttr(::mlir::PatternRewriter& rewriter, int64_t value)
                          dropout_op->getLoc(), dropout_op->getResultTypes().front(), operands,
                          fused_bias_add_dropout_attributes)
                      ->getResults();
-      // pad op is expected to be erased if it is not used
+      // bias_add and dropout op is expected to be erased if it is not used
       return res;
     }
   }
