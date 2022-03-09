@@ -26,6 +26,7 @@ os.environ["ONEFLOW_MLIR_ENABLE_ROUND_TRIP"] = "1"
 import oneflow as flow
 import oneflow.unittest
 
+
 def do_bias_add_dropout_graph(test_case, with_cuda, prob):
     x = flow.randn(2, 3, 4, 5)
     bias = flow.randn(5)
@@ -49,11 +50,12 @@ def do_bias_add_dropout_graph(test_case, with_cuda, prob):
     lazy_res = graph_to_run(x, bias)
     test_case.assertTrue(np.array_equal(eager_res.numpy(), lazy_res.numpy()))
 
+
 @flow.unittest.skip_unless_1n1d()
 class TestBiasAddDropout(oneflow.unittest.TestCase):
     def test_bias_add_dropout_graph(test_case):
         do_bias_add_dropout_graph(test_case, True, 1.0)
 
+
 if __name__ == "__main__":
     unittest.main()
-
