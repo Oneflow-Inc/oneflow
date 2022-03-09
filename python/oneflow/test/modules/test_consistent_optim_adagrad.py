@@ -32,7 +32,6 @@ def compare_with_numpy_adagrad(
     test_case,
     placement,
     sbp,
-    device,
     x_shape,
     learning_rate,
     train_iters,
@@ -110,7 +109,6 @@ def compare_with_numpy_adam_clip_grad(
     test_case,
     placement,
     sbp,
-    device,
     x_shape,
     learning_rate,
     train_iters,
@@ -200,7 +198,6 @@ class TestAdagrad(flow.unittest.TestCase):
     @globaltest
     def test_adagrad(test_case):
         arg_dict = OrderedDict()
-        arg_dict["device"] = ["cpu", "cuda"]
         arg_dict["x_shape"] = [(4, 4)]
         arg_dict["learning_rate"] = [0.3]
         arg_dict["train_iters"] = [10]
@@ -216,26 +213,25 @@ class TestAdagrad(flow.unittest.TestCase):
                 for sbp in all_sbp(placement, max_dim=1, except_partial_sum=True):
                     compare_with_numpy_adagrad(test_case, placement, sbp, *arg)
 
-    @globaltest
-    def test_adagrad_clip_grad(test_case):
-        arg_dict = OrderedDict()
-        arg_dict["device"] = ["cpu", "cuda"]
-        arg_dict["x_shape"] = [(10,)]
-        arg_dict["learning_rate"] = [0.03]
-        arg_dict["train_iters"] = [10]
-        arg_dict["lr_decay"] = [0.75]
-        arg_dict["weight_decay"] = [0.1]
-        arg_dict["initial_accumulator_value"] = [1.0]
-        arg_dict["eps"] = [1e-07]
-        arg_dict["clip_grad_max_norm"] = [1.0]
-        arg_dict["clip_grad_norm_type"] = ["inf", 3.5]
-        arg_dict["reload_state_step"] = [5]  # save and load optim state
-        arg_dict["save_load_by_pickle"] = [False, True]
+    # @globaltest
+    # def test_adagrad_clip_grad(test_case):
+    #     arg_dict = OrderedDict()
+    #     arg_dict["x_shape"] = [(10,)]
+    #     arg_dict["learning_rate"] = [0.03]
+    #     arg_dict["train_iters"] = [10]
+    #     arg_dict["lr_decay"] = [0.75]
+    #     arg_dict["weight_decay"] = [0.1]
+    #     arg_dict["initial_accumulator_value"] = [1.0]
+    #     arg_dict["eps"] = [1e-07]
+    #     arg_dict["clip_grad_max_norm"] = [1.0]
+    #     arg_dict["clip_grad_norm_type"] = ["inf", 3.5]
+    #     arg_dict["reload_state_step"] = [5]  # save and load optim state
+    #     arg_dict["save_load_by_pickle"] = [False, True]
 
-        for arg in GenArgList(arg_dict):
-            for placement in all_placement():
-                for sbp in all_sbp(placement, max_dim=1, except_partial_sum=True):
-                    compare_with_numpy_adam_clip_grad(test_case, placement, sbp, *arg)
+    #     for arg in GenArgList(arg_dict):
+    #         for placement in all_placement():
+    #             for sbp in all_sbp(placement, max_dim=1, except_partial_sum=True):
+    #                 compare_with_numpy_adam_clip_grad(test_case, placement, sbp, *arg)
 
 
 if __name__ == "__main__":
