@@ -15,7 +15,6 @@ limitations under the License.
 */
 #include "oneflow/core/embedding/cache.h"
 #include "oneflow/core/embedding/full_cache.h"
-#include "oneflow/core/device/cuda_util.h"
 
 namespace oneflow {
 

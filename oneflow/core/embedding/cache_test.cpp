@@ -40,7 +40,7 @@ void TestCache(Cache* cache, uint32_t line_size) {
   ep::Stream* stream = device->CreateStream();
 
   std::unordered_set<int64_t> in_cache;
-  const size_t n_iter = 128;
+  const size_t n_iter = 32;
   const uint32_t n_keys = 1024;
   int64_t* d_keys;
   int64_t* keys;
