@@ -26,7 +26,7 @@ import oneflow.unittest
 from oneflow.test_utils.automated_test_util import *
 
 
-@autotest(n=10, auto_backward=False, check_graph=False)
+@autotest(n=1, auto_backward=False, check_graph=False)
 def _test_greater_impl(test_case, ndim, placement, sbp):
     dims = [random(1, 4) * 8 for i in range(ndim)]
     x1 = random_tensor(ndim, *dims)
@@ -38,7 +38,6 @@ def _test_greater_impl(test_case, ndim, placement, sbp):
     return z
 
 
-@unittest.skip("TODO: houjiang, yushun. this test might fail")
 class TestGreaterConsistent(flow.unittest.TestCase):
     @globaltest
     def test_greater(test_case):
