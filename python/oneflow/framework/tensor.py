@@ -293,7 +293,11 @@ def _neg(self):
 
 
 def _pow(self, b):
-    return flow.pow(self, b)
+    return flow._C.pow(self, b)
+
+
+def _rpow(self, b):
+    return flow._C.pow(b, self)
 
 
 def _abs(self):
@@ -1034,6 +1038,7 @@ def RegisterMethods():
     Tensor.__rtruediv__ = _rtruediv
     Tensor.__neg__ = _neg
     Tensor.__pow__ = _pow
+    Tensor.__rpow__ = _rpow
     Tensor.__format__ = _format
     Tensor.__floordiv__ = _floor_divide
     Tensor.__len__ = _len
