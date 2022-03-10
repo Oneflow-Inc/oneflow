@@ -265,6 +265,11 @@ if(CPU_THREADING_RUNTIME STREQUAL "TBB")
   set(ONETBB_MD5 7545d4084baff17af73da2dae5ab8005)
 endif()
 
+set(ROBIN_HOOD_HASHING_URL
+    https://github.com/martinus/robin-hood-hashing/archive/refs/tags/3.11.5.tar.gz)
+use_mirror(VARIABLE ROBIN_HOOD_HASHING_URL URL ${ROBIN_HOOD_HASHING_URL})
+set(ROBIN_HOOD_HASHING_MD5 a78bd30a7582f25984f8592652836467)
+
 add_subdirectory(external)
 include(third_party)
 
