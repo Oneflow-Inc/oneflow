@@ -28,9 +28,7 @@ namespace oneflow {
   CHECK_GE_OR_RETURN(start, 0);
   CHECK_GE_OR_RETURN(length, 0);
   // length should be input size if split the full slice dimension
-  if (start == 0 && length > in.shape().At(dim)) {
-    length = in.shape().At(dim);
-  }
+  if (start == 0 && length > in.shape().At(dim)) { length = in.shape().At(dim); }
   user_op::TensorDesc* out = ctx->OutputTensorDesc("out", 0);
 
   DimVector dim_vec;
