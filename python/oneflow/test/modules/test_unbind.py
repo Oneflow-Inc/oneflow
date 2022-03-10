@@ -41,7 +41,7 @@ class TestUnbind(flow.unittest.TestCase):
         x = random_tensor(ndim=4).to(device)
         y = torch.unbind(x, random(0, 4).to(int))
         return y
-    
+
     @autotest(check_graph=True)
     def test_unbind_flow_with_random_data3(test_case):
         device = random_device()
@@ -56,7 +56,7 @@ class TestUnbind(flow.unittest.TestCase):
         y = torch.unbind(x, random(0, 3).to(int))
         return y
 
-    @autotest(check_graph=True)    
+    @autotest(check_graph=True)
     def test_unbind_flow_with_random_data5(test_case):
         device = random_device()
         x = random_tensor(ndim=2).to(device)
