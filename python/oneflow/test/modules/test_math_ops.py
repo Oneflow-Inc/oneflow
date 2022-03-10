@@ -173,14 +173,14 @@ class TestPow(flow.unittest.TestCase):
         return torch.pow(x, y)
 
     @autotest(n=10, auto_backward=True, check_graph=True)
-    def test_pow_reverse_int_scalar_with_random_data(test_case):
+    def test_reverse_pow_int_scalar_with_random_data(test_case):
         device = random_device()
         x = random_tensor().to(device)
         y = random().to(int)
         return torch.pow(y, x)
 
     @autotest(n=10, auto_backward=True, check_graph=True)
-    def test_rpow_int_scalar_with_random_data(test_case):
+    def test_symbolic_reverse_pow_with_random_data(test_case):
         device = random_device()
         x = random_tensor().to(device)
         y = random().to(int)

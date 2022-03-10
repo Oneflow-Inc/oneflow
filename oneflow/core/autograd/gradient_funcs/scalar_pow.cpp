@@ -70,7 +70,7 @@ class ScalarPow : public OpExprGradFunction<ScalarPowCaptureState> {
 
 REGISTER_OP_EXPR_GRAD_FUNCTION("scalar_pow", ScalarPow);
 
-class ScalarTensorPow : public OpExprGradFunction<ScalarPowCaptureState> {
+class ScalarReversePow : public OpExprGradFunction<ScalarPowCaptureState> {
  public:
   Maybe<void> Init(const OpExpr& op) override {
     const auto* fw_op_expr = dynamic_cast<const UserOpExpr*>(&op);
@@ -103,7 +103,7 @@ class ScalarTensorPow : public OpExprGradFunction<ScalarPowCaptureState> {
     MutableAttrMap attrs;
     in_grads->resize(1);
     if (ctx->requires_grad) {
-      (*in_grads)[0] = JUST(functional::ScalarTensorPowGrad(x, out_grads[0], ctx->operand));
+      (*in_grads)[0] = JUST(functional::ScalarReversePowGrad(x, out_grads[0], ctx->operand));
     }
     return Maybe<void>::Ok();
   }
@@ -113,7 +113,7 @@ class ScalarTensorPow : public OpExprGradFunction<ScalarPowCaptureState> {
   AttrMap base_attrs_;
 };
 
-REGISTER_OP_EXPR_GRAD_FUNCTION("scalar_tensor_pow", ScalarTensorPow);
+REGISTER_OP_EXPR_GRAD_FUNCTION("scalar_reverse_pow", ScalarReversePow);
 
 }  // namespace one
 }  // namespace oneflow

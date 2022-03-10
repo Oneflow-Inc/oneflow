@@ -173,13 +173,13 @@ REGISTER_USER_OP_GRAD("scalar_pow")
       return Maybe<void>::Ok();
     });
 
-REGISTER_USER_OP_GRAD("scalar_tensor_pow")
+REGISTER_USER_OP_GRAD("scalar_reverse_pow")
     .SetGenBackwardOpConfFn([](const user_op::UserOpWrapper& op,
                                const user_op::AddOpFn& AddOp) -> Maybe<void> {
       if (op.NeedGenGradTensor4OpInput("in", 0)) {
         user_op::UserOpConfWrapperBuilder builder(op.op_name() + "_grad");
         user_op::UserOpConfWrapper grad_op =
-            builder.Op("scalar_tensor_pow_grad")
+            builder.Op("scalar_reverse_pow_grad")
                 .Input("x", op.input("in", 0))
                 .Input("dy", op.GetGradTensorWithOpOutput("out", 0))
                 .Output("dx")

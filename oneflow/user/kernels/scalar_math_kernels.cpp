@@ -25,9 +25,9 @@ struct ScalarMathFunctor<DeviceType::kCPU, BIN_OP, T> final {
 };
 
 template<template<typename> class BIN_OP, typename T>
-struct ScalarTensorMathFunctor<DeviceType::kCPU, BIN_OP, T> final {
+struct ScalarReverseMathFunctor<DeviceType::kCPU, BIN_OP, T> final {
   void operator()(ep::Stream* stream, const int64_t elem_cnt, const T scalar, const T* in, T* out) {
-    DoScalarTensorMath<BIN_OP, T>(elem_cnt, scalar, in, out);
+    DoScalarReverseMath<BIN_OP, T>(elem_cnt, scalar, in, out);
   }
 };
 
@@ -65,10 +65,10 @@ class ScalarMathKernel final : public user_op::OpKernel {
 };
 
 template<DeviceType device_type, template<typename> class BIN_OP, typename T>
-class ScalarTensorPowKernel final : public user_op::OpKernel {
+class ScalarReverseMathKernel final : public user_op::OpKernel {
  public:
-  ScalarTensorPowKernel() = default;
-  ~ScalarTensorPowKernel() = default;
+  ScalarReverseMathKernel() = default;
+  ~ScalarReverseMathKernel() = default;
 
  private:
   void Compute(user_op::KernelComputeContext* ctx) const override {
@@ -87,7 +87,7 @@ class ScalarTensorPowKernel final : public user_op::OpKernel {
 
     int64_t elem_cnt = out->shape().elem_cnt();
     if (elem_cnt != 0) {
-      ScalarTensorMathFunctor<device_type, BIN_OP, T>()(ctx->stream(), elem_cnt, scalar_operand,
+      ScalarReverseMathFunctor<device_type, BIN_OP, T>()(ctx->stream(), elem_cnt, scalar_operand,
                                                         in_ptr, out_ptr);
     } else {
       // For 0-d Tensor
@@ -117,22 +117,22 @@ class ScalarTensorPowKernel final : public user_op::OpKernel {
                                                   dtype_pair);                                   \
   REGISTER_UNARY_MATH_SCALAR_ELEMWISE_USER_KERNEL(device, "scalar_pow", BinaryFuncPow, dtype_pair);
 
-#define REGISTER_UNARY_MATH_SCALAR_TENSOR_ELEMWISE_USER_KERNEL(device, kernel_name, binary_op,     \
+#define REGISTER_UNARY_MATH_SCALAR_REVERSE_ELEMWISE_USER_KERNEL(device, kernel_name, binary_op,     \
                                                                input_dtype_pair)                   \
   REGISTER_USER_KERNEL(kernel_name)                                                                \
-      .SetCreateFn<ScalarTensorPowKernel<device, binary_op, OF_PP_PAIR_FIRST(input_dtype_pair)>>() \
+      .SetCreateFn<ScalarReverseMathKernel<device, binary_op, OF_PP_PAIR_FIRST(input_dtype_pair)>>() \
       .SetIsMatchedHob((user_op::HobDeviceType() == device)                                        \
                        && (user_op::HobDataType("in", 0) == OF_PP_PAIR_SECOND(input_dtype_pair)));
 
-#define REGISTER_SCALAR_TENSOR_POW_KERNEL(device, dtype_pair)                         \
-  REGISTER_UNARY_MATH_SCALAR_TENSOR_ELEMWISE_USER_KERNEL(device, "scalar_tensor_pow", \
+#define REGISTER_SCALAR_REVERSE_POW_KERNEL(device, dtype_pair)                         \
+  REGISTER_UNARY_MATH_SCALAR_REVERSE_ELEMWISE_USER_KERNEL(device, "scalar_reverse_pow", \
                                                          BinaryFuncPow, dtype_pair);
 
 // we register uint8_t, int8_t, int32_t, int64_t, float, double, float16.
 OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(REGISTER_SCALAR_MATH_KERNEL, (DeviceType::kCPU),
                                  ARITHMETIC_DATA_TYPE_SEQ UNSIGNED_INT_DATA_TYPE_SEQ
                                      FLOAT16_DATA_TYPE_SEQ)
-OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(REGISTER_SCALAR_TENSOR_POW_KERNEL, (DeviceType::kCPU),
+OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(REGISTER_SCALAR_REVERSE_POW_KERNEL, (DeviceType::kCPU),
                                  ARITHMETIC_DATA_TYPE_SEQ UNSIGNED_INT_DATA_TYPE_SEQ
                                      FLOAT16_DATA_TYPE_SEQ)
 
@@ -140,7 +140,7 @@ OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(REGISTER_SCALAR_TENSOR_POW_KERNEL, (DeviceType:
 OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(REGISTER_SCALAR_MATH_KERNEL, (DeviceType::kCUDA),
                                  ARITHMETIC_DATA_TYPE_SEQ UNSIGNED_INT_DATA_TYPE_SEQ
                                      FLOAT16_DATA_TYPE_SEQ)
-OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(REGISTER_SCALAR_TENSOR_POW_KERNEL, (DeviceType::kCUDA),
+OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(REGISTER_SCALAR_REVERSE_POW_KERNEL, (DeviceType::kCUDA),
                                  ARITHMETIC_DATA_TYPE_SEQ UNSIGNED_INT_DATA_TYPE_SEQ
                                      FLOAT16_DATA_TYPE_SEQ)
 #endif  // WITH_CUDA
@@ -187,10 +187,10 @@ REGISTER_CPU_SCALAR_POW_GRAD_KERNEL(DeviceType::kCPU, float);
 REGISTER_CPU_SCALAR_POW_GRAD_KERNEL(DeviceType::kCPU, double);
 
 template<DeviceType device_type, typename T>
-class CpuScalarTensorPowGradKernel final : public user_op::OpKernel {
+class CpuScalarReversePowGradKernel final : public user_op::OpKernel {
  public:
-  CpuScalarTensorPowGradKernel() = default;
-  ~CpuScalarTensorPowGradKernel() = default;
+  CpuScalarReversePowGradKernel() = default;
+  ~CpuScalarReversePowGradKernel() = default;
 
  private:
   void Compute(user_op::KernelComputeContext* ctx) const override {
@@ -218,13 +218,13 @@ class CpuScalarTensorPowGradKernel final : public user_op::OpKernel {
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
 
-#define REGISTER_CPU_SCALAR_TENSOR_POW_GRAD_KERNEL(device, dtype) \
-  REGISTER_USER_KERNEL("scalar_tensor_pow_grad")                  \
-      .SetCreateFn<CpuScalarTensorPowGradKernel<device, dtype>>() \
+#define REGISTER_CPU_SCALAR_REVERSE_POW_GRAD_KERNEL(device, dtype) \
+  REGISTER_USER_KERNEL("scalar_reverse_pow_grad")                  \
+      .SetCreateFn<CpuScalarReversePowGradKernel<device, dtype>>() \
       .SetIsMatchedHob((user_op::HobDeviceType() == device)       \
                        && (user_op::HobDataType("dx", 0) == GetDataType<dtype>::value));
 
-REGISTER_CPU_SCALAR_TENSOR_POW_GRAD_KERNEL(DeviceType::kCPU, float);
-REGISTER_CPU_SCALAR_TENSOR_POW_GRAD_KERNEL(DeviceType::kCPU, double);
+REGISTER_CPU_SCALAR_REVERSE_POW_GRAD_KERNEL(DeviceType::kCPU, float);
+REGISTER_CPU_SCALAR_REVERSE_POW_GRAD_KERNEL(DeviceType::kCPU, double);
 
 }  // namespace oneflow

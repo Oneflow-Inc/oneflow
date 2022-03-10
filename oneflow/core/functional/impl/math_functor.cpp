@@ -237,14 +237,6 @@ class ScalarPowFunctor : public ScalarMathBaseFunctor {
   ScalarPowFunctor() : ScalarMathBaseFunctor(/*op_name=*/"scalar_pow") {}
 };
 
-class ScalarTensorPowFunctor : public ScalarMathBaseFunctor {
- public:
-  ScalarTensorPowFunctor() : ScalarMathBaseFunctor(/*op_name=*/"scalar_tensor_pow") {}
-  Maybe<Tensor> operator()(const Scalar& scalar, const std::shared_ptr<one::Tensor>& input) const {
-    return ScalarMathBaseFunctor::operator()(input, scalar, false);
-  }
-};
-
 class ScalarPowGradFunctor {
  public:
   ScalarPowGradFunctor() {
@@ -271,11 +263,19 @@ class ScalarPowGradFunctor {
   std::shared_ptr<OpExpr> op_;
 };
 
-class ScalarTensorPowGradFunctor {
+class ScalarReversePowFunctor : public ScalarMathBaseFunctor {
  public:
-  ScalarTensorPowGradFunctor() {
+  ScalarReversePowFunctor() : ScalarMathBaseFunctor(/*op_name=*/"scalar_reverse_pow") {}
+  Maybe<Tensor> operator()(const Scalar& scalar, const std::shared_ptr<one::Tensor>& input) const {
+    return ScalarMathBaseFunctor::operator()(input, scalar, false);
+  }
+};
+
+class ScalarReversePowGradFunctor {
+ public:
+  ScalarReversePowGradFunctor() {
     op_ = CHECK_JUST(
-        one::OpBuilder("scalar_tensor_pow_grad").Input("x").Input("dy").Output("dx").Build());
+        one::OpBuilder("scalar_reverse_pow_grad").Input("x").Input("dy").Output("dx").Build());
   }
   Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x,
                            const std::shared_ptr<one::Tensor>& dy, const Scalar& scalar) const {
@@ -2779,9 +2779,9 @@ ONEFLOW_FUNCTION_LIBRARY(m) {
   m.add_functor<ScalarDivFunctor, ScalarDiv2Functor>("ScalarDiv");
   m.add_functor<InplaceScalarDivFunctor>("InplaceScalarDiv");
   m.add_functor<ScalarPowFunctor>("ScalarPow");
-  m.add_functor<ScalarTensorPowFunctor>("ScalarTensorPow");
+  m.add_functor<ScalarReversePowFunctor>("ScalarReversePow");
   m.add_functor<ScalarPowGradFunctor>("ScalarPowGrad");
-  m.add_functor<ScalarTensorPowGradFunctor>("ScalarTensorPowGrad");
+  m.add_functor<ScalarReversePowGradFunctor>("ScalarReversePowGrad");
   m.add_functor<ReduceMaxFunctor>("ReduceMax");
   m.add_functor<MaxFunctor, Max2Functor>("Max");
   m.add_functor<ReduceMeanFunctor>("ReduceMean");
