@@ -790,7 +790,9 @@ class DualObject:
             state_dict = pytorch.state_dict()
             state_dict = {k: v.detach().cpu().numpy() for (k, v) in state_dict.items()}
             oneflow_state_dict = oneflow.state_dict()
-            oneflow_state_dict = {k: v.detach() for (k, v) in oneflow_state_dict.items()}
+            oneflow_state_dict = {
+                k: v.detach() for (k, v) in oneflow_state_dict.items()
+            }
             already_global = False
             for (k, v) in oneflow_state_dict.items():
                 if v.is_global:
@@ -801,7 +803,11 @@ class DualObject:
                     for (k, v) in oneflow_state_dict.items():
                         if v.is_global:
                             t = getattr(oneflow, k)
-                            setattr(oneflow, k, t.to_global(placement=v.placement, sbp=v.sbp))
+                            setattr(
+                                oneflow,
+                                k,
+                                t.to_global(placement=v.placement, sbp=v.sbp),
+                            )
                 else:
                     oneflow = oneflow.to_global(
                         placement=flow.env.all_device_placement("cpu"),
