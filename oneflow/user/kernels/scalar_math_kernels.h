@@ -57,7 +57,7 @@ struct ScalarReverseMathFunctor final {
 
 template<template<typename> class UnaryFunctor, typename T>
 OF_DEVICE_FUNC void DoScalarReverseMath(const int64_t elem_cnt, const T scalar, const T* in,
-                                       T* out) {
+                                        T* out) {
   XPU_1D_KERNEL_LOOP(idx, elem_cnt) { out[idx] = UnaryFunctor<T>::Invoke(scalar, in[idx]); }
 }
 

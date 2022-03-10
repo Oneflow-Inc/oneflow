@@ -217,7 +217,7 @@ class GpuScalarReversePowGradKernel final : public user_op::OpKernel {
 #define REGISTER_CUDA_SCALAR_REVERSE_POW_BACKWARD_KERNEL(device, dtype) \
   REGISTER_USER_KERNEL("scalar_reverse_pow_grad")                       \
       .SetCreateFn<GpuScalarReversePowGradKernel<device, dtype>>()      \
-      .SetIsMatchedHob((user_op::HobDeviceType() == device)            \
+      .SetIsMatchedHob((user_op::HobDeviceType() == device)             \
                        && (user_op::HobDataType("dx", 0) == GetDataType<dtype>::value));
 
 REGISTER_CUDA_SCALAR_REVERSE_POW_BACKWARD_KERNEL(DeviceType::kCUDA, float);

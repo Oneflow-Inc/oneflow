@@ -88,7 +88,7 @@ class ScalarReverseMathKernel final : public user_op::OpKernel {
     int64_t elem_cnt = out->shape().elem_cnt();
     if (elem_cnt != 0) {
       ScalarReverseMathFunctor<device_type, BIN_OP, T>()(ctx->stream(), elem_cnt, scalar_operand,
-                                                        in_ptr, out_ptr);
+                                                         in_ptr, out_ptr);
     } else {
       // For 0-d Tensor
       return;
@@ -117,16 +117,17 @@ class ScalarReverseMathKernel final : public user_op::OpKernel {
                                                   dtype_pair);                                   \
   REGISTER_UNARY_MATH_SCALAR_ELEMWISE_USER_KERNEL(device, "scalar_pow", BinaryFuncPow, dtype_pair);
 
-#define REGISTER_UNARY_MATH_SCALAR_REVERSE_ELEMWISE_USER_KERNEL(device, kernel_name, binary_op,     \
-                                                               input_dtype_pair)                   \
-  REGISTER_USER_KERNEL(kernel_name)                                                                \
-      .SetCreateFn<ScalarReverseMathKernel<device, binary_op, OF_PP_PAIR_FIRST(input_dtype_pair)>>() \
-      .SetIsMatchedHob((user_op::HobDeviceType() == device)                                        \
+#define REGISTER_UNARY_MATH_SCALAR_REVERSE_ELEMWISE_USER_KERNEL(device, kernel_name, binary_op, \
+                                                                input_dtype_pair)               \
+  REGISTER_USER_KERNEL(kernel_name)                                                             \
+      .SetCreateFn<                                                                             \
+          ScalarReverseMathKernel<device, binary_op, OF_PP_PAIR_FIRST(input_dtype_pair)>>()     \
+      .SetIsMatchedHob((user_op::HobDeviceType() == device)                                     \
                        && (user_op::HobDataType("in", 0) == OF_PP_PAIR_SECOND(input_dtype_pair)));
 
-#define REGISTER_SCALAR_REVERSE_POW_KERNEL(device, dtype_pair)                         \
+#define REGISTER_SCALAR_REVERSE_POW_KERNEL(device, dtype_pair)                          \
   REGISTER_UNARY_MATH_SCALAR_REVERSE_ELEMWISE_USER_KERNEL(device, "scalar_reverse_pow", \
-                                                         BinaryFuncPow, dtype_pair);
+                                                          BinaryFuncPow, dtype_pair);
 
 // we register uint8_t, int8_t, int32_t, int64_t, float, double, float16.
 OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(REGISTER_SCALAR_MATH_KERNEL, (DeviceType::kCPU),
@@ -221,7 +222,7 @@ class CpuScalarReversePowGradKernel final : public user_op::OpKernel {
 #define REGISTER_CPU_SCALAR_REVERSE_POW_GRAD_KERNEL(device, dtype) \
   REGISTER_USER_KERNEL("scalar_reverse_pow_grad")                  \
       .SetCreateFn<CpuScalarReversePowGradKernel<device, dtype>>() \
-      .SetIsMatchedHob((user_op::HobDeviceType() == device)       \
+      .SetIsMatchedHob((user_op::HobDeviceType() == device)        \
                        && (user_op::HobDataType("dx", 0) == GetDataType<dtype>::value));
 
 REGISTER_CPU_SCALAR_REVERSE_POW_GRAD_KERNEL(DeviceType::kCPU, float);
