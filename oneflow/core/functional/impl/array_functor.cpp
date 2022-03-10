@@ -2129,8 +2129,7 @@ class SplitFunctor {
 class UnbindFunctor {
  public:
   UnbindFunctor() {}
-  Maybe<TensorTuple> operator()(const std::shared_ptr<one::Tensor>& x,
-                                const int64_t& dim) const {
+  Maybe<TensorTuple> operator()(const std::shared_ptr<one::Tensor>& x, const int64_t& dim) const {
     int64_t axis = dim;
     int32_t ndim = x->ndim();
     if (axis < 0) { axis += ndim; }
@@ -2139,9 +2138,7 @@ class UnbindFunctor {
         << "], but got " << dim << ")";
     int64_t dim_size = x->shape()->At(axis);
     TensorTuple unbinds(dim_size);
-    for (int i = 0; i < dim_size; ++i) {
-      unbinds[i] = JUST(Select(x, axis, i));
-    }
+    for (int i = 0; i < dim_size; ++i) { unbinds[i] = JUST(Select(x, axis, i)); }
     return unbinds;
   }
 };
