@@ -10,32 +10,27 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 """
-
 import unittest
-from collections import OrderedDict
-
-import numpy as np
-from test_util import GenArgList
-
 import oneflow as flow
 import oneflow.unittest
 
 from oneflow.test_utils.automated_test_util import *
 
 
-@autotest(check_graph=False)
+@autotest(n=1, check_graph=False)
 def _test_bmm_with_random_data(test_case, placement, sbp):
-    x = random_pytorch_tensor(ndim=3, dim0=2, dim1=3, dim2=4).to_consistent(
+    dims = [random(1, 4).to(int) * 8 for _ in range(3)]
+    x = random_tensor(3, *dims).to_global(
         placement=placement, sbp=sbp
     )
-    y = random_pytorch_tensor(ndim=3, dim0=2, dim1=4, dim2=5).to_consistent(
+    y = random_tensor(3, *dims).to_global(
         placement=placement, sbp=sbp
     )
-
     return torch.bmm(x, y)
 
+
 class TestModule(flow.unittest.TestCase):
-    @consistent
+    @globaltest
     def test_bmm_with_random_data(test_case):
         for placement in all_placement():
             for sbp in all_sbp(placement, max_dim=3):
