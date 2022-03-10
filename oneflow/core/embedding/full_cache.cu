@@ -105,7 +105,7 @@ __global__ void OrdinalEncodeKernel(uint64_t capacity, TableEntry<Key, Index>* t
                                     uint64_t* context) {
   CUDA_1D_KERNEL_LOOP(i, num_keys) {
     Key key = keys[i];
-    uint64_t hash = XXH64()(key);
+    uint64_t hash = FullCacheHash()(key);
     bool success = GetOrInsertOne<Key, Index>(capacity, table, table_size, key, hash, context + i);
     assert(success);
   }
@@ -116,7 +116,7 @@ __global__ void OrdinalEncodeLookupKernel(uint64_t capacity, TableEntry<Key, Ind
                                           uint32_t num_keys, const Key* keys, uint64_t* context) {
   CUDA_1D_KERNEL_LOOP(i, num_keys) {
     Key key = keys[i];
-    uint64_t hash = XXH64()(key);
+    uint64_t hash = FullCacheHash()(key);
     GetOne<Key, Index>(capacity, table, key, hash, context + i);
   }
 }

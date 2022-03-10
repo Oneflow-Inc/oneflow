@@ -21,6 +21,7 @@ namespace oneflow {
 namespace embedding {
 
 std::unique_ptr<Cache> NewCache(const CacheOptions& options) {
+#ifdef WITH_CUDA
   CHECK_GT(options.key_size, 0);
   CHECK_GT(options.value_size, 0);
   CHECK_GT(options.capacity, 0);
@@ -33,6 +34,10 @@ std::unique_ptr<Cache> NewCache(const CacheOptions& options) {
     UNIMPLEMENTED();
     return nullptr;
   }
+#else
+  UNIMPLEMENTED();
+  return nullptr;
+#endif  // WITH_CUDA
 }
 
 }  // namespace embedding
