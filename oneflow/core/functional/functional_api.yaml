@@ -1169,6 +1169,10 @@
   signature: "Void (Tensor ref, Tensor value, Int64List start, Int64List stop, Int64List step) => LogicalSliceAssign"
   bind_python: True
 
+- name: "logical_slice_assign_out"
+  signature: "Tensor (Tensor ref, Tensor value, Int64List start, Int64List stop, Int64List step) => LogicalSliceAssignOut"
+  bind_python: True
+
 - name: "copy"
   signature: "Tensor (Tensor x, String device_type, Int64 device_id) => Copy"
   bind_python: True

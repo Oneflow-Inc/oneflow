@@ -168,6 +168,25 @@ def OneFlow_LogicalSliceAssignOp : OneFlow_BaseOp<"logical_slice_assign", [Decla
   let has_input_arg_modify_fn = 1;
 }
 
+def OneFlow_LogicalSliceAssignOutOp : OneFlow_BaseOp<"logical_slice_assign_out", [DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
+  let input = (ins
+    OneFlow_Tensor:$ref,
+    OneFlow_Tensor:$value
+  );
+  let output = (outs
+    OneFlow_Tensor:$y
+  );
+  let attrs = (ins
+    SI64ArrayAttr:$start,
+    SI64ArrayAttr:$stop,
+    SI64ArrayAttr:$step
+  );
+  let has_logical_tensor_desc_infer_fn = 1;
+  let has_physical_tensor_desc_infer_fn = 1;
+  let has_get_sbp_fn = 1;
+  let has_data_type_infer_fn = 1;
+}
+
 #endif // GET_ONEFLOW_ASSIGN_OP_DEFINITIONS
 
 // Group: BASE
