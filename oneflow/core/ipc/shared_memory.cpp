@@ -39,11 +39,8 @@ namespace {
 // return errno
 int ShmOpen(const std::string& shm_name, int* fd, bool create) {
   SharedMemoryManager::get().AddShmName(shm_name);
-  if (create) {
-    *fd = shm_open(("/" + shm_name).c_str(), O_CREAT | O_RDWR | O_EXCL, S_IRUSR | S_IWUSR);
-  } else {
-    *fd = shm_open(("/" + shm_name).c_str(), O_RDWR | O_EXCL, S_IRUSR | S_IWUSR);
-  }
+  *fd = shm_open(("/" + shm_name).c_str(), (create ? O_CREAT : 0) | O_RDWR | O_EXCL,
+                 S_IRUSR | S_IWUSR);
   return *fd == -1 ? errno : 0;
 }
 
