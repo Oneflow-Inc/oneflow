@@ -6955,7 +6955,7 @@ def OneFlow_ScalarPowGradOp : OneFlow_BaseOp<"scalar_pow_grad", [NoSideEffect, D
   let has_data_type_infer_fn = 1;
 }
 
-def OneFlow_ScalarTensorPowOp : OneFlow_BaseOp<"scalar_reverse_pow", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
+def OneFlow_ScalarReversePowOp : OneFlow_BaseOp<"scalar_reverse_pow", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
     OneFlow_Tensor:$in
   );
@@ -6974,7 +6974,7 @@ def OneFlow_ScalarTensorPowOp : OneFlow_BaseOp<"scalar_reverse_pow", [NoSideEffe
   let has_data_type_infer_fn = 1;
 }
 
-def OneFlow_ScalarTensorPowGradOp : OneFlow_BaseOp<"scalar_reverse_pow_grad", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
+def OneFlow_ScalarReversePowGradOp : OneFlow_BaseOp<"scalar_reverse_pow_grad", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
     OneFlow_Tensor:$x,
     OneFlow_Tensor:$dy

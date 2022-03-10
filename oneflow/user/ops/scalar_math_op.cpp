@@ -60,7 +60,7 @@ IMPLEMENT_SCALAR_MATH_OP_FUNCS(ScalarFmod, GetSbp4ScalarMath)
 IMPLEMENT_SCALAR_MATH_OP_FUNCS(ScalarMul, GetSbp4ScalarMul)
 IMPLEMENT_SCALAR_MATH_OP_FUNCS(ScalarDiv, GetSbp4ScalarMul)
 IMPLEMENT_SCALAR_MATH_OP_FUNCS(ScalarPow, GetSbp4ScalarMath)
-IMPLEMENT_SCALAR_MATH_OP_FUNCS(ScalarTensorPow, GetSbp4ScalarMath)
+IMPLEMENT_SCALAR_MATH_OP_FUNCS(ScalarReversePow, GetSbp4ScalarMath)
 #undef IMPLEMENT_SCALAR_MATH_OP_FUNCS
 
 /*static*/ Maybe<void> ScalarPowGradOp::GetSbp(user_op::SbpContext* ctx) {
@@ -83,21 +83,21 @@ IMPLEMENT_SCALAR_MATH_OP_FUNCS(ScalarTensorPow, GetSbp4ScalarMath)
   return Maybe<void>::Ok();
 }
 
-/*static*/ Maybe<void> ScalarTensorPowGradOp::GetSbp(user_op::SbpContext* ctx) {
+/*static*/ Maybe<void> ScalarReversePowGradOp::GetSbp(user_op::SbpContext* ctx) {
   const user_op::TensorDesc& x_tensor = ctx->LogicalTensorDesc4InputArgNameAndIndex("x", 0);
   FOR_RANGE(int64_t, i, 0, x_tensor.shape().NumAxes()) {
     ctx->NewBuilder().Split(ctx->inputs(), i).Split(ctx->outputs(), i).Build();
   }
   return Maybe<void>::Ok();
 }
-/*static*/ Maybe<void> ScalarTensorPowGradOp::InferLogicalTensorDesc(user_op::InferContext* ctx) {
+/*static*/ Maybe<void> ScalarReversePowGradOp::InferLogicalTensorDesc(user_op::InferContext* ctx) {
   *ctx->OutputShape("dx", 0) = ctx->InputShape("x", 0);
   return Maybe<void>::Ok();
 }
-/*static*/ Maybe<void> ScalarTensorPowGradOp::InferPhysicalTensorDesc(user_op::InferContext* ctx) {
+/*static*/ Maybe<void> ScalarReversePowGradOp::InferPhysicalTensorDesc(user_op::InferContext* ctx) {
   return InferLogicalTensorDesc(ctx);
 }
-/*static*/ Maybe<void> ScalarTensorPowGradOp::InferDataType(user_op::InferContext* ctx) {
+/*static*/ Maybe<void> ScalarReversePowGradOp::InferDataType(user_op::InferContext* ctx) {
   CHECK_EQ_OR_RETURN(ctx->InputDType("x", 0), ctx->InputDType("dy", 0));
   *ctx->OutputDType("dx", 0) = ctx->InputDType("x", 0);
   return Maybe<void>::Ok();
