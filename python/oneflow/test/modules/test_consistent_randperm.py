@@ -26,8 +26,8 @@ def _test_consistent_randperm(test_case, N, placement, sbp, dtype):
     x = flow.randperm(N, placement=placement, sbp=sbp, dtype=dtype)
 
     test_case.assertEqual(x.dtype, dtype)
-    #TODO: support (B,S)
-    #test_case.assertEqual(x.sbp, sbp)
+    #TODO: support (B,S
+    test_case.assertEqual(x.sbp, sbp)
     test_case.assertEqual(x.placement, placement)
 
 
