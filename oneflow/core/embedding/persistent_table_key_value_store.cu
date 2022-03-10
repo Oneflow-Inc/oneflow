@@ -229,7 +229,14 @@ void KeyValueStoreImpl<Key>::SaveSnapshot(const std::string& name) {
 
 std::unique_ptr<KeyValueStore> NewPersistentTableKeyValueStore(
     const PersistentTableKeyValueStoreOptions& options) {
-  return std::unique_ptr<KeyValueStore>(new KeyValueStoreImpl<uint64_t>(options));
+  if (options.table_options.key_size == sizeof(uint64_t)) {
+    return std::unique_ptr<KeyValueStore>(new KeyValueStoreImpl<uint64_t>(options));
+  } else if (options.table_options.key_size == sizeof(uint32_t)) {
+    return std::unique_ptr<KeyValueStore>(new KeyValueStoreImpl<uint32_t>(options));
+  } else {
+    UNIMPLEMENTED();
+    return nullptr;
+  }
 }
 
 }  // namespace embedding
