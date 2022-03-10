@@ -132,4 +132,4 @@ REGISTER_CUBLAS_FUSED_MLP_KERNEL_GPU(nv_bfloat16, DataType::kBFloat16);
 
 }  // namespace oneflow
 
-#endif
+#endif  // CUDA_VERSION >= 11040

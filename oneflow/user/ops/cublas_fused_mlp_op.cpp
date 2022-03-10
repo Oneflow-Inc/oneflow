@@ -19,27 +19,25 @@ limitations under the License.
 #include "oneflow/core/framework/framework.h"
 #include "oneflow/core/framework/infer_util.h"
 #include "oneflow/core/framework/op_generated.h"
-#include "oneflow/user/kernels/cublas_fused_mlp_util.cuh"
 
 namespace oneflow {
 
 namespace {
 
-// constexpr int32_t kAuxReluLdAlignRequirement = 128;
+constexpr int32_t kAuxReluLdAlignRequirement = 128;
 
-// long AlignReluAuxLd(long aux_ld) {
-//   /*
-//   ReLu bit-mask matrix leading dimension in elements.
-//   Must be divisible by 128 and be no less than the number of rows in the output matrix.
-//   */
-//   long old_aux_ld = aux_ld;
-//   return ((old_aux_ld + kAuxReluLdAlignRequirement - 1) / kAuxReluLdAlignRequirement)
-//          * kAuxReluLdAlignRequirement;
-// }
+long AlignReluAuxLd(long aux_ld) {
+  /*
+  ReLu bit-mask matrix leading dimension in elements.
+  Must be divisible by 128 and be no less than the number of rows in the output matrix.
+  */
+  long old_aux_ld = aux_ld;
+  return ((old_aux_ld + kAuxReluLdAlignRequirement - 1) / kAuxReluLdAlignRequirement)
+         * kAuxReluLdAlignRequirement;
+}
 
 Maybe<void> InferTensorDesc4FusedMatmul(user_op::InferContext* ctx) {
   const user_op::TensorDesc& x_desc = ctx->InputTensorDesc("x", 0);
-  user_op::TensorDesc* out = ctx->OutputTensorDesc("out", 0);
   int32_t weight_size = ctx->input_size("weights");
   int32_t bias_size = ctx->input_size("biases");
   CHECK_EQ_OR_RETURN(weight_size, bias_size);

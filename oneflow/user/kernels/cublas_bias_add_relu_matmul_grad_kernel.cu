@@ -99,4 +99,4 @@ REGISTER_CUBLAS_BIAS_ADD_RELU_MATMUL_GRAD_KERNEL(half)
 
 }  // namespace oneflow
 
-#endif
+#endif  // CUDA_VERSION >= 11040

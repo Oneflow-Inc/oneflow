@@ -287,14 +287,13 @@ class FusedMLPFunctor {
     CHECK_GE_OR_RETURN(weight_size, 1) << "The number of weights should be greater equal than 1. ";
     CHECK_EQ_OR_RETURN(weight_size, bias_size)
         << "The number of weights should be equal to biases. ";
-    int64_t m = 0, n = 0, k = 0;
+    int64_t n = 0, k = 0;
     /*
     x: (m, k)
     weight: (n, k) need transpose
     bias: (n)
     */
     const auto& x_shape = x->shape();
-    m = x_shape->At(0);
     k = x_shape->At(1);
     for (int64_t i = 0; i < weight_size; i++) {
       const auto& weight_shape = weights[i]->shape();
@@ -313,14 +312,14 @@ class FusedMLPFunctor {
       k = n;
     }
 
-    DeviceType device_type;
+#if CUDA_VERSION >= 11050
+    DeviceType device_type{};
     if (x->is_consistent()) {
       device_type = JUST(x->parallel_desc())->device_type();
     } else {
       device_type = JUST(x->device())->enum_type();
     }
 
-#if CUDA_VERSION >= 11050
     if ((device_type == DeviceType::kCUDA) && (weight_size <= kMaxInputCount)
         && (!ParseBooleanFromEnv("ONEFLOW_FUNCTOR_DISABLE_FUSED_MLP", false))) {
       TensorTuple input(2 * weight_size + 1);
@@ -330,12 +329,11 @@ class FusedMLPFunctor {
 
       MutableAttrMap attrs;
       JUST(attrs.SetAttr<bool>("skip_final_activation", skip_final_activation));
-
       return OpInterpUtil::Dispatch<Tensor>(*fused_op_[weight_size], input, attrs);
     }
-#endif
+#endif  // CUDA_VERSION >= 11050
 
-    // Fall back to matmul + bias_add + relu
+    // Fall back to Naive matmul + bias_add + relu
     std::shared_ptr<one::Tensor> out = x;
     for (int32_t layer_idx = 0; layer_idx < weight_size; layer_idx++) {
       out = JUST(
