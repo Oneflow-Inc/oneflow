@@ -15,7 +15,6 @@ limitations under the License.
 */
 #include "oneflow/core/job_rewriter/optimizer.h"
 #include "oneflow/core/framework/framework.h"
-#include "oneflow/core/operator/operator.h"
 
 namespace oneflow {
 

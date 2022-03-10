@@ -13,7 +13,6 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
-#include "glog/logging.h"
 #include "oneflow/core/framework/framework.h"
 #include "oneflow/user/kernels/model_update_kernel_util.h"
 #include "oneflow/user/kernels/indexed_slices_reduce_sum_kernel_util.h"
