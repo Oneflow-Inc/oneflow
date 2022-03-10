@@ -89,13 +89,12 @@ class CompileScope {
 #else
       LOG(WARNING) << "XRT TensorRT is unavailable while tensorrt is enabled";
 #endif
-    }
-    else if (kind == XrtKind::kOpenVino) {
+    } else if (kind == XrtKind::kOpenVino) {
 #ifdef WITH_OPENVINO
       *(job_config_cfg.mutable_xrt_config()->mutable_use_openvino()) = true;
 #else
       LOG(WARNING) << "XRT OpenVINO is unavailable while openvino is enabled";
-#endif 
+#endif
     }
   }
 };
