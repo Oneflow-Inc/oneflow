@@ -112,7 +112,7 @@ Maybe<void> NaiveInterpret(const UserOpExpr& user_op_expr, const TensorTuple& in
       outputs->at(i) = std::make_shared<DTRMirroredTensor>(tensor_impl);
       output_tensor_metas->at(i) = tensor_impl->mut_tensor_meta();
     } else {
-        if (!outputs->at(i)) {
+      if (!outputs->at(i)) {
         const auto& tensor_impl = std::make_shared<EagerMirroredTensorImpl>();
         outputs->at(i) = std::make_shared<MirroredTensor>(tensor_impl);
         output_tensor_metas->at(i) = tensor_impl->mut_tensor_meta();
@@ -121,7 +121,7 @@ Maybe<void> NaiveInterpret(const UserOpExpr& user_op_expr, const TensorTuple& in
         CHECK_OR_RETURN(has_eager_blob_object);
         output_eager_blob_objects->at(i) = JUST(outputs->at(i)->eager_blob_object());
       }
-    }  
+    }
   }
   Symbol<Device> op_device;
   bool need_check_mem_case = true;

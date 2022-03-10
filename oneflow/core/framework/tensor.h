@@ -509,7 +509,8 @@ class DTRMirroredTensor final : public MirroredTensor {
 
   std::shared_ptr<Holder> holder() const { return holder_; }
   Maybe<void> set_data(const std::shared_ptr<Tensor>& other) override {
-    const auto& dtr_mirrored_tensor = std::dynamic_pointer_cast<DTRMirroredTensor>(JUST(other->detach()));
+    const auto& dtr_mirrored_tensor =
+        std::dynamic_pointer_cast<DTRMirroredTensor>(JUST(other->detach()));
     CHECK_NOTNULL_OR_RETURN(dtr_mirrored_tensor);
     bool old_requires_grad = requires_grad();
     impl_ = dtr_mirrored_tensor->impl_;
