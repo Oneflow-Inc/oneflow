@@ -311,7 +311,7 @@ class Graph(object):
 
         """
         # Sync to make sure states has been updated.
-        oneflow._oneflow_internal.eager.multi_client.Sync()
+        oneflow._oneflow_internal.eager.Sync()
         if destination is None:
             destination = OrderedDict()
             destination._metadata = OrderedDict()
@@ -385,7 +385,7 @@ class Graph(object):
                 additional_var_names, convert_to_tensor_tuple(additional_var_tensors)
             )
         # Sync to make sure states has been loaded.
-        oneflow._oneflow_internal.eager.multi_client.Sync()
+        oneflow._oneflow_internal.eager.Sync()
 
     @property
     def name(self):
@@ -889,7 +889,7 @@ class Graph(object):
             ]
             eager_outputs = self._eager_outputs_buffer[self._cur_index_of_ouputs_buffer]
 
-            # oneflow._oneflow_internal.eager.multi_client.Sync() NOTE(chengcheng): Need Sync?
+            # oneflow._oneflow_internal.eager.Sync() NOTE(chengcheng): Need Sync?
             oneflow._oneflow_internal.nn.graph.RunLazyNNGraph(
                 convert_to_tensor_tuple(flattened_eager_args),
                 outputs_tensor_tuple,

@@ -15,7 +15,6 @@ limitations under the License.
 */
 
 #include "oneflow/api/common/ofblob.h"
-#include "oneflow/api/common/scope.h"
 #include "oneflow/api/cpp/framework/device.h"
 #include "oneflow/api/cpp/framework/graph.h"
 #include "oneflow/api/cpp/framework/ivalue.h"
@@ -66,7 +65,7 @@ namespace {
 class CompileScope {
  public:
   CompileScope(const of::JobConfigProto& job_config, const of::Device& device, XrtKind kind) {
-    const std::shared_ptr<of::Scope> scope = CHECK_JUST(of::MakeScope(job_config, device));
+    const std::shared_ptr<of::Scope> scope = CHECK_JUST(MakeScope(job_config, device));
     CHECK_JUST(of::ThreadLocalScopeStackPush(scope));
 
     of::cfg::JobConfigProto job_config_cfg(job_config);
