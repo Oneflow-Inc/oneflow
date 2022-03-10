@@ -423,7 +423,7 @@ Maybe<Tensor> AsStrided(const std::shared_ptr<one::Tensor>& input, const std::ve
                                                  JUST(input->device())));
               in_grads->resize(1);
               in_grads->at(0) = JUST(
-                  functional::AsStridedGrad(out_grads.at(0), input, size, stride, storage_offset));
+                  functional::AsStridedGrad(out_grads.at(0), like, size, stride, storage_offset));
               return Maybe<void>::Ok();
             });
     TensorTuple outputs{output};
