@@ -29,10 +29,38 @@ import oneflow.unittest
 @flow.unittest.skip_unless_1n1d()
 class TestUnbind(flow.unittest.TestCase):
     @autotest(check_graph=True)
-    def test_unbind_flow_with_random_data(test_case):
+    def test_unbind_flow_with_random_data1(test_case):
         device = random_device()
         x = random_tensor(ndim=4).to(device)
         y = torch.unbind(x, random(0, 4).to(int))
+        return y
+
+    @autotest(check_graph=True)
+    def test_unbind_flow_with_random_data2(test_case):
+        device = random_device()
+        x = random_tensor(ndim=4).to(device)
+        y = torch.unbind(x, random(0, 4).to(int))
+        return y
+    
+    @autotest(check_graph=True)
+    def test_unbind_flow_with_random_data3(test_case):
+        device = random_device()
+        x = random_tensor(ndim=3).to(device)
+        y = torch.unbind(x, random(0, 3).to(int))
+        return y
+
+    @autotest(check_graph=True)
+    def test_unbind_flow_with_random_data4(test_case):
+        device = random_device()
+        x = random_tensor(ndim=3).to(device)
+        y = torch.unbind(x, random(0, 3).to(int))
+        return y
+
+    @autotest(check_graph=True)    
+    def test_unbind_flow_with_random_data5(test_case):
+        device = random_device()
+        x = random_tensor(ndim=2).to(device)
+        y = torch.unbind(x, random(0, 2).to(int))
         return y
 
 

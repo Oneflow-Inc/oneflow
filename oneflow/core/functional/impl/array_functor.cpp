@@ -2129,9 +2129,9 @@ class SplitFunctor {
 class UnbindFunctor {
  public:
   UnbindFunctor() {}
-  Maybe<TensorTuple> operator()(const std::shared_ptr<one::Tensor>& x, const int64_t& dim) const {
+  Maybe<TensorTuple> operator()(const std::shared_ptr<one::Tensor>& x, const int32_t& dim) const {
     int64_t axis = dim;
-    int32_t ndim = x->ndim();
+    const int32_t ndim = x->ndim();
     if (axis < 0) { axis += ndim; }
     CHECK_OR_RETURN((dim >= -ndim) && (dim < ndim))
         << "Dimension out of range (expected to be in range of [" << -ndim << "," << ndim - 1
