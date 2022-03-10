@@ -33,8 +33,10 @@ TensorViewOperand::TensorViewOperand(
   ForEachConstMirroredObject(SetInserter(&input_dependences_));
   ForEachMutMirroredObject(SetInserter(&output_dependences_));
   ForEachMut2MirroredObject(SetInserter(&output_dependences_));
-  stream_sequential_dependence_ =
-      CHECK_JUST(eager_blob_object->producer_stream())->mut_schedule_local_dep_object();
+  if (eager_blob_object->producer_stream().has_value()) {
+    stream_sequential_dependence_ =
+        CHECK_JUST(eager_blob_object->producer_stream())->mut_schedule_local_dep_object();
+  }
 }
 
 void TensorViewOperand::ForEachConstMirroredObject(
