@@ -93,17 +93,11 @@ def check_non_localhost_proxy_and_print_warning():
 @enable_if.condition(hob.in_normal_mode & ~hob.env_initialized)
 def env_init():
     global default_env_proto
-    is_multi_client = oneflow._oneflow_internal.IsMultiClient()
     assert len(default_env_proto.machine) > 0
-    CompleteEnvProto(default_env_proto, is_multi_client)
+    CompleteEnvProto(default_env_proto)
     if default_env_proto.ctrl_bootstrap_conf.world_size > 1:
         check_non_localhost_proxy_and_print_warning()
-    c_api_util.InitEnv(default_env_proto, is_multi_client)
-    if not is_multi_client:
-        if oneflow._oneflow_internal.CurrentMachineId() == 0:
-            scope_util.InitScopeStack()
-        else:
-            exit(0)
+    c_api_util.InitEnv(default_env_proto)
     return True
 
 
@@ -229,9 +223,8 @@ def do_nothing(*args, **kwargs):
     return False
 
 
-def CompleteEnvProto(env_proto, is_multi_client):
-    if is_multi_client:
-        _UpdateDefaultEnvProtoByMultiClientEnvVars(env_proto)
+def CompleteEnvProto(env_proto):
+    _UpdateDefaultEnvProtoByMultiClientEnvVars(env_proto)
     if env_proto.HasField("ctrl_port") == False:
         if len(env_proto.machine) == 1:
             env_proto.ctrl_port = _FindFreePort()
