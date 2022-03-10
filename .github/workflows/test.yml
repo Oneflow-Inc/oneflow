@@ -790,7 +790,7 @@ jobs:
         uses: actions/checkout@v2
         with:
           repository: Oneflow-Inc/insightface
-          ref: 3496c36e62ce2001bb1fa86619ee6ba42be038a0
+          ref: ad47b6cc8bce5893c5a55ec83e8e4c4f6ec5632e
           path: ${{ env.INSIGHT_FACE_SRC }}
       - name: Insightface IResNet50 Graph DDP test
         id: models-iresnet50
