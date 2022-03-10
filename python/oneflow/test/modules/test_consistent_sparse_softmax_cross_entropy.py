@@ -48,6 +48,8 @@ def _compare_eager_global_with_torch(
     )
     of_logits = of_logits.to_global(placement, logits_sbp)
 
+    of_logits.retain_grad()
+
     of_labels = flow.tensor(np_labels, dtype=label_type).to_global(
         flow.env.all_device_placement("cpu"), flow.sbp.broadcast
     )
