@@ -66,6 +66,7 @@ class TestArange(flow.unittest.TestCase):
                 _test_arange_with_random_data(test_case, placement, sbp)
                 _test_arange_with_float_delta(test_case, placement, sbp)
 
+
 def _test_consistent_arange(test_case, start, end, step, placement, sbp):
     x = flow.arange(start, end, step, placement=placement, sbp=sbp)
 
@@ -98,11 +99,9 @@ class TestRandConsistent(flow.unittest.TestCase):
         arg_dict["step"] = [i for i in range(1, 5, 1)]
         for args in GenArgDict(arg_dict):
             for placement in all_placement():
-                for sbp in all_sbp(
-                    placement, max_dim=1, except_partial_sum=True
-                ):
+                for sbp in all_sbp(placement, max_dim=1, except_partial_sum=True):
                     _test_consistent_arange(
-                        test_case,**args, placement = placement, sbp = sbp
+                        test_case, **args, placement=placement, sbp=sbp
                     )
 
     @unittest.skipIf(os.getenv("ONEFLOW_TEST_CPU_ONLY"), "only test cpu cases")
