@@ -317,6 +317,39 @@ class LayerNormAffineFunctor {
   std::shared_ptr<OpExpr> op_;
 };
 
+class PixelShuffleFunctor {
+ public:
+  PixelShuffleFunctor() {}
+  Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x, const int64_t& h_upscale_factor,
+                           const int64_t& w_upscale_factor) const {
+    CHECK_OR_RETURN(x->ndim() == 4) << "Only Accept 4D Tensor";
+    int64_t batch = x->shape()->At(0);
+    int64_t channel = x->shape()->At(1);
+    int64_t height = x->shape()->At(2);
+    int64_t width = x->shape()->At(3);
+    std::shared_ptr<one::Tensor> out;
+    CHECK_OR_RETURN(channel % (h_upscale_factor * w_upscale_factor) == 0)
+        << "The channels of input tensor must be divisible by (upscale_factor * upscale_factor) or "
+           "(h_upscale_factor * w_upscale_factor)";
+    int64_t new_c = static_cast<int>(channel / (h_upscale_factor * w_upscale_factor));
+    std::vector<int32_t> permute_vec = {0, 1, 4, 2, 5, 3};
+    std::vector<int64_t> reshape_vec_1 = {batch, new_c, h_upscale_factor * w_upscale_factor, height,
+                                          width};
+    Shape reshape_1(DimVector(reshape_vec_1.begin(), reshape_vec_1.end()));
+    std::vector<int64_t> reshape_vec_2 = {batch,  new_c, h_upscale_factor, w_upscale_factor,
+                                          height, width};
+    Shape reshape_2(DimVector(reshape_vec_2.begin(), reshape_vec_2.end()));
+    std::vector<int64_t> reshape_vec_3 = {batch, new_c, height * h_upscale_factor,
+                                          width * w_upscale_factor};
+    Shape reshape_3(DimVector(reshape_vec_3.begin(), reshape_vec_3.end()));
+    out = JUST(Reshape(x, reshape_1));
+    out = JUST(Reshape(out, reshape_2));
+    out = JUST(Permute(out, permute_vec));
+    out = JUST(Reshape(out, reshape_3));
+    return out;
+  }
+};
+
 class PoolNDFunctor {
  public:
   PoolNDFunctor() = default;
@@ -2251,6 +2284,7 @@ ONEFLOW_FUNCTION_LIBRARY(m) {
   m.add_functor<impl::PadFunctor>("Pad");
   m.add_functor<impl::DropoutFunctor>("Dropout");
   m.add_functor<impl::DropoutGradFunctor>("DropoutGrad");
+  m.add_functor<impl::PixelShuffleFunctor>("PixelShuffle");
   m.add_functor<impl::Avgpool1DFunctor>("Avgpool1D");
   m.add_functor<impl::Avgpool2DFunctor>("Avgpool2D");
   m.add_functor<impl::Avgpool3DFunctor>("Avgpool3D");
