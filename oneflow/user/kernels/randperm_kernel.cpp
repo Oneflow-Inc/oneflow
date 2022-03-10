@@ -37,15 +37,14 @@ class CpuRandPermKernel final : public user_op::OpKernel {
       user_op::KernelInitContext* ctx) const override {
     const auto& generator = CHECK_JUST(one::MakeGenerator(kCPU));
     generator->set_current_seed(ctx->Attr<int64_t>("seed"));
-     if (ctx->parallel_ctx().parallel_num() > 1) {
+    if (ctx->parallel_ctx().parallel_num() > 1) {
       const Shape& parallel_hierarchy = *ctx->parallel_desc().hierarchy();
-  const cfg::NdSbp& nd_sbp = ctx->NdSbp4ArgNameAndIndex("out", 0);
-  int32_t n = ctx->Attr<int32_t>("n");
-  const Shape& logical_shape = Shape({n});
-  const int64_t parallel_id = ctx->parallel_ctx().parallel_id();
-   view =
-      GetTensorSliceView4ParallelId(parallel_hierarchy, nd_sbp, logical_shape, parallel_id);
-   }
+      const cfg::NdSbp& nd_sbp = ctx->NdSbp4ArgNameAndIndex("out", 0);
+      int32_t n = ctx->Attr<int32_t>("n");
+      const Shape& logical_shape = Shape({n});
+      const int64_t parallel_id = ctx->parallel_ctx().parallel_id();
+      view = GetTensorSliceView4ParallelId(parallel_hierarchy, nd_sbp, logical_shape, parallel_id);
+    }
     return std::make_shared<DistributionKernelState>(generator);
   }
 
@@ -69,11 +68,11 @@ class CpuRandPermKernel final : public user_op::OpKernel {
     std::vector<int64_t> stop;
     std::vector<int64_t> step(range_vec.size(), 1);
     for (const auto& range : range_vec) {
-        start.emplace_back(range.begin());
-        stop.emplace_back(range.end());
-      }
-    output = one::functional::detail::Slice(output, start, stop, step);
+      start.emplace_back(range.begin());
+      stop.emplace_back(range.end());
     }
+    output = one::functional::detail::Slice(output, start, stop, step);
+  }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
 
