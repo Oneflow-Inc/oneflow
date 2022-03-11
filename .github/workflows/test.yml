@@ -736,7 +736,7 @@ jobs:
         with:
           repository: Oneflow-Inc/libai
           # please use a commit here
-          ref: 5008543320aebed6836534e1441a67a187f5b5d9 
+          ref: 395bdb137401358d0b4f3ee96a6b57e7216bb138
           path: ${{ env.LIBAI_SRC}}
       - name: Install OneFlow
         if: ${{ !fromJson(matrix.cache-hit) && contains(matrix.runs-on, 'self-hosted') }}
@@ -748,7 +748,7 @@ jobs:
         if: ${{ !fromJson(matrix.cache-hit) && contains(matrix.runs-on, 'self-hosted') }}
         run: |
           docker exec ${TEST_CONTAINER_NAME} python3 -m pip install -e ${{ env.FLOW_VISION_SRC}}
-          docker exec ${TEST_CONTAINER_NAME} python3 -m pip install pybind11
+          docker exec ${TEST_CONTAINER_NAME} python3 -m pip install pybind11 --user
           docker exec ${TEST_CONTAINER_NAME} python3 -m pip install -e ${{ env.LIBAI_SRC}}
       - name: Run OneFlow doctor
         if: ${{ !fromJson(matrix.cache-hit) && contains(matrix.runs-on, 'self-hosted') }}
