@@ -28,10 +28,12 @@ import oneflow.unittest
 
 @flow.unittest.skip_unless_1n1d()
 class TestSplitWithSizes(flow.unittest.TestCase):
-    @autotest(check_graph=True)
+    @autotest(n=10, check_graph=True)
     def test_split_with_sizes(test_case):
         device = random_device()
-
+        x = torch.tensor(range(12)).reshape(3,4)
+        y = torch.split_with_sizes(x, [1, 2], 0)
+        return y
 
 
 if __name__ == "__main__":

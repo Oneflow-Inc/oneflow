@@ -28,7 +28,7 @@ import oneflow.unittest
 
 @flow.unittest.skip_unless_1n1d()
 class TestViewAs(flow.unittest.TestCase):
-    @autotest(check_graph=True)
+    @autotest(n=10, check_graph=True)
     def test_view(test_case):
         device = random_device()
         x = torch.tensor(range(12)).reshape(3,4).to(device)
