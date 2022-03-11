@@ -69,7 +69,7 @@ class OpArgBlobAttribute {
   std::shared_ptr<cfg::BlobDescProto> blob_desc_;
   std::string logical_blob_name_;
   std::shared_ptr<Shape> shape_;
-  std::shared_ptr<Stride> stride;
+  std::shared_ptr<Stride> stride_;
 };
 
 class OpArgParallelAttribute {
