@@ -148,11 +148,6 @@ def _xor(self, other):
     return flow._C.logical_xor(self, other)
 
 
-def _contiguous(self):
-    # TODO: support stride mechanism
-    return self
-
-
 def _cpu(self):
     return self.to(device="cpu")
 
@@ -591,7 +586,7 @@ def _permute(self, *dims):
             new_dims = (new_dims,)
     else:
         new_dims = dims
-    return flow._C.transpose(self, new_dims)
+    return flow._C.permute(self, new_dims)
 
 
 def _matmul(self, other):
@@ -1145,7 +1140,6 @@ def RegisterMethods():
     Tensor.tril = _tril
     Tensor.triu = _triu
     Tensor.where = _where
-    Tensor.contiguous = _contiguous
     Tensor.norm = _norm
     Tensor.transpose = _transpose
     Tensor.to_global = _to_global
