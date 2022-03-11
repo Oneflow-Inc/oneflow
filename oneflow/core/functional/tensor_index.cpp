@@ -62,7 +62,7 @@ Maybe<TensorTuple> ExpandMaskIndex(const std::shared_ptr<Tensor>& index) {
   }
   if (size_tensor->is_consistent()) {
     // TODO(): check size_tensor sbp is broadcast.
-    size_tensor = JUST(functional::ConsistentToLocal(size_tensor));
+    size_tensor = JUST(functional::ConsistentToLocal(size_tensor, /*copy=*/false));
   }
   int64_t size = 0;
   const auto& callback = [&](uint64_t of_blob_ptr) {
@@ -334,9 +334,9 @@ Maybe<Tensor> ApplyAdvancedIndexing(const std::shared_ptr<Tensor>& input,
     const auto& broadcast_sbp = JUST(MakeBroadcastSbpParallel());
     int n = JUST(input->nd_sbp())->sbp_parallel_size();
     std::vector<Symbol<SbpParallel>> grad_sbp_tuple;
-    packed_indices =
-        JUST(ToConsistent(packed_indices, placement,
-                          std::vector<Symbol<SbpParallel>>(n, broadcast_sbp), grad_sbp_tuple));
+    packed_indices = JUST(ToConsistent(packed_indices, placement,
+                                       std::vector<Symbol<SbpParallel>>(n, broadcast_sbp),
+                                       grad_sbp_tuple, /*copy=*/false));
   } else {
     Symbol<Device> device = JUST(transposed_input->device());
     if (JUST(packed_indices->device()) != device) {

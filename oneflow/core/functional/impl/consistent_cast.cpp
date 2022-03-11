@@ -224,7 +224,8 @@ static constexpr auto* GetConsistentToConsistentOpExpr =
 Maybe<Tensor> ConsistentToConsistent(const std::shared_ptr<Tensor>& x,
                                      Symbol<ParallelDesc> parallel_desc,
                                      const std::vector<Symbol<SbpParallel>>& sbp_parallels,
-                                     const std::vector<Symbol<SbpParallel>>& grad_sbp_parallels) {
+                                     const std::vector<Symbol<SbpParallel>>& grad_sbp_parallels,
+                                     const bool copy) {
   const auto& consistent_tensor = JUST(x->AsConsistentTensor());
   CHECK_NOTNULL_OR_RETURN(consistent_tensor) << "consistent tensors supported only";
   std::shared_ptr<one::OpExpr> op;
@@ -237,7 +238,7 @@ Maybe<Tensor> ConsistentToConsistent(const std::shared_ptr<Tensor>& x,
     op = JUST(GetConsistentToConsistentOpExpr(grad_sbp_parallels));
   }
   const auto& nd_sbp = JUST(GetNdSbp(sbp_parallels));
-  if (!LazyMode::is_enabled() && JUST(x->nd_sbp()) == nd_sbp
+  if (!copy && !LazyMode::is_enabled() && JUST(x->nd_sbp()) == nd_sbp
       && JUST(x->parallel_desc()) == parallel_desc && grad_sbp_parallels.size() == 0) {
     return x;
   }
@@ -254,7 +255,7 @@ Maybe<Tensor> ConsistentToConsistent(const std::shared_ptr<Tensor>& x,
 Maybe<Tensor> LocalToConsistent(const std::shared_ptr<Tensor>& x,
                                 Symbol<ParallelDesc> parallel_desc,
                                 const std::vector<Symbol<SbpParallel>>& sbp_parallels,
-                                const std::shared_ptr<OpExpr>& op) {
+                                const std::shared_ptr<OpExpr>& op, const bool copy) {
   CHECK_OR_RETURN(!x->is_lazy())
       << "local_tensor.to_global() is not supported within nn.Graph for now";
   CHECK_OR_RETURN(x->is_local()) << Error::UnimplementedError() << "local tensors supported only";
@@ -268,9 +269,12 @@ Maybe<Tensor> LocalToConsistent(const std::shared_ptr<Tensor>& x,
   }
   // copy to default device of the current rank if input's device type is right but not on default
   // device
-  if (JUST(input->device())->device_id() != GlobalProcessCtx::LocalRank()) {
-    VLOG(2) << "The tensor isn't on default device of the current rank., now copy it to "
-            << parallel_desc->device_tag() << ": " << GlobalProcessCtx::LocalRank();
+  bool device_mismatch = JUST(input->device())->device_id() != GlobalProcessCtx::LocalRank();
+  if (copy || device_mismatch) {
+    if (device_mismatch) {
+      VLOG(2) << "The tensor isn't on default device of the current rank., now copy it to "
+              << parallel_desc->device_tag() << ": " << GlobalProcessCtx::LocalRank();
+    }
     input = JUST(functional::Copy(x, Device::Type4DeviceTag(parallel_desc->device_tag()),
                                   GlobalProcessCtx::LocalRank()));
   }
@@ -303,7 +307,7 @@ class LocalToConsistentFunctor {
   Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x,
                            Symbol<ParallelDesc> parallel_desc,
                            const std::vector<Symbol<SbpParallel>>& sbp_parallels,
-                           const Shape& shape, const Symbol<DType>& dtype) const {
+                           const Shape& shape, const Symbol<DType>& dtype, const bool copy) const {
     JUST(CheckDeviceIdsIsValid(parallel_desc));
     NonRecursiveMetaInfoConsistencyCheckScope no_recursive_meta_info_conisitency_check_scope;
     JUST(MetaInfoConsistencyCheck(parallel_desc, sbp_parallels, 1));
@@ -318,9 +322,12 @@ class LocalToConsistentFunctor {
     }
     // copy to default device of the current rank if input's device type is right but not on default
     // device
-    if (JUST(input->device())->device_id() != GlobalProcessCtx::LocalRank()) {
-      VLOG(2) << "The tensor isn't on default device of the current rank., now copy it to "
-              << parallel_desc->device_tag() << ": " << GlobalProcessCtx::LocalRank();
+    bool device_mismatch = JUST(input->device())->device_id() != GlobalProcessCtx::LocalRank();
+    if (copy || device_mismatch) {
+      if (device_mismatch) {
+        VLOG(2) << "The tensor isn't on default device of the current rank., now copy it to "
+                << parallel_desc->device_tag() << ": " << GlobalProcessCtx::LocalRank();
+      }
       input = JUST(functional::Copy(x, Device::Type4DeviceTag(parallel_desc->device_tag()),
                                     GlobalProcessCtx::LocalRank()));
     }
@@ -348,15 +355,18 @@ class ToConsistentFunctor {
   Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x,
                            Symbol<ParallelDesc> parallel_desc,
                            const std::vector<Symbol<SbpParallel>>& sbp_parallels,
-                           const std::vector<Symbol<SbpParallel>>& grad_sbp_parallels) const {
+                           const std::vector<Symbol<SbpParallel>>& grad_sbp_parallels,
+                           const bool copy) const {
     JUST(CheckDeviceIdsIsValid(parallel_desc));
     NonRecursiveMetaInfoConsistencyCheckScope scope;
     JUST(MetaInfoConsistencyCheck(parallel_desc, sbp_parallels, grad_sbp_parallels, 1));
     std::shared_ptr<Tensor> tensor;
     if (x->is_consistent()) {
-      tensor = JUST(ConsistentToConsistent(x, parallel_desc, sbp_parallels, grad_sbp_parallels));
+      tensor =
+          JUST(ConsistentToConsistent(x, parallel_desc, sbp_parallels, grad_sbp_parallels, copy));
     } else {
-      tensor = JUST(LocalToConsistent(x, parallel_desc, sbp_parallels, local_to_consistent_op_));
+      tensor =
+          JUST(LocalToConsistent(x, parallel_desc, sbp_parallels, local_to_consistent_op_, copy));
     }
     return tensor;
   }
@@ -372,11 +382,13 @@ class ConsistentToLocalFunctor {
         one::CastFromConsistentOpExpr::New(*CHECK_JUST(UniqueStr("consistent_to_local"))));
   }
 
-  Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x) const {
+  Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x, const bool copy) const {
     CHECK_OR_RETURN(!x->is_lazy())
         << "consistent_tensor.to_local() is not supported within nn.Graph for now";
     CHECK_OR_RETURN(x->is_consistent()) << "consistent tensors supported only";
-    return JUST(OpInterpUtil::Dispatch<one::Tensor>(*op_, {x}));
+    const auto& local_tensor = JUST(OpInterpUtil::Dispatch<one::Tensor>(*op_, {x}));
+    if (copy) { return local_tensor->clone(); }
+    return local_tensor;
   }
 
  private:

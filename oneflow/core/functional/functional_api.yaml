@@ -1670,15 +1670,15 @@
   bind_python: False
 
 - name: "local_to_global"
-  signature: "Tensor (Tensor x, Placement placement, SbpList sbp, Shape shape, DataType dtype) => LocalToConsistent"
+  signature: "Tensor (Tensor x, Placement placement, SbpList sbp, Shape shape, DataType dtype, Bool copy=False) => LocalToConsistent"
   bind_python: False
 
 - name: "to_global"
-  signature: "Tensor (Tensor x, Placement placement, SbpList sbp, SbpList grad_sbp) => ToConsistent"
+  signature: "Tensor (Tensor x, Placement placement, SbpList sbp, SbpList grad_sbp, Bool copy=False) => ToConsistent"
   bind_python: True
 
 - name: "to_local"
-  signature: "Tensor (Tensor x) => ConsistentToLocal"
+  signature: "Tensor (Tensor x, Bool copy=False) => ConsistentToLocal"
   bind_python: True
 
 - name: "stream_touch"

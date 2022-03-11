@@ -949,10 +949,10 @@ class SparseSoftmaxCrossEntropyFunctor {
       s0s1_sbp_parallels.emplace_back(logits_nd_sbp.sbp_parallel(1));
       max_global_stage_input0 = JUST(functional::ToConsistent(
           max_device_stage->at(0), JUST(max_device_stage->at(0)->parallel_desc()),
-          s0b_sbp_parallels, s0s1_sbp_parallels));
+          s0b_sbp_parallels, s0s1_sbp_parallels, /*copy=*/false));
       max_global_stage_input1 = JUST(functional::ToConsistent(
           max_device_stage->at(2), JUST(max_device_stage->at(0)->parallel_desc()),
-          s0b_sbp_parallels, s0s1_sbp_parallels));
+          s0b_sbp_parallels, s0s1_sbp_parallels, /*copy=*/false));
     }
     // op_reduce_max_global_stage_
     attrs.clear();
@@ -964,7 +964,7 @@ class SparseSoftmaxCrossEntropyFunctor {
     if (logits_nd_sbp.sbp_parallel_size() == 2) {
       broadcast_sub_input = JUST(functional::ToConsistent(
           broadcast_sub_input, JUST(max_device_stage->at(0)->parallel_desc()), s0b_sbp_parallels,
-          s0b_sbp_parallels));
+          s0b_sbp_parallels, /*copy=*/false));
     }
     // op_broadcast_sub_
     attrs.clear();
@@ -983,7 +983,7 @@ class SparseSoftmaxCrossEntropyFunctor {
       std::vector<Symbol<SbpParallel>> empty_grad_sbp_parallels;
       broadcast_div_input1 = JUST(functional::ToConsistent(
           output_reduce_sum->at(0), JUST(output_reduce_sum->at(0)->parallel_desc()),
-          s0b_sbp_parallels, s0b_sbp_parallels));
+          s0b_sbp_parallels, s0b_sbp_parallels, /*copy=*/false));
     }
     // op_broadcast_div_
     attrs.clear();

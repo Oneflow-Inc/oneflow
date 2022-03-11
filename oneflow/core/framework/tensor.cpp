@@ -68,13 +68,11 @@ Maybe<Tensor> MirroredTensor::clone() const {
 }
 
 Maybe<Tensor> ConsistentTensor::clone() const {
-  const auto& local_tensor = JUST(cur_rank_phy_tensor());
-  const auto& device_type = JUST(local_tensor->device())->type();
-  int64_t device_id = JUST(local_tensor->device())->device_id();
-  const auto& cloned_local_tensor = JUST(functional::Copy(local_tensor, device_type, device_id));
+  std::shared_ptr<Tensor> input = std::const_pointer_cast<Tensor>(shared_from_this());
   DisableCheckConsistentTensorMetaScope disable_meta_check{};
-  return functional::LocalToConsistent(cloned_local_tensor, JUST(parallel_desc()),
-                                       *JUST(GetSbpList(JUST(nd_sbp()))), *shape(), dtype());
+  return JUST(functional::ToConsistent(input, JUST(parallel_desc()),
+                                       *JUST(GetSbpList(JUST(nd_sbp()))), /*grad_sbp_parallels=*/{},
+                                       /*copy=*/true));
 }
 
 Maybe<ConsistentTensor> ConsistentTensor::MakeTensor(const std::shared_ptr<const Shape>& shape,
