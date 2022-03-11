@@ -111,6 +111,7 @@ class Graph(object):
         self.config = GraphConfig()
         self._blocks = OrderedDict()
         self._opts = []
+        self._verbose = False
         self._grad_scaler = None
         self._variables_conf = OrderedDict()
         self._additional_variable_tobe_loaded = OrderedDict()
@@ -282,6 +283,11 @@ class Graph(object):
                 lr_sch.optimizer is optim
             ), "lr_scheduler's optimizer must be the same optimizer in add_optimizer."
             opt_dict["lr_sch"] = lr_sch
+            self._verbose = opt_dict["lr_sch"].verbose
+            rank = get_rank()
+            if rank != 0:
+                self._verbose = False
+        oneflow._oneflow_internal.SetVerbose(str(self._verbose))
         self._opts.append(opt_dict)
         # Set the training config if there is an optimizer add in graph.
         if len(self._opts) == 1:

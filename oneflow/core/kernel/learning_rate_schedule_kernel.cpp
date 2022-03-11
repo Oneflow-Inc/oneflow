@@ -17,6 +17,7 @@ limitations under the License.
 #include "oneflow/core/job/resource_desc.h"
 #include "oneflow/core/job/global_for.h"
 #include "oneflow/core/persistence/tee_persistent_log_stream.h"
+#include "oneflow/api/python/env/env.h"
 
 namespace oneflow {
 
@@ -32,8 +33,8 @@ class LearningRateScheduleKernel final : public Kernel {
       log_stream_ = TeePersistentLogStream::Create("train_step2lr.csv");
       (*log_stream_) << "train_step, lr\n";
     }
-
-    if (FLAGS_v >= 1) { print_step_lr_ = true; }
+    std::cout << "!!!!!!!!!!!!!!!!test!!!!!!!!!!!!!!!" << GetVerbose() << std::endl;
+    if (strcmp(GetVerbose(), "True") == 0) { print_step_lr_ = true; }
   }
 
   void ForwardDataContent(KernelContext* ctx) const override;
