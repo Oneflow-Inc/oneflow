@@ -33,7 +33,6 @@ class LearningRateScheduleKernel final : public Kernel {
       log_stream_ = TeePersistentLogStream::Create("train_step2lr.csv");
       (*log_stream_) << "train_step, lr\n";
     }
-    std::cout << "!!!!!!!!!!!!!!!!test!!!!!!!!!!!!!!!" << GetVerbose() << std::endl;
     if (strcmp(GetVerbose(), "True") == 0) { print_step_lr_ = true; }
   }
 

@@ -88,10 +88,10 @@ inline Maybe<void> SetFLAGS_v(int32_t v_level) {
 }
 inline Maybe<int32_t> GetFLAGS_v() { return FLAGS_v; }
 inline Maybe<void> SetVerbose(char* verbose) {
-  setenv("GRAPH_VERBOSE_LR_STEP", verbose, 1);
+  setenv("GRAPH_VERBOSE_STEP_LR", verbose, 1);
   return Maybe<void>::Ok();
 }
-inline char* GetVerbose() { return std::getenv("GRAPH_VERBOSE_LR_STEP"); }
+inline char* GetVerbose() { return std::getenv("GRAPH_VERBOSE_STEP_LR"); }
 }  // namespace oneflow
 
 #endif  // ONEFLOW_API_PYTHON_ENV_ENV_H_
