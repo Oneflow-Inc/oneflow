@@ -3489,7 +3489,7 @@ class TestEagerBoxingAsymmetricMix1d2dWithRandomPlacement(flow.unittest.TestCase
     def test_eager_boxing_asymmetric_mix_1d_2d_with_random_placement(test_case):
         arg_dict = OrderedDict()
         sbp_dict = OrderedDict()
-        arg_dict["shape"] = [(12, 24), (12, 24, 12)]
+        arg_dict["shape"] = [(12, 24), (17, 13, 19)]
 
         arg_dict["in_device_type"] = ["cpu", "cuda"]
         arg_dict["out_device_type"] = ["cpu", "cuda"]
