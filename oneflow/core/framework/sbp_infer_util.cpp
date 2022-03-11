@@ -60,7 +60,10 @@ Maybe<double> ComputCopyCostBetweenTwoSbpParallel(const SbpParallel& producer_sb
     }
   }
 
-  if (producer_parallel_desc == consumer_parallel_desc) {
+  // NOTE: We do not consider tensors on different devices.
+  // A tensor placed on cpu with a consumer operator that accepts cuda inputs would be transfered to
+  // cuda later. We do not have correct parallel description at this moment.
+  if (producer_parallel_desc.EqualsIgnoringDeviceType(consumer_parallel_desc)) {
     // Same sbp, no cost: S->S, B->B, P->P
     if (producer_sbp_parallel == consumer_sbp_parallel) { return 0.0; }
     // B->S, B->P
@@ -232,7 +235,9 @@ Maybe<double> ComputeEagerCopyCostBetweenNdSbp(const NdSbp& producer_sbp_paralle
 
   bool same_nd_sbp = reduced_in_nd_sbp == reduced_out_nd_sbp;
   // Same sbp is always supported.
-  if (same_nd_sbp && reduced_in_parallel_desc == reduced_out_parallel_desc) { return 0.0; }
+  if (same_nd_sbp && reduced_in_parallel_desc.EqualsIgnoringDeviceType(reduced_out_parallel_desc)) {
+    return 0.0;
+  }
   if (requires_same_sbp) { return kUnsupportedBoxing; }
 
   int32_t in_dim = in_hierarchy->NumAxes();
@@ -245,7 +250,7 @@ Maybe<double> ComputeEagerCopyCostBetweenNdSbp(const NdSbp& producer_sbp_paralle
   }
 
   double total_cost = 0.0;
-  if (reduced_in_parallel_desc == reduced_out_parallel_desc) {
+  if (reduced_in_parallel_desc.EqualsIgnoringDeviceType(reduced_out_parallel_desc)) {
     // NOTE: After analysis, transfer cost increase if spliting the same dimension.
     // Example 1: (S(1), S(0), S(1), S(0)) -> (S(0), S(0), S(0), S(0))
     // Example 2: (B, S(0)) -> (S(0), S(0))
@@ -348,7 +353,9 @@ Maybe<double> ComputeLazyCopyCostBetweenNdSbp(const NdSbp& producer_sbp_parallel
 
   bool same_nd_sbp = reduced_in_nd_sbp == reduced_out_nd_sbp;
   // Same sbp is always supported.
-  if (same_nd_sbp && reduced_in_parallel_desc == reduced_out_parallel_desc) { return 0.0; }
+  if (same_nd_sbp && reduced_in_parallel_desc.EqualsIgnoringDeviceType(reduced_out_parallel_desc)) {
+    return 0.0;
+  }
   if (requires_same_sbp) { return kUnsupportedBoxing; }
 
   // We support different hierarchy for 1D sbp
@@ -365,7 +372,7 @@ Maybe<double> ComputeLazyCopyCostBetweenNdSbp(const NdSbp& producer_sbp_parallel
   double logical_blob_size =
       logical_blob_desc.shape().elem_cnt() * GetSizeOfDataType(logical_blob_desc.data_type());
   bool on_same_devices =
-      reduced_in_parallel_desc.EqualsIgnoringHierarchy(reduced_out_parallel_desc);
+      reduced_in_parallel_desc.EqualsOnlyForMachineAndDeviceIds(reduced_out_parallel_desc);
 
   if (in_dim == 2 && out_dim == 2) {
     // Not supporting different hierarchy
