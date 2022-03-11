@@ -642,7 +642,8 @@ Maybe<void> BoxingCollector::AskSbpCombination4DiffPlacement(
   int32_t j = FindId4NdSbp(sbp_consumer);
   // Different placements: [2, 3] vs 5, or [3, 2] vs [2, 2], or cpu vs cuda
   // Different hierarchies: [2, 3] vs 5, or [4, 3] vs [6, 2]
-  bool same_placement = producer_parallel_desc.EqualsOnlyForMachineAndDeviceIds(consumer_parallel_desc);
+  bool same_placement =
+      producer_parallel_desc.EqualsOnlyForMachineAndDeviceIds(consumer_parallel_desc);
   // Dealing with 2D sbp
   if (i >= 0 && j >= 0) {
     if (same_placement) {
@@ -825,7 +826,8 @@ Maybe<bool> BoxingCollector::Ask1Combination4DiffPlacement(
 
   // Different placements: [2, 3] vs 5, or [3, 2] vs [2, 2], or cpu vs cuda
   // Different hierarchies: [2, 3] vs 5, or [4, 3] vs [6, 2]
-  bool diff_placement = !producer_parallel_desc.EqualsOnlyForMachineAndDeviceIds(consumer_parallel_desc);
+  bool diff_placement =
+      !producer_parallel_desc.EqualsOnlyForMachineAndDeviceIds(consumer_parallel_desc);
 
   // If we found a diagonal middle node with current boxing collector
   if (min_diag_producer >= 0) {
