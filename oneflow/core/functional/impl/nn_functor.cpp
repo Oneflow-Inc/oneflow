@@ -28,6 +28,7 @@ limitations under the License.
 #include "oneflow/core/framework/random_generator.h"
 #include "oneflow/core/functional/functional.h"
 #include "oneflow/core/functional/function_library.h"
+#include "oneflow/core/functional/functional_api.yaml.h"
 #include "oneflow/core/functional/sequence_function.h"
 #include "oneflow/core/functional/impl/common.h"
 #include "oneflow/core/functional/impl/unary_functor.h"
@@ -1253,8 +1254,8 @@ class NormalizationFunctor {
   Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x,
                            const Optional<one::Tensor>& moving_mean,
                            const Optional<one::Tensor>& moving_variance,
-                           const std::shared_ptr<one::Tensor>& gamma,
-                           const std::shared_ptr<one::Tensor>& beta, const int32_t& axis,
+                           const Optional<one::Tensor>& gamma,
+                           const Optional<one::Tensor>& beta, const int32_t& axis,
                            const float& epsilon, const float& momentum,
                            const bool& training) const {
     MutableAttrMap attrs;
@@ -1265,18 +1266,32 @@ class NormalizationFunctor {
 
     CHECK_OR_RETURN((moving_mean && moving_variance) || (!moving_mean && !moving_variance))
         << "Both moving_mean and moving_variance should be None or Tensor.";
+    
+    std::shared_ptr<one::Tensor> gamma_val; 
+    std::shared_ptr<one::Tensor> beta_val; 
+
+    if(gamma.has_value() && beta.has_value()){
+      gamma_val = JUST(gamma); 
+      beta_val = JUST(beta); 
+    } else {
+      const Shape gamma_beta_shape = Shape({x->shape()->At(1)}); 
+      // TODO
+      gamma_val = JUST(functional::Constant(gamma_beta_shape, 1.0, x->dtype(), x->device())); 
+      beta_val = JUST(functional::Constant(gamma_beta_shape, 0.0, x->dtype(), x->device())); 
+    }
+    
     if (!training) {
       CHECK_OR_RETURN(moving_mean && moving_variance)
           << "Must have moving_mean and moving_variance in eval mode.";
       return OpInterpUtil::Dispatch<one::Tensor>(
-          *norm_eval_op_, {x, JUST(moving_mean), JUST(moving_variance), gamma, beta}, attrs);
+          *norm_eval_op_, {x, JUST(moving_mean), JUST(moving_variance), gamma_val, beta_val}, attrs);
     }
     if (moving_mean) {
       return OpInterpUtil::Dispatch<one::Tensor>(
-          *norm_training_stats_op_, {x, JUST(moving_mean), JUST(moving_variance), gamma, beta},
+          *norm_training_stats_op_, {x, JUST(moving_mean), JUST(moving_variance), gamma_val, beta_val},
           attrs);
     }
-    return OpInterpUtil::Dispatch<one::Tensor>(*norm_training_no_stats_op_, {x, gamma, beta},
+    return OpInterpUtil::Dispatch<one::Tensor>(*norm_training_no_stats_op_, {x, gamma_val, beta_val},
                                                attrs);
   }
 

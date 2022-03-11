@@ -559,7 +559,7 @@
 - name: "normalization"
   signature:
     "Tensor (Tensor x, Tensor moving_mean=None, Tensor moving_variance=None,
-    Tensor gamma, Tensor beta, Int32 axis=1, Float epsilon=1e-5,
+    Tensor gamma=None, Tensor beta=None, Int32 axis=1, Float epsilon=1e-5,
     Float momentum=0.9, Bool is_training=False) => Normalization"
 
   bind_python: True
