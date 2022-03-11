@@ -425,6 +425,20 @@ class UserKernelInferContext final : public user_op::KernelInferContext {
                                  << ") is not found";
     return arg_tensor->mut_shape();
   }
+  const StrideView& StrideView4ArgNameAndIndex(const std::string& arg_name,
+                                             int32_t arg_index) override {
+    user_op::Tensor* arg_tensor = Tensor4ArgNameAndIndex(arg_name, arg_index);
+    CHECK(arg_tensor != nullptr) << "Tensor of arg (" << arg_name << "," << arg_index
+                                 << ") is not found";
+    return arg_tensor->stride();
+  }
+  MutStrideView* MutStrideView4ArgNameAndIndex(const std::string& arg_name,
+                                             int32_t arg_index) override {
+    user_op::Tensor* arg_tensor = Tensor4ArgNameAndIndex(arg_name, arg_index);
+    CHECK(arg_tensor != nullptr) << "Tensor of arg (" << arg_name << "," << arg_index
+                                 << ") is not found";
+    return arg_tensor->mut_stride();
+  }
 
   user_op::InferContext* MutOpInferContext() override { return &op_infer_ctx_; }
   const user_op::TensorDescInferFn& GetOpInferFn() const override { return tensor_desc_infer_fn_; }

@@ -58,6 +58,12 @@ class EagerBlobObjectTensorView final : public user_op::Tensor {
     return mut_eager_blob_object_()->mut_blob()->mut_shape_view();
   }
 
+  const StrideView& stride() const override { return mut_eager_blob_object_()->blob().stride(); }
+
+  MutStrideView* mut_stride() override {
+    return mut_eager_blob_object_()->mut_blob()->mut_stride_view();
+  }
+
   DataType data_type() const override { return mut_eager_blob_object_()->blob().data_type(); }
 
   const MemoryCase& mem_case() const override {
@@ -80,6 +86,10 @@ class EagerBlobObjectTensorDescView final : public user_op::TensorDesc {
   const Shape& shape() const override { return mut_eager_blob_object_()->blob_desc().shape(); }
 
   Shape* mut_shape() override { return &mut_eager_blob_object_()->mut_blob_desc()->mut_shape(); }
+
+  const Stride& stride() const override { return mut_eager_blob_object_()->blob_desc().stride(); }
+
+  Stride* mut_stride() override { return &mut_eager_blob_object_()->mut_blob_desc()->mut_stride(); }
 
   DataType data_type() const override { return mut_eager_blob_object_()->blob_desc().data_type(); }
 
@@ -110,6 +120,13 @@ class ConsistentTensorMetaTensorDescView final : public user_op::TensorDesc {
   const Shape& shape() const override { return consistent_tensor_meta_()->shape(); }
 
   Shape* mut_shape() override {
+    UNIMPLEMENTED();
+    return nullptr;
+  }
+
+  const Stride& stride() const override { return consistent_tensor_meta_()->stride(); }
+
+  Stride* mut_stride() override {
     UNIMPLEMENTED();
     return nullptr;
   }

@@ -163,7 +163,6 @@ Maybe<void> EagerMirroredTensorImpl::RegisterStorageDeleteHook(const std::functi
 MirroredTensorMeta::MirroredTensorMeta()
     : TensorMeta(std::make_shared<const Shape>(), DataType::kInvalidDataType),
       device_(Symbol<Device>()),
-      stride_(std::make_shared<const Stride>()),
       storage_offset_(0) {
   set_stride(std::make_shared<const Stride>());
 }

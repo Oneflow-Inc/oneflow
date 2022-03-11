@@ -15,6 +15,8 @@ limitations under the License.
 */
 
 #include "oneflow/core/common/stride.h"
+#include "oneflow/core/common/stride.cfg.h"
+#include "oneflow/core/common/protobuf.h"
 
 namespace oneflow {
 
@@ -27,6 +29,16 @@ Stride::Stride(const Shape& shape) {
       stride *= shape.At(i - 1);
     }
   }
+}
+
+Stride::Stride(const std::initializer_list<int64_t>& stride_vec) : stride_vec_(stride_vec) {}
+Stride::Stride(const StrideVector& stride_vec) : stride_vec_(stride_vec) {}
+Stride::Stride(StrideVector&& stride_vec) : stride_vec_(std::move(stride_vec)) {}
+Stride::Stride(const StrideProto& stride_proto) {
+  stride_vec_.assign(stride_proto.dim().begin(), stride_proto.dim().end());
+}
+Stride::Stride(const cfg::StrideProto& stride_proto) {
+  stride_vec_.assign(stride_proto.dim().begin(), stride_proto.dim().end());
 }
 
 Stride& Stride::assign(const StrideVector& stride_vec) {

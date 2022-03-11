@@ -25,13 +25,19 @@ namespace oneflow {
 
 class StrideView;
 
+namespace cfg {
+class StrideProto;
+}
+
 class Stride final {
  public:
   Stride() = default;
   explicit Stride(const Shape& shape);
-  explicit Stride(const StrideVector& stride_vec) : stride_vec_(stride_vec) {}
-  explicit Stride(StrideVector&& stride_vec) : stride_vec_(stride_vec) {}
-  Stride(const std::initializer_list<int64_t>& stride_vec) : stride_vec_(stride_vec) {}
+  explicit Stride(StrideVector&& stride_vec);
+  explicit Stride(const StrideVector& stride_vec);
+  explicit Stride(const StrideProto& stride_proto);
+  explicit Stride(const cfg::StrideProto& stride_proto);
+  Stride(const std::initializer_list<int64_t>& stride_vec);
   Stride& operator=(const Stride& stride);
   Stride& assign(const StrideVector& dim_vec);
   ~Stride() = default;

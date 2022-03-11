@@ -168,6 +168,10 @@ class KernelInferContext {
                                                      int32_t arg_index) = 0;
   virtual MutShapeView* MutShapeView4ArgNameAndIndex(const std::string& arg_name,
                                                      int32_t arg_index) = 0;
+  virtual const StrideView& StrideView4ArgNameAndIndex(const std::string& arg_name,
+                                                     int32_t arg_index) = 0;
+  virtual MutStrideView* MutStrideView4ArgNameAndIndex(const std::string& arg_name,
+                                                     int32_t arg_index) = 0;
 
   const std::string& input(const std::string& arg_name, int32_t index) const {
     return user_op_conf().input(arg_name, index);
@@ -279,6 +283,7 @@ class OpKernelCache {
 
   static const int32_t kAllMayChanged = 0;
   static const int32_t kShapeNotChanged = 1 << 0;
+  static const int32_t kStrideNotChanged = 1 << 0;
   static const int32_t kAttrNotChanged = 1 << 1;
 
  protected:

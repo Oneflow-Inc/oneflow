@@ -92,23 +92,24 @@ class Blob final {
     CheckDataType<T>(data_type());
     return static_cast<T*>(dptr_);
   }
-
+  // shape
   const Shape& static_shape() const { return blob_desc_->shape(); }
-  const Stride& static_stride() const { return blob_desc_->stride(); }
   const ShapeView& shape_view() const { return *shape_view_; }
   const ShapeView& shape() const { return *shape_view_; }
-  const StrideView& stride_view() const { return *stride_view_; }
-  const StrideView& stride() const { return *stride_view_; }
   MutShapeView* mut_shape_view() {
     this->blob_access_checker()->CheckHeaderMutable();
     return mut_shape_view_.get();
   }
+  MutShapeView* ForceMutShapeView() { return mut_shape_view_.get(); }
+  // stride
+  const Stride& static_stride() const { return blob_desc_->stride(); }
+  const StrideView& stride_view() const { return *stride_view_; }
+  const StrideView& stride() const { return *stride_view_; }
   MutStrideView* mut_stride_view() {
     this->blob_access_checker()->CheckHeaderMutable();
     return mut_stride_view_.get();
   }
-
-  MutShapeView* ForceMutShapeView() { return mut_shape_view_.get(); }
+  MutStrideView* ForceMutStrideView() { return mut_stride_view_.get(); }
 
   void reset_dptr(char* dptr) { dptr_ = dptr; }
 
