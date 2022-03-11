@@ -657,12 +657,6 @@ Maybe<void> BoxingCollector::AskSbpCombination4DiffPlacement(
         return Maybe<void>::Ok();
       }
     } else {
-      if (producer_parallel_desc.EqualsIgnoringDeviceType(consumer_parallel_desc) && 
-        ComputeLazyCopyCostBetweenNdSbp(sbp_producer, sbp_consumer, logical_blob_desc, 
-        producer_parallel_desc, consumer_parallel_desc, /*requires_same_sbp=*/false) < 
-        GetValidMaxCopyCost()){
-          return Maybe<void>::Ok();
-      }
       CHECK_OR_RETURN(diag_node_diff_placement_.size() > 0)
           << "Have not initialzie the combination table for different hierarchies yet! "
              "Please run JUST(GenerateCombination4DiffPlacement(this, this)); "
