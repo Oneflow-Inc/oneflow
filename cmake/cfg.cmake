@@ -35,6 +35,7 @@ function(GENERATE_CFG_AND_PYBIND11_CPP SRCS HDRS PYBIND_SRCS ROOT_DIR)
     oneflow/core/operator/op_conf.proto
     oneflow/core/operator/interface_blob_conf.proto
     oneflow/core/common/shape.proto
+    oneflow/core/common/stride.proto
     oneflow/core/record/record.proto
     oneflow/core/job/resource.proto
     oneflow/core/register/logical_blob_id.proto
@@ -95,6 +96,7 @@ function(GENERATE_CFG_AND_PYBIND11_CPP SRCS HDRS PYBIND_SRCS ROOT_DIR)
       oneflow/core/register/logical_blob_id.proto
       oneflow/core/operator/interface_blob_conf.proto
       oneflow/core/common/shape.proto
+      oneflow/core/common/stride.proto
       oneflow/core/register/blob_desc.proto
       oneflow/core/operator/op_conf.proto)
 

@@ -21,6 +21,7 @@ limitations under the License.
 #include "oneflow/core/memory/memory_case.pb.h"
 #include "oneflow/core/register/blob_desc.h"
 #include "oneflow/core/common/shape_view.h"
+#include "oneflow/core/common/stride_view.h"
 #include "oneflow/core/common/symbol.h"
 
 namespace oneflow {
@@ -93,11 +94,18 @@ class Blob final {
   }
 
   const Shape& static_shape() const { return blob_desc_->shape(); }
+  const Stride& static_stride() const { return blob_desc_->stride(); }
   const ShapeView& shape_view() const { return *shape_view_; }
   const ShapeView& shape() const { return *shape_view_; }
+  const StrideView& stride_view() const { return *stride_view_; }
+  const StrideView& stride() const { return *stride_view_; }
   MutShapeView* mut_shape_view() {
     this->blob_access_checker()->CheckHeaderMutable();
     return mut_shape_view_.get();
+  }
+  MutStrideView* mut_stride_view() {
+    this->blob_access_checker()->CheckHeaderMutable();
+    return mut_stride_view_.get();
   }
 
   MutShapeView* ForceMutShapeView() { return mut_shape_view_.get(); }
@@ -131,6 +139,8 @@ class Blob final {
   int64_t storage_offset_;
   std::unique_ptr<ShapeView> shape_view_;
   std::unique_ptr<MutShapeView> mut_shape_view_;
+  std::unique_ptr<StrideView> stride_view_;
+  std::unique_ptr<MutStrideView> mut_stride_view_;
 };
 
 #define INIT_GLOBAL_BLOB_MUTABLE_CHECKER(is_header_mutable, is_body_mutable)             \

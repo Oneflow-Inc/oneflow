@@ -3,6 +3,7 @@ package oneflow;
 
 import "oneflow/core/register/logical_blob_id.proto";
 import "oneflow/core/common/shape.proto";
+import "oneflow/core/common/stride.proto";
 
 message ParallelContext {
   required int64 parallel_id = 1;

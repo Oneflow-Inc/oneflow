@@ -23,13 +23,18 @@ OpArgBlobAttribute::OpArgBlobAttribute(const std::shared_ptr<cfg::BlobDescProto>
                                        const std::string& logical_blob_name)
     : blob_desc_(blob_desc), logical_blob_name_(logical_blob_name) {
   ShapeProto shape_proto;
+  StrideProto stride_proto;
   blob_desc_->shape().ToProto(&shape_proto);
+  blob_desc_->stride().ToProto(&stride_proto);
   shape_ = std::make_shared<Shape>(shape_proto);
+  stride_ = std::make_shared<Stride>(stride_proto);
 }
 
 std::shared_ptr<cfg::BlobDescProto> OpArgBlobAttribute::blob_desc() const { return blob_desc_; }
 
 std::shared_ptr<Shape> OpArgBlobAttribute::shape() const { return shape_; }
+
+std::shared_ptr<Stride> OpArgBlobAttribute::stride() const { return stride_; }
 
 std::string OpArgBlobAttribute::logical_blob_name() const { return logical_blob_name_; }
 
@@ -38,7 +43,7 @@ cfg::DataType OpArgBlobAttribute::get_dtype() const { return blob_desc_->data_ty
 bool OpArgBlobAttribute::is_dynamic() const { return blob_desc_->is_dynamic(); }
 
 bool OpArgBlobAttribute::operator==(const OpArgBlobAttribute& other) const {
-  return (*shape_ == *other.shape()) && (get_dtype() == other.get_dtype())
+  return (*shape_ == *other.shape()) && (*stride_ == *other.stride()) && ((get_dtype() == other.get_dtype())
          && (is_dynamic() == other.is_dynamic())
          && (logical_blob_name_ == other.logical_blob_name());
 }

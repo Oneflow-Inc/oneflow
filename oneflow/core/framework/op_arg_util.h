@@ -21,8 +21,10 @@ limitations under the License.
 #include "oneflow/core/job/mirrored_parallel.cfg.h"
 #include "oneflow/core/common/balanced_splitter.h"
 #include "oneflow/core/common/shape.h"
+#include "oneflow/core/common/stride.h"
 #include "oneflow/core/common/data_type.cfg.h"
 #include "oneflow/core/common/shape.cfg.h"
+#include "oneflow/core/common/stride.cfg.h"
 #include "oneflow/core/register/logical_blob_id.cfg.h"
 #include "oneflow/core/operator/interface_blob_conf.cfg.h"
 #include "oneflow/core/register/blob_desc.cfg.h"
@@ -49,6 +51,8 @@ class OpArgBlobAttribute {
 
   std::shared_ptr<Shape> shape() const;
 
+  std::shared_ptr<Stride> stride() const;
+
   std::string logical_blob_name() const;
 
   cfg::DataType get_dtype() const;
@@ -65,6 +69,7 @@ class OpArgBlobAttribute {
   std::shared_ptr<cfg::BlobDescProto> blob_desc_;
   std::string logical_blob_name_;
   std::shared_ptr<Shape> shape_;
+  std::shared_ptr<Stride> stride;
 };
 
 class OpArgParallelAttribute {

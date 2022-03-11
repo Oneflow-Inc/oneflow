@@ -17,6 +17,7 @@ limitations under the License.
 #define ONEFLOW_CORE_FRAMEWORK_EAGER_BLOB_UTIL_H_
 
 #include "oneflow/core/common/shape.h"
+#include "oneflow/core/common/stride.h"
 #include "oneflow/core/common/data_type.pb.h"
 #include "oneflow/core/framework/object.h"
 #include "oneflow/core/framework/blob_register.h"

@@ -14,7 +14,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 #include "oneflow/core/framework/tensor_meta.h"
-#include "oneflow/core/framework/stride.h"
+#include "oneflow/core/common/stride.h"
 
 namespace oneflow {
 namespace one {

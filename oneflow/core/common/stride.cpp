@@ -14,7 +14,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-#include "oneflow/core/framework/stride.h"
+#include "oneflow/core/common/stride.h"
 
 namespace oneflow {
 
@@ -27,6 +27,11 @@ Stride::Stride(const Shape& shape) {
       stride *= shape.At(i - 1);
     }
   }
+}
+
+Stride& Stride::assign(const StrideVector& stride_vec) {
+  stride_vec_ = stride_vec;
+  return *this;
 }
 
 Stride& Stride::operator=(const Stride& stride) {

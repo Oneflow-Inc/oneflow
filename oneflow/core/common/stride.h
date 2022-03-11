@@ -17,10 +17,13 @@ limitations under the License.
 #ifndef ONEFLOW_CORE_FRAMEWORK_STRIDE_H_
 #define ONEFLOW_CORE_FRAMEWORK_STRIDE_H_
 
+#include "oneflow/core/common/stride.pb.h"
 #include "oneflow/core/common/shape.h"
 #include "oneflow/core/common/util.h"
 
 namespace oneflow {
+
+class StrideView;
 
 class Stride final {
  public:
@@ -30,6 +33,7 @@ class Stride final {
   explicit Stride(StrideVector&& stride_vec) : stride_vec_(stride_vec) {}
   Stride(const std::initializer_list<int64_t>& stride_vec) : stride_vec_(stride_vec) {}
   Stride& operator=(const Stride& stride);
+  Stride& assign(const StrideVector& dim_vec);
   ~Stride() = default;
 
   bool operator==(const Stride& rhs) const;

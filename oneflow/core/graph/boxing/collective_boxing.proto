@@ -2,6 +2,7 @@ syntax = "proto2";
 package oneflow.boxing.collective;
 
 import "oneflow/core/common/shape.proto";
+import "oneflow/core/common/stride.proto";
 import "oneflow/core/common/data_type.proto";
 import "oneflow/core/common/device_type.proto";
 

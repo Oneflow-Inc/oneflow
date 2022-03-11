@@ -17,7 +17,7 @@ limitations under the License.
 #define ONEFLOW_CORE_FUNCTIONAL_IMPL_COMMON_H_
 
 #include "oneflow/core/framework/tensor.h"
-#include "oneflow/core/framework/stride.h"
+#include "oneflow/core/common/stride.h"
 
 namespace oneflow {
 namespace one {
