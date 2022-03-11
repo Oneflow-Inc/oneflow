@@ -72,9 +72,6 @@ TEST(Api, graph_gpu_test) {
     Graph graph = LoadGraph(device);
     Forward(graph, device);
   }
-  std::cerr << "after graph" << std::endl;
-  oneflow::vm::ClusterSync();
-  std::cerr << "after sync" << std::endl;
 }
 
 TEST(Api, graph_multi_gpu_test) {

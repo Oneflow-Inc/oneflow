@@ -54,6 +54,7 @@ limitations under the License.
 #include "oneflow/core/operator/interface_blob_conf.pb.h"
 #include "oneflow/core/operator/op_conf.pb.h"
 #include "oneflow/core/register/logical_blob_id.pb.h"
+#include "oneflow/core/vm/vm_util.h"
 
 namespace oneflow_api {
 
@@ -129,7 +130,7 @@ class Graph::GraphImpl final {
   GraphImpl(const GraphImpl& graph) = delete;
   GraphImpl(GraphImpl&& graph) noexcept;
 
-  ~GraphImpl() = default;
+  ~GraphImpl();
 
   GraphImpl& operator=(const GraphImpl& graph) = delete;
   GraphImpl& operator=(GraphImpl&& graph) noexcept;
@@ -392,6 +393,10 @@ of::Maybe<void> Graph::GraphImpl::RegisterTensors(const std::vector<Tensor>& inp
     parameter_tensor_tuple_ = ConvertToTensorTuple(variable_tensors);
   }
   return of::Maybe<void>::Ok();
+}
+
+Graph::GraphImpl::~GraphImpl() {
+  of::vm::ClusterSync().GetOrThrow();
 }
 
 }  // namespace oneflow_api
