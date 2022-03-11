@@ -35,7 +35,7 @@ from oneflow.test_utils.automated_test_util import *
 
 @autotest(n=1, check_graph=False)
 def _test_chunk(test_case, ndim, placement, sbp):
-    dims = [random(1, 3).to(int) * 4 for _ in range(ndim)]
+    dims = [random(1, 3).to(int) * 8 for _ in range(ndim)]
     x = random_tensor(ndim, *dims).to_global(placement=placement, sbp=sbp)
     dim = random(-ndim, ndim).to(int)
     chunks = random(low=1, high=4).to(int)
