@@ -15,6 +15,7 @@ limitations under the License.
 */
 
 #include "oneflow/core/common/data_type.pb.h"
+#include "oneflow/core/common/maybe.h"
 #include "oneflow/core/common/optional.h"
 #include "oneflow/core/common/scalar.h"
 #include "oneflow/core/framework/attr_map.h"
@@ -1268,7 +1269,8 @@ class NormalizationFunctor {
     std::shared_ptr<one::Tensor> gamma_val;
     std::shared_ptr<one::Tensor> beta_val;
 
-    CHECK_LE(x->shape()->NumAxes(), 2) << "NumAxes of x should be larger or equal than 2. ";
+    CHECK_LE_OR_RETURN(x->shape()->NumAxes(), 2)
+        << "NumAxes of x should be larger or equal than 2. ";
     if (gamma.has_value() && beta.has_value()) {
       gamma_val = JUST(gamma);
       beta_val = JUST(beta);
