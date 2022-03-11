@@ -356,11 +356,15 @@ ArrayAttr getSI32ArrayAttr(::mlir::PatternRewriter& rewriter, ArrayRef<int32_t> 
   if (auto conv_op = llvm::dyn_cast<oneflow::Conv2DOp>(conv_result.getDefiningOp())) {
     SmallVector<Value, 4> operands;
     NamedAttrList attributes = conv_op->getAttrs();
-    llvm::SmallVector<int32_t> perm;
+    llvm::SmallVector<int32_t> perm, output_perm;
     perm.push_back(0);
     perm.push_back(2);
     perm.push_back(3);
     perm.push_back(1);
+    output_perm.push_back(0);
+    output_perm.push_back(3);
+    output_perm.push_back(1);
+    output_perm.push_back(2);
     NamedAttrList transpos_attributes = conv_op->getAttrs();
     transpos_attributes.erase(conv_op.filtersAttrName());
     transpos_attributes.erase(conv_op.padding_beforeAttrName());
@@ -403,6 +407,7 @@ ArrayAttr getSI32ArrayAttr(::mlir::PatternRewriter& rewriter, ArrayRef<int32_t> 
                                               operands, attributes)
                    ->getResults();
     // insert transpose for output
+    transpos_attributes.set(llvm::StringRef("perm"), getSI32ArrayAttr(rewriter, output_perm));
     std::string transpose_3_name = conv_op.op_nameAttr().str() + "_transpose_output";
     transpos_attributes.set(llvm::StringRef("op_name"), rewriter.getStringAttr(transpose_3_name));
     SmallVector<Value, 4> output_operands;
