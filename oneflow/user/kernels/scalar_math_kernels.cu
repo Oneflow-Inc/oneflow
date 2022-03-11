@@ -119,7 +119,7 @@ template<typename T>
 struct ScalarReversePowGradFunctor {
   OF_DEVICE_FUNC explicit ScalarReversePowGradFunctor(T exponent) : exponent(exponent) {}
   __device__ T operator()(T x, T dy) const {
-    return pow(exponent, x) * log(static_cast<double>(exponent)) * dy;
+    return pow(exponent, x) * log(exponent) * dy;
   }
   const T exponent;
 };
