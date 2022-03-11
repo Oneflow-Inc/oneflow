@@ -69,6 +69,7 @@ class TestReshapeConsistent(flow.unittest.TestCase):
                 for sbp in all_sbp(placement, max_dim=len(pair[0])):
                     _test_reshape_impl(test_case, pair, placement, sbp)
 
+    @unittest.skipIf(True, "skip this test temporarily")
     @globaltest
     def test_reshape_like(test_case):
         shape_pairs = [
