@@ -19,6 +19,7 @@ import oneflow.unittest
 
 from oneflow.test_utils.automated_test_util import *
 
+
 @autotest(n=1, auto_backward=True, check_graph=False)
 def _autotest_dropout_p0(test_case, placement, sbp, p):
     ndim = 1
@@ -27,6 +28,7 @@ def _autotest_dropout_p0(test_case, placement, sbp, p):
     y = x.to_global(placement=placement, sbp=sbp)
     m = torch.nn.Dropout(p=p, inplace=random_bool())
     return m(x)
+
 
 @autotest(n=1, auto_backward=True, check_graph=False)
 def _autotest_dropout_eval(test_case, placement, sbp, p):
@@ -37,6 +39,7 @@ def _autotest_dropout_eval(test_case, placement, sbp, p):
     m = torch.nn.Dropout(p=p, inplace=random_bool())
     m.eval()
     return m(x)
+
 
 class TestDropoutConsistent(flow.unittest.TestCase):
     @globaltest

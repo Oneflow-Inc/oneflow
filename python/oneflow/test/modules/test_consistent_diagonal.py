@@ -19,6 +19,7 @@ import oneflow.unittest
 
 from oneflow.test_utils.automated_test_util import *
 
+
 @autotest(n=1, check_graph=False)
 def _test_flow_diagonal_impl(test_case, placement, sbp):
     offset = random(-5, 5).to(int).value() * 8
@@ -27,14 +28,15 @@ def _test_flow_diagonal_impl(test_case, placement, sbp):
 
     x = random_tensor(
         ndim=4,
-        dim0=random(1, 4)*8,
-        dim1=random(1, 4)*8,
-        dim2=random(1, 4)*8,
-        dim3=random(1, 4)*8,
+        dim0=random(1, 4) * 8,
+        dim1=random(1, 4) * 8,
+        dim2=random(1, 4) * 8,
+        dim3=random(1, 4) * 8,
     )
     y = x.to_global(placement=placement, sbp=sbp)
     z = torch.diagonal(y, offset, dim1, dim2)
     return z
+
 
 class TestDiagonalConsistent(flow.unittest.TestCase):
     @globaltest

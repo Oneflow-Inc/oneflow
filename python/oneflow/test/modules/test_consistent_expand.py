@@ -20,6 +20,7 @@ import oneflow.unittest
 
 from oneflow.test_utils.automated_test_util import *
 
+
 @autotest(n=1, auto_backward=True, check_graph=False)
 def _test_expand_impl(test_case, ndim, placement, sbp):
     dims = [random(1, 4) * 8 for i in range(ndim)]

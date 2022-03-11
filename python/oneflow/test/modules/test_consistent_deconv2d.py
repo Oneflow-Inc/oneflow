@@ -20,6 +20,7 @@ import oneflow.unittest
 
 from oneflow.test_utils.automated_test_util import *
 
+
 @autotest(n=1, auto_backward=True, check_graph=False)
 def _test_deconv2d_impl(test_case, placement, sbp):
     ndim = 4
@@ -41,12 +42,14 @@ def _test_deconv2d_impl(test_case, placement, sbp):
     y = m(x)
     return y
 
+
 class TestDeconv2dConsistent(flow.unittest.TestCase):
     @globaltest
     def _test_deconv2d_impl(test_case):
         for placement in all_placement():
             for sbp in all_sbp(placement, max_dim=4):
                 _test_deconv2d_impl(test_case, placement, sbp)
+
 
 if __name__ == "__main__":
     unittest.main()

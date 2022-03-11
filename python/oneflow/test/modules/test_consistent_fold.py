@@ -20,12 +20,13 @@ import oneflow.unittest
 
 from oneflow.test_utils.automated_test_util import *
 
+
 @autotest(n=1, auto_backward=True, check_graph=False)
 def _test_fold_impl(test_case, placement, sbp):
-    ndim=constant(3)
-    dim0=constant(2)
-    dim1=constant(36)
-    dim2=constant(4)
+    ndim = constant(3)
+    dim0 = constant(2)
+    dim1 = constant(36)
+    dim2 = constant(4)
     m = torch.nn.Fold(
         output_size=constant((4, 4)),
         kernel_size=constant(3),
@@ -40,12 +41,14 @@ def _test_fold_impl(test_case, placement, sbp):
     z = m(y)
     return z
 
+
 class TestFold(flow.unittest.TestCase):
     @globaltest
     def test_fold(test_case):
         for placement in all_placement():
             for sbp in all_sbp(placement, max_dim=3):
                 _test_fold_impl(test_case, placement, sbp)
+
 
 if __name__ == "__main__":
     unittest.main()
