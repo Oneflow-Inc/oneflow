@@ -232,7 +232,8 @@ class Graph(object):
         to make the loss tensor a scalar tensor.
 
         Note:
-            Also, during the training process, set ``verbose=True`` if you need to output learning rate information of each step.
+            If you want to output the learning rate information for each step, 
+            set the ``verbose`` parameter of the ``lr_scheduler`` to ``True``, and you will see the result at rank 0.
             
             This feature is the same as eager mode.
 
@@ -244,7 +245,6 @@ class Graph(object):
             >>> loss_fn = flow.nn.MSELoss(reduction="sum")
             >>> model = flow.nn.Sequential(flow.nn.Linear(3, 1), flow.nn.Flatten(0, 1))
             >>> optimizer = flow.optim.SGD(model.parameters(), lr=1e-6)
-            >>> # scheduler = flow.optim.lr_scheduler.CosineDecayLR(optimizer, decay_steps=100, alpha=0.98, verbose=True)
             >>> class LinearTrainGraph(flow.nn.Graph):
             ...     def __init__(self):
             ...         super().__init__()
@@ -252,7 +252,6 @@ class Graph(object):
             ...         self.loss_fn = loss_fn
             ...         # Add an optimizer
             ...         self.add_optimizer(optimizer)
-            ...         # self.add_optimizer(optimizer,lr_sch=scheduler)
             ...     def build(self, x, y):
             ...         y_pred = self.model(x)
             ...         loss = self.loss_fn(y_pred, y)

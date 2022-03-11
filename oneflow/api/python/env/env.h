@@ -29,6 +29,15 @@ limitations under the License.
 
 namespace oneflow {
 
+static std::string graph_verbose_step_lr = "False";
+
+Maybe<void> SetGraphVerboseStepLr(std::string verbose) {
+  graph_verbose_step_lr = verbose;
+  return Maybe<void>::Ok();
+}
+
+std::string GetGraphVerboseStepLr() { return graph_verbose_step_lr; }
+
 inline Maybe<std::string> CurrentResource() {
   CHECK_NOTNULL_OR_RETURN((Global<ResourceDesc, ForSession>::Get()));
   return PbMessage2TxtString(Global<ResourceDesc, ForSession>::Get()->resource());
@@ -87,11 +96,11 @@ inline Maybe<void> SetFLAGS_v(int32_t v_level) {
   return Maybe<void>::Ok();
 }
 inline Maybe<int32_t> GetFLAGS_v() { return FLAGS_v; }
-inline Maybe<void> SetVerbose(char* verbose) {
-  setenv("GRAPH_VERBOSE_STEP_LR", verbose, 1);
+inline Maybe<void> SetVerbose(std::string verbose) {
+  SetGraphVerboseStepLr(verbose);
   return Maybe<void>::Ok();
 }
-inline char* GetVerbose() { return std::getenv("GRAPH_VERBOSE_STEP_LR"); }
+inline std::string GetVerbose() { return GetGraphVerboseStepLr(); }
 }  // namespace oneflow
 
 #endif  // ONEFLOW_API_PYTHON_ENV_ENV_H_

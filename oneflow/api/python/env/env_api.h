@@ -56,8 +56,8 @@ inline void SetFLAGS_v(int32_t v_level) { return oneflow::SetFLAGS_v(v_level).Ge
 
 inline int32_t GetFLAGS_v() { return oneflow::GetFLAGS_v().GetOrThrow(); }
 
-inline void SetVerbose(char* verbose) { return oneflow::SetVerbose(verbose).GetOrThrow(); }
+inline void SetVerbose(std::string verbose) { return oneflow::SetVerbose(verbose).GetOrThrow(); }
 
-inline char* GetVerbose() { return oneflow::GetVerbose(); }
+inline std::string GetVerbose() { return oneflow::GetVerbose(); }
 
 #endif  // ONEFLOW_API_PYTHON_ENV_ENV_API_H_
