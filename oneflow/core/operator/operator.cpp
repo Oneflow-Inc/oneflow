@@ -15,6 +15,7 @@ limitations under the License.
 */
 #include "oneflow/core/common/balanced_splitter.h"
 #include "oneflow/core/common/container_util.h"
+#include "oneflow/core/common/decorator.h"
 #include "oneflow/core/vm/symbol_storage.h"
 #include "oneflow/core/framework/instructions_builder.h"
 #include "oneflow/core/framework/to_string.h"
@@ -23,6 +24,7 @@ limitations under the License.
 #include "oneflow/core/job/sbp_signature_builder.h"
 #include "oneflow/core/job/scope.h"
 #include "oneflow/core/job/sbp_parallel.h"
+#include "oneflow/core/job/lazy_mode.h"
 #include "oneflow/core/operator/operator.h"
 #include "oneflow/core/operator/op_node_signature.pb.h"
 #include "oneflow/core/job/nd_sbp_infer_hint.h"
@@ -1514,15 +1516,39 @@ Maybe<Shape> Get1dHierarchyPhysicalShape(const Shape& logical_shape,
   return physical;
 }
 
+Maybe<std::vector<int64_t>> GetIndexesFromOffset(const Shape& parallel_hierarchy, int64_t offset) {
+  auto indexes = std::make_shared<std::vector<int64_t>>();
+  indexes->resize(parallel_hierarchy.NumAxes());
+  for (int i = 0; i < parallel_hierarchy.NumAxes(); ++i) {
+    indexes->at(i) = offset / parallel_hierarchy.Count(i + 1);
+    offset = offset % parallel_hierarchy.Count(i + 1);
+  }
+  CHECK_EQ_OR_RETURN(offset, 0);
+  return indexes;
+}
+
+static constexpr auto* CachedGetIndexesFromOffset =
+    DECORATE(&GetIndexesFromOffset, ThreadLocalCopiable);
+
 Maybe<Shape> GetNdHierarchyPhysicalShape(const Shape& logical_shape, const NdSbp& nd_sbp,
-                                         const Shape& parallel_hierarchy) {
+                                         const Shape& parallel_hierarchy,
+                                         const int64_t parallel_id) {
   std::shared_ptr<Shape> physical = std::make_shared<Shape>(logical_shape);
+  const auto& indexes = JUST(CachedGetIndexesFromOffset(parallel_hierarchy, parallel_id));
   FOR_RANGE(int64_t, i, 0, parallel_hierarchy.NumAxes()) {
     const auto& sbp_parallel = nd_sbp.sbp_parallel(i);
     if (sbp_parallel.has_split_parallel()) {
       const int64_t split_axis = sbp_parallel.split_parallel().axis();
-      CHECK_EQ_OR_RETURN(physical->At(split_axis) % parallel_hierarchy.At(i), 0);
-      physical->Set(split_axis, physical->At(split_axis) / parallel_hierarchy.At(i));
+      if (LazyMode::is_enabled()) {
+        CHECK_EQ_OR_RETURN(physical->At(split_axis) % parallel_hierarchy.At(i), 0);
+        physical->Set(split_axis, physical->At(split_axis) / parallel_hierarchy.At(i));
+      } else {
+        if (physical->At(split_axis) > 0) {
+          CHECK_GE_OR_RETURN(physical->At(split_axis), parallel_hierarchy.At(i));
+          const BalancedSplitter bs(physical->At(split_axis), parallel_hierarchy.At(i));
+          physical->Set(split_axis, bs.At(indexes->at(i)).size());
+        }
+      }
     }
   }
   return physical;
@@ -1539,7 +1565,8 @@ Maybe<Shape> GetPhysicalShape(const Shape& logical_shape, const NdSbp& nd_sbp,
     return Get1dHierarchyPhysicalShape(logical_shape, nd_sbp.sbp_parallel(0),
                                        parallel_desc.hierarchy()->elem_cnt(), parallel_id);
   } else {
-    return GetNdHierarchyPhysicalShape(logical_shape, nd_sbp, *parallel_desc.hierarchy());
+    return GetNdHierarchyPhysicalShape(logical_shape, nd_sbp, *parallel_desc.hierarchy(),
+                                       parallel_id);
   }
 }
 
