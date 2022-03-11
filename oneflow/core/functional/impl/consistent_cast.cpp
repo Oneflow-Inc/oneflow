@@ -272,7 +272,7 @@ Maybe<Tensor> LocalToConsistent(const std::shared_ptr<Tensor>& x,
   bool device_mismatch = JUST(input->device())->device_id() != GlobalProcessCtx::LocalRank();
   if (copy || device_mismatch) {
     if (device_mismatch) {
-      VLOG(2) << "The tensor isn't on default device of the current rank., now copy it to "
+      VLOG(2) << "The tensor isn't on default device of the current rank, now copy it to "
               << parallel_desc->device_tag() << ": " << GlobalProcessCtx::LocalRank();
     }
     input = JUST(functional::Copy(x, Device::Type4DeviceTag(parallel_desc->device_tag()),
@@ -325,7 +325,7 @@ class LocalToConsistentFunctor {
     bool device_mismatch = JUST(input->device())->device_id() != GlobalProcessCtx::LocalRank();
     if (copy || device_mismatch) {
       if (device_mismatch) {
-        VLOG(2) << "The tensor isn't on default device of the current rank., now copy it to "
+        VLOG(2) << "The tensor isn't on default device of the current rank, now copy it to "
                 << parallel_desc->device_tag() << ": " << GlobalProcessCtx::LocalRank();
       }
       input = JUST(functional::Copy(x, Device::Type4DeviceTag(parallel_desc->device_tag()),
