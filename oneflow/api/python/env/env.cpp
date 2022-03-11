@@ -14,29 +14,29 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 #include <pybind11/pybind11.h>
+#include "oneflow/api/python/env/env.h"
 #include "oneflow/api/python/of_api_registry.h"
-#include "oneflow/api/python/env/env_api.h"
 
 namespace py = pybind11;
 
 ONEFLOW_API_PYBIND11_MODULE("", m) {
-  m.def("CurrentResource", &CurrentResource);
-  m.def("EnvResource", &EnvResource);
-  m.def("EnableEagerEnvironment", &EnableEagerEnvironment);
+  m.def("CurrentResource", &oneflow::CurrentResource);
+  m.def("EnvResource", &oneflow::EnvResource);
+  m.def("EnableEagerEnvironment", &oneflow::EnableEagerEnvironment);
 
-  m.def("IsEnvInited", &IsEnvInited);
-  m.def("InitEnv", &InitEnv);
-  m.def("DestroyEnv", &DestroyEnv, py::call_guard<py::gil_scoped_release>());
+  m.def("IsEnvInited", &oneflow::IsEnvInited);
+  m.def("InitEnv", &oneflow::InitEnv);
+  m.def("DestroyEnv", &oneflow::DestroyEnv, py::call_guard<py::gil_scoped_release>());
 
-  m.def("CurrentMachineId", &CurrentMachineId);
+  m.def("CurrentMachineId", &oneflow::CurrentMachineId);
 
-  m.def("GetRank", &GetRank);
-  m.def("GetWorldSize", &GetWorldSize);
-  m.def("GetNodeSize", &GetNodeSize);
-  m.def("GetLocalRank", &GetLocalRank);
-  m.def("CudaGetDeviceCount", &CudaGetDeviceCount);
-  m.def("SetFLAGS_alsologtostderr", &SetFLAGS_alsologtostderr);
-  m.def("GetFLAGS_alsologtostderr", &GetFLAGS_alsologtostderr);
-  m.def("SetFLAGS_v", &SetFLAGS_v);
-  m.def("GetFLAGS_v", &GetFLAGS_v);
+  m.def("GetRank", &oneflow::GetRank);
+  m.def("GetWorldSize", &oneflow::GetWorldSize);
+  m.def("GetNodeSize", &oneflow::GetNodeSize);
+  m.def("GetLocalRank", &oneflow::GetLocalRank);
+  m.def("CudaGetDeviceCount", &oneflow::CudaGetDeviceCount);
+  m.def("SetFLAGS_alsologtostderr", &oneflow::SetFLAGS_alsologtostderr);
+  m.def("GetFLAGS_alsologtostderr", &oneflow::GetFLAGS_alsologtostderr);
+  m.def("SetFLAGS_v", &oneflow::SetFLAGS_v);
+  m.def("GetFLAGS_v", &oneflow::GetFLAGS_v);
 }

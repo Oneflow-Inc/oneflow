@@ -37,11 +37,20 @@ struct is_maybe<Maybe<T>> {
   static const bool value = true;
 };
 
+inline const std::shared_ptr<cfg::ErrorProto>& UninitializedValueError() {
+  static thread_local const auto& error =
+      Error::InvalidValueError("uninitialized value").error_proto();
+  return error;
+}
+
 template<typename T>
 class Maybe<T, typename std::enable_if<!(std::is_same<T, void>::value || IsScalarType<T>::value)
                                        && !std::is_reference<T>::value>::type>
     final {
  public:
+  using ValueT = typename std::remove_reference<T>::type;
+
+  __attribute__((warning("Default constructor of Maybe can only used by Maybe itself and pybind11 type caster"))) Maybe() : data_or_error_(UninitializedValueError()) {}
   Maybe(const T& data) : data_or_error_(std::make_shared<T>(data)) {}
   Maybe(T&& data) : data_or_error_(std::make_shared<T>(std::move(data))) {}
   Maybe(const Error& error) : data_or_error_(error.error_proto()) {}
@@ -115,13 +124,21 @@ class Maybe<T, typename std::enable_if<!(std::is_same<T, void>::value || IsScala
 template<typename T>
 class Maybe<T, typename std::enable_if<std::is_same<T, void>::value>::type> final {
  public:
+  using ValueT = typename std::remove_reference<T>::type;
+
+  __attribute__((warning("Default constructor of Maybe can only used by Maybe itself and pybind11 type caster"))) Maybe() : error_or_scalar_(nullptr) {}
   Maybe(const Error& error) : error_or_scalar_(error.error_proto()) { CheckError(); }
   Maybe(const std::shared_ptr<cfg::ErrorProto>& error) : error_or_scalar_(error) { CheckError(); }
   Maybe(const Maybe&) = default;
   Maybe(Maybe&&) = default;
   ~Maybe() = default;
 
-  static Maybe Ok() { return Maybe(); }
+  static Maybe Ok() { 
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wattribute-warning"
+    return Maybe(); 
+#pragma GCC diagnostic pop
+  }
 
   bool IsOk() const { return error_or_scalar_.IsScalar(); }
   void Data_YouAreNotAllowedToCallThisFuncOutsideThisFile() const {}
@@ -154,7 +171,6 @@ class Maybe<T, typename std::enable_if<std::is_same<T, void>::value>::type> fina
   }
 
  private:
-  Maybe() : error_or_scalar_(nullptr) {}
   void CheckError() const {
     CHECK_NE(this->error()->error_type_case(), cfg::ErrorProto::ERROR_TYPE_NOT_SET);
   }
@@ -162,15 +178,11 @@ class Maybe<T, typename std::enable_if<std::is_same<T, void>::value>::type> fina
   SharedOrScalar<cfg::ErrorProto, void*> error_or_scalar_;
 };
 
-inline const std::shared_ptr<cfg::ErrorProto>& UninitializedValueError() {
-  static thread_local const auto& error =
-      Error::InvalidValueError("uninitialized value").error_proto();
-  return error;
-}
-
 template<typename T>
 class Maybe<T, typename std::enable_if<IsScalarType<T>::value>::type> final {
  public:
+  using ValueT = typename std::remove_reference<T>::type;
+
   Maybe(T data) : error_or_scalar_(data) {}
   Maybe(const Error& error) : error_or_scalar_(error.error_proto()) { CheckError(); }
   Maybe(const std::shared_ptr<cfg::ErrorProto>& error) : error_or_scalar_(error) { CheckError(); }
@@ -229,10 +241,11 @@ template<typename T>
 class Maybe<T, typename std::enable_if<!(std::is_same<T, void>::value || IsScalarType<T>::value)
                                        && std::is_reference<T>::value>::type>
     final {
+ public:
   using ValueT = typename std::remove_reference<T>::type;
   using PtrT = ValueT*;
 
- public:
+  __attribute__((warning("Default constructor of Maybe can only used by Maybe itself and pybind11 type caster"))) Maybe() : maybe_ptr_(UninitializedValueError()) {}
   Maybe(T data) : maybe_ptr_(&data) {}
   Maybe(const Error& error) : maybe_ptr_(error) {}
   Maybe(const std::shared_ptr<cfg::ErrorProto>& error) : maybe_ptr_(error) {}

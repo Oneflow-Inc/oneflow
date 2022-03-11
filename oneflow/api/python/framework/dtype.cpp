@@ -39,7 +39,7 @@ ONEFLOW_API_PYBIND11_MODULE("", m) {
             return CHECK_JUST(DType::Get(DataType(t)));
           }))
       .def_property_readonly(
-          "bytes", [](const Symbol<DType>& dtype) { return dtype->bytes().GetOrThrow(); });
+          "bytes", [](const Symbol<DType>& dtype) { return dtype->bytes(); });
 
   m.attr("bool") = &CHECK_JUST(DType::Get(DataType::kBool));
   m.attr("char") = &CHECK_JUST(DType::Get(DataType::kChar));

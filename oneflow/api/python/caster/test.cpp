@@ -15,21 +15,22 @@ limitations under the License.
 */
 #include <pybind11/pybind11.h>
 #include "oneflow/api/python/of_api_registry.h"
-#include "oneflow/core/vm/vm_util.h"
-#include "oneflow/core/eager/dev_vm_dep_object_consume_mode.h"
 
-ONEFLOW_API_PYBIND11_MODULE("eager", m) {
-  using namespace oneflow;
-  namespace py = pybind11;
-  m.def(
-      "Sync", []() { return vm::ClusterSync(); }, py::call_guard<py::gil_scoped_release>());
+namespace py = pybind11;
 
-  py::class_<one::DevVmDepObjectConsumeModeGuard,
-             std::shared_ptr<one::DevVmDepObjectConsumeModeGuard>>(
-      m, "DevVmDepObjectConsumeModeGuard");
+namespace oneflow {
 
-  m.def("SourceOpOnlyResourceDependenceModeGuard", []() {
-    return std::make_shared<one::DevVmDepObjectConsumeModeGuard>(
-        one::DevVmDepObjectConsumeMode::NONE);
+ONEFLOW_API_PYBIND11_MODULE("test_api", m) {
+  m.def("increase_if_not_none",
+        [](const Optional<int>& x) -> Optional<int> { return x.map([](int i) { return i + 1; }); });
+  m.def("divide", [](float x, float y) -> Maybe<float> {
+    CHECK_NE_OR_RETURN(y, 0);
+    return x / y;
+  });
+  m.def("throw_if_zero", [](int x) -> Maybe<void> {
+    CHECK_NE_OR_RETURN(x, 0);
+    return Maybe<void>::Ok();
   });
 }
+
+}  // namespace oneflow
