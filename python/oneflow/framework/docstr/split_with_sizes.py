@@ -38,7 +38,7 @@ add_docstr(
         >>> import oneflow as flow
                
         >>> a = flow.arange(10).reshape(5,2)
-        >>> flow.split(a, [1,4])
+        >>> flow.split_with_sizes(a, [1,4])
         (tensor([[0, 1]], dtype=oneflow.int64), tensor([[2, 3],
                 [4, 5],
                 [6, 7],
