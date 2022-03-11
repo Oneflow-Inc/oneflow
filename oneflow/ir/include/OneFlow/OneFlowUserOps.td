@@ -5407,7 +5407,7 @@ def OneFlow_AdamUpdateOp : OneFlow_BaseOp<"adam_update", [NoGrad, AttrSizedOpera
     Optional<OneFlow_Tensor>:$bias_correction2,
     OneFlow_Tensor:$m,
     OneFlow_Tensor:$v,
-    OneFlow_Tensor:$max_v
+    Optional<OneFlow_Tensor>:$max_v
   );
   let attrs = (ins
     DefaultValuedAttr<F32Attr, "0.">:$learning_rate_val,
@@ -5443,7 +5443,7 @@ def OneFlow_IndexedSlicesAdamUpdateOp : OneFlow_BaseOp<"indexed_slices_adam_upda
     Optional<OneFlow_Tensor>:$bias_correction2,
     OneFlow_Tensor:$m,
     OneFlow_Tensor:$v,
-    OneFlow_Tensor:$max_v
+    Optional<OneFlow_Tensor>:$max_v
   );
   let attrs = (ins
     DefaultValuedAttr<F32Attr, "0.">:$learning_rate_val,
