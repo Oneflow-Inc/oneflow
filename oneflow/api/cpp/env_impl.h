@@ -11,7 +11,7 @@ class OneFlowEnv {
   public:
   OF_DISALLOW_COPY(OneFlowEnv);
   OneFlowEnv();
-  ~OneFlowEnv() = default;
+  ~OneFlowEnv();
   std::shared_ptr<of::MultiClientSessionContext> GetSessionCtx() {
 	  return session_ctx_;
   }

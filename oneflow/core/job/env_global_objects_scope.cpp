@@ -273,11 +273,11 @@ EnvGlobalObjectsScope::~EnvGlobalObjectsScope() {
   Global<ProcessCtx>::Delete();
   Global<EnvDesc>::Delete();
   ClearAllSymbolAndIdCache();
-  google::ShutdownGoogleLogging();
   if (Global<EnvGlobalObjectsScope>::Get() != nullptr) {
     Global<EnvGlobalObjectsScope>::SetAllocated(nullptr);
   }
   VLOG(2) << "Finish closing env global objects scope." << std::endl;
+  google::ShutdownGoogleLogging();
 }
 
 }  // namespace oneflow

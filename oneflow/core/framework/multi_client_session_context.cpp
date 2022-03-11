@@ -155,7 +155,6 @@ Maybe<void> MultiClientSessionContext::UpdateResource(const std::string& reso_pr
 Maybe<void> MultiClientSessionContext::TryClose() {
   if (is_inited_) {
     VLOG(1) << "Try to delete multi client session context." << std::endl;
-
     // sync before NNGraph release to ensure LaunchLazyJob instruction was completed and released
     JUST(vm::ClusterSync());
     {
@@ -182,9 +181,10 @@ Maybe<void> MultiClientSessionContext::TryClose() {
     // NOTE(chengcheng): New after delete because in EnvGlobalObjectScope once created ResourceDesc.
     Global<ResourceDesc, ForSession>::New(Global<ResourceDesc, ForEnv>::Get()->resource(),
                                           GlobalProcessCtx::NumOfProcessPerNode());
+    VLOG(1) << "Finish delete multi client session context." << std::endl;
+    env_ctx_.reset();
     is_inited_ = false;
   }
-  VLOG(1) << "Finish delete multi client session context." << std::endl;
   return Maybe<void>::Ok();
 }
 

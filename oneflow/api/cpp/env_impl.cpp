@@ -112,4 +112,9 @@ OneFlowEnv::OneFlowEnv() {
   session_ctx_->TryInit(config_proto);
 }
 
+OneFlowEnv::~OneFlowEnv() {
+  session_ctx_.reset();
+  env_ctx_.reset();
+}
+
 }  // namespace oneflow_api

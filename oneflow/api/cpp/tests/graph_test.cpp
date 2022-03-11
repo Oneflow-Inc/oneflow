@@ -25,6 +25,8 @@ limitations under the License.
 #include <vector>
 #include "oneflow/api/cpp/framework.h"
 #include "oneflow/api/cpp/tests/api_test.h"
+#include "oneflow/core/vm/vm_util.h"
+
 
 namespace oneflow_api {
 
@@ -32,7 +34,7 @@ namespace {
 
 inline Graph LoadGraph(const Device& device) {
   Graph graph =
-      Graph::Load("./oneflow/api/cpp/tests/graph_test_model/affine_with_parameter", device);
+      Graph::Load("/home/xuxiaoyu/dev/oneflow/oneflow/api/cpp/tests/graph_test_model/affine_with_parameter", device);
   return graph;
 }
 
@@ -70,6 +72,9 @@ TEST(Api, graph_gpu_test) {
     Graph graph = LoadGraph(device);
     Forward(graph, device);
   }
+  std::cerr << "after graph" << std::endl;
+  oneflow::vm::ClusterSync();
+  std::cerr << "after sync" << std::endl;
 }
 
 TEST(Api, graph_multi_gpu_test) {
