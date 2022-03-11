@@ -16,12 +16,12 @@ limitations under the License.
 #ifndef ONEFLOW_USER_DATA_DATA_READER_H_
 #define ONEFLOW_USER_DATA_DATA_READER_H_
 
-#include "oneflow/core/common/buffer.h"
-#include "oneflow/core/framework/op_kernel.h"
 #include "oneflow/user/data/dataset.h"
 #include "oneflow/user/data/parser.h"
+#include "oneflow/core/common/buffer.h"
 
 namespace oneflow {
+
 namespace data {
 
 static const int32_t kDataReaderBatchBufferSize = 4;
@@ -29,10 +29,12 @@ static const int32_t kDataReaderBatchBufferSize = 4;
 template<typename LoadTarget>
 class DataReader {
  public:
-  using LoadTargetPtr = std::shared_ptr<LoadTarget>;
-  using LoadTargetPtrList = std::vector<LoadTargetPtr>;
+  using SampleType = LoadTarget;
+  using BatchType = std::vector<SampleType>;
+
   DataReader(user_op::KernelInitContext* ctx)
       : is_closed_(false), batch_buffer_(kDataReaderBatchBufferSize) {}
+
   virtual ~DataReader() {
     Close();
     if (load_thrd_.joinable()) { load_thrd_.join(); }
@@ -40,20 +42,15 @@ class DataReader {
 
   void Read(user_op::KernelComputeContext* ctx) {
     CHECK(load_thrd_.joinable()) << "You should call StartLoadThread before read data";
-    auto batch_data = FetchBatchData();
-    parser_->Parse(batch_data, ctx);
+    auto batch = FetchBatchData();
+    parser_->Parse(batch, ctx);
   }
 
   void Close() {
-    is_closed_.store(true);
-    bool buffer_drained = false;
-    while (!buffer_drained) {
-      std::shared_ptr<LoadTargetPtrList> abandoned_batch_data(nullptr);
-      auto status = batch_buffer_.TryReceive(&abandoned_batch_data);
-      CHECK_NE(status, BufferStatus::kBufferStatusErrorClosed);
-      buffer_drained = (status == BufferStatus::kBufferStatusEmpty);
+    if (!is_closed_.load()) {
+      is_closed_.store(true);
+      batch_buffer_.Close();
     }
-    batch_buffer_.Close();
   }
 
  protected:
@@ -68,24 +65,24 @@ class DataReader {
   std::unique_ptr<Parser<LoadTarget>> parser_;
 
  private:
-  std::shared_ptr<LoadTargetPtrList> FetchBatchData() {
-    std::shared_ptr<LoadTargetPtrList> batch_data(nullptr);
-    CHECK_EQ(batch_buffer_.Pull(&batch_data), BufferStatus::kBufferStatusSuccess);
-    return batch_data;
+  BatchType FetchBatchData() {
+    BatchType batch;
+    CHECK_EQ(batch_buffer_.Pull(&batch), BufferStatus::kBufferStatusSuccess);
+    return batch;
   }
 
   bool LoadBatch() {
-    std::shared_ptr<LoadTargetPtrList> batch_data =
-        std::make_shared<LoadTargetPtrList>(std::move(loader_->Next()));
-    return batch_buffer_.Push(batch_data) == BufferStatus::kBufferStatusSuccess;
+    BatchType batch = loader_->Next();
+    return batch_buffer_.Push(std::move(batch)) == BufferStatus::kBufferStatusSuccess;
   }
 
   std::atomic<bool> is_closed_;
-  Buffer<std::shared_ptr<LoadTargetPtrList>> batch_buffer_;
+  Buffer<BatchType> batch_buffer_;
   std::thread load_thrd_;
 };
 
 }  // namespace data
+
 }  // namespace oneflow
 
 #endif  // ONEFLOW_USER_DATA_DATA_READER_H_

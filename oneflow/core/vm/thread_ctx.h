@@ -25,14 +25,17 @@ limitations under the License.
 namespace oneflow {
 namespace vm {
 
+using PendingInstructionChannel =
+    intrusive::Channel<INTRUSIVE_FIELD(Instruction, pending_instruction_hook_)>;
+using PendingInstructionList =
+    intrusive::List<INTRUSIVE_FIELD(Instruction, pending_instruction_hook_)>;
+
 class ThreadCtx final : public intrusive::Base {
  public:
   void __Init__() { clear_stream_rt_desc(); }
 
   // types
   using StreamList = intrusive::List<INTRUSIVE_FIELD(Stream, thread_ctx_stream_hook_)>;
-  using PendingInstructionChannel =
-      intrusive::Channel<INTRUSIVE_FIELD(Instruction, pending_instruction_hook_)>;
 
   // Getters
   bool has_stream_rt_desc() const { return stream_rt_desc_ != nullptr; }
@@ -50,11 +53,12 @@ class ThreadCtx final : public intrusive::Base {
     __Init__();
     set_stream_rt_desc(&stream_rt_desc);
   }
-  void LoopRun(const std::function<void(ThreadCtx*)>& Initializer);
-  intrusive::ChannelStatus TryReceiveAndRun();
+  size_t TryReceiveAndRun();
+  intrusive::ChannelStatus ReceiveAndRun();
 
  private:
-  intrusive::ChannelStatus ReceiveAndRun();
+  template<intrusive::ChannelStatus (PendingInstructionChannel::*Move)(PendingInstructionList*)>
+  intrusive::ChannelStatus MoveAndRun(size_t* cnt);
 
   friend class intrusive::Ref;
   intrusive::Ref* mut_intrusive_ref() { return &intrusive_ref_; }

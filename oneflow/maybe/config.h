@@ -37,16 +37,30 @@ limitations under the License.
 #if !__is_identifier(__is_aggregate)
 #define OF_MAYBE_HAS_IS_AGGREGATE
 #endif
-#elif __has_builtin(__is_aggregate)
+#else
+#if __has_builtin(__is_aggregate)
 #define OF_MAYBE_HAS_IS_AGGREGATE
+#endif
 #endif
 
 #ifdef OF_MAYBE_HAS_IS_AGGREGATE
-#define OF_MAYBE_IS_AGGREGATE(...) __is_aggregate(__VA_ARGS__)
+#define OF_MAYBE_IS_AGGREGATE(...) (__is_aggregate(__VA_ARGS__))
 #else
 // decay to POD checking if no such builtin (because implementing __is_aggregate need reflection)
 #define OF_MAYBE_IS_AGGREGATE(...) \
-  std::is_standard_layout<__VA_ARGS__>::value&& std::is_trivial<__VA_ARGS__>::value
+  (std::is_standard_layout<__VA_ARGS__>::value && std::is_trivial<__VA_ARGS__>::value)
+#endif
+
+// `__builtin_expect` exists at least since GCC 4 / Clang 3
+#define OF_MAYBE_EXPECT_FALSE(x) (__builtin_expect((x), 0))
+
+#if __has_cpp_attribute(nodiscard)
+#define OF_MAYBE_NODISCARD_FUNC [[nodiscard]]
+#define OF_MAYBE_NODISCARD_TYPE [[nodiscard]]
+#elif __has_attribute(warn_unused_result)
+#define OF_MAYBE_NODISCARD_FUNC \
+  __attribute__((warn_unused_result))  // or [[gnu::warn_unused_result]]
+#define OF_MAYBE_NODISCARD_TYPE
 #endif
 
 #endif  // ONEFLOW_MAYBE_CONFIG_H_

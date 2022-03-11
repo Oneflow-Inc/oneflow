@@ -22,16 +22,13 @@ limitations under the License.
 #include "oneflow/core/common/shape_view.h"
 #include "oneflow/core/common/shape.h"
 #include "oneflow/core/memory/memory_case.pb.h"
-#include "oneflow/core/framework/tensor.h"
 #include "oneflow/core/framework/tensor_impl.h"
 #include "oneflow/core/framework/transport_token.h"
 #include "oneflow/core/common/error.h"
 
 namespace oneflow {
 
-namespace cfg {
 class NdSbp;
-}
 class Device;
 
 namespace one {
@@ -53,7 +50,7 @@ class Tensor : public std::enable_shared_from_this<Tensor> {
   virtual const std::shared_ptr<const Shape>& shape() const = 0;
   virtual Symbol<DType> dtype() const = 0;
   virtual Maybe<TransportToken> transport_token() const = 0;
-  virtual Maybe<Symbol<cfg::NdSbp>> nd_sbp() const = 0;
+  virtual Maybe<Symbol<NdSbp>> nd_sbp() const = 0;
   virtual Maybe<Symbol<ParallelDesc>> parallel_desc() const = 0;
   virtual Maybe<Symbol<Device>> device() const = 0;
   virtual Maybe<Symbol<Device>*> mut_device() = 0;
@@ -76,11 +73,11 @@ class Tensor : public std::enable_shared_from_this<Tensor> {
   virtual Maybe<int64_t> storage_offset() const { OF_UNIMPLEMENTED(); }
 
   // Getters/Setters valid only for EagerConsistentTensor
-  virtual Maybe<const Optional<Symbol<cfg::NdSbp>>&> consumer_nd_sbp_constraint() const {
+  virtual Maybe<const Optional<Symbol<NdSbp>>&> consumer_nd_sbp_constraint() const {
     OF_UNIMPLEMENTED();
   }
   virtual Maybe<MirroredTensor> cur_rank_phy_tensor() const { OF_UNIMPLEMENTED(); }
-  virtual Maybe<void> set_consumer_nd_sbp_constraint(Symbol<cfg::NdSbp> val) { OF_UNIMPLEMENTED(); }
+  virtual Maybe<void> set_consumer_nd_sbp_constraint(Symbol<NdSbp> val) { OF_UNIMPLEMENTED(); }
 
   // Getters for autograd
   virtual bool requires_grad() const = 0;
@@ -100,13 +97,16 @@ class Tensor : public std::enable_shared_from_this<Tensor> {
   virtual Maybe<void> set_acc_grad(const std::shared_ptr<Tensor>& grad) = 0;
   virtual Maybe<Tensor> mut_acc_grad() = 0;
   virtual void set_is_leaf(bool is_leaf) = 0;
+  virtual std::shared_ptr<const AutogradMeta> autograd_meta() const = 0;
   virtual std::shared_ptr<AutogradMeta> mut_autograd_meta() = 0;
-  virtual bool has_autograd_meta() const = 0;
   virtual void set_autograd_meta(const std::shared_ptr<AutogradMeta>& autograd_meta) = 0;
 
   virtual user_op::TensorDesc* mut_tensor_meta() = 0;
   virtual Maybe<void> set_data(const std::shared_ptr<Tensor>& other) = 0;
 
+  virtual Maybe<void> RegisterStorageDeleteHook(const std::function<void()>& hook) {
+    OF_UNIMPLEMENTED();
+  };
   virtual Maybe<MirroredTensor> AsMirroredTensor() = 0;
   virtual Maybe<ConsistentTensor> AsConsistentTensor() = 0;
 
@@ -124,7 +124,7 @@ class StaticZerosTensor final : public Tensor {
   const std::shared_ptr<const Shape>& shape() const override { return shape_; }
   Symbol<DType> dtype() const override { return CHECK_JUST(DType::Get(dtype_)); }
   Maybe<TransportToken> transport_token() const override { RETURN_ERROR_WITH_BUG_PROMPT(); }
-  Maybe<Symbol<cfg::NdSbp>> nd_sbp() const override { RETURN_ERROR_WITH_BUG_PROMPT(); }
+  Maybe<Symbol<NdSbp>> nd_sbp() const override { RETURN_ERROR_WITH_BUG_PROMPT(); }
   Maybe<Symbol<ParallelDesc>> parallel_desc() const override { RETURN_ERROR_WITH_BUG_PROMPT(); }
   Maybe<Symbol<Device>> device() const override { return device_; }
   Maybe<Symbol<Device>*> mut_device() override { RETURN_ERROR_WITH_BUG_PROMPT(); }
@@ -162,11 +162,11 @@ class StaticZerosTensor final : public Tensor {
   Maybe<int64_t> storage_offset() const override { RETURN_ERROR_WITH_BUG_PROMPT(); }
 
   // Getters/Setters valid only for EagerConsistentTensor
-  Maybe<const Optional<Symbol<cfg::NdSbp>>&> consumer_nd_sbp_constraint() const override {
+  Maybe<const Optional<Symbol<NdSbp>>&> consumer_nd_sbp_constraint() const override {
     RETURN_ERROR_WITH_BUG_PROMPT();
   }
   Maybe<MirroredTensor> cur_rank_phy_tensor() const override { RETURN_ERROR_WITH_BUG_PROMPT(); }
-  Maybe<void> set_consumer_nd_sbp_constraint(Symbol<cfg::NdSbp> val) override {
+  Maybe<void> set_consumer_nd_sbp_constraint(Symbol<NdSbp> val) override {
     RETURN_ERROR_WITH_BUG_PROMPT();
   }
 
@@ -213,13 +213,12 @@ class StaticZerosTensor final : public Tensor {
   }
   Maybe<Tensor> mut_acc_grad() override { RETURN_ERROR_WITH_BUG_PROMPT(); }
   void set_is_leaf(bool is_leaf) override { PRINT_BUG_PROMPT_AND_ABORT(); }
+  std::shared_ptr<const AutogradMeta> autograd_meta() const override {
+    PRINT_BUG_PROMPT_AND_ABORT();
+  }
   std::shared_ptr<AutogradMeta> mut_autograd_meta() override {
     PRINT_BUG_PROMPT_AND_ABORT();
     return nullptr;
-  }
-  bool has_autograd_meta() const override {
-    PRINT_BUG_PROMPT_AND_ABORT();
-    return false;
   }
   void set_autograd_meta(const std::shared_ptr<AutogradMeta>& autograd_meta) override {
     PRINT_BUG_PROMPT_AND_ABORT();
@@ -275,7 +274,7 @@ class Parameter final : public TensorIf<Parameter> {
 
   const std::shared_ptr<const Shape>& shape() const override { return tensor_->shape(); }
   Symbol<DType> dtype() const override { return tensor_->dtype(); }
-  Maybe<Symbol<cfg::NdSbp>> nd_sbp() const override { return tensor_->nd_sbp(); }
+  Maybe<Symbol<NdSbp>> nd_sbp() const override { return tensor_->nd_sbp(); }
   Maybe<Symbol<ParallelDesc>> parallel_desc() const override { return tensor_->parallel_desc(); }
   Maybe<Symbol<Device>> device() const override { return tensor_->device(); }
   Maybe<Symbol<Device>*> mut_device() override { return tensor_->mut_device(); }
@@ -316,14 +315,14 @@ class Parameter final : public TensorIf<Parameter> {
   Maybe<const Stride> stride() const override { return tensor_->stride(); }
   Maybe<int64_t> storage_offset() const override { return tensor_->storage_offset(); }
 
-  Maybe<const Optional<Symbol<cfg::NdSbp>>&> consumer_nd_sbp_constraint() const override {
+  Maybe<const Optional<Symbol<NdSbp>>&> consumer_nd_sbp_constraint() const override {
     return tensor_->consumer_nd_sbp_constraint();
   }
   Maybe<TransportToken> transport_token() const override { return tensor_->transport_token(); }
   Maybe<MirroredTensor> cur_rank_phy_tensor() const override {
     return tensor_->cur_rank_phy_tensor();
   }
-  Maybe<void> set_consumer_nd_sbp_constraint(Symbol<cfg::NdSbp> val) override {
+  Maybe<void> set_consumer_nd_sbp_constraint(Symbol<NdSbp> val) override {
     return tensor_->set_consumer_nd_sbp_constraint(val);
   }
 
@@ -346,10 +345,12 @@ class Parameter final : public TensorIf<Parameter> {
   }
   Maybe<Tensor> mut_acc_grad() override { return tensor_->mut_acc_grad(); }
   void set_is_leaf(bool is_leaf) override { return tensor_->set_is_leaf(is_leaf); }
+  std::shared_ptr<const AutogradMeta> autograd_meta() const override {
+    return tensor_->autograd_meta();
+  }
   std::shared_ptr<AutogradMeta> mut_autograd_meta() override {
     return tensor_->mut_autograd_meta();
   }
-  bool has_autograd_meta() const override { return tensor_->has_autograd_meta(); }
   void set_autograd_meta(const std::shared_ptr<AutogradMeta>& autograd_meta) override {
     return tensor_->set_autograd_meta(autograd_meta);
   }
@@ -396,7 +397,7 @@ class MirroredTensor final : public TensorIf<MirroredTensor> {
     OF_RUNTIME_ERROR() << "Only consistent tensors have 'consistent_id', Consistent id is used to "
                           "synchronize rank";
   }
-  Maybe<Symbol<cfg::NdSbp>> nd_sbp() const override {
+  Maybe<Symbol<NdSbp>> nd_sbp() const override {
     OF_RUNTIME_ERROR()
         << "Local tensor has no sbp property. "
            "sbp is the description in the oneflow distributed case, you can refer to "
@@ -437,7 +438,6 @@ class MirroredTensor final : public TensorIf<MirroredTensor> {
   bool requires_grad() const override { return impl_->requires_grad(); }
   bool is_leaf() const override { return impl_->is_leaf(); }
   bool retain_grad() const override { return impl_->retain_grad(); }
-  bool has_autograd_meta() const override { return impl_->has_autograd_meta(); }
 
   // Setters for autograd
   Maybe<void> set_acc_grad(const std::shared_ptr<Tensor>& grad) override {
@@ -453,6 +453,9 @@ class MirroredTensor final : public TensorIf<MirroredTensor> {
   }
   Maybe<Tensor> mut_acc_grad() override { return impl_->mut_acc_grad(); }
   void set_is_leaf(bool is_leaf) override { impl_->set_is_leaf(is_leaf); }
+  std::shared_ptr<const AutogradMeta> autograd_meta() const override {
+    return impl_->autograd_meta();
+  }
   std::shared_ptr<AutogradMeta> mut_autograd_meta() override { return impl_->mut_autograd_meta(); }
   void set_autograd_meta(const std::shared_ptr<AutogradMeta>& autograd_meta) override {
     impl_->set_autograd_meta(autograd_meta);
@@ -481,6 +484,10 @@ class MirroredTensor final : public TensorIf<MirroredTensor> {
     return Maybe<void>::Ok();
   }
 
+  Maybe<void> RegisterStorageDeleteHook(const std::function<void()>& hook) override {
+    return impl_->RegisterStorageDeleteHook(hook);
+  }
+
   Maybe<MirroredTensor> AsMirroredTensor() override {
     return std::dynamic_pointer_cast<MirroredTensor>(shared_from_this());
   }
@@ -501,7 +508,7 @@ class ConsistentTensor final : public TensorIf<ConsistentTensor> {
   const std::shared_ptr<const Shape>& shape() const override { return impl_->shape(); }
   Symbol<DType> dtype() const override { return CHECK_JUST(DType::Get(impl_->dtype())); }
   Maybe<TransportToken> transport_token() const override { return impl_->transport_token(); }
-  Maybe<Symbol<cfg::NdSbp>> nd_sbp() const override { return impl_->nd_sbp(); }
+  Maybe<Symbol<NdSbp>> nd_sbp() const override { return impl_->nd_sbp(); }
   Maybe<Symbol<ParallelDesc>> parallel_desc() const override { return impl_->parallel_desc(); }
   Maybe<Symbol<Device>> device() const override {
     OF_RUNTIME_ERROR() << "Only local tensors have 'device'. Please use "
@@ -512,7 +519,7 @@ class ConsistentTensor final : public TensorIf<ConsistentTensor> {
   }
   bool is_lazy() const override { return impl_->is_lazy(); }
   bool is_consistent() const override { return true; }
-  Maybe<const Optional<Symbol<cfg::NdSbp>>&> consumer_nd_sbp_constraint() const override {
+  Maybe<const Optional<Symbol<NdSbp>>&> consumer_nd_sbp_constraint() const override {
     return impl_->consumer_nd_sbp_constraint();
   }
   Maybe<MirroredTensor> cur_rank_phy_tensor() const override {
@@ -533,7 +540,7 @@ class ConsistentTensor final : public TensorIf<ConsistentTensor> {
   Maybe<bool> has_eager_blob_object() const override { return impl_->has_eager_blob_object(); }
 
   // Setters
-  Maybe<void> set_consumer_nd_sbp_constraint(Symbol<cfg::NdSbp> val) override {
+  Maybe<void> set_consumer_nd_sbp_constraint(Symbol<NdSbp> val) override {
     impl_->set_consumer_nd_sbp_constraint(val);
     return Maybe<void>::Ok();
   }
@@ -544,7 +551,6 @@ class ConsistentTensor final : public TensorIf<ConsistentTensor> {
   bool requires_grad() const override { return impl_->requires_grad(); }
   bool is_leaf() const override { return impl_->is_leaf(); }
   bool retain_grad() const override { return impl_->retain_grad(); }
-  bool has_autograd_meta() const override { return impl_->has_autograd_meta(); }
 
   // Setters for autograd
   Maybe<void> set_acc_grad(const std::shared_ptr<Tensor>& grad) override {
@@ -560,6 +566,9 @@ class ConsistentTensor final : public TensorIf<ConsistentTensor> {
     return impl_->set_retain_grad(retain_grad);
   }
   void set_is_leaf(bool is_leaf) override { impl_->set_is_leaf(is_leaf); }
+  std::shared_ptr<const AutogradMeta> autograd_meta() const override {
+    return impl_->autograd_meta();
+  }
   std::shared_ptr<AutogradMeta> mut_autograd_meta() override { return impl_->mut_autograd_meta(); }
   void set_autograd_meta(const std::shared_ptr<AutogradMeta>& autograd_meta) override {
     impl_->set_autograd_meta(autograd_meta);
@@ -570,7 +579,7 @@ class ConsistentTensor final : public TensorIf<ConsistentTensor> {
   Maybe<Tensor> clone() const override;
 
   static Maybe<ConsistentTensor> MakeTensor(const std::shared_ptr<const Shape>& shape,
-                                            DataType dtype, Symbol<cfg::NdSbp> nd_sbp,
+                                            DataType dtype, Symbol<NdSbp> nd_sbp,
                                             Symbol<ParallelDesc> parallel_desc, bool is_lazy,
                                             bool requires_grad, bool is_leaf);
 

@@ -27,7 +27,7 @@ namespace one {
 
 struct ConsistentToConsistentState : public AutoGradCaptureState {
   Symbol<ParallelDesc> parallel_desc;
-  Symbol<cfg::NdSbp> nd_sbp;
+  Symbol<NdSbp> nd_sbp;
 };
 
 class ConsistentToConsistentGradFunction : public OpExprGradFunction<ConsistentToConsistentState> {
@@ -63,7 +63,7 @@ class ConsistentToConsistentGradFunction : public OpExprGradFunction<ConsistentT
   }
 
  private:
-  Optional<Symbol<cfg::NdSbp>> grad_nd_sbp_;
+  Optional<Symbol<NdSbp>> grad_nd_sbp_;
 };
 
 REGISTER_OP_EXPR_GRAD_FUNCTION("consistent_to_consistent", ConsistentToConsistentGradFunction);

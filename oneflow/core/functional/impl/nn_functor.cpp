@@ -35,6 +35,8 @@ limitations under the License.
 #include "oneflow/user/kernels/random_mask_like_kernel.h"
 #include "oneflow/user/kernels/dropout_kernel.h"
 #include "oneflow/core/register/ofblob.h"
+#include "oneflow/core/common/container_util.h"
+
 namespace oneflow {
 namespace one {
 namespace functional {
@@ -482,8 +484,9 @@ class MseLossFunctor : public LossFunctorBase {
   Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& input,
                            const std::shared_ptr<one::Tensor>& target,
                            const std::string& reduction) const {
-    const auto out =
-        sequence_function(functional::Sub).then(functional::Square).call(input, target);
+    const auto out = sequence_function(functional::Sub)
+                         .then(functional::Square)
+                         .call(input, target, /*inplace=*/false);
     return apply_reduction(out, reduction);
   }
 };
@@ -494,7 +497,9 @@ class L1LossFunctor : public LossFunctorBase {
   Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& input,
                            const std::shared_ptr<one::Tensor>& target,
                            const std::string& reduction) const {
-    const auto out = sequence_function(functional::Sub).then(functional::Abs).call(input, target);
+    const auto out = sequence_function(functional::Sub)
+                         .then(functional::Abs)
+                         .call(input, target, /*inplace=*/false);
     return apply_reduction(out, reduction);
   }
 };
@@ -549,7 +554,7 @@ class MarginRankingLossFunctor : public LossFunctorBase {
               return functional::ScalarAdd(x, Scalar(margin), /*alpha=*/1, /*inplace=*/true);
             })
             .then(std::bind(functional::Clamp, std::placeholders::_1, Scalar(0), NullOpt))
-            .call(input_1, input_2);
+            .call(input_1, input_2, /*inplace=*/false);
     return apply_reduction(out, reduction);
   }
 };
@@ -884,7 +889,7 @@ class SparseSoftmaxCrossEntropyFunctor {
 
     if (logits->shape()->NumAxes() != 2) { return false; }
 
-    const cfg::NdSbp& logits_nd_sbp = *(JUST(logits->nd_sbp()));
+    const NdSbp& logits_nd_sbp = *(JUST(logits->nd_sbp()));
     const int32_t split_axis = logits->shape()->NumAxes() - 1;
     bool has_split_axis_parallel = false;
     for (int64_t i = 0; i < logits_nd_sbp.sbp_parallel_size(); ++i) {
@@ -932,11 +937,11 @@ class SparseSoftmaxCrossEntropyFunctor {
     std::shared_ptr<Tensor> max_global_stage_input0 = max_device_stage->at(0);
     std::shared_ptr<Tensor> max_global_stage_input1 = max_device_stage->at(2);
 
-    const cfg::NdSbp& logits_nd_sbp = *(JUST(logits->nd_sbp()));
-    std::vector<Symbol<cfg::SbpParallel>> s0b_sbp_parallels;
-    std::vector<Symbol<cfg::SbpParallel>> s0s1_sbp_parallels;
+    const NdSbp& logits_nd_sbp = *(JUST(logits->nd_sbp()));
+    std::vector<Symbol<SbpParallel>> s0b_sbp_parallels;
+    std::vector<Symbol<SbpParallel>> s0s1_sbp_parallels;
     if (logits_nd_sbp.sbp_parallel_size() == 2) {
-      cfg::SbpParallel sbp;
+      SbpParallel sbp;
       sbp.mutable_broadcast_parallel();
       s0b_sbp_parallels.emplace_back(logits_nd_sbp.sbp_parallel(0));
       s0b_sbp_parallels.emplace_back(sbp);
@@ -975,7 +980,7 @@ class SparseSoftmaxCrossEntropyFunctor {
         JUST(OpInterpUtil::Dispatch<TensorTuple>(*op_reduce_sum_, {output_exp->at(0)}, attrs));
     std::shared_ptr<Tensor> broadcast_div_input1 = output_reduce_sum->at(0);
     if (logits_nd_sbp.sbp_parallel_size() == 2) {
-      std::vector<Symbol<cfg::SbpParallel>> empty_grad_sbp_parallels;
+      std::vector<Symbol<SbpParallel>> empty_grad_sbp_parallels;
       broadcast_div_input1 = JUST(functional::ToConsistent(
           output_reduce_sum->at(0), JUST(output_reduce_sum->at(0)->parallel_desc()),
           s0b_sbp_parallels, s0b_sbp_parallels));
@@ -1146,19 +1151,22 @@ class TripletMarginLossFunctor {
       if ((reduction != "none") && (reduction != "sum") && (reduction != "mean")) return false;
       return true;
     }());
-    auto da_p = JUST(VectorNorm(JUST(ScalarAdd(eps, JUST(Sub(anchor, positive)), /*alpha=*/1)), p,
-                                dim, /*keepdim=*/false, anchor->dtype()));
-    auto da_n = JUST(VectorNorm(JUST(ScalarAdd(eps, JUST(Sub(anchor, negative)), /*alpha=*/1)), p,
-                                dim, /*keepdim=*/false, anchor->dtype()));
+    auto da_p = JUST(VectorNorm(
+        JUST(ScalarAdd(eps, JUST(Sub(anchor, positive, /*inplace=*/false)), /*alpha=*/1)), p, dim,
+        /*keepdim=*/false, anchor->dtype()));
+    auto da_n = JUST(VectorNorm(
+        JUST(ScalarAdd(eps, JUST(Sub(anchor, negative, /*inplace=*/false)), /*alpha=*/1)), p, dim,
+        /*keepdim=*/false, anchor->dtype()));
     if (swap) {
-      auto distance_swap =
-          JUST(VectorNorm(JUST(ScalarAdd(eps, JUST(Sub(positive, negative)), /*alpha=*/1)), p, dim,
-                          /*keepdim=*/false, positive->dtype()));
+      auto distance_swap = JUST(VectorNorm(
+          JUST(ScalarAdd(eps, JUST(Sub(positive, negative, /*inplace=*/false)), /*alpha=*/1)), p,
+          dim,
+          /*keepdim=*/false, positive->dtype()));
       da_n = JUST(Minimum(distance_swap, da_n));
     }
-    auto triplet_loss =
-        JUST(Clamp(JUST(ScalarAdd(JUST(Sub(da_p, da_n)), margin, /*alpha=*/1, /*inplace=*/false)),
-                   /*min=*/0.0, NullOpt));
+    auto triplet_loss = JUST(Clamp(JUST(ScalarAdd(JUST(Sub(da_p, da_n, /*inplace=*/false)), margin,
+                                                  /*alpha=*/1, /*inplace=*/false)),
+                                   /*min=*/0.0, NullOpt));
     int32_t ndim = triplet_loss->ndim() - 1;
     std::vector<int32_t> axis(1, ndim);
 
@@ -1416,7 +1424,8 @@ class PadFunctor {
     if (mode == "constant") {
       CHECK_EQ_OR_RETURN(pad.size() % 2, 0)
           << "Length of pad must be even but instead it equals " << pad.size();
-      if (IsFloatingDataType(x->dtype()->data_type())) {
+      if (IsFloatingDataType(x->dtype()->data_type())
+          || x->dtype()->data_type() == DataType::kFloat16) {
         JUST(attrs.SetAttr<double>("floating_constant_value", JUST(value.As<double>())));
         JUST(attrs.SetAttr<int64_t>("integral_constant_value", 0));
       } else if (IsIntegralDataType(x->dtype()->data_type())) {
@@ -1471,27 +1480,36 @@ class DropoutFunctor {
     add_op_ = CHECK_JUST(one::OpBuilder("add_n").Input("in", 2).Output("out").Build());
   }
   Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x, const float& p,
-                           const bool& training, const Optional<one::Generator>& generator,
+                           const bool& training, const bool& inplace,
+                           const Optional<one::Generator>& generator,
                            const Optional<one::Tensor>& addend) const {
+    auto outputs = std::make_shared<TensorTuple>(1);
+    if (inplace) {
+      JUST(CheckInplaceValid(x));
+      (*outputs)[0] = x;
+    }
     const auto gen = generator.value_or(JUST(one::DefaultAutoGenerator()));
     const auto& dropout_state = std::make_shared<FusedDropoutKernelState>(gen);
     MutableAttrMap dropout_attrs;
     JUST(dropout_attrs.SetAttr<float>("rate", p));
     if (addend) {
       if ((!training) || p == 0.0) {
-        return OpInterpUtil::Dispatch<Tensor>(*add_op_, {x, JUST(addend)});
+        JUST(OpInterpUtil::Dispatch(*add_op_, {x, JUST(addend)}, outputs.get()));
       } else {
-        return OpInterpUtil::Dispatch<Tensor>(*dropout_addend_op_, {x, JUST(addend)},
-                                              OpExprInterpContext(dropout_attrs, dropout_state));
+        outputs->resize(2);
+        JUST(OpInterpUtil::Dispatch(*dropout_addend_op_, {x, JUST(addend)}, outputs.get(),
+                                    OpExprInterpContext(dropout_attrs, dropout_state)));
       }
     } else {
       if (!training || p == 0.0) {
         return x;
       } else {
-        return OpInterpUtil::Dispatch<Tensor>(*dropout_op_, {x},
-                                              OpExprInterpContext(dropout_attrs, dropout_state));
+        outputs->resize(2);
+        JUST(OpInterpUtil::Dispatch(*dropout_op_, {x}, outputs.get(),
+                                    OpExprInterpContext(dropout_attrs, dropout_state)));
       }
     }
+    return (*outputs)[0];
   }
 
  private:
@@ -1525,7 +1543,7 @@ class AvgPoolingNDFunctor {
                            const std::vector<int32_t>& kernel_size,
                            const Optional<std::vector<int32_t>>& stride,
                            const std::vector<int32_t>& padding, const bool& ceil_mode,
-                           const bool& count_include_pad, const int64_t& divisor_override,
+                           const bool& count_include_pad, const int32_t& divisor_override,
                            const std::string& data_format) const {
     MutableAttrMap attrs;
     JUST(attrs.SetAttr<std::string>("data_format", data_format));
@@ -1539,7 +1557,7 @@ class AvgPoolingNDFunctor {
     }
     JUST(attrs.SetAttr<bool>("ceil_mode", ceil_mode));
     JUST(attrs.SetAttr<bool>("count_include_pad", count_include_pad));
-    JUST(attrs.SetAttr<int64_t>("divisor_override", divisor_override));
+    JUST(attrs.SetAttr<int32_t>("divisor_override", divisor_override));
     return OpInterpUtil::Dispatch<Tensor>(*op_, {x}, attrs);
   }
 
@@ -1639,12 +1657,10 @@ class OneHotFunctor {
       auto tensor_max = JUST(functional::ReduceMax(input, axis, false));
 
       int64_t max = 0;
-      const auto& callback =
-          std::make_shared<std::function<void(uint64_t)>>([&](uint64_t of_blob_ptr) {
-            auto* of_blob = reinterpret_cast<OfBlob*>(of_blob_ptr);
-            of_blob->AutoMemCopyTo<int64_t>(&max,
-                                            1);  // copy 1 scalar(int64_t) tensor's value to max
-          });
+      const auto& callback = [&](uint64_t of_blob_ptr) {
+        auto* of_blob = reinterpret_cast<OfBlob*>(of_blob_ptr);
+        of_blob->AutoMemCopyTo<int64_t>(&max, 1);  // copy 1 scalar(int64_t) tensor's value to max
+      };
       JUST(SyncAccessTensorWithTimeOut(tensor_max, callback, "const"));
       JUST(attrs.SetAttr<int64_t>("depth", max + 1));
 
@@ -2055,29 +2071,6 @@ class CtcGreedyDecoderFunctor {
   std::shared_ptr<OpExpr> op_;
 };
 
-class PartialFCSampleFunctor {
- public:
-  PartialFCSampleFunctor() {
-    op_ = CHECK_JUST(one::OpBuilder("distributed_partial_fc_sample")
-                         .Input("weight")
-                         .Input("label")
-                         .Output("mapped_label")
-                         .Output("sampled_label")
-                         .Output("sampled_weight")
-                         .Build());
-  }
-  Maybe<TensorTuple> operator()(const std::shared_ptr<one::Tensor>& wegiht,
-                                const std::shared_ptr<one::Tensor>& label,
-                                const int64_t& num_sample) const {
-    MutableAttrMap attrs;
-    JUST(attrs.SetAttr<int64_t>("num_sample", num_sample));
-    return OpInterpUtil::Dispatch<TensorTuple>(*op_, {wegiht, label}, attrs);
-  }
-
- private:
-  std::shared_ptr<OpExpr> op_;
-};
-
 class PariticalFCSampleDisableBoxing {
  public:
   PariticalFCSampleDisableBoxing() {
@@ -2165,6 +2158,54 @@ class RoiAlignGradFunctor {
   std::shared_ptr<OpExpr> op_;
 };
 
+class FusedDotFeatureInteractionFunctor {
+ public:
+  FusedDotFeatureInteractionFunctor() {
+    ops_has_output_concat_.resize(kMaxInputCount);
+    ops_no_output_concat_.resize(kMaxInputCount);
+    for (int n = 0; n < ops_has_output_concat_.size(); ++n) {
+      ops_has_output_concat_[n] = CHECK_JUST(one::OpBuilder("fused_dot_feature_interaction")
+                                                 .Input("features", n + 1)
+                                                 .Input("output_concat")
+                                                 .Output("out")
+                                                 .Output("padded_concated_features")
+                                                 .Build());
+    }
+    for (int n = 0; n < ops_no_output_concat_.size(); ++n) {
+      ops_no_output_concat_[n] = CHECK_JUST(one::OpBuilder("fused_dot_feature_interaction")
+                                                .Input("features", n + 1)
+                                                .Output("out")
+                                                .Output("padded_concated_features")
+                                                .Build());
+    }
+  }
+
+  Maybe<Tensor> operator()(const TensorTuple& features, const Optional<one::Tensor>& output_concat,
+                           const bool& self_interaction, const int32_t& output_padding) const {
+    MutableAttrMap attrs;
+    JUST(attrs.SetAttr<bool>("self_interaction", self_interaction));
+    JUST(attrs.SetAttr<int32_t>("output_padding", output_padding));
+    const int64_t n_features = features.size();
+    CHECK_LE_OR_RETURN(n_features, kMaxInputCount);
+    if (output_concat) {
+      JUST(attrs.SetAttr<bool>("has_output_concat", true));
+      TensorTuple inputs(n_features + 1);
+      for (int64_t i = 0; i < n_features; ++i) { inputs[i] = JUST(oneflow::VectorAt(features, i)); }
+      inputs[n_features] = JUST(output_concat);
+      return OpInterpUtil::Dispatch<Tensor>(
+          *JUST(oneflow::VectorAt(ops_has_output_concat_, n_features - 1)), inputs, attrs);
+    } else {
+      JUST(attrs.SetAttr<bool>("has_output_concat", false));
+      return OpInterpUtil::Dispatch<Tensor>(
+          *JUST(oneflow::VectorAt(ops_no_output_concat_, n_features - 1)), features, attrs);
+    }
+  }
+
+ private:
+  std::vector<std::shared_ptr<OpExpr>> ops_has_output_concat_;
+  std::vector<std::shared_ptr<OpExpr>> ops_no_output_concat_;
+};
+
 }  // namespace impl
 
 ONEFLOW_FUNCTION_LIBRARY(m) {
@@ -2229,11 +2270,11 @@ ONEFLOW_FUNCTION_LIBRARY(m) {
   m.add_functor<impl::FusedScaleTrilSoftmaxMaskScaleFunctor>("FusedScaleTrilSoftmaxMaskScale");
   m.add_functor<impl::FusedScaleTrilFunctor>("FusedScaleTril");
   m.add_functor<impl::CtcGreedyDecoderFunctor>("CtcGreedyDecoder");
-  m.add_functor<impl::PartialFCSampleFunctor>("DistributedPariticalFCSample");
   m.add_functor<impl::PariticalFCSampleDisableBoxing>("DistributedPariticalFCSampleDisableBoxing");
   m.add_functor<impl::NmsFunctor>("Nms");
   m.add_functor<impl::RoiAlignFunctor>("RoiAlign");
   m.add_functor<impl::RoiAlignGradFunctor>("RoiAlignGrad");
+  m.add_functor<impl::FusedDotFeatureInteractionFunctor>("FusedDotFeatureInteraction");
 };
 
 }  // namespace functional

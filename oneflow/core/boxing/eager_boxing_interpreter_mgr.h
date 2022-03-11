@@ -26,8 +26,8 @@ class EagerBoxingInterpreterManager final {
   EagerBoxingInterpreterManager() = default;
   virtual ~EagerBoxingInterpreterManager() = default;
 
-  Maybe<EagerBoxingInterpreter> GetEagerBoxingInterpreter(Symbol<cfg::NdSbp> in_nd_sbp,
-                                                          Symbol<cfg::NdSbp> out_nd_sbp,
+  Maybe<EagerBoxingInterpreter> GetEagerBoxingInterpreter(Symbol<NdSbp> in_nd_sbp,
+                                                          Symbol<NdSbp> out_nd_sbp,
                                                           Symbol<ParallelDesc> in_parallel_desc,
                                                           Symbol<ParallelDesc> out_parallel_desc,
                                                           const Shape& logical_shape) const;

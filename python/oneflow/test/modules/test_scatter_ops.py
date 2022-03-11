@@ -27,8 +27,8 @@ class TestScatterOpsModule(flow.unittest.TestCase):
     @autotest(n=5)
     def test_scatter_random_data_at_dim_0(test_case):
         device = random_device()
-        input = random_pytorch_tensor(ndim=2, dim0=2, dim1=2).to(device)
-        src = random_pytorch_tensor(ndim=2, dim0=2, dim1=2).to(device)
+        input = random_tensor(ndim=2, dim0=2, dim1=2).to(device)
+        src = random_tensor(ndim=2, dim0=2, dim1=2).to(device)
         index = constant(
             torch.tensor(np.array([[0, 1], [1, 0]]), dtype=torch.int64, device=device)
         )
@@ -38,8 +38,8 @@ class TestScatterOpsModule(flow.unittest.TestCase):
     @autotest(n=5)
     def test_scatter_random_data_at_dim_1(test_case):
         device = random_device()
-        input = random_pytorch_tensor(ndim=2, dim0=2, dim1=2).to(device)
-        src = random_pytorch_tensor(ndim=2, dim0=2, dim1=2).to(device)
+        input = random_tensor(ndim=2, dim0=2, dim1=2).to(device)
+        src = random_tensor(ndim=2, dim0=2, dim1=2).to(device)
         index = constant(
             torch.tensor(np.array([[1, 0], [0, 1]]), dtype=torch.int64, device=device)
         )
@@ -49,8 +49,8 @@ class TestScatterOpsModule(flow.unittest.TestCase):
     @autotest(n=5)
     def test_scatter_scalar_random_data_at_dim0(test_case):
         device = random_device()
-        input = random_pytorch_tensor(ndim=2, dim0=2, dim1=2).to(device)
-        src = random_pytorch_tensor(ndim=2, dim0=2, dim1=2).to(device)
+        input = random_tensor(ndim=2, dim0=2, dim1=2).to(device)
+        src = random_tensor(ndim=2, dim0=2, dim1=2).to(device)
         index = constant(
             torch.tensor(np.array([[0, 1], [1, 0]]), dtype=torch.int64, device=device)
         )
@@ -60,8 +60,8 @@ class TestScatterOpsModule(flow.unittest.TestCase):
     @autotest(n=5)
     def test_scatter_scalar_random_data_at_dim1(test_case):
         device = random_device()
-        input = random_pytorch_tensor(ndim=2, dim0=2, dim1=2).to(device)
-        src = random_pytorch_tensor(ndim=2, dim0=2, dim1=2).to(device)
+        input = random_tensor(ndim=2, dim0=2, dim1=2).to(device)
+        src = random_tensor(ndim=2, dim0=2, dim1=2).to(device)
         index = constant(
             torch.tensor(np.array([[1, 0], [0, 1]]), dtype=torch.int64, device=device)
         )
@@ -71,8 +71,8 @@ class TestScatterOpsModule(flow.unittest.TestCase):
     @autotest(n=5)
     def test_scatter_add_random_data_at_dim0(test_case):
         device = random_device()
-        input = random_pytorch_tensor(ndim=2, dim0=2, dim1=2).to(device)
-        src = random_pytorch_tensor(ndim=2, dim0=2, dim1=2).to(device)
+        input = random_tensor(ndim=2, dim0=2, dim1=2).to(device)
+        src = random_tensor(ndim=2, dim0=2, dim1=2).to(device)
         index = constant(
             torch.tensor(np.array([[1, 0], [0, 1]]), dtype=torch.int64, device=device)
         )
@@ -82,8 +82,8 @@ class TestScatterOpsModule(flow.unittest.TestCase):
     @autotest(n=5)
     def test_scatter_add_random_data_at_dim1(test_case):
         device = random_device()
-        input = random_pytorch_tensor(ndim=2, dim0=2, dim1=2).to(device)
-        src = random_pytorch_tensor(ndim=2, dim0=2, dim1=2).to(device)
+        input = random_tensor(ndim=2, dim0=2, dim1=2).to(device)
+        src = random_tensor(ndim=2, dim0=2, dim1=2).to(device)
         index = constant(
             torch.tensor(np.array([[0, 1], [1, 0]]), dtype=torch.int64, device=device)
         )

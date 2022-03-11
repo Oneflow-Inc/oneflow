@@ -20,7 +20,7 @@ from collections import OrderedDict
 import numpy as np
 
 from oneflow.test_utils.automated_test_util import *
-from test_util import GenArgList
+from oneflow.test_utils.test_util import GenArgList
 
 import oneflow as flow
 import oneflow.unittest
@@ -31,7 +31,7 @@ class TestSwapaxes(flow.unittest.TestCase):
     @autotest(check_graph=True)
     def test_swapaxes_flow_with_random_data(test_case):
         device = random_device()
-        x = random_pytorch_tensor(ndim=3).to(device)
+        x = random_tensor(ndim=3).to(device)
         y = torch.swapaxes(x, random(0, 2).to(int), random(0, 2).to(int))
         return y
 

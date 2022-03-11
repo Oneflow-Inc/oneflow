@@ -17,7 +17,6 @@ limitations under the License.
 #define ONEFLOW_USER_DATA_DISTRIBUTED_UTIL_H_
 
 #include "oneflow/core/framework/framework.h"
-#include "oneflow/core/common/multi_client.h"
 #include "oneflow/core/common/nd_index_offset_helper.h"
 #include "oneflow/core/job/sbp_parallel.h"
 #include "oneflow/core/rpc/include/global_process_ctx.h"
@@ -29,7 +28,7 @@ namespace data {
 inline Maybe<void> InitDataSourceDistributedInfo(user_op::KernelInitContext* ctx,
                                                  size_t& world_size, int64_t& rank) {
   auto nd_sbp_str_vec = ctx->Attr<std::vector<std::string>>("nd_sbp");
-  if (nd_sbp_str_vec.empty() && JUST(IsMultiClient())) {
+  if (nd_sbp_str_vec.empty()) {
     world_size = GlobalProcessCtx::WorldSize();
     rank = GlobalProcessCtx::Rank();
   } else {
@@ -44,7 +43,7 @@ inline Maybe<void> InitDataSourceDistributedInfo(user_op::KernelInitContext* ctx
     index_helper.OffsetToNdIndex(ctx->parallel_ctx().parallel_id(), nd_index);
 
     for (int i = hierarchy.NumAxes() - 1; i >= 0; --i) {
-      cfg::SbpParallel sbp;
+      SbpParallel sbp;
       CHECK_OR_RETURN(ParseSbpParallelFromString(nd_sbp_str_vec[i], &sbp));
       if (sbp.has_split_parallel()) {
         rank += nd_index[i] * world_size;

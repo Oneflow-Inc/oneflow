@@ -109,23 +109,23 @@ Maybe<void> NaiveInterpret(const UserOpExpr& user_op_expr, const TensorTuple& in
       output_eager_blob_objects->at(i) = JUST(outputs->at(i)->eager_blob_object());
     }
   }
-  Symbol<Device> op_device;
+  Symbol<Stream> stream;
   bool need_check_mem_case = true;
 
   // Infer devices
-  if (!user_op_expr.has_device_infer_fn()) {
-    op_device = default_device;
+  if (!user_op_expr.has_device_and_stream_infer_fn()) {
+    stream = GetDefaultStreamByDevice(default_device);
     for (int i = 0; i < outputs->size(); i++) {
       auto* tensor_impl = JUST(TensorImpl4Tensor(outputs->at(i)));
       *JUST(tensor_impl->mut_device()) = default_device;
     }
   } else {
     need_check_mem_case = false;
-    op_device = JUST(user_op_expr.InferDevices(attrs, inputs, outputs));
+    stream = JUST(user_op_expr.InferDeviceAndStream(attrs, inputs, outputs));
   }
 
   // Infer shapes and dtypes
-  const auto& device_tag = JUST(op_device->of_type());
+  const auto& device_tag = JUST(stream->device()->of_type());
   JUST(user_op_expr.InferPhysicalShapeAndDType(
       attrs, device_tag,
       [&](int32_t i) -> const TensorMeta* {
@@ -141,7 +141,7 @@ Maybe<void> NaiveInterpret(const UserOpExpr& user_op_expr, const TensorTuple& in
     auto* tensor_impl = JUST(TensorImpl4Tensor(outputs->at(i)));
     if (!output_eager_blob_objects->at(i)) {
       tensor_impl->mut_tensor_meta()->set_stride(std::make_shared<Stride>(*tensor_impl->shape()));
-      const auto& dep_object = JUST(GetLocalDepObjectFromDevicePool(op_device));
+      const auto& dep_object = NewLocalDepObject();
       JUST(tensor_impl->InitEagerBlobObject(dep_object));
       output_eager_blob_objects->at(i) = JUST(tensor_impl->eager_blob_object());
     } else {
@@ -152,7 +152,7 @@ Maybe<void> NaiveInterpret(const UserOpExpr& user_op_expr, const TensorTuple& in
     }
   }
 
-  const auto& kernel = JUST(user_op_expr.MutKernel4Device(op_device));
+  const auto& kernel = JUST(user_op_expr.MutKernel4Stream(stream));
   kernel->set_need_check_mem_case(need_check_mem_case);
 
   for (int64_t index : kernel->output_tuple_indexes4mut2_obns()) {
@@ -161,7 +161,7 @@ Maybe<void> NaiveInterpret(const UserOpExpr& user_op_expr, const TensorTuple& in
 
   JUST(PhysicalRun([&](InstructionsBuilder* builder) -> Maybe<void> {
     return builder->LocalCallOpKernel(kernel, input_eager_blob_objects, output_eager_blob_objects,
-                                      ctx, op_device);
+                                      ctx, stream);
   }));
   return Maybe<void>::Ok();
 }
@@ -244,8 +244,7 @@ Maybe<Tensor> Broadcast(const std::shared_ptr<Tensor>& tensor, int64_t src_rank,
 namespace {
 
 Maybe<Tensor> GetSyncedTensorIfBroadcast(const std::shared_ptr<Tensor>& tensor,
-                                         Symbol<ParallelDesc> parallel_desc,
-                                         Symbol<cfg::NdSbp> nd_sbp) {
+                                         Symbol<ParallelDesc> parallel_desc, Symbol<NdSbp> nd_sbp) {
   Optional<int64_t> parallel_id;
   JUST(GetTensorDevice4CurrentProcessCtx(parallel_desc, &parallel_id));
   if (!parallel_id.has_value()) { return tensor; }

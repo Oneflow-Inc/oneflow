@@ -16,6 +16,7 @@ limitations under the License.
 #ifndef ONEFLOW_CORE_COMMON_DATA_TYPE_H_
 #define ONEFLOW_CORE_COMMON_DATA_TYPE_H_
 
+#include <cfloat>
 #include <type_traits>
 #if defined(WITH_CUDA)
 #include <cuda_fp16.h>
@@ -237,6 +238,7 @@ bool IsSupportRequireGradDataType(DataType data_type);
 bool IsPODDataType(DataType data_type);
 bool IsPODAndHalfDataType(DataType data_type);
 bool IsIndexDataType(DataType data_type);
+bool NotSupportBoxingDataType(DataType data_type);
 size_t GetSizeOfDataType(DataType data_type);
 
 inline bool operator==(const OptInt64& lhs, const OptInt64& rhs) {

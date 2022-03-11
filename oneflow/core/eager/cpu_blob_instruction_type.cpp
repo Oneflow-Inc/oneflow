@@ -18,15 +18,6 @@ limitations under the License.
 
 namespace oneflow {
 namespace vm {
-class CpuLazyReferenceInstructionType : public LazyReferenceInstructionType {
- public:
-  CpuLazyReferenceInstructionType() = default;
-  ~CpuLazyReferenceInstructionType() override = default;
-
-  using stream_type = vm::CpuStreamType;
-};
-
-COMMAND(vm::RegisterInstructionType<CpuLazyReferenceInstructionType>("cpu.LazyReference"));
 
 class CpuAccessBlobByCallbackInstructionType final : public AccessBlobByCallbackInstructionType {
  public:

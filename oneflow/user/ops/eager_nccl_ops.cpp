@@ -19,6 +19,7 @@ limitations under the License.
 #include "oneflow/core/framework/device.h"
 #include "oneflow/user/ops/comm_net_device_infer_util.h"
 #include "oneflow/core/framework/op_generated.h"
+#include "oneflow/core/job/nd_sbp_util.h"
 
 namespace oneflow {
 
@@ -41,9 +42,9 @@ namespace oneflow {
   return Maybe<void>::Ok();
 }
 
-/* static */ Maybe<Symbol<Device>> EagerNcclAllReduceOp::InferDevice(
-    user_op::DeviceInferContext* ctx) {
-  return DeviceInferFn<&IsAsyncLaunched>(ctx);
+/* static */ Maybe<Symbol<Stream>> EagerNcclAllReduceOp::InferDeviceAndStream(
+    user_op::DeviceAndStreamInferContext* ctx) {
+  return DeviceAndStreamInferFn<&IsAsyncLaunched>(ctx);
 }
 
 /* static */ Maybe<void> EagerNcclBroadcastOp::InferLogicalTensorDesc(user_op::InferContext* ctx) {
@@ -67,9 +68,31 @@ namespace oneflow {
   return Maybe<void>::Ok();
 }
 
-/* static */ Maybe<Symbol<Device>> EagerNcclBroadcastOp::InferDevice(
-    user_op::DeviceInferContext* ctx) {
-  return DeviceInferFn<&SyncLaunched>(ctx);
+/* static */ Maybe<Symbol<Stream>> EagerNcclBroadcastOp::InferDeviceAndStream(
+    user_op::DeviceAndStreamInferContext* ctx) {
+  return DeviceAndStreamInferFn<&IsAsyncLaunched>(ctx);
+}
+
+/* static */ Maybe<void> EagerNcclTouchOp::InferLogicalTensorDesc(user_op::InferContext* ctx) {
+  return Maybe<void>::Ok();
+}
+
+/*static*/ Maybe<void> EagerNcclTouchOp::InferPhysicalTensorDesc(user_op::InferContext* ctx) {
+  return Maybe<void>::Ok();
+}
+
+/* static */ Maybe<void> EagerNcclTouchOp::GetSbp(user_op::SbpContext* ctx) {
+  // local only
+  return Maybe<void>::Ok();
+}
+
+/* static */ Maybe<void> EagerNcclTouchOp::InferDataType(user_op::InferContext* ctx) {
+  return Maybe<void>::Ok();
+}
+
+/* static */ Maybe<Symbol<Stream>> EagerNcclTouchOp::InferDeviceAndStream(
+    user_op::DeviceAndStreamInferContext* ctx) {
+  return DeviceAndStreamInferFn<&IsAsyncLaunched>(ctx);
 }
 
 /* static */ Maybe<void> EagerNcclReduceOp::InferLogicalTensorDesc(user_op::InferContext* ctx) {
@@ -90,9 +113,9 @@ namespace oneflow {
   return Maybe<void>::Ok();
 }
 
-/* static */ Maybe<Symbol<Device>> EagerNcclReduceOp::InferDevice(
-    user_op::DeviceInferContext* ctx) {
-  return DeviceInferFn<&SyncLaunched>(ctx);
+/* static */ Maybe<Symbol<Stream>> EagerNcclReduceOp::InferDeviceAndStream(
+    user_op::DeviceAndStreamInferContext* ctx) {
+  return DeviceAndStreamInferFn<&SyncLaunched>(ctx);
 }
 
 /* static */ Maybe<void> EagerNcclReduceScatterOp::InferLogicalTensorDesc(
@@ -103,21 +126,19 @@ namespace oneflow {
 
 /* static */ Maybe<void> EagerNcclReduceScatterOp::InferPhysicalTensorDesc(
     user_op::InferContext* ctx) {
+  const Shape& in_shape = ctx->InputShape("in", 0);
   Shape* out_shape = ctx->OutputShape("out", 0);
-  const Shape& shape = ctx->InputShape("in", 0);
-  DimVector dim_vec;
-  if (shape.NumAxes() > 0) {
-    dim_vec.insert(dim_vec.end(), shape.dim_vec().cbegin(), shape.dim_vec().cend());
-  }
-  const cfg::SbpParallel& out_sbp_para = ctx->SbpParallel4ArgNameAndIndex("out", 0);
   const int64_t& parallel_num = ctx->parallel_ctx().parallel_num();
   if (parallel_num > 1) {
-    const int64_t& split_axis = out_sbp_para.split_parallel().axis();
-    CHECK_LT_OR_RETURN(split_axis, dim_vec.size());
-    BalancedSplitter bs(shape.At(split_axis), parallel_num);
-    dim_vec[split_axis] = bs.At(ctx->parallel_ctx().parallel_id()).size();
+    const Shape& parallel_hierarchy = *ctx->parallel_desc().hierarchy();
+    const NdSbp& nd_sbp = ctx->NdSbp4ArgNameAndIndex("out", 0);
+    const int64_t parallel_id = ctx->parallel_ctx().parallel_id();
+    const Shape& physical_shape =
+        GetTensorSliceView4ParallelId(parallel_hierarchy, nd_sbp, in_shape, parallel_id).shape();
+    *out_shape = physical_shape;
+  } else {
+    *out_shape = in_shape;
   }
-  *out_shape = Shape(dim_vec);
   return Maybe<void>::Ok();
 }
 
@@ -126,9 +147,9 @@ namespace oneflow {
 }
 
 /* static */ Maybe<void> EagerNcclReduceScatterOp::InferNdSbp(user_op::InferNdSbpFnContext* ctx) {
-  const cfg::NdSbp& in_dis_hint = ctx->NdSbpHint4InputArgNameAndIndex("in", 0);
-  cfg::NdSbp* in_nd_sbp = ctx->NdSbp4ArgNameAndIndex("in", 0);
-  cfg::NdSbp* out_nd_sbp = ctx->NdSbp4ArgNameAndIndex("out", 0);
+  const NdSbp& in_dis_hint = ctx->NdSbpHint4InputArgNameAndIndex("in", 0);
+  NdSbp* in_nd_sbp = ctx->NdSbp4ArgNameAndIndex("in", 0);
+  NdSbp* out_nd_sbp = ctx->NdSbp4ArgNameAndIndex("out", 0);
   CHECK_GE_OR_RETURN(in_dis_hint.sbp_parallel_size(), 1);
   for (const auto& sbp_hint : in_dis_hint.sbp_parallel()) {
     CHECK_OR_RETURN(sbp_hint.has_partial_sum_parallel() || sbp_hint.has_broadcast_parallel());
@@ -151,9 +172,9 @@ namespace oneflow {
   return Maybe<void>::Ok();
 }
 
-/* static */ Maybe<Symbol<Device>> EagerNcclReduceScatterOp::InferDevice(
-    user_op::DeviceInferContext* ctx) {
-  return DeviceInferFn<&SyncLaunched>(ctx);
+/* static */ Maybe<Symbol<Stream>> EagerNcclReduceScatterOp::InferDeviceAndStream(
+    user_op::DeviceAndStreamInferContext* ctx) {
+  return DeviceAndStreamInferFn<&SyncLaunched>(ctx);
 }
 
 /* static */ Maybe<void> EagerNcclAllGatherOp::InferLogicalTensorDesc(user_op::InferContext* ctx) {
@@ -171,9 +192,9 @@ namespace oneflow {
 }
 
 /* static */ Maybe<void> EagerNcclAllGatherOp::InferNdSbp(user_op::InferNdSbpFnContext* ctx) {
-  const cfg::NdSbp& in_dis_hint = ctx->NdSbpHint4InputArgNameAndIndex("in", 0);
-  cfg::NdSbp* in_nd_sbp = ctx->NdSbp4ArgNameAndIndex("in", 0);
-  cfg::NdSbp* out_nd_sbp = ctx->NdSbp4ArgNameAndIndex("out", 0);
+  const NdSbp& in_dis_hint = ctx->NdSbpHint4InputArgNameAndIndex("in", 0);
+  NdSbp* in_nd_sbp = ctx->NdSbp4ArgNameAndIndex("in", 0);
+  NdSbp* out_nd_sbp = ctx->NdSbp4ArgNameAndIndex("out", 0);
   CHECK_GE_OR_RETURN(in_dis_hint.sbp_parallel_size(), 1);
   for (const auto& sbp_hint : in_dis_hint.sbp_parallel()) {
     CHECK_OR_RETURN(sbp_hint.has_split_parallel());
@@ -198,9 +219,9 @@ namespace oneflow {
   return Maybe<void>::Ok();
 }
 
-/* static */ Maybe<Symbol<Device>> EagerNcclAllGatherOp::InferDevice(
-    user_op::DeviceInferContext* ctx) {
-  return DeviceInferFn<&SyncLaunched>(ctx);
+/* static */ Maybe<Symbol<Stream>> EagerNcclAllGatherOp::InferDeviceAndStream(
+    user_op::DeviceAndStreamInferContext* ctx) {
+  return DeviceAndStreamInferFn<&SyncLaunched>(ctx);
 }
 
 /* static */ Maybe<void> EagerNcclS2sOp::InferLogicalTensorDesc(user_op::InferContext* ctx) {
@@ -216,9 +237,9 @@ namespace oneflow {
 /* static */ Maybe<void> EagerNcclS2sOp::InferNdSbp(user_op::InferNdSbpFnContext* ctx) {
   const int64_t in_split_axis = ctx->user_op_conf().attr<int64_t>("in_split_axis");
   const int64_t out_split_axis = ctx->user_op_conf().attr<int64_t>("out_split_axis");
-  const cfg::NdSbp& in_dis_hint = ctx->NdSbpHint4InputArgNameAndIndex("in", 0);
-  cfg::NdSbp* in_nd_sbp = ctx->NdSbp4ArgNameAndIndex("in", 0);
-  cfg::NdSbp* out_nd_sbp = ctx->NdSbp4ArgNameAndIndex("out", 0);
+  const NdSbp& in_dis_hint = ctx->NdSbpHint4InputArgNameAndIndex("in", 0);
+  NdSbp* in_nd_sbp = ctx->NdSbp4ArgNameAndIndex("in", 0);
+  NdSbp* out_nd_sbp = ctx->NdSbp4ArgNameAndIndex("out", 0);
   CHECK_GE_OR_RETURN(in_dis_hint.sbp_parallel_size(), 1);
   for (const auto& sbp_hint : in_dis_hint.sbp_parallel()) {
     CHECK_OR_RETURN(sbp_hint.has_split_parallel());
@@ -243,8 +264,9 @@ namespace oneflow {
   return Maybe<void>::Ok();
 }
 
-/* static */ Maybe<Symbol<Device>> EagerNcclS2sOp::InferDevice(user_op::DeviceInferContext* ctx) {
-  return DeviceInferFn<&SyncLaunched>(ctx);
+/* static */ Maybe<Symbol<Stream>> EagerNcclS2sOp::InferDeviceAndStream(
+    user_op::DeviceAndStreamInferContext* ctx) {
+  return DeviceAndStreamInferFn<&SyncLaunched>(ctx);
 }
 
 }  // namespace oneflow

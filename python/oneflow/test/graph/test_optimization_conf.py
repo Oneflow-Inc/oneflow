@@ -75,8 +75,18 @@ class TestGraphWithSysConf(flow.unittest.TestCase):
         g = CustomGraphSysConf()
 
         print("optimization conf: \n", g._optimization_conf_proto)
+        test_case.assertTrue(g._optimization_conf_proto.nccl_use_compute_stream)
         g._generate_config_proto()
         print("graph conf: \n", g._config_proto)
+
+        flow.boxing.nccl.enable_use_compute_stream(False)
+        test_case.assertTrue(not g._optimization_conf_proto.nccl_use_compute_stream)
+        flow.boxing.nccl.disable_group_boxing_by_dst_parallel(False)
+        test_case.assertTrue(
+            not g._optimization_conf_proto.disable_group_boxing_by_dst_parallel
+        )
+
+        print("optimization conf after session init: \n", g._optimization_conf_proto)
 
 
 if __name__ == "__main__":

@@ -18,7 +18,7 @@ import unittest
 from collections import OrderedDict
 
 import numpy as np
-from test_util import GenArgList
+from oneflow.test_utils.test_util import GenArgList
 
 import oneflow as flow
 import oneflow.unittest
@@ -100,8 +100,8 @@ class TestModule(flow.unittest.TestCase):
     @autotest(check_graph=True)
     def test_bmm_with_torch(test_case):
         device = random_device()
-        mat1 = random_pytorch_tensor(ndim=3, dim0=2, dim1=4, dim2=3).to(device)
-        mat2 = random_pytorch_tensor(ndim=3, dim0=2, dim1=3, dim2=4).to(device)
+        mat1 = random_tensor(ndim=3, dim0=2, dim1=4, dim2=3).to(device)
+        mat2 = random_tensor(ndim=3, dim0=2, dim1=3, dim2=4).to(device)
         y = torch.bmm(mat1, mat2,)
         return y
 

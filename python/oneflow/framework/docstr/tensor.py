@@ -19,9 +19,9 @@ from oneflow.framework.docstr.utils import add_docstr
 add_docstr(
     oneflow.tensor,
     r"""
-    Constructs a tensor with data, return a consistent tensor if placement and sbp are in kwargs,
-       otherwise return a local tensor. 
-       
+    Constructs a tensor with data, return a global tensor if placement and sbp are in kwargs,
+       otherwise return a local tensor.
+
     Arguments:
         data: Initial data for the tensor. Can be a list, tuple, NumPy ndarray, scalar or tensor.
     Keyword Arguments:
@@ -35,7 +35,6 @@ add_docstr(
 
     Note:
         The Keyword Argument device is mutually exclusive with placement and sbp.
-        Consistent tensor only can be constructed from tensor.
 
 
     For example:
@@ -43,7 +42,7 @@ add_docstr(
     .. code-block:: python
 
         >>> import oneflow as flow
-        
+
         >>> x = flow.tensor([1,2,3])
         >>> x
         tensor([1, 2, 3], dtype=oneflow.int64)
@@ -88,6 +87,15 @@ add_docstr(
 )
 
 add_docstr(
+    oneflow.Tensor.expand,
+    """
+    Tensor.expand() -> Tensor
+
+    See :func:`oneflow.expand`
+    """,
+)
+
+add_docstr(
     oneflow.Tensor.expand_as,
     """
     expand_as(other) -> Tensor
@@ -118,9 +126,52 @@ add_docstr(
 )
 
 add_docstr(
+    oneflow.Tensor.flip,
+    """
+    See :func:`oneflow.flip`
+    """,
+)
+
+add_docstr(
+    oneflow.Tensor.in_top_k,
+    """
+    Tensor.in_top_k(targets, predictions, k) -> Tensor
+
+    See :func:`oneflow.in_top_k`
+    """,
+)
+
+add_docstr(
+    oneflow.Tensor.index_select,
+    """
+    Tensor.index_select(dim, index) -> Tensor
+
+    See :func:`oneflow.index_select`
+    """,
+)
+
+add_docstr(
     oneflow.Tensor.numel,
     """
     See :func:`oneflow.numel`
+    """,
+)
+
+add_docstr(
+    oneflow.Tensor.new_ones,
+    """
+    Tensor.new_ones() -> Tensor
+
+    See :func:`oneflow.new_ones`
+    """,
+)
+
+add_docstr(
+    oneflow.Tensor.to_global,
+    """
+    Tensor.to_global() -> Tensor
+
+    See :func:`oneflow.to_global`
     """,
 )
 
@@ -327,6 +378,13 @@ add_docstr(
 )
 
 add_docstr(
+    oneflow.Tensor.argwhere,
+    """
+    See :func:`oneflow.argwhere`
+    """,
+)
+
+add_docstr(
     oneflow.Tensor.atanh,
     """
     See :func:`oneflow.atanh`
@@ -428,6 +486,24 @@ add_docstr(
 )
 
 add_docstr(
+    oneflow.Tensor.erf,
+    """
+    Tensor.erf() -> Tensor
+
+    See :func:`oneflow.erf`
+    """,
+)
+
+add_docstr(
+    oneflow.Tensor.erfc,
+    """
+    Tensor.erfc() -> Tensor
+
+    See :func:`oneflow.erfc`
+    """,
+)
+
+add_docstr(
     oneflow.Tensor.erfinv,
     """
     See :func:`oneflow.erfinv`
@@ -438,6 +514,34 @@ add_docstr(
     oneflow.Tensor.erfinv_,
     """
     Inplace version of :func:`oneflow.erfinv`
+    """,
+)
+
+add_docstr(
+    oneflow.Tensor.eq,
+    """
+    See :func:`oneflow.eq`
+    """,
+)
+
+add_docstr(
+    oneflow.Tensor.lt,
+    """
+    See :func:`oneflow.lt`
+    """,
+)
+
+add_docstr(
+    oneflow.Tensor.le,
+    """
+    See :func:`oneflow.le`
+    """,
+)
+
+add_docstr(
+    oneflow.Tensor.ne,
+    """
+    See :func:`oneflow.ne`
     """,
 )
 
@@ -471,7 +575,7 @@ add_docstr(
 
     For CUDA tensors, this function returns the device ordinal of the GPU on which the tensor resides. For CPU tensors, an error is thrown.
 
-  
+
     """,
 )
 
@@ -498,15 +602,30 @@ add_docstr(
 
 add_docstr(
     oneflow.Tensor.mul,
-    """
+    """Tensor.mul(value) -> Tensor
     See :func:`oneflow.mul`
     """,
 )
 
 add_docstr(
     oneflow.Tensor.mul_,
-    """
-    In-place version of :func`oneflow.Tensor.mul`.
+    """Tensor.mul_(value) -> Tensor
+
+    In-place version of :func:`oneflow.Tensor.mul`.
+    """,
+)
+
+add_docstr(
+    oneflow.Tensor.div_,
+    """Tensor.div_(value) -> Tensor
+    In-place version of :func:`oneflow.Tensor.div`.
+    """,
+)
+
+add_docstr(
+    oneflow.Tensor.sub_,
+    """Tensor.sub_(value) -> Tensor
+    In-place version of :func:`oneflow.Tensor.sub`.
     """,
 )
 
@@ -582,6 +701,78 @@ add_docstr(
 )
 
 add_docstr(
+    oneflow.Tensor.reciprocal,
+    """
+    See :func:`oneflow.reciprocal`
+    """,
+)
+
+add_docstr(
+    oneflow.Tensor.add,
+    """
+    See :func:`oneflow.add`
+    """,
+)
+
+add_docstr(
+    oneflow.Tensor.add_,
+    """
+    In-place version of :func:`oneflow.Tensor.add`.
+    """,
+)
+
+add_docstr(
+    oneflow.Tensor.asin,
+    """
+    See :func:`oneflow.asin`
+    """,
+)
+
+add_docstr(
+    oneflow.Tensor.arcsin,
+    """
+    See :func:`oneflow.arcsin`
+    """,
+)
+
+add_docstr(
+    oneflow.Tensor.arcsinh,
+    """
+    See :func:`oneflow.arcsinh`
+    """,
+)
+
+add_docstr(
+    oneflow.Tensor.sin,
+    """
+    sin() -> Tensor
+
+    See :func:`oneflow.sin`
+    """,
+)
+
+add_docstr(
+    oneflow.Tensor.cos,
+    """
+    See :func:`oneflow.cos`
+    """,
+)
+
+add_docstr(
+    oneflow.Tensor.atan,
+    """
+    See :func:`oneflow.atan`
+    """,
+)
+
+add_docstr(
+    oneflow.Tensor.arctan,
+    """
+    See :func:`oneflow.arctan`
+    """,
+)
+
+add_docstr(
     oneflow.Tensor.selu,
     """
     See :func:`oneflow.selu`
@@ -620,13 +811,13 @@ add_docstr(
     oneflow.Tensor.size,
     """
     The interface is consistent with PyTorch.
-    
+
     Returns the size of the self tensor. If dim is not specified, the returned value is a oneflow.Size, a subclass of tuple. If dim is specified, returns an int holding the size of that dimension.
 
     Args:
         idx (int, optional): The dimension for which to retrieve the size.
 
-  
+
     """,
 )
 
@@ -680,6 +871,29 @@ add_docstr(
 )
 
 add_docstr(
+    oneflow.Tensor.to_local,
+    """Returns the local tensor of a global tensor.
+
+
+    Args:
+        input (Tensor): the input tensor.
+
+    For example:
+
+    .. code-block:: python
+
+        >>> import oneflow as flow
+        >>> import numpy as np
+        >>> np_arr = np.array([0.5, 0.6, 0.7]).astype(np.float32)
+        >>> input = flow.tensor(np_arr, dtype=flow.float32)
+        >>> placement = flow.placement("cpu", ranks=[0])
+        >>> global_tensor = input.to_global(placement, [flow.sbp.split(0)])
+        >>> global_tensor.to_local()
+        tensor([0.5000, 0.6000, 0.7000], dtype=oneflow.float32)
+    """,
+)
+
+add_docstr(
     oneflow.Tensor.uniform_,
     """
     Tensor.uniform_(from=0, to=1) → Tensor
@@ -688,7 +902,7 @@ add_docstr(
 
     .. math::
         P(x)=1/(to-from)
-    
+
     """,
 )
 
@@ -758,28 +972,77 @@ add_docstr(
 add_docstr(
     oneflow.Tensor.clamp,
     """
-    See :func:`oneflow.clamp`. 
+    See :func:`oneflow.clamp`.
     """,
 )
 
 add_docstr(
     oneflow.Tensor.clamp_,
     """
-    Inplace version of :func:`oneflow.Tensor.clamp`. 
+    Inplace version of :func:`oneflow.Tensor.clamp`.
     """,
 )
 
 add_docstr(
     oneflow.Tensor.clip,
     """
-    Alias for :func:`oneflow.Tensor.clamp`. 
+    Alias for :func:`oneflow.Tensor.clamp`.
     """,
 )
 
 add_docstr(
     oneflow.Tensor.clip_,
     """
-    Alias for :func:`oneflow.Tensor.clamp_`. 
+    Alias for :func:`oneflow.Tensor.clamp_`.
+    """,
+)
+
+add_docstr(
+    oneflow.Tensor.cpu,
+    r"""Returns a copy of this object in CPU memory.
+    If this object is already in CPU memory and on the correct device, then no copy is performed and the original object is returned.
+
+    For example:
+
+    .. code-block:: python
+
+        >>> import oneflow as flow
+
+        >>> input = flow.tensor([1, 2, 3, 4, 5], device=flow.device("cuda"))
+        >>> output = input.cpu()
+        >>> output.device
+        device(type='cpu', index=0)
+    """,
+)
+
+add_docstr(
+    oneflow.Tensor.cuda,
+    r"""Returns a copy of this object in CUDA memory.
+    If this object is already in CUDA memory and on the correct device, then no copy is performed and the original object is returned.
+
+    Args:
+        device  (flow.device): The destination GPU device. Defaults to the current CUDA device.
+
+    For example:
+
+    .. code-block:: python
+
+        >>> import oneflow as flow
+
+        >>> input = flow.Tensor([1, 2, 3, 4, 5])
+        >>> output = input.cuda()
+        >>> output.device
+        device(type='cuda', index=0)
+    """,
+)
+
+
+add_docstr(
+    oneflow.Tensor.repeat,
+    """
+    Tensor.repeat(*size) -> Tensor
+
+    See :func:`oneflow.repeat`
     """,
 )
 
@@ -793,10 +1056,399 @@ add_docstr(
 )
 
 add_docstr(
+    oneflow.Tensor.tile,
+    """
+    Tensor.tile(*dims) -> Tensor
+
+    See :func:`oneflow.tile`
+    """,
+)
+
+add_docstr(
     oneflow.Tensor.T,
     """
     Is this Tensor with its dimensions reversed.
- 
+
     If `n` is the number of dimensions in `x`, `x.T` is equivalent to `x.permute(n-1, n-2, ..., 0)`.
+    """,
+)
+
+add_docstr(
+    oneflow.Tensor.fmod,
+    """
+    Tensor.fmod(other) -> Tensor
+
+    See :func:`oneflow.fmod`
+
+    """,
+)
+
+add_docstr(
+    oneflow.Tensor.logical_and,
+    """
+    logical_and() -> Tensor
+
+    See :func:`oneflow.logical_and`
+
+    """,
+)
+
+add_docstr(
+    oneflow.Tensor.logical_or,
+    """
+
+    logical_or() -> Tensor
+
+    See :func:`oneflow.logical_or`
+
+    """,
+)
+
+add_docstr(
+    oneflow.Tensor.logical_xor,
+    """
+    logical_xor() -> Tensor
+
+    See :func:`oneflow.logical_xor`
+
+    """,
+)
+
+add_docstr(
+    oneflow.Tensor.masked_fill,
+    """
+    See :func:`oneflow.masked_fill`
+    """,
+)
+
+add_docstr(
+    oneflow.Tensor.masked_select,
+    """
+    See :func:`oneflow.masked_select`
+    """,
+)
+
+add_docstr(
+    oneflow.Tensor.sub,
+    """
+    See :func:`oneflow.sub`
+    """,
+)
+
+add_docstr(
+    oneflow.Tensor.div,
+    """
+    See :func:`oneflow.div`
+
+    """,
+)
+
+add_docstr(
+    oneflow.Tensor.ceil,
+    """
+    See :func:`oneflow.ceil`
+    """,
+)
+
+add_docstr(
+    oneflow.Tensor.expm1,
+    """
+    See :func:`oneflow.expm1`
+    """,
+)
+
+add_docstr(
+    oneflow.Tensor.topk,
+    """
+    See :func:`oneflow.topk`
+    """,
+)
+
+add_docstr(
+    oneflow.Tensor.nms,
+    """
+    See :func:`oneflow.nms`
+    """,
+)
+
+add_docstr(
+    oneflow.Tensor.nonzero,
+    """
+    nonzero(input, as_tuple=False) -> Tensor
+
+    See :func:`oneflow.nonzero`
+    """,
+)
+
+add_docstr(
+    oneflow.Tensor.max,
+    """
+    input.max(dim, index) -> Tensor
+
+    See :func:`oneflow.max`
+    """,
+)
+
+add_docstr(
+    oneflow.Tensor.min,
+    """
+    input.min(dim, index) -> Tensor
+
+    See :func:`oneflow.min`
+    """,
+)
+
+add_docstr(
+    oneflow.Tensor.sum,
+    """
+    input.sum(dim, index) -> Tensor
+
+    See :func:`oneflow.sum`
+    """,
+)
+
+add_docstr(
+    oneflow.Tensor.mean,
+    """
+    input.mean(dim, index) -> Tensor
+
+    See :func:`oneflow.mean`
+    """,
+)
+
+add_docstr(
+    oneflow.Tensor.prod,
+    """
+    input.prod(dim, index) -> Tensor
+
+    See :func:`oneflow.prod`
+    """,
+)
+
+add_docstr(
+    oneflow.Tensor.reshape,
+    """
+    See :func:`oneflow.reshape`
+    """,
+)
+
+add_docstr(
+    oneflow.Tensor.view,
+    """
+    The interface is consistent with PyTorch.
+    The documentation is referenced from: https://pytorch.org/docs/stable/generated/torch.Tensor.view.html
+
+    Returns a new tensor with the same data as the :attr:`self` tensor but of a
+    different :attr:`shape`.
+
+    The returned tensor shares the same data and must have the same number
+    of elements, but may have a different size. For a tensor to be viewed, the new
+    view size must be compatible with its original size and stride, i.e., each new
+    view dimension must either be a subspace of an original dimension, or only span
+    across original dimensions :math:`d, d+1, \\dots, d+k` that satisfy the following
+    contiguity-like condition that :math:`\\forall i = d, \\dots, d+k-1`,
+
+    .. math::
+
+      \\text{stride}[i] = \\text{stride}[i+1] \\times \\text{size}[i+1]
+
+    Otherwise, it will not be possible to view :attr:`self` tensor as :attr:`shape`
+    without copying it (e.g., via :meth:`contiguous`). When it is unclear whether a
+    :meth:`view` can be performed, it is advisable to use :meth:`reshape`, which
+    returns a view if the shapes are compatible, and copies (equivalent to calling
+    :meth:`contiguous`) otherwise.
+
+    Args:
+        input: A Tensor.
+        *shape: flow.Size or int...
+    Returns:
+        A Tensor has the same type as `input`.
+
+    For example:
+
+    .. code-block:: python
+
+        >>> import numpy as np
+        >>> import oneflow as flow
+
+        >>> x = np.array(
+        ...    [[1, 2, 3, 4], [5, 6, 7, 8], [9, 10, 11, 12], [13, 14, 15, 16]]
+        ... ).astype(np.float32)
+        >>> input = flow.Tensor(x)
+
+        >>> y = input.view(2, 2, 2, -1).numpy().shape
+        >>> y
+        (2, 2, 2, 2)
+    """,
+)
+
+add_docstr(
+    oneflow.Tensor.sort,
+    """
+    See :func:`oneflow.sort`
+    """,
+)
+
+add_docstr(
+    oneflow.Tensor.type_as,
+    r"""Returns this tensor cast to the type of the given tensor.
+        This is a no-op if the tensor is already of the correct type.
+
+    Args:
+        input  (Tensor): the input tensor.
+        target (Tensor): the tensor which has the desired type.
+
+    For example:
+
+    .. code-block:: python
+
+        >>> import oneflow as flow
+        >>> import numpy as np
+
+        >>> input = flow.tensor(np.random.randn(1, 2, 3), dtype=flow.float32)
+        >>> target = flow.tensor(np.random.randn(4, 5, 6), dtype = flow.int32)
+        >>> input = input.type_as(target)
+        >>> input.dtype
+        oneflow.int32
+    """,
+)
+
+add_docstr(
+    oneflow.Tensor.int,
+    r"""`Tensor.int()` is equivalent to `Tensor.to(flow.int32)`. See to().
+
+    Args:
+        input  (Tensor): the input tensor.
+
+    For example:
+
+    .. code-block:: python
+
+        >>> import oneflow as flow
+        >>> import numpy as np
+
+        >>> input = flow.tensor(np.random.randn(1, 2, 3), dtype=flow.float32)
+        >>> input = input.int()
+        >>> input.dtype
+        oneflow.int32
+    """,
+)
+
+add_docstr(
+    oneflow.Tensor.long,
+    r"""`Tensor.long()` is equivalent to `Tensor.to(flow.int64)`. See to().
+
+    Args:
+        input  (Tensor): the input tensor.
+
+    For example:
+
+    .. code-block:: python
+
+        >>> import oneflow as flow
+        >>> import numpy as np
+
+        >>> input = flow.tensor(np.random.randn(1, 2, 3), dtype=flow.float32)
+        >>> input = input.long()
+        >>> input.dtype
+        oneflow.int64
+    """,
+)
+
+add_docstr(
+    oneflow.Tensor.float,
+    r"""`Tensor.float()` is equivalent to `Tensor.to(flow.float32)`. See to().
+
+    Args:
+        input  (Tensor): the input tensor.
+
+    For example:
+
+    .. code-block:: python
+
+        >>> import oneflow as flow
+        >>> import numpy as np
+
+        >>> input = flow.tensor(np.random.randn(1, 2, 3), dtype=flow.int)
+        >>> input = input.float()
+        >>> input.dtype
+        oneflow.float32
+    """,
+)
+
+add_docstr(
+    oneflow.Tensor.double,
+    r"""`Tensor.double()` is equivalent to `Tensor.to(flow.float64)`. See to().
+
+    Args:
+        input  (Tensor): the input tensor.
+
+    For example:
+
+    .. code-block:: python
+
+        >>> import oneflow as flow
+        >>> import numpy as np
+
+        >>> input = flow.tensor(np.random.randn(1, 2, 3), dtype=flow.int)
+        >>> input = input.double()
+        >>> input.dtype
+        oneflow.float64
+    """,
+)
+
+add_docstr(
+    oneflow.Tensor.is_floating_point,
+    """
+    See :func:`oneflow.is_floating_point`
+    """,
+)
+
+add_docstr(
+    oneflow.Tensor.item,
+    r"""Returns the value of this tensor as a standard Python number. This only works for tensors with one element.
+    For other cases, see tolist().
+
+    This operation is not differentiable.
+
+    Args:
+        input  (Tensor): the input tensor.
+
+    For example:
+
+    .. code-block:: python
+
+        >>> import oneflow as flow
+        >>> x = flow.tensor([1.0])
+        >>> x.item()
+        1.0
+    """,
+)
+
+add_docstr(
+    oneflow.Tensor.tolist,
+    r"""Returns the tensor as a (nested) list. For scalars, a standard Python number is returned,
+    just like with `item()`. Tensors are automatically moved to the CPU first if necessary.
+
+    This operation is not differentiable.
+
+    Args:
+        input  (Tensor): the input tensor.
+
+    For example:
+
+    .. code-block:: python
+
+        >>> import oneflow as flow
+        >>> input = flow.tensor([[1,2,3], [4,5,6]])
+        >>> input.tolist()
+        [[1, 2, 3], [4, 5, 6]]
+    """,
+)
+
+add_docstr(
+    oneflow.Tensor.where,
+    """
+    See :func:`oneflow.where`
     """,
 )
