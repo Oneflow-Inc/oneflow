@@ -43,12 +43,16 @@ int64_t ConstEnvInteger() {
   return EnvVar::GetConstEnvInteger();
 }
 
-#define DEFINE_CONST_ENV_INTEGER(EnvVar, default_value)                                         \
-  struct EnvVar {                                                                               \
-    static int64_t GetConstEnvInteger() {                                                       \
-      thread_local int64_t value = ParseIntegerFromEnv(OF_PP_STRINGIZE(EnvVar), default_value); \
-      return value;                                                                             \
-    }                                                                                           \
+#define DEFINE_CONST_ENV_INTEGER(EnvVar, default_value)                                   \
+  struct EnvVar {                                                                         \
+    static int64_t GetValue() {                                                           \
+      static int64_t value = ParseIntegerFromEnv(OF_PP_STRINGIZE(EnvVar), default_value); \
+      return value;                                                                       \
+    }                                                                                     \
+    static int64_t GetConstEnvInteger() {                                                 \
+      thread_local int64_t value = GetValue();                                            \
+      return value;                                                                       \
+    }                                                                                     \
   };
 
 template<typename EnvVar>
@@ -56,12 +60,16 @@ bool ConstEnvBoolean() {
   return EnvVar::GetConstEnvBoolean();
 }
 
-#define DEFINE_CONST_ENV_BOOLEAN(EnvVar, default_value)                                      \
-  struct EnvVar {                                                                            \
-    static bool GetConstEnvBoolean() {                                                       \
-      thread_local bool value = ParseBooleanFromEnv(OF_PP_STRINGIZE(EnvVar), default_value); \
-      return value;                                                                          \
-    }                                                                                        \
+#define DEFINE_CONST_ENV_BOOLEAN(EnvVar, default_value)                                \
+  struct EnvVar {                                                                      \
+    static bool GetValue() {                                                           \
+      static bool value = ParseBooleanFromEnv(OF_PP_STRINGIZE(EnvVar), default_value); \
+      return value;                                                                    \
+    }                                                                                  \
+    static bool GetConstEnvBoolean() {                                                 \
+      thread_local bool value = GetValue();                                            \
+      return value;                                                                    \
+    }                                                                                  \
   };
 
 }  // namespace oneflow
