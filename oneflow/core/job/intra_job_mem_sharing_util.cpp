@@ -97,8 +97,8 @@ void InitMemoryChains(Plan* plan,
     const StreamId stream_id = PlanUtil::GetStreamId(*task);
     int64_t machine_id = task->machine_id();
     DeviceType device_type = stream_id.device_id().device_type();
-    // TODO(zwx): eliminate this special if condition
-    if (device_type != DeviceType::kCUDA) { continue; }
+    // TODO(zwx): eliminate this special 'is cpu' determine
+    if (device_type == DeviceType::kCPU) { continue; }
     int64_t device_id = stream_id.device_id().device_index();
     int64_t device_unique_id = GenDeviceUniqueId(machine_id, device_id);
     MemoryChain* mem_chain =

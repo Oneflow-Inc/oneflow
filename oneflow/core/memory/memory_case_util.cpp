@@ -46,7 +46,6 @@ MemoryCase GetPinnedHostMemoryCase(const MemoryCase& mem_case) {
 // MemCaseId encoding (bits)
 // | reserved | node_index | device_type | device_index | reserved | pinned_device_type | pinned_device_index |
 // | --- 1 -- | --- 19 --- | ---- 5 ---- | ----- 7 ---- | -- 20 -- | ------- 5 -------- | ------- 7 --------- |
-// | --- 1 -- | --- 19 --- | ---- 5 ---- | ----- 7 ---- | -- 20 -- | ------- 5 -------- | ------- 7 --------- |
 // | ---------------------- 32 ------------------------ | ---------------------- 32 ------------------------- |
 // clang-format on
 
