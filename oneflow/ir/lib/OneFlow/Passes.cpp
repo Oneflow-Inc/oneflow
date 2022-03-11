@@ -308,6 +308,8 @@ bool IsPaddingCouldBeAssimilatedIntoConv(::mlir::ArrayAttr padding_before,
   return false;
 }
 
+bool IsChannelFirst(mlir::StringAttr data_format) { return data_format.str() == "channels_first"; }
+
 ArrayAttr getSI32ArrayAttr(::mlir::PatternRewriter& rewriter, ArrayRef<int32_t> values) {
   auto attrs = llvm::to_vector<8>(llvm::map_range(
       values, [&](int32_t v) -> Attribute { return rewriter.getSI32IntegerAttr(v); }));
@@ -345,6 +347,72 @@ ArrayAttr getSI32ArrayAttr(::mlir::PatternRewriter& rewriter, ArrayRef<int32_t> 
       // pad op is expected to be erased if it is not used
       return res;
     }
+  }
+  return {};
+}
+
+::llvm::SmallVector<::mlir::Value, 4> CreateNHWCConv2d(::mlir::PatternRewriter& rewriter,
+                                                       OpResult conv_result) {
+  if (auto conv_op = llvm::dyn_cast<oneflow::Conv2DOp>(conv_result.getDefiningOp())) {
+    SmallVector<Value, 4> operands;
+    NamedAttrList attributes = conv_op->getAttrs();
+    llvm::SmallVector<int32_t> perm;
+    perm.push_back(0);
+    perm.push_back(2);
+    perm.push_back(3);
+    perm.push_back(1);
+    NamedAttrList transpos_attributes = conv_op->getAttrs();
+    transpos_attributes.erase(conv_op.filtersAttrName());
+    transpos_attributes.erase(conv_op.padding_beforeAttrName());
+    transpos_attributes.erase(conv_op.data_formatAttrName());
+    transpos_attributes.erase(conv_op.kernel_sizeAttrName());
+    transpos_attributes.erase(conv_op.stridesAttrName());
+    transpos_attributes.erase(conv_op.dilation_rateAttrName());
+    transpos_attributes.erase(conv_op.groupsAttrName());
+    transpos_attributes.append(llvm::StringRef("perm"), getSI32ArrayAttr(rewriter, perm));
+    std::string transpose_1_name = conv_op.op_nameAttr().str() + "_transpose_input";
+    transpos_attributes.set(llvm::StringRef("op_name"), rewriter.getStringAttr(transpose_1_name));
+    // insert transpose for input
+    SmallVector<Value, 4> input_operands;
+    input_operands.push_back(conv_op.in());
+    auto input_res = rewriter
+                         .create<oneflow::TransposeOp>(conv_op->getLoc(), conv_op->getResultTypes(),
+                                                       input_operands, transpos_attributes)
+                         ->getResults()[0];
+
+    // insert transpose for weight
+    std::string transpose_2_name = conv_op.op_nameAttr().str() + "_transpose_weight";
+    transpos_attributes.set(llvm::StringRef("op_name"), rewriter.getStringAttr(transpose_2_name));
+    SmallVector<Value, 4> weight_operands;
+    weight_operands.push_back(conv_op.weight());
+    auto weight_res =
+        rewriter
+            .create<oneflow::TransposeOp>(conv_op->getLoc(), conv_op->getResultTypes(),
+                                          weight_operands, transpos_attributes)
+            ->getResults()[0];
+
+    operands.push_back(input_res);
+    operands.push_back(weight_res);
+    if (conv_op.bias()) operands.push_back(conv_op.bias());
+    if (conv_op.bias_multiplier()) operands.push_back(conv_op.bias_multiplier());
+    // change data_format
+    attributes.set(conv_op.data_formatAttrName(), rewriter.getStringAttr("channels_last"));
+    // rewrite convop
+    auto res = rewriter
+                   .create<oneflow::Conv2DOp>(conv_op->getLoc(), conv_op->getResultTypes(),
+                                              operands, attributes)
+                   ->getResults();
+    // insert transpose for output
+    std::string transpose_3_name = conv_op.op_nameAttr().str() + "_transpose_output";
+    transpos_attributes.set(llvm::StringRef("op_name"), rewriter.getStringAttr(transpose_3_name));
+    SmallVector<Value, 4> output_operands;
+    output_operands.push_back(res[0]);
+    auto output_res =
+        rewriter
+            .create<oneflow::TransposeOp>(conv_op->getLoc(), conv_op->getResultTypes(),
+                                          output_operands, transpos_attributes)
+            ->getResults();
+    return output_res;
   }
   return {};
 }
@@ -431,6 +499,8 @@ void populateFuserForExistingOp(::mlir::RewritePatternSet& patterns) {
   patterns.add<FusedScaleTrilPattern2>(patterns.getContext());
   patterns.add<FusedPadConv2DPattern>(patterns.getContext());
   patterns.add<NormalizationAddReluPattern>(patterns.getContext());
+  bool enable_nhwc = ::oneflow::ParseBooleanFromEnv("ONEFLOW_ENABLE_NHWC_IN_MLIR", true);
+  if (enable_nhwc) { patterns.add<NHWCConv2DPattern>(patterns.getContext()); }
 }
 
 void populateGpuHelperPatterns(::mlir::RewritePatternSet& patterns) {

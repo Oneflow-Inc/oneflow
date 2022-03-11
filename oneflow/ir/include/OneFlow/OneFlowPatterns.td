@@ -139,7 +139,6 @@ def FusePadAndConv2d :
   NativeCodeCall<"mlir::oneflow::CreateConv2dAndErasePad($_builder, $0, $1)">;
 
 def HasIdenticalPadding: Constraint<CPred<"mlir::oneflow::IsPaddingCouldBeAssimilatedIntoConv($0, $1, $2)">, "">;
-def IsChannelFirst: Constraint<CPred<"mlir::oneflow::IsChannelFirst($0)">, "">;
 
 def FusedPadConv2DPattern : Pat<
   (
@@ -336,5 +335,38 @@ def ReplaceCopyWithGPUPattern : Pat<
   ),
   [(IsArg $dst)]
 >;
+
+def CreateNHWCConv2d :
+  NativeCodeCall<"mlir::oneflow::CreateNHWCConv2d($_builder, $0)">;
+
+def IsChannelFirst: Constraint<CPred<"mlir::oneflow::IsChannelFirst($0)">, "">;
+
+def NHWCConv2DPattern : Pat<
+  (
+    OneFlow_Conv2DOp : $conv_2d_res
+    $x,
+    $weight,
+    $bias,
+    $bias_multiplier,
+    $conv2d_op_name,
+    $conv2d_device_tag,
+    $conv2d_device_name,
+    $conv2d_scope_symbol_id,
+    $conv2d_hierarchy,
+    $operand_segment_sizes,
+    $filters,
+    $padding_before,
+    $data_format,
+    $kernel_size,
+    $strides,
+    $dilation_rate,
+    $groups
+  ),
+  (CreateNHWCConv2d $conv_2d_res),
+  [
+    (IsChannelFirst $data_format)
+  ]
+>;
+
 
 #endif // ONEFLOW_PATTERNS
