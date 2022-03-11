@@ -1118,6 +1118,20 @@ class ViewFunctor {
   std::shared_ptr<OpExpr> op_;
 };
 
+class ViewAsFunctor {
+ public:
+  ViewAsFunctor() {}
+  Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x, const std::shared_ptr<one::Tensor>& other) const {
+    const Shape& target_shap = *(other->shape());
+    const int64_t x_elem_cnt = x->shape()->elem_cnt();
+    const int64_t other_elem_cnt = target_shap.elem_cnt();
+    CHECK_OR_RETURN(x_elem_cnt == other_elem_cnt)
+      << "shape '" << target_shap.ToString() 
+      << "' is invalid for input of size " << x_elem_cnt;
+    return JUST(View(x, *(other->shape())));
+  }
+};
+
 class ToContiguousFunctor {
  public:
   ToContiguousFunctor() {
@@ -2820,6 +2834,8 @@ ONEFLOW_FUNCTION_LIBRARY(m) {
   m.add_functor<impl::ScatterNdLikeFunctor>("ScatterNdLike");
   m.add_functor<impl::ReshapeFunctor>("Reshape");
   m.add_functor<impl::ViewFunctor>("View");
+  m.add_functor<impl::ViewAsFunctor>("ViewAs");
+  m.add_functor<impl::SplitWithSizeFunctor>("SplitWithSizes");
   m.add_functor<impl::ToContiguousFunctor>("ToContiguous");
   m.add_functor<impl::SliceFunctor>("Slice");
   m.add_functor<impl::SliceGradFunctor>("SliceGrad");

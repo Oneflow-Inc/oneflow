@@ -20,6 +20,8 @@ from .pooling import *
 from .activation import *
 from .dropout import *
 from .vision import *
+from .view_as import *
+from .split_with_sizes import *
 from .norm import *
 from .loss import *
 from .onehot import *

@@ -1137,6 +1137,18 @@
   signature: "Tensor (Tensor x, Shape shape) => View"
   bind_python: True
 
+- name: "view_as"
+  signature: [
+    "Tensor (Tensor x, Tensor other) => ViewAs",
+  ]
+  bind_python: True
+
+- name: "split_with_sizes"
+  signature: [
+    "TensorTuple (Tensor x, Int64List split_sizes, Int64 dim=0) => SplitWithSizes",
+  ]
+  bind_python: True
+
 - name: "contiguous"
   signature: "Tensor (Tensor input) => ToContiguous"
   bind_python: True
