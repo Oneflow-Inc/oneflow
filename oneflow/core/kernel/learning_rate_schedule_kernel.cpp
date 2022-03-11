@@ -290,7 +290,7 @@ void LearningRateScheduleKernel::ForwardDataContent(KernelContext* ctx) const {
   if (conf.has_learning_rate_decay()) {
     learning_rate = GetDecayedLearningRate(conf.learning_rate_decay(), learning_rate, train_step);
   }
-  // NOTE(lixiang): nn.Graph.debug(1) will print step and lr.
+  // NOTE(lixiang): Set verbose=True will print step and lr.
   if (print_step_lr_) {
     std::cout << "Last step " << train_step << " adjusting learning rate to " << learning_rate
               << std::endl;
