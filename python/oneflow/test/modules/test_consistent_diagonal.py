@@ -21,7 +21,7 @@ from oneflow.test_utils.automated_test_util import *
 
 
 @autotest(n=1, check_graph=False)
-def _test_flow_diagonal_impl(test_case, placement, sbp):
+def _test_diagonal_impl(test_case, placement, sbp):
     offset = random(-5, 5).to(int).value() * 8
     dim1 = random(-4, 4).to(int).value()
     dim2 = random(-4, 4).to(int).value()
@@ -45,7 +45,7 @@ class TestDiagonalConsistent(flow.unittest.TestCase):
         ndim = random(1, 5).to(int).value()
         for placement in all_placement():
             for sbp in all_sbp(placement, max_dim=4):
-                _test_flow_diagonal_impl(test_case, placement, sbp)
+                _test_diagonal_impl(test_case, placement, sbp)
 
 
 if __name__ == "__main__":

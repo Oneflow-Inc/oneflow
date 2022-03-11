@@ -45,9 +45,9 @@ def _test_deconv2d_impl(test_case, placement, sbp):
 
 class TestDeconv2dConsistent(flow.unittest.TestCase):
     @globaltest
-    def _test_deconv2d_impl(test_case):
+    def test_deconv2d(test_case):
         for placement in all_placement():
-            for sbp in all_sbp(placement, max_dim=4):
+            for sbp in all_sbp(placement, max_dim=2):
                 _test_deconv2d_impl(test_case, placement, sbp)
 
 

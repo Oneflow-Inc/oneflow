@@ -21,7 +21,7 @@ from oneflow.test_utils.automated_test_util import *
 
 
 @autotest(n=1, auto_backward=True, check_graph=False)
-def _autotest_dropout_p0(test_case, placement, sbp, p):
+def _test_dropout_p0(test_case, placement, sbp, p):
     ndim = 1
     dims = [random(1, 5) * 8 for i in range(ndim)]
     x = random_tensor(ndim, *dims)
@@ -31,7 +31,7 @@ def _autotest_dropout_p0(test_case, placement, sbp, p):
 
 
 @autotest(n=1, auto_backward=True, check_graph=False)
-def _autotest_dropout_eval(test_case, placement, sbp, p):
+def _test_dropout_eval(test_case, placement, sbp, p):
     ndim = 1
     dims = [random(1, 5) * 8 for i in range(ndim)]
     x = random_tensor(ndim, *dims)
@@ -43,17 +43,17 @@ def _autotest_dropout_eval(test_case, placement, sbp, p):
 
 class TestDropoutConsistent(flow.unittest.TestCase):
     @globaltest
-    def autotest_dropout_p01(test_case):
+    def test_dropout_p01(test_case):
         for placement in all_placement():
             for sbp in all_sbp(placement, max_dim=1):
-                _autotest_dropout_p01(test_case, placement, sbp, p=0.0)
-                _autotest_dropout_p01(test_case, placement, sbp, p=1.0)
+                _test_dropout_p01(test_case, placement, sbp, p=0.0)
+                _test_dropout_p01(test_case, placement, sbp, p=1.0)
 
     @globaltest
-    def autotest_dropout_eval(test_case):
+    def test_dropout_eval(test_case):
         for placement in all_placement():
             for sbp in all_sbp(placement, max_dim=1):
-                _autotest_dropout_eval(test_case, placement, sbp)
+                _test_dropout_eval(test_case, placement, sbp)
 
 
 if __name__ == "__main__":
