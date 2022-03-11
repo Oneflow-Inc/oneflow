@@ -269,7 +269,7 @@ __global__ void GetKernel(LruCacheContext<Key, Elem> cache_ctx, uint32_t num_key
     const uint32_t n_batch_keys = min(kWarpSize, num_keys - batch_offset);
     if (thread_ctx.lane_id < n_batch_keys) {
       const Key key = keys[batch_offset + thread_ctx.lane_id];
-      const size_t hash = XXH64()(key);
+      const size_t hash = LruCacheHash()(key);
       const uint32_t set_id = hash % cache_ctx.n_set;
       block_keys[thread_ctx.warp_id_in_block][thread_ctx.lane_id] = key;
       block_set_ids[thread_ctx.warp_id_in_block][thread_ctx.lane_id] = set_id;
@@ -322,7 +322,7 @@ __global__ void PutWithoutEvictingKernel(LruCacheContext<Key, Elem> cache_ctx, u
     const uint32_t n_batch_keys = min(kWarpSize, num_keys - batch_offset);
     if (thread_ctx.lane_id < n_batch_keys) {
       const Key key = keys[batch_offset + thread_ctx.lane_id];
-      const size_t hash = XXH64()(key);
+      const size_t hash = LruCacheHash()(key);
       const uint32_t set_id = hash % cache_ctx.n_set;
       block_keys[thread_ctx.warp_id_in_block][thread_ctx.lane_id] = key;
       block_set_ids[thread_ctx.warp_id_in_block][thread_ctx.lane_id] = set_id;
@@ -378,7 +378,7 @@ __global__ void EvictKernel(LruCacheContext<Key, Elem> cache_ctx, const Key* key
     const uint32_t n_batch_keys = min(kWarpSize, num_evict - batch_offset);
     if (thread_ctx.lane_id < n_batch_keys) {
       const Key key = keys[batch_offset + thread_ctx.lane_id];
-      const size_t hash = XXH64()(key);
+      const size_t hash = LruCacheHash()(key);
       const uint32_t set_id = hash % cache_ctx.n_set;
       block_keys[thread_ctx.warp_id_in_block][thread_ctx.lane_id] = key;
       block_set_ids[thread_ctx.warp_id_in_block][thread_ctx.lane_id] = set_id;
