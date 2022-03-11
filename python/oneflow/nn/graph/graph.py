@@ -231,6 +231,11 @@ class Graph(object):
         in ``nn.Graph.build()`` for the moment. So you may call methods such as ``Tensor.mean()``
         to make the loss tensor a scalar tensor.
 
+        Note:
+            Also, during the training process, set ``verbose=True`` if you need to output learning rate information of each step.
+            
+            This feature is the same as eager mode.
+
         For example:
 
         .. code-block:: python
@@ -239,6 +244,7 @@ class Graph(object):
             >>> loss_fn = flow.nn.MSELoss(reduction="sum")
             >>> model = flow.nn.Sequential(flow.nn.Linear(3, 1), flow.nn.Flatten(0, 1))
             >>> optimizer = flow.optim.SGD(model.parameters(), lr=1e-6)
+            >>> # scheduler = flow.optim.lr_scheduler.CosineDecayLR(optimizer, decay_steps=100, alpha=0.98, verbose=True)
             >>> class LinearTrainGraph(flow.nn.Graph):
             ...     def __init__(self):
             ...         super().__init__()
@@ -246,6 +252,7 @@ class Graph(object):
             ...         self.loss_fn = loss_fn
             ...         # Add an optimizer
             ...         self.add_optimizer(optimizer)
+            ...         # self.add_optimizer(optimizer,lr_sch=scheduler)
             ...     def build(self, x, y):
             ...         y_pred = self.model(x)
             ...         loss = self.loss_fn(y_pred, y)
@@ -423,9 +430,6 @@ class Graph(object):
         print graph build info of each nn.Module. ``v_level`` 2 will additionally print graph build
         info of each operation. ``v_level`` 3 will additionally print more detailed info of each
         operation.
-
-        In addition, during the training process, when ``v_level`` is greater than or equal to 1, 
-        the learning rate information of each step will be printed.
 
         Use ``ranks`` to choose which rank to print the debug information.
 
