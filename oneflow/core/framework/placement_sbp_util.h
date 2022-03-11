@@ -72,6 +72,8 @@ Maybe<Symbol<one::ConsistentTensorMeta>> CalcSubConsistentTensorMeta(
     Symbol<one::ConsistentTensorMeta> tensor_meta, Symbol<ParallelDesc> sub_parallel_desc,
     Symbol<NdSbp> sub_nd_sbp);
 
+Maybe<Symbol<ParallelDesc>> CalcSubParallelDesc4Axis(Symbol<ParallelDesc> parallel_desc, int axis);
+
 }  // namespace private_details
 
 extern Maybe<void> (*CheckIsNdSbpBoxingAcyclic)(Symbol<PlacedNdSbp> in, Symbol<PlacedNdSbp> out);
@@ -88,6 +90,9 @@ static constexpr auto* GetBroadcastSubParallelDesc =
 
 static constexpr auto* DecomposeIntoNaiveTransformations =
     DECORATE(&private_details::DecomposeIntoNaiveTransformations, ThreadLocal);
+
+static constexpr auto* CalcSubParallelDesc4Axis =
+    DECORATE(&private_details::CalcSubParallelDesc4Axis, ThreadLocal);
 
 Maybe<std::unordered_map<int64_t, Symbol<ParallelDesc>>> GetBroadcastGroup(
     Symbol<ParallelDesc> src_parallel_desc, Symbol<ParallelDesc> dst_parallel_desc);

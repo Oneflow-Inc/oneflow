@@ -87,6 +87,25 @@ Maybe<const Shape> GetSelectedShape(const Shape& hierarchy_shape,
   return std::make_shared<const Shape>(dim_vec);
 }
 
+Maybe<void> GetSubIndex2OriginIndex(
+    const IndexVector& indexes, int axis,
+    std::function<void(const DimVector&, DimVector*)>* SubIndex2OriginIndex) {
+  CHECK_LT_OR_RETURN(axis, indexes.size());
+  *SubIndex2OriginIndex = [=](const DimVector& selected, DimVector* origin) {
+    origin->resize(indexes.size());
+    *origin = indexes;
+    origin->at(axis) = selected.at(axis);
+  };
+  return Maybe<void>::Ok();
+}
+
+Maybe<const Shape> GetSubShape4Axis(const Shape& hierarchy_shape, int axis) {
+  CHECK_GT_OR_RETURN(hierarchy_shape.NumAxes(), axis);
+  DimVector dim_vec = DimVector(hierarchy_shape.NumAxes(), 1);
+  dim_vec.at(axis) = hierarchy_shape.At(axis);
+  return std::make_shared<const Shape>(dim_vec);
+}
+
 Maybe<Symbol<std::vector<int>>> CalcAxis2IsBroadcast(Symbol<NdSbp> nd_sbp) {
   std::vector<int> axis2is_selected(nd_sbp->sbp_parallel_size());
   for (int i = 0; i < axis2is_selected.size(); ++i) {
@@ -120,7 +139,52 @@ Maybe<Symbol<ParallelDesc>> CalcSelectedSubParallelDesc(Symbol<ParallelDesc> par
 
 static auto* GetSelectedSubParallelDesc = DECORATE(&CalcSelectedSubParallelDesc, ThreadLocal);
 
+Maybe<std::vector<int64_t>> GetSubParallelIds4Axis(const Shape& hierarchy_shape, int axis,
+                                                   int64_t parallel_id) {
+  CHECK_GT_OR_RETURN(hierarchy_shape.NumAxes(), axis);
+  StrideVector hierarchy_strides{};
+  GetStrideVector(hierarchy_shape, &hierarchy_strides);
+  IndexVector indexes{};
+  JUST(GetIndexesFromOffset(hierarchy_strides, parallel_id, &indexes));
+  std::function<void(const DimVector&, DimVector*)> SubIndex2OriginIndex;
+  JUST(GetSubIndex2OriginIndex(indexes, axis, &SubIndex2OriginIndex));
+  const auto& broadcast_shape = JUST(GetSubShape4Axis(hierarchy_shape, axis));
+  StrideVector broadcast_strides{};
+  GetStrideVector(*broadcast_shape, &broadcast_strides);
+  const auto& origin_offsets = std::make_shared<std::vector<int64_t>>(broadcast_shape->elem_cnt());
+  for (int64_t i = 0; i < broadcast_shape->elem_cnt(); ++i) {
+    IndexVector broadcast_indexes{};
+    JUST(GetIndexesFromOffset(broadcast_strides, i, &broadcast_indexes));
+    IndexVector origin_indexes{};
+    SubIndex2OriginIndex(broadcast_indexes, &origin_indexes);
+    int64_t origin_offset = -1;
+    JUST(GetOffsetFromIndexes(hierarchy_strides, origin_indexes, &origin_offset));
+    origin_offsets->at(i) = origin_offset;
+  }
+  return origin_offsets;
+}
+
 }  // namespace
+
+Maybe<Symbol<ParallelDesc>> CalcSubParallelDesc4Axis(Symbol<ParallelDesc> parallel_desc, int axis) {
+  const auto& opt_parallel_id = JUST(GetParallelId4CurrentProcessCtx(parallel_desc));
+  int64_t parallel_id = JUST(*opt_parallel_id);
+  const auto& hierarchy_shape = *parallel_desc->hierarchy();
+  const auto& slected_parallel_ids =
+      JUST(GetSubParallelIds4Axis(hierarchy_shape, axis, parallel_id));
+  ParallelConf parallel_conf;
+  parallel_conf.set_device_tag(parallel_desc->device_tag());
+  bool found_parallel_id = false;
+  for (int64_t i : *slected_parallel_ids) {
+    found_parallel_id = found_parallel_id || (i == parallel_id);
+    int64_t machine_id = JUST(parallel_desc->MachineId4ParallelId(i));
+    int64_t device_id = JUST(parallel_desc->DeviceId4ParallelId(i));
+    parallel_conf.add_device_name(std::string("@") + std::to_string(machine_id) + ":"
+                                  + std::to_string(device_id));
+  }
+  CHECK_OR_RETURN(found_parallel_id);
+  return SymbolOf(ParallelDesc(parallel_conf));
+}
 
 Maybe<std::vector<int64_t>> GetSelectedParallelIds(const Shape& hierarchy_shape,
                                                    const std::vector<int>& axis2is_selected,
