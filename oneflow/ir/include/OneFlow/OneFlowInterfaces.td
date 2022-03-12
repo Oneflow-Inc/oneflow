@@ -88,5 +88,18 @@ def CpuOnly : OpInterface<"CpuOnly"> {
   let cppNamespace = "::mlir::oneflow";
 }
 
+def NCHWCompatibleInterface : OpInterface<"NCHWCompatible"> {
+  let description = [{
+    Interface to NCHW compatibility
+  }];
+
+  let methods = [
+    InterfaceMethod<"",
+        "bool", "IsNCHW", (ins)
+    >,
+  ];
+  let cppNamespace = "::mlir::oneflow";
+}
+
 
 #endif  // ONEFLOW_IR_INCLUDE_ONEFLOW_ONEFLOWINTERFACES_H_

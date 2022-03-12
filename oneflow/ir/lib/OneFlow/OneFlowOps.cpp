@@ -16,11 +16,11 @@ limitations under the License.
 #include "OneFlow/OneFlowOps.h"
 #include "OneFlow/OneFlowDialect.h"
 #include "OneFlow/OneFlowSupport.h"
-#include "OneFlow/Passes.h"
 
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/StringSet.h"
 
+#include "llvm/Support/Casting.h"
 #include "mlir/IR/BuiltinAttributes.h"
 #include "mlir/IR/OpImplementation.h"
 #include "mlir/IR/PatternMatch.h"
@@ -68,6 +68,12 @@ static ParseResult parseConstantOp(OpAsmParser& parser, OperationState& result) 
   }
   result.addTypes(value.getType());
   return success();
+}
+
+ArrayAttr getSI32ArrayAttr(::mlir::PatternRewriter& rewriter, ArrayRef<int32_t> values) {
+  auto attrs = llvm::to_vector<8>(llvm::map_range(
+      values, [&](int32_t v) -> Attribute { return rewriter.getSI32IntegerAttr(v); }));
+  return rewriter.getArrayAttr(attrs);
 }
 
 namespace {
@@ -242,6 +248,95 @@ void OutputOp::getCanonicalizationPatterns(RewritePatternSet& results, MLIRConte
   results.insert<ConcreteSystemOpPattern<OutputOp>>(context);
 }
 
+bool CheckNchwCompatible(Operation* op) {
+  if (auto nchw = llvm::dyn_cast<NCHWCompatible>(op)) {
+    return nchw.IsNCHW();
+  } else {
+    return false;
+  }
+}
+struct DoNHWCConv2DPattern : public OpRewritePattern<Conv2DOp> {
+  explicit DoNHWCConv2DPattern(MLIRContext* context)
+      : OpRewritePattern<Conv2DOp>(context, /*benefit=*/1) {}
+  LogicalResult matchAndRewrite(Conv2DOp conv_op, PatternRewriter& rewriter) const override {
+    // TODO: use CheckNchwCompatible function to check
+    if (conv_op.IsNCHW()) {
+      std::cout << "enter here" << std::endl;
+      SmallVector<Value, 4> operands;
+      NamedAttrList attributes = conv_op->getAttrs();
+      llvm::SmallVector<int32_t> perm, output_perm;
+      perm.push_back(0);
+      perm.push_back(2);
+      perm.push_back(3);
+      perm.push_back(1);
+      output_perm.push_back(0);
+      output_perm.push_back(3);
+      output_perm.push_back(1);
+      output_perm.push_back(2);
+      NamedAttrList transpos_attributes = conv_op->getAttrs();
+      transpos_attributes.erase(conv_op.filtersAttrName());
+      transpos_attributes.erase(conv_op.padding_beforeAttrName());
+      transpos_attributes.erase(conv_op.data_formatAttrName());
+      transpos_attributes.erase(conv_op.kernel_sizeAttrName());
+      transpos_attributes.erase(conv_op.stridesAttrName());
+      transpos_attributes.erase(conv_op.dilation_rateAttrName());
+      transpos_attributes.erase(conv_op.groupsAttrName());
+      transpos_attributes.append(llvm::StringRef("perm"), getSI32ArrayAttr(rewriter, perm));
+      std::string transpose_1_name = conv_op.op_nameAttr().str() + "_transpose_input";
+      transpos_attributes.set(llvm::StringRef("op_name"), rewriter.getStringAttr(transpose_1_name));
+      // insert transpose for input
+      SmallVector<Value, 4> input_operands;
+      input_operands.push_back(conv_op.in());
+      auto input_res =
+          rewriter
+              .create<oneflow::TransposeOp>(conv_op.getLoc(), conv_op->getResultTypes(),
+                                            input_operands, transpos_attributes)
+              ->getResults()[0];
+
+      // insert transpose for weight
+      std::string transpose_2_name = conv_op.op_nameAttr().str() + "_transpose_weight";
+      transpos_attributes.set(llvm::StringRef("op_name"), rewriter.getStringAttr(transpose_2_name));
+      SmallVector<Value, 4> weight_operands;
+      weight_operands.push_back(conv_op.weight());
+      auto weight_res =
+          rewriter
+              .create<oneflow::TransposeOp>(conv_op.getLoc(), conv_op->getResultTypes(),
+                                            weight_operands, transpos_attributes)
+              ->getResults()[0];
+
+      operands.push_back(input_res);
+      operands.push_back(weight_res);
+      if (conv_op.bias()) operands.push_back(conv_op.bias());
+      if (conv_op.bias_multiplier()) operands.push_back(conv_op.bias_multiplier());
+      // change data_format
+      attributes.set(conv_op.data_formatAttrName(), rewriter.getStringAttr("channels_last"));
+      // rewrite convop
+      auto res = rewriter
+                     .create<oneflow::Conv2DOp>(conv_op.getLoc(), conv_op->getResultTypes(),
+                                                operands, attributes)
+                     ->getResults();
+      // insert transpose for output
+      transpos_attributes.set(llvm::StringRef("perm"), getSI32ArrayAttr(rewriter, output_perm));
+      std::string transpose_3_name = conv_op.op_nameAttr().str() + "_transpose_output";
+      transpos_attributes.set(llvm::StringRef("op_name"), rewriter.getStringAttr(transpose_3_name));
+      SmallVector<Value, 4> output_operands;
+      output_operands.push_back(res[0]);
+      if (auto created_op = rewriter.replaceOpWithNewOp<oneflow::TransposeOp>(
+              conv_op, conv_op->getResultTypes(), output_operands, transpos_attributes)) {
+        return success();
+      } else {
+        return failure();
+      }
+    }
+    return success();
+  }
+};
+
+void Conv2DOp::getCanonicalizationPatterns(RewritePatternSet& results, MLIRContext* context) {
+  bool enable_nhwc = ::oneflow::ParseBooleanFromEnv("ONEFLOW_ENABLE_NHWC_IN_MLIR", true);
+  if (enable_nhwc) { results.insert<DoNHWCConv2DPattern>(context); }
+}
+
 void NormalizationAddReluOp::build(::mlir::OpBuilder& odsBuilder, ::mlir::OperationState& odsState,
                                    Value x, Value addend, Value moving_mean, Value moving_variance,
                                    Value gamma, Value beta, StringRef op_name, StringRef device_tag,
@@ -371,6 +466,8 @@ llvm::Optional<OpResult> GetCtrlOutputResult(Operation* op) {
   }
   return llvm::None;
 }
+
+bool Conv2DOp::IsNCHW() { return this->data_format().str() == "channels_first"; }
 
 }  // namespace oneflow
 
