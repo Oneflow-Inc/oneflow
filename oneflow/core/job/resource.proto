@@ -53,7 +53,7 @@ message Resource {
   optional CollectiveBoxingConf collective_boxing_conf = 19;
 
   // NOTE(chengcheng) to reuse nccl memory and speed up
-  optional bool nccl_use_compute_stream = 30 [default = false];
+  optional bool nccl_use_compute_stream = 30 [default = true];
   optional bool disable_group_boxing_by_dst_parallel = 31 [default = false];
 
   optional CudnnConfig cudnn_conf = 32;
