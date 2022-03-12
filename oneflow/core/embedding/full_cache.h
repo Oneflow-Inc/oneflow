@@ -13,13 +13,24 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
-#include <pybind11/pybind11.h>
-#include "oneflow/api/python/of_api_registry.h"
-#include "oneflow/core/vm/vm_util.h"
+#ifndef ONEFLOW_CORE_EMBEDDING_FULL_CACHE_H_
+#define ONEFLOW_CORE_EMBEDDING_FULL_CACHE_H_
 
-ONEFLOW_API_PYBIND11_MODULE("eager.single_client", m) {
-  using namespace oneflow;
-  namespace py = pybind11;
-  m.def(
-      "Sync", []() { vm::ClusterSync().GetOrThrow(); }, py::call_guard<py::gil_scoped_release>());
-}
+#include "oneflow/core/embedding/cache.h"
+#include "oneflow/core/common/data_type.h"
+
+namespace oneflow {
+
+namespace embedding {
+
+#ifdef WITH_CUDA
+
+std::unique_ptr<Cache> NewFullCache(const CacheOptions& options);
+
+#endif  // WITH_CUDA
+
+}  // namespace embedding
+
+}  // namespace oneflow
+
+#endif  // ONEFLOW_CORE_EMBEDDING_FULL_CACHE_H_
