@@ -15,6 +15,7 @@ limitations under the License.
 */
 
 #include "oneflow/core/common/data_type.pb.h"
+#include "oneflow/core/common/maybe.h"
 #include "oneflow/core/common/optional.h"
 #include "oneflow/core/common/scalar.h"
 #include "oneflow/core/framework/attr_map.h"
@@ -1378,9 +1379,8 @@ class NormalizationFunctor {
   Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x,
                            const Optional<one::Tensor>& moving_mean,
                            const Optional<one::Tensor>& moving_variance,
-                           const std::shared_ptr<one::Tensor>& gamma,
-                           const std::shared_ptr<one::Tensor>& beta, const int32_t& axis,
-                           const float& epsilon, const float& momentum,
+                           const Optional<one::Tensor>& gamma, const Optional<one::Tensor>& beta,
+                           const int32_t& axis, const float& epsilon, const float& momentum,
                            const bool& training) const {
     MutableAttrMap attrs;
     JUST(attrs.SetAttr<int32_t>("axis", axis));
@@ -1390,25 +1390,35 @@ class NormalizationFunctor {
 
     CHECK_OR_RETURN((moving_mean && moving_variance) || (!moving_mean && !moving_variance))
         << "Both moving_mean and moving_variance should be None or Tensor.";
+
+    std::shared_ptr<one::Tensor> gamma_val;
+    std::shared_ptr<one::Tensor> beta_val;
+
+    CHECK_GE_OR_RETURN(x->shape()->NumAxes(), 2)
+        << "NumAxes of x should be greater or equal than 2. ";
+    if (gamma.has_value() && beta.has_value()) {
+      gamma_val = JUST(gamma);
+      beta_val = JUST(beta);
+    } else {
+      const Shape gamma_beta_shape = Shape({x->shape()->At(1)});
+      gamma_val = JUST(functional::Constant(gamma_beta_shape, 1.0, x->dtype(), JUST(x->device())));
+      beta_val = JUST(functional::Constant(gamma_beta_shape, 0.0, x->dtype(), JUST(x->device())));
+    }
+
     if (!training) {
       CHECK_OR_RETURN(moving_mean && moving_variance)
           << "Must have moving_mean and moving_variance in eval mode.";
       return OpInterpUtil::Dispatch<one::Tensor>(
-          *norm_eval_op_,
-          {x->contiguous(), JUST(moving_mean)->contiguous(), JUST(moving_variance)->contiguous(),
-           gamma->contiguous(), beta->contiguous()},
+          *norm_eval_op_, {x->contiguous(), JUST(moving_mean)->contiguous(), JUST(moving_variance)->contiguous(), gamma_val->contiguous(), beta_val->contiguous()},
           attrs);
     }
     if (moving_mean) {
       return OpInterpUtil::Dispatch<one::Tensor>(
           *norm_training_stats_op_,
-          {x->contiguous(), JUST(moving_mean)->contiguous(), JUST(moving_variance)->contiguous(),
-           gamma->contiguous(), beta->contiguous()},
-          attrs);
+          {x->contiguous(), JUST(moving_mean)->contiguous(), JUST(moving_variance)->contiguous(), gamma_val->contiguous(), beta_val->contiguous()}, attrs);
     }
-    return OpInterpUtil::Dispatch<one::Tensor>(
-        *norm_training_no_stats_op_, {x->contiguous(), gamma->contiguous(), beta->contiguous()},
-        attrs);
+    return OpInterpUtil::Dispatch<one::Tensor>(*norm_training_no_stats_op_,
+                                               {x, gamma_val, beta_val}, attrs);
   }
 
  private:
