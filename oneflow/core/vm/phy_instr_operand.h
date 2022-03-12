@@ -33,6 +33,7 @@ using DependenceVector = std::vector<MirroredObject*>;
 class PhyInstrOperand {
  public:
   virtual ~PhyInstrOperand() = default;
+  virtual void ReleaseInCallBackThread() {}
 
   virtual const DependenceVector& input_dependences() const = 0;
   virtual const DependenceVector& output_dependences() const = 0;

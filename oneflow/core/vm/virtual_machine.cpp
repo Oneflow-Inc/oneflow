@@ -159,7 +159,7 @@ VirtualMachine::~VirtualMachine() {
   //   Test case to reproduce the bug:
   //   oneflow/python/oneflow/test/graph/test_graph_session_env_destruct.py In this case, a graph
   //   destructed after oneflow init called atexit hook.
-  // ControlSync();
+  ControlSync();
   pending_notifier_.Close();
   schedule_thread_.join();
   CHECK(!vm_);

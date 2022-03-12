@@ -29,10 +29,14 @@ class BarrierPhyInstrOperand : public PhyInstrOperand {
     stream_sequential_dependence_ = nullptr;
   }
   ~BarrierPhyInstrOperand() {
+    LOG(ERROR) << "barrier instruction del " << this;
+  }
+  void ReleaseInCallBackThread() override {
     // Make sure barrier callbacks run after all objects of previous instructions are destructed in
     // Callback thread.
     callback_();
   }
+
 
   const DependenceVector& input_dependences() const override {
     static DependenceVector dependences{};

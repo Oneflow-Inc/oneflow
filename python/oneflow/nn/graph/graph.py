@@ -1167,7 +1167,9 @@ class Graph(object):
 
     def __del__(self):
         # Ensure vm has finished running this graph.
+        print(f"graph {self.name} try to del", flush=True)
         oneflow._oneflow_internal.eager.Sync()
+        print(f"graph {self.name} succeed to del", flush=True)
 
 
 if __name__ == "__main__":

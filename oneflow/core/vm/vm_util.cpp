@@ -41,7 +41,11 @@ Maybe<void> ClusterSync() {
   auto bc = std::make_shared<BlockingCounter>(1);
   JUST(PhysicalRun([bc](InstructionsBuilder* builder) -> Maybe<void> {
     JUST(builder->ComputeGlobalFrontSeqBarrier());
-    JUST(builder->ComputeRankFrontSeqCallback([bc]() { bc->Decrease(); }));
+    LOG(ERROR) << "cluster sync build ComputeRankFrontSeqCallback.";
+    JUST(builder->ComputeRankFrontSeqCallback([bc]() {
+      bc->Decrease();
+      LOG(ERROR) << "cluster sync build ComputeRankFrontSeqCallback [bc decrease].";
+    }));
     return Maybe<void>::Ok();
   }));
   JUST(bc->WaitUntilCntEqualZero(VirtualMachine::GetPredicatorNoMoreInstructionsFinished()));

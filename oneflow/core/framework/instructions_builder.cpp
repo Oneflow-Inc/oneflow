@@ -576,6 +576,7 @@ template Maybe<void> InstructionsBuilder::AccessBlobByCallback(
 Maybe<void> InstructionsBuilder::ComputeRankFrontSeqCallback(
     const std::function<void()>& callback) {
   const auto& phy_instr_operand = std::make_shared<vm::BarrierPhyInstrOperand>(callback);
+  LOG(ERROR) << "build sync instruction which has addr: " << phy_instr_operand.get();
   auto instruction = intrusive::make_shared<vm::InstructionMsg>(
       Global<VirtualMachine>::Get()->mut_vm(), "ComputeRankFrontSeqCallback",
       std::shared_ptr<const ParallelDesc>(), phy_instr_operand);

@@ -543,7 +543,9 @@ void VirtualMachineEngine::Callback() {
   InstructionMsgList garbage_msg_list;
   mut_garbage_msg_list()->MoveTo(&garbage_msg_list);
   INTRUSIVE_FOR_EACH(garbage, &garbage_msg_list) {
+    LOG(ERROR) << "callback_try_to [do] gc on instruction which has addr: " << garbage->phy_instr_operand().get() << " name " << garbage->DebugName();
     CHECK_JUST(Global<ForeignLockHelper>::Get()->WithScopedAcquire([&]() -> Maybe<void> {
+      LOG(ERROR) << "callback_try_to [start] gc on instruction which has addr: " << garbage->phy_instr_operand().get() << " name " << garbage->DebugName();
       garbage_msg_list.Erase(garbage.Mutable());
       // There may be a tiny gap between appending `garbage` to garbage_list and dereferencing
       // `garbage` in scheduler thread or work thread.
@@ -563,8 +565,10 @@ void VirtualMachineEngine::Callback() {
         // Do nothing. Wait until all other threads ref_cnts released.
       }
       CHECK_NOTNULL(garbage->phy_instr_operand());
-      CHECK_EQ(garbage->phy_instr_operand().use_count(), 1) << garbage->DebugName();
+      //CHECK_EQ(garbage->phy_instr_operand().use_count(), 1) << garbage->DebugName();
+      garbage->phy_instr_operand()->ReleaseInCallBackThread();
       // Destruct garbage.
+      LOG(ERROR) << "callback_try_to [finish] gc on instruction which has addr: " << garbage->phy_instr_operand().get() << " name " << garbage->DebugName();
       return Maybe<void>::Ok();
     }));
   }

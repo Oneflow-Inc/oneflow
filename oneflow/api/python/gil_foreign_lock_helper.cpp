@@ -35,8 +35,11 @@ class GILForeignLockHelper final : public ForeignLockHelper {
 
   Maybe<void> WithScopedAcquire(const std::function<Maybe<void>()>& Callback) const override {
     if (!PyGILState_Check()) {
+      LOG(ERROR) << "try_to_get_gil";
       py::gil_scoped_acquire acquire;
+      LOG(ERROR) << "succeed_to_get_gil";
       JUST(Callback());
+      LOG(ERROR) << "succeed_to_callback";
     } else {
       JUST(Callback());
     }
