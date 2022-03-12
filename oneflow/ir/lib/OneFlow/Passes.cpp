@@ -16,6 +16,8 @@ limitations under the License.
 #include "OneFlow/OneFlowOps.h"
 #include "OneFlow/OneFlowDialect.h"
 #include "OneFlow/Passes.h"
+#include "mlir/IR/OperationSupport.h"
+#include "oneflow/core/framework/random_generator.h"
 
 #include "mlir/Conversion/LinalgToLLVM/LinalgToLLVM.h"
 #include "mlir/Conversion/MemRefToLLVM/MemRefToLLVM.h"
@@ -140,28 +142,6 @@ NamedAttrList GetJitOpAttributes(::mlir::PatternRewriter& rewriter, StringRef op
   attributes.set(OpTrait::IsOpConfCompatible<void>::getScopeSymbolIDAttr(),
                  op_to_replace_adaptor.scope_symbol_idAttr());
   return attributes;
-}
-
-::llvm::SmallVector<::mlir::Value, 4> OutlineBatchMatMul(::mlir::PatternRewriter& rewriter,
-                                                         mlir::OpResult matmul_res) {
-  if (auto batch_matmul_op = llvm::dyn_cast<BatchMatmulOp>(matmul_res.getDefiningOp())) {
-    auto op_name = batch_matmul_op.op_name();
-    SmallVector<::mlir::Value, 2> operands;
-    operands.push_back(batch_matmul_op.a());
-    operands.push_back(batch_matmul_op.b());
-    SmallVector<::mlir::Value, 1> results;
-    results.push_back(batch_matmul_op.out());
-    NamedAttrList attributes =
-        GetJitOpAttributes(rewriter, op_name, operands.size(), results.size(), batch_matmul_op);
-    SmallVector<Operation*, 4> ops = {batch_matmul_op};
-    auto function =
-        GetOrInsertFuncOp(rewriter, batch_matmul_op->getLoc(), op_name, operands, results, ops);
-    auto created =
-        rewriter.create<MlirJitOp>(batch_matmul_op.getLoc(), function, attributes, operands);
-    if (failed(DumpAssembly(rewriter, created))) exit(1);
-    return created->getResults();
-  }
-  return {};
 }
 
 static StringRef sanitizeIdentifier(StringRef name, SmallString<16>& buffer,
@@ -343,6 +323,39 @@ bool IsPaddingCouldBeAssimilatedIntoConv(::mlir::ArrayAttr padding_before,
   return {};
 }
 
+::llvm::SmallVector<::mlir::Value, 4> CreateFusedBiasAddMaskScale(::mlir::PatternRewriter& rewriter,
+                                                                  OpResult dropout_result,
+                                                                  OpResult bias_add_result,
+                                                                  Operation* mask) {
+  if (auto dropout_op = llvm::dyn_cast<oneflow::DropoutOp>(dropout_result.getDefiningOp())) {
+    if (auto bias_add_op = llvm::dyn_cast<oneflow::BiasAddOp>(bias_add_result.getDefiningOp())) {
+      SmallVector<Value, 4> operands;
+      operands.push_back(bias_add_op.a());
+      operands.push_back(bias_add_op.b());
+      operands.push_back(mask->getResults()[0]);
+      NamedAttrList fused_bias_add_dropout_attributes = dropout_op->getAttrs();
+      fused_bias_add_dropout_attributes.append(llvm::StringRef("axis"), bias_add_op.axisAttr());
+      fused_bias_add_dropout_attributes.append(llvm::StringRef("scale"), dropout_op.rateAttr());
+      fused_bias_add_dropout_attributes.erase(dropout_op.rateAttrName());
+      auto res = rewriter
+                     .create<oneflow::FusedBiasAddMaskScaleOp>(
+                         dropout_op->getLoc(), dropout_op->getResultTypes().front(), operands,
+                         fused_bias_add_dropout_attributes)
+                     ->getResults();
+      // bias_add and dropout op is expected to be erased if it is not used
+      return res;
+    }
+  }
+  return {};
+}
+
+mlir::IntegerAttr GetDefaultSeed(::mlir::PatternRewriter& rewriter) {
+  const auto gen = CHECK_JUST(::oneflow::one::DefaultAutoGenerator());
+  return getSI64IntegerAttr(rewriter, (int64_t)gen->current_seed());
+}
+
+bool IsAddToOutputNone(ValueRange value) { return (int)value.size() > 0 ? false : true; }
+
 }  // namespace oneflow
 
 }  // namespace mlir
@@ -416,7 +429,6 @@ LogicalResult LowerModuleToCUDALLVM(mlir::MLIRContext* context, ModuleOp module)
 
 void populateFuserPasses(::mlir::RewritePatternSet& patterns) {
   patterns.add<MulCastPattern>(patterns.getContext());
-  patterns.add<BatchMatmulPattern>(patterns.getContext());
 }
 
 void populateFuserForExistingOp(::mlir::RewritePatternSet& patterns) {
@@ -424,6 +436,7 @@ void populateFuserForExistingOp(::mlir::RewritePatternSet& patterns) {
   patterns.add<FusedScaleTrilPattern>(patterns.getContext());
   patterns.add<FusedScaleTrilPattern2>(patterns.getContext());
   patterns.add<FusedPadConv2DPattern>(patterns.getContext());
+  patterns.add<FusedBiasAddDropoutPattern>(patterns.getContext());
   patterns.add<NormalizationAddReluPattern>(patterns.getContext());
 }
 
