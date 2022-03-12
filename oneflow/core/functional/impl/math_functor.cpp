@@ -57,9 +57,9 @@ class AddNFunctor {
       if (i == 0 && inplace) {
         JUST(CheckInplaceValid(partial_inputs.at(0)));
         std::shared_ptr<TensorTuple> outs = std::make_shared<TensorTuple>(1);
-        outs->at(0) = partial_inputs.at(0)->contiguous();
+        (*outs)[0] = partial_inputs[0]->contiguous();
         JUST(OpInterpUtil::Dispatch(*op_.at(size - 1), partial_inputs, outs.get()));
-        outputs.emplace_back(outs->at(0));
+        outputs.emplace_back((*outs)[0]);
       } else {
         outputs.emplace_back(
             JUST(OpInterpUtil::Dispatch<Tensor>(*op_.at(size - 1), partial_inputs)));

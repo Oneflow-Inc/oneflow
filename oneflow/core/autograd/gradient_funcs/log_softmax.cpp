@@ -70,7 +70,7 @@ Maybe<void> LogSoftmax::Apply(const LogSoftmaxCaptureState* ctx, const TensorTup
   const auto& dy = out_grads.at(0);
   const auto& prob = ctx->SavedTensors().at(0);
   in_grads->resize(1);
-  in_grads->at(0) = JUST(OpInterpUtil::Dispatch<Tensor>(*grad_op_, {prob->contiguous(), dy}));
+  (*in_grads)[0] = JUST(OpInterpUtil::Dispatch<Tensor>(*grad_op_, {prob->contiguous(), dy}));
   return Maybe<void>::Ok();
 }
 

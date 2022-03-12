@@ -346,8 +346,8 @@ Maybe<Tensor> Expand(const std::shared_ptr<Tensor>& input, const std::vector<int
               autograd::AutoGradMode mode(create_graph);
               CHECK_EQ_OR_RETURN(out_grads.size(), 1);
               in_grads->resize(1);
-              in_grads->at(0) =
-                  JUST(functional::ExpandGrad(out_grads.at(0), in_shape, expand_shape));
+              (*in_grads)[0] =
+                  JUST(functional::ExpandGrad(out_grads[0], in_shape, expand_shape));
               return Maybe<void>::Ok();
             });
     TensorTuple outputs{output};
@@ -393,8 +393,8 @@ Maybe<Tensor> Narrow(const std::shared_ptr<Tensor>& input, const int64_t& dim, c
               auto like = JUST(functional::Empty(Shape(input->shape()->dim_vec()), input->dtype(),
                                                  JUST(input->device())));
               in_grads->resize(1);
-              in_grads->at(0) =
-                  JUST(functional::NarrowGrad(out_grads.at(0), like, dim, start, length));
+              (*in_grads)[0] =
+                  JUST(functional::NarrowGrad(out_grads[0], like, dim, start, length));
               return Maybe<void>::Ok();
             });
     TensorTuple outputs{output};
@@ -422,8 +422,8 @@ Maybe<Tensor> AsStrided(const std::shared_ptr<one::Tensor>& input, const std::ve
               auto like = JUST(functional::Empty(Shape(input->shape()->dim_vec()), input->dtype(),
                                                  JUST(input->device())));
               in_grads->resize(1);
-              in_grads->at(0) = JUST(
-                  functional::AsStridedGrad(out_grads.at(0), like, size, stride, storage_offset));
+              (*in_grads)[0] = JUST(
+                  functional::AsStridedGrad(out_grads[0], like, size, stride, storage_offset));
               return Maybe<void>::Ok();
             });
     TensorTuple outputs{output};
@@ -445,8 +445,8 @@ Maybe<Tensor> Transpose(const std::shared_ptr<Tensor>& input, const std::vector<
 
   StrideVector stride_vec(ndim);
   for (int i = 0; i < ndim; ++i) {
-    target_dims[i] = shape->At(permute.at(i));
-    stride_vec[i] = strides->At(permute.at(i));
+    target_dims[i] = shape->At(permute[i]);
+    stride_vec[i] = strides->At(permute[i]);
   }
 
   auto output = JUST(BasicView(input, Shape(target_dims), Stride(stride_vec), storage_offset));
@@ -457,11 +457,11 @@ Maybe<Tensor> Transpose(const std::shared_ptr<Tensor>& input, const std::vector<
                 bool create_graph) -> Maybe<void> {
               std::vector<int32_t> grad_perm;
               grad_perm.resize(ndim);
-              for (int i = 0; i < ndim; ++i) { grad_perm.at(permute.at(i)) = i; }
+              for (int i = 0; i < ndim; ++i) { grad_perm[permute[i]] = i; }
               autograd::AutoGradMode mode(create_graph);
               CHECK_EQ_OR_RETURN(out_grads.size(), 1);
               in_grads->resize(1);
-              in_grads->at(0) = JUST(functional::Transpose(out_grads.at(0), grad_perm));
+              (*in_grads)[0] = JUST(functional::Transpose(out_grads[0], grad_perm));
               return Maybe<void>::Ok();
             });
     TensorTuple outputs{output};
@@ -513,8 +513,8 @@ Maybe<Tensor> UnfoldTensor(const std::shared_ptr<Tensor>& input, const MutableAt
               autograd::AutoGradMode mode(create_graph);
               CHECK_EQ_OR_RETURN(out_grads.size(), 1);
               in_grads->resize(1);
-              in_grads->at(0) =
-                  JUST(functional::UnfoldTensorGrad(out_grads.at(0), input, dimension, size, step));
+              (*in_grads)[0] =
+                  JUST(functional::UnfoldTensorGrad(out_grads[0], input, dimension, size, step));
               return Maybe<void>::Ok();
             });
     TensorTuple outputs{output};
@@ -533,7 +533,7 @@ Maybe<Tensor> Diagonal(const std::shared_ptr<Tensor>& input, const int32_t offse
   int64_t storage_offset = JUST(JUST(input->AsMirroredTensor())->storage_offset());
 
   // infer output storage_offset
-  int64_t diag_size;
+  int64_t diag_size=0;
   if (offset >= 0) {
     diag_size = std::max<int64_t>(std::min(shape->At(dim1), shape->At(dim2) - offset), 0);
   } else {
@@ -578,9 +578,9 @@ Maybe<Tensor> Diagonal(const std::shared_ptr<Tensor>& input, const int32_t offse
               std::shared_ptr<Tensor> grad_input =
                   JUST(functional::Empty(*input->shape(), input->dtype(), JUST(input->device())));
               auto diag = JUST(functional::Diagonal(grad_input, offset, dim1, dim2));
-              diag = JUST(functional::Copy(out_grads.at(0), JUST(input->device())->type(),
+              diag = JUST(functional::Copy(out_grads[0], JUST(input->device())->type(),
                                            JUST(input->device())->device_id()));
-              in_grads->at(0) = grad_input;
+              (*in_grads)[0] = grad_input;
               return Maybe<void>::Ok();
             });
     TensorTuple outputs{output};
