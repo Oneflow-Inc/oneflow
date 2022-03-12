@@ -32,7 +32,8 @@ namespace oneflow_api {
 namespace {
 
 inline Graph LoadGraph(const Device& device) {
-  Graph graph = Graph::Load("./oneflow/api/cpp/tests/graph_test_model/affine_with_parameter", device);
+  Graph graph =
+      Graph::Load("./oneflow/api/cpp/tests/graph_test_model/affine_with_parameter", device);
   return graph;
 }
 
