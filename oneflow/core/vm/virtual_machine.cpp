@@ -154,7 +154,12 @@ void VirtualMachine::ControlSync() {
 }
 
 VirtualMachine::~VirtualMachine() {
-  ControlSync();
+  // NOTE(xuxiaoyu): In some case ControlSync at env destructoin cause infinite waiting.
+  //   So it's removed at the moment.
+  //   Test case to reproduce the bug:
+  //   oneflow/python/oneflow/test/graph/test_graph_session_env_destruct.py In this case, a graph
+  //   destructed after oneflow init called atexit hook.
+  // ControlSync();
   pending_notifier_.Close();
   schedule_thread_.join();
   CHECK(!vm_);

@@ -22,16 +22,12 @@ limitations under the License.
 
 namespace oneflow_api {
 void initialize() {
-  if (of::Global<OneFlowEnv>::Get() == nullptr) {
-    of::Global<OneFlowEnv>::New();
-  }
+  if (of::Global<OneFlowEnv>::Get() == nullptr) { of::Global<OneFlowEnv>::New(); }
   of::SetShuttingDown(false);
 }
 
 void release() {
-  if (of::Global<OneFlowEnv>::Get() != nullptr) {
-    of::Global<OneFlowEnv>::Delete();
-  }
+  if (of::Global<OneFlowEnv>::Get() != nullptr) { of::Global<OneFlowEnv>::Delete(); }
   of::SetShuttingDown();
   of::ResetThisThreadUniqueConsistentId().GetOrThrow();
 }

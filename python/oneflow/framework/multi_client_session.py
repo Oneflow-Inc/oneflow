@@ -32,7 +32,7 @@ class MultiClientSession(object):
 
     def __init__(self, env, sess_id):
         self._id = sess_id
-        self._env= env
+        self._env = env
         assert self._env is not None
         self._internal_sess = oneflow._oneflow_internal.RegsiterSession(sess_id)
         # New a MultiClientSessionContext

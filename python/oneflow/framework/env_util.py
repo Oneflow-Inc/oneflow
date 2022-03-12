@@ -387,6 +387,7 @@ class EnvHolder(object):
         # TODO(strint): deal with abnormal exit
         # if self._is_normal_exit:
         #     del self._env_cxt
+        oneflow._oneflow_internal.eager.Sync()
         oneflow._oneflow_internal.SetShuttingDown()
         print("oneflow env del")
 
