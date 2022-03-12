@@ -149,10 +149,7 @@ Maybe<void> CudaStream::Sync() {
 
 void CudaStream::RecordEvent(Event* event) {
   auto* cuda_event = static_cast<CudaEvent*>(event);  // NOLINT
-  // OF_CUDA_CHECK(cudaEventRecord(cuda_event->cuda_event(), cuda_stream_));
-  if (cudaEventRecord(cuda_event->cuda_event(), cuda_stream_) != cudaSuccess) {
-    std::cerr << "cuda even record error" << std::endl;
-  }
+  OF_CUDA_CHECK(cudaEventRecord(cuda_event->cuda_event(), cuda_stream_));
 }
 
 cudaStream_t CudaStream::cuda_stream() const { return cuda_stream_; }

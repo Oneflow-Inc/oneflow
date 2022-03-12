@@ -13,7 +13,6 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 """
-import atexit
 import os
 import time
 from collections import OrderedDict
@@ -1167,8 +1166,8 @@ class Graph(object):
         )
 
     def __del__(self):
+        # Ensure vm has finished running this graph.
         oneflow._oneflow_internal.eager.Sync()
-        print(f"oneflow graph {self.name} del")
 
 
 if __name__ == "__main__":

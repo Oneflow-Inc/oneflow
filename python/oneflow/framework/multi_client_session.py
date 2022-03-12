@@ -48,13 +48,11 @@ class MultiClientSession(object):
         self._check_status(self.Status.CREATED, self.Status.INITED)
         if self.status_ == self.Status.CREATED:
             config_proto_str = text_format.MessageToString(self.config_proto)
-            # oneflow._oneflow_internal.InitMultiClientSessionContext(config_proto_str)
             self._session_ctx.try_init(config_proto_str)
             self.status_ = self.Status.INITED
 
     def _TryClose(self):
         if self.status_ != self.Status.CLOSED:
-            # oneflow._oneflow_internal.TryDestroyMultiClientSessionContext()
             oneflow._oneflow_internal.ClearSessionById(self.id)
         self.status_ = self.Status.CLOSED
 
@@ -122,11 +120,7 @@ class MultiClientSession(object):
     def update_resource_eagerly(self, resource_config):
         self._check_status(self.Status.INITED)
         config_proto_str = text_format.MessageToString(resource_config)
-        # oneflow._oneflow_internal.MultiClientSessionContextUpdateResource(
-        #    config_proto_str
-        # )
         self._session_ctx.update_resource(config_proto_str)
 
     def __del__(self):
         self._TryClose()
-        print("oneflow session del")

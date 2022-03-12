@@ -156,8 +156,6 @@ Maybe<void> MultiClientSessionContext::UpdateResource(const std::string& reso_pr
 Maybe<void> MultiClientSessionContext::TryClose() {
   if (is_inited_) {
     VLOG(1) << "Try to delete multi client session context." << std::endl;
-    // sync before NNGraph release to ensure LaunchLazyJob instruction was completed and released
-    // JUST(vm::ClusterSync());
     {
       // NOTE(chengcheng): delete runtime global objects
       Global<boxing::collective::Scheduler>::Delete();
