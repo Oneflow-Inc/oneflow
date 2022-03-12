@@ -25,7 +25,6 @@ limitations under the License.
 #include <vector>
 #include "oneflow/api/cpp/framework.h"
 #include "oneflow/api/cpp/tests/api_test.h"
-#include "oneflow/core/vm/vm_util.h"
 
 namespace oneflow_api {
 
