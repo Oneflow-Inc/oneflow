@@ -205,6 +205,8 @@ def _test_embedding_gradient_shuffle(test_case):
             .numpy()
             .flatten(),
             np_cur_rank_unique_embedding_grad[np_inverse].flatten(),
+            atol=1e-4,
+            rtol=1e-4,
         )
     )
 
