@@ -55,7 +55,6 @@ class TensorMeta : public user_op::TensorDesc {
     stride_ = val; 
     is_contiguous_ = IsContiguous(shape(), *stride_);
   }
-  Stride* mut_stride() override { return const_cast<Stride*>(stride_.get()); }
   DataType* mut_dtype() { return &data_type_; }
   void set_dtype(DataType data_type) { data_type_ = data_type; }
   DataType* mut_data_type() override { return &data_type_; }

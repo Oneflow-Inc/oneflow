@@ -34,7 +34,6 @@ class TensorDesc {
   virtual const Shape& shape() const = 0;
   virtual Shape* mut_shape() = 0;
   virtual const Stride& stride() const = 0;
-  virtual Stride* mut_stride() = 0;
   virtual DataType data_type() const = 0;
   virtual DataType* mut_data_type() = 0;
 
@@ -58,7 +57,6 @@ class NaiveTensorDesc final : public TensorDesc {
   const Shape& shape() const override { return shape_; }
   Shape* mut_shape() override { return &shape_; }
   const Stride& stride() const override { return stride_; }
-  Stride* mut_stride() override { return &stride_; }
   DataType data_type() const override { return data_type_; }
   DataType* mut_data_type() override { return &data_type_; }
 

@@ -32,7 +32,6 @@ class BlobTensorView final : public Tensor {
   const ShapeView& shape() const override;
   MutShapeView* mut_shape() override;
   const StrideView& stride() const override;
-  MutStrideView* mut_stride() override;
   DataType data_type() const override;
   const MemoryCase& mem_case() const override;
   const void* raw_dptr() const override;
