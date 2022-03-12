@@ -22,10 +22,6 @@ limitations under the License.
 #include <new>
 #include <cuda.h>
 
-#if CUDA_VERSION >= 11000
-#include <cuda/std/semaphore>
-#endif
-
 namespace oneflow {
 
 namespace embedding {
@@ -57,30 +53,6 @@ struct ThreadContext {
   uint32_t lane_id;
 };
 
-#if CUDA_VERSION >= 11000
-
-class WarpMutex {
- public:
-  OF_DISALLOW_COPY_AND_MOVE(WarpMutex);
-  __device__ WarpMutex() : semaphore_(1) {}
-  __device__ ~WarpMutex() = default;
-
-  __device__ void Lock(const ThreadContext& thread_ctx) {
-    if (thread_ctx.lane_id == 0) { semaphore_.acquire(); }
-    __syncwarp();
-  }
-
-  __device__ void Unlock(const ThreadContext& thread_ctx) {
-    __syncwarp();
-    if (thread_ctx.lane_id == 0) { semaphore_.release(); }
-  }
-
- private:
-  cuda::binary_semaphore<cuda::thread_scope_device> semaphore_;
-};
-
-#else
-
 class WarpMutex {
  public:
   OF_DISALLOW_COPY_AND_MOVE(WarpMutex);
@@ -105,8 +77,6 @@ class WarpMutex {
  private:
   int32_t flag_;
 };
-
-#endif
 
 template<typename Key, typename Elem>
 struct LruCacheContext {
