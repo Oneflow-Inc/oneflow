@@ -84,13 +84,28 @@ class ToContiguousKernel final : public user_op::OpKernel {
   void Compute(user_op::KernelComputeContext* ctx) const override {
     const user_op::Tensor* in = ctx->Tensor4ArgNameAndIndex("in", 0);
     user_op::Tensor* out = ctx->Tensor4ArgNameAndIndex("out", 0);
+    const user_op::TensorDesc* in_desc = ctx->TensorDesc4ArgNameAndIndex("in", 0);
+    const user_op::TensorDesc* out_desc = ctx->TensorDesc4ArgNameAndIndex("out", 0);
 
     const ShapeView& in_shape = in->shape();
     CHECK_EQ(out->shape(), in_shape);
     const DataType in_data_type = in->data_type();
     CHECK_EQ(out->data_type(), in_data_type);
 
-    const auto& in_stride = ctx->Attr<std::vector<int64_t>>("stride");
+    // TODO:(zhaoluyang) support stride in in->stride() and out->stride()
+    // printf("\n to_contiguous kernel >>>> in shape:%s; in stride:%s; out shape:%s; out stride:%s; ",      
+    //       in->shape().ToString().c_str(), in->stride().ToString().c_str(),
+    //       out->shape().ToString().c_str(), out->stride().ToString().c_str()
+    //       );
+    printf("\n in_desc >>>> in shape:%s; in stride:%s; out shape:%s; out stride:%s; ",      
+          in_desc->shape().ToString().c_str(), in_desc->stride().ToString().c_str(),
+          out_desc->shape().ToString().c_str(), out_desc->stride().ToString().c_str()
+          );
+    const StrideVector& stride_vec = in_desc->stride().StrideVec();
+    std::vector<int64_t> in_stride(in_desc->stride().NumAxes());
+    std::copy(stride_vec.begin(), stride_vec.end(), in_stride.begin());
+    
+    // const auto& in_stride = ctx->Attr<std::vector<int64_t>>("stride");
 
     const char* in_dptr = static_cast<const char*>(in->raw_dptr());
     char* out_dptr = static_cast<char*>(out->mut_raw_dptr());

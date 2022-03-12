@@ -16,6 +16,7 @@ limitations under the License.
 
 #include "oneflow/core/common/stride.h"
 #include "oneflow/core/common/stride.cfg.h"
+#include "oneflow/core/common/stride_view.h"
 #include "oneflow/core/common/protobuf.h"
 
 namespace oneflow {
@@ -54,6 +55,12 @@ Stride::Stride(const cfg::StrideProto& stride_proto) {
 
 Stride& Stride::assign(const StrideVector& stride_vec) {
   stride_vec_ = stride_vec;
+  return *this;
+}
+
+Stride& Stride::CheckNumAxesIdenticalAndAssign(const StrideView& stride_view) {
+  CHECK_EQ(NumAxes(), stride_view.NumAxes());
+  std::copy(stride_view.ptr(), stride_view.ptr() + stride_view.NumAxes(), stride_vec_.data());
   return *this;
 }
 

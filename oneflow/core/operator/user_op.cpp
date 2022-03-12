@@ -45,6 +45,7 @@ BlobDesc* FindValidBlobDescOfBnsInOp(
 user_op::NaiveTensorDesc GenTensorDescFromBlobDesc(const BlobDesc* blob_desc) {
   user_op::NaiveTensorDesc tensor_desc;
   *tensor_desc.mut_shape() = blob_desc->shape();
+  *tensor_desc.mut_stride() = blob_desc->stride();
   *tensor_desc.mut_data_type() = blob_desc->data_type();
   *tensor_desc.mut_is_dynamic() = blob_desc->is_dynamic();
   return tensor_desc;
@@ -181,6 +182,17 @@ class UserOpInferContext final : public user_op::InferContext {
     auto it = arg2tensor_desc_.find(std::make_pair(arg_name, index));
     if (it == arg2tensor_desc_.end()) { return nullptr; };
     return it->second.mut_shape();
+  }
+  const Stride& InputStride(const std::string& arg_name, int32_t index) const override {
+    return *const_cast<UserOpInferContext*>(this)->Stride4ArgNameAndIndex(arg_name, index);
+  }
+  Stride* OutputStride(const std::string& arg_name, int32_t index) override {
+    return Stride4ArgNameAndIndex(arg_name, index);
+  }
+  Stride* Stride4ArgNameAndIndex(const std::string& arg_name, int32_t index) override {
+    auto it = arg2tensor_desc_.find(std::make_pair(arg_name, index));
+    if (it == arg2tensor_desc_.end()) { return nullptr; };
+    return it->second.mut_stride();
   }
   const DataType& InputDType(const std::string& arg_name, int32_t index) const override {
     return *const_cast<UserOpInferContext*>(this)->Dtype4ArgNameAndIndex(arg_name, index);
@@ -541,6 +553,7 @@ Maybe<void> UserOp::InferInternalBlobDescs(
     CHECK_NOTNULL_OR_RETURN(tmp_buffer_blob);
     tmp_buffer_blob->set_data_type(DataType::kChar);
     tmp_buffer_blob->mut_shape() = Shape({static_cast<int64_t>(tmp_size)});
+    tmp_buffer_blob->mut_stride() = Stride({static_cast<int64_t>(tmp_size)});
   }
   return Maybe<void>::Ok();
 }
@@ -570,6 +583,7 @@ Maybe<void> UserOp::InferLogicalOutBlobDescs(
     user_op::TensorDesc* tensor_desc = infer_ctx.OutputTensorDesc(pair.first, pair.second);
     out_blob_desc->set_data_type(tensor_desc->data_type());
     out_blob_desc->mut_shape() = tensor_desc->shape();
+    out_blob_desc->mut_stride() = tensor_desc->stride();
     out_blob_desc->set_is_dynamic(tensor_desc->is_dynamic());
   }
   return Maybe<void>::Ok();
@@ -601,6 +615,7 @@ Maybe<void> UserOp::InferOutBlobDescs(
       BlobDesc* out_blob_desc = GetBlobDesc4BnInOp(GenRepeatedBn(pair.first, pair.second));
       out_blob_desc->set_data_type(*(infer_ctx.OutputDType(pair.first, pair.second)));
       out_blob_desc->mut_shape() = *(infer_ctx.OutputShape(pair.first, pair.second));
+      out_blob_desc->mut_stride() = Stride(*(infer_ctx.OutputShape(pair.first, pair.second)));
       out_blob_desc->set_is_dynamic(*infer_ctx.OutputIsDynamic(pair.first, pair.second));
     }
     return Maybe<void>::Ok();

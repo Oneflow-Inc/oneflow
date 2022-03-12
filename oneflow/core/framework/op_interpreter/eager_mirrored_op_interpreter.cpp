@@ -148,6 +148,7 @@ Maybe<void> NaiveInterpret(const UserOpExpr& user_op_expr, const TensorTuple& in
       // output i is inplaced.
       // check thread_local TensorMeta and tensor_impl TensorMeta.
       CHECK_OR_RETURN(tensor_impl->tensor_meta()->shape() == output_tensor_metas->at(i)->shape());
+      CHECK_OR_RETURN(tensor_impl->tensor_meta()->stride() == output_tensor_metas->at(i)->stride());
       CHECK_OR_RETURN(tensor_impl->tensor_meta()->dtype() == output_tensor_metas->at(i)->dtype());
     }
   }

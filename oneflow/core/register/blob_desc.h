@@ -55,6 +55,7 @@ class BlobDesc final {
   const std::shared_ptr<const Shape>& shape_ptr() const { return shape_; }
   const std::shared_ptr<const Stride>& stride_ptr() const { return stride_; }
   Shape& mut_shape() { return *CHECK_NOTNULL(mut_shape_ptr().get()); }
+  Stride& mut_stride() { return *CHECK_NOTNULL(mut_stride_ptr().get()); }
   void set_shape(const Shape& shape) { *CHECK_NOTNULL(mut_shape_ptr().get()) = shape; }
   void set_stride(const Stride& stride) { stride_ = std::make_shared<Stride>(stride); }
 
@@ -81,6 +82,7 @@ class BlobDesc final {
   std::shared_ptr<const Shape> shape_;
   std::shared_ptr<const Stride> stride_;
   std::shared_ptr<Shape> mut_shape_ptr() const { return std::const_pointer_cast<Shape>(shape_); }
+  std::shared_ptr<Stride> mut_stride_ptr() const { return std::const_pointer_cast<Stride>(stride_); }
   DataType data_type_;
   bool is_dynamic_;
   bool is_contiguous_;

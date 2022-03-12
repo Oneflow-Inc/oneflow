@@ -28,6 +28,9 @@ void OpKernel::InferShape(KernelInferContext* ctx) const {
     const Shape& shape = *op_infer_ctx->OutputShape(arg_pair.first, arg_pair.second);
     auto* mut_shape_view = ctx->MutShapeView4ArgNameAndIndex(arg_pair.first, arg_pair.second);
     if (mut_shape_view) { mut_shape_view->set_shape(shape); }
+    const Stride& stride = *op_infer_ctx->OutputStride(arg_pair.first, arg_pair.second);
+    auto* mut_stride_view = ctx->MutStrideView4ArgNameAndIndex(arg_pair.first, arg_pair.second);
+    if (mut_stride_view) { mut_stride_view->set_stride(stride); }
   }
 }
 

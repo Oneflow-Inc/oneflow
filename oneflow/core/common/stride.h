@@ -40,7 +40,8 @@ class Stride final {
   explicit Stride(const cfg::StrideProto& stride_proto);
   Stride(const std::initializer_list<int64_t>& stride_vec);
   Stride& operator=(const Stride& stride);
-  Stride& assign(const StrideVector& dim_vec);
+  Stride& assign(const StrideVector& stride_vec);
+  Stride& CheckNumAxesIdenticalAndAssign(const StrideView& stride_view);
   ~Stride() = default;
 
   bool operator==(const Stride& rhs) const;

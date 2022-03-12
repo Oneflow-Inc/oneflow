@@ -90,6 +90,7 @@ struct LocalCallOpKernelUtil final {
                          operand->consistent_tensor_infer_result().get());
     size_t temp_size = InferTmpSizeFn(op_infer_ctx);
     temp_blob_desc->mut_shape() = Shape({static_cast<int64_t>(temp_size)});
+    temp_blob_desc->mut_stride() = Stride(temp_blob_desc->mut_shape());
     temp_blob_desc->set_is_dynamic(true);
     op_infer_ctx->Update(nullptr, nullptr, nullptr);
   }
