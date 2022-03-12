@@ -31,6 +31,17 @@ Stride::Stride(const Shape& shape) {
   }
 }
 
+Stride::Stride(const std::shared_ptr<Shape>& shape) {
+  if (shape->NumAxes() > 0) {
+    stride_vec_.resize(shape->NumAxes());
+    int64_t stride = 1;
+    for (size_t i = shape->NumAxes(); i > 0; --i) {
+      stride_vec_.at(i - 1) = stride;
+      stride *= shape->At(i - 1);
+    }
+  }
+}
+
 Stride::Stride(const std::initializer_list<int64_t>& stride_vec) : stride_vec_(stride_vec) {}
 Stride::Stride(const StrideVector& stride_vec) : stride_vec_(stride_vec) {}
 Stride::Stride(StrideVector&& stride_vec) : stride_vec_(std::move(stride_vec)) {}
@@ -63,6 +74,10 @@ std::string Stride::ToString() const {
   }
   ss << ")";
   return ss.str();
+}
+
+void Stride::ToProto(StrideProto* ret) const {
+  *(ret->mutable_dim()) = PbRf<int64_t>(stride_vec_.begin(), stride_vec_.end());
 }
 
 }  // namespace oneflow

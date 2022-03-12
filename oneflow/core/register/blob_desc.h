@@ -35,10 +35,12 @@ class BlobDesc final {
   // NOTE(chengcheng): Cannot using std::make_shared in header file, because it will cause
   //  Segmentation fault with unknown reason.
   BlobDesc(const Shape& shape, DataType dtype, bool is_dynamic);
-  BlobDesc(const std::shared_ptr<Shape>& shape, DataType dtype, bool is_dynamic);
+  BlobDesc(const Shape& shape, const Stride& stride, DataType dtype, bool is_dynamic);
+  BlobDesc(const std::shared_ptr<Shape>& shape, const std::shared_ptr<Stride>& stride, DataType dtype, bool is_dynamic);
 
   BlobDesc(const Shape& shape, DataType dtype);
-  BlobDesc(const std::shared_ptr<Shape>& shape, DataType dtype);
+  BlobDesc(const Shape& shape, const Stride& stride, DataType dtype);
+  BlobDesc(const std::shared_ptr<Shape>& shape, const std::shared_ptr<Stride>& stride, DataType dtype);
   explicit BlobDesc(DataType dtype);
   explicit BlobDesc(const BlobDescProto& proto);
   explicit BlobDesc(const BlobDesc&);
@@ -83,6 +85,7 @@ class BlobDesc final {
   std::shared_ptr<Stride> mut_stride_ptr() const { return std::const_pointer_cast<Stride>(stride_); }
   DataType data_type_;
   bool is_dynamic_;
+  bool is_contiguous_;
 };
 
 bool CompareLbiBlobDescPair(const LbiBlobDescPair& lhs, const LbiBlobDescPair& rhs);

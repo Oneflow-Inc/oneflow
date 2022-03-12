@@ -99,7 +99,8 @@ Maybe<void> ConsistentTensorMetaInferArgs::MakeInputBlobDescs(
   for (int i = 0; i < input_arg_tuple.size(); ++i) {
     const auto& tensor_meta = *input_consistent_tensor_metas_.at(i).tensor_meta();
     const auto& shape = std::const_pointer_cast<Shape>(tensor_meta.shape_ptr());
-    blob_descs->emplace_back(shape, tensor_meta.data_type());
+    const auto& stride = std::const_pointer_cast<Stride>(tensor_meta.stride_ptr());
+    blob_descs->emplace_back(shape, stride, tensor_meta.data_type());
   }
   return Maybe<void>::Ok();
 }

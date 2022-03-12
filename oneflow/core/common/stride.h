@@ -33,6 +33,7 @@ class Stride final {
  public:
   Stride() = default;
   explicit Stride(const Shape& shape);
+  explicit Stride(const std::shared_ptr<Shape>& shape);
   explicit Stride(StrideVector&& stride_vec);
   explicit Stride(const StrideVector& stride_vec);
   explicit Stride(const StrideProto& stride_proto);
@@ -46,6 +47,7 @@ class Stride final {
   bool operator!=(const Stride& rhs) const { return !(*this == rhs); }
 
   std::string ToString() const;
+  void ToProto(StrideProto*) const;
 
   // Getters and Setters
   const StrideVector& StrideVec() const { return stride_vec_; }

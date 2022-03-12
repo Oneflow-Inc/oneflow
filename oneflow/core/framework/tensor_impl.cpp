@@ -105,14 +105,15 @@ Maybe<void> EagerMirroredTensorImpl::InitEagerBlobObject(
   CHECK_OR_RETURN(static_cast<bool>(device()));
   const auto& mem_case = device()->mem_case();
   const auto& mut_shape = std::const_pointer_cast<Shape>(tensor_meta()->shape_ptr());
+  const auto& mut_stride = std::const_pointer_cast<Stride>(tensor_meta()->stride_ptr());
 
   if (tensor_storage_) {
     auto tensor_storage = tensor_storage_->storage();
-    eager_blob_object_ = std::make_shared<vm::EagerBlobObject>(mem_case, mut_shape, dtype(),
+    eager_blob_object_ = std::make_shared<vm::EagerBlobObject>(mem_case, mut_shape, mut_stride, dtype(),
                                                                tensor_storage, dep_object);
   } else {
     const auto& eager_blob_object = std::make_shared<vm::EagerBlobObject>(
-        mem_case, mut_shape, dtype(), std::make_shared<vm::TensorStorage>(), dep_object);
+        mem_case, mut_shape, mut_stride, dtype(), std::make_shared<vm::TensorStorage>(), dep_object);
     JUST(set_eager_blob_object(eager_blob_object));
   }
   return Maybe<void>::Ok();
@@ -128,6 +129,12 @@ Maybe<void> EagerMirroredTensorImpl::set_eager_blob_object(
   return Maybe<void>::Ok();
 }
 
+const std::shared_ptr<const Stride>& EagerMirroredTensorImpl::stride() const {
+  if (!eager_blob_object_) { return tensor_meta()->stride_ptr(); }
+  const auto& stride_ptr = eager_blob_object_->blob_desc().stride_ptr();
+  return stride_ptr;
+
+}
 const std::shared_ptr<const Shape>& EagerMirroredTensorImpl::shape() const {
   if (!eager_blob_object_) { return tensor_meta()->shape_ptr(); }
   if (eager_blob_object_->is_shape_synced()) { return eager_blob_object_->blob_desc().shape_ptr(); }

@@ -28,8 +28,8 @@ namespace vm {
 class BlobObject {
  public:
   BlobObject(const std::shared_ptr<MemoryCase>& mem_case, const std::shared_ptr<Shape>& shape,
-             DataType data_type)
-      : mem_case_(mem_case), blob_desc_(shape, data_type) {}
+             const std::shared_ptr<Stride>& stride, DataType data_type)
+      : mem_case_(mem_case), blob_desc_(shape, stride, data_type) {}
   BlobObject(const BlobObject&) = delete;
   BlobObject(BlobObject&&) = delete;
   virtual ~BlobObject() = default;
