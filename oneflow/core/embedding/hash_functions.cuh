@@ -62,6 +62,8 @@ __device__ __host__ __forceinline__ uint64_t xxh64_uint64(uint64_t v, uint64_t s
 static const size_t kShardingHashSeed = 1;
 static const size_t kLocalUniqueHashSeed = 2;
 static const size_t kGlobalUniqueHashSeed = 3;
+static const size_t kFullCacheHashSeed = 4;
+static const size_t kLruCacheHashSeed = 5;
 
 }  // namespace
 
@@ -83,10 +85,15 @@ struct GlobalUniqueHash {
   }
 };
 
-struct XXH64 {
-  __device__ __host__ __forceinline__ size_t operator()(uint64_t v) { return xxh64_uint64(v, 0); }
-  __device__ __host__ __forceinline__ size_t operator()(uint64_t v, size_t seed) {
-    return xxh64_uint64(v, seed);
+struct FullCacheHash {
+  __device__ __host__ __forceinline__ size_t operator()(uint64_t v) {
+    return xxh64_uint64(v, kFullCacheHashSeed);
+  }
+};
+
+struct LruCacheHash {
+  __device__ __host__ __forceinline__ size_t operator()(uint64_t v) {
+    return xxh64_uint64(v, kLruCacheHashSeed);
   }
 };
 
