@@ -14,6 +14,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 #include "oneflow/core/common/foreign_lock_helper.h"
+#include "oneflow/core/common/debug_thread_local_cnt.h"
 
 #include <pybind11/pybind11.h>
 #include "oneflow/api/python/of_api_registry.h"
@@ -34,15 +35,19 @@ class GILForeignLockHelper final : public ForeignLockHelper {
   }
 
   Maybe<void> WithScopedAcquire(const std::function<Maybe<void>()>& Callback) const override {
+    LOG(ERROR) << "cnt " << *MutDebugThreadLocalCnt();
     if (!PyGILState_Check()) {
-      LOG(ERROR) << "try_to_get_gil";
+      LOG(ERROR) << "try_to_get_gil of cnt " << *MutDebugThreadLocalCnt();
       py::gil_scoped_acquire acquire;
-      LOG(ERROR) << "succeed_to_get_gil";
+      LOG(ERROR) << "succeed_to_get_gil of cnt" << *MutDebugThreadLocalCnt();
       JUST(Callback());
-      LOG(ERROR) << "succeed_to_callback";
+      LOG(ERROR) << "succeed_to_callback of cnt " << *MutDebugThreadLocalCnt();
     } else {
+      LOG(ERROR) << "default before callback cnt " << *MutDebugThreadLocalCnt();
       JUST(Callback());
+      LOG(ERROR) << "default after callback cnt" << *MutDebugThreadLocalCnt();
     }
+    LOG(ERROR) << "acq succeed callback cnt " << *MutDebugThreadLocalCnt();
     return Maybe<void>::Ok();
   }
 };

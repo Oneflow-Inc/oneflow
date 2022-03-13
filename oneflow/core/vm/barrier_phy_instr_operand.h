@@ -17,6 +17,7 @@ limitations under the License.
 #define ONEFLOW_CORE_VM_BARRIER_PHY_INSTR_OPERAND_H_
 
 #include <functional>
+#include <thread>
 #include "oneflow/core/vm/phy_instr_operand.h"
 
 namespace oneflow {
@@ -29,7 +30,8 @@ class BarrierPhyInstrOperand : public PhyInstrOperand {
     stream_sequential_dependence_ = nullptr;
   }
   ~BarrierPhyInstrOperand() {
-    LOG(ERROR) << "barrier instruction del " << this;
+    std::thread::id this_id = std::this_thread::get_id();
+    LOG(ERROR) << "thread " << this_id << " barrier instruction del " << this;
   }
   void ReleaseInCallBackThread() override {
     // Make sure barrier callbacks run after all objects of previous instructions are destructed in
