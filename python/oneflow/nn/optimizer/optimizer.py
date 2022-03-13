@@ -87,7 +87,7 @@ class _SourceOpOnlyResourceDependenceMode:
 
     def __enter__(self):
         self.guard = (
-            flow._oneflow_internal.eager.multi_client.SourceOpOnlyResourceDependenceModeGuard()
+            flow._oneflow_internal.eager.SourceOpOnlyResourceDependenceModeGuard()
         )
 
     def __exit__(self, *args, **kwargs):
