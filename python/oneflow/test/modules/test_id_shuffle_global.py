@@ -24,7 +24,7 @@ import oneflow.unittest
 from oneflow.test_utils.automated_test_util import *
 
 parallel_num = 2
-max_id = 10000
+max_id = 1000
 
 
 def get_tensors(batch_size, num_columns):
@@ -43,7 +43,7 @@ def get_tensors(batch_size, num_columns):
 
 
 def _test_id_shuffle(test_case, has_column_id, num_columns):
-    batch_size = int(16384 / parallel_num)
+    batch_size = int(1024 / parallel_num)
     placement = flow.placement(type="cuda", ranks=list(range(parallel_num)))
 
     class TestGraph(flow.nn.Graph):
@@ -128,7 +128,7 @@ def _test_id_shuffle(test_case, has_column_id, num_columns):
 
 
 def _test_embedding_shuffle(test_case, dtype):
-    batch_size = int(16384 / 2)
+    batch_size = int(1024 / parallel_num)
     placement = flow.placement(type="cuda", ranks=list(range(parallel_num)))
     num_columns = 26
     if dtype == flow.float16:
@@ -174,7 +174,7 @@ def _test_embedding_shuffle(test_case, dtype):
 
 
 def _test_embedding_gradient_shuffle(test_case):
-    batch_size = int(16384 / parallel_num)
+    batch_size = int(1024 / parallel_num)
     placement = flow.placement(type="cuda", ranks=list(range(parallel_num)))
     num_columns = 26
     embedding_size = 128

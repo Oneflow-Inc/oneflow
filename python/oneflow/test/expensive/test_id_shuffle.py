@@ -25,8 +25,8 @@ from oneflow.test_utils.automated_test_util import *
 
 
 def _test_id_shuffle(test_case, has_column_id, num_columns):
-    batch_size = 55296
-    ids = np.random.randint(0, 200000, (batch_size, num_columns), dtype=np.int64)
+    batch_size = 512
+    ids = np.random.randint(0, 1000, (batch_size, num_columns), dtype=np.int64)
     if has_column_id:
         column_ids = (
             ids % num_columns
@@ -86,9 +86,9 @@ def _test_id_shuffle(test_case, has_column_id, num_columns):
 
 
 def _test_embedding_shuffle(test_case, dtype):
-    batch_size = 55296
+    batch_size = 512
     num_columns = 26
-    ids = np.random.randint(0, 200000, (batch_size, num_columns), dtype=np.int64)
+    ids = np.random.randint(0, 1000, (batch_size, num_columns), dtype=np.int64)
     column_ids = (
         ids % num_columns
     )  # same id must have same column id, so in this case get column_ids from ids
@@ -96,7 +96,7 @@ def _test_embedding_shuffle(test_case, dtype):
         np_dtype = np.float16
     else:
         np_dtype = np.float32
-    data = np.random.rand(200000, 128).astype(np_dtype)
+    data = np.random.rand(1000, 128).astype(np_dtype)
     ids_tensor = flow.tensor(ids, requires_grad=False).to("cuda")
     column_ids_tensor = flow.tensor(
         column_ids.astype(np.int32), requires_grad=False
@@ -133,10 +133,10 @@ def _test_embedding_shuffle(test_case, dtype):
 
 
 def _test_embedding_gradient_shuffle(test_case):
-    batch_size = 2000
+    batch_size = 512
     num_columns = 26
     embedding_size = 128
-    ids = np.random.randint(0, 2000, (batch_size, num_columns), dtype=np.int64)
+    ids = np.random.randint(0, 1000, (batch_size, num_columns), dtype=np.int64)
     column_ids = (
         ids % num_columns
     )  # same id must have same column id, so in this case get column_ids from ids
