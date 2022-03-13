@@ -33,7 +33,9 @@ class TestBatchNormModule(flow.unittest.TestCase):
         device = random_device()
         channel = random(1, 4).to(int)
         m = torch.nn.BatchNorm1d(
-            num_features=channel, track_running_stats=random().to(bool)
+            num_features=channel,
+            track_running_stats=random().to(bool),
+            affine=random().to(bool),
         ).to(device)
         m.train(random())
         x = random_tensor(
@@ -47,7 +49,9 @@ class TestBatchNormModule(flow.unittest.TestCase):
         device = random_device()
         channel = random(1, 4).to(int)
         m = torch.nn.BatchNorm2d(
-            num_features=channel, track_running_stats=random().to(bool)
+            num_features=channel,
+            track_running_stats=random().to(bool),
+            affine=random().to(bool),
         ).to(device)
         m.train(random())
         x = random_tensor(
@@ -61,7 +65,9 @@ class TestBatchNormModule(flow.unittest.TestCase):
         device = random_device()
         channel = random(1, 4).to(int)
         m = torch.nn.BatchNorm3d(
-            num_features=channel, track_running_stats=random().to(bool)
+            num_features=channel,
+            track_running_stats=random().to(bool),
+            affine=random().to(bool),
         ).to(device)
         m.train(random())
         x = random_tensor(ndim=5, dim1=channel, requires_grad=True).to(device)
