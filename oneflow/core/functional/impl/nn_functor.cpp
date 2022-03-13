@@ -1409,13 +1409,17 @@ class NormalizationFunctor {
       CHECK_OR_RETURN(moving_mean && moving_variance)
           << "Must have moving_mean and moving_variance in eval mode.";
       return OpInterpUtil::Dispatch<one::Tensor>(
-          *norm_eval_op_, {x->contiguous(), JUST(moving_mean)->contiguous(), JUST(moving_variance)->contiguous(), gamma_val->contiguous(), beta_val->contiguous()},
+          *norm_eval_op_,
+          {x->contiguous(), JUST(moving_mean)->contiguous(), JUST(moving_variance)->contiguous(),
+           gamma_val->contiguous(), beta_val->contiguous()},
           attrs);
     }
     if (moving_mean) {
       return OpInterpUtil::Dispatch<one::Tensor>(
           *norm_training_stats_op_,
-          {x->contiguous(), JUST(moving_mean)->contiguous(), JUST(moving_variance)->contiguous(), gamma_val->contiguous(), beta_val->contiguous()}, attrs);
+          {x->contiguous(), JUST(moving_mean)->contiguous(), JUST(moving_variance)->contiguous(),
+           gamma_val->contiguous(), beta_val->contiguous()},
+          attrs);
     }
     return OpInterpUtil::Dispatch<one::Tensor>(*norm_training_no_stats_op_,
                                                {x, gamma_val, beta_val}, attrs);
