@@ -34,10 +34,13 @@ namespace oneflow {
   Shape shape = ctx->Attr<Shape>("shape");
   const user_op::TensorDesc& in_tensor_desc = ctx->InputTensorDesc("in", 0);
   user_op::TensorDesc* out_tensor_desc = ctx->OutputTensorDesc("out", 0);
+
   const Shape& in_shape = in_tensor_desc.shape();
   Shape* out_shape = out_tensor_desc->mut_shape();
   CHECK_OR_RETURN(in_tensor_desc.is_dynamic() == false);
-  *out_tensor_desc = in_tensor_desc;
+  // *out_tensor_desc = in_tensor_desc;
+  *out_tensor_desc->mut_data_type()=in_tensor_desc.data_type();
+  // *out_tensor_desc->mut_stride() = Stride(in_shape);
   if (in_shape.NumAxes() == 0 || shape.NumAxes() == 0) {
     // NOTE(chengcheng): input/output Scalar
     // do nothing
@@ -69,6 +72,7 @@ namespace oneflow {
   const Shape& in_shape = in_tensor_desc.shape();
   Shape* out_shape = out_tensor_desc->mut_shape();
   *out_tensor_desc->mut_shape() = in_tensor_desc.shape();
+  // *out_tensor_desc->mut_stride() = Stride(in_shape);
   *out_tensor_desc->mut_is_dynamic() = in_tensor_desc.is_dynamic();
   if (in_shape.NumAxes() == 0 || logical_shape.NumAxes() == 0) {
     // NOTE(chengcheng): input/output Scalar

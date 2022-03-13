@@ -133,8 +133,8 @@ const std::shared_ptr<const Stride>& EagerMirroredTensorImpl::stride() const {
   if (!eager_blob_object_) { return tensor_meta()->stride_ptr(); }
   const auto& stride_ptr = eager_blob_object_->blob_desc().stride_ptr();
   return stride_ptr;
-
 }
+
 const std::shared_ptr<const Shape>& EagerMirroredTensorImpl::shape() const {
   if (!eager_blob_object_) { return tensor_meta()->shape_ptr(); }
   if (eager_blob_object_->is_shape_synced()) { return eager_blob_object_->blob_desc().shape_ptr(); }
@@ -180,9 +180,9 @@ MirroredTensorMeta::MirroredTensorMeta(const std::shared_ptr<const Shape>& shape
   set_stride(std::make_shared<const Stride>(*shape));
 }
 
-MirroredTensorMeta::MirroredTensorMeta(const std::shared_ptr<const Shape>& shape, DataType dtype,
-                                       Symbol<Device> device,
+MirroredTensorMeta::MirroredTensorMeta(const std::shared_ptr<const Shape>& shape, 
                                        const std::shared_ptr<const Stride>& stride,
+                                       DataType dtype, Symbol<Device> device,
                                        int64_t storage_offset)
     : TensorMeta(shape, dtype), device_(device), storage_offset_(storage_offset) {
   set_stride(stride);
@@ -287,6 +287,12 @@ Maybe<ConsistentTensorImpl> EagerConsistentTensorImpl::detach() const {
   detached_impl->consumer_nd_sbp_constraint_ = consumer_nd_sbp_constraint_;
   detached_impl->transport_token_ = transport_token_;
   return std::shared_ptr<ConsistentTensorImpl>(detached_impl);
+}
+
+const std::shared_ptr<const Stride>& EagerConsistentTensorImpl::stride() const {
+  if (!cur_rank_phy_tensor_) { return tensor_meta()->stride_ptr(); }
+  const auto& stride_ptr = cur_rank_phy_tensor_->tensor_meta().stride_ptr();
+  return stride_ptr;
 }
 
 }  // namespace one

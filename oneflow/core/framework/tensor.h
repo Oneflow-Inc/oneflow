@@ -479,7 +479,7 @@ class MirroredTensor final : public TensorIf<MirroredTensor> {
   Maybe<Tensor> detach() const override;
   Maybe<Tensor> clone() const override;
 
-  static Maybe<MirroredTensor> MakeTensor(const std::shared_ptr<const Shape>& shape, DataType dtype,
+  static Maybe<MirroredTensor> MakeTensor(const std::shared_ptr<const Shape>& shape, const std::shared_ptr<const Stride>& stride, DataType dtype,
                                           const Symbol<Device>& device, bool is_lazy,
                                           bool requires_grad, bool is_leaf);
   MirroredTensorImpl* mut_impl() { return impl_.get(); }
@@ -520,6 +520,7 @@ class ConsistentTensor final : public TensorIf<ConsistentTensor> {
 
   // Getters
   const std::shared_ptr<const Shape>& shape() const override { return impl_->shape(); }
+  
   Symbol<DType> dtype() const override { return CHECK_JUST(DType::Get(impl_->dtype())); }
   Maybe<TransportToken> transport_token() const override { return impl_->transport_token(); }
   Maybe<Symbol<NdSbp>> nd_sbp() const override { return impl_->nd_sbp(); }
@@ -542,6 +543,7 @@ class ConsistentTensor final : public TensorIf<ConsistentTensor> {
   bool is_cuda() const override;
   std::shared_ptr<Tensor> contiguous() const override;
   Maybe<Tensor> data() override { return this->detach(); }
+  Maybe<const Stride> stride() const override { return impl_->stride(); }
 
   // Getters valid only for EagerMirroredTensor
   Maybe<vm::EagerBlobObject> eager_blob_object() const override {
@@ -595,6 +597,7 @@ class ConsistentTensor final : public TensorIf<ConsistentTensor> {
   Maybe<Tensor> clone() const override;
 
   static Maybe<ConsistentTensor> MakeTensor(const std::shared_ptr<const Shape>& shape,
+                                            const std::shared_ptr<const Stride>& stride,
                                             DataType dtype, Symbol<NdSbp> nd_sbp,
                                             Symbol<ParallelDesc> parallel_desc, bool is_lazy,
                                             bool requires_grad, bool is_leaf);

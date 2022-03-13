@@ -93,14 +93,6 @@ class ToContiguousKernel final : public user_op::OpKernel {
     CHECK_EQ(out->data_type(), in_data_type);
 
     // TODO:(zhaoluyang) support stride in in->stride() and out->stride()
-    // printf("\n to_contiguous kernel >>>> in shape:%s; in stride:%s; out shape:%s; out stride:%s; ",      
-    //       in->shape().ToString().c_str(), in->stride().ToString().c_str(),
-    //       out->shape().ToString().c_str(), out->stride().ToString().c_str()
-    //       );
-    printf("\n in_desc >>>> in shape:%s; in stride:%s; out shape:%s; out stride:%s; ",      
-          in_desc->shape().ToString().c_str(), in_desc->stride().ToString().c_str(),
-          out_desc->shape().ToString().c_str(), out_desc->stride().ToString().c_str()
-          );
     const StrideVector& stride_vec = in_desc->stride().StrideVec();
     std::vector<int64_t> in_stride(in_desc->stride().NumAxes());
     std::copy(stride_vec.begin(), stride_vec.end(), in_stride.begin());

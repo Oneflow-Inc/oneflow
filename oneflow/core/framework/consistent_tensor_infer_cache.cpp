@@ -289,6 +289,8 @@ class UserOpExprDeviceAndStreamInferContext final : public user_op::DeviceAndStr
     const auto& ibn = user_op_expr.input_arg_tuple()->indexed_bns().at(i);
     const auto& nd_sbp = SymbolOf(*JUST(op->NdSbp4BnInOp(ibn)));
     ConsistentTensorMeta consistent_tensor_meta(old_consistent_tensor_meta->shape_ptr(),
+                                                // old_consistent_tensor_meta->stride_ptr(),
+                                                std::make_shared<const Stride>(Stride(old_consistent_tensor_meta->shape())),
                                                 old_consistent_tensor_meta->dtype(), nd_sbp,
                                                 old_consistent_tensor_meta->parallel_desc());
     input_metas->at(i) = SymbolOf(consistent_tensor_meta);
@@ -297,10 +299,12 @@ class UserOpExprDeviceAndStreamInferContext final : public user_op::DeviceAndStr
   for (int32_t i = 0; i < user_op_expr.output_size(); ++i) {
     const auto& output_mut_meta = output_mut_metas.at(i);
     const auto& shape = output_mut_meta.tensor_meta().shape_ptr();
+    // const auto& stride = output_mut_meta.tensor_meta().stride_ptr();
+    const auto& stride = std::make_shared<Stride>(Stride(output_mut_meta.tensor_meta().shape()));
     DataType data_type = output_mut_meta.tensor_meta().data_type();
     const auto& obn = user_op_expr.output_arg_tuple()->indexed_bns().at(i);
     const auto& nd_sbp = SymbolOf(*JUST(op->NdSbp4BnInOp(obn)));
-    ConsistentTensorMeta tensor_meta(shape, data_type, nd_sbp, parallel_desc);
+    ConsistentTensorMeta tensor_meta(shape, stride, data_type, nd_sbp, parallel_desc);
     output_metas->at(i) = SymbolOf(tensor_meta);
   }
   result->set_stream(JUST(InferDeviceAndStream(user_op_expr, infer_args)));
@@ -328,9 +332,11 @@ class UserOpExprDeviceAndStreamInferContext final : public user_op::DeviceAndStr
   for (int32_t i = 0; i < user_op_expr.output_size(); ++i) {
     const auto& output_mut_meta = output_mut_metas.at(i);
     const auto& shape = output_mut_meta.tensor_meta().shape_ptr();
+    // const auto& stride = output_mut_meta.tensor_meta().stride_ptr();
+    const auto& stride = std::make_shared<Stride>(Stride(output_mut_meta.tensor_meta().shape()));
     DataType data_type = output_mut_meta.tensor_meta().data_type();
     const auto& nd_sbp = infer_args.nd_sbp();
-    ConsistentTensorMeta tensor_meta(shape, data_type, nd_sbp, parallel_desc);
+    ConsistentTensorMeta tensor_meta(shape, stride, data_type, nd_sbp, parallel_desc);
     output_metas->at(i) = SymbolOf(tensor_meta);
   }
   result->set_stream(JUST(GetDefaultStreamByPlacement(parallel_desc)));

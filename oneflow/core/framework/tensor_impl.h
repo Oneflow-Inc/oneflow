@@ -164,6 +164,7 @@ class ConsistentTensorImpl : public TensorImpl {
   void set_consumer_nd_sbp_constraint(Symbol<NdSbp> val) { consumer_nd_sbp_constraint_ = val; }
 
   ConsistentTensorMeta* mut_tensor_meta() {
+    // return const_cast<ConsistentTensorMeta*>(tensor_meta_.get());
     PRINT_BUG_PROMPT_AND_ABORT();
     return nullptr;
   }
@@ -289,6 +290,7 @@ class EagerConsistentTensorImpl final : public ConsistentTensorImpl {
   ~EagerConsistentTensorImpl() override = default;
 
   // Getters
+  const std::shared_ptr<const Stride>& stride() const override;
   bool is_lazy() const override { return false; }
   bool is_contiguous() const override {
     // TODO:(zhaoluyang) default return true for now,

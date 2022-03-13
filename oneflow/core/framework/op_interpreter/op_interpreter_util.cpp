@@ -174,13 +174,13 @@ template<>
     const auto& device =
         JUST(Device::MakeDeviceByParallelDesc(*parallel_attr->parallel_desc_symbol()));
     const auto& tensor = JUST(MirroredTensor::MakeTensor(
-        blob_attr->shape(), dtype, device, is_lazy, /*requires_grad=*/false, /*is_leaf=*/true));
+        blob_attr->shape(), blob_attr->stride(), dtype, device, is_lazy, /*requires_grad=*/false, /*is_leaf=*/true));
     return static_cast<std::shared_ptr<Tensor>>(tensor);
   } else {
     const auto& nd_sbp = std::make_shared<NdSbp>();
     *nd_sbp->mutable_sbp_parallel()->Add() = *(parallel_attr->sbp_parallel());
     const auto& tensor =
-        JUST(ConsistentTensor::MakeTensor(blob_attr->shape(), dtype, SymbolOf(*nd_sbp),
+        JUST(ConsistentTensor::MakeTensor(blob_attr->shape(), blob_attr->stride() ,dtype, SymbolOf(*nd_sbp),
                                           SymbolOf(*parallel_attr->parallel_desc_symbol()), is_lazy,
                                           /*requires_grad=*/false, /*is_leaf=*/true));
     return static_cast<std::shared_ptr<Tensor>>(tensor);
