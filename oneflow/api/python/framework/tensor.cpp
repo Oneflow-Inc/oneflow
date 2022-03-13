@@ -26,7 +26,6 @@ limitations under the License.
 #include "oneflow/api/python/functional/tensor_api.yaml.pybind.h"
 #include "oneflow/core/framework/tensor.h"
 #include "oneflow/core/framework/tensor_rpc_util.h"
-#include "oneflow/core/framework/tensor_methods.h"
 #include "oneflow/core/framework/device.h"
 #include "oneflow/core/framework/stride.h"
 #include "oneflow/core/framework/py_distribute.h"
@@ -173,7 +172,8 @@ ONEFLOW_API_PYBIND11_MODULE("", m) {
              const auto& stride = t.stride().GetPtrOrThrow()->StrideVec();
              return py::tuple(py::make_iterator(stride.begin(), stride.end()));
            })
-      .def("is_contiguous", &IsContiguous)
+      .def("is_contiguous", &Tensor::is_contiguous)
+      .def("contiguous", &Tensor::contiguous)
       .def_property_readonly("grad_fn", &Tensor::grad_fn_node)
       .def_property_readonly("is_leaf", &Tensor::is_leaf)
       .def_property("requires_grad", &Tensor::requires_grad, &ApiSetRequiresGrad)
