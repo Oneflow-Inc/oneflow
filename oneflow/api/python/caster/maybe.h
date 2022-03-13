@@ -1,38 +1,53 @@
 #include <pybind11/pybind11.h>
+
+#include "oneflow/api/python/caster/common.h"
 #include "oneflow/core/common/maybe.h"
 
 namespace pybind11 {
 namespace detail {
 
-namespace {
-template<typename T>
-T& DeferenceIfSharedPtr(std::shared_ptr<T> ptr) {
-  return *ptr;
-}
+using oneflow::Maybe;
+
+namespace impl {
 
 template<typename T>
-T&& DeferenceIfSharedPtr(T&& obj) {
-  return std::forward<T>(obj);
-}
-}  // namespace
+using IsHoldedInsideSharedPtrByMaybe =
+    std::is_same<decltype(std::declval<Maybe<T>>()
+                              .Data_YouAreNotAllowedToCallThisFuncOutsideThisFile()),
+                 std::shared_ptr<T>>;
 
-template<typename Type, typename Value = typename Type::ValueT>
+template<typename T, typename std::enable_if_t<IsSupportedByPybind11WhenInsideSharedPtr<T>::value
+                                                   && IsHoldedInsideSharedPtrByMaybe<T>::value,
+                                               int> = 0>
+std::shared_ptr<T> GetOrThrowHelper(Maybe<T> x) {
+  return x.GetPtrOrThrow();
+}
+
+template<typename T,
+         typename std::enable_if_t<!IsSupportedByPybind11WhenInsideSharedPtr<T>::value || !IsHoldedInsideSharedPtrByMaybe<T>::value, int> = 0>
+T GetOrThrowHelper(Maybe<T> x) {
+  return x.GetOrThrow();
+}
+
+}  // namespace impl
+
+template<typename Type>
 struct maybe_caster {
+  using Value = decltype(impl::GetOrThrowHelper(std::declval<Type>()));
   using value_conv = make_caster<Value>;
 
   template<typename T>
   static handle cast(T&& src, return_value_policy policy, handle parent) {
-    if (!src.IsOk()) { oneflow::ThrowError(src.error()); }
     if (!std::is_lvalue_reference<T>::value) {
       policy = return_value_policy_override<Value>::policy(policy);
     }
-    return value_conv::cast(DeferenceIfSharedPtr(CHECK_JUST(std::forward<T>(src))), policy, parent);
+    return value_conv::cast(impl::GetOrThrowHelper(std::forward<T>(src)), policy, parent);
   }
 
   bool load(handle src, bool convert) {
     if (!src) { return false; }
     if (src.is_none()) {
-      // does not accept `None` from Python. Users can use Optional in those cases.
+      // Maybe<T> does not accept `None` from Python. Users can use Optional in those cases.
       return false;
     }
     value_conv inner_caster;
@@ -46,7 +61,7 @@ struct maybe_caster {
 };
 
 template<>
-struct maybe_caster<oneflow::Maybe<void>> {
+struct maybe_caster<Maybe<void>> {
   template<typename T>
   static handle cast(T&& src, return_value_policy policy, handle parent) {
     if (!src.IsOk()) { oneflow::ThrowError(src.error()); }
@@ -55,11 +70,11 @@ struct maybe_caster<oneflow::Maybe<void>> {
 
   bool load(handle src, bool convert) { return false; }
 
-  PYBIND11_TYPE_CASTER(oneflow::Maybe<void>, _("Maybe[void]"));
+  PYBIND11_TYPE_CASTER(Maybe<void>, _("Maybe[void]"));
 };
 
 template<typename T>
-struct type_caster<oneflow::Maybe<T>> : public maybe_caster<oneflow::Maybe<T>> {};
+struct type_caster<Maybe<T>> : public maybe_caster<Maybe<T>> {};
 
 }  // namespace detail
 }  // namespace pybind11

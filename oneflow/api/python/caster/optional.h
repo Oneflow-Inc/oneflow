@@ -1,12 +1,47 @@
 #include <pybind11/pybind11.h>
+
+#include "oneflow/api/python/caster/common.h"
 #include "oneflow/core/common/optional.h"
 
 namespace pybind11 {
 namespace detail {
 
+namespace impl {
+
+template<typename T>
+T& DeferenceIfSharedPtr(std::shared_ptr<T> ptr) {
+  return *ptr;
+}
+
+template<typename T>
+T&& DeferenceIfSharedPtr(T&& obj) {
+  return std::forward<T>(obj);
+}
+
+template<typename T>
+using IsHoldedInsideSharedPtrByOptional =
+    std::is_same<typename oneflow::Optional<T>::storage_type, std::shared_ptr<T>>;
+
+template<typename T, typename std::enable_if_t<IsSupportedByPybind11WhenInsideSharedPtr<T>::value
+                                                   && IsHoldedInsideSharedPtrByOptional<T>::value,
+                                               int> = 0>
+std::shared_ptr<T> GetDataHelper(oneflow::Optional<T> x) {
+  return CHECK_JUST(x);
+}
+
+template<typename T, typename std::enable_if_t<!IsSupportedByPybind11WhenInsideSharedPtr<T>::value
+                                                   || !IsHoldedInsideSharedPtrByOptional<T>::value,
+                                               int> = 0>
+T GetDataHelper(oneflow::Optional<T> x) {
+  return DeferenceIfSharedPtr<T>(CHECK_JUST(x));
+}
+
+}  // namespace impl
+
 // Copy from pybind11 include/pybind11/stl.h
-template<typename Type, typename Value = typename Type::value_type>
+template<typename Type>
 struct oneflow_optional_caster {
+  using Value = decltype(impl::GetDataHelper(std::declval<Type>()));
   using value_conv = make_caster<Value>;
 
   template<typename T>
@@ -15,7 +50,7 @@ struct oneflow_optional_caster {
     if (!std::is_lvalue_reference<T>::value) {
       policy = return_value_policy_override<Value>::policy(policy);
     }
-    return value_conv::cast(CHECK_JUST(std::forward<T>(src)), policy, parent);
+    return value_conv::cast(impl::GetDataHelper(std::forward<T>(src)), policy, parent);
   }
 
   bool load(handle src, bool convert) {

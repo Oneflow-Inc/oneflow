@@ -20,6 +20,28 @@ class TestPybind11Caster(flow.unittest.TestCase):
             flow._oneflow_internal.test_api.throw_if_zero(0)
         test_case.assertTrue('Check failed' in str(context.exception))
 
+    def test_return_maybe_shared_ptr(test_case):
+        a1 = flow._oneflow_internal.test_api.get_singleton_a()
+        x1 = a1.get_x()
+        a1.inc_x()
+
+        a2 = flow._oneflow_internal.test_api.get_singleton_a()
+        x2 = a2.get_x()
+
+        test_case.assertEqual(id(a1), id(a2))
+        test_case.assertEqual(x1 + 1, x2);
+
+    def test_pass_optional_shared_ptr(test_case):
+        a1 = flow._oneflow_internal.test_api.get_singleton_a()
+        x1 = a1.get_x()
+        a1.inc_x()
+
+        a2 = flow._oneflow_internal.test_api.increase_x_of_a_if_not_none(a1)
+        x2 = a2.get_x()
+
+        test_case.assertEqual(id(a1), id(a2))
+        test_case.assertEqual(x1 + 2, x2);
+
 
 if __name__ == "__main__":
     unittest.main()
