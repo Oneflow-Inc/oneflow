@@ -33,7 +33,7 @@ struct MultiReduceParamsPack {
 
 template<typename T, typename TransformFn, typename ReduceFn>
 __global__ void MultiReduceGpu(TransformFn transform, const MultiReduceParamsPack<T> pack_params,
-                                T* out) {
+                               T* out) {
   ReduceFn reduce_fn{};
   T t_out = *out;
   for (int i = 0; i < pack_params.size; ++i) {
@@ -53,8 +53,8 @@ struct MultiReduce<DeviceType::kCUDA, T, TransformFn, ReduceFn> {
   void operator()(ep::Stream* stream, TransformFn transform,
                   const std::vector<MultiReduceParam<T>>& params, T init, T* ret) {
     std::unique_ptr<ep::primitive::Fill> fill =
-      ep::primitive::NewPrimitive<ep::primitive::FillFactory>(stream->device_type(),
-                                                              GetDataType<T>::value);
+        ep::primitive::NewPrimitive<ep::primitive::FillFactory>(stream->device_type(),
+                                                                GetDataType<T>::value);
     CHECK(fill);
     fill->Launch(stream, ret, init, 1);
     for (size_t i = 0; i < params.size(); i += kMultiReduceMaxPackSize) {
@@ -67,12 +67,12 @@ struct MultiReduce<DeviceType::kCUDA, T, TransformFn, ReduceFn> {
       }
       MultiReduceGpu<T, TransformFn, ReduceFn>
           <<<BlocksNum4ThreadsNum(max_elem_cnt), kCudaThreadsNumPerBlock, 0,
-              stream->As<ep::CudaStream>()->cuda_stream()>>>(transform, pack_params, ret);
+             stream->As<ep::CudaStream>()->cuda_stream()>>>(transform, pack_params, ret);
     }
   }
 };
 
-// TODO(zwx): These functors may be needed when supporting half data type 
+// TODO(zwx): These functors may be needed when supporting half data type
 /*
 template<>
 struct Abs<half> {

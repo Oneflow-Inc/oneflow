@@ -31,7 +31,8 @@ class MultiReduceSumPowAbsKernel final : public user_op::OpKernel,
   ~MultiReduceSumPowAbsKernel() override = default;
 
  private:
-  void Compute(user_op::KernelComputeContext* ctx, OpKernelState*, const OpKernelCache*) const override {
+  void Compute(user_op::KernelComputeContext* ctx, OpKernelState*,
+               const OpKernelCache*) const override {
     std::vector<MultiReduceParam<T>> params;
     params.resize(ctx->input_size("x"));
     for (size_t i = 0; i < params.size(); ++i) {
@@ -77,11 +78,12 @@ enum class Ximum {
 template<DeviceType device_type, typename T, Ximum X>
 class MultiReduceXimumAbsKernel final : public user_op::OpKernel, public user_op::CudaGraphSupport {
  public:
-   MultiReduceXimumAbsKernel() = default;
+  MultiReduceXimumAbsKernel() = default;
   ~MultiReduceXimumAbsKernel() override = default;
 
  private:
-  void Compute(user_op::KernelComputeContext* ctx, OpKernelState*, const OpKernelCache*) const override {
+  void Compute(user_op::KernelComputeContext* ctx, OpKernelState*,
+               const OpKernelCache*) const override {
     std::vector<MultiReduceParam<T>> params;
     params.resize(ctx->input_size("x"));
     for (size_t i = 0; i < params.size(); ++i) {
