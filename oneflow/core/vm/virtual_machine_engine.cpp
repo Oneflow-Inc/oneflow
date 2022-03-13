@@ -204,8 +204,12 @@ void VirtualMachineEngine::MoveInstructionMsgToGarbageMsgList(
   if (unlikely(local_garbage_msg_list_.size() > kWindowSize)) { MoveToGarbageMsgListAndNotifyGC(); }
 }
 
-void VirtualMachineEngine::MoveToGarbageMsgListAndNotifyGC() {
+void VirtualMachineEngine::FlushGarbageMsgList() {
   garbage_msg_list_.MoveFrom(&local_garbage_msg_list_);
+}
+
+void VirtualMachineEngine::MoveToGarbageMsgListAndNotifyGC() {
+  FlushGarbageMsgList();
   notify_callback_thread_();
 }
 

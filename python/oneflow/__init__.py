@@ -261,8 +261,6 @@ def atexit_hook(hook):
         if oneflow._oneflow_internal.IsEnvInited():
             oneflow._oneflow_internal.eager.Sync()
     oneflow.framework.session_context.TryCloseDefaultSession()
-    if hook.is_normal_exit():
-        oneflow._oneflow_internal.DestroyEnv()
     oneflow._oneflow_internal.SetShuttingDown()
 
 

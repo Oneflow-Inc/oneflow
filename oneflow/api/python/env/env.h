@@ -47,13 +47,6 @@ inline Maybe<void> EnableEagerEnvironment(bool enable_eager_execution) {
 
 inline Maybe<bool> IsEnvInited() { return Global<EnvGlobalObjectsScope>::Get() != nullptr; }
 
-inline Maybe<void> DestroyEnv() {
-  if (Global<EnvGlobalObjectsScope>::Get() == nullptr) { return Maybe<void>::Ok(); }
-  OF_ENV_BARRIER();
-  Global<EnvGlobalObjectsScope>::Delete();
-  return Maybe<void>::Ok();
-}
-
 inline Maybe<void> InitEnv(const std::string& env_proto_str) {
   EnvProto env_proto;
   CHECK_OR_RETURN(TxtString2PbMessage(env_proto_str, &env_proto))
