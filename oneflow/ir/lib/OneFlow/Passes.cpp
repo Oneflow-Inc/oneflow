@@ -288,6 +288,11 @@ bool IsPaddingCouldBeAssimilatedIntoConv(::mlir::ArrayAttr padding_before,
   return false;
 }
 
+IntegerAttr getSI64IntegerAttr(::mlir::PatternRewriter& rewriter, int64_t value) {
+  return IntegerAttr::get(rewriter.getIntegerType(64, /*isSigned=*/true),
+                          APInt(64, value, /*isSigned=*/true));
+}
+
 ::llvm::SmallVector<::mlir::Value, 4> CreateConv2dAndErasePad(::mlir::PatternRewriter& rewriter,
                                                               OpResult conv_result,
                                                               OpResult pad_result) {
@@ -366,6 +371,35 @@ namespace mlir {
 
 namespace oneflow {
 
+bool CheckNchwCompatible(Operation* op) {
+  if (auto nchw = llvm::dyn_cast<NCHWCompatible>(op)) {
+    return nchw.IsNCHW();
+  } else {
+    return false;
+  }
+}
+
+struct AutoNhwcPattern : public RewritePattern {
+ public:
+  AutoNhwcPattern(PatternBenefit benefit, MLIRContext* context)
+      : RewritePattern(Conv2DOp::getOperationName(), benefit, context) {}
+
+  LogicalResult match(Operation* op) const override {
+    if (CheckNchwCompatible(op)) {
+      std::cout << "match success" << std::endl;
+      return success();
+    } else {
+      return failure();
+    }
+  }
+  void rewrite(Operation* op, PatternRewriter& rewriter) const override {
+    auto nchw = llvm::dyn_cast<NCHWCompatible>(op);
+    std::cout << "rewrite success" << std::endl;
+    nchw.UpdateAttrs();
+    // nchw.NchwToNhwc();
+  }
+};
+
 void BroadcastMulOp::getCanonicalizationPatterns(RewritePatternSet& results, MLIRContext* context) {
   results.insert<BroadcastMulToScalarMulPattern>(context);
 }
@@ -438,6 +472,11 @@ void populateFuserForExistingOp(::mlir::RewritePatternSet& patterns) {
   patterns.add<FusedPadConv2DPattern>(patterns.getContext());
   patterns.add<FusedBiasAddDropoutPattern>(patterns.getContext());
   patterns.add<NormalizationAddReluPattern>(patterns.getContext());
+  bool enable_nhwc = ::oneflow::ParseBooleanFromEnv("ONEFLOW_ENABLE_NHWC_IN_MLIR", true);
+  if (enable_nhwc) {
+    std::cout << "AutoNhwcPattern Pass" << std::endl;
+    patterns.add<AutoNhwcPattern>(1, patterns.getContext());
+  }
 }
 
 void populateGpuHelperPatterns(::mlir::RewritePatternSet& patterns) {
