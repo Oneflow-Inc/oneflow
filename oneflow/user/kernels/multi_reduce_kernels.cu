@@ -13,13 +13,10 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
-#ifndef ONEFLOW_USER_KERNELS_MULTI_REDUCE_KERNEL_UTIL_CUH_
-#define ONEFLOW_USER_KERNELS_MULTI_REDUCE_KERNEL_UTIL_CUH_
-
-#if defined(__CUDACC__)
-
-#include "oneflow/user/kernels/multi_reduce_kernel_util.h"
+#include "oneflow/user/kernels/multi_reduce_kernels.h"
+#include "oneflow/core/ep/include/primitive/fill.h"
 #include "oneflow/core/cuda/atomic.cuh"
+#include "oneflow/core/device/cuda_util.h"
 #include <cub/cub.cuh>
 
 namespace oneflow {
@@ -36,7 +33,7 @@ struct MultiReduceParamsPack {
 
 template<typename T, typename TransformFn, typename ReduceFn>
 __global__ void MultiReduceGpu(TransformFn transform, const MultiReduceParamsPack<T> pack_params,
-                               T* out) {
+                                T* out) {
   ReduceFn reduce_fn{};
   T t_out = *out;
   for (int i = 0; i < pack_params.size; ++i) {
@@ -52,35 +49,41 @@ __global__ void MultiReduceGpu(TransformFn transform, const MultiReduceParamsPac
 }  // namespace
 
 template<typename T, typename TransformFn, typename ReduceFn>
-struct MultiReduce<DeviceType::kCUDA, TransformFn, ReduceFn> {
+struct MultiReduce<DeviceType::kCUDA, T, TransformFn, ReduceFn> {
   void operator()(ep::Stream* stream, TransformFn transform,
                   const std::vector<MultiReduceParam<T>>& params, T init, T* ret) {
-    Memset<DeviceType::kCUDA>(stream, ret, init, sizeof(T));
+    std::unique_ptr<ep::primitive::Fill> fill =
+      ep::primitive::NewPrimitive<ep::primitive::FillFactory>(stream->device_type(),
+                                                              GetDataType<T>::value);
+    CHECK(fill);
+    fill->Launch(stream, ret, init, 1);
     for (size_t i = 0; i < params.size(); i += kMultiReduceMaxPackSize) {
       MultiReduceParamsPack<T> pack_params{};
       size_t max_elem_cnt = 0;
-      pack_params.size = std::min(kMultiReduceMaxPackSize, params.size() - i);
+      pack_params.size = std::min<size_t>(kMultiReduceMaxPackSize, params.size() - i);
       for (size_t j = 0; j < pack_params.size; ++j) {
         pack_params.params[j] = params[i + j];
-        max_elem_cnt = std::max(max_elem_cnt, pack_params.params[j].size);
+        max_elem_cnt = std::max<size_t>(max_elem_cnt, pack_params.params[j].size);
       }
       MultiReduceGpu<T, TransformFn, ReduceFn>
           <<<BlocksNum4ThreadsNum(max_elem_cnt), kCudaThreadsNumPerBlock, 0,
-             stream->As<ep::CudaStream>()->cuda_stream()>>>(transform, pack_params, ret);
+              stream->As<ep::CudaStream>()->cuda_stream()>>>(transform, pack_params, ret);
     }
   }
-}
+};
 
+// TODO(zwx): These functors may be needed when supporting half data type 
+/*
 template<>
 struct Abs<half> {
-  OF_DEVICE_FUNC half operator()(half x) const {
+  __device__ __forceinline__ half operator()(half x) const {
     return __hlt(x, GetZeroVal<half>()) ? __hneg(x) : x;
   }
 };
 
 template<>
-struct PowByZero {
-  OF_DEVICE_FUNC half operator()(half x) const {
+struct PowByZero<half> {
+  __device__ __forceinline__ half operator()(half x) const {
     return x == GetZeroVal<half>() ? x : GetOneVal<half>();
   }
 };
@@ -89,17 +92,24 @@ template<>
 struct AbsPow<half> {
   explicit AbsPow(float base) : base_(base) {}
 
-  OF_DEVICE_FUNC half operator()(half x) {
+  __device__ __forceinline__ half operator()(half x) {
     half abs_x = __hlt(x, GetZeroVal<half>()) ? __hneg(x) : x;
     return __float2half(pow(__half2float(x), base_));
   }
 
- private:
+  private:
   float base_;
 };
+*/
+
+namespace user_op {
+
+REGISTER_MULTI_REDUCE_SUM_POW_ABS_KERNEL(DeviceType::kCUDA, float)
+REGISTER_MULTI_REDUCE_SUM_POW_ABS_KERNEL(DeviceType::kCUDA, double)
+
+REGISTER_MULTI_REDUCE_XIMUM_ABS_KERNELS(DeviceType::kCUDA, float)
+REGISTER_MULTI_REDUCE_XIMUM_ABS_KERNELS(DeviceType::kCUDA, double)
+
+}  // namespace user_op
 
 }  // namespace oneflow
-
-#endif  // defined(__CUDACC__)
-
-#endif  // ONEFLOW_USER_KERNELS_MULTI_REDUCE_KERNEL_UTIL_CUH_

@@ -767,15 +767,15 @@ std::string GlobalNorm(const OpGraph& op_graph, JobBuilder* job_builder,
   auto global_pow_op =
       user_op::UserOpConfWrapperBuilder("System-ClipGradient-GlobalNorm-GlobalPow-" + NewUniqueId())
           .Op("scalar_pow")
-          .Input("x", global_reduce_sum_lbn)
-          .Attr("float_operand", 1 / p)
+          .Input("in", global_reduce_sum_lbn)
+          .Attr("float_operand", 1.0 / p)
           .Attr("has_float_operand", true)
-          .Output("y")
+          .Output("out")
           .ScopeSymbolId(scope_symbol_id)
           .Build();
   job_builder->AddOps(*out_parallel_conf, {global_pow_op.op_conf()});
 
-  return global_pow_op.output("y", 0);
+  return global_pow_op.output("out", 0);
 }
 
 void ClipGradientByGlobalNorm(const OpGraph& op_graph, JobBuilder* job_builder,
@@ -799,10 +799,10 @@ void ClipGradientByGlobalNorm(const OpGraph& op_graph, JobBuilder* job_builder,
   auto add_eps_ops =
       user_op::UserOpConfWrapperBuilder("System-ClipGradient-GlobalNorm-AddEps-" + NewUniqueId())
           .Op("scalar_add")
-          .Input("x", total_norm_lbn)
+          .Input("in", total_norm_lbn)
           .Attr("float_operand", 1e-6)
           .Attr("has_float_operand", true)
-          .Output("y")
+          .Output("out")
           .ScopeSymbolId(scope_symbol_id)
           .Build();
   job_builder->AddOps(parallel_conf, {add_eps_ops.op_conf()});
@@ -810,7 +810,7 @@ void ClipGradientByGlobalNorm(const OpGraph& op_graph, JobBuilder* job_builder,
   auto inv_op =
       user_op::UserOpConfWrapperBuilder("System-ClipGradient-GlobalNorm-Inv-" + NewUniqueId())
           .Op("reciprocal_no_nan")
-          .Input("x", add_eps_ops.output("y", 0))
+          .Input("x", add_eps_ops.output("out", 0))
           .Output("y")
           .ScopeSymbolId(scope_symbol_id)
           .Build();
@@ -819,10 +819,10 @@ void ClipGradientByGlobalNorm(const OpGraph& op_graph, JobBuilder* job_builder,
   auto coeff_op =
       user_op::UserOpConfWrapperBuilder("System-ClipGradient-GlobalNorm-Coeff-" + NewUniqueId())
           .Op("scalar_mul")
-          .Input("x", inv_op.output("y", 0))
-          .Attr("float_operand", conf.max_norm())
+          .Input("in", inv_op.output("y", 0))
+          .Attr("float_operand", static_cast<double>(conf.max_norm()))
           .Attr("has_float_operand", true)
-          .Output("y")
+          .Output("out")
           .ScopeSymbolId(scope_symbol_id)
           .Build();
   job_builder->AddOps(parallel_conf, {coeff_op.op_conf()});
@@ -830,7 +830,7 @@ void ClipGradientByGlobalNorm(const OpGraph& op_graph, JobBuilder* job_builder,
   auto clamp_coeff_op =
       user_op::UserOpConfWrapperBuilder("System-ClipGradient-GlobalNorm-Clamp-" + NewUniqueId())
           .Op("clip_by_scalar_max")
-          .Input("x", coeff_op.output("y", 0))
+          .Input("x", coeff_op.output("out", 0))
           .Attr("floating_max", 1.0)
           .Output("y")
           .ScopeSymbolId(scope_symbol_id)
