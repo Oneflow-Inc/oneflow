@@ -98,11 +98,11 @@ def NCHWCompatibleInterface : OpInterface<"NCHWCompatible"> {
         "bool", "IsNCHW", (ins)
     >,
     InterfaceMethod<"",
-        "bool", "UpdateAttrs", (ins)
+        "bool", "UpdateAttrs", (ins "PatternRewriter&": $rewriter)
     >,
-    // InterfaceMethod<"",
-    //     "bool", "NchwToNhwc", (ins)
-    // >,
+    InterfaceMethod<"",
+        "bool", "NchwToNhwc", (ins "PatternRewriter&": $rewriter)
+    >,
   ];
   let cppNamespace = "::mlir::oneflow";
 }

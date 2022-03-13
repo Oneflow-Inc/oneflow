@@ -377,8 +377,8 @@ struct AutoNhwcPattern : public OpInterfaceRewritePattern<NCHWCompatible> {
  public:
   LogicalResult matchAndRewrite(NCHWCompatible op, PatternRewriter& rewriter) const override {
     if (op.IsNCHW()) {
-      op.UpdateAttrs();
-      // TODO: add nchw2nhwc
+      // op.UpdateAttrs(rewriter);
+      op.NchwToNhwc(rewriter);
       return success();
     } else {
       return failure();
