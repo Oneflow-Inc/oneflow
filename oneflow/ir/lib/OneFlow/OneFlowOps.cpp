@@ -402,8 +402,6 @@ bool Conv2DOp::UpdateAttrs() {
   return true;
 }
 
-llvm::StringLiteral Conv2DOp::getOperationName() { return this->getOperationName(); }
-
 // bool Conv2DOp::NchwToNhwc() {
 //   auto conv_op = llvm::dyn_cast<Conv2DOp>(*this);
 //   SmallVector<Value, 4> operands;

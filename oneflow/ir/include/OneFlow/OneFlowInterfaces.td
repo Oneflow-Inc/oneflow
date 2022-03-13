@@ -100,9 +100,6 @@ def NCHWCompatibleInterface : OpInterface<"NCHWCompatible"> {
     InterfaceMethod<"",
         "bool", "UpdateAttrs", (ins)
     >,
-    InterfaceMethod<"",
-        "llvm::StringLiteral", "getOperationName", (ins)
-    >
     // InterfaceMethod<"",
     //     "bool", "NchwToNhwc", (ins)
     // >,

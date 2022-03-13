@@ -370,9 +370,9 @@ bool IsAddToOutputNone(ValueRange value) { return (int)value.size() > 0 ? false 
 namespace mlir {
 
 namespace oneflow {
-struct AutoNhwcPattern : public OpRewritePattern<NCHWCompatible> {
+struct AutoNhwcPattern : public OpInterfaceRewritePattern<NCHWCompatible> {
   explicit AutoNhwcPattern(mlir::MLIRContext* context)
-      : OpRewritePattern<NCHWCompatible>(context, /*benefit=*/1) {}
+      : OpInterfaceRewritePattern<NCHWCompatible>(context, /*benefit=*/1) {}
 
  public:
   LogicalResult matchAndRewrite(NCHWCompatible op, PatternRewriter& rewriter) const override {
