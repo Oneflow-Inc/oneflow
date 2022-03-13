@@ -370,33 +370,16 @@ bool IsAddToOutputNone(ValueRange value) { return (int)value.size() > 0 ? false 
 namespace mlir {
 
 namespace oneflow {
-
-bool CheckNchwCompatible(Operation* op) {
-  if (auto nchw = llvm::dyn_cast<NCHWCompatible>(op)) {
-    return nchw.IsNCHW();
-  } else {
-    return false;
-  }
-}
-
-struct AutoNhwcPattern : public RewritePattern {
+struct AutoNhwcPattern : public OpRewritePattern<NCHWCompatible> {
  public:
-  AutoNhwcPattern(PatternBenefit benefit, MLIRContext* context)
-      : RewritePattern(Conv2DOp::getOperationName(), benefit, context) {}
-
-  LogicalResult match(Operation* op) const override {
-    if (CheckNchwCompatible(op)) {
-      std::cout << "match success" << std::endl;
+  LogicalResult matchAndRewrite(NCHWCompatible op, PatternRewriter& rewriter) const override {
+    if (op.IsNCHW()) {
+      op.UpdateAttrs();
+      // TODO: add nchw2nhwc
       return success();
     } else {
       return failure();
     }
-  }
-  void rewrite(Operation* op, PatternRewriter& rewriter) const override {
-    auto nchw = llvm::dyn_cast<NCHWCompatible>(op);
-    std::cout << "rewrite success" << std::endl;
-    nchw.UpdateAttrs();
-    // nchw.NchwToNhwc();
   }
 };
 
@@ -473,10 +456,7 @@ void populateFuserForExistingOp(::mlir::RewritePatternSet& patterns) {
   patterns.add<FusedBiasAddDropoutPattern>(patterns.getContext());
   patterns.add<NormalizationAddReluPattern>(patterns.getContext());
   bool enable_nhwc = ::oneflow::ParseBooleanFromEnv("ONEFLOW_ENABLE_NHWC_IN_MLIR", true);
-  if (enable_nhwc) {
-    std::cout << "AutoNhwcPattern Pass" << std::endl;
-    patterns.add<AutoNhwcPattern>(1, patterns.getContext());
-  }
+  if (enable_nhwc) { patterns.add<AutoNhwcPattern>(patterns.getContext()); }
 }
 
 void populateGpuHelperPatterns(::mlir::RewritePatternSet& patterns) {
