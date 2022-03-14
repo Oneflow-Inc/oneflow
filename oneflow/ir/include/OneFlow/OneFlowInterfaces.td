@@ -103,6 +103,15 @@ def NCHWCompatibleInterface : OpInterface<"NCHWCompatible"> {
     InterfaceMethod<"",
         "bool", "NchwToNhwc", (ins "PatternRewriter&": $rewriter)
     >,
+    InterfaceMethod<"create NHWC op and return results should be transpose",
+        "llvm::SmallVector<mlir::Value, 4>", "NchwToNhwc_New", (ins "llvm::SmallVector<mlir::Value, 4>": $transposed_inputs, "PatternRewriter&": $rewriter)
+    >,
+    InterfaceMethod<"",
+        "llvm::DenseSet<mlir::Value>", "OperandsToTranspose", (ins)
+    >,
+    InterfaceMethod<"",
+        "llvm::DenseSet<mlir::Value>", "ResultsToTranspose", (ins)
+    >,
   ];
   let cppNamespace = "::mlir::oneflow";
 }

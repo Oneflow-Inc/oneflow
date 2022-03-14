@@ -16,6 +16,7 @@ limitations under the License.
 #include "OneFlow/OneFlowOps.h"
 #include "OneFlow/OneFlowDialect.h"
 #include "OneFlow/Passes.h"
+#include "llvm/ADT/DenseSet.h"
 #include "mlir/IR/OperationSupport.h"
 #include "oneflow/core/framework/random_generator.h"
 
@@ -376,11 +377,69 @@ struct AutoNhwcPattern : public OpInterfaceRewritePattern<NCHWCompatible> {
 
  public:
   LogicalResult matchAndRewrite(NCHWCompatible op, PatternRewriter& rewriter) const override {
+    // if (op.IsNCHW()) {
+    //   op.NchwToNhwc(rewriter);
+    //   return success();
+    // } else {
+    //   return failure();
+    // }
+    llvm::SmallVector<int32_t> perm, output_perm;
+    perm.push_back(0);
+    perm.push_back(2);
+    perm.push_back(3);
+    perm.push_back(1);
+    output_perm.push_back(0);
+    output_perm.push_back(3);
+    output_perm.push_back(1);
+    output_perm.push_back(2);
+    TransposeOp tp;
+    NamedAttrList transpos_attributes = tp->getAttrs();
+    transpos_attributes.set(llvm::StringRef("perm"), getSI32ArrayAttr(rewriter, perm));
+
     if (op.IsNCHW()) {
-      op.NchwToNhwc(rewriter);
-      return success();
-    } else {
-      return failure();
+      // create transpose op for input operand
+      SmallVector<Value, 4> operands_to_tranpose;
+      llvm::DenseSet<Value> operand_transpose = op.OperandsToTranspose();
+      int cnt = 0;
+      for (Value operand : operand_transpose) {
+        std::string transpose_name =
+            op->getName().getStringRef().str() + "_transpose_input_" + std::to_string(cnt);
+        transpos_attributes.set(llvm::StringRef("op_name"), rewriter.getStringAttr(transpose_name));
+        SmallVector<Value, 4> input_operands;
+        input_operands.push_back(operand);
+        auto input_res = rewriter
+                             .create<oneflow::TransposeOp>(op.getLoc(), op->getResultTypes(),
+                                                           input_operands, transpos_attributes)
+                             ->getResults()[0];
+        operands_to_tranpose.push_back(input_res);
+      }
+      // do nchw2nhwc2
+      SmallVector<Value, 4> created_results = op.NchwToNhwc_New(operands_to_tranpose, rewriter);
+      // create transpose op for results
+      cnt = 0;
+      bool flag = true;
+      transpos_attributes.set(llvm::StringRef("perm"), getSI32ArrayAttr(rewriter, output_perm));
+      llvm::DenseSet<Value> transpose_result = op.ResultsToTranspose();
+      for (Value result : op->getOpResults()) {
+        if (transpose_result.find(result) != transpose_result.end()) {
+          std::string transpose_name =
+              op->getName().getStringRef().str() + "_transpose_output_" + std::to_string(cnt);
+          transpos_attributes.set(llvm::StringRef("op_name"),
+                                  rewriter.getStringAttr(transpose_name));
+          SmallVector<Value, 4> result_operands;
+          result_operands.push_back(created_results[cnt]);
+          if (auto created_op = rewriter.replaceOpWithNewOp<oneflow::TransposeOp>(
+                  op, op->getResultTypes(), result_operands, transpos_attributes)) {
+            flag = true;
+          } else {
+            flag = false;
+          }
+        }
+      }
+      if (flag)
+        return success();
+      else
+        return failure();
     }
   }
 };

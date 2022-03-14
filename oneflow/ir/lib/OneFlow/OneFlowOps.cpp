@@ -21,6 +21,7 @@ limitations under the License.
 #include "llvm/ADT/StringSet.h"
 
 #include "llvm/Support/Casting.h"
+#include "mlir/IR/Attributes.h"
 #include "mlir/IR/BuiltinAttributes.h"
 #include "mlir/IR/OpImplementation.h"
 #include "mlir/IR/OperationSupport.h"
@@ -398,10 +399,42 @@ llvm::Optional<OpResult> GetCtrlOutputResult(Operation* op) {
 
 bool Conv2DOp::IsNCHW() { return this->data_format().str() == "channels_first"; }
 
+llvm::DenseSet<Value> Conv2DOp::OperandsToTranspose() {
+  llvm::DenseSet<Value> result;
+  result.insert(this->in());
+  result.insert(this->weight());
+  return result;
+}
+
+llvm::DenseSet<Value> Conv2DOp::ResultsToTranspose() {
+  llvm::DenseSet<Value> result;
+  result.insert(this->out());
+  return result;
+}
+
 bool Conv2DOp::UpdateAttrs(NamedAttrList& attributes, PatternRewriter& rewriter) {
   auto conv_op = *this;
   attributes.set(conv_op.data_formatAttrName(), rewriter.getStringAttr("channels_last"));
   return true;
+}
+
+llvm::SmallVector<Value, 4> Conv2DOp::NchwToNhwc_New(llvm::SmallVector<Value, 4> value,
+                                                     PatternRewriter& rewriter) {
+  auto conv_op = *this;
+  SmallVector<Value, 4> operands;
+  operands.push_back(value[0]);
+  operands.push_back(value[1]);
+  if (conv_op.bias()) operands.push_back(conv_op.bias());
+  if (conv_op.bias_multiplier()) operands.push_back(conv_op.bias_multiplier());
+  NamedAttrList attributes = conv_op->getAttrs();
+  conv_op.UpdateAttrs(attributes, rewriter);
+  auto res = rewriter
+                 .create<oneflow::Conv2DOp>(conv_op.getLoc(), conv_op->getResultTypes(), operands,
+                                            attributes)
+                 ->getResults();
+  llvm::SmallVector<Value, 4> results;
+  results.push_back(res[0]);
+  return results;
 }
 
 bool Conv2DOp::NchwToNhwc(PatternRewriter& rewriter) {
