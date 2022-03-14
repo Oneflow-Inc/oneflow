@@ -21,34 +21,52 @@ import oneflow.unittest
 from oneflow.test_utils.automated_test_util import *
 
 
-@autotest(n=1, auto_backward=True, check_graph=False)
-def _test_deconv2d_impl(test_case, placement, sbp):
+@autotest(n=1, auto_backward=False, check_graph=False)
+def _test_deconv2d_impl(test_case, placement, weight_sbp, input_sbp):
     ndim = 4
-    channels = random(1, 6).to(int).value() * 8
+    in_channels = random(1, 5).to(int).value() * 8
+    groups = random(1, 4).to(int).value()
+    out_channels = groups * 8
+    kernel_size = random(1, 4).to(int).value()
+    stride = random(1, 5).to(int).value()
+    padding = random(1, 3).to(int).value()
+    dilation = random(1, 5).to(int).value()
+    padding_mode = constant("zeros")
     m = torch.nn.ConvTranspose2d(
-        in_channels=channels,
-        out_channels=random(1, 8).to(int).value() * 8,
-        kernel_size=random(1, 4).to(int).value(),
-        stride=random() | nothing(),
-        padding=random(1, 3).to(int).value() | nothing(),
-        dilation=random(1, 5).to(int).value() | nothing(),
-        groups=random(1, 5).to(int).value() | nothing(),
-        padding_mode=constant("zeros") | nothing(),
+        in_channels=in_channels,
+        out_channels=out_channels,
+        kernel_size=kernel_size,
+        stride=stride,
+        padding=padding,
+        dilation=dilation,
+        groups=groups,
+        padding_mode=padding_mode,
+        bias=False,
     )
     m.train(random())
-    dims = [random(1, 4) * 8 for i in range(ndim)]
-    x = random_tensor(ndim, *dims)
-    y = x.to_global(placement=placement, sbp=sbp)
+
+    m.weight = torch.nn.Parameter(
+        m.weight.to_global(placement=placement, sbp=weight_sbp)
+    )
+
+    if m.bias is not None:
+        bias_sbp = random_sbp(placement, max_dim=1)
+        m.bias = torch.nn.Parameter(
+            m.bias.to_global(placement=placement, sbp=bias_sbp)
+        )
+
+    nchw = [random(1, 3).to(int).value()*8, in_channels, random(1, 5).to(int).value()*8, random(1, 5).to(int).value()*8]
+    x = random_tensor(ndim, *nchw).to_global(placement=placement, sbp=input_sbp)
     y = m(x)
     return y
-
 
 class TestDeconv2dConsistent(flow.unittest.TestCase):
     @globaltest
     def test_deconv2d(test_case):
         for placement in all_placement():
-            for sbp in all_sbp(placement, max_dim=2):
-                _test_deconv2d_impl(test_case, placement, sbp)
+            for input_sbp in all_sbp(placement, max_dim=2):
+                for weight_sbp in all_sbp(placement, max_dim=2):
+                    _test_deconv2d_impl(test_case, placement, weight_sbp, input_sbp)
 
 
 if __name__ == "__main__":
