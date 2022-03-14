@@ -19,24 +19,28 @@ limitations under the License.
 
 namespace py = pybind11;
 
+namespace oneflow {
+
 ONEFLOW_API_PYBIND11_MODULE("", m) {
-  m.def("CurrentResource", &oneflow::CurrentResource);
-  m.def("EnvResource", &oneflow::EnvResource);
-  m.def("EnableEagerEnvironment", &oneflow::EnableEagerEnvironment);
+  m.def("CurrentResource", &CurrentResource);
+  m.def("EnvResource", &EnvResource);
+  m.def("EnableEagerEnvironment", &EnableEagerEnvironment);
 
-  m.def("IsEnvInited", &oneflow::IsEnvInited);
-  m.def("InitEnv", &oneflow::InitEnv);
-  m.def("DestroyEnv", &oneflow::DestroyEnv, py::call_guard<py::gil_scoped_release>());
+  m.def("IsEnvInited", &IsEnvInited);
+  m.def("InitEnv", &InitEnv);
+  m.def("DestroyEnv", &DestroyEnv, py::call_guard<py::gil_scoped_release>());
 
-  m.def("CurrentMachineId", &oneflow::CurrentMachineId);
+  m.def("CurrentMachineId", &CurrentMachineId);
 
-  m.def("GetRank", &oneflow::GetRank);
-  m.def("GetWorldSize", &oneflow::GetWorldSize);
-  m.def("GetNodeSize", &oneflow::GetNodeSize);
-  m.def("GetLocalRank", &oneflow::GetLocalRank);
-  m.def("CudaGetDeviceCount", &oneflow::CudaGetDeviceCount);
-  m.def("SetFLAGS_alsologtostderr", &oneflow::SetFLAGS_alsologtostderr);
-  m.def("GetFLAGS_alsologtostderr", &oneflow::GetFLAGS_alsologtostderr);
-  m.def("SetFLAGS_v", &oneflow::SetFLAGS_v);
-  m.def("GetFLAGS_v", &oneflow::GetFLAGS_v);
+  m.def("GetRank", &GetRank);
+  m.def("GetWorldSize", &GetWorldSize);
+  m.def("GetNodeSize", &GetNodeSize);
+  m.def("GetLocalRank", &GetLocalRank);
+  m.def("CudaGetDeviceCount", &CudaGetDeviceCount);
+  m.def("SetFLAGS_alsologtostderr", &SetFLAGS_alsologtostderr);
+  m.def("GetFLAGS_alsologtostderr", &GetFLAGS_alsologtostderr);
+  m.def("SetFLAGS_v", &SetFLAGS_v);
+  m.def("GetFLAGS_v", &GetFLAGS_v);
 }
+
+}  // namespace oneflow
