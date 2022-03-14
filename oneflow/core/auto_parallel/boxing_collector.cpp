@@ -210,7 +210,7 @@ Maybe<void> BoxingCollector::GenerateCombination4SamePlacement(int32_t max_middl
     for (int32_t j = 0; j < n; j++) {
       minimum_copy_cost_[i][j] = JUST(ComputeLazyCopyCostBetweenNdSbp(
           nd_sbp_lists_[i], nd_sbp_lists_[j], blob_desc, parallel_desc, parallel_desc,
-          /*is_same_sbp=*/false));
+          /*requires_same_sbp=*/false));
     }
   }
 
