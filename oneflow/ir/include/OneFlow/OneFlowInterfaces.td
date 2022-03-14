@@ -98,7 +98,7 @@ def NCHWCompatibleInterface : OpInterface<"NCHWCompatible"> {
         "bool", "IsNCHW", (ins)
     >,
     InterfaceMethod<"",
-        "bool", "UpdateAttrs", (ins "PatternRewriter&": $rewriter)
+        "bool", "UpdateAttrs", (ins "NamedAttrList&": $attributes, "PatternRewriter&": $rewriter)
     >,
     InterfaceMethod<"",
         "bool", "NchwToNhwc", (ins "PatternRewriter&": $rewriter)

@@ -23,6 +23,7 @@ limitations under the License.
 #include "llvm/Support/Casting.h"
 #include "mlir/IR/BuiltinAttributes.h"
 #include "mlir/IR/OpImplementation.h"
+#include "mlir/IR/OperationSupport.h"
 #include "mlir/IR/PatternMatch.h"
 #include "mlir/IR/FunctionImplementation.h"
 #include "mlir/Support/LLVM.h"
@@ -397,10 +398,8 @@ llvm::Optional<OpResult> GetCtrlOutputResult(Operation* op) {
 
 bool Conv2DOp::IsNCHW() { return this->data_format().str() == "channels_first"; }
 
-bool Conv2DOp::UpdateAttrs(PatternRewriter& rewriter) {
-  // this->data_format().str() = "channels_last";
+bool Conv2DOp::UpdateAttrs(NamedAttrList& attributes, PatternRewriter& rewriter) {
   auto conv_op = *this;
-  NamedAttrList attributes = conv_op->getAttrs();
   attributes.set(conv_op.data_formatAttrName(), rewriter.getStringAttr("channels_last"));
   return true;
 }
@@ -409,6 +408,7 @@ bool Conv2DOp::NchwToNhwc(PatternRewriter& rewriter) {
   auto conv_op = *this;
   SmallVector<Value, 4> operands;
   NamedAttrList attributes = conv_op->getAttrs();
+  conv_op.UpdateAttrs(attributes, rewriter);
   llvm::SmallVector<int32_t> perm, output_perm;
   perm.push_back(0);
   perm.push_back(2);
@@ -451,7 +451,6 @@ bool Conv2DOp::NchwToNhwc(PatternRewriter& rewriter) {
   operands.push_back(weight_res);
   if (conv_op.bias()) operands.push_back(conv_op.bias());
   if (conv_op.bias_multiplier()) operands.push_back(conv_op.bias_multiplier());
-  attributes.set(conv_op.data_formatAttrName(), rewriter.getStringAttr("channels_last"));
   // rewrite convop
   auto res = rewriter
                  .create<oneflow::Conv2DOp>(conv_op.getLoc(), conv_op->getResultTypes(), operands,
