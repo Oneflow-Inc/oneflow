@@ -22,6 +22,13 @@ limitations under the License.
 #include "absl/strings/str_cat.h"
 #include "absl/strings/str_split.h"
 
+extern bool FLAGS_use_xla_jit;
+extern bool FLAGS_use_tensorrt;
+extern bool FLAGS_use_openvino;
+extern bool FLAGS_tensorrt_fp16;
+extern bool FLAGS_tensorrt_int8;
+extern std::string FLAGS_tensorrt_int8_calibration;
+
 namespace oneflow {
 
 Maybe<void> XrtLaunchOp::InitFromOpConf() {

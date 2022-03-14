@@ -55,10 +55,9 @@ inline bool XrtCompilationEnabled(const JobDesc& job_desc) {
 
   if (job_desc.has_xrt_config()) {
     const XrtConfig& config = job_desc.xrt_config();
-    return xrt_compilation_enabled
-          || (config.has_use_xla_jit() && config.use_xla_jit())
-          || (config.has_use_tensorrt() && config.use_tensorrt())
-          || (config.has_use_openvino() && config.use_openvino());
+    return xrt_compilation_enabled || (config.has_use_xla_jit() && config.use_xla_jit())
+           || (config.has_use_tensorrt() && config.use_tensorrt())
+           || (config.has_use_openvino() && config.use_openvino());
   }
   return xrt_compilation_enabled;
 }

@@ -55,7 +55,7 @@ bool FLAGS_tensorrt_int8 = EnvToBool(FLAGS_tensorrt_int8, false);
 // TensorRT int8 calibration table directory.
 // Default is empty, and this means the calibration table will be implictly generated if
 // tensorrt_int8 flag is true.
-std::string FLAGS_int8_calibration = EnvToString(FLAGS_int8_calibration, "");
+std::string FLAGS_tensorrt_int8_calibration = EnvToString(FLAGS_tensorrt_int8_calibration, "");
 
 namespace oneflow {
 namespace xrt {
@@ -192,23 +192,6 @@ std::shared_ptr<XrtGraph> BuildXrtGraph(const OpGraph* op_graph) {
 std::shared_ptr<XrtGraph> BuildXrtGraph(const XrtLaunchOpConf::Function& function,
                                         const DeviceType& device_type) {
   return graph_builder::BuildGraph(function, device_type);
-}
-
-void InitXrtConfigurations(const XrtConfig& config) {
-  if (config.has_use_xla_jit()) { FLAGS_use_xla_jit = config.use_xla_jit(); }
-  if (config.has_use_tensorrt()) { FLAGS_use_tensorrt = config.use_tensorrt(); }
-  if (config.has_use_openvino()) { FLAGS_use_openvino = config.use_openvino(); }
-  // Set xla configurations.
-  if (config.has_tensorrt_config()) {
-    const XrtConfig::TensorRTConfig& trt_config = config.tensorrt_config();
-    if (trt_config.has_use_fp16()) { FLAGS_tensorrt_fp16 = trt_config.use_fp16(); }
-    if (trt_config.has_use_int8()) {
-      FLAGS_tensorrt_int8 = trt_config.use_int8();
-      if (trt_config.has_int8_calibration()) {
-        FLAGS_int8_calibration = trt_config.int8_calibration();
-      }
-    }
-  }
 }
 
 bool XrtCompilationEnabled() {
