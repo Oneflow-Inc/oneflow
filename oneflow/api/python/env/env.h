@@ -88,11 +88,11 @@ inline Maybe<void> SetFLAGS_v(int32_t v_level) {
   return Maybe<void>::Ok();
 }
 inline Maybe<int32_t> GetFLAGS_v() { return FLAGS_v; }
-inline Maybe<void> SetGraphVerbose(bool verbose) {
+inline Maybe<void> SetGraphLRVerbose(bool verbose) {
   SetGraphVerboseStepLr(verbose);
   return Maybe<void>::Ok();
 }
-inline bool GetGraphVerbose() { return *GetGraphVerboseStepLr(); }
+inline bool GetGraphLRVerbose() { return *GetGraphVerboseStepLr(); }
 }  // namespace oneflow
 
 #endif  // ONEFLOW_API_PYTHON_ENV_ENV_H_

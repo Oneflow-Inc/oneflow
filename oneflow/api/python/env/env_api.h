@@ -56,8 +56,10 @@ inline void SetFLAGS_v(int32_t v_level) { return oneflow::SetFLAGS_v(v_level).Ge
 
 inline int32_t GetFLAGS_v() { return oneflow::GetFLAGS_v().GetOrThrow(); }
 
-inline void SetGraphVerbose(bool verbose) { return oneflow::SetGraphVerbose(verbose).GetOrThrow(); }
+inline void SetGraphLRVerbose(bool verbose) {
+  return oneflow::SetGraphLRVerbose(verbose).GetOrThrow();
+}
 
-inline bool GetGraphVerbose() { return oneflow::GetGraphVerbose(); }
+inline bool GetGraphLRVerbose() { return oneflow::GetGraphLRVerbose(); }
 
 #endif  // ONEFLOW_API_PYTHON_ENV_ENV_API_H_

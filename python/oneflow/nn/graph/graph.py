@@ -293,7 +293,7 @@ class Graph(object):
             rank = get_rank()
             if rank != 0:
                 self._verbose = False
-        oneflow._oneflow_internal.SetGraphVerbose(self._verbose)
+        oneflow._oneflow_internal.SetGraphLRVerbose(self._verbose)
         self._opts.append(opt_dict)
         # Set the training config if there is an optimizer add in graph.
         if len(self._opts) == 1:
