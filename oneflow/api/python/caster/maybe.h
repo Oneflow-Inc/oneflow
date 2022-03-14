@@ -26,9 +26,10 @@ using oneflow::Maybe;
 namespace impl {
 
 template<typename T>
-using IsHoldedInsideSharedPtrByMaybe = std::is_same<
-    decltype(std::declval<Maybe<T>>().Data_YouAreNotAllowedToCallThisFuncOutsideThisFile()),
-    std::shared_ptr<T>>;
+using IsHoldedInsideSharedPtrByMaybe =
+    std::is_same<decltype(
+                     std::declval<Maybe<T>>().Data_YouAreNotAllowedToCallThisFuncOutsideThisFile()),
+                 std::shared_ptr<T>>;
 
 template<typename T, typename std::enable_if_t<IsSupportedByPybind11WhenInsideSharedPtr<T>::value
                                                    && IsHoldedInsideSharedPtrByMaybe<T>::value,
