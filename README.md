@@ -225,12 +225,17 @@ Please refer to [troubleshooting](docs/source/troubleshooting.md) for common iss
 
 ## Model Zoo and Benchmark
 
+- [libai](https://github.com/Oneflow-Inc/libai)
+  - [BERT-large](https://libai.readthedocs.io/en/latest/tutorials/Getting%20Started.html#train-bert-large-model-parallelly)
+  - [GPT](https://libai.readthedocs.io/en/latest/libai.models.html#libai.models.GPTForPreTraining)
+  - [T5](https://libai.readthedocs.io/en/latest/libai.models.html#libai.models.T5ForPreTraining)
+  - [VisionTransformer](https://libai.readthedocs.io/en/latest/libai.models.html#libai.models.VisionTransformer)
+  - [VisionTransformer](https://libai.readthedocs.io/en/latest/libai.models.html#libai.models.VisionTransformer)
+- [flowvision](https://github.com/Oneflow-Inc/vision)
 - [OneFlow Models](https://github.com/Oneflow-Inc/models)
+  - [ResNet-50](https://github.com/Oneflow-Inc/models/tree/main/Vision/classification/image/resnet50)
+  - [Wide&Deep](https://github.com/Oneflow-Inc/models/tree/main/RecommenderSystems/wide_and_deep)
 - [OneFlow-Benchmark](https://github.com/Oneflow-Inc/OneFlow-Benchmark)
-- [GPT](https://github.com/Oneflow-Inc/OneFlow-Benchmark/tree/master/LanguageModeling/GPT)
-- [ResNet-50](https://github.com/Oneflow-Inc/models/tree/main/Vision/classification/image/resnet50)
-- [Wide&Deep](https://github.com/Oneflow-Inc/models/tree/main/RecommenderSystems/wide_and_deep)
-- [BERT](https://github.com/Oneflow-Inc/models/tree/main/NLP/bert-oneflow)
 
 ## Communication
 
