@@ -24,7 +24,7 @@ MirroredTensorMeta::MirroredTensorMeta()
     : TensorMeta(std::make_shared<const Shape>(), DataType::kInvalidDataType),
       device_(Symbol<Device>()),
       stride_(std::make_shared<const Stride>()),
-      is_contiguous_(false),
+      is_contiguous_(true),
       storage_offset_(0) {}
 
 MirroredTensorMeta::MirroredTensorMeta(const std::shared_ptr<const Shape>& shape, DataType dtype,
