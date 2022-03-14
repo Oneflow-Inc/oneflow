@@ -1120,7 +1120,7 @@ add_docstr(
     This operator applies matrix multiplication to two 2-D Tensor.
 
     .. note::
-    This function does not broadcast. For broadcasting matrix products, see :code:`flow.matmul()`.
+        This function does not broadcast. For broadcasting matrix products, see :func:`flow.matmul()`.
 
     Args:
         a (oneflow.Tensor): A 2-D Tensor
