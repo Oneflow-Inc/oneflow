@@ -208,6 +208,37 @@ class OneFlow_NormalizationAddReluBaseOp : OneFlow_BaseOp<"normalization_add_rel
   let has_input_arg_modify_fn = 1;
 }
 
+class OneFlow_NormalizationBaseOp<string mnemonic, list<Trait> traits = []> : OneFlow_BaseOp<mnemonic, !listconcat(traits, [NoSideEffect, AttrSizedOperandSegments, DeclareOpInterfaceMethods<UserOpCompatibleInterface>])> {
+  let input = (ins
+    OneFlow_Tensor:$x,
+    Optional<OneFlow_Tensor>:$moving_mean,
+    Optional<OneFlow_Tensor>:$moving_variance,
+    OneFlow_Tensor:$gamma,
+    OneFlow_Tensor:$beta,
+    Optional<OneFlow_Tensor>:$_add_to_output
+  );
+  let output = (outs
+    OneFlow_Tensor:$y,
+    Optional<OneFlow_Tensor>:$mean,
+    Optional<OneFlow_Tensor>:$inv_variance
+  );
+  let attrs = (ins
+    DefaultValuedAttr<SI32Attr, "0">:$axis,
+    DefaultValuedAttr<F32Attr, "0.">:$epsilon,
+    DefaultValuedAttr<BoolAttr, "false">:$training,
+    DefaultValuedAttr<F32Attr, "0.">:$momentum
+  );
+  let trait_attrs = (ins
+    I32ElementsAttr:$operand_segment_sizes,
+    I32ElementsAttr:$result_segment_sizes
+  );
+  let has_logical_tensor_desc_infer_fn = 1;
+  let has_physical_tensor_desc_infer_fn = 1;
+  let has_get_sbp_fn = 1;
+  let has_data_type_infer_fn = 1;
+  let has_input_arg_modify_fn = 1;
+}
+
 #endif // GET_ONEFLOW_BASE_OP_DEFINITIONS
 
 // Group: BINARY
@@ -5288,45 +5319,8 @@ def OneFlow_NormalOp : OneFlow_BaseOp<"normal", [NoSideEffect, NoGrad, DeclareOp
   let has_nd_sbp_infer_fn = 1;
 }
 
-class OneFlow_NormalizationBaseOp<string mnemonic, list<Trait> traits = []> : OneFlow_BaseOp<mnemonic, !listconcat(traits, [NoSideEffect, AttrSizedOperandSegments, DeclareOpInterfaceMethods<UserOpCompatibleInterface>])> {
-  let input = (ins
-    OneFlow_Tensor:$x,
-    Optional<OneFlow_Tensor>:$moving_mean,
-    Optional<OneFlow_Tensor>:$moving_variance,
-    OneFlow_Tensor:$gamma,
-    OneFlow_Tensor:$beta,
-    Optional<OneFlow_Tensor>:$_add_to_output
-  );
-  let output = (outs
-    OneFlow_Tensor:$y,
-    Optional<OneFlow_Tensor>:$mean,
-    Optional<OneFlow_Tensor>:$inv_variance
-  );
-  let attrs = (ins
-    DefaultValuedAttr<SI32Attr, "0">:$axis,
-    DefaultValuedAttr<F32Attr, "0.">:$epsilon,
-    DefaultValuedAttr<BoolAttr, "false">:$training,
-    DefaultValuedAttr<F32Attr, "0.">:$momentum
-  );
-  let trait_attrs = (ins
-    I32ElementsAttr:$operand_segment_sizes,
-    I32ElementsAttr:$result_segment_sizes
-  );
-  let has_logical_tensor_desc_infer_fn = 1;
-  let has_physical_tensor_desc_infer_fn = 1;
-  let has_get_sbp_fn = 1;
-  let has_data_type_infer_fn = 1;
-  let has_input_arg_modify_fn = 1;
-}
-
 def OneFlow_NormalizationOp : OneFlow_NormalizationBaseOp<"normalization", [AttrSizedResultSegments]> {
   let hasCanonicalizer = 1;
-}
-
-def OneFlow_NormalizationInferenceOp : OneFlow_NormalizationBaseOp<"normalization_infer", []> {
-  let output = (outs
-    OneFlow_Tensor:$y
-  );
 }
 
 def OneFlow_NormalizationGradOp : OneFlow_BaseOp<"normalization_grad", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {

@@ -266,6 +266,12 @@ def OneFlow_ReturnOp : Op<OneFlow_Dialect, "return", [NoSideEffect, HasParent<"J
   let parser = [{ return ::mlir::oneflow::parse$cppClass(parser, result); }];
 }
 
+def OneFlow_NormalizationInferenceOp : OneFlow_NormalizationBaseOp<"normalization_infer", []> {
+  let output = (outs
+    OneFlow_Tensor:$y
+  );
+}
+
 #endif // REMOVE_ONEFLOW_MLIR_ONLY_OP_DEFINITIONS
 
 #endif // ONEFLOW_OPS
