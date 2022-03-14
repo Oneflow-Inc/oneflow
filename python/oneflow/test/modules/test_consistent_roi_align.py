@@ -97,7 +97,7 @@ def _test_roi_align(test_case, placement, rois_sbp):
     )
 
     # compare backward
-    of_local.sum().backward()
+    of_out.sum().backward()
     torch_out.sum().backward()
     of_input_grad = x.oneflow.grad.to_global(
         placement=flow.env.all_device_placement("cpu"), sbp=[flow.sbp.broadcast,]
@@ -106,8 +106,6 @@ def _test_roi_align(test_case, placement, rois_sbp):
 
     of_grad_np = of_input_grad.numpy()
     torch_grad_np = torch_input_grad.detach().cpu().numpy()
-
-    # BUG: roi_align backward is not correct
     test_case.assertTrue(np.allclose(of_input_grad.numpy(), torch_input_grad.numpy(), rtol=1e-04, atol=1e-4))
 
 
