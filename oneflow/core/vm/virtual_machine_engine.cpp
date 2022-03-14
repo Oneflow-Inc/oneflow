@@ -567,6 +567,9 @@ void VirtualMachineEngine::Callback() {
         // Do nothing. Wait until all other threads ref_cnts released.
       }
       CHECK_NOTNULL(garbage->phy_instr_operand());
+      while (garbage->phy_instr_operand().use_count() > 1) {
+        // Do nothing. Wait until all other threads ref_cnts released.
+      }
       CHECK_EQ(garbage->phy_instr_operand().use_count(), 1) << garbage->DebugName();
       // Destruct garbage.
       return Maybe<void>::Ok();
