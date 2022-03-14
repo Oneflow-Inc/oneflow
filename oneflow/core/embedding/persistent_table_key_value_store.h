@@ -13,27 +13,29 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
-#include "oneflow/xrt/openvino/ops/op_context.h"
-#include "oneflow/xrt/openvino/ops/op_kernel.h"
+#ifndef ONEFLOW_CORE_EMBEDDING_PERSISTENT_TABLE_KEY_VALUE_STORE_H_
+#define ONEFLOW_CORE_EMBEDDING_PERSISTENT_TABLE_KEY_VALUE_STORE_H_
 
-#include <ngraph/op/relu.hpp>
+#include "oneflow/core/embedding/key_value_store.h"
+#include "oneflow/core/embedding/persistent_table.h"
 
 namespace oneflow {
-namespace xrt {
-namespace openvino {
 
-class ReluOp : public OpenvinoOpKernel {
- public:
-  void Compile(OpenvinoOpContext* ctx) override {
-    std::shared_ptr<ngraph::Node> ngraph_node =
-        std::make_shared<ngraph::op::Relu>(ctx->Input("x_0"));
-    ngraph_node->set_friendly_name(ctx->op_name().c_str());
-    ctx->SetOutput("y_0", ngraph_node);
-  }
+namespace embedding {
+
+#ifdef WITH_CUDA
+
+struct PersistentTableKeyValueStoreOptions {
+  PersistentTableOptions table_options{};
 };
 
-REGISTER_OPENVINO_OP_KERNEL(Relu, ReluOp).EnableTrainPhase().Finalize();
+std::unique_ptr<KeyValueStore> NewPersistentTableKeyValueStore(
+    const PersistentTableKeyValueStoreOptions& options);
 
-}  // namespace openvino
-}  // namespace xrt
+#endif  // WITH_CUDA
+
+}  // namespace embedding
+
 }  // namespace oneflow
+
+#endif  // ONEFLOW_CORE_EMBEDDING_PERSISTENT_TABLE_KEY_VALUE_STORE_H_
