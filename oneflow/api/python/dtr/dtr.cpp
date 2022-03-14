@@ -36,26 +36,19 @@ Maybe<void> EnableDTRStrategy(bool enable_dtr, size_t thres, int debug_level,
   return Maybe<void>::Ok();
 }
 
-Maybe<bool> IsDTREnabled() {
-  CHECK_NOTNULL_OR_RETURN((Global<DTRConfig>::Get()));
-  return Global<DTRConfig>::Get()->is_enabled;
-}
-
 void ApiEnableDTRStrategy(bool enable_dtr, size_t thres, int debug_level,
                           const std::string& heuristic) {
   EnableDTRStrategy(enable_dtr, thres, debug_level, heuristic).GetOrThrow();
 }
 
-bool ApiIsDTREnabled() { return IsDTREnabled().GetOrThrow(); }
-
 ONEFLOW_API_PYBIND11_MODULE("dtr", m) {
   m.def("enable", &ApiEnableDTRStrategy);
-  m.def("is_enabled", &ApiIsDTREnabled);
+  m.def("is_enabled", &dtr::is_enabled);
   m.def("allocated_memory",
         []() -> size_t { return Global<vm::DtrCudaAllocator>::Get()->allocated_memory(); });
   m.def("display_all_pieces",
         []() -> void { return Global<vm::DtrCudaAllocator>::Get()->DisplayAllPieces(); });
-  m.def("display", []() -> void { Global<one::DTRTensorPool>::Get()->display().GetOrThrow(); });
+  m.def("display", []() -> void { Global<dtr::TensorPool>::Get()->display().GetOrThrow(); });
   m.def("set_non_evictable", [](const std::shared_ptr<one::Tensor> t) -> void {
     if (auto dtr_tensor =
             std::dynamic_pointer_cast<one::DTRMirroredTensor>(CHECK_JUST(t->AsMirroredTensor()))) {

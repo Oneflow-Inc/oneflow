@@ -5,11 +5,15 @@
 
 namespace oneflow {
 
-bool DTREnabled();
-size_t GetDTRMemoryThreshold();
-bool DTRDebugEnabled();
-int DTRDebugLevel();
-bool dtr_use_disjoint_set();
+namespace dtr {
+
+bool is_enabled();
+size_t memory_threshold();
+bool is_enabled_and_debug();
+int debug_level();
+bool is_using_disjoint_set();
+
+}  // namespace dtr
 
 namespace vm {
 

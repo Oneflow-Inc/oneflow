@@ -41,16 +41,16 @@ void EvictDTRTensorInstructionType::Compute(vm::Instruction* instruction) const 
   if (ParseBooleanFromEnv("OF_DTR_EE", true)) {
     const auto& ebo =
         CHECK_NOTNULL(std::dynamic_pointer_cast<vm::DTREagerBlobObject>(ptr->eager_blob_object()));
-    if (DTRDebugEnabled()) {
+    if (dtr::is_enabled_and_debug()) {
       LOG(INFO) << "eager eviction tensor " << ebo.get() << " of op "
                 << ebo->compute_op_type_name() << " with size " << ebo->BlobBodyBytes();
     }
     if (!ebo->is_evictable()) {
-      if (DTRDebugEnabled()) {
+      if (dtr::is_enabled_and_debug()) {
         LOG(INFO) << "but skip because non evictable" << std::endl;
       }
     } else if (ebo->is_pinned()) {
-      if (DTRDebugEnabled()) { LOG(INFO) << "but skip because pinned" << std::endl; }
+      if (dtr::is_enabled_and_debug()) { LOG(INFO) << "but skip because pinned" << std::endl; }
     } else {
       CHECK_JUST(ebo->evict());
     }
@@ -84,7 +84,7 @@ void ReleaseTensorInstructionType::Compute(vm::Instruction* instruction) const {
   const auto* ptr =
       dynamic_cast<const vm::ReleaseTensorArgPhyInstrOperand*>(phy_instr_operand.get());
   CHECK_NOTNULL(ptr);
-  if (DTRDebugEnabled()) {
+  if (dtr::is_enabled_and_debug()) {
     LOG(INFO) << "release tensor " << ptr->eager_blob_object().get() << " with ref count "
               << ptr->eager_blob_object().use_count() << std::endl;
   }

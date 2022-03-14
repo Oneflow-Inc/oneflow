@@ -24,9 +24,9 @@ namespace vm {
 class LocalCallOpKernelPhyInstrOperand;
 }
 
-namespace one {
+namespace dtr {
 
-DTRTensorPool::DTRTensorPool() : duration_(0), total_memory_bytes_(0), num_eviction_(0), num_recomputation_(0), num_destruction_(0) {
+TensorPool::TensorPool() : duration_(0), total_memory_bytes_(0), num_eviction_(0), num_recomputation_(0), num_destruction_(0) {
   start_time_ = std::chrono::steady_clock::now();
 }
 
@@ -50,13 +50,13 @@ void printInfo(const std::shared_ptr<vm::DTREagerBlobObject>& debo) {
 }
 }  // namespace
 
-void DTRTensorPool::inc_num_eviction() { num_eviction_++; }
+void TensorPool::inc_num_eviction() { num_eviction_++; }
 
-Maybe<vm::DTREagerBlobObject*> DTRTensorPool::find_best_tensor() {
+Maybe<vm::DTREagerBlobObject*> TensorPool::find_best_tensor() {
   double min_cost = -1;
   vm::DTREagerBlobObject* best(nullptr);
   int evict_object_id = -1;
-  if (oneflow::DTRDebugEnabled()) { LOG(INFO) << "Finding best tensor to evict..."; }
+  if (dtr::is_enabled_and_debug()) { LOG(INFO) << "Finding best tensor to evict..."; }
   int id = 0;
   double tensor_pool_mem = 0.;
   for (const auto& object : candidates_) {
@@ -72,12 +72,12 @@ Maybe<vm::DTREagerBlobObject*> DTRTensorPool::find_best_tensor() {
         }
       }
       if (static_cast<bool>(shared_object->compute_op())) {
-        if (oneflow::DTRDebugLevel() >= 2) {
+        if (dtr::debug_level() >= 2) {
           LOG(INFO) << "id " << id << ", ";
           printInfo(shared_object);
         }
       }
-      if (oneflow::DTRDebugEnabled()) {
+      if (dtr::is_enabled_and_debug()) {
         // copy op in lenet/alexnet model is always to copy parameters
         // from cpu to gpu during model.to('cuda')
         // copying from cpu to gpu uses cuda h2d memory pool, unrelated
@@ -94,7 +94,7 @@ Maybe<vm::DTREagerBlobObject*> DTRTensorPool::find_best_tensor() {
     }
     id++;
   }
-  if (oneflow::DTRDebugEnabled()) {
+  if (dtr::is_enabled_and_debug()) {
     LOG(INFO) << "pool mem is " << tensor_pool_mem << "MB";
     if (best != nullptr) {
       LOG(INFO) << "Evict " << evict_object_id << "th object , cost is " << min_cost
@@ -115,7 +115,7 @@ Maybe<vm::DTREagerBlobObject*> DTRTensorPool::find_best_tensor() {
   return best;
 }
 
-Maybe<bool> DTRTensorPool::find_best_tensor_and_evict() {
+Maybe<bool> TensorPool::find_best_tensor_and_evict() {
   auto* best = JUST(find_best_tensor());
   if (best == nullptr) { return false; }
   JUST(best->evict());
@@ -123,7 +123,7 @@ Maybe<bool> DTRTensorPool::find_best_tensor_and_evict() {
   return true;
 }
 
-Maybe<void> DTRTensorPool::insert(std::shared_ptr<vm::DTREagerBlobObject> blob_object,
+Maybe<void> TensorPool::insert(std::shared_ptr<vm::DTREagerBlobObject> blob_object,
                                   size_t thres) {
   CHECK_NOTNULL_OR_RETURN(blob_object);
   CHECK_EQ_OR_RETURN(thres, 0);
@@ -144,11 +144,11 @@ Maybe<void> DTRTensorPool::insert(std::shared_ptr<vm::DTREagerBlobObject> blob_o
   return Maybe<void>::Ok();
 }
 
-Maybe<void> DTRTensorPool::clear() {
+Maybe<void> TensorPool::clear() {
   auto object = candidates_.begin();
   while (object != candidates_.end()) {
     if (object->lock().get() == nullptr) {
-      if (oneflow::DTRDebugEnabled()) {
+      if (dtr::is_enabled_and_debug()) {
         // LOG(INFO) << "Erase nullptr candidates from tensor_pool.";
       }
       candidates_.erase(object);
@@ -160,7 +160,7 @@ Maybe<void> DTRTensorPool::clear() {
   return Maybe<void>::Ok();
 }
 
-double DTRTensorPool::duration() {
+double TensorPool::duration() {
   return duration_;
   // auto t2 = std::chrono::steady_clock::now();
   // // time in seconds
@@ -170,12 +170,12 @@ double DTRTensorPool::duration() {
   // return time_span.count();
 }
 
-void DTRTensorPool::time_flies(double t) {
+void TensorPool::time_flies(double t) {
   duration_ += t;
-  if (oneflow::DTRDebugEnabled()) { LOG(INFO) << "time flies " << t << " to " << duration_; }
+  if (dtr::is_enabled_and_debug()) { LOG(INFO) << "time flies " << t << " to " << duration_; }
 }
 
-Maybe<void> DTRTensorPool::display2() {
+Maybe<void> TensorPool::display2() {
   std::cout << "===== Info of current tensor pool =====" << std::endl;
   std::cout << "Number of candidates: " << candidates_.size() << std::endl;
   int id = 0;
@@ -205,14 +205,14 @@ Maybe<void> DTRTensorPool::display2() {
   return Maybe<void>::Ok();
 }
 
-Maybe<void> DTRTensorPool::display() {
+Maybe<void> TensorPool::display() {
   std::cout << "===== Info of current tensor pool =====" << std::endl;
   std::cout << "Number of candidates: " << candidates_.size() << std::endl;
   return Maybe<void>::Ok();
 }
 
 // Disjoint Node Set
-void DTRTensorPool::merge(std::shared_ptr<vm::DisjNode>& x, std::shared_ptr<vm::DisjNode>& y) {
+void TensorPool::merge(std::shared_ptr<vm::DisjNode>& x, std::shared_ptr<vm::DisjNode>& y) {
   auto&& parent_x = find_father(x);
   auto&& parent_y = find_father(y);
   if (parent_x.get() == parent_y.get()) { return; }
@@ -224,7 +224,7 @@ void DTRTensorPool::merge(std::shared_ptr<vm::DisjNode>& x, std::shared_ptr<vm::
   x->reset_pesudo_node();
 }
 
-void DTRTensorPool::pesudo_merge(std::shared_ptr<vm::DisjNode>& x, std::shared_ptr<vm::DisjNode>& y) {
+void TensorPool::pesudo_merge(std::shared_ptr<vm::DisjNode>& x, std::shared_ptr<vm::DisjNode>& y) {
   auto pesudo_x = x->pesudo_node();
   auto pesudo_y = y->pesudo_node();
   auto&& pesudo_parent_x = find_father(pesudo_x);
@@ -237,7 +237,7 @@ void DTRTensorPool::pesudo_merge(std::shared_ptr<vm::DisjNode>& x, std::shared_p
   pesudo_parent_x->set_cnt(pesudo_parent_y->cnt());
 }
 
-std::shared_ptr<vm::DisjNode> DTRTensorPool::find_father(std::shared_ptr<vm::DisjNode>& x) {
+std::shared_ptr<vm::DisjNode> TensorPool::find_father(std::shared_ptr<vm::DisjNode>& x) {
   if (x->is_root()) {
     return x;
   } else {
@@ -248,14 +248,14 @@ std::shared_ptr<vm::DisjNode> DTRTensorPool::find_father(std::shared_ptr<vm::Dis
   }
 }
 
-void DTRTensorPool::update_after_compute(vm::DTREagerBlobObject* obj) {
+void TensorPool::update_after_compute(vm::DTREagerBlobObject* obj) {
   auto&& fa = find_father(obj->node);
   fa->set_compute_time(fa->compute_time() - obj->node->compute_time());
   obj->reset_node(obj->compute_time());
   obj->reset_pesudo_node();
 }
 
-int DTRTensorPool::update_after_pesudo_compute(vm::DTREagerBlobObject* obj) {
+int TensorPool::update_after_pesudo_compute(vm::DTREagerBlobObject* obj) {
   // split start_tensor from the chain
   auto&& pesudo_node = obj->node->pesudo_node();
   auto&& fa = find_father(pesudo_node);
@@ -278,7 +278,7 @@ int DTRTensorPool::update_after_pesudo_compute(vm::DTREagerBlobObject* obj) {
   return fa->cnt();
 }
 
-Maybe<void> DTRTensorPool::update_after_evict(vm::DTREagerBlobObject* obj) {
+Maybe<void> TensorPool::update_after_evict(vm::DTREagerBlobObject* obj) {
   auto* operand = obj->compute_op();
   const auto& inputs = operand->inputs();
   const auto& outputs = operand->outputs();
@@ -300,7 +300,7 @@ Maybe<void> DTRTensorPool::update_after_evict(vm::DTREagerBlobObject* obj) {
   return Maybe<void>::Ok();
 }
 
-Maybe<void> DTRTensorPool::update_after_pesudo_evict(vm::DTREagerBlobObject* obj, const char* start_id, const char* end_id) {
+Maybe<void> TensorPool::update_after_pesudo_evict(vm::DTREagerBlobObject* obj, const char* start_id, const char* end_id) {
   // include new end_tensor in the chain
   auto* operand = obj->compute_op();
   const auto& inputs = operand->inputs();
@@ -323,17 +323,17 @@ Maybe<void> DTRTensorPool::update_after_pesudo_evict(vm::DTREagerBlobObject* obj
   return Maybe<void>::Ok();
 }
 
-void DTRTensorPool::set_total_memory(size_t mem) { total_memory_bytes_ = mem; }
+void TensorPool::set_total_memory(size_t mem) { total_memory_bytes_ = mem; }
 
-size_t DTRTensorPool::get_total_memory() { return total_memory_bytes_; }
+size_t TensorPool::get_total_memory() { return total_memory_bytes_; }
 
-void DTRTensorPool::set_current_op_type_name(std::string op_type_name) {
+void TensorPool::set_current_op_type_name(std::string op_type_name) {
   current_op_type_name_ = std::move(op_type_name);
 }
 
-const std::string& DTRTensorPool::current_op_type_name() {
+const std::string& TensorPool::current_op_type_name() {
   return current_op_type_name_;
 }
 
-}  // namespace one
+}  // namespace dtr
 }  // namespace oneflow

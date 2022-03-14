@@ -194,9 +194,9 @@ bool CudaAllocator::AllocateBlockToExtendTotalMem(size_t aligned_size) {
   size_t total_bytes = -1;
   OF_CUDA_CHECK(cudaMemGetInfo(&free_bytes, &total_bytes));
   size_t available_bytes = -1;
-  if (oneflow::DTREnabled()) {
-    if (total_memory_bytes_ < oneflow::GetDTRMemoryThreshold()) {
-      available_bytes = oneflow::GetDTRMemoryThreshold() - total_memory_bytes_;
+  if (dtr::is_enabled()) {
+    if (total_memory_bytes_ < dtr::memory_threshold()) {
+      available_bytes = dtr::memory_threshold() - total_memory_bytes_;
       LOG(INFO) << "available_bytes: " << available_bytes / 1024. / 1024.
                 << ", total_memory_bytes: " << total_memory_bytes_ / 1024. / 1024.;
     } else {
@@ -219,7 +219,7 @@ bool CudaAllocator::AllocateBlockToExtendTotalMem(size_t aligned_size) {
     allocate_bytes = RoundUp(allocate_bytes, 2097152);
   }
   const size_t final_allocate_bytes = CudaMemAlignedBytes(allocate_bytes);
-  if (oneflow::DTRDebugEnabled()) {
+  if (dtr::is_enabled_and_debug()) {
     LOG(INFO) << "final allocate " << final_allocate_bytes / 1024. / 1024. << ", allocate "
               << allocate_bytes / 1024. / 1024. << ", wanted " << aligned_size / 1024. / 1024.;
   }
@@ -239,7 +239,7 @@ bool CudaAllocator::AllocateBlockToExtendTotalMem(size_t aligned_size) {
 
   // extend sucess
   total_memory_bytes_ += final_allocate_bytes;
-  Global<one::DTRTensorPool>::Get()->set_total_memory(total_memory_bytes_);
+  Global<dtr::TensorPool>::Get()->set_total_memory(total_memory_bytes_);
 
   Piece* piece = AllocatePiece();
   piece->size = final_allocate_bytes;
@@ -279,7 +279,7 @@ bool CudaAllocator::DeallocateFreeBlockForGarbageCollection() {
   }
 
   total_memory_bytes_ -= total_free_bytes;
-  Global<one::DTRTensorPool>::Get()->set_total_memory(total_memory_bytes_);
+  Global<dtr::TensorPool>::Get()->set_total_memory(total_memory_bytes_);
 
   if (total_free_bytes > 0) {
     LOG(INFO) << "CudaAllocator try deallocate free block for garbage collection. "
@@ -339,11 +339,11 @@ void CudaAllocator::Allocate(char** mem_ptr, std::size_t size) {
   // size_t r_memory = oneflow::GetDTRRemainMemory();
   // std::cout << r_memory << std::endl;
 
-  if (oneflow::DTREnabled()) {
+  if (dtr::is_enabled()) {
     // if (oneflow::DTRDebugEnabled()) { std::cout << "dtr enabled condition" << std::endl; }
     // int it = 0;   // evict iteration times
     while (piece == nullptr
-           && CHECK_JUST(Global<one::DTRTensorPool>::Get()->find_best_tensor_and_evict())) {
+           && CHECK_JUST(Global<dtr::TensorPool>::Get()->find_best_tensor_and_evict())) {
       LOG(INFO) << "total_memory_bytes after find best tensor and evict: "
                 << total_memory_bytes_ / 1024. / 1024.;
       piece = FindPiece(aligned_size);
@@ -361,7 +361,7 @@ void CudaAllocator::Allocate(char** mem_ptr, std::size_t size) {
   }
 
   if (piece == nullptr) {
-    CHECK_JUST(Global<one::DTRTensorPool>::Get()->display2());
+    CHECK_JUST(Global<dtr::TensorPool>::Get()->display2());
     Display();
   }
 

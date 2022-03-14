@@ -26,19 +26,19 @@ limitations under the License.
 #include "oneflow/core/eager/dtr_util.h"
 
 namespace oneflow {
-namespace one {
+namespace dtr {
 
-struct DTRTensorPool {
-  DTRTensorPool();
-  OF_DISALLOW_COPY_AND_MOVE(DTRTensorPool);
-  ~DTRTensorPool() {
+struct TensorPool {
+  TensorPool();
+  OF_DISALLOW_COPY_AND_MOVE(TensorPool);
+  ~TensorPool() {
     std::cout << "=======================" << std::endl;
-    std::cout << "Destruct DTRTensorPool." << std::endl;
+    std::cout << "Destruct TensorPool." << std::endl;
     std::cout << "Times of eviction: " << num_eviction_ << std::endl;
     std::cout << "Times of recomputation: " << num_recomputation_ << std::endl;
     std::cout << "Times of destruction: " << num_destruction_ << std::endl;
     std::cout << "duration_: " << duration_ << std::endl;
-    if (DTRDebugEnabled()) { CHECK_JUST(display()); }
+    if (dtr::is_enabled_and_debug()) { CHECK_JUST(display()); }
   }
 
   void set_total_memory(size_t mem);
@@ -86,7 +86,7 @@ struct DTRTensorPool {
   int num_destruction_;
 };
 
-}  // namespace one
+}  // namespace dtr
 }  // namespace oneflow
 
 #endif  // ONEFLOW_CORE_FRAMEWORK_TENSOR_POOL_H_

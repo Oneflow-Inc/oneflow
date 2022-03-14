@@ -104,7 +104,7 @@ Maybe<void> NaiveInterpret(const UserOpExpr& user_op_expr, const TensorTuple& in
   std::vector<bool> inplace_flag(outputs->size());
   for (int i = 0; i < outputs->size(); i++) {
     if (!outputs->at(i)) {
-      if (DTREnabled()) {
+      if (dtr::is_enabled()) {
         const auto& tensor_impl = std::make_shared<DTREagerMirroredTensorImpl>();
         outputs->at(i) = std::make_shared<DTRMirroredTensor>(tensor_impl);
         output_tensor_metas->at(i) = tensor_impl->mut_tensor_meta();
@@ -166,7 +166,7 @@ Maybe<void> NaiveInterpret(const UserOpExpr& user_op_expr, const TensorTuple& in
       CHECK_OR_RETURN(tensor_impl->tensor_meta()->dtype() == output_tensor_metas->at(i)->dtype());
     }
   }
-  if (DTREnabled()) {
+  if (dtr::is_enabled()) {
     CHECK_OR_RETURN(std::all_of(input_eager_blob_objects->begin(), input_eager_blob_objects->end(),
                                 [](const std::shared_ptr<vm::EagerBlobObject>& t) {
                                   return dynamic_cast<vm::DTREagerBlobObject*>(t.get()) != nullptr;

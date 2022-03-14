@@ -56,7 +56,7 @@ DtrCudaAllocator::~DtrCudaAllocator() {
 }
 
 void DtrCudaAllocator::Mark(DTREagerBlobObject* ebo, char* mem_ptr) {
-  if (oneflow::DTRDebugEnabled()) { LOG(INFO) << "mark " << ebo << " " << (void*)mem_ptr; }
+  if (dtr::is_enabled_and_debug()) { LOG(INFO) << "mark " << ebo << " " << (void*)mem_ptr; }
   Piece* piece = ptr2piece_.at(mem_ptr);
   piece->tensor = ebo;
 }
@@ -150,7 +150,7 @@ DtrCudaAllocator::Piece* DtrCudaAllocator::FindPiece(size_t aligned_size) {
   CHECK(IsAlignedSize(aligned_size));
 
   if (memory_ == nullptr) {
-    const size_t size = oneflow::GetDTRMemoryThreshold();
+    const size_t size = dtr::memory_threshold();
     OF_CUDA_CHECK(cudaMalloc(&memory_, size));
     Piece* piece = AllocatePiece();
     piece->size = size;
@@ -179,7 +179,7 @@ DtrCudaAllocator::Piece* DtrCudaAllocator::FindPiece(size_t aligned_size) {
           piece->bin_num = kInvalidBinNum;
           piece->is_free = false;
         } else if (piece->size > aligned_size) {
-                    const std::string& name = Global<one::DTRTensorPool>::Get()->current_op_type_name();
+                    const std::string& name = Global<dtr::TensorPool>::Get()->current_op_type_name();
           const bool choose_left = [&]() {
             if (ParseBooleanFromEnv("OF_DTR_NLR", false)) {
               // CHECK(ParseBooleanFromEnv("OF_DTR_HIGH_CONV", true));
@@ -197,7 +197,7 @@ DtrCudaAllocator::Piece* DtrCudaAllocator::FindPiece(size_t aligned_size) {
             }
           }();
           if (choose_left) {
-            if (oneflow::DTRDebugEnabled()) { LOG(INFO) << "left: " << name; }
+            if (dtr::is_enabled_and_debug()) { LOG(INFO) << "left: " << name; }
             piece->bin_num = kInvalidBinNum;
             piece->is_free = false;
 
@@ -285,7 +285,7 @@ double get_cost(const vm::DTREagerBlobObject* ebo, int& coeff) {
 }
 
 DtrCudaAllocator::Piece* DtrCudaAllocator::EvictAndFindPiece(size_t size) {
-  if (oneflow::DTRDebugEnabled()) { LOG(INFO) << "size: " << size; }
+  if (dtr::is_enabled_and_debug()) { LOG(INFO) << "size: " << size; }
   auto start = ptr2piece_.begin();
   auto end = ptr2piece_.begin();
   size_t total_size = 0;
@@ -298,7 +298,7 @@ DtrCudaAllocator::Piece* DtrCudaAllocator::EvictAndFindPiece(size_t size) {
       auto* end_tensor = end->second->tensor;
       // const auto* end_tensor = end->second->tensor;
       if (end_tensor != nullptr && (end_tensor->is_pinned() || !end_tensor->is_evictable())) {
-        if (oneflow::DTRDebugEnabled()) {
+        if (dtr::is_enabled_and_debug()) {
           LOG(INFO) << "skip tensor: " << end_tensor
                     << ", size: " << end_tensor->blob_body_bytes_double() << ", compute op "
                     << end_tensor->compute_op_type_name() << ", num_pinned: " << end_tensor->num_pinned()
@@ -315,12 +315,12 @@ DtrCudaAllocator::Piece* DtrCudaAllocator::EvictAndFindPiece(size_t size) {
       if (end_tensor != nullptr) {
         const char* start_id = start->first;
         const char* end_id = end->first;
-        CHECK_JUST(Global<one::DTRTensorPool>::Get()->update_after_pesudo_evict(end_tensor, start_id, end_id));
+        CHECK_JUST(Global<dtr::TensorPool>::Get()->update_after_pesudo_evict(end_tensor, start_id, end_id));
       }
       int coeff = -1;
       cost += get_cost(end_tensor, coeff);
       end++;
-      if (oneflow::DTRDebugEnabled()) {
+      if (dtr::is_enabled_and_debug()) {
         LOG(INFO) << "move end, include op: "
                   << (end_tensor != nullptr ? end_tensor->compute_op_type_name() : "no tensor")
                   << ", size: " << end->second->size
@@ -332,7 +332,7 @@ DtrCudaAllocator::Piece* DtrCudaAllocator::EvictAndFindPiece(size_t size) {
         min_cost = cost;
         min_start = start;
         min_end = end;
-        if (oneflow::DTRDebugEnabled()) { LOG(INFO) << "record, min_cost: " << min_cost; }
+        if (dtr::is_enabled_and_debug()) { LOG(INFO) << "record, min_cost: " << min_cost; }
       }
       auto* start_tensor = start->second->tensor;
       // const auto* start_tensor = start->second->tensor;
@@ -340,10 +340,10 @@ DtrCudaAllocator::Piece* DtrCudaAllocator::EvictAndFindPiece(size_t size) {
       // start_tensor is back in the pool, update_after_pesudo_compute
       int coeff = -1;
       if (start_tensor != nullptr) {
-        coeff = Global<one::DTRTensorPool>::Get()->update_after_pesudo_compute(start_tensor);
+        coeff = Global<dtr::TensorPool>::Get()->update_after_pesudo_compute(start_tensor);
       }
       cost -= get_cost(start_tensor, coeff);
-      if (oneflow::DTRDebugEnabled()) {
+      if (dtr::is_enabled_and_debug()) {
         LOG(INFO) << "move start, exclude op: "
                   << (start_tensor != nullptr ? start_tensor->compute_op_type_name() : "no tensor")
                   << ", size: " << start->second->size
@@ -361,7 +361,7 @@ DtrCudaAllocator::Piece* DtrCudaAllocator::EvictAndFindPiece(size_t size) {
     pieces_to_be_evicted.push_back(piece);
   }
   for (auto* piece : pieces_to_be_evicted) {
-    if (oneflow::DTRDebugEnabled()) {
+    if (dtr::is_enabled_and_debug()) {
       int coeff = -1;
       LOG(INFO) << "release dptr: " << (void*)piece->ptr << ", size: " << piece->size
                 << ", cost: " << get_cost(piece->tensor, coeff) << ", compute op: "
@@ -373,7 +373,7 @@ DtrCudaAllocator::Piece* DtrCudaAllocator::EvictAndFindPiece(size_t size) {
     // so no bug occurs. It is tricky and fragile.
     if (piece->tensor != nullptr) { CHECK_JUST(piece->tensor->evict()); }
   }
-  if (oneflow::DTRDebugEnabled()) { LOG(INFO) << "evict size: " << size2; }
+  if (dtr::is_enabled_and_debug()) { LOG(INFO) << "evict size: " << size2; }
   return FindPiece(size);
 }
 
@@ -389,7 +389,7 @@ void DtrCudaAllocator::Allocate(char** mem_ptr, std::size_t size) {
   if (piece == nullptr) { piece = EvictAndFindPiece(aligned_size); }
 
   if (piece == nullptr) {
-    CHECK_JUST(Global<one::DTRTensorPool>::Get()->display2());
+    CHECK_JUST(Global<dtr::TensorPool>::Get()->display2());
     Display();
   }
 

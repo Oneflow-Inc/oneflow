@@ -79,7 +79,7 @@ bool DTRMirroredTensor::is_in_memory() const {
 }
 
 Maybe<void> DTRMirroredTensor::set_tensor_inputs(const TensorTuple& inputs) {
-  if (oneflow::DTRDebugEnabled()) {
+  if (dtr::is_enabled_and_debug()) {
     std::stringstream ss;
     ss << "set inputs of " << this << " (ebo " << JUST(eager_blob_object()).get() << ") to ";
     for (const auto& x : inputs) {
@@ -103,7 +103,7 @@ Maybe<void> DTRMirroredTensor::set_tensor_inputs(const TensorTuple& inputs) {
   }
   holder_ =
       std::make_shared<Holder>(input_holders, JUST(tensor_storage()), JUST(eager_blob_object()));
-  if (oneflow::DTRDebugEnabled()) { LOG(INFO) << "set_tenosr_inputs done"; }
+  if (dtr::is_enabled_and_debug()) { LOG(INFO) << "set_tenosr_inputs done"; }
   return Maybe<void>::Ok();
 }
 
@@ -122,7 +122,7 @@ Maybe<MirroredTensor> StaticZerosTensor::AsMirroredTensor() {
     const auto& impl =
         std::make_shared<LazyMirroredTensorImpl>(tensor_meta, requires_grad, is_leaf);
     return std::make_shared<MirroredTensor>(impl);
-  } else if (oneflow::DTREnabled()) {
+  } else if (dtr::is_enabled()) {
     const auto& impl =
         std::make_shared<DTREagerMirroredTensorImpl>(tensor_meta, requires_grad, is_leaf);
     const auto& tensor = std::make_shared<DTRMirroredTensor>(impl);

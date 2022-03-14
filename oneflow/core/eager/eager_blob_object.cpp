@@ -67,7 +67,7 @@ Maybe<void> EagerBlobObject::TryAllocateBlobBodyMemory(DeviceCtx* device_ctx) {
   const std::size_t required_body_bytes = blob->AlignedByteSizeOfBlobBody();
   if (required_body_bytes == 0) {
     CHECK_ISNULL_OR_RETURN(blob->dptr());
-    if (oneflow::DTRDebugEnabled()) {
+    if (dtr::is_enabled_and_debug()) {
       LOG(INFO) << "ebo " << this << " has no body";
       LOG(INFO) << blob->shape();
     }
@@ -75,7 +75,7 @@ Maybe<void> EagerBlobObject::TryAllocateBlobBodyMemory(DeviceCtx* device_ctx) {
   }
   if (blob->dptr() != nullptr) {
     CHECK_EQ_OR_RETURN(blob_body_bytes_, required_body_bytes);
-    if (oneflow::DTRDebugEnabled()) {
+    if (dtr::is_enabled_and_debug()) {
       LOG(INFO) << "ebo " << this
                 << " body already allocated, blob_body_bytes_: " << blob_body_bytes_
                 << ", required_body_bytes: " << required_body_bytes;
@@ -98,12 +98,12 @@ Maybe<void> EagerBlobObject::TryAllocateBlobBodyMemory(DeviceCtx* device_ctx) {
             dtr_allocator->Mark(dtr_ebo, dptr);
           } else {
             // do nothing
-            if (oneflow::DTRDebugEnabled()) {
+            if (dtr::is_enabled_and_debug()) {
               LOG(INFO) << "dtr_allocator has a non DTREagerBlobObject, " << typeid(*this).name();
             }
           }
         } else {
-          if (oneflow::DTRDebugEnabled()) {
+          if (dtr::is_enabled_and_debug()) {
             LOG(INFO) << "not dtr allocator, " << typeid(*allocator).name();
           }
         }

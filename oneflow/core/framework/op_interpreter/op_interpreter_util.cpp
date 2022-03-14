@@ -36,7 +36,7 @@ namespace {
 
 std::shared_ptr<AutogradInterpreter> BuildEagerInterpreter(const bool& is_mirrored) {
   std::shared_ptr<OpExprInterpreter> internal;
-  if (DTREnabled()) {
+  if (dtr::is_enabled()) {
     internal = std::make_shared<DTREagerMirroredInterpreter>();
   } else if (is_mirrored) {
     internal = std::make_shared<EagerMirroredInterpreter>();

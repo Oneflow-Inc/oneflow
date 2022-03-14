@@ -8,18 +8,22 @@
 
 namespace oneflow {
 
-bool DTREnabled() { return Global<DTRConfig>::Get()->is_enabled; }
+namespace dtr {
 
-size_t GetDTRMemoryThreshold() { return Global<DTRConfig>::Get()->memory_threshold; }
+bool is_enabled() { return Global<DTRConfig>::Get()->is_enabled; }
 
-bool DTRDebugEnabled() { return DTREnabled() && Global<DTRConfig>::Get()->debug_level > 0; }
+size_t memory_threshold() { return Global<DTRConfig>::Get()->memory_threshold; }
 
-int DTRDebugLevel() {
-  if (!DTREnabled()) { return 0; }
+bool is_enabled_and_debug() { return is_enabled() && Global<DTRConfig>::Get()->debug_level > 0; }
+
+int debug_level() {
+  if (!is_enabled()) { return 0; }
   return Global<DTRConfig>::Get()->debug_level;
 }
 
-bool dtr_use_disjoint_set() { return Global<DTRConfig>::Get()->heuristic == "eq"; }
+bool is_using_disjoint_set() { return Global<DTRConfig>::Get()->heuristic == "eq"; }
+
+}  // namespace dtr
 
 namespace vm {
 
@@ -70,7 +74,7 @@ std::shared_ptr<LocalCallOpKernelPhyInstrOperand> DTROp2LocalCallOp(DTRInstrOper
     if (auto input = inputs[i].lock()) {
       input_shared_ptr->at(i) = input;
     } else {
-      // CHECK_JUST(Global<one::DTRTensorPool>::Get()->display2());
+      // CHECK_JUST(Global<dtr::TensorPool>::Get()->display2());
       LOG(FATAL) << "null at input " << i << " of op "
                  << operand->shared_opkernel()->op_type_name();
     }
@@ -80,7 +84,7 @@ std::shared_ptr<LocalCallOpKernelPhyInstrOperand> DTROp2LocalCallOp(DTRInstrOper
     if (auto output = outputs[i].lock()) {
       output_shared_ptr->at(i) = output;
     } else {
-      // CHECK_JUST(Global<one::DTRTensorPool>::Get()->display2());
+      // CHECK_JUST(Global<dtr::TensorPool>::Get()->display2());
       LOG(FATAL) << "null at output " << i << " of op "
                  << operand->shared_opkernel()->op_type_name();
     }
@@ -106,7 +110,7 @@ Maybe<void> CheckInMemory(const std::vector<std::shared_ptr<DTREagerBlobObject>>
   }
   return Maybe<void>::Ok();
 }
-}
+}  // namespace
 
 Maybe<void> CheckInputInMemory(LocalCallOpKernelPhyInstrOperand* operand) {
   return CheckInMemory(GetDTRInputs(operand));
