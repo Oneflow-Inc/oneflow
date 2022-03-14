@@ -17,23 +17,28 @@ import unittest
 import oneflow as flow
 import oneflow.unittest
 
+
 @flow.unittest.skip_unless_1n1d()
 class TestPybind11Caster(flow.unittest.TestCase):
     def test_optional(test_case):
-        test_case.assertEqual(flow._oneflow_internal.test_api.increase_if_not_none(1), 2)
-        test_case.assertEqual(flow._oneflow_internal.test_api.increase_if_not_none(None), None)
+        test_case.assertEqual(
+            flow._oneflow_internal.test_api.increase_if_not_none(1), 2
+        )
+        test_case.assertEqual(
+            flow._oneflow_internal.test_api.increase_if_not_none(None), None
+        )
 
     def test_maybe(test_case):
         test_case.assertEqual(flow._oneflow_internal.test_api.divide(6, 2), 3)
         with test_case.assertRaises(Exception) as context:
             flow._oneflow_internal.test_api.divide(6, 0)
-        test_case.assertTrue('Check failed' in str(context.exception))
+        test_case.assertTrue("Check failed" in str(context.exception))
 
     def test_maybe_void(test_case):
         flow._oneflow_internal.test_api.throw_if_zero(1)
         with test_case.assertRaises(Exception) as context:
             flow._oneflow_internal.test_api.throw_if_zero(0)
-        test_case.assertTrue('Check failed' in str(context.exception))
+        test_case.assertTrue("Check failed" in str(context.exception))
 
     def test_return_maybe_shared_ptr(test_case):
         a1 = flow._oneflow_internal.test_api.get_singleton_a()
@@ -44,7 +49,7 @@ class TestPybind11Caster(flow.unittest.TestCase):
         x2 = a2.get_x()
 
         test_case.assertEqual(id(a1), id(a2))
-        test_case.assertEqual(x1 + 1, x2);
+        test_case.assertEqual(x1 + 1, x2)
 
     def test_pass_optional_shared_ptr(test_case):
         a1 = flow._oneflow_internal.test_api.get_singleton_a()
@@ -55,7 +60,7 @@ class TestPybind11Caster(flow.unittest.TestCase):
         x2 = a2.get_x()
 
         test_case.assertEqual(id(a1), id(a2))
-        test_case.assertEqual(x1 + 2, x2);
+        test_case.assertEqual(x1 + 2, x2)
 
 
 if __name__ == "__main__":
