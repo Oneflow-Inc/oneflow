@@ -42,7 +42,7 @@ class TestDiagonalConsistent(flow.unittest.TestCase):
     @globaltest
     def test_diagonal(test_case):
         for placement in all_placement():
-            for sbp in all_sbp(placement, max_dim = 4):
+            for sbp in all_sbp(placement, max_dim=4):
                 _test_diagonal_impl(test_case, placement, sbp)
 
 
