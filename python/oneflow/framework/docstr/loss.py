@@ -115,13 +115,10 @@ add_docstr(
         >>> import oneflow as flow
         >>> import oneflow.nn.functional as F
         >>> input = flow.randn(3, 5, requires_grad=True)
-        >>> target = flow.randint(5, (3,), dtype=flow.int64)
+        >>> target = flow.ones(3, dtype=flow.int64)
         >>> loss = F.cross_entropy(input, target)
         >>> loss.backward()
-        >>> input = flow.randn(3, 5, requires_grad=True)
-        >>> target = flow.randn(3, 5).softmax(dim=1)
-        >>> loss = F.cross_entropy(input, target)
-        >>> loss.backward()
+
 
     """
 )
