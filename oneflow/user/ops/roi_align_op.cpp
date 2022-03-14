@@ -20,7 +20,7 @@ namespace oneflow {
 
 /*static*/ Maybe<void> RoiAlignOp::GetSbp(user_op::SbpContext* ctx) {
   ctx->NewBuilder()
-      .Split(user_op::OpArg("x", 0), 0)
+      .Broadcast(user_op::OpArg("x", 0))
       .Split(user_op::OpArg("rois", 0), 0)
       .Split(user_op::OpArg("y", 0), 0)
       .Build();
@@ -61,9 +61,9 @@ namespace oneflow {
 /*static*/ Maybe<void> RoiAlignGradOp::GetSbp(user_op::SbpContext* ctx) {
   ctx->NewBuilder()
       .Split(user_op::OpArg("dy", 0), 0)
-      .Split(user_op::OpArg("x_like", 0), 0)
+      .Broadcast(user_op::OpArg("x_like", 0))
       .Split(user_op::OpArg("rois", 0), 0)
-      .Split(user_op::OpArg("dx", 0), 0)
+      .Broadcast(user_op::OpArg("dx", 0))
       .Build();
   return Maybe<void>::Ok();
 }
