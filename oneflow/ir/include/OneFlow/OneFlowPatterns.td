@@ -62,28 +62,6 @@ def BroadcastMulToScalarMulPattern : Pat<
   ]
 >;
 
-def OutlineBatchMatMul : NativeCodeCall<"::mlir::oneflow::OutlineBatchMatMul($_builder, $0)">;
-def BatchMatmulPattern : Pat<
-  (
-    OneFlow_BatchMatmulOp : $batch_matmul_op
-    $a,
-    $b,
-    $_add_to_output,
-    $transpose_a,
-    $transpose_b,
-    $alpha,
-    $batch_matmul_op_name,
-    $matmul_device_tag,
-    $matmul_device_name,
-    $matmul_scope_symbol_id,
-    $matmul_hierarchy
-  ),
-  (OutlineBatchMatMul $batch_matmul_op),
-  [
-    (IsNotNestedInJit $batch_matmul_op)
-  ]
->;
-
 def GetFirstValue :
   NativeCodeCall<"*$0.begin()">;
 
@@ -133,6 +111,103 @@ def FusedScaleTrilPattern : Pat<
     (IsGPU $tril_device_tag),
     (IsGPU $scale_device_tag)
   ]
+>;
+
+def FusePadAndConv2d :
+  NativeCodeCall<"mlir::oneflow::CreateConv2dAndErasePad($_builder, $0, $1)">;
+
+def HasIdenticalPadding: Constraint<CPred<"mlir::oneflow::IsPaddingCouldBeAssimilatedIntoConv($0, $1, $2)">, "">;
+
+def FusedPadConv2DPattern : Pat<
+  (
+    OneFlow_Conv2DOp : $conv_2d_res
+    (
+      OneFlow_PadOp : $pad_res
+        $x,
+        $pad_op_name,
+        $pad_device_tag,
+        $pad_device_name,
+        $pad_scope_symbol_id,
+        $pad_hierarchy,
+        $pad_op_padding_before,
+        $pad_op_padding_after,
+        $pad_op_padding,
+        $floating_constant_value,
+        $integral_constant_value
+    ),
+    $weight,
+    $bias,
+    $bias_multiplier,
+    $conv2d_op_name,
+    $conv2d_device_tag,
+    $conv2d_device_name,
+    $conv2d_scope_symbol_id,
+    $conv2d_hierarchy,
+    $operand_segment_sizes,
+    $filters,
+    $padding_before,
+    $data_format,
+    $kernel_size,
+    $strides,
+    $dilation_rate,
+    $groups
+  ),
+  (FusePadAndConv2d $conv_2d_res, $pad_res),
+  [
+    (HasIdenticalPadding $pad_op_padding_before, $pad_op_padding_after, $data_format)
+  ]
+>;
+
+def GetDefaultSeed :
+  NativeCodeCall<"mlir::oneflow::GetDefaultSeed($_builder)">;
+
+def FusedBiasAddMaskScale :
+  NativeCodeCall<"mlir::oneflow::CreateFusedBiasAddMaskScale($_builder, $0, $1, $2)">;
+
+def IsAddToOutputNone: Constraint<CPred<"mlir::oneflow::IsAddToOutputNone($0)">, "">;
+
+def FusedBiasAddDropoutPattern : Pattern<
+  (
+    OneFlow_DropoutOp: $dropout_res
+    (
+      OneFlow_BiasAddOp: $bias_add_res
+        $a,
+        $b,
+        $bias_add_op_name,
+        $bias_add_device_tag,
+        $bias_add_device_name,
+        $bias_add_scope_symbol_id,
+        $bias_add_hierarchy,
+        $bias_add_op_axis
+    ),
+    $_add_to_output,
+    $dropout_op_name,
+    $dropout_device_tag,
+    $dropout_device_name,
+    $dropout_scope_symbol_id,
+    $dropout_hierarchy,
+    $dropout_op_rate
+  ),
+  [
+    (
+      FusedBiasAddMaskScale
+      $dropout_res__0,
+      $bias_add_res,
+      (
+        OneFlow_RandomMaskLikeOp : $mask
+          $a,
+          $bias_add_op_name,
+          $dropout_device_tag,
+          $dropout_device_name,
+          $dropout_scope_symbol_id,
+          $dropout_hierarchy,
+          $dropout_op_rate,
+          (GetDefaultSeed)
+      )
+    ),
+    (replaceWithValue $mask)
+  ],
+  [(IsAddToOutputNone $_add_to_output)]
 >;
 
 // TODO: use either to merge two patterns

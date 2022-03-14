@@ -19,7 +19,7 @@ import unittest
 from collections import OrderedDict
 
 import numpy as np
-from test_util import GenArgList
+from oneflow.test_utils.test_util import GenArgList
 from optimizer_test_util import clip_grad_norm_np
 
 import oneflow as flow
@@ -77,9 +77,7 @@ def compare_with_numpy_adam(
             train_one_iter(random_grad_seq[i])
             if i == reload_state_step:
                 state_dict = adam.state_dict()
-                adam = flow.optim.Adam(
-                    [{"params": [x],}], do_bias_correction=do_bias_correction,
-                )
+                adam = flow.optim.Adam([{"params": [x],}],)
                 if save_load_by_pickle:
                     with tempfile.TemporaryDirectory() as save_dir:
                         flow.save(state_dict, save_dir)
@@ -185,9 +183,7 @@ def compare_with_numpy_adam_clip_grad(
             train_one_iter(random_grad_seq[i])
             if i == reload_state_step:
                 state_dict = adam.state_dict()
-                adam = flow.optim.Adam(
-                    [{"params": [x],}], do_bias_correction=do_bias_correction,
-                )
+                adam = flow.optim.Adam([{"params": [x],}])
                 if save_load_by_pickle:
                     with tempfile.TemporaryDirectory() as save_dir:
                         flow.save(state_dict, save_dir)

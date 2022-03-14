@@ -16,10 +16,30 @@ limitations under the License.
 #ifndef ONEFLOW_CORE_IPC_SHARED_MEMORY_H_
 #define ONEFLOW_CORE_IPC_SHARED_MEMORY_H_
 
+#include "oneflow/core/common/util.h"
 #include "oneflow/core/common/maybe.h"
+#include "oneflow/core/common/global.h"
 
 namespace oneflow {
 namespace ipc {
+
+class SharedMemoryManager final {
+ public:
+  OF_DISALLOW_COPY_AND_MOVE(SharedMemoryManager);
+  ~SharedMemoryManager();
+  void AddShmName(const std::string& shm_name);
+  Maybe<void> DeleteShmName(const std::string& shm_name);
+
+  void UnlinkAllShms();
+
+  static SharedMemoryManager& get();
+
+ private:
+  SharedMemoryManager() = default;
+  void FindAndDeleteOutdatedShmNames();
+  std::set<std::string> shm_names_;
+  std::recursive_mutex mutex_;
+};
 
 class SharedMemory final {
  public:
@@ -27,8 +47,8 @@ class SharedMemory final {
   SharedMemory(SharedMemory&&) = delete;
   ~SharedMemory();
 
-  static Maybe<SharedMemory> Open(size_t size);
-  static Maybe<SharedMemory> Open(const std::string& name);
+  static Maybe<SharedMemory> Open(size_t size, bool create);
+  static Maybe<SharedMemory> Open(const std::string& name, bool create);
 
   const char* buf() const { return buf_; }
   char* mut_buf() { return buf_; }

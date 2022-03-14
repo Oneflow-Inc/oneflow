@@ -16,7 +16,7 @@ limitations under the License.
 import bisect
 from typing import Sequence, Union
 from .optimizer import Optimizer
-from .lr_scheduler import LRScheduler, _scheduler_with_step
+from .lr_scheduler import LRScheduler
 
 
 class SequentialLR(LRScheduler):
@@ -68,7 +68,7 @@ class SequentialLR(LRScheduler):
             raise ValueError("Sequential Schedulers expects at least one scheduler")
 
         for i in range(len(schedulers)):
-            if schedulers[i]._optimizer != optimizer:
+            if schedulers[i].optimizer != optimizer:
                 raise ValueError(
                     "Sequential Schedulers expects all schedulers to belong to the same optimizer, but "
                     f"got schedulers at index {i} to be different than the optimizer passed in."
@@ -82,62 +82,65 @@ class SequentialLR(LRScheduler):
             )
 
         if isinstance(interval_rescaling, (list, tuple)):
-            if len(interval_rescaling) != len(schedulers):
+            if len(interval_rescaling) != len(milestones):
                 raise ValueError(
                     "'interval_rescaling' expects a bool or a list of bool with length be equal to "
-                    f"the number of sequential schedulers, but got number of schedulers {len(schedulers)} "
+                    f"the number of milestones, but got number of milestones {len(milestones)} "
                     f"and the length of list of interval_rescaling {len(interval_rescaling)}"
                 )
 
             assert all([isinstance(r, bool) for r in interval_rescaling])
         else:
             assert isinstance(interval_rescaling, bool)
-            interval_rescaling = [interval_rescaling] * (len(schedulers))
+            interval_rescaling = [interval_rescaling] * (len(milestones))
 
-        self.schedulers = schedulers
-        self.milestones = milestones
-        self.interval_rescaling = interval_rescaling
+        self.schedulers = list(schedulers)
+        self.milestones = list(milestones)
+        self.interval_rescaling = list(interval_rescaling)
         super().__init__(optimizer, last_step, verbose)
 
-    def get_lr(self):
-        idx = bisect.bisect_right(self.milestones, self.last_step)
-        cur_step = self.last_step
-        if self.interval_rescaling[idx] and idx > 0:
-            cur_step -= self.milestones[idx - 1]
-
-        with _scheduler_with_step(self.schedulers[idx], cur_step) as scheduler:
-            lrs = scheduler.get_lr()
-
-        return lrs
-
     def step(self):
-        super().step()
-        # sync last_step
-        for s in self.schedulers:
-            s.last_step = self.last_step
+        self.last_step += 1
+        cur_step = self.last_step
+        s_i = bisect.bisect_right(self.milestones, cur_step)
+        if s_i > 0 and self.interval_rescaling[s_i - 1]:
+            cur_step = self.last_step - self.milestones[s_i - 1]
+
+        scheduler = self.schedulers[s_i]
+        scheduler.last_step = cur_step
+        lrs = [scheduler.get_lr(base_lr, cur_step) for base_lr in self.base_lrs]
+        self.update_lrs(lrs)
 
     def state_dict(self):
         # exclude optimizer and nested schedulers
         state_dict = {
             key: value
             for key, value in self.__dict__.items()
-            if key not in ("_optimizer", "schedulers")
+            if key not in ("optimizer", "schedulers")
         }
         state_dict["schedulers"] = [None] * len(self.schedulers)
-
-        for idx, s in enumerate(self.schedulers):
-            state_dict["schedulers"][idx] = s.state_dict()
+        for i, s in enumerate(self.schedulers):
+            state_dict["schedulers"][i] = s.state_dict()
 
         return state_dict
 
     def load_state_dict(self, state_dict):
-        schedulers = state_dict.pop("schedulers")
+        scheduler_states = state_dict.pop("schedulers")
         self.__dict__.update(state_dict)
         # avoid side effect of calling load_state_dict twice
-        state_dict["schedulers"] = schedulers
+        state_dict["schedulers"] = scheduler_states
 
-        for idx, s in enumerate(schedulers):
-            self.schedulers[idx].load_state_dict(s)
+        for i, s in enumerate(scheduler_states):
+            self.schedulers[i].load_state_dict(s)
 
-    def _generate_conf_for_graph(self, opt_confs):
-        raise NotImplementedError("SequentialLR is not supported in graph mode")
+    def _generate_conf_for_graph(self, lr_conf):
+        seq_lr_conf = lr_conf.mutable_sequential_scheduler_conf()
+
+        for scheduler in self.schedulers:
+            scheduler._generate_conf_for_graph(seq_lr_conf.mutable_schedulers().Add())
+
+        for m in self.milestones:
+            seq_lr_conf.add_milestones(m)
+
+        for r in self.interval_rescaling:
+            seq_lr_conf.add_interval_rescaling(r)

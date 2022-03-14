@@ -26,7 +26,6 @@ limitations under the License.
 #include "oneflow/api/python/functional/tensor_api.yaml.pybind.h"
 #include "oneflow/core/framework/tensor.h"
 #include "oneflow/core/framework/tensor_rpc_util.h"
-#include "oneflow/core/framework/tensor_methods.h"
 #include "oneflow/core/framework/device.h"
 #include "oneflow/core/framework/stride.h"
 #include "oneflow/core/framework/py_distribute.h"
@@ -49,14 +48,14 @@ const Symbol<DType>* GetTensorDType(const Tensor& tensor) {
   return &CHECK_JUST(DType::Get(tensor.dtype()->data_type()));
 }
 
-py::array ApiEagerTensorToNumpy(const py::handle& py_tensor) {
+py::array ApiEagerMirroredTensorToNumpy(const py::handle& py_tensor) {
   const std::shared_ptr<Tensor> tensor = py::cast<const std::shared_ptr<Tensor>>(py_tensor);
   DataType data_type = tensor->dtype()->data_type();
   switch (data_type) {
 #define SWITCH_EAGER_TENSOR_TO_NUMPY(cpp_type, of_type) \
-  case of_type: return EagerTensorToNumpy<cpp_type>(py_tensor).GetOrThrow();
+  case of_type: return EagerMirroredTensorToNumpy<cpp_type>(py_tensor).GetOrThrow();
     OF_PP_FOR_EACH_TUPLE(SWITCH_EAGER_TENSOR_TO_NUMPY, POD_DATA_TYPE_SEQ)
-    case DataType::kFloat16: return EagerTensorToNumpy<float16>(py_tensor).GetOrThrow();
+    case DataType::kFloat16: return EagerMirroredTensorToNumpy<float16>(py_tensor).GetOrThrow();
     default:
       return Maybe<py::array>(Error::UnimplementedError() << "Invalid datatype").GetOrThrow();
   }
@@ -112,10 +111,6 @@ void ApiRegisterTensorHook(const std::shared_ptr<Tensor>& self, const AutogradMe
 void ApiRegisterTensorPostGradAccumulationHook(const std::shared_ptr<Tensor>& self,
                                                const AutogradMeta::Hook& hook) {
   return RegisterTensorPostGradAccumulationHook(self, hook).GetOrThrow();
-}
-
-bool ApiIsContiguous(const std::shared_ptr<Tensor>& tensor) {
-  return IsContiguous(tensor).GetOrThrow();
 }
 
 py::tuple ApiTensorGetPyTupleOfSbp(const Tensor& tensor) {
@@ -178,14 +173,20 @@ ONEFLOW_API_PYBIND11_MODULE("", m) {
           })
       .def_property(
           "data", [](Tensor& t) { return t.data().GetPtrOrThrow(); },
-          [](Tensor& t, const std::shared_ptr<Tensor>& other) { t.set_data(other).GetOrThrow(); })
+          [](const std::shared_ptr<Tensor>& t, const std::shared_ptr<Tensor>& other) {
+            auto hooks = t->autograd_meta()->hooks();
+            t->set_data(other).GetOrThrow();
+            // Re-register hooks
+            for (const auto& hook : hooks) { ApiRegisterTensorHook(t, hook); }
+          })
       .def("storage_offset", [](const Tensor& t) { return t.storage_offset().GetOrThrow(); })
       .def("stride",
            [](const Tensor& t) {
              const auto& stride = t.stride().GetPtrOrThrow()->StrideVec();
              return py::tuple(py::make_iterator(stride.begin(), stride.end()));
            })
-      .def("is_contiguous", &ApiIsContiguous)
+      .def("is_contiguous", &Tensor::is_contiguous)
+      .def("contiguous", &Tensor::contiguous)
       .def_property_readonly("grad_fn", &Tensor::grad_fn_node)
       .def_property_readonly("is_leaf", &Tensor::is_leaf)
       .def_property("requires_grad", &Tensor::requires_grad, &ApiSetRequiresGrad)
@@ -222,7 +223,7 @@ ONEFLOW_API_PYBIND11_MODULE("", m) {
            [](const std::shared_ptr<one::Tensor>& tensor) {
              return CheckMetaConsistency(tensor).GetOrThrow();
            })
-      .def("to_numpy", &ApiEagerTensorToNumpy, py::return_value_policy::move)
+      .def("to_numpy", &ApiEagerMirroredTensorToNumpy, py::return_value_policy::move)
 #define DEFINE_TENSOR_METHOD(T, type_proto)                    \
   .def("_copy_to_numpy_" #T, &ApiCopyMirroredTensorToNumpy<T>) \
       .def("_copy_from_numpy_" #T, &ApiCopyMirroredTensorFromNumpy<T>)

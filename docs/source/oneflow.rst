@@ -51,7 +51,8 @@ oneflow
             as_strided,
             div, 
             dot, 
-            eq, 
+            eq,
+            einsum,
             equal, 
             expand, 
             eye,
@@ -182,3 +183,4 @@ oneflow
             LongTensor,
 
 .. autofunction:: oneflow.relu
+.. autofunction:: oneflow.set_num_threads
