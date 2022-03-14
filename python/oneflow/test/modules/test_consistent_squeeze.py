@@ -27,7 +27,7 @@ import oneflow.unittest
 
 @autotest(n=1, check_graph=False)
 def _test_squeeze_1d_input(test_case, placement, sbp):
-    x = random_tensor(1, 10, dtype=float).to_global(placement, sbp)
+    x = random_tensor(1, 16, dtype=float).to_global(placement, sbp)
     y = torch.squeeze(x)
     return y
 
