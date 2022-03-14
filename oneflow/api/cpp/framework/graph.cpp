@@ -59,7 +59,7 @@ namespace oneflow_api {
 
 namespace of = oneflow;
 
-enum class XrtKind : int { kNone = 0, kTensorRT = 1 };
+enum class XrtKind : int { kNone = 0, kTensorRT = 1, kOpenVino = 2 };
 
 namespace {
 
@@ -89,6 +89,12 @@ class CompileScope {
       *(job_config_cfg.mutable_xrt_config()->mutable_use_tensorrt()) = true;
 #else
       LOG(WARNING) << "XRT TensorRT is unavailable while tensorrt is enabled";
+#endif
+    } else if (kind == XrtKind::kOpenVino) {
+#ifdef WITH_OPENVINO
+      *(job_config_cfg.mutable_xrt_config()->mutable_use_openvino()) = true;
+#else
+      LOG(WARNING) << "XRT OpenVINO is unavailable while openvino is enabled";
 #endif
     }
   }
@@ -144,6 +150,7 @@ class Graph::GraphImpl final {
   std::vector<Tensor> Forward(const std::vector<Tensor>& inputs);
   void set_batch_size(int batch_size) { batch_size_ = batch_size; }
   void enable_tensorrt() { xrt_kind_ = XrtKind::kTensorRT; }
+  void enable_openvino() { xrt_kind_ = XrtKind::kOpenVino; }
 
  private:
   of::Maybe<void> CollectInputOutputInfos();
@@ -212,6 +219,8 @@ IValue Graph::Forward(const IValue& inputs) {
 void Graph::set_batch_size(int batch_size) { graph_->set_batch_size(batch_size); }
 
 void Graph::enable_tensorrt() { graph_->enable_tensorrt(); }
+
+void Graph::enable_openvino() { graph_->enable_openvino(); }
 
 Graph Graph::Load(const std::string& model_path, const Device& device) {
   Graph graph(model_path, device);
