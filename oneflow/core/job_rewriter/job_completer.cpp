@@ -124,8 +124,8 @@ Maybe<void> JobCompleter::Complete(Job* job) const {
 #ifdef OF_WITH_XRT
     JUST(WithOpGraphAndMutJob(job, &RebuildXrtCompiledJob));
 #else
-    LOG(WARNING) << "It will not use XLA or TensorRT since WITH_XLA or "
-                    "WITH_TENSORRT was not enabled when compiling the project.";
+    LOG(WARNING) << "It will not use XLA, TensorRT or OpenVINO since WITH_XLA, "
+                    "WITH_TENSORRT or WITH_OPENVINO was not enabled when compiling the project.";
 #endif  // OF_WITH_XRT
   }
 #ifdef WITH_CUDA
