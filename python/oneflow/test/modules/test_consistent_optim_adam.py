@@ -240,7 +240,7 @@ class TestAdam(flow.unittest.TestCase):
     @globaltest
     def test_adam(test_case):
         arg_dict = OrderedDict()
-        arg_dict["x_shape"] = [(4, 4)]
+        arg_dict["x_shape"] = [(16, 16)]
         arg_dict["learning_rate"] = [1e-3]
         arg_dict["train_iters"] = [3]
         arg_dict["betas"] = [(0.99, 0.9)]
@@ -259,7 +259,7 @@ class TestAdam(flow.unittest.TestCase):
     @globaltest
     def test_adam_clip_grad(test_case):
         arg_dict = OrderedDict()
-        arg_dict["x_shape"] = [(10,)]
+        arg_dict["x_shape"] = [(16, 16)]
         arg_dict["learning_rate"] = [1e-3]
         arg_dict["train_iters"] = [5]
         arg_dict["betas"] = [(0.99, 0.9)]

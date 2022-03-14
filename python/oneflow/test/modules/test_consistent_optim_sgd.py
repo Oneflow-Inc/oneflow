@@ -190,7 +190,7 @@ class TestOptimizers(flow.unittest.TestCase):
     @globaltest
     def test_sgd(test_case):
         arg_dict = OrderedDict()
-        arg_dict["x_shape"] = [(4, 4)]
+        arg_dict["x_shape"] = [(16, 16)]
         arg_dict["momentum"] = [0.0, 0.9]
         arg_dict["weight_decay"] = [0.0, 0.9]
         arg_dict["learning_rate"] = [1]
@@ -205,7 +205,7 @@ class TestOptimizers(flow.unittest.TestCase):
     @globaltest
     def test_sgd_clip_grad(test_case):
         arg_dict = OrderedDict()
-        arg_dict["x_shape"] = [(4, 4)]
+        arg_dict["x_shape"] = [(16, 16)]
         arg_dict["momentum"] = [0.0, 0.9]
         arg_dict["weight_decay"] = [0.0, 0.9]
         arg_dict["learning_rate"] = [0.2]

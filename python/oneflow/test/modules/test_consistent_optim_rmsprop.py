@@ -221,7 +221,7 @@ class TestRMSProp(flow.unittest.TestCase):
     @globaltest
     def test_rmsprop(test_case):
         arg_dict = OrderedDict()
-        arg_dict["x_shape"] = [(4, 4)]
+        arg_dict["x_shape"] = [(16, 16)]
         arg_dict["learning_rate"] = [1]
         arg_dict["momentum"] = [0.0]
         arg_dict["train_iters"] = [5]
@@ -240,7 +240,7 @@ class TestRMSProp(flow.unittest.TestCase):
     @globaltest
     def test_rmsprop_clip_grad(test_case):
         arg_dict = OrderedDict()
-        arg_dict["x_shape"] = [(4, 4)]
+        arg_dict["x_shape"] = [(16, 16)]
         arg_dict["learning_rate"] = [1]
         arg_dict["momentum"] = [0.0]
         arg_dict["train_iters"] = [5]
