@@ -499,7 +499,8 @@ Maybe<void> BoxingCollector::AskSbpCombination(const NdSbp& sbp_producer, const 
   if (Is1dSbp(sbp_producer) && Is1dSbp(sbp_consumer)) {
     if (sbp_consumer.sbp_parallel(0).has_partial_sum_parallel()) {
       // Support [4]: P <--> [2, 2]: (P, P)
-      if (producer_parallel_desc.EqualsOnlyForMachineAndDeviceIds(consumer_parallel_desc)
+      // Support {0, 1, 2, 3}: P <--> {2, 0, 6, 7}: (P, P)
+      if (producer_parallel_desc.parallel_num() == consumer_parallel_desc.parallel_num()
           && sbp_producer.sbp_parallel(0).has_partial_sum_parallel()) {
         return Maybe<void>::Ok();
       }
@@ -646,7 +647,12 @@ Maybe<void> BoxingCollector::AskSbpCombination4DiffPlacement(
       producer_parallel_desc.EqualsOnlyForMachineAndDeviceIds(consumer_parallel_desc);
   // Dealing with 2D sbp
   if (i >= 0 && j >= 0) {
+    // Pure copy between machines and devices
+    if (i == j && (*producer_parallel_desc.hierarchy() == *consumer_parallel_desc.hierarchy())) {
+      return Maybe<void>::Ok();
+    }
     if (same_placement) {
+      // Different hierarchies
       CHECK_OR_RETURN(diag_node_diff_hierarchy_.size() > 0)
           << "Have not initialzie the combination table for different hierarchies yet! "
              "Please run JUST(GenerateCombination4DiffHierarchy(this, this)); "
@@ -658,6 +664,7 @@ Maybe<void> BoxingCollector::AskSbpCombination4DiffPlacement(
         return Maybe<void>::Ok();
       }
     } else {
+      // Different placements
       CHECK_OR_RETURN(diag_node_diff_placement_.size() > 0)
           << "Have not initialzie the combination table for different hierarchies yet! "
              "Please run JUST(GenerateCombination4DiffPlacement(this, this)); "
