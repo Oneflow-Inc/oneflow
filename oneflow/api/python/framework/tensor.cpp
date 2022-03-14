@@ -198,8 +198,6 @@ ONEFLOW_API_PYBIND11_MODULE("", m) {
       .def_property_readonly("is_eager", &Tensor::is_eager)
       .def_property_readonly("is_consistent", &Tensor::is_consistent)
       .def_property_readonly("is_local", &Tensor::is_local)
-      .def_property_readonly("_is_dtr_tensor", &Tensor::is_dtr_tensor)
-      .def_property_readonly("_is_in_memory", &Tensor::is_in_memory)
       .def("zeros_", &ApiEagerMirroredTensorZeros)
       .def("register_hook", &ApiRegisterTensorHook)
       // local tensor only

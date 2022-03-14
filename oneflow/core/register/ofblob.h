@@ -93,7 +93,6 @@ void OfBlob::AutoMemCopyFrom(const T* ptr, int64_t len) const {
 }
 
 inline void OfBlob::AsyncAutoMemset(const char value) const {
-  LOG(INFO) << "mut dptr: " << blob_->mut_dptr();
   ::oneflow::AutoMemset(device_ctx_, blob_->mut_dptr(), value,
                         blob_->shape().elem_cnt() * GetSizeOfDataType(blob_->data_type()),
                         blob_->mem_case());

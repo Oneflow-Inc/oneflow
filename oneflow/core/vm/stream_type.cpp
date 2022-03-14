@@ -18,8 +18,6 @@ limitations under the License.
 #include "oneflow/core/vm/stream.h"
 #include "oneflow/core/vm/instruction.h"
 #include "oneflow/core/common/util.h"
-#include "oneflow/core/framework/tensor_pool.h"
-#include "oneflow/core/job/env_global_objects_scope.h"
 #include "oneflow/core/intrusive/intrusive.h"
 
 namespace oneflow {

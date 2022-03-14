@@ -51,7 +51,7 @@ class TestDTR(flow.unittest.TestCase):
         # wait for the operations to finish
         flow._oneflow_internal.eager.multi_client.Sync()
         # check if there are 2 tensors are evicted
-        not_in_memory_num = sum(0 if x._is_in_memory else 1 for x in [x1, x2, x3, x4, x5, x6, x7])
+        not_in_memory_num = sum(0 if flow._oneflow_internal.dtr.is_in_memory(x) else 1 for x in [x1, x2, x3, x4, x5, x6, x7])
         test_case.assertEqual(not_in_memory_num, 2)
         # check if the memory is full
         test_case.assertEqual(flow._oneflow_internal.dtr.allocated_memory(), 20 * 1024)
@@ -73,7 +73,7 @@ class TestDTR(flow.unittest.TestCase):
         # wait for the operations to finish
         flow._oneflow_internal.eager.multi_client.Sync()
         # check if there is 1 tensors are evicted
-        not_in_memory_num = sum(0 if x._is_in_memory else 1 for x in [x1, x2, x3, x4, x5])
+        not_in_memory_num = sum(0 if flow._oneflow_internal.dtr.is_in_memory(x) else 1 for x in [x1, x2, x3, x4, x5])
         test_case.assertEqual(not_in_memory_num, 1)
         # check if the memory is full
         test_case.assertEqual(flow._oneflow_internal.dtr.allocated_memory(), 16 * 1024)
@@ -89,9 +89,9 @@ class TestDTR(flow.unittest.TestCase):
         x2 = x1 + 1
         flow._oneflow_internal.eager.multi_client.Sync()
         flow._oneflow_internal.dtr.evict(x2)
-        test_case.assertFalse(x2._is_in_memory)
+        test_case.assertFalse(flow._oneflow_internal.dtr.is_in_memory(x2))
         flow._oneflow_internal.dtr.evict(x2)
-        test_case.assertFalse(x2._is_in_memory)
+        test_case.assertFalse(flow._oneflow_internal.dtr.is_in_memory(x2))
         test_case.assertTrue(np.array_equal(x2, np.ones(x2.shape) * 2))
 
     def test_dropout(test_case):
@@ -102,11 +102,11 @@ class TestDTR(flow.unittest.TestCase):
         x2 = m(x1)
 
         flow._oneflow_internal.eager.multi_client.Sync()
-        test_case.assertTrue(x2._is_in_memory)
+        test_case.assertTrue(flow._oneflow_internal.dtr.is_in_memory(x2))
 
         x2_np1 = x2.numpy()
         flow._oneflow_internal.dtr.evict(x2)
-        test_case.assertFalse(x2._is_in_memory)
+        test_case.assertFalse(flow._oneflow_internal.dtr.is_in_memory(x2))
 
         x2_np2 = x2.numpy()
 
@@ -122,19 +122,19 @@ class TestDTR(flow.unittest.TestCase):
         x1 = flow.reshape(flow.rand(1024).to('cuda'), (1, 1024, 1, 1)) # x1 = 1, total memory: 1024 * 4 = 4096 bytes = 4KB
         x2 = m(x1)
         rm_np1 = m.running_mean.numpy()
-        test_case.assertTrue(x2._is_in_memory)
+        test_case.assertTrue(flow._oneflow_internal.dtr.is_in_memory(x2))
         x2_np1 = x2.numpy()
 
         flow._oneflow_internal.eager.multi_client.Sync()
-        test_case.assertTrue(x2._is_in_memory)
+        test_case.assertTrue(flow._oneflow_internal.dtr.is_in_memory(x2))
 
         flow._oneflow_internal.dtr.evict(x2)
-        test_case.assertFalse(x2._is_in_memory)
+        test_case.assertFalse(flow._oneflow_internal.dtr.is_in_memory(x2))
         x2_np2 = x2.numpy()
         rm_np2 = m.running_mean.numpy()
 
         flow._oneflow_internal.dtr.evict(x2)
-        test_case.assertFalse(x2._is_in_memory)
+        test_case.assertFalse(flow._oneflow_internal.dtr.is_in_memory(x2))
         x2_np3 = x2.numpy()
         rm_np3 = m.running_mean.numpy()
         test_case.assertTrue(np.array_equal(x2_np1, x2_np2))

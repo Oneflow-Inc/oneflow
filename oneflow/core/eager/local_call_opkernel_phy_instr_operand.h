@@ -78,12 +78,6 @@ class LocalCallOpKernelPhyInstrOperand : public vm::PhyInstrOperand {
     return Maybe<void>::Ok();
   }
 
-  template<typename DoEachT>
-  Maybe<void> ForEachInputTensor(const DoEachT& DoEach) {
-    for (const auto& input : *inputs()) { JUST(DoEach(input.get())); }
-    return Maybe<void>::Ok();
-  }
-
   void ForEachConstMirroredObject(
       const std::function<void(vm::MirroredObject* infer, vm::MirroredObject* compute)>&)
       const override;

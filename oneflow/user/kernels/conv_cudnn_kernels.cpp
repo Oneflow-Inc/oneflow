@@ -178,7 +178,6 @@ class ConvGpuKernel final : public user_op::OpKernel, public user_op::CudaGraphS
     const CudnnConvArgs& args = args_and_algo.args;
     const cudnnConvolutionFwdAlgoPerf_t& algo_perf = args_and_algo.algo_perf;
 
-    VLOG(2) << "out dptr: " << out->dptr<T>() << ", out shape: " << out->shape();
     OF_CUDNN_CHECK(cudnnConvolutionForward(
         ctx->device_ctx()->cudnn_handle(), CudnnSPOnePtr<T>(), args.xdesc.Get(), in->dptr(),
         args.wdesc.Get(), weight->dptr(), args.cdesc.Get(), algo_perf.algo, buf->mut_dptr(),
@@ -266,10 +265,6 @@ class ConvDataGradGpuKernel final : public user_op::OpKernel, public user_op::Cu
       beta = CudnnSPZeroPtr<T>();
     }
 
-    VLOG(2) << "filter dptr: " << filter->dptr<T>() << ", filter shape: " << filter->shape()
-        << ", buf dptr: " << buf->dptr<T>() << ", buf shape: " << buf->shape()
-        << ", dx dptr: " << dx->dptr<T>() << ", dx shape: " << dx->shape()
-        << ", dy dptr: " << dy->dptr<T>() << ", dy shape: " << dy->shape();
     OF_CUDNN_CHECK(cudnnConvolutionBackwardData(
         ctx->device_ctx()->cudnn_handle(), alpha, args.wdesc.Get(), filter->dptr(),
         args.ydesc.Get(), dy->dptr(), args.cdesc.Get(), algo_perf.algo, buf->mut_dptr(),

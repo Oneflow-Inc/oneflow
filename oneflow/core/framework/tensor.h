@@ -64,8 +64,6 @@ class Tensor {
   virtual bool is_local() const { return !is_consistent(); }
   virtual bool is_lazy() const = 0;
   virtual bool is_eager() const { return !is_lazy(); }
-  virtual bool is_dtr_tensor() const { return false; }
-  virtual bool is_in_memory() const { return true; }
   virtual const TensorMeta& tensor_meta() const = 0;
   virtual Maybe<Tensor> data() = 0;
   virtual Maybe<Symbol<ConsistentTensorMeta>> consistent_tensor_meta() const { OF_UNIMPLEMENTED(); }
@@ -267,10 +265,6 @@ class TensorIf : public Tensor {
 class Parameter final : public TensorIf<Parameter> {
  public:
   Parameter(std::shared_ptr<Tensor> tensor, bool requires_grad);
-  // Parameter(const std::shared_ptr<Tensor>& tensor, bool requires_grad) {
-  //   this->tensor_ = tensor->detach().GetPtrOrThrow();
-  //   CHECK_JUST(this->tensor_->set_requires_grad(requires_grad));
-  // }
 
   const std::shared_ptr<const Shape>& shape() const override { return tensor_->shape(); }
   Symbol<DType> dtype() const override { return tensor_->dtype(); }
@@ -500,8 +494,7 @@ class DTRMirroredTensor final : public MirroredTensor {
       : MirroredTensor(impl) {}
   ~DTRMirroredTensor() = default;
 
-  bool is_dtr_tensor() const override;
-  bool is_in_memory() const override;
+  bool is_in_memory() const;
 
   Maybe<void> set_tensor_inputs(const TensorTuple& inputs);
 
