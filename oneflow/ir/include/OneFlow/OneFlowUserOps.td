@@ -4171,8 +4171,8 @@ def OneFlow_ErfInvOp : OneFlow_BaseOp<"erfinv", [NoSideEffect, DeclareOpInterfac
 #endif // GET_ONEFLOW_MATH_OP_DEFINITIONS
 
 // Group: MATMUL
-// batch_matmul, broadcast_matmul, broadcast_matmul_grad_b, distributed_partial_fc_sample, distributed_partial_fc_sample_disable_boxing, erfc, erfc_grad, matmul
-// Total: 8
+// batch_matmul, broadcast_matmul, broadcast_matmul_grad_b, distributed_partial_fc_sample, distributed_partial_fc_sample_disable_boxing, erfc, erfc_grad, matmul, cublas_fused_mlp, cublas_bias_add_relu_matmul_grad
+// Total: 10
 
 #ifdef GET_ONEFLOW_MATMUL_OP_DEFINITIONS
 
@@ -4310,6 +4310,42 @@ def OneFlow_MatmulOp : OneFlow_BaseOp<"matmul", [NoSideEffect, DeclareOpInterfac
     DefaultValuedAttr<BoolAttr, "false">:$transpose_a,
     DefaultValuedAttr<BoolAttr, "false">:$transpose_b,
     DefaultValuedAttr<F64Attr, "1.">:$alpha
+  );
+  let has_logical_tensor_desc_infer_fn = 1;
+  let has_physical_tensor_desc_infer_fn = 1;
+  let has_get_sbp_fn = 1;
+  let has_data_type_infer_fn = 1;
+}
+
+def OneFlow_CublasFusedMLPOp : OneFlow_BaseOp<"cublas_fused_mlp", [NoSideEffect, AttrSizedOperandSegments, AttrSizedResultSegments, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
+  let input = (ins
+    OneFlow_Tensor:$x,
+    Variadic<OneFlow_Tensor>:$weights, 
+    Variadic<OneFlow_Tensor>:$biases
+  );
+  let output = (outs
+    OneFlow_Tensor:$out, 
+    Variadic<OneFlow_Tensor>:$cublas_aux, 
+    Variadic<OneFlow_Tensor>:$hidden
+  );
+  let attrs = (ins
+    DefaultValuedAttr<BoolAttr, "false">:$skip_final_activation
+  );
+  let has_logical_tensor_desc_infer_fn = 1;
+  let has_physical_tensor_desc_infer_fn = 1;
+  let has_get_sbp_fn = 1;
+  let has_data_type_infer_fn = 1;
+}
+
+def OneFlow_CublasBiasAddReluMatmulGradOp : OneFlow_BaseOp<"cublas_bias_add_relu_matmul_grad", [NoSideEffect, NoGrad, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
+  let input = (ins
+    OneFlow_Tensor:$dy,
+    OneFlow_Tensor:$weight,
+    OneFlow_Tensor:$aux
+  );
+  let output = (outs
+    OneFlow_Tensor:$d_grad, 
+    OneFlow_Tensor:$d_bias
   );
   let has_logical_tensor_desc_infer_fn = 1;
   let has_physical_tensor_desc_infer_fn = 1;
@@ -8444,6 +8480,18 @@ def OneFlow_RandomMaskLikeOp : OneFlow_BaseOp<"random_mask_like", [NoSideEffect,
     DefaultValuedAttr<F32Attr, "0.">:$rate,
     DefaultValuedAttr<SI64Attr, "0">:$seed
   );
+  let builders = [
+    OpBuilder<(ins
+      "Value":$like,
+      "StringRef":$op_name,
+      "StringRef":$device_tag,
+      "ArrayAttr":$device_name,
+      "IntegerAttr":$scope_symbol_id,
+      "ArrayAttr":$hierarchy,
+      "FloatAttr":$rate,
+      "IntegerAttr":$seed
+    )>
+  ];
   let has_check_fn = 1;
   let has_logical_tensor_desc_infer_fn = 1;
   let has_physical_tensor_desc_infer_fn = 1;
@@ -9085,6 +9133,69 @@ def OneFlow_UpsampleTrilinear3DGradOp : OneFlow_BaseOp<"upsample_trilinear_3d_gr
   let has_get_sbp_fn = 1;
   let has_data_type_infer_fn = 1;
 }
-
 #endif // GET_ONEFLOW_UPSAMPLE_OP_DEFINITIONS
 
+// Group: OneEmbedding
+// id_shuffle, embedding_shuffle, embedding_gradient_shuffle
+// Total: 3
+
+#ifdef GET_ONEFLOW_ONE_EMBEDDING_OP_DEFINITIONS
+
+def OneFlow_IdShuffleOp : OneFlow_BaseOp<"id_shuffle", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
+  let input = (ins
+    OneFlow_Tensor:$ids,
+    Optional<OneFlow_Tensor>:$column_ids
+  );
+  let output = (outs
+    OneFlow_Tensor:$num_unique_matrix,
+    OneFlow_Tensor:$inverse_unique_partition_indices,
+    OneFlow_Tensor:$cur_rank_num_unique,
+    OneFlow_Tensor:$cur_rank_unique_ids,
+    OneFlow_Tensor:$cur_rank_unique_column_ids,
+    OneFlow_Tensor:$cur_rank_inverse_indices
+  );
+  let attrs = (ins
+    DefaultValuedAttr<SI32Attr, "1">:$num_columns
+  );
+  let same_output_regst_num = 1;
+  let has_logical_tensor_desc_infer_fn = 1;
+  let has_physical_tensor_desc_infer_fn = 1;
+  let has_get_sbp_fn = 1;
+  let has_data_type_infer_fn = 1;
+}
+
+def OneFlow_EmbeddingShuffleOp : OneFlow_BaseOp<"embedding_shuffle", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
+  let input = (ins
+    OneFlow_Tensor:$cur_rank_embeddings,
+    OneFlow_Tensor:$num_unique_matrix,
+    OneFlow_Tensor:$cur_rank_inverse_indices,
+    OneFlow_Tensor:$inverse_unique_partition_indices
+  );
+  let output = (outs
+    OneFlow_Tensor:$embeddings
+  );
+  let same_output_regst_num = 1;
+  let has_logical_tensor_desc_infer_fn = 1;
+  let has_physical_tensor_desc_infer_fn = 1;
+  let has_get_sbp_fn = 1;
+  let has_data_type_infer_fn = 1;
+}
+
+def OneFlow_EmbeddingGradientShuffleOp : OneFlow_BaseOp<"embedding_gradient_shuffle", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
+  let input = (ins
+    OneFlow_Tensor:$embedding_grad,
+    OneFlow_Tensor:$num_unique_matrix,
+    OneFlow_Tensor:$cur_rank_inverse_indices,
+    OneFlow_Tensor:$inverse_unique_partition_indices
+  );
+  let output = (outs
+    OneFlow_Tensor:$cur_rank_unique_embedding_grad
+  );
+  let same_output_regst_num = 1;
+  let has_logical_tensor_desc_infer_fn = 1;
+  let has_physical_tensor_desc_infer_fn = 1;
+  let has_get_sbp_fn = 1;
+  let has_data_type_infer_fn = 1;
+}
+
+#endif // GET_ONEFLOW_ONE_EMBEDDING_OP_DEFINITIONS

@@ -564,7 +564,7 @@
 - name: "normalization"
   signature:
     "Tensor (Tensor x, Tensor moving_mean=None, Tensor moving_variance=None,
-    Tensor gamma, Tensor beta, Int32 axis=1, Float epsilon=1e-5,
+    Tensor gamma=None, Tensor beta=None, Int32 axis=1, Float epsilon=1e-5,
     Float momentum=0.9, Bool is_training=False) => Normalization"
 
   bind_python: True
@@ -856,6 +856,16 @@
     "Tensor (Tensor a, Tensor b, Bool transpose_a=False, Bool transpose_b=False,
     Double alpha=1.0) => MatMul"
   bind_python: True
+
+- name: "fused_mlp"
+  signature:
+    "Tensor (Tensor x, TensorTuple weights, TensorTuple biases, Bool skip_final_activation) => FusedMLP"
+  bind_python: True
+
+- name: "cublas_bias_add_relu_matmul_grad"
+  signature:
+    "TensorTuple (Tensor dy, Tensor weight, Tensor aux) => CublasBiasAddReluMatmulGrad"
+  bind_python: False
 
 - name: "broadcast_matmul_grad_b"
   signature: "Tensor (Tensor a, Tensor b, Double alpha=1.0) => BroadcastMatmulGradB"
@@ -2011,6 +2021,18 @@
 - name: "cumprod_grad"
   signature: "Tensor (Tensor input, Tensor y, Tensor x, Int64 dim) => CumprodGrad"
   bind_python: False
+
+- name: "one_embedding_id_shuffle"
+  signature: "TensorTuple (Tensor ids, Tensor column_ids=None, Int32 num_columns=1) => OneEmbeddingIdShuffle"
+  bind_python: True
+
+- name: "one_embedding_embedding_shuffle"
+  signature: "Tensor (Tensor cur_rank_embeddings, Tensor num_unique_matrix, Tensor cur_rank_inverse_indices, Tensor inverse_unique_partition_indices) => OneEmbeddingEmbeddingShuffle"
+  bind_python: True
+
+- name: "one_embedding_embedding_gradient_shuffle"
+  signature: "Tensor (Tensor embedding_grad, Tensor num_unique_matrix, Tensor cur_rank_inverse_indices, Tensor inverse_unique_partition_indices) => OneEmbeddingEmbeddingGradientShuffle"
+  bind_python: True
 
 - name: "einsum"
   signature: "Tensor (String equation, TensorTuple operands) => EinSum"
