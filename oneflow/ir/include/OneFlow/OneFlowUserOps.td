@@ -5317,6 +5317,7 @@ def OneFlow_NormalizationOp : OneFlow_BaseOp<"normalization", [NoSideEffect, Att
   let has_get_sbp_fn = 1;
   let has_data_type_infer_fn = 1;
   let has_input_arg_modify_fn = 1;
+  // let hasCanonicalizer = 1;
 }
 
 def OneFlow_NormalizationGradOp : OneFlow_BaseOp<"normalization_grad", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {

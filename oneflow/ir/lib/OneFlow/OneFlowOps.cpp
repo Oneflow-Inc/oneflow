@@ -22,6 +22,7 @@ limitations under the License.
 #include "llvm/ADT/StringSet.h"
 
 #include "mlir/IR/BuiltinAttributes.h"
+#include "mlir/IR/MLIRContext.h"
 #include "mlir/IR/OpImplementation.h"
 #include "mlir/IR/PatternMatch.h"
 #include "mlir/IR/FunctionImplementation.h"
@@ -338,6 +339,26 @@ static LogicalResult verify(mlir::oneflow::ReturnOp op) {
 
   return success();
 }
+
+OpFoldResult VariableIrOp::fold(ArrayRef<Attribute> operands) { return pointerAttr(); }
+
+// struct FusedConv2DBatchNormPattern : public OpRewritePattern<NormalizationOp> {
+//   explicit FusedConv2DBatchNormPattern(MLIRContext* context)
+//       : OpRewritePattern<NormalizationOp>(context, /*benefit=*/1) {}
+//   LogicalResult matchAndRewrite(oneflow::NormalizationOp op,
+//                                 PatternRewriter& rewriter) const override {
+//     const auto inputOp = op->getOperand(0).getDefiningOp<Conv2DOp>();
+//     if (!inputOp) { return failure(); }
+//     op.y().replaceAllUsesWith(inputOp->getResult(0));
+//     op->erase();
+//     return success();
+//   }
+// };
+
+// void NormalizationOp::getCanonicalizationPatterns(RewritePatternSet& results,
+//                                                     MLIRContext* context) {
+//   results.insert<FusedConv2DBatchNormPattern>(context);
+// }
 
 }  // namespace oneflow
 

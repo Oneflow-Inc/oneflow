@@ -59,6 +59,29 @@ def OneFlow_SystemOp : OneFlow_Op<"system", [OneFlow_IsImportCompatible]> {
   let hasCanonicalizer = 1;
 }
 
+def OneFlow_VariableIrOp : OneFlow_IROp<"variable_ir", [ConstantLike, NoSideEffect]> {
+  let summary = "";
+  let arguments = (ins
+    DefaultValuedAttr<UI64Attr, "0">:$pointer
+  );
+  let results = (outs
+    AnyType:$output
+  );
+  let hasFolder = 1;
+}
+
+def OneFlow_NullOp : OneFlow_IROp<"null_ir", [NoSideEffect]> {
+  let summary = "";
+  // let arguments = (ins
+  //   OneFlow_Tensor:$input
+  // );
+  let arguments = (ins);
+  let results = (outs
+    OneFlow_Tensor:$output
+  );
+  let builders = [OpBuilder<(ins)>];
+}
+
 def OneFlow_LossMarkerOp : OneFlow_IROp<"loss_marker", []> {
   let summary = "mark a result as loss to prevent its defining op from optimized away";
   let arguments = (ins Variadic<AnyType>:$loss);

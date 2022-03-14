@@ -17,6 +17,7 @@ limitations under the License.
 #include "OneFlow/OneFlowDialect.h"
 #include "OneFlow/Passes.h"
 
+#include "llvm/ADT/None.h"
 #include "mlir/Conversion/LinalgToLLVM/LinalgToLLVM.h"
 #include "mlir/Conversion/MemRefToLLVM/MemRefToLLVM.h"
 #include "mlir/Conversion/ReconcileUnrealizedCasts/ReconcileUnrealizedCasts.h"
@@ -34,6 +35,7 @@ limitations under the License.
 #include "mlir/IR/OpImplementation.h"
 #include "mlir/IR/PatternMatch.h"
 #include "mlir/IR/BlockAndValueMapping.h"
+#include "mlir/IR/Value.h"
 #include "mlir/Pass/Pass.h"
 #include "mlir/Pass/PassManager.h"
 #include "mlir/Support/LogicalResult.h"
@@ -349,6 +351,117 @@ ArrayAttr getSI32ArrayAttr(::mlir::PatternRewriter& rewriter, ArrayRef<int32_t> 
   return {};
 }
 
+::llvm::SmallVector<::mlir::Value, 4> FuseConv2DBatchNorm(::mlir::PatternRewriter& rewriter,
+                                                          OpResult conv_result,
+                                                          OpResult bn_result) {
+  if (auto conv_op = llvm::dyn_cast<oneflow::Conv2DOp>(conv_result.getDefiningOp())) {
+    if (auto bn_op = llvm::dyn_cast<oneflow::NormalizationOp>(bn_result.getDefiningOp())) {
+      SmallVector<Value, 4> final_results;
+      NamedAttrList attributes = conv_op->getAttrs();
+      SmallVector<Value, 4> operands;
+      operands.push_back(conv_op.in());
+      operands.push_back(conv_op.weight());
+      if (conv_op.bias()) operands.push_back(conv_op.bias());
+      if (conv_op.bias_multiplier()) operands.push_back(conv_op.bias_multiplier());
+
+      // auto res = rewriter
+      //                .create<oneflow::Conv2DOp>(conv_op->getLoc(), conv_op->getResultTypes(),
+      //                                           operands, attributes)
+      //                ->getResults();
+      auto new_conv_op = rewriter.create<oneflow::Conv2DOp>(
+          conv_op->getLoc(), conv_op->getResultTypes(), operands, attributes);
+
+      final_results.push_back(new_conv_op.out());
+      if (bn_op.mean()) {
+        final_results.push_back(
+            rewriter.create<::mlir::oneflow::NullOp>(conv_op->getLoc(), conv_op.in().getType())
+                .output());
+      } else {
+        final_results.push_back({});
+      }
+      if (bn_op.inv_variance()) {
+        final_results.push_back(
+            rewriter.create<::mlir::oneflow::NullOp>(conv_op->getLoc(), conv_op.in().getType())
+                .output());
+      } else {
+        final_results.push_back({});
+      }
+
+      // pad op is expected to be erased if it is not used
+      // rewriter.eraseOp(llvm::dyn_cast<oneflow::NormalizationOp>(bn_result.getDefiningOp()));
+      return final_results;
+    }
+  }
+  return {};
+}
+::llvm::SmallVector<::mlir::Value, 4> CreateOneFlowNullOp(::mlir::PatternRewriter& rewriter,
+                                                          OpResult bn_result) {
+  if (auto bn_op = llvm::dyn_cast<oneflow::NormalizationOp>(bn_result.getDefiningOp())) {
+    return rewriter
+        .create<::mlir::oneflow::NullOp>(rewriter.getUnknownLoc(), bn_op->getOperand(0).getType())
+        .getODSResults(0);
+  }
+  return {};
+}
+
+// struct FuseConv2DBatchNormPattern : public ::mlir::RewritePattern {
+//   FuseConv2DBatchNormPattern(::mlir::MLIRContext* context)
+//       : ::mlir::RewritePattern("oneflow.normalization", 1, context, {}) {}
+//   ::mlir::LogicalResult matchAndRewrite(::mlir::Operation* op0,
+//                                         ::mlir::PatternRewriter& rewriter) const override {
+//     // auto op = ::llvm::dyn_cast<::mlir::oneflow::NormalizationOp>(op0);
+//     // const auto inputOp = op->getOperand(0).getDefiningOp<::mlir::oneflow::Conv2DOp>();
+//     // if (!inputOp) { return failure(); }
+//     // op.y().replaceAllUsesWith(inputOp->getResult(0));
+//     // // op->erase();
+//     // std::cout<<233<<std::endl;
+//     // rewriter.eraseOp(op);
+//     // return success();
+//     auto bn_op = ::llvm::dyn_cast<::mlir::oneflow::NormalizationOp>(op0);
+//     auto* op1 = (*bn_op.getODSOperands(0).begin()).getDefiningOp();
+//     if (!(op1)) {
+//       return rewriter.notifyMatchFailure(bn_op, [&](::mlir::Diagnostic& diag) {
+//         diag << "There's no operation that defines operand 0 of bn_op";
+//       });
+//     }
+//     auto conv_op = ::llvm::dyn_cast<::mlir::oneflow::Conv2DOp>(op1);
+//     if (!(conv_op)) {
+//       return rewriter.notifyMatchFailure(op1, [&](::mlir::Diagnostic& diag) {
+//         diag << "conv_op is not ::mlir::oneflow::Conv2DOp type";
+//       });
+//     }
+
+//     auto odsLoc = rewriter.getFusedLoc({op0->getLoc(), op1->getLoc()});
+//     ::llvm::SmallVector<::mlir::Value, 4> tblgen_repl_values;
+//     auto result = FuseConv2DBatchNorm(rewriter, (*conv_op.getODSResults(0).begin()));
+//     (void)result;
+
+//     for (auto v : ::llvm::SmallVector<::mlir::Value, 4>{{result}}) {
+//       tblgen_repl_values.push_back(v);
+//     }
+
+//     ::mlir::oneflow::NullOp tblgen_NullOp_0 =
+//         rewriter.create<::mlir::oneflow::NullOp>(odsLoc, conv_op.in().getType());
+//     ::mlir::oneflow::NullOp tblgen_NullOp_1 =
+//         rewriter.create<::mlir::oneflow::NullOp>(odsLoc, conv_op.in().getType());
+//     for (auto v : ::llvm::SmallVector<::mlir::Value, 4>{tblgen_NullOp_0.getODSResults(0)}) {
+//       tblgen_repl_values.push_back(v);
+//     }
+//     for (auto v : ::llvm::SmallVector<::mlir::Value, 4>{tblgen_NullOp_1.getODSResults(0)}) {
+//       tblgen_repl_values.push_back(v);
+//     }
+//     // rewriter.replaceOp(op0,tblgen_repl_values);
+//     // rewriter.replaceOp(op0, *tblgen_repl_values.begin());
+
+//     rewriter.replaceOp(op0, result);
+
+//     //  bn_op.y().replaceAllUsesWith(conv_op->getResult(0));
+//     // rewriter.eraseOp(op0);
+
+//     return ::mlir::success();
+//   }
+// };
+
 }  // namespace oneflow
 
 }  // namespace mlir
@@ -431,6 +544,8 @@ void populateFuserForExistingOp(::mlir::RewritePatternSet& patterns) {
   patterns.add<FusedScaleTrilPattern2>(patterns.getContext());
   patterns.add<FusedPadConv2DPattern>(patterns.getContext());
   patterns.add<NormalizationAddReluPattern>(patterns.getContext());
+  // patterns.add<ReplaceVariableInBatchNormOperandsPattern>(patterns.getContext());
+  patterns.add<FuseConv2DBatchNormPattern>(patterns.getContext());
 }
 
 void populateGpuHelperPatterns(::mlir::RewritePatternSet& patterns) {
