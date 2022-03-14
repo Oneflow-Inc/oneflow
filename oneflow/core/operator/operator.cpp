@@ -721,6 +721,7 @@ Maybe<void> Operator::GreedilyFindMinCopyCostNdSbp(
             JUST(VectorAt(nd_sbp_sig_list, i)).bn_in_op2nd_sbp().at(ibn),
             producer_infer_hint4ibn->logical_blob_desc(), producer_infer_hint4ibn->parallel_desc(),
             *JUST(GetParallelDesc4BnInOp(ibn)), requires_same_sbp[ibn_id]);
+        sum_priority_ratio += priority_ratio;
         if (priority_ratio > 1.5) {
           total_copy_cost = GetMaxVal<float>();
           break;
@@ -728,7 +729,6 @@ Maybe<void> Operator::GreedilyFindMinCopyCostNdSbp(
         if (infer_rule == 2 && priority_ratio == 0.0) {
           continue;
         }
-        sum_priority_ratio += priority_ratio;
         }
         total_copy_cost += JUST(ComputeCopyCostBetweenNdSbp(
             producer_infer_hint4ibn->nd_sbp(),
