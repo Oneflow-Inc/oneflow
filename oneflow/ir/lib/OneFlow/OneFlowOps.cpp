@@ -418,8 +418,8 @@ bool Conv2DOp::UpdateAttrs(NamedAttrList& attributes, PatternRewriter& rewriter)
   return true;
 }
 
-llvm::SmallVector<Value, 4> Conv2DOp::NchwToNhwc_New(llvm::SmallVector<Value, 4> value,
-                                                     PatternRewriter& rewriter) {
+llvm::SmallVector<Value, 4> Conv2DOp::NchwToNhwc(llvm::SmallVector<Value, 4> value,
+                                                 PatternRewriter& rewriter) {
   auto conv_op = *this;
   SmallVector<Value, 4> operands;
   operands.push_back(value[0]);
@@ -436,74 +436,6 @@ llvm::SmallVector<Value, 4> Conv2DOp::NchwToNhwc_New(llvm::SmallVector<Value, 4>
   results.push_back(res[0]);
   return results;
 }
-
-// bool Conv2DOp::NchwToNhwc(PatternRewriter& rewriter) {
-//   auto conv_op = *this;
-//   SmallVector<Value, 4> operands;
-//   NamedAttrList attributes = conv_op->getAttrs();
-//   conv_op.UpdateAttrs(attributes, rewriter);
-//   llvm::SmallVector<int32_t> perm, output_perm;
-//   perm.push_back(0);
-//   perm.push_back(2);
-//   perm.push_back(3);
-//   perm.push_back(1);
-//   output_perm.push_back(0);
-//   output_perm.push_back(3);
-//   output_perm.push_back(1);
-//   output_perm.push_back(2);
-//   NamedAttrList transpos_attributes = conv_op->getAttrs();
-//   transpos_attributes.erase(conv_op.filtersAttrName());
-//   transpos_attributes.erase(conv_op.padding_beforeAttrName());
-//   transpos_attributes.erase(conv_op.data_formatAttrName());
-//   transpos_attributes.erase(conv_op.kernel_sizeAttrName());
-//   transpos_attributes.erase(conv_op.stridesAttrName());
-//   transpos_attributes.erase(conv_op.dilation_rateAttrName());
-//   transpos_attributes.erase(conv_op.groupsAttrName());
-//   transpos_attributes.append(llvm::StringRef("perm"), getSI32ArrayAttr(rewriter, perm));
-//   std::string transpose_1_name = conv_op.op_nameAttr().str() + "_transpose_input";
-//   transpos_attributes.set(llvm::StringRef("op_name"), rewriter.getStringAttr(transpose_1_name));
-//   // insert transpose for input
-//   SmallVector<Value, 4> input_operands;
-//   input_operands.push_back(conv_op.in());
-//   auto input_res = rewriter
-//                        .create<oneflow::TransposeOp>(conv_op.getLoc(), conv_op->getResultTypes(),
-//                                                      input_operands, transpos_attributes)
-//                        ->getResults()[0];
-
-//   // insert transpose for weight
-//   std::string transpose_2_name = conv_op.op_nameAttr().str() + "_transpose_weight";
-//   transpos_attributes.set(llvm::StringRef("op_name"), rewriter.getStringAttr(transpose_2_name));
-//   SmallVector<Value, 4> weight_operands;
-//   weight_operands.push_back(conv_op.weight());
-//   auto weight_res = rewriter
-//                         .create<oneflow::TransposeOp>(conv_op.getLoc(),
-//                         conv_op->getResultTypes(),
-//                                                       weight_operands, transpos_attributes)
-//                         ->getResults()[0];
-
-//   operands.push_back(input_res);
-//   operands.push_back(weight_res);
-//   if (conv_op.bias()) operands.push_back(conv_op.bias());
-//   if (conv_op.bias_multiplier()) operands.push_back(conv_op.bias_multiplier());
-//   // rewrite convop
-//   auto res = rewriter
-//                  .create<oneflow::Conv2DOp>(conv_op.getLoc(), conv_op->getResultTypes(),
-//                  operands,
-//                                             attributes)
-//                  ->getResults();
-//   // insert transpose for output
-//   transpos_attributes.set(llvm::StringRef("perm"), getSI32ArrayAttr(rewriter, output_perm));
-//   std::string transpose_3_name = conv_op.op_nameAttr().str() + "_transpose_output";
-//   transpos_attributes.set(llvm::StringRef("op_name"), rewriter.getStringAttr(transpose_3_name));
-//   SmallVector<Value, 4> output_operands;
-//   output_operands.push_back(res[0]);
-//   if (auto created_op = rewriter.replaceOpWithNewOp<oneflow::TransposeOp>(
-//           conv_op, conv_op->getResultTypes(), output_operands, transpos_attributes)) {
-//     return true;
-//   } else {
-//     return false;
-//   }
-// }
 
 }  // namespace oneflow
 

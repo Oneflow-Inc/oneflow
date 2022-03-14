@@ -377,12 +377,6 @@ struct AutoNhwcPattern : public OpInterfaceRewritePattern<NCHWCompatible> {
 
  public:
   LogicalResult matchAndRewrite(NCHWCompatible op, PatternRewriter& rewriter) const override {
-    // if (op.IsNCHW()) {
-    //   op.NchwToNhwc(rewriter);
-    //   return success();
-    // } else {
-    //   return failure();
-    // }
     llvm::SmallVector<int32_t> perm, output_perm;
     perm.push_back(0);
     perm.push_back(2);
@@ -414,10 +408,9 @@ struct AutoNhwcPattern : public OpInterfaceRewritePattern<NCHWCompatible> {
         operands_to_tranpose.push_back(input_res);
       }
       // do nchw2nhwc2
-      SmallVector<Value, 4> created_results = op.NchwToNhwc_New(operands_to_tranpose, rewriter);
+      SmallVector<Value, 4> created_results = op.NchwToNhwc(operands_to_tranpose, rewriter);
       // create transpose op for results
       cnt = 0;
-      bool flag = true;
       transpos_attributes.set(llvm::StringRef("perm"), getSI32ArrayAttr(rewriter, output_perm));
       llvm::DenseSet<Value> transpose_result = op.ResultsToTranspose();
       for (Value result : op->getOpResults()) {
@@ -430,16 +423,13 @@ struct AutoNhwcPattern : public OpInterfaceRewritePattern<NCHWCompatible> {
           result_operands.push_back(created_results[cnt]);
           if (auto created_op = rewriter.replaceOpWithNewOp<oneflow::TransposeOp>(
                   op, op->getResultTypes(), result_operands, transpos_attributes)) {
-            flag = true;
+            continue;
           } else {
-            flag = false;
+            return failure();
           }
         }
       }
-      if (flag)
-        return success();
-      else
-        return failure();
+      return success();
     }
   }
 };
