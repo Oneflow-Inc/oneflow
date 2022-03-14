@@ -109,7 +109,8 @@ template<typename IDX>
 class EmbeddingKernelState final : public user_op::OpKernelState {
  public:
   explicit EmbeddingKernelState(user_op::KernelInitContext* ctx)
-      : generator_(CHECK_JUST(one::MakeGenerator(DeviceType::kCUDA))) {
+      : device_index_(-1), generator_(CHECK_JUST(one::MakeGenerator(DeviceType::kCUDA))) {
+    OF_CUDA_CHECK(cudaGetDevice(&device_index_));
     OF_CUDA_CHECK(cudaMallocHost(&host_num_keys_, sizeof(IDX)));
     EmbeddingColumns embedding_columns(ctx->Attr<std::string>("embedding_columns"));
     uint32_t max_query_length =
@@ -120,7 +121,10 @@ class EmbeddingKernelState final : public user_op::OpKernelState {
     // key_value_store_->ReserveQueryLength(max_query_length);
     columns_param_ = embedding_columns.Columns();
   }
-  ~EmbeddingKernelState() { OF_CUDA_CHECK(cudaFreeHost(host_num_keys_)); }
+  ~EmbeddingKernelState() {
+    CudaCurrentDeviceGuard guard(device_index_);
+    OF_CUDA_CHECK(cudaFreeHost(host_num_keys_));
+  }
 
   void* HostNumKeys() { return host_num_keys_; }
 
@@ -131,6 +135,7 @@ class EmbeddingKernelState final : public user_op::OpKernelState {
   ColumnsParam Columns() { return columns_param_; }
 
  private:
+  int device_index_;
   void* host_num_keys_;
   std::shared_ptr<one::Generator> generator_;
   embedding::KeyValueStore* key_value_store_;
@@ -140,7 +145,8 @@ class EmbeddingKernelState final : public user_op::OpKernelState {
 template<typename IDX>
 class EmbeddingPutKernelState final : public user_op::OpKernelState {
  public:
-  explicit EmbeddingPutKernelState(user_op::KernelInitContext* ctx) {
+  explicit EmbeddingPutKernelState(user_op::KernelInitContext* ctx) : device_index_(-1) {
+    OF_CUDA_CHECK(cudaGetDevice(&device_index_));
     OF_CUDA_CHECK(cudaMallocHost(&host_num_keys_, sizeof(IDX)));
     uint32_t max_query_length =
         ctx->TensorDesc4ArgNameAndIndex("unique_ids", 0)->shape().elem_cnt();
@@ -149,12 +155,16 @@ class EmbeddingPutKernelState final : public user_op::OpKernelState {
     //    ctx->Attr<std::string>("embedding_name"), ctx->parallel_ctx().parallel_id());
     // key_value_store_->ReserveQueryLength(max_query_length);
   }
-  ~EmbeddingPutKernelState() { OF_CUDA_CHECK(cudaFreeHost(host_num_keys_)); }
+  ~EmbeddingPutKernelState() {
+    CudaCurrentDeviceGuard guard(device_index_);
+    OF_CUDA_CHECK(cudaFreeHost(host_num_keys_));
+  }
 
   void* HostNumKeys() { return host_num_keys_; }
   embedding::KeyValueStore* KeyValueStore() { return key_value_store_; }
 
  private:
+  int device_index_;
   void* host_num_keys_;
   embedding::KeyValueStore* key_value_store_;
 };

@@ -2035,7 +2035,7 @@
   bind_python: True
 
 - name: "embedding_lookup_placeholder"
-  signature: "Tensor (Tensor shadow, Tensor ids, Tensor column_ids, DataType dtype, Int64 embedding_size, String embedding_columns, String embedding_options) => OneEmbeddingLookup"
+  signature: "Tensor (Tensor shadow, Tensor ids, Tensor column_ids, DataType dtype, Int64 embedding_size, String embedding_columns, String key_value_store_options) => OneEmbeddingLookup"
   bind_python: True
 
 - name: "unique_key_value_pair"

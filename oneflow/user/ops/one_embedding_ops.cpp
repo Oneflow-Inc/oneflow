@@ -95,13 +95,14 @@ namespace oneflow {
 
 REGISTER_USER_OP_GRAD("embedding_lookup_placeholder")
     .SetGenBackwardOpConfFn([](const user_op::UserOpWrapper& op,
-                               user_op::AddOpFn AddOp) -> Maybe<void> {
+                               const user_op::AddOpFn& AddOp) -> Maybe<void> {
       user_op::UserOpConfWrapperBuilder builder(op.op_name() + "_update");
       user_op::UserOpConfWrapper grad_op =
           builder.Op("embedding_update_placeholder")
               .Input("ids", op.input("ids", 0))
               .Input("embedding_grad", op.GetGradTensorWithOpOutput("embeddings", 0))
-              .Attr<std::string>("embedding_options", op.attr<std::string>("embedding_options"))
+              .Attr<std::string>("key_value_store_options",
+                                 op.attr<std::string>("key_value_store_options"))
               .Build();
       AddOp(grad_op);
       return Maybe<void>::Ok();
@@ -144,10 +145,10 @@ REGISTER_USER_OP_GRAD("embedding_lookup_placeholder")
   CHECK_EQ_OR_RETURN(num_unique_ids_shape.elem_cnt(), 1);
   const int64_t embedding_size = ctx->Attr<int64_t>("embedding_size");
   const int64_t line_size = ctx->Attr<int64_t>("line_size");
-  CHECK_NE(embedding_size, 0);
-  CHECK_NE(line_size, 0);
-  CHECK_GE(line_size, embedding_size);
-  CHECK_EQ(line_size % embedding_size, 0);
+  CHECK_NE_OR_RETURN(embedding_size, 0);
+  CHECK_NE_OR_RETURN(line_size, 0);
+  CHECK_GE_OR_RETURN(line_size, embedding_size);
+  CHECK_EQ_OR_RETURN(line_size % embedding_size, 0);
   if (ctx->has_output("embeddings", 0)) {
     DimVector embeddings_dim_vec = unique_ids_shape.dim_vec();
     embeddings_dim_vec.push_back(embedding_size);
