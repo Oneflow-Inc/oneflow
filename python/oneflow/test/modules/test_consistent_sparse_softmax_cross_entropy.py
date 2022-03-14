@@ -136,8 +136,10 @@ class TestConsistentSparseSoftmaxCrossEntropyWithLogits(flow.unittest.TestCase):
         arg_dict["num_classes"] = [1024]
         for arg in GenArgList(arg_dict):
             for placement in all_placement():
-                for logits_sbp in all_sbp(placement, max_dim=1):
+                for logits_sbp in all_sbp(placement, max_dim=2):
                     for labels_sbp in all_sbp(placement, max_dim=1):
+                        flow._oneflow_internal.eager.Sync()
+                        print(placement, logits_sbp, labels_sbp, *arg)
                         _compare_eager_global_with_torch(
                             placement, logits_sbp, labels_sbp, *arg
                         )
