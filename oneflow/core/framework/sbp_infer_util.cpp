@@ -540,4 +540,35 @@ Maybe<double> ComputeCopyCostWithMiddleNodes(const NdSbp& producer_sbp_parallel,
   return total_cost;
 }
 
+// Decide the priority to infer sbp
+double ComputeSbpInferPriority(const NdSbp& producer_sbp_parallel,
+                               const NdSbp& consumer_sbp_parallel,
+                               const BlobDesc& logical_blob_desc,
+                               const ParallelDesc& producer_parallel_desc,
+                               const ParallelDesc& consumer_parallel_desc, bool requires_same_sbp) {
+  ParallelDesc reduced_in_parallel_desc = producer_parallel_desc;
+  ParallelDesc reduced_out_parallel_desc = consumer_parallel_desc;
+  NdSbp reduced_in_nd_sbp;
+  NdSbp reduced_out_nd_sbp;
+  InOutParallelDimReduce(producer_parallel_desc, consumer_parallel_desc, producer_sbp_parallel,
+                         consumer_sbp_parallel, &reduced_in_parallel_desc,
+                         &reduced_out_parallel_desc, &reduced_in_nd_sbp, &reduced_out_nd_sbp);
+
+  if (requires_same_sbp) {
+    if (reduced_in_nd_sbp == reduced_out_nd_sbp
+        && reduced_in_parallel_desc == reduced_out_parallel_desc) {
+      return 0.0;
+    } else {
+      return 2.0;
+    }
+  } else {
+    if (reduced_in_nd_sbp == reduced_out_nd_sbp
+        && *reduced_in_parallel_desc.hierarchy() == *reduced_out_parallel_desc.hierarchy()) {
+      return 0.0;
+    } else {
+      return 1.0;
+    }
+  }
+}
+
 }  // namespace oneflow

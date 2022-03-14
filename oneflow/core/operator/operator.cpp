@@ -713,6 +713,16 @@ Maybe<void> Operator::GreedilyFindMinCopyCostNdSbp(
       for (int32_t ibn_id = 0; ibn_id < input_bns().size(); ibn_id++) {
         const auto& ibn = input_bns().at(ibn_id);
         const auto& producer_infer_hint4ibn = JUST(NdSbpInferHint4Ibn(ibn));
+        double priority_ratio = ComputeSbpInferPriority(
+            producer_infer_hint4ibn->nd_sbp(),
+            JUST(VectorAt(nd_sbp_sig_list, i)).bn_in_op2nd_sbp().at(ibn),
+            producer_infer_hint4ibn->logical_blob_desc(), producer_infer_hint4ibn->parallel_desc(),
+            *JUST(GetParallelDesc4BnInOp(ibn)), requires_same_sbp[ibn_id]);
+        if (priority_ratio == 0.0) {
+          continue;
+        } else if (priority_ratio > 1.5) {
+          break;
+        }
         total_copy_cost += JUST(ComputeCopyCostBetweenNdSbp(
             producer_infer_hint4ibn->nd_sbp(),
             JUST(VectorAt(nd_sbp_sig_list, i)).bn_in_op2nd_sbp().at(ibn),

@@ -66,6 +66,16 @@ Maybe<double> ComputeCopyCostWithMiddleNodes(const NdSbp& producer_sbp_parallel,
                                              const ParallelDesc& consumer_parallel_desc,
                                              bool requires_same_sbp);
 
+// Decide the priority to infer sbp
+// 0: highest priority
+// 1.0: normal priority
+// 2.0: Penality, the same as infinity
+double ComputeSbpInferPriority(const NdSbp& producer_sbp_parallel,
+                               const NdSbp& consumer_sbp_parallel,
+                               const BlobDesc& logical_blob_desc,
+                               const ParallelDesc& producer_parallel_desc,
+                               const ParallelDesc& consumer_parallel_desc, bool requires_same_sbp);
+
 }  // namespace oneflow
 
 #endif  // ONEFLOW_CORE_FRAMEWORK_SBP_INFER_UTIL_H_
