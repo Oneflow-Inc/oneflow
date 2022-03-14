@@ -103,7 +103,11 @@ def _test_roi_align(test_case, placement, rois_sbp):
         placement=flow.env.all_device_placement("cpu"), sbp=[flow.sbp.broadcast,]
     ).to_local()
     torch_input_grad = x.pytorch.grad.detach().cpu()
-    test_case.assertTrue(np.allclose(of_input_grad.numpy(), torch_input_grad.numpy(), rtol=1e-04, atol=1e-4))
+    test_case.assertTrue(
+        np.allclose(
+            of_input_grad.numpy(), torch_input_grad.numpy(), rtol=1e-04, atol=1e-4
+        )
+    )
 
 
 class TestRoiAlign(flow.unittest.TestCase):
