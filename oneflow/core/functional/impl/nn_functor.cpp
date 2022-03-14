@@ -2409,9 +2409,9 @@ class OneEmbeddingEmbeddingGradientShuffleFunctor {
   std::shared_ptr<OpExpr> op_;
 };
 
-class EmbeddingLookupFunctor {
+class OneEmbeddingLookupFunctor {
  public:
-  EmbeddingLookupFunctor() {
+  OneEmbeddingLookupFunctor() {
     op_ = CHECK_JUST(one::OpBuilder("embedding_lookup_placeholder")
                          .Input("shadow")
                          .Input("ids")
@@ -2432,6 +2432,28 @@ class EmbeddingLookupFunctor {
     JUST(attrs.SetAttr<std::string>("embedding_columns", embedding_columns));
     JUST(attrs.SetAttr<std::string>("embedding_options", embedding_options));
     return OpInterpUtil::Dispatch<Tensor>(*op_, {shadow, ids, column_ids}, attrs);
+  }
+
+ private:
+  std::shared_ptr<OpExpr> op_;
+};
+
+class UniqueKeyValuePairFunctor {
+ public:
+  UniqueKeyValuePairFunctor() {
+    op_ = CHECK_JUST(one::OpBuilder("unique_key_value_pair")
+                         .Input("keys")
+                         .Input("values")
+                         .Output("num_unique")
+                         .Output("unique_keys")
+                         .Output("unique_values")
+                         .Output("inverse_indices")
+                         .Build());
+  }
+
+  Maybe<TensorTuple> operator()(const std::shared_ptr<one::Tensor>& keys,
+                                const std::shared_ptr<one::Tensor>& values) const {
+    return OpInterpUtil::Dispatch<TensorTuple>(*op_, {keys, values});
   }
 
  private:
@@ -2512,7 +2534,8 @@ ONEFLOW_FUNCTION_LIBRARY(m) {
   m.add_functor<impl::OneEmbeddingEmbeddingShuffleFunctor>("OneEmbeddingEmbeddingShuffle");
   m.add_functor<impl::OneEmbeddingEmbeddingGradientShuffleFunctor>(
       "OneEmbeddingEmbeddingGradientShuffle");
-  m.add_functor<impl::EmbeddingLookupFunctor>("OneEmbeddingLookup");
+  m.add_functor<impl::OneEmbeddingLookupFunctor>("OneEmbeddingLookup");
+  m.add_functor<impl::UniqueKeyValuePairFunctor>("UniqueKeyValuePair");
 };
 
 }  // namespace functional

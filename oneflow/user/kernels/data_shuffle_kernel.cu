@@ -662,4 +662,63 @@ class EmbeddingGradientShuffleKernel final : public user_op::OpKernel {
 OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(REGISTER_CUDA_EMBEDDING_GRADIENT_SHUFFLE_KERNEL,
                                  FLOATING_DATA_TYPE_SEQ HALF_DATA_TYPE_SEQ, IDX_DATA_TYPE_SEQ)
 
+template<typename K, typename V, typename IDX>
+class UniqueKeyValuePairKernel final : public user_op::OpKernel {
+ public:
+  UniqueKeyValuePairKernel() = default;
+  ~UniqueKeyValuePairKernel() override = default;
+
+ private:
+  using user_op::OpKernel::Compute;
+
+  void Compute(user_op::KernelComputeContext* ctx) const override {
+    const user_op::Tensor* keys = ctx->Tensor4ArgNameAndIndex("keys", 0);
+    const user_op::Tensor* values = ctx->Tensor4ArgNameAndIndex("values", 0);
+    user_op::Tensor* num_unique = ctx->Tensor4ArgNameAndIndex("num_unique", 0);
+    user_op::Tensor* unique_keys = ctx->Tensor4ArgNameAndIndex("unique_keys", 0);
+    user_op::Tensor* unique_values = ctx->Tensor4ArgNameAndIndex("unique_values", 0);
+    user_op::Tensor* inverse_indices = ctx->Tensor4ArgNameAndIndex("inverse_indices", 0);
+    user_op::Tensor* tmp_buffer = ctx->Tensor4ArgNameAndIndex("tmp_buffer", 0);
+
+    const int64_t num_keys = keys->shape().elem_cnt();
+    const int64_t hash_capacity = num_keys;
+    const size_t workspace_bytes = GetCudaAlignedSize(hash_capacity * sizeof(TableEntry<K>));
+    CHECK_LE(workspace_bytes, tmp_buffer->shape().elem_cnt());
+    cudaStream_t cuda_stream = ctx->stream()->As<ep::CudaStream>()->cuda_stream();
+
+    bool need_process_column_ids = true;
+    UniqueAndPartition<K, V, IDX, embedding::GlobalUniqueHash>(
+        cuda_stream, num_keys, hash_capacity, 1, reinterpret_cast<const K*>(keys->dptr()),
+        reinterpret_cast<const V*>(values->dptr()), reinterpret_cast<IDX*>(num_unique->mut_dptr()),
+        reinterpret_cast<K*>(unique_keys->mut_dptr()),
+        reinterpret_cast<V*>(unique_values->mut_dptr()),
+        reinterpret_cast<IDX*>(inverse_indices->mut_dptr()),
+        reinterpret_cast<TableEntry<K>*>(tmp_buffer->mut_dptr()), workspace_bytes,
+        need_process_column_ids);
+  }
+  bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
+};
+
+#define REGISTER_CUDA_UNIQUE_KEY_VALUE_PAIR_KERNEL(k_dtype_pair, value_dtype_pair, idx_dtype_pair) \
+  REGISTER_USER_KERNEL("unique_key_value_pair")                                                    \
+      .SetCreateFn<UniqueKeyValuePairKernel<OF_PP_PAIR_FIRST(k_dtype_pair),                        \
+                                            OF_PP_PAIR_FIRST(value_dtype_pair),                    \
+                                            OF_PP_PAIR_FIRST(idx_dtype_pair)>>()                   \
+      .SetIsMatchedHob(                                                                            \
+          (user_op::HobDeviceType() == DeviceType::kCUDA)                                          \
+          && (user_op::HobDataType("keys", 0) == OF_PP_PAIR_SECOND(k_dtype_pair))                  \
+          && (user_op::HobDataType("inverse_indices", 0) == OF_PP_PAIR_SECOND(idx_dtype_pair))     \
+          && (user_op::HobDataType("values", 0) == OF_PP_PAIR_SECOND(value_dtype_pair)))           \
+      .SetInferTmpSizeFn([](user_op::InferContext* ctx) {                                          \
+        const user_op::TensorDesc& keys = ctx->InputTensorDesc("keys", 0);                         \
+        const int64_t num_keys = keys.shape().elem_cnt();                                          \
+        const int64_t hash_capacity = num_keys;                                                    \
+        const size_t workspace_bytes = GetCudaAlignedSize(                                         \
+            hash_capacity * sizeof(TableEntry<OF_PP_PAIR_FIRST(k_dtype_pair)>));                   \
+        return workspace_bytes;                                                                    \
+      });
+
+OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(REGISTER_CUDA_UNIQUE_KEY_VALUE_PAIR_KERNEL, ID_DATA_TYPE_SEQ,
+                                 ID_DATA_TYPE_SEQ, IDX_DATA_TYPE_SEQ)
+
 }  // namespace oneflow
