@@ -95,6 +95,7 @@ OneFlow Tensor Class
             lt, 
             masked_fill, 
             masked_select, 
+            mm,
             matmul, 
             max, 
             mean, 

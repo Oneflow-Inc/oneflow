@@ -86,6 +86,7 @@ oneflow
             le, 
             masked_fill, 
             masked_select, 
+            mm,
             matmul, 
             narrow, 
             max, 

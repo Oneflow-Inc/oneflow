@@ -1113,6 +1113,38 @@ add_docstr(
 )
 
 add_docstr(
+    oneflow.mm,
+    r"""
+    mm(input, other) -> Tensor
+
+    This operator applies matrix multiplication to two 2-D Tensor.
+
+    .. note::
+    This function does not broadcast. For broadcasting matrix products, see :code:`flow.matmul()`.
+
+    Args:
+        a (oneflow.Tensor): A 2-D Tensor
+        b (oneflow.Tensor): A 2-D Tensor
+
+    Returns:
+        oneflow.Tensor: The result Tensor
+
+    For example:
+
+    .. code-block:: python
+
+        >>> import oneflow as flow
+        >>> input1 = flow.tensor(np.random.randn(2, 6), dtype=flow.float32)
+        >>> input2 = flow.tensor(np.random.randn(6, 5), dtype=flow.float32)
+        >>> of_out = flow.mm(input1, input2)
+        >>> of_out.shape
+        oneflow.Size([2, 5])
+
+    """
+)
+
+
+add_docstr(
     oneflow.matmul,
     r"""
     matmul(input, other) -> Tensor

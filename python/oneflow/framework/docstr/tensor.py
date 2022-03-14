@@ -257,6 +257,13 @@ add_docstr(
 )
 
 add_docstr(
+    oneflow.Tensor.mm,
+    """
+    See :func:`oneflow.mm`
+    """
+)
+
+add_docstr(
     oneflow.Tensor.matmul,
     """
     See :func:`oneflow.matmul`

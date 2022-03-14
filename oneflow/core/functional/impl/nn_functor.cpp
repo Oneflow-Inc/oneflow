@@ -196,6 +196,34 @@ class DeConv3dFunctor : public DeConvBaseFunctor {
   }
 };
 
+class MMFunctor {
+  public:
+    MMFunctor() {
+      matmul_op_ = CHECK_JUST(one::OpBuilder("matmul").Input("a").Input("b").Output("out").Build());
+    }
+
+    Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& a,
+                             const std::shared_ptr<one::Tensor>& b) const {
+      const auto& a_shape = a->shape();
+      const auto& b_shape = b->shape();
+
+      CHECK_EQ_OR_RETURN(a_shape->NumAxes(), 2) << "Tensor a must be a matrix.";
+      CHECK_EQ_OR_RETURN(b_shape->NumAxes(), 2) << "Tensor b must be a matrix.";
+      CHECK_EQ_OR_RETURN(a_shape->At(1), b_shape->At(0)) << "Tensor a and b shapes cannot be multiplied. (" 
+      << a_shape->At(0) << "x" << a_shape->At(1) << " and " 
+      << b_shape->At(0) << "x" << b_shape->At(1) << ").";
+
+      MutableAttrMap attrs;
+      JUST(attrs.SetAttr<bool>("transpose_a", false));
+      JUST(attrs.SetAttr<bool>("transpose_b", false));
+      JUST(attrs.SetAttr<double>("alpha", 1.));
+      return OpInterpUtil::Dispatch<Tensor>(*matmul_op_, {a, b}, attrs);
+                             }
+    
+  private:
+    std::shared_ptr<OpExpr> matmul_op_;
+};
+
 class MatMulFunctor {
  public:
   MatMulFunctor() {
@@ -2419,6 +2447,7 @@ ONEFLOW_FUNCTION_LIBRARY(m) {
   m.add_functor<impl::DeConv1dFunctor>("Deconv1d");
   m.add_functor<impl::DeConv2dFunctor>("Deconv2d");
   m.add_functor<impl::DeConv3dFunctor>("Deconv3d");
+  m.add_functor<impl::MMFunctor>("MM");
   m.add_functor<impl::MatMulFunctor>("MatMul");
   m.add_functor<impl::BatchMatMulFunctor>("BatchMatMul");
   m.add_functor<impl::FusedMLPFunctor>("FusedMLP");
