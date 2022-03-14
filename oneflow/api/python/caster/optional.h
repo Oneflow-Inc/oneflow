@@ -21,6 +21,8 @@ limitations under the License.
 namespace pybind11 {
 namespace detail {
 
+using oneflow::Optional;
+
 namespace impl {
 
 template<typename T>
@@ -35,19 +37,19 @@ T&& DeferenceIfSharedPtr(T&& obj) {
 
 template<typename T>
 using IsHoldedInsideSharedPtrByOptional =
-    std::is_same<typename oneflow::Optional<T>::storage_type, std::shared_ptr<T>>;
+    std::is_same<typename Optional<T>::storage_type, std::shared_ptr<T>>;
 
 template<typename T, typename std::enable_if_t<IsSupportedByPybind11WhenInsideSharedPtr<T>::value
                                                    && IsHoldedInsideSharedPtrByOptional<T>::value,
                                                int> = 0>
-std::shared_ptr<T> GetDataHelper(oneflow::Optional<T> x) {
+std::shared_ptr<T> GetDataHelper(Optional<T> x) {
   return CHECK_JUST(x);
 }
 
 template<typename T, typename std::enable_if_t<!IsSupportedByPybind11WhenInsideSharedPtr<T>::value
                                                    || !IsHoldedInsideSharedPtrByOptional<T>::value,
                                                int> = 0>
-T GetDataHelper(oneflow::Optional<T> x) {
+T GetDataHelper(Optional<T> x) {
   return DeferenceIfSharedPtr<T>(CHECK_JUST(x));
 }
 
@@ -84,7 +86,7 @@ struct oneflow_optional_caster {
 };
 
 template<typename T>
-struct type_caster<oneflow::Optional<T>> : public oneflow_optional_caster<oneflow::Optional<T>> {};
+struct type_caster<Optional<T>> : public oneflow_optional_caster<Optional<T>> {};
 
 }  // namespace detail
 }  // namespace pybind11
