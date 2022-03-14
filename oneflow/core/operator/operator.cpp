@@ -708,21 +708,27 @@ Maybe<void> Operator::GreedilyFindMinCopyCostNdSbp(
           || NotSupportBoxingDataType(
               JUST(NdSbpInferHint4Ibn(ibn))->logical_blob_desc().data_type());
     }
+    static int32_t infer_rule = ParseIntegerFromEnv("SBP_INFER_RULE_TAG", 1);
     for (int32_t i = 0; i < nd_sbp_sig_list.size(); ++i) {
       double total_copy_cost = 0.0;
+      double sum_priority_ratio = 0.0;
       for (int32_t ibn_id = 0; ibn_id < input_bns().size(); ibn_id++) {
         const auto& ibn = input_bns().at(ibn_id);
         const auto& producer_infer_hint4ibn = JUST(NdSbpInferHint4Ibn(ibn));
+        if(infer_rule <= 2){
         double priority_ratio = ComputeSbpInferPriority(
             producer_infer_hint4ibn->nd_sbp(),
             JUST(VectorAt(nd_sbp_sig_list, i)).bn_in_op2nd_sbp().at(ibn),
             producer_infer_hint4ibn->logical_blob_desc(), producer_infer_hint4ibn->parallel_desc(),
             *JUST(GetParallelDesc4BnInOp(ibn)), requires_same_sbp[ibn_id]);
-        if (priority_ratio == 0.0) {
-          continue;
-        } else if (priority_ratio > 1.5) {
+        if (priority_ratio > 1.5) {
           total_copy_cost = GetMaxVal<float>();
           break;
+        }
+        if (infer_rule == 2 && priority_ratio == 0.0) {
+          continue;
+        }
+        sum_priority_ratio += priority_ratio;
         }
         total_copy_cost += JUST(ComputeCopyCostBetweenNdSbp(
             producer_infer_hint4ibn->nd_sbp(),
@@ -730,7 +736,11 @@ Maybe<void> Operator::GreedilyFindMinCopyCostNdSbp(
             producer_infer_hint4ibn->logical_blob_desc(), producer_infer_hint4ibn->parallel_desc(),
             *JUST(GetParallelDesc4BnInOp(ibn)), requires_same_sbp[ibn_id]));
         // Reduce inquiries
-        if (total_copy_cost > min_copy_cost) { break; }
+        if (infer_rule > 1 && total_copy_cost > min_copy_cost) { break; }
+      }
+      if(infer_rule == 1 && sum_priority_ratio == 0.0){
+        select_sbp_idx = i;
+        break;
       }
       if (total_copy_cost <= min_copy_cost) {
         select_sbp_idx = i;
