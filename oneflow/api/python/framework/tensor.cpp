@@ -26,7 +26,6 @@ limitations under the License.
 #include "oneflow/api/python/functional/tensor_api.yaml.pybind.h"
 #include "oneflow/core/framework/tensor.h"
 #include "oneflow/core/framework/tensor_rpc_util.h"
-#include "oneflow/core/framework/tensor_methods.h"
 #include "oneflow/core/framework/device.h"
 #include "oneflow/core/framework/stride.h"
 #include "oneflow/core/framework/py_distribute.h"
@@ -114,10 +113,6 @@ void ApiRegisterTensorPostGradAccumulationHook(const std::shared_ptr<Tensor>& se
   return RegisterTensorPostGradAccumulationHook(self, hook).GetOrThrow();
 }
 
-bool ApiIsContiguous(const std::shared_ptr<Tensor>& tensor) {
-  return IsContiguous(tensor).GetOrThrow();
-}
-
 py::tuple ApiTensorGetPyTupleOfSbp(const Tensor& tensor) {
   return *TensorGetPyTupleOfSbp(tensor).GetPtrOrThrow();
 }
@@ -178,14 +173,20 @@ ONEFLOW_API_PYBIND11_MODULE("", m) {
           })
       .def_property(
           "data", [](Tensor& t) { return t.data().GetPtrOrThrow(); },
-          [](Tensor& t, const std::shared_ptr<Tensor>& other) { t.set_data(other).GetOrThrow(); })
+          [](const std::shared_ptr<Tensor>& t, const std::shared_ptr<Tensor>& other) {
+            auto hooks = t->autograd_meta()->hooks();
+            t->set_data(other).GetOrThrow();
+            // Re-register hooks
+            for (const auto& hook : hooks) { ApiRegisterTensorHook(t, hook); }
+          })
       .def("storage_offset", [](const Tensor& t) { return t.storage_offset().GetOrThrow(); })
       .def("stride",
            [](const Tensor& t) {
              const auto& stride = t.stride().GetPtrOrThrow()->StrideVec();
              return py::tuple(py::make_iterator(stride.begin(), stride.end()));
            })
-      .def("is_contiguous", &ApiIsContiguous)
+      .def("is_contiguous", &Tensor::is_contiguous)
+      .def("contiguous", &Tensor::contiguous)
       .def_property_readonly("grad_fn", &Tensor::grad_fn_node)
       .def_property_readonly("is_leaf", &Tensor::is_leaf)
       .def_property("requires_grad", &Tensor::requires_grad, &ApiSetRequiresGrad)

@@ -26,7 +26,7 @@ ThreadMgr::~ThreadMgr() {
     ActorMsg msg = ActorMsg::BuildCommandMsg(-1, ActorCmd::kStopThread);
     thread_pair.second->GetMsgChannelPtr()->Send(msg);
     thread_pair.second.reset();
-    LOG(INFO) << "actor thread " << thread_pair.first << " finish";
+    VLOG(3) << "actor thread " << thread_pair.first << " finish";
   }
 }
 

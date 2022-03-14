@@ -13,13 +13,12 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
-#include <pybind11/pybind11.h>
-#include "oneflow/api/python/of_api_registry.h"
-#include "oneflow/core/vm/vm_util.h"
+#ifndef ONEFLOW_IR_INCLUDE_ONEFLOW_ONEFLOWTYPES_H_
+#define ONEFLOW_IR_INCLUDE_ONEFLOW_ONEFLOWTYPES_H_
 
-ONEFLOW_API_PYBIND11_MODULE("eager.single_client", m) {
-  using namespace oneflow;
-  namespace py = pybind11;
-  m.def(
-      "Sync", []() { vm::ClusterSync().GetOrThrow(); }, py::call_guard<py::gil_scoped_release>());
-}
+#include "mlir/IR/Types.h"
+
+#define GET_TYPEDEF_CLASSES
+#include "OneFlow/OneFlowOpsTypes.h.inc"
+
+#endif  // ONEFLOW_IR_INCLUDE_ONEFLOW_ONEFLOWTYPES_H_

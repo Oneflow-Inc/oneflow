@@ -168,6 +168,7 @@
       "Tensor (Tensor input, Tensor exponent) => Pow",
       "Tensor (Tensor input, Scalar exponent, *, Bool inplace=False) => ScalarPow",
       "Tensor (Tensor input, Scalar exponent) => ScalarPow",
+      "Tensor (Scalar exponent, Tensor input) => ScalarReversePow",
     ]
   bind_python: True
 
@@ -181,6 +182,10 @@
 
 - name: "scalar_pow_grad"
   signature: "Tensor (Tensor input, Tensor dy, Scalar exponent) => ScalarPowGrad"
+  bind_python: False
+
+- name: "scalar_reverse_pow_grad"
+  signature: "Tensor (Tensor input, Tensor dy, Scalar exponent) => ScalarReversePowGrad"
   bind_python: False
 
 - name: "broadcast_pow"
@@ -559,7 +564,7 @@
 - name: "normalization"
   signature:
     "Tensor (Tensor x, Tensor moving_mean=None, Tensor moving_variance=None,
-    Tensor gamma, Tensor beta, Int32 axis=1, Float epsilon=1e-5,
+    Tensor gamma=None, Tensor beta=None, Int32 axis=1, Float epsilon=1e-5,
     Float momentum=0.9, Bool is_training=False) => Normalization"
 
   bind_python: True
@@ -852,6 +857,16 @@
     Double alpha=1.0) => MatMul"
   bind_python: True
 
+- name: "fused_mlp"
+  signature:
+    "Tensor (Tensor x, TensorTuple weights, TensorTuple biases, Bool skip_final_activation) => FusedMLP"
+  bind_python: True
+
+- name: "cublas_bias_add_relu_matmul_grad"
+  signature:
+    "TensorTuple (Tensor dy, Tensor weight, Tensor aux) => CublasBiasAddReluMatmulGrad"
+  bind_python: False
+
 - name: "broadcast_matmul_grad_b"
   signature: "Tensor (Tensor a, Tensor b, Double alpha=1.0) => BroadcastMatmulGradB"
   bind_python: False
@@ -1135,6 +1150,10 @@
 
 - name: "view"
   signature: "Tensor (Tensor x, Shape shape) => View"
+  bind_python: True
+
+- name: "contiguous"
+  signature: "Tensor (Tensor input) => ToContiguous"
   bind_python: True
 
 - name: "slice_view_1d_contiguous"
@@ -1927,12 +1946,6 @@
   signature: "TensorTuple (Tensor log_probs, Tensor input_lengths, Bool merge_repeated=True) => CtcGreedyDecoder"
   bind_python: True
 
-
-- name: "distributed_partial_fc_sample"
-  signature:
-    "TensorTuple (Tensor weight, Tensor label, Int64 num_sample) => DistributedPariticalFCSample"
-  bind_python: True
-
 - name: "distributed_partial_fc_sample_disable_boxing"
   signature:
     "TensorTuple (Tensor sampled_weight_diff, Tensor sampled_label) => DistributedPariticalFCSampleDisableBoxing"
@@ -2008,3 +2021,19 @@
 - name: "cumprod_grad"
   signature: "Tensor (Tensor input, Tensor y, Tensor x, Int64 dim) => CumprodGrad"
   bind_python: False
+
+- name: "one_embedding_id_shuffle"
+  signature: "TensorTuple (Tensor ids, Tensor column_ids=None, Int32 num_columns=1) => OneEmbeddingIdShuffle"
+  bind_python: True
+
+- name: "one_embedding_embedding_shuffle"
+  signature: "Tensor (Tensor cur_rank_embeddings, Tensor num_unique_matrix, Tensor cur_rank_inverse_indices, Tensor inverse_unique_partition_indices) => OneEmbeddingEmbeddingShuffle"
+  bind_python: True
+
+- name: "one_embedding_embedding_gradient_shuffle"
+  signature: "Tensor (Tensor embedding_grad, Tensor num_unique_matrix, Tensor cur_rank_inverse_indices, Tensor inverse_unique_partition_indices) => OneEmbeddingEmbeddingGradientShuffle"
+  bind_python: True
+
+- name: "einsum"
+  signature: "Tensor (String equation, TensorTuple operands) => EinSum"
+  bind_python: True

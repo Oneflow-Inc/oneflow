@@ -15,6 +15,8 @@ limitations under the License.
 */
 #include "oneflow/core/platform/include/pthread_fork.h"
 #include "oneflow/core/common/util.h"
+#include "oneflow/core/vm/virtual_machine.h"
+#include "oneflow/core/vm/vm_util.h"
 
 namespace oneflow {
 
@@ -25,7 +27,15 @@ static bool is_fork = false;
 bool IsForkedSubProcess() { return is_fork; }
 static void SetIsForkedSubProcess() { is_fork = true; }
 
-void RegisterForkCallback() { pthread_atfork(nullptr, nullptr, SetIsForkedSubProcess); }
+namespace {
+void CurrentRankVmSync() {
+  // Instructions in forked subprocesses are not dispatched to vm,
+  // so no need to sync vm in these processes.
+  if (!is_fork && Global<VirtualMachine>::Get() != nullptr) { CHECK_JUST(vm::CurrentRankSync()); }
+}
+}  // namespace
+
+void RegisterForkCallback() { pthread_atfork(&CurrentRankVmSync, nullptr, &SetIsForkedSubProcess); }
 COMMAND(RegisterForkCallback());
 
 const char* kOfCudaNotSupportInForkedSubProcess =

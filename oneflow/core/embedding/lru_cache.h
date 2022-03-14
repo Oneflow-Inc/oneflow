@@ -1,4 +1,4 @@
-"""
+/*
 Copyright 2020 The OneFlow Authors. All rights reserved.
 
 Licensed under the Apache License, Version 2.0 (the "License");
@@ -12,5 +12,20 @@ distributed under the License is distributed on an "AS IS" BASIS,
 WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
-"""
-from oneflow.nn.optimizer.sparse_optimizer import SparseOptimizer
+*/
+#ifndef ONEFLOW_CORE_EMBEDDING_LRU_CACHE_H_
+#define ONEFLOW_CORE_EMBEDDING_LRU_CACHE_H_
+
+#include "oneflow/core/embedding/cache.h"
+
+namespace oneflow {
+
+namespace embedding {
+
+std::unique_ptr<Cache> NewLruCache(const CacheOptions& options);
+
+}  // namespace embedding
+
+}  // namespace oneflow
+
+#endif  // ONEFLOW_CORE_EMBEDDING_LRU_CACHE_H_
