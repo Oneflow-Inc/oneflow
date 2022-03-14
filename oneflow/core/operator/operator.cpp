@@ -721,6 +721,7 @@ Maybe<void> Operator::GreedilyFindMinCopyCostNdSbp(
         if (priority_ratio == 0.0) {
           continue;
         } else if (priority_ratio > 1.5) {
+          total_copy_cost = GetMaxVal<float>();
           break;
         }
         total_copy_cost += JUST(ComputeCopyCostBetweenNdSbp(
