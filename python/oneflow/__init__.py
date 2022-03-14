@@ -277,7 +277,7 @@ import oneflow._C
 from oneflow._C import tensor, batch_gather
 from oneflow._C import from_numpy
 
-from oneflow.autograd import grad_enable, no_grad, inference_mode, is_grad_enabled
+from oneflow.autograd import enable_grad, set_grad_enabled, no_grad, inference_mode, is_grad_enabled
 import oneflow.nn.image
 
 from oneflow.framework.check_point_v2 import load
