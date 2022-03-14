@@ -25,5 +25,27 @@ template<typename T>
 using IsSupportedByPybind11WhenInsideSharedPtr =
     std::is_base_of<type_caster_base<T>, type_caster<T>>;
 
+#define PYBIND11_TYPE_CASTER_WITH_SHARED_PTR(type, py_name)                               \
+ protected:                                                                               \
+  std::shared_ptr<type> value;                                                            \
+                                                                                          \
+ public:                                                                                  \
+  static constexpr auto name = py_name;                                                   \
+  template<typename T_, enable_if_t<std::is_same<type, remove_cv_t<T_>>::value, int> = 0> \
+  static handle cast(T_* src, return_value_policy policy, handle parent) {                \
+    if (!src) return none().release();                                                    \
+    if (policy == return_value_policy::take_ownership) {                                  \
+      auto h = cast(std::move(*src), policy, parent);                                     \
+      delete src;                                                                         \
+      return h;                                                                           \
+    }                                                                                     \
+    return cast(*src, policy, parent);                                                    \
+  }                                                                                       \
+  operator type*() { return value.get(); }                                                \
+  operator type&() { return *value; }                                                     \
+  operator type&&()&& { return std::move(*value); }                                       \
+  template<typename T_>                                                                   \
+  using cast_op_type = pybind11::detail::movable_cast_op_type<T_>
+
 }  // namespace detail
 }  // namespace pybind11

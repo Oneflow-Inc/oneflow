@@ -64,7 +64,7 @@ struct maybe_caster {
     value_conv inner_caster;
     if (!inner_caster.load(src, convert)) { return false; }
 
-    value = cast_op<Value&&>(std::move(inner_caster));
+    value = std::make_shared<Type>(cast_op<Value&&>(std::move(inner_caster)));
     return true;
   }
 
@@ -76,7 +76,7 @@ struct maybe_caster {
     return value_conv::cast(impl::GetOrThrowHelper(std::forward<T>(src)), policy, parent);
   }
 
-  PYBIND11_TYPE_CASTER(Type, _("Maybe[") + value_conv::name + _("]"));
+  PYBIND11_TYPE_CASTER_WITH_SHARED_PTR(Maybe<void>, _("Maybe[void]"));
 };
 
 template<>
@@ -95,7 +95,7 @@ struct maybe_caster<Maybe<void>> {
     return false;
   }
 
-  PYBIND11_TYPE_CASTER(Maybe<void>, _("Maybe[void]"));
+  PYBIND11_TYPE_CASTER_WITH_SHARED_PTR(Maybe<void>, _("Maybe[void]"));
 };
 
 template<typename T>
