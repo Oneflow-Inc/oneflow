@@ -196,11 +196,13 @@ struct LocalCallOpKernelUtil {
                               return Maybe<void>::Ok();
                             }));
 
-    for (int i : operand->opkernel().input_tuple_indexes4mut_ibns()) {
-      const std::string& op_type_name = operand->opkernel().op_type_name();
-      std::cout << "mutable! op: " << op_type_name << ", input " << i;
-      std::cout << "set it as non evictable" << std::endl;
-      GetDTRInputs(operand)[i]->set_evict_attr(false);
+    if (DTREnabled()) {
+      for (int i : operand->opkernel().input_tuple_indexes4mut_ibns()) {
+        const std::string& op_type_name = operand->opkernel().op_type_name();
+        std::cout << "mutable! op: " << op_type_name << ", input " << i;
+        std::cout << "set it as non evictable" << std::endl;
+        GetDTRInputs(operand)[i]->set_evict_attr(false);
+      }
     }
     if (oneflow::DTRDebugLevel() >= 3) {
       for (int i : operand->opkernel().input_tuple_indexes4mut_ibns()) {
