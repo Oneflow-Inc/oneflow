@@ -385,7 +385,7 @@ class EmbeddingPrefetchKernel final : public user_op::OpKernel {
                                     embedding_size, line_size, num_unique_ids->dptr(),
                                     unique_ids->dptr(), column_ids->dptr(), values_ptr,
                                     tmp_buffer->mut_dptr(), &num_unique, true);
-    CHECK_GT(num_unique, 0);
+    CHECK_GT(num_unique, 0) << "num unique ids must greater than 0. ";
   }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
@@ -449,7 +449,7 @@ class EmbeddingLookupKernel final : public user_op::OpKernel {
         ctx->stream(), kernel_state, unique_ids->shape().elem_cnt(), embedding_size, line_size,
         num_unique_ids->dptr(), unique_ids->dptr(), column_ids->dptr(),
         unique_values->mut_dptr<T>(), tmp_buffer->mut_dptr(), &num_unique, false);
-    CHECK_GT(num_unique, 0);
+    CHECK_GT(num_unique, 0) << "num unique ids must greater than 0. ";
     if (ctx->has_output("embeddings", 0)) {
       user_op::Tensor* embeddings = ctx->Tensor4ArgNameAndIndex("embeddings", 0);
       CopyValuesToEmbeddings<T>(ctx->stream(), num_unique, embedding_size, line_size,
