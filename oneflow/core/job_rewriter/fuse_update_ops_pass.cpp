@@ -169,10 +169,12 @@ Maybe<void> FuseUpdateOpsPass::Apply(const OpGraph& op_graph, JobBuilder* job_bu
     } else if (user_op_conf.op_type_name() == "adam_update") {
       fused_op_builder.Input("m", user_op_conf.input("m", 0))
           .Input("v", user_op_conf.input("v", 0))
-          .Input("max_v", user_op_conf.input("max_v", 0))
           .Attr<float>("beta1", user_op_conf.attr<float>("beta1"))
           .Attr<float>("beta2", user_op_conf.attr<float>("beta2"))
           .Attr<float>("epsilon", user_op_conf.attr<float>("epsilon"));
+      if (user_op_conf.has_input("max_v", 0)) {
+        fused_op_builder.Input("max_v", user_op_conf.input("max_v", 0));
+      }
       if (user_op_conf.has_input("bias_correction1", 0)) {
         fused_op_builder.Input("bias_correction1", user_op_conf.input("bias_correction1", 0));
       }

@@ -207,9 +207,9 @@ import oneflow.framework.scope_util as scope_util
 import oneflow.framework.session_context as session_ctx
 from oneflow.framework.tensor_str import set_printoptions
 
-_env = env_util.GetEnv()
-session_ctx.NewDefaultSession(_env)
-del _env
+__oneflow_global_unique_env = env_util.GetEnv()
+session_ctx.NewDefaultSession(__oneflow_global_unique_env)
+
 oneflow._oneflow_internal.RegisterGILForeignLockHelper()
 oneflow._oneflow_internal.InitDefaultConsistentTransportTokenScope()
 
@@ -254,10 +254,9 @@ hook = ExitHook()
 
 def atexit_hook(hook):
     if hook.is_normal_exit():
-        if oneflow._oneflow_internal.IsEnvInited():
-            oneflow._oneflow_internal.eager.Sync()
+        oneflow._oneflow_internal.eager.Sync()
     oneflow.framework.session_context.TryCloseDefaultSession()
-    env_util.DelEnv(hook.is_normal_exit())
+    oneflow._oneflow_internal.SetShuttingDown()
 
 
 atexit.register(atexit_hook, hook)
@@ -386,7 +385,7 @@ from . import (
     boxing,
     backends,
     amp,
-)  # , saved_model NOTE(chengcheng): unavailable now
+)
 import oneflow.utils.data
 import oneflow.comm
 import oneflow.framework.docstr as docstr

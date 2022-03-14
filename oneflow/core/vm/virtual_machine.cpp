@@ -29,6 +29,7 @@ limitations under the License.
 #include "oneflow/core/profiler/profiler.h"
 #include "oneflow/core/platform/include/pthread_fork.h"
 #include "oneflow/core/common/env_var.h"
+#include "oneflow/core/framework/shut_down_util.h"
 #include "oneflow/core/framework/device.h"
 
 namespace oneflow {
@@ -115,7 +116,9 @@ VirtualMachine::VirtualMachine(const Resource& resource, int64_t this_machine_id
   // In order to notify threads in VirtualMachineEngine, a notify callback lambda should be take as
   // an argument for VirtualMachineEngine's constructor.
   vm_ = intrusive::make_shared<vm::VirtualMachineEngine>(
-      vm::MakeVmDesc(resource, this_machine_id).Get(), [this]() { callback_notifier_.Notify(); });
+      vm::MakeVmDesc(resource, this_machine_id).Get(), [this]() {
+        if (!IsShuttingDown()) { callback_notifier_.Notify(); }
+      });
   OF_PROFILER_NAME_THIS_HOST_THREAD("_Main");
   std::function<void(vm::ThreadCtx*)> WorkerInitializer;
   GetWorkerThreadInitializer(vm_, &WorkerInitializer);
@@ -203,6 +206,15 @@ Maybe<void> VirtualMachine::Receive(vm::InstructionMsgList* instr_list) {
       // NOTE: operate `vm_` in forked subprocesses causes mysterious problems.
       // `ComputeInFuseMode` will be replaced by `Compute` soon.
       instr_msg->mut_instr_type_id()->instruction_type().ComputeInFuseMode(instr_msg);
+    }
+  } else if (IsShuttingDown()) {
+    CHECK_OR_RETURN(vm_->Empty());
+    CHECK_OR_RETURN(vm_->CallbackEmpty());
+    JUST(vm_->Receive(instr_list));
+    while (!(vm_->Empty() && vm_->CallbackEmpty())) {
+      vm_->Schedule();
+      vm_->FlushGarbageMsgList();
+      vm_->Callback();
     }
   } else {
     const int64_t kHighWaterMark = GetInstructionHighWaterMark();

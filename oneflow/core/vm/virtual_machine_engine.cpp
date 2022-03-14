@@ -208,8 +208,12 @@ void VirtualMachineEngine::MoveInstructionMsgToGarbageMsgList(
   }
 }
 
-void VirtualMachineEngine::MoveToGarbageMsgListAndNotifyGC() {
+void VirtualMachineEngine::FlushGarbageMsgList() {
   garbage_msg_list_.MoveFrom(&local_garbage_msg_list_);
+}
+
+void VirtualMachineEngine::MoveToGarbageMsgListAndNotifyGC() {
+  FlushGarbageMsgList();
   notify_callback_thread_();
 }
 
