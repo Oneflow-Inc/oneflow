@@ -348,7 +348,7 @@ struct NormalizationInferencePattern : public OpRewritePattern<NormalizationOp> 
   LogicalResult matchAndRewrite(oneflow::NormalizationOp op,
                                 PatternRewriter& rewriter) const override {
     if (op.mean() || op.inv_variance()) return failure();
-    if (auto created_op = rewriter.replaceOpWithNewOp<NormalizationOp>(
+    if (auto created_op = rewriter.replaceOpWithNewOp<NormalizationInferenceOp>(
             op, op->getResultTypes(), op.getOperands(), op->getAttrs())) {
       return success();
     }
