@@ -22,6 +22,9 @@ limitations under the License.
 
 #include <cublas_v2.h>
 #include <cuda.h>
+#if CUDA_VERSION >= 10010
+#include <cublasLt.h>
+#endif
 #include <cuda_runtime.h>
 #include <cudnn.h>
 #include <curand.h>
