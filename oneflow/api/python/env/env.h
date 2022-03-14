@@ -24,20 +24,11 @@ limitations under the License.
 #include "oneflow/core/job/env_global_objects_scope.h"
 #include "oneflow/core/job/global_for.h"
 #include "oneflow/core/job/resource_desc.h"
+#include "oneflow/core/job/graph_verbose_step_lr_util.h"
 #include "oneflow/core/control/global_process_ctx.h"
 #include "oneflow/core/rpc/include/base.h"
 
 namespace oneflow {
-
-std::atomic<bool>* GetGraphVerboseStepLr() {
-  static std::atomic<bool> graph_verbose_step_lr{false};
-  return &graph_verbose_step_lr;
-}
-
-void SetGraphVerboseStepLr(bool verbose) {
-  auto* graph_verbose_step_lr = GetGraphVerboseStepLr();
-  *graph_verbose_step_lr = verbose;
-}
 
 inline Maybe<std::string> CurrentResource() {
   CHECK_NOTNULL_OR_RETURN((Global<ResourceDesc, ForSession>::Get()));
@@ -97,11 +88,11 @@ inline Maybe<void> SetFLAGS_v(int32_t v_level) {
   return Maybe<void>::Ok();
 }
 inline Maybe<int32_t> GetFLAGS_v() { return FLAGS_v; }
-inline Maybe<void> SetVerbose(bool verbose) {
+inline Maybe<void> SetGraphVerbose(bool verbose) {
   SetGraphVerboseStepLr(verbose);
   return Maybe<void>::Ok();
 }
-inline bool GetVerbose() { return *GetGraphVerboseStepLr(); }
+inline bool GetGraphVerbose() { return *GetGraphVerboseStepLr(); }
 }  // namespace oneflow
 
 #endif  // ONEFLOW_API_PYTHON_ENV_ENV_H_
