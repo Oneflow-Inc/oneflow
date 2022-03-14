@@ -120,32 +120,36 @@ class TestGather(flow.unittest.TestCase):
     @autotest(check_graph=True)
     def test_flow_gather_with_random_data(test_case):
         device = random_device()
-        input = random_tensor(ndim=4, dim1=3, dim2=4, dim3=5).to(device)
-        dim = random(0, 4).to(int)
+        input = random_tensor(ndim=4, dim0=6, dim1=3, dim2=4, dim3=5).to(device)
         index = random_tensor(
             ndim=4,
-            dim1=random(1, 3).to(int),
-            dim2=random(1, 4).to(int),
-            dim3=random(1, 5).to(int),
+            dim0=random(1, 10).to(int),
+            dim1=3,
+            dim2=4,
+            dim3=5,
+            low=0,
+            high=2,
             dtype=int,
         ).to(device)
-        return torch.gather(input, dim, index)
+        return torch.gather(input, 0, index)
 
     @autotest(auto_backward=False, check_graph=True)
     def test_flow_gather_bool_with_random_data(test_case):
         device = random_device()
-        input = random_tensor(ndim=4, dim1=3, dim2=4, dim3=5).to(
+        input = random_tensor(ndim=4, dim0=6, dim1=3, dim2=4, dim3=5).to(
             device=device, dtype=torch.bool
         )
-        dim = random(0, 4).to(int)
         index = random_tensor(
             ndim=4,
-            dim1=random(1, 3).to(int),
-            dim2=random(1, 4).to(int),
-            dim3=random(1, 5).to(int),
+            dim0=random(1, 10).to(int),
+            dim1=3,
+            dim2=4,
+            dim3=5,
+            low=0,
+            high=2,
             dtype=int,
         ).to(device)
-        return torch.gather(input, dim, index)
+        return torch.gather(input, 0, index)
 
 
 if __name__ == "__main__":
