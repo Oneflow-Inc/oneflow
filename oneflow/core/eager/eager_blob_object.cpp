@@ -67,7 +67,10 @@ Maybe<void> EagerBlobObject::TryAllocateBlobBodyMemory(DeviceCtx* device_ctx) {
   const std::size_t required_body_bytes = blob->AlignedByteSizeOfBlobBody();
   if (required_body_bytes == 0) {
     CHECK_ISNULL_OR_RETURN(blob->dptr());
-    if (oneflow::DTRDebugEnabled()) { LOG(INFO) << "ebo " << this << " has no body"; }
+    if (oneflow::DTRDebugEnabled()) {
+      LOG(INFO) << "ebo " << this << " has no body";
+      LOG(INFO) << blob->shape();
+    }
     return Maybe<void>::Ok();
   }
   if (blob->dptr() != nullptr) {
@@ -155,11 +158,18 @@ void DTREagerBlobObject::unpin() {
 }
 
 Maybe<void> DTREagerBlobObject::evict() {
+  CHECK_OR_RETURN(is_evictable());
   if (oneflow::DTRDebugEnabled()) { LOG(INFO) << "evict " << this; }
+  if (blob().shape().elem_cnt() == 0) {
+    if (oneflow::DTRDebugEnabled()) {
+      LOG(INFO) << "but elem_cnt is 0, shape is " << blob().shape() << ", skip";
+    }
+    return Maybe<void>::Ok();
+  }
   evict_flag_ = true;
   JUST(DeallocateBlobDataPtr());
   if (blob_) { blob_->reset_dptr(nullptr); }
-  CHECK_NE_OR_RETURN(is_in_memory(), true);
+  CHECK_OR_RETURN(!is_in_memory());
   Global<one::DTRTensorPool>::Get()->inc_num_eviction();
   return Maybe<void>::Ok();
 }
@@ -169,8 +179,7 @@ void DTREagerBlobObject::clear_invalid_object() {
   CHECK_JUST(Global<one::DTRTensorPool>::Get()->clear());
 }
 
-void DTREagerBlobObject::SetComputeOp(
-    std::shared_ptr<LocalCallOpKernelPhyInstrOperand>& operand) {
+void DTREagerBlobObject::set_compute_op(const std::shared_ptr<LocalCallOpKernelPhyInstrOperand>& operand) {
   update_access_time();
   compute_op_ = std::make_unique<DTRInstrOperand>(
       operand->shared_opkernel(), operand->inputs(), operand->outputs(),
@@ -188,7 +197,7 @@ void DTREagerBlobObject::update_access_time() {
 }
 
 void DTREagerBlobObject::AppendUserOp(
-    std::shared_ptr<vm::LocalCallOpKernelPhyInstrOperand>& operand) {
+    const std::shared_ptr<vm::LocalCallOpKernelPhyInstrOperand>& operand) {
   user_ops_.emplace_back(std::make_unique<DTRInstrOperand>(
       operand->shared_opkernel(), operand->inputs(), operand->outputs(),
       operand->consistent_tensor_infer_result(), operand->op_interp_ctx(),
@@ -197,7 +206,7 @@ void DTREagerBlobObject::AppendUserOp(
 
 bool DTREagerBlobObject::is_in_memory() const {
   // return !evict_flag_;
-  return (tensor_buffer_->blob_dptr() != nullptr);
+  return tensor_buffer_->blob_dptr() != nullptr || blob().shape().elem_cnt() == 0;
 }
 
 int DTREagerBlobObject::parent_depth() const {
@@ -403,6 +412,7 @@ Maybe<double> DTREagerBlobObject::cost() const {
 
 void DTREagerBlobObject::set_compute_time(double val) {
   if (val > 0) {
+    // TODO: add a minimal cost for bytes == 0?
     compute_time_ = val;
   } else {
     compute_time_ = blob_body_bytes_;
@@ -516,8 +526,8 @@ bool DTREagerBlobObject::is_evictable() const {
   // FIXME: set_tensor_inputs should also include other outputs of the compute_op
   if (compute_op_->shared_opkernel()->user_op_conf_->op_type_name() == "nll") { return false; }
   // if (compute_op_->shared_opkernel()->user_op_conf_->op_type_name() == "conv_filter_grad") {
-  // return false; } if (compute_op_->shared_opkernel()->user_op_conf_->op_type_name() == "matmul")
-  // { return false; }
+  // return false; } if (compute_op_->shared_opkernel()->user_op_conf_->op_type_name() ==
+  // "matmul") { return false; }
   return could_evict_;
 }
 

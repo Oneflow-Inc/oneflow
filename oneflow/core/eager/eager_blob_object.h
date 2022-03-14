@@ -174,7 +174,7 @@ class DTREagerBlobObject final : public EagerBlobObject {
                      const std::shared_ptr<TensorBuffer>& tensor_buffer, LocalDepObject* dep_object);
   ~DTREagerBlobObject() override;
 
-  void SetComputeOp(std::shared_ptr<LocalCallOpKernelPhyInstrOperand>& operand);
+  void set_compute_op(const std::shared_ptr<LocalCallOpKernelPhyInstrOperand>& operand);
 
   int parent_depth() const;
   int child_depth() const;
@@ -208,7 +208,7 @@ class DTREagerBlobObject final : public EagerBlobObject {
   void pin();
   void unpin();
   void update_access_time();
-  void AppendUserOp(std::shared_ptr<LocalCallOpKernelPhyInstrOperand>& operand);
+  void AppendUserOp(const std::shared_ptr<LocalCallOpKernelPhyInstrOperand>& operand);
   Maybe<void> evict();
   Maybe<double> parent_cost(bool is_bp_required=false) const;
   Maybe<double> child_cost(bool is_bp_required=false) const;

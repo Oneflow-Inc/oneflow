@@ -384,7 +384,6 @@ class StatefulLocalOpKernel final {
   OF_DISALLOW_COPY_AND_MOVE(StatefulLocalOpKernel);
   static Maybe<StatefulLocalOpKernel> New(const std::shared_ptr<OperatorConf>& op_conf,
                                           const Symbol<Device>& device, const AttrMap& base_attrs,
-                                          const std::shared_ptr<const ParallelDesc>& parallel_desc,
                                           const std::shared_ptr<const ArgTuple>& input_arg_tuple,
                                           const std::shared_ptr<const ArgTuple>& output_arg_tuple);
   ~StatefulLocalOpKernel();
@@ -422,6 +421,9 @@ class StatefulLocalOpKernel final {
 
   void set_need_check_mem_case(bool value) { need_check_mem_case_ = value; }
 
+  std::shared_ptr<const ArgTuple> input_arg_tuple() const { return input_arg_tuple_; }
+  std::shared_ptr<const ArgTuple> output_arg_tuple() const { return output_arg_tuple_; }
+
  private:
   friend struct vm::LocalCallOpKernelUtil;
   StatefulLocalOpKernel() = default;
@@ -456,8 +458,10 @@ class StatefulLocalOpKernel final {
   std::shared_ptr<OperatorConf> op_conf_;
   std::unique_ptr<ComposedAttrMap> composed_attrs_for_scheduler_thread_;
   std::unique_ptr<ComposedAttrMap> composed_attrs_for_main_thread_;
+
  public:
   std::unique_ptr<user_op::UserOpConfWrapper> user_op_conf_;
+
  private:
   Symbol<Device> device_;
   std::unique_ptr<LocalUserKernelRegContext> reg_ctx_;

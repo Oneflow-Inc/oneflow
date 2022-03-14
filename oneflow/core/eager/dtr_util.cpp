@@ -15,7 +15,7 @@ auto ConvertToDTRVector(const std::vector<std::shared_ptr<EagerBlobObject>>& bas
   std::transform(base_class_vector.begin(), base_class_vector.end(),
                  std::back_inserter(sub_class_vector),
                  [](const std::shared_ptr<EagerBlobObject>& x) {
-                   return std::dynamic_pointer_cast<DTREagerBlobObject>(x);
+                   return CHECK_NOTNULL(std::dynamic_pointer_cast<DTREagerBlobObject>(x));
                  });
   return sub_class_vector;
 };
@@ -79,20 +79,26 @@ std::shared_ptr<LocalCallOpKernelPhyInstrOperand> DTROp2LocalCallOp(DTRInstrOper
   return phy_instr_operand;
 }
 
-Maybe<void> CheckInputInMemory(LocalCallOpKernelPhyInstrOperand* operand) {
-  for (auto& dtr_blob_object : GetDTRInputs(operand)) {
-    CHECK_OR_RETURN(dtr_blob_object->is_in_memory());
-    CHECK_NOTNULL_OR_RETURN(dtr_blob_object->blob().dptr());
+namespace {
+Maybe<void> CheckInMemory(const std::vector<std::shared_ptr<DTREagerBlobObject>>& vec) {
+  int i = 0;
+  for (auto& dtr_blob_object : vec) {
+    if (dtr_blob_object->blob().shape().elem_cnt() > 0) {
+      CHECK_OR_RETURN(dtr_blob_object->is_in_memory());
+      CHECK_NOTNULL_OR_RETURN(dtr_blob_object->blob().dptr());
+    }
+    i++;
   }
   return Maybe<void>::Ok();
 }
+}
+
+Maybe<void> CheckInputInMemory(LocalCallOpKernelPhyInstrOperand* operand) {
+  return CheckInMemory(GetDTRInputs(operand));
+}
 
 Maybe<void> CheckOutputInMemory(LocalCallOpKernelPhyInstrOperand* operand) {
-  for (auto& dtr_blob_object : GetDTROutputs(operand)) {
-    CHECK_OR_RETURN(dtr_blob_object->is_in_memory());
-    CHECK_NOTNULL_OR_RETURN(dtr_blob_object->blob().dptr());
-  }
-  return Maybe<void>::Ok();
+  return CheckInMemory(GetDTROutputs(operand));
 }
 
 }  // namespace vm

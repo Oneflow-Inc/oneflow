@@ -83,6 +83,65 @@ class TestDTR(flow.unittest.TestCase):
 
         test_case.assertTrue(np.array_equal(y.numpy(), 20 * np.ones(y.shape)))
 
+    def test_evict_api(test_case):
+        flow.enable_dtr(True, "36KB", 0, "eq")
+        x1 = flow.ones(1024).to('cuda')
+        x2 = x1 + 1
+        flow._oneflow_internal.eager.multi_client.Sync()
+        flow._oneflow_internal.dtr.evict(x2)
+        test_case.assertFalse(x2._is_in_memory)
+        flow._oneflow_internal.dtr.evict(x2)
+        test_case.assertFalse(x2._is_in_memory)
+        test_case.assertTrue(np.array_equal(x2, np.ones(x2.shape) * 2))
+
+    def test_dropout(test_case):
+        flow.enable_dtr(True, "120KB", 0, "eq")
+        m = flow.nn.Dropout(p=0.5)
+
+        x1 = flow.rand(10).to('cuda')
+        x2 = m(x1)
+
+        flow._oneflow_internal.eager.multi_client.Sync()
+        test_case.assertTrue(x2._is_in_memory)
+
+        x2_np1 = x2.numpy()
+        flow._oneflow_internal.dtr.evict(x2)
+        test_case.assertFalse(x2._is_in_memory)
+
+        x2_np2 = x2.numpy()
+
+        print(x2_np1)
+        print(x2_np2)
+        test_case.assertTrue(np.array_equal(x2_np1, x2_np2))
+
+    def test_bn(test_case):
+        flow.enable_dtr(True, "120KB", 0, "eq")
+
+        m = flow.nn.BatchNorm2d(1024).to('cuda')
+
+        x1 = flow.reshape(flow.rand(1024).to('cuda'), (1, 1024, 1, 1)) # x1 = 1, total memory: 1024 * 4 = 4096 bytes = 4KB
+        x2 = m(x1)
+        rm_np1 = m.running_mean.numpy()
+        test_case.assertTrue(x2._is_in_memory)
+        x2_np1 = x2.numpy()
+
+        flow._oneflow_internal.eager.multi_client.Sync()
+        test_case.assertTrue(x2._is_in_memory)
+
+        flow._oneflow_internal.dtr.evict(x2)
+        test_case.assertFalse(x2._is_in_memory)
+        x2_np2 = x2.numpy()
+        rm_np2 = m.running_mean.numpy()
+
+        flow._oneflow_internal.dtr.evict(x2)
+        test_case.assertFalse(x2._is_in_memory)
+        x2_np3 = x2.numpy()
+        rm_np3 = m.running_mean.numpy()
+        test_case.assertTrue(np.array_equal(x2_np1, x2_np2))
+        test_case.assertTrue(np.array_equal(x2_np1, x2_np3))
+        test_case.assertTrue(np.array_equal(rm_np1, rm_np2))
+        test_case.assertTrue(np.array_equal(rm_np1, rm_np3))
+
     # def test_dtr_threshold(test_case):
     #     regex = re.compile(r"(\d+(?:\.\d+)?)\s*([kmg]?b)", re.IGNORECASE)
     #     magnitude = ["b", "kb", "mb", "gb"]

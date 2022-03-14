@@ -43,6 +43,15 @@ namespace vm {
 
 using DTREagerBlobObjectList = std::vector<std::shared_ptr<vm::DTREagerBlobObject>>;
 
+Maybe<LocalCallOpKernelPhyInstrOperand> GetLocalCallOpKernelPhyInstrOperand(
+    vm::Instruction* instruction) {
+  const auto& operand = instruction->instr_msg().phy_instr_operand();
+  CHECK_OR_RETURN(static_cast<bool>(operand));
+  auto ptr = std::dynamic_pointer_cast<LocalCallOpKernelPhyInstrOperand>(operand);
+  CHECK_NOTNULL_OR_RETURN(ptr);
+  return ptr;
+}
+
 struct LocalCallOpKernelUtil {
   // inputs are guaranteed to be in memory before calling this function,
   // thus no recomputation is needed, but eviction is still possible.
@@ -73,15 +82,6 @@ struct LocalCallOpKernelUtil {
     return Maybe<void>::Ok();
   }
   static inline Maybe<void> ComputeInstruction(vm::Instruction* instruction);
-
-  static inline Maybe<LocalCallOpKernelPhyInstrOperand> GetLocalCallOpKernelPhyInstrOperand(
-      vm::Instruction* instruction) {
-    const auto& operand = instruction->instr_msg().phy_instr_operand();
-    CHECK_OR_RETURN(static_cast<bool>(operand));
-    auto ptr = std::dynamic_pointer_cast<LocalCallOpKernelPhyInstrOperand>(operand);
-    CHECK_NOTNULL_OR_RETURN(ptr);
-    return ptr;
-  }
 
  private:
   static inline Maybe<const MemoryCase&> GetMemCase(LocalCallOpKernelPhyInstrOperand* operand) {
@@ -174,7 +174,6 @@ struct LocalCallOpKernelUtil {
     Global<one::DTRTensorPool>::Get()->set_current_op_type_name(operand->opkernel().op_type_name());
     JUST(operand->ForEachOutputTensor([&](vm::EagerBlobObject* blob_object) -> Maybe<void> {
       JUST(blob_object->TryAllocateBlobBodyMemory(device_ctx));
-      CHECK_NOTNULL_OR_RETURN(blob_object->tensor_buffer()->blob_dptr());
       return Maybe<void>::Ok();
     }));
     Global<one::DTRTensorPool>::Get()->set_current_op_type_name("");
@@ -197,10 +196,14 @@ struct LocalCallOpKernelUtil {
                               return Maybe<void>::Ok();
                             }));
 
+    for (int i : operand->opkernel().input_tuple_indexes4mut_ibns()) {
+      const std::string& op_type_name = operand->opkernel().op_type_name();
+      std::cout << "mutable! op: " << op_type_name << ", input " << i;
+      std::cout << "set it as non evictable" << std::endl;
+      GetDTRInputs(operand)[i]->set_evict_attr(false);
+    }
     if (oneflow::DTRDebugLevel() >= 3) {
       for (int i : operand->opkernel().input_tuple_indexes4mut_ibns()) {
-        const std::string& op_type_name = operand->opkernel().op_type_name();
-        std::cout << "mutable! op: " << op_type_name << ", input " << i;
         const auto& mut_input = operand->inputs()->at(i);
         if (mut_input->mem_case().has_device_cuda_mem()) {
           size_t bytes = mut_input->blob_desc().ByteSizeOfBlobBody();
@@ -304,8 +307,6 @@ struct LocalCallOpKernelUtil {
   }
 };
 
-namespace {
-
 bool IsInplace(const DTREagerBlobObjectList& inputs, const DTREagerBlobObjectList& outputs) {
   bool is_in_place = false;
   for (const auto& input : inputs) {
@@ -319,111 +320,6 @@ bool IsInplace(const DTREagerBlobObjectList& inputs, const DTREagerBlobObjectLis
   }
   return is_in_place;
 }
-
-}  // namespace
-
-struct DTRLocalCallOpKernelUtil final : public LocalCallOpKernelUtil {
-  static inline Maybe<void> RecursivelyCompute(
-      const std::shared_ptr<oneflow::vm::LocalCallOpKernelPhyInstrOperand>& operand,
-      DeviceCtx* device_ctx) {
-    // PinGuard guard(operand->inputs());
-    if (oneflow::DTRDebugLevel() >= 2) {
-      if (auto* thread_safe_allocator =
-              dynamic_cast<vm::ThreadSafeAllocator*>(device_ctx->mut_allocator())) {
-        if (auto* dtr_allocator =
-                dynamic_cast<vm::DtrCudaAllocator*>(thread_safe_allocator->backend_allocator())) {
-          LOG(INFO) << "allocator stats:";
-          dtr_allocator->DisplayAllPieces();
-        } else {
-          CHECK_OR_RETURN(false);
-        }
-      }
-    }
-
-    const auto& inputs = GetDTRInputs(operand);
-    const auto& outputs = GetDTROutputs(operand);
-
-    for (auto& output : outputs) {
-      output->pin();
-      if (oneflow::DTRDebugEnabled()) {
-        LOG(INFO) << "going to (re)compute " << output->compute_op() << "("
-                  << output->compute_op_type_name() << ") for " << output;
-      }
-    }
-
-    for (auto& input : inputs) {
-      if (!input->is_in_memory()) {
-        CHECK_GT_OR_RETURN(input->input_size(), 0);
-        // TODO: recursive recompute the inputs
-        auto local_call_op = DTROp2LocalCallOp(input->compute_op());
-        CHECK_NOTNULL_OR_RETURN(local_call_op);
-
-        if (oneflow::DTRDebugEnabled()) {
-          LOG(INFO) << "going to recompute " << input->compute_op() << "("
-                    << input->compute_op_type_name() << ") for " << input << ", whose dptr is "
-                    << input->blob().dptr() << ", is in memory: " << input->is_in_memory()
-                    << std::endl;
-        }
-        // TODO for each ptr rather than shared_ptr
-        JUST(RecursivelyCompute(local_call_op, device_ctx));
-        Global<one::DTRTensorPool>::Get()->add_recompute_times();
-      }
-    }
-
-    JUST(CheckInputInMemory(operand.get()));
-
-    JUST(ComputeOperand(operand.get(), device_ctx));
-    const double compute_time = JUST(GetEstimatedComputeTime(operand));
-
-    // update output tensor dtr attrs
-    for (auto& output : outputs) {
-      CHECK_OR_RETURN(output->is_in_memory());
-      output->set_compute_time(compute_time);
-      CHECK_GT_OR_RETURN(output->compute_time(), 0);
-      output->reset_pesudo_node();
-      Global<one::DTRTensorPool>::Get()->update_after_compute(output.get());
-    }
-
-    // unpin output
-    if (oneflow::DTRDebugEnabled()) { LOG(INFO) << "unpin output"; }
-    for (auto& output : outputs) { output->unpin(); }
-    if (oneflow::DTRDebugEnabled()) { LOG(INFO) << "unpin output end"; }
-
-    // use current timestamp as access time and **then** update timestamp
-    for (auto& input : inputs) { input->update_access_time(); }
-    for (auto& output : outputs) { output->update_access_time(); }
-
-    // eager eviction in remat
-    for (auto& input : inputs) {
-      input->unpin();
-      if (input->num_pinned() == 0
-          && Global<one::DTRTensorPool>::Get()->need_eager_eviction_ebos_.count(input.get()) > 0) {
-        if (oneflow::DTRDebugEnabled()) {
-          LOG(INFO) << "going to evict " << input << " in recomputation, whose dptr is "
-                    << input->blob().dptr() << ", compute op: " << input->compute_op_type_name()
-                    << ", size: " << input->blob().ByteSizeOfBlobBody()
-                    << ", is in memory: " << input->is_in_memory() << std::endl;
-        }
-        Global<one::DTRTensorPool>::Get()->need_eager_eviction_ebos_.erase(input.get());
-        JUST(input->evict());
-      }
-    }
-
-    // update timestamp
-    Global<one::DTRTensorPool>::Get()->time_flies(compute_time);
-    return Maybe<void>::Ok();
-  }
-
-  static Maybe<double> GetEstimatedComputeTime(
-      const std::shared_ptr<oneflow::vm::LocalCallOpKernelPhyInstrOperand>& operand) {
-    const auto& inputs = *operand->inputs();
-    const auto& outputs = *operand->outputs();
-    size_t estimated_compute_time = 0;
-    for (const auto& input : inputs) { estimated_compute_time += input->BlobBodyBytes(); }
-    for (const auto& output : outputs) { estimated_compute_time += output->BlobBodyBytes(); }
-    return estimated_compute_time;
-  }
-};
 
 Maybe<void> _IncReferenceNumOfRecomputedTensor(
     const std::shared_ptr<vm::LocalCallOpKernelPhyInstrOperand>& operand, int& pinned_num) {
@@ -470,53 +366,162 @@ Maybe<int> IncReferenceNumOfRecomputedTensor(
     const std::shared_ptr<vm::LocalCallOpKernelPhyInstrOperand>& operand) {
   int pinned_num = 0;
   JUST(_IncReferenceNumOfRecomputedTensor(operand, pinned_num));
+  Global<one::DTRTensorPool>::Get()->operand_visited_.clear();
   return pinned_num;
+}
+
+static Maybe<double> GetEstimatedComputeTime(
+    const std::shared_ptr<oneflow::vm::LocalCallOpKernelPhyInstrOperand>& operand) {
+  const auto& inputs = *operand->inputs();
+  const auto& outputs = *operand->outputs();
+  size_t estimated_compute_time = 0;
+  for (const auto& input : inputs) { estimated_compute_time += input->BlobBodyBytes(); }
+  for (const auto& output : outputs) { estimated_compute_time += output->BlobBodyBytes(); }
+  return estimated_compute_time;
+}
+
+Maybe<void> _RecursivelyCompute(
+    const std::shared_ptr<oneflow::vm::LocalCallOpKernelPhyInstrOperand>& operand,
+    DeviceCtx* device_ctx) {
+  // PinGuard guard(operand->inputs());
+  if (oneflow::DTRDebugLevel() >= 2) {
+    if (auto* thread_safe_allocator =
+            dynamic_cast<vm::ThreadSafeAllocator*>(device_ctx->mut_allocator())) {
+      if (auto* dtr_allocator =
+              dynamic_cast<vm::DtrCudaAllocator*>(thread_safe_allocator->backend_allocator())) {
+        LOG(INFO) << "allocator stats:";
+        dtr_allocator->DisplayAllPieces();
+      } else {
+        CHECK_OR_RETURN(false);
+      }
+    }
+  }
+
+  const auto& inputs = GetDTRInputs(operand);
+  const auto& outputs = GetDTROutputs(operand);
+
+  for (auto& output : outputs) {
+    output->pin();
+    if (oneflow::DTRDebugEnabled()) {
+      LOG(INFO) << "going to (re)compute " << output->compute_op() << "("
+                << output->compute_op_type_name() << ") for " << output;
+    }
+  }
+
+  for (auto& input : inputs) {
+    if (!input->is_in_memory()) {
+      CHECK_GT_OR_RETURN(input->input_size(), 0);
+      // TODO: recursive recompute the inputs
+      auto local_call_op = DTROp2LocalCallOp(input->compute_op());
+      CHECK_NOTNULL_OR_RETURN(local_call_op);
+
+      if (oneflow::DTRDebugEnabled()) {
+        LOG(INFO) << "going to recompute " << input->compute_op() << "("
+                  << input->compute_op_type_name() << ") for " << input << ", whose dptr is "
+                  << input->blob().dptr() << ", is in memory: " << input->is_in_memory()
+                  << std::endl;
+      }
+      // TODO for each ptr rather than shared_ptr
+      JUST(_RecursivelyCompute(local_call_op, device_ctx));
+      Global<one::DTRTensorPool>::Get()->add_recompute_times();
+    }
+  }
+
+  JUST(CheckInputInMemory(operand.get()));
+
+  JUST(LocalCallOpKernelUtil::ComputeOperand(operand.get(), device_ctx));
+  const double compute_time = JUST(GetEstimatedComputeTime(operand));
+
+  JUST(CheckOutputInMemory(operand.get()));
+  // update output tensor dtr attrs
+  for (auto& output : outputs) {
+    output->set_compute_time(compute_time);
+    CHECK_GE_OR_RETURN(output->compute_time(), 0);
+    output->reset_pesudo_node();
+    Global<one::DTRTensorPool>::Get()->update_after_compute(output.get());
+  }
+
+  // unpin output
+  if (oneflow::DTRDebugEnabled()) { LOG(INFO) << "unpin output"; }
+  for (auto& output : outputs) { output->unpin(); }
+  if (oneflow::DTRDebugEnabled()) { LOG(INFO) << "unpin output end"; }
+
+  // use current timestamp as access time and **then** update timestamp
+  for (auto& input : inputs) { input->update_access_time(); }
+  for (auto& output : outputs) { output->update_access_time(); }
+
+  // eager eviction in remat
+  for (auto& input : inputs) {
+    input->unpin();
+    if (input->num_pinned() == 0
+        && Global<one::DTRTensorPool>::Get()->need_eager_eviction_ebos_.count(input.get()) > 0) {
+      if (oneflow::DTRDebugEnabled()) {
+        LOG(INFO) << "going to evict " << input << " in recomputation, whose dptr is "
+                  << input->blob().dptr() << ", compute op: " << input->compute_op_type_name()
+                  << ", size: " << input->blob().ByteSizeOfBlobBody()
+                  << ", is in memory: " << input->is_in_memory() << std::endl;
+      }
+      Global<one::DTRTensorPool>::Get()->need_eager_eviction_ebos_.erase(input.get());
+      JUST(input->evict());
+    }
+  }
+
+  // update timestamp
+  Global<one::DTRTensorPool>::Get()->time_flies(compute_time);
+  return Maybe<void>::Ok();
+}
+
+Maybe<void> RecursivelyCompute(
+    const std::shared_ptr<oneflow::vm::LocalCallOpKernelPhyInstrOperand>& operand,
+    DeviceCtx* device_ctx) {
+  int pinned_num = JUST(IncReferenceNumOfRecomputedTensor(operand));
+  if (oneflow::DTRDebugEnabled()) {
+    LOG(INFO) << "pinning input tensors ended, pinned num: " << pinned_num;
+  }
+  JUST(_RecursivelyCompute(operand, device_ctx));
+  CHECK_OR_RETURN(Global<one::DTRTensorPool>::Get()->need_eager_eviction_ebos_.empty());
+  if (oneflow::DTRDebugLevel() >= 1) {
+    LOG(INFO) << "all compute ok for " << operand->opkernel().op_type_name() << std::endl;
+  }
+  return Maybe<void>::Ok();
+}
+
+Maybe<void> DTRComputeInstruction(vm::Instruction* instruction) {
+  auto operand = JUST(GetLocalCallOpKernelPhyInstrOperand(instruction));
+  DeviceCtx* device_ctx = instruction->stream().device_ctx().get();
+
+  if (oneflow::DTRDebugEnabled()) {
+    LOG(INFO) << "all compute start for " << operand->opkernel().op_type_name() << std::endl;
+    LOG(INFO) << "start pinning input tensors..";
+  }
+
+  const auto& inputs = GetDTRInputs(operand);
+  const auto& outputs = GetDTROutputs(operand);
+
+  for (auto& output : outputs) { output->set_compute_op(operand); }
+  for (auto& input : inputs) { input->AppendUserOp(operand); }
+  JUST(RecursivelyCompute(operand, device_ctx));
+  bool is_inplace = IsInplace(inputs, outputs);
+  for (const auto& output : outputs) {
+    if (is_inplace) {
+      output->set_evict_attr(false);
+    } else {
+      JUST(Global<one::DTRTensorPool>::Get()->insert(output));
+    }
+  }
+  if (oneflow::DTRDebugLevel() >= 3) { JUST(Global<one::DTRTensorPool>::Get()->display2()); }
+  return Maybe<void>::Ok();
 }
 
 inline Maybe<void> LocalCallOpKernelUtil::ComputeInstruction(vm::Instruction* instruction) {
   auto operand = JUST(GetLocalCallOpKernelPhyInstrOperand(instruction));
   DeviceCtx* device_ctx = instruction->stream().device_ctx().get();
-  if (oneflow::DTREnabled()) {
-    if (oneflow::DTRDebugEnabled()) {
-      LOG(INFO) << "all compute start for " << operand->opkernel().op_type_name() << std::endl;
-      LOG(INFO) << "start pinning input tensors..";
-    }
-    int pinned_num = JUST(IncReferenceNumOfRecomputedTensor(operand));
-    if (oneflow::DTRDebugEnabled()) {
-      LOG(INFO) << "pinning input tensors ended, pinned num: " << pinned_num;
-    }
-    Global<one::DTRTensorPool>::Get()->operand_visited_.clear();
-
-    const auto& inputs = GetDTRInputs(operand);
-    const auto& outputs = GetDTROutputs(operand);
-
-    for (auto& output : outputs) { output->SetComputeOp(operand); }
-    for (auto& input : inputs) { input->AppendUserOp(operand); }
-    JUST(DTRLocalCallOpKernelUtil::RecursivelyCompute(operand, device_ctx));
-    bool is_inplace = IsInplace(inputs, outputs);
-    for (const auto& output : outputs) {
-      if (is_inplace) {
-        output->set_evict_attr(false);
-      } else {
-        JUST(Global<one::DTRTensorPool>::Get()->insert(output));
-      }
-    }
-    if (oneflow::DTRDebugLevel() >= 3) { JUST(Global<one::DTRTensorPool>::Get()->display2()); }
-
-    CHECK_OR_RETURN(Global<one::DTRTensorPool>::Get()->need_eager_eviction_ebos_.empty());
-    if (oneflow::DTRDebugLevel() >= 1) {
-      LOG(INFO) << "all compute ok for " << operand->opkernel().op_type_name() << std::endl;
-    }
-    return Maybe<void>::Ok();
-  } else {
-    return ComputeOperand(operand.get(), device_ctx);
-  }
+  return ComputeOperand(operand.get(), device_ctx);
 }
 
 Maybe<void> DTRUtil::recompute(vm::DTREagerBlobObject* object, DeviceCtx* device_ctx) {
   if (object->is_in_memory()) { return Maybe<void>::Ok(); }
-  return DTRLocalCallOpKernelUtil::RecursivelyCompute(DTROp2LocalCallOp(object->compute_op()),
-                                                      device_ctx);
+  return RecursivelyCompute(DTROp2LocalCallOp(object->compute_op()), device_ctx);
 }
 
 void LocalCallOpKernelInstructionType::Infer(vm::Instruction* instruction) const {
@@ -524,13 +529,16 @@ void LocalCallOpKernelInstructionType::Infer(vm::Instruction* instruction) const
 }
 
 void LocalCallOpKernelInstructionType::Compute(vm::Instruction* instruction) const {
-  CHECK_OK(LocalCallOpKernelUtil::ComputeInstruction(instruction));
+  if (oneflow::DTREnabled()) {
+    CHECK_OK(DTRComputeInstruction(instruction));
+  } else {
+    CHECK_OK(LocalCallOpKernelUtil::ComputeInstruction(instruction));
+  }
 }
 
 const std::string& LocalCallOpKernelInstructionType::DebugOpTypeName(
     vm::Instruction* instruction) const {
-  auto operand =
-      CHECK_JUST(LocalCallOpKernelUtil::GetLocalCallOpKernelPhyInstrOperand(instruction));
+  auto operand = CHECK_JUST(GetLocalCallOpKernelPhyInstrOperand(instruction));
   return operand->opkernel().op_type_name();
 }
 

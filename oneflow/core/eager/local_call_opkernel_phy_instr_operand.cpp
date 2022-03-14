@@ -96,6 +96,22 @@ DTRInstrOperand::DTRInstrOperand(
     for (const auto& in : *input) { inputs_.emplace_back(in); }
     outputs_ = std::vector<std::weak_ptr<vm::EagerBlobObject>>();
     for (const auto& out : *output) { outputs_.emplace_back(out); }
+
+    if (opkernel->op_type_name() == "normalization") {
+      const OperatorConf op_conf = [&]() {
+        auto op_conf = opkernel_->user_op_conf_->op_conf();
+        op_conf.mutable_user_conf()->mutable_input()->erase("moving_mean");
+        op_conf.mutable_user_conf()->mutable_input()->erase("moving_variance");
+        return op_conf;
+      }();
+      const std::vector<std::string> input_indexed_bns = [&]() {
+        auto input_indexed_bns = opkernel_->input_arg_tuple()->indexed_bns();
+        input_indexed_bns.erase(std::remove(input_indexed_bns.begin(), input_indexed_bns.end(), "moving_mean"), input_indexed_bns.end());
+        return input_indexed_bns;
+      }();
+
+      opkernel_ = CHECK_JUST(one::StatefulLocalOpKernel::New(std::make_shared<OperatorConf>(op_conf), opkernel_->device(), opkernel_->composed_attrs_for_scheduler_thread()->base_attr_map(), std::make_shared<const ArgTuple>(input_indexed_bns), opkernel_->output_arg_tuple()));
+    }
   }
 }  // namespace vm
 }  // namespace oneflow
