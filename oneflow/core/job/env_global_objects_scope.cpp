@@ -48,6 +48,7 @@ limitations under the License.
 #include "oneflow/core/kernel/sync_check_kernel_observer.h"
 #include "oneflow/core/kernel/blob_access_checker_kernel_observer.h"
 #include "oneflow/core/kernel/profiler_kernel_observer.h"
+#include "oneflow/core/embedding/embedding_manager.h"
 #ifdef WITH_RDMA
 #include "oneflow/core/platform/include/ibv.h"
 #endif  // WITH_RDMA
@@ -142,6 +143,7 @@ Maybe<void> EnvGlobalObjectsScope::Init(const EnvProto& env_proto) {
   InitLogging(env_proto.cpp_logging_conf());
   Global<EnvDesc>::New(env_proto);
   Global<ProcessCtx>::New();
+  Global<embedding::EmbeddingManager>::New();
   // Avoid dead lock by using CHECK_JUST instead of JUST. because it maybe be blocked in
   // ~CtrlBootstrap.
   if (Global<ResourceDesc, ForSession>::Get()->enable_dry_run()) {
@@ -261,6 +263,7 @@ EnvGlobalObjectsScope::~EnvGlobalObjectsScope() {
   CHECK_NOTNULL(Global<CtrlClient>::Get());
   CHECK_NOTNULL(Global<EnvDesc>::Get());
   Global<RpcManager>::Delete();
+  Global<embedding::EmbeddingManager>::Delete();
   Global<ProcessCtx>::Delete();
   Global<EnvDesc>::Delete();
   ClearAllSymbolAndIdCache();
