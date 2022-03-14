@@ -70,15 +70,15 @@ struct LocalCallOpKernelUtil {
 
     user_op::OpKernelState* state;
     TryInitOpKernelState(operand, device_ctx, &state);
-    if (oneflow::DTREnabled()) { JUST(CheckInputInMemory(operand)); }
+    if (DTREnabled()) { JUST(CheckInputInMemory(operand)); }
     JUST(OpKernelCompute(operand, device_ctx, state));
 
     JUST(DeallocateTempStorageBlobMemory(operand, device_ctx));
     operand->set_user_opkernel(nullptr);
-    if (oneflow::DTRDebugEnabled()) {
+    if (DTRDebugEnabled()) {
       LOG(INFO) << operand->shared_opkernel()->op_type_name() << " ComputeOperand done";
     }
-    if (oneflow::DTREnabled()) { JUST(CheckOutputInMemory(operand)); }
+    if (DTREnabled()) { JUST(CheckOutputInMemory(operand)); }
     return Maybe<void>::Ok();
   }
   static inline Maybe<void> ComputeInstruction(vm::Instruction* instruction);
@@ -178,7 +178,7 @@ struct LocalCallOpKernelUtil {
     }));
     Global<one::DTRTensorPool>::Get()->set_current_op_type_name("");
 
-    if (oneflow::DTREnabled()) { JUST(CheckOutputInMemory(operand)); }
+    if (DTREnabled()) { JUST(CheckOutputInMemory(operand)); }
     return Maybe<void>::Ok();
   }
 
@@ -204,7 +204,7 @@ struct LocalCallOpKernelUtil {
         GetDTRInputs(operand)[i]->set_evict_attr(false);
       }
     }
-    if (oneflow::DTRDebugLevel() >= 3) {
+    if (DTRDebugLevel() >= 3) {
       for (int i : operand->opkernel().input_tuple_indexes4mut_ibns()) {
         const auto& mut_input = operand->inputs()->at(i);
         if (mut_input->mem_case().has_device_cuda_mem()) {
@@ -325,7 +325,7 @@ bool IsInplace(const DTREagerBlobObjectList& inputs, const DTREagerBlobObjectLis
 
 Maybe<void> _IncReferenceNumOfRecomputedTensor(
     const std::shared_ptr<vm::LocalCallOpKernelPhyInstrOperand>& operand, int& pinned_num) {
-  if (oneflow::DTRDebugEnabled()) {
+  if (DTRDebugEnabled()) {
     LOG(INFO) << operand.get() << " with type " << operand->shared_opkernel()->op_type_name()
               << " start";
   }
@@ -341,7 +341,7 @@ Maybe<void> _IncReferenceNumOfRecomputedTensor(
       if (dtr_pool->operand_visited_.count(input->compute_op()) == 0) {
         dtr_pool->operand_visited_.insert(input->compute_op());
 
-        if (oneflow::DTRDebugEnabled()) {
+        if (DTRDebugEnabled()) {
           LOG(INFO) << input << " with compute op " << dtr_op << ", type "
                     << dtr_op->shared_opkernel()->op_type_name()
                     << " is not in memory, searching parents..";
@@ -351,13 +351,13 @@ Maybe<void> _IncReferenceNumOfRecomputedTensor(
       }
     } else {
       pinned_num++;
-      if (oneflow::DTRDebugEnabled()) {
+      if (DTRDebugEnabled()) {
         LOG(INFO) << "pin: compute op of " << input << " is " << dtr_op << " with type "
                   << dtr_op->shared_opkernel()->op_type_name();
       }
     }
   }
-  if (oneflow::DTRDebugEnabled()) {
+  if (DTRDebugEnabled()) {
     LOG(INFO) << operand.get() << " with type " << operand->shared_opkernel()->op_type_name()
               << " end";
   }
@@ -373,7 +373,7 @@ Maybe<int> IncReferenceNumOfRecomputedTensor(
 }
 
 static Maybe<double> GetEstimatedComputeTime(
-    const std::shared_ptr<oneflow::vm::LocalCallOpKernelPhyInstrOperand>& operand) {
+    const std::shared_ptr<vm::LocalCallOpKernelPhyInstrOperand>& operand) {
   const auto& inputs = *operand->inputs();
   const auto& outputs = *operand->outputs();
   size_t estimated_compute_time = 0;
@@ -383,10 +383,10 @@ static Maybe<double> GetEstimatedComputeTime(
 }
 
 Maybe<void> _RecursivelyCompute(
-    const std::shared_ptr<oneflow::vm::LocalCallOpKernelPhyInstrOperand>& operand,
+    const std::shared_ptr<vm::LocalCallOpKernelPhyInstrOperand>& operand,
     DeviceCtx* device_ctx) {
   // PinGuard guard(operand->inputs());
-  if (oneflow::DTRDebugLevel() >= 2) {
+  if (DTRDebugLevel() >= 2) {
     if (auto* thread_safe_allocator =
             dynamic_cast<vm::ThreadSafeAllocator*>(device_ctx->mut_allocator())) {
       if (auto* dtr_allocator =
@@ -404,7 +404,7 @@ Maybe<void> _RecursivelyCompute(
 
   for (auto& output : outputs) {
     output->pin();
-    if (oneflow::DTRDebugEnabled()) {
+    if (DTRDebugEnabled()) {
       LOG(INFO) << "going to (re)compute " << output->compute_op() << "("
                 << output->compute_op_type_name() << ") for " << output;
     }
@@ -417,7 +417,7 @@ Maybe<void> _RecursivelyCompute(
       auto local_call_op = DTROp2LocalCallOp(input->compute_op());
       CHECK_NOTNULL_OR_RETURN(local_call_op);
 
-      if (oneflow::DTRDebugEnabled()) {
+      if (DTRDebugEnabled()) {
         LOG(INFO) << "going to recompute " << input->compute_op() << "("
                   << input->compute_op_type_name() << ") for " << input << ", whose dptr is "
                   << input->blob().dptr() << ", is in memory: " << input->is_in_memory()
@@ -444,9 +444,9 @@ Maybe<void> _RecursivelyCompute(
   }
 
   // unpin output
-  if (oneflow::DTRDebugEnabled()) { LOG(INFO) << "unpin output"; }
+  if (DTRDebugEnabled()) { LOG(INFO) << "unpin output"; }
   for (auto& output : outputs) { output->unpin(); }
-  if (oneflow::DTRDebugEnabled()) { LOG(INFO) << "unpin output end"; }
+  if (DTRDebugEnabled()) { LOG(INFO) << "unpin output end"; }
 
   // use current timestamp as access time and **then** update timestamp
   for (auto& input : inputs) { input->update_access_time(); }
@@ -457,7 +457,7 @@ Maybe<void> _RecursivelyCompute(
     input->unpin();
     if (input->num_pinned() == 0
         && Global<one::DTRTensorPool>::Get()->need_eager_eviction_ebos_.count(input.get()) > 0) {
-      if (oneflow::DTRDebugEnabled()) {
+      if (DTRDebugEnabled()) {
         LOG(INFO) << "going to evict " << input << " in recomputation, whose dptr is "
                   << input->blob().dptr() << ", compute op: " << input->compute_op_type_name()
                   << ", size: " << input->blob().ByteSizeOfBlobBody()
@@ -474,15 +474,15 @@ Maybe<void> _RecursivelyCompute(
 }
 
 Maybe<void> RecursivelyCompute(
-    const std::shared_ptr<oneflow::vm::LocalCallOpKernelPhyInstrOperand>& operand,
+    const std::shared_ptr<vm::LocalCallOpKernelPhyInstrOperand>& operand,
     DeviceCtx* device_ctx) {
   int pinned_num = JUST(IncReferenceNumOfRecomputedTensor(operand));
-  if (oneflow::DTRDebugEnabled()) {
+  if (DTRDebugEnabled()) {
     LOG(INFO) << "pinning input tensors ended, pinned num: " << pinned_num;
   }
   JUST(_RecursivelyCompute(operand, device_ctx));
   CHECK_OR_RETURN(Global<one::DTRTensorPool>::Get()->need_eager_eviction_ebos_.empty());
-  if (oneflow::DTRDebugLevel() >= 1) {
+  if (DTRDebugLevel() >= 1) {
     LOG(INFO) << "all compute ok for " << operand->opkernel().op_type_name() << std::endl;
   }
   return Maybe<void>::Ok();
@@ -492,7 +492,7 @@ Maybe<void> DTRComputeInstruction(vm::Instruction* instruction) {
   auto operand = JUST(GetLocalCallOpKernelPhyInstrOperand(instruction));
   DeviceCtx* device_ctx = instruction->stream().device_ctx().get();
 
-  if (oneflow::DTRDebugEnabled()) {
+  if (DTRDebugEnabled()) {
     LOG(INFO) << "all compute start for " << operand->opkernel().op_type_name() << std::endl;
     LOG(INFO) << "start pinning input tensors..";
   }
@@ -511,7 +511,7 @@ Maybe<void> DTRComputeInstruction(vm::Instruction* instruction) {
       JUST(Global<one::DTRTensorPool>::Get()->insert(output));
     }
   }
-  if (oneflow::DTRDebugLevel() >= 3) { JUST(Global<one::DTRTensorPool>::Get()->display2()); }
+  if (DTRDebugLevel() >= 3) { JUST(Global<one::DTRTensorPool>::Get()->display2()); }
   return Maybe<void>::Ok();
 }
 
@@ -531,7 +531,7 @@ void LocalCallOpKernelInstructionType::Infer(vm::Instruction* instruction) const
 }
 
 void LocalCallOpKernelInstructionType::Compute(vm::Instruction* instruction) const {
-  if (oneflow::DTREnabled()) {
+  if (DTREnabled()) {
     CHECK_OK(DTRComputeInstruction(instruction));
   } else {
     CHECK_OK(LocalCallOpKernelUtil::ComputeInstruction(instruction));
