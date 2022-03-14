@@ -55,21 +55,19 @@ T GetDataHelper(Optional<T> x) {
 
 }  // namespace impl
 
-// Copy from pybind11 include/pybind11/stl.h
+// Code is copied from pybind11 include/pybind11/stl.h
+// Comments wrapped by /* */ are copied from
+// https://pybind11.readthedocs.io/en/stable/advanced/cast/custom.html
 template<typename Type>
 struct oneflow_optional_caster {
   using Value = decltype(impl::GetDataHelper(std::declval<Type>()));
   using value_conv = make_caster<Value>;
 
-  template<typename T>
-  static handle cast(T&& src, return_value_policy policy, handle parent) {
-    if (!src) { return none().inc_ref(); }
-    if (!std::is_lvalue_reference<T>::value) {
-      policy = return_value_policy_override<Value>::policy(policy);
-    }
-    return value_conv::cast(impl::GetDataHelper(std::forward<T>(src)), policy, parent);
-  }
-
+  /**
+   * Conversion part 1 (Python->C++): convert a PyObject into a Optional<T>
+   * instance or return false upon failure. The second argument
+   * indicates whether implicit conversions should be applied.
+   */
   bool load(handle src, bool convert) {
     if (!src) { return false; }
     if (src.is_none()) {
@@ -82,6 +80,27 @@ struct oneflow_optional_caster {
     return true;
   }
 
+  /**
+   * Conversion part 2 (C++ -> Python): convert an Optional<T> instance into
+   * a Python object. The second and third arguments are used to
+   * indicate the return value policy and parent object (for
+   * ``return_value_policy::reference_internal``) and are generally
+   * ignored by implicit casters.
+   */
+  template<typename T>
+  static handle cast(T&& src, return_value_policy policy, handle parent) {
+    if (!src) { return none().inc_ref(); }
+    if (!std::is_lvalue_reference<T>::value) {
+      policy = return_value_policy_override<Value>::policy(policy);
+    }
+    return value_conv::cast(impl::GetDataHelper(std::forward<T>(src)), policy, parent);
+  }
+
+  /**
+   * This macro establishes the name 'Optional[T]' in
+   * function signatures and declares a local variable
+   * 'value' of type inty
+   */
   PYBIND11_TYPE_CASTER(Type, _("Optional[") + value_conv::name + _("]"));
 };
 

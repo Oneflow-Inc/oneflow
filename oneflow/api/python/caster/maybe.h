@@ -47,18 +47,13 @@ T GetOrThrowHelper(Maybe<T> x) {
 
 }  // namespace impl
 
+// Information about pybind11 custom type caster can be found
+// at oneflow/api/python/caster/optional.h, and also at
+// https://pybind11.readthedocs.io/en/stable/advanced/cast/custom.html
 template<typename Type>
 struct maybe_caster {
   using Value = decltype(impl::GetOrThrowHelper(std::declval<Type>()));
   using value_conv = make_caster<Value>;
-
-  template<typename T>
-  static handle cast(T&& src, return_value_policy policy, handle parent) {
-    if (!std::is_lvalue_reference<T>::value) {
-      policy = return_value_policy_override<Value>::policy(policy);
-    }
-    return value_conv::cast(impl::GetOrThrowHelper(std::forward<T>(src)), policy, parent);
-  }
 
   bool load(handle src, bool convert) {
     if (!src) { return false; }
@@ -71,6 +66,14 @@ struct maybe_caster {
 
     value = cast_op<Value&&>(std::move(inner_caster));
     return true;
+  }
+
+  template<typename T>
+  static handle cast(T&& src, return_value_policy policy, handle parent) {
+    if (!std::is_lvalue_reference<T>::value) {
+      policy = return_value_policy_override<Value>::policy(policy);
+    }
+    return value_conv::cast(impl::GetOrThrowHelper(std::forward<T>(src)), policy, parent);
   }
 
   PYBIND11_TYPE_CASTER(Type, _("Maybe[") + value_conv::name + _("]"));
