@@ -39,7 +39,7 @@ Maybe<py::bytes> CpuBroadcast(py::bytes* in, int64_t root) {
                                         parallel_desc, nullptr));
 
   if (GlobalProcessCtx::Rank() == root) {
-    JUST(ccl::Broadcast<DeviceType::kCPU>(buffer, buffer, length, DataType::kChar, root,
+    JUST(ccl::Broadcast<DeviceType::kCPU>(buffer, buffer, length, DataType::kChar, root,  // NOLINT
                                           parallel_desc, nullptr));
     return *in;
   } else {
@@ -60,10 +60,9 @@ Maybe<py::bytes> CpuBroadcast(py::bytes* in, int64_t root) {
 }  // namespace
 
 ONEFLOW_API_PYBIND11_MODULE("", m) {
-  m.def("cpu_broadcast", [](py::bytes in, int64_t root) -> Maybe<py::bytes> {
-    return CpuBroadcast(&in, root);
-  });
-  m.def("cpu_broadcast", [](py::none in, int64_t root) -> Maybe<py::bytes> {
+  m.def("cpu_broadcast",
+        [](py::bytes in, int64_t root) -> Maybe<py::bytes> { return CpuBroadcast(&in, root); });
+  m.def("cpu_broadcast", [](const py::none& in, int64_t root) -> Maybe<py::bytes> {
     return CpuBroadcast(nullptr, root);
   });
 }
