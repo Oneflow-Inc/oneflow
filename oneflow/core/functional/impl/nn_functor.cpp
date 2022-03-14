@@ -2438,9 +2438,9 @@ class OneEmbeddingLookupFunctor {
   std::shared_ptr<OpExpr> op_;
 };
 
-class UniqueKeyValuePairFunctor {
+class OneEmbeddingUniqueKeyValuePairFunctor {
  public:
-  UniqueKeyValuePairFunctor() {
+  OneEmbeddingUniqueKeyValuePairFunctor() {
     op_ = CHECK_JUST(one::OpBuilder("unique_key_value_pair")
                          .Input("keys")
                          .Input("values")
@@ -2535,7 +2535,7 @@ ONEFLOW_FUNCTION_LIBRARY(m) {
   m.add_functor<impl::OneEmbeddingEmbeddingGradientShuffleFunctor>(
       "OneEmbeddingEmbeddingGradientShuffle");
   m.add_functor<impl::OneEmbeddingLookupFunctor>("OneEmbeddingLookup");
-  m.add_functor<impl::UniqueKeyValuePairFunctor>("UniqueKeyValuePair");
+  m.add_functor<impl::OneEmbeddingUniqueKeyValuePairFunctor>("OneEmbeddingUniqueKeyValuePair");
 };
 
 }  // namespace functional

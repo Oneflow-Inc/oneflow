@@ -232,7 +232,7 @@ def _test_unique_key_value(test_case, num_columns):
                 unique_ids,
                 unique_column_ids,
                 inverse_indices,
-            ) = flow._C.unique_key_value_pair(ids, column_ids)
+            ) = flow._C.one_embedding_unique_key_value_pair(ids, column_ids)
             return (
                 flow.cast(num_unique, flow.int32),
                 flow.cast(unique_ids, flow.int32),

@@ -83,27 +83,19 @@ void ParseColumnFromJson(const nlohmann::json& initializer, EmbeddingColumn* emb
   }
 }
 
-class EmbeddingColumns {
- public:
-  OF_DISALLOW_COPY_AND_MOVE(EmbeddingColumns);
-  EmbeddingColumns(std::string json_serialized) {
-    auto json_object = nlohmann::json::parse(json_serialized);
-    CHECK(json_object.contains("columns"));
-    auto columns = json_object["columns"];
-    CHECK(columns.is_array());
-    CHECK_LE(columns.size(), kMaxColumns);
-    for (int32_t i = 0; i < columns.size(); ++i) {
-      auto column = columns.at(i);
-      CHECK(column.contains("initializer"));
-      ParseColumnFromJson(column["initializer"], &(param_.columns[i]));
-    }
-    param_.num_columns = columns.size();
+void ParseEmbeddingColumns(const std::string& json_serialized, ColumnsParam* param) {
+  auto json_object = nlohmann::json::parse(json_serialized);
+  CHECK(json_object.contains("columns"));
+  auto columns = json_object["columns"];
+  CHECK(columns.is_array());
+  CHECK_LE(columns.size(), kMaxColumns);
+  for (int32_t i = 0; i < columns.size(); ++i) {
+    auto column = columns.at(i);
+    CHECK(column.contains("initializer"));
+    ParseColumnFromJson(column["initializer"], &(param->columns[i]));
   }
-  ColumnsParam Columns() const { return param_; }
-
- private:
-  ColumnsParam param_;
-};
+  param->num_columns = columns.size();
+}
 
 template<typename IDX>
 class EmbeddingKernelState final : public user_op::OpKernelState {
@@ -112,14 +104,13 @@ class EmbeddingKernelState final : public user_op::OpKernelState {
       : device_index_(-1), generator_(CHECK_JUST(one::MakeGenerator(DeviceType::kCUDA))) {
     OF_CUDA_CHECK(cudaGetDevice(&device_index_));
     OF_CUDA_CHECK(cudaMallocHost(&host_num_keys_, sizeof(IDX)));
-    EmbeddingColumns embedding_columns(ctx->Attr<std::string>("embedding_columns"));
-    uint32_t max_query_length =
-        ctx->TensorDesc4ArgNameAndIndex("unique_ids", 0)->shape().elem_cnt();
+    ParseEmbeddingColumns(ctx->Attr<std::string>("embedding_columns"), &columns_param_);
     // TODO: depend on EmbeddingManager
-    // key_value_store_ = Global<EmbeddingManager>::Get()->GetKeyValueStore(
+    // key_value_store_ = Global<embedding::EmbeddingManager>::Get()->GetKeyValueStore(
     //    ctx->Attr<std::string>("embedding_name"), ctx->parallel_ctx().parallel_id());
+    // uint32_t max_query_length =
+    //    ctx->TensorDesc4ArgNameAndIndex("unique_ids", 0)->shape().elem_cnt();
     // key_value_store_->ReserveQueryLength(max_query_length);
-    columns_param_ = embedding_columns.Columns();
   }
   ~EmbeddingKernelState() {
     CudaCurrentDeviceGuard guard(device_index_);
@@ -132,7 +123,7 @@ class EmbeddingKernelState final : public user_op::OpKernelState {
 
   one::Generator* generator() { return generator_.get(); }
 
-  ColumnsParam Columns() { return columns_param_; }
+  const ColumnsParam& Columns() { return columns_param_; }
 
  private:
   int device_index_;
@@ -148,11 +139,11 @@ class EmbeddingPutKernelState final : public user_op::OpKernelState {
   explicit EmbeddingPutKernelState(user_op::KernelInitContext* ctx) : device_index_(-1) {
     OF_CUDA_CHECK(cudaGetDevice(&device_index_));
     OF_CUDA_CHECK(cudaMallocHost(&host_num_keys_, sizeof(IDX)));
-    uint32_t max_query_length =
-        ctx->TensorDesc4ArgNameAndIndex("unique_ids", 0)->shape().elem_cnt();
     // TODO: depend on EmbeddingManager
-    // key_value_store_ = Global<EmbeddingManager>::Get()->GetKeyValueStore(
+    // key_value_store_ = Global<embedding::EmbeddingManager>::Get()->GetKeyValueStore(
     //    ctx->Attr<std::string>("embedding_name"), ctx->parallel_ctx().parallel_id());
+    // uint32_t max_query_length =
+    //    ctx->TensorDesc4ArgNameAndIndex("unique_ids", 0)->shape().elem_cnt();
     // key_value_store_->ReserveQueryLength(max_query_length);
   }
   ~EmbeddingPutKernelState() {
@@ -220,9 +211,9 @@ __global__ void InitValueKernel(uint64_t seed, one::CUDAGeneratorState* cuda_gen
     int col = i - row * line_size;
     const uint32_t index = missing_indices[row];
     const int64_t offset = index * line_size + col;
-    const int32_t slot_idx = column_ids[index];
-    assert(slot_idx < param.num_columns);
-    EmbeddingInitializer initializer = param.columns[slot_idx].initializer;
+    const int32_t column_idx = column_ids[index];
+    assert(column_idx < param.num_columns);
+    EmbeddingInitializer initializer = param.columns[column_idx].initializer;
     T value = 0;
     if (col < embedding_size) {
       if (initializer.type == InitializerType::kUniform) {
@@ -250,29 +241,24 @@ __global__ void InitValueKernel(uint64_t seed, one::CUDAGeneratorState* cuda_gen
 }
 
 template<typename T, typename U, typename IDX>
-void LookupAndInitMissing(ep::Stream* stream, EmbeddingKernelState<IDX>* kernel_state,
+void LookupAndInitMissing(ep::Stream* stream, EmbeddingKernelState<IDX>* embedding_state,
                           const int64_t num_ids, const int32_t embedding_size,
                           const int32_t line_size, const void* num_unique_ptr,
                           const void* unique_ids, const void* column_ids, T* values_ptr,
                           void* tmp_buffer_ptr, uint32_t* return_num_unique,
                           const bool put_to_kv_store) {
-  const auto& generator = kernel_state->generator();
+  const auto& generator = embedding_state->generator();
   CHECK_NOTNULL(generator);
   std::shared_ptr<one::CUDAGeneratorImpl> cuda_generator =
       CHECK_JUST(generator->template Get<one::CUDAGeneratorImpl>());
   uint64_t seed = cuda_generator->current_seed();
   one::CUDAGeneratorState* cuda_gen_state = cuda_generator->cuda_gen_state();
-  embedding::KeyValueStore* store = kernel_state->KeyValueStore();
-  ColumnsParam param = kernel_state->Columns();
-  bool need_value_buffer;
-  if (values_ptr != nullptr) {
-    need_value_buffer = false;
-  } else {
-    need_value_buffer = true;
-  }
+  embedding::KeyValueStore* store = embedding_state->KeyValueStore();
+  const ColumnsParam& param = embedding_state->Columns();
+  bool need_value_buffer = (values_ptr == nullptr);
   EmbeddingTmpBufferManager buffer_manager(tmp_buffer_ptr, num_ids, line_size * sizeof(T),
                                            need_value_buffer);
-  void* host_num_keys = kernel_state->HostNumKeys();
+  void* host_num_keys = embedding_state->HostNumKeys();
   OF_CUDA_CHECK(cudaMemcpyAsync(host_num_keys, num_unique_ptr, sizeof(IDX), cudaMemcpyDefault,
                                 stream->As<ep::CudaStream>()->cuda_stream()));
   CHECK_JUST(stream->Sync());
@@ -304,8 +290,8 @@ void LookupAndInitMissing(ep::Stream* stream, EmbeddingKernelState<IDX>* kernel_
 }
 
 template<typename T, typename U>
-__global__ void CastAndCopyNd(int64_t out_elem_cnt, const int32_t in_cols, const int32_t out_cols,
-                              const T* in, U* out) {
+__global__ void Copy2D(int64_t out_elem_cnt, const int32_t in_cols, const int32_t out_cols,
+                       const T* in, U* out) {
   CUDA_1D_KERNEL_LOOP(i, out_elem_cnt) {
     const int32_t row = i / out_cols;
     const int32_t col = i - row * out_cols;
@@ -343,8 +329,8 @@ void CopyValuesToEmbeddings(ep::Stream* stream, int64_t num_unique, const int32_
   } else {
     const int64_t embedding_elem_cnt = num_unique * embedding_size;
     if (embedding_dtype == DataType::kFloat16) {
-      CastAndCopyNd<T, half><<<BlocksNum4ThreadsNum(embedding_elem_cnt), kCudaThreadsNumPerBlock, 0,
-                               stream->As<ep::CudaStream>()->cuda_stream()>>>(
+      Copy2D<T, half><<<BlocksNum4ThreadsNum(embedding_elem_cnt), kCudaThreadsNumPerBlock, 0,
+                        stream->As<ep::CudaStream>()->cuda_stream()>>>(
           embedding_elem_cnt, value_size, embedding_size, values,
           reinterpret_cast<half*>(embeddings));
     } else {
@@ -359,7 +345,7 @@ template<typename T, typename U, typename IDX>
 class EmbeddingPrefetchKernel final : public user_op::OpKernel {
  public:
   EmbeddingPrefetchKernel() = default;
-  ~EmbeddingPrefetchKernel() = default;
+  ~EmbeddingPrefetchKernel() override = default;
 
   std::shared_ptr<user_op::OpKernelState> CreateOpKernelState(
       user_op::KernelInitContext* ctx) const override {
@@ -370,8 +356,8 @@ class EmbeddingPrefetchKernel final : public user_op::OpKernel {
   using user_op::OpKernel::Compute;
   void Compute(user_op::KernelComputeContext* ctx, user_op::OpKernelState* state,
                const user_op::OpKernelCache*) const override {
-    auto* kernel_state = dynamic_cast<EmbeddingKernelState<IDX>*>(state);
-    CHECK(kernel_state != nullptr);
+    auto* embedding_state = dynamic_cast<EmbeddingKernelState<IDX>*>(state);
+    CHECK(embedding_state != nullptr);
 
     const user_op::Tensor* num_unique_ids = ctx->Tensor4ArgNameAndIndex("num_unique_ids", 0);
     const user_op::Tensor* unique_ids = ctx->Tensor4ArgNameAndIndex("unique_ids", 0);
@@ -381,11 +367,10 @@ class EmbeddingPrefetchKernel final : public user_op::OpKernel {
     const int64_t line_size = ctx->Attr<int64_t>("line_size");
     uint32_t num_unique;
     T* values_ptr = nullptr;
-    LookupAndInitMissing<T, U, IDX>(ctx->stream(), kernel_state, unique_ids->shape().elem_cnt(),
+    LookupAndInitMissing<T, U, IDX>(ctx->stream(), embedding_state, unique_ids->shape().elem_cnt(),
                                     embedding_size, line_size, num_unique_ids->dptr(),
                                     unique_ids->dptr(), column_ids->dptr(), values_ptr,
                                     tmp_buffer->mut_dptr(), &num_unique, true);
-    CHECK_GT(num_unique, 0) << "num unique ids must greater than 0. ";
   }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
@@ -424,7 +409,7 @@ template<typename T, typename U, typename IDX>
 class EmbeddingLookupKernel final : public user_op::OpKernel {
  public:
   EmbeddingLookupKernel() = default;
-  ~EmbeddingLookupKernel() = default;
+  ~EmbeddingLookupKernel() override = default;
 
   std::shared_ptr<user_op::OpKernelState> CreateOpKernelState(
       user_op::KernelInitContext* ctx) const override {
@@ -435,8 +420,8 @@ class EmbeddingLookupKernel final : public user_op::OpKernel {
   using user_op::OpKernel::Compute;
   void Compute(user_op::KernelComputeContext* ctx, user_op::OpKernelState* state,
                const user_op::OpKernelCache*) const override {
-    auto* kernel_state = dynamic_cast<EmbeddingKernelState<IDX>*>(state);
-    CHECK(kernel_state != nullptr);
+    auto* embedding_state = dynamic_cast<EmbeddingKernelState<IDX>*>(state);
+    CHECK(embedding_state != nullptr);
     const user_op::Tensor* num_unique_ids = ctx->Tensor4ArgNameAndIndex("num_unique_ids", 0);
     const user_op::Tensor* unique_ids = ctx->Tensor4ArgNameAndIndex("unique_ids", 0);
     const user_op::Tensor* column_ids = ctx->Tensor4ArgNameAndIndex("column_ids", 0);
@@ -446,10 +431,9 @@ class EmbeddingLookupKernel final : public user_op::OpKernel {
     const int64_t line_size = ctx->Attr<int64_t>("line_size");
     uint32_t num_unique;
     LookupAndInitMissing<T, U, IDX>(
-        ctx->stream(), kernel_state, unique_ids->shape().elem_cnt(), embedding_size, line_size,
+        ctx->stream(), embedding_state, unique_ids->shape().elem_cnt(), embedding_size, line_size,
         num_unique_ids->dptr(), unique_ids->dptr(), column_ids->dptr(),
         unique_values->mut_dptr<T>(), tmp_buffer->mut_dptr(), &num_unique, false);
-    CHECK_GT(num_unique, 0) << "num unique ids must greater than 0. ";
     if (ctx->has_output("embeddings", 0)) {
       user_op::Tensor* embeddings = ctx->Tensor4ArgNameAndIndex("embeddings", 0);
       CopyValuesToEmbeddings<T>(ctx->stream(), num_unique, embedding_size, line_size,
@@ -485,7 +469,7 @@ template<typename IDX>
 class EmbeddingPutKernel final : public user_op::OpKernel {
  public:
   EmbeddingPutKernel() = default;
-  ~EmbeddingPutKernel() = default;
+  ~EmbeddingPutKernel() override = default;
 
   std::shared_ptr<user_op::OpKernelState> CreateOpKernelState(
       user_op::KernelInitContext* ctx) const override {
@@ -496,14 +480,14 @@ class EmbeddingPutKernel final : public user_op::OpKernel {
   using user_op::OpKernel::Compute;
   void Compute(user_op::KernelComputeContext* ctx, user_op::OpKernelState* state,
                const user_op::OpKernelCache*) const override {
-    auto* kernel_state = dynamic_cast<EmbeddingPutKernelState<IDX>*>(state);
-    CHECK(kernel_state != nullptr);
-    embedding::KeyValueStore* store = kernel_state->KeyValueStore();
+    auto* embedding_state = dynamic_cast<EmbeddingPutKernelState<IDX>*>(state);
+    CHECK(embedding_state != nullptr);
+    embedding::KeyValueStore* store = embedding_state->KeyValueStore();
     const user_op::Tensor* num_unique_ids = ctx->Tensor4ArgNameAndIndex("num_unique_ids", 0);
     const user_op::Tensor* unique_ids = ctx->Tensor4ArgNameAndIndex("unique_ids", 0);
     const user_op::Tensor* unique_embeddings = ctx->Tensor4ArgNameAndIndex("unique_embeddings", 0);
 
-    IDX* host_num_keys = reinterpret_cast<IDX*>(kernel_state->HostNumKeys());
+    IDX* host_num_keys = reinterpret_cast<IDX*>(embedding_state->HostNumKeys());
     OF_CUDA_CHECK(cudaMemcpyAsync(host_num_keys, num_unique_ids->dptr(), sizeof(IDX),
                                   cudaMemcpyDefault,
                                   ctx->stream()->As<ep::CudaStream>()->cuda_stream()));
