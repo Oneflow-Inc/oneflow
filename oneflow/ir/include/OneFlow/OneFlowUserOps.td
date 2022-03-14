@@ -5288,7 +5288,7 @@ def OneFlow_NormalOp : OneFlow_BaseOp<"normal", [NoSideEffect, NoGrad, DeclareOp
   let has_nd_sbp_infer_fn = 1;
 }
 
-def OneFlow_NormalizationOp : OneFlow_BaseOp<"normalization", [NoSideEffect, AttrSizedOperandSegments, AttrSizedResultSegments, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
+class OneFlow_NormalizationBaseOp<string mnemonic, list<Trait> traits = []> : OneFlow_BaseOp<mnemonic, !listconcat(traits, [NoSideEffect, AttrSizedOperandSegments, DeclareOpInterfaceMethods<UserOpCompatibleInterface>])> {
   let input = (ins
     OneFlow_Tensor:$x,
     Optional<OneFlow_Tensor>:$moving_mean,
@@ -5317,7 +5317,16 @@ def OneFlow_NormalizationOp : OneFlow_BaseOp<"normalization", [NoSideEffect, Att
   let has_get_sbp_fn = 1;
   let has_data_type_infer_fn = 1;
   let has_input_arg_modify_fn = 1;
-  // let hasCanonicalizer = 1;
+}
+
+def OneFlow_NormalizationOp : OneFlow_NormalizationBaseOp<"normalization", [AttrSizedResultSegments]> {
+  let hasCanonicalizer = 1;
+}
+
+def OneFlow_NormalizationInferenceOp : OneFlow_NormalizationBaseOp<"normalization_infer", []> {
+  let output = (outs
+    OneFlow_Tensor:$y
+  );
 }
 
 def OneFlow_NormalizationGradOp : OneFlow_BaseOp<"normalization_grad", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {

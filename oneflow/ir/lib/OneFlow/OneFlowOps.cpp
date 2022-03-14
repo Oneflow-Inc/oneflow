@@ -342,23 +342,24 @@ static LogicalResult verify(mlir::oneflow::ReturnOp op) {
 
 OpFoldResult VariableIrOp::fold(ArrayRef<Attribute> operands) { return pointerAttr(); }
 
-// struct FusedConv2DBatchNormPattern : public OpRewritePattern<NormalizationOp> {
-//   explicit FusedConv2DBatchNormPattern(MLIRContext* context)
-//       : OpRewritePattern<NormalizationOp>(context, /*benefit=*/1) {}
-//   LogicalResult matchAndRewrite(oneflow::NormalizationOp op,
-//                                 PatternRewriter& rewriter) const override {
-//     const auto inputOp = op->getOperand(0).getDefiningOp<Conv2DOp>();
-//     if (!inputOp) { return failure(); }
-//     op.y().replaceAllUsesWith(inputOp->getResult(0));
-//     op->erase();
-//     return success();
-//   }
-// };
+struct NormalizationInferencePattern : public OpRewritePattern<NormalizationOp> {
+  explicit NormalizationInferencePattern(MLIRContext* context)
+      : OpRewritePattern<NormalizationOp>(context, /*benefit=*/1) {}
+  LogicalResult matchAndRewrite(oneflow::NormalizationOp op,
+                                PatternRewriter& rewriter) const override {
+    if (op.mean() || op.inv_variance()) return failure();
+    if (auto created_op = rewriter.replaceOpWithNewOp<NormalizationOp>(
+            op, op->getResultTypes(), op.getOperands(), op->getAttrs())) {
+      return success();
+    }
+    return failure();
+  }
+};
 
-// void NormalizationOp::getCanonicalizationPatterns(RewritePatternSet& results,
-//                                                     MLIRContext* context) {
-//   results.insert<FusedConv2DBatchNormPattern>(context);
-// }
+void NormalizationOp::getCanonicalizationPatterns(RewritePatternSet& results,
+                                                  MLIRContext* context) {
+  results.insert<NormalizationInferencePattern>(context);
+}
 
 }  // namespace oneflow
 

@@ -406,10 +406,10 @@ def ReplaceCopyWithGPUPattern : Pat<
 def IsTraingFalse: Constraint<CPred<"!($0.getValue())">, "">;
 def FuseConv2DBatchNorm : NativeCodeCall<"mlir::oneflow::FuseConv2DBatchNorm($_builder, $0, $1)">;
 def CreateOneFlowNullOp: NativeCodeCall<"mlir::oneflow::CreateOneFlowNullOp($_builder, $0)">;
-// def FuseConv2DBatchNormPattern : Pattern<
+// def FuseConv2DBatchNormPattern : Pat<
 def FuseConv2DBatchNormPattern : Pat<
   (
-    OneFlow_NormalizationOp: $batch_norm_op
+    OneFlow_NormalizationInferenceOp: $batch_norm_op
       (
         OneFlow_Conv2DOp : $conv_2d_op
           $x,
@@ -447,19 +447,10 @@ def FuseConv2DBatchNormPattern : Pat<
       $bn_training,
       $bn_momentum
   ),
-  // [(
-  //   CreateOneFlowNullOp $batch_norm_op__0
-  // ),
-  // (
-  //   CreateOneFlowNullOp $batch_norm_op__0
-  // ),
-  // (
-  //   FuseConv2DBatchNorm: $result $conv_2d_op, $batch_norm_op__0
-  // )],
-  (FuseConv2DBatchNorm: $result $conv_2d_op, $batch_norm_op__0),
-  // [(IsTraingFalse $bn_training)]
+  (
+    FuseConv2DBatchNorm $conv_2d_op, $batch_norm_op__0
+  ),
   []
 >;
-
 
 #endif // ONEFLOW_PATTERNS

@@ -355,7 +355,7 @@ ArrayAttr getSI32ArrayAttr(::mlir::PatternRewriter& rewriter, ArrayRef<int32_t> 
                                                           OpResult conv_result,
                                                           OpResult bn_result) {
   if (auto conv_op = llvm::dyn_cast<oneflow::Conv2DOp>(conv_result.getDefiningOp())) {
-    if (auto bn_op = llvm::dyn_cast<oneflow::NormalizationOp>(bn_result.getDefiningOp())) {
+    if (auto bn_op = llvm::dyn_cast<oneflow::NormalizationInferenceOp>(bn_result.getDefiningOp())) {
       SmallVector<Value, 4> final_results;
       NamedAttrList attributes = conv_op->getAttrs();
       SmallVector<Value, 4> operands;
@@ -363,7 +363,6 @@ ArrayAttr getSI32ArrayAttr(::mlir::PatternRewriter& rewriter, ArrayRef<int32_t> 
       operands.push_back(conv_op.weight());
       if (conv_op.bias()) operands.push_back(conv_op.bias());
       if (conv_op.bias_multiplier()) operands.push_back(conv_op.bias_multiplier());
-
       // auto res = rewriter
       //                .create<oneflow::Conv2DOp>(conv_op->getLoc(), conv_op->getResultTypes(),
       //                                           operands, attributes)
@@ -372,23 +371,6 @@ ArrayAttr getSI32ArrayAttr(::mlir::PatternRewriter& rewriter, ArrayRef<int32_t> 
           conv_op->getLoc(), conv_op->getResultTypes(), operands, attributes);
 
       final_results.push_back(new_conv_op.out());
-      if (bn_op.mean()) {
-        final_results.push_back(
-            rewriter.create<::mlir::oneflow::NullOp>(conv_op->getLoc(), conv_op.in().getType())
-                .output());
-      } else {
-        final_results.push_back({});
-      }
-      if (bn_op.inv_variance()) {
-        final_results.push_back(
-            rewriter.create<::mlir::oneflow::NullOp>(conv_op->getLoc(), conv_op.in().getType())
-                .output());
-      } else {
-        final_results.push_back({});
-      }
-
-      // pad op is expected to be erased if it is not used
-      // rewriter.eraseOp(llvm::dyn_cast<oneflow::NormalizationOp>(bn_result.getDefiningOp()));
       return final_results;
     }
   }
