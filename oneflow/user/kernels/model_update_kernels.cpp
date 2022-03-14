@@ -579,7 +579,6 @@ class IndexedSlicesAdamUpdateKernel final : public user_op::OpKernel {
     user_op::Tensor* model = ctx->Tensor4ArgNameAndIndex("model", 0);
     user_op::Tensor* m = ctx->Tensor4ArgNameAndIndex("m", 0);
     user_op::Tensor* v = ctx->Tensor4ArgNameAndIndex("v", 0);
-    user_op::Tensor* max_v = ctx->Tensor4ArgNameAndIndex("max_v", 0);
 
     const auto beta1 = ctx->Attr<float>("beta1");
     const auto beta2 = ctx->Attr<float>("beta2");
@@ -587,6 +586,12 @@ class IndexedSlicesAdamUpdateKernel final : public user_op::OpKernel {
     const auto weight_decay = ctx->Attr<float>("weight_decay");
     const bool amsgrad = ctx->Attr<bool>("amsgrad");
     const bool do_bias_correction = ctx->Attr<bool>("do_bias_correction");
+
+    T* max_v_ptr = nullptr;
+    if (amsgrad) {
+      user_op::Tensor* max_v = ctx->Tensor4ArgNameAndIndex("max_v", 0);
+      max_v_ptr = max_v->mut_dptr<T>();
+    }
 
     auto* kernel_cache = dynamic_cast<const IndexedSlicesUpdateOpKernelCache*>(cache);
     CHECK_NOTNULL(kernel_cache);
@@ -618,7 +623,7 @@ class IndexedSlicesAdamUpdateKernel final : public user_op::OpKernel {
         buffer_manager.NumUniqueDiffIndicesPtr(), learning_rate_ptr, bias_correction1_ptr,
         bias_correction2_ptr, buffer_manager.UniqueDiffIndicesPtr(),
         buffer_manager.UniqueDiffValuesPtr(), model->mut_dptr<T>(), m->mut_dptr<T>(),
-        v->mut_dptr<T>(), max_v->mut_dptr<T>());
+        v->mut_dptr<T>(), max_v_ptr);
   }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return true; }
 };
