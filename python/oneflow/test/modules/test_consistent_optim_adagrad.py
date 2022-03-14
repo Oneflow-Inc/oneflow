@@ -216,7 +216,7 @@ class TestAdagrad(flow.unittest.TestCase):
     @globaltest
     def test_adagrad_clip_grad(test_case):
         arg_dict = OrderedDict()
-        arg_dict["x_shape"] = [(16,16)]
+        arg_dict["x_shape"] = [(16, 16)]
         arg_dict["learning_rate"] = [0.03]
         arg_dict["train_iters"] = [10]
         arg_dict["lr_decay"] = [0.75]
