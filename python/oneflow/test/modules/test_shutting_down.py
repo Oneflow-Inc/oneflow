@@ -15,10 +15,20 @@ limitations under the License.
 """
 import oneflow
 
+class TestCallWhenShuttingDown:
+    def __init__(self):
+        tensor = oneflow.ones((2, 2))
+        print(tensor)
 
-class TestSyncLate:
+    def __del__(self):
+        tensor = oneflow.ones((2, 2))
+        print(tensor)
+
+test_call_when_shutting_down = TestCallWhenShuttingDown()
+
+class TestSyncWhenShuttingDown:
     def __del__(self):
         oneflow._oneflow_internal.eager.Sync()
 
 
-test_case = TestSyncLate()
+test_sync_when_shutting_down = TestSyncWhenShuttingDown()
