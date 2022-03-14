@@ -1051,8 +1051,8 @@ def random_tensor(
     dim2=None,
     dim3=None,
     dim4=None,
-    low=0,
-    high=1,
+    low=None,
+    high=None,
     dtype=float,
     requires_grad=True,
 ):

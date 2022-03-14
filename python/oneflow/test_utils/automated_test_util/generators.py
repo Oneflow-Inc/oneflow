@@ -285,8 +285,8 @@ class random_pytorch_tensor(generator):
         dim2=None,
         dim3=None,
         dim4=None,
-        low=0,
-        high=1,
+        low=None,
+        high=None,
         dtype=float,
     ):
         if ndim is None:
@@ -351,9 +351,17 @@ class random_pytorch_tensor(generator):
 
         pytorch_tensor = None
         if dtype == float:
+            if low is None:
+                low = -1
+            if high is None:
+                high = 1
             np_arr = rng.uniform(low=low, high=high, size=shape)
             return torch.Tensor(np_arr)
         elif dtype == int:
+            if low is None:
+                low = -10
+            if high is None:
+                high = 11
             np_arr = rng.integers(low=low, high=high, size=shape)
             return torch.tensor(np_arr, dtype=torch.int64)
         else:
