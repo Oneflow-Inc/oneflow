@@ -947,7 +947,7 @@ class SparseSoftmaxCrossEntropyFunctor {
         const auto& sbp_parallel = logits_nd_sbp.sbp_parallel(i);
         if (sbp_parallel.has_split_parallel()) {
           const int64_t& split_axis = sbp_parallel.split_parallel().axis();
-          if (split_axis == 1) {
+          if (split_axis == axis) {
             SbpParallel sbp;
             sbp.mutable_broadcast_parallel();
             new_sbp_parallels.emplace_back(sbp);
