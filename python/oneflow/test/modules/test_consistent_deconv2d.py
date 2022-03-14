@@ -51,17 +51,16 @@ def _test_deconv2d_impl(test_case, placement, weight_sbp, input_sbp):
 
     if m.bias is not None:
         bias_sbp = random_sbp(placement, max_dim=1)
-        m.bias = torch.nn.Parameter(
-            m.bias.to_global(placement=placement, sbp=bias_sbp)
-        )
+        m.bias = torch.nn.Parameter(m.bias.to_global(placement=placement, sbp=bias_sbp))
 
     batch = random(1, 3).to(int).value() * 8
     height = random(1, 5).to(int).value() * 8
-    width =  random(1, 5).to(int).value() * 8
+    width = random(1, 5).to(int).value() * 8
     nchw = [batch, in_channels, height, width]
     x = random_tensor(ndim, *nchw).to_global(placement=placement, sbp=input_sbp)
     y = m(x)
     return y
+
 
 class TestDeconv2dConsistent(flow.unittest.TestCase):
     @globaltest
