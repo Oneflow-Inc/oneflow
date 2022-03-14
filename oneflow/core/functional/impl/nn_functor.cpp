@@ -411,6 +411,36 @@ class LayerNormAffineFunctor {
   std::shared_ptr<OpExpr> op_;
 };
 
+class GroupNormAffineFunctor {
+ public:
+  GroupNormAffineFunctor() {
+    op_ = CHECK_JUST(one::OpBuilder("group_norm")
+                         .Input("x")
+                         .Input("gamma")
+                         .Input("beta")
+                         .Output("y")
+                         .Output("mean")
+                         .Output("inv_variance")
+                         .Build());
+  }
+  Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x,
+                           const std::shared_ptr<one::Tensor>& gamma,
+                           const std::shared_ptr<one::Tensor>& beta, 
+                           const bool affine, 
+                           const int32_t num_groups, 
+                           const double& epsilon) const {
+    MutableAttrMap attrs;
+    JUST(attrs.SetAttr<bool>("affine", affine));
+    JUST(attrs.SetAttr<int32_t>("num_groups", num_groups));
+    JUST(attrs.SetAttr<double>("epsilon", epsilon));
+    return OpInterpUtil::Dispatch<Tensor>(*op_, {x, gamma, beta}, attrs);
+  }
+
+ private:
+  std::shared_ptr<OpExpr> op_;
+};
+
+
 class PoolNDFunctor {
  public:
   PoolNDFunctor() = default;
@@ -2424,6 +2454,7 @@ ONEFLOW_FUNCTION_LIBRARY(m) {
   m.add_functor<impl::FusedMLPFunctor>("FusedMLP");
   m.add_functor<impl::LayerNormFunctor>("LayerNorm");
   m.add_functor<impl::LayerNormAffineFunctor>("LayerNormAffine");
+  m.add_functor<impl::GroupNormAffineFunctor>("GroupNormAffine");
   m.add_functor<impl::TFAvgPool2DFunctor>("AvgPool2D");
   m.add_functor<impl::Maxpool1DFunctor>("Maxpool1D");
   m.add_functor<impl::Maxpool2DFunctor>("Maxpool2D");
