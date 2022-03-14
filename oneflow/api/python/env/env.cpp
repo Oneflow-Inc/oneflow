@@ -24,8 +24,11 @@ ONEFLOW_API_PYBIND11_MODULE("", m) {
   m.def("EnvResource", &EnvResource);
   m.def("EnableEagerEnvironment", &EnableEagerEnvironment);
 
-  m.def("IsEnvInited", &IsEnvInited);
-  m.def("InitEnv", &InitEnv);
+  using Env = oneflow::EnvGlobalObjectsScope;
+  py::class_<Env, std::shared_ptr<Env>>(m, "Env").def(
+      py::init([](const std::string& env_proto_str) {
+        return oneflow::CreateEnv(env_proto_str).GetPtrOrThrow();
+      }));
 
   m.def("CurrentMachineId", &CurrentMachineId);
 

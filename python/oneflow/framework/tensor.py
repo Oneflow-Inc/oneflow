@@ -23,6 +23,7 @@ import oneflow.core.framework.variable_meta_info_pb2 as variable_meta_info_pb
 import numpy as np
 from typing import Union
 
+import oneflow._oneflow_internal
 
 Tensor = flow._oneflow_internal.Tensor
 TensorTuple = flow._oneflow_internal.TensorTuple

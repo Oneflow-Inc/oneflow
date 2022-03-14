@@ -26,12 +26,6 @@ inline void EnableEagerEnvironment(bool enable_eager_execution) {
   return oneflow::EnableEagerEnvironment(enable_eager_execution).GetOrThrow();
 }
 
-inline bool IsEnvInited() { return oneflow::IsEnvInited().GetOrThrow(); }
-
-inline void InitEnv(const std::string& env_proto_str) {
-  return oneflow::InitEnv(env_proto_str).GetOrThrow();
-}
-
 inline long long CurrentMachineId() { return oneflow::CurrentMachineId().GetOrThrow(); }
 
 inline int64_t GetRank() { return oneflow::GetRank().GetOrThrow(); }
