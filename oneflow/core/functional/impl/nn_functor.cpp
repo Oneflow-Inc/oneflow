@@ -2409,6 +2409,35 @@ class OneEmbeddingEmbeddingGradientShuffleFunctor {
   std::shared_ptr<OpExpr> op_;
 };
 
+class EmbeddingLookupFunctor {
+ public:
+  EmbeddingLookupFunctor() {
+    op_ = CHECK_JUST(one::OpBuilder("embedding_lookup_placeholder")
+                         .Input("shadow")
+                         .Input("ids")
+                         .Input("column_ids")
+                         .Output("embeddings")
+                         .Build());
+  }
+
+  Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& shadow,
+                           const std::shared_ptr<one::Tensor>& ids,
+                           const std::shared_ptr<one::Tensor>& column_ids,
+                           const Symbol<DType>& dtype, const int64_t embedding_size,
+                           const std::string& embedding_columns,
+                           const std::string& embedding_options) const {
+    MutableAttrMap attrs;
+    JUST(attrs.SetAttr<DataType>("dtype", dtype->data_type()));
+    JUST(attrs.SetAttr<int64_t>("embedding_size", embedding_size));
+    JUST(attrs.SetAttr<std::string>("embedding_columns", embedding_columns));
+    JUST(attrs.SetAttr<std::string>("embedding_options", embedding_options));
+    return OpInterpUtil::Dispatch<Tensor>(*op_, {shadow, ids, column_ids}, attrs);
+  }
+
+ private:
+  std::shared_ptr<OpExpr> op_;
+};
+
 }  // namespace impl
 
 ONEFLOW_FUNCTION_LIBRARY(m) {
@@ -2483,6 +2512,7 @@ ONEFLOW_FUNCTION_LIBRARY(m) {
   m.add_functor<impl::OneEmbeddingEmbeddingShuffleFunctor>("OneEmbeddingEmbeddingShuffle");
   m.add_functor<impl::OneEmbeddingEmbeddingGradientShuffleFunctor>(
       "OneEmbeddingEmbeddingGradientShuffle");
+  m.add_functor<impl::EmbeddingLookupFunctor>("OneEmbeddingLookup");
 };
 
 }  // namespace functional
