@@ -592,6 +592,7 @@ def _permute(self, *dims):
 def _matmul(self, other):
     return flow.matmul(self, other)
 
+
 def _mm(self, other):
     return flow.mm(self, other)
 

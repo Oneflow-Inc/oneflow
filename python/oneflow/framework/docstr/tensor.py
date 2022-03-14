@@ -260,7 +260,7 @@ add_docstr(
     oneflow.Tensor.mm,
     """
     See :func:`oneflow.mm`
-    """
+    """,
 )
 
 add_docstr(
