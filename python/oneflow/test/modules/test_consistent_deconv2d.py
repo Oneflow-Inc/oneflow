@@ -21,8 +21,8 @@ import oneflow.unittest
 from oneflow.test_utils.automated_test_util import *
 
 
-@autotest(n=1, auto_backward=False, check_graph=False)
-def _test_deconv2d_impl(test_case, placement, weight_sbp, input_sbp):
+@autotest(n=1, auto_backward=True, check_graph=False)
+def _test_deconv2d_impl(test_case, placement, input_sbp):
     ndim = 4
     in_channels = random(1, 5).to(int).value() * 8
     groups = random(1, 4).to(int).value()
@@ -45,6 +45,7 @@ def _test_deconv2d_impl(test_case, placement, weight_sbp, input_sbp):
     )
     m.train(random())
 
+    weight_sbp = random_sbp(placement, max_dim=2)
     m.weight = torch.nn.Parameter(
         m.weight.to_global(placement=placement, sbp=weight_sbp)
     )
@@ -67,8 +68,7 @@ class TestDeconv2dConsistent(flow.unittest.TestCase):
     def test_deconv2d(test_case):
         for placement in all_placement():
             for input_sbp in all_sbp(placement, max_dim=2):
-                for weight_sbp in all_sbp(placement, max_dim=2):
-                    _test_deconv2d_impl(test_case, placement, weight_sbp, input_sbp)
+                _test_deconv2d_impl(test_case, placement, input_sbp)
 
 
 if __name__ == "__main__":
