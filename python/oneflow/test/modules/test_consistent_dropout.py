@@ -20,23 +20,22 @@ import oneflow.unittest
 from oneflow.test_utils.automated_test_util import *
 
 
-@autotest(n=1, auto_backward=True, check_graph=False)
-def _test_dropout_p0(test_case, placement, sbp, p):
-    ndim = 1
+@autotest(n=1, auto_backward=False, check_graph=False, atol=1e-5, rtol=1e-5)
+def _test_dropout_p01(test_case, placement, sbp, ndim, p):
     dims = [random(1, 5) * 8 for i in range(ndim)]
     x = random_tensor(ndim, *dims)
     y = x.to_global(placement=placement, sbp=sbp)
-    m = torch.nn.Dropout(p=p, inplace=random_bool())
+    m = torch.nn.Dropout(p=p, inplace=False)
     return m(x)
 
 
-@autotest(n=1, auto_backward=True, check_graph=False)
-def _test_dropout_eval(test_case, placement, sbp, p):
+@autotest(n=1, auto_backward=False, check_graph=False, atol=1e-5, rtol=1e-5)
+def _test_dropout_eval_p01(test_case, placement, sbp, ndim, p):
     ndim = 1
     dims = [random(1, 5) * 8 for i in range(ndim)]
     x = random_tensor(ndim, *dims)
     y = x.to_global(placement=placement, sbp=sbp)
-    m = torch.nn.Dropout(p=p, inplace=random_bool())
+    m = torch.nn.Dropout(p=p, inplace=False)
     m.eval()
     return m(x)
 
@@ -44,16 +43,21 @@ def _test_dropout_eval(test_case, placement, sbp, p):
 class TestDropoutConsistent(flow.unittest.TestCase):
     @globaltest
     def test_dropout_p01(test_case):
+        # random ndim in range [1,3]
+        ndim = random(1, 4).to(int).value()
         for placement in all_placement():
             for sbp in all_sbp(placement, max_dim=1):
-                _test_dropout_p01(test_case, placement, sbp, p=0.0)
-                _test_dropout_p01(test_case, placement, sbp, p=1.0)
+                _test_dropout_p01(test_case, placement, sbp, ndim, p=0.0)
+                _test_dropout_p01(test_case, placement, sbp, ndim, p=1.0)
 
     @globaltest
     def test_dropout_eval(test_case):
+        # random ndim in range [1,3]
+        ndim = random(1, 4).to(int).value()
         for placement in all_placement():
             for sbp in all_sbp(placement, max_dim=1):
-                _test_dropout_eval(test_case, placement, sbp)
+                _test_dropout_eval_p01(test_case, placement, sbp, ndim, 0.0)
+                _test_dropout_eval_p01(test_case, placement, sbp, ndim, 1.0)
 
 
 if __name__ == "__main__":
