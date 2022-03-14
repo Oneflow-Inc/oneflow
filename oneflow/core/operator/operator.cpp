@@ -699,11 +699,11 @@ Maybe<void> Operator::GreedilyFindMinCopyCostNdSbp(
   if (nd_sbp_sig_list.size() == 1) {
     select_sbp_idx = 0;
   } else {
-    std::vector<bool> is_same_sbp(input_bns().size());
+    std::vector<bool> need_same_sbp(input_bns().size());
     for (int32_t ibn_id = 0; ibn_id < input_bns().size(); ibn_id++) {
       const auto& ibn = input_bns().at(ibn_id);
       const auto& blob_modifier_ = InputBlobModifier4Ibn(ibn);
-      is_same_sbp[ibn_id] = (blob_modifier_.has_is_mutable() && blob_modifier_.is_mutable())
+      need_same_sbp[ibn_id] = (blob_modifier_.has_is_mutable() && blob_modifier_.is_mutable())
                             || NotSupportBoxingDataType(
                                 JUST(NdSbpInferHint4Ibn(ibn))->logical_blob_desc().data_type());
     }
@@ -716,7 +716,7 @@ Maybe<void> Operator::GreedilyFindMinCopyCostNdSbp(
             producer_infer_hint4ibn->nd_sbp(),
             JUST(VectorAt(nd_sbp_sig_list, i)).bn_in_op2nd_sbp().at(ibn),
             producer_infer_hint4ibn->logical_blob_desc(), producer_infer_hint4ibn->parallel_desc(),
-            *JUST(GetParallelDesc4BnInOp(ibn)), is_same_sbp[ibn_id]));
+            *JUST(GetParallelDesc4BnInOp(ibn)), need_same_sbp[ibn_id]));
         // Reduce inquiries
         if (total_copy_cost > min_copy_cost) { break; }
       }
@@ -738,7 +738,7 @@ Maybe<void> Operator::GreedilyFindMinCopyCostNdSbp(
         const auto& ibn = input_bns().at(ibn_id);
         const NdSbp& nd_sbp = JUST(NdSbpInferHint4Ibn(ibn))->nd_sbp();
         err << " " << ibn << ": " << NdSbpToString(nd_sbp);
-        if (!is_same_sbp[ibn_id]) { err << " [ transfer disabled ]"; }
+        if (!need_same_sbp[ibn_id]) { err << " [ transfer disabled ]"; }
         err << ";";
       }
 
