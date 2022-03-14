@@ -47,22 +47,19 @@ inline Maybe<void> RebuildXrtCompiledJob(const OpGraph& op_graph, Job* job) {
 }
 
 inline bool XrtCompilationEnabled(const JobDesc& job_desc) {
+#ifdef OF_WITH_XRT
   if (!job_desc.has_xrt_config()) {
-#ifdef OF_WITH_XRT
     return xrt::XrtCompilationEnabled();
-#else
-    return false;
-#endif  // OF_WITH_XRT
   }
-  const XrtConfig& config = job_desc.xrt_config();
-#ifdef OF_WITH_XRT
-  xrt::InitXrtConfigurations(config);
-  return xrt::XrtCompilationEnabled();
+  else {
+    return xrt::XrtCompilationEnabled()
+          || (config.has_use_xla_jit() && config.use_xla_jit())
+          || (config.has_use_tensorrt() && config.use_tensorrt())
+          || (config.has_use_openvino() && config.use_openvino());
+  }
 #else
-  return (config.has_use_xla_jit() && config.use_xla_jit())
-         || (config.has_use_tensorrt() && config.use_tensorrt())
-         || (config.has_use_openvino() && config.use_openvino());
-#endif  // OF_WITH_XRT
+  return false;
+#endif
 }
 
 }  // namespace oneflow
