@@ -15,6 +15,7 @@ limitations under the License.
 */
 #include <type_traits>
 #include "oneflow/core/common/blocking_then_busy.h"
+#include "oneflow/core/framework/tensor_meta.h"
 #include "oneflow/core/vm/virtual_machine.h"
 #include "oneflow/core/framework/instructions_builder.h"
 #include "oneflow/core/framework/tensor_impl.h"
@@ -164,6 +165,7 @@ MirroredTensorMeta::MirroredTensorMeta()
     : TensorMeta(std::make_shared<const Shape>(), DataType::kInvalidDataType),
       device_(Symbol<Device>()),
       stride_(std::make_shared<const Stride>()),
+      is_contiguous_(false),
       storage_offset_(0) {}
 
 MirroredTensorMeta::MirroredTensorMeta(const std::shared_ptr<const Shape>& shape, DataType dtype,
@@ -171,13 +173,16 @@ MirroredTensorMeta::MirroredTensorMeta(const std::shared_ptr<const Shape>& shape
     : TensorMeta(shape, dtype),
       device_(device),
       stride_(std::make_shared<const Stride>(*shape)),
+      is_contiguous_(false),
       storage_offset_(0) {}
 
 MirroredTensorMeta::MirroredTensorMeta(const std::shared_ptr<const Shape>& shape, DataType dtype,
                                        Symbol<Device> device,
                                        const std::shared_ptr<const Stride>& stride,
                                        int64_t storage_offset)
-    : TensorMeta(shape, dtype), device_(device), stride_(stride), storage_offset_(storage_offset) {}
+    : TensorMeta(shape, dtype), device_(device), stride_(stride), storage_offset_(storage_offset) {
+  is_contiguous_ = IsContiguous(*shape, *stride);
+}
 
 bool MirroredTensorMeta::operator==(const MirroredTensorMeta& other) const {
   // It's correct to ignore is_dynamic_ field.
