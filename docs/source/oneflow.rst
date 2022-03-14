@@ -159,6 +159,7 @@ oneflow
             is_nonzero,
             is_tensor,
             no_grad,
+            set_grad_enabled,
             grad_enable,
             inference_mode,
             is_grad_enabled,
