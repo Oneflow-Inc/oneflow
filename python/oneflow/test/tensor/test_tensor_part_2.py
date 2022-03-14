@@ -907,6 +907,16 @@ class TestTensorNumpy(flow.unittest.TestCase):
         y = x.swapaxes(random(0, 2).to(int), random(0, 2).to(int))
         return y
 
+    @autotest(check_graph=False)
+    def test_mm_with_random_data(test_case):
+        device = random_device()
+        dim0 = random(low=2, high=10).to(int)
+        dim1 = random(low=3, high=20).to(int)
+        dim2 = random(low=2, high=11).to(int)
+        a = random_tensor(ndim=2, dim0=dim0, dim1=dim1)
+        b = random_tensor(ndim=2, dim0=dim1, dim1=dim2)
+        return torch.mm(a, b)
+
 
 if __name__ == "__main__":
     unittest.main()

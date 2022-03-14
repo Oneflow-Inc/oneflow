@@ -592,6 +592,9 @@ def _permute(self, *dims):
 def _matmul(self, other):
     return flow.matmul(self, other)
 
+def _mm(self, other):
+    return flow.mm(self, other)
+
 
 def _round(self):
     return flow.round(self)
@@ -1130,6 +1133,7 @@ def RegisterMethods():
     Tensor.square = _square
     Tensor.var = _var
     Tensor.std = _std
+    Tensor.mm = _mm
     Tensor.matmul = _matmul
     Tensor.round = _round
     Tensor.softplus = _softplus
