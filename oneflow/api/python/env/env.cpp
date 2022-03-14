@@ -20,39 +20,10 @@ limitations under the License.
 
 namespace py = pybind11;
 
-namespace oneflow {
-Maybe<void> EnableDTRStrategy(bool enable_dtr, size_t thres, int debug_level,
-                              const std::string& heuristic) {
-  CHECK_NOTNULL_OR_RETURN((Global<DTRConfig>::Get()));
-  *Global<DTRConfig>::Get() = DTRConfig(enable_dtr, thres, debug_level, heuristic);
-  CHECK_EQ_OR_RETURN(Global<vm::DtrCudaAllocator>::Get()->allocated_memory(), 0);
-  Global<vm::DtrCudaAllocator>::Delete();
-  // re-init the allocator using the new config
-  Global<vm::DtrCudaAllocator>::SetAllocated(new vm::DtrCudaAllocator(0));
-  return Maybe<void>::Ok();
-}
-
-Maybe<bool> CheckDTRStrategy() {
-  CHECK_NOTNULL_OR_RETURN((Global<DTRConfig>::Get()));
-  return Global<DTRConfig>::Get()->is_enabled;
-}
-}  // namespace oneflow
-
-void ApiEnableDTRStrategy(bool enable_dtr, size_t thres, int debug_level,
-                          const std::string& heuristic) {
-  oneflow::EnableDTRStrategy(enable_dtr, thres, debug_level, heuristic).GetOrThrow();
-}
-
-bool ApiCheckDTRStrategy() {
-   return oneflow::CheckDTRStrategy().GetOrThrow();
-}
-
 ONEFLOW_API_PYBIND11_MODULE("", m) {
   m.def("CurrentResource", &CurrentResource);
   m.def("EnvResource", &EnvResource);
   m.def("EnableEagerEnvironment", &EnableEagerEnvironment);
-  m.def("EnableDTRStrategy", &ApiEnableDTRStrategy);
-  m.def("CheckDTRStrategy", &ApiCheckDTRStrategy);
 
   m.def("IsEnvInited", &IsEnvInited);
   m.def("InitEnv", &InitEnv);

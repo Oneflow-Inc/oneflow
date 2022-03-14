@@ -30,6 +30,7 @@ limitations under the License.
 #include "oneflow/core/vm/access_blob_arg_cb_phy_instr_operand.h"
 #include "oneflow/core/register/ofblob.h"
 #include "oneflow/core/eager/eager_blob_object.h"
+#include "oneflow/core/eager/dtr_eager_blob_object.h"
 #include "oneflow/core/eager/opkernel_instruction_type.h"
 
 namespace oneflow {

@@ -18,9 +18,9 @@ limitations under the License.
 
 #include "oneflow/core/vm/cuda_allocator.h"
 #include "oneflow/core/device/cuda_util.h"
+#include "oneflow/core/eager/dtr_util.h"
 #include "oneflow/core/framework/tensor_pool.h"
 #include "oneflow/core/job/env_global_objects_scope.h"
-#include "oneflow/core/job/job_build_and_infer_ctx_mgr.h"
 #include <iostream>
 
 namespace oneflow {

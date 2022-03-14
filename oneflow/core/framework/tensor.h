@@ -21,7 +21,7 @@ limitations under the License.
 #include "oneflow/core/common/data_type.cfg.h"
 #include "oneflow/core/common/shape_view.h"
 #include "oneflow/core/common/shape.h"
-#include "oneflow/core/job/job_build_and_infer_ctx_mgr.h"
+#include "oneflow/core/eager/dtr_util.h"
 #include "oneflow/core/memory/memory_case.pb.h"
 #include "oneflow/core/framework/tensor_tuple.h"
 #include "oneflow/core/framework/tensor_impl.h"

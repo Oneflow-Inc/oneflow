@@ -19,12 +19,38 @@ limitations under the License.
 #include "oneflow/core/framework/tensor_pool.h"
 #include "oneflow/core/vm/dtr_cuda_allocator.h"
 #include "oneflow/core/framework/tensor.h"
+#include "oneflow/core/job/global_for.h"
 
 namespace py = pybind11;
 
-using namespace oneflow;
+namespace oneflow {
+
+Maybe<void> EnableDTRStrategy(bool enable_dtr, size_t thres, int debug_level,
+                              const std::string& heuristic) {
+  CHECK_NOTNULL_OR_RETURN((Global<DTRConfig>::Get()));
+  *Global<DTRConfig>::Get() = DTRConfig(enable_dtr, thres, debug_level, heuristic);
+  CHECK_EQ_OR_RETURN(Global<vm::DtrCudaAllocator>::Get()->allocated_memory(), 0);
+  Global<vm::DtrCudaAllocator>::Delete();
+  // re-init the allocator using the new config
+  Global<vm::DtrCudaAllocator>::SetAllocated(new vm::DtrCudaAllocator(0));
+  return Maybe<void>::Ok();
+}
+
+Maybe<bool> IsDTREnabled() {
+  CHECK_NOTNULL_OR_RETURN((Global<DTRConfig>::Get()));
+  return Global<DTRConfig>::Get()->is_enabled;
+}
+
+void ApiEnableDTRStrategy(bool enable_dtr, size_t thres, int debug_level,
+                          const std::string& heuristic) {
+  EnableDTRStrategy(enable_dtr, thres, debug_level, heuristic).GetOrThrow();
+}
+
+bool ApiIsDTREnabled() { return IsDTREnabled().GetOrThrow(); }
 
 ONEFLOW_API_PYBIND11_MODULE("dtr", m) {
+  m.def("enable", &ApiEnableDTRStrategy);
+  m.def("is_enabled", &ApiIsDTREnabled);
   m.def("allocated_memory",
         []() -> size_t { return Global<vm::DtrCudaAllocator>::Get()->allocated_memory(); });
   m.def("display_all_pieces",
@@ -57,3 +83,5 @@ ONEFLOW_API_PYBIND11_MODULE("dtr", m) {
     return false;
   });
 }
+
+}  // namespace oneflow

@@ -80,11 +80,6 @@ class EagerJobBuildAndInferCtxMgr : public JobBuildAndInferCtxMgr {
 };
 
 bool EagerExecutionEnabled();
-bool DTREnabled();
-size_t GetDTRMemoryThreshold();
-bool DTRDebugEnabled();
-int DTRDebugLevel();
-bool dtr_use_disjoint_set();
 
 Maybe<JobBuildAndInferCtxMgr*> GlobalJobBuildAndInferCtxMgr();
 Maybe<JobBuildAndInferCtx*> GetJobBuildAndInferCtx(const std::string& job_name);

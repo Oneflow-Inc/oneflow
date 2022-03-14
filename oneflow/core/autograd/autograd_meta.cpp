@@ -18,8 +18,8 @@ limitations under the License.
 #include "oneflow/core/framework/dtype.h"
 #include "oneflow/core/autograd/autograd_meta.h"
 #include "oneflow/core/eager/eager_blob_object.h"
+#include "oneflow/core/eager/dtr_eager_blob_object.h"
 #include "oneflow/core/functional/functional.h"
-#include "oneflow/core/job/job_build_and_infer_ctx_mgr.h"
 
 namespace oneflow {
 
@@ -57,13 +57,6 @@ Maybe<Tensor> TensorInfo::zeros() const {
 }
 
 Maybe<void> AutogradMeta::set_acc_grad(const std::shared_ptr<Tensor>& grad) {
-  // if (acc_grad_ != nullptr) {
-  //   if (auto dtr_grad_ebo = std::dynamic_pointer_cast<vm::DTREagerBlobObject>(
-  //           JUST(acc_grad_->eager_blob_object()))) {
-  //     std::cout << "unpin parameter.grad, compute op: " << dtr_grad_ebo->compute_op_type_name() << std::endl;
-  //     dtr_grad_ebo->unpin();
-  //   }
-  // }
   if (const auto& static_zeros_tensor = std::dynamic_pointer_cast<StaticZerosTensor>(grad)) {
     acc_grad_ = JUST(static_zeros_tensor->AsMirroredTensor());
   } else {

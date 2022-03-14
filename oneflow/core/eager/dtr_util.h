@@ -4,6 +4,13 @@
 #include "oneflow/core/common/maybe.h"
 
 namespace oneflow {
+
+bool DTREnabled();
+size_t GetDTRMemoryThreshold();
+bool DTRDebugEnabled();
+int DTRDebugLevel();
+bool dtr_use_disjoint_set();
+
 namespace vm {
 
 class DTREagerBlobObject;

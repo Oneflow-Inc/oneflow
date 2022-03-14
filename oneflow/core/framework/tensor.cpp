@@ -17,6 +17,7 @@ limitations under the License.
 #include "oneflow/core/framework/tensor_rpc_util.h"
 #include "oneflow/core/framework/nd_sbp.h"
 #include "oneflow/core/common/maybe.h"
+#include "oneflow/core/eager/dtr_eager_blob_object.h"
 #include "oneflow/core/job/parallel_desc.h"
 #include "oneflow/core/job/job_build_and_infer_ctx_mgr.h"
 #include "oneflow/core/job/job_build_and_infer_ctx.h"

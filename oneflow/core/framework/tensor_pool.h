@@ -22,7 +22,8 @@ limitations under the License.
 #include <chrono>
 
 #include "oneflow/core/job/env_global_objects_scope.h"
-#include "oneflow/core/eager/eager_blob_object.h"
+#include "oneflow/core/eager/dtr_eager_blob_object.h"
+#include "oneflow/core/eager/dtr_util.h"
 
 namespace oneflow {
 namespace one {
@@ -37,7 +38,7 @@ struct DTRTensorPool {
     std::cout << "Times of recomputation: " << num_recomputation_ << std::endl;
     std::cout << "Times of destruction: " << num_destruction_ << std::endl;
     std::cout << "duration_: " << duration_ << std::endl;
-    if (oneflow::DTRDebugEnabled()) { CHECK_JUST(display()); }
+    if (DTRDebugEnabled()) { CHECK_JUST(display()); }
   }
 
   void set_total_memory(size_t mem);

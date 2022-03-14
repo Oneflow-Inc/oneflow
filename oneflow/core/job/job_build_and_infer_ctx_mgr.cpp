@@ -104,14 +104,6 @@ Maybe<void> EagerJobBuildAndInferCtxMgr::VirtualCloseJob() {
 }
 
 bool EagerExecutionEnabled() { return *Global<bool, EagerExecution>::Get(); }
-bool DTREnabled() { return Global<DTRConfig>::Get()->is_enabled; }
-size_t GetDTRMemoryThreshold() { return Global<DTRConfig>::Get()->memory_threshold; }
-bool DTRDebugEnabled() { return DTREnabled() && Global<DTRConfig>::Get()->debug_level > 0; }
-int DTRDebugLevel() {
-  if (!DTREnabled()) { return 0; }
-  return Global<DTRConfig>::Get()->debug_level;
-}
-bool dtr_use_disjoint_set() { return Global<DTRConfig>::Get()->heuristic == "eq"; }
 
 Maybe<JobBuildAndInferCtxMgr*> GlobalJobBuildAndInferCtxMgr() {
   if (JUST(IsMultiClient())) {

@@ -15,6 +15,8 @@ limitations under the License.
 */
 #include "oneflow/core/common/symbol.h"
 #include "oneflow/core/common/decorator.h"
+#include "oneflow/core/eager/dtr_eager_blob_object.h"
+#include "oneflow/core/eager/dtr_util.h"
 #include "oneflow/core/framework/device.h"
 #include "oneflow/core/framework/op_interpreter.h"
 #include "oneflow/core/framework/op_interpreter/op_interpreter_util.h"
@@ -32,7 +34,6 @@ limitations under the License.
 #include "oneflow/core/memory/memory_case_util.h"
 #include "oneflow/core/operator/operator.h"
 #include "oneflow/user/kernels/stateful_local_opkernel.h"
-#include "oneflow/core/job/job_build_and_infer_ctx_mgr.h"
 #include "oneflow/core/vm/vm_util.h"
 #include "oneflow/core/autograd/autograd_mode.h"
 #include "oneflow/core/framework/placement_sbp_util.h"
@@ -103,7 +104,7 @@ Maybe<void> NaiveInterpret(const UserOpExpr& user_op_expr, const TensorTuple& in
   std::vector<bool> inplace_flag(outputs->size());
   for (int i = 0; i < outputs->size(); i++) {
     if (!outputs->at(i)) {
-      if (oneflow::DTREnabled()) {
+      if (DTREnabled()) {
         const auto& tensor_impl = std::make_shared<DTREagerMirroredTensorImpl>();
         outputs->at(i) = std::make_shared<DTRMirroredTensor>(tensor_impl);
         output_tensor_metas->at(i) = tensor_impl->mut_tensor_meta();
@@ -165,7 +166,7 @@ Maybe<void> NaiveInterpret(const UserOpExpr& user_op_expr, const TensorTuple& in
       CHECK_OR_RETURN(tensor_impl->tensor_meta()->dtype() == output_tensor_metas->at(i)->dtype());
     }
   }
-  if (oneflow::DTREnabled()) {
+  if (DTREnabled()) {
     CHECK_OR_RETURN(std::all_of(input_eager_blob_objects->begin(), input_eager_blob_objects->end(),
                                 [](const std::shared_ptr<vm::EagerBlobObject>& t) {
                                   return dynamic_cast<vm::DTREagerBlobObject*>(t.get()) != nullptr;

@@ -1,11 +1,26 @@
 #include "oneflow/core/eager/dtr_util.h"
 
 #include <algorithm>
-#include "oneflow/core/eager/eager_blob_object.h"
+#include "oneflow/core/eager/dtr_eager_blob_object.h"
 #include "oneflow/core/eager/local_call_opkernel_phy_instr_operand.h"
+#include "oneflow/core/job/global_for.h"
 #include "oneflow/user/kernels/stateful_local_opkernel.h"
 
 namespace oneflow {
+
+bool DTREnabled() { return Global<DTRConfig>::Get()->is_enabled; }
+
+size_t GetDTRMemoryThreshold() { return Global<DTRConfig>::Get()->memory_threshold; }
+
+bool DTRDebugEnabled() { return DTREnabled() && Global<DTRConfig>::Get()->debug_level > 0; }
+
+int DTRDebugLevel() {
+  if (!DTREnabled()) { return 0; }
+  return Global<DTRConfig>::Get()->debug_level;
+}
+
+bool dtr_use_disjoint_set() { return Global<DTRConfig>::Get()->heuristic == "eq"; }
+
 namespace vm {
 
 namespace {

@@ -17,6 +17,8 @@ limitations under the License.
 #include "oneflow/core/vm/instruction.h"
 #include "oneflow/core/vm/release_tensor_arg_phy_instr_operand.h"
 #include "oneflow/core/eager/eager_blob_object.h"
+#include "oneflow/core/eager/dtr_util.h"
+#include "oneflow/core/eager/dtr_eager_blob_object.h"
 #include "oneflow/core/vm/cuda_stream_type.h"
 #include "oneflow/core/vm/cpu_stream_type.h"
 #include "oneflow/core/vm/stream.h"
@@ -39,16 +41,16 @@ void EvictDTRTensorInstructionType::Compute(vm::Instruction* instruction) const 
   if (ParseBooleanFromEnv("OF_DTR_EE", true)) {
     const auto& ebo =
         CHECK_NOTNULL(std::dynamic_pointer_cast<vm::DTREagerBlobObject>(ptr->eager_blob_object()));
-    if (oneflow::DTRDebugEnabled()) {
+    if (DTRDebugEnabled()) {
       LOG(INFO) << "eager eviction tensor " << ebo.get() << " of op "
                 << ebo->compute_op_type_name() << " with size " << ebo->BlobBodyBytes();
     }
     if (!ebo->is_evictable()) {
-      if (oneflow::DTRDebugEnabled()) {
+      if (DTRDebugEnabled()) {
         LOG(INFO) << "but skip because non evictable" << std::endl;
       }
     } else if (ebo->is_pinned()) {
-      if (oneflow::DTRDebugEnabled()) { LOG(INFO) << "but skip because pinned" << std::endl; }
+      if (DTRDebugEnabled()) { LOG(INFO) << "but skip because pinned" << std::endl; }
     } else {
       CHECK_JUST(ebo->evict());
     }
@@ -82,7 +84,7 @@ void ReleaseTensorInstructionType::Compute(vm::Instruction* instruction) const {
   const auto* ptr =
       dynamic_cast<const vm::ReleaseTensorArgPhyInstrOperand*>(phy_instr_operand.get());
   CHECK_NOTNULL(ptr);
-  if (oneflow::DTRDebugEnabled()) {
+  if (DTRDebugEnabled()) {
     LOG(INFO) << "release tensor " << ptr->eager_blob_object().get() << " with ref count "
               << ptr->eager_blob_object().use_count() << std::endl;
   }

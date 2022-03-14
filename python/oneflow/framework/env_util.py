@@ -105,11 +105,11 @@ def enable_dtr(val=False, thres="1500MB", debug=False, heuristic="full"):
     else:
         raise TypeError("CUDA memory value should be a str or an int.")
 
-    return oneflow._oneflow_internal.EnableDTRStrategy(val, out, debug, heuristic)
+    return oneflow._oneflow_internal.dtr.enable(val, out, debug, heuristic)
 
 @enable_if.condition(hob.in_normal_mode)
 def is_dtr_enabled() -> bool:
-    return oneflow._oneflow_internal.CheckDTRStrategy()
+    return oneflow._oneflow_internal.dtr.is_enabled()
 
 
 def api_env_init() -> bool:
