@@ -104,31 +104,6 @@ xrt::Executable* XrtLaunchKernel<device_type>::BuildExecutable(
       // xrt::RunXrtPass("UpdateArgMetaData", graph.get(), options,
       //                 &this->job_desc());
     }
-    {
-      // TODO(zzk0): set config
-      const JobDesc& job_desc = GlobalJobDesc();
-      const XrtConfig& config = job_desc.xrt_config();
-
-      auto flags = kernel_conf->mutable_xrt_launch_conf()->mutable_flags();
-      *(flags.mutable_use_xla_jit()) =
-          FLAGS_use_xla_jit || (config.has_use_xla_jit() && config.use_xla_jit());
-      *(flags.mutable_use_tensorrt()) =
-          FLAGS_use_tensorrt || (config.has_tensorrt_config() && config.use_tensorrt());
-      *(flags.mutable_use_openvino()) =
-          FLAGS_use_openvino || (config.has_use_openvino() && config.use_openvino());
-
-      if (config.has_tensorrt_config()) {
-        const XrtConfig::TensorRTConfig& trt_config = config.tensorrt_config();
-        *(flags.mutable_tensorrt_fp16()) =
-            FLAGS_tensorrt_fp16 || (trt_config.has_use_fp16() && trt_config.use_fp16());
-        *(flags.mutable_tensorrt_int8()) =
-            FLAGS_tensorrt_int8 || (trt_config.has_use_int8() && trt_config.use_int8());
-        *(flags.mutable_int8_calibration()) = FLAGS_tensorrt_int8_calibration;
-        if (trt_config.has_int8_calibration()) {
-          *(flags.mutable_int8_calibration()) = trt_config.int8_calibration();
-        }
-      }
-    }
     xrt::XrtEngine engine = xrt::StringToXrtEngine(launch_conf.engine());
     xrt::XrtDevice device = xrt::DeviceTypeToXrtDevice(device_type);
     xrt::GraphCompiler compiler(this->op_conf().name(), engine, device, device_ordinal);
@@ -220,8 +195,7 @@ void XrtLaunchKernel<device_type>::ForwardDataContent(KernelContext* ctx) const 
   }
   if (executable->engine() == xrt::XrtEngine::TENSORRT) {
     CHECK_EQ(device_type, DeviceType::kCUDA);
-    // TODO(zzk0): get options from op_conf refactor here
-    const auto& launch_conf = this->op_conf().xrt_launch_conf();
+    const auto& launch_conf = kernel_conf().xrt_launch_conf();
     const auto& flags = launch_conf.flags();
     run_options.max_batch_size = FLAGS_max_batch_size;
     run_options.tensorrt_fp16 = flags.tensorrt_fp16();

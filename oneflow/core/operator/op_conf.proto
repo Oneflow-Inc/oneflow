@@ -369,14 +369,6 @@ message XrtLaunchOpConf {
     repeated Argument argument = 1;
     repeated OperatorConf node = 2;
   }
-  message Flags {
-    optional bool use_xla_jit = 1 [default = false];
-    optional bool use_tensorrt = 2 [default = false];
-    optional bool tensorrt_fp16 = 200 [default = false];
-    optional bool tensorrt_int8 = 201 [default = false];
-    optional string tensorrt_int8_calibration = 211 [default = ""];
-    optional bool use_openvino = 3 [default = false];
-  }
   repeated string in = 1;
   repeated string out = 2;
   required Function function = 3;
@@ -391,7 +383,6 @@ message XrtLaunchOpConf {
   map<string, SbpSignature> sbp_signatures = 8;
   optional bool model_update = 9 [default = false];
   map<string, BlobDescProto> lbn2logical_blob_desc = 10;
-  required Flags flags = 11;
 }
 
 message ModelInitV2OpConf {

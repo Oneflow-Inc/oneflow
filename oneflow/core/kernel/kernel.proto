@@ -20,7 +20,17 @@ message UserKernelConf {
 }
 
 message XrtLaunchKernelConf {
+  message Flags {
+    optional bool use_xla_jit = 1 [default = false];
+    optional bool use_tensorrt = 2 [default = false];
+    optional bool tensorrt_fp16 = 200 [default = false];
+    optional bool tensorrt_int8 = 201 [default = false];
+    optional string tensorrt_int8_calibration = 211 [default = ""];
+    optional bool use_openvino = 3 [default = false];
+  }
+
   required ParallelContext parallel_ctx = 1;
+  optional Flags flags = 2;
 }
 
 message SyncDynamicResizeKernelConf {
