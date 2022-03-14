@@ -26,10 +26,9 @@ using oneflow::Maybe;
 namespace impl {
 
 template<typename T>
-using IsHoldedInsideSharedPtrByMaybe =
-    std::is_same<decltype(
-                     std::declval<Maybe<T>>().Data_YouAreNotAllowedToCallThisFuncOutsideThisFile()),
-                 std::shared_ptr<T>>;
+using IsHoldedInsideSharedPtrByMaybe = std::is_same<
+    decltype(std::declval<Maybe<T>>().Data_YouAreNotAllowedToCallThisFuncOutsideThisFile()),
+    std::shared_ptr<T>>;
 
 template<typename T, typename std::enable_if_t<IsSupportedByPybind11WhenInsideSharedPtr<T>::value
                                                    && IsHoldedInsideSharedPtrByMaybe<T>::value,
@@ -58,7 +57,8 @@ struct maybe_caster {
   bool load(handle src, bool convert) {
     if (!src) { return false; }
     if (src.is_none()) {
-      // Maybe<T> does not accept `None` from Python. Users can use Optional in those cases.
+      // Maybe<T> (except Maybe<void>) does not accept `None` from Python. Users can use Optional in
+      // those cases.
       return false;
     }
     value_conv inner_caster;
@@ -87,7 +87,13 @@ struct maybe_caster<Maybe<void>> {
     return none().inc_ref();
   }
 
-  bool load(handle src, bool convert) { return false; }
+  bool load(handle src, bool convert) {
+    if (src && src.is_none()) {
+      return true;  // None is accepted because NoneType (i.e. void) is the value type of
+                    // Maybe<void>
+    }
+    return false;
+  }
 
   PYBIND11_TYPE_CASTER(Maybe<void>, _("Maybe[void]"));
 };
