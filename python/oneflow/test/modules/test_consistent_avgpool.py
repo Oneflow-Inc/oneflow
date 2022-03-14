@@ -129,13 +129,13 @@ class TestAvgPoolingModule(flow.unittest.TestCase):
     @globaltest
     def test_avg_pooling(test_case):
         for placement in all_placement():
-            for sbp in all_sbp(placement, max_dim=3):
+            for sbp in all_sbp(placement, max_dim=2):
                 _test_avgpool1d_with_random_data(test_case, placement, sbp)
                 _test_functional_avgpool1d_with_random_data(test_case, placement, sbp)
-            for sbp in all_sbp(placement, max_dim=4):
+            for sbp in all_sbp(placement, max_dim=2):
                 _test_avgpool2d_with_random_data(test_case, placement, sbp)
                 _test_functional_avgpool2d_with_random_data(test_case, placement, sbp)
-            for sbp in all_sbp(placement, max_dim=5):
+            for sbp in all_sbp(placement, max_dim=2):
                 _test_avgpool3d_with_random_data(test_case, placement, sbp)
                 _test_functional_avgpool3d_with_random_data(test_case, placement, sbp)
 
