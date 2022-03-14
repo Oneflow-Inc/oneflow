@@ -36,7 +36,7 @@ class TestExpandConsistent(flow.unittest.TestCase):
         # random ndim in range [1,4]
         ndim = random(1, 5).to(int).value()
         for placement in all_placement():
-            for sbp in all_sbp(placement, max_dim=ndim):
+            for sbp in all_sbp(placement, max_dim=2):
                 _test_expand_impl(test_case, ndim, placement, sbp)
 
 
