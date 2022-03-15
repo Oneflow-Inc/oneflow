@@ -98,8 +98,6 @@ Maybe<void> AutogradInterpreter::Apply(const OpExpr& op_expr, const TensorTuple&
   // Lazy mode will construct backward compute graph in passes, so disable autograd if lazy mode.
   if (requires_grad && !LazyMode::is_enabled()) {
     const auto& grad_closure = JUST(op_expr.GetOrCreateOpGradClosure());
-    JUST(grad_closure->Capture(inputs, *outputs, ctx));
-
     auto backward_fn =
         std::make_shared<std::function<Maybe<void>(const TensorTuple&, TensorTuple*, bool)>>(
             [=](const TensorTuple& out_grads, TensorTuple* in_grads,
@@ -110,6 +108,9 @@ Maybe<void> AutogradInterpreter::Apply(const OpExpr& op_expr, const TensorTuple&
             });
     JUST(GetThreadLocalAutogradEngine()->AddBackwardFuncPtr(op_expr.op_type_name() + "_backward",
                                                             backward_fn, inputs, outputs));
+    // Capture inputs and outputs after `AddBackwardFuncPtr` because of that grad function
+    // node has been attached to them.
+    JUST(grad_closure->Capture(inputs, *outputs, ctx));
   }
   for (auto& output : *outputs) {
     output->set_is_leaf(inputs.size() == 0 || !requires_grad);
