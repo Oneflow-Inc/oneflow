@@ -204,6 +204,7 @@ class EnvHolder(object):
 def GetEnv():
     return EnvHolder()
 
+
 device_tag2default_parallel_conf = {}
 default_env_proto = _DefaultEnvProto()
 config_master_addr = ctrl_bootstrap_pb.Address()
