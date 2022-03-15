@@ -409,6 +409,10 @@ jobs:
           oneflow-src: ${{ env.ONEFLOW_SRC }}
           include-distributed: true
           world-size: 2
+          devices: |
+            cuda
+          tests: |
+            module
 
   find-test-cache:
     name: "Find test cache"
@@ -434,6 +438,41 @@ jobs:
             self-hosted
             linux
           oneflow-src: ${{ env.ONEFLOW_SRC }}
+          devices: |
+            cuda
+          tests: |
+            module
+            misc
+            speed-test
+
+  find-benchmark-cache:
+    name: "Find benchmark cache"
+    if: github.event.pull_request.draft == false && github.base_ref == 'master'
+    runs-on: ubuntu-latest
+    needs: [build-oneflow]
+    env:
+      ONEFLOW_SRC: .
+    outputs:
+      matrix: ${{ steps.find-cache.outputs.matrix }}
+    steps:
+      - name: Checkout Oneflow-Inc/oneflow
+        uses: actions/checkout@v2
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+          repository: ${{github.event.pull_request.head.repo.full_name}}
+      - uses: Oneflow-Inc/get-oneflow/cache-complete/matrix/test@support-openvino
+        name: find cache
+        id: find-cache
+        timeout-minutes: 5
+        with:
+          runner-labels: |
+            self-hosted
+            linux
+          oneflow-src: ${{ env.ONEFLOW_SRC }}
+          devices: |
+            cuda
+          tests: |
+            benchmark
 
   test-distributed:
     name: Distributed test suite
