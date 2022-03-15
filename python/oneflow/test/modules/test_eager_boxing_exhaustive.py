@@ -119,8 +119,6 @@ class TestEagerBoxingSymmetricExhaustiveTesting(flow.unittest.TestCase):
         arg_dict["shape"] = [(12, 12), (18, 24), (15, 17)]
         arg_dict["in_device"] = ["cpu", "cuda"]
         arg_dict["out_device"] = ["cpu", "cuda"]
-        arg_dict["in_device"] = ["cpu"]
-        arg_dict["out_device"] = ["cpu"]
         arg_dict["in_device_list"] = [[0, 1], [1, 2, 3], [0, 1, 2, 3]]
         arg_dict["out_device_list"] = [[0, 1, 3], [0, 1, 2, 3]]
         for arg in GenArgList(arg_dict):
@@ -131,8 +129,6 @@ class TestEagerBoxingSymmetricExhaustiveTesting(flow.unittest.TestCase):
         arg_dict = OrderedDict()
         arg_dict["in_device"] = ["cpu", "cuda"]
         arg_dict["out_device"] = ["cpu", "cuda"]
-        arg_dict["in_device"] = ["cpu"]
-        arg_dict["out_device"] = ["cpu"]
         for arg in GenArgList(arg_dict):
             _test_eager_boxing_symmetric_2d_exhaustive_testing(test_case, *arg)
 
@@ -145,8 +141,6 @@ class TestEagerBoxingSpecialSplitAxisExhaustiveTesting(flow.unittest.TestCase):
         arg_dict = OrderedDict()
         arg_dict["in_device"] = ["cpu", "cuda"]
         arg_dict["out_device"] = ["cpu", "cuda"]
-        arg_dict["in_device"] = ["cpu"]
-        arg_dict["out_device"] = ["cpu"]
         arg_dict["in_device_list"] = [[0, 1], [1, 2, 3], [0, 1, 2, 3]]
         arg_dict["out_device_list"] = [[0, 1, 3], [0, 1, 2, 3]]
         for arg in GenArgList(arg_dict):
@@ -157,8 +151,6 @@ class TestEagerBoxingSpecialSplitAxisExhaustiveTesting(flow.unittest.TestCase):
         arg_dict = OrderedDict()
         arg_dict["in_device"] = ["cpu", "cuda"]
         arg_dict["out_device"] = ["cpu", "cuda"]
-        arg_dict["in_device"] = ["cpu"]
-        arg_dict["out_device"] = ["cpu"]
         for arg in GenArgList(arg_dict):
             _test_eager_boxing_2d_special_split_axis(test_case, *arg)
 
