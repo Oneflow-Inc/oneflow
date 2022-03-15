@@ -39,9 +39,9 @@ def _test_eager_boxing_normal_1d_exhaustive_testing(
     in_placement = flow.placement(type=in_device, ranks=in_device_list)
     out_placement = flow.placement(type=out_device, ranks=out_device_list)
     for elem in itertools.product(sbps, sbps):
-        x = random_tensor(
-            len(shape), *shape, requires_grad=False
-        ).oneflow.to_global(placement=in_placement, sbp=elem[0])
+        x = random_tensor(len(shape), *shape, requires_grad=False).oneflow.to_global(
+            placement=in_placement, sbp=elem[0]
+        )
         y = x.to_global(placement=out_placement, sbp=elem[1])
         test_case.assertTrue(np.allclose(y.numpy(), x.numpy()))
 
@@ -62,9 +62,9 @@ def _test_eager_boxing_symmetric_2d_exhaustive_testing(
     in_placement = flow.placement(type=in_device, ranks=[[0, 1], [2, 3]])
     out_placement = flow.placement(type=out_device, ranks=[[0, 1], [2, 3]])
     for elem in nd_sbps:
-        x = random_tensor(
-            len(shape), *shape, requires_grad=False
-        ).oneflow.to_global(placement=in_placement, sbp=elem[0])
+        x = random_tensor(len(shape), *shape, requires_grad=False).oneflow.to_global(
+            placement=in_placement, sbp=elem[0]
+        )
         y = x.to_global(placement=out_placement, sbp=elem[1])
         test_case.assertTrue(np.allclose(y.numpy(), x.numpy()))
 
@@ -82,9 +82,9 @@ def _test_eager_boxing_1d_special_split_axis(
     in_placement = flow.placement(type=in_device, ranks=in_device_list)
     out_placement = flow.placement(type=out_device, ranks=out_device_list)
     for elem in itertools.product(sbps, sbps):
-        x = random_tensor(
-            len(shape), *shape, requires_grad=False
-        ).oneflow.to_global(placement=in_placement, sbp=elem[0])
+        x = random_tensor(len(shape), *shape, requires_grad=False).oneflow.to_global(
+            placement=in_placement, sbp=elem[0]
+        )
         y = x.to_global(placement=out_placement, sbp=elem[1])
         test_case.assertTrue(np.allclose(y.numpy(), x.numpy()))
 
@@ -103,9 +103,9 @@ def _test_eager_boxing_2d_special_split_axis(test_case, in_device, out_device):
     in_placement = flow.placement(type=in_device, ranks=[[0, 1], [2, 3]])
     out_placement = flow.placement(type=out_device, ranks=[[0, 1], [2, 3]])
     for elem in nd_sbps:
-        x = random_tensor(
-            len(shape), *shape, requires_grad=False
-        ).oneflow.to_global(placement=in_placement, sbp=elem[0])
+        x = random_tensor(len(shape), *shape, requires_grad=False).oneflow.to_global(
+            placement=in_placement, sbp=elem[0]
+        )
         y = x.to_global(placement=out_placement, sbp=elem[1])
         test_case.assertTrue(np.allclose(y.numpy(), x.numpy()))
 
