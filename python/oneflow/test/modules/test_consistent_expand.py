@@ -21,12 +21,12 @@ import oneflow.unittest
 from oneflow.test_utils.automated_test_util import *
 
 
-@autotest(n=1, auto_backward=True, check_graph=False)
+@autotest(n=10, auto_backward=True, check_graph=False)
 def _test_expand_impl(test_case, ndim, placement, sbp):
     dims = [random(1, 4) * 8 for i in range(ndim)]
     x = random_tensor(ndim, *dims)
     y = x.to_global(placement=placement, sbp=sbp)
-    z = y.expand(3, *dims)
+    z = y.expand(ndim, *dims)
     return z
 
 
@@ -36,7 +36,7 @@ class TestExpandConsistent(flow.unittest.TestCase):
         # random ndim in range [1,4]
         ndim = random(1, 5).to(int).value()
         for placement in all_placement():
-            for sbp in all_sbp(placement, max_dim=2):
+            for sbp in all_sbp(placement, max_dim=min(2, ndim)):
                 _test_expand_impl(test_case, ndim, placement, sbp)
 
 
