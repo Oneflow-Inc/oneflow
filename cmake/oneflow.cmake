@@ -440,7 +440,8 @@ if(BUILD_TESTING)
       WORKING_DIRECTORY
       ${PROJECT_SOURCE_DIR})
     find_package(Threads REQUIRED)
-    target_link_libraries(oneflow_cpp_api_testexe oneflow_cpp ${oneflow_test_libs} Threads::Threads)
+    target_link_libraries(oneflow_cpp_api_testexe oneflow_cpp ${oneflow_third_party_libs}
+                          ${oneflow_test_libs} Threads::Threads)
   endif()
 endif()
 
