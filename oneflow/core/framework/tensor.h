@@ -305,9 +305,7 @@ class ProxyTensor : public TensorIf<DerivedT> {
   virtual void set_grad_fn_node(const std::shared_ptr<FunctionNode>& grad_fn_node) {
     tensor_->set_grad_fn_node(grad_fn_node);
   }
-  virtual std::shared_ptr<FunctionNode> mut_grad_fn_node() {
-    return tensor_->mut_grad_fn_node();
-  }
+  virtual std::shared_ptr<FunctionNode> mut_grad_fn_node() { return tensor_->mut_grad_fn_node(); }
 
   virtual Maybe<EagerMirroredTensorImpl*> mut_eager_mirrored_tensor_impl() {
     return tensor_->mut_eager_mirrored_tensor_impl();
