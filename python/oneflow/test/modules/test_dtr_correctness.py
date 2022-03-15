@@ -30,16 +30,17 @@ import resnet50_model_dtr
 
 
 def sync():
-    flow._oneflow_internal.eager.multi_client.Sync()
+    flow.comm.barrier()
     # sync_tensor.numpy()
 
 
 class TestDTRCorrectness(flow.unittest.TestCase):
     def setUp(self):
         super().setUp()
+        assert os.getenv('ONEFLOW_DISABLE_VIEW') is not None, "Please set ONEFLOW_DISABLE_VIEW to True, 1 or ON"
         # wait for all previous operations to finish and 
         # check the memory is empty at the beginning of every test case
-        flow._oneflow_internal.eager.multi_client.Sync()
+        flow.comm.barrier()
         self.assertEqual(flow._oneflow_internal.dtr.allocated_memory(), 0)
 
     def test_dtr_correctness(test_case):
