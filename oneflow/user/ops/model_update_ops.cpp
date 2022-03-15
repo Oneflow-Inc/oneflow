@@ -253,10 +253,6 @@ Maybe<void> InferLambUpdateTensorDesc(user_op::InferContext* ctx) {
   const user_op::TensorDesc& v = ctx->InputTensorDesc("v", 0);
   JUST(CheckShapeLike(&v, &model));
   JUST(CheckLearningRateShape(ctx));
-  const user_op::TensorDesc& beta1_t = ctx->InputTensorDesc("beta1_t", 0);
-  const user_op::TensorDesc& beta2_t = ctx->InputTensorDesc("beta2_t", 0);
-  JUST(CheckScalarShape(&beta1_t));
-  JUST(CheckScalarShape(&beta2_t));
   if (ctx->has_input("scale_by_tensor", 0)) {
     const auto& scale_by_tensor = ctx->InputTensorDesc("scale_by_tensor", 0);
     JUST(CheckScalarShape(&scale_by_tensor));
@@ -270,11 +266,6 @@ Maybe<void> InferLambUpdateDataType(user_op::InferContext* ctx) {
   JUST(CheckDataTypeLike(&m, &model));
   const user_op::TensorDesc& v = ctx->InputTensorDesc("v", 0);
   JUST(CheckDataTypeLike(&v, &model));
-  const DataType data_type = model.data_type();
-  const user_op::TensorDesc& beta1_t = ctx->InputTensorDesc("beta1_t", 0);
-  const user_op::TensorDesc& beta2_t = ctx->InputTensorDesc("beta2_t", 0);
-  JUST(CheckScalarDataType(&beta1_t, data_type));
-  JUST(CheckScalarDataType(&beta2_t, data_type));
   JUST(CheckLearningRateDataType(ctx));
   if (ctx->has_input("scale_by_tensor", 0)) {
     const auto& scale_by_tensor = ctx->InputTensorDesc("scale_by_tensor", 0);
@@ -282,6 +273,7 @@ Maybe<void> InferLambUpdateDataType(user_op::InferContext* ctx) {
   }
   return Maybe<void>::Ok();
 }
+
 Maybe<void> SetInputArgModifierMutable(const user_op::GetInputArgModifier& GetInputArgModifierFn,
                                        const std::string& arg_name, int32_t arg_index) {
   user_op::InputArgModifier* arg_modifier = GetInputArgModifierFn(arg_name, arg_index);
@@ -295,7 +287,9 @@ Maybe<void> AdamInputArgModifyFn(const user_op::GetInputArgModifier& GetInputArg
   JUST(SetInputArgModifierMutable(GetInputArgModifierFn, "model", 0));
   JUST(SetInputArgModifierMutable(GetInputArgModifierFn, "m", 0));
   JUST(SetInputArgModifierMutable(GetInputArgModifierFn, "v", 0));
-  JUST(SetInputArgModifierMutable(GetInputArgModifierFn, "max_v", 0));
+  if (conf.has_input("max_v", 0)) {
+    JUST(SetInputArgModifierMutable(GetInputArgModifierFn, "max_v", 0));
+  }
   return Maybe<void>::Ok();
 }
 
@@ -311,8 +305,6 @@ Maybe<void> LambInputArgModifyFn(const user_op::GetInputArgModifier& GetInputArg
   JUST(SetInputArgModifierMutable(GetInputArgModifierFn, "model", 0));
   JUST(SetInputArgModifierMutable(GetInputArgModifierFn, "m", 0));
   JUST(SetInputArgModifierMutable(GetInputArgModifierFn, "v", 0));
-  JUST(SetInputArgModifierMutable(GetInputArgModifierFn, "beta1_t", 0));
-  JUST(SetInputArgModifierMutable(GetInputArgModifierFn, "beta2_t", 0));
   return Maybe<void>::Ok();
 }
 
@@ -583,14 +575,13 @@ Maybe<void> InferLarsUpdateDataType(user_op::InferContext* ctx) {
 /* static */ Maybe<void> AdamUpdateOp::GetSbp(user_op::SbpContext* ctx) {
   const user_op::TensorDesc& model = ctx->LogicalTensorDesc4InputArgNameAndIndex("model", 0);
   FOR_RANGE(int64_t, axis, 0, model.shape().NumAxes()) {
-    ctx->NewBuilder()
-        .Broadcast(ctx->inputs())
-        .Split(user_op::OpArg("model", 0), axis)
-        .Split(user_op::OpArg("model_diff", 0), axis)
-        .Split(user_op::OpArg("m", 0), axis)
-        .Split(user_op::OpArg("v", 0), axis)
-        .Split(user_op::OpArg("max_v", 0), axis)
-        .Build();
+    std::vector<user_op::OpArg> split_args;
+    split_args.emplace_back("model", 0);
+    split_args.emplace_back("model_diff", 0);
+    split_args.emplace_back("m", 0);
+    split_args.emplace_back("v", 0);
+    if (ctx->user_op_conf().has_input("max_v", 0)) { split_args.emplace_back("max_v", 0); }
+    ctx->NewBuilder().Broadcast(ctx->inputs()).Split(split_args, axis).Build();
   }
   return Maybe<void>::Ok();
 }
@@ -651,22 +642,24 @@ Maybe<void> InferLarsUpdateDataType(user_op::InferContext* ctx) {
   std::vector<user_op::OpArg> broadcast_args;
   broadcast_args.emplace_back("learning_rate", 0);
   broadcast_args.emplace_back("model_diff_indices", 0);
+
+  std::vector<user_op::OpArg> split_args;
+  split_args.emplace_back("model", 0);
+  split_args.emplace_back("m", 0);
+  split_args.emplace_back("v", 0);
+  if (ctx->user_op_conf().has_input("max_v", 0)) { split_args.emplace_back("max_v", 0); }
+
   ctx->NewBuilder()
       .Broadcast(broadcast_args)
       .Broadcast(user_op::OpArg("model_diff_values", 0))
-      .Split(user_op::OpArg("model", 0), 0)
-      .Split(user_op::OpArg("m", 0), 0)
-      .Split(user_op::OpArg("v", 0), 0)
-      .Split(user_op::OpArg("max_v", 0), 0)
+      .Split(split_args, 0)
       .Build();
+
   FOR_RANGE(int64_t, i, 1, model.shape().NumAxes()) {
     ctx->NewBuilder()
         .Broadcast(broadcast_args)
         .Split(user_op::OpArg("model_diff_values", 0), model_diff_indices.shape().NumAxes() + i - 1)
-        .Split(user_op::OpArg("model", 0), i)
-        .Split(user_op::OpArg("m", 0), i)
-        .Split(user_op::OpArg("v", 0), i)
-        .Split(user_op::OpArg("max_v", 0), i)
+        .Split(split_args, i)
         .Build();
   }
   return Maybe<void>::Ok();

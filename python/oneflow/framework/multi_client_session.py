@@ -119,3 +119,10 @@ class MultiClientSession(object):
     def _update_scope_attr_name2defaultVal(self):
         items = c_api_util.GetScopeConfigDef().attr_name2attr_def.items()
         self.scope_attr_name2default_val_ = {k: v.default_val for (k, v) in items}
+
+    def update_resource_eagerly(self, resource_config):
+        self._check_status(self.Status.INITED)
+        config_proto_str = text_format.MessageToString(resource_config)
+        oneflow._oneflow_internal.MultiClientSessionContextUpdateResource(
+            config_proto_str
+        )

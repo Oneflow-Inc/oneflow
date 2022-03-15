@@ -25,6 +25,7 @@ limitations under the License.
 #include "oneflow/core/thread/thread_manager.h"
 #include "oneflow/core/job/eager_nccl_comm_manager.h"
 #include "oneflow/core/ep/cuda/cuda_stream.h"
+#include "oneflow/core/common/constant.h"
 
 namespace oneflow {
 namespace ccl {
@@ -69,11 +70,15 @@ template<typename T>
 struct DtypeAllReduce<T, kSum> {
   static Maybe<void> Call(const void* void_in, void* void_out, size_t elem_cnt,
                           Symbol<ParallelDesc> parallel_desc) {
+    int64_t parallel_num = parallel_desc->parallel_num();
+    if (parallel_num == 1) {
+      if (void_in != void_out) { std::memcpy(void_out, void_in, elem_cnt * sizeof(T)); }
+      return Maybe<void>::Ok();
+    }
     const T* in = reinterpret_cast<const T*>(void_in);
     T* out = reinterpret_cast<T*>(void_out);
-    int64_t parallel_num = parallel_desc->parallel_num();
     BalancedSplitter bs(elem_cnt, parallel_num);
-    std::vector<T> recv_buffer(bs.At(0).size());
+    auto recv_buffer = std::make_unique<T[]>(bs.At(0).size());
     Optional<int64_t> parallel_id;
     JUST(GetTensorDevice4CurrentProcessCtx(parallel_desc, &parallel_id));
     const auto& rank_group = JUST(RankGroup::New(parallel_desc));
@@ -90,7 +95,7 @@ struct DtypeAllReduce<T, kSum> {
       }
       size_t send_size = bs.At(send_part_id).size();
       int64_t recv_part_id = RingDecrease(part_id, parallel_num);
-      T* recv_ptr = recv_buffer.data();
+      T* recv_ptr = recv_buffer.get();
       size_t recv_size = bs.At(recv_part_id).size();
       NaiveAsyncTransportCtx ctx(
           transport_token,
@@ -112,7 +117,7 @@ struct DtypeAllReduce<T, kSum> {
       if (recv_size > 0) {
         JUST(TransportUtil::ReceiveFromPrevRankInRing(rank_group, transport_token, &ctx));
       }
-      JUST(TransportUtil::WaitUntilDoneOrTimeout(ctx, TransportUtil::TimeoutSeconds()));
+      JUST(ctx.WaitDone());
       const T* cur_in = &in[bs.At(recv_part_id).begin()];
       T* cur_out = &out[bs.At(recv_part_id).begin()];
       if (recv_size > 0) { VecAdd(recv_size, cur_out, cur_in, recv_ptr); }
@@ -145,7 +150,7 @@ struct DtypeAllReduce<T, kSum> {
       if (recv_size > 0) {
         JUST(TransportUtil::ReceiveFromPrevRankInRing(rank_group, transport_token, &ctx));
       }
-      JUST(TransportUtil::WaitUntilDoneOrTimeout(ctx, TransportUtil::TimeoutSeconds()));
+      JUST(ctx.WaitDone());
     }
     return Maybe<void>::Ok();
   }
@@ -172,16 +177,21 @@ template<typename T>
 struct DtypeReduceScatter<T, kSum> {
   static Maybe<void> Call(const void* void_in, void* void_out, size_t elem_cnt,
                           Symbol<ParallelDesc> parallel_desc) {
+    int64_t parallel_num = parallel_desc->parallel_num();
+    if (parallel_num == 1) {
+      if (void_in != void_out) { std::memcpy(void_out, void_in, elem_cnt * sizeof(T)); }
+      return Maybe<void>::Ok();
+    }
+
     const T* in = reinterpret_cast<const T*>(void_in);
     T* out = reinterpret_cast<T*>(void_out);
 
-    int64_t parallel_num = parallel_desc->parallel_num();
     BalancedSplitter bs(elem_cnt * parallel_num, parallel_num);
     const auto& opt_parallel_id = JUST(GetParallelId4CurrentProcessCtx(parallel_desc));
     CHECK_OR_RETURN(opt_parallel_id->has_value());
     int64_t parallel_id = JUST(*opt_parallel_id);
 
-    std::vector<T> recv_buffer(bs.At(0).size());
+    auto recv_buffer = std::make_unique<T[]>(bs.At(0).size());
     const auto& rank_group = JUST(RankGroup::New(parallel_desc));
 
     TransportToken transport_token =
@@ -197,7 +207,7 @@ struct DtypeReduceScatter<T, kSum> {
       }
       size_t send_size = bs.At(send_part_id).size();
       int64_t recv_part_id = RingDecrease(part_id, parallel_num);
-      T* recv_ptr = recv_buffer.data();
+      T* recv_ptr = recv_buffer.get();
       size_t recv_size = bs.At(recv_part_id).size();
       NaiveAsyncTransportCtx ctx(
           transport_token,
@@ -219,7 +229,7 @@ struct DtypeReduceScatter<T, kSum> {
       if (recv_size > 0) {
         JUST(TransportUtil::ReceiveFromPrevRankInRing(rank_group, transport_token, &ctx));
       }
-      JUST(TransportUtil::WaitUntilDoneOrTimeout(ctx, TransportUtil::TimeoutSeconds()));
+      JUST(ctx.WaitDone());
       const T* cur_in = &in[bs.At(recv_part_id).begin()];
       if (recv_size > 0) { VecAdd(recv_size, out, cur_in, recv_ptr); }
     }
@@ -245,8 +255,12 @@ Maybe<void> ReduceScatter<DeviceType::kCPU>(const void* in, void* out, size_t el
 template<>
 Maybe<void> AllGather<DeviceType::kCPU>(const void* in, void* out, size_t elem_cnt, DataType dtype,
                                         Symbol<ParallelDesc> parallel_desc, ep::Stream* stream) {
-  char* char_out = reinterpret_cast<char*>(out);
   int64_t parallel_num = parallel_desc->parallel_num();
+  if (parallel_num == 1) {
+    if (in != out) { std::memcpy(out, in, elem_cnt * GetSizeOfDataType(dtype)); }
+    return Maybe<void>::Ok();
+  }
+  char* char_out = reinterpret_cast<char*>(out);
   size_t chunk_size = elem_cnt * GetSizeOfDataType(dtype);
   BalancedSplitter bs(chunk_size * parallel_num, parallel_num);
   const auto& opt_parallel_id = JUST(GetParallelId4CurrentProcessCtx(parallel_desc));
@@ -286,7 +300,7 @@ Maybe<void> AllGather<DeviceType::kCPU>(const void* in, void* out, size_t elem_c
     if (recv_size > 0) {
       JUST(TransportUtil::ReceiveFromPrevRankInRing(rank_group, transport_token, &ctx));
     }
-    JUST(TransportUtil::WaitUntilDoneOrTimeout(ctx, TransportUtil::TimeoutSeconds()));
+    JUST(ctx.WaitDone());
   }
   return Maybe<void>::Ok();
 }
@@ -307,25 +321,29 @@ Maybe<void> CpuBroadcast(const void* in, void* out, size_t buffer_size, int64_t 
                          const TransportToken& transport_token) {
   static thread_local std::vector<int64_t> rank_heap{};
   JUST(InitBroadcastRankHeap(&rank_heap, *parallel_desc, root));
-  NaiveAsyncTransportCtx transport_ctx(
-      transport_token,
-      [&](void** buffer, std::size_t* size, std::function<void()>* Cb) -> Maybe<void> {
-        *buffer = (root == GlobalProcessCtx::Rank() ? const_cast<void*>(in) : out);
-        *size = buffer_size;
-        *Cb = [] {};
-        return Maybe<void>::Ok();
-      },
-      [&](void** buffer, std::size_t* size, std::function<void()>* Cb) -> Maybe<void> {
-        *buffer = out;
-        *size = buffer_size;
-        *Cb = [] {};
-        return Maybe<void>::Ok();
-      });
-  JUST(TransportUtil::ReceiveDataFromParentInHeap(rank_heap, transport_token, &transport_ctx));
-  JUST(TransportUtil::WaitUntilDoneOrTimeout(transport_ctx, TransportUtil::TimeoutSeconds()));
-  JUST(TransportUtil::SendDataToChildrenInHeap(rank_heap, transport_token, &transport_ctx));
-  if (GlobalProcessCtx::Rank() == root && out != in) { std::memcpy(out, in, buffer_size); }
-  JUST(TransportUtil::WaitUntilDoneOrTimeout(transport_ctx, TransportUtil::TimeoutSeconds()));
+  auto Send = [&](void** buffer, std::size_t* size, std::function<void()>* Cb) -> Maybe<void> {
+    *buffer = (root == GlobalProcessCtx::Rank() ? const_cast<void*>(in) : out);
+    *size = buffer_size;
+    *Cb = [] {};
+    return Maybe<void>::Ok();
+  };
+  auto Recv = [&](void** buffer, std::size_t* size, std::function<void()>* Cb) -> Maybe<void> {
+    *buffer = out;
+    *size = buffer_size;
+    *Cb = [] {};
+    return Maybe<void>::Ok();
+  };
+  {
+    NaiveAsyncTransportCtx transport_ctx(transport_token, Send, Recv);
+    JUST(TransportUtil::ReceiveDataFromParentInHeap(rank_heap, transport_token, &transport_ctx));
+    JUST_MSG(transport_ctx.WaitDone(), kAsymmetricCodeErrorMsg);
+  }
+  {
+    NaiveAsyncTransportCtx transport_ctx(transport_token, Send, Recv);
+    JUST(TransportUtil::SendDataToChildrenInHeap(rank_heap, transport_token, &transport_ctx));
+    if (GlobalProcessCtx::Rank() == root && out != in) { std::memcpy(out, in, buffer_size); }
+    JUST_MSG(transport_ctx.WaitDone(), kAsymmetricCodeErrorMsg);
+  }
   return Maybe<void>::Ok();
 }
 
@@ -345,16 +363,16 @@ struct DtypeReduce<T, kSum> {
     size_t size = root == GlobalProcessCtx::Rank() && void_in != void_out ? 0 : bs.At(0).size();
     T* tmp_out = nullptr;
     // void_out is only used on rank root and ignored for other ranks.
-    std::vector<T> tmp_out_buffer(size);
+    auto tmp_out_buffer = std::make_unique<T[]>(size);
     int64_t parallel_id_of_root =
         JUST(parallel_desc->ParallelId4MachineDeviceId(root, GlobalProcessCtx::LocalRank(root)));
     if (root == GlobalProcessCtx::Rank() && void_in != void_out) {
       tmp_out = &reinterpret_cast<T*>(void_out)[bs.At(parallel_id_of_root).begin()];
     } else {
-      tmp_out = tmp_out_buffer.data();
+      tmp_out = tmp_out_buffer.get();
     }
 
-    std::vector<T> recv_buffer(bs.At(0).size());
+    auto recv_buffer = std::make_unique<T[]>(bs.At(0).size());
     Optional<int64_t> parallel_id;
     JUST(GetTensorDevice4CurrentProcessCtx(parallel_desc, &parallel_id));
     const auto& rank_group = JUST(RankGroup::New(parallel_desc));
@@ -371,7 +389,7 @@ struct DtypeReduce<T, kSum> {
       }
       size_t send_size = bs.At(send_part_id).size();
       int64_t recv_part_id = RingDecrease(part_id, parallel_num);
-      T* recv_ptr = recv_buffer.data();
+      T* recv_ptr = recv_buffer.get();
       size_t recv_size = bs.At(recv_part_id).size();
       NaiveAsyncTransportCtx ctx(
           transport_token,
@@ -393,7 +411,7 @@ struct DtypeReduce<T, kSum> {
       if (recv_size > 0) {
         JUST(TransportUtil::ReceiveFromPrevRankInRing(rank_group, transport_token, &ctx));
       }
-      JUST(TransportUtil::WaitUntilDoneOrTimeout(ctx, TransportUtil::TimeoutSeconds()));
+      JUST(ctx.WaitDone());
       const T* cur_in = &in[bs.At(recv_part_id).begin()];
       if (recv_size > 0) { VecAdd(recv_size, tmp_out, cur_in, recv_ptr); }
     }
@@ -426,7 +444,7 @@ struct DtypeReduce<T, kSum> {
               UNIMPLEMENTED_THEN_RETURN();
             });
         JUST(TransportUtil::SendDataToRank(root, transport_token, &ctx));
-        JUST(TransportUtil::WaitUntilDoneOrTimeout(ctx, TransportUtil::TimeoutSeconds()));
+        JUST(ctx.WaitDone());
       }
       if (recv_size > 0 && root == GlobalProcessCtx::Rank()) {
         NaiveAsyncTransportCtx ctx(
@@ -441,7 +459,7 @@ struct DtypeReduce<T, kSum> {
               return Maybe<void>::Ok();
             });
         JUST(TransportUtil::ReceiveDataFromRank(src_rank, transport_token, &ctx));
-        JUST(TransportUtil::WaitUntilDoneOrTimeout(ctx, TransportUtil::TimeoutSeconds()));
+        JUST(ctx.WaitDone());
       }
     }
     return Maybe<void>::Ok();
@@ -493,7 +511,7 @@ Maybe<void> Send<DeviceType::kCPU>(const void* in, size_t elem_cnt, DataType dty
         UNIMPLEMENTED_THEN_RETURN();
       });
   JUST(TransportUtil::SendDataToRank(dst, transport_token, &transport_ctx));
-  JUST(TransportUtil::WaitUntilDoneOrTimeout(transport_ctx, TransportUtil::TimeoutSeconds()));
+  JUST(transport_ctx.WaitDone());
   return Maybe<void>::Ok();
 }
 
@@ -532,7 +550,7 @@ Maybe<void> Recv<DeviceType::kCPU>(void* out, size_t elem_cnt, DataType dtype, i
         return Maybe<void>::Ok();
       });
   JUST(TransportUtil::ReceiveDataFromRank(src, transport_token, &transport_ctx));
-  JUST(TransportUtil::WaitUntilDoneOrTimeout(transport_ctx, TransportUtil::TimeoutSeconds()));
+  JUST(transport_ctx.WaitDone());
   return Maybe<void>::Ok();
 }
 

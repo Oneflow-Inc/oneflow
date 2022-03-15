@@ -70,7 +70,7 @@ void CpuTopK(ep::Stream* /*stream*/, const T* in_ptr, int64_t* indices_ptr, int6
       bc.Decrease();
     });
   }
-  bc.WaitUntilCntEqualZero();
+  bc.WaitForeverUntilCntEqualZero();
 }
 
 }  // namespace

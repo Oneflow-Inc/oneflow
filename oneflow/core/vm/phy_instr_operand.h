@@ -19,6 +19,7 @@ limitations under the License.
 #include <functional>
 #include <set>
 #include <vector>
+#include <memory>
 #include "oneflow/core/intrusive/intrusive.h"
 
 namespace oneflow {
@@ -35,6 +36,9 @@ class PhyInstrOperand {
 
   virtual const DependenceVector& input_dependences() const = 0;
   virtual const DependenceVector& output_dependences() const = 0;
+  virtual MirroredObject* stream_sequential_dependence() const {
+    return stream_sequential_dependence_;
+  }
 
   static std::function<void(MirroredObject*)> SetInserter(DependenceVector* dependences) {
     auto existed =
@@ -45,7 +49,9 @@ class PhyInstrOperand {
   }
 
  protected:
-  PhyInstrOperand() = default;
+  PhyInstrOperand() : stream_sequential_dependence_(nullptr) {}
+
+  MirroredObject* stream_sequential_dependence_;
 };
 
 }  // namespace vm

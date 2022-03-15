@@ -45,7 +45,7 @@ Maybe<void> InferTensorDesc(user_op::InferContext* ctx) {
   } else if (like) {
     output_num_axes = like->shape().NumAxes();
   } else {
-    throw Error::UnimplementedError();
+    OF_UNIMPLEMENTED() << "Input tensor and like tensor cannot be empty simultaneously.";
   }
   CHECK_EQ_OR_RETURN(output_num_axes, index_num_axes);
 
@@ -95,7 +95,7 @@ Maybe<void> InferScalarTensorDesc(user_op::InferContext* ctx) {
 Maybe<void> InputArgModifierFn(const user_op::GetInputArgModifier& GetInputArgModifierFn,
                                const user_op::UserOpConfWrapper&) {
   user_op::InputArgModifier* indices_modifier = GetInputArgModifierFn("index", 0);
-  CHECK(indices_modifier != nullptr);
+  CHECK_OR_RETURN(indices_modifier != nullptr);
   indices_modifier->set_requires_grad(false);
 
   return Maybe<void>::Ok();
@@ -104,7 +104,7 @@ Maybe<void> InputArgModifierFn(const user_op::GetInputArgModifier& GetInputArgMo
 Maybe<void> InputScalarArgModifierFn(const user_op::GetInputArgModifier& GetInputArgModifierFn,
                                      const user_op::UserOpConfWrapper&) {
   user_op::InputArgModifier* indices_modifier = GetInputArgModifierFn("index", 0);
-  CHECK(indices_modifier != nullptr);
+  CHECK_OR_RETURN(indices_modifier != nullptr);
   indices_modifier->set_requires_grad(false);
 
   return Maybe<void>::Ok();

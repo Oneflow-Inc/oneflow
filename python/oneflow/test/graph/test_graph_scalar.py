@@ -97,7 +97,7 @@ def _test_scalar_train_graph(test_case, device):
         )
 
 
-def _test_scalar_consistent_train_graph(test_case, placement):
+def _test_scalar_global_train_graph(test_case, placement):
     sbp_b = flow.sbp.broadcast
 
     class MyModule(flow.nn.Module):
@@ -121,7 +121,7 @@ def _test_scalar_consistent_train_graph(test_case, placement):
         eager_out_list.append(of_eager_out)
 
     lazy_module = MyModule()
-    lazy_module.to_consistent(placement=placement, sbp=sbp_b)
+    lazy_module.to_global(placement=placement, sbp=sbp_b)
 
     class ScalarTrainGraph(flow.nn.Graph):
         def __init__(self):
@@ -139,7 +139,7 @@ def _test_scalar_consistent_train_graph(test_case, placement):
     scalar_g = ScalarTrainGraph()
     for i in range(3):
         x = flow.tensor(i * 1.0, requires_grad=False)
-        x = x.to_consistent(placement=placement, sbp=sbp_b)
+        x = x.to_global(placement=placement, sbp=sbp_b)
         of_lazy_out = scalar_g(x)
         lazy_out_list.append(of_lazy_out)
 
@@ -166,11 +166,11 @@ class TestScalarGraph(oneflow.unittest.TestCase):
     def test_scalar_train_graph_cpu(test_case):
         _test_scalar_train_graph(test_case, flow.device("cpu"))
 
-    def test_scalar_consistent_train_graph_gpu(test_case):
-        _test_scalar_consistent_train_graph(test_case, flow.placement("cuda", {0: [0]}))
+    def test_scalar_global_train_graph_gpu(test_case):
+        _test_scalar_global_train_graph(test_case, flow.placement("cuda", ranks=[0]))
 
-    def test_scalar_consistent_train_graph_cpu(test_case):
-        _test_scalar_consistent_train_graph(test_case, flow.placement("cpu", {0: [0]}))
+    def test_scalar_global_train_graph_cpu(test_case):
+        _test_scalar_global_train_graph(test_case, flow.placement("cpu", ranks=[0]))
 
 
 if __name__ == "__main__":

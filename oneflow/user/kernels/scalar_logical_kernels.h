@@ -22,6 +22,7 @@ limitations under the License.
 namespace oneflow {
 
 #define INSTANTIATE_SCALAR_LOGICAL_FUNCTORS(device_type, binary_op)      \
+  template struct ScalarLogicalFunctor<device_type, binary_op, bool>;    \
   template struct ScalarLogicalFunctor<device_type, binary_op, uint8_t>; \
   template struct ScalarLogicalFunctor<device_type, binary_op, int8_t>;  \
   template struct ScalarLogicalFunctor<device_type, binary_op, int32_t>; \
@@ -32,12 +33,12 @@ namespace oneflow {
 template<DeviceType device_type, template<typename T> class BIN_OP, typename T>
 struct ScalarLogicalFunctor final {
   void operator()(ep::Stream* stream, const int64_t elem_cnt, const T scalar, const T* in,
-                  int8_t* out);
+                  bool* out);
 };
 
 template<template<typename> class UnaryFunctor, typename T>
 OF_DEVICE_FUNC void DoScalarLogical(const int64_t elem_cnt, const T scalar, const T* in,
-                                    int8_t* out) {
+                                    bool* out) {
   XPU_1D_KERNEL_LOOP(idx, elem_cnt) { out[idx] = UnaryFunctor<T>::Invoke(in[idx], scalar); }
 }
 

@@ -38,6 +38,7 @@ NumPyArrayInternal::~NumPyArrayInternal() {
 
 Maybe<int> OFDataTypeToNumpyType(DataType of_data_type) {
   switch (of_data_type) {
+    case DataType::kBool: return NPY_BOOL;
     case DataType::kFloat: return NPY_FLOAT32;
     case DataType::kDouble: return NPY_FLOAT64;
     case DataType::kInt8: return NPY_INT8;
@@ -53,11 +54,13 @@ Maybe<int> OFDataTypeToNumpyType(DataType of_data_type) {
 
 Maybe<DataType> NumpyTypeToOFDataType(int np_type) {
   switch (np_type) {
+    case NPY_BOOL: return DataType::kBool;
     case NPY_FLOAT32: return DataType::kFloat;
     case NPY_FLOAT64: return DataType::kDouble;
     case NPY_INT8: return DataType::kInt8;
     case NPY_INT32: return DataType::kInt32;
-    case NPY_INT64: return DataType::kInt64;
+    case NPY_INT64:
+    case NPY_LONGLONG: return DataType::kInt64;
     case NPY_UINT8: return DataType::kUInt8;
     case NPY_FLOAT16: return DataType::kFloat16;
     default:

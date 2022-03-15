@@ -46,6 +46,8 @@ from oneflow.nn.modules.batchnorm_fused import (
     FusedBatchNorm2d,
     FusedBatchNorm3d,
 )
+from oneflow.nn.modules.fused_mlp import FusedMLP
+
 from oneflow.nn.modules.container import (
     ModuleDict,
     ModuleList,
@@ -67,6 +69,9 @@ from oneflow.nn.modules.moving_average_min_max_observer import (
 )
 from oneflow.nn.modules.fake_quantization import FakeQuantization
 from oneflow.nn.modules.quantization import Quantization
+from oneflow.nn.modules.distributed_partial_fc_sample import (
+    DistributedPariticalFCSample,
+)
 
 from oneflow.nn.modules.dataset import (
     COCOReader,
@@ -81,6 +86,7 @@ from oneflow.nn.modules.dataset import (
     OFRecordReader as OfrecordReader,
     OFRecordBytesDecoder,
     GPTIndexedBinDataReader,
+    OneRecReader,
 )
 
 from oneflow.nn.modules.dropout import Dropout

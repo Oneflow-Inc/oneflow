@@ -81,10 +81,10 @@ class OFRecordDataLoader(flow.nn.Module):
 
 def _train_with_graph(iter_num=3):
     B = [flow.sbp.broadcast]
-    P0 = flow.placement("cuda", {0: [0]})
-    P1 = flow.placement("cuda", {0: [1]})
-    P2 = flow.placement("cuda", {0: [2]})
-    P3 = flow.placement("cuda", {0: [3]})
+    P0 = flow.placement("cuda", ranks=[0])
+    P1 = flow.placement("cuda", ranks=[1])
+    P2 = flow.placement("cuda", ranks=[2])
+    P3 = flow.placement("cuda", ranks=[3])
 
     train_data_loader = OFRecordDataLoader(
         ofrecord_root="/dataset/ImageNet/ofrecord",
@@ -110,27 +110,21 @@ def _train_with_graph(iter_num=3):
             def __init__(self):
                 super().__init__()
                 # Initlize module and move each module to the right placement of its pipeline stage.
-                self.stage_0_m = StageModule(1452, 8, False).to_consistent(
+                self.stage_0_m = StageModule(1452, 8, False).to_global(
                     placement=P0, sbp=B
                 )
-                self.stage_1_m = StageModule(8, 8, False).to_consistent(
-                    placement=P1, sbp=B
-                )
-                self.stage_2_m = StageModule(8, 8, False).to_consistent(
-                    placement=P2, sbp=B
-                )
-                self.stage_3_m = StageModule(8, 1, False).to_consistent(
-                    placement=P3, sbp=B
-                )
+                self.stage_1_m = StageModule(8, 8, False).to_global(placement=P1, sbp=B)
+                self.stage_2_m = StageModule(8, 8, False).to_global(placement=P2, sbp=B)
+                self.stage_3_m = StageModule(8, 1, False).to_global(placement=P3, sbp=B)
 
             def forward(self, image):
                 out = self.stage_0_m(image)
                 # Move tensor between different pipeline stages.
-                out = out.to_consistent(placement=P1, sbp=B)
+                out = out.to_global(placement=P1, sbp=B)
                 out = self.stage_1_m(out)
-                out = out.to_consistent(placement=P2, sbp=B)
+                out = out.to_global(placement=P2, sbp=B)
                 out = self.stage_2_m(out)
-                out = out.to_consistent(placement=P3, sbp=B)
+                out = out.to_global(placement=P3, sbp=B)
                 out = self.stage_3_m(out)
                 return out
 
@@ -159,17 +153,17 @@ def _train_with_graph(iter_num=3):
             image, label = self.train_data_loader()
 
             # Dataloader's outputs are on host memory, so move it to device 0.
-            image = image.to_consistent(placement=P0, sbp=B)
+            image = image.to_global(placement=P0, sbp=B)
             pp_m.train()
             out = self.pp_m(image)
 
             # Dataloader's outputs are on host memory, so move it to device 3.
-            label = label.to_consistent(placement=P3, sbp=B)
+            label = label.to_global(placement=P3, sbp=B)
             loss = self.mseloss(out, label.to(dtype=flow.float32))
             loss.backward()
 
             # Returning image and label is just for re-using data in eager test
-            image = image.to_consistent(placement=P3, sbp=B)
+            image = image.to_global(placement=P3, sbp=B)
             return loss, image, label
 
     pp_g = PipelineGraph()

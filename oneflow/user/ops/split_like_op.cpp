@@ -122,8 +122,8 @@ namespace oneflow {
 
 /*static*/ Maybe<void> SplitLikeOp::CheckAttr(const user_op::UserOpDefWrapper&,
                                               const user_op::UserOpConfWrapper& op_conf) {
-  CHECK_OR_RETURN(op_conf.input_size("like") >= 2);
-  CHECK_OR_RETURN(op_conf.output_size("out") >= 2);
+  CHECK_OR_RETURN(op_conf.input_size("like") >= 1);
+  CHECK_OR_RETURN(op_conf.output_size("out") >= 1);
   return Maybe<void>::Ok();
 }
 

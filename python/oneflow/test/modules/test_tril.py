@@ -25,7 +25,7 @@ class TestTril(flow.unittest.TestCase):
     @autotest(check_graph=True)
     def test_tril_without_diag(test_case):
         device = random_device()
-        x = random_pytorch_tensor(
+        x = random_tensor(
             ndim=4,
             dim0=random(1, 5).to(int),
             dim1=random(1, 5).to(int),
@@ -41,7 +41,7 @@ class TestTril(flow.unittest.TestCase):
     def test_tril_with_diag(test_case):
         device = random_device()
         diagonal = random(-3, 3).to(int)
-        x = random_pytorch_tensor(
+        x = random_tensor(
             ndim=4,
             dim0=random(1, 5).to(int),
             dim1=random(1, 5).to(int),

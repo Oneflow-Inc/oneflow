@@ -24,21 +24,8 @@ limitations under the License.
 #include "oneflow/core/common/data_type.h"
 #include "oneflow/core/common/spin_counter.h"
 #include "oneflow/core/rpc/include/global_process_ctx.h"
-#include "oneflow/core/common/thread_local_callback.h"
 
 namespace oneflow {
-
-/*static*/ Maybe<void> TransportUtil::WaitUntilDoneOrTimeout(const AsyncTransportCtx& ctx,
-                                                             int64_t seconds) {
-  bool is_printed = false;
-  const auto& TryPrintStackInfo = [&is_printed] {
-    if (!is_printed) { blocking::StackInfoCallback(); }
-    is_printed = true;
-  };
-  JUST(SpinWaitUntilTimeout([&] { return *ctx.flying_cnt() > 0; }, seconds, TryPrintStackInfo,
-                            TransportUtil::BlockingWarningIntervalSeconds()));
-  return Maybe<void>::Ok();
-}
 
 namespace {
 
@@ -49,17 +36,17 @@ template<Maybe<void> (*SendOrRecv)(const TransportToken&, int64_t, void*, std::s
          typename ForEachRankT>
 Maybe<void> AccessToOtherRanks(const ForEachRankT& ForEachRank, const TransportToken& token,
                                AsyncTransportCtx* ctx) {
-  const auto& flying_cnt = ctx->flying_cnt();
-  JUST(ForEachRank([&](int64_t rank) -> Maybe<void> {
+  auto* blocking_counter = ctx->mut_blocking_counter();
+  JUST(ForEachRank([&, blocking_counter](int64_t rank) -> Maybe<void> {
     if (rank == GlobalProcessCtx::Rank()) { return Maybe<void>::Ok(); }
-    ++*flying_cnt;
+    blocking_counter->Increase();
     void* buffer = nullptr;
     std::size_t size = 0;
     std::function<void()> Callback;
     JUST((ctx->*Prepare)(rank, &buffer, &size, &Callback));
-    JUST(SendOrRecv(token, rank, buffer, size, [flying_cnt, Callback]() {
+    JUST(SendOrRecv(token, rank, buffer, size, [blocking_counter, Callback]() {
       Callback();
-      --*flying_cnt;
+      blocking_counter->Decrease();
     }));
     return Maybe<void>::Ok();
   }));

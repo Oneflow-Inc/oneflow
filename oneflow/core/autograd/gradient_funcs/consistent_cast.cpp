@@ -26,7 +26,7 @@ namespace one {
 
 struct CastConsistentCaptureState : public AutoGradCaptureState {
   Symbol<ParallelDesc> parallel_desc;
-  Symbol<cfg::NdSbp> nd_sbp;
+  Symbol<NdSbp> nd_sbp;
   std::shared_ptr<const Shape> shape;
   Symbol<DType> dtype;
 };
@@ -55,7 +55,7 @@ class CastToConsistent : public OpExprGradFunction<CastConsistentCaptureState> {
     std::shared_ptr<Tensor> out_grad = out_grads.at(0);
     CHECK_OR_RETURN(out_grad->is_consistent());
     {
-      Symbol<cfg::NdSbp> nd_sbp_constraint = ctx->nd_sbp;
+      Symbol<NdSbp> nd_sbp_constraint = ctx->nd_sbp;
       Symbol<ParallelDesc> parallel_desc_constraint = ctx->parallel_desc;
       out_grad =
           JUST(functional::ToConsistent(out_grad, parallel_desc_constraint,

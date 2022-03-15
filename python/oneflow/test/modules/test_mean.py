@@ -20,7 +20,7 @@ from collections import OrderedDict
 import numpy as np
 
 from oneflow.test_utils.automated_test_util import *
-from test_util import GenArgList
+from oneflow.test_utils.test_util import GenArgList
 
 import oneflow as flow
 import oneflow.unittest
@@ -83,7 +83,7 @@ class TestMean(flow.unittest.TestCase):
     def test_mean_with_random_data(test_case):
         device = random_device()
         dim = random(1, 4).to(int)
-        x = random_pytorch_tensor(ndim=4, dtype=float).to(device)
+        x = random_tensor(ndim=4, dtype=float).to(device)
         return torch.mean(x, dim)
 
 

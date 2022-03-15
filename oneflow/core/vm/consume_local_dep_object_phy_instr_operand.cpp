@@ -22,17 +22,23 @@ namespace vm {
 
 void ConsumeLocalDepObjectPhyInstrOperand::ForEachConstMirroredObject(
     const std::function<void(MirroredObject* compute)>& DoEach) const {
-  if (modifier_ == "const") { DoEach(compute_local_dep_object_->mut_mirrored_object()); }
+  if (modifier_ == "const") {
+    for (const auto& dep : compute_local_dep_objects_) { DoEach(dep.get()); }
+  }
 }
 
 void ConsumeLocalDepObjectPhyInstrOperand::ForEachMutMirroredObject(
     const std::function<void(MirroredObject* compute)>& DoEach) const {
-  if (modifier_ == "mut") { DoEach(compute_local_dep_object_->mut_mirrored_object()); }
+  if (modifier_ == "mut") {
+    for (const auto& dep : compute_local_dep_objects_) { DoEach(dep.get()); }
+  }
 }
 
 void ConsumeLocalDepObjectPhyInstrOperand::ForEachMut2MirroredObject(
     const std::function<void(MirroredObject* compute)>& DoEach) const {
-  if (modifier_ == "mut2") { DoEach(compute_local_dep_object_->mut_mirrored_object()); }
+  if (modifier_ == "mut2") {
+    for (const auto& dep : compute_local_dep_objects_) { DoEach(dep.get()); }
+  }
 }
 
 }  // namespace vm

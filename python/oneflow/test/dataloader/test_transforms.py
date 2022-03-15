@@ -16,10 +16,12 @@ limitations under the License.
 import os
 import unittest
 
+import flowvision as vision
+import flowvision.transforms as transforms
+
 import oneflow as flow
 import oneflow.nn as nn
 import oneflow.optim as optim
-import oneflow.utils.vision.transforms as transforms
 import oneflow.unittest
 from data_utils import load_data_cifar10
 
@@ -44,7 +46,7 @@ class Net(nn.Module):
         return x
 
 
-def test(test_case):
+def _test(test_case):
     if os.getenv("ONEFLOW_TEST_CPU_ONLY"):
         device = flow.device("cpu")
     else:
@@ -56,7 +58,7 @@ def test(test_case):
     criterion = nn.CrossEntropyLoss()
     criterion.to(device)
 
-    transform = flow.utils.vision.transforms.Compose(
+    transform = transforms.Compose(
         [
             transforms.Pad(10),
             transforms.RandomHorizontalFlip(p=0.5),
@@ -116,7 +118,7 @@ def test(test_case):
 @flow.unittest.skip_unless_1n1d()
 class TestCifarDataset(flow.unittest.TestCase):
     def test_cifar_dataset(test_case):
-        test(test_case)
+        _test(test_case)
 
 
 if __name__ == "__main__":

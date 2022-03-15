@@ -14,9 +14,45 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 #include <glog/logging.h>
+#include <random>
 #include "oneflow/core/common/str_util.h"
 
 namespace oneflow {
+
+namespace internal {
+
+std::string JoinPathImpl(std::initializer_list<std::string> paths) {
+  std::string result;
+  for (const std::string& path : paths) {
+    if (path.empty()) continue;
+    if (result.empty()) {
+      result = path;
+      continue;
+    }
+    if (result[result.size() - 1] == '/') {
+      if (IsAbsolutePath(path)) {
+        result.append(path.substr(1));
+      } else {
+        result.append(path);
+      }
+    } else {
+      if (IsAbsolutePath(path)) {
+        result.append(path);
+      } else {
+        result += ("/" + path);
+      }
+    }
+  }
+  return result;
+}
+
+std::string GetHashKeyImpl(std::initializer_list<int> integers) {
+  std::string result = "";
+  for (int integer : integers) { result += std::to_string(integer) + ","; }
+  return result;
+}
+
+}  // namespace internal
 
 const char* StrToToken(const char* text, const std::string& delims, std::string* token) {
   token->clear();
@@ -146,39 +182,19 @@ std::string ToLower(const std::string& cap) {
   return small;
 }
 
-namespace internal {
+// https://stackoverflow.com/questions/440133/how-do-i-create-a-random-alpha-numeric-string-in-c
+std::string GenAlphaNumericString(size_t len) {
+  static thread_local const std::string alphanum("0123456789"
+                                                 "ABCDEFGHIJKLMNOPQRSTUVWXYZ"
+                                                 "abcdefghijklmnopqrstuvwxyz");
+  std::string tmp_s;
+  tmp_s.reserve(len);
 
-std::string JoinPathImpl(std::initializer_list<std::string> paths) {
-  std::string result;
-  for (std::string path : paths) {
-    if (path.empty()) continue;
-    if (result.empty()) {
-      result = path;
-      continue;
-    }
-    if (result[result.size() - 1] == '/') {
-      if (IsAbsolutePath(path)) {
-        result.append(path.substr(1));
-      } else {
-        result.append(path);
-      }
-    } else {
-      if (IsAbsolutePath(path)) {
-        result.append(path);
-      } else {
-        result += ("/" + path);
-      }
-    }
-  }
-  return result;
+  std::random_device rd{};
+  std::mt19937 mt(rd());
+  std::uniform_int_distribution<> dist(0, 1024);
+  for (int i = 0; i < len; ++i) { tmp_s += alphanum.at(dist(mt) % alphanum.size()); }
+  return tmp_s;
 }
-
-std::string GetHashKeyImpl(std::initializer_list<int> integers) {
-  std::string result = "";
-  for (int integer : integers) { result += std::to_string(integer) + ","; }
-  return result;
-}
-
-}  // namespace internal
 
 }  // namespace oneflow

@@ -32,16 +32,16 @@ struct InterfaceOpUtil final {
   static Maybe<void> GetInputLikeOpSbpSignature(const InterfaceBlobConf& blob_conf,
                                                 const PbRpf<std::string>& input_bns,
                                                 const PbRpf<std::string>& output_bns,
-                                                cfg::SbpSignature* sbp_signature);
+                                                SbpSignature* sbp_signature);
   static Maybe<void> GetOutputLikeOpSbpSignature(const InterfaceBlobConf& blob_conf,
                                                  const PbRpf<std::string>& input_bns,
                                                  const PbRpf<std::string>& output_bns,
-                                                 cfg::SbpSignature* sbp_signature);
+                                                 SbpSignature* sbp_signature);
   static Maybe<void> InitBlobConf(InterfaceBlobConf* blob_conf,
                                   const ParallelBlobConf& parallel_blob_conf);
 
   static Maybe<void> ParseNdSbpFromBlobConf(const InterfaceBlobConf& blob_conf,
-                                            const ParallelDesc& parallel_desc, cfg::NdSbp* nd_sbp);
+                                            const ParallelDesc& parallel_desc, NdSbp* nd_sbp);
 };
 
 }  // namespace oneflow

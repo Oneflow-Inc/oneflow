@@ -29,29 +29,33 @@ limitations under the License.
 #include "oneflow/xrt/tensorrt/trt_int8_calibrator.h"
 #endif  // WITH_TENSORRT
 
-DEFINE_int32(clustering_minimum_nodes, EnvToInt(FLAGS_clustering_minimum_nodes, 1),
-             "Minium nodes of a cluster after clustering.");
-DEFINE_int32(clustering_maximum_nodes, EnvToInt(FLAGS_clustering_maximum_nodes, 1000),
-             "Maxium nodes of a cluster after clustering.");
-DEFINE_bool(strict_clustering, EnvToBool(FLAGS_strict_clustering, true),
-            "Option to clustering with strict dependencies analysis.");
+// Minium nodes of a cluster after clustering.
+int32_t FLAGS_clustering_minimum_nodes = EnvToInt(FLAGS_clustering_minimum_nodes, 1);
+// Maxium nodes of a cluster after clustering.
+int32_t FLAGS_clustering_maximum_nodes = EnvToInt(FLAGS_clustering_maximum_nodes, 1000);
+// Option to clustering with strict dependencies analysis.
+bool FLAGS_strict_clustering = EnvToBool(FLAGS_strict_clustering, true);
 
 // DEFINE_string(engine, EnvToString(FLAGS_engine, "XLA"),
 //               "Which third party engine to be used. XLA and TENSORRT are "
 //               "valid, Default means using no engine.");
-DEFINE_bool(use_xla_jit, EnvToBool(FLAGS_use_xla_jit, false), "It's optional to use xla jit.");
-DEFINE_bool(use_tensorrt, EnvToBool(FLAGS_use_tensorrt, false), "It's optional to use tensorrt.");
-DEFINE_bool(use_openvino, EnvToBool(FLAGS_use_openvino, false), "It's optional to use openvino.");
 
-DEFINE_bool(tensorrt_fp16, EnvToBool(FLAGS_tensorrt_fp16, false),
-            "Enable fp16 precision for TENSORRT engine.");
-DEFINE_bool(tensorrt_int8, EnvToBool(FLAGS_tensorrt_int8, false),
-            "Enable int8 precision for TENSORRT engine.");
+// It's optional to use xla jit.
+bool FLAGS_use_xla_jit = EnvToBool(FLAGS_use_xla_jit, false);
+// It's optional to use tensorrt.
+bool FLAGS_use_tensorrt = EnvToBool(FLAGS_use_tensorrt, false);
+// It's optional to use openvino.
+bool FLAGS_use_openvino = EnvToBool(FLAGS_use_openvino, false);
 
-DEFINE_string(int8_calibration, EnvToString(FLAGS_int8_calibration, ""),
-              "TensorRT int8 calibration table directory. "
-              "Default is empty, and this means the calibration table will be "
-              "implictly generated if tensorrt_int8 flag is true.");
+// Enable fp16 precision for TENSORRT engine.
+bool FLAGS_tensorrt_fp16 = EnvToBool(FLAGS_tensorrt_fp16, false);
+// Enable int8 precision for TENSORRT engine.
+bool FLAGS_tensorrt_int8 = EnvToBool(FLAGS_tensorrt_int8, false);
+
+// TensorRT int8 calibration table directory.
+// Default is empty, and this means the calibration table will be implictly generated if
+// tensorrt_int8 flag is true.
+std::string FLAGS_int8_calibration = EnvToString(FLAGS_int8_calibration, "");
 
 namespace oneflow {
 namespace xrt {

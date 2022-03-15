@@ -34,7 +34,7 @@ class InferGraph(flow.nn.Graph):
         model = resnet50()
         if placement_arg is not None:
             if "placement" in placement_arg:
-                model.to_consistent(**placement_arg)
+                model.to_global(**placement_arg)
             else:
                 model.to(**placement_arg)
         self.model = model
@@ -50,14 +50,14 @@ class InferGraph(flow.nn.Graph):
 class GraphSaveTestCase(flow.unittest.TestCase):
     def test_save_and_load(self):
         placement_arg = {
-            "placement": flow.placement("cuda", {0: [0]}),
+            "placement": flow.placement("cuda", ranks=[0]),
             "sbp": flow.sbp.broadcast,
         }
         graph = InferGraph(placement_arg)
         image_placeholder = flow.empty(
             (1, 3, 224, 224),
             dtype=flow.float32,
-            placement=flow.placement("cpu", {0: [0]}),
+            placement=flow.placement("cpu", ranks=[0]),
             sbp=flow.sbp.broadcast,
         )
         graph._compile(image_placeholder)
@@ -89,7 +89,9 @@ class GraphSaveTestCase(flow.unittest.TestCase):
         op_list_.sort(key=sort_by_op_name)
 
         for (op, op_) in zip(op_list, op_list_):
-            self.assertTrue(op == op_)
+            # TODO: convert loc in MLIR
+            op_.ClearField("loc")
+            self.assertTrue(op == op_, {"op": op, "op_": op_})
 
 
 if __name__ == "__main__":

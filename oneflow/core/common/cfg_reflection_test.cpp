@@ -15,6 +15,7 @@ limitations under the License.
 */
 #include <set>
 #include <cstdlib>
+#include "gtest/gtest.h"
 #include "oneflow/core/common/cfg_reflection_test.cfg.h"
 #include "oneflow/core/common/cfg_reflection_test.pb.h"
 #include "oneflow/core/common/util.h"
