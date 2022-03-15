@@ -321,6 +321,41 @@ class TestModule(flow.unittest.TestCase):
         output = model(input, "conv", "relu")
         test_case.assertEqual(output.shape, flow.Size([4, 10, 30, 30]))
 
+    @flow.unittest.skip_unless_1n1d()
+    def test_module_submodule(test_case):
+        class CustomSubModule(flow.nn.Module):
+            def __init__(self):
+                super().__init__()
+                self.param = flow.nn.Linear(2, 3)
+
+        class CustomModule(flow.nn.Module):
+            def __init__(self) -> None:
+                super().__init__()
+                self.linear = CustomSubModule()
+
+        m = CustomModule()
+        test_case.assertTrue(
+            isinstance(m.get_submodule("linear.param"), flow.nn.Linear)
+        )
+
+    @flow.unittest.skip_unless_1n1d()
+    def test_module_get_parameter(test_case):
+        class CustomModule(flow.nn.Module):
+            def __init__(self, param1, param2):
+                super().__init__()
+                self.param1 = param1
+                self.param2 = param2
+
+        tensor0 = flow.nn.Parameter(flow.Tensor(2, 3).to(dtype=flow.float32))
+        tensor1 = flow.nn.Parameter(flow.Tensor(2, 3).to(dtype=flow.float32))
+        m = CustomModule(tensor0, tensor1)
+        test_case.assertTrue(
+            np.array_equal(m.get_parameter("param1").numpy(), tensor0.numpy())
+        )
+        test_case.assertTrue(
+            np.array_equal(m.get_parameter("param2").numpy(), tensor1.numpy())
+        )
+
 
 if __name__ == "__main__":
     unittest.main()

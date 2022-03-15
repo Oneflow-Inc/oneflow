@@ -631,6 +631,40 @@ class Module(object):
     def _get_name(self):
         return self.__class__.__name__
 
+    def get_submodule(self, submodule: str):
+        if submodule == "":
+            return self
+        curr_module_name = [self._get_name()]
+        sub_module_names = submodule.split(".")
+        mod = self
+        for sub_module_name in sub_module_names:
+            if not hasattr(mod, sub_module_name):
+                raise AttributeError(
+                    f"`{'.'.join(curr_module_name)}` doesn't have sub-module `{sub_module_name}`"
+                )
+            mod = getattr(mod, sub_module_name)
+            curr_module_name.append(sub_module_name)
+            if not isinstance(mod, flow.nn.Module):
+                raise TypeError(
+                    f"`{sub_module_name}` isn't a oneflow.Module, but {type(mod)}"
+                )
+        return mod
+
+    def get_parameter(self, target_name: str):
+        sub_module_name, _, parameter_name = target_name.rpartition(".")
+        sub_module = self.get_submodule(sub_module_name)
+        if hasattr(sub_module, parameter_name):
+            parameter = getattr(sub_module, parameter_name)
+        else:
+            raise AttributeError(
+                f"`{sub_module._get_name()}` doesn't have attribute `{parameter_name}`"
+            )
+        if not isinstance(parameter, flow.Tensor):
+            raise TypeError(
+                f"`{target_name}` is not a oneflow.Tensor, but {type(parameter)}"
+            )
+        return parameter
+
     def extra_repr(self) -> str:
         """Set the extra representation of the module
 
