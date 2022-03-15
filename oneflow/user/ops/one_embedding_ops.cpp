@@ -208,7 +208,7 @@ REGISTER_USER_OP_GRAD("embedding_lookup_placeholder")
 
 Maybe<void> CheckDataShape(user_op::InferContext* ctx) {
   CHECK_EQ_OR_RETURN(ctx->InputShape("learning_rate", 0), Shape({1}));
-  if (ctx->has_input("scale_by_tensor", 0)) {
+  if (ctx->has_input("down_scale_by_tensor", 0)) {
     CHECK_EQ_OR_RETURN(ctx->InputShape("learning_rate", 0), Shape({1}));
   }
   CHECK_EQ_OR_RETURN(ctx->InputShape("num_unique_ids", 0), Shape({1}));
@@ -223,8 +223,8 @@ Maybe<void> CheckDataShape(user_op::InferContext* ctx) {
 Maybe<void> CheckDataType(user_op::InferContext* ctx) {
   const DataType learning_rate_dtype = ctx->InputDType("learning_rate", 0);
   CHECK_EQ_OR_RETURN(learning_rate_dtype, DataType::kFloat);
-  if (ctx->has_input("scale_by_tensor", 0)) {
-    CHECK_EQ_OR_RETURN(ctx->InputDType("scale_by_tensor", 0),
+  if (ctx->has_input("down_scale_by_tensor", 0)) {
+    CHECK_EQ_OR_RETURN(ctx->InputDType("down_scale_by_tensor", 0),
                        ctx->InputDType("unique_embeddings", 0));
   }
   return Maybe<void>::Ok();

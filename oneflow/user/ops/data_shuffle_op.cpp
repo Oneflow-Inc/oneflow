@@ -18,6 +18,46 @@ limitations under the License.
 
 namespace oneflow {
 
+/* static */ Maybe<void> UniqueKeyValuePairOp::InferLogicalTensorDesc(user_op::InferContext* ctx) {
+  const Shape& keys_shape = ctx->InputShape("keys", 0);
+  const int32_t num_columns = ctx->Attr<int32_t>("num_columns");
+  CHECK_GE_OR_RETURN(num_columns, 1);
+  if (ctx->has_input("values", 0)) {
+    const Shape& values_shape = ctx->InputShape("values", 0);
+    CHECK_EQ_OR_RETURN(keys_shape, values_shape);
+  } else {
+    if (num_columns > 1) {
+      CHECK_EQ_OR_RETURN(keys_shape.NumAxes(), 2);
+      CHECK_EQ_OR_RETURN(keys_shape.At(1), num_columns);
+    }
+  }
+  *ctx->OutputShape("num_unique", 0) = Shape({1});
+  *ctx->OutputShape("unique_keys", 0) = Shape({keys_shape.elem_cnt()});
+  *ctx->OutputShape("unique_values", 0) = Shape({keys_shape.elem_cnt()});
+  *ctx->OutputShape("inverse_indices", 0) = keys_shape;
+  return Maybe<void>::Ok();
+}
+
+/*static*/ Maybe<void> UniqueKeyValuePairOp::InferPhysicalTensorDesc(user_op::InferContext* ctx) {
+  return InferLogicalTensorDesc(ctx);
+}
+
+/* static */ Maybe<void> UniqueKeyValuePairOp::GetSbp(user_op::SbpContext* ctx) {
+  return Maybe<void>::Ok();
+}
+
+/* static */ Maybe<void> UniqueKeyValuePairOp::InferDataType(user_op::InferContext* ctx) {
+  *ctx->OutputDType("num_unique", 0) = DataType::kInt32;
+  *ctx->OutputDType("unique_keys", 0) = ctx->InputDType("keys", 0);
+  *ctx->OutputDType("inverse_indices", 0) = DataType::kInt32;
+  if (ctx->has_input("values", 0)) {
+    *ctx->OutputDType("unique_values", 0) = ctx->InputDType("values", 0);
+  } else {
+    *ctx->OutputDType("unique_values", 0) = DataType::kInt32;
+  }
+  return Maybe<void>::Ok();
+}
+
 /* static */ Maybe<void> IdShuffleOp::InferLogicalTensorDesc(user_op::InferContext* ctx) {
   const Shape& ids_shape = ctx->InputShape("ids", 0);
   const int32_t num_columns = ctx->Attr<int32_t>("num_columns");
@@ -148,39 +188,6 @@ namespace oneflow {
   CHECK_OR_RETURN(ctx->InputDType("cur_rank_inverse_indices", 0) == DataType::kUInt32);
   CHECK_OR_RETURN(ctx->InputDType("inverse_unique_partition_indices", 0) == DataType::kUInt32);
   *ctx->OutputDType("cur_rank_unique_embedding_grad", 0) = ctx->InputDType("embedding_grad", 0);
-  return Maybe<void>::Ok();
-}
-
-/* static */ Maybe<void> UniqueKeyValuePairOp::InferLogicalTensorDesc(user_op::InferContext* ctx) {
-  const Shape& keys_shape = ctx->InputShape("keys", 0);
-  const Shape& values_shape = ctx->InputShape("values", 0);
-  CHECK_EQ_OR_RETURN(keys_shape.NumAxes(), values_shape.NumAxes());
-  for (int i = 0; i < keys_shape.NumAxes(); ++i) {
-    CHECK_EQ_OR_RETURN(keys_shape.At(i), values_shape.At(i));
-  }
-  *ctx->OutputShape("num_unique", 0) = Shape({1});
-  *ctx->OutputShape("unique_keys", 0) = Shape({keys_shape.elem_cnt()});
-  *ctx->OutputShape("unique_values", 0) = Shape({values_shape.elem_cnt()});
-  *ctx->OutputShape("inverse_indices", 0) = keys_shape;
-  return Maybe<void>::Ok();
-}
-
-/*static*/ Maybe<void> UniqueKeyValuePairOp::InferPhysicalTensorDesc(user_op::InferContext* ctx) {
-  return InferLogicalTensorDesc(ctx);
-}
-
-/* static */ Maybe<void> UniqueKeyValuePairOp::GetSbp(user_op::SbpContext* ctx) {
-  ctx->NewBuilder().Split(ctx->inputs(), 0).Split(ctx->outputs(), 0).Build();
-  return Maybe<void>::Ok();
-}
-
-/* static */ Maybe<void> UniqueKeyValuePairOp::InferDataType(user_op::InferContext* ctx) {
-  const DataType key_dtype = ctx->InputDType("keys", 0);
-  const DataType values_dtype = ctx->InputDType("values", 0);
-  *ctx->OutputDType("num_unique", 0) = DataType::kUInt32;
-  *ctx->OutputDType("unique_keys", 0) = key_dtype;
-  *ctx->OutputDType("unique_values", 0) = values_dtype;
-  *ctx->OutputDType("inverse_indices", 0) = DataType::kUInt32;
   return Maybe<void>::Ok();
 }
 
