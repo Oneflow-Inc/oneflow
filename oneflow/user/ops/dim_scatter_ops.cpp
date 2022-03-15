@@ -149,7 +149,24 @@ Maybe<void> SetSbpScatter(user_op::SbpContext* ctx) {
   return Maybe<void>::Ok();
 }
 
-Maybe<void> SetSbpScatterScalar(user_op::SbpContext* ctx) { return Maybe<void>::Ok(); }
+Maybe<void> SetSbpScatterScalar(user_op::SbpContext* ctx) {
+  const int32_t dim = ctx->Attr<int32_t>("dim");
+
+  const Shape& index_tensor_shape = ctx->LogicalTensorDesc4InputArgNameAndIndex("index", 0).shape();
+  const Shape& input_tensor_shape = ctx->LogicalTensorDesc4InputArgNameAndIndex("input", 0).shape();
+
+  FOR_RANGE(int64_t, i, 0, index_tensor_shape.NumAxes()) {
+    if (i == dim) { continue; }
+    if (index_tensor_shape.At(i) == input_tensor_shape.At(i)) {
+      ctx->NewBuilder()
+          .Split(user_op::OpArg("index", 0), i)
+          .Split(user_op::OpArg("input", 0), i)
+          .Split(user_op::OpArg("output", 0), i)
+          .Build();
+    }
+  }
+  return Maybe<void>::Ok();
+}
 
 Maybe<void> InferDtype(user_op::InferContext* ctx) {
   const user_op::TensorDesc& index = ctx->InputTensorDesc("index", 0);
