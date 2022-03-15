@@ -129,11 +129,11 @@ class Embedding(Module):
         key_value_store_options["parallel_num"] = flow.env.get_world_size()
         self.key_value_store_options = json.dumps(key_value_store_options)
         self.embedding_columns = json.dumps(embedding_columns)
-        # TODO(zzk): Support placement configuration. Currently OneEmbedding is placed in all gpu.
-        self.parallel_id = flow.env.get_rank()
-        self.parallel_num = flow.env.get_world_size()
+        self.local_rank = flow.env.get_local_rank()
+        self.rank_id = flow.env.get_rank()
+        self.world_size = flow.env.get_world_size()
         self.handler = OneEmbeddingHandler(
-            self.key_value_store_options, self.parallel_id, self.parallel_num
+            self.key_value_store_options, self.local_rank, self.rank_id, self.world_size
         )
         self.shadow = flow.nn.Parameter(flow.Tensor(1))
 
@@ -183,7 +183,7 @@ class Embedding(Module):
 
     def forward(self, ids, column_ids):
         assert self.key_type == ids.dtype, "ids data_type must equals key_type"
-        return flow._C.embedding_lookup_placeholder(
+        return flow._C.one_embedding_lookup(
             self.shadow,
             ids,
             column_ids,

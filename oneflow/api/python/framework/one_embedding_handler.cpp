@@ -23,48 +23,57 @@ namespace oneflow {
 
 class OneEmbeddingHandler final {
  public:
-  OneEmbeddingHandler(const std::string& key_value_store_option_string, int64_t rank_id,
-                      int64_t world_size)
-      : rank_id_(rank_id), world_size_(world_size) {
-    key_value_store_option_.reset(
-        new embedding::KeyValueStoreOptions(key_value_store_option_string));
-    embedding_name_ = key_value_store_option_->Name();
-    CreateKeyValueStore(*key_value_store_option_, rank_id_, world_size_);
+  OneEmbeddingHandler(const std::string& key_value_store_option_string, int64_t local_rank_id,
+                      int64_t rank_id, int64_t world_size)
+      : local_rank_id_(local_rank_id), rank_id_(rank_id), world_size_(world_size) {
+    embedding::KeyValueStoreOptions key_value_store_options(key_value_store_option_string);
+    embedding_name_ = key_value_store_options.Name();
+    CreateKeyValueStore(key_value_store_options);
   }
 
   void LoadSnapshot(const std::string& snapshot_name) {
-    Global<embedding::EmbeddingManager>::Get()->LoadSnapshot(embedding_name_, rank_id_,
-                                                             snapshot_name);
+#ifdef WITH_CUDA
+    Global<embedding::EmbeddingManager>::Get()->LoadSnapshot(embedding_name_, local_rank_id_,
+                                                             rank_id_, snapshot_name);
+#else
+    UNIMPLEMENTED();
+#endif
   }
 
   void SaveSnapshot(const std::string& snapshot_name) {
-    Global<embedding::EmbeddingManager>::Get()->SaveSnapshot(embedding_name_, rank_id_,
-                                                             snapshot_name);
-  }
-
-  void CreateKeyValueStore(const embedding::KeyValueStoreOptions& key_value_store_options,
-                           int64_t num_rank, int64_t world_size) {
-    Global<embedding::EmbeddingManager>::Get()->CreateKeyValueStore(key_value_store_options,
-                                                                    rank_id_, world_size_);
+#ifdef WITH_CUDA
+    Global<embedding::EmbeddingManager>::Get()->SaveSnapshot(embedding_name_, local_rank_id_,
+                                                             rank_id_, snapshot_name);
+#else
+    UNIMPLEMENTED();
+#endif
   }
 
  private:
+  void CreateKeyValueStore(const embedding::KeyValueStoreOptions& key_value_store_options) {
+#ifdef WITH_CUDA
+    Global<embedding::EmbeddingManager>::Get()->CreateKeyValueStore(
+        key_value_store_options, local_rank_id_, rank_id_, world_size_);
+#else
+    UNIMPLEMENTED();
+#endif
+  }
+
   std::string embedding_name_;
-  std::unique_ptr<embedding::KeyValueStoreOptions> key_value_store_option_;
+  int64_t local_rank_id_;
   int64_t rank_id_;
   int64_t world_size_;
 };
 
 ONEFLOW_API_PYBIND11_MODULE("", m) {
   py::class_<OneEmbeddingHandler, std::shared_ptr<OneEmbeddingHandler>>(m, "OneEmbeddingHandler")
-      .def(py::init([](const std::string& key_value_store_option_str, const int64_t rank_id,
-                       const int64_t world_size) {
-        return std::make_shared<OneEmbeddingHandler>(key_value_store_option_str, rank_id,
-                                                     world_size);
+      .def(py::init([](const std::string& key_value_store_option_str, const int64_t local_rank_id,
+                       const int64_t rank_id, const int64_t world_size) {
+        return std::make_shared<OneEmbeddingHandler>(key_value_store_option_str, local_rank_id,
+                                                     rank_id, world_size);
       }))
       .def("SaveSnapshot", &OneEmbeddingHandler::SaveSnapshot)
-      .def("LoadSnapshot", &OneEmbeddingHandler::LoadSnapshot)
-      .def("CreateKeyValueStore", &OneEmbeddingHandler::CreateKeyValueStore);
+      .def("LoadSnapshot", &OneEmbeddingHandler::LoadSnapshot);
 }
 
 }  // namespace oneflow

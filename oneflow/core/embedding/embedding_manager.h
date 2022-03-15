@@ -25,20 +25,22 @@ namespace oneflow {
 
 namespace embedding {
 
+#ifdef WITH_CUDA
+
 class EmbeddingManager final {
  public:
   EmbeddingManager() = default;
   ~EmbeddingManager() = default;
 
-  void SaveSnapshot(const std::string& embedding_name, int64_t parallel_id,
+  void SaveSnapshot(const std::string& embedding_name, int64_t local_rank_id, int64_t rank_id,
                     const std::string& snapshot_name);
-  void LoadSnapshot(const std::string& embedding_name, int64_t parallel_id,
+  void LoadSnapshot(const std::string& embedding_name, int64_t local_rank_id, int64_t rank_id,
                     const std::string& snapshot_name);
 
-  KeyValueStore* GetKeyValueStore(const std::string& embedding_name, int64_t parallel_id);
+  KeyValueStore* GetKeyValueStore(const std::string& embedding_name, int64_t rank_id);
 
-  void CreateKeyValueStore(const KeyValueStoreOptions& options, int64_t parallel_id,
-                           int64_t parallel_num);
+  void CreateKeyValueStore(const KeyValueStoreOptions& options, int64_t local_rank_id,
+                           int64_t rank_id, int64_t world_size);
 
  private:
   HashMap<std::pair<std::string, int64_t>, std::unique_ptr<KeyValueStore>> key_value_store_map_;
@@ -47,5 +49,7 @@ class EmbeddingManager final {
 
 }  // namespace embedding
 }  // namespace oneflow
+
+#endif  // WITH_CUDA
 
 #endif  // ONEFLOW_CORE_EMBEDDING_EMBEDDING_MANAGER_H_

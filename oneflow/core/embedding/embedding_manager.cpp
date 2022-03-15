@@ -22,29 +22,31 @@ namespace oneflow {
 
 namespace embedding {
 
+#ifdef WITH_CUDA
+
 KeyValueStore* EmbeddingManager::GetKeyValueStore(const std::string& embedding_name,
-                                                  int64_t parallel_id) {
-  OF_CUDA_CHECK(cudaSetDevice(parallel_id));
-  std::pair<std::string, int64_t> map_key = std::make_pair(embedding_name, parallel_id);
+                                                  int64_t rank_id) {
+  std::pair<std::string, int64_t> map_key = std::make_pair(embedding_name, rank_id);
   std::unique_lock<std::mutex> lock(mutex_);
   auto it = key_value_store_map_.find(map_key);
   return it->second.get();
 }
 
 void EmbeddingManager::CreateKeyValueStore(const KeyValueStoreOptions& key_value_store_options,
-                                           int64_t parallel_id, int64_t parallel_num) {
-  OF_CUDA_CHECK(cudaSetDevice(parallel_id));
+                                           int64_t local_rank_id, int64_t rank_id,
+                                           int64_t world_size) {
+  OF_CUDA_CHECK(cudaSetDevice(local_rank_id));
   const std::string& name = key_value_store_options.Name();
   const uint32_t line_size = key_value_store_options.LineSize();
-  std::pair<std::string, int64_t> map_key = std::make_pair(name, parallel_id);
+  std::pair<std::string, int64_t> map_key = std::make_pair(name, rank_id);
   std::unique_lock<std::mutex> lock(mutex_);
 
   std::unique_ptr<KeyValueStore> store;
   PersistentTableKeyValueStoreOptions options{};
   const std::vector<std::string>& persistent_table_paths =
       key_value_store_options.PersistentTablePaths();
-  CHECK_EQ(persistent_table_paths.size(), parallel_num);
-  options.table_options.path = persistent_table_paths.at(parallel_id);
+  CHECK_EQ(persistent_table_paths.size(), world_size);
+  options.table_options.path = persistent_table_paths.at(rank_id);
   options.table_options.value_size = line_size * key_value_store_options.ValueTypeSize();
   options.table_options.key_size = key_value_store_options.KeyTypeSize();
   options.table_options.physical_block_size =
@@ -59,32 +61,34 @@ void EmbeddingManager::CreateKeyValueStore(const KeyValueStoreOptions& key_value
   key_value_store_map_.emplace(map_key, std::move(store));
 }
 
-void EmbeddingManager::SaveSnapshot(const std::string& embedding_name, int64_t parallel_id,
-                                    const std::string& snapshot_name) {
-  OF_CUDA_CHECK(cudaSetDevice(parallel_id));
-  std::pair<std::string, int64_t> map_key = std::make_pair(embedding_name, parallel_id);
+void EmbeddingManager::SaveSnapshot(const std::string& embedding_name, int64_t local_rank_id,
+                                    int64_t rank_id, const std::string& snapshot_name) {
+  OF_CUDA_CHECK(cudaSetDevice(local_rank_id));
+  std::pair<std::string, int64_t> map_key = std::make_pair(embedding_name, rank_id);
   std::unique_lock<std::mutex> lock(mutex_);
 
   auto it = key_value_store_map_.find(map_key);
   CHECK(it != key_value_store_map_.end())
-      << "Can not find embedding: " << embedding_name << "-" << parallel_id;
+      << "Can not find embedding: " << embedding_name << "-" << rank_id;
   it->second->SaveSnapshot(snapshot_name);
 }
 
-void EmbeddingManager::LoadSnapshot(const std::string& embedding_name, int64_t parallel_id,
-                                    const std::string& snapshot_name) {
-  OF_CUDA_CHECK(cudaSetDevice(parallel_id));
-  std::pair<std::string, int64_t> map_key = std::make_pair(embedding_name, parallel_id);
+void EmbeddingManager::LoadSnapshot(const std::string& embedding_name, int64_t local_rank_id,
+                                    int64_t rank_id, const std::string& snapshot_name) {
+  OF_CUDA_CHECK(cudaSetDevice(local_rank_id));
+  std::pair<std::string, int64_t> map_key = std::make_pair(embedding_name, rank_id);
   auto it = key_value_store_map_.find(map_key);
   CHECK(it != key_value_store_map_.end())
-      << "Can not find embedding: " << embedding_name << "-" << parallel_id;
+      << "Can not find embedding: " << embedding_name << "-" << rank_id;
   if (it->second->SnapshotExists(snapshot_name)) {
     it->second->LoadSnapshot(snapshot_name);
   } else {
-    LOG(ERROR) << "Here Exists Embedding name is: " << embedding_name << "-" << parallel_id
+    LOG(ERROR) << "Here Exists Embedding name is: " << embedding_name << "-" << rank_id
                << " but no corresponding snapshot. ";
   }
 }
+
+#endif  // WITH_CUDA
 
 }  // namespace embedding
 

@@ -143,7 +143,6 @@ Maybe<void> EnvGlobalObjectsScope::Init(const EnvProto& env_proto) {
   InitLogging(env_proto.cpp_logging_conf());
   Global<EnvDesc>::New(env_proto);
   Global<ProcessCtx>::New();
-  Global<embedding::EmbeddingManager>::New();
   // Avoid dead lock by using CHECK_JUST instead of JUST. because it maybe be blocked in
   // ~CtrlBootstrap.
   if (Global<ResourceDesc, ForSession>::Get()->enable_dry_run()) {
@@ -189,6 +188,7 @@ Maybe<void> EnvGlobalObjectsScope::Init(const EnvProto& env_proto) {
 #ifdef WITH_CUDA
   Global<EagerNcclCommMgr>::New();
   Global<CudnnConvAlgoCache>::New();
+  Global<embedding::EmbeddingManager>::New();
 #endif
   Global<vm::VirtualMachineScope>::New(Global<ResourceDesc, ForSession>::Get()->resource());
   Global<EagerJobBuildAndInferCtxMgr>::New();
@@ -250,6 +250,7 @@ EnvGlobalObjectsScope::~EnvGlobalObjectsScope() {
   Global<EagerJobBuildAndInferCtxMgr>::Delete();
   Global<vm::VirtualMachineScope>::Delete();
 #ifdef WITH_CUDA
+  Global<embedding::EmbeddingManager>::Delete();
   Global<CudnnConvAlgoCache>::Delete();
   Global<EagerNcclCommMgr>::Delete();
 #endif
@@ -263,7 +264,6 @@ EnvGlobalObjectsScope::~EnvGlobalObjectsScope() {
   CHECK_NOTNULL(Global<CtrlClient>::Get());
   CHECK_NOTNULL(Global<EnvDesc>::Get());
   Global<RpcManager>::Delete();
-  Global<embedding::EmbeddingManager>::Delete();
   Global<ProcessCtx>::Delete();
   Global<EnvDesc>::Delete();
   ClearAllSymbolAndIdCache();
