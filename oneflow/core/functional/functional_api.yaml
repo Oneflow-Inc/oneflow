@@ -853,7 +853,7 @@
 
 - name: "mm"
   signature:
-    "Tensor (Tensor a, Tensor b) => MM"
+    "Tensor (Tensor a, Tensor b) => MatrixMatmul"
   bind_python: True
 
 - name: "matmul"

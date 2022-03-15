@@ -196,9 +196,9 @@ class DeConv3dFunctor : public DeConvBaseFunctor {
   }
 };
 
-class MMFunctor {
+class MatrixMatmulFunctor {
  public:
-  MMFunctor() {
+  MatrixMatmulFunctor() {
     matmul_op_ = CHECK_JUST(one::OpBuilder("matmul").Input("a").Input("b").Output("out").Build());
   }
 
@@ -2447,7 +2447,7 @@ ONEFLOW_FUNCTION_LIBRARY(m) {
   m.add_functor<impl::DeConv1dFunctor>("Deconv1d");
   m.add_functor<impl::DeConv2dFunctor>("Deconv2d");
   m.add_functor<impl::DeConv3dFunctor>("Deconv3d");
-  m.add_functor<impl::MMFunctor>("MM");
+  m.add_functor<impl::MatrixMatmulFunctor>("MatrixMatmul");
   m.add_functor<impl::MatMulFunctor>("MatMul");
   m.add_functor<impl::BatchMatMulFunctor>("BatchMatMul");
   m.add_functor<impl::FusedMLPFunctor>("FusedMLP");
