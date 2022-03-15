@@ -400,8 +400,8 @@ Operation* getResultTransposeOp(NCHWCompatible op, Value val, NamedAttrList tran
   transpos_attributes.set(llvm::StringRef("op_name"), rewriter.getStringAttr(transpose_name));
   SmallVector<Value, 4> result_operands;
   result_operands.push_back(val);
-  return rewriter.create<oneflow::TransposeOp>(op.getLoc(), op->getResultTypes(), result_operands,
-                                               transpos_attributes);
+  return rewriter.replaceOpWithNewOp<oneflow::TransposeOp>(op, op->getResultTypes(),
+                                                           result_operands, transpos_attributes);
 }
 
 }  // namespace oneflow
