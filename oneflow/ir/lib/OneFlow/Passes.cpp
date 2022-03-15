@@ -17,6 +17,7 @@ limitations under the License.
 #include "OneFlow/OneFlowDialect.h"
 #include "OneFlow/Passes.h"
 #include "llvm/ADT/DenseSet.h"
+#include "llvm/ADT/SmallVector.h"
 #include "mlir/IR/OperationSupport.h"
 #include "oneflow/core/framework/random_generator.h"
 
@@ -376,6 +377,21 @@ void getResultTransposePerm(llvm::SmallVector<int32_t>& v) {
   v.push_back(2);
 }
 
+llvm::SmallVector<mlir::Value, 4> getInputOperandTransposeOp(NCHWCompatible op, Value val,
+                                                             NamedAttrList transpos_attributes,
+                                                             int cnt, PatternRewriter& rewriter) {
+  std::string transpose_name =
+      op->getName().getStringRef().str() + "_transpose_input_" + std::to_string(cnt++);
+  transpos_attributes.set(llvm::StringRef("op_name"), rewriter.getStringAttr(transpose_name));
+  SmallVector<Value, 4> input_operands;
+  input_operands.push_back(val);
+  auto res = rewriter
+                 .create<oneflow::TransposeOp>(op.getLoc(), op->getResultTypes(), input_operands,
+                                               transpos_attributes)
+                 ->getResults();
+  return res;
+}
+
 }  // namespace oneflow
 
 }  // namespace mlir
@@ -405,17 +421,9 @@ struct AutoNhwcPattern : public OpInterfaceRewritePattern<NCHWCompatible> {
       int cnt = 0;
       for (Value operand : op->getOperands()) {
         if (operand_transpose.find(operand) != operand_transpose.end()) {
-          std::string transpose_name =
-              op->getName().getStringRef().str() + "_transpose_input_" + std::to_string(cnt++);
-          transpos_attributes.set(llvm::StringRef("op_name"),
-                                  rewriter.getStringAttr(transpose_name));
-          SmallVector<Value, 4> input_operands;
-          input_operands.push_back(operand);
-          auto input_res = rewriter
-                               .create<oneflow::TransposeOp>(op.getLoc(), op->getResultTypes(),
-                                                             input_operands, transpos_attributes)
-                               ->getResults()[0];
-          tranposed_operands.push_back(input_res);
+          SmallVector<Value, 4> input_res =
+              getInputOperandTransposeOp(op, operand, transpos_attributes, cnt++, rewriter);
+          tranposed_operands.push_back(input_res[0]);
         }
       }
       // do nchw2nhwc2
