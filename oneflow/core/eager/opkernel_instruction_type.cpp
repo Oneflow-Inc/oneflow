@@ -281,7 +281,7 @@ Maybe<void> DTRComputeInstruction(const vm::InstructionMsg& instr_msg);
 
 void LocalCallOpKernelInstructionType::Compute(vm::Instruction* instruction) const {
   if (dtr::is_enabled()) {
-    CHECK_OK(DTRComputeInstruction(instruction->instr_msg()));
+    CHECK_JUST(DTRComputeInstruction(instruction->instr_msg()));
   } else {
     CHECK_JUST(LocalCallOpKernelUtil::Compute(instruction->instr_msg()));
   }

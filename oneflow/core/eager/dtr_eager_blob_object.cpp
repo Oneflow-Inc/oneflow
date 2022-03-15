@@ -15,14 +15,12 @@ namespace oneflow {
 namespace vm {
 
 Maybe<void> DTREagerBlobObject::TryAllocateBlobBodyMemory(DeviceCtx* device_ctx) {
-  LOG(INFO) << "hhh";
   vm::Allocator* allocator = device_ctx->mut_allocator();
   CHECK_NOTNULL_OR_RETURN(allocator);
   Blob* blob = mut_blob();
   CHECK_NOTNULL_OR_RETURN(blob);
   const std::size_t required_body_bytes = blob->AlignedByteSizeOfBlobBody();
   if (required_body_bytes == 0) {
-    LOG(INFO) << this;
     CHECK_ISNULL_OR_RETURN(blob->dptr());
     if (dtr::is_enabled_and_debug()) {
       LOG(INFO) << "ebo " << this << " has no body";
@@ -30,9 +28,7 @@ Maybe<void> DTREagerBlobObject::TryAllocateBlobBodyMemory(DeviceCtx* device_ctx)
     }
     return Maybe<void>::Ok();
   }
-  LOG(INFO) << this;
   if (blob->dptr() != nullptr) {
-    LOG(INFO) << this;
     CHECK_EQ_OR_RETURN(tensor_storage_->blob_bytes(), required_body_bytes);
     if (dtr::is_enabled_and_debug()) {
       LOG(INFO) << "ebo " << this
@@ -42,7 +38,6 @@ Maybe<void> DTREagerBlobObject::TryAllocateBlobBodyMemory(DeviceCtx* device_ctx)
     return Maybe<void>::Ok();
   }
   {
-    LOG(INFO) << this;
     // reset tensor_buffer_;
     const auto& Free = [allocator, required_body_bytes](char* dptr) {
       if (IsShuttingDown()) { return; }
@@ -70,7 +65,6 @@ Maybe<void> DTREagerBlobObject::TryAllocateBlobBodyMemory(DeviceCtx* device_ctx)
       }
     }
     CHECK_NOTNULL_OR_RETURN(dptr);
-    LOG(INFO) << "set data of " << this << std::endl;
     tensor_storage_->set_blob_dptr(std::unique_ptr<char, std::function<void(char*)>>(dptr, Free),
                                    required_body_bytes);
     blob->reset_dptr(dptr);
@@ -124,8 +118,7 @@ Maybe<void> DTREagerBlobObject::evict() {
     return Maybe<void>::Ok();
   }
   evict_flag_ = true;
-  // JUST(DeallocateBlobDataPtr());
-  LOG(INFO) << "evict " << this << std::endl;
+  // NOTE: DeallocateBlobDataPtr() resets tensor_storage_, which is not we want
   tensor_storage_->Release();
   if (blob_) { blob_->reset_dptr(nullptr); }
   CHECK_OR_RETURN(!is_in_memory());
