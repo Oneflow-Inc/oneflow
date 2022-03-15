@@ -389,7 +389,6 @@ struct AutoNhwcPattern : public OpInterfaceRewritePattern<NCHWCompatible> {
     NamedAttrList transpos_attributes;
     op.GetTransposeAttrs(transpos_attributes, rewriter);
     transpos_attributes.append(llvm::StringRef("perm"), getSI32ArrayAttr(rewriter, perm));
-    for (auto x : transpos_attributes) { std::cout << x.getName().str() << " " << std::endl; }
     if (op.IsNCHW()) {
       // create transpose op for input operand
       SmallVector<Value, 4> operands_to_tranpose;
