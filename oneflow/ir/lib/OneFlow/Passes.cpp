@@ -379,9 +379,10 @@ void getResultTransposePerm(llvm::SmallVector<int32_t>& v) {
 
 llvm::SmallVector<mlir::Value, 4> getInputOperandTransposeOp(NCHWCompatible op, Value val,
                                                              NamedAttrList transpos_attributes,
-                                                             int cnt, PatternRewriter& rewriter) {
-  std::string transpose_name =
-      op->getName().getStringRef().str() + "_transpose_input_" + std::to_string(cnt);
+                                                             int num_transposed_operand,
+                                                             PatternRewriter& rewriter) {
+  std::string transpose_name = op->getName().getStringRef().str() + "_transpose_input_"
+                               + std::to_string(num_transposed_operand);
   transpos_attributes.set(llvm::StringRef("op_name"), rewriter.getStringAttr(transpose_name));
   SmallVector<Value, 4> input_operands;
   input_operands.push_back(val);
@@ -392,19 +393,15 @@ llvm::SmallVector<mlir::Value, 4> getInputOperandTransposeOp(NCHWCompatible op, 
   return res;
 }
 
-bool getResultTransposeOp(NCHWCompatible op, Value val, NamedAttrList transpos_attributes, int cnt,
-                          PatternRewriter& rewriter) {
-  std::string transpose_name =
-      op->getName().getStringRef().str() + "_transpose_output_" + std::to_string(cnt);
+Operation* getResultTransposeOp(NCHWCompatible op, Value val, NamedAttrList transpos_attributes,
+                                int num_transposed_result, PatternRewriter& rewriter) {
+  std::string transpose_name = op->getName().getStringRef().str() + "_transpose_output_"
+                               + std::to_string(num_transposed_result);
   transpos_attributes.set(llvm::StringRef("op_name"), rewriter.getStringAttr(transpose_name));
   SmallVector<Value, 4> result_operands;
   result_operands.push_back(val);
-  if (auto created_op = rewriter.replaceOpWithNewOp<oneflow::TransposeOp>(
-          op, op->getResultTypes(), result_operands, transpos_attributes)) {
-    return true;
-  } else {
-    return false;
-  }
+  return rewriter.replaceOpWithNewOp<oneflow::TransposeOp>(op, op->getResultTypes(),
+                                                           result_operands, transpos_attributes);
 }
 
 }  // namespace oneflow
@@ -427,35 +424,36 @@ struct AutoNhwcPattern : public OpInterfaceRewritePattern<NCHWCompatible> {
     getResultTransposePerm(result_perm);
 
     NamedAttrList transpos_attributes;
-    op.GetTransposeAttrs(transpos_attributes, rewriter);
+    op.InitTransposeAttrs(transpos_attributes, rewriter);
     transpos_attributes.append(llvm::StringRef("perm"), getSI32ArrayAttr(rewriter, perm));
     if (op.IsNCHW()) {
       // create transpose op for input operand
       SmallVector<Value, 4> tranposed_operands;
       llvm::DenseSet<Value> operand_transpose = op.OperandsToTranspose();
-      int cnt = 0;
+      int num_transposed_operand = 0;
       for (Value operand : op->getOperands()) {
         if (operand_transpose.find(operand) != operand_transpose.end()) {
-          SmallVector<Value, 4> input_res =
-              getInputOperandTransposeOp(op, operand, transpos_attributes, cnt, rewriter);
+          SmallVector<Value, 4> input_res = getInputOperandTransposeOp(
+              op, operand, transpos_attributes, num_transposed_operand, rewriter);
           tranposed_operands.push_back(input_res[0]);
-          cnt += 1;
+          num_transposed_operand += 1;
         }
       }
       // do nchw2nhwc2
       SmallVector<Value, 4> created_results = op.NchwToNhwc(tranposed_operands, rewriter);
       // create transpose op for results
-      cnt = 0;
+      int num_transposed_result = 0;
       transpos_attributes.set(llvm::StringRef("perm"), getSI32ArrayAttr(rewriter, result_perm));
       llvm::DenseSet<Value> transpose_result = op.ResultsToTranspose();
       for (Value result : op->getOpResults()) {
         if (transpose_result.find(result) != transpose_result.end()) {
-          if (getResultTransposeOp(op, created_results[cnt], transpos_attributes, cnt, rewriter)) {
+          if (getResultTransposeOp(op, created_results[num_transposed_result], transpos_attributes,
+                                   num_transposed_result, rewriter)) {
             continue;
           } else {
             return failure();
           }
-          cnt += 1;
+          num_transposed_result += 1;
         }
       }
     }

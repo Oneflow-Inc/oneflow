@@ -97,11 +97,8 @@ def NCHWCompatibleInterface : OpInterface<"NCHWCompatible"> {
     InterfaceMethod<"",
         "bool", "IsNCHW", (ins)
     >,
-    InterfaceMethod<"",
-        "void", "SetAttrs", (ins "NamedAttrList&": $attributes, "PatternRewriter&": $rewriter)
-    >,
-    InterfaceMethod<"",
-        "void", "GetTransposeAttrs", (ins "NamedAttrList&": $attributes, "PatternRewriter&": $rewriter)
+    InterfaceMethod<"Init attributes of transpose op based on attributes of current op",
+        "void", "InitTransposeAttrs", (ins "NamedAttrList&": $attributes, "PatternRewriter&": $rewriter)
     >,
     InterfaceMethod<"create NHWC op and return results should be transposed",
         "llvm::SmallVector<mlir::Value, 4>", "NchwToNhwc", (ins "llvm::SmallVector<mlir::Value, 4>": $transposed_inputs, "PatternRewriter&": $rewriter)

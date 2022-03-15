@@ -412,12 +412,7 @@ llvm::DenseSet<Value> Conv2DOp::ResultsToTranspose() {
   return result;
 }
 
-void Conv2DOp::SetAttrs(NamedAttrList& attributes, PatternRewriter& rewriter) {
-  auto conv_op = *this;
-  attributes.set(conv_op.data_formatAttrName(), rewriter.getStringAttr("channels_last"));
-}
-
-void Conv2DOp::GetTransposeAttrs(NamedAttrList& transpos_attributes, PatternRewriter& rewriter) {
+void Conv2DOp::InitTransposeAttrs(NamedAttrList& transpos_attributes, PatternRewriter& rewriter) {
   auto conv_op = *this;
   transpos_attributes = conv_op->getAttrs();
   transpos_attributes.erase(conv_op.filtersAttrName());
@@ -438,7 +433,7 @@ llvm::SmallVector<Value, 4> Conv2DOp::NchwToNhwc(llvm::SmallVector<Value, 4> val
   if (conv_op.bias()) operands.push_back(conv_op.bias());
   if (conv_op.bias_multiplier()) operands.push_back(conv_op.bias_multiplier());
   NamedAttrList attributes = conv_op->getAttrs();
-  conv_op.SetAttrs(attributes, rewriter);
+  attributes.set(conv_op.data_formatAttrName(), rewriter.getStringAttr("channels_last"));
   auto res = rewriter
                  .create<oneflow::Conv2DOp>(conv_op.getLoc(), conv_op->getResultTypes(), operands,
                                             attributes)
