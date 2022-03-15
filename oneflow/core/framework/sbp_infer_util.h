@@ -21,6 +21,12 @@ limitations under the License.
 
 namespace oneflow {
 
+enum SbpInferRuleTag : int {
+  kAllMatch = 1,   // All match first, then lowest cost
+  kMatchAMAP = 2,  // Match as much as possible
+  kMinCost = 3     // Lowest cost
+};
+
 double GetValidMaxCopyCost();
 
 double GetTransferCost();

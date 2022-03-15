@@ -720,7 +720,7 @@ Maybe<void> Operator::GreedilyFindMinCopyCostNdSbp(
         const auto& ibn = input_bns().at(ibn_id);
         const auto& producer_infer_hint4ibn = JUST(NdSbpInferHint4Ibn(ibn));
         // Skip the computation of priority ratio if SBP_INFER_RULE_TAG = 3
-        if (infer_rule <= 2) {
+        if (infer_rule != SbpInferRuleTag::kMinCost) {
           double priority_ratio = ComputeSbpInferPriority(
               producer_infer_hint4ibn->nd_sbp(),
               JUST(VectorAt(nd_sbp_sig_list, i)).bn_in_op2nd_sbp().at(ibn),
@@ -735,7 +735,7 @@ Maybe<void> Operator::GreedilyFindMinCopyCostNdSbp(
           }
           // If SBP_INFER_RULE_TAG = 2 and the input blob has a matched sbp,
           // skip the computation of the transfer cost
-          if (infer_rule == 2 && priority_ratio == 0.0) { continue; }
+          if (infer_rule == SbpInferRuleTag::kMatchAMAP && priority_ratio == 0.0) { continue; }
         }
         // Compute the cost and add them up
         total_copy_cost += JUST(ComputeCopyCostBetweenNdSbp(
@@ -746,10 +746,10 @@ Maybe<void> Operator::GreedilyFindMinCopyCostNdSbp(
         // Reduce inquiries when the current cost is larger than the minimum cost
         // For SBP_INFER_RULE_TAG = 1, do not prune it since the all-matched case
         // might have larger cost.
-        if (infer_rule > 1 && total_copy_cost > min_copy_cost) { break; }
+        if (infer_rule != SbpInferRuleTag::kAllMatch && total_copy_cost > min_copy_cost) { break; }
       }
       // For SBP_INFER_RULE_TAG = 1, select the all-matched case if found
-      if (infer_rule == 1 && sum_priority_ratio == 0.0) {
+      if (infer_rule == SbpInferRuleTag::kAllMatch && sum_priority_ratio == 0.0) {
         select_sbp_idx = i;
         break;
       }
