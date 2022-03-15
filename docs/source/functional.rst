@@ -44,4 +44,3 @@ Functional operations for neural networks
 .. autofunction:: embedding
 .. autofunction:: linear
 .. autofunction:: cross_entropy
-
