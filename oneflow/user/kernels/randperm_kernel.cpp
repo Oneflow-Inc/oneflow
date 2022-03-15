@@ -20,32 +20,30 @@ limitations under the License.
 #include "oneflow/core/framework/random_generator.h"
 #include "oneflow/user/kernels/arange_kernel_util.h"
 #include "oneflow/user/kernels/distributions/common.h"
-#include "oneflow/core/rpc/include/global_process_ctx.h"
-#include "oneflow/core/register/tensor_slice_view.h"
 #include "oneflow/core/job/nd_sbp_util.h"
-#include "oneflow/core/framework/tensor_desc.h"
-#include "oneflow/core/functional/tensor_index.h"
-
+#include "oneflow/core/common/container_util.h"
+#include "oneflow/core/register/tensor_slice_view.h"
 namespace oneflow {
 
 class CpuRandPermKernel final : public user_op::OpKernel {
  public:
   CpuRandPermKernel() = default;
   ~CpuRandPermKernel() = default;
-  TensorSliceView view;
   std::shared_ptr<user_op::OpKernelState> CreateOpKernelState(
       user_op::KernelInitContext* ctx) const override {
     const auto& generator = CHECK_JUST(one::MakeGenerator(kCPU));
     generator->set_current_seed(ctx->Attr<int64_t>("seed"));
-     if (ctx->parallel_ctx().parallel_num() > 1) {
-      const Shape& parallel_hierarchy = *ctx->parallel_desc().hierarchy();
-  const cfg::NdSbp& nd_sbp = ctx->NdSbp4ArgNameAndIndex("out", 0);
-  int32_t n = ctx->Attr<int32_t>("n");
-  const Shape& logical_shape = Shape({n});
-  const int64_t parallel_id = ctx->parallel_ctx().parallel_id();
-   view =
-      GetTensorSliceView4ParallelId(parallel_hierarchy, nd_sbp, logical_shape, parallel_id);
-   }
+
+    int64_t parallel_num = ctx->parallel_ctx().parallel_num();
+    const NdSbp& nd_sbp = ctx->NdSbp4ArgNameAndIndex("out", 0);
+    if (parallel_num > 1) {
+      const Shape& hierarchy = *ctx->parallel_desc().hierarchy();
+      int64_t parallel_id = ctx->parallel_ctx().parallel_id();
+      int32_t n = ctx->Attr<int32_t>("n");
+      const Shape& logical_shape = Shape({n});
+
+      view = GetTensorSliceView4ParallelId(hierarchy, nd_sbp, logical_shape, parallel_id);
+    }
     return std::make_shared<DistributionKernelState>(generator);
   }
 
@@ -54,27 +52,23 @@ class CpuRandPermKernel final : public user_op::OpKernel {
                const user_op::OpKernelCache*) const override {
     user_op::Tensor* out = ctx->Tensor4ArgNameAndIndex("out", 0);
     int32_t* output = out->mut_dptr<int32_t>();
+    int32_t* temp = out->mut_dptr<int32_t>();
     const int32_t n = ctx->Attr<int32_t>("n");
-    int64_t rank_id = GlobalProcessCtx::Rank();
     if (n == 0) { return; }
     auto* distribution_state = dynamic_cast<DistributionKernelState*>(state);
     CHECK_NOTNULL(distribution_state);
     const auto& generator = distribution_state->generator();
     const auto& cpu_generator = CHECK_JUST(generator->Get<one::CPUGeneratorImpl>());
     CHECK_NOTNULL(generator);
-    user_op::ArangeFunctor<DeviceType::kCPU, int32_t>()(ctx->stream(), 0, 1, n, output);
-    std::shuffle(output, output + n, cpu_generator->engine());
-    const std::vector<Range>& range_vec = view.range_vec();
-    std::vector<int64_t> start;
-    std::vector<int64_t> stop;
-    std::vector<int64_t> step(range_vec.size(), 1);
-    for (const auto& range : range_vec) {
-        start.emplace_back(range.begin());
-        stop.emplace_back(range.end());
-      }
-    output = one::functional::detail::Slice(output, start, stop, step);
+    user_op::ArangeFunctor<DeviceType::kCPU, int32_t>()(ctx->stream(), 0, 1, n, temp);
+    std::shuffle(temp, temp + n, cpu_generator->engine());
+    for(int i=view.At(0).begin();i<view.At(0).end();i++){
+      *(output+i) = *(temp+i);
     }
+  }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
+  private:
+     mutable TensorSliceView view;
 };
 
 REGISTER_USER_KERNEL("randperm")
