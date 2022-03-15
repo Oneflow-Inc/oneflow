@@ -33,7 +33,7 @@ class LearningRateScheduleKernel final : public Kernel {
       log_stream_ = TeePersistentLogStream::Create("train_step2lr.csv");
       (*log_stream_) << "train_step, lr\n";
     }
-    if (*GetGraphVerboseStepLr()) { print_step_lr_ = true; }
+    if (IsOpenGraphVerboseStepLr()) { print_step_lr_ = true; }
   }
 
   void ForwardDataContent(KernelContext* ctx) const override;

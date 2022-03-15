@@ -13,17 +13,27 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
-#ifndef ONEFLOW_CORE_JOB_GRAPH_VERBOSE_STEP_LR_UTIL_H_
-#define ONEFLOW_CORE_JOB_GRAPH_VERBOSE_STEP_LR_UTIL_H_
-
-#include "oneflow/core/common/maybe.h"
+#include "oneflow/core/job/graph_verbose_step_lr_util.h"
 
 namespace oneflow {
 
-bool IsOpenGraphVerboseStepLr();
+namespace {
 
-void SetGraphVerboseStepLr(bool verbose);
+std::atomic<bool>* GetGraphVerboseStepLr() {
+  static std::atomic<bool> graph_verbose_step_lr{false};
+  return &graph_verbose_step_lr;
+}
+}  // namespace
+
+bool IsOpenGraphVerboseStepLr() {
+  auto* graph_verbose_step_lr = GetGraphVerboseStepLr();
+  bool is_graph_verbose_step_lr = *graph_verbose_step_lr;
+  return is_graph_verbose_step_lr;
+}
+
+void SetGraphVerboseStepLr(bool verbose) {
+  auto* graph_verbose_step_lr = GetGraphVerboseStepLr();
+  *graph_verbose_step_lr = verbose;
+}
 
 }  // namespace oneflow
-
-#endif  // ONEFLOW_CORE_JOB_GRAPH_VERBOSE_STEP_LR_UTIL_H_

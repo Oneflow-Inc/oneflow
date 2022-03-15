@@ -92,7 +92,7 @@ inline Maybe<void> SetGraphLRVerbose(bool verbose) {
   SetGraphVerboseStepLr(verbose);
   return Maybe<void>::Ok();
 }
-inline bool GetGraphLRVerbose() { return *GetGraphVerboseStepLr(); }
+inline bool GetGraphLRVerbose() { return IsOpenGraphVerboseStepLr(); }
 }  // namespace oneflow
 
 #endif  // ONEFLOW_API_PYTHON_ENV_ENV_H_
