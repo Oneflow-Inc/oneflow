@@ -196,22 +196,13 @@ def _UpdateDefaultEnvProtoByMultiClientEnvVars(env_proto):
 
 class EnvHolder(object):
     def __init__(self):
-        self._is_normal_exit = True
         if not HasAllMultiClientEnvVars():
             SetDefaultMultiClientEnvVars()
         self._env_cxt = create_env()
 
 
 def GetEnv():
-    global _env_holder
-    if _env_holder is not None:
-        return _env_holder
-    else:
-        _env_holder = EnvHolder()
-        return _env_holder
-
-
-_env_holder = None
+    return EnvHolder()
 
 device_tag2default_parallel_conf = {}
 default_env_proto = _DefaultEnvProto()
