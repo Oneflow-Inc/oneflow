@@ -391,7 +391,7 @@ struct AutoNhwcPattern : public OpInterfaceRewritePattern<NCHWCompatible> {
     transpos_attributes.append(llvm::StringRef("perm"), getSI32ArrayAttr(rewriter, perm));
     if (op.IsNCHW()) {
       // create transpose op for input operand
-      SmallVector<Value, 4> operands_to_tranpose;
+      SmallVector<Value, 4> tranposed_operands;
       llvm::DenseSet<Value> operand_transpose = op.OperandsToTranspose();
       int cnt = 0;
       for (Value operand : op->getOperands()) {
@@ -406,11 +406,11 @@ struct AutoNhwcPattern : public OpInterfaceRewritePattern<NCHWCompatible> {
                                .create<oneflow::TransposeOp>(op.getLoc(), op->getResultTypes(),
                                                              input_operands, transpos_attributes)
                                ->getResults()[0];
-          operands_to_tranpose.push_back(input_res);
+          tranposed_operands.push_back(input_res);
         }
       }
       // do nchw2nhwc2
-      SmallVector<Value, 4> created_results = op.NchwToNhwc(operands_to_tranpose, rewriter);
+      SmallVector<Value, 4> created_results = op.NchwToNhwc(tranposed_operands, rewriter);
       // create transpose op for results
       cnt = 0;
       transpos_attributes.set(llvm::StringRef("perm"), getSI32ArrayAttr(rewriter, output_perm));
@@ -508,7 +508,7 @@ void populateFuserForExistingOp(::mlir::RewritePatternSet& patterns) {
   patterns.add<FusedPadConv2DPattern>(patterns.getContext());
   patterns.add<FusedBiasAddDropoutPattern>(patterns.getContext());
   patterns.add<NormalizationAddReluPattern>(patterns.getContext());
-  bool enable_nhwc = ::oneflow::ParseBooleanFromEnv("ONEFLOW_ENABLE_NHWC_IN_MLIR", true);
+  bool enable_nhwc = ::oneflow::ParseBooleanFromEnv("ONEFLOW_MLIR_PREFER_NHWC", true);
   if (enable_nhwc) { patterns.add<AutoNhwcPattern>(patterns.getContext()); }
 }
 

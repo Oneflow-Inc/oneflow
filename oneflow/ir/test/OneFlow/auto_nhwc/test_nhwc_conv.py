@@ -21,7 +21,7 @@ import numpy as np
 import os
 
 os.environ["ONEFLOW_MLIR_ENABLE_ROUND_TRIP"] = "1"
-os.environ["ONEFLOW_ENABLE_NHWC_IN_MLIR"] = "1"
+os.environ["ONEFLOW_MLIR_PREFER_NHWC"] = "1"
 
 import oneflow as flow
 import oneflow.unittest
