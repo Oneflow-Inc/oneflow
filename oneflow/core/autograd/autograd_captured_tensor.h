@@ -16,8 +16,8 @@ limitations under the License.
 #ifndef ONEFLOW_CORE_AUTOGRAD_AUTOGRAD_CAPTURED_TENSOR_H_
 #define ONEFLOW_CORE_AUTOGRAD_AUTOGRAD_CAPTURED_TENSOR_H_
 
-#include "oneflow/core/framework/functional/functional.h"
 #include "oneflow/core/framework/tensor.h"
+#include "oneflow/core/functional/functional.h"
 
 namespace oneflow {
 namespace one {
