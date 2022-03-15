@@ -119,7 +119,7 @@ void _SetSbp(user_op::SbpContext* ctx, const char* like_or_input) {
       ctx->LogicalTensorDesc4InputArgNameAndIndex(like_or_input, 0).shape();
 
   FOR_RANGE(int64_t, i, 0, index_tensor_shape.NumAxes()) {
-    if (i == dim) continue;
+    if (i == dim) { continue; }
     int64_t len = index_tensor_shape.At(i);
     if (len == src_tensor_shape.At(i) && len == input_tensor_shape.At(i)) {
       ctx->NewBuilder()
