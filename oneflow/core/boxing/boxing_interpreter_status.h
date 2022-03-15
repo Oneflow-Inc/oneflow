@@ -66,7 +66,7 @@ class BoxingInterpreterStatus final {
   Symbol<PlacedNdSbp> dst_placed_nd_sbp() const { return dst_placed_nd_sbp_; }
   Symbol<std::vector<Symbol<PlacedNdSbp>>> mid_placed_nd_sbp() const { return mid_placed_nd_sbp_; }
 
-  const std::string& boxing_interpreter_routing() const;
+  const std::string& boxing_routing() const;
   const std::string& nd_sbp_routing() const;
   const std::string& placement_routing() const;
 
