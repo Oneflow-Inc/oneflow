@@ -62,13 +62,12 @@ class CpuRandPermKernel final : public user_op::OpKernel {
     CHECK_NOTNULL(generator);
     user_op::ArangeFunctor<DeviceType::kCPU, int32_t>()(ctx->stream(), 0, 1, n, temp);
     std::shuffle(temp, temp + n, cpu_generator->engine());
-    for(int i=view.At(0).begin();i<view.At(0).end();i++){
-      *(output+i) = *(temp+i);
-    }
+    for (int i = view.At(0).begin(); i < view.At(0).end(); i++) { *(output + i) = *(temp + i); }
   }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
-  private:
-     mutable TensorSliceView view;
+
+ private:
+  mutable TensorSliceView view;
 };
 
 REGISTER_USER_KERNEL("randperm")
