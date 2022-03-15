@@ -120,5 +120,5 @@ add_docstr(
         >>> loss.backward()
 
 
-    """
+    """,
 )
