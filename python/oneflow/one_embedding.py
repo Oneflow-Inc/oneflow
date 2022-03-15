@@ -36,9 +36,11 @@ def _check_initializer(initializer):
     if initializer_type == "uniform":
         assert initializer.__contains__("low")
         assert initializer.__contains__("high")
-    else:
+    elif initializer_type == "normal":
         assert initializer.__contains__("mean")
         assert initializer.__contains__("std")
+    else:
+        raise NotImplementedError("unsupported initializer_type")
 
 
 def _check_cache(cache):
@@ -129,6 +131,7 @@ class Embedding(Module):
         key_value_store_options["parallel_num"] = flow.env.get_world_size()
         self.key_value_store_options = json.dumps(key_value_store_options)
         self.embedding_columns = json.dumps(embedding_columns)
+        self.num_columns = len(embedding_columns["columns"])
         self.local_rank = flow.env.get_local_rank()
         self.rank_id = flow.env.get_rank()
         self.world_size = flow.env.get_world_size()
@@ -181,7 +184,7 @@ class Embedding(Module):
     def load_snapshot(self, snapshot_name):
         self.handler.LoadSnapshot(snapshot_name)
 
-    def forward(self, ids, column_ids):
+    def forward(self, ids, column_ids=None):
         assert self.key_type == ids.dtype, "ids data_type must equals key_type"
         return flow._C.one_embedding_lookup(
             self.shadow,
@@ -189,6 +192,7 @@ class Embedding(Module):
             column_ids,
             self.dtype,
             self.embedding_dim,
+            self.num_columns,
             self.embedding_columns,
             self.key_value_store_options,
         )
@@ -271,7 +275,7 @@ def make_host_mem_cached_ssd_store_options(
 ):
     assert host_memory_mb > 0
     assert isinstance(persistent_path, (str, list, tuple))
-    option = {
+    options = {
         "kv_store": {
             "caches": [
                 {
@@ -300,7 +304,7 @@ def make_device_mem_cached_host_store_options(
     assert device_memory_mb > 0
     assert host_memory_mb > 0
     assert isinstance(persistent_path, (str, list, tuple))
-    option = {
+    options = {
         "kv_store": {
             "caches": [
                 {
@@ -321,4 +325,4 @@ def make_device_mem_cached_host_store_options(
         },
         "size_factor": size_factor,
     }
-    return option
+    return options

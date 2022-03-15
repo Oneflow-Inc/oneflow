@@ -54,7 +54,7 @@ void EmbeddingManager::CreateKeyValueStore(const KeyValueStoreOptions& key_value
   options.table_options.target_chunk_size_mb = 4 * 1024;
   store = NewPersistentTableKeyValueStore(options);
   const std::vector<CacheOptions>& cache_options = key_value_store_options.GetCachesOptions();
-  for (int i = 0; i < cache_options.size(); ++i) {
+  for (int i = cache_options.size() - 1; i >= 0; --i) {
     std::unique_ptr<Cache> cache = NewCache(cache_options.at(i));
     store = NewCachedKeyValueStore(std::move(store), std::move(cache));
   }
