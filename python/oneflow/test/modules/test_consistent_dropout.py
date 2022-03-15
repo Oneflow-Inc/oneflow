@@ -45,7 +45,7 @@ class TestDropoutConsistent(flow.unittest.TestCase):
         # random ndim in range [1,3]
         ndim = random(1, 4).to(int).value()
         for placement in all_placement():
-            for sbp in all_sbp(placement, max_dim=1):
+            for sbp in all_sbp(placement, max_dim=min(2, ndim)):
                 _test_dropout_p01(test_case, placement, sbp, ndim, p=0.0)
                 _test_dropout_p01(test_case, placement, sbp, ndim, p=1.0)
 
@@ -54,7 +54,7 @@ class TestDropoutConsistent(flow.unittest.TestCase):
         # random ndim in range [1,3]
         ndim = random(1, 4).to(int).value()
         for placement in all_placement():
-            for sbp in all_sbp(placement, max_dim=1):
+            for sbp in all_sbp(placement, max_dim=min(2, ndim)):
                 _test_dropout_eval_p01(test_case, placement, sbp, ndim, 0.0)
                 _test_dropout_eval_p01(test_case, placement, sbp, ndim, 1.0)
 
