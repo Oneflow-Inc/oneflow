@@ -708,6 +708,10 @@ Maybe<void> Operator::GreedilyFindMinCopyCostNdSbp(
           || NotSupportBoxingDataType(
               JUST(NdSbpInferHint4Ibn(ibn))->logical_blob_desc().data_type());
     }
+    // SBP_INFER_RULE_TAG = 1, pick the sbp signature which matches all the producers
+    //                          or has the lowest cost
+    // SBP_INFER_RULE_TAG = 2, pick the sbp signature which matches as much as possible
+    // SBP_INFER_RULE_TAG = 3, pick the sbp signature which has the lowest cost
     static int32_t infer_rule = ParseIntegerFromEnv("SBP_INFER_RULE_TAG", 1);
     for (int32_t i = 0; i < nd_sbp_sig_list.size(); ++i) {
       double total_copy_cost = 0.0;
@@ -715,37 +719,45 @@ Maybe<void> Operator::GreedilyFindMinCopyCostNdSbp(
       for (int32_t ibn_id = 0; ibn_id < input_bns().size(); ibn_id++) {
         const auto& ibn = input_bns().at(ibn_id);
         const auto& producer_infer_hint4ibn = JUST(NdSbpInferHint4Ibn(ibn));
-        if(infer_rule <= 2){
-        double priority_ratio = ComputeSbpInferPriority(
-            producer_infer_hint4ibn->nd_sbp(),
-            JUST(VectorAt(nd_sbp_sig_list, i)).bn_in_op2nd_sbp().at(ibn),
-            producer_infer_hint4ibn->logical_blob_desc(), producer_infer_hint4ibn->parallel_desc(),
-            *JUST(GetParallelDesc4BnInOp(ibn)), requires_same_sbp[ibn_id]);
-        sum_priority_ratio += priority_ratio;
-        if (priority_ratio > 1.5) {
-          total_copy_cost = GetMaxVal<float>();
-          break;
+        // Skip the computation of priority ratio if SBP_INFER_RULE_TAG = 3
+        if (infer_rule <= 2) {
+          double priority_ratio = ComputeSbpInferPriority(
+              producer_infer_hint4ibn->nd_sbp(),
+              JUST(VectorAt(nd_sbp_sig_list, i)).bn_in_op2nd_sbp().at(ibn),
+              producer_infer_hint4ibn->logical_blob_desc(),
+              producer_infer_hint4ibn->parallel_desc(), *JUST(GetParallelDesc4BnInOp(ibn)),
+              requires_same_sbp[ibn_id]);
+          sum_priority_ratio += priority_ratio;
+          // We do not accept any blob which has a priority ratio greater than 1
+          if (priority_ratio > 1.5) {
+            total_copy_cost = GetMaxVal<float>();
+            break;
+          }
+          // If SBP_INFER_RULE_TAG = 2 and the input blob has a matched sbp,
+          // skip the computation of the transfer cost
+          if (infer_rule == 2 && priority_ratio == 0.0) { continue; }
         }
-        if (infer_rule == 2 && priority_ratio == 0.0) {
-          continue;
-        }
-        }
+        // Compute the cost and add them up
         total_copy_cost += JUST(ComputeCopyCostBetweenNdSbp(
             producer_infer_hint4ibn->nd_sbp(),
             JUST(VectorAt(nd_sbp_sig_list, i)).bn_in_op2nd_sbp().at(ibn),
             producer_infer_hint4ibn->logical_blob_desc(), producer_infer_hint4ibn->parallel_desc(),
             *JUST(GetParallelDesc4BnInOp(ibn)), requires_same_sbp[ibn_id]));
-        // Reduce inquiries
+        // Reduce inquiries when the current cost is larger than the minimum cost
+        // For SBP_INFER_RULE_TAG = 1, do not prune it since the all-matched case
+        // might have larger cost.
         if (infer_rule > 1 && total_copy_cost > min_copy_cost) { break; }
       }
-      if(infer_rule == 1 && sum_priority_ratio == 0.0){
+      // For SBP_INFER_RULE_TAG = 1, select the all-matched case if found
+      if (infer_rule == 1 && sum_priority_ratio == 0.0) {
         select_sbp_idx = i;
         break;
       }
+      // Otherwise, select the case with the lowest cost
       if (total_copy_cost <= min_copy_cost) {
         select_sbp_idx = i;
         min_copy_cost = total_copy_cost;
-        // Reduce inquiries
+        // Reduce inquiries if the copy cost is 0.
         if (total_copy_cost == 0.0) { break; }
       }
     }
