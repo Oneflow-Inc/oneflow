@@ -78,12 +78,18 @@ struct LocalCallOpKernelUtil final {
       TryInitOpKernelStateAndCache(operand, device_ctx, &state, &cache);
       OF_PROFILER_RANGE_POP();
     }
+
+    if (dtr::is_enabled()) { JUST(CheckInputInMemory(operand)); }
     OpKernelCompute(operand, device_ctx, state, cache);
     if (unlikely(operand->need_temp_storage())) {
       OF_PROFILER_RANGE_PUSH("DeallocateTempStorageBlobMemory");
       JUST(DeallocateTempStorageBlobMemory(operand, device_ctx));
       OF_PROFILER_RANGE_POP();
     }
+    if (dtr::is_enabled_and_debug()) {
+      LOG(INFO) << operand->shared_opkernel()->op_type_name() << " ComputeOperand done";
+    }
+    if (dtr::is_enabled()) { JUST(CheckOutputInMemory(operand)); }
     return Maybe<void>::Ok();
   }
 
@@ -129,10 +135,16 @@ struct LocalCallOpKernelUtil final {
 
   static inline Maybe<void> AllocateOutputBlobsMemory(LocalCallOpKernelPhyInstrOperand* operand,
                                                       DeviceCtx* device_ctx) {
+    Global<dtr::TensorPool>::Get()->set_current_op_type_name(operand->opkernel().op_type_name());
+
     for (const auto& blob_object : *operand->outputs()) {
       JUST(blob_object->TryInitBlob());
       JUST(blob_object->TryAllocateBlobBodyMemory(device_ctx));
     }
+
+    Global<dtr::TensorPool>::Get()->set_current_op_type_name("");
+
+    if (dtr::is_enabled()) { JUST(CheckOutputInMemory(operand)); }
     return Maybe<void>::Ok();
   }
 
@@ -153,6 +165,110 @@ struct LocalCallOpKernelUtil final {
     OF_PROFILER_RANGE_POP();
     // tensor tuples are not allowed to be hold by StatefulLocalOpKernel
     opkernel->UpdateComputeContext(nullptr, nullptr, nullptr, nullptr);
+
+    if (dtr::is_enabled()) {
+      for (int i : operand->opkernel().input_tuple_indexes4mut_ibns()) {
+        const std::string& op_type_name = operand->opkernel().op_type_name();
+        std::cout << "mutable! op: " << op_type_name << ", input " << i;
+        std::cout << " set it as non evictable" << std::endl;
+        GetDTRInputs(operand)[i]->set_evict_attr(false);
+      }
+    }
+    if (dtr::debug_level() >= 3) {
+      for (int i : operand->opkernel().input_tuple_indexes4mut_ibns()) {
+        const auto& mut_input = operand->inputs()->at(i);
+        if (mut_input->mem_case().has_device_cuda_mem()) {
+          size_t bytes = mut_input->blob_desc().ByteSizeOfBlobBody();
+          std::vector<float> tmp(bytes / 4);
+          cudaMemcpy(tmp.data(), mut_input->blob().dptr(), bytes,
+                     cudaMemcpyKind::cudaMemcpyDeviceToHost);
+          float x = 0;
+          for (float f : tmp) { x += f; }
+          mut_input->hash_ = x;
+          mut_input->backup_data_.resize(bytes / 4);
+          memcpy(mut_input->backup_data_.data(), tmp.data(), bytes);
+          std::cout << ", gpu memory." << std::endl;
+        } else {
+          std::cout << ", non gpu memory." << std::endl;
+        }
+      }
+
+      // compare_input_hash flag
+      bool compare_input_hash = false;
+      for (const auto& base_class_output : *operand->outputs()) {
+        if (base_class_output->mem_case().has_device_cuda_mem()) {
+          size_t bytes = base_class_output->blob_desc().ByteSizeOfBlobBody();
+          CHECK_EQ(bytes % 4, 0);
+          std::vector<float> tmp(bytes / 4);
+          cudaMemcpy(tmp.data(), base_class_output->blob().dptr(), bytes,
+                     cudaMemcpyKind::cudaMemcpyDeviceToHost);
+          float x = 0;
+          for (float f : tmp) { x += f; }
+          if (const auto output =
+                  std::dynamic_pointer_cast<DTREagerBlobObject>(base_class_output)) {
+            if (output->hash_ != -1) {
+              if (output->hash_ != x) {
+                std::cout << "wrong!!!!"
+                          << " compute op: "
+                          << output->compute_op()->shared_opkernel()->user_op_conf_->op_type_name()
+                          << ", old hash: " << output->hash_ << ", new hash: " << x
+                          << ", old data[0]: " << output->backup_data_[0]
+                          << ", new data[0]: " << tmp[0]
+                          << ", shape: " << output->blob_desc().shape() << std::endl;
+
+                // compare hash of inputs
+                compare_input_hash = true;
+              } else {
+                std::cout << "correct :)"
+                          << " compute op: "
+                          << output->compute_op()->shared_opkernel()->user_op_conf_->op_type_name()
+                          << ", old hash: " << output->hash_ << ", new hash: " << x << std::endl;
+              }
+            } else {
+              std::cout << "first! set hash to " << x << std::endl;
+            }
+          }
+          base_class_output->hash_ = x;
+          base_class_output->backup_data_.resize(bytes / 4);
+          memcpy(base_class_output->backup_data_.data(), tmp.data(), bytes);
+        } else {
+          std::cout << "compute non gpu memory, op is: " << operand->opkernel().op_type_name()
+                    << std::endl;
+        }
+      }
+      if (compare_input_hash) {
+        for (const auto& base_class_input : *operand->inputs()) {
+          if (const auto input = std::dynamic_pointer_cast<DTREagerBlobObject>(base_class_input)) {
+            if (input->mem_case().has_device_cuda_mem()) {
+              size_t bytes = input->blob_desc().ByteSizeOfBlobBody();
+              CHECK_EQ(bytes % 4, 0);
+              std::vector<float> tmp(bytes / 4);
+              cudaMemcpy(tmp.data(), input->blob().dptr(), bytes,
+                         cudaMemcpyKind::cudaMemcpyDeviceToHost);
+              float x = 0;
+              for (float f : tmp) { x += f; }
+              if (input->hash_ != -1) {
+                if (input->hash_ != x) {
+                  std::cout << "input hash wrong!!!!"
+                            << ", old hash: " << input->hash_ << ", new hash: " << x
+                            << ", old data[0]: " << input->backup_data_[0]
+                            << ", new data[0]: " << tmp[0]
+                            << ", shape: " << input->blob_desc().shape() << std::endl;
+                } else {
+                  std::cout << "input hash correct :)"
+                            << ", shape: " << input->blob_desc().shape() << std::endl;
+                }
+              } else {
+                std::cout << "input not initialized!!!!!" << x << std::endl;
+              }
+            } else {
+              std::cout << "input non gpu memory, op is: " << operand->opkernel().op_type_name()
+                        << std::endl;
+            }
+          }
+        }
+      }
+    }
   }
 
   static inline Maybe<void> DeallocateTempStorageBlobMemory(

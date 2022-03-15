@@ -179,7 +179,7 @@ DtrCudaAllocator::Piece* DtrCudaAllocator::FindPiece(size_t aligned_size) {
           piece->bin_num = kInvalidBinNum;
           piece->is_free = false;
         } else if (piece->size > aligned_size) {
-                    const std::string& name = Global<dtr::TensorPool>::Get()->current_op_type_name();
+          const std::string& name = Global<dtr::TensorPool>::Get()->current_op_type_name();
           const bool choose_left = [&]() {
             if (ParseBooleanFromEnv("OF_DTR_NLR", false)) {
               // CHECK(ParseBooleanFromEnv("OF_DTR_HIGH_CONV", true));
@@ -275,9 +275,7 @@ double get_cost(const vm::DTREagerBlobObject* ebo, int& coeff) {
     return cost;
   }
   // const double cost = CHECK_JUST(ebo->cost());
-  if (coeff < 0) {
-    coeff = ebo->pesudo_cnt();
-  }
+  if (coeff < 0) { coeff = ebo->pesudo_cnt(); }
   cost = cost * coeff;
   CHECK(!isinf(cost));
   CHECK(!isnan(cost));
@@ -301,7 +299,8 @@ DtrCudaAllocator::Piece* DtrCudaAllocator::EvictAndFindPiece(size_t size) {
         if (dtr::is_enabled_and_debug()) {
           LOG(INFO) << "skip tensor: " << end_tensor
                     << ", size: " << end_tensor->blob_body_bytes_double() << ", compute op "
-                    << end_tensor->compute_op_type_name() << ", num_pinned: " << end_tensor->num_pinned()
+                    << end_tensor->compute_op_type_name()
+                    << ", num_pinned: " << end_tensor->num_pinned()
                     << ", is_evictable: " << end_tensor->is_evictable();
         }
         end++;
@@ -315,7 +314,8 @@ DtrCudaAllocator::Piece* DtrCudaAllocator::EvictAndFindPiece(size_t size) {
       if (end_tensor != nullptr) {
         const char* start_id = start->first;
         const char* end_id = end->first;
-        CHECK_JUST(Global<dtr::TensorPool>::Get()->update_after_pesudo_evict(end_tensor, start_id, end_id));
+        CHECK_JUST(Global<dtr::TensorPool>::Get()->update_after_pesudo_evict(end_tensor, start_id,
+                                                                             end_id));
       }
       int coeff = -1;
       cost += get_cost(end_tensor, coeff);
@@ -323,8 +323,8 @@ DtrCudaAllocator::Piece* DtrCudaAllocator::EvictAndFindPiece(size_t size) {
       if (dtr::is_enabled_and_debug()) {
         LOG(INFO) << "move end, include op: "
                   << (end_tensor != nullptr ? end_tensor->compute_op_type_name() : "no tensor")
-                  << ", size: " << end->second->size
-                  << ", total_size: " << total_size << ", cost: " << cost;
+                  << ", size: " << end->second->size << ", total_size: " << total_size
+                  << ", cost: " << cost;
       }
 
     } else {
@@ -346,8 +346,8 @@ DtrCudaAllocator::Piece* DtrCudaAllocator::EvictAndFindPiece(size_t size) {
       if (dtr::is_enabled_and_debug()) {
         LOG(INFO) << "move start, exclude op: "
                   << (start_tensor != nullptr ? start_tensor->compute_op_type_name() : "no tensor")
-                  << ", size: " << start->second->size
-                  << ", total_size: " << total_size << ", cost: " << cost;
+                  << ", size: " << start->second->size << ", total_size: " << total_size
+                  << ", cost: " << cost;
       }
       start++;
     }
