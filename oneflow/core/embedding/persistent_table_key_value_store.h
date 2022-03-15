@@ -13,24 +13,29 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
-#ifndef ONEFLOW_CORE_COMMON_MULTICLIENT_H_
-#define ONEFLOW_CORE_COMMON_MULTICLIENT_H_
+#ifndef ONEFLOW_CORE_EMBEDDING_PERSISTENT_TABLE_KEY_VALUE_STORE_H_
+#define ONEFLOW_CORE_EMBEDDING_PERSISTENT_TABLE_KEY_VALUE_STORE_H_
 
-#include "oneflow/core/common/maybe.h"
-#include "oneflow/core/common/optional.h"
-#include "oneflow/core/job/global_for.h"
+#include "oneflow/core/embedding/key_value_store.h"
+#include "oneflow/core/embedding/persistent_table.h"
 
 namespace oneflow {
 
-inline Optional<bool>* IsMultiClientPtr() { return Global<Optional<bool>, MultiClient>::Get(); }
+namespace embedding {
 
-inline Maybe<bool> IsMultiClient() { return JUST(*Global<Optional<bool>, MultiClient>::Get()); }
+#ifdef WITH_CUDA
 
-inline Maybe<void> SetIsMultiClient(bool is_multi_client) {
-  CHECK_NOTNULL_OR_RETURN(IsMultiClientPtr());
-  *IsMultiClientPtr() = is_multi_client;
-  return Maybe<void>::Ok();
-}
+struct PersistentTableKeyValueStoreOptions {
+  PersistentTableOptions table_options{};
+};
+
+std::unique_ptr<KeyValueStore> NewPersistentTableKeyValueStore(
+    const PersistentTableKeyValueStoreOptions& options);
+
+#endif  // WITH_CUDA
+
+}  // namespace embedding
+
 }  // namespace oneflow
 
-#endif
+#endif  // ONEFLOW_CORE_EMBEDDING_PERSISTENT_TABLE_KEY_VALUE_STORE_H_
