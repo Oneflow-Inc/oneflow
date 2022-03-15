@@ -27,32 +27,33 @@ import oneflow as flow
 import oneflow.unittest
 
 
-def do_nhwc_bias_add(test_case, with_cuda):
-    a = flow.randn(2, 3, 4, 5)
-    b = flow.randn(3)
+def do_nhwc_bacth_norm(test_case, with_cuda):
+    x = flow.randn(2, 3, 4, 5)
+    bn = flow.nn.BatchNorm2d(3)
     if with_cuda:
-        a = a.cuda()
-        b = b.cuda()
+        x = x.cuda()
+        bn.to("cuda")
 
-    eager_bias_add_res = flow._C.bias_add(a, b, axis=1)
+    eager_batch_norm_res = bn(x)
 
     class GraphToRun(flow.nn.Graph):
         def __init__(self):
             super().__init__()
+            self.m = bn
 
-        def build(self, a, b):
-            return flow._C.bias_add(a, b, axis=1)
+        def build(self, x):
+            return self.m(x)
 
     graph_to_run = GraphToRun()
-    lazy_bias_add_res = graph_to_run(a, b)
-    test_case.assertTrue(np.allclose(eager_bias_add_res.numpy(), lazy_bias_add_res.numpy(), rtol=1e-5, atol=1e-5))
+    lazy_batch_norm_res = graph_to_run(x)
+    test_case.assertTrue(np.allclose(eager_batch_norm_res.numpy(), lazy_batch_norm_res.numpy(), rtol=1e-5, atol=1e-5))
 
 
 @flow.unittest.skip_unless_1n1d()
-class TestNhwcBiasAdd(oneflow.unittest.TestCase):
-    def test_nhwc_bias_add_graph(test_case):
-        do_nhwc_bias_add(test_case, True)
-        do_nhwc_bias_add(test_case, False)
+class TestNhwcConv(oneflow.unittest.TestCase):
+    def test_nhwc_conv_graph(test_case):
+        do_nhwc_bacth_norm(test_case, True)
+        do_nhwc_bacth_norm(test_case, False)
 
 
 if __name__ == "__main__":

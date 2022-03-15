@@ -452,11 +452,13 @@ bool BiasAddOp::IsNCHW() {
 
 llvm::DenseSet<Value> BiasAddOp::OperandsToTranspose() {
   llvm::DenseSet<Value> result;
+  result.insert(this->a());
   return result;
 }
 
 llvm::DenseSet<Value> BiasAddOp::ResultsToTranspose() {
   llvm::DenseSet<Value> result;
+  result.insert(this->out());
   return result;
 }
 
@@ -469,9 +471,65 @@ void BiasAddOp::InitTransposeAttrs(NamedAttrList& transpos_attributes, PatternRe
 llvm::SmallVector<Value, 4> BiasAddOp::NchwToNhwc(llvm::SmallVector<Value, 4> value,
                                                   PatternRewriter& rewriter) {
   auto bias_add_op = *this;
+  SmallVector<Value, 4> operands;
+  operands.push_back(value[0]);
+  operands.push_back(bias_add_op.b());
   NamedAttrList attributes = bias_add_op->getAttrs();
   attributes.set(bias_add_op.axisAttrName(), rewriter.getSI32IntegerAttr(3));
+  auto res = rewriter
+                 .create<oneflow::BiasAddOp>(bias_add_op.getLoc(), bias_add_op->getResultTypes(),
+                                             operands, attributes)
+                 ->getResults();
   llvm::SmallVector<Value, 4> results;
+  results.push_back(res[0]);
+  return results;
+}
+
+bool NormalizationOp::IsNCHW() {
+  if (this->axisAttr().getValue().getSExtValue() == 1)
+    return true;
+  else
+    return false;
+}
+
+llvm::DenseSet<Value> NormalizationOp::OperandsToTranspose() {
+  llvm::DenseSet<Value> result;
+  result.insert(this->x());
+  return result;
+}
+
+llvm::DenseSet<Value> NormalizationOp::ResultsToTranspose() {
+  llvm::DenseSet<Value> result;
+  result.insert(this->y());
+  return result;
+}
+
+void NormalizationOp::InitTransposeAttrs(NamedAttrList& transpos_attributes,
+                                         PatternRewriter& rewriter) {
+  auto normalization_op = *this;
+  transpos_attributes = normalization_op->getAttrs();
+  transpos_attributes.erase(normalization_op.axisAttrName());
+}
+
+llvm::SmallVector<Value, 4> NormalizationOp::NchwToNhwc(llvm::SmallVector<Value, 4> value,
+                                                        PatternRewriter& rewriter) {
+  auto normalization_op = *this;
+  SmallVector<Value, 4> operands;
+  operands.push_back(value[0]);
+  if (normalization_op.moving_mean()) operands.push_back(normalization_op.moving_mean());
+  if (normalization_op.moving_variance()) operands.push_back(normalization_op.moving_variance());
+  operands.push_back(normalization_op.gamma());
+  operands.push_back(normalization_op.beta());
+  if (normalization_op._add_to_output()) operands.push_back(normalization_op._add_to_output());
+  NamedAttrList attributes = normalization_op->getAttrs();
+  attributes.set(normalization_op.axisAttrName(), rewriter.getSI32IntegerAttr(3));
+  auto res =
+      rewriter
+          .create<oneflow::NormalizationOp>(
+              normalization_op.getLoc(), normalization_op->getResultTypes(), operands, attributes)
+          ->getResults();
+  llvm::SmallVector<Value, 4> results;
+  results.push_back(res[0]);
   return results;
 }
 
