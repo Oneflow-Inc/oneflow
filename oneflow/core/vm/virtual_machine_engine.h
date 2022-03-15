@@ -104,7 +104,6 @@ class VirtualMachineEngine final : public intrusive::Base {
   // Returns true if old pending_instruction_list is empty
   Maybe<bool> Receive(intrusive::shared_ptr<InstructionMsg>&& instruction_msg);
   void Schedule();
-  void FlushGarbageMsgList();
   void Callback();
   void NotifyCallback();
   bool ThreadUnsafeEmpty() const;
