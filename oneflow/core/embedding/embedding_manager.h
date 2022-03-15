@@ -47,9 +47,9 @@ class EmbeddingManager final {
   std::mutex mutex_;
 };
 
+#endif  // WITH_CUDA
+
 }  // namespace embedding
 }  // namespace oneflow
-
-#endif  // WITH_CUDA
 
 #endif  // ONEFLOW_CORE_EMBEDDING_EMBEDDING_MANAGER_H_
