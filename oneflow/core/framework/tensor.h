@@ -59,6 +59,7 @@ class Tensor : public std::enable_shared_from_this<Tensor> {
   virtual bool is_local() const { return !is_consistent(); }
   virtual bool is_lazy() const = 0;
   virtual bool is_eager() const { return !is_lazy(); }
+  virtual bool is_contiguous() const = 0;
   virtual const TensorMeta& tensor_meta() const = 0;
   virtual Maybe<Tensor> data() = 0;
   virtual Maybe<Symbol<ConsistentTensorMeta>> consistent_tensor_meta() const { OF_UNIMPLEMENTED(); }
@@ -88,6 +89,7 @@ class Tensor : public std::enable_shared_from_this<Tensor> {
   virtual Maybe<TensorArg> current_grad() const = 0;
   virtual Maybe<Tensor> detach() const = 0;
   virtual Maybe<Tensor> clone() const = 0;
+  virtual std::shared_ptr<Tensor> contiguous() const = 0;
 
   // Setters for autograd
   virtual Maybe<void> set_requires_grad(bool requires_grad) = 0;
@@ -183,6 +185,10 @@ class StaticZerosTensor final : public Tensor {
     PRINT_BUG_PROMPT_AND_ABORT();
     return false;
   }
+  bool is_contiguous() const override {
+    PRINT_BUG_PROMPT_AND_ABORT();
+    return true;
+  }
   std::shared_ptr<const FunctionNode> grad_fn_node() const override {
     PRINT_BUG_PROMPT_AND_ABORT();
     return nullptr;
@@ -191,6 +197,9 @@ class StaticZerosTensor final : public Tensor {
   Maybe<TensorArg> current_grad() const override { RETURN_ERROR_WITH_BUG_PROMPT(); }
   Maybe<Tensor> detach() const override { RETURN_ERROR_WITH_BUG_PROMPT(); }
   Maybe<Tensor> clone() const override { RETURN_ERROR_WITH_BUG_PROMPT(); }
+  std::shared_ptr<Tensor> contiguous() const override {
+    return std::const_pointer_cast<Tensor>(shared_from_this());
+  }
 
   // Setters for autograd
   Maybe<void> set_requires_grad(bool requires_grad) override {
@@ -328,6 +337,7 @@ class ProxyTensor : public TensorIf<DerivedT> {
   virtual bool requires_grad() const { return tensor_->requires_grad(); }
   virtual bool is_leaf() const { return tensor_->is_leaf(); }
   virtual bool retain_grad() const { return tensor_->retain_grad(); }
+  virtual bool is_contiguous() const { return tensor_->is_contiguous(); }
   virtual Maybe<Tensor> acc_grad() const { return tensor_->acc_grad(); }
   virtual Maybe<TensorArg> current_grad() const { return tensor_->current_grad(); }
   virtual Maybe<Tensor> detach() const { return tensor_->detach(); }
@@ -388,6 +398,7 @@ class Parameter final : public ProxyTensor<Parameter> {
   }
 
   bool is_leaf() const override { return true; }
+  std::shared_ptr<Tensor> contiguous() const override;
 };
 
 class MirroredTensor final : public TensorIf<MirroredTensor> {
@@ -423,6 +434,7 @@ class MirroredTensor final : public TensorIf<MirroredTensor> {
   bool is_lazy() const override { return impl_->is_lazy(); }
   bool is_consistent() const override { return false; }
   bool is_cuda() const override;
+  std::shared_ptr<Tensor> contiguous() const override;
 
   const TensorMeta& tensor_meta() const override { return *impl_->tensor_meta(); }
   Maybe<Tensor> data() override { return this->detach(); }
@@ -445,6 +457,7 @@ class MirroredTensor final : public TensorIf<MirroredTensor> {
   bool requires_grad() const override { return impl_->requires_grad(); }
   bool is_leaf() const override { return impl_->is_leaf(); }
   bool retain_grad() const override { return impl_->retain_grad(); }
+  bool is_contiguous() const override { return impl_->is_contiguous(); }
 
   // Setters for autograd
   Maybe<void> set_acc_grad(const std::shared_ptr<Tensor>& grad) override {
@@ -533,6 +546,7 @@ class ConsistentTensor final : public TensorIf<ConsistentTensor> {
     return impl_->cur_rank_phy_tensor();
   }
   bool is_cuda() const override;
+  std::shared_ptr<Tensor> contiguous() const override;
   Maybe<Tensor> data() override { return this->detach(); }
 
   // Getters valid only for EagerMirroredTensor
@@ -558,6 +572,7 @@ class ConsistentTensor final : public TensorIf<ConsistentTensor> {
   bool requires_grad() const override { return impl_->requires_grad(); }
   bool is_leaf() const override { return impl_->is_leaf(); }
   bool retain_grad() const override { return impl_->retain_grad(); }
+  bool is_contiguous() const override { return impl_->is_contiguous(); }
 
   // Setters for autograd
   Maybe<void> set_acc_grad(const std::shared_ptr<Tensor>& grad) override {

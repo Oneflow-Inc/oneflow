@@ -36,6 +36,12 @@ class AutogradCapturedTensor final : public ProxyTensor<AutogradCapturedTensor> 
   }
   const std::shared_ptr<FunctionNode>& mut_grad_fn_node() override { return *grad_fn_node_; }
 
+  std::shared_ptr<Tensor> contiguous() const override {
+    const auto& tensor = std::const_pointer_cast<Tensor>(shared_from_this());
+    if (tensor_->is_contiguous()) { return tensor; }
+    return CHECK_JUST(functional::ToContiguous(tensor));
+  }
+
  private:
   const std::shared_ptr<FunctionNode>* grad_fn_node_;
 };
