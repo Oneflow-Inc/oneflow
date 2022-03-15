@@ -443,6 +443,38 @@ llvm::SmallVector<Value, 4> Conv2DOp::NchwToNhwc(llvm::SmallVector<Value, 4> val
   return results;
 }
 
+bool BiasAddOp::IsNCHW() {
+  if (this->axisAttr().getValue().getSExtValue() == 1)
+    return true;
+  else
+    return false;
+}
+
+llvm::DenseSet<Value> BiasAddOp::OperandsToTranspose() {
+  llvm::DenseSet<Value> result;
+  return result;
+}
+
+llvm::DenseSet<Value> BiasAddOp::ResultsToTranspose() {
+  llvm::DenseSet<Value> result;
+  return result;
+}
+
+void BiasAddOp::InitTransposeAttrs(NamedAttrList& transpos_attributes, PatternRewriter& rewriter) {
+  auto bias_add_op = *this;
+  transpos_attributes = bias_add_op->getAttrs();
+  transpos_attributes.erase(bias_add_op.axisAttrName());
+}
+
+llvm::SmallVector<Value, 4> BiasAddOp::NchwToNhwc(llvm::SmallVector<Value, 4> value,
+                                                  PatternRewriter& rewriter) {
+  auto bias_add_op = *this;
+  NamedAttrList attributes = bias_add_op->getAttrs();
+  attributes.set(bias_add_op.axisAttrName(), rewriter.getSI32IntegerAttr(3));
+  llvm::SmallVector<Value, 4> results;
+  return results;
+}
+
 }  // namespace oneflow
 
 }  // namespace mlir

@@ -27,35 +27,32 @@ import oneflow as flow
 import oneflow.unittest
 
 
-def do_nhwc_conv(test_case, with_cuda, with_bias):
-    x = flow.randn(2, 3, 4, 5)
-    conv = flow.nn.Conv2d(3, 4, 2, 1, bias=with_bias)
+def do_nhwc_bias_add(test_case, with_cuda):
+    a = flow.randn(2, 3, 4, 5)
+    b = flow.randn(3)
     if with_cuda:
-        x = x.cuda()
-        conv.to("cuda")
+        a = a.cuda()
+        b = b.cuda()
 
-    eager_conv_x = conv(x)
+    eager_bias_add_res = flow._C.bias_add(a, b, axis=1)
 
     class GraphToRun(flow.nn.Graph):
         def __init__(self):
             super().__init__()
-            self.conv = conv
 
-        def build(self, x):
-            return self.conv(x)
+        def build(self, a, b):
+            return flow._C.bias_add(a, b, axis=1)
 
     graph_to_run = GraphToRun()
-    lazy_conv_x = graph_to_run(x)
-    test_case.assertTrue(np.allclose(eager_conv_x.numpy(), lazy_conv_x.numpy(), rtol=1e-5, atol=1e-5))
+    lazy_bias_add_res = graph_to_run(a, b)
+    test_case.assertTrue(np.allclose(eager_bias_add_res.numpy(), lazy_bias_add_res.numpy(), rtol=1e-5, atol=1e-5))
 
 
 @flow.unittest.skip_unless_1n1d()
 class TestNhwcConv(oneflow.unittest.TestCase):
     def test_nhwc_conv_graph(test_case):
-        do_nhwc_conv(test_case, True, True)
-        do_nhwc_conv(test_case, False, True)
-        do_nhwc_conv(test_case, True, False)
-        do_nhwc_conv(test_case, False, False)
+        do_nhwc_bias_add(test_case, True)
+        do_nhwc_bias_add(test_case, False)
 
 
 if __name__ == "__main__":
