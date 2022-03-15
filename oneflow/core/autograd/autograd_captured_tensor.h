@@ -32,14 +32,14 @@ class AutogradCapturedTensor final : public ProxyTensor<AutogradCapturedTensor> 
       CHECK(tensor->grad_fn_node()) << "The grad function node is expected for the captured tensor "
                                        "which requires_grad is True";
     }
-    grad_fn_node_ = &tensor->mut_grad_fn_node();
+    grad_fn_node_ = tensor->mut_grad_fn_node();
   }
 
-  std::shared_ptr<const FunctionNode> grad_fn_node() const override { return *grad_fn_node_; }
+  std::shared_ptr<const FunctionNode> grad_fn_node() const override { return grad_fn_node_.lock(); }
   void set_grad_fn_node(const std::shared_ptr<FunctionNode>& grad_fn_node) override {
     PRINT_BUG_PROMPT_AND_ABORT();
   }
-  const std::shared_ptr<FunctionNode>& mut_grad_fn_node() override { return *grad_fn_node_; }
+  std::shared_ptr<FunctionNode> mut_grad_fn_node() override { return grad_fn_node_.lock(); }
 
   std::shared_ptr<Tensor> contiguous() const override {
     const auto& tensor = std::const_pointer_cast<Tensor>(shared_from_this());
@@ -48,7 +48,7 @@ class AutogradCapturedTensor final : public ProxyTensor<AutogradCapturedTensor> 
   }
 
  private:
-  const std::shared_ptr<FunctionNode>* grad_fn_node_;
+  std::weak_ptr<FunctionNode> grad_fn_node_;
 };
 
 }  // namespace one

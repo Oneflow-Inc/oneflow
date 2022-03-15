@@ -95,7 +95,7 @@ class Tensor : public std::enable_shared_from_this<Tensor> {
   virtual Maybe<void> set_requires_grad(bool requires_grad) = 0;
   virtual Maybe<void> set_retain_grad(bool retain_grad) = 0;
   virtual void set_grad_fn_node(const std::shared_ptr<FunctionNode>& grad_fn_node) = 0;
-  virtual const std::shared_ptr<FunctionNode>& mut_grad_fn_node() = 0;
+  virtual std::shared_ptr<FunctionNode> mut_grad_fn_node() = 0;
   virtual Maybe<void> set_acc_grad(const std::shared_ptr<Tensor>& grad) = 0;
   virtual Maybe<Tensor> mut_acc_grad() = 0;
   virtual void set_is_leaf(bool is_leaf) = 0;
@@ -213,7 +213,7 @@ class StaticZerosTensor final : public Tensor {
   void set_grad_fn_node(const std::shared_ptr<FunctionNode>& grad_fn_node) override {
     PRINT_BUG_PROMPT_AND_ABORT();
   }
-  const std::shared_ptr<FunctionNode>& mut_grad_fn_node() override {
+  std::shared_ptr<FunctionNode> mut_grad_fn_node() override {
     PRINT_BUG_PROMPT_AND_ABORT();
     return *(std::shared_ptr<FunctionNode>*)nullptr;
   }
@@ -267,7 +267,7 @@ class TensorIf : public Tensor {
   void set_grad_fn_node(const std::shared_ptr<FunctionNode>& grad_fn_node) override {
     grad_fn_node_ = grad_fn_node;
   }
-  const std::shared_ptr<FunctionNode>& mut_grad_fn_node() override { return grad_fn_node_; }
+  std::shared_ptr<FunctionNode> mut_grad_fn_node() override { return grad_fn_node_; }
 
  protected:
   TensorIf() = default;
@@ -305,7 +305,7 @@ class ProxyTensor : public TensorIf<DerivedT> {
   virtual void set_grad_fn_node(const std::shared_ptr<FunctionNode>& grad_fn_node) {
     tensor_->set_grad_fn_node(grad_fn_node);
   }
-  virtual const std::shared_ptr<FunctionNode>& mut_grad_fn_node() {
+  virtual std::shared_ptr<FunctionNode> mut_grad_fn_node() {
     return tensor_->mut_grad_fn_node();
   }
 
