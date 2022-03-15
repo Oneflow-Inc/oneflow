@@ -29,13 +29,15 @@ KeyValueStore* EmbeddingManager::GetKeyValueStore(const std::string& embedding_n
   std::pair<std::string, int64_t> map_key = std::make_pair(embedding_name, rank_id);
   std::unique_lock<std::mutex> lock(mutex_);
   auto it = key_value_store_map_.find(map_key);
+  CHECK(it != key_value_store_map_.end())
+      << "Can not find embedding: " << embedding_name << "-" << rank_id;
   return it->second.get();
 }
 
 void EmbeddingManager::CreateKeyValueStore(const KeyValueStoreOptions& key_value_store_options,
                                            int64_t local_rank_id, int64_t rank_id,
                                            int64_t world_size) {
-  OF_CUDA_CHECK(cudaSetDevice(local_rank_id));
+  CudaCurrentDeviceGuard guard(local_rank_id);
   const std::string& name = key_value_store_options.Name();
   const uint32_t line_size = key_value_store_options.LineSize();
   std::pair<std::string, int64_t> map_key = std::make_pair(name, rank_id);
@@ -63,7 +65,7 @@ void EmbeddingManager::CreateKeyValueStore(const KeyValueStoreOptions& key_value
 
 void EmbeddingManager::SaveSnapshot(const std::string& embedding_name, int64_t local_rank_id,
                                     int64_t rank_id, const std::string& snapshot_name) {
-  OF_CUDA_CHECK(cudaSetDevice(local_rank_id));
+  CudaCurrentDeviceGuard guard(local_rank_id);
   std::pair<std::string, int64_t> map_key = std::make_pair(embedding_name, rank_id);
   std::unique_lock<std::mutex> lock(mutex_);
 
@@ -75,7 +77,7 @@ void EmbeddingManager::SaveSnapshot(const std::string& embedding_name, int64_t l
 
 void EmbeddingManager::LoadSnapshot(const std::string& embedding_name, int64_t local_rank_id,
                                     int64_t rank_id, const std::string& snapshot_name) {
-  OF_CUDA_CHECK(cudaSetDevice(local_rank_id));
+  CudaCurrentDeviceGuard guard(local_rank_id);
   std::pair<std::string, int64_t> map_key = std::make_pair(embedding_name, rank_id);
   auto it = key_value_store_map_.find(map_key);
   CHECK(it != key_value_store_map_.end())
