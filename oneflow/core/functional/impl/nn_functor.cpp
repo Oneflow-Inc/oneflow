@@ -417,15 +417,15 @@ class PixelShuffleFunctor {
   Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x, const int64_t& h_upscale_factor,
                            const int64_t& w_upscale_factor) const {
     CHECK_OR_RETURN(x->ndim() == 4) << "Only Accept 4D Tensor";
-    int64_t batch = x->shape()->At(0);
-    int64_t channel = x->shape()->At(1);
-    int64_t height = x->shape()->At(2);
-    int64_t width = x->shape()->At(3);
+    const int64_t batch = x->shape()->At(0);
+    const int64_t channel = x->shape()->At(1);
+    const int64_t height = x->shape()->At(2);
+    const int64_t width = x->shape()->At(3);
     std::shared_ptr<one::Tensor> out;
     CHECK_OR_RETURN(channel % (h_upscale_factor * w_upscale_factor) == 0)
         << "The channels of input tensor must be divisible by (upscale_factor * upscale_factor) or "
            "(h_upscale_factor * w_upscale_factor)";
-    int64_t new_c = static_cast<int>(channel / (h_upscale_factor * w_upscale_factor));
+    const int64_t new_c = static_cast<int>(channel / (h_upscale_factor * w_upscale_factor));
     std::vector<int32_t> permute_vec = {0, 1, 4, 2, 5, 3};
     std::vector<int64_t> reshape_vec_1 = {batch, new_c, h_upscale_factor * w_upscale_factor, height,
                                           width};
