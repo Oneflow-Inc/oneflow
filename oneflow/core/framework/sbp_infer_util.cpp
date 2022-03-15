@@ -555,17 +555,24 @@ double ComputeSbpInferPriority(const NdSbp& producer_sbp_parallel,
                          &reduced_out_parallel_desc, &reduced_in_nd_sbp, &reduced_out_nd_sbp);
 
   if (requires_same_sbp) {
+    // This blob does not support boxing
     if (reduced_in_nd_sbp == reduced_out_nd_sbp
         && reduced_in_parallel_desc == reduced_out_parallel_desc) {
+      // Highest priority: this blob have the same placement and sbp on both the producer and
+      // consumer
       return 0.0;
     } else {
+      // Penality: this blob have different placments and sbps but it does not support boxing
       return 2.0;
     }
   } else {
+    // This blob supports boxing
     if (reduced_in_nd_sbp == reduced_out_nd_sbp
         && *reduced_in_parallel_desc.hierarchy() == *reduced_out_parallel_desc.hierarchy()) {
+      // Highest priority: this blob have the same sbp on both the producer and consumer
       return 0.0;
     } else {
+      // Normal priority: transfer occurs
       return 1.0;
     }
   }
