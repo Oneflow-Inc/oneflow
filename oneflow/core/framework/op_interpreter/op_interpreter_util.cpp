@@ -18,7 +18,6 @@ limitations under the License.
 #include <memory>
 
 #include "oneflow/core/common/maybe.h"
-#include "oneflow/core/eager/dtr_util.h"
 #include "oneflow/core/eager/eager_blob_object.h"
 #include "oneflow/core/eager/foreign_boxing_util.h"
 #include "oneflow/core/framework/device.h"
@@ -36,9 +35,7 @@ namespace {
 
 std::shared_ptr<AutogradInterpreter> BuildEagerInterpreter(const bool& is_mirrored) {
   std::shared_ptr<OpExprInterpreter> internal;
-  if (dtr::is_enabled()) {
-    internal = std::make_shared<DTREagerMirroredInterpreter>();
-  } else if (is_mirrored) {
+  if (is_mirrored) {
     internal = std::make_shared<EagerMirroredInterpreter>();
   } else {
     internal = std::make_shared<EagerConsistentInterpreter>();

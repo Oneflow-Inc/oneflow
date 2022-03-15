@@ -84,7 +84,6 @@ class EagerBlobObject : public BlobObject {
   }
 
   std::shared_ptr<TensorBuffer>& tensor_buffer() { return tensor_buffer_; }
-  char* object_dptr() { return tensor_buffer_->blob_dptr(); }
 
   bool is_shape_synced() const { return is_shape_synced_; }
 
@@ -101,8 +100,6 @@ class EagerBlobObject : public BlobObject {
   void set_last_used_device(Symbol<Device> last_used_device) {
     last_used_device_ = last_used_device;
   }
-
-  double blob_body_bytes_double() const { return static_cast<double>(blob_body_bytes_); }
 
  private:
   EagerBlobObject(const std::shared_ptr<MemoryCase>& mem_case, const std::shared_ptr<Shape>& shape,

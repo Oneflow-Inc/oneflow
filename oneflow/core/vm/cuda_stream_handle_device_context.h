@@ -22,6 +22,7 @@ limitations under the License.
 #include "oneflow/core/device/cuda_stream_handle.h"
 #include "oneflow/core/vm/cuda_allocator.h"
 #include "oneflow/core/vm/dtr_cuda_allocator.h"
+#include "oneflow/core/vm/dtr_naive_allocator.h"
 #include "oneflow/core/vm/thread_safe_allocator.h"
 #include "oneflow/core/common/single_thread_obj_pool.h"
 
@@ -31,6 +32,14 @@ namespace vm {
 #ifdef WITH_CUDA
 
 COMMAND(Global<DtrCudaAllocator>::SetAllocated(new DtrCudaAllocator(0)));
+
+inline Allocator* GetAllocator(int64_t device_id) {
+  if (ParseBooleanFromEnv("OF_DTR", false)) {
+    if (ParseBooleanFromEnv("OF_DTR_ALLO", true)) { return Global<DtrCudaAllocator>::Get(); }
+    return new DtrNaiveCudaAllocator(device_id);
+  }
+  return new CudaAllocator(device_id);
+}
 
 class CudaStreamHandleDeviceCtx : public DeviceCtx, public SingleThreadQueryCudaEventProvider {
  public:
@@ -42,23 +51,27 @@ class CudaStreamHandleDeviceCtx : public DeviceCtx, public SingleThreadQueryCuda
       : DeviceCtx(),
         SingleThreadQueryCudaEventProvider(device_id),
         cuda_handler_(new CudaStreamHandle(nullptr)),
-        cuda_allocator_(new ThreadSafeAllocator(
-            ParseBooleanFromEnv("OF_DTR", false) && ParseBooleanFromEnv("OF_DTR_ALLO", true)
-                ? static_cast<Allocator*>(Global<DtrCudaAllocator>::Get())
-                : new CudaAllocator(device_id))),
+        cuda_allocator_(new ThreadSafeAllocator(GetAllocator(device_id))),
         device_id_(device_id) {}
 
-  cudaStream_t cuda_stream() const override { return cuda_handler_->cuda_stream(); }
-  cublasHandle_t cublas_handle() const override { return cuda_handler_->cublas_handle(); }
-  cudnnHandle_t cudnn_handle() const override { return cuda_handler_->cudnn_handle(); }
+  cudaStream_t cuda_stream() const override {
+    return cuda_handler_->cuda_stream(); }
+  cublasHandle_t cublas_handle() const override {
+    return cuda_handler_->cublas_handle(); }
+  cudnnHandle_t cudnn_handle() const override {
+    return cuda_handler_->cudnn_handle(); }
 
-  void SyncDevice() override { OF_CUDA_CHECK(cudaStreamSynchronize(cuda_stream())); }
+  void SyncDevice() override {
+    OF_CUDA_CHECK(cudaStreamSynchronize(cuda_stream())); }
 
-  void AddCallBack(std::function<void()> callback) const override { UNIMPLEMENTED(); }
+  void AddCallBack(std::function<void()> callback) const override {
+    UNIMPLEMENTED(); }
 
-  vm::Allocator* mut_allocator() override { return cuda_allocator_.get(); }
+  vm::Allocator* mut_allocator() override {
+    return cuda_allocator_.get(); }
 
-  DeviceType device_type() const override { return DeviceType::kGPU; }
+  DeviceType device_type() const override {
+    return DeviceType::kGPU; }
 
  protected:
   std::unique_ptr<CudaStreamHandle> cuda_handler_;

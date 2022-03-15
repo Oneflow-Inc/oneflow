@@ -16,8 +16,11 @@ limitations under the License.
 
 #ifdef WITH_CUDA
 
-#include "oneflow/core/vm/cuda_allocator.h"
+#include "oneflow/core/vm/dtr_naive_allocator.h"
 #include "oneflow/core/device/cuda_util.h"
+#include "oneflow/core/eager/dtr_util.h"
+#include "oneflow/core/framework/tensor_pool.h"
+#include "oneflow/core/job/env_global_objects_scope.h"
 #include <iostream>
 
 namespace oneflow {
@@ -31,10 +34,16 @@ inline bool IsAlignedSize(size_t size) { return size % kCudaMemAllocAlignSize ==
 
 static const size_t kPieceSplitThreshold = 128 << 20;  // 128MiB
 
+inline double bytes2Mb(size_t bytes) { return bytes * 1. / 1024 / 1024; }
+
 }  // namespace
 
-CudaAllocator::CudaAllocator(int64_t device_id)
-    : Allocator(), device_id_(device_id), total_memory_bytes_(0), recycle_piece_list_(nullptr) {
+DtrNaiveCudaAllocator::DtrNaiveCudaAllocator(int64_t device_id)
+    : Allocator(),
+      device_id_(device_id),
+      total_memory_bytes_(0),
+      recycle_piece_list_(nullptr),
+      id_(get_id()) {
   bins_.resize(kBinNumSize);
   for (int i = 0; i < kBinNumSize; ++i) {
     size_t bin_size = BinSize4BinNum(i);
@@ -46,7 +55,7 @@ CudaAllocator::CudaAllocator(int64_t device_id)
   }
 }
 
-CudaAllocator::~CudaAllocator() {
+DtrNaiveCudaAllocator::~DtrNaiveCudaAllocator() {
   if (total_memory_bytes_ == 0) {
     CHECK_EQ(mem_ptr2block_.size(), 0);
     return;
@@ -55,21 +64,21 @@ CudaAllocator::~CudaAllocator() {
   for (auto& pair : mem_ptr2block_) { OF_CUDA_CHECK(cudaFree(pair.first)); }
 }
 
-void CudaAllocator::InsertPiece2Bin(Piece* piece) {
+void DtrNaiveCudaAllocator::InsertPiece2Bin(Piece* piece) {
   CHECK(piece->is_free && piece->bin_num == kInvalidBinNum);
   int32_t bin_num = BinNum4BinSize(piece->size);
   piece->bin_num = bin_num;
   CHECK(bins_.at(bin_num).pieces.insert(piece).second);
 }
 
-void CudaAllocator::RemovePieceFromBin(Piece* piece) {
+void DtrNaiveCudaAllocator::RemovePieceFromBin(Piece* piece) {
   CHECK(piece->is_free);
   CHECK_NE(piece->bin_num, kInvalidBinNum);
   CHECK_GT(bins_.at(piece->bin_num).pieces.erase(piece), 0);
   piece->bin_num = kInvalidBinNum;
 }
 
-CudaAllocator::Piece* CudaAllocator::AllocatePiece() {
+DtrNaiveCudaAllocator::Piece* DtrNaiveCudaAllocator::AllocatePiece() {
   if (recycle_piece_list_) {
     Piece* ret = recycle_piece_list_;
     recycle_piece_list_ = recycle_piece_list_->next;
@@ -80,7 +89,7 @@ CudaAllocator::Piece* CudaAllocator::AllocatePiece() {
   }
 }
 
-void CudaAllocator::DeallocatePiece(Piece* piece) {
+void DtrNaiveCudaAllocator::DeallocatePiece(Piece* piece) {
   piece->ptr = nullptr;
   piece->size = 0;
   piece->bin_num = kInvalidBinNum;
@@ -90,19 +99,41 @@ void CudaAllocator::DeallocatePiece(Piece* piece) {
   recycle_piece_list_ = piece;
 }
 
-void CudaAllocator::MarkPiece(Piece* piece) {
+void DtrNaiveCudaAllocator::MarkPiece(Piece* piece) {
   CHECK_NOTNULL(piece->ptr);
   CHECK(ptr2piece_.emplace(piece->ptr, piece).second);
 }
-void CudaAllocator::UnMarkPiece(Piece* piece) {
+void DtrNaiveCudaAllocator::UnMarkPiece(Piece* piece) {
   CHECK_NOTNULL(piece->ptr);
   auto it = ptr2piece_.find(piece->ptr);
   CHECK(it != ptr2piece_.end());
   ptr2piece_.erase(it);
 }
 
-CudaAllocator::Piece* CudaAllocator::FindPiece(size_t aligned_size) {
+void DtrNaiveCudaAllocator::Display() {
+  double total_free_piece_bytes = 0.;
+  for (int32_t bin_num = 0; bin_num < kBinNumSize; ++bin_num) {
+    Bin* bin = &bins_.at(bin_num);
+    for (auto it = bin->pieces.begin(); it != bin->pieces.end(); ++it) {
+      Piece* piece = *it;
+      CHECK(piece->is_free);
+      CHECK_NOTNULL(piece->ptr);
+      CHECK_EQ(piece->bin_num, bin_num);
+      CHECK(IsAlignedSize(piece->size));
+      std::cout << "piece in bin " << bin_num << ", memory: " << piece->size * 1. / 1024 / 1024
+                << "MB" << std::endl;
+      total_free_piece_bytes += piece->size;
+    }
+  }
+  std::cout << "total_free_piece_bytes: " << bytes2Mb(total_free_piece_bytes) << "MB"
+            << ", total allocate bytes: " << bytes2Mb(total_allocate_bytes_) << "MB"
+            << ", total deallocate bytes: " << bytes2Mb(total_deallocate_bytes_) << "MB"
+            << ", total memory bytes: " << bytes2Mb(total_memory_bytes_) << "MB" << std::endl;
+}
+
+DtrNaiveCudaAllocator::Piece* DtrNaiveCudaAllocator::FindPiece(size_t aligned_size) {
   CHECK(IsAlignedSize(aligned_size));
+
   for (int32_t bin_num = BinNum4BinSize(aligned_size); bin_num < kBinNumSize; ++bin_num) {
     Bin* bin = &bins_.at(bin_num);
     for (auto it = bin->pieces.begin(); it != bin->pieces.end(); ++it) {
@@ -141,7 +172,7 @@ CudaAllocator::Piece* CudaAllocator::FindPiece(size_t aligned_size) {
   return nullptr;
 }
 
-void CudaAllocator::MergeNeighbourFreePiece(Piece* lhs, Piece* rhs) {
+void DtrNaiveCudaAllocator::MergeNeighbourFreePiece(Piece* lhs, Piece* rhs) {
   CHECK(lhs->is_free);
   CHECK(rhs->is_free);
   CHECK(lhs->next == rhs);
@@ -155,15 +186,26 @@ void CudaAllocator::MergeNeighbourFreePiece(Piece* lhs, Piece* rhs) {
   DeallocatePiece(rhs);
 }
 
-bool CudaAllocator::AllocateBlockToExtendTotalMem(size_t aligned_size) {
+bool DtrNaiveCudaAllocator::AllocateBlockToExtendTotalMem(size_t aligned_size) {
   CHECK(IsAlignedSize(aligned_size));
 
   cudaSetDevice(device_id_);
   size_t free_bytes = -1;
   size_t total_bytes = -1;
   OF_CUDA_CHECK(cudaMemGetInfo(&free_bytes, &total_bytes));
-  const size_t remain_bytes = 50 * 1048576;
-  const size_t available_bytes = free_bytes - remain_bytes;  // remain at least 50MiB memory
+  size_t available_bytes = -1;
+  if (dtr::is_enabled()) {
+    if (total_memory_bytes_ < dtr::memory_threshold()) {
+      available_bytes = dtr::memory_threshold() - total_memory_bytes_;
+      LOG(INFO) << "available_bytes: " << available_bytes / 1024. / 1024.
+                << ", total_memory_bytes: " << total_memory_bytes_ / 1024. / 1024.;
+    } else {
+      return false;
+    }
+  } else {
+    const size_t remain_bytes = 50 * 1048576;  // remain at least 50MiB memory
+    available_bytes = free_bytes - remain_bytes;
+  }
 
   size_t allocate_bytes = aligned_size;
   if (allocate_bytes < 1048576) {
@@ -177,16 +219,27 @@ bool CudaAllocator::AllocateBlockToExtendTotalMem(size_t aligned_size) {
     allocate_bytes = RoundUp(allocate_bytes, 2097152);
   }
   const size_t final_allocate_bytes = CudaMemAlignedBytes(allocate_bytes);
+  if (dtr::is_enabled_and_debug()) {
+    LOG(INFO) << "final allocate " << final_allocate_bytes / 1024. / 1024. << ", allocate "
+              << allocate_bytes / 1024. / 1024. << ", wanted " << aligned_size / 1024. / 1024.;
+  }
 
-  if (final_allocate_bytes > available_bytes) { return false; }
+  if (final_allocate_bytes > available_bytes) {
+    return false;
+  }
 
-  if (final_allocate_bytes < aligned_size) { return false; }
+  if (final_allocate_bytes < aligned_size) {
+    return false;
+  }
 
   char* mem_ptr = nullptr;
-  if (cudaMalloc(&mem_ptr, final_allocate_bytes) != cudaSuccess) { return false; }
+  if (cudaMalloc(&mem_ptr, final_allocate_bytes) != cudaSuccess) {
+    return false;
+  }
 
   // extend sucess
   total_memory_bytes_ += final_allocate_bytes;
+  Global<dtr::TensorPool>::Get()->set_total_memory(total_memory_bytes_);
 
   Piece* piece = AllocatePiece();
   piece->size = final_allocate_bytes;
@@ -203,7 +256,8 @@ bool CudaAllocator::AllocateBlockToExtendTotalMem(size_t aligned_size) {
   return true;
 }
 
-bool CudaAllocator::DeallocateFreeBlockForGarbageCollection() {
+bool DtrNaiveCudaAllocator::DeallocateFreeBlockForGarbageCollection() {
+  // if (oneflow::DTRDebugEnabled()) { std::cout << "Start deallocating gpu memory." << std::endl; }
   size_t total_free_bytes = 0;
   HashSet<char*> free_block_ptrs;
   for (const auto& pair : mem_ptr2block_) {
@@ -225,10 +279,11 @@ bool CudaAllocator::DeallocateFreeBlockForGarbageCollection() {
   }
 
   total_memory_bytes_ -= total_free_bytes;
+  Global<dtr::TensorPool>::Get()->set_total_memory(total_memory_bytes_);
 
   if (total_free_bytes > 0) {
-    LOG(INFO) << "CudaAllocator try deallocate free block for garbage collection. "
-              << " deallocate free bytes : " << total_free_bytes;
+    LOG(INFO) << "DtrNaiveCudaAllocator try deallocate free block for garbage collection. "
+              << " deallocate free bytes : " << total_free_bytes / 1024. / 1024.;
     cudaSetDevice(device_id_);
     for (char* ptr : free_block_ptrs) {
       auto it = mem_ptr2block_.find(ptr);
@@ -258,7 +313,7 @@ bool CudaAllocator::DeallocateFreeBlockForGarbageCollection() {
   return total_free_bytes > 0;
 }
 
-void CudaAllocator::Allocate(char** mem_ptr, std::size_t size) {
+void DtrNaiveCudaAllocator::Allocate(char** mem_ptr, std::size_t size) {
   if (size == 0) {
     *mem_ptr = nullptr;
     return;
@@ -276,13 +331,54 @@ void CudaAllocator::Allocate(char** mem_ptr, std::size_t size) {
     }
   }
 
+  // // test DTRMemoryThreshold
+  // double test_thres = oneflow::GetDTRMemoryThreshold();
+  // std::cout << test_thres << std::endl;
+
+  // // test DTRRemainMemory
+  // size_t r_memory = oneflow::GetDTRRemainMemory();
+  // std::cout << r_memory << std::endl;
+
+  if (dtr::is_enabled()) {
+    // if (oneflow::DTRDebugEnabled()) { std::cout << "dtr enabled condition" << std::endl; }
+    // int it = 0;   // evict iteration times
+    while (piece == nullptr
+           && CHECK_JUST(Global<dtr::TensorPool>::Get()->find_best_tensor_and_evict())) {
+      LOG(INFO) << "total_memory_bytes after find best tensor and evict: "
+                << total_memory_bytes_ / 1024. / 1024.;
+      piece = FindPiece(aligned_size);
+      if (piece == nullptr) {
+        if (AllocateBlockToExtendTotalMem(aligned_size)) { piece = FindPiece(aligned_size); }
+      }
+      if (piece == nullptr) {
+        if (DeallocateFreeBlockForGarbageCollection()
+            && AllocateBlockToExtendTotalMem(aligned_size)) {
+          piece = FindPiece(aligned_size);
+        }
+      }
+      // it++;
+    }
+  }
+
+  if (piece == nullptr) {
+    CHECK_JUST(Global<dtr::TensorPool>::Get()->display2());
+    Display();
+  }
+
   CHECK(piece != nullptr) << "Error! : Out of memory when allocate size : " << size;
   CHECK_NOTNULL(piece->ptr);
   CHECK(ptr2piece_.find(piece->ptr) != ptr2piece_.end());
   *mem_ptr = piece->ptr;
+  total_allocate_bytes_ += size;
+  // if (oneflow::DTRDebugEnabled()) {
+  //   std::cout << "aid " << id_ << ", allocate " << (size / 1024. / 1024.)
+  //             << "MB, total mem: " << (total_memory_bytes_ / 1024. / 1024.)
+  //             << "MB, total allocate bytes: " << (total_allocate_bytes_ / 1024. / 1024.)
+  //             << std::endl;
+  // }
 }
 
-void CudaAllocator::Deallocate(char* mem_ptr, std::size_t size) {
+void DtrNaiveCudaAllocator::Deallocate(char* mem_ptr, std::size_t size) {
   if (mem_ptr == nullptr) { return; }
 
   auto it = ptr2piece_.find(mem_ptr);
@@ -312,6 +408,12 @@ void CudaAllocator::Deallocate(char* mem_ptr, std::size_t size) {
     last_piece_insert_to_bin = prev_p;
   }
   InsertPiece2Bin(last_piece_insert_to_bin);
+  total_deallocate_bytes_ += size;
+  // if (oneflow::DTRDebugEnabled()) {
+  //   std::cout << "id: " << id_ << "deallocate " << (size / 1024. / 1024.)
+  //             << "MB, total deallocate bytes: " << (total_deallocate_bytes_ / 1024. / 1024.)
+  //             << std::endl;
+  // }
 }
 
 }  // namespace vm

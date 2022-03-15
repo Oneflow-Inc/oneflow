@@ -165,11 +165,6 @@ ONEFLOW_API_PYBIND11_MODULE("", m) {
           "data", [](Tensor& t) { return t.data().GetPtrOrThrow(); },
           [](Tensor& t, const std::shared_ptr<Tensor>& other) { t.set_data(other).GetOrThrow(); })
       .def("storage_offset", [](const Tensor& t) { return t.storage_offset().GetOrThrow(); })
-      .def("print_ptr",
-           [](const Tensor& t) -> void {
-             std::cout << &t << " (ebo " << t.eager_blob_object().GetPtrOrThrow().get() << ")"
-                       << std::endl;
-           })
       .def("stride",
            [](const Tensor& t) {
              const auto& stride = t.stride().GetPtrOrThrow()->StrideVec();

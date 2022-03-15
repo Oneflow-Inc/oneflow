@@ -57,6 +57,12 @@ class DTREagerBlobObject final : public EagerBlobObject {
                      const std::shared_ptr<TensorBuffer>& tensor_buffer, LocalDepObject* dep_object);
   ~DTREagerBlobObject() override;
 
+  Maybe<void> TryAllocateBlobBodyMemory(DeviceCtx* device_ctx) override;
+
+  char* object_dptr() { return tensor_buffer_->blob_dptr(); }
+
+  double blob_body_bytes_double() const { return static_cast<double>(blob_body_bytes_); }
+
   void set_compute_op(const std::shared_ptr<LocalCallOpKernelPhyInstrOperand>& operand);
 
   int parent_depth() const;

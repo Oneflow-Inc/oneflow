@@ -14,16 +14,10 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 #include "oneflow/core/eager/eager_blob_object.h"
-#include "oneflow/core/job/global_for.h"
 #include "oneflow/core/vm/allocator.h"
 #include "oneflow/core/framework/to_string.h"
 #include "oneflow/core/framework/shut_down_util.h"
-#include "oneflow/core/framework/tensor_pool.h"
-#include "oneflow/core/job/env_global_objects_scope.h"
 #include "oneflow/core/common/shape_vec.h"
-#include "oneflow/core/vm/dtr_cuda_allocator.h"
-#include "oneflow/core/vm/thread_safe_allocator.h"
-#include "oneflow/user/kernels/stateful_local_opkernel.h"
 
 namespace oneflow {
 namespace vm {
@@ -67,19 +61,10 @@ Maybe<void> EagerBlobObject::TryAllocateBlobBodyMemory(DeviceCtx* device_ctx) {
   const std::size_t required_body_bytes = blob->AlignedByteSizeOfBlobBody();
   if (required_body_bytes == 0) {
     CHECK_ISNULL_OR_RETURN(blob->dptr());
-    if (dtr::is_enabled_and_debug()) {
-      LOG(INFO) << "ebo " << this << " has no body";
-      LOG(INFO) << blob->shape();
-    }
     return Maybe<void>::Ok();
   }
   if (blob->dptr() != nullptr) {
     CHECK_EQ_OR_RETURN(blob_body_bytes_, required_body_bytes);
-    if (dtr::is_enabled_and_debug()) {
-      LOG(INFO) << "ebo " << this
-                << " body already allocated, blob_body_bytes_: " << blob_body_bytes_
-                << ", required_body_bytes: " << required_body_bytes;
-    }
     return Maybe<void>::Ok();
   }
   {
@@ -90,26 +75,6 @@ Maybe<void> EagerBlobObject::TryAllocateBlobBodyMemory(DeviceCtx* device_ctx) {
     };
     char* dptr = nullptr;
     allocator->Allocate(&dptr, required_body_bytes);
-    if (ParseBooleanFromEnv("OF_DTR", false) && ParseBooleanFromEnv("OF_DTR_ALLO", true)) {
-      if (auto* b_allocator = dynamic_cast<vm::ThreadSafeAllocator*>(allocator)) {
-        if (auto* dtr_allocator =
-                dynamic_cast<vm::DtrCudaAllocator*>(b_allocator->backend_allocator())) {
-          if (auto* dtr_ebo = dynamic_cast<vm::DTREagerBlobObject*>(this)) {
-            dtr_allocator->Mark(dtr_ebo, dptr);
-          } else {
-            // do nothing
-            if (dtr::is_enabled_and_debug()) {
-              LOG(INFO) << "dtr_allocator has a non DTREagerBlobObject, " << typeid(*this).name();
-            }
-          }
-        } else {
-          if (dtr::is_enabled_and_debug()) {
-            LOG(INFO) << "not dtr allocator, " << typeid(*allocator).name();
-          }
-        }
-      }
-    }
-    CHECK_NOTNULL_OR_RETURN(dptr);
     tensor_buffer_->set_blob_dptr(std::unique_ptr<char, std::function<void(char*)>>(dptr, Free));
     blob->reset_dptr(dptr);
     InitNonPODTypeBlobIfNeed(non_pod_initer_.get(), blob_.get());
