@@ -45,9 +45,12 @@ inline ncclDataType_t GetNcclDataType(const DataType& dt) {
     NCCL_DATA_TYPE_CASE(Int32);
     NCCL_DATA_TYPE_CASE(Int64);
     NCCL_DATA_TYPE_CASE(Float16);
+    case DataType::kBool: return ncclDataType_t::ncclUint8;
 #if defined(__CUDA_BF16_TYPES_EXIST__) && NCCL_VERSION_CODE >= 21003
     case DataType::kBFloat16: return ncclBfloat16;
 #endif
+    case DataType::kUInt32: return ncclUint32;
+    case DataType::kUInt64: return ncclUint64;
     default: UNIMPLEMENTED();
   }
   return ncclDataType_t::ncclFloat;
@@ -57,7 +60,7 @@ std::string NcclUniqueIdToString(const ncclUniqueId& unique_id);
 
 void NcclUniqueIdFromString(const std::string& str, ncclUniqueId* unique_id);
 
-#define HAS_GPU_SEND_RECV NCCL_VERSION_CODE > 2700
+#define HAS_NCCL_SEND_RECV NCCL_VERSION_CODE > 2700
 
 #endif  // WITH_CUDA
 

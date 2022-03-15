@@ -40,9 +40,9 @@ static void UpsampleBilinear2DForward(const int64_t elem_cnt, const T* in_dptr,
     const T top_right = in_dptr[top_offset + params.right_w_index];
     const T bottom_left = in_dptr[bottom_offset + params.left_w_index];
     const T bottom_right = in_dptr[bottom_offset + params.right_w_index];
-    const T top = top_left + (top_right - top_left) * params.w_lerp;
-    const T bottom = bottom_left + (bottom_right - bottom_left) * params.w_lerp;
-    out_dptr[index] = top + (bottom - top) * params.h_lerp;
+    out_dptr[index] =
+        (1 - params.h_lerp) * ((1 - params.w_lerp) * top_left + params.w_lerp * top_right)
+        + params.h_lerp * ((1 - params.w_lerp) * bottom_left + params.w_lerp * bottom_right);
   }
 }
 
@@ -123,7 +123,7 @@ class UpsampleBilinear2DGradCPUKernel final : public user_op::OpKernel {
  private:
   void Compute(user_op::KernelComputeContext* ctx) const override {
     user_op::Tensor* dx_tensor = ctx->Tensor4ArgNameAndIndex("dx", 0);
-    Memset<DeviceType::kCPU>(ctx->device_ctx(), dx_tensor->mut_dptr<T>(), 0,
+    Memset<DeviceType::kCPU>(ctx->stream(), dx_tensor->mut_dptr<T>(), 0,
                              dx_tensor->shape().elem_cnt() * sizeof(T));
     const user_op::Tensor* dy_tensor = ctx->Tensor4ArgNameAndIndex("dy", 0);
     const float height_scale = ctx->Attr<float>("height_scale");
@@ -155,15 +155,15 @@ class UpsampleBilinear2DGradCPUKernel final : public user_op::OpKernel {
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
 
-#define REGISTER_UPSAMPLE_BILINEAR_2D_CPU_KERNEL(dtype)                                \
-  REGISTER_USER_KERNEL("upsample_bilinear_2d")                                         \
-      .SetCreateFn<UpsampleBilinear2DCPUKernel<dtype>>()                               \
-      .SetIsMatchedHob((user_op::HobDeviceTag() == "cpu")                              \
-                       & (user_op::HobDataType("y", 0) == GetDataType<dtype>::value)); \
-  REGISTER_USER_KERNEL("upsample_bilinear_2d_grad")                                    \
-      .SetCreateFn<UpsampleBilinear2DGradCPUKernel<dtype>>()                           \
-      .SetIsMatchedHob((user_op::HobDeviceTag() == "cpu")                              \
-                       & (user_op::HobDataType("dx", 0) == GetDataType<dtype>::value));
+#define REGISTER_UPSAMPLE_BILINEAR_2D_CPU_KERNEL(dtype)                                 \
+  REGISTER_USER_KERNEL("upsample_bilinear_2d")                                          \
+      .SetCreateFn<UpsampleBilinear2DCPUKernel<dtype>>()                                \
+      .SetIsMatchedHob((user_op::HobDeviceType() == DeviceType::kCPU)                   \
+                       && (user_op::HobDataType("y", 0) == GetDataType<dtype>::value)); \
+  REGISTER_USER_KERNEL("upsample_bilinear_2d_grad")                                     \
+      .SetCreateFn<UpsampleBilinear2DGradCPUKernel<dtype>>()                            \
+      .SetIsMatchedHob((user_op::HobDeviceType() == DeviceType::kCPU)                   \
+                       && (user_op::HobDataType("dx", 0) == GetDataType<dtype>::value));
 
 REGISTER_UPSAMPLE_BILINEAR_2D_CPU_KERNEL(float)
 REGISTER_UPSAMPLE_BILINEAR_2D_CPU_KERNEL(double)

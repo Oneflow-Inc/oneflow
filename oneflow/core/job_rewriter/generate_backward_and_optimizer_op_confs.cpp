@@ -22,7 +22,6 @@ limitations under the License.
 #include "oneflow/core/job/scope.pb.h"
 #include "oneflow/core/job/foreign_callback.h"
 #include "oneflow/core/vm/symbol_storage.h"
-#include "oneflow/core/framework/interpreter.h"
 #include "oneflow/core/framework/instructions_builder.h"
 #include "oneflow/core/framework/symbol_id_cache.h"
 
@@ -38,38 +37,6 @@ void UpdateJobHelperConfProducedLbi2ConsumedDiffLbi(
     auto* mut_pair = mut_pairs.add_pair();
     *mut_pair->mutable_first() = pair.first;
     *mut_pair->mutable_second() = pair.second;
-  }
-}
-
-void SetNdSbpSignatureHintByIdenticalSbpObaPairs(const OpGraph& op_graph,
-                                                 const OpBlobArgPairs& identical_sbp_oba_pairs,
-                                                 JobBuilder* job_builder) {
-  HashMap<OpBlobArg, const cfg::NdSbp*> oba2nd_sbp;
-  op_graph.ForEachNode([&](OpNode* op_node) {
-    auto ForEachBn = [&](const std::function<void(const std::string&)>& Handler) {
-      for (const auto& ibn : op_node->op().input_bns()) { Handler(ibn); }
-      for (const auto& obn : op_node->op().output_bns()) { Handler(obn); }
-    };
-    ForEachBn([&](const std::string& bn_in_op) {
-      const auto& oba = GenOpBlobArg(op_node->op().op_name(), bn_in_op);
-      oba2nd_sbp[oba] = &op_node->NdSbp4Lbi(op_node->op().BnInOp2Lbi(bn_in_op));
-    });
-  });
-  auto HasNdSbp = [&](const OpBlobArg& oba) { return oba2nd_sbp.find(oba) != oba2nd_sbp.end(); };
-  for (const auto& pair : identical_sbp_oba_pairs.pair()) {
-    const cfg::NdSbp* nd_sbp = nullptr;
-    if (HasNdSbp(pair.first()) && HasNdSbp(pair.second())) {
-      CHECK(oba2nd_sbp.at(pair.first()) == oba2nd_sbp.at(pair.second()));
-      nd_sbp = oba2nd_sbp.at(pair.first());
-    } else if (HasNdSbp(pair.first())) {
-      nd_sbp = oba2nd_sbp.at(pair.first());
-    } else if (HasNdSbp(pair.second())) {
-      nd_sbp = oba2nd_sbp.at(pair.second());
-    } else {
-      UNIMPLEMENTED();
-    }
-    job_builder->SetNdSbp4Oba(pair.first(), *nd_sbp);
-    job_builder->SetNdSbp4Oba(pair.second(), *nd_sbp);
   }
 }
 
@@ -136,7 +103,7 @@ Maybe<JobBuilder> WithCalculationPassScope(const std::string& pass_name, Job* jo
     if (exists_op_names.count(op_conf.name()) > 0) { continue; }
     CHECK_OR_RETURN(op_conf.has_scope_symbol_id());
     OF_RETURN_IF_ERROR(scope_storage.MaybeGet(op_conf.scope_symbol_id())) << op_conf.DebugString();
-    scope_id2op_names[op_conf.scope_symbol_id()].push_back(&op_conf);
+    scope_id2op_names[op_conf.scope_symbol_id()].emplace_back(&op_conf);
   }
   const auto& GetNewScopeSymbolId = [&](int64_t old_scope_symbol_id) -> Maybe<int64_t> {
     const auto& old_scope = JUST(scope_storage.MaybeGet(old_scope_symbol_id));
@@ -145,7 +112,7 @@ Maybe<JobBuilder> WithCalculationPassScope(const std::string& pass_name, Job* jo
     new_scope->set_parent_scope_symbol_id(old_scope_symbol_id);
     new_scope->set_calculation_pass_name(pass_name);
     int64_t symbol_id = 0;
-    JUST(LogicalInterpreter().Run([&](InstructionsBuilder* builder) -> Maybe<void> {
+    JUST(PhysicalRun([&](InstructionsBuilder* builder) -> Maybe<void> {
       symbol_id = JUST(builder->FindOrCreateSymbolId<cfg::ScopeProto>(*new_scope));
       return Maybe<void>::Ok();
     }));
@@ -211,7 +178,6 @@ Maybe<void> GenerateBackwardAndOptimizerOpConfs::Apply(Job* job, JobPassCtx* ctx
     return Maybe<void>::Ok();
   }));
   UpdateJobHelperConfProducedLbi2ConsumedDiffLbi(lbi2diff_lbi, job_builder.get());
-  SetNdSbpSignatureHintByIdenticalSbpObaPairs(op_graph, identical_sbp_oba_pairs, job_builder.get());
   return Maybe<void>::Ok();
 }
 

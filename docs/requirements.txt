@@ -2,5 +2,6 @@ sphinx==3.5.4
 recommonmark==0.6.0
 furo==2021.4.11b34
 # above are dev dependencies
+--pre
 --find-links https://staging.oneflow.info/branch/master/cpu
 oneflow

@@ -56,7 +56,7 @@ bool FindInNoCastRegisry(const std::string& op_type, const OpArg& op_arg) {
 std::function<bool(OpNode*)> MakePredicatorIsAllowedToRunWithHalf(const OpGraph& op_graph) {
   auto allowed_set = std::make_shared<HashSet<OpNode*>>();
   op_graph.ForEachNode([&](OpNode* node) {
-    if (node->parallel_desc().device_type() != DeviceType::kGPU) { return; }
+    if (node->parallel_desc().device_type() != DeviceType::kCUDA) { return; }
     if (node->op().output_bns().size() > 0) { INSERT_CHECK(allowed_set->insert(node)); }
   });
   return [allowed_set](OpNode* node) -> bool { return IsKeyFound(*allowed_set, node); };
@@ -91,7 +91,7 @@ void InsertCastOpImpl(bool f2h, const OpGraph& op_graph, const HashSet<OpNode*>&
     for (OpEdge* edge : white_set_edges) {
       CHECK_EQ(1, edge->lbis().size());
       std::string lbn = GenLogicalBlobName(edge->lbis().front());
-      edges_group_by_lbn[lbn].push_back(edge);
+      edges_group_by_lbn[lbn].emplace_back(edge);
     }
   }
 
@@ -143,12 +143,13 @@ void InsertCastOpImpl(bool f2h, const OpGraph& op_graph, const HashSet<OpNode*>&
     if (cast_is_consumed) {
       job_builder->AddOps(src_node->parallel_desc().parallel_conf(),
                           std::vector<OperatorConf>{cast_op.op_conf()});
-      LOG(INFO) << "Insert CastOp: " << cast_op.op_name() << " between " << lbn;
+      VLOG(3) << "Insert CastOp: " << cast_op.op_name() << " between " << lbn;
     }
   }
 
   std::vector<OperatorConf> dst_op_confs;
-  for (const auto& pair : dst_op_name2dst_op_confs) { dst_op_confs.push_back(pair.second); }
+  dst_op_confs.reserve(dst_op_name2dst_op_confs.size());
+  for (const auto& pair : dst_op_name2dst_op_confs) { dst_op_confs.emplace_back(pair.second); }
   // make sure an op_conf can only be udpated once, cuz later update will override before
   job_builder->MutOpsOnlyOnce(dst_op_confs);
 }
@@ -209,15 +210,15 @@ Maybe<void> AutoMixedPrecision::Apply(const OpGraph& op_graph, JobBuilder* job_b
   HashSet<OpNode*> white_set;
 
   FillBlackSet(op_graph, &black_set);
-  VLOG(1) << "BlackSet include: "
+  VLOG(3) << "BlackSet include: "
           << Container2Str<HashSet<OpNode*>, OpNode*>(black_set, OpName4Node);
 
   auto IsAllowedToRunWithHalf = MakePredicatorIsAllowedToRunWithHalf(op_graph);
   FillWhiteSet(op_graph, IsAllowedToRunWithHalf, black_set, &white_set);
-  VLOG(2) << "WhiteSet Before Propagate include: "
+  VLOG(3) << "WhiteSet Before Propagate include: "
           << Container2Str<HashSet<OpNode*>, OpNode*>(white_set, OpName4Node);
   PropagateWhiteThroughClearNodes(op_graph, IsAllowedToRunWithHalf, black_set, &white_set);
-  VLOG(1) << "WhiteSet include: "
+  VLOG(2) << "WhiteSet include: "
           << Container2Str<HashSet<OpNode*>, OpNode*>(white_set, OpName4Node);
 
   InsertCastOp(op_graph, white_set, job_builder);
@@ -246,7 +247,7 @@ void AutoMixedPrecision::FillBlackSet(const OpGraph& op_graph, HashSet<OpNode*>*
       [&](OpNode* node) { return IsKeyFound(*black_set, node); },
       [&](OpNode* node) {
         INSERT_CHECK(black_set->insert(node));
-        VLOG(2) << "FillBlackSet(): Insert " << node->op().op_name() << " to black_set";
+        VLOG(3) << "FillBlackSet(): Insert " << node->op().op_name() << " to black_set";
       });
 }
 
@@ -277,7 +278,7 @@ void AutoMixedPrecision::FillWhiteSet(const OpGraph& op_graph,
       [&](OpNode* node) { return IsKeyFound(*white_set, node); },
       [&](OpNode* node) {
         INSERT_CHECK(white_set->insert(node));
-        VLOG(2) << "FillWhiteSet(): Insert " << node->op().op_name() << " to white_set";
+        VLOG(3) << "FillWhiteSet(): Insert " << node->op().op_name() << " to white_set";
       });
 }
 
@@ -294,7 +295,7 @@ void AutoMixedPrecision::PropagateWhiteThroughClearNodes(
         [&](OpNode* node) { return IsKeyFound(*white_set, node); },
         [&](OpNode* node) {
           INSERT_CHECK(white_set->insert(node));
-          VLOG(2) << "PropagateWhiteThroughNonListNodes(): Insert " << node->op().op_name()
+          VLOG(3) << "PropagateWhiteThroughNonListNodes(): Insert " << node->op().op_name()
                   << " to white_set";
         });
   };

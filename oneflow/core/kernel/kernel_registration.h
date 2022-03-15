@@ -102,15 +102,15 @@ Kernel* CreateKernel(const KernelConf& kernel_conf);
   REGISTER_KERNEL_WITH_DEVICE_AND_DTYPE(op_type, DeviceType::kCPU, double, \
                                         kernel<DeviceType::kCPU, double>)
 
-#define REGISTER_KERNEL_HELPER_GPU_FLOATING(op_type, kernel)               \
-  REGISTER_KERNEL_WITH_DEVICE_AND_DTYPE(op_type, DeviceType::kGPU, float,  \
-                                        kernel<DeviceType::kGPU, float>)   \
-  REGISTER_KERNEL_WITH_DEVICE_AND_DTYPE(op_type, DeviceType::kGPU, double, \
-                                        kernel<DeviceType::kGPU, double>)
+#define REGISTER_KERNEL_HELPER_CUDA_FLOATING(op_type, kernel)               \
+  REGISTER_KERNEL_WITH_DEVICE_AND_DTYPE(op_type, DeviceType::kCUDA, float,  \
+                                        kernel<DeviceType::kCUDA, float>)   \
+  REGISTER_KERNEL_WITH_DEVICE_AND_DTYPE(op_type, DeviceType::kCUDA, double, \
+                                        kernel<DeviceType::kCUDA, double>)
 
-#define REGISTER_KERNEL_HELPER_GPU_HALF(op_type, kernel)                    \
-  REGISTER_KERNEL_WITH_DEVICE_AND_DTYPE(op_type, DeviceType::kGPU, float16, \
-                                        kernel<DeviceType::kGPU, float16>)
+#define REGISTER_KERNEL_HELPER_CUDA_HALF(op_type, kernel)                    \
+  REGISTER_KERNEL_WITH_DEVICE_AND_DTYPE(op_type, DeviceType::kCUDA, float16, \
+                                        kernel<DeviceType::kCUDA, float16>)
 
 }  // namespace oneflow
 

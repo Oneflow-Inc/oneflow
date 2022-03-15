@@ -42,8 +42,8 @@ class ModelInitV2Op : public Operator {
   }
 
  private:
-  Maybe<void> InferNdSbpSignature(cfg::NdSbpSignature* nd_sbp_signature,
-                                  const cfg::NdSbpSignature& nd_sbp_constraints,
+  Maybe<void> InferNdSbpSignature(NdSbpSignature* nd_sbp_signature,
+                                  const NdSbpSignature& nd_sbp_constraints,
                                   const ParallelDesc& parallel_desc,
                                   std::function<Maybe<const NdSbpInferHint*>(const std::string&)>
                                       NdSbpInferHint4Ibn) const override {
@@ -80,8 +80,8 @@ class ModelLoadV2Op : public Operator {
   }
 
  private:
-  Maybe<void> InferNdSbpSignature(cfg::NdSbpSignature* nd_sbp_signature,
-                                  const cfg::NdSbpSignature& nd_sbp_constraints,
+  Maybe<void> InferNdSbpSignature(NdSbpSignature* nd_sbp_signature,
+                                  const NdSbpSignature& nd_sbp_constraints,
                                   const ParallelDesc& parallel_desc,
                                   std::function<Maybe<const NdSbpInferHint*>(const std::string&)>
                                       NdSbpInferHint4Ibn) const override {
@@ -128,8 +128,8 @@ class ModelSaveV2Op final : public Operator {
   }
 
  private:
-  Maybe<void> InferNdSbpSignature(cfg::NdSbpSignature* nd_sbp_signature,
-                                  const cfg::NdSbpSignature& nd_sbp_constraints,
+  Maybe<void> InferNdSbpSignature(NdSbpSignature* nd_sbp_signature,
+                                  const NdSbpSignature& nd_sbp_constraints,
                                   const ParallelDesc& parallel_desc,
                                   std::function<Maybe<const NdSbpInferHint*>(const std::string&)>
                                       NdSbpInferHint4Ibn) const override {

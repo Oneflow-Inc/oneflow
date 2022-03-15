@@ -19,7 +19,7 @@ limitations under the License.
 #include "oneflow/core/common/balanced_splitter.h"
 #include "oneflow/core/thread/thread_manager.h"
 #include "oneflow/core/common/blocking_counter.h"
-#include "oneflow/core/primitive/include/add.h"
+#include "oneflow/core/ep/include/primitive/add.h"
 
 namespace oneflow {
 
@@ -51,15 +51,16 @@ template<typename T>
 void CalcSumOfBlobs(KernelContext* ctx, const std::function<Blob*(const std::string&)>& BnInOp2Blob,
                     const PbRpf<std::string>& src_bns, const std::string& dst_bn) {
   Blob* dst_blob = BnInOp2Blob(dst_bn);
-  std::unique_ptr<primitive::Add> primitive =
-      primitive::NewPrimitive<primitive::AddFactory>(DeviceType::kCPU, dst_blob->data_type());
+  std::unique_ptr<ep::primitive::Add> primitive =
+      ep::primitive::NewPrimitive<ep::primitive::AddFactory>(DeviceType::kCPU,
+                                                             dst_blob->data_type());
   CHECK(primitive);
   std::vector<const void*> srcs(src_bns.size());
   FOR_RANGE(size_t, i, 0, src_bns.size()) {
     Blob* src_blob_i = BnInOp2Blob(src_bns.Get(i));
     srcs[i] = src_blob_i->dptr<T>();
   }
-  primitive->Launch(ctx->stream_ctx(), srcs.data(), srcs.size(), dst_blob->mut_dptr<T>(),
+  primitive->Launch(ctx->stream(), srcs.data(), srcs.size(), dst_blob->mut_dptr<T>(),
                     dst_blob->static_shape().elem_cnt());
 }
 
@@ -68,7 +69,7 @@ void CopyFromFirstToOtherBlobs(KernelContext* ctx,
                                const PbRpf<std::string>& bns) {
   const Blob* blob_0 = BnInOp2Blob(bns.Get(0));
   FOR_RANGE(size_t, i, 1, bns.size()) {
-    AutoMemcpy(ctx->stream_ctx(), BnInOp2Blob(bns.Get(i)), blob_0);
+    AutoMemcpy(ctx->stream(), BnInOp2Blob(bns.Get(i)), blob_0);
   }
 }
 
@@ -124,7 +125,7 @@ class DataContentDesc final {
 static const char* GetConstDptr(Blob* blob) { return blob->dptr<char>(); }
 static char* GetMutDptr(Blob* blob) { return blob->mut_dptr<char>(); }
 
-void ConcatSplitPartDataContent(DeviceCtx* ctx, const DataContentDesc& in_desc,
+void ConcatSplitPartDataContent(ep::Stream* stream, const DataContentDesc& in_desc,
                                 const DataContentDesc& out_desc, int32_t part_id,
                                 int32_t part_num) {
   size_t one_elem_size = in_desc.OneElemSize();
@@ -154,7 +155,7 @@ void ConcatSplitPartDataContent(DeviceCtx* ctx, const DataContentDesc& in_desc,
     }
     int64_t copy_elem_num = std::min(in_elem_num, out_elem_num);
     size_t copy_size = copy_elem_num * one_elem_size;
-    Memcpy<DeviceType::kCPU>(ctx, out_ptr, in_ptr, copy_size);
+    Memcpy<DeviceType::kCPU>(stream, out_ptr, in_ptr, copy_size);
     in_elem_num -= copy_elem_num;
     out_elem_num -= copy_elem_num;
     in_ptr += copy_size;
@@ -166,7 +167,7 @@ void ConcatSplitPartDataContent(DeviceCtx* ctx, const DataContentDesc& in_desc,
   CHECK_EQ(out_idx, range.end());
 }
 
-void ConcatSplitDataContent(DeviceCtx* ctx,
+void ConcatSplitDataContent(ep::Stream* stream,
                             const std::function<Blob*(const std::string&)>& BnInOp2Blob,
                             const PbRpf<std::string>& concat_bns, int32_t concat_axis,
                             const PbRpf<std::string>& split_bns, int32_t split_axis) {
@@ -180,14 +181,14 @@ void ConcatSplitDataContent(DeviceCtx* ctx,
   if (part_num >= 2) {
     BlockingCounter bc(part_num);
     FOR_RANGE(int32_t, part_id, 0, part_num) {
-      Global<ThreadPool>::Get()->AddWork([&ctx, &in_desc, &out_desc, part_id, &part_num, &bc]() {
-        ConcatSplitPartDataContent(ctx, in_desc, out_desc, part_id, part_num);
+      Global<ThreadPool>::Get()->AddWork([stream, &in_desc, &out_desc, part_id, &part_num, &bc]() {
+        ConcatSplitPartDataContent(stream, in_desc, out_desc, part_id, part_num);
         bc.Decrease();
       });
     }
-    bc.WaitUntilCntEqualZero();
+    bc.WaitForeverUntilCntEqualZero();
   } else {
-    ConcatSplitPartDataContent(ctx, in_desc, out_desc, 0, 1);
+    ConcatSplitPartDataContent(stream, in_desc, out_desc, 0, 1);
   }
 }
 
@@ -204,15 +205,15 @@ void BoxingKernel<T>::VirtualKernelInit(KernelContext* ctx) {
 template<typename T>
 void BoxingKernel<T>::ForwardDataContent(KernelContext* ctx) const {
   const BoxingOpConf& boxing_conf = op_conf().boxing_conf();
-  DeviceCtx* device_ctx = ctx->device_ctx();
+  ep::Stream* stream = ctx->stream();
   const auto BnInOp2Blob = [ctx](const std::string& bn) { return ctx->BnInOp2Blob(bn); };
   if (boxing_conf.in_box_case() == BoxingOpConf::kConcatBox) {
     if (boxing_conf.out_box_case() == BoxingOpConf::kSplitBox) {
-      ConcatSplitDataContent(device_ctx, BnInOp2Blob, op_attribute().input_bns(),
+      ConcatSplitDataContent(stream, BnInOp2Blob, op_attribute().input_bns(),
                              boxing_conf.concat_box().axis(), op_attribute().output_bns(),
                              boxing_conf.split_box().axis());
     } else if (boxing_conf.out_box_case() == BoxingOpConf::kCloneBox) {
-      ConcatSplitDataContent(device_ctx, BnInOp2Blob, op_attribute().input_bns(),
+      ConcatSplitDataContent(stream, BnInOp2Blob, op_attribute().input_bns(),
                              boxing_conf.concat_box().axis(), obn_0_, 0);
       CopyFromFirstToOtherBlobs(ctx, BnInOp2Blob, op_attribute().output_bns());
     } else {
@@ -221,7 +222,7 @@ void BoxingKernel<T>::ForwardDataContent(KernelContext* ctx) const {
   } else if (boxing_conf.in_box_case() == BoxingOpConf::kAddBox) {
     if (boxing_conf.out_box_case() == BoxingOpConf::kSplitBox) {
       CalcSumOfBlobs<T>(ctx, BnInOp2Blob, op_attribute().input_bns(), "middle");
-      ConcatSplitDataContent(device_ctx, BnInOp2Blob, ConstructPbRpf("middle"), 0,
+      ConcatSplitDataContent(stream, BnInOp2Blob, ConstructPbRpf("middle"), 0,
                              op_attribute().output_bns(), boxing_conf.split_box().axis());
     } else if (boxing_conf.out_box_case() == BoxingOpConf::kCloneBox) {
       CalcSumOfBlobs<T>(ctx, BnInOp2Blob, op_attribute().input_bns(), obn_0_.Get(0));

@@ -30,14 +30,14 @@ struct NdarrayApplyBinary<
     device_type, T, binary_func,
     typename std::enable_if<std::is_same<T, typename DevDType<device_type, T>::type>::value>::type>
     final {
-  static void Apply(DeviceCtx* ctx,
+  static void Apply(ep::Stream* stream,
                     const XpuVarNdarray<typename BinaryFuncTrait<binary_func, T>::return_type>& y,
                     const XpuVarNdarray<const T>& a, const XpuVarNdarray<const T>& b) {
-    NdarrayApplyBinaryCoreWrapper<device_type, T, binary_func>::Apply(ctx, y, a, b);
+    NdarrayApplyBinaryCoreWrapper<device_type, T, binary_func>::Apply(stream, y, a, b);
   }
-  static void InplaceApply(DeviceCtx* ctx, const XpuVarNdarray<T>& y,
+  static void InplaceApply(ep::Stream* stream, const XpuVarNdarray<T>& y,
                            const XpuVarNdarray<const T>& x) {
-    NdarrayApplyBinaryCoreWrapper<device_type, T, binary_func>::InplaceApply(ctx, y, x);
+    NdarrayApplyBinaryCoreWrapper<device_type, T, binary_func>::InplaceApply(stream, y, x);
   }
 };
 
@@ -47,18 +47,18 @@ struct NdarrayApplyBinary<
     typename std::enable_if<!std::is_same<T, typename DevDType<device_type, T>::type>::value>::type>
     final {
   using NewT = typename DevDType<device_type, T>::type;
-  static void Apply(DeviceCtx* ctx,
+  static void Apply(ep::Stream* stream,
                     const XpuVarNdarray<typename BinaryFuncTrait<binary_func, T>::return_type>& y,
                     const XpuVarNdarray<const T>& a, const XpuVarNdarray<const T>& b) {
     return NdarrayApplyBinary<device_type, NewT, binary_func>::Apply(
-        ctx, reinterpret_cast<const XpuVarNdarray<NewT>&>(y),
+        stream, reinterpret_cast<const XpuVarNdarray<NewT>&>(y),
         reinterpret_cast<const XpuVarNdarray<const NewT>&>(a),
         reinterpret_cast<const XpuVarNdarray<const NewT>&>(b));
   }
-  static void InplaceApply(DeviceCtx* ctx, const XpuVarNdarray<T>& y,
+  static void InplaceApply(ep::Stream* stream, const XpuVarNdarray<T>& y,
                            const XpuVarNdarray<const T>& x) {
     return NdarrayApplyBinary<device_type, NewT, binary_func>::InplaceApply(
-        ctx, reinterpret_cast<const XpuVarNdarray<NewT>&>(y),
+        stream, reinterpret_cast<const XpuVarNdarray<NewT>&>(y),
         reinterpret_cast<const XpuVarNdarray<const NewT>&>(x));
   }
 };

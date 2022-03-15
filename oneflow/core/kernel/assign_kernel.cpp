@@ -31,7 +31,7 @@ class AssignKernel final : public Kernel {
 void AssignKernel::ForwardDataContent(KernelContext* ctx) const {
   const Blob* value = ctx->BnInOp2Blob("value");
   Blob* ref = ctx->BnInOp2Blob("ref");
-  AutoMemcpy(ctx->stream_ctx(), ref, value);
+  AutoMemcpy(ctx->stream(), ref, value);
 }
 
 REGISTER_KERNEL(OperatorConf::kAssignConf, AssignKernel);

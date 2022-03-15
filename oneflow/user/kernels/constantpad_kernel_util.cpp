@@ -21,7 +21,7 @@ namespace user_op {
 
 template<typename IN_T>
 struct ConstantPad1dFunctor<DeviceType::kCPU, IN_T> final {
-  void operator()(DeviceCtx* ctx, const IN_T* src, IN_T* dest,
+  void operator()(ep::Stream* stream, const IN_T* src, IN_T* dest,
                   const NdIndexOffsetHelper<int64_t, 3>& index_helper, const ShapeView& x_shape,
                   const ShapeView& y_shape, const std::vector<int64_t>& padding,
                   IN_T constant_value) {
@@ -36,7 +36,7 @@ struct ConstantPad1dFunctor<DeviceType::kCPU, IN_T> final {
 
 template<typename IN_T>
 struct ConstantPad1dGradFunctor<DeviceType::kCPU, IN_T> final {
-  void operator()(DeviceCtx* ctx, const IN_T* src, IN_T* dest,
+  void operator()(ep::Stream* stream, const IN_T* src, IN_T* dest,
                   const NdIndexOffsetHelper<int64_t, 3>& index_helper, const ShapeView& dy_shape,
                   const ShapeView& dx_shape, const std::vector<int64_t>& padding) {
     const int64_t c_idx = 1;
@@ -48,7 +48,7 @@ struct ConstantPad1dGradFunctor<DeviceType::kCPU, IN_T> final {
 
 template<typename IN_T>
 struct ConstantPad3dFunctor<DeviceType::kCPU, IN_T> final {
-  void operator()(DeviceCtx* ctx, const IN_T* src, IN_T* dest,
+  void operator()(ep::Stream* stream, const IN_T* src, IN_T* dest,
                   const NdIndexOffsetHelper<int64_t, 5>& index_helper, const ShapeView& x_shape,
                   const ShapeView& y_shape, const std::vector<int64_t>& padding,
                   IN_T constant_value) {
@@ -67,7 +67,7 @@ struct ConstantPad3dFunctor<DeviceType::kCPU, IN_T> final {
 
 template<typename IN_T>
 struct ConstantPad3dGradFunctor<DeviceType::kCPU, IN_T> final {
-  void operator()(DeviceCtx* ctx, const IN_T* src, IN_T* dest,
+  void operator()(ep::Stream* stream, const IN_T* src, IN_T* dest,
                   const NdIndexOffsetHelper<int64_t, 5>& index_helper, const ShapeView& dy_shape,
                   const ShapeView& dx_shape, const std::vector<int64_t>& padding) {
     const int64_t c_idx = 1;

@@ -25,7 +25,7 @@ namespace test {
 TEST(Optional, copy_constructor) {
   Optional<int64_t> a(0);
   std::vector<Optional<int64_t>> vec;
-  vec.push_back(a);
+  vec.emplace_back(a);
   ASSERT_TRUE(vec[0].has_value());
   int64_t val = CHECK_JUST(vec[0]);
   ASSERT_EQ(val, 0);

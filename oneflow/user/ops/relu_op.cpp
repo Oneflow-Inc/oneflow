@@ -14,76 +14,73 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 #include "oneflow/core/framework/framework.h"
+#include "oneflow/core/framework/op_generated.h"
 
 namespace oneflow {
 
+/*static*/ Maybe<void> ReluOp::GetSbp(user_op::SbpContext* ctx) {
+  const user_op::TensorDesc& in_tensor = ctx->LogicalTensorDesc4InputArgNameAndIndex("x", 0);
+  FOR_RANGE(int64_t, i, 0, in_tensor.shape().NumAxes()) {
+    ctx->NewBuilder().Split(user_op::OpArg("x", 0), i).Split(user_op::OpArg("y", 0), i).Build();
+  }
+  return Maybe<void>::Ok();
+}
+/*static*/ Maybe<void> ReluOp::InferLogicalTensorDesc(user_op::InferContext* ctx) {
+  const Shape& in_shape = ctx->InputShape("x", 0);
+  Shape* out_shape = ctx->OutputShape("y", 0);
+  *out_shape = in_shape;
+  return Maybe<void>::Ok();
+}
+/*static*/ Maybe<void> ReluOp::InferPhysicalTensorDesc(user_op::InferContext* ctx) {
+  return InferLogicalTensorDesc(ctx);
+}
+/*static*/ Maybe<void> ReluOp::InferDataType(user_op::InferContext* ctx) {
+  *ctx->OutputDType("y", 0) = ctx->InputDType("x", 0);
+  return Maybe<void>::Ok();
+}
+
+/*static*/ Maybe<void> ReluGradOp::GetSbp(user_op::SbpContext* ctx) {
+  const user_op::TensorDesc& y_tensor = ctx->LogicalTensorDesc4InputArgNameAndIndex("y", 0);
+  FOR_RANGE(int64_t, i, 0, y_tensor.shape().NumAxes()) {
+    ctx->NewBuilder()
+        .Split(user_op::OpArg("y", 0), i)
+        .Split(user_op::OpArg("dy", 0), i)
+        .Split(user_op::OpArg("dx", 0), i)
+        .Build();
+  }
+  return Maybe<void>::Ok();
+}
+/*static*/ Maybe<void> ReluGradOp::InferLogicalTensorDesc(user_op::InferContext* ctx) {
+  const Shape& y_shape = ctx->InputShape("y", 0);
+  const Shape& dy_shape = ctx->InputShape("dy", 0);
+  Shape* dx_shape = ctx->OutputShape("dx", 0);
+  CHECK_OR_RETURN(dy_shape == y_shape);
+  *dx_shape = dy_shape;
+  return Maybe<void>::Ok();
+}
+/*static*/ Maybe<void> ReluGradOp::InferPhysicalTensorDesc(user_op::InferContext* ctx) {
+  return InferLogicalTensorDesc(ctx);
+}
+/*static*/ Maybe<void> ReluGradOp::InferDataType(user_op::InferContext* ctx) {
+  const DataType& data_type = ctx->InputDType("y", 0);
+  CHECK_EQ_OR_RETURN(ctx->InputDType("dy", 0), data_type);
+  *ctx->OutputDType("dx", 0) = data_type;
+  return Maybe<void>::Ok();
+}
+
 namespace {
-
-REGISTER_USER_OP("relu")
-    .Input("in")
-    .Output("out")
-    .SetTensorDescInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
-      const Shape& in_shape = ctx->InputShape("in", 0);
-      Shape* out_shape = ctx->OutputShape("out", 0);
-      *out_shape = in_shape;
-      return Maybe<void>::Ok();
-    })
-    .SetGetSbpFn([](user_op::SbpContext* ctx) -> Maybe<void> {
-      const user_op::TensorDesc& in_tensor = ctx->LogicalTensorDesc4InputArgNameAndIndex("in", 0);
-      FOR_RANGE(int64_t, i, 0, in_tensor.shape().NumAxes()) {
-        ctx->NewBuilder()
-            .Split(user_op::OpArg("in", 0), i)
-            .Split(user_op::OpArg("out", 0), i)
-            .Build();
-      }
-      return Maybe<void>::Ok();
-    })
-    .SetDataTypeInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
-      *ctx->OutputDType("out", 0) = ctx->InputDType("in", 0);
-      return Maybe<void>::Ok();
-    });
-
-REGISTER_USER_OP("relu_grad")
-    .Input("y")
-    .Input("dy")
-    .Output("dx")
-    .SetTensorDescInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
-      const Shape& y_shape = ctx->InputShape("y", 0);
-      const Shape& dy_shape = ctx->InputShape("dy", 0);
-      Shape* dx_shape = ctx->OutputShape("dx", 0);
-      CHECK_OR_RETURN(dy_shape == y_shape);
-      *dx_shape = dy_shape;
-      return Maybe<void>::Ok();
-    })
-    .SetGetSbpFn([](user_op::SbpContext* ctx) -> Maybe<void> {
-      const user_op::TensorDesc& y_tensor = ctx->LogicalTensorDesc4InputArgNameAndIndex("y", 0);
-      FOR_RANGE(int64_t, i, 0, y_tensor.shape().NumAxes()) {
-        ctx->NewBuilder()
-            .Split(user_op::OpArg("y", 0), i)
-            .Split(user_op::OpArg("dy", 0), i)
-            .Split(user_op::OpArg("dx", 0), i)
-            .Build();
-      }
-      return Maybe<void>::Ok();
-    })
-    .SetDataTypeInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
-      const DataType& data_type = ctx->InputDType("y", 0);
-      CHECK_EQ_OR_RETURN(ctx->InputDType("dy", 0), data_type);
-      *ctx->OutputDType("dx", 0) = data_type;
-      return Maybe<void>::Ok();
-    });
 
 REGISTER_USER_OP_GRAD("relu").SetBackwardOpConfGenFn(
     [](user_op::BackwardOpConfContext* ctx) -> Maybe<void> {
       const auto relu_grad_op_name = ctx->FwOp().op_name() + "_grad";
       ctx->DefineOp(relu_grad_op_name, [&ctx](user_op::BackwardOpBuilder& builder) {
         return builder.OpTypeName("relu_grad")
-            .InputBind("y", ctx->FwOp().output("out", 0))
-            .InputBind("dy", ctx->FwOp().output_grad("out", 0))
+            .InputBind("y", ctx->FwOp().output("y", 0))
+            .InputBind("dy", ctx->FwOp().output_grad("y", 0))
             .Output("dx")
             .Build();
       });
-      ctx->FwOp().InputGradBind(user_op::OpArg("in", 0),
+      ctx->FwOp().InputGradBind(user_op::OpArg("x", 0),
                                 [&ctx, &relu_grad_op_name]() -> const std::string& {
                                   return ctx->GetOp(relu_grad_op_name).output("dx", 0);
                                 });

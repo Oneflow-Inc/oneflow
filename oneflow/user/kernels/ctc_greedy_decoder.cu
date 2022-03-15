@@ -18,6 +18,7 @@ limitations under the License.
 #include "oneflow/core/kernel/new_kernel_util.h"
 #include "oneflow/core/kernel/kernel_util.h"
 #include "oneflow/user/kernels/ctc_greedy_decoder.h"
+#include "oneflow/core/ep/cuda/cuda_stream.h"
 
 namespace oneflow {
 namespace {
@@ -110,8 +111,8 @@ __global__ void CtcGreedyDecodeGpu(int64_t* decoded_ptr, T* neg_sum_logits_ptr,
 }
 
 template<typename T>
-struct CTCGreedyDecoderFunctor<DeviceType::kGPU, T> final {
-  void operator()(DeviceCtx* ctx, int64_t* decoded_ptr, T* neg_sum_logits_ptr,
+struct CTCGreedyDecoderFunctor<DeviceType::kCUDA, T> final {
+  void operator()(ep::Stream* stream, int64_t* decoded_ptr, T* neg_sum_logits_ptr,
                   const T* log_probs_ptr, const int64_t* input_lengths_ptr,
                   const bool merge_repeated, const int64_t max_input_length,
                   const int64_t batch_size, const int64_t num_labels) {
@@ -123,22 +124,23 @@ struct CTCGreedyDecoderFunctor<DeviceType::kGPU, T> final {
         &max_active_blocks, CtcGreedyDecodeGpu<T>, kCudaThreadsNumPerBlock, shared_mem_size));
     if (max_active_blocks > 0) {
       CtcGreedyDecodeGpuMultiThread<<<BlocksNum4ThreadsNum(thread_num), kCudaThreadsNumPerBlock,
-                                      shared_mem_size, ctx->cuda_stream()>>>(
+                                      shared_mem_size,
+                                      stream->As<ep::CudaStream>()->cuda_stream()>>>(
           decoded_ptr, neg_sum_logits_ptr, log_probs_ptr, input_lengths_ptr, merge_repeated,
           max_input_length, batch_size, num_labels);
 
     } else {
       CtcGreedyDecodeGpu<<<BlocksNum4ThreadsNum(thread_num), kCudaThreadsNumPerBlock, 0,
-                           ctx->cuda_stream()>>>(decoded_ptr, neg_sum_logits_ptr, log_probs_ptr,
-                                                 input_lengths_ptr, merge_repeated,
-                                                 max_input_length, batch_size, num_labels);
+                           stream->As<ep::CudaStream>()->cuda_stream()>>>(
+          decoded_ptr, neg_sum_logits_ptr, log_probs_ptr, input_lengths_ptr, merge_repeated,
+          max_input_length, batch_size, num_labels);
     }
   }
 };
 
 }  // namespace
 
-REGISTER_CTC_GREEDY_DECODER_KERNELS(DeviceType::kGPU, float);
-REGISTER_CTC_GREEDY_DECODER_KERNELS(DeviceType::kGPU, double);
+REGISTER_CTC_GREEDY_DECODER_KERNELS(DeviceType::kCUDA, float);
+REGISTER_CTC_GREEDY_DECODER_KERNELS(DeviceType::kCUDA, double);
 
 }  // namespace oneflow

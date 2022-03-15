@@ -23,6 +23,7 @@ limitations under the License.
 #include <cub/cub.cuh>
 #include <curand.h>
 #include <curand_kernel.h>
+#include "oneflow/core/ep/cuda/cuda_stream.h"
 
 namespace oneflow {
 namespace user_op {
@@ -142,15 +143,15 @@ __global__ void GenerateGpu(curandState* state, const int64_t n, const int64_t m
 
 class DistributedPartialFcSampleOpKernelState final : public user_op::OpKernelState {
  public:
-  DistributedPartialFcSampleOpKernelState(DeviceCtx* ctx, int64_t lower, int64_t upper,
+  DistributedPartialFcSampleOpKernelState(ep::Stream* stream, int64_t lower, int64_t upper,
                                           int64_t num_sample_per_rank, int64_t seed)
       : lower_(lower), upper_(upper), num_sample_per_rank_(num_sample_per_rank) {
-    CHECK_NOTNULL(ctx);
+    CHECK_NOTNULL(stream);
     const int64_t num_classes = upper_ - lower_;
     OF_CUDA_CHECK(cudaMalloc(&curand_states_, BlocksNum4ThreadsNum(num_classes)
                                                   * kCudaThreadsNumPerBlock * sizeof(curandState)));
     SetupKernel<<<BlocksNum4ThreadsNum(num_classes), kCudaThreadsNumPerBlock, 0,
-                  ctx->cuda_stream()>>>(seed, curand_states_);
+                  stream->As<ep::CudaStream>()->cuda_stream()>>>(seed, curand_states_);
   }
   ~DistributedPartialFcSampleOpKernelState() {
     cudaError_t ret = cudaFree(curand_states_);
@@ -162,9 +163,10 @@ class DistributedPartialFcSampleOpKernelState final : public user_op::OpKernelSt
   int64_t num_sample_per_rank() const { return num_sample_per_rank_; }
 
   template<typename K>
-  void GenRandom(DeviceCtx* ctx, const int64_t n, const int64_t max_val, K* buffer) {
-    GenerateGpu<K><<<BlocksNum4ThreadsNum(n), kCudaThreadsNumPerBlock, 0, ctx->cuda_stream()>>>(
-        curand_states_, n, max_val, buffer);
+  void GenRandom(ep::Stream* stream, const int64_t n, const int64_t max_val, K* buffer) {
+    GenerateGpu<K>
+        <<<BlocksNum4ThreadsNum(n), kCudaThreadsNumPerBlock, 0,
+           stream->As<ep::CudaStream>()->cuda_stream()>>>(curand_states_, n, max_val, buffer);
   }
 
  private:
@@ -246,35 +248,34 @@ __global__ void GetMappedLabel(const int64_t n, const K* label_map_key, const K*
 }
 
 template<typename K>
-void MapLabel(DeviceCtx* ctx, const int64_t num_classes, const int64_t batch_size,
+void MapLabel(ep::Stream* stream, const int64_t num_classes, const int64_t batch_size,
               const int64_t lower_bound, const int64_t parallel_num, const int64_t num_sample,
               size_t temp_storage_bytes, const K* label_ptr, K* mapped_label_ptr,
               K* cub_sort_values_ptr, K* cub_sort_keys_out_ptr, K* cub_sort_values_out_ptr,
               void* cub_tmp_storage_ptr, K* bound_index_ptr, K* bound_value_ptr) {
-  IotaKernel<<<BlocksNum4ThreadsNum(batch_size), kCudaThreadsNumPerBlock, 0, ctx->cuda_stream()>>>(
-      batch_size, cub_sort_values_ptr);
+  IotaKernel<<<BlocksNum4ThreadsNum(batch_size), kCudaThreadsNumPerBlock, 0,
+               stream->As<ep::CudaStream>()->cuda_stream()>>>(batch_size, cub_sort_values_ptr);
   OF_CUDA_CHECK((cub::DeviceRadixSort::SortPairs<K, K>(
       cub_tmp_storage_ptr, temp_storage_bytes, label_ptr, cub_sort_keys_out_ptr,
       cub_sort_values_ptr, cub_sort_values_out_ptr, batch_size, 0, sizeof(K) * 8,
-      ctx->cuda_stream())));
+      stream->As<ep::CudaStream>()->cuda_stream())));
   NotEqualToPreviousAdjacentIterator<K, K> unique_counting_iter(cub_sort_keys_out_ptr, 0);
   OF_CUDA_CHECK((cub::DeviceScan::InclusiveSum<NotEqualToPreviousAdjacentIterator<K, K>, K*>(
       cub_tmp_storage_ptr, temp_storage_bytes, unique_counting_iter, cub_sort_values_ptr,
-      batch_size, ctx->cuda_stream())));
+      batch_size, stream->As<ep::CudaStream>()->cuda_stream())));
 
   GetPartionBound<<<BlocksNum4ThreadsNum(batch_size), kCudaThreadsNumPerBlock, 0,
-                    ctx->cuda_stream()>>>(batch_size, parallel_num, num_classes,
-                                          cub_sort_keys_out_ptr, cub_sort_values_ptr,
-                                          bound_index_ptr, bound_value_ptr);
+                    stream->As<ep::CudaStream>()->cuda_stream()>>>(
+      batch_size, parallel_num, num_classes, cub_sort_keys_out_ptr, cub_sort_values_ptr,
+      bound_index_ptr, bound_value_ptr);
 
-  GetLabelMap<K>
-      <<<BlocksNum4ThreadsNum(batch_size), kCudaThreadsNumPerBlock, 0, ctx->cuda_stream()>>>(
-          batch_size, parallel_num, num_sample, bound_index_ptr, bound_value_ptr,
-          cub_sort_values_ptr);
+  GetLabelMap<K><<<BlocksNum4ThreadsNum(batch_size), kCudaThreadsNumPerBlock, 0,
+                   stream->As<ep::CudaStream>()->cuda_stream()>>>(
+      batch_size, parallel_num, num_sample, bound_index_ptr, bound_value_ptr, cub_sort_values_ptr);
 
   GetMappedLabel<<<BlocksNum4ThreadsNum(batch_size), kCudaThreadsNumPerBlock, 0,
-                   ctx->cuda_stream()>>>(batch_size, cub_sort_values_out_ptr, cub_sort_values_ptr,
-                                         mapped_label_ptr);
+                   stream->As<ep::CudaStream>()->cuda_stream()>>>(
+      batch_size, cub_sort_values_out_ptr, cub_sort_values_ptr, mapped_label_ptr);
 }
 
 }  // namespace
@@ -287,7 +288,7 @@ class DistributedPartialFcSampleGpuKernel final : public user_op::OpKernel {
 
   std::shared_ptr<user_op::OpKernelState> CreateOpKernelState(
       user_op::KernelInitContext* ctx) const override {
-    const cfg::SbpParallel& in_sbp = ctx->SbpParallel4ArgNameAndIndex("weight", 0);
+    const SbpParallel& in_sbp = ctx->SbpParallel4ArgNameAndIndex("weight", 0);
     const TensorDesc* in_logical_desc = ctx->LogicalTensorDesc4ArgNameAndIndex("weight", 0);
     const int64_t class_num = in_logical_desc->shape().At(0);
     const int64_t num_sample = ctx->Attr<int64_t>("num_sample");
@@ -302,17 +303,18 @@ class DistributedPartialFcSampleGpuKernel final : public user_op::OpKernel {
       CHECK(ctx->SbpParallel4ArgNameAndIndex("label", 0).has_broadcast_parallel());
       BalancedSplitter bs(class_num, parallel_num);
       return std::make_shared<DistributedPartialFcSampleOpKernelState>(
-          ctx->device_ctx(), bs.At(ctx->parallel_ctx().parallel_id()).begin(),
+          ctx->stream(), bs.At(ctx->parallel_ctx().parallel_id()).begin(),
           bs.At(ctx->parallel_ctx().parallel_id()).end(), num_sample_per_rank, seed);
     } else {
-      return std::make_shared<DistributedPartialFcSampleOpKernelState>(
-          ctx->device_ctx(), 0, class_num, num_sample_per_rank, seed);
+      return std::make_shared<DistributedPartialFcSampleOpKernelState>(ctx->stream(), 0, class_num,
+                                                                       num_sample_per_rank, seed);
     }
   }
 
  private:
   using user_op::OpKernel::Compute;
-  void Compute(user_op::KernelComputeContext* ctx, user_op::OpKernelState* state) const override {
+  void Compute(user_op::KernelComputeContext* ctx, user_op::OpKernelState* state,
+               const user_op::OpKernelCache*) const override {
     const user_op::Tensor* weight = ctx->Tensor4ArgNameAndIndex("weight", 0);
     const user_op::Tensor* label = ctx->Tensor4ArgNameAndIndex("label", 0);
     user_op::Tensor* mapped_label = ctx->Tensor4ArgNameAndIndex("mapped_label", 0);
@@ -331,31 +333,31 @@ class DistributedPartialFcSampleGpuKernel final : public user_op::OpKernel {
     CHECK_EQ(num_classes, kernel_state->upper() - kernel_state->lower());
     const int64_t lower_bound = kernel_state->lower();
     const int64_t num_sample = kernel_state->num_sample_per_rank();
-    kernel_state->GenRandom<K>(ctx->device_ctx(), num_classes, num_classes,
+    kernel_state->GenRandom<K>(ctx->stream(), num_classes, num_classes,
                                buffer_manager.CubSortKeysPtr());
     MarkPositive<<<BlocksNum4ThreadsNum(batch_size), kCudaThreadsNumPerBlock, 0,
-                   ctx->device_ctx()->cuda_stream()>>>(
+                   ctx->stream()->As<ep::CudaStream>()->cuda_stream()>>>(
         batch_size, lower_bound, num_classes, label->dptr<K>(), buffer_manager.CubSortKeysPtr());
     IotaKernel<<<BlocksNum4ThreadsNum(num_classes), kCudaThreadsNumPerBlock, 0,
-                 ctx->device_ctx()->cuda_stream()>>>(num_classes,
-                                                     buffer_manager.CubSortValuesPtr());
+                 ctx->stream()->As<ep::CudaStream>()->cuda_stream()>>>(
+        num_classes, buffer_manager.CubSortValuesPtr());
     size_t temp_storage_bytes = buffer_manager.GetCubTmpStorageSize();
     OF_CUDA_CHECK((cub::DeviceRadixSort::SortPairs<K, K>(
         buffer_manager.CubTmpStoragePtr(), temp_storage_bytes, buffer_manager.CubSortKeysPtr(),
         buffer_manager.CubSortKeysOutPtr(), buffer_manager.CubSortValuesPtr(),
         buffer_manager.CubSortValuesOutPtr(), num_classes, 0, sizeof(K) * 8,
-        ctx->device_ctx()->cuda_stream())));
+        ctx->stream()->As<ep::CudaStream>()->cuda_stream())));
 
     GetSampledLabel<<<BlocksNum4ThreadsNum(num_sample), kCudaThreadsNumPerBlock, 0,
-                      ctx->device_ctx()->cuda_stream()>>>(num_sample, lower_bound,
-                                                          buffer_manager.CubSortValuesOutPtr(),
-                                                          sampled_label->mut_dptr<K>());
+                      ctx->stream()->As<ep::CudaStream>()->cuda_stream()>>>(
+        num_sample, lower_bound, buffer_manager.CubSortValuesOutPtr(),
+        sampled_label->mut_dptr<K>());
 
-    GatherKernelUtilImpl<DeviceType::kGPU, T, K>::Forward(
-        ctx->device_ctx(), buffer_manager.CubSortValuesOutPtr(), num_sample, weight->dptr<T>(),
+    GatherKernelUtilImpl<DeviceType::kCUDA, T, K>::Forward(
+        ctx->stream(), buffer_manager.CubSortValuesOutPtr(), num_sample, weight->dptr<T>(),
         Shape({1, num_classes, weight->shape().Count(1)}), sampled_weight->mut_dptr<T>(), 0);
 
-    MapLabel<K>(ctx->device_ctx(), num_classes, batch_size, lower_bound, parallel_num, num_sample,
+    MapLabel<K>(ctx->stream(), num_classes, batch_size, lower_bound, parallel_num, num_sample,
                 buffer_manager.GetCubTmpStorageSize(), label->dptr<K>(),
                 mapped_label->mut_dptr<K>(), buffer_manager.CubSortValuesPtr(),
                 buffer_manager.CubSortKeysOutPtr(), buffer_manager.CubSortValuesOutPtr(),
@@ -366,13 +368,13 @@ class DistributedPartialFcSampleGpuKernel final : public user_op::OpKernel {
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
 
-#define REGISTER_DISTRIBUTED_PARTIAL_FC_SAMPLE_GPU_KERNEL(dtype_pair, ltype_pair)                \
+#define REGISTER_DISTRIBUTED_PARTIAL_FC_SAMPLE_CUDA_KERNEL(dtype_pair, ltype_pair)               \
   REGISTER_USER_KERNEL("distributed_partial_fc_sample")                                          \
       .SetCreateFn<DistributedPartialFcSampleGpuKernel<OF_PP_PAIR_FIRST(dtype_pair),             \
                                                        OF_PP_PAIR_FIRST(ltype_pair)>>()          \
-      .SetIsMatchedHob((user_op::HobDeviceTag() == "gpu")                                        \
-                       & (user_op::HobDataType("label", 0) == OF_PP_PAIR_SECOND(ltype_pair))     \
-                       & (user_op::HobDataType("weight", 0) == OF_PP_PAIR_SECOND(dtype_pair)))   \
+      .SetIsMatchedHob((user_op::HobDeviceType() == DeviceType::kCUDA)                           \
+                       && (user_op::HobDataType("label", 0) == OF_PP_PAIR_SECOND(ltype_pair))    \
+                       && (user_op::HobDataType("weight", 0) == OF_PP_PAIR_SECOND(dtype_pair)))  \
       .SetInferTmpSizeFn([](oneflow::user_op::InferContext* ctx) {                               \
         const int64_t num_classes = ctx->InputTensorDesc("weight", 0).shape().At(0);             \
         const int64_t batch_size = ctx->InputTensorDesc("label", 0).shape().At(0);               \
@@ -382,7 +384,7 @@ class DistributedPartialFcSampleGpuKernel final : public user_op::OpKernel {
         return buffer_manager.GetTotalBufferSize();                                              \
       });
 
-OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(REGISTER_DISTRIBUTED_PARTIAL_FC_SAMPLE_GPU_KERNEL,
+OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(REGISTER_DISTRIBUTED_PARTIAL_FC_SAMPLE_CUDA_KERNEL,
                                  FLOATING_DATA_TYPE_SEQ, INDEX_DATA_TYPE_SEQ)
 
 template<typename T, typename K>
@@ -393,7 +395,8 @@ class DistributedPartialFcSampleDisableBoxingGpuKernel final : public user_op::O
 
  private:
   using user_op::OpKernel::Compute;
-  void Compute(user_op::KernelComputeContext* ctx, user_op::OpKernelState* state) const override {
+  void Compute(user_op::KernelComputeContext* ctx, user_op::OpKernelState* state,
+               const user_op::OpKernelCache*) const override {
     const user_op::Tensor* sampled_weight_diff =
         ctx->Tensor4ArgNameAndIndex("sampled_weight_diff", 0);
     const user_op::Tensor* sampled_label = ctx->Tensor4ArgNameAndIndex("sampled_label", 0);
@@ -401,28 +404,26 @@ class DistributedPartialFcSampleDisableBoxingGpuKernel final : public user_op::O
         ctx->Tensor4ArgNameAndIndex("boxing_disabled_sampled_weight_diff", 0);
     user_op::Tensor* boxing_disabled_sampled_label =
         ctx->Tensor4ArgNameAndIndex("boxing_disabled_sampled_label", 0);
-    Memcpy<DeviceType::kGPU>(ctx->device_ctx(),
-                             boxing_disabled_sampled_weight_diff->mut_dptr<void>(),
-                             sampled_weight_diff->dptr<void>(),
-                             sampled_weight_diff->shape().elem_cnt()
-                                 * GetSizeOfDataType(sampled_weight_diff->data_type()));
-    Memcpy<DeviceType::kGPU>(
-        ctx->device_ctx(), boxing_disabled_sampled_label->mut_dptr<void>(),
-        sampled_label->dptr<void>(),
+    Memcpy<DeviceType::kCUDA>(ctx->stream(), boxing_disabled_sampled_weight_diff->mut_dptr<void>(),
+                              sampled_weight_diff->dptr<void>(),
+                              sampled_weight_diff->shape().elem_cnt()
+                                  * GetSizeOfDataType(sampled_weight_diff->data_type()));
+    Memcpy<DeviceType::kCUDA>(
+        ctx->stream(), boxing_disabled_sampled_label->mut_dptr<void>(), sampled_label->dptr<void>(),
         sampled_label->shape().elem_cnt() * GetSizeOfDataType(sampled_label->data_type()));
   }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
 
-#define REGISTER_DISTRIBUTED_PARTIAL_FC_SAMPLE_DISABLE_BOXING_GPU_KERNEL(dtype_pair, ltype_pair) \
-  REGISTER_USER_KERNEL("distributed_partial_fc_sample_disable_boxing")                           \
-      .SetCreateFn<DistributedPartialFcSampleDisableBoxingGpuKernel<                             \
-          OF_PP_PAIR_FIRST(dtype_pair), OF_PP_PAIR_FIRST(ltype_pair)>>()                         \
-      .SetIsMatchedHob(                                                                          \
-          (user_op::HobDeviceTag() == "gpu")                                                     \
-          & (user_op::HobDataType("sampled_label", 0) == OF_PP_PAIR_SECOND(ltype_pair))          \
-          & (user_op::HobDataType("sampled_weight_diff", 0) == OF_PP_PAIR_SECOND(dtype_pair)));
-OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(REGISTER_DISTRIBUTED_PARTIAL_FC_SAMPLE_DISABLE_BOXING_GPU_KERNEL,
+#define REGISTER_DISTRIBUTED_PARTIAL_FC_SAMPLE_DISABLE_BOXING_CUDA_KERNEL(dtype_pair, ltype_pair) \
+  REGISTER_USER_KERNEL("distributed_partial_fc_sample_disable_boxing")                            \
+      .SetCreateFn<DistributedPartialFcSampleDisableBoxingGpuKernel<                              \
+          OF_PP_PAIR_FIRST(dtype_pair), OF_PP_PAIR_FIRST(ltype_pair)>>()                          \
+      .SetIsMatchedHob(                                                                           \
+          (user_op::HobDeviceType() == DeviceType::kCUDA)                                         \
+          && (user_op::HobDataType("sampled_label", 0) == OF_PP_PAIR_SECOND(ltype_pair))          \
+          && (user_op::HobDataType("sampled_weight_diff", 0) == OF_PP_PAIR_SECOND(dtype_pair)));
+OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(REGISTER_DISTRIBUTED_PARTIAL_FC_SAMPLE_DISABLE_BOXING_CUDA_KERNEL,
                                  FLOATING_DATA_TYPE_SEQ, INDEX_DATA_TYPE_SEQ)
 
 }  // namespace user_op

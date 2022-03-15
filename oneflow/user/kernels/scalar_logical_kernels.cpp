@@ -19,8 +19,8 @@ namespace oneflow {
 
 template<template<typename T> class BIN_OP, typename T>
 struct ScalarLogicalFunctor<DeviceType::kCPU, BIN_OP, T> final {
-  void operator()(DeviceCtx* ctx, const int64_t elem_cnt, const T scalar, const T* in,
-                  int8_t* out) {
+  void operator()(ep::Stream* stream, const int64_t elem_cnt, const T scalar, const T* in,
+                  bool* out) {
     DoScalarLogical<BIN_OP, T>(elem_cnt, scalar, in, out);
   }
 };
@@ -44,11 +44,11 @@ class ScalarLogicalKernel final : public user_op::OpKernel {
       UNIMPLEMENTED();
     }
     const T* in_ptr = in->dptr<T>();
-    int8_t* out_ptr = out->mut_dptr<int8_t>();
+    bool* out_ptr = out->mut_dptr<bool>();
 
     int64_t elem_cnt = out->shape().elem_cnt();
     if (elem_cnt != 0) {
-      ScalarLogicalFunctor<device_type, BIN_OP, T>()(ctx->device_ctx(), elem_cnt, scalar_operand,
+      ScalarLogicalFunctor<device_type, BIN_OP, T>()(ctx->stream(), elem_cnt, scalar_operand,
                                                      in_ptr, out_ptr);
     } else {
       // For 0-d Tensor
@@ -62,8 +62,8 @@ class ScalarLogicalKernel final : public user_op::OpKernel {
                                                            input_dtype_pair)                     \
   REGISTER_USER_KERNEL(kernel_name)                                                              \
       .SetCreateFn<ScalarLogicalKernel<device, binary_op, OF_PP_PAIR_FIRST(input_dtype_pair)>>() \
-      .SetIsMatchedHob((user_op::HobDeviceTag() == device)                                       \
-                       & (user_op::HobDataType("in", 0) == OF_PP_PAIR_SECOND(input_dtype_pair)));
+      .SetIsMatchedHob((user_op::HobDeviceType() == device)                                      \
+                       && (user_op::HobDataType("in", 0) == OF_PP_PAIR_SECOND(input_dtype_pair)));
 
 #define REGISTER_SCALAR_LOGICAL_KERNEL(device, dtype_pair)                                         \
   REGISTER_UNARY_LOGICAL_SCALAR_ELEMWISE_USER_KERNEL(device, "scalar_logical_equal", BinaryFuncEQ, \
@@ -85,13 +85,15 @@ class ScalarLogicalKernel final : public user_op::OpKernel {
   REGISTER_UNARY_LOGICAL_SCALAR_ELEMWISE_USER_KERNEL(device, "scalar_logical_and", BinaryFuncAND,  \
                                                      dtype_pair);
 
-// we register uint8_t, int8_t, int32_t, int64_t, float, double.
+// we register bool, uint8_t, int8_t, int32_t, int64_t, float, double.
 OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(REGISTER_SCALAR_LOGICAL_KERNEL, (DeviceType::kCPU),
-                                 ARITHMETIC_DATA_TYPE_SEQ UNSIGNED_INT_DATA_TYPE_SEQ)
+                                 ARITHMETIC_DATA_TYPE_SEQ UNSIGNED_INT_DATA_TYPE_SEQ
+                                     BOOL_DATA_TYPE_SEQ)
 
 #ifdef WITH_CUDA
-OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(REGISTER_SCALAR_LOGICAL_KERNEL, (DeviceType::kGPU),
-                                 ARITHMETIC_DATA_TYPE_SEQ UNSIGNED_INT_DATA_TYPE_SEQ)
+OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(REGISTER_SCALAR_LOGICAL_KERNEL, (DeviceType::kCUDA),
+                                 ARITHMETIC_DATA_TYPE_SEQ UNSIGNED_INT_DATA_TYPE_SEQ
+                                     BOOL_DATA_TYPE_SEQ)
 #endif  // WITH_CUDA
 
 }  // namespace oneflow

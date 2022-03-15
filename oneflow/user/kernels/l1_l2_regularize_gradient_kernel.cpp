@@ -34,7 +34,7 @@ class L1L2RegularizeGradientKernel final : public user_op::OpKernel {
     const auto l1 = ctx->Attr<float>("l1");
     const auto l2 = ctx->Attr<float>("l2");
     L1L2RegularizeGradientKernelUtil<device_type, T>::RegularizeGradient(
-        ctx->device_ctx(), out->shape().elem_cnt(), model->dptr<T>(), model_diff->dptr<T>(),
+        ctx->stream(), out->shape().elem_cnt(), model->dptr<T>(), model_diff->dptr<T>(),
         out->mut_dptr<T>(), l1, l2);
   }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
@@ -43,8 +43,8 @@ class L1L2RegularizeGradientKernel final : public user_op::OpKernel {
 #define REGISTER_L1_L2_REGULARIZE_GRADIENT_KERNEL(device, dtype)                                \
   REGISTER_USER_KERNEL("l1_l2_regularize_gradient")                                             \
       .SetCreateFn<L1L2RegularizeGradientKernel<device, dtype>>()                               \
-      .SetIsMatchedHob((user_op::HobDeviceTag() == device)                                      \
-                       & (user_op::HobDataType("out", 0) == GetDataType<dtype>::value))         \
+      .SetIsMatchedHob((user_op::HobDeviceType() == device)                                     \
+                       && (user_op::HobDataType("out", 0) == GetDataType<dtype>::value))        \
       .SetInplaceProposalFn([](const user_op::InferContext&,                                    \
                                user_op::AddInplaceArgPair AddInplaceArgPairFn) -> Maybe<void> { \
         OF_RETURN_IF_ERROR(AddInplaceArgPairFn("out", 0, "model_diff", 0, true));               \
@@ -54,8 +54,8 @@ class L1L2RegularizeGradientKernel final : public user_op::OpKernel {
 REGISTER_L1_L2_REGULARIZE_GRADIENT_KERNEL(DeviceType::kCPU, float)
 REGISTER_L1_L2_REGULARIZE_GRADIENT_KERNEL(DeviceType::kCPU, double)
 #ifdef WITH_CUDA
-REGISTER_L1_L2_REGULARIZE_GRADIENT_KERNEL(DeviceType::kGPU, float)
-REGISTER_L1_L2_REGULARIZE_GRADIENT_KERNEL(DeviceType::kGPU, double)
+REGISTER_L1_L2_REGULARIZE_GRADIENT_KERNEL(DeviceType::kCUDA, float)
+REGISTER_L1_L2_REGULARIZE_GRADIENT_KERNEL(DeviceType::kCUDA, double)
 #endif
 
 }  // namespace

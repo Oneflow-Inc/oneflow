@@ -132,7 +132,7 @@ struct FlatMsgViewPatternVec {
   const T* at(int index) const { return vec().at(index); }
   size_t size() const { return vec().size(); }
   void clear() { mut_vec()->clear(); }
-  void push_back(const T* ptr) { mut_vec()->push_back(ptr); }
+  void emplace_back(const T* ptr) { mut_vec()->emplace_back(ptr); }
 
  private:
   using Vec = std::vector<const T*>;
@@ -216,7 +216,7 @@ struct _FlatMsgViewFieldMatcher<true, WalkCtxType, FieldPtrT> {
     while (ctx->is_token_index_valid()) {
       const auto* oneof = ctx->GetOneof();
       if (!oneof->template HasField<FieldType>()) { break; }
-      field->push_back(&oneof->template GetField<FieldType>());
+      field->emplace_back(&oneof->template GetField<FieldType>());
       ctx->increase_token_index();
     }
     return false;

@@ -16,6 +16,7 @@ limitations under the License.
 #include "oneflow/core/framework/framework.h"
 #include "oneflow/core/kernel/new_kernel_util.h"
 #include "oneflow/user/kernels/radix_sort.cuh"
+#include "oneflow/core/ep/cuda/cuda_stream.h"
 
 namespace oneflow {
 
@@ -85,18 +86,18 @@ class GpuArgSortKernel final : public user_op::OpKernel {
     const int32_t instance_num = elem_cnt / instance_size;
     const std::string& direction = ctx->Attr<std::string>("direction");
     InitializeIndices<<<BlocksNum4ThreadsNum(elem_cnt), kCudaThreadsNumPerBlock, 0,
-                        ctx->device_ctx()->cuda_stream()>>>(elem_cnt, buf_manager.IndicesPtr(),
-                                                            instance_size);
+                        ctx->stream()->As<ep::CudaStream>()->cuda_stream()>>>(
+        elem_cnt, buf_manager.IndicesPtr(), instance_size);
     if (direction == "ASCENDING") {
       SortPairsAscending(in->dptr<T>(), buf_manager.IndicesPtr(), instance_num, instance_size,
                          buf_manager.TempStoragePtr(), buf_manager.TempStorageBytes(),
                          buf_manager.SortedInPtr(), out->mut_dptr<int32_t>(),
-                         ctx->device_ctx()->cuda_stream());
+                         ctx->stream()->As<ep::CudaStream>()->cuda_stream());
     } else if (direction == "DESCENDING") {
       SortPairsDescending(in->dptr<T>(), buf_manager.IndicesPtr(), instance_num, instance_size,
                           buf_manager.TempStoragePtr(), buf_manager.TempStorageBytes(),
                           buf_manager.SortedInPtr(), out->mut_dptr<int32_t>(),
-                          ctx->device_ctx()->cuda_stream());
+                          ctx->stream()->As<ep::CudaStream>()->cuda_stream());
     } else {
       UNIMPLEMENTED();
     }
@@ -104,11 +105,11 @@ class GpuArgSortKernel final : public user_op::OpKernel {
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
 
-#define REGISTER_GPU_ARG_SORT_KERNEL(dtype)                                                        \
+#define REGISTER_CUDA_ARG_SORT_KERNEL(dtype)                                                       \
   REGISTER_USER_KERNEL("arg_sort")                                                                 \
       .SetCreateFn<GpuArgSortKernel<dtype>>()                                                      \
-      .SetIsMatchedHob((user_op::HobDeviceTag() == "gpu")                                          \
-                       & (user_op::HobDataType("in", 0) == GetDataType<dtype>::value))             \
+      .SetIsMatchedHob((user_op::HobDeviceType() == DeviceType::kCUDA)                             \
+                       && (user_op::HobDataType("in", 0) == GetDataType<dtype>::value))            \
       .SetInferTmpSizeFn([](user_op::InferContext* ctx) {                                          \
         const Shape& in_shape = ctx->InputShape("in", 0);                                          \
         const int32_t elem_cnt = in_shape.elem_cnt();                                              \
@@ -135,11 +136,12 @@ class GpuArgSortKernel final : public user_op::OpKernel {
         return sorted_in_aligned_bytes + indices_aligned_bytes + temp_storage_bytes;               \
       });
 
-REGISTER_GPU_ARG_SORT_KERNEL(float)
-REGISTER_GPU_ARG_SORT_KERNEL(double)
-REGISTER_GPU_ARG_SORT_KERNEL(int8_t)
-REGISTER_GPU_ARG_SORT_KERNEL(uint8_t)
-REGISTER_GPU_ARG_SORT_KERNEL(int32_t)
-REGISTER_GPU_ARG_SORT_KERNEL(int64_t)
+REGISTER_CUDA_ARG_SORT_KERNEL(float)
+REGISTER_CUDA_ARG_SORT_KERNEL(double)
+REGISTER_CUDA_ARG_SORT_KERNEL(bool)
+REGISTER_CUDA_ARG_SORT_KERNEL(int8_t)
+REGISTER_CUDA_ARG_SORT_KERNEL(uint8_t)
+REGISTER_CUDA_ARG_SORT_KERNEL(int32_t)
+REGISTER_CUDA_ARG_SORT_KERNEL(int64_t)
 
 }  // namespace oneflow

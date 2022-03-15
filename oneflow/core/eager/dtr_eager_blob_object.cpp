@@ -15,12 +15,14 @@ namespace oneflow {
 namespace vm {
 
 Maybe<void> DTREagerBlobObject::TryAllocateBlobBodyMemory(DeviceCtx* device_ctx) {
+  LOG(INFO) << "hhh";
   vm::Allocator* allocator = device_ctx->mut_allocator();
   CHECK_NOTNULL_OR_RETURN(allocator);
   Blob* blob = mut_blob();
   CHECK_NOTNULL_OR_RETURN(blob);
   const std::size_t required_body_bytes = blob->AlignedByteSizeOfBlobBody();
   if (required_body_bytes == 0) {
+    LOG(INFO) << this;
     CHECK_ISNULL_OR_RETURN(blob->dptr());
     if (dtr::is_enabled_and_debug()) {
       LOG(INFO) << "ebo " << this << " has no body";
@@ -28,16 +30,19 @@ Maybe<void> DTREagerBlobObject::TryAllocateBlobBodyMemory(DeviceCtx* device_ctx)
     }
     return Maybe<void>::Ok();
   }
+  LOG(INFO) << this;
   if (blob->dptr() != nullptr) {
-    CHECK_EQ_OR_RETURN(blob_body_bytes_, required_body_bytes);
+    LOG(INFO) << this;
+    CHECK_EQ_OR_RETURN(tensor_storage_->blob_bytes(), required_body_bytes);
     if (dtr::is_enabled_and_debug()) {
       LOG(INFO) << "ebo " << this
-                << " body already allocated, blob_body_bytes_: " << blob_body_bytes_
+                << " body already allocated, blob_body_bytes_: " << tensor_storage_->blob_bytes()
                 << ", required_body_bytes: " << required_body_bytes;
     }
     return Maybe<void>::Ok();
   }
   {
+    LOG(INFO) << this;
     // reset tensor_buffer_;
     const auto& Free = [allocator, required_body_bytes](char* dptr) {
       if (IsShuttingDown()) { return; }
@@ -65,19 +70,21 @@ Maybe<void> DTREagerBlobObject::TryAllocateBlobBodyMemory(DeviceCtx* device_ctx)
       }
     }
     CHECK_NOTNULL_OR_RETURN(dptr);
-    tensor_buffer_->set_blob_dptr(std::unique_ptr<char, std::function<void(char*)>>(dptr, Free));
+    LOG(INFO) << "set data of " << this << std::endl;
+    tensor_storage_->set_blob_dptr(std::unique_ptr<char, std::function<void(char*)>>(dptr, Free),
+                                   required_body_bytes);
     blob->reset_dptr(dptr);
-    InitNonPODTypeBlobIfNeed(non_pod_initer_.get(), blob_.get());
+    InitNonPODTypeBlobIfNeed(tensor_storage_->non_pod_allocator(), blob_.get());
   }
-  blob_body_bytes_ = required_body_bytes;
+  // rewrite it
   return Maybe<void>::Ok();
 }
 
 DTREagerBlobObject::DTREagerBlobObject(const std::shared_ptr<MemoryCase>& mem_case,
                                        const std::shared_ptr<Shape>& shape, DataType data_type,
-                                       const std::shared_ptr<TensorBuffer>& tensor_buffer,
-                                       LocalDepObject* dep_object)
-    : EagerBlobObject(mem_case, shape, data_type, tensor_buffer, dep_object),
+                                       const std::shared_ptr<TensorStorage>& tensor_storage,
+                                       const intrusive::shared_ptr<LocalDepObject>& dep_object)
+    : EagerBlobObject(mem_case, shape, data_type, tensor_storage, dep_object),
       could_evict_(true),
       is_bp_required_(false),
       compute_time_(0),
@@ -90,12 +97,7 @@ DTREagerBlobObject::DTREagerBlobObject(const std::shared_ptr<MemoryCase>& mem_ca
   node->set_pesudo_node(pesudo_node);  // might induce some problems
 }
 
-DTREagerBlobObject::~DTREagerBlobObject() {
-  clear_invalid_object();
-  non_pod_initer_.reset();
-  tensor_buffer_.reset();
-  blob_.reset();
-}
+DTREagerBlobObject::~DTREagerBlobObject() { clear_invalid_object(); }
 
 void DTREagerBlobObject::pin() {
   pinned_++;
@@ -122,7 +124,9 @@ Maybe<void> DTREagerBlobObject::evict() {
     return Maybe<void>::Ok();
   }
   evict_flag_ = true;
-  JUST(DeallocateBlobDataPtr());
+  // JUST(DeallocateBlobDataPtr());
+  LOG(INFO) << "evict " << this << std::endl;
+  tensor_storage_->Release();
   if (blob_) { blob_->reset_dptr(nullptr); }
   CHECK_OR_RETURN(!is_in_memory());
   Global<dtr::TensorPool>::Get()->inc_num_eviction();
@@ -134,8 +138,7 @@ void DTREagerBlobObject::clear_invalid_object() {
   CHECK_JUST(Global<dtr::TensorPool>::Get()->clear());
 }
 
-void DTREagerBlobObject::set_compute_op(
-    const std::shared_ptr<LocalCallOpKernelPhyInstrOperand>& operand) {
+void DTREagerBlobObject::set_compute_op(LocalCallOpKernelPhyInstrOperand* operand) {
   update_access_time();
   compute_op_ = std::make_unique<DTRInstrOperand>(
       operand->shared_opkernel(), operand->inputs(), operand->outputs(),
@@ -152,8 +155,7 @@ void DTREagerBlobObject::update_access_time() {
   if (dtr::is_enabled_and_debug()) { LOG(INFO) << "update_access_time to " << last_access_time_; }
 }
 
-void DTREagerBlobObject::AppendUserOp(
-    const std::shared_ptr<vm::LocalCallOpKernelPhyInstrOperand>& operand) {
+void DTREagerBlobObject::AppendUserOp(vm::LocalCallOpKernelPhyInstrOperand* operand) {
   user_ops_.emplace_back(std::make_unique<DTRInstrOperand>(
       operand->shared_opkernel(), operand->inputs(), operand->outputs(),
       operand->consistent_tensor_infer_result(), operand->op_interp_ctx(),
@@ -162,7 +164,7 @@ void DTREagerBlobObject::AppendUserOp(
 
 bool DTREagerBlobObject::is_in_memory() const {
   // return !evict_flag_;
-  return tensor_buffer_->blob_dptr() != nullptr || blob().shape().elem_cnt() == 0;
+  return tensor_storage_->blob_dptr() != nullptr || blob().shape().elem_cnt() == 0;
 }
 
 int DTREagerBlobObject::parent_depth() const {
@@ -321,8 +323,8 @@ Maybe<double> DTREagerBlobObject::cost(const std::string& heuristic) const {
 
   if (dtr::is_enabled_and_debug()) {
     std::cout << std::dec << "ap compute " << JUST(approx_neighbor_cost()) << ", blob_body_bytes_ "
-              << blob_body_bytes_ << ", time_since_last_access " << time_since_last_access
-              << std::endl;
+              << tensor_storage_->blob_bytes() << ", time_since_last_access "
+              << time_since_last_access << std::endl;
     // const auto pd = parent_depth();
     // const auto cd = child_depth();
     // std::cout << "parent depth: " << pd << ", child depth: " << cd << ", total depth: " << pd +
@@ -371,7 +373,7 @@ void DTREagerBlobObject::set_compute_time(double val) {
     // TODO: add a minimal cost for bytes == 0?
     compute_time_ = val;
   } else {
-    compute_time_ = blob_body_bytes_;
+    compute_time_ = tensor_storage_->blob_bytes();
   }
   if (ParseBooleanFromEnv("OF_DTR_HIGH_ADD_N", true)) {
     if (compute_op_type_name() == "add_n") { compute_time_ *= 5; }
@@ -401,7 +403,7 @@ Maybe<double> DTREagerBlobObject::reverse_cost() const {
 Maybe<double> DTREagerBlobObject::rev_fwd_cost() const {
   // base_cost
   double time_since_last_access = Global<dtr::TensorPool>::Get()->duration() - last_access_time_;
-  double base_cost = compute_time_ / blob_body_bytes_ / time_since_last_access;
+  double base_cost = compute_time_ / tensor_storage_->blob_bytes() / time_since_last_access;
 
   // parent_cost for compute_op_
   // parent_cost: sum of cost for all parent nodes that are not in memory
@@ -435,7 +437,7 @@ Maybe<double> DTREagerBlobObject::rev_fwd_cost() const {
 
 Maybe<double> DTREagerBlobObject::rev_bwd_cost() const {
   double time_since_last_access = Global<dtr::TensorPool>::Get()->duration() - last_access_time_;
-  double base_cost = compute_time_ / blob_body_bytes_ / time_since_last_access;
+  double base_cost = compute_time_ / tensor_storage_->blob_bytes() / time_since_last_access;
 
   // parent_cost for user_op
   // parent_cost: sum of cost for all parent nodes that are not in memory

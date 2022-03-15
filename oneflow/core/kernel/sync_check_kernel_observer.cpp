@@ -20,7 +20,7 @@ namespace oneflow {
 
 void SyncCheckKernelObserver::DidForwardDataContent(KernelContext* kernel_ctx,
                                                     const Kernel* kernel) {
-  CHECK_JUST_MSG(kernel_ctx->stream_ctx()->Sync(), kernel->op_conf().name());
+  CHECK_JUST_MSG(kernel_ctx->stream()->Sync(), kernel->op_conf().name());
 }
 
 }  // namespace oneflow

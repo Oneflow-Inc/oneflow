@@ -14,35 +14,35 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 #include "oneflow/core/framework/framework.h"
+#include "oneflow/core/framework/op_generated.h"
 
 namespace oneflow {
 
-REGISTER_NO_GRAD_USER_OP("sort")
-    .Input("in")
-    .Output("out")
-    .Attr<std::string>("direction")
-    .SetTensorDescInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
-      *ctx->OutputShape("out", 0) = ctx->InputShape("in", 0);
-      return Maybe<void>::Ok();
-    })
-    .SetGetSbpFn([](user_op::SbpContext* ctx) -> Maybe<void> {
-      // The current implementation can only do sort in the last dimension and should use Broadcast
-      // (by default) instead of Split for that dimension
-      const user_op::TensorDesc& in_tensor = ctx->LogicalTensorDesc4InputArgNameAndIndex("in", 0);
-      FOR_RANGE(int64_t, i, 0, in_tensor.shape().NumAxes() - 1) {
-        ctx->NewBuilder().Split(ctx->inputs(), i).Split(ctx->outputs(), i).Build();
-      }
-      return Maybe<void>::Ok();
-    })
-    .SetCheckAttrFn([](const user_op::UserOpDefWrapper& op_def,
-                       const user_op::UserOpConfWrapper& op_conf) -> Maybe<void> {
-      const std::string& direction = op_conf.attr<std::string>("direction");
-      CHECK_OR_RETURN(direction == "ASCENDING" || direction == "DESCENDING");
-      return Maybe<void>::Ok();
-    })
-    .SetDataTypeInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
-      *ctx->OutputDType("out", 0) = ctx->InputDType("in", 0);
-      return Maybe<void>::Ok();
-    });
+/*static*/ Maybe<void> SortOp::GetSbp(user_op::SbpContext* ctx) {
+  // The current implementation can only do sort in the last dimension and should use Broadcast
+  // (by default) instead of Split for that dimension
+  const user_op::TensorDesc& in_tensor = ctx->LogicalTensorDesc4InputArgNameAndIndex("in", 0);
+  FOR_RANGE(int64_t, i, 0, in_tensor.shape().NumAxes() - 1) {
+    ctx->NewBuilder().Split(ctx->inputs(), i).Split(ctx->outputs(), i).Build();
+  }
+  return Maybe<void>::Ok();
+}
+/*static*/ Maybe<void> SortOp::InferLogicalTensorDesc(user_op::InferContext* ctx) {
+  *ctx->OutputShape("out", 0) = ctx->InputShape("in", 0);
+  return Maybe<void>::Ok();
+}
+/*static*/ Maybe<void> SortOp::InferPhysicalTensorDesc(user_op::InferContext* ctx) {
+  return InferLogicalTensorDesc(ctx);
+}
+/*static*/ Maybe<void> SortOp::InferDataType(user_op::InferContext* ctx) {
+  *ctx->OutputDType("out", 0) = ctx->InputDType("in", 0);
+  return Maybe<void>::Ok();
+}
+/*static*/ Maybe<void> SortOp::CheckAttr(const user_op::UserOpDefWrapper&,
+                                         const user_op::UserOpConfWrapper& op_conf) {
+  const std::string& direction = op_conf.attr<std::string>("direction");
+  CHECK_OR_RETURN(direction == "ASCENDING" || direction == "DESCENDING");
+  return Maybe<void>::Ok();
+}
 
 }  // namespace oneflow

@@ -24,6 +24,7 @@ namespace one {
 
 struct SliceCaptureState : public AutoGradCaptureState {
   bool requires_grad;
+  Shape like_shape;
   std::vector<int64_t> start;
   std::vector<int64_t> stop;
   std::vector<int64_t> step;
@@ -49,17 +50,15 @@ class Slice : public OpExprGradFunction<SliceCaptureState> {
     ctx->start = JUST(composed_attrs.GetAttr<std::vector<int64_t>>("start"));
     ctx->stop = JUST(composed_attrs.GetAttr<std::vector<int64_t>>("stop"));
     ctx->step = JUST(composed_attrs.GetAttr<std::vector<int64_t>>("step"));
-    ctx->SaveTensorForBackward(inputs.at(0));
+    ctx->like_shape = *(inputs.at(0)->shape());
     return Maybe<void>::Ok();
   }
 
   Maybe<void> Apply(const SliceCaptureState* ctx, const TensorTuple& out_grads,
                     TensorTuple* in_grads) const override {
-    const auto& like = ctx->SavedTensors().at(0);
-
     in_grads->resize(1);
-    in_grads->at(0) =
-        JUST(functional::SliceGrad(out_grads.at(0), like, ctx->start, ctx->stop, ctx->step));
+    in_grads->at(0) = JUST(
+        functional::SliceGrad(out_grads.at(0), ctx->like_shape, ctx->start, ctx->stop, ctx->step));
     return Maybe<void>::Ok();
   }
 

@@ -24,14 +24,14 @@ namespace data {
 template<typename LoadTarget>
 class DistributedTrainingDataset final : public Dataset<LoadTarget> {
  public:
-  using BaseDataset = RandomAccessDataset<LoadTarget>;
-  using BaseDatasetUnqPtr = std::unique_ptr<BaseDataset>;
-  using LoadTargetShdPtr = std::shared_ptr<LoadTarget>;
-  using LoadTargetShdPtrVec = std::vector<LoadTargetShdPtr>;
+  using Base = Dataset<LoadTarget>;
+  using SampleType = typename Base::SampleType;
+  using BatchType = typename Base::BatchType;
+  using NestedDS = RandomAccessDataset<LoadTarget>;
 
   DistributedTrainingDataset(int64_t parallel_num, int64_t parallel_id, bool stride_partition,
-                             bool shuffle, int64_t random_seed, BaseDatasetUnqPtr&& dataset)
-      : base_dataset_(std::move(dataset)),
+                             bool shuffle, int64_t random_seed, std::unique_ptr<NestedDS>&& dataset)
+      : nested_ds_(std::move(dataset)),
         shuffle_(shuffle),
         stride_partition_(stride_partition),
         rnd_seed_(random_seed),
@@ -39,19 +39,19 @@ class DistributedTrainingDataset final : public Dataset<LoadTarget> {
         pos_(0),
         pos_in_shard_(0),
         epoch_cnt_(0) {
-    shard_size_ = std::ceil(static_cast<float>(base_dataset_->Size()) / num_shards_);
+    shard_size_ = std::ceil(static_cast<float>(nested_ds_->Size()) / num_shards_);
     if (stride_partition) {
       pos_ = parallel_id;
     } else {
       pos_ = parallel_id * shard_size_;
     }
-    index_seq_.resize(base_dataset_->Size());
+    index_seq_.resize(nested_ds_->Size());
     std::iota(index_seq_.begin(), index_seq_.end(), 0);
     GenNewIndexSequence();
   }
   virtual ~DistributedTrainingDataset() = default;
 
-  virtual LoadTargetShdPtrVec Next() override {
+  virtual BatchType Next() override {
     // There are 2 partition strategies
     // assume epoch size is 10, index seq don't shuffle and there are 4 parts
     // stride partition strategy (when stride_partition is true):
@@ -62,7 +62,7 @@ class DistributedTrainingDataset final : public Dataset<LoadTarget> {
     //       |  part1   |  part2   |  part3   |  part4   |
     // iter0 | 0, 1, 2, | 3, 4, 5, | 6, 7, 8, | 9, 0, 1, |
     // iter1 | 2, 3, 4, | 5, 6, 7, | 8, 9, 0, | 1, 2, 3, |
-    LoadTargetShdPtrVec ret = base_dataset_->At(index_seq_.at(pos_));
+    BatchType batch = nested_ds_->At(index_seq_.at(pos_));
     if (stride_partition_) {
       pos_ += num_shards_;
     } else {
@@ -74,7 +74,7 @@ class DistributedTrainingDataset final : public Dataset<LoadTarget> {
       }
     }
     CheckRanOutOfSize();
-    return ret;
+    return batch;
   }
 
  private:
@@ -93,7 +93,7 @@ class DistributedTrainingDataset final : public Dataset<LoadTarget> {
     epoch_cnt_ += 1;
   }
 
-  BaseDatasetUnqPtr base_dataset_;
+  std::unique_ptr<NestedDS> nested_ds_;
   bool shuffle_;
   bool stride_partition_;
   int64_t rnd_seed_;

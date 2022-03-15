@@ -90,10 +90,10 @@ std::shared_ptr<LocalCallOpKernelPhyInstrOperand> DTROp2LocalCallOp(DTRInstrOper
     }
   }
 
-  auto phy_instr_operand = std::make_shared<LocalCallOpKernelPhyInstrOperand>(
+  auto phy_instr_operand = CHECK_JUST(LocalCallOpKernelPhyInstrOperand::New(
       operand->shared_opkernel(), input_shared_ptr, output_shared_ptr,
       operand->consistent_tensor_infer_result(), operand->op_interp_ctx(),
-      operand->dev_vm_dep_object_consume_mode());
+      operand->dev_vm_dep_object_consume_mode()));
 
   return phy_instr_operand;
 }

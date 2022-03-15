@@ -41,7 +41,7 @@ Maybe<void> GenerateBackwardOpConf(
   } else if (nullptr != val->gen_bw_fn) {
     // old interface, will be removed when all backward gradient configs are using new interface
     auto AddOp = [&](const user_op::UserOpConfWrapper& wrapper) {
-      bw_op_confs->push_back(wrapper.op_conf());
+      bw_op_confs->emplace_back(wrapper.op_conf());
     };
     JUST(val->gen_bw_fn(fw_user_op, AddOp));
   }

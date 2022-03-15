@@ -37,5 +37,3 @@ then
 else
     echo "deadlock unsolved, skipping multi-card eager"
 fi
-
-ONEFLOW_TEST_MULTI_PROCESS=1 python3 test/ops/test_multi_process.py --failfast --verbose

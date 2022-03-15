@@ -91,7 +91,7 @@ struct GenerateBaseGridImp<DeviceType::kCPU> {
 };
 
 template<>
-struct GenerateBaseGridImp<DeviceType::kGPU> {
+struct GenerateBaseGridImp<DeviceType::kCUDA> {
   static void Generate2D(user_op::KernelComputeContext* ctx, float* grid_ptr, int64_t H, int64_t W,
                          bool align_corners);
   static void Generate2D(user_op::KernelComputeContext* ctx, double* grid_ptr, int64_t H, int64_t W,

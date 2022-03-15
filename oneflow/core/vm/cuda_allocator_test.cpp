@@ -14,6 +14,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 #ifdef WITH_CUDA
+#include "gtest/gtest.h"
 #include "oneflow/core/vm/cuda_allocator.h"
 #include "oneflow/core/vm/thread_safe_allocator.h"
 #include "oneflow/core/device/cuda_util.h"
@@ -45,7 +46,7 @@ TEST(CudaAllocator, cuda_allocator) {
     char* ptr = nullptr;
     a->Allocate(&ptr, 1);
     ASSERT_TRUE(ptr != nullptr);
-    ptrs.push_back(ptr);
+    ptrs.emplace_back(ptr);
   }
   std::sort(ptrs.begin(), ptrs.end());
   for (int i = 0; i < 512; ++i) {
@@ -61,7 +62,7 @@ TEST(CudaAllocator, cuda_allocator) {
     char* ptr = nullptr;
     a->Allocate(&ptr, 10000);
     ASSERT_TRUE(ptr != nullptr);
-    ptrs.push_back(ptr);
+    ptrs.emplace_back(ptr);
   }
   std::sort(ptrs.begin(), ptrs.end());
   for (int i = 0; i < 2048; ++i) {

@@ -44,13 +44,13 @@ class BroadcastPowXGradKernel final : public user_op::OpKernel {
     XpuVarNdarray<T> tmp(dz.shape(), tmp_buffer->mut_dptr<T>());
 
     NdarrayUtil<device, T>::BroadcastDiv(
-        ctx->device_ctx(), tmp,
+        ctx->stream(), tmp,
         XpuVarNdarray<const T>(z_tensor->shape(), z_tensor->dptr<T>(), num_axes),
         XpuVarNdarray<const T>(x_tensor->shape(), x_tensor->dptr<T>(), num_axes));
-    NdarrayUtil<device, T>::BroadcastMul(ctx->device_ctx(), tmp, y, const_tmp);
-    NdarrayUtil<device, T>::BroadcastMul(ctx->device_ctx(), tmp, dz, const_tmp);
+    NdarrayUtil<device, T>::BroadcastMul(ctx->stream(), tmp, y, const_tmp);
+    NdarrayUtil<device, T>::BroadcastMul(ctx->stream(), tmp, dz, const_tmp);
     NdarrayUtil<device, T>::ReduceSum(
-        ctx->device_ctx(), XpuVarNdarray<T>(dx_tensor->shape(), dx_tensor->mut_dptr<T>(), num_axes),
+        ctx->stream(), XpuVarNdarray<T>(dx_tensor->shape(), dx_tensor->mut_dptr<T>(), num_axes),
         const_tmp, tmp);
   };
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
@@ -72,7 +72,7 @@ class BroadcastPowYGradKernel final : public user_op::OpKernel {
 
     const int64_t num_axes = dz_tensor->shape().NumAxes();
     const int64_t elem_cnt = z_tensor->shape().elem_cnt();
-    Memset<device>(ctx->device_ctx(), tmp_buffer->mut_dptr<T>(), 0,
+    Memset<device>(ctx->stream(), tmp_buffer->mut_dptr<T>(), 0,
                    GetCudaAlignedSize(elem_cnt * sizeof(T)));
     T* tmp_ptr = tmp_buffer->mut_dptr<T>();
     XpuVarNdarray<const T> z(z_tensor->shape(), z_tensor->dptr<T>(), num_axes);
@@ -81,46 +81,46 @@ class BroadcastPowYGradKernel final : public user_op::OpKernel {
     XpuVarNdarray<T> tmp(dz.shape(), tmp_buffer->mut_dptr<T>());
     XpuVarNdarray<const T> x(x_tensor->shape(), x_tensor->dptr<T>(), num_axes);
     XpuVarNdarray<T> dy(dy_tensor->shape(), dy_tensor->mut_dptr<T>(), num_axes);
-    NdarrayUtil<device, T>::BroadcastAdd(ctx->device_ctx(), tmp, x, const_tmp);
+    NdarrayUtil<device, T>::BroadcastAdd(ctx->stream(), tmp, x, const_tmp);
     FOR_RANGE(int64_t, i, 0, elem_cnt) { tmp_ptr[i] = SafeLog(tmp_ptr[i]); }
-    NdarrayUtil<device, T>::BroadcastMul(ctx->device_ctx(), tmp, dz, const_tmp);
-    NdarrayUtil<device, T>::BroadcastMul(ctx->device_ctx(), tmp, z, const_tmp);
-    NdarrayUtil<device, T>::ReduceSum(ctx->device_ctx(), dy, const_tmp, tmp);
+    NdarrayUtil<device, T>::BroadcastMul(ctx->stream(), tmp, dz, const_tmp);
+    NdarrayUtil<device, T>::BroadcastMul(ctx->stream(), tmp, z, const_tmp);
+    NdarrayUtil<device, T>::ReduceSum(ctx->stream(), dy, const_tmp, tmp);
   };
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
 
 }  // namespace
 
-#define REGISTER_BROADCAST_POW_X_GRAD_KERNEL(device, dtype_pair)                          \
-  REGISTER_USER_KERNEL("broadcast_pow_x_grad")                                            \
-      .SetCreateFn<BroadcastPowXGradKernel<device, OF_PP_PAIR_FIRST(dtype_pair)>>()       \
-      .SetIsMatchedHob((user_op::HobDeviceTag() == device)                                \
-                       & (user_op::HobDataType("x", 0) == OF_PP_PAIR_SECOND(dtype_pair))) \
-      .SetInferTmpSizeFn([](oneflow::user_op::InferContext* ctx) {                        \
-        const user_op::TensorDesc& z = ctx->InputTensorDesc("z", 0);                      \
-        const DataType& data_type = z.data_type();                                        \
-        const int64_t elem_cnt = z.shape().elem_cnt();                                    \
-        return GetCudaAlignedSize(elem_cnt * GetSizeOfDataType(data_type));               \
+#define REGISTER_BROADCAST_POW_X_GRAD_KERNEL(device, dtype_pair)                           \
+  REGISTER_USER_KERNEL("broadcast_pow_x_grad")                                             \
+      .SetCreateFn<BroadcastPowXGradKernel<device, OF_PP_PAIR_FIRST(dtype_pair)>>()        \
+      .SetIsMatchedHob((user_op::HobDeviceType() == device)                                \
+                       && (user_op::HobDataType("x", 0) == OF_PP_PAIR_SECOND(dtype_pair))) \
+      .SetInferTmpSizeFn([](oneflow::user_op::InferContext* ctx) {                         \
+        const user_op::TensorDesc& z = ctx->InputTensorDesc("z", 0);                       \
+        const DataType& data_type = z.data_type();                                         \
+        const int64_t elem_cnt = z.shape().elem_cnt();                                     \
+        return GetCudaAlignedSize(elem_cnt * GetSizeOfDataType(data_type));                \
       });
 
-#define REGISTER_BROADCAST_POW_Y_GRAD_KERNEL(device, dtype_pair)                          \
-  REGISTER_USER_KERNEL("broadcast_pow_y_grad")                                            \
-      .SetCreateFn<BroadcastPowYGradKernel<device, OF_PP_PAIR_FIRST(dtype_pair)>>()       \
-      .SetIsMatchedHob((user_op::HobDeviceTag() == device)                                \
-                       & (user_op::HobDataType("x", 0) == OF_PP_PAIR_SECOND(dtype_pair))) \
-      .SetInferTmpSizeFn([](oneflow::user_op::InferContext* ctx) {                        \
-        const user_op::TensorDesc& z = ctx->InputTensorDesc("z", 0);                      \
-        const DataType& data_type = z.data_type();                                        \
-        const int64_t elem_cnt = z.shape().elem_cnt();                                    \
-        return GetCudaAlignedSize(elem_cnt * GetSizeOfDataType(data_type));               \
+#define REGISTER_BROADCAST_POW_Y_GRAD_KERNEL(device, dtype_pair)                           \
+  REGISTER_USER_KERNEL("broadcast_pow_y_grad")                                             \
+      .SetCreateFn<BroadcastPowYGradKernel<device, OF_PP_PAIR_FIRST(dtype_pair)>>()        \
+      .SetIsMatchedHob((user_op::HobDeviceType() == device)                                \
+                       && (user_op::HobDataType("x", 0) == OF_PP_PAIR_SECOND(dtype_pair))) \
+      .SetInferTmpSizeFn([](oneflow::user_op::InferContext* ctx) {                         \
+        const user_op::TensorDesc& z = ctx->InputTensorDesc("z", 0);                       \
+        const DataType& data_type = z.data_type();                                         \
+        const int64_t elem_cnt = z.shape().elem_cnt();                                     \
+        return GetCudaAlignedSize(elem_cnt * GetSizeOfDataType(data_type));                \
       });
 OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(REGISTER_BROADCAST_POW_X_GRAD_KERNEL, DEVICE_TYPE_SEQ,
                                  ARITHMETIC_DATA_TYPE_SEQ)
 OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(REGISTER_BROADCAST_POW_Y_GRAD_KERNEL, (DeviceType::kCPU),
                                  ARITHMETIC_DATA_TYPE_SEQ)
 #ifdef WITH_CUDA
-OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(REGISTER_BROADCAST_POW_X_GRAD_KERNEL, (DeviceType::kGPU),
+OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(REGISTER_BROADCAST_POW_X_GRAD_KERNEL, (DeviceType::kCUDA),
                                  FLOAT16_DATA_TYPE_SEQ)
 #endif
 

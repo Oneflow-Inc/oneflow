@@ -26,7 +26,7 @@ HostListBootstrapClient::HostListBootstrapClient(const EnvDesc& env_desc) {
     const Machine& mchn = env_desc.machine(i);
     port = (mchn.ctrl_port_agent() != -1) ? (mchn.ctrl_port_agent()) : env_desc.ctrl_port();
     addr = mchn.addr() + ":" + std::to_string(port);
-    stubs_.push_back(CtrlService::NewStub(addr));
+    stubs_.emplace_back(CtrlService::NewStub(addr));
     LoadServer(mchn.addr(), stubs_[i].get());
   }
 }

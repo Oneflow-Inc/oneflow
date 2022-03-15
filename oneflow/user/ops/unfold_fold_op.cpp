@@ -16,10 +16,9 @@ limitations under the License.
 #include "oneflow/core/framework/framework.h"
 #include "oneflow/user/ops/nn_util.h"
 #include "oneflow/core/operator/operator_util.h"
+#include "oneflow/core/framework/op_generated.h"
 
 namespace oneflow {
-
-namespace user_op {
 
 namespace {
 
@@ -135,30 +134,26 @@ Maybe<void> GetFoldSbpFn(user_op::SbpContext* ctx) {
 
 }  // namespace
 
-REGISTER_USER_OP("unfold")
-    .Input("x")
-    .Output("y")
-    .Attr<std::string>("data_format")
-    .Attr<std::vector<int32_t>>("kernel_size")
-    .Attr<std::vector<int32_t>>("padding")
-    .Attr<std::vector<int32_t>>("strides")
-    .Attr<std::vector<int32_t>>("dilation_rate")
-    .SetTensorDescInferFn(UnfoldTensorDescInferFn)
-    .SetGetSbpFn(GetUnfoldSbpFn)
-    .SetDataTypeInferFn(SetUnfoldDTypeFn);
+/*static*/ Maybe<void> UnfoldOp::GetSbp(user_op::SbpContext* ctx) { return GetUnfoldSbpFn(ctx); }
+/*static*/ Maybe<void> UnfoldOp::InferLogicalTensorDesc(user_op::InferContext* ctx) {
+  return UnfoldTensorDescInferFn(ctx);
+}
+/*static*/ Maybe<void> UnfoldOp::InferPhysicalTensorDesc(user_op::InferContext* ctx) {
+  return InferLogicalTensorDesc(ctx);
+}
+/*static*/ Maybe<void> UnfoldOp::InferDataType(user_op::InferContext* ctx) {
+  return SetUnfoldDTypeFn(ctx);
+}
 
-REGISTER_USER_OP("fold")
-    .Input("x")
-    .Output("y")
-    .Attr<std::vector<int32_t>>("output_size")
-    .Attr<std::vector<int32_t>>("kernel_size")
-    .Attr<std::vector<int32_t>>("strides")
-    .Attr<std::vector<int32_t>>("padding")
-    .Attr<std::vector<int32_t>>("dilation_rate")
-    .SetTensorDescInferFn(FoldTensorDescInferFn)
-    .SetGetSbpFn(GetFoldSbpFn)
-    .SetDataTypeInferFn(FoldDTypeFn);
-
-}  // namespace user_op
+/*static*/ Maybe<void> FoldOp::GetSbp(user_op::SbpContext* ctx) { return GetFoldSbpFn(ctx); }
+/*static*/ Maybe<void> FoldOp::InferLogicalTensorDesc(user_op::InferContext* ctx) {
+  return FoldTensorDescInferFn(ctx);
+}
+/*static*/ Maybe<void> FoldOp::InferPhysicalTensorDesc(user_op::InferContext* ctx) {
+  return InferLogicalTensorDesc(ctx);
+}
+/*static*/ Maybe<void> FoldOp::InferDataType(user_op::InferContext* ctx) {
+  return FoldDTypeFn(ctx);
+}
 
 }  // namespace oneflow

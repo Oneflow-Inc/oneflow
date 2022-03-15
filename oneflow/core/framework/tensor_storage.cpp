@@ -22,13 +22,13 @@ namespace oneflow {
 namespace one {
 
 TensorStorage::TensorStorage(const std::shared_ptr<const ParallelDesc>& parallel_desc)
-    : buffer_(std::make_shared<vm::TensorBuffer>()) {}
+    : storage_(std::make_shared<vm::TensorStorage>()) {}
 
-TensorStorage::TensorStorage(const std::shared_ptr<vm::TensorBuffer>& tensor_buffer)
-    : buffer_(tensor_buffer) {}
+TensorStorage::TensorStorage(const std::shared_ptr<vm::TensorStorage>& tensor_storage)
+    : storage_(tensor_storage) {}
 
 TensorStorage::~TensorStorage() {
-  if (!IsShuttingDown() && releaser_hook_) { (*releaser_hook_)(buffer_); }
+  if (!IsShuttingDown() && releaser_hook_) { (*releaser_hook_)(storage_); }
 }
 
 }  // namespace one

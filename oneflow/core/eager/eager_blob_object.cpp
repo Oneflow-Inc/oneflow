@@ -24,16 +24,14 @@ namespace vm {
 
 EagerBlobObject::EagerBlobObject(const std::shared_ptr<MemoryCase>& mem_case,
                                  const std::shared_ptr<Shape>& shape, DataType data_type,
-                                 const std::shared_ptr<TensorBuffer>& tensor_buffer,
-                                 const Optional<LocalDepObject*>& dep_object)
+                                 const std::shared_ptr<TensorStorage>& tensor_storage,
+                                 const intrusive::shared_ptr<LocalDepObject>& dep_object)
     : BlobObject(mem_case, shape, data_type),
-      tensor_buffer_(tensor_buffer),
-      blob_body_bytes_(0),
+      tensor_storage_(tensor_storage),
       is_shape_synced_(true),
       compute_local_dep_object_(dep_object) {
   CHECK(static_cast<bool>(shape));
-  CHECK(static_cast<bool>(tensor_buffer));
-  non_pod_initer_ = std::make_unique<MemoryAllocator>();
+  CHECK(static_cast<bool>(tensor_storage));
 }
 
 Maybe<void> EagerBlobObject::TryInitBlob() {
@@ -41,7 +39,9 @@ Maybe<void> EagerBlobObject::TryInitBlob() {
   return Maybe<void>::Ok();
 }
 
-Maybe<void> EagerBlobObject::InitBlob() {
+Maybe<void> EagerBlobObject::InitBlob() { return InitBlobWithOffset(0); }
+
+Maybe<void> EagerBlobObject::InitBlobWithOffset(const int64_t offset) {
   CHECK_NE_OR_RETURN(blob_desc_.data_type(), DataType::kInvalidDataType);
   if (!blob_desc_.shape().is_initialized()) { blob_desc_.set_shape(Shape(DimVector{})); }
   {
@@ -49,7 +49,7 @@ Maybe<void> EagerBlobObject::InitBlob() {
     int64_t header_byte_size = blob_desc_.AlignedByteSizeOfBlobHeader();
     header_buffer_ = std::make_unique<char[]>(header_byte_size);
   }
-  blob_.reset(new Blob(*mem_case_, &blob_desc_, header_buffer_.get(), nullptr));
+  blob_.reset(new Blob(*mem_case_, &blob_desc_, header_buffer_.get(), nullptr, offset));
   return Maybe<void>::Ok();
 }
 
@@ -58,28 +58,29 @@ Maybe<void> EagerBlobObject::TryAllocateBlobBodyMemory(DeviceCtx* device_ctx) {
   CHECK_NOTNULL_OR_RETURN(allocator);
   Blob* blob = mut_blob();
   CHECK_NOTNULL_OR_RETURN(blob);
-  const std::size_t required_body_bytes = blob->AlignedByteSizeOfBlobBody();
+  size_t required_body_bytes = blob->AlignedByteSizeOfBlobBody();
   if (required_body_bytes == 0) {
-    CHECK_ISNULL_OR_RETURN(blob->dptr());
+    CHECK_ISNULL_OR_RETURN(tensor_storage_->blob_dptr());
     return Maybe<void>::Ok();
   }
-  if (blob->dptr() != nullptr) {
-    CHECK_EQ_OR_RETURN(blob_body_bytes_, required_body_bytes);
+  if (tensor_storage_->blob_dptr() != nullptr) {
+    CHECK_GE_OR_RETURN(tensor_storage_->blob_bytes(), required_body_bytes);
     return Maybe<void>::Ok();
   }
   {
-    // reset tensor_buffer_;
+    // reset tensor_storage_;
     const auto& Free = [allocator, required_body_bytes](char* dptr) {
       if (IsShuttingDown()) { return; }
       allocator->Deallocate(dptr, required_body_bytes);
     };
     char* dptr = nullptr;
     allocator->Allocate(&dptr, required_body_bytes);
-    tensor_buffer_->set_blob_dptr(std::unique_ptr<char, std::function<void(char*)>>(dptr, Free));
+    tensor_storage_->set_blob_dptr(std::unique_ptr<char, std::function<void(char*)>>(dptr, Free),
+                                   required_body_bytes);
+
     blob->reset_dptr(dptr);
-    InitNonPODTypeBlobIfNeed(non_pod_initer_.get(), blob_.get());
+    InitNonPODTypeBlobIfNeed(tensor_storage_->non_pod_allocator(), blob_.get());
   }
-  blob_body_bytes_ = required_body_bytes;
   return Maybe<void>::Ok();
 }
 

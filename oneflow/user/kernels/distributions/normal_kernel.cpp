@@ -21,14 +21,14 @@ namespace oneflow {
 namespace {
 #define REGISTER_UNIFORM_KERNEL(device, dtype)                                               \
   REGISTER_USER_KERNEL("normal").SetCreateFn<NormalKernel<device, dtype>>().SetIsMatchedHob( \
-      (user_op::HobDeviceTag() == device)                                                    \
-      & (user_op::HobAttr<DataType>("dtype") == GetDataType<dtype>::value));
+      (user_op::HobDeviceType() == device)                                                   \
+      && (user_op::HobAttr<DataType>("dtype") == GetDataType<dtype>::value));
 
 REGISTER_UNIFORM_KERNEL(DeviceType::kCPU, float)
 REGISTER_UNIFORM_KERNEL(DeviceType::kCPU, double)
 #ifdef WITH_CUDA
-REGISTER_UNIFORM_KERNEL(DeviceType::kGPU, float)
-REGISTER_UNIFORM_KERNEL(DeviceType::kGPU, double)
+REGISTER_UNIFORM_KERNEL(DeviceType::kCUDA, float)
+REGISTER_UNIFORM_KERNEL(DeviceType::kCUDA, double)
 #endif  // WITH_CUDA
 }  // namespace
 

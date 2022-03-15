@@ -15,7 +15,7 @@ limitations under the License.
 */
 #include "oneflow/core/kernel/kernel.h"
 #include "oneflow/core/kernel/kernel_context.h"
-#include "oneflow/core/primitive/include/memcpy.h"
+#include "oneflow/core/ep/include/primitive/memcpy.h"
 
 namespace oneflow {
 
@@ -33,7 +33,7 @@ class IdentityKernel final : public Kernel {
 void IdentityKernel::ForwardDataContent(KernelContext* ctx) const {
   const Blob* in_blob = ctx->BnInOp2Blob("in");
   Blob* out_blob = ctx->BnInOp2Blob("out");
-  AutoMemcpy(ctx->stream_ctx(), out_blob, in_blob);
+  AutoMemcpy(ctx->stream(), out_blob, in_blob);
 }
 
 void IdentityKernel::ForwardHeader(KernelContext* ctx) const {

@@ -28,8 +28,8 @@ inline void EnableEagerEnvironment(bool enable_eager_execution) {
 
 inline bool IsEnvInited() { return oneflow::IsEnvInited().GetOrThrow(); }
 
-inline void InitEnv(const std::string& env_proto_str, bool is_multi_client) {
-  return oneflow::InitEnv(env_proto_str, is_multi_client).GetOrThrow();
+inline void InitEnv(const std::string& env_proto_str) {
+  return oneflow::InitEnv(env_proto_str).GetOrThrow();
 }
 
 inline void DestroyEnv() { return oneflow::DestroyEnv().GetOrThrow(); }
@@ -44,12 +44,16 @@ inline size_t GetNodeSize() { return oneflow::GetNodeSize().GetOrThrow(); }
 
 inline size_t GetLocalRank() { return oneflow::GetLocalRank().GetOrThrow(); }
 
-inline bool IsMultiClient() { return oneflow::IsMultiClient().GetOrThrow(); }
+inline size_t CudaGetDeviceCount() { return oneflow::CudaGetDeviceCount().GetOrThrow(); }
 
-inline void SetIsMultiClient(bool is_multi_client) {
-  return oneflow::SetIsMultiClient(is_multi_client).GetOrThrow();
+inline void SetFLAGS_alsologtostderr(bool flag) {
+  return oneflow::SetFLAGS_alsologtostderr(flag).GetOrThrow();
 }
 
-inline size_t CudaGetDeviceCount() { return oneflow::CudaGetDeviceCount().GetOrThrow(); }
+inline bool GetFLAGS_alsologtostderr() { return oneflow::GetFLAGS_alsologtostderr().GetOrThrow(); }
+
+inline void SetFLAGS_v(int32_t v_level) { return oneflow::SetFLAGS_v(v_level).GetOrThrow(); }
+
+inline int32_t GetFLAGS_v() { return oneflow::GetFLAGS_v().GetOrThrow(); }
 
 #endif  // ONEFLOW_API_PYTHON_ENV_ENV_API_H_

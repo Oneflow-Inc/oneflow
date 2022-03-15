@@ -49,7 +49,7 @@ class ArgWhereKernel final : public user_op::OpKernel {
     void* tmp_ptr = tmp ? tmp->mut_dptr() : nullptr;
     size_t tmp_size = tmp ? tmp->shape().elem_cnt() * GetSizeOfDataType(tmp->data_type()) : 0;
     ArgWhereKernelUtil<device_type, IN_T, OUT_T, NDIM>::ArgWhere(
-        ctx->device_ctx(), input->shape(), input->dptr<IN_T>(), tmp_ptr, tmp_size,
+        ctx->stream(), input->shape(), input->dptr<IN_T>(), tmp_ptr, tmp_size,
         output->mut_dptr<OUT_T>(), output_size->mut_dptr<OUT_T>());
   }
 };
@@ -65,7 +65,8 @@ struct SwitchUtil {
 
   DEFINE_STATIC_SWITCH_FUNC(
       size_t, GetWorkspaceBytesSize, SWITCH_ENTRY, MAKE_DEVICE_TYPE_CTRV_SEQ(DEVICE_TYPE_SEQ),
-      MAKE_DATA_TYPE_CTRV_SEQ(ARITHMETIC_DATA_TYPE_SEQ UNSIGNED_INT_DATA_TYPE_SEQ),
+      MAKE_DATA_TYPE_CTRV_SEQ(
+          ARITHMETIC_DATA_TYPE_SEQ UNSIGNED_INT_DATA_TYPE_SEQ BOOL_DATA_TYPE_SEQ),
       MAKE_DATA_TYPE_CTRV_SEQ(INDEX_DATA_TYPE_SEQ), MAKE_NDIM_CTRV_SEQ(DIM_SEQ));
 #undef SWITCH_ENTRY
 };
@@ -84,20 +85,20 @@ size_t InferTempStorageBytesSize(user_op::InferContext* ctx) {
 
 }  // namespace
 
-#define REGISTER_ARG_WHERE_KERNEL(device, itype, otype)                                         \
-  REGISTER_USER_KERNEL("argwhere")                                                              \
-      .SetCreateFn<ArgWhereKernel<device, itype, otype>>()                                      \
-      .SetIsMatchedHob((user_op::HobDeviceTag() == device)                                      \
-                       & (user_op::HobDataType("input", 0) == GetDataType<itype>::value)        \
-                       & (user_op::HobDataType("output", 0) == GetDataType<otype>::value)       \
-                       & (user_op::HobDataType("output_size", 0) == GetDataType<otype>::value)) \
+#define REGISTER_ARG_WHERE_KERNEL(device, itype, otype)                                          \
+  REGISTER_USER_KERNEL("argwhere")                                                               \
+      .SetCreateFn<ArgWhereKernel<device, itype, otype>>()                                       \
+      .SetIsMatchedHob((user_op::HobDeviceType() == device)                                      \
+                       && (user_op::HobDataType("input", 0) == GetDataType<itype>::value)        \
+                       && (user_op::HobDataType("output", 0) == GetDataType<otype>::value)       \
+                       && (user_op::HobDataType("output_size", 0) == GetDataType<otype>::value)) \
       .SetInferTmpSizeFn(InferTempStorageBytesSize);
 
 #define REGISTER_ARG_WHERE_KERNEL_WITH_DTYPE_PAIR(device, itype_pair, otype_pair) \
   REGISTER_ARG_WHERE_KERNEL(device, OF_PP_PAIR_FIRST(itype_pair), OF_PP_PAIR_FIRST(otype_pair))
 
-OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(REGISTER_ARG_WHERE_KERNEL_WITH_DTYPE_PAIR, DEVICE_TYPE_SEQ,
-                                 ARITHMETIC_DATA_TYPE_SEQ UNSIGNED_INT_DATA_TYPE_SEQ,
-                                 INDEX_DATA_TYPE_SEQ)
+OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(
+    REGISTER_ARG_WHERE_KERNEL_WITH_DTYPE_PAIR, DEVICE_TYPE_SEQ,
+    ARITHMETIC_DATA_TYPE_SEQ UNSIGNED_INT_DATA_TYPE_SEQ BOOL_DATA_TYPE_SEQ, INDEX_DATA_TYPE_SEQ)
 
 }  // namespace oneflow

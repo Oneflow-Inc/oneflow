@@ -35,7 +35,7 @@ class IdentityKernel final : public user_op::OpKernel, public user_op::CudaGraph
     CHECK_EQ(out->shape(), in_shape);
     const DataType in_data_type = in->data_type();
     CHECK_EQ(out->data_type(), in_data_type);
-    Memcpy<device_type>(ctx->device_ctx(), out->mut_dptr<void>(), in->dptr<void>(),
+    Memcpy<device_type>(ctx->stream(), out->mut_dptr<void>(), in->dptr<void>(),
                         in_shape.elem_cnt() * GetSizeOfDataType(in_data_type));
   }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
@@ -44,7 +44,7 @@ class IdentityKernel final : public user_op::OpKernel, public user_op::CudaGraph
 #define REGISTER_IDENTITY_KERNEL(op, device)                                                    \
   REGISTER_USER_KERNEL(op)                                                                      \
       .SetCreateFn<IdentityKernel<device>>()                                                    \
-      .SetIsMatchedHob(user_op::HobDeviceTag() == device)                                       \
+      .SetIsMatchedHob(user_op::HobDeviceType() == device)                                      \
       .SetInplaceProposalFn([](const user_op::InferContext&,                                    \
                                user_op::AddInplaceArgPair AddInplaceArgPairFn) -> Maybe<void> { \
         OF_RETURN_IF_ERROR(AddInplaceArgPairFn("out", 0, "in", 0, false));                      \
@@ -57,11 +57,11 @@ REGISTER_IDENTITY_KERNEL("parallel_cast", DeviceType::kCPU)
 REGISTER_IDENTITY_KERNEL("hierarchical_parallel_cast", DeviceType::kCPU)
 REGISTER_IDENTITY_KERNEL("hierarchical_parallel_cast_like", DeviceType::kCPU)
 #ifdef WITH_CUDA
-REGISTER_IDENTITY_KERNEL("identity", DeviceType::kGPU)
-REGISTER_IDENTITY_KERNEL("identity_buffer", DeviceType::kGPU)
-REGISTER_IDENTITY_KERNEL("parallel_cast", DeviceType::kGPU)
-REGISTER_IDENTITY_KERNEL("hierarchical_parallel_cast", DeviceType::kGPU)
-REGISTER_IDENTITY_KERNEL("hierarchical_parallel_cast_like", DeviceType::kGPU)
+REGISTER_IDENTITY_KERNEL("identity", DeviceType::kCUDA)
+REGISTER_IDENTITY_KERNEL("identity_buffer", DeviceType::kCUDA)
+REGISTER_IDENTITY_KERNEL("parallel_cast", DeviceType::kCUDA)
+REGISTER_IDENTITY_KERNEL("hierarchical_parallel_cast", DeviceType::kCUDA)
+REGISTER_IDENTITY_KERNEL("hierarchical_parallel_cast_like", DeviceType::kCUDA)
 #endif
 
 }  // namespace

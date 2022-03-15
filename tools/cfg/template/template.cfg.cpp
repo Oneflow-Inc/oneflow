@@ -42,7 +42,7 @@ void Const{{ util.class_name(cls) }}::_{{ util.class_name(cls) }}_::InitFromProt
       *mutable_{{ util.field_name(field) }}()->Add() = {{ util.field_message_type_name_with_cfg_namespace(field) }}(elem);
     }
 {% elif util.field_is_enum_type(field) %}
-    for (const int& elem : proto_{{ util.class_name(cls).lower() }}.{{ util.field_name(field) }}() ) {
+    for (int elem : proto_{{ util.class_name(cls).lower() }}.{{ util.field_name(field) }}() ) {
       add_{{ util.field_name(field) }}({{ util.module_package_cfg_namespace(module) }}::{{ util.field_enum_name(field) }}(elem));
     }
 {% else %}
@@ -116,7 +116,7 @@ void Const{{ util.class_name(cls) }}::_{{ util.class_name(cls) }}_::ToProto({{ u
       *proto_{{ util.class_name(cls).lower() }}->mutable_{{ util.field_name(field) }}()->Add() = proto_{{ util.field_name(field).lower() }}_elem;
     }
 {% elif util.field_is_enum_type(field) %}
-    for (const int& elem : {{ util.field_name(field) }}() ) {
+    for (int elem : {{ util.field_name(field) }}() ) {
       proto_{{ util.class_name(cls).lower() }}->add_{{ util.field_name(field) }}({{ util.module_package_namespace(module) }}::{{ util.field_enum_name(field) }}(elem));
     }
 {% else %}

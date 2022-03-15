@@ -16,58 +16,67 @@ limitations under the License.
 #include "oneflow/core/eager/local_call_opkernel_phy_instr_operand.h"
 #include "oneflow/user/kernels/stateful_local_opkernel.h"
 #include "oneflow/core/eager/dev_vm_dep_object_consume_mode.h"
+#include "oneflow/core/framework/stream_is_comm_net_stream.h"
 
 namespace oneflow {
 namespace vm {
 
+Maybe<void> LocalCallOpKernelPhyInstrOperand::Init() {
+  JUST(mut_opkernel()->ChooseOpKernel(&user_opkernel_, &need_temp_storage_, attrs(), inputs().get(),
+                                      outputs().get(), consistent_tensor_infer_result().get()));
+  return Maybe<void>::Ok();
+}
+
 void LocalCallOpKernelPhyInstrOperand::ForEachConstMirroredObject(
-    const std::function<void(vm::MirroredObject* infer, vm::MirroredObject* compute)>& DoEach)
-    const {
+    const std::function<void(vm::MirroredObject* compute)>& DoEach) const {
   const auto& input_list = inputs();
   for (int64_t index : opkernel().input_tuple_indexes4const_ibns()) {
     const auto& input = input_list->at(index);
-    DoEach(nullptr, CHECK_JUST(input->compute_local_dep_object())->mut_mirrored_object());
+    DoEach(CHECK_JUST(input->compute_local_dep_object()));
+  }
+}
+
+void LocalCallOpKernelPhyInstrOperand::InitStreamSequentialDependence() {
+  const auto& stream = opkernel().stream();
+  auto* device_schedule_dep_object = stream->mut_schedule_local_dep_object();
+  if (StreamRoleSwitch<IsCommNetStream>(stream->stream_role())) {
+    // Sequantialize nccl instructions to avoid deadlock
+    stream_sequential_dependence_ = device_schedule_dep_object;
+  } else {
+    // Sequantialize instructions to avoid explosive memory allocation of source ops
+    if (dev_vm_dep_object_consume_mode() == one::DevVmDepObjectConsumeMode::MUTABLE) {
+      stream_sequential_dependence_ = device_schedule_dep_object;
+    } else if (opkernel().input_tuple_indexes4const_ibns().empty()
+               && opkernel().input_tuple_indexes4mut_ibns().empty()) {
+      stream_sequential_dependence_ = device_schedule_dep_object;
+    }
   }
 }
 
 void LocalCallOpKernelPhyInstrOperand::ForEachMutMirroredObject(
-    const std::function<void(vm::MirroredObject* infer, vm::MirroredObject* compute)>& DoEach)
-    const {
-  const auto& device = opkernel().device();
-  const auto& opt_transport_dep_object = device->mut_transport_local_dep_object();
-  if (opt_transport_dep_object.has_value()) {
-    DoEach(nullptr, CHECK_JUST(opt_transport_dep_object)->mut_mirrored_object());
-  }
-  auto* device_schedule_dep_object = device->mut_schedule_local_dep_object();
-  if (device->type() == "async_launched_nccl") {
-    // Sequantialize nccl instructions to avoid deadlock
-    DoEach(nullptr, device_schedule_dep_object->mut_mirrored_object());
-  } else {
-    // Sequantialize instructions to avoid explosive memory allocation of source ops
-    if (dev_vm_dep_object_consume_mode() == one::DevVmDepObjectConsumeMode::MUTABLE) {
-      DoEach(nullptr, device_schedule_dep_object->mut_mirrored_object());
-    }
-  }
+    const std::function<void(vm::MirroredObject* compute)>& DoEach) const {
+  const auto& stream = opkernel().stream();
+  const auto& opt_transport_dep_object = stream->mut_transport_local_dep_object();
+  if (opt_transport_dep_object.has_value()) { DoEach(CHECK_JUST(opt_transport_dep_object)); }
 
   const auto& input_list = inputs();
   for (int64_t index : opkernel().input_tuple_indexes4mut_ibns()) {
     const auto& input = input_list->at(index);
-    DoEach(nullptr, CHECK_JUST(input->compute_local_dep_object())->mut_mirrored_object());
+    DoEach(CHECK_JUST(input->compute_local_dep_object()));
   }
   const auto& output_list = outputs();
   for (int64_t index : opkernel().output_tuple_indexes4mut_obns()) {
     const auto& output = output_list->at(index);
-    DoEach(nullptr, CHECK_JUST(output->compute_local_dep_object())->mut_mirrored_object());
+    DoEach(CHECK_JUST(output->compute_local_dep_object()));
   }
 }
 
 void LocalCallOpKernelPhyInstrOperand::ForEachMut2MirroredObject(
-    const std::function<void(vm::MirroredObject* infer, vm::MirroredObject* compute)>& DoEach)
-    const {
+    const std::function<void(vm::MirroredObject* compute)>& DoEach) const {
   const auto& output_list = outputs();
   for (int64_t index : opkernel().output_tuple_indexes4mut2_obns()) {
     const auto& output = output_list->at(index);
-    DoEach(nullptr, CHECK_JUST(output->compute_local_dep_object())->mut_mirrored_object());
+    DoEach(CHECK_JUST(output->compute_local_dep_object()));
   }
 }
 
@@ -110,7 +119,7 @@ DTRInstrOperand::DTRInstrOperand(
         return input_indexed_bns;
       }();
 
-      opkernel_ = CHECK_JUST(one::StatefulLocalOpKernel::New(std::make_shared<OperatorConf>(op_conf), opkernel_->device(), opkernel_->composed_attrs_for_scheduler_thread()->base_attr_map(), std::make_shared<const ArgTuple>(input_indexed_bns), opkernel_->output_arg_tuple()));
+      opkernel_ = CHECK_JUST(one::StatefulLocalOpKernel::New(std::make_shared<OperatorConf>(op_conf), opkernel_->stream(), opkernel_->composed_attrs_for_scheduler_thread()->base_attr_map(), std::make_shared<const ArgTuple>(input_indexed_bns), opkernel_->output_arg_tuple()));
     }
   }
 }  // namespace vm

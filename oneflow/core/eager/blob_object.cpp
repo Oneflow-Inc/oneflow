@@ -27,7 +27,7 @@ Maybe<void> BlobObject::CheckMemCase(const ParallelDesc& parallel_desc, int64_t 
     CHECK_OR_RETURN(this->mem_case_->has_host_mem())
         << "DeviceType: " << device_tag
         << " not match MemoryCase: " << this->mem_case_->host_mem().DebugString();
-  } else if (parallel_desc.device_type() == DeviceType::kGPU) {
+  } else if (parallel_desc.device_type() == DeviceType::kCUDA) {
     CHECK_OR_RETURN(this->mem_case_->has_device_cuda_mem())
         << "DeviceType: " << device_tag
         << " not match MemoryCase: " << this->mem_case_->device_cuda_mem().DebugString();

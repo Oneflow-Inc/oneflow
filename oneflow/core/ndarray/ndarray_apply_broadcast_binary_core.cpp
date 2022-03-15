@@ -19,7 +19,7 @@ namespace oneflow {
 
 template<typename T, int NDIMS, template<typename> class binary_func>
 struct NdarrayApplyBroadcastBinaryCoreWrapper<DeviceType::kCPU, T, NDIMS, binary_func> final {
-  static void Apply(DeviceCtx* ctx,
+  static void Apply(ep::Stream* stream,
                     const XpuVarNdarray<typename BinaryFuncTrait<binary_func, T>::return_type>& y,
                     const XpuVarNdarray<const T>& a, const XpuVarNdarray<const T>& b) {
     NdarrayApplyBroadcastBinaryCore<T, NDIMS, binary_func>::Apply(y, a, b);
@@ -29,7 +29,7 @@ struct NdarrayApplyBroadcastBinaryCoreWrapper<DeviceType::kCPU, T, NDIMS, binary
 template<typename T, int NDIMS, template<typename> class binary_func>
 struct NdarrayApplyBroadcastInplaceBinaryCoreWrapper<DeviceType::kCPU, T, NDIMS, binary_func>
     final {
-  static void InplaceApply(DeviceCtx* ctx, const XpuVarNdarray<T>& y,
+  static void InplaceApply(ep::Stream* stream, const XpuVarNdarray<T>& y,
                            const XpuVarNdarray<const T>& x) {
     NdarrayApplyBroadcastBinaryCore<T, NDIMS, binary_func>::InplaceApply(y, x);
   }
@@ -40,11 +40,11 @@ struct NdarrayApplyBroadcastInplaceBinaryCoreWrapper<DeviceType::kCPU, T, NDIMS,
       DeviceType::kCPU, OF_PP_PAIR_FIRST(dtype_pair), NDIMS, binary_func>;
 OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(INSTANTIATE_BROADCAST_BINARY_FUNC,
                                  ARITHMETIC_DATA_TYPE_SEQ FLOAT16_DATA_TYPE_SEQ
-                                     UNSIGNED_INT_DATA_TYPE_SEQ,
+                                     UNSIGNED_INT_DATA_TYPE_SEQ BOOL_DATA_TYPE_SEQ,
                                  DIM_SEQ, ARITHMETIC_BINARY_FUNC_SEQ);
 OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(INSTANTIATE_BROADCAST_BINARY_FUNC,
                                  ARITHMETIC_DATA_TYPE_SEQ FLOAT16_DATA_TYPE_SEQ
-                                     UNSIGNED_INT_DATA_TYPE_SEQ,
+                                     UNSIGNED_INT_DATA_TYPE_SEQ BOOL_DATA_TYPE_SEQ,
                                  DIM_SEQ, LOGICAL_BINARY_FUNC_SEQ);
 
 #define INSTANTIATE_BROADCAST_INPLACE_BINARY_FUNC(dtype_pair, NDIMS, binary_func) \
@@ -52,9 +52,9 @@ OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(INSTANTIATE_BROADCAST_BINARY_FUNC,
       DeviceType::kCPU, OF_PP_PAIR_FIRST(dtype_pair), NDIMS, binary_func>;
 OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(INSTANTIATE_BROADCAST_INPLACE_BINARY_FUNC,
                                  ARITHMETIC_DATA_TYPE_SEQ FLOAT16_DATA_TYPE_SEQ
-                                     UNSIGNED_INT_DATA_TYPE_SEQ,
+                                     UNSIGNED_INT_DATA_TYPE_SEQ BOOL_DATA_TYPE_SEQ,
                                  DIM_SEQ, ARITHMETIC_BINARY_FUNC_SEQ);
 OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(INSTANTIATE_BROADCAST_INPLACE_BINARY_FUNC,
-                                 ((int8_t, DataType::kInt8)), DIM_SEQ, LOGICAL_BINARY_FUNC_SEQ);
+                                 ((bool, DataType::kBool)), DIM_SEQ, LOGICAL_BINARY_FUNC_SEQ);
 
 }  // namespace oneflow

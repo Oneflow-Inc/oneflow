@@ -277,7 +277,7 @@ std::vector<std::string> HadoopFileSystem::ListDir(const std::string& dir) {
     // Assume it's an empty directory.
     return result;
   }
-  for (int i = 0; i < entries; i++) { result.push_back(Basename(info[i].mName)); }
+  for (int i = 0; i < entries; i++) { result.emplace_back(Basename(info[i].mName)); }
   hdfs_->hdfsFreeFileInfo(info, entries);
   return result;
 }

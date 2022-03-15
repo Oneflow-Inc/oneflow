@@ -107,7 +107,7 @@ class FlipGrad1DCpuKernel final : public user_op::OpKernel {
  private:
   void Compute(user_op::KernelComputeContext* ctx) const override {
     user_op::Tensor* dx_tensor = ctx->Tensor4ArgNameAndIndex("dx", 0);
-    Memset<DeviceType::kCPU>(ctx->device_ctx(), dx_tensor->mut_dptr<T>(), 0,
+    Memset<DeviceType::kCPU>(ctx->stream(), dx_tensor->mut_dptr<T>(), 0,
                              dx_tensor->shape().elem_cnt() * sizeof(T));
     const user_op::Tensor* dy_tensor = ctx->Tensor4ArgNameAndIndex("dy", 0);
     memcpy((void*)dx_tensor->mut_dptr<T>(), (void*)dy_tensor->dptr<T>(),
@@ -118,13 +118,14 @@ class FlipGrad1DCpuKernel final : public user_op::OpKernel {
 
 #define REGISTER_FLIP_CPU_KERNEL(dtype)                                             \
   REGISTER_USER_KERNEL("flip").SetCreateFn<FlipCpuKernel<dtype>>().SetIsMatchedHob( \
-      (user_op::HobDeviceTag() == "cpu")                                            \
-      & (user_op::HobDataType("y", 0) == GetDataType<dtype>::value));               \
+      (user_op::HobDeviceType() == DeviceType::kCPU)                                \
+      && (user_op::HobDataType("y", 0) == GetDataType<dtype>::value));              \
   REGISTER_USER_KERNEL("flip_grad")                                                 \
       .SetCreateFn<FlipGrad1DCpuKernel<dtype>>()                                    \
-      .SetIsMatchedHob((user_op::HobDeviceTag() == "cpu")                           \
-                       & (user_op::HobDataType("dx", 0) == GetDataType<dtype>::value));
+      .SetIsMatchedHob((user_op::HobDeviceType() == DeviceType::kCPU)               \
+                       && (user_op::HobDataType("dx", 0) == GetDataType<dtype>::value));
 
+REGISTER_FLIP_CPU_KERNEL(bool)
 REGISTER_FLIP_CPU_KERNEL(float)
 REGISTER_FLIP_CPU_KERNEL(double)
 REGISTER_FLIP_CPU_KERNEL(uint8_t)

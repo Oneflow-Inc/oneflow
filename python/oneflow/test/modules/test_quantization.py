@@ -21,8 +21,12 @@ import math
 import numpy as np
 
 from oneflow.test_utils.automated_test_util import *
-from test_util import GenArgList
-from test_util import GenArgList, type_name_to_flow_type, type_name_to_np_type
+from oneflow.test_utils.test_util import GenArgList
+from oneflow.test_utils.test_util import (
+    GenArgList,
+    type_name_to_flow_type,
+    type_name_to_np_type,
+)
 
 import oneflow as flow
 import oneflow.unittest
@@ -50,7 +54,7 @@ def gen_quant_scale_for_min_max_cambricon(weight, quantization_bit):
 
 
 def product(tu):
-    return np.prod(tu).astype(np.int).item()
+    return np.prod(tu).astype(np.int32).item()
 
 
 def quant_per_layer_symmetric(input, quantization_bit, scale):

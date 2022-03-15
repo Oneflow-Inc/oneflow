@@ -14,8 +14,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 #include "oneflow/core/graph/compute_task_node.h"
-#include "oneflow/core/graph/task_graph.h"
-#include "oneflow/core/operator/variable_op.h"
+#include "oneflow/core/graph/task_stream_index_manager.h"
 
 namespace oneflow {
 
@@ -83,6 +82,8 @@ void DistributeConcatCompTaskNode::BuildOutRegst() {
     out_regst->set_hint_inplace_consumed_regst_desc_id(in_regst->regst_desc_id());
   }
 }
+
+REGISTER_COMP_TASK_STREAM_INDEX_GETTER(TaskType::kDistributeConcat);
 
 REGISTER_SYSTEM_OP_COMP_TASK_NODE_TYPE(OperatorConf::kDistributeConcatConf,
                                        DistributeConcatCompTaskNode);

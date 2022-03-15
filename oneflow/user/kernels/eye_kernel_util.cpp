@@ -21,11 +21,11 @@ namespace user_op {
 
 template<typename T>
 struct EyeFunctor<DeviceType::kCPU, T> final {
-  void operator()(DeviceCtx* ctx, const int64_t& cols, const int64_t& rows, T* out) {
+  void operator()(ep::Stream* stream, const int64_t& cols, const int64_t& rows, T* out) {
     SetOneInDiag(cols, rows, out);
   }
 };
-OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(INSTANTIATE_EYE_FUNCTOR, (DeviceType::kCPU), RANGE_DATA_TYPE_SEQ);
+OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(INSTANTIATE_EYE_FUNCTOR, (DeviceType::kCPU), EYE_DATA_TYPE_SEQ);
 
 }  // namespace user_op
 }  // namespace oneflow

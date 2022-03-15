@@ -14,52 +14,51 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 #include "oneflow/core/framework/framework.h"
+#include "oneflow/core/framework/op_generated.h"
 
 namespace oneflow {
 
-REGISTER_NO_GRAD_USER_OP("unique_with_counts")
-    .Input("x")
-    .Output("y")
-    .Output("idx")
-    .Output("count")
-    .Output("num_unique")
-    .Attr<DataType>("out_idx", DataType::kInt32)
-    .SetTensorDescInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
-      const user_op::TensorDesc& x = ctx->InputTensorDesc("x", 0);
-      CHECK_EQ_OR_RETURN(x.shape().NumAxes(), 1);
+/*static*/ Maybe<void> UniqueWithCountsOp::GetSbp(user_op::SbpContext* ctx) {
+  return user_op::GetSbpFnUtil::DefaultBroadcastToBroadcast(ctx);
+}
+/*static*/ Maybe<void> UniqueWithCountsOp::InferLogicalTensorDesc(user_op::InferContext* ctx) {
+  const user_op::TensorDesc& x = ctx->InputTensorDesc("x", 0);
+  CHECK_EQ_OR_RETURN(x.shape().NumAxes(), 1);
 
-      user_op::TensorDesc* y = ctx->OutputTensorDesc("y", 0);
-      *y->mut_shape() = x.shape();
-      *y->mut_is_dynamic() = x.is_dynamic();
+  user_op::TensorDesc* y = ctx->OutputTensorDesc("y", 0);
+  *y->mut_shape() = x.shape();
+  *y->mut_is_dynamic() = x.is_dynamic();
 
-      user_op::TensorDesc* idx = ctx->OutputTensorDesc("idx", 0);
-      *idx->mut_shape() = x.shape();
-      *idx->mut_is_dynamic() = x.is_dynamic();
+  user_op::TensorDesc* idx = ctx->OutputTensorDesc("idx", 0);
+  *idx->mut_shape() = x.shape();
+  *idx->mut_is_dynamic() = x.is_dynamic();
 
-      user_op::TensorDesc* count = ctx->OutputTensorDesc("count", 0);
-      *count->mut_shape() = x.shape();
-      *count->mut_is_dynamic() = x.is_dynamic();
+  user_op::TensorDesc* count = ctx->OutputTensorDesc("count", 0);
+  *count->mut_shape() = x.shape();
+  *count->mut_is_dynamic() = x.is_dynamic();
 
-      user_op::TensorDesc* num_unique = ctx->OutputTensorDesc("num_unique", 0);
-      *num_unique->mut_shape() = Shape({1});
-      return Maybe<void>::Ok();
-    })
-    .SetDataTypeInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
-      const user_op::TensorDesc& x = ctx->InputTensorDesc("x", 0);
-      auto out_idx = ctx->Attr<DataType>("out_idx");
-      CHECK_OR_RETURN(IsIndexDataType(out_idx));
-      user_op::TensorDesc* y = ctx->OutputTensorDesc("y", 0);
-      *y->mut_data_type() = x.data_type();
+  user_op::TensorDesc* num_unique = ctx->OutputTensorDesc("num_unique", 0);
+  *num_unique->mut_shape() = Shape({1});
+  return Maybe<void>::Ok();
+}
+/*static*/ Maybe<void> UniqueWithCountsOp::InferPhysicalTensorDesc(user_op::InferContext* ctx) {
+  return InferLogicalTensorDesc(ctx);
+}
+/*static*/ Maybe<void> UniqueWithCountsOp::InferDataType(user_op::InferContext* ctx) {
+  const user_op::TensorDesc& x = ctx->InputTensorDesc("x", 0);
+  auto out_idx = ctx->Attr<DataType>("out_idx");
+  CHECK_OR_RETURN(IsIndexDataType(out_idx));
+  user_op::TensorDesc* y = ctx->OutputTensorDesc("y", 0);
+  *y->mut_data_type() = x.data_type();
 
-      user_op::TensorDesc* idx = ctx->OutputTensorDesc("idx", 0);
-      *idx->mut_data_type() = out_idx;
+  user_op::TensorDesc* idx = ctx->OutputTensorDesc("idx", 0);
+  *idx->mut_data_type() = out_idx;
 
-      user_op::TensorDesc* count = ctx->OutputTensorDesc("count", 0);
-      *count->mut_data_type() = out_idx;
-      user_op::TensorDesc* num_unique = ctx->OutputTensorDesc("num_unique", 0);
-      *num_unique->mut_data_type() = out_idx;
-      return Maybe<void>::Ok();
-    })
-    .SetGetSbpFn(user_op::GetSbpFnUtil::DefaultBroadcastToBroadcast);
+  user_op::TensorDesc* count = ctx->OutputTensorDesc("count", 0);
+  *count->mut_data_type() = out_idx;
+  user_op::TensorDesc* num_unique = ctx->OutputTensorDesc("num_unique", 0);
+  *num_unique->mut_data_type() = out_idx;
+  return Maybe<void>::Ok();
+}
 
 }  // namespace oneflow

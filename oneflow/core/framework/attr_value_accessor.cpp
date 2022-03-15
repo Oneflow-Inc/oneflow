@@ -130,7 +130,7 @@ std::vector<Shape> AttrValueAccessor<std::vector<Shape>>::Attr(const AttrValue& 
 template<>
 void AttrValueAccessor<std::vector<Shape>>::Attr(const std::vector<Shape>& cpp_val,
                                                  AttrValue* attr_val) {
-  if (attr_val->at_list_shape().val_size() > 0) { attr_val->mutable_at_list_shape()->clear_val(); }
+  attr_val->mutable_at_list_shape()->clear_val();
   FOR_RANGE(int32_t, i, 0, cpp_val.size()) {
     cpp_val.at(i).ToProto(attr_val->mutable_at_list_shape()->add_val());
   }
@@ -176,8 +176,8 @@ Maybe<AttrVal> MakeCppAttrValueFromProtoOrCfgAttrValue(const ProtoT& cfg_attr_va
 // clang-format off
 #define MAKE_ENTRY(field, cpp_type, attr_type)                                        \
   }                                                                                   \
-  else if (dynamic_cast<const TypedAttrVal<cpp_type>*>(&cpp_attr_value) != nullptr) { \
-    const auto* ptr = dynamic_cast<const TypedAttrVal<cpp_type>*>(&cpp_attr_value);   \
+  else if (dynamic_cast<const TypedAttrValIf<cpp_type>*>(&cpp_attr_value) != nullptr) { \
+    const auto* ptr = dynamic_cast<const TypedAttrValIf<cpp_type>*>(&cpp_attr_value);   \
     AttrValueAccessor<cpp_type>::Attr(ptr->val(), attr_value);
     OF_PP_FOR_EACH_TUPLE(MAKE_ENTRY, ATTR_SEQ);
 #undef MAKE_ENTRY

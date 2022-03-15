@@ -31,7 +31,7 @@ class CopyDataContentKernel final : public user_op::OpKernel, public user_op::Cu
     user_op::Tensor* out = ctx->Tensor4ArgNameAndIndex("out", 0);
     CHECK_EQ(in->shape().elem_cnt(), out->shape().elem_cnt());
     CHECK_EQ(in->data_type(), out->data_type());
-    Memcpy<device_type>(ctx->device_ctx(), out->mut_dptr<void>(), in->dptr<void>(),
+    Memcpy<device_type>(ctx->stream(), out->mut_dptr<void>(), in->dptr<void>(),
                         in->shape().elem_cnt() * GetSizeOfDataType(in->data_type()));
   };
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }

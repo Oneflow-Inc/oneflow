@@ -140,8 +140,8 @@ class TestGraphOptimizer(flow.unittest.TestCase):
                 self.add_optimizer(sgd0, lr_sch=constant_warmup_cosine_lr0)
                 self.add_optimizer(sgd1, lr_sch=linear_warmup_cosine_lr1)
 
-            def build(self, x, y):
-                out0, out1 = self.m(x, y)
+            def build(self, x):
+                out0, out1 = self.m(x)
                 out0.backward()
                 out1.backward()
                 return out0, out1
@@ -149,6 +149,7 @@ class TestGraphOptimizer(flow.unittest.TestCase):
         g = CustomGraph0()
         x = flow.Tensor(4, 10)
         flow.nn.init.uniform_(x, a=-1.0, b=1.0)
+        g._filter_states()
         g._generate_config_proto()
         print("repr(g): \n", repr(g))
         print("g.config.proto: \n", g.config.proto)

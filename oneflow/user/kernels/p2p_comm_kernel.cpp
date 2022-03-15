@@ -35,7 +35,7 @@ class SendKernel final : public user_op::OpKernel {
     user_op::Tensor* in = ctx->Tensor4ArgNameAndIndex("in", 0);
     const auto& dst_process_id = ctx->Attr<int64_t>("dst_process_id");
     CHECK_JUST(ccl::Send<device_type>(in->dptr(), in->shape().elem_cnt(), in->data_type(),
-                                      dst_process_id, ctx->device_ctx()));
+                                      dst_process_id, ctx->stream()));
   }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
@@ -51,20 +51,20 @@ class RecvKernel final : public user_op::OpKernel {
     user_op::Tensor* out = ctx->Tensor4ArgNameAndIndex("out", 0);
     const auto& src_process_id = ctx->Attr<int64_t>("src_process_id");
     CHECK_JUST(ccl::Recv<device_type>(out->mut_dptr(), out->shape().elem_cnt(), out->data_type(),
-                                      src_process_id, ctx->device_ctx()));
+                                      src_process_id, ctx->stream()));
   }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
 
 #define REGISTER_KERNEL(device)                                                   \
   REGISTER_USER_KERNEL("send").SetCreateFn<SendKernel<device>>().SetIsMatchedHob( \
-      (user_op::HobDeviceTag() == device));                                       \
+      (user_op::HobDeviceType() == device));                                      \
   REGISTER_USER_KERNEL("recv").SetCreateFn<RecvKernel<device>>().SetIsMatchedHob( \
-      (user_op::HobDeviceTag() == device));
+      (user_op::HobDeviceType() == device));
 
 REGISTER_KERNEL(DeviceType::kCPU)
 #ifdef WITH_CUDA
-REGISTER_KERNEL(DeviceType::kGPU)
+REGISTER_KERNEL(DeviceType::kCUDA)
 #endif
 }  // namespace
 

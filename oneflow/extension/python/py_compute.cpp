@@ -36,6 +36,7 @@ void* TensorToMem(const user_op::Tensor* tensor) {
   switch (tensor->data_type()) {
     case DataType::kFloat: return TENSOR_MEM_CAST(float);
     case DataType::kDouble: return TENSOR_MEM_CAST(double);
+    case DataType::kBool: return TENSOR_MEM_CAST(bool);
     case DataType::kInt8: return TENSOR_MEM_CAST(int8_t);
     case DataType::kInt32: return TENSOR_MEM_CAST(int32_t);
     case DataType::kInt64: return TENSOR_MEM_CAST(int64_t);
@@ -55,8 +56,8 @@ void TensorToNumpy(const user_op::Tensor* tensor, PyObject** arg_ptr) {
     return;
   }
   int type_num = CHECK_JUST(numpy::OFDataTypeToNumpyType(tensor->data_type()));
-  LOG(INFO) << "Tensor data type " << DataType_Name(tensor->data_type()) << " Numpy type "
-            << type_num;
+  VLOG(3) << "Tensor data type " << DataType_Name(tensor->data_type()) << " Numpy type "
+          << type_num;
   int dim_size = tensor->shape().NumAxes();
   npy_intp dims[dim_size];
   FOR_RANGE(size_t, i, 0, dim_size) { dims[i] = tensor->shape().At(i); }
@@ -79,6 +80,7 @@ void MemToTensor(void* array_data_ptr, const size_t size, user_op::Tensor* tenso
   switch (tensor->data_type()) {
     case DataType::kFloat: TENSOR_MEM_ASSIGN(float); break;
     case DataType::kDouble: TENSOR_MEM_ASSIGN(double); break;
+    case DataType::kBool: TENSOR_MEM_ASSIGN(bool); break;
     case DataType::kInt8: TENSOR_MEM_ASSIGN(int8_t); break;
     case DataType::kInt32: TENSOR_MEM_ASSIGN(int32_t); break;
     case DataType::kInt64: TENSOR_MEM_ASSIGN(int64_t); break;
@@ -123,7 +125,7 @@ void MakePyInputs(const UserOpDef& op_def, user_op::KernelComputeContext* ctx,
   FOR_RANGE(size_t, i, 0, def_in_num) {
     PyObject* arg = nullptr;
     const std::string& arg_name = op_def.input(i).name();
-    LOG(INFO) << "input arg_name " << arg_name;
+    VLOG(3) << "input arg_name " << arg_name;
     // do not support multi input in one symbolic arg name
     int32_t index = 0;
     TensorToNumpy(ctx->Tensor4ArgNameAndIndex(arg_name, index), &arg);
@@ -143,13 +145,13 @@ void GetPyOutputs(const UserOpDef& op_def, user_op::KernelComputeContext* ctx,
   if (PyList_Check(py_outputs)) {
     FOR_RANGE(size_t, i, 0, def_out_num) {
       const std::string& arg_name = op_def.output(i).name();
-      LOG(INFO) << "output arg_name " << arg_name;
+      VLOG(3) << "output arg_name " << arg_name;
       int32_t index = 0;
       NumpyToTensor(PyList_GetItem(py_outputs, i), ctx->Tensor4ArgNameAndIndex(arg_name, index));
     }
   } else if (PyArray_Check(py_outputs)) {
     const std::string& arg_name = ctx->outputs().at(0).first;
-    LOG(INFO) << "output arg_name " << arg_name;
+    VLOG(3) << "output arg_name " << arg_name;
     int32_t index = 0;
     NumpyToTensor(py_outputs, ctx->Tensor4ArgNameAndIndex(arg_name, index));
   } else {

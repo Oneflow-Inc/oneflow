@@ -22,9 +22,8 @@ namespace oneflow {
 namespace one {
 
 struct SmoothL1LossCaptureState : public AutoGradCaptureState {
-  std::string reduction = "none";
-  float beta = 0.0;
   bool requires_grad = false;
+  float beta = 0.0;
 };
 
 class SmoothL1Loss : public OpExprGradFunction<SmoothL1LossCaptureState> {
@@ -38,30 +37,30 @@ class SmoothL1Loss : public OpExprGradFunction<SmoothL1LossCaptureState> {
 
   Maybe<void> Capture(SmoothL1LossCaptureState* ctx, const TensorTuple& inputs,
                       const TensorTuple& outputs, const AttrMap& attrs) const override {
-    CHECK_EQ_OR_RETURN(inputs.size(), 2);
     ctx->requires_grad = inputs.at(0)->requires_grad();  // prediction
     if (!ctx->requires_grad) { return Maybe<void>::Ok(); }
+
+    CHECK_EQ_OR_RETURN(inputs.size(), 2);
 
     ctx->SaveTensorForBackward(inputs.at(0));  // prediction
     ctx->SaveTensorForBackward(inputs.at(1));  // label
 
     ComposedAttrMap composed_attrs(attrs, base_attrs_);
     ctx->beta = JUST(composed_attrs.GetAttr<float>("beta"));
-    ctx->reduction = JUST(composed_attrs.GetAttr<std::string>("reduction"));
     return Maybe<void>::Ok();
   }
 
   Maybe<void> Apply(const SmoothL1LossCaptureState* ctx, const TensorTuple& out_grads,
                     TensorTuple* in_grads) const override {
+    if (!ctx->requires_grad) { return Maybe<void>::Ok(); }
+
     CHECK_EQ_OR_RETURN(out_grads.size(), 1);
     in_grads->resize(2);
 
-    if (ctx->requires_grad) {
-      const auto& prediction = ctx->SavedTensors().at(0);
-      const auto& label = ctx->SavedTensors().at(1);
-      in_grads->at(0) = JUST(functional::SmoothL1LossGrad(out_grads.at(0), prediction, label,
-                                                          ctx->beta, ctx->reduction));
-    }
+    const auto& prediction = ctx->SavedTensors().at(0);
+    const auto& label = ctx->SavedTensors().at(1);
+    in_grads->at(0) =
+        JUST(functional::SmoothL1LossGrad(out_grads.at(0), prediction, label, ctx->beta));
     return Maybe<void>::Ok();
   }
 

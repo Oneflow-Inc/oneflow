@@ -30,7 +30,7 @@ class DistributeAddKernel final : public Kernel {
 };
 
 void DistributeAddKernel::ForwardDataContent(KernelContext* ctx) const {
-  AutoMemcpy(ctx->stream_ctx(), ctx->BnInOp2Blob("out"), GetInBlob(ctx));
+  AutoMemcpy(ctx->stream(), ctx->BnInOp2Blob("out"), GetInBlob(ctx));
 }
 
 const Blob* DistributeAddKernel::GetInBlob(KernelContext* ctx) const {
@@ -59,7 +59,7 @@ class DistributeCloneKernel final : public Kernel {
 };
 
 void DistributeCloneKernel::ForwardDataContent(KernelContext* ctx) const {
-  AutoMemcpy(ctx->stream_ctx(), GetOutBlob(ctx), ctx->BnInOp2Blob("in"));
+  AutoMemcpy(ctx->stream(), GetOutBlob(ctx), ctx->BnInOp2Blob("in"));
 }
 
 Blob* DistributeCloneKernel::GetOutBlob(KernelContext* ctx) const {
@@ -88,7 +88,7 @@ class DistributeConcatKernel final : public Kernel {
 };
 
 void DistributeConcatKernel::ForwardDataContent(KernelContext* ctx) const {
-  AutoMemcpy(ctx->stream_ctx(), ctx->BnInOp2Blob("out"), GetInBlob(ctx));
+  AutoMemcpy(ctx->stream(), ctx->BnInOp2Blob("out"), GetInBlob(ctx));
 }
 
 const Blob* DistributeConcatKernel::GetInBlob(KernelContext* ctx) const {
@@ -118,7 +118,7 @@ class DistributeSplitKernel final : public Kernel {
 };
 
 void DistributeSplitKernel::ForwardDataContent(KernelContext* ctx) const {
-  AutoMemcpy(ctx->stream_ctx(), GetOutBlob(ctx), ctx->BnInOp2Blob("in"));
+  AutoMemcpy(ctx->stream(), GetOutBlob(ctx), ctx->BnInOp2Blob("in"));
 }
 
 void DistributeSplitKernel::ForwardShape(KernelContext* ctx) const {

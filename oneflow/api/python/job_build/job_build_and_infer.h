@@ -114,10 +114,10 @@ inline Maybe<bool> JobBuildAndInferCtx_IsDynamic(const std::string& job_name,
   return ctx->IsDynamic(lbn);
 }
 
-inline Maybe<bool> JobBuildAndInferCtx_DisableBoxing(const std::string& job_name,
-                                                     const std::string& lbn) {
+inline Maybe<bool> JobBuildAndInferCtx_IsDisableBoxing(const std::string& job_name,
+                                                       const std::string& lbn) {
   auto* ctx = JUST(GetJobBuildAndInferCtx(job_name));
-  return ctx->DisableBoxing(lbn);
+  return ctx->IsDisableBoxing(lbn);
 }
 
 inline Maybe<std::string> JobBuildAndInferCtx_GetSplitAxisFromProducerView(

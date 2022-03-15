@@ -16,11 +16,14 @@ limitations under the License.
 import itertools
 from collections import OrderedDict, namedtuple
 from typing import Callable, Dict, Iterator, List, Optional, Set, Tuple, TypeVar, Union
+import traceback
+import warnings
 
 import numpy as np
 import oneflow as flow
 from oneflow.framework.tensor import Tensor
 from oneflow.nn.parameter import Parameter
+from contextlib import contextmanager
 
 
 class _IncompatibleKeys(
@@ -51,7 +54,6 @@ T = TypeVar("T", bound="Module")
 class Module(object):
     def __init__(self):
         self.training = True
-        self._consistent = False
         self._parameters = OrderedDict()
         self._buffers = OrderedDict()
         self._non_persistent_buffers_set = set()
@@ -62,10 +64,6 @@ class Module(object):
         self._state_dict_hooks = OrderedDict()
         self._load_state_dict_pre_hooks = OrderedDict()
         self._modules = OrderedDict()
-
-    @property
-    def consistent(self):
-        return self._consistent
 
     def forward(self, *args, **kwargs):
         raise NotImplementedError()
@@ -319,6 +317,33 @@ class Module(object):
     def eval(self: T) -> T:
         return self.train(False)
 
+    def zero_grad(self, set_to_none: bool = False) -> None:
+        r"""Sets gradients of all model parameters to zero. See similar function
+        under :class:`oneflow.optim.Optimizer` for more context.
+
+        Args:
+            set_to_none (bool): instead of setting to zero, set the grads to None.
+                See :meth:`oneflow.optim.Optimizer.zero_grad` for details.
+        """
+        if getattr(self, "_is_replica", False):
+            warnings.warn(
+                "Calling .zero_grad() from a module created with nn.DataParallel() has no effect. "
+                "The parameters are copied (in a differentiable manner) from the original module. "
+                "This means they are not leaf nodes in autograd and so don't accumulate gradients. "
+                "If you need gradients in your forward method, consider using autograd.grad instead."
+            )
+
+        for p in self.parameters():
+            if p.grad is not None:
+                if set_to_none:
+                    p.grad = None
+                else:
+                    if p.grad.grad_fn is not None:
+                        p.grad.detach_()
+                    else:
+                        p.grad.requires_grad_(False)
+                    p.grad.zeros_()
+
     def _save_to_state_dict(self, destination, prefix, keep_vars):
         for (name, param) in self._parameters.items():
             if param is not None:
@@ -372,8 +397,14 @@ class Module(object):
                         param.copy_(input_param)
                 except Exception as ex:
                     error_msgs.append(
-                        'While copying the parameter named "{}", whose dimensions in the model are {} and whose dimensions in the checkpoint are {}, an exception occurred : {}.'.format(
-                            key, param.shape, input_param.shape, ex.args
+                        'While copying the parameter "{}", an exception occurred : \n\n{}.'.format(
+                            key,
+                            "".join(
+                                map(
+                                    lambda line: "\t" + line,
+                                    traceback.format_exc().splitlines(True),
+                                )
+                            ),
                         )
                     )
             elif strict:
@@ -464,9 +495,14 @@ class Module(object):
     def register_forward_hook(self, hook: Callable[..., None]) -> None:
         self._forward_hooks[len(self._forward_hooks)] = hook
 
-    def _apply(self, fn):
+    def _apply(self, fn, applied_dict=None):
+        # A dict to store tensors that has already been applied.
+        # There is no need to apply multiple times on a same tensor.
+        if applied_dict is None:
+            applied_dict = dict()
+
         for module in self.children():
-            module._apply(fn)
+            module._apply(fn, applied_dict)
 
         def can_use_assign_copy(tensor, tensor_applied):
             return tensor.is_local == tensor_applied.is_local
@@ -475,27 +511,47 @@ class Module(object):
             if param is None:
                 continue
 
-            assert isinstance(param, Parameter)
-            assert param.is_leaf
-            with flow.no_grad():
-                param_applied = fn(param)
-            param_applied.requires_grad = param.requires_grad
-
-            if param.grad is not None:
-                assert param.grad.is_leaf
+            need_apply = False
+            if param not in applied_dict:
+                need_apply = True
+                assert isinstance(param, Parameter)
+                assert param.is_leaf
                 with flow.no_grad():
-                    grad_applied = fn(param.grad)
-                grad_applied.requires_grad = param.grad.requires_grad
-                param_applied.grad = grad_applied
+                    param_applied = fn(param)
+                param_applied.requires_grad = param.requires_grad
+
+                if param.grad is not None:
+                    assert param.grad.is_leaf
+                    with flow.no_grad():
+                        grad_applied = fn(param.grad)
+                    grad_applied.requires_grad = param.grad.requires_grad
+                    param_applied.grad = grad_applied
+            else:
+                param_applied = applied_dict[param]
 
             if can_use_assign_copy(param_applied, param):
-                self._parameters[key].data = param_applied
+                if need_apply:
+                    self._parameters[key].data = param_applied
+                    applied_dict[param] = param_applied
+                else:
+                    # The parameter's data has already been set when it can use assign copy.
+                    pass
             else:
-                self._parameters[key] = Parameter(param_applied, param.requires_grad)
+                if need_apply:
+                    new_param = Parameter(param_applied, param.requires_grad)
+                    self._parameters[key] = new_param
+                    applied_dict[param] = new_param
+                else:
+                    self._parameters[key] = applied_dict[param]
 
         for (key, buf) in self._buffers.items():
             if buf is not None:
-                self._buffers[key] = fn(buf)
+                if buf not in applied_dict:
+                    buf_applied = fn(buf)
+                    self._buffers[key] = buf_applied
+                    applied_dict[buf] = buf_applied
+                else:
+                    self._buffers[key] = applied_dict[buf]
                 # TODO: choose a better way
                 flow._oneflow_internal.dtr.set_non_evictable(self._buffers[key])
         return self
@@ -512,9 +568,14 @@ class Module(object):
 
         return self._apply(convert)
 
-    def to_consistent(self, placement=None, sbp=None):
+    def to_consistent(self, *args, **kwargs):
+        raise RuntimeError(
+            ".to_consistent has been removed, please use .to_global instead"
+        )
+
+    def to_global(self, placement=None, sbp=None):
         def convert(t):
-            return t.to_consistent(placement=placement, sbp=sbp)
+            return t.to_global(placement=placement, sbp=sbp)
 
         return self._apply(convert)
 

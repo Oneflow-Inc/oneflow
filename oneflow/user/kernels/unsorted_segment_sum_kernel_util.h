@@ -22,7 +22,7 @@ namespace oneflow {
 
 template<DeviceType device_type, typename T, typename K, typename U>
 struct UnsortedSegmentSumKernelUtil final {
-  static void UnsortedSegmentSum(DeviceCtx* ctx, const K* segment_ids, const U* data,
+  static void UnsortedSegmentSum(ep::Stream* stream, const K* segment_ids, const U* data,
                                  int64_t num_segment_ids, int64_t num_segments,
                                  int64_t outer_dim_size, int64_t inner_dim_size,
                                  int64_t segment_id_offset, T* out);
@@ -30,6 +30,8 @@ struct UnsortedSegmentSumKernelUtil final {
 
 #define UNSORTED_SEGMENT_SUM_DATA_TYPE_SEQ \
   FLOATING_DATA_TYPE_SEQ OF_PP_MAKE_TUPLE_SEQ(int32_t, DataType::kInt32)
+#define UNSORTED_SEGMENT_SUM_INDEX_TYPE_SEQ \
+  INDEX_DATA_TYPE_SEQ OF_PP_MAKE_TUPLE_SEQ(uint32_t, DataType::kUInt32)
 
 }  // namespace oneflow
 

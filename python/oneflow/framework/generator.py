@@ -23,12 +23,6 @@ def create_generator(device=None):
     return oneflow._oneflow_internal.create_generator(device)
 
 
-def default_generator(device=None):
-    if device is None:
-        device = "auto"
-    return oneflow._oneflow_internal.default_generator(device)
-
-
 def manual_seed(seed):
     oneflow._oneflow_internal.manual_seed(seed)
 
@@ -42,5 +36,21 @@ def _setstate(self, state_dict):
     self.set_state(state_dict["state"])
 
 
+def get_rng_state():
+    """
+    returns the state of the default random number generator
+    """
+    return oneflow.default_generator.get_state()
+
+
+def set_rng_state(state):
+    """
+    sets the state of the default random number generator to the given state
+    """
+
+    return oneflow.default_generator.set_state(state)
+
+
+default_generator = oneflow._oneflow_internal.default_generator("cpu")
 oneflow._oneflow_internal.Generator.__getstate__ = _getstate
 oneflow._oneflow_internal.Generator.__setstate__ = _setstate

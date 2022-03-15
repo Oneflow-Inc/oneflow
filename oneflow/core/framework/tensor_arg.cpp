@@ -36,13 +36,20 @@ Maybe<void> TensorArg::PushPartialTensor(const std::shared_ptr<Tensor>& partial_
     //
     // As we know that dx = dz + dp / z and dy = dz, so it will lead to wrong value
     // for dy if dx is shared with dz.
-    acc_tensor_ = JUST(functional::Add(partial_tensor, acc_tensor_, /*inplace=*/false));
+    acc_tensor_ =
+        JUST(functional::Add(partial_tensor, acc_tensor_, /*alpha=*/1, /*inplace=*/false));
   }
   return Maybe<void>::Ok();
 }
 
-Maybe<Tensor> TensorArg::GetAccTensor() {
+Maybe<Tensor> TensorArg::GetAccTensor(const std::vector<AutogradMeta::Hook>& hooks) {
   CHECK_OR_RETURN(Empty() == false) << "Can not GetAccTensor because it is empty";
+  if (!hooks.empty()) {
+    for (const auto& hook : hooks) {
+      auto new_grad = hook(acc_tensor_);
+      if (new_grad) { acc_tensor_ = new_grad; }
+    }
+  }
   return acc_tensor_;
 }
 

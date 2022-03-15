@@ -20,17 +20,16 @@ limitations under the License.
 #include "oneflow/core/common/symbol.h"
 
 namespace oneflow {
-namespace cfg {
 
 class NdSbp;
-}
-
 class Shape;
 class Device;
 class Stride;
 class ParallelDesc;
 
 namespace one {
+
+bool IsContiguous(const Shape& shape, const Stride& stride);
 
 class TensorMeta : public user_op::TensorDesc {
  public:
@@ -67,15 +66,22 @@ class MirroredTensorMeta : public TensorMeta {
   MirroredTensorMeta();
   MirroredTensorMeta(const std::shared_ptr<const Shape>& shape, DataType dtype,
                      Symbol<Device> device);
+  MirroredTensorMeta(const std::shared_ptr<const Shape>& shape, DataType dtype,
+                     Symbol<Device> device, const std::shared_ptr<const Stride>& stride,
+                     int64_t storage_offset);
   virtual ~MirroredTensorMeta() = default;
 
   const Symbol<Device>& device() const { return device_; }
   const Stride& stride() const { return *stride_; }
+  bool is_contiguous() const { return is_contiguous_; }
   const std::shared_ptr<const Stride>& stride_ptr() const { return stride_; }
   int64_t storage_offset() const { return storage_offset_; }
 
   Symbol<Device>* mut_device() { return &device_; }
-  void set_stride(const std::shared_ptr<const Stride>& stride) { stride_ = stride; }
+  void set_stride(const std::shared_ptr<const Stride>& stride) {
+    stride_ = stride;
+    is_contiguous_ = IsContiguous(shape(), *stride_);
+  }
   void set_storage_offset(int64_t offset) { storage_offset_ = offset; }
 
   bool operator==(const MirroredTensorMeta& other) const;
@@ -84,13 +90,14 @@ class MirroredTensorMeta : public TensorMeta {
  private:
   Symbol<Device> device_;
   std::shared_ptr<const Stride> stride_;
+  bool is_contiguous_;
   int64_t storage_offset_;
 };
 
 class ConsistentTensorMeta : public TensorMeta {
  public:
   ConsistentTensorMeta(const std::shared_ptr<const Shape>& shape, DataType dtype,
-                       Symbol<cfg::NdSbp> nd_sbp, Symbol<ParallelDesc> parallel_desc)
+                       Symbol<NdSbp> nd_sbp, Symbol<ParallelDesc> parallel_desc)
       : TensorMeta(shape, dtype), nd_sbp_(nd_sbp), parallel_desc_(parallel_desc) {}
   ConsistentTensorMeta(const ConsistentTensorMeta&) = default;
   ConsistentTensorMeta(ConsistentTensorMeta&&) = default;
@@ -98,17 +105,17 @@ class ConsistentTensorMeta : public TensorMeta {
 
   bool operator==(const ConsistentTensorMeta& other) const;
 
-  Symbol<cfg::NdSbp> nd_sbp() const { return nd_sbp_; }
+  Symbol<NdSbp> nd_sbp() const { return nd_sbp_; }
   Symbol<ParallelDesc> parallel_desc() const { return parallel_desc_; }
 
-  void set_nd_sbp(Symbol<cfg::NdSbp> val) { nd_sbp_ = val; }
+  void set_nd_sbp(Symbol<NdSbp> val) { nd_sbp_ = val; }
 
   void set_parallel_desc(Symbol<ParallelDesc> val) { parallel_desc_ = val; }
 
   size_t CalcHashValue() const;
 
  private:
-  Symbol<cfg::NdSbp> nd_sbp_;
+  Symbol<NdSbp> nd_sbp_;
   Symbol<ParallelDesc> parallel_desc_;
 };
 

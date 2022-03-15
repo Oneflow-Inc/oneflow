@@ -88,7 +88,7 @@ class TestOFRecordModule(flow.unittest.TestCase):
 
 @flow.unittest.skip_unless_1n1d()
 class TestConsistentOFRecordModule(flow.unittest.TestCase):
-    def test_consistent_record(test_case):
+    def test_global_record(test_case):
         batch_size = 1
         color_space = "RGB"
         height = 224
@@ -102,7 +102,7 @@ class TestConsistentOFRecordModule(flow.unittest.TestCase):
             data_part_num=1,
             part_name_suffix_length=5,
             shuffle_after_epoch=False,
-            placement=flow.placement("cpu", {0: [0]}),
+            placement=flow.placement("cpu", ranks=[0]),
             sbp=[flow.sbp.split(0)],
         )
         record_image_decoder = flow.nn.OFRecordImageDecoder(
@@ -116,7 +116,7 @@ class TestConsistentOFRecordModule(flow.unittest.TestCase):
         )
         flip = flow.nn.CoinFlip(
             batch_size=batch_size,
-            placement=flow.placement("cpu", {0: [0]}),
+            placement=flow.placement("cpu", ranks=[0]),
             sbp=[flow.sbp.split(0)],
         )
         crop_mirror_normal = flow.nn.CropMirrorNormalize(
@@ -302,7 +302,7 @@ class TestCocoReader(flow.unittest.TestCase):
     def test_coco_reader(test_case):
         anno_file = "/dataset/mscoco_2017/annotations/instances_val2017.json"
         image_dir = "/dataset/mscoco_2017/val2017"
-        num_iterations = 100
+        num_iterations = 10
         coco_reader = flow.nn.COCOReader(
             annotation_file=anno_file,
             image_dir=image_dir,

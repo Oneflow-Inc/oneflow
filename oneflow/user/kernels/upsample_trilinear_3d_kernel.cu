@@ -152,7 +152,7 @@ class UpsampleTrilinear3DGPUKernel final : public user_op::OpKernel {
     const T scale_height = GetAreaPixelScale(in_height, out_height, align_corners, height_scale);
     const T scale_width = GetAreaPixelScale(in_width, out_width, align_corners, width_scale);
 
-    RUN_CUDA_KERNEL((UpsampleTrilinear3DForward<T>), ctx->device_ctx(), elem_cnt, elem_cnt,
+    RUN_CUDA_KERNEL((UpsampleTrilinear3DForward<T>), ctx->stream(), elem_cnt, elem_cnt,
                     x_tensor->dptr<T>(), in_helper, out_helper, x_tensor->shape().At(2),
                     x_tensor->shape().At(3), x_tensor->shape().At(4), scale_depth, scale_height,
                     scale_width, align_corners, y_tensor->mut_dptr<T>());
@@ -171,8 +171,8 @@ class UpsampleTrilinearGrad3DGPUKernel final : public user_op::OpKernel {
   void Compute(user_op::KernelComputeContext* ctx) const override {
     user_op::Tensor* dx_tensor = ctx->Tensor4ArgNameAndIndex("dx", 0);
 
-    Memset<DeviceType::kGPU>(ctx->device_ctx(), dx_tensor->mut_dptr<T>(), 0,
-                             dx_tensor->shape().elem_cnt() * sizeof(T));
+    Memset<DeviceType::kCUDA>(ctx->stream(), dx_tensor->mut_dptr<T>(), 0,
+                              dx_tensor->shape().elem_cnt() * sizeof(T));
     const user_op::Tensor* dy_tensor = ctx->Tensor4ArgNameAndIndex("dy", 0);
     const float depth_scale = ctx->Attr<float>("depth_scale");
     const float height_scale = ctx->Attr<float>("height_scale");
@@ -198,7 +198,7 @@ class UpsampleTrilinearGrad3DGPUKernel final : public user_op::OpKernel {
     const T scale_height = GetAreaPixelScale(in_height, out_height, align_corners, height_scale);
     const T scale_width = GetAreaPixelScale(in_width, out_width, align_corners, width_scale);
 
-    RUN_CUDA_KERNEL((UpsampleTrilinear3DBackward<T>), ctx->device_ctx(), elem_cnt, elem_cnt,
+    RUN_CUDA_KERNEL((UpsampleTrilinear3DBackward<T>), ctx->stream(), elem_cnt, elem_cnt,
                     dy_tensor->dptr<T>(), dy_helper, dx_helper, dx_tensor->shape().At(2),
                     dx_tensor->shape().At(3), dx_tensor->shape().At(4), scale_depth, scale_height,
                     scale_width, align_corners, dx_tensor->mut_dptr<T>());
@@ -206,17 +206,17 @@ class UpsampleTrilinearGrad3DGPUKernel final : public user_op::OpKernel {
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
 
-#define REGISTER_UPSAMPTRILINEAR3D_GPU_KERNEL(dtype)                                   \
-  REGISTER_USER_KERNEL("upsample_trilinear_3d")                                        \
-      .SetCreateFn<UpsampleTrilinear3DGPUKernel<dtype>>()                              \
-      .SetIsMatchedHob((user_op::HobDeviceTag() == "gpu")                              \
-                       & (user_op::HobDataType("y", 0) == GetDataType<dtype>::value)); \
-  REGISTER_USER_KERNEL("upsample_trilinear_3d_grad")                                   \
-      .SetCreateFn<UpsampleTrilinearGrad3DGPUKernel<dtype>>()                          \
-      .SetIsMatchedHob((user_op::HobDeviceTag() == "gpu")                              \
-                       & (user_op::HobDataType("dx", 0) == GetDataType<dtype>::value));
+#define REGISTER_UPSAMPTRILINEAR3D_CUDA_KERNEL(dtype)                                   \
+  REGISTER_USER_KERNEL("upsample_trilinear_3d")                                         \
+      .SetCreateFn<UpsampleTrilinear3DGPUKernel<dtype>>()                               \
+      .SetIsMatchedHob((user_op::HobDeviceType() == DeviceType::kCUDA)                  \
+                       && (user_op::HobDataType("y", 0) == GetDataType<dtype>::value)); \
+  REGISTER_USER_KERNEL("upsample_trilinear_3d_grad")                                    \
+      .SetCreateFn<UpsampleTrilinearGrad3DGPUKernel<dtype>>()                           \
+      .SetIsMatchedHob((user_op::HobDeviceType() == DeviceType::kCUDA)                  \
+                       && (user_op::HobDataType("dx", 0) == GetDataType<dtype>::value));
 
-REGISTER_UPSAMPTRILINEAR3D_GPU_KERNEL(float)
-REGISTER_UPSAMPTRILINEAR3D_GPU_KERNEL(double)
+REGISTER_UPSAMPTRILINEAR3D_CUDA_KERNEL(float)
+REGISTER_UPSAMPTRILINEAR3D_CUDA_KERNEL(double)
 
 }  // namespace oneflow

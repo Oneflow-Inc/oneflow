@@ -18,6 +18,7 @@ limitations under the License.
 
 #include <atomic>
 #include <glog/logging.h>
+#include "oneflow/core/intrusive/cpp_attribute.h"
 
 namespace oneflow {
 
@@ -25,7 +26,7 @@ namespace intrusive {
 
 class Ref {
  public:
-  Ref() : ref_cnt_() {}
+  Ref() : ref_cnt_(), deleter_(nullptr) {}
 
   using RefCntType = int32_t;
 
@@ -44,11 +45,17 @@ class Ref {
   template<typename T>
   static void DecreaseRef(T* ptr) {
     CHECK_NOTNULL(ptr);
-    RefCntType ref_cnt = ptr->mut_intrusive_ref()->DecreaseRefCount();
-    if (ref_cnt > 0) { return; }
-    ptr->__Delete__();
-    delete ptr;
+    auto* ref = ptr->mut_intrusive_ref();
+    if (INTRUSIVE_PREDICT_TRUE(ref->DecreaseRefCount() > 0)) { return; }
+    if (INTRUSIVE_PREDICT_TRUE(ref->deleter_ == nullptr)) {
+      ptr->__Delete__();
+      delete ptr;
+    } else {
+      ref->deleter_(ptr);
+    }
   }
+
+  void set_deleter(void (*deleter)(void*)) { deleter_ = deleter; }
 
  private:
   void InitRefCount() { ref_cnt_ = 0; }
@@ -56,6 +63,7 @@ class Ref {
   RefCntType DecreaseRefCount() { return --ref_cnt_; }
 
   std::atomic<RefCntType> ref_cnt_;
+  void (*deleter_)(void*);
 };
 
 }  // namespace intrusive

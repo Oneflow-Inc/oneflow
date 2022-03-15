@@ -30,8 +30,8 @@ struct NdarrayApplyUnary<
     device_type, T, unary_func,
     typename std::enable_if<std::is_same<T, typename DevDType<device_type, T>::type>::value>::type>
     final {
-  static void InplaceApply(DeviceCtx* ctx, const XpuVarNdarray<T>& y) {
-    NdarrayApplyUnaryCoreWrapper<device_type, T, unary_func>::InplaceApply(ctx, y);
+  static void InplaceApply(ep::Stream* stream, const XpuVarNdarray<T>& y) {
+    NdarrayApplyUnaryCoreWrapper<device_type, T, unary_func>::InplaceApply(stream, y);
   }
 };
 
@@ -40,10 +40,10 @@ struct NdarrayApplyUnary<
     device_type, T, unary_func,
     typename std::enable_if<!std::is_same<T, typename DevDType<device_type, T>::type>::value>::type>
     final {
-  static void InplaceApply(DeviceCtx* ctx, const XpuVarNdarray<T>& y) {
+  static void InplaceApply(ep::Stream* stream, const XpuVarNdarray<T>& y) {
     using NewT = typename DevDType<device_type, T>::type;
     return NdarrayApplyUnary<device_type, NewT, unary_func>::InplaceApply(
-        ctx, reinterpret_cast<const XpuVarNdarray<NewT>&>(y));
+        stream, reinterpret_cast<const XpuVarNdarray<NewT>&>(y));
   }
 };
 

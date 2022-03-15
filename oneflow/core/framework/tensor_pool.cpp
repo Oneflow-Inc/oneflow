@@ -44,7 +44,7 @@ void printInfo(const std::shared_ptr<vm::DTREagerBlobObject>& debo) {
             // << ", parent_depth: " << debo->parent_depth()
             // << ", child_depth: " << debo->child_depth()
             << ", tensor buffer dptr: "
-            << static_cast<const void*>(debo->tensor_buffer()->blob_dptr())
+            << static_cast<const void*>(debo->tensor_storage()->blob_dptr())
             // << ", data_type: " << debo->mut_blob_desc()->data_type()
             << std::endl;
 }

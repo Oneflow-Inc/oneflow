@@ -16,7 +16,7 @@ limitations under the License.
 #include <pybind11/pybind11.h>
 
 #include "oneflow/api/python/of_api_registry.h"
-#include "oneflow/api/python/framework/throw.h"
+#include "oneflow/core/common/throw.h"
 
 namespace py = pybind11;
 
@@ -42,6 +42,16 @@ py::object AddFunctionDoc(py::object f, const std::string& doc_string) {
                           << " already has a docstring.";
     }
     f->func_doc = PyUnicode_FromString(doc_str);
+  } else if (py::isinstance<py::detail::generic_type>(f)) {
+    if (py::hasattr(f, "__doc__")) {
+      auto doc = py::getattr(f, "__doc__");
+      if (!doc.is(py::none())) {
+        THROW(RuntimeError) << Py_TYPE(obj)->tp_name << " already has a docstring.";
+      }
+    }
+    py::setattr(f, "__doc__", py::reinterpret_steal<py::object>(PyUnicode_FromString(doc_str)));
+  } else if (Py_TYPE(obj)->tp_name == PyProperty_Type.tp_name) {
+    py::setattr(f, "__doc__", py::reinterpret_steal<py::object>(PyUnicode_FromString(doc_str)));
   } else {
     THROW(RuntimeError) << "function is " << Py_TYPE(obj)->tp_name << ", not a valid function.";
   }

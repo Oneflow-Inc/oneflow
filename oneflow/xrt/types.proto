@@ -15,6 +15,7 @@ enum XrtEngine {
   XLA = 2;
   TENSORRT = 3;
   TVM = 4;
+  OPENVINO = 5;
 }
 
 message XrtField {

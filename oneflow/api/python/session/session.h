@@ -18,6 +18,7 @@ limitations under the License.
 
 #include <string>
 #include <google/protobuf/text_format.h>
+#include "oneflow/api/python/session/session_api.h"
 #include "oneflow/core/common/protobuf.h"
 #include "oneflow/core/control/ctrl_client.h"
 #include "oneflow/core/control/global_process_ctx.h"
@@ -54,7 +55,7 @@ inline Maybe<void> InitEagerGlobalSession(const std::string& config_proto_str) {
   Global<SessionGlobalObjectsScope>::SetAllocated(new SessionGlobalObjectsScope());
 
   JUST(Global<SessionGlobalObjectsScope>::Get()->EagerInit(config_proto));
-  LOG(INFO) << "NewGlobal " << typeid(SessionGlobalObjectsScope).name();
+  VLOG(3) << "NewGlobal " << typeid(SessionGlobalObjectsScope).name();
 
   return Maybe<void>::Ok();
 }
@@ -74,7 +75,7 @@ inline Maybe<void> InitLazyGlobalSession(const std::string& config_proto_str) {
   CHECK_ISNULL_OR_RETURN(Global<SessionGlobalObjectsScope>::Get());
   Global<SessionGlobalObjectsScope>::SetAllocated(new SessionGlobalObjectsScope());
   JUST(Global<SessionGlobalObjectsScope>::Get()->Init(config_proto));
-  LOG(INFO) << "NewGlobal " << typeid(SessionGlobalObjectsScope).name();
+  VLOG(3) << "NewGlobal " << typeid(SessionGlobalObjectsScope).name();
   return Maybe<void>::Ok();
 }
 
@@ -128,15 +129,25 @@ inline Maybe<void> InitMultiClientSessionContext(const std::string& config_proto
   return Maybe<void>::Ok();
 }
 
+inline Maybe<void> MultiClientSessionContextUpdateResource(const std::string& resource_proto_str) {
+  CHECK_NOTNULL_OR_RETURN(Global<MultiClientSessionContext>::Get());
+  Resource reso_proto;
+  CHECK_OR_RETURN(TxtString2PbMessage(resource_proto_str, &reso_proto))
+      << "failed to parse config_proto: " << resource_proto_str;
+  JUST(Global<MultiClientSessionContext>::Get()->UpdateResource(reso_proto));
+  return Maybe<void>::Ok();
+}
+
 inline Maybe<void> MultiClientSessionContextAddCGraph(
     const std::shared_ptr<oneflow::NNGraph>& c_graph_ptr) {
+  CHECK_NOTNULL_OR_RETURN(Global<MultiClientSessionContext>::Get());
   JUST(Global<MultiClientSessionContext>::Get()->AddCGraph(c_graph_ptr));
   return Maybe<void>::Ok();
 }
 
 inline Maybe<void> TryDestroyMultiClientSessionContext() {
   // Global<T>::Delete is not allowed to be called here
-  // because glog is not constructed yet and LOG(INFO) has bad bahavior
+  // because glog is not constructed yet and has bad bahavior
   if (Global<MultiClientSessionContext>::Get() != nullptr) {
     JUST(Global<MultiClientSessionContext>::Get()->TryClose());
     delete Global<MultiClientSessionContext>::Get();

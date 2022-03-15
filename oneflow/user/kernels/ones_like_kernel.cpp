@@ -15,7 +15,7 @@ limitations under the License.
 */
 #include "oneflow/core/common/switch_func.h"
 #include "oneflow/core/framework/framework.h"
-#include "oneflow/core/primitive/include/fill.h"
+#include "oneflow/core/ep/include/primitive/fill.h"
 
 namespace oneflow {
 
@@ -24,9 +24,9 @@ namespace user_op {
 namespace {
 
 template<typename Context>
-std::unique_ptr<primitive::Fill> NewFillPrimitive(Context* ctx) {
+std::unique_ptr<ep::primitive::Fill> NewFillPrimitive(Context* ctx) {
   const DataType data_type = ctx->TensorDesc4ArgNameAndIndex("out", 0)->data_type();
-  return primitive::NewPrimitive<primitive::FillFactory>(ctx->device_type(), data_type);
+  return ep::primitive::NewPrimitive<ep::primitive::FillFactory>(ctx->device_type(), data_type);
 }
 
 class OnesLikeKernel final : public user_op::OpKernel {
@@ -37,24 +37,25 @@ class OnesLikeKernel final : public user_op::OpKernel {
  private:
   void Compute(user_op::KernelComputeContext* ctx) const override {
     user_op::Tensor* out = ctx->Tensor4ArgNameAndIndex("out", 0);
-    std::unique_ptr<primitive::Fill> fill = primitive::NewPrimitive<primitive::FillFactory>(
-        ctx->stream_ctx()->device_type(), out->data_type());
+    std::unique_ptr<ep::primitive::Fill> fill =
+        ep::primitive::NewPrimitive<ep::primitive::FillFactory>(ctx->stream()->device_type(),
+                                                                out->data_type());
     CHECK(fill);
-    fill->Launch(ctx->stream_ctx(), out->mut_dptr(), 1, out->shape().elem_cnt());
+    fill->Launch(ctx->stream(), out->mut_dptr(), 1, out->shape().elem_cnt());
   }
 
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
 
-hob::HobContextGetter<user_op::KernelRegContext, bool> FillPrimitiveExists() {
-  return user_op::HobCtxGetter<bool>(
-      "FillPrimitiveExists",
-      [](const user_op::KernelRegContext& ctx) { return NewFillPrimitive(&ctx).operator bool(); });
+auto FillPrimitiveExists() {
+  return hob::make_custom("FillPrimitiveExists", [](const user_op::KernelRegContext& ctx) {
+    return NewFillPrimitive(&ctx).operator bool();
+  });
 }
 
 REGISTER_USER_KERNEL("ones_like")
     .SetCreateFn<OnesLikeKernel>()
-    .SetIsMatchedHob(FillPrimitiveExists() == true);
+    .SetIsMatchedHob(FillPrimitiveExists());
 
 }  // namespace
 

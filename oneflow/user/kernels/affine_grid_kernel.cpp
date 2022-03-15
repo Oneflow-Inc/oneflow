@@ -38,11 +38,11 @@ class AffineGridKernel final : public user_op::OpKernel {
     bool is_2d_grid = true;
     if (size.NumAxes() == 5) { is_2d_grid = false; }
 
+    int64_t N = theta->shape().At(0);
     int64_t theta_h = theta->shape().At(1);
     int64_t theta_w = theta->shape().At(2);
 
     if (is_2d_grid) {
-      int64_t N = size.At(0);
       int64_t H = size.At(2);
       int64_t W = size.At(3);
       // generate base grid
@@ -50,13 +50,12 @@ class AffineGridKernel final : public user_op::OpKernel {
                                                    align_corners);
       // Compute each batch
       for (int n = 0; n < N; n++) {
-        NewKernelUtil<device_type>::OFGemm(ctx->device_ctx(), CblasNoTrans, CblasTrans, H * W,
-                                           theta_h, theta_w, 1.0, tmp_buffer->dptr<data_type>(),
+        NewKernelUtil<device_type>::OFGemm(ctx->stream(), CblasNoTrans, CblasTrans, H * W, theta_h,
+                                           theta_w, 1.0, tmp_buffer->dptr<data_type>(),
                                            theta->dptr<data_type>() + n * theta_h * theta_w, 0.0,
                                            grid->mut_dptr<data_type>() + n * theta_h * H * W);
       }
     } else {
-      int64_t N = size.At(0);
       int64_t D = size.At(2);
       int64_t H = size.At(3);
       int64_t W = size.At(4);
@@ -65,7 +64,7 @@ class AffineGridKernel final : public user_op::OpKernel {
                                                    align_corners);
       // Compute each batch
       for (int n = 0; n < N; n++) {
-        NewKernelUtil<device_type>::OFGemm(ctx->device_ctx(), CblasNoTrans, CblasTrans, D * H * W,
+        NewKernelUtil<device_type>::OFGemm(ctx->stream(), CblasNoTrans, CblasTrans, D * H * W,
                                            theta_h, theta_w, 1.0, tmp_buffer->dptr<data_type>(),
                                            theta->dptr<data_type>() + n * theta_h * theta_w, 0.0,
                                            grid->mut_dptr<data_type>() + n * theta_h * D * H * W);
@@ -75,22 +74,22 @@ class AffineGridKernel final : public user_op::OpKernel {
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
 
-#define REGISTER_AFFINE_GRID_KERNEL(device, dtype)                                        \
-  REGISTER_USER_KERNEL("affine_grid")                                                     \
-      .SetCreateFn<AffineGridKernel<device, dtype>>()                                     \
-      .SetIsMatchedHob((user_op::HobDeviceTag() == device)                                \
-                       & (user_op::HobDataType("theta", 0) == GetDataType<dtype>::value)) \
-      .SetInferTmpSizeFn([](user_op::InferContext* ctx) -> size_t {                       \
-        const Shape& size = ctx->Attr<Shape>("size");                                     \
-        size_t tmp_buffer_size = size.Count(2) * (size.NumAxes() - 1) * sizeof(dtype);    \
-        return tmp_buffer_size;                                                           \
+#define REGISTER_AFFINE_GRID_KERNEL(device, dtype)                                         \
+  REGISTER_USER_KERNEL("affine_grid")                                                      \
+      .SetCreateFn<AffineGridKernel<device, dtype>>()                                      \
+      .SetIsMatchedHob((user_op::HobDeviceType() == device)                                \
+                       && (user_op::HobDataType("theta", 0) == GetDataType<dtype>::value)) \
+      .SetInferTmpSizeFn([](user_op::InferContext* ctx) -> size_t {                        \
+        const Shape& size = ctx->Attr<Shape>("size");                                      \
+        size_t tmp_buffer_size = size.Count(2) * (size.NumAxes() - 1) * sizeof(dtype);     \
+        return tmp_buffer_size;                                                            \
       })
 
 REGISTER_AFFINE_GRID_KERNEL(DeviceType::kCPU, float);
 REGISTER_AFFINE_GRID_KERNEL(DeviceType::kCPU, double);
 #ifdef WITH_CUDA
-REGISTER_AFFINE_GRID_KERNEL(DeviceType::kGPU, float);
-REGISTER_AFFINE_GRID_KERNEL(DeviceType::kGPU, double);
+REGISTER_AFFINE_GRID_KERNEL(DeviceType::kCUDA, float);
+REGISTER_AFFINE_GRID_KERNEL(DeviceType::kCUDA, double);
 #endif
 
 template<DeviceType device_type, typename data_type>
@@ -109,11 +108,11 @@ class AffineGridGradKernel final : public user_op::OpKernel {
     bool is_2d_grid = true;
     if (size.NumAxes() == 5) { is_2d_grid = false; }
 
+    int64_t N = dtheta->shape().At(0);
     int64_t dtheta_h = dtheta->shape().At(1);
     int64_t dtheta_w = dtheta->shape().At(2);
 
     if (is_2d_grid) {
-      int64_t N = size.At(0);
       int64_t H = size.At(2);
       int64_t W = size.At(3);
       // generate base grid
@@ -122,12 +121,11 @@ class AffineGridGradKernel final : public user_op::OpKernel {
       // Compute each batch
       for (int n = 0; n < N; n++) {
         NewKernelUtil<device_type>::OFGemm(
-            ctx->device_ctx(), CblasTrans, CblasNoTrans, dtheta_h, dtheta_w, H * W, 1.0,
+            ctx->stream(), CblasTrans, CblasNoTrans, dtheta_h, dtheta_w, H * W, 1.0,
             dgrid->dptr<data_type>() + n * dtheta_h * H * W, tmp_buffer->dptr<data_type>(), 0.0,
             dtheta->mut_dptr<data_type>() + n * dtheta_h * dtheta_w);
       }
     } else {
-      int64_t N = size.At(0);
       int64_t D = size.At(2);
       int64_t H = size.At(3);
       int64_t W = size.At(4);
@@ -136,7 +134,7 @@ class AffineGridGradKernel final : public user_op::OpKernel {
       // Compute each batch
       for (int n = 0; n < N; n++) {
         NewKernelUtil<device_type>::OFGemm(
-            ctx->device_ctx(), CblasTrans, CblasNoTrans, dtheta_h, dtheta_w, D * H * W, 1.0,
+            ctx->stream(), CblasTrans, CblasNoTrans, dtheta_h, dtheta_w, D * H * W, 1.0,
             dgrid->dptr<data_type>() + n * dtheta_h * D * H * W, tmp_buffer->dptr<data_type>(), 0.0,
             dtheta->mut_dptr<data_type>() + n * dtheta_h * dtheta_w);
       }
@@ -145,22 +143,22 @@ class AffineGridGradKernel final : public user_op::OpKernel {
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
 
-#define REGISTER_AFFINE_GRID_GRAD_KERNEL(device, dtype)                                   \
-  REGISTER_USER_KERNEL("affine_grid_grad")                                                \
-      .SetCreateFn<AffineGridGradKernel<device, dtype>>()                                 \
-      .SetIsMatchedHob((user_op::HobDeviceTag() == device)                                \
-                       & (user_op::HobDataType("dgrid", 0) == GetDataType<dtype>::value)) \
-      .SetInferTmpSizeFn([](user_op::InferContext* ctx) -> size_t {                       \
-        const Shape& size = ctx->Attr<Shape>("size");                                     \
-        size_t tmp_buffer_size = size.Count(2) * (size.NumAxes() - 1) * sizeof(dtype);    \
-        return tmp_buffer_size;                                                           \
+#define REGISTER_AFFINE_GRID_GRAD_KERNEL(device, dtype)                                    \
+  REGISTER_USER_KERNEL("affine_grid_grad")                                                 \
+      .SetCreateFn<AffineGridGradKernel<device, dtype>>()                                  \
+      .SetIsMatchedHob((user_op::HobDeviceType() == device)                                \
+                       && (user_op::HobDataType("dgrid", 0) == GetDataType<dtype>::value)) \
+      .SetInferTmpSizeFn([](user_op::InferContext* ctx) -> size_t {                        \
+        const Shape& size = ctx->Attr<Shape>("size");                                      \
+        size_t tmp_buffer_size = size.Count(2) * (size.NumAxes() - 1) * sizeof(dtype);     \
+        return tmp_buffer_size;                                                            \
       })
 
 REGISTER_AFFINE_GRID_GRAD_KERNEL(DeviceType::kCPU, float);
 REGISTER_AFFINE_GRID_GRAD_KERNEL(DeviceType::kCPU, double);
 #ifdef WITH_CUDA
-REGISTER_AFFINE_GRID_GRAD_KERNEL(DeviceType::kGPU, float);
-REGISTER_AFFINE_GRID_GRAD_KERNEL(DeviceType::kGPU, double);
+REGISTER_AFFINE_GRID_GRAD_KERNEL(DeviceType::kCUDA, float);
+REGISTER_AFFINE_GRID_GRAD_KERNEL(DeviceType::kCUDA, double);
 #endif
 
 }  // namespace oneflow

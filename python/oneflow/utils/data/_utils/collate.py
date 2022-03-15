@@ -56,7 +56,7 @@ def default_convert(data):
     ):
         return [default_convert(d) for d in data]
     else:
-        # NOTE: torch just return data here, and not raise any exception!
+        # NOTE: pytorch just return data here, and not raise any exception!
         raise TypeError(default_convert_err_msg_format.format(elem_type))
 
 

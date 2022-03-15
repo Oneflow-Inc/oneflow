@@ -81,9 +81,6 @@ class DistributedSampler(Sampler[T_co]):
         seed: int = 0,
         drop_last: bool = False,
     ) -> None:
-        if not flow.env.is_multi_client():
-            raise RuntimeError("Requires multi-client env to be available")
-
         if num_replicas is None:
             num_replicas = flow.env.get_world_size()
         if rank is None:
@@ -124,7 +121,7 @@ class DistributedSampler(Sampler[T_co]):
     def __iter__(self) -> Iterator[T_co]:
         if self.shuffle:
             # deterministically shuffle based on epoch and seed
-            g = flow.Generator()
+            g = flow.Generator("cpu")
             g.manual_seed(self.seed + self.epoch)
             indices = flow._C.randperm(len(self.dataset), generator=g).tolist()
         else:

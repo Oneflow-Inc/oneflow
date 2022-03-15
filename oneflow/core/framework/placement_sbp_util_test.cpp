@@ -13,13 +13,14 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
+#include "gtest/gtest.h"
 #include "oneflow/core/framework/placement_sbp_util.h"
 #include "oneflow/core/framework/tensor_meta.h"
 #include "oneflow/core/job/parallel_desc.h"
 #include "oneflow/core/common/util.h"
 #include "oneflow/core/common/shape.h"
 #include "oneflow/core/control/ctrl_bootstrap.pb.h"
-#include "oneflow/core/job/sbp_parallel.cfg.h"
+#include "oneflow/core/job/sbp_parallel.h"
 
 namespace oneflow {
 namespace test {
@@ -72,7 +73,7 @@ TEST(GetSelectedParallelIds, 2d_broadcast_broadcast) {
   Shape hierarchy_shape(DimVector{parallel_size, parallel_size});
   std::vector<int> axis2is_selected{true, true};
   std::vector<int64_t> expected{};
-  for (int i = 0; i < parallel_size * parallel_size; ++i) { expected.push_back(i); }
+  for (int i = 0; i < parallel_size * parallel_size; ++i) { expected.emplace_back(i); }
   for (int i = 0; i < parallel_size * parallel_size; ++i) {
     const auto& broadcast_parallel_ids =
         CHECK_JUST(private_details::GetSelectedParallelIds(hierarchy_shape, axis2is_selected, i));
@@ -99,7 +100,7 @@ TEST(GetSelectedParallelIds, 2d_broadcast_nonbroadcast) {
   for (int i = 0; i < parallel_size; ++i) {
     for (int j = 0; j < parallel_size; ++j) {
       std::vector<int64_t> expected{};
-      for (int k = 0; k < parallel_size; ++k) { expected.push_back(k * parallel_size + j); }
+      for (int k = 0; k < parallel_size; ++k) { expected.emplace_back(k * parallel_size + j); }
       int64_t parallel_id = i * parallel_size + j;
       const auto& broadcast_parallel_ids = CHECK_JUST(
           private_details::GetSelectedParallelIds(hierarchy_shape, axis2is_selected, parallel_id));
@@ -114,7 +115,7 @@ TEST(GetSelectedParallelIds, 2d_nonbroadcast_broadcast) {
   std::vector<int> axis2is_selected{false, true};
   for (int i = 0; i < parallel_size; ++i) {
     std::vector<int64_t> expected{};
-    for (int j = 0; j < parallel_size; ++j) { expected.push_back(i * parallel_size + j); }
+    for (int j = 0; j < parallel_size; ++j) { expected.emplace_back(i * parallel_size + j); }
     for (int j = 0; j < parallel_size; ++j) {
       int64_t parallel_id = i * parallel_size + j;
       const auto& broadcast_parallel_ids = CHECK_JUST(
@@ -126,7 +127,7 @@ TEST(GetSelectedParallelIds, 2d_nonbroadcast_broadcast) {
 
 namespace {
 
-void InitSbpParallel(cfg::SbpParallel* sbp_parallel, const std::string& sbp_tag) {
+void InitSbpParallel(SbpParallel* sbp_parallel, const std::string& sbp_tag) {
   CHECK(sbp_tag.size() == 1 || sbp_tag.size() == 2);
   if (sbp_tag[0] == 'S') {
     CHECK_EQ(sbp_tag.size(), 2);
@@ -142,8 +143,8 @@ void InitSbpParallel(cfg::SbpParallel* sbp_parallel, const std::string& sbp_tag)
 }
 
 template<typename... Args>
-Symbol<cfg::NdSbp> GetNdSbp(Args... sbps) {
-  cfg::NdSbp nd_sbp;
+Symbol<NdSbp> GetNdSbp(Args... sbps) {
+  NdSbp nd_sbp;
   for (const auto& sbp : std::vector<std::string>{sbps...}) {
     InitSbpParallel(nd_sbp.mutable_sbp_parallel()->Add(), sbp);
   }
@@ -151,7 +152,7 @@ Symbol<cfg::NdSbp> GetNdSbp(Args... sbps) {
 }
 
 Symbol<one::ConsistentTensorMeta> MakeConsistentTensorMeta(Symbol<ParallelDesc> parallel_desc,
-                                                           Symbol<cfg::NdSbp> nd_sbp) {
+                                                           Symbol<NdSbp> nd_sbp) {
   const auto& shape = std::make_shared<const Shape>(DimVector{256, 256});
   one::ConsistentTensorMeta tensor_meta(shape, DataType::kInt32, nd_sbp, parallel_desc);
   return SymbolOf(tensor_meta);
@@ -220,10 +221,10 @@ TEST(DecomposeIntoNaiveTransformations, decompose_two_axes) {
   GlobaProcessCtxScope scope(2, 8);
   ParallelConf parallel_conf;
   parallel_conf.set_device_tag("cpu");
-  parallel_conf.add_device_name("0:0-3");
-  parallel_conf.add_device_name("1:0-3");
+  parallel_conf.add_device_name("0:0-1");
+  parallel_conf.add_device_name("1:0-1");
   parallel_conf.mutable_hierarchy()->add_dim(2);
-  parallel_conf.mutable_hierarchy()->add_dim(4);
+  parallel_conf.mutable_hierarchy()->add_dim(2);
   const auto& parallel_desc = SymbolOf(ParallelDesc(parallel_conf));
   const auto& src_nd_sbp = GetNdSbp("S0", "P");
   const auto& dst_nd_sbp = GetNdSbp("B", "S0");
@@ -248,7 +249,7 @@ TEST(DecomposeIntoNaiveTransformations, decompose_two_axes) {
   {
     ParallelConf expected_parallel_conf;
     expected_parallel_conf.set_device_tag("cpu");
-    expected_parallel_conf.add_device_name("0:0-3");
+    expected_parallel_conf.add_device_name("0:0-1");
     const auto& expected_parallel_desc = SymbolOf(ParallelDesc(expected_parallel_conf));
     const auto& ctensor_meta = transformations->at(1).consistent_tensor_meta;
     ASSERT_TRUE(ctensor_meta->parallel_desc() == expected_parallel_desc);
@@ -286,48 +287,6 @@ TEST(CalcDecomposableEquivalentShapeAndNdSbpPair, expand_src) {
   ASSERT_TRUE(*std::get<0>(*tuple) == Shape(DimVector{4, 4, 4}));
   ASSERT_TRUE(std::get<1>(*tuple) == GetNdSbp("S0", "S1"));
   ASSERT_TRUE(std::get<2>(*tuple) == dst_nd_sbp);
-}
-
-TEST(CalcDecomposableEquivalentShapeAndNdSbpPair, expand_dst) {
-  Shape shape(DimVector{16, 4});
-  Shape hierarchy(DimVector{4, 4});
-  const auto& src_nd_sbp = GetNdSbp("P", "S0");
-  const auto& dst_nd_sbp = GetNdSbp("S0", "S0");
-  const auto& maybe_tuple = TRY(private_details::CalcDecomposableEquivalentShapeAndNdSbpPair(
-      shape, hierarchy, src_nd_sbp, dst_nd_sbp));
-  ASSERT_TRUE(maybe_tuple.IsOk());
-  const auto& tuple = CHECK_JUST(maybe_tuple);
-  ASSERT_TRUE(*std::get<0>(*tuple) == Shape(DimVector{4, 4, 4}));
-  ASSERT_TRUE(std::get<1>(*tuple) == GetNdSbp("P", "S0"));
-  ASSERT_TRUE(std::get<2>(*tuple) == GetNdSbp("S0", "S1"));
-}
-
-TEST(CalcDecomposableEquivalentShapeAndNdSbpPair, expand_dst_3d) {
-  Shape shape(DimVector{128, 4});
-  Shape hierarchy(DimVector{4, 4, 4});
-  const auto& src_nd_sbp = GetNdSbp("P", "S0", "S1");
-  const auto& dst_nd_sbp = GetNdSbp("S0", "S0", "S0");
-  const auto& maybe_tuple = TRY(private_details::CalcDecomposableEquivalentShapeAndNdSbpPair(
-      shape, hierarchy, src_nd_sbp, dst_nd_sbp));
-  ASSERT_TRUE(maybe_tuple.IsOk());
-  const auto& tuple = CHECK_JUST(maybe_tuple);
-  ASSERT_TRUE(*std::get<0>(*tuple) == Shape(DimVector{4, 4, 8, 4}));
-  ASSERT_TRUE(std::get<1>(*tuple) == GetNdSbp("P", "S0", "S3"));
-  ASSERT_TRUE(std::get<2>(*tuple) == GetNdSbp("S0", "S1", "S2"));
-}
-
-TEST(CalcDecomposableEquivalentShapeAndNdSbpPair, expand_src_3d) {
-  Shape shape(DimVector{128, 4});
-  Shape hierarchy(DimVector{4, 4, 4});
-  const auto& src_nd_sbp = GetNdSbp("S0", "S0", "S0");
-  const auto& dst_nd_sbp = GetNdSbp("P", "S0", "S1");
-  const auto& maybe_tuple = TRY(private_details::CalcDecomposableEquivalentShapeAndNdSbpPair(
-      shape, hierarchy, src_nd_sbp, dst_nd_sbp));
-  ASSERT_TRUE(maybe_tuple.IsOk());
-  const auto& tuple = CHECK_JUST(maybe_tuple);
-  ASSERT_TRUE(*std::get<0>(*tuple) == Shape(DimVector{4, 4, 8, 4}));
-  ASSERT_TRUE(std::get<1>(*tuple) == GetNdSbp("S0", "S1", "S2"));
-  ASSERT_TRUE(std::get<2>(*tuple) == GetNdSbp("P", "S0", "S3"));
 }
 
 TEST(CalcDecomposableEquivalentShapeAndNdSbpPair, expand_failed) {

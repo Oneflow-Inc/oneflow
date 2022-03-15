@@ -50,7 +50,7 @@ class AdamOptimizerOp : public OptimizerOp {
     if (gradient_shape.NumAxes() > 1) {
       std::vector<long long> bcast_sizes;
       for (int i = 0; i < gradient_shape.NumAxes() - 1; ++i) {
-        bcast_sizes.push_back(gradient_shape.At(i));
+        bcast_sizes.emplace_back(gradient_shape.At(i));
       }
       lr = xla::Broadcast(lr, bcast_sizes);
       if (ctx->HasInput("scale_by_tensor_0")) {

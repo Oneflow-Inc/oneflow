@@ -16,12 +16,13 @@ limitations under the License.
 #include "oneflow/core/control/global_process_ctx.h"
 #include "oneflow/core/kernel/kernel.h"
 #include "oneflow/core/register/tensor_slice_copier.h"
-#include "oneflow/core/device/cpu_device_context.h"
 #include "oneflow/core/common/nd_index_offset_helper.h"
 #include "oneflow/core/job/nd_sbp_util.h"
 #include "oneflow/core/operator/operator.h"
 #include "oneflow/core/persistence/snapshot.h"
-#include "oneflow/core/stream/include/stream_context_adapter.h"
+#include "oneflow/core/ep/cuda/cuda_stream.h"
+#include "oneflow/core/ep/cpu/cpu_stream.h"
+#include "oneflow/core/ep/include/device_manager_registry.h"
 
 namespace oneflow {
 
@@ -39,11 +40,11 @@ struct InitializeWithConfUtil final {
 #undef MAKE_INITIALIZE_SWITCH_ENTRY
 };
 
-cfg::NdSbp GetNdSbp(const KernelConf& kernel_conf, const std::string& bn_in_op) {
+NdSbp GetNdSbp(const KernelConf& kernel_conf, const std::string& bn_in_op) {
   const auto& nd_sbp_map = kernel_conf.op_attribute().nd_sbp_signature().bn_in_op2nd_sbp();
   const auto& it = nd_sbp_map.find(bn_in_op);
   CHECK(it != nd_sbp_map.end());
-  return cfg::NdSbp(it->second);
+  return NdSbp(it->second);
 }
 
 class OnDemandHostBlob final {
@@ -83,45 +84,50 @@ class OnDemandHostBlob final {
 };
 
 template<DeviceType device_type>
-void SyncCopyToHost(DeviceCtx* ctx, const void* src, void* dst, size_t size);
+void SyncCopyToHost(ep::Stream* stream, const void* src, void* dst, size_t size);
 
 template<>
-void SyncCopyToHost<DeviceType::kCPU>(DeviceCtx* ctx, const void* src, void* dst, size_t size) {
+void SyncCopyToHost<DeviceType::kCPU>(ep::Stream* stream, const void* src, void* dst, size_t size) {
   std::memcpy(dst, src, size);
 }
 
 #ifdef WITH_CUDA
 template<>
-void SyncCopyToHost<DeviceType::kGPU>(DeviceCtx* ctx, const void* src, void* dst, size_t size) {
-  OF_CUDA_CHECK(cudaStreamSynchronize(ctx->cuda_stream()));
-  OF_CUDA_CHECK(cudaMemcpyAsync(dst, src, size, cudaMemcpyDefault, ctx->cuda_stream()));
-  OF_CUDA_CHECK(cudaStreamSynchronize(ctx->cuda_stream()));
+void SyncCopyToHost<DeviceType::kCUDA>(ep::Stream* stream, const void* src, void* dst,
+                                       size_t size) {
+  OF_CUDA_CHECK(cudaStreamSynchronize(stream->As<ep::CudaStream>()->cuda_stream()));
+  OF_CUDA_CHECK(cudaMemcpyAsync(dst, src, size, cudaMemcpyDefault,
+                                stream->As<ep::CudaStream>()->cuda_stream()));
+  OF_CUDA_CHECK(cudaStreamSynchronize(stream->As<ep::CudaStream>()->cuda_stream()));
 }
 #endif
 
 template<DeviceType device_type>
-void SyncCopyToDevice(DeviceCtx* ctx, const void* src, void* dst, size_t size);
+void SyncCopyToDevice(ep::Stream* stream, const void* src, void* dst, size_t size);
 
 template<>
-void SyncCopyToDevice<DeviceType::kCPU>(DeviceCtx* ctx, const void* src, void* dst, size_t size) {
+void SyncCopyToDevice<DeviceType::kCPU>(ep::Stream* stream, const void* src, void* dst,
+                                        size_t size) {
   std::memcpy(dst, src, size);
 }
 
 #ifdef WITH_CUDA
 template<>
-void SyncCopyToDevice<DeviceType::kGPU>(DeviceCtx* ctx, const void* src, void* dst, size_t size) {
-  OF_CUDA_CHECK(cudaStreamSynchronize(ctx->cuda_stream()));
-  OF_CUDA_CHECK(cudaMemcpyAsync(dst, src, size, cudaMemcpyDefault, ctx->cuda_stream()));
-  OF_CUDA_CHECK(cudaStreamSynchronize(ctx->cuda_stream()));
+void SyncCopyToDevice<DeviceType::kCUDA>(ep::Stream* stream, const void* src, void* dst,
+                                         size_t size) {
+  OF_CUDA_CHECK(cudaStreamSynchronize(stream->As<ep::CudaStream>()->cuda_stream()));
+  OF_CUDA_CHECK(cudaMemcpyAsync(dst, src, size, cudaMemcpyDefault,
+                                stream->As<ep::CudaStream>()->cuda_stream()));
+  OF_CUDA_CHECK(cudaStreamSynchronize(stream->As<ep::CudaStream>()->cuda_stream()));
 }
 #endif
 
 template<DeviceType device_type>
-std::string SyncReadStringFromBlob(DeviceCtx* ctx, const Blob* blob) {
+std::string SyncReadStringFromBlob(ep::Stream* stream, const Blob* blob) {
   std::vector<char> content;
   const int64_t size = blob->shape().elem_cnt();
   content.resize(size);
-  SyncCopyToHost<device_type>(ctx, blob->dptr(), content.data(), size);
+  SyncCopyToHost<device_type>(stream, blob->dptr(), content.data(), size);
   return std::string(content.data(), content.size());
 }
 
@@ -138,29 +144,31 @@ std::string GetTmpPartKey(const std::string& base, const ParallelContext& parall
 void HostSliceCopy(Blob* dst, const TensorSliceView& dst_slice, const Blob* src,
                    const TensorSliceView& src_slice) {
   TensorSliceCopier copier(dst_slice, src_slice, dst->data_type(), DeviceType::kCPU);
-  CpuDeviceCtx device_ctx;
-  std::unique_ptr<StreamContext> stream_ctx(NewStreamContextAdapter(&device_ctx));
-  copier.Copy(stream_ctx.get(), dst, src);
+  auto device = Global<ep::DeviceManagerRegistry>::Get()->GetDevice(DeviceType::kCPU, 0);
+  CHECK(device);
+  auto* stream = device->CreateStream();
+  copier.Copy(stream, dst, src);
+  device->DestroyStream(stream);
 }
 
 template<DeviceType device_type>
 class AutoSyncBlobAccessor final {
  public:
   OF_DISALLOW_COPY_AND_MOVE(AutoSyncBlobAccessor);
-  AutoSyncBlobAccessor(DeviceCtx* ctx, Blob* underlying, bool read_sync, bool write_sync)
-      : device_ctx_(ctx),
+  AutoSyncBlobAccessor(ep::Stream* stream, Blob* underlying, bool read_sync, bool write_sync)
+      : stream_(stream),
         underlying_(underlying),
         read_sync_(read_sync),
         write_sync_(write_sync),
         host_blob_(underlying) {
     if (read_sync_) {
-      SyncCopyToHost<device_type>(device_ctx_, underlying_->dptr(), host_blob_.blob()->mut_dptr(),
+      SyncCopyToHost<device_type>(stream_, underlying_->dptr(), host_blob_.blob()->mut_dptr(),
                                   underlying_->ByteSizeOfBlobBody());
     }
   }
   ~AutoSyncBlobAccessor() {
     if (write_sync_) {
-      SyncCopyToDevice<device_type>(device_ctx_, host_blob_.blob()->dptr(), underlying_->mut_dptr(),
+      SyncCopyToDevice<device_type>(stream_, host_blob_.blob()->dptr(), underlying_->mut_dptr(),
                                     underlying_->ByteSizeOfBlobBody());
     }
   }
@@ -168,7 +176,7 @@ class AutoSyncBlobAccessor final {
   Blob* host_blob() { return host_blob_.blob(); }
 
  private:
-  DeviceCtx* device_ctx_;
+  ep::Stream* stream_;
   Blob* underlying_;
   bool read_sync_;
   bool write_sync_;
@@ -179,7 +187,7 @@ template<>
 class AutoSyncBlobAccessor<DeviceType::kCPU> final {
  public:
   OF_DISALLOW_COPY_AND_MOVE(AutoSyncBlobAccessor);
-  AutoSyncBlobAccessor(DeviceCtx* ctx, Blob* underlying, bool read_sync, bool write_sync)
+  AutoSyncBlobAccessor(ep::Stream* stream, Blob* underlying, bool read_sync, bool write_sync)
       : underlying_(underlying) {}
   ~AutoSyncBlobAccessor() = default;
 
@@ -219,9 +227,9 @@ class ModelInitV2Kernel final : public Kernel {
       int64_t seed_num = 1;
       int64_t seed_offset = 0;
       const auto& original_variable_conf = model_init_v2_conf.original_variable_conf(i);
-      const cfg::NdSbp& nd_sbp = GetNdSbp(this->kernel_conf(), GenRepeatedBn("ref", i));
+      const NdSbp& nd_sbp = GetNdSbp(this->kernel_conf(), GenRepeatedBn("ref", i));
       FOR_RANGE(int64_t, j, 0, hierarchy->NumAxes()) {
-        cfg::SbpParallel sbp_parallel = nd_sbp.sbp_parallel(j);
+        const SbpParallel& sbp_parallel = nd_sbp.sbp_parallel(j);
         CHECK(sbp_parallel.has_split_parallel() || sbp_parallel.has_broadcast_parallel());
         if (sbp_parallel.has_split_parallel()) {
           seed_num *= hierarchy->At(j);
@@ -231,9 +239,9 @@ class ModelInitV2Kernel final : public Kernel {
       std::seed_seq seq{original_variable_conf.random_seed()};
       std::vector<int64_t> seeds(seed_num);
       seq.generate(seeds.begin(), seeds.end());
-      seeds_.push_back(seeds.at(seed_offset));
+      seeds_.emplace_back(seeds.at(seed_offset));
       const Shape logical_blob_shape(original_variable_conf.shape());
-      tensor_slice_views_.push_back(GetTensorSliceView4ParallelId(
+      tensor_slice_views_.emplace_back(GetTensorSliceView4ParallelId(
           *hierarchy, nd_sbp, logical_blob_shape, parallel_ctx.parallel_id()));
     }
   }
@@ -245,7 +253,7 @@ class ModelInitV2Kernel final : public Kernel {
       Blob* ref = ctx->BnInOp2Blob(GenRepeatedBn("ref", i));
       const DataType data_type = ref->data_type();
       const VariableOpConf& original_variable_conf = conf.original_variable_conf(i);
-      AutoSyncBlobAccessor<device_type> ref_accessor(ctx->device_ctx(), ref, false, true);
+      AutoSyncBlobAccessor<device_type> ref_accessor(ctx->stream(), ref, false, true);
       if (original_variable_conf.has_initializer()) {
         std::mt19937 random_seed_gen(seeds_.at(i));
         InitializeWithConfUtil::SwitchInitializeWithConf(
@@ -290,9 +298,9 @@ class ModelLoadV2Kernel final : public Kernel {
     CHECK_EQ(model_load_v2_conf.original_variable_conf_size(), num_var);
     tensor_slice_views_.reserve(num_var);
     FOR_RANGE(int64_t, i, 0, num_var) {
-      const cfg::NdSbp& nd_sbp = GetNdSbp(this->kernel_conf(), GenRepeatedBn("ref", i));
+      const NdSbp& nd_sbp = GetNdSbp(this->kernel_conf(), GenRepeatedBn("ref", i));
       const Shape logical_blob_shape(model_load_v2_conf.original_variable_conf(i).shape());
-      tensor_slice_views_.push_back(
+      tensor_slice_views_.emplace_back(
           GetTensorSliceView4ParallelId(*hierarchy, nd_sbp, logical_blob_shape,
                                         this->kernel_conf().parallel_ctx().parallel_id()));
     }
@@ -301,7 +309,7 @@ class ModelLoadV2Kernel final : public Kernel {
   void ForwardDataContent(KernelContext* ctx) const override {
     const ModelLoadV2OpConf& conf = this->op_conf().model_load_v2_conf();
     const Blob* path = ctx->BnInOp2Blob("path");
-    const std::string snapshot_path = SyncReadStringFromBlob<device_type>(ctx->device_ctx(), path);
+    const std::string snapshot_path = SyncReadStringFromBlob<device_type>(ctx->stream(), path);
     SnapshotReader reader(snapshot_path);
     FOR_RANGE(int64_t, i, 0, conf.variable_op_name_size()) {
       Blob* ref = ctx->BnInOp2Blob(GenRepeatedBn("ref", i));
@@ -309,7 +317,7 @@ class ModelLoadV2Kernel final : public Kernel {
       const Shape logical_blob_shape(original_variable_conf.shape());
       const std::string& var_lbn =
           GenLogicalBlobName(conf.variable_op_name(i), original_variable_conf.out());
-      AutoSyncBlobAccessor<device_type> ref_accessor(ctx->device_ctx(), ref, false, true);
+      AutoSyncBlobAccessor<device_type> ref_accessor(ctx->stream(), ref, false, true);
       reader.Read(var_lbn, logical_blob_shape, tensor_slice_views_.at(i), ref_accessor.host_blob());
     }
   }
@@ -332,9 +340,9 @@ class ModelSaveV2Kernel final : public Kernel {
             this->kernel_conf().op_attribute().parallel_conf_signature().op_parallel_conf())
             .hierarchy();
     const auto NeedDoSave = [&](const std::vector<int64_t>& parallel_rank,
-                                const cfg::NdSbp& nd_sbp) -> bool {
+                                const NdSbp& nd_sbp) -> bool {
       FOR_RANGE(int64_t, j, 0, hierarchy->NumAxes()) {
-        const cfg::SbpParallel& sbp_parallel = nd_sbp.sbp_parallel(j);
+        const SbpParallel& sbp_parallel = nd_sbp.sbp_parallel(j);
         if (sbp_parallel.has_broadcast_parallel() && parallel_rank.at(j) != 0) { return false; }
       }
       return true;
@@ -352,11 +360,12 @@ class ModelSaveV2Kernel final : public Kernel {
     part_ids_.reserve(num_var);
     FOR_RANGE(int64_t, i, 0, num_var) {
       counters_.emplace_back(new int64_t(0));
-      const cfg::NdSbp& nd_sbp = GetNdSbp(this->kernel_conf(), GenRepeatedBn("in", i));
+      const NdSbp& nd_sbp = GetNdSbp(this->kernel_conf(), GenRepeatedBn("in", i));
       const Shape logical_blob_shape(model_save_v2_conf.original_variable_conf(i).shape());
-      bool variable_need_do_save;
-      int64_t variable_part_id;
+      bool variable_need_do_save = false;
+      int64_t variable_part_id = 0;
       std::vector<TensorSliceView> variable_part_id2slice_views;
+      variable_part_id2slice_views.reserve(hierarchy->elem_cnt());
       FOR_RANGE(int64_t, j, 0, hierarchy->elem_cnt()) {
         hierarchy_index_helper.OffsetToNdIndex(j, parallel_rank.data());
         bool cur_id_need_do_save = NeedDoSave(parallel_rank, nd_sbp);
@@ -365,13 +374,13 @@ class ModelSaveV2Kernel final : public Kernel {
           variable_part_id = variable_part_id2slice_views.size();
         }
         if (cur_id_need_do_save) {
-          variable_part_id2slice_views.push_back(GetTensorSliceView4ParallelRank(
+          variable_part_id2slice_views.emplace_back(GetTensorSliceView4ParallelRank(
               *hierarchy, nd_sbp, logical_blob_shape, parallel_rank));
         }
       }
-      need_do_saves_.push_back(variable_need_do_save);
-      part_ids_.push_back(variable_part_id);
-      part_id2slice_views_.push_back(variable_part_id2slice_views);
+      need_do_saves_.emplace_back(variable_need_do_save);
+      part_ids_.emplace_back(variable_part_id);
+      part_id2slice_views_.emplace_back(variable_part_id2slice_views);
     }
   }
 
@@ -379,8 +388,7 @@ class ModelSaveV2Kernel final : public Kernel {
   void ForwardDataContent(KernelContext* ctx) const override {
     const ModelSaveV2OpConf& conf = this->op_conf().model_save_v2_conf();
     const Blob* path_blob = ctx->BnInOp2Blob("path");
-    const std::string snapshot_path =
-        SyncReadStringFromBlob<device_type>(ctx->device_ctx(), path_blob);
+    const std::string snapshot_path = SyncReadStringFromBlob<device_type>(ctx->stream(), path_blob);
     SnapshotWriter writer(snapshot_path);
     SnapshotReader reader(snapshot_path);
     FOR_RANGE(int64_t, i, 0, conf.variable_op_name_size()) {
@@ -391,7 +399,7 @@ class ModelSaveV2Kernel final : public Kernel {
       const VariableOpConf& original_variable_conf = conf.original_variable_conf(i);
       const Shape logical_blob_shape(original_variable_conf.shape());
       const DataType data_type = original_variable_conf.data_type();
-      AutoSyncBlobAccessor<device_type> in_accessor(ctx->device_ctx(), in_blob, true, false);
+      AutoSyncBlobAccessor<device_type> in_accessor(ctx->stream(), in_blob, true, false);
       const std::string var_lbn =
           GenLogicalBlobName(conf.variable_op_name(i), original_variable_conf.out());
       const bool is_broadcast = ShapeView(logical_blob_shape) == in_blob->shape();

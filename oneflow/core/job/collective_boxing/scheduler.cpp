@@ -172,7 +172,7 @@ void ExecutorImpl::GroupRequests(
                                         group_buffer_))) {
             HandleGroup();
           }
-          group_buffer_.push_back(request_id);
+          group_buffer_.emplace_back(request_id);
         } else {
           if (!group_buffer_.empty()
               && HasRankInteraction(
@@ -230,7 +230,7 @@ SchedulerPlanToken* Scheduler::AddPlan(const Plan& plan) {
   std::vector<int64_t> job_ids;
   for (const auto& job_id7request_set : plan.collective_boxing_plan().job_id2request_set()) {
     const int64_t job_id = job_id7request_set.first;
-    job_ids.push_back(job_id);
+    job_ids.emplace_back(job_id);
     impl_->request_store->InitJob(job_id, job_id7request_set.second);
     impl_->executor->InitJob(job_id);
     impl_->coordinator->InitJob(job_id);

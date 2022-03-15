@@ -17,7 +17,7 @@ limitations under the License.
 #ifndef ONEFLOW_USER_KERNELS_DISTRIBUTIONS_NORMAL_DISTRIBUTION_H_
 #define ONEFLOW_USER_KERNELS_DISTRIBUTIONS_NORMAL_DISTRIBUTION_H_
 
-#include "oneflow/core/device/device_context.h"
+#include "oneflow/core/ep/include/stream.h"
 #include "oneflow/core/framework/random_generator.h"
 #ifdef WITH_CUDA
 #include <curand.h>
@@ -36,7 +36,7 @@ class NormalDistribution<DeviceType::kCPU, T> final {
   NormalDistribution(T mean, T std) : mean_(mean), std_(std) {}
   ~NormalDistribution() = default;
 
-  void operator()(DeviceCtx* device_ctx, const int64_t elem_cnt, T* dptr,
+  void operator()(ep::Stream* stream, const int64_t elem_cnt, T* dptr,
                   const std::shared_ptr<one::Generator>& generator) const;
 
  private:
@@ -46,13 +46,13 @@ class NormalDistribution<DeviceType::kCPU, T> final {
 
 #ifdef WITH_CUDA
 template<typename T>
-class NormalDistribution<DeviceType::kGPU, T> final {
+class NormalDistribution<DeviceType::kCUDA, T> final {
  public:
   OF_DISALLOW_COPY_AND_MOVE(NormalDistribution);
   NormalDistribution(T mean, T std) : mean_(mean), std_(std) {}
   ~NormalDistribution() = default;
 
-  void operator()(DeviceCtx* device_ctx, const int64_t elem_cnt, T* dptr,
+  void operator()(ep::Stream* stream, const int64_t elem_cnt, T* dptr,
                   const std::shared_ptr<one::Generator>& generator) const;
 
  private:

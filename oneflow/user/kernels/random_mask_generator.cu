@@ -14,6 +14,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 #include "oneflow/user/kernels/random_mask_generator.h"
+#include "oneflow/core/ep/cuda/cuda_stream.h"
 
 namespace oneflow {
 
@@ -25,14 +26,14 @@ using PackType = ulonglong2;
 
 union Pack {
   PackType p_value;
-  int8_t b_value[sizeof(PackType)];
+  bool b_value[sizeof(PackType)];
 };
 
-__device__ int8_t GenMask(curandState* state, const float rate) {
-  return curand_uniform(state) >= rate;
+__device__ bool GenMask(curandState* state, const float rate) {
+  return curand_uniform(state) > rate;
 }
 
-__global__ void GenerateGpu(curandState* state, const int64_t n, const float rate, int8_t* mask) {
+__global__ void GenerateGpu(curandState* state, const int64_t n, const float rate, bool* mask) {
   const int id = blockIdx.x * blockDim.x + threadIdx.x;
   curandState localState = state[id];
   PackType* pack_mask = reinterpret_cast<PackType*>(mask);
@@ -50,18 +51,18 @@ __global__ void GenerateGpu(curandState* state, const int64_t n, const float rat
 
 }  // namespace
 
-void RandomMaskGenerator<DeviceType::kGPU>::Generate(DeviceCtx* device_ctx, const int64_t n,
-                                                     const float rate, int8_t* mask) {
+void RandomMaskGenerator<DeviceType::kCUDA>::Generate(ep::Stream* stream, const int64_t n,
+                                                      const float rate, bool* mask) {
   int32_t block_num = generator_->max_block_num();
   int32_t thread_num = generator_->max_thread_num();
   auto* curand_states = generator_->curand_states();
   const int32_t elem_cnt_per_block = thread_num * sizeof(PackType) * kMinPackPerThread;
   const int32_t block_num_final =
       std::min(static_cast<int32_t>((n + elem_cnt_per_block - 1) / elem_cnt_per_block), block_num);
-  GenerateGpu<<<block_num_final, thread_num, 0, device_ctx->cuda_stream()>>>(curand_states, n, rate,
-                                                                             mask);
+  GenerateGpu<<<block_num_final, thread_num, 0, stream->As<ep::CudaStream>()->cuda_stream()>>>(
+      curand_states, n, rate, mask);
 }
 
-template class RandomMaskGenerator<DeviceType::kGPU>;
+template class RandomMaskGenerator<DeviceType::kCUDA>;
 
 }  // namespace oneflow

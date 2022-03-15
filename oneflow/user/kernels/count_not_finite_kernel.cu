@@ -17,6 +17,7 @@ limitations under the License.
 #include <cub/cub.cuh>
 #include "oneflow/core/kernel/new_kernel_util.h"
 #include "oneflow/core/kernel/cuda_graph_support.h"
+#include "oneflow/core/ep/cuda/cuda_stream.h"
 
 namespace oneflow {
 
@@ -39,12 +40,22 @@ __device__ __inline__ int64_t AtomicAdd(int64_t* address, int64_t val) {
 }
 
 template<typename T>
+__inline__ __device__ bool IsFinite(T x) {
+  return isfinite(x);
+}
+
+template<>
+__inline__ __device__ bool IsFinite<half>(half x) {
+  return IsFinite(static_cast<float>(x));
+}
+
+template<typename T>
 __global__ void CountNotFiniteGpu(const int64_t n, const T* x, int64_t* y) {
   typedef cub::BlockReduce<int64_t, kCudaThreadsNumPerBlock> BlockReduce;
   __shared__ typename BlockReduce::TempStorage cub_reduce_tmp_storage;
   int64_t thread_count = 0;
   CUDA_1D_KERNEL_LOOP(i, n) {
-    if (!isfinite(x[i])) { thread_count += 1; }
+    if (!IsFinite(x[i])) { thread_count += 1; }
   }
   __syncthreads();
   int64_t block_count_sum = BlockReduce(cub_reduce_tmp_storage).Reduce(thread_count, cub::Sum());
@@ -58,7 +69,7 @@ __global__ void MultiCountNotFiniteGpu(Param<T, N> param) {
   int64_t thread_count = 0;
   for (int32_t k = 0; k < param.num_x; ++k) {
     CUDA_1D_KERNEL_LOOP(i, param.x_elem_cnt[k]) {
-      if (!isfinite(param.x[k][i])) { thread_count += 1; }
+      if (!IsFinite(param.x[k][i])) { thread_count += 1; }
     }
   }
   __syncthreads();
@@ -87,23 +98,24 @@ class CountNotFiniteGpuKernel final : public user_op::OpKernel, public user_op::
     const user_op::Tensor* x = ctx->Tensor4ArgNameAndIndex("x", 0);
     user_op::Tensor* y = ctx->Tensor4ArgNameAndIndex("y", 0);
     const int64_t elem_cnt = x->shape().elem_cnt();
-    Memset<DeviceType::kGPU>(ctx->device_ctx(), y->mut_dptr<int64_t>(), 0,
-                             y->shape().elem_cnt() * sizeof(int64_t));
-    CountNotFiniteGpu<T>
-        <<<GetCountNotFiniteNumBlocks(elem_cnt), kCudaThreadsNumPerBlock, 0,
-           ctx->device_ctx()->cuda_stream()>>>(elem_cnt, x->dptr<T>(), y->mut_dptr<int64_t>());
+    Memset<DeviceType::kCUDA>(ctx->stream(), y->mut_dptr<int64_t>(), 0,
+                              y->shape().elem_cnt() * sizeof(int64_t));
+    CountNotFiniteGpu<T><<<GetCountNotFiniteNumBlocks(elem_cnt), kCudaThreadsNumPerBlock, 0,
+                           ctx->stream()->As<ep::CudaStream>()->cuda_stream()>>>(
+        elem_cnt, x->dptr<T>(), y->mut_dptr<int64_t>());
   }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
 
-#define REGISTER_COUNT_NOT_FINITE_GPU_KERNEL(dtype)       \
-  REGISTER_USER_KERNEL("count_not_finite")                \
-      .SetCreateFn<CountNotFiniteGpuKernel<dtype>>()      \
-      .SetIsMatchedHob((user_op::HobDeviceTag() == "gpu") \
-                       & (user_op::HobDataType("x", 0) == GetDataType<dtype>::value));
+#define REGISTER_COUNT_NOT_FINITE_CUDA_KERNEL(dtype)                   \
+  REGISTER_USER_KERNEL("count_not_finite")                             \
+      .SetCreateFn<CountNotFiniteGpuKernel<dtype>>()                   \
+      .SetIsMatchedHob((user_op::HobDeviceType() == DeviceType::kCUDA) \
+                       && (user_op::HobDataType("x", 0) == GetDataType<dtype>::value));
 
-REGISTER_COUNT_NOT_FINITE_GPU_KERNEL(float)
-REGISTER_COUNT_NOT_FINITE_GPU_KERNEL(double)
+REGISTER_COUNT_NOT_FINITE_CUDA_KERNEL(half)
+REGISTER_COUNT_NOT_FINITE_CUDA_KERNEL(float)
+REGISTER_COUNT_NOT_FINITE_CUDA_KERNEL(double)
 
 template<typename T>
 class MultiCountNotFiniteGpuKernel final : public user_op::OpKernel,
@@ -117,8 +129,8 @@ class MultiCountNotFiniteGpuKernel final : public user_op::OpKernel,
   void Compute(user_op::KernelComputeContext* ctx) const override {
     user_op::Tensor* y = ctx->Tensor4ArgNameAndIndex("y", 0);
     Param<T, 128> para;
-    Memset<DeviceType::kGPU>(ctx->device_ctx(), y->mut_dptr<int64_t>(), 0,
-                             y->shape().elem_cnt() * sizeof(int64_t));
+    Memset<DeviceType::kCUDA>(ctx->stream(), y->mut_dptr<int64_t>(), 0,
+                              y->shape().elem_cnt() * sizeof(int64_t));
     para.y = y->mut_dptr<int64_t>();
 
     int64_t remain_size = ctx->inputs().size();
@@ -141,19 +153,20 @@ class MultiCountNotFiniteGpuKernel final : public user_op::OpKernel,
       }
       MultiCountNotFiniteGpu<T, 128>
           <<<GetCountNotFiniteNumBlocks(max_elem_cnt), kCudaThreadsNumPerBlock, 0,
-             ctx->device_ctx()->cuda_stream()>>>(para);
+             ctx->stream()->As<ep::CudaStream>()->cuda_stream()>>>(para);
     }
   }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
 
-#define REGISTER_MULTI_COUNT_NOT_FINITE_GPU_KERNEL(dtype) \
-  REGISTER_USER_KERNEL("multi_count_not_finite")          \
-      .SetCreateFn<MultiCountNotFiniteGpuKernel<dtype>>() \
-      .SetIsMatchedHob((user_op::HobDeviceTag() == "gpu") \
-                       & (user_op::HobDataType("x", 0) == GetDataType<dtype>::value));
+#define REGISTER_MULTI_COUNT_NOT_FINITE_CUDA_KERNEL(dtype)             \
+  REGISTER_USER_KERNEL("multi_count_not_finite")                       \
+      .SetCreateFn<MultiCountNotFiniteGpuKernel<dtype>>()              \
+      .SetIsMatchedHob((user_op::HobDeviceType() == DeviceType::kCUDA) \
+                       && (user_op::HobDataType("x", 0) == GetDataType<dtype>::value));
 
-REGISTER_MULTI_COUNT_NOT_FINITE_GPU_KERNEL(float)
-REGISTER_MULTI_COUNT_NOT_FINITE_GPU_KERNEL(double)
+REGISTER_MULTI_COUNT_NOT_FINITE_CUDA_KERNEL(half)
+REGISTER_MULTI_COUNT_NOT_FINITE_CUDA_KERNEL(float)
+REGISTER_MULTI_COUNT_NOT_FINITE_CUDA_KERNEL(double)
 
 }  // namespace oneflow

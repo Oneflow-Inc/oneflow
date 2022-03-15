@@ -15,6 +15,7 @@ limitations under the License.
 */
 #include "oneflow/user/kernels/where_kernel_util.h"
 #include "oneflow/core/cuda/elementwise.cuh"
+#include "oneflow/core/ep/cuda/cuda_stream.h"
 
 namespace oneflow {
 
@@ -59,30 +60,31 @@ struct WhereScalarXYFunctor {
 }  // namespace
 
 template<typename T, typename CondT>
-struct WhereKernelUtil<DeviceType::kGPU, T, CondT> {
-  static void Where(DeviceCtx* ctx, const int64_t elem_cnt, const CondT* cond, const T* lhs,
+struct WhereKernelUtil<DeviceType::kCUDA, T, CondT> {
+  static void Where(ep::Stream* stream, const int64_t elem_cnt, const CondT* cond, const T* lhs,
                     const T* rhs, T* out) {
     cuda::elementwise::Ternary(WhereFunctor<T, CondT>(), elem_cnt, out, cond, lhs, rhs,
-                               ctx->cuda_stream());
+                               stream->As<ep::CudaStream>()->cuda_stream());
   }
-  static void WhereXScalar(DeviceCtx* ctx, const int64_t elem_cnt, const CondT* cond,
+  static void WhereXScalar(ep::Stream* stream, const int64_t elem_cnt, const CondT* cond,
                            const T x_scalar, const T* rhs, T* out) {
     cuda::elementwise::Binary(WhereScalarXFunctor<T, CondT>(x_scalar), elem_cnt, out, cond, rhs,
-                              ctx->cuda_stream());
+                              stream->As<ep::CudaStream>()->cuda_stream());
   }
-  static void WhereYScalar(DeviceCtx* ctx, const int64_t elem_cnt, const CondT* cond, const T* lhs,
-                           const T y_scalar, T* out) {
+  static void WhereYScalar(ep::Stream* stream, const int64_t elem_cnt, const CondT* cond,
+                           const T* lhs, const T y_scalar, T* out) {
     cuda::elementwise::Binary(WhereScalarYFunctor<T, CondT>(y_scalar), elem_cnt, out, cond, lhs,
-                              ctx->cuda_stream());
+                              stream->As<ep::CudaStream>()->cuda_stream());
   }
-  static void WhereXYScalar(DeviceCtx* ctx, const int64_t elem_cnt, const CondT* cond,
+  static void WhereXYScalar(ep::Stream* stream, const int64_t elem_cnt, const CondT* cond,
                             const T x_scalar, const T y_scalar, T* out) {
     cuda::elementwise::Unary(WhereScalarXYFunctor<T, CondT>(x_scalar, y_scalar), elem_cnt, out,
-                             cond, ctx->cuda_stream());
+                             cond, stream->As<ep::CudaStream>()->cuda_stream());
   }
 };
 
-OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(INSTANTIATE_WHERE_FUNCTOR, (DeviceType::kGPU),
-                                 ARITHMETIC_DATA_TYPE_SEQ FLOAT16_DATA_TYPE_SEQ, INT_DATA_TYPE_SEQ)
+OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(INSTANTIATE_WHERE_FUNCTOR, (DeviceType::kCUDA),
+                                 ARITHMETIC_DATA_TYPE_SEQ FLOAT16_DATA_TYPE_SEQ BOOL_DATA_TYPE_SEQ,
+                                 INT_DATA_TYPE_SEQ BOOL_DATA_TYPE_SEQ)
 
 }  // namespace oneflow

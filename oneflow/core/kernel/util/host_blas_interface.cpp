@@ -20,7 +20,7 @@ namespace oneflow {
 namespace {
 
 template<typename T>
-static void Gemm(DeviceCtx* /*ctx*/, const enum CBLAS_ORDER order, enum CBLAS_TRANSPOSE trans_a,
+static void Gemm(ep::Stream* /*stream*/, const enum CBLAS_ORDER order, enum CBLAS_TRANSPOSE trans_a,
                  enum CBLAS_TRANSPOSE trans_b, const int m, const int n, const int k,
                  const double alpha, const T* a, const T* b, const double beta, T* c) {
   const int lda = (trans_a == CblasNoTrans) ? k : m;
@@ -33,18 +33,18 @@ static void Gemm(DeviceCtx* /*ctx*/, const enum CBLAS_ORDER order, enum CBLAS_TR
 
 }  // namespace
 
-void BlasIf<DeviceType::kCPU>::OFGemm(DeviceCtx* ctx, enum CBLAS_TRANSPOSE trans_a,
+void BlasIf<DeviceType::kCPU>::OFGemm(ep::Stream* stream, enum CBLAS_TRANSPOSE trans_a,
                                       enum CBLAS_TRANSPOSE trans_b, const int m, const int n,
                                       const int k, const double alpha, const float* a,
                                       const float* b, const double beta, float* c) {
-  Gemm<float>(ctx, CblasRowMajor, trans_a, trans_b, m, n, k, alpha, a, b, beta, c);
+  Gemm<float>(stream, CblasRowMajor, trans_a, trans_b, m, n, k, alpha, a, b, beta, c);
 }
 
-void BlasIf<DeviceType::kCPU>::OFGemm(DeviceCtx* ctx, enum CBLAS_TRANSPOSE trans_a,
+void BlasIf<DeviceType::kCPU>::OFGemm(ep::Stream* stream, enum CBLAS_TRANSPOSE trans_a,
                                       enum CBLAS_TRANSPOSE trans_b, const int m, const int n,
                                       const int k, const double alpha, const double* a,
                                       const double* b, const double beta, double* c) {
-  Gemm<double>(ctx, CblasRowMajor, trans_a, trans_b, m, n, k, alpha, a, b, beta, c);
+  Gemm<double>(stream, CblasRowMajor, trans_a, trans_b, m, n, k, alpha, a, b, beta, c);
 }
 
 }  // namespace oneflow

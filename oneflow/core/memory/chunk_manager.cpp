@@ -30,7 +30,7 @@ void ChunkMgr::GetChunkProtosByMemZoneUniqueId(int64_t mem_zone_uid,
     for (int64_t chunk_id : chunk_ids) {
       auto chunk_it = chunk_id2chunk_proto_.find(chunk_id);
       CHECK(chunk_it != chunk_id2chunk_proto_.end());
-      chunks->push_back(chunk_it->second.get());
+      chunks->emplace_back(chunk_it->second.get());
     }
   }
 }

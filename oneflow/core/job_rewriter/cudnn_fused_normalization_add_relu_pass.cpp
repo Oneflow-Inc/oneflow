@@ -16,6 +16,10 @@ limitations under the License.
 #include "oneflow/core/job_rewriter/job_pass.h"
 #include "oneflow/core/framework/framework.h"
 
+#ifdef WITH_CUDA
+#include <cudnn.h>
+#endif  // WITH_CUDA
+
 namespace oneflow {
 
 namespace {
@@ -74,6 +78,9 @@ Maybe<void> CudnnFusedNormalizationAddReluPass::Apply(const OpGraph& op_graph,
     if (x_shape.Count(axis + 1) != 1) { return; }
     if (x_shape.At(axis) % 4 != 0) { return; }
     OperatorConf new_op_conf = op_conf;
+    auto mute_attrs = new_op_conf.mutable_user_conf()->mutable_attr();
+    auto training_it = mute_attrs->find("training");
+    if (training_it != mute_attrs->end()) { mute_attrs->erase(training_it); }
     new_op_conf.mutable_user_conf()->set_op_type_name("cudnn_fused_" + op_type_name);
     job_builder->MutOpsOnlyOnce({new_op_conf});
   });

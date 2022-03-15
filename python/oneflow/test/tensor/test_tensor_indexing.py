@@ -15,6 +15,7 @@ limitations under the License.
 """
 import random
 import unittest
+from oneflow.test_utils.test_util import GenArgList
 from collections import OrderedDict
 
 import numpy as np
@@ -22,7 +23,7 @@ import oneflow as flow
 import oneflow.unittest
 
 
-def test_basic_slice(test_case, numpy_x):
+def _test_basic_slice(test_case, numpy_x):
     x = flow.tensor(numpy_x)
 
     test_case.assertTrue(np.allclose(numpy_x[1], x[1].numpy()))
@@ -80,7 +81,7 @@ def test_basic_slice(test_case, numpy_x):
     )
 
 
-def test_advanced_indexing(test_case, numpy_x):
+def _test_advanced_indexing(test_case, numpy_x):
     x = flow.tensor(numpy_x)
 
     test_case.assertTrue(np.allclose(numpy_x[[0, 1]], x[[0, 1]].numpy()))
@@ -137,7 +138,38 @@ def test_advanced_indexing(test_case, numpy_x):
     test_case.assertTrue(np.allclose(numpy_x[mask > 1], x[y > 1].numpy()))
 
 
-def test_combining_indexing(test_case, numpy_x):
+def _test_advanced_indexing_array(test_case, numpy_x, dtype):
+    x = flow.tensor(numpy_x)
+
+    idx = np.array([0, 1], dtype=dtype)
+    test_case.assertTrue(np.allclose(numpy_x[idx], x[idx].numpy()))
+
+    idx1 = np.array([0, 1], dtype=dtype)
+    idx2 = np.array([1, 0], dtype=dtype)
+    test_case.assertTrue(np.allclose(numpy_x[idx1, idx2], x[idx1, idx2].numpy()))
+
+    idx = np.array([[0, 1], [0, 1], [1, 0]], dtype=dtype)
+    test_case.assertTrue(np.allclose(numpy_x[idx, :, :], x[idx, :, :].numpy()))
+    test_case.assertTrue(np.allclose(numpy_x[idx, idx, :], x[idx, idx, :].numpy()))
+    test_case.assertTrue(np.allclose(numpy_x[idx, idx, idx], x[idx, idx, idx].numpy()))
+
+    idx1 = np.array([[1, 0, 1], [1, 1, 0]])
+    idx2 = np.array([[0], [1]])
+    test_case.assertTrue(
+        np.allclose(numpy_x[:, idx1, :, idx2].shape, x[:, idx1, :, idx2].shape)
+    )
+    test_case.assertTrue(
+        np.allclose(numpy_x[:, idx1, 1, idx2].shape, x[:, idx1, 1, idx2].shape)
+    )
+    test_case.assertTrue(
+        np.allclose(numpy_x[idx1, :, idx2, :].shape, x[idx1, :, idx2, :].shape)
+    )
+    test_case.assertTrue(
+        np.allclose(numpy_x[:, idx1, idx2, :].shape, x[:, idx1, idx2, :].shape)
+    )
+
+
+def _test_combining_indexing(test_case, numpy_x):
     x = flow.tensor(numpy_x)
 
     test_case.assertTrue(
@@ -152,7 +184,24 @@ def test_combining_indexing(test_case, numpy_x):
     )
 
 
-def test_mask_setitem(test_case, numpy_x):
+def _test_mask_getitem(test_case, numpy_x):
+    x = flow.tensor(numpy_x)
+
+    mask = np.random.rand(*numpy_x.shape).astype(np.float32)
+    y = flow.tensor(mask)
+    test_case.assertTrue(np.allclose(numpy_x[mask > 0.5], x[y > 0.5].numpy()))
+    test_case.assertTrue(np.allclose(numpy_x[mask > 1.0], x[y > 1.0].numpy()))
+
+    mask = np.random.rand(numpy_x.shape[0]).astype(np.float32)
+    y = flow.tensor(mask)
+    test_case.assertTrue(np.allclose(numpy_x[mask > 0.5], x[y > 0.5].numpy()))
+    test_case.assertTrue(np.allclose(numpy_x[mask > 1.0], x[y > 1.0].numpy()))
+
+    test_case.assertTrue(np.allclose(numpy_x[mask > 0.5, 1], x[y > 0.5, 1].numpy()))
+    test_case.assertTrue(np.allclose(numpy_x[mask > 1.0, 1], x[y > 1.0, 1].numpy()))
+
+
+def _test_mask_setitem(test_case, numpy_x):
     x = flow.tensor(numpy_x)
 
     # mask tensor index
@@ -177,47 +226,106 @@ def test_mask_setitem(test_case, numpy_x):
     test_case.assertTrue(np.allclose(numpy_x, x.numpy()))
 
 
+def _test_list_indexing_using_scalar_tensor(test_case, dtype):
+    y = np.random.randint(0, 100, size=100)
+    for i in range(len(y)):
+        x = flow.tensor(i, dtype=dtype)
+        test_case.assertEqual(y[i], y[x])
+
+
 @flow.unittest.skip_unless_1n1d()
 class TestTensorIndexing(flow.unittest.TestCase):
     def test_basic_slice(test_case):
         numpy_x = np.arange(0, 60, 1).reshape([3, 4, 5]).astype(np.float32)
-        test_basic_slice(test_case, numpy_x)
+        _test_basic_slice(test_case, numpy_x)
 
         numpy_x = np.arange(0, 360, 1).reshape([3, 4, 5, 6]).astype(np.float32)
-        test_basic_slice(test_case, numpy_x)
+        _test_basic_slice(test_case, numpy_x)
 
         numpy_x = np.arange(0, 720, 1).reshape([8, 9, 10]).astype(np.float32)
-        test_basic_slice(test_case, numpy_x)
+        _test_basic_slice(test_case, numpy_x)
 
     def test_advanced_indexing(test_case):
         numpy_x = np.arange(0, 60, 1).reshape([3, 4, 5]).astype(np.float32)
-        test_advanced_indexing(test_case, numpy_x)
+        _test_advanced_indexing(test_case, numpy_x)
 
         numpy_x = np.arange(0, 360, 1).reshape([3, 4, 5, 6]).astype(np.float32)
-        test_advanced_indexing(test_case, numpy_x)
+        _test_advanced_indexing(test_case, numpy_x)
 
         numpy_x = np.arange(0, 720, 1).reshape([8, 9, 10]).astype(np.float32)
-        test_advanced_indexing(test_case, numpy_x)
+        _test_advanced_indexing(test_case, numpy_x)
+
+    def test_advanced_indexing_array(test_case):
+        numpy_x = np.arange(0, 60, 1).reshape([3, 2, 2, 5]).astype(np.float32)
+        _test_advanced_indexing_array(test_case, numpy_x, np.int32)
+        _test_advanced_indexing_array(test_case, numpy_x, np.int64)
+
+        numpy_x = np.arange(0, 360, 1).reshape([3, 4, 5, 6]).astype(np.float32)
+        _test_advanced_indexing_array(test_case, numpy_x, np.int32)
+        _test_advanced_indexing_array(test_case, numpy_x, np.int64)
+
+        numpy_x = np.arange(0, 720, 1).reshape([5, 8, 9, 2]).astype(np.float32)
+        _test_advanced_indexing_array(test_case, numpy_x, np.int32)
+        _test_advanced_indexing_array(test_case, numpy_x, np.int64)
 
     def test_combining_indexing(test_case):
         numpy_x = np.arange(0, 60, 1).reshape([3, 4, 5]).astype(np.float32)
-        test_combining_indexing(test_case, numpy_x)
+        _test_combining_indexing(test_case, numpy_x)
 
         numpy_x = np.arange(0, 360, 1).reshape([3, 4, 5, 6]).astype(np.float32)
-        test_combining_indexing(test_case, numpy_x)
+        _test_combining_indexing(test_case, numpy_x)
 
         numpy_x = np.arange(0, 720, 1).reshape([8, 9, 10]).astype(np.float32)
-        test_combining_indexing(test_case, numpy_x)
+        _test_combining_indexing(test_case, numpy_x)
+
+    def test_mask_getitem(test_case):
+        numpy_x = np.arange(0, 60, 1).reshape([3, 4, 5]).astype(np.float32)
+        _test_mask_getitem(test_case, numpy_x)
+
+        numpy_x = np.arange(0, 360, 1).reshape([3, 4, 5, 6]).astype(np.float32)
+        _test_mask_getitem(test_case, numpy_x)
+
+        numpy_x = np.arange(0, 720, 1).reshape([8, 9, 10]).astype(np.float32)
+        _test_mask_getitem(test_case, numpy_x)
+
+        numpy_x = np.arange(0, 27, 1).reshape(3, 3, 3)
+        x = flow.tensor(numpy_x)
+        test_case.assertTrue(
+            np.allclose(
+                numpy_x[[False, True, False], 1], x[[False, True, False], 1].numpy()
+            )
+        )
+        test_case.assertTrue(
+            np.allclose(
+                numpy_x[[False, True, False], [True, False, False]],
+                x[[False, True, False], [True, False, False]].numpy(),
+            )
+        )
 
     def test_mask_setitem(test_case):
         numpy_x = np.arange(0, 60, 1).reshape([3, 4, 5]).astype(np.float32)
-        test_mask_setitem(test_case, numpy_x)
+        _test_mask_setitem(test_case, numpy_x)
 
         numpy_x = np.arange(0, 360, 1).reshape([3, 4, 5, 6]).astype(np.float32)
-        test_mask_setitem(test_case, numpy_x)
+        _test_mask_setitem(test_case, numpy_x)
 
         numpy_x = np.arange(0, 720, 1).reshape([8, 9, 10]).astype(np.float32)
-        test_mask_setitem(test_case, numpy_x)
+        _test_mask_setitem(test_case, numpy_x)
+
+    def test_advanced_indexing_with_scalar_index(test_case):
+        index = flow.tensor([0, 2])
+        x = flow.randn(5)
+        x[index[0]] = 1
+        test_case.assertTrue(np.allclose(x[0].numpy(), 1))
+
+    def test_list_indexing_using_scalar_tensor(test_case):
+        arg_dict = OrderedDict()
+        arg_dict["function_test"] = [
+            _test_list_indexing_using_scalar_tensor,
+        ]
+        arg_dict["dtype"] = [flow.uint8, flow.int8, flow.int32, flow.int64]
+        for arg in GenArgList(arg_dict):
+            arg[0](test_case, *arg[1:])
 
 
 if __name__ == "__main__":

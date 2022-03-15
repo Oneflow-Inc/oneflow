@@ -14,18 +14,17 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 #include "OneFlow/OneFlowOps.h"
-#include <iostream>
-#include <string>
 #include "OneFlow/OneFlowDialect.h"
 #include "OneFlow/Passes.h"
-#include "llvm/ADT/STLExtras.h"
+#include "mlir/IR/OperationSupport.h"
+#include "oneflow/core/framework/random_generator.h"
+
 #include "mlir/Conversion/LinalgToLLVM/LinalgToLLVM.h"
 #include "mlir/Conversion/MemRefToLLVM/MemRefToLLVM.h"
-#include "mlir/Conversion/SCFToStandard/SCFToStandard.h"
+#include "mlir/Conversion/ReconcileUnrealizedCasts/ReconcileUnrealizedCasts.h"
 #include "mlir/Conversion/StandardToLLVM/ConvertStandardToLLVMPass.h"
 #include "mlir/Conversion/TosaToLinalg/TosaToLinalg.h"
 #include "mlir/Dialect/Affine/IR/AffineOps.h"
-#include "mlir/Dialect/Linalg/IR/LinalgTypes.h"
 #include "mlir/Dialect/Linalg/Passes.h"
 #include "mlir/Dialect/MemRef/IR/MemRef.h"
 #include "mlir/Dialect/SCF/Passes.h"
@@ -42,6 +41,8 @@ limitations under the License.
 #include "mlir/Support/LogicalResult.h"
 #include "mlir/Transforms/DialectConversion.h"
 #include "mlir/Transforms/Passes.h"
+#include "mlir/Dialect/Bufferization/Transforms/Passes.h"
+#include "mlir/Conversion/SCFToControlFlow/SCFToControlFlow.h"
 #ifdef WITH_MLIR_CUDA_CODEGEN
 #include "mlir/Conversion/AffineToStandard/AffineToStandard.h"
 #include "mlir/Conversion/GPUCommon/GPUCommonPass.h"
@@ -50,13 +51,21 @@ limitations under the License.
 #include "mlir/Conversion/SCFToGPU/SCFToGPUPass.h"
 #endif  // WITH_MLIR_CUDA_CODEGEN
 
-using namespace mlir;
-using namespace mlir::oneflow;
+#include "llvm/ADT/STLExtras.h"
+
+#include <iostream>
+#include <string>
+
+namespace mlir {
+
+namespace oneflow {
 
 LogicalResult DumpAssembly(::mlir::PatternRewriter& rewriter, MlirJitOp op) {
   // TODO: now we only need one JIT engine
-  auto parent_func_op = op->getParentOfType<FuncOp>();
+  auto parent_func_op = op->getParentOfType<oneflow::Job>();
+  if (!parent_func_op) { return failure(); }
   auto parent_module_op = parent_func_op->getParentOfType<ModuleOp>();
+  if (!parent_module_op) { return failure(); }
   SymbolTable symbol_table(parent_module_op);
   std::string mlir;
   llvm::raw_string_ostream os_mlir(mlir);
@@ -77,17 +86,28 @@ FuncOp GetOrInsertFuncOp(::mlir::PatternRewriter& rewriter, mlir::Location loc, 
   for (auto result : results) { result_types.push_back(result.getType()); }
   auto func_type = rewriter.getFunctionType(argument_types, result_types);
   auto first_op = *ops.begin();
-  auto parent_func_op = first_op->getParentOfType<FuncOp>();
+  auto parent_func_op = first_op->getParentOfType<oneflow::Job>();
+  if (!parent_func_op) {
+    emitError(loc) << "null parent oneflow::Job " << *first_op;
+    return nullptr;
+  }
   auto parent_module_op = parent_func_op->getParentOfType<ModuleOp>();
+  if (!parent_module_op) {
+    emitError(loc) << "null ModuleOp " << *first_op;
+    return nullptr;
+  }
   SymbolTable symbol_table(parent_module_op);
   OpBuilder::InsertionGuard guard(rewriter);
   Block::iterator insertPt(parent_func_op->getNextNode());
   rewriter.setInsertionPointToStart(&parent_module_op.body().getBlocks().back());
-  assert(!parent_func_op->hasAttr("llvm.emit_c_interface"));
+  if (parent_func_op->hasAttr("llvm.emit_c_interface")) {
+    emitError(loc) << "parent should not has attr of llvm.emit_c_interface " << *parent_func_op;
+    return nullptr;
+  }
   auto function = rewriter.create<mlir::FuncOp>(loc, func_name, func_type);
   function->setAttr("llvm.emit_c_interface", mlir::UnitAttr::get(rewriter.getContext()));
   function.body().emplaceBlock();
-  function.body().addArguments(argument_types);
+  for (auto& arg : argument_types) { function.body().addArguments(arg, loc); }
   for (auto argument_pair : llvm::zip(operands, function.body().getArguments())) {
     mapping.map(std::get<0>(argument_pair), std::get<1>(argument_pair));
   }
@@ -96,8 +116,11 @@ FuncOp GetOrInsertFuncOp(::mlir::PatternRewriter& rewriter, mlir::Location loc, 
   for (auto op : ops) { nb.clone(*op, mapping); }
   SmallVector<::mlir::Value, 4> mapped_results;
   for (auto result : results) { mapped_results.push_back(mapping.lookup(result)); }
-  rewriter.create<ReturnOp>(loc, mapped_results);
-  assert(!symbol_table.lookup(func_name));
+  rewriter.create<mlir::ReturnOp>(loc, mapped_results);
+  if (symbol_table.lookup(func_name)) {
+    emitError(loc) << func_name << " should not be at symbol table of ModuleOp";
+    return nullptr;
+  }
   return function;
 }
 
@@ -107,70 +130,246 @@ NamedAttrList GetJitOpAttributes(::mlir::PatternRewriter& rewriter, StringRef op
   oneflow::UserOpAdaptor op_to_replace_adaptor(op_to_replace->getOperands(),
                                                op_to_replace->getAttrDictionary());
   NamedAttrList attributes;
-  attributes.set("op_type_name", rewriter.getStringAttr("mlir_jit"));
-  attributes.set("device_tag", op_to_replace_adaptor.device_tag());
-  attributes.set("device_name", op_to_replace_adaptor.device_name());
-  attributes.set("hierarchy", op_to_replace_adaptor.hierarchy());
-  using LBNVec = SmallVector<StringRef, 8>;
-  using LBNSegVec = SmallVector<int32_t, 8>;
-
-  LBNVec input_lbn_segment_keys;
-  LBNSegVec input_lbn_segment_sizes;
-  input_lbn_segment_keys.push_back("in");
-  input_lbn_segment_sizes.push_back(input_size);
-
-  attributes.set("input_lbn_segment_keys", rewriter.getStrArrayAttr(input_lbn_segment_keys));
-  attributes.set("input_lbn_segment_sizes", rewriter.getI32ArrayAttr(input_lbn_segment_sizes));
-
-  attributes.set("op_name", rewriter.getStringAttr(op_name));
-
-  LBNVec output_lbns;
-  LBNVec output_lbn_segment_keys;
-  LBNSegVec output_lbn_segment_sizes;
+  attributes.set(OpTrait::IsOpConfCompatible<void>::getDeviceTagAttr(),
+                 op_to_replace_adaptor.device_tagAttr());
+  attributes.set(OpTrait::IsOpConfCompatible<void>::getDeviceNameAttr(),
+                 op_to_replace_adaptor.device_name());
+  attributes.set(OpTrait::IsOpConfCompatible<void>::getHierarchyAttr(),
+                 op_to_replace_adaptor.hierarchyAttr());
+  attributes.set(OpTrait::IsOpConfCompatible<void>::getOpNameAttr(),
+                 rewriter.getStringAttr(op_name));
   // TODO: use functions in oneflow to genearated bn
-  SmallString<64> output_lbn_storage;
-  for (size_t i = 0; i < output_size; i++) {
-    output_lbns.push_back(
-        (op_name + "/" + "out_" + std::to_string(i)).toStringRef(output_lbn_storage));
-    output_lbn_segment_keys.push_back("out");
-    output_lbn_segment_sizes.push_back(output_size);
-  }
-  attributes.set("output_lbns", rewriter.getStrArrayAttr(output_lbns));
-  attributes.set("output_lbn_segment_keys", rewriter.getStrArrayAttr(output_lbn_segment_keys));
-  attributes.set("output_lbn_segment_sizes", rewriter.getI32ArrayAttr(output_lbn_segment_sizes));
-  attributes.set("scope_symbol_id", op_to_replace_adaptor.scope_symbol_id());
+  attributes.set(OpTrait::IsOpConfCompatible<void>::getScopeSymbolIDAttr(),
+                 op_to_replace_adaptor.scope_symbol_idAttr());
   return attributes;
+}
+
+static StringRef sanitizeIdentifier(StringRef name, SmallString<16>& buffer,
+                                    StringRef allowedPunctChars = "$._",
+                                    bool allowTrailingDigit = true) {
+  assert(!name.empty() && "Shouldn't have an empty name here");
+
+  auto copyNameToBuffer = [&] {
+    for (char ch : name) {
+      if (llvm::isAlnum(ch) || allowedPunctChars.contains(ch))
+        buffer.push_back(ch);
+      else if (ch == ' ')
+        buffer.push_back('_');
+      else
+        buffer.append(llvm::utohexstr((unsigned char)ch));
+    }
+  };
+
+  // Check to see if this name is valid. If it starts with a digit, then it
+  // could conflict with the autogenerated numeric ID's, so add an underscore
+  // prefix to avoid problems.
+  if (isdigit(name[0])) {
+    buffer.push_back('_');
+    copyNameToBuffer();
+    return buffer;
+  }
+
+  // If the name ends with a trailing digit, add a '_' to avoid potential
+  // conflicts with autogenerated ID's.
+  if (!allowTrailingDigit && isdigit(name.back())) {
+    copyNameToBuffer();
+    buffer.push_back('_');
+    return buffer;
+  }
+
+  // Check to see that the name consists of only valid identifier characters.
+  for (char ch : name) {
+    if (!llvm::isAlnum(ch) && !allowedPunctChars.contains(ch)) {
+      copyNameToBuffer();
+      return buffer;
+    }
+  }
+
+  // If there are no invalid characters, return the original name.
+  return name;
 }
 
 ::llvm::SmallVector<::mlir::Value, 4> OutlineMulCast(::mlir::PatternRewriter& rewriter,
                                                      mlir::OpResult mul_res,
                                                      mlir::OpResult cast_res) {
-  if (llvm::dyn_cast<MlirJitOp>(mul_res.getParentBlock()->getParentOp())) { return {}; }
-  if (auto mul_op = llvm::dyn_cast<ScalarMulByTensorOp>(mul_res.getDefiningOp())) {
-    if (auto cast_op = llvm::dyn_cast<CastOp>(cast_res.getDefiningOp())) {
-      // TODO: extract a function to generate op name for jit op from ops being fused
-      SmallString<64> op_name_storage;
-      auto op_name =
-          (cast_op.op_name() + "__FUSE__" + mul_op.op_name()).toStringRef(op_name_storage);
-      SmallVector<::mlir::Value, 2> operands;
-      operands.push_back(cast_op.x());
-      operands.push_back(mul_op.scalar());
-      SmallVector<::mlir::Value, 1> results;
-      results.push_back(mul_op.y());
-      NamedAttrList attributes =
-          GetJitOpAttributes(rewriter, op_name, operands.size(), results.size(), mul_op);
-      SmallVector<Operation*, 4> ops = {cast_op, mul_op};
-      auto function =
-          GetOrInsertFuncOp(rewriter, mul_op->getLoc(), op_name, operands, results, ops);
-      auto created = rewriter.create<MlirJitOp>(mul_op.getLoc(), function, attributes, operands);
-      assert(DumpAssembly(rewriter, created).succeeded());
-      cast_op->dropAllUses();
-      cast_op.erase();
-      return created->getResults();
+  auto mul_op = mul_res.getDefiningOp();
+  auto scale = mlir::Value();
+  auto output = mlir::Value();
+  if (auto scalar_mul_op = llvm::dyn_cast<ScalarMulByTensorOp>(mul_op)) {
+    scale = scalar_mul_op.scalar();
+    output = scalar_mul_op.y();
+  } else if (auto broadcast_mul_op = llvm::dyn_cast<BroadcastMulOp>(mul_op)) {
+    scale = broadcast_mul_op.y();
+    output = broadcast_mul_op.z();
+  } else {
+    mul_res.getDefiningOp()->emitError("pattern mul(cast(x), scalar) doesn't support this op");
+    exit(1);
+  }
+  if (!mul_op->hasTrait<OpTrait::IsOpConfCompatible>()) {
+    mul_res.getDefiningOp()->emitError("not OpConf compatible");
+    exit(1);
+  }
+  if (auto cast_op = llvm::dyn_cast<CastOp>(cast_res.getDefiningOp())) {
+    // TODO: extract a function to generate op name for jit op from ops being fused
+    SmallString<64> op_name_storage;
+    auto op_name =
+        (cast_op.op_name() + "__FUSE__"
+         + mul_op->getAttrOfType<StringAttr>(OpTrait::IsOpConfCompatible<void>::getOpNameAttr())
+               .getValue()
+               .str())
+            .toStringRef(op_name_storage);
+    SmallString<16> tempBuffer;
+    op_name = sanitizeIdentifier(op_name, tempBuffer);
+    SmallVector<::mlir::Value, 2> operands;
+    operands.push_back(cast_op.in());
+    operands.push_back(scale);
+    SmallVector<::mlir::Value, 1> results;
+    results.push_back(output);
+    NamedAttrList attributes =
+        GetJitOpAttributes(rewriter, op_name, operands.size(), results.size(), mul_op);
+    SmallVector<Operation*, 4> ops = {cast_op, mul_op};
+    auto function = GetOrInsertFuncOp(rewriter, mul_op->getLoc(), op_name, operands, results, ops);
+    auto created = rewriter.create<MlirJitOp>(mul_op->getLoc(), function, attributes, operands);
+    if (failed(DumpAssembly(rewriter, created))) { exit(1); }
+    cast_op->dropAllUses();
+    cast_op.erase();
+    return created->getResults();
+  }
+  return {};
+}
+
+::llvm::SmallVector<::mlir::Value, 4> CreateGPUMemcpyOpFromMemrefCopy(
+    ::mlir::PatternRewriter& rewriter, ::mlir::memref::CopyOp copyOp) {
+  // NOTE: to get lowered to LLVM, it has to be async
+  ::mlir::ValueRange empty_async_dependencies{};
+  auto token = rewriter.getType<gpu::AsyncTokenType>();
+  auto t0 =
+      rewriter.create<gpu::WaitOp>(copyOp->getLoc(), token, empty_async_dependencies).asyncToken();
+  auto t2 = rewriter
+                .create<gpu::MemcpyOp>(copyOp->getLoc(),
+                                       /*optional asyncToken*/ token,
+                                       /*asyncDependencies*/ llvm::SmallVector<Value, 1>({t0}),
+                                       /*dst*/ copyOp.target(),
+                                       /*src*/ copyOp.source())
+                .getResults();
+  rewriter.create<gpu::WaitOp>(copyOp->getLoc(), llvm::None, t2);
+  return {};
+}
+
+bool IsScalarTensor(Value value) {
+  if (auto tensor = value.getType().dyn_cast<RankedTensorType>()) {
+    return tensor.getNumElements() == 1;
+  }
+  return false;
+}
+
+bool HasZeroPadding(mlir::ArrayAttr padding) {
+  for (auto val : padding.getValue()) {
+    if (val.cast<IntegerAttr>().getValue().getSExtValue() != 0) return false;
+  }
+  return true;
+}
+
+bool IsPaddingCouldBeAssimilatedIntoConv(::mlir::ArrayAttr padding_before,
+                                         ::mlir::ArrayAttr padding_after,
+                                         ::mlir::StringAttr data_format) {
+  if (padding_before.size() == 4 && padding_after.size() == 4) {
+    if (padding_before.getValue().equals(padding_after.getValue())) {
+      if (data_format.str() == "channels_first") {
+        return padding_before.getValue()[0].cast<IntegerAttr>().getValue().getSExtValue() == 0
+               && padding_before.getValue()[1].cast<IntegerAttr>().getValue().getSExtValue() == 0;
+      }
+      if (data_format.str() == "channels_last") {
+        return padding_before.getValue()[0].cast<IntegerAttr>().getValue().getSExtValue() == 0
+               && padding_before.getValue()[3].cast<IntegerAttr>().getValue().getSExtValue() == 0;
+      }
+    }
+  }
+  return false;
+}
+
+ArrayAttr getSI32ArrayAttr(::mlir::PatternRewriter& rewriter, ArrayRef<int32_t> values) {
+  auto attrs = llvm::to_vector<8>(llvm::map_range(
+      values, [&](int32_t v) -> Attribute { return rewriter.getSI32IntegerAttr(v); }));
+  return rewriter.getArrayAttr(attrs);
+}
+
+IntegerAttr getSI64IntegerAttr(::mlir::PatternRewriter& rewriter, int64_t value) {
+  return IntegerAttr::get(rewriter.getIntegerType(64, /*isSigned=*/true),
+                          APInt(64, value, /*isSigned=*/true));
+}
+
+::llvm::SmallVector<::mlir::Value, 4> CreateConv2dAndErasePad(::mlir::PatternRewriter& rewriter,
+                                                              OpResult conv_result,
+                                                              OpResult pad_result) {
+  if (auto conv_op = llvm::dyn_cast<oneflow::Conv2DOp>(conv_result.getDefiningOp())) {
+    if (auto pad_op = llvm::dyn_cast<oneflow::PadOp>(pad_result.getDefiningOp())) {
+      NamedAttrList attributes = conv_op->getAttrs();
+      SmallVector<Value, 4> operands;
+      operands.push_back(pad_op.x());
+      operands.push_back(conv_op.weight());
+      if (conv_op.bias()) operands.push_back(conv_op.bias());
+      if (conv_op.bias_multiplier()) operands.push_back(conv_op.bias_multiplier());
+      llvm::SmallVector<int32_t> padding_before_array;
+      if (conv_op.data_formatAttr().getValue().str() == "channels_first") {
+        for (auto val : pad_op.padding_before().getValue().take_back(2)) {
+          padding_before_array.push_back(val.cast<IntegerAttr>().getValue().getSExtValue());
+        }
+      } else {
+        padding_before_array.push_back(
+            pad_op.padding_before().getValue()[1].cast<IntegerAttr>().getValue().getSExtValue());
+        padding_before_array.push_back(
+            pad_op.padding_before().getValue()[2].cast<IntegerAttr>().getValue().getSExtValue());
+      }
+      attributes.set(conv_op.padding_beforeAttrName(),
+                     getSI32ArrayAttr(rewriter, padding_before_array));
+      auto res = rewriter
+                     .create<oneflow::Conv2DOp>(conv_op->getLoc(), conv_op->getResultTypes(),
+                                                operands, attributes)
+                     ->getResults();
+      // pad op is expected to be erased if it is not used
+      return res;
     }
   }
   return {};
 }
+
+::llvm::SmallVector<::mlir::Value, 4> CreateFusedBiasAddMaskScale(::mlir::PatternRewriter& rewriter,
+                                                                  OpResult dropout_result,
+                                                                  OpResult bias_add_result,
+                                                                  Operation* mask) {
+  if (auto dropout_op = llvm::dyn_cast<oneflow::DropoutOp>(dropout_result.getDefiningOp())) {
+    if (auto bias_add_op = llvm::dyn_cast<oneflow::BiasAddOp>(bias_add_result.getDefiningOp())) {
+      SmallVector<Value, 4> operands;
+      operands.push_back(bias_add_op.a());
+      operands.push_back(bias_add_op.b());
+      operands.push_back(mask->getResults()[0]);
+      NamedAttrList fused_bias_add_dropout_attributes = dropout_op->getAttrs();
+      fused_bias_add_dropout_attributes.append(llvm::StringRef("axis"), bias_add_op.axisAttr());
+      fused_bias_add_dropout_attributes.append(llvm::StringRef("scale"), dropout_op.rateAttr());
+      fused_bias_add_dropout_attributes.erase(dropout_op.rateAttrName());
+      auto res = rewriter
+                     .create<oneflow::FusedBiasAddMaskScaleOp>(
+                         dropout_op->getLoc(), dropout_op->getResultTypes().front(), operands,
+                         fused_bias_add_dropout_attributes)
+                     ->getResults();
+      // bias_add and dropout op is expected to be erased if it is not used
+      return res;
+    }
+  }
+  return {};
+}
+
+mlir::IntegerAttr GetDefaultSeed(::mlir::PatternRewriter& rewriter) {
+  const auto gen = CHECK_JUST(::oneflow::one::DefaultAutoGenerator());
+  return getSI64IntegerAttr(rewriter, (int64_t)gen->current_seed());
+}
+
+bool IsAddToOutputNone(ValueRange value) { return (int)value.size() > 0 ? false : true; }
+
+}  // namespace oneflow
+
+}  // namespace mlir
 
 #include "OneFlow/OneFlowPatterns.cpp.inc"
 
@@ -178,30 +377,35 @@ namespace mlir {
 
 namespace oneflow {
 
+void BroadcastMulOp::getCanonicalizationPatterns(RewritePatternSet& results, MLIRContext* context) {
+  results.insert<BroadcastMulToScalarMulPattern>(context);
+}
+
 void AddLowerToLinalgMemRefPasses(PassManager& pm) {
-  pm.addPass(createLowerOneFlowToTosaPass());                     // lower-oneflow-to-tosa
-  pm.addPass(createCSEPass());                                    // cse
-  pm.addNestedPass<FuncOp>(tosa::createTosaToLinalgOnTensors());  // tosa-to-linalg-on-tensors
+  pm.addPass(createLowerOneFlowToTosaPass());            // lower-oneflow-to-tosa
+  pm.addPass(createCSEPass());                           // cse
+  pm.addNestedPass<FuncOp>(tosa::createTosaToLinalg());  // tosa-to-linalg-on-tensors
   auto p = createLinalgElementwiseOpFusionPass();
-  assert(p->initializeOptions("allow-folding-unit-dim-reshapes=true").succeeded());
-  pm.addNestedPass<FuncOp>(std::move(p));                     // linalg-fuse-elementwise-ops
-  pm.addNestedPass<FuncOp>(createLinalgBufferizePass());      // linalg-bufferize
-  pm.addNestedPass<FuncOp>(createTensorBufferizePass());      // tensor-bufferize
-  pm.addPass(createTensorConstantBufferizePass());            // tensor-constant-bufferize
-  pm.addPass(createFuncBufferizePass());                      // func-bufferize
-  pm.addPass(createBufferResultsToOutParamsPass());           // buffer-results-to-out-params
-  pm.addPass(createCanonicalizerPass());                      // canonicalize
-  pm.addNestedPass<FuncOp>(createFinalizingBufferizePass());  // finalizing-bufferize
+  if (p->initializeOptions("allow-folding-unit-dim-reshapes=true").failed()) exit(1);
+  pm.addNestedPass<FuncOp>(std::move(p));                           // linalg-fuse-elementwise-ops
+  pm.addNestedPass<FuncOp>(createLinalgBufferizePass());            // linalg-bufferize
+  pm.addNestedPass<FuncOp>(createTensorBufferizePass());            // tensor-bufferize
+  pm.addPass(createFuncBufferizePass());                            // func-bufferize
+  pm.addPass(bufferization::createBufferResultsToOutParamsPass());  // buffer-results-to-out-params
+  pm.addPass(createCanonicalizerPass());                            // canonicalize
+  pm.addNestedPass<FuncOp>(
+      mlir::bufferization::createFinalizingBufferizePass());  // finalizing-bufferize
 }
 
 LogicalResult LowerModuleToLLVM(mlir::MLIRContext* context, ModuleOp module) {
   mlir::PassManager pm(context);
   AddLowerToLinalgMemRefPasses(pm);
   pm.addNestedPass<FuncOp>(createConvertLinalgToLoopsPass());  // convert-linalg-to-loops
-  pm.addNestedPass<FuncOp>(createLowerToCFGPass());            // convert-scf-to-std
+  pm.addNestedPass<FuncOp>(createConvertSCFToCFPass());        // convert-scf-to-cf
   pm.addPass(createConvertLinalgToLLVMPass());                 // convert-linalg-to-llvm
   pm.addPass(createMemRefToLLVMPass());                        // convert-memref-to-llvm
   pm.addPass(createLowerToLLVMPass());                         // convert-std-to-llvm
+  pm.addPass(createReconcileUnrealizedCastsPass());            // reconcile-unrealized-casts
   return pm.run(module);
 }
 
@@ -210,19 +414,25 @@ LogicalResult LowerModuleToLLVM(mlir::MLIRContext* context, ModuleOp module) {
 LogicalResult LowerModuleToCUDALLVM(mlir::MLIRContext* context, ModuleOp module) {
   InitializeLLVMNVPTXBackend();
   mlir::PassManager pm(context);
+  bool enable_ir_printing =
+      ::oneflow::ParseBooleanFromEnv("ONEFLOW_MLIR_ENABLE_IR_PRINTING", false);
+  context->disableMultithreading(enable_ir_printing);
   AddLowerToLinalgMemRefPasses(pm);
   pm.addNestedPass<FuncOp>(
-      createConvertLinalgToParallelLoopsPass());      // convert-linalg-to-parallel-loops
-  pm.addNestedPass<FuncOp>(createMapSCFToGPUPass());  // gpu-greedy-parallel-loop-mapping
-  pm.addPass(createParallelLoopToGpuPass());          // convert-parallel-loops-to-gpu
-  pm.addPass(createGpuKernelOutliningPass());         // gpu-kernel-outlining
-  pm.addNestedPass<FuncOp>(createBufferHostRegisterPass());
-  pm.addPass(createCanonicalizerPass());  // canonicalize
-  pm.addNestedPass<gpu::GPUModuleOp>(createStripDebugInfoPass());
-  pm.addNestedPass<gpu::GPUModuleOp>(createLowerAffinePass());
-  pm.addNestedPass<gpu::GPUModuleOp>(createLowerGpuOpsToNVVMOpsPass());
-  pm.addNestedPass<gpu::GPUModuleOp>(createSerializeToCubinPass());
+      createConvertLinalgToParallelLoopsPass());             // convert-linalg-to-parallel-loops
+  pm.addPass(createMapSCFToGPUPass());                       // gpu-greedy-parallel-loop-mapping
+  pm.addPass(createParallelLoopToGpuPass());                 // convert-parallel-loops-to-gpu
+  pm.addPass(createGpuKernelOutliningPass());                // gpu-kernel-outlining
+  pm.addNestedPass<FuncOp>(createBufferHostRegisterPass());  // buffer-host-register
+  pm.addPass(createCanonicalizerPass());                     // canonicalize
+  // -pass-pipeline='gpu.module([PASS1][PASS2]...)'
+  pm.addNestedPass<gpu::GPUModuleOp>(createStripDebugInfoPass());        // strip-debuginfo
+  pm.addNestedPass<gpu::GPUModuleOp>(createLowerAffinePass());           // lower-affine
+  pm.addNestedPass<gpu::GPUModuleOp>(createLowerGpuOpsToNVVMOpsPass());  // convert-gpu-to-nvvm
+  pm.addNestedPass<gpu::GPUModuleOp>(createSerializeToCubinPass());      // out-of-tree-gpu-to-cubin
+  pm.addNestedPass<FuncOp>(createGpuCopyArgPass());                      // buffer-host-register
   pm.addPass(createGpuToLLVMConversionPass());
+  if (enable_ir_printing) pm.enableIRPrinting();
   return pm.run(module);
 }
 
@@ -234,9 +444,15 @@ void populateFuserPasses(::mlir::RewritePatternSet& patterns) {
 
 void populateFuserForExistingOp(::mlir::RewritePatternSet& patterns) {
   patterns.add<FusedBiasAddGeluPattern>(patterns.getContext());
-  patterns.add<FusedBiasAddDropoutPattern>(patterns.getContext());
   patterns.add<FusedScaleTrilPattern>(patterns.getContext());
   patterns.add<FusedScaleTrilPattern2>(patterns.getContext());
+  patterns.add<FusedPadConv2DPattern>(patterns.getContext());
+  patterns.add<FusedBiasAddDropoutPattern>(patterns.getContext());
+  patterns.add<NormalizationAddReluPattern>(patterns.getContext());
+}
+
+void populateGpuHelperPatterns(::mlir::RewritePatternSet& patterns) {
+  patterns.add<ReplaceCopyWithGPUPattern>(patterns.getContext());
 }
 
 }  // namespace oneflow

@@ -15,6 +15,7 @@ limitations under the License.
 */
 #include "oneflow/core/kernel/util/cuda_blas_interface.h"
 #include "oneflow/core/device/cuda_util.h"
+#include "oneflow/core/ep/cuda/cuda_stream.h"
 
 namespace oneflow {
 
@@ -47,7 +48,7 @@ std::tuple<int, int, int, cublasOperation_t, cublasOperation_t> PrepareToCallCub
 }
 
 template<typename T>
-void Gemm(DeviceCtx* ctx, const enum CBLAS_ORDER /*order*/, enum CBLAS_TRANSPOSE trans_a,
+void Gemm(ep::Stream* stream, const enum CBLAS_ORDER /*order*/, enum CBLAS_TRANSPOSE trans_a,
           enum CBLAS_TRANSPOSE trans_b, const int m, const int n, const int k, const double alpha,
           const T* a, const T* b, const double beta, T* c) {
   int lda = 0;
@@ -60,12 +61,12 @@ void Gemm(DeviceCtx* ctx, const enum CBLAS_ORDER /*order*/, enum CBLAS_TRANSPOSE
 
   const T alpha_val = static_cast<T>(alpha);
   const T beta_val = static_cast<T>(beta);
-  cublas_gemm<T>(ctx->cublas_handle(), cublas_trans_b, cublas_trans_a, n, m, k, &alpha_val, b, ldb,
-                 a, lda, &beta_val, c, ldc);
+  cublas_gemm<T>(stream->As<ep::CudaStream>()->cublas_handle(), cublas_trans_b, cublas_trans_a, n,
+                 m, k, &alpha_val, b, ldb, a, lda, &beta_val, c, ldc);
 }
 
 template<>
-void Gemm(DeviceCtx* ctx, const enum CBLAS_ORDER /*order*/, enum CBLAS_TRANSPOSE trans_a,
+void Gemm(ep::Stream* stream, const enum CBLAS_ORDER /*order*/, enum CBLAS_TRANSPOSE trans_a,
           enum CBLAS_TRANSPOSE trans_b, const int m, const int n, const int k, const double alpha,
           const half* a, const half* b, const double beta, half* c) {
   const float alpha_f = static_cast<float>(alpha);
@@ -78,18 +79,19 @@ void Gemm(DeviceCtx* ctx, const enum CBLAS_ORDER /*order*/, enum CBLAS_TRANSPOSE
   std::tie(lda, ldb, ldc, cublas_trans_a, cublas_trans_b) =
       PrepareToCallCublasGemm(trans_a, trans_b, m, n, k);
 #if CUDA_VERSION < 11000
-  CublasMathModeGuard guard(ctx->cublas_handle(), CUBLAS_TENSOR_OP_MATH);
+  CublasMathModeGuard guard(stream->As<ep::CudaStream>()->cublas_handle(), CUBLAS_TENSOR_OP_MATH);
 #else
-  CublasMathModeGuard guard(ctx->cublas_handle(), CUBLAS_DEFAULT_MATH);
+  CublasMathModeGuard guard(stream->As<ep::CudaStream>()->cublas_handle(), CUBLAS_DEFAULT_MATH);
 #endif  // CUDA_VERSION < 11000
   if (GetCudaSmVersion() >= 500) {
-    OF_CUBLAS_CHECK(cublasGemmEx(ctx->cublas_handle(), cublas_trans_b, cublas_trans_a, n, m, k,
-                                 &alpha_f, b, CUDA_R_16F, ldb, a, CUDA_R_16F, lda, &beta_f, c,
-                                 CUDA_R_16F, ldc, CUDA_R_32F, CUBLAS_GEMM_DFALT_TENSOR_OP));
+    OF_CUBLAS_CHECK(cublasGemmEx(stream->As<ep::CudaStream>()->cublas_handle(), cublas_trans_b,
+                                 cublas_trans_a, n, m, k, &alpha_f, b, CUDA_R_16F, ldb, a,
+                                 CUDA_R_16F, lda, &beta_f, c, CUDA_R_16F, ldc, CUDA_R_32F,
+                                 CUBLAS_GEMM_DFALT_TENSOR_OP));
   } else {
-    OF_CUBLAS_CHECK(cublasSgemmEx(ctx->cublas_handle(), cublas_trans_b, cublas_trans_a, n, m, k,
-                                  &alpha_f, b, CUDA_R_16F, ldb, a, CUDA_R_16F, lda, &beta_f, c,
-                                  CUDA_R_16F, ldc));
+    OF_CUBLAS_CHECK(cublasSgemmEx(stream->As<ep::CudaStream>()->cublas_handle(), cublas_trans_b,
+                                  cublas_trans_a, n, m, k, &alpha_f, b, CUDA_R_16F, ldb, a,
+                                  CUDA_R_16F, lda, &beta_f, c, CUDA_R_16F, ldc));
   }
 }
 
@@ -109,24 +111,25 @@ OF_PP_FOR_EACH_TUPLE(SPECIALIZE_CUDA_DATA_TYPE, CUDA_DATA_TYPE_SEQ);
 
 }  // namespace
 
-void BlasIf<DeviceType::kGPU>::OFGemm(DeviceCtx* ctx, enum CBLAS_TRANSPOSE trans_a,
-                                      enum CBLAS_TRANSPOSE trans_b, const int m, const int n,
-                                      const int k, const double alpha, const float* a,
-                                      const float* b, const double beta, float* c) {
-  Gemm<float>(ctx, CblasRowMajor, trans_a, trans_b, m, n, k, alpha, a, b, beta, c);
+void BlasIf<DeviceType::kCUDA>::OFGemm(ep::Stream* stream, enum CBLAS_TRANSPOSE trans_a,
+                                       enum CBLAS_TRANSPOSE trans_b, const int m, const int n,
+                                       const int k, const double alpha, const float* a,
+                                       const float* b, const double beta, float* c) {
+  Gemm<float>(stream, CblasRowMajor, trans_a, trans_b, m, n, k, alpha, a, b, beta, c);
 }
-void BlasIf<DeviceType::kGPU>::OFGemm(DeviceCtx* ctx, enum CBLAS_TRANSPOSE trans_a,
-                                      enum CBLAS_TRANSPOSE trans_b, const int m, const int n,
-                                      const int k, const double alpha, const double* a,
-                                      const double* b, const double beta, double* c) {
-  Gemm<double>(ctx, CblasRowMajor, trans_a, trans_b, m, n, k, alpha, a, b, beta, c);
+void BlasIf<DeviceType::kCUDA>::OFGemm(ep::Stream* stream, enum CBLAS_TRANSPOSE trans_a,
+                                       enum CBLAS_TRANSPOSE trans_b, const int m, const int n,
+                                       const int k, const double alpha, const double* a,
+                                       const double* b, const double beta, double* c) {
+  Gemm<double>(stream, CblasRowMajor, trans_a, trans_b, m, n, k, alpha, a, b, beta, c);
 }
-void BlasIf<DeviceType::kGPU>::OFGemm(DeviceCtx* ctx, enum CBLAS_TRANSPOSE trans_a,
-                                      enum CBLAS_TRANSPOSE trans_b, const int m, const int n,
-                                      const int k, const double alpha, const float16* a,
-                                      const float16* b, const double beta, float16* c) {
-  Gemm<half>(ctx, CblasRowMajor, trans_a, trans_b, m, n, k, alpha, reinterpret_cast<const half*>(a),
-             reinterpret_cast<const half*>(b), beta, reinterpret_cast<half*>(c));
+void BlasIf<DeviceType::kCUDA>::OFGemm(ep::Stream* stream, enum CBLAS_TRANSPOSE trans_a,
+                                       enum CBLAS_TRANSPOSE trans_b, const int m, const int n,
+                                       const int k, const double alpha, const float16* a,
+                                       const float16* b, const double beta, float16* c) {
+  Gemm<half>(stream, CblasRowMajor, trans_a, trans_b, m, n, k, alpha,
+             reinterpret_cast<const half*>(a), reinterpret_cast<const half*>(b), beta,
+             reinterpret_cast<half*>(c));
 }
 
 }  // namespace oneflow

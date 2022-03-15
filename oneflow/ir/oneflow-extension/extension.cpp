@@ -14,16 +14,18 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 #include "mlir/Parser.h"
-#include "mlir/Dialect/Linalg/IR/LinalgTypes.h"
 #include "mlir/Dialect/StandardOps/IR/Ops.h"
+#include "mlir/Dialect/Linalg/IR/Linalg.h"
 #include "mlir/ExecutionEngine/ExecutionEngine.h"
 #include "mlir/ExecutionEngine/MemRefUtils.h"
 #include "mlir/Target/LLVMIR/Dialect/LLVMIR/LLVMToLLVMIRTranslation.h"
 #include "llvm/Support/TargetSelect.h"
 #include "OneFlow/OneFlowDialect.h"
+#include "oneflow/core/common/str_util.h"
 #include "oneflow/core/common/switch_func.h"
 #include "oneflow/core/framework/framework.h"
 #include "oneflow/core/kernel/new_kernel_util.h"
+#include "oneflow/core/persistence/tee_persistent_log_stream.h"
 #include "oneflow/ir/include/OneFlow/Passes.h"
 #include "oneflow/ir/include/OneFlow/Extension.h"
 
@@ -40,8 +42,8 @@ namespace {
 
 REGISTER_USER_OP("mlir_jit")
     .Attr<std::string>("mlir_assembly")
-    .InputWithMinimum("in", 0)
-    .OutputWithMinimum("out", 0)
+    .Input("in")
+    .Output("out")
     .SetTensorDescInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
       // TODO: infer shape by extracting Ops from mlir_assembly
       CHECK_EQ(ctx->inputs().size(), 2);
@@ -131,8 +133,8 @@ llvm::SmallVector<OpaqueMemRefDescriptor> GetMLIRCInterfaceArgs(
 }
 
 void WithMlirContext(
-    user_op::KernelComputeContext* ctx, llvm::SmallVector<llvm::StringRef, 4> ext_libs,
-    const std::function<mlir::OwningModuleRef(mlir::MLIRContext* mlir_ctx)>& parse,
+    user_op::KernelComputeContext* ctx, const llvm::SmallVector<llvm::StringRef, 4>& ext_libs,
+    const std::function<mlir::OwningOpRef<mlir::ModuleOp>(mlir::MLIRContext* mlir_ctx)>& parse,
     const std::function<void(mlir::MLIRContext* mlir_ctx, mlir::ModuleOp module)>& lower) {
   mlir::DialectRegistry registry;
   registry
@@ -140,13 +142,19 @@ void WithMlirContext(
               mlir::tosa::TosaDialect, mlir::linalg::LinalgDialect>();
   mlir::registerLLVMDialectTranslation(registry);
   mlir::MLIRContext mlir_ctx(registry);
-  mlir::OwningModuleRef module = parse(&mlir_ctx);
+  mlir::OwningOpRef<mlir::ModuleOp> module = parse(&mlir_ctx);
   CHECK(!!module) << "fail to parse MLIR, op: " << ctx->op_name();
   if (ParseBooleanFromEnv("ONEFLOW_MLIR_STDOUT", false)) { module->print(llvm::outs()); }
   llvm::InitializeNativeTarget();
   llvm::InitializeNativeTargetAsmPrinter();
   lower(&mlir_ctx, *module);
   if (ParseBooleanFromEnv("ONEFLOW_MLIR_STDOUT", false)) { module->print(llvm::outs()); }
+  if (ParseBooleanFromEnv("ONEFLOW_MLIR_DUMP_IR", false)) {
+    std::string mlir;
+    llvm::raw_string_ostream os_mlir(mlir);
+    module->print(os_mlir);
+    TeePersistentLogStream::Create(JoinPath("jit", ctx->op_name() + ".mlir"))->Write(mlir);
+  }
   auto jit_or_error = mlir::ExecutionEngine::create(
       /* m */ *module, /* llvmModuleBuilder */ nullptr, /* transformer */ {},
       /* jitCodeGenOptLevel */ llvm::None, /* sharedLibPaths */ ext_libs);
@@ -169,8 +177,10 @@ class MlirJitCpuKernel final : public user_op::OpKernel {
 
  private:
   void Compute(user_op::KernelComputeContext* ctx) const override {
+    llvm::SmallVector<llvm::StringRef, 4> ext_libs(
+        {SharedLibPaths()->begin(), SharedLibPaths()->end()});
     WithMlirContext(
-        ctx, {},
+        ctx, ext_libs,
         [&ctx](mlir::MLIRContext* mlir_ctx) {
           return mlir::parseSourceString<mlir::ModuleOp>(ctx->Attr<std::string>("mlir_assembly"),
                                                          mlir_ctx);
@@ -186,8 +196,8 @@ class MlirJitCpuKernel final : public user_op::OpKernel {
 #define REGISTER_MLIR_JIT_CPU_KERNEL(dtype)                                                     \
   REGISTER_USER_KERNEL("mlir_jit")                                                              \
       .SetCreateFn<MlirJitCpuKernel<dtype>>()                                                   \
-      .SetIsMatchedHob((user_op::HobDeviceTag() == DeviceType::kCPU)                            \
-                       & (user_op::HobDataType("out", 0) == GetDataType<dtype>::value))         \
+      .SetIsMatchedHob((user_op::HobDeviceType() == DeviceType::kCPU)                           \
+                       && (user_op::HobDataType("out", 0) == GetDataType<dtype>::value))        \
       .SetInplaceProposalFn([](const user_op::InferContext&,                                    \
                                user_op::AddInplaceArgPair AddInplaceArgPairFn) -> Maybe<void> { \
         return Maybe<void>::Ok();                                                               \
@@ -229,8 +239,8 @@ class MlirJitGpuKernel final : public user_op::OpKernel {
 #define REGISTER_MLIR_JIT_GPU_KERNEL(dtype)                                                     \
   REGISTER_USER_KERNEL("mlir_jit")                                                              \
       .SetCreateFn<MlirJitGpuKernel<dtype>>()                                                   \
-      .SetIsMatchedHob((user_op::HobDeviceTag() == DeviceType::kGPU)                            \
-                       & (user_op::HobDataType("out", 0) == GetDataType<dtype>::value))         \
+      .SetIsMatchedHob((user_op::HobDeviceType() == DeviceType::kCUDA)                          \
+                       && (user_op::HobDataType("out", 0) == GetDataType<dtype>::value))        \
       .SetInplaceProposalFn([](const user_op::InferContext&,                                    \
                                user_op::AddInplaceArgPair AddInplaceArgPairFn) -> Maybe<void> { \
         return Maybe<void>::Ok();                                                               \

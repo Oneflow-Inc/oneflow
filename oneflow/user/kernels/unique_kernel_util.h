@@ -17,19 +17,20 @@ limitations under the License.
 #define ONEFLOW_USER_KERNELS_UNIQUE_KERNEL_UTIL_H_
 
 #include "oneflow/core/kernel/kernel_util.h"
+#include "oneflow/core/ep/include/stream.h"
 
 namespace oneflow {
 
 template<DeviceType device_type, typename KEY, typename IDX>
 struct UniqueKernelUtil {
-  static void Unique(DeviceCtx* ctx, int64_t n, const KEY* in, IDX* num_unique, KEY* unique_out,
+  static void Unique(ep::Stream* stream, int64_t n, const KEY* in, IDX* num_unique, KEY* unique_out,
                      IDX* idx_out, void* workspace, int64_t workspace_size_in_bytes);
-  static void UniqueWithCounts(DeviceCtx* ctx, int64_t n, const KEY* in, IDX* num_unique,
+  static void UniqueWithCounts(ep::Stream* stream, int64_t n, const KEY* in, IDX* num_unique,
                                KEY* unique_out, IDX* idx_out, IDX* count, void* workspace,
                                int64_t workspace_size_in_bytes);
-  static void GetUniqueWorkspaceSizeInBytes(DeviceCtx* ctx, int64_t n,
+  static void GetUniqueWorkspaceSizeInBytes(ep::Stream* stream, int64_t n,
                                             int64_t* workspace_size_in_bytes);
-  static void GetUniqueWithCountsWorkspaceSizeInBytes(DeviceCtx* ctx, int64_t n,
+  static void GetUniqueWithCountsWorkspaceSizeInBytes(ep::Stream* stream, int64_t n,
                                                       int64_t* workspace_size_in_bytes);
 };
 

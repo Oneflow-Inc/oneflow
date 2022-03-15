@@ -37,7 +37,7 @@ class BroadcastLikeKernel final : public user_op::OpKernel, public user_op::Cuda
     const Shape& reduced_shape =
         CreateReducedShapeOrOnesShape(like_tensor->shape(), {axis.begin(), axis.end()});
     NdarrayUtil<device_type, T>::BroadcastTo(
-        ctx->device_ctx(), XpuVarNdarray<T>(out_tensor->shape(), out_tensor->mut_dptr<T>()),
+        ctx->stream(), XpuVarNdarray<T>(out_tensor->shape(), out_tensor->mut_dptr<T>()),
         XpuVarNdarray<const T>(reduced_shape, in_tensor->dptr<T>()));
   }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
@@ -45,16 +45,16 @@ class BroadcastLikeKernel final : public user_op::OpKernel, public user_op::Cuda
 
 }  // namespace
 
-#define REGISTER_BROADCAST_LIKE_XPU_KERNEL(device, dtype)  \
-  REGISTER_USER_KERNEL("broadcast_like")                   \
-      .SetCreateFn<BroadcastLikeKernel<device, dtype>>()   \
-      .SetIsMatchedHob((user_op::HobDeviceTag() == device) \
-                       & (user_op::HobDataType("y", 0) == GetDataType<dtype>::value));
+#define REGISTER_BROADCAST_LIKE_XPU_KERNEL(device, dtype)   \
+  REGISTER_USER_KERNEL("broadcast_like")                    \
+      .SetCreateFn<BroadcastLikeKernel<device, dtype>>()    \
+      .SetIsMatchedHob((user_op::HobDeviceType() == device) \
+                       && (user_op::HobDataType("y", 0) == GetDataType<dtype>::value));
 
 #ifdef WITH_CUDA
 #define REGISTER_BROADCAST_LIKE_KERNEL(dtype)                 \
   REGISTER_BROADCAST_LIKE_XPU_KERNEL(DeviceType::kCPU, dtype) \
-  REGISTER_BROADCAST_LIKE_XPU_KERNEL(DeviceType::kGPU, dtype)
+  REGISTER_BROADCAST_LIKE_XPU_KERNEL(DeviceType::kCUDA, dtype)
 #else
 #define REGISTER_BROADCAST_LIKE_KERNEL(dtype) \
   REGISTER_BROADCAST_LIKE_XPU_KERNEL(DeviceType::kCPU, dtype)
@@ -63,6 +63,7 @@ class BroadcastLikeKernel final : public user_op::OpKernel, public user_op::Cuda
 REGISTER_BROADCAST_LIKE_KERNEL(float)
 REGISTER_BROADCAST_LIKE_KERNEL(float16)
 REGISTER_BROADCAST_LIKE_KERNEL(double)
+REGISTER_BROADCAST_LIKE_KERNEL(bool)
 REGISTER_BROADCAST_LIKE_KERNEL(int8_t)
 REGISTER_BROADCAST_LIKE_KERNEL(int32_t)
 REGISTER_BROADCAST_LIKE_KERNEL(int64_t)

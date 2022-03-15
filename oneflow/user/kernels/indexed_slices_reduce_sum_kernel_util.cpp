@@ -26,7 +26,7 @@ int64_t GetUniqueIdxSize(int64_t n) {
 
 template<DeviceType device_type, typename K, typename T, typename IDX>
 void IndexedSlicesReduceSumKernelUtil<device_type, K, T, IDX>::ReduceSum(
-    DeviceCtx* ctx, int64_t n, int64_t m, const K* indices, const T* values,
+    ep::Stream* stream, int64_t n, int64_t m, const K* indices, const T* values,
     IDX* num_unique_indices, K* indices_out, T* values_out, void* workspace,
     int64_t workspace_size_in_bytes) {
   const int64_t unique_idx_size = GetUniqueIdxSize<IDX>(n);
@@ -34,21 +34,21 @@ void IndexedSlicesReduceSumKernelUtil<device_type, K, T, IDX>::ReduceSum(
   IDX* unique_idx_ptr = reinterpret_cast<IDX*>(workspace);
   void* unique_workspace_ptr = reinterpret_cast<unsigned char*>(workspace) + unique_idx_size;
   const int64_t unique_workspace_size = workspace_size_in_bytes - unique_idx_size;
-  UniqueKernelUtil<device_type, K, IDX>::Unique(ctx, n, indices, num_unique_indices, indices_out,
+  UniqueKernelUtil<device_type, K, IDX>::Unique(stream, n, indices, num_unique_indices, indices_out,
                                                 unique_idx_ptr, unique_workspace_ptr,
                                                 unique_workspace_size);
   const Shape flat_in_shape({1, n, m});
-  Memset<device_type>(ctx, values_out, 0, n * m * sizeof(T));
+  Memset<device_type>(stream, values_out, 0, n * m * sizeof(T));
 
   UnsortedSegmentSumKernelUtil<device_type, T, IDX, T>::UnsortedSegmentSum(
-      ctx, unique_idx_ptr, values, n, n, 1, m, 0, values_out);
+      stream, unique_idx_ptr, values, n, n, 1, m, 0, values_out);
 }
 
 template<DeviceType device_type, typename K, typename T, typename IDX>
 void IndexedSlicesReduceSumKernelUtil<device_type, K, T, IDX>::GetReduceSumWorkspaceSizeInBytes(
-    DeviceCtx* ctx, int64_t n, int64_t m, int64_t* workspace_size_in_bytes) {
+    ep::Stream* stream, int64_t n, int64_t m, int64_t* workspace_size_in_bytes) {
   int64_t unique_workspace_size;
-  UniqueKernelUtil<device_type, K, int64_t>::GetUniqueWorkspaceSizeInBytes(ctx, n,
+  UniqueKernelUtil<device_type, K, int64_t>::GetUniqueWorkspaceSizeInBytes(stream, n,
                                                                            &unique_workspace_size);
   *workspace_size_in_bytes = GetUniqueIdxSize<IDX>(n) + unique_workspace_size;
 }

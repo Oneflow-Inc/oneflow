@@ -27,8 +27,8 @@ namespace oneflow {
   FLOATING_DATA_TYPE_SEQ          \
   OF_PP_MAKE_TUPLE_SEQ(int32_t, DataType::kInt32)
 
-#define PADDING_DATA_TYPE_GPU_SEQ \
-  FLOAT16_DATA_TYPE_SEQ           \
+#define PADDING_DATA_TYPE_CUDA_SEQ \
+  FLOAT16_DATA_TYPE_SEQ            \
   PADDING_DATA_TYPE_CPU_SEQ
 
 namespace user_op {
@@ -46,7 +46,7 @@ struct DeviceAdd {
 
 template<DeviceType device_type, typename IN_T>
 struct ReflectionPad2dFunctor final {
-  void operator()(DeviceCtx* ctx, const IN_T* src, IN_T* dest,
+  void operator()(ep::Stream* stream, const IN_T* src, IN_T* dest,
                   const NdIndexOffsetHelper<int64_t, 4>& index_helper, int64_t n_batch,
                   int64_t n_channel, int64_t y_height, int64_t y_width, int64_t x_height,
                   int64_t x_width, int64_t pad_left, int64_t pad_top);
@@ -54,7 +54,7 @@ struct ReflectionPad2dFunctor final {
 
 template<DeviceType device_type, typename IN_T>
 struct ReflectionPad2dGradFunctor final {
-  void operator()(DeviceCtx* ctx, const IN_T* src, IN_T* dest,
+  void operator()(ep::Stream* stream, const IN_T* src, IN_T* dest,
                   const NdIndexOffsetHelper<int64_t, 4>& index_helper, int64_t n_batch,
                   int64_t n_channel, int64_t dy_height, int64_t dy_width, int64_t dx_height,
                   int64_t dx_width, int64_t pad_left, int64_t pad_top);
@@ -144,7 +144,7 @@ OF_DEVICE_FUNC void DoReflectionPad2dGrad(const IN_T* src, IN_T* dest,
 
 template<DeviceType device_type, typename IN_T>
 struct ReplicationPad2dFunctor final {
-  void operator()(DeviceCtx* ctx, const IN_T* src, IN_T* dest,
+  void operator()(ep::Stream* stream, const IN_T* src, IN_T* dest,
                   const NdIndexOffsetHelper<int64_t, 4>& index_helper, int64_t n_batch,
                   int64_t n_channel, int64_t y_height, int64_t y_width, int64_t x_height,
                   int64_t x_width, int64_t pad_left, int64_t pad_top);
@@ -152,7 +152,7 @@ struct ReplicationPad2dFunctor final {
 
 template<DeviceType device_type, typename IN_T>
 struct ReplicationPad2dGradFunctor final {
-  void operator()(DeviceCtx* ctx, const IN_T* src, IN_T* dest,
+  void operator()(ep::Stream* stream, const IN_T* src, IN_T* dest,
                   const NdIndexOffsetHelper<int64_t, 4>& index_helper, int64_t n_batch,
                   int64_t n_channel, int64_t dy_height, int64_t dy_width, int64_t dx_height,
                   int64_t dx_width, int64_t pad_left, int64_t pad_top);
@@ -243,7 +243,7 @@ OF_DEVICE_FUNC void DoReplicationPad2dGrad(const IN_T* src, IN_T* dest,
 
 template<DeviceType device_type, typename IN_T>
 struct ConstantPad2dFunctor final {
-  void operator()(DeviceCtx* ctx, const IN_T* src, IN_T* dest,
+  void operator()(ep::Stream* stream, const IN_T* src, IN_T* dest,
                   const NdIndexOffsetHelper<int64_t, 4>& index_helper, int64_t n_batch,
                   int64_t n_channel, int64_t y_height, int64_t y_width, int64_t x_height,
                   int64_t x_width, int64_t pad_left, int64_t pad_top, IN_T constant_value);
@@ -251,7 +251,7 @@ struct ConstantPad2dFunctor final {
 
 template<DeviceType device_type, typename IN_T>
 struct ConstantPad2dGradFunctor final {
-  void operator()(DeviceCtx* ctx, const IN_T* src, IN_T* dest,
+  void operator()(ep::Stream* stream, const IN_T* src, IN_T* dest,
                   const NdIndexOffsetHelper<int64_t, 4>& index_helper, int64_t n_batch,
                   int64_t n_channel, int64_t dy_height, int64_t dy_width, int64_t dx_height,
                   int64_t dx_width, int64_t pad_left, int64_t pad_top);

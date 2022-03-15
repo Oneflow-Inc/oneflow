@@ -19,13 +19,13 @@ limitations under the License.
 
 namespace oneflow {
 
-bool SubTskGphBuilderUtil::IsDeviceTypeCPUOrGPU(const ParallelDesc& parallel_desc) {
+bool SubTskGphBuilderUtil::IsDeviceTypeCPUOrCUDA(const ParallelDesc& parallel_desc) {
   return parallel_desc.device_type() == DeviceType::kCPU
-         || parallel_desc.device_type() == DeviceType::kGPU;
+         || parallel_desc.device_type() == DeviceType::kCUDA;
 }
 
 bool SubTskGphBuilderUtil::HasEmptySliceIfSplit(int64_t parallel_num,
-                                                const cfg::SbpParallel& sbp_parallel,
+                                                const SbpParallel& sbp_parallel,
                                                 const BlobDesc& blob_desc) {
   if (sbp_parallel.has_split_parallel()) {
     return blob_desc.shape().At(sbp_parallel.split_parallel().axis()) < parallel_num;
@@ -34,32 +34,32 @@ bool SubTskGphBuilderUtil::HasEmptySliceIfSplit(int64_t parallel_num,
   }
 }
 
-bool SubTskGphBuilderUtil::IsOnSameGPU(const TaskNode* lhs, const TaskNode* rhs) {
+bool SubTskGphBuilderUtil::IsOnSameCUDADevice(const TaskNode* lhs, const TaskNode* rhs) {
   return lhs->stream_id().device_id() == rhs->stream_id().device_id()
-         && lhs->stream_id().device_id().device_type() == DeviceType::kGPU;
+         && lhs->stream_id().device_id().device_type() == DeviceType::kCUDA;
 }
 
-bool SubTskGphBuilderUtil::IsBoxingS2S(const cfg::SbpParallel& src, const cfg::SbpParallel& dst) {
+bool SubTskGphBuilderUtil::IsBoxingS2S(const SbpParallel& src, const SbpParallel& dst) {
   return src.has_split_parallel() && dst.has_split_parallel();
 }
 
-bool SubTskGphBuilderUtil::IsBoxingS2B(const cfg::SbpParallel& src, const cfg::SbpParallel& dst) {
+bool SubTskGphBuilderUtil::IsBoxingS2B(const SbpParallel& src, const SbpParallel& dst) {
   return src.has_split_parallel() && dst.has_broadcast_parallel();
 }
 
-bool SubTskGphBuilderUtil::IsBoxingP2S(const cfg::SbpParallel& src, const cfg::SbpParallel& dst) {
+bool SubTskGphBuilderUtil::IsBoxingP2S(const SbpParallel& src, const SbpParallel& dst) {
   return src.has_partial_sum_parallel() && dst.has_split_parallel();
 }
 
-bool SubTskGphBuilderUtil::IsBoxingP2B(const cfg::SbpParallel& src, const cfg::SbpParallel& dst) {
+bool SubTskGphBuilderUtil::IsBoxingP2B(const SbpParallel& src, const SbpParallel& dst) {
   return src.has_partial_sum_parallel() && dst.has_broadcast_parallel();
 }
 
-bool SubTskGphBuilderUtil::IsBoxingB2B(const cfg::SbpParallel& src, const cfg::SbpParallel& dst) {
+bool SubTskGphBuilderUtil::IsBoxingB2B(const SbpParallel& src, const SbpParallel& dst) {
   return src.has_broadcast_parallel() && dst.has_broadcast_parallel();
 }
 
-bool SubTskGphBuilderUtil::IsBoxingB2S(const cfg::SbpParallel& src, const cfg::SbpParallel& dst) {
+bool SubTskGphBuilderUtil::IsBoxingB2S(const SbpParallel& src, const SbpParallel& dst) {
   return src.has_broadcast_parallel() && dst.has_split_parallel();
 }
 

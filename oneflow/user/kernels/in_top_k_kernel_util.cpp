@@ -14,13 +14,14 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 #include "oneflow/user/kernels/in_top_k_kernel_util.h"
+#include "oneflow/core/common/data_type_seq.h"
 
 namespace oneflow {
 
 template<typename T>
 struct InTopkKernelUtil<DeviceType::kCPU, T> {
-  static void InTopk(DeviceCtx* ctx, const int instance_num, const int classes_num,
-                     const T* targets, const float* predictions, const int k, int8_t* out) {
+  static void InTopk(ep::Stream* stream, const int instance_num, const int classes_num,
+                     const T* targets, const float* predictions, const int k, bool* out) {
     FOR_RANGE(int32_t, idx, 0, instance_num) {
       T target = targets[idx];
       bool cannot_say =

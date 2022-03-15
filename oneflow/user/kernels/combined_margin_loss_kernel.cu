@@ -17,6 +17,7 @@ limitations under the License.
 #include "oneflow/core/common/balanced_splitter.h"
 #include "oneflow/core/kernel/kernel_util.h"
 #include "oneflow/user/kernels/math_unary_elementwise_func.h"
+#include "oneflow/core/ep/cuda/cuda_stream.h"
 
 namespace oneflow {
 
@@ -66,10 +67,10 @@ __global__ void GpuBackward(const int64_t n, const int64_t num_classes, const in
   }
 }
 
-class CombinedMarginLossOpKernelState final : public user_op::OpKernelState {
+class CombinedMarginLossOpKernelCache final : public user_op::OpKernelCache {
  public:
-  CombinedMarginLossOpKernelState(int64_t lower, int64_t upper) : lower_(lower), upper_(upper) {}
-  ~CombinedMarginLossOpKernelState() override = default;
+  CombinedMarginLossOpKernelCache(int64_t lower, int64_t upper) : lower_(lower), upper_(upper) {}
+  ~CombinedMarginLossOpKernelCache() override = default;
 
   int64_t lower() const { return lower_; }
   int64_t upper() const { return upper_; }
@@ -79,13 +80,11 @@ class CombinedMarginLossOpKernelState final : public user_op::OpKernelState {
   const int64_t upper_;
 };
 
-std::shared_ptr<user_op::OpKernelState> CreateCombinedMarginLossOpKernelState(
-    user_op::KernelInitContext* ctx, const std::string& in_arg_name) {
-  if (ctx->parallel_ctx().parallel_num() == 1) {
-    return std::shared_ptr<user_op::OpKernelState>(nullptr);
-  }
+std::shared_ptr<user_op::OpKernelCache> CreateCombinedMarginLossOpKernelCache(
+    user_op::KernelCacheContext* ctx, const std::string& in_arg_name) {
+  if (ctx->parallel_ctx().parallel_num() == 1) { return nullptr; }
 
-  const cfg::SbpParallel& in_sbp = ctx->SbpParallel4ArgNameAndIndex(in_arg_name, 0);
+  const SbpParallel& in_sbp = ctx->SbpParallel4ArgNameAndIndex(in_arg_name, 0);
   if (in_sbp.has_split_parallel() && in_sbp.split_parallel().axis() == 1
       && ctx->parallel_ctx().parallel_num() > 1) {
     CHECK(ctx->SbpParallel4ArgNameAndIndex("label", 0).has_broadcast_parallel());
@@ -94,11 +93,11 @@ std::shared_ptr<user_op::OpKernelState> CreateCombinedMarginLossOpKernelState(
     const auto depth = ctx->Attr<int64_t>("depth");
     CHECK_EQ(depth, in_logical_desc->shape().At(1));
     BalancedSplitter bs(depth, ctx->parallel_ctx().parallel_num());
-    return std::make_shared<CombinedMarginLossOpKernelState>(
+    return std::make_shared<CombinedMarginLossOpKernelCache>(
         bs.At(ctx->parallel_ctx().parallel_id()).begin(),
         bs.At(ctx->parallel_ctx().parallel_id()).end());
   } else {
-    return std::shared_ptr<user_op::OpKernelState>(nullptr);
+    return nullptr;
   }
 }
 
@@ -110,14 +109,15 @@ class CombinedMarginLossGpuKernel final : public user_op::OpKernel {
   CombinedMarginLossGpuKernel() = default;
   ~CombinedMarginLossGpuKernel() override = default;
 
-  std::shared_ptr<user_op::OpKernelState> CreateOpKernelState(
-      user_op::KernelInitContext* ctx) const override {
-    return CreateCombinedMarginLossOpKernelState(ctx, "x");
+  std::shared_ptr<user_op::OpKernelCache> InitOpKernelCache(
+      user_op::KernelCacheContext* ctx) const override {
+    return CreateCombinedMarginLossOpKernelCache(ctx, "x");
   }
 
  private:
   using user_op::OpKernel::Compute;
-  void Compute(user_op::KernelComputeContext* ctx, user_op::OpKernelState* state) const override {
+  void Compute(user_op::KernelComputeContext* ctx, user_op::OpKernelState*,
+               const user_op::OpKernelCache* cache) const override {
     const user_op::Tensor* x = ctx->Tensor4ArgNameAndIndex("x", 0);
     const user_op::Tensor* label = ctx->Tensor4ArgNameAndIndex("label", 0);
     user_op::Tensor* y = ctx->Tensor4ArgNameAndIndex("y", 0);
@@ -126,38 +126,39 @@ class CombinedMarginLossGpuKernel final : public user_op::OpKernel {
     const float m2 = ctx->Attr<float>("m2");
     const float m3 = ctx->Attr<float>("m3");
     int64_t lower_bound = 0;
-    if (state != nullptr) {
-      auto* kernel_state = dynamic_cast<CombinedMarginLossOpKernelState*>(state);
-      CHECK_NOTNULL(kernel_state);
-      CHECK_EQ(x->shape().Count(1), kernel_state->upper() - kernel_state->lower());
-      lower_bound = kernel_state->lower();
+    if (cache != nullptr) {
+      auto* kernel_cache = dynamic_cast<const CombinedMarginLossOpKernelCache*>(cache);
+      CHECK_NOTNULL(kernel_cache);
+      CHECK_EQ(x->shape().Count(1), kernel_cache->upper() - kernel_cache->lower());
+      lower_bound = kernel_cache->lower();
     }
     if (m1 == 1.0 && m2 == 0.0) {
       GpuForward<T, K, true><<<BlocksNum4ThreadsNum(x->shape().elem_cnt()), kCudaThreadsNumPerBlock,
-                               0, ctx->device_ctx()->cuda_stream()>>>(
+                               0, ctx->stream()->As<ep::CudaStream>()->cuda_stream()>>>(
           x->shape().elem_cnt(), x->shape().Count(1), lower_bound, static_cast<T>(m1),
           static_cast<T>(m2), static_cast<T>(m3), x->dptr<T>(), label->dptr<K>(), y->mut_dptr<T>(),
           theta->mut_dptr<T>());
     } else {
-      GpuForward<T, K, false><<<BlocksNum4ThreadsNum(x->shape().elem_cnt()),
-                                kCudaThreadsNumPerBlock, 0, ctx->device_ctx()->cuda_stream()>>>(
-          x->shape().elem_cnt(), x->shape().Count(1), lower_bound, static_cast<T>(m1),
-          static_cast<T>(m2), static_cast<T>(m3), x->dptr<T>(), label->dptr<K>(), y->mut_dptr<T>(),
-          theta->mut_dptr<T>());
+      GpuForward<T, K, false>
+          <<<BlocksNum4ThreadsNum(x->shape().elem_cnt()), kCudaThreadsNumPerBlock, 0,
+             ctx->stream()->As<ep::CudaStream>()->cuda_stream()>>>(
+              x->shape().elem_cnt(), x->shape().Count(1), lower_bound, static_cast<T>(m1),
+              static_cast<T>(m2), static_cast<T>(m3), x->dptr<T>(), label->dptr<K>(),
+              y->mut_dptr<T>(), theta->mut_dptr<T>());
     }
   }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
 
-#define REGISTER_COMBINED_MARGIN_LOSS_GPU_KERNEL(in_type, indices_type)               \
-  REGISTER_USER_KERNEL("combined_margin_loss")                                        \
-      .SetCreateFn<CombinedMarginLossGpuKernel<OF_PP_PAIR_FIRST(in_type),             \
-                                               OF_PP_PAIR_FIRST(indices_type)>>()     \
-      .SetIsMatchedHob((user_op::HobDeviceTag() == "gpu")                             \
-                       & (user_op::HobDataType("x", 0) == OF_PP_PAIR_SECOND(in_type)) \
-                       & (user_op::HobDataType("label", 0) == OF_PP_PAIR_SECOND(indices_type)));
+#define REGISTER_COMBINED_MARGIN_LOSS_CUDA_KERNEL(in_type, indices_type)               \
+  REGISTER_USER_KERNEL("combined_margin_loss")                                         \
+      .SetCreateFn<CombinedMarginLossGpuKernel<OF_PP_PAIR_FIRST(in_type),              \
+                                               OF_PP_PAIR_FIRST(indices_type)>>()      \
+      .SetIsMatchedHob((user_op::HobDeviceType() == DeviceType::kCUDA)                 \
+                       && (user_op::HobDataType("x", 0) == OF_PP_PAIR_SECOND(in_type)) \
+                       && (user_op::HobDataType("label", 0) == OF_PP_PAIR_SECOND(indices_type)));
 
-OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(REGISTER_COMBINED_MARGIN_LOSS_GPU_KERNEL, FLOATING_DATA_TYPE_SEQ,
+OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(REGISTER_COMBINED_MARGIN_LOSS_CUDA_KERNEL, FLOATING_DATA_TYPE_SEQ,
                                  INDEX_DATA_TYPE_SEQ)
 
 template<typename T, typename K>
@@ -166,14 +167,15 @@ class CombinedMarginLossGradGpuKernel final : public user_op::OpKernel {
   CombinedMarginLossGradGpuKernel() = default;
   ~CombinedMarginLossGradGpuKernel() override = default;
 
-  std::shared_ptr<user_op::OpKernelState> CreateOpKernelState(
-      user_op::KernelInitContext* ctx) const override {
-    return CreateCombinedMarginLossOpKernelState(ctx, "dy");
+  std::shared_ptr<user_op::OpKernelCache> InitOpKernelCache(
+      user_op::KernelCacheContext* ctx) const override {
+    return CreateCombinedMarginLossOpKernelCache(ctx, "dy");
   }
 
  private:
   using user_op::OpKernel::Compute;
-  void Compute(user_op::KernelComputeContext* ctx, user_op::OpKernelState* state) const override {
+  void Compute(user_op::KernelComputeContext* ctx, user_op::OpKernelState*,
+               const user_op::OpKernelCache* cache) const override {
     const user_op::Tensor* dy = ctx->Tensor4ArgNameAndIndex("dy", 0);
     const user_op::Tensor* label = ctx->Tensor4ArgNameAndIndex("label", 0);
     const user_op::Tensor* theta = ctx->Tensor4ArgNameAndIndex("theta", 0);
@@ -182,38 +184,40 @@ class CombinedMarginLossGradGpuKernel final : public user_op::OpKernel {
     const float m2 = ctx->Attr<float>("m2");
     const float m3 = ctx->Attr<float>("m3");
     int64_t lower_bound = 0;
-    if (state != nullptr) {
-      auto* kernel_state = dynamic_cast<CombinedMarginLossOpKernelState*>(state);
-      CHECK_NOTNULL(kernel_state);
-      CHECK_EQ(dy->shape().Count(1), kernel_state->upper() - kernel_state->lower());
-      lower_bound = kernel_state->lower();
+    if (cache != nullptr) {
+      auto* kernel_cache = dynamic_cast<const CombinedMarginLossOpKernelCache*>(cache);
+      CHECK_NOTNULL(kernel_cache);
+      CHECK_EQ(dy->shape().Count(1), kernel_cache->upper() - kernel_cache->lower());
+      lower_bound = kernel_cache->lower();
     }
     if (m1 == 1.0 && m2 == 0.0) {
-      GpuBackward<T, K, true><<<BlocksNum4ThreadsNum(dy->shape().elem_cnt()),
-                                kCudaThreadsNumPerBlock, 0, ctx->device_ctx()->cuda_stream()>>>(
-          dy->shape().elem_cnt(), dy->shape().Count(1), lower_bound, static_cast<T>(m1),
-          static_cast<T>(m2), static_cast<T>(m3), dy->dptr<T>(), label->dptr<K>(), theta->dptr<T>(),
-          dx->mut_dptr<T>());
+      GpuBackward<T, K, true>
+          <<<BlocksNum4ThreadsNum(dy->shape().elem_cnt()), kCudaThreadsNumPerBlock, 0,
+             ctx->stream()->As<ep::CudaStream>()->cuda_stream()>>>(
+              dy->shape().elem_cnt(), dy->shape().Count(1), lower_bound, static_cast<T>(m1),
+              static_cast<T>(m2), static_cast<T>(m3), dy->dptr<T>(), label->dptr<K>(),
+              theta->dptr<T>(), dx->mut_dptr<T>());
     } else {
-      GpuBackward<T, K, false><<<BlocksNum4ThreadsNum(dy->shape().elem_cnt()),
-                                 kCudaThreadsNumPerBlock, 0, ctx->device_ctx()->cuda_stream()>>>(
-          dy->shape().elem_cnt(), dy->shape().Count(1), lower_bound, static_cast<T>(m1),
-          static_cast<T>(m2), static_cast<T>(m3), dy->dptr<T>(), label->dptr<K>(), theta->dptr<T>(),
-          dx->mut_dptr<T>());
+      GpuBackward<T, K, false>
+          <<<BlocksNum4ThreadsNum(dy->shape().elem_cnt()), kCudaThreadsNumPerBlock, 0,
+             ctx->stream()->As<ep::CudaStream>()->cuda_stream()>>>(
+              dy->shape().elem_cnt(), dy->shape().Count(1), lower_bound, static_cast<T>(m1),
+              static_cast<T>(m2), static_cast<T>(m3), dy->dptr<T>(), label->dptr<K>(),
+              theta->dptr<T>(), dx->mut_dptr<T>());
     }
   }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
 
-#define REGISTER_COMBINED_MARGIN_LOSS_GRAD_GPU_KERNEL(dy_type, indices_type)           \
-  REGISTER_USER_KERNEL("combined_margin_loss_grad")                                    \
-      .SetCreateFn<CombinedMarginLossGradGpuKernel<OF_PP_PAIR_FIRST(dy_type),          \
-                                                   OF_PP_PAIR_FIRST(indices_type)>>()  \
-      .SetIsMatchedHob((user_op::HobDeviceTag() == "gpu")                              \
-                       & (user_op::HobDataType("dy", 0) == OF_PP_PAIR_SECOND(dy_type)) \
-                       & (user_op::HobDataType("label", 0) == OF_PP_PAIR_SECOND(indices_type)));
+#define REGISTER_COMBINED_MARGIN_LOSS_GRAD_CUDA_KERNEL(dy_type, indices_type)           \
+  REGISTER_USER_KERNEL("combined_margin_loss_grad")                                     \
+      .SetCreateFn<CombinedMarginLossGradGpuKernel<OF_PP_PAIR_FIRST(dy_type),           \
+                                                   OF_PP_PAIR_FIRST(indices_type)>>()   \
+      .SetIsMatchedHob((user_op::HobDeviceType() == DeviceType::kCUDA)                  \
+                       && (user_op::HobDataType("dy", 0) == OF_PP_PAIR_SECOND(dy_type)) \
+                       && (user_op::HobDataType("label", 0) == OF_PP_PAIR_SECOND(indices_type)));
 
-OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(REGISTER_COMBINED_MARGIN_LOSS_GRAD_GPU_KERNEL,
+OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(REGISTER_COMBINED_MARGIN_LOSS_GRAD_CUDA_KERNEL,
                                  FLOATING_DATA_TYPE_SEQ, INDEX_DATA_TYPE_SEQ)
 
 }  // namespace oneflow

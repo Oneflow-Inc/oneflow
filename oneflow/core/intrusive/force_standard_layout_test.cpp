@@ -17,6 +17,7 @@ limitations under the License.
 // caused by the following trick
 // reference: https://gcc.gnu.org/bugzilla/show_bug.cgi?id=65899
 #include <sstream>
+#include "gtest/gtest.h"
 #include "oneflow/core/common/util.h"
 #include "oneflow/core/intrusive/force_standard_layout.h"
 

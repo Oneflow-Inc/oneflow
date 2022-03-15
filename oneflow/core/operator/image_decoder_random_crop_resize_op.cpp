@@ -35,9 +35,9 @@ Maybe<void> InferBlobDescs(const OperatorConf& op_conf,
   *out = *in;
   out->set_data_type(DataType::kUInt8);
   DimVector out_dim_vec = in->shape().dim_vec();
-  out_dim_vec.push_back(conf.target_height());
-  out_dim_vec.push_back(conf.target_width());
-  out_dim_vec.push_back(3);
+  out_dim_vec.emplace_back(conf.target_height());
+  out_dim_vec.emplace_back(conf.target_width());
+  out_dim_vec.emplace_back(3);
   out->mut_shape() = Shape(out_dim_vec);
   return Maybe<void>::Ok();
 }
@@ -83,7 +83,7 @@ class ImageDecoderRandomCropResizeOp final : public Operator {
 
   Maybe<void> GetSbpSignatures(
       const std::function<Maybe<const BlobDesc&>(const std::string&)>& LogicalBlobDesc4Ibn,
-      cfg::SbpSignatureList* sbp_sig_list) const override {
+      SbpSignatureList* sbp_sig_list) const override {
     SbpSignatureBuilder()
         .Split("in", 0)
         .Split("out", 0)
@@ -119,7 +119,7 @@ class ImageDecoderRandomCropResizeOp final : public Operator {
     bn2parallel_desc["out"] = op_parallel_desc;
     if (device_type() == DeviceType::kCPU) {
       bn2parallel_desc["in"] = op_parallel_desc;
-    } else if (device_type() == DeviceType::kGPU) {
+    } else if (device_type() == DeviceType::kCUDA) {
       std::shared_ptr<ParallelDesc> in_parallel_desc =
           std::make_shared<ParallelDesc>(*op_parallel_desc);
       in_parallel_desc->set_device_type(DeviceType::kCPU);

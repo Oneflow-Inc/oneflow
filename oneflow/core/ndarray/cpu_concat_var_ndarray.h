@@ -96,7 +96,7 @@ class CpuConcatVarNdarray : public CpuNdarray<T, NDIMS> {
     int64_t axes_dim_num = 0;
     std::vector<Range> ret;
     FOR_RANGE(int32_t, i, 0, var_ndarrays.size()) {
-      ret.push_back(
+      ret.emplace_back(
           Range(axes_dim_num, axes_dim_num + var_ndarrays[i].xpu_shape().At(CONCAT_AXES)));
       axes_dim_num += var_ndarrays[i].xpu_shape().At(CONCAT_AXES);
     }

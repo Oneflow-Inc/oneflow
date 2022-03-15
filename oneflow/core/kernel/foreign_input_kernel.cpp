@@ -40,7 +40,7 @@ void ForeignInputKernel::ForwardDataContent(KernelContext* ctx) const {
                                    ->TryReceive(&foreign_job_instance);
   CHECK_NE(buffer_status, kBufferStatusEmpty);
   if (buffer_status == kBufferStatusSuccess) {
-    OfBlob ofblob(ctx->device_ctx(), ctx->BnInOp2Blob("out"));
+    OfBlob ofblob(ctx->stream(), ctx->BnInOp2Blob("out"));
     foreign_job_instance->PushBlob(reinterpret_cast<uint64_t>(&ofblob));
   }
 }

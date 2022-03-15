@@ -33,7 +33,7 @@ int64_t* MutThreadLocalTensorMetaCheckDepth();
 Maybe<CheckConsistencyAsyncTransportCtx> LaunchTensorMetaConsistencyCheck(
     const one::Tensor& tensor);
 
-Maybe<void> BuzyWaitAndCheck(std::shared_ptr<CheckConsistencyAsyncTransportCtx>& ctx);
+Maybe<void> BusyWaitAndCheck(std::shared_ptr<CheckConsistencyAsyncTransportCtx>& ctx);
 
 Maybe<void> RunCallback(const std::shared_ptr<one::Tensor>& tensor,
                         const std::function<Maybe<void>()>& Callback);
@@ -59,7 +59,7 @@ struct CheckConsistentTensorMeta<RetT, const std::shared_ptr<one::Tensor>&, Args
     RetT ret = func(tensor, args...);
     --*depth;
     // Always synchronize consistent tensor meta even if `func` failed.
-    if (*depth == 0) { JUST(private_details::BuzyWaitAndCheck(ctx)); }
+    if (*depth == 0) { JUST(private_details::BusyWaitAndCheck(ctx)); }
     return ret;
   }
 };

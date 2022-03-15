@@ -14,6 +14,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 #include "oneflow/core/graph/compute_task_node.h"
+#include "oneflow/core/graph/task_stream_index_manager.h"
 
 namespace oneflow {
 
@@ -29,7 +30,6 @@ class WaitAndSendIdsCompTaskNode final : public CompTaskNode {
   bool IsMeaningLess() override { return false; }
 
   TaskType GetTaskType() const override { return TaskType::kWaitAndSendIds; }
-  bool IsIndependent() const override { return true; }
 
  private:
   void InferProducedDataRegstTimeShape() override;
@@ -59,10 +59,7 @@ void WaitAndSendIdsCompTaskNode::InferProducedDataRegstTimeShape() {
   });
 }
 
-REGISTER_COMPUTE_TASK_NODE_STREAM_INDEX_GETTER(DeviceType::kCPU, TaskType::kWaitAndSendIds)
-    .SetStreamIndexGetterFn([](CPUStreamIndexGenerator* generator) -> uint32_t {
-      return generator->GenerateIndependentTaskStreamIndex(TaskType::kWaitAndSendIds);
-    });
+REGISTER_INDEPENDENT_TASK_STREAM_INDEX_GETTER(TaskType::kWaitAndSendIds);
 
 REGISTER_SYSTEM_OP_COMP_TASK_NODE_TYPE(OperatorConf::kWaitAndSendIdsConf,
                                        WaitAndSendIdsCompTaskNode);

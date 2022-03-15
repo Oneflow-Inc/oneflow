@@ -39,7 +39,7 @@ Maybe<void> GenerateBackwardOpConf4Concat(
       DiffLbi4BnInOp(ibn_of_distribute_concat_op)->set_blob_name(obn);
     }
   }
-  op_confs->push_back(split_op);
+  op_confs->emplace_back(split_op);
   return Maybe<void>::Ok();
 }
 
@@ -67,7 +67,7 @@ Maybe<void> GenerateBackwardOpConf4Split(
     CHECK_EQ(concat_op_conf->in_size(), distribute_split_conf.out_size());
     DiffLbi4BnInOp("in")->set_op_name(concat_op.name());
     DiffLbi4BnInOp("in")->set_blob_name("out");
-    op_confs->push_back(concat_op);
+    op_confs->emplace_back(concat_op);
   }
   return Maybe<void>::Ok();
 }
@@ -95,7 +95,7 @@ Maybe<void> GenerateBackwardOpConf4Clone(
     CHECK_EQ(partial_op_conf->in_size(), conf.out_size());
     DiffLbi4BnInOp("in")->set_op_name(partial_op.name());
     DiffLbi4BnInOp("in")->set_blob_name("out");
-    op_confs->push_back(partial_op);
+    op_confs->emplace_back(partial_op);
   }
   return Maybe<void>::Ok();
 }
@@ -119,7 +119,7 @@ Maybe<void> GenerateBackwardOpConf4Add(
       DiffLbi4BnInOp(ibn_of_distribute_add_op)->set_blob_name(obn);
     }
   }
-  op_confs->push_back(broadcast_op);
+  op_confs->emplace_back(broadcast_op);
   return Maybe<void>::Ok();
 }
 

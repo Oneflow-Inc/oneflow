@@ -183,7 +183,7 @@ template<typename NodeType, typename EdgeType>
 std::list<NodeType*> Graph<NodeType, EdgeType>::source_nodes() const {
   std::list<NodeType*> ret;
   ForEachNode([&](NodeType* node) {
-    if (node->in_edges().empty()) { ret.push_back(node); }
+    if (node->in_edges().empty()) { ret.emplace_back(node); }
   });
   return ret;
 }
@@ -192,7 +192,7 @@ template<typename NodeType, typename EdgeType>
 std::list<NodeType*> Graph<NodeType, EdgeType>::sink_nodes() const {
   std::list<NodeType*> ret;
   ForEachNode([&](NodeType* node) {
-    if (node->out_edges().empty()) { ret.push_back(node); }
+    if (node->out_edges().empty()) { ret.emplace_back(node); }
   });
   return ret;
 }
@@ -547,12 +547,12 @@ void Graph<NodeType, EdgeType>::DfsTopoForEachNodeSortByDistanceToSink(
   {
     std::list<NodeType*> nodes;
     TopoForEachNode(starts, ForEachInNode, ForEachOutNode,
-                    [&](NodeType* node) { nodes.push_back(node); });
+                    [&](NodeType* node) { nodes.emplace_back(node); });
     std::list<NodeType*> sinks;
     for (NodeType* node : nodes) {
       bool is_sink = true;
       ForEachOutNode(node, [&](NodeType* out_node) { is_sink = false; });
-      if (is_sink) { sinks.push_back(node); }
+      if (is_sink) { sinks.emplace_back(node); }
     }
     TopoForEachNode(sinks, ForEachOutNode, ForEachInNode, [&](NodeType* node) {
       int64_t distance_to_sink = -1;
@@ -565,7 +565,7 @@ void Graph<NodeType, EdgeType>::DfsTopoForEachNodeSortByDistanceToSink(
   auto ForEachOutNodeSortedByDistanceToSink = [&](NodeType* node,
                                                   const std::function<void(NodeType*)>& Handler) {
     std::vector<NodeType*> out_nodes;
-    ForEachOutNode(node, [&](NodeType* out_node) { out_nodes.push_back(out_node); });
+    ForEachOutNode(node, [&](NodeType* out_node) { out_nodes.emplace_back(out_node); });
     std::sort(out_nodes.begin(), out_nodes.end(), [&](NodeType* lhs, NodeType* rhs) {
       // DfsTopoForEachNode use stack, so sort desc
       return node2distance_to_sink.at(lhs) > node2distance_to_sink.at(rhs);

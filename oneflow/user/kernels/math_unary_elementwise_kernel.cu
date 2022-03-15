@@ -16,6 +16,8 @@ limitations under the License.
 #include "oneflow/core/framework/framework.h"
 #include "oneflow/user/kernels/math_unary_elementwise_func.h"
 #include "oneflow/core/kernel/cuda_graph_support.h"
+#include "oneflow/core/ep/cuda/cuda_stream.h"
+#include "oneflow/core/device/cuda_util.h"
 
 namespace oneflow {
 
@@ -51,8 +53,8 @@ class MathUnaryElementwiseGpuKernel final : public user_op::OpKernel,
     CHECK_LE(n, GetMaxVal<int32_t>() / 2);
     if (n == 0) { return; }
     MathUnaryElementwiseForwardGpu<UnaryFunctor, T>
-        <<<BlocksNum4ThreadsNum(n), kCudaThreadsNumPerBlock, 0, ctx->device_ctx()->cuda_stream()>>>(
-            n, x, y);
+        <<<BlocksNum4ThreadsNum(n), kCudaThreadsNumPerBlock, 0,
+           ctx->stream()->As<ep::CudaStream>()->cuda_stream()>>>(n, x, y);
   }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
@@ -78,35 +80,35 @@ class MathUnaryElementwiseGradGpuKernel final : public user_op::OpKernel,
     CHECK_LE(n, GetMaxVal<int32_t>() / 2);
     if (n == 0) { return; }
     MathUnaryElementwiseBackwardGpu<UnaryFunctor, T>
-        <<<BlocksNum4ThreadsNum(n), kCudaThreadsNumPerBlock, 0, ctx->device_ctx()->cuda_stream()>>>(
-            n, x, dy, dx);
+        <<<BlocksNum4ThreadsNum(n), kCudaThreadsNumPerBlock, 0,
+           ctx->stream()->As<ep::CudaStream>()->cuda_stream()>>>(n, x, dy, dx);
   }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
 
-#define REGISTER_MATH_UNARY_ELEMENTWISE_GPU_KERNEL_AND_GRAD(math_type_pair, data_type_pair)        \
+#define REGISTER_MATH_UNARY_ELEMENTWISE_CUDA_KERNEL_AND_GRAD(math_type_pair, data_type_pair)       \
   REGISTER_USER_KERNEL(OF_PP_PAIR_FIRST(math_type_pair))                                           \
       .SetCreateFn<                                                                                \
           MathUnaryElementwiseGpuKernel<OF_PP_CAT(OF_PP_PAIR_SECOND(math_type_pair), Functor),     \
                                         OF_PP_PAIR_FIRST(data_type_pair)>>()                       \
-      .SetIsMatchedHob((user_op::HobDeviceTag() == "gpu")                                          \
-                       & (user_op::HobDataType("x", 0) == OF_PP_PAIR_SECOND(data_type_pair))       \
-                       & (user_op::HobDataType("y", 0) == OF_PP_PAIR_SECOND(data_type_pair)));     \
+      .SetIsMatchedHob((user_op::HobDeviceType() == DeviceType::kCUDA)                             \
+                       && (user_op::HobDataType("x", 0) == OF_PP_PAIR_SECOND(data_type_pair))      \
+                       && (user_op::HobDataType("y", 0) == OF_PP_PAIR_SECOND(data_type_pair)));    \
                                                                                                    \
   REGISTER_USER_KERNEL((std::string("") + OF_PP_PAIR_FIRST(math_type_pair) + "_grad"))             \
       .SetCreateFn<                                                                                \
           MathUnaryElementwiseGradGpuKernel<OF_PP_CAT(OF_PP_PAIR_SECOND(math_type_pair), Functor), \
                                             OF_PP_PAIR_FIRST(data_type_pair)>>()                   \
-      .SetIsMatchedHob((user_op::HobDeviceTag() == "gpu")                                          \
-                       & (user_op::HobDataType("x", 0) == OF_PP_PAIR_SECOND(data_type_pair)));
+      .SetIsMatchedHob((user_op::HobDeviceType() == DeviceType::kCUDA)                             \
+                       && (user_op::HobDataType("x", 0) == OF_PP_PAIR_SECOND(data_type_pair)));
 
-OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(REGISTER_MATH_UNARY_ELEMENTWISE_GPU_KERNEL_AND_GRAD,
+OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(REGISTER_MATH_UNARY_ELEMENTWISE_CUDA_KERNEL_AND_GRAD,
                                  MATH_UNARY_ELEMENTWISE_FUNC_SEQ, FLOATING_DATA_TYPE_SEQ)
 
 // For some special dtype kernel register.
-OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(REGISTER_MATH_UNARY_ELEMENTWISE_GPU_KERNEL_AND_GRAD,
+OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(REGISTER_MATH_UNARY_ELEMENTWISE_CUDA_KERNEL_AND_GRAD,
                                  OF_PP_MAKE_TUPLE_SEQ("abs", Abs), UNSIGNED_INT_DATA_TYPE_SEQ)
-OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(REGISTER_MATH_UNARY_ELEMENTWISE_GPU_KERNEL_AND_GRAD,
+OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(REGISTER_MATH_UNARY_ELEMENTWISE_CUDA_KERNEL_AND_GRAD,
                                  OF_PP_MAKE_TUPLE_SEQ("abs", Abs), INT_DATA_TYPE_SEQ)
 
 template<template<typename> class UnaryFunctor>
@@ -127,8 +129,8 @@ class MathUnaryElementwiseGpuHalfKernel final : public user_op::OpKernel,
     CHECK_LE(n, GetMaxVal<int32_t>() / 2);
     if (n == 0) { return; }
     MathUnaryElementwiseForwardGpu<UnaryFunctor, half>
-        <<<BlocksNum4ThreadsNum(n), kCudaThreadsNumPerBlock, 0, ctx->device_ctx()->cuda_stream()>>>(
-            n, x, y);
+        <<<BlocksNum4ThreadsNum(n), kCudaThreadsNumPerBlock, 0,
+           ctx->stream()->As<ep::CudaStream>()->cuda_stream()>>>(n, x, y);
   }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
@@ -154,25 +156,25 @@ class MathUnaryElementwiseGradGpuHalfKernel final : public user_op::OpKernel,
     CHECK_LE(n, GetMaxVal<int32_t>() / 2);
     if (n == 0) { return; }
     MathUnaryElementwiseBackwardGpu<UnaryFunctor, half>
-        <<<BlocksNum4ThreadsNum(n), kCudaThreadsNumPerBlock, 0, ctx->device_ctx()->cuda_stream()>>>(
-            n, x, dy, dx);
+        <<<BlocksNum4ThreadsNum(n), kCudaThreadsNumPerBlock, 0,
+           ctx->stream()->As<ep::CudaStream>()->cuda_stream()>>>(n, x, dy, dx);
   }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
 
-#define REGISTER_MATH_UNARY_ELEMENTWISE_GPU_HALF_KERNEL_AND_GRAD(math_type_str, math_func_prefix) \
-  REGISTER_USER_KERNEL(math_type_str)                                                             \
-      .SetCreateFn<MathUnaryElementwiseGpuHalfKernel<OF_PP_CAT(math_func_prefix, Functor)>>()     \
-      .SetIsMatchedHob((user_op::HobDeviceTag() == "gpu")                                         \
-                       & (user_op::HobDataType("x", 0) == DataType::kFloat16)                     \
-                       & (user_op::HobDataType("y", 0) == DataType::kFloat16));                   \
-                                                                                                  \
-  REGISTER_USER_KERNEL((std::string("") + math_type_str + "_grad"))                               \
-      .SetCreateFn<MathUnaryElementwiseGradGpuHalfKernel<OF_PP_CAT(math_func_prefix, Functor)>>() \
-      .SetIsMatchedHob((user_op::HobDeviceTag() == "gpu")                                         \
-                       & (user_op::HobDataType("x", 0) == DataType::kFloat16));
+#define REGISTER_MATH_UNARY_ELEMENTWISE_GUDA_HALF_KERNEL_AND_GRAD(math_type_str, math_func_prefix) \
+  REGISTER_USER_KERNEL(math_type_str)                                                              \
+      .SetCreateFn<MathUnaryElementwiseGpuHalfKernel<OF_PP_CAT(math_func_prefix, Functor)>>()      \
+      .SetIsMatchedHob((user_op::HobDeviceType() == DeviceType::kCUDA)                             \
+                       && (user_op::HobDataType("x", 0) == DataType::kFloat16)                     \
+                       && (user_op::HobDataType("y", 0) == DataType::kFloat16));                   \
+                                                                                                   \
+  REGISTER_USER_KERNEL((std::string("") + math_type_str + "_grad"))                                \
+      .SetCreateFn<MathUnaryElementwiseGradGpuHalfKernel<OF_PP_CAT(math_func_prefix, Functor)>>()  \
+      .SetIsMatchedHob((user_op::HobDeviceType() == DeviceType::kCUDA)                             \
+                       && (user_op::HobDataType("x", 0) == DataType::kFloat16));
 
-OF_PP_FOR_EACH_TUPLE(REGISTER_MATH_UNARY_ELEMENTWISE_GPU_HALF_KERNEL_AND_GRAD,
+OF_PP_FOR_EACH_TUPLE(REGISTER_MATH_UNARY_ELEMENTWISE_GUDA_HALF_KERNEL_AND_GRAD,
                      MATH_UNARY_ELEMENTWISE_FUNC_SEQ)
 
 }  // namespace oneflow

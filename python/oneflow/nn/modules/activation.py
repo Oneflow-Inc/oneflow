@@ -68,13 +68,20 @@ class PReLU(Module):
 
     """
 
-    def __init__(self, num_parameters: int = 1, init: float = 0.25) -> None:
+    def __init__(
+        self, num_parameters: int = 1, init: float = 0.25, device=None, dtype=None
+    ) -> None:
         super().__init__()
         self.num_parameters = num_parameters
-        self.weight = flow.nn.Parameter(flow.Tensor(num_parameters).fill_(init))
+        self.weight = flow.nn.Parameter(
+            flow.empty(num_parameters, dtype=dtype, device=device).fill_(init)
+        )
 
     def forward(self, x):
         return flow._C.prelu(x, self.weight)
+
+    def extra_repr(self) -> str:
+        return "num_parameters={}".format(self.num_parameters)
 
 
 class ReLU(Module):

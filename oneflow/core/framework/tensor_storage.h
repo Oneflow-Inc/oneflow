@@ -25,7 +25,7 @@ class ParallelDesc;
 
 namespace vm {
 
-class TensorBuffer;
+class TensorStorage;
 
 }  // namespace vm
 
@@ -34,19 +34,19 @@ namespace one {
 class TensorStorage final {
  public:
   explicit TensorStorage(const std::shared_ptr<const ParallelDesc>& parallel_desc);
-  explicit TensorStorage(const std::shared_ptr<vm::TensorBuffer>& tensor_buffer);
+  explicit TensorStorage(const std::shared_ptr<vm::TensorStorage>& tensor_storage);
   ~TensorStorage();
 
-  using ReleaserHookT = std::function<void(const std::shared_ptr<vm::TensorBuffer>&)>;
+  using ReleaserHookT = std::function<void(const std::shared_ptr<vm::TensorStorage>&)>;
 
-  const std::shared_ptr<vm::TensorBuffer> buffer() const { return buffer_; }
+  const std::shared_ptr<vm::TensorStorage> storage() const { return storage_; }
 
   void set_releaser_hook(const ReleaserHookT& releaser_hook) {
     releaser_hook_ = std::make_shared<ReleaserHookT>(releaser_hook);
   }
 
  private:
-  std::shared_ptr<vm::TensorBuffer> buffer_;
+  std::shared_ptr<vm::TensorStorage> storage_;
   std::shared_ptr<ReleaserHookT> releaser_hook_;
 };
 

@@ -15,7 +15,7 @@ limitations under the License.
 */
 #include <pybind11/pybind11.h>
 #include <pybind11/operators.h>
-#include "oneflow/api/python/framework/throw.h"
+#include "oneflow/core/common/throw.h"
 #include "oneflow/api/python/of_api_registry.h"
 #include "oneflow/core/operator/op_conf_symbol.h"
 #include "oneflow/core/common/maybe.h"

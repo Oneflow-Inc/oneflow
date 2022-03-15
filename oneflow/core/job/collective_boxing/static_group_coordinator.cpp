@@ -122,7 +122,7 @@ void StaticGroupCoordinator::InitJob(int64_t job_id) {
   std::vector<RequestId> request_ids;
   impl_->request_store_->ForEachMutRequestEntryInJob(
       job_id, [&](RequestEntry* request_entry, int32_t i, const RequestId& request_id) {
-        request_ids.push_back(request_id);
+        request_ids.emplace_back(request_id);
       });
   SortRequestIdsByOrder(impl_->request_store_.get(), &request_ids);
   StaticGroupRequestsInfo info;
@@ -142,8 +142,8 @@ void StaticGroupCoordinator::InitJob(int64_t job_id) {
           RequestGroupIndex request_group_index{group_id, idx_in_group};
           request_index2request_group_index.at(request_id.request_index) = request_group_index;
         }
-        group_id2request_ids.push_back(group);
-        group_id2group_token.push_back(group_token);
+        group_id2request_ids.emplace_back(group);
+        group_id2group_token.emplace_back(group_token);
       });
 
   CHECK(impl_->job_id2static_group_requests_info_.emplace(job_id, info).second);

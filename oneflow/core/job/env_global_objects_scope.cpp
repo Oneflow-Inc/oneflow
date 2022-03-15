@@ -26,6 +26,7 @@ limitations under the License.
 #include "oneflow/core/job/resource_desc.h"
 #include "oneflow/core/job/global_for.h"
 #include "oneflow/core/common/util.h"
+#include "oneflow/core/common/tensor_buffer.h"
 #include "oneflow/core/persistence/file_system.h"
 #include "oneflow/core/device/cuda_util.h"
 #include "oneflow/core/vm/virtual_machine_scope.h"
@@ -34,11 +35,11 @@ limitations under the License.
 #include "oneflow/core/device/cudnn_conv_util.h"
 #include "oneflow/core/rpc/include/manager.h"
 #include "oneflow/core/transport/transport.h"
-#include "oneflow/core/device/node_device_descriptor_manager.h"
+#include "oneflow/core/hardware/node_device_descriptor_manager.h"
 #include "oneflow/core/vm/symbol_storage.h"
 #include "oneflow/core/framework/multi_client_session_context.h"
 #include "oneflow/core/framework/symbol_id_cache.h"
-#include "oneflow/core/operator/op_node_signature.cfg.h"
+#include "oneflow/core/operator/op_node_signature.pb.h"
 #include "oneflow/core/operator/op_conf.cfg.h"
 #include "oneflow/core/framework/tensor_pool.h"
 #include "oneflow/core/comm_network/comm_network.h"
@@ -51,6 +52,8 @@ limitations under the License.
 #ifdef WITH_RDMA
 #include "oneflow/core/platform/include/ibv.h"
 #endif  // WITH_RDMA
+#include "oneflow/core/ep/include/device_manager_registry.h"
+#include "oneflow/core/ep/cpu/cpu_device_manager.h"
 
 namespace oneflow {
 
@@ -96,10 +99,18 @@ Resource GetDefaultResource(const EnvProto& env_proto) {
   return resource;
 }
 
-void ClearAllSymbolAndIdCache() {
-  Global<symbol::Storage<StringSymbol>>::Get()->ClearAll();
-  Global<symbol::IdCache<std::string>>::Get()->ClearAll();
+void SetCpuDeviceManagerNumThreads() {
+  ep::CpuDeviceManager* cpu_device_manager = dynamic_cast<ep::CpuDeviceManager*>(
+      Global<ep::DeviceManagerRegistry>::Get()->GetDeviceManager(DeviceType::kCPU));
+  constexpr size_t kDefaultUsedNumThreads = 2;
+  int64_t cpu_logic_core = std::thread::hardware_concurrency();
+  int64_t default_num_threads =
+      (cpu_logic_core / GlobalProcessCtx::NumOfProcessPerNode()) - kDefaultUsedNumThreads;
+  int64_t num_threads = ParseIntegerFromEnv("OMP_NUM_THREADS", default_num_threads);
+  cpu_device_manager->SetDeviceNumThreads(num_threads);
+}
 
+void ClearAllSymbolAndIdCache() {
   Global<symbol::Storage<Scope>>::Get()->ClearAll();
   Global<symbol::IdCache<cfg::ScopeProto>>::Get()->ClearAll();
 
@@ -111,8 +122,6 @@ void ClearAllSymbolAndIdCache() {
 
   Global<symbol::Storage<OperatorConfSymbol>>::Get()->ClearAll();
   Global<symbol::IdCache<cfg::OperatorConf>>::Get()->ClearAll();
-  Global<symbol::Storage<OpNodeSignatureDesc>>::Get()->ClearAll();
-  Global<symbol::IdCache<cfg::OpNodeSignature>>::Get()->ClearAll();
 }
 
 #if defined(__linux__) && defined(WITH_RDMA)
@@ -132,9 +141,6 @@ bool CommNetIBEnabled() {
 
 Maybe<void> EnvGlobalObjectsScope::Init(const EnvProto& env_proto) {
   InitLogging(env_proto.cpp_logging_conf());
-#ifdef WITH_CUDA
-  InitGlobalCudaDeviceProp();
-#endif
   Global<EnvDesc>::New(env_proto);
   Global<ProcessCtx>::New();
   Global<dtr::TensorPool>::New();
@@ -142,26 +148,26 @@ Maybe<void> EnvGlobalObjectsScope::Init(const EnvProto& env_proto) {
   // ~CtrlBootstrap.
   if (Global<ResourceDesc, ForSession>::Get()->enable_dry_run()) {
 #ifdef RPC_BACKEND_LOCAL
-    LOG(INFO) << "using rpc backend: dry-run";
+    LOG(INFO) << "Using rpc backend: dry-run";
     Global<RpcManager>::SetAllocated(new DryRunRpcManager());
 #else
-    static_assert(false, "requires rpc backend dry-run to dry run oneflow");
+    static_assert(false, "Requires rpc backend dry-run to dry run oneflow");
 #endif  // RPC_BACKEND_LOCAL
   } else if ((env_proto.machine_size() == 1 && env_proto.has_ctrl_bootstrap_conf() == false)
              || (env_proto.has_ctrl_bootstrap_conf()
                  && env_proto.ctrl_bootstrap_conf().world_size() == 1)) /*single process*/ {
 #ifdef RPC_BACKEND_LOCAL
-    LOG(INFO) << "using rpc backend: local";
+    LOG(INFO) << "Using rpc backend: local";
     Global<RpcManager>::SetAllocated(new LocalRpcManager());
 #else
-    static_assert(false, "requires rpc backend local to run oneflow in single processs");
+    static_assert(false, "Requires rpc backend local to run oneflow in single processs");
 #endif  // RPC_BACKEND_LOCAL
   } else /*multi process, multi machine*/ {
 #ifdef RPC_BACKEND_GRPC
-    LOG(INFO) << "using rpc backend: gRPC";
+    LOG(INFO) << "Using rpc backend: gRPC";
     Global<RpcManager>::SetAllocated(new GrpcRpcManager());
 #else
-    UNIMPLEMENTED() << "to run distributed oneflow, you must enable at least one multi-node rpc "
+    UNIMPLEMENTED() << "To run distributed oneflow, you must enable at least one multi-node rpc "
                        "backend by adding cmake argument, for instance: -DRPC_BACKEND=GRPC";
 #endif  // RPC_BACKEND_GRPC
   }
@@ -172,12 +178,14 @@ Maybe<void> EnvGlobalObjectsScope::Init(const EnvProto& env_proto) {
                                     GlobalProcessCtx::NumOfProcessPerNode());
   Global<ResourceDesc, ForSession>::New(GetDefaultResource(env_proto),
                                         GlobalProcessCtx::NumOfProcessPerNode());
-  Global<device::NodeDeviceDescriptorManager>::SetAllocated(
-      new device::NodeDeviceDescriptorManager());
+  Global<hardware::NodeDeviceDescriptorManager>::SetAllocated(
+      new hardware::NodeDeviceDescriptorManager());
   if (Global<ResourceDesc, ForEnv>::Get()->enable_debug_mode()) {
-    Global<device::NodeDeviceDescriptorManager>::Get()->DumpSummary("devices");
+    Global<hardware::NodeDeviceDescriptorManager>::Get()->DumpSummary("devices");
   }
+  Global<ep::DeviceManagerRegistry>::New();
   Global<ThreadPool>::New(Global<ResourceDesc, ForSession>::Get()->ComputeThreadPoolSize());
+  SetCpuDeviceManagerNumThreads();
 #ifdef WITH_CUDA
   Global<EagerNcclCommMgr>::New();
   Global<CudnnConvAlgoCache>::New();
@@ -210,21 +218,23 @@ Maybe<void> EnvGlobalObjectsScope::Init(const EnvProto& env_proto) {
              "value, it will impact performance";
       kernel_observers.emplace_back(new SyncCheckKernelObserver());
     }
-    if (!ParseBooleanFromEnv("ONEFLOW_KERNEL_DISABLE_BLOB_ACCESS_CHECKER", false)) {
+    if (!ParseBooleanFromEnv("ONEFLOW_KERNEL_DISABLE_BLOB_ACCESS_CHECKER", true)) {
       kernel_observers.emplace_back(new BlobAccessCheckerKernelObserver());
     }
     kernel_observers.emplace_back(new ProfilerKernelObserver());
     Global<KernelObserver>::SetAllocated(new ChainKernelObserver(kernel_observers));
   }
+  TensorBufferPool::New();
   return Maybe<void>::Ok();
 }
 
 EnvGlobalObjectsScope::~EnvGlobalObjectsScope() {
   auto session_ctx = Global<MultiClientSessionContext>::Get();
   if (session_ctx != nullptr) {
-    VLOG(2) << "Multi client session has not closed , env close it at env scope destruction.";
+    VLOG(1) << "Multi client session has not closed , env close it at env scope destruction.";
     CHECK_JUST(session_ctx->TryClose());
   }
+  TensorBufferPool::Delete();
   Global<KernelObserver>::Delete();
   if (!Global<ResourceDesc, ForSession>::Get()->enable_dry_run()) {
 #ifdef __linux__
@@ -244,20 +254,18 @@ EnvGlobalObjectsScope::~EnvGlobalObjectsScope() {
   Global<EagerNcclCommMgr>::Delete();
 #endif
   Global<ThreadPool>::Delete();
+  Global<ep::DeviceManagerRegistry>::Delete();
   if (Global<ResourceDesc, ForSession>::Get() != nullptr) {
     Global<ResourceDesc, ForSession>::Delete();
   }
   Global<ResourceDesc, ForEnv>::Delete();
-  Global<device::NodeDeviceDescriptorManager>::Delete();
+  Global<hardware::NodeDeviceDescriptorManager>::Delete();
   CHECK_NOTNULL(Global<CtrlClient>::Get());
   CHECK_NOTNULL(Global<EnvDesc>::Get());
   Global<RpcManager>::Delete();
   Global<ProcessCtx>::Delete();
   Global<EnvDesc>::Delete();
   Global<dtr::TensorPool>::Delete();
-#ifdef WITH_CUDA
-  Global<cudaDeviceProp>::Delete();
-#endif
   ClearAllSymbolAndIdCache();
   google::ShutdownGoogleLogging();
 }
