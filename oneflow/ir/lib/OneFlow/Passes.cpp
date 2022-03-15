@@ -362,6 +362,20 @@ mlir::IntegerAttr GetDefaultSeed(::mlir::PatternRewriter& rewriter) {
 
 bool IsAddToOutputNone(ValueRange value) { return (int)value.size() > 0 ? false : true; }
 
+void getInputOperandTransposePerm(llvm::SmallVector<int32_t>& v) {
+  v.push_back(0);
+  v.push_back(2);
+  v.push_back(3);
+  v.push_back(1);
+}
+
+void getResultTransposePerm(llvm::SmallVector<int32_t>& v) {
+  v.push_back(0);
+  v.push_back(3);
+  v.push_back(1);
+  v.push_back(2);
+}
+
 }  // namespace oneflow
 
 }  // namespace mlir
@@ -377,15 +391,10 @@ struct AutoNhwcPattern : public OpInterfaceRewritePattern<NCHWCompatible> {
 
  public:
   LogicalResult matchAndRewrite(NCHWCompatible op, PatternRewriter& rewriter) const override {
-    llvm::SmallVector<int32_t> perm, output_perm;
-    perm.push_back(0);
-    perm.push_back(2);
-    perm.push_back(3);
-    perm.push_back(1);
-    output_perm.push_back(0);
-    output_perm.push_back(3);
-    output_perm.push_back(1);
-    output_perm.push_back(2);
+    llvm::SmallVector<int32_t> perm, result_perm;
+    getInputOperandTransposePerm(perm);
+    getResultTransposePerm(result_perm);
+
     NamedAttrList transpos_attributes;
     op.GetTransposeAttrs(transpos_attributes, rewriter);
     transpos_attributes.append(llvm::StringRef("perm"), getSI32ArrayAttr(rewriter, perm));
@@ -413,7 +422,7 @@ struct AutoNhwcPattern : public OpInterfaceRewritePattern<NCHWCompatible> {
       SmallVector<Value, 4> created_results = op.NchwToNhwc(tranposed_operands, rewriter);
       // create transpose op for results
       cnt = 0;
-      transpos_attributes.set(llvm::StringRef("perm"), getSI32ArrayAttr(rewriter, output_perm));
+      transpos_attributes.set(llvm::StringRef("perm"), getSI32ArrayAttr(rewriter, result_perm));
       llvm::DenseSet<Value> transpose_result = op.ResultsToTranspose();
       for (Value result : op->getOpResults()) {
         if (transpose_result.find(result) != transpose_result.end()) {
@@ -422,7 +431,7 @@ struct AutoNhwcPattern : public OpInterfaceRewritePattern<NCHWCompatible> {
           transpos_attributes.set(llvm::StringRef("op_name"),
                                   rewriter.getStringAttr(transpose_name));
           SmallVector<Value, 4> result_operands;
-          result_operands.push_back(created_results[cnt]);
+          result_operands.push_back(created_results[cnt++]);
           if (auto created_op = rewriter.replaceOpWithNewOp<oneflow::TransposeOp>(
                   op, op->getResultTypes(), result_operands, transpos_attributes)) {
             continue;
