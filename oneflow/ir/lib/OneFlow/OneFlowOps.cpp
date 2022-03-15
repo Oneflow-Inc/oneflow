@@ -533,6 +533,51 @@ llvm::SmallVector<Value, 4> NormalizationOp::NchwToNhwc(llvm::SmallVector<Value,
   return results;
 }
 
+bool MaxPool2DOp::IsNCHW() { return this->data_format().str() == "channels_first"; }
+
+llvm::DenseSet<Value> MaxPool2DOp::OperandsToTranspose() {
+  llvm::DenseSet<Value> result;
+  result.insert(this->x());
+  return result;
+}
+
+llvm::DenseSet<Value> MaxPool2DOp::ResultsToTranspose() {
+  llvm::DenseSet<Value> result;
+  result.insert(this->y());
+  result.insert(this->indice());
+  return result;
+}
+
+void MaxPool2DOp::InitTransposeAttrs(NamedAttrList& transpos_attributes,
+                                     PatternRewriter& rewriter) {
+  auto maxpool_2d_op = *this;
+  transpos_attributes = maxpool_2d_op->getAttrs();
+  transpos_attributes.erase(maxpool_2d_op.paddingAttrName());
+  transpos_attributes.erase(maxpool_2d_op.data_formatAttrName());
+  transpos_attributes.erase(maxpool_2d_op.kernel_sizeAttrName());
+  transpos_attributes.erase(maxpool_2d_op.strideAttrName());
+  transpos_attributes.erase(maxpool_2d_op.dilationAttrName());
+  transpos_attributes.erase(maxpool_2d_op.return_indicesAttrName());
+  transpos_attributes.erase(maxpool_2d_op.ceil_modeAttrName());
+}
+
+llvm::SmallVector<Value, 4> MaxPool2DOp::NchwToNhwc(llvm::SmallVector<Value, 4> value,
+                                                    PatternRewriter& rewriter) {
+  auto maxpool_2d_op = *this;
+  SmallVector<Value, 4> operands;
+  operands.push_back(value[0]);
+  NamedAttrList attributes = maxpool_2d_op->getAttrs();
+  attributes.set(maxpool_2d_op.data_formatAttrName(), rewriter.getStringAttr("channels_last"));
+  auto res = rewriter
+                 .create<oneflow::MaxPool2DOp>(
+                     maxpool_2d_op.getLoc(), maxpool_2d_op->getResultTypes(), operands, attributes)
+                 ->getResults();
+  llvm::SmallVector<Value, 4> results;
+  results.push_back(res[0]);
+  results.push_back(res[1]);
+  return results;
+}
+
 }  // namespace oneflow
 
 }  // namespace mlir

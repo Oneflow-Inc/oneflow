@@ -441,6 +441,7 @@ struct AutoNhwcPattern : public OpInterfaceRewritePattern<NCHWCompatible> {
       }
       // do nchw2nhwc2
       SmallVector<Value, 4> created_results = op.NchwToNhwc(tranposed_operands, rewriter);
+      std::cout << created_results.size() << std::endl;
       // create transpose op for results
       int num_transposed_result = 0;
       transpos_attributes.set(llvm::StringRef("perm"), getSI32ArrayAttr(rewriter, result_perm));
@@ -449,11 +450,10 @@ struct AutoNhwcPattern : public OpInterfaceRewritePattern<NCHWCompatible> {
         if (transpose_result.find(result) != transpose_result.end()) {
           if (getResultTransposeOp(op, created_results[num_transposed_result], transpos_attributes,
                                    num_transposed_result, rewriter)) {
-            continue;
+            num_transposed_result += 1;
           } else {
             return failure();
           }
-          num_transposed_result += 1;
         }
       }
     }
