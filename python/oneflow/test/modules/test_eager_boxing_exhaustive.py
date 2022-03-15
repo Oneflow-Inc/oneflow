@@ -23,7 +23,8 @@ import numpy as np
 import oneflow as flow
 
 import oneflow.unittest
-from test_util import GenArgList
+from oneflow.test_utils.test_util import GenArgList
+from oneflow.test_utils.automated_test_util import *
 
 
 def _test_eager_boxing_normal_1d_exhaustive_testing(
@@ -35,36 +36,14 @@ def _test_eager_boxing_normal_1d_exhaustive_testing(
         flow.sbp.broadcast,
         flow.sbp.partial_sum,
     ]
-    np.random.seed(10)
-    np_arr = np.random.uniform(-1e2, 1e2, shape)
-    in_placement = flow.placement(in_device, {0: in_device_list})
-    out_placement = flow.placement(out_device, {0: out_device_list})
-    failed_boxing = []
+    in_placement = flow.placement(type=in_device, ranks=in_device_list)
+    out_placement = flow.placement(type=out_device, ranks=out_device_list)
     for elem in itertools.product(sbps, sbps):
-        try:
-            x = flow.tensor(
-                np_arr,
-                dtype=flow.float32,
-                placement=in_placement,
-                sbp=elem[0],
-                requires_grad=False,
-            )
-            y = x.to_consistent(placement=out_placement, sbp=elem[1])
-
-            z = y.to_consistent(placement=out_placement, sbp=flow.sbp.broadcast)
-            if flow.env.get_rank() in out_device_list:
-                test_case.assertTrue(np.allclose(z.to_local().numpy(), np_arr),)
-        except flow._oneflow_internal.exception.BoxingNotSupportedException:
-            failed_boxing.append(
-                (elem, shape, in_device, out_device, in_device_list, out_device_list)
-            )
-
-    if flow.env.get_rank() == 0:
-        print(
-            "%d unsuported boxing 1d type" % len(failed_boxing),
-            failed_boxing,
-            sep="\n",
-        )
+        x = random_tensor(
+            len(shape), *shape, requires_grad=False
+        ).oneflow.to_global(placement=in_placement, sbp=elem[0])
+        y = x.to_global(placement=out_placement, sbp=elem[1])
+        test_case.assertTrue(np.allclose(y.numpy(), x.numpy()))
 
 
 def _test_eager_boxing_symmetric_2d_exhaustive_testing(
@@ -79,33 +58,15 @@ def _test_eager_boxing_symmetric_2d_exhaustive_testing(
     nd_sbps = itertools.product(
         itertools.product(sbps, sbps), itertools.product(sbps, sbps)
     )
-    np.random.seed(20)
-    np_arr = np.random.uniform(-1e2, 1e2, (32, 96, 64))
-    in_placement = flow.placement(in_device, {0: range(4)}, (2, 2))
-    out_placement = flow.placement(out_device, {0: range(4)}, (2, 2))
-    failed_boxing = []
+    shape = (32, 96, 64)
+    in_placement = flow.placement(type=in_device, ranks=[[0, 1], [2, 3]])
+    out_placement = flow.placement(type=out_device, ranks=[[0, 1], [2, 3]])
     for elem in nd_sbps:
-        try:
-            x = flow.tensor(
-                np_arr,
-                dtype=flow.float32,
-                placement=in_placement,
-                sbp=elem[0],
-                requires_grad=False,
-            )
-            y = x.to_consistent(placement=out_placement, sbp=elem[1])
-
-            z = y.to_consistent(
-                placement=out_placement, sbp=[flow.sbp.broadcast, flow.sbp.broadcast]
-            )
-            test_case.assertTrue(np.allclose(z.to_local().numpy(), np_arr,),)
-        except flow._oneflow_internal.exception.BoxingNotSupportedException:
-            failed_boxing.append(elem)
-
-    if flow.env.get_rank() == 0:
-        print(
-            "%d unsuported boxing 2d type" % len(failed_boxing), failed_boxing, sep="\n"
-        )
+        x = random_tensor(
+            len(shape), *shape, requires_grad=False
+        ).oneflow.to_global(placement=in_placement, sbp=elem[0])
+        y = x.to_global(placement=out_placement, sbp=elem[1])
+        test_case.assertTrue(np.allclose(y.numpy(), x.numpy()))
 
 
 def _test_eager_boxing_1d_special_split_axis(
@@ -113,41 +74,19 @@ def _test_eager_boxing_1d_special_split_axis(
 ):
     sbps = [
         flow.sbp.split(2),
-        flow.sbp.split(4),
+        flow.sbp.split(3),
         flow.sbp.broadcast,
         flow.sbp.partial_sum,
     ]
-    np.random.seed(30)
-    shape = (16, 16, 5, 8, 7, 6)
-    np_arr = np.random.uniform(-1e2, 1e2, shape)
-    in_placement = flow.placement(in_device, {0: in_device_list})
-    out_placement = flow.placement(out_device, {0: out_device_list})
-    failed_boxing = []
+    shape = (16, 16, 5, 7)
+    in_placement = flow.placement(type=in_device, ranks=in_device_list)
+    out_placement = flow.placement(type=out_device, ranks=out_device_list)
     for elem in itertools.product(sbps, sbps):
-        try:
-            x = flow.tensor(
-                np_arr,
-                dtype=flow.float32,
-                placement=in_placement,
-                sbp=elem[0],
-                requires_grad=False,
-            )
-            y = x.to_consistent(placement=out_placement, sbp=elem[1])
-
-            z = y.to_consistent(placement=out_placement, sbp=flow.sbp.broadcast)
-            if flow.env.get_rank() in out_device_list:
-                test_case.assertTrue(np.allclose(z.to_local().numpy(), np_arr),)
-        except flow._oneflow_internal.exception.BoxingNotSupportedException:
-            failed_boxing.append(
-                (elem, shape, in_device, out_device, in_device_list, out_device_list)
-            )
-
-    if flow.env.get_rank() == 0:
-        print(
-            "%d unsuported boxing 1d type" % len(failed_boxing),
-            failed_boxing,
-            sep="\n",
-        )
+        x = random_tensor(
+            len(shape), *shape, requires_grad=False
+        ).oneflow.to_global(placement=in_placement, sbp=elem[0])
+        y = x.to_global(placement=out_placement, sbp=elem[1])
+        test_case.assertTrue(np.allclose(y.numpy(), x.numpy()))
 
 
 def _test_eager_boxing_2d_special_split_axis(test_case, in_device, out_device):
@@ -160,54 +99,40 @@ def _test_eager_boxing_2d_special_split_axis(test_case, in_device, out_device):
     nd_sbps = itertools.product(
         itertools.product(sbps, sbps), itertools.product(sbps, sbps)
     )
-    np.random.seed(40)
-    np_arr = np.random.uniform(-1e2, 1e2, (8, 16, 4, 8, 12))
-    in_placement = flow.placement(in_device, {0: range(4)}, (2, 2))
-    out_placement = flow.placement(out_device, {0: range(4)}, (2, 2))
-    failed_boxing = []
+    shape = (8, 16, 4, 8, 12)
+    in_placement = flow.placement(type=in_device, ranks=[[0, 1], [2, 3]])
+    out_placement = flow.placement(type=out_device, ranks=[[0, 1], [2, 3]])
     for elem in nd_sbps:
-        try:
-            x = flow.tensor(
-                np_arr,
-                dtype=flow.float32,
-                placement=in_placement,
-                sbp=elem[0],
-                requires_grad=False,
-            )
-            y = x.to_consistent(placement=out_placement, sbp=elem[1])
-
-            z = y.to_consistent(
-                placement=out_placement, sbp=[flow.sbp.broadcast, flow.sbp.broadcast]
-            )
-            test_case.assertTrue(np.allclose(z.to_local().numpy(), np_arr),)
-        except flow._oneflow_internal.exception.BoxingNotSupportedException:
-            failed_boxing.append((elem, in_device, out_device))
-
-    if flow.env.get_rank() == 0:
-        print(
-            "%d unsuported boxing 2d type" % len(failed_boxing),
-            failed_boxing,
-            sep="\n",
-        )
+        x = random_tensor(
+            len(shape), *shape, requires_grad=False
+        ).oneflow.to_global(placement=in_placement, sbp=elem[0])
+        y = x.to_global(placement=out_placement, sbp=elem[1])
+        test_case.assertTrue(np.allclose(y.numpy(), x.numpy()))
 
 
 @flow.unittest.skip_unless_1n4d()
 @unittest.skipIf(os.getenv("ONEFLOW_TEST_CPU_ONLY"), "only test cpu cases")
 class TestEagerBoxingSymmetricExhaustiveTesting(flow.unittest.TestCase):
+    @globaltest
     def test_eager_boxing_normal_1d_exhaustive_testing(test_case):
         arg_dict = OrderedDict()
         arg_dict["shape"] = [(12, 12), (18, 24), (15, 17)]
         arg_dict["in_device"] = ["cpu", "cuda"]
         arg_dict["out_device"] = ["cpu", "cuda"]
+        arg_dict["in_device"] = ["cpu"]
+        arg_dict["out_device"] = ["cpu"]
         arg_dict["in_device_list"] = [[0, 1], [1, 2, 3], [0, 1, 2, 3]]
         arg_dict["out_device_list"] = [[0, 1, 3], [0, 1, 2, 3]]
         for arg in GenArgList(arg_dict):
             _test_eager_boxing_normal_1d_exhaustive_testing(test_case, *arg)
 
+    @globaltest
     def test_eager_boxing_symmetric_2d_exhaustive_testing(test_case):
         arg_dict = OrderedDict()
         arg_dict["in_device"] = ["cpu", "cuda"]
         arg_dict["out_device"] = ["cpu", "cuda"]
+        arg_dict["in_device"] = ["cpu"]
+        arg_dict["out_device"] = ["cpu"]
         for arg in GenArgList(arg_dict):
             _test_eager_boxing_symmetric_2d_exhaustive_testing(test_case, *arg)
 
@@ -215,19 +140,25 @@ class TestEagerBoxingSymmetricExhaustiveTesting(flow.unittest.TestCase):
 @flow.unittest.skip_unless_1n4d()
 @unittest.skipIf(os.getenv("ONEFLOW_TEST_CPU_ONLY"), "only test cpu cases")
 class TestEagerBoxingSpecialSplitAxisExhaustiveTesting(flow.unittest.TestCase):
+    @globaltest
     def test_eager_boxing_1d_special_split_axis(test_case):
         arg_dict = OrderedDict()
         arg_dict["in_device"] = ["cpu", "cuda"]
         arg_dict["out_device"] = ["cpu", "cuda"]
+        arg_dict["in_device"] = ["cpu"]
+        arg_dict["out_device"] = ["cpu"]
         arg_dict["in_device_list"] = [[0, 1], [1, 2, 3], [0, 1, 2, 3]]
         arg_dict["out_device_list"] = [[0, 1, 3], [0, 1, 2, 3]]
         for arg in GenArgList(arg_dict):
             _test_eager_boxing_1d_special_split_axis(test_case, *arg)
 
+    @globaltest
     def test_eager_boxing_2d_special_split_axis(test_case):
         arg_dict = OrderedDict()
         arg_dict["in_device"] = ["cpu", "cuda"]
         arg_dict["out_device"] = ["cpu", "cuda"]
+        arg_dict["in_device"] = ["cpu"]
+        arg_dict["out_device"] = ["cpu"]
         for arg in GenArgList(arg_dict):
             _test_eager_boxing_2d_special_split_axis(test_case, *arg)
 
