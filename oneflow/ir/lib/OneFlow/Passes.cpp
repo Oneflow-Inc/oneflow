@@ -400,8 +400,8 @@ Operation* getResultTransposeOp(NCHWCompatible op, Value val, NamedAttrList tran
   transpos_attributes.set(llvm::StringRef("op_name"), rewriter.getStringAttr(transpose_name));
   SmallVector<Value, 4> result_operands;
   result_operands.push_back(val);
-  return rewriter.replaceOpWithNewOp<oneflow::TransposeOp>(op, op->getResultTypes(),
-                                                           result_operands, transpos_attributes);
+  return rewriter.create<oneflow::TransposeOp>(op.getLoc(), op->getResultTypes(), result_operands,
+                                               transpos_attributes);
 }
 
 }  // namespace oneflow
@@ -441,7 +441,6 @@ struct AutoNhwcPattern : public OpInterfaceRewritePattern<NCHWCompatible> {
       }
       // do nchw2nhwc2
       SmallVector<Value, 4> created_results = op.NchwToNhwc(tranposed_operands, rewriter);
-      std::cout << created_results.size() << std::endl;
       // create transpose op for results
       int num_transposed_result = 0;
       transpos_attributes.set(llvm::StringRef("perm"), getSI32ArrayAttr(rewriter, result_perm));
