@@ -182,18 +182,7 @@ def call(conn=None, cmd=None, msg=None):
     return conn.recv().decode()
 
 
-def launch_worker_via_agent(host=None, env_proto=None):
-    print("[unittest]", "launching worker via agent at", host)
-    from multiprocessing.connection import Client
-
-    address = ("localhost", worker_agent_port())
-    conn = Client(address, authkey=worker_agent_authkey().encode())
-    cast(conn=conn, cmd="host", msg=host)
-    cast(conn=conn, cmd="env_proto", msg=pbtxt.MessageToString(env_proto))
-    assert call(conn=conn, cmd="start_worker") == "ok"
-    print("[unittest]", "worker launched via agent at", host)
-    conn.close()
-
+TestCase = unittest.TestCase
 
 def skip_unless(n, d):
     if (n > 1 or d > 1) and oneflow.sysconfig.has_rpc_backend_grpc() == False:
