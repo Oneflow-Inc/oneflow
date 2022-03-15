@@ -594,7 +594,7 @@ def _matmul(self, other):
 
 
 def _mm(self, other):
-    return flow.mm(self, other)
+    return flow._C.mm(self, other)
 
 
 def _round(self):
