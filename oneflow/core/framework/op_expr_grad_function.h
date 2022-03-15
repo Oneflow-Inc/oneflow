@@ -96,11 +96,15 @@ class OpExprGradFunction : public OpExprGradFunctionIf {
     CHECK_NOTNULL_OR_RETURN(state);
     // Convert outputs from `Tensor` to `AutogradCapturedTensor` to avoid
     // circular reference between `Tensor` and `FunctionNode`.
+    TensorTuple captured_inputs(inputs.size());
+    for (int i = 0; i < inputs.size(); ++i) {
+      captured_inputs[i] = std::make_shared<AutogradCapturedTensor>(inputs.at(i));
+    }
     TensorTuple captured_outputs(outputs.size());
     for (int i = 0; i < outputs.size(); ++i) {
       captured_outputs[i] = std::make_shared<AutogradCapturedTensor>(outputs.at(i));
     }
-    return Capture(state, inputs, captured_outputs, interp_ctx);
+    return Capture(state, captured_inputs, captured_outputs, interp_ctx);
   }
 
   Maybe<void> ApplyIf(const AutoGradCaptureState* ctx, const TensorTuple& out_grads,

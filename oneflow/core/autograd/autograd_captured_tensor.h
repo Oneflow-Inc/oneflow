@@ -27,7 +27,11 @@ class AutogradCapturedTensor final : public ProxyTensor<AutogradCapturedTensor> 
   AutogradCapturedTensor(const std::shared_ptr<Tensor>& tensor)
       : ProxyTensor<AutogradCapturedTensor>(tensor->detach().GetPtrOrThrow()) {
     CHECK_JUST(this->tensor_->set_requires_grad(tensor->requires_grad()));
-    CHECK(tensor->grad_fn_node()) << "The grad function node is expected for the captured tensor";
+    this->tensor_->set_is_leaf(tensor->is_leaf());
+    if (tensor->requires_grad()) {
+      CHECK(tensor->grad_fn_node()) << "The grad function node is expected for the captured tensor "
+                                       "which requires_grad is True";
+    }
     grad_fn_node_ = &tensor->mut_grad_fn_node();
   }
 

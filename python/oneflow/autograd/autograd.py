@@ -36,6 +36,7 @@ def grad(
         retain_graph,
         create_graph,
     )
+    print(in_grads)
     return tuple([Tensor(x) for x in in_grads])
 
 
