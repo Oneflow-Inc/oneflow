@@ -37,7 +37,7 @@ class TestCumsumConsistent(flow.unittest.TestCase):
         # random ndim in range [1,4]
         ndim = random(1, 5).to(int).value()
         for placement in all_placement():
-            for sbp in all_sbp(placement, max_dim=ndim):
+            for sbp in all_sbp(placement, max_dim=min(2, ndim)):
                 _test_cumsum_impl(test_case, ndim, placement, sbp)
 
 
