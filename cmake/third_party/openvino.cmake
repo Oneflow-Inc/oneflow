@@ -41,11 +41,22 @@ if(WITH_OPENVINO)
           $ENV{OPENVINO_ROOT} $ENV{OPENVINO_ROOT}/deployment_tools/inference_engine/lib/intel64/
           ${THIRD_PARTY_DIR}/OPENVINO/deployment_tools/inference_engine/lib/intel64/)
 
+  find_library(
+    OPENVINO_EXTERNAL_LIBRARIES
+    NAMES libhwloc.so.5 libtbb.so.2 libtbb_preview.so.2 libtbbbind.so.2 libtbbmalloc.so.2
+          libtbbmalloc_proxy.so.2
+    PATHS ${OPENVINO_ROOT}
+          ${OPENVINO_ROOT}/deployment_tools/inference_engine/external/tbb/lib/
+          $ENV{OPENVINO_ROOT}
+          $ENV{OPENVINO_ROOT}/deployment_tools/inference_engine/external/tbb/lib/
+          ${THIRD_PARTY_DIR}/OPENVINO/deployment_tools/inference_engine/external/tbb/lib/)
+
   list(APPEND OPENVINO_INCLUDE_DIR ${OPENVINO_INFERENCE_INCLUDE_DIR})
   list(APPEND OPENVINO_INCLUDE_DIR ${OPENVINO_NGRAPH_INCLUDE_DIR})
   list(APPEND OPENVINO_LIBRARIES ${OPENVINO_INFERENCE_LIBRARIES})
   list(APPEND OPENVINO_LIBRARIES ${OPENVINO_NGRAPH_LIBRARIES})
   list(APPEND OPENVINO_LIBRARIES ${OPENVINO_INFERENCE_LEGACY_LIBRARIES})
+  list(APPEND OPENVINO_LIBRARIES ${OPENVINO_EXTERNAL_LIBRARIES})
 
   if(OPENVINO_INCLUDE_DIR AND OPENVINO_LIBRARIES)
 
