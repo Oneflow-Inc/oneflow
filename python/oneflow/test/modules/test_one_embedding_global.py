@@ -138,13 +138,13 @@ def _test_one_embedding(test_case, has_column_id, num_columns, use_fp16):
 @unittest.skipIf(os.getenv("ONEFLOW_TEST_CPU_ONLY"), "only test cpu cases")
 @flow.unittest.skip_unless_1n2d()
 class OneEmbeddingTestCase(flow.unittest.TestCase):
-    # def test_one_embedding1(test_case):
-    #    arg_dict = OrderedDict()
-    #    arg_dict["has_column_id"] = [True, False]
-    #    arg_dict["num_columns"] = [1, 2]
-    #    arg_dict["use_fp16"] = [False]
-    #    for kwargs in GenArgDict(arg_dict):
-    #        _test_one_embedding(test_case, **kwargs)
+    def test_one_embedding1(test_case):
+       arg_dict = OrderedDict()
+       arg_dict["has_column_id"] = [True, False]
+       arg_dict["num_columns"] = [1, 2]
+       arg_dict["use_fp16"] = [False]
+       for kwargs in GenArgDict(arg_dict):
+           _test_one_embedding(test_case, **kwargs)
 
     def test_one_embedding2(test_case):
         arg_dict = OrderedDict()
