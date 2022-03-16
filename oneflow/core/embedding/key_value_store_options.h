@@ -49,8 +49,8 @@ void ParseCacheOptions(const nlohmann::json& cache_obj, CacheOptions* cache_opti
     capacity = cache_obj["capacity"].get<int64_t>();
   }
   CHECK_GT(capacity, 0) << "capacity or cache_memory_budget_mb must be set";
-  const int64_t extra_capacity = capacity * 0.05;
   // add an extra_capacity to avoid crash by uneven partition.
+  const int64_t extra_capacity = capacity * 0.05;
   cache_options->capacity = capacity + (extra_capacity > 4096 ? extra_capacity : 4096);
   CHECK(cache_obj.contains("value_memory_kind"));
   CHECK(cache_obj["value_memory_kind"].is_string());
