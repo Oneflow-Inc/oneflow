@@ -26,7 +26,7 @@ def _test_fold_impl(test_case, placement, sbp):
     ndim = 3
     dims = [random(1, 4).to(int).value() * 8 for i in range(ndim)]
     m = torch.nn.Fold(
-        output_size=constant(((dims[2]//4) * 2, 4 * 2)),
+        output_size=constant(((dims[2] // 4) * 2, 4 * 2)),
         kernel_size=constant(2),
         dilation=constant(1),
         padding=constant(0),
