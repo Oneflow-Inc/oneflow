@@ -87,6 +87,8 @@ class Graph(object):
 
     Note:
         nn.Graph cannot be nested at the moment.
+
+    This feature is in Beta Stage.
     """
     _child_init_cnt = dict()
 
@@ -105,7 +107,8 @@ class Graph(object):
             ...         # Then define the graph attributes
             ...     def build(self):
             ...         pass
-
+        
+        This feature is in RC Stage.
         """
         self._generate_name()
         self.config = GraphConfig()
@@ -177,6 +180,7 @@ class Graph(object):
             * ``Tensor``
             * ``None``
 
+        This feature is in RC Stage.
         """
         raise NotImplementedError()
 
@@ -201,6 +205,8 @@ class Graph(object):
             will do the computaion graph generation and optimization at the first call.
 
             Donot override this function.
+
+        This feature is in RC Stage.
         """
         if not self._is_compiled:
             with graph_build_util.GLogScopeContext(
@@ -274,6 +280,8 @@ class Graph(object):
             optim (oneflow.optim.Optimizer): The optimizer.
             lr_sch : The learning rate scheduler, see oneflow.optim.lr_scheduler.
             is_sparse: When set to be True, treat optim as a sparse optimizer. Default is False.
+
+        This feature is in Beta Stage.
         """
         opt_dict = dict()
         assert optim is not None, "optimizer cannot be None"
@@ -301,6 +309,8 @@ class Graph(object):
 
     def set_grad_scaler(self, grad_scaler: GradScaler = None):
         r"""Set the GradScaler for gradient and loss scaling.
+
+        This feature is in Alpha Stage.
         """
         assert isinstance(grad_scaler, (GradScaler, StaticGradScaler))
         self._grad_scaler = grad_scaler
@@ -321,6 +331,7 @@ class Graph(object):
         Returns:
             dict: a dictionary containing the whole state of the graph.
 
+        This feature is in Beta Stage.
         """
         # Sync to make sure states has been updated.
         oneflow._oneflow_internal.eager.Sync()
@@ -374,6 +385,8 @@ class Graph(object):
 
         Note:
             nn.Graph's state dict can only be loaded before the first call of a graph.
+
+        This feature is in Beta Stage.
         """
         assert (
             not self._is_compiled
@@ -402,14 +415,10 @@ class Graph(object):
     @property
     def name(self):
         r"""Name auto-generated for this graph.
+
+        This feature is in Beta Stage.
         """
         return self._name
-
-    @property
-    def training(self):
-        r"""In traninig mode if the graph has an optimizer.
-        """
-        return self.config.training
 
     def debug(
         self,
@@ -445,6 +454,8 @@ class Graph(object):
             ranks (int or list(int)): choose ranks to print the debug information. Default rank ``0``.
                 You can choose any valid rank. Ranks equals ``-1`` means debug on all ranks.
             mode (bool): whether to set debug mode (``True``) or not (``False``). Default: ``True``.
+
+        This feature is in Beta Stage.
         """
         assert isinstance(v_level, int)
         assert v_level >= 0, "The min verbose debug info level is 0."
@@ -488,6 +499,7 @@ class Graph(object):
             out_tensors = g(input_tensors)
             print(g) # Inputs and Outputs infos are added
 
+        This feature is in Beta Stage.
         """
         child_lines = []
         child_lines.append(add_indent(repr(self.config), 2))
@@ -1128,6 +1140,8 @@ class Graph(object):
             (MODULE:linear:Linear(in_features=3, out_features=8, bias=False)): (
               (PARAMETER:linear.weight:tensor(..., size=(8, 3), dtype=oneflow.float32, requires_grad=True)): ()
             )
+
+        This feature is in Beta Stage.
         """
         if "_name" not in self.__dict__:
             raise AttributeError(
