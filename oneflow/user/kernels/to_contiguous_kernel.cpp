@@ -85,7 +85,6 @@ class ToContiguousKernel final : public user_op::OpKernel {
     const user_op::Tensor* in = ctx->Tensor4ArgNameAndIndex("in", 0);
     user_op::Tensor* out = ctx->Tensor4ArgNameAndIndex("out", 0);
     const user_op::TensorDesc* in_desc = ctx->TensorDesc4ArgNameAndIndex("in", 0);
-    const user_op::TensorDesc* out_desc = ctx->TensorDesc4ArgNameAndIndex("out", 0);
 
     const ShapeView& in_shape = in->shape();
     CHECK_EQ(out->shape(), in_shape);
@@ -97,8 +96,6 @@ class ToContiguousKernel final : public user_op::OpKernel {
     std::vector<int64_t> in_stride(in_desc->stride().NumAxes());
     std::copy(stride_vec.begin(), stride_vec.end(), in_stride.begin());
     
-    // const auto& in_stride = ctx->Attr<std::vector<int64_t>>("stride");
-
     const char* in_dptr = static_cast<const char*>(in->raw_dptr());
     char* out_dptr = static_cast<char*>(out->mut_raw_dptr());
     ToContiguousUtil<device_type, T>(ctx->stream(), in_shape, in_stride, in_dptr, out_dptr)();
