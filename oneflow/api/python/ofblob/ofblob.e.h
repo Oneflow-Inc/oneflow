@@ -44,8 +44,6 @@ struct BlobNumpyCopyUtil {
 
 }  // namespace oneflow
 
-typedef half_float::half float16;
-
 #define DEFINE_COPIER(T, type_proto)                                                               \
   inline void OfBlob_CopyToBuffer_##T(uint64_t of_blob_ptr, const oneflow::NumPyArrayPtr& array) { \
     oneflow::BlobNumpyCopyUtil<T>::To(of_blob_ptr, array).GetOrThrow();                            \

@@ -17,7 +17,6 @@ limitations under the License.
 #define ONEFLOW_USER_KERNELS_SLICE_UTIL_H_
 
 #include "oneflow/core/common/nd_index_offset_helper.h"
-#include "oneflow/core/common/nd_index_offset_with_stride_helper.h"
 #include "oneflow/core/common/util.h"
 #include "oneflow/core/ep/include/stream.h"
 
@@ -75,8 +74,6 @@ using SliceIndexHelper = NdIndexOffsetHelper<int64_t, NDIM>;
 template<int NDIM>
 using SliceStridedIndexHelper = NdIndexStridedOffsetHelper<int64_t, NDIM>;
 
-template<int NDIM>
-using SliceIndexWithStrideHelper = NdIndexOffsetWithStrideHelper<int64_t, NDIM>;
 
 template<int NDIM>
 OF_DEVICE_FUNC int64_t SliceOffsetToEntireOffset(int64_t offset, const SliceParams& params,

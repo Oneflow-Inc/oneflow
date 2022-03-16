@@ -37,8 +37,6 @@ struct SliceKernelUtil<DeviceType::kCPU, T> {
     SliceStridedIndexHelper<NDIM> sliced_strided_idx_cvtr(params.sliced_strides);
     SliceStridedIndexHelper<NDIM> entire_strided_idx_cvtr(params.entire_strides);
     FOR_RANGE(int, i, 0, elem_cnt) {
-      // int64_t offset = SliceOffsetToEntireOffset<NDIM>(i, params, entire_idx_cvtr,
-      // sliced_idx_cvtr);
       int64_t sliced_offset = 0;
       int64_t entire_offset = 0;
       SliceIndexToStridedOffset<NDIM>(i, params, entire_strided_idx_cvtr, sliced_idx_cvtr,
