@@ -13,27 +13,17 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
-#include "oneflow/xrt/openvino/ops/op_context.h"
-#include "oneflow/xrt/openvino/ops/op_kernel.h"
+#ifndef ONEFLOW_CORE_JOB_GRAPH_VERBOSE_STEP_LR_UTIL_H_
+#define ONEFLOW_CORE_JOB_GRAPH_VERBOSE_STEP_LR_UTIL_H_
 
-#include <ngraph/op/relu.hpp>
+#include "oneflow/core/common/maybe.h"
 
 namespace oneflow {
-namespace xrt {
-namespace openvino {
 
-class ReluOp : public OpenvinoOpKernel {
- public:
-  void Compile(OpenvinoOpContext* ctx) override {
-    std::shared_ptr<ngraph::Node> ngraph_node =
-        std::make_shared<ngraph::op::Relu>(ctx->Input("x_0"));
-    ngraph_node->set_friendly_name(ctx->op_name().c_str());
-    ctx->SetOutput("y_0", ngraph_node);
-  }
-};
+bool IsOpenGraphVerboseStepLr();
 
-REGISTER_OPENVINO_OP_KERNEL(Relu, ReluOp).EnableTrainPhase().Finalize();
+void SetGraphVerboseStepLr(bool verbose);
 
-}  // namespace openvino
-}  // namespace xrt
 }  // namespace oneflow
+
+#endif  // ONEFLOW_CORE_JOB_GRAPH_VERBOSE_STEP_LR_UTIL_H_
