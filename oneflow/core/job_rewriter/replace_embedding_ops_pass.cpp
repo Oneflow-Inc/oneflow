@@ -607,7 +607,7 @@ Maybe<void> ReplaceEmbeddingOps::Apply(const OpGraph& op_graph, JobBuilder* job_
           }
           if (found_embedding_optimizer == true) { break; }
         }
-        CHECK_EQ_OR_RETURN(found_embedding_optimizer, true);
+        CHECK_EQ(found_embedding_optimizer, true);
         const std::string& learning_rate_lbn =
             AddScheduleOp(op_graph, job_builder, embedding_optimizer_conf,
                           "System-Train-LearningRate-Scheduler_" + NewUniqueId());
