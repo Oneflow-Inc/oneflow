@@ -14,7 +14,6 @@ See the License for the specific language governing permissions and
 limitations under the License.
 """
 import oneflow as flow
-import oneflow._oneflow_internal
 from oneflow.nn.module import Module
 import json
 import datetime
