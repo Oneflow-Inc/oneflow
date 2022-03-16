@@ -52,8 +52,9 @@ class CpuRandPermKernel final : public user_op::OpKernel {
                const user_op::OpKernelCache*) const override {
     user_op::Tensor* out = ctx->Tensor4ArgNameAndIndex("out", 0);
     int32_t* output = out->mut_dptr<int32_t>();
-    int32_t* temp = out->mut_dptr<int32_t>();
     const int32_t n = ctx->Attr<int32_t>("n");
+    user_op::Tensor* tmp_buffer = ctx->Tensor4ArgNameAndIndex("tmp_buffer", 0);
+    int32_t* temp = tmp_buffer->mut_dptr<int32_t>();
     if (n == 0) { return; }
     auto* distribution_state = dynamic_cast<DistributionKernelState*>(state);
     CHECK_NOTNULL(distribution_state);
@@ -73,6 +74,9 @@ class CpuRandPermKernel final : public user_op::OpKernel {
 
 REGISTER_USER_KERNEL("randperm")
     .SetCreateFn<CpuRandPermKernel>()
-    .SetIsMatchedHob((user_op::HobDeviceType() == DeviceType::kCPU));
-
+    .SetIsMatchedHob((user_op::HobDeviceType() == DeviceType::kCPU))
+    .SetInferTmpSizeFn([](user_op::InferContext* ctx) {                              \
+        const int32_t n = ctx->Attr<int32_t>("n");                               \
+        return n * sizeof(int32_t);            
+      }); 
 }  // namespace oneflow
