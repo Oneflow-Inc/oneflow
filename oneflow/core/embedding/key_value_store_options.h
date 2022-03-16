@@ -38,15 +38,17 @@ void ParseCacheOptions(const nlohmann::json& cache_obj, CacheOptions* cache_opti
     UNIMPLEMENTED() << "Unsupported cache policy";
   }
   int64_t capacity = 0;
+  if (cache_obj.contains("capacity")) {
+    CHECK(cache_obj["capacity"].is_number());
+    capacity = cache_obj["capacity"].get<int64_t>();
+  }
   if (cache_obj.contains("cache_memory_budget_mb")) {
     CHECK(cache_obj["cache_memory_budget_mb"].is_number());
     int64_t cache_memory_budget_mb = cache_obj["cache_memory_budget_mb"].get<int64_t>();
-    capacity = cache_memory_budget_mb * 1024 * 1024 / cache_options->value_size;
-  }
-  if (cache_obj.contains("capacity")) {
-    CHECK_EQ(capacity, 0) << "when set capacity, must not set cache_memory_budget_mb";
-    CHECK(cache_obj["capacity"].is_number());
-    capacity = cache_obj["capacity"].get<int64_t>();
+    if (cache_memory_budget_mb > 0) {
+      CHECK_EQ(capacity, 0) << "when set capacity, must not set cache_memory_budget_mb";
+      capacity = cache_memory_budget_mb * 1024 * 1024 / cache_options->value_size;
+    }
   }
   CHECK_GT(capacity, 0) << "capacity or cache_memory_budget_mb must be set";
   // add an extra_capacity to avoid crash by uneven partition.
