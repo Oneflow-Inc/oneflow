@@ -35,7 +35,7 @@ void ParseCacheOptions(const nlohmann::json& cache_obj, CacheOptions* cache_opti
   } else if (policy == "full") {
     cache_options->policy = CacheOptions::Policy::kFull;
   } else {
-    UNIMPLEMENTED();
+    UNIMPLEMENTED() << "Unsupported cache policy";
   }
   CHECK(cache_obj.contains("cache_memory_budget_mb"));
   CHECK(cache_obj["cache_memory_budget_mb"].is_number());
@@ -49,7 +49,7 @@ void ParseCacheOptions(const nlohmann::json& cache_obj, CacheOptions* cache_opti
   } else if (value_memory_kind == "host") {
     cache_options->value_memory_kind = CacheOptions::MemoryKind::kHost;
   } else {
-    UNIMPLEMENTED();
+    UNIMPLEMENTED() << "Unsupported cache value_memory_kind";
   }
 }
 
