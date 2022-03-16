@@ -930,7 +930,7 @@
   bind_python: True
 
 - name: "cross_entropy"
-  signature: "Tensor(Tensor input, Tensor target, Tensor weight=None, Int64 ignore_index, String reduction) => CrossEntropy"
+  signature: "Tensor(Tensor input, Tensor target, Tensor weight=None, Int64 ignore_index=-100, String reduction=\"mean\") => CrossEntropy"
   bind_python: True
 
 - name: "distributed_sparse_cross_entropy_grad"
