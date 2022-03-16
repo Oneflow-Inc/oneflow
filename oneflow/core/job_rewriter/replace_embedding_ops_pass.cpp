@@ -18,6 +18,7 @@ limitations under the License.
 #include "oneflow/core/job_rewriter/dynamic_loss_scale_job_pass_state.h"
 #include "oneflow/core/job_rewriter/autograd.h"
 #include "oneflow/core/embedding/key_value_store_options.h"
+#include "oneflow/core/common/container_util.h"
 
 namespace oneflow {
 
@@ -59,7 +60,7 @@ Maybe<void> DynamicLossScaleAddGradient(JobPassCtx* ctx, const OpGraph& op_graph
             user_op::UserOpConfWrapperBuilder("System-DynamicLossScale-CountNotFinite-"
                                               + NewUniqueId())
                 .Op("count_not_finite")
-                .Input("x", gradient_lbns.at(0))
+                .Input("x", JUST(oneflow::VectorAt(gradient_lbns, 0)))
                 .Output("y")
                 .ScopeSymbolId(op_node->op().op_conf().scope_symbol_id())
                 .Build();
@@ -296,6 +297,7 @@ double GetLossInstanceNumScaleFactor(const OpGraph& op_graph, JobBuilder* job_bu
   CHECK_JUST(MakeGetterLossOpNode4OpName(op_graph, &LossOpNode4OpName));
   const TrainConf& train_conf = job_builder->job().job_conf().train_conf();
   HashMap<LogicalBlobId, OpNode*> loss_lbi2op_node;
+  CHECK_GT(train_conf.loss_lbn().size(), 0);
   for (const auto& loss_lbn : train_conf.loss_lbn()) {
     const auto& lbi = GenLogicalBlobId(loss_lbn);
     CHECK(loss_lbi2op_node.emplace(lbi, LossOpNode4OpName(lbi.op_name())).second);
@@ -317,6 +319,7 @@ double GetLossInstanceNumScaleFactor(const OpGraph& op_graph, JobBuilder* job_bu
       if (blob_desc != nullptr) { CHECK(*blob_desc == *cur_blob_desc); }
       blob_desc = cur_blob_desc;
     }
+    CHECK(blob_desc != nullptr);
     scale_factor = 1.0f / static_cast<float>(blob_desc->shape().elem_cnt());
   } else {
     std::unique_ptr<BlobDesc> blob_desc;
