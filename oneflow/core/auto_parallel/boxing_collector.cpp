@@ -536,7 +536,7 @@ Maybe<void> BoxingCollector::AskSbpCombination(const NdSbp& sbp_producer, const 
   }
 
   // Middle nodes algorithm supports transfer for different machines or devices or hierarchies
-  if (!producer_parallel_desc.EqualsIgnoringDeviceType(consumer_parallel_desc)) {
+  if (producer_parallel_desc != consumer_parallel_desc) {
     JUST(AskSbpCombination4DiffPlacement(sbp_producer, sbp_consumer, logical_blob_desc,
                                          producer_parallel_desc, consumer_parallel_desc,
                                          is_customized, middle_sbps, diag_node_pos, compute_cost));
@@ -567,7 +567,7 @@ Maybe<void> BoxingCollector::AskSbpCombination4Same2DPlacement(
     const ParallelDesc& producer_parallel_desc, const ParallelDesc& consumer_parallel_desc,
     bool is_customized, std::vector<NdSbp>& middle_sbps, int32_t* diag_node_pos,
     bool compute_cost) {
-  CHECK_OR_RETURN(producer_parallel_desc.EqualsIgnoringDeviceType(consumer_parallel_desc))
+  CHECK_OR_RETURN(producer_parallel_desc == consumer_parallel_desc)
       << "Producer and consumer have different placements, Please use AskSbpCombination directly";
   middle_sbps.clear();
 
@@ -643,8 +643,7 @@ Maybe<void> BoxingCollector::AskSbpCombination4DiffPlacement(
   int32_t j = FindId4NdSbp(sbp_consumer);
   // Different placements: [2, 3] vs 5, or [3, 2] vs [2, 2], or cpu vs cuda
   // Different hierarchies: [2, 3] vs 5, or [4, 3] vs [6, 2]
-  bool same_placement =
-      producer_parallel_desc.EqualsOnlyForMachineAndDeviceIds(consumer_parallel_desc);
+  bool same_placement = producer_parallel_desc.EqualsIgnoringHierarchy(consumer_parallel_desc);
   // Dealing with 2D sbp
   if (i >= 0 && j >= 0) {
     // Pure copy between machines and devices
@@ -833,8 +832,7 @@ Maybe<bool> BoxingCollector::Ask1Combination4DiffPlacement(
 
   // Different placements: [2, 3] vs 5, or [3, 2] vs [2, 2], or cpu vs cuda
   // Different hierarchies: [2, 3] vs 5, or [4, 3] vs [6, 2]
-  bool diff_placement =
-      !producer_parallel_desc.EqualsOnlyForMachineAndDeviceIds(consumer_parallel_desc);
+  bool diff_placement = !producer_parallel_desc.EqualsIgnoringHierarchy(consumer_parallel_desc);
 
   // If we found a diagonal middle node with current boxing collector
   if (min_diag_producer >= 0) {
