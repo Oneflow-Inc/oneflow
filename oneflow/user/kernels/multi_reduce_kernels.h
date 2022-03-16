@@ -21,7 +21,6 @@ limitations under the License.
 #include "oneflow/user/kernels/multi_reduce_kernel_util.h"
 
 namespace oneflow {
-namespace user_op {
 
 template<DeviceType device_type, typename T>
 class MultiReduceSumPowAbsKernel final : public user_op::OpKernel,
@@ -31,8 +30,10 @@ class MultiReduceSumPowAbsKernel final : public user_op::OpKernel,
   ~MultiReduceSumPowAbsKernel() override = default;
 
  private:
-  void Compute(user_op::KernelComputeContext* ctx, OpKernelState*,
-               const OpKernelCache*) const override {
+  using user_op::OpKernel::Compute;
+
+  void Compute(user_op::KernelComputeContext* ctx, user_op::OpKernelState*,
+               const user_op::OpKernelCache*) const override {
     std::vector<MultiReduceParam<T>> params;
     params.resize(ctx->input_size("x"));
     for (size_t i = 0; i < params.size(); ++i) {
@@ -61,6 +62,7 @@ class MultiReduceSumPowAbsKernel final : public user_op::OpKernel,
       reduce_sum(ctx->stream(), func, params, GetZeroVal<T>(), y_dptr);
     }
   }
+
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
 
@@ -82,8 +84,10 @@ class MultiReduceXimumAbsKernel final : public user_op::OpKernel, public user_op
   ~MultiReduceXimumAbsKernel() override = default;
 
  private:
-  void Compute(user_op::KernelComputeContext* ctx, OpKernelState*,
-               const OpKernelCache*) const override {
+  using user_op::OpKernel::Compute;
+
+  void Compute(user_op::KernelComputeContext* ctx, user_op::OpKernelState*,
+               const user_op::OpKernelCache*) const override {
     std::vector<MultiReduceParam<T>> params;
     params.resize(ctx->input_size("x"));
     for (size_t i = 0; i < params.size(); ++i) {
@@ -103,6 +107,7 @@ class MultiReduceXimumAbsKernel final : public user_op::OpKernel, public user_op
       UNIMPLEMENTED();
     }
   }
+
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
 
@@ -118,7 +123,6 @@ class MultiReduceXimumAbsKernel final : public user_op::OpKernel, public user_op
   REGISTER_MULTI_REDUCE_XIMUM_ABS_KERNEL("local_multi_reduce_max_abs", Ximum::kMax, device, dtype) \
   REGISTER_MULTI_REDUCE_XIMUM_ABS_KERNEL("local_multi_reduce_min_abs", Ximum::kMin, device, dtype)
 
-}  // namespace user_op
 }  // namespace oneflow
 
 #endif  // ONEFLOW_USER_KERNELS_MULTI_REDUCE_KERNELS_H_

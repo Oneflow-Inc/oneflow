@@ -16,7 +16,6 @@ limitations under the License.
 #include "oneflow/user/kernels/multi_reduce_kernels.h"
 
 namespace oneflow {
-namespace user_op {
 
 REGISTER_MULTI_REDUCE_SUM_POW_ABS_KERNEL(DeviceType::kCPU, float)
 REGISTER_MULTI_REDUCE_SUM_POW_ABS_KERNEL(DeviceType::kCPU, double)
@@ -24,5 +23,4 @@ REGISTER_MULTI_REDUCE_SUM_POW_ABS_KERNEL(DeviceType::kCPU, double)
 REGISTER_MULTI_REDUCE_XIMUM_ABS_KERNELS(DeviceType::kCPU, float)
 REGISTER_MULTI_REDUCE_XIMUM_ABS_KERNELS(DeviceType::kCPU, double)
 
-}  // namespace user_op
 }  // namespace oneflow
