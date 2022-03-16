@@ -19,6 +19,7 @@ import json
 import datetime
 from oneflow._oneflow_internal import OneEmbeddingHandler
 import numpy as np
+import traceback
 
 
 def _check_initializer(initializer):
@@ -40,8 +41,13 @@ def _check_cache(cache):
     assert isinstance(cache, dict)
     assert cache.__contains__("policy")
     assert cache["policy"] in ["lru", "full"]
-    assert cache.__contains__("cache_memory_budget_mb")
-    assert cache["cache_memory_budget_mb"] > 0
+    cache_memory_budget_mb = 0
+    if cache.__contains__("cache_memory_budget_mb"):
+        cache_memory_budget_mb = cache["cache_memory_budget_mb"]
+    capacity = 0
+    if cache.__contains__("capacity"):
+        capacity = cache["capacity"]
+    assert cache_memory_budget_mb > 0 or capacity > 0
     assert cache.__contains__("value_memory_kind")
     assert cache["value_memory_kind"] in ["device", "host"]
 
@@ -191,17 +197,54 @@ class Embedding(Module):
         )
 
 
-def make_device_mem_store_options(
-    device_memory_mb, persistent_path, size_factor=1, physical_block_size=512
+def _check_and_get_capacity_and_memory_budget_mb(
+    capacity, capacity_name, memory_budget_mb, memory_budget_mb_name
 ):
-    assert device_memory_mb > 0
+    if capacity is not None:
+        if memory_budget_mb is not None:
+            print(
+                "WARNING: {} is set so {} will be ignored".format(
+                    capacity_name, memory_budget_mb_name
+                )
+            )
+            print(traceback.format_stack()[-3])
+        assert capacity > 0
+        memory_budget_mb = 0
+    elif memory_budget_mb is not None:
+        assert memory_budget_mb > 0
+        capacity = 0
+    else:
+        raise ValueError(
+            "must set {} or {}".format(capacity_name, memory_budget_mb_name)
+        )
+    return capacity, memory_budget_mb
+
+
+def make_device_mem_store_options(
+    persistent_path,
+    capacity_per_rank=None,
+    device_memory_budget_mb_per_rank=None,
+    size_factor=1,
+    physical_block_size=512,
+):
     assert isinstance(persistent_path, (str, list, tuple))
+    (
+        capacity_per_rank,
+        device_memory_budget_mb_per_rank,
+    ) = _check_and_get_capacity_and_memory_budget_mb(
+        capacity_per_rank,
+        "capacity_per_rank",
+        device_memory_budget_mb_per_rank,
+        "device_memory_budget_mb_per_rank",
+    )
+    assert capacity_per_rank > 0 or device_memory_budget_mb_per_rank > 0
     options = {
         "kv_store": {
             "caches": [
                 {
                     "policy": "full",
-                    "cache_memory_budget_mb": device_memory_mb,
+                    "capacity": capacity_per_rank,
+                    "cache_memory_budget_mb": device_memory_budget_mb_per_rank,
                     "value_memory_kind": "device",
                 }
             ],
@@ -216,16 +259,30 @@ def make_device_mem_store_options(
 
 
 def make_host_mem_store_options(
-    host_memory_mb, persistent_path, size_factor=1, physical_block_size=512
+    persistent_path,
+    capacity_per_rank=None,
+    host_memory_budget_mb_per_rank=None,
+    size_factor=1,
+    physical_block_size=512,
 ):
-    assert host_memory_mb > 0
     assert isinstance(persistent_path, (str, list, tuple))
+    (
+        capacity_per_rank,
+        host_memory_budget_mb_per_rank,
+    ) = _check_and_get_capacity_and_memory_budget_mb(
+        capacity_per_rank,
+        "capacity_per_rank",
+        host_memory_budget_mb_per_rank,
+        "host_memory_budget_mb_per_rank",
+    )
+    assert capacity_per_rank > 0 or host_memory_budget_mb_per_rank > 0
     options = {
         "kv_store": {
             "caches": [
                 {
                     "policy": "full",
-                    "cache_memory_budget_mb": host_memory_mb,
+                    "capacity": capacity_per_rank,
+                    "cache_memory_budget_mb": host_memory_budget_mb_per_rank,
                     "value_memory_kind": "host",
                 }
             ],
@@ -240,16 +297,30 @@ def make_host_mem_store_options(
 
 
 def make_device_mem_cached_ssd_store_options(
-    device_memory_mb, persistent_path, size_factor=1, physical_block_size=512
+    persistent_path,
+    cached_capacity_per_rank=None,
+    device_memory_budget_mb_per_rank=None,
+    size_factor=1,
+    physical_block_size=512,
 ):
-    assert device_memory_mb > 0
     assert isinstance(persistent_path, (str, list, tuple))
+    (
+        cached_capacity_per_rank,
+        device_memory_budget_mb_per_rank,
+    ) = _check_and_get_capacity_and_memory_budget_mb(
+        cached_capacity_per_rank,
+        "cached_capacity_per_rank",
+        device_memory_budget_mb_per_rank,
+        "device_memory_budget_mb_per_rank",
+    )
+    assert cached_capacity_per_rank > 0 or device_memory_budget_mb_per_rank > 0
     options = {
         "kv_store": {
             "caches": [
                 {
                     "policy": "lru",
-                    "cache_memory_budget_mb": device_memory_mb,
+                    "capacity": cached_capacity_per_rank,
+                    "cache_memory_budget_mb": device_memory_budget_mb_per_rank,
                     "value_memory_kind": "device",
                 }
             ],
@@ -264,16 +335,30 @@ def make_device_mem_cached_ssd_store_options(
 
 
 def make_host_mem_cached_ssd_store_options(
-    host_memory_mb, persistent_path, size_factor=1, physical_block_size=512
+    persistent_path,
+    cached_capacity_per_rank=None,
+    host_memory_budget_mb_per_rank=None,
+    size_factor=1,
+    physical_block_size=512,
 ):
-    assert host_memory_mb > 0
     assert isinstance(persistent_path, (str, list, tuple))
+    (
+        cached_capacity_per_rank,
+        host_memory_budget_mb_per_rank,
+    ) = _check_and_get_capacity_and_memory_budget_mb(
+        cached_capacity_per_rank,
+        "cached_capacity_per_rank",
+        host_memory_budget_mb_per_rank,
+        "host_memory_budget_mb_per_rank",
+    )
+    assert cached_capacity_per_rank > 0 or host_memory_budget_mb_per_rank > 0
     options = {
         "kv_store": {
             "caches": [
                 {
                     "policy": "lru",
-                    "cache_memory_budget_mb": host_memory_mb,
+                    "capacity": cached_capacity_per_rank,
+                    "cache_memory_budget_mb": host_memory_budget_mb_per_rank,
                     "value_memory_kind": "host",
                 }
             ],
@@ -287,27 +372,49 @@ def make_host_mem_cached_ssd_store_options(
     return options
 
 
-def make_device_mem_cached_host_store_options(
-    device_memory_mb,
-    host_memory_mb,
+def make_device_mem_cached_host_mem_store_options(
     persistent_path,
+    cached_capacity_per_rank=None,
+    device_memory_budget_mb_per_rank=None,
+    capacity_per_rank=None,
+    host_memory_budget_mb_per_rank=None,
     size_factor=1,
     physical_block_size=512,
 ):
-    assert device_memory_mb > 0
-    assert host_memory_mb > 0
     assert isinstance(persistent_path, (str, list, tuple))
+    (
+        cached_capacity_per_rank,
+        device_memory_budget_mb_per_rank,
+    ) = _check_and_get_capacity_and_memory_budget_mb(
+        cached_capacity_per_rank,
+        "cached_capacity_per_rank",
+        device_memory_budget_mb_per_rank,
+        "device_memory_budget_mb_per_rank",
+    )
+    assert cached_capacity_per_rank > 0 or device_memory_budget_mb_per_rank > 0
+    (
+        capacity_per_rank,
+        host_memory_budget_mb_per_rank,
+    ) = _check_and_get_capacity_and_memory_budget_mb(
+        capacity_per_rank,
+        "capacity_per_rank",
+        host_memory_budget_mb_per_rank,
+        "host_memory_budget_mb_per_rank",
+    )
+    assert capacity_per_rank > 0 or host_memory_budget_mb_per_rank > 0
     options = {
         "kv_store": {
             "caches": [
                 {
                     "policy": "lru",
-                    "cache_memory_budget_mb": device_memory_mb,
+                    "capacity": cached_capacity_per_rank,
+                    "cache_memory_budget_mb": device_memory_budget_mb_per_rank,
                     "value_memory_kind": "device",
                 },
                 {
                     "policy": "full",
-                    "cache_memory_budget_mb": host_memory_mb,
+                    "capacity": capacity_per_rank,
+                    "cache_memory_budget_mb": host_memory_budget_mb_per_rank,
                     "value_memory_kind": "host",
                 },
             ],
