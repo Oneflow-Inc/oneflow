@@ -544,7 +544,7 @@ llvm::DenseSet<Value> MaxPool2DOp::OperandsToTranspose() {
 llvm::DenseSet<Value> MaxPool2DOp::ResultsToTranspose() {
   llvm::DenseSet<Value> result;
   result.insert(this->y());
-  result.insert(this->indice());
+  // result.insert(this->indice());
   return result;
 }
 
@@ -574,7 +574,7 @@ llvm::SmallVector<Value, 4> MaxPool2DOp::NchwToNhwc(llvm::SmallVector<Value, 4> 
                  ->getResults();
   llvm::SmallVector<Value, 4> results;
   results.push_back(res[0]);
-  results.push_back(res[1]);
+  // if (maxpool_2d_op.return_indicesAttr()) { results.push_back(res[1]); }
   return results;
 }
 

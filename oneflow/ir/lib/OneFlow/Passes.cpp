@@ -393,15 +393,16 @@ llvm::SmallVector<mlir::Value, 4> getInputOperandTransposeOp(NCHWCompatible op, 
   return res;
 }
 
-Operation* getResultTransposeOp(NCHWCompatible op, Value val, NamedAttrList transpos_attributes,
-                                int num_transposed_result, PatternRewriter& rewriter) {
+TransposeOp getResultTransposeOp(NCHWCompatible op, Value val, NamedAttrList transpos_attributes,
+                                 int num_transposed_result, PatternRewriter& rewriter) {
   std::string transpose_name = op->getName().getStringRef().str() + "_transpose_output_"
                                + std::to_string(num_transposed_result);
   transpos_attributes.set(llvm::StringRef("op_name"), rewriter.getStringAttr(transpose_name));
-  SmallVector<Value, 4> result_operands;
-  result_operands.push_back(val);
-  return rewriter.replaceOpWithNewOp<oneflow::TransposeOp>(op, op->getResultTypes(),
-                                                           result_operands, transpos_attributes);
+  SmallVector<Value, 4> operands;
+  operands.push_back(val);
+  TransposeOp transpose_op = rewriter.create<oneflow::TransposeOp>(
+      op.getLoc(), op->getResultTypes(), operands, transpos_attributes);
+  return transpose_op;
 }
 
 }  // namespace oneflow
@@ -447,8 +448,10 @@ struct AutoNhwcPattern : public OpInterfaceRewritePattern<NCHWCompatible> {
       llvm::DenseSet<Value> transpose_result = op.ResultsToTranspose();
       for (Value result : op->getOpResults()) {
         if (transpose_result.find(result) != transpose_result.end()) {
-          if (getResultTransposeOp(op, created_results[num_transposed_result], transpos_attributes,
-                                   num_transposed_result, rewriter)) {
+          if (auto result_transpose_op =
+                  getResultTransposeOp(op, created_results[num_transposed_result],
+                                       transpos_attributes, num_transposed_result, rewriter)) {
+            result.replaceAllUsesWith(result_transpose_op.output());
             num_transposed_result += 1;
           } else {
             return failure();
