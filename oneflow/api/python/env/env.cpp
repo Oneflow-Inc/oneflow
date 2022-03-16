@@ -14,10 +14,12 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 #include <pybind11/pybind11.h>
+#include "oneflow/api/python/env/env.h"
 #include "oneflow/api/python/of_api_registry.h"
-#include "oneflow/api/python/env/env_api.h"
 
 namespace py = pybind11;
+
+namespace oneflow {
 
 ONEFLOW_API_PYBIND11_MODULE("", m) {
   m.def("CurrentResource", &CurrentResource);
@@ -42,3 +44,5 @@ ONEFLOW_API_PYBIND11_MODULE("", m) {
   m.def("SetGraphLRVerbose", &SetGraphLRVerbose);
   m.def("GetGraphLRVerbose", &GetGraphLRVerbose);
 }
+
+}  // namespace oneflow
