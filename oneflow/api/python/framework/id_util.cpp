@@ -22,7 +22,7 @@ namespace py = pybind11;
 namespace oneflow {
 
 ONEFLOW_API_PYBIND11_MODULE("", m) {
-  m.def("UniqueStr", [](const std::string& prefix) { return UniqueStr(prefix).GetOrThrow(); });
+  m.def("UniqueStr", &UniqueStr);
 }
 
 }  // namespace oneflow

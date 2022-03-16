@@ -47,16 +47,16 @@ Maybe<cfg::OpAttribute> MakeOpAttribute(const std::string& op_attribute_str) {
 
 ONEFLOW_API_PYBIND11_MODULE("deprecated", m) {
   m.def("MakeOpConfByString",
-        [](const std::string& str) { return MakeOpConf(str).GetPtrOrThrow(); });
+        [](const std::string& str) { return MakeOpConf(str); });
 
   m.def("MakeOpAttributeByString",
-        [](const std::string& str) { return MakeOpAttribute(str).GetPtrOrThrow(); });
+        [](const std::string& str) { return MakeOpAttribute(str); });
 
   m.def("GetProtoDtype4OfDtype",
         [](const Symbol<DType>& x) { return static_cast<int>(x->data_type()); });
 
   m.def("GetDTypeByDataType",
-        [](int data_type) { return DType::Get(static_cast<DataType>(data_type)).GetOrThrow(); });
+        [](int data_type) { return DType::Get(static_cast<DataType>(data_type)); });
 }
 
 }  // namespace oneflow
