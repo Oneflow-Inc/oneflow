@@ -13,16 +13,10 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 """
-import warnings
-from typing import Optional
-
 import oneflow as flow
 import oneflow._oneflow_internal
-from oneflow.framework.tensor import register_tensor_op
 from oneflow.nn.module import Module
-from oneflow.nn.modules.utils import _check_inplace_valid
 import json
-import os
 import datetime
 from oneflow._oneflow_internal import OneEmbeddingHandler
 import numpy as np

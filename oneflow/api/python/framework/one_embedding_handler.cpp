@@ -36,7 +36,7 @@ class OneEmbeddingHandler final {
     Global<embedding::EmbeddingManager>::Get()->LoadSnapshot(embedding_name_, local_rank_id_,
                                                              rank_id_, snapshot_name);
 #else
-    UNIMPLEMENTED();
+    UNIMPLEMENTED() << "Only Support with CUDA";
 #endif
   }
 
@@ -45,7 +45,7 @@ class OneEmbeddingHandler final {
     Global<embedding::EmbeddingManager>::Get()->SaveSnapshot(embedding_name_, local_rank_id_,
                                                              rank_id_, snapshot_name);
 #else
-    UNIMPLEMENTED();
+    UNIMPLEMENTED() << "Only Support with CUDA";
 #endif
   }
 
@@ -55,7 +55,7 @@ class OneEmbeddingHandler final {
     Global<embedding::EmbeddingManager>::Get()->CreateKeyValueStore(
         key_value_store_options, local_rank_id_, rank_id_, world_size_);
 #else
-    UNIMPLEMENTED();
+    UNIMPLEMENTED() << "Only Support with CUDA";
 #endif
   }
 
