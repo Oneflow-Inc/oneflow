@@ -16,13 +16,13 @@ limitations under the License.
 
 #include "oneflow/core/framework/framework.h"
 #include "oneflow/core/embedding/key_value_store.h"
+#include "oneflow/core/embedding/embedding_manager.h"
 #include "oneflow/core/device/cuda_util.h"
 #include "oneflow/user/kernels/random_mask_generator.h"
 #include "oneflow/core/framework/random_generator_impl.h"
 #include "oneflow/core/cuda/atomic.cuh"
 #include "oneflow/core/ep/include/primitive/copy_nd.h"
 #include "oneflow/core/ep/include/primitive/cast.h"
-#include "nlohmann/json.hpp"
 
 namespace oneflow {
 
@@ -105,12 +105,11 @@ class EmbeddingKernelState final : public user_op::OpKernelState {
     OF_CUDA_CHECK(cudaGetDevice(&device_index_));
     OF_CUDA_CHECK(cudaMallocHost(&host_num_keys_, sizeof(IDX)));
     ParseEmbeddingColumns(ctx->Attr<std::string>("embedding_columns"), &columns_param_);
-    // TODO: depend on EmbeddingManager
-    // key_value_store_ = Global<embedding::EmbeddingManager>::Get()->GetKeyValueStore(
-    //    ctx->Attr<std::string>("embedding_name"), ctx->parallel_ctx().parallel_id());
-    // uint32_t max_query_length =
-    //    ctx->TensorDesc4ArgNameAndIndex("unique_ids", 0)->shape().elem_cnt();
-    // key_value_store_->ReserveQueryLength(max_query_length);
+    key_value_store_ = Global<embedding::EmbeddingManager>::Get()->GetKeyValueStore(
+        ctx->Attr<std::string>("embedding_name"), ctx->parallel_ctx().parallel_id());
+    uint32_t max_query_length =
+        ctx->TensorDesc4ArgNameAndIndex("unique_ids", 0)->shape().elem_cnt();
+    key_value_store_->ReserveQueryLength(max_query_length);
   }
   ~EmbeddingKernelState() override {
     CudaCurrentDeviceGuard guard(device_index_);
@@ -139,12 +138,11 @@ class EmbeddingPutKernelState final : public user_op::OpKernelState {
   explicit EmbeddingPutKernelState(user_op::KernelInitContext* ctx) : device_index_(-1) {
     OF_CUDA_CHECK(cudaGetDevice(&device_index_));
     OF_CUDA_CHECK(cudaMallocHost(&host_num_keys_, sizeof(IDX)));
-    // TODO: depend on EmbeddingManager
-    // key_value_store_ = Global<embedding::EmbeddingManager>::Get()->GetKeyValueStore(
-    //    ctx->Attr<std::string>("embedding_name"), ctx->parallel_ctx().parallel_id());
-    // uint32_t max_query_length =
-    //    ctx->TensorDesc4ArgNameAndIndex("unique_ids", 0)->shape().elem_cnt();
-    // key_value_store_->ReserveQueryLength(max_query_length);
+    key_value_store_ = Global<embedding::EmbeddingManager>::Get()->GetKeyValueStore(
+        ctx->Attr<std::string>("embedding_name"), ctx->parallel_ctx().parallel_id());
+    uint32_t max_query_length =
+        ctx->TensorDesc4ArgNameAndIndex("unique_ids", 0)->shape().elem_cnt();
+    key_value_store_->ReserveQueryLength(max_query_length);
   }
   ~EmbeddingPutKernelState() override {
     CudaCurrentDeviceGuard guard(device_index_);
