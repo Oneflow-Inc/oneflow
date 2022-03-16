@@ -20,7 +20,7 @@ class BlockConfig(object):
 
     When an nn.Module is added into an nn.Graph, it is wrapped into a ModuleBlock. You can set or get optimization configs on an nn.Module with it's `ModuleBlock.config`. 
 
-    This feature is in Beta Stage.
+    This feature is in Stage Beta.
     """
 
     def __init__(self):
@@ -45,7 +45,7 @@ class BlockConfig(object):
             self.module_pipeline.m_stage0.config.stage_id = 0
             self.module_pipeline.m_stage1.config.stage_id = 1
 
-        This feature is in Beta Stage.
+        This feature is in Stage Beta.
         """
         return self._stage_id
 
@@ -83,7 +83,7 @@ class BlockConfig(object):
 
             graph = Graph()
 
-        This feature is in Beta Stage.
+        This feature is in Stage Beta.
         """
         return self._activation_checkpointing
 
