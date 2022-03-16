@@ -86,27 +86,19 @@ Maybe<void> InferGradDataType(user_op::InferContext* ctx) {
   return Maybe<void>::Ok();
 }
 
-/* static */ Maybe<void> KlDivLossOp::ModifyInputArg(
-    const GetInputArgModifier& GetInputArgModifierFn, const user_op::UserOpConfWrapper& conf) {
-  user_op::InputArgModifier* target_modifier = GetInputArgModifierFn("target", 0);
-  CHECK_OR_RETURN(target_modifier != nullptr);
-  target_modifier->set_requires_grad(false);
-  return Maybe<void>::Ok();
-}
-
 /* static */ Maybe<void> KlDivLossOp::InferDataType(user_op::InferContext* ctx) {
   return KlInferDataType(ctx);
 }
 
-/* static */ Maybe<void> KlDivLossGradOp::InferLogicalTensorDesc(user_op::InferContext* ctx) {
+/* static */ Maybe<void> KlDivLossInputGradOp::InferLogicalTensorDesc(user_op::InferContext* ctx) {
   return InferGradTensorDescFn(ctx);
 }
 
-/*static*/ Maybe<void> KlDivLossGradOp::InferPhysicalTensorDesc(user_op::InferContext* ctx) {
+/*static*/ Maybe<void> KlDivLossInputGradOp::InferPhysicalTensorDesc(user_op::InferContext* ctx) {
   return InferLogicalTensorDesc(ctx);
 }
 
-/* static */ Maybe<void> KlDivLossGradOp::GetSbp(user_op::SbpContext* ctx) {
+/* static */ Maybe<void> KlDivLossInputGradOp::GetSbp(user_op::SbpContext* ctx) {
   const auto& input_shape = ctx->LogicalTensorDesc4InputArgNameAndIndex("input", 0).shape();
   FOR_RANGE(int64_t, i, 0, input_shape.NumAxes()) {
     ctx->NewBuilder()
@@ -119,7 +111,32 @@ Maybe<void> InferGradDataType(user_op::InferContext* ctx) {
   return Maybe<void>::Ok();
 }
 
-/* static */ Maybe<void> KlDivLossGradOp::InferDataType(user_op::InferContext* ctx) {
+/* static */ Maybe<void> KlDivLossInputGradOp::InferDataType(user_op::InferContext* ctx) {
+  return InferGradDataType(ctx);
+}
+
+/* static */ Maybe<void> KlDivLossTargetGradOp::InferLogicalTensorDesc(user_op::InferContext* ctx) {
+  return InferGradTensorDescFn(ctx);
+}
+
+/*static*/ Maybe<void> KlDivLossTargetGradOp::InferPhysicalTensorDesc(user_op::InferContext* ctx) {
+  return InferLogicalTensorDesc(ctx);
+}
+
+/* static */ Maybe<void> KlDivLossTargetGradOp::GetSbp(user_op::SbpContext* ctx) {
+  const auto& input_shape = ctx->LogicalTensorDesc4InputArgNameAndIndex("input", 0).shape();
+  FOR_RANGE(int64_t, i, 0, input_shape.NumAxes()) {
+    ctx->NewBuilder()
+        .Split(user_op::OpArg("input", 0), i)
+        .Split(user_op::OpArg("target", 0), i)
+        .Split(user_op::OpArg("dx", 0), i)
+        .Split(user_op::OpArg("dy", 0), i)
+        .Build();
+  }
+  return Maybe<void>::Ok();
+}
+
+/* static */ Maybe<void> KlDivLossTargetGradOp::InferDataType(user_op::InferContext* ctx) {
   return InferGradDataType(ctx);
 }
 
@@ -127,15 +144,27 @@ REGISTER_USER_OP_GRAD("kl_div_loss")
     .SetGenBackwardOpConfFn([](const user_op::UserOpWrapper& op,
                                const user_op::AddOpFn& AddOp) -> Maybe<void> {
       if (op.NeedGenGradTensor4OpInput("input", 0)) {
-        user_op::UserOpConfWrapperBuilder builder(op.op_name() + "_grad");
+        user_op::UserOpConfWrapperBuilder builder(op.op_name() + "_input_grad");
         user_op::UserOpConfWrapper grad_op =
-            builder.Op("kl_div_loss_grad")
+            builder.Op("kl_div_loss_input_grad")
                 .Input("input", op.input("input", 0))
                 .Input("target", op.input("target", 0))
                 .Input("dy", op.GetGradTensorWithOpOutput("out", 0))
                 .Output("dx")
                 .Build();
         op.BindGradTensorWithOpInput(grad_op.output("dx", 0), "input", 0);
+        AddOp(grad_op);
+      }
+      if (op.NeedGenGradTensor4OpInput("target", 0)) {
+        user_op::UserOpConfWrapperBuilder builder(op.op_name() + "_target_grad");
+        user_op::UserOpConfWrapper grad_op =
+            builder.Op("kl_div_loss_target_grad")
+                .Input("input", op.input("input", 0))
+                .Input("target", op.input("target", 0))
+                .Input("dy", op.GetGradTensorWithOpOutput("out", 0))
+                .Output("dx")
+                .Build();
+        op.BindGradTensorWithOpInput(grad_op.output("dx", 0), "target", 0);
         AddOp(grad_op);
       }
       return Maybe<void>::Ok();

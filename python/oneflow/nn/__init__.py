@@ -110,6 +110,8 @@ from oneflow.nn.modules.loss import (
     SmoothL1Loss,
     CombinedMarginLoss,
     TripletMarginLoss,
+    SoftTargetCrossEntropy,
+    JsdCrossEntropy,
 )
 from oneflow.nn.modules.normalization import GroupNorm, LayerNorm
 from oneflow.nn.modules.padding import (

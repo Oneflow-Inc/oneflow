@@ -37,12 +37,27 @@ void ComputeKLDivOut(int64_t elem_cnt, const T* input, const T* target, T* out,
 }
 
 template<typename T>
-void ComputeKLDivGradOut(int64_t elem_cnt, const T* input, const T* target, const T* dy, T* dx,
-                         const bool log_target) {
+void ComputeKLDivInputGradOut(int64_t elem_cnt, const T* input, const T* target, const T* dy, T* dx,
+                              const bool log_target) {
   FOR_RANGE(int64_t, i, 0, elem_cnt) {
     const T dy_val = dy[i];
     dx[i] =
         log_target ? (-std::exp(target[i]) * dy_val) : (target[i] > 0 ? -target[i] * dy_val : 0);
+  }
+}
+
+template<typename T>
+void ComputeKLDivTargetGradOut(int64_t elem_cnt, const T* input, const T* target, const T* dy,
+                               T* dx, const bool log_target) {
+  FOR_RANGE(int64_t, i, 0, elem_cnt) {
+    const T dy_val = dy[i];
+    if (log_target) {
+      dx[i] = dy_val * ((target[i] + GetOneVal<T>() - input[i]) * std::exp(target[i]));
+    } else {
+      dx[i] = target[i] == GetZeroVal<T>()
+                  ? 0
+                  : dy_val * (std::log(target[i]) + GetOneVal<T>() - input[i]);
+    }
   }
 }
 
@@ -57,19 +72,32 @@ class KLDivKernel : public SimpleLossKernel<DeviceType::kCPU, T, KLDivKernel<T>>
 };
 
 template<typename T>
-class KLDivGradKernel : public SimpleLossGradKernel<DeviceType::kCPU, T, KLDivGradKernel<T>> {
+class KLDivInputGradKernel
+    : public SimpleLossGradKernel<DeviceType::kCPU, T, KLDivInputGradKernel<T>> {
  public:
   void ComputeOut(user_op::KernelComputeContext* ctx, int64_t elem_cnt, const T* input,
                   const T* target, const T* dy, T* dx) const {
     const bool log_target = ctx->Attr<bool>("log_target");
-    ComputeKLDivGradOut(elem_cnt, input, target, dy, dx, log_target);
+    ComputeKLDivInputGradOut(elem_cnt, input, target, dy, dx, log_target);
+  }
+};
+
+template<typename T>
+class KLDivTargetGradKernel
+    : public SimpleLossGradKernel<DeviceType::kCPU, T, KLDivTargetGradKernel<T>> {
+ public:
+  void ComputeOut(user_op::KernelComputeContext* ctx, int64_t elem_cnt, const T* input,
+                  const T* target, const T* dy, T* dx) const {
+    const bool log_target = ctx->Attr<bool>("log_target");
+    ComputeKLDivTargetGradOut(elem_cnt, input, target, dy, dx, log_target);
   }
 };
 
 }  // namespace
 
 REGISTER_SIMPLE_LOSS_KERNEL_CPU("kl_div_loss", KLDivKernel)
-REGISTER_SIMPLE_LOSS_GRAD_KERNEL_CPU("kl_div_loss_grad", KLDivGradKernel)
+REGISTER_SIMPLE_LOSS_GRAD_KERNEL_CPU("kl_div_loss_input_grad", KLDivInputGradKernel)
+REGISTER_SIMPLE_LOSS_GRAD_KERNEL_CPU("kl_div_loss_target_grad", KLDivTargetGradKernel)
 
 }  // namespace user_op
 }  // namespace oneflow
