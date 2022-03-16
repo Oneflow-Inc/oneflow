@@ -180,7 +180,7 @@ template<typename T, typename G, typename IDX>
 class MomentumEmbeddingUpdateKernel final : public user_op::OpKernel {
  public:
   MomentumEmbeddingUpdateKernel() = default;
-  ~MomentumEmbeddingUpdateKernel() = default;
+  ~MomentumEmbeddingUpdateKernel() override = default;
 
  private:
   using user_op::OpKernel::Compute;
@@ -245,7 +245,7 @@ template<typename T, typename G, typename IDX>
 class AdamEmbeddingUpdateKernel final : public user_op::OpKernel {
  public:
   AdamEmbeddingUpdateKernel() = default;
-  ~AdamEmbeddingUpdateKernel() = default;
+  ~AdamEmbeddingUpdateKernel() override = default;
 
  private:
   using user_op::OpKernel::Compute;
