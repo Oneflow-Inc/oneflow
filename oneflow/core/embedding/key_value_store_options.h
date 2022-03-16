@@ -37,10 +37,27 @@ void ParseCacheOptions(const nlohmann::json& cache_obj, CacheOptions* cache_opti
   } else {
     UNIMPLEMENTED() << "Unsupported cache policy";
   }
-  CHECK(cache_obj.contains("cache_memory_budget_mb"));
-  CHECK(cache_obj["cache_memory_budget_mb"].is_number());
-  cache_options->capacity =
-      cache_obj["cache_memory_budget_mb"].get<int64_t>() * 1024 * 1024 / cache_options->value_size;
+  int64_t capacity = 0;
+  if (cache_obj.contains("capacity")) {
+    CHECK(cache_obj["capacity"].is_number());
+    capacity = cache_obj["capacity"].get<int64_t>();
+  }
+  int64_t cache_memory_budget_mb = 0;
+  if (cache_obj.contains("cache_memory_budget_mb")) {
+    CHECK(cache_obj["cache_memory_budget_mb"].is_number());
+    cache_memory_budget_mb = cache_obj["cache_memory_budget_mb"].get<int64_t>();
+  }
+  if (capacity > 0) {
+    CHECK_EQ(cache_memory_budget_mb, 0) << "when set capacity, must not set cache_memory_budget_mb";
+    const int64_t extra_capacity = capacity * 0.05;
+    // add an extra_capacity to avoid crash by uneven partition.
+    cache_options->capacity = capacity + extra_capacity > 4096 ? extra_capacity : 4096;
+  } else if (cache_memory_budget_mb > 0) {
+    cache_options->capacity = cache_memory_budget_mb * 1024 * 1024 / cache_options->value_size;
+  } else {
+    LOG(FATAL) << "capacity or cache_memory_budget_mb must be set";
+  }
+
   CHECK(cache_obj.contains("value_memory_kind"));
   CHECK(cache_obj["value_memory_kind"].is_string());
   std::string value_memory_kind = cache_obj["value_memory_kind"].get<std::string>();
