@@ -227,7 +227,7 @@ Maybe<void> EnvGlobalObjectsScope::Init(const EnvProto& env_proto) {
 }
 
 EnvGlobalObjectsScope::~EnvGlobalObjectsScope() {
-  if (!CHECK_JUST(is_normal_exit_)) { return; }
+  if (is_normal_exit_.has_value() && !CHECK_JUST(is_normal_exit_)) { return; }
   auto session_ctx = Global<MultiClientSessionContext>::Get();
   if (session_ctx != nullptr) {
     VLOG(1) << "Multi client session has not closed , env close it at env scope destruction.";
