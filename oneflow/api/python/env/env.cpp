@@ -41,6 +41,8 @@ ONEFLOW_API_PYBIND11_MODULE("", m) {
   m.def("GetFLAGS_alsologtostderr", &GetFLAGS_alsologtostderr);
   m.def("SetFLAGS_v", &SetFLAGS_v);
   m.def("GetFLAGS_v", &GetFLAGS_v);
+  m.def("SetGraphLRVerbose", &SetGraphLRVerbose);
+  m.def("GetGraphLRVerbose", &GetGraphLRVerbose);
 }
 
 }  // namespace oneflow

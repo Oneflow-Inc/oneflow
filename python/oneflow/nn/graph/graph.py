@@ -111,6 +111,7 @@ class Graph(object):
         self.config = GraphConfig()
         self._blocks = OrderedDict()
         self._opts = []
+        self._verbose = False
         self._grad_scaler = None
         self._variables_conf = OrderedDict()
         self._additional_variable_tobe_loaded = OrderedDict()
@@ -230,6 +231,12 @@ class Graph(object):
         in ``nn.Graph.build()`` for the moment. So you may call methods such as ``Tensor.mean()``
         to make the loss tensor a scalar tensor.
 
+        Note:
+            If you want to output the learning rate information for each step, 
+            set the ``verbose`` parameter of the ``lr_scheduler`` to ``True``, and you will see the result at rank 0.
+            
+            This feature is the same as eager mode.
+
         For example:
 
         .. code-block:: python
@@ -282,6 +289,11 @@ class Graph(object):
                 lr_sch.optimizer is optim
             ), "lr_scheduler's optimizer must be the same optimizer in add_optimizer."
             opt_dict["lr_sch"] = lr_sch
+            self._verbose = opt_dict["lr_sch"].verbose
+            rank = get_rank()
+            if rank != 0:
+                self._verbose = False
+        oneflow._oneflow_internal.SetGraphLRVerbose(self._verbose)
         self._opts.append(opt_dict)
         # Set the training config if there is an optimizer add in graph.
         if len(self._opts) == 1:
@@ -417,9 +429,6 @@ class Graph(object):
         print graph build info of each nn.Module. ``v_level`` 2 will additionally print graph build
         info of each operation. ``v_level`` 3 will additionally print more detailed info of each
         operation.
-
-        In addition, during the training process, when ``v_level`` is greater than or equal to 1, 
-        the learning rate information of each step will be printed.
 
         Use ``ranks`` to choose which rank to print the debug information.
 
