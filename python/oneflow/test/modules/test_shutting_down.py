@@ -15,6 +15,7 @@ limitations under the License.
 """
 import oneflow
 
+
 class TestCallWhenShuttingDown:
     def __init__(self):
         tensor = oneflow.ones((2, 2))
@@ -24,7 +25,9 @@ class TestCallWhenShuttingDown:
         tensor = oneflow.ones((2, 2))
         print(tensor)
 
+
 test_call_when_shutting_down = TestCallWhenShuttingDown()
+
 
 class TestSyncWhenShuttingDown:
     def __del__(self):
