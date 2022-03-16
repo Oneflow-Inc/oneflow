@@ -594,6 +594,19 @@ jobs:
         if: ${{ !fromJson(matrix.cache-hit) && contains(matrix.runs-on, 'self-hosted') }}
         run: |
           docker exec ${TEST_CONTAINER_NAME} python3 -m pip install -e ${{ env.FLOW_VISION_SRC}}
+      - name: Benchmark Resnet50
+        timeout-minutes: 20
+        if: ${{ !fromJson(matrix.cache-hit) && matrix.test-type == 'benchmark' && matrix.device == 'cuda' }}
+        uses: Oneflow-Inc/get-oneflow/pytest-benchmark@support-auto-benchmark
+        with:
+          pytest-script: ${{env.vision_path}}/benchmark/test_resnet50.py
+          benchmark-id: 1-gpu-Resnet50
+          pytest-args: |
+            -v
+          pytest-compare-args: |
+            --benchmark-compare-fail=min:5%
+            --benchmark-compare-fail=mean:0.001
+          container-name: ${{ env.TEST_CONTAINER_NAME }}
       - name: Print stacks in all core files
         timeout-minutes: 45
         if: ${{ failure() && contains(matrix.runs-on, 'self-hosted') }}
