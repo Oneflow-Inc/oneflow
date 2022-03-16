@@ -93,11 +93,11 @@ Maybe<void> DynamicLossScaleAddGradient(JobPassCtx* ctx, const OpGraph& op_graph
           ReplaceInputLbnInOpCustomizedConf(&new_identity_conf, "in_0", add_op.output("out", 0));
       CHECK_EQ_OR_RETURN(identity_op_conf.input("in", 0), old_val);
       job_builder->MutOpsOnlyOnce({new_identity_conf});
-
     } else {
-      UNIMPLEMENTED();
+      UNIMPLEMENTED_THEN_RETURN();
     }
   }
+  return Maybe<void>::Ok();
 }
 
 std::string AddScheduleOp(const OpGraph& op_graph, JobBuilder* job_builder,
