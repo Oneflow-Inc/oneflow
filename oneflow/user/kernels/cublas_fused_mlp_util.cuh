@@ -83,10 +83,10 @@ cudaDataType_t GetCudaDataType(DataType data_type) {
 
 cublasComputeType_t GetComputeType(DataType data_type) {
   switch (data_type) {
-    case kFloat: 
-      if(ParseBooleanFromEnv("ONEFLOW_EP_CUDA_ENABLE_TF32_EXECUTION", true)){
-        return CUBLAS_COMPUTE_32F_FAST_TF32; 
-      }else{
+    case kFloat:
+      if (ParseBooleanFromEnv("ONEFLOW_EP_CUDA_ENABLE_TF32_EXECUTION", true)) {
+        return CUBLAS_COMPUTE_32F_FAST_TF32;
+      } else {
         return CUBLAS_COMPUTE_32F;
       }
     case kDouble: return CUBLAS_COMPUTE_64F;
