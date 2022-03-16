@@ -102,14 +102,10 @@ struct AbsPow<half> {
 };
 */
 
-namespace user_op {
-
 REGISTER_MULTI_REDUCE_SUM_POW_ABS_KERNEL(DeviceType::kCUDA, float)
 REGISTER_MULTI_REDUCE_SUM_POW_ABS_KERNEL(DeviceType::kCUDA, double)
 
 REGISTER_MULTI_REDUCE_XIMUM_ABS_KERNELS(DeviceType::kCUDA, float)
 REGISTER_MULTI_REDUCE_XIMUM_ABS_KERNELS(DeviceType::kCUDA, double)
-
-}  // namespace user_op
 
 }  // namespace oneflow
