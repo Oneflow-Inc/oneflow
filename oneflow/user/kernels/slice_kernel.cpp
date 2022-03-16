@@ -63,7 +63,7 @@ void ConstructSliceParamsLarge(const SliceContext& ctx, const std::vector<int64_
   CHECK_EQ(stop_vec.size(), ndim);
   CHECK_EQ(step_vec.size(), ndim);
 
-  std::memset(slice_param, 0, sizeof(SliceParams));
+  std::memset(static_cast<void *>(slice_param), 0, sizeof(SliceParams));
   slice_param->ndim = ndim;
   FOR_RANGE(int, i, 0, slice_param->ndim) {
     const int64_t dim_size = shape.At(i);
@@ -103,7 +103,7 @@ void ConstructSliceParamsSmall(const SliceContext& ctx, const std::vector<int64_
   CHECK_EQ(stop_vec.size(), ndim);
   CHECK_EQ(step_vec.size(), ndim);
 
-  std::memset(slice_param, 0, sizeof(SliceParams));
+  std::memset(static_cast<void *>(slice_param), 0, sizeof(SliceParams));
   slice_param->ndim = ndim;
   FOR_RANGE(int, i, 0, slice_param->ndim) {
     const int64_t start_in_full_large = start_vec.at(i);
@@ -144,7 +144,7 @@ SliceParams ConstructSliceParams(user_op::KernelComputeContext* ctx, const user_
   CHECK_EQ(step_vec.size(), ndim);
 
   SliceParams params;
-  std::memset(&params, 0, sizeof(SliceParams));
+  std::memset(static_cast<void *>(&params), 0, sizeof(SliceParams));
   if (entire->shape().NumAxes() == 1 && sliced->shape().NumAxes() == 0) {
     params.ndim = ndim;
     params.dims[0] = entire->shape().At(0);
@@ -201,7 +201,7 @@ SliceParams ConstructSliceParamsWithStride(user_op::KernelComputeContext* ctx,
   CHECK_EQ(step_vec.size(), ndim);
 
   SliceParams params;
-  std::memset(&params, 0, sizeof(SliceParams));
+  std::memset(static_cast<void *>(&params), 0, sizeof(SliceParams));
   if (entire->shape().NumAxes() == 1 && sliced->shape().NumAxes() == 0) {
     params.ndim = ndim;
     params.dims[0] = entire->shape().At(0);
