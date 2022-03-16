@@ -74,7 +74,6 @@ using SliceIndexHelper = NdIndexOffsetHelper<int64_t, NDIM>;
 template<int NDIM>
 using SliceStridedIndexHelper = NdIndexStridedOffsetHelper<int64_t, NDIM>;
 
-
 template<int NDIM>
 OF_DEVICE_FUNC int64_t SliceOffsetToEntireOffset(int64_t offset, const SliceParams& params,
                                                  const SliceIndexHelper<NDIM>& entire_idx_cvtr,
