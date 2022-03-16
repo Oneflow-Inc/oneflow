@@ -481,123 +481,371 @@ bool IsBroadcast(const NdSbp& nd_sbp, const ParallelDesc& parallel_desc) {
   return true;
 }
 
+bool HasSplit(const NdSbp& nd_sbp, const ParallelDesc& parallel_desc) {
+  if (parallel_desc.parallel_num() == 1) { return false; }
+  for (const auto& sbp : nd_sbp.sbp_parallel()) {
+    if (sbp.has_split_parallel()) { return true; }
+  }
+  return false;
+}
+
+OperatorConf GenConstantLikeOp(const std::string& op_name, int64_t scope_symbol_id,
+                               const std::string& like_lbn, double value, bool as_int) {
+  OperatorConf op_conf;
+  op_conf.set_name(op_name);
+  op_conf.set_scope_symbol_id(scope_symbol_id);
+  ConstantLikeOpConf* constant_like_conf = op_conf.mutable_constant_like_conf();
+  constant_like_conf->set_like(like_lbn);
+  if (as_int) {
+    constant_like_conf->set_int_operand(static_cast<int64_t>(value));
+  } else {
+    constant_like_conf->set_float_operand(value);
+  }
+  constant_like_conf->set_out("out");
+  return op_conf;
+}
+
+std::string GlobalAbsMaxMin(const OpGraph& op_graph, JobBuilder* job_builder,
+                            const HashMap<LogicalBlobId, LogicalBlobId>& lbi2diff_lbi,
+                            bool max_or_min, ParallelConf* out_parallel_conf) {
+  // max(abs(x))
+  bool all_same_parallel_desc = true;
+  const ParallelDesc& any_parallel_desc =
+      op_graph.OpNode4OpName(lbi2diff_lbi.begin()->first.op_name())->parallel_desc();
+  std::vector<std::string> group_reduce_lbns;
+
+  auto GroupReduce = [&](const ParallelDesc& parallel_desc, const NdSbp& nd_sbp,
+                         const std::vector<LogicalBlobId>& lbis) {
+    if (!parallel_desc.EqualsIgnoringHierarchy(any_parallel_desc)) {
+      all_same_parallel_desc = false;
+    }
+    int64_t scope_symbol_id =
+        MakeScopeSymbolId(job_builder->job().job_conf(), parallel_desc.parallel_conf());
+    bool has_split = HasSplit(nd_sbp, parallel_desc);
+    if (job_builder->job().job_conf().enable_gradients_stats_aggregation()) {
+      std::string reduce_op_type_name =
+          has_split ? (max_or_min ? "local_multi_reduce_max_abs" : "local_multi_reduce_min_abs")
+                    : (max_or_min ? "multi_reduce_max_abs" : "multi_reduce_min_abs");
+      std::string reduce_op_name =
+          "System-ClipGradient-GlobalNorm-MultiReduceXimumAbs-" + NewUniqueId();
+      auto multi_reduce_op_builder = user_op::UserOpConfWrapperBuilder(reduce_op_name)
+                                         .Op(reduce_op_type_name)
+                                         .Output("y")
+                                         .ScopeSymbolId(scope_symbol_id);
+      for (const auto& lbi : lbis) {
+        multi_reduce_op_builder.Input("x", GenLogicalBlobName(lbi2diff_lbi.at(lbi)));
+      }
+      auto multi_reduce_op = multi_reduce_op_builder.Build();
+      job_builder->AddOps(parallel_desc.parallel_conf(), {multi_reduce_op.op_conf()});
+      if (has_split) {
+        // trival constant for global_reduce_max's input device_count
+        auto device_count_op = GenConstantLikeOp(
+            "System-ClipGradient-GlobalNorm-GlobalReduceXimumDeviceCount-" + NewUniqueId(),
+            scope_symbol_id, multi_reduce_op.output("y", 0), 0, true);
+        job_builder->AddOps(parallel_desc.parallel_conf(), {device_count_op});
+        auto device_count_lbn =
+            GenLogicalBlobName(device_count_op.name(), device_count_op.constant_like_conf().out());
+        // S->B->B global reduce max/min
+        std::string global_reduce_op_type_name =
+            max_or_min ? "reduce_max_global_stage" : "reduce_min_global_stage";
+        std::string global_reduce_op_name =
+            "System-ClipGradient-GlobalNorm-GlobalReduceXimum-" + NewUniqueId();
+        auto global_reduce_op = user_op::UserOpConfWrapperBuilder(global_reduce_op_name)
+                                    .Op(global_reduce_op_type_name)
+                                    .Input("in", multi_reduce_op.output("y", 0))
+                                    .Input("device_count", device_count_lbn)
+                                    .Output("out")
+                                    .Output("mask")
+                                    .ScopeSymbolId(scope_symbol_id)
+                                    .Build();
+        job_builder->AddOps(parallel_desc.parallel_conf(), {global_reduce_op.op_conf()});
+        group_reduce_lbns.push_back(global_reduce_op.output("out", 0));
+      } else {
+        group_reduce_lbns.push_back(multi_reduce_op.output("y", 0));
+      }
+    } else {
+      std::vector<std::string> max_lbns;
+      max_lbns.reserve(lbis.size());
+      for (const auto& lbi : lbis) {
+        auto abs_op =
+            user_op::UserOpConfWrapperBuilder("System-ClipGradient-GlobalNorm-Abs-" + NewUniqueId())
+                .Op("abs")
+                .Input("x", GenLogicalBlobName(lbi2diff_lbi.at(lbi)))
+                .Output("y")
+                .ScopeSymbolId(scope_symbol_id)
+                .Build();
+        job_builder->AddOps(parallel_desc.parallel_conf(), {abs_op.op_conf()});
+        if (has_split) {
+          std::string device_reduce_op_type_name =
+              max_or_min ? "reduce_max_device_stage" : "reduce_min_device_stage";
+          std::string device_reduce_op_name =
+              "System-ClipGradient-GlobalNorm-DeviceReduceXimum-" + NewUniqueId();
+          auto device_reduce_op = user_op::UserOpConfWrapperBuilder(device_reduce_op_name)
+                                      .Op(device_reduce_op_type_name)
+                                      .Input("in", GenLogicalBlobName(lbi2diff_lbi.at(lbi)))
+                                      .Output("out")
+                                      .Output("mask")
+                                      .Output("count")
+                                      .ScopeSymbolId(scope_symbol_id)
+                                      .Build();
+          job_builder->AddOps(parallel_desc.parallel_conf(), {device_reduce_op.op_conf()});
+
+          std::string global_reduce_op_type_name =
+              max_or_min ? "reduce_max_global_stage" : "reduce_min_global_stage";
+          std::string global_reduce_op_name =
+              "System-ClipGradient-GlobalNorm-GlobalReduceXimum-" + NewUniqueId();
+          auto global_reduce_op = user_op::UserOpConfWrapperBuilder(device_reduce_op_name)
+                                      .Op(device_reduce_op_type_name)
+                                      .Input("in", device_reduce_op.output("out", 0))
+                                      .Input("device_count", device_reduce_op.output("mask", 0))
+                                      .Output("out")
+                                      .Output("mask")
+                                      .ScopeSymbolId(scope_symbol_id)
+                                      .Build();
+          job_builder->AddOps(parallel_desc.parallel_conf(), {global_reduce_op.op_conf()});
+          max_lbns.push_back(global_reduce_op.output("out", 0));
+        } else {
+          const Shape& shape =
+              op_graph.OpNode4OpName(lbi.op_name())->LogicalBlobDesc4Lbi(lbi).shape();
+          std::string reduce_op_type_name = max_or_min ? "reduce_max" : "reduce_min";
+          std::string reduce_op_name =
+              "System-ClipGradient-GlobalNorm-ReduceXimum-" + NewUniqueId();
+          std::vector<int32_t> reduce_axes(shape.NumAxes());
+          std::iota(reduce_axes.begin(), reduce_axes.end(), 0);
+          auto reduce_op = user_op::UserOpConfWrapperBuilder(reduce_op_name)
+                               .Op(reduce_op_type_name)
+                               .Input("input_tensor", GenLogicalBlobName(lbi2diff_lbi.at(lbi)))
+                               .Output("output_tensor")
+                               .Attr("axis", reduce_axes)
+                               .Attr("keepdims", false)
+                               .ScopeSymbolId(scope_symbol_id)
+                               .Build();
+          job_builder->AddOps(parallel_desc.parallel_conf(), {reduce_op.op_conf()});
+          max_lbns.push_back(reduce_op.output("out", 0));
+        }
+      }
+      // stack all grad max and go on max
+      auto stack_op_builder =
+          user_op::UserOpConfWrapperBuilder("System-ClipGradient-GlobalNorm-Stack-" + NewUniqueId())
+              .Op("stack")
+              .Output("out")
+              .ScopeSymbolId(scope_symbol_id);
+      for (const auto& lbn : max_lbns) { stack_op_builder.Input("in", lbn); }
+      auto stack_op = stack_op_builder.Build();
+      job_builder->AddOps(parallel_desc.parallel_conf(), {stack_op.op_conf()});
+
+      std::string reduce_op_type_name = max_or_min ? "reduce_max" : "reduce_min";
+      std::string reduce_op_name =
+          "System-ClipGradient-GlobalNorm-Stack-ReduceXimum-" + NewUniqueId();
+      auto reduce_op = user_op::UserOpConfWrapperBuilder(reduce_op_name)
+                           .Op(reduce_op_type_name)
+                           .Input("input_tensor", stack_op.output("out", 0))
+                           .Output("output_tensor")
+                           .Attr("axis", std::vector<int32_t>{0})
+                           .Attr("keepdims", false)
+                           .ScopeSymbolId(scope_symbol_id)
+                           .Build();
+      job_builder->AddOps(parallel_desc.parallel_conf(), {reduce_op.op_conf()});
+      group_reduce_lbns.push_back(reduce_op.output("output_tensor", 0));
+    }
+  };
+  ForEachAggregatedParamGroup(op_graph, lbi2diff_lbi, GroupReduce);
+
+  CHECK_GT(group_reduce_lbns.size(), 0);
+  // stack all group max and go on max
+  if (group_reduce_lbns.size() == 1) {
+    return group_reduce_lbns[0];
+  } else {
+    *out_parallel_conf = all_same_parallel_desc ? any_parallel_desc.parallel_conf()
+                                                : GenParallelConfOfCpuZeroOnMaster();
+    out_parallel_conf->mutable_hierarchy()->clear_dim();
+    const int64_t scope_symbol_id =
+        MakeScopeSymbolId(job_builder->job().job_conf(), *out_parallel_conf);
+    auto stack_op_builder = user_op::UserOpConfWrapperBuilder(
+                                "System-ClipGradient-GlobalNorm-GroupStack-" + NewUniqueId())
+                                .Op("stack")
+                                .Output("out")
+                                .ScopeSymbolId(scope_symbol_id);
+    for (const auto& lbn : group_reduce_lbns) { stack_op_builder.Input("in", lbn); }
+    auto stack_op = stack_op_builder.Build();
+    job_builder->AddOps(*out_parallel_conf, {stack_op.op_conf()});
+
+    std::string reduce_op_type_name = max_or_min ? "reduce_max" : "reduce_min";
+    std::string reduce_op_name = "System-ClipGradient-GlobalNorm-GroupReduceXimum-" + NewUniqueId();
+    auto reduce_op = user_op::UserOpConfWrapperBuilder(reduce_op_name)
+                         .Op(reduce_op_type_name)
+                         .Input("input_tensor", stack_op.output("out", 0))
+                         .Output("output_tensor")
+                         .Attr("axis", std::vector<int32_t>{0})
+                         .Attr("keepdims", false)
+                         .ScopeSymbolId(scope_symbol_id)
+                         .Build();
+    job_builder->AddOps(*out_parallel_conf, {reduce_op.op_conf()});
+    return reduce_op.output("output_tensor", 0);
+  }
+}
+
+std::string GlobalNorm(const OpGraph& op_graph, JobBuilder* job_builder,
+                       const HashMap<LogicalBlobId, LogicalBlobId>& lbi2diff_lbi, float p,
+                       ParallelConf* out_parallel_conf) {
+  bool all_same_parallel_desc = true;
+  const ParallelDesc& any_parallel_desc =
+      op_graph.OpNode4OpName(lbi2diff_lbi.begin()->first.op_name())->parallel_desc();
+  bool all_broadcast = true;
+  std::vector<std::string> group_lbns;
+  std::vector<ParallelConf> group_parallel_confs;
+  group_lbns.reserve(lbi2diff_lbi.size());
+  group_parallel_confs.reserve(lbi2diff_lbi.size());
+
+  auto GroupNorm = [&](const ParallelDesc& parallel_desc, const NdSbp& nd_sbp,
+                       const std::vector<LogicalBlobId>& lbis) {
+    if (!parallel_desc.EqualsIgnoringHierarchy(any_parallel_desc)) {
+      all_same_parallel_desc = false;
+    }
+    int64_t scope_symbol_id =
+        MakeScopeSymbolId(job_builder->job().job_conf(), parallel_desc.parallel_conf());
+    if (!IsBroadcast(nd_sbp, parallel_desc)) { all_broadcast = false; }
+    group_parallel_confs.emplace_back(parallel_desc.parallel_conf());
+
+    if (job_builder->job().job_conf().enable_gradients_stats_aggregation()) {
+      auto multi_reduce_sum_op_builder =
+          user_op::UserOpConfWrapperBuilder("System-ClipGradient-GlobalNorm-MultiReduceSumPowAbs-"
+                                            + NewUniqueId())
+              .Op("multi_reduce_sum_pow_abs")
+              .Attr("p", p)
+              .Output("y")
+              .ScopeSymbolId(scope_symbol_id);
+      for (const auto& lbi : lbis) {
+        multi_reduce_sum_op_builder.Input("x", GenLogicalBlobName(lbi2diff_lbi.at(lbi)));
+      }
+      const auto multi_reduce_sum_op = multi_reduce_sum_op_builder.Build();
+      job_builder->AddOps(parallel_desc.parallel_conf(), {multi_reduce_sum_op.op_conf()});
+      group_lbns.emplace_back(multi_reduce_sum_op.output("y", 0));
+    } else {
+      std::vector<std::string> lbns_to_add;
+      lbns_to_add.reserve(lbis.size());
+      for (const auto& lbi : lbis) {
+        const LogicalBlobId& diff_lbi = lbi2diff_lbi.at(lbi);
+        const auto square_sum_op =
+            user_op::UserOpConfWrapperBuilder("System-ClipGradient-GlobalNorm-ReduceSumPowAbs-"
+                                              + NewUniqueId())
+                .Op("multi_reduce_sum_pow_abs")
+                .Input("x", GenLogicalBlobName(diff_lbi))
+                .Attr("p", p)
+                .Output("y")
+                .ScopeSymbolId(scope_symbol_id)
+                .Build();
+        job_builder->AddOps(parallel_desc.parallel_conf(), {square_sum_op.op_conf()});
+        lbns_to_add.emplace_back(square_sum_op.output("y", 0));
+      }
+      group_lbns.emplace_back(AddLbns(job_builder, lbns_to_add, parallel_desc.parallel_conf(),
+                                      scope_symbol_id, "System-ClipGradient-GlobalNorm-Add-"));
+    }
+  };
+  ForEachAggregatedParamGroup(op_graph, lbi2diff_lbi, GroupNorm);
+  *out_parallel_conf = all_same_parallel_desc ? any_parallel_desc.parallel_conf()
+                                              : GenParallelConfOfCpuZeroOnMaster();
+  const int64_t scope_symbol_id =
+      MakeScopeSymbolId(job_builder->job().job_conf(), *out_parallel_conf);
+  std::string global_reduce_sum_lbn;
+  if (all_broadcast) {
+    global_reduce_sum_lbn = AddLbns(job_builder, group_lbns, *out_parallel_conf, scope_symbol_id,
+                                    "System-ClipGradient-GlobalNorm-Add-");
+  } else {
+    std::vector<std::string> partial_group_lbns;
+    partial_group_lbns.reserve(group_lbns.size());
+    for (size_t i = 0; i < group_lbns.size(); ++i) {
+      partial_group_lbns.emplace_back(AddCastToP(job_builder, group_lbns.at(i),
+                                                 group_parallel_confs.at(i),
+                                                 "System-ClipGradient-ParallelCast-"));
+    }
+    out_parallel_conf->mutable_hierarchy()->clear_dim();
+    global_reduce_sum_lbn = AddLbns(job_builder, partial_group_lbns, *out_parallel_conf,
+                                    scope_symbol_id, "System-ClipGradient-GlobalNorm-Add-");
+  }
+
+  auto global_pow_op =
+      user_op::UserOpConfWrapperBuilder("System-ClipGradient-GlobalNorm-GlobalPow-" + NewUniqueId())
+          .Op("scalar_pow")
+          .Input("in", global_reduce_sum_lbn)
+          .Attr("float_operand", 1.0 / p)
+          .Attr("has_float_operand", true)
+          .Output("out")
+          .ScopeSymbolId(scope_symbol_id)
+          .Build();
+  job_builder->AddOps(*out_parallel_conf, {global_pow_op.op_conf()});
+
+  return global_pow_op.output("out", 0);
+}
+
 void ClipGradientByGlobalNorm(const OpGraph& op_graph, JobBuilder* job_builder,
                               HashMap<LogicalBlobId, LogicalBlobId>* lbi2diff_lbi,
                               const ClipByGlobalNormConf& conf) {
   if (lbi2diff_lbi->empty()) { return; }
-  bool all_same_parallel_desc = true;
-  const ParallelDesc& any_parallel_desc =
-      op_graph.OpNode4OpName(lbi2diff_lbi->begin()->first.op_name())->parallel_desc();
-  const size_t loop_size = lbi2diff_lbi->size();
-  std::vector<std::string> partial_square_sum_lbns;
-  partial_square_sum_lbns.reserve(loop_size);
-  std::vector<bool> is_broadcast_nd_sbp;
-  is_broadcast_nd_sbp.reserve(loop_size);
-  std::vector<ParallelConf> param_group_parallel_confs;
-  param_group_parallel_confs.reserve(loop_size);
-  ForEachAggregatedParamGroup(
-      op_graph, *lbi2diff_lbi,
-      [&](const ParallelDesc& parallel_desc, const NdSbp& nd_sbp,
-          const std::vector<LogicalBlobId>& lbis) {
-        if (!parallel_desc.EqualsIgnoringHierarchy(any_parallel_desc)) {
-          all_same_parallel_desc = false;
-        }
-        int64_t scope_symbol_id =
-            MakeScopeSymbolId(job_builder->job().job_conf(), parallel_desc.parallel_conf());
-        is_broadcast_nd_sbp.emplace_back(IsBroadcast(nd_sbp, parallel_desc));
-        param_group_parallel_confs.emplace_back(parallel_desc.parallel_conf());
-        if (job_builder->job().job_conf().enable_gradients_stats_aggregation()) {
-          auto multi_square_sum_op_builder =
-              user_op::UserOpConfWrapperBuilder("System-ClipGradient-GlobalNorm-MultiSquareSum-"
-                                                + NewUniqueId())
-                  .Op("multi_square_sum")
-                  .Output("y")
-                  .ScopeSymbolId(scope_symbol_id);
-          for (const auto& lbi : lbis) {
-            multi_square_sum_op_builder.Input("x", GenLogicalBlobName(lbi2diff_lbi->at(lbi)));
-          }
-          const auto multi_square_sum_op = multi_square_sum_op_builder.Build();
-          job_builder->AddOps(parallel_desc.parallel_conf(), {multi_square_sum_op.op_conf()});
-          partial_square_sum_lbns.emplace_back(multi_square_sum_op.output("y", 0));
-        } else {
-          std::vector<std::string> lbns_to_add;
-          lbns_to_add.reserve(lbis.size());
-          for (const auto& lbi : lbis) {
-            const LogicalBlobId& diff_lbi = lbi2diff_lbi->at(lbi);
-            const auto square_sum_op =
-                user_op::UserOpConfWrapperBuilder("System-ClipGradient-GlobalNorm-SquareSum-"
-                                                  + NewUniqueId())
-                    .Op("square_sum")
-                    .Input("x", GenLogicalBlobName(diff_lbi))
-                    .Output("y")
-                    .ScopeSymbolId(scope_symbol_id)
-                    .Build();
-            job_builder->AddOps(parallel_desc.parallel_conf(), {square_sum_op.op_conf()});
-            lbns_to_add.emplace_back(square_sum_op.output("y", 0));
-          }
-          partial_square_sum_lbns.emplace_back(
-              AddLbns(job_builder, lbns_to_add, parallel_desc.parallel_conf(), scope_symbol_id,
-                      "System-ClipGradient-GlobalNorm-Add-"));
-        }
-      });
-  ParallelConf global_norm_parallel_conf = all_same_parallel_desc
-                                               ? any_parallel_desc.parallel_conf()
-                                               : GenParallelConfOfCpuZeroOnMaster();
-  const bool all_group_broadcast =
-      std::all_of(is_broadcast_nd_sbp.begin(), is_broadcast_nd_sbp.end(), [](bool i) { return i; });
-  std::vector<std::string> square_sum_lbns_for_add;
-  if (!all_group_broadcast) {
-    for (int64_t i = 0; i < partial_square_sum_lbns.size(); ++i) {
-      square_sum_lbns_for_add.emplace_back(AddCastToP(job_builder, partial_square_sum_lbns.at(i),
-                                                      param_group_parallel_confs.at(i),
-                                                      "System-ClipGradient-ParallelCast-"));
-    }
-    global_norm_parallel_conf.mutable_hierarchy()->clear_dim();
+  ParallelConf parallel_conf;
+  std::string total_norm_lbn;
+  if (conf.has_inf_norm_type() && conf.inf_norm_type()) {
+    total_norm_lbn = GlobalAbsMaxMin(op_graph, job_builder, *lbi2diff_lbi, true, &parallel_conf);
+  } else if (conf.has_neg_inf_norm_type() && conf.neg_inf_norm_type()) {
+    total_norm_lbn = GlobalAbsMaxMin(op_graph, job_builder, *lbi2diff_lbi, false, &parallel_conf);
   } else {
-    square_sum_lbns_for_add = std::move(partial_square_sum_lbns);
+    CHECK(conf.has_norm_type());
+    total_norm_lbn =
+        GlobalNorm(op_graph, job_builder, *lbi2diff_lbi, conf.norm_type(), &parallel_conf);
   }
 
-  const int64_t scope_symbol_id =
-      MakeScopeSymbolId(job_builder->job().job_conf(), global_norm_parallel_conf);
-  const std::string square_sum_lbn =
-      AddLbns(job_builder, square_sum_lbns_for_add, global_norm_parallel_conf, scope_symbol_id,
-              "System-ClipGradient-GlobalNorm-Add-");
-  auto inv_global_norm_op = user_op::UserOpConfWrapperBuilder(
-                                "System-ClipGradient-GlobalNorm-InvGlobalNorm-" + NewUniqueId())
-                                .Op("rsqrt")
-                                .Input("x", square_sum_lbn)
-                                .Output("y")
-                                .ScopeSymbolId(scope_symbol_id)
-                                .Build();
-  job_builder->AddOps(global_norm_parallel_conf, {inv_global_norm_op.op_conf()});
-  OperatorConf inv_clip_norm_op_conf{};
-  inv_clip_norm_op_conf.set_name("System-ClipGradient-GlobalNorm-InvClipNorm-" + NewUniqueId());
-  ConstantLikeOpConf* inv_clip_norm_constant_like_conf =
-      inv_clip_norm_op_conf.mutable_constant_like_conf();
-  inv_clip_norm_constant_like_conf->set_like(inv_global_norm_op.output("y", 0));
-  inv_clip_norm_constant_like_conf->set_float_operand(1.0 / conf.clip_norm());
-  inv_clip_norm_constant_like_conf->set_out("out");
-  inv_clip_norm_op_conf.set_scope_symbol_id(scope_symbol_id);
-  job_builder->AddOps(global_norm_parallel_conf, {inv_clip_norm_op_conf});
-  auto minimum_op =
-      user_op::UserOpConfWrapperBuilder("System-ClipGradient-GlobalNorm-Minimum-" + NewUniqueId())
-          .Op("broadcast_minimum")
-          .Input("x", inv_global_norm_op.output("y", 0))
-          .Input("y", GenLogicalBlobName(inv_clip_norm_op_conf.name(),
-                                         inv_clip_norm_constant_like_conf->out()))
-          .Output("z")
+  int64_t scope_symbol_id = MakeScopeSymbolId(job_builder->job().job_conf(), parallel_conf);
+
+  auto add_eps_ops =
+      user_op::UserOpConfWrapperBuilder("System-ClipGradient-GlobalNorm-AddEps-" + NewUniqueId())
+          .Op("scalar_add")
+          .Input("in", total_norm_lbn)
+          .Attr("float_operand", 1e-6)
+          .Attr("has_float_operand", true)
+          .Output("out")
           .ScopeSymbolId(scope_symbol_id)
           .Build();
-  job_builder->AddOps(global_norm_parallel_conf, {minimum_op.op_conf()});
-  const std::string gradient_scale_factor_lbn = minimum_op.output("z", 0);
+  job_builder->AddOps(parallel_conf, {add_eps_ops.op_conf()});
+
+  auto inv_op =
+      user_op::UserOpConfWrapperBuilder("System-ClipGradient-GlobalNorm-Inv-" + NewUniqueId())
+          .Op("reciprocal_no_nan")
+          .Input("x", add_eps_ops.output("out", 0))
+          .Output("y")
+          .ScopeSymbolId(scope_symbol_id)
+          .Build();
+  job_builder->AddOps(parallel_conf, {inv_op.op_conf()});
+
+  auto coeff_op =
+      user_op::UserOpConfWrapperBuilder("System-ClipGradient-GlobalNorm-Coeff-" + NewUniqueId())
+          .Op("scalar_mul")
+          .Input("in", inv_op.output("y", 0))
+          .Attr("float_operand", static_cast<double>(conf.max_norm()))
+          .Attr("has_float_operand", true)
+          .Output("out")
+          .ScopeSymbolId(scope_symbol_id)
+          .Build();
+  job_builder->AddOps(parallel_conf, {coeff_op.op_conf()});
+
+  auto clamp_coeff_op =
+      user_op::UserOpConfWrapperBuilder("System-ClipGradient-GlobalNorm-Clamp-" + NewUniqueId())
+          .Op("clip_by_scalar_max")
+          .Input("x", coeff_op.output("out", 0))
+          .Attr("floating_max", 1.0)
+          .Output("y")
+          .ScopeSymbolId(scope_symbol_id)
+          .Build();
+  job_builder->AddOps(parallel_conf, {clamp_coeff_op.op_conf()});
+
+  const std::string& coeff_lbn = clamp_coeff_op.output("y", 0);
   for (auto& pair : *lbi2diff_lbi) {
     const LogicalBlobId& lbi = pair.first;
     LogicalBlobId& diff_lbi = pair.second;
-    auto scalar_mul_op = user_op::UserOpConfWrapperBuilder(
-                             "System-ClipGradient-GlobalNorm-ScalarMul-" + NewUniqueId())
+    auto mul_op_name = "System-ClipGradient-GlobalNorm-ScalarMul-" + NewUniqueId();
+    auto scalar_mul_op = user_op::UserOpConfWrapperBuilder(mul_op_name)
                              .Op("scalar_mul_by_tensor")
                              .Input("x", GenLogicalBlobName(diff_lbi))
-                             .Input("scalar", gradient_scale_factor_lbn)
+                             .Input("scalar", coeff_lbn)
                              .Output("y")
                              .ScopeSymbolId(ScopeSymbolId4Lbi(op_graph, lbi))
                              .Build();

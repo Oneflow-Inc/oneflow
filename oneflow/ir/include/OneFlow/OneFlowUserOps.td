@@ -4613,6 +4613,71 @@ def OneFlow_MultiSquareSumOp : OneFlow_BaseOp<"multi_square_sum", [NoSideEffect,
   let has_data_type_infer_fn = 1;
 }
 
+def OneFlow_MultiReduceSumPowAbsOp : OneFlow_BaseOp<"multi_reduce_sum_pow_abs", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
+  let input = (ins
+    Variadic<OneFlow_Tensor>:$x
+  );
+  let output = (outs
+    OneFlow_Tensor:$y
+  );
+  let attrs = (ins
+    DefaultValuedAttr<F32Attr, "0">:$p
+  );
+  let has_logical_tensor_desc_infer_fn = 1;
+  let has_data_type_infer_fn = 1;
+  let has_get_sbp_fn = 1;
+}
+
+def OneFlow_MultiReduceMaxAbsOp : OneFlow_BaseOp<"multi_reduce_max_abs", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
+  let input = (ins
+    Variadic<OneFlow_Tensor>:$x
+  );
+  let output = (outs
+    OneFlow_Tensor:$y
+  );
+  let has_logical_tensor_desc_infer_fn = 1;
+  let has_data_type_infer_fn = 1;
+  let has_get_sbp_fn = 1;
+}
+
+def OneFlow_MultiReduceMinAbsOp : OneFlow_BaseOp<"multi_reduce_min_abs", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
+  let input = (ins
+    Variadic<OneFlow_Tensor>:$x
+  );
+  let output = (outs
+    OneFlow_Tensor:$y
+  );
+  let has_logical_tensor_desc_infer_fn = 1;
+  let has_data_type_infer_fn = 1;
+  let has_get_sbp_fn = 1;
+}
+
+def OneFlow_LocalMultiReduceMaxAbsOp : OneFlow_BaseOp<"local_multi_reduce_max_abs", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
+  let input = (ins
+    Variadic<OneFlow_Tensor>:$x
+  );
+  let output = (outs
+    OneFlow_Tensor:$y
+  );
+  let has_logical_tensor_desc_infer_fn = 1;
+  let has_physical_tensor_desc_infer_fn = 1;
+  let has_data_type_infer_fn = 1;
+  let has_get_sbp_fn = 1;
+}
+
+def OneFlow_LocalMultiReduceMinAbsOp : OneFlow_BaseOp<"local_multi_reduce_min_abs", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
+  let input = (ins
+    Variadic<OneFlow_Tensor>:$x
+  );
+  let output = (outs
+    OneFlow_Tensor:$y
+  );
+  let has_logical_tensor_desc_infer_fn = 1;
+  let has_physical_tensor_desc_infer_fn = 1;
+  let has_data_type_infer_fn = 1;
+  let has_get_sbp_fn = 1;
+}
+
 def OneFlow_NllOp : OneFlow_BaseOp<"nll", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
     OneFlow_Tensor:$input,
