@@ -181,58 +181,6 @@ SliceParams ConstructSliceParams(user_op::KernelComputeContext* ctx, const user_
   }
   return params;
 }
-
-SliceParams ConstructSliceParamsWithStride(user_op::KernelComputeContext* ctx,
-                                           const user_op::Tensor* entire,
-                                           const user_op::Tensor* sliced,
-                                           const std::vector<int64_t>& stride) {
-  const auto& start_vec = ctx->Attr<std::vector<int64_t>>("start");
-  const auto& stop_vec = ctx->Attr<std::vector<int64_t>>("stop");
-  const auto& step_vec = ctx->Attr<std::vector<int64_t>>("step");
-  const int64_t ndim = entire->shape().NumAxes();
-  CHECK_LE(ndim, kSliceMaxDims);
-  if (entire->shape().NumAxes() == 1) {
-    CHECK_LE(sliced->shape().NumAxes(), 1);
-  } else {
-    CHECK_EQ(sliced->shape().NumAxes(), ndim);
-  }
-  CHECK_EQ(start_vec.size(), ndim);
-  CHECK_EQ(stop_vec.size(), ndim);
-  CHECK_EQ(step_vec.size(), ndim);
-
-  SliceParams params;
-  std::memset(static_cast<void *>(&params), 0, sizeof(SliceParams));
-  if (entire->shape().NumAxes() == 1 && sliced->shape().NumAxes() == 0) {
-    params.ndim = ndim;
-    params.dims[0] = entire->shape().At(0);
-    params.start[0] = RegulateSliceStart(start_vec.at(0), entire->shape().At(0));
-    params.step[0] = step_vec.at(0);
-    params.size[0] = 1;
-    return params;
-  }
-  params.ndim = ndim;
-  params.use_stride = true;
-  FOR_RANGE(int, i, 0, params.ndim) {
-    const int64_t dim_size = entire->shape().At(i);
-    const int64_t slice_size = sliced->shape().At(i);
-    const int64_t step = step_vec.at(i);
-    CHECK_NE(step, 0);
-    const int64_t start = RegulateSliceStart(start_vec.at(i), dim_size);
-    const int64_t stop = RegulateSliceStop(stop_vec.at(i), dim_size);
-    if (step > 0) {
-      CHECK_LT(start + step * (slice_size - 1), stop);
-    } else {
-      CHECK_GT(start + step * (slice_size - 1), stop);
-    }
-    params.dims[i] = dim_size;
-    params.start[i] = start;
-    params.step[i] = step;
-    params.size[i] = slice_size;
-    params.stride[i] = stride[i];
-  }
-  return params;
-}
-
 }  // namespace
 
 template<DeviceType device_type, typename T>
