@@ -105,7 +105,7 @@ CublasScalarParameter GetCublasScalarParameter(Scalar scalar, cublasComputeType_
   CublasScalarParameter sp{};
   if (compute_type == CUBLAS_COMPUTE_64F) {
     sp.d = scalar.Value<double>();
-  } else if (compute_type == CUBLAS_COMPUTE_32F) {
+  } else if (compute_type == CUBLAS_COMPUTE_32F || compute_type == CUBLAS_COMPUTE_32F_FAST_TF32) {
     sp.s = scalar.Value<float>();
   } else {
     UNIMPLEMENTED();
