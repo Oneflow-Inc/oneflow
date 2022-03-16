@@ -38,13 +38,15 @@ std::string BuildIdentityOp(JobBuilder* job_builder, const std::string& in_lbn,
   return identity_op.output("out", 0);
 }
 
-void DynamicLossScaleAddGradient(JobPassCtx* ctx, const OpGraph& op_graph, JobBuilder* job_builder,
-                                 const std::vector<std::string>& gradient_lbns,
-                                 int64_t scope_symbol_id, const ParallelConf& parallel_conf) {
+Maybe<void> DynamicLossScaleAddGradient(JobPassCtx* ctx, const OpGraph& op_graph,
+                                        JobBuilder* job_builder,
+                                        const std::vector<std::string>& gradient_lbns,
+                                        int64_t scope_symbol_id,
+                                        const ParallelConf& parallel_conf) {
   if (job_builder->job().job_conf().train_conf().has_dynamic_loss_scale_policy()) {
-    CHECK_GT(gradient_lbns.size(), 0);
+    CHECK_GT_OR_RETURN(gradient_lbns.size(), 0);
     const auto& dynamic_loss_scale_state =
-        CHECK_JUST(ctx->GetState<DynamicLossScaleJobPassState>("dynamic_loss_scale_state"));
+        JUST(ctx->GetState<DynamicLossScaleJobPassState>("dynamic_loss_scale_state"));
     const LogicalBlobId count_not_finite_lbi =
         GenLogicalBlobId(dynamic_loss_scale_state.count_not_finite_lbn());
     const OpNode* op_node = op_graph.OpNode4OpName(count_not_finite_lbi.op_name());
@@ -89,7 +91,7 @@ void DynamicLossScaleAddGradient(JobPassCtx* ctx, const OpGraph& op_graph, JobBu
       OperatorConf new_identity_conf = identity_op_conf.op_conf();
       const auto& old_val =
           ReplaceInputLbnInOpCustomizedConf(&new_identity_conf, "in_0", add_op.output("out", 0));
-      CHECK_EQ(identity_op_conf.input("in", 0), old_val);
+      CHECK_EQ_OR_RETURN(identity_op_conf.input("in", 0), old_val);
       job_builder->MutOpsOnlyOnce({new_identity_conf});
 
     } else {
@@ -315,7 +317,6 @@ double GetLossInstanceNumScaleFactor(const OpGraph& op_graph, JobBuilder* job_bu
       if (blob_desc != nullptr) { CHECK(*blob_desc == *cur_blob_desc); }
       blob_desc = cur_blob_desc;
     }
-    CHECK(!blob_desc->is_dynamic());
     scale_factor = 1.0f / static_cast<float>(blob_desc->shape().elem_cnt());
   } else {
     std::unique_ptr<BlobDesc> blob_desc;
@@ -509,7 +510,7 @@ Maybe<void> ReplaceEmbeddingOps::Apply(const OpGraph& op_graph, JobBuilder* job_
                                        JobPassCtx* ctx) const {
   std::vector<std::string> gradient_lbns;
   ParallelConf embedding_parallel_conf;
-  int64_t embedding_scope_symbol_id;
+  int64_t embedding_scope_symbol_id = 0;
   HashMap<std::string, OperatorConf> op_name2op_conf;
   op_graph.ForEachNode([&](const OpNode* op_node) {
     const OperatorConf& op_conf = op_node->op().op_conf();
@@ -640,8 +641,8 @@ Maybe<void> ReplaceEmbeddingOps::Apply(const OpGraph& op_graph, JobBuilder* job_
   });
   for (const auto& pair : op_name2op_conf) { job_builder->MutOpsOnlyOnce({pair.second}); }
   if (gradient_lbns.size() > 0) {
-    DynamicLossScaleAddGradient(ctx, op_graph, job_builder, gradient_lbns,
-                                embedding_scope_symbol_id, embedding_parallel_conf);
+    JUST(DynamicLossScaleAddGradient(ctx, op_graph, job_builder, gradient_lbns,
+                                     embedding_scope_symbol_id, embedding_parallel_conf));
   }
   return Maybe<void>::Ok();
 }

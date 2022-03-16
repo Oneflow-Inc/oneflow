@@ -25,8 +25,13 @@ import tempfile
 
 from oneflow.test_utils.automated_test_util import *
 
-path1 = tempfile.TemporaryDirectory(dir="./").name
-path2 = tempfile.TemporaryDirectory(dir="./").name
+if flow.env.get_rank() == 0:
+    if os.path.exists("./test1"):
+        os.system("rm -rf ./test1")
+    if os.path.exists("./test2"):
+        os.system("rm -rf ./test2")
+path1 = "test1"
+path2 = "test2"
 
 
 def _test_one_embedding(test_case, has_column_id, num_columns, use_fp16):
@@ -75,7 +80,9 @@ def _test_one_embedding(test_case, has_column_id, num_columns, use_fp16):
                     }
                 )
             store_options = flow.one_embedding.make_device_mem_cached_ssd_store_options(
-                device_memory_mb=16, persistent_path=path, size_factor=1,
+                device_memory_budget_mb_per_rank=16,
+                persistent_path=path,
+                size_factor=1,
             )
             self.embedding = flow.one_embedding.Embedding(
                 name,
