@@ -27,7 +27,7 @@ add_docstr(
     oneflow.nn.Module.to_global,
     """
     Convert the parameters to be global.
-    It will apply the same Tensor.to_global operation to each parameter in this module.
+    It will apply the same :func:`oneflow.Tensor.to_global` operation to each parameter in this module.
 
 
     Note:
