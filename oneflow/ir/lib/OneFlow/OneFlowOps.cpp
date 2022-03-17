@@ -399,6 +399,8 @@ llvm::Optional<OpResult> GetCtrlOutputResult(Operation* op) {
 
 bool Conv2DOp::IsNCHW() { return this->data_format().str() == "channels_first"; }
 
+std::string Conv2DOp::GetOpName() { return this->op_name().str(); }
+
 llvm::DenseSet<Value> Conv2DOp::OperandsToTranspose() {
   llvm::DenseSet<Value> result;
   result.insert(this->in());
@@ -450,6 +452,8 @@ bool BiasAddOp::IsNCHW() {
     return false;
 }
 
+std::string BiasAddOp::GetOpName() { return this->op_name().str(); }
+
 llvm::DenseSet<Value> BiasAddOp::OperandsToTranspose() {
   llvm::DenseSet<Value> result;
   result.insert(this->a());
@@ -491,6 +495,8 @@ bool NormalizationOp::IsNCHW() {
   else
     return false;
 }
+
+std::string NormalizationOp::GetOpName() { return this->op_name().str(); }
 
 llvm::DenseSet<Value> NormalizationOp::OperandsToTranspose() {
   llvm::DenseSet<Value> result;
@@ -534,6 +540,8 @@ llvm::SmallVector<Value, 4> NormalizationOp::NchwToNhwc(llvm::SmallVector<Value,
 }
 
 bool MaxPool2DOp::IsNCHW() { return this->data_format().str() == "channels_first"; }
+
+std::string MaxPool2DOp::GetOpName() { return this->op_name().str(); }
 
 llvm::DenseSet<Value> MaxPool2DOp::OperandsToTranspose() {
   llvm::DenseSet<Value> result;

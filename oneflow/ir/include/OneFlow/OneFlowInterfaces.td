@@ -104,6 +104,9 @@ def NCHWCompatibleInterface : OpInterface<"NCHWCompatible"> {
         "llvm::SmallVector<mlir::Value, 4>", "NchwToNhwc", (ins "llvm::SmallVector<mlir::Value, 4>": $transposed_inputs, "PatternRewriter&": $rewriter)
     >,
     InterfaceMethod<"",
+        "std::string", "GetOpName", (ins)
+    >,
+    InterfaceMethod<"",
         "llvm::DenseSet<mlir::Value>", "OperandsToTranspose", (ins)
     >,
     InterfaceMethod<"",
