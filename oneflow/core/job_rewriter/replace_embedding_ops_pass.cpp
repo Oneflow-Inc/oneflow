@@ -214,7 +214,11 @@ void BuildEmbeddingShuffle(JobBuilder* job_builder, const ParallelConf& parallel
           .Output("embeddings")
           .ScopeSymbolId(embedding_op.op_conf().scope_symbol_id())
           .Build();
-  add_ops->push_back(embedding_shuffle_op.op_conf());
+  OperatorConf embedding_shuffle_new_op_conf = embedding_shuffle_op.op_conf();
+  if (ParseBooleanFromEnv("ONEFLOW_ONE_EMBEDDING_EMBEDDING_SHUFFLE_INDEPENTENT_STREAM", false)) {
+    embedding_shuffle_new_op_conf.set_stream_name_hint("EMBEDDING_SHUFFLE");
+  }
+  add_ops->push_back(embedding_shuffle_new_op_conf);
   *new_embeddings_lbn = embedding_shuffle_op.output("embeddings", 0);
 }
 
@@ -232,7 +236,7 @@ void BuildEmbeddingGradientShuffle(JobPassCtx* ctx, const OpGraph& op_graph,
   };
   std::string update_embedding_grad_lbn = update_embedding_grad;
   if (ctx->job_desc().enable_auto_mixed_precision()
-      && ParseBooleanFromEnv("GRADIENT_SHUFFLE_USE_FP16", true)) {
+      && ParseBooleanFromEnv("ONEFLOW_ONE_EMBEDDING_GRADIENT_SHUFFLE_USE_FP16", true)) {
     LogicalBlobId embedding_grad_lbi = GenLogicalBlobId(update_embedding_grad_lbn);
     const OpNode* cast_node = op_graph.OpNode4OpName(embedding_grad_lbi.op_name());
     if (cast_node->op().op_conf().has_user_conf()) {
@@ -272,13 +276,17 @@ void BuildEmbeddingGradientShuffle(JobPassCtx* ctx, const OpGraph& op_graph,
             .Output("cur_rank_unique_embedding_grad")
             .ScopeSymbolId(embedding_op.op_conf().scope_symbol_id())
             .Build();
-    job_builder->AddOps(parallel_conf, {embedding_gradient_shuffle_op.op_conf()});
+    OperatorConf embedding_gradient_shuffle_new_op_conf = embedding_gradient_shuffle_op.op_conf();
+    if (ParseBooleanFromEnv("ONEFLOW_ONE_EMBEDDING_EMBEDDING_SHUFFLE_INDEPENTENT_STREAM", false)) {
+      embedding_gradient_shuffle_new_op_conf.set_stream_name_hint("EMBEDDING_SHUFFLE");
+    }
+    job_builder->AddOps(parallel_conf, {embedding_gradient_shuffle_new_op_conf});
     *cur_rank_unique_embedding_grad_lbn =
         embedding_gradient_shuffle_op.output("cur_rank_unique_embedding_grad", 0);
   }
   if (ctx->job_desc().enable_auto_mixed_precision()
-      && ParseBooleanFromEnv("GRADIENT_SHUFFLE_USE_FP16", true)
-      && ParseBooleanFromEnv("NOT_FUSE_CAST_TO_UPDATE", false)) {
+      && ParseBooleanFromEnv("ONEFLOW_ONE_EMBEDDING_GRADIENT_SHUFFLE_USE_FP16", true)
+      && ParseBooleanFromEnv("ONEFLOW_ONE_EMBEDDING_NOT_FUSE_CAST_TO_UPDATE", false)) {
     auto cast_op = user_op::UserOpConfWrapperBuilder(embedding_op.op_name() + "_cast_h2f")
                        .Op("cast")
                        .Input("in", *cur_rank_unique_embedding_grad_lbn)
@@ -491,6 +499,22 @@ void BuildEmbeddingUpdate(JobPassCtx* ctx, const OpGraph& op_graph, JobBuilder* 
   job_builder->AddOps(parallel_conf, {embedding_put_new_op_conf});
 }
 
+void UpdateConsumerOpConf(const OpNode* consumer, const LogicalBlobId& out,
+                          const std::string& new_out_lbn,
+                          HashMap<std::string, OperatorConf>* op_name2op_conf) {
+  const std::string& consumer_op_name = consumer->op().op_name();
+  if (op_name2op_conf->find(consumer_op_name) == op_name2op_conf->end()) {
+    (*op_name2op_conf)[consumer_op_name] = consumer->op().op_conf();
+  }
+  for (const std::string& ibn : consumer->op().input_bns()) {
+    if (consumer->op().BnInOp2Lbi(ibn) == out) {
+      OperatorConf& consumer_op_conf = op_name2op_conf->at(consumer_op_name);
+      const auto& new_val = new_out_lbn;
+      const auto& old_val = ReplaceInputLbnInOpCustomizedConf(&consumer_op_conf, ibn, new_val);
+      CHECK_EQ(GenLogicalBlobName(out), old_val);
+    }
+  }
+}
 }  // namespace
 
 class ReplaceEmbeddingOps final : public JobPass {
@@ -571,6 +595,23 @@ Maybe<void> ReplaceEmbeddingOps::Apply(const OpGraph& op_graph, JobBuilder* job_
     }
     delete_op_names.push_back(embedding_op.op_name());
 
+    const LogicalBlobId out = GenLogicalBlobId(embedding_op.output("embeddings", 0));
+    for (const OpEdge* out_edge : op_node->out_edges()) {
+      const OpNode* consumer = out_edge->dst_node();
+      if (consumer->op().op_conf().has_user_conf()
+          && consumer->op().op_conf().user_conf().op_type_name() == "cast") {
+        const user_op::UserOpConfWrapper cast_op_conf(consumer->op().op_conf());
+        delete_op_names.push_back(consumer->op().op_name());
+        for (const OpEdge* cast_out_edge : consumer->out_edges()) {
+          const OpNode* cast_consumer = cast_out_edge->dst_node();
+          const LogicalBlobId cast_out_lbi = GenLogicalBlobId(cast_op_conf.output("out", 0));
+          UpdateConsumerOpConf(cast_consumer, cast_out_lbi, new_embeddings_lbn, &op_name2op_conf);
+        }
+      } else {
+        UpdateConsumerOpConf(consumer, out, new_embeddings_lbn, &op_name2op_conf);
+      }
+    }
+
     // find update op
     const OpNode* producer =
         op_graph.OpNode4OpName(GenLogicalBlobId(embedding_op.input("ids", 0)).op_name());
@@ -624,23 +665,6 @@ Maybe<void> ReplaceEmbeddingOps::Apply(const OpGraph& op_graph, JobBuilder* job_
     }
     job_builder->DelOps(delete_op_names);
     job_builder->AddOps(op_node->parallel_desc().parallel_conf(), add_ops);
-
-    const LogicalBlobId out = GenLogicalBlobId(embedding_op.output("embeddings", 0));
-    for (const OpEdge* out_edge : op_node->out_edges()) {
-      const OpNode* consumer = out_edge->dst_node();
-      const std::string& consumer_op_name = consumer->op().op_name();
-      if (op_name2op_conf.find(consumer_op_name) == op_name2op_conf.end()) {
-        op_name2op_conf[consumer_op_name] = consumer->op().op_conf();
-      }
-      for (const std::string& ibn : consumer->op().input_bns()) {
-        if (consumer->op().BnInOp2Lbi(ibn) == out) {
-          OperatorConf& consumer_op_conf = op_name2op_conf.at(consumer_op_name);
-          const auto& new_val = new_embeddings_lbn;
-          const auto& old_val = ReplaceInputLbnInOpCustomizedConf(&consumer_op_conf, ibn, new_val);
-          CHECK_EQ(GenLogicalBlobName(out), old_val);
-        }
-      }
-    }
   });
   for (const auto& pair : op_name2op_conf) { job_builder->MutOpsOnlyOnce({pair.second}); }
   if (gradient_lbns.size() > 0) {
