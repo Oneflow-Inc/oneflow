@@ -128,7 +128,7 @@ class RMSprop(Optimizer):
 
     def __init__(
         self,
-        parameters: Union[Iterator[Parameter], List[Dict]],
+        params: Union[Iterator[Parameter], List[Dict]],
         lr: float = 0.001,
         alpha: float = 0.99,
         eps: float = 1e-08,
@@ -147,7 +147,7 @@ class RMSprop(Optimizer):
         options["eps"] = eps
         options["weight_decay"] = weight_decay
         options["centered"] = centered
-        super().__init__(parameters, options)
+        super().__init__(params, options)
 
         for param_group in self.param_groups:
             for param in param_group.parameters:
