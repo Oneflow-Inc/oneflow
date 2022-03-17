@@ -27,7 +27,7 @@ class LazyRefBlobObject final : public BlobObject {
   LazyRefBlobObject(LazyRefBlobObject&&) = delete;
   LazyRefBlobObject(Blob* blob)
       : BlobObject(std::make_shared<MemoryCase>(blob->mem_case()),
-                   std::make_shared<Shape>(blob->static_shape()), std::make_shared<Stride>(blob->static_stride()), blob->data_type()) {
+                   std::make_shared<Shape>(blob->static_shape()), std::make_shared<Stride>(blob->stride()), blob->data_type()) {
     blob_desc_ = blob->blob_desc();
     ref_blob_ = blob;
   }

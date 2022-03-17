@@ -168,11 +168,6 @@ class KernelInferContext {
                                                      int32_t arg_index) = 0;
   virtual MutShapeView* MutShapeView4ArgNameAndIndex(const std::string& arg_name,
                                                      int32_t arg_index) = 0;
-  virtual const StrideView& StrideView4ArgNameAndIndex(const std::string& arg_name,
-                                                     int32_t arg_index) = 0;
-  virtual MutStrideView* MutStrideView4ArgNameAndIndex(const std::string& arg_name,
-                                                     int32_t arg_index) = 0;
-
 
   const std::string& input(const std::string& arg_name, int32_t index) const {
     return user_op_conf().input(arg_name, index);

@@ -26,9 +26,7 @@ const ShapeView& BlobTensorView::shape() const { return blob_->shape(); }
 
 MutShapeView* BlobTensorView::mut_shape() { return blob_->mut_shape_view(); }
 
-const StrideView& BlobTensorView::stride() const { return blob_->stride(); }
-
-MutStrideView* BlobTensorView::mut_stride() { return blob_->mut_stride_view(); }
+const Stride& BlobTensorView::stride() const { return blob_->stride(); }
 
 DataType BlobTensorView::data_type() const { return blob_->data_type(); }
 

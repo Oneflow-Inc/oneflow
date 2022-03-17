@@ -102,12 +102,7 @@ class Blob final {
   }
   MutShapeView* ForceMutShapeView() { return mut_shape_view_.get(); }
   // stride
-  const Stride& static_stride() const { return blob_desc_->stride(); }
-  const StrideView& stride_view() const { return *stride_view_; }
-  const StrideView& stride() const { return *stride_view_; }
-  MutStrideView* mut_stride_view() {
-    return mut_stride_view_.get();
-  }
+  const Stride& stride() const { return blob_desc_->stride(); }
 
   void reset_dptr(char* dptr) { dptr_ = dptr; }
 
@@ -138,8 +133,6 @@ class Blob final {
   int64_t storage_offset_;
   std::unique_ptr<ShapeView> shape_view_;
   std::unique_ptr<MutShapeView> mut_shape_view_;
-  std::unique_ptr<StrideView> stride_view_;
-  std::unique_ptr<MutStrideView> mut_stride_view_;
 };
 
 #define INIT_GLOBAL_BLOB_MUTABLE_CHECKER(is_header_mutable, is_body_mutable)             \

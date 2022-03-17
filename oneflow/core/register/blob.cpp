@@ -39,19 +39,15 @@ void Blob::Init(const MemoryCase& mem_case, const BlobDesc* blob_desc, char* hea
   storage_offset_ = offset;
   dptr_ = body_ptr;
   header_ptr_ = header_ptr;
+
   this->blob_access_checker_ = Global<BlobAccessCheckerIf<true, true>>::Get();
   int64_t* shape_ptr = reinterpret_cast<int64_t*>(header_ptr);
-  
   shape_view_.reset(new ShapeView(shape_ptr, static_shape().NumAxes()));
-  int64_t stride_ptr[static_shape().NumAxes()];
-  stride_view_.reset(new StrideView(Stride(static_shape())));
-  // printf("\n blob.cpp >>>>>> shape >>>> %s; stride >>>> %s", shape().ToString().c_str(), stride().ToString().c_str());
+
   if (blob_desc->is_dynamic()) {
     mut_shape_view_.reset(new MutShapeView(shape_ptr, static_shape().NumAxes()));
-    mut_stride_view_.reset(new MutStrideView(stride_ptr, static_stride().NumAxes()));
   }
   MutShapeView(shape_ptr, static_shape().NumAxes()).set_shape(static_shape());
-  MutStrideView(stride_ptr, static_stride().NumAxes()).set_stride(static_stride());
 }
 
 void Blob::CopyHeaderFrom(const Blob* rhs) {
