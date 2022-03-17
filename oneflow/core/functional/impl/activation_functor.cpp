@@ -466,7 +466,7 @@ class SoftShrinkGradFunctor {
                            const double& alpha) const {
     MutableAttrMap attrs;
     JUST(attrs.SetAttr<double>("alpha", alpha));
-    return OpInterpUtil::Dispatch<one::Tensor>(*op_, {x, dy}, attrs);
+    return OpInterpUtil::Dispatch<one::Tensor>(*op_, {dy, x}, attrs);
   }
 
  private:

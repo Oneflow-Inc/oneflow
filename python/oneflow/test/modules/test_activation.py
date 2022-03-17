@@ -765,7 +765,7 @@ class TestSoftshrinkModule(flow.unittest.TestCase):
         y = m(x)
         return y
 
-    @autotest(auto_backward=False, check_graph=False)
+    @autotest(auto_backward=False, check_graph=True)
     def test_softshrink_module_with_0_size_data(test_case):
         m = torch.nn.Softshrink(alpha=random() | nothing())
         m.train(random())
@@ -773,6 +773,16 @@ class TestSoftshrinkModule(flow.unittest.TestCase):
         m.to(device)
         x = random_tensor(4, 2, 3, 0, 3).to(device)
         y = m(x)
+        return y
+
+    @autotest(n=10)
+    def test_inplace_celu_module(test_case):
+        m = torch.nn.CELU(alpha=random() | nothing(), inplace=True)
+        device = random_device()
+        m.to(device)
+        x = random_tensor().to(device)
+        y = x + 0.001
+        m(y)
         return y
 
 
