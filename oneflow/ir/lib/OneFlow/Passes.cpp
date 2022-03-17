@@ -18,6 +18,7 @@ limitations under the License.
 #include "OneFlow/Passes.h"
 #include "llvm/ADT/DenseSet.h"
 #include "llvm/ADT/SmallVector.h"
+#include "mlir/IR/Attributes.h"
 #include "mlir/IR/OperationSupport.h"
 #include "oneflow/core/framework/random_generator.h"
 
@@ -378,30 +379,30 @@ void getResultTransposePerm(llvm::SmallVector<int32_t>& v) {
 }
 
 llvm::SmallVector<mlir::Value, 4> getInputOperandTransposeOp(NCHWCompatible op, Value val,
-                                                             NamedAttrList transpos_attributes,
+                                                             NamedAttrList transpose_attributes,
                                                              int num_transposed_operand,
                                                              PatternRewriter& rewriter) {
   std::string transpose_name = op->getName().getStringRef().str() + "_transpose_input_"
                                + std::to_string(num_transposed_operand);
-  transpos_attributes.set(llvm::StringRef("op_name"), rewriter.getStringAttr(transpose_name));
+  transpose_attributes.set(llvm::StringRef("op_name"), rewriter.getStringAttr(transpose_name));
   SmallVector<Value, 4> input_operands;
   input_operands.push_back(val);
   auto res = rewriter
                  .create<oneflow::TransposeOp>(op.getLoc(), op->getResultTypes(), input_operands,
-                                               transpos_attributes)
+                                               transpose_attributes)
                  ->getResults();
   return res;
 }
 
-TransposeOp getResultTransposeOp(NCHWCompatible op, Value val, NamedAttrList transpos_attributes,
+TransposeOp getResultTransposeOp(NCHWCompatible op, Value val, NamedAttrList transpose_attributes,
                                  int num_transposed_result, PatternRewriter& rewriter) {
   std::string transpose_name = op->getName().getStringRef().str() + "_transpose_output_"
                                + std::to_string(num_transposed_result);
-  transpos_attributes.set(llvm::StringRef("op_name"), rewriter.getStringAttr(transpose_name));
+  transpose_attributes.set(llvm::StringRef("op_name"), rewriter.getStringAttr(transpose_name));
   SmallVector<Value, 4> operands;
   operands.push_back(val);
   TransposeOp transpose_op = rewriter.create<oneflow::TransposeOp>(
-      op.getLoc(), op->getResultTypes(), operands, transpos_attributes);
+      op.getLoc(), op->getResultTypes(), operands, transpose_attributes);
   return transpose_op;
 }
 
@@ -424,9 +425,9 @@ struct AutoNhwcPattern : public OpInterfaceRewritePattern<NCHWCompatible> {
     getInputOperandTransposePerm(perm);
     getResultTransposePerm(result_perm);
 
-    NamedAttrList transpos_attributes;
-    op.InitTransposeAttrs(transpos_attributes, rewriter);
-    transpos_attributes.append(llvm::StringRef("perm"), getSI32ArrayAttr(rewriter, perm));
+    NamedAttrList transpose_attributes;
+    op.InitTransposeAttrs(transpose_attributes, rewriter);
+    transpose_attributes.append(llvm::StringRef("perm"), getSI32ArrayAttr(rewriter, perm));
     if (op.IsNCHW()) {
       // create transpose op for input operand
       SmallVector<Value, 4> tranposed_operands;
@@ -435,7 +436,7 @@ struct AutoNhwcPattern : public OpInterfaceRewritePattern<NCHWCompatible> {
       for (Value operand : op->getOperands()) {
         if (operand_transpose.find(operand) != operand_transpose.end()) {
           SmallVector<Value, 4> input_res = getInputOperandTransposeOp(
-              op, operand, transpos_attributes, num_transposed_operand, rewriter);
+              op, operand, transpose_attributes, num_transposed_operand, rewriter);
           tranposed_operands.push_back(input_res[0]);
           num_transposed_operand += 1;
         }
@@ -444,14 +445,14 @@ struct AutoNhwcPattern : public OpInterfaceRewritePattern<NCHWCompatible> {
       SmallVector<Value, 4> created_results = op.NchwToNhwc(tranposed_operands, rewriter);
       // create transpose op for results
       int num_transposed_result = 0;
-      transpos_attributes.set(llvm::StringRef("perm"), getSI32ArrayAttr(rewriter, result_perm));
+      transpose_attributes.set(llvm::StringRef("perm"), getSI32ArrayAttr(rewriter, result_perm));
       llvm::DenseSet<Value> transpose_result = op.ResultsToTranspose();
       for (Value result : op->getOpResults()) {
         if (transpose_result.find(result) != transpose_result.end()) {
           if (auto result_transpose_op =
                   getResultTransposeOp(op, created_results[num_transposed_result],
-                                       transpos_attributes, num_transposed_result, rewriter)) {
-            result.replaceAllUsesWith(result_transpose_op.output());
+                                       transpose_attributes, num_transposed_result, rewriter)) {
+            result.replaceAllUsesWith(result_transpose_op->getOpResults()[0]);
             num_transposed_result += 1;
           } else {
             return failure();
