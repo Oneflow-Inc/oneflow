@@ -21,15 +21,15 @@ add_docstr(
     """
     to_global(input, placement=None, sbp=None, grad_sbp=None) -> Tensor
 
-    Cast a local tensor to global tensor or cast a
-    global tensor to another global tensor with
-    different sbp or placement
+    Convert a local tensor to global tensor or convert a global tensor to another global tensor with
+    different sbp or placement.
 
 
     Args:
         input (Tensor): the input tensor.
-        placement (flow.placement, optional): the desired placement of returned global tensor. Default: if None, the input tensor must be consistent one and use its own placement.
-        sbp (flow.sbp.sbp or tuple of flow.sbp.sbp, optional): the desired sbp descriptor of returned global tensor. Default: if None, the input tensor must be consistent one and use its own sbp.
+        placement (flow.placement, optional): the desired placement of returned global tensor. Default: if None, the input tensor must be global and use its own placement.
+        sbp (flow.sbp.sbp or tuple of flow.sbp.sbp, optional): the desired sbp descriptor of returned global tensor. Default: if None, the input tensor must be global and use its own sbp. 
+        grad_sbp (flow.sbp.sbp or tuple of flow.sbp.sbp, optional): manually specify the gradient sbp of the operation in the backward pass. Default: if None, the gradient sbp will be infered automatically.
 
     For example:
 
