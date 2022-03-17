@@ -991,7 +991,7 @@ class Softshrink(Module):
         tensor([0.5000, 1.5000, 2.5000], dtype=oneflow.float32)
     """
 
-    def __init__(self,  alpha: float = 0.5, inplace: bool = False):
+    def __init__(self, alpha: float = 0.5, inplace: bool = False):
         assert inplace is False, "inplace of Softshrink is not supported."
         self.inplace = inplace
         self.alpha = alpha

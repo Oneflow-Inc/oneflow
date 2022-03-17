@@ -742,6 +742,7 @@ class TestLogSigmoidFunction(flow.unittest.TestCase):
         y = torch.nn.functional.logsigmoid(x)
         return y
 
+
 @flow.unittest.skip_unless_1n1d()
 class TestSoftshrinkModule(flow.unittest.TestCase):
     @autotest()
@@ -773,6 +774,7 @@ class TestSoftshrinkModule(flow.unittest.TestCase):
         x = random_tensor(4, 2, 3, 0, 3).to(device)
         y = m(x)
         return y
+
 
 if __name__ == "__main__":
     unittest.main()
