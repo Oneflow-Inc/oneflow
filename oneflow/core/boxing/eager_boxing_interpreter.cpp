@@ -94,7 +94,7 @@ Maybe<BoxingInterpreterStatus> AtomicBoxingExpr::Check(Symbol<PlacedNdSbp> in,
       JUST_MSG(MapAt(*MutName2BoxingChecker(), boxing_name_),
                std::stringstream() << "boxing checker not found. checker_name: " << boxing_name_);
   JUST(Checker(in, out, logical_shape));
-  return MakeBoxingInterpreterStatus(boxing_name_, in, out);
+  return MakeBoxingInterpreterStatus(boxing_name_, logical_shape, in, out);
 }
 
 Maybe<BoxingFunctionT> AtomicBoxingExpr::GetBoxingFunction(Symbol<PlacedNdSbp> in,
