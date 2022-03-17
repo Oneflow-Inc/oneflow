@@ -99,6 +99,8 @@ Operators for neural networks
         FusedBatchNorm3d, 
         FusedMLP, 
 
+.. autofunction:: oneflow.nn.modules.pixelshuffle.PixelShufflev2
+
 .. autofunction:: oneflow.nn.parallel.DistributedDataParallel
 
 .. currentmodule:: oneflow.nn.utils
