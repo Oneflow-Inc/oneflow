@@ -405,21 +405,21 @@ class MirroredTensor final : public TensorIf<MirroredTensor> {
   const std::shared_ptr<const Shape>& shape() const override { return impl_->shape(); }
   Symbol<DType> dtype() const override { return CHECK_JUST(DType::Get(impl_->dtype())); }
   Maybe<TransportToken> transport_token() const override {
-    OF_RUNTIME_ERROR() << "Only consistent tensors have 'consistent_id', Consistent id is used to "
+    OF_RUNTIME_ERROR() << "Only global tensors have 'consistent_id', Consistent id is used to "
                           "synchronize rank";
   }
   Maybe<Symbol<NdSbp>> nd_sbp() const override {
     OF_RUNTIME_ERROR()
         << "Local tensor has no sbp property. "
            "sbp is the description in the oneflow distributed case, you can refer to "
-           "https://docs.oneflow.org/master/basics_topics/essentials_of_oneflow.html; "
-           "For example, create a consistent tensor like this : 'x = oneflow.tensor((2,3, "
+           "https://docs.oneflow.org/master/parallelism/03_consistent_tensor.html; "
+           "For example, create a globel tensor like this : 'x = oneflow.tensor((2,3, "
            "placement=oneflow.placement(\"cuda\", {0: 0}), sbp=oneflow.sbp.broadcast))', then "
            "'x.sbp' is 'oneflow.sbp.broadcast'";
   }
   Maybe<Symbol<ParallelDesc>> parallel_desc() const override {
-    OF_RUNTIME_ERROR() << "Only consistent tensors have 'placement'. Placement is used to describe "
-                          "the distribution of consistent tensor in multiple GPUs. Please use "
+    OF_RUNTIME_ERROR() << "Only globel tensors have 'placement'. Placement is used to describe "
+                          "the distribution of globel tensor in multiple GPUs. Please use "
                           "'.device' for local tensors.";
   }
   Maybe<Symbol<Device>> device() const override { return impl_->device(); }
@@ -525,7 +525,7 @@ class ConsistentTensor final : public TensorIf<ConsistentTensor> {
   Maybe<Symbol<ParallelDesc>> parallel_desc() const override { return impl_->parallel_desc(); }
   Maybe<Symbol<Device>> device() const override {
     OF_RUNTIME_ERROR() << "Only local tensors have 'device'. Please use "
-                          "'.placement' for consistent tensors.";
+                          "'.placement' for global tensors.";
   }
   Maybe<Symbol<Device>*> mut_device() override {
     OF_RUNTIME_ERROR() << "ConsistentTensor has no mut_device property";
