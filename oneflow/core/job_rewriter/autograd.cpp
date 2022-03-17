@@ -451,22 +451,22 @@ std::string AddLbns(JobBuilder* job_builder, const std::vector<std::string>& lbn
   }
 }
 
-std::string AddCastToP(JobBuilder* job_builder, const std::string& in_lbn,
-                       const ParallelConf& parallel_conf, const std::string& op_name_prefix) {
+std::string AddParallelCast(JobBuilder* job_builder, const std::string& in_lbn,
+                            const std::string& sbp_str, const ParallelConf& parallel_conf,
+                            const std::string& op_name_prefix) {
   ParallelConf flat_parallel_conf = parallel_conf;
   flat_parallel_conf.mutable_hierarchy()->clear_dim();
   const int64_t scope_symbol_id =
       MakeScopeSymbolId(job_builder->job().job_conf(), flat_parallel_conf);
-  std::vector<std::string> cast_nd_sbp;
-  cast_nd_sbp.emplace_back("P");
+  std::vector<std::string> sbp = {sbp_str};
   auto parallel_cast_op =
       user_op::UserOpConfWrapperBuilder(op_name_prefix + NewUniqueId())
           .Op("hierarchical_parallel_cast")
           .Input("in", in_lbn)
           .Output("out")
-          .Attr<std::vector<std::string>>("nd_sbp", cast_nd_sbp)
+          .Attr<std::vector<std::string>>("nd_sbp", sbp)
           .Attr<std::string>("grad_mode", "auto")
-          .Attr<std::vector<std::string>>("grad_nd_sbp", std::vector<std::string>())
+          .Attr<std::vector<std::string>>("grad_nd_sbp", std::vector<std::string>{})
           .ScopeSymbolId(scope_symbol_id)
           .Build();
   job_builder->AddOps(flat_parallel_conf, {parallel_cast_op.op_conf()});
@@ -743,26 +743,35 @@ std::string GlobalNorm(const OpGraph& op_graph, JobBuilder* job_builder,
     }
   };
   ForEachAggregatedParamGroup(op_graph, lbi2diff_lbi, GroupNorm);
+
+  // sum in group
   *out_parallel_conf = all_same_parallel_desc ? any_parallel_desc.parallel_conf()
                                               : GenParallelConfOfCpuZeroOnMaster();
   const int64_t scope_symbol_id =
       MakeScopeSymbolId(job_builder->job().job_conf(), *out_parallel_conf);
-  std::string global_reduce_sum_lbn;
+  std::vector<std::string> sum_group_lbns;
   if (all_broadcast) {
-    global_reduce_sum_lbn = AddLbns(job_builder, group_lbns, *out_parallel_conf, scope_symbol_id,
-                                    "System-ClipGradient-GlobalNorm-Add-");
+    sum_group_lbns = std::move(group_lbns);
   } else {
-    std::vector<std::string> partial_group_lbns;
-    partial_group_lbns.reserve(group_lbns.size());
+    sum_group_lbns.reserve(group_lbns.size());
     for (size_t i = 0; i < group_lbns.size(); ++i) {
-      partial_group_lbns.emplace_back(AddCastToP(job_builder, group_lbns.at(i),
-                                                 group_parallel_confs.at(i),
-                                                 "System-ClipGradient-ParallelCast-"));
+      std::string lbn;
+      if (all_same_parallel_desc) {
+        // reduce many times P->B (allreduce) to 1 times
+        lbn = AddParallelCast(job_builder, group_lbns.at(i), "P", group_parallel_confs.at(i),
+                              "System-ClipGradient-ParallelCast-");
+      } else {
+        // sum will run on cpu 0, we need do P->B first, 
+        // because when execution is on single device, only B is accepted
+        lbn = AddParallelCast(job_builder, group_lbns.at(i), "B", group_parallel_confs.at(i),
+                              "System-ClipGradient-ParallelCast-");
+      }
+      sum_group_lbns.push_back(std::move(lbn));
     }
     out_parallel_conf->mutable_hierarchy()->clear_dim();
-    global_reduce_sum_lbn = AddLbns(job_builder, partial_group_lbns, *out_parallel_conf,
-                                    scope_symbol_id, "System-ClipGradient-GlobalNorm-Add-");
   }
+  auto global_reduce_sum_lbn = AddLbns(job_builder, sum_group_lbns, *out_parallel_conf,
+                                       scope_symbol_id, "System-ClipGradient-GlobalNorm-Add-");
 
   auto global_pow_op =
       user_op::UserOpConfWrapperBuilder("System-ClipGradient-GlobalNorm-GlobalPow-" + NewUniqueId())
@@ -1299,9 +1308,9 @@ Maybe<void> CountNotFiniteIfNeeded(JobPassCtx* ctx, const OpGraph& op_graph,
                                              : GenParallelConfOfCpuZeroOnMaster();
   if (!all_group_broadcast) {
     for (int64_t i = 0; i < partial_count_not_finite_lbns.size(); ++i) {
-      count_not_finite_lbns_for_add.emplace_back(
-          AddCastToP(job_builder, partial_count_not_finite_lbns.at(i),
-                     param_group_parallel_confs.at(i), "System-DynamicLossScale-ParallelCast-"));
+      count_not_finite_lbns_for_add.emplace_back(AddParallelCast(
+          job_builder, partial_count_not_finite_lbns.at(i), "P", param_group_parallel_confs.at(i),
+          "System-DynamicLossScale-ParallelCast-"));
     }
     count_all_parallel_conf.mutable_hierarchy()->clear_dim();
   } else {
