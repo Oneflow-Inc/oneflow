@@ -19,7 +19,7 @@ from oneflow.framework.docstr.utils import add_docstr
 add_docstr(
     oneflow.nn.Module.to_consistent,
     """
-    This interface is no longer available, please use .to_global instead
+    This interface is no longer available, please use :func:`oneflow.nn.Module.to_global` instead
     """,
 )
 
