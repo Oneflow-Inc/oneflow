@@ -27,6 +27,7 @@ OpKernelInferCache::OpKernelInferCache(const KernelConf& kernel_conf, const void
   cache_key_.scope = scope;
   cache_key_.op_conf_sym = op->GetOpConfWithoutOpNameAndLbn();
   cache_key_.ibn_idx2shape_sym.resize(op->input_bns().size());
+  cache_key_.ibn_idx2stride_sym.resize(op->input_bns().size());
   cache_key_.dtype_signature_sym = SymbolOf(kernel_conf.dtype_signature());
 }
 
@@ -49,10 +50,16 @@ void OpKernelInferCache::UpdateCacheKey(KernelInferContext* ctx) {
     ctx->ShapeView4ArgNameAndIndex(arg_name, arg_index).ToShape(&shape);
     return SymbolOf(shape);
   };
+  auto GetSymbolOfStride = [&](const std::string& arg_name, int32_t arg_index) -> Symbol<Stride> {
+    Stride stride;
+    ctx->StrideView4ArgNameAndIndex(arg_name, arg_index).ToStride(&stride);
+    return SymbolOf(stride);
+  };
   const auto& inputs = ctx->inputs();
   FOR_RANGE(int, i, 0, inputs.size()) {
     const auto& arg_pair = inputs.at(i);
     cache_key_.ibn_idx2shape_sym.at(i) = GetSymbolOfShape(arg_pair.first, arg_pair.second);
+    cache_key_.ibn_idx2stride_sym.at(i) = GetSymbolOfStride(arg_pair.first, arg_pair.second);
   }
 }
 
@@ -61,6 +68,7 @@ void OpKernelInferCache::UpdateCacheValue(KernelInferContext* ctx) {
   if (cached_key2value_.size() >= kReleaseInIndependentThreadThreshold) { Reset(); }
   auto* cache_value = new OpInferCacheValue();
   cache_value->obn_idx2shape_sym.resize(ctx->outputs().size());
+  cache_value->obn_idx2stride_sym.resize(ctx->outputs().size());
   FOR_RANGE(int, i, 0, ctx->outputs().size()) {
     const auto& out_arg_pair = ctx->outputs().at(i);
     const ShapeView& out_shape_view =
@@ -68,6 +76,12 @@ void OpKernelInferCache::UpdateCacheValue(KernelInferContext* ctx) {
     Shape out_shape;
     out_shape_view.ToShape(&out_shape);
     cache_value->obn_idx2shape_sym.at(i).reset(out_shape);
+
+    const StrideView& out_stride_view =
+        ctx->StrideView4ArgNameAndIndex(out_arg_pair.first, out_arg_pair.second);
+    Stride out_stride;
+    out_stride_view.ToStride(&out_stride);
+    cache_value->obn_idx2stride_sym.at(i).reset(out_stride);
   }
   KeyType* new_key = new KeyType(cache_key_);
   key_storage_.emplace_back(new_key);
