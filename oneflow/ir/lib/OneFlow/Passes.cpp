@@ -401,8 +401,9 @@ TransposeOp getResultTransposeOp(NCHWCompatible op, Value val, NamedAttrList tra
   transpose_attributes.set(llvm::StringRef("op_name"), rewriter.getStringAttr(transpose_name));
   SmallVector<Value, 4> operands;
   operands.push_back(val);
-  TransposeOp transpose_op = rewriter.create<oneflow::TransposeOp>(
-      op.getLoc(), op->getResultTypes(), operands, transpose_attributes);
+  TransposeOp transpose_op = rewriter.create<oneflow::TransposeOp>(op.getLoc(), val.getType(),
+                                                                   operands, transpose_attributes);
+  transpose_op->dump();
   return transpose_op;
 }
 
@@ -452,7 +453,7 @@ struct AutoNhwcPattern : public OpInterfaceRewritePattern<NCHWCompatible> {
           if (auto result_transpose_op =
                   getResultTransposeOp(op, created_results[num_transposed_result],
                                        transpose_attributes, num_transposed_result, rewriter)) {
-            result.replaceAllUsesWith(result_transpose_op->getOpResults()[0]);
+            result.replaceAllUsesWith(result_transpose_op);
             num_transposed_result += 1;
           } else {
             return failure();
