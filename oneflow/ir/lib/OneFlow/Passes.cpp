@@ -388,7 +388,7 @@ llvm::SmallVector<mlir::Value, 4> getInputOperandTransposeOp(NCHWCompatible op, 
   SmallVector<Value, 4> input_operands;
   input_operands.push_back(val);
   auto res = rewriter
-                 .create<oneflow::TransposeOp>(op.getLoc(), op->getResultTypes(), input_operands,
+                 .create<oneflow::TransposeOp>(op.getLoc(), val.getType(), input_operands,
                                                transpose_attributes)
                  ->getResults();
   return res;
@@ -403,7 +403,6 @@ TransposeOp getResultTransposeOp(NCHWCompatible op, Value val, NamedAttrList tra
   operands.push_back(val);
   TransposeOp transpose_op = rewriter.create<oneflow::TransposeOp>(op.getLoc(), val.getType(),
                                                                    operands, transpose_attributes);
-  transpose_op->dump();
   return transpose_op;
 }
 
@@ -448,6 +447,7 @@ struct AutoNhwcPattern : public OpInterfaceRewritePattern<NCHWCompatible> {
       int num_transposed_result = 0;
       transpose_attributes.set(llvm::StringRef("perm"), getSI32ArrayAttr(rewriter, result_perm));
       llvm::DenseSet<Value> transpose_result = op.ResultsToTranspose();
+
       for (Value result : op->getOpResults()) {
         if (transpose_result.find(result) != transpose_result.end()) {
           if (auto result_transpose_op =

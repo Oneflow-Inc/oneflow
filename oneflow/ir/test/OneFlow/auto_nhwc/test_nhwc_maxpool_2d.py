@@ -55,10 +55,10 @@ def do_nhwc_maxpool_2d(test_case, with_cuda, with_return_induces):
 @flow.unittest.skip_unless_1n1d()
 class TestNhwcMaxPool2d(oneflow.unittest.TestCase):
     def test_nhwc_maxpool_2d_graph(test_case):
-        # do_nhwc_maxpool_2d(test_case, True, True)
+        do_nhwc_maxpool_2d(test_case, True, True)
         do_nhwc_maxpool_2d(test_case, True, False)
-        # do_nhwc_maxpool_2d(test_case, False, True)
-        # do_nhwc_maxpool_2d(test_case, False, False)
+        do_nhwc_maxpool_2d(test_case, False, True)
+        do_nhwc_maxpool_2d(test_case, False, False)
 
 
 if __name__ == "__main__":
