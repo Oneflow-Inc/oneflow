@@ -16,6 +16,62 @@ limitations under the License.
 import oneflow
 from oneflow.framework.docstr.utils import add_docstr
 
+oneflow.device.__doc__ = r"""
+    The documentation is referenced from:
+    https://pytorch.org/docs/stable/tensor_attributes.html#torch.torch.device
+
+    A :class:`oneflow.device` is an object representing the device on which a :class:`oneflow.Tensor` is or will be allocated.
+
+    The :class:`oneflow.device` contains a device type ('cpu' or 'cuda') and optional device ordinal for the device type. If the 
+    device ordinal is not present, this object will always represent the current device for the device type.
+
+    A :class:`oneflow.device`’s device can be accessed via the Tensor.device property.
+
+    A :class:`oneflow.device` can be constructed via a string or via a string and device ordinal
+
+    Via a string:
+
+    .. code-block:: python
+
+        >>> import oneflow as flow
+        >>> flow.device('cuda:0')
+        device(type='cuda', index=0) 
+
+        >>> flow.device('cpu')
+        device(type='cpu', index=0)
+
+        >>> flow.device('cuda')  # current cuda device
+        device(type='cuda', index=0)
+    
+    Via a string and device ordinal:
+
+    .. code-block:: python
+
+        >>> import oneflow as flow
+        >>> flow.device('cuda', 0)
+        device(type='cuda', index=0)
+
+        >>> flow.device('cpu', 0)
+        device(type='cpu', index=0)
+    
+    Note:
+        The :class:`oneflow.device` argument in functions can generally be substituted with a string. This allows for fast prototyping of code.
+        
+        .. code-block:: python
+
+            >>> import oneflow as flow
+            >>> # Example of a function that takes in a oneflow.device
+            >>> cuda1 = flow.device('cuda:1')
+            >>> flow.randn((2,3), device=cuda1)
+        
+        .. code-block:: python
+
+            >>> # You can substitute the flow.device with a string
+            >>> flow.randn((2,3), device='cuda:1')
+
+"""
+
+
 oneflow.placement.__doc__ = r"""
     A ``oneflow.placement`` is an object representing the device group on which a :class:`oneflow.Tensor` is or will be allocated. The ``oneflow.placement`` contains a device type ('cpu' or 'cuda') and corresponding device sequence.
     
@@ -64,7 +120,7 @@ oneflow.sbp.sbp.__doc__ = r"""
 
         >>> s = flow.sbp.split(0)
         >>> s
-        oneflow.sbp.split(axis=0)
+        oneflow.sbp.split(axis)=0)
         >>> b = flow.sbp.broadcast()
         >>> b
         oneflow.sbp.broadcast

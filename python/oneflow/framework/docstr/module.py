@@ -50,5 +50,7 @@ add_docstr(
         >>> m.to_global(placement=flow.placement("cpu", ranks=[0]), sbp=[flow.sbp.split(0)])
         >>> m.weight.is_global
         True
+        >>> m.bias.is_global
+        True
     """,
 )

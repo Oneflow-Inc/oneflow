@@ -79,6 +79,38 @@ add_docstr(
     """,
 )
 
+
+add_docstr(
+    oneflow.Tensor.device,
+    r"""
+    The documentation is referenced from:
+    https://pytorch.org/docs/stable/generated/torch.Tensor.device.html#torch.Tensor.device
+    
+    Is the :class:`oneflow.device` where this Tensor is, which is invalid for global tensor.
+    """,
+)
+
+add_docstr(
+    oneflow.Tensor.placement,
+    r"""
+    Is the :class:`oneflow.placement` where this Tensor is, which is invalid for local tensor.
+    """,
+)
+
+add_docstr(
+    oneflow.Tensor.sbp,
+    r"""
+    Is the ``oneflow.sbp`` representing that how the data of the global tensor is distributed, which is invalid for local tensor.
+    """,
+)
+
+add_docstr(
+    oneflow.Tensor.is_global,
+    r"""
+    Return whether this Tensor is a global tensor.
+    """,
+)
+
 add_docstr(
     oneflow.Tensor.atan2,
     r"""
@@ -237,7 +269,7 @@ add_docstr(
 
     .. code-block:: python
 
-        >>> # results on rank 0
+        >>> # results on rank 1
         oneflow.Size([2])
         tensor([0., 1.], placement=oneflow.placement(type="cpu", ranks=[0, 1]), sbp=(oneflow.sbp.split(axis=0),), dtype=oneflow.float32)
     """,
