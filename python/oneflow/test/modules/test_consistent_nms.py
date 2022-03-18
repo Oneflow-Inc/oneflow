@@ -26,9 +26,6 @@ from test_nms import nms_np
 def _test_nms(test_case, placement, sbp):
     iou = 0.5
     boxes, scores = create_tensors_with_iou(800, iou)
-    print("==========score=========")
-    print(scores)
-    print("==========score=========")
 
     global_boxes = flow.tensor(boxes, dtype=flow.float32).to_global(
         placement=flow.env.all_device_placement("cpu"), sbp=flow.sbp.broadcast
@@ -45,12 +42,6 @@ def _test_nms(test_case, placement, sbp):
     keep_np = nms_np(np_boxes, np_scores, iou)
 
     keep = flow.nms(global_boxes, global_scores, iou)
-    print("=====================")
-    print("placement = \n", placement)
-    print("sbp = \n", sbp)
-    print("keep = \n", keep.numpy())
-    print("keep numpy = \n", keep_np)
-    print("=====================")
     test_case.assertTrue(np.allclose(keep.numpy(), keep_np))
 
 
