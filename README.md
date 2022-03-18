@@ -65,7 +65,7 @@
 
   - Stable
     ```bash
-    python3 -m pip install --find-links https://release.oneflow.info oneflow==0.6.0+[PLATFORM]
+    python3 -m pip install --find-links https://release.oneflow.info oneflow==0.7.0+[PLATFORM]
     ```
   - Nightly
     ```
