@@ -239,6 +239,13 @@ message JobConfigProto {
   optional bool cudnn_conv_enable_pseudo_half = 600 [default = true];
   optional bool enable_auto_mixed_precision = 602 [default = false];
   optional bool enable_quantization_aware_training = 603 [default = false];
+
+  optional bool enable_auto_parallel = 700 [default = false];
+  optional double auto_parallel_computation_cost_ratio = 701 [default = 1.0];
+  optional double auto_parallel_wait_time = 702 [default = 0.0];
+  optional double auto_parallel_transfer_cost = 703 [default = 0.0];
+  optional bool enable_auto_parallel_mainstem_algo = 704 [default = false];
+  optional bool enable_auto_parallel_sbp_collector = 705 [default = false];
   
   optional int64 concurrency_width = 1000 [default = 128];
 

@@ -14,10 +14,10 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 #include "oneflow/core/framework/framework.h"
+#include "oneflow/core/operator/operator.h"
 #include "oneflow/core/framework/op_generated.h"
 
 namespace oneflow {
-
 /* static */ Maybe<void> OFRecordReaderOp::InferLogicalTensorDesc(user_op::InferContext* ctx) {
   user_op::TensorDesc* out_tensor = ctx->OutputTensorDesc("out", 0);
   *out_tensor->mut_shape() = Shape({ctx->Attr<int32_t>("batch_size")});
@@ -45,6 +45,27 @@ namespace oneflow {
 /* static */ Maybe<void> OFRecordReaderOp::GetSbp(user_op::SbpContext* ctx) {
   ctx->NewBuilder().Split(ctx->outputs(), 0).Build();
   return Maybe<void>::Ok();
+}
+
+/* static */ Maybe<void> OFRecordReaderOp::GetNdSbpSignatureList(
+    user_op::GetNdSbpSignatureListContext* ctx) {
+  NdSbpSignature nd_sbp_signature;
+  SbpParallel split_sbp_parallel;
+  split_sbp_parallel.mutable_split_parallel()->set_axis(0);
+  for (int32_t dim_sbp = 0; dim_sbp < ctx->parallel_hierarchy().NumAxes(); dim_sbp++) {
+    *(*nd_sbp_signature.mutable_bn_in_op2nd_sbp())[GenRepeatedBn("out", 0)].add_sbp_parallel() =
+        split_sbp_parallel;
+  }
+  ctx->AddNdSbpSignature(nd_sbp_signature);
+  return Maybe<void>::Ok();
+}
+
+/* static */ Maybe<double> OFRecordReaderOp::GetComputeComplexity(
+    user_op::ComputeComplexityFnContext* ctx) {
+  // Don't support broadcast.
+  return double(ctx->Shape4ArgNameAndIndex("out", 0)->elem_cnt()
+                * GetSizeOfDataType(DataType::kOFRecord))
+         / ctx->parallel_desc().hierarchy()->elem_cnt();
 }
 
 /* static */ Maybe<void> OFRecordReaderOp::ModifyOutputArg(

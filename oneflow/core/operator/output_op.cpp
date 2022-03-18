@@ -20,6 +20,19 @@ limitations under the License.
 
 namespace oneflow {
 
+namespace {
+Maybe<void> InferOutputOpNdSbpSignature(NdSbpSignature* nd_sbp_signature,
+                                        const ParallelDesc& parallel_desc,
+                                        const OperatorConf& op_conf) {
+  const InterfaceBlobConf& blob_conf = op_conf.output_conf().blob_conf();
+  NdSbp& in_nd_sbp = (*nd_sbp_signature->mutable_bn_in_op2nd_sbp())["in"];
+  NdSbp& out_nd_sbp = (*nd_sbp_signature->mutable_bn_in_op2nd_sbp())["out"];
+  JUST(InterfaceOpUtil::ParseNdSbpFromBlobConf(blob_conf, parallel_desc, &in_nd_sbp));
+  JUST(InterfaceOpUtil::ParseNdSbpFromBlobConf(blob_conf, parallel_desc, &out_nd_sbp));
+  return Maybe<void>::Ok();
+}
+}  // anonymous namespace
+
 Maybe<void> OutputOp::InitFromOpConf() {
   CHECK(op_conf().has_output_conf());
   EnrollInputBn("in");
@@ -47,6 +60,37 @@ Maybe<void> OutputOp::InferOutBlobDescs(
   return Maybe<void>::Ok();
 }
 
+Maybe<void> OutputOp::GetSbpSignatures(SbpSignatureList* sbp_sig_list) const {
+  SbpSignature* sbp = sbp_sig_list->mutable_sbp_signature()->Add();
+  CHECK_EQ_OR_RETURN(JUST(GetOpParallelDesc())->hierarchy()->NumAxes(), 1)
+      << "Only support 1d sbp now.";
+  // Get sbp from BlobConf
+  const InterfaceBlobConf& blob_conf = op_conf().output_conf().blob_conf();
+  // TODO: make sure blob_conf must set nd_sbp
+  CHECK_OR_RETURN(blob_conf.has_nd_sbp());
+  const SbpParallel& sbp_parallel = SbpParallel(blob_conf.nd_sbp().sbp_parallel(0));
+  if (sbp_parallel.has_broadcast_parallel()) {
+    SbpSignatureBuilder().Broadcast("in").Broadcast("out").Build(sbp);
+  } else if (sbp_parallel.has_partial_sum_parallel()) {
+    SbpSignatureBuilder().PartialSum("in").PartialSum("out").Build(sbp);
+  } else if (sbp_parallel.has_split_parallel()) {
+    int64_t split_axis = sbp_parallel.split_parallel().axis();
+    SbpSignatureBuilder().Split("in", split_axis).Split("out", split_axis).Build(sbp);
+  } else {
+    UNIMPLEMENTED_THEN_RETURN();
+  }
+  return Maybe<void>::Ok();
+}
+
+Maybe<void> OutputOp::GetNdSbpSignatureList(
+    const std::function<Maybe<const BlobDesc&>(const std::string&)>& LogicalBlobDesc4Ibn,
+    const ParallelDesc& parallel_desc, std::vector<NdSbpSignature>* nd_sbp_sig_list) const {
+  NdSbpSignature nd_sbp_signature;
+  JUST(InferOutputOpNdSbpSignature(&nd_sbp_signature, parallel_desc, op_conf()));
+  nd_sbp_sig_list->emplace_back(nd_sbp_signature);
+  return Maybe<void>::Ok();
+}
+
 Maybe<void> OutputOp::InferSbpSignature(
     SbpSignature* sbp_signature, const SbpSignature& sbp_sig_conf,
     const std::function<int32_t(const SbpSignature&)>& CalcOrderValue4SbpSig,
@@ -61,12 +105,7 @@ Maybe<void> OutputOp::InferNdSbpSignature(
     NdSbpSignature* nd_sbp_signature, const NdSbpSignature& nd_sbp_constraints,
     const ParallelDesc& parallel_desc,
     std::function<Maybe<const NdSbpInferHint*>(const std::string&)> NdSbpInferHint4Ibn) const {
-  const InterfaceBlobConf& blob_conf = op_conf().output_conf().blob_conf();
-  NdSbp& in_nd_sbp = (*nd_sbp_signature->mutable_bn_in_op2nd_sbp())["in"];
-  NdSbp& out_nd_sbp = (*nd_sbp_signature->mutable_bn_in_op2nd_sbp())["out"];
-  JUST(InterfaceOpUtil::ParseNdSbpFromBlobConf(blob_conf, parallel_desc, &in_nd_sbp));
-  JUST(InterfaceOpUtil::ParseNdSbpFromBlobConf(blob_conf, parallel_desc, &out_nd_sbp));
-
+  JUST(InferOutputOpNdSbpSignature(nd_sbp_signature, parallel_desc, op_conf()));
   return Maybe<void>::Ok();
 }
 

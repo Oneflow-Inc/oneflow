@@ -208,6 +208,16 @@ OpRegistry& OpRegistry::SetDeviceAndStreamInferFn(
   return *this;
 }
 
+OpRegistry& OpRegistry::SetComputeComplexityFn(ComputeComplexityFn compute_complexity_fn) {
+  result_.compute_complexity_fn = std::move(compute_complexity_fn);
+  return *this;
+}
+
+OpRegistry& OpRegistry::SetGetNdSbpSignatureListFn(GetNdSbpSignatureListFn get_nd_sbp_list_fn) {
+  result_.get_nd_sbp_list_fn = std::move(get_nd_sbp_list_fn);
+  return *this;
+}
+
 Maybe<OpRegistry&> OpRegistry::Finish() {
   CHECK_OR_RETURN(result_.logical_tensor_desc_infer_fn != nullptr)
       << "No TensorDescInfer function for " << result_.op_type_name;
