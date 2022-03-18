@@ -13,7 +13,7 @@ args = parser.parse_args()
 local_label = ""
 version = f"0.7.0"
 
-os.environ["ONEFLOW_RELEASE_VERSION"] = "1"
+os.environ["ONEFLOW_RELEASE_VERSION"] = version
 # set version if release of nightly
 assert (
     os.getenv("ONEFLOW_RELEASE_VERSION") != ""
