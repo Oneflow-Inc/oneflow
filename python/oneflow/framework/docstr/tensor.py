@@ -169,7 +169,7 @@ add_docstr(
 add_docstr(
     oneflow.Tensor.to_global,
     """
-    Tensor.to_global() -> Tensor
+    Tensor.to_global(input, placement, sbp) -> Tensor
 
     See :func:`oneflow.to_global`
     """,
@@ -342,7 +342,8 @@ add_docstr(
 
 add_docstr(
     oneflow.Tensor.argsort,
-    """This operator sorts the input Tensor at specified dim and return the indices of the sorted Tensor.
+    """oneflow.Tensor.argsort(input, dim, descending)
+    This operator sorts the input Tensor at specified dim and return the indices of the sorted Tensor.
 
     Args:
         input (oneflow.Tensor): The input Tensor.
@@ -872,7 +873,8 @@ add_docstr(
 
 add_docstr(
     oneflow.Tensor.to_local,
-    """Returns the local tensor of a global tensor.
+    """oneflow.Tensor.to_local(input)
+    Returns the local tensor of a global tensor.
 
 
     Args:
@@ -927,7 +929,8 @@ add_docstr(
 
 add_docstr(
     oneflow.Tensor.to,
-    """Performs Tensor dtype and/or device conversion.
+    """ oneflow.Tensor.to(input, *args, **kwargs)
+        Performs Tensor dtype and/or device conversion.
         A flow.dtype and flow.device are inferred from the arguments of `input.to(*args, **kwargs)`.
 
     .. note::
@@ -1235,6 +1238,7 @@ add_docstr(
 add_docstr(
     oneflow.Tensor.view,
     """
+    oneflow.Tensor.view(input, *shape)
     The interface is consistent with PyTorch.
     The documentation is referenced from: https://pytorch.org/docs/stable/generated/torch.Tensor.view.html
 
@@ -1291,7 +1295,8 @@ add_docstr(
 
 add_docstr(
     oneflow.Tensor.type_as,
-    r"""Returns this tensor cast to the type of the given tensor.
+    r"""oneflow.Tensor.type_as(input, target)
+        Returns this tensor cast to the type of the given tensor.
         This is a no-op if the tensor is already of the correct type.
 
     Args:
@@ -1315,7 +1320,8 @@ add_docstr(
 
 add_docstr(
     oneflow.Tensor.int,
-    r"""`Tensor.int()` is equivalent to `Tensor.to(flow.int32)`. See to().
+    r"""oneflow.Tensor.int(input)
+    `Tensor.int()` is equivalent to `Tensor.to(flow.int32)`. See to().
 
     Args:
         input  (Tensor): the input tensor.
@@ -1336,7 +1342,8 @@ add_docstr(
 
 add_docstr(
     oneflow.Tensor.long,
-    r"""`Tensor.long()` is equivalent to `Tensor.to(flow.int64)`. See to().
+    r"""oneflow.Tensor.long(input)
+    `Tensor.long()` is equivalent to `Tensor.to(flow.int64)`. See to().
 
     Args:
         input  (Tensor): the input tensor.
@@ -1357,7 +1364,8 @@ add_docstr(
 
 add_docstr(
     oneflow.Tensor.float,
-    r"""`Tensor.float()` is equivalent to `Tensor.to(flow.float32)`. See to().
+    r"""oneflow.Tensor.float(input)
+    `Tensor.float()` is equivalent to `Tensor.to(flow.float32)`. See to().
 
     Args:
         input  (Tensor): the input tensor.
@@ -1378,7 +1386,8 @@ add_docstr(
 
 add_docstr(
     oneflow.Tensor.double,
-    r"""`Tensor.double()` is equivalent to `Tensor.to(flow.float64)`. See to().
+    r"""oneflow.Tensor.double(input)
+    `Tensor.double()` is equivalent to `Tensor.to(flow.float64)`. See to().
 
     Args:
         input  (Tensor): the input tensor.
@@ -1406,7 +1415,8 @@ add_docstr(
 
 add_docstr(
     oneflow.Tensor.item,
-    r"""Returns the value of this tensor as a standard Python number. This only works for tensors with one element.
+    r"""oneflow.Tensor.item(input)
+    Returns the value of this tensor as a standard Python number. This only works for tensors with one element.
     For other cases, see tolist().
 
     This operation is not differentiable.
@@ -1427,7 +1437,8 @@ add_docstr(
 
 add_docstr(
     oneflow.Tensor.tolist,
-    r"""Returns the tensor as a (nested) list. For scalars, a standard Python number is returned,
+    r"""oneflow.Tensor.tolist(input)
+    Returns the tensor as a (nested) list. For scalars, a standard Python number is returned,
     just like with `item()`. Tensors are automatically moved to the CPU first if necessary.
 
     This operation is not differentiable.

@@ -18,7 +18,8 @@ from oneflow.framework.docstr.utils import add_docstr
 
 add_docstr(
     oneflow.abs,
-    r"""Return the absolute value of each element in input tensor:math:`y = |x|` element-wise.
+    r"""oneflow.abs(input)
+    Return the absolute value of each element in input tensor:math:`y = |x|` element-wise.
 
     Args:
         input (Tensor): the input tensor.
@@ -39,7 +40,8 @@ add_docstr(
 
 add_docstr(
     oneflow.add,
-    r"""Computes the addition of `input` by `other` for each element, scalar and broadcast promotation are supported.
+    r"""oneflow.add(input,other)
+    Computes the addition of `input` by `other` for each element, scalar and broadcast promotation are supported.
     The formula is:
 
     .. math::
@@ -488,6 +490,7 @@ add_docstr(
 add_docstr(
     oneflow.acos,
     r"""
+    oneflow.acos(input)
     Returns a new tensor with the inverse cosine of the elements of :attr:`input`.
 
     .. math::
@@ -514,6 +517,7 @@ add_docstr(
 add_docstr(
     oneflow.acosh,
     r"""
+    oneflow.acosh(input)
     Returns a new tensor with the inverse hyperbolic cosine of the elements of :attr:`input`.
 
     .. math::

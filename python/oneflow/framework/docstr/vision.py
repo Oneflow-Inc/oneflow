@@ -19,6 +19,7 @@ from oneflow.framework.docstr.utils import add_docstr
 add_docstr(
     oneflow._C.pad,
     r"""
+    oneflow._C.pad(input, pad, mode, value)
     Pads tensor.
 
     Padding size:
