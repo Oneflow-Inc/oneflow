@@ -70,9 +70,9 @@ def create_tensors_with_iou(N, iou_thresh):
     x0, y0, x1, y1 = boxes[-1].tolist()
     iou_thresh += 1e-5
     boxes[-1, 2] += (x1 - x0) * (1 - iou_thresh) / iou_thresh
-    scores_list = np.arange(N)
-    scores = np.random.choice(scores_list, N, replace=False)
-    return boxes, scores
+    scores = np.arange(N)
+    shuffled_scores = np.random.choice(scores, N, replace=False)
+    return boxes, shuffled_scores
 
 
 def _test_nms(test_case, device):
