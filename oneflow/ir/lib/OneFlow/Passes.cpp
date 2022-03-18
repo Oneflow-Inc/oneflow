@@ -367,6 +367,10 @@ mlir::IntegerAttr GetDefaultSeed(::mlir::PatternRewriter& rewriter) {
 
 bool IsAddToOutputNone(ValueRange value) { return (int)value.size() > 0 ? false : true; }
 
+bool IsSameDtype(mlir::OpResult cast_result, mlir::Value input) {
+  return cast_result.getType() == input.getType();
+}
+
 }  // namespace oneflow
 
 }  // namespace mlir
@@ -449,6 +453,7 @@ void populateFuserForExistingOp(::mlir::RewritePatternSet& patterns) {
   patterns.add<FusedPadConv2DPattern>(patterns.getContext());
   patterns.add<FusedBiasAddDropoutPattern>(patterns.getContext());
   patterns.add<NormalizationAddReluPattern>(patterns.getContext());
+  patterns.add<DeleteSameDtypeCastOpPattern>(patterns.getContext());
 }
 
 void populateGpuHelperPatterns(::mlir::RewritePatternSet& patterns) {
