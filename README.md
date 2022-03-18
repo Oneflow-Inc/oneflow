@@ -12,7 +12,7 @@
 - Version 0.6.0 is out!
   - Improved consistent mode support.
   - More performant eager execution.
-  - [Full changelog](https://github.com/Oneflow-Inc/oneflow/releases/tag/v0.6.0)
+  - [Full changelog](https://github.com/Oneflow-Inc/oneflow/releases/tag/v0.7.0)
 
 ## Publication
 
