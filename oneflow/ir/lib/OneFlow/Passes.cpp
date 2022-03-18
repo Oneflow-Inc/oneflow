@@ -362,36 +362,42 @@ mlir::IntegerAttr GetDefaultSeed(::mlir::PatternRewriter& rewriter) {
   return getSI64IntegerAttr(rewriter, (int64_t)gen->current_seed());
 }
 
-void InitTransposeAttributes(Operation* op, NamedAttrList& transpose_attributes,
-                             PatternRewriter& rewriter) {
-  oneflow::UserOpAdaptor op_to_replace_adaptor(op->getOperands(), op->getAttrDictionary());
-  transpose_attributes.set(OpTrait::IsOpConfCompatible<void>::getDeviceTagAttr(),
-                           op_to_replace_adaptor.device_tagAttr());
-  transpose_attributes.set(OpTrait::IsOpConfCompatible<void>::getDeviceNameAttr(),
-                           op_to_replace_adaptor.device_name());
-  transpose_attributes.set(OpTrait::IsOpConfCompatible<void>::getHierarchyAttr(),
-                           op_to_replace_adaptor.hierarchyAttr());
-  transpose_attributes.set(OpTrait::IsOpConfCompatible<void>::getOpNameAttr(),
-                           rewriter.getStringAttr(op_to_replace_adaptor.op_name().str()));
+LogicalResult InitTransposeAttributes(Operation* op, NamedAttrList& transpose_attributes,
+                                      PatternRewriter& rewriter) {
+  if (op->hasTrait<OpTrait::IsOpConfCompatible>()) {
+    oneflow::UserOpAdaptor op_to_replace_adaptor(op->getOperands(), op->getAttrDictionary());
+    transpose_attributes.set(OpTrait::IsOpConfCompatible<void>::getDeviceTagAttr(),
+                             op_to_replace_adaptor.device_tagAttr());
+    transpose_attributes.set(OpTrait::IsOpConfCompatible<void>::getDeviceNameAttr(),
+                             op_to_replace_adaptor.device_name());
+    transpose_attributes.set(OpTrait::IsOpConfCompatible<void>::getHierarchyAttr(),
+                             op_to_replace_adaptor.hierarchyAttr());
+    transpose_attributes.set(OpTrait::IsOpConfCompatible<void>::getOpNameAttr(),
+                             rewriter.getStringAttr(op_to_replace_adaptor.op_name().str()));
 
-  transpose_attributes.set(OpTrait::IsOpConfCompatible<void>::getScopeSymbolIDAttr(),
-                           op_to_replace_adaptor.scope_symbol_idAttr());
+    transpose_attributes.set(OpTrait::IsOpConfCompatible<void>::getScopeSymbolIDAttr(),
+                             op_to_replace_adaptor.scope_symbol_idAttr());
+    return success();
+  } else {
+    op->emitError("must be a op of trait IsOpConfCompatible!");
+    return failure();
+  }
 }
 
 bool IsAddToOutputNone(ValueRange value) { return (int)value.size() > 0 ? false : true; }
 
-void getChannelLastTransposePerm(llvm::SmallVector<int32_t>& v) {
-  v.push_back(0);
-  v.push_back(2);
-  v.push_back(3);
-  v.push_back(1);
+void getChannelLastTransposePerm(llvm::SmallVector<int32_t>& perm) {
+  perm.push_back(0);
+  perm.push_back(2);
+  perm.push_back(3);
+  perm.push_back(1);
 }
 
-void getChannelFirstTransposePerm(llvm::SmallVector<int32_t>& v) {
-  v.push_back(0);
-  v.push_back(3);
-  v.push_back(1);
-  v.push_back(2);
+void getChannelFirstTransposePerm(llvm::SmallVector<int32_t>& perm) {
+  perm.push_back(0);
+  perm.push_back(3);
+  perm.push_back(1);
+  perm.push_back(2);
 }
 
 llvm::SmallVector<mlir::Value, 4> getInputOperandTransposeOp(NCHWCompatible op, Value val,
@@ -444,9 +450,12 @@ struct AutoNhwcPattern : public OpInterfaceRewritePattern<NCHWCompatible> {
     getChannelFirstTransposePerm(result_perm);
 
     NamedAttrList transpose_attributes;
-    InitTransposeAttributes(op, transpose_attributes, rewriter);
+    if (InitTransposeAttributes(op, transpose_attributes, rewriter).succeeded()) {
+      transpose_attributes.append(llvm::StringRef("perm"), getSI32ArrayAttr(rewriter, perm));
+    } else {
+      return failure();
+    }
 
-    transpose_attributes.append(llvm::StringRef("perm"), getSI32ArrayAttr(rewriter, perm));
     if (op.IsNCHW()) {
       // create transpose op for input operand
       SmallVector<Value, 4> tranposed_operands;
