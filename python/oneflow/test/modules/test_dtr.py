@@ -168,6 +168,24 @@ class TestDTR(flow.unittest.TestCase):
     #     magnitude = ["b", "kb", "mb", "gb"]
     #     out = regex.findall(TestDTR.THRES)
     #     test_case.assertEqual(len(out), 1)
+
+    def test_dtr_work_on_inplace(test_case):
+        flow.enable_dtr(True, "12KB", 0, "eq")
+
+        x1 = flow.ones(1024, requires_grad=True).to('cuda')     # 4KB (x1=1)
+        x2 = x1 * 2                         # 8KB (x1=1, x2=2)
+        y = x2 + 1                          # 12KB (x1=1, x2=2, y=3)
+        x2.add_(1)                          # 12KB (x1=1, x2=3, y=3)
+        test_case.assertEqual(x2.grad_fn.name(), 'scalar_add_backward')
+
+        x3 = x2 + 1                         # evict x1 (x2=3, x3=4, y=3)
+        x4 = x2 + 1                         # evict y (x2=3, x3=4, x4=4)
+        flow.comm.barrier()
+        test_case.assertFalse(flow._oneflow_internal.dtr.is_in_memory(y))   # make sure y is evicted
+        x5 = y + 1                          # evict x3, x4, y (x2, x5)
+
+        # If inplace right in DTR, y should be recomputed as 3 and x5 should be 4. Otherwise, y could be 4 and x5 could be 5
+        test_case.assertTrue(np.array_equal(x5.numpy(), 4 * np.ones(x5.shape)))
         
 
 if __name__ == "__main__":
