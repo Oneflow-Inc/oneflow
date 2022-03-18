@@ -564,7 +564,7 @@ class _BaseDataLoaderIter(object):
                 warn_msg += "Multiprocessing dataloader is not support yet!"
             warnings.warn(warn_msg)
         return data
-    
+
     next = __next__  # Python2 compatibility
 
     def __len__(self) -> int:
