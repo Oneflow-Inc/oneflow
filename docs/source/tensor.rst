@@ -159,7 +159,6 @@ OneFlow Tensor Class
             tile, 
             to,
             to_global,
-            to_consistent,
             to_local,
             to_consistent,
             tolist, 
