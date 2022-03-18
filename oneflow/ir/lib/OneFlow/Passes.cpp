@@ -364,14 +364,14 @@ mlir::IntegerAttr GetDefaultSeed(::mlir::PatternRewriter& rewriter) {
 
 bool IsAddToOutputNone(ValueRange value) { return (int)value.size() > 0 ? false : true; }
 
-void getInputOperandTransposePerm(llvm::SmallVector<int32_t>& v) {
+void getChannelLastTransposePerm(llvm::SmallVector<int32_t>& v) {
   v.push_back(0);
   v.push_back(2);
   v.push_back(3);
   v.push_back(1);
 }
 
-void getResultTransposePerm(llvm::SmallVector<int32_t>& v) {
+void getChannelFirstTransposePerm(llvm::SmallVector<int32_t>& v) {
   v.push_back(0);
   v.push_back(3);
   v.push_back(1);
@@ -422,8 +422,8 @@ struct AutoNhwcPattern : public OpInterfaceRewritePattern<NCHWCompatible> {
  public:
   LogicalResult matchAndRewrite(NCHWCompatible op, PatternRewriter& rewriter) const override {
     llvm::SmallVector<int32_t> perm, result_perm;
-    getInputOperandTransposePerm(perm);
-    getResultTransposePerm(result_perm);
+    getChannelLastTransposePerm(perm);
+    getChannelFirstTransposePerm(result_perm);
 
     NamedAttrList transpose_attributes;
     op.InitTransposeAttrs(transpose_attributes, rewriter);
@@ -441,7 +441,7 @@ struct AutoNhwcPattern : public OpInterfaceRewritePattern<NCHWCompatible> {
           num_transposed_operand += 1;
         }
       }
-      // do nchw2nhwc2
+      // create NHWC op
       SmallVector<Value, 4> created_results = op.NchwToNhwc(tranposed_operands, rewriter);
       // create transpose op for results
       int num_transposed_result = 0;
