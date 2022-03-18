@@ -1,4 +1,4 @@
-# Changelog for OneFlow v0.7.0
+# Changelog for OneFlow v0.8.0
 
 ## v0.8.0-dev
 
