@@ -90,7 +90,7 @@ def CpuOnly : OpInterface<"CpuOnly"> {
 
 def NCHWCompatibleInterface : OpInterface<"NCHWCompatible"> {
   let description = [{
-    Interface to NCHW compatibility
+    Interface of NCHW compatibility
   }];
 
   let methods = [
