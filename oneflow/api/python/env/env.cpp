@@ -14,8 +14,8 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 #include <pybind11/pybind11.h>
+#include "oneflow/api/python/env/env.h"
 #include "oneflow/api/python/of_api_registry.h"
-#include "oneflow/api/python/env/env_api.h"
 #include "oneflow/core/common/global.h"
 #include "oneflow/core/vm/vm_util.h"
 #include "oneflow/core/vm/virtual_machine.h"
@@ -36,22 +36,19 @@ Maybe<void> SwitchToShuttingDownPhase(EnvGlobalObjectsScope* env, bool is_normal
   return Maybe<void>::Ok();
 }
 
-}  // namespace oneflow
-
 ONEFLOW_API_PYBIND11_MODULE("", m) {
   m.def("CurrentResource", &CurrentResource);
   m.def("EnvResource", &EnvResource);
   m.def("EnableEagerEnvironment", &EnableEagerEnvironment);
 
-  using Env = oneflow::EnvGlobalObjectsScope;
-  py::class_<Env, std::shared_ptr<Env>>(m, "Env")
+  py::class_<EnvGlobalObjectsScope, std::shared_ptr<EnvGlobalObjectsScope>>(m, "Env")
       .def(py::init([](const std::string& env_proto_str) {
-        return oneflow::CreateEnv(env_proto_str).GetPtrOrThrow();
+        return CreateEnv(env_proto_str).GetPtrOrThrow();
       }))
       .def(
           "SwitchToShuttingDownPhase",
-          [](Env* env, bool is_normal_exit) {
-            oneflow::SwitchToShuttingDownPhase(env, is_normal_exit).GetOrThrow();
+          [](EnvGlobalObjectsScope* env, bool is_normal_exit) {
+            SwitchToShuttingDownPhase(env, is_normal_exit).GetOrThrow();
           },
           py::call_guard<py::gil_scoped_release>());
 
@@ -66,4 +63,8 @@ ONEFLOW_API_PYBIND11_MODULE("", m) {
   m.def("GetFLAGS_alsologtostderr", &GetFLAGS_alsologtostderr);
   m.def("SetFLAGS_v", &SetFLAGS_v);
   m.def("GetFLAGS_v", &GetFLAGS_v);
+  m.def("SetGraphLRVerbose", &SetGraphLRVerbose);
+  m.def("GetGraphLRVerbose", &GetGraphLRVerbose);
 }
+
+}  // namespace oneflow
