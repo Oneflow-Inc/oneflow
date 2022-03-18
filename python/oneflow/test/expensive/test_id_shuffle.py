@@ -211,6 +211,54 @@ def _test_embedding_gradient_shuffle(test_case):
     )
 
 
+def _test_unique_key_value(test_case, has_column_id, num_columns):
+    batch_size = 128
+    ids = np.random.randint(0, 1000, (batch_size, num_columns), dtype=np.int64)
+    if has_column_id:
+        column_ids = (
+            ids % num_columns
+        )  # same id must have same column id, so in this case get column_ids from ids
+        column_ids_tensor = flow.tensor(
+            column_ids.astype(np.int32), requires_grad=False
+        ).to("cuda")
+    else:
+        column_ids_tensor = None
+    ids_tensor = flow.tensor(ids, requires_grad=False).to("cuda")
+
+    class TestGraph(flow.nn.Graph):
+        def __init__(self):
+            super().__init__()
+
+        def build(self, ids, column_ids):
+            (
+                num_unique,
+                unique_ids,
+                unique_column_ids,
+                inverse_indices,
+            ) = flow._C.one_embedding_unique_key_value_pair(
+                ids, column_ids, num_columns
+            )
+            return (
+                flow.cast(num_unique, flow.int32),
+                flow.cast(unique_ids, flow.int32),
+                flow.cast(unique_column_ids, flow.int32),
+                flow.cast(inverse_indices, flow.int32),
+            )
+
+    graph = TestGraph()
+    (num_unique, unique_ids, unique_column_ids, inverse_indices,) = graph(
+        ids_tensor, column_ids_tensor
+    )
+    np_unique_ids, np_inverse = np.unique(ids, return_inverse=True)
+    np_num_unique = np_unique_ids.size
+    test_case.assertTrue(np.array_equal(np_num_unique, num_unique[0]))
+    reversed_ids = unique_ids[inverse_indices]
+    test_case.assertTrue(np.array_equal(reversed_ids.numpy(), ids))
+    if has_column_id:
+        reversed_column_ids = unique_column_ids[inverse_indices]
+        test_case.assertTrue(np.array_equal(reversed_column_ids.numpy(), column_ids))
+
+
 @unittest.skipIf(os.getenv("ONEFLOW_TEST_CPU_ONLY"), "only test cpu cases")
 @flow.unittest.skip_unless_1n1d()
 class DataShuffleTestCase(flow.unittest.TestCase):
@@ -231,6 +279,13 @@ class DataShuffleTestCase(flow.unittest.TestCase):
         arg_dict = OrderedDict()
         for kwargs in GenArgDict(arg_dict):
             _test_embedding_gradient_shuffle(test_case, **kwargs)
+
+    def test_unique_key_value(test_case):
+        arg_dict = OrderedDict()
+        arg_dict["has_column_id"] = [True, False]
+        arg_dict["num_columns"] = [13, 26, 1]
+        for kwargs in GenArgDict(arg_dict):
+            _test_unique_key_value(test_case, **kwargs)
 
 
 if __name__ == "__main__":
