@@ -42,11 +42,11 @@ Maybe<std::vector<Symbol<SbpParallel>>> MakeSplitSbpParallelList(int max_split_a
   return ret;
 }
 
-Maybe<Symbol<SbpParallel>> GetSplitSbpParallel(int dim) {
-  CHECK_LT_OR_RETURN(dim, kMaxSplitAxis);
+Maybe<Symbol<SbpParallel>> GetSplitSbpParallel(int axis) {
+  CHECK_LT_OR_RETURN(axis, kMaxSplitAxis);
   static std::vector<Symbol<SbpParallel>> split_sbp_sym_list =
       *JUST(MakeSplitSbpParallelList(kMaxSplitAxis));
-  return split_sbp_sym_list.at(dim);
+  return split_sbp_sym_list.at(axis);
 }
 
 Maybe<Symbol<SbpParallel>> GetBroadcastSbpParallel() {
@@ -104,7 +104,7 @@ ONEFLOW_API_PYBIND11_MODULE("sbp", m) {
             return GetSbpFromState(state).GetOrThrow();
           }));
   m.def(
-      "split", [](int dim) { return GetSplitSbpParallel(dim).GetOrThrow(); }, py::arg("dim"));
+      "split", [](int axis) { return GetSplitSbpParallel(axis).GetOrThrow(); }, py::arg("axis"));
   m.def("broadcast", []() { return GetBroadcastSbpParallel().GetOrThrow(); });
   m.def("partial_sum", []() { return GetPartialSumSbpParallel().GetOrThrow(); });
 }
