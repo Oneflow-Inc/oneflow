@@ -9,9 +9,9 @@
 
 ## Latest News
 
-- Version 0.6.0 is out!
-  - Improved consistent mode support.
-  - More performant eager execution.
+- Version 0.7.0 is out!
+  - Introducing global tensor
+  - Semi-auto parallelization has landed
   - [Full changelog](https://github.com/Oneflow-Inc/oneflow/releases/tag/v0.7.0)
 
 ## Publication
