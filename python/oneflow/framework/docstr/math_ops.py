@@ -265,7 +265,7 @@ add_docstr(
 
 add_docstr(
     oneflow.asin,
-    r"""
+    r"""oneflow.asin(input)
     Returns a new tensor with the arcsine of the elements of :attr:`input`.
 
     .. math::
@@ -298,7 +298,7 @@ add_docstr(
 
 add_docstr(
     oneflow.asinh,
-    r"""
+    r"""oneflow.asinh(input)
     Returns a new tensor with the inverse hyperbolic sine of the elements of :attr:`input`.
 
     .. math::
@@ -333,7 +333,7 @@ add_docstr(
 
 add_docstr(
     oneflow.atan,
-    r"""
+    r"""oneflow.atan(input)
     Returns a new tensor with the arctangent of the elements of :attr:`input`.
 
     .. math::
@@ -358,7 +358,8 @@ add_docstr(
 
 add_docstr(
     oneflow.ceil,
-    r"""Returns a new tensor with the ceil of the elements of :attr:`input`,
+    r"""oneflow.ceil(input)
+    Returns a new tensor with the ceil of the elements of :attr:`input`,
     the smallest integer greater than or equal to each element.
 
     The equation is:
@@ -546,7 +547,8 @@ add_docstr(
 
 add_docstr(
     oneflow.atanh,
-    r"""Returns a new tensor with the inverse hyperbolic tangent of the elements of :attr:`input`.
+    r"""oneflow.atanh(input)
+    Returns a new tensor with the inverse hyperbolic tangent of the elements of :attr:`input`.
 
     .. math::
         \text{out}_{i} = \tanh^{-1}(\text{input}_{i})
@@ -1355,7 +1357,7 @@ add_docstr(
 
 add_docstr(
     oneflow.as_strided,
-    r"""
+    r"""oneflow.as_strided（input, size, stride, storage_offset)
     Create a view of an existing oneflow.Tensor input with specified size, stride and storage_offset.
     The documentation is referenced from:
     https://pytorch.org/docs/stable/generated/torch.as_strided.html#torch.as_strided.
