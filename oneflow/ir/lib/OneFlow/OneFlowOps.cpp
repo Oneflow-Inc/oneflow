@@ -399,17 +399,9 @@ llvm::Optional<OpResult> GetCtrlOutputResult(Operation* op) {
 
 bool Conv2DOp::IsNCHW() { return this->data_format().str() == "channels_first"; }
 
-llvm::DenseSet<Value> Conv2DOp::OperandsToTranspose() {
-  llvm::DenseSet<Value> result;
-  result.insert(this->in());
-  result.insert(this->weight());
-  return result;
-}
+llvm::DenseSet<Value> Conv2DOp::OperandsToTranspose() { return {this->in(), this->weight()}; }
 
-llvm::DenseSet<Value> Conv2DOp::ResultsToTranspose() {
-  llvm::DenseSet<Value> result{this->out()};
-  return result;
-}
+llvm::DenseSet<Value> Conv2DOp::ResultsToTranspose() { return {this->out()}; }
 
 llvm::SmallVector<Value, 4> Conv2DOp::NchwToNhwc(llvm::SmallVector<Value, 4> value,
                                                  PatternRewriter& rewriter) {
@@ -432,15 +424,9 @@ llvm::SmallVector<Value, 4> Conv2DOp::NchwToNhwc(llvm::SmallVector<Value, 4> val
 
 bool BiasAddOp::IsNCHW() { return this->axisAttr().getValue().getSExtValue() == 1; }
 
-llvm::DenseSet<Value> BiasAddOp::OperandsToTranspose() {
-  llvm::DenseSet<Value> result{this->a()};
-  return result;
-}
+llvm::DenseSet<Value> BiasAddOp::OperandsToTranspose() { return {this->a()}; }
 
-llvm::DenseSet<Value> BiasAddOp::ResultsToTranspose() {
-  llvm::DenseSet<Value> result{this->out()};
-  return result;
-}
+llvm::DenseSet<Value> BiasAddOp::ResultsToTranspose() { return {this->out()}; }
 
 llvm::SmallVector<Value, 4> BiasAddOp::NchwToNhwc(llvm::SmallVector<Value, 4> value,
                                                   PatternRewriter& rewriter) {
@@ -461,15 +447,9 @@ llvm::SmallVector<Value, 4> BiasAddOp::NchwToNhwc(llvm::SmallVector<Value, 4> va
 
 bool NormalizationOp::IsNCHW() { return this->axisAttr().getValue().getSExtValue() == 1; }
 
-llvm::DenseSet<Value> NormalizationOp::OperandsToTranspose() {
-  llvm::DenseSet<Value> result{this->x()};
-  return result;
-}
+llvm::DenseSet<Value> NormalizationOp::OperandsToTranspose() { return {this->x()}; }
 
-llvm::DenseSet<Value> NormalizationOp::ResultsToTranspose() {
-  llvm::DenseSet<Value> result{this->y()};
-  return result;
-}
+llvm::DenseSet<Value> NormalizationOp::ResultsToTranspose() { return {this->y()}; }
 
 llvm::SmallVector<Value, 4> NormalizationOp::NchwToNhwc(llvm::SmallVector<Value, 4> value,
                                                         PatternRewriter& rewriter) {
@@ -495,17 +475,9 @@ llvm::SmallVector<Value, 4> NormalizationOp::NchwToNhwc(llvm::SmallVector<Value,
 
 bool MaxPool2DOp::IsNCHW() { return this->data_format().str() == "channels_first"; }
 
-llvm::DenseSet<Value> MaxPool2DOp::OperandsToTranspose() {
-  llvm::DenseSet<Value> result{this->x()};
-  return result;
-}
+llvm::DenseSet<Value> MaxPool2DOp::OperandsToTranspose() { return {this->x()}; }
 
-llvm::DenseSet<Value> MaxPool2DOp::ResultsToTranspose() {
-  llvm::DenseSet<Value> result;
-  result.insert(this->y());
-  result.insert(this->indice());
-  return result;
-}
+llvm::DenseSet<Value> MaxPool2DOp::ResultsToTranspose() { return {this->y(), this->indice()}; }
 
 llvm::SmallVector<Value, 4> MaxPool2DOp::NchwToNhwc(llvm::SmallVector<Value, 4> value,
                                                     PatternRewriter& rewriter) {
