@@ -32,8 +32,6 @@ __global__ void SliceForwardGpu(const int n, SliceParams params,
     int64_t entire_offset = 0;
     SliceIndexToStridedOffset<NDIM>(i, params, entire_strided_idx_cvtr, sliced_idx_cvtr,
                                     sliced_strided_idx_cvtr, &slice_offset, &entire_offset);
-    // int64_t offset = SliceOffsetToEntireOffset<NDIM>(i, params, entire_idx_cvtr,
-    // sliced_idx_cvtr);
     sliced[slice_offset] = entire[entire_offset];
   }
 }
@@ -49,8 +47,6 @@ __global__ void SliceBackwardGpu(const int n, SliceParams params,
     int64_t entire_offset = 0;
     SliceIndexToStridedOffset<NDIM>(i, params, entire_strided_idx_cvtr, sliced_idx_cvtr,
                                     sliced_strided_idx_cvtr, &slice_offset, &entire_offset);
-    // int64_t offset = SliceOffsetToEntireOffset<NDIM>(i, params, entire_idx_cvtr,
-    // sliced_idx_cvtr);
     entire[entire_offset] = sliced[slice_offset];
   }
 }
@@ -121,19 +117,8 @@ template<typename T>
 void GetPackedParams(const SliceParams& params, const T* entire, const T* sliced, size_t* pack_size,
                      SliceParams* packed_params) {
   CHECK_GT(params.ndim, 0);
-  // const int64_t last_dim = params.ndim - 1;
-  // if (params.step[last_dim] == 1) {
-  //   *pack_size = GetPackSize<T>(params, entire, sliced);
-  //   CHECK_GE(*pack_size, sizeof(T));
-  //   const int64_t elem_per_pack = *pack_size / sizeof(T);
-  //   *packed_params = params;
-  //   packed_params->dims[last_dim] /= elem_per_pack;
-  //   packed_params->start[last_dim] /= elem_per_pack;
-  //   packed_params->size[last_dim] /= elem_per_pack;
-  // } else {
   *pack_size = sizeof(T);
   *packed_params = params;
-  // }
 }
 
 }  // namespace

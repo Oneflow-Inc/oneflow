@@ -886,9 +886,15 @@ Maybe<void> LazyInterpreter::ApplyImpl(const UserOpExpr& op_expr, const TensorTu
     const auto& input_tensor = inputs.at(i);
     CHECK_OR_RETURN(device_tag == GetDeviceTagOfTensor(input_tensor))
         << " Lazy nn.Graph name : " << graph_name << " encountered ERROR where multi-input tensor"
-        << " has different device type in module/op_name: " << new_op_name
-        << ". Please use tensor.to() or tensor.to_global() to make all input with same device.";
-    CHECK_OR_RETURN(parallel_desc->Equals(*JUST(GetParallelDescOfTensor(input_tensor))));
+        << " has different device types in module/op_name: " << new_op_name
+        << ". Please use tensor.to() or tensor.to_global() to synchronize all the input with the "
+           "same device.";
+    // TODO: Print out all the placement
+    CHECK_OR_RETURN(parallel_desc->Equals(*JUST(GetParallelDescOfTensor(input_tensor))))
+        << " Lazy nn.Graph name : " << graph_name << " encountered ERROR where multi-input tensor"
+        << " has different placements in module/op_name: " << new_op_name
+        << ". Please use tensor.to() or tensor.to_global() to synchronize all the input with the "
+           "same placement.";
     CHECK_EQ_OR_RETURN(is_local, input_tensor->is_local());
     const std::string& ibn = op_expr.indexed_ibns().at(i);
     std::string lbn = TensorNameScope::Global()->Lookup(input_tensor);

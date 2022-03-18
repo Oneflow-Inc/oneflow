@@ -17,7 +17,6 @@ limitations under the License.
 #define ONEFLOW_USER_KERNELS_SLICE_UTIL_H_
 
 #include "oneflow/core/common/nd_index_offset_helper.h"
-#include "oneflow/core/common/nd_index_offset_with_stride_helper.h"
 #include "oneflow/core/common/util.h"
 #include "oneflow/core/ep/include/stream.h"
 
@@ -76,9 +75,6 @@ template<int NDIM>
 using SliceStridedIndexHelper = NdIndexStridedOffsetHelper<int64_t, NDIM>;
 
 template<int NDIM>
-using SliceIndexWithStrideHelper = NdIndexOffsetWithStrideHelper<int64_t, NDIM>;
-
-template<int NDIM>
 OF_DEVICE_FUNC int64_t SliceOffsetToEntireOffset(int64_t offset, const SliceParams& params,
                                                  const SliceIndexHelper<NDIM>& entire_idx_cvtr,
                                                  const SliceIndexHelper<NDIM>& sliced_idx_cvtr) {
@@ -104,8 +100,6 @@ OF_DEVICE_FUNC void SliceIndexToStridedOffset(
     int64_t* entire_offset) {
   int64_t nd_index[NDIM] = {0};
   sliced_idx_cvtr.OffsetToNdIndex(idx, nd_index);
-  // *sliced_offset = sliced_strided_idx_cvtr.NdIndexToOffset(nd_index);
-  // assert(*sliced_offset == idx);
   *sliced_offset = idx;
 #ifdef __CUDA_ARCH__
 #pragma unroll
@@ -116,7 +110,6 @@ OF_DEVICE_FUNC void SliceIndexToStridedOffset(
     assert(nd_index[i] < params.dims[i]);
   }
   *entire_offset = entire_strided_idx_cvtr.NdIndexToOffset(nd_index);
-  // return entire_strided_idx_cvtr.NdIndexToOffset(nd_index);
 }
 
 template<DeviceType device_type, typename T>
