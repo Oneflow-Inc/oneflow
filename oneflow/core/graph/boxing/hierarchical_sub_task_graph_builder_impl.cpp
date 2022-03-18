@@ -416,42 +416,42 @@ class NDSliceBoxingSubTskGphBuilder final : public HierarchicalSubTskGphBuilder 
             CreateSliceBoxingNode(out_parallel_desc, out_id, out_slice, kSliceBoxingTaskModeCopy);
         const TensorSliceView& first_intersection =
             FindFirstNotEmptyInterSection(out_slice, in_slices);
-        if (slice_boxing_type == "add") { CHECK(!first_intersection.IsEmpty()); }
-        SliceBoxingTaskNode* add_node = nullptr;
+        if (first_intersection.IsEmpty()) { return Error::BoxingNotSupportedError(); }
+        SliceBoxingTaskNode* slice_node = nullptr;
         if (slice_boxing_type == "add") {
-          add_node = CreateSliceBoxingNode(out_parallel_desc, out_id, first_intersection,
-                                           kSliceBoxingTaskModeAdd);
+          slice_node = CreateSliceBoxingNode(out_parallel_desc, out_id, first_intersection,
+                                             kSliceBoxingTaskModeAdd);
         }
         FOR_RANGE(int64_t, in_id, 0, in_parallel_num) {
           const TensorSliceView& in_slice = in_slices.at(in_id);
           const TensorSliceView& intersection = out_slice.Intersect(in_slice);
           if (intersection.IsEmpty()) { continue; }
           if (slice_boxing_type == "add") { CHECK_OR_RETURN(intersection == first_intersection); }
-          TaskNode* in_node = sorted_in_tasks.at(in_id);
-          SliceBoxingTaskNode* in_copy_node = CreateSliceBoxingNode(
-              in_parallel_desc, in_id, intersection, kSliceBoxingTaskModeCopy);
-          in_copy_node->ConnectToSrcNodeWithSlice(in_node, NewEdge(), in_slice);
-          TaskNode* proxy_node =
-              ctx->task_graph()->GetProxyNode(in_copy_node, lbi, out_parallel_desc, out_id);
           if (slice_boxing_type == "add") {
-            CHECK(add_node != nullptr);
-            add_node->ConnectToSrcNodeWithSlice(proxy_node, NewEdge(), intersection);
+            CHECK_OR_RETURN(intersection == first_intersection);
           } else if (slice_boxing_type == "copy") {
-            SliceBoxingTaskNode* out_copy_node = CreateSliceBoxingNode(
-                out_parallel_desc, out_id, intersection, kSliceBoxingTaskModeCopy);
-            out_copy_node->ConnectToSrcNodeWithSlice(proxy_node, NewEdge(), intersection);
-            out_node->ConnectToSrcNodeWithSlice(out_copy_node, NewEdge(), intersection);
+            slice_node = CreateSliceBoxingNode(out_parallel_desc, out_id, intersection,
+                                             kSliceBoxingTaskModeCopy);
           } else {
             UNIMPLEMENTED();
           }
+          TaskNode* in_node = sorted_in_tasks.at(in_id);
+          SliceBoxingTaskNode* in_copy_node =
+              CreateSliceBoxingNode(in_parallel_desc, in_id, intersection, kSliceBoxingTaskModeCopy);
+          in_copy_node->ConnectToSrcNodeWithSlice(in_node, NewEdge(), in_slice);
+          TaskNode* proxy_node =
+              ctx->task_graph()->GetProxyNode(in_copy_node, lbi, out_parallel_desc, out_id);
+          slice_node->ConnectToSrcNodeWithSlice(proxy_node, NewEdge(), intersection);
+          if (slice_boxing_type == "copy") {
+            out_node->ConnectToSrcNodeWithSlice(slice_node, NewEdge(), intersection);
+          }
         }
         if (slice_boxing_type == "add") {
-          CHECK(add_node != nullptr);
-          out_node->ConnectToSrcNodeWithSlice(add_node, NewEdge(), first_intersection);
+          out_node->ConnectToSrcNodeWithSlice(slice_node, NewEdge(), first_intersection);
         }
         sorted_out_tasks->push_back(out_node);
       }
-      return BuildSubTskGphBuilderStatus("2DSliceBoxingAddSubTskGphBuilder", "P2S");
+      return BuildSubTskGphBuilderStatus("NDSliceBoxingSubTskGphBuilder", slice_boxing_type);
     } else {
       return Error::BoxingNotSupportedError();
     }
