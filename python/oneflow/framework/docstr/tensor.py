@@ -193,7 +193,7 @@ add_docstr(
     Args:
         placement (flow.placement, optional): the desired placement of returned global tensor. Default: None
         sbp (flow.sbp.sbp or tuple of flow.sbp.sbp, optional): the desired sbp of returned global tensor. Default: None
-        grad_sbp (flow.sbp.sbp or tuple of flow.sbp.sbp, optional): manually specify the gradient sbp of this operation in the backward pass. If None, the gradient sbp will be infered automatically. It is only used if this tensor is a global tensor. Default: None
+        grad_sbp (flow.sbp.sbp or tuple of flow.sbp.sbp, optional): manually specify the sbp of this tensor's grad tensor in the backward pass. If None, the grad tensor sbp will be infered automatically. It is only used if this tensor is a global tensor. Default: None
 
     For local tensor:
 
@@ -246,7 +246,7 @@ add_docstr(
 add_docstr(
     oneflow.Tensor.to_consistent,
     """
-    This interface is no longer available, please use :func:`oneflow.Tensor.to_global` instead
+    This interface is no longer available, please use :func:`oneflow.Tensor.to_global` instead.
     """,
 )
 
