@@ -173,5 +173,7 @@ OneFlow Tensor Class
             var, 
             view, 
             where, 
-            zeros_, 
+            zero_, 
+            is_contiguous,
+            is_cuda,
             nms,

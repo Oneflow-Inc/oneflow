@@ -14,6 +14,7 @@ Functional operations for neural networks
 .. autofunction:: hardswish
 .. autofunction:: hardtanh
 .. autofunction:: normalize
+.. autofunction:: layer_norm
 .. autofunction:: leaky_relu
 .. autofunction:: elu
 .. autofunction:: celu

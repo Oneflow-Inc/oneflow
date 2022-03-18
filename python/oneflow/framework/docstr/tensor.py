@@ -1452,3 +1452,30 @@ add_docstr(
     See :func:`oneflow.where`
     """,
 )
+
+add_docstr(
+    oneflow.Tensor.zero_,
+    r"""
+    Tensor.zero_() -> Tensor
+    
+    Fills `self` tensor with zeros.
+    """,
+)
+
+add_docstr(
+    oneflow.Tensor.is_contiguous,
+    r"""
+    Tensor.is_contiguous() -> bool
+
+    Returns True if `self` tensor is contiguous in memory.
+    """,
+)
+
+add_docstr(
+    oneflow.Tensor.is_cuda,
+    r"""
+    Tensor.is_cuda() -> bool
+    
+    Is `True` if the Tensor is stored on the GPU, `False` otherwise.
+    """,
+)
