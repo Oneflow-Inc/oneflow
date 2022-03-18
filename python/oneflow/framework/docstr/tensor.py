@@ -1398,13 +1398,6 @@ add_docstr(
 )
 
 add_docstr(
-    oneflow.Tensor.is_floating_point,
-    """
-    See :func:`oneflow.is_floating_point`
-    """,
-)
-
-add_docstr(
     oneflow.Tensor.is_contiguous,
     r"""
     Tensor.is_contiguous() -> bool
@@ -1419,6 +1412,13 @@ add_docstr(
     Tensor.is_cuda() -> bool
     
     Is `True` if the Tensor is stored on the GPU, `False` otherwise.
+    """,
+)
+
+add_docstr(
+    oneflow.Tensor.is_floating_point,
+    """
+    See :func:`oneflow.is_floating_point`
     """,
 )
 
