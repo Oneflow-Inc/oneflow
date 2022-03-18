@@ -386,19 +386,9 @@ LogicalResult InitTransposeAttributes(Operation* op, NamedAttrList& transpose_at
 
 bool IsAddToOutputNone(ValueRange value) { return (int)value.size() > 0 ? false : true; }
 
-void getChannelLastTransposePerm(llvm::SmallVector<int32_t>& perm) {
-  perm.push_back(0);
-  perm.push_back(2);
-  perm.push_back(3);
-  perm.push_back(1);
-}
+llvm::SmallVector<int32_t> getChannelLastTransposePerm() { return {0, 2, 3, 1}; }
 
-void getChannelFirstTransposePerm(llvm::SmallVector<int32_t>& perm) {
-  perm.push_back(0);
-  perm.push_back(3);
-  perm.push_back(1);
-  perm.push_back(2);
-}
+llvm::SmallVector<int32_t> getChannelFirstTransposePerm() { return {0, 3, 1, 2}; }
 
 llvm::SmallVector<mlir::Value, 4> getInputOperandTransposeOp(NCHWCompatible op, Value val,
                                                              NamedAttrList transpose_attributes,
@@ -445,9 +435,8 @@ struct AutoNhwcPattern : public OpInterfaceRewritePattern<NCHWCompatible> {
 
  public:
   LogicalResult matchAndRewrite(NCHWCompatible op, PatternRewriter& rewriter) const override {
-    llvm::SmallVector<int32_t> perm, result_perm;
-    getChannelLastTransposePerm(perm);
-    getChannelFirstTransposePerm(result_perm);
+    llvm::SmallVector<int32_t> perm = getChannelLastTransposePerm();
+    llvm::SmallVector<int32_t> result_perm = getChannelFirstTransposePerm();
 
     NamedAttrList transpose_attributes;
     if (InitTransposeAttributes(op, transpose_attributes, rewriter).succeeded()) {
