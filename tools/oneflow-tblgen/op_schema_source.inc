@@ -76,6 +76,12 @@ REGISTER_USER_OP("{{op.name}}")
 {%- if op.has_get_sbp_fn -%}
     .SetGetSbpFn(&{{opname}}::GetSbp)
 {%- endif -%}
+{%- if op.has_get_nd_sbp_fn -%}
+    .SetGetNdSbpSignatureListFn(&{{opname}}::GetNdSbpSignatureList)
+{%- endif -%}
+{%- if op.has_compute_complexity_fn -%}
+    .SetComputeComplexityFn(&{{opname}}::GetComputeComplexity)
+{%- endif -%}
 {%- if op.has_logical_tensor_desc_infer_fn -%}
     .SetLogicalTensorDescInferFn(&{{opname}}::InferLogicalTensorDesc)
 {%- endif -%}

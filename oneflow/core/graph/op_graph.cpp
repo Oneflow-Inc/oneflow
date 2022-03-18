@@ -18,6 +18,8 @@ limitations under the License.
 #include "oneflow/core/job/job_builder.h"
 #include "oneflow/core/job/mirrored_sig_infer_hint.h"
 #include "oneflow/core/job/lazy_mode.h"
+#include "oneflow/core/auto_parallel/algorithm_util.h"
+#include "oneflow/core/framework/nd_sbp.h"
 
 namespace oneflow {
 
@@ -565,6 +567,64 @@ Maybe<void> OpGraph::ForEachOpNode(const std::function<Maybe<void>(const OpNode&
     JUST(DoEach(op_node));
   }
   return Maybe<void>::Ok();
+}
+
+// Print the graph with SBP in order
+void OpGraph::PrintSBPGraphDebugInfo() const {
+  // test debug
+  std::cout << "Get Into Print Op Graph" << std::endl;
+  // Collect op_node
+  std::vector<OpNode*> NodeList;
+  ForEachNode([&](OpNode* op_node) { NodeList.push_back(op_node); });
+
+  // test debug
+  std::cout << "Deciding order" << std::endl;
+  // Decide the order to vist the op
+  std::vector<int32_t> order;
+  auto_parallel::DecideOrder(NodeList, order, [&](OpNode* a, OpNode* b) {
+    return a->op().op_name().compare(b->op().op_name()) > 0;
+  });
+  std::vector<int32_t> str_order;
+
+  // test debug
+  std::cout << "Finish deciding order" << std::endl;
+
+  for (int32_t i = 0; i < NodeList.size(); i++) {
+    OpNode* op_node = NodeList[order[i]];
+    std::cout << op_node->op().op_name() << " (^_^):" << std::endl;
+    // Sort before printing
+    const auto& op_input_bns = op_node->op().input_bns();
+    auto comp = [](const std::string& a, const std::string& b) { return a.compare(b) > 0; };
+    auto_parallel::DecideOrder(op_input_bns, str_order, comp);
+    // Print out SBP information for input operator
+    for (int32_t j : str_order) {
+      const auto& ibn = op_input_bns[j];
+      auto producer_node = op_node->MutSrcNode4Ibn(ibn);
+      std::cout << "Pre Op:" << producer_node->op().op_name() << ": " << ibn;
+      const auto& this_sbp_parallel = op_node->NdSbp4BnInOp(ibn);
+      std::cout << ", " << NdSbpToString(this_sbp_parallel);
+      const auto input_blob_modifier_ = op_node->op().InputBlobModifier4Ibn(ibn);
+      bool is_same_sbp = input_blob_modifier_.has_is_mutable() && input_blob_modifier_.is_mutable();
+      if (is_same_sbp) std::cout << ", same SBP";
+      std::cout << ", "
+                << op_node->LogicalBlobDesc4Lbi(op_node->op().BnInOp2Lbi(ibn)).shape().elem_cnt();
+      std::cout << std::endl;
+    }
+    // Sort before printing
+    const auto& op_output_bns = op_node->op().output_bns();
+    auto_parallel::DecideOrder(op_output_bns, str_order, comp);
+    // Print out SBP information for output blobs
+    for (int32_t j : str_order) {
+      const auto& obn = op_output_bns[j];
+      std::cout << "Out Op:" << obn;
+      const auto& this_sbp_parallel = op_node->NdSbp4BnInOp(obn);
+      std::cout << ", " << NdSbpToString(this_sbp_parallel);
+      std::cout << ", "
+                << op_node->LogicalBlobDesc4Lbi(op_node->op().BnInOp2Lbi(obn)).shape().elem_cnt();
+      std::cout << std::endl;
+    }
+    std::cout << std::endl;
+  }
 }
 
 }  // namespace oneflow

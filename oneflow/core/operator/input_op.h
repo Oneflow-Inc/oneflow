@@ -42,6 +42,10 @@ class InputOp final : public Operator {
       const ParallelDesc& parallel_desc) const override;
 
   Maybe<void> GetSbpSignatures(SbpSignatureList* sbp_sig_list) const override;
+  Maybe<void> GetNdSbpSignatureList(
+      const std::function<Maybe<const BlobDesc&>(const std::string&)>& LogicalBlobDesc4Ibn,
+      const ParallelDesc& parallel_desc,
+      std::vector<NdSbpSignature>* nd_sbp_sig_list) const override;
   Symbol<OperatorConf> GetOpConfWithoutOpNameAndLbn() const override;
   Maybe<void> InferNdSbpSignature(NdSbpSignature* nd_sbp_signature,
                                   const NdSbpSignature& nd_sbp_constraints,

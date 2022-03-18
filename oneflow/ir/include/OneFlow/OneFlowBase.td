@@ -87,6 +87,8 @@ class OneFlow_BaseOp<string mnemonic, list<Trait> traits = []> :
   bit has_output_arg_modify_fn = 0;
   bit has_output_blob_time_shape_infer_fn = 0;
   bit has_nd_sbp_infer_fn = 0;
+  bit has_compute_complexity_fn = 0;
+  bit has_get_nd_sbp_fn = 0;
 }
 
 class OneFlow_Op<string mnemonic, list<Trait> traits = []> :
@@ -156,6 +158,7 @@ class OneFlow_ConvolutionBaseOp<string mnemonic, list<Trait> traits = []> :
     let has_physical_tensor_desc_infer_fn = 1;
     let has_get_sbp_fn = 1;
     let has_data_type_infer_fn = 1;
+    let has_compute_complexity_fn = 1;
 }
 
 class OneFlow_TFPoolBaseOp<string mnemonic, list<Trait> traits = []> :
@@ -176,6 +179,7 @@ class OneFlow_TFPoolBaseOp<string mnemonic, list<Trait> traits = []> :
   let has_physical_tensor_desc_infer_fn = 1;
   let has_get_sbp_fn = 1;
   let has_data_type_infer_fn = 1;
+  let has_compute_complexity_fn = 1;
 }
 
 class OneFlow_TFPoolGradBaseOp<string mnemonic, list<Trait> traits = []> :
@@ -200,6 +204,7 @@ class OneFlow_TFPoolGradBaseOp<string mnemonic, list<Trait> traits = []> :
   let has_physical_tensor_desc_infer_fn = 1;
   let has_get_sbp_fn = 1;
   let has_data_type_infer_fn = 1;
+  let has_compute_complexity_fn = 1;
 }
 
 
@@ -226,6 +231,7 @@ class OneFlow_MaxPoolBaseOp<string mnemonic, list<Trait> traits = []> :
   let has_physical_tensor_desc_infer_fn = 1;
   let has_get_sbp_fn = 1;
   let has_data_type_infer_fn = 1;
+  let has_compute_complexity_fn = 1;
 }
 
 class OneFlow_AvgPoolBaseOp<string mnemonic, list<Trait> traits = []> :
@@ -250,6 +256,7 @@ class OneFlow_AvgPoolBaseOp<string mnemonic, list<Trait> traits = []> :
   let has_physical_tensor_desc_infer_fn = 1;
   let has_get_sbp_fn = 1;
   let has_data_type_infer_fn = 1;
+  let has_compute_complexity_fn = 1;
 }
 
 class OneFlow_MaxPoolGradBaseOp<string mnemonic, list<Trait> traits = []> :
@@ -276,6 +283,7 @@ class OneFlow_MaxPoolGradBaseOp<string mnemonic, list<Trait> traits = []> :
   let has_physical_tensor_desc_infer_fn = 1;
   let has_get_sbp_fn = 1;
   let has_data_type_infer_fn = 1;
+  let has_compute_complexity_fn = 1;
 }
 
 class OneFlow_AvgPoolGradBaseOp<string mnemonic, list<Trait> traits = []> :
@@ -301,6 +309,7 @@ class OneFlow_AvgPoolGradBaseOp<string mnemonic, list<Trait> traits = []> :
   let has_physical_tensor_desc_infer_fn = 1;
   let has_get_sbp_fn = 1;
   let has_data_type_infer_fn = 1;
+  let has_compute_complexity_fn = 1;
 }
 
 class OneFlow_AdaptivePoolBaseOp<string mnemonic, list<Trait> traits = []> :

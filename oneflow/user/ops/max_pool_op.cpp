@@ -110,6 +110,24 @@ GenBackwardOpConfFn MaxPoolMakeBackwardOpConfFn(const int32_t dim) {
   };
 }
 
+// Logically computation cost of pool op is the product of output data amount and pool kernal data
+// amount. After adding sbp, we just divide it by parallel number if output data is splitted because
+// splitting input and using partial sum for output is not a valid sbp for this op for now.
+Maybe<double> GetComputationCostFn(user_op::ComputeComplexityFnContext* ctx) {
+  const std::vector<int32_t> pool_size = ctx->Attr<std::vector<int32_t>>("kernel_size");
+  double logical_computation_cost =
+      std::accumulate(pool_size.begin(), pool_size.end(),
+                      ctx->Shape4ArgNameAndIndex("y", 0)->elem_cnt(), std::multiplies<double>());
+  const auto& parallel_hierarchy = ctx->parallel_desc().hierarchy();
+  const auto& nd_sbp_y = ctx->NdSbp4ArgNameAndIndex("y", 0);
+  for (int32_t dim_sbp = 0; dim_sbp < nd_sbp_y.sbp_parallel_size(); dim_sbp++) {
+    if (nd_sbp_y.sbp_parallel(dim_sbp).has_split_parallel()) {
+      logical_computation_cost /= parallel_hierarchy->At(dim_sbp);
+    }
+  }
+  return logical_computation_cost;
+}
+
 Maybe<void> BackwardTensorDescInferFn(user_op::InferContext* ctx) {
   *ctx->OutputTensorDesc("dx", 0) = ctx->InputTensorDesc("x", 0);
   return Maybe<void>::Ok();
@@ -138,6 +156,10 @@ Maybe<void> BwInferDataType(user_op::InferContext* ctx) {
   }                                                                                      \
   /*static*/ Maybe<void> name##Op::InferDataType(user_op::InferContext* ctx) {           \
     return FwInferDataType(ctx);                                                         \
+  }                                                                                      \
+  /*static*/ Maybe<double> name##Op::GetComputeComplexity(                               \
+      user_op::ComputeComplexityFnContext* ctx) {                                        \
+    return GetComputationCostFn(ctx);                                                    \
   }
 
 IMPLEMENT_MAXPOOL_FUNCS(MaxPool1D, 1)
@@ -157,6 +179,10 @@ IMPLEMENT_MAXPOOL_FUNCS(MaxPool3D, 3)
   }                                                                                          \
   /*static*/ Maybe<void> name##GradOp::InferDataType(user_op::InferContext* ctx) {           \
     return BwInferDataType(ctx);                                                             \
+  }                                                                                          \
+  /*static*/ Maybe<double> name##GradOp::GetComputeComplexity(                               \
+      user_op::ComputeComplexityFnContext* ctx) {                                            \
+    return GetComputationCostFn(ctx);                                                        \
   }
 
 IMPLEMENT_MAXPOOL_BACKWARD_FUNCS(MaxPool1D)
@@ -167,19 +193,5 @@ IMPLEMENT_MAXPOOL_BACKWARD_FUNCS(MaxPool3D)
 REGISTER_USER_OP_GRAD("max_pool_1d").SetGenBackwardOpConfFn(MaxPoolMakeBackwardOpConfFn(1));
 REGISTER_USER_OP_GRAD("max_pool_2d").SetGenBackwardOpConfFn(MaxPoolMakeBackwardOpConfFn(2));
 REGISTER_USER_OP_GRAD("max_pool_3d").SetGenBackwardOpConfFn(MaxPoolMakeBackwardOpConfFn(3));
-
-#define IMPLEMENT_AVGPOOL_FUNCS(name, ndim)                                              \
-  /*static*/ Maybe<void> name##Op::GetSbp(user_op::SbpContext* ctx) {                    \
-    return AvgPoolForwardGetSbpFn(ctx);                                                  \
-  }                                                                                      \
-  /*static*/ Maybe<void> name##Op::InferLogicalTensorDesc(user_op::InferContext* ctx) {  \
-    return AvgPoolMakeForwardTensorDescInferFn(ndim)(ctx);                               \
-  }                                                                                      \
-  /*static*/ Maybe<void> name##Op::InferPhysicalTensorDesc(user_op::InferContext* ctx) { \
-    return InferLogicalTensorDesc(ctx);                                                  \
-  }                                                                                      \
-  /*static*/ Maybe<void> name##Op::InferDataType(user_op::InferContext* ctx) {           \
-    return FwInferDataType(ctx);                                                         \
-  }
 
 }  // namespace oneflow

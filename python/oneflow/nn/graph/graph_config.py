@@ -287,6 +287,51 @@ class GraphConfig(object):
         """
         self.proto.enable_straighten_algorithm_in_task_graph = mode
 
+    def enable_auto_parallel(self, mode: bool = True):
+        """If true, then graph will use auto parallel algorithm.
+
+        Args:
+            mode (bool, optional): [description]. Default is True.
+        """
+        self.proto.enable_auto_parallel = mode
+
+    def set_auto_parallel_computation_cost_ratio(self, ratio):
+        """
+        Set coefficient of computation cost in auto-parallel algorithm.
+        """
+        self.proto.auto_parallel_computation_cost_ratio = ratio
+
+    def set_auto_parallel_wait_time(self, cost):
+        """
+        Set wait time for auto-parallel algorithm.
+
+        wait time: An auto-parallel parameter. Describe the mutable extra time it will take when
+        communication between devices occurs. It will be added to the copy cost and may get reduced
+        when cover by computation cost.
+        """
+        self.proto.auto_parallel_wait_time = cost
+
+    def set_auto_parallel_transfer_cost(self, cost):
+        """
+        Set transfer cost for auto-parallel algorithm.
+        
+        transfer cost: An auto-parallel parameter. Describe the fixed extra time it will take when
+        communication between devices occurs. It will be added to the copy cost and can not be reduced.
+        """
+        self.proto.auto_parallel_transfer_cost = cost
+
+    def enable_auto_parallel_mainstem_algo(self, mode: bool = True):
+        """
+        Find the mainstem of the sbp graph, then reduce the wait time for tributaries.
+        """
+        self.proto.enable_auto_parallel_mainstem_algo = mode
+
+    def enable_auto_parallel_sbp_collector(self, mode: bool = True):
+        """
+        Use sbp collector to create sbp proxy for nodes with multiple downstream operators.
+        """
+        self.proto.enable_auto_parallel_sbp_collector = mode
+
     def _generate_optimizer_and_variable_configs(
         self, opt_dict: OptDict = None, variables_conf: OrderedDict = None,
     ):

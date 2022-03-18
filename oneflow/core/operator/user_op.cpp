@@ -20,6 +20,8 @@ limitations under the License.
 #include "oneflow/core/operator/user_op.h"
 #include "oneflow/core/framework/infer_output_blob_time_shape_fn_context.h"
 #include "oneflow/core/framework/infer_nd_sbp_fn_context.h"
+#include "oneflow/core/framework/compute_complexity_fn_context.h"
+#include "oneflow/core/framework/get_nd_sbp_signature_list_context.h"
 
 namespace oneflow {
 
@@ -487,6 +489,111 @@ class UserOpInferNdSbpFnContext : public user_op::InferNdSbpFnContext {
   std::function<Maybe<const NdSbpInferHint*>(const std::string&)> nd_sbp_infer_hint4ibn_fn_;
 };
 
+// Store information for computing computation cost
+// TODO: Maybe this class could simplify
+class UserOpComputeComplexityFnContext : public user_op::ComputeComplexityFnContext {
+ public:
+  using ArgVec = std::vector<std::pair<std::string, int32_t>>;
+
+  UserOpComputeComplexityFnContext(
+      const OperatorConf& op_conf, const ParallelDesc& parallel_desc,
+      const NdSbpSignature* sbp_signature,
+      std::function<const BlobDesc&(const std::string& bn)> logical_blob_desc4bn)
+      : user_op::ComputeComplexityFnContext(user_op::UserOpConfWrapper(op_conf)),
+        parallel_desc_(parallel_desc),
+        sbp_signature_(sbp_signature) {
+    auto InitInOrOut = [&](const PbMap<std::string, UserOpConf::ListString>& arg_map,
+                           ArgVec* arg_vec) {
+      for (auto it = arg_map.begin(); it != arg_map.end(); ++it) {
+        const std::string& arg_name = it->first;
+        for (int32_t i = 0; i < it->second.s_size(); ++i) {
+          const BlobDesc& blob = logical_blob_desc4bn(GenRepeatedBn(arg_name, i));
+          auto key = std::make_pair(arg_name, i);
+          arg2tensor_desc_.emplace(key, GenTensorDescFromBlobDesc(&blob));
+          arg_vec->emplace_back(std::make_pair(arg_name, i));
+        }
+      }
+    };
+    InitInOrOut(op_conf.user_conf().input(), &inputs_);
+    InitInOrOut(op_conf.user_conf().output(), &outputs_);
+  }
+  ~UserOpComputeComplexityFnContext() override = default;
+
+  user_op::TensorDesc* TensorDesc4ArgNameAndIndex(const std::string& arg_name,
+                                                  int32_t index) override {
+    auto it = arg2tensor_desc_.find(std::make_pair(arg_name, index));
+    if (it == arg2tensor_desc_.end()) { return nullptr; };
+    return &(it->second);
+  }
+  Shape* Shape4ArgNameAndIndex(const std::string& arg_name, int32_t index) override {
+    auto it = arg2tensor_desc_.find(std::make_pair(arg_name, index));
+    if (it == arg2tensor_desc_.end()) { return nullptr; };
+    return it->second.mut_shape();
+  }
+  DataType* Dtype4ArgNameAndIndex(const std::string& arg_name, int32_t index) override {
+    auto it = arg2tensor_desc_.find(std::make_pair(arg_name, index));
+    if (it == arg2tensor_desc_.end()) { return nullptr; };
+    return it->second.mut_data_type();
+  }
+  bool* IsDynamic4ArgNameAndIndex(const std::string& arg_name, int32_t index) override {
+    auto it = arg2tensor_desc_.find(std::make_pair(arg_name, index));
+    if (it == arg2tensor_desc_.end()) { return nullptr; };
+    return it->second.mut_is_dynamic();
+  }
+
+  const NdSbp NdSbp4ArgNameAndIndex(const std::string& arg_name, int32_t index) const override {
+    const auto& bn2sbp = sbp_signature_->bn_in_op2nd_sbp();
+    std::string bn = GenRepeatedBn(arg_name, index);
+    CHECK(bn2sbp.find(bn) != bn2sbp.end());
+    return sbp_signature_->bn_in_op2nd_sbp().at(bn);
+  }
+
+  const ArgVec& inputs() const override { return inputs_; }
+  const ArgVec& outputs() const override { return outputs_; }
+  const ParallelDesc& parallel_desc() const override { return parallel_desc_; };
+  const NdSbpSignature* GetNdSbpSignature() const override { return sbp_signature_; }
+
+ private:
+  ArgVec inputs_;
+  ArgVec outputs_;
+  const ParallelDesc parallel_desc_;
+  const NdSbpSignature* sbp_signature_;
+  HashMap<std::pair<std::string, int32_t>, user_op::NaiveTensorDesc> arg2tensor_desc_;
+};
+
+class UserOpGetNdSbpSignatureListContext : public user_op::GetNdSbpSignatureListContext {
+ public:
+  UserOpGetNdSbpSignatureListContext(
+      const UserOp* op,
+      std::function<Maybe<const BlobDesc&>(const std::string&)> LogicalBlobDesc4Ibn,
+      const ParallelDesc& parallel_desc, std::vector<NdSbpSignature>* nd_sbp_sig_list)
+      : user_op::GetNdSbpSignatureListContext(user_op::UserOpConfWrapper(op->user_op_conf())),
+        op_(op),
+        logical_blob_desc4ibn_(std::move(LogicalBlobDesc4Ibn)),
+        parallel_desc_(parallel_desc),
+        nd_sbp_sig_list_(nd_sbp_sig_list) {}
+  ~UserOpGetNdSbpSignatureListContext() override = default;
+
+  void AddNdSbpSignature(NdSbpSignature& nd_sbp_sig) override {
+    nd_sbp_sig_list_->emplace_back(nd_sbp_sig);
+  }
+
+  const Shape& parallel_hierarchy() override {
+    return *(CHECK_JUST(op_->GetOpParallelDesc())->hierarchy());
+  }
+
+  const Shape& BlobShape4InputArgNameAndIndex(const std::string& arg_name,
+                                              int32_t index) const override {
+    return CHECK_JUST(logical_blob_desc4ibn_(GenRepeatedBn(arg_name, index))).shape();
+  }
+
+ private:
+  const UserOp* op_;
+  std::function<Maybe<const BlobDesc&>(const std::string&)> logical_blob_desc4ibn_;
+  const ParallelDesc parallel_desc_;
+  std::vector<NdSbpSignature>* nd_sbp_sig_list_;
+};
+
 Maybe<void> UserOp::InitFromOpConf() {
   CHECK_OR_RETURN(op_conf().has_user_conf());
   for (const auto& pair : op_conf().user_conf().input()) {
@@ -735,6 +842,19 @@ Maybe<void> UserOp::GetSbpSignatures(
   return Maybe<void>::Ok();
 }
 
+Maybe<double> UserOp::GetComputeComplexity(
+    NdSbpSignature* sbp_signature,
+    std::function<const BlobDesc&(const std::string& bn)> logical_blob_desc4bn,
+    const ParallelDesc& parallel_desc) const {
+  if (val_->compute_complexity_fn) {
+    UserOpComputeComplexityFnContext user_op_compute_complexity_fn_context(
+        op_conf(), parallel_desc, sbp_signature, logical_blob_desc4bn);
+    return val_->compute_complexity_fn(&user_op_compute_complexity_fn_context);
+  } else {
+    return Operator::GetComputeComplexity(sbp_signature, logical_blob_desc4bn, parallel_desc);
+  }
+}
+
 Maybe<void> UserOp::InferOpTimeShape(
     const std::function<Maybe<const Shape>(const std::string&)>& GetTimeShape4BnInOp,
     std::shared_ptr<const Shape>* time_shape) const {
@@ -779,6 +899,20 @@ Maybe<void> UserOp::InferNdSbpSignature(
         sbp_list->Add()->mutable_broadcast_parallel();
       }
     }
+  }
+  return Maybe<void>::Ok();
+}
+
+Maybe<void> UserOp::GetNdSbpSignatureList(
+    const std::function<Maybe<const BlobDesc&>(const std::string&)>& LogicalBlobDesc4Ibn,
+    const ParallelDesc& parallel_desc, std::vector<NdSbpSignature>* nd_sbp_sig_list) const {
+  if (val_->get_nd_sbp_list_fn) {
+    NdSbpSignature empty_sbp_signature;
+    UserOpGetNdSbpSignatureListContext user_op_get_nd_sbp_list_context(
+        this, LogicalBlobDesc4Ibn, parallel_desc, nd_sbp_sig_list);
+    return val_->get_nd_sbp_list_fn(&user_op_get_nd_sbp_list_context);
+  } else {
+    JUST(Operator::GetNdSbpSignatureList(LogicalBlobDesc4Ibn, parallel_desc, nd_sbp_sig_list));
   }
   return Maybe<void>::Ok();
 }

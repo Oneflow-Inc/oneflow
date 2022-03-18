@@ -44,6 +44,10 @@ class UserOp final : public Operator {
       HashMap<std::string, std::string>* con_inplace_obn2ibn,
       const std::function<BlobDesc*(const std::string&)>& GetBlobDesc4BnInOp,
       const ParallelContext* parallel_ctx) const override;
+  Maybe<double> GetComputeComplexity(
+      NdSbpSignature* sbp_signature,
+      std::function<const BlobDesc&(const std::string& bn)> logical_blob_desc4bn,
+      const ParallelDesc& parallel_desc) const override;
   Symbol<OperatorConf> GetOpConfWithoutOpNameAndLbn() const override;
   const user_op::UserOpConfWrapper& user_op_conf() const;
   const ArgVec& inputs() const { return inputs_; }
@@ -60,6 +64,10 @@ class UserOp final : public Operator {
   Maybe<void> GetSbpSignatures(
       const std::function<Maybe<const BlobDesc&>(const std::string&)>& LogicalBlobDesc4Ibn,
       const ParallelDesc& parallel_desc, SbpSignatureList* sbp_sig_list) const override;
+  Maybe<void> GetNdSbpSignatureList(
+      const std::function<Maybe<const BlobDesc&>(const std::string&)>& LogicalBlobDesc4Ibn,
+      const ParallelDesc& parallel_desc,
+      std::vector<NdSbpSignature>* nd_sbp_sig_list) const override;
   Maybe<void> InferOpTimeShape(
       const std::function<Maybe<const Shape>(const std::string&)>& GetTimeShape4BnInOp,
       std::shared_ptr<const Shape>* time_shape) const override;

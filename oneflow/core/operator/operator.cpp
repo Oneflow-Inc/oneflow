@@ -893,6 +893,47 @@ Maybe<void> Operator::InferMirroredSignatureIf(
                                 parallel_desc);
 }
 
+// Compute time complexity for given blob description and sbp signature.
+// Use function to replace the HashMap from logical blob id to blob description pointer.
+Maybe<double> Operator::GetComputeComplexity(
+    NdSbpSignature* sbp_signature,
+    std::function<const BlobDesc&(const std::string& bn)> logical_blob_desc4bn,
+    const ParallelDesc& parallel_desc) const {
+  const auto& sbp_bn_in_op2nd_sbp = sbp_signature->bn_in_op2nd_sbp();
+  double complexity = 0;
+  const auto& parallel_hierarchy = *parallel_desc.hierarchy();
+
+  auto ComputeComplexity4Blobs = [&](const PbRpf<std::string>& bns) -> Maybe<void> {
+    for (const auto& bn : bns) {
+      const BlobDesc& logical_blob_desc = logical_blob_desc4bn(bn);
+      const NdSbp& nd_sbp = sbp_bn_in_op2nd_sbp.at(bn);
+      CHECK_EQ_OR_RETURN(nd_sbp.sbp_parallel_size(), parallel_hierarchy.NumAxes())
+          << "At this moment, the dimension of nd SBP should be equal to the depth of hierarchy in "
+          << "parallel description.";
+
+      double total_cost = logical_blob_desc.shape().elem_cnt();
+      for (int32_t sbp_dim = 0; sbp_dim < nd_sbp.sbp_parallel_size(); sbp_dim++) {
+        const auto& sbp = nd_sbp.sbp_parallel(sbp_dim);
+        if (sbp.has_split_parallel()) {
+          const int64_t axis = sbp.split_parallel().axis();
+          if (axis >= logical_blob_desc.shape().NumAxes()
+              || logical_blob_desc.shape().At(axis) < parallel_hierarchy.At(sbp_dim)) {
+            complexity = GetMaxVal<float>();
+            return Maybe<void>::Ok();
+          } else {
+            total_cost /= parallel_hierarchy.At(sbp_dim);
+          }
+        }
+      }
+      complexity += total_cost;
+    }
+    return Maybe<void>::Ok();
+  };
+  JUST(ComputeComplexity4Blobs(input_bns()));
+  JUST(ComputeComplexity4Blobs(output_bns()));
+  return complexity;
+}
+
 std::string DebugString4MirroredHint(
     std::function<Maybe<const MirroredSigInferHint*>(const std::string&)> MirroredSigInferHint4Ibn,
     const Operator& op) {
@@ -1322,7 +1363,7 @@ Maybe<void> Operator::ToOpAttribute(OpAttribute* op_attribute) const {
         } else {
           ParallelConf parallel_conf = pair.second->parallel_conf();
           const auto MakeParallelDescSymbol = [&parallel_conf]() -> Maybe<int64_t> {
-            int64_t symbol_id;
+            int64_t symbol_id = 0;
             const auto BuildInstruction =
                 [&symbol_id, &parallel_conf](InstructionsBuilder* builder) -> Maybe<void> {
               symbol_id = JUST(JUST(builder->GetParallelDescSymbol(parallel_conf))->symbol_id());
