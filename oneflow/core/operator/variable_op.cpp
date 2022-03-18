@@ -74,7 +74,22 @@ Maybe<void> VariableOp::InferOutBlobDescs(
 }
 
 Maybe<void> VariableOp::GetSbpSignatures(SbpSignatureList* sbp_sig_list) const {
-  CHECK_EQ_OR_RETURN(JUST(GetOpParallelDesc())->hierarchy()->NumAxes(), 1);
+  int64_t num_axes = op_conf().variable_conf().shape().dim_size();
+  for (int i = 0; i < num_axes; ++i) {
+    SbpSignatureBuilder()
+        .Broadcast(input_bns())
+        .Split(output_bns(), i)
+        .Build(sbp_sig_list->mutable_sbp_signature()->Add());
+  }
+  return Maybe<void>::Ok();
+}
+
+Maybe<void> VariableOp::InferSbpSignature(
+    SbpSignature* sbp_signature, const SbpSignature& sbp_sig_conf,
+    const std::function<int32_t(const SbpSignature&)>& CalcOrderValue4SbpSig,
+    std::function<Maybe<const SbpInferHint*>(const std::string&)> SbpInferHint4Ibn,
+    const ParallelDesc& parallel_desc) const {
+  CHECK_EQ_OR_RETURN(parallel_desc.hierarchy()->NumAxes(), 1);
   SbpSignatureBuilder sbp_sig_builder;
   if (op_conf().variable_conf().nd_sbp_size() != 0) {
     CHECK_EQ_OR_RETURN(op_conf().variable_conf().nd_sbp_size(), 1);
@@ -88,19 +103,7 @@ Maybe<void> VariableOp::GetSbpSignatures(SbpSignatureList* sbp_sig_list) const {
   } else {
     sbp_sig_builder.Broadcast(output_bns());
   }
-  sbp_sig_builder.Broadcast(input_bns()).Build(sbp_sig_list->mutable_sbp_signature()->Add());
-  return Maybe<void>::Ok();
-}
-
-Maybe<void> VariableOp::InferSbpSignature(
-    SbpSignature* sbp_signature, const SbpSignature& sbp_sig_conf,
-    const std::function<int32_t(const SbpSignature&)>& CalcOrderValue4SbpSig,
-    std::function<Maybe<const SbpInferHint*>(const std::string&)> SbpInferHint4Ibn,
-    const ParallelDesc& parallel_desc) const {
-  CHECK_EQ_OR_RETURN(parallel_desc.hierarchy()->NumAxes(), 1);
-  SbpSignatureList sbp_sig_list;
-  JUST(GetSbpSignatures(&sbp_sig_list));
-  *sbp_signature = sbp_sig_list.sbp_signature().Get(0);
+  sbp_sig_builder.Broadcast(input_bns()).Build(sbp_signature);
   return Maybe<void>::Ok();
 }
 

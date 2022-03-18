@@ -114,6 +114,37 @@ Maybe<void> GetSbpSignatures4Conv(user_op::SbpContext* ctx) {
   return Maybe<void>::Ok();
 }
 
+/*
+Example for conv2d:
+
+ComputationCost
+= ((k*k + k*k-1)*c + c-1 + bias?1:0) * out_channel * out_width * out_height * batch_size
+= (2*k*k*c - 1 + bias?1:0) * out_channel * out_width * out_height * batch_size
+≈ 2*k*k*c * out_channel * out_width * out_height * batch_size
+*/
+Maybe<double> ConvComputationCost(user_op::ComputeComplexityFnContext* ctx) {
+  const std::vector<int32_t> kernel_size = ctx->Attr<std::vector<int32_t>>("kernel_size");
+  const std::string data_format = ctx->Attr<std::string>("data_format");
+  const user_op::TensorDesc* in = ctx->TensorDesc4ArgNameAndIndex("in", 0);
+  const size_t c_dim = data_format == "channels_first" ? 1 : in->shape().NumAxes() - 1;
+  const int32_t c = in->shape().At(c_dim);
+  const user_op::TensorDesc* out = ctx->TensorDesc4ArgNameAndIndex("out", 0);
+  double cost =
+      std::accumulate(kernel_size.begin(), kernel_size.end(), 1.0, std::multiplies<double>());
+  cost = cost * 2 * c;
+  cost *= std::accumulate(out->shape().dim_vec().begin(), out->shape().dim_vec().end(), 1.0,
+                          std::multiplies<double>());
+
+  const auto& parallel_hierarchy = ctx->parallel_desc().hierarchy();
+  const auto& nd_sbp_out = ctx->NdSbp4ArgNameAndIndex("out", 0);
+  for (int32_t dim_sbp = 0; dim_sbp < nd_sbp_out.sbp_parallel_size(); dim_sbp++) {
+    if (nd_sbp_out.sbp_parallel(dim_sbp).has_split_parallel()) {
+      cost /= parallel_hierarchy->At(dim_sbp);
+    }
+  }
+  return cost;
+}
+
 template<size_t NDims>
 Maybe<void> CheckAttr_(const user_op::UserOpDefWrapper& def,
                        const user_op::UserOpConfWrapper& conf) {
@@ -242,6 +273,11 @@ Maybe<void> GenerateBackwardOpConf4Conv(const user_op::UserOpWrapper& op, user_o
   return GetSbpSignatures4Conv(ctx);
 }
 
+/* static */ Maybe<double> Conv1DOp::GetComputeComplexity(
+    user_op::ComputeComplexityFnContext* ctx) {
+  return ConvComputationCost(ctx);
+}
+
 /* static */ Maybe<void> Conv1DOp::CheckAttr(const user_op::UserOpDefWrapper& def,
                                              const user_op::UserOpConfWrapper& conf) {
   return CheckAttr_<1>(def, conf);
@@ -264,6 +300,11 @@ Maybe<void> GenerateBackwardOpConf4Conv(const user_op::UserOpWrapper& op, user_o
   return GetSbpSignatures4Conv(ctx);
 }
 
+/* static */ Maybe<double> Conv2DOp::GetComputeComplexity(
+    user_op::ComputeComplexityFnContext* ctx) {
+  return ConvComputationCost(ctx);
+}
+
 /* static */ Maybe<void> Conv2DOp::CheckAttr(const user_op::UserOpDefWrapper& def,
                                              const user_op::UserOpConfWrapper& conf) {
   return CheckAttr_<2>(def, conf);
@@ -284,6 +325,11 @@ Maybe<void> GenerateBackwardOpConf4Conv(const user_op::UserOpWrapper& op, user_o
 
 /* static */ Maybe<void> Conv3DOp::GetSbp(user_op::SbpContext* ctx) {
   return GetSbpSignatures4Conv(ctx);
+}
+
+/* static */ Maybe<double> Conv3DOp::GetComputeComplexity(
+    user_op::ComputeComplexityFnContext* ctx) {
+  return ConvComputationCost(ctx);
 }
 
 /* static */ Maybe<void> Conv3DOp::CheckAttr(const user_op::UserOpDefWrapper& def,
