@@ -427,6 +427,7 @@ struct AutoNhwcPattern : public OpInterfaceRewritePattern<NCHWCompatible> {
 
     NamedAttrList transpose_attributes;
     op.InitTransposeAttrs(transpose_attributes, rewriter);
+
     transpose_attributes.append(llvm::StringRef("perm"), getSI32ArrayAttr(rewriter, perm));
     if (op.IsNCHW()) {
       // create transpose op for input operand
