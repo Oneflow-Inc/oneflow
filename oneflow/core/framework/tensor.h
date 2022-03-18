@@ -405,7 +405,7 @@ class MirroredTensor final : public TensorIf<MirroredTensor> {
   const std::shared_ptr<const Shape>& shape() const override { return impl_->shape(); }
   Symbol<DType> dtype() const override { return CHECK_JUST(DType::Get(impl_->dtype())); }
   Maybe<TransportToken> transport_token() const override {
-    OF_RUNTIME_ERROR() << "Only global tensors have 'consistent_id', Consistent id is used to "
+    OF_RUNTIME_ERROR() << "Only global tensors have 'global_id', global id is used to "
                           "synchronize rank";
   }
   Maybe<Symbol<NdSbp>> nd_sbp() const override {
