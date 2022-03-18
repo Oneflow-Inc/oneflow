@@ -75,7 +75,7 @@ def do_lenet(test_case, with_cuda):
 class TestLeNet(oneflow.unittest.TestCase):
     def test_nhwc_lenet_graph(test_case):
         do_lenet(test_case, True)
-        # do_lenet(test_case, False)
+        do_lenet(test_case, False)
 
 
 if __name__ == "__main__":
