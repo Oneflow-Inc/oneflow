@@ -52,7 +52,7 @@ add_docstr(
 
 add_docstr(
     oneflow.from_numpy,
-    r"""from_numpy
+    r"""
     Creates a ``Tensor`` from a ``numpy.ndarray``.
 
     The returned tensor and ndarray share the same memory. Modifications to the tensor
