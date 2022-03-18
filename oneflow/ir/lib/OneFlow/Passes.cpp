@@ -362,6 +362,22 @@ mlir::IntegerAttr GetDefaultSeed(::mlir::PatternRewriter& rewriter) {
   return getSI64IntegerAttr(rewriter, (int64_t)gen->current_seed());
 }
 
+void InitTransposeAttributes(Operation* op, NamedAttrList& transpose_attributes,
+                             PatternRewriter& rewriter) {
+  oneflow::UserOpAdaptor op_to_replace_adaptor(op->getOperands(), op->getAttrDictionary());
+  transpose_attributes.set(OpTrait::IsOpConfCompatible<void>::getDeviceTagAttr(),
+                           op_to_replace_adaptor.device_tagAttr());
+  transpose_attributes.set(OpTrait::IsOpConfCompatible<void>::getDeviceNameAttr(),
+                           op_to_replace_adaptor.device_name());
+  transpose_attributes.set(OpTrait::IsOpConfCompatible<void>::getHierarchyAttr(),
+                           op_to_replace_adaptor.hierarchyAttr());
+  transpose_attributes.set(OpTrait::IsOpConfCompatible<void>::getOpNameAttr(),
+                           rewriter.getStringAttr(op_to_replace_adaptor.op_name().str()));
+
+  transpose_attributes.set(OpTrait::IsOpConfCompatible<void>::getScopeSymbolIDAttr(),
+                           op_to_replace_adaptor.scope_symbol_idAttr());
+}
+
 bool IsAddToOutputNone(ValueRange value) { return (int)value.size() > 0 ? false : true; }
 
 void getChannelLastTransposePerm(llvm::SmallVector<int32_t>& v) {
@@ -428,7 +444,7 @@ struct AutoNhwcPattern : public OpInterfaceRewritePattern<NCHWCompatible> {
     getChannelFirstTransposePerm(result_perm);
 
     NamedAttrList transpose_attributes;
-    op.InitTransposeAttrs(transpose_attributes, rewriter);
+    InitTransposeAttributes(op, transpose_attributes, rewriter);
 
     transpose_attributes.append(llvm::StringRef("perm"), getSI32ArrayAttr(rewriter, perm));
     if (op.IsNCHW()) {
