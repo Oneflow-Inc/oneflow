@@ -23,21 +23,27 @@ os.environ["ONEFLOW_MLIR_ENABLE_ROUND_TRIP"] = "1"
 import oneflow as flow
 import oneflow.unittest
 
+def _cast_optimal_pass(test_case, dtype):
+    a = flow.tensor([2, 3], dtype=dtype)
+    eager_b = flow.cast(a, dtype=dtype)
+    class CastOpOptimalPass(flow.nn.Graph):
+        def __init__(self):
+            super().__init__()
+            self.cast = flow.cast
+
+        def build(self, x):
+            return self.cast(x, dtype=dtype)
+            
+    lazy_b = CastOpOptimalPass()(a)
+    test_case.assertEqual(eager_b.dtype, lazy_b.dtype)
+
+
 @flow.unittest.skip_unless_1n1d()
 class TestCastOpOptimalPass(flow.unittest.TestCase):
-    def test_fused_op(test_case):
-        a = flow.tensor([2, 3], dtype=flow.float64)
-        eager_b = flow.cast(a, dtype=flow.float64)
-        class CastOpOptimalPass(flow.nn.Graph):
-            def __init__(self):
-                super().__init__()
-                self.cast = flow.cast
+    def test_case_optimal_pass(test_case):
+        for dtype in [flow.float32, flow.float64, flow.int32, flow.int64]:
+            _cast_optimal_pass(test_case, dtype)
 
-            def build(self, x):
-                return self.cast(x, dtype=flow.float64)      
-                
-        lazy_b = CastOpOptimalPass()(a)
-        test_case.assertEqual(eager_b.dtype, lazy_b.dtype)
 
 if __name__ == "__main__":
     unittest.main()
