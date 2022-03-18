@@ -19,6 +19,7 @@ from oneflow.framework.docstr.utils import add_docstr
 add_docstr(
     oneflow.bmm,
     """
+    oneflow.bmm(input,mat2)
     Performs a batch matrix-matrix product of matrices stored in input and mat2.
 
     `input` and `mat2` must be 3-D tensors each containing the same number of matrices.

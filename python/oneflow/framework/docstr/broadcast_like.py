@@ -19,6 +19,7 @@ from oneflow.framework.docstr.utils import add_docstr
 add_docstr(
     oneflow.broadcast_like,
     """
+    oneflow.broadcast_like(x, like_tensor, broadcast_axes)
     This operator broadcast tensor `x` to `like_tensor` according to the broadcast_axes. 
 
     Args:
