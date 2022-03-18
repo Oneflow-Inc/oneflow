@@ -22,7 +22,7 @@ import numpy as np
 import os
 
 os.environ["ONEFLOW_MLIR_ENABLE_ROUND_TRIP"] = "1"
-os.environ["ONEFLOW_MLIR_PREFER_NHWC"] = "1"
+# os.environ["ONEFLOW_MLIR_PREFER_NHWC"] = "1"
 
 import oneflow as flow
 import oneflow.unittest
@@ -47,6 +47,8 @@ def do_nhwc_bacth_norm(test_case, with_cuda):
 
     graph_to_run = GraphToRun()
     lazy_batch_norm_res = graph_to_run(x)
+    print(eager_batch_norm_res.numpy().flatten()[:20])
+    print(lazy_batch_norm_res.numpy().flatten()[:20])
     test_case.assertTrue(np.allclose(eager_batch_norm_res.numpy(), lazy_batch_norm_res.numpy(), rtol=1e-5, atol=1e-5))
 
 
@@ -54,7 +56,7 @@ def do_nhwc_bacth_norm(test_case, with_cuda):
 class TestNhwcConv(oneflow.unittest.TestCase):
     def test_nhwc_conv_graph(test_case):
         do_nhwc_bacth_norm(test_case, True)
-        do_nhwc_bacth_norm(test_case, False)
+        # do_nhwc_bacth_norm(test_case, False)
 
 
 if __name__ == "__main__":
