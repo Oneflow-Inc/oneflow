@@ -169,9 +169,77 @@ add_docstr(
 add_docstr(
     oneflow.Tensor.to_global,
     """
-    Tensor.to_global() -> Tensor
+    Tensor.to_global(placement=None, sbp=None, grad_sbp=None) -> Tensor
 
-    See :func:`oneflow.to_global`
+    Creates a global tensor if this tensor is a local tensor, otherwise performs Tensor placement and/or sbp conversion.
+
+    Note:
+        This tensor can be local tensor or global tensor.
+
+        - For local tensor
+
+          Both placement and sbp are required.
+
+          The returned global tensor takes this tensor as its local component in the current rank.
+
+          There is no data communication usually, but when sbp is ``oneflow.sbp.broadcast``, the data on rank 0 will be broadcast to other ranks.
+
+        - For global tensor
+
+          At least one of placement and sbp is required.
+
+          If placement and sbp are all the same as this tensor's own placement and sbp, then returns this tensor own.
+    
+    Args:
+        placement (flow.placement, optional): the desired placement of returned global tensor. Default: None
+        sbp (flow.sbp.sbp or tuple of flow.sbp.sbp, optional): the desired sbp of returned global tensor. Default: None
+        grad_sbp (flow.sbp.sbp or tuple of flow.sbp.sbp, optional): manually specify the gradient sbp of this operation in the backward pass. If None, the gradient sbp will be infered automatically. It is only used if this tensor is a global tensor. Default: None
+
+    For local tensor:
+
+    .. code-block:: python
+
+        >>> # Run on 2 ranks respectively
+        >>> import oneflow as flow
+        >>> input = flow.tensor([0., 1.], dtype=flow.float32) # doctest: +SKIP
+        >>> output = input.to_global(placement=flow.placement("cpu", ranks=[0, 1]), sbp=[flow.sbp.split(0)]) # doctest: +SKIP
+        >>> print(output.size()) # doctest: +SKIP
+        >>> print(output) # doctest: +SKIP
+
+    .. code-block:: python
+
+        >>> # results on rank 0
+        oneflow.Size([4])
+        tensor([0., 1., 0., 1.], placement=oneflow.placement(type="cpu", ranks=[0, 1]), sbp=(oneflow.sbp.split(axis=0),), dtype=oneflow.float32) 
+ 
+    .. code-block:: python
+
+        >>> # results on rank 1
+        oneflow.Size([4])
+        tensor([0., 1., 0., 1.], placement=oneflow.placement(type="cpu", ranks=[0, 1]), sbp=(oneflow.sbp.split(axis=0),), dtype=oneflow.float32)
+
+    For global tensor:
+
+    .. code-block:: python
+
+        >>> # Run on 2 ranks respectively
+        >>> import oneflow as flow
+        >>> input = flow.tensor([0., 1.], dtype=flow.float32, placement=flow.placement("cpu", ranks=[0, 1]), sbp=[flow.sbp.broadcast]) # doctest: +SKIP
+        >>> output = input.to_global(placement=flow.placement("cpu", ranks=[0, 1]), sbp=[flow.sbp.split(0)]) # doctest: +SKIP
+        >>> print(output.size()) # doctest: +SKIP
+        >>> print(output) # doctest: +SKIP
+
+    .. code-block:: python
+
+        >>> # results on rank 0
+        oneflow.Size([2])
+        tensor([0., 1.], placement=oneflow.placement(type="cpu", ranks=[0, 1]), sbp=(oneflow.sbp.split(axis=0),), dtype=oneflow.float32)
+
+    .. code-block:: python
+
+        >>> # results on rank 0
+        oneflow.Size([2])
+        tensor([0., 1.], placement=oneflow.placement(type="cpu", ranks=[0, 1]), sbp=(oneflow.sbp.split(axis=0),), dtype=oneflow.float32)
     """,
 )
 
@@ -179,6 +247,43 @@ add_docstr(
     oneflow.Tensor.to_consistent,
     """
     This interface is no longer available, please use :func:`oneflow.Tensor.to_global` instead
+    """,
+)
+
+add_docstr(
+    oneflow.Tensor.to_local,
+    """
+    Tensor.to_local() -> Tensor
+
+    Returns the local component of this global tensor in the current rank.
+
+    Note:
+        This tensor should be a global tensor, and it returns a empty tensor if there is no local component in the current rank.
+
+        No copy occurred in this operation.
+
+    For example:
+
+    .. code-block:: python
+
+        >>> # Run on 2 ranks respectively
+        >>> import oneflow as flow
+        >>> x = flow.tensor([0., 1.], dtype=flow.float32, placement=flow.placement("cpu", ranks=[0, 1]), sbp=[flow.sbp.split(0)]) # doctest: +SKIP
+        >>> y = x.to_local() # doctest: +SKIP
+        >>> print(y.size()) # doctest: +SKIP
+        >>> print(y) # doctest: +SKIP
+
+    .. code-block:: python
+
+        >>> # results on rank 0
+        oneflow.Size([1])
+        tensor([0.], dtype=oneflow.float32)
+
+    .. code-block:: python
+
+        >>> # results on rank 1
+        oneflow.Size([1])
+        tensor([1.], dtype=oneflow.float32)
     """,
 )
 
@@ -248,18 +353,18 @@ add_docstr(
 
         >>> x = flow.arange(1., 8)
         >>> x
-        tensor([ 1.,  2.,  3.,  4.,  5.,  6.,  7.])
+        tensor([1, 2, 3, 4, 5, 6, 7], dtype=oneflow.int64)
         >>> x.unfold(0, 2, 1)
-        tensor([[ 1.,  2.],
-                [ 2.,  3.],
-                [ 3.,  4.],
-                [ 4.,  5.],
-                [ 5.,  6.],
-                [ 6.,  7.]])
+        tensor([[1, 2],
+                [2, 3],
+                [3, 4],
+                [4, 5],
+                [5, 6],
+                [6, 7]], dtype=oneflow.int64)
         >>> x.unfold(0, 2, 2)
-        tensor([[ 1.,  2.],
-                [ 3.,  4.],
-                [ 5.,  6.]])
+        tensor([[1, 2],
+                [3, 4],
+                [5, 6]], dtype=oneflow.int64)
     """,
 )
 
@@ -874,29 +979,6 @@ add_docstr(
     oneflow.Tensor.triu,
     """
     See :func:`oneflow.triu`
-    """,
-)
-
-add_docstr(
-    oneflow.Tensor.to_local,
-    """Returns the local tensor of a global tensor.
-
-
-    Args:
-        input (Tensor): the input tensor.
-
-    For example:
-
-    .. code-block:: python
-
-        >>> import oneflow as flow
-        >>> import numpy as np
-        >>> np_arr = np.array([0.5, 0.6, 0.7]).astype(np.float32)
-        >>> input = flow.tensor(np_arr, dtype=flow.float32)
-        >>> placement = flow.placement("cpu", ranks=[0])
-        >>> global_tensor = input.to_global(placement, [flow.sbp.split(0)])
-        >>> global_tensor.to_local()
-        tensor([0.5000, 0.6000, 0.7000], dtype=oneflow.float32)
     """,
 )
 

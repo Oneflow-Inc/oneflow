@@ -26,16 +26,20 @@ add_docstr(
 add_docstr(
     oneflow.nn.Module.to_global,
     """
-    Convert the parameters to be global.
-    It will apply the same :func:`oneflow.Tensor.to_global` operation to each parameter in this module.
+    Convert the parameters and buffers to global.
+
+    It performs the same :func:`oneflow.Tensor.to_global` conversion to each parameter and buffer in this module.
 
 
     Note:
         This method modifies the module in-place.
 
+        Both placement and sbp are required if the parameters and buffers of this module are local,
+        otherwise at least one of placement and sbp is required.
+
     Args:
-        placement (flow.placement, optional): the desired placement of the parameters in this module. Default: if None, all parameters must be global and use its own placement.
-        sbp (flow.sbp.sbp or tuple of flow.sbp.sbp, optional): the desired SBP of the parameters in this module. Default: if None, all parameters must be global and use its own sbp.
+        placement (flow.placement, optional): the desired placement of the parameters and buffers in this module. Default: None
+        sbp (flow.sbp.sbp or tuple of flow.sbp.sbp, optional): the desired sbp of the parameters and buffers in this module. Default: None
 
     For example:
 

@@ -148,8 +148,6 @@ oneflow
             tensor, 
             tile, 
             to, 
-            to_global,
-            to_local,
             transpose,
             t,
             tril, 
