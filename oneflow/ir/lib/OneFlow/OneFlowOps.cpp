@@ -397,8 +397,8 @@ llvm::Optional<OpResult> GetCtrlOutputResult(Operation* op) {
   return llvm::None;
 }
 
-void InitTransposeAttributes(Operation* op, const std::string& op_name,
-                             NamedAttrList& transpose_attributes, PatternRewriter& rewriter) {
+void InitTransposeAttributes(Operation* op, NamedAttrList& transpose_attributes,
+                             PatternRewriter& rewriter) {
   oneflow::UserOpAdaptor op_to_replace_adaptor(op->getOperands(), op->getAttrDictionary());
   transpose_attributes.set(OpTrait::IsOpConfCompatible<void>::getDeviceTagAttr(),
                            op_to_replace_adaptor.device_tagAttr());
@@ -407,14 +407,13 @@ void InitTransposeAttributes(Operation* op, const std::string& op_name,
   transpose_attributes.set(OpTrait::IsOpConfCompatible<void>::getHierarchyAttr(),
                            op_to_replace_adaptor.hierarchyAttr());
   transpose_attributes.set(OpTrait::IsOpConfCompatible<void>::getOpNameAttr(),
-                           rewriter.getStringAttr(op_name));
+                           rewriter.getStringAttr(op_to_replace_adaptor.op_name().str()));
+
   transpose_attributes.set(OpTrait::IsOpConfCompatible<void>::getScopeSymbolIDAttr(),
                            op_to_replace_adaptor.scope_symbol_idAttr());
 }
 
 bool Conv2DOp::IsNCHW() { return this->data_format().str() == "channels_first"; }
-
-std::string Conv2DOp::GetOpName() { return this->op_name().str(); }
 
 llvm::DenseSet<Value> Conv2DOp::OperandsToTranspose() {
   llvm::DenseSet<Value> result;
@@ -424,14 +423,13 @@ llvm::DenseSet<Value> Conv2DOp::OperandsToTranspose() {
 }
 
 llvm::DenseSet<Value> Conv2DOp::ResultsToTranspose() {
-  llvm::DenseSet<Value> result;
-  result.insert(this->out());
+  llvm::DenseSet<Value> result{this->out()};
   return result;
 }
 
 void Conv2DOp::InitTransposeAttrs(NamedAttrList& transpose_attributes, PatternRewriter& rewriter) {
   auto conv_op = *this;
-  InitTransposeAttributes(conv_op, conv_op.GetOpName(), transpose_attributes, rewriter);
+  InitTransposeAttributes(conv_op, transpose_attributes, rewriter);
 }
 
 llvm::SmallVector<Value, 4> Conv2DOp::NchwToNhwc(llvm::SmallVector<Value, 4> value,
@@ -453,30 +451,21 @@ llvm::SmallVector<Value, 4> Conv2DOp::NchwToNhwc(llvm::SmallVector<Value, 4> val
   return results;
 }
 
-bool BiasAddOp::IsNCHW() {
-  if (this->axisAttr().getValue().getSExtValue() == 1)
-    return true;
-  else
-    return false;
-}
-
-std::string BiasAddOp::GetOpName() { return this->op_name().str(); }
+bool BiasAddOp::IsNCHW() { return this->axisAttr().getValue().getSExtValue() == 1; }
 
 llvm::DenseSet<Value> BiasAddOp::OperandsToTranspose() {
-  llvm::DenseSet<Value> result;
-  result.insert(this->a());
+  llvm::DenseSet<Value> result{this->a()};
   return result;
 }
 
 llvm::DenseSet<Value> BiasAddOp::ResultsToTranspose() {
-  llvm::DenseSet<Value> result;
-  result.insert(this->out());
+  llvm::DenseSet<Value> result{this->out()};
   return result;
 }
 
 void BiasAddOp::InitTransposeAttrs(NamedAttrList& transpose_attributes, PatternRewriter& rewriter) {
   auto bias_add_op = *this;
-  InitTransposeAttributes(bias_add_op, bias_add_op.GetOpName(), transpose_attributes, rewriter);
+  InitTransposeAttributes(bias_add_op, transpose_attributes, rewriter);
 }
 
 llvm::SmallVector<Value, 4> BiasAddOp::NchwToNhwc(llvm::SmallVector<Value, 4> value,
@@ -496,32 +485,22 @@ llvm::SmallVector<Value, 4> BiasAddOp::NchwToNhwc(llvm::SmallVector<Value, 4> va
   return results;
 }
 
-bool NormalizationOp::IsNCHW() {
-  if (this->axisAttr().getValue().getSExtValue() == 1)
-    return true;
-  else
-    return false;
-}
-
-std::string NormalizationOp::GetOpName() { return this->op_name().str(); }
+bool NormalizationOp::IsNCHW() { return this->axisAttr().getValue().getSExtValue() == 1; }
 
 llvm::DenseSet<Value> NormalizationOp::OperandsToTranspose() {
-  llvm::DenseSet<Value> result;
-  result.insert(this->x());
+  llvm::DenseSet<Value> result{this->x()};
   return result;
 }
 
 llvm::DenseSet<Value> NormalizationOp::ResultsToTranspose() {
-  llvm::DenseSet<Value> result;
-  result.insert(this->y());
+  llvm::DenseSet<Value> result{this->y()};
   return result;
 }
 
 void NormalizationOp::InitTransposeAttrs(NamedAttrList& transpose_attributes,
                                          PatternRewriter& rewriter) {
   auto normalization_op = *this;
-  InitTransposeAttributes(normalization_op, normalization_op.GetOpName(), transpose_attributes,
-                          rewriter);
+  InitTransposeAttributes(normalization_op, transpose_attributes, rewriter);
 }
 
 llvm::SmallVector<Value, 4> NormalizationOp::NchwToNhwc(llvm::SmallVector<Value, 4> value,
@@ -548,11 +527,8 @@ llvm::SmallVector<Value, 4> NormalizationOp::NchwToNhwc(llvm::SmallVector<Value,
 
 bool MaxPool2DOp::IsNCHW() { return this->data_format().str() == "channels_first"; }
 
-std::string MaxPool2DOp::GetOpName() { return this->op_name().str(); }
-
 llvm::DenseSet<Value> MaxPool2DOp::OperandsToTranspose() {
-  llvm::DenseSet<Value> result;
-  result.insert(this->x());
+  llvm::DenseSet<Value> result{this->x()};
   return result;
 }
 
@@ -566,7 +542,7 @@ llvm::DenseSet<Value> MaxPool2DOp::ResultsToTranspose() {
 void MaxPool2DOp::InitTransposeAttrs(NamedAttrList& transpose_attributes,
                                      PatternRewriter& rewriter) {
   auto maxpool_2d_op = *this;
-  InitTransposeAttributes(maxpool_2d_op, maxpool_2d_op.GetOpName(), transpose_attributes, rewriter);
+  InitTransposeAttributes(maxpool_2d_op, transpose_attributes, rewriter);
 }
 
 llvm::SmallVector<Value, 4> MaxPool2DOp::NchwToNhwc(llvm::SmallVector<Value, 4> value,

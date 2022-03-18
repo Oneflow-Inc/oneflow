@@ -382,8 +382,9 @@ llvm::SmallVector<mlir::Value, 4> getInputOperandTransposeOp(NCHWCompatible op, 
                                                              NamedAttrList transpose_attributes,
                                                              int num_transposed_operand,
                                                              PatternRewriter& rewriter) {
-  std::string transpose_name =
-      op.GetOpName() + "_transpose_input_" + std::to_string(num_transposed_operand);
+  oneflow::UserOpAdaptor op_to_replace_adaptor(op->getOperands(), op->getAttrDictionary());
+  std::string transpose_name = op_to_replace_adaptor.op_name().str() + "_transpose_input_"
+                               + std::to_string(num_transposed_operand);
   transpose_attributes.set(llvm::StringRef("op_name"), rewriter.getStringAttr(transpose_name));
   SmallVector<Value, 4> input_operands;
   input_operands.push_back(val);
@@ -396,8 +397,9 @@ llvm::SmallVector<mlir::Value, 4> getInputOperandTransposeOp(NCHWCompatible op, 
 
 TransposeOp getResultTransposeOp(NCHWCompatible op, Value val, NamedAttrList transpose_attributes,
                                  int num_transposed_result, PatternRewriter& rewriter) {
-  std::string transpose_name =
-      op.GetOpName() + "_transpose_output_" + std::to_string(num_transposed_result);
+  oneflow::UserOpAdaptor op_to_replace_adaptor(op->getOperands(), op->getAttrDictionary());
+  std::string transpose_name = op_to_replace_adaptor.op_name().str() + "_transpose_output_"
+                               + std::to_string(num_transposed_result);
   transpose_attributes.set(llvm::StringRef("op_name"), rewriter.getStringAttr(transpose_name));
   SmallVector<Value, 4> operands;
   operands.push_back(val);
