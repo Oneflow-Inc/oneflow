@@ -225,7 +225,7 @@ void BuildEmbeddingShuffle(JobBuilder* job_builder, const std::string& embedding
 
 void BuildEmbeddingGradientShuffle(JobPassCtx* ctx, const OpGraph& op_graph,
                                    JobBuilder* job_builder, const OpNode* op_node,
-                                   const std::string embedding_name, const bool use_system_gather,
+                                   const std::string& embedding_name, const bool use_system_gather,
                                    const ParallelConf& parallel_conf,
                                    const user_op::UserOpConfWrapper& embedding_op,
                                    const std::string& inverse_indices_lbn,
