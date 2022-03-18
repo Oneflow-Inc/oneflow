@@ -52,7 +52,7 @@
 - To install latest stable release of OneFlow with CUDA support:
 
   ```bash
-  python3 -m pip install -f https://release.oneflow.info oneflow==0.6.0+cu102
+  python3 -m pip install -f https://release.oneflow.info oneflow==0.7.0+cu102
   ```
 
 - To install nightly release of OneFlow with CUDA support:
