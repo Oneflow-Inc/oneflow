@@ -21,6 +21,7 @@ from .activation import *
 from .dropout import *
 from .vision import *
 from .norm import *
+from .normalization import *
 from .loss import *
 from .onehot import *
 from .comparison import *

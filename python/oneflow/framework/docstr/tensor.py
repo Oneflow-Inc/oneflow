@@ -1405,6 +1405,24 @@ add_docstr(
 )
 
 add_docstr(
+    oneflow.Tensor.is_contiguous,
+    r"""
+    Tensor.is_contiguous() -> bool
+
+    Returns True if `self` tensor is contiguous in memory.
+    """,
+)
+
+add_docstr(
+    oneflow.Tensor.is_cuda,
+    r"""
+    Tensor.is_cuda() -> bool
+    
+    Is `True` if the Tensor is stored on the GPU, `False` otherwise.
+    """,
+)
+
+add_docstr(
     oneflow.Tensor.item,
     r"""Returns the value of this tensor as a standard Python number. This only works for tensors with one element.
     For other cases, see tolist().
@@ -1459,23 +1477,5 @@ add_docstr(
     Tensor.zero_() -> Tensor
     
     Fills `self` tensor with zeros.
-    """,
-)
-
-add_docstr(
-    oneflow.Tensor.is_contiguous,
-    r"""
-    Tensor.is_contiguous() -> bool
-
-    Returns True if `self` tensor is contiguous in memory.
-    """,
-)
-
-add_docstr(
-    oneflow.Tensor.is_cuda,
-    r"""
-    Tensor.is_cuda() -> bool
-    
-    Is `True` if the Tensor is stored on the GPU, `False` otherwise.
     """,
 )
