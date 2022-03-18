@@ -19,11 +19,11 @@ from contextlib import contextmanager
 import oneflow._oneflow_internal
 
 
-def split_sbp(axis: int) -> oneflow._oneflow_internal.sbp.sbp:
-    """Generate a split scheme in which op will be splitted at `axis`.
+def split_sbp(dim: int) -> oneflow._oneflow_internal.sbp.sbp:
+    """Generate a split scheme in which op will be splitted at `dim`.
 
     Args:
-        axis (int): At `axis` the op will be splitted.
+        dim (int): At `dim` the op will be splitted.
 
     Returns:
         SbpParallel: Split scheme object, often required by `to_global` method of `Tensor`
@@ -34,5 +34,5 @@ def split_sbp(axis: int) -> oneflow._oneflow_internal.sbp.sbp:
         ct2 = t1.to_global(sbp=flow.sbp.split(0), placement=("cuda", ranks=[0, 1, 2, 3]))
 
     """
-    assert type(axis) is int
-    return oneflow._oneflow_internal.sbp.split(axis)
+    assert type(dim) is int
+    return oneflow._oneflow_internal.sbp.split(dim)

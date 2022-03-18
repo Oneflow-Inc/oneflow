@@ -19,7 +19,7 @@ from oneflow.framework.docstr.utils import add_docstr
 add_docstr(
     oneflow.nn.Module.to_consistent,
     """
-    This interface is no longer available, please use :func:`oneflow.nn.Module.to_global` instead
+    This interface is no longer available, please use :func:`oneflow.nn.Module.to_global` instead.
     """,
 )
 
@@ -49,6 +49,8 @@ add_docstr(
         >>> m = flow.nn.Conv2d(in_channels=3, out_channels=4, kernel_size=3)
         >>> m.to_global(placement=flow.placement("cpu", ranks=[0]), sbp=[flow.sbp.split(0)])
         >>> m.weight.is_global
+        True
+        >>> m.bias.is_global
         True
     """,
 )
