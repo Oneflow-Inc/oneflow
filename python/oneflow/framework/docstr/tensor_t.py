@@ -18,8 +18,7 @@ from oneflow.framework.docstr.utils import add_docstr
 
 add_docstr(
     oneflow.t,
-    """
-    oneflow.t(input) → Tensor.
+    """oneflow.t(input)
 
         Expects `input` to be <= 2-D tensor and transposes dimensions 0 and 1. 
 

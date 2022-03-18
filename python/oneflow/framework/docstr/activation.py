@@ -48,7 +48,7 @@ add_docstr(
 
 add_docstr(
     oneflow.relu,
-    """
+    """relu(inplace)
     Applies the rectified linear unit function element-wise. See :class:`~oneflow.nn.ReLU` for more details. 
 
     Args:

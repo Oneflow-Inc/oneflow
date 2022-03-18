@@ -188,7 +188,8 @@ def relu6(input, inplace=False):
 
 
 class Tanh(Module):
-    """This operator computes the hyperbolic tangent value of Tensor.
+    """Tanh(input)
+    This operator computes the hyperbolic tangent value of Tensor.
 
     The equation is:
 
