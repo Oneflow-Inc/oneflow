@@ -15,6 +15,7 @@ limitations under the License.
 """
 # RUN: python3 %s | FileCheck %s
 # CHECK-NOT: oneflow.cast
+
 import os
 import unittest
 import numpy as np
