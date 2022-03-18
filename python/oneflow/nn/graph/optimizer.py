@@ -14,7 +14,6 @@ See the License for the specific language governing permissions and
 limitations under the License.
 """
 from oneflow.nn.optimizer.optimizer import Optimizer
-from oneflow.nn.optimizer.sparse_optimizer import SparseOptimizer
 from oneflow.nn.optimizer.lr_scheduler import LRScheduler
 
 
@@ -26,16 +25,15 @@ class OptDict(object):
         if "optim" in opt_dict:
             if isinstance(opt_dict["optim"], Optimizer):
                 self._optimizer = opt_dict["optim"]
-                self._is_sparse = False
-            elif isinstance(opt_dict["optim"], SparseOptimizer):
-                self._optimizer = opt_dict["optim"]._nested_optim
-                self._is_sparse = True
             else:
-                raise ValueError(
-                    'opt_dict["optim"] is not an instance of Optimizer or SparseOptimizer.'
-                )
+                raise ValueError('opt_dict["optim"] is not an instance of Optimizer.')
         else:
             raise ValueError("Key 'optim' doesn't exist in opt_dict.")
+
+        if "is_sparse" in opt_dict and opt_dict["is_sparse"] is True:
+            self._is_sparse = True
+        else:
+            self._is_sparse = False
 
         self._lr_scheduler = None
         if "lr_sch" in opt_dict:
