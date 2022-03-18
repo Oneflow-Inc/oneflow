@@ -151,7 +151,7 @@ void BuildEmbeddingLookup(JobPassCtx* ctx, JobBuilder* job_builder, const int64_
             .ScopeSymbolId(embedding_op.op_conf().scope_symbol_id())
             .Build();
     OperatorConf embedding_prefetch_new_op_conf = embedding_prefetch_op.op_conf();
-    embedding_prefetch_new_op_conf.set_stream_name_hint(embedding_name + "EMBEDDING");
+    embedding_prefetch_new_op_conf.set_stream_name_hint(embedding_name + "_EMBEDDING");
     job_builder->AddOps(parallel_conf, {embedding_prefetch_new_op_conf});
     context_lbn = AddIdentityOp(embedding_prefetch_op.output("context", 0));
   }
@@ -182,7 +182,7 @@ void BuildEmbeddingLookup(JobPassCtx* ctx, JobBuilder* job_builder, const int64_
   }
   user_op::UserOpConfWrapper embedding_lookup_op = embedding_lookup_op_builder.Build();
   OperatorConf embedding_lookup_new_op_conf = embedding_lookup_op.op_conf();
-  embedding_lookup_new_op_conf.set_stream_name_hint(embedding_name + "EMBEDDING");
+  embedding_lookup_new_op_conf.set_stream_name_hint(embedding_name + "_EMBEDDING");
   job_builder->AddOps(parallel_conf, {embedding_lookup_new_op_conf});
   if (has_embeddings_output) {
     *embedding_lbn = embedding_lookup_op.output("embeddings", 0);
@@ -217,7 +217,7 @@ void BuildEmbeddingShuffle(JobBuilder* job_builder, const std::string& embedding
           .Build();
   OperatorConf embedding_shuffle_new_op_conf = embedding_shuffle_op.op_conf();
   if (ParseBooleanFromEnv("ONEFLOW_ONE_EMBEDDING_EMBEDDING_SHUFFLE_INDEPENTENT_STREAM", false)) {
-    embedding_shuffle_new_op_conf.set_stream_name_hint(embedding_name + "EMBEDDING_SHUFFLE");
+    embedding_shuffle_new_op_conf.set_stream_name_hint(embedding_name + "_EMBEDDING_SHUFFLE");
   }
   add_ops->push_back(embedding_shuffle_new_op_conf);
   *new_embeddings_lbn = embedding_shuffle_op.output("embeddings", 0);
@@ -281,7 +281,7 @@ void BuildEmbeddingGradientShuffle(JobPassCtx* ctx, const OpGraph& op_graph,
     OperatorConf embedding_gradient_shuffle_new_op_conf = embedding_gradient_shuffle_op.op_conf();
     if (ParseBooleanFromEnv("ONEFLOW_ONE_EMBEDDING_EMBEDDING_SHUFFLE_INDEPENTENT_STREAM", false)) {
       embedding_gradient_shuffle_new_op_conf.set_stream_name_hint(embedding_name
-                                                                  + "EMBEDDING_SHUFFLE");
+                                                                  + "_EMBEDDING_SHUFFLE");
     }
     job_builder->AddOps(parallel_conf, {embedding_gradient_shuffle_new_op_conf});
     *cur_rank_unique_embedding_grad_lbn =
@@ -380,7 +380,7 @@ void BuildIdShuffle(bool use_system_gather, const std::string& embedding_name,
     }
     user_op::UserOpConfWrapper unique_op = unique_op_builder.Build();
     OperatorConf unique_new_op_conf = unique_op.op_conf();
-    unique_new_op_conf.set_stream_name_hint(embedding_name + "ID_SHUFFLE");
+    unique_new_op_conf.set_stream_name_hint(embedding_name + "_ID_SHUFFLE");
     add_ops->push_back(unique_new_op_conf);
     *num_unique_ids_lbn = unique_op.output("num_unique", 0);
     *unique_ids_lbn = unique_op.output("unique_keys", 0);
@@ -403,7 +403,7 @@ void BuildIdShuffle(bool use_system_gather, const std::string& embedding_name,
     }
     user_op::UserOpConfWrapper id_shuffle_op = id_shuffle_op_builder.Build();
     OperatorConf id_shuffle_new_op_conf = id_shuffle_op.op_conf();
-    id_shuffle_new_op_conf.set_stream_name_hint(embedding_name + "ID_SHUFFLE");
+    id_shuffle_new_op_conf.set_stream_name_hint(embedding_name + "_ID_SHUFFLE");
     add_ops->push_back(id_shuffle_new_op_conf);
     *inner_inverse_unique_partition_indices_lbn =
         id_shuffle_op.output("inverse_unique_partition_indices", 0);
@@ -485,7 +485,7 @@ void BuildEmbeddingUpdate(JobPassCtx* ctx, const OpGraph& op_graph, JobBuilder* 
   user_op::UserOpConfWrapper embedding_update_op =
       embedding_update_op_builder.ScopeSymbolId(embedding_op.op_conf().scope_symbol_id()).Build();
   OperatorConf embedding_update_new_op_conf = embedding_update_op.op_conf();
-  embedding_update_new_op_conf.set_stream_name_hint(embedding_name + "EMBEDDING");
+  embedding_update_new_op_conf.set_stream_name_hint(embedding_name + "_EMBEDDING");
   job_builder->AddOps(parallel_conf, {embedding_update_new_op_conf});
 
   user_op::UserOpConfWrapperBuilder embedding_put_op_builder(embedding_op.op_name()
@@ -499,7 +499,7 @@ void BuildEmbeddingUpdate(JobPassCtx* ctx, const OpGraph& op_graph, JobBuilder* 
           .ScopeSymbolId(embedding_op.op_conf().scope_symbol_id())
           .Build();
   OperatorConf embedding_put_new_op_conf = embedding_put_op.op_conf();
-  embedding_put_new_op_conf.set_stream_name_hint(embedding_name + "EMBEDDING");
+  embedding_put_new_op_conf.set_stream_name_hint(embedding_name + "_EMBEDDING");
   job_builder->AddOps(parallel_conf, {embedding_put_new_op_conf});
 }
 
