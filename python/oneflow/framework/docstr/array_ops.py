@@ -137,7 +137,7 @@ add_docstr(
 
 add_docstr(
     oneflow.argmax,
-    r"""oneflow.argmax（input, dim, keepdim)
+    r"""oneflow.argmax(input, dim, keepdim)
     The op computes the index with the largest value of a Tensor at specified axis.
 
     Args:
