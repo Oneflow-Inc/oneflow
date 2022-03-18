@@ -47,7 +47,14 @@ def do_nhwc_bacth_norm(test_case, with_cuda):
 
     graph_to_run = GraphToRun()
     lazy_batch_norm_res = graph_to_run(x)
-    test_case.assertTrue(np.allclose(eager_batch_norm_res.numpy(), lazy_batch_norm_res.numpy(), rtol=1e-5, atol=1e-5))
+    test_case.assertTrue(
+        np.allclose(
+            eager_batch_norm_res.numpy(),
+            lazy_batch_norm_res.numpy(),
+            rtol=1e-5,
+            atol=1e-5,
+        )
+    )
 
 
 @flow.unittest.skip_unless_1n1d()

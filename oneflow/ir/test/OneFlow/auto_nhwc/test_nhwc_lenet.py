@@ -29,14 +29,15 @@ import oneflow.unittest
 import oneflow.nn as nn
 import oneflow.nn.functional as F
 
+
 class LeNet(nn.Module):
     def __init__(self):
         super(LeNet, self).__init__()
         self.conv1 = nn.Conv2d(3, 6, 5)
         self.conv2 = nn.Conv2d(6, 16, 5)
-        self.fc1   = nn.Linear(16*5*5, 120)
-        self.fc2   = nn.Linear(120, 84)
-        self.fc3   = nn.Linear(84, 10)
+        self.fc1 = nn.Linear(16 * 5 * 5, 120)
+        self.fc2 = nn.Linear(120, 84)
+        self.fc3 = nn.Linear(84, 10)
 
     def forward(self, x):
         out = F.relu(self.conv1(x))
@@ -48,6 +49,7 @@ class LeNet(nn.Module):
         out = F.relu(self.fc2(out))
         out = self.fc3(out)
         return out
+
 
 def do_lenet(test_case, with_cuda):
     x = flow.randn(2, 3, 32, 32)
@@ -68,7 +70,9 @@ def do_lenet(test_case, with_cuda):
 
     graph_to_run = GraphToRun()
     lazy_res = graph_to_run(x)
-    test_case.assertTrue(np.allclose(eager_res.numpy(), lazy_res.numpy(), rtol=1e-5, atol=1e-5))
+    test_case.assertTrue(
+        np.allclose(eager_res.numpy(), lazy_res.numpy(), rtol=1e-5, atol=1e-5)
+    )
 
 
 @flow.unittest.skip_unless_1n1d()

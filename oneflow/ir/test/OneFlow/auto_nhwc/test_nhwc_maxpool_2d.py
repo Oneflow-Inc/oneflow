@@ -30,7 +30,9 @@ import oneflow.unittest
 
 def do_nhwc_maxpool_2d(test_case, with_cuda, with_return_induces):
     x = flow.randn(1, 4, 4, 4)
-    maxpool_2d = flow.nn.MaxPool2d(kernel_size=3, padding=1, stride=3, return_indices=with_return_induces)
+    maxpool_2d = flow.nn.MaxPool2d(
+        kernel_size=3, padding=1, stride=3, return_indices=with_return_induces
+    )
     if with_cuda:
         x = x.cuda()
         maxpool_2d.to("cuda")
@@ -48,9 +50,23 @@ def do_nhwc_maxpool_2d(test_case, with_cuda, with_return_induces):
     graph_to_run = GraphToRun()
     lazy_maxpool_2d_res = graph_to_run(x)
     if with_return_induces:
-        test_case.assertTrue(np.allclose(eager_maxpool_2d_res[0].numpy(), lazy_maxpool_2d_res[0].numpy(), rtol=1e-5, atol=1e-5))
+        test_case.assertTrue(
+            np.allclose(
+                eager_maxpool_2d_res[0].numpy(),
+                lazy_maxpool_2d_res[0].numpy(),
+                rtol=1e-5,
+                atol=1e-5,
+            )
+        )
     else:
-        test_case.assertTrue(np.allclose(eager_maxpool_2d_res.numpy(), lazy_maxpool_2d_res.numpy(), rtol=1e-5, atol=1e-5))
+        test_case.assertTrue(
+            np.allclose(
+                eager_maxpool_2d_res.numpy(),
+                lazy_maxpool_2d_res.numpy(),
+                rtol=1e-5,
+                atol=1e-5,
+            )
+        )
 
 
 @flow.unittest.skip_unless_1n1d()

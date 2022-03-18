@@ -46,7 +46,11 @@ def do_nhwc_bias_add(test_case, with_cuda):
 
     graph_to_run = GraphToRun()
     lazy_bias_add_res = graph_to_run(a, b)
-    test_case.assertTrue(np.allclose(eager_bias_add_res.numpy(), lazy_bias_add_res.numpy(), rtol=1e-5, atol=1e-5))
+    test_case.assertTrue(
+        np.allclose(
+            eager_bias_add_res.numpy(), lazy_bias_add_res.numpy(), rtol=1e-5, atol=1e-5
+        )
+    )
 
 
 @flow.unittest.skip_unless_1n1d()
