@@ -63,3 +63,4 @@ from .is_floating_point import *
 from .where import *
 from .einsum import *
 from .oneflow import *
+from .argsort import *
