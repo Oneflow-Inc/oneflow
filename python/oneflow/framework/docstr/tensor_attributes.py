@@ -35,7 +35,7 @@ oneflow.device.__doc__ = r"""
 
         >>> import oneflow as flow
         >>> flow.device('cuda:0')
-        device(type='cuda', index=0) 
+        device(type='cuda', index=0)
 
         >>> flow.device('cpu')
         device(type='cpu', index=0)
@@ -61,13 +61,13 @@ oneflow.device.__doc__ = r"""
 
             >>> import oneflow as flow
             >>> # Example of a function that takes in a oneflow.device
-            >>> cuda1 = flow.device('cuda:1')
-            >>> flow.randn((2,3), device=cuda1)
+            >>> cuda0 = flow.device('cuda:0')
+            >>> x = flow.randn(2,3, device=cuda0)
         
         .. code-block:: python
 
             >>> # You can substitute the flow.device with a string
-            >>> flow.randn((2,3), device='cuda:1')
+            >>> x = flow.randn(2,3, device='cuda:0')
 
 """
 
@@ -120,7 +120,7 @@ oneflow.sbp.sbp.__doc__ = r"""
 
         >>> s = flow.sbp.split(0)
         >>> s
-        oneflow.sbp.split(axis)=0)
+        oneflow.sbp.split(axis=0)
         >>> b = flow.sbp.broadcast()
         >>> b
         oneflow.sbp.broadcast
