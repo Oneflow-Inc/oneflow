@@ -9,10 +9,10 @@
 
 ## Latest News
 
-- Version 0.6.0 is out!
-  - Improved consistent mode support.
-  - More performant eager execution.
-  - [Full changelog](https://github.com/Oneflow-Inc/oneflow/releases/tag/v0.6.0)
+- Version 0.7.0 is out!
+  - Introducing global tensor
+  - Semi-auto parallelization has landed
+  - [Full changelog](https://github.com/Oneflow-Inc/oneflow/releases/tag/v0.7.0)
 
 ## Publication
 
@@ -52,7 +52,7 @@
 - To install latest stable release of OneFlow with CUDA support:
 
   ```bash
-  python3 -m pip install -f https://release.oneflow.info oneflow==0.6.0+cu102
+  python3 -m pip install -f https://release.oneflow.info oneflow==0.7.0+cu102
   ```
 
 - To install nightly release of OneFlow with CUDA support:
@@ -65,7 +65,7 @@
 
   - Stable
     ```bash
-    python3 -m pip install --find-links https://release.oneflow.info oneflow==0.6.0+[PLATFORM]
+    python3 -m pip install --find-links https://release.oneflow.info oneflow==0.7.0+[PLATFORM]
     ```
   - Nightly
     ```

@@ -347,20 +347,6 @@ void ScaleModelDiffByDynamicLossInstanceNum(
   }
 }
 
-Maybe<void> MakeGetterLossOpNode4OpName(
-    const OpGraph& op_graph, std::function<OpNode*(const std::string&)>* LossOpNode4OpName) {
-  std::list<OpNode*> loss_nodes;
-  JUST(GetLossOpNodes(op_graph, &loss_nodes));
-  auto loss_op_name2op_node = std::make_shared<HashMap<std::string, OpNode*>>();
-  for (OpNode* op_node : loss_nodes) {
-    CHECK(loss_op_name2op_node->emplace(op_node->op().op_name(), op_node).second);
-  }
-  *LossOpNode4OpName = [loss_op_name2op_node](const std::string& op_name) -> OpNode* {
-    return loss_op_name2op_node->at(op_name);
-  };
-  return Maybe<void>::Ok();
-}
-
 bool AllSplitDistribution(const NdSbp& nd_sbp) {
   for (int64_t i = 0; i < nd_sbp.sbp_parallel_size(); ++i) {
     if (!nd_sbp.sbp_parallel(i).has_split_parallel()) { return false; }
@@ -866,6 +852,20 @@ void ClipGradientByGlobalNorm(const OpGraph& op_graph, JobBuilder* job_builder,
 
 }  // namespace
 
+Maybe<void> MakeGetterLossOpNode4OpName(
+    const OpGraph& op_graph, std::function<OpNode*(const std::string&)>* LossOpNode4OpName) {
+  std::list<OpNode*> loss_nodes;
+  JUST(GetLossOpNodes(op_graph, &loss_nodes));
+  auto loss_op_name2op_node = std::make_shared<HashMap<std::string, OpNode*>>();
+  for (OpNode* op_node : loss_nodes) {
+    CHECK(loss_op_name2op_node->emplace(op_node->op().op_name(), op_node).second);
+  }
+  *LossOpNode4OpName = [loss_op_name2op_node](const std::string& op_name) -> OpNode* {
+    return loss_op_name2op_node->at(op_name);
+  };
+  return Maybe<void>::Ok();
+}
+
 Maybe<void> MakePredicatorNeedBackwardOp(const OpGraph& op_graph,
                                          std::function<bool(OpNode*)>* NeedBackwardOp) {
   auto var_op_nodes_and_descendants = std::make_shared<HashSet<OpNode*>>();
@@ -895,6 +895,10 @@ void GetVariableOpNodesAndDescendants(const OpGraph& op_graph, HashSet<OpNode*>*
   op_graph.ForEachNode([&](OpNode* op_node) {
     const auto& op_conf = op_node->op().op_conf();
     if (op_conf.has_variable_conf()) { starts.emplace_back(op_node); }
+    if (op_conf.has_user_conf()
+        && op_conf.user_conf().op_type_name() == "embedding_lookup_placeholder") {
+      starts.push_back(op_node);
+    }
   });
   auto ForEachNextNode = [&](OpNode* op_node, const std::function<void(OpNode*)>& Handler) {
     for (OpEdge* edge : op_node->out_edges()) {
@@ -1203,8 +1207,9 @@ void AddDiffParallelCast(const OpGraph& op_graph, JobBuilder* job_builder,
     if (model_op_node->parallel_desc().parallel_num() <= 1) { continue; }
     const int64_t scope_symbol_id = model_op_node->op().op_conf().scope_symbol_id();
     std::vector<std::string> nd_sbp;
-    nd_sbp.reserve(model_op_node->NdSbp4BnInOp("out").sbp_parallel().size());
-    for (const auto& sbp_parallel : model_op_node->NdSbp4BnInOp("out").sbp_parallel()) {
+    const std::string& variable_sole_obn = model_op_node->op().SoleObn();
+    nd_sbp.reserve(model_op_node->NdSbp4BnInOp(variable_sole_obn).sbp_parallel().size());
+    for (const auto& sbp_parallel : model_op_node->NdSbp4BnInOp(variable_sole_obn).sbp_parallel()) {
       nd_sbp.emplace_back(SbpParallelToString(sbp_parallel));
     }
     auto parallel_cast_op =
