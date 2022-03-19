@@ -650,15 +650,15 @@ std::string GlobalAbsMaxMin(const OpGraph& op_graph, JobBuilder* job_builder,
     }
   };
   ForEachAggregatedParamGroup(op_graph, lbi2diff_lbi, GroupReduce);
-
   CHECK_GT(group_reduce_lbns.size(), 0);
-  // stack all group max and go on max
+
+  *out_parallel_conf = all_same_parallel_desc ? any_parallel_desc.parallel_conf()
+                                              : GenParallelConfOfCpuZeroOnMaster();
+  out_parallel_conf->mutable_hierarchy()->clear_dim();
   if (group_reduce_lbns.size() == 1) {
     return group_reduce_lbns[0];
   } else {
-    *out_parallel_conf = all_same_parallel_desc ? any_parallel_desc.parallel_conf()
-                                                : GenParallelConfOfCpuZeroOnMaster();
-    out_parallel_conf->mutable_hierarchy()->clear_dim();
+    // stack all group max and go on max
     const int64_t scope_symbol_id =
         MakeScopeSymbolId(job_builder->job().job_conf(), *out_parallel_conf);
     auto stack_op_builder = user_op::UserOpConfWrapperBuilder(
@@ -761,7 +761,7 @@ std::string GlobalNorm(const OpGraph& op_graph, JobBuilder* job_builder,
         lbn = AddParallelCast(job_builder, group_lbns.at(i), "P", group_parallel_confs.at(i),
                               "System-ClipGradient-ParallelCast-");
       } else {
-        // sum will run on cpu 0, we need do P->B first, 
+        // sum will run on cpu 0, we need do P->B first,
         // because when execution is on single device, only B is accepted
         lbn = AddParallelCast(job_builder, group_lbns.at(i), "B", group_parallel_confs.at(i),
                               "System-ClipGradient-ParallelCast-");
