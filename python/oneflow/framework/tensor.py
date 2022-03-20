@@ -354,6 +354,7 @@ def _sin(self):
 def _sin_inplace(self):
     return flow._C.sin_(self)
 
+
 def _tan(self):
     return flow.tan(self)
 
@@ -990,6 +991,7 @@ def _is_consistent(self):
 def _to_consistent(self, *args, **kwargs):
     raise RuntimeError(".to_consistent has been removed, please use .to_global instead")
 
+
 def _storage_offset(self):
     return self.storage_offset()
 
@@ -1197,8 +1199,7 @@ def RegisterMethods():
     Tensor.zero_ = _zero_
     Tensor.is_consistent = _is_consistent
     Tensor.to_consistent = _to_consistent
-    Tensor.storage_offset=_storage_offset
-
+    Tensor.storage_offset = _storage_offset
 
 
 def register_tensor_op(op_name):
