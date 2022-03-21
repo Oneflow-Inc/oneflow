@@ -21,6 +21,11 @@ int debug_level() {
   return Global<DTRConfig>::Get()->debug_level;
 }
 
+bool is_check_enabled() {
+  if (!is_enabled()) { return false; }
+  return ParseBooleanFromEnv("OF_DTR_CHECK", false);
+}
+
 bool is_using_disjoint_set() { return Global<DTRConfig>::Get()->heuristic == "eq"; }
 
 }  // namespace dtr

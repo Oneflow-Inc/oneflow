@@ -47,9 +47,9 @@ ONEFLOW_API_PYBIND11_MODULE("dtr", m) {
   m.def("is_dtr_tensor", [](const std::shared_ptr<one::Tensor>& tensor) -> bool {
     return std::dynamic_pointer_cast<one::DTRMirroredTensor>(tensor) != nullptr;
   });
-  m.def("is_in_memory", [](const std::shared_ptr<one::Tensor>& tensor) -> bool {
+  m.def("is_in_memory", [](const std::shared_ptr<one::Tensor>& tensor) -> Maybe<bool> {
     auto dtr_tensor = std::dynamic_pointer_cast<one::DTRMirroredTensor>(tensor);
-    CHECK_NOTNULL(dtr_tensor);
+    CHECK_NOTNULL_OR_RETURN(dtr_tensor);
     return dtr_tensor->is_in_memory();
   });
   m.def("allocated_memory",
@@ -57,28 +57,26 @@ ONEFLOW_API_PYBIND11_MODULE("dtr", m) {
   m.def("display_all_pieces",
         []() -> void { return Global<vm::DtrCudaAllocator>::Get()->DisplayAllPieces(); });
   m.def("display", []() -> void { Global<dtr::TensorPool>::Get()->display().GetOrThrow(); });
-  m.def("set_non_evictable", [](const std::shared_ptr<one::Tensor> t) -> void {
-    if (auto dtr_tensor =
-            std::dynamic_pointer_cast<one::DTRMirroredTensor>(CHECK_JUST(t->AsMirroredTensor()))) {
-      std::dynamic_pointer_cast<vm::DTREagerBlobObject>(CHECK_JUST(dtr_tensor->eager_blob_object()))
-          ->set_evict_attr(false);
-    }
+  m.def("set_non_evictable", [](const std::shared_ptr<one::Tensor>& t) -> Maybe<void> {
+    auto dtr_tensor =
+        std::dynamic_pointer_cast<one::DTRMirroredTensor>(JUST(t->AsMirroredTensor()));
+    std::dynamic_pointer_cast<vm::DTREagerBlobObject>(JUST(dtr_tensor->eager_blob_object()))
+        ->set_evict_attr(false);
+    return Maybe<void>::Ok();
   });
-  m.def("evict", [](const std::shared_ptr<one::Tensor> t) -> void {
-    if (auto dtr_tensor =
-            std::dynamic_pointer_cast<one::DTRMirroredTensor>(CHECK_JUST(t->AsMirroredTensor()))) {
-      CHECK_JUST(std::dynamic_pointer_cast<vm::DTREagerBlobObject>(
-                     CHECK_JUST(dtr_tensor->eager_blob_object()))
-                     ->evict());
-    } else {
-      CHECK(false);
-    }
+  m.def("evict", [](const std::shared_ptr<one::Tensor>& t) -> Maybe<void> {
+    auto dtr_tensor =
+        std::dynamic_pointer_cast<one::DTRMirroredTensor>(JUST(t->AsMirroredTensor()));
+    CHECK_NOTNULL_OR_RETURN(dtr_tensor);
+    JUST(std::dynamic_pointer_cast<vm::DTREagerBlobObject>(JUST(dtr_tensor->eager_blob_object()))
+             ->evict());
+    return Maybe<void>::Ok();
   });
-  m.def("is_evictable", [](const std::shared_ptr<one::Tensor> t) -> bool {
+  m.def("is_evictable", [](const std::shared_ptr<one::Tensor>& t) -> Maybe<bool> {
     if (auto dtr_tensor =
-            std::dynamic_pointer_cast<one::DTRMirroredTensor>(CHECK_JUST(t->AsMirroredTensor()))) {
+            std::dynamic_pointer_cast<one::DTRMirroredTensor>(JUST(t->AsMirroredTensor()))) {
       return std::dynamic_pointer_cast<vm::DTREagerBlobObject>(
-                 CHECK_JUST(dtr_tensor->eager_blob_object()))
+                 JUST(dtr_tensor->eager_blob_object()))
           ->is_evictable();
     }
     return false;

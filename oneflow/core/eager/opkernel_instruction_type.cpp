@@ -169,12 +169,12 @@ struct LocalCallOpKernelUtil final {
     if (dtr::is_enabled()) {
       for (int i : operand->opkernel().input_tuple_indexes4mut_ibns()) {
         const std::string& op_type_name = operand->opkernel().op_type_name();
-        std::cout << "mutable! op: " << op_type_name << ", input " << i;
-        std::cout << " set it as non evictable" << std::endl;
+        LOG(INFO) << "mutable! op: " << op_type_name << ", input " << i;
+        LOG(INFO) << " set it as non evictable";
         GetDTRInputs(operand)[i]->set_evict_attr(false);
       }
     }
-    if (dtr::debug_level() >= 3) {
+    if (dtr::is_check_enabled()) {
       for (int i : operand->opkernel().input_tuple_indexes4mut_ibns()) {
         const auto& mut_input = operand->inputs()->at(i);
         if (mut_input->mem_case().has_device_cuda_mem()) {
@@ -187,9 +187,9 @@ struct LocalCallOpKernelUtil final {
           mut_input->hash_ = x;
           mut_input->backup_data_.resize(bytes / 4);
           memcpy(mut_input->backup_data_.data(), tmp.data(), bytes);
-          std::cout << ", gpu memory." << std::endl;
+          LOG(INFO) << ", gpu memory." << std::endl;
         } else {
-          std::cout << ", non gpu memory." << std::endl;
+          LOG(INFO) << ", non gpu memory." << std::endl;
         }
       }
 
@@ -197,18 +197,18 @@ struct LocalCallOpKernelUtil final {
       bool compare_input_hash = false;
       for (const auto& base_class_output : *operand->outputs()) {
         if (base_class_output->mem_case().has_device_cuda_mem()) {
-          size_t bytes = base_class_output->blob_desc().ByteSizeOfBlobBody();
-          CHECK_EQ(bytes % 4, 0);
-          std::vector<float> tmp(bytes / 4);
-          cudaMemcpy(tmp.data(), base_class_output->blob().dptr(), bytes,
-                     cudaMemcpyKind::cudaMemcpyDeviceToHost);
-          float x = 0;
-          for (float f : tmp) { x += f; }
           if (const auto output =
                   std::dynamic_pointer_cast<DTREagerBlobObject>(base_class_output)) {
+            size_t bytes = base_class_output->blob_desc().ByteSizeOfBlobBody();
+            CHECK_EQ(bytes % 4, 0) << "compute op: " << output->compute_op_type_name();
+            std::vector<float> tmp(bytes / 4);
+            cudaMemcpy(tmp.data(), base_class_output->blob().dptr(), bytes,
+                       cudaMemcpyKind::cudaMemcpyDeviceToHost);
+            float x = 0;
+            for (float f : tmp) { x += f; }
             if (output->hash_ != -1) {
               if (output->hash_ != x) {
-                std::cout << "wrong!!!!"
+                LOG(INFO) << "wrong!!!!"
                           << " compute op: "
                           << output->compute_op()->shared_opkernel()->user_op_conf_->op_type_name()
                           << ", old hash: " << output->hash_ << ", new hash: " << x
@@ -219,20 +219,20 @@ struct LocalCallOpKernelUtil final {
                 // compare hash of inputs
                 compare_input_hash = true;
               } else {
-                std::cout << "correct :)"
+                LOG(INFO) << "correct :)"
                           << " compute op: "
                           << output->compute_op()->shared_opkernel()->user_op_conf_->op_type_name()
                           << ", old hash: " << output->hash_ << ", new hash: " << x << std::endl;
               }
             } else {
-              std::cout << "first! set hash to " << x << std::endl;
+              LOG(INFO) << "first! set hash to " << x << std::endl;
             }
+            base_class_output->hash_ = x;
+            base_class_output->backup_data_.resize(bytes / 4);
+            memcpy(base_class_output->backup_data_.data(), tmp.data(), bytes);
           }
-          base_class_output->hash_ = x;
-          base_class_output->backup_data_.resize(bytes / 4);
-          memcpy(base_class_output->backup_data_.data(), tmp.data(), bytes);
         } else {
-          std::cout << "compute non gpu memory, op is: " << operand->opkernel().op_type_name()
+          LOG(INFO) << "compute non gpu memory, op is: " << operand->opkernel().op_type_name()
                     << std::endl;
         }
       }
@@ -249,20 +249,20 @@ struct LocalCallOpKernelUtil final {
               for (float f : tmp) { x += f; }
               if (input->hash_ != -1) {
                 if (input->hash_ != x) {
-                  std::cout << "input hash wrong!!!!"
+                  LOG(INFO) << "input hash wrong!!!!"
                             << ", old hash: " << input->hash_ << ", new hash: " << x
                             << ", old data[0]: " << input->backup_data_[0]
                             << ", new data[0]: " << tmp[0]
                             << ", shape: " << input->blob_desc().shape() << std::endl;
                 } else {
-                  std::cout << "input hash correct :)"
+                  LOG(INFO) << "input hash correct :)"
                             << ", shape: " << input->blob_desc().shape() << std::endl;
                 }
               } else {
-                std::cout << "input not initialized!!!!!" << x << std::endl;
+                LOG(INFO) << "input not initialized!!!!!" << x << std::endl;
               }
             } else {
-              std::cout << "input non gpu memory, op is: " << operand->opkernel().op_type_name()
+              LOG(INFO) << "input non gpu memory, op is: " << operand->opkernel().op_type_name()
                         << std::endl;
             }
           }

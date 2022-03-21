@@ -24,7 +24,7 @@ import oneflow as flow
 import oneflow.unittest
 
 
-# @unittest.skipUnless(os.getenv("OF_DTR"), "only test while DTR is on")
+# TODO: add a pure cpu test
 class TestDTR(flow.unittest.TestCase):
     def setUp(self):
         super().setUp()
