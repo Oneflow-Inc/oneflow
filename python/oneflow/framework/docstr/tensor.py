@@ -680,6 +680,16 @@ add_docstr(
 )
 
 add_docstr(
+    oneflow.Tensor.retain_grad,
+    r"""
+    Compatible with PyTorch.
+
+    Enables this Tensor to have their ``grad`` populated during ``backward()``. This is a no-op
+    for leaf tensors.
+    """,
+)
+
+add_docstr(
     oneflow.Tensor.bmm,
     """
     See :func:`oneflow.bmm`
