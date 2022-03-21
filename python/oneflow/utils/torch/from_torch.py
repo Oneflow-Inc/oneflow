@@ -63,6 +63,8 @@ def from_torch(torch_tensor):
         print_error_msg()
     assert isinstance(torch_tensor, torch.Tensor)
     device = torch_tensor.device.__str__()
-    assert device == "cpu", "Only supports conversion of torch tensor whose device is cpu"
+    assert (
+        device == "cpu"
+    ), "Only supports conversion of torch tensor whose device is cpu"
     np_data = torch_tensor.cpu().detach().numpy()
     return flow_from_numpy(np_data)
