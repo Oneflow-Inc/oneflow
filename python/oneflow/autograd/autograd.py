@@ -25,14 +25,38 @@ from oneflow.framework.tensor_tuple_util import convert_to_tensor_tuple
 def grad(
     outputs: Union[Tensor, Sequence[Tensor]],
     inputs: Union[Tensor, Sequence[Tensor]],
-    out_grads: Union[Tensor, Sequence[Tensor], None] = None,
+    grad_outputs: Union[Tensor, Sequence[Tensor], None] = None,
     retain_graph: bool = False,
     create_graph: bool = False,
 ) -> Tuple[Tensor]:
+    r"""
+    The documentation is referenced from:
+    https://pytorch.org/docs/stable/generated/torch.autograd.grad.html#torch.autograd.grad
+
+    Computes and returns the sum of gradients of outputs with respect to the inputs.
+
+    The graph is differentiated using the chain rule. ``grad_outputs`` should be a sequence of
+    length matching ``outputs``, containing the "vector" in the Jacobian-vector product.
+    (``None`` is an acceptable value for that tensor don't require gradient.)
+
+    Args:
+        outputs (Sequence[Tensor]): Tensors of which the derivative will be computed.
+        inputs (Sequence[Tensor]): Inputs w.r.t. which the derivative will be returned(and not
+            accumulated into ``.grad``).
+        grad_outputs (Sequence[Tensor], optional): The "vector" in the Jacobian-vector product.
+            Usually gradients w.r.t. each output. None values can be specified for scalar Tensors
+            or ones that don't require grad. Defaults to None.
+        retain_graph (bool, optional): If ``False``, the graph used to compute the grads will be
+            reset after backward is complete. Defaults to ``False``. Note that in nearly all cases
+            setting this option to ``True`` is not needed and often can be worked around in a much
+            more efficient way. Defaults to the value of ``create_graph``.
+        create_graph (bool, optional): If ``True``, graph of the derivative will be constructed,
+            allowing to compute higher order derivative products. Defaults to ``False``.
+    """
     in_grads = grad_api(
         convert_to_tensor_tuple(outputs),
         convert_to_tensor_tuple(inputs),
-        convert_to_tensor_tuple(out_grads),
+        convert_to_tensor_tuple(grad_outputs),
         retain_graph,
         create_graph,
     )
