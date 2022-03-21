@@ -612,7 +612,7 @@ add_docstr(
         >>> c = a + 2
         >>> c.is_leaf
         False
-    """
+    """,
 )
 
 add_docstr(
@@ -621,7 +621,29 @@ add_docstr(
     Compatible with PyTorch.
 
     Is ``True`` if gradient need to be computed for this Tensor, ``False`` otherwise.
-    """
+    """,
+)
+
+add_docstr(
+    oneflow.Tensor.requires_grad_,
+    r"""oneflow.Tensor.requires_grad_(requires_grad=True) -> Tensor
+    Compatible with PyTorch.
+
+    Args:
+        requires_grad (bool): Change the requires_grad flag for this Tensor. Default is ``True``.
+
+    For example:
+
+    .. code-block:: python
+
+        >>> import oneflow as flow
+        >>> a = flow.rand(10, requires_grad=False)
+        >>> a.requires_grad
+        False
+        >>> a.requires_grad_(requires_grad=True)
+        >>> a.requires_grad
+        True
+    """,
 )
 
 add_docstr(
