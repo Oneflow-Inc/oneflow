@@ -616,6 +616,15 @@ add_docstr(
 )
 
 add_docstr(
+    oneflow.Tensor.requires_grad,
+    r"""
+    Compatible with PyTorch.
+
+    Is ``True`` if gradient need to be computed for this Tensor, ``False`` otherwise.
+    """
+)
+
+add_docstr(
     oneflow.Tensor.bmm,
     """
     See :func:`oneflow.bmm`
