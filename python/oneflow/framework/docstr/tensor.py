@@ -569,6 +569,13 @@ add_docstr(
 )
 
 add_docstr(
+    oneflow.Tensor.grad_fn,
+    r"""
+    Return the function that created this tensor if it's ``requires_grad`` is True.
+    """,
+)
+
+add_docstr(
     oneflow.Tensor.bmm,
     """
     See :func:`oneflow.bmm`
