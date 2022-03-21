@@ -631,27 +631,83 @@ class Module(object):
     def _get_name(self):
         return self.__class__.__name__
 
-    def get_submodule(self, submodule: str):
-        if submodule == "":
+    def get_submodule(self, target: str):
+        r"""Get submodule accroding to the name of submodule.
+
+        Args:
+            target (str): The name of submodule to find.
+
+        Example:
+
+            >>> from oneflow import nn
+            >>> class Net3(nn.Module):
+            >>>     def __init__(self):
+            >>>         super().__init__()
+            >>>         self.linear = nn.Linear(3, 2)
+            >>>
+            >>> class Net2(nn.Module):
+            >>>     def __init__(self):
+            >>>         super().__init__()
+            >>>         self.net3 = Net3()
+            >>>
+            >>> class Net1(nn.Module):
+            >>>     def __init__(self):
+            >>>         super().__init__()
+            >>>         self.net2 = Net2()
+            >>>
+            >>> net = Net1()
+            >>> print(net.get_submodule("net2.net3"))
+            Net3(
+            (linear): Linear(in_features=3, out_features=2, bias=True)
+            )
+            >>> print(net.get_submodule("net2"))
+            Net2(
+            (net3): Net3(
+                (linear): Linear(in_features=3, out_features=2, bias=True)
+                )
+            )
+
+        Returns:
+            oneflow.nn.Module: The submodule referenced by ``target``
+
+        Raises:
+            AttributeError: If the module can't reference the submodule accroding to ``target``
+            TypeError: If the result referenced by ``target`` is not an ``nn.Module``
+
+        """
+        if target == "":
             return self
         curr_module_name = [self._get_name()]
-        sub_module_names = submodule.split(".")
+        submodule_names = target.split(".")
         mod = self
-        for sub_module_name in sub_module_names:
-            if not hasattr(mod, sub_module_name):
+        for submodule_name in submodule_names:
+            if not hasattr(mod, submodule_name):
                 raise AttributeError(
-                    f"`{'.'.join(curr_module_name)}` doesn't have sub-module `{sub_module_name}`"
+                    f"`{'.'.join(curr_module_name)}` doesn't have sub-module `{submodule_name}`"
                 )
-            mod = getattr(mod, sub_module_name)
-            curr_module_name.append(sub_module_name)
+            mod = getattr(mod, submodule_name)
+            curr_module_name.append(submodule_name)
             if not isinstance(mod, flow.nn.Module):
                 raise TypeError(
-                    f"`{sub_module_name}` isn't a oneflow.Module, but {type(mod)}"
+                    f"`{submodule_name}` isn't a oneflow.Module, but {type(mod)}"
                 )
         return mod
 
-    def get_parameter(self, target_name: str):
-        sub_module_name, _, parameter_name = target_name.rpartition(".")
+    def get_parameter(self, target: str):
+        r"""Return the parameter refenreced by ``target``.
+
+        Args:
+            target (str): The name of parameter to find.
+
+        Returns:
+            oneflow.nn.Parameter: The parameter referenced by ``target``
+
+        Raises:
+            AttributeError: If the module can't reference the parameter according to ``target``
+            TypeError: If the result refererenced by ``target`` is not an ``nn.Parameter``
+
+        """
+        sub_module_name, _, parameter_name = target.rpartition(".")
         sub_module = self.get_submodule(sub_module_name)
         if hasattr(sub_module, parameter_name):
             parameter = getattr(sub_module, parameter_name)
@@ -661,7 +717,7 @@ class Module(object):
             )
         if not isinstance(parameter, flow.Tensor):
             raise TypeError(
-                f"`{target_name}` is not a oneflow.Tensor, but {type(parameter)}"
+                f"`{target}` is not a oneflow.Tensor, but {type(parameter)}"
             )
         return parameter
 
