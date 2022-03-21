@@ -33,7 +33,9 @@ from oneflow import oneflow_deprecate
 
 def api_all_device_placement(device_type: str) -> oneflow._oneflow_internal.placement:
     r"""
-    Return a placement containing all devices of all machines under env.
+    oneflow.env.all_device_placement(device_type) -> oneflow.placement
+
+    Returns a placement that contains all available devices.
 
     Args:
         device_type (str): cuda or cpu
@@ -42,11 +44,11 @@ def api_all_device_placement(device_type: str) -> oneflow._oneflow_internal.plac
 
     .. code-block:: python
 
-        # world_size = 4, node_size = 1
+        # Runs on 4 ranks
         import oneflow as flow
         
-        p = flow.env.all_device_placement("cuda") # oneflow.placement(device_type="cuda", ranks=[0, 1, 2, 3])
-        p = flow.env.all_device_placement("cpu") # oneflow.placement(device_type="cpu", ranks=[0, 1, 2, 3])
+        p = flow.env.all_device_placement("cuda") # oneflow.placement(type="cuda", ranks=[0, 1, 2, 3])
+        p = flow.env.all_device_placement("cpu") # oneflow.placement(type="cpu", ranks=[0, 1, 2, 3])
 
     """
     return oneflow._oneflow_internal.AllDevicePlacement(device_type)

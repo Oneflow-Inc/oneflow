@@ -168,7 +168,6 @@ from oneflow._C import hsplit
 from oneflow._C import vsplit
 from oneflow._C import concat
 from oneflow._C import concat as cat
-from oneflow._C import to
 from oneflow._C import dim_gather as gather
 from oneflow._C import gather_nd
 from oneflow._C import roi_align
@@ -404,6 +403,7 @@ import oneflow.comm
 import oneflow.framework.docstr as docstr
 import oneflow.cuda
 import oneflow.multiprocessing
+import oneflow.one_embedding
 
 if oneflow._oneflow_internal.flags.with_mlir():
     oneflow_internal_path = oneflow._oneflow_internal.__file__
