@@ -640,9 +640,40 @@ add_docstr(
         >>> a = flow.rand(10, requires_grad=False)
         >>> a.requires_grad
         False
-        >>> a.requires_grad_(requires_grad=True)
+        >>> a = a.requires_grad_(requires_grad=True)
         >>> a.requires_grad
         True
+    """,
+)
+
+add_docstr(
+    oneflow.Tensor.register_hook,
+    r"""oneflow.Tensor.register_hook(hook)
+
+    Registers a backward hook.
+
+    The hook will be called every time a gradient with respect to the Tensor is computed.
+    The hook should have the following signature:
+    ```
+    hook(grad) -> Tensor or None
+    ```
+
+    The hook should not modify its argument, but it can optionally return a new gradient which
+    will be used in place of ``grad``.
+
+    For example:
+
+    .. code-block:: python
+
+        >>> import oneflow as flow
+        >>> x = flow.ones(5, requires_grad=True)
+        >>> def hook(grad):
+        ...     return grad * 2
+        >>> x.register_hook(hook)
+        >>> y = x * 2
+        >>> y.sum().backward()
+        >>> x.grad
+        tensor([4., 4., 4., 4., 4.], dtype=oneflow.float32)
     """,
 )
 
