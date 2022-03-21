@@ -16,6 +16,9 @@ limitations under the License.
 #include "OneFlow/OneFlowDialect.h"
 #include "OneFlow/OneFlowOps.h"
 #include "OneFlow/OneFlowOpsDialect.cpp.inc"
+#include "mlir/IR/BuiltinAttributes.h"
+#include "mlir/IR/Dialect.h"
+#include "mlir/IR/TypeRange.h"
 
 namespace mlir {
 
@@ -131,6 +134,13 @@ void OneFlowDialect::initialize() {
 #define GET_OP_LIST
 #include "OneFlow/OneFlow.upsample_ops.cpp.inc"
       >();
+}
+
+mlir::Operation* OneFlowDialect::materializeConstant(mlir::OpBuilder& builder,
+                                                     mlir::Attribute value, mlir::Type type,
+                                                     mlir::Location loc) {
+  return builder.create<VariableIrOp>(loc, type, ValueRange(),
+                                      value.cast<mlir::DictionaryAttr>().getValue());
 }
 
 }  // namespace oneflow

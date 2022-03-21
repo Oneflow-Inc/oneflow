@@ -764,6 +764,7 @@ LogicalResult ApplyRoundTripPatterns(RoundTripOneFlowJobWrapperInterface& job_wr
     pm.addPass(oneflow::createOutlineJitFunctionPass());
   }
   pm.addPass(oneflow::createFuseIntoExistingOpPass());
+  pm.addPass(oneflow::createConstantFoldingPass());
   pm.addPass(createCanonicalizerPass());
   llvm::raw_string_ostream os_graphviz(graphviz);
   pm.addPass(createPrintOpGraphPass(os_graphviz));
@@ -771,6 +772,7 @@ LogicalResult ApplyRoundTripPatterns(RoundTripOneFlowJobWrapperInterface& job_wr
     module->emitError("Failed to run round-trip passes");
     return failure();
   }
+  module->dump();
   job_wrapper.DumpLog("RoundTripOneFlowJob.optimized.mlir.dot", graphviz);
   DumpMLIR(job_wrapper, module.get(), "RoundTripOneFlowJob.optimized");
   return success();

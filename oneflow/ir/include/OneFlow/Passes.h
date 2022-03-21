@@ -27,7 +27,9 @@ limitations under the License.
 #include "OneFlow/Conversion/OneFlowToTosa.h"
 #include "OneFlow/Conversion/SCFToGPU.h"
 #include "OneFlow/Transform/BufferHostRegister.h"
+#include "OneFlow/Transform/ConstantFolding.h"
 #include "OneFlow/Transform/OutlineAndFuse.h"
+
 #ifdef WITH_MLIR_CUDA_CODEGEN
 #include "OneFlow/Conversion/PTXToCubin.h"
 #endif  // WITH_MLIR_CUDA_CODEGEN
@@ -47,6 +49,7 @@ LogicalResult LowerModuleToCUDALLVM(mlir::MLIRContext* context, ModuleOp module)
 void populateFuserPasses(::mlir::RewritePatternSet& patterns);
 void populateFuserForExistingOp(::mlir::RewritePatternSet& patterns);
 void populateGpuHelperPatterns(::mlir::RewritePatternSet& patterns);
+void populateConstantFolding(::mlir::RewritePatternSet& patterns);
 
 }  // namespace oneflow
 

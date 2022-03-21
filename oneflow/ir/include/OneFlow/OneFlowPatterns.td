@@ -403,17 +403,18 @@ def ReplaceCopyWithGPUPattern : Pat<
 //   ),
 //   []
 // >;
-def IsTraingFalse: Constraint<CPred<"!($0.getValue())">, "">;
 def FuseConv2DBatchNorm : NativeCodeCall<"mlir::oneflow::FuseConv2DBatchNorm($_builder, $0, $1)">;
-def CreateOneFlowNullOp: NativeCodeCall<"mlir::oneflow::CreateOneFlowNullOp($_builder, $0)">;
-// def FuseConv2DBatchNormPattern : Pat<
 def FuseConv2DBatchNormPattern : Pat<
   (
     OneFlow_NormalizationInferenceOp: $batch_norm_op
       (
         OneFlow_Conv2DOp : $conv_2d_op
           $x,
-          $weight,
+          (
+            OneFlow_VariableIrOp : $variable_conv_2d_weight
+              $shape,
+              $key
+          ),
           $bias,
           $bias_multiplier,
           $conv2d_op_name,
@@ -452,5 +453,72 @@ def FuseConv2DBatchNormPattern : Pat<
   ),
   []
 >;
+// def CreateOneFlowVariableIrOp : NativeCodeCall<"mlir::oneflow::CreateOneFlowVariableIrOp($_builder, $0)">;
+// def ReplaceConv2dVariable: NativeCodeCall<"mlir::oneflow::ReplaceConv2dVariable($_builder, $0)">;
+// def ReplaceConv2dVariablePattern : Pat<
+// (
+//   OneFlow_Conv2DOp : $conv_2d_result
+//           $x,
+//           (
+//             OneFlow_VariableOp : $conv_2d_weight_result
+//               $ctrl_inputs,
+//               $output_lbns,
+//               $w_shape,
+//               $w_data_type,
+//               $w_model_name,
+//               $w_l1_regularization,
+//               $w_l2_regularization,
+//               $w_trainable,
+//               $w_float_initializer,
+//               $w_integer_initializer,
+//               $w_nd_sbp,
+//               $w_op_name,
+//               $w_device_tag,
+//               $w_device_name,
+//               $w_scope_symbol_id,
+//               $w_hierarchy
+//           ),
+//           $bias,
+//           $bias_multiplier,
+//           $conv2d_op_name,
+//           $conv2d_device_tag,
+//           $conv2d_device_name,
+//           $conv2d_scope_symbol_id,
+//           $conv2d_hierarchy,
+//           $conv2d_operand_segment_sizes,
+//           $filters,
+//           $padding_before,
+//           $data_format,
+//           $kernel_size,
+//           $strides,
+//           $dilation_rate,
+//           $groups
+// ),
+// (ReplaceConv2dVariable $conv_2d_result),
+// // (
+// //   OneFlow_Conv2DOp
+// //           $x,
+// //           (
+// //             CreateOneFlowVariableIrOp
+// //               $conv_2d_weight_result__0
+// //           ),
+// //           (GetFirstValue $bias),
+// //           (GetFirstValue $bias_multiplier),
+// //           $conv2d_op_name,
+// //           $conv2d_device_tag,
+// //           $conv2d_device_name,
+// //           $conv2d_scope_symbol_id,
+// //           $conv2d_hierarchy,
+// //           $conv2d_operand_segment_sizes,
+// //           $filters,
+// //           $padding_before,
+// //           $data_format,
+// //           $kernel_size,
+// //           $strides,
+// //           $dilation_rate,
+// //           $groups
+// // ),
+// []
+// >;
 
 #endif // ONEFLOW_PATTERNS

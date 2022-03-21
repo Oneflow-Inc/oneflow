@@ -18,6 +18,7 @@ limitations under the License.
 #include "OneFlow/Passes.h"
 
 #include "llvm/ADT/None.h"
+#include "llvm/Support/Casting.h"
 #include "mlir/Conversion/LinalgToLLVM/LinalgToLLVM.h"
 #include "mlir/Conversion/MemRefToLLVM/MemRefToLLVM.h"
 #include "mlir/Conversion/ReconcileUnrealizedCasts/ReconcileUnrealizedCasts.h"
@@ -351,6 +352,55 @@ ArrayAttr getSI32ArrayAttr(::mlir::PatternRewriter& rewriter, ArrayRef<int32_t> 
   return {};
 }
 
+// ::mlir::Value CreateOneFlowVariableIrOp(::mlir::PatternRewriter& rewriter,
+//                                         OpResult variable_result) {
+//   if (auto variable_op = llvm::dyn_cast<oneflow::VariableOp>(variable_result.getDefiningOp())) {
+//     auto new_variable_op = rewriter.create<::mlir::oneflow::VariableIrOp>(
+//         variable_op->getLoc(), variable_op.output().getType(),
+//         variable_op.output_lbns().begin()->dyn_cast<mlir::StringAttr>());
+//     variable_op.output().replaceAllUsesWith(new_variable_op.output());
+//     return new_variable_op.output();
+//   }
+//   return {};
+// }
+// ::llvm::SmallVector<::mlir::Value, 4> ReplaceConv2dVariable(::mlir::PatternRewriter& rewriter,
+//                                                             OpResult conv_result) {
+//   if (auto conv_op = llvm::dyn_cast<oneflow::Conv2DOp>(conv_result.getDefiningOp())) {
+//     if (auto op0 = llvm::dyn_cast<oneflow::VariableOp>(conv_op.weight().getDefiningOp())) {
+//       rewriter.replaceOp(op0, rewriter
+//                                   .create<oneflow::VariableIrOp>(
+//                                       op0->getLoc(), op0.output().getType(),
+//                                       op0.output_lbns().begin()->dyn_cast<mlir::StringAttr>())
+//                                   ->getResults());
+//       if (conv_op.bias()) {
+//         if (auto op1 = llvm::dyn_cast<oneflow::VariableOp>(conv_op.bias().getDefiningOp())) {
+//           rewriter.replaceOp(op1, rewriter
+//                                       .create<oneflow::VariableIrOp>(
+//                                           op1->getLoc(), op1.output().getType(),
+//                                           op1.output_lbns().begin()->dyn_cast<mlir::StringAttr>())
+//                                       ->getResults());
+//         }
+//       }
+
+//       SmallVector<Value, 4> final_results;
+//       NamedAttrList attributes = conv_op->getAttrs();
+//       SmallVector<Value, 4> operands;
+//       operands.push_back(conv_op.in());
+//       operands.push_back(conv_op.weight());
+//       if (conv_op.bias()) operands.push_back(conv_op.bias());
+//       if (conv_op.bias_multiplier()) operands.push_back(conv_op.bias_multiplier());
+//       auto new_conv_op = rewriter.create<oneflow::Conv2DOp>(
+//           conv_op->getLoc(), conv_op->getResultTypes(), operands, attributes);
+
+//       final_results.push_back(new_conv_op.out());
+
+//       return final_results;
+//       // return conv_op->getResults();
+//     }
+//   }
+//   return {};
+// }
+
 ::llvm::SmallVector<::mlir::Value, 4> FuseConv2DBatchNorm(::mlir::PatternRewriter& rewriter,
                                                           OpResult conv_result,
                                                           OpResult bn_result) {
@@ -358,15 +408,16 @@ ArrayAttr getSI32ArrayAttr(::mlir::PatternRewriter& rewriter, ArrayRef<int32_t> 
     if (auto bn_op = llvm::dyn_cast<oneflow::NormalizationInferenceOp>(bn_result.getDefiningOp())) {
       SmallVector<Value, 4> final_results;
       NamedAttrList attributes = conv_op->getAttrs();
+
       SmallVector<Value, 4> operands;
       operands.push_back(conv_op.in());
-      operands.push_back(conv_op.weight());
+      auto mul_op = rewriter.create<oneflow::BroadcastMulIrOp>(
+          conv_op->getLoc(), conv_op->getResultTypes(), conv_op.weight(), bn_op.gamma());
+      operands.push_back(mul_op.output());  // new weight
+      // operands.push_back(conv_op.weight());
       if (conv_op.bias()) operands.push_back(conv_op.bias());
       if (conv_op.bias_multiplier()) operands.push_back(conv_op.bias_multiplier());
-      // auto res = rewriter
-      //                .create<oneflow::Conv2DOp>(conv_op->getLoc(), conv_op->getResultTypes(),
-      //                                           operands, attributes)
-      //                ->getResults();
+
       auto new_conv_op = rewriter.create<oneflow::Conv2DOp>(
           conv_op->getLoc(), conv_op->getResultTypes(), operands, attributes);
 
@@ -376,15 +427,22 @@ ArrayAttr getSI32ArrayAttr(::mlir::PatternRewriter& rewriter, ArrayRef<int32_t> 
   }
   return {};
 }
-::llvm::SmallVector<::mlir::Value, 4> CreateOneFlowNullOp(::mlir::PatternRewriter& rewriter,
-                                                          OpResult bn_result) {
-  if (auto bn_op = llvm::dyn_cast<oneflow::NormalizationOp>(bn_result.getDefiningOp())) {
-    return rewriter
-        .create<::mlir::oneflow::NullOp>(rewriter.getUnknownLoc(), bn_op->getOperand(0).getType())
-        .getODSResults(0);
+
+struct ReplaceVariablePattern : public ::mlir::RewritePattern {
+  explicit ReplaceVariablePattern(::mlir::MLIRContext* context)
+      : ::mlir::RewritePattern("oneflow.variable", 1, context, {"oneflow.variable_ir"}) {}
+  ::mlir::LogicalResult matchAndRewrite(::mlir::Operation* op0,
+                                        ::mlir::PatternRewriter& rewriter) const override {
+    auto op = ::llvm::dyn_cast<oneflow::VariableOp>(op0);
+
+    auto op_new = rewriter.create<oneflow::VariableIrOp>(op->getLoc(), op.output().getType(),
+                                                         op.shape(), op.op_name());
+    // op.output_lbns().begin()->dyn_cast<mlir::StringAttr>());
+
+    rewriter.replaceOp(op0, op_new->getResults());
+    return ::mlir::success();
   }
-  return {};
-}
+};
 
 // struct FuseConv2DBatchNormPattern : public ::mlir::RewritePattern {
 //   FuseConv2DBatchNormPattern(::mlir::MLIRContext* context)
@@ -527,11 +585,19 @@ void populateFuserForExistingOp(::mlir::RewritePatternSet& patterns) {
   patterns.add<FusedPadConv2DPattern>(patterns.getContext());
   patterns.add<NormalizationAddReluPattern>(patterns.getContext());
   // patterns.add<ReplaceVariableInBatchNormOperandsPattern>(patterns.getContext());
-  patterns.add<FuseConv2DBatchNormPattern>(patterns.getContext());
+  // patterns.add<ReplaceConv2dVariablePattern>(patterns.getContext());
+
+  // patterns.add<ReplaceVariablePattern>(patterns.getContext());
+  // patterns.add<FuseConv2DBatchNormPattern>(patterns.getContext());
 }
 
 void populateGpuHelperPatterns(::mlir::RewritePatternSet& patterns) {
   patterns.add<ReplaceCopyWithGPUPattern>(patterns.getContext());
+}
+
+void populateConstantFolding(::mlir::RewritePatternSet& patterns) {
+  patterns.add<ReplaceVariablePattern>(patterns.getContext());
+  patterns.add<FuseConv2DBatchNormPattern>(patterns.getContext());
 }
 
 }  // namespace oneflow

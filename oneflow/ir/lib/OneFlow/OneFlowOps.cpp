@@ -17,6 +17,21 @@ limitations under the License.
 #include "OneFlow/OneFlowDialect.h"
 #include "OneFlow/OneFlowSupport.h"
 #include "OneFlow/Passes.h"
+#include "llvm/ADT/StringRef.h"
+#include "mlir/IR/Attributes.h"
+#include "oneflow/core/common/data_type.pb.h"
+#include "oneflow/core/common/just.h"
+#include "oneflow/core/common/shape.h"
+#include "oneflow/core/common/shape_vec.h"
+#include "oneflow/core/common/util.h"
+#include "oneflow/core/framework/device.h"
+#include "oneflow/core/framework/tensor.h"
+#include "oneflow/core/functional/functional_api.yaml.h"
+#include "oneflow/api/common/ofblob.h"
+#include "oneflow/core/common/data_type.h"
+#include "oneflow/core/framework/tensor_util.h"
+#include "oneflow/core/job/lazy_mode.h"
+#include "oneflow/core/vm/vm_util.h"
 
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/StringSet.h"
@@ -30,7 +45,9 @@ limitations under the License.
 #include "mlir/Support/LogicalResult.h"
 
 #include <iostream>
+#include <memory>
 #include <string>
+#include <vector>
 
 namespace mlir {
 
@@ -340,7 +357,88 @@ static LogicalResult verify(mlir::oneflow::ReturnOp op) {
   return success();
 }
 
-OpFoldResult VariableIrOp::fold(ArrayRef<Attribute> operands) { return pointerAttr(); }
+struct VariableIrHandler final {
+  std::string model_path = "";
+  std::string key = "";
+  std::vector<int64_t> shape = {};
+  std::shared_ptr<::oneflow::one::Tensor> tensor = nullptr;
+
+  StringAttr keyAttr() { return attr_dict_.get("key").cast<StringAttr>(); }
+
+  ArrayAttr shapeAttr() { return attr_dict_.get("shape").cast<mlir::ArrayAttr>(); }
+
+  explicit VariableIrHandler(const Attribute& attr_dict)
+      : attr_dict_(attr_dict.dyn_cast_or_null<mlir::DictionaryAttr>()) {
+    model_path = ::oneflow::GetStringFromEnv("ONEFLOW_MODEL_LOAD_PATH", "");
+    key = keyAttr().str();
+    const auto shape_array_attr = shapeAttr();
+    for (const auto& item : shape_array_attr.getValue()) {
+      shape.emplace_back(item.cast<IntegerAttr>().getValue().getSExtValue());
+    }
+    __load_tensor_from_file(__format_tensor_path());
+  }
+
+ private:
+  DictionaryAttr attr_dict_;
+  std::string __format_tensor_path() { return model_path + "/" + key.substr(6) + "/" + "out"; }
+  void __load_tensor_from_file(const std::string& file_path) {
+    const auto device = ::oneflow::Device::ParseAndNew("cpu").GetOrThrow();
+    tensor = ::oneflow::one::functional::Empty(
+                 ::oneflow::Shape(::oneflow::DimVector(shape.begin(), shape.end())),
+                 ::oneflow::DType::Get(::oneflow::DataType::kFloat).GetOrThrow(), device)
+                 .GetPtrOrThrow();
+    const std::string buffer = [&]() {
+      std::ifstream variable_file(file_path, std::ios::binary);
+      CHECK(variable_file.is_open());
+      std::stringstream ss;
+      ss << variable_file.rdbuf();
+      return ss.str();
+    }();
+    const auto& callback = [&](uint64_t of_blob_ptr) {
+      ::oneflow::BlobBufferCopyUtil<void>::From(
+          of_blob_ptr, buffer.data(),
+          tensor->shape()->elem_cnt() * ::oneflow::GetSizeOfDataType(tensor->dtype()->data_type()))
+          .GetOrThrow();
+    };
+    ::oneflow::one::SyncAccessTensorWithTimeOut(tensor, callback, "mut").GetOrThrow();
+  }
+};
+
+class FolderGuard final {
+ public:
+  explicit FolderGuard(MLIRContext* context) : context_(context) {}
+  StringAttr operator()(const std::string& key) { return StringAttr::get(context_, key); }
+
+ private:
+  MLIRContext* context_ = nullptr;
+  ::oneflow::LazyMode::Guard guard{false};
+};
+
+OpFoldResult VariableIrOp::fold(ArrayRef<Attribute> operands) {
+  NamedAttrList attrs;
+  attrs.set(shapeAttrName(), shapeAttr());
+  attrs.set(keyAttrName(), keyAttr());
+  return DictionaryAttr::get(getContext(), attrs);
+}
+
+OpFoldResult BroadcastMulIrOp::fold(ArrayRef<Attribute> operands) {
+  FolderGuard g(getContext());
+
+  auto lhs_handler = VariableIrHandler(operands.front());
+  auto rhs_handler = VariableIrHandler(operands.back());
+
+  auto new_shape = ::oneflow::Shape::Ones(4);
+  new_shape.Set(0, rhs_handler.tensor->dim(0));
+  const auto reshaped_rhs_tensor =
+      ::oneflow::one::functional::Reshape(rhs_handler.tensor, new_shape).GetPtrOrThrow();
+  const auto result = ::oneflow::one::functional::Mul(lhs_handler.tensor, reshaped_rhs_tensor);
+
+  ::oneflow::vm::ClusterSync().GetOrThrow();
+  NamedAttrList attrs;
+  attrs.set(g("key"), g(lhs_handler.key + rhs_handler.key));
+  attrs.set(g("shape"), lhs_handler.shapeAttr());
+  return mlir::DictionaryAttr::get(getContext(), attrs);
+}
 
 struct NormalizationInferencePattern : public OpRewritePattern<NormalizationOp> {
   explicit NormalizationInferencePattern(MLIRContext* context)
