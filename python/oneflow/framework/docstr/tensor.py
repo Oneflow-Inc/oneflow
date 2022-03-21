@@ -654,9 +654,11 @@ add_docstr(
 
     The hook will be called every time a gradient with respect to the Tensor is computed.
     The hook should have the following signature:
-    ```
-    hook(grad) -> Tensor or None
-    ```
+
+    .. code-block:: 
+
+        hook(grad) -> Tensor or None
+
 
     The hook should not modify its argument, but it can optionally return a new gradient which
     will be used in place of ``grad``.
