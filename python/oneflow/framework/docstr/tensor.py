@@ -562,6 +562,13 @@ add_docstr(
 )
 
 add_docstr(
+    oneflow.Tensor.grad,
+    r"""
+    Return the gradient calculated by autograd functions. This property is None by default.
+    """,
+)
+
+add_docstr(
     oneflow.Tensor.bmm,
     """
     See :func:`oneflow.bmm`
