@@ -112,6 +112,13 @@ add_docstr(
 )
 
 add_docstr(
+    oneflow.Tensor.is_lazy,
+    r"""
+    Return whether this Tensor is a lazy tensor.
+    """,
+)
+
+add_docstr(
     oneflow.Tensor.atan2,
     r"""
     See :func:`oneflow.atan2`
