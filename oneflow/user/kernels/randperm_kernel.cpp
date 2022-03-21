@@ -79,8 +79,8 @@ class CpuRandPermKernel final : public user_op::OpKernel {
 REGISTER_USER_KERNEL("randperm")
     .SetCreateFn<CpuRandPermKernel>()
     .SetIsMatchedHob((user_op::HobDeviceType() == DeviceType::kCPU))
-    .SetInferTmpSizeFn([](user_op::InferContext* ctx) {                              \
-        const int32_t n = ctx->Attr<int32_t>("n");                               \
-        return n * sizeof(int32_t);            
-      }); 
+    .SetInferTmpSizeFn([](user_op::InferContext* ctx) {
+      const int32_t n = ctx->Attr<int32_t>("n");
+      return n * sizeof(int32_t);
+    });
 }  // namespace oneflow
