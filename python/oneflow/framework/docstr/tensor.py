@@ -583,6 +583,39 @@ add_docstr(
 )
 
 add_docstr(
+    oneflow.Tensor.is_leaf,
+    r"""
+    Compatible with PyTorch.
+
+    All Tensors that have ``requires_grad`` which is ``False`` will be leaf Tensors by convention.
+
+    For Tensor that have ``requires_grad`` which is ``True``, they will be leaf Tensors if they
+    were created by source operations.
+
+    Only leaf Tensors will have their ``grad`` populated during a call to ``backward()``. To get
+    ``grad`` populated for non-leaf Tensors, you can use ``retain_grad()``.
+
+    For example:
+
+    .. code-block:: python
+
+        >>> import oneflow as flow
+        >>> a = flow.rand(10, requires_grad=False)
+        >>> a.is_leaf
+        True
+        >>> a = flow.rand(10, requires_grad=True)
+        >>> a.is_leaf
+        True
+        >>> b = a.cuda()
+        >>> b.is_leaf
+        False
+        >>> c = a + 2
+        >>> c.is_leaf
+        False
+    """
+)
+
+add_docstr(
     oneflow.Tensor.bmm,
     """
     See :func:`oneflow.bmm`
