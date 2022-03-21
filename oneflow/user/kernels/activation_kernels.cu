@@ -198,8 +198,8 @@ template<>
 struct SoftShrinkGradFunctor<half> {
   OF_DEVICE_FUNC explicit SoftShrinkGradFunctor(float alpha)
       : alpha(alpha), float_functor(SoftShrinkGradFunctor<float>(alpha)) {}
-  OF_DEVICE_FUNC half operator()(half x, half dy) const {
-    return __float2half(float_functor(__half2float(x), __half2float(dy)));
+  OF_DEVICE_FUNC half operator()(half y, half dy) const {
+    return __float2half(float_functor(__half2float(y), __half2float(dy)));
   }
 
   const float alpha;

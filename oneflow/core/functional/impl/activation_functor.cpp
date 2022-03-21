@@ -460,13 +460,13 @@ class SoftShrinkFunctor {
 class SoftShrinkGradFunctor {
  public:
   SoftShrinkGradFunctor() {
-    op_ = CHECK_JUST(one::OpBuilder("softshrink_grad").Input("dy").Input("x").Output("dx").Build());
+    op_ = CHECK_JUST(one::OpBuilder("softshrink_grad").Input("dy").Input("y").Output("dx").Build());
   }
-  Maybe<Tensor> operator()(const std::shared_ptr<Tensor>& x, const std::shared_ptr<Tensor>& dy,
+  Maybe<Tensor> operator()(const std::shared_ptr<Tensor>& y, const std::shared_ptr<Tensor>& dy,
                            const double& alpha) const {
     MutableAttrMap attrs;
     JUST(attrs.SetAttr<double>("alpha", alpha));
-    return OpInterpUtil::Dispatch<one::Tensor>(*op_, {dy, x}, attrs);
+    return OpInterpUtil::Dispatch<one::Tensor>(*op_, {dy, y}, attrs);
   }
 
  private:
