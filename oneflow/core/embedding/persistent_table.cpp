@@ -42,7 +42,7 @@ namespace embedding {
 
 namespace {
 
-constexpr uint32_t kNumWorkerThreads = 4;
+constexpr uint32_t kDefaultNumWorkerThreads = 4;
 constexpr uint32_t kRingQueueDepth = 128;
 constexpr uint32_t kRingSubmitBatch = 32;
 constexpr uint32_t kAioQueueDepth = 128;
@@ -437,8 +437,10 @@ PersistentTableImpl<Key, Engine>::PersistentTableImpl(const PersistentTableOptio
     PosixFile::RecursiveCreateDirectory(keys_dir_, 0755);
     PosixFile::RecursiveCreateDirectory(values_dir_, 0755);
   }
-  workers_.resize(kNumWorkerThreads);
-  for (uint32_t tid = 0; tid < kNumWorkerThreads; ++tid) {
+  const uint32_t num_workers = ParseIntegerFromEnv(
+      "ONEFLOW_ONE_EMBEDDING_PERSISTENT_TABLE_NUM_WORKERS", kDefaultNumWorkerThreads);
+  workers_.resize(kDefaultNumWorkerThreads);
+  for (uint32_t tid = 0; tid < workers_.size(); ++tid) {
     workers_.at(tid).reset(new Worker<Engine>);
   }
   std::unordered_map<uint64_t, std::string> chunks;
@@ -460,7 +462,7 @@ PersistentTableImpl<Key, Engine>::PersistentTableImpl(const PersistentTableOptio
 
 template<typename Key, typename Engine>
 PersistentTableImpl<Key, Engine>::~PersistentTableImpl() {
-  for (uint32_t tid = 0; tid < kNumWorkerThreads; ++tid) { workers_.at(tid)->Shutdown(); }
+  for (uint32_t tid = 0; tid < workers_.size(); ++tid) { workers_.at(tid)->Shutdown(); }
 }
 
 template<typename Key, typename Engine>
@@ -742,8 +744,8 @@ void PersistentTableImpl<Key, Engine>::SaveSnapshot(const std::string& name) {
 template<typename Key, typename Engine>
 void PersistentTableImpl<Key, Engine>::ParallelFor(size_t total,
                                                    const ForRange<Engine>& for_range) {
-  ParallelForTask<Engine> task(kNumWorkerThreads, total, &for_range);
-  for (size_t i = 0; i < kNumWorkerThreads; ++i) { workers_.at(i)->Schedule(&task); }
+  ParallelForTask<Engine> task(workers_.size(), total, &for_range);
+  for (size_t i = 0; i < workers_.size(); ++i) { workers_.at(i)->Schedule(&task); }
   task.bc.WaitForeverUntilCntEqualZero();
 }
 
