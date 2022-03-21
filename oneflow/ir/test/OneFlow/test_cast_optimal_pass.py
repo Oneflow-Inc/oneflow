@@ -19,13 +19,16 @@ limitations under the License.
 import os
 import unittest
 import numpy as np
+
 os.environ["ONEFLOW_MLIR_ENABLE_ROUND_TRIP"] = "1"
 import oneflow as flow
 import oneflow.unittest
 
+
 def _cast_optimal_pass(test_case, dtype):
     a = flow.tensor([2, 3], dtype=dtype)
     eager_b = flow.cast(a, dtype=dtype)
+
     class CastOpOptimalPass(flow.nn.Graph):
         def __init__(self):
             super().__init__()
@@ -33,7 +36,7 @@ def _cast_optimal_pass(test_case, dtype):
 
         def build(self, x):
             return self.cast(x, dtype=dtype)
-            
+
     lazy_b = CastOpOptimalPass()(a)
     test_case.assertEqual(eager_b.dtype, lazy_b.dtype)
 
