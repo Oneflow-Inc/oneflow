@@ -66,9 +66,9 @@ class CpuRandPermKernel final : public user_op::OpKernel {
     std::shuffle(temp, temp + n, cpu_generator->engine());
     int j = 0;
     for (int i = view.At(0).begin(); i < view.At(0).end(); i++) {
-         *(output + j) = *(temp + i); 
-         j++;
-       }
+      *(output + j) = *(temp + i);
+      j++;
+    }
   }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 
