@@ -824,8 +824,8 @@ def _to(self, *args, **kwargs):
             new_args.append(args[0])
     for i in range(1, len(args)):
         new_args.append(args[i])
-    if ('device' in kwargs) and isinstance(kwargs['device'], int):
-        kwargs['device'] = flow.device(f"cuda:{kwargs['device']}")
+    if ("device" in kwargs) and isinstance(kwargs["device"], int):
+        kwargs["device"] = flow.device(f"cuda:{kwargs['device']}")
     return flow._C.to(self, *new_args, **kwargs)
 
 

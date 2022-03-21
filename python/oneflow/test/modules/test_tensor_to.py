@@ -173,12 +173,13 @@ class TestTo(flow.unittest.TestCase):
         device_num = random(0, 2).to(int).value()
         x = random_tensor(ndim=4).to(device_num)
         return x
-    
+
     @autotest(check_graph=True)
     def test_int_to_kwargs(test_case):
         device_num = random(0, 2).to(int).value()
         x = random_tensor(ndim=4).to(device=device_num)
         return x
+
 
 if __name__ == "__main__":
     unittest.main()
