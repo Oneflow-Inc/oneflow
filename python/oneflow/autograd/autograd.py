@@ -40,14 +40,49 @@ def grad(
 
 
 def backward(
-    outputs: Union[Tensor, Sequence[Tensor]],
-    out_grads: Union[Tensor, Sequence[Tensor], None],
+    tensors: Union[Tensor, Sequence[Tensor]],
+    grad_tensors: Union[Tensor, Sequence[Tensor], None],
     retain_graph: bool = False,
     create_graph: bool = False,
 ) -> None:
+    r"""
+    The documentation is referenced from:
+    https://pytorch.org/docs/stable/generated/torch.autograd.backward.html#torch.autograd.backward
+
+    Computes the sum of gradients of given tensors with respect to graph leaves.
+
+    The graph is differentiated using the chain rule. If any of ``tensors`` are non-scalar (i.e.
+    their data has more than one element) and require gradient, then the Jacobian-vector product
+    would be computed, in this case the function additionally requires specifying ``grad_tensors``.
+    It should be a sequence of matching length, that contains the "vector" in the Jacobian-vector
+    product, usually the gradient of the differentiated function w.r.t. corresponding tensors.
+    (``None`` is an acceptable value for all tensors that don't need gradient.)
+
+    This function accumulates gradients in the leaves - you might need to zero ``.grad`` attributes
+    or set them to ``None`` before calling it.
+
+    Note:
+        Using this method with ``create_graph=True`` will create a reference cycle between the
+        parameter and its gradient which can cause a memory leak. We recommend using
+        ``autograd.grad`` when creating the graph to avoid this. If you have to use this function,
+        make sure to reset the ``.grad`` fields of your parameters to ``None`` after use to break
+        the cycle and avoid the leak.
+
+    Args:
+        tensors (Tensor or Sequence[Tensor]): Tensors of which the derivative will be computed.
+        grad_tensors (Tensor or Sequence[Tensor], optional): The "vector" in the Jacobian-vector
+            product, usually gradients each element of corresponding tensors. (None values can be
+            specified for scalar Tensors or ones that don't require grad.)
+        retain_graph (bool, optional): If ``False``, the graph used to compute the grads will be
+            reset after backward is complete. Defaults to ``False``. Note that in nearly all cases
+            setting this option to ``True`` is not needed and often can be worked around in a much
+            more efficient way. Defaults to the value of ``create_graph``.
+        create_graph (bool, optional): If ``True``, graph of the derivative will be constructed,
+            allowing to compute higher order derivative products. Defaults to ``False``.
+    """
     backward_api(
-        convert_to_tensor_tuple(outputs),
-        convert_to_tensor_tuple(out_grads),
+        convert_to_tensor_tuple(tensors),
+        convert_to_tensor_tuple(grad_tensors),
         retain_graph,
         create_graph,
     )
