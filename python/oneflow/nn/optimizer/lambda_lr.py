@@ -94,6 +94,9 @@ class LambdaLR(LRScheduler):
                 self.lr_lambdas[idx].__dict__.update(fn)
 
     def step(self):
+        """Performs a single learning rate schedule step.
+
+        """
         self.last_step += 1
         lrs = []
         for (lmbda, base_lr) in zip(self.lr_lambdas, self.base_lrs):

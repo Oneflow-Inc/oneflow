@@ -227,6 +227,14 @@ class Optimizer(object):
         }
 
     def step(self, closure: Union[Callable, None] = None) -> Union[Tensor, None]:
+        """Performs a single optimization step (parameter update).
+
+        Args:
+            closure (Union[Callable, None], optional): A closure that reevaluates the model and returns the loss. Optional for most optimizers.
+
+        Returns:
+            Union[Tensor, None]: The loss. 
+        """
         raise NotImplementedError()
 
     def clip_grad(self):
@@ -324,6 +332,9 @@ class Optimizer(object):
 
     @property
     def support_sparse(self):
+        """Whether the Optimizer support sparse update. 
+
+        """
         return False
 
     def _check_variables_in_graph(self, vars_conf):
