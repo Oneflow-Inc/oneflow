@@ -168,7 +168,6 @@ from oneflow._C import hsplit
 from oneflow._C import vsplit
 from oneflow._C import concat
 from oneflow._C import concat as cat
-from oneflow._C import to
 from oneflow._C import dim_gather as gather
 from oneflow._C import gather_nd
 from oneflow._C import roi_align
@@ -210,14 +209,12 @@ from oneflow.framework.tensor_str import set_printoptions
 
 if not env_util.HasAllMultiClientEnvVars():
     env_util.SetDefaultMultiClientEnvVars()
-oneflow._oneflow_internal.SetIsMultiClient(True)
 env_util.api_env_init()
 oneflow._oneflow_internal.RegisterGILForeignLockHelper()
 oneflow._oneflow_internal.InitDefaultConsistentTransportTokenScope()
 session_ctx.OpenDefaultSession(
     MultiClientSession(oneflow._oneflow_internal.NewSessionId())
 )
-scope_util.InitScopeStack()
 oneflow._oneflow_internal.EnableEagerEnvironment(True)
 del env_util
 from oneflow.framework import python_callback, register_python_callback
@@ -261,10 +258,7 @@ hook = ExitHook()
 def atexit_hook(hook):
     if hook.is_normal_exit():
         if oneflow._oneflow_internal.IsEnvInited():
-            if oneflow.env.is_multi_client():
-                oneflow._oneflow_internal.eager.multi_client.Sync()
-            elif oneflow.env.get_rank() == 0:
-                oneflow._oneflow_internal.eager.single_client.Sync()
+            oneflow._oneflow_internal.eager.Sync()
     oneflow.framework.session_context.TryCloseDefaultSession()
     if hook.is_normal_exit():
         oneflow._oneflow_internal.DestroyEnv()
@@ -407,6 +401,7 @@ import oneflow.comm
 import oneflow.framework.docstr as docstr
 import oneflow.cuda
 import oneflow.multiprocessing
+import oneflow.one_embedding
 
 if oneflow._oneflow_internal.flags.with_mlir():
     oneflow_internal_path = oneflow._oneflow_internal.__file__

@@ -565,6 +565,8 @@ class _BaseDataLoaderIter(object):
             warnings.warn(warn_msg)
         return data
 
+    next = __next__
+
     def __len__(self) -> int:
         return len(self._index_sampler)
 
