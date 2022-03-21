@@ -42,10 +42,10 @@ Maybe<void> DeprecatedPhysicalRun(const std::function<void(InstructionsBuilder*)
 
 ONEFLOW_API_PYBIND11_MODULE("deprecated", m) {
   py::class_<InstructionsBuilder, std::shared_ptr<InstructionsBuilder>>(m, "InstructionsBuilder")
-      .def("BuildInitialScope", &InstructionsBuilder::BuildInitialScope, py::arg("session_id").none(false),
-           py::arg("job_conf").none(false), py::arg("device_tag").none(false),
-           py::arg("machine_device_ids").none(false), py::arg("hierarchy").none(true),
-           py::arg("is_mirrored").none(false))
+      .def("BuildInitialScope", &InstructionsBuilder::BuildInitialScope,
+           py::arg("session_id").none(false), py::arg("job_conf").none(false),
+           py::arg("device_tag").none(false), py::arg("machine_device_ids").none(false),
+           py::arg("hierarchy").none(true), py::arg("is_mirrored").none(false))
       .def("BuildScopeWithNewParallelDesc", &InstructionsBuilder::BuildScopeWithNewParallelDesc,
            py::arg("scope").none(false), py::arg("device_tag").none(false),
            py::arg("machine_device_ids").none(false), py::arg("hierarchy").none(true))
@@ -54,9 +54,7 @@ ONEFLOW_API_PYBIND11_MODULE("deprecated", m) {
       .def("BuildScopeWithNewScopeName", &InstructionsBuilder::BuildScopeWithNewScopeName)
       .def("BuildScopeByProtoSetter", &InstructionsBuilder::BuildScopeByProtoSetter);
 
-  m.def(
-      "PhysicalRun", &DeprecatedPhysicalRun,
-      py::call_guard<py::gil_scoped_release>());
+  m.def("PhysicalRun", &DeprecatedPhysicalRun, py::call_guard<py::gil_scoped_release>());
 }
 
 }  // namespace oneflow

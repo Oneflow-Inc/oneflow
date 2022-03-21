@@ -46,11 +46,9 @@ Maybe<cfg::OpAttribute> MakeOpAttribute(const std::string& op_attribute_str) {
 }  // namespace
 
 ONEFLOW_API_PYBIND11_MODULE("deprecated", m) {
-  m.def("MakeOpConfByString",
-        [](const std::string& str) { return MakeOpConf(str); });
+  m.def("MakeOpConfByString", [](const std::string& str) { return MakeOpConf(str); });
 
-  m.def("MakeOpAttributeByString",
-        [](const std::string& str) { return MakeOpAttribute(str); });
+  m.def("MakeOpAttributeByString", [](const std::string& str) { return MakeOpAttribute(str); });
 
   m.def("GetProtoDtype4OfDtype",
         [](const Symbol<DType>& x) { return static_cast<int>(x->data_type()); });

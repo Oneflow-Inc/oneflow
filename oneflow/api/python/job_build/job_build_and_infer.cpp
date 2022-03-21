@@ -68,5 +68,4 @@ ONEFLOW_API_PYBIND11_MODULE("", m) {
   m.def("JobBuildAndInferCtx_GetOpBlobLbn", &JobBuildAndInferCtx_GetOpBlobLbn);
 }
 
-}
-
+}  // namespace oneflow

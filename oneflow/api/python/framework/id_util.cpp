@@ -21,8 +21,6 @@ namespace py = pybind11;
 
 namespace oneflow {
 
-ONEFLOW_API_PYBIND11_MODULE("", m) {
-  m.def("UniqueStr", &UniqueStr);
-}
+ONEFLOW_API_PYBIND11_MODULE("", m) { m.def("UniqueStr", &UniqueStr); }
 
 }  // namespace oneflow

@@ -37,6 +37,6 @@ ONEFLOW_API_PYBIND11_MODULE("one", m) {
       .def("build", &OpBuilder::Build);
 }
 
-}
+}  // namespace one
 
 }  // namespace oneflow

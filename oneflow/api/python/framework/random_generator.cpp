@@ -31,8 +31,9 @@ Maybe<one::Generator> CreateGenerator(const std::string& device_tag) {
 
 ONEFLOW_API_PYBIND11_MODULE("", m) {
   py::class_<one::Generator, std::shared_ptr<one::Generator>>(m, "Generator")
-      .def(py::init(
-          [](const std::string& device_tag) { return CreateGenerator(device_tag).GetPtrOrThrow(); }))
+      .def(py::init([](const std::string& device_tag) {
+        return CreateGenerator(device_tag).GetPtrOrThrow();
+      }))
       .def("manual_seed", &one::Generator::set_current_seed)
       .def("initial_seed", &one::Generator::current_seed)
       .def("seed", &one::Generator::seed)

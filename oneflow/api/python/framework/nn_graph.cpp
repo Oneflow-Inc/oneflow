@@ -47,11 +47,11 @@ ONEFLOW_API_PYBIND11_MODULE("nn.graph.", m) {
   py::class_<NNGraph, std::shared_ptr<NNGraph>>(m, "CNNGraph")
       .def(py::init<const std::string&>())
       .def_property_readonly("name", &NNGraph::job_name)
-      .def(
-          "register_input_op_names_and_tensors", &NNGraph::RegisterInputOpNamesAndTensors)
+      .def("register_input_op_names_and_tensors", &NNGraph::RegisterInputOpNamesAndTensors)
       .def("register_output_op_names_and_tensors", &NNGraph::RegisterOutputOpNamesAndTensors)
       .def("register_variable_op_names_and_tensors", &NNGraph::RegisterVariableOpNamesAndTensors)
-      .def("register_additional_variable_names_and_tensors", &NNGraph::RegisterAdditionalVarOpNamesAndTensorsToBeLoaded)
+      .def("register_additional_variable_names_and_tensors",
+           &NNGraph::RegisterAdditionalVarOpNamesAndTensorsToBeLoaded)
       .def_property_readonly("additional_var_names", &APINNGraphAdditionalVarNames)
       .def_property_readonly("additional_var_tensors", &APINNGraphAdditionalVarTensors)
       .def("complie_and_init_runtime", &NNGraph::CompileAndInitRuntime);
@@ -59,12 +59,13 @@ ONEFLOW_API_PYBIND11_MODULE("nn.graph.", m) {
   m.def("RunLazyNNGraph", &RunLazyNNGraph);
   m.def("SoftSyncNNGraphBuffers", &SoftSyncNNGraphBuffers);
   m.def("AddTensorAsGraphLoss", &AddTensorAsGraphLoss);
-  m.def("SaveJobToIR", [](const std::string& serialized_job, const std::string& path) -> Maybe<void> {
-    Job job;
-    CHECK_OR_RETURN(TxtString2PbMessage(serialized_job, &job));
-    return SaveJobToIR(&job, path);
-    ;
-  });
+  m.def("SaveJobToIR",
+        [](const std::string& serialized_job, const std::string& path) -> Maybe<void> {
+          Job job;
+          CHECK_OR_RETURN(TxtString2PbMessage(serialized_job, &job));
+          return SaveJobToIR(&job, path);
+          ;
+        });
   m.def("LoadSerializedJobFromIR", [](const std::string& path) -> Maybe<py::bytes> {
     Job job;
     JUST(LoadJobFromIR(&job, path));

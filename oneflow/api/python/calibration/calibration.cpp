@@ -27,4 +27,4 @@ ONEFLOW_API_PYBIND11_MODULE("", m) {
   m.def("WriteInt8Calibration", &WriteInt8Calibration);
 }
 
-}
+}  // namespace oneflow

@@ -22,12 +22,9 @@ namespace py = pybind11;
 namespace oneflow {
 
 ONEFLOW_API_PYBIND11_MODULE("", m) {
-  m.def("HasSharedOpKernelObject4ParallelConfSymbol",
-        &HasSharedOpKernelObject4ParallelConfSymbol);
-  m.def("GetSharedOpKernelObject4ParallelConfSymbol",
-        &GetOpKernelObject4ParallelConfSymbol);
-  m.def("SetSharedOpKernelObject4ParallelConfSymbol",
-        &SetSharedOpKernelObject4ParallelConfSymbol);
+  m.def("HasSharedOpKernelObject4ParallelConfSymbol", &HasSharedOpKernelObject4ParallelConfSymbol);
+  m.def("GetSharedOpKernelObject4ParallelConfSymbol", &GetOpKernelObject4ParallelConfSymbol);
+  m.def("SetSharedOpKernelObject4ParallelConfSymbol", &SetSharedOpKernelObject4ParallelConfSymbol);
 }
 
 }  // namespace oneflow

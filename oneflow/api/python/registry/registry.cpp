@@ -26,4 +26,4 @@ ONEFLOW_API_PYBIND11_MODULE("", m) {
   m.def("CheckAndClearRegistryFlag", &CheckAndClearRegistryFlag);
 }
 
-}
+}  // namespace oneflow

@@ -99,8 +99,7 @@ ONEFLOW_API_PYBIND11_MODULE("sbp", m) {
           [](const std::pair<std::string, int>& state) {  // __setstate__
             return GetSbpFromState(state).GetOrThrow();
           }));
-  m.def(
-      "split", GetSplitSbpParallel, py::arg("axis"));
+  m.def("split", GetSplitSbpParallel, py::arg("axis"));
   m.def("broadcast", &GetBroadcastSbpParallel);
   m.def("partial_sum", &GetPartialSumSbpParallel);
 }
