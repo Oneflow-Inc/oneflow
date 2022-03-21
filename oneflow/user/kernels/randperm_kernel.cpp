@@ -23,6 +23,7 @@ limitations under the License.
 #include "oneflow/core/job/nd_sbp_util.h"
 #include "oneflow/core/common/container_util.h"
 #include "oneflow/core/register/tensor_slice_view.h"
+
 namespace oneflow {
 
 class CpuRandPermKernel final : public user_op::OpKernel {
@@ -63,7 +64,11 @@ class CpuRandPermKernel final : public user_op::OpKernel {
     CHECK_NOTNULL(generator);
     user_op::ArangeFunctor<DeviceType::kCPU, int32_t>()(ctx->stream(), 0, 1, n, temp);
     std::shuffle(temp, temp + n, cpu_generator->engine());
-    for (int i = view.At(0).begin(); i < view.At(0).end(); i++) { *(output + i) = *(temp + i); }
+    int j = 0;
+    for (int i = view.At(0).begin(); i < view.At(0).end(); i++) {
+         *(output + j) = *(temp + i); 
+         j++;
+       }
   }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 
