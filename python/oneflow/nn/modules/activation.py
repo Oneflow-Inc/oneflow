@@ -992,7 +992,6 @@ class Softshrink(Module):
     """
 
     def __init__(self, alpha: float = 0.5, inplace: bool = False):
-        assert inplace is False, "inplace of Softshrink is not supported."
         self.inplace = inplace
         self.alpha = alpha
         super().__init__()

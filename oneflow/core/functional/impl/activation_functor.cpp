@@ -448,9 +448,16 @@ class SoftShrinkFunctor {
                            bool inplace) const {
     MutableAttrMap attrs;
     CHECK_GT_OR_RETURN(alpha, 0) << "alpha must be greater than 0";
-    CHECK_EQ_OR_RETURN(inplace, false) << "inplace of Softshrink is not supported";
     JUST(attrs.SetAttr<double>("alpha", alpha));
-    return OpInterpUtil::Dispatch<one::Tensor>(*op_, {x}, attrs);
+    if (inplace) {
+      JUST(CheckInplaceValid(x));
+      std::shared_ptr<TensorTuple> outputs = std::make_shared<TensorTuple>(1);
+      outputs->at(0) = x;
+      JUST(OpInterpUtil::Dispatch(*op_, {x}, outputs.get(), attrs));
+      return outputs->at(0);
+    } else {
+      return OpInterpUtil::Dispatch<one::Tensor>(*op_, {x}, attrs);
+    }
   }
 
  private:

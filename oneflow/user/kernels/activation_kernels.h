@@ -264,7 +264,7 @@ struct SoftShrinkGradFunctor {
       [](user_op::KernelComputeContext* ctx) {                               \
         return SoftShrinkGradFunctor<dtype>(ctx->Attr<double>("alpha"));     \
       },                                                                     \
-      "dx", "x", "dy");
+      "dx", "y", "dy");
 
 #define REGISTER_ELU_KERNEL(device, dtype)                        \
   REGISTER_UNARY_ELEMWISE_USER_KERNEL(                            \

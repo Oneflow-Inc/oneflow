@@ -355,7 +355,7 @@ class SoftShrink : public OpExprGradFunction<SoftShrinkCaptureState> {
 
     ComposedAttrMap composed_attrs(attrs, base_attrs_);
     ctx->alpha = JUST(composed_attrs.GetAttr<double>("alpha"));
-    ctx->SaveTensorForBackward(inputs.at(0));
+    ctx->SaveTensorForBackward(outputs.at(0));
     return Maybe<void>::Ok();
   }
 
