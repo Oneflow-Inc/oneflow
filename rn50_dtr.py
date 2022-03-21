@@ -231,8 +231,10 @@ for iter in range(ALL_ITERS):
         train_label = train_label.to(cuda0)
         logits = model(train_data)
         loss = criterion(logits, train_label)
+        del logits
         loss_logger.update(loss.item(), args.bs)
         loss.backward()
+        del loss
         optimizer.step()
         optimizer.zero_grad(True)
 
@@ -242,8 +244,6 @@ for iter in range(ALL_ITERS):
 
     writer.add_scalar('Loss/train/loss', loss_logger.avg, iter)
 
-    del logits
-    del loss
     flow.comm.barrier()
     # sync()
     if iter >= WARMUP_ITERS:
