@@ -442,7 +442,7 @@ PersistentTableImpl<Key, Engine>::PersistentTableImpl(const PersistentTableOptio
   }
   const uint32_t num_workers = ParseIntegerFromEnv(
       "ONEFLOW_ONE_EMBEDDING_PERSISTENT_TABLE_NUM_WORKERS", kDefaultNumWorkerThreads);
-  workers_.resize(kDefaultNumWorkerThreads);
+  workers_.resize(num_workers);
   for (uint32_t tid = 0; tid < workers_.size(); ++tid) {
     workers_.at(tid).reset(new Worker<Engine>);
   }
