@@ -13,12 +13,33 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 """
+import sys
 import oneflow as flow
+
+
+def print_error_msg():
+    msg = ""
+    exc_info = sys.exc_info()
+    if len(exc_info) > 0:
+        msg += str(exc_info[0])
+    if len(exc_info) > 1:
+        msg += " " + str(exc_info[1])
+    print(msg)
 
 
 def to_torch(flow_tensor):
     r"""
+    to_torch(flow_tensor) -> Tensor
+
     This function is the opposite of :func:`oneflow.utils.from_torch`.
+
+    Args:
+        input (oneflow.Tensor): Input Tensor
+
+    Returns:
+        torch.Tensor
+
+    For example:
 
     .. code-block:: python
 
@@ -27,17 +48,15 @@ def to_torch(flow_tensor):
         flow_t = flow.tensor([[1, 2, 3], [4, 5, 6]])
         torch_t = flow.utils.to_torch(flow_t)
 
+    This feature ``to_torch`` is at Alpha Stage.
     """
     try:
         import torch
     except:
-        print("No module named torch")
+        print_error_msg()
     assert isinstance(flow_tensor, flow.Tensor)
     assert (
         flow_tensor.is_cuda == False
-    ), "Only supports conversion of tensor whose device is cpu"
+    ), "Only supports conversion of oneflow tensor whose device is cpu"
     np_data = flow_tensor.cpu().detach().numpy()
-    # assert (
-    #     torch.from_numpy(np_data).data_ptr() == np_data.__array_interface__["data"][0]
-    # )
     return torch.from_numpy(np_data)

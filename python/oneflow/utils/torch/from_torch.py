@@ -13,17 +13,38 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 """
+import sys
 import oneflow as flow
 from oneflow._C import from_numpy as flow_from_numpy
 
 
+def print_error_msg():
+    msg = ""
+    exc_info = sys.exc_info()
+    if len(exc_info) > 0:
+        msg += str(exc_info[0])
+    if len(exc_info) > 1:
+        msg += " " + str(exc_info[1])
+    print(msg)
+
+
 def from_torch(torch_tensor):
     r"""
+    from_torch(torch_tensor) -> Tensor
+
     Create a oneflow tensor from torch tensor.
 
-    The returned tensor and torch tensor share the same memory. Currently only cpu tensor is supported.
+    The returned tensor and torch tensor share the same memory. 
     
-    In order to use torch's some cpu ops, this function also can be used in special data processing stages.
+    .. note::
+        Currently only cpu tensor is supported.
+        In order to use torch's some cpu ops, this function also can be used in special data processing stages.
+
+    Args:
+        input (torch.Tensor): Input Tensor
+
+    Returns:
+        oneflow.Tensor
 
     For example:
 
@@ -33,14 +54,15 @@ def from_torch(torch_tensor):
 
         torch_t = torch.tensor([[1, 2, 3], [4, 5, 6]])
         flow_t = flow.utils.from_torch(torch_t)
-
+    
+    This feature ``from_torch`` is at Alpha Stage.
     """
     try:
         import torch
     except:
-        print("No module named torch")
+        print_error_msg()
     assert isinstance(torch_tensor, torch.Tensor)
     device = torch_tensor.device.__str__()
-    assert device == "cpu", "Only supports conversion of tensor whose device is cpu"
+    assert device == "cpu", "Only supports conversion of torch tensor whose device is cpu"
     np_data = torch_tensor.cpu().detach().numpy()
-    return flow_from_numpy(np_data).to(device=device)
+    return flow_from_numpy(np_data)
