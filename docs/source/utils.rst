@@ -15,7 +15,7 @@ Utils
         SequentialSampler,
         RandomSampler,
         SubsetRandomSampler,
-        BatchSampler,
+        BatchSampler
         
 
 .. currentmodule:: oneflow.utils
