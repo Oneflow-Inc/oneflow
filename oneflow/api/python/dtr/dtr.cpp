@@ -36,13 +36,8 @@ Maybe<void> EnableDTRStrategy(bool enable_dtr, size_t thres, int debug_level,
   return Maybe<void>::Ok();
 }
 
-void ApiEnableDTRStrategy(bool enable_dtr, size_t thres, int debug_level,
-                          const std::string& heuristic) {
-  EnableDTRStrategy(enable_dtr, thres, debug_level, heuristic).GetOrThrow();
-}
-
 ONEFLOW_API_PYBIND11_MODULE("dtr", m) {
-  m.def("enable", &ApiEnableDTRStrategy);
+  m.def("enable", &EnableDTRStrategy);
   m.def("is_enabled", &dtr::is_enabled);
   m.def("is_dtr_tensor", [](const std::shared_ptr<one::Tensor>& tensor) -> bool {
     return std::dynamic_pointer_cast<one::DTRMirroredTensor>(tensor) != nullptr;
@@ -56,10 +51,11 @@ ONEFLOW_API_PYBIND11_MODULE("dtr", m) {
         []() -> size_t { return Global<vm::DtrCudaAllocator>::Get()->allocated_memory(); });
   m.def("display_all_pieces",
         []() -> void { return Global<vm::DtrCudaAllocator>::Get()->DisplayAllPieces(); });
-  m.def("display", []() -> void { Global<dtr::TensorPool>::Get()->display().GetOrThrow(); });
+  m.def("display", []() -> Maybe<void> { return Global<dtr::TensorPool>::Get()->display(); });
   m.def("set_non_evictable", [](const std::shared_ptr<one::Tensor>& t) -> Maybe<void> {
     auto dtr_tensor =
         std::dynamic_pointer_cast<one::DTRMirroredTensor>(JUST(t->AsMirroredTensor()));
+    CHECK_NOTNULL_OR_RETURN(dtr_tensor);
     std::dynamic_pointer_cast<vm::DTREagerBlobObject>(JUST(dtr_tensor->eager_blob_object()))
         ->set_evict_attr(false);
     return Maybe<void>::Ok();
