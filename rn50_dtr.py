@@ -140,7 +140,7 @@ model = resnet50.resnet50()
 
 criterion = nn.CrossEntropyLoss()
 
-cuda0 = flow.device('cuda:1')
+cuda0 = flow.device('cuda:0')
 sync_tensor = flow.tensor([1, 2, 3]).to(cuda0)
 
 
