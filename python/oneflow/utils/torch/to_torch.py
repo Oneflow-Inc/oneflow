@@ -14,33 +14,30 @@ See the License for the specific language governing permissions and
 limitations under the License.
 """
 import oneflow as flow
-from oneflow._C import from_numpy as flow_from_numpy
 
 
-def from_torch(torch_tensor):
+def to_torch(flow_tensor):
     r"""
-    Create a oneflow tensor from torch tensor.
-
-    The returned tensor and torch tensor share the same memory. Currently only cpu tensor is supported.
-    
-    In order to use torch's some cpu ops, this function also can be used in special data processing stages.
-
-    For example:
+    This function is the opposite of :func:`oneflow.utils.from_torch`.
 
     .. code-block:: python
 
         import oneflow as flow
 
-        torch_t = torch.tensor([[1, 2, 3], [4, 5, 6]])
-        flow_t = flow.utils.from_torch(torch_t)
+        flow_t = flow.tensor([[1, 2, 3], [4, 5, 6]])
+        torch_t = flow.utils.to_torch(flow_t)
 
     """
     try:
         import torch
     except:
         print("No module named torch")
-    assert isinstance(torch_tensor, torch.Tensor)
-    device = torch_tensor.device.__str__()
-    assert device == "cpu", "Only supports conversion of tensor whose device is cpu"
-    np_data = torch_tensor.cpu().detach().numpy()
-    return flow_from_numpy(np_data).to(device=device)
+    assert isinstance(flow_tensor, flow.Tensor)
+    assert (
+        flow_tensor.is_cuda == False
+    ), "Only supports conversion of tensor whose device is cpu"
+    np_data = flow_tensor.cpu().detach().numpy()
+    # assert (
+    #     torch.from_numpy(np_data).data_ptr() == np_data.__array_interface__["data"][0]
+    # )
+    return torch.from_numpy(np_data)

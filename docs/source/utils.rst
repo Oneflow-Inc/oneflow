@@ -15,8 +15,13 @@ Utils
         SequentialSampler,
         RandomSampler,
         SubsetRandomSampler,
-        BatchSampler
+        BatchSampler,
+        
 
 .. currentmodule:: oneflow.utils
 .. automodule:: oneflow.utils.data.distributed
     :members: DistributedSampler
+
+
+.. autofunction:: oneflow.utils.from_torch
+.. autofunction:: oneflow.utils.to_torch
