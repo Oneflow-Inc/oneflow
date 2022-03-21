@@ -817,6 +817,7 @@ def _format(self, format_spec):
 
 def _to(self, *args, **kwargs):
     new_args = list()
+    # If device is single int, replace it with flow.device("cuda:{device}")
     if len(args) > 0 and isinstance(args[0], int):
         new_args.append(flow.device(f"cuda:{args[0]}"))
         for i in range(1, len(args)):
