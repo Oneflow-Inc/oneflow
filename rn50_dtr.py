@@ -5,6 +5,8 @@ import os
 
 import numpy as np
 from numpy import random
+from tqdm import tqdm
+from torch.utils.tensorboard import SummaryWriter
 
 
 # resnet50 bs 32, use_disjoint_set=False: threshold ~800MB
@@ -21,6 +23,28 @@ from numpy import random
 # os.environ["OF_ITERS"] = "40"
 
 import argparse
+
+
+class DataLogger(object):
+    """Average data logger."""
+    def __init__(self):
+        self.clear()
+
+    def clear(self):
+        self.value = 0
+        self.sum = 0
+        self.cnt = 0
+        self.avg = 0
+
+    def update(self, value, n=1):
+        self.value = value
+        self.sum += value * n
+        self.cnt += n
+        self._cal_avg()
+
+    def _cal_avg(self):
+        self.avg = self.sum / self.cnt
+
 
 class NegativeArgAction(argparse.Action):
     def __init__(self, option_strings, dest, env_var_name, **kwargs):
@@ -47,10 +71,19 @@ class PositiveArgAction(argparse.Action):
         os.environ[self.env_var_name] = "True"
 
 
+# Set random seed for reproducibility.
+def setup_seed(seed):
+    random.seed(seed)
+    os.environ['PYTHONHASHSEED'] = str(seed)
+    np.random.seed(seed)
+    flow.manual_seed(seed)
+
+
 parser = argparse.ArgumentParser()
 parser.add_argument('bs', type=int)
 parser.add_argument('threshold', type=str)
 parser.add_argument('iters', type=int)
+parser.add_argument('exp_id', type=str)
 parser.add_argument('--no-dtr', action=NegativeArgAction, env_var_name="OF_DTR")
 parser.add_argument('--no-lr', action=NegativeArgAction, env_var_name="OF_DTR_LR")
 parser.add_argument('--no-o-one', action=NegativeArgAction, env_var_name="OF_DTR_O_ONE")
@@ -67,8 +100,12 @@ print(os.environ)
 
 import oneflow as flow
 import oneflow.nn as nn
+import flowvision
+import torch
+import torchvision
 
-import resnet50_model
+# import resnet50_model
+import resnet50
 
 # run forward, backward and update parameters
 WARMUP_ITERS = 5
@@ -86,14 +123,9 @@ if args.dtr:
     flow.enable_dtr(args.dtr, args.threshold, args.debug_level, heuristic)
 
 seed = 20
-flow.manual_seed(seed)
-np.random.seed(seed)
-random.seed(seed)
+setup_seed(seed)
 
-def sync():
-    flow._oneflow_internal.eager.multi_client.Sync()
-    # sync_tensor.numpy()
-
+writer = SummaryWriter('./tensorboard/' + args.exp_id)
 
 def display():
     flow._oneflow_internal.dtr.display()
@@ -101,13 +133,14 @@ def display():
 
 # init model
 # model = resnet50_model.resnet50(norm_layer=nn.Identity)
-model = resnet50_model.resnet50()
+model = resnet50.resnet50()
+# model = resnet50_model.resnet50()
 # model.load_state_dict(flow.load('/tmp/abcde'))
 # flow.save(model.state_dict(), '/tmp/abcde')
 
 criterion = nn.CrossEntropyLoss()
 
-cuda0 = flow.device('cuda:0')
+cuda0 = flow.device('cuda:1')
 sync_tensor = flow.tensor([1, 2, 3]).to(cuda0)
 
 
@@ -172,13 +205,11 @@ train_label = flow.tensor(
     (np.random.uniform(size=(args.bs,)) * 1000).astype(np.int32), dtype=flow.int32, device=cuda0
 )
 
-def temp():
-    if args.allocator:
-        sync()
-        # print('----------allocator start')
-        flow._oneflow_internal.eager.multi_client.Temp()
-        sync()
-        # print('----------allocator end')
+# load tiny-imagenet dataset
+transforms = flowvision.transforms.Compose([flowvision.transforms.Resize(224),flowvision.transforms.ToTensor()])
+imagenet_data = flowvision.datasets.ImageFolder('/dataset/tiny-imagenet-200/train/', transforms)
+# imagenet_data = flowvision.datasets.ImageFolder('/dataset/tiny-imagenet-200/train/', flowvision.transforms.ToTensor())
+train_data_loader = flow.utils.data.DataLoader(imagenet_data, batch_size=args.bs, shuffle=False, num_workers=0)
 
 total_time = 0
 for iter in range(ALL_ITERS):
@@ -186,30 +217,41 @@ for iter in range(ALL_ITERS):
         for x in model.parameters():
             x.grad = flow.zeros_like(x).to(cuda0)
 
-        temp()
+        flow.comm.barrier()
+        # temp()
     if iter >= WARMUP_ITERS:
         start_time = time.time()
-    logits = model(train_data)
-    loss = criterion(logits, train_label)
-    if (iter + 1) % 1 == 0:
-        print('loss: ', loss.numpy())
-    loss.backward()
-    optimizer.step()
-    optimizer.zero_grad(True)
-    # sync()
-    # exit(2)
-    if args.dtr and args.debug_level > 0:
-        sync()
-        display()
+    
+    train_bar = tqdm(train_data_loader, dynamic_ncols=True)
+
+    loss_logger = DataLogger()
+
+    for train_data, train_label in train_bar:
+        train_data = train_data.to(cuda0)
+        train_label = train_label.to(cuda0)
+        logits = model(train_data)
+        loss = criterion(logits, train_label)
+        loss_logger.update(loss.item(), args.bs)
+        loss.backward()
+        optimizer.step()
+        optimizer.zero_grad(True)
+
+        train_bar.set_description(
+            'Epoch {}: loss: {:.4f}'.format(iter + 1, loss_logger.avg)
+        )
+
+    writer.add_scalar('Loss/train/loss', loss_logger.avg, iter)
+
     del logits
     del loss
-    sync()
+    flow.comm.barrier()
+    # sync()
     if iter >= WARMUP_ITERS:
         end_time = time.time()
         this_time = end_time - start_time
-        print(f'iter: {iter}, time: {this_time}')
+    #     print(f'iter: {iter}, time: {this_time}')
         total_time += this_time
-    print(f'iter {iter} end')
+    # print(f'iter {iter} end')
 
 end_time = time.time()
 print(f'{ALL_ITERS - WARMUP_ITERS} iters: avg {(total_time) / (ALL_ITERS - WARMUP_ITERS)}s')
