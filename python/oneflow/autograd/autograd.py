@@ -52,6 +52,9 @@ def grad(
             more efficient way. Defaults to the value of ``create_graph``.
         create_graph (bool, optional): If ``True``, graph of the derivative will be constructed,
             allowing to compute higher order derivative products. Defaults to ``False``.
+
+    Returns:
+        Tuple(Tensor): A tuple of tensors containing the gradients for each ``inputs``.
     """
     in_grads = grad_api(
         convert_to_tensor_tuple(outputs),
