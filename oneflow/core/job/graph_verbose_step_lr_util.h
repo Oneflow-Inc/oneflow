@@ -13,23 +13,17 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
-#include "oneflow/core/vm/thread_ctx.h"
-#include "oneflow/core/common/util.h"
+#ifndef ONEFLOW_CORE_JOB_GRAPH_VERBOSE_STEP_LR_UTIL_H_
+#define ONEFLOW_CORE_JOB_GRAPH_VERBOSE_STEP_LR_UTIL_H_
+
+#include "oneflow/core/common/maybe.h"
 
 namespace oneflow {
-namespace vm {
 
-size_t ThreadCtx::TryReceiveAndRun() {
-  const StreamType& stream_type = stream_rt_desc().stream_type();
-  intrusive::List<INTRUSIVE_FIELD(Instruction, pending_instruction_hook_)> tmp_list;
-  mut_pending_instruction_list()->MoveTo(&tmp_list);
-  size_t size = tmp_list.size();
-  INTRUSIVE_FOR_EACH(instruction, &tmp_list) {
-    tmp_list.Erase(instruction.Mutable());
-    stream_type.Run(instruction.Mutable());
-  }
-  return size;
-}
+bool IsOpenGraphVerboseStepLr();
 
-}  // namespace vm
+void SetGraphVerboseStepLr(bool verbose);
+
 }  // namespace oneflow
+
+#endif  // ONEFLOW_CORE_JOB_GRAPH_VERBOSE_STEP_LR_UTIL_H_

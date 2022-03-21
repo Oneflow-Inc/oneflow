@@ -48,6 +48,7 @@ limitations under the License.
 #include "oneflow/core/kernel/sync_check_kernel_observer.h"
 #include "oneflow/core/kernel/blob_access_checker_kernel_observer.h"
 #include "oneflow/core/kernel/profiler_kernel_observer.h"
+#include "oneflow/core/embedding/embedding_manager.h"
 #ifdef WITH_RDMA
 #include "oneflow/core/platform/include/ibv.h"
 #endif  // WITH_RDMA
@@ -187,6 +188,7 @@ Maybe<void> EnvGlobalObjectsScope::Init(const EnvProto& env_proto) {
 #ifdef WITH_CUDA
   Global<EagerNcclCommMgr>::New();
   Global<CudnnConvAlgoCache>::New();
+  Global<embedding::EmbeddingManager>::New();
 #endif
   Global<vm::VirtualMachineScope>::New(Global<ResourceDesc, ForSession>::Get()->resource());
   Global<EagerJobBuildAndInferCtxMgr>::New();
@@ -227,6 +229,7 @@ Maybe<void> EnvGlobalObjectsScope::Init(const EnvProto& env_proto) {
 }
 
 EnvGlobalObjectsScope::~EnvGlobalObjectsScope() {
+  if (is_normal_exit_.has_value() && !CHECK_JUST(is_normal_exit_)) { return; }
   auto session_ctx = Global<MultiClientSessionContext>::Get();
   if (session_ctx != nullptr) {
     VLOG(1) << "Multi client session has not closed , env close it at env scope destruction.";
@@ -248,6 +251,7 @@ EnvGlobalObjectsScope::~EnvGlobalObjectsScope() {
   Global<EagerJobBuildAndInferCtxMgr>::Delete();
   Global<vm::VirtualMachineScope>::Delete();
 #ifdef WITH_CUDA
+  Global<embedding::EmbeddingManager>::Delete();
   Global<CudnnConvAlgoCache>::Delete();
   Global<EagerNcclCommMgr>::Delete();
 #endif
