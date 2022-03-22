@@ -13,6 +13,7 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 """
+import os
 import unittest
 import oneflow as flow
 import oneflow.unittest
@@ -30,6 +31,8 @@ class TestEnv(flow.unittest.TestCase):
             # rank 1
             test_case.assertEqual(flow.cuda.current_device(), 1)
 
+    def test_cuda_is_available(test_case):
+        test_case.assertEqual(flow.cuda.is_available(), True)
 
 if __name__ == "__main__":
     unittest.main()
