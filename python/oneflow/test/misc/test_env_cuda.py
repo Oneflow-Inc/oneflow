@@ -17,7 +17,7 @@ import unittest
 import oneflow as flow
 import oneflow.unittest
 
-
+@unittest.skipIf(os.getenv("ONEFLOW_TEST_CPU_ONLY"), "only test cpu cases")
 @flow.unittest.skip_unless_1n2d()
 class TestEnv(flow.unittest.TestCase):
     def test_get_device_count(test_case):
