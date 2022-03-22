@@ -204,19 +204,15 @@ register_class_method_util.RegisterMethod4Class()
 import oneflow.framework.env_util as env_util
 import oneflow.framework.scope_util as scope_util
 import oneflow.framework.session_context as session_ctx
-from oneflow.framework.multi_client_session import MultiClientSession
 from oneflow.framework.tensor_str import set_printoptions
 
-if not env_util.HasAllMultiClientEnvVars():
-    env_util.SetDefaultMultiClientEnvVars()
-env_util.api_env_init()
+__oneflow_global_unique_env = env_util.GetEnv()
+session_ctx.NewDefaultSession(__oneflow_global_unique_env)
+
 oneflow._oneflow_internal.RegisterGILForeignLockHelper()
 oneflow._oneflow_internal.InitDefaultConsistentTransportTokenScope()
-session_ctx.OpenDefaultSession(
-    MultiClientSession(oneflow._oneflow_internal.NewSessionId())
-)
+
 oneflow._oneflow_internal.EnableEagerEnvironment(True)
-del env_util
 from oneflow.framework import python_callback, register_python_callback
 
 oneflow._oneflow_internal.RegisterGlobalForeignCallback(
@@ -256,13 +252,8 @@ hook = ExitHook()
 
 
 def atexit_hook(hook):
-    if hook.is_normal_exit():
-        if oneflow._oneflow_internal.IsEnvInited():
-            oneflow._oneflow_internal.eager.Sync()
     oneflow.framework.session_context.TryCloseDefaultSession()
-    if hook.is_normal_exit():
-        oneflow._oneflow_internal.DestroyEnv()
-    oneflow._oneflow_internal.SetShuttingDown()
+    __oneflow_global_unique_env.SwitchToShuttingDownPhase(hook.is_normal_exit())
 
 
 atexit.register(atexit_hook, hook)
@@ -282,9 +273,6 @@ import oneflow.nn.image
 from oneflow.framework.check_point_v2 import load
 from oneflow.framework.check_point_v2 import save
 from oneflow.framework.dtype import convert_oneflow_dtype_to_numpy_dtype, dtypes
-from oneflow.framework.env_util import (
-    api_enable_eager_execution as enable_eager_execution,
-)
 from oneflow.framework.function_util import FunctionConfig
 from oneflow.framework.function_util import FunctionConfig as function_config
 from oneflow.framework.generator import create_generator as Generator
@@ -297,7 +285,6 @@ from oneflow.framework.generator import (
 
 # NOTE(chengcheng) oneflow.Model is unavailable now.
 # from oneflow.framework.model import Model
-from oneflow.framework.scope_util import api_current_scope as current_scope
 from oneflow.framework.tensor import Tensor
 from oneflow.framework.tensor import is_nonzero
 from oneflow.framework.type_tensor import *
@@ -395,7 +382,7 @@ from . import (
     boxing,
     backends,
     amp,
-)  # , saved_model NOTE(chengcheng): unavailable now
+)
 import oneflow.utils.data
 import oneflow.comm
 import oneflow.framework.docstr as docstr

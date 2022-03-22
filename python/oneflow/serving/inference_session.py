@@ -158,8 +158,7 @@ class InferenceSession(object):
             self.event_loop_ = asyncio.get_event_loop()
 
     def init(self):
-        if not oneflow._oneflow_internal.IsEnvInited():
-            flow.env.init()
+        raise NotImplementedError("InferenceSession is deprecated.")
         if not oneflow._oneflow_internal.IsSessionInited():
             self._make_config_proto()
             # session_util._TryCompleteConfigProto(self.config_proto_)
@@ -263,7 +262,7 @@ class InferenceSession(object):
 
     def compile(self, op_list):
         self._check_status(self.SessionStatus.OPEN)
-        scope = flow.current_scope()
+        scope = scope_util.current_scope()
         device_tag = scope.device_parallel_desc_symbol.device_tag
         for op_conf in op_list:
             if _need_check_device_tag(op_conf) and op_conf.device_tag != device_tag:
