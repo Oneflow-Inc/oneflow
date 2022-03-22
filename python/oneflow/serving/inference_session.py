@@ -158,8 +158,7 @@ class InferenceSession(object):
             self.event_loop_ = asyncio.get_event_loop()
 
     def init(self):
-        if not oneflow._oneflow_internal.IsEnvInited():
-            flow.env.init()
+        raise NotImplementedError("InferenceSession is deprecated.")
         if not oneflow._oneflow_internal.IsSessionInited():
             self._make_config_proto()
             # session_util._TryCompleteConfigProto(self.config_proto_)
