@@ -14,20 +14,10 @@ include(CMakeDependentOption)
 
 set(CUDNN_ROOT_DIR "" CACHE PATH "Folder contains NVIDIA cuDNN")
 
-if(CUDA_VERSION VERSION_LESS "11.0")
-  set(CUDA_VERSION_VERSION_LESS_11 TRUE)
-endif()
-
-cmake_dependent_option(CUDNN_STATIC "Look for static cuDNN" ON "CUDA_VERSION_VERSION_LESS_11" OFF)
-
 if(OF_CUDA_LINK_DYNAMIC_LIBRARY)
   set(CUDNN_STATIC OFF)
 endif()
-if(CUDNN_STATIC)
-  set(__cudnn_libname "libcudnn_static.a")
-else()
-  set(__cudnn_libname "libcudnn.so")
-endif()
+set(__cudnn_libname "libcudnn.so")
 
 find_path(CUDNN_INCLUDE_DIR cudnn.h HINTS ${CUDNN_ROOT_DIR} ${CUDAToolkit_INCLUDE_DIRS}
           PATH_SUFFIXES cuda/include include)
@@ -66,16 +56,24 @@ if(CUDNN_FOUND)
 
   set(CUDNN_INCLUDE_DIRS ${CUDNN_INCLUDE_DIR})
 
-  if(NOT CUDNN_STATIC AND CUDNN_VERSION_MAJOR GREATER_EQUAL 8)
+  get_filename_component(CUDNN_LIBRARY_DIRECTORY ${CUDNN_LIBRARY} DIRECTORY)
+  if(NOT CUDNN_STATIC)
     # skipping: libcudnn_adv_infer.so libcudnn_adv_train.so
     set(CUDNN_DYNAMIC_NAMES libcudnn_cnn_infer.so libcudnn_cnn_train.so libcudnn_ops_infer.so
                             libcudnn_ops_train.so)
-    get_filename_component(CUDNN_LIBRARY_DIRECTORY ${CUDNN_LIBRARY} DIRECTORY)
     foreach(CUDNN_DYNAMIC_NAME ${CUDNN_DYNAMIC_NAMES})
       list(APPEND CUDNN_LIBRARIES ${CUDNN_LIBRARY_DIRECTORY}/${CUDNN_DYNAMIC_NAME})
     endforeach()
   else()
-    set(CUDNN_LIBRARIES ${CUDNN_LIBRARY})
+    list(APPEND CUDNN_LIBRARIES
+      ${CUDNN_LIBRARY_DIRECTORY}/libcudnn_cnn_infer_static.a
+      ${CUDNN_LIBRARY_DIRECTORY}/libcudnn_cnn_train_static.a
+      ${CUDNN_LIBRARY_DIRECTORY}/libcudnn_ops_infer_static.a
+      ${CUDNN_LIBRARY_DIRECTORY}/libcudnn_ops_train_static.a)
+    if(CUDNN_WHOLE_ARCHIVE)
+      list(PREPEND CUDNN_LIBRARIES -Wl,--whole-archive)
+      list(APPEND CUDNN_LIBRARIES -Wl,--no-whole-archive)
+    endif()
   endif()
   message(
     STATUS

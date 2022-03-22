@@ -58,6 +58,7 @@ if(APPLE)
 endif()
 
 set(CUDNN_STATIC OFF CACHE BOOL "")
+set(CUDNN_WHOLE_ARCHIVE ON CACHE BOOL "only effective if CUDNN_STATIC=ON")
 
 project(oneflow C CXX)
 
