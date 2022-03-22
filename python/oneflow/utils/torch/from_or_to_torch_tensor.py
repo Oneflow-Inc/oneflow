@@ -37,7 +37,7 @@ def from_torch(torch_tensor):
     The returned tensor and torch tensor share the same memory. 
     
     .. note::
-        Currently only cpu tensor is supported.
+        Currently only cpu and local tensor is supported.
         In order to use torch's some cpu ops, this function also can be used in special data processing stages.
 
     Args:
@@ -79,7 +79,7 @@ def to_torch(flow_tensor):
     The returned tensor and oneflow tensor share the same memory. 
     
     .. note::
-        This function is the opposite of :func:`oneflow.utils.from_torch`.
+        Currently only cpu and local tensor is supported.
 
     Args:
         input (oneflow.Tensor): Input Tensor
