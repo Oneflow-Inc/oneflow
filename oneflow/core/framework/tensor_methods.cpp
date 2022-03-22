@@ -90,9 +90,9 @@ Maybe<Tensor> BasicView(const std::shared_ptr<Tensor>& input, const Shape& targe
       /*is_leaf=*/!input->requires_grad());
   JUST(tensor_impl->InitEagerBlobObject(JUST(blob_object->compute_local_dep_object())));
   std::shared_ptr<Tensor> output(new MirroredTensor(tensor_impl));
-  
+
   // run tensor view instruction
-  
+
   // =============================impl1======================================
   // // init view blob (with empty data pointer)
   // const auto& eager_blob_object = JUST(input->eager_blob_object());
@@ -103,12 +103,11 @@ Maybe<Tensor> BasicView(const std::shared_ptr<Tensor>& input, const Shape& targe
   // void* input_ptr = eager_blob_object->mut_blob()->mut_raw_dptr();
   // view_eager_blob_object->mut_blob()->reset_dptr(static_cast<char*>(input_ptr));
 
-
   // =============================impl2======================================
   // std::unique_ptr<ep::DeviceManagerRegistry> device_manager_registry(
   //     new ep::DeviceManagerRegistry());
-  // auto stream_device = device_manager_registry->GetDevice(device->enum_type(), device->device_id());
-  // ep::Stream* stream = stream_device->CreateStream();
+  // auto stream_device = device_manager_registry->GetDevice(device->enum_type(),
+  // device->device_id()); ep::Stream* stream = stream_device->CreateStream();
 
   // // init view blob (with empty data pointer)
   // const auto& eager_blob_object = JUST(input->eager_blob_object());
