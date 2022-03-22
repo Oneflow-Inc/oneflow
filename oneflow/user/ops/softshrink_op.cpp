@@ -89,3 +89,4 @@ REGISTER_USER_OP_GRAD("softshrink")
       return Maybe<void>::Ok();
     });
 }  // namespace oneflow
+
