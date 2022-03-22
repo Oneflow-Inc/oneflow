@@ -16,6 +16,7 @@ limitations under the License.
 from .math_ops import *
 from .random import *
 from .conv import *
+from .as_tensor import *
 from .pooling import *
 from .activation import *
 from .dropout import *

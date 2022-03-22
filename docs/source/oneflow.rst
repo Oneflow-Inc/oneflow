@@ -166,6 +166,7 @@ oneflow
             set_printoptions,
             decode_onerec,
             from_numpy,
+            as_tensor,
             cumsum,
             topk,
             nms,
