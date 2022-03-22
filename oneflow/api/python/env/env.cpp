@@ -45,12 +45,8 @@ ONEFLOW_API_PYBIND11_MODULE("", m) {
       .def(py::init([](const std::string& env_proto_str) {
         return CreateEnv(env_proto_str).GetPtrOrThrow();
       }))
-      .def(
-          "SwitchToShuttingDownPhase",
-          [](EnvGlobalObjectsScope* env, bool is_normal_exit) {
-            SwitchToShuttingDownPhase(env, is_normal_exit).GetOrThrow();
-          },
-          py::call_guard<py::gil_scoped_release>());
+      .def("SwitchToShuttingDownPhase", &SwitchToShuttingDownPhase,
+           py::call_guard<py::gil_scoped_release>());
 
   m.def("CurrentMachineId", &CurrentMachineId);
 
