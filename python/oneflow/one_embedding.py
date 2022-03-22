@@ -61,9 +61,14 @@ class Embedding(Module):
         key_type,
         columns,
         store_options,
-        default_initializer={"type": "normal", "mean": 0, "std": 0.05},
+        default_initializer=None,
     ):
         super().__init__()
+        default_initializer = default_initializer or {
+            "type": "normal",
+            "mean": 0,
+            "std": 0.05,
+        }
         key_value_store_options = {}
         embedding_columns = {}
         key_value_store_options["name"] = name
