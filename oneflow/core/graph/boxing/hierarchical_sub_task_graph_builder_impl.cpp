@@ -427,8 +427,12 @@ class NDSliceBoxingSubTskGphBuilder final : public HierarchicalSubTskGphBuilder 
           GetTensorSliceView(*out_parallel_desc.hierarchy(), out_nd_sbp, logical_blob_desc.shape());
       const int64_t out_parallel_num = out_parallel_desc.parallel_num();
 
-      std::vector<int64_t> in_parallel_ids(in_parallel_desc.hierarchy()->NumAxes());
-      std::vector<int64_t> out_parallel_ids(out_parallel_desc.hierarchy()->NumAxes());
+      const auto& parallel_hierarchy = in_parallel_desc.hierarchy();
+      int32_t hierarchy_dimension = parallel_hierarchy->NumAxes();
+      const NdIndexOffsetHelper<int64_t, SHAPE_MAX_AXIS_SIZE> hierarchy_index_helper(
+          parallel_hierarchy->dim_vec().data(), hierarchy_dimension);
+      std::vector<int64_t> in_parallel_ids(hierarchy_dimension);
+      std::vector<int64_t> out_parallel_ids(hierarchy_dimension);
 
       FOR_RANGE(int64_t, out_id, 0, out_parallel_num) {
         const TensorSliceView& out_slice = out_slices.at(out_id);
@@ -450,10 +454,8 @@ class NDSliceBoxingSubTskGphBuilder final : public HierarchicalSubTskGphBuilder 
           out_copy_node->ConnectToSrcNodeWithSlice(proxy_node, NewEdge(), intersection);
           out_node->ConnectToSrcNodeWithSlice(out_copy_node, NewEdge(), intersection);
         };
-        const auto& parallel_hierarchy = in_parallel_desc.hierarchy();
-        const NdIndexOffsetHelper<int64_t, SHAPE_MAX_AXIS_SIZE> hierarchy_index_helper(
-            parallel_hierarchy->dim_vec().data(), parallel_hierarchy->NumAxes());
-        hierarchy_index_helper.OffsetToNdIndex(out_id, out_parallel_ids.data());
+        hierarchy_index_helper.OffsetToNdIndex(out_id, out_parallel_ids.data(),
+                                               hierarchy_dimension);
         DfsTraverseRanks4NdSbp(0, in_parallel_ids, out_parallel_ids, *parallel_hierarchy,
                                hierarchy_index_helper, in_nd_sbp, visit);
 
