@@ -26,6 +26,16 @@ namespace primitive {
 
 namespace {
 
+int64_t compute_index(int64_t out_offset, const StrideParam in_stride, const StrideParam out_stride){
+  int64_t in_offset = 0;
+  int64_t remaining = out_offset;
+  for (size_t i = 0; i < in_stride.n_dim; ++i) {
+    const int64_t idx = remaining / out_stride.stride[i];
+    remaining -= idx * out_stride.stride[i];
+    in_offset += idx * in_stride.stride[i];
+  }
+  return in_offset;
+}
 template<UnaryOp unary_op, typename Src, typename Dst>
 class ElementwiseUnaryImpl : public ElementwiseUnary {
  public:
@@ -44,6 +54,20 @@ class ElementwiseUnaryImpl : public ElementwiseUnary {
       }
     });
   }
+
+  void LaunchWithStride(Stream* stream, const void* src_ptr, void* dst_ptr, size_t count, const StrideParam in_stride, const StrideParam out_stride) override {
+    CpuStream* cpu_stream = stream->As<CpuStream>();
+
+    Dst* dst = reinterpret_cast<Dst*>(dst_ptr);
+    const Src* src = reinterpret_cast<const Src*>(src_ptr);
+    cpu_stream->ParallelFor(0, count, [src, dst, in_stride, out_stride](int64_t begin, int64_t end) {
+      for (int64_t i = begin; i < end; i++) {
+        int64_t src_idx = compute_index(i, in_stride, out_stride);
+        dst[i] = UnaryFunctor<DeviceType::kCPU, unary_op, Dst, Src>()(src[src_idx]);
+      }
+    });
+  }
+
 };
 
 template<UnaryOp unary_op, typename Src, typename Dst>

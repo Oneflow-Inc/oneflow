@@ -40,10 +40,25 @@ class ReluKernel final : public user_op::OpKernel, public user_op::CudaGraphSupp
 
     const user_op::Tensor* x = ctx->Tensor4ArgNameAndIndex("x", 0);
     user_op::Tensor* y = ctx->Tensor4ArgNameAndIndex("y", 0);
+    const size_t ndim = x->shape().NumAxes();
     const int64_t elem_cnt = x->shape().elem_cnt();
 
+    const StrideVector& in_stride_vec = x->stride().StrideVec();
+    const StrideVector& out_stride_vec = y->stride().StrideVec();    
+    bool is_contiguous = true;
+    for(size_t i=0; i<ndim; ++i){
+      if(in_stride_vec.at(i)!=out_stride_vec.at(i)){
+        is_contiguous = false;
+      }
+    }
+    oneflow::ep::primitive::StrideParam param_in_stride(in_stride_vec.data(), ndim), param_out_stride(out_stride_vec.data(), ndim);
+
     if (elem_cnt != 0) {
-      primitive->Launch(ctx->stream(), x->dptr(), y->mut_dptr(), elem_cnt);
+      if(is_contiguous){
+        primitive->Launch(ctx->stream(), x->dptr(), y->mut_dptr(), elem_cnt);
+      }else{
+        primitive->LaunchWithStride(ctx->stream(), x->dptr(), y->mut_dptr(), elem_cnt, param_in_stride, param_out_stride);
+      }
     } else {
       // For 0-d Tensor
       return;

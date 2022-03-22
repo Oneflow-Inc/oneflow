@@ -38,7 +38,8 @@ class ReluFunctor {
  public:
   ReluFunctor() { op_ = CHECK_JUST(one::OpBuilder("relu").Input("x", 1).Output("y", 1).Build()); }
   Maybe<Tensor> operator()(const std::shared_ptr<Tensor>& input, bool inplace) const {
-    auto x = input->contiguous();
+    // auto x = input->contiguous();
+    auto x = input;
     if (inplace) {
       JUST(CheckInplaceValid(x));
       std::shared_ptr<TensorTuple> outputs = std::make_shared<TensorTuple>(1);

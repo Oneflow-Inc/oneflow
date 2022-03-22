@@ -24,6 +24,15 @@ namespace oneflow {
 namespace ep {
 namespace primitive {
 
+struct StrideParam {
+  int32_t stride[16];
+  size_t n_dim;
+  StrideParam(const int64_t* stride_vec, const size_t ndim) {
+    n_dim = ndim;
+    for (size_t i = 0; i < n_dim; ++i) { stride[i] = stride_vec[i]; }
+  }
+};
+
 class ElementwiseUnary : public Primitive {
  public:
   OF_DISALLOW_COPY_AND_MOVE(ElementwiseUnary);
@@ -31,6 +40,7 @@ class ElementwiseUnary : public Primitive {
   ~ElementwiseUnary() override = default;
 
   virtual void Launch(Stream* stream, const void* src, void* dst, size_t count) = 0;
+  virtual void LaunchWithStride(Stream* stream, const void* src, void* dst, size_t count, const StrideParam in_stride, const StrideParam out_stride) = 0;
 };
 
 class ElementwiseUnaryFactory : public Factory<ElementwiseUnary> {
