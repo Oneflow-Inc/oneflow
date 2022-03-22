@@ -46,6 +46,6 @@ Maybe<one::Tensor> GetIdentity(const std::shared_ptr<one::Tensor>& tensor, Symbo
                                                  *tensor->shape(), tensor->dtype()));
 }
 
-COMMAND(RegisterBoxingFunction("identity", DECORATE(&RawCheckIdentity, ThreadLocalCopiable),
+COMMAND(RegisterBoxingFunction("identity", DECORATE(&RawCheckIdentity, ThreadLocalCachedCopiable),
                                &GetIdentity));
 }  // namespace oneflow
