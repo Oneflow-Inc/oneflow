@@ -58,10 +58,11 @@ bool HasNonCtrlConsumedRegstDescId(const TaskProto& task) {
 }  // namespace
 
 Runtime::Runtime(const Plan& plan, const HashMap<std::string, Blob*>& variable_op_name2eager_blob) {
+  DumpThreadIdsFromPlan(plan);
   {
     // NOTE(chengcheng): All runtime Global objects AddPlan
     Global<RegstMgr>::Get()->AddPlan(plan, variable_op_name2eager_blob);
-    Global<ThreadMgr>::Get()->AddPlan(plan);
+    Global<ThreadMgr>::Get()->AddThreads(thread_ids_);
     Global<RuntimeJobDescs>::Get()->AddPlan(plan);
     collective_boxing_scheduler_plan_token_ =
         Global<boxing::collective::Scheduler>::Get()->AddPlan(plan);
@@ -106,7 +107,19 @@ Runtime::~Runtime() {
     Global<RuntimeCtx>::Get()->WaitUntilCntEqualZero(GetRunningActorCountKeyByJobId(pair.first));
   }
   OF_SESSION_BARRIER();
+  Global<ThreadMgr>::Get()->TryDeleteThreads(thread_ids_);
   Global<boxing::collective::Scheduler>::Get()->DeletePlan(collective_boxing_scheduler_plan_token_);
+}
+
+void Runtime::DumpThreadIdsFromPlan(const Plan& plan) {
+  const int64_t this_rank = GlobalProcessCtx::Rank();
+  for (const TaskProto& task : plan.task()) {
+    TaskId task_id = DecodeTaskIdFromInt64(task.task_id());
+    StreamId stream_id = task_id.stream_id();
+    if (stream_id.rank() != this_rank) { continue; }
+    int64_t thrd_id = EncodeStreamIdToInt64(stream_id);
+    thread_ids_.insert(thrd_id);
+  }
 }
 
 }  // namespace oneflow

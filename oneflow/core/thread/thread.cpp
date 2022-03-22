@@ -50,6 +50,8 @@ void Thread::AddTask(const TaskProto& task) {
   CHECK(id2task_.emplace(task.task_id(), task).second);
 }
 
+bool Thread::Empty() const { return id2actor_ptr_.empty(); }
+
 void Thread::PollMsgChannel() {
   while (true) {
     if (local_msg_queue_.empty()) {
