@@ -159,14 +159,14 @@ void DfsTraverseRanks4NdSbp(
     // If Split, go through all the ranks along the depth-dimension.
     for (int64_t i = 0; i < parallel_hierarchy.dim_vec().at(depth); i++) {
       in_parallel_ids[depth] = i;
-      DfsTraverseRanks4NdSbp(depth, in_parallel_ids, out_parallel_ids, parallel_hierarchy,
+      DfsTraverseRanks4NdSbp(depth + 1, in_parallel_ids, out_parallel_ids, parallel_hierarchy,
                              hierarchy_index_helper, in_nd_sbp, visit);
     }
   } else {
     // If Broadcast in the sbp of the producer, only visit those ranks with the same id as the
     // current rank along the depth-dimension.
     in_parallel_ids[depth] = out_parallel_ids[depth];
-    DfsTraverseRanks4NdSbp(depth, in_parallel_ids, out_parallel_ids, parallel_hierarchy,
+    DfsTraverseRanks4NdSbp(depth + 1, in_parallel_ids, out_parallel_ids, parallel_hierarchy,
                            hierarchy_index_helper, in_nd_sbp, visit);
   }
 }
