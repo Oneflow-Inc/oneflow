@@ -112,8 +112,6 @@ Maybe<void> MultiClientSessionContext::TryInit(const ConfigProto& config_proto) 
       Global<boxing::collective::Scheduler>::New();
     }
 
-    // NOTE(chengcheng): val need > 0 for check. So we need decrease first when session close.
-    graph_cnt_.reset(new BlockingCounter(1));
     is_inited_ = true;
   }
   return Maybe<void>::Ok();
@@ -133,10 +131,6 @@ Maybe<void> MultiClientSessionContext::AddCGraph(
   return Maybe<void>::Ok();
 }
 
-void MultiClientSessionContext::IncreaseGraphCountWithRuntimeInited() { graph_cnt_->Increase(); }
-
-void MultiClientSessionContext::DecreaseGraphCountWithRuntimeInited() { graph_cnt_->Decrease(); }
-
 Maybe<void> MultiClientSessionContext::TryClose() {
   if (is_inited_) {
     VLOG(1) << "Try to delete multi client session context." << std::endl;
@@ -147,10 +141,7 @@ Maybe<void> MultiClientSessionContext::TryClose() {
       VLOG(1) << "Try to close graph: " << graph->job_name() << std::endl;
       JUST(graph->Close());
     }
-    // NOTE(chengcheng): graph cnt need decrease first for initial with val 1.
-    graph_cnt_->Decrease();
-    graph_cnt_->WaitForeverUntilCntEqualZero();
-
+    graphs_.clear();
     {
       // NOTE(chengcheng): delete runtime global objects
       Global<boxing::collective::Scheduler>::Delete();

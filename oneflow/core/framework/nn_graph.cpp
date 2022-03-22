@@ -80,7 +80,6 @@ Maybe<void> NNGraph::Close() {
     if (runtime_inited_) {
       CloseRuntimeBuffers();
       runtime_.reset();
-      Global<MultiClientSessionContext>::Get()->DecreaseGraphCountWithRuntimeInited();
     }
     Global<MultiClientSessionContext>::Get()->RemoveGraphFreeEagerTensors(name_);
     is_closed_ = true;
@@ -299,7 +298,6 @@ Maybe<void> NNGraph::CompileAndInitRuntime() {
   JUST(GetVariableRealBlobAfterSyncPlan());
   runtime_.reset(new Runtime(plan_, variable_op_name2eager_blob_));
   runtime_inited_ = true;
-  Global<MultiClientSessionContext>::Get()->IncreaseGraphCountWithRuntimeInited();
   return Maybe<void>::Ok();
 }
 
