@@ -246,7 +246,7 @@ struct SoftShrinkFunctor {
 
 template<typename T>
 struct SoftShrinkGradFunctor {
-  OF_DEVICE_FUNC explicit SoftShrinkGradFunctor(float alpha) : alpha(alpha) {}
+  OF_DEVICE_FUNC explicit SoftShrinkGradFunctor(double alpha) : alpha(alpha) {}
   OF_DEVICE_FUNC T operator()(T y, T dy) const {
     return y == static_cast<T>(0) ? static_cast<T>(0) : dy;
   }
