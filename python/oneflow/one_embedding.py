@@ -107,6 +107,9 @@ class Embedding(Module):
                 for i in range(len(caches)):
                     assert isinstance(caches[i], dict)
                     _check_cache(caches[i])
+            for i in range(len(caches)):
+                if caches[i].__contains__("capacity"):
+                    caches[i]["capacity"] = caches[i]["capacity"] // parallel_num
         assert kv_store.__contains__("persistent_table")
         persistent_table = kv_store["persistent_table"]
         assert isinstance(persistent_table, dict)
