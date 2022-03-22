@@ -257,7 +257,9 @@ hook = ExitHook()
 
 def atexit_hook(hook):
     oneflow.framework.session_context.TryCloseDefaultSession()
+    print("cclog: atexit before shutting down. normal exit is: ", hook.is_normal_exit())
     _oneflow_global_unique_env_.SwitchToShuttingDownPhase(hook.is_normal_exit())
+    print("cclog: atexit after shutting down")
 
 
 atexit.register(atexit_hook, hook)

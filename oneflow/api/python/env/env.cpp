@@ -27,7 +27,9 @@ namespace oneflow {
 
 Maybe<void> SwitchToShuttingDownPhase(EnvGlobalObjectsScope* env, bool is_normal_exit) {
   if (is_normal_exit) {
-    JUST(vm::ClusterSync());
+    LOG(WARNING) << "cclog : ShuttingDownSync before";
+    // JUST(vm::ClusterSync());
+    LOG(WARNING) << "cclog : ShuttingDownSync after";
     auto* vm = JUST(GlobalMaybe<VirtualMachine>());
     JUST(vm->CloseVMThreads());
   }

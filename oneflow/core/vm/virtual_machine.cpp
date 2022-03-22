@@ -159,7 +159,9 @@ void VirtualMachine::ControlSync() {
 
 Maybe<void> VirtualMachine::CloseVMThreads() {
   CHECK_OR_RETURN(!vm_threads_closed_);
+  LOG(WARNING) << "cclog : VM::CloseVMThreads::Sync() before";
   ControlSync();
+  LOG(WARNING) << "cclog : VM::CloseVMThreads::Sync() after";
   pending_notifier_.Close();
   schedule_thread_.join();
   vm_threads_closed_ = true;
@@ -171,8 +173,6 @@ VirtualMachine::~VirtualMachine() {
   CHECK(vm_->Empty());
   CHECK(vm_->CallbackEmpty());
   vm_.Reset();
-  callback_notifier_.Close();
-  callback_thread_.join();
 }
 
 std::function<Maybe<bool>()> VirtualMachine::GetPredicatorNoMoreInstructionsFinished() {
@@ -290,6 +290,7 @@ class MultiThreadScheduleCtx : public vm::ScheduleCtx {
 }  // namespace
 
 void VirtualMachine::ScheduleLoop(const std::function<void()>& Initializer) {
+  LOG(WARNING) << "cclog : ScheduleLoop Begin";
   Initializer();
   MultiThreadScheduleCtx schedule_ctx(&callback_notifier_);
   auto* vm = mut_vm();
@@ -324,18 +325,28 @@ void VirtualMachine::ScheduleLoop(const std::function<void()>& Initializer) {
     } while (MicrosecondsFrom(start) < kWorkingMicroseconds);
     OF_PROFILER_RANGE_POP();
   }
+  LOG(WARNING) << "cclog : schedule loop after loop";
   ScheduleUntilVMEmpty(vm, schedule_ctx);
+  LOG(WARNING) << "cclog : schedule loop afther vm empty";
   CHECK_JUST(ForEachThreadCtx(vm_.Mutable(), [&](vm::ThreadCtx* thread_ctx) -> Maybe<void> {
     thread_ctx->mut_notifier()->Close();
     return Maybe<void>::Ok();
   }));
   for (const auto& worker_thread : worker_threads_) { worker_thread->join(); }
+  LOG(WARNING) << "cclog : schedule loop down after worker thread join.";
+  callback_notifier_.Close();
+  callback_thread_.join();
+  LOG(WARNING) << "cclog : callback thread join.";
 }
 
 void VirtualMachine::CallbackLoop(const std::function<void()>& Initializer) {
   Initializer();
   auto* vm = mut_vm();
-  while (callback_notifier_.WaitAndClearNotifiedCnt() == kNotifierStatusSuccess) { vm->Callback(); }
+  while (callback_notifier_.WaitAndClearNotifiedCnt() == kNotifierStatusSuccess) {
+    LOG(WARNING) << "cclog : callback loop before do callback";
+    vm->Callback();
+    LOG(WARNING) << "cclog : callback loop after do callback";
+  }
 }
 
 }  // namespace oneflow

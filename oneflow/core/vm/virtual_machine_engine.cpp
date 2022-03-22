@@ -232,6 +232,8 @@ void VirtualMachineEngine::MakeInstructions(InstructionMsg* instr_msg,
   intrusive::shared_ptr<Instruction> instr = stream->NewInstruction(instr_msg, pd);
   LivelyInstructionListPushBack(instr.Mutable());
   if (unlikely(is_barrier_instruction)) {
+    LOG(WARNING) << "cclog : MakeInstructions::  InstrMsg: " << instr_msg->DebugName()
+                 << " , ref_cnt = " << instr_msg->ref_cnt();
     mut_barrier_instruction_list()->PushBack(instr.Mutable());
   } else {
     new_instruction_list->PushBack(instr.Mutable());
@@ -508,6 +510,8 @@ void VirtualMachineEngine::TryRunBarrierInstruction(const ScheduleCtx& schedule_
   LivelyInstructionListErase(sequnential_instruction);
   sequnential_instruction->clear_instr_msg();
   constexpr int kZeroWindowSize = 0;  // flush immediately.
+  LOG(WARNING) << "cclog : TryRunBarrierInstruction:: InstrMsg: " << instr_msg->DebugName()
+               << " , ref_cnt = " << instr_msg->ref_cnt();
   MoveInstructionMsgToGarbageMsgList(kZeroWindowSize, std::move(instr_msg), schedule_ctx);
   OF_PROFILER_RANGE_POP();
 }
@@ -547,36 +551,54 @@ void VirtualMachineEngine::Schedule(const ScheduleCtx& schedule_ctx) {
 }
 
 void VirtualMachineEngine::Callback() {
-  InstructionMsgList garbage_msg_list;
-  mut_garbage_msg_list()->MoveTo(&garbage_msg_list);
-  INTRUSIVE_FOR_EACH(garbage, &garbage_msg_list) {
-    CHECK_JUST(Global<ForeignLockHelper>::Get()->WithScopedAcquire([&]() -> Maybe<void> {
-      garbage_msg_list.Erase(garbage.Mutable());
-      // There may be a tiny gap between appending `garbage` to garbage_list and dereferencing
-      // `garbage` in scheduler thread or work thread.
-      //  e.g.
-      //
-      //   void Foo() {
-      //     auto garbage = GetGarbage();
-      //     AppendToGarbageList(garbage);
-      //
-      //     // **Callback thread maybe handle garbage in the same time**. From it's point view,
-      //     ref_cnt > 1.
-      //
-      //     garbage.reset(); // explicitly dereference garbage for better understood.
-      //   }
-      //
-      while (garbage->ref_cnt() > 1) {
-        // Do nothing. Wait until all other threads ref_cnts released.
+  {
+    InstructionMsgList garbage_msg_list;
+    mut_garbage_msg_list()->MoveTo(&garbage_msg_list);
+    // CHECK_JUST(Global<ForeignLockHelper>::Get()->WithScopedAcquire([&]() -> Maybe<void> {
+    {
+      INTRUSIVE_FOR_EACH(garbage, &garbage_msg_list) {
+        LOG(WARNING) << "cclog : callback: garbage name 1 : " << garbage->DebugName()
+                     << " ref cnt = " << garbage->ref_cnt();
+        garbage_msg_list.Erase(garbage.Mutable());
+        LOG(WARNING) << "cclog : callback: " << garbage->DebugName() << " after erase";
+        // There may be a tiny gap between appending `garbage` to garbage_list and dereferencing
+        // `garbage` in scheduler thread or work thread.
+        //  e.g.
+        //
+        //   void Foo() {
+        //     auto garbage = GetGarbage();
+        //     AppendToGarbageList(garbage);
+        //
+        //     // **Callback thread maybe handle garbage in the same time**. From it's point view,
+        //     ref_cnt > 1.
+        //
+        //     garbage.reset(); // explicitly dereference garbage for better understood.
+        //   }
+        //
+        LOG(WARNING) << "cclog : callback: garbage name: " << garbage->DebugName()
+                     << " ref cnt = " << garbage->ref_cnt();
+        while (garbage->ref_cnt() > 1) {
+          // Do nothing. Wait until all other threads ref_cnts released.
+        }
+        LOG(WARNING) << "cclog : callback: " << garbage->DebugName()
+                     << " after waiting ref cnt = 0";
+        CHECK_NOTNULL(garbage->phy_instr_operand());
+        while (garbage->phy_instr_operand().use_count() > 1) {
+          // Do nothing. Wait until all other threads ref_cnts released.
+        }
+        LOG(WARNING) << "cclog : callback: " << garbage->DebugName()
+                     << " after waiting use cnt = 0";
+        // Destruct garbage.
+        LOG(WARNING) << "cclog : callback: garbage name 2 : " << garbage->DebugName();
+        garbage.Reset();
+        LOG(WARNING) << "cclog : after this garbage destruct.";
       }
-      CHECK_NOTNULL(garbage->phy_instr_operand());
-      while (garbage->phy_instr_operand().use_count() > 1) {
-        // Do nothing. Wait until all other threads ref_cnts released.
-      }
-      // Destruct garbage.
-      return Maybe<void>::Ok();
-    }));
+    }
+    // return Maybe<void>::Ok();
+    //}));
+    LOG(WARNING) << "cclog : callback: try to leave temp scope.";
   }
+  LOG(WARNING) << "cclog : callback: finish leave temp scope.";
 }
 
 bool VirtualMachineEngine::ThreadUnsafeEmpty() const {
