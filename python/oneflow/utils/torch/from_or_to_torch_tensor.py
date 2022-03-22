@@ -68,3 +68,43 @@ def from_torch(torch_tensor):
     ), "Only supports conversion of torch tensor whose device is cpu"
     np_data = torch_tensor.cpu().detach().numpy()
     return flow_from_numpy(np_data)
+
+
+def to_torch(flow_tensor):
+    r"""
+    to_torch(flow_tensor) -> Tensor
+
+    Create a torch tensor from oneflow tensor.
+
+    The returned tensor and oneflow tensor share the same memory. 
+    
+    .. note::
+        This function is the opposite of :func:`oneflow.utils.from_torch`.
+
+    Args:
+        input (oneflow.Tensor): Input Tensor
+
+    Returns:
+        torch.Tensor
+
+    For example:
+
+    .. code-block:: python
+
+        import oneflow as flow
+
+        flow_t = flow.tensor([[1, 2, 3], [4, 5, 6]])
+        torch_t = flow.utils.to_torch(flow_t)
+
+    This feature ``to_torch`` is at Alpha Stage.
+    """
+    try:
+        import torch
+    except:
+        print_error_msg()
+    assert isinstance(flow_tensor, flow.Tensor)
+    assert (
+        flow_tensor.is_cuda == False
+    ), "Only supports conversion of oneflow tensor whose device is cpu"
+    np_data = flow_tensor.cpu().detach().numpy()
+    return torch.from_numpy(np_data)
