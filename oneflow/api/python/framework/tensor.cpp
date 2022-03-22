@@ -61,10 +61,6 @@ py::array ApiEagerMirroredTensorToNumpy(const py::handle& py_tensor) {
   }
 }
 
-void ApiEagerMirroredTensorZeros(const std::shared_ptr<Tensor>& tensor) {
-  return EagerMirroredTensorZeros(tensor).GetOrThrow();
-}
-
 template<typename T>
 void ApiCopyMirroredTensorToNumpy(const std::shared_ptr<Tensor>& tensor, py::array_t<T> array) {
   CopyBetweenMirroredTensorAndNumpy<T>(tensor, array.ptr(), BlobNumpyCopyUtil<T>::To, "const",
@@ -106,15 +102,6 @@ std::tuple<std::vector<Shape>, std::vector<Symbol<DType>>> GetTensorBufferShapes
 
 void ApiRegisterTensorHook(const std::shared_ptr<Tensor>& self, const AutogradMeta::Hook& hook) {
   return RegisterTensorHook(self, hook).GetOrThrow();
-}
-
-void ApiRegisterTensorPostGradAccumulationHook(const std::shared_ptr<Tensor>& self,
-                                               const AutogradMeta::Hook& hook) {
-  return RegisterTensorPostGradAccumulationHook(self, hook).GetOrThrow();
-}
-
-py::tuple ApiTensorGetPyTupleOfSbp(const Tensor& tensor) {
-  return *TensorGetPyTupleOfSbp(tensor).GetPtrOrThrow();
 }
 
 std::shared_ptr<Tensor> ApiNewTensor(py::args args, py::kwargs kwargs) {
@@ -209,9 +196,9 @@ ONEFLOW_API_PYBIND11_MODULE("", m) {
       .def_property_readonly("is_eager", &Tensor::is_eager)
       .def_property_readonly("is_global", &Tensor::is_consistent)
       .def_property_readonly("is_local", &Tensor::is_local)
-      .def("zeros_", &ApiEagerMirroredTensorZeros)
+      .def("zeros_", &EagerMirroredTensorZeros)
       .def("register_hook", &ApiRegisterTensorHook)
-      .def("_register_post_grad_accumulation_hook", &ApiRegisterTensorPostGradAccumulationHook)
+      .def("_register_post_grad_accumulation_hook", &RegisterTensorPostGradAccumulationHook)
       // local tensor only
       .def_property_readonly("_tensor_buffer_shapes_and_dtypes", &GetTensorBufferShapesAndDTypes)
       .def_property_readonly("device", &TensorGetDevice)
@@ -235,7 +222,7 @@ ONEFLOW_API_PYBIND11_MODULE("", m) {
       .def("_register_storage_delete_hook", &ApiRegisterStorageDeleteHook)
       // consistent tensor only
       .def_property_readonly("placement", &TensorGetParallelDesc)
-      .def_property_readonly("sbp", &ApiTensorGetPyTupleOfSbp);
+      .def_property_readonly("sbp", &TensorGetPyTupleOfSbp);
 
   auto nn = m.def_submodule("nn");
   py::class_<Parameter, std::shared_ptr<Parameter>, Tensor>(nn, "Parameter")
