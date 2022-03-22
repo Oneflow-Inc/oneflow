@@ -25,11 +25,7 @@ class TestEnv(flow.unittest.TestCase):
         test_case.assertEqual(flow.cuda.device_count(), 2)
 
     def test_current_device_idx(test_case):
-        if flow.env.get_rank() == 0: 
-            test_case.assertEqual(flow.cuda.current_device(), 0)
-        else:
-            # rank 1
-            test_case.assertEqual(flow.cuda.current_device(), 1)
+        test_case.assertEqual(flow.cuda.current_device(), flow.env.get_rank())
 
     def test_cuda_is_available(test_case):
         test_case.assertEqual(flow.cuda.is_available(), True)
