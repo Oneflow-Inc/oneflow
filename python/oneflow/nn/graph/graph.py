@@ -43,7 +43,6 @@ from oneflow.nn.graph.util import (
 from oneflow.nn.module import Module
 from oneflow.nn.optimizer.lr_scheduler import LRScheduler
 from oneflow.nn.optimizer.optimizer import Optimizer
-from oneflow.nn.optimizer.sparse_optimizer import SparseOptimizer
 
 
 class Graph(object):
@@ -112,6 +111,7 @@ class Graph(object):
         self.config = GraphConfig()
         self._blocks = OrderedDict()
         self._opts = []
+        self._verbose = False
         self._grad_scaler = None
         self._variables_conf = OrderedDict()
         self._additional_variable_tobe_loaded = OrderedDict()
@@ -211,7 +211,7 @@ class Graph(object):
         return self.__run(*args, **kwargs)
 
     def add_optimizer(
-        self, optim: Optimizer, *, lr_sch: LRScheduler = None,
+        self, optim: Optimizer, *, lr_sch: LRScheduler = None, is_sparse: bool = False,
     ):
         r"""Add an optimizer, an learning rate scheduler to the graph.
 
@@ -230,6 +230,12 @@ class Graph(object):
         Also note that only scalar tensor are allowed to call ``backward()``
         in ``nn.Graph.build()`` for the moment. So you may call methods such as ``Tensor.mean()``
         to make the loss tensor a scalar tensor.
+
+        Note:
+            If you want to output the learning rate information for each step, 
+            set the ``verbose`` parameter of the ``lr_scheduler`` to ``True``, and you will see the result at rank 0.
+            
+            This feature is the same as eager mode.
 
         For example:
 
@@ -267,19 +273,27 @@ class Graph(object):
         Args:
             optim (oneflow.optim.Optimizer): The optimizer.
             lr_sch : The learning rate scheduler, see oneflow.optim.lr_scheduler.
+            is_sparse: When set to be True, treat optim as a sparse optimizer. Default is False.
         """
         opt_dict = dict()
         assert optim is not None, "optimizer cannot be None"
         assert isinstance(
-            optim, (Optimizer, SparseOptimizer)
+            optim, Optimizer
         ), "optimizer must be an instance of Optimizer"
+
         opt_dict["optim"] = optim
+        opt_dict["is_sparse"] = bool(is_sparse)
         if lr_sch is not None:
             assert isinstance(lr_sch, LRScheduler)
             assert (
                 lr_sch.optimizer is optim
             ), "lr_scheduler's optimizer must be the same optimizer in add_optimizer."
             opt_dict["lr_sch"] = lr_sch
+            self._verbose = opt_dict["lr_sch"].verbose
+            rank = get_rank()
+            if rank != 0:
+                self._verbose = False
+        oneflow._oneflow_internal.SetGraphLRVerbose(self._verbose)
         self._opts.append(opt_dict)
         # Set the training config if there is an optimizer add in graph.
         if len(self._opts) == 1:
@@ -309,7 +323,7 @@ class Graph(object):
 
         """
         # Sync to make sure states has been updated.
-        oneflow._oneflow_internal.eager.multi_client.Sync()
+        oneflow._oneflow_internal.eager.Sync()
         if destination is None:
             destination = OrderedDict()
             destination._metadata = OrderedDict()
@@ -383,7 +397,7 @@ class Graph(object):
                 additional_var_names, convert_to_tensor_tuple(additional_var_tensors)
             )
         # Sync to make sure states has been loaded.
-        oneflow._oneflow_internal.eager.multi_client.Sync()
+        oneflow._oneflow_internal.eager.Sync()
 
     @property
     def name(self):
@@ -884,7 +898,7 @@ class Graph(object):
             ]
             eager_outputs = self._eager_outputs_buffer[self._cur_index_of_ouputs_buffer]
 
-            # oneflow._oneflow_internal.eager.multi_client.Sync() NOTE(chengcheng): Need Sync?
+            # oneflow._oneflow_internal.eager.Sync() NOTE(chengcheng): Need Sync?
             oneflow._oneflow_internal.nn.graph.RunLazyNNGraph(
                 convert_to_tensor_tuple(flattened_eager_args),
                 outputs_tensor_tuple,
