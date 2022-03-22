@@ -969,7 +969,7 @@ class Softshrink(Module):
         \end{cases}
 
     Args:
-        alpha: the :math:`\\alpha` value for the Softshrink furmulation. Default: 1.0
+        alpha: the :math:`\\alpha` value for the Softshrink furmulation. Default: 0.5
         inplace: can optionally do the operation in-place. Default: ``False``
     
     Shape:
@@ -983,12 +983,12 @@ class Softshrink(Module):
     
         >>> import numpy as np
         >>> import oneflow as flow
-        >>> x = np.array([1, 2, 3]).astype(np.float32)
+        >>> x = np.array([-1, 0, 0.2, 0.5]).astype(np.float32)
         >>> input = flow.Tensor(x)
-        >>> softshrink = flow.nn.Softshrink()
+        >>> softshrink = flow.nn.Softshrink(alpha=0.5)
         >>> out = softshrink(input)
         >>> out
-        tensor([0.5000, 1.5000, 2.5000], dtype=oneflow.float32)
+        tensor([-0.5000,  0.0000,  0.0000,  0.0000], dtype=oneflow.float32)
     """
 
     def __init__(self, alpha: float = 0.5, inplace: bool = False):
