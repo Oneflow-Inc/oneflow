@@ -46,7 +46,6 @@ inline Maybe<void> EnableEagerEnvironment(bool enable_eager_execution) {
   return Maybe<void>::Ok();
 }
 
-inline Maybe<bool> IsEnvInited() { return Global<EnvGlobalObjectsScope>::Get() != nullptr; }
 
 inline Maybe<long long> CurrentMachineId() { return GlobalProcessCtx::Rank(); }
 

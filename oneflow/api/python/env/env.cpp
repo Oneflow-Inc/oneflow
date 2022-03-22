@@ -56,7 +56,6 @@ ONEFLOW_API_PYBIND11_MODULE("", m) {
           },
           py::call_guard<py::gil_scoped_release>());
 
-  m.def("IsEnvInited", &IsEnvInited);
   m.def("CurrentMachineId", &CurrentMachineId);
 
   m.def("GetRank", &GetRank);
