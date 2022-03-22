@@ -38,6 +38,8 @@ def infer_type(data):
         return flow.float32
     elif isdtype(data, np.float16):
         return flow.float16
+    else:
+        raise TypeError("numpy-ndarray holds elements of unsupported datatype")
 
 
 def as_tensor(data, dtype=None, device=None):

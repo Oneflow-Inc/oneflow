@@ -21,6 +21,8 @@ add_docstr(
     r"""
     as_tensor(data, dtype=None, device=None) -> Tensor
 
+    The interface is consistent with PyTorch.
+    
     Converts data into a tensor, sharing data and preserving autograd history if possible.
 
     If data is already a tensor with the requeseted dtype and device then data itself is returned, but if data is a tensor with a different dtype or device then it’s copied as if using data.to(dtype=dtype, device=device).
