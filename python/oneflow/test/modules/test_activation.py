@@ -745,7 +745,7 @@ class TestLogSigmoidFunction(flow.unittest.TestCase):
 
 @flow.unittest.skip_unless_1n1d()
 class TestSoftshrinkModule(flow.unittest.TestCase):
-    @autotest()
+    @autotest(n=5)
     def test_softshrink_module_with_random_data(test_case):
         m = torch.nn.Softshrink(alpha=random() | nothing())
         m.train(random())
@@ -755,7 +755,7 @@ class TestSoftshrinkModule(flow.unittest.TestCase):
         y = m(x)
         return y
 
-    @autotest()
+    @autotest(n=5)
     def test_softshrink_module_with_0dim_data(test_case):
         m = torch.nn.Softshrink(alpha=random() | nothing())
         m.train(random())

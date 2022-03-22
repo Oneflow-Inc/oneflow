@@ -234,7 +234,7 @@ struct ReluGradFunctor {
 
 template<typename T>
 struct SoftShrinkFunctor {
-  OF_DEVICE_FUNC explicit SoftShrinkFunctor(float alpha) : alpha(alpha) {}
+  OF_DEVICE_FUNC explicit SoftShrinkFunctor(double alpha) : alpha(alpha) {}
   OF_DEVICE_FUNC T operator()(T x) const {
     if (x > alpha) return x - alpha;
     if (x < -alpha) return x + alpha;

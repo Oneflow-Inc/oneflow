@@ -955,7 +955,11 @@ class SELU(Module):
 
 
 class Softshrink(Module):
-    r"""The Softshrink activation.
+    r"""
+    The interface is consistent with PyTorch.
+    The documentation is referenced from: https://pytorch.org/docs/stable/generated/torch.nn.Softshrink.html?highlight=softshrink#torch.nn.Softshrink.
+
+    The Softshrink activation.
 
     The formula is:
     
@@ -969,7 +973,7 @@ class Softshrink(Module):
         \end{cases}
 
     Args:
-        alpha: the :math:`\\alpha` value for the Softshrink furmulation. Default: 0.5
+        alpha: the :math:`\\alpha` value for the Softshrink formulation. Default: 0.5
         inplace: can optionally do the operation in-place. Default: ``False``
     
     Shape:
