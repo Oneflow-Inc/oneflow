@@ -75,7 +75,7 @@ NNGraph::~NNGraph() {
 
 Maybe<void> NNGraph::Close() {
   if (!is_closed_) {
-    VLOG(2) << "Try to close c nn graph name " << name_ << "." << std::endl;
+    VLOG(1) << "Try to close c nn graph name " << name_ << "." << std::endl;
     if (runtime_inited_) {
       CloseRuntimeBuffers();
       runtime_.reset();
