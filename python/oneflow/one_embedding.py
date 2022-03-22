@@ -291,3 +291,15 @@ def make_cached_host_mem_store_options(
         "size_factor": size_factor,
     }
     return options
+
+
+def make_uniform_initializer(low, high):
+    return {"type": "uniform", "low": low, "high": high}
+
+
+def make_normal_initializer(mean, std):
+    return {"type": "normal", "mean": mean, "std": std}
+
+
+def make_column(initializer):
+    return {"initializer": initializer}
