@@ -27,11 +27,11 @@ bool RawIsPartialSumSbp(Symbol<SbpParallel> sbp_parallel) {
   return sbp_parallel->has_partial_sum_parallel();
 }
 
-static constexpr auto* IsPartialSumSbp = DECORATE(&RawIsPartialSumSbp, ThreadLocal);
+static constexpr auto* IsPartialSumSbp = DECORATE(&RawIsPartialSumSbp, ThreadLocalCached);
 
 bool RawIsSplitSbp(Symbol<SbpParallel> sbp_parallel) { return sbp_parallel->has_split_parallel(); }
 
-static constexpr auto* IsSplitSbp = DECORATE(&RawIsSplitSbp, ThreadLocal);
+static constexpr auto* IsSplitSbp = DECORATE(&RawIsSplitSbp, ThreadLocalCached);
 
 Maybe<void> RawCheckNaivePToS(Symbol<PlacedNdSbp> in, Symbol<PlacedNdSbp> out,
                               const Shape& logical_shape) {
@@ -44,7 +44,7 @@ Maybe<void> RawCheckNaivePToS(Symbol<PlacedNdSbp> in, Symbol<PlacedNdSbp> out,
   return Maybe<void>::Ok();
 }
 
-static constexpr auto* CheckNaivePToS = DECORATE(&RawCheckNaivePToS, ThreadLocalCopiable);
+static constexpr auto* CheckNaivePToS = DECORATE(&RawCheckNaivePToS, ThreadLocalCachedCopiable);
 
 }  // namespace
 
