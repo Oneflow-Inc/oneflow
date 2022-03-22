@@ -4,7 +4,6 @@ on:
   push:
     branches:
       - "release/*"
-      - add-cu115-to-nightly
 
   schedule:
     # beijing: 2 am.
