@@ -26,8 +26,13 @@ class TestToTroch(flow.unittest.TestCase):
     # NOTE: oneflow and torch cpu tensor shared the same memory, refer to File "python/oneflow/test/modules/test_from_torch.py", line 49, in test_from_torch_cpu.
     def test_to_torch_cpu(test_case):
         flow_t = flow.rand(5, 3, 3)
+        numpy_from_flow = flow_t.numpy()
 
         torch_t = flow.utils.to_torch(flow_t)
+
+        test_case.assertEqual(
+            torch_t.data_ptr(), numpy_from_flow.__array_interface__["data"][0]
+        )
 
         test_case.assertTrue(
             np.allclose(flow_t.numpy(), torch_t.numpy(), rtol=0.001, atol=0.001)
@@ -46,8 +51,13 @@ class TestToTroch(flow.unittest.TestCase):
 
     def test_to_torch_cpu_with_0dim_data(test_case):
         flow_t = flow.tensor(5)
+        numpy_from_flow = flow_t.numpy()
 
         torch_t = flow.utils.to_torch(flow_t)
+
+        test_case.assertEqual(
+            torch_t.data_ptr(), numpy_from_flow.__array_interface__["data"][0]
+        )
 
         test_case.assertTrue(
             np.allclose(flow_t.numpy(), torch_t.numpy(), rtol=0.001, atol=0.001)
