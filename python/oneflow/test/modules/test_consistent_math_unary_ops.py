@@ -93,24 +93,6 @@ def _test_square(test_case, placement, sbp, ndim):
 
 
 @autotest(n=1, check_graph=False)
-def _test_pow_with_scalar(test_case, placement, sbp, ndim):
-    dim_list = [random(1, 3).to(int).value() * 8 for _ in range(ndim)]
-    x = random_tensor(ndim, *dim_list).to_global(placement, sbp)
-    y = random().to(float)
-    z = torch.pow(x, y)
-    return z
-
-
-@autotest(n=1, auto_backward=False, check_graph=False)
-def _test_floordiv_with_scalar(test_case, placement, sbp, ndim):
-    dim_list = [random(1, 3).to(int).value() * 8 for _ in range(ndim)]
-    x = random_tensor(ndim, *dim_list,).to_global(placement, sbp)
-    y = random().to(float)
-    z = torch.floor_divide(x, y)
-    return z
-
-
-@autotest(n=1, check_graph=False)
 def _test_arccos(test_case, placement, sbp, ndim):
     dim_list = [random(1, 3).to(int).value() * 8 for _ in range(ndim)]
     x = random_tensor(ndim, *dim_list, low=2, high=3).to_global(placement, sbp)
@@ -142,24 +124,6 @@ def _test_acosh(test_case, placement, sbp, ndim):
     return y
 
 
-@autotest(n=1, auto_backward=False, check_graph=False)
-def _test_floordiv(test_case, placement, sbp, ndim):
-    dim_list = [random(1, 3).to(int).value() * 8 for _ in range(ndim)]
-    x = random_tensor(ndim, *dim_list).to_global(placement, sbp)
-    y = random_tensor(ndim, *dim_list).to_global(placement, sbp)
-    z = torch.floor_divide(x, y)
-    return z
-
-
-@autotest(n=1, check_graph=False)
-def _test_atan2(test_case, placement, sbp, ndim):
-    dim_list = [random(1, 3).to(int).value() * 8 for _ in range(ndim)]
-    x = random_tensor(ndim, *dim_list).to_global(placement, sbp)
-    y = random_tensor(ndim, *dim_list).to_global(placement, sbp)
-    z = torch.atan2(x, y)
-    return z
-
-
 class TestMathOps(flow.unittest.TestCase):
     @globaltest
     def test_math_ops(test_case):
@@ -175,15 +139,10 @@ class TestMathOps(flow.unittest.TestCase):
                 _test_exp(test_case, placement, sbp, ndim)
                 _test_rsqrt(test_case, placement, sbp, ndim)
                 _test_square(test_case, placement, sbp, ndim)
-                _test_pow_with_scalar(test_case, placement, sbp, ndim)
-                _test_floordiv_with_scalar(test_case, placement, sbp, ndim)
                 _test_arccos(test_case, placement, sbp, ndim)
                 _test_acos(test_case, placement, sbp, ndim)
                 _test_arccosh(test_case, placement, sbp, ndim)
                 _test_acosh(test_case, placement, sbp, ndim)
-
-                _test_floordiv(test_case, placement, sbp, ndim)
-                _test_atan2(test_case, placement, sbp, ndim)
 
 
 if __name__ == "__main__":
