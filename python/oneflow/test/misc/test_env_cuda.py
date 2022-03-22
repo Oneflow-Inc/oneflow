@@ -34,5 +34,6 @@ class TestEnv(flow.unittest.TestCase):
     def test_cuda_is_available(test_case):
         test_case.assertEqual(flow.cuda.is_available(), True)
 
+
 if __name__ == "__main__":
     unittest.main()
