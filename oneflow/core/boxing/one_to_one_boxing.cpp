@@ -33,7 +33,8 @@ Maybe<void> RawCheckNaiveOneToOne(Symbol<PlacedNdSbp> in, Symbol<PlacedNdSbp> ou
   return Maybe<void>::Ok();
 }
 
-static constexpr auto* CheckNaiveOneToOne = DECORATE(&RawCheckNaiveOneToOne, ThreadLocalCopiable);
+static constexpr auto* CheckNaiveOneToOne =
+    DECORATE(&RawCheckNaiveOneToOne, ThreadLocalCachedCopiable);
 
 }  // namespace
 
