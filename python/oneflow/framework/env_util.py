@@ -201,14 +201,14 @@ class EnvHolder(object):
         if not HasAllMultiClientEnvVars():
             SetDefaultMultiClientEnvVars()
         self._env_cxt = create_env()
-    
+
     def SwitchToShuttingDownPhase(self, is_normal_exit=True):
         self._env_cxt.SwitchToShuttingDownPhase(is_normal_exit)
 
 
-
 def GetEnv():
     return EnvHolder()
+
 
 device_tag2default_parallel_conf = {}
 default_env_proto = _DefaultEnvProto()

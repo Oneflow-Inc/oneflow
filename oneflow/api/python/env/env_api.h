@@ -26,7 +26,6 @@ inline void EnableEagerEnvironment(bool enable_eager_execution) {
   return oneflow::EnableEagerEnvironment(enable_eager_execution).GetOrThrow();
 }
 
-
 inline long long CurrentMachineId() { return oneflow::CurrentMachineId().GetOrThrow(); }
 
 inline int64_t GetRank() { return oneflow::GetRank().GetOrThrow(); }
