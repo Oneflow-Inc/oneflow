@@ -31,6 +31,11 @@ class TestFromTroch(flow.unittest.TestCase):
         test_case.assertEqual(
             torch_t.data_ptr(), numpy_from_torch.__array_interface__["data"][0]
         )
+        numpy_from_torch[0][0] = [1, 2, 3]
+        test_case.assertTrue(
+            np.allclose(torch_t.numpy(), numpy_from_torch, rtol=0.001, atol=0.001)
+        )
+
         # NOTE: oneflow and numpy shared the same memory,
         #   so oneflow and torch cpu tensor shared the same memory,
         #   which means oneflow can use torch's cpu tensor without cost.
@@ -41,9 +46,10 @@ class TestFromTroch(flow.unittest.TestCase):
         )
         test_case.assertEqual(torch_t.numpy().dtype, flow_t.numpy().dtype)
 
+    # NOTE: For the case of 0 size tensor, no memory addresses are compared.
+    #  Because the address of 0 size tensor is random at this time.
     def test_from_torch_cpu_with_0_size_data(test_case):
         torch_t = torch.rand(5, 0, 3)
-        numpy_from_torch = torch_t.numpy()
 
         flow_t = flow.utils.from_torch(torch_t)
 
@@ -66,12 +72,6 @@ class TestFromTroch(flow.unittest.TestCase):
             np.allclose(torch_t.numpy(), flow_t.numpy(), rtol=0.001, atol=0.001)
         )
         test_case.assertEqual(torch_t.numpy().dtype, flow_t.numpy().dtype)
-
-    def _test_from_torch_cuda(test_case):
-        # NOTE: This test can not pass, torch to oneflow conversion of gpu tensor type is not supported.
-        #   Because torch does not provide relevant interfaces.
-        torch_t = torch.tensor([[1, 2, 3], [4, 5, 6]], device="cuda")
-        flow_t = flow.utils.from_torch(torch_t)
 
 
 if __name__ == "__main__":

@@ -37,8 +37,9 @@ def from_torch(torch_tensor):
     The returned tensor and torch tensor share the same memory. 
     
     .. note::
-        Currently only cpu and local tensor is supported.
-        In order to use torch's some cpu ops, this function also can be used in special data processing stages.
+        Currently only cpu tensor, local tensor is supported.
+
+        This function can be used in special data processing stages, torch's some cpu ops can be used. 
 
     Args:
         input (torch.Tensor): Input Tensor
@@ -51,6 +52,7 @@ def from_torch(torch_tensor):
     .. code-block:: python
 
         import oneflow as flow
+        import torch
 
         torch_t = torch.tensor([[1, 2, 3], [4, 5, 6]])
         flow_t = flow.utils.from_torch(torch_t)
@@ -65,7 +67,7 @@ def from_torch(torch_tensor):
     device = torch_tensor.device.__str__()
     assert (
         device == "cpu"
-    ), "Only supports conversion of torch tensor whose device is cpu"
+    ), "Only supports conversion of torch tensor whose device is cpu, need to call torch_tensor.cpu() first"
     np_data = torch_tensor.cpu().detach().numpy()
     return flow_from_numpy(np_data)
 
@@ -79,7 +81,7 @@ def to_torch(flow_tensor):
     The returned tensor and oneflow tensor share the same memory. 
     
     .. note::
-        Currently only cpu and local tensor is supported.
+        Currently only cpu tensor, local tensor is supported.
 
     Args:
         input (oneflow.Tensor): Input Tensor
@@ -92,6 +94,7 @@ def to_torch(flow_tensor):
     .. code-block:: python
 
         import oneflow as flow
+        import torch
 
         flow_t = flow.tensor([[1, 2, 3], [4, 5, 6]])
         torch_t = flow.utils.to_torch(flow_t)
@@ -105,6 +108,6 @@ def to_torch(flow_tensor):
     assert isinstance(flow_tensor, flow.Tensor)
     assert (
         flow_tensor.is_cuda == False
-    ), "Only supports conversion of oneflow tensor whose device is cpu"
+    ), "Only supports conversion of oneflow tensor whose device is cpu, need to call flow_tensor.cpu() first"
     np_data = flow_tensor.cpu().detach().numpy()
     return torch.from_numpy(np_data)

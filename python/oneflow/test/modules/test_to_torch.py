@@ -33,12 +33,18 @@ class TestToTroch(flow.unittest.TestCase):
         test_case.assertEqual(
             torch_t.data_ptr(), numpy_from_flow.__array_interface__["data"][0]
         )
+        numpy_from_flow[0][0] = [1, 2, 3]
+        test_case.assertTrue(
+            np.allclose(torch_t.numpy(), numpy_from_flow, rtol=0.001, atol=0.001)
+        )
 
         test_case.assertTrue(
             np.allclose(flow_t.numpy(), torch_t.numpy(), rtol=0.001, atol=0.001)
         )
         test_case.assertEqual(flow_t.numpy().dtype, torch_t.numpy().dtype)
 
+    # NOTE: For the case of 0 size tensor, no memory addresses are compared.
+    #  Because the address of 0 size tensor is random at this time.
     def test_to_torch_cpu_with_0_size_data(test_case):
         flow_t = flow.rand(5, 3, 0)
 
@@ -63,11 +69,6 @@ class TestToTroch(flow.unittest.TestCase):
             np.allclose(flow_t.numpy(), torch_t.numpy(), rtol=0.001, atol=0.001)
         )
         test_case.assertEqual(flow_t.numpy().dtype, torch_t.numpy().dtype)
-
-    def _test_to_torch_cuda(test_case):
-        # NOTE: This test can not pass, to be fixed later.
-        flow_t = flow.tensor([[1, 2, 3], [4, 5, 6]], device="cuda")
-        torch_t = flow.utils.to_torch(flow_t)
 
 
 if __name__ == "__main__":
