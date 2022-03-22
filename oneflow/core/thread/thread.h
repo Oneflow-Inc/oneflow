@@ -34,8 +34,6 @@ class Thread {
   virtual ~Thread();
 
   void AddTask(const TaskProto&);
-  // NOTE(chengcheng): Indicates whether all actors in the thread have been destructed.
-  bool Empty() const;
 
   Channel<ActorMsg>* GetMsgChannelPtr() { return &msg_channel_; }
 
