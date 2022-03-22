@@ -22,29 +22,16 @@ import oneflow as flow
 import oneflow.unittest
 
 
-def isdtype(data, dt):
-    return data.dtype.num == np.dtype(dt).num
-
-
-def infer_type(data):
-    if isdtype(data, np.int32):
-        return flow.int32
-    elif isdtype(data, np.int64):
-        return flow.int64
-    elif isdtype(data, np.int8):
-        return flow.int8
-    elif isdtype(data, np.uint8):
-        return flow.uint8
-    elif isdtype(data, np.bool):
-        return flow.bool
-    elif isdtype(data, np.float64):
-        return flow.float64
-    elif isdtype(data, np.float32):
-        return flow.float32
-    elif isdtype(data, np.float16):
-        return flow.float16
-    else:
-        raise TypeError("numpy-ndarray holds elements of unsupported datatype")
+numpy_dtype_to_oneflow_dtype_dict = {
+    np.int32: flow.int32,
+    np.int64: flow.int64,
+    np.int8: flow.int8,
+    np.uint8: flow.uint8,
+    np.bool: flow.bool,
+    np.float64: flow.float64,
+    np.float32: flow.float32,
+    np.float16: flow.float16,
+}
 
 
 @flow.unittest.skip_unless_1n1d()
@@ -101,9 +88,9 @@ class TestAsTensor(flow.unittest.TestCase):
                     np_arr = np.ones((2, 3), dtype=np_dtype)
                     try:
                         tensor = flow.as_tensor(np_arr, dtype=flow_dtype)
-                        if infer_type(
-                            np_arr
-                        ) == flow_dtype and device is not flow.device("cuda:0"):
+                        if numpy_dtype_to_oneflow_dtype_dict[
+                            np_arr.dtype
+                        ] == flow_dtype and device is not flow.device("cuda:0"):
                             tensor[0][0] += 1.0
                             test_case.assertTrue(np.array_equal(np_arr, tensor.numpy()))
                         else:

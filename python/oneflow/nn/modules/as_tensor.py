@@ -16,30 +16,16 @@ limitations under the License.
 import numpy as np
 import oneflow as flow
 
-
-def isdtype(data, dt):
-    return data.dtype.num == np.dtype(dt).num
-
-
-def infer_type(data):
-    if isdtype(data, np.int32):
-        return flow.int32
-    elif isdtype(data, np.int64):
-        return flow.int64
-    elif isdtype(data, np.int8):
-        return flow.int8
-    elif isdtype(data, np.uint8):
-        return flow.uint8
-    elif isdtype(data, np.bool):
-        return flow.bool
-    elif isdtype(data, np.float64):
-        return flow.float64
-    elif isdtype(data, np.float32):
-        return flow.float32
-    elif isdtype(data, np.float16):
-        return flow.float16
-    else:
-        raise TypeError("numpy-ndarray holds elements of unsupported datatype")
+numpy_dtype_to_oneflow_dtype_dict = {
+    np.int32: flow.int32,
+    np.int64: flow.int64,
+    np.int8: flow.int8,
+    np.uint8: flow.uint8,
+    np.bool: flow.bool,
+    np.float64: flow.float64,
+    np.float32: flow.float32,
+    np.float16: flow.float16,
+}
 
 
 def as_tensor(data, dtype=None, device=None):
@@ -59,7 +45,11 @@ def as_tensor(data, dtype=None, device=None):
             else:
                 data = flow.tensor(data, device=device)
         else:
-            if infer_type(data) is dtype:
+            if data.dtype in numpy_dtype_to_oneflow_dtype_dict:
+                data_infer_flow_type = numpy_dtype_to_oneflow_dtype_dict[data.dtype]
+            else:
+                raise TypeError("numpy-ndarray holds elements of unsupported datatype")
+            if data_infer_flow_type is dtype:
                 if (device is None) or (device.type == "cpu"):
                     data = flow.from_numpy(data)
                 else:
