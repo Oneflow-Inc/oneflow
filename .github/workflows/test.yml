@@ -545,6 +545,7 @@ jobs:
             -v ${ONEFLOW_TEST_CACHE_DIR}:${ONEFLOW_TEST_CACHE_DIR} \
             -e ONEFLOW_TEST_CACHE_DIR=${ONEFLOW_TEST_CACHE_DIR} \
             -e ONEFLOW_TIMEOUT_SECONDS=${{ env.ONEFLOW_TIMEOUT_SECONDS }} \
+            -e ONEFLOW_THRAED_LOCAL_CACHED_SIZE=8192 \
             -e ONEFLOW_MLIR_ENABLE_ROUND_TRIP=1 \
             --name ${TEST_CONTAINER_NAME} \
             ${{ env.EXTRA_DOCKER_ARGS }} \
@@ -723,6 +724,7 @@ jobs:
             -v ${ONEFLOW_TEST_CACHE_DIR}:${ONEFLOW_TEST_CACHE_DIR} \
             -e ONEFLOW_TEST_CACHE_DIR=${ONEFLOW_TEST_CACHE_DIR} \
             -e ONEFLOW_TIMEOUT_SECONDS=${{ env.ONEFLOW_TIMEOUT_SECONDS }} \
+            -e ONEFLOW_THRAED_LOCAL_CACHED_SIZE=8192 \
             -e ONEFLOW_MLIR_ENABLE_ROUND_TRIP=1 \
             --name ${TEST_CONTAINER_NAME} \
             ${{ env.EXTRA_DOCKER_ARGS }} \
