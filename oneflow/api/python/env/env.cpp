@@ -14,11 +14,29 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 #include <pybind11/pybind11.h>
+#include "oneflow/api/python/env/env.h"
 #include "oneflow/api/python/of_api_registry.h"
 #include "oneflow/api/python/env/env_api.h"
 #include "oneflow/core/job/env_global_objects_scope.h"
+#include "oneflow/core/common/global.h"
+#include "oneflow/core/vm/vm_util.h"
+#include "oneflow/core/vm/virtual_machine.h"
+#include "oneflow/core/framework/shut_down_util.h"
 
 namespace py = pybind11;
+
+namespace oneflow {
+
+Maybe<void> SwitchToShuttingDownPhase(EnvGlobalObjectsScope* env, bool is_normal_exit) {
+  if (is_normal_exit) {
+    JUST(vm::ClusterSync());
+    auto* vm = JUST(GlobalMaybe<VirtualMachine>());
+    JUST(vm->CloseVMThreads());
+  }
+  JUST(env->init_is_normal_exit(is_normal_exit));
+  SetShuttingDown(true);
+  return Maybe<void>::Ok();
+}
 
 ONEFLOW_API_PYBIND11_MODULE("", m) {
   m.def("CurrentResource", &CurrentResource);
@@ -30,7 +48,13 @@ ONEFLOW_API_PYBIND11_MODULE("", m) {
       .def(py::init<>())
       .def("init", [](oneflow::EnvGlobalObjectsScope& env, const std::string& env_proto_str) {
         return env.Init(env_proto_str).GetOrThrow();
-      });
+      })
+      .def(
+          "SwitchToShuttingDownPhase",
+          [](EnvGlobalObjectsScope* env, bool is_normal_exit) {
+            SwitchToShuttingDownPhase(env, is_normal_exit).GetOrThrow();
+          },
+          py::call_guard<py::gil_scoped_release>());
 
   m.def("IsEnvInited", &IsEnvInited);
   m.def("CurrentMachineId", &CurrentMachineId);
@@ -44,4 +68,8 @@ ONEFLOW_API_PYBIND11_MODULE("", m) {
   m.def("GetFLAGS_alsologtostderr", &GetFLAGS_alsologtostderr);
   m.def("SetFLAGS_v", &SetFLAGS_v);
   m.def("GetFLAGS_v", &GetFLAGS_v);
+  m.def("SetGraphLRVerbose", &SetGraphLRVerbose);
+  m.def("GetGraphLRVerbose", &GetGraphLRVerbose);
 }
+
+}  // namespace oneflow

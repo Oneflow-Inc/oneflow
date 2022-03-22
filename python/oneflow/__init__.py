@@ -168,7 +168,6 @@ from oneflow._C import hsplit
 from oneflow._C import vsplit
 from oneflow._C import concat
 from oneflow._C import concat as cat
-from oneflow._C import to
 from oneflow._C import dim_gather as gather
 from oneflow._C import gather_nd
 from oneflow._C import roi_align
@@ -253,10 +252,8 @@ hook = ExitHook()
 
 
 def atexit_hook(hook):
-    if hook.is_normal_exit():
-        oneflow._oneflow_internal.eager.Sync()
     oneflow.framework.session_context.TryCloseDefaultSession()
-    oneflow._oneflow_internal.SetShuttingDown()
+    __oneflow_global_unique_env.SwitchToShuttingDownPhase(hook.is_normal_exit())
 
 
 atexit.register(atexit_hook, hook)
@@ -391,6 +388,7 @@ import oneflow.comm
 import oneflow.framework.docstr as docstr
 import oneflow.cuda
 import oneflow.multiprocessing
+import oneflow.one_embedding
 
 if oneflow._oneflow_internal.flags.with_mlir():
     oneflow_internal_path = oneflow._oneflow_internal.__file__

@@ -17,6 +17,7 @@ limitations under the License.
 #define ONEFLOW_CORE_JOB_CLUSTER_OBJECTS_SCOPE_H_
 #include "oneflow/core/common/util.h"
 #include "oneflow/core/common/maybe.h"
+#include "oneflow/core/common/optional.h"
 #include "oneflow/core/job/env_desc.h"
 #include "oneflow/core/framework/device.h"
 
@@ -32,6 +33,15 @@ class EnvGlobalObjectsScope final {
 
   Maybe<void> Init(const EnvProto& env_proto);
   Maybe<void> Init(const std::string& env_proto_str);
+
+  Maybe<void> init_is_normal_exit(bool is_normal_exit) {
+    CHECK_OR_RETURN(!is_normal_exit_.has_value());
+    is_normal_exit_ = is_normal_exit;
+    return Maybe<void>::Ok();
+  }
+
+ private:
+  Optional<bool> is_normal_exit_;
 };
 
 }  // namespace oneflow
