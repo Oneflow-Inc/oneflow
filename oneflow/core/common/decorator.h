@@ -24,8 +24,6 @@ limitations under the License.
 
 namespace oneflow {
 
-static const int64_t kThreadLocalCachedSize = EnvInteger<ONEFLOW_THRAED_LOCAL_CACHED_SIZE>();
-
 template<template<typename...> class Decorator>
 struct WithDecorator final {
   template<typename T, typename = void>
@@ -160,7 +158,9 @@ struct ThreadLocalCachedCopiable<RetT, Arg0> {
     static thread_local std::unordered_map<KeyT, MappedT> map;
     auto iter = map.find(arg0);
     if (iter == map.end()) {
-      if (map.size() >= ThreadLocalEnvInteger<ONEFLOW_THRAED_LOCAL_CACHED_SIZE>()) { map.clear(); }
+      if (map.size() >= ThreadLocalEnvInteger<ONEFLOW_THRAED_LOCAL_CACHED_SIZE>()) {
+        map.clear();
+      }
       iter = map.emplace(arg0, func(arg0)).first;
     }
     return iter->second;
@@ -182,7 +182,9 @@ struct ThreadLocalCachedCopiable<RetT, Arg0, Args...> {
     const auto& key = KeyT(arg0, args...);
     auto iter = map.find(key);
     if (iter == map.end()) {
-      if (map.size() >= ThreadLocalEnvInteger<ONEFLOW_THRAED_LOCAL_CACHED_SIZE>()) { map.clear(); }
+      if (map.size() >= ThreadLocalEnvInteger<ONEFLOW_THRAED_LOCAL_CACHED_SIZE>()) {
+        map.clear();
+      }
       iter = map.emplace(key, func(arg0, args...)).first;
     }
     return iter->second;
