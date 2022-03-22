@@ -24,7 +24,7 @@ import torch
 @flow.unittest.skip_unless_1n1d()
 class TestFromTroch(flow.unittest.TestCase):
     def test_from_torch_cpu(test_case):
-        torch_t = torch.tensor([[1, 2, 3], [4, 5, 6]])
+        torch_t = torch.rand(5, 3, 3)
         numpy_from_torch = torch_t.numpy()
 
         # NOTE: torch and numpy shared the same memory.
@@ -34,6 +34,32 @@ class TestFromTroch(flow.unittest.TestCase):
         # NOTE: oneflow and numpy shared the same memory,
         #   so oneflow and torch cpu tensor shared the same memory,
         #   which means oneflow can use torch's cpu tensor without cost.
+        flow_t = flow.utils.from_torch(torch_t)
+
+        test_case.assertTrue(
+            np.allclose(torch_t.numpy(), flow_t.numpy(), rtol=0.001, atol=0.001)
+        )
+        test_case.assertEqual(torch_t.numpy().dtype, flow_t.numpy().dtype)
+
+    def test_from_torch_cpu_with_0_size_data(test_case):
+        torch_t = torch.rand(5, 0, 3)
+        numpy_from_torch = torch_t.numpy()
+
+        flow_t = flow.utils.from_torch(torch_t)
+
+        test_case.assertTrue(
+            np.allclose(torch_t.numpy(), flow_t.numpy(), rtol=0.001, atol=0.001)
+        )
+        test_case.assertEqual(torch_t.numpy().dtype, flow_t.numpy().dtype)
+
+    def test_from_torch_cpu_with_0dim_data(test_case):
+        torch_t = torch.tensor(5)
+        numpy_from_torch = torch_t.numpy()
+
+        test_case.assertEqual(
+            torch_t.data_ptr(), numpy_from_torch.__array_interface__["data"][0]
+        )
+
         flow_t = flow.utils.from_torch(torch_t)
 
         test_case.assertTrue(
