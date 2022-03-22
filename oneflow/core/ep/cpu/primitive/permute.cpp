@@ -15,6 +15,9 @@ limitations under the License.
 */
 #include "oneflow/core/ep/include/primitive/permute.h"
 #include "oneflow/core/ep/common/primitive/permute_impl.h"
+#include "oneflow/core/ep/cpu/cpu_stream.h"
+#include "oneflow/core/ep/cpu/cpu_device.h"
+
 
 namespace oneflow {
 
@@ -64,6 +67,46 @@ class PermuteImpl : public Permute {
   }
 };
 
+#ifdef WITH_ONEDNN
+class OneDnnPermuteImpl : public Permute {
+ public:
+  OF_DISALLOW_COPY_AND_MOVE(OneDnnPermuteImpl);
+  OneDnnPermuteImpl() = default;
+  ~OneDnnPermuteImpl() override = default;
+
+  using Permute::Launch;
+  void Launch(Stream* stream, DataType data_type, size_t num_dims, const int64_t* src_dims,
+              const void* src, const int* permutation, void* dst) override {
+  
+    // 判断onednn是否支持
+
+    CpuStream* cpu_stream = stream->As<CpuStream>();
+    size_t num_threads = static_cast<CpuDevice*>(cpu_stream->device())->GetNumThreads();
+    CpuNumThreadsGuard guard(num_threads);
+
+    dnnl::engine* onednn_engine = stream->As<CpuStream>()->onednn_engine();
+    dnnl::stream* onednn_stream = stream->As<CpuStream>()->onednn_stream();
+
+    dnnl::memory::dims src_stride(kMaxNumDims, 0);
+    dnnl::memory::dims dst_stride(kMaxNumDims, 0);
+
+    src_stride[num_dims-1] = 1;
+    for (size_t dim = num_dims-2; dim >= 0; dim--) {
+      src_stride[dim] = src_stride[dim+1] * src_dims[dim+1];
+    }
+    //
+    dst_stride[permutation[num_dims-1]] = 1;
+    for (size_t dim = num_dims-2; dim >= 0; dim--) {
+      int index = permutation[dim+1];
+      dst_stride[permutation[dim]] = dst_stride[index] * src_dims[index];
+    }
+    printf("%ld, %ld, %ld, %ld\n", src_stride[0], src_stride[1], src_stride[2], src_stride[3]);
+    printf("%ld, %ld, %ld, %ld\n", dst_stride[0], dst_stride[1], dst_stride[2], dst_stride[3]);
+  }
+};
+
+#endif  // WITH_ONEDNN
+
 class PermuteFactoryImpl : public PermuteFactory {
  public:
   OF_DISALLOW_COPY_AND_MOVE(PermuteFactoryImpl);
@@ -72,7 +115,12 @@ class PermuteFactoryImpl : public PermuteFactory {
 
   std::unique_ptr<Permute> New(size_t max_num_dims) override {
     if (max_num_dims <= kMaxNumDims) {
+      #ifdef WITH_ONEDNN
+      return std::unique_ptr<Permute>(new OneDnnPermuteImpl());
+      #else
       return std::unique_ptr<Permute>(new PermuteImpl());
+      #endif  // WITH_ONEDNN
+      
     } else {
       return nullptr;
     }
