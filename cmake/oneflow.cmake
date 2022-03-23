@@ -353,8 +353,17 @@ if(BUILD_PYTHON)
   set_target_properties(oneflow_internal PROPERTIES LIBRARY_OUTPUT_DIRECTORY
                                                     "${ONEFLOW_PYTHON_DIR}/oneflow")
   target_link_libraries(
-    oneflow_internal PRIVATE $<TARGET_OBJECTS:oneflow> of_protoobj of_cfgobj of_functional_obj of_op_schema of_functional_tensor_obj of_api_common
-                             ${oneflow_third_party_libs} of_pyext_obj glog::glog)
+    oneflow_internal
+    PRIVATE $<TARGET_OBJECTS:oneflow>
+            of_protoobj
+            of_cfgobj
+            of_functional_obj
+            of_op_schema
+            of_functional_tensor_obj
+            of_api_common
+            ${oneflow_third_party_libs}
+            of_pyext_obj
+            glog::glog)
   target_include_directories(oneflow_internal PRIVATE ${Python_INCLUDE_DIRS}
                                                       ${Python_NumPy_INCLUDE_DIRS})
 
