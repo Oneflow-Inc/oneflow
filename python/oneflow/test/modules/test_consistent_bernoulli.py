@@ -26,7 +26,7 @@ import oneflow.unittest
 
 
 def _test_bernoulli(test_case, ndim, placement, sbp):
-    dims = [random(1, 4).to(int) * 8 for _ in range(ndim)]
+    dims = [random(1, 3).to(int) * 8 for _ in range(ndim)]
     x = random_tensor(ndim, *dims).oneflow
     with flow.no_grad():
         x[:] = 1
@@ -36,7 +36,7 @@ def _test_bernoulli(test_case, ndim, placement, sbp):
 
 
 def _test_bernoulli_with_generator(test_case, ndim, placement, sbp):
-    dims = [random(1, 4).to(int) * 8 for _ in range(ndim)]
+    dims = [random(1, 3).to(int) * 8 for _ in range(ndim)]
     generator = flow.Generator()
     generator.manual_seed(0)
     x = random_tensor(ndim, *dims).oneflow
@@ -55,7 +55,7 @@ class TestBernoulli(flow.unittest.TestCase):
             if placement.type != "cpu":
                 continue
             ndim = random(1, 4).to(int).value()
-            for sbp in all_sbp(placement, max_dim=ndim):
+            for sbp in all_sbp(placement, max_dim=min(2, ndim)):
                 _test_bernoulli(test_case, ndim, placement, sbp)
                 _test_bernoulli_with_generator(test_case, ndim, placement, sbp)
 

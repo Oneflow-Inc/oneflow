@@ -22,7 +22,7 @@ from oneflow.test_utils.automated_test_util import *
 
 @autotest(n=1, rtol=1e-3, atol=1e-3, check_graph=False)
 def _test_batchnorm1d_module(test_case, placement, sbp):
-    dims = [random(1, 4).to(int) for _ in range(3)]
+    dims = [random(1, 3).to(int) for _ in range(3)]
     channel = dims[1]
     track_running_stats = random_bool().value()
     m = torch.nn.BatchNorm1d(
@@ -36,7 +36,7 @@ def _test_batchnorm1d_module(test_case, placement, sbp):
 
 @autotest(n=1, rtol=1e-3, atol=1e-3, check_graph=False)
 def _test_batchnorm2d_module(test_case, placement, sbp):
-    dims = [random(1, 4).to(int) for _ in range(4)]
+    dims = [random(1, 3).to(int) for _ in range(4)]
     channel = dims[1]
     track_running_stats = random_bool().value()
     m = torch.nn.BatchNorm2d(
@@ -50,7 +50,7 @@ def _test_batchnorm2d_module(test_case, placement, sbp):
 
 @autotest(n=1, rtol=1e-3, atol=1e-3, check_graph=False)
 def _test_batchnorm3d_module(test_case, placement, sbp):
-    dims = [random(1, 4).to(int) for _ in range(5)]
+    dims = [random(1, 3).to(int) for _ in range(5)]
     channel = dims[1]
     track_running_stats = random_bool().value()
     m = torch.nn.BatchNorm3d(
