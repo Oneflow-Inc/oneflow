@@ -743,5 +743,45 @@ class TestLogSigmoidFunction(flow.unittest.TestCase):
         return y
 
 
+@flow.unittest.skip_unless_1n1d()
+class TestThresholdModule(flow.unittest.TestCase):
+    @autotest(n=5)
+    def test_threshold_module_with_random_data(test_case):
+        m = torch.nn.Threshold(
+            threshold=random() | nothing(), value=random() | nothing()
+        )
+        m.train(random())
+        device = random_device()
+        m.to(device)
+        x = random_tensor().to(device)
+        y = m(x)
+        return y
+
+    @autotest(n=5)
+    def test_threshold_module_with_0dim_data(test_case):
+        # m = torch.nn.Threshold(threshold=random(), value=random())
+        m = torch.nn.Threshold(
+            threshold=random() | nothing(), value=random() | nothing()
+        )
+        m.train(random())
+        device = random_device()
+        m.to(device)
+        x = random_tensor(ndim=0).to(device)
+        y = m(x)
+        return y
+
+    @autotest(auto_backward=False, check_graph=True)
+    def test_threshold_module_with_0_size_data(test_case):
+        m = torch.nn.Threshold(
+            threshold=random() | nothing(), value=random() | nothing()
+        )
+        m.train(random())
+        device = random_device()
+        m.to(device)
+        x = random_tensor(4, 2, 3, 0, 3).to(device)
+        y = m(x)
+        return y
+
+
 if __name__ == "__main__":
     unittest.main()

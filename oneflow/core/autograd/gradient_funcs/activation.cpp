@@ -393,7 +393,7 @@ class Threshold : public OpExprGradFunction<ThresholdCaptureState> {
     if (!ctx->requires_grad) { return Maybe<void>::Ok(); }
 
     ComposedAttrMap composed_attrs(attrs, base_attrs_);
-    ctx->threshold = JUST(composed_attrs.GetAttr<double>("threshold"));
+    ctx->threshold = JUST(composed_attrs.GetAttr<double>("thres"));
     ctx->SaveTensorForBackward(inputs.at(0));
     return Maybe<void>::Ok();
   }
