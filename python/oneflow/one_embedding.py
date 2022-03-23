@@ -52,14 +52,14 @@ def _check_cache(cache):
     assert cache["value_memory_kind"] in ["device", "host"]
 
 
-class Embedding(Module):
+class MultiTableEmbedding(Module):
     def __init__(
         self,
         name,
         embedding_dim,
         dtype,
         key_type,
-        columns,
+        tables,
         store_options,
         default_initializer=None,
     ):
@@ -70,7 +70,7 @@ class Embedding(Module):
             "std": 0.05,
         }
         key_value_store_options = {}
-        embedding_columns = {}
+        embedding_tables = {}
         key_value_store_options["name"] = name
         assert embedding_dim > 0
         self.embedding_dim = embedding_dim
@@ -131,21 +131,22 @@ class Embedding(Module):
         key_value_store_options["kv_store"] = kv_store
 
         # initializer
-        if columns is not None:
-            assert isinstance(columns, (list, tuple))
-            for column in columns:
-                assert isinstance(column, dict)
-                assert column.__contains__("initializer")
-                _check_initializer(column["initializer"])
-            embedding_columns["columns"] = columns
+        if tables is not None:
+            assert isinstance(tables, (list, tuple))
+            for table in tables:
+                assert isinstance(table, dict)
+                assert table.__contains__("initializer")
+                _check_initializer(table["initializer"])
+            # TODO(guoran): change "columns" to "tables" and modify c++ code
+            embedding_tables["columns"] = tables
         else:
             assert default_initializer is not None
             _check_initializer(default_initializer)
-            embedding_columns["columns"] = [{"initializer": default_initializer}]
+            embedding_tables["columns"] = [{"initializer": default_initializer}]
         key_value_store_options["parallel_num"] = parallel_num
         self.key_value_store_options = json.dumps(key_value_store_options)
-        self.embedding_columns = json.dumps(embedding_columns)
-        self.num_columns = len(embedding_columns["columns"])
+        self.embedding_tables = json.dumps(embedding_tables)
+        self.num_tables = len(embedding_tables["columns"])
         self.local_rank = flow.env.get_local_rank()
         self.rank_id = flow.env.get_rank()
         self.world_size = parallel_num
@@ -198,16 +199,16 @@ class Embedding(Module):
     def load_snapshot(self, snapshot_name):
         self.handler.LoadSnapshot(snapshot_name)
 
-    def forward(self, ids, column_ids=None):
+    def forward(self, ids, table_ids=None):
         assert self.key_type == ids.dtype, "ids data_type must equals key_type"
         return flow._C.one_embedding_lookup(
             self.shadow,
             ids,
-            column_ids,
+            table_ids,
             self.dtype,
             self.embedding_dim,
-            self.num_columns,
-            self.embedding_columns,
+            self.num_tables,
+            self.embedding_tables,
             self.key_value_store_options,
         )
 
@@ -309,5 +310,5 @@ def make_normal_initializer(mean, std):
     return {"type": "normal", "mean": mean, "std": std}
 
 
-def make_column(initializer):
+def make_table(initializer):
     return {"initializer": initializer}
