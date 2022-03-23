@@ -115,7 +115,7 @@ OneFlowEnv::OneFlowEnv() {
   CompleteEnvProto(env_proto);
 
   env_ctx_ = std::make_shared<of::EnvGlobalObjectsScope>();
-  env_ctx_->Init(env_proto);
+  CHECK_JUST(env_ctx_->Init(env_proto));
 
   of::ConfigProto config_proto;
   config_proto.mutable_resource()->set_cpu_device_num(1);  // useless, will be set in TryInit
@@ -124,7 +124,7 @@ OneFlowEnv::OneFlowEnv() {
   config_proto.set_session_id(session_id);
 
   session_ctx_ = std::make_shared<of::MultiClientSessionContext>(env_ctx_);
-  session_ctx_->TryInit(config_proto);
+  CHECK_JUST(session_ctx_->TryInit(config_proto));
 }
 
 OneFlowEnv::~OneFlowEnv() {
