@@ -63,9 +63,9 @@ Maybe<BoxingInterpreterStatus> RawMakeComposedBoxingInterpreterStatus(
 }  // namespace
 
 decltype(MakeBoxingInterpreterStatus) MakeBoxingInterpreterStatus =
-    DECORATE(&RawMakeBoxingInterpreterStatus, ThreadLocalCopiable);
+    DECORATE(&RawMakeBoxingInterpreterStatus, ThreadLocalCachedCopiable);
 decltype(MakeComposedBoxingInterpreterStatus) MakeComposedBoxingInterpreterStatus =
-    DECORATE(&RawMakeComposedBoxingInterpreterStatus, ThreadLocalCopiable);
+    DECORATE(&RawMakeComposedBoxingInterpreterStatus, ThreadLocalCachedCopiable);
 
 namespace {
 
@@ -104,9 +104,9 @@ Maybe<std::string> RawGetBoxingDesc(Symbol<std::vector<std::string>> sorted_boxi
   return ss.str();
 }
 
-static constexpr auto* GetNdSbpRouting = DECORATE(&RawGetNdSbpRouting, ThreadLocal);
-static constexpr auto* GetPlacementRouting = DECORATE(&RawGetPlacementRouting, ThreadLocal);
-static constexpr auto* GetBoxingDesc = DECORATE(&RawGetBoxingDesc, ThreadLocal);
+static constexpr auto* GetNdSbpRouting = DECORATE(&RawGetNdSbpRouting, ThreadLocalCached);
+static constexpr auto* GetPlacementRouting = DECORATE(&RawGetPlacementRouting, ThreadLocalCached);
+static constexpr auto* GetBoxingDesc = DECORATE(&RawGetBoxingDesc, ThreadLocalCached);
 
 }  // namespace
 
