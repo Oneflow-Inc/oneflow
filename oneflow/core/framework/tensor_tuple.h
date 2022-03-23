@@ -25,8 +25,7 @@ namespace one {
 
 class Tensor;
 
-class TensorTuple final : public std::vector<std::shared_ptr<Tensor>>,
-                          public std::enable_shared_from_this<TensorTuple> {
+class TensorTuple final : public std::vector<std::shared_ptr<Tensor>> {
  public:
   // TensorTuple(const TensorTuple&) = delete;
   // TensorTuple(TensorTuple&) = delete;
