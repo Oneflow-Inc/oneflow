@@ -67,6 +67,7 @@ if(CUDNN_FOUND)
   else()
     set(SINGLE_CUDNN_STATIC_LIB ${CUDNN_LIBRARY_DIRECTORY}/libcudnn_static.a)
     if(EXISTS ${SINGLE_CUDNN_STATIC_LIB})
+      get_filename_component(SINGLE_CUDNN_STATIC_LIB "${SINGLE_CUDNN_STATIC_LIB}" REALPATH)
       list(APPEND CUDNN_LIBRARIES ${SINGLE_CUDNN_STATIC_LIB})
     else()
       list(

@@ -258,7 +258,7 @@ include_directories(${PROJECT_SOURCE_DIR}) # TO FIND: third_party/eigen3/..
 include_directories(${PROJECT_BINARY_DIR})
 
 # cc obj lib
-oneflow_add_library(oneflow ${of_all_obj_cc})
+oneflow_add_library(oneflow OBJECT ${of_all_obj_cc})
 
 add_dependencies(oneflow of_protoobj)
 add_dependencies(oneflow of_cfgobj)
@@ -300,24 +300,17 @@ if(APPLE)
   set(of_libs -Wl,-force_load oneflow of_protoobj of_cfgobj of_functional_obj of_op_schema)
   target_link_libraries(oneflow of_protoobj of_cfgobj of_functional_obj ${oneflow_third_party_libs})
 elseif(UNIX)
-  set(of_libs
-      -Wl,--whole-archive
-      oneflow
-      of_protoobj
-      of_cfgobj
-      of_functional_obj
-      of_op_schema
-      -Wl,--no-whole-archive
-      -ldl
-      -lrt)
+  set(of_libs oneflow of_cfgobj of_functional_obj of_op_schema -ldl -lrt)
   target_link_libraries(
     oneflow
     of_protoobj
     of_cfgobj
     of_functional_obj
+    ${NCCL_LIBRARIES}
+    ${CUDNN_LIBRARIES}
+    ${VENDOR_CUDA_LIBRARIES}
     ${oneflow_third_party_libs}
     ${EXTERNAL_TARGETS}
-    -Wl,--no-whole-archive
     -ldl
     -lrt)
   if(BUILD_CUDA)
@@ -360,7 +353,7 @@ if(BUILD_PYTHON)
   set_target_properties(oneflow_internal PROPERTIES LIBRARY_OUTPUT_DIRECTORY
                                                     "${ONEFLOW_PYTHON_DIR}/oneflow")
   target_link_libraries(
-    oneflow_internal PRIVATE ${of_libs} of_functional_tensor_obj of_api_common
+    oneflow_internal PRIVATE $<TARGET_OBJECTS:oneflow> of_protoobj of_cfgobj of_functional_obj of_op_schema of_functional_tensor_obj of_api_common
                              ${oneflow_third_party_libs} of_pyext_obj glog::glog)
   target_include_directories(oneflow_internal PRIVATE ${Python_INCLUDE_DIRS}
                                                       ${Python_NumPy_INCLUDE_DIRS})

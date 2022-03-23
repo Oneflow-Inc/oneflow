@@ -283,10 +283,6 @@ if(BUILD_CUDA)
   endif()
   include(nccl)
 
-  list(APPEND oneflow_third_party_libs ${NCCL_LIBRARIES})
-  list(APPEND oneflow_third_party_libs ${CUDNN_LIBRARIES})
-  list(APPEND oneflow_third_party_libs ${VENDOR_CUDA_LIBRARIES})
-
   list(APPEND oneflow_third_party_dependencies nccl)
 
   list(APPEND ONEFLOW_THIRD_PARTY_INCLUDE_DIRS ${CUDNN_INCLUDE_DIRS} ${CUB_INCLUDE_DIR}
