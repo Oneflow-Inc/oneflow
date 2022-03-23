@@ -20,7 +20,6 @@ namespace oneflow {
 
 namespace ep {
 namespace primitive {
-
 namespace {
 
 template<UnaryOp unary_op, typename Src, typename Dst>

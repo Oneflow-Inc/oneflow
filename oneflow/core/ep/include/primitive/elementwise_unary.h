@@ -18,20 +18,12 @@ limitations under the License.
 
 #include "oneflow/core/ep/include/primitive/primitive.h"
 #include "oneflow/core/ep/include/primitive/unary_op.h"
+#include "oneflow/core/common/stride.h"
 
 namespace oneflow {
 
 namespace ep {
 namespace primitive {
-
-struct StrideParam {
-  int64_t stride[16];
-  size_t n_dim;
-  StrideParam(const int64_t* stride_vec, const size_t ndim) {
-    n_dim = ndim;
-    for (size_t i = 0; i < n_dim; ++i) { stride[i] = stride_vec[i]; }
-  }
-};
 
 
 class ElementwiseUnary : public Primitive {

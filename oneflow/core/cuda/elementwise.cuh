@@ -20,7 +20,7 @@ limitations under the License.
 #include <cstdint>
 #include <algorithm>
 #include <type_traits>
-#include "oneflow/core/ep/common/primitive/elementwise_unary.h"
+#include "oneflow/core/common/stride.h"
 
 namespace oneflow {
 
@@ -52,9 +52,9 @@ inline cudaError_t GetNumBlocks(int64_t n, int* num_blocks) {
   return cudaSuccess;
 }
 
-__device__ __forceinline__ int64_t compute_index(int64_t out_offset,
-                                                   const oneflow::ep::primitive::StrideParam& in_stride,
-                                                   const oneflow::ep::primitive::StrideParam& out_stride) {
+__device__ __forceinline__ int64_t offset_to_index(int64_t out_offset,
+                                                   const StrideParam& in_stride,
+                                                   const StrideParam& out_stride) {
   int64_t in_offset = 0;
   int64_t remaining = out_offset;
 
@@ -160,13 +160,13 @@ __global__ void __launch_bounds__(kBlockSize)
 template<typename FactoryT, typename R, typename... IN>
 __global__ void __launch_bounds__(kBlockSize)
     ApplyWithStride(FactoryT factory, int64_t count, 
-      const oneflow::ep::primitive::StrideParam in_stride, 
-      const oneflow::ep::primitive::StrideParam out_stride, 
+      const StrideParam in_stride, 
+      const StrideParam out_stride, 
       R* r, const IN*... in) {
   auto functor = factory();
   const int global_tid = blockIdx.x * kBlockSize + threadIdx.x;
   for (int64_t i = global_tid; i < count; i += blockDim.x * gridDim.x) {
-    int64_t src_idx = compute_index(i, in_stride, out_stride);
+    int64_t src_idx = offset_to_index(i, in_stride, out_stride);
     r[i] = functor((in[src_idx])...);
   }
 }
@@ -203,8 +203,8 @@ struct GenericLauncher {
   }
 
   static cudaError_t LaunchWithStride(FactoryT factory, int64_t n, 
-    const oneflow::ep::primitive::StrideParam& in_stride, 
-    const oneflow::ep::primitive::StrideParam& out_stride, 
+    const StrideParam& in_stride, 
+    const StrideParam& out_stride, 
     R* r, const IN*... in, cudaStream_t stream) {
     constexpr int pack_size = PackSize<R, IN...>();
     int num_blocks;
@@ -227,8 +227,8 @@ inline cudaError_t UnaryWithFactory(FactoryT factory, int64_t n, R* r, const A* 
 
 template<typename FactoryT, typename R, typename A>
 inline cudaError_t UnaryWithStrideFactory(FactoryT factory, int64_t n, 
-const oneflow::ep::primitive::StrideParam& in_stride, 
-const oneflow::ep::primitive::StrideParam& out_stride,
+const StrideParam& in_stride, 
+const StrideParam& out_stride,
 R* r, const A* a, cudaStream_t stream) {
   return GenericLauncher<FactoryT, R, A>::LaunchWithStride(factory, n, in_stride, out_stride, r, a, stream);
 }
@@ -240,8 +240,8 @@ inline cudaError_t Unary(FunctorT functor, int64_t n, R* r, const A* a, cudaStre
 
 template<typename FunctorT, typename R, typename A>
 inline cudaError_t UnaryWithStride(FunctorT functor, int64_t n, 
-const oneflow::ep::primitive::StrideParam& in_stride, 
-const oneflow::ep::primitive::StrideParam& out_stride, 
+const StrideParam& in_stride, 
+const StrideParam& out_stride, 
 R* r, const A* a, cudaStream_t stream) {
   return UnaryWithStrideFactory(SimpleFactory<FunctorT>(functor), n, in_stride, out_stride, r, a, stream);
 }

@@ -49,7 +49,7 @@ class GeluKernel final : public user_op::OpKernel, public user_op::CudaGraphSupp
     DimVector in_shape_vec;
     x->shape().ToDimVector(&in_shape_vec);
     bool is_contiguous = oneflow::one::IsContiguous(in_shape_vec, in_stride_vec);
-    oneflow::ep::primitive::StrideParam param_in_stride(in_stride_vec.data(), ndim), param_out_stride(out_stride_vec.data(), ndim);
+    StrideParam param_in_stride(in_stride_vec.data(), ndim), param_out_stride(out_stride_vec.data(), ndim);
 
     if (elem_cnt != 0) {
       if(is_contiguous){
