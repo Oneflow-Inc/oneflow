@@ -13,23 +13,24 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 """
+import os
+import unittest
 import oneflow as flow
-
-from oneflow.cuda.type_tensor import *
-
-
-def is_available() -> bool:
-    r"""Returns a bool indicating if CUDA is currently available."""
-    # This function never throws and returns 0 if driver is missing or can't
-    # be initialized
-    return device_count() > 0
+import oneflow.unittest
 
 
-def device_count() -> int:
-    r"""Returns the number of GPUs available."""
-    return flow._oneflow_internal.CudaGetDeviceCount()
+@unittest.skipIf(os.getenv("ONEFLOW_TEST_CPU_ONLY"), "only test cpu cases")
+@flow.unittest.skip_unless_1n2d()
+class TestEnv(flow.unittest.TestCase):
+    def test_get_device_count(test_case):
+        test_case.assertEqual(flow.cuda.device_count(), 2)
+
+    def test_current_device_idx(test_case):
+        test_case.assertEqual(flow.cuda.current_device(), flow.env.get_rank())
+
+    def test_cuda_is_available(test_case):
+        test_case.assertEqual(flow.cuda.is_available(), True)
 
 
-def current_device() -> int:
-    r"""Returns local rank as device index."""
-    return flow._oneflow_internal.GetCudaDeviceIndex()
+if __name__ == "__main__":
+    unittest.main()
