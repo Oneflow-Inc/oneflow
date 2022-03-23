@@ -13,12 +13,13 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 """
+from oneflow.framework.env_util import api_all_device_placement as all_device_placement
 import oneflow._oneflow_internal
 
 
 def get_local_rank():
     """Returns the local rank of current machine.
-    Local rank is not globally unique. It is only unique per process on a machine. 
+    Local rank is not globally unique. It is only unique per process on a machine.
 
     Returns:
         The the local rank of process on current machine.
@@ -29,7 +30,7 @@ def get_local_rank():
 
 def get_rank():
     """Returns the rank of current process group.
-    Rank is globally unique, range of which is [0, world_size). 
+    Rank is globally unique, range of which is [0, world_size).
 
     Returns:
         The rank of the process group.
