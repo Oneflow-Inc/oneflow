@@ -419,7 +419,7 @@ class NDSliceBoxingSubTskGphBuilder final : public HierarchicalSubTskGphBuilder 
           && (NdSbpNoPartialParallel(in_nd_sbp) || NdsbpAllSplitParallel(out_nd_sbp))) {
         // pass
       } else {
-        Error::BoxingNotSupportedError();
+        return Error::BoxingNotSupportedError();
       }
 
       bool producer_has_partial = !NdSbpNoPartialParallel(in_nd_sbp);
