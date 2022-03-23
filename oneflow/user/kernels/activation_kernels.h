@@ -221,6 +221,33 @@ struct SoftSignGradFunctor {
 };
 
 template<typename T>
+struct SoftplusFunctor {
+  OF_DEVICE_FUNC explicit SoftplusFunctor(double beta, double threshold)
+      : beta(beta), threshold(threshold) {}
+  OF_DEVICE_FUNC T operator()(T x) const {
+    // MATH_FUNC_F(log, (1.0f + MATH_FUNC_F(exp, x)))
+    return (x * beta) > threshold ? x : static_cast<T>(std::log1p(std::exp(x * beta))) / beta;
+  }
+
+  const T beta;
+  const T threshold;
+};
+
+template<typename T>
+struct SoftplusGradFunctor {
+  OF_DEVICE_FUNC explicit SoftplusGradFunctor(double beta, double threshold)
+      : beta(beta), threshold(threshold) {}
+  OF_DEVICE_FUNC T operator()(T y, T dy) const {
+    // TODO
+    T z = std::exp(dy * beta);
+    return (dy * beta) > threshold ? y : y * z / (z + T(1.));
+  }
+
+  const T beta;
+  const T threshold;
+};
+
+template<typename T>
 struct ReluFunctor {
   OF_DEVICE_FUNC explicit ReluFunctor() {}
   OF_DEVICE_FUNC T operator()(T x) const { return x > static_cast<T>(0) ? x : static_cast<T>(0); }
@@ -364,6 +391,21 @@ struct ReluGradFunctor {
       device, "softsign_grad", SoftSignGradFunctor, dtype, dtype, dtype,                          \
       [](user_op::KernelComputeContext* ctx) { return SoftSignGradFunctor<dtype>(); }, "dx", "x", \
       "dy");
+
+#define REGISTER_SOFTPLUS_KERNEL(device, dtype)                                                   \
+  REGISTER_UNARY_ELEMWISE_USER_KERNEL(                                                            \
+      device, "softplus", SoftplusFunctor, dtype, dtype,                                          \
+      [](user_op::KernelComputeContext* ctx) {                                                    \
+        return SoftplusFunctor<dtype>(ctx->Attr<double>("beta"), ctx->Attr<double>("threshold")); \
+      },                                                                                          \
+      "out", "in");                                                                               \
+  REGISTER_BINARY_ELEMWISE_USER_KERNEL(                                                           \
+      device, "softplus_grad", SoftplusGradFunctor, dtype, dtype, dtype,                          \
+      [](user_op::KernelComputeContext* ctx) {                                                    \
+        return SoftplusGradFunctor<dtype>(ctx->Attr<double>("beta"),                              \
+                                          ctx->Attr<double>("threshold"));                        \
+      },                                                                                          \
+      "dx", "y", "dy");
 
 // For Relu Inplace Proposal Fn.
 #define REGISTER_RELU_FORWARD_KERNEL(device, dtype)                                                \

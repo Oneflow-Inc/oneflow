@@ -132,12 +132,15 @@ add_docstr(
 add_docstr(
     oneflow.softplus,
     r"""
-    softplus(x: Tensor) -> Tensor 
+    softplus(x: Tensor, beta: int = 1, threshold: int = 20) -> Tensor 
 
     Applies the element-wise function:
 
     .. math::
-        \text{Softplus}(x) = \frac{1}{\beta} * \log(1 + \exp(\beta * x))    
+        \text{Softplus}(x) = \frac{1}{\beta} * \log(1 + \exp(\beta * x))   
+
+    For numerical stability the implementation reverts to the linear function
+    when :math:`input \times \beta > threshold`. 
     
     See :class:`~oneflow.nn.Softplus` for more details.
     """,
