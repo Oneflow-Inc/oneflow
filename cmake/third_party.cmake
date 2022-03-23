@@ -161,10 +161,6 @@ if(NOT WITH_XLA)
   list(APPEND oneflow_third_party_libs ${RE2_LIBRARIES})
 endif()
 
-if(WITH_ZLIB)
-  list(APPEND oneflow_third_party_libs zlib_imported)
-endif()
-
 if(WIN32)
   # static gflags lib requires "PathMatchSpecA" defined in "ShLwApi.Lib"
   list(APPEND oneflow_third_party_libs "ShLwApi.Lib")

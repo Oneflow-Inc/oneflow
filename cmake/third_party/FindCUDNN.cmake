@@ -65,16 +65,24 @@ if(CUDNN_FOUND)
       list(APPEND CUDNN_LIBRARIES ${CUDNN_LIBRARY_DIRECTORY}/${CUDNN_DYNAMIC_NAME})
     endforeach()
   else()
+    set(SINGLE_CUDNN_STATIC_LIB ${CUDNN_LIBRARY_DIRECTORY}/libcudnn_static.a)
+    if(EXISTS ${SINGLE_CUDNN_STATIC_LIB})
+      list(APPEND CUDNN_LIBRARIES ${SINGLE_CUDNN_STATIC_LIB})
+    else()
+      list(APPEND CUDNN_LIBRARIES
+        ${CUDNN_LIBRARY_DIRECTORY}/libcudnn_ops_infer_static.a
+        ${CUDNN_LIBRARY_DIRECTORY}/libcudnn_ops_train_static.a
+        ${CUDNN_LIBRARY_DIRECTORY}/libcudnn_cnn_infer_static.a
+        ${CUDNN_LIBRARY_DIRECTORY}/libcudnn_cnn_train_static.a
+        ${CUDNN_LIBRARY_DIRECTORY}/libcudnn_adv_infer_static.a
+        ${CUDNN_LIBRARY_DIRECTORY}/libcudnn_adv_train_static.a
+      )
+    endif()
     list(APPEND CUDNN_LIBRARIES
-      ${CUDNN_LIBRARY_DIRECTORY}/libcudnn_cnn_infer_static.a
-      ${CUDNN_LIBRARY_DIRECTORY}/libcudnn_cnn_train_static.a
-      ${CUDNN_LIBRARY_DIRECTORY}/libcudnn_ops_infer_static.a
-      ${CUDNN_LIBRARY_DIRECTORY}/libcudnn_ops_train_static.a
-      ${CUDNN_LIBRARY_DIRECTORY}/libcudnn_adv_infer_static.a
-      ${CUDNN_LIBRARY_DIRECTORY}/libcudnn_adv_train_static.a
       CUDA::cublas_static
       CUDA::cublasLt_static
-      )
+      zlib_imported
+    )
     if(CUDNN_WHOLE_ARCHIVE)
       list(PREPEND CUDNN_LIBRARIES -Wl,--whole-archive)
       list(APPEND CUDNN_LIBRARIES -Wl,--no-whole-archive)
