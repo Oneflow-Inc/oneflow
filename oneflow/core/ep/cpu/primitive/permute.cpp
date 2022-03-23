@@ -67,8 +67,61 @@ class PermuteImpl : public Permute {
 };
 
 #ifdef WITH_ONEDNN
-constexpr size_t kMaxOneDnnMovementSize = 5;
-uint32_t OnednnDatatypeTagMap[kMaxOneDnnMovementSize] = {0, dnnl_u8, dnnl_f16, 0, dnnl_s32};
+
+size_t perm2key(size_t num_dims, const int* permutation) {
+  uint64_t key = 0;
+  for (int i = 0; i < num_dims; i++) { key |= permutation[i] << i * 4; }
+  return key;
+}
+
+template<size_t movement_size>
+void PermuteSpecialCaseCHW(size_t num_dims, const int64_t* src_dims, const void* src,
+                           const int* permutation, void* dst) {
+  using T = typename std::aligned_storage<movement_size, movement_size>::type;
+
+  size_t iter_num = src_dims[0] * src_dims[1];
+  size_t chanal_num = src_dims[2];
+
+  T* src_ptr = (T*)src;
+  T* dst_ptr = (T*)dst;
+  T* c_ptr[kMaxNumDims] = {};
+
+  for (int i = 0; i < num_dims; i++) { c_ptr[i] = dst_ptr + (i * iter_num); }
+
+  for (int64_t i = 0; i < iter_num; i++) {
+    for (int64_t c = 0; c < chanal_num; c++) { c_ptr[c][i] = src_ptr[i * chanal_num + c]; }
+  }
+}
+
+bool PermuteSpecialCase(DataType data_type, size_t num_dims, const int64_t* src_dims,
+                        const void* src, const int* permutation, void* dst) {
+  if (0x102 == perm2key(num_dims, permutation)) {
+    void (*func)(size_t num_dims, const int64_t* src_dims, const void* src, const int* permutation,
+                 void* dst) = nullptr;
+    size_t movement_size = GetSizeOfDataType(data_type);
+    if (movement_size == 1) {
+      func = PermuteSpecialCaseCHW<1>;
+    } else if (movement_size == 2) {
+      func = PermuteSpecialCaseCHW<2>;
+    } else if (movement_size == 4) {
+      func = PermuteSpecialCaseCHW<4>;
+    } else if (movement_size == 8) {
+      func = PermuteSpecialCaseCHW<8>;
+    } else if (movement_size == 16) {
+      func = PermuteSpecialCaseCHW<16>;
+    } else {
+      UNIMPLEMENTED();
+    }
+    func(num_dims, src_dims, src, permutation, dst);
+    printf("chw-hwc \n");
+    return true;
+  }
+  return false;
+}
+
+constexpr size_t kMaxOneDnnMapSize = 5;
+constexpr size_t kMaxOneDNNMovementSize = 4;
+uint32_t OnednnDatatypeTagMap[kMaxOneDnnMapSize] = {0, dnnl_u8, dnnl_f16, 0, dnnl_s32};
 class OneDnnPermuteImpl : public Permute {
  public:
   OF_DISALLOW_COPY_AND_MOVE(OneDnnPermuteImpl);
@@ -78,12 +131,11 @@ class OneDnnPermuteImpl : public Permute {
   using Permute::Launch;
   void Launch(Stream* stream, DataType data_type, size_t num_dims, const int64_t* src_dims,
               const void* src, const int* permutation, void* dst) override {
-    // 判断onednn是否支持
-    size_t movement_size = GetSizeOfDataType(data_type);
-    if (movement_size > 4) {
-      SimplifyThenLaunch(stream, data_type, num_dims, src_dims, src, permutation, dst);
-      return;
-    }
+    CHECK_LE(num_dims, kMaxNumDims);
+    CHECK_GT(num_dims, 0);
+
+    // SpecialCase
+    if (PermuteSpecialCase(data_type, num_dims, src_dims, src, permutation, dst)) { return; }
 
     CpuStream* cpu_stream = stream->As<CpuStream>();
     size_t num_threads = static_cast<CpuDevice*>(cpu_stream->device())->GetNumThreads();
@@ -92,28 +144,38 @@ class OneDnnPermuteImpl : public Permute {
     dnnl::engine* onednn_engine = stream->As<CpuStream>()->onednn_engine();
     dnnl::stream* onednn_stream = stream->As<CpuStream>()->onednn_stream();
 
-    dnnl::memory::dims dims(num_dims);
-    dnnl::memory::dims src_stride(kMaxNumDims, 0);
-    dnnl::memory::dims dst_stride(kMaxNumDims, 0);
+    size_t onednn_num_dims = num_dims;
+    dnnl::memory::dims onednn_dims(onednn_num_dims + 1, 0);
+    dnnl::memory::dims onednn_perm(onednn_num_dims + 1, 0);
+    dnnl::memory::dims src_stride(onednn_num_dims + 1, 0);
+    dnnl::memory::dims dst_stride(onednn_num_dims + 1, 0);
 
-    dims[num_dims - 1] = src_dims[num_dims - 1];
-    src_stride[num_dims - 1] = 1;
-    dst_stride[permutation[num_dims - 1]] = 1;
-
-    for (int64_t dim = num_dims - 2; dim >= 0; dim--) {
-      int index = permutation[dim + 1];
-      dims[dim] = src_dims[dim];
-      src_stride[dim] = src_stride[dim + 1] * src_dims[dim + 1];
-      dst_stride[permutation[dim]] = dst_stride[index] * src_dims[index];
+    for (int64_t dim = onednn_num_dims - 1; dim >= 0; dim--) {
+      onednn_dims[dim] = src_dims[dim];
+      onednn_perm[dim] = permutation[dim];
     }
 
-    printf("%ld, %ld, %ld, %ld\n", src_stride[0], src_stride[1], src_stride[2], src_stride[3]);
-    printf("%ld, %ld, %ld, %ld\n", dst_stride[0], dst_stride[1], dst_stride[2], dst_stride[3]);
+    size_t movement_size = GetSizeOfDataType(data_type);
+    if (movement_size > kMaxOneDNNMovementSize) {
+      onednn_dims[onednn_num_dims] = movement_size / kMaxOneDNNMovementSize;
+      onednn_perm[onednn_num_dims] = onednn_num_dims;
+      onednn_num_dims = onednn_num_dims + 1;
+      movement_size = kMaxOneDNNMovementSize;
+    }
+
+    src_stride[onednn_num_dims - 1] = 1;
+    dst_stride[onednn_perm[onednn_num_dims - 1]] = 1;
+
+    for (int64_t dim = onednn_num_dims - 2; dim >= 0; dim--) {
+      int index = onednn_perm[dim + 1];
+      src_stride[dim] = src_stride[dim + 1] * onednn_dims[dim + 1];
+      dst_stride[onednn_perm[dim]] = dst_stride[index] * onednn_dims[index];
+    }
 
     dnnl::memory::data_type onednn_data_type =
         static_cast<dnnl::memory::data_type>(OnednnDatatypeTagMap[movement_size]);
-    auto src_md = dnnl::memory::desc(dims, onednn_data_type, src_stride);
-    auto dst_md = dnnl::memory::desc(dims, onednn_data_type, dst_stride);
+    auto src_md = dnnl::memory::desc(onednn_dims, onednn_data_type, src_stride);
+    auto dst_md = dnnl::memory::desc(onednn_dims, onednn_data_type, dst_stride);
     auto src_mem = dnnl::memory(src_md, *onednn_engine, const_cast<void*>(src));
     auto dst_mem = dnnl::memory(dst_md, *onednn_engine, dst);
     auto reorder_pd = dnnl::reorder::primitive_desc(*onednn_engine, src_md, *onednn_engine, dst_md);
