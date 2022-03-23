@@ -40,7 +40,7 @@ def _test_fused_scale_tril(
             super().__init__()
 
         def build(self):
-            return flow.tril(tensor_x * scale, 0)
+            return flow.tril(tensor_x * scale, diagonal)
 
     lazy_out_0 = TestFuseScaleTril()()
     test_case.assertTrue(np.allclose(eager_out.numpy(), lazy_out_0.numpy()))
@@ -50,7 +50,7 @@ def _test_fused_scale_tril(
             super().__init__()
 
         def build(self):
-            return flow.tril(tensor_x, 0) * scale
+            return flow.tril(tensor_x, diagonal) * scale
     
     lazy_out_1 = TestFuseTrilScale()()
     test_case.assertTrue(np.allclose(eager_out.numpy(), lazy_out_1.numpy()))
