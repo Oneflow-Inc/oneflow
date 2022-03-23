@@ -182,11 +182,11 @@ GraphFunctionNode::GraphFunctionNode(
     const TensorTuple& inputs, const TensorTuple& outputs)
     : FunctionNode(op_type_name) {
   input_meta_data_.resize(inputs.size());
-  next_functions_->reserve(inputs.size());
+  next_functions_.reserve(inputs.size());
   for (int i = 0; i < inputs.size(); ++i) {
     if (inputs.at(i)->requires_grad()) {
       input_meta_data_.at(i) = inputs.at(i)->mut_autograd_meta();
-      next_functions_->emplace_back(inputs.at(i)->mut_grad_fn_node());
+      next_functions_.emplace_back(inputs.at(i)->mut_grad_fn_node());
     }
   }
 
@@ -223,7 +223,7 @@ Maybe<void> GraphTask::ComputeDependencies() {
     FunctionNode* node = stack.top();
     stack.pop();
     if (/*bool has_seen=*/!seen.insert(node).second) { continue; }
-    for (const auto& next_grad_fn : *(node->GetNextFunctions())) {
+    for (const auto& next_grad_fn : node->GetNextFunctions()) {
       FunctionNode* next_node = next_grad_fn.get();
       dependencies_[next_node] += 1;
       if (seen.find(next_node) == seen.end()) { stack.push(next_node); }
@@ -241,9 +241,9 @@ Maybe<void> GraphTask::ComputeDependenciesAndPruneNode(const TensorTuple& inputs
     size_t next_function_idx_;
 
     FunctionNode* GetNextFunction() {
-      if (next_function_idx_ < node_->GetNextFunctions()->size()) {
+      if (next_function_idx_ < node_->GetNextFunctionsNum()) {
         next_function_idx_ += 1;
-        return node_->GetNextFunctions()->at(next_function_idx_ - 1).get();
+        return node_->GetNextFunctions()[next_function_idx_ - 1].get();
       } else {
         return nullptr;
       }
@@ -273,8 +273,8 @@ Maybe<void> GraphTask::ComputeDependenciesAndPruneNode(const TensorTuple& inputs
         continue;  // recurse
       }
     } else {
-      bool need_execute = std::any_of(frame.node_->GetNextFunctions()->begin(),
-                                      frame.node_->GetNextFunctions()->end(),
+      bool need_execute = std::any_of(frame.node_->GetNextFunctions().begin(),
+                                      frame.node_->GetNextFunctions().end(),
                                       [&](const std::shared_ptr<FunctionNode>& fn) {
                                         return need_execute_.find(fn.get()) != need_execute_.end();
                                       });
@@ -305,7 +305,7 @@ Maybe<void> GraphTask::Apply(bool save_grad_for_leaf) {
     node->ReleaseOutTensorArgs();
     if (!retain_graph_) { node->ReleaseData(); }
 
-    for (const auto& next_grad_fn : *(node->GetNextFunctions())) {
+    for (const auto& next_grad_fn : node->GetNextFunctions()) {
       FunctionNode* next_node = next_grad_fn.get();
       dependencies_[next_node] -= 1;
       if (dependencies_[next_node] == 0) { queue.push(next_node); }
