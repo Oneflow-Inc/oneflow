@@ -939,6 +939,41 @@ class ArgSortFunctor {
   std::shared_ptr<OpExpr> op_;
 };
 
+class SearchSortedFunctor {
+ public:
+  SearchSortedFunctor() {
+    op_ = CHECK_JUST(one::OpBuilder("searchsorted")
+                         .Input("sorted_sequence")
+                         .Input("values")
+                         .Input("sorter")
+                         .Output("out")
+                         .Build());
+    no_sorter_op_ = CHECK_JUST(one::OpBuilder("searchsorted")
+                         .Input("sorted_sequence")
+                         .Input("values")
+                         .Output("out")
+                         .Build());
+  }
+  Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& sorted_sequence,
+                           const std::shared_ptr<one::Tensor>& values,
+                           const Optional<one::Tensor>& sorter,
+                           bool out_int32, bool right,
+                           const std::string side) const {
+    MutableAttrMap attrs;
+    JUST(attrs.SetAttr<bool>("out_int32", out_int32));
+    JUST(attrs.SetAttr<bool>("right", right));
+    JUST(attrs.SetAttr<std::string>("side", side));
+    if (sorter) {
+      return OpInterpUtil::Dispatch<Tensor>(*op_, {sorted_sequence, values, JUST(sorter)}, attrs);
+    } else {
+      return OpInterpUtil::Dispatch<Tensor>(*no_sorter_op_, {sorted_sequence, values}, attrs);
+    }
+  }
+
+ private:
+  std::shared_ptr<OpExpr> op_;
+  std::shared_ptr<OpExpr> no_sorter_op_;
+};
 class GatherNdFunctor {
  public:
   GatherNdFunctor() {
@@ -2740,6 +2775,7 @@ ONEFLOW_FUNCTION_LIBRARY(m) {
   m.add_functor<impl::GatherFunctor>("Gather");
   m.add_functor<impl::DimGatherFunctor>("DimGather");
   m.add_functor<impl::ArgSortFunctor>("ArgSort");
+  m.add_functor<impl::SearchSortedFunctor>("SearchSorted");
   m.add_functor<impl::GatherNdFunctor>("GatherNd");
   m.add_functor<impl::ScatterNdFunctor>("ScatterNd");
   m.add_functor<impl::TensorScatterNdUpdateFunctor>("TensorScatterNdUpdate");
