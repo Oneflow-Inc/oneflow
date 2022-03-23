@@ -59,8 +59,7 @@ class FunctionNode {
   std::vector<std::shared_ptr<AutogradMeta>> output_meta_data_;
   std::vector<TensorInfo> output_tensor_infos_;
   // Actual backward function builds in `AutogradInterpreter` to calculate one backward op
-  std::shared_ptr<const std::function<Maybe<void>(const TensorTuple&, TensorTuple*, bool)>>
-      backward_fn_;
+  std::function<Maybe<void>(const TensorTuple&, TensorTuple*, bool)> backward_fn_;
 };
 
 class AutogradEngine {
@@ -78,8 +77,7 @@ class AutogradEngine {
   // Builds FunctionNode, binding to all `outputs_` tensors and saving in AutogradEngine
   virtual Maybe<FunctionNode> AddBackwardFuncPtr(
       const std::string& op_type_name,
-      const std::shared_ptr<
-          const std::function<Maybe<void>(const TensorTuple&, TensorTuple*, bool)>>& backward_fn,
+      std::function<Maybe<void>(const TensorTuple&, TensorTuple*, bool)> backward_fn,
       const TensorTuple& inputs, TensorTuple* outputs) = 0;
 
  protected:
@@ -105,8 +103,7 @@ class GraphAutogradEngine final : public AutogradEngine {
   void ClearEngine() override{};
   Maybe<FunctionNode> AddBackwardFuncPtr(
       const std::string& op_type_name,
-      const std::shared_ptr<
-          const std::function<Maybe<void>(const TensorTuple&, TensorTuple*, bool)>>& backward_fn,
+      std::function<Maybe<void>(const TensorTuple&, TensorTuple*, bool)> backward_fn,
       const TensorTuple& inputs, TensorTuple* outputs) override;
 
  private:
@@ -124,11 +121,9 @@ class GraphAutogradEngine final : public AutogradEngine {
 class GraphFunctionNode final : public FunctionNode {
  public:
   OF_DISALLOW_COPY_AND_MOVE(GraphFunctionNode);
-  GraphFunctionNode(
-      const std::string& op_type_name,
-      const std::shared_ptr<
-          const std::function<Maybe<void>(const TensorTuple&, TensorTuple*, bool)>>& backward_fn,
-      const TensorTuple& inputs, const TensorTuple& outputs);
+  GraphFunctionNode(const std::string& op_type_name,
+                    std::function<Maybe<void>(const TensorTuple&, TensorTuple*, bool)> backward_fn,
+                    const TensorTuple& inputs, const TensorTuple& outputs);
   GraphFunctionNode() = delete;
   ~GraphFunctionNode() override = default;
 

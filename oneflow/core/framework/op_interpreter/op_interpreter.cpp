@@ -100,14 +100,12 @@ Maybe<void> AutogradInterpreter::Apply(const OpExpr& op_expr, const TensorTuple&
     const auto& grad_closure = JUST(op_expr.GetOrCreateOpGradClosure());
     JUST(grad_closure->Capture(inputs, *outputs, ctx));
 
-    auto backward_fn =
-        std::make_shared<std::function<Maybe<void>(const TensorTuple&, TensorTuple*, bool)>>(
-            [=](const TensorTuple& out_grads, TensorTuple* in_grads,
-                bool create_graph) -> Maybe<void> {
-              autograd::AutoGradMode mode(create_graph);
-              JUST(grad_closure->Apply(out_grads, in_grads));
-              return Maybe<void>::Ok();
-            });
+    auto backward_fn = [=](const TensorTuple& out_grads, TensorTuple* in_grads,
+                           bool create_graph) -> Maybe<void> {
+      autograd::AutoGradMode mode(create_graph);
+      JUST(grad_closure->Apply(out_grads, in_grads));
+      return Maybe<void>::Ok();
+    };
     JUST(GetThreadLocalAutogradEngine()->AddBackwardFuncPtr(op_expr.op_type_name() + "_backward",
                                                             backward_fn, inputs, outputs));
   }
