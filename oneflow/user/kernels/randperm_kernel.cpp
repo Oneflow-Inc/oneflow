@@ -42,7 +42,6 @@ class CpuRandPermKernel final : public user_op::OpKernel {
       int64_t parallel_id = ctx->parallel_ctx().parallel_id();
       int32_t n = ctx->Attr<int32_t>("n");
       const Shape& logical_shape = Shape({n});
-
       view = GetTensorSliceView4ParallelId(hierarchy, nd_sbp, logical_shape, parallel_id);
     }
     return std::make_shared<DistributionKernelState>(generator);
