@@ -36,5 +36,11 @@ bool IsContiguous(const Shape& shape, const Stride& stride) {
   return contig_if_nonempty;
 }
 
+bool IsContiguous(const DimVector& shape_vec, const StrideVector& stride_vec) {
+  Shape shape(shape_vec);
+  Stride stride(stride_vec);
+  return IsContiguous(shape, stride);
+}
+
 }  // namespace one
 }  // namespace oneflow
