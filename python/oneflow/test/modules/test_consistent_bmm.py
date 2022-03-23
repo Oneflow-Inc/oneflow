@@ -22,9 +22,12 @@ from oneflow.test_utils.automated_test_util import *
 
 @autotest(n=1, check_graph=False)
 def _test_bmm_with_random_data(test_case, placement, sbp):
-    dims = [random(1, 3).to(int) * 8 for _ in range(3)]
-    x = random_tensor(3, *dims).to_global(placement=placement, sbp=sbp)
-    y = random_tensor(3, *dims).to_global(placement=placement, sbp=sbp)
+    batch = random(1, 3).to(int) * 8
+    m = random(1, 3).to(int) * 8
+    n = random(1, 3).to(int) * 8
+    k = random(1, 3).to(int) * 8
+    x = random_tensor(ndim=3, dim0=batch, dim1=m, dim2=k).to_global(placement=placement, sbp=sbp)
+    y = random_tensor(ndim=3, dim0=batch, dim1=k, dim2=n).to_global(placement=placement, sbp=sbp)
     return torch.bmm(x, y)
 
 
