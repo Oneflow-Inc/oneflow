@@ -32,8 +32,8 @@ class ArangeOpKernelCache final : public user_op::OpKernelCache {
   int64_t upper() const { return upper_; }
 
  private:
-  const int64_t lower_;
-  const int64_t upper_;
+   const int64_t lower_;
+   const int64_t upper_;
 };
 template<DeviceType device_type, typename T>
 class ArangeKernel final : public OpKernel {
@@ -75,8 +75,6 @@ class ArangeKernel final : public OpKernel {
                const user_op::OpKernelCache* cache) const override {
     Tensor* out = ctx->Tensor4ArgNameAndIndex("out", 0);
     T* output = out->mut_dptr<T>();
-    user_op::Tensor* tmp_buffer = ctx->Tensor4ArgNameAndIndex("tmp_buffer", 0);
-    T* temp = tmp_buffer->mut_dptr<T>();
     const DataType dtype = ctx->Attr<DataType>("dtype");
     int64_t arange_elem_cnt = 0;
     T start = 0;
@@ -99,13 +97,9 @@ class ArangeKernel final : public OpKernel {
       limit = static_cast<T>(float_limit);
     }
     if (arange_elem_cnt == 0) { return; }
-
-    ArangeFunctor<device_type, T>()(ctx->stream(), start, delta, arange_elem_cnt, temp);
-    int j = 0;
-    for (int i = cache->lower(); i < cache->upper(); i++) {
-         *(output + j) = *(temp + i); 
-         j++;
-       }
+    const auto* arange_cache = dynamic_cast<const ArangeOpKernelCache*>(cache);
+    arange_elem_cnt = arange_cache->upper()-arange_cache->lower();
+    ArangeFunctor<device_type, T>()(ctx->stream(), arange_cache->lower(), delta, arange_elem_cnt,output);
   }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 
@@ -113,34 +107,12 @@ class ArangeKernel final : public OpKernel {
   mutable TensorSliceView view;
 };
 
-template<typename T>
-user_op::InferTmpSizeFn GenFwInferTmpSizeFn() {
-  return [](user_op::InferContext* ctx) {
-    DataType dtype = ctx->Attr<DataType>("dtype");
-    int64_t range_elem_cnt = 0;
-    if (IsIntegralDataType(dtype)) {
-      int64_t integer_delta = ctx->Attr<int64_t>("integer_delta");
-      int64_t integer_start = ctx->Attr<int64_t>("integer_start");
-      int64_t integer_limit = ctx->Attr<int64_t>("integer_limit");
-      range_elem_cnt =
-          std::ceil(static_cast<double>(integer_limit - integer_start) / integer_delta);
-    } else {
-      double float_delta = ctx->Attr<double>("float_delta");
-      double float_start = ctx->Attr<double>("float_start");
-      double float_limit = ctx->Attr<double>("float_limit");
-      range_elem_cnt = std::ceil(static_cast<double>(float_limit - float_start) / float_delta);
-    }
-    if (range_elem_cnt == 0) { return; }
-    return range_elem_cnt * sizeof(T);
-  };
-}
 
 #define REGISTER_ARANGE_KERNEL(device, dtype)                                                 \
   REGISTER_USER_KERNEL("arange")                                                              \
       .SetCreateFn<ArangeKernel<device, dtype>>()                                             \
       .SetIsMatchedHob((user_op::HobDeviceType() == device)                                   \
-                       && (user_op::HobAttr<DataType>("dtype") == GetDataType<dtype>::value)) \
-      .SetInferTmpSizeFn(GenFwInferTmpSizeFn<dtype>());
+                       && (user_op::HobAttr<DataType>("dtype") == GetDataType<dtype>::value)) ;
 
 #define REGISTER_ARANGE_KERNELS_WITH_DEVICE(device) \
   REGISTER_ARANGE_KERNEL(device, uint8_t)           \
