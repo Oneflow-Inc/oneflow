@@ -77,7 +77,12 @@ if(CUDNN_FOUND)
         ${CUDNN_LIBRARY_DIRECTORY}/libcudnn_cnn_infer_static.a
         ${CUDNN_LIBRARY_DIRECTORY}/libcudnn_cnn_train_static.a)
     endif()
-    list(APPEND CUDNN_LIBRARIES CUDA::cublas_static CUDA::cublasLt_static zlib_imported)
+    list(APPEND CUDNN_LIBRARIES CUDA::cublas_static CUDA::cublasLt_static)
+    # Starting cudnn 8.3, zlib should be linked additionally
+    # For more info: https://docs.nvidia.com/deeplearning/cudnn/release-notes/rel_8.html
+    if(CUDNN_VERSION VERSION_GREATER_EQUAL "8.3")
+      list(APPEND CUDNN_LIBRARIES zlib_imported)
+    endif()
     if(CUDNN_WHOLE_ARCHIVE)
       list(PREPEND CUDNN_LIBRARIES -Wl,--whole-archive)
       list(APPEND CUDNN_LIBRARIES -Wl,--no-whole-archive)
