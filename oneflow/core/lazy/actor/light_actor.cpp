@@ -215,7 +215,12 @@ class LightActor : public ActorBase, public KernelContext, public ActorContextPr
       stream_kernel_observer_ = kernel_observer_provider->GetKernelObserver();
     }
   }
-  ~LightActor() override = default;
+  ~LightActor() override {
+    for (IndexType i = 0; i < index2state_.Size(); ++i) {
+      auto& state = index2state_.Get(i);
+      if (state.regst_type == RegstType::kProduced) { delete state.regst; }
+    }
+  }
 
   void Init(const JobDesc* job_desc, ActorContext* actor_ctx) override {
     const TaskProto& task_proto = actor_ctx->task_proto();
