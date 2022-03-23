@@ -21,6 +21,7 @@ limitations under the License.
 #include "oneflow/core/vm/vm_util.h"
 #include "oneflow/core/vm/virtual_machine.h"
 #include "oneflow/core/framework/shut_down_util.h"
+#include "oneflow/core/device/cuda_util.h"
 
 namespace py = pybind11;
 
@@ -59,6 +60,9 @@ ONEFLOW_API_PYBIND11_MODULE("", m) {
   m.def("GetNodeSize", &GetNodeSize);
   m.def("GetLocalRank", &GetLocalRank);
   m.def("CudaGetDeviceCount", &CudaGetDeviceCount);
+#ifdef WITH_CUDA
+  m.def("GetCudaDeviceIndex", &GetCudaDeviceIndex);
+#endif  // WITH_CUDA
   m.def("SetFLAGS_alsologtostderr", &SetFLAGS_alsologtostderr);
   m.def("GetFLAGS_alsologtostderr", &GetFLAGS_alsologtostderr);
   m.def("SetFLAGS_v", &SetFLAGS_v);
