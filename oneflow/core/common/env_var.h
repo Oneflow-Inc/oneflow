@@ -47,6 +47,8 @@ int64_t ThreadLocalEnvInteger();
     return value;                                                                              \
   }
 
+DEFINE_THREAD_LOCAL_ENV_INTEGER(ONEFLOW_THRAED_LOCAL_CACHED_SIZE, 128 * 1024);
+
 }  // namespace oneflow
 
 #endif  // ONEFLOW_CORE_COMMON_ENV_VAR_H_
