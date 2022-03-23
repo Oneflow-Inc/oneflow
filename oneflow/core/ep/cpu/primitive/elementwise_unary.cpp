@@ -26,7 +26,7 @@ namespace primitive {
 
 namespace {
 
-int64_t compute_index(int64_t out_offset, const StrideParam in_stride, const StrideParam out_stride){
+int64_t compute_index(int64_t out_offset, const StrideParam& in_stride, const StrideParam& out_stride){
   int64_t in_offset = 0;
   int64_t remaining = out_offset;
   for (size_t i = 0; i < in_stride.n_dim; ++i) {
@@ -56,7 +56,7 @@ class ElementwiseUnaryImpl : public ElementwiseUnary {
     });
   }
 
-  void LaunchWithStride(Stream* stream, const void* src_ptr, void* dst_ptr, size_t count, const StrideParam in_stride, const StrideParam out_stride) override {
+  void LaunchWithStride(Stream* stream, const void* src_ptr, void* dst_ptr, size_t count, const StrideParam& in_stride, const StrideParam& out_stride) override {
     CpuStream* cpu_stream = stream->As<CpuStream>();
 
     Dst* dst = reinterpret_cast<Dst*>(dst_ptr);

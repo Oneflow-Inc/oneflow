@@ -38,16 +38,14 @@ class ReluFunctor {
  public:
   ReluFunctor() { op_ = CHECK_JUST(one::OpBuilder("relu").Input("x", 1).Output("y", 1).Build()); }
   Maybe<Tensor> operator()(const std::shared_ptr<Tensor>& input, bool inplace) const {
-    // auto x = input->contiguous();
-    auto x = input;
     if (inplace) {
-      JUST(CheckInplaceValid(x));
+      JUST(CheckInplaceValid(input));
       std::shared_ptr<TensorTuple> outputs = std::make_shared<TensorTuple>(1);
-      outputs->at(0) = x;
-      JUST(OpInterpUtil::Dispatch(*op_, {x}, outputs.get(), AttrMap{}));
+      outputs->at(0) = input;
+      JUST(OpInterpUtil::Dispatch(*op_, {input}, outputs.get(), AttrMap{}));
       return outputs->at(0);
     } else {
-      return OpInterpUtil::Dispatch<Tensor>(*op_, {x});
+      return OpInterpUtil::Dispatch<Tensor>(*op_, {input});
     }
   }
 
