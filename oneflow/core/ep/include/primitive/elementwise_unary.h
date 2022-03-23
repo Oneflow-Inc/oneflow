@@ -25,13 +25,14 @@ namespace ep {
 namespace primitive {
 
 struct StrideParam {
-  int32_t stride[16];
+  int64_t stride[16];
   size_t n_dim;
   StrideParam(const int64_t* stride_vec, const size_t ndim) {
     n_dim = ndim;
     for (size_t i = 0; i < n_dim; ++i) { stride[i] = stride_vec[i]; }
   }
 };
+
 
 class ElementwiseUnary : public Primitive {
  public:

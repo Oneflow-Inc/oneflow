@@ -20,6 +20,7 @@ limitations under the License.
 #include <cstdint>
 #include <algorithm>
 #include <type_traits>
+#include "oneflow/core/ep/common/primitive/elementwise_unary.h"
 
 namespace oneflow {
 
@@ -49,6 +50,21 @@ inline cudaError_t GetNumBlocks(int64_t n, int* num_blocks) {
   *num_blocks = std::max<int>(1, std::min<int64_t>((n + kBlockSize - 1) / kBlockSize,
                                                    sm_count * tpm / kBlockSize * kNumWaves));
   return cudaSuccess;
+}
+
+__device__ __forceinline__ int64_t compute_index(int64_t out_offset,
+                                                   const oneflow::ep::primitive::StrideParam& in_stride,
+                                                   const oneflow::ep::primitive::StrideParam& out_stride) {
+  int64_t in_offset = 0;
+  int64_t remaining = out_offset;
+
+#pragma unroll
+  for (size_t i = 0; i < in_stride.n_dim; ++i) {
+    const int64_t idx = static_cast<int64_t>(remaining / out_stride.stride[i]);
+    remaining -= idx * out_stride.stride[i];
+    in_offset += idx * in_stride.stride[i];
+  }
+  return in_offset;
 }
 
 template<typename T, int pack_size>
@@ -141,6 +157,20 @@ __global__ void __launch_bounds__(kBlockSize)
   if (tail && global_tid < n_tail) { tail_r[global_tid] = functor((tail_in[global_tid])...); }
 }
 
+template<typename FactoryT, typename R, typename... IN>
+__global__ void __launch_bounds__(kBlockSize)
+    ApplyWithStride(FactoryT factory, int64_t count, 
+      const oneflow::ep::primitive::StrideParam in_stride, 
+      const oneflow::ep::primitive::StrideParam out_stride, 
+      R* r, const IN*... in) {
+  auto functor = factory();
+  const int global_tid = blockIdx.x * kBlockSize + threadIdx.x;
+  for (int64_t i = global_tid; i < count; i += blockDim.x * gridDim.x) {
+    int64_t src_idx = compute_index(i, in_stride, out_stride);
+    r[i] = functor((in[src_idx])...);
+  }
+}
+
 template<typename FunctorT>
 struct SimpleFactory {
   explicit SimpleFactory(FunctorT functor) : tpl(functor) {}
@@ -171,6 +201,22 @@ struct GenericLauncher {
         (in + tail_offset)...);
     return cudaPeekAtLastError();
   }
+
+  static cudaError_t LaunchWithStride(FactoryT factory, int64_t n, 
+    const oneflow::ep::primitive::StrideParam in_stride, 
+    const oneflow::ep::primitive::StrideParam out_stride, 
+    R* r, const IN*... in, cudaStream_t stream) {
+    constexpr int pack_size = PackSize<R, IN...>();
+    int num_blocks;
+    {
+      cudaError_t err = GetNumBlocks(n, &num_blocks);
+      if (err != cudaSuccess) { return err; }
+    }
+    auto func = ApplyWithStride<FactoryT, R, IN...>;
+    func<<<num_blocks, kBlockSize, 0, stream>>>(
+        factory, n, in_stride, out_stride, r, (in)...);
+    return cudaPeekAtLastError();
+  }
 };
 
 template<typename FactoryT, typename R, typename A>
@@ -179,9 +225,25 @@ inline cudaError_t UnaryWithFactory(FactoryT factory, int64_t n, R* r, const A* 
   return GenericLauncher<FactoryT, R, A>::Launch(factory, n, r, a, stream);
 }
 
+template<typename FactoryT, typename R, typename A>
+inline cudaError_t UnaryWithStrideFactory(FactoryT factory, int64_t n, 
+const oneflow::ep::primitive::StrideParam in_stride, 
+const oneflow::ep::primitive::StrideParam out_stride,
+R* r, const A* a, cudaStream_t stream) {
+  return GenericLauncher<FactoryT, R, A>::LaunchWithStride(factory, n, in_stride, out_stride, r, a, stream);
+}
+
 template<typename FunctorT, typename R, typename A>
 inline cudaError_t Unary(FunctorT functor, int64_t n, R* r, const A* a, cudaStream_t stream) {
   return UnaryWithFactory(SimpleFactory<FunctorT>(functor), n, r, a, stream);
+}
+
+template<typename FunctorT, typename R, typename A>
+inline cudaError_t UnaryWithStride(FunctorT functor, int64_t n, 
+const oneflow::ep::primitive::StrideParam in_stride, 
+const oneflow::ep::primitive::StrideParam out_stride, 
+R* r, const A* a, cudaStream_t stream) {
+  return UnaryWithStrideFactory(SimpleFactory<FunctorT>(functor), n, in_stride, out_stride, r, a, stream);
 }
 
 template<typename FactoryT, typename R, typename A, typename B>

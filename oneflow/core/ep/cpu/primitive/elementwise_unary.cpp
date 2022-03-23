@@ -36,6 +36,7 @@ int64_t compute_index(int64_t out_offset, const StrideParam in_stride, const Str
   }
   return in_offset;
 }
+
 template<UnaryOp unary_op, typename Src, typename Dst>
 class ElementwiseUnaryImpl : public ElementwiseUnary {
  public:
