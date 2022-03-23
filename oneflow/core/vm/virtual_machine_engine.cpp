@@ -506,7 +506,6 @@ void VirtualMachineEngine::TryRunBarrierInstruction(const ScheduleCtx& schedule_
   mut_barrier_instruction_list()->Erase(sequnential_instruction);
   intrusive::shared_ptr<InstructionMsg> instr_msg(sequnential_instruction->mut_instr_msg());
   LivelyInstructionListErase(sequnential_instruction);
-  sequnential_instruction->clear_instr_msg();
   constexpr int kZeroWindowSize = 0;  // flush immediately.
   MoveInstructionMsgToGarbageMsgList(kZeroWindowSize, std::move(instr_msg), schedule_ctx);
   OF_PROFILER_RANGE_POP();
