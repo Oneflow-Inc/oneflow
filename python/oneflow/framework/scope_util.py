@@ -47,26 +47,13 @@ def api_scope_config(**kwargs):
     return ScopeContext(scope)
 
 
-def api_current_scope():
+def current_scope():
     """ Return current scope
     """
     return oneflow._oneflow_internal.GetCurrentScope()
 
 
 from oneflow import oneflow_deprecate
-
-
-@oneflow_deprecate()
-def deprecated_current_scope(*args, **kwargs):
-    print(
-        "WARNING:",
-        "oneflow.scope.current_scope",
-        "will be removed in the future, use {} instead.".format(
-            "oneflow.current_scope"
-        ),
-    )
-    print(traceback.format_stack()[-2])
-    return api_current_scope(*args, **kwargs)
 
 
 def MakeScope(build_func):

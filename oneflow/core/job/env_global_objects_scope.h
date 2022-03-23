@@ -28,10 +28,11 @@ class ParallelDesc;
 class EnvGlobalObjectsScope final {
  public:
   OF_DISALLOW_COPY_AND_MOVE(EnvGlobalObjectsScope);
-  EnvGlobalObjectsScope() = default;
+  EnvGlobalObjectsScope();
   ~EnvGlobalObjectsScope();
 
   Maybe<void> Init(const EnvProto& env_proto);
+  Maybe<void> Init(const std::string& env_proto_str);
 
   Maybe<void> init_is_normal_exit(bool is_normal_exit) {
     CHECK_OR_RETURN(!is_normal_exit_.has_value());

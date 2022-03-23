@@ -46,15 +46,6 @@ inline Maybe<void> EnableEagerEnvironment(bool enable_eager_execution) {
   return Maybe<void>::Ok();
 }
 
-inline Maybe<EnvGlobalObjectsScope> CreateEnv(const std::string& env_proto_str) {
-  EnvProto env_proto;
-  CHECK_OR_RETURN(TxtString2PbMessage(env_proto_str, &env_proto))
-      << "failed to parse env_proto" << env_proto_str;
-  auto env = std::make_shared<EnvGlobalObjectsScope>();
-  JUST(env->Init(env_proto));
-  return env;
-}
-
 inline Maybe<long long> CurrentMachineId() { return GlobalProcessCtx::Rank(); }
 
 inline Maybe<int64_t> GetRank() { return GlobalProcessCtx::Rank(); }

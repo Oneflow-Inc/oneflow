@@ -204,19 +204,15 @@ register_class_method_util.RegisterMethod4Class()
 import oneflow.framework.env_util as env_util
 import oneflow.framework.scope_util as scope_util
 import oneflow.framework.session_context as session_ctx
-from oneflow.framework.multi_client_session import MultiClientSession
 from oneflow.framework.tensor_str import set_printoptions
 
-if not env_util.HasAllMultiClientEnvVars():
-    env_util.SetDefaultMultiClientEnvVars()
-_oneflow_global_unique_env_ = env_util.create_env()
+__oneflow_global_unique_env = env_util.GetEnv()
+session_ctx.NewDefaultSession(__oneflow_global_unique_env)
+
 oneflow._oneflow_internal.RegisterGILForeignLockHelper()
 oneflow._oneflow_internal.InitDefaultConsistentTransportTokenScope()
-session_ctx.OpenDefaultSession(
-    MultiClientSession(oneflow._oneflow_internal.NewSessionId())
-)
+
 oneflow._oneflow_internal.EnableEagerEnvironment(True)
-del env_util
 from oneflow.framework import python_callback, register_python_callback
 
 oneflow._oneflow_internal.RegisterGlobalForeignCallback(
@@ -257,7 +253,7 @@ hook = ExitHook()
 
 def atexit_hook(hook):
     oneflow.framework.session_context.TryCloseDefaultSession()
-    _oneflow_global_unique_env_.SwitchToShuttingDownPhase(hook.is_normal_exit())
+    __oneflow_global_unique_env.SwitchToShuttingDownPhase(hook.is_normal_exit())
 
 
 atexit.register(atexit_hook, hook)
@@ -289,7 +285,6 @@ from oneflow.framework.generator import (
 
 # NOTE(chengcheng) oneflow.Model is unavailable now.
 # from oneflow.framework.model import Model
-from oneflow.framework.scope_util import api_current_scope as current_scope
 from oneflow.framework.tensor import Tensor
 from oneflow.framework.tensor import is_nonzero
 from oneflow.framework.type_tensor import *

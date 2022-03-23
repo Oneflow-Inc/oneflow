@@ -77,7 +77,7 @@ def create_env():
     CompleteEnvProto(default_env_proto)
     if default_env_proto.ctrl_bootstrap_conf.world_size > 1:
         check_non_localhost_proxy_and_print_warning()
-    return c_api_util.CreateEnv(default_env_proto)
+    return c_api_util.GetEnvContext(default_env_proto)
 
 
 def CompleteEnvProto(env_proto):
@@ -194,6 +194,20 @@ def _UpdateDefaultEnvProtoByMultiClientEnvVars(env_proto):
     if os.getenv("GLOG_logbuflevel"):
         cpp_logging_conf.logbuflevel = os.getenv("GLOG_logbuflevel")
     env_proto.cpp_logging_conf.CopyFrom(cpp_logging_conf)
+
+
+class EnvHolder(object):
+    def __init__(self):
+        if not HasAllMultiClientEnvVars():
+            SetDefaultMultiClientEnvVars()
+        self._env_cxt = create_env()
+
+    def SwitchToShuttingDownPhase(self, is_normal_exit=True):
+        self._env_cxt.SwitchToShuttingDownPhase(is_normal_exit)
+
+
+def GetEnv():
+    return EnvHolder()
 
 
 device_tag2default_parallel_conf = {}

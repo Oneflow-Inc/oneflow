@@ -22,6 +22,7 @@ from typing import List, Optional, Sequence, Tuple, Union
 import oneflow as flow
 import oneflow._oneflow_internal._C as _C
 from oneflow.framework.tensor import Tensor
+from oneflow.framework.scope_util import current_scope
 from oneflow.nn.common_types import _size_1_t, _size_2_t, _size_3_t, _size_any_t
 from oneflow.nn.module import Module
 from oneflow.nn.modules.utils import _pair, _reverse_repeat_tuple, _single, _triple
@@ -836,7 +837,7 @@ class COCOReader(Module):
             # local apply
             outputs = _C.dispatch_coco_reader(
                 self._op,
-                session_id=flow.current_scope().session_id,
+                session_id=current_scope().session_id,
                 annotation_file=self.annotation_file,
                 image_dir=self.image_dir,
                 batch_size=self.batch_size,
@@ -851,7 +852,7 @@ class COCOReader(Module):
             # consistent apply
             outputs = _C.dispatch_coco_reader(
                 self._op,
-                session_id=flow.current_scope().session_id,
+                session_id=current_scope().session_id,
                 annotation_file=self.annotation_file,
                 image_dir=self.image_dir,
                 batch_size=self.batch_size,

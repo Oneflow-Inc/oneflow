@@ -13,23 +13,26 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
+#include <memory>
+#include "oneflow/core/framework/multi_client_session_context.h"
+#include "oneflow/core/job/env_global_objects_scope.h"
 
-#include <glog/logging.h>
-#include "oneflow/api/cpp/env.h"
-#include "oneflow/api/cpp/env_impl.h"
-#include "oneflow/core/framework/shut_down_util.h"
-#include "oneflow/core/thread/thread_consistent_id.h"
+#ifndef ONEFLOW_API_CPP_ENV_IMPL_H_
+#define ONEFLOW_API_CPP_ENV_IMPL_H_
 
 namespace oneflow_api {
-void initialize() {
-  if (of::Global<OneFlowEnv>::Get() == nullptr) { of::Global<OneFlowEnv>::New(); }
-  of::SetShuttingDown(false);
-}
+namespace of = oneflow;
+class OneFlowEnv {
+ public:
+  OF_DISALLOW_COPY(OneFlowEnv);
+  OneFlowEnv();
+  ~OneFlowEnv();
+  std::shared_ptr<of::MultiClientSessionContext> GetSessionCtx() { return session_ctx_; }
 
-void release() {
-  if (of::Global<OneFlowEnv>::Get() != nullptr) { of::Global<OneFlowEnv>::Delete(); }
-  of::SetShuttingDown();
-  of::ResetThisThreadUniqueConsistentId().GetOrThrow();
-}
-
+ private:
+  std::shared_ptr<of::EnvGlobalObjectsScope> env_ctx_;
+  std::shared_ptr<of::MultiClientSessionContext> session_ctx_;
+};
 }  // namespace oneflow_api
+
+#endif  // ONEFLOW_API_CPP_ENV_IMPL_H_
