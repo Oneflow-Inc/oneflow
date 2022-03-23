@@ -103,9 +103,9 @@ class ArangeKernel final : public OpKernel {
     ArangeFunctor<device_type, T>()(ctx->stream(), start, delta, arange_elem_cnt, temp);
     int j = 0;
     for (int i = cache->lower(); i < cache->upper(); i++) {
-         *(output + j) = *(temp + i); 
-         j++;
-       }
+      *(output + j) = *(temp + i);
+      j++;
+    }
   }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 
