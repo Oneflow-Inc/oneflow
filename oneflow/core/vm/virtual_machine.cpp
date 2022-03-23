@@ -111,7 +111,8 @@ void WorkerLoop(vm::ThreadCtx* thread_ctx, const std::function<void(vm::ThreadCt
 
 }  // namespace
 
-VirtualMachine::VirtualMachine(const Resource& resource, int64_t this_machine_id) {
+VirtualMachine::VirtualMachine(const Resource& resource, int64_t this_machine_id)
+    : vm_threads_closed_(false) {
   // Class VirtualMachineEngine only cares the basic logical of vm, while class VirtualMachine
   // manages threads and condition variables.
   // In order to notify threads in VirtualMachineEngine, a notify callback lambda should be take as
@@ -132,7 +133,6 @@ VirtualMachine::VirtualMachine(const Resource& resource, int64_t this_machine_id
   std::function<void()> SchedulerInitializer;
   GetSchedulerThreadInitializer(&SchedulerInitializer);
   schedule_thread_ = std::thread(&VirtualMachine::ScheduleLoop, this, SchedulerInitializer);
-  vm_threads_closed_ = false;
 }
 
 namespace {
@@ -275,7 +275,7 @@ namespace {
 class MultiThreadScheduleCtx : public vm::ScheduleCtx {
  public:
   explicit MultiThreadScheduleCtx(Notifier* cb_notifier) : cb_notifier_(cb_notifier) {}
-  MultiThreadScheduleCtx() = default;
+  ~MultiThreadScheduleCtx() = default;
 
   void OnGarbageMsgPending() const override { cb_notifier_->Notify(); }
   void OnWorkerLoadPending(vm::ThreadCtx* thread_ctx) const override {

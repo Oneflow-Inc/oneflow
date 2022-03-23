@@ -44,8 +44,6 @@ class ScheduleCtx {
 
   virtual void OnGarbageMsgPending() const = 0;
   virtual void OnWorkerLoadPending(vm::ThreadCtx* thread_ctx) const = 0;
-
- private:
 };
 
 struct VmDesc;

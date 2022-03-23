@@ -16,7 +16,6 @@ limitations under the License.
 #include <pybind11/pybind11.h>
 #include "oneflow/api/python/env/env.h"
 #include "oneflow/api/python/of_api_registry.h"
-#include "oneflow/api/python/env/env_api.h"
 #include "oneflow/core/job/env_global_objects_scope.h"
 #include "oneflow/core/common/global.h"
 #include "oneflow/core/vm/vm_util.h"
@@ -50,12 +49,8 @@ ONEFLOW_API_PYBIND11_MODULE("", m) {
            [](oneflow::EnvGlobalObjectsScope& env, const std::string& env_proto_str) {
              return env.Init(env_proto_str).GetOrThrow();
            })
-      .def(
-          "SwitchToShuttingDownPhase",
-          [](EnvGlobalObjectsScope* env, bool is_normal_exit) {
-            SwitchToShuttingDownPhase(env, is_normal_exit).GetOrThrow();
-          },
-          py::call_guard<py::gil_scoped_release>());
+      .def("SwitchToShuttingDownPhase", &SwitchToShuttingDownPhase,
+           py::call_guard<py::gil_scoped_release>());
 
   m.def("CurrentMachineId", &CurrentMachineId);
 

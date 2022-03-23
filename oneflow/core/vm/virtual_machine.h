@@ -54,6 +54,7 @@ class VirtualMachine final {
 
   Maybe<void> RunInCurrentThread(vm::InstructionMsgList* instr_list);
 
+  bool vm_threads_closed_;
   intrusive::shared_ptr<vm::VirtualMachineEngine> vm_;
   // for asynchronized execution
   std::list<std::unique_ptr<std::thread>> worker_threads_;
@@ -61,7 +62,6 @@ class VirtualMachine final {
   Notifier pending_notifier_;
   std::thread callback_thread_;
   Notifier callback_notifier_;
-  bool vm_threads_closed_;
 };
 
 }  // namespace oneflow
