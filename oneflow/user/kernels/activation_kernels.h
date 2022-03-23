@@ -15,6 +15,7 @@ limitations under the License.
 */
 #ifndef _ONEFLOW_USER_KERNELS_ACTIVATION_KERNELS_H_
 #define _ONEFLOW_USER_KERNELS_ACTIVATION_KERNELS_H_
+#include "oneflow/core/common/data_type.h"
 #include "oneflow/user/kernels/elementwise_xpu_kernel.h"
 
 namespace oneflow {
@@ -221,6 +222,22 @@ struct SoftSignGradFunctor {
 };
 
 template<typename T>
+struct ThresholdFunctor {
+  OF_DEVICE_FUNC explicit ThresholdFunctor(double threshold, double value)
+      : threshold(threshold), value(value) {}
+  OF_DEVICE_FUNC T operator()(T x) const { return (x > threshold) ? x : value; }
+  const T threshold;
+  const T value;
+};
+
+template<typename T>
+struct ThresholdGradFunctor {
+  OF_DEVICE_FUNC explicit ThresholdGradFunctor(double threshold) : threshold(threshold) {}
+  OF_DEVICE_FUNC T operator()(T x, T dy) const { return (x > threshold) ? dy : static_cast<T>(0); }
+  const T threshold;
+};
+
+template<typename T>
 struct ReluFunctor {
   OF_DEVICE_FUNC explicit ReluFunctor() {}
   OF_DEVICE_FUNC T operator()(T x) const { return x > static_cast<T>(0) ? x : static_cast<T>(0); }
@@ -364,6 +381,21 @@ struct ReluGradFunctor {
       device, "softsign_grad", SoftSignGradFunctor, dtype, dtype, dtype,                          \
       [](user_op::KernelComputeContext* ctx) { return SoftSignGradFunctor<dtype>(); }, "dx", "x", \
       "dy");
+
+#define REGISTER_THRESHOLD_KERNEL(device, dtype)                            \
+  REGISTER_UNARY_ELEMWISE_USER_KERNEL(                                      \
+      device, "threshold", ThresholdFunctor, dtype, dtype,                  \
+      [](user_op::KernelComputeContext* ctx) {                              \
+        return ThresholdFunctor<dtype>(ctx->Attr<double>("threshold"),      \
+                                       ctx->Attr<double>("value"));         \
+      },                                                                    \
+      "out", "in");                                                         \
+  REGISTER_BINARY_ELEMWISE_USER_KERNEL(                                     \
+      device, "threshold_grad", ThresholdGradFunctor, dtype, dtype, dtype,  \
+      [](user_op::KernelComputeContext* ctx) {                              \
+        return ThresholdGradFunctor<dtype>(ctx->Attr<double>("threshold")); \
+      },                                                                    \
+      "dx", "x", "dy");
 
 // For Relu Inplace Proposal Fn.
 #define REGISTER_RELU_FORWARD_KERNEL(device, dtype)                                                \

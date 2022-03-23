@@ -47,6 +47,7 @@ from oneflow._C import softsign
 from oneflow._C import softmax
 from oneflow._C import softplus
 from oneflow._C import tanh
+from oneflow._C import threshold
 from oneflow._C import silu
 from oneflow._C import mish
 from oneflow._C import layer_norm

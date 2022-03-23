@@ -489,6 +489,14 @@
   signature: "Tensor (Tensor x, Tensor dy) => TanhGrad"
   bind_python: True
 
+- name: "threshold"
+  signature: "Tensor (Tensor x, Double threshold, Double value) => Threshold"
+  bind_python: True
+
+- name: "threshold_grad"
+  signature: "Tensor (Tensor x, Tensor dy, Double threshold) => ThresholdGrad"
+  bind_python: False
+
 - name: "elu"
   signature: "Tensor (Tensor x, Double alpha) => Elu"
   bind_python: True

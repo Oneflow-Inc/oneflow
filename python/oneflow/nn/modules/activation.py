@@ -1033,6 +1033,15 @@ class GLU(Module):
     def forward(self, input):
         return flow._C.glu(input, self.dim)
 
+class Threshold(Module):
+    def __init__(self, threshold: float, value: float):
+        super().__init__()
+        self.threshold = threshold
+        self.value = value
+
+    def forward(self, input):
+        return flow._C.threshold(input, self.threshold, self.value)
+
 
 if __name__ == "__main__":
     import doctest

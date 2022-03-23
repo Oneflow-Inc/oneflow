@@ -146,6 +146,7 @@ from oneflow._C import matmul
 from oneflow._C import bernoulli
 from oneflow._C import round
 from oneflow._C import softplus
+from oneflow._C import threshold
 from oneflow._C import tril
 from oneflow._C import triu
 from oneflow._C import pad
