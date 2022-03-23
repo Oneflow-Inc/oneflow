@@ -458,11 +458,7 @@ class NDSliceBoxingSubTskGphBuilder final : public HierarchicalSubTskGphBuilder 
           in_copy_node->ConnectToSrcNodeWithSlice(in_node, NewEdge(), in_slice);
           TaskNode* proxy_node =
               ctx->task_graph()->GetProxyNode(in_copy_node, lbi, out_parallel_desc, out_id);
-          if (producer_has_partial) {
-            out_node->ConnectToSrcNodeWithSlice(proxy_node, NewEdge(), intersection);
-          } else {
-            out_node->ConnectToSrcNodeWithSlice(proxy_node, NewEdge(), intersection);
-          }
+          out_node->ConnectToSrcNodeWithSlice(proxy_node, NewEdge(), intersection);
         };
         hierarchy_index_helper.OffsetToNdIndex(out_id, out_parallel_ids.data(),
                                                hierarchy_dimension);
