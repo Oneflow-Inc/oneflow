@@ -99,33 +99,13 @@ class AutogradEngine {
                                                                   bool create_graph) = 0;
 };
 
-// Stack Autograd Node and Engine
-class StackFunctionNode final : public FunctionNode {
+class GraphAutogradEngine final : public AutogradEngine {
  public:
-  OF_DISALLOW_COPY_AND_MOVE(StackFunctionNode);
-  StackFunctionNode(
-      const std::string& op_type_name,
-      const std::shared_ptr<
-          const std::function<Maybe<void>(const TensorTuple&, TensorTuple*, bool)>>& backward_fn,
-      const TensorTuple& inputs, const TensorTuple& outputs);
-  StackFunctionNode() = delete;
-  ~StackFunctionNode() override = default;
+  OF_DISALLOW_COPY_AND_MOVE(GraphAutogradEngine);
+  GraphAutogradEngine() = default;
+  ~GraphAutogradEngine() override = default;
 
-  void ReleaseData() override;
-  bool is_in_stack() const { return is_in_stack_; }
-  void set_is_in_stack(bool in_stack) { is_in_stack_ = in_stack; }
-
- private:
-  bool is_in_stack_;
-};
-
-class StackAutogradEngine final : public AutogradEngine {
- public:
-  OF_DISALLOW_COPY_AND_MOVE(StackAutogradEngine);
-  StackAutogradEngine() = default;
-  ~StackAutogradEngine() override = default;
-
-  void ClearEngine() override;
+  void ClearEngine() override{};
   Maybe<FunctionNode> AddBackwardFuncPtr(
       const std::string& op_type_name,
       const std::shared_ptr<
@@ -133,10 +113,6 @@ class StackAutogradEngine final : public AutogradEngine {
       const TensorTuple& inputs, TensorTuple* outputs) override;
 
  private:
-  // StackFunctionNode must be saved in engine, because any node in list may be released at any
-  // moment.
-  std::list<std::weak_ptr<FunctionNode>> node_list_;
-  void ClearReleasedFunctionNodes();
   Maybe<void> RunBackwardAndSaveGrads4LeafTensor(const TensorTuple& outputs,
                                                  const TensorTuple& out_grads, bool retain_graph,
                                                  bool create_graph) override;
@@ -178,30 +154,6 @@ class GraphTask final {
   std::vector<FunctionNode*> roots_;
   HashMap<FunctionNode*, int> dependencies_;
   HashSet<FunctionNode*> need_execute_;
-};
-
-class GraphAutogradEngine final : public AutogradEngine {
- public:
-  OF_DISALLOW_COPY_AND_MOVE(GraphAutogradEngine);
-  GraphAutogradEngine() = default;
-  ~GraphAutogradEngine() override = default;
-
-  void ClearEngine() override{};
-  Maybe<FunctionNode> AddBackwardFuncPtr(
-      const std::string& op_type_name,
-      const std::shared_ptr<
-          const std::function<Maybe<void>(const TensorTuple&, TensorTuple*, bool)>>& backward_fn,
-      const TensorTuple& inputs, TensorTuple* outputs) override;
-
- private:
-  Maybe<void> RunBackwardAndSaveGrads4LeafTensor(const TensorTuple& outputs,
-                                                 const TensorTuple& out_grads, bool retain_graph,
-                                                 bool create_graph) override;
-  Maybe<TensorTuple> RunBackwardAndReturnInputsTensorGrad(const TensorTuple& outputs,
-                                                          const TensorTuple& inputs,
-                                                          const TensorTuple& out_grads,
-                                                          bool retain_graph,
-                                                          bool create_graph) override;
 };
 
 AutogradEngine* GetThreadLocalAutogradEngine();

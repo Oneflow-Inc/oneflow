@@ -106,35 +106,6 @@ Maybe<TensorTuple> AutogradEngine::RunBackwardAndReturnInputsTensorGradIf(
                                               create_graph);
 }
 
-StackFunctionNode::StackFunctionNode(
-    const std::string& op_type_name,
-    const std::shared_ptr<const std::function<Maybe<void>(const TensorTuple&, TensorTuple*, bool)>>&
-        backward_fn,
-    const TensorTuple& inputs, const TensorTuple& outputs)
-    : FunctionNode(op_type_name) {
-  input_meta_data_.resize(inputs.size());
-  next_functions_->reserve(inputs.size());
-  for (int i = 0; i < inputs.size(); ++i) {
-    if (inputs.at(i)->requires_grad()) {
-      input_meta_data_.at(i) = inputs.at(i)->mut_autograd_meta();
-      next_functions_->emplace_back(inputs.at(i)->mut_grad_fn_node());
-    }
-  }
-
-  output_meta_data_.resize(outputs.size());
-  output_tensor_infos_.reserve(outputs.size());
-  for (int i = 0; i < outputs.size(); ++i) {
-    const auto& autograd_meta =
-        NewAutogradMeta(outputs.at(i)->requires_grad(), outputs.at(i)->is_leaf());
-    outputs.at(i)->set_autograd_meta(autograd_meta);
-    output_meta_data_.at(i) = outputs.at(i)->mut_autograd_meta();
-    output_tensor_infos_.emplace_back(TensorInfo(*outputs.at(i)));
-  }
-
-  backward_fn_ = backward_fn;
-  is_in_stack_ = false;
-}
-
 Maybe<void> FunctionNode::AccGrad4RetainGradTensor() {
   for (const std::shared_ptr<AutogradMeta>& out : output_meta_data_) {
     if (out->retain_grad()) { JUST(CopyOrAccGrad(out.get(), /*autograd_mode=*/false)); }
@@ -169,11 +140,6 @@ void FunctionNode::ReleaseOutTensorArgs() {
   }
 }
 
-void StackFunctionNode::ReleaseData() {
-  if (!input_meta_data_.empty()) { backward_fn_.reset(); }
-  is_in_stack_ = false;
-}
-
 Maybe<bool> FunctionNode::Apply(bool create_graph) {
   CHECK_NOTNULL_OR_RETURN(backward_fn_.get())
       << "This FunctionNode with name `" << GetOpTypeName() << "` has been released.\n"
@@ -203,102 +169,6 @@ Maybe<bool> FunctionNode::Apply(bool create_graph) {
     }
   }
   return true;
-}
-
-void StackAutogradEngine::ClearEngine() { node_list_.clear(); }
-
-void StackAutogradEngine::ClearReleasedFunctionNodes() {
-  node_list_.erase(std::remove_if(node_list_.begin(), node_list_.end(),
-                                  [](const std::weak_ptr<FunctionNode>& node) {
-                                    return node.lock() == nullptr;
-                                  }),
-                   node_list_.end());
-}
-
-Maybe<void> StackAutogradEngine::RunBackwardAndSaveGrads4LeafTensor(const TensorTuple& outputs,
-                                                                    const TensorTuple& out_grads,
-                                                                    bool retain_graph,
-                                                                    bool create_graph) {
-  ClearReleasedFunctionNodes();
-  for (int i = 0; i < outputs.size(); ++i) {
-    JUST(JUST(outputs.at(i)->current_grad())->PushPartialTensor(out_grads.at(i)));
-  }
-  // Runs each FunctionNode
-  for (const auto& weak_func_node : node_list_) {
-    const auto& func_node = weak_func_node.lock();
-    CHECK_NOTNULL_OR_RETURN(func_node);
-    if (JUST(func_node->Apply(create_graph))) {
-      JUST(func_node->AccGrad4LeafTensor(create_graph));
-      JUST(func_node->AccGrad4RetainGradTensor());
-      func_node->ReleaseOutTensorArgs();
-      if (!retain_graph) { func_node->ReleaseData(); }
-    }
-  }
-  if (!retain_graph) { ClearEngine(); }
-  return Maybe<void>::Ok();
-}
-
-Maybe<TensorTuple> StackAutogradEngine::RunBackwardAndReturnInputsTensorGrad(
-    const TensorTuple& outputs, const TensorTuple& inputs, const TensorTuple& out_grads,
-    bool retain_graph, bool create_graph) {
-  ClearReleasedFunctionNodes();
-  std::shared_ptr<TensorTuple> input_current_grad = std::make_shared<TensorTuple>(inputs.size());
-  std::vector<bool> ori_retain_grad(inputs.size());
-  for (int i = 0; i < inputs.size(); ++i) {
-    ori_retain_grad.at(i) = inputs.at(i)->retain_grad();
-    JUST(inputs.at(i)->set_retain_grad(true));
-  }
-  for (int i = 0; i < outputs.size(); ++i) {
-    JUST(JUST(outputs.at(i)->current_grad())->PushPartialTensor(out_grads.at(i)));
-  }
-  // Runs each FunctionNode
-  for (const auto& weak_func_node : node_list_) {
-    const auto& func_node = weak_func_node.lock();
-    CHECK_NOTNULL_OR_RETURN(func_node);
-    if (JUST(func_node->Apply(create_graph))) {
-      JUST(func_node->AccGrad4RetainGradTensor());
-      func_node->ReleaseOutTensorArgs();
-      if (!retain_graph) { func_node->ReleaseData(); }
-    }
-  }
-  // Gets input grads and resume retain_grad
-  for (int i = 0; i < inputs.size(); ++i) {
-    input_current_grad->at(i) = JUST(inputs.at(i)->acc_grad());
-    if (!ori_retain_grad.at(i)) {
-      JUST(inputs.at(i)->set_acc_grad(nullptr));
-      JUST(inputs.at(i)->set_retain_grad(false));
-    }
-  }
-  if (!retain_graph) { ClearEngine(); }
-  return input_current_grad;
-}
-
-Maybe<FunctionNode> StackAutogradEngine::AddBackwardFuncPtr(
-    const std::string& op_type_name,
-    const std::shared_ptr<const std::function<Maybe<void>(const TensorTuple&, TensorTuple*, bool)>>&
-        backward_fn,
-    const TensorTuple& inputs, TensorTuple* outputs) {
-  // Firstly push function_node of tensor in stack which is leaf and requires_grad
-  for (const std::shared_ptr<Tensor>& in_tensor : inputs) {
-    if (in_tensor->is_leaf() && in_tensor->requires_grad()) {
-      if (!in_tensor->grad_fn_node()) { JUST(AddAccumulateFunctionNode(in_tensor)); }
-      StackFunctionNode* stack_function_node =
-          dynamic_cast<StackFunctionNode*>(in_tensor->mut_grad_fn_node().get());
-      if (!stack_function_node->is_in_stack()) {
-        stack_function_node->set_is_in_stack(true);
-        node_list_.push_front(in_tensor->mut_grad_fn_node());
-      }
-    }
-  }
-
-  std::shared_ptr<StackFunctionNode> func_node =
-      std::make_shared<StackFunctionNode>(op_type_name, backward_fn, inputs, *outputs);
-  for (const std::shared_ptr<Tensor>& out_tensor : *outputs) {
-    out_tensor->set_grad_fn_node(func_node);
-  }
-  func_node->set_is_in_stack(true);
-  node_list_.push_front(func_node);
-  return std::static_pointer_cast<FunctionNode>(func_node);
 }
 
 void GraphFunctionNode::ReleaseData() {
