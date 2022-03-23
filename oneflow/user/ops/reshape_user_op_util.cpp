@@ -15,11 +15,19 @@ limitations under the License.
 */
 #include "oneflow/user/ops/reshape_user_op_util.h"
 #include "oneflow/core/operator/operator.h"
+#include "oneflow/core/common/cpp_attribute.h"
 
 namespace oneflow {
 
 Maybe<Shape> ReshapeUserOpUtil::GetLogicalOutBlobShape(const Shape& in_shape,
                                                        const Shape& reshape) {
+  if (unlikely(in_shape.elem_cnt() == 0)) {
+    FOR_RANGE(int, axis, 0, reshape.NumAxes()) {
+      int64_t dim = reshape.At(axis);
+      CHECK_GE_OR_RETURN(dim, 0);
+    }
+    return std::make_shared<Shape>(reshape);
+  }
   size_t total_elem_dim_exclude_minus_1 = 1;
   bool has_minus_1 = false;
   bool minus_1_axis = -1;
@@ -55,7 +63,7 @@ Maybe<void> ReshapeUserOpUtil::Squeeze(const Shape& origin, Shape* shape,
   DimVector dim_vec;
   FOR_RANGE(int, axis, 0, origin.NumAxes()) {
     int64_t dim = origin.At(axis);
-    CHECK_GT_OR_RETURN(dim, 0);
+    CHECK_GE_OR_RETURN(dim, 0);
     if (dim == 1) { continue; }
     CHECK_OR_RETURN(squeezed_axis2origin_axis->emplace(dim_vec.size(), axis).second);
     dim_vec.emplace_back(dim);
