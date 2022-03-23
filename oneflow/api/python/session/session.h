@@ -119,7 +119,6 @@ inline Maybe<void> CreateMultiClientSessionContext() {
 
 inline Maybe<void> InitMultiClientSessionContext(const std::string& config_proto_str) {
   CHECK_NOTNULL_OR_RETURN(Global<MultiClientSessionContext>::Get());
-  CHECK_NOTNULL_OR_RETURN(Global<EnvGlobalObjectsScope>::Get());
   CHECK_NOTNULL_OR_RETURN(Global<EnvDesc>::Get()) << "env not found";
 
   ConfigProto config_proto;

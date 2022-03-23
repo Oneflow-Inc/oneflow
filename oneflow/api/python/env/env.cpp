@@ -16,19 +16,37 @@ limitations under the License.
 #include <pybind11/pybind11.h>
 #include "oneflow/api/python/env/env.h"
 #include "oneflow/api/python/of_api_registry.h"
+#include "oneflow/core/common/global.h"
+#include "oneflow/core/vm/vm_util.h"
+#include "oneflow/core/vm/virtual_machine.h"
+#include "oneflow/core/framework/shut_down_util.h"
 
 namespace py = pybind11;
 
 namespace oneflow {
+
+Maybe<void> SwitchToShuttingDownPhase(EnvGlobalObjectsScope* env, bool is_normal_exit) {
+  if (is_normal_exit) {
+    JUST(vm::ClusterSync());
+    auto* vm = JUST(GlobalMaybe<VirtualMachine>());
+    JUST(vm->CloseVMThreads());
+  }
+  JUST(env->init_is_normal_exit(is_normal_exit));
+  SetShuttingDown(true);
+  return Maybe<void>::Ok();
+}
 
 ONEFLOW_API_PYBIND11_MODULE("", m) {
   m.def("CurrentResource", &CurrentResource);
   m.def("EnvResource", &EnvResource);
   m.def("EnableEagerEnvironment", &EnableEagerEnvironment);
 
-  m.def("IsEnvInited", &IsEnvInited);
-  m.def("InitEnv", &InitEnv);
-  m.def("DestroyEnv", &DestroyEnv, py::call_guard<py::gil_scoped_release>());
+  py::class_<EnvGlobalObjectsScope, std::shared_ptr<EnvGlobalObjectsScope>>(m, "Env")
+      .def(py::init([](const std::string& env_proto_str) {
+        return CreateEnv(env_proto_str).GetPtrOrThrow();
+      }))
+      .def("SwitchToShuttingDownPhase", &SwitchToShuttingDownPhase,
+           py::call_guard<py::gil_scoped_release>());
 
   m.def("CurrentMachineId", &CurrentMachineId);
 
