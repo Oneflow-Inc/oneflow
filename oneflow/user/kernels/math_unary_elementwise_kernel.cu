@@ -18,6 +18,8 @@ limitations under the License.
 #include "oneflow/core/kernel/cuda_graph_support.h"
 #include "oneflow/core/ep/cuda/cuda_stream.h"
 #include "oneflow/core/device/cuda_util.h"
+#include "oneflow/core/common/stride.h"
+#include "oneflow/core/cuda/elementwise.cuh"
 
 namespace oneflow {
 
@@ -26,6 +28,14 @@ namespace {
 template<template<typename> class UnaryFunctor, typename T>
 __global__ void MathUnaryElementwiseForwardGpu(const int n, const T* x, T* y) {
   CUDA_1D_KERNEL_LOOP(i, n) { y[i] = UnaryFunctor<T>::Forward(x[i]); }
+}
+
+template<template<typename> class UnaryFunctor, typename T>
+__global__ void MathUnaryElementwiseWithStrideForwardGpu(const int n, const StrideParam in_stride, const StrideParam out_stride, const T* x, T* y) {
+  CUDA_1D_KERNEL_LOOP(i, n) { 
+    const int32_t idx = oneflow::cuda::elementwise::offset_to_index(i, in_stride, out_stride);
+    y[i] = UnaryFunctor<T>::Forward(x[idx]); 
+  }
 }
 
 template<template<typename> class UnaryFunctor, typename T>
@@ -52,9 +62,23 @@ class MathUnaryElementwiseGpuKernel final : public user_op::OpKernel,
     int64_t n = tensor_x->shape().elem_cnt();
     CHECK_LE(n, GetMaxVal<int32_t>() / 2);
     if (n == 0) { return; }
-    MathUnaryElementwiseForwardGpu<UnaryFunctor, T>
+    // compute is_contiguous and construct input/output stride params
+    const int32_t ndim = tensor_x->shape().NumAxes();
+    const StrideVector& in_stride_vec = tensor_x->stride().StrideVec();
+    const StrideVector& out_stride_vec = tensor_y->stride().StrideVec();    
+    DimVector in_shape_vec;
+    tensor_x->shape().ToDimVector(&in_shape_vec);
+    bool is_contiguous = oneflow::one::IsContiguous(in_shape_vec, in_stride_vec);
+    StrideParam in_stride(in_stride_vec.data(), ndim), out_stride(out_stride_vec.data(), ndim);
+    if(is_contiguous){
+      MathUnaryElementwiseForwardGpu<UnaryFunctor, T>
         <<<BlocksNum4ThreadsNum(n), kCudaThreadsNumPerBlock, 0,
            ctx->stream()->As<ep::CudaStream>()->cuda_stream()>>>(n, x, y);
+    }else{
+      MathUnaryElementwiseWithStrideForwardGpu<UnaryFunctor, T>
+        <<<BlocksNum4ThreadsNum(n), kCudaThreadsNumPerBlock, 0,
+           ctx->stream()->As<ep::CudaStream>()->cuda_stream()>>>(n, in_stride, out_stride, x, y); 
+    }
   }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };

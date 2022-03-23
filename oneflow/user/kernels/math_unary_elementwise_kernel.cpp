@@ -32,7 +32,23 @@ class MathUnaryElementwiseCpuKernel final : public user_op::OpKernel {
     T* y = tensor_y->mut_dptr<T>();
     int64_t n = tensor_x->shape().elem_cnt();
     CHECK_LE(n, GetMaxVal<int32_t>() / 2);
-    for (int32_t i = 0; i < n; ++i) { y[i] = UnaryFunctor<T>::Forward(x[i]); }
+    // compute is_contiguous and construct input/output stride params
+    const int32_t ndim = tensor_x->shape().NumAxes();
+    const StrideVector& in_stride_vec = tensor_x->stride().StrideVec();
+    const StrideVector& out_stride_vec = tensor_y->stride().StrideVec();    
+    DimVector in_shape_vec;
+    tensor_x->shape().ToDimVector(&in_shape_vec);
+    bool is_contiguous = oneflow::one::IsContiguous(in_shape_vec, in_stride_vec);
+    StrideParam param_in_stride(in_stride_vec.data(), ndim), param_out_stride(out_stride_vec.data(), ndim);
+    if(is_contiguous){
+      for (int32_t i = 0; i < n; ++i) { y[i] = UnaryFunctor<T>::Forward(x[i]); }
+    }else{
+      for (int32_t i = 0; i < n; ++i) { 
+        int32_t src_idx = compute_index(i, param_in_stride, param_out_stride);
+        y[i] = UnaryFunctor<T>::Forward(x[src_idx]); 
+      }
+    }
+
   }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
