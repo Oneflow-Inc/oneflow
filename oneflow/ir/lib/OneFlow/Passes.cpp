@@ -482,6 +482,38 @@ struct AutoNhwcPattern : public OpInterfaceRewritePattern<NCHWCompatible> {
   }
 };
 
+bool checkRedundantTranspose(ArrayAttr pre, ArrayAttr afe) {
+  const auto prePerm = pre.getValue();
+  const auto afePerm = afe.getValue();
+  if (prePerm.size() == 4 && afePerm.size() == 4) {
+    // handle nchw->nhwc->nchw: (0, 2, 3, 1) -> (0, 3, 1, 2)
+    if (prePerm[0] == afePerm[0] && prePerm[1] == afePerm[3] && prePerm[2] == afePerm[1]
+        && prePerm[3] == afePerm[2])
+      return true;
+    // handle nhwc->nchw->nhwc: (0, 3, 1, 2) -> (0, 2, 3, 1)
+    if (prePerm[0] == afePerm[0] && prePerm[1] == afePerm[2] && prePerm[2] == afePerm[3]
+        && prePerm[3] == afePerm[1])
+      return true;
+  }
+  return false;
+}
+
+struct AutoNhwcEliminateRedundantTransposePattern : public mlir::OpRewritePattern<TransposeOp> {
+  explicit AutoNhwcEliminateRedundantTransposePattern(mlir::MLIRContext* context)
+      : OpRewritePattern<TransposeOp>(context, /*benefit=*/1) {}
+  mlir::LogicalResult matchAndRewrite(TransposeOp op,
+                                      mlir::PatternRewriter& rewriter) const override {
+    mlir::Value transposeInput = op.getOperand();
+    TransposeOp transposeInputOp = transposeInput.getDefiningOp<TransposeOp>();
+
+    if (!transposeInputOp || !checkRedundantTranspose(op.permAttr(), transposeInputOp.permAttr())) {
+      return failure();
+    }
+    rewriter.replaceOp(op, {transposeInputOp.getOperand()});
+    return success();
+  }
+};
+
 void BroadcastMulOp::getCanonicalizationPatterns(RewritePatternSet& results, MLIRContext* context) {
   results.insert<BroadcastMulToScalarMulPattern>(context);
 }
@@ -555,7 +587,10 @@ void populateFuserForExistingOp(::mlir::RewritePatternSet& patterns) {
   patterns.add<FusedBiasAddDropoutPattern>(patterns.getContext());
   patterns.add<NormalizationAddReluPattern>(patterns.getContext());
   bool enable_nhwc = ::oneflow::ParseBooleanFromEnv("ONEFLOW_MLIR_PREFER_NHWC", false);
-  if (enable_nhwc) { patterns.add<AutoNhwcPattern>(patterns.getContext()); }
+  if (enable_nhwc) {
+    patterns.add<AutoNhwcPattern>(patterns.getContext());
+    patterns.add<AutoNhwcEliminateRedundantTransposePattern>(patterns.getContext());
+  }
 }
 
 void populateGpuHelperPatterns(::mlir::RewritePatternSet& patterns) {
