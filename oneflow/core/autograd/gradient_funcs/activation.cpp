@@ -13,7 +13,6 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
-#include "oneflow/core/framework/attr_map.h"
 #include "oneflow/core/framework/op_expr_grad_function.h"
 #include "oneflow/core/functional/functional.h"
 
@@ -394,7 +393,7 @@ class Threshold : public OpExprGradFunction<ThresholdCaptureState> {
     if (!ctx->requires_grad) { return Maybe<void>::Ok(); }
 
     ComposedAttrMap composed_attrs(attrs, base_attrs_);
-    ctx->threshold = JUST(composed_attrs.GetAttr<double>("alpha"));
+    ctx->threshold = JUST(composed_attrs.GetAttr<double>("threshold"));
     ctx->SaveTensorForBackward(inputs.at(0));
     return Maybe<void>::Ok();
   }

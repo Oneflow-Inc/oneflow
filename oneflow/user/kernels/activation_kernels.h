@@ -15,7 +15,6 @@ limitations under the License.
 */
 #ifndef _ONEFLOW_USER_KERNELS_ACTIVATION_KERNELS_H_
 #define _ONEFLOW_USER_KERNELS_ACTIVATION_KERNELS_H_
-#include "oneflow/core/common/data_type.h"
 #include "oneflow/user/kernels/elementwise_xpu_kernel.h"
 
 namespace oneflow {

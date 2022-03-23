@@ -490,7 +490,7 @@
   bind_python: True
 
 - name: "threshold"
-  signature: "Tensor (Tensor x, Double threshold, Double value) => Threshold"
+  signature: "Tensor (Tensor x, *, Double threshold, Double value) => Threshold"
   bind_python: True
 
 - name: "threshold_grad"
