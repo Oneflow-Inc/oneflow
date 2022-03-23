@@ -155,19 +155,19 @@ void DfsTraverseRanks4NdSbp(
                                                  parallel_hierarchy.NumAxes()));
     return;
   }
-  if (in_nd_sbp.sbp_parallel(depth).has_split_parallel()) {
-    // If Split, go through all the ranks along the depth-dimension.
-    for (int64_t i = 0; i < parallel_hierarchy.dim_vec().at(depth); i++) {
-      in_parallel_ids[depth] = i;
-      DfsTraverseRanks4NdSbp(depth + 1, in_parallel_ids, out_parallel_ids, parallel_hierarchy,
-                             hierarchy_index_helper, in_nd_sbp, visit);
-    }
-  } else {
+  if (in_nd_sbp.sbp_parallel(depth).has_broadcast_parallel()) {
     // If Broadcast in the sbp of the producer, only visit those ranks with the same id as the
     // current rank along the depth-dimension.
     in_parallel_ids[depth] = out_parallel_ids[depth];
     DfsTraverseRanks4NdSbp(depth + 1, in_parallel_ids, out_parallel_ids, parallel_hierarchy,
                            hierarchy_index_helper, in_nd_sbp, visit);
+  } else {
+    // If Split or PartialSum, go through all the ranks along the depth-dimension.
+    for (int64_t i = 0; i < parallel_hierarchy.dim_vec().at(depth); i++) {
+      in_parallel_ids[depth] = i;
+      DfsTraverseRanks4NdSbp(depth + 1, in_parallel_ids, out_parallel_ids, parallel_hierarchy,
+                             hierarchy_index_helper, in_nd_sbp, visit);
+    }
   }
 }
 
@@ -415,11 +415,14 @@ class NDSliceBoxingSubTskGphBuilder final : public HierarchicalSubTskGphBuilder 
       return node;
     };
     if (*in_parallel_desc.hierarchy() == *out_parallel_desc.hierarchy()) {
-      if (NdSbpNoPartialParallel(in_nd_sbp) && NdSbpNoPartialParallel(out_nd_sbp)) {
+      if (NdSbpNoPartialParallel(out_nd_sbp)
+          && (NdSbpNoPartialParallel(in_nd_sbp) || NdsbpAllSplitParallel(out_nd_sbp))) {
         // pass
       } else {
         Error::BoxingNotSupportedError();
       }
+
+      bool producer_has_partial = !NdSbpNoPartialParallel(in_nd_sbp);
 
       const std::vector<TensorSliceView> in_slices =
           GetTensorSliceView(*in_parallel_desc.hierarchy(), in_nd_sbp, logical_blob_desc.shape());
@@ -436,8 +439,15 @@ class NDSliceBoxingSubTskGphBuilder final : public HierarchicalSubTskGphBuilder 
 
       FOR_RANGE(int64_t, out_id, 0, out_parallel_num) {
         const TensorSliceView& out_slice = out_slices.at(out_id);
-        SliceBoxingTaskNode* out_node =
-            CreateSliceBoxingNode(out_parallel_desc, out_id, out_slice, kSliceBoxingTaskModeCopy);
+        SliceBoxingTaskNode* out_node = nullptr;
+        if (producer_has_partial) {
+          out_node =
+              CreateSliceBoxingNode(out_parallel_desc, out_id, out_slice, kSliceBoxingTaskModeAdd);
+        } else {
+          out_node =
+              CreateSliceBoxingNode(out_parallel_desc, out_id, out_slice, kSliceBoxingTaskModeCopy);
+        }
+
         const auto& visit = [&](int64_t in_id) {
           const TensorSliceView& in_slice = in_slices.at(in_id);
           const TensorSliceView& intersection = out_slice.Intersect(in_slice);
@@ -448,17 +458,16 @@ class NDSliceBoxingSubTskGphBuilder final : public HierarchicalSubTskGphBuilder 
           in_copy_node->ConnectToSrcNodeWithSlice(in_node, NewEdge(), in_slice);
           TaskNode* proxy_node =
               ctx->task_graph()->GetProxyNode(in_copy_node, lbi, out_parallel_desc, out_id);
-
-          SliceBoxingTaskNode* out_copy_node = CreateSliceBoxingNode(
-              out_parallel_desc, out_id, intersection, kSliceBoxingTaskModeCopy);
-          out_copy_node->ConnectToSrcNodeWithSlice(proxy_node, NewEdge(), intersection);
-          out_node->ConnectToSrcNodeWithSlice(out_copy_node, NewEdge(), intersection);
+          if (producer_has_partial) {
+            out_node->ConnectToSrcNodeWithSlice(proxy_node, NewEdge(), intersection);
+          } else {
+            out_node->ConnectToSrcNodeWithSlice(proxy_node, NewEdge(), intersection);
+          }
         };
         hierarchy_index_helper.OffsetToNdIndex(out_id, out_parallel_ids.data(),
                                                hierarchy_dimension);
         DfsTraverseRanks4NdSbp(0, in_parallel_ids, out_parallel_ids, *parallel_hierarchy,
                                hierarchy_index_helper, in_nd_sbp, visit);
-
         sorted_out_tasks->push_back(out_node);
       }
       return BuildSubTskGphBuilderStatus("NDSliceBoxingAddSubTskGphBuilder", "One step transfer");
@@ -536,7 +545,8 @@ class Same2DHierarchySubTskGphBuilder final : public HierarchicalSubTskGphBuilde
             ctx, sorted_in_tasks, sorted_out_tasks, sorted_ctrl_tasks, in_parallel_desc,
             out_parallel_desc, lbi, logical_blob_desc, in_nd_sbp, out_nd_sbp, time_shape);
       } else {
-        if (NdSbpNoPartialParallel(in_nd_sbp) && NdSbpNoPartialParallel(out_nd_sbp)) {
+        if (NdSbpNoPartialParallel(out_nd_sbp)
+            && (NdSbpNoPartialParallel(in_nd_sbp) || NdsbpAllSplitParallel(out_nd_sbp))) {
           return nd_slice_boxing_sub_tsk_gph_builder_->Build(
               ctx, sorted_in_tasks, sorted_out_tasks, sorted_ctrl_tasks, in_parallel_desc,
               out_parallel_desc, lbi, logical_blob_desc, in_nd_sbp, out_nd_sbp, time_shape);
