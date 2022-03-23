@@ -622,6 +622,7 @@ jobs:
       SSH_TANK_HOST: 192.168.1.13
       SSH_TANK_PATH: /tank
       FLOW_VISION_SRC: flow_vision
+      INSIGHT_FACE_SRC: insightface
       METRICS_DIR: metrics
     steps:
       - name: Fix permissions
@@ -823,6 +824,21 @@ jobs:
               repo: context.repo.repo,
               body: "<details>\n <summary>Speed stats:</summary>\n\n ``` \n${{ steps.speed.outputs.stats }}\n ``` \n\n</details>".replace(/\\n/g, '\n')
             })
+      - name: Insightface
+        if: ${{ !fromJson(matrix.cache-hit) && matrix.test-type == 'speed-test' && matrix.device == 'cuda' }}
+        uses: actions/checkout@v2
+        with:
+          repository: Oneflow-Inc/insightface
+          ref: ad47b6cc8bce5893c5a55ec83e8e4c4f6ec5632e
+          path: ${{ env.INSIGHT_FACE_SRC }}
+      - name: Insightface IResNet50 Graph DDP test
+        id: models-iresnet50
+        timeout-minutes: 30
+        if: ${{ !fromJson(matrix.cache-hit) && matrix.test-type == 'speed-test' && matrix.device == 'cuda' }}
+        run: |
+          docker exec -e INSIGHT_FACE_TEST_DIR=${{ env.INSIGHT_FACE_SRC }}/recognition/arcface_oneflow \
+            ${{ env.TEST_CONTAINER_NAME }} \
+            bash ${{ env.INSIGHT_FACE_SRC }}/recognition/arcface_oneflow/ci/run_eager_graph.sh
       - name: Module API test
         timeout-minutes: 45
         if: ${{ !fromJson(matrix.cache-hit) && matrix.test-type == 'module' && !fromJson(matrix.is-distributed) }}
@@ -980,3 +996,4 @@ jobs:
               repo: context.repo.repo,
               body: 'Static analysis with clang failed. PR label automerge has been removed'
             })
+          
