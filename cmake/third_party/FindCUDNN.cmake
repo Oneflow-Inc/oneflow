@@ -74,8 +74,6 @@ if(CUDNN_FOUND)
         ${CUDNN_LIBRARY_DIRECTORY}/libcudnn_ops_train_static.a
         ${CUDNN_LIBRARY_DIRECTORY}/libcudnn_cnn_infer_static.a
         ${CUDNN_LIBRARY_DIRECTORY}/libcudnn_cnn_train_static.a
-        ${CUDNN_LIBRARY_DIRECTORY}/libcudnn_adv_infer_static.a
-        ${CUDNN_LIBRARY_DIRECTORY}/libcudnn_adv_train_static.a
       )
     endif()
     list(APPEND CUDNN_LIBRARIES
