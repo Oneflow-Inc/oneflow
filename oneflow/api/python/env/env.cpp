@@ -16,7 +16,6 @@ limitations under the License.
 #include <pybind11/pybind11.h>
 #include "oneflow/api/python/env/env.h"
 #include "oneflow/api/python/of_api_registry.h"
-#include "oneflow/api/python/env/env_api.h"
 #include "oneflow/core/job/env_global_objects_scope.h"
 #include "oneflow/core/common/global.h"
 #include "oneflow/core/vm/vm_util.h"
