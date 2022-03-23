@@ -377,7 +377,7 @@ class TestUpsample2d(flow.unittest.TestCase):
         "The nearest interpolate operation in pytorch has bug, https://github.com/pytorch/pytorch/issues/65200"
     )
     @autotest()
-    def test_upsample2d(test_case):
+    def test_upsample2d_nearest(test_case):
         device = random_device()
         x = random_tensor().to(device)
         m = torch.nn.Upsample(scale_factor=random().to(float), mode="nearest")
