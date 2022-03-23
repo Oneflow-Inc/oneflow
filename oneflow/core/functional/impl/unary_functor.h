@@ -33,7 +33,7 @@ namespace impl {
 class UnaryFunctor {
  public:
   Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x) const {
-    return OpInterpUtil::Dispatch<Tensor>(*op_, {x->contiguous()});
+    return OpInterpUtil::Dispatch<Tensor>(*op_, {x});
   }
 
  protected:

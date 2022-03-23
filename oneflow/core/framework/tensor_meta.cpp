@@ -37,9 +37,23 @@ bool IsContiguous(const Shape& shape, const Stride& stride) {
 }
 
 bool IsContiguous(const DimVector& shape_vec, const StrideVector& stride_vec) {
-  Shape shape(shape_vec);
-  Stride stride(stride_vec);
-  return IsContiguous(shape, stride);
+  const size_t ndim = shape_vec.size();
+  const size_t stride_ndim = stride_vec.size();
+  if(ndim < 1 || stride_ndim < 1){ return true; }
+  int64_t elem_cnt = 1;
+  for (int64_t s : shape_vec) { elem_cnt *= s; }
+  if (elem_cnt <= 1) { return true; }
+
+  int64_t expected_stride = 1;
+  bool contig_if_nonempty = true;
+  for (int64_t i = ndim - 1; i >= 0; --i) {
+    if (shape_vec.at(i) == 0) { return true; }
+    if (contig_if_nonempty && shape_vec.at(i) != 1) {
+      if (stride_vec.at(i) != expected_stride) { contig_if_nonempty = false; }
+      expected_stride *= shape_vec.at(i);
+    }
+  }
+  return contig_if_nonempty;
 }
 
 }  // namespace one

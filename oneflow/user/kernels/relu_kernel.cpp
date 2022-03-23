@@ -16,7 +16,6 @@ limitations under the License.
 #include "oneflow/core/framework/framework.h"
 #include "oneflow/core/kernel/cuda_graph_support.h"
 #include "oneflow/core/ep/include/primitive/elementwise_unary.h"
-#include "oneflow/core/framework/tensor_meta.h"
 
 namespace oneflow {
 
