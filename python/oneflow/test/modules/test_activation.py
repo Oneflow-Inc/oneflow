@@ -487,7 +487,7 @@ def _test_softplus_threshold(test_case, device):
 
 
 def _test_softplus_backward(test_case, device):
-    m = flow.nn.Softplus(1,20)
+    m = flow.nn.Softplus(1, 20)
     arr = np.array([1.0, 2.0, 21.0, 20.0, 4.0])
     x = flow.tensor(arr, device=flow.device(device), requires_grad=True)
     of_out = m(x)

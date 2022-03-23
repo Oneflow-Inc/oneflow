@@ -237,7 +237,7 @@ template<typename T>
 struct SoftplusGradFunctor {
   OF_DEVICE_FUNC explicit SoftplusGradFunctor(double beta, double threshold)
       : beta(beta), threshold(threshold) {}
-  OF_DEVICE_FUNC T operator()(T x, T dy) const {
+  OF_DEVICE_FUNC T operator()(T y, T dy) const {
     // torch
     // T z = std::exp(x * beta);
     // return (x * beta) > threshold ? dy : dy * z / (z + T(1.0));
@@ -246,7 +246,7 @@ struct SoftplusGradFunctor {
     // return (x_beta) > static_cast<T>(threshold) ? dy : dy / (static_cast<T>(1) +
     // std::exp(-x_beta));
     // oneflow dy * std::exp(x * beta) / (std::exp(x * beta) + 1.0f);
-    auto x_beta = static_cast<T>(beta) * x;
+    auto x_beta = static_cast<T>(beta) * y;
     return (x_beta) > static_cast<T>(threshold)
                ? dy
                : dy * std::exp(x_beta) / (std::exp(x_beta) + static_cast<T>(1));

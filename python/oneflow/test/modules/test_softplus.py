@@ -27,11 +27,11 @@ import torch
 
 def _test_softplus_impl(test_case, shape, device):
     np_input = np.random.randn(*shape)
-    of_input = torch.tensor(
-        np_input, dtype=torch.float32, device=torch.device(device), requires_grad=True
+    of_input = flow.tensor(
+        np_input, dtype=flow.float32, device=flow.device(device), requires_grad=True
     )
     np_x_grad = np.exp(np_input) / (1 + np.exp(np_input))
-    of_out = torch.nn.functional.softplus(of_input,1,20)
+    of_out = flow.nn.functional.softplus(of_input, 1, 20)
     np_out = np.log(1 + np.exp(np_input))
     test_case.assertTrue(np.allclose(of_out.detach().numpy(), np_out, 0.0001, 0.0001))
     of_out = of_out.sum()
