@@ -43,7 +43,7 @@ Maybe<void> RawCheckFlattenHierarchy(Symbol<PlacedNdSbp> in, Symbol<PlacedNdSbp>
 }  // namespace
 
 static constexpr auto* CheckFlattenHierarchy =
-    DECORATE(&RawCheckFlattenHierarchy, ThreadLocalCopiable);
+    DECORATE(&RawCheckFlattenHierarchy, ThreadLocalCachedCopiable);
 
 Maybe<one::Tensor> FlattenHierarchy(const std::shared_ptr<one::Tensor>& tensor,
                                     Symbol<PlacedNdSbp> in, Symbol<PlacedNdSbp> out) {
