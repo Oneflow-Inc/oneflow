@@ -38,9 +38,44 @@ class MathBinaryElementwiseCpuKernel final : public user_op::OpKernel {
     CHECK_LE(n, GetMaxVal<int32_t>() / 2);
     ep::CpuStream* cpu_stream = ctx->stream()->As<ep::CpuStream>();
 
-    cpu_stream->ParallelFor(0, n, [x, y, z](int64_t begin, int64_t end) {
-      for (int64_t i = begin; i < end; i++) { z[i] = BinaryFunctor<T>::Forward(x[i], y[i]); }
-    });
+    // compute is_contiguous and construct input/output stride params
+    const int32_t ndim = tensor_x->shape().NumAxes();
+    const StrideVector& x_stride_vec = tensor_x->stride().StrideVec();
+    const StrideVector& y_stride_vec = tensor_y->stride().StrideVec();  
+    const StrideVector& z_stride_vec = tensor_z->stride().StrideVec();    
+    DimVector x_shape_vec, y_shape_vec;
+    tensor_x->shape().ToDimVector(&x_shape_vec);
+    tensor_y->shape().ToDimVector(&y_shape_vec);
+    bool x_contiguous = oneflow::one::IsContiguous(x_shape_vec, x_stride_vec);
+    bool y_contiguous = oneflow::one::IsContiguous(y_shape_vec, y_stride_vec);
+    StrideParam x_stride(x_stride_vec.data(), ndim), y_stride(y_stride_vec.data(), ndim), z_stride(z_stride_vec.data(), ndim);
+    if(x_contiguous && y_contiguous){
+      cpu_stream->ParallelFor(0, n, [x, y, z](int64_t begin, int64_t end) {
+        for (int64_t i = begin; i < end; i++) { z[i] = BinaryFunctor<T>::Forward(x[i], y[i]); }
+      });
+    } else if(x_contiguous){
+       cpu_stream->ParallelFor(0, n, [x, y, z, y_stride, z_stride](int64_t begin, int64_t end) {
+        for (int64_t i = begin; i < end; i++) { 
+          int32_t y_idx = compute_index(i, y_stride, z_stride);
+          z[i] = BinaryFunctor<T>::Forward(x[i], y[y_idx]); 
+        }
+      });
+    } else if(y_contiguous){
+      cpu_stream->ParallelFor(0, n, [x, y, z, x_stride, z_stride](int64_t begin, int64_t end) {
+        for (int64_t i = begin; i < end; i++) { 
+          int32_t x_idx = compute_index(i, x_stride, z_stride);
+          z[i] = BinaryFunctor<T>::Forward(x[x_idx], y[i]); 
+        }
+      });
+    } else {
+      cpu_stream->ParallelFor(0, n, [x, y, z, x_stride, y_stride, z_stride](int64_t begin, int64_t end) {
+        for (int64_t i = begin; i < end; i++) { 
+          int32_t x_idx = compute_index(i, x_stride, z_stride);
+          int32_t y_idx = compute_index(i, y_stride, z_stride);
+          z[i] = BinaryFunctor<T>::Forward(x[x_idx], y[y_idx]); 
+        }
+      });
+    }
   }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };

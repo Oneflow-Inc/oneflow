@@ -159,7 +159,7 @@ __global__ void __launch_bounds__(kBlockSize)
 
 template<typename FactoryT, typename R, typename... IN>
 __global__ void __launch_bounds__(kBlockSize)
-    ApplyWithStride(FactoryT factory, int64_t count, 
+    ApplyGenericWithStride(FactoryT factory, int64_t count, 
       const StrideParam in_stride, 
       const StrideParam out_stride, 
       R* r, const IN*... in) {
@@ -212,7 +212,7 @@ struct GenericLauncher {
       cudaError_t err = GetNumBlocks(n, &num_blocks);
       if (err != cudaSuccess) { return err; }
     }
-    auto func = ApplyWithStride<FactoryT, R, IN...>;
+    auto func = ApplyGenericWithStride<FactoryT, R, IN...>;
     func<<<num_blocks, kBlockSize, 0, stream>>>(
         factory, n, in_stride, out_stride, r, (in)...);
     return cudaPeekAtLastError();
@@ -227,8 +227,7 @@ inline cudaError_t UnaryWithFactory(FactoryT factory, int64_t n, R* r, const A* 
 
 template<typename FactoryT, typename R, typename A>
 inline cudaError_t UnaryWithStrideFactory(FactoryT factory, int64_t n, 
-const StrideParam& in_stride, 
-const StrideParam& out_stride,
+const StrideParam& in_stride, const StrideParam& out_stride,
 R* r, const A* a, cudaStream_t stream) {
   return GenericLauncher<FactoryT, R, A>::LaunchWithStride(factory, n, in_stride, out_stride, r, a, stream);
 }
@@ -240,8 +239,7 @@ inline cudaError_t Unary(FunctorT functor, int64_t n, R* r, const A* a, cudaStre
 
 template<typename FunctorT, typename R, typename A>
 inline cudaError_t UnaryWithStride(FunctorT functor, int64_t n, 
-const StrideParam& in_stride, 
-const StrideParam& out_stride, 
+const StrideParam& in_stride, const StrideParam& out_stride, 
 R* r, const A* a, cudaStream_t stream) {
   return UnaryWithStrideFactory(SimpleFactory<FunctorT>(functor), n, in_stride, out_stride, r, a, stream);
 }
@@ -256,6 +254,20 @@ template<typename FunctorT, typename R, typename A, typename B>
 inline cudaError_t Binary(FunctorT functor, int64_t n, R* r, const A* a, const B* b,
                           cudaStream_t stream) {
   return BinaryWithFactory(SimpleFactory<FunctorT>(functor), n, r, a, b, stream);
+}
+
+template<typename FactoryT, typename R, typename A, typename B>
+inline cudaError_t BinaryWithStrideFactory(FactoryT factory, int64_t n, 
+  const StrideParam& in_stride, const StrideParam& out_stride, 
+  R* r, const A* a, const B* b, cudaStream_t stream) {
+  return GenericLauncher<FactoryT, R, A, B>::LaunchWithStride(factory, n, in_stride, out_stride, r, a, b, stream);
+}
+
+template<typename FunctorT, typename R, typename A, typename B>
+inline cudaError_t BinaryWithStride(FunctorT functor, int64_t n, 
+  const StrideParam& in_stride, const StrideParam& out_stride, 
+  R* r, const A* a, const B* b, cudaStream_t stream) {
+  return BinaryWithStrideFactory(SimpleFactory<FunctorT>(functor), n, in_stride, out_stride, r, a, b, stream);
 }
 
 template<typename FactoryT, typename R, typename A, typename B, typename C>

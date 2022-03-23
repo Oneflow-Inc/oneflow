@@ -53,7 +53,7 @@ class BinaryFloatFunctor {
   Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x,
                            const std::shared_ptr<one::Tensor>& y) const {
     TensorProcessor tensor_processor;
-    JUST(tensor_processor.AddInputs({x->contiguous(), y->contiguous()}, DType::Float()).Apply());
+    JUST(tensor_processor.AddInputs({x, y}, DType::Float()).Apply());
     TensorTuple input_tuple = JUST(tensor_processor.GetInputs());
     return OpInterpUtil::Dispatch<Tensor>(*op_, input_tuple);
   }
