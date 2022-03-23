@@ -261,12 +261,18 @@ void ScheduleUntilVMEmpty(vm::VirtualMachineEngine* vm, const vm::ScheduleCtx& s
   }
 }
 
+std::mutex* MutVMMutex() {
+  static std::mutex mutex;
+  return &mutex;
+}
+
 }  // namespace
 
 Maybe<void> VirtualMachine::RunInCurrentThread(vm::InstructionMsgList* instr_list) {
   CHECK_OR_RETURN(vm_->Empty());
   CHECK_OR_RETURN(vm_->CallbackEmpty());
   JUST(vm_->Receive(instr_list));
+  std::unique_lock<std::mutex> lock(*MutVMMutex());
   ScheduleUntilVMEmpty(vm_.Mutable(), SingleThreadScheduleCtx(vm_.Mutable()));
   return Maybe<void>::Ok();
 }
@@ -290,6 +296,7 @@ class MultiThreadScheduleCtx : public vm::ScheduleCtx {
 }  // namespace
 
 void VirtualMachine::ScheduleLoop(const std::function<void()>& Initializer) {
+  std::unique_lock<std::mutex> lock(*MutVMMutex());
   LOG(WARNING) << "cclog : ScheduleLoop Begin";
   Initializer();
   MultiThreadScheduleCtx schedule_ctx(&callback_notifier_);

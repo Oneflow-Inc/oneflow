@@ -31,6 +31,7 @@ class BarrierPhyInstrOperand : public PhyInstrOperand {
   ~BarrierPhyInstrOperand() {
     // Make sure barrier callbacks run after all objects of previous instructions are destructed in
     // Callback thread.
+    LOG(ERROR) << "BarrierPhyInstrOperand::~BarrierPhyInstrOperand. this:" << this;
     callback_();
   }
 

@@ -506,12 +506,21 @@ void VirtualMachineEngine::TryRunBarrierInstruction(const ScheduleCtx& schedule_
   CHECK(OnSchedulerThread(stream_type));
   stream_type.Run(sequnential_instruction);
   mut_barrier_instruction_list()->Erase(sequnential_instruction);
+  LOG(WARNING) << "before LivelyInstructionListErase phy_instr_operand: "
+               << sequnential_instruction->mut_instr_msg()->phy_instr_operand().get()
+               << " , ref_cnt = " << sequnential_instruction->mut_instr_msg()->ref_cnt();
   intrusive::shared_ptr<InstructionMsg> instr_msg(sequnential_instruction->mut_instr_msg());
+  LOG(WARNING) << "after LivelyInstructionListErase phy_instr_operand: "
+               << sequnential_instruction->mut_instr_msg()->phy_instr_operand().get()
+               << " , ref_cnt = " << sequnential_instruction->mut_instr_msg()->ref_cnt();
+  LOG(WARNING) << "sequnential_instruction-ref_cnt: " << sequnential_instruction->ref_cnt();
   LivelyInstructionListErase(sequnential_instruction);
-  sequnential_instruction->clear_instr_msg();
+  LOG(WARNING) << "after LivelyInstructionListErase phy_instr_operand: "
+               << sequnential_instruction->mut_instr_msg()->phy_instr_operand().get()
+               << " , ref_cnt = " << sequnential_instruction->mut_instr_msg()->ref_cnt();
   constexpr int kZeroWindowSize = 0;  // flush immediately.
-  LOG(WARNING) << "cclog : TryRunBarrierInstruction:: InstrMsg: " << instr_msg->DebugName()
-               << " , ref_cnt = " << instr_msg->ref_cnt();
+  LOG(WARNING) << "cclog : TryRunBarrierInstruction:: phy_instr_operand: "
+               << instr_msg->phy_instr_operand().get() << " , ref_cnt = " << instr_msg->ref_cnt();
   MoveInstructionMsgToGarbageMsgList(kZeroWindowSize, std::move(instr_msg), schedule_ctx);
   OF_PROFILER_RANGE_POP();
 }
