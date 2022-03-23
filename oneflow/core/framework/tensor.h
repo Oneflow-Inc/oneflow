@@ -280,88 +280,98 @@ class ProxyTensor : public TensorIf<DerivedT> {
   ProxyTensor(const std::shared_ptr<Tensor>& tensor) : tensor_(tensor) {}
   virtual ~ProxyTensor() = default;
 
-  virtual const std::shared_ptr<const Shape>& shape() const { return tensor_->shape(); }
-  virtual Symbol<DType> dtype() const { return tensor_->dtype(); }
-  virtual Maybe<Symbol<NdSbp>> nd_sbp() const { return tensor_->nd_sbp(); }
-  virtual Maybe<Symbol<ParallelDesc>> parallel_desc() const { return tensor_->parallel_desc(); }
-  virtual Maybe<Symbol<Device>> device() const { return tensor_->device(); }
-  virtual Maybe<Symbol<Device>*> mut_device() { return tensor_->mut_device(); }
-  virtual bool is_cuda() const { return tensor_->is_cuda(); }
-  virtual bool is_consistent() const { return tensor_->is_consistent(); }
-  virtual bool is_local() const { return tensor_->is_local(); }
-  virtual bool is_lazy() const { return tensor_->is_lazy(); }
-  virtual bool is_eager() const { return tensor_->is_eager(); }
-  virtual const TensorMeta& tensor_meta() const { return tensor_->tensor_meta(); }
-  virtual Maybe<Symbol<ConsistentTensorMeta>> consistent_tensor_meta() const {
+  virtual const std::shared_ptr<const Shape>& shape() const override { return tensor_->shape(); }
+  virtual Symbol<DType> dtype() const override { return tensor_->dtype(); }
+  virtual Maybe<Symbol<NdSbp>> nd_sbp() const override { return tensor_->nd_sbp(); }
+  virtual Maybe<Symbol<ParallelDesc>> parallel_desc() const override {
+    return tensor_->parallel_desc();
+  }
+  virtual Maybe<Symbol<Device>> device() const override { return tensor_->device(); }
+  virtual Maybe<Symbol<Device>*> mut_device() override { return tensor_->mut_device(); }
+  virtual bool is_cuda() const override { return tensor_->is_cuda(); }
+  virtual bool is_consistent() const override { return tensor_->is_consistent(); }
+  virtual bool is_local() const override { return tensor_->is_local(); }
+  virtual bool is_lazy() const override { return tensor_->is_lazy(); }
+  virtual bool is_eager() const override { return tensor_->is_eager(); }
+  virtual const TensorMeta& tensor_meta() const override { return tensor_->tensor_meta(); }
+  virtual Maybe<Symbol<ConsistentTensorMeta>> consistent_tensor_meta() const override {
     return tensor_->consistent_tensor_meta();
   }
-  virtual Maybe<Tensor> data() { return tensor_->detach(); }
+  virtual Maybe<Tensor> data() override { return tensor_->detach(); }
 
   // Must override grad_fn_node function. Otherwise grad_fn will belong to this not tensor_,
   // and it will be wrong when use Parameter.data() in operators.
-  virtual std::shared_ptr<const FunctionNode> grad_fn_node() const {
+  virtual std::shared_ptr<const FunctionNode> grad_fn_node() const override {
     return tensor_->grad_fn_node();
   }
-  virtual void set_grad_fn_node(const std::shared_ptr<FunctionNode>& grad_fn_node) {
+  virtual void set_grad_fn_node(const std::shared_ptr<FunctionNode>& grad_fn_node) override {
     tensor_->set_grad_fn_node(grad_fn_node);
   }
-  virtual std::shared_ptr<FunctionNode> mut_grad_fn_node() { return tensor_->mut_grad_fn_node(); }
+  virtual std::shared_ptr<FunctionNode> mut_grad_fn_node() override {
+    return tensor_->mut_grad_fn_node();
+  }
 
-  virtual Maybe<EagerMirroredTensorImpl*> mut_eager_mirrored_tensor_impl() {
+  virtual Maybe<EagerMirroredTensorImpl*> mut_eager_mirrored_tensor_impl() override {
     return tensor_->mut_eager_mirrored_tensor_impl();
   }
-  virtual Maybe<vm::EagerBlobObject> eager_blob_object() const {
+  virtual Maybe<vm::EagerBlobObject> eager_blob_object() const override {
     return tensor_->eager_blob_object();
   }
-  virtual Maybe<LocalDepObject*> compute_local_dep_object() const {
+  virtual Maybe<LocalDepObject*> compute_local_dep_object() const override {
     return tensor_->compute_local_dep_object();
   }
-  virtual Maybe<bool> has_eager_blob_object() const { return tensor_->has_eager_blob_object(); }
-  virtual Maybe<TensorStorage> tensor_storage() const { return tensor_->tensor_storage(); }
-  virtual Maybe<const Stride> stride() const { return tensor_->stride(); }
-  virtual Maybe<int64_t> storage_offset() const { return tensor_->storage_offset(); }
+  virtual Maybe<bool> has_eager_blob_object() const override {
+    return tensor_->has_eager_blob_object();
+  }
+  virtual Maybe<TensorStorage> tensor_storage() const override { return tensor_->tensor_storage(); }
+  virtual Maybe<const Stride> stride() const override { return tensor_->stride(); }
+  virtual Maybe<int64_t> storage_offset() const override { return tensor_->storage_offset(); }
 
-  virtual Maybe<const Optional<Symbol<NdSbp>>&> consumer_nd_sbp_constraint() const {
+  virtual Maybe<const Optional<Symbol<NdSbp>>&> consumer_nd_sbp_constraint() const override {
     return tensor_->consumer_nd_sbp_constraint();
   }
-  virtual Maybe<TransportToken> transport_token() const { return tensor_->transport_token(); }
-  virtual Maybe<MirroredTensor> cur_rank_phy_tensor() const {
+  virtual Maybe<TransportToken> transport_token() const override {
+    return tensor_->transport_token();
+  }
+  virtual Maybe<MirroredTensor> cur_rank_phy_tensor() const override {
     return tensor_->cur_rank_phy_tensor();
   }
-  virtual Maybe<void> set_consumer_nd_sbp_constraint(Symbol<NdSbp> val) {
+  virtual Maybe<void> set_consumer_nd_sbp_constraint(Symbol<NdSbp> val) override {
     return tensor_->set_consumer_nd_sbp_constraint(val);
   }
 
-  virtual bool requires_grad() const { return tensor_->requires_grad(); }
-  virtual bool is_leaf() const { return tensor_->is_leaf(); }
-  virtual bool retain_grad() const { return tensor_->retain_grad(); }
-  virtual bool is_contiguous() const { return tensor_->is_contiguous(); }
-  virtual Maybe<Tensor> acc_grad() const { return tensor_->acc_grad(); }
-  virtual Maybe<TensorArg> current_grad() const { return tensor_->current_grad(); }
-  virtual Maybe<Tensor> detach() const { return tensor_->detach(); }
-  virtual Maybe<Tensor> clone() const { return tensor_->clone(); }
+  virtual bool requires_grad() const override { return tensor_->requires_grad(); }
+  virtual bool is_leaf() const override { return tensor_->is_leaf(); }
+  virtual bool retain_grad() const override { return tensor_->retain_grad(); }
+  virtual bool is_contiguous() const override { return tensor_->is_contiguous(); }
+  virtual Maybe<Tensor> acc_grad() const override { return tensor_->acc_grad(); }
+  virtual Maybe<TensorArg> current_grad() const override { return tensor_->current_grad(); }
+  virtual Maybe<Tensor> detach() const override { return tensor_->detach(); }
+  virtual Maybe<Tensor> clone() const override { return tensor_->clone(); }
 
-  virtual Maybe<void> set_requires_grad(bool requires_grad) {
+  virtual Maybe<void> set_requires_grad(bool requires_grad) override {
     return tensor_->set_requires_grad(requires_grad);
   }
-  virtual Maybe<void> set_retain_grad(bool retain_grad) {
+  virtual Maybe<void> set_retain_grad(bool retain_grad) override {
     return tensor_->set_retain_grad(retain_grad);
   }
-  virtual Maybe<void> set_acc_grad(const std::shared_ptr<Tensor>& grad) {
+  virtual Maybe<void> set_acc_grad(const std::shared_ptr<Tensor>& grad) override {
     return tensor_->set_acc_grad(grad);
   }
-  virtual Maybe<Tensor> mut_acc_grad() { return tensor_->mut_acc_grad(); }
-  virtual void set_is_leaf(bool is_leaf) { return tensor_->set_is_leaf(is_leaf); }
-  virtual std::shared_ptr<const AutogradMeta> autograd_meta() const {
+  virtual Maybe<Tensor> mut_acc_grad() override { return tensor_->mut_acc_grad(); }
+  virtual void set_is_leaf(bool is_leaf) override { return tensor_->set_is_leaf(is_leaf); }
+  virtual std::shared_ptr<const AutogradMeta> autograd_meta() const override {
     return tensor_->autograd_meta();
   }
-  virtual std::shared_ptr<AutogradMeta> mut_autograd_meta() { return tensor_->mut_autograd_meta(); }
-  virtual void set_autograd_meta(const std::shared_ptr<AutogradMeta>& autograd_meta) {
+  virtual std::shared_ptr<AutogradMeta> mut_autograd_meta() override {
+    return tensor_->mut_autograd_meta();
+  }
+  virtual void set_autograd_meta(const std::shared_ptr<AutogradMeta>& autograd_meta) override {
     return tensor_->set_autograd_meta(autograd_meta);
   }
 
-  virtual user_op::TensorDesc* mut_tensor_meta() { return tensor_->mut_tensor_meta(); }
-  virtual Maybe<void> set_data(const std::shared_ptr<Tensor>& other) {
+  virtual user_op::TensorDesc* mut_tensor_meta() override { return tensor_->mut_tensor_meta(); }
+  virtual Maybe<void> set_data(const std::shared_ptr<Tensor>& other) override {
     CHECK_OR_RETURN(is_local() == other->is_local() && is_eager() == other->is_eager())
         << "You can't assign copy between tensors with different type";
     bool old_requires_grad = tensor_->requires_grad();
@@ -370,14 +380,14 @@ class ProxyTensor : public TensorIf<DerivedT> {
     return Maybe<void>::Ok();
   }
 
-  virtual Maybe<MirroredTensor> AsMirroredTensor() {
+  virtual Maybe<MirroredTensor> AsMirroredTensor() override {
     if (const auto& mirrored_tensor = std::dynamic_pointer_cast<MirroredTensor>(tensor_)) {
       return mirrored_tensor;
     }
     RETURN_ERROR_WITH_BUG_PROMPT();
   }
 
-  virtual Maybe<ConsistentTensor> AsConsistentTensor() {
+  virtual Maybe<ConsistentTensor> AsConsistentTensor() override {
     if (const auto& consistent_tensor = std::dynamic_pointer_cast<ConsistentTensor>(tensor_)) {
       return consistent_tensor;
     }
