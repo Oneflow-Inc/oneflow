@@ -207,9 +207,15 @@ class EnvHolder(object):
 
 
 def GetEnv():
-    return EnvHolder()
+    global _env_holder
+    if _env_holder is None:
+        _env_holder = EnvHolder()
+    else:
+        print("Environment has been initialized, this env init will do nothing.")
+    return _env_holder
 
 
+_env_holder = None
 device_tag2default_parallel_conf = {}
 default_env_proto = _DefaultEnvProto()
 config_master_addr = ctrl_bootstrap_pb.Address()
