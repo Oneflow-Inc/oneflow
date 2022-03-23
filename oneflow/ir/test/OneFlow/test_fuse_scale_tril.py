@@ -28,11 +28,12 @@ def _test_fused_scale_tril(
     test_case,
     shape,
     diagonal=0,
-    scale=1,
+    scale=1.0,
 ):
     x = np.random.rand(*shape)
+    # Different dtype will result in insert of cast op causing pass to fail.
     tensor_x = flow.tensor(x, device="cuda", dtype=flow.float32)
-    eager_out = flow.tril(tensor_x, 0) * scale
+    eager_out = flow.tril(tensor_x, diagonal) * scale
 
     class TestFuseScaleTril(flow.nn.Graph):
         def __init__(self):
@@ -60,8 +61,8 @@ class FusedScaleTrilTestCase(flow.unittest.TestCase):
     def test_fused_scale_tril(test_case):
         arg_dict = OrderedDict()
         arg_dict["shape"] = [(5, 5), (4, 6)]
-        arg_dict["diagonal"] = [-1, 0, 1]
-        arg_dict["scale"] = [-2.3, 0.7, 2]
+        arg_dict["diagonal"] = [-1, 0]
+        arg_dict["scale"] = [-2.3, 2.0]
         for kwargs in GenArgDict(arg_dict):
             _test_fused_scale_tril(test_case, **kwargs)
 
