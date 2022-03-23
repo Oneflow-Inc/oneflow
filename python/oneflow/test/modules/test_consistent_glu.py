@@ -50,5 +50,6 @@ class TestGluModule(flow.unittest.TestCase):
                 _test_glu(test_case, placement, sbp)
                 _test_glu_module(test_case, placement, sbp)
 
+
 if __name__ == "__main__":
     unittest.main()
