@@ -55,11 +55,7 @@ jobs:
       - name: Checkout Oneflow-Inc/oneflow
         if: ${{ github.event.inputs.oneflow-ref == '' }}
         uses: actions/checkout@v2
-<<<<<<< HEAD
-      - uses: Oneflow-Inc/get-oneflow@support-cuda-115
-=======
       - uses: Oneflow-Inc/get-oneflow@support-auto-benchmark
->>>>>>> run-auto-benchmark
         name: Build manylinux
         id: build-cuda
         with:
