@@ -469,7 +469,7 @@ class Hardshrink(Module):
         \end{cases}
 
     Args:
-        lambd: the :math:`\\lambda` value for the Hardshrink formulation. Default: 0.5
+        lambd: the :math:`\lambda` value for the Hardshrink formulation. Default: 0.5
         inplace: can optionally do the operation in-place. Default: ``False``
 
     Shape:
@@ -485,7 +485,7 @@ class Hardshrink(Module):
         >>> import oneflow as flow
         >>> x = np.array([-1, 0, 0.2, 0.5]).astype(np.float32)
         >>> input = flow.Tensor(x)
-        >>> hardshrink = flow.nn.Hardshrink(alpha=0.5)
+        >>> hardshrink = flow.nn.Hardshrink(lambd=0.5)
         >>> out = hardshrink(input)
         >>> out
         tensor([-1.0000,  0.0000,  0.0000,  0.0000], dtype=oneflow.float32)
