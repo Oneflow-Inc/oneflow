@@ -285,4 +285,10 @@ def FuseIntoExistingOpPass : Pass<"fuse-into-existing-op", "ModuleOp"> {
   let constructor = "mlir::oneflow::createFuseIntoExistingOpPass()";
 }
 
+def AutoNhwcPass : Pass<"auto-nhwc", "ModuleOp"> {
+  let summary = "";
+  let constructor = "mlir::oneflow::createAutoNhwcPass()";
+}
+
+
 #endif // ONEFLOW_PASSES
