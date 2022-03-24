@@ -98,11 +98,11 @@ class OpExprGradFunction : public OpExprGradFunctionIf {
     // circular reference between `Tensor` and `FunctionNode`.
     TensorTuple captured_inputs(inputs.size());
     for (int i = 0; i < inputs.size(); ++i) {
-      captured_inputs[i] = std::make_shared<AutogradCapturedTensor>(inputs.at(i));
+      captured_inputs[i] = JUST(AutogradCapturedTensor::MakeTensor(inputs.at(i)));
     }
     TensorTuple captured_outputs(outputs.size());
     for (int i = 0; i < outputs.size(); ++i) {
-      captured_outputs[i] = std::make_shared<AutogradCapturedTensor>(outputs.at(i));
+      captured_outputs[i] = JUST(AutogradCapturedTensor::MakeTensor(outputs.at(i)));
     }
     return Capture(state, captured_inputs, captured_outputs, interp_ctx);
   }

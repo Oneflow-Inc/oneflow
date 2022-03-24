@@ -24,14 +24,8 @@ namespace one {
 
 class AutogradCapturedTensor final : public ProxyTensor<AutogradCapturedTensor> {
  public:
-  AutogradCapturedTensor(const std::shared_ptr<Tensor>& tensor)
-      : ProxyTensor<AutogradCapturedTensor>(tensor->detach().GetPtrOrThrow()) {
-    this->tensor_->set_autograd_meta(tensor->mut_autograd_meta());
-    if (tensor->requires_grad()) {
-      CHECK(tensor->grad_fn_node()) << "The grad function node is expected for the captured tensor "
-                                       "which requires_grad is True";
-    }
-    grad_fn_node_ = tensor->mut_grad_fn_node();
+  static Maybe<AutogradCapturedTensor> MakeTensor(const std::shared_ptr<Tensor>& tensor) {
+    return std::shared_ptr<AutogradCapturedTensor>(new AutogradCapturedTensor(tensor));
   }
 
   std::shared_ptr<const FunctionNode> grad_fn_node() const override { return grad_fn_node_.lock(); }
@@ -44,6 +38,17 @@ class AutogradCapturedTensor final : public ProxyTensor<AutogradCapturedTensor> 
     const auto& tensor = std::const_pointer_cast<Tensor>(shared_from_this());
     if (tensor_->is_contiguous()) { return tensor; }
     return CHECK_JUST(functional::ToContiguous(tensor));
+  }
+
+ private:
+  explicit AutogradCapturedTensor(const std::shared_ptr<Tensor>& tensor)
+      : ProxyTensor<AutogradCapturedTensor>(tensor->detach().GetPtrOrThrow()) {
+    this->tensor_->set_autograd_meta(tensor->mut_autograd_meta());
+    if (tensor->requires_grad()) {
+      CHECK(tensor->grad_fn_node()) << "The grad function node is expected for the captured tensor "
+                                       "which requires_grad is True";
+    }
+    grad_fn_node_ = tensor->mut_grad_fn_node();
   }
 
  private:
