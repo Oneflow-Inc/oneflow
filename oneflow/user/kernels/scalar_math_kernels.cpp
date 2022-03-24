@@ -28,7 +28,7 @@ template<template<typename> class BIN_OP, typename T>
 struct ScalarMathWithStrideFunctor<DeviceType::kCPU, BIN_OP, T> final {
   void operator()(ep::Stream* stream, const int64_t elem_cnt, const StrideParam& in_stride,
                   const StrideParam& out_stride, const T scalar, const T* in, T* out) {
-    DoScalarMath<BIN_OP, T>(elem_cnt, scalar, in, out);
+    DoScalarMathWithStride<BIN_OP, T>(elem_cnt, in_stride, out_stride, scalar, in, out);
   }
 };
 
@@ -78,7 +78,7 @@ class ScalarMathKernel final : public user_op::OpKernel {
             ctx->stream(), elem_cnt, in_stride, out_stride, scalar_operand, in_ptr, out_ptr);
       }
     } else {
-      // For 0-d Tensor
+      // For 0 shape Tensor
       return;
     }
   }
