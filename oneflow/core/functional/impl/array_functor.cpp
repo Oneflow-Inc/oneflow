@@ -974,6 +974,47 @@ class SearchSortedFunctor {
   std::shared_ptr<OpExpr> op_;
   std::shared_ptr<OpExpr> no_sorter_op_;
 };
+
+class SearchSortedScalarFunctor {
+ public:
+  SearchSortedScalarFunctor() {
+    op_ = CHECK_JUST(one::OpBuilder("searchsorted_scalar")
+                         .Input("sorted_sequence")
+                         .Input("sorter")
+                         .Output("out")
+                         .Build());
+    no_sorter_op_ = CHECK_JUST(one::OpBuilder("searchsorted_scalar")
+                         .Input("sorted_sequence")
+                         .Output("out")
+                         .Build());
+  }
+  Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& sorted_sequence,
+                           const Scalar& values,
+                           const Optional<one::Tensor>& sorter,
+                           bool out_int32, bool right,
+                           const std::string side) const {
+    MutableAttrMap attrs;
+    JUST(attrs.SetAttr<bool>("out_int32", out_int32));
+    JUST(attrs.SetAttr<bool>("right", right));
+    JUST(attrs.SetAttr<std::string>("side", side));
+    // check values Scalar and sorted_sequence one dim
+    int32_t is_sequence_1d = sorted_sequence->shape()->NumAxes();
+    LOG(WARNING) << "is_sequence_1d: " << is_sequence_1d;
+    CHECK_OR_RETURN(is_sequence_1d == 1) << "input value can be a scalar only when boundaries tensor dimension is 1, but we got boundaries tensor dim=" << is_sequence_1d;
+    double values_tmp = JUST(values.As<double>());
+    JUST(attrs.SetAttr<double>("values", values_tmp));
+    if (sorter) {
+      return OpInterpUtil::Dispatch<Tensor>(*op_, {sorted_sequence, JUST(sorter)}, attrs);
+    } else {
+      return OpInterpUtil::Dispatch<Tensor>(*no_sorter_op_, {sorted_sequence}, attrs);
+    }
+  }
+
+ private:
+  std::shared_ptr<OpExpr> op_;
+  std::shared_ptr<OpExpr> no_sorter_op_;
+};
+
 class GatherNdFunctor {
  public:
   GatherNdFunctor() {
@@ -2776,6 +2817,7 @@ ONEFLOW_FUNCTION_LIBRARY(m) {
   m.add_functor<impl::DimGatherFunctor>("DimGather");
   m.add_functor<impl::ArgSortFunctor>("ArgSort");
   m.add_functor<impl::SearchSortedFunctor>("SearchSorted");
+  m.add_functor<impl::SearchSortedScalarFunctor>("SearchSortedScalar");
   m.add_functor<impl::GatherNdFunctor>("GatherNd");
   m.add_functor<impl::ScatterNdFunctor>("ScatterNd");
   m.add_functor<impl::TensorScatterNdUpdateFunctor>("TensorScatterNdUpdate");

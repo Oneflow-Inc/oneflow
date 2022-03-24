@@ -48,7 +48,6 @@ namespace oneflow {
 
 /* static */ Maybe<void> SearchSortedOp::InferDataType(user_op::InferContext* ctx) {
   const bool& out_int32 = ctx->Attr<bool>("out_int32");
-  LOG(WARNING) << "00000000000000000000000000000";
   if (out_int32) {
     *ctx->OutputDType("out", 0) = DataType::kInt32;
   } else {
