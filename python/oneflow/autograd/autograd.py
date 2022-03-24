@@ -25,14 +25,14 @@ from oneflow.framework.tensor_tuple_util import convert_to_tensor_tuple
 def grad(
     outputs: Union[Tensor, Sequence[Tensor]],
     inputs: Union[Tensor, Sequence[Tensor]],
-    out_grads: Union[Tensor, Sequence[Tensor], None] = None,
+    grad_outputs: Union[Tensor, Sequence[Tensor], None] = None,
     retain_graph: bool = False,
     create_graph: bool = False,
 ) -> Tuple[Tensor]:
     in_grads = grad_api(
         convert_to_tensor_tuple(outputs),
         convert_to_tensor_tuple(inputs),
-        convert_to_tensor_tuple(out_grads),
+        convert_to_tensor_tuple(grad_outputs),
         retain_graph,
         create_graph,
     )
@@ -40,14 +40,14 @@ def grad(
 
 
 def backward(
-    outputs: Union[Tensor, Sequence[Tensor]],
-    out_grads: Union[Tensor, Sequence[Tensor], None],
+    tensors: Union[Tensor, Sequence[Tensor]],
+    grad_tensors: Union[Tensor, Sequence[Tensor], None],
     retain_graph: bool = False,
     create_graph: bool = False,
 ) -> None:
     backward_api(
-        convert_to_tensor_tuple(outputs),
-        convert_to_tensor_tuple(out_grads),
+        convert_to_tensor_tuple(tensors),
+        convert_to_tensor_tuple(grad_tensors),
         retain_graph,
         create_graph,
     )

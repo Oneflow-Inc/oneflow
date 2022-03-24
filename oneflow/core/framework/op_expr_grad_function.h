@@ -17,6 +17,7 @@ limitations under the License.
 #ifndef ONEFLOW_CORE_FRAMEWORK_OP_EXPR_GRAD_FUNCTION_H_
 #define ONEFLOW_CORE_FRAMEWORK_OP_EXPR_GRAD_FUNCTION_H_
 
+#include "oneflow/core/autograd/autograd_captured_tensor.h"
 #include "oneflow/core/common/auto_registration_factory.h"
 #include "oneflow/core/framework/op_interpreter.h"
 
@@ -97,19 +98,17 @@ class OpExprGradFunction : public OpExprGradFunctionIf {
                         const OpExprInterpContext& interp_ctx) const override {
     StateT* state = dynamic_cast<StateT*>(ctx);
     CHECK_NOTNULL_OR_RETURN(state);
-    // Only captures detached tensor for calculating grad and set right requires_grad
-    // for higher order derivative
-    TensorTuple detach_inputs(inputs.size());
+    // Convert outputs from `Tensor` to `AutogradCapturedTensor` to avoid
+    // circular reference between `Tensor` and `FunctionNode`.
+    TensorTuple captured_inputs(inputs.size());
     for (int i = 0; i < inputs.size(); ++i) {
-      detach_inputs.at(i) = JUST(inputs.at(i)->detach());
-      JUST(detach_inputs.at(i)->set_requires_grad(inputs.at(i)->requires_grad()));
+      captured_inputs[i] = std::make_shared<AutogradCapturedTensor>(inputs.at(i));
     }
-    TensorTuple detach_outputs(outputs.size());
+    TensorTuple captured_outputs(outputs.size());
     for (int i = 0; i < outputs.size(); ++i) {
-      detach_outputs.at(i) = JUST(outputs.at(i)->detach());
-      JUST(detach_outputs.at(i)->set_requires_grad(outputs.at(i)->requires_grad()));
+      captured_outputs[i] = std::make_shared<AutogradCapturedTensor>(outputs.at(i));
     }
-    return Capture(state, detach_inputs, detach_outputs, interp_ctx);
+    return Capture(state, captured_inputs, captured_outputs, interp_ctx);
   }
 
   Maybe<void> ApplyIf(const AutoGradCaptureState* ctx, const TensorTuple& out_grads,
