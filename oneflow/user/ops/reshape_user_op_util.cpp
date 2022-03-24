@@ -25,13 +25,12 @@ Maybe<Shape> ReshapeUserOpUtil::GetLogicalOutBlobShape(const Shape& in_shape,
     FOR_RANGE(int, axis, 0, reshape.NumAxes()) {
       int64_t dim = reshape.At(axis);
       if (dim == -1) {
-        return Error::RuntimeError() << "cannot reshape tensor of 0 elements into shape "
-            << reshape.DebugStr()
-            << " because the unspecified dimension size -1 can be any value and is ambiguous";
+        return Error::RuntimeError()
+               << "cannot reshape tensor of 0 elements into shape " << reshape.DebugStr()
+               << " because the unspecified dimension size -1 can be any value and is ambiguous";
       } else if (dim < 0) {
         return Error::RuntimeError() << "invalid shape dimension " << dim;
       }
-      
     }
     return std::make_shared<Shape>(reshape);
   }
