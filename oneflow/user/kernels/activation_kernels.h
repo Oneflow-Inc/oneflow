@@ -225,7 +225,7 @@ struct SoftplusFunctor {
   OF_DEVICE_FUNC explicit SoftplusFunctor(double beta, double threshold)
       : beta(beta), threshold(threshold) {}
   OF_DEVICE_FUNC T operator()(T x) const {
-    return (x * beta) > threshold ? x : log(T(1.) + exp(x * beta)) / beta;
+    return (x * beta) > threshold ? x : log(static_cast<T>(1.0) + exp(x * beta)) / beta;
   }
 
   const T beta;
@@ -238,7 +238,7 @@ struct SoftplusGradFunctor {
       : beta(beta), threshold(threshold) {}
   OF_DEVICE_FUNC T operator()(T x, T dy) const {
     T z = exp(x * beta);
-    return (x * beta) > threshold ? dy : dy * z / (z + T(1.));
+    return (x * beta) > threshold ? dy : dy * z / (z + static_cast<T>(1.0));
   }
 
   const T beta;

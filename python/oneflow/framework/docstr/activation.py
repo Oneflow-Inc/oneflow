@@ -132,7 +132,7 @@ add_docstr(
 add_docstr(
     oneflow.softplus,
     r"""
-    softplus(x: Tensor, beta: int = 1, threshold: int = 20) -> Tensor 
+    softplus(x: Tensor, beta: double = 1, threshold: double = 20) -> Tensor 
 
     Applies the element-wise function:
 
