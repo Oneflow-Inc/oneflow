@@ -63,11 +63,8 @@ class CpuRandPermKernel final : public user_op::OpKernel {
     CHECK_NOTNULL(generator);
     user_op::ArangeFunctor<DeviceType::kCPU, int32_t>()(ctx->stream(), 0, 1, n, temp);
     std::shuffle(temp, temp + n, cpu_generator->engine());
-    int j = 0;
-    for (int i = view.At(0).begin(); i < view.At(0).end(); i++) {
-      *(output + j) = *(temp + i);
-      j++;
-    }
+    auto len = view.At(0).end()-view.At(0).begin();
+    memcpy(output, temp+view.At(0).begin(), sizeof(int32_t)*len);
   }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 
