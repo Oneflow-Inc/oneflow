@@ -28,10 +28,10 @@ def _test_global_unfold_tensor_with_random_data(test_case, placement, sbp):
     dim = random(0, ndim).to(int).value()
     x = random_tensor(
         ndim=ndim,
-        dim0=random(1, 5).to(int) * 8,
-        dim1=random(1, 5).to(int) * 8,
-        dim2=random(1, 5).to(int) * 8,
-        dim3=random(1, 5).to(int) * 8,
+        dim0=random(1, 3).to(int) * 8,
+        dim1=random(1, 3).to(int) * 8,
+        dim2=4,
+        dim3=4,
     ).to_global(placement, sbp)
     high = x.oneflow.size()[dim]
     size = random(1, high).to(int).value()
@@ -44,7 +44,7 @@ class TestGlobalUnfoldTensor(flow.unittest.TestCase):
     @globaltest
     def test_global_unfold_tensor_with_random_data(test_case):
         for placement in all_placement():
-            for sbp in all_sbp(placement, max_dim=3):
+            for sbp in all_sbp(placement, max_dim=2):
                 _test_global_unfold_tensor_with_random_data(test_case, placement, sbp)
 
 
