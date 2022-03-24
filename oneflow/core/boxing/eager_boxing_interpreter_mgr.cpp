@@ -176,7 +176,7 @@ Maybe<EagerBoxingInterpreter> GetBoxingInterpreter(Symbol<NdSbp> in_nd_sbp,
   }
 
   UNIMPLEMENTED_THEN_RETURN() << Error::BoxingNotSupportedError()
-                              << "consistent-to-consistent not supported"
+                              << "global-to-global not supported"
                               << ". from_nd_sbp: " << NdSbpToString(in_nd_sbp)
                               << ", to_nd_sbp: " << NdSbpToString(out_nd_sbp)
                               << ", from_placement: " << *JUST(PlacementToString(in_parallel_desc))
