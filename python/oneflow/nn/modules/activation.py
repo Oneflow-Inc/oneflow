@@ -967,13 +967,13 @@ class Softshrink(Module):
 
         \text{Softshrink}(x) =
         \begin{cases}
-        x - \alpha, & \text{ if } x > \alpha \\
-        x + \alpha, & \text{ if } x < -\alpha \\
+        x - \lambd, & \text{ if } x > \lambda \\
+        x + \lambd, & \text{ if } x < -\lambda \\
         0, & \text{ otherwise }
         \end{cases}
 
     Args:
-        alpha: the :math:`\\alpha` value for the Softshrink formulation. Default: 0.5
+        lambd: the :math:`\lambda` value for the Softshrink formulation. Default: 0.5
         inplace: can optionally do the operation in-place. Default: ``False``
     
     Shape:
@@ -989,22 +989,22 @@ class Softshrink(Module):
         >>> import oneflow as flow
         >>> x = np.array([-1, 0, 0.2, 0.5]).astype(np.float32)
         >>> input = flow.Tensor(x)
-        >>> softshrink = flow.nn.Softshrink(alpha=0.5)
+        >>> softshrink = flow.nn.Softshrink(lambd=0.5)
         >>> out = softshrink(input)
         >>> out
         tensor([-0.5000,  0.0000,  0.0000,  0.0000], dtype=oneflow.float32)
     """
 
-    def __init__(self, alpha: float = 0.5, inplace: bool = False):
+    def __init__(self, lambd: float = 0.5, inplace: bool = False):
         self.inplace = inplace
-        self.alpha = alpha
+        self.lambd = lambd
         super().__init__()
 
     def forward(self, x):
-        return flow._C.softshrink(x, alpha=self.alpha, inplace=self.inplace)
+        return flow._C.softshrink(x, alpha=self.lambd, inplace=self.inplace)
 
     def extra_repr(self) -> str:
-        param_str = f"alpha={self.alpha}"
+        param_str = f"lambd={self.lambd}"
         param_str += ", inplace=True" if self.inplace else ""
         return param_str
 
