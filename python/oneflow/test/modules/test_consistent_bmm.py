@@ -26,8 +26,12 @@ def _test_bmm_with_random_data(test_case, placement, sbp):
     m = random(1, 3).to(int) * 8
     n = random(1, 3).to(int) * 8
     k = random(1, 3).to(int) * 8
-    x = random_tensor(ndim=3, dim0=batch, dim1=m, dim2=k).to_global(placement=placement, sbp=sbp)
-    y = random_tensor(ndim=3, dim0=batch, dim1=k, dim2=n).to_global(placement=placement, sbp=sbp)
+    x = random_tensor(ndim=3, dim0=batch, dim1=m, dim2=k).to_global(
+        placement=placement, sbp=sbp
+    )
+    y = random_tensor(ndim=3, dim0=batch, dim1=k, dim2=n).to_global(
+        placement=placement, sbp=sbp
+    )
     return torch.bmm(x, y)
 
 

@@ -411,6 +411,39 @@ class LayerNormAffineFunctor {
   std::shared_ptr<OpExpr> op_;
 };
 
+class PixelShuffleFunctor {
+ public:
+  PixelShuffleFunctor() {}
+  Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x, const int64_t& h_upscale_factor,
+                           const int64_t& w_upscale_factor) const {
+    CHECK_OR_RETURN(x->ndim() == 4) << "Only Accept 4D Tensor";
+    const int64_t batch = x->shape()->At(0);
+    const int64_t channel = x->shape()->At(1);
+    const int64_t height = x->shape()->At(2);
+    const int64_t width = x->shape()->At(3);
+    std::shared_ptr<one::Tensor> out;
+    CHECK_OR_RETURN(channel % (h_upscale_factor * w_upscale_factor) == 0)
+        << "The channels of input tensor must be divisible by (upscale_factor * upscale_factor) or "
+           "(h_upscale_factor * w_upscale_factor)";
+    const int64_t new_c = static_cast<int>(channel / (h_upscale_factor * w_upscale_factor));
+    std::vector<int32_t> permute_vec = {0, 1, 4, 2, 5, 3};
+    std::vector<int64_t> reshape_vec_1 = {batch, new_c, h_upscale_factor * w_upscale_factor, height,
+                                          width};
+    Shape reshape_1(DimVector(reshape_vec_1.begin(), reshape_vec_1.end()));
+    std::vector<int64_t> reshape_vec_2 = {batch,  new_c, h_upscale_factor, w_upscale_factor,
+                                          height, width};
+    Shape reshape_2(DimVector(reshape_vec_2.begin(), reshape_vec_2.end()));
+    std::vector<int64_t> reshape_vec_3 = {batch, new_c, height * h_upscale_factor,
+                                          width * w_upscale_factor};
+    Shape reshape_3(DimVector(reshape_vec_3.begin(), reshape_vec_3.end()));
+    out = JUST(Reshape(x, reshape_1));
+    out = JUST(Reshape(out, reshape_2));
+    out = JUST(Permute(out, permute_vec));
+    out = JUST(Reshape(out, reshape_3));
+    return out;
+  }
+};
+
 class PoolNDFunctor {
  public:
   PoolNDFunctor() = default;
@@ -2315,6 +2348,178 @@ class FusedDotFeatureInteractionFunctor {
   std::vector<std::shared_ptr<OpExpr>> ops_no_output_concat_;
 };
 
+class OneEmbeddingIdShuffleFunctor {
+ public:
+  OneEmbeddingIdShuffleFunctor() {
+    op_column_ids_has_in_out_ = CHECK_JUST(one::OpBuilder("id_shuffle")
+                                               .Input("ids")
+                                               .Input("column_ids")
+                                               .Output("num_unique_matrix")
+                                               .Output("inverse_unique_partition_indices")
+                                               .Output("cur_rank_num_unique")
+                                               .Output("cur_rank_unique_ids")
+                                               .Output("cur_rank_unique_column_ids")
+                                               .Output("cur_rank_inverse_indices")
+                                               .Build());
+    op_column_ids_no_in_has_out_ = CHECK_JUST(one::OpBuilder("id_shuffle")
+                                                  .Input("ids")
+                                                  .Output("num_unique_matrix")
+                                                  .Output("inverse_unique_partition_indices")
+                                                  .Output("cur_rank_num_unique")
+                                                  .Output("cur_rank_unique_ids")
+                                                  .Output("cur_rank_unique_column_ids")
+                                                  .Output("cur_rank_inverse_indices")
+                                                  .Build());
+  }
+
+  Maybe<TensorTuple> operator()(const std::shared_ptr<one::Tensor>& ids,
+                                const Optional<one::Tensor>& column_ids,
+                                const int32_t& num_columns) const {
+    MutableAttrMap attrs;
+    JUST(attrs.SetAttr<int32_t>("num_columns", num_columns));
+    if (column_ids) {
+      return OpInterpUtil::Dispatch<TensorTuple>(*op_column_ids_has_in_out_,
+                                                 {ids, JUST(column_ids)}, attrs);
+    } else {
+      return OpInterpUtil::Dispatch<TensorTuple>(*op_column_ids_no_in_has_out_, {ids}, attrs);
+    }
+  }
+
+ private:
+  std::shared_ptr<OpExpr> op_column_ids_has_in_out_;
+  std::shared_ptr<OpExpr> op_column_ids_no_in_has_out_;
+};
+
+class OneEmbeddingEmbeddingShuffleFunctor {
+ public:
+  OneEmbeddingEmbeddingShuffleFunctor() {
+    op_ = CHECK_JUST(one::OpBuilder("embedding_shuffle")
+                         .Input("cur_rank_embeddings")
+                         .Input("num_unique_matrix")
+                         .Input("cur_rank_inverse_indices")
+                         .Input("inverse_unique_partition_indices")
+                         .Output("embeddings")
+                         .Build());
+  }
+
+  Maybe<Tensor> operator()(
+      const std::shared_ptr<one::Tensor>& cur_rank_embeddings,
+      const std::shared_ptr<one::Tensor>& num_unique_matrix,
+      const std::shared_ptr<one::Tensor>& cur_rank_inverse_indices,
+      const std::shared_ptr<one::Tensor>& inverse_unique_partition_indices) const {
+    return OpInterpUtil::Dispatch<Tensor>(
+        *op_, {cur_rank_embeddings, num_unique_matrix, cur_rank_inverse_indices,
+               inverse_unique_partition_indices});
+  }
+
+ private:
+  std::shared_ptr<OpExpr> op_;
+};
+
+class OneEmbeddingEmbeddingGradientShuffleFunctor {
+ public:
+  OneEmbeddingEmbeddingGradientShuffleFunctor() {
+    op_ = CHECK_JUST(one::OpBuilder("embedding_gradient_shuffle")
+                         .Input("embedding_grad")
+                         .Input("num_unique_matrix")
+                         .Input("cur_rank_inverse_indices")
+                         .Input("inverse_unique_partition_indices")
+                         .Output("cur_rank_unique_embedding_grad")
+                         .Build());
+  }
+
+  Maybe<Tensor> operator()(
+      const std::shared_ptr<one::Tensor>& embedding_grad,
+      const std::shared_ptr<one::Tensor>& num_unique_matrix,
+      const std::shared_ptr<one::Tensor>& cur_rank_inverse_indices,
+      const std::shared_ptr<one::Tensor>& inverse_unique_partition_indices) const {
+    return OpInterpUtil::Dispatch<Tensor>(
+        *op_, {embedding_grad, num_unique_matrix, cur_rank_inverse_indices,
+               inverse_unique_partition_indices});
+  }
+
+ private:
+  std::shared_ptr<OpExpr> op_;
+};
+
+class OneEmbeddingLookupFunctor {
+ public:
+  OneEmbeddingLookupFunctor() {
+    op_has_column_ids_ = CHECK_JUST(one::OpBuilder("embedding_lookup_placeholder")
+                                        .Input("shadow")
+                                        .Input("ids")
+                                        .Input("column_ids")
+                                        .Output("embeddings")
+                                        .Build());
+    op_no_column_ids_ = CHECK_JUST(one::OpBuilder("embedding_lookup_placeholder")
+                                       .Input("shadow")
+                                       .Input("ids")
+                                       .Output("embeddings")
+                                       .Build());
+  }
+
+  Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& shadow,
+                           const std::shared_ptr<one::Tensor>& ids,
+                           const Optional<one::Tensor>& column_ids, const Symbol<DType>& dtype,
+                           const int64_t embedding_size, const int32_t num_columns,
+                           const std::string& embedding_columns,
+                           const std::string& key_value_store_options) const {
+    MutableAttrMap attrs;
+    JUST(attrs.SetAttr<DataType>("dtype", dtype->data_type()));
+    JUST(attrs.SetAttr<int64_t>("embedding_size", embedding_size));
+    JUST(attrs.SetAttr<int32_t>("num_columns", num_columns));
+    JUST(attrs.SetAttr<std::string>("embedding_columns", embedding_columns));
+    JUST(attrs.SetAttr<std::string>("key_value_store_options", key_value_store_options));
+    if (column_ids) {
+      return OpInterpUtil::Dispatch<Tensor>(*op_has_column_ids_, {shadow, ids, JUST(column_ids)},
+                                            attrs);
+    } else {
+      return OpInterpUtil::Dispatch<Tensor>(*op_no_column_ids_, {shadow, ids}, attrs);
+    }
+  }
+
+ private:
+  std::shared_ptr<OpExpr> op_has_column_ids_;
+  std::shared_ptr<OpExpr> op_no_column_ids_;
+};
+
+class OneEmbeddingUniqueKeyValuePairFunctor {
+ public:
+  OneEmbeddingUniqueKeyValuePairFunctor() {
+    op_has_input_value_ = CHECK_JUST(one::OpBuilder("unique_key_value_pair")
+                                         .Input("keys")
+                                         .Input("values")
+                                         .Output("num_unique")
+                                         .Output("unique_keys")
+                                         .Output("unique_values")
+                                         .Output("inverse_indices")
+                                         .Build());
+    op_no_input_value_ = CHECK_JUST(one::OpBuilder("unique_key_value_pair")
+                                        .Input("keys")
+                                        .Output("num_unique")
+                                        .Output("unique_keys")
+                                        .Output("unique_values")
+                                        .Output("inverse_indices")
+                                        .Build());
+  }
+
+  Maybe<TensorTuple> operator()(const std::shared_ptr<one::Tensor>& keys,
+                                const Optional<one::Tensor>& values,
+                                const int32_t num_columns) const {
+    MutableAttrMap attrs;
+    JUST(attrs.SetAttr<int32_t>("num_columns", num_columns));
+    if (values) {
+      return OpInterpUtil::Dispatch<TensorTuple>(*op_has_input_value_, {keys, JUST(values)}, attrs);
+    } else {
+      return OpInterpUtil::Dispatch<TensorTuple>(*op_no_input_value_, {keys}, attrs);
+    }
+  }
+
+ private:
+  std::shared_ptr<OpExpr> op_has_input_value_;
+  std::shared_ptr<OpExpr> op_no_input_value_;
+};
+
 }  // namespace impl
 
 ONEFLOW_FUNCTION_LIBRARY(m) {
@@ -2361,6 +2566,7 @@ ONEFLOW_FUNCTION_LIBRARY(m) {
   m.add_functor<impl::PadFunctor>("Pad");
   m.add_functor<impl::DropoutFunctor>("Dropout");
   m.add_functor<impl::DropoutGradFunctor>("DropoutGrad");
+  m.add_functor<impl::PixelShuffleFunctor>("PixelShuffle");
   m.add_functor<impl::Avgpool1DFunctor>("Avgpool1D");
   m.add_functor<impl::Avgpool2DFunctor>("Avgpool2D");
   m.add_functor<impl::Avgpool3DFunctor>("Avgpool3D");
@@ -2385,6 +2591,12 @@ ONEFLOW_FUNCTION_LIBRARY(m) {
   m.add_functor<impl::RoiAlignFunctor>("RoiAlign");
   m.add_functor<impl::RoiAlignGradFunctor>("RoiAlignGrad");
   m.add_functor<impl::FusedDotFeatureInteractionFunctor>("FusedDotFeatureInteraction");
+  m.add_functor<impl::OneEmbeddingIdShuffleFunctor>("OneEmbeddingIdShuffle");
+  m.add_functor<impl::OneEmbeddingEmbeddingShuffleFunctor>("OneEmbeddingEmbeddingShuffle");
+  m.add_functor<impl::OneEmbeddingEmbeddingGradientShuffleFunctor>(
+      "OneEmbeddingEmbeddingGradientShuffle");
+  m.add_functor<impl::OneEmbeddingLookupFunctor>("OneEmbeddingLookup");
+  m.add_functor<impl::OneEmbeddingUniqueKeyValuePairFunctor>("OneEmbeddingUniqueKeyValuePair");
 };
 
 }  // namespace functional
