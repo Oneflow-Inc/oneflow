@@ -1042,6 +1042,8 @@ class SparseSoftmaxCrossEntropyFunctor {
                                const std::shared_ptr<one::Tensor>& label) const {
     if (!(logits->is_consistent() && label->is_consistent())) { return false; }
 
+    if (JUST(logits->parallel_desc())->parallel_num() == 1) { return false; }
+
     if (logits->shape()->NumAxes() != 2) { return false; }
 
     const NdSbp& logits_nd_sbp = *(JUST(logits->nd_sbp()));
@@ -1093,21 +1095,34 @@ class SparseSoftmaxCrossEntropyFunctor {
     std::shared_ptr<Tensor> max_global_stage_input1 = max_device_stage->at(2);
 
     const NdSbp& logits_nd_sbp = *(JUST(logits->nd_sbp()));
-    std::vector<Symbol<SbpParallel>> s0b_sbp_parallels;
+    std::vector<Symbol<SbpParallel>> new_sbp_parallels;
     std::vector<Symbol<SbpParallel>> s0s1_sbp_parallels;
     if (logits_nd_sbp.sbp_parallel_size() == 2) {
-      SbpParallel sbp;
-      sbp.mutable_broadcast_parallel();
-      s0b_sbp_parallels.emplace_back(logits_nd_sbp.sbp_parallel(0));
-      s0b_sbp_parallels.emplace_back(sbp);
+      for (int i = 0; i < logits_nd_sbp.sbp_parallel_size(); ++i) {
+        const auto& sbp_parallel = logits_nd_sbp.sbp_parallel(i);
+        if (sbp_parallel.has_split_parallel()) {
+          const int64_t& split_axis = sbp_parallel.split_parallel().axis();
+          if (split_axis == axis) {
+            SbpParallel sbp;
+            sbp.mutable_broadcast_parallel();
+            new_sbp_parallels.emplace_back(sbp);
+          } else {
+            CHECK_EQ_OR_RETURN(split_axis, 0);
+            new_sbp_parallels.emplace_back(sbp_parallel);
+          }
+        } else {
+          new_sbp_parallels.emplace_back(sbp_parallel);
+        }
+      }
+
       s0s1_sbp_parallels.emplace_back(logits_nd_sbp.sbp_parallel(0));
       s0s1_sbp_parallels.emplace_back(logits_nd_sbp.sbp_parallel(1));
       max_global_stage_input0 = JUST(functional::ToConsistent(
           max_device_stage->at(0), JUST(max_device_stage->at(0)->parallel_desc()),
-          s0b_sbp_parallels, s0s1_sbp_parallels));
+          new_sbp_parallels, s0s1_sbp_parallels));
       max_global_stage_input1 = JUST(functional::ToConsistent(
           max_device_stage->at(2), JUST(max_device_stage->at(0)->parallel_desc()),
-          s0b_sbp_parallels, s0s1_sbp_parallels));
+          new_sbp_parallels, s0s1_sbp_parallels));
     }
     // op_reduce_max_global_stage_
     attrs.clear();
@@ -1119,8 +1134,8 @@ class SparseSoftmaxCrossEntropyFunctor {
     auto& broadcast_sub_input = max_global_stage->at(0);
     if (logits_nd_sbp.sbp_parallel_size() == 2) {
       broadcast_sub_input = JUST(functional::ToConsistent(
-          broadcast_sub_input, JUST(max_device_stage->at(0)->parallel_desc()), s0b_sbp_parallels,
-          s0b_sbp_parallels));
+          broadcast_sub_input, JUST(max_device_stage->at(0)->parallel_desc()), new_sbp_parallels,
+          new_sbp_parallels));
     }
     // op_broadcast_sub_
     attrs.clear();
@@ -1139,7 +1154,7 @@ class SparseSoftmaxCrossEntropyFunctor {
       std::vector<Symbol<SbpParallel>> empty_grad_sbp_parallels;
       broadcast_div_input1 = JUST(functional::ToConsistent(
           output_reduce_sum->at(0), JUST(output_reduce_sum->at(0)->parallel_desc()),
-          s0b_sbp_parallels, s0b_sbp_parallels));
+          new_sbp_parallels, new_sbp_parallels));
     }
     // op_broadcast_div_
     attrs.clear();
@@ -2501,6 +2516,84 @@ class OneEmbeddingEmbeddingGradientShuffleFunctor {
   std::shared_ptr<OpExpr> op_;
 };
 
+class OneEmbeddingLookupFunctor {
+ public:
+  OneEmbeddingLookupFunctor() {
+    op_has_column_ids_ = CHECK_JUST(one::OpBuilder("embedding_lookup_placeholder")
+                                        .Input("shadow")
+                                        .Input("ids")
+                                        .Input("column_ids")
+                                        .Output("embeddings")
+                                        .Build());
+    op_no_column_ids_ = CHECK_JUST(one::OpBuilder("embedding_lookup_placeholder")
+                                       .Input("shadow")
+                                       .Input("ids")
+                                       .Output("embeddings")
+                                       .Build());
+  }
+
+  Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& shadow,
+                           const std::shared_ptr<one::Tensor>& ids,
+                           const Optional<one::Tensor>& column_ids, const Symbol<DType>& dtype,
+                           const int64_t embedding_size, const int32_t num_columns,
+                           const std::string& embedding_columns,
+                           const std::string& key_value_store_options) const {
+    MutableAttrMap attrs;
+    JUST(attrs.SetAttr<DataType>("dtype", dtype->data_type()));
+    JUST(attrs.SetAttr<int64_t>("embedding_size", embedding_size));
+    JUST(attrs.SetAttr<int32_t>("num_columns", num_columns));
+    JUST(attrs.SetAttr<std::string>("embedding_columns", embedding_columns));
+    JUST(attrs.SetAttr<std::string>("key_value_store_options", key_value_store_options));
+    if (column_ids) {
+      return OpInterpUtil::Dispatch<Tensor>(*op_has_column_ids_, {shadow, ids, JUST(column_ids)},
+                                            attrs);
+    } else {
+      return OpInterpUtil::Dispatch<Tensor>(*op_no_column_ids_, {shadow, ids}, attrs);
+    }
+  }
+
+ private:
+  std::shared_ptr<OpExpr> op_has_column_ids_;
+  std::shared_ptr<OpExpr> op_no_column_ids_;
+};
+
+class OneEmbeddingUniqueKeyValuePairFunctor {
+ public:
+  OneEmbeddingUniqueKeyValuePairFunctor() {
+    op_has_input_value_ = CHECK_JUST(one::OpBuilder("unique_key_value_pair")
+                                         .Input("keys")
+                                         .Input("values")
+                                         .Output("num_unique")
+                                         .Output("unique_keys")
+                                         .Output("unique_values")
+                                         .Output("inverse_indices")
+                                         .Build());
+    op_no_input_value_ = CHECK_JUST(one::OpBuilder("unique_key_value_pair")
+                                        .Input("keys")
+                                        .Output("num_unique")
+                                        .Output("unique_keys")
+                                        .Output("unique_values")
+                                        .Output("inverse_indices")
+                                        .Build());
+  }
+
+  Maybe<TensorTuple> operator()(const std::shared_ptr<one::Tensor>& keys,
+                                const Optional<one::Tensor>& values,
+                                const int32_t num_columns) const {
+    MutableAttrMap attrs;
+    JUST(attrs.SetAttr<int32_t>("num_columns", num_columns));
+    if (values) {
+      return OpInterpUtil::Dispatch<TensorTuple>(*op_has_input_value_, {keys, JUST(values)}, attrs);
+    } else {
+      return OpInterpUtil::Dispatch<TensorTuple>(*op_no_input_value_, {keys}, attrs);
+    }
+  }
+
+ private:
+  std::shared_ptr<OpExpr> op_has_input_value_;
+  std::shared_ptr<OpExpr> op_no_input_value_;
+};
+
 }  // namespace impl
 
 ONEFLOW_FUNCTION_LIBRARY(m) {
@@ -2576,6 +2669,8 @@ ONEFLOW_FUNCTION_LIBRARY(m) {
   m.add_functor<impl::OneEmbeddingEmbeddingShuffleFunctor>("OneEmbeddingEmbeddingShuffle");
   m.add_functor<impl::OneEmbeddingEmbeddingGradientShuffleFunctor>(
       "OneEmbeddingEmbeddingGradientShuffle");
+  m.add_functor<impl::OneEmbeddingLookupFunctor>("OneEmbeddingLookup");
+  m.add_functor<impl::OneEmbeddingUniqueKeyValuePairFunctor>("OneEmbeddingUniqueKeyValuePair");
 };
 
 }  // namespace functional
