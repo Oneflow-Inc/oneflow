@@ -96,13 +96,11 @@ parser.add_argument('--debug-level', type=int, default=0)
 
 args = parser.parse_args()
 
-print(os.environ)
+# print(os.environ)
 
 import oneflow as flow
 import oneflow.nn as nn
 import flowvision
-import torch
-import torchvision
 
 # import resnet50_model
 import resnet50
@@ -135,8 +133,9 @@ def display():
 # model = resnet50_model.resnet50(norm_layer=nn.Identity)
 model = resnet50.resnet50()
 # model = resnet50_model.resnet50()
-# model.load_state_dict(flow.load('/tmp/abcde'))
-# flow.save(model.state_dict(), '/tmp/abcde')
+
+model.load_state_dict(weights)
+# flow.save(model.state_dict(), '/tmp/abcdef')
 
 criterion = nn.CrossEntropyLoss()
 
@@ -224,25 +223,21 @@ for iter in range(ALL_ITERS):
     
     train_bar = tqdm(train_data_loader, dynamic_ncols=True)
 
-    loss_logger = DataLogger()
-
-    for train_data, train_label in train_bar:
+    for iter_in_epoch, (train_data, train_label) in enumerate(train_bar):
         train_data = train_data.to(cuda0)
         train_label = train_label.to(cuda0)
         logits = model(train_data)
         loss = criterion(logits, train_label)
         del logits
-        loss_logger.update(loss.item(), args.bs)
         loss.backward()
+        train_bar.set_description(
+            'Epoch {}: loss: {:.4f}'.format(iter + 1, loss.item())
+        )
+        writer.add_scalar('Loss/train/loss', loss.item(), iter_in_epoch)
+        writer.flush()
         del loss
         optimizer.step()
         optimizer.zero_grad(True)
-
-        train_bar.set_description(
-            'Epoch {}: loss: {:.4f}'.format(iter + 1, loss_logger.avg)
-        )
-
-    writer.add_scalar('Loss/train/loss', loss_logger.avg, iter)
 
     flow.comm.barrier()
     # sync()
