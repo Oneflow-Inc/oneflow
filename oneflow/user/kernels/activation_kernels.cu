@@ -76,8 +76,8 @@ struct SoftplusGradFunctor<half> {
       : beta(beta),
         threshold(threshold),
         float_functor(SoftplusGradFunctor<float>(beta, threshold)) {}
-  __device__ half operator()(half y, half dy) const {
-    return __float2half(float_functor(__half2float(y), __half2float(dy)));
+  __device__ half operator()(half x, half dy) const {
+    return __float2half(float_functor(__half2float(x), __half2float(dy)));
   }
   const float beta;
   const float threshold;

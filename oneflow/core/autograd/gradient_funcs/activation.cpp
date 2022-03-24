@@ -240,9 +240,9 @@ class Softplus : public OpExprGradFunction<SoftplusCaptureState> {
     CHECK_EQ_OR_RETURN(out_grads.size(), 1);
     in_grads->resize(1);
     if (ctx->requires_grad) {
-      const auto& y = ctx->SavedTensors().at(0);
+      const auto& x = ctx->SavedTensors().at(0);
       in_grads->at(0) =
-          JUST(functional::SoftplusGrad(y, out_grads.at(0), ctx->beta, ctx->threshold));
+          JUST(functional::SoftplusGrad(x, out_grads.at(0), ctx->beta, ctx->threshold));
     }
     return Maybe<void>::Ok();
   }

@@ -397,7 +397,6 @@ class SoftplusFunctor {
   Maybe<Tensor> operator()(const std::shared_ptr<Tensor>& x, const double& beta,
                            const double& threshold) const {
     MutableAttrMap attrs;
-    // TODO
     JUST(attrs.SetAttr<double>("beta", beta));
     JUST(attrs.SetAttr<double>("threshold", threshold));
     return OpInterpUtil::Dispatch<one::Tensor>(*op_, {x}, attrs);
@@ -410,14 +409,14 @@ class SoftplusFunctor {
 class SoftplusGradFunctor {
  public:
   SoftplusGradFunctor() {
-    op_ = CHECK_JUST(one::OpBuilder("softplus_grad").Input("y").Input("dy").Output("dx").Build());
+    op_ = CHECK_JUST(one::OpBuilder("softplus_grad").Input("x").Input("dy").Output("dx").Build());
   }
-  Maybe<Tensor> operator()(const std::shared_ptr<Tensor>& y, const std::shared_ptr<Tensor>& dy,
+  Maybe<Tensor> operator()(const std::shared_ptr<Tensor>& x, const std::shared_ptr<Tensor>& dy,
                            const double& beta, const double& threshold) const {
     MutableAttrMap attrs;
     JUST(attrs.SetAttr<double>("beta", beta));
     JUST(attrs.SetAttr<double>("threshold", threshold));
-    return OpInterpUtil::Dispatch<one::Tensor>(*op_, {y, dy}, attrs);
+    return OpInterpUtil::Dispatch<one::Tensor>(*op_, {x, dy}, attrs);
   }
 
  private:

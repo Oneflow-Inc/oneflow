@@ -31,13 +31,11 @@ def _test_softplus_impl(test_case, shape, device):
         np_input, dtype=flow.float32, device=flow.device(device), requires_grad=True
     )
     np_x_grad = np.exp(np_input) / (1 + np.exp(np_input))
-    of_out = flow.nn.functional.softplus(of_input, 1, 20)
+    of_out = flow.softplus(of_input)
     np_out = np.log(1 + np.exp(np_input))
-    test_case.assertTrue(np.allclose(of_out.detach().numpy(), np_out, 0.0001, 0.0001))
+    test_case.assertTrue(np.allclose(of_out.numpy(), np_out, 0.0001, 0.0001))
     of_out = of_out.sum()
     of_out.backward()
-    print(of_input.grad.numpy())
-    print(np_x_grad)
     test_case.assertTrue(np.allclose(of_input.grad.numpy(), np_x_grad, 0.0001, 0.0001))
 
 
