@@ -435,14 +435,13 @@ class TestConv1d(flow.unittest.TestCase):
         for arg in GenArgList(arg_dict):
             arg[0](test_case, *arg[1:])
 
+    @autotest(n=3)
     def test_nn_functional_conv1d(test_case):
-        img = flow.ones(1,3,224)
-        kernel = flow.randn(3,1,3)
-        y = flow.nn.functional.conv1d(img, kernel, groups=3)
-        assert(y.shape[0] == img.shape[0])
-        assert(y.shape[1] == kernel.shape[0])
-        # default padding is 1.
-        assert(y.shape[2] == img.shape[2] - 2)
+        device = random_device()
+        img = torch.ones((1,3,224), requires_grad=True).to(device)
+        kernel = torch.ones((3,1,3), requires_grad=True).to(device)
+        y = torch.nn.functional.conv1d(img, kernel, groups=3)
+        return y
 
     @autotest()
     def test_conv1d_with_random_data(test_case):

@@ -1581,15 +1581,13 @@ class TestConv2d(flow.unittest.TestCase):
                 )
             )
 
+    @autotest(n=3)
     def test_nn_functional_conv2d(test_case):
-        img = flow.ones(1,3,224,224)
-        kernel = flow.randn(3,1,3,3)
-        y = flow.nn.functional.conv2d(img, kernel, groups=3)
-        assert(y.shape[0] == img.shape[0])
-        assert(y.shape[1] == kernel.shape[0])
-        # default padding is 1.
-        assert(y.shape[2] == img.shape[2] - 2)
-        assert(y.shape[3] == img.shape[3] - 2)
+        device = random_device()
+        img = torch.ones((1,3,224,224), requires_grad=True).to(device)
+        kernel = torch.ones((3,1,3,3), requires_grad=True).to(device)
+        y = torch.nn.functional.conv2d(img, kernel, groups=3)
+        return y
 
     def test_conv2d(test_case):
         arg_dict = OrderedDict()
