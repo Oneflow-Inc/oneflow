@@ -66,9 +66,9 @@ class TestBatchNormModule(flow.unittest.TestCase):
     @globaltest
     def test_batchnorm(test_case):
         for placement in all_placement():
-            # mean and variance maybe inconsistent if input is split into each rank for training.
-            # max_dim=0 will disable generating split sbp.
-            for sbp in all_sbp(placement, max_dim=0):
+            # Splitting the input will cause the mean and variance calculated by
+            # each rank to be different from PyTorch.
+            for sbp in all_sbp(placement, except_split=True):
                 _test_batchnorm1d_module(test_case, placement, sbp)
                 _test_batchnorm2d_module(test_case, placement, sbp)
                 _test_batchnorm3d_module(test_case, placement, sbp)
