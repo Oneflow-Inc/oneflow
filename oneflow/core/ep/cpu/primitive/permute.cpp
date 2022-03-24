@@ -83,9 +83,22 @@ void PermuteSpecialCaseCHW(size_t num_dims, const int64_t* src_dims, const void*
   T* src_ptr = (T*)src;
   T* dst_ptr = (T*)dst;
 
-  for (int64_t i = 0; i < dim0_num; i++) {
-    T* c_ptr = src_ptr + (i * dim1_num);
-    for (int64_t j = 0; j < dim1_num; j++) { dst_ptr[j*dim0_num+i] = c_ptr[j]; }
+  if (dim1_num == 3) {
+    T* r = dst_ptr;
+    T* g = dst_ptr + (dim0_num);
+    T* b = dst_ptr + 2 * (dim0_num);
+
+    for (int i = 0; i < dim0_num; i++) {
+      r[i] = src_ptr[3 * i];
+      g[i] = src_ptr[3 * i + 1];
+      b[i] = src_ptr[3 * i + 2];
+    }
+
+  } else {
+    for (int64_t i = 0; i < dim0_num; i++) {
+      T* c_ptr = src_ptr + (i * dim1_num);
+      for (int64_t j = 0; j < dim1_num; j++) { dst_ptr[j * dim0_num + i] = c_ptr[j]; }
+    }
   }
 }
 
