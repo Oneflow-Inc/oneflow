@@ -32,8 +32,8 @@ class ArangeOpKernelCache final : public user_op::OpKernelCache {
   int64_t upper() const { return upper_; }
 
  private:
-   const int64_t lower_;
-   const int64_t upper_;
+  const int64_t lower_;
+  const int64_t upper_;
 };
 template<DeviceType device_type, typename T>
 class ArangeKernel final : public OpKernel {
@@ -98,8 +98,9 @@ class ArangeKernel final : public OpKernel {
     }
     if (arange_elem_cnt == 0) { return; }
     const auto* arange_cache = dynamic_cast<const ArangeOpKernelCache*>(cache);
-    arange_elem_cnt = arange_cache->upper()-arange_cache->lower();
-    ArangeFunctor<device_type, T>()(ctx->stream(), arange_cache->lower(), delta, arange_elem_cnt,output);
+    arange_elem_cnt = arange_cache->upper() - arange_cache->lower();
+    ArangeFunctor<device_type, T>()(ctx->stream(), arange_cache->lower(), delta, arange_elem_cnt,
+                                    output);
   }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 
@@ -107,12 +108,10 @@ class ArangeKernel final : public OpKernel {
   mutable TensorSliceView view;
 };
 
-
-#define REGISTER_ARANGE_KERNEL(device, dtype)                                                 \
-  REGISTER_USER_KERNEL("arange")                                                              \
-      .SetCreateFn<ArangeKernel<device, dtype>>()                                             \
-      .SetIsMatchedHob((user_op::HobDeviceType() == device)                                   \
-                       && (user_op::HobAttr<DataType>("dtype") == GetDataType<dtype>::value)) ;
+#define REGISTER_ARANGE_KERNEL(device, dtype)                                                \
+  REGISTER_USER_KERNEL("arange").SetCreateFn<ArangeKernel<device, dtype>>().SetIsMatchedHob( \
+      (user_op::HobDeviceType() == device)                                                   \
+      && (user_op::HobAttr<DataType>("dtype") == GetDataType<dtype>::value));
 
 #define REGISTER_ARANGE_KERNELS_WITH_DEVICE(device) \
   REGISTER_ARANGE_KERNEL(device, uint8_t)           \
