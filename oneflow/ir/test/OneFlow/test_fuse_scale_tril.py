@@ -19,16 +19,15 @@ limitations under the License.
 import os
 import unittest
 import numpy as np
+
 os.environ["ONEFLOW_MLIR_ENABLE_ROUND_TRIP"] = "1"
 import oneflow as flow
 from collections import OrderedDict
 from oneflow.test_utils.test_util import GenArgDict
 
+
 def _test_fused_scale_tril(
-    test_case,
-    shape,
-    diagonal=0,
-    scale=1.0,
+    test_case, shape, diagonal=0, scale=1.0,
 ):
     x = np.random.rand(*shape)
     # Different dtype will result in insert of cast op causing pass to fail.
@@ -51,7 +50,7 @@ def _test_fused_scale_tril(
 
         def build(self):
             return flow.tril(tensor_x, diagonal) * scale
-    
+
     lazy_out_1 = TestFuseTrilScale()()
     test_case.assertTrue(np.allclose(eager_out.numpy(), lazy_out_1.numpy()))
 
