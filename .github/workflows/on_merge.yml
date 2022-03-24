@@ -2,8 +2,6 @@ on:
   pull_request:
     type:
       - closed
-    branches:
-      - master
 
 env:
   OSS_ACCESS_KEY_ID: ${{ secrets.OSS_ACCESS_KEY_ID }}
