@@ -71,6 +71,7 @@ class BinaryGradFunctor {
                            const std::shared_ptr<one::Tensor>& y,
                            const std::shared_ptr<one::Tensor>& dz) const {
     TensorProcessor tensor_processor;
+    // TODO binary grad support stride and remove `x->contiguous(), y->contiguous()`
     JUST(tensor_processor.PromoteInputsToCommonDtype(true)
              .AddInputs({x->contiguous(), y->contiguous(), dz})
              .Apply());
