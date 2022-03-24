@@ -22,6 +22,17 @@ from oneflow.test_utils.automated_test_util import *
 
 @flow.unittest.skip_unless_1n1d()
 class TestConv3DModule(flow.unittest.TestCase):
+    def test_nn_functional_conv3d(test_case):
+        img = flow.ones(1, 3, 224, 224, 224)
+        kernel = flow.randn(6, 3, 3, 3, 3)
+        y = flow.nn.functional.conv3d(img, kernel)
+        assert(y.shape[0] == img.shape[0])
+        assert(y.shape[1] == kernel.shape[0])
+        # default padding is 1.
+        assert(y.shape[2] == img.shape[2] - 2)
+        assert(y.shape[3] == img.shape[3] - 2)
+        assert(y.shape[3] == img.shape[3] - 2)
+
     @autotest(n=10)
     def test_conv3d_with_random_data(test_case):
         channels = random(1, 6)

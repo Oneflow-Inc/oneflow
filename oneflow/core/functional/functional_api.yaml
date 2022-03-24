@@ -696,23 +696,23 @@
 
 - name: "conv1d"
   signature:
-    "Tensor (Tensor x, Tensor weight, Tensor bias=None, Int32List[1] stride,
-    Int32List[1] padding, Int32List[1] dilation, Int32 groups=1,
-    String channel_pos) => Conv1d"
+    "Tensor (Tensor x, Tensor weight, Tensor bias=None, Int32List[1] stride={1},
+    Int32List[1] padding={0}, Int32List[1] dilation={1}, Int32 groups=1,
+    String channel_pos=\"channels_first\") => Conv1d"
   bind_python: True
 
 - name: "conv2d"
   signature:
-    "Tensor (Tensor x, Tensor weight, Tensor bias=None, Int32List[2] stride,
-    Int32List[2] padding, Int32List[2] dilation, Int32 groups=1,
-    String channel_pos) => Conv2d"
+    "Tensor (Tensor x, Tensor weight, Tensor bias=None, Int32List[2] stride={1},
+    Int32List[2] padding={0}, Int32List[2] dilation={1}, Int32 groups=1,
+    String channel_pos=\"channels_first\") => Conv2d"
   bind_python: True
 
 - name: "conv3d"
   signature:
-    "Tensor (Tensor x, Tensor weight, Tensor bias=None, Int32List[3] stride,
-    Int32List[3] padding, Int32List[3] dilation, Int32 groups=1,
-    String channel_pos) => Conv3d"
+    "Tensor (Tensor x, Tensor weight, Tensor bias=None, Int32List[3] stride={1},
+    Int32List[3] padding={0}, Int32List[3] dilation={1}, Int32 groups=1,
+    String channel_pos=\"channels_first\") => Conv3d"
   bind_python: True
 
 - name: "fake_quantization"

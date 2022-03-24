@@ -1581,6 +1581,16 @@ class TestConv2d(flow.unittest.TestCase):
                 )
             )
 
+    def test_nn_functional_conv2d(test_case):
+        img = flow.ones(1,3,224,224)
+        kernel = flow.randn(3,1,3,3)
+        y = flow.nn.functional.conv2d(img, kernel, groups=3)
+        assert(y.shape[0] == img.shape[0])
+        assert(y.shape[1] == kernel.shape[0])
+        # default padding is 1.
+        assert(y.shape[2] == img.shape[2] - 2)
+        assert(y.shape[3] == img.shape[3] - 2)
+
     def test_conv2d(test_case):
         arg_dict = OrderedDict()
         arg_dict["device"] = ["cuda", "cpu"]
@@ -1865,7 +1875,6 @@ class TestConv2d(flow.unittest.TestCase):
         x.pytorch = x.pytorch.to("cuda")
         y = m(x)
         return y
-
 
 if __name__ == "__main__":
     unittest.main()
