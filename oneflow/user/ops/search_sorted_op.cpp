@@ -37,12 +37,6 @@ namespace oneflow {
 
 /* static */ Maybe<void> SearchSortedOp::CheckAttr(const user_op::UserOpDefWrapper& def,
                                               const user_op::UserOpConfWrapper& conf) {
-  const std::string& side = conf.attr<std::string>("side");
-  CHECK_OR_RETURN(side == "left" || side == "right") << "for searchsorted op, side can only be 'left' or 'right' but got " << side;
-  const std::string& right = conf.attr<std::string>("right");
-  CHECK_OR_RETURN((right == "True" and side == "right") or (right == "False" and side == "left")) << "for searchsorted op,  \
-                  side and right can't be set to opposites, but got side of " << side << " while right was " << right;
-  
   return Maybe<void>::Ok();
 }
 
@@ -55,5 +49,39 @@ namespace oneflow {
   }
   return Maybe<void>::Ok();
 }
+
+
+/* static */ Maybe<void> SearchSortedScalarOp::InferLogicalTensorDesc(user_op::InferContext* ctx) {
+  *ctx->OutputShape("out", 0) = Shape({});
+  return Maybe<void>::Ok();
+}
+
+/*static*/ Maybe<void> SearchSortedScalarOp::InferPhysicalTensorDesc(user_op::InferContext* ctx) {
+  return InferLogicalTensorDesc(ctx);
+}
+
+/* static */ Maybe<void> SearchSortedScalarOp::GetSbp(user_op::SbpContext* ctx) {
+  const user_op::TensorDesc& in_tensor = ctx->LogicalTensorDesc4InputArgNameAndIndex("in", 0);
+  FOR_RANGE(int64_t, i, 0, in_tensor.shape().NumAxes() - 1) {
+    ctx->NewBuilder().Split(ctx->inputs(), i).Split(ctx->outputs(), i).Build();
+  }
+  return Maybe<void>::Ok();
+}
+
+/* static */ Maybe<void> SearchSortedScalarOp::CheckAttr(const user_op::UserOpDefWrapper& def,
+                                              const user_op::UserOpConfWrapper& conf) {
+  return Maybe<void>::Ok();
+}
+
+/* static */ Maybe<void> SearchSortedScalarOp::InferDataType(user_op::InferContext* ctx) {
+  const bool& out_int32 = ctx->Attr<bool>("out_int32");
+  if (out_int32) {
+    *ctx->OutputDType("out", 0) = DataType::kInt32;
+  } else {
+    *ctx->OutputDType("out", 0) = DataType::kInt64;
+  }
+  return Maybe<void>::Ok();
+}
+
 
 }  // namespace oneflow

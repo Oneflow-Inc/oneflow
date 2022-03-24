@@ -74,15 +74,12 @@ class CpuSearchSortedKernel final : public user_op::OpKernel {
     const user_op::Tensor* sorter = ctx->Tensor4ArgNameAndIndex("sorter", 0);
 
     user_op::Tensor* out = ctx->Tensor4ArgNameAndIndex("out", 0);
-    const bool& out_int32 = ctx->Attr<bool>("out_int32");
     const bool& right = ctx->Attr<bool>("right");
     const input_t* values_ptr = values->dptr<input_t>();
 
     const input_t* sequence_ptr = sorted_sequence->dptr<input_t>();
     output_t* out_ptr = out->mut_dptr<output_t>();
-    // const int32_t instance_size = in->shape().At(in->shape().NumAxes() - 1);
     const int32_t instance_num = values->shape().elem_cnt();
-    // const std::string& direction = ctx->Attr<std::string>("direction");
     bool is_values_scalar = (values->shape().elem_cnt() == 1 && values->shape().NumAxes() == 0);
     bool is_sequence_1d = (sorted_sequence->shape().NumAxes() == 1);
     int64_t values_shape_last = is_values_scalar ? 1 : values->shape().At(values->shape().NumAxes()-1);
@@ -94,7 +91,6 @@ class CpuSearchSortedKernel final : public user_op::OpKernel {
         cus_lower_bound(start_bd, end_bd, values_ptr[i], sequence_ptr, nullptr) - start_bd :
         cus_upper_bound(start_bd, end_bd, values_ptr[i], sequence_ptr, nullptr) - start_bd;
 
-      // type conversion might happen here
       out_ptr[i] = pos;
     }
   }
@@ -127,25 +123,18 @@ class CpuSearchSortedScalarKernel final : public user_op::OpKernel {
     const user_op::Tensor* sorter = ctx->Tensor4ArgNameAndIndex("sorter", 0);
 
     user_op::Tensor* out = ctx->Tensor4ArgNameAndIndex("out", 0);
-    const bool& out_int32 = ctx->Attr<bool>("out_int32");
+
     const bool& right = ctx->Attr<bool>("right");
-    // double ord_tmp = JUST(.As<double>());
-    const input_t& values = ctx->Attr<input_t>("values");
-    // const dou* values_ptr = values->dptr<double>();
+    const input_t& values = static_cast<input_t>(ctx->Attr<double>("values"));
 
     const input_t* sequence_ptr = sorted_sequence->dptr<input_t>();
     output_t* out_ptr = out->mut_dptr<output_t>();
-    // const int32_t instance_size = in->shape().At(in->shape().NumAxes() - 1);
-    // const std::string& direction = ctx->Attr<std::string>("direction");
-    // bool is_values_scalar = (values->shape().elem_cnt() == 1 && values->shape().NumAxes() == 0);
-    // LOG(WARNING) << "is_values_scalar: " << is_values_scalar;
     int64_t sequence_shape_last = sorted_sequence->shape().At(0);
 
     output_t pos = !right ?
       cus_lower_bound<>(0, sequence_shape_last, values, sequence_ptr, nullptr):
        cus_upper_bound(0, sequence_shape_last, values, sequence_ptr, nullptr);
 
-    // type conversion might happen here
     out_ptr[0] = pos;
 
   }

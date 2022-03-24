@@ -181,7 +181,11 @@
   bind_python: False
 
 - name: "searchsorted"
-  signature: 'Tensor (Tensor sorted_sequence, Tensor values, Tensor sorter=None, Bool out_int32=False, Bool right=False, String side="left") => SearchSorted'
+  signature:
+    [
+      'Tensor (Tensor sorted_sequence, Tensor values, Tensor sorter=None, Bool out_int32=False, Bool right=False) => SearchSorted',
+      'Tensor (Tensor sorted_sequence, Scalar values, Tensor sorter=None, Bool out_int32=False, Bool right=False) => SearchSortedScalar',
+    ]
   bind_python: True
 
 - name: "scalar_pow_grad"

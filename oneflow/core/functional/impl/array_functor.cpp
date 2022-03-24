@@ -957,12 +957,10 @@ class SearchSortedFunctor {
   Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& sorted_sequence,
                            const std::shared_ptr<one::Tensor>& values,
                            const Optional<one::Tensor>& sorter,
-                           bool out_int32, bool right,
-                           const std::string side) const {
+                           bool out_int32, bool right) const {
     MutableAttrMap attrs;
     JUST(attrs.SetAttr<bool>("out_int32", out_int32));
     JUST(attrs.SetAttr<bool>("right", right));
-    JUST(attrs.SetAttr<std::string>("side", side));
     if (sorter) {
       return OpInterpUtil::Dispatch<Tensor>(*op_, {sorted_sequence, values, JUST(sorter)}, attrs);
     } else {
@@ -991,18 +989,21 @@ class SearchSortedScalarFunctor {
   Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& sorted_sequence,
                            const Scalar& values,
                            const Optional<one::Tensor>& sorter,
-                           bool out_int32, bool right,
-                           const std::string side) const {
+                           bool out_int32, bool right) const {
     MutableAttrMap attrs;
     JUST(attrs.SetAttr<bool>("out_int32", out_int32));
     JUST(attrs.SetAttr<bool>("right", right));
-    JUST(attrs.SetAttr<std::string>("side", side));
     // check values Scalar and sorted_sequence one dim
     int32_t is_sequence_1d = sorted_sequence->shape()->NumAxes();
-    LOG(WARNING) << "is_sequence_1d: " << is_sequence_1d;
     CHECK_OR_RETURN(is_sequence_1d == 1) << "input value can be a scalar only when boundaries tensor dimension is 1, but we got boundaries tensor dim=" << is_sequence_1d;
-    double values_tmp = JUST(values.As<double>());
-    JUST(attrs.SetAttr<double>("values", values_tmp));
+    bool is_values_float = values.IsFloatingPoint();
+    if (is_values_float) {
+      double_t values_tmp = JUST(values.As<double_t>());
+      JUST(attrs.SetAttr<double>("values", values_tmp));
+    } else {
+      int64_t values_tmp = JUST(values.As<int64_t>());
+      JUST(attrs.SetAttr<double>("values", values_tmp));
+    }
     if (sorter) {
       return OpInterpUtil::Dispatch<Tensor>(*op_, {sorted_sequence, JUST(sorter)}, attrs);
     } else {

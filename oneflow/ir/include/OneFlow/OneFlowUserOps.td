@@ -3088,8 +3088,7 @@ def OneFlow_SearchSortedOp : OneFlow_BaseOp<"searchsorted", [NoSideEffect, NoGra
   );
   let attrs = (ins
     DefaultValuedAttr<BoolAttr, "false">:$out_int32,
-    DefaultValuedAttr<BoolAttr, "false">:$right,
-    DefaultValuedAttr<StrAttr, "\"left\"">:$side
+    DefaultValuedAttr<BoolAttr, "false">:$right
   );
   let has_check_fn = 1;
   let has_logical_tensor_desc_infer_fn = 1;
@@ -3097,6 +3096,27 @@ def OneFlow_SearchSortedOp : OneFlow_BaseOp<"searchsorted", [NoSideEffect, NoGra
   let has_get_sbp_fn = 1;
   let has_data_type_infer_fn = 1;
 }
+
+def OneFlow_SearchSortedScalarOp : OneFlow_BaseOp<"searchsorted_scalar", [NoSideEffect, NoGrad, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
+  let input = (ins
+    OneFlow_Tensor:$sorted_sequence,
+    Optional<OneFlow_Tensor>:$sorter
+  );
+  let output = (outs
+    OneFlow_Tensor:$out
+  );
+  let attrs = (ins
+    DefaultValuedAttr<BoolAttr, "false">:$out_int32,
+    DefaultValuedAttr<BoolAttr, "false">:$right,
+    DefaultValuedAttr<F32Attr, "0.">:$values
+  );
+  let has_check_fn = 1;
+  let has_logical_tensor_desc_infer_fn = 1;
+  let has_physical_tensor_desc_infer_fn = 1;
+  let has_get_sbp_fn = 1;
+  let has_data_type_infer_fn = 1;
+}
+
 
 def OneFlow_SliceOp : OneFlow_BaseOp<"slice", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
