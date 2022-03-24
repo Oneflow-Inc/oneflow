@@ -226,7 +226,7 @@ struct SoftplusFunctor {
       : beta(beta), threshold(threshold) {}
   OF_DEVICE_FUNC T operator()(T x) const {
     // MATH_FUNC_F(log, (1.0f + MATH_FUNC_F(exp, x)))
-    return (x * beta) > threshold ? x : static_cast<T>(std::log1p(std::exp(x * beta))) / beta;
+    return (x * beta) > threshold ? x : log(static_cast<T>(1) + exp(x * beta)) / beta;
   }
 
   const T beta;
@@ -238,17 +238,15 @@ struct SoftplusGradFunctor {
   OF_DEVICE_FUNC explicit SoftplusGradFunctor(double beta, double threshold)
       : beta(beta), threshold(threshold) {}
   OF_DEVICE_FUNC T operator()(T y, T dy) const {
-    // torch
-    // T z = std::exp(y * beta);
-    // return (y * beta) > threshold ? dy : dy * z / (z + T(1.0));
+    T z = exp(y * beta);
+    return (y * beta) > threshold ? dy : dy * z / (z + T(1.0));
     // paddle
-    // auto x_beta = static_cast<T>(beta) * x;
-    // return (x_beta) > static_cast<T>(threshold) ? dy : dy / (static_cast<T>(1) +
-    // std::exp(-x_beta));
-    auto x_beta = static_cast<T>(beta) * y;
-    return (x_beta) > static_cast<T>(threshold)
-               ? dy
-               : dy * std::exp(x_beta) / (std::exp(x_beta) + static_cast<T>(1));
+    // auto x_beta = static_cast<T>(beta) * y;
+    // return x_beta > static_cast<T>(threshold) ? dy : dy / (static_cast<T>(1) +
+    // std::exp(-x_beta)); auto x_beta = static_cast<T>(beta) * y; return (x_beta) >
+    // static_cast<T>(threshold)
+    //            ? dy
+    //            : dy * std::exp(x_beta) / (std::exp(x_beta) + static_cast<T>(1));
   }
 
   const T beta;
