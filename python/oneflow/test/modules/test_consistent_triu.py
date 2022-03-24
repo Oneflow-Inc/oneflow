@@ -24,10 +24,10 @@ import oneflow.unittest
 def _test_global_triu_without_diag(test_case, placement, sbp):
     x = random_tensor(
         ndim=4,
-        dim0=random(1, 5).to(int) * 8,
-        dim1=random(1, 5).to(int) * 8,
-        dim2=random(1, 5).to(int) * 8,
-        dim3=random(1, 5).to(int) * 8,
+        dim0=random(1, 3).to(int) * 8,
+        dim1=random(1, 3).to(int) * 8,
+        dim2=2,
+        dim3=4,
     ).to_global(placement, sbp)
     y = torch.triu(x)
     y = torch.exp(y)
@@ -40,10 +40,10 @@ def _test_global_triu_with_diag(test_case, placement, sbp):
     diagonal = random(-3, 3).to(int)
     x = random_tensor(
         ndim=4,
-        dim0=random(1, 5).to(int) * 8,
-        dim1=random(1, 5).to(int) * 8,
-        dim2=random(1, 5).to(int) * 8,
-        dim3=random(1, 5).to(int) * 8,
+        dim0=random(1, 3).to(int) * 8,
+        dim1=random(1, 3).to(int) * 8,
+        dim2=2,
+        dim3=4,
     ).to_global(placement, sbp)
     y = torch.triu(x, diagonal)
     y = torch.exp(y)
@@ -55,13 +55,13 @@ class TestConsistentTriu(flow.unittest.TestCase):
     @globaltest
     def test_global_triu_without_diag(test_case):
         for placement in all_placement():
-            for sbp in all_sbp(placement, max_dim=4):
+            for sbp in all_sbp(placement, max_dim=2):
                 _test_global_triu_without_diag(test_case, placement, sbp)
 
     @globaltest
     def test_global_triu_with_diag(test_case):
         for placement in all_placement():
-            for sbp in all_sbp(placement, max_dim=4):
+            for sbp in all_sbp(placement, max_dim=2):
                 _test_global_triu_with_diag(test_case, placement, sbp)
 
 

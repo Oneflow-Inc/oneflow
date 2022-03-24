@@ -24,7 +24,10 @@ Maybe<Shape> ReshapeUserOpUtil::GetLogicalOutBlobShape(const Shape& in_shape,
   if (unlikely(in_shape.elem_cnt() == 0)) {
     FOR_RANGE(int, axis, 0, reshape.NumAxes()) {
       int64_t dim = reshape.At(axis);
-      CHECK_GE_OR_RETURN(dim, 0);
+      CHECK_GE_OR_RETURN(dim, 0)
+          << Error::RuntimeError() << "cannot reshape tensor of 0 elements into shape "
+          << reshape.DebugStr()
+          << " because the unspecified dimension size -1 can be any value and is ambiguous";
     }
     return std::make_shared<Shape>(reshape);
   }
@@ -63,7 +66,9 @@ Maybe<void> ReshapeUserOpUtil::Squeeze(const Shape& origin, Shape* shape,
   DimVector dim_vec;
   FOR_RANGE(int, axis, 0, origin.NumAxes()) {
     int64_t dim = origin.At(axis);
-    CHECK_GE_OR_RETURN(dim, 0);
+    CHECK_GE_OR_RETURN(dim, 0) << Error::RuntimeError()
+                               << "Trying to suqeeze tensor with negative dimension -1: "
+                               << origin.DebugStr();
     if (dim == 1) { continue; }
     CHECK_OR_RETURN(squeezed_axis2origin_axis->emplace(dim_vec.size(), axis).second);
     dim_vec.emplace_back(dim);
