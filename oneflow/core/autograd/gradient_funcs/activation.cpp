@@ -14,6 +14,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 #include "oneflow/core/framework/op_expr_grad_function.h"
+#include "oneflow/core/common/container_util.h"
 #include "oneflow/core/functional/functional.h"
 
 namespace oneflow {
@@ -389,12 +390,12 @@ class Threshold : public OpExprGradFunction<ThresholdCaptureState> {
   Maybe<void> Capture(ThresholdCaptureState* ctx, const TensorTuple& inputs,
                       const TensorTuple& outputs, const AttrMap& attrs) const override {
     CHECK_EQ_OR_RETURN(inputs.size(), 1);
-    ctx->requires_grad = inputs.at(0)->requires_grad();
+    ctx->requires_grad = JUST(oneflow::VectorAt(inputs, 0))->requires_grad();
     if (!ctx->requires_grad) { return Maybe<void>::Ok(); }
 
     ComposedAttrMap composed_attrs(attrs, base_attrs_);
     ctx->threshold = JUST(composed_attrs.GetAttr<double>("thres"));
-    ctx->SaveTensorForBackward(inputs.at(0));
+    ctx->SaveTensorForBackward(JUST(oneflow::VectorAt(inputs, 0)));
     return Maybe<void>::Ok();
   }
 
@@ -404,7 +405,7 @@ class Threshold : public OpExprGradFunction<ThresholdCaptureState> {
     in_grads->resize(1);
     if (ctx->requires_grad) {
       const auto& x = ctx->SavedTensors().at(0);
-      in_grads->at(0) = JUST(functional::ThresholdGrad(x, out_grads.at(0), ctx->threshold));
+      *JUST(oneflow::VectorAt(in_grads, 0)) = JUST(functional::ThresholdGrad(x, JUST(oneflow::VectorAt(out_grads, 0)), ctx->threshold));
     }
     return Maybe<void>::Ok();
   }
