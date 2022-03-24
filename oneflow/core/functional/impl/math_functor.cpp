@@ -1638,7 +1638,7 @@ class ScalarLogicalBaseFunctor {
       UNIMPLEMENTED_THEN_RETURN() << "The scalar in " << op_->op_type_name()
                                   << " should be float or int.";
     }
-    JUST(tensor_processor.AddInputs({x->contiguous()}, lowest_dtype).Apply());
+    JUST(tensor_processor.AddInputs({x}, lowest_dtype).Apply());
     TensorTuple casted_vec = JUST(tensor_processor.GetInputs());
 
     return OpInterpUtil::Dispatch<Tensor>(*op_, {casted_vec}, attrs);
