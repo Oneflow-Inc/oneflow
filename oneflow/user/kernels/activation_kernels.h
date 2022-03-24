@@ -119,6 +119,26 @@ struct HardsigmoidGradFunctor {
 };
 
 template<typename T>
+struct HardShrinkFunctor {
+  OF_DEVICE_FUNC explicit HardShrinkFunctor(double lambd) : lambd(lambd) {}
+  OF_DEVICE_FUNC T operator()(T x) const {
+    return (x <= lambd && x >= -lambd) ? static_cast<T>(0) : x;
+  }
+
+  const T lambd;
+};
+
+template<typename T>
+struct HardShrinkGradFunctor {
+  OF_DEVICE_FUNC explicit HardShrinkGradFunctor(double lambd) : lambd(lambd) {}
+  OF_DEVICE_FUNC T operator()(T y, T dy) const {
+    return y == static_cast<T>(0) ? static_cast<T>(0) : dy;
+  }
+
+  const T lambd;
+};
+
+template<typename T>
 struct HardtanhFunctor {
   OF_DEVICE_FUNC explicit HardtanhFunctor(float min_val, float max_val)
       : min_val(min_val), max_val(max_val) {}
@@ -292,6 +312,20 @@ struct ReluGradFunctor {
       device, "hardsigmoid_grad", HardsigmoidGradFunctor, dtype, dtype, dtype,                  \
       [](user_op::KernelComputeContext* ctx) { return HardsigmoidGradFunctor<dtype>(); }, "dx", \
       "x", "dy");
+
+#define REGISTER_HARDSHRINK_KERNEL(device, dtype)                            \
+  REGISTER_UNARY_ELEMWISE_USER_KERNEL(                                       \
+      device, "hardshrink", HardShrinkFunctor, dtype, dtype,                 \
+      [](user_op::KernelComputeContext* ctx) {                               \
+        return HardShrinkFunctor<dtype>(ctx->Attr<double>("lambd"));         \
+      },                                                                     \
+      "out", "in");                                                          \
+  REGISTER_BINARY_ELEMWISE_USER_KERNEL(                                      \
+      device, "hardshrink_grad", HardShrinkGradFunctor, dtype, dtype, dtype, \
+      [](user_op::KernelComputeContext* ctx) {                               \
+        return HardShrinkGradFunctor<dtype>(ctx->Attr<double>("lambd"));     \
+      },                                                                     \
+      "dx", "y", "dy");
 
 #define REGISTER_HARDTANH_KERNEL(device, dtype)                                                 \
   REGISTER_USER_KERNEL("hardtanh")                                                              \

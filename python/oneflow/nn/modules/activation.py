@@ -450,6 +450,55 @@ class Hardsigmoid(Module):
         inplace_str = "inplace=True" if self.inplace else ""
         return inplace_str
 
+        
+class Hardshrink(Module):
+    r"""
+    The interface is consistent with PyTorch.
+    The documentation is referenced from: https://pytorch.org/docs/stable/generated/torch.nn.Hardshrink.html?highlight=hardshrink#torch.nn.Hardshrink
+    The Hardshrink activation.
+    The formula is:
+    
+    .. math::
+        \text{Hardshrink}(x) =
+        \begin{cases}
+        x, & \text{ if } x > \lambda \\
+        x, & \text{ if } x < -\lambda \\
+        0, & \text{ otherwise }
+        \end{cases}
+    Args:
+        lambd: the :math:`\\lambda` value for the Hardshrink formulation. Default: 0.5
+        inplace: can optionally do the operation in-place. Default: ``False``
+    
+    Shape:
+        - Input: :math:`(N, *)` where `*` means, any number of additional
+          dimensions
+        - Output: :math:`(N, *)`, same shape as the input
+    For example:
+    
+    .. code-block:: python
+    
+        >>> import numpy as np
+        >>> import oneflow as flow
+        >>> x = np.array([-1, 0, 0.2, 0.5]).astype(np.float32)
+        >>> input = flow.Tensor(x)
+        >>> hardshrink = flow.nn.Hardshrink(alpha=0.5)
+        >>> out = hardshrink(input)
+        >>> out
+        tensor([-1.0000,  0.0000,  0.0000,  0.0000], dtype=oneflow.float32)
+    """
+
+    def __init__(self, lambd: float = 0.5, inplace: bool = False):
+        self.inplace = inplace
+        self.lambd = lambd
+        super().__init__()
+
+    def forward(self, x):
+        return flow._C.hardshrink(x, lambd=self.lambd, inplace=self.inplace)
+
+    def extra_repr(self) -> str:
+        param_str = f"lambd={self.lambd}"
+        param_str += ", inplace=True" if self.inplace else ""
+        return param_str
 
 class Softmax(Module):
     """Applies the Softmax function to an n-dimensional input Tensor

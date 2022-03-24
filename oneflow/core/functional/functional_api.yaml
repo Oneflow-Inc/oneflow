@@ -533,6 +533,14 @@
   signature: "Tensor (Tensor dy, Tensor x) => HardSigmoidGrad"
   bind_python: False
 
+- name: "hardshrink"
+  signature: "Tensor (Tensor x, *, Double lambd=0.5, Bool inplace=False) => HardShrink"
+  bind_python: True
+
+- name: "hardshrink_grad"
+  signature: "Tensor (Tensor y, Tensor dy, Double lambd=0.5) => HardShrinkGrad"
+  bind_python: False
+
 - name: "softmax"
   signature: "Tensor (Tensor x, Int64 dim=None) => Softmax"
   bind_python: True
