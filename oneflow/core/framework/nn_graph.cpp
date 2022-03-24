@@ -268,6 +268,7 @@ Maybe<void> NNGraph::CompileAndInitRuntime() {
       TeePersistentLogStream::Create("job_" + name_ + "_plan")->Write(plan_);
       PlanUtil::ToDotFile(plan_, "job_" + name_ + "_plan.dot");
     }
+    PlanUtil::GenRegisterHint(&plan_);
     // TODO(chengcheng): test collective boxing for multi-job.
     PlanUtil::GenCollectiveBoxingPlan(&job_, &plan_);
     // PlanUtil::SetForceInplaceMemBlock(&plan_); NOTE(chengcheng): only for ssp.
