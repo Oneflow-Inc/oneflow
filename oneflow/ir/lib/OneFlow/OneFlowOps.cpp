@@ -510,8 +510,24 @@ llvm::SmallVector<Value, 4> ReluOp::NchwToNhwc(llvm::SmallVector<Value, 4> value
                  .create<oneflow::ReluOp>(relu_op.getLoc(), relu_op->getResultTypes(), operands,
                                           relu_op->getAttrs())
                  ->getResults();
-  llvm::SmallVector<Value, 4> results{res[0]};
-  return results;
+  return {res[0]};
+}
+
+bool Add2Op::IsNCHW() { return false; }
+
+llvm::DenseSet<Value> Add2Op::OperandsToTranspose() { return {this->in0(), this->in1()}; }
+
+llvm::DenseSet<Value> Add2Op::ResultsToTranspose() { return {this->out()}; }
+
+llvm::SmallVector<Value, 4> Add2Op::NchwToNhwc(llvm::SmallVector<Value, 4> value,
+                                               PatternRewriter& rewriter) {
+  auto add2_op = *this;
+  SmallVector<Value, 4> operands{value[0], value[1]};
+  auto res = rewriter
+                 .create<oneflow::Add2Op>(add2_op.getLoc(), add2_op->getResultTypes(), operands,
+                                          add2_op->getAttrs())
+                 ->getResults();
+  return {res[0]};
 }
 
 }  // namespace oneflow

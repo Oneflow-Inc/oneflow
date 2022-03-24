@@ -65,7 +65,7 @@ def OneFlow_LossMarkerOp : OneFlow_IROp<"loss_marker", []> {
   let arguments = (ins Variadic<AnyType>:$loss);
 }
 
-def OneFlow_Add2Op : OneFlow_BaseOp<"add_n2", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>, DeclareOpInterfaceMethods<AlternativeOpTypeNameInterface>]> {
+def OneFlow_Add2Op : OneFlow_BaseOp<"add_n2", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>, DeclareOpInterfaceMethods<AlternativeOpTypeNameInterface>, DeclareOpInterfaceMethods<NCHWCompatibleInterface>]> {
   let summary = "";
   let input = (ins
     AnyType:$in0,

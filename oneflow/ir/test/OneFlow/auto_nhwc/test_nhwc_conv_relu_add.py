@@ -35,7 +35,7 @@ def do_nhwc_conv(test_case, with_cuda, with_bias):
         x = x.cuda()
         conv.to("cuda")
 
-    eager_conv_x = flow.relu(conv(x))
+    eager_conv_x = flow.relu(conv(x)) + flow.relu(conv(x))
 
     class GraphToRun(flow.nn.Graph):
         def __init__(self):
@@ -43,10 +43,12 @@ def do_nhwc_conv(test_case, with_cuda, with_bias):
             self.conv = conv
 
         def build(self, x):
-            return flow.relu(self.conv(x))
+            return flow.relu(self.conv(x)) + flow.relu(self.conv(x))
 
     graph_to_run = GraphToRun()
     lazy_conv_x = graph_to_run(x)
+    print(eager_conv_x.numpy().flatten()[:10])
+    print(lazy_conv_x.numpy().flatten()[:10])
     test_case.assertTrue(
         np.allclose(eager_conv_x.numpy(), lazy_conv_x.numpy(), rtol=1e-5, atol=1e-5)
     )
