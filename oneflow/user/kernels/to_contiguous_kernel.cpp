@@ -93,7 +93,7 @@ class ToContiguousKernel final : public user_op::OpKernel {
     const StrideVector& stride_vec = in->stride().StrideVec();
     std::vector<int64_t> in_stride(in->stride().NumAxes());
     std::copy(stride_vec.begin(), stride_vec.end(), in_stride.begin());
-    
+
     const char* in_dptr = static_cast<const char*>(in->raw_dptr());
     char* out_dptr = static_cast<char*>(out->mut_raw_dptr());
     ToContiguousUtil<device_type, T>(ctx->stream(), in_shape, in_stride, in_dptr, out_dptr)();

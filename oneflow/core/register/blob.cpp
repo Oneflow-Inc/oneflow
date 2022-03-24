@@ -32,8 +32,8 @@ Blob::Blob(const MemoryCase& mem_case,  // NOLINT，Blob::Blob(...) { // NOLINT
   Init(mem_case, blob_desc, header_ptr, body_ptr, offset);
 }
 
-void Blob::Init(const MemoryCase& mem_case, const BlobDesc* blob_desc, char* header_ptr, 
-            char* body_ptr, const int64_t offset) {
+void Blob::Init(const MemoryCase& mem_case, const BlobDesc* blob_desc, char* header_ptr,
+                char* body_ptr, const int64_t offset) {
   mem_case_ = mem_case;
   blob_desc_ = blob_desc;
   storage_offset_ = offset;

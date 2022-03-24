@@ -109,11 +109,12 @@ Maybe<void> EagerMirroredTensorImpl::InitEagerBlobObject(
 
   if (tensor_storage_) {
     auto tensor_storage = tensor_storage_->storage();
-    eager_blob_object_ = std::make_shared<vm::EagerBlobObject>(mem_case, mut_shape, mut_stride, dtype(),
-                                                               tensor_storage, dep_object);
+    eager_blob_object_ = std::make_shared<vm::EagerBlobObject>(mem_case, mut_shape, mut_stride,
+                                                               dtype(), tensor_storage, dep_object);
   } else {
-    const auto& eager_blob_object = std::make_shared<vm::EagerBlobObject>(
-        mem_case, mut_shape, mut_stride, dtype(), std::make_shared<vm::TensorStorage>(), dep_object);
+    const auto& eager_blob_object =
+        std::make_shared<vm::EagerBlobObject>(mem_case, mut_shape, mut_stride, dtype(),
+                                              std::make_shared<vm::TensorStorage>(), dep_object);
     JUST(set_eager_blob_object(eager_blob_object));
   }
   return Maybe<void>::Ok();
@@ -180,10 +181,9 @@ MirroredTensorMeta::MirroredTensorMeta(const std::shared_ptr<const Shape>& shape
   set_stride(std::make_shared<const Stride>(*shape));
 }
 
-MirroredTensorMeta::MirroredTensorMeta(const std::shared_ptr<const Shape>& shape, 
-                                       const std::shared_ptr<const Stride>& stride,
-                                       DataType dtype, Symbol<Device> device,
-                                       int64_t storage_offset)
+MirroredTensorMeta::MirroredTensorMeta(const std::shared_ptr<const Shape>& shape,
+                                       const std::shared_ptr<const Stride>& stride, DataType dtype,
+                                       Symbol<Device> device, int64_t storage_offset)
     : TensorMeta(shape, dtype), device_(device), storage_offset_(storage_offset) {
   set_stride(stride);
 }

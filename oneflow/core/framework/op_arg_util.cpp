@@ -43,8 +43,8 @@ cfg::DataType OpArgBlobAttribute::get_dtype() const { return blob_desc_->data_ty
 bool OpArgBlobAttribute::is_dynamic() const { return blob_desc_->is_dynamic(); }
 
 bool OpArgBlobAttribute::operator==(const OpArgBlobAttribute& other) const {
-  return (*shape_ == *other.shape()) && (*stride_ == *other.stride()) && (get_dtype() == other.get_dtype())
-         && (is_dynamic() == other.is_dynamic())
+  return (*shape_ == *other.shape()) && (*stride_ == *other.stride())
+         && (get_dtype() == other.get_dtype()) && (is_dynamic() == other.is_dynamic())
          && (logical_blob_name_ == other.logical_blob_name());
 }
 

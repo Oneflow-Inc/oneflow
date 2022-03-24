@@ -322,8 +322,8 @@ Maybe<std::pair<Symbol<one::ConsistentTensorMeta>, Symbol<NdSbp>>> CalcDecomposa
   std::tie(shape, src_nd_sbp, dst_nd_sbp) = *JUST(
       CalcDecomposableEquivalentShapeAndNdSbpPair(*shape, *hierarchy, src_nd_sbp, dst_nd_sbp));
 
-  one::ConsistentTensorMeta decomposible_tensor_meta(shape, stride, tensor_meta->dtype(), src_nd_sbp,
-                                                     tensor_meta->parallel_desc());
+  one::ConsistentTensorMeta decomposible_tensor_meta(shape, stride, tensor_meta->dtype(),
+                                                     src_nd_sbp, tensor_meta->parallel_desc());
   return std::make_pair(SymbolOf(decomposible_tensor_meta), dst_nd_sbp);
 }
 
@@ -501,8 +501,8 @@ Maybe<Symbol<one::ConsistentTensorMeta>> CalcSubConsistentTensorMeta(
   const auto& logical_shape =
       JUST(GetLogicalShape(*physical_shape, *sub_nd_sbp, *sub_parallel_desc));
   const auto& logical_stride = std::make_shared<Stride>(Stride(logical_shape));
-  one::ConsistentTensorMeta sub_consistent_tensor_meta(logical_shape, logical_stride, tensor_meta->dtype(),
-                                                       sub_nd_sbp, sub_parallel_desc);
+  one::ConsistentTensorMeta sub_consistent_tensor_meta(
+      logical_shape, logical_stride, tensor_meta->dtype(), sub_nd_sbp, sub_parallel_desc);
   return SymbolOf(sub_consistent_tensor_meta);
 }
 
@@ -521,7 +521,8 @@ Maybe<Symbol<NdSbp>> ReplaceNdSbpComponent(Symbol<NdSbp> nd_sbp, int64_t axis,
 
 Maybe<Symbol<one::ConsistentTensorMeta>> ReplaceNdSbp(Symbol<one::ConsistentTensorMeta> tensor_meta,
                                                       Symbol<NdSbp> nd_sbp) {
-  one::ConsistentTensorMeta new_tensor_meta(tensor_meta->shape_ptr(), tensor_meta->stride_ptr(), tensor_meta->dtype(), nd_sbp,
+  one::ConsistentTensorMeta new_tensor_meta(tensor_meta->shape_ptr(), tensor_meta->stride_ptr(),
+                                            tensor_meta->dtype(), nd_sbp,
                                             tensor_meta->parallel_desc());
   return SymbolOf(new_tensor_meta);
 }

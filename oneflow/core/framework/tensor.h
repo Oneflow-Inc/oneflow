@@ -479,9 +479,10 @@ class MirroredTensor final : public TensorIf<MirroredTensor> {
   Maybe<Tensor> detach() const override;
   Maybe<Tensor> clone() const override;
 
-  static Maybe<MirroredTensor> MakeTensor(const std::shared_ptr<const Shape>& shape, const std::shared_ptr<const Stride>& stride, DataType dtype,
-                                          const Symbol<Device>& device, bool is_lazy,
-                                          bool requires_grad, bool is_leaf);
+  static Maybe<MirroredTensor> MakeTensor(const std::shared_ptr<const Shape>& shape,
+                                          const std::shared_ptr<const Stride>& stride,
+                                          DataType dtype, const Symbol<Device>& device,
+                                          bool is_lazy, bool requires_grad, bool is_leaf);
   MirroredTensorImpl* mut_impl() { return impl_.get(); }
   Maybe<EagerMirroredTensorImpl*> mut_eager_mirrored_tensor_impl() override {
     return impl_->mut_eager_mirrored_tensor_impl();
@@ -520,7 +521,7 @@ class ConsistentTensor final : public TensorIf<ConsistentTensor> {
 
   // Getters
   const std::shared_ptr<const Shape>& shape() const override { return impl_->shape(); }
-  
+
   Symbol<DType> dtype() const override { return CHECK_JUST(DType::Get(impl_->dtype())); }
   Maybe<TransportToken> transport_token() const override { return impl_->transport_token(); }
   Maybe<Symbol<NdSbp>> nd_sbp() const override { return impl_->nd_sbp(); }

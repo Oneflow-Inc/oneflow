@@ -35,8 +35,13 @@ class TensorMeta : public user_op::TensorDesc {
  public:
   TensorMeta(const std::shared_ptr<const Shape>& shape, DataType dtype)
       : shape_(shape), data_type_(dtype), is_dynamic_(false), is_contiguous_(true) {}
-  TensorMeta(const std::shared_ptr<const Shape>& shape, const std::shared_ptr<const Stride>& stride, DataType dtype)
-      : shape_(shape), stride_(stride), data_type_(dtype), is_dynamic_(false), is_contiguous_(true) {}
+  TensorMeta(const std::shared_ptr<const Shape>& shape, const std::shared_ptr<const Stride>& stride,
+             DataType dtype)
+      : shape_(shape),
+        stride_(stride),
+        data_type_(dtype),
+        is_dynamic_(false),
+        is_contiguous_(true) {}
   TensorMeta(const TensorMeta&) = default;
   TensorMeta(TensorMeta&&) = default;
   virtual ~TensorMeta() = default;
@@ -53,8 +58,8 @@ class TensorMeta : public user_op::TensorDesc {
 
   void set_shape(const std::shared_ptr<const Shape>& val) { shape_ = val; }
   Shape* mut_shape() override { return const_cast<Shape*>(shape_.get()); }
-  void set_stride(const std::shared_ptr<const Stride>& val) { 
-    stride_ = val; 
+  void set_stride(const std::shared_ptr<const Stride>& val) {
+    stride_ = val;
     is_contiguous_ = IsContiguous(shape(), *stride_);
   }
   Stride* mut_stride() override { return const_cast<Stride*>(stride_.get()); }
@@ -78,9 +83,9 @@ class MirroredTensorMeta : public TensorMeta {
   MirroredTensorMeta();
   MirroredTensorMeta(const std::shared_ptr<const Shape>& shape, DataType dtype,
                      Symbol<Device> device);
-  MirroredTensorMeta(const std::shared_ptr<const Shape>& shape, 
-                     const std::shared_ptr<const Stride>& stride,
-                     DataType dtype, Symbol<Device> device, int64_t storage_offset);
+  MirroredTensorMeta(const std::shared_ptr<const Shape>& shape,
+                     const std::shared_ptr<const Stride>& stride, DataType dtype,
+                     Symbol<Device> device, int64_t storage_offset);
   virtual ~MirroredTensorMeta() = default;
 
   const Symbol<Device>& device() const { return device_; }
@@ -99,7 +104,8 @@ class MirroredTensorMeta : public TensorMeta {
 
 class ConsistentTensorMeta : public TensorMeta {
  public:
-  ConsistentTensorMeta(const std::shared_ptr<const Shape>& shape, const std::shared_ptr<const Stride>& stride, DataType dtype,
+  ConsistentTensorMeta(const std::shared_ptr<const Shape>& shape,
+                       const std::shared_ptr<const Stride>& stride, DataType dtype,
                        Symbol<NdSbp> nd_sbp, Symbol<ParallelDesc> parallel_desc)
       : TensorMeta(shape, stride, dtype), nd_sbp_(nd_sbp), parallel_desc_(parallel_desc) {}
   ConsistentTensorMeta(const ConsistentTensorMeta&) = default;
