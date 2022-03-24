@@ -68,6 +68,11 @@ class PermuteImpl : public Permute {
 
 #ifdef WITH_ONEDNN
 
+enum PermuteKey {
+  HWC2CHW = 0x102,
+  CHW2HWC = 0x201,
+};
+
 size_t perm2key(size_t num_dims, const int* permutation) {
   uint64_t key = 0;
   for (int i = 0; i < num_dims; i++) { key |= permutation[i] << i * 4; }
@@ -75,8 +80,8 @@ size_t perm2key(size_t num_dims, const int* permutation) {
 }
 
 template<size_t movement_size>
-void PermuteSpecialCaseCHW(size_t num_dims, const int64_t* src_dims, const void* src,
-                           const int* permutation, void* dst) {
+void PermuteSpecialCaseHWC2CHW(size_t num_dims, const int64_t* src_dims, const void* src,
+                               const int* permutation, void* dst) {
   using T = typename std::aligned_storage<movement_size, movement_size>::type;
   size_t dim0_num = src_dims[0] * src_dims[1];
   size_t dim1_num = src_dims[2];
@@ -102,27 +107,85 @@ void PermuteSpecialCaseCHW(size_t num_dims, const int64_t* src_dims, const void*
   }
 }
 
+template<size_t movement_size>
+void PermuteSpecialCaseCHW2HWC(size_t num_dims, const int64_t* src_dims, const void* src,
+                               const int* permutation, void* dst) {
+  using T = typename std::aligned_storage<movement_size, movement_size>::type;
+  size_t dim1_num = src_dims[1] * src_dims[2];
+  size_t dim0_num = src_dims[0];
+  T* src_ptr = (T*)src;
+  T* dst_ptr = (T*)dst;
+
+  if (dim0_num == 3) {
+    T* r = src_ptr;
+    T* g = src_ptr + (dim1_num);
+    T* b = src_ptr + 2 * (dim1_num);
+
+    for (int i = 0; i < dim1_num; i++) {
+      dst_ptr[3 * i] = r[i];
+      dst_ptr[3 * i + 1] = g[i];
+      dst_ptr[3 * i + 2] = b[i];
+    }
+  } else {
+    for (int64_t i = 0; i < dim1_num; i++) {
+      T* c_ptr = dst_ptr + (i * dim1_num);
+      for (int64_t j = 0; j < dim0_num; j++) { c_ptr[j] = src_ptr[i * dim0_num + j]; }
+    }
+  }
+}
+
+void LaunchSpecialCaseHWC2CHW(DataType data_type, size_t num_dims, const int64_t* src_dims,
+                              const void* src, const int* permutation, void* dst) {
+  void (*func)(size_t num_dims, const int64_t* src_dims, const void* src, const int* permutation,
+               void* dst) = nullptr;
+  size_t movement_size = GetSizeOfDataType(data_type);
+  if (movement_size == 1) {
+    func = PermuteSpecialCaseHWC2CHW<1>;
+  } else if (movement_size == 2) {
+    func = PermuteSpecialCaseHWC2CHW<2>;
+  } else if (movement_size == 4) {
+    func = PermuteSpecialCaseHWC2CHW<4>;
+  } else if (movement_size == 8) {
+    func = PermuteSpecialCaseHWC2CHW<8>;
+  } else if (movement_size == 16) {
+    func = PermuteSpecialCaseHWC2CHW<16>;
+  } else {
+    UNIMPLEMENTED();
+  }
+  func(num_dims, src_dims, src, permutation, dst);
+  printf("hwc-chw \n");
+}
+
+void LaunchSpecialCaseCHW2HWC(DataType data_type, size_t num_dims, const int64_t* src_dims,
+                              const void* src, const int* permutation, void* dst) {
+  void (*func)(size_t num_dims, const int64_t* src_dims, const void* src, const int* permutation,
+               void* dst) = nullptr;
+  size_t movement_size = GetSizeOfDataType(data_type);
+  if (movement_size == 1) {
+    func = PermuteSpecialCaseCHW2HWC<1>;
+  } else if (movement_size == 2) {
+    func = PermuteSpecialCaseCHW2HWC<2>;
+  } else if (movement_size == 4) {
+    func = PermuteSpecialCaseCHW2HWC<4>;
+  } else if (movement_size == 8) {
+    func = PermuteSpecialCaseCHW2HWC<8>;
+  } else if (movement_size == 16) {
+    func = PermuteSpecialCaseCHW2HWC<16>;
+  } else {
+    UNIMPLEMENTED();
+  }
+  func(num_dims, src_dims, src, permutation, dst);
+  printf("chw-hwc \n");
+}
+
 bool PermuteSpecialCase(DataType data_type, size_t num_dims, const int64_t* src_dims,
                         const void* src, const int* permutation, void* dst) {
-  if (0x102 == perm2key(num_dims, permutation)) {
-    void (*func)(size_t num_dims, const int64_t* src_dims, const void* src, const int* permutation,
-                 void* dst) = nullptr;
-    size_t movement_size = GetSizeOfDataType(data_type);
-    if (movement_size == 1) {
-      func = PermuteSpecialCaseCHW<1>;
-    } else if (movement_size == 2) {
-      func = PermuteSpecialCaseCHW<2>;
-    } else if (movement_size == 4) {
-      func = PermuteSpecialCaseCHW<4>;
-    } else if (movement_size == 8) {
-      func = PermuteSpecialCaseCHW<8>;
-    } else if (movement_size == 16) {
-      func = PermuteSpecialCaseCHW<16>;
-    } else {
-      UNIMPLEMENTED();
-    }
-    func(num_dims, src_dims, src, permutation, dst);
-    printf("chw-hwc \n");
+  size_t key = perm2key(num_dims, permutation);
+  if (HWC2CHW == key) {
+    LaunchSpecialCaseHWC2CHW(data_type, num_dims, src_dims, src, permutation, dst);
+    return true;
+  } else if (CHW2HWC == key) {
+    LaunchSpecialCaseCHW2HWC(data_type, num_dims, src_dims, src, permutation, dst);
     return true;
   }
   return false;
