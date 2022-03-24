@@ -78,18 +78,14 @@ template<size_t movement_size>
 void PermuteSpecialCaseCHW(size_t num_dims, const int64_t* src_dims, const void* src,
                            const int* permutation, void* dst) {
   using T = typename std::aligned_storage<movement_size, movement_size>::type;
-
-  size_t iter_num = src_dims[0] * src_dims[1];
-  size_t chanal_num = src_dims[2];
-
+  size_t dim0_num = src_dims[0] * src_dims[1];
+  size_t dim1_num = src_dims[2];
   T* src_ptr = (T*)src;
   T* dst_ptr = (T*)dst;
-  T* c_ptr[kMaxNumDims] = {};
 
-  for (int i = 0; i < num_dims; i++) { c_ptr[i] = dst_ptr + (i * iter_num); }
-
-  for (int64_t i = 0; i < iter_num; i++) {
-    for (int64_t c = 0; c < chanal_num; c++) { c_ptr[c][i] = src_ptr[i * chanal_num + c]; }
+  for (int64_t i = 0; i < dim0_num; i++) {
+    T* c_ptr = src_ptr + (i * dim1_num);
+    for (int64_t j = 0; j < dim1_num; j++) { dst_ptr[j*dim0_num+i] = c_ptr[j]; }
   }
 }
 
