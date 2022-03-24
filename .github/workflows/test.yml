@@ -594,9 +594,7 @@ jobs:
         if: ${{ !fromJson(matrix.cache-hit) && contains(matrix.runs-on, 'self-hosted') }}
         run: |
           docker exec ${TEST_CONTAINER_NAME} python3 -m pip install -e ${{ env.FLOW_VISION_SRC}}
-      ############################################################################################################
-      #########         Benchmark Start       ####################################################################
-      ############################################################################################################
+      # start pytest benchmark
       - name: Benchmark alexnet
         timeout-minutes: 20
         if: ${{ !fromJson(matrix.cache-hit) && matrix.test-type == 'benchmark' && matrix.device == 'cuda' }}
@@ -1143,9 +1141,7 @@ jobs:
             --benchmark-compare-fail=min:5%
             --benchmark-compare-fail=mean:0.001
           container-name: ${{ env.TEST_CONTAINER_NAME }}
-      ############################################################################################################
-      #########         Benchmark End       ######################################################################
-      ############################################################################################################
+      # end pytest benchmark
       - name: Print stacks in all core files
         timeout-minutes: 45
         if: ${{ failure() && contains(matrix.runs-on, 'self-hosted') }}
