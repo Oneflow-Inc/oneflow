@@ -47,7 +47,7 @@ def _test_conv1d(test_case, placement, sbp):
 
 
 @autotest(n=1, check_graph=False)
-def test_depthwise_conv1d(test_case, placement, sbp):
+def _test_depthwise_conv1d(test_case, placement, sbp):
     ndim = 3
     dims = [random(1, 3).to(int) * 8 for _ in range(ndim)]
     m = torch.nn.Conv1d(
@@ -76,7 +76,7 @@ class TestConv1d(flow.unittest.TestCase):
             for sbp in all_sbp(placement, max_dim=2):
                 _test_conv1d(test_case, placement, sbp)
             for sbp in all_sbp(placement, max_dim=1):
-                test_depthwise_conv1d(test_case, placement, sbp)
+                _test_depthwise_conv1d(test_case, placement, sbp)
 
 
 if __name__ == "__main__":
