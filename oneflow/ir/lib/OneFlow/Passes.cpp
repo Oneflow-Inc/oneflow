@@ -420,6 +420,22 @@ TransposeOp getResultTransposeOp(NCHWCompatible op, Value val, NamedAttrList tra
   return transpose_op;
 }
 
+bool checkInsertTransposeOp(NCHWCompatible op, PatternRewriter& rewriter) {
+  bool insert_transpose_op_flag = false;
+  for (mlir::Value operand : op->getOperands()) {
+    TransposeOp transposeInputOp = operand.getDefiningOp<TransposeOp>();
+    if (!transposeInputOp) continue;
+    const auto perm = transposeInputOp.permAttr();
+    if (perm.size() == 4 && perm[0] == rewriter.getSI32IntegerAttr(0)
+        && perm[1] == rewriter.getSI32IntegerAttr(3) && perm[2] == rewriter.getSI32IntegerAttr(1)
+        && perm[3] == rewriter.getSI32IntegerAttr(2)) {
+      insert_transpose_op_flag = true;
+      break;
+    }
+  }
+  return insert_transpose_op_flag;
+}
+
 }  // namespace oneflow
 
 }  // namespace mlir
@@ -445,7 +461,7 @@ struct AutoNhwcPattern : public OpInterfaceRewritePattern<NCHWCompatible> {
       return failure();
     }
 
-    if (op.IsNCHW()) {
+    if (op.IsNCHW() || (!op.IsNCHW() && checkInsertTransposeOp(op, rewriter))) {
       // create transpose op for input operand
       SmallVector<Value, 4> tranposed_operands;
       llvm::DenseSet<Value> operand_transpose = op.OperandsToTranspose();

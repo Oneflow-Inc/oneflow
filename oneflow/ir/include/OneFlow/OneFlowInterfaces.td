@@ -110,5 +110,4 @@ def NCHWCompatibleInterface : OpInterface<"NCHWCompatible"> {
   let cppNamespace = "::mlir::oneflow";
 }
 
-
 #endif  // ONEFLOW_IR_INCLUDE_ONEFLOW_ONEFLOWINTERFACES_H_

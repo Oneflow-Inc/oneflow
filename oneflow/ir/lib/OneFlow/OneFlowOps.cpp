@@ -496,6 +496,24 @@ llvm::SmallVector<Value, 4> MaxPool2DOp::NchwToNhwc(llvm::SmallVector<Value, 4> 
   return results;
 }
 
+bool ReluOp::IsNCHW() { return false; }
+
+llvm::DenseSet<Value> ReluOp::OperandsToTranspose() { return {this->x()}; }
+
+llvm::DenseSet<Value> ReluOp::ResultsToTranspose() { return {this->y()}; }
+
+llvm::SmallVector<Value, 4> ReluOp::NchwToNhwc(llvm::SmallVector<Value, 4> value,
+                                               PatternRewriter& rewriter) {
+  auto relu_op = *this;
+  SmallVector<Value, 4> operands{value[0]};
+  auto res = rewriter
+                 .create<oneflow::ReluOp>(relu_op.getLoc(), relu_op->getResultTypes(), operands,
+                                          relu_op->getAttrs())
+                 ->getResults();
+  llvm::SmallVector<Value, 4> results{res[0]};
+  return results;
+}
+
 }  // namespace oneflow
 
 }  // namespace mlir
