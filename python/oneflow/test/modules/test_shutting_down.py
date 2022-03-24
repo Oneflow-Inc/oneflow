@@ -14,7 +14,10 @@ See the License for the specific language governing permissions and
 limitations under the License.
 """
 import oneflow
+import os
 
+
+world_size = os.getenv('WORLD_SIZE')
 
 class TestCallWhenShuttingDown:
     def __init__(self):
@@ -22,8 +25,9 @@ class TestCallWhenShuttingDown:
         print(tensor)
 
     def __del__(self):
-        tensor = oneflow.ones((2, 2))
-        print(tensor)
+        if world_size == 1:
+            tensor = oneflow.ones((2, 2))
+            print(tensor)
 
 
 test_call_when_shutting_down = TestCallWhenShuttingDown()
