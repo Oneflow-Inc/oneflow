@@ -188,6 +188,7 @@ class TestSeluModule(flow.unittest.TestCase):
     def test_selu_module(test_case):
         _test_activation_module(test_case, "selu")
 
+
 class TestSoftplusModule(flow.unittest.TestCase):
     def test_softplus_module(test_case):
         _test_activation_module(test_case, "softplus")
