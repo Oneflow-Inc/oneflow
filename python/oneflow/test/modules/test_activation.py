@@ -511,7 +511,6 @@ class TestSoftplusModule(flow.unittest.TestCase):
         for arg in GenArgList(arg_dict):
             arg[0](test_case, *arg[1:])
 
-    @unittest.skip("pytorch softplus backward has bug")
     @autotest()
     def test_softplus_module_with_random_data(test_case):
         m = torch.nn.Softplus(beta=random() | nothing(), threshold=random() | nothing())

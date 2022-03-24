@@ -231,7 +231,7 @@ class Softplus : public OpExprGradFunction<SoftplusCaptureState> {
     ComposedAttrMap composed_attrs(attrs, base_attrs_);
     ctx->beta = JUST(composed_attrs.GetAttr<double>("beta"));
     ctx->threshold = JUST(composed_attrs.GetAttr<double>("threshold"));
-    ctx->SaveTensorForBackward(outputs.at(0));
+    ctx->SaveTensorForBackward(inputs.at(0));
     return Maybe<void>::Ok();
   }
 
