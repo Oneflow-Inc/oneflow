@@ -36,6 +36,8 @@ void AddDiffStaticShapeCast(const OpGraph& op_graph, JobBuilder* job_builder,
 Maybe<void> CountNotFiniteIfNeeded(JobPassCtx* ctx, const OpGraph& op_graph,
                                    JobBuilder* job_builder,
                                    const HashMap<LogicalBlobId, LogicalBlobId>& lbi2diff_lbi);
+Maybe<void> MakeGetterLossOpNode4OpName(
+    const OpGraph& op_graph, std::function<OpNode*(const std::string&)>* LossOpNode4OpName);
 Maybe<void> ScaleModelDiffByLossInstanceNum(const OpGraph& op_graph, JobBuilder* job_builder,
                                             HashMap<LogicalBlobId, LogicalBlobId>* lbi2diff_lbi);
 void ScaleModelDiffByLossScale(JobPassCtx* ctx, const OpGraph& op_graph, JobBuilder* job_builder,
