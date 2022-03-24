@@ -21,8 +21,6 @@ limitations under the License.
 namespace oneflow {
 
 Shape CreateReducedShape(const ShapeView& shape, const AxisVector& axis_vec) {
-  // For 0-dim Tensor
-  if (axis_vec.empty()) { return Shape({}); }
   DimVector dim_vec;
   shape.ToDimVector(&dim_vec);
   for (int64_t axis : axis_vec) { dim_vec.at(ShiftNegativeAxis(axis, shape.NumAxes())) = 1; }
