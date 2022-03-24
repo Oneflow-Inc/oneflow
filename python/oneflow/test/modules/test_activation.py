@@ -757,7 +757,7 @@ class TestHardshrinkModule(flow.unittest.TestCase):
 
     @autotest(n=5)
     def test_hardshrink_module_with_0dim_data(test_case):
-        m = torch.nn.Hardshrink(labmd=random() | nothing())
+        m = torch.nn.Hardshrink(lambd=random() | nothing())
         m.train(random())
         device = random_device()
         m.to(device)
@@ -766,8 +766,8 @@ class TestHardshrinkModule(flow.unittest.TestCase):
         return y
 
     @autotest(auto_backward=False, check_graph=True)
-    def test_softshrink_module_with_0_size_data(test_case):
-        m = torch.nn.Hardshrink(alpha=random() | nothing())
+    def test_hardshrink_module_with_0_size_data(test_case):
+        m = torch.nn.Hardshrink(lambd=random() | nothing())
         m.train(random())
         device = random_device()
         m.to(device)
