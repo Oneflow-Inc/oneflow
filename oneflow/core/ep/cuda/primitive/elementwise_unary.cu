@@ -38,10 +38,12 @@ class ElementwiseUnaryImpl : public ElementwiseUnary {
             cuda_stream->cuda_stream())));
   }
 
-  void LaunchWithStride(Stream* stream, const void* src, void* dst, size_t count, const StrideParam& in_stride, const StrideParam& out_stride) override {
+  void LaunchWithStride(Stream* stream, const void* src, void* dst, size_t count,
+                        const StrideParam& in_stride, const StrideParam& out_stride) override {
     auto* cuda_stream = stream->As<CudaStream>();
     OF_CUDA_CHECK(
-        (cuda::elementwise::UnaryWithStride<UnaryFunctor<DeviceType::kCUDA, unary_op, Dst, Src>, Dst, Src>(
+        (cuda::elementwise::UnaryWithStride<UnaryFunctor<DeviceType::kCUDA, unary_op, Dst, Src>,
+                                            Dst, Src>(
             UnaryFunctor<DeviceType::kCUDA, unary_op, Dst, Src>(), count, in_stride, out_stride,
             reinterpret_cast<Dst*>(dst), reinterpret_cast<const Src*>(src),
             cuda_stream->cuda_stream())));

@@ -41,8 +41,8 @@ struct StridesParam {
 
 template<typename IndexType, size_t ndim>
 __device__ __forceinline__ IndexType compute_in_offset(IndexType out_offset,
-                                                   const StridesParam& out_params,
-                                                   const StridesParam& in_params) {
+                                                       const StridesParam& out_params,
+                                                       const StridesParam& in_params) {
   IndexType in_offset = 0;
   IndexType remaining = out_offset;
 

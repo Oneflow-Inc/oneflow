@@ -39,7 +39,7 @@ namespace oneflow {
   Shape* out_shape = out_tensor_desc->mut_shape();
   CHECK_OR_RETURN(in_tensor_desc.is_dynamic() == false);
   // *out_tensor_desc = in_tensor_desc;
-  *out_tensor_desc->mut_data_type()=in_tensor_desc.data_type();
+  *out_tensor_desc->mut_data_type() = in_tensor_desc.data_type();
   // *out_tensor_desc->mut_stride() = Stride(in_shape);
   if (in_shape.NumAxes() == 0 || shape.NumAxes() == 0) {
     // NOTE(chengcheng): input/output Scalar

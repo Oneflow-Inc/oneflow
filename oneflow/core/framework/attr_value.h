@@ -41,8 +41,8 @@ namespace user_op {
 
 #define ENUM_ATTR_SEQ OF_PP_MAKE_TUPLE_SEQ(at_data_type, DataType, AttrType::kAtDataType)
 
-#define MESSAGE_ATTR_SEQ                                       \
-  OF_PP_MAKE_TUPLE_SEQ(at_shape, Shape, AttrType::kAtShape)    \
+#define MESSAGE_ATTR_SEQ                                    \
+  OF_PP_MAKE_TUPLE_SEQ(at_shape, Shape, AttrType::kAtShape) \
   OF_PP_MAKE_TUPLE_SEQ(at_stride, Stride, AttrType::kAtStride)
 
 #define LIST_BASIC_ATTR_SEQ                                                         \
@@ -53,8 +53,8 @@ namespace user_op {
 #define LIST_ENUM_ATTR_SEQ \
   OF_PP_MAKE_TUPLE_SEQ(at_list_data_type, std::vector<DataType>, AttrType::kAtListDataType)
 
-#define LIST_MESSAGE_ATTR_SEQ \
-  OF_PP_MAKE_TUPLE_SEQ(at_list_shape, std::vector<Shape>, AttrType::kAtListShape)  \
+#define LIST_MESSAGE_ATTR_SEQ                                                     \
+  OF_PP_MAKE_TUPLE_SEQ(at_list_shape, std::vector<Shape>, AttrType::kAtListShape) \
   OF_PP_MAKE_TUPLE_SEQ(at_list_stride, std::vector<Stride>, AttrType::kAtListStride)
 
 #define LIST_STRING_ATTR_SEQ \

@@ -31,10 +31,12 @@ __global__ void MathUnaryElementwiseForwardGpu(const int n, const T* x, T* y) {
 }
 
 template<template<typename> class UnaryFunctor, typename T>
-__global__ void MathUnaryElementwiseWithStrideForwardGpu(const int n, const StrideParam in_stride, const StrideParam out_stride, const T* x, T* y) {
-  CUDA_1D_KERNEL_LOOP(i, n) { 
+__global__ void MathUnaryElementwiseWithStrideForwardGpu(const int n, const StrideParam in_stride,
+                                                         const StrideParam out_stride, const T* x,
+                                                         T* y) {
+  CUDA_1D_KERNEL_LOOP(i, n) {
     const int32_t idx = oneflow::cuda::elementwise::offset_to_index(i, in_stride, out_stride);
-    y[i] = UnaryFunctor<T>::Forward(x[idx]); 
+    y[i] = UnaryFunctor<T>::Forward(x[idx]);
   }
 }
 
@@ -65,19 +67,19 @@ class MathUnaryElementwiseGpuKernel final : public user_op::OpKernel,
     // compute is_contiguous and construct input/output stride params
     const int32_t ndim = tensor_x->shape().NumAxes();
     const StrideVector& in_stride_vec = tensor_x->stride().StrideVec();
-    const StrideVector& out_stride_vec = tensor_y->stride().StrideVec();    
+    const StrideVector& out_stride_vec = tensor_y->stride().StrideVec();
     DimVector in_shape_vec;
     tensor_x->shape().ToDimVector(&in_shape_vec);
     bool is_contiguous = oneflow::one::IsContiguous(in_shape_vec, in_stride_vec);
     StrideParam in_stride(in_stride_vec.data(), ndim), out_stride(out_stride_vec.data(), ndim);
-    if(is_contiguous){
+    if (is_contiguous) {
       MathUnaryElementwiseForwardGpu<UnaryFunctor, T>
-        <<<BlocksNum4ThreadsNum(n), kCudaThreadsNumPerBlock, 0,
-           ctx->stream()->As<ep::CudaStream>()->cuda_stream()>>>(n, x, y);
-    }else{
+          <<<BlocksNum4ThreadsNum(n), kCudaThreadsNumPerBlock, 0,
+             ctx->stream()->As<ep::CudaStream>()->cuda_stream()>>>(n, x, y);
+    } else {
       MathUnaryElementwiseWithStrideForwardGpu<UnaryFunctor, T>
-        <<<BlocksNum4ThreadsNum(n), kCudaThreadsNumPerBlock, 0,
-           ctx->stream()->As<ep::CudaStream>()->cuda_stream()>>>(n, in_stride, out_stride, x, y); 
+          <<<BlocksNum4ThreadsNum(n), kCudaThreadsNumPerBlock, 0,
+             ctx->stream()->As<ep::CudaStream>()->cuda_stream()>>>(n, in_stride, out_stride, x, y);
     }
   }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }

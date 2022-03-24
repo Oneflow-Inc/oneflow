@@ -25,7 +25,6 @@ namespace oneflow {
 namespace ep {
 namespace primitive {
 
-
 class ElementwiseUnary : public Primitive {
  public:
   OF_DISALLOW_COPY_AND_MOVE(ElementwiseUnary);
@@ -33,7 +32,8 @@ class ElementwiseUnary : public Primitive {
   ~ElementwiseUnary() override = default;
 
   virtual void Launch(Stream* stream, const void* src, void* dst, size_t count) = 0;
-  virtual void LaunchWithStride(Stream* stream, const void* src, void* dst, size_t count, const StrideParam& in_stride, const StrideParam& out_stride) = 0;
+  virtual void LaunchWithStride(Stream* stream, const void* src, void* dst, size_t count,
+                                const StrideParam& in_stride, const StrideParam& out_stride) = 0;
 };
 
 class ElementwiseUnaryFactory : public Factory<ElementwiseUnary> {

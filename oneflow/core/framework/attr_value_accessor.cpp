@@ -160,7 +160,7 @@ std::vector<Stride> AttrValueAccessor<std::vector<Stride>>::Attr(const AttrValue
 }
 template<>
 void AttrValueAccessor<std::vector<Stride>>::Attr(const std::vector<Stride>& cpp_val,
-                                                 AttrValue* attr_val) {
+                                                  AttrValue* attr_val) {
   attr_val->mutable_at_list_stride()->clear_val();
   FOR_RANGE(int32_t, i, 0, cpp_val.size()) {
     cpp_val.at(i).ToProto(attr_val->mutable_at_list_stride()->add_val());

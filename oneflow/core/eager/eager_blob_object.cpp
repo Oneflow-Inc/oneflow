@@ -23,7 +23,7 @@ namespace oneflow {
 namespace vm {
 
 EagerBlobObject::EagerBlobObject(const std::shared_ptr<MemoryCase>& mem_case,
-                                 const std::shared_ptr<Shape>& shape, 
+                                 const std::shared_ptr<Shape>& shape,
                                  const std::shared_ptr<Stride>& stride, DataType data_type,
                                  const std::shared_ptr<TensorStorage>& tensor_storage,
                                  const intrusive::shared_ptr<LocalDepObject>& dep_object)
@@ -45,8 +45,8 @@ Maybe<void> EagerBlobObject::InitBlob() { return InitBlobWithOffset(0); }
 
 Maybe<void> EagerBlobObject::InitBlobWithOffset(const int64_t offset) {
   CHECK_NE_OR_RETURN(blob_desc_.data_type(), DataType::kInvalidDataType);
-  if (!blob_desc_.shape().is_initialized()) { 
-    blob_desc_.set_shape(Shape(DimVector{})); 
+  if (!blob_desc_.shape().is_initialized()) {
+    blob_desc_.set_shape(Shape(DimVector{}));
     blob_desc_.set_stride(Stride(StrideVector{}));
   }
   {

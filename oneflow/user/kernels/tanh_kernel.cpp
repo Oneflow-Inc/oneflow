@@ -46,17 +46,18 @@ class TanhKernel final : public user_op::OpKernel, public user_op::CudaGraphSupp
     // compute is_contiguous and construct input/output stride params
     const int32_t ndim = x->shape().NumAxes();
     const StrideVector& in_stride_vec = x->stride().StrideVec();
-    const StrideVector& out_stride_vec = y->stride().StrideVec();    
+    const StrideVector& out_stride_vec = y->stride().StrideVec();
     DimVector in_shape_vec;
     x->shape().ToDimVector(&in_shape_vec);
     bool is_contiguous = oneflow::one::IsContiguous(in_shape_vec, in_stride_vec);
     StrideParam in_stride(in_stride_vec.data(), ndim), out_stride(out_stride_vec.data(), ndim);
 
     if (elem_cnt != 0) {
-      if(is_contiguous){
+      if (is_contiguous) {
         primitive->Launch(ctx->stream(), x->dptr(), y->mut_dptr(), elem_cnt);
-      }else{
-        primitive->LaunchWithStride(ctx->stream(), x->dptr(), y->mut_dptr(), elem_cnt, in_stride, out_stride);
+      } else {
+        primitive->LaunchWithStride(ctx->stream(), x->dptr(), y->mut_dptr(), elem_cnt, in_stride,
+                                    out_stride);
       }
     } else {
       // For 0 shape Tensor

@@ -22,14 +22,24 @@ bool CompareLbiBlobDescPair(const LbiBlobDescPair& lhs, const LbiBlobDescPair& r
 }
 
 BlobDesc::BlobDesc(const Shape& shape, DataType dtype, bool is_dynamic)
-    : shape_(std::make_shared<Shape>(shape)), stride_(std::make_shared<Stride>(shape)), data_type_(dtype), is_dynamic_(is_dynamic) {}
+    : shape_(std::make_shared<Shape>(shape)),
+      stride_(std::make_shared<Stride>(shape)),
+      data_type_(dtype),
+      is_dynamic_(is_dynamic) {}
 BlobDesc::BlobDesc(const Shape& shape, const Stride& stride, DataType dtype, bool is_dynamic)
-    : shape_(std::make_shared<Shape>(shape)), stride_(std::make_shared<Stride>(stride)), data_type_(dtype), is_dynamic_(is_dynamic) {}
-BlobDesc::BlobDesc(const std::shared_ptr<Shape>& shape, const std::shared_ptr<Stride>& stride, DataType dtype, bool is_dynamic)
+    : shape_(std::make_shared<Shape>(shape)),
+      stride_(std::make_shared<Stride>(stride)),
+      data_type_(dtype),
+      is_dynamic_(is_dynamic) {}
+BlobDesc::BlobDesc(const std::shared_ptr<Shape>& shape, const std::shared_ptr<Stride>& stride,
+                   DataType dtype, bool is_dynamic)
     : shape_(shape), stride_(stride), data_type_(dtype), is_dynamic_(is_dynamic) {}
-BlobDesc::BlobDesc(const Shape& shape, DataType dtype) : BlobDesc(shape, Stride(shape), dtype, false) {}
-BlobDesc::BlobDesc(const Shape& shape, const Stride& stride, DataType dtype) : BlobDesc(shape, stride, dtype, false) {}
-BlobDesc::BlobDesc(const std::shared_ptr<Shape>& shape, const std::shared_ptr<Stride>& stride, DataType dtype)
+BlobDesc::BlobDesc(const Shape& shape, DataType dtype)
+    : BlobDesc(shape, Stride(shape), dtype, false) {}
+BlobDesc::BlobDesc(const Shape& shape, const Stride& stride, DataType dtype)
+    : BlobDesc(shape, stride, dtype, false) {}
+BlobDesc::BlobDesc(const std::shared_ptr<Shape>& shape, const std::shared_ptr<Stride>& stride,
+                   DataType dtype)
     : BlobDesc(shape, stride, dtype, false) {}
 BlobDesc::BlobDesc(DataType dtype) : BlobDesc(Shape(), Stride(), dtype, false) {}
 
@@ -69,7 +79,7 @@ void BlobDesc::CopyFrom(const BlobDesc& other) {
 void BlobDesc::set_is_dynamic(bool is_dynamic) { is_dynamic_ = is_dynamic; }
 
 bool BlobDesc::operator==(const BlobDesc& rhs) const {
-  return (shape() == rhs.shape())&& (stride() == rhs.stride()) && (data_type() == rhs.data_type())
+  return (shape() == rhs.shape()) && (stride() == rhs.stride()) && (data_type() == rhs.data_type())
          && (is_dynamic() == rhs.is_dynamic());
 }
 

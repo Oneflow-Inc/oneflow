@@ -78,8 +78,7 @@ Maybe<Tensor> BasicView(const std::shared_ptr<Tensor>& input, const Shape& targe
   // TODO(): Check shape compatible.
   auto device = JUST(input->device());
   auto tensor_meta = std::make_shared<MirroredTensorMeta>(
-      std::make_shared<Shape>(target_shape), 
-      std::make_shared<Stride>(target_stride),
+      std::make_shared<Shape>(target_shape), std::make_shared<Stride>(target_stride),
       input->dtype()->data_type(), device, storage_offset);
 
   CHECK_OR_RETURN(JUST(input->has_eager_blob_object()));

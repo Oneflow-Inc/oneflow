@@ -28,8 +28,8 @@ TensorDesc& TensorDesc::operator=(const TensorDesc& rhs) {
 }
 
 bool TensorDesc::operator==(const TensorDesc& rhs) const {
-  return (this->shape() == rhs.shape()) && (this->stride() == rhs.stride()) && (this->data_type() == rhs.data_type())
-         && (this->is_dynamic() == rhs.is_dynamic());
+  return (this->shape() == rhs.shape()) && (this->stride() == rhs.stride())
+         && (this->data_type() == rhs.data_type()) && (this->is_dynamic() == rhs.is_dynamic());
 }
 
 NaiveTensorDesc::NaiveTensorDesc(const NaiveTensorDesc& rhs) { *this = rhs; }

@@ -39,7 +39,7 @@ bool IsContiguous(const Shape& shape, const Stride& stride) {
 bool IsContiguous(const DimVector& shape_vec, const StrideVector& stride_vec) {
   const size_t ndim = shape_vec.size();
   const size_t stride_ndim = stride_vec.size();
-  if(ndim < 1 || stride_ndim < 1){ return true; }
+  if (ndim < 1 || stride_ndim < 1) { return true; }
   int64_t elem_cnt = 1;
   for (int64_t s : shape_vec) { elem_cnt *= s; }
   if (elem_cnt <= 1) { return true; }

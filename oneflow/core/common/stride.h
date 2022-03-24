@@ -38,7 +38,8 @@ struct StrideParam {
   }
 };
 
-int64_t compute_index(int64_t out_offset, const StrideParam& in_stride, const StrideParam& out_stride);
+int64_t compute_index(int64_t out_offset, const StrideParam& in_stride,
+                      const StrideParam& out_stride);
 
 class Stride final {
  public:

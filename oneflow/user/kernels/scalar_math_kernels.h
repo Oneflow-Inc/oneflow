@@ -22,14 +22,21 @@ limitations under the License.
 
 namespace oneflow {
 
-#define INSTANTIATE_SCALAR_MATH_FUNCTORS(device_type, binary_op)      \
-  template struct ScalarMathFunctor<device_type, binary_op, uint8_t>; \
-  template struct ScalarMathFunctor<device_type, binary_op, int8_t>;  \
-  template struct ScalarMathFunctor<device_type, binary_op, int32_t>; \
-  template struct ScalarMathFunctor<device_type, binary_op, int64_t>; \
-  template struct ScalarMathFunctor<device_type, binary_op, float>;   \
-  template struct ScalarMathFunctor<device_type, binary_op, double>;  \
-  template struct ScalarMathFunctor<device_type, binary_op, float16>;
+#define INSTANTIATE_SCALAR_MATH_FUNCTORS(device_type, binary_op)                \
+  template struct ScalarMathFunctor<device_type, binary_op, uint8_t>;           \
+  template struct ScalarMathFunctor<device_type, binary_op, int8_t>;            \
+  template struct ScalarMathFunctor<device_type, binary_op, int32_t>;           \
+  template struct ScalarMathFunctor<device_type, binary_op, int64_t>;           \
+  template struct ScalarMathFunctor<device_type, binary_op, float>;             \
+  template struct ScalarMathFunctor<device_type, binary_op, double>;            \
+  template struct ScalarMathFunctor<device_type, binary_op, float16>;           \
+  template struct ScalarMathWithStrideFunctor<device_type, binary_op, uint8_t>; \
+  template struct ScalarMathWithStrideFunctor<device_type, binary_op, int8_t>;  \
+  template struct ScalarMathWithStrideFunctor<device_type, binary_op, int32_t>; \
+  template struct ScalarMathWithStrideFunctor<device_type, binary_op, int64_t>; \
+  template struct ScalarMathWithStrideFunctor<device_type, binary_op, float>;   \
+  template struct ScalarMathWithStrideFunctor<device_type, binary_op, double>;  \
+  template struct ScalarMathWithStrideFunctor<device_type, binary_op, float16>;
 
 #define INSTANTIATE_SCALAR_REVERSE_MATH_FUNCTORS(device_type, binary_op)     \
   template struct ScalarReverseMathFunctor<device_type, binary_op, uint8_t>; \
@@ -48,6 +55,22 @@ struct ScalarMathFunctor final {
 template<template<typename> class UnaryFunctor, typename T>
 OF_DEVICE_FUNC void DoScalarMath(const int64_t elem_cnt, const T scalar, const T* in, T* out) {
   XPU_1D_KERNEL_LOOP(idx, elem_cnt) { out[idx] = UnaryFunctor<T>::Invoke(in[idx], scalar); }
+}
+
+template<DeviceType device_type, template<typename> class BIN_OP, typename T>
+struct ScalarMathWithStrideFunctor final {
+  void operator()(ep::Stream* stream, const int64_t elem_cnt, const StrideParam& in_stride,
+                  const StrideParam& out_stride, const T scalar, const T* in, T* out);
+};
+
+template<template<typename> class UnaryFunctor, typename T>
+OF_DEVICE_FUNC void DoScalarMathWithStride(const int64_t elem_cnt, const StrideParam& in_stride,
+                                           const StrideParam& out_stride, const T scalar,
+                                           const T* in, T* out) {
+  XPU_1D_KERNEL_LOOP(i, elem_cnt) {
+    const int64_t in_idx = compute_index(i, in_stride, out_stride);
+    out[i] = UnaryFunctor<T>::Invoke(in[in_idx], scalar);
+  }
 }
 
 template<DeviceType device_type, template<typename> class BIN_OP, typename T>

@@ -31,11 +31,11 @@ struct UnaryElemwiseXpuLauncher<DeviceType::kCUDA, FunctorT, OutputT, InputA> fi
 
 template<typename FunctorT, typename OutputT, typename InputA>
 struct UnaryElemwiseXpuWithStride<DeviceType::kCUDA, FunctorT, OutputT, InputA> final {
-  void operator()(ep::Stream* stream, int64_t elem_cnt, 
-    StrideParam& in_stride, StrideParam& out_stride, 
-    OutputT* out, const InputA* input_a, FunctorT functor) {
-    OF_CUDA_CHECK(cuda::elementwise::UnaryWithStride(functor, elem_cnt, in_stride, out_stride, out, input_a,
-                                           stream->As<ep::CudaStream>()->cuda_stream()));
+  void operator()(ep::Stream* stream, int64_t elem_cnt, StrideParam& in_stride,
+                  StrideParam& out_stride, OutputT* out, const InputA* input_a, FunctorT functor) {
+    OF_CUDA_CHECK(cuda::elementwise::UnaryWithStride(functor, elem_cnt, in_stride, out_stride, out,
+                                                     input_a,
+                                                     stream->As<ep::CudaStream>()->cuda_stream()));
   }
 };
 
