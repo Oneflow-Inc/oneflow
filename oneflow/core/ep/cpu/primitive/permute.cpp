@@ -68,57 +68,6 @@ class PermuteImpl : public Permute {
 
 #ifdef WITH_ONEDNN
 
-size_t perm2key(size_t num_dims, const int* permutation) {
-  uint64_t key = 0;
-  for (int i = 0; i < num_dims; i++) { key |= permutation[i] << i * 4; }
-  return key;
-}
-
-template<size_t movement_size>
-void PermuteSpecialCaseCHW(size_t num_dims, const int64_t* src_dims, const void* src,
-                           const int* permutation, void* dst) {
-  using T = typename std::aligned_storage<movement_size, movement_size>::type;
-
-  size_t iter_num = src_dims[0] * src_dims[1];
-  size_t chanal_num = src_dims[2];
-
-  T* src_ptr = (T*)src;
-  T* dst_ptr = (T*)dst;
-  T* c_ptr[kMaxNumDims] = {};
-
-  for (int i = 0; i < num_dims; i++) { c_ptr[i] = dst_ptr + (i * iter_num); }
-
-  for (int64_t i = 0; i < iter_num; i++) {
-    for (int64_t c = 0; c < chanal_num; c++) { c_ptr[c][i] = src_ptr[i * chanal_num + c]; }
-  }
-}
-
-bool PermuteSpecialCase(DataType data_type, size_t num_dims, const int64_t* src_dims,
-                        const void* src, const int* permutation, void* dst) {
-  if (0x102 == perm2key(num_dims, permutation)) {
-    void (*func)(size_t num_dims, const int64_t* src_dims, const void* src, const int* permutation,
-                 void* dst) = nullptr;
-    size_t movement_size = GetSizeOfDataType(data_type);
-    if (movement_size == 1) {
-      func = PermuteSpecialCaseCHW<1>;
-    } else if (movement_size == 2) {
-      func = PermuteSpecialCaseCHW<2>;
-    } else if (movement_size == 4) {
-      func = PermuteSpecialCaseCHW<4>;
-    } else if (movement_size == 8) {
-      func = PermuteSpecialCaseCHW<8>;
-    } else if (movement_size == 16) {
-      func = PermuteSpecialCaseCHW<16>;
-    } else {
-      UNIMPLEMENTED();
-    }
-    func(num_dims, src_dims, src, permutation, dst);
-    printf("chw-hwc \n");
-    return true;
-  }
-  return false;
-}
-
 constexpr size_t kMaxOneDnnMapSize = 5;
 constexpr size_t kMaxOneDNNMovementSize = 4;
 uint32_t OnednnDatatypeTagMap[kMaxOneDnnMapSize] = {0, dnnl_u8, dnnl_f16, 0, dnnl_s32};
@@ -133,9 +82,6 @@ class OneDnnPermuteImpl : public Permute {
               const void* src, const int* permutation, void* dst) override {
     CHECK_LE(num_dims, kMaxNumDims);
     CHECK_GT(num_dims, 0);
-
-    // SpecialCase
-    if (PermuteSpecialCase(data_type, num_dims, src_dims, src, permutation, dst)) { return; }
 
     CpuStream* cpu_stream = stream->As<CpuStream>();
     size_t num_threads = static_cast<CpuDevice*>(cpu_stream->device())->GetNumThreads();
