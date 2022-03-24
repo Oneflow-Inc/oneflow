@@ -153,9 +153,11 @@ class TestHardsigmoidModule(flow.unittest.TestCase):
     def test_hardsigmoid_module(test_case):
         _test_activation_module(test_case, "hardsigmoid")
 
+
 class TestHardshrinkModule(flow.unittest.TestCase):
     def test_hardshrink_module(test_case):
         _test_activation_module(test_case, "hardshrink")
+
 
 class TestLogSigmoidModule(flow.unittest.TestCase):
     def test_logsigmoid_module(test_case):

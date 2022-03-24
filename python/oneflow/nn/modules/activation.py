@@ -450,14 +450,16 @@ class Hardsigmoid(Module):
         inplace_str = "inplace=True" if self.inplace else ""
         return inplace_str
 
-        
+
 class Hardshrink(Module):
     r"""
     The interface is consistent with PyTorch.
     The documentation is referenced from: https://pytorch.org/docs/stable/generated/torch.nn.Hardshrink.html?highlight=hardshrink#torch.nn.Hardshrink
+
     The Hardshrink activation.
+
     The formula is:
-    
+
     .. math::
         \text{Hardshrink}(x) =
         \begin{cases}
@@ -465,16 +467,18 @@ class Hardshrink(Module):
         x, & \text{ if } x < -\lambda \\
         0, & \text{ otherwise }
         \end{cases}
+
     Args:
         lambd: the :math:`\\lambda` value for the Hardshrink formulation. Default: 0.5
         inplace: can optionally do the operation in-place. Default: ``False``
-    
+
     Shape:
         - Input: :math:`(N, *)` where `*` means, any number of additional
           dimensions
         - Output: :math:`(N, *)`, same shape as the input
+
     For example:
-    
+
     .. code-block:: python
     
         >>> import numpy as np
@@ -499,6 +503,7 @@ class Hardshrink(Module):
         param_str = f"lambd={self.lambd}"
         param_str += ", inplace=True" if self.inplace else ""
         return param_str
+
 
 class Softmax(Module):
     """Applies the Softmax function to an n-dimensional input Tensor
