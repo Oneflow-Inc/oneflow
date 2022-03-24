@@ -175,7 +175,7 @@ void LaunchSpecialCaseCHW2HWC(DataType data_type, size_t num_dims, const int64_t
     UNIMPLEMENTED();
   }
   func(num_dims, src_dims, src, permutation, dst);
-  printf("chw-hwc \n");
+  printf("chw-hwc .\n");
 }
 
 bool PermuteSpecialCase(DataType data_type, size_t num_dims, const int64_t* src_dims,
@@ -207,7 +207,7 @@ class OneDnnPermuteImpl : public Permute {
     CHECK_GT(num_dims, 0);
 
     // SpecialCase
-    if (PermuteSpecialCase(data_type, num_dims, src_dims, src, permutation, dst)) { return; }
+    // if (PermuteSpecialCase(data_type, num_dims, src_dims, src, permutation, dst)) { return; }
 
     CpuStream* cpu_stream = stream->As<CpuStream>();
     size_t num_threads = static_cast<CpuDevice*>(cpu_stream->device())->GetNumThreads();
