@@ -22,7 +22,6 @@ from oneflow.test_utils.test_util import GenArgList
 
 import oneflow as flow
 import oneflow.unittest
-import torch
 
 
 def _test_softplus_impl(test_case, shape, device):
