@@ -217,10 +217,10 @@ class OneDnnPermuteImpl : public Permute {
     dnnl::stream* onednn_stream = stream->As<CpuStream>()->onednn_stream();
 
     size_t onednn_num_dims = num_dims;
-    dnnl::memory::dims onednn_dims(onednn_num_dims + 1, 0);
-    dnnl::memory::dims onednn_perm(onednn_num_dims + 1, 0);
-    dnnl::memory::dims src_stride(onednn_num_dims + 1, 0);
-    dnnl::memory::dims dst_stride(onednn_num_dims + 1, 0);
+    dnnl::memory::dims onednn_dims(kMaxNumDims + 1, 0);
+    dnnl::memory::dims onednn_perm(kMaxNumDims + 1, 0);
+    dnnl::memory::dims src_stride(kMaxNumDims + 1, 0);
+    dnnl::memory::dims dst_stride(kMaxNumDims + 1, 0);
 
     for (int64_t dim = onednn_num_dims - 1; dim >= 0; dim--) {
       onednn_dims[dim] = src_dims[dim];
@@ -234,6 +234,7 @@ class OneDnnPermuteImpl : public Permute {
       onednn_num_dims = onednn_num_dims + 1;
       movement_size = kMaxOneDNNMovementSize;
     }
+    onednn_dims.resize(onednn_num_dims);
 
     src_stride[onednn_num_dims - 1] = 1;
     dst_stride[onednn_perm[onednn_num_dims - 1]] = 1;
