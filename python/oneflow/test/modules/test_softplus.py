@@ -46,7 +46,7 @@ class Testsoftplus(flow.unittest.TestCase):
     def test_softplus(test_case):
         arg_dict = OrderedDict()
         arg_dict["shape"] = [(2, 3), (2, 4, 5, 6)]
-        arg_dict["device"] = ["cpu"]
+        arg_dict["device"] = ["cpu", "cuda"]
         for arg in GenArgList(arg_dict):
             _test_softplus_impl(test_case, *arg)
 

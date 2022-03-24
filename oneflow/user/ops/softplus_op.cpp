@@ -76,7 +76,7 @@ REGISTER_USER_OP_GRAD("softplus")
       const auto softplus_grad_op_name = ctx->FwOp().op_name() + "_grad";
       ctx->DefineOp(softplus_grad_op_name, [&ctx](user_op::BackwardOpBuilder& builder) {
         return builder.OpTypeName("softplus_grad")
-            .InputBind("y", ctx->FwOp().output("y", 0))
+            .InputBind("y", ctx->FwOp().output("out", 0))
             .InputBind("dy", ctx->FwOp().output_grad("out", 0))
             .Attr<double>("beta", ctx->FwOp().attr<double>("beta"))
             .Attr<double>("threshold", ctx->FwOp().attr<double>("threshold"))

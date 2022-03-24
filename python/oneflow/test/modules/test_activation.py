@@ -493,8 +493,7 @@ def _test_softplus_backward(test_case, device):
     of_out = m(x)
     of_out = of_out.sum()
     of_out.backward()
-    print(x.grad.numpy())
-    np_grad = [0.78805844, 0.89349302, 1.0, 1.0, 0.98233158]
+    np_grad = [0.7310585786300049, 0.8807970779778824, 1.0, 1.0, 0.9820137900379085]
     test_case.assertTrue(np.allclose(x.grad.numpy(), np_grad, 1e-05, 1e-05))
 
 
