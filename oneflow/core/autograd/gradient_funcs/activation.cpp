@@ -403,7 +403,8 @@ class TanhShrink : public OpExprGradFunction<TanhShrinkCaptureState> {
     in_grads->resize(1);
     if (ctx->requires_grad) {
       const auto& x = ctx->SavedTensors().at(0);
-      *JUST(oneflow::VectorAt(in_grads, 0)) = JUST(functional::TanhShrinkGrad(x, JUST(oneflow::VectorAt(out_grads, 0))));
+      *JUST(oneflow::VectorAt(in_grads, 0)) =
+          JUST(functional::TanhShrinkGrad(x, JUST(oneflow::VectorAt(out_grads, 0))));
     }
     return Maybe<void>::Ok();
   }

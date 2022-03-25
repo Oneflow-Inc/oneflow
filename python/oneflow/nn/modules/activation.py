@@ -263,9 +263,10 @@ class Tanhshrink(Module):
     def __init__(self, inplace=False):
         super().__init__()
         self.inplace = inplace
-    
+
     def forward(self, input):
         return flow._C.tanhshrink(input, inplace=self.inplace)
+
 
 class ELU(Module):
     """Applies the element-wise function:

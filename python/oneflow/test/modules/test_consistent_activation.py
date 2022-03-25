@@ -188,6 +188,7 @@ class TestSeluModule(flow.unittest.TestCase):
     def test_selu_module(test_case):
         _test_activation_module(test_case, "selu")
 
+
 class TestTanhshrinkModule(flow.unittest.TestCase):
     def test_tanhshrink_module(test_case):
         _test_activation_module(test_case, "tanhshrink")

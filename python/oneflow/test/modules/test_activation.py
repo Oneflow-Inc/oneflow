@@ -742,6 +742,7 @@ class TestLogSigmoidFunction(flow.unittest.TestCase):
         y = torch.nn.functional.logsigmoid(x)
         return y
 
+
 class TestTanhshrinkModule(flow.unittest.TestCase):
     @autotest()
     def test_tanhshrink_module_with_random_data(test_case):

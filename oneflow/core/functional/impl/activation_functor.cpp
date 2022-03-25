@@ -461,19 +461,19 @@ class TanhShrinkFunctor {
   std::shared_ptr<OpExpr> op_;
 };
 
-class TanhShrinkGradFunctor  {
+class TanhShrinkGradFunctor {
  public:
   TanhShrinkGradFunctor() {
     op_ = CHECK_JUST(one::OpBuilder("tanhshrink_grad").Input("x").Input("dy").Output("dx").Build());
   }
 
-  Maybe<Tensor> operator()(const std::shared_ptr<Tensor>& x, const std::shared_ptr<Tensor>& dy) const {
+  Maybe<Tensor> operator()(const std::shared_ptr<Tensor>& x,
+                           const std::shared_ptr<Tensor>& dy) const {
     MutableAttrMap attrs;
     return OpInterpUtil::Dispatch<Tensor>(*op_, {x, dy}, attrs);
   }
 
-
-  private:
+ private:
   std::shared_ptr<OpExpr> op_;
 };
 
