@@ -13,6 +13,7 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
+#include <stdexcept>
 #include "oneflow/core/common/error.h"
 #include "oneflow/core/common/exception.h"
 #include "oneflow/core/common/protobuf.h"
@@ -298,6 +299,8 @@ Error Error::InputDeviceNotMatchError() {
 }
 
 void ThrowError(const std::shared_ptr<cfg::ErrorProto>& error) {
+  if (error->has_runtime_error()) { throw std::runtime_error(error->msg()); }
+
   const auto& maybe_error = TRY(FormatErrorStr(error));
   const auto& error_str = maybe_error.GetDataAndErrorProto(error->DebugString());
 
