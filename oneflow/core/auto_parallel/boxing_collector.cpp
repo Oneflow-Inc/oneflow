@@ -76,6 +76,10 @@ BoxingCollector::BoxingCollector(int32_t max_axis) { CHECK_JUST(Init(max_axis));
 
 // Construct a boxing collector with given maximum number of axis
 Maybe<void> BoxingCollector::Init(int32_t max_axis) {
+  // Not allowed two-step boxing and disable checking for debugging
+  if (ParseBooleanFromEnv("ONEFLOW_BOXING_DISABLE_MIDDLE_NODE_AND_CHECK", false)) {
+    return Maybe<void>::Ok();
+  }
   // Set up at least two split for op graph.
   // For a negative example: Resnet50 only have B, P, S(0)
   CollectUniverse(max_axis);
@@ -206,7 +210,7 @@ Maybe<void> BoxingCollector::GenerateCombination4SamePlacement(int32_t max_middl
     for (int32_t j = 0; j < n; j++) {
       minimum_copy_cost_[i][j] = JUST(ComputeLazyCopyCostBetweenNdSbp(
           nd_sbp_lists_[i], nd_sbp_lists_[j], blob_desc, parallel_desc, parallel_desc,
-          /*is_same_sbp=*/false));
+          /*requires_same_sbp=*/false));
     }
   }
 
@@ -486,12 +490,17 @@ Maybe<void> BoxingCollector::AskSbpCombination(const NdSbp& sbp_producer, const 
                                                bool is_customized, std::vector<NdSbp>& middle_sbps,
                                                int32_t* diag_node_pos, bool compute_cost) {
   middle_sbps.clear();
+  // Not allowed two-step boxing and disable checking for debugging
+  if (ParseBooleanFromEnv("ONEFLOW_BOXING_DISABLE_MIDDLE_NODE_AND_CHECK", false)) {
+    return Maybe<void>::Ok();
+  }
   // Dealing with 1D sbp to 1D sbp
   // Specifically, S -> P.
   if (Is1dSbp(sbp_producer) && Is1dSbp(sbp_consumer)) {
     if (sbp_consumer.sbp_parallel(0).has_partial_sum_parallel()) {
       // Support [4]: P <--> [2, 2]: (P, P)
-      if (producer_parallel_desc.EqualsIgnoringHierarchy(consumer_parallel_desc)
+      // Support {0, 1, 2, 3}: P <--> {2, 0, 6, 7}: (P, P)
+      if (producer_parallel_desc.parallel_num() == consumer_parallel_desc.parallel_num()
           && sbp_producer.sbp_parallel(0).has_partial_sum_parallel()) {
         return Maybe<void>::Ok();
       }
@@ -637,7 +646,12 @@ Maybe<void> BoxingCollector::AskSbpCombination4DiffPlacement(
   bool same_placement = producer_parallel_desc.EqualsIgnoringHierarchy(consumer_parallel_desc);
   // Dealing with 2D sbp
   if (i >= 0 && j >= 0) {
+    // Pure copy between machines and devices
+    if (i == j && (*producer_parallel_desc.hierarchy() == *consumer_parallel_desc.hierarchy())) {
+      return Maybe<void>::Ok();
+    }
     if (same_placement) {
+      // Different hierarchies
       CHECK_OR_RETURN(diag_node_diff_hierarchy_.size() > 0)
           << "Have not initialzie the combination table for different hierarchies yet! "
              "Please run JUST(GenerateCombination4DiffHierarchy(this, this)); "
@@ -649,6 +663,7 @@ Maybe<void> BoxingCollector::AskSbpCombination4DiffPlacement(
         return Maybe<void>::Ok();
       }
     } else {
+      // Different placements
       CHECK_OR_RETURN(diag_node_diff_placement_.size() > 0)
           << "Have not initialzie the combination table for different hierarchies yet! "
              "Please run JUST(GenerateCombination4DiffPlacement(this, this)); "

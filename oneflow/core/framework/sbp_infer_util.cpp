@@ -18,7 +18,6 @@ limitations under the License.
 #include "oneflow/core/auto_parallel/boxing_collector.h"
 #include "oneflow/core/graph/boxing/hierarchical_sub_task_graph_builder_impl.h"
 #include "oneflow/core/boxing/eager_boxing_interpreter_mgr.h"
-#include "oneflow/core/common/multi_client.h"
 #include "oneflow/core/common/util.h"
 #include "oneflow/core/job/lazy_mode.h"
 #include "oneflow/core/job/parallel_desc.h"
@@ -61,6 +60,8 @@ Maybe<double> ComputCopyCostBetweenTwoSbpParallel(const SbpParallel& producer_sb
     }
   }
 
+  // NOTE: A tensor placed on cpu with a consumer operator that accepts cuda inputs would be
+  // transfered to cuda later. We might not have correct parallel description at this moment.
   if (producer_parallel_desc == consumer_parallel_desc) {
     // Same sbp, no cost: S->S, B->B, P->P
     if (producer_sbp_parallel == consumer_sbp_parallel) { return 0.0; }
@@ -354,9 +355,10 @@ Maybe<double> ComputeLazyCopyCostBetweenNdSbp(const NdSbp& producer_sbp_parallel
 
   // We support different hierarchy for 1D sbp
   if (in_dim == 1 && out_dim == 1) {
-    return ComputCopyCostBetweenTwoSbpParallel(
-        reduced_in_nd_sbp.sbp_parallel(0), reduced_out_nd_sbp.sbp_parallel(0), logical_blob_desc,
-        reduced_in_parallel_desc, reduced_out_parallel_desc);
+    return GetTransferCost()
+           + JUST(ComputCopyCostBetweenTwoSbpParallel(
+               reduced_in_nd_sbp.sbp_parallel(0), reduced_out_nd_sbp.sbp_parallel(0),
+               logical_blob_desc, reduced_in_parallel_desc, reduced_out_parallel_desc));
   }
   // Not supporting different hierarchy
   // TODO: Support it in the future
@@ -371,19 +373,22 @@ Maybe<double> ComputeLazyCopyCostBetweenNdSbp(const NdSbp& producer_sbp_parallel
     // Not supporting different hierarchy
     // TODO: Support it in the future
     if (*in_hierarchy != *out_hierarchy) { return kUnsupportedBoxing; }
-    return ComputCopyCostBetweenTwoNdSbp(reduced_in_nd_sbp, reduced_out_nd_sbp, logical_blob_size,
-                                         in_hierarchy, on_same_devices);
+    return GetTransferCost()
+           + JUST(ComputCopyCostBetweenTwoNdSbp(reduced_in_nd_sbp, reduced_out_nd_sbp,
+                                                logical_blob_size, in_hierarchy, on_same_devices));
   }
 
   // (in_dim == 2 && out_dim == 1) || (in_dim == 1 && out_dim == 2)
   if (in_dim == 2 && out_dim == 1) {
-    return ComputCopyCostBetweenTwoNdSbp(reduced_in_nd_sbp, reduced_out_nd_sbp, logical_blob_size,
-                                         in_hierarchy, on_same_devices);
+    return GetTransferCost()
+           + JUST(ComputCopyCostBetweenTwoNdSbp(reduced_in_nd_sbp, reduced_out_nd_sbp,
+                                                logical_blob_size, in_hierarchy, on_same_devices));
   }
 
   if (in_dim == 1 && out_dim == 2) {
-    return ComputCopyCostBetweenTwoNdSbp(reduced_in_nd_sbp, reduced_out_nd_sbp, logical_blob_size,
-                                         out_hierarchy, on_same_devices);
+    return GetTransferCost()
+           + JUST(ComputCopyCostBetweenTwoNdSbp(reduced_in_nd_sbp, reduced_out_nd_sbp,
+                                                logical_blob_size, out_hierarchy, on_same_devices));
   }
 
   return Error::RuntimeError()
@@ -395,6 +400,13 @@ double GetValidMaxCopyCost() {
   // We suppose that valid copy cost range is [0, FloatMax*0.8]
   static const double kValidMaxCopyCost = kUnsupportedBoxing * 0.8;
   return kValidMaxCopyCost;
+}
+
+double GetTransferCost() {
+  // Each transfer would have cost.
+  // Except for same parallel description and sbp
+  static const double kTransferCost = ParseFloatFromEnv("AUTO_PARALLEL_TRANSFER_COST", 1.65e8);
+  return kTransferCost;
 }
 
 void ResizeNdSbpSignature(NdSbpSignature& nd_sbp_sig, int32_t size) {
@@ -493,7 +505,6 @@ Maybe<double> ComputeCopyCostWithMiddleNodes(const NdSbp& producer_sbp_parallel,
       /*compute_cost=*/true));
   // Parameters
   double total_cost = 0.0;
-  double transfer_cost = ParseFloatFromEnv("AUTO_PARALLEL_TRANSFER_COST", 1.65e7);
   // Set up the information of the first node in the first connection
   const NdSbp* pre_nd_sbp = &producer_sbp_parallel;
   const ParallelDesc* pre_parallel_desc = &producer_parallel_desc;
@@ -511,8 +522,7 @@ Maybe<double> ComputeCopyCostWithMiddleNodes(const NdSbp& producer_sbp_parallel,
     // TODO: Needs more effort if dealing with different placement
     total_cost += JUST(ComputeLazyCopyCostBetweenNdSbp(*pre_nd_sbp, middle_sbp, logical_blob_desc,
                                                        *pre_parallel_desc, *middle_parallel_desc,
-                                                       requires_same_sbp))
-                  + transfer_cost;
+                                                       requires_same_sbp));
     // Set up the information of the first node in the next connection
     pre_nd_sbp = &middle_sbp;
     pre_parallel_desc = middle_parallel_desc;
@@ -523,6 +533,44 @@ Maybe<double> ComputeCopyCostWithMiddleNodes(const NdSbp& producer_sbp_parallel,
                                                      consumer_parallel_desc, requires_same_sbp));
 
   return total_cost;
+}
+
+// Decide the priority to infer sbp
+double ComputeSbpInferPriority(const NdSbp& producer_sbp_parallel,
+                               const NdSbp& consumer_sbp_parallel,
+                               const BlobDesc& logical_blob_desc,
+                               const ParallelDesc& producer_parallel_desc,
+                               const ParallelDesc& consumer_parallel_desc, bool requires_same_sbp) {
+  ParallelDesc reduced_in_parallel_desc = producer_parallel_desc;
+  ParallelDesc reduced_out_parallel_desc = consumer_parallel_desc;
+  NdSbp reduced_in_nd_sbp;
+  NdSbp reduced_out_nd_sbp;
+  InOutParallelDimReduce(producer_parallel_desc, consumer_parallel_desc, producer_sbp_parallel,
+                         consumer_sbp_parallel, &reduced_in_parallel_desc,
+                         &reduced_out_parallel_desc, &reduced_in_nd_sbp, &reduced_out_nd_sbp);
+
+  if (requires_same_sbp) {
+    // This blob does not support boxing
+    if (reduced_in_nd_sbp == reduced_out_nd_sbp
+        && reduced_in_parallel_desc == reduced_out_parallel_desc) {
+      // Highest priority: this blob have the same placement and sbp on both the producer and
+      // consumer
+      return 0.0;
+    } else {
+      // Penality: this blob have different placments and sbps but it does not support boxing
+      return 2.0;
+    }
+  } else {
+    // This blob supports boxing
+    if (reduced_in_nd_sbp == reduced_out_nd_sbp
+        && *reduced_in_parallel_desc.hierarchy() == *reduced_out_parallel_desc.hierarchy()) {
+      // Highest priority: this blob have the same sbp on both the producer and consumer
+      return 0.0;
+    } else {
+      // Normal priority: transfer occurs
+      return 1.0;
+    }
+  }
 }
 
 }  // namespace oneflow

@@ -59,6 +59,7 @@ class Tensor : public std::enable_shared_from_this<Tensor> {
   virtual bool is_local() const { return !is_consistent(); }
   virtual bool is_lazy() const = 0;
   virtual bool is_eager() const { return !is_lazy(); }
+  virtual bool is_contiguous() const = 0;
   virtual const TensorMeta& tensor_meta() const = 0;
   virtual Maybe<Tensor> data() = 0;
   virtual Maybe<Symbol<ConsistentTensorMeta>> consistent_tensor_meta() const { OF_UNIMPLEMENTED(); }
@@ -88,6 +89,7 @@ class Tensor : public std::enable_shared_from_this<Tensor> {
   virtual Maybe<TensorArg> current_grad() const = 0;
   virtual Maybe<Tensor> detach() const = 0;
   virtual Maybe<Tensor> clone() const = 0;
+  virtual std::shared_ptr<Tensor> contiguous() const = 0;
 
   // Setters for autograd
   virtual Maybe<void> set_requires_grad(bool requires_grad) = 0;
@@ -183,6 +185,10 @@ class StaticZerosTensor final : public Tensor {
     PRINT_BUG_PROMPT_AND_ABORT();
     return false;
   }
+  bool is_contiguous() const override {
+    PRINT_BUG_PROMPT_AND_ABORT();
+    return true;
+  }
   std::shared_ptr<const FunctionNode> grad_fn_node() const override {
     PRINT_BUG_PROMPT_AND_ABORT();
     return nullptr;
@@ -191,6 +197,9 @@ class StaticZerosTensor final : public Tensor {
   Maybe<TensorArg> current_grad() const override { RETURN_ERROR_WITH_BUG_PROMPT(); }
   Maybe<Tensor> detach() const override { RETURN_ERROR_WITH_BUG_PROMPT(); }
   Maybe<Tensor> clone() const override { RETURN_ERROR_WITH_BUG_PROMPT(); }
+  std::shared_ptr<Tensor> contiguous() const override {
+    return std::const_pointer_cast<Tensor>(shared_from_this());
+  }
 
   // Setters for autograd
   Maybe<void> set_requires_grad(bool requires_grad) override {
@@ -329,10 +338,12 @@ class Parameter final : public TensorIf<Parameter> {
   bool requires_grad() const override { return tensor_->requires_grad(); }
   bool is_leaf() const override { return true; }
   bool retain_grad() const override { return tensor_->retain_grad(); }
+  bool is_contiguous() const override { return tensor_->is_contiguous(); }
   Maybe<Tensor> acc_grad() const override { return tensor_->acc_grad(); }
   Maybe<TensorArg> current_grad() const override { return tensor_->current_grad(); }
   Maybe<Tensor> detach() const override { return tensor_->detach(); }
   Maybe<Tensor> clone() const override { return tensor_->clone(); }
+  std::shared_ptr<Tensor> contiguous() const override;
 
   Maybe<void> set_requires_grad(bool requires_grad) override {
     return tensor_->set_requires_grad(requires_grad);
@@ -394,21 +405,21 @@ class MirroredTensor final : public TensorIf<MirroredTensor> {
   const std::shared_ptr<const Shape>& shape() const override { return impl_->shape(); }
   Symbol<DType> dtype() const override { return CHECK_JUST(DType::Get(impl_->dtype())); }
   Maybe<TransportToken> transport_token() const override {
-    OF_RUNTIME_ERROR() << "Only consistent tensors have 'consistent_id', Consistent id is used to "
+    OF_RUNTIME_ERROR() << "Only global tensors have 'global_id', global id is used to "
                           "synchronize rank";
   }
   Maybe<Symbol<NdSbp>> nd_sbp() const override {
     OF_RUNTIME_ERROR()
         << "Local tensor has no sbp property. "
            "sbp is the description in the oneflow distributed case, you can refer to "
-           "https://docs.oneflow.org/master/basics_topics/essentials_of_oneflow.html; "
-           "For example, create a consistent tensor like this : 'x = oneflow.tensor((2,3, "
+           "https://docs.oneflow.org/master/parallelism/03_consistent_tensor.html; "
+           "For example, create a global tensor like this : 'x = oneflow.tensor((2,3, "
            "placement=oneflow.placement(\"cuda\", {0: 0}), sbp=oneflow.sbp.broadcast))', then "
            "'x.sbp' is 'oneflow.sbp.broadcast'";
   }
   Maybe<Symbol<ParallelDesc>> parallel_desc() const override {
-    OF_RUNTIME_ERROR() << "Only consistent tensors have 'placement'. Placement is used to describe "
-                          "the distribution of consistent tensor in multiple GPUs. Please use "
+    OF_RUNTIME_ERROR() << "Only global tensors have 'placement'. Placement is used to describe "
+                          "the distribution of global tensor in multiple GPUs. Please use "
                           "'.device' for local tensors.";
   }
   Maybe<Symbol<Device>> device() const override { return impl_->device(); }
@@ -416,6 +427,7 @@ class MirroredTensor final : public TensorIf<MirroredTensor> {
   bool is_lazy() const override { return impl_->is_lazy(); }
   bool is_consistent() const override { return false; }
   bool is_cuda() const override;
+  std::shared_ptr<Tensor> contiguous() const override;
 
   const TensorMeta& tensor_meta() const override { return *impl_->tensor_meta(); }
   Maybe<Tensor> data() override { return this->detach(); }
@@ -438,6 +450,7 @@ class MirroredTensor final : public TensorIf<MirroredTensor> {
   bool requires_grad() const override { return impl_->requires_grad(); }
   bool is_leaf() const override { return impl_->is_leaf(); }
   bool retain_grad() const override { return impl_->retain_grad(); }
+  bool is_contiguous() const override { return impl_->is_contiguous(); }
 
   // Setters for autograd
   Maybe<void> set_acc_grad(const std::shared_ptr<Tensor>& grad) override {
@@ -512,7 +525,7 @@ class ConsistentTensor final : public TensorIf<ConsistentTensor> {
   Maybe<Symbol<ParallelDesc>> parallel_desc() const override { return impl_->parallel_desc(); }
   Maybe<Symbol<Device>> device() const override {
     OF_RUNTIME_ERROR() << "Only local tensors have 'device'. Please use "
-                          "'.placement' for consistent tensors.";
+                          "'.placement' for global tensors.";
   }
   Maybe<Symbol<Device>*> mut_device() override {
     OF_RUNTIME_ERROR() << "ConsistentTensor has no mut_device property";
@@ -526,6 +539,7 @@ class ConsistentTensor final : public TensorIf<ConsistentTensor> {
     return impl_->cur_rank_phy_tensor();
   }
   bool is_cuda() const override;
+  std::shared_ptr<Tensor> contiguous() const override;
   Maybe<Tensor> data() override { return this->detach(); }
 
   // Getters valid only for EagerMirroredTensor
@@ -551,6 +565,7 @@ class ConsistentTensor final : public TensorIf<ConsistentTensor> {
   bool requires_grad() const override { return impl_->requires_grad(); }
   bool is_leaf() const override { return impl_->is_leaf(); }
   bool retain_grad() const override { return impl_->retain_grad(); }
+  bool is_contiguous() const override { return impl_->is_contiguous(); }
 
   // Setters for autograd
   Maybe<void> set_acc_grad(const std::shared_ptr<Tensor>& grad) override {
