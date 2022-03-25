@@ -35,7 +35,7 @@ class BinaryFunctor {
                            const std::shared_ptr<one::Tensor>& y) const {
     TensorProcessor tensor_processor;
     JUST(tensor_processor.PromoteInputsToCommonDtype(true)
-             .AddInputs({x->contiguous(), y->contiguous()})
+             .AddInputs({x, y})
              .Apply());
     TensorTuple input_tuple = JUST(tensor_processor.GetInputs());
     return OpInterpUtil::Dispatch<Tensor>(*op_, input_tuple);
