@@ -29,7 +29,7 @@ from oneflow.test_utils.automated_test_util import *
 @autotest(n=1, check_graph=False)
 def _test_linear_with_random_data(test_case, placement, weight_sbp, input_sbp):
     input_size = 8
-    m = torch.nn.Linear(in_features=input_size, out_features=8, bias=True)
+    m = torch.nn.Linear(in_features=input_size, out_features=8, bias=random())
     m.train(random())
     m.weight = torch.nn.Parameter(
         m.weight.to_global(placement=placement, sbp=weight_sbp)
