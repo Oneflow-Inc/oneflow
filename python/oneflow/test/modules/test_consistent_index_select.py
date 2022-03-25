@@ -23,7 +23,7 @@ from oneflow.test_utils.automated_test_util import *
 
 @autotest(n=1, auto_backward=False, check_graph=False)
 def _test_index_select_impl(test_case, ndim, placement, sbp):
-    dims = [random(1, 4) * 8 for i in range(ndim)]
+    dims = [random(1, 3) * 8 for i in range(ndim)]
     dim = random(0, ndim).to(int)
     index = random_tensor(1, random(1, 5), low=0, high=dims[dim.value()], dtype=int)
     index_sbp = (

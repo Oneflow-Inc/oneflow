@@ -23,7 +23,7 @@ from oneflow.test_utils.automated_test_util import *
 
 @autotest(n=1, check_graph=False)
 def _test_instancenorm1d_impl(test_case, placement, sbp):
-    dims = [random(1, 4) * 8 for i in range(3)]
+    dims = [random(1, 3) * 8 for i in range(3)]
     m = torch.nn.InstanceNorm1d(
         num_features=dims[1].to(int),
         eps=random().to(float),
@@ -37,7 +37,7 @@ def _test_instancenorm1d_impl(test_case, placement, sbp):
 
 @autotest(n=1, check_graph=False)
 def _test_instancenorm2d_impl(test_case, placement, sbp):
-    dims = [random(1, 4) * 8 for i in range(4)]
+    dims = [random(1, 3) * 8 for i in range(4)]
     m = torch.nn.InstanceNorm2d(
         num_features=dims[1].to(int),
         eps=random().to(float),
@@ -51,7 +51,7 @@ def _test_instancenorm2d_impl(test_case, placement, sbp):
 
 @autotest(n=1, check_graph=False)
 def _test_instancenorm3d_impl(test_case, placement, sbp):
-    dims = [random(1, 4) * 8 for i in range(5)]
+    dims = [random(1, 3) * 8 for i in range(5)]
     m = torch.nn.InstanceNorm3d(
         num_features=dims[1].to(int),
         eps=random().to(float),
@@ -63,13 +63,23 @@ def _test_instancenorm3d_impl(test_case, placement, sbp):
     return y
 
 
-class TestInstanceNorm1dConsistent(flow.unittest.TestCase):
+class TestInstanceNormConsistent(flow.unittest.TestCase):
     @globaltest
     def test_instancenorm1d(test_case):
         for placement in all_placement():
-            for sbp in all_sbp(placement, max_dim=1):
+            for sbp in all_sbp(placement, max_dim=2):
                 _test_instancenorm1d_impl(test_case, placement, sbp)
+
+    @globaltest
+    def test_instancenorm2d(test_case):
+        for placement in all_placement():
+            for sbp in all_sbp(placement, max_dim=2):
                 _test_instancenorm2d_impl(test_case, placement, sbp)
+
+    @globaltest
+    def test_instancenorm3d(test_case):
+        for placement in all_placement():
+            for sbp in all_sbp(placement, max_dim=2):
                 _test_instancenorm3d_impl(test_case, placement, sbp)
 
 

@@ -34,7 +34,7 @@ class TestLog1pModule(flow.unittest.TestCase):
     def test_log1p(test_case):
         for placement in all_placement():
             ndim = random(0, 4).to(int).value()
-            for sbp in all_sbp(placement, max_dim=ndim):
+            for sbp in all_sbp(placement, max_dim=min(2, ndim)):
                 _test_log1p_impl(test_case, ndim, placement, sbp)
 
 

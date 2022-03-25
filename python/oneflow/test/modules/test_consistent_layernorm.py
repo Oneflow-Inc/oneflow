@@ -38,17 +38,14 @@ def _test_layernorm_impl(test_case, placement, sbp, get_width):
     m = torch.nn.LayerNorm(
         normalized_shape=norm_shape, elementwise_affine=oneof(True, False)
     )
+    weight_and_bias_sbp = random_sbp(placement, max_dim=0)
     if m.weight is not None:
         m.weight = torch.nn.Parameter(
-            m.weight.to_global(
-                placement=placement, sbp=random_sbp(placement, max_dim=len(norm_shape))
-            )
+            m.weight.to_global(placement=placement, sbp=weight_and_bias_sbp)
         )
     if m.bias is not None:
         m.bias = torch.nn.Parameter(
-            m.bias.to_global(
-                placement=placement, sbp=random_sbp(placement, max_dim=len(norm_shape))
-            )
+            m.bias.to_global(placement=placement, sbp=weight_and_bias_sbp)
         )
     y = m(x)
     return y
@@ -58,13 +55,13 @@ class TestLayerNormConsistent(flow.unittest.TestCase):
     @globaltest
     def test_layernorm(test_case):
         for placement in all_placement():
-            for sbp in all_sbp(placement, max_dim=4):
+            for sbp in all_sbp(placement, max_dim=2):
                 _test_layernorm_impl(test_case, placement, sbp, lambda: random(1, 1024))
                 _test_layernorm_impl(
                     test_case, placement, sbp, lambda: random(1024, 8192)
                 )
                 _test_layernorm_impl(
-                    test_case, placement, sbp, lambda: random(8192, 32768)
+                    test_case, placement, sbp, lambda: random(8192, 10240)
                 )
 
 

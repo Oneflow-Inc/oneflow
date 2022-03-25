@@ -23,7 +23,7 @@ import oneflow.unittest
 
 @autotest(n=1, auto_backward=False, check_graph=False)
 def _test_less_impl(test_case, ndim, placement, sbp):
-    dims = [random(1, 4) * 8 for i in range(ndim)]
+    dims = [random(1, 3) * 8 for i in range(ndim)]
     x1 = random_tensor(ndim, *dims)
     x1 = x1.to_global(placement=placement, sbp=sbp)
     x2 = random_tensor(ndim, *dims)
@@ -38,13 +38,13 @@ class TestLessConsistent(flow.unittest.TestCase):
     def test_less(test_case):
         ndim = random(1, 5).to(int).value()
         for placement in all_placement():
-            for sbp in all_sbp(placement, max_dim=ndim):
+            for sbp in all_sbp(placement, max_dim=min(2, ndim)):
                 _test_less_impl(test_case, ndim, placement, sbp)
 
 
 @autotest(n=1, auto_backward=False, check_graph=False)
 def _test_less_equal_impl(test_case, ndim, placement, sbp):
-    dims = [random(1, 4) * 8 for i in range(ndim)]
+    dims = [random(1, 3) * 8 for i in range(ndim)]
     x1 = random_tensor(ndim, *dims)
     x1 = x1.to_global(placement=placement, sbp=sbp)
     x2 = random_tensor(ndim, *dims)
@@ -59,7 +59,7 @@ class TestLessEqualConsistent(flow.unittest.TestCase):
     def test_less_equal(test_case):
         ndim = random(1, 5).to(int).value()
         for placement in all_placement():
-            for sbp in all_sbp(placement, max_dim=ndim):
+            for sbp in all_sbp(placement, max_dim=min(2, ndim)):
                 _test_less_equal_impl(test_case, ndim, placement, sbp)
 
 
