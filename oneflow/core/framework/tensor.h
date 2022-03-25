@@ -300,7 +300,7 @@ class ProxyTensor : public TensorIf<DerivedT> {
   virtual Maybe<Tensor> data() override { return tensor_->detach(); }
 
   // Must override grad_fn_node function. Otherwise grad_fn will belong to this not tensor_,
-  // and it will be wrong when use Parameter.data() in operators.
+  // and it will be wrong when use Tensor.data() in operators.
   virtual std::shared_ptr<const FunctionNode> grad_fn_node() const override {
     return tensor_->grad_fn_node();
   }
@@ -400,13 +400,17 @@ class ProxyTensor : public TensorIf<DerivedT> {
 
 class Parameter final : public ProxyTensor<Parameter> {
  public:
-  Parameter(const std::shared_ptr<Tensor>& tensor, bool requires_grad)
-      : ProxyTensor<Parameter>(tensor->detach().GetPtrOrThrow()) {
-    this->tensor_->set_requires_grad(requires_grad);
+  static Maybe<Parameter> MakeTensor(const std::shared_ptr<Tensor>& tensor, bool requires_grad) {
+    return std::shared_ptr<Parameter>(new Parameter(JUST(tensor->detach()), requires_grad));
   }
-
   bool is_leaf() const override { return true; }
   std::shared_ptr<Tensor> contiguous() const override;
+
+ private:
+  Parameter(const std::shared_ptr<Tensor>& tensor, bool requires_grad)
+      : ProxyTensor<Parameter>(tensor) {
+    this->tensor_->set_requires_grad(requires_grad);
+  }
 };
 
 class MirroredTensor final : public TensorIf<MirroredTensor> {
