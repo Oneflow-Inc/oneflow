@@ -400,7 +400,7 @@ struct ReluGradFunctor {
         return user_op::NewOpKernel<                                                              \
             BinaryElemwiseXpuKernel<device, TanhShrinkGradFunctor<dtype>, dtype, dtype, dtype>>(  \
             [](user_op::KernelComputeContext* ctx) { return TanhShrinkGradFunctor<dtype>(); },    \
-            "dx", "y", "dy");                                                                     \
+            "dx", "x", "dy");                                                                     \
       })                                                                                          \
       .SetIsMatchedHob((user_op::HobDeviceType() == device)                                       \
                        && (user_op::HobDataType("dx", 0) == GetDataType<dtype>::value))           \
