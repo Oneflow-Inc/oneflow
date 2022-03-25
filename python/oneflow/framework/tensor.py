@@ -155,7 +155,7 @@ def _cpu(self):
 def _cuda(self, device: Union[int, str, flow.device] = None):
     if device is None:
         device = "cuda"
-    elif device is isinstance(int):
+    elif isinstance(device, int):
         device = "cuda:" + str(device)
     return self.to(device=device)
 
