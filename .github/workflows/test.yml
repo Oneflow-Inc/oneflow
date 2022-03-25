@@ -786,6 +786,7 @@ jobs:
           docker exec ${{ env.TEST_CONTAINER_NAME }} bash ci/test/build_docs.sh
       - name: Upload documentation
         if: ${{ !fromJson(matrix.cache-hit) && matrix.test-type == 'misc' && matrix.device == 'cpu' }}
+        continue-on-error: ${{ !(github.repository == 'Oneflow-Inc/oneflow') }}
         uses: ./.github/actions/upload_oss
         with:
           src_path: build-docs/build/html
