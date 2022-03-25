@@ -208,9 +208,9 @@ class LeakyRelu : public OpExprGradFunction<LeakyReluCaptureState> {
 };
 
 struct SoftplusCaptureState : public AutoGradCaptureState {
-  bool requires_grad;
-  double beta;
-  double threshold;
+  bool requires_grad = true;
+  double beta = 1.0;
+  double threshold = 20.0;
 };
 
 class Softplus : public OpExprGradFunction<SoftplusCaptureState> {
