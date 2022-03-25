@@ -35,20 +35,21 @@ EagerBlobObject::EagerBlobObject(const std::shared_ptr<MemoryCase>& mem_case,
       storage_offset_(0),
       tensor_storage_(tensor_storage),
       is_shape_synced_(true),
-      compute_local_dep_object_(dep_object) {
+      compute_local_dep_object_(dep_object),
+      blob_desc_(shape, data_type) {
   CHECK(static_cast<bool>(shape));
   CHECK(static_cast<bool>(tensor_storage));
 }
 
-std::shared_ptr<Blob> EagerBlobObject::AsBlob(const BlobDesc* blob_desc) {
-  return std::shared_ptr<Blob>(new Blob(*mem_case_, blob_desc,
-                                        reinterpret_cast<char*>(mut_shape_view_.mut_ptr()),
-                                        mut_dptr<char>()));
+Blob* EagerBlobObject::blob() {
+  if (!blob_) {
+    blob_.reset(new Blob(
+      *mem_case_, &blob_desc_, reinterpret_cast<char*>(mut_shape_view_.mut_ptr()), mut_dptr<char>()));
+  }
+  return blob_.get();
 }
 
-void EagerBlobObject::set_storage_offset(const int64_t offset) {
-  storage_offset_ = offset;
-}
+void EagerBlobObject::set_storage_offset(const int64_t offset) { storage_offset_ = offset; }
 
 Maybe<void> EagerBlobObject::TryAllocateBlobBodyMemory(DeviceCtx* device_ctx) {
   vm::Allocator* allocator = device_ctx->mut_allocator();
@@ -73,7 +74,6 @@ Maybe<void> EagerBlobObject::TryAllocateBlobBodyMemory(DeviceCtx* device_ctx) {
     tensor_storage_->set_blob_dptr(std::unique_ptr<char, std::function<void(char*)>>(dptr, Free),
                                    required_body_bytes);
 
-    // blob->reset_dptr(dptr);
     InitNonPODTypeEagerBlobObjectIfNeed(tensor_storage_->non_pod_allocator(), this);
   }
   return Maybe<void>::Ok();

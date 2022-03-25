@@ -18,12 +18,13 @@ limitations under the License.
 
 #include "oneflow/core/common/maybe.h"
 #include "oneflow/core/common/optional.h"
-#include "oneflow/core/eager/blob_object.h"
 #include "oneflow/core/eager/local_dep_object.h"
+#include "oneflow/core/device/device_context.h"
 #include "oneflow/core/memory/memory_allocator.h"
 #include "oneflow/core/framework/device.h"
 #include "oneflow/core/framework/stream.h"
 #include "oneflow/core/framework/tensor_methods.h"
+#include "oneflow/core/register/blob.h"
 
 namespace oneflow {
 
@@ -93,18 +94,13 @@ class EagerBlobObject final {
                   DataType data_type, const std::shared_ptr<TensorStorage>& tensor_storage,
                   const intrusive::shared_ptr<LocalDepObject>& dep_object);
 
-  ~EagerBlobObject() {
-    tensor_storage_.reset();
-    // header_buffer_.reset();
-    // blob_.reset();
-  }
+  ~EagerBlobObject() { tensor_storage_.reset(); }
 
   void set_storage_offset(const int64_t offset);
 
-  [[deprecated(
-      "\"Blob\" will be removed in eager. Please do not use this method whenever possible")]] std::
-      shared_ptr<Blob>
-      AsBlob(const BlobDesc* blob_desc);
+  [[deprecated("\"Blob\" will be removed in eager. Please avoid to use this method whenever "
+               "possible. Almost all methods of `Blob` are also in `EagerBlobObject`.")]] Blob*
+  blob();
 
   Maybe<void> TryAllocateBlobBodyMemory(DeviceCtx* device_ctx);
   Maybe<void> DeallocateBlobDataPtr() {
@@ -183,6 +179,10 @@ class EagerBlobObject final {
   std::shared_ptr<TensorStorage> tensor_storage_;
   std::atomic<bool> is_shape_synced_;
   intrusive::shared_ptr<LocalDepObject> compute_local_dep_object_;
+
+  // NOTE: Will be removed soon. Avoid to use it whenever possible.
+  BlobDesc blob_desc_;
+  std::unique_ptr<Blob> blob_;
 };
 
 }  // namespace vm

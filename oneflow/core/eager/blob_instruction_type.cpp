@@ -19,7 +19,6 @@ limitations under the License.
 #include "oneflow/core/vm/instruction.h"
 #include "oneflow/core/vm/instruction_type.h"
 #include "oneflow/core/eager/blob_instruction_type.h"
-#include "oneflow/core/eager/blob_object.h"
 #include "oneflow/core/vm/control_stream_type.h"
 #include "oneflow/core/vm/stream.h"
 #include "oneflow/core/device/cuda_util.h"
@@ -48,10 +47,8 @@ void AccessBlobByCallbackInstructionType::ComputeInstrMsg(
       dynamic_cast<const vm::AccessBlobArgCbPhyInstrOperand*>(phy_instr_operand.get());
   CHECK_NOTNULL(ptr);
   DeviceCtx* device_ctx = instr_msg.phy_instr_stream()->device_ctx().get();
-  const auto& eager_blob_object = ptr->eager_blob_object();
-  BlobDesc blob_desc(eager_blob_object->shape(), eager_blob_object->data_type());
-  auto blob = ptr->eager_blob_object()->AsBlob(&blob_desc);
-  OfBlob ofblob(device_ctx->stream(), blob.get());
+  auto* blob = ptr->eager_blob_object()->blob();
+  OfBlob ofblob(device_ctx->stream(), blob);
   ptr->callback()(reinterpret_cast<uint64_t>(&ofblob));
 }
 
