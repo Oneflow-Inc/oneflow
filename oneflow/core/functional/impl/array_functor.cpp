@@ -1785,7 +1785,8 @@ class SliceView1dContiguousFunctor {
   SliceView1dContiguousFunctor() = default;
   Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x, int64_t start,
                            int64_t end) const {
-    return JUST(view::Slice(x, {start}, {end}, {1}));
+    if (view::IsViewApplicable(x)) { return JUST(view::Slice(x, {start}, {end}, {1})); }
+    return JUST(functional::Slice(x, {start}, {end}, {1}));
   }
 };
 
