@@ -62,6 +62,14 @@ class TestCuda(flow.unittest.TestCase):
         x = x.cuda()
         y = x.sum()
         return y
+    
+    @autotest(n=5)
+    def test_cuda_int_device(test_case):
+        device = random_device()
+        x = random_tensor().to(device)
+        x = x.cuda(1)
+        y = x.sum()
+        return y
 
 
 @flow.unittest.skip_unless_1n1d()
