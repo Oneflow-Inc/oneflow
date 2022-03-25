@@ -28,6 +28,7 @@ struct PersistentTableOptions {
   uint32_t value_size = 0;
   uint64_t target_chunk_size_mb = 4 * 1024;
   uint16_t physical_block_size = 4096;
+  uint64_t capacity_hint = 0;
 };
 
 class PersistentTable {
