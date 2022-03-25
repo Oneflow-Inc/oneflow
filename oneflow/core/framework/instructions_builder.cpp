@@ -481,7 +481,7 @@ Maybe<void> InstructionsBuilder::TensorView(const T input_tensor, const T view_t
   // init view blob (with empty data pointer)
   JUST(view_eager_blob_object->InitBlobWithOffset(JUST(view_tensor->storage_offset())));
   view_eager_blob_object->set_is_shape_synced(true);
-  CHECK_OR_RETURN(eager_blob_object->tensor_storage() == view_eager_blob_object->tensor_storage());
+  view_eager_blob_object->set_last_used_stream(JUST(eager_blob_object->last_used_stream()));
   // prepare instruction operand
   const auto& phy_instr_operand =
       std::make_shared<vm::TensorViewOperand>(eager_blob_object, view_eager_blob_object);
