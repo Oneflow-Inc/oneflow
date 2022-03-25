@@ -20,6 +20,19 @@ namespace oneflow {
 
 Maybe<Shape> ReshapeUserOpUtil::GetLogicalOutBlobShape(const Shape& in_shape,
                                                        const Shape& reshape) {
+  if (unlikely(in_shape.elem_cnt() == 0)) {
+    FOR_RANGE(int, axis, 0, reshape.NumAxes()) {
+      int64_t dim = reshape.At(axis);
+      if (dim == -1) {
+        return Error::RuntimeError()
+               << "cannot reshape tensor of 0 elements into shape " << reshape.DebugStr()
+               << " because the unspecified dimension size -1 can be any value and is ambiguous";
+      } else if (dim < 0) {
+        return Error::RuntimeError() << "invalid shape dimension " << dim;
+      }
+    }
+    return std::make_shared<Shape>(reshape);
+  }
   size_t total_elem_dim_exclude_minus_1 = 1;
   bool has_minus_1 = false;
   bool minus_1_axis = -1;
