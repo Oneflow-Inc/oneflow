@@ -1283,6 +1283,20 @@ add_docstr(
 )
 
 add_docstr(
+    oneflow.Tensor.view_as,
+    """
+    See :func:`oneflow.view_as`
+    """,
+)
+
+add_docstr(
+    oneflow.Tensor.split_with_sizes,
+    """
+    See :func:`oneflow.split_with_sizes`
+    """,
+)
+
+add_docstr(
     oneflow.Tensor.sort,
     """
     See :func:`oneflow.sort`

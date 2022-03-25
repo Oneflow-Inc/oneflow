@@ -370,6 +370,19 @@ class TestTensor(flow.unittest.TestCase):
         y = x.var()
         return y
 
+    @autotest(n=10, check_graph=True)
+    def _test_tensor_view_as(test_case):
+        x = torch.tensor(range(12)).reshape(3,4)
+        y = torch.tensor(range(12)).reshape(2,6)
+        z = torch.view_as(x, y)
+        return z
+
+    @autotest(n=10, check_graph=True)
+    def _test_split_with_sizes(test_case):
+        x = torch.tensor(range(12)).reshape(3,4)
+        y = torch.split_with_sizes(x, [1, 2], 0)
+        return y
+
     # TODO(): 'var backward' is composed of several other ops,
     # reducemean doesn't support 0-shape for now
     @autotest(n=5, auto_backward=False, check_graph=True)

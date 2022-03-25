@@ -160,6 +160,8 @@ from oneflow._C import var
 from oneflow._C import stack
 from oneflow._C import squeeze
 from oneflow._C import narrow
+from oneflow._C import view_as
+from oneflow._C import split_with_sizes
 from oneflow._C import unsqueeze
 from oneflow._C import permute
 from oneflow._C import select

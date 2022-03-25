@@ -930,6 +930,11 @@ def _view(self, *shape):
         new_shape = shape
     return flow._C.view(self, new_shape)
 
+def _view_as(self, other):
+    return flow.view_as(self, other)
+
+def _split_with_sizes(self, split_sizes, dim=0):
+    return flow.split_with_sizes(self, split_sizes, dim)
 
 def _sort(self, dim: int = -1, descending: bool = False):
     return flow.sort(self, dim, descending)
@@ -1180,6 +1185,8 @@ def RegisterMethods():
     Tensor.to_local = _to_local
     Tensor.reshape = _reshape
     Tensor.view = _view
+    Tensor.view_as = _view_as
+    Tensor.split_with_sizes = _split_with_sizes
     Tensor.sort = _sort
     Tensor.type_as = _type_as
     Tensor.tolist = _tolist
