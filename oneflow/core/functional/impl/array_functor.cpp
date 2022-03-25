@@ -1121,13 +1121,13 @@ class ViewFunctor {
 class ViewAsFunctor {
  public:
   ViewAsFunctor() {}
-  Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x, const std::shared_ptr<one::Tensor>& other) const {
+  Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x,
+                           const std::shared_ptr<one::Tensor>& other) const {
     const Shape& target_shape = *(other->shape());
     const int64_t x_elem_cnt = x->shape()->elem_cnt();
     const int64_t other_elem_cnt = target_shape.elem_cnt();
     CHECK_OR_RETURN(x_elem_cnt == other_elem_cnt)
-      << "shape '" << target_shape.ToString() 
-      << "' is invalid for input of size " << x_elem_cnt;
+        << "shape '" << target_shape.ToString() << "' is invalid for input of size " << x_elem_cnt;
     return JUST(View(x, *(other->shape())));
   }
 };

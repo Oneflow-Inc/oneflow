@@ -31,8 +31,8 @@ class TestViewAs(flow.unittest.TestCase):
     @autotest(n=10, check_graph=True)
     def test_view(test_case):
         device = random_device()
-        x = torch.tensor(range(12)).reshape(3,4).to(device)
-        y = torch.tensor(range(12)).reshape(2,6).to(device)
+        x = torch.tensor(range(12)).reshape(3, 4).to(device)
+        y = torch.tensor(range(12)).reshape(2, 6).to(device)
         z = torch.view_as(x, y)
         return z
 
