@@ -401,7 +401,7 @@ Maybe<CPUGeneratorImpl> MakeGeneratorImpl<CPUGeneratorImpl>(uint64_t seed, int d
 
 template<>
 DeviceKey MakeDeviceKey<CUDAGeneratorImpl>(int device_index) {
-  if (device_index == -1) { device_index = GetCudaDeviceIndex(); }
+  if (device_index == -1) { cudaGetDevice(&device_index); }
   DeviceKey device_key;
   device_key.device_type = DeviceType::kCUDA;
   device_key.device_index = device_index;
