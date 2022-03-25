@@ -28,8 +28,8 @@ from oneflow.test_utils.automated_test_util import *
 
 @autotest(n=1, check_graph=False)
 def _test_linear_with_random_data(test_case, placement, weight_sbp, input_sbp):
-    input_size = 2
-    m = torch.nn.Linear(in_features=input_size, out_features=2, bias=True)
+    input_size = 8
+    m = torch.nn.Linear(in_features=input_size, out_features=8, bias=True)
     m.train(random())
     m.weight = torch.nn.Parameter(
         m.weight.to_global(placement=placement, sbp=weight_sbp)
@@ -38,7 +38,7 @@ def _test_linear_with_random_data(test_case, placement, weight_sbp, input_sbp):
         # bias is 1-d tensor
         bias_sbp = random_sbp(placement, max_dim=1)
         m.bias = torch.nn.Parameter(m.bias.to_global(placement=placement, sbp=bias_sbp))
-    x = random_tensor(ndim=2, dim0=input_size, dim1=2).to_global(
+    x = random_tensor(ndim=2, dim0=input_size, dim1=8).to_global(
         placement=placement, sbp=input_sbp
     )
     y = m(x)
