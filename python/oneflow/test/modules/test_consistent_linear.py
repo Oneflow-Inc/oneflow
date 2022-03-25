@@ -26,36 +26,32 @@ import oneflow.unittest
 from oneflow.test_utils.automated_test_util import *
 
 
-@autotest(n=1, check_graph=False)
-def _test_linear_with_random_data(test_case, placement, weight_sbp, input_sbp):
-    print(placement)
-    print(weight_sbp)
-    input_size = 8
-    m = torch.nn.Linear(in_features=input_size, out_features=8, bias=random())
+@autotest(n=1, check_graph=False, auto_backward=False)
+def _test_linear_with_random_data(test_case, placement, sbp):
+    row = random(1, 3).to(int) * 8
+    col = random(1, 3).to(int) * 8
+    m = torch.nn.Linear(
+        in_features=col, out_features=8, bias=False
+    )  # bias=True and sbp = s0 will fail
     m.train(random())
-    m.weight = torch.nn.Parameter(
-        m.weight.to_global(placement=placement, sbp=weight_sbp)
-    )
+    m.weight = torch.nn.Parameter(m.weight.to_global(placement=placement, sbp=sbp))
     if m.bias is not None:
         # bias is 1-d tensor
         bias_sbp = random_sbp(placement, max_dim=1)
         m.bias = torch.nn.Parameter(m.bias.to_global(placement=placement, sbp=bias_sbp))
-    x = random_tensor(ndim=2, dim1=input_size, dim2=8).to_global(
-        placement=placement, sbp=input_sbp
+    x = random_tensor(ndim=2, dim0=row, dim1=col).to_global(
+        placement=placement, sbp=sbp
     )
     y = m(x)
     return y
 
 
-# class TestLinearModule(flow.unittest.TestCase):
-#     @globaltest
-#     def test_linear_with_random_data(test_case):
-#         for placement in all_placement():
-#             # TODO(): Fix 2d sbp
-#             if len(placement.ranks.shape) != 1:
-#                 continue
-#             for sbp in all_sbp(placement, max_dim=2):
-#                 _test_linear_with_random_data(test_case, placement, sbp, sbp)
+class TestLinearModule(flow.unittest.TestCase):
+    @globaltest
+    def test_linear_with_random_data(test_case):
+        for placement in all_placement():
+            for sbp in all_sbp(placement, max_dim=2):
+                _test_linear_with_random_data(test_case, placement, sbp)
 
 
 if __name__ == "__main__":
