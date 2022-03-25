@@ -82,7 +82,7 @@ class OneDnnPermuteImpl : public Permute {
     CHECK_LE(num_dims, kMaxNumDims);
     CHECK_GT(num_dims, 0);
     CpuStream* cpu_stream = stream->As<CpuStream>();
-    size_t num_threads = static_cast<CpuDevice*>(cpu_stream->device())->GetNumThreads();
+    size_t num_threads = static_cast<CpuDevice*>(cpu_stream->device())->GetNumThreads();  // NOLINT
     CpuNumThreadsGuard guard(num_threads);
 
     dnnl::engine* onednn_engine = stream->As<CpuStream>()->onednn_engine();
