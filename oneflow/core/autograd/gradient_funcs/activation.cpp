@@ -225,8 +225,6 @@ class Softplus : public OpExprGradFunction<SoftplusCaptureState> {
   Maybe<void> Capture(SoftplusCaptureState* ctx, const TensorTuple& inputs,
                       const TensorTuple& outputs, const AttrMap& attrs) const override {
     CHECK_EQ_OR_RETURN(inputs.size(), 1);
-    ctx->requires_grad = inputs.at(0)->requires_grad();
-    if (!ctx->requires_grad) { return Maybe<void>::Ok(); }
 
     ComposedAttrMap composed_attrs(attrs, base_attrs_);
     ctx->beta = JUST(composed_attrs.GetAttr<double>("beta"));
