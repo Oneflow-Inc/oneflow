@@ -55,7 +55,7 @@ Maybe<void> ReshapeUserOpUtil::Squeeze(const Shape& origin, Shape* shape,
   DimVector dim_vec;
   FOR_RANGE(int, axis, 0, origin.NumAxes()) {
     int64_t dim = origin.At(axis);
-    CHECK_GT_OR_RETURN(dim, 0);
+    CHECK_GE_OR_RETURN(dim, 0);
     if (dim == 1) { continue; }
     CHECK_OR_RETURN(squeezed_axis2origin_axis->emplace(dim_vec.size(), axis).second);
     dim_vec.emplace_back(dim);
