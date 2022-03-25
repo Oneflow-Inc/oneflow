@@ -168,7 +168,12 @@ void InitLruCacheContext(const CacheOptions& options, LruCacheContext<Key, Elem>
   if (options.value_memory_kind == CacheOptions::MemoryKind::kDevice) {
     OF_CUDA_CHECK(cudaMalloc(&(ctx->lines), lines_size));
   } else if (options.value_memory_kind == CacheOptions::MemoryKind::kHost) {
-    OF_CUDA_CHECK(cudaMallocHost(&(ctx->lines), lines_size));
+    if (ParseBooleanFromEnv("ONEFLOW_ONE_EMBEDDING_DISABLE_NUMA_AWARE_ALLOCATION", false)) {
+      OF_CUDA_CHECK(cudaMallocHost(&(ctx->lines), lines_size));
+    } else {
+      OF_CUDA_CHECK(
+          NumaAwareCudaMallocHost(device, reinterpret_cast<void**>(&ctx->lines), lines_size));
+    }
   } else {
     UNIMPLEMENTED();
   }
