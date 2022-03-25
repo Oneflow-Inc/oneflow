@@ -34,6 +34,7 @@ from oneflow.nn.modules.activation import (
     Softmax,
     Softplus,
     Tanh,
+    Tanhshrink,
     SELU,
     SiLU,
     Softsign,

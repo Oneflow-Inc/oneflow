@@ -742,6 +742,37 @@ class TestLogSigmoidFunction(flow.unittest.TestCase):
         y = torch.nn.functional.logsigmoid(x)
         return y
 
+class TestTanhshrinkModule(flow.unittest.TestCase):
+    @autotest()
+    def test_tanhshrink_module_with_random_data(test_case):
+        m = torch.nn.Tanhshrink()
+        m.train(random())
+        device = random_device()
+        m.to(device)
+        x = random_tensor().to(device)
+        y = m(x)
+        return y
+
+    @autotest()
+    def test_tanhshrink_module_with_0dim_data(test_case):
+        m = torch.nn.Tanhshrink()
+        m.train(random())
+        device = random_device()
+        m.to(device)
+        x = random_tensor(ndim=0).to(device)
+        y = m(x)
+        return y
+
+    @autotest(auto_backward=False, check_graph=True)
+    def test_tanhshrink_module_with_0_size_data(test_case):
+        m = torch.nn.Tanhshrink()
+        m.train(random())
+        device = random_device()
+        m.to(device)
+        x = random_tensor(4, 2, 3, 0, 3).to(device)
+        y = m(x)
+        return y
+
 
 if __name__ == "__main__":
     unittest.main()

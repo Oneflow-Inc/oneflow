@@ -27,6 +27,7 @@ limitations under the License.
 #include "oneflow/core/functional/function_library.h"
 #include "oneflow/core/autograd/autograd_mode.h"
 #include "oneflow/core/functional/sequence_function.h"
+#include "oneflow/core/common/container_util.h"
 
 namespace oneflow {
 namespace one {
@@ -438,6 +439,44 @@ class SoftSignGradFunctor : public BinaryFunctor {
   }
 };
 
+class TanhShrinkFunctor {
+ public:
+  TanhShrinkFunctor() {
+    op_ = CHECK_JUST(one::OpBuilder("tanhshrink").Input("in").Output("out").Build());
+  }
+  Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x, bool inplace) const {
+    MutableAttrMap attrs;
+    if (inplace) {
+      JUST(CheckInplaceValid(x));
+      std::shared_ptr<TensorTuple> outputs = std::make_shared<TensorTuple>(1);
+      *JUST(oneflow::VectorAt(outputs.get(), 0)) = x;
+      JUST(OpInterpUtil::Dispatch(*op_, {x}, outputs.get(), attrs));
+      return *JUST(oneflow::VectorAt(outputs.get(), 0));
+    } else {
+      return OpInterpUtil::Dispatch<one::Tensor>(*op_, {x}, attrs);
+    }
+  }
+
+ private:
+  std::shared_ptr<OpExpr> op_;
+};
+
+class TanhShrinkGradFunctor  {
+ public:
+  TanhShrinkGradFunctor() {
+    op_ = CHECK_JUST(one::OpBuilder("tanhshrink_grad").Input("x").Input("dy").Output("dx").Build());
+  }
+
+  Maybe<Tensor> operator()(const std::shared_ptr<Tensor>& x, const std::shared_ptr<Tensor>& dy) const {
+    MutableAttrMap attrs;
+    return OpInterpUtil::Dispatch<Tensor>(*op_, {x, dy}, attrs);
+  }
+
+
+  private:
+  std::shared_ptr<OpExpr> op_;
+};
+
 }  // namespace impl
 
 ONEFLOW_FUNCTION_LIBRARY(m) {
@@ -471,6 +510,8 @@ ONEFLOW_FUNCTION_LIBRARY(m) {
   m.add_functor<impl::SeluGradFunctor>("SeluGrad");
   m.add_functor<impl::SoftSignFunctor>("SoftSign");
   m.add_functor<impl::SoftSignGradFunctor>("SoftSignGrad");
+  m.add_functor<impl::TanhShrinkFunctor>("TanhShrink");
+  m.add_functor<impl::TanhShrinkGradFunctor>("TanhShrinkGrad");
 };
 
 }  // namespace functional

@@ -27,6 +27,7 @@ namespace oneflow {
   REGISTER_SILU_KERNEL(DeviceType::kCPU, dtype);        \
   REGISTER_SELU_KERNEL(DeviceType::kCPU, dtype);        \
   REGISTER_SOFTSIGN_KERNEL(DeviceType::kCPU, dtype);    \
+  REGISTER_TANHSHRINK_KERNEL(DeviceType::kCPU, dtype);  \
   REGISTER_LEAKYRELU_KERNEL(DeviceType::kCPU, dtype);   \
   REGISTER_RELU_BACKWARD_KERNEL(DeviceType::kCPU, dtype);
 

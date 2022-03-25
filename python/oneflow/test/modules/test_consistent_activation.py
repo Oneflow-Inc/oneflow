@@ -54,6 +54,8 @@ def build_module(act_type):
         return torch.nn.SiLU()
     elif act_type == "selu":
         return torch.nn.SELU()
+    elif act_type == "tanhshrink":
+        return torch.nn.Tanhshrink()
     else:
         raise ValueError("activation type %s is not support" % act_type)
 
@@ -185,6 +187,10 @@ class TestSiluModule(flow.unittest.TestCase):
 class TestSeluModule(flow.unittest.TestCase):
     def test_selu_module(test_case):
         _test_activation_module(test_case, "selu")
+
+class TestTanhshrinkModule(flow.unittest.TestCase):
+    def test_tanhshrink_module(test_case):
+        _test_activation_module(test_case, "tanhshrink")
 
 
 if __name__ == "__main__":

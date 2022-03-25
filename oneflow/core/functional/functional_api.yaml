@@ -489,6 +489,14 @@
   signature: "Tensor (Tensor x, Tensor dy) => TanhGrad"
   bind_python: True
 
+- name: "tanhshrink"
+  signature: "Tensor (Tensor x, *, Bool inplace=False) => TanhShrink"
+  bind_python: True
+
+- name: "tanhshrink_grad"
+  signature: "Tensor (Tensor x, Tensor dy) => TanhShrinkGrad"
+  bind_python: False
+
 - name: "elu"
   signature: "Tensor (Tensor x, Double alpha) => Elu"
   bind_python: True

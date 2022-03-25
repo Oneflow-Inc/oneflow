@@ -225,6 +225,48 @@ class Tanh(Module):
         return flow._C.tanh(input)
 
 
+class Tanhshrink(Module):
+    r"""The Tanhshrink Activation.
+
+    The equation is:
+
+    .. math::
+
+        \text {Tanhshrink} (x) = x - \tanh (x)
+
+    Args:
+        inplace: can optionally do the operation in-place. Default: ``False``
+        
+    Shape:
+        - Input: :math:`(N, *)` where `*` means, any number of additional
+          dimensions
+        - Output: :math:`(N, *)`, same shape as the input
+
+    Returns:
+        oneflow.Tensor: The result Tensor
+
+    For example:
+
+    .. code-block:: python
+
+        >>> import oneflow as flow
+        >>> import numpy as np
+        >>> input = np.array([-1, 0, 1]).astype(np.float32)
+        >>> input = flow.Tensor(input)
+        >>> tanhshrink = flow.nn.Tanhshrink()
+        >>> out = tanhshrink(input)
+        >>> out
+        tensor([-0.2384,  0.0000,  0.2384], dtype=oneflow.float32)
+
+    """
+
+    def __init__(self, inplace=False):
+        super().__init__()
+        self.inplace = inplace
+    
+    def forward(self, input):
+        return flow._C.tanhshrink(input, inplace=self.inplace)
+
 class ELU(Module):
     """Applies the element-wise function:
 

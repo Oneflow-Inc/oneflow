@@ -29,6 +29,7 @@ Functional operations for neural networks
 .. autofunction:: softmax 
 .. autofunction:: softplus
 .. autofunction:: tanh 
+.. autofunction:: tanhshrink
 .. autofunction:: silu
 .. autofunction:: mish
 .. autofunction:: one_hot

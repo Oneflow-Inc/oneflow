@@ -221,6 +221,20 @@ struct SoftSignGradFunctor {
 };
 
 template<typename T>
+struct TanhShrinkFunctor {
+  OF_DEVICE_FUNC explicit TanhShrinkFunctor() {}
+  OF_DEVICE_FUNC T operator()(T x) const { return x - tanh(x); }
+};
+
+template<typename T>
+struct TanhShrinkGradFunctor {
+  OF_DEVICE_FUNC explicit TanhShrinkGradFunctor() {}
+  OF_DEVICE_FUNC T operator()(T x, T dy) const { 
+    T tanh_value = tanh(x);
+    return dy * (tanh_value * tanh_value); }
+};
+
+template<typename T>
 struct ReluFunctor {
   OF_DEVICE_FUNC explicit ReluFunctor() {}
   OF_DEVICE_FUNC T operator()(T x) const { return x > static_cast<T>(0) ? x : static_cast<T>(0); }
@@ -364,6 +378,15 @@ struct ReluGradFunctor {
       device, "softsign_grad", SoftSignGradFunctor, dtype, dtype, dtype,                          \
       [](user_op::KernelComputeContext* ctx) { return SoftSignGradFunctor<dtype>(); }, "dx", "x", \
       "dy");
+
+#define REGISTER_TANHSHRINK_KERNEL(device, dtype)                                                  \
+  REGISTER_UNARY_ELEMWISE_USER_KERNEL(                                                             \
+      device, "tanhshrink", TanhShrinkFunctor, dtype, dtype,                                       \
+      [](user_op::KernelComputeContext* ctx) { return TanhShrinkFunctor<dtype>(); }, "out", "in"); \
+  REGISTER_BINARY_ELEMWISE_USER_KERNEL(                                                            \
+      device, "tanhshrink_grad", TanhShrinkGradFunctor, dtype, dtype, dtype,                       \
+      [](user_op::KernelComputeContext* ctx) { return TanhShrinkGradFunctor<dtype>(); }, "dx",     \
+      "x", "dy");
 
 // For Relu Inplace Proposal Fn.
 #define REGISTER_RELU_FORWARD_KERNEL(device, dtype)                                                \

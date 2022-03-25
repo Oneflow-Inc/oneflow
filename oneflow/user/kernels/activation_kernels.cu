@@ -171,6 +171,24 @@ struct SoftSignGradFunctor<half> {
 };
 
 template<>
+struct TanhShrinkFunctor<half> {
+  OF_DEVICE_FUNC explicit TanhShrinkFunctor() : float_functor(TanhShrinkFunctor<float>()) {}
+  OF_DEVICE_FUNC half operator()(half x) const {
+    return __float2half(float_functor(__half2float(x)));
+  }
+  TanhShrinkFunctor<float> float_functor;
+};
+
+template<>
+struct TanhShrinkGradFunctor<half> {
+  OF_DEVICE_FUNC explicit TanhShrinkGradFunctor() : float_functor(TanhShrinkGradFunctor<float>()) {}
+  OF_DEVICE_FUNC half operator()(half x, half dy) const {
+    return __float2half(float_functor(__half2float(x), __half2float(dy)));
+  }
+  TanhShrinkGradFunctor<float> float_functor;
+};
+
+template<>
 struct ReluGradFunctor<half> {
   OF_DEVICE_FUNC explicit ReluGradFunctor() {}
   __device__ half operator()(half y, half dy) const {
@@ -193,6 +211,7 @@ struct ReluGradFunctor<half> {
   REGISTER_SILU_KERNEL(DeviceType::kCUDA, dtype);        \
   REGISTER_SELU_KERNEL(DeviceType::kCUDA, dtype);        \
   REGISTER_SOFTSIGN_KERNEL(DeviceType::kCUDA, dtype);    \
+  REGISTER_TANHSHRINK_KERNEL(DeviceType::kCUDA, dtype);  \
   REGISTER_LEAKYRELU_KERNEL(DeviceType::kCUDA, dtype);   \
   REGISTER_RELU_BACKWARD_KERNEL(DeviceType::kCUDA, dtype);
 
