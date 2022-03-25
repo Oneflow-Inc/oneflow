@@ -26,7 +26,7 @@ import oneflow.unittest
 from oneflow.test_utils.automated_test_util import *
 
 
-@autotest(n=1, check_graph=False, auto_backward=False)
+@autotest(n=1, check_graph=False)
 def _test_linear_with_random_data(test_case, placement, sbp):
     row = random(1, 3).to(int) * 8
     col = random(1, 3).to(int) * 8
