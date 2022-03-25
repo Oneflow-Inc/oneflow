@@ -24,7 +24,7 @@ from test_in_top_k import _in_top_k_np
 
 @autotest(n=1, auto_backward=False, check_graph=False)
 def _test_in_top_k_impl(test_case, placement, sbp):
-    dims = [random(1, 3) * 8 for _ in range(2)]
+    dims = [random(1, 3).to(int) * 8 for _ in range(2)]
     x_np = (
         random_pytorch_tensor(1, dims[0], high=dims[1], dtype=int)
         .value()

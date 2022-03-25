@@ -23,7 +23,7 @@ import oneflow.unittest
 
 @autotest(n=1, check_graph=False)
 def _test_log1p_impl(test_case, ndim, placement, sbp):
-    dims = [random(1, 3) * 8 for i in range(ndim)]
+    dims = [random(1, 3).to(int) * 8 for i in range(ndim)]
     x = random_tensor(ndim, *dims).to_global(placement=placement, sbp=sbp)
     y = torch.log1p(x)
     return y

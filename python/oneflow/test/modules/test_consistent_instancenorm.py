@@ -23,7 +23,7 @@ from oneflow.test_utils.automated_test_util import *
 
 @autotest(n=1, check_graph=False)
 def _test_instancenorm1d_impl(test_case, placement, sbp):
-    dims = [random(1, 3) * 8 for i in range(3)]
+    dims = [random(1, 3).to(int) * 8 for i in range(3)]
     m = torch.nn.InstanceNorm1d(
         num_features=dims[1].to(int),
         eps=random().to(float),
