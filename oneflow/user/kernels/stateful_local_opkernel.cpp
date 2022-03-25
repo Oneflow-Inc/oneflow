@@ -430,9 +430,9 @@ Maybe<void> StatefulLocalOpKernel::ChooseOpKernel(
 
   DataType primary_dtype = kInvalidDataType;
   if (likely(!inputs->empty())) {
-    primary_dtype = (*inputs)[0]->blob_desc().data_type();
+    primary_dtype = (*inputs)[0]->data_type();
   } else if (likely(!outputs->empty())) {
-    primary_dtype = (*outputs)[0]->blob_desc().data_type();
+    primary_dtype = (*outputs)[0]->data_type();
   } else {
     // do nothing
   }

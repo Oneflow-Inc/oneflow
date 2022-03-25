@@ -74,8 +74,8 @@ size_t BlobDesc::ByteSizeOfBlobHeader() const {
 
 size_t BlobDesc::AlignedByteSizeOfBlobHeader() const {
   return shape().is_initialized()
-             ? RoundUp(shape().NumAxes() * sizeof(int64_t), BlobDesc::kHeaderAlignSize)
-             : RoundUp(0, BlobDesc::kHeaderAlignSize);
+             ? RoundUp(shape().NumAxes() * sizeof(int64_t), kBlobHeaderAlignSize)
+             : RoundUp(0, kBlobHeaderAlignSize);
 }
 
 size_t BlobDesc::ByteSizeOfBlobBody() const {
@@ -83,7 +83,7 @@ size_t BlobDesc::ByteSizeOfBlobBody() const {
 }
 
 size_t BlobDesc::AlignedByteSizeOfBlobBody() const {
-  return RoundUp(ByteSizeOfBlobBody(), BlobDesc::kBodyAlignSize);
+  return RoundUp(ByteSizeOfBlobBody(), kBlobBodyAlignSize);
 }
 
 size_t BlobDesc::AlignedTotalByteSize() const {

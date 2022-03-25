@@ -81,7 +81,7 @@ class TensorStorage {
   std::vector<std::function<void()>> storage_delete_hooks_;
 };
 
-class EagerBlobObject final : public BlobObject {
+class EagerBlobObject final {
  public:
   EagerBlobObject(const EagerBlobObject&) = delete;
   EagerBlobObject(EagerBlobObject&&) = delete;
@@ -93,23 +93,21 @@ class EagerBlobObject final : public BlobObject {
                   DataType data_type, const std::shared_ptr<TensorStorage>& tensor_storage,
                   const intrusive::shared_ptr<LocalDepObject>& dep_object);
 
-  ~EagerBlobObject() override {
+  ~EagerBlobObject() {
     tensor_storage_.reset();
-    header_buffer_.reset();
-    blob_.reset();
+    // header_buffer_.reset();
+    // blob_.reset();
   }
 
-  BlobDesc* mut_blob_desc() override { return &blob_desc_; }
+  void set_storage_offset(const int64_t offset);
 
-  const Blob& blob() const override { return *blob_; }
-  Blob* mut_blob() override { return blob_.get(); }
+  [[deprecated(
+      "\"Blob\" will be removed in eager. Please do not use this method whenever possible")]] std::
+      shared_ptr<Blob>
+      AsBlob(const BlobDesc* blob_desc);
 
-  Maybe<void> TryInitBlob() override;
-  Maybe<void> InitBlob();
-  Maybe<void> InitBlobWithOffset(const int64_t offset);
-
-  Maybe<void> TryAllocateBlobBodyMemory(DeviceCtx* device_ctx) override;
-  Maybe<void> DeallocateBlobDataPtr() override {
+  Maybe<void> TryAllocateBlobBodyMemory(DeviceCtx* device_ctx);
+  Maybe<void> DeallocateBlobDataPtr() {
     tensor_storage_->Release();
     tensor_storage_.reset(new TensorStorage);
     return Maybe<void>::Ok();
@@ -143,9 +141,45 @@ class EagerBlobObject final : public BlobObject {
     tensor_storage_->set_last_used_stream(last_used_stream);
   }
 
+  const std::shared_ptr<const Shape>& shape_ptr() const { return shape_; }
+  const Shape& shape() const { return *shape_; }
+  Shape& mut_shape() { return const_cast<Shape&>(shape()); }
+  const ShapeView* shape_view() const { return &shape_view_; }
+  MutShapeView* mut_shape_view() { return &mut_shape_view_; }
+
+  size_t ByteSizeOfBlobBody() const {
+    return shape_view_.elem_cnt() * GetSizeOfDataType(data_type_);
+  }
+  size_t ByteSizeOfBlobHeader() const { return shape().NumAxes() * sizeof(int64_t); }
+
+  template<typename T = void>
+  const T* dptr() const {
+    return reinterpret_cast<T*>(tensor_storage_->blob_dptr()
+                                + storage_offset_ * GetSizeOfDataType(data_type_));
+  }
+
+  template<typename T = void>
+  T* mut_dptr() {
+    return const_cast<T*>(dptr<T>());
+  }
+
+  DataType data_type() const { return data_type_; }
+  DataType* mut_data_type() { return &data_type_; }
+  const MemoryCase& mem_case() const { return *mem_case_; }
+
+  bool is_dynamic() const { return is_dynamic_; }
+  void set_is_dynamic(bool is_dynamic) { is_dynamic_ = is_dynamic; }
+  bool* mut_is_dynamic() { return &is_dynamic_; }
+
  private:
-  std::unique_ptr<Blob> blob_;
-  std::unique_ptr<char[]> header_buffer_;
+  bool is_dynamic_;
+  std::shared_ptr<MemoryCase> mem_case_;
+  DataType data_type_;
+  ShapeView shape_view_;
+  MutShapeView mut_shape_view_;
+  std::shared_ptr<const Shape> shape_;
+
+  int64_t storage_offset_;
   std::shared_ptr<TensorStorage> tensor_storage_;
   std::atomic<bool> is_shape_synced_;
   intrusive::shared_ptr<LocalDepObject> compute_local_dep_object_;

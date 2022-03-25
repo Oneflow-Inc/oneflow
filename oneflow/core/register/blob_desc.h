@@ -42,9 +42,6 @@ class BlobDesc final {
   explicit BlobDesc(const BlobDescProto& proto);
   explicit BlobDesc(const BlobDesc&);
 
-  static const int32_t kBodyAlignSize = 512;
-  static const int32_t kHeaderAlignSize = 64;
-
   BlobDesc& operator=(const BlobDesc&);
 
   const Shape& shape() const { return *CHECK_NOTNULL(shape_.get()); }
