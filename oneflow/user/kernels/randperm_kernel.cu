@@ -35,6 +35,21 @@ __global__ void GeneKeysAndValues(const int32_t n, int32_t* values, int32_t* key
   }
 }
 
+namespace {
+
+template<typename K>
+size_t GetCubSortPairsTempStorageSize(int64_t n) {
+  size_t cub_sort_temp_store_size = 0;
+  OF_CUDA_CHECK((cub::DeviceRadixSort::SortPairs<K, K>(nullptr, cub_sort_temp_store_size, nullptr,
+                                                       nullptr, nullptr, nullptr, n)));
+  size_t temp_store_size = GetCudaAlignedSize(cub_sort_temp_store_size);
+  CHECK_GE(temp_store_size, 0);
+  CHECK_LT(temp_store_size, static_cast<size_t>(GetMaxVal<int64_t>()));
+  return temp_store_size;
+}
+
+}  // namespace
+
 class GpuRandPermKernel final : public user_op::OpKernel {
  public:
   GpuRandPermKernel() = default;
@@ -78,7 +93,7 @@ class GpuRandPermKernel final : public user_op::OpKernel {
     const int32_t indices_aligned_bytes = GetCudaAlignedSize(n * sizeof(int32_t));
     void* tmp_base =
         reinterpret_cast<void*>(reinterpret_cast<char*>(value_base) + indices_aligned_bytes);
-    size_t temp_storage_bytes = InferTempStorageForSortPairsDescending<int32_t, int32_t>(1, n);
+    size_t temp_storage_bytes = GetCubSortPairsTempStorageSize<int32_t>(n);
 
     GeneKeysAndValues<<<block_num, kCudaThreadsNumPerBlock, 0,
                         ctx->stream()->As<ep::CudaStream>()->cuda_stream()>>>(
@@ -110,8 +125,7 @@ REGISTER_USER_KERNEL("randperm")
       const int32_t indices_aligned_bytes = GetCudaAlignedSize(n * sizeof(int32_t));
 
       /* CUB Temp Storage */
-      const int32_t temp_storage_bytes =
-          InferTempStorageForSortPairsDescending<int32_t, int32_t>(1, n);
+      const int32_t temp_storage_bytes = GetCubSortPairsTempStorageSize<int32_t>(n);
 
       return sorted_in_aligned_bytes + indices_aligned_bytes + temp_storage_bytes;
     });
