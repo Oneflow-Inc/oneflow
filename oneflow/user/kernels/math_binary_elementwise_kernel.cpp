@@ -101,7 +101,89 @@ class MathBinaryElementwiseXGradCpuKernel final : public user_op::OpKernel {
     T* dx = tensor_dx->mut_dptr<T>();
     int64_t n = tensor_x->shape().elem_cnt();
     CHECK_LE(n, GetMaxVal<int32_t>() / 2);
-    for (int32_t i = 0; i < n; ++i) { dx[i] = BinaryFunctor<T>::BackwardXGrad(x[i], y[i], dz[i]); }
+
+    const int32_t ndim = tensor_x->shape().NumAxes();
+    const StrideVector& x_stride_vec = tensor_x->stride().StrideVec();
+    const StrideVector& y_stride_vec = tensor_y->stride().StrideVec();
+    const StrideVector& dz_stride_vec = tensor_dz->stride().StrideVec();
+    DimVector x_shape_vec, y_shape_vec, dz_shape_vec;
+    tensor_x->shape().ToDimVector(&x_shape_vec);
+    tensor_y->shape().ToDimVector(&y_shape_vec);
+    tensor_dz->shape().ToDimVector(&dz_shape_vec);
+    const bool x_contiguous = oneflow::one::IsContiguous(x_shape_vec, x_stride_vec);
+    const bool y_contiguous = oneflow::one::IsContiguous(y_shape_vec, y_stride_vec);
+    const bool dz_contiguous = oneflow::one::IsContiguous(dz_shape_vec, dz_stride_vec);
+    if (x_contiguous && y_contiguous && dz_contiguous) {
+      for (int32_t i = 0; i < n; ++i) { 
+        dx[i] = BinaryFunctor<T>::BackwardXGrad(x[i], y[i], dz[i]); 
+      }
+    } else if (x_contiguous && y_contiguous && !dz_contiguous) {
+      const StrideParam dz_stride(dz_stride_vec.data(), ndim);
+      const StrideVector& dx_stride_vec = tensor_dx->stride().StrideVec();
+      const StrideParam dx_stride(dx_stride_vec.data(), ndim);
+      for (int32_t i = 0; i < n; ++i) { 
+        const int32_t dz_idx = compute_index(i, dz_stride, dx_stride);
+        dx[i] = BinaryFunctor<T>::BackwardXGrad(x[i], y[i], dz[dz_idx]); 
+      }
+    } else if (x_contiguous && !y_contiguous && dz_contiguous) {
+      const StrideParam y_stride(y_stride_vec.data(), ndim);
+      const StrideVector& dx_stride_vec = tensor_dx->stride().StrideVec();
+      const StrideParam dx_stride(dx_stride_vec.data(), ndim);
+      for (int32_t i = 0; i < n; ++i) { 
+        const int32_t y_idx = compute_index(i, y_stride, dx_stride);
+        dx[i] = BinaryFunctor<T>::BackwardXGrad(x[i], y[y_idx], dz[i]); 
+      }
+    } else if (!x_contiguous && y_contiguous && dz_contiguous) {
+      const StrideParam x_stride(x_stride_vec.data(), ndim);
+      const StrideVector& dx_stride_vec = tensor_dx->stride().StrideVec();
+      const StrideParam dx_stride(dx_stride_vec.data(), ndim);
+      for (int32_t i = 0; i < n; ++i) { 
+        const int32_t x_idx = compute_index(i, x_stride, dx_stride);
+        dx[i] = BinaryFunctor<T>::BackwardXGrad(x[x_idx], y[i], dz[i]); 
+      }
+    } else if (!x_contiguous && !y_contiguous && dz_contiguous) {
+      const StrideParam x_stride(x_stride_vec.data(), ndim);
+      const StrideParam y_stride(y_stride_vec.data(), ndim);
+      const StrideVector& dx_stride_vec = tensor_dx->stride().StrideVec();
+      const StrideParam dx_stride(dx_stride_vec.data(), ndim);
+      for (int32_t i = 0; i < n; ++i) { 
+        const int32_t x_idx = compute_index(i, x_stride, dx_stride);
+        const int32_t y_idx = compute_index(i, y_stride, dx_stride);
+        dx[i] = BinaryFunctor<T>::BackwardXGrad(x[x_idx], y[y_idx], dz[i]); 
+      }
+    } else if (!x_contiguous && y_contiguous && !dz_contiguous) {
+      const StrideParam x_stride(x_stride_vec.data(), ndim);
+      const StrideParam dz_stride(dz_stride_vec.data(), ndim);
+      const StrideVector& dx_stride_vec = tensor_dx->stride().StrideVec();
+      const StrideParam dx_stride(dx_stride_vec.data(), ndim);
+      for (int32_t i = 0; i < n; ++i) { 
+        const int32_t x_idx = compute_index(i, x_stride, dx_stride);
+        const int32_t dz_idx = compute_index(i, dz_stride, dx_stride);
+        dx[i] = BinaryFunctor<T>::BackwardXGrad(x[x_idx], y[i], dz[dz_idx]); 
+      }
+    } else if (x_contiguous && !y_contiguous && !dz_contiguous) {
+      const StrideParam y_stride(y_stride_vec.data(), ndim);
+      const StrideParam dz_stride(dz_stride_vec.data(), ndim);
+      const StrideVector& dx_stride_vec = tensor_dx->stride().StrideVec();
+      const StrideParam dx_stride(dx_stride_vec.data(), ndim);
+      for (int32_t i = 0; i < n; ++i) { 
+        const int32_t y_idx = compute_index(i, y_stride, dx_stride);
+        const int32_t dz_idx = compute_index(i, dz_stride, dx_stride);
+        dx[i] = BinaryFunctor<T>::BackwardXGrad(x[i], y[y_idx], dz[dz_idx]); 
+      }
+    } else if (!x_contiguous && !y_contiguous && !dz_contiguous) {
+      const StrideParam x_stride(x_stride_vec.data(), ndim);
+      const StrideParam y_stride(y_stride_vec.data(), ndim);
+      const StrideParam dz_stride(dz_stride_vec.data(), ndim);
+      const StrideVector& dx_stride_vec = tensor_dx->stride().StrideVec();
+      const StrideParam dx_stride(dx_stride_vec.data(), ndim);
+      for (int32_t i = 0; i < n; ++i) { 
+        const int32_t x_idx = compute_index(i, x_stride, dx_stride);
+        const int32_t y_idx = compute_index(i, y_stride, dx_stride);
+        const int32_t dz_idx = compute_index(i, dz_stride, dx_stride);
+        dx[i] = BinaryFunctor<T>::BackwardXGrad(x[x_idx], y[y_idx], dz[dz_idx]); 
+      }
+    }
   }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
