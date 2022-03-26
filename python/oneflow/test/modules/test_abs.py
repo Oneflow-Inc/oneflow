@@ -37,8 +37,8 @@ class TestAbsModule(flow.unittest.TestCase):
         x = random_tensor().to(device)
         permute_list = list(range(5))
         shuffle(permute_list)
-        x = x.permute(permute_list)
-        y = torch.abs(x)
+        x2 = x.permute(permute_list)
+        y = torch.abs(x2)
         return y
 
     @autotest(check_graph=True)
