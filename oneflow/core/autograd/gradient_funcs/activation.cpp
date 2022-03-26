@@ -15,6 +15,7 @@ limitations under the License.
 */
 #include "oneflow/core/framework/op_expr_grad_function.h"
 #include "oneflow/core/functional/functional.h"
+#include "oneflow/core/common/container_util.h"
 
 namespace oneflow {
 namespace one {
@@ -229,7 +230,7 @@ class Softplus : public OpExprGradFunction<SoftplusCaptureState> {
     ComposedAttrMap composed_attrs(attrs, base_attrs_);
     ctx->beta = JUST(composed_attrs.GetAttr<double>("beta"));
     ctx->threshold = JUST(composed_attrs.GetAttr<double>("threshold"));
-    ctx->SaveTensorForBackward(inputs.at(0));
+    ctx->SaveTensorForBackward(JUST(oneflow::VectorAt(inputs, 0)));
     return Maybe<void>::Ok();
   }
 
@@ -238,9 +239,9 @@ class Softplus : public OpExprGradFunction<SoftplusCaptureState> {
     CHECK_EQ_OR_RETURN(out_grads.size(), 1);
     in_grads->resize(1);
     if (ctx->requires_grad) {
-      const auto& x = ctx->SavedTensors().at(0);
-      in_grads->at(0) =
-          JUST(functional::SoftplusGrad(x, out_grads.at(0), ctx->beta, ctx->threshold));
+      const auto& x = JUST(oneflow::VectorAt(ctx->SavedTensors(), 0));
+      *JUST(oneflow::VectorAt(in_grads, 0)) = JUST(functional::SoftplusGrad(
+          x, JUST(oneflow::VectorAt(out_grads, 0)), ctx->beta, ctx->threshold));
     }
     return Maybe<void>::Ok();
   }
