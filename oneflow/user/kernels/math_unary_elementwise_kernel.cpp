@@ -85,25 +85,25 @@ class MathUnaryElementwiseGradCpuKernel final : public user_op::OpKernel {
     } else if (x_contiguous) {
       const StrideParam param_dy_stride(dy_stride_vec.data(), ndim);
       const StrideParam param_dx_stride(dx_stride_vec.data(), ndim);
-      for (int32_t i = 0; i < n; ++i) { 
+      for (int32_t i = 0; i < n; ++i) {
         const int32_t dy_idx = compute_index(i, param_dy_stride, param_dx_stride);
-        dx[i] = UnaryFunctor<T>::Backward(x[i], dy[dy_idx]); 
+        dx[i] = UnaryFunctor<T>::Backward(x[i], dy[dy_idx]);
       }
     } else if (dy_contiguous) {
       const StrideParam param_x_stride(x_stride_vec.data(), ndim);
       const StrideParam param_dx_stride(dx_stride_vec.data(), ndim);
-      for (int32_t i = 0; i < n; ++i) { 
+      for (int32_t i = 0; i < n; ++i) {
         int32_t x_idx = compute_index(i, param_x_stride, param_dx_stride);
-        dx[i] = UnaryFunctor<T>::Backward(x[x_idx], dy[i]); 
+        dx[i] = UnaryFunctor<T>::Backward(x[x_idx], dy[i]);
       }
     } else {
       const StrideParam param_x_stride(x_stride_vec.data(), ndim);
       const StrideParam param_dy_stride(dy_stride_vec.data(), ndim);
       const StrideParam param_dx_stride(dx_stride_vec.data(), ndim);
-      for (int32_t i = 0; i < n; ++i) { 
+      for (int32_t i = 0; i < n; ++i) {
         const int32_t x_idx = compute_index(i, param_x_stride, param_dx_stride);
         const int32_t dy_idx = compute_index(i, param_dy_stride, param_dx_stride);
-        dx[i] = UnaryFunctor<T>::Backward(x[x_idx], dy[dy_idx]); 
+        dx[i] = UnaryFunctor<T>::Backward(x[x_idx], dy[dy_idx]);
       }
     }
   }
