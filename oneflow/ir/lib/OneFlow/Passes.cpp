@@ -13,14 +13,17 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
+#include <vector>
 #include "OneFlow/OneFlowOps.h"
 #include "OneFlow/OneFlowDialect.h"
 #include "OneFlow/Passes.h"
 #include "OneFlow/OneFlowSupport.h"
 #include "llvm/ADT/DenseSet.h"
 #include "llvm/ADT/SmallVector.h"
+#include "mlir-c/BuiltinAttributes.h"
 #include "mlir/IR/Attributes.h"
 #include "mlir/IR/OperationSupport.h"
+#include "mlir/IR/MLIRContext.h"
 #include "oneflow/core/framework/random_generator.h"
 
 #include "llvm/ADT/ArrayRef.h"
@@ -340,69 +343,75 @@ IntegerAttr getSI64IntegerAttr(::mlir::PatternRewriter& rewriter, int64_t value)
   return {};
 }
 
-// ::mlir::Value CreateOneFlowVariableIrOp(::mlir::PatternRewriter& rewriter,
-//                                         OpResult variable_result) {
-//   if (auto variable_op = llvm::dyn_cast<oneflow::VariableOp>(variable_result.getDefiningOp())) {
-//     auto new_variable_op = rewriter.create<::mlir::oneflow::VariableIrOp>(
-//         variable_op->getLoc(), variable_op.output().getType(),
-//         variable_op.output_lbns().begin()->dyn_cast<mlir::StringAttr>());
-//     variable_op.output().replaceAllUsesWith(new_variable_op.output());
-//     return new_variable_op.output();
-//   }
-//   return {};
-// }
-// ::llvm::SmallVector<::mlir::Value, 4> ReplaceConv2dVariable(::mlir::PatternRewriter& rewriter,
-//                                                             OpResult conv_result) {
-//   if (auto conv_op = llvm::dyn_cast<oneflow::Conv2DOp>(conv_result.getDefiningOp())) {
-//     if (auto op0 = llvm::dyn_cast<oneflow::VariableOp>(conv_op.weight().getDefiningOp())) {
-//       rewriter.replaceOp(op0, rewriter
-//                                   .create<oneflow::VariableIrOp>(
-//                                       op0->getLoc(), op0.output().getType(),
-//                                       op0.output_lbns().begin()->dyn_cast<mlir::StringAttr>())
-//                                   ->getResults());
-//       if (conv_op.bias()) {
-//         if (auto op1 = llvm::dyn_cast<oneflow::VariableOp>(conv_op.bias().getDefiningOp())) {
-//           rewriter.replaceOp(op1, rewriter
-//                                       .create<oneflow::VariableIrOp>(
-//                                           op1->getLoc(), op1.output().getType(),
-//                                           op1.output_lbns().begin()->dyn_cast<mlir::StringAttr>())
-//                                       ->getResults());
-//         }
-//       }
-
-//       SmallVector<Value, 4> final_results;
-//       NamedAttrList attributes = conv_op->getAttrs();
-//       SmallVector<Value, 4> operands;
-//       operands.push_back(conv_op.in());
-//       operands.push_back(conv_op.weight());
-//       if (conv_op.bias()) operands.push_back(conv_op.bias());
-//       if (conv_op.bias_multiplier()) operands.push_back(conv_op.bias_multiplier());
-//       auto new_conv_op = rewriter.create<oneflow::Conv2DOp>(
-//           conv_op->getLoc(), conv_op->getResultTypes(), operands, attributes);
-
-//       final_results.push_back(new_conv_op.out());
-
-//       return final_results;
-//       // return conv_op->getResults();
-//     }
-//   }
-//   return {};
-// }
+NamedAttrList GetUserOpCommonAttrs(MLIRContext* ctx, const std::string& op_name) {
+  NamedAttrList attrs;
+  attrs.set("op_name", StringAttr::get(ctx, op_name));
+  attrs.set("device_tag", StringAttr::get(ctx, "cpu"));
+  attrs.set("device_name",
+            ArrayAttr::get(ctx, llvm::to_vector<8>(llvm::map_range(ArrayRef<StringRef>({"@0:0"}),
+                                                                   [&](StringRef v) -> Attribute {
+                                                                     return StringAttr::get(ctx, v);
+                                                                   }))));
+  return attrs;
+}
 
 ::llvm::SmallVector<::mlir::Value, 4> FuseConv2DBatchNorm(::mlir::PatternRewriter& rewriter,
                                                           OpResult conv_result,
                                                           OpResult bn_result) {
   if (auto conv_op = llvm::dyn_cast<oneflow::Conv2DOp>(conv_result.getDefiningOp())) {
     if (auto bn_op = llvm::dyn_cast<oneflow::NormalizationInferenceOp>(bn_result.getDefiningOp())) {
+      auto ctx = rewriter.getContext();
       SmallVector<Value, 4> final_results;
       NamedAttrList attributes = conv_op->getAttrs();
 
       SmallVector<Value, 4> operands;
       operands.push_back(conv_op.in());
-      // auto mul_op = rewriter.create<oneflow::MultiplyOp>(
-      //     conv_op->getLoc(), conv_op->getResultTypes(), conv_op.weight(), bn_op.gamma());
-      // operands.push_back(mul_op.out());  // new weight
-      operands.push_back(conv_op.weight());
+
+      auto add_op_attrs = GetUserOpCommonAttrs(ctx, "scalar_add");
+      add_op_attrs.set("has_float_operand", BoolAttr::get(ctx, true));
+      add_op_attrs.set("float_operand", bn_op.epsilonAttr());
+      auto add_op = rewriter.create<oneflow::ScalarAddOp>(
+          conv_op->getLoc(), conv_op->getResultTypes(),
+          SmallVector<Value, 4>({bn_op.moving_variance()}), add_op_attrs);
+
+      auto div_op = rewriter.create<oneflow::BroadcastDivOp>(
+          conv_op->getLoc(), conv_op->getResultTypes(),
+          SmallVector<Value, 4>({bn_op.gamma(), add_op.out()}), GetUserOpCommonAttrs(ctx, "div"));
+
+      auto reshape_op_attrs = GetUserOpCommonAttrs(ctx, "reshape");
+      auto bn_gamma_shape = bn_op.gamma()
+                                .getDefiningOp()
+                                ->getAttrDictionary()
+                                .get("value")
+                                .cast<mlir::DenseElementsAttr>()
+                                .getType()
+                                .cast<mlir::RankedTensorType>()
+                                .getShape();
+      auto conv_weight_shape = conv_op.weight()
+                                   .getDefiningOp()
+                                   ->getAttrDictionary()
+                                   .get("value")
+                                   .cast<mlir::DenseElementsAttr>()
+                                   .getType()
+                                   .cast<mlir::RankedTensorType>()
+                                   .getShape();
+      std::vector<int64_t> bn_gamma_new_shape({bn_gamma_shape.front()});
+      for (int i = 1; i < conv_weight_shape.size(); ++i) { bn_gamma_new_shape.emplace_back(1); }
+      reshape_op_attrs.set("shape", ArrayAttr::get(ctx, llvm::to_vector<8>(llvm::map_range(
+                                                            ArrayRef<int64_t>(bn_gamma_new_shape),
+                                                            [&](int64_t v) -> Attribute {
+                                                              return rewriter.getI64IntegerAttr(v);
+                                                            }))));
+      auto reshape_op = rewriter.create<oneflow::ReshapeOp>(
+          conv_op->getLoc(), conv_op->getResultTypes(), SmallVector<Value, 4>({div_op.z()}),
+          reshape_op_attrs);
+
+      auto mul_op = rewriter.create<oneflow::MultiplyOp>(
+          conv_op->getLoc(), conv_op->getResultTypes(),
+          SmallVector<Value, 4>({conv_op.weight(), reshape_op.out()}),
+          GetUserOpCommonAttrs(ctx, "multiply"));
+      operands.push_back(mul_op.out());
+
       if (conv_op.bias()) operands.push_back(conv_op.bias());
       if (conv_op.bias_multiplier()) operands.push_back(conv_op.bias_multiplier());
 
@@ -463,7 +472,6 @@ struct ReplaceVariablePattern : public ::mlir::RewritePattern {
     attrs.set(op.nd_sbpAttrName(), op.nd_sbpAttr());
     auto op_new = rewriter.create<oneflow::VariableIrOp>(op->getLoc(), op.output().getType(),
                                                          ValueRange(), attrs);
-    // op.output_lbns().begin()->dyn_cast<mlir::StringAttr>());
     rewriter.replaceOp(op0, op_new->getResults());
     return ::mlir::success();
   }
@@ -501,63 +509,6 @@ struct ReplaceVariableIrPattern : public ::mlir::RewritePattern {
   }
 };
 
-// struct FuseConv2DBatchNormPattern : public ::mlir::RewritePattern {
-//   FuseConv2DBatchNormPattern(::mlir::MLIRContext* context)
-//       : ::mlir::RewritePattern("oneflow.normalization", 1, context, {}) {}
-//   ::mlir::LogicalResult matchAndRewrite(::mlir::Operation* op0,
-//                                         ::mlir::PatternRewriter& rewriter) const override {
-//     // auto op = ::llvm::dyn_cast<::mlir::oneflow::NormalizationOp>(op0);
-//     // const auto inputOp = op->getOperand(0).getDefiningOp<::mlir::oneflow::Conv2DOp>();
-//     // if (!inputOp) { return failure(); }
-//     // op.y().replaceAllUsesWith(inputOp->getResult(0));
-//     // // op->erase();
-//     // std::cout<<233<<std::endl;
-//     // rewriter.eraseOp(op);
-//     // return success();
-//     auto bn_op = ::llvm::dyn_cast<::mlir::oneflow::NormalizationOp>(op0);
-//     auto* op1 = (*bn_op.getODSOperands(0).begin()).getDefiningOp();
-//     if (!(op1)) {
-//       return rewriter.notifyMatchFailure(bn_op, [&](::mlir::Diagnostic& diag) {
-//         diag << "There's no operation that defines operand 0 of bn_op";
-//       });
-//     }
-//     auto conv_op = ::llvm::dyn_cast<::mlir::oneflow::Conv2DOp>(op1);
-//     if (!(conv_op)) {
-//       return rewriter.notifyMatchFailure(op1, [&](::mlir::Diagnostic& diag) {
-//         diag << "conv_op is not ::mlir::oneflow::Conv2DOp type";
-//       });
-//     }
-
-//     auto odsLoc = rewriter.getFusedLoc({op0->getLoc(), op1->getLoc()});
-//     ::llvm::SmallVector<::mlir::Value, 4> tblgen_repl_values;
-//     auto result = FuseConv2DBatchNorm(rewriter, (*conv_op.getODSResults(0).begin()));
-//     (void)result;
-
-//     for (auto v : ::llvm::SmallVector<::mlir::Value, 4>{{result}}) {
-//       tblgen_repl_values.push_back(v);
-//     }
-
-//     ::mlir::oneflow::NullOp tblgen_NullOp_0 =
-//         rewriter.create<::mlir::oneflow::NullOp>(odsLoc, conv_op.in().getType());
-//     ::mlir::oneflow::NullOp tblgen_NullOp_1 =
-//         rewriter.create<::mlir::oneflow::NullOp>(odsLoc, conv_op.in().getType());
-//     for (auto v : ::llvm::SmallVector<::mlir::Value, 4>{tblgen_NullOp_0.getODSResults(0)}) {
-//       tblgen_repl_values.push_back(v);
-//     }
-//     for (auto v : ::llvm::SmallVector<::mlir::Value, 4>{tblgen_NullOp_1.getODSResults(0)}) {
-//       tblgen_repl_values.push_back(v);
-//     }
-//     // rewriter.replaceOp(op0,tblgen_repl_values);
-//     // rewriter.replaceOp(op0, *tblgen_repl_values.begin());
-
-//     rewriter.replaceOp(op0, result);
-
-//     //  bn_op.y().replaceAllUsesWith(conv_op->getResult(0));
-//     // rewriter.eraseOp(op0);
-
-//     return ::mlir::success();
-//   }
-// };
 mlir::IntegerAttr GetDefaultSeed(::mlir::PatternRewriter& rewriter) {
   const auto gen = CHECK_JUST(::oneflow::one::DefaultAutoGenerator());
   return getSI64IntegerAttr(rewriter, (int64_t)gen->current_seed());
@@ -755,11 +706,6 @@ void populateFuserForExistingOp(::mlir::RewritePatternSet& patterns) {
   patterns.add<FusedPadConv2DPattern>(patterns.getContext());
   patterns.add<FusedBiasAddDropoutPattern>(patterns.getContext());
   patterns.add<NormalizationAddReluPattern>(patterns.getContext());
-  // patterns.add<ReplaceVariableInBatchNormOperandsPattern>(patterns.getContext());
-  // patterns.add<ReplaceConv2dVariablePattern>(patterns.getContext());
-
-  // patterns.add<ReplaceVariablePattern>(patterns.getContext());
-  // patterns.add<FuseConv2DBatchNormPattern>(patterns.getContext());
   bool enable_nhwc = ::oneflow::ParseBooleanFromEnv("ONEFLOW_MLIR_PREFER_NHWC", false);
   if (enable_nhwc) { patterns.add<AutoNhwcPattern>(patterns.getContext()); }
 }
