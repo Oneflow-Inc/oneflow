@@ -1869,6 +1869,9 @@ class VarianceFunctor {
       std::sort(dims.begin(), dims.end());
       axis.assign(dims.begin(), dims.end());
     }
+    for (size_t i = 0; i < axis.size(); i++) {
+      if (axis[i] < 0) { axis[i] += ndim; }
+    }
     JUST(attrs.SetAttr<std::vector<int32_t>>("dim", axis));
     JUST(attrs.SetAttr<DataType>("dtype", input->dtype()->data_type()));
 
