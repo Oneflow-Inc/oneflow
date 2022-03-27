@@ -97,6 +97,7 @@ from oneflow._C import tanh
 from oneflow._C import as_strided
 from oneflow._C import silu
 from oneflow._C import selu
+from oneflow._C import softshrink
 from oneflow._C import softsign
 from oneflow._C import cast
 from oneflow._C import ones_like
