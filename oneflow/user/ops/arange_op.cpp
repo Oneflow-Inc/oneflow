@@ -15,6 +15,8 @@ limitations under the License.
 */
 #include "oneflow/core/framework/framework.h"
 #include "oneflow/core/framework/op_generated.h"
+#include "oneflow/core/common/balanced_splitter.h"
+#include "oneflow/core/job/nd_sbp_util.h"
 
 namespace oneflow {
 
@@ -49,7 +51,31 @@ namespace oneflow {
 }
 
 /*static*/ Maybe<void> ArangeOp::InferPhysicalTensorDesc(user_op::InferContext* ctx) {
-  return InferLogicalTensorDesc(ctx);
+  DataType dtype = ctx->Attr<DataType>("dtype");
+  int64_t range_elem_cnt = 0;
+  if (IsIntegralDataType(dtype)) {
+    int64_t integer_delta = ctx->Attr<int64_t>("integer_delta");
+    int64_t integer_start = ctx->Attr<int64_t>("integer_start");
+    int64_t integer_limit = ctx->Attr<int64_t>("integer_limit");
+    range_elem_cnt = std::ceil(static_cast<double>(integer_limit - integer_start) / integer_delta);
+  } else {
+    double float_delta = ctx->Attr<double>("float_delta");
+    double float_start = ctx->Attr<double>("float_start");
+    double float_limit = ctx->Attr<double>("float_limit");
+    range_elem_cnt = std::ceil(static_cast<double>(float_limit - float_start) / float_delta);
+  }
+
+  const Shape& logical_shape = Shape({range_elem_cnt});
+  const NdSbp& nd_sbp = ctx->NdSbp4ArgNameAndIndex("out", 0);
+  const Shape& parallel_hierarchy = *ctx->parallel_desc().hierarchy();
+
+  const int64_t parallel_id = ctx->parallel_ctx().parallel_id();
+  const Shape& physical_shape =
+      GetTensorSliceView4ParallelId(parallel_hierarchy, nd_sbp, logical_shape, parallel_id).shape();
+
+  *ctx->OutputShape("out", 0) = physical_shape;
+
+  return Maybe<void>::Ok();
 }
 
 /* static */ Maybe<void> ArangeOp::GetSbp(user_op::SbpContext* ctx) {
