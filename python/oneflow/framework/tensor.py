@@ -1201,6 +1201,7 @@ def RegisterMethods():
     Tensor.to_consistent = _to_consistent
     Tensor.is_contiguous = _is_contiguous
 
+
 def register_tensor_op(op_name):
     def set_tensor_op(method):
         setattr(Tensor, op_name, method)
