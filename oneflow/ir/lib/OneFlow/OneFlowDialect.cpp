@@ -15,6 +15,7 @@ limitations under the License.
 */
 #include "OneFlow/OneFlowDialect.h"
 #include "OneFlow/OneFlowOps.h"
+#include "OneFlow/OneFlowTypes.h"
 #include "OneFlow/OneFlowOpsDialect.cpp.inc"
 #include "mlir/IR/BuiltinAttributes.h"
 #include "mlir/IR/Dialect.h"
@@ -133,6 +134,13 @@ void OneFlowDialect::initialize() {
       ,
 #define GET_OP_LIST
 #include "OneFlow/OneFlow.upsample_ops.cpp.inc"
+      ,
+#define GET_OP_LIST
+#include "OneFlow/OneFlow.one_embedding_ops.cpp.inc"
+      >();
+  addTypes<
+#define GET_TYPEDEF_LIST
+#include "OneFlow/OneFlowOpsTypes.cpp.inc"
       >();
 }
 

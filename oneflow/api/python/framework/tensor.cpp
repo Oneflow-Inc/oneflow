@@ -26,7 +26,6 @@ limitations under the License.
 #include "oneflow/api/python/functional/tensor_api.yaml.pybind.h"
 #include "oneflow/core/framework/tensor.h"
 #include "oneflow/core/framework/tensor_rpc_util.h"
-#include "oneflow/core/framework/tensor_methods.h"
 #include "oneflow/core/framework/device.h"
 #include "oneflow/core/framework/stride.h"
 #include "oneflow/core/framework/py_distribute.h"
@@ -60,10 +59,6 @@ py::array ApiEagerMirroredTensorToNumpy(const py::handle& py_tensor) {
     default:
       return Maybe<py::array>(Error::UnimplementedError() << "Invalid datatype").GetOrThrow();
   }
-}
-
-void ApiEagerMirroredTensorZeros(const std::shared_ptr<Tensor>& tensor) {
-  return EagerMirroredTensorZeros(tensor).GetOrThrow();
 }
 
 template<typename T>
@@ -107,19 +102,6 @@ std::tuple<std::vector<Shape>, std::vector<Symbol<DType>>> GetTensorBufferShapes
 
 void ApiRegisterTensorHook(const std::shared_ptr<Tensor>& self, const AutogradMeta::Hook& hook) {
   return RegisterTensorHook(self, hook).GetOrThrow();
-}
-
-void ApiRegisterTensorPostGradAccumulationHook(const std::shared_ptr<Tensor>& self,
-                                               const AutogradMeta::Hook& hook) {
-  return RegisterTensorPostGradAccumulationHook(self, hook).GetOrThrow();
-}
-
-bool ApiIsContiguous(const std::shared_ptr<Tensor>& tensor) {
-  return IsContiguous(tensor).GetOrThrow();
-}
-
-py::tuple ApiTensorGetPyTupleOfSbp(const Tensor& tensor) {
-  return *TensorGetPyTupleOfSbp(tensor).GetPtrOrThrow();
 }
 
 std::shared_ptr<Tensor> ApiNewTensor(py::args args, py::kwargs kwargs) {
@@ -178,14 +160,20 @@ ONEFLOW_API_PYBIND11_MODULE("", m) {
           })
       .def_property(
           "data", [](Tensor& t) { return t.data().GetPtrOrThrow(); },
-          [](Tensor& t, const std::shared_ptr<Tensor>& other) { t.set_data(other).GetOrThrow(); })
+          [](const std::shared_ptr<Tensor>& t, const std::shared_ptr<Tensor>& other) {
+            auto hooks = t->autograd_meta()->hooks();
+            t->set_data(other).GetOrThrow();
+            // Re-register hooks
+            for (const auto& hook : hooks) { ApiRegisterTensorHook(t, hook); }
+          })
       .def("storage_offset", [](const Tensor& t) { return t.storage_offset().GetOrThrow(); })
       .def("stride",
            [](const Tensor& t) {
              const auto& stride = t.stride().GetPtrOrThrow()->StrideVec();
              return py::tuple(py::make_iterator(stride.begin(), stride.end()));
            })
-      .def("is_contiguous", &ApiIsContiguous)
+      .def("is_contiguous", &Tensor::is_contiguous)
+      .def("contiguous", &Tensor::contiguous)
       .def_property_readonly("grad_fn", &Tensor::grad_fn_node)
       .def_property_readonly("is_leaf", &Tensor::is_leaf)
       .def_property("requires_grad", &Tensor::requires_grad, &ApiSetRequiresGrad)
@@ -208,9 +196,9 @@ ONEFLOW_API_PYBIND11_MODULE("", m) {
       .def_property_readonly("is_eager", &Tensor::is_eager)
       .def_property_readonly("is_global", &Tensor::is_consistent)
       .def_property_readonly("is_local", &Tensor::is_local)
-      .def("zeros_", &ApiEagerMirroredTensorZeros)
+      .def("zeros_", &EagerMirroredTensorZeros)
       .def("register_hook", &ApiRegisterTensorHook)
-      .def("_register_post_grad_accumulation_hook", &ApiRegisterTensorPostGradAccumulationHook)
+      .def("_register_post_grad_accumulation_hook", &RegisterTensorPostGradAccumulationHook)
       // local tensor only
       .def_property_readonly("_tensor_buffer_shapes_and_dtypes", &GetTensorBufferShapesAndDTypes)
       .def_property_readonly("device", &TensorGetDevice)
@@ -234,7 +222,7 @@ ONEFLOW_API_PYBIND11_MODULE("", m) {
       .def("_register_storage_delete_hook", &ApiRegisterStorageDeleteHook)
       // consistent tensor only
       .def_property_readonly("placement", &TensorGetParallelDesc)
-      .def_property_readonly("sbp", &ApiTensorGetPyTupleOfSbp);
+      .def_property_readonly("sbp", &TensorGetPyTupleOfSbp);
 
   auto nn = m.def_submodule("nn");
   py::class_<Parameter, std::shared_ptr<Parameter>, Tensor>(nn, "Parameter")

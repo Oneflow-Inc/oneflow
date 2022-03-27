@@ -16,7 +16,6 @@ limitations under the License.
 
 #include "oneflow/core/common/buffer_manager.h"
 #include "oneflow/core/common/maybe.h"
-#include "oneflow/core/common/multi_client.h"
 #include "oneflow/core/framework/multi_client_session_context.h"
 #include "oneflow/core/framework/load_library.h"
 #include "oneflow/core/job/resource.pb.h"
@@ -62,7 +61,6 @@ int32_t GetCpuDeviceNum() { return std::thread::hardware_concurrency(); }
 
 Maybe<void> MultiClientSessionContext::TryInit(const ConfigProto& config_proto) {
   if (!is_inited_) {
-    CHECK_OR_RETURN(JUST(IsMultiClient()));
     DumpVersionInfo();
 
     Resource resource = config_proto.resource();
@@ -135,12 +133,12 @@ Maybe<void> MultiClientSessionContext::AddCGraph(
 
 Maybe<void> MultiClientSessionContext::TryClose() {
   if (is_inited_) {
-    VLOG(2) << "Try to delete multi client session context." << std::endl;
+    VLOG(1) << "Try to delete multi client session context." << std::endl;
 
     // sync before NNGraph release to ensure LaunchLazyJob instruction was completed and released
     JUST(vm::ClusterSync());
     for (const auto& graph : graphs_) {
-      VLOG(2) << "Try to close graph: " << graph->job_name() << std::endl;
+      VLOG(1) << "Try to close graph: " << graph->job_name() << std::endl;
       JUST(graph->Close());
     }
     graphs_.clear();
@@ -170,7 +168,7 @@ Maybe<void> MultiClientSessionContext::TryClose() {
     Global<ResourceDesc, ForSession>::New(Global<ResourceDesc, ForEnv>::Get()->resource(),
                                           GlobalProcessCtx::NumOfProcessPerNode());
   }
-  VLOG(2) << "Finish delete multi client session context." << std::endl;
+  VLOG(1) << "Finish delete multi client session context." << std::endl;
   return Maybe<void>::Ok();
 }
 

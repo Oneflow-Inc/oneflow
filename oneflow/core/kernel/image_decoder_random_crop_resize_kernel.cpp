@@ -14,13 +14,16 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
+#include "oneflow/core/common/error.h"
 #include "oneflow/core/kernel/kernel.h"
 #include "oneflow/core/common/tensor_buffer.h"
 #include "oneflow/core/common/channel.h"
 #include "oneflow/core/common/blocking_counter.h"
 #include "oneflow/core/profiler/profiler.h"
 #include "oneflow/user/image/random_crop_generator.h"
+#include "oneflow/user/image/jpeg_decoder.h"
 #include <opencv2/opencv.hpp>
+#include <jpeglib.h>
 
 #ifdef WITH_CUDA
 
@@ -146,11 +149,24 @@ class CpuDecodeHandle final : public DecodeHandle {
   }
 };
 
-void CpuDecodeHandle::DecodeRandomCropResize(const unsigned char* data, size_t length,
-                                             RandomCropGenerator* crop_generator,
-                                             unsigned char* workspace, size_t workspace_size,
-                                             unsigned char* dst, int target_width,
-                                             int target_height) {
+bool CpuJpegDecodeRandomCropResize(const unsigned char* data, size_t length,
+                                   RandomCropGenerator* crop_generator, unsigned char* workspace,
+                                   size_t workspace_size, unsigned char* dst, int target_width,
+                                   int target_height) {
+  cv::Mat image_mat;
+  if (JpegPartialDecodeRandomCropImage(data, length, crop_generator, workspace, workspace_size,
+                                       &image_mat)) {
+    return false;
+  }
+
+  cv::Mat dst_mat(target_height, target_width, CV_8UC3, dst, cv::Mat::AUTO_STEP);
+  cv::resize(image_mat, dst_mat, cv::Size(target_width, target_height), 0, 0, cv::INTER_LINEAR);
+  return true;
+}
+
+void OpencvDecodeRandomCropResize(const unsigned char* data, size_t length,
+                                  RandomCropGenerator* crop_generator, unsigned char* dst,
+                                  int target_width, int target_height) {
   cv::Mat image =
       cv::imdecode(cv::Mat(1, length, CV_8UC1, const_cast<unsigned char*>(data)), cv::IMREAD_COLOR);
   cv::Mat cropped;
@@ -166,6 +182,19 @@ void CpuDecodeHandle::DecodeRandomCropResize(const unsigned char* data, size_t l
   cv::resize(cropped, resized, cv::Size(target_width, target_height), 0, 0, cv::INTER_LINEAR);
   cv::Mat dst_mat(target_height, target_width, CV_8UC3, dst, cv::Mat::AUTO_STEP);
   cv::cvtColor(resized, dst_mat, cv::COLOR_BGR2RGB);
+}
+
+void CpuDecodeHandle::DecodeRandomCropResize(const unsigned char* data, size_t length,
+                                             RandomCropGenerator* crop_generator,
+                                             unsigned char* workspace, size_t workspace_size,
+                                             unsigned char* dst, int target_width,
+                                             int target_height) {
+  if (CpuJpegDecodeRandomCropResize(data, length, crop_generator, workspace, workspace_size, dst,
+                                    target_width, target_height)) {
+    return;
+  }
+
+  OpencvDecodeRandomCropResize(data, length, crop_generator, dst, target_width, target_height);
 }
 
 template<>
