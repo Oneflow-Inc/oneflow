@@ -453,9 +453,6 @@ class Hardsigmoid(Module):
 
 class Hardshrink(Module):
     r"""
-    The interface is consistent with PyTorch.
-    The documentation is referenced from: https://pytorch.org/docs/stable/generated/torch.nn.Hardshrink.html?highlight=hardshrink#torch.nn.Hardshrink
-
     The Hardshrink activation.
 
     The formula is:
