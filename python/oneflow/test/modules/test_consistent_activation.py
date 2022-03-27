@@ -56,6 +56,8 @@ def build_module(act_type):
         return torch.nn.SELU()
     elif act_type == "softplus":
         return torch.nn.Softplus()
+    elif act_type == "softshrink":
+        return torch.nn.Softshrink()
     else:
         raise ValueError("activation type %s is not support" % act_type)
 
@@ -192,6 +194,11 @@ class TestSeluModule(flow.unittest.TestCase):
 class TestSoftplusModule(flow.unittest.TestCase):
     def test_softplus_module(test_case):
         _test_activation_module(test_case, "softplus")
+
+
+class TestSoftshrinkModule(flow.unittest.TestCase):
+    def test_softshrink_module(test_case):
+        _test_activation_module(test_case, "softshrink")
 
 
 if __name__ == "__main__":
