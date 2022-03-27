@@ -9,6 +9,8 @@ namespace oneflow {
 
 std::unique_ptr<mlir::Pass> createConstantFoldingPass();
 
+std::unique_ptr<mlir::Pass> createPostConstantFoldingPass();
+
 }  // namespace oneflow
 
 }  // namespace mlir

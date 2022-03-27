@@ -412,8 +412,13 @@ def FuseConv2DBatchNormPattern : Pat<
           $x,
           (
             OneFlow_VariableIrOp : $variable_conv_2d_weight
-              $shape,
-              $key
+              $value,
+              $v_op_name,
+              $v_device_tag,
+              $v_device_name,
+              $v_scope_symbol_id,
+              $v_hierarchy,
+              $v_nd_sbp
           ),
           $bias,
           $bias_multiplier,

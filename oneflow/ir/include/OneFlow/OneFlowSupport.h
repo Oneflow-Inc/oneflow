@@ -16,9 +16,14 @@ limitations under the License.
 #ifndef ONEFLOW_IR_INCLUDE_ONEFLOW_ONEFLOWSUPPORT_H_
 #define ONEFLOW_IR_INCLUDE_ONEFLOW_ONEFLOWSUPPORT_H_
 
+#include <memory>
 #include <string>
 #include <vector>
 
+#include "mlir/IR/BuiltinAttributes.h"
+#include "mlir/IR/BuiltinTypes.h"
+#include "oneflow/core/common/shape.h"
+#include "oneflow/core/framework/tensor.h"
 // This include is not necessary now, but it is here for testing the namespace collision
 #include "oneflow/core/framework/user_op_registry_manager.h"
 
@@ -36,6 +41,12 @@ static const std::vector<std::string>* inputKeys() {
 std::vector<std::string> GetInputKeys(const std::string& op_type_name);
 
 std::vector<std::string> GetOutputKeys(const std::string& op_type_name);
+
+mlir::DenseElementsAttr TensorToDenseElementsAttr(
+    const std::shared_ptr<::oneflow::one::Tensor>& tensor, const mlir::FloatType& float_type);
+
+std::shared_ptr<::oneflow::one::Tensor> DenseElementsAttrToTensor(
+    const mlir::DenseElementsAttr& attr);
 
 }  // namespace support
 

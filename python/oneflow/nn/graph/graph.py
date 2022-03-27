@@ -211,7 +211,10 @@ class Graph(object):
         return self.__run(*args, **kwargs)
 
     def add_optimizer(
-        self, optim: Optimizer, *, lr_sch: LRScheduler = None,
+        self,
+        optim: Optimizer,
+        *,
+        lr_sch: LRScheduler = None,
     ):
         r"""Add an optimizer, an learning rate scheduler to the graph.
 
@@ -286,8 +289,7 @@ class Graph(object):
             self.config._train(True)
 
     def set_grad_scaler(self, grad_scaler: GradScaler = None):
-        r"""Set the GradScaler for gradient and loss scaling.
-        """
+        r"""Set the GradScaler for gradient and loss scaling."""
         assert isinstance(grad_scaler, (GradScaler, StaticGradScaler))
         self._grad_scaler = grad_scaler
 
@@ -321,7 +323,9 @@ class Graph(object):
             module = block.origin
             if module is not None:
                 module.state_dict(
-                    sub_destination, "", keep_vars=False,
+                    sub_destination,
+                    "",
+                    keep_vars=False,
                 )
             destination[name] = sub_destination
         # Get additional states.
@@ -387,14 +391,12 @@ class Graph(object):
 
     @property
     def name(self):
-        r"""Name auto-generated for this graph.
-        """
+        r"""Name auto-generated for this graph."""
         return self._name
 
     @property
     def training(self):
-        r"""In traninig mode if the graph has an optimizer.
-        """
+        r"""In traninig mode if the graph has an optimizer."""
         return self.config.training
 
     def debug(
@@ -416,7 +418,7 @@ class Graph(object):
         info of each operation. ``v_level`` 3 will additionally print more detailed info of each
         operation.
 
-        In addition, during the training process, when ``v_level`` is greater than or equal to 1, 
+        In addition, during the training process, when ``v_level`` is greater than or equal to 1,
         the learning rate information of each step will be printed.
 
         Use ``ranks`` to choose which rank to print the debug information.
@@ -507,8 +509,7 @@ class Graph(object):
         return shallow_repr
 
     def __print(self, s_level=2, v_level=0, msg: str = ""):
-        r"""Do print according to info level.
-        """
+        r"""Do print according to info level."""
         assert isinstance(s_level, int)
         assert isinstance(v_level, int)
         assert isinstance(msg, str)
@@ -661,7 +662,9 @@ class Graph(object):
         # Complie graph to execution plan and init Runtime
         try:
             self.__print(
-                0, 0, self._shallow_repr() + " start building plan.",
+                0,
+                0,
+                self._shallow_repr() + " start building plan.",
             )
             compile_and_init_start = time.perf_counter()
             self._c_nn_graph.complie_and_init_runtime()
@@ -756,6 +759,9 @@ class Graph(object):
                 1,
                 self._shallow_repr() + " start building graph with compile passes.",
             )
+            oneflow._oneflow_internal.FillVariableTensorMgr(
+                state_op_names, self._state_tensor_tuple
+            )
             # Complete the graph job proto
             oneflow._oneflow_internal.CurJobBuildAndInferCtx_Complete()
             # Save full graph job proto after job Complete for find real output blob shape and build it.
@@ -787,6 +793,13 @@ class Graph(object):
             self._c_nn_graph.register_output_op_names_and_tensors(
                 output_op_names, self._outputs_tensor_tuple
             )
+
+            (
+                state_op_names,
+                state_tensors,
+            ) = oneflow._oneflow_internal.DumpVariableTensorMgr()
+            self._state_tensor_tuple = convert_to_tensor_tuple(state_tensors)
+
             self._c_nn_graph.register_variable_op_names_and_tensors(
                 state_op_names, self._state_tensor_tuple
             )
@@ -1027,7 +1040,10 @@ class Graph(object):
                 return mapping_tensor_or_none(arg)
             else:
                 self.__io_item_check(
-                    arg, None, io_type, leaf_node._prefix + "_" + leaf_node._name,
+                    arg,
+                    None,
+                    io_type,
+                    leaf_node._prefix + "_" + leaf_node._name,
                 )
 
         out = io_node.map_leaf(leaf_node_fn)
@@ -1068,7 +1084,10 @@ class Graph(object):
             with oneflow._oneflow_internal.lazy_mode.guard(False):
                 if t.is_global:
                     eager_out = oneflow.empty(
-                        shape, dtype=dtype, placement=t.placement, sbp=t.sbp,
+                        shape,
+                        dtype=dtype,
+                        placement=t.placement,
+                        sbp=t.sbp,
                     )
                 else:
                     eager_out = oneflow.empty(shape, dtype=dtype, device=t.device)

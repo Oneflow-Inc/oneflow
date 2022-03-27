@@ -13,7 +13,19 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
+#include <iostream>
+#include <vector>
+#include "mlir/IR/BuiltinAttributes.h"
+#include "mlir/IR/BuiltinTypes.h"
+
+#include "oneflow/api/common/ofblob.h"
+#include "oneflow/core/common/just.h"
+#include "oneflow/core/job/lazy_mode.h"
+#include "oneflow/core/functional/functional_api.yaml.h"
+#include "oneflow/core/framework/tensor.h"
+#include "oneflow/core/framework/tensor_util.h"
 #include "oneflow/core/framework/user_op_registry_manager.h"
+#include "oneflow/user/kernels/avg_pooling_kernel_util.h"
 
 namespace mlir {
 
@@ -41,6 +53,42 @@ std::vector<std::string> GetOutputKeys(const std::string& op_type_name) {
   std::vector<std::string> ret{};
   for (auto& arg : GetUserOpDef(op_type_name).output()) { ret.push_back(arg.name()); }
   return ret;
+}
+
+mlir::DenseElementsAttr TensorToDenseElementsAttr(
+    const std::shared_ptr<::oneflow::one::Tensor>& tensor, const mlir::FloatType& float_type) {
+  ::oneflow::LazyMode::Guard guard{false};
+  auto shape = tensor->shape();
+  std::vector<int64_t> shape_vec(shape->dim_vec().begin(), shape->dim_vec().end());
+  std::vector<float> data(shape->elem_cnt());
+
+  const auto& callback = [&](uint64_t ofblob_ptr) {
+    CHECK_JUST(::oneflow::BlobBufferCopyUtil<float>::To(ofblob_ptr, data.data(), data.size()));
+  };
+  ::oneflow::one::SyncAccessTensorWithTimeOut(tensor, callback, "const").GetOrThrow();
+  return mlir::DenseElementsAttr::get(mlir::RankedTensorType::get(shape_vec, float_type),
+                                      llvm::makeArrayRef(data));
+}
+
+std::shared_ptr<::oneflow::one::Tensor> DenseElementsAttrToTensor(
+    const mlir::DenseElementsAttr& attr) {
+  ::oneflow::LazyMode::Guard guard{false};
+  auto t = attr.getType().cast<mlir::RankedTensorType>();
+  std::vector<int64_t> shape = t.getShape().vec();
+  const auto device = ::oneflow::Device::ParseAndNew("cpu").GetOrThrow();
+  std::shared_ptr<::oneflow::one::Tensor> tensor =
+      ::oneflow::one::functional::Empty(
+          ::oneflow::Shape(::oneflow::DimVector(shape.begin(), shape.end())),
+          ::oneflow::DType::Get(::oneflow::DataType::kFloat).GetOrThrow(), device)
+          .GetPtrOrThrow();
+  std::vector<float> data(attr.getValues<float>().begin(), attr.getValues<float>().end());
+  const auto& callback = [&](uint64_t of_blob_ptr) {
+    ::oneflow::BlobBufferCopyUtil<float>::From(of_blob_ptr, data.data(),
+                                               tensor->shape()->elem_cnt())
+        .GetOrThrow();
+  };
+  ::oneflow::one::SyncAccessTensorWithTimeOut(tensor, callback, "mut").GetOrThrow();
+  return tensor;
 }
 
 }  // namespace support

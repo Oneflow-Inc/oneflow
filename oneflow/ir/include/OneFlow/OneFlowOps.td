@@ -59,66 +59,21 @@ def OneFlow_SystemOp : OneFlow_Op<"system", [OneFlow_IsImportCompatible]> {
   let hasCanonicalizer = 1;
 }
 
+def F32ElementsAttr : FloatElementsAttr<32>;
+
 def OneFlow_VariableIrOp : OneFlow_IROp<"variable_ir", [ConstantLike, NoSideEffect]> {
   let summary = "";
-  let arguments = (ins
-    ShapeAttr:$shape,
-    StrAttr:$key
+  let arguments = (ins 
+    F32ElementsAttr:$value,
+    StrAttr:$op_name,
+    StrAttr:$device_tag,
+    StrArrayAttr:$device_name, // TODO: change device_name to dict and parse the literal fmt like "0:0-0"
+    OptionalAttr<I64Attr>:$scope_symbol_id,
+    OptionalAttr<I64ArrayAttr>:$hierarchy,
+    StrArrayAttr:$nd_sbp
   );
   let results = (outs
     AnyType:$output
-  );
-  let hasFolder = 1;
-}
-
-// def OneFlow_ScalarAddIrOp : OneFlow_IROp<"scalar_add_ir", [NoSideEffect]> {
-
-//   let summary = "";
-//   let arguments = (ins
-//     OneFlow_Tensor:$x,
-//     DefaultValuedAttr<F64Attr, "0.">:$float_operand
-//   );
-//   let results = (outs
-//     OneFlow_Tensor:$output
-//   );
-//   let hasFolder = 1;
-// }
-
-// def OneFlow_BroadcastAddIrOp : OneFlow_IROp<"broadcast_add_ir", [NoSideEffect]> {
-
-//   let summary = "";
-//   let arguments = (ins
-//     OneFlow_Tensor:$x,
-//     OneFlow_Tensor:$y
-//   );
-//   let results = (outs
-//     OneFlow_Tensor:$output
-//   );
-//   let hasFolder = 1;
-// }
-
-// def OneFlow_BroadcastDivIrOp : OneFlow_IROp<"broadcast_div_ir", [NoSideEffect]> {
-
-//   let summary = "";
-//   let arguments = (ins
-//     OneFlow_Tensor:$x,
-//     OneFlow_Tensor:$y
-//   );
-//   let results = (outs
-//     OneFlow_Tensor:$output
-//   );
-//   let hasFolder = 1;
-// }
-
-def OneFlow_BroadcastMulIrOp : OneFlow_IROp<"broadcast_mul_ir", [NoSideEffect]> {
-
-  let summary = "";
-  let arguments = (ins
-    OneFlow_Tensor:$x,
-    OneFlow_Tensor:$y
-  );
-  let results = (outs
-    OneFlow_Tensor:$output
   );
   let hasFolder = 1;
 }
@@ -357,6 +312,11 @@ def FuseIntoExistingOpPass : Pass<"fuse-into-existing-op", "ModuleOp"> {
 def ConstantFoldingPass : Pass<"constant-folding", "ModuleOp"> {
   let summary = "";
   let constructor = "mlir::oneflow::createConstantFoldingPass()";
+}
+
+def PostConstantFoldingPass : Pass<"post-constant-folding", "ModuleOp"> {
+  let summary = "";
+  let constructor = "mlir::oneflow::createPostConstantFoldingPass()";
 }
 
 #endif // ONEFLOW_PASSES

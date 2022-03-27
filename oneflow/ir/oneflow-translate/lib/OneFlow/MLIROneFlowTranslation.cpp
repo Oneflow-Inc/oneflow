@@ -765,6 +765,7 @@ LogicalResult ApplyRoundTripPatterns(RoundTripOneFlowJobWrapperInterface& job_wr
   }
   pm.addPass(oneflow::createFuseIntoExistingOpPass());
   pm.addPass(oneflow::createConstantFoldingPass());
+  pm.addPass(oneflow::createPostConstantFoldingPass());
   pm.addPass(createCanonicalizerPass());
   llvm::raw_string_ostream os_graphviz(graphviz);
   pm.addPass(createPrintOpGraphPass(os_graphviz));

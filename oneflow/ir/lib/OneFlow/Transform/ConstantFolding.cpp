@@ -32,15 +32,27 @@ class ConstantFoldingPass : public ConstantFoldingPassBase<ConstantFoldingPass> 
   }
 };
 
+class PostConstantFoldingPass : public PostConstantFoldingPassBase<PostConstantFoldingPass> {
+  void runOnOperation() override {
+    Operation* op = getOperation();
+    RewritePatternSet patterns(op->getContext());
+    oneflow::populatePostConstantFolding(patterns);
+    (void)applyPatternsAndFoldGreedily(op, std::move(patterns));
+  }
+};
+
 }  // namespace
 
 namespace mlir {
 
 namespace oneflow {
 
-
 std::unique_ptr<Pass> createConstantFoldingPass() {
   return std::make_unique<ConstantFoldingPass>();
+}
+
+std::unique_ptr<Pass> createPostConstantFoldingPass() {
+  return std::make_unique<PostConstantFoldingPass>();
 }
 
 }  // namespace oneflow

@@ -37,6 +37,7 @@ limitations under the License.
 #include "oneflow/core/vm/vm_util.h"
 #include "oneflow/core/job/collective_boxing/scheduler.h"
 #include "oneflow/core/graph/task_stream_index_manager.h"
+#include "oneflow/core/operator/variable_tensor_mgr.h"
 #ifdef WITH_CUDA
 #include <cuda.h>
 #endif  // WITH_CUDA
@@ -112,6 +113,7 @@ Maybe<void> MultiClientSessionContext::TryInit(const ConfigProto& config_proto) 
       Global<RuntimeJobDescs>::New();
       Global<summary::EventsWriter>::New();
       Global<boxing::collective::Scheduler>::New();
+      Global<VariableTensorMgr>::New();
     }
 
     is_inited_ = true;
@@ -155,6 +157,7 @@ Maybe<void> MultiClientSessionContext::TryClose() {
       Global<RuntimeCtx>::Delete();
       Global<BufferMgr<std::shared_ptr<CriticalSectionInstance>>>::Delete();
       Global<BufferMgr<std::shared_ptr<JobInstance>>>::Delete();
+      Global<VariableTensorMgr>::Delete();
     }
 
     Global<LazyJobBuildAndInferCtxMgr>::Delete();

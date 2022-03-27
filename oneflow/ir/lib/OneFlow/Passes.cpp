@@ -16,7 +16,9 @@ limitations under the License.
 #include "OneFlow/OneFlowOps.h"
 #include "OneFlow/OneFlowDialect.h"
 #include "OneFlow/Passes.h"
+#include "OneFlow/OneFlowSupport.h"
 
+#include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/None.h"
 #include "llvm/Support/Casting.h"
 #include "mlir/Conversion/LinalgToLLVM/LinalgToLLVM.h"
@@ -33,7 +35,9 @@ limitations under the License.
 #include "mlir/Dialect/Tensor/Transforms/Passes.h"
 #include "mlir/Dialect/Tosa/IR/TosaOps.h"
 #include "mlir/IR/BuiltinAttributes.h"
+#include "mlir/IR/BuiltinTypes.h"
 #include "mlir/IR/OpImplementation.h"
+#include "mlir/IR/OperationSupport.h"
 #include "mlir/IR/PatternMatch.h"
 #include "mlir/IR/BlockAndValueMapping.h"
 #include "mlir/IR/Value.h"
@@ -44,6 +48,8 @@ limitations under the License.
 #include "mlir/Transforms/Passes.h"
 #include "mlir/Dialect/Bufferization/Transforms/Passes.h"
 #include "mlir/Conversion/SCFToControlFlow/SCFToControlFlow.h"
+#include "oneflow/core/operator/variable_tensor_mgr.h"
+
 #ifdef WITH_MLIR_CUDA_CODEGEN
 #include "mlir/Conversion/AffineToStandard/AffineToStandard.h"
 #include "mlir/Conversion/GPUCommon/GPUCommonPass.h"
@@ -411,10 +417,10 @@ ArrayAttr getSI32ArrayAttr(::mlir::PatternRewriter& rewriter, ArrayRef<int32_t> 
 
       SmallVector<Value, 4> operands;
       operands.push_back(conv_op.in());
-      auto mul_op = rewriter.create<oneflow::BroadcastMulIrOp>(
-          conv_op->getLoc(), conv_op->getResultTypes(), conv_op.weight(), bn_op.gamma());
-      operands.push_back(mul_op.output());  // new weight
-      // operands.push_back(conv_op.weight());
+      // auto mul_op = rewriter.create<oneflow::MultiplyOp>(
+      //     conv_op->getLoc(), conv_op->getResultTypes(), conv_op.weight(), bn_op.gamma());
+      // operands.push_back(mul_op.out());  // new weight
+      operands.push_back(conv_op.weight());
       if (conv_op.bias()) operands.push_back(conv_op.bias());
       if (conv_op.bias_multiplier()) operands.push_back(conv_op.bias_multiplier());
 
@@ -434,11 +440,54 @@ struct ReplaceVariablePattern : public ::mlir::RewritePattern {
   ::mlir::LogicalResult matchAndRewrite(::mlir::Operation* op0,
                                         ::mlir::PatternRewriter& rewriter) const override {
     auto op = ::llvm::dyn_cast<oneflow::VariableOp>(op0);
-
+    NamedAttrList attrs;
+    attrs.set(
+        StringAttr::get(getContext(), "value"),
+        support::TensorToDenseElementsAttr(::oneflow::Global<::oneflow::VariableTensorMgr>::Get()
+                                               ->Get(op.op_name().str())
+                                               .GetPtrOrThrow(),
+                                           rewriter.getF32Type()));
+    attrs.set(op.op_nameAttrName(), op.op_nameAttr());
+    attrs.set(op.device_tagAttrName(), op.device_tagAttr());
+    attrs.set(op.device_nameAttrName(), op.device_nameAttr());
+    attrs.set(op.scope_symbol_idAttrName(), op.scope_symbol_idAttr());
+    attrs.set(op.hierarchyAttrName(), op.hierarchyAttr());
+    attrs.set(op.nd_sbpAttrName(), op.nd_sbpAttr());
     auto op_new = rewriter.create<oneflow::VariableIrOp>(op->getLoc(), op.output().getType(),
-                                                         op.shape(), op.op_name());
+                                                         ValueRange(), attrs);
     // op.output_lbns().begin()->dyn_cast<mlir::StringAttr>());
+    rewriter.replaceOp(op0, op_new->getResults());
+    return ::mlir::success();
+  }
+};
 
+struct ReplaceVariableIrPattern : public ::mlir::RewritePattern {
+  explicit ReplaceVariableIrPattern(::mlir::MLIRContext* context)
+      : ::mlir::RewritePattern("oneflow.variable_ir", 1, context, {"oneflow.variable"}) {}
+  ::mlir::LogicalResult matchAndRewrite(::mlir::Operation* op0,
+                                        ::mlir::PatternRewriter& rewriter) const override {
+    auto op = ::llvm::dyn_cast<oneflow::VariableIrOp>(op0);
+    NamedAttrList attrs;
+    auto value_ = op.valueAttr();
+    attrs.set(StringAttr::get(getContext(), "shape"),
+              rewriter.getArrayAttr(llvm::to_vector<8>(llvm::map_range(
+                  value_.getType().cast<mlir::RankedTensorType>().getShape(),
+                  [&](int64_t v) -> Attribute {
+                    return IntegerAttr::get(rewriter.getIntegerType(64, /*isSigned=*/true),
+                                            APInt(64, v, /*isSigned=*/true));
+                  }))));
+    attrs.set(StringAttr::get(getContext(), "data_type"),
+              oneflow::DataTypeAttr::get(getContext(), oneflow::DataType::DT_Float));
+    auto output_lbns_attr = rewriter.getStrArrayAttr({op.op_name().str() + "/out"});
+    attrs.set(OpTrait::IsImportCompatible<void>::getOutputLBNsAttr(), output_lbns_attr);
+    attrs.set(op.op_nameAttrName(), op.op_nameAttr());
+    attrs.set(op.device_tagAttrName(), op.device_tagAttr());
+    attrs.set(op.device_nameAttrName(), op.device_nameAttr());
+    attrs.set(op.scope_symbol_idAttrName(), op.scope_symbol_idAttr());
+    attrs.set(op.hierarchyAttrName(), op.hierarchyAttr());
+    attrs.set(op.nd_sbpAttrName(), op.nd_sbpAttr());
+    auto op_new = rewriter.create<oneflow::VariableOp>(op->getLoc(), op.output().getType(),
+                                                       ValueRange(), attrs);
     rewriter.replaceOp(op0, op_new->getResults());
     return ::mlir::success();
   }
@@ -598,6 +647,10 @@ void populateGpuHelperPatterns(::mlir::RewritePatternSet& patterns) {
 void populateConstantFolding(::mlir::RewritePatternSet& patterns) {
   patterns.add<ReplaceVariablePattern>(patterns.getContext());
   patterns.add<FuseConv2DBatchNormPattern>(patterns.getContext());
+}
+
+void populatePostConstantFolding(::mlir::RewritePatternSet& patterns) {
+  patterns.add<ReplaceVariableIrPattern>(patterns.getContext());
 }
 
 }  // namespace oneflow

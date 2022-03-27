@@ -50,6 +50,7 @@ void populateFuserPasses(::mlir::RewritePatternSet& patterns);
 void populateFuserForExistingOp(::mlir::RewritePatternSet& patterns);
 void populateGpuHelperPatterns(::mlir::RewritePatternSet& patterns);
 void populateConstantFolding(::mlir::RewritePatternSet& patterns);
+void populatePostConstantFolding(::mlir::RewritePatternSet& patterns);
 
 }  // namespace oneflow
 
