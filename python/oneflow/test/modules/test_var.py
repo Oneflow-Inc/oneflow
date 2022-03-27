@@ -36,7 +36,7 @@ class TestVar(flow.unittest.TestCase):
         x = random_tensor(ndim=4).to(device)
         y = torch.var(
             x,
-            dim=random(low=0, high=4).to(int),
+            dim=random(low=-4, high=4).to(int),
             unbiased=random().to(bool),
             keepdim=random().to(bool),
         )
@@ -48,7 +48,7 @@ class TestVar(flow.unittest.TestCase):
         x = random_tensor(4, 2, 3, 0, 4).to(device)
         y = torch.var(
             x,
-            dim=random(low=0, high=4).to(int),
+            dim=random(low=-4, high=4).to(int),
             unbiased=random().to(bool),
             keepdim=random().to(bool),
         )
