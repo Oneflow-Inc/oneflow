@@ -411,6 +411,9 @@ IntegerAttr getSI64IntegerAttr(::mlir::PatternRewriter& rewriter, int64_t value)
 
       final_results.push_back(new_conv_op.out());
       return final_results;
+    }
+  }
+  return {};
 }
 
 ::llvm::SmallVector<::mlir::Value, 4> CreateFusedBiasAddMaskScale(::mlir::PatternRewriter& rewriter,

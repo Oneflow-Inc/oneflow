@@ -405,6 +405,8 @@ struct NormalizationInferencePattern : public OpRewritePattern<NormalizationOp> 
 void NormalizationOp::getCanonicalizationPatterns(RewritePatternSet& results,
                                                   MLIRContext* context) {
   results.insert<NormalizationInferencePattern>(context);
+}
+
 ResultRange GetDataOutputResults(Operation* op) {
   if (auto cec = dyn_cast<ControlEdgeCompatible>(op)) {
     return cec.dataOutputResults();
