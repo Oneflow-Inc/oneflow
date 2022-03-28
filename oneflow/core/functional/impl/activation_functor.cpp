@@ -438,23 +438,6 @@ class SoftSignGradFunctor : public BinaryFunctor {
   }
 };
 
-class ThresholdFunctor {
- public:
-  ThresholdFunctor() {
-    op_ = CHECK_JUST(one::OpBuilder("threshold").Input("in").Output("out").Build());
-  }
-
-  Maybe<Tensor> operator()(const std::shared_ptr<Tensor>& x, const double& threshold,
-                           const double& value) const {
-    MutableAttrMap attrs;
-    JUST(attrs.SetAttr<double>("thres", threshold));
-    JUST(attrs.SetAttr<double>("value", value));
-    return OpInterpUtil::Dispatch<one::Tensor>(*op_, {x}, attrs);
-                           }
-                           private: 
-                            std::shared_ptr<OpExpr> op_;
-};
-
 class SoftShrinkFunctor {
  public:
   SoftShrinkFunctor() {
@@ -481,6 +464,24 @@ class SoftShrinkFunctor {
   std::shared_ptr<OpExpr> op_;
 };
 
+class ThresholdFunctor {
+ public:
+  ThresholdFunctor() {
+    op_ = CHECK_JUST(one::OpBuilder("threshold").Input("in").Output("out").Build());
+  }
+
+  Maybe<Tensor> operator()(const std::shared_ptr<Tensor>& x, const double& threshold,
+                           const double& value) const {
+    MutableAttrMap attrs;
+    JUST(attrs.SetAttr<double>("thres", threshold));
+    JUST(attrs.SetAttr<double>("value", value));
+    return OpInterpUtil::Dispatch<one::Tensor>(*op_, {x}, attrs);
+  }
+
+ private:
+  std::shared_ptr<OpExpr> op_;
+};
+
 class ThresholdGradFunctor {
  public:
   ThresholdGradFunctor() {
@@ -491,9 +492,10 @@ class ThresholdGradFunctor {
                            const double& threshold) const {
     MutableAttrMap attrs;
     return OpInterpUtil::Dispatch<one::Tensor>(*op_, {x, dy}, attrs);
-                           }
-                           private:
-                            std::shared_ptr<OpExpr> op_;
+  }
+
+ private:
+  std::shared_ptr<OpExpr> op_;
 };
 
 class SoftShrinkGradFunctor {

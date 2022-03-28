@@ -448,7 +448,8 @@ class Threshold : public OpExprGradFunction<ThresholdCaptureState> {
     in_grads->resize(1);
     if (ctx->requires_grad) {
       const auto& x = ctx->SavedTensors().at(0);
-      *JUST(oneflow::VectorAt(in_grads, 0)) = JUST(functional::ThresholdGrad(x, JUST(oneflow::VectorAt(out_grads, 0)), ctx->threshold));
+      *JUST(oneflow::VectorAt(in_grads, 0)) =
+          JUST(functional::ThresholdGrad(x, JUST(oneflow::VectorAt(out_grads, 0)), ctx->threshold));
     }
     return Maybe<void>::Ok();
   }

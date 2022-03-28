@@ -190,9 +190,11 @@ class TestSeluModule(flow.unittest.TestCase):
     def test_selu_module(test_case):
         _test_activation_module(test_case, "selu")
 
+
 class TestThresholdModule(flow.unittest.TestCase):
     def test_threshold_module(test_case):
         _test_activation_module(test_case, "threshold")
+
 
 class TestSoftshrinkModule(flow.unittest.TestCase):
     def test_softshrink_module(test_case):

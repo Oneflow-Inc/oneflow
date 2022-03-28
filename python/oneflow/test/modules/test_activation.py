@@ -775,6 +775,7 @@ class TestSoftshrinkModule(flow.unittest.TestCase):
         y = m(x)
         return y
 
+
 @flow.unittest.skip_unless_1n1d()
 class TestThresholdModule(flow.unittest.TestCase):
     @autotest(n=5)
