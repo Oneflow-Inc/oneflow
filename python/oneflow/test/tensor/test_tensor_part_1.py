@@ -1000,7 +1000,7 @@ class TestTensor(flow.unittest.TestCase):
         y = x.unsqueeze(random(1, 3).to(int))
         return y
 
-    @autotest(auto_backward=False, check_graph=True)
+    @autotest(n=3, auto_backward=False, check_graph=True)
     def test_flow_invert_with_random_data(test_case):
         device = random_device()
         x = random_tensor().to(device, dtype=torch.bool)
