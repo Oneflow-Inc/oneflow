@@ -329,5 +329,13 @@ class TestModule(flow.unittest.TestCase):
         return m(x)
 
 
+@flow.unittest.skip_unless_1n2d()
+class TestDropoutOnNonDefaultDevice(flow.unittest.TestCase):
+    def test_non_default_device(test_case):
+        x = flow.tensor([2, 3], dtype=flow.float, device="cuda:1")
+        y = flow._C.dropout(x)
+        test_case.assertEqual(y.device, flow.device("cuda:1"))
+
+
 if __name__ == "__main__":
     unittest.main()

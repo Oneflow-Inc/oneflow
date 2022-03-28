@@ -141,5 +141,12 @@ class TestRandint(flow.unittest.TestCase):
             arg[0](test_case, *arg[1:])
 
 
+@flow.unittest.skip_unless_1n2d()
+class TestRandintOnNonDefaultDevice(flow.unittest.TestCase):
+    def test_non_default_device(test_case):
+        x = flow.randint(low=1, high=2, size=flow.Size((2, 3)), device="cuda:1")
+        test_case.assertEqual(x.device, flow.device("cuda:1"))
+
+
 if __name__ == "__main__":
     unittest.main()

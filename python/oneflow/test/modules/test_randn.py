@@ -93,7 +93,7 @@ class TestRandnModule(flow.unittest.TestCase):
             _test_backward,
             _test_with_generator,
         ]
-        arg_dict["device"] = ["cpu", "cuda", "cuda:1"]
+        arg_dict["device"] = ["cpu", "cuda"]
         arg_dict["shape"] = [(2, 3), (2, 3, 4), (2, 3, 4, 5)]
 
         for arg in GenArgList(arg_dict):
@@ -107,6 +107,13 @@ class TestRandnModule(flow.unittest.TestCase):
 
         for arg in GenArgList(arg_dict):
             arg[0](test_case, *arg[1:])
+
+
+@flow.unittest.skip_unless_1n2d()
+class TestRandnOnNonDefaultDevice(flow.unittest.TestCase):
+    def test_non_default_device(test_case):
+        x = flow.randn(2, 3, device="cuda:1")
+        test_case.assertEqual(x.device, flow.device("cuda:1"))
 
 
 if __name__ == "__main__":
