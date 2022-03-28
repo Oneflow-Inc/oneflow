@@ -85,10 +85,22 @@ def _test_id_shuffle(test_case, has_column_id, num_columns):
     # when has_column_id=False, we can not test column ids because in this case same ids not lead to same column id
 
 
+def _test_quantize(np_data, np_dtype):
+    quantize_factor = np.max(np.abs(np_data), axis=2) / 127
+    quantize_factor = np.expand_dims(quantize_factor, axis=2)
+    np_data = np_data / quantize_factor
+    np_data = np_data.astype(np.int8)
+    np_data = np_data.astype(np_dtype) * quantize_factor
+    return np_data
+
+
 def _test_embedding_shuffle(test_case, dtype):
     batch_size = 512
     num_columns = 26
+
     ids = np.random.randint(0, 1000, (batch_size, num_columns), dtype=np.int64)
+    # ids = np.random.randint(0, 2, (batch_size, num_columns), dtype=np.int64)
+
     column_ids = (
         ids % num_columns
     )  # same id must have same column id, so in this case get column_ids from ids
@@ -97,6 +109,7 @@ def _test_embedding_shuffle(test_case, dtype):
     else:
         np_dtype = np.float32
     data = np.random.rand(1000, 128).astype(np_dtype)
+
     ids_tensor = flow.tensor(ids, requires_grad=False).to("cuda")
     column_ids_tensor = flow.tensor(
         column_ids.astype(np.int32), requires_grad=False
@@ -129,7 +142,11 @@ def _test_embedding_shuffle(test_case, dtype):
     embeddings = graph(ids_tensor, column_ids_tensor, data_tensor)
     np_embeddings = data[ids]
 
-    test_case.assertTrue(np.array_equal(embeddings.numpy(), np_embeddings))
+    # Quantized numpy embedding.
+    np_embeddings = _test_quantize(np_embeddings, np_dtype)
+    test_case.assertTrue(
+        np.allclose(embeddings.numpy(), np_embeddings, atol=1e-3, rtol=1e-3)
+    )
 
 
 def _test_embedding_gradient_shuffle(test_case):
