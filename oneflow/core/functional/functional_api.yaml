@@ -1471,11 +1471,11 @@
   bind_python: False
 
 - name: "softplus"
-  signature: "Tensor (Tensor x) => Softplus"
+  signature: "Tensor (Tensor x, Double beta=1.0, Double threshold=20.0) => Softplus"
   bind_python: True
 
 - name: "softplus_grad"
-  signature: "Tensor (Tensor x, Tensor dy) => SoftplusGrad"
+  signature: "Tensor (Tensor x, Tensor dy, Double beta=1.0, Double threshold=20.0) => SoftplusGrad"
   bind_python: False
 
 - name: "softshrink"
