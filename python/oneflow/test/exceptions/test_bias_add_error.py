@@ -30,23 +30,24 @@ class TestBiasAddError(flow.unittest.TestCase):
     def test_bias_add_dimension_match_error(self):
         with self.assertRaises(Exception) as context:
             x = flow.ones((4, 4), dtype=flow.float32)
-            bias = flow.ones((5, ), dtype=flow.float32)
+            bias = flow.ones((5,), dtype=flow.float32)
             out = flow._C.bias_add(x, bias, axis=1)
         self.assertTrue(
             "The size of tensor x (4,4) must match the size of tensor b (5,) at dimension 1"
             in str(context.exception)
         )
-    
+
     def test_bias_add_index_error(self):
         with self.assertRaises(Exception) as context:
             x = flow.ones((4, 4), dtype=flow.float32)
-            bias = flow.ones((5, ), dtype=flow.float32)
+            bias = flow.ones((5,), dtype=flow.float32)
             out = flow._C.bias_add(x, bias, axis=3)
-        
+
         self.assertTrue(
             "Dimension out of range (expected to be in range of [ -2,1], but got 3)"
             in str(context.exception)
         )
+
 
 if __name__ == "__main__":
     unittest.main()
