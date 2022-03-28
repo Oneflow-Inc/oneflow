@@ -83,11 +83,8 @@ __global__ void ComputeVarScalarOut(const T* in_ptr, T* out_ptr, T* tmp_buffer_p
   }
   const size_t elems_per_block = var_param.elem_cnt / gridDim.x;
   const size_t elems_per_thread = elems_per_block / blockDim.x;
-
+  // tail element number in block
   size_t tail_elems = elems_per_block % blockDim.x;
-  if (blockIdx.x == gridDim.x - 1 && threadIdx.x == 0) {
-    tail_elems += var_param.elem_cnt % gridDim.x;
-  }
 
   T thread_mean = 0.0;
   T thread_m2 = 0.0;
@@ -98,7 +95,10 @@ __global__ void ComputeVarScalarOut(const T* in_ptr, T* out_ptr, T* tmp_buffer_p
     WelfordReduce(&in_ptr[block_offset], &thread_mean, &thread_m2, &thread_count,
                   elems_per_block - tail_elems, threadIdx.x, blockDim.x);
   }
-
+  // thread 0 of last block handles tail element between blocks
+  if (blockIdx.x == gridDim.x - 1 && threadIdx.x == 0) {
+    tail_elems += var_param.elem_cnt % gridDim.x;
+  }
   // thread 0 deal tail elems
   if (tail_elems != 0 && threadIdx.x == 0) {
     const size_t tail_offset = blockIdx.x * elems_per_block + blockDim.x * elems_per_thread;
