@@ -33,15 +33,13 @@ bool IsContiguous(const Shape& shape, const Stride& stride);
 
 class TensorMeta : public user_op::TensorDesc {
  public:
-  TensorMeta(const std::shared_ptr<const Shape>& shape, DataType dtype)
-      : shape_(shape), data_type_(dtype), is_dynamic_(false), is_contiguous_(true) {}
   TensorMeta(const std::shared_ptr<const Shape>& shape, const std::shared_ptr<const Stride>& stride,
              DataType dtype)
       : shape_(shape),
         stride_(stride),
         data_type_(dtype),
         is_dynamic_(false),
-        is_contiguous_(true) {}
+        is_contiguous_(IsContiguous(*shape_, *stride_)) {}
   TensorMeta(const TensorMeta&) = default;
   TensorMeta(TensorMeta&&) = default;
   virtual ~TensorMeta() = default;
