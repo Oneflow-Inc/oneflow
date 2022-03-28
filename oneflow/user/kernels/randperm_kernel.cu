@@ -29,8 +29,10 @@ limitations under the License.
 namespace oneflow {
 __global__ void GeneKeysAndValues(const int32_t n, int32_t* values, int32_t* keys,
                                   curandState* state) {
-  XPU_1D_KERNEL_LOOP(i, n) {
-    keys[i] = curand(state + i);
+  const int id = blockIdx.x * blockDim.x + threadIdx.x;
+  curandState localState = state[id];
+  CUDA_1D_KERNEL_LOOP(i, n) {
+    keys[i] = curand(&localState);
     values[i] = i;
   }
 }
