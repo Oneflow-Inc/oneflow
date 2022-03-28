@@ -491,6 +491,7 @@ class ThresholdGradFunctor {
   Maybe<Tensor> operator()(const std::shared_ptr<Tensor>& x, const std::shared_ptr<Tensor>& dy,
                            const double& threshold) const {
     MutableAttrMap attrs;
+    JUST(attrs.SetAttr<double>("thres", threshold));
     return OpInterpUtil::Dispatch<one::Tensor>(*op_, {x, dy}, attrs);
   }
 
