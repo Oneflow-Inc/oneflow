@@ -101,6 +101,19 @@ def _test_cross_entropy_loss(dim=int):
     return y
 
 
+def _test_nn_functional_cross_entropy_loss(dim=int):
+    (
+        x,
+        target,
+        weight,
+        ignore_index,
+        device,
+    ) = generate_necessity_for_cross_entropy_or_nll_loss(dim)
+    y1 = torch.nn.functional.cross_entropy(x, target)
+    y2 = torch.nn.functional.cross_entropy(x, target, weight)
+    return y1 + y2
+
+
 @flow.unittest.skip_unless_1n1d()
 class TestCrossEntropyLossModule(flow.unittest.TestCase):
     @autotest(check_graph=True)
@@ -118,6 +131,11 @@ class TestCrossEntropyLossModule(flow.unittest.TestCase):
     @autotest(check_graph=True)
     def test_cross_entropy_loss_with_random_data_dim_5(test_case):
         return _test_cross_entropy_loss(5)
+
+    @autotest(check_graph=True)
+    def test_nn_functional_cross_entropy_with_random_data_dim(test_case):
+        dim = random(2, 6).to(int).value()
+        return _test_nn_functional_cross_entropy_loss(dim)
 
 
 def _test_nll_loss(dim=int):
