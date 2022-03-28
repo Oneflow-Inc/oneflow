@@ -50,5 +50,6 @@ class TestMulModule(flow.unittest.TestCase):
             for sbp in all_sbp(placement, max_dim=ndim):
                 _test_mul_with_scalar(test_case, ndim, placement, sbp)
 
+
 if __name__ == "__main__":
     unittest.main()
