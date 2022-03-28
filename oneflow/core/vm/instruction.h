@@ -141,36 +141,6 @@ class Instruction final : public intrusive::Base {
 
   intrusive::Ref::RefCntType ref_cnt() const { return intrusive_ref_.ref_cnt(); }
 
- private:
-  friend class intrusive::Ref;
-  intrusive::Ref* mut_intrusive_ref() { return &intrusive_ref_; }
-
-  Instruction()
-      : intrusive_ref_(),
-        stream_(),
-        instruction_type_(),
-        phy_instr_operand_(),
-        status_buffer_(),
-        access_list_(),
-        in_edges_(),
-        out_edges_(),
-        main_instruction_hook_(),
-        dispatched_instruction_hook_(),
-        lively_instruction_hook_(),
-        worker_pending_instruction_hook_(),
-        barrier_instruction_hook_() {}
-  intrusive::Ref intrusive_ref_;
-  // fields
-  Stream* stream_;
-  const InstructionType* instruction_type_;
-  std::shared_ptr<PhyInstrOperand> phy_instr_operand_;
-  InstructionStatusBuffer status_buffer_;
-  // lists
-  DependenceAccessList access_list_;
-  InEdgeList in_edges_;
-  OutEdgeList out_edges_;
-
- public:
   // used for instructions building, pending to scheduler, constructing DAG, pending to callback
   // thread and so on.
   intrusive::ListHook main_instruction_hook_;
@@ -182,6 +152,37 @@ class Instruction final : public intrusive::Base {
   intrusive::ListHook worker_pending_instruction_hook_;
   // for barr
   intrusive::ListHook barrier_instruction_hook_;
+
+ private:
+  friend class intrusive::Ref;
+  intrusive::Ref* mut_intrusive_ref() { return &intrusive_ref_; }
+
+  Instruction()
+      : main_instruction_hook_(),
+        dispatched_instruction_hook_(),
+        lively_instruction_hook_(),
+        worker_pending_instruction_hook_(),
+        barrier_instruction_hook_(),
+        access_list_(),
+        in_edges_(),
+        out_edges_(),
+        intrusive_ref_(),
+        stream_(),
+        instruction_type_(),
+        phy_instr_operand_(),
+        status_buffer_() {}
+
+  // lists
+  DependenceAccessList access_list_;
+  InEdgeList in_edges_;
+  OutEdgeList out_edges_;
+
+  // fields
+  intrusive::Ref intrusive_ref_;
+  Stream* stream_;
+  const InstructionType* instruction_type_;
+  std::shared_ptr<PhyInstrOperand> phy_instr_operand_;
+  InstructionStatusBuffer status_buffer_;
 };
 
 using InstructionList = intrusive::List<INTRUSIVE_FIELD(Instruction, main_instruction_hook_)>;
