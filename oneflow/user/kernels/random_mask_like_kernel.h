@@ -19,6 +19,7 @@ limitations under the License.
 #include "oneflow/user/kernels/random_mask_generator.h"
 #include "oneflow/core/framework/framework.h"
 #include "oneflow/core/kernel/cuda_graph_support.h"
+#include "oneflow/core/ep/include/device.h"
 
 namespace oneflow {
 
@@ -59,8 +60,11 @@ class RandomMaskLikeKernel final : public user_op::OpKernel, public user_op::Cud
     CHECK_NOTNULL(random_mask_like_state);
     const auto& generator = random_mask_like_state->generator();
     CHECK_NOTNULL(generator);
-    auto random_mask_like_gen = std::make_shared<RandomMaskGenerator<device_type>>(generator);
-    random_mask_like_gen->Generate(ctx->stream(), elem_cnt, ctx->Attr<float>("rate"), mask);
+    auto* stream = ctx->stream();
+    const auto device_index = stream->device()->device_index();
+    auto random_mask_like_gen =
+        std::make_shared<RandomMaskGenerator<device_type>>(generator, device_index);
+    random_mask_like_gen->Generate(stream, elem_cnt, ctx->Attr<float>("rate"), mask);
   }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };

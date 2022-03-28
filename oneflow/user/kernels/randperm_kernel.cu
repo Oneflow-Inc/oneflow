@@ -24,6 +24,7 @@ limitations under the License.
 #include "oneflow/user/kernels/arange_kernel_util.h"
 #include "oneflow/user/kernels/radix_sort.cuh"
 #include "oneflow/user/kernels/distributions/common.h"
+#include "oneflow/core/ep/include/device.h"
 #include "oneflow/core/ep/cuda/cuda_stream.h"
 
 namespace oneflow {
@@ -59,7 +60,9 @@ class GpuRandPermKernel final : public user_op::OpKernel {
     auto* distribution_state = dynamic_cast<DistributionKernelState*>(state);
     CHECK_NOTNULL(distribution_state);
     const auto& generator = distribution_state->generator();
-    const auto& gpu_generator = CHECK_JUST(generator->Get<one::CUDAGeneratorImpl>());
+    auto* stream = ctx->stream();
+    const auto device_index = stream->device()->device_index();
+    const auto& gpu_generator = CHECK_JUST(generator->Get<one::CUDAGeneratorImpl>(device_index));
     CHECK_NOTNULL(generator);
 
     int32_t block_num = gpu_generator->max_block_num();
@@ -81,8 +84,8 @@ class GpuRandPermKernel final : public user_op::OpKernel {
     size_t temp_storage_bytes = InferTempStorageForSortPairsDescending<int32_t, int32_t>(1, n);
 
     GeneKeysAndValues<<<block_num, kCudaThreadsNumPerBlock, 0,
-                        ctx->stream()->As<ep::CudaStream>()->cuda_stream()>>>(
-        n, value_base, key_base, curand_states);
+                        stream->As<ep::CudaStream>()->cuda_stream()>>>(n, value_base, key_base,
+                                                                       curand_states);
 
     auto err = cub::DeviceRadixSort::SortPairs(
         /* d_temp_storage */ tmp_base,
