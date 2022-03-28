@@ -17,13 +17,12 @@ limitations under the License.
 
 import os
 import unittest
-
-os.environ["ONEFLOW_MLIR_ENABLE_ROUND_TRIP"] = "1"
-
 import numpy as np
 import oneflow as flow
 import oneflow.unittest
 import oneflow.nn as nn
+
+os.environ["ONEFLOW_MLIR_ENABLE_ROUND_TRIP"] = "1"
 
 
 class MultiplyModel(nn.Module):
@@ -51,6 +50,7 @@ def _test_fold_multiply(test_case):
 
     graph = MultiplyGraph()
     lazy_res = graph()
+
     test_case.assertTrue(
         np.allclose(eager_res.numpy(), lazy_res.numpy(), rtol=1e-5, atol=1e-5)
     )

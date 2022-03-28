@@ -104,6 +104,22 @@ OpFoldResult ScalarAddOp::fold(ArrayRef<Attribute> operands) {
   return attrs.getDictionary(ctx);
 }
 
+OpFoldResult SqrtOp::fold(ArrayRef<Attribute> operands) {
+  const auto ctx = getContext();
+  FolderGuard g(ctx);
+  if (!operands.front()) { return {}; }  // Important!
+
+  const auto attr_dict = operands.front().cast<mlir::DictionaryAttr>();
+  auto attrs = NamedAttrList(attr_dict);
+  const auto tensor =
+      support::DenseElementsAttrToTensor(attr_dict.get("value").cast<mlir::DenseElementsAttr>());
+  auto result = ::oneflow::one::functional::Sqrt(tensor).GetPtrOrThrow();
+  attrs.set("value", support::TensorToDenseElementsAttr(result, mlir::FloatType::getF32(ctx)));
+  attrs.set("op_name", g.GenNewVariableOpName());
+
+  return attrs.getDictionary(ctx);
+}
+
 OpFoldResult MultiplyOp::fold(ArrayRef<Attribute> operands) {
   const auto ctx = getContext();
   FolderGuard g(ctx);

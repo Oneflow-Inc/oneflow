@@ -377,9 +377,13 @@ NamedAttrList GetUserOpCommonAttrs(MLIRContext* ctx, const std::string& op_name)
           conv_op->getLoc(), conv_op->getResultTypes(),
           SmallVector<Value, 4>({bn_op.moving_variance()}), add_op_attrs);
 
+      auto sqrt_op = rewriter.create<oneflow::SqrtOp>(conv_op->getLoc(), conv_op->getResultTypes(),
+                                                      SmallVector<Value, 4>({add_op.out()}),
+                                                      GetUserOpCommonAttrs(ctx, "sqrt"));
+
       auto div_op = rewriter.create<oneflow::BroadcastDivOp>(
           conv_op->getLoc(), conv_op->getResultTypes(),
-          SmallVector<Value, 4>({bn_op.gamma(), add_op.out()}), GetUserOpCommonAttrs(ctx, "div"));
+          SmallVector<Value, 4>({bn_op.gamma(), sqrt_op.y()}), GetUserOpCommonAttrs(ctx, "div"));
 
       auto reshape_op_attrs = GetUserOpCommonAttrs(ctx, "reshape");
       auto bn_gamma_shape = bn_op.gamma()
@@ -416,7 +420,6 @@ NamedAttrList GetUserOpCommonAttrs(MLIRContext* ctx, const std::string& op_name)
       operands.push_back(mul_op.out());
 
       // deal with bias
-
       if (!conv_op.bias()) {
         auto mul_op_bias = rewriter.create<oneflow::MultiplyOp>(
             conv_op->getLoc(), conv_op->getResultTypes(),
