@@ -252,6 +252,42 @@ struct ReluGradFunctor {
   OF_DEVICE_FUNC T operator()(T y, T dy) const { return (y > static_cast<T>(0)) * dy; }
 };
 
+template<typename T>
+struct SoftShrinkFunctor {
+  OF_DEVICE_FUNC explicit SoftShrinkFunctor(double alpha) : alpha(alpha) {}
+  OF_DEVICE_FUNC T operator()(T x) const {
+    if (x > alpha) return x - alpha;
+    if (x < -alpha) return x + alpha;
+    return static_cast<T>(0);
+  }
+
+  const T alpha;
+};
+
+template<typename T>
+struct SoftShrinkGradFunctor {
+  OF_DEVICE_FUNC explicit SoftShrinkGradFunctor(double alpha) : alpha(alpha) {}
+  OF_DEVICE_FUNC T operator()(T y, T dy) const {
+    return y == static_cast<T>(0) ? static_cast<T>(0) : dy;
+  }
+
+  const T alpha;
+};
+
+#define REGISTER_SOFTSHRINK_KERNEL(device, dtype)                            \
+  REGISTER_UNARY_ELEMWISE_USER_KERNEL(                                       \
+      device, "softshrink", SoftShrinkFunctor, dtype, dtype,                 \
+      [](user_op::KernelComputeContext* ctx) {                               \
+        return SoftShrinkFunctor<dtype>(ctx->Attr<double>("alpha"));         \
+      },                                                                     \
+      "out", "in");                                                          \
+  REGISTER_BINARY_ELEMWISE_USER_KERNEL(                                      \
+      device, "softshrink_grad", SoftShrinkGradFunctor, dtype, dtype, dtype, \
+      [](user_op::KernelComputeContext* ctx) {                               \
+        return SoftShrinkGradFunctor<dtype>(ctx->Attr<double>("alpha"));     \
+      },                                                                     \
+      "dx", "y", "dy");
+
 #define REGISTER_ELU_KERNEL(device, dtype)                        \
   REGISTER_UNARY_ELEMWISE_USER_KERNEL(                            \
       device, "elu", EluFunctor, dtype, dtype,                    \

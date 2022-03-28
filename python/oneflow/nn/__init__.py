@@ -33,6 +33,7 @@ from oneflow.nn.modules.activation import (
     ReLU6,
     Sigmoid,
     Softmax,
+    Softshrink,
     Softplus,
     Tanh,
     SELU,

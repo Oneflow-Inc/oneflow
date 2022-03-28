@@ -1005,6 +1005,61 @@ class SELU(Module):
         return flow._C.selu(x)
 
 
+class Softshrink(Module):
+    r"""
+    The interface is consistent with PyTorch.
+    The documentation is referenced from: https://pytorch.org/docs/stable/generated/torch.nn.Softshrink.html?highlight=softshrink#torch.nn.Softshrink.
+
+    The Softshrink activation.
+
+    The formula is:
+    
+    .. math::
+
+        \text{Softshrink}(x) =
+        \begin{cases}
+        x - \lambd, & \text{ if } x > \lambda \\
+        x + \lambd, & \text{ if } x < -\lambda \\
+        0, & \text{ otherwise }
+        \end{cases}
+
+    Args:
+        lambd: the :math:`\lambda` value for the Softshrink formulation. Default: 0.5
+        inplace: can optionally do the operation in-place. Default: ``False``
+    
+    Shape:
+        - Input: :math:`(N, *)` where `*` means, any number of additional
+          dimensions
+        - Output: :math:`(N, *)`, same shape as the input
+
+    For example:
+    
+    .. code-block:: python
+    
+        >>> import numpy as np
+        >>> import oneflow as flow
+        >>> x = np.array([-1, 0, 0.2, 0.5]).astype(np.float32)
+        >>> input = flow.Tensor(x)
+        >>> softshrink = flow.nn.Softshrink(lambd=0.5)
+        >>> out = softshrink(input)
+        >>> out
+        tensor([-0.5000,  0.0000,  0.0000,  0.0000], dtype=oneflow.float32)
+    """
+
+    def __init__(self, lambd: float = 0.5, inplace: bool = False):
+        self.inplace = inplace
+        self.lambd = lambd
+        super().__init__()
+
+    def forward(self, x):
+        return flow._C.softshrink(x, alpha=self.lambd, inplace=self.inplace)
+
+    def extra_repr(self) -> str:
+        param_str = f"lambd={self.lambd}"
+        param_str += ", inplace=True" if self.inplace else ""
+        return param_str
+
+
 class Softsign(Module):
     r"""The SoftSign activation.
 

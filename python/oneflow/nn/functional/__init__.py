@@ -39,6 +39,7 @@ from oneflow._C import elu
 from oneflow._C import celu
 from oneflow._C import selu
 from oneflow._C import sigmoid
+from oneflow._C import softshrink
 from oneflow._C import prelu
 from oneflow._C import gelu
 from oneflow._C import glu
