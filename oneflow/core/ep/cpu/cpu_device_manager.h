@@ -17,6 +17,7 @@ limitations under the License.
 #define ONEFLOW_CORE_EP_CPU_CPU_DEVICE_MANAGER_H_
 
 #include "oneflow/core/ep/include/device_manager.h"
+#include "oneflow/core/ep/cpu/cpu_device.h"
 
 namespace oneflow {
 
@@ -39,7 +40,7 @@ class CpuDeviceManager : public DeviceManager {
  private:
   size_t device_num_threads_;
   std::mutex device_mutex_;
-  std::shared_ptr<Device> device_;
+  std::shared_ptr<CpuDevice> device_;
   DeviceManagerRegistry* registry_;
 };
 

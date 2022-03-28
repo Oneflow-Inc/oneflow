@@ -17,6 +17,7 @@ limitations under the License.
 #define ONEFLOW_CORE_EP_CUDA_CUDA_DEVICE_MANAGER_H_
 
 #include "oneflow/core/ep/include/device_manager.h"
+#include "oneflow/core/ep/cuda/cuda_device.h"
 
 #ifdef WITH_CUDA
 
@@ -39,7 +40,7 @@ class CudaDeviceManager : public DeviceManager {
 
  private:
   std::mutex devices_mutex_;
-  std::vector<std::shared_ptr<Device>> devices_;
+  std::vector<std::shared_ptr<CudaDevice>> devices_;
   DeviceManagerRegistry* registry_;
 };
 
