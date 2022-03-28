@@ -364,9 +364,12 @@ NamedAttrList GetUserOpCommonAttrs(MLIRContext* ctx, const std::string& op_name)
       SmallVector<Value, 4> final_results;
       NamedAttrList attributes = conv_op->getAttrs();
 
+      attributes.set("operand_segment_sizes", rewriter.getI32VectorAttr({1, 1, 1, 0}));
+
       SmallVector<Value, 4> operands;
       operands.push_back(conv_op.in());
 
+      // deal with weight
       auto add_op_attrs = GetUserOpCommonAttrs(ctx, "scalar_add");
       add_op_attrs.set("has_float_operand", BoolAttr::get(ctx, true));
       add_op_attrs.set("float_operand", bn_op.epsilonAttr());
@@ -412,7 +415,20 @@ NamedAttrList GetUserOpCommonAttrs(MLIRContext* ctx, const std::string& op_name)
           GetUserOpCommonAttrs(ctx, "multiply"));
       operands.push_back(mul_op.out());
 
-      if (conv_op.bias()) operands.push_back(conv_op.bias());
+      // deal with bias
+
+      if (!conv_op.bias()) {
+        auto mul_op_bias = rewriter.create<oneflow::MultiplyOp>(
+            conv_op->getLoc(), conv_op->getResultTypes(),
+            SmallVector<Value, 4>({bn_op.moving_mean(), div_op.z()}),
+            GetUserOpCommonAttrs(ctx, "multiply_bias"));
+        auto sub_op_bias = rewriter.create<oneflow::BroadcastSubOp>(
+            conv_op->getLoc(), conv_op->getResultTypes(),
+            SmallVector<Value, 4>({bn_op.beta(), mul_op_bias.out()}),
+            GetUserOpCommonAttrs(ctx, "sub_bias"));
+        operands.push_back(sub_op_bias.z());
+      }
+      // if (conv_op.bias()) operands.push_back(conv_op.bias());
       if (conv_op.bias_multiplier()) operands.push_back(conv_op.bias_multiplier());
 
       auto new_conv_op = rewriter.create<oneflow::Conv2DOp>(

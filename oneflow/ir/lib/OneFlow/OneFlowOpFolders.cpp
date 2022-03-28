@@ -147,5 +147,27 @@ OpFoldResult BroadcastDivOp::fold(ArrayRef<Attribute> operands) {
   return attrs.getDictionary(ctx);
 }
 
+OpFoldResult BroadcastSubOp::fold(ArrayRef<Attribute> operands) {
+  const auto ctx = getContext();
+  FolderGuard g(ctx);
+  if (!(operands.front() && operands.back())) { return {}; }  // Important!
+  auto lhs_attr_dict = operands.front().cast<mlir::DictionaryAttr>();
+  auto rhs_attr_dict = operands.back().cast<mlir::DictionaryAttr>();
+
+  auto attrs = NamedAttrList(lhs_attr_dict);
+  auto lhs_tensor = support::DenseElementsAttrToTensor(
+      lhs_attr_dict.get("value").cast<mlir::DenseElementsAttr>());
+  auto rhs_tensor = support::DenseElementsAttrToTensor(
+      rhs_attr_dict.get("value").cast<mlir::DenseElementsAttr>());
+
+  const auto result =
+      ::oneflow::one::functional::Sub(lhs_tensor, rhs_tensor, false).GetPtrOrThrow();
+
+  attrs.set("value", support::TensorToDenseElementsAttr(result, mlir::FloatType::getF32(ctx)));
+
+  attrs.set("op_name", g.GenNewVariableOpName());
+  return attrs.getDictionary(ctx);
+}
+
 }  // namespace oneflow
 }  // namespace mlir
