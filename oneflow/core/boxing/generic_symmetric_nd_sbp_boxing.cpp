@@ -29,24 +29,23 @@ namespace {
 using IndexVector = DimVector;
 using StrideVector = DimVector;
 
-bool RawIsAllBroadcastNdSbp(Symbol<NdSbp> nd_sbp) {
-  for (const auto& sbp_parallel : nd_sbp->sbp_parallel()) {
-    if (!sbp_parallel.has_broadcast_parallel()) { return false; }
+bool RawIsAllBroadcastNdSbpAfterDim(Symbol<NdSbp> nd_sbp, int dim) {
+  for (int i = dim; i < nd_sbp->sbp_parallel_size(); ++i) {
+    if (!nd_sbp->sbp_parallel(i).has_broadcast_parallel()) { return false; }
   }
   return true;
 }
 
-static constexpr auto* IsAllBroadcastNdSbp = DECORATE(&RawIsAllBroadcastNdSbp, ThreadLocal);
+static constexpr auto* IsAllBroadcastNdSbpAfterDim =
+    DECORATE(&RawIsAllBroadcastNdSbpAfterDim, ThreadLocalCached);
 
-Maybe<Symbol<NdSbp>> GetAllBroadcastNdSbp(int64_t ndim) {
-  NdSbp broadcast_nd_sbp;
-  for (int64_t i = 0; i < ndim; ++i) {
-    broadcast_nd_sbp.mutable_sbp_parallel()->Add()->mutable_broadcast_parallel();
-  }
-  return SymbolOf(broadcast_nd_sbp);
+Maybe<Symbol<SbpParallel>> GetBroadcastSbp() {
+  SbpParallel broadcast_sbp;
+  broadcast_sbp.mutable_broadcast_parallel();
+  return SymbolOf(broadcast_sbp);
 }
 
-auto* CachedGetAllBroadcastNdSbp = DECORATE(&GetAllBroadcastNdSbp, ThreadLocal);
+auto* CachedGetBroadcastSbp = DECORATE(&GetBroadcastSbp, ThreadLocalCached);
 
 void GetStrideVector(const Shape& shape, StrideVector* strides) {
   strides->resize(shape.NumAxes());
@@ -93,35 +92,19 @@ Maybe<Shape> CalLogicalShape4Axis(const Shape& logical_shape, int axis,
   return sub_logical_shape;
 }
 
-static constexpr auto* GetLogicalShape4Axis = DECORATE(&CalLogicalShape4Axis, ThreadLocalCopiable);
+static constexpr auto* GetLogicalShape4Axis =
+    DECORATE(&CalLogicalShape4Axis, ThreadLocalCachedCopiable);
 
-Maybe<Symbol<NdSbp>> ConvertSbpParallelToNdSbp(const SbpParallel& sbp) {
-  NdSbp nd_sbp;
-  *nd_sbp.mutable_sbp_parallel()->Add() = sbp;
-  return SymbolOf(nd_sbp);
+Maybe<int> CalFirstDiffSbpDim(Symbol<NdSbp> in_nd_sbp, Symbol<NdSbp> out_nd_sbp) {
+  CHECK_EQ_OR_RETURN(in_nd_sbp->sbp_parallel_size(), out_nd_sbp->sbp_parallel_size());
+  int dim = 0;
+  for (; dim < in_nd_sbp->sbp_parallel_size(); ++dim) {
+    if (in_nd_sbp->sbp_parallel(dim) != out_nd_sbp->sbp_parallel(dim)) { break; }
+  }
+  return dim;
 }
 
-static constexpr auto* CachedConvertSbpParallelToNdSbp =
-    DECORATE(&ConvertSbpParallelToNdSbp, ThreadLocalCopiable);
-
-Maybe<Symbol<NdSbp>> ConvertToBroadcastAtAxis(Symbol<NdSbp> nd_sbp, int axis) {
-  CHECK_LT_OR_RETURN(axis, nd_sbp->sbp_parallel_size());
-  NdSbp out_nd_sbp = *nd_sbp;
-  out_nd_sbp.mutable_sbp_parallel(axis)->mutable_broadcast_parallel();
-  return SymbolOf(out_nd_sbp);
-}
-
-static constexpr auto* CachedConvertToBroadcastAtAxis =
-    DECORATE(&ConvertToBroadcastAtAxis, ThreadLocal);
-
-Maybe<Symbol<NdSbp>> ReplaceSbpAtAxis(Symbol<NdSbp> nd_sbp, int axis, const SbpParallel& sbp) {
-  CHECK_LT_OR_RETURN(axis, nd_sbp->sbp_parallel_size());
-  NdSbp out_nd_sbp = *nd_sbp;
-  *out_nd_sbp.mutable_sbp_parallel(axis) = sbp;
-  return SymbolOf(out_nd_sbp);
-}
-
-auto* CachedReplaceSbpAtAxis = DECORATE(&ReplaceSbpAtAxis, ThreadLocalCopiable);
+static constexpr auto* CachedCalFirstDiffSbpDim = DECORATE(&CalFirstDiffSbpDim, ThreadLocalCached);
 
 Maybe<one::Tensor> Apply1DBoxing(const std::shared_ptr<one::Tensor>& input, Symbol<NdSbp> in_nd_sbp,
                                  Symbol<NdSbp> out_nd_sbp, Symbol<ParallelDesc> in_parallel_desc,
@@ -146,7 +129,7 @@ Maybe<void> RawCheckGenericSymmetricNdSbpBoxing(Symbol<PlacedNdSbp> in, Symbol<P
 }
 
 static constexpr auto* CheckGenericSymmetricNdSbpBoxing =
-    DECORATE(&RawCheckGenericSymmetricNdSbpBoxing, ThreadLocalCopiable);
+    DECORATE(&RawCheckGenericSymmetricNdSbpBoxing, ThreadLocalCachedCopiable);
 
 }  // namespace
 
@@ -161,7 +144,9 @@ Maybe<one::Tensor> GenericSymmetricNdSbpBoxing(const std::shared_ptr<one::Tensor
   const auto& out_parallel_id = JUST(GetParallelId4CurrentProcessCtx(out_parallel_desc));
   if (out_parallel_id->has_value()) {
     output = input;
-    Symbol<NdSbp> broadcast_nd_sbp = JUST(CachedGetAllBroadcastNdSbp(1));
+
+    int first_diff_sbp_dim = JUST(CachedCalFirstDiffSbpDim(in->nd_sbp(), out_nd_sbp));
+    Symbol<SbpParallel> broadcast_sbp = JUST(CachedGetBroadcastSbp());
 
     const auto& opt_parallel_id = JUST(GetParallelId4CurrentProcessCtx(in_parallel_desc));
     int64_t parallel_id = JUST(*opt_parallel_id);
@@ -173,14 +158,14 @@ Maybe<one::Tensor> GenericSymmetricNdSbpBoxing(const std::shared_ptr<one::Tensor
 
     // Convert input to broadcast tensor step by step
     // e.g.
-    // If in_nd_sbp is (S(0), B, S(0))
-    // Altered state of sbp is (S(0), B, S(0)) -> (S(0), B, B) -> (B, B, B)
-    for (int64_t i = out_nd_sbp->sbp_parallel_size() - 1; i >= 0; --i) {
+    // If in_nd_sbp is (S(0), B, S(0)), (S(0), S(0), S(1))
+    // Altered state of sbp is (S(0), B, S(0)) -> (S(0), B, B)
+    for (int64_t i = out_nd_sbp->sbp_parallel_size() - 1; i >= first_diff_sbp_dim; --i) {
       const auto& nd_sbp = JUST(output->nd_sbp());
       const auto& sbp_parallel = nd_sbp->sbp_parallel(i);
       if (sbp_parallel.has_broadcast_parallel()) { continue; }
 
-      const auto& one_dim_nd_sbp = JUST(CachedConvertSbpParallelToNdSbp(sbp_parallel));
+      const auto& one_dim_nd_sbp = JUST(SbpToNdSbp(sbp_parallel));
       const auto& sub_logical_shape =
           *JUST(GetLogicalShape4Axis(logical_shape, i, in_parallel_desc, nd_sbp));
       std::shared_ptr<one::Tensor> local_tensor = JUST(output->cur_rank_phy_tensor());
@@ -196,25 +181,26 @@ Maybe<one::Tensor> GenericSymmetricNdSbpBoxing(const std::shared_ptr<one::Tensor
           local_tensor, sub_parallel_desc, *JUST(GetSbpList(one_dim_nd_sbp)), sub_logical_shape,
           local_tensor->dtype()));
 
-      sub_global_tensor = JUST(Apply1DBoxing(sub_global_tensor, one_dim_nd_sbp, broadcast_nd_sbp,
-                                             sub_parallel_desc, sub_parallel_desc));
+      sub_global_tensor =
+          JUST(Apply1DBoxing(sub_global_tensor, one_dim_nd_sbp, JUST(SbpToNdSbp(broadcast_sbp)),
+                             sub_parallel_desc, sub_parallel_desc));
 
       local_tensor = JUST(sub_global_tensor->cur_rank_phy_tensor());
 
-      const auto& new_nd_sbp = JUST(CachedConvertToBroadcastAtAxis(nd_sbp, i));
+      const auto& new_nd_sbp = JUST(SetSbpAtAxis(*nd_sbp, *broadcast_sbp, i));
 
       output = JUST(one::functional::LocalToConsistent(local_tensor, in_parallel_desc,
                                                        *JUST(GetSbpList(new_nd_sbp)), logical_shape,
                                                        local_tensor->dtype()));
     }
 
-    CHECK_OR_RETURN(IsAllBroadcastNdSbp(JUST(output->nd_sbp())));
+    CHECK_OR_RETURN(IsAllBroadcastNdSbpAfterDim(JUST(output->nd_sbp()), first_diff_sbp_dim));
 
     // Convert broadcast tensor to output with out_nd_sbp data step by step
     // e.g.
-    // If out_nd_sbp is (S(1), S(0), S(1))
-    // Altered state of sbp is (B, B, B) -> (S(1), B, B) -> (S(1), S(0), B) -> (S(1), S(0), S(1))
-    for (int64_t i = 0; i < out_nd_sbp->sbp_parallel_size(); ++i) {
+    // If out_nd_sbp is (S(0), S(0), S(1))
+    // Altered state of sbp is (S(0), B, B) -> (S(0), S(0), B) -> (S(0), S(0), S(1))
+    for (int64_t i = first_diff_sbp_dim; i < out_nd_sbp->sbp_parallel_size(); ++i) {
       const auto& sbp_parallel = out_nd_sbp->sbp_parallel(i);
       if (sbp_parallel.has_broadcast_parallel()) { continue; }
 
@@ -227,12 +213,12 @@ Maybe<one::Tensor> GenericSymmetricNdSbpBoxing(const std::shared_ptr<one::Tensor
       std::shared_ptr<one::Tensor> local_tensor = JUST(output->cur_rank_phy_tensor());
 
       std::shared_ptr<one::Tensor> sub_global_tensor = JUST(one::functional::LocalToConsistent(
-          local_tensor, sub_parallel_desc, *JUST(GetSbpList(broadcast_nd_sbp)), sub_logical_shape,
-          local_tensor->dtype()));
+          local_tensor, sub_parallel_desc, *JUST(GetSbpList(JUST(SbpToNdSbp(broadcast_sbp)))),
+          sub_logical_shape, local_tensor->dtype()));
 
-      const auto& one_dim_nd_sbp = JUST(CachedConvertSbpParallelToNdSbp(sbp_parallel));
-      sub_global_tensor = JUST(Apply1DBoxing(sub_global_tensor, broadcast_nd_sbp, one_dim_nd_sbp,
-                                             sub_parallel_desc, sub_parallel_desc));
+      const auto& one_dim_nd_sbp = JUST(SbpToNdSbp(sbp_parallel));
+      sub_global_tensor = JUST(Apply1DBoxing(sub_global_tensor, JUST(SbpToNdSbp(broadcast_sbp)),
+                                             one_dim_nd_sbp, sub_parallel_desc, sub_parallel_desc));
 
       local_tensor = JUST(sub_global_tensor->cur_rank_phy_tensor());
 
@@ -241,7 +227,7 @@ Maybe<one::Tensor> GenericSymmetricNdSbpBoxing(const std::shared_ptr<one::Tensor
           *JUST(GetPhysicalShape(sub_logical_shape, *one_dim_nd_sbp, *sub_parallel_desc, index));
       CHECK_EQ_OR_RETURN(physical_shape, *local_tensor->shape());
 
-      const auto& new_nd_sbp = JUST(CachedReplaceSbpAtAxis(nd_sbp, i, sbp_parallel));
+      const auto& new_nd_sbp = JUST(SetSbpAtAxis(*nd_sbp, sbp_parallel, i));
 
       output = JUST(one::functional::LocalToConsistent(local_tensor, in_parallel_desc,
                                                        *JUST(GetSbpList(new_nd_sbp)), logical_shape,

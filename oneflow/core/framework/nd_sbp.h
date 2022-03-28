@@ -53,6 +53,12 @@ std::string NdSbpToString(Symbol<NdSbp> nd_sbp_sym);
 std::string SbpToString(const SbpParallel& sbp);
 std::string NdSbpToString(const NdSbp& nd_sbp);
 
+Maybe<Symbol<NdSbp>> SetSbpAtAxis(Symbol<NdSbp> nd_sbp, Symbol<SbpParallel> sbp, int axis);
+Maybe<Symbol<NdSbp>> SetSbpAtAxis(const NdSbp& nd_sbp, const SbpParallel& sbp, int axis);
+
+Maybe<Symbol<NdSbp>> SbpToNdSbp(Symbol<SbpParallel> sbp);
+Maybe<Symbol<NdSbp>> SbpToNdSbp(const SbpParallel& sbp);
+
 // If an nd sbp can be converted to a 1d sbp.
 bool Is1dSbp(const NdSbp& nd_sbp);
 

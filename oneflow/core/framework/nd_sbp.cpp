@@ -131,6 +131,25 @@ std::string NdSbpToString(const NdSbp& nd_sbp) {
   return ss.str();
 }
 
+Maybe<Symbol<NdSbp>> SetSbpAtAxis(Symbol<NdSbp> nd_sbp, Symbol<SbpParallel> sbp, int axis) {
+  return SetSbpAtAxis(*nd_sbp, *sbp, axis);
+}
+
+Maybe<Symbol<NdSbp>> SetSbpAtAxis(const NdSbp& nd_sbp, const SbpParallel& sbp, int axis) {
+  CHECK_LT_OR_RETURN(axis, nd_sbp.sbp_parallel_size());
+  NdSbp out_nd_sbp = nd_sbp;
+  *out_nd_sbp.mutable_sbp_parallel(axis) = sbp;
+  return SymbolOf(out_nd_sbp);
+}
+
+Maybe<Symbol<NdSbp>> SbpToNdSbp(Symbol<SbpParallel> sbp) { return SbpToNdSbp(*sbp); }
+
+Maybe<Symbol<NdSbp>> SbpToNdSbp(const SbpParallel& sbp) {
+  NdSbp out_nd_sbp;
+  *out_nd_sbp.add_sbp_parallel() = sbp;
+  return SymbolOf(out_nd_sbp);
+}
+
 // If an nd sbp can be converted to a 1d sbp.
 bool Is1dSbp(const NdSbp& nd_sbp) {
   if (nd_sbp.sbp_parallel_size() == 0) { return false; }
