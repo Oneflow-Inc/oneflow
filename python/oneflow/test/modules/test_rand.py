@@ -32,6 +32,7 @@ def _test_rand(test_case, device, shape):
     test_case.assertTrue(not np.array_equal(y1.numpy(), y2.numpy()))
     test_case.assertTrue(shape == y1.shape)
 
+
 def _test_rand_tuple_shape(test_case, device, shape):
     y1 = flow.rand(shape, device=flow.device(device))
     y2 = flow.rand(shape, device=flow.device(device))
