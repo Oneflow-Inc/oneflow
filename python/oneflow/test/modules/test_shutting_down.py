@@ -22,13 +22,13 @@ world_size = os.getenv("WORLD_SIZE")
 
 class TestCallWhenShuttingDown:
     def __init__(self):
+        self.oneflow = oneflow
         tensor = oneflow.ones((2, 2))
         print(tensor)
 
     def __del__(self):
         if world_size == 1:
-            tensor = oneflow.ones((2, 2))
-            print(tensor)
+            tensor = self.oneflow.ones((2, 2))
 
 
 test_call_when_shutting_down = TestCallWhenShuttingDown()
