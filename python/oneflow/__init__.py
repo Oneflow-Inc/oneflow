@@ -97,6 +97,7 @@ from oneflow._C import tanh
 from oneflow._C import as_strided
 from oneflow._C import silu
 from oneflow._C import selu
+from oneflow._C import softshrink
 from oneflow._C import softsign
 from oneflow._C import cast
 from oneflow._C import ones_like
@@ -168,7 +169,6 @@ from oneflow._C import hsplit
 from oneflow._C import vsplit
 from oneflow._C import concat
 from oneflow._C import concat as cat
-from oneflow._C import to
 from oneflow._C import dim_gather as gather
 from oneflow._C import gather_nd
 from oneflow._C import roi_align
@@ -298,6 +298,7 @@ from oneflow.framework.generator import (
 
 # NOTE(chengcheng) oneflow.Model is unavailable now.
 # from oneflow.framework.model import Model
+import oneflow.utils.torch
 from oneflow.framework.scope_util import api_current_scope as current_scope
 from oneflow.framework.tensor import Tensor
 from oneflow.framework.tensor import is_nonzero
