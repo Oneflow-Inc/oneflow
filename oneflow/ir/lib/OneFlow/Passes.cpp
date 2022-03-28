@@ -484,10 +484,10 @@ struct ReplaceVariableIrPattern : public ::mlir::RewritePattern {
                                         ::mlir::PatternRewriter& rewriter) const override {
     auto op = ::llvm::dyn_cast<oneflow::VariableIrOp>(op0);
     NamedAttrList attrs;
-    auto value_ = op.valueAttr();
+    const auto tensor_attr = op.value();
     attrs.set(StringAttr::get(getContext(), "shape"),
               rewriter.getArrayAttr(llvm::to_vector<8>(llvm::map_range(
-                  value_.getType().cast<mlir::RankedTensorType>().getShape(),
+                  tensor_attr.getType().cast<mlir::RankedTensorType>().getShape(),
                   [&](int64_t v) -> Attribute {
                     return IntegerAttr::get(rewriter.getIntegerType(64, /*isSigned=*/true),
                                             APInt(64, v, /*isSigned=*/true));
@@ -505,6 +505,11 @@ struct ReplaceVariableIrPattern : public ::mlir::RewritePattern {
     auto op_new = rewriter.create<oneflow::VariableOp>(op->getLoc(), op.output().getType(),
                                                        ValueRange(), attrs);
     rewriter.replaceOp(op0, op_new->getResults());
+
+    ::oneflow::Global<::oneflow::VariableTensorMgr>::Get()
+        ->Set(op.op_nameAttr().str(), support::DenseElementsAttrToTensor(tensor_attr))
+        .GetOrThrow();
+
     return ::mlir::success();
   }
 };

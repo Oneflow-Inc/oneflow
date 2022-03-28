@@ -23,6 +23,7 @@ class VariableTensorMgr final {
   Maybe<void> Fill(const std::vector<std::string>& variable_op_names,
                    const std::vector<std::shared_ptr<one::Tensor>>& variable_tensors);
   Maybe<std::tuple<std::vector<std::string>, std::vector<std::shared_ptr<one::Tensor>>>> Dump();
+  Maybe<std::vector<std::string>> DumpNames();
 
  private:
   friend class Global<VariableTensorMgr>;

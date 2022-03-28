@@ -48,4 +48,10 @@ VariableTensorMgr::Dump() {
   return std::make_tuple(variable_op_names, variable_tensors);
 }
 
+Maybe<std::vector<std::string>> VariableTensorMgr::DumpNames() {
+  std::vector<std::string> variable_op_names;
+  for (const auto& x : variables_) { variable_op_names.push_back(x.first); }
+  return variable_op_names;
+}
+
 }  // namespace oneflow

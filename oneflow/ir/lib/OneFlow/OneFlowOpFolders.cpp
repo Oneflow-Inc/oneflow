@@ -28,6 +28,22 @@ limitations under the License.
 
 namespace mlir {
 namespace oneflow {
+namespace {
+
+class FolderGuard final {
+ public:
+  explicit FolderGuard(MLIRContext* context) : context_(context) {}
+  StringAttr GenNewVariableOpName(const std::string& key = "") {
+    if (key == "") { return StringAttr::get(context_, "variable_" + ::oneflow::NewUniqueId()); }
+    return StringAttr::get(context_, "variable_" + key + "_" + ::oneflow::NewUniqueId());
+  }
+
+ private:
+  MLIRContext* context_ = nullptr;
+  ::oneflow::LazyMode::Guard guard{false};
+};
+
+}  // namespace
 
 OpFoldResult VariableIrOp::fold(ArrayRef<Attribute> operands) {
   NamedAttrList attrs;
@@ -42,8 +58,10 @@ OpFoldResult VariableIrOp::fold(ArrayRef<Attribute> operands) {
 }
 
 OpFoldResult ReshapeOp::fold(ArrayRef<Attribute> operands) {
-  ::oneflow::LazyMode::Guard guard{false};
+  const auto ctx = getContext();
+  FolderGuard g(ctx);
   if (!operands.front()) { return {}; }  // Important!
+
   const auto attr_dict = operands.front().cast<mlir::DictionaryAttr>();
   auto attrs = NamedAttrList(attr_dict);
   const auto tensor =
@@ -56,18 +74,17 @@ OpFoldResult ReshapeOp::fold(ArrayRef<Attribute> operands) {
       ::oneflow::one::functional::Reshape(
           tensor, ::oneflow::Shape(::oneflow::DimVector(shape_vec.begin(), shape_vec.end())))
           .GetPtrOrThrow();
-  attrs.erase("value");
-  attrs.set("value",
-            support::TensorToDenseElementsAttr(result, mlir::FloatType::getF32(getContext())));
-  ::oneflow::Global<::oneflow::VariableTensorMgr>::Get()
-      ->Set(attr_dict.get("op_name").cast<mlir::StringAttr>().str(), result)
-      .GetOrThrow();
-  return attrs.getDictionary(getContext());
+  attrs.set("value", support::TensorToDenseElementsAttr(result, mlir::FloatType::getF32(ctx)));
+  attrs.set("op_name", g.GenNewVariableOpName());
+
+  return attrs.getDictionary(ctx);
 }
 
 OpFoldResult ScalarAddOp::fold(ArrayRef<Attribute> operands) {
-  ::oneflow::LazyMode::Guard guard{false};
+  const auto ctx = getContext();
+  FolderGuard g(ctx);
   if (!operands.front()) { return {}; }  // Important!
+
   const auto attr_dict = operands.front().cast<mlir::DictionaryAttr>();
   auto attrs = NamedAttrList(attr_dict);
   const auto tensor =
@@ -81,17 +98,15 @@ OpFoldResult ScalarAddOp::fold(ArrayRef<Attribute> operands) {
         ::oneflow::one::functional::ScalarAdd(tensor, float_operand().convertToFloat(), 1, false)
             .GetPtrOrThrow();
   }
-  attrs.erase("value");
-  attrs.set("value",
-            support::TensorToDenseElementsAttr(result, mlir::FloatType::getF32(getContext())));
-  ::oneflow::Global<::oneflow::VariableTensorMgr>::Get()
-      ->Set(attr_dict.get("op_name").cast<mlir::StringAttr>().str(), result)
-      .GetOrThrow();
-  return attrs.getDictionary(getContext());
+  attrs.set("value", support::TensorToDenseElementsAttr(result, mlir::FloatType::getF32(ctx)));
+  attrs.set("op_name", g.GenNewVariableOpName());
+
+  return attrs.getDictionary(ctx);
 }
 
 OpFoldResult MultiplyOp::fold(ArrayRef<Attribute> operands) {
-  ::oneflow::LazyMode::Guard guard{false};
+  const auto ctx = getContext();
+  FolderGuard g(ctx);
   if (!(operands.front() && operands.back())) { return {}; }  // Important!
   auto lhs_attr_dict = operands.front().cast<mlir::DictionaryAttr>();
   auto rhs_attr_dict = operands.back().cast<mlir::DictionaryAttr>();
@@ -104,20 +119,16 @@ OpFoldResult MultiplyOp::fold(ArrayRef<Attribute> operands) {
 
   const auto result = ::oneflow::one::functional::Mul(lhs_tensor, rhs_tensor).GetPtrOrThrow();
 
-  attrs.erase("value");
-  attrs.set("value",
-            support::TensorToDenseElementsAttr(result, mlir::FloatType::getF32(getContext())));
-  ::oneflow::Global<::oneflow::VariableTensorMgr>::Get()
-      ->Delete(rhs_attr_dict.get("op_name").cast<mlir::StringAttr>().str())
-      .GetOrThrow();
-  ::oneflow::Global<::oneflow::VariableTensorMgr>::Get()
-      ->Set(lhs_attr_dict.get("op_name").cast<mlir::StringAttr>().str(), result)
-      .GetOrThrow();
-  return attrs.getDictionary(getContext());
+  attrs.set("value", support::TensorToDenseElementsAttr(result, mlir::FloatType::getF32(ctx)));
+
+  attrs.set("op_name", g.GenNewVariableOpName());
+
+  return attrs.getDictionary(ctx);
 }
 
 OpFoldResult BroadcastDivOp::fold(ArrayRef<Attribute> operands) {
-  ::oneflow::LazyMode::Guard guard{false};
+  const auto ctx = getContext();
+  FolderGuard g(ctx);
   if (!(operands.front() && operands.back())) { return {}; }  // Important!
   auto lhs_attr_dict = operands.front().cast<mlir::DictionaryAttr>();
   auto rhs_attr_dict = operands.back().cast<mlir::DictionaryAttr>();
@@ -130,16 +141,10 @@ OpFoldResult BroadcastDivOp::fold(ArrayRef<Attribute> operands) {
 
   const auto result = ::oneflow::one::functional::Div(lhs_tensor, rhs_tensor).GetPtrOrThrow();
 
-  attrs.erase("value");
-  attrs.set("value",
-            support::TensorToDenseElementsAttr(result, mlir::FloatType::getF32(getContext())));
-  ::oneflow::Global<::oneflow::VariableTensorMgr>::Get()
-      ->Delete(rhs_attr_dict.get("op_name").cast<mlir::StringAttr>().str())
-      .GetOrThrow();
-  ::oneflow::Global<::oneflow::VariableTensorMgr>::Get()
-      ->Set(lhs_attr_dict.get("op_name").cast<mlir::StringAttr>().str(), result)
-      .GetOrThrow();
-  return attrs.getDictionary(getContext());
+  attrs.set("value", support::TensorToDenseElementsAttr(result, mlir::FloatType::getF32(ctx)));
+
+  attrs.set("op_name", g.GenNewVariableOpName());
+  return attrs.getDictionary(ctx);
 }
 
 }  // namespace oneflow

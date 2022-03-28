@@ -15,6 +15,7 @@ limitations under the License.
 */
 #include "oneflow/core/framework/nn_graph.h"
 #include "oneflow/core/common/buffer_manager.h"
+#include "oneflow/core/common/just.h"
 #include "oneflow/core/common/maybe.h"
 #include "oneflow/core/common/scalar.h"
 #include "oneflow/core/common/util.h"
@@ -38,6 +39,7 @@ limitations under the License.
 #include "oneflow/core/persistence/tee_persistent_log_stream.h"
 #include "oneflow/core/vm/vm_util.h"
 #include "oneflow/core/profiler/profiler.h"
+#include "oneflow/core/operator/variable_tensor_mgr.h"
 
 namespace oneflow {
 
@@ -239,6 +241,20 @@ Maybe<void> NNGraph::RegisterNewVariableOpInJobPass() {
   }));
   return Maybe<void>::Ok();
 }
+Maybe<void> NNGraph::DeleteOutdatedVariableOpInJobPass() {
+  std::set<std::string> variables_set;
+  OpGraph op_graph(job_);
+  JUST(op_graph.MaybeForEachNode([&](OpNode* op_node) -> Maybe<void> {
+    if (op_node->op().op_conf().has_variable_conf() == false) { return Maybe<void>::Ok(); }
+    variables_set.insert(op_node->op().op_name());
+    return Maybe<void>::Ok();
+  }));
+  auto mgr = ::oneflow::Global<::oneflow::VariableTensorMgr>::Get();
+  for (auto& name : mgr->DumpNames().GetOrThrow()) {
+    if (variables_set.find(name) == variables_set.end()) { mgr->Delete(name).GetOrThrow(); }
+  }
+  return Maybe<void>::Ok();
+}
 
 Maybe<void> NNGraph::CompileAndInitRuntime() {
   CHECK_OR_RETURN(!runtime_inited_);
@@ -248,6 +264,7 @@ Maybe<void> NNGraph::CompileAndInitRuntime() {
 
   JUST(RegisterFreeEagerTensorsToVariableOpNames());
   JUST(RegisterNewVariableOpInJobPass());
+  JUST(DeleteOutdatedVariableOpInJobPass());
 
   // NOTE(chengcheng): TensorNameScope need to be cleared after current graph is built.
   one::TensorNameScope::Global()->Clear();
