@@ -453,37 +453,60 @@ void ShuffleEmbeddings(cudaStream_t cuda_stream, ncclComm_t comm, int64_t parall
               reverse_unique_cur_rank_embeddings, recv_offsets, recv_elem_cnt, received_embeddings);
 }
 
-constexpr int kReduceBlockSize = 128; 
+constexpr int kReduceBlockSize = 128;
 
 template<typename T>
-struct MaxOp {
-  __device__ __forceinline__ T operator()(const T& a, const T& b) const { return max(a, b); }
+struct AbsMaxOp {
+  __device__ __forceinline__ T operator()(const T& a, const T& b) const {
+    return max(abs(a), abs(b));
+  }
 };
 
-// template<>
-// struct MaxOp<half> {
-//   __device__ __forceinline__ half operator()(const half& a, const half& b) const { return __hmax(a, b); }
-// };
-
 template<typename T>
-__inline__ __device__ T BlockAllReduceMax(T val) {
+__inline__ __device__ T BlockAllReduceAbsMax(T val) {
   typedef cub::BlockReduce<T, kReduceBlockSize> BlockReduce;
   __shared__ typename BlockReduce::TempStorage temp_storage;
   __shared__ T final_result;
-  T result = BlockReduce(temp_storage).Reduce(val, MaxOp<T>());
+  T result = BlockReduce(temp_storage).Reduce(val, AbsMaxOp<T>());
   if (threadIdx.x == 0) { final_result = result; }
   __syncthreads();
   return final_result;
 }
 
-template<typename T>
-__global__ void QuantizeAndDequantizeBlockKernel(const T* x, T* tmp_buffer){
-  int32_t global_thread_index = blockDim.x * blockIdx.x + threadIdx.x; 
-  T x_val = x[global_thread_index]; 
-  T quantize_factor = BlockAllReduceMax<T>(x_val);
-  int8_t quantized_val = static_cast<int8_t>(x_val / quantize_factor); 
-  T dequantized_val = static_cast<T>(quantized_val) * quantize_factor; 
-  tmp_buffer[global_thread_index] = dequantized_val; 
+template<typename T, typename IDX>
+__global__ void QuantizeAndDequantizeBlockKernel(T* x, IDX n);
+
+template<typename T, typename IDX>
+__global__ void QuantizeAndDequantizeBlockKernel(T* x, IDX n) {
+  CUDA_1D_KERNEL_LOOP_T(IDX, i, n) {
+    T x_val = x[i];
+    T quantize_factor = BlockAllReduceAbsMax<T>(x_val) / 127;
+    int8_t quantized_val = static_cast<int8_t>(x_val / quantize_factor);
+    T dequantized_val = static_cast<T>(quantized_val) * quantize_factor;
+    x[i] = dequantized_val;
+  }
+}
+
+template<>
+__global__ void QuantizeAndDequantizeBlockKernel<half, int32_t>(half* x, int32_t n) {
+  CUDA_1D_KERNEL_LOOP_T(int32_t, i, n) {
+    float x_val = __half2float(x[i]);  // todo
+    float quantize_factor = BlockAllReduceAbsMax<float>(x_val) / 127;
+    int8_t quantized_val = static_cast<int8_t>(x_val / quantize_factor);
+    float dequantized_val = static_cast<float>(quantized_val) * quantize_factor;
+    x[i] = __float2half(dequantized_val);
+  }
+}
+
+template<>
+__global__ void QuantizeAndDequantizeBlockKernel<half, uint32_t>(half* x, uint32_t n) {
+  CUDA_1D_KERNEL_LOOP_T(uint32_t, i, n) {
+    float x_val = __half2float(x[i]);  // todo
+    float quantize_factor = BlockAllReduceAbsMax<float>(x_val) / 127;
+    int8_t quantized_val = static_cast<int8_t>(x_val / quantize_factor);
+    float dequantized_val = static_cast<float>(quantized_val) * quantize_factor;
+    x[i] = __float2half(dequantized_val);
+  }
 }
 
 template<typename T, typename IDX>
@@ -503,8 +526,7 @@ class EmbeddingShuffleKernel final : public user_op::OpKernel {
                const user_op::OpKernelCache*) const override {
     auto* kernel_state = dynamic_cast<DataShuffleKernelState<IDX>*>(state);
     CHECK(kernel_state != nullptr);
-    const user_op::Tensor* cur_rank_embeddings =
-        ctx->Tensor4ArgNameAndIndex("cur_rank_embeddings", 0);
+    user_op::Tensor* cur_rank_embeddings = ctx->Tensor4ArgNameAndIndex("cur_rank_embeddings", 0);
     const user_op::Tensor* num_unique_matrix = ctx->Tensor4ArgNameAndIndex("num_unique_matrix", 0);
     const user_op::Tensor* cur_rank_inverse_indices =
         ctx->Tensor4ArgNameAndIndex("cur_rank_inverse_indices", 0);
@@ -533,23 +555,24 @@ class EmbeddingShuffleKernel final : public user_op::OpKernel {
     size_t reverse_unique_cur_rank_embeddings_size =
         GetCudaAlignedSize(parallel_num * num_ids * embedding_size * sizeof(T));
     size_t received_embeddings_size = reverse_unique_cur_rank_embeddings_size;
-    size_t quantized_embeddings_size = reverse_unique_cur_rank_embeddings_size; 
+    size_t quantized_embeddings_size = reverse_unique_cur_rank_embeddings_size;
     T* reverse_unique_cur_rank_embeddings = reinterpret_cast<T*>(tmp_buffer->mut_dptr());
     T* received_embeddings = reinterpret_cast<T*>(tmp_buffer->mut_dptr<char>()
                                                   + reverse_unique_cur_rank_embeddings_size);
-    T* quantized_embeddings = reinterpret_cast<T*>(tmp_buffer->mut_dptr<char>() 
-                                                  + reverse_unique_cur_rank_embeddings_size 
-                                                  + received_embeddings_size);
 
     CHECK_GE(tmp_buffer->shape().elem_cnt(),
-             reverse_unique_cur_rank_embeddings_size + received_embeddings_size + quantized_embeddings_size);
+             reverse_unique_cur_rank_embeddings_size + received_embeddings_size);
 
-    QuantizeAndDequantizeBlockKernel<T><<<parallel_num * num_ids, kReduceBlockSize>>>(cur_rank_embeddings->dptr<T>(), quantized_embeddings); 
+    int32_t elem_cnt = parallel_num * num_ids * embedding_size;
+    int32_t block_num =
+        std::min((elem_cnt + kReduceBlockSize - 1) / kReduceBlockSize, kCudaMaxBlocksNum);
+    QuantizeAndDequantizeBlockKernel<T, IDX>
+        <<<block_num, kReduceBlockSize>>>(cur_rank_embeddings->mut_dptr<T>(), elem_cnt);
 
     // reverse cur_rank unique
     GatherKernelUtilImpl<DeviceType::kCUDA, T, IDX>::Forward(
         ctx->stream(), reinterpret_cast<const IDX*>(cur_rank_inverse_indices->dptr()),
-        cur_rank_num_ids, quantized_embeddings,
+        cur_rank_num_ids, cur_rank_embeddings->mut_dptr<T>(),
         Shape({1, cur_rank_embeddings->shape().elem_cnt() / embedding_size, embedding_size}),
         reverse_unique_cur_rank_embeddings, 0);
 
@@ -582,16 +605,14 @@ class EmbeddingShuffleKernel final : public user_op::OpKernel {
         size_t reverse_cur_rank_embeddings_size = GetCudaAlignedSize(                             \
             cur_rank_embeddings.shape().elem_cnt() * sizeof(OF_PP_PAIR_FIRST(t_dtype_pair)));     \
         size_t recv_unique_embeddings = reverse_cur_rank_embeddings_size;                         \
-        size_t quantized_embeddings = reverse_cur_rank_embeddings_size;                           \
-        return reverse_cur_rank_embeddings_size + recv_unique_embeddings + quantized_embeddings;  \
+        return reverse_cur_rank_embeddings_size + recv_unique_embeddings;                         \
       });
 
-// OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(REGISTER_CUDA_EMBEDDING_SHUFFLE_KERNEL,
-//                                  FLOATING_DATA_TYPE_SEQ FLOAT16_DATA_TYPE_SEQ, IDX_DATA_TYPE_SEQ)
-
 OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(REGISTER_CUDA_EMBEDDING_SHUFFLE_KERNEL,
-  FLOATING_DATA_TYPE_SEQ, IDX_DATA_TYPE_SEQ)
+                                 FLOATING_DATA_TYPE_SEQ HALF_DATA_TYPE_SEQ, IDX_DATA_TYPE_SEQ)
 
+// OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(REGISTER_CUDA_EMBEDDING_SHUFFLE_KERNEL,
+// FLOATING_DATA_TYPE_SEQ, IDX_DATA_TYPE_SEQ)
 
 template<typename T, typename IDX>
 void ShuffleEmbeddingsGrad(cudaStream_t cuda_stream, ncclComm_t comm, int64_t parallel_id,
