@@ -20,20 +20,6 @@ namespace oneflow {
 
 namespace {
 
-Maybe<void> CheckBroadcastable(const Shape& a_shape, const Shape& b_shape) {
-  Shape broadcast_shape = Shape::Ones(std::max(a_shape.NumAxes(), b_shape.NumAxes()));
-  Shape a_extend_shape = CreateLeftExtendedShape(ShapeView(a_shape), broadcast_shape.NumAxes());
-  Shape b_extend_shape = CreateLeftExtendedShape(ShapeView(b_shape), broadcast_shape.NumAxes());
-  FOR_RANGE(int64_t, i, 0, broadcast_shape.NumAxes()) {
-    CHECK_OR_RETURN(a_extend_shape.At(i) == 1 || b_extend_shape.At(i) == 1
-                    || a_extend_shape.At(i) == b_extend_shape.At(i))
-        << Error::RuntimeError() << "The size of tensor a (" << a_extend_shape.At(i)
-        << ") must match the size of tensor b (" << b_extend_shape.At(i)
-        << ") at non-singleton dimension " << i;
-  }
-  return Maybe<void>::Ok();
-}
-
 Maybe<Shape> GetBroadcastShape(const Shape& a_shape, const Shape& b_shape) {
   Shape broadcast_shape = Shape::Ones(std::max(a_shape.NumAxes(), b_shape.NumAxes()));
   Shape a_extend_shape = CreateLeftExtendedShape(ShapeView(a_shape), broadcast_shape.NumAxes());
@@ -51,9 +37,6 @@ Maybe<Shape> GetBroadcastShape(const Shape& a_shape, const Shape& b_shape) {
 
 Maybe<std::vector<std::tuple<int64_t, int64_t, int64_t, int64_t>>> CalValidSplitDims(
     const Shape& a_shape, const Shape& b_shape, const Shape& c_shape) {
-  JUST(CheckBroadcastable(a_shape, b_shape));
-  JUST(CheckBroadcastable(a_shape, c_shape));
-  JUST(CheckBroadcastable(b_shape, c_shape));
   std::shared_ptr<std::vector<std::tuple<int64_t, int64_t, int64_t, int64_t>>> vaild_split_dims =
       std::make_shared<std::vector<std::tuple<int64_t, int64_t, int64_t, int64_t>>>();
   int32_t max_num_axes =
@@ -77,7 +60,6 @@ Maybe<std::vector<std::tuple<int64_t, int64_t, int64_t, int64_t>>> CalValidSplit
 
 Maybe<std::vector<std::tuple<int64_t, int64_t, int64_t>>> CalValidSplitDims(const Shape& a_shape,
                                                                             const Shape& b_shape) {
-  JUST(CheckBroadcastable(a_shape, b_shape));
   std::shared_ptr<std::vector<std::tuple<int64_t, int64_t, int64_t>>> vaild_split_dims =
       std::make_shared<std::vector<std::tuple<int64_t, int64_t, int64_t>>>();
   int32_t max_num_axes = std::max(a_shape.NumAxes(), b_shape.NumAxes());
