@@ -408,7 +408,7 @@ def _log1p(self):
 
 
 def _log2(self):
-    return flow.log2(self)
+    return flow._C.log2(self)
 
 
 def _reciprocal(self):
