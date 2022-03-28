@@ -644,7 +644,7 @@ class ReduceMeanFunctor {
     } else {
       for (const int32_t& i : axis) { reduce_count *= x->shape()->At(i); }
     }
-    if (reduce_count == 1) { return sum; }
+    if (reduce_count == 1 || reduce_count == 0) { return sum; }
     CHECK_GT_OR_RETURN(reduce_count, 0);
     return functional::ScalarMul(sum, 1.0 / reduce_count, false);
   }
@@ -1868,6 +1868,9 @@ class VarianceFunctor {
           << "], but got " << dims.size();
       std::sort(dims.begin(), dims.end());
       axis.assign(dims.begin(), dims.end());
+    }
+    for (size_t i = 0; i < axis.size(); i++) {
+      if (axis[i] < 0) { axis[i] += ndim; }
     }
     JUST(attrs.SetAttr<std::vector<int32_t>>("dim", axis));
     JUST(attrs.SetAttr<DataType>("dtype", input->dtype()->data_type()));

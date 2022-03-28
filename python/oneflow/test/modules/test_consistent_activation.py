@@ -54,8 +54,13 @@ def build_module(act_type):
         return torch.nn.SiLU()
     elif act_type == "selu":
         return torch.nn.SELU()
+<<<<<<< HEAD
     elif act_type == "threshold":
         return torch.nn.Threshold(threshold=random(), value=random())
+=======
+    elif act_type == "softshrink":
+        return torch.nn.Softshrink()
+>>>>>>> origin/master
     else:
         raise ValueError("activation type %s is not support" % act_type)
 
@@ -191,6 +196,11 @@ class TestSeluModule(flow.unittest.TestCase):
 class TestThresholdModule(flow.unittest.TestCase):
     def test_threshold_module(test_case):
         _test_activation_module(test_case, "threshold")
+
+class TestSoftshrinkModule(flow.unittest.TestCase):
+    def test_softshrink_module(test_case):
+        _test_activation_module(test_case, "softshrink")
+
 
 if __name__ == "__main__":
     unittest.main()

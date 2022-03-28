@@ -13,7 +13,7 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
-#include "oneflow/core/common/optional.h"
+#include "oneflow/core/common/container_util.h"
 #include "oneflow/core/common/scalar.h"
 #include "oneflow/core/functional/functional.h"
 #include "oneflow/core/functional/impl/unary_functor.h"
@@ -450,6 +450,31 @@ class ThresholdFunctor {
     JUST(attrs.SetAttr<double>("thres", threshold));
     JUST(attrs.SetAttr<double>("value", value));
     return OpInterpUtil::Dispatch<one::Tensor>(*op_, {x}, attrs);
+                           }
+                           private: 
+                            std::shared_ptr<OpExpr> op_;
+};
+
+class SoftShrinkFunctor {
+ public:
+  SoftShrinkFunctor() {
+    op_ = CHECK_JUST(one::OpBuilder("softshrink").Input("in").Output("out").Build());
+  }
+
+  Maybe<Tensor> operator()(const std::shared_ptr<Tensor>& x, const double& alpha,
+                           bool inplace) const {
+    MutableAttrMap attrs;
+    CHECK_GT_OR_RETURN(alpha, 0) << "alpha must be greater than 0";
+    JUST(attrs.SetAttr<double>("alpha", alpha));
+    if (inplace) {
+      JUST(CheckInplaceValid(x));
+      std::shared_ptr<TensorTuple> outputs = std::make_shared<TensorTuple>(1);
+      *JUST(oneflow::VectorAt(outputs.get(), 0)) = x;
+      JUST(OpInterpUtil::Dispatch(*op_, {x}, outputs.get(), attrs));
+      return *JUST(oneflow::VectorAt(outputs.get(), 0));
+    } else {
+      return OpInterpUtil::Dispatch<one::Tensor>(*op_, {x}, attrs);
+    }
   }
 
  private:
@@ -465,8 +490,21 @@ class ThresholdGradFunctor {
   Maybe<Tensor> operator()(const std::shared_ptr<Tensor>& x, const std::shared_ptr<Tensor>& dy,
                            const double& threshold) const {
     MutableAttrMap attrs;
-    JUST(attrs.SetAttr<double>("thres", threshold));
     return OpInterpUtil::Dispatch<one::Tensor>(*op_, {x, dy}, attrs);
+                           }
+                           private:
+                            std::shared_ptr<OpExpr> op_;
+};
+
+class SoftShrinkGradFunctor {
+ public:
+  SoftShrinkGradFunctor() {
+  }
+  Maybe<Tensor> operator()(const std::shared_ptr<Tensor>& y, const std::shared_ptr<Tensor>& dy,
+                           const double& alpha) const {
+    MutableAttrMap attrs;
+    JUST(attrs.SetAttr<double>("alpha", alpha));
+    return OpInterpUtil::Dispatch<one::Tensor>(*op_, {dy, y}, attrs);
   }
 
  private:
@@ -508,6 +546,8 @@ ONEFLOW_FUNCTION_LIBRARY(m) {
   m.add_functor<impl::SoftSignGradFunctor>("SoftSignGrad");
   m.add_functor<impl::ThresholdFunctor>("Threshold");
   m.add_functor<impl::ThresholdGradFunctor>("ThresholdGrad");
+  m.add_functor<impl::SoftShrinkFunctor>("SoftShrink");
+  m.add_functor<impl::SoftShrinkGradFunctor>("SoftShrinkGrad");
 };
 
 }  // namespace functional
