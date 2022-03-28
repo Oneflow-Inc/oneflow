@@ -499,6 +499,7 @@ class ThresholdGradFunctor {
 class SoftShrinkGradFunctor {
  public:
   SoftShrinkGradFunctor() {
+    op_ = CHECK_JUST(one::OpBuilder("softshrink_grad").Input("dy").Input("y").Output("dx").Build());
   }
   Maybe<Tensor> operator()(const std::shared_ptr<Tensor>& y, const std::shared_ptr<Tensor>& dy,
                            const double& alpha) const {
