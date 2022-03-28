@@ -33,6 +33,7 @@ numpy_dtype_to_oneflow_dtype_dict = {
     np.float16: flow.float16,
 }
 
+
 @flow.unittest.skip_unless_1n1d()
 @unittest.skipIf(os.getenv("ONEFLOW_TEST_CPU_ONLY"), "only test gpu cases")
 class TestAsTensor(flow.unittest.TestCase):
