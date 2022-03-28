@@ -17,6 +17,7 @@ limitations under the License.
 #define ONEFLOW_CORE_EP_CUDA_CUDA_STREAM_H_
 
 #include "oneflow/core/ep/include/stream.h"
+#include "oneflow/core/ep/cuda/cuda_device.h"
 
 #ifdef WITH_CUDA
 
@@ -75,7 +76,7 @@ class CudaStream : public Stream {
   static constexpr uint32_t kDefaultBlockSize = 256;
 
   DeviceType device_type() const override;
-  Device* device() const override;
+  CudaDevice* device() const override;
   Maybe<void> Sync() override;
   void RecordEvent(Event* event) override;
 
