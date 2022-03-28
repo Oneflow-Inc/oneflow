@@ -52,25 +52,31 @@ def _check_cache(cache):
     assert cache["value_memory_kind"] in ["device", "host"]
 
 
-class Embedding(Module):
+class MultiTableEmbedding(Module):
     def __init__(
         self,
         name,
         embedding_dim,
         dtype,
         key_type,
-        columns,
+        tables,
         store_options,
-        default_initializer={"type": "normal", "mean": 0, "std": 0.05},
+        default_initializer=None,
     ):
         super().__init__()
+        default_initializer = default_initializer or {
+            "type": "normal",
+            "mean": 0,
+            "std": 0.05,
+        }
         key_value_store_options = {}
-        embedding_columns = {}
+        embedding_tables = {}
         key_value_store_options["name"] = name
         assert embedding_dim > 0
         self.embedding_dim = embedding_dim
         self.dtype = dtype
         self.key_type = key_type
+        parallel_num = flow.env.get_world_size()
 
         key_type_size = np.dtype(
             flow.convert_oneflow_dtype_to_numpy_dtype(key_type)
@@ -101,6 +107,9 @@ class Embedding(Module):
                 for i in range(len(caches)):
                     assert isinstance(caches[i], dict)
                     _check_cache(caches[i])
+            for i in range(len(caches)):
+                if caches[i].__contains__("capacity"):
+                    caches[i]["capacity"] = caches[i]["capacity"] // parallel_num
         assert kv_store.__contains__("persistent_table")
         persistent_table = kv_store["persistent_table"]
         assert isinstance(persistent_table, dict)
@@ -108,32 +117,39 @@ class Embedding(Module):
         persistent_table_path = persistent_table["path"]
         assert isinstance(persistent_table_path, (str, list, tuple))
         if isinstance(persistent_table_path, (list, tuple)):
-            assert len(persistent_table_path) == flow.env.get_world_size()
+            assert len(persistent_table_path) == parallel_num
         if persistent_table.__contains__("physical_block_size"):
             assert persistent_table["physical_block_size"] in [512, 4096]
         else:
             persistent_table["physical_block_size"] = 4096
+        if persistent_table.__contains__("capacity_hint"):
+            assert persistent_table["capacity_hint"] >= 0
+            persistent_table["capacity_hint"] = (
+                persistent_table["capacity_hint"] // parallel_num
+            )
+
         key_value_store_options["kv_store"] = kv_store
 
         # initializer
-        if columns is not None:
-            assert isinstance(columns, (list, tuple))
-            for column in columns:
-                assert isinstance(column, dict)
-                assert column.__contains__("initializer")
-                _check_initializer(column["initializer"])
-            embedding_columns["columns"] = columns
+        if tables is not None:
+            assert isinstance(tables, (list, tuple))
+            for table in tables:
+                assert isinstance(table, dict)
+                assert table.__contains__("initializer")
+                _check_initializer(table["initializer"])
+            # TODO(guoran): change "columns" to "tables" and modify c++ code
+            embedding_tables["columns"] = tables
         else:
             assert default_initializer is not None
             _check_initializer(default_initializer)
-            embedding_columns["columns"] = [{"initializer": default_initializer}]
-        key_value_store_options["parallel_num"] = flow.env.get_world_size()
+            embedding_tables["columns"] = [{"initializer": default_initializer}]
+        key_value_store_options["parallel_num"] = parallel_num
         self.key_value_store_options = json.dumps(key_value_store_options)
-        self.embedding_columns = json.dumps(embedding_columns)
-        self.num_columns = len(embedding_columns["columns"])
+        self.embedding_tables = json.dumps(embedding_tables)
+        self.num_tables = len(embedding_tables["columns"])
         self.local_rank = flow.env.get_local_rank()
         self.rank_id = flow.env.get_rank()
-        self.world_size = flow.env.get_world_size()
+        self.world_size = parallel_num
         self.handler = OneEmbeddingHandler(
             self.key_value_store_options, self.local_rank, self.rank_id, self.world_size
         )
@@ -183,74 +199,38 @@ class Embedding(Module):
     def load_snapshot(self, snapshot_name):
         self.handler.LoadSnapshot(snapshot_name)
 
-    def forward(self, ids, column_ids=None):
+    def forward(self, ids, table_ids=None):
         assert self.key_type == ids.dtype, "ids data_type must equals key_type"
         return flow._C.one_embedding_lookup(
             self.shadow,
             ids,
-            column_ids,
+            table_ids,
             self.dtype,
             self.embedding_dim,
-            self.num_columns,
-            self.embedding_columns,
+            self.num_tables,
+            self.embedding_tables,
             self.key_value_store_options,
         )
 
 
-def _check_and_get_capacity_and_memory_budget_mb(
-    capacity, capacity_name, memory_budget_mb, memory_budget_mb_name
-):
-    if capacity is not None:
-        if memory_budget_mb is not None:
-            print(
-                "WARNING: {} is set so {} will be ignored".format(
-                    capacity_name, memory_budget_mb_name
-                )
-            )
-            print(traceback.format_stack()[-3])
-        assert capacity > 0
-        memory_budget_mb = 0
-    elif memory_budget_mb is not None:
-        assert memory_budget_mb > 0
-        capacity = 0
-    else:
-        raise ValueError(
-            "must set {} or {}".format(capacity_name, memory_budget_mb_name)
-        )
-    return capacity, memory_budget_mb
-
-
 def make_device_mem_store_options(
-    persistent_path,
-    capacity_per_rank=None,
-    device_memory_budget_mb_per_rank=None,
-    size_factor=1,
-    physical_block_size=512,
+    persistent_path, capacity, size_factor=1, physical_block_size=512
 ):
     assert isinstance(persistent_path, (str, list, tuple))
-    (
-        capacity_per_rank,
-        device_memory_budget_mb_per_rank,
-    ) = _check_and_get_capacity_and_memory_budget_mb(
-        capacity_per_rank,
-        "capacity_per_rank",
-        device_memory_budget_mb_per_rank,
-        "device_memory_budget_mb_per_rank",
-    )
-    assert capacity_per_rank > 0 or device_memory_budget_mb_per_rank > 0
+    assert capacity > 0
     options = {
         "kv_store": {
             "caches": [
                 {
                     "policy": "full",
-                    "capacity": capacity_per_rank,
-                    "cache_memory_budget_mb": device_memory_budget_mb_per_rank,
+                    "capacity": int(capacity),
                     "value_memory_kind": "device",
                 }
             ],
             "persistent_table": {
                 "path": persistent_path,
                 "physical_block_size": physical_block_size,
+                "capacity_hint": int(capacity),
             },
         },
         "size_factor": size_factor,
@@ -258,75 +238,32 @@ def make_device_mem_store_options(
     return options
 
 
-def make_host_mem_store_options(
+def make_cached_ssd_store_options(
+    cache_budget_mb,
     persistent_path,
-    capacity_per_rank=None,
-    host_memory_budget_mb_per_rank=None,
+    capacity=None,
     size_factor=1,
     physical_block_size=512,
 ):
     assert isinstance(persistent_path, (str, list, tuple))
-    (
-        capacity_per_rank,
-        host_memory_budget_mb_per_rank,
-    ) = _check_and_get_capacity_and_memory_budget_mb(
-        capacity_per_rank,
-        "capacity_per_rank",
-        host_memory_budget_mb_per_rank,
-        "host_memory_budget_mb_per_rank",
-    )
-    assert capacity_per_rank > 0 or host_memory_budget_mb_per_rank > 0
-    options = {
-        "kv_store": {
-            "caches": [
-                {
-                    "policy": "full",
-                    "capacity": capacity_per_rank,
-                    "cache_memory_budget_mb": host_memory_budget_mb_per_rank,
-                    "value_memory_kind": "host",
-                }
-            ],
-            "persistent_table": {
-                "path": persistent_path,
-                "physical_block_size": physical_block_size,
-            },
-        },
-        "size_factor": size_factor,
-    }
-    return options
-
-
-def make_device_mem_cached_ssd_store_options(
-    persistent_path,
-    cached_capacity_per_rank=None,
-    device_memory_budget_mb_per_rank=None,
-    size_factor=1,
-    physical_block_size=512,
-):
-    assert isinstance(persistent_path, (str, list, tuple))
-    (
-        cached_capacity_per_rank,
-        device_memory_budget_mb_per_rank,
-    ) = _check_and_get_capacity_and_memory_budget_mb(
-        cached_capacity_per_rank,
-        "cached_capacity_per_rank",
-        device_memory_budget_mb_per_rank,
-        "device_memory_budget_mb_per_rank",
-    )
-    assert cached_capacity_per_rank > 0 or device_memory_budget_mb_per_rank > 0
+    assert cache_budget_mb > 0
+    if capacity is not None:
+        assert capacity > 0
+    else:
+        capacity = 0
     options = {
         "kv_store": {
             "caches": [
                 {
                     "policy": "lru",
-                    "capacity": cached_capacity_per_rank,
-                    "cache_memory_budget_mb": device_memory_budget_mb_per_rank,
+                    "cache_memory_budget_mb": cache_budget_mb,
                     "value_memory_kind": "device",
                 }
             ],
             "persistent_table": {
                 "path": persistent_path,
                 "physical_block_size": physical_block_size,
+                "capacity_hint": int(capacity),
             },
         },
         "size_factor": size_factor,
@@ -334,95 +271,44 @@ def make_device_mem_cached_ssd_store_options(
     return options
 
 
-def make_host_mem_cached_ssd_store_options(
-    persistent_path,
-    cached_capacity_per_rank=None,
-    host_memory_budget_mb_per_rank=None,
-    size_factor=1,
-    physical_block_size=512,
+def make_cached_host_mem_store_options(
+    cache_budget_mb, persistent_path, capacity, size_factor=1, physical_block_size=512,
 ):
     assert isinstance(persistent_path, (str, list, tuple))
-    (
-        cached_capacity_per_rank,
-        host_memory_budget_mb_per_rank,
-    ) = _check_and_get_capacity_and_memory_budget_mb(
-        cached_capacity_per_rank,
-        "cached_capacity_per_rank",
-        host_memory_budget_mb_per_rank,
-        "host_memory_budget_mb_per_rank",
-    )
-    assert cached_capacity_per_rank > 0 or host_memory_budget_mb_per_rank > 0
+    assert cache_budget_mb > 0
+    assert capacity > 0
     options = {
         "kv_store": {
             "caches": [
                 {
                     "policy": "lru",
-                    "capacity": cached_capacity_per_rank,
-                    "cache_memory_budget_mb": host_memory_budget_mb_per_rank,
-                    "value_memory_kind": "host",
-                }
-            ],
-            "persistent_table": {
-                "path": persistent_path,
-                "physical_block_size": physical_block_size,
-            },
-        },
-        "size_factor": size_factor,
-    }
-    return options
-
-
-def make_device_mem_cached_host_mem_store_options(
-    persistent_path,
-    cached_capacity_per_rank=None,
-    device_memory_budget_mb_per_rank=None,
-    capacity_per_rank=None,
-    host_memory_budget_mb_per_rank=None,
-    size_factor=1,
-    physical_block_size=512,
-):
-    assert isinstance(persistent_path, (str, list, tuple))
-    (
-        cached_capacity_per_rank,
-        device_memory_budget_mb_per_rank,
-    ) = _check_and_get_capacity_and_memory_budget_mb(
-        cached_capacity_per_rank,
-        "cached_capacity_per_rank",
-        device_memory_budget_mb_per_rank,
-        "device_memory_budget_mb_per_rank",
-    )
-    assert cached_capacity_per_rank > 0 or device_memory_budget_mb_per_rank > 0
-    (
-        capacity_per_rank,
-        host_memory_budget_mb_per_rank,
-    ) = _check_and_get_capacity_and_memory_budget_mb(
-        capacity_per_rank,
-        "capacity_per_rank",
-        host_memory_budget_mb_per_rank,
-        "host_memory_budget_mb_per_rank",
-    )
-    assert capacity_per_rank > 0 or host_memory_budget_mb_per_rank > 0
-    options = {
-        "kv_store": {
-            "caches": [
-                {
-                    "policy": "lru",
-                    "capacity": cached_capacity_per_rank,
-                    "cache_memory_budget_mb": device_memory_budget_mb_per_rank,
+                    "cache_memory_budget_mb": cache_budget_mb,
                     "value_memory_kind": "device",
                 },
                 {
                     "policy": "full",
-                    "capacity": capacity_per_rank,
-                    "cache_memory_budget_mb": host_memory_budget_mb_per_rank,
+                    "capacity": int(capacity),
                     "value_memory_kind": "host",
                 },
             ],
             "persistent_table": {
                 "path": persistent_path,
                 "physical_block_size": physical_block_size,
+                "capacity_hint": int(capacity),
             },
         },
         "size_factor": size_factor,
     }
     return options
+
+
+def make_uniform_initializer(low, high):
+    return {"type": "uniform", "low": low, "high": high}
+
+
+def make_normal_initializer(mean, std):
+    return {"type": "normal", "mean": mean, "std": std}
+
+
+def make_table(initializer):
+    return {"initializer": initializer}

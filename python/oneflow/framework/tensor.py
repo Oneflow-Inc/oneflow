@@ -815,7 +815,17 @@ def _format(self, format_spec):
 
 
 def _to(self, *args, **kwargs):
-    return flow._C.to(self, *args, **kwargs)
+    new_args = list()
+    # If device is single int, replace it with flow.device("cuda:{device}")
+    if len(args) > 0 and isinstance(args[0], int):
+        new_args.append(flow.device(f"cuda:{args[0]}"))
+        for i in range(1, len(args)):
+            new_args.append(args[i])
+    else:
+        new_args = args
+    if ("device" in kwargs) and isinstance(kwargs["device"], int):
+        kwargs["device"] = flow.device(f"cuda:{kwargs['device']}")
+    return flow._C.to(self, *new_args, **kwargs)
 
 
 def _to_global(self, placement=None, sbp=None, grad_sbp=None):

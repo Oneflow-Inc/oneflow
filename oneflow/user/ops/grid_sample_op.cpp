@@ -132,7 +132,7 @@ Maybe<void> GridSampleGradOp::CheckAttr(const user_op::UserOpDefWrapper& def,
       .Split(user_op::OpArg("input", 0), 1)
       .Broadcast(user_op::OpArg("grid", 0))
       .Split(user_op::OpArg("dinput", 0), 1)
-      .Broadcast(user_op::OpArg("dgrid", 0))
+      .PartialSum(user_op::OpArg("dgrid", 0))
       .Build();
   return Maybe<void>::Ok();
 }
