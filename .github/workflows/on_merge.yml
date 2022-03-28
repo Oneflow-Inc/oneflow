@@ -1,7 +1,7 @@
 name: Update Benchmark History
 on:
   pull_request:
-    type:
+    types:
       - closed
     branches:
       - master
