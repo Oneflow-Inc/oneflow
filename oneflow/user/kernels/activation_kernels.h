@@ -417,18 +417,19 @@ struct SoftShrinkGradFunctor {
       [](user_op::KernelComputeContext* ctx) { return SoftSignGradFunctor<dtype>(); }, "dx", "x", \
       "dy");
 
-#define REGISTER_THRESHOLD_KERNEL(device, dtype)                                                \
-  REGISTER_UNARY_ELEMWISE_USER_KERNEL(                                                          \
-      device, "threshold", ThresholdFunctor, dtype, dtype,                                      \
-      [](user_op::KernelComputeContext* ctx) {                                                  \
-        return ThresholdFunctor<dtype>(ctx->Attr<double>("thres"), ctx->Attr<double>("value")); \
-      },                                                                                        \
-      "out", "in");                                                                             \
-  REGISTER_BINARY_ELEMWISE_USER_KERNEL(                                                         \
-      device, "threshold_grad", ThresholdGradFunctor, dtype, dtype, dtype,                      \
-      [](user_op::KernelComputeContext* ctx) {                                                  \
-        return ThresholdGradFunctor<dtype>(ctx->Attr<double>("thres"));                         \
-      },                                                                                        \
+#define REGISTER_THRESHOLD_KERNEL(device, dtype)                                \
+  REGISTER_UNARY_ELEMWISE_USER_KERNEL(                                          \
+      device, "threshold", ThresholdFunctor, dtype, dtype,                      \
+      [](user_op::KernelComputeContext* ctx) {                                  \
+        return ThresholdFunctor<dtype>(ctx->Attr<double>("threshold_val"),      \
+                                       ctx->Attr<double>("value"));             \
+      },                                                                        \
+      "out", "in");                                                             \
+  REGISTER_BINARY_ELEMWISE_USER_KERNEL(                                         \
+      device, "threshold_grad", ThresholdGradFunctor, dtype, dtype, dtype,      \
+      [](user_op::KernelComputeContext* ctx) {                                  \
+        return ThresholdGradFunctor<dtype>(ctx->Attr<double>("threshold_val")); \
+      },                                                                        \
       "dx", "x", "dy");
 
 // For Relu Inplace Proposal Fn.

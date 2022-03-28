@@ -78,7 +78,7 @@ REGISTER_USER_OP_GRAD("threshold")
         return builder.OpTypeName("threshold_grad")
             .InputBind("x", ctx->FwOp().input("in", 0))
             .InputBind("dy", ctx->FwOp().output_grad("out", 0))
-            .Attr<double>("thres", ctx->FwOp().attr<double>("thres"))
+            .Attr<double>("threshold_val", ctx->FwOp().attr<double>("threshold_val"))
             .Output("dx")
             .Build();
       });

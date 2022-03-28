@@ -651,7 +651,7 @@ def OneFlow_ThresholdGradOp : OneFlow_BaseOp<"threshold_grad", [NoSideEffect, De
     OneFlow_Tensor:$dx
   );
   let attrs = (ins
-    DefaultValuedAttr<F64Attr, "0.">:$thres
+    DefaultValuedAttr<F64Attr, "0.">:$threshold
   );
   let has_logical_tensor_desc_infer_fn = 1;
   let has_physical_tensor_desc_infer_fn = 1;
