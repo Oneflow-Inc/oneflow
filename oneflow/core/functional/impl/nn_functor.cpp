@@ -57,7 +57,7 @@ class BiasAddFunctor {
       const int64_t num_axes = x->shape()->NumAxes();
       axis_val += num_axes;
     }
-    CHECK_LT_OR_RETURN(axis_val, x->shape()->NumAxes()) << Error::IndexError() << "IndexError: Dimension out of range (expected to be in range of [ -"<< x->shape()->NumAxes() <<"," << x->shape()->NumAxes()-1 << "], but got "<< axis_val <<")";
+    CHECK_LT_OR_RETURN(axis_val, x->shape()->NumAxes()) << Error::IndexError() << "Dimension out of range (expected to be in range of [ -"<< x->shape()->NumAxes() <<"," << x->shape()->NumAxes()-1 << "], but got "<< axis_val <<")";
     CHECK_EQ_OR_RETURN(x->shape()->At(axis_val), bias->shape()->At(0)) << Error::RuntimeError() << "The size of tensor x "<< x->shape()->ToString() << " must match the size of tensor b "<<  bias->shape()->ToString() << " at dimension " << axis_val;
     JUST(attrs.SetAttr<int32_t>("axis", axis_val));
     return OpInterpUtil::Dispatch<Tensor>(*op_, {x, bias}, attrs);
