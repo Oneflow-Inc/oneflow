@@ -127,7 +127,7 @@ def _test_expand_flow_size(test_case, device):
     expand_dim = flow.Size([2, 4, 2, 32])
     input, gout, out_np, gin_np = _np_get_expand(input_shape, expand_dim)
     of_input = flow.tensor(input, dtype=flow.int, device=flow.device(device))
-    of_out = of_input.expand(2, 4, 2, 32)
+    of_out = of_input.expand(expand_dim)
 
     test_case.assertTrue(np.array_equal(of_out.numpy(), out_np.astype(np.int32)))
 

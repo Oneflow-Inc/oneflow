@@ -14,9 +14,10 @@ See the License for the specific language governing permissions and
 limitations under the License.
 """
 import oneflow as flow
-from oneflow.nn.modules.utils import _single
+from oneflow.nn.modules.utils import _single, _handle_size_arg
 
 def expand_op(input, *sizes):
+    sizes = _handle_size_arg(sizes)
     sizes = _single(sizes)
     return flow._C.expand(input, sizes)
 
