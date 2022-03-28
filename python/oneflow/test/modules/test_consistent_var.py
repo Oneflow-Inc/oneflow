@@ -26,10 +26,10 @@ from oneflow.test_utils.automated_test_util import *
 def _test_flow_global_var_all_dim_with_random_data(test_case, placement, sbp):
     x = random_tensor(
         ndim=4,
-        dim0=random(1, 5).to(int) * 8,
-        dim1=random(1, 5).to(int) * 8,
-        dim2=random(1, 5).to(int) * 8,
-        dim3=random(1, 5).to(int) * 8,
+        dim0=random(1, 3).to(int) * 8,
+        dim1=random(1, 3).to(int) * 8,
+        dim2=random(1, 3).to(int) * 8,
+        dim3=random(1, 3).to(int) * 8,
     ).to_global(placement, sbp)
     y = torch.var(x)
     return y
@@ -39,10 +39,10 @@ def _test_flow_global_var_all_dim_with_random_data(test_case, placement, sbp):
 def _test_flow_global_var_one_dim_with_random_data(test_case, placement, sbp):
     x = random_tensor(
         ndim=4,
-        dim0=random(1, 5).to(int) * 8,
-        dim1=random(1, 5).to(int) * 8,
-        dim2=random(1, 5).to(int) * 8,
-        dim3=random(1, 5).to(int) * 8,
+        dim0=random(1, 3).to(int) * 8,
+        dim1=random(1, 3).to(int) * 8,
+        dim2=random(1, 3).to(int) * 8,
+        dim3=random(1, 3).to(int) * 8,
     ).to_global(placement, sbp)
     y = torch.var(
         x,
