@@ -30,11 +30,12 @@ namespace oneflow {
 __global__ void GeneKeysAndValues(const int32_t n, int32_t* values, int32_t* keys,
                                   curandState* state) {
   const int id = blockIdx.x * blockDim.x + threadIdx.x;
-  curandState localState = state[id];
+  curandState local_state = state[id];
   CUDA_1D_KERNEL_LOOP(i, n) {
-    keys[i] = curand(&localState);
+    keys[i] = curand(&local_state);
     values[i] = i;
   }
+  state[id] = local_state;
 }
 
 namespace {
