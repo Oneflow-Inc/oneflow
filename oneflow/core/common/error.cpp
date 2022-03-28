@@ -19,6 +19,7 @@ limitations under the License.
 #include "oneflow/core/common/protobuf.h"
 #include "oneflow/core/common/util.h"
 #include "oneflow/core/common/error_util.h"
+#include "oneflow/core/common/env_var/debug_mode.h"
 
 namespace oneflow {
 
@@ -306,7 +307,7 @@ std::string GetStackedErrorString(const std::shared_ptr<cfg::ErrorProto>& error)
 }
 
 std::string GetErrorString(const std::shared_ptr<cfg::ErrorProto>& error) {
-  if (std::getenv("ONEFLOW_DEBUG_MODE") != nullptr) {
+  if (EnvBool<ONEFLOW_DEBUG_MODE>()) {
     return GetStackedErrorString(error);
   } else {
     return error->msg();
@@ -315,9 +316,9 @@ std::string GetErrorString(const std::shared_ptr<cfg::ErrorProto>& error) {
 
 void ThrowError(const std::shared_ptr<cfg::ErrorProto>& error) {
   *MutThreadLocalError() = error;
-  if (error->has_runtime_error()) { throw RuntimeException(error->msg()); }
-  if (error->has_index_error()) { throw IndexException(error->msg()); }
-  if (error->has_unimplemented_error()) { throw NotImplementedException(error->msg()); }
+  if (error->has_runtime_error()) { throw RuntimeException(GetErrorString(error)); }
+  if (error->has_index_error()) { throw IndexException(GetErrorString(error)); }
+  if (error->has_unimplemented_error()) { throw NotImplementedException(GetErrorString(error)); }
   throw Exception(GetStackedErrorString(error));
 }
 
