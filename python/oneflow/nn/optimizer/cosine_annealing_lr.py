@@ -15,10 +15,11 @@ limitations under the License.
 """
 import math
 
-from .lr_scheduler import LrScheduler
+from .optimizer import Optimizer
+from .lr_scheduler import LRScheduler
 
 
-class CosineAnnealingLR(LrScheduler):
+class CosineAnnealingLR(LRScheduler):
     r"""
     The documentation is referenced from: https://pytorch.org/docs/stable/generated/torch.optim.lr_scheduler.CosineAnnealingLR.html?highlight=cosine#torch.optim.lr_scheduler.CosineAnnealingLR
 
@@ -62,35 +63,22 @@ class CosineAnnealingLR(LrScheduler):
     """
 
     def __init__(
-        self, optimizer, T_max: int, eta_min: float = 0.0, last_step=-1, verbose=False
+        self,
+        optimizer: Optimizer,
+        T_max: int,
+        eta_min: float = 0.0,
+        last_step: int = -1,
+        verbose: bool = False,
     ):
         self.T_max = T_max
         self.eta_min = eta_min
         super().__init__(optimizer, last_step, verbose)
 
-    def get_lr(self):
-        if self.last_step == 0:
-            return [group["lr"] for group in self._optimizer.param_groups]
-        elif (self.last_step - 1 - self.T_max) % (2 * self.T_max) == 0:
-            return [
-                group["lr"]
-                + (base_lr - self.eta_min) * (1 - math.cos(math.pi / self.T_max)) / 2
-                for base_lr, group in zip(self.base_lrs, self._optimizer.param_groups)
-            ]
-        return [
-            (1 + math.cos(math.pi * self.last_step / self.T_max))
-            / (1 + math.cos(math.pi * (self.last_step - 1) / self.T_max))
-            * (group["lr"] - self.eta_min)
-            + self.eta_min
-            for group in self._optimizer.param_groups
-        ]
+    def get_lr(self, base_lr, step):
+        cos_decay = 0.5 * (1 + math.cos(math.pi * step / self.T_max))
+        return self.eta_min + (base_lr - self.eta_min) * cos_decay
 
-    def _generate_conf_for_graph(self, opt_confs):
-        for opt_conf in opt_confs:
-            learning_rate_decay_conf = opt_conf.mutable_learning_rate_decay()
-            learning_rate_decay_conf.mutable_cosine_annealing_conf().set_t_max(
-                self.T_max
-            )
-            learning_rate_decay_conf.mutable_cosine_annealing_conf().set_eta_min(
-                self.eta_min
-            )
+    def _generate_conf_for_graph(self, lr_conf):
+        cosine_annealing_conf = lr_conf.mutable_cosine_annealing_conf()
+        cosine_annealing_conf.set_t_max(self.T_max)
+        cosine_annealing_conf.set_eta_min(self.eta_min)

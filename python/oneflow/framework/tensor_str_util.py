@@ -22,8 +22,8 @@ def slice_wrapper(tensor, slice_tuple: Tuple[int, int, int]):
     with flow.no_grad():
         ndim = tensor.ndim
         slice_tuple_list = [slice_tuple] + [[None, None, None]] * (ndim - 1)
-        # TODO(): a kind 'slice op' supports both local and consistent tensor
-        if tensor.is_consistent:
+        # TODO(): a kind 'slice op' supports both local and global tensor
+        if tensor.is_global:
             # input is s0, output is p
             # input is b, output is b
             # input is p, output is p
@@ -31,7 +31,7 @@ def slice_wrapper(tensor, slice_tuple: Tuple[int, int, int]):
             tensor = flow.logical_slice(tensor, slice_tuple_list)
         else:
             tensor = flow.slice(tensor, slice_tuple_list)
-        # TODO(): flow.sequeeze will fail in some consistent tensor case
+        # TODO(): flow.sequeeze will fail in some global tensor case
         if tensor.shape[0] == 1 and ndim > 1:
             tensor = tensor.reshape(list(tensor.shape[1:]))
         return tensor
@@ -49,9 +49,9 @@ def _autoset_linewidth():
 
 
 def _try_convert_to_local_tensor(tensor):
-    if tensor.is_consistent:
-        tensor = tensor.to_consistent(
-            placement=flow.env.all_device_placement(tensor.placement.device_type),
+    if tensor.is_global:
+        tensor = tensor.to_global(
+            placement=flow.env.all_device_placement(tensor.placement.type),
             sbp=flow.sbp.broadcast,
         ).to_local()
     return tensor

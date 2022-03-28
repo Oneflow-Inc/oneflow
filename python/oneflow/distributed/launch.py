@@ -107,6 +107,20 @@ def main():
     current_env["MASTER_ADDR"] = args.master_addr
     current_env["MASTER_PORT"] = str(args.master_port)
     current_env["WORLD_SIZE"] = str(dist_world_size)
+
+    if "OMP_NUM_THREADS" not in os.environ and args.nproc_per_node > 1:
+        current_env["OMP_NUM_THREADS"] = str(1)
+        print(
+            "*****************************************\n"
+            "Setting OMP_NUM_THREADS environment variable for each process "
+            "to be {} in default, to avoid your system being overloaded, "
+            "please further tune the variable for optimal performance in "
+            "your application as needed. \n"
+            "*****************************************".format(
+                current_env["OMP_NUM_THREADS"]
+            )
+        )
+
     processes: List[Any] = []
     if args.logdir:
         if os.path.exists(args.logdir):
@@ -169,7 +183,9 @@ def main():
             try:
                 # Note: use os.kill or process.kill() may only kill current process
                 # use killpg will kill(use signal) this process and all sub-processes
-                # if orphan sub-processes still exist, use signal.SIGKILL instead.
+                #
+                # Note: Worker processes launched by data loader will exit automatically
+                # when its parent process exits because of `_prctl_pr_set_pdeathsig`.
                 os.killpg(os.getpid(), signal.SIGTERM)
             except Exception:
                 pass

@@ -124,6 +124,12 @@ class TensorSource : public TraitBase<ConcreteType, TensorSource> {
   }
 };
 
+template<typename ConcreteType>
+class OnlyExistsInIR : public TraitBase<ConcreteType, OnlyExistsInIR> {};
+
+template<typename ConcreteType>
+class IsElementwise : public TraitBase<ConcreteType, IsElementwise> {};
+
 }  // namespace OpTrait
 
 }  // namespace mlir

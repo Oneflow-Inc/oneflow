@@ -76,8 +76,12 @@ def load_data_mnist(
         download=download,
         source_url=source_url,
     )
-    train_iter = flow.utils.data.DataLoader(mnist_train, batch_size, shuffle=True)
-    test_iter = flow.utils.data.DataLoader(mnist_test, batch_size, shuffle=False)
+    train_iter = flow.utils.data.DataLoader(
+        mnist_train, batch_size, shuffle=True, num_workers=2
+    )
+    test_iter = flow.utils.data.DataLoader(
+        mnist_test, batch_size, shuffle=False, num_workers=2
+    )
     return train_iter, test_iter
 
 

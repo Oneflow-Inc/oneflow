@@ -49,7 +49,18 @@ def check_dir_empty(path):
 
 check_unwanted_test_scripts(
     python_test_dir=os.path.join(src_root, "python/oneflow/test"),
-    allowed=["custom_ops", "dataloader", "graph", "models", "modules", "tensor", "xrt"],
+    allowed=[
+        "custom_ops",
+        "dataloader",
+        "graph",
+        "models",
+        "modules",
+        "tensor",
+        "xrt",
+        "exceptions",
+        "expensive",
+        "misc",
+    ],
 )
 
 check_unwanted_test_scripts(

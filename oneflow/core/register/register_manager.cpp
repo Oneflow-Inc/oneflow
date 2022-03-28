@@ -92,7 +92,7 @@ void RegstMgr::AddPlan(const Plan& plan,
         //   will set variable op output blob mem_case with cuda pinned memory if this output
         //   blob has GPU op consume. We can JUST ignore this diff because it ONLY has little
         //   perf loss but correct.
-        //   And this problem is NOT tensor.to("cuda") or tensor.to_consistent().
+        //   And this problem is NOT tensor.to("cuda") or tensor.to_global().
         CHECK((mem_block.mem_case().has_host_mem() && var_blob->mem_case().has_host_mem())
               || (mem_block.mem_case() == var_blob->mem_case()))
             << " variable op name: " << var_name << " in rank: " << this_machine_id

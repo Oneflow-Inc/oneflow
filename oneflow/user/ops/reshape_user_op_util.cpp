@@ -15,11 +15,25 @@ limitations under the License.
 */
 #include "oneflow/user/ops/reshape_user_op_util.h"
 #include "oneflow/core/operator/operator.h"
+#include "oneflow/core/common/cpp_attribute.h"
 
 namespace oneflow {
 
 Maybe<Shape> ReshapeUserOpUtil::GetLogicalOutBlobShape(const Shape& in_shape,
                                                        const Shape& reshape) {
+  if (unlikely(in_shape.elem_cnt() == 0)) {
+    FOR_RANGE(int, axis, 0, reshape.NumAxes()) {
+      int64_t dim = reshape.At(axis);
+      if (dim == -1) {
+        return Error::RuntimeError()
+               << "cannot reshape tensor of 0 elements into shape " << reshape.DebugStr()
+               << " because the unspecified dimension size -1 can be any value and is ambiguous";
+      } else if (dim < 0) {
+        return Error::RuntimeError() << "invalid shape dimension " << dim;
+      }
+    }
+    return std::make_shared<Shape>(reshape);
+  }
   size_t total_elem_dim_exclude_minus_1 = 1;
   bool has_minus_1 = false;
   bool minus_1_axis = -1;
@@ -55,7 +69,9 @@ Maybe<void> ReshapeUserOpUtil::Squeeze(const Shape& origin, Shape* shape,
   DimVector dim_vec;
   FOR_RANGE(int, axis, 0, origin.NumAxes()) {
     int64_t dim = origin.At(axis);
-    CHECK_GT_OR_RETURN(dim, 0);
+    CHECK_GE_OR_RETURN(dim, 0) << Error::RuntimeError()
+                               << "Trying to suqeeze tensor with negative dimension " << dim
+                               << " : " << origin.DebugStr();
     if (dim == 1) { continue; }
     CHECK_OR_RETURN(squeezed_axis2origin_axis->emplace(dim_vec.size(), axis).second);
     dim_vec.emplace_back(dim);
@@ -125,7 +141,7 @@ Maybe<void> ReshapeUserOpUtil::GetReshapeUserOpSbpSignatures(
 namespace {
 
 Maybe<void> GetInputNdSbp(user_op::InferNdSbpFnContext* ctx, const user_op::OpArg& in_arg,
-                          cfg::NdSbp* distribution) {
+                          NdSbp* distribution) {
   *distribution = ctx->NdSbpHint4InputArgNameAndIndex(in_arg.name(), in_arg.index());
   const auto& constraints = ctx->nd_sbp_constraints();
   if (constraints.bn_in_op2nd_sbp_size() != 0) {
@@ -136,8 +152,7 @@ Maybe<void> GetInputNdSbp(user_op::InferNdSbpFnContext* ctx, const user_op::OpAr
   return Maybe<void>::Ok();
 }
 
-Maybe<void> ApplySbpParallel(const cfg::SbpParallel& sbp, const int64_t parallel_num,
-                             Shape* shape) {
+Maybe<void> ApplySbpParallel(const SbpParallel& sbp, const int64_t parallel_num, Shape* shape) {
   if (sbp.has_split_parallel()) {
     const int64_t axis = sbp.split_parallel().axis();
     CHECK_EQ_OR_RETURN(shape->At(axis) % parallel_num, 0);
@@ -156,21 +171,21 @@ Maybe<void> ReshapeUserOpUtil::InferNdSbp(user_op::InferNdSbpFnContext* ctx,
   const bool is_reshape_like = (op_type_name == "reshape_like");
   std::vector<user_op::OpArg> in_args({{"in", 0}});
   if (is_reshape_like) { in_args.emplace_back(user_op::OpArg("like", 0)); }
-  HashMap<std::string, cfg::NdSbp> ibn2nd_sbp;
+  HashMap<std::string, NdSbp> ibn2nd_sbp;
   ibn2nd_sbp.reserve(in_args.size());
   for (const auto& arg : in_args) {
-    cfg::NdSbp* in_distribution = ctx->NdSbp4ArgNameAndIndex(arg.name(), arg.index());
+    NdSbp* in_distribution = ctx->NdSbp4ArgNameAndIndex(arg.name(), arg.index());
     JUST(GetInputNdSbp(ctx, arg, in_distribution));
     CHECK_OR_RETURN(
         ibn2nd_sbp.emplace(GenRepeatedBn(arg.name(), arg.index()), *in_distribution).second);
   }
-  cfg::NdSbp* out_distribution = ctx->NdSbp4ArgNameAndIndex("out", 0);
+  NdSbp* out_distribution = ctx->NdSbp4ArgNameAndIndex("out", 0);
 
   Shape in_shape = logical_in_shape;
   Shape out_shape = logical_out_shape;
   const Shape& parallel_hierarchy = ctx->parallel_hierarchy();
   for (int64_t i = 0; i < parallel_hierarchy.NumAxes(); ++i) {
-    cfg::SbpSignatureList sbp_sig_list;
+    SbpSignatureList sbp_sig_list;
     user_op::UserOpSbpSignatureBuilder builder(&sbp_sig_list);
     builder.Broadcast(in_args).Broadcast(user_op::OpArg("out", 0)).Build();
     if (is_reshape_like) {
@@ -190,7 +205,7 @@ Maybe<void> ReshapeUserOpUtil::InferNdSbp(user_op::InferNdSbpFnContext* ctx,
                                          parallel_hierarchy.At(i), &builder));
     }
 
-    const cfg::SbpSignature* matched_sbp_signature = nullptr;
+    const SbpSignature* matched_sbp_signature = nullptr;
     for (const auto& sbp_signature : sbp_sig_list.sbp_signature()) {
       bool all_match = true;
       for (const auto& in_arg : in_args) {
@@ -206,7 +221,7 @@ Maybe<void> ReshapeUserOpUtil::InferNdSbp(user_op::InferNdSbpFnContext* ctx,
       }
     }
     CHECK_OR_RETURN(matched_sbp_signature != nullptr);
-    cfg::SbpParallel out_sbp = matched_sbp_signature->bn_in_op2sbp_parallel().at("out_0");
+    SbpParallel out_sbp = matched_sbp_signature->bn_in_op2sbp_parallel().at("out_0");
     JUST(ApplySbpParallel(matched_sbp_signature->bn_in_op2sbp_parallel().at("in_0"),
                           parallel_hierarchy.At(i), &in_shape));
     JUST(ApplySbpParallel(out_sbp, parallel_hierarchy.At(i), &out_shape));

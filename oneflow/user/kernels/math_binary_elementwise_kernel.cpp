@@ -15,6 +15,8 @@ limitations under the License.
 */
 #include "oneflow/core/framework/framework.h"
 #include "oneflow/user/kernels/math_binary_elementwise_func.h"
+#include "oneflow/core/ep/cpu/cpu_stream.h"
+#include "oneflow/core/ep/cpu/cpu_device.h"
 
 namespace oneflow {
 
@@ -34,7 +36,11 @@ class MathBinaryElementwiseCpuKernel final : public user_op::OpKernel {
     T* z = tensor_z->mut_dptr<T>();
     int64_t n = tensor_x->shape().elem_cnt();
     CHECK_LE(n, GetMaxVal<int32_t>() / 2);
-    for (int32_t i = 0; i < n; ++i) { z[i] = BinaryFunctor<T>::Forward(x[i], y[i]); }
+    ep::CpuStream* cpu_stream = ctx->stream()->As<ep::CpuStream>();
+
+    cpu_stream->ParallelFor(0, n, [x, y, z](int64_t begin, int64_t end) {
+      for (int64_t i = begin; i < end; i++) { z[i] = BinaryFunctor<T>::Forward(x[i], y[i]); }
+    });
   }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };

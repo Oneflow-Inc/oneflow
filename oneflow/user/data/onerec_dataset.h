@@ -74,9 +74,12 @@ namespace data {
 
 class OneRecDataset final : public Dataset<TensorBuffer> {
  public:
-  using LoadTargetPtr = std::shared_ptr<TensorBuffer>;
-  using LoadTargetPtrList = std::vector<LoadTargetPtr>;
+  using Base = Dataset<TensorBuffer>;
+  using SampleType = typename Base::SampleType;
+  using BatchType = typename Base::BatchType;
+
   OF_DISALLOW_COPY_AND_MOVE(OneRecDataset);
+
   OneRecDataset(user_op::KernelInitContext* ctx, int32_t batch_size) : batch_size_(batch_size) {
     current_epoch_ = 0;
     shuffle_after_epoch_ = ctx->Attr<bool>("shuffle_after_epoch");
@@ -94,14 +97,14 @@ class OneRecDataset final : public Dataset<TensorBuffer> {
 
   ~OneRecDataset() { CHECK_NE(LZ4_XXH64_freeState(hash_state_), XXH_ERROR); }
 
-  LoadTargetPtrList Next() override {
-    LoadTargetPtrList ret;
-    ret.resize(batch_size_);
-    for (int32_t i = 0; i < batch_size_; ++i) {
-      ret.at(i).reset(new TensorBuffer());
-      ReadSample(*ret.at(i).get());
+  BatchType Next() override {
+    BatchType batch;
+    batch.reserve(batch_size_);
+    for (size_t i = 0; i < batch_size_; ++i) {
+      batch.push_back(TensorBuffer());
+      ReadSample(batch.back());
     }
-    return ret;
+    return batch;
   }
 
  private:

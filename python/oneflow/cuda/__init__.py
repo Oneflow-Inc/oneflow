@@ -15,6 +15,8 @@ limitations under the License.
 """
 import oneflow as flow
 
+from oneflow.cuda.type_tensor import *
+
 
 def is_available() -> bool:
     r"""Returns a bool indicating if CUDA is currently available."""
@@ -24,5 +26,10 @@ def is_available() -> bool:
 
 
 def device_count() -> int:
-    r"""Returns the number of GPUs available.."""
+    r"""Returns the number of GPUs available."""
     return flow._oneflow_internal.CudaGetDeviceCount()
+
+
+def current_device() -> int:
+    r"""Returns local rank as device index."""
+    return flow._oneflow_internal.GetCudaDeviceIndex()

@@ -24,7 +24,7 @@ namespace oneflow {
 
 namespace {
 
-bool IsAllPartialSumNdSbp(Symbol<cfg::NdSbp> nd_sbp) {
+bool IsAllPartialSumNdSbp(Symbol<NdSbp> nd_sbp) {
   for (const auto& sbp_parallel : nd_sbp->sbp_parallel()) {
     if (!sbp_parallel.has_partial_sum_parallel()) { return false; }
   }
@@ -39,7 +39,7 @@ Maybe<void> RawCheckNaive1ToP(Symbol<PlacedNdSbp> in, Symbol<PlacedNdSbp> out,
   return Maybe<void>::Ok();
 }
 
-static constexpr auto* CheckNaive1ToP = DECORATE(&RawCheckNaive1ToP, ThreadLocalCopiable);
+static constexpr auto* CheckNaive1ToP = DECORATE(&RawCheckNaive1ToP, ThreadLocalCachedCopiable);
 
 }  // namespace
 

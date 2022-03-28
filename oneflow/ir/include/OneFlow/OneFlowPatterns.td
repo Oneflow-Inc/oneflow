@@ -3,8 +3,11 @@
 #define ONEFLOW_PATTERNS
 
 include "OneFlow/OneFlowOps.td"
+include "mlir/Dialect/MemRef/IR/MemRefOps.td"
+include "mlir/Dialect/GPU/GPUOps.td"
 
 def IsNotNestedInJit: Constraint<CPred<"($0.getDefiningOp()->getParentOfType<::mlir::oneflow::Job>())">, "">;
+def IsScalarTensor: Constraint<CPred<"::mlir::oneflow::IsScalarTensor($0)">, "">;
 def OutlineMulCast : NativeCodeCall<"::mlir::oneflow::OutlineMulCast($_builder, $0, $1)">;
 // TODO: remove attr binding if possible
 def MulCastPattern : Pat<
@@ -30,6 +33,32 @@ def MulCastPattern : Pat<
   (OutlineMulCast $mul_op, $cast_op),
   [
     (IsNotNestedInJit $mul_op)
+  ]
+>;
+
+def BroadcastMulToScalarMulPattern : Pat<
+  (
+    OneFlow_BroadcastMulOp
+    $x,
+    $y,
+    $mul_op_name,
+    $mul_device_tag,
+    $mul_device_name,
+    $mul_scope_symbol_id,
+    $mul_hierarchy
+  ),
+  (
+    OneFlow_ScalarMulByTensorOp
+    $x,
+    $y,
+    $mul_op_name,
+    $mul_device_tag,
+    $mul_device_name,
+    $mul_scope_symbol_id,
+    $mul_hierarchy
+  ),
+  [
+    (IsScalarTensor $y)
   ]
 >;
 
@@ -82,6 +111,103 @@ def FusedScaleTrilPattern : Pat<
     (IsGPU $tril_device_tag),
     (IsGPU $scale_device_tag)
   ]
+>;
+
+def FusePadAndConv2d :
+  NativeCodeCall<"mlir::oneflow::CreateConv2dAndErasePad($_builder, $0, $1)">;
+
+def HasIdenticalPadding: Constraint<CPred<"mlir::oneflow::IsPaddingCouldBeAssimilatedIntoConv($0, $1, $2)">, "">;
+
+def FusedPadConv2DPattern : Pat<
+  (
+    OneFlow_Conv2DOp : $conv_2d_res
+    (
+      OneFlow_PadOp : $pad_res
+        $x,
+        $pad_op_name,
+        $pad_device_tag,
+        $pad_device_name,
+        $pad_scope_symbol_id,
+        $pad_hierarchy,
+        $pad_op_padding_before,
+        $pad_op_padding_after,
+        $pad_op_padding,
+        $floating_constant_value,
+        $integral_constant_value
+    ),
+    $weight,
+    $bias,
+    $bias_multiplier,
+    $conv2d_op_name,
+    $conv2d_device_tag,
+    $conv2d_device_name,
+    $conv2d_scope_symbol_id,
+    $conv2d_hierarchy,
+    $operand_segment_sizes,
+    $filters,
+    $padding_before,
+    $data_format,
+    $kernel_size,
+    $strides,
+    $dilation_rate,
+    $groups
+  ),
+  (FusePadAndConv2d $conv_2d_res, $pad_res),
+  [
+    (HasIdenticalPadding $pad_op_padding_before, $pad_op_padding_after, $data_format)
+  ]
+>;
+
+def GetDefaultSeed :
+  NativeCodeCall<"mlir::oneflow::GetDefaultSeed($_builder)">;
+
+def FusedBiasAddMaskScale :
+  NativeCodeCall<"mlir::oneflow::CreateFusedBiasAddMaskScale($_builder, $0, $1, $2)">;
+
+def IsAddToOutputNone: Constraint<CPred<"mlir::oneflow::IsAddToOutputNone($0)">, "">;
+
+def FusedBiasAddDropoutPattern : Pattern<
+  (
+    OneFlow_DropoutOp: $dropout_res
+    (
+      OneFlow_BiasAddOp: $bias_add_res
+        $a,
+        $b,
+        $bias_add_op_name,
+        $bias_add_device_tag,
+        $bias_add_device_name,
+        $bias_add_scope_symbol_id,
+        $bias_add_hierarchy,
+        $bias_add_op_axis
+    ),
+    $_add_to_output,
+    $dropout_op_name,
+    $dropout_device_tag,
+    $dropout_device_name,
+    $dropout_scope_symbol_id,
+    $dropout_hierarchy,
+    $dropout_op_rate
+  ),
+  [
+    (
+      FusedBiasAddMaskScale
+      $dropout_res__0,
+      $bias_add_res,
+      (
+        OneFlow_RandomMaskLikeOp : $mask
+          $a,
+          $bias_add_op_name,
+          $dropout_device_tag,
+          $dropout_device_name,
+          $dropout_scope_symbol_id,
+          $dropout_hierarchy,
+          $dropout_op_rate,
+          (GetDefaultSeed)
+      )
+    ),
+    (replaceWithValue $mask)
+  ],
+  [(IsAddToOutputNone $_add_to_output)]
 >;
 
 // TODO: use either to merge two patterns
@@ -223,6 +349,40 @@ def NormalizationAddReluPattern : Pattern<
   (replaceWithValue $fuse_results__0),
   ],
   [(IsTraingTrue $bn_training)]
+>;
+
+def IsArg: Constraint<CPred<"$0.dyn_cast<::mlir::BlockArgument>()">, "">;
+def getResultTypes : NativeCodeCall<"$0.getResultTypes()">;
+def CreateGPUMemcpyOpFromMemrefCopy : NativeCodeCall<"::mlir::oneflow::CreateGPUMemcpyOpFromMemrefCopy($_builder, $0)">;
+def ReplaceCopyWithGPUPattern : Pat<
+  (
+    CopyOp:$results
+    $src,
+    $dst
+  ),
+  (
+    CreateGPUMemcpyOpFromMemrefCopy $results
+  ),
+  [(IsArg $dst)]
+>;
+
+def IsSameDtype : Constraint<CPred<"mlir::oneflow::IsSameDtype($0, $1)">>;
+
+def DeleteSameDtypeCastOpPattern : Pat<
+  (
+    OneFlow_CastOp : $res
+     $x,
+     $cast_op_name,
+     $cast_device_tag, 
+     $cast_device_name, 
+     $cast_scope_symbol_id,
+     $cast_hierarchy,
+     $dtype
+  ),
+  (
+    replaceWithValue $x
+  ),
+  [(IsSameDtype $res, $x)]
 >;
 
 #endif // ONEFLOW_PATTERNS

@@ -20,7 +20,7 @@ from collections import OrderedDict
 import numpy as np
 
 from oneflow.test_utils.automated_test_util import *
-from test_util import GenArgList
+from oneflow.test_utils.test_util import GenArgList
 
 import oneflow as flow
 import oneflow.unittest
@@ -75,14 +75,14 @@ class TestFlattenModule(flow.unittest.TestCase):
         m.train(random())
         device = random_device()
         m.to(device)
-        x = random_pytorch_tensor().to(device)
+        x = random_tensor().to(device)
         y = m(x)
         return y
 
     @autotest(check_graph=True)
     def test_flatten_with_random_data(test_case):
         device = random_device()
-        x = random_pytorch_tensor().to(device)
+        x = random_tensor().to(device)
         y = torch.flatten(
             x,
             start_dim=random(1, 6).to(int) | nothing(),
@@ -90,10 +90,10 @@ class TestFlattenModule(flow.unittest.TestCase):
         )
         return y
 
-    @autotest(auto_backward=False, check_graph=False)
+    @autotest(auto_backward=False, check_graph=True)
     def test_flatten_bool_with_random_data(test_case):
         device = random_device()
-        x = random_pytorch_tensor().to(device=device, dtype=torch.bool)
+        x = random_tensor().to(device=device, dtype=torch.bool)
         y = torch.flatten(
             x,
             start_dim=random(1, 6).to(int) | nothing(),
@@ -104,7 +104,7 @@ class TestFlattenModule(flow.unittest.TestCase):
     @autotest(check_graph=True)
     def test_flatten_with_0dim_data(test_case):
         device = random_device()
-        x = random_pytorch_tensor(ndim=0).to(device)
+        x = random_tensor(ndim=0).to(device)
         y = torch.flatten(
             x,
             start_dim=random(1, 6).to(int) | nothing(),

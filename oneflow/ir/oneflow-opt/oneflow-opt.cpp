@@ -29,10 +29,11 @@ limitations under the License.
 #include "OneFlow/Passes.h"
 
 namespace mlir {
-struct TestOneFlowTraitFolder : public PassWrapper<TestOneFlowTraitFolder, FunctionPass> {
-  void runOnFunction() override {
-    assert(
-        succeeded(applyPatternsAndFoldGreedily(getFunction(), RewritePatternSet(&getContext()))));
+struct TestOneFlowTraitFolder : public PassWrapper<TestOneFlowTraitFolder, OperationPass<FuncOp>> {
+  void runOnOperation() override {
+    if (failed(applyPatternsAndFoldGreedily(getOperation(), RewritePatternSet(&getContext())))) {
+      exit(1);
+    }
   }
   StringRef getArgument() const final { return "test-oneflow-trait-folder"; }
 };
@@ -46,6 +47,7 @@ int32_t main(int32_t argc, char** argv) {
   mlir::registerLowerOneFlowToTosaPassPass();
   mlir::registerMapSCFToGPUPassPass();
   mlir::registerBufferHostRegisterPassPass();
+  mlir::registerGpuCopyArgPassPass();
 #ifdef WITH_MLIR_CUDA_CODEGEN
   mlir::oneflow::registerGpuSerializeToCubinPass();
 #endif  // WITH_MLIR_CUDA_CODEGEN
@@ -59,5 +61,6 @@ int32_t main(int32_t argc, char** argv) {
   registry.insert<mlir::LLVM::LLVMDialect>();
   registry.insert<mlir::gpu::GPUDialect>();
   registry.insert<mlir::AffineDialect>();
+  registry.insert<mlir::bufferization::BufferizationDialect>();
   return failed(mlir::MlirOptMain(argc, argv, "OneFlow optimizer driver\n", registry));
 }

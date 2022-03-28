@@ -41,9 +41,9 @@ def empty_op(
         dtype (flow.dtype, optional): The desired data type of returned tensor. Default: ``flow.float32``.
         device (torch.device, optional): The desired device of returned local tensor. If None, uses the
           current device.
-        placement (flow.placement, optional): The desired device of returned consistent tensor. If None, will
+        placement (flow.placement, optional): The desired device of returned global tensor. If None, will
           construct local tensor.
-        sbp (flow.sbp or List[flow.sbp], optional): The desired sbp of returned consistent tensor.
+        sbp (flow.sbp or List[flow.sbp], optional): The desired sbp of returned global tensor.
         requires_grad (bool, optional): If autograd should record operations on the returned tensor. Default: False.
 
     For example:
@@ -54,11 +54,11 @@ def empty_op(
         >>> y = flow.empty(4, 5)  # construct local empty tensor
         >>> y.shape
         oneflow.Size([4, 5])
-        >>> y.is_consistent
+        >>> y.is_global
         False
-        >>> placement = flow.placement("cpu", {0: [0]})
+        >>> placement = flow.placement("cpu", ranks=[0])
         >>> y = flow.empty(4, 5, placement=placement, sbp=flow.sbp.broadcast)  # construct consistent empty tensor
-        >>> y.is_consistent
+        >>> y.is_global
         True
 
     """
@@ -80,14 +80,12 @@ def empty_op(
         else:
             for elem in sbp:
                 assert isinstance(elem, flow.sbp.sbp), "sbp: %s" % sbp
-        assert len(sbp) == len(placement.hierarchy)
+        assert len(sbp) == len(placement.ranks.shape)
     else:
         assert sbp is None, "sbp: %s" % sbp
 
     if placement is not None:
-        tensor = flow._C.consistent_empty(
-            shape, dtype=dtype, placement=placement, sbp=sbp
-        )
+        tensor = flow._C.global_empty(shape, dtype=dtype, placement=placement, sbp=sbp)
     else:
         tensor = flow._C.empty(shape, dtype=dtype, device=device)
     tensor.requires_grad_(requires_grad)

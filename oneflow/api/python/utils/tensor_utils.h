@@ -23,17 +23,34 @@ limitations under the License.
 #include <pybind11/numpy.h>
 
 #include "oneflow/extension/python/numpy.h"
-#include "oneflow/core/common/thread_local_callback.h"
 #include "oneflow/core/framework/device.h"
 #include "oneflow/core/framework/dtype.h"
 #include "oneflow/core/framework/instructions_builder.h"
 #include "oneflow/core/framework/tensor.h"
-#include "oneflow/core/framework/nd_sbp.h"
-#include "oneflow/core/functional/functional_api.yaml.h"
 #include "oneflow/core/framework/stride.h"
 #include "oneflow/core/register/ofblob.h"
+#include "oneflow/core/common/blocking_then_busy.h"
+#include "oneflow/core/vm/virtual_machine.h"
 #include "oneflow/extension/python/numpy.h"
+#include "oneflow/core/common/foreign_lock_helper.h"
+
 namespace py = pybind11;
+
+namespace pybind11 {
+// reference: https://github.com/pybind/pybind11/issues/1776
+template<>
+struct format_descriptor<oneflow::float16> {
+  static pybind11::dtype dtype() {
+    handle ptr = detail::npy_api::get().PyArray_DescrFromType_(NPY_FLOAT16);
+    return reinterpret_borrow<pybind11::dtype>(ptr);
+  }
+  static std::string format() {
+    // following: https://docs.python.org/3/library/struct.html#format-characters
+    return "e";
+  }
+  static constexpr auto name() { return detail::_("float16"); }
+};
+}  // namespace pybind11
 
 namespace oneflow {
 namespace one {
@@ -41,12 +58,12 @@ namespace one {
 Maybe<void> EagerMirroredTensorZeros(const std::shared_ptr<Tensor>& t);
 
 template<typename T>
-inline static Maybe<py::array> EagerTensorToNumpy(const py::handle& py_tensor) {
+inline static Maybe<py::array> EagerMirroredTensorToNumpy(const py::handle& py_tensor) {
   const std::shared_ptr<Tensor> t = py::cast<const std::shared_ptr<Tensor>>(py_tensor);
 
   std::shared_ptr<MirroredTensor> tensor = JUST(t->AsMirroredTensor());
   CHECK_OR_RETURN(JUST(tensor->device()) == JUST(Device::New("cpu")));
-  CHECK_OR_RETURN(tensor->is_eager()) << "eager tensors supported only";
+  CHECK_OR_RETURN(tensor->is_eager()) << "eager tensors supported only.";
   // set base object attr
   py::handle handle = py::handle(py_tensor.ptr());
 
@@ -57,24 +74,14 @@ inline static Maybe<py::array> EagerTensorToNumpy(const py::handle& py_tensor) {
                                                    tensor->dtype()->data_type());
 
   T* data_ptr = nullptr;
-  const auto& Callback = std::make_shared<std::function<void(uint64_t)>>([&](uint64_t ofblob_ptr) {
+  const auto& Callback = [&](uint64_t ofblob_ptr) {
     data_ptr = reinterpret_cast<OfBlob*>(ofblob_ptr)->mut_blob()->mut_dptr<T>();
-  });
-  bool is_printed = false;
-  SpinCounter::SpinWait(
-      1,
-      [&](const std::shared_ptr<SpinCounter>& sc) -> Maybe<void> {
-        return PhysicalRun([&](InstructionsBuilder* builder) -> Maybe<void> {
-          return builder->SyncAccessBlobByCallback(tensor, sc, Callback, "mut");
-        });
-      },
-      [&is_printed]() {
-        if (!is_printed) {
-          blocking::StackInfoCallback();
-          is_printed = true;
-        }
-      });
-
+  };
+  auto btb = std::make_shared<BlockingThenBusy>(1);
+  JUST(PhysicalRun([&](InstructionsBuilder* builder) -> Maybe<void> {
+    return builder->SyncAccessBlobByCallback(tensor, btb, Callback, "mut");
+  }));
+  JUST(btb->WaitUntilCntEqualZero(VirtualMachine::GetPredicatorNoMoreInstructionsFinished()));
   return py::array(
       py::buffer_info(data_ptr, sizeof(T), py::format_descriptor<T>::format(), ndim, shape, stride),
       handle);
@@ -85,47 +92,26 @@ inline Maybe<void> CopyBetweenMirroredTensorAndNumpy(
     const std::shared_ptr<Tensor>& t, PyObject* array,
     Maybe<void> (*Copy)(uint64_t, const NumPyArrayPtr&), const std::string& modifier,
     bool block_host_until_done) {
-  std::shared_ptr<MirroredTensor> tensor;
-  CHECK_OR_RETURN(t->is_eager()) << "eager tensors supported only";
-  if (t->is_local()) {
-    tensor = JUST(t->AsMirroredTensor());
-  } else {
-    const Symbol<ConsistentTensorMeta>& tensor_meta = JUST(t->consistent_tensor_meta());
-    const Symbol<cfg::NdSbp>& nd_sbp = tensor_meta->nd_sbp();
-    CHECK_OR_RETURN(!nd_sbp->sbp_parallel().empty());
-    cfg::SbpParallel broadcast_sbp;
-    broadcast_sbp.mutable_broadcast_parallel();
-    std::vector<Symbol<cfg::SbpParallel>> sbp_tuple(nd_sbp->sbp_parallel_size(),
-                                                    SymbolOf(broadcast_sbp));
-    std::vector<Symbol<cfg::SbpParallel>> none;
-    const auto& consistent_tensor =
-        JUST(functional::ToConsistent(t, tensor_meta->parallel_desc(), sbp_tuple, none));
-    tensor = JUST(consistent_tensor->cur_rank_phy_tensor());
-  }
+  auto tensor = JUST(t->AsMirroredTensor());
+  CHECK_OR_RETURN(tensor->is_eager()) << "eager tensors supported only.";
 
   if (block_host_until_done) {
     NumPyArrayPtr array_ptr(array);
-    const auto& Callback = std::make_shared<std::function<void(uint64_t)>>(
-        [array_ptr, Copy](uint64_t ofblob_ptr) { CHECK_JUST(Copy(ofblob_ptr, array_ptr)); });
-    bool is_printed = false;
-    JUST(SpinCounter::SpinWait(
-        1,
-        [&](const std::shared_ptr<SpinCounter>& sc) -> Maybe<void> {
-          return PhysicalRun([&](InstructionsBuilder* builder) -> Maybe<void> {
-            return builder->SyncAccessBlobByCallback(tensor, sc, Callback, modifier);
-          });
-        },
-        [&is_printed]() {
-          if (!is_printed) {
-            blocking::StackInfoCallback();
-            is_printed = true;
-          }
-        }));
+    const auto& Callback = [array_ptr, Copy](uint64_t ofblob_ptr) {
+      CHECK_JUST(Copy(ofblob_ptr, array_ptr));
+    };
+    auto btb = std::make_shared<BlockingThenBusy>(1);
+    JUST(PhysicalRun([&](InstructionsBuilder* builder) -> Maybe<void> {
+      return builder->SyncAccessBlobByCallback(tensor, btb, Callback, modifier);
+    }));
+    JUST(btb->WaitUntilCntEqualZero(VirtualMachine::GetPredicatorNoMoreInstructionsFinished()));
   } else {
     Py_INCREF(array);
     NumPyArrayPtr array_ptr(array, [array]() {
-      py::gil_scoped_acquire acquire;
-      Py_DECREF(array);
+      CHECK_JUST(Global<ForeignLockHelper>::Get()->WithScopedAcquire([&]() -> Maybe<void> {
+        Py_DECREF(array);
+        return Maybe<void>::Ok();
+      }));
     });
 
     JUST(PhysicalRun([&](InstructionsBuilder* builder) -> Maybe<void> {
@@ -147,6 +133,9 @@ MaybeGetTensorBufferShapesAndDTypes(const std::shared_ptr<Tensor>& t);
 
 Maybe<void> RegisterTensorHook(const std::shared_ptr<Tensor>& self, const AutogradMeta::Hook& hook);
 
+Maybe<void> RegisterTensorPostGradAccumulationHook(const std::shared_ptr<Tensor>& self,
+                                                   const AutogradMeta::Hook& hook);
+
 Maybe<py::tuple> TensorGetPyTupleOfSbp(const Tensor& tensor);
 
 Maybe<Tensor> MakeLocalTensorFromData(PyObject* data, const Optional<Symbol<DType>>& dtype,
@@ -154,7 +143,7 @@ Maybe<Tensor> MakeLocalTensorFromData(PyObject* data, const Optional<Symbol<DTyp
 
 Maybe<Tensor> MakeConsistentTensorFromData(PyObject* data, const Optional<Symbol<DType>>& dtype,
                                            Symbol<ParallelDesc> placement,
-                                           const std::vector<Symbol<cfg::SbpParallel>>& sbp_tuple,
+                                           const std::vector<Symbol<SbpParallel>>& sbp_tuple,
                                            bool requires_grad);
 
 Maybe<Tensor> MakeTensorFromOtherTensor(const std::shared_ptr<Tensor>& other);
@@ -167,7 +156,7 @@ Maybe<Tensor> MakeTensorFromOtherTensor(const std::shared_ptr<Tensor>& other,
 Maybe<Tensor> MakeTensorFromOtherTensor(const std::shared_ptr<Tensor>& other,
                                         const Optional<Symbol<DType>>& dtype,
                                         const Symbol<ParallelDesc>& placement,
-                                        const std::vector<Symbol<cfg::SbpParallel>>& sbp_tuple,
+                                        const std::vector<Symbol<SbpParallel>>& sbp_tuple,
                                         const bool& requires_grad);
 
 }  // namespace one

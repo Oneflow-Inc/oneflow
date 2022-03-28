@@ -44,7 +44,7 @@ std::shared_ptr<BroadcastDistribute> GlobalBroadcastDistribute() { return g_broa
 
 Maybe<SplitDistribute> GlobalSplitDistribute(int axis) { return JUST(VectorAt(g_split, axis)); }
 
-Maybe<Distribute> MakeDistribute(const cfg::SbpParallel& sbp_parallel) {
+Maybe<Distribute> MakeDistribute(const SbpParallel& sbp_parallel) {
   if (sbp_parallel.has_broadcast_parallel()) {
     return std::shared_ptr<Distribute>(GlobalBroadcastDistribute());
   } else if (sbp_parallel.has_split_parallel()) {

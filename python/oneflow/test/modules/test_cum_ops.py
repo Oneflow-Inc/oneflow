@@ -27,16 +27,16 @@ class TestCumOp(flow.unittest.TestCase):
     @autotest(n=30, check_graph=True)
     def test_cumsum(test_case):
         device = random_device()
-        x = random_pytorch_tensor().to(device)
+        x = random_tensor().to(device)
         dim = random(0, x.ndim.pytorch).to(int)
         z = torch.cumsum(x, dim)
         return z
 
-    @unittest.skip("it has bug")
+    @unittest.skip("Different algorithm causes accumulative error!")
     @autotest(check_graph=True)
     def test_cumprod(test_case):
         device = random_device()
-        x = random_pytorch_tensor().to(device)
+        x = random_tensor().to(device)
         dim = random(0, x.ndim.pytorch).to(int)
         z = torch.cumprod(x, dim)
         return z

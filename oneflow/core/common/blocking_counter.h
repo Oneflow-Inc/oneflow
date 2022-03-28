@@ -16,9 +16,8 @@ limitations under the License.
 #ifndef ONEFLOW_CORE_COMMON_BLOCKING_COUNTER_H_
 #define ONEFLOW_CORE_COMMON_BLOCKING_COUNTER_H_
 
-#include "oneflow/core/common/foreign_lock_helper.h"
-#include "oneflow/core/common/global.h"
 #include "oneflow/core/common/util.h"
+#include "oneflow/core/common/maybe.h"
 
 namespace oneflow {
 
@@ -30,19 +29,11 @@ class BlockingCounter final {
 
   BlockingCounter(int64_t cnt_val) { cnt_val_ = cnt_val; }
 
-  int64_t Decrease() {
-    std::unique_lock<std::mutex> lck(mtx_);
-    cnt_val_ -= 1;
-    if (cnt_val_ == 0) { cond_.notify_all(); }
-    return cnt_val_;
-  }
-  void WaitUntilCntEqualZero() {
-    CHECK_JUST(Global<ForeignLockHelper>::Get()->WithScopedRelease([&, this]() -> Maybe<void> {
-      std::unique_lock<std::mutex> lck(mtx_);
-      cond_.wait(lck, [this]() { return cnt_val_ == 0; });
-      return Maybe<void>::Ok();
-    }));
-  }
+  int64_t Increase();
+  int64_t Decrease();
+  void WaitForeverUntilCntEqualZero();
+  Maybe<void> WaitUntilCntEqualZero(size_t timeout_seconds);
+  Maybe<void> WaitUntilCntEqualZero(const std::function<Maybe<bool>()>& StopWaitingAfterTimeout);
 
  private:
   std::mutex mtx_;

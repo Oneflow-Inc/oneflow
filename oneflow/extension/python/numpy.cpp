@@ -59,7 +59,8 @@ Maybe<DataType> NumpyTypeToOFDataType(int np_type) {
     case NPY_FLOAT64: return DataType::kDouble;
     case NPY_INT8: return DataType::kInt8;
     case NPY_INT32: return DataType::kInt32;
-    case NPY_INT64: return DataType::kInt64;
+    case NPY_INT64:
+    case NPY_LONGLONG: return DataType::kInt64;
     case NPY_UINT8: return DataType::kUInt8;
     case NPY_FLOAT16: return DataType::kFloat16;
     default:

@@ -1,6 +1,6 @@
-# Changelog for OneFlow v0.7.0
+# Changelog for OneFlow v0.8.0
 
-## v0.7.0-dev
+## v0.8.0-dev
 
 ### 1. Enhancements
 
@@ -14,8 +14,6 @@
 
 #### Build
 
-- placeholder
-
 ### 2. Bug fixes
 
 #### Placeholder
@@ -24,9 +22,6 @@
 
 #### Single client
 
-- Single client compatibility has been removed.
-- `from oneflow.compatible import single_client as flow` will fail.
+## v0.7.0
 
-## v0.6.0
-
-The CHANGELOG for v0.6.0 releases can be found [in the v0.6.0 tag](https://github.com/Oneflow-Inc/oneflow/releases/tag/v0.6.0).
+The CHANGELOG for v0.7.0 releases can be found [in the v0.7.0 tag](https://github.com/Oneflow-Inc/oneflow/releases/tag/v0.7.0).

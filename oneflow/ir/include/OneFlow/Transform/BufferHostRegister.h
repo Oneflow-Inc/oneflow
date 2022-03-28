@@ -23,6 +23,7 @@ namespace mlir {
 namespace oneflow {
 
 std::unique_ptr<mlir::Pass> createBufferHostRegisterPass();
+std::unique_ptr<mlir::Pass> createGpuCopyArgPass();
 
 }  // namespace oneflow
 

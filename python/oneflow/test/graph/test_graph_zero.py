@@ -23,11 +23,11 @@ import oneflow.unittest
 
 def _test_linear_train_graph_with_zero(test_case, zero_stage=1):
     def train_with_graph(iter_num=1):
-        P = flow.placement("cuda", {0: [0, 1]})
+        P = flow.placement("cuda", ranks=[0, 1])
         B = flow.sbp.broadcast
         S0 = flow.sbp.split(0)
         linear = flow.nn.Linear(8, 4)
-        linear = linear.to_consistent(placement=P, sbp=B)
+        linear = linear.to_global(placement=P, sbp=B)
         flow.nn.init.constant_(linear.weight, 2.068758)
         flow.nn.init.constant_(linear.bias, 0.23)
         of_sgd = flow.optim.SGD(linear.parameters(), lr=0.001, momentum=0.9)

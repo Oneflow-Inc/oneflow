@@ -1,23 +1,14 @@
 include(FetchContent)
 message("-- LLVM_MONO_REPO_URL: " ${LLVM_MONO_REPO_URL})
 message("-- LLVM_MONO_REPO_MD5: " ${LLVM_MONO_REPO_MD5})
-FetchContent_Declare(
-  llvm_monorepo
-)
+FetchContent_Declare(llvm_monorepo)
 FetchContent_GetProperties(llvm_monorepo)
 
 set(LLVM_INSTALL_DIR ${THIRD_PARTY_DIR}/llvm)
 
 if(NOT llvm_monorepo_POPULATED)
-  FetchContent_Populate(llvm_monorepo
-    URL ${LLVM_MONO_REPO_URL}
-    URL_HASH MD5=${LLVM_MONO_REPO_MD5}
-  )
+  FetchContent_Populate(llvm_monorepo URL ${LLVM_MONO_REPO_URL} URL_HASH MD5=${LLVM_MONO_REPO_MD5})
 endif()
-set(CMAKE_CXX_FLAGS "" CACHE STRING "" FORCE)
-set(CMAKE_CXX_FLAGS_DEBUG "" CACHE STRING "" FORCE)
-set(CMAKE_CXX_FLAGS_RELEASE "" CACHE STRING "" FORCE)
-set(CMAKE_CXX_FLAGS_RELWITHDEBINFO "" CACHE STRING "" FORCE)
 
 set(CMAKE_INSTALL_PREFIX ${LLVM_INSTALL_DIR} CACHE STRING "" FORCE)
 set(LLVM_ENABLE_RTTI ON CACHE BOOL "turn this on to make it compatible with protobuf")
@@ -37,7 +28,7 @@ set(LLVM_INSTALL_UTILS ON CACHE BOOL "")
 set(LLVM_ENABLE_OCAMLDOC OFF CACHE BOOL "")
 set(LLVM_ENABLE_BINDINGS OFF CACHE BOOL "")
 set(LLVM_OPTIMIZED_TABLEGEN ON CACHE BOOL "" FORCE)
-set(MLIR_ENABLE_CUDA_RUNNER ${WITH_MLIR_CUDA_CODEGEN} CACHE STRING "")
+set(MLIR_ENABLE_CUDA_RUNNER ${WITH_MLIR_CUDA_CODEGEN} CACHE BOOL "" FORCE)
 set(LLVM_MAIN_SRC_DIR ${llvm_monorepo_SOURCE_DIR}/llvm)
 set(LLVM_BINARY_DIR ${llvm_monorepo_BINARY_DIR})
 set(LLVM_TOOLS_BINARY_DIR ${llvm_monorepo_BINARY_DIR}/bin CACHE STRING "" FORCE)
@@ -45,7 +36,6 @@ set(MLIR_MAIN_SRC_DIR ${LLVM_MAIN_SRC_DIR}/../mlir)
 set(MLIR_INCLUDE_DIR ${LLVM_MAIN_SRC_DIR}/../mlir/include)
 set(MLIR_GENERATED_INCLUDE_DIR ${LLVM_BINARY_DIR}/tools/mlir/include)
 set(MLIR_INCLUDE_DIRS "${MLIR_INCLUDE_DIR};${MLIR_GENERATED_INCLUDE_DIR}")
-
 
 set(llvm_monorepo_BINARY_DIR ${llvm_monorepo_BINARY_DIR})
 install(TARGETS oneflow of_protoobj of_cfgobj of_functional_obj EXPORT oneflow DESTINATION lib)

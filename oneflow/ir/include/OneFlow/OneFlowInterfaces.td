@@ -28,6 +28,7 @@ def UserOpCompatibleInterface : OpInterface<"UserOpCompatible"> {
         return $_op.getODSResultIndexAndLength(index);
     }]>
   ];
+  let cppNamespace = "::mlir::oneflow";
 }
 
 def AlternativeOpTypeNameInterface : OpInterface<"HasAlternativeOpTypeName"> {
@@ -50,6 +51,7 @@ def AlternativeOpTypeNameInterface : OpInterface<"HasAlternativeOpTypeName"> {
         return &val;
     }]>,
   ];
+  let cppNamespace = "::mlir::oneflow";
 }
 
 def ControlEdgeCompatibleInterface : OpInterface<"ControlEdgeCompatible"> {
@@ -71,16 +73,41 @@ def ControlEdgeCompatibleInterface : OpInterface<"ControlEdgeCompatible"> {
         "::mlir::Value", "ctrlOutputResult", (ins)
     >
   ];
+  let cppNamespace = "::mlir::oneflow";
 }
 
 def NoGrad : OpInterface<"NoGrad"> {
   let description = [{
   }];
+  let cppNamespace = "::mlir::oneflow";
 }
 
 def CpuOnly : OpInterface<"CpuOnly"> {
   let description = [{
   }];
+  let cppNamespace = "::mlir::oneflow";
+}
+
+def NCHWCompatibleInterface : OpInterface<"NCHWCompatible"> {
+  let description = [{
+    Interface of NCHW compatibility
+  }];
+
+  let methods = [
+    InterfaceMethod<"",
+        "bool", "IsNCHW", (ins)
+    >,
+    InterfaceMethod<"Create NHWC op and return the new op's results to be transposed",
+        "llvm::SmallVector<mlir::Value, 4>", "NchwToNhwc", (ins "llvm::SmallVector<mlir::Value, 4>": $transposed_inputs, "PatternRewriter&": $rewriter)
+    >,
+    InterfaceMethod<"",
+        "llvm::DenseSet<mlir::Value>", "OperandsToTranspose", (ins)
+    >,
+    InterfaceMethod<"",
+        "llvm::DenseSet<mlir::Value>", "ResultsToTranspose", (ins)
+    >,
+  ];
+  let cppNamespace = "::mlir::oneflow";
 }
 
 

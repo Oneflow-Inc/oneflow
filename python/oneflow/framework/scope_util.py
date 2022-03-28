@@ -79,7 +79,7 @@ def MakeScope(build_func):
         scope = build_func(old_scope, builder)
         assert scope is not None
 
-    oneflow._oneflow_internal.deprecated.LogicalRun(BuildScope)
+    oneflow._oneflow_internal.deprecated.PhysicalRun(BuildScope)
     return scope
 
 
@@ -93,16 +93,8 @@ def MakeInitialScope(job_conf, device_tag, machine_device_ids, hierarchy, is_mir
             session_id, job_conf, device_tag, machine_device_ids, hierarchy, is_mirrored
         )
 
-    oneflow._oneflow_internal.deprecated.LogicalRun(BuildInitialScope)
+    oneflow._oneflow_internal.deprecated.PhysicalRun(BuildInitialScope)
     return scope
-
-
-def InitScopeStack():
-    job_conf = job_conf_cfg.JobConfigProto()
-    job_conf.mutable_predict_conf()
-    job_conf.set_job_name("")
-    scope = MakeInitialScope(job_conf, "cpu", ["0:0"], None, is_mirrored=False)
-    oneflow._oneflow_internal.InitGlobalScopeStack(scope)
 
 
 @contextmanager

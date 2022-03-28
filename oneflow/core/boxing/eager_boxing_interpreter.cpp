@@ -31,8 +31,8 @@ Maybe<void> CheckEagerBoxingDataType(DataType val) {
 }  // namespace
 
 Maybe<one::Tensor> EagerBoxingInterpreter::Interpret(const std::shared_ptr<one::Tensor>& input,
-                                                     Symbol<cfg::NdSbp> in_nd_sbp,
-                                                     Symbol<cfg::NdSbp> out_nd_sbp,
+                                                     Symbol<NdSbp> in_nd_sbp,
+                                                     Symbol<NdSbp> out_nd_sbp,
                                                      Symbol<ParallelDesc> in_parallel_desc,
                                                      Symbol<ParallelDesc> out_parallel_desc) const {
   JUST(CheckEagerBoxingDataType(input->dtype()->data_type()));
@@ -73,7 +73,8 @@ Maybe<BoxingFunctionT> RawGetBoxingFunction(const std::string& method_name, Symb
 
 Maybe<BoxingFunctionT> GetBoxingFunction(const std::string& method_name, Symbol<PlacedNdSbp> in,
                                          Symbol<PlacedNdSbp> out, const Shape& logical_shape) {
-  return DECORATE(&RawGetBoxingFunction, ThreadLocalCopiable)(method_name, in, out, logical_shape);
+  return DECORATE(&RawGetBoxingFunction, ThreadLocalCachedCopiable)(method_name, in, out,
+                                                                    logical_shape);
 }
 
 void RegisterBoxingFunction(const std::string& method_name, const BoxingCheckerT& Checker,
@@ -94,13 +95,14 @@ Maybe<BoxingInterpreterStatus> AtomicBoxingExpr::Check(Symbol<PlacedNdSbp> in,
       JUST_MSG(MapAt(*MutName2BoxingChecker(), boxing_name_),
                std::stringstream() << "boxing checker not found. checker_name: " << boxing_name_);
   JUST(Checker(in, out, logical_shape));
-  return MakeBoxingInterpreterStatus(boxing_name_, in, out);
+  return MakeBoxingInterpreterStatus(boxing_name_, logical_shape, in, out);
 }
 
 Maybe<BoxingFunctionT> AtomicBoxingExpr::GetBoxingFunction(Symbol<PlacedNdSbp> in,
                                                            Symbol<PlacedNdSbp> out,
                                                            const Shape& logical_shape) const {
-  return DECORATE(&RawGetBoxingFunction, ThreadLocalCopiable)(boxing_name_, in, out, logical_shape);
+  return DECORATE(&RawGetBoxingFunction, ThreadLocalCachedCopiable)(boxing_name_, in, out,
+                                                                    logical_shape);
 }
 
 Maybe<BoxingInterpreterStatus> DivideAndConquerBoxingExpr::Check(Symbol<PlacedNdSbp> in,
