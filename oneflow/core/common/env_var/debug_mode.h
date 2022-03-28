@@ -21,7 +21,10 @@ limitations under the License.
 namespace oneflow {
 
 DEFINE_ENV_BOOL(ONEFLOW_DEBUG_MODE, false);
+DEFINE_ENV_BOOL(ONEFLOW_DEBUG, false);
 
-}
+inline bool IsInDebugMode() { return EnvBool<ONEFLOW_DEBUG_MODE>() || EnvBool<ONEFLOW_DEBUG>(); }
+
+}  // namespace oneflow
 
 #endif  // ONEFLOW_CORE_COMMON_ENV_VAR_DEBUG_MODE_H_

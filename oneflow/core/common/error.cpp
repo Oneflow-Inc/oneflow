@@ -307,7 +307,7 @@ std::string GetStackedErrorString(const std::shared_ptr<cfg::ErrorProto>& error)
 }
 
 std::string GetErrorString(const std::shared_ptr<cfg::ErrorProto>& error) {
-  if (EnvBool<ONEFLOW_DEBUG_MODE>()) {
+  if (IsInDebugMode()) {
     return GetStackedErrorString(error);
   } else {
     return error->msg();
