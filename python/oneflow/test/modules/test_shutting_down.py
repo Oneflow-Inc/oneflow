@@ -17,7 +17,8 @@ import oneflow
 import os
 
 
-world_size = os.getenv('WORLD_SIZE')
+world_size = os.getenv("WORLD_SIZE")
+
 
 class TestCallWhenShuttingDown:
     def __init__(self):
