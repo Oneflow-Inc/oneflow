@@ -21,6 +21,7 @@ from oneflow.test_utils.test_util import GenArgList
 from test_moving_average_min_max_observer import _check_moving_average_min_max_observer
 from oneflow.test_utils.automated_test_util import *
 
+
 def _run_test_moving_average_min_max_observer(
     test_case,
     placement,
@@ -31,17 +32,23 @@ def _run_test_moving_average_min_max_observer(
     quantization_bit,
     quantization_scheme,
     quantization_formula,
-    momentum
+    momentum,
 ):
     moving_max_np = np.zeros((1,))
     moving_min_np = np.zeros((1,))
 
     current_train_step_tensor = flow.tensor(
-        np.zeros((1,)).astype(np.float32), dtype=flow.int64, placement=placement, sbp=sbp)
+        np.zeros((1,)).astype(np.float32),
+        dtype=flow.int64,
+        placement=placement,
+        sbp=sbp,
+    )
     for i in range(10):
-        of_activation = random_tensor(
-            len(activation_shape), *activation_shape, low=-0.5, high=0.5
-        ).to_global(placement, sbp).oneflow
+        of_activation = (
+            random_tensor(len(activation_shape), *activation_shape, low=-0.5, high=0.5)
+            .to_global(placement, sbp)
+            .oneflow
+        )
         np_activation = of_activation.numpy()
 
         moving_average_min_max_observer = flow.nn.MovingAverageMinMaxObserver(
