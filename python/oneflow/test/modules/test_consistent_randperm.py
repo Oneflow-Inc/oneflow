@@ -53,12 +53,7 @@ class TestRandConsistent(flow.unittest.TestCase):
     def test_rand_consistent(test_case):
         RandNs = [i for i in range(10, 50, 5)]
         Dtypes = [
-            flow.uint8,
-            flow.int8,
             flow.int32,
-            flow.int64,
-            flow.float32,
-            flow.float64,
         ]
         for N in RandNs:
             for placement in all_placement():
@@ -80,12 +75,7 @@ class TestRandConsistent(flow.unittest.TestCase):
             flow.placement("cuda", ranks=[[0, 1],]),
         ]
         arg_dict["dtype"] = [
-            flow.uint8,
-            flow.int8,
             flow.int32,
-            flow.int64,
-            flow.float32,
-            flow.float64,
         ]
         for args in GenArgDict(arg_dict):
             N = args["N"]
