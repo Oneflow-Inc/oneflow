@@ -85,10 +85,10 @@ Maybe<BoxingExprIf> NToOneBoxingExpr() {
 
 Maybe<BoxingExprIf> OneToNBoxingExpr() {
   return JUST(BoxingExpr(JUST(OutPlacementAndPartialSum()), JUST(BoxingExpr("naive-1-to-p")),
-                         JUST(BoxingExpr("nccl-p-to-b")) | JUST(BoxingExpr("ccl-p-to-b"))
+                         JUST(BoxingExpr("identity")) | JUST(BoxingExpr("nccl-p-to-b"))
+                             | JUST(BoxingExpr("ccl-p-to-b"))
                              | JUST(SymmetricOneDimPToSxBoxingExpr())
-                             | JUST(SymmetricNDimToNDimBoxingExpr())
-                             | JUST(BoxingExpr("identity"))));
+                             | JUST(SymmetricNDimToNDimBoxingExpr())));
 }
 
 Maybe<BoxingExprIf> SymmetricOneDimXToBBoxingExpr() {
@@ -138,27 +138,27 @@ Maybe<BoxingExprIf> RawMainBoxingExpr() {
                      | JUST(BoxingExpr("symmetric-s-to-p"))
                      | JUST(SymmetricOneDimXToBBoxingExpr())
                      | JUST(ASymmetricOneDimXToBBoxingExpr())
-                     | JUST(BoxingExpr("naive-s-to-s"))
                      | JUST(BoxingExpr("naive-1-to-1"))
+                     | JUST(OneToNBoxingExpr())
+                     | JUST(NToOneBoxingExpr())
+                     | JUST(BoxingExpr("naive-s-to-s"))
                      | JUST(BoxingExpr("naive-s-to-b"))
                      | JUST(BoxingExpr("naive-b-to-s"))
                      | JUST(BoxingExpr("naive-p-to-b"))
                      | JUST(BoxingExpr("naive-p-to-s"))
                      | JUST(BoxingExpr("naive-s-to-p"))
-                     | JUST(OneToNBoxingExpr())
-                     | JUST(NToOneBoxingExpr())
-                     | JUST(GenericBoxingExpr())
                      | JUST(BoxingExpr("nd-sbp-dim-reduce"))
                      | JUST(SymmetricNDimToNDimBoxingExpr())
                      | JUST(SymmetricOneDimToNDimBoxingExpr())
-                     | JUST(SymmetricNDimToOneDimBoxingExpr());
+                     | JUST(SymmetricNDimToOneDimBoxingExpr())
+                     | JUST(GenericBoxingExpr());
   // clang-format on
   return core | JUST(OptionalCudaCopy(core));
 }
 
 }  // namespace
 
-static constexpr auto* MainBoxingExpr = DECORATE(&RawMainBoxingExpr, ThreadLocal);
+static constexpr auto* MainBoxingExpr = DECORATE(&RawMainBoxingExpr, ThreadLocalCached);
 
 Maybe<EagerBoxingInterpreter> GetBoxingInterpreter(Symbol<NdSbp> in_nd_sbp,
                                                    Symbol<NdSbp> out_nd_sbp,
@@ -184,7 +184,7 @@ Maybe<EagerBoxingInterpreter> GetBoxingInterpreter(Symbol<NdSbp> in_nd_sbp,
 }
 
 static constexpr auto* CachedGetBoxingInterpreter =
-    DECORATE(&GetBoxingInterpreter, ThreadLocalCopiable);
+    DECORATE(&GetBoxingInterpreter, ThreadLocalCachedCopiable);
 
 }  // namespace
 

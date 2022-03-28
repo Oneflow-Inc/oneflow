@@ -51,7 +51,8 @@ oneflow
             as_strided,
             div, 
             dot, 
-            eq, 
+            eq,
+            einsum,
             equal, 
             expand, 
             eye,
@@ -146,9 +147,6 @@ oneflow
             tanh, 
             tensor, 
             tile, 
-            to, 
-            to_global,
-            to_local,
             transpose,
             t,
             tril, 
@@ -182,3 +180,4 @@ oneflow
             LongTensor,
 
 .. autofunction:: oneflow.relu
+.. autofunction:: oneflow.set_num_threads

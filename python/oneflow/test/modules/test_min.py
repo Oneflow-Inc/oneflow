@@ -15,74 +15,69 @@ limitations under the License.
 """
 
 import unittest
-from collections import OrderedDict
-
 import numpy as np
 
 from oneflow.test_utils.automated_test_util import *
-from oneflow.test_utils.test_util import GenArgList
-
 import oneflow as flow
 import oneflow.unittest
 
 
-def _test_min(test_case, device, shape, dim, keepdims):
-    input_arr = np.random.randn(*shape)
-    np_out = np.amin(input_arr, axis=dim, keepdims=keepdims)
-    x = flow.tensor(
-        input_arr, dtype=flow.float32, device=flow.device(device), requires_grad=True
-    )
-    of_out = flow.min(x, dim, keepdims)
-    if dim != None:
-        of_out = of_out[0]
-
-    test_case.assertTrue(np.allclose(of_out.numpy(), np_out, 1e-05, 1e-05))
-    of_out = of_out.sum()
-    of_out.backward()
-    np_out_grad = np.zeros_like(input_arr)
-    if dim == None:
-        arg_min = np.argmin(input_arr)
-        np.put(np_out_grad, arg_min, 1)
-    else:
-        arg_min = np.expand_dims(np.argmin(input_arr, axis=dim), axis=dim)
-        np.put_along_axis(np_out_grad, arg_min, 1, axis=dim)
-    test_case.assertTrue(np.allclose(x.grad.numpy(), np_out_grad, 0.0001, 0.0001))
-
-
-def _test_min_tensor_function(test_case, device, shape, dim, keepdims):
-    input_arr = np.random.randn(*shape)
-    np_out = np.amin(input_arr, axis=dim, keepdims=keepdims)
-    x = flow.tensor(
-        input_arr, dtype=flow.float32, device=flow.device(device), requires_grad=True
-    )
-    of_out = x.min(dim, keepdims)
-    if dim != None:
-        of_out = of_out[0]
-
-    test_case.assertTrue(np.allclose(of_out.numpy(), np_out, 1e-05, 1e-05))
-    of_out = of_out.sum()
-    of_out.backward()
-    np_out_grad = np.zeros_like(input_arr)
-    if dim == None:
-        arg_min = np.argmin(input_arr)
-        np.put(np_out_grad, arg_min, 1)
-    else:
-        arg_min = np.expand_dims(np.argmin(input_arr, axis=dim), axis=dim)
-        np.put_along_axis(np_out_grad, arg_min, 1, axis=dim)
-    test_case.assertTrue(np.allclose(x.grad.numpy(), np_out_grad, 0.0001, 0.0001))
-
-
 @flow.unittest.skip_unless_1n1d()
 class TestMinModule(flow.unittest.TestCase):
-    def test_min(test_case):
-        arg_dict = OrderedDict()
-        arg_dict["test_fun"] = [_test_min, _test_min_tensor_function]
-        arg_dict["device"] = ["cpu", "cuda"]
-        arg_dict["shape"] = [(2,), (2, 3), (2, 3, 4, 5)]
-        arg_dict["dim"] = [None, 0, -1]
-        arg_dict["keepdims"] = [False, True]
-        for arg in GenArgList(arg_dict):
-            arg[0](test_case, *arg[1:])
+    @autotest(n=5, check_allclose=False, check_graph=False)
+    def test_min_reduce_random_dim(test_case):
+        device = random_device()
+        ndim = random().to(int).value()
+        x = random_tensor(ndim=ndim, dim0=random(1, 8))
+        y = x.to(device)
+        dim = random(-ndim, ndim).to(int).value()
+        keep_dims = random_bool().value()
+        y = torch.min(x, dim=dim, keepdim=keep_dims)
+
+        # pytorch result is an instance of class 'torch.return_types.min', but oneflow is tuple
+        test_case.assertTrue(
+            np.allclose(
+                y.oneflow[0].detach().cpu().numpy(),
+                y.pytorch.values.detach().cpu().numpy(),
+                rtol=0.0001,
+                atol=1e-05,
+            )
+        )
+        test_case.assertTrue(
+            np.allclose(
+                y.oneflow[1].detach().cpu().numpy(),
+                y.pytorch.indices.detach().cpu().numpy(),
+                rtol=0.0001,
+                atol=1e-05,
+            )
+        )
+
+        y.oneflow[0].sum().backward()
+        y.pytorch.values.sum().backward()
+        test_case.assertTrue(
+            np.allclose(
+                x.oneflow.grad.detach().cpu().numpy(),
+                x.pytorch.grad.detach().cpu().numpy(),
+                rtol=0.0001,
+                atol=1e-05,
+            )
+        )
+
+    @autotest(n=5, check_graph=False)
+    def test_min_reduce_all_dim(test_case):
+        device = random_device()
+        ndim = random().to(int).value()
+        x = random_tensor(ndim=ndim, dim0=random(1, 8)).to(device)
+        return torch.min(x)
+
+    @autotest(n=5, check_graph=False)
+    def test_min_elementwise(test_case):
+        device = random_device()
+        ndim = random().to(int).value()
+        dims = [random(1, 8) for _ in range(ndim)]
+        x = random_tensor(ndim, *dims).to(device)
+        y = random_tensor(ndim, *dims).to(device)
+        return torch.min(x, y)
 
 
 if __name__ == "__main__":
