@@ -9,10 +9,10 @@
 
 ## Latest News
 
-- Version 0.6.0 is out!
-  - Improved consistent mode support.
-  - More performant eager execution.
-  - [Full changelog](https://github.com/Oneflow-Inc/oneflow/releases/tag/v0.6.0)
+- Version 0.7.0 is out!
+  - Introducing global tensor
+  - Semi-auto parallelization has landed
+  - [Full changelog](https://github.com/Oneflow-Inc/oneflow/releases/tag/v0.7.0)
 
 ## Publication
 
@@ -52,7 +52,7 @@
 - To install latest stable release of OneFlow with CUDA support:
 
   ```bash
-  python3 -m pip install -f https://release.oneflow.info oneflow==0.6.0+cu102
+  python3 -m pip install -f https://release.oneflow.info oneflow==0.7.0+cu102
   ```
 
 - To install nightly release of OneFlow with CUDA support:
@@ -65,7 +65,7 @@
 
   - Stable
     ```bash
-    python3 -m pip install --find-links https://release.oneflow.info oneflow==0.6.0+[PLATFORM]
+    python3 -m pip install --find-links https://release.oneflow.info oneflow==0.7.0+[PLATFORM]
     ```
   - Nightly
     ```
@@ -225,12 +225,17 @@ Please refer to [troubleshooting](docs/source/troubleshooting.md) for common iss
 
 ## Model Zoo and Benchmark
 
-- [OneFlow Models](https://github.com/Oneflow-Inc/models)
-- [OneFlow-Benchmark](https://github.com/Oneflow-Inc/OneFlow-Benchmark)
-- [GPT](https://github.com/Oneflow-Inc/OneFlow-Benchmark/tree/master/LanguageModeling/GPT)
-- [ResNet-50](https://github.com/Oneflow-Inc/models/tree/main/Vision/classification/image/resnet50)
-- [Wide&Deep](https://github.com/Oneflow-Inc/models/tree/main/RecommenderSystems/wide_and_deep)
-- [BERT](https://github.com/Oneflow-Inc/models/tree/main/NLP/bert-oneflow)
+- [Libai(Toolbox for Parallel Training Large-Scale Transformer Models)](https://github.com/Oneflow-Inc/libai)
+  - [BERT-large](https://libai.readthedocs.io/en/latest/tutorials/Getting%20Started.html#train-bert-large-model-parallelly)
+  - [GPT](https://libai.readthedocs.io/en/latest/libai.models.html#libai.models.GPTForPreTraining)
+  - [T5](https://libai.readthedocs.io/en/latest/libai.models.html#libai.models.T5ForPreTraining)
+  - [VisionTransformer](https://libai.readthedocs.io/en/latest/libai.models.html#libai.models.VisionTransformer)
+  - [SwinTransformer](https://libai.readthedocs.io/en/latest/libai.models.html#libai.models.SwinTransformer)
+- [FlowVision(Toolbox for Computer Vision Datasets, SOTA Models and Utils)](https://github.com/Oneflow-Inc/vision)
+- [OneFlow-Models(Examples of How to Implement Models in Various Fields with OneFlow)](https://github.com/Oneflow-Inc/models)
+  - [ResNet-50](https://github.com/Oneflow-Inc/models/tree/main/Vision/classification/image/resnet50)
+  - [Wide&Deep](https://github.com/Oneflow-Inc/models/tree/main/RecommenderSystems/wide_and_deep)
+- [OneFlow-Benchmark(Outdated)](https://github.com/Oneflow-Inc/OneFlow-Benchmark)
 
 ## Communication
 

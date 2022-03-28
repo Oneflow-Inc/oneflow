@@ -20,12 +20,12 @@ limitations under the License.
 #include <memory>
 #include <vector>
 #include "oneflow/core/common/util.h"
+#include "oneflow/core/autograd/autograd_meta.h"
 
 namespace oneflow {
 namespace one {
 
 class Tensor;
-class OpExpr;
 
 // This class will be used in TensorImpl and Autograd. It will share data with different
 // FunctionNodes.
@@ -38,7 +38,7 @@ class TensorArg final {
   bool Empty() const;
   void Release();
   Maybe<void> PushPartialTensor(const std::shared_ptr<Tensor>& partial_tensor);
-  Maybe<Tensor> GetAccTensor();
+  Maybe<Tensor> GetAccTensor(const std::vector<AutogradMeta::Hook>& hooks);
 
  private:
   std::shared_ptr<Tensor> acc_tensor_;

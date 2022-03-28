@@ -263,6 +263,41 @@ class ScalarPowGradFunctor {
   std::shared_ptr<OpExpr> op_;
 };
 
+class ScalarReversePowFunctor : public ScalarMathBaseFunctor {
+ public:
+  ScalarReversePowFunctor() : ScalarMathBaseFunctor(/*op_name=*/"scalar_reverse_pow") {}
+  Maybe<Tensor> operator()(const Scalar& scalar, const std::shared_ptr<one::Tensor>& input) const {
+    return ScalarMathBaseFunctor::operator()(input, scalar, false);
+  }
+};
+
+class ScalarReversePowGradFunctor {
+ public:
+  ScalarReversePowGradFunctor() {
+    op_ = CHECK_JUST(
+        one::OpBuilder("scalar_reverse_pow_grad").Input("x").Input("dy").Output("dx").Build());
+  }
+  Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x,
+                           const std::shared_ptr<one::Tensor>& dy, const Scalar& scalar) const {
+    MutableAttrMap attrs;
+    if (scalar.IsFloatingPoint()) {
+      JUST(attrs.SetAttr<bool>("has_float_operand", true));
+      JUST(attrs.SetAttr<bool>("has_int_operand", false));
+      JUST(attrs.SetAttr<double>("float_operand", JUST(scalar.As<double>())));
+    } else if (scalar.IsIntegral()) {
+      JUST(attrs.SetAttr<bool>("has_float_operand", false));
+      JUST(attrs.SetAttr<bool>("has_int_operand", true));
+      JUST(attrs.SetAttr<int64_t>("int_operand", JUST(scalar.As<int64_t>())));
+    } else {
+      UNIMPLEMENTED_THEN_RETURN() << "The scalar in ScalarTensorPowGrad should be float or int.";
+    }
+    return OpInterpUtil::Dispatch<Tensor>(*op_, {x, dy}, attrs);
+  }
+
+ private:
+  std::shared_ptr<OpExpr> op_;
+};
+
 class ScalarFloorDivFunctor : public ScalarMathBaseFunctor {
  public:
   ScalarFloorDivFunctor() : ScalarMathBaseFunctor(/*op_name=*/"scalar_floordiv") {}
@@ -609,7 +644,7 @@ class ReduceMeanFunctor {
     } else {
       for (const int32_t& i : axis) { reduce_count *= x->shape()->At(i); }
     }
-    if (reduce_count == 1) { return sum; }
+    if (reduce_count == 1 || reduce_count == 0) { return sum; }
     CHECK_GT_OR_RETURN(reduce_count, 0);
     return functional::ScalarMul(sum, 1.0 / reduce_count, false);
   }
@@ -1834,6 +1869,9 @@ class VarianceFunctor {
       std::sort(dims.begin(), dims.end());
       axis.assign(dims.begin(), dims.end());
     }
+    for (size_t i = 0; i < axis.size(); i++) {
+      if (axis[i] < 0) { axis[i] += ndim; }
+    }
     JUST(attrs.SetAttr<std::vector<int32_t>>("dim", axis));
     JUST(attrs.SetAttr<DataType>("dtype", input->dtype()->data_type()));
 
@@ -2744,7 +2782,9 @@ ONEFLOW_FUNCTION_LIBRARY(m) {
   m.add_functor<ScalarDivFunctor, ScalarDiv2Functor>("ScalarDiv");
   m.add_functor<InplaceScalarDivFunctor>("InplaceScalarDiv");
   m.add_functor<ScalarPowFunctor>("ScalarPow");
+  m.add_functor<ScalarReversePowFunctor>("ScalarReversePow");
   m.add_functor<ScalarPowGradFunctor>("ScalarPowGrad");
+  m.add_functor<ScalarReversePowGradFunctor>("ScalarReversePowGrad");
   m.add_functor<ReduceMaxFunctor>("ReduceMax");
   m.add_functor<MaxFunctor, Max2Functor>("Max");
   m.add_functor<ReduceMeanFunctor>("ReduceMean");
@@ -2763,8 +2803,8 @@ ONEFLOW_FUNCTION_LIBRARY(m) {
   m.add_functor<ReduceMinGlobalStageGradFunctor>("ReduceMinGlobalStageGrad");
   m.add_functor<ReduceMaxGlobalStageGradFunctor>("ReduceMaxGlobalStageGrad");
   m.add_functor<TransposeFunctor>("Transpose");
-  m.add_functor<TransposeFunctor>("Permute");
   m.add_functor<Transpose2dimFunctor>("Transpose2dim");
+  m.add_functor<TransposeFunctor>("Permute");
   m.add_functor<AsStridedFunctor>("AsStrided");
   m.add_functor<AsStridedGradFunctor>("AsStridedGrad");
   m.add_functor<SwapaxesFunctor>("Swapaxes");

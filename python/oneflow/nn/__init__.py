@@ -32,6 +32,7 @@ from oneflow.nn.modules.activation import (
     ReLU6,
     Sigmoid,
     Softmax,
+    Softshrink,
     Softplus,
     Tanh,
     SELU,
@@ -46,6 +47,8 @@ from oneflow.nn.modules.batchnorm_fused import (
     FusedBatchNorm2d,
     FusedBatchNorm3d,
 )
+from oneflow.nn.modules.fused_mlp import FusedMLP
+
 from oneflow.nn.modules.container import (
     ModuleDict,
     ModuleList,
