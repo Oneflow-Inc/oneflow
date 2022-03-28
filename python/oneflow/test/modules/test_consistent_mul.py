@@ -45,7 +45,7 @@ class TestMulModule(flow.unittest.TestCase):
 
     @globaltest
     def test_mul_with_scalar(test_case):
-        ndim = random().to(int).value()
+        ndim = random(1, 4).to(int).value()
         for placement in all_placement():
             for sbp in all_sbp(placement, max_dim=ndim):
                 _test_mul_with_scalar(test_case, ndim, placement, sbp)
