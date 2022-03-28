@@ -46,8 +46,9 @@ size_t GetCubSortPairsTempStorageSize(int64_t n) {
   OF_CUDA_CHECK((cub::DeviceRadixSort::SortPairs<K, K>(nullptr, cub_sort_temp_store_size, nullptr,
                                                        nullptr, nullptr, nullptr, n)));
   size_t temp_store_size = GetCudaAlignedSize(cub_sort_temp_store_size);
-  CHECK_GE(temp_store_size, 0);
-  CHECK_LT(temp_store_size, static_cast<size_t>(GetMaxVal<int64_t>()));
+  CHECK_GE(temp_store_size, 0) << "temp_store_size should >= 0.";
+  CHECK_LT(temp_store_size, static_cast<size_t>(GetMaxVal<int64_t>()))
+      << "temp_store_size should < " << static_cast<size_t>(GetMaxVal<int64_t>());
   return temp_store_size;
 }
 
