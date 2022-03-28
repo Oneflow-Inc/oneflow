@@ -80,7 +80,7 @@ class CpuNumThreadsGuard {
 class CpuStream : public Stream {
  public:
   OF_DISALLOW_COPY_AND_MOVE(CpuStream);
-  explicit CpuStream(Device* device) : device_(device) {
+  explicit CpuStream(CpuDevice* device) : device_(device) {
 #ifdef WITH_ONEDNN
     onednn_engine_.reset(new dnnl::engine(dnnl::engine::kind::cpu, 0));
     onednn_stream_.reset(new dnnl::stream(*onednn_engine_));
@@ -90,7 +90,7 @@ class CpuStream : public Stream {
   ~CpuStream() override = default;
 
   DeviceType device_type() const override;
-  Device* device() const override;
+  CpuDevice* device() const override;
   Maybe<void> Sync() override;
   void RecordEvent(Event* event) override;
 
@@ -103,7 +103,7 @@ class CpuStream : public Stream {
   void ParallelFor(int64_t begin, int64_t end, const F& func, size_t grain_size) {
 #if OF_CPU_THREADING_RUNTIME != OF_RUNTIME_SEQ
     auto DivUp = [](int64_t x, int64_t y) { return (x + y - 1) / y; };
-    size_t num_threads = dynamic_cast<CpuDevice*>(device())->GetNumThreads();
+    size_t num_threads = device()->GetNumThreads();
 #endif
     if (begin >= end) { return; }
 #if OF_CPU_THREADING_RUNTIME == OF_RUNTIME_OMP
@@ -149,7 +149,7 @@ class CpuStream : public Stream {
   std::unique_ptr<dnnl::engine> onednn_engine_;
   std::unique_ptr<dnnl::stream> onednn_stream_;
 #endif
-  Device* device_;
+  CpuDevice* device_;
   static constexpr size_t kParallelForDefaultGrain = 32768;
 };
 
