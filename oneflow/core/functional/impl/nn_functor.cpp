@@ -57,8 +57,14 @@ class BiasAddFunctor {
       const int64_t num_axes = x->shape()->NumAxes();
       axis_val += num_axes;
     }
-    CHECK_LT_OR_RETURN(axis_val, x->shape()->NumAxes()) << Error::IndexError() << "Dimension out of range (expected to be in range of [ -"<< x->shape()->NumAxes() <<"," << x->shape()->NumAxes()-1 << "], but got "<< axis_val <<")";
-    CHECK_EQ_OR_RETURN(x->shape()->At(axis_val), bias->shape()->At(0)) << Error::RuntimeError() << "The size of tensor x "<< x->shape()->ToString() << " must match the size of tensor b "<<  bias->shape()->ToString() << " at dimension " << axis_val;
+    CHECK_LT_OR_RETURN(axis_val, x->shape()->NumAxes())
+        << Error::IndexError() << "Dimension out of range (expected to be in range of [ -"
+        << x->shape()->NumAxes() << "," << x->shape()->NumAxes() - 1 << "], but got " << axis_val
+        << ")";
+    CHECK_EQ_OR_RETURN(x->shape()->At(axis_val), bias->shape()->At(0))
+        << Error::RuntimeError() << "The size of tensor x " << x->shape()->ToString()
+        << " must match the size of tensor b " << bias->shape()->ToString() << " at dimension "
+        << axis_val;
     JUST(attrs.SetAttr<int32_t>("axis", axis_val));
     return OpInterpUtil::Dispatch<Tensor>(*op_, {x, bias}, attrs);
   }
@@ -81,8 +87,12 @@ class ConvBaseFunctor {
                            const std::string& channel_pos) const {
     MutableAttrMap conv_attrs;
     std::vector<int32_t> kernel_size_vec(num_spatial_dims_);
+    int32_t channel_idx = 1;
     int32_t kernel_idx_offset = 2;
-    if (channel_pos == "channels_last") { kernel_idx_offset = 1; }
+    if (channel_pos == "channels_last") {
+      kernel_idx_offset = 1;
+      channel_idx = kernel_idx_offset + num_spatial_dims_;
+    }
 
     for (int i = 0; i < num_spatial_dims_; i++) {
       kernel_size_vec.at(i) = ((weight->shape())->At(i + kernel_idx_offset));
@@ -97,9 +107,7 @@ class ConvBaseFunctor {
     const std::shared_ptr<one::Tensor>& conv_out =
         JUST(OpInterpUtil::Dispatch<Tensor>(*conv_op_, {x, weight}, conv_attrs));
     if (bias) {
-      MutableAttrMap bias_attrs;
-      JUST(bias_attrs.SetAttr<int32_t>("axis", 1));
-      return OpInterpUtil::Dispatch<Tensor>(*bias_op_, {conv_out, JUST(bias)}, bias_attrs);
+      return functional::BiasAdd(conv_out, JUST(bias), channel_idx);
     } else {
       return conv_out;
     }
