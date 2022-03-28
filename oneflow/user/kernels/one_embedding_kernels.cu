@@ -23,6 +23,7 @@ limitations under the License.
 #include "oneflow/core/cuda/atomic.cuh"
 #include "oneflow/core/ep/include/primitive/copy_nd.h"
 #include "oneflow/core/ep/include/primitive/cast.h"
+#include "oneflow/core/ep/include/device.h"
 
 namespace oneflow {
 
@@ -248,7 +249,7 @@ void LookupAndInitMissing(ep::Stream* stream, EmbeddingKernelState<IDX>* embeddi
   const auto& generator = embedding_state->generator();
   CHECK_NOTNULL(generator);
   std::shared_ptr<one::CUDAGeneratorImpl> cuda_generator =
-      CHECK_JUST(generator->template Get<one::CUDAGeneratorImpl>());
+      CHECK_JUST(generator->template Get<one::CUDAGeneratorImpl>(stream->device()->device_index()));
   uint64_t seed = cuda_generator->current_seed();
   one::CUDAGeneratorState* cuda_gen_state = cuda_generator->cuda_gen_state();
   embedding::KeyValueStore* store = embedding_state->KeyValueStore();
