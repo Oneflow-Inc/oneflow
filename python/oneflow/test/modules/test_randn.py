@@ -102,7 +102,7 @@ class TestRandnModule(flow.unittest.TestCase):
     def test_0d_randn(test_case):
         arg_dict = OrderedDict()
         arg_dict["test_fun"] = [_test_0d_rand]
-        arg_dict["device"] = ["cpu", "cuda"]
+        arg_dict["device"] = ["cpu", "cuda", "cuda:1"]
         arg_dict["shape"] = [(2, 0, 4), (2, 0, 2)]
 
         for arg in GenArgList(arg_dict):
