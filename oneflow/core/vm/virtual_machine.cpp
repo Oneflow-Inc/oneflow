@@ -16,11 +16,11 @@ limitations under the License.
 #include <typeinfo>
 #include "oneflow/core/vm/virtual_machine.h"
 #include "oneflow/core/vm/instruction.h"
+#include "oneflow/core/vm/instruction_type.h"
 #include "oneflow/core/vm/no_arg_cb_phy_instr_operand.h"
 #include "oneflow/core/vm/barrier_instruction_type.h"
 #include "oneflow/core/vm/vm_util.h"
 #include "oneflow/core/common/blocking_counter.h"
-#include "oneflow/core/common/multi_client.h"
 #include "oneflow/core/common/cpp_attribute.h"
 #include "oneflow/core/common/singleton_ptr.h"
 #include "oneflow/core/control/global_process_ctx.h"
@@ -55,17 +55,13 @@ Maybe<void> ForEachThreadCtx(vm::VirtualMachineEngine* vm,
 
 void GetSchedulerThreadInitializer(std::function<void()>* Initializer) {
   *Initializer = [&]() {
-    if (!CHECK_JUST(IsMultiClient())) { return; }
     CHECK_JUST(InitThisThreadUniqueConsistentId(kThreadConsistentIdScheduler, "scheduler"));
     OF_PROFILER_NAME_THIS_HOST_THREAD("_VM::Scheduler");
   };
 }
 
 void GetCallbackThreadInitializer(std::function<void()>* Initializer) {
-  *Initializer = [&]() {
-    if (!CHECK_JUST(IsMultiClient())) { return; }
-    OF_PROFILER_NAME_THIS_HOST_THREAD("_VM::Callback");
-  };
+  *Initializer = [&]() { OF_PROFILER_NAME_THIS_HOST_THREAD("_VM::Callback"); };
 }
 
 void WorkerLoop(vm::ThreadCtx* thread_ctx, const std::function<void(vm::ThreadCtx*)>& Initializer) {
@@ -155,18 +151,12 @@ std::string VirtualMachine::GetBlockingDebugString() {
 
 Maybe<void> VirtualMachine::Receive(vm::InstructionList* instruction_list) {
   if (unlikely(pthread_fork::IsForkedSubProcess())) {
-    CHECK_OR_RETURN(JUST(IsMultiClient()));
     INTRUSIVE_FOR_EACH_PTR(instruction, instruction_list) {
       const auto& device = instruction->stream().device();
       CHECK_OR_RETURN(device->enum_type() == DeviceType::kCPU)
           << pthread_fork::kOfCudaNotSupportInForkedSubProcess;
+      instruction->instruction_type().Compute(instruction);
     }
-    JUST(vm_->Receive(instruction_list));
-    while (!vm_->Empty()) { vm_->Schedule(); }
-    vm_->Callback();
-    // no scheduler processing gc, we must do it in current thread.
-    vm::InstructionList garbage_instruction_list;
-    vm_->mut_garbage_instruction_list()->MoveTo(&garbage_instruction_list);
   } else {
     const int64_t kHighWaterMark = GetInstructionHighWaterMark();
     if (vm_->flying_instruction_cnt() > kHighWaterMark) {

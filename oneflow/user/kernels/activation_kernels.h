@@ -29,13 +29,7 @@ struct LeakyReluFunctor {
 template<typename T>
 struct LeakyReluGradFunctor {
   OF_DEVICE_FUNC explicit LeakyReluGradFunctor(float alpha) : alpha(alpha) {}
-  OF_DEVICE_FUNC T operator()(T x, T dy) const {
-    if (alpha > 0) {
-      return dy > 0 ? dy : dy * alpha;
-    } else {
-      return (x > 0) ? dy : dy * alpha;
-    }
-  }
+  OF_DEVICE_FUNC T operator()(T x, T dy) const { return (x > 0) ? dy : dy * alpha; }
   const T alpha;
 };
 
@@ -227,6 +221,31 @@ struct SoftSignGradFunctor {
 };
 
 template<typename T>
+struct SoftplusFunctor {
+  OF_DEVICE_FUNC explicit SoftplusFunctor(double beta, double threshold)
+      : beta(beta), threshold(threshold) {}
+  OF_DEVICE_FUNC T operator()(T x) const {
+    return (x * beta) > threshold ? x : log(static_cast<T>(1.0) + exp(x * beta)) / beta;
+  }
+
+  const T beta;
+  const T threshold;
+};
+
+template<typename T>
+struct SoftplusGradFunctor {
+  OF_DEVICE_FUNC explicit SoftplusGradFunctor(double beta, double threshold)
+      : beta(beta), threshold(threshold) {}
+  OF_DEVICE_FUNC T operator()(T x, T dy) const {
+    T z = exp(x * beta);
+    return (x * beta) > threshold ? dy : dy * z / (z + static_cast<T>(1.0));
+  }
+
+  const T beta;
+  const T threshold;
+};
+
+template<typename T>
 struct ReluFunctor {
   OF_DEVICE_FUNC explicit ReluFunctor() {}
   OF_DEVICE_FUNC T operator()(T x) const { return x > static_cast<T>(0) ? x : static_cast<T>(0); }
@@ -237,6 +256,42 @@ struct ReluGradFunctor {
   OF_DEVICE_FUNC explicit ReluGradFunctor() {}
   OF_DEVICE_FUNC T operator()(T y, T dy) const { return (y > static_cast<T>(0)) * dy; }
 };
+
+template<typename T>
+struct SoftShrinkFunctor {
+  OF_DEVICE_FUNC explicit SoftShrinkFunctor(double alpha) : alpha(alpha) {}
+  OF_DEVICE_FUNC T operator()(T x) const {
+    if (x > alpha) return x - alpha;
+    if (x < -alpha) return x + alpha;
+    return static_cast<T>(0);
+  }
+
+  const T alpha;
+};
+
+template<typename T>
+struct SoftShrinkGradFunctor {
+  OF_DEVICE_FUNC explicit SoftShrinkGradFunctor(double alpha) : alpha(alpha) {}
+  OF_DEVICE_FUNC T operator()(T y, T dy) const {
+    return y == static_cast<T>(0) ? static_cast<T>(0) : dy;
+  }
+
+  const T alpha;
+};
+
+#define REGISTER_SOFTSHRINK_KERNEL(device, dtype)                            \
+  REGISTER_UNARY_ELEMWISE_USER_KERNEL(                                       \
+      device, "softshrink", SoftShrinkFunctor, dtype, dtype,                 \
+      [](user_op::KernelComputeContext* ctx) {                               \
+        return SoftShrinkFunctor<dtype>(ctx->Attr<double>("alpha"));         \
+      },                                                                     \
+      "out", "in");                                                          \
+  REGISTER_BINARY_ELEMWISE_USER_KERNEL(                                      \
+      device, "softshrink_grad", SoftShrinkGradFunctor, dtype, dtype, dtype, \
+      [](user_op::KernelComputeContext* ctx) {                               \
+        return SoftShrinkGradFunctor<dtype>(ctx->Attr<double>("alpha"));     \
+      },                                                                     \
+      "dx", "y", "dy");
 
 #define REGISTER_ELU_KERNEL(device, dtype)                        \
   REGISTER_UNARY_ELEMWISE_USER_KERNEL(                            \
@@ -370,6 +425,21 @@ struct ReluGradFunctor {
       device, "softsign_grad", SoftSignGradFunctor, dtype, dtype, dtype,                          \
       [](user_op::KernelComputeContext* ctx) { return SoftSignGradFunctor<dtype>(); }, "dx", "x", \
       "dy");
+
+#define REGISTER_SOFTPLUS_KERNEL(device, dtype)                                                   \
+  REGISTER_UNARY_ELEMWISE_USER_KERNEL(                                                            \
+      device, "softplus", SoftplusFunctor, dtype, dtype,                                          \
+      [](user_op::KernelComputeContext* ctx) {                                                    \
+        return SoftplusFunctor<dtype>(ctx->Attr<double>("beta"), ctx->Attr<double>("threshold")); \
+      },                                                                                          \
+      "out", "in");                                                                               \
+  REGISTER_BINARY_ELEMWISE_USER_KERNEL(                                                           \
+      device, "softplus_grad", SoftplusGradFunctor, dtype, dtype, dtype,                          \
+      [](user_op::KernelComputeContext* ctx) {                                                    \
+        return SoftplusGradFunctor<dtype>(ctx->Attr<double>("beta"),                              \
+                                          ctx->Attr<double>("threshold"));                        \
+      },                                                                                          \
+      "dx", "x", "dy");
 
 // For Relu Inplace Proposal Fn.
 #define REGISTER_RELU_FORWARD_KERNEL(device, dtype)                                                \

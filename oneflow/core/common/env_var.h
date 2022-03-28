@@ -34,6 +34,7 @@ DEFINE_ENV_INTEGER(ONEFLOW_TIMEOUT_SECONDS, 7200);
 DEFINE_ENV_INTEGER(ONEFLOW_CHECK_TIMEOUT_SLEEP_SECONDS, EnvInteger<ONEFLOW_TIMEOUT_SECONDS>());
 
 DEFINE_ENV_INTEGER(ONEFLOW_VM_BLOCKING_DEBUG_INSTRUCTIONS_DISPLAY_LIMIT, 100);
+DEFINE_ENV_INTEGER(ONEFLOW_DELETE_OUTDATED_SHM_NAMES_INTERVAL, 1000);
 
 template<typename env_var>
 int64_t ThreadLocalEnvInteger();
@@ -45,6 +46,8 @@ int64_t ThreadLocalEnvInteger();
     thread_local int64_t value = ParseIntegerFromEnv(OF_PP_STRINGIZE(env_var), default_value); \
     return value;                                                                              \
   }
+
+DEFINE_THREAD_LOCAL_ENV_INTEGER(ONEFLOW_THRAED_LOCAL_CACHED_SIZE, 128 * 1024);
 
 }  // namespace oneflow
 

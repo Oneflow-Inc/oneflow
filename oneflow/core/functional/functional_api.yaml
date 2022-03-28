@@ -168,6 +168,7 @@
       "Tensor (Tensor input, Tensor exponent) => Pow",
       "Tensor (Tensor input, Scalar exponent, *, Bool inplace=False) => ScalarPow",
       "Tensor (Tensor input, Scalar exponent) => ScalarPow",
+      "Tensor (Scalar exponent, Tensor input) => ScalarReversePow",
     ]
   bind_python: True
 
@@ -181,6 +182,10 @@
 
 - name: "scalar_pow_grad"
   signature: "Tensor (Tensor input, Tensor dy, Scalar exponent) => ScalarPowGrad"
+  bind_python: False
+
+- name: "scalar_reverse_pow_grad"
+  signature: "Tensor (Tensor input, Tensor dy, Scalar exponent) => ScalarReversePowGrad"
   bind_python: False
 
 - name: "broadcast_pow"
@@ -227,6 +232,22 @@
 - name: "xlogy_y_grad"
   signature: "Tensor (Tensor dz, Tensor x, Tensor y) => XlogyYGrad"
   bind_python: False
+
+- name: "max"
+  signature: [
+    "Tensor (Tensor input) => Max",
+    "TensorTuple (Tensor input, Int32 dim, Bool keepdim=False) => Max",
+    "Tensor (Tensor input, Tensor other) => Max"
+  ]
+  bind_python: True
+
+- name: "min"
+  signature: [
+    "Tensor (Tensor input) => Min",
+    "TensorTuple (Tensor input, Int32 dim, Bool keepdim=False) => Min",
+    "Tensor (Tensor input, Tensor other) => Min"
+  ]
+  bind_python: True
 
 - name: "reduce_max"
   signature: "Tensor (Tensor x, Int32List axis, Bool keepdims=False) => ReduceMax"
@@ -543,7 +564,7 @@
 - name: "normalization"
   signature:
     "Tensor (Tensor x, Tensor moving_mean=None, Tensor moving_variance=None,
-    Tensor gamma, Tensor beta, Int32 axis=1, Float epsilon=1e-5,
+    Tensor gamma=None, Tensor beta=None, Int32 axis=1, Float epsilon=1e-5,
     Float momentum=0.9, Bool is_training=False) => Normalization"
 
   bind_python: True
@@ -675,22 +696,22 @@
 
 - name: "conv1d"
   signature:
-    "Tensor (Tensor x, Tensor weight, Tensor bias=None, Int32List stride,
-    Int32List padding, Int32List dilation, Int32 groups=1,
+    "Tensor (Tensor x, Tensor weight, Tensor bias=None, Int32List[1] stride,
+    Int32List[1] padding, Int32List[1] dilation, Int32 groups=1,
     String channel_pos) => Conv1d"
   bind_python: True
 
 - name: "conv2d"
   signature:
-    "Tensor (Tensor x, Tensor weight, Tensor bias=None, Int32List stride,
-    Int32List padding, Int32List dilation, Int32 groups=1,
+    "Tensor (Tensor x, Tensor weight, Tensor bias=None, Int32List[2] stride,
+    Int32List[2] padding, Int32List[2] dilation, Int32 groups=1,
     String channel_pos) => Conv2d"
   bind_python: True
 
 - name: "conv3d"
   signature:
-    "Tensor (Tensor x, Tensor weight, Tensor bias=None, Int32List stride,
-    Int32List padding, Int32List dilation, Int32 groups=1,
+    "Tensor (Tensor x, Tensor weight, Tensor bias=None, Int32List[3] stride,
+    Int32List[3] padding, Int32List[3] dilation, Int32 groups=1,
     String channel_pos) => Conv3d"
   bind_python: True
 
@@ -788,6 +809,12 @@
   signature: "Tensor (Tensor input, Int32 dim) => Unsqueeze"
   bind_python: True
 
+- name: "squeeze"
+  signature: [
+    "Tensor (Tensor x, Int32List[1] dim=None) => Squeeze",
+  ]
+  bind_python: True
+
 - name: "exp"
   signature: "Tensor (Tensor x) => Exp"
   bind_python: True
@@ -829,6 +856,16 @@
     "Tensor (Tensor a, Tensor b, Bool transpose_a=False, Bool transpose_b=False,
     Double alpha=1.0) => MatMul"
   bind_python: True
+
+- name: "fused_mlp"
+  signature:
+    "Tensor (Tensor x, TensorTuple weights, TensorTuple biases, Bool skip_final_activation) => FusedMLP"
+  bind_python: True
+
+- name: "cublas_bias_add_relu_matmul_grad"
+  signature:
+    "TensorTuple (Tensor dy, Tensor weight, Tensor aux) => CublasBiasAddReluMatmulGrad"
+  bind_python: False
 
 - name: "broadcast_matmul_grad_b"
   signature: "Tensor (Tensor a, Tensor b, Double alpha=1.0) => BroadcastMatmulGradB"
@@ -893,7 +930,7 @@
   bind_python: True
 
 - name: "cross_entropy"
-  signature: "Tensor(Tensor input, Tensor target, Tensor weight=None, Int64 ignore_index, String reduction) => CrossEntropy"
+  signature: "Tensor(Tensor input, Tensor target, Tensor weight=None, Int64 ignore_index=-100, String reduction=\"mean\") => CrossEntropy"
   bind_python: True
 
 - name: "distributed_sparse_cross_entropy_grad"
@@ -1111,6 +1148,14 @@
   signature: "Tensor (Tensor x, Shape shape) => Reshape"
   bind_python: True
 
+- name: "view"
+  signature: "Tensor (Tensor x, Shape shape) => View"
+  bind_python: True
+
+- name: "contiguous"
+  signature: "Tensor (Tensor input) => ToContiguous"
+  bind_python: True
+
 - name: "slice_view_1d_contiguous"
   signature: "Tensor (Tensor x, Int64 start, Int64 end) => SliceView1dContiguous"
   bind_python: True
@@ -1141,12 +1186,6 @@
 
 - name: "logical_slice_assign"
   signature: "Void (Tensor ref, Tensor value, Int64List start, Int64List stop, Int64List step) => LogicalSliceAssign"
-  bind_python: True
-
-- name: "squeeze"
-  signature: [
-    "Tensor (Tensor x, Int32List[1] dim=None) => Squeeze",
-  ]
   bind_python: True
 
 - name: "copy"
@@ -1432,11 +1471,19 @@
   bind_python: False
 
 - name: "softplus"
-  signature: "Tensor (Tensor x) => Softplus"
+  signature: "Tensor (Tensor x, Double beta=1.0, Double threshold=20.0) => Softplus"
   bind_python: True
 
 - name: "softplus_grad"
-  signature: "Tensor (Tensor x, Tensor dy) => SoftplusGrad"
+  signature: "Tensor (Tensor x, Tensor dy, Double beta=1.0, Double threshold=20.0) => SoftplusGrad"
+  bind_python: False
+
+- name: "softshrink"
+  signature: "Tensor (Tensor x, *, Double alpha=0.5, Bool inplace=False) => SoftShrink"
+  bind_python: True
+
+- name: "softshrink_grad"
+  signature: "Tensor (Tensor y, Tensor dy, Double alpha=0.5) => SoftShrinkGrad"
   bind_python: False
 
 - name: "one_hot"
@@ -1506,7 +1553,7 @@
   bind_python: True
 
 - name: "dropout"
-  signature: "Tensor (Tensor x, Float p=0.5, Bool training=True, Generator generator=None, *, Tensor addend=None) => Dropout"
+  signature: "Tensor (Tensor input, Float p=0.5, Bool training=True, Bool inplace=False, Generator generator=None, *, Tensor addend=None) => Dropout"
   bind_python: True
 
 - name: "dropout_grad"
@@ -1626,11 +1673,11 @@
   bind_python: False
 
 - name: "minimum"
-  signature: "Tensor (Tensor x, Tensor y) => Minimum"
+  signature: "Tensor (Tensor input, Tensor other) => Minimum"
   bind_python: True
 
 - name: "maximum"
-  signature: "Tensor (Tensor x, Tensor y) => Maximum"
+  signature: "Tensor (Tensor input, Tensor other) => Maximum"
   bind_python: True
 
 - name: "elementwise_min_grad"
@@ -1907,12 +1954,6 @@
   signature: "TensorTuple (Tensor log_probs, Tensor input_lengths, Bool merge_repeated=True) => CtcGreedyDecoder"
   bind_python: True
 
-
-- name: "distributed_partial_fc_sample"
-  signature:
-    "TensorTuple (Tensor weight, Tensor label, Int64 num_sample) => DistributedPariticalFCSample"
-  bind_python: True
-
 - name: "distributed_partial_fc_sample_disable_boxing"
   signature:
     "TensorTuple (Tensor sampled_weight_diff, Tensor sampled_label) => DistributedPariticalFCSampleDisableBoxing"
@@ -1988,3 +2029,31 @@
 - name: "cumprod_grad"
   signature: "Tensor (Tensor input, Tensor y, Tensor x, Int64 dim) => CumprodGrad"
   bind_python: False
+
+- name: "one_embedding_id_shuffle"
+  signature: "TensorTuple (Tensor ids, Tensor column_ids=None, Int32 num_columns=1) => OneEmbeddingIdShuffle"
+  bind_python: True
+
+- name: "one_embedding_embedding_shuffle"
+  signature: "Tensor (Tensor cur_rank_embeddings, Tensor num_unique_matrix, Tensor cur_rank_inverse_indices, Tensor inverse_unique_partition_indices) => OneEmbeddingEmbeddingShuffle"
+  bind_python: True
+
+- name: "one_embedding_embedding_gradient_shuffle"
+  signature: "Tensor (Tensor embedding_grad, Tensor num_unique_matrix, Tensor cur_rank_inverse_indices, Tensor inverse_unique_partition_indices) => OneEmbeddingEmbeddingGradientShuffle"
+  bind_python: True
+
+- name: "one_embedding_lookup"
+  signature: "Tensor (Tensor shadow, Tensor ids, Tensor column_ids=None, DataType dtype, Int64 embedding_size, Int32 num_columns, String embedding_columns, String embedding_store_options) => OneEmbeddingLookup"
+  bind_python: True
+
+- name: "one_embedding_unique_key_value_pair"
+  signature: "TensorTuple (Tensor keys, Tensor values=None, Int32 num_columns) => OneEmbeddingUniqueKeyValuePair"
+  bind_python: True
+
+- name: "einsum"
+  signature: "Tensor (String equation, TensorTuple operands) => EinSum"
+  bind_python: True
+
+- name: "pixel_shuffle"
+  signature: "Tensor (Tensor input, Int64 h_upscale_factor, Int64 w_upscale_factor) => PixelShuffle"
+  bind_python: True
