@@ -32,9 +32,6 @@ def parse_boolean_form_env(string, flag):
             return True
     return False
 
-
-
-
 def grad_setting_fn(module, param):
     def grad_setting(grad):
         if param.grad is None:
