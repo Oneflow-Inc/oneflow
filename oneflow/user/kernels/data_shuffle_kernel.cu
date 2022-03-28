@@ -647,7 +647,9 @@ class EmbeddingGradientShuffleKernel final : public user_op::OpKernel {
                const user_op::OpKernelCache*) const override {
     auto* kernel_state = dynamic_cast<DataShuffleKernelState<IDX>*>(state);
     CHECK(kernel_state != nullptr);
-    const user_op::Tensor* embedding_grad = ctx->Tensor4ArgNameAndIndex("embedding_grad", 0);
+    // const user_op::Tensor* embedding_grad = ctx->Tensor4ArgNameAndIndex("embedding_grad", 0);
+    user_op::Tensor* embedding_grad = ctx->Tensor4ArgNameAndIndex("embedding_grad", 0);
+    
     const user_op::Tensor* num_unique_matrix = ctx->Tensor4ArgNameAndIndex("num_unique_matrix", 0);
     const user_op::Tensor* cur_rank_inverse_indices =
         ctx->Tensor4ArgNameAndIndex("cur_rank_inverse_indices", 0);
@@ -690,9 +692,17 @@ class EmbeddingGradientShuffleKernel final : public user_op::OpKernel {
       OF_CUDA_CHECK(cudaMemsetAsync(unique_partition_embedding_grad + offset, 0, valid_value_size,
                                     cuda_stream));
     }
+
+    int64_t row_size = embedding_grad->shape().At(0);
+    int32_t elem_cnt = row_size * embedding_size;
+    int32_t block_num =
+        std::min((elem_cnt + kReduceBlockSize - 1) / kReduceBlockSize, kCudaMaxBlocksNum);
+    QuantizeAndDequantizeBlockKernel<T, IDX>
+        <<<block_num, kReduceBlockSize>>>(embedding_grad->mut_dptr<T>(), elem_cnt);
+
     UnsortedSegmentSumKernelUtil<DeviceType::kCUDA, T, IDX, T>::UnsortedSegmentSum(
         ctx->stream(), reinterpret_cast<const IDX*>(inverse_unique_partition_indices->dptr()),
-        embedding_grad->dptr<T>(), num_ids, parallel_num * num_ids, 1, embedding_size, 0,
+        embedding_grad->mut_dptr<T>(), num_ids, parallel_num * num_ids, 1, embedding_size, 0,
         unique_partition_embedding_grad);
 
     ncclComm_t comm = kernel_state->comm();
