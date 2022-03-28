@@ -349,19 +349,19 @@ struct SoftShrinkGradFunctor {
       [](user_op::KernelComputeContext* ctx) { return HardsigmoidGradFunctor<dtype>(); }, "dx", \
       "x", "dy");
 
-#define REGISTER_HARDSHRINK_KERNEL_(device, dtype)                           \
-  REGISTER_UNARY_ELEMWISE_USER_KERNEL(                                       \
-      device, "hardshrink", HardShrinkFunctor, dtype, dtype,                 \
-      [](user_op::KernelComputeContext* ctx) {                               \
-        return HardShrinkFunctor<dtype>(ctx->Attr<double>("lambd"));         \
-      },                                                                     \
-      "out", "in");                                                          \
-  REGISTER_BINARY_ELEMWISE_USER_KERNEL(                                      \
-      device, "hardshrink_grad", HardShrinkGradFunctor, dtype, dtype, dtype, \
-      [](user_op::KernelComputeContext* ctx) {                               \
-        return HardShrinkGradFunctor<dtype>(ctx->Attr<double>("lambd"));     \
-      },                                                                     \
-      "dx", "y", "dy");
+// #define REGISTER_HARDSHRINK_KERNEL_(device, dtype)                           \
+//   REGISTER_UNARY_ELEMWISE_USER_KERNEL(                                       \
+//       device, "hardshrink", HardShrinkFunctor, dtype, dtype,                 \
+//       [](user_op::KernelComputeContext* ctx) {                               \
+//         return HardShrinkFunctor<dtype>(ctx->Attr<double>("lambd"));         \
+//       },                                                                     \
+//       "out", "in");                                                          \
+//   REGISTER_BINARY_ELEMWISE_USER_KERNEL(                                      \
+//       device, "hardshrink_grad", HardShrinkGradFunctor, dtype, dtype, dtype, \
+//       [](user_op::KernelComputeContext* ctx) {                               \
+//         return HardShrinkGradFunctor<dtype>(ctx->Attr<double>("lambd"));     \
+//       },                                                                     \
+//       "dx", "y", "dy");
 
 // #define REGISTER_HARDSHRINK_KERNEL(device, dtype)                                                \
 //   REGISTER_USER_KERNEL("hardshrink")                                                     \

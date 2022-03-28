@@ -774,7 +774,7 @@ class TestHardshrinkModule(flow.unittest.TestCase):
         x = random_tensor(4, 2, 3, 0, 3).to(device)
         y = m(x)
         return y
-        
+
 
 @flow.unittest.skip_unless_1n1d()
 class TestSoftshrinkModule(flow.unittest.TestCase):
