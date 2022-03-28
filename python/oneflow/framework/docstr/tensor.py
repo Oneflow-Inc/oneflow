@@ -342,6 +342,20 @@ add_docstr(
 )
 
 add_docstr(
+    oneflow.Tensor.sqrt,
+    """
+    See :func:`oneflow.sqrt`
+    """,
+)
+
+add_docstr(
+    oneflow.Tensor.square,
+    """
+    See :func:`oneflow.square`
+    """,
+)
+
+add_docstr(
     oneflow.Tensor.std,
     """
     See :func:`oneflow.std`
@@ -987,6 +1001,13 @@ add_docstr(
 )
 
 add_docstr(
+    oneflow.Tensor.addmm,
+    """
+    See :func:`oneflow.addmm`
+    """,
+)
+
+add_docstr(
     oneflow.Tensor.add_,
     """
     In-place version of :func:`oneflow.Tensor.add`.
@@ -1027,6 +1048,41 @@ add_docstr(
     oneflow.Tensor.cos,
     """
     See :func:`oneflow.cos`
+    """,
+)
+
+add_docstr(
+    oneflow.Tensor.diagonal,
+    """
+    See :func:`oneflow.diagonal`
+    """,
+)
+
+add_docstr(
+    oneflow.Tensor.log,
+    """
+    See :func:`oneflow.log`
+    """,
+)
+
+add_docstr(
+    oneflow.Tensor.ndim,
+    """
+    See :func:`oneflow.Tensor.dim`
+    """,
+)
+
+add_docstr(
+    oneflow.Tensor.rsqrt,
+    """
+    See :func:`oneflow.rsqrt`
+    """,
+)
+
+add_docstr(
+    oneflow.Tensor.cosh,
+    """
+    See :func:`oneflow.cosh`
     """,
 )
 
