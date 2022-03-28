@@ -17,7 +17,7 @@ from typing import Optional, Union
 
 import oneflow as flow
 from oneflow.nn.module import Module
-from oneflow.nn.modules.utils import _single
+from oneflow.nn.modules.utils import _single, _handle_size_arg
 
 
 def _rand_op_common_process(
@@ -146,50 +146,6 @@ def rand_op(
         )
 
 
-class RandN(Module):
-    def __init__(
-        self,
-        size,
-        generator=None,
-        dtype=None,
-        layout=None,
-        device=None,
-        placement=None,
-        sbp=None,
-        requires_grad=False,
-    ) -> None:
-        super().__init__()
-        self.requires_grad = requires_grad
-        (
-            self.size,
-            self.device,
-            self.generator,
-            self.placement,
-            self.sbp,
-        ) = _rand_op_common_process(size, device, generator, placement, sbp)
-        self.dtype = dtype
-
-    def forward(self):
-        if self.placement is not None:
-            res = flow._C.randn(
-                self.size,
-                placement=self.placement,
-                sbp=self.sbp,
-                dtype=self.dtype,
-                generator=self.generator,
-                requires_grad=self.requires_grad,
-            )
-        else:
-            res = flow._C.randn(
-                self.size,
-                dtype=self.dtype,
-                device=self.device,
-                generator=self.generator,
-                requires_grad=self.requires_grad,
-            )
-        return res
-
-
 def randn_op(
     *size,
     out=None,
@@ -238,6 +194,7 @@ def randn_op(
         True
 
     """
+    size = _handle_size_arg(size)
     assert out is None, "out not supported yet"
     assert layout is None, "layout not supported yet"
     if placement is not None:
