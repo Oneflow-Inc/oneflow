@@ -99,7 +99,7 @@ def _test_eager_boxing_2d_special_split_axis(test_case, in_device, out_device):
     nd_sbps = itertools.product(
         itertools.product(sbps, sbps), itertools.product(sbps, sbps)
     )
-    shape = (8, 16, 4, 8, 12)
+    shape = (4, 8, 4, 8, 4)
     in_placement = flow.placement(type=in_device, ranks=[[0, 1], [2, 3]])
     out_placement = flow.placement(type=out_device, ranks=[[0, 1], [2, 3]])
     for elem in nd_sbps:
