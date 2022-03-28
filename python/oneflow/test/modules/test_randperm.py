@@ -51,7 +51,7 @@ def _test_randperm_randomness(test_case, N, device, dtype):
     test_case.assertFalse(np.all(x1.numpy() == x2.numpy()))
 
 
-def _test_randperm_larg_seq_randomness(test_case, N, device, dtype):
+def _test_randperm_large_seq_randomness(test_case, N, device, dtype):
     n = 65536
     x1 = flow.randperm(n, device=device)
     x2 = flow.randperm(n, device=device)
