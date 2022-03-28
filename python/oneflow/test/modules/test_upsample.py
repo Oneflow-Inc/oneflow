@@ -398,6 +398,19 @@ class TestUpsample2d(flow.unittest.TestCase):
         )
         y = m(x)
         return y
+    
+    @unittest.skipIf(os.getenv("ONEFLOW_TEST_CPU_ONLY"), "only test cpu cases")
+    @autotest(atol=1e-5)
+    def test_upsample2d_bicubic(test_case):
+        x = random_tensor(ndim=4, dim0=16, dim1=8).to("cuda")
+        m = torch.nn.Upsample(
+            scale_factor=random().to(float),
+            mode="bicubic",
+            align_corners=False,
+        )
+        y = m(x)
+        return y
+
 
 
 if __name__ == "__main__":
