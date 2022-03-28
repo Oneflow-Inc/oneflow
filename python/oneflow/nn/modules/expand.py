@@ -16,6 +16,7 @@ limitations under the License.
 import oneflow as flow
 from oneflow.nn.modules.utils import _single, _handle_size_arg
 
+
 def expand_op(input, *sizes):
     sizes = _handle_size_arg(sizes)
     sizes = _single(sizes)
