@@ -423,7 +423,7 @@ class GroupNormAffineFunctor {
                          .Output("inv_variance")
                          .Build());
   }
-  Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x,
+  Maybe<TensorTuple> operator()(const std::shared_ptr<one::Tensor>& x,
                            const std::shared_ptr<one::Tensor>& gamma,
                            const std::shared_ptr<one::Tensor>& beta, 
                            const bool affine, 
@@ -433,7 +433,7 @@ class GroupNormAffineFunctor {
     JUST(attrs.SetAttr<bool>("affine", affine));
     JUST(attrs.SetAttr<int32_t>("num_groups", num_groups));
     JUST(attrs.SetAttr<double>("epsilon", epsilon));
-    return OpInterpUtil::Dispatch<Tensor>(*op_, {x, gamma, beta}, attrs);
+    return OpInterpUtil::Dispatch<TensorTuple>(*op_, {x, gamma, beta}, attrs);
   }
 
  private:

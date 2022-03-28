@@ -83,4 +83,55 @@ oneflow::DataType InferGnParamDataType(const DataType x_data_type) {
   return Maybe<void>::Ok();
 }
 
+// GroupNorm Grad
+/* static */ Maybe<void> GroupNormGradOp::InferLogicalTensorDesc(user_op::InferContext* ctx) {
+  const user_op::TensorDesc& dy = ctx->InputTensorDesc("dy", 0);
+  const user_op::TensorDesc& x = ctx->InputTensorDesc("x", 0);
+  const user_op::TensorDesc& mean = ctx->InputTensorDesc("mean", 0);
+  const user_op::TensorDesc& inv_variance = ctx->InputTensorDesc("inv_variance", 0);
+  const int32_t num_groups = ctx->Attr<int32_t>("num_groups"); 
+  user_op::TensorDesc* dx = ctx->OutputTensorDesc("dx", 0);
+  CHECK_EQ_OR_RETURN(dy.shape(), x.shape());
+  const Shape& gn_param_shape = Shape({x.shape().At(0), num_groups}); 
+  CHECK_EQ_OR_RETURN(mean.shape(), gn_param_shape);
+  CHECK_EQ_OR_RETURN(inv_variance.shape(), gn_param_shape);
+  *dx->mut_shape() = dy.shape();
+  *dx->mut_is_dynamic() = dy.is_dynamic();
+  return Maybe<void>::Ok();
+}
+
+/*static*/ Maybe<void> GroupNormGradOp::InferPhysicalTensorDesc(user_op::InferContext* ctx) {
+  return InferLogicalTensorDesc(ctx);
+}
+
+/* static */ Maybe<void> GroupNormGradOp::GetSbp(user_op::SbpContext* ctx) {
+  std::vector<user_op::OpArg> broadcast_args;
+  if (ctx->user_op_conf().has_input("gamma", 0)) {
+    broadcast_args.emplace_back(user_op::OpArg("gamma", 0));
+  }
+  
+  // TODO: Support More SBP
+  ctx->NewBuilder()
+    .Split(ctx->inputs(), 0)
+    .Split(ctx->outputs(), 0)
+    .Broadcast(broadcast_args)
+    .Build();
+  return Maybe<void>::Ok();
+}
+
+/* static */ Maybe<void> GroupNormGradOp::InferDataType(user_op::InferContext* ctx) {
+  const user_op::TensorDesc& dy = ctx->InputTensorDesc("dy", 0);
+  const user_op::TensorDesc& x = ctx->InputTensorDesc("x", 0);
+  CHECK_EQ_OR_RETURN(dy.data_type(), x.data_type());
+  const user_op::TensorDesc& mean = ctx->InputTensorDesc("mean", 0);
+  const user_op::TensorDesc& inv_variance = ctx->InputTensorDesc("inv_variance", 0);
+  const DataType& gn_param_data_type = InferGnParamDataType(x.data_type());
+  CHECK_EQ_OR_RETURN(mean.data_type(), gn_param_data_type);
+  CHECK_EQ_OR_RETURN(inv_variance.data_type(), gn_param_data_type);
+  user_op::TensorDesc* dx = ctx->OutputTensorDesc("dx", 0);
+  *dx->mut_data_type() = dy.data_type();
+  return Maybe<void>::Ok();
+}
+
+
 }  // namespace oneflow
