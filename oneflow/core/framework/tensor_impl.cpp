@@ -160,7 +160,6 @@ Maybe<void> EagerMirroredTensorImpl::RegisterStorageDeleteHook(const std::functi
   return Maybe<void>::Ok();
 }
 
-
 Maybe<ConsistentTensorImpl> LazyConsistentTensorImpl::detach() const {
   auto detached_impl = std::make_shared<LazyConsistentTensorImpl>(tensor_meta_, false, true);
   return std::shared_ptr<ConsistentTensorImpl>(detached_impl);
