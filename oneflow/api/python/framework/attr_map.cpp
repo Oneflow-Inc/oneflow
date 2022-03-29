@@ -30,7 +30,7 @@ ONEFLOW_API_PYBIND11_MODULE("", m) {
       .def("__setitem__",
            [](MutableCfgAttrMap* m, const std::string& attr_name,
               const std::shared_ptr<cfg::AttrValue>& attr_value) {
-             m->SetAttr(attr_name, attr_value).GetOrThrow();
+             return m->SetAttr(attr_name, attr_value);
            })
       .def("__getitem__",
            [](const MutableCfgAttrMap& m, const std::string& attr_name) { return m.at(attr_name); })
