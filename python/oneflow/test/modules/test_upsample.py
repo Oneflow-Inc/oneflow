@@ -406,7 +406,7 @@ class TestUpsample2d(flow.unittest.TestCase):
         m = torch.nn.Upsample(
             scale_factor=random().to(float),
             mode="bicubic",
-            align_corners=False,
+            align_corners=random_bool(),
         )
         y = m(x)
         return y
