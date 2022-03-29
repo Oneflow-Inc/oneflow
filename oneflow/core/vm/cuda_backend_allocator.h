@@ -30,6 +30,7 @@ class CudaBackendAllocator final : public Allocator {
 
   void Allocate(char** mem_ptr, std::size_t size) override;
   void Deallocate(char* mem_ptr, std::size_t size) override;
+  void DeviceReset() override;
 
  private:
   int64_t device_id_;

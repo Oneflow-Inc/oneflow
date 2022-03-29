@@ -50,7 +50,8 @@ Maybe<void> RawCheckSymmetricBToP(Symbol<PlacedNdSbp> in, Symbol<PlacedNdSbp> ou
   return Maybe<void>::Ok();
 }
 
-static constexpr auto* CheckSymmetricBToP = DECORATE(&RawCheckSymmetricBToP, ThreadLocalCopiable);
+static constexpr auto* CheckSymmetricBToP =
+    DECORATE(&RawCheckSymmetricBToP, ThreadLocalCachedCopiable);
 
 }  // namespace
 

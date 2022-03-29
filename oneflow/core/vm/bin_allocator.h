@@ -111,7 +111,7 @@ class BinAllocator final : public Allocator {
   void RemovePieceFromBin(Piece* piece);
 
   bool AllocateBlockToExtendTotalMem(size_t aligned_size);
-  void DeallocateFreeBlockForGarbageCollection();
+  bool DeallocateFreeBlockForGarbageCollection();
 
   const size_t alignment_;
   const std::unique_ptr<Allocator> backend_;

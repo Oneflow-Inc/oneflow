@@ -200,7 +200,7 @@ bool BinAllocator::AllocateBlockToExtendTotalMem(size_t aligned_size) {
   return true;
 }
 
-void BinAllocator::DeallocateFreeBlockForGarbageCollection() {
+bool BinAllocator::DeallocateFreeBlockForGarbageCollection() {
   size_t total_free_bytes = 0;
   HashSet<char*> free_block_ptrs;
   for (const auto& pair : mem_ptr2block_) {
@@ -224,6 +224,8 @@ void BinAllocator::DeallocateFreeBlockForGarbageCollection() {
   total_memory_bytes_ -= total_free_bytes;
 
   if (total_free_bytes > 0) {
+    VLOG(3) << "BinAllocator try deallocate free block for garbage collection. "
+            << " deallocate free bytes : " << total_free_bytes;
     for (char* ptr : free_block_ptrs) {
       auto it = mem_ptr2block_.find(ptr);
       CHECK(it != mem_ptr2block_.end());
@@ -248,6 +250,7 @@ void BinAllocator::DeallocateFreeBlockForGarbageCollection() {
       backend_->Deallocate(ptr, block.size);
     }
   }
+  return total_free_bytes > 0;
 }
 
 void BinAllocator::Allocate(char** mem_ptr, std::size_t size) {
@@ -264,10 +267,17 @@ void BinAllocator::Allocate(char** mem_ptr, std::size_t size) {
   }
 
   if (piece == nullptr) {
-    DeallocateFreeBlockForGarbageCollection();
-    if (AllocateBlockToExtendTotalMem(aligned_size)) { piece = FindPiece(aligned_size); }
+    if (DeallocateFreeBlockForGarbageCollection() && AllocateBlockToExtendTotalMem(aligned_size)) {
+      piece = FindPiece(aligned_size);
+    }
   }
-  if (piece == nullptr) { LOG(FATAL) << "Error! : Out of memory when allocate size : " << size; }
+
+  if (piece == nullptr) {
+    backend_->DeviceReset();
+    LOG(FATAL) << "Error! : Out of memory when allocate size : " << size
+               << ".\n The total_memory_bytes allocated by this BinAllocator is : "
+               << total_memory_bytes_;
+  }
   CHECK_NOTNULL(piece->ptr);
   CHECK(ptr2piece_.find(piece->ptr) != ptr2piece_.end());
   *mem_ptr = piece->ptr;

@@ -235,25 +235,17 @@ class TestTensor(flow.unittest.TestCase):
         x = flow.Tensor(*shape)
         test_case.assertTrue(x.is_local)
 
-        with test_case.assertRaises(
-            oneflow._oneflow_internal.exception.RuntimeException
-        ):
+        with test_case.assertRaises(RuntimeError):
             x.global_id()
 
-        with test_case.assertRaises(
-            oneflow._oneflow_internal.exception.RuntimeException
-        ):
+        with test_case.assertRaises(RuntimeError):
             x.sbp
 
-        with test_case.assertRaises(
-            oneflow._oneflow_internal.exception.RuntimeException
-        ):
+        with test_case.assertRaises(RuntimeError):
             x.placement
 
         if x.dtype != flow.tensor_buffer:
-            with test_case.assertRaises(
-                oneflow._oneflow_internal.exception.RuntimeException
-            ):
+            with test_case.assertRaises(RuntimeError):
                 x._tensor_buffer_shapes_and_dtypes
 
     @flow.unittest.skip_unless_1n1d()
@@ -366,6 +358,19 @@ class TestTensor(flow.unittest.TestCase):
         y = x.sum() + (x * 2).sum()
         y.backward()
         test_case.assertTrue(np.allclose(grad_nonlocal.numpy(), np.ones(shape) * 3))
+
+    @flow.unittest.skip_unless_1n1d()
+    def test_non_leaf_tensor_register_hook(test_case):
+        shape = (2, 3)
+        x = flow.Tensor(*shape).requires_grad_()
+        y = x + 1
+        y.register_hook(lambda grad: grad * 2)
+        z1 = y * 2
+        z2 = y * 3
+        loss = (z1 + z2).sum()
+        loss.backward(retain_graph=True)
+        loss.backward()
+        test_case.assertTrue(np.allclose(x.grad.numpy(), np.ones(shape) * 20))
 
     @flow.unittest.skip_unless_1n1d()
     def test_user_defined_data(test_case):

@@ -34,6 +34,10 @@ class TensorViewInstructionType final : public vm::InstructionType {
 
   std::string DebugName(const vm::InstructionMsg& instr_msg) const override { return "TensorView"; }
   void Compute(vm::Instruction* instruction) const override;
+  void ComputeInFuseMode(vm::InstructionMsg* instr_msg) const override;
+
+ private:
+  void ComputeInstrMsg(const vm::InstructionMsg& instr_msg) const;
 };
 
 class AccessBlobByCallbackInstructionType final : public vm::InstructionType {
@@ -45,6 +49,10 @@ class AccessBlobByCallbackInstructionType final : public vm::InstructionType {
     return "AccessBlobByCallback";
   }
   void Compute(vm::Instruction* instruction) const override;
+  void ComputeInFuseMode(vm::InstructionMsg* instruction_msg) const override;
+
+ private:
+  void ComputeInstrMsg(const vm::InstructionMsg& instruction_msg) const;
 };
 
 class CpuRecordEventInstructionType final : public vm::InstructionType {

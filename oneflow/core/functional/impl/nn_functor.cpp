@@ -15,6 +15,7 @@ limitations under the License.
 */
 
 #include "oneflow/core/common/data_type.pb.h"
+#include "oneflow/core/common/maybe.h"
 #include "oneflow/core/common/optional.h"
 #include "oneflow/core/common/scalar.h"
 #include "oneflow/core/framework/attr_map.h"
@@ -263,6 +264,99 @@ class BatchMatMulFunctor {
   std::shared_ptr<OpExpr> batch_matmul_op_;
 };
 
+class FusedMLPFunctor {
+ public:
+  FusedMLPFunctor() {
+#if CUDA_VERSION >= 11040
+    fused_op_.resize(kMaxInputCount /*the maximum number of inputs*/);
+    for (int n = 1; n < fused_op_.size(); ++n) {
+      fused_op_[n] = CHECK_JUST(one::OpBuilder("cublas_fused_mlp")
+                                    .Input("x")
+                                    .Input("weights", n)
+                                    .Input("biases", n)
+                                    .Output("out")
+                                    .Output("cublas_aux", n)
+                                    .Output("hidden", n)
+                                    .Build());
+    }
+#endif
+  }
+  Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x, const TensorTuple& weights,
+                           const TensorTuple& biases, bool skip_final_activation) const {
+    const int64_t weight_size = weights.size();
+    const int64_t bias_size = biases.size();
+    CHECK_GE_OR_RETURN(weight_size, 1) << "The number of weights should be greater equal than 1. ";
+    CHECK_EQ_OR_RETURN(weight_size, bias_size)
+        << "The number of weights should be equal to biases. ";
+    int64_t n = 0, k = 0;
+    /*
+    x: (m, k)
+    weight: (n, k) need transpose
+    bias: (n)
+    */
+    const auto& x_shape = x->shape();
+    k = x_shape->At(1);
+    for (int64_t i = 0; i < weight_size; i++) {
+      const auto& weight_shape = weights[i]->shape();
+      const auto& bias_shape = biases[i]->shape();
+
+      // TODO(): Support Fused batch/broadcast matmul.
+      CHECK_EQ_OR_RETURN(weight_shape->NumAxes(), 2) << "Weight's dim should == 2";
+      CHECK_EQ_OR_RETURN(bias_shape->NumAxes(), 1) << "Bias's dim should == 1";
+
+      n = weight_shape->At(0);
+      CHECK_EQ_OR_RETURN(bias_shape->At(0), n) << "Bias's dim is not equal to weight's last dim. ";
+      CHECK_EQ_OR_RETURN(weight_shape->At(1), k)
+          << "weight's first dim should be equal to input's last dim. ";
+
+      // Set for next layer.
+      k = n;
+    }
+
+#if CUDA_VERSION >= 11050
+    DeviceType device_type{};
+    if (x->is_consistent()) {
+      device_type = JUST(x->parallel_desc())->device_type();
+    } else {
+      device_type = JUST(x->device())->enum_type();
+    }
+
+    if ((device_type == DeviceType::kCUDA) && (weight_size <= kMaxInputCount)
+        && (!ParseBooleanFromEnv("ONEFLOW_FUNCTOR_DISABLE_FUSED_MLP", false))) {
+      TensorTuple input(2 * weight_size + 1);
+      input[0] = x;
+      std::copy(weights.begin(), weights.end(), input.begin() + 1);
+      std::copy(biases.begin(), biases.end(), input.begin() + 1 + weight_size);
+
+      MutableAttrMap attrs;
+      JUST(attrs.SetAttr<bool>("skip_final_activation", skip_final_activation));
+      return OpInterpUtil::Dispatch<Tensor>(*fused_op_[weight_size], input, attrs);
+    }
+#endif  // CUDA_VERSION >= 11050
+
+    // Fall back to Naive matmul + bias_add + relu
+    std::shared_ptr<one::Tensor> out = x;
+    for (int32_t layer_idx = 0; layer_idx < weight_size; layer_idx++) {
+      out = JUST(
+          functional::BiasAdd(JUST(functional::MatMul(out, weights[layer_idx], false, true, 1.0)),
+                              biases[layer_idx], 1));
+      if ((layer_idx != weight_size - 1) || (!skip_final_activation)) {
+        /*
+        When it is not finaly dense layer, or it is final dense layer and skip_final_activate=False,
+        we add relu Layer.
+        */
+        out = JUST(functional::Relu(out, false));
+      }
+    }
+    return out;
+  }
+
+ private:
+#if CUDA_VERSION >= 11040
+  std::vector<std::shared_ptr<OpExpr>> fused_op_;
+#endif
+};
+
 class LayerNormFunctor {
  public:
   LayerNormFunctor() {
@@ -315,6 +409,39 @@ class LayerNormAffineFunctor {
 
  private:
   std::shared_ptr<OpExpr> op_;
+};
+
+class PixelShuffleFunctor {
+ public:
+  PixelShuffleFunctor() {}
+  Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x, const int64_t& h_upscale_factor,
+                           const int64_t& w_upscale_factor) const {
+    CHECK_OR_RETURN(x->ndim() == 4) << "Only Accept 4D Tensor";
+    const int64_t batch = x->shape()->At(0);
+    const int64_t channel = x->shape()->At(1);
+    const int64_t height = x->shape()->At(2);
+    const int64_t width = x->shape()->At(3);
+    std::shared_ptr<one::Tensor> out;
+    CHECK_OR_RETURN(channel % (h_upscale_factor * w_upscale_factor) == 0)
+        << "The channels of input tensor must be divisible by (upscale_factor * upscale_factor) or "
+           "(h_upscale_factor * w_upscale_factor)";
+    const int64_t new_c = static_cast<int>(channel / (h_upscale_factor * w_upscale_factor));
+    std::vector<int32_t> permute_vec = {0, 1, 4, 2, 5, 3};
+    std::vector<int64_t> reshape_vec_1 = {batch, new_c, h_upscale_factor * w_upscale_factor, height,
+                                          width};
+    Shape reshape_1(DimVector(reshape_vec_1.begin(), reshape_vec_1.end()));
+    std::vector<int64_t> reshape_vec_2 = {batch,  new_c, h_upscale_factor, w_upscale_factor,
+                                          height, width};
+    Shape reshape_2(DimVector(reshape_vec_2.begin(), reshape_vec_2.end()));
+    std::vector<int64_t> reshape_vec_3 = {batch, new_c, height * h_upscale_factor,
+                                          width * w_upscale_factor};
+    Shape reshape_3(DimVector(reshape_vec_3.begin(), reshape_vec_3.end()));
+    out = JUST(Reshape(x, reshape_1));
+    out = JUST(Reshape(out, reshape_2));
+    out = JUST(Permute(out, permute_vec));
+    out = JUST(Reshape(out, reshape_3));
+    return out;
+  }
 };
 
 class PoolNDFunctor {
@@ -887,6 +1014,8 @@ class SparseSoftmaxCrossEntropyFunctor {
                                const std::shared_ptr<one::Tensor>& label) const {
     if (!(logits->is_consistent() && label->is_consistent())) { return false; }
 
+    if (JUST(logits->parallel_desc())->parallel_num() == 1) { return false; }
+
     if (logits->shape()->NumAxes() != 2) { return false; }
 
     const NdSbp& logits_nd_sbp = *(JUST(logits->nd_sbp()));
@@ -938,21 +1067,34 @@ class SparseSoftmaxCrossEntropyFunctor {
     std::shared_ptr<Tensor> max_global_stage_input1 = max_device_stage->at(2);
 
     const NdSbp& logits_nd_sbp = *(JUST(logits->nd_sbp()));
-    std::vector<Symbol<SbpParallel>> s0b_sbp_parallels;
+    std::vector<Symbol<SbpParallel>> new_sbp_parallels;
     std::vector<Symbol<SbpParallel>> s0s1_sbp_parallels;
     if (logits_nd_sbp.sbp_parallel_size() == 2) {
-      SbpParallel sbp;
-      sbp.mutable_broadcast_parallel();
-      s0b_sbp_parallels.emplace_back(logits_nd_sbp.sbp_parallel(0));
-      s0b_sbp_parallels.emplace_back(sbp);
+      for (int i = 0; i < logits_nd_sbp.sbp_parallel_size(); ++i) {
+        const auto& sbp_parallel = logits_nd_sbp.sbp_parallel(i);
+        if (sbp_parallel.has_split_parallel()) {
+          const int64_t& split_axis = sbp_parallel.split_parallel().axis();
+          if (split_axis == axis) {
+            SbpParallel sbp;
+            sbp.mutable_broadcast_parallel();
+            new_sbp_parallels.emplace_back(sbp);
+          } else {
+            CHECK_EQ_OR_RETURN(split_axis, 0);
+            new_sbp_parallels.emplace_back(sbp_parallel);
+          }
+        } else {
+          new_sbp_parallels.emplace_back(sbp_parallel);
+        }
+      }
+
       s0s1_sbp_parallels.emplace_back(logits_nd_sbp.sbp_parallel(0));
       s0s1_sbp_parallels.emplace_back(logits_nd_sbp.sbp_parallel(1));
       max_global_stage_input0 = JUST(functional::ToConsistent(
           max_device_stage->at(0), JUST(max_device_stage->at(0)->parallel_desc()),
-          s0b_sbp_parallels, s0s1_sbp_parallels));
+          new_sbp_parallels, s0s1_sbp_parallels));
       max_global_stage_input1 = JUST(functional::ToConsistent(
           max_device_stage->at(2), JUST(max_device_stage->at(0)->parallel_desc()),
-          s0b_sbp_parallels, s0s1_sbp_parallels));
+          new_sbp_parallels, s0s1_sbp_parallels));
     }
     // op_reduce_max_global_stage_
     attrs.clear();
@@ -963,8 +1105,8 @@ class SparseSoftmaxCrossEntropyFunctor {
     auto& broadcast_sub_input = max_global_stage->at(0);
     if (logits_nd_sbp.sbp_parallel_size() == 2) {
       broadcast_sub_input = JUST(functional::ToConsistent(
-          broadcast_sub_input, JUST(max_device_stage->at(0)->parallel_desc()), s0b_sbp_parallels,
-          s0b_sbp_parallels));
+          broadcast_sub_input, JUST(max_device_stage->at(0)->parallel_desc()), new_sbp_parallels,
+          new_sbp_parallels));
     }
     // op_broadcast_sub_
     attrs.clear();
@@ -983,7 +1125,7 @@ class SparseSoftmaxCrossEntropyFunctor {
       std::vector<Symbol<SbpParallel>> empty_grad_sbp_parallels;
       broadcast_div_input1 = JUST(functional::ToConsistent(
           output_reduce_sum->at(0), JUST(output_reduce_sum->at(0)->parallel_desc()),
-          s0b_sbp_parallels, s0b_sbp_parallels));
+          new_sbp_parallels, new_sbp_parallels));
     }
     // op_broadcast_div_
     attrs.clear();
@@ -1253,9 +1395,8 @@ class NormalizationFunctor {
   Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x,
                            const Optional<one::Tensor>& moving_mean,
                            const Optional<one::Tensor>& moving_variance,
-                           const std::shared_ptr<one::Tensor>& gamma,
-                           const std::shared_ptr<one::Tensor>& beta, const int32_t& axis,
-                           const float& epsilon, const float& momentum,
+                           const Optional<one::Tensor>& gamma, const Optional<one::Tensor>& beta,
+                           const int32_t& axis, const float& epsilon, const float& momentum,
                            const bool& training) const {
     MutableAttrMap attrs;
     JUST(attrs.SetAttr<int32_t>("axis", axis));
@@ -1265,19 +1406,35 @@ class NormalizationFunctor {
 
     CHECK_OR_RETURN((moving_mean && moving_variance) || (!moving_mean && !moving_variance))
         << "Both moving_mean and moving_variance should be None or Tensor.";
+
+    std::shared_ptr<one::Tensor> gamma_val;
+    std::shared_ptr<one::Tensor> beta_val;
+
+    CHECK_GE_OR_RETURN(x->shape()->NumAxes(), 2)
+        << "NumAxes of x should be greater or equal than 2. ";
+    if (gamma.has_value() && beta.has_value()) {
+      gamma_val = JUST(gamma);
+      beta_val = JUST(beta);
+    } else {
+      const Shape gamma_beta_shape = Shape({x->shape()->At(1)});
+      gamma_val = JUST(functional::Constant(gamma_beta_shape, 1.0, x->dtype(), JUST(x->device())));
+      beta_val = JUST(functional::Constant(gamma_beta_shape, 0.0, x->dtype(), JUST(x->device())));
+    }
+
     if (!training) {
       CHECK_OR_RETURN(moving_mean && moving_variance)
           << "Must have moving_mean and moving_variance in eval mode.";
       return OpInterpUtil::Dispatch<one::Tensor>(
-          *norm_eval_op_, {x, JUST(moving_mean), JUST(moving_variance), gamma, beta}, attrs);
+          *norm_eval_op_, {x, JUST(moving_mean), JUST(moving_variance), gamma_val, beta_val},
+          attrs);
     }
     if (moving_mean) {
       return OpInterpUtil::Dispatch<one::Tensor>(
-          *norm_training_stats_op_, {x, JUST(moving_mean), JUST(moving_variance), gamma, beta},
-          attrs);
+          *norm_training_stats_op_,
+          {x, JUST(moving_mean), JUST(moving_variance), gamma_val, beta_val}, attrs);
     }
-    return OpInterpUtil::Dispatch<one::Tensor>(*norm_training_no_stats_op_, {x, gamma, beta},
-                                               attrs);
+    return OpInterpUtil::Dispatch<one::Tensor>(*norm_training_no_stats_op_,
+                                               {x, gamma_val, beta_val}, attrs);
   }
 
  private:
@@ -2071,29 +2228,6 @@ class CtcGreedyDecoderFunctor {
   std::shared_ptr<OpExpr> op_;
 };
 
-class PartialFCSampleFunctor {
- public:
-  PartialFCSampleFunctor() {
-    op_ = CHECK_JUST(one::OpBuilder("distributed_partial_fc_sample")
-                         .Input("weight")
-                         .Input("label")
-                         .Output("mapped_label")
-                         .Output("sampled_label")
-                         .Output("sampled_weight")
-                         .Build());
-  }
-  Maybe<TensorTuple> operator()(const std::shared_ptr<one::Tensor>& wegiht,
-                                const std::shared_ptr<one::Tensor>& label,
-                                const int64_t& num_sample) const {
-    MutableAttrMap attrs;
-    JUST(attrs.SetAttr<int64_t>("num_sample", num_sample));
-    return OpInterpUtil::Dispatch<TensorTuple>(*op_, {wegiht, label}, attrs);
-  }
-
- private:
-  std::shared_ptr<OpExpr> op_;
-};
-
 class PariticalFCSampleDisableBoxing {
  public:
   PariticalFCSampleDisableBoxing() {
@@ -2229,6 +2363,178 @@ class FusedDotFeatureInteractionFunctor {
   std::vector<std::shared_ptr<OpExpr>> ops_no_output_concat_;
 };
 
+class OneEmbeddingIdShuffleFunctor {
+ public:
+  OneEmbeddingIdShuffleFunctor() {
+    op_column_ids_has_in_out_ = CHECK_JUST(one::OpBuilder("id_shuffle")
+                                               .Input("ids")
+                                               .Input("column_ids")
+                                               .Output("num_unique_matrix")
+                                               .Output("inverse_unique_partition_indices")
+                                               .Output("cur_rank_num_unique")
+                                               .Output("cur_rank_unique_ids")
+                                               .Output("cur_rank_unique_column_ids")
+                                               .Output("cur_rank_inverse_indices")
+                                               .Build());
+    op_column_ids_no_in_has_out_ = CHECK_JUST(one::OpBuilder("id_shuffle")
+                                                  .Input("ids")
+                                                  .Output("num_unique_matrix")
+                                                  .Output("inverse_unique_partition_indices")
+                                                  .Output("cur_rank_num_unique")
+                                                  .Output("cur_rank_unique_ids")
+                                                  .Output("cur_rank_unique_column_ids")
+                                                  .Output("cur_rank_inverse_indices")
+                                                  .Build());
+  }
+
+  Maybe<TensorTuple> operator()(const std::shared_ptr<one::Tensor>& ids,
+                                const Optional<one::Tensor>& column_ids,
+                                const int32_t& num_columns) const {
+    MutableAttrMap attrs;
+    JUST(attrs.SetAttr<int32_t>("num_columns", num_columns));
+    if (column_ids) {
+      return OpInterpUtil::Dispatch<TensorTuple>(*op_column_ids_has_in_out_,
+                                                 {ids, JUST(column_ids)}, attrs);
+    } else {
+      return OpInterpUtil::Dispatch<TensorTuple>(*op_column_ids_no_in_has_out_, {ids}, attrs);
+    }
+  }
+
+ private:
+  std::shared_ptr<OpExpr> op_column_ids_has_in_out_;
+  std::shared_ptr<OpExpr> op_column_ids_no_in_has_out_;
+};
+
+class OneEmbeddingEmbeddingShuffleFunctor {
+ public:
+  OneEmbeddingEmbeddingShuffleFunctor() {
+    op_ = CHECK_JUST(one::OpBuilder("embedding_shuffle")
+                         .Input("cur_rank_embeddings")
+                         .Input("num_unique_matrix")
+                         .Input("cur_rank_inverse_indices")
+                         .Input("inverse_unique_partition_indices")
+                         .Output("embeddings")
+                         .Build());
+  }
+
+  Maybe<Tensor> operator()(
+      const std::shared_ptr<one::Tensor>& cur_rank_embeddings,
+      const std::shared_ptr<one::Tensor>& num_unique_matrix,
+      const std::shared_ptr<one::Tensor>& cur_rank_inverse_indices,
+      const std::shared_ptr<one::Tensor>& inverse_unique_partition_indices) const {
+    return OpInterpUtil::Dispatch<Tensor>(
+        *op_, {cur_rank_embeddings, num_unique_matrix, cur_rank_inverse_indices,
+               inverse_unique_partition_indices});
+  }
+
+ private:
+  std::shared_ptr<OpExpr> op_;
+};
+
+class OneEmbeddingEmbeddingGradientShuffleFunctor {
+ public:
+  OneEmbeddingEmbeddingGradientShuffleFunctor() {
+    op_ = CHECK_JUST(one::OpBuilder("embedding_gradient_shuffle")
+                         .Input("embedding_grad")
+                         .Input("num_unique_matrix")
+                         .Input("cur_rank_inverse_indices")
+                         .Input("inverse_unique_partition_indices")
+                         .Output("cur_rank_unique_embedding_grad")
+                         .Build());
+  }
+
+  Maybe<Tensor> operator()(
+      const std::shared_ptr<one::Tensor>& embedding_grad,
+      const std::shared_ptr<one::Tensor>& num_unique_matrix,
+      const std::shared_ptr<one::Tensor>& cur_rank_inverse_indices,
+      const std::shared_ptr<one::Tensor>& inverse_unique_partition_indices) const {
+    return OpInterpUtil::Dispatch<Tensor>(
+        *op_, {embedding_grad, num_unique_matrix, cur_rank_inverse_indices,
+               inverse_unique_partition_indices});
+  }
+
+ private:
+  std::shared_ptr<OpExpr> op_;
+};
+
+class OneEmbeddingLookupFunctor {
+ public:
+  OneEmbeddingLookupFunctor() {
+    op_has_column_ids_ = CHECK_JUST(one::OpBuilder("embedding_lookup_placeholder")
+                                        .Input("shadow")
+                                        .Input("ids")
+                                        .Input("column_ids")
+                                        .Output("embeddings")
+                                        .Build());
+    op_no_column_ids_ = CHECK_JUST(one::OpBuilder("embedding_lookup_placeholder")
+                                       .Input("shadow")
+                                       .Input("ids")
+                                       .Output("embeddings")
+                                       .Build());
+  }
+
+  Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& shadow,
+                           const std::shared_ptr<one::Tensor>& ids,
+                           const Optional<one::Tensor>& column_ids, const Symbol<DType>& dtype,
+                           const int64_t embedding_size, const int32_t num_columns,
+                           const std::string& embedding_columns,
+                           const std::string& key_value_store_options) const {
+    MutableAttrMap attrs;
+    JUST(attrs.SetAttr<DataType>("dtype", dtype->data_type()));
+    JUST(attrs.SetAttr<int64_t>("embedding_size", embedding_size));
+    JUST(attrs.SetAttr<int32_t>("num_columns", num_columns));
+    JUST(attrs.SetAttr<std::string>("embedding_columns", embedding_columns));
+    JUST(attrs.SetAttr<std::string>("key_value_store_options", key_value_store_options));
+    if (column_ids) {
+      return OpInterpUtil::Dispatch<Tensor>(*op_has_column_ids_, {shadow, ids, JUST(column_ids)},
+                                            attrs);
+    } else {
+      return OpInterpUtil::Dispatch<Tensor>(*op_no_column_ids_, {shadow, ids}, attrs);
+    }
+  }
+
+ private:
+  std::shared_ptr<OpExpr> op_has_column_ids_;
+  std::shared_ptr<OpExpr> op_no_column_ids_;
+};
+
+class OneEmbeddingUniqueKeyValuePairFunctor {
+ public:
+  OneEmbeddingUniqueKeyValuePairFunctor() {
+    op_has_input_value_ = CHECK_JUST(one::OpBuilder("unique_key_value_pair")
+                                         .Input("keys")
+                                         .Input("values")
+                                         .Output("num_unique")
+                                         .Output("unique_keys")
+                                         .Output("unique_values")
+                                         .Output("inverse_indices")
+                                         .Build());
+    op_no_input_value_ = CHECK_JUST(one::OpBuilder("unique_key_value_pair")
+                                        .Input("keys")
+                                        .Output("num_unique")
+                                        .Output("unique_keys")
+                                        .Output("unique_values")
+                                        .Output("inverse_indices")
+                                        .Build());
+  }
+
+  Maybe<TensorTuple> operator()(const std::shared_ptr<one::Tensor>& keys,
+                                const Optional<one::Tensor>& values,
+                                const int32_t num_columns) const {
+    MutableAttrMap attrs;
+    JUST(attrs.SetAttr<int32_t>("num_columns", num_columns));
+    if (values) {
+      return OpInterpUtil::Dispatch<TensorTuple>(*op_has_input_value_, {keys, JUST(values)}, attrs);
+    } else {
+      return OpInterpUtil::Dispatch<TensorTuple>(*op_no_input_value_, {keys}, attrs);
+    }
+  }
+
+ private:
+  std::shared_ptr<OpExpr> op_has_input_value_;
+  std::shared_ptr<OpExpr> op_no_input_value_;
+};
+
 }  // namespace impl
 
 ONEFLOW_FUNCTION_LIBRARY(m) {
@@ -2241,6 +2547,7 @@ ONEFLOW_FUNCTION_LIBRARY(m) {
   m.add_functor<impl::DeConv3dFunctor>("Deconv3d");
   m.add_functor<impl::MatMulFunctor>("MatMul");
   m.add_functor<impl::BatchMatMulFunctor>("BatchMatMul");
+  m.add_functor<impl::FusedMLPFunctor>("FusedMLP");
   m.add_functor<impl::LayerNormFunctor>("LayerNorm");
   m.add_functor<impl::LayerNormAffineFunctor>("LayerNormAffine");
   m.add_functor<impl::TFAvgPool2DFunctor>("AvgPool2D");
@@ -2274,6 +2581,7 @@ ONEFLOW_FUNCTION_LIBRARY(m) {
   m.add_functor<impl::PadFunctor>("Pad");
   m.add_functor<impl::DropoutFunctor>("Dropout");
   m.add_functor<impl::DropoutGradFunctor>("DropoutGrad");
+  m.add_functor<impl::PixelShuffleFunctor>("PixelShuffle");
   m.add_functor<impl::Avgpool1DFunctor>("Avgpool1D");
   m.add_functor<impl::Avgpool2DFunctor>("Avgpool2D");
   m.add_functor<impl::Avgpool3DFunctor>("Avgpool3D");
@@ -2293,12 +2601,17 @@ ONEFLOW_FUNCTION_LIBRARY(m) {
   m.add_functor<impl::FusedScaleTrilSoftmaxMaskScaleFunctor>("FusedScaleTrilSoftmaxMaskScale");
   m.add_functor<impl::FusedScaleTrilFunctor>("FusedScaleTril");
   m.add_functor<impl::CtcGreedyDecoderFunctor>("CtcGreedyDecoder");
-  m.add_functor<impl::PartialFCSampleFunctor>("DistributedPariticalFCSample");
   m.add_functor<impl::PariticalFCSampleDisableBoxing>("DistributedPariticalFCSampleDisableBoxing");
   m.add_functor<impl::NmsFunctor>("Nms");
   m.add_functor<impl::RoiAlignFunctor>("RoiAlign");
   m.add_functor<impl::RoiAlignGradFunctor>("RoiAlignGrad");
   m.add_functor<impl::FusedDotFeatureInteractionFunctor>("FusedDotFeatureInteraction");
+  m.add_functor<impl::OneEmbeddingIdShuffleFunctor>("OneEmbeddingIdShuffle");
+  m.add_functor<impl::OneEmbeddingEmbeddingShuffleFunctor>("OneEmbeddingEmbeddingShuffle");
+  m.add_functor<impl::OneEmbeddingEmbeddingGradientShuffleFunctor>(
+      "OneEmbeddingEmbeddingGradientShuffle");
+  m.add_functor<impl::OneEmbeddingLookupFunctor>("OneEmbeddingLookup");
+  m.add_functor<impl::OneEmbeddingUniqueKeyValuePairFunctor>("OneEmbeddingUniqueKeyValuePair");
 };
 
 }  // namespace functional

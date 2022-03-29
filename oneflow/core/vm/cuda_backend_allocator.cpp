@@ -33,6 +33,15 @@ void CudaBackendAllocator::Deallocate(char* mem_ptr, std::size_t size) {
   OF_CUDA_CHECK(cudaFree(mem_ptr));
 }
 
+void CudaBackendAllocator::DeviceReset() {
+  cudaSetDevice(device_id_);
+  // NOTE(chengcheng): In some corner case on ubuntu, cuda memory not released even if OOM.
+  //   So there need release all cuda memory allocated by this process before core dump.
+  LOG(WARNING) << "OOM error is detected, process will exit. And it will start to reset CUDA "
+               << "device for releasing device memory.";
+  OF_CUDA_CHECK(cudaDeviceReset());
+}
+
 }  // namespace vm
 }  // namespace oneflow
 
