@@ -22,37 +22,32 @@ namespace py = pybind11;
 
 namespace oneflow {
 
+Maybe<one::Generator> CreateGenerator(const std::string& device_tag) {
+  std::string device_name = "";
+  int device_index = -1;
+  JUST(ParsingDeviceTag(device_tag, &device_name, &device_index));
+  return one::MakeGenerator(device_name, device_index);
+}
+
 ONEFLOW_API_PYBIND11_MODULE("", m) {
   py::class_<one::Generator, std::shared_ptr<one::Generator>>(m, "Generator")
       .def(py::init([](const std::string& device_tag) {
-        std::string device_name = "";
-        int device_index = -1;
-        ParsingDeviceTag(device_tag, &device_name, &device_index).GetOrThrow();
-        return one::MakeGenerator(device_name, device_index).GetPtrOrThrow();
+        return CreateGenerator(device_tag).GetPtrOrThrow();
       }))
       .def("manual_seed", &one::Generator::set_current_seed)
       .def("initial_seed", &one::Generator::current_seed)
       .def("seed", &one::Generator::seed)
-      .def_property_readonly(
-          "device", [](const one::Generator& generator) { return generator.device().GetOrThrow(); })
-      .def("get_state",
-           [](const one::Generator& generator) { return generator.GetState().GetPtrOrThrow(); })
-      .def("set_state", [](one::Generator& generator, const std::shared_ptr<one::Tensor>& state) {
-        return generator.SetState(state).GetOrThrow();
-      });
+      .def_property_readonly("device", &one::Generator::device)
+      .def("get_state", &one::Generator::GetState)
+      .def("set_state", &one::Generator::SetState);
 
-  m.def("manual_seed", [](uint64_t seed) { return one::ManualSeed(seed).GetOrThrow(); });
-  m.def("create_generator", [](const std::string& device_tag) {
+  m.def("manual_seed", [](uint64_t seed) { return one::ManualSeed(seed); });
+  m.def("create_generator", &CreateGenerator);
+  m.def("default_generator", [](const std::string& device_tag) -> Maybe<one::Generator> {
     std::string device_name = "";
     int device_index = -1;
-    ParsingDeviceTag(device_tag, &device_name, &device_index).GetOrThrow();
-    return one::MakeGenerator(device_name, device_index).GetPtrOrThrow();
-  });
-  m.def("default_generator", [](const std::string& device_tag) {
-    std::string device_name = "";
-    int device_index = -1;
-    ParsingDeviceTag(device_tag, &device_name, &device_index).GetOrThrow();
-    return one::DefaultGenerator(device_name, device_index).GetPtrOrThrow();
+    JUST(ParsingDeviceTag(device_tag, &device_name, &device_index));
+    return one::DefaultGenerator(device_name, device_index);
   });
 }
 
