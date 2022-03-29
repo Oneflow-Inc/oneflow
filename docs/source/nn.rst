@@ -83,6 +83,7 @@ Operators for neural networks
         SmoothL1Loss,
         Softmax,
         Softplus, 
+        Softshrink,
         Softsign, 
         Tanh,
         Upsample,
