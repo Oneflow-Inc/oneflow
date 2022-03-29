@@ -1543,22 +1543,3 @@ add_docstr(
     See :func:`oneflow.where`
     """,
 )
-
-add_docstr(
-    oneflow.Tensor.storage_offset,
-    """
-    storage_offset() -> int
-
-    Returns self tensor’s offset in the underlying storage in terms of number of storage elements (not bytes).
-
-    For example:
-
-    .. code-block:: python
-
-        >>> import oneflow as flow
-
-        >>> x = flow.tensor([1, 2, 3, 4, 5])
-        >>> x.storage_offset()
-        0
-    """,
-)
