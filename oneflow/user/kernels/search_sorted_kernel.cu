@@ -21,7 +21,7 @@ limitations under the License.
 namespace oneflow {
 
 template<typename input_t>
-OF_DEVICE_FUNC int64_t cus_lower_bound(int64_t start, int64_t end, const input_t val, const input_t* bd, const int64_t* sort) {
+OF_DEVICE_FUNC int64_t cus_lower_bound(int64_t start, int64_t end, const input_t val, const input_t* bd, const input_t* sort) {
   // sorter gives relative ordering for ND tensors, so we need to save and add the non-updated start as an offset
   // i.e. the second row of a 3x3 tensors starts at element 3 but sorter's second row only contains 0, 1, or 2
   const int64_t orig_start = start;
@@ -42,7 +42,7 @@ OF_DEVICE_FUNC int64_t cus_lower_bound(int64_t start, int64_t end, const input_t
 // std::upper_bound can not be used here since its customized comparator requires both arguments to have the
 // same type, which wouldn't happen when comparing val of input_t to an indexer value from sorter of int64
 template<typename input_t>
-OF_DEVICE_FUNC int64_t cus_upper_bound(int64_t start, int64_t end, const input_t val, const input_t* bd, const int64_t* sort) {
+OF_DEVICE_FUNC int64_t cus_upper_bound(int64_t start, int64_t end, const input_t val, const input_t* bd, const input_t* sort) {
   // sorter gives relative ordering for ND tensors, so we need to save and add the non-updated start as an offset
   // i.e. the second row of a 3x3 tensors starts at element 3 but sorter's second row only contains 0, 1, or 2
   const int64_t orig_start = start;
@@ -66,6 +66,7 @@ __global__ void DoSearchSortedLogical(int32_t instance_num, bool is_sequence_1d,
                                       output_t* out_ptr) {
   int64_t i = blockIdx.x * blockDim.x + threadIdx.x;
   int64_t start_bd = is_sequence_1d ? 0 : i / values_shape_last * sequence_shape_last;
+  // LOG(WARNING) << "is sequence 1d: " << is_sequence_1d;
   int64_t end_bd = start_bd + sequence_shape_last;
   output_t pos = !right ?
     cus_lower_bound<input_t>(start_bd, end_bd, values_ptr[i], sequence_ptr, sorter_ptr) - start_bd :
@@ -73,6 +74,15 @@ __global__ void DoSearchSortedLogical(int32_t instance_num, bool is_sequence_1d,
   out_ptr[i] = pos;
 }
 
+template<typename input_t, typename output_t>
+__global__ void DoSearchSortedScalarLogical(int64_t sequence_shape_last, bool right, const input_t& values,   \
+                                      const input_t* sequence_ptr, const input_t* sorter_ptr,   \
+                                      output_t* out_ptr) {
+  output_t pos = !right ?
+    cus_lower_bound<input_t>(0, sequence_shape_last, values, sequence_ptr, sorter_ptr) :
+     cus_upper_bound<input_t>(0, sequence_shape_last, values, sequence_ptr, sorter_ptr);
+  out_ptr[0] = pos;
+}
 
 template<typename input_t, typename output_t>
 class GpuSearchSortedKernel final : public user_op::OpKernel {
@@ -83,6 +93,7 @@ class GpuSearchSortedKernel final : public user_op::OpKernel {
  private:
   using user_op::OpKernel::Compute;
   void Compute(user_op::KernelComputeContext* ctx) const override {
+    LOG(WARNING) << "in GpuSearchSortedKernel";
     const user_op::Tensor* sorted_sequence = ctx->Tensor4ArgNameAndIndex("sorted_sequence", 0);
     const user_op::Tensor* values = ctx->Tensor4ArgNameAndIndex("values", 0);
     const user_op::Tensor* sorter = ctx->Tensor4ArgNameAndIndex("sorter", 0);
@@ -91,9 +102,9 @@ class GpuSearchSortedKernel final : public user_op::OpKernel {
     const bool& right = ctx->Attr<bool>("right");
     const input_t* values_ptr = values->dptr<input_t>();
     const input_t* sequence_ptr = sorted_sequence->dptr<input_t>();
-    const int64_t* sorter_ptr = nullptr;
+    const input_t* sorter_ptr = nullptr;
     if (sorter) {
-      sorter_ptr = sorter->dptr<int64_t>();
+      sorter_ptr = sorter->dptr<input_t>();
     }
     output_t* out_ptr = out->mut_dptr<output_t>();
     const int32_t instance_num = values->shape().elem_cnt();
@@ -115,5 +126,45 @@ class GpuSearchSortedKernel final : public user_op::OpKernel {
 
 REGISTER_GPU_SEARCH_SORTED_KERNEL(int64_t, int32_t)
 REGISTER_GPU_SEARCH_SORTED_KERNEL(int64_t, int64_t)
+
+
+template<typename input_t, typename output_t>
+class GpuSearchSortedScalarKernel final : public user_op::OpKernel {
+ public:
+  GpuSearchSortedScalarKernel() = default;
+  ~GpuSearchSortedScalarKernel() = default;
+
+ private:
+  using user_op::OpKernel::Compute;
+  void Compute(user_op::KernelComputeContext* ctx) const override {
+    LOG(WARNING) << "in GpuSearchSortedScalarKernel";
+    const user_op::Tensor* sorted_sequence = ctx->Tensor4ArgNameAndIndex("sorted_sequence", 0);
+    const user_op::Tensor* sorter = ctx->Tensor4ArgNameAndIndex("sorter", 0);
+    const int64_t* sorter_ptr = nullptr;
+    if (sorter) {
+      sorter_ptr = sorter->dptr<int64_t>();
+    }
+    user_op::Tensor* out = ctx->Tensor4ArgNameAndIndex("out", 0);
+
+    const bool& right = ctx->Attr<bool>("right");
+    const input_t& values = static_cast<input_t>(ctx->Attr<double>("values"));
+
+    const input_t* sequence_ptr = sorted_sequence->dptr<input_t>();
+    output_t* out_ptr = out->mut_dptr<output_t>();
+    int64_t sequence_shape_last = sorted_sequence->shape().At(0);
+    RUN_CUDA_KERNEL((DoSearchSortedScalarLogical<input_t, output_t>), ctx->stream(), 1,   \
+                     sequence_shape_last, right, values,   \
+                     sequence_ptr, sorter_ptr, out_ptr);
+  }
+  bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
+};
+
+#define REGISTER_GPU_SEARCH_SORTED_SCALAR_KERNEL(in_dtype, out_dtype)                                              \
+  REGISTER_USER_KERNEL("searchsorted_scalar").SetCreateFn<GpuSearchSortedScalarKernel<in_dtype, out_dtype>>().SetIsMatchedHob( \
+      (user_op::HobDeviceType() == DeviceType::kCUDA)                                  \
+      && (user_op::HobDataType("out", 0) == GetDataType<out_dtype>::value));
+
+REGISTER_GPU_SEARCH_SORTED_SCALAR_KERNEL(int64_t, int32_t)
+REGISTER_GPU_SEARCH_SORTED_SCALAR_KERNEL(int64_t, int64_t)
 
 }  // namespace oneflow

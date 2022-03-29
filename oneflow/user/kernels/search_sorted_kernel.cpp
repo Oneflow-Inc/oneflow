@@ -19,7 +19,7 @@ limitations under the License.
 namespace oneflow {
 
 template<typename input_t>
-int64_t cus_lower_bound(int64_t start, int64_t end, const input_t val, const input_t* bd, const int64_t* sort) {
+int64_t cus_lower_bound(int64_t start, int64_t end, const input_t val, const input_t* bd, const input_t* sort) {
   // sorter gives relative ordering for ND tensors, so we need to save and add the non-updated start as an offset
   // i.e. the second row of a 3x3 tensors starts at element 3 but sorter's second row only contains 0, 1, or 2
   const int64_t orig_start = start;
@@ -40,7 +40,7 @@ int64_t cus_lower_bound(int64_t start, int64_t end, const input_t val, const inp
 // std::upper_bound can not be used here since its customized comparator requires both arguments to have the
 // same type, which wouldn't happen when comparing val of input_t to an indexer value from sorter of int64
 template<typename input_t>
-int64_t cus_upper_bound(int64_t start, int64_t end, const input_t val, const input_t* bd, const int64_t* sort) {
+int64_t cus_upper_bound(int64_t start, int64_t end, const input_t val, const input_t* bd, const input_t* sort) {
   // sorter gives relative ordering for ND tensors, so we need to save and add the non-updated start as an offset
   // i.e. the second row of a 3x3 tensors starts at element 3 but sorter's second row only contains 0, 1, or 2
   const int64_t orig_start = start;
@@ -78,9 +78,9 @@ class CpuSearchSortedKernel final : public user_op::OpKernel {
     const input_t* values_ptr = values->dptr<input_t>();
     const input_t* sequence_ptr = sorted_sequence->dptr<input_t>();
     LOG(WARNING) << "sorter: " << sorter;
-    const int64_t* sorter_ptr = nullptr;
+    const input_t* sorter_ptr = nullptr;
     if (sorter) {
-      sorter_ptr = sorter->dptr<int64_t>();
+      sorter_ptr = sorter->dptr<input_t>();
     }
     output_t* out_ptr = out->mut_dptr<output_t>();
     const int32_t instance_num = values->shape().elem_cnt();
@@ -125,9 +125,9 @@ class CpuSearchSortedScalarKernel final : public user_op::OpKernel {
   void Compute(user_op::KernelComputeContext* ctx) const override {
     const user_op::Tensor* sorted_sequence = ctx->Tensor4ArgNameAndIndex("sorted_sequence", 0);
     const user_op::Tensor* sorter = ctx->Tensor4ArgNameAndIndex("sorter", 0);
-    const int64_t* sorter_ptr = nullptr;
+    const input_t* sorter_ptr = nullptr;
     if (sorter) {
-      sorter_ptr = sorter->dptr<int64_t>();
+      sorter_ptr = sorter->dptr<input_t>();
     }
     user_op::Tensor* out = ctx->Tensor4ArgNameAndIndex("out", 0);
 
