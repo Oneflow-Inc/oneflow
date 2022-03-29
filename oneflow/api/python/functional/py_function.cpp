@@ -95,18 +95,10 @@ bool ParseArgs(const py::args& args, const py::kwargs& kwargs, std::vector<Pytho
         parsed_args->at(i) = std::move(arg);
       } else {
         if (raise_exception) {
-          std::string module_name = std::string();
-          if (py::hasattr(obj.ptr(), "__module__")) {
-            module_name = py::handle(obj.ptr()).attr("__module__").cast<std::string>();
-          }
-          std::string type_name = std::string();
-          if (module_name == "oneflow._oneflow_internal" || module_name.empty()) {
-            type_name = Py_TYPE(obj.ptr())->tp_name;
-          } else {
-            type_name = std::move(module_name) + "." + Py_TYPE(obj.ptr())->tp_name;
-          }
-          THROW(TypeError) << function.name << "(): argument '" << param.name << "' must be "
-                           << ValueTypeName(param.type).GetOrThrow() << ", not " << type_name;
+          THROW(TypeError)
+              << function.name << "(): argument '" << param.name << "' must be "
+              << ValueTypeName(param.type).GetOrThrow() << ", not "
+              << PyStringAsString(PyObject_Str((PyObject*)Py_TYPE(obj.ptr()))).GetOrThrow();
         }
         return false;
       }
