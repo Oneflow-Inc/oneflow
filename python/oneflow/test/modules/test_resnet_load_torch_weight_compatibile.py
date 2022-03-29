@@ -26,7 +26,7 @@ import oneflow.unittest
 
 
 @flow.unittest.skip_unless_1n1d()
-class TestBatchNormCompatibile(flow.unittest.TestCase):
+class TestResNet18LoadWeightCompatibile(flow.unittest.TestCase):
     def test_resnet18_load_weight_compatibile(test_case):
         resnet18_torch = models_torch.resnet18(pretrained=True)
         resnet18_flow = models_flow.resnet18()
