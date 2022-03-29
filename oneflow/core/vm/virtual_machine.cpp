@@ -28,7 +28,7 @@ limitations under the License.
 #include "oneflow/core/framework/transport_token.h"
 #include "oneflow/core/profiler/profiler.h"
 #include "oneflow/core/platform/include/pthread_fork.h"
-#include "oneflow/core/common/env_var.h"
+#include "oneflow/core/common/env_var/env_var.h"
 #include "oneflow/core/framework/device.h"
 
 namespace oneflow {
