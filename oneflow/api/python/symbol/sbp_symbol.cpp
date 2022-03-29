@@ -31,10 +31,6 @@ namespace oneflow {
 
 namespace {
 
-std::string SbpParallelSymbolToString(const Symbol<SbpParallel>& sbp_sym) {
-  return *api::SbpToString(sbp_sym).GetPtrOrThrow();
-}
-
 Maybe<std::vector<Symbol<SbpParallel>>> MakeSplitSbpParallelList(int max_split_axis) {
   std::shared_ptr<std::vector<Symbol<SbpParallel>>> ret =
       std::make_shared<std::vector<Symbol<SbpParallel>>>(max_split_axis);
@@ -90,8 +86,8 @@ ONEFLOW_API_PYBIND11_MODULE("sbp", m) {
   m.attr("max_split_axis") = kMaxSplitAxis;
   py::class_<Symbol<SbpParallel>, std::shared_ptr<Symbol<SbpParallel>>>(m, "sbp",
                                                                         py::dynamic_attr())
-      .def("__str__", &SbpParallelSymbolToString)
-      .def("__repr__", &SbpParallelSymbolToString)
+      .def("__str__", &api::SbpToString)
+      .def("__repr__", &api::SbpToString)
       .def(py::self == py::self)
       .def(py::hash(py::self))
       .def("_ToAttrStr",
@@ -103,10 +99,9 @@ ONEFLOW_API_PYBIND11_MODULE("sbp", m) {
           [](const std::pair<std::string, int>& state) {  // __setstate__
             return GetSbpFromState(state).GetOrThrow();
           }));
-  m.def(
-      "split", [](int axis) { return GetSplitSbpParallel(axis).GetOrThrow(); }, py::arg("axis"));
-  m.def("broadcast", []() { return GetBroadcastSbpParallel().GetOrThrow(); });
-  m.def("partial_sum", []() { return GetPartialSumSbpParallel().GetOrThrow(); });
+  m.def("split", GetSplitSbpParallel, py::arg("axis"));
+  m.def("broadcast", &GetBroadcastSbpParallel);
+  m.def("partial_sum", &GetPartialSumSbpParallel);
 }
 
 }  // namespace oneflow
