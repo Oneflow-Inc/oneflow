@@ -15,15 +15,21 @@ limitations under the License.
 """
 import os
 
+
 def string_to_bool(env_str):
-    if env_str.lower() in ('1', 'true', 'yes', 'on', 'y'):
+    if env_str.lower() in ("1", "true", "yes", "on", "y"):
         return True
     return False
 
+
 def parse_boolean_form_env(env_var, defalut_value):
     # This function aligns with ParseBooleanFromEnv() in oneflow/core/common/util.cpp
-    assert isinstance(env_var, str), "env variable must be string, but got: " + type(env_var)
-    assert isinstance(defalut_value, bool), "env variable defalut value must be boolean, but got: " + type(defalut_value)
+    assert isinstance(env_var, str), "env variable must be string, but got: " + type(
+        env_var
+    )
+    assert isinstance(
+        defalut_value, bool
+    ), "env variable defalut value must be boolean, but got: " + type(defalut_value)
     if os.getenv(env_var) is None:
         return defalut_value
     else:

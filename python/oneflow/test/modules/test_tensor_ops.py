@@ -62,7 +62,7 @@ class TestCuda(flow.unittest.TestCase):
         x = x.cuda()
         y = x.sum()
         return y
-    
+
     @autotest(n=5)
     def test_cuda_int_device(test_case):
         device = random_device()

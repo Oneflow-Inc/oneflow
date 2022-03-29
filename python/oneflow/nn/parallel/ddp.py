@@ -70,7 +70,9 @@ def DistributedDataParallel(
 ):
     assert all(x.dtype == flow.float32 for x in module.parameters())
     if parse_boolean_form_env("ONEFLOW_DISABLE_VIEW", False):
-        warnings.warn("because the environment variable 'ONEFLOW_DISABLE_VIEW' is set to true, so the view mechanism is disabled, and we will set bucket_size = 1")
+        warnings.warn(
+            "because the environment variable 'ONEFLOW_DISABLE_VIEW' is set to true, so the view mechanism is disabled, and we will set bucket_size = 1"
+        )
         bucket_size = 1
     world_size = flow.env.get_world_size()
     with flow.no_grad():
