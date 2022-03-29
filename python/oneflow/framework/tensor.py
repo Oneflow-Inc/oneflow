@@ -148,11 +148,6 @@ def _xor(self, other):
     return flow._C.logical_xor(self, other)
 
 
-def _contiguous(self):
-    # TODO: support stride mechanism
-    return self
-
-
 def _cpu(self):
     return self.to(device="cpu")
 
@@ -293,7 +288,11 @@ def _neg(self):
 
 
 def _pow(self, b):
-    return flow.pow(self, b)
+    return flow._C.pow(self, b)
+
+
+def _rpow(self, b):
+    return flow._C.pow(b, self)
 
 
 def _abs(self):
@@ -587,7 +586,7 @@ def _permute(self, *dims):
             new_dims = (new_dims,)
     else:
         new_dims = dims
-    return flow._C.transpose(self, new_dims)
+    return flow._C.permute(self, new_dims)
 
 
 def _matmul(self, other):
@@ -817,7 +816,17 @@ def _format(self, format_spec):
 
 
 def _to(self, *args, **kwargs):
-    return flow._C.to(self, *args, **kwargs)
+    new_args = list()
+    # If device is single int, replace it with flow.device("cuda:{device}")
+    if len(args) > 0 and isinstance(args[0], int):
+        new_args.append(flow.device(f"cuda:{args[0]}"))
+        for i in range(1, len(args)):
+            new_args.append(args[i])
+    else:
+        new_args = args
+    if ("device" in kwargs) and isinstance(kwargs["device"], int):
+        kwargs["device"] = flow.device(f"cuda:{kwargs['device']}")
+    return flow._C.to(self, *new_args, **kwargs)
 
 
 def _to_global(self, placement=None, sbp=None, grad_sbp=None):
@@ -1034,6 +1043,7 @@ def RegisterMethods():
     Tensor.__rtruediv__ = _rtruediv
     Tensor.__neg__ = _neg
     Tensor.__pow__ = _pow
+    Tensor.__rpow__ = _rpow
     Tensor.__format__ = _format
     Tensor.__floordiv__ = _floor_divide
     Tensor.__len__ = _len
@@ -1136,7 +1146,6 @@ def RegisterMethods():
     Tensor.tril = _tril
     Tensor.triu = _triu
     Tensor.where = _where
-    Tensor.contiguous = _contiguous
     Tensor.norm = _norm
     Tensor.transpose = _transpose
     Tensor.to_global = _to_global

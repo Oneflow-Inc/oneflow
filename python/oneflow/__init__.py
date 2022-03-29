@@ -97,6 +97,7 @@ from oneflow._C import tanh
 from oneflow._C import as_strided
 from oneflow._C import silu
 from oneflow._C import selu
+from oneflow._C import softshrink
 from oneflow._C import softsign
 from oneflow._C import cast
 from oneflow._C import ones_like
@@ -149,7 +150,6 @@ from oneflow._C import softplus
 from oneflow._C import tril
 from oneflow._C import triu
 from oneflow._C import pad
-from oneflow._C import distributed_partial_fc_sample
 from oneflow._C import transpose
 from oneflow._C import relu
 from oneflow._C import softmax
@@ -169,7 +169,6 @@ from oneflow._C import hsplit
 from oneflow._C import vsplit
 from oneflow._C import concat
 from oneflow._C import concat as cat
-from oneflow._C import to
 from oneflow._C import dim_gather as gather
 from oneflow._C import gather_nd
 from oneflow._C import roi_align
@@ -211,14 +210,12 @@ from oneflow.framework.tensor_str import set_printoptions
 
 if not env_util.HasAllMultiClientEnvVars():
     env_util.SetDefaultMultiClientEnvVars()
-oneflow._oneflow_internal.SetIsMultiClient(True)
 env_util.api_env_init()
 oneflow._oneflow_internal.RegisterGILForeignLockHelper()
 oneflow._oneflow_internal.InitDefaultConsistentTransportTokenScope()
 session_ctx.OpenDefaultSession(
     MultiClientSession(oneflow._oneflow_internal.NewSessionId())
 )
-scope_util.InitScopeStack()
 oneflow._oneflow_internal.EnableEagerEnvironment(True)
 del env_util
 from oneflow.framework import python_callback, register_python_callback
@@ -262,10 +259,7 @@ hook = ExitHook()
 def atexit_hook(hook):
     if hook.is_normal_exit():
         if oneflow._oneflow_internal.IsEnvInited():
-            if oneflow.env.is_multi_client():
-                oneflow._oneflow_internal.eager.multi_client.Sync()
-            elif oneflow.env.get_rank() == 0:
-                oneflow._oneflow_internal.eager.single_client.Sync()
+            oneflow._oneflow_internal.eager.Sync()
     oneflow.framework.session_context.TryCloseDefaultSession()
     if hook.is_normal_exit():
         oneflow._oneflow_internal.DestroyEnv()
@@ -304,6 +298,7 @@ from oneflow.framework.generator import (
 
 # NOTE(chengcheng) oneflow.Model is unavailable now.
 # from oneflow.framework.model import Model
+import oneflow.utils.torch
 from oneflow.framework.scope_util import api_current_scope as current_scope
 from oneflow.framework.tensor import Tensor
 from oneflow.framework.tensor import is_nonzero
@@ -316,6 +311,7 @@ from oneflow.nn.modules.pooling import (
     adaptive_avg_pool2d,
     adaptive_avg_pool3d,
 )
+from oneflow.nn.modules.einsum import einsum_op as einsum
 from oneflow.nn.modules.is_tensor import is_tensor_op as is_tensor
 from oneflow.nn.modules.arange import arange_op as arange
 from oneflow.nn.modules.linspace import linspace_op as linspace
@@ -329,6 +325,9 @@ from oneflow.nn.modules.empty import empty_op as empty
 from oneflow.nn.modules.dataset import tensor_buffer_to_list_of_tensors
 from oneflow._C import movedim
 from oneflow.nn.modules.expand import expand_op as expand
+from oneflow.nn.modules.distributed_partial_fc_sample import (
+    distributed_partial_fc_sample_op as distributed_partial_fc_sample,
+)
 from oneflow.nn.modules.roll import roll_op as roll
 from oneflow.nn.modules.flip import flip_op as flip
 from oneflow.nn.modules.logical_ops import logical_and_op as logical_and
@@ -404,6 +403,7 @@ import oneflow.comm
 import oneflow.framework.docstr as docstr
 import oneflow.cuda
 import oneflow.multiprocessing
+import oneflow.one_embedding
 
 if oneflow._oneflow_internal.flags.with_mlir():
     oneflow_internal_path = oneflow._oneflow_internal.__file__
