@@ -54,7 +54,6 @@ def _test_global_upsample2d_bilinear(test_case, placement, sbp):
     return y
 
 
-# backward compute result of oneflow is not same with pytorch
 @autotest(n=1, auto_backward=True, check_graph=False)
 def _test_global_upsample2d_bicubic(test_case, placement, sbp):
     x = random_tensor(ndim=4, dim0=8, dim1=16).to_global(placement, sbp)
