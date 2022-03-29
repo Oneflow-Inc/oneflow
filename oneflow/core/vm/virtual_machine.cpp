@@ -20,7 +20,6 @@ limitations under the License.
 #include "oneflow/core/vm/no_arg_cb_phy_instr_operand.h"
 #include "oneflow/core/vm/vm_util.h"
 #include "oneflow/core/common/blocking_counter.h"
-#include "oneflow/core/common/multi_client.h"
 #include "oneflow/core/common/cpp_attribute.h"
 #include "oneflow/core/control/global_process_ctx.h"
 #include "oneflow/core/job/global_for.h"
@@ -29,7 +28,7 @@ limitations under the License.
 #include "oneflow/core/framework/transport_token.h"
 #include "oneflow/core/profiler/profiler.h"
 #include "oneflow/core/platform/include/pthread_fork.h"
-#include "oneflow/core/common/env_var.h"
+#include "oneflow/core/common/env_var/env_var.h"
 #include "oneflow/core/framework/device.h"
 
 namespace oneflow {
@@ -55,17 +54,13 @@ Maybe<void> ForEachThreadCtx(vm::VirtualMachineEngine* vm,
 
 void GetSchedulerThreadInitializer(std::function<void()>* Initializer) {
   *Initializer = [&]() {
-    if (!CHECK_JUST(IsMultiClient())) { return; }
     CHECK_JUST(InitThisThreadUniqueConsistentId(kThreadConsistentIdScheduler, "scheduler"));
     OF_PROFILER_NAME_THIS_HOST_THREAD("_VM::Scheduler");
   };
 }
 
 void GetCallbackThreadInitializer(std::function<void()>* Initializer) {
-  *Initializer = [&]() {
-    if (!CHECK_JUST(IsMultiClient())) { return; }
-    OF_PROFILER_NAME_THIS_HOST_THREAD("_VM::Callback");
-  };
+  *Initializer = [&]() { OF_PROFILER_NAME_THIS_HOST_THREAD("_VM::Callback"); };
 }
 
 std::type_index GetStreamTypeIndex(const vm::ThreadCtx* thread_ctx) {
@@ -98,7 +93,6 @@ void GetWorkerThreadInitializer(intrusive::shared_ptr<vm::VirtualMachineEngine> 
     stream_type_index2consistent_id[stream_type_index] = thread_consistent_id++;
   }
   *Initializer = [stream_type_index2consistent_id](vm::ThreadCtx* thread_ctx) {
-    if (!CHECK_JUST(IsMultiClient())) { return; }
     const auto& stream_type_index = GetStreamTypeIndex(thread_ctx);
     const auto& iter = stream_type_index2consistent_id.find(stream_type_index);
     if (iter != stream_type_index2consistent_id.end()) {
@@ -197,7 +191,6 @@ std::string VirtualMachine::GetBlockingDebugString() {
 
 Maybe<void> VirtualMachine::Receive(vm::InstructionMsgList* instr_list) {
   if (unlikely(pthread_fork::IsForkedSubProcess())) {
-    CHECK_OR_RETURN(JUST(IsMultiClient()));
     INTRUSIVE_FOR_EACH_PTR(instr_msg, instr_list) {
       const auto& parallel_desc = instr_msg->phy_instr_parallel_desc();
       CHECK_OR_RETURN(!parallel_desc || parallel_desc->device_type() == DeviceType::kCPU)

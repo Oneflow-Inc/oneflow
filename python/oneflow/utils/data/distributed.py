@@ -81,9 +81,6 @@ class DistributedSampler(Sampler[T_co]):
         seed: int = 0,
         drop_last: bool = False,
     ) -> None:
-        if not flow.env.is_multi_client():
-            raise RuntimeError("Requires multi-client env to be available")
-
         if num_replicas is None:
             num_replicas = flow.env.get_world_size()
         if rank is None:
