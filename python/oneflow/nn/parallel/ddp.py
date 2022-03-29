@@ -18,19 +18,9 @@ import warnings
 from collections import OrderedDict
 
 import oneflow as flow
+from oneflow.support.env_var_util import parse_boolean_form_env
 from oneflow.framework.tensor_tuple_util import convert_to_tensor_tuple
 
-
-def parse_boolean_form_env(string, flag):
-    assert isinstance(string, str), "env variable must be string, but got: " + type(string)
-    assert isinstance(flag, bool), "env variable flag must be boolean, but got: " + type(flag)
-    if(flag):
-        if os.getenv(string) in ('True', 'true', '1', 1):
-            return True
-    else:
-        if os.getenv(string) in ('False', 'false', '0', 0):
-            return True
-    return False
 
 def grad_setting_fn(module, param):
     def grad_setting(grad):
@@ -80,7 +70,7 @@ def DistributedDataParallel(
     module: "flow.nn.Module", *, broadcast_buffers: bool = True, bucket_size: int = 10
 ):
     assert all(x.dtype == flow.float32 for x in module.parameters())
-    if parse_boolean_form_env("ONEFLOW_DISABLE_VIEW", True):
+    if parse_boolean_form_env("ONEFLOW_DISABLE_VIEW", False):
         warnings.warn("because the environment variable 'ONEFLOW_DISABLE_VIEW' is set to true, so the view mechanism is disabled, and we will set bucket_size = 1")
         bucket_size = 1
     world_size = flow.env.get_world_size()
