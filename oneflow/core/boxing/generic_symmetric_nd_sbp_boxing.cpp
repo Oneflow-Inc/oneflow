@@ -21,12 +21,12 @@ limitations under the License.
 #include "oneflow/core/framework/placement_sbp_util.h"
 #include "oneflow/core/framework/nd_sbp.h"
 #include "oneflow/core/operator/operator.h"
+#include "oneflow/core/framework/stride.h"
 
 namespace oneflow {
 
 namespace {
 
-using IndexVector = DimVector;
 using StrideVector = DimVector;
 
 bool RawIsAllBroadcastNdSbpAfterDim(Symbol<NdSbp> nd_sbp, int dim) {
@@ -47,17 +47,12 @@ Maybe<Symbol<SbpParallel>> GetBroadcastSbp() {
 
 auto* CachedGetBroadcastSbp = DECORATE(&GetBroadcastSbp, ThreadLocalCached);
 
-void GetStrideVector(const Shape& shape, StrideVector* strides) {
-  strides->resize(shape.NumAxes());
-  for (int i = 0; i < shape.NumAxes(); ++i) { strides->at(i) = shape.Count(i + 1); }
-}
-
-int64_t GetIndex4AxisFromOffset(int64_t offset, const StrideVector& strides, int axis) {
-  CHECK_LT(axis, strides.size());
+int64_t CalIndex4Dim(int64_t offset, const Stride& stride, int axis) {
+  CHECK_LT(axis, stride.NumAxes());
   int64_t index = -1;
   for (int i = 0; i < axis + 1; ++i) {
-    index = offset / strides.at(i);
-    offset = offset % strides.at(i);
+    index = offset / stride.At(i);
+    offset = offset % stride.At(i);
   }
   CHECK_NE(index, -1);
   return index;
@@ -71,13 +66,12 @@ Maybe<Shape> CalLogicalShape4Axis(const Shape& logical_shape, int axis,
   const auto& opt_parallel_id = JUST(GetParallelId4CurrentProcessCtx(parallel_desc));
   int64_t parallel_id = JUST(*opt_parallel_id);
   const auto& hierarchy_shape = *parallel_desc->hierarchy();
-  StrideVector hierarchy_strides{};
-  GetStrideVector(hierarchy_shape, &hierarchy_strides);
+  Stride hierarchy_stride(hierarchy_shape);
 
   FOR_RANGE(int64_t, i, 0, axis) {
     const auto& sbp_parallel = nd_sbp->sbp_parallel(i);
     if (sbp_parallel.has_split_parallel()) {
-      int64_t index = GetIndex4AxisFromOffset(parallel_id, hierarchy_strides, i);
+      int64_t index = CalIndex4Dim(parallel_id, hierarchy_stride, i);
       int64_t dim = hierarchy_shape.At(i);
       const int64_t split_axis = sbp_parallel.split_parallel().axis();
 
@@ -151,8 +145,7 @@ Maybe<one::Tensor> GenericSymmetricNdSbpBoxing(const std::shared_ptr<one::Tensor
     const auto& opt_parallel_id = JUST(GetParallelId4CurrentProcessCtx(in_parallel_desc));
     int64_t parallel_id = JUST(*opt_parallel_id);
     const auto& hierarchy_shape = *in_parallel_desc->hierarchy();
-    StrideVector hierarchy_strides{};
-    GetStrideVector(hierarchy_shape, &hierarchy_strides);
+    Stride hierarchy_stride(hierarchy_shape);
 
     const auto& logical_shape = *input->shape();
 
@@ -171,7 +164,7 @@ Maybe<one::Tensor> GenericSymmetricNdSbpBoxing(const std::shared_ptr<one::Tensor
       std::shared_ptr<one::Tensor> local_tensor = JUST(output->cur_rank_phy_tensor());
       const auto& sub_parallel_desc = JUST(CalcSubParallelDesc4Axis(in_parallel_desc, i));
 
-      int64_t index = GetIndex4AxisFromOffset(parallel_id, hierarchy_strides, i);
+      int64_t index = CalIndex4Dim(parallel_id, hierarchy_stride, i);
 
       const auto& physical_shape =
           *JUST(GetPhysicalShape(sub_logical_shape, *one_dim_nd_sbp, *sub_parallel_desc, index));
@@ -222,7 +215,7 @@ Maybe<one::Tensor> GenericSymmetricNdSbpBoxing(const std::shared_ptr<one::Tensor
 
       local_tensor = JUST(sub_global_tensor->cur_rank_phy_tensor());
 
-      int64_t index = GetIndex4AxisFromOffset(parallel_id, hierarchy_strides, i);
+      int64_t index = CalIndex4Dim(parallel_id, hierarchy_stride, i);
       const auto& physical_shape =
           *JUST(GetPhysicalShape(sub_logical_shape, *one_dim_nd_sbp, *sub_parallel_desc, index));
       CHECK_EQ_OR_RETURN(physical_shape, *local_tensor->shape());
