@@ -18,7 +18,6 @@ limitations under the License.
 
 #include <string>
 #include <google/protobuf/text_format.h>
-#include "oneflow/api/python/session/session_api.h"
 #include "oneflow/core/common/protobuf.h"
 #include "oneflow/core/control/ctrl_client.h"
 #include "oneflow/core/control/global_process_ctx.h"
