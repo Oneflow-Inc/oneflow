@@ -235,25 +235,17 @@ class TestTensor(flow.unittest.TestCase):
         x = flow.Tensor(*shape)
         test_case.assertTrue(x.is_local)
 
-        with test_case.assertRaises(
-            oneflow._oneflow_internal.exception.RuntimeException
-        ):
+        with test_case.assertRaises(RuntimeError):
             x.global_id()
 
-        with test_case.assertRaises(
-            oneflow._oneflow_internal.exception.RuntimeException
-        ):
+        with test_case.assertRaises(RuntimeError):
             x.sbp
 
-        with test_case.assertRaises(
-            oneflow._oneflow_internal.exception.RuntimeException
-        ):
+        with test_case.assertRaises(RuntimeError):
             x.placement
 
         if x.dtype != flow.tensor_buffer:
-            with test_case.assertRaises(
-                oneflow._oneflow_internal.exception.RuntimeException
-            ):
+            with test_case.assertRaises(RuntimeError):
                 x._tensor_buffer_shapes_and_dtypes
 
     @flow.unittest.skip_unless_1n1d()
