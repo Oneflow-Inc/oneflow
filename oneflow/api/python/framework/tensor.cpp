@@ -118,7 +118,7 @@ void ApiSetRequiresGrad(Tensor& tensor, bool requires_grad) {
 
 std::shared_ptr<Parameter> ApiNewParameter(const std::shared_ptr<Tensor>& data,
                                            bool requires_grad) {
-  return std::make_shared<Parameter>(data, requires_grad);
+  return Parameter::MakeTensor(data, requires_grad).GetPtrOrThrow();
 }
 
 void ApiRegisterStorageDeleteHook(const std::shared_ptr<Tensor>& tensor,
