@@ -23,27 +23,16 @@ import torch
 @flow.unittest.skip_unless_1n1d()
 class TestErrorMsg(flow.unittest.TestCase):
     def test_torch_error_msg(test_case):
-        with test_case.assertRaises(
-            flow._oneflow_internal.exception.TypeException
-        ) as exp:
+        with test_case.assertRaises(flow._oneflow_internal.exception.Exception) as exp:
             F.pad(torch.randn(2, 2))
         test_case.assertTrue("torch.Tensor" in str(exp.exception))
-
-    def test_oneflow_error_msg(test_case):
-        with test_case.assertRaises(
-            flow._oneflow_internal.exception.TypeException
-        ) as exp:
-            F.pad(F.pad)
-        test_case.assertLess(str(exp.exception).count("oneflow._oneflow_internal"), 2)
 
     def test_numpy_error_msg(test_case):
         import numpy as np
 
-        with test_case.assertRaises(
-            flow._oneflow_internal.exception.TypeException
-        ) as exp:
+        with test_case.assertRaises(flow._oneflow_internal.exception.Exception) as exp:
             F.pad(np.random.randn(2, 2))
-        test_case.assertFalse(".numpy" in str(exp.exception))
+        test_case.assertTrue("numpy" in str(exp.exception))
 
 
 if __name__ == "__main__":
