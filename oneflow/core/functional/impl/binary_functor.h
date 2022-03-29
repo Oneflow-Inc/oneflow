@@ -73,7 +73,7 @@ class BinaryGradFunctor {
     TensorProcessor tensor_processor;
     // TODO binary grad support stride and remove `x->contiguous(), y->contiguous()`
     JUST(tensor_processor.PromoteInputsToCommonDtype(true)
-             .AddInputs({x->contiguous(), y->contiguous(), dz})
+             .AddInputs({x, y, dz})
              .Apply());
     TensorTuple input_tuple = JUST(tensor_processor.GetInputs());
     return OpInterpUtil::Dispatch<Tensor>(*op_, input_tuple);
