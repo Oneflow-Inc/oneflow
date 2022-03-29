@@ -99,7 +99,7 @@ bool ParseArgs(const py::args& args, const py::kwargs& kwargs, std::vector<Pytho
           if (py::hasattr(obj.ptr(), "__module__")) {
             module_name = py::handle(obj.ptr()).attr("__module__").cast<std::string>();
           }
-          if (module_name == "oneflow._oneflow_internal") {
+          if (module_name == "oneflow._oneflow_internal" || module_name.empty()) {
             module_name = Py_TYPE(obj.ptr())->tp_name;
           } else {
             module_name = module_name + "." + Py_TYPE(obj.ptr())->tp_name;
