@@ -20,7 +20,7 @@ from collections import OrderedDict
 from oneflow.test_utils.automated_test_util import *
 from oneflow.nn.modules import min_max_observer
 from oneflow.test_utils.test_util import GenArgList
-from oneflow.test.modules.test_min_max_observer import _check_min_max_observer
+from test_min_max_observer import _check_min_max_observer
 
 
 def _run_test_min_max_observer(
