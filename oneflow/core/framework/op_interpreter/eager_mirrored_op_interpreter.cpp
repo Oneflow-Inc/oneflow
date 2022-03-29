@@ -13,8 +13,9 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
-#include "oneflow/core/common/symbol.h"
+#include "oneflow/core/common/container_util.h"
 #include "oneflow/core/common/decorator.h"
+#include "oneflow/core/common/symbol.h"
 #include "oneflow/core/framework/device.h"
 #include "oneflow/core/framework/op_interpreter.h"
 #include "oneflow/core/framework/op_interpreter/op_interpreter_util.h"
@@ -413,7 +414,8 @@ Maybe<void> EagerMirroredInterpreter::ApplyImpl(const SelectTopNOpExpr& op_expr,
                                                 const TensorTuple& inputs, TensorTuple* outputs,
                                                 const OpExprInterpContext& ctx) const {
   int top_n = JUST(ctx.attrs.GetAttr<int32_t>("top_n"));
-  outputs->assign(inputs.begin(), inputs.begin() + top_n);
+  outputs->resize(top_n);
+  for (int i = 0; i < top_n; ++i) { (*outputs)[i] = JUST(JUST(VectorAt(inputs, i))->detach()); }
   return Maybe<void>::Ok();
 }
 

@@ -25,12 +25,10 @@ namespace oneflow {
 ONEFLOW_API_PYBIND11_MODULE("exception", m) {
   m.def("GetThreadLocalLastError", &ThreadLocalError);
   py::register_exception<oneflow::Exception>(m, "Exception");
-#define REGISTER_EXCEPTION(cls) \
-  py::register_exception<oneflow::OF_PP_CAT(cls, Exception)>(m, OF_PP_STRINGIZE(cls) "Exception");
-
-  OF_PP_FOR_EACH_TUPLE(REGISTER_EXCEPTION, EXCEPTION_SEQ)
-
-#undef REGISTER_EXCEPTION
+  py::register_exception<oneflow::RuntimeException>(m, "RuntimeError", PyExc_RuntimeError);
+  py::register_exception<oneflow::IndexException>(m, "IndexError", PyExc_IndexError);
+  py::register_exception<oneflow::NotImplementedException>(m, "NotImplementedError",
+                                                           PyExc_NotImplementedError);
 }
 
 }  // namespace oneflow
