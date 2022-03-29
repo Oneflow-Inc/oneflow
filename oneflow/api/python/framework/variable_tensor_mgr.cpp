@@ -18,6 +18,7 @@ limitations under the License.
 #include <tuple>
 #include "oneflow/api/python/of_api_registry.h"
 #include "oneflow/core/common/global.h"
+#include "oneflow/core/framework/tensor.h"
 #include "oneflow/core/operator/variable_tensor_mgr.h"
 
 namespace py = pybind11;

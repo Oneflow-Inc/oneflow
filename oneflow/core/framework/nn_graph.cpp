@@ -241,7 +241,7 @@ Maybe<void> NNGraph::RegisterNewVariableOpInJobPass() {
   }));
   return Maybe<void>::Ok();
 }
-Maybe<void> NNGraph::DeleteOutdatedVariableOpInJobPass() {
+Maybe<void> NNGraph::DeleteOutdatedVariableInVariableTensorMgr() {
   std::set<std::string> variables_set;
   OpGraph op_graph(job_);
   JUST(op_graph.MaybeForEachNode([&](OpNode* op_node) -> Maybe<void> {
@@ -264,7 +264,7 @@ Maybe<void> NNGraph::CompileAndInitRuntime() {
 
   JUST(RegisterFreeEagerTensorsToVariableOpNames());
   JUST(RegisterNewVariableOpInJobPass());
-  JUST(DeleteOutdatedVariableOpInJobPass());
+  JUST(DeleteOutdatedVariableInVariableTensorMgr());
 
   // NOTE(chengcheng): TensorNameScope need to be cleared after current graph is built.
   one::TensorNameScope::Global()->Clear();

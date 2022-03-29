@@ -6,10 +6,16 @@
 #include <tuple>
 #include "oneflow/core/common/just.h"
 #include "oneflow/core/common/util.h"
-#include "oneflow/core/common/global.h"
-#include "oneflow/core/framework/tensor.h"
 
 namespace oneflow {
+
+template<typename T, typename Kind>
+class Global;
+namespace one {
+
+class Tensor;
+
+}
 
 class VariableTensorMgr final {
  public:
@@ -34,4 +40,4 @@ class VariableTensorMgr final {
 
 }  // namespace oneflow
 
-#endif // ONEFLOW_CORE_OPERATOR_VARIABLE_TENSOR_MGR_H_
+#endif  // ONEFLOW_CORE_OPERATOR_VARIABLE_TENSOR_MGR_H_

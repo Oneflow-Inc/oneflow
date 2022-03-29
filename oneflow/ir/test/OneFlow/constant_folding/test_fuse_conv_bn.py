@@ -13,6 +13,7 @@ def _test_fuse_conv_bn(test_case):
     data = flow.randn(1, 3, 224, 224)
 
     model = resnet50(pretrained=True, progress=True)
+    model.eval()
     eager_res = model(data)
 
     class Resnet50Graph(nn.Graph):

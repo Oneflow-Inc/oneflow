@@ -13,6 +13,7 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
+#include <functional>
 #include <memory>
 #include <vector>
 #include "OneFlow/OneFlowOps.h"
@@ -33,7 +34,7 @@ namespace {
 class FolderGuard final {
  public:
   explicit FolderGuard(MLIRContext* context) : context_(context) {}
-  StringAttr GenNewVariableOpName(const std::string& key = "") {
+  const StringAttr GenNewVariableOpName(const std::string& key = "") const {
     if (key == "") { return StringAttr::get(context_, "variable_" + ::oneflow::NewUniqueId()); }
     return StringAttr::get(context_, "variable_" + key + "_" + ::oneflow::NewUniqueId());
   }
@@ -42,6 +43,45 @@ class FolderGuard final {
   MLIRContext* context_ = nullptr;
   ::oneflow::LazyMode::Guard guard{false};
 };
+
+using TensorPtr = std::shared_ptr<::oneflow::one::Tensor>;
+
+OpFoldResult UnaryFold(MLIRContext* ctx, ArrayRef<Attribute> operands,
+                       const std::function<TensorPtr(const TensorPtr&)>& f) {
+  const FolderGuard g(ctx);
+  if (!operands.front()) { return {}; }  // Important!
+
+  const auto attr_dict = operands.front().cast<mlir::DictionaryAttr>();
+  auto attrs = NamedAttrList(attr_dict);
+  const auto tensor =
+      support::DenseElementsAttrToTensor(attr_dict.get("value").cast<mlir::DenseElementsAttr>());
+  const auto result = f(tensor);
+  attrs.set("value", support::TensorToDenseElementsAttr(result, mlir::FloatType::getF32(ctx)));
+  attrs.set("op_name", g.GenNewVariableOpName());
+
+  return attrs.getDictionary(ctx);
+}
+
+OpFoldResult BinaryFold(MLIRContext* ctx, ArrayRef<Attribute> operands,
+                        const std::function<TensorPtr(const TensorPtr&, const TensorPtr&)>& f) {
+  const FolderGuard g(ctx);
+  if (!(operands.front() && operands.back())) { return {}; }  // Important!
+  auto lhs_attr_dict = operands.front().cast<mlir::DictionaryAttr>();
+  auto rhs_attr_dict = operands.back().cast<mlir::DictionaryAttr>();
+
+  auto attrs = NamedAttrList(lhs_attr_dict);
+  const auto lhs_tensor = support::DenseElementsAttrToTensor(
+      lhs_attr_dict.get("value").cast<mlir::DenseElementsAttr>());
+  const auto rhs_tensor = support::DenseElementsAttrToTensor(
+      rhs_attr_dict.get("value").cast<mlir::DenseElementsAttr>());
+
+  const auto result = f(lhs_tensor, rhs_tensor);
+
+  attrs.set("value", support::TensorToDenseElementsAttr(result, mlir::FloatType::getF32(ctx)));
+  attrs.set("op_name", g.GenNewVariableOpName());
+
+  return attrs.getDictionary(ctx);
+}
 
 }  // namespace
 
@@ -58,131 +98,53 @@ OpFoldResult VariableIrOp::fold(ArrayRef<Attribute> operands) {
 }
 
 OpFoldResult ReshapeOp::fold(ArrayRef<Attribute> operands) {
-  const auto ctx = getContext();
-  FolderGuard g(ctx);
-  if (!operands.front()) { return {}; }  // Important!
-
-  const auto attr_dict = operands.front().cast<mlir::DictionaryAttr>();
-  auto attrs = NamedAttrList(attr_dict);
-  const auto tensor =
-      support::DenseElementsAttrToTensor(attr_dict.get("value").cast<mlir::DenseElementsAttr>());
-  std::vector<int64_t> shape_vec;
-  for (auto& x : shape().getValue()) {
-    shape_vec.emplace_back(x.cast<mlir::IntegerAttr>().getInt());
-  }
-  auto result =
-      ::oneflow::one::functional::Reshape(
-          tensor, ::oneflow::Shape(::oneflow::DimVector(shape_vec.begin(), shape_vec.end())))
-          .GetPtrOrThrow();
-  attrs.set("value", support::TensorToDenseElementsAttr(result, mlir::FloatType::getF32(ctx)));
-  attrs.set("op_name", g.GenNewVariableOpName());
-
-  return attrs.getDictionary(ctx);
+  return UnaryFold(getContext(), operands, [this](const auto& tensor) {
+    std::vector<int64_t> shape_vec;
+    for (auto& x : shape().getValue()) {
+      shape_vec.emplace_back(x.cast<mlir::IntegerAttr>().getInt());
+    }
+    return ::oneflow::one::functional::Reshape(
+               tensor, ::oneflow::Shape(::oneflow::DimVector(shape_vec.begin(), shape_vec.end())))
+        .GetPtrOrThrow();
+  });
 }
 
 OpFoldResult ScalarAddOp::fold(ArrayRef<Attribute> operands) {
-  const auto ctx = getContext();
-  FolderGuard g(ctx);
-  if (!operands.front()) { return {}; }  // Important!
-
-  const auto attr_dict = operands.front().cast<mlir::DictionaryAttr>();
-  auto attrs = NamedAttrList(attr_dict);
-  const auto tensor =
-      support::DenseElementsAttrToTensor(attr_dict.get("value").cast<mlir::DenseElementsAttr>());
-  std::shared_ptr<::oneflow::one::Tensor> result;
-  if (has_int_operand()) {
-    result = ::oneflow::one::functional::ScalarAdd(tensor, int_operand(), 1, false).GetPtrOrThrow();
-  }
-  if (has_float_operand()) {
-    result =
-        ::oneflow::one::functional::ScalarAdd(tensor, float_operand().convertToFloat(), 1, false)
-            .GetPtrOrThrow();
-  }
-  attrs.set("value", support::TensorToDenseElementsAttr(result, mlir::FloatType::getF32(ctx)));
-  attrs.set("op_name", g.GenNewVariableOpName());
-
-  return attrs.getDictionary(ctx);
+  return UnaryFold(getContext(), operands, [this](const auto& tensor) -> TensorPtr {
+    if (has_int_operand()) {
+      return ::oneflow::one::functional::ScalarAdd(tensor, int_operand(), 1, false).GetPtrOrThrow();
+    }
+    if (has_float_operand()) {
+      return ::oneflow::one::functional::ScalarAdd(tensor, float_operand().convertToFloat(), 1,
+                                                   false)
+          .GetPtrOrThrow();
+    }
+    return nullptr;
+  });
 }
 
 OpFoldResult SqrtOp::fold(ArrayRef<Attribute> operands) {
-  const auto ctx = getContext();
-  FolderGuard g(ctx);
-  if (!operands.front()) { return {}; }  // Important!
-
-  const auto attr_dict = operands.front().cast<mlir::DictionaryAttr>();
-  auto attrs = NamedAttrList(attr_dict);
-  const auto tensor =
-      support::DenseElementsAttrToTensor(attr_dict.get("value").cast<mlir::DenseElementsAttr>());
-  auto result = ::oneflow::one::functional::Sqrt(tensor).GetPtrOrThrow();
-  attrs.set("value", support::TensorToDenseElementsAttr(result, mlir::FloatType::getF32(ctx)));
-  attrs.set("op_name", g.GenNewVariableOpName());
-
-  return attrs.getDictionary(ctx);
+  return UnaryFold(getContext(), operands, [](const auto& tensor) -> TensorPtr {
+    return ::oneflow::one::functional::Sqrt(tensor).GetPtrOrThrow();
+  });
 }
 
 OpFoldResult MultiplyOp::fold(ArrayRef<Attribute> operands) {
-  const auto ctx = getContext();
-  FolderGuard g(ctx);
-  if (!(operands.front() && operands.back())) { return {}; }  // Important!
-  auto lhs_attr_dict = operands.front().cast<mlir::DictionaryAttr>();
-  auto rhs_attr_dict = operands.back().cast<mlir::DictionaryAttr>();
-
-  auto attrs = NamedAttrList(lhs_attr_dict);
-  auto lhs_tensor = support::DenseElementsAttrToTensor(
-      lhs_attr_dict.get("value").cast<mlir::DenseElementsAttr>());
-  auto rhs_tensor = support::DenseElementsAttrToTensor(
-      rhs_attr_dict.get("value").cast<mlir::DenseElementsAttr>());
-
-  const auto result = ::oneflow::one::functional::Mul(lhs_tensor, rhs_tensor).GetPtrOrThrow();
-
-  attrs.set("value", support::TensorToDenseElementsAttr(result, mlir::FloatType::getF32(ctx)));
-
-  attrs.set("op_name", g.GenNewVariableOpName());
-
-  return attrs.getDictionary(ctx);
+  return BinaryFold(getContext(), operands, [](const auto& lhs, const auto& rhs) -> TensorPtr {
+    return ::oneflow::one::functional::Mul(lhs, rhs).GetPtrOrThrow();
+  });
 }
 
 OpFoldResult BroadcastDivOp::fold(ArrayRef<Attribute> operands) {
-  const auto ctx = getContext();
-  FolderGuard g(ctx);
-  if (!(operands.front() && operands.back())) { return {}; }  // Important!
-  auto lhs_attr_dict = operands.front().cast<mlir::DictionaryAttr>();
-  auto rhs_attr_dict = operands.back().cast<mlir::DictionaryAttr>();
-
-  auto attrs = NamedAttrList(lhs_attr_dict);
-  auto lhs_tensor = support::DenseElementsAttrToTensor(
-      lhs_attr_dict.get("value").cast<mlir::DenseElementsAttr>());
-  auto rhs_tensor = support::DenseElementsAttrToTensor(
-      rhs_attr_dict.get("value").cast<mlir::DenseElementsAttr>());
-
-  const auto result = ::oneflow::one::functional::Div(lhs_tensor, rhs_tensor).GetPtrOrThrow();
-
-  attrs.set("value", support::TensorToDenseElementsAttr(result, mlir::FloatType::getF32(ctx)));
-
-  attrs.set("op_name", g.GenNewVariableOpName());
-  return attrs.getDictionary(ctx);
+  return BinaryFold(getContext(), operands, [](const auto& lhs, const auto& rhs) -> TensorPtr {
+    return ::oneflow::one::functional::Div(lhs, rhs).GetPtrOrThrow();
+  });
 }
 
 OpFoldResult BroadcastSubOp::fold(ArrayRef<Attribute> operands) {
-  const auto ctx = getContext();
-  FolderGuard g(ctx);
-  if (!(operands.front() && operands.back())) { return {}; }  // Important!
-  auto lhs_attr_dict = operands.front().cast<mlir::DictionaryAttr>();
-  auto rhs_attr_dict = operands.back().cast<mlir::DictionaryAttr>();
-
-  auto attrs = NamedAttrList(lhs_attr_dict);
-  auto lhs_tensor = support::DenseElementsAttrToTensor(
-      lhs_attr_dict.get("value").cast<mlir::DenseElementsAttr>());
-  auto rhs_tensor = support::DenseElementsAttrToTensor(
-      rhs_attr_dict.get("value").cast<mlir::DenseElementsAttr>());
-
-  const auto result =
-      ::oneflow::one::functional::Sub(lhs_tensor, rhs_tensor, false).GetPtrOrThrow();
-
-  attrs.set("value", support::TensorToDenseElementsAttr(result, mlir::FloatType::getF32(ctx)));
-
-  attrs.set("op_name", g.GenNewVariableOpName());
-  return attrs.getDictionary(ctx);
+  return BinaryFold(getContext(), operands, [](const auto& lhs, const auto& rhs) -> TensorPtr {
+    return ::oneflow::one::functional::Sub(lhs, rhs, false).GetPtrOrThrow();
+  });
 }
 
 }  // namespace oneflow
