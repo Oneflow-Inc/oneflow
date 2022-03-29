@@ -139,6 +139,13 @@ class TestModule(flow.unittest.TestCase):
         device = random_device()
         x = random_tensor(ndim=2, dim0=random(), dim1=random()).to(device)
         return torch.cat((x, x, x), random(0, 2).to(int))
+    
+    @autotest(n=5, check_graph=True)
+    def test_cat_with_diff_dtype(test_case):
+        device = random_device()
+        x = random_tensor(ndim=2, dim0=random(), dim1=random()).to(device)
+        y = random_tensor(ndim=2, dim0=random(), dim1=random()).to(device).int()
+        return torch.cat((x, y), random(0, 2).to(int))
 
     @autotest(n=10, auto_backward=False, check_graph=True)
     def test_concat_with_input_0_size_data(test_case):
