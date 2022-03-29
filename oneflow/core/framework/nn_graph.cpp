@@ -294,13 +294,13 @@ Maybe<void> NNGraph::CompileAndInitRuntime() {
   NewRuntimeBuffers();
 
   JUST(GetVariableRealBlobAfterSyncPlan());
-  runtime_.reset(new Runtime(plan_, variable_op_name2eager_blob_));
+  runtime_.reset(new Runtime(plan_, variable_op_name2eager_blob_object_));
   runtime_inited_ = true;
   return Maybe<void>::Ok();
 }
 
 Maybe<void> NNGraph::GetVariableRealBlobAfterSyncPlan() {
-  CHECK_OR_RETURN(variable_op_name2eager_blob_.empty());
+  CHECK_OR_RETURN(variable_op_name2eager_blob_object_.empty());
   JUST(vm::CurrentRankSync());
   JobBuildAndInferCtx* job_ctx = JUST(GetJobBuildAndInferCtx(name_));
   auto job_id = job_ctx->job_id();
@@ -396,7 +396,7 @@ Maybe<void> NNGraph::GetVariableRealBlobAfterSyncPlan() {
       var_blob = JUST(tensor->eager_blob_object()).get();
     }
     CHECK_OR_RETURN(var_blob != nullptr);
-    CHECK_OR_RETURN(variable_op_name2eager_blob_.emplace(var_name, var_blob).second);
+    CHECK_OR_RETURN(variable_op_name2eager_blob_object_.emplace(var_name, var_blob).second);
   }
   // Clear after load additional variable is finished.
   additional_variable_op_tobe_loaded_name2tensor_.clear();

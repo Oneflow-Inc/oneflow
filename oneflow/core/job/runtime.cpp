@@ -58,10 +58,10 @@ bool HasNonCtrlConsumedRegstDescId(const TaskProto& task) {
 
 }  // namespace
 
-Runtime::Runtime(const Plan& plan, const HashMap<std::string, vm::EagerBlobObject*>& variable_op_name2eager_blob) {
+Runtime::Runtime(const Plan& plan, const HashMap<std::string, vm::EagerBlobObject*>& variable_op_name2eager_blob_object) {
   {
     // NOTE(chengcheng): All runtime Global objects AddPlan
-    Global<RegstMgr>::Get()->AddPlan(plan, variable_op_name2eager_blob);
+    Global<RegstMgr>::Get()->AddPlan(plan, variable_op_name2eager_blob_object);
     Global<ThreadMgr>::Get()->AddPlan(plan);
     Global<RuntimeJobDescs>::Get()->AddPlan(plan);
     collective_boxing_scheduler_plan_token_ =

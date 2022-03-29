@@ -101,7 +101,7 @@ MaybeGetTensorBufferShapesAndDTypes(const std::shared_ptr<Tensor>& t) {
   JUST(btb->WaitUntilCntEqualZero(VirtualMachine::GetPredicatorNoMoreInstructionsFinished()));
 
   const auto& eager_blob_object = JUST(tensor->eager_blob_object());
-  const ShapeView& blob_shape = eager_blob_object->shape();
+  const Shape& blob_shape = eager_blob_object->shape();
   const auto* tensor_buffer_ptr = eager_blob_object->dptr<TensorBuffer>();
   for (int64_t i = 0; i < blob_shape.elem_cnt(); ++i) {
     const TensorBuffer* tensor_buffer = tensor_buffer_ptr + i;

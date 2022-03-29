@@ -81,7 +81,7 @@ void InputCriticalSectionBeginPhyInstrOperand::AccessBlobByOpName(uint64_t of_bl
   {
     size_t header_size = of_blob->mut_blob()->blob_desc().ByteSizeOfBlobHeader();
     CHECK_EQ(header_size, eager_blob_object->shape().NumAxes() * sizeof(int64_t));
-    std::memcpy(of_blob->mut_blob()->mut_header_ptr(), eager_blob_object->shape().dim_vec().data(),
+    std::memcpy(of_blob->mut_blob()->mut_header_ptr(), eager_blob_object->mut_header_ptr(),
                 header_size);
   }
   const auto& end_event_record = op_name2end_event_record_->at(op_name);

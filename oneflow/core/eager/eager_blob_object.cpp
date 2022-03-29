@@ -41,8 +41,7 @@ EagerBlobObject::EagerBlobObject(const std::shared_ptr<MemoryCase>& mem_case,
 
 Blob* EagerBlobObject::blob() {
   if (!blob_) {
-    blob_.reset(new Blob(*mem_case_, &blob_desc_,
-                         reinterpret_cast<char*>(mut_shape().dim_vec().data()), mut_dptr<char>()));
+    blob_.reset(new Blob(*mem_case_, &blob_desc_, mut_header_ptr(), mut_dptr<char>()));
   }
   return blob_.get();
 }

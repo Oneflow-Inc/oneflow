@@ -83,7 +83,6 @@ Maybe<Tensor> BasicView(const std::shared_ptr<Tensor>& input, const Shape& targe
       JUST(view_tensor->eager_blob_object());
   view_eager_blob_object->set_storage_offset(JUST(view_tensor->storage_offset()));
   view_eager_blob_object->set_is_shape_synced(true);
-  view_eager_blob_object->set_last_used_stream(JUST(input_eager_blob_object->last_used_stream()));
   return std::static_pointer_cast<Tensor>(view_tensor);
 }
 

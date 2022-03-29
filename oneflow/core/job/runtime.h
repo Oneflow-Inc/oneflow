@@ -33,9 +33,9 @@ class Runtime final {
   Runtime() = delete;
   ~Runtime();
 
-  // TODO(chengcheng): refactor Runtime interface about variable_op_name2eager_blob
+  // TODO(chengcheng): refactor Runtime interface about variable_op_name2eager_blob_object
   Runtime(const Plan& plan,
-          const HashMap<std::string, vm::EagerBlobObject*>& variable_op_name2eager_blob);
+          const HashMap<std::string, vm::EagerBlobObject*>& variable_op_name2eager_blob_object);
 
  private:
   HashMap<int64_t, int64_t> job_id2actor_size_;

@@ -159,6 +159,9 @@ class EagerBlobObject final {
     return const_cast<T*>(dptr<T>());
   }
 
+  const char* header_ptr() const { return reinterpret_cast<const char*>(shape_->dim_vec().data()); }
+  char* mut_header_ptr() { return reinterpret_cast<char*>(shape_->dim_vec().data()); }
+
   DataType data_type() const { return data_type_; }
   DataType* mut_data_type() { return &data_type_; }
   const MemoryCase& mem_case() const { return *mem_case_; }
