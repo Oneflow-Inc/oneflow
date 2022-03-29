@@ -13,12 +13,22 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
-#ifndef ONEFLOW_CORE_COMMON_ENV_VAR_H_
-#define ONEFLOW_CORE_COMMON_ENV_VAR_H_
+#ifndef ONEFLOW_CORE_COMMON_ENV_VAR_ENV_VAR_H_
+#define ONEFLOW_CORE_COMMON_ENV_VAR_ENV_VAR_H_
 
 #include "oneflow/core/common/util.h"
 
 namespace oneflow {
+
+template<typename env_var>
+bool EnvBool();
+
+#define DEFINE_ENV_BOOL(env_var, default_value)                          \
+  struct env_var {};                                                     \
+  template<>                                                             \
+  inline bool EnvBool<env_var>() {                                       \
+    return ParseBooleanFromEnv(OF_PP_STRINGIZE(env_var), default_value); \
+  }
 
 template<typename env_var>
 int64_t EnvInteger();
@@ -51,4 +61,4 @@ DEFINE_THREAD_LOCAL_ENV_INTEGER(ONEFLOW_THRAED_LOCAL_CACHED_SIZE, 128 * 1024);
 
 }  // namespace oneflow
 
-#endif  // ONEFLOW_CORE_COMMON_ENV_VAR_H_
+#endif  // ONEFLOW_CORE_COMMON_ENV_VAR_ENV_VAR_H_
