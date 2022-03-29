@@ -81,13 +81,9 @@ class Shape final {
 
   Maybe<Shape> Slice(int64_t start_dim, int64_t end_dim) const;
 
-  ShapeView ToShapeView() const {
-    return ShapeView(dim_vec_.data(), dim_vec_.size());
-  }
+  ShapeView ToShapeView() const { return ShapeView(dim_vec_.data(), dim_vec_.size()); }
 
-  MutShapeView ToMutShapeView() {
-    return MutShapeView(dim_vec_.data(), dim_vec_.size());
-  }
+  MutShapeView ToMutShapeView() { return MutShapeView(dim_vec_.data(), dim_vec_.size()); }
 
  private:
   DimVector dim_vec_;

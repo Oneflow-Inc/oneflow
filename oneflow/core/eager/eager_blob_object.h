@@ -141,12 +141,14 @@ class EagerBlobObject final {
   const Shape& shape() const { return *shape_; }
   Shape& mut_shape() { return *shape_; }
 
-  size_t ByteSizeOfBlobBody() const {
-    return shape_->elem_cnt() * GetSizeOfDataType(data_type_);
+  size_t ByteSizeOfBlobBody() const { return shape_->elem_cnt() * GetSizeOfDataType(data_type_); }
+  size_t AlignedByteSizeOfBlobBody() const {
+    return RoundUp(ByteSizeOfBlobBody(), kBlobBodyAlignSize);
   }
-  size_t AlignedByteSizeOfBlobBody() const { return RoundUp(ByteSizeOfBlobBody(), kBlobBodyAlignSize); }
   size_t ByteSizeOfBlobHeader() const { return shape().NumAxes() * sizeof(int64_t); }
-  size_t AlignedByteSizeOfBlobHeader() const { return RoundUp(ByteSizeOfBlobHeader(), kBlobHeaderAlignSize); }
+  size_t AlignedByteSizeOfBlobHeader() const {
+    return RoundUp(ByteSizeOfBlobHeader(), kBlobHeaderAlignSize);
+  }
 
   template<typename T = void>
   const T* dptr() const {

@@ -411,15 +411,14 @@ class UserKernelInferContext final : public user_op::KernelInferContext {
     CHECK(it != arg2tensor_.end()) << "Arg (" << arg_name << "," << arg_index << ") is not found";
     return it->second.get();
   }
-  ShapeView ShapeView4ArgNameAndIndex(const std::string& arg_name,
-                                             int32_t arg_index) override {
+  ShapeView ShapeView4ArgNameAndIndex(const std::string& arg_name, int32_t arg_index) override {
     user_op::Tensor* arg_tensor = Tensor4ArgNameAndIndex(arg_name, arg_index);
     CHECK(arg_tensor != nullptr) << "Tensor of arg (" << arg_name << "," << arg_index
                                  << ") is not found";
     return arg_tensor->shape();
   }
   MutShapeView MutShapeView4ArgNameAndIndex(const std::string& arg_name,
-                                             int32_t arg_index) override {
+                                            int32_t arg_index) override {
     user_op::Tensor* arg_tensor = Tensor4ArgNameAndIndex(arg_name, arg_index);
     CHECK(arg_tensor != nullptr) << "Tensor of arg (" << arg_name << "," << arg_index
                                  << ") is not found";

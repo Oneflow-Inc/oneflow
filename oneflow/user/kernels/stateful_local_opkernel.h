@@ -60,9 +60,7 @@ class EagerBlobObjectTensorView final : public user_op::Tensor {
 
   DataType data_type() const override { return mut_eager_blob_object_()->data_type(); }
 
-  const MemoryCase& mem_case() const override {
-    return mut_eager_blob_object_()->mem_case();
-  }
+  const MemoryCase& mem_case() const override { return mut_eager_blob_object_()->mem_case(); }
 
   const void* raw_dptr() const override { return mut_eager_blob_object_()->dptr(); }
 
@@ -83,19 +81,13 @@ class EagerBlobObjectTensorDescView final : public user_op::TensorDesc {
 
   DataType data_type() const override { return mut_eager_blob_object_()->data_type(); }
 
-  DataType* mut_data_type() override {
-    return mut_eager_blob_object_()->mut_data_type();
-  }
+  DataType* mut_data_type() override { return mut_eager_blob_object_()->mut_data_type(); }
 
   bool is_dynamic() const override { return mut_eager_blob_object_()->is_dynamic(); }
 
-  bool* mut_is_dynamic() override {
-    return mut_eager_blob_object_()->mut_is_dynamic();
-  }
+  bool* mut_is_dynamic() override { return mut_eager_blob_object_()->mut_is_dynamic(); }
 
-  void set_is_dynamic(bool val) override {
-    mut_eager_blob_object_()->set_is_dynamic(val);
-  }
+  void set_is_dynamic(bool val) override { mut_eager_blob_object_()->set_is_dynamic(val); }
 
  private:
   const std::function<vm::EagerBlobObject*()> mut_eager_blob_object_;
