@@ -162,7 +162,7 @@ class TensorBufferToListOfTensors final : public user_op::OpKernel {
       CHECK_EQ(out_dtype, tensor_buffer->data_type());
       if (dynamic_out) {
         CHECK_LE(tensor_buffer->shape().elem_cnt(), out_i->shape().elem_cnt());
-        out_i->mut_shape()->set_shape(tensor_buffer->shape());
+        out_i->mut_shape().set_shape(tensor_buffer->shape());
       } else {
         CHECK_EQ(tensor_buffer->shape().elem_cnt(), out_i->shape().elem_cnt());
       }
@@ -198,7 +198,7 @@ class TensorBufferToListOfTensorsV2 final : public user_op::OpKernel {
       CHECK_EQ(out_dtypes[i], tensor_buffer->data_type());
       if (dynamic_out) {
         CHECK_LE(tensor_buffer->shape().elem_cnt(), out_i->shape().elem_cnt());
-        out_i->mut_shape()->set_shape(tensor_buffer->shape());
+        out_i->mut_shape().set_shape(tensor_buffer->shape());
       } else {
         CHECK_EQ(tensor_buffer->shape().elem_cnt(), out_i->shape().elem_cnt());
       }

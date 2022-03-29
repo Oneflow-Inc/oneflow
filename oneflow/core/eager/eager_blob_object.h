@@ -137,16 +137,16 @@ class EagerBlobObject final {
     tensor_storage_->set_last_used_stream(last_used_stream);
   }
 
-  const std::shared_ptr<const Shape>& shape_ptr() const { return shape_; }
+  std::shared_ptr<const Shape> shape_ptr() const { return shape_; }
   const Shape& shape() const { return *shape_; }
-  Shape& mut_shape() { return const_cast<Shape&>(shape()); }
-  const ShapeView* shape_view() const { return &shape_view_; }
-  MutShapeView* mut_shape_view() { return &mut_shape_view_; }
+  Shape& mut_shape() { return *shape_; }
 
   size_t ByteSizeOfBlobBody() const {
-    return shape_view_.elem_cnt() * GetSizeOfDataType(data_type_);
+    return shape_->elem_cnt() * GetSizeOfDataType(data_type_);
   }
+  size_t AlignedByteSizeOfBlobBody() const { return RoundUp(ByteSizeOfBlobBody(), kBlobBodyAlignSize); }
   size_t ByteSizeOfBlobHeader() const { return shape().NumAxes() * sizeof(int64_t); }
+  size_t AlignedByteSizeOfBlobHeader() const { return RoundUp(ByteSizeOfBlobHeader(), kBlobHeaderAlignSize); }
 
   template<typename T = void>
   const T* dptr() const {
@@ -171,9 +171,7 @@ class EagerBlobObject final {
   bool is_dynamic_;
   std::shared_ptr<MemoryCase> mem_case_;
   DataType data_type_;
-  ShapeView shape_view_;
-  MutShapeView mut_shape_view_;
-  std::shared_ptr<const Shape> shape_;
+  std::shared_ptr<Shape> shape_;
 
   int64_t storage_offset_;
   std::shared_ptr<TensorStorage> tensor_storage_;

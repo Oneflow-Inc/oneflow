@@ -66,28 +66,28 @@ void COCOParser::Parse(BatchType& batch_data, user_op::KernelComputeContext* ctx
   // dynamic batch size
   if (image_tensor->shape().elem_cnt() != batch_data.size()) {
     CHECK_EQ(image_tensor->shape().NumAxes(), 1);
-    image_tensor->mut_shape()->Set(0, batch_data.size());
+    image_tensor->mut_shape().Set(0, batch_data.size());
   }
   if (image_id_tensor && image_id_tensor->shape().At(0) != batch_data.size()) {
-    image_id_tensor->mut_shape()->Set(0, batch_data.size());
+    image_id_tensor->mut_shape().Set(0, batch_data.size());
   }
   if (image_size_tensor && image_size_tensor->shape().At(0) != batch_data.size()) {
-    image_size_tensor->mut_shape()->Set(0, batch_data.size());
+    image_size_tensor->mut_shape().Set(0, batch_data.size());
   }
   if (bbox_tensor && bbox_tensor->shape().elem_cnt() != batch_data.size()) {
     CHECK_EQ(bbox_tensor->shape().NumAxes(), 1);
-    bbox_tensor->mut_shape()->Set(0, batch_data.size());
+    bbox_tensor->mut_shape().Set(0, batch_data.size());
   }
   if (label_tensor && label_tensor->shape().elem_cnt() != batch_data.size()) {
     CHECK_EQ(label_tensor->shape().NumAxes(), 1);
-    label_tensor->mut_shape()->Set(0, batch_data.size());
+    label_tensor->mut_shape().Set(0, batch_data.size());
   }
   if (segm_tensor && segm_index_tensor && segm_tensor->shape().elem_cnt() != batch_data.size()) {
     CHECK_EQ(segm_tensor->shape().NumAxes(), 1);
     CHECK_EQ(segm_index_tensor->shape().NumAxes(), 1);
     CHECK_EQ(segm_tensor->shape().elem_cnt(), segm_index_tensor->shape().elem_cnt());
-    segm_tensor->mut_shape()->Set(0, batch_data.size());
-    segm_index_tensor->mut_shape()->Set(0, batch_data.size());
+    segm_tensor->mut_shape().Set(0, batch_data.size());
+    segm_index_tensor->mut_shape().Set(0, batch_data.size());
   }
 }
 

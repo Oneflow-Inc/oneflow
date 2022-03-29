@@ -50,7 +50,7 @@ class ConcatKernel final : public user_op::OpKernel {
         }
       }
     }
-    ctx->MutShapeView4ArgNameAndIndex("out", 0)->set_shape(Shape(dim_vec));
+    ctx->MutShapeView4ArgNameAndIndex("out", 0).set_shape(Shape(dim_vec));
   }
 
   void Compute(user_op::KernelComputeContext* ctx) const override {

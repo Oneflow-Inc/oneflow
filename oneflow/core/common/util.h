@@ -187,8 +187,6 @@ const int32_t kBlobHeaderAlignSize = 64;
 inline size_t RoundUp(size_t n, size_t val) { return (n + val - 1) / val * val; }
 
 inline size_t GetCudaAlignedSize(size_t size) { return RoundUp(size, kCudaAlignSize); }
-inline size_t GetBlobBodyAlignedSize(size_t size) { return RoundUp(size, kBlobBodyAlignSize); }
-inline size_t GetBlobHeaderAlignedSize(size_t size) { return RoundUp(size, kBlobHeaderAlignSize); }
 
 size_t GetAvailableCpuMemSize();
 

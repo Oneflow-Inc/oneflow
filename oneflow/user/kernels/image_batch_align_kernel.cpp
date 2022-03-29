@@ -78,10 +78,10 @@ class ImageBatchAlignKernel final : public user_op::OpKernel {
     max_width = RoundUp(max_width, alignment);
 
     if (dynamic_out) {
-      auto* mut_shape_view = out_tensor->mut_shape();
-      mut_shape_view->Set(0, num_images);
-      mut_shape_view->Set(1, max_height);
-      mut_shape_view->Set(2, max_width);
+      auto mut_shape_view = out_tensor->mut_shape();
+      mut_shape_view.Set(0, num_images);
+      mut_shape_view.Set(1, max_height);
+      mut_shape_view.Set(2, max_width);
     }
 
     memset(out_tensor->mut_dptr(), 0,

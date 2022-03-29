@@ -263,7 +263,7 @@ class TestDynamicSourceKernel final : public user_op::OpKernel {
  private:
   void Compute(user_op::KernelComputeContext* ctx) const override {
     user_op::Tensor* out_blob = ctx->Tensor4ArgNameAndIndex("out", 0);
-    out_blob->mut_shape()->Set(0, 3);
+    out_blob->mut_shape().Set(0, 3);
     for (int i = 0; i < 3; ++i) { *(out_blob->mut_dptr<float>() + i) = static_cast<float>(i); }
   }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }

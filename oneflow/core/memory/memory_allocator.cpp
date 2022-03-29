@@ -122,13 +122,13 @@ void InitNonPODTypeBlobIfNeed(MemoryAllocator* allocator, Blob* blob_ptr) {
 void InitNonPODTypeEagerBlobObjectIfNeed(MemoryAllocator* allocator,
                                          vm::EagerBlobObject* eager_blob_object_ptr) {
   if (eager_blob_object_ptr->data_type() == kOFRecord) {
-    int64_t elem_cnt = eager_blob_object_ptr->shape_view()->elem_cnt();
+    int64_t elem_cnt = eager_blob_object_ptr->shape().elem_cnt();
     FOR_RANGE(int64_t, idx, 0, elem_cnt) {
       allocator->PlacementNew(&eager_blob_object_ptr->mut_dptr<OFRecord>()[idx]);
     }
   }
   if (eager_blob_object_ptr->data_type() == kTensorBuffer) {
-    int64_t elem_cnt = eager_blob_object_ptr->shape_view()->elem_cnt();
+    int64_t elem_cnt = eager_blob_object_ptr->shape().elem_cnt();
     FOR_RANGE(int64_t, idx, 0, elem_cnt) {
       allocator->PlacementNew(&eager_blob_object_ptr->mut_dptr<TensorBuffer>()[idx]);
     }

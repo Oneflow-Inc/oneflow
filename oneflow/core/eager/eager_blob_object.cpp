@@ -29,8 +29,6 @@ EagerBlobObject::EagerBlobObject(const std::shared_ptr<MemoryCase>& mem_case,
     : is_dynamic_(false),
       mem_case_(mem_case),
       data_type_(data_type),
-      shape_view_(*shape),
-      mut_shape_view_(const_cast<int64_t*>(shape->dim_vec().data()), shape->dim_vec().size()),
       shape_(shape),
       storage_offset_(0),
       tensor_storage_(tensor_storage),
@@ -43,8 +41,8 @@ EagerBlobObject::EagerBlobObject(const std::shared_ptr<MemoryCase>& mem_case,
 
 Blob* EagerBlobObject::blob() {
   if (!blob_) {
-    blob_.reset(new Blob(
-      *mem_case_, &blob_desc_, reinterpret_cast<char*>(mut_shape_view_.mut_ptr()), mut_dptr<char>()));
+    blob_.reset(new Blob(*mem_case_, &blob_desc_,
+                         reinterpret_cast<char*>(mut_shape().dim_vec().data()), mut_dptr<char>()));
   }
   return blob_.get();
 }
@@ -54,7 +52,7 @@ void EagerBlobObject::set_storage_offset(const int64_t offset) { storage_offset_
 Maybe<void> EagerBlobObject::TryAllocateBlobBodyMemory(DeviceCtx* device_ctx) {
   vm::Allocator* allocator = device_ctx->mut_allocator();
   CHECK_NOTNULL_OR_RETURN(allocator);
-  size_t required_body_bytes = GetBlobBodyAlignedSize(ByteSizeOfBlobBody());
+  size_t required_body_bytes = AlignedByteSizeOfBlobBody();
   if (required_body_bytes == 0) {
     CHECK_ISNULL_OR_RETURN(tensor_storage_->blob_dptr());
     return Maybe<void>::Ok();

@@ -81,15 +81,15 @@ void RegstMgr::AddPlan(
       CHECK(var_blob) << " variable op name: " << var_name << " in rank: " << this_machine_id
                       << " CANNNOT NULL.";
       if (mem_block.is_separated_header()) {
-        CHECK_GE(GetBlobHeaderAlignedSize(var_blob->ByteSizeOfBlobHeader()), mem_block.mem_size());
+        CHECK_GE(var_blob->AlignedByteSizeOfBlobHeader(), mem_block.mem_size());
         CHECK_GE(mem_block.mem_size(), var_blob->ByteSizeOfBlobHeader());
         CHECK(mem_block_id2ptr_
                   .emplace(mem_block_id,
-                           reinterpret_cast<char*>(var_blob->mut_shape_view()->mut_ptr()))
+                           reinterpret_cast<char*>(var_blob->mut_shape().dim_vec().data()))
                   .second);
         CHECK(mem_block.mem_case().has_host_mem());
       } else {
-        CHECK_GE(GetBlobBodyAlignedSize(var_blob->ByteSizeOfBlobBody()), mem_block.mem_size());
+        CHECK_GE(var_blob->AlignedByteSizeOfBlobBody(), mem_block.mem_size());
         CHECK_GE(mem_block.mem_size(), var_blob->ByteSizeOfBlobBody());
         CHECK(mem_block_id2ptr_.emplace(mem_block_id, var_blob->mut_dptr<char>()).second);
         // NOTE(chengcheng):
