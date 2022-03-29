@@ -26,17 +26,17 @@ class TestCallWhenShuttingDown:
         tensor = oneflow.ones((2, 2))
         print(tensor)
 
-    def __del__(self):
+    def __del__(self, of=oneflow):
         if world_size == 1:
-            tensor = self.oneflow.ones((2, 2))
+            tensor = of.ones((2, 2))
 
 
 test_call_when_shutting_down = TestCallWhenShuttingDown()
 
 
 class TestSyncWhenShuttingDown:
-    def __del__(self):
-        oneflow._oneflow_internal.eager.Sync()
+    def __del__(self, of=oneflow):
+        of._oneflow_internal.eager.Sync()
 
 
 test_sync_when_shutting_down = TestSyncWhenShuttingDown()
