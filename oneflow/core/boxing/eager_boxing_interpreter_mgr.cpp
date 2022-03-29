@@ -39,14 +39,12 @@ Maybe<BoxingExprIf> OptionalCudaCopy(const std::shared_ptr<BoxingExprIf>& core_b
 }
 
 Maybe<BoxingExprIf> SymmetricOneDimSxToBBoxingExpr() {
-  return JUST(BoxingExpr(JUST(InPlacementAndSplit(0)),
-                         JUST(OptionalBoxing("ccl-s-to-s")),
+  return JUST(BoxingExpr(JUST(InPlacementAndSplit(0)), JUST(OptionalBoxing("ccl-s-to-s")),
                          JUST(BoxingExpr("ccl-s-to-b"))));
 }
 
 Maybe<BoxingExprIf> SymmetricOneDimPToSxBoxingExpr() {
-  return JUST(BoxingExpr(JUST(OutPlacementAndSplit(0)),
-                         JUST(BoxingExpr("ccl-p-to-s")),
+  return JUST(BoxingExpr(JUST(OutPlacementAndSplit(0)), JUST(BoxingExpr("ccl-p-to-s")),
                          JUST(OptionalBoxing("ccl-s-to-s"))));
 }
 
@@ -77,8 +75,7 @@ Maybe<BoxingExprIf> SymmetricNDimToOneDimBoxingExpr() {
 
 Maybe<BoxingExprIf> NToOneBoxingExpr() {
   return JUST(BoxingExpr(JUST(InPlacementAndBroadcast()),
-                         JUST(BoxingExpr("ccl-p-to-b"))
-                             | JUST(SymmetricOneDimSxToBBoxingExpr())
+                         JUST(BoxingExpr("ccl-p-to-b")) | JUST(SymmetricOneDimSxToBBoxingExpr())
                              | JUST(SymmetricNDimToNDimBoxingExpr()) | JUST(BoxingExpr("identity")),
                          JUST(BoxingExpr("naive-b-to-1"))));
 }
@@ -93,7 +90,7 @@ Maybe<BoxingExprIf> OneToNBoxingExpr() {
 Maybe<BoxingExprIf> SymmetricOneDimXToBBoxingExpr() {
   return JUST(BoxingExpr("ccl-p-to-b"))
          | JUST(BoxingExpr(JUST(InPlacementAndSplit(0)),
-                           JUST(BoxingExpr("identity")) |JUST(BoxingExpr("ccl-s-to-s")),
+                           JUST(BoxingExpr("identity")) | JUST(BoxingExpr("ccl-s-to-s")),
                            JUST(BoxingExpr("ccl-s-to-b"))));
 }
 
