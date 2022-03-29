@@ -22,7 +22,7 @@ from oneflow.test_utils.automated_test_util import *
 import numpy as np
 
 
-@autotest(n=1, auto_backward=True, check_graph=False)
+@autotest(n=1, auto_backward=True, check_graph=True)
 def _test_global_unfold_tensor_with_random_data(test_case, placement, sbp):
     ndim = 4
     dim = random(0, ndim).to(int).value()
