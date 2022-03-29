@@ -13,20 +13,25 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 """
-import traceback
 
-import oneflow._oneflow_internal
+import unittest
 
-
-def write_int8_calibration(path):
-    try:
-        oneflow._oneflow_internal.WriteInt8Calibration(path)
-    except oneflow._oneflow_internal.exception.Exception:
-        traceback.print_exc()
+import oneflow as flow
+import oneflow.unittest
 
 
-def cache_int8_calibration():
-    try:
-        oneflow._oneflow_internal.CacheInt8Calibration()
-    except oneflow._oneflow_internal.exception.Exception:
-        traceback.print_exc()
+@flow.unittest.skip_unless_1n1d()
+class TestModule(flow.unittest.TestCase):
+    def test_exception_only_one_dim_infered(test_case):
+        # torch exception and messge:
+        #
+        #   RuntimeError: only one dimension can be inferred
+        #
+        x = flow.tensor((2, 2))
+        with test_case.assertRaises(RuntimeError) as ctx:
+            y = x.reshape((-1, -1))
+        test_case.assertEqual("only one dimension can be inferred", str(ctx.exception))
+
+
+if __name__ == "__main__":
+    unittest.main()
