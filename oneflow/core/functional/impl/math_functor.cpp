@@ -14,6 +14,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
+#include "oneflow/core/common/container_util.h"
 #include "oneflow/core/common/scalar.h"
 #include "oneflow/core/framework/attr_map.h"
 #include "oneflow/core/framework/nd_sbp.h"
@@ -1525,15 +1526,11 @@ class SelectTopNFunctor {
     MutableAttrMap attr;
     JUST(attr.SetAttr<int32_t>("top_n", n));
     std::vector<bool> require_grad(n);
-    std::vector<bool> is_leaf(n);
-    for (int i = 0; i < n; ++i) {
-      is_leaf.at(i) = (inputs.at(i)->is_leaf());
-      require_grad.at(i) = (inputs.at(i)->requires_grad());
-    }
+    for (int i = 0; i < n; ++i) { require_grad[i] = JUST(VectorAt(inputs, i))->requires_grad(); }
     const auto& output = JUST(OpInterpUtil::Dispatch<one::TensorTuple>(*op_, inputs, attr));
-    for (int i = 0; i < n; ++i) {
-      inputs.at(i)->set_is_leaf(is_leaf.at(i));
-      JUST(inputs.at(i)->set_requires_grad(require_grad.at(i)));
+    for (int i = 0; i < output->size(); ++i) {
+      (*output)[i]->set_is_leaf(false);
+      JUST((*output)[i]->set_requires_grad(require_grad[i]));
     }
     return output;
   }
