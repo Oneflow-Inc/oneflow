@@ -19,6 +19,7 @@ limitations under the License.
 #include <cstdint>
 #include "oneflow/core/vm/allocator.h"
 #include "oneflow/core/common/util.h"
+#include "oneflow/core/ep/include/allocation_options.h"
 
 namespace oneflow {
 
@@ -32,7 +33,9 @@ namespace vm {
 
 class EpBackendHostAllocator final : public Allocator {
  public:
-  explicit EpBackendHostAllocator(const std::shared_ptr<ep::Device>& ep_device, const AllocationOptions& allocation_options) : ep_device_(ep_device), allocation_options_(allocation_options) {}
+  explicit EpBackendHostAllocator(const std::shared_ptr<ep::Device>& ep_device,
+                                  const ep::AllocationOptions& allocation_options)
+      : ep_device_(ep_device), allocation_options_(allocation_options) {}
   ~EpBackendHostAllocator() override = default;
 
   void Allocate(char** mem_ptr, std::size_t size) override;
@@ -40,7 +43,7 @@ class EpBackendHostAllocator final : public Allocator {
 
  private:
   std::shared_ptr<ep::Device> ep_device_;
-  AllocationOptions allocation_options_;
+  ep::AllocationOptions allocation_options_;
 };
 
 }  // namespace vm

@@ -13,22 +13,15 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
-#include "oneflow/core/vm/ep_backend_host_allocator.h"
-#include "oneflow/core/device/cuda_util.h"
-#include "oneflow/core/ep/include/device.h"
+#ifndef ONEFLOW_CORE_ENV_VAR_EP_BASED_CUDA_H_
+#define ONEFLOW_CORE_ENV_VAR_EP_BASED_CUDA_H_
+
+#include "oneflow/core/common/env_var/env_var.h"
 
 namespace oneflow {
 
-namespace vm {
+DEFINE_THREAD_LOCAL_ENV_BOOL(ONEFLOW_EP_BASED_CUDA, true);
 
-void EpBackendHostAllocator::Allocate(char** mem_ptr, std::size_t size) {
-  CHECK_JUST(ep_device_->AllocPinned(allocation_options_, reinterpret_cast<void**>(mem_ptr), size));
 }
 
-void EpBackendHostAllocator::Deallocate(char* mem_ptr, std::size_t size) {
-  ep_device_->FreePinned(allocation_options_, mem_ptr);
-}
-
-}  // namespace vm
-
-}  // namespace oneflow
+#endif  // ONEFLOW_CORE_ENV_VAR_EP_BASED_CUDA_H_

@@ -49,7 +49,7 @@ class EpDeviceCtx : public DeviceCtx {
         ep_event_provier_(),
         ep_stream_(nullptr),
         ep_allocator_(new ThreadSafeAllocator(std::make_unique<BinAllocator>(
-            ep::kMaxAlignmentRequirement, backend_allocator))) {}
+            ep::kMaxAlignmentRequirement, std::move(backend_allocator)))) {}
 
   ep::Stream* stream() override { return GetOrCreateEpStream(); }
 
@@ -57,8 +57,7 @@ class EpDeviceCtx : public DeviceCtx {
 
   DeviceType device_type() const override { return device_->enum_type(); }
 
-
-  EpEventProvider* ep_event_provier() const { 
+  EpEventProvider* ep_event_provider() {
     if (unlikely(ep_event_provier_ == nullptr)) {
       ep_event_provier_.reset(new SingleThreadEpEventProvider(GetOrCreateEpDevice()));
     }
@@ -67,14 +66,14 @@ class EpDeviceCtx : public DeviceCtx {
 
   ep::Device* GetOrCreateEpDevice() const {
     if (unlikely(ep_device_ == nullptr)) {
-      ep_device_ = Global<ep::DeviceManagerRegistry>::Get()->GetDevice(
-                    device_->enum_type(), device_->device_id());
+      ep_device_ = Global<ep::DeviceManagerRegistry>::Get()->GetDevice(device_->enum_type(),
+                                                                       device_->device_id());
       CHECK(ep_device_);
     }
     return ep_device_.get();
   }
- private:
 
+ private:
   ep::Stream* GetOrCreateEpStream() const {
     if (unlikely(ep_stream_ == nullptr)) {
       ep_stream_ = dynamic_cast<ep::CudaStream*>(GetOrCreateEpDevice()->CreateStream());

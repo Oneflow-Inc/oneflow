@@ -31,9 +31,7 @@ class EpOptionalEventRecordStatusQuerier {
  public:
   ~EpOptionalEventRecordStatusQuerier();
 
-  bool done() const {
-    return launched_ && (ep_event_ == nullptr || ep_event_->Query());
-  }
+  bool done() const { return launched_ && (ep_event_ == nullptr || ep_event_->Query()); }
 
   void SetLaunched(EpDeviceCtx* device_ctx);
 

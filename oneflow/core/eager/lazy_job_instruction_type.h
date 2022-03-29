@@ -92,6 +92,7 @@ class LaunchLazyJobInstructionType final : public InstructionType {  // NOLINT
       buffer_mgr->Get(GetSourceTickBufferName(job_name))->Push(job_instance);
       OF_PROFILER_RANGE_POP();  // BufferMgr
     }
+    (void)run_id;  // disable compiler warning.
     OF_PROFILER_RANGE_PUSH("EnqueueNNGraph");
     device_ctx->EnqueueNNGraph(cur_nn_graph);
     OF_PROFILER_RANGE_POP();  // EnqueueNNGraph

@@ -25,6 +25,8 @@ limitations under the License.
 #include "oneflow/core/vm/stream.h"
 #include "oneflow/core/device/cuda_event.h"
 #include "oneflow/core/vm/ep_event.h"
+#include "oneflow/core/vm/ep_device_context.h"
+#include "oneflow/core/common/env_var/ep_based_cuda.h"
 
 namespace oneflow {
 namespace vm {
@@ -105,7 +107,7 @@ class EpRecordEventInstructionType final : public vm::InstructionType {
     auto* status_buffer = instruction->mut_status_buffer();
     auto* stream = instruction->mut_stream();
     instruction->stream_type().InitInstructionStatus(*stream, status_buffer);
-    auto* ep_device_ctx = static_cast<EpDeviceCtx*>(stream.device_ctx().get());
+    auto* ep_device_ctx = static_cast<EpDeviceCtx*>(stream->device_ctx().get());
     auto* ep_event_provider = ep_device_ctx->ep_event_provider();
     const auto& ep_event = CHECK_NOTNULL(ep_event_provider)->GetReusedEpEvent();
     auto* data_ptr = status_buffer->mut_buffer()->mut_data();
@@ -161,11 +163,15 @@ struct GetRecordEventInstructionType {
     if (device_type == DeviceType::kCPU) {
       return SingletonPtr<vm::CpuRecordEventInstructionType>();
     } else if (device_type == DeviceType::kCUDA) {
+      if (ThreadLocalEnvBool<ONEFLOW_EP_BASED_CUDA>()) {
+        return SingletonPtr<vm::EpRecordEventInstructionType>();
+      } else {
 #ifdef WITH_CUDA
-      return SingletonPtr<vm::CudaRecordEventInstructionType>();
+        return SingletonPtr<vm::CudaRecordEventInstructionType>();
 #else
-      UNIMPLEMENTED_THEN_RETURN();
+        UNIMPLEMENTED_THEN_RETURN();
 #endif
+      }
     } else {
       return SingletonPtr<vm::EpRecordEventInstructionType>();
     }

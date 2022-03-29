@@ -41,27 +41,27 @@ class EpEvent final {
   ep::Event* event_;
 };
 
-
 class EpEventProvider {
  public:
   EpEventProvider(const EpEventProvider&) = delete;
   EpEventProvider(EpEventProvider&&) = delete;
+  virtual ~EpEventProvider() = default;
 
   virtual std::shared_ptr<EpEvent> GetReusedEpEvent() = 0;
 
+ protected:
+  EpEventProvider() = default;
 };
 
-class SingleThreadEpEventProvider final : EpEventProvider {
+class SingleThreadEpEventProvider final : public EpEventProvider {
  public:
-  SingleThreadReusedEpEventPool(const SingleThreadReusedEpEventPool&) = delete;
-  SingleThreadReusedEpEventPool(SingleThreadReusedEpEventPool&&) = delete;
-  explicit SingleThreadReusedEpEventPool(ep::Device* device)
-      : events_(new SingleThreadPoolType()), device_(device) {}
-  ~SingleThreadReusedEpEventPool() = default;
+  SingleThreadEpEventProvider(const SingleThreadEpEventProvider&) = delete;
+  SingleThreadEpEventProvider(SingleThreadEpEventProvider&&) = delete;
+  explicit SingleThreadEpEventProvider(ep::Device* device)
+      : EpEventProvider(), events_(new SingleThreadPoolType()), device_(device) {}
+  ~SingleThreadEpEventProvider() = default;
 
-  std::shared_ptr<EpEvent> GetReusedEpEvent() override {
-    return events_->make_shared(device_);
-  }
+  std::shared_ptr<EpEvent> GetReusedEpEvent() override { return events_->make_shared(device_); }
 
  private:
   using SingleThreadPoolType =

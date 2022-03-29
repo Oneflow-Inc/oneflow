@@ -24,6 +24,7 @@ limitations under the License.
 #include "oneflow/core/vm/ep_backend_allocator.h"
 #include "oneflow/core/common/util.h"
 #include "oneflow/core/profiler/profiler.h"
+#include "oneflow/core/ep/include/device_manager_registry.h"
 
 namespace oneflow {
 namespace vm {
@@ -31,8 +32,9 @@ namespace vm {
 void EpStreamType::InitDeviceCtx(std::unique_ptr<DeviceCtx>* device_ctx, Stream* stream) const {
   DeviceType device_type = stream->device()->enum_type();
   size_t device_index = stream->device()->device_id();
-  auto ep_device = Global<DeviceManagerRegistry>::Get()->GetDevice(device_type,  device_index);
-  auto ep_backend_allocator = std::make_unique<EpBackendAllocator>(ep_device, {});
+  auto ep_device = Global<ep::DeviceManagerRegistry>::Get()->GetDevice(device_type, device_index);
+  auto ep_backend_allocator =
+      std::make_unique<EpBackendAllocator>(ep_device, ep::AllocationOptions{});
   device_ctx->reset(new EpDeviceCtx(stream->device(), std::move(ep_backend_allocator)));
 }
 
@@ -44,14 +46,13 @@ void EpStreamType::InitInstructionStatus(const Stream& stream,
 }
 
 void EpStreamType::DeleteInstructionStatus(const Stream& stream,
-                                             InstructionStatusBuffer* status_buffer) const {
-  auto* ptr =
-      EpOptionalEventRecordStatusQuerier::MutCast(status_buffer->mut_buffer()->mut_data());
+                                           InstructionStatusBuffer* status_buffer) const {
+  auto* ptr = EpOptionalEventRecordStatusQuerier::MutCast(status_buffer->mut_buffer()->mut_data());
   ptr->~EpOptionalEventRecordStatusQuerier();
 }
 
-bool EpStreamType::QueryInstructionStatusDone(
-    const Stream& stream, const InstructionStatusBuffer& status_buffer) const {
+bool EpStreamType::QueryInstructionStatusDone(const Stream& stream,
+                                              const InstructionStatusBuffer& status_buffer) const {
   return EpOptionalEventRecordStatusQuerier::Cast(status_buffer.buffer().data())->done();
 }
 
