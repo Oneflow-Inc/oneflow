@@ -16,11 +16,15 @@ limitations under the License.
 #include <pybind11/pybind11.h>
 #include <string>
 #include "oneflow/api/python/of_api_registry.h"
-#include "oneflow/api/python/calibration/calibration_api.h"
+#include "oneflow/api/python/calibration/calibration.h"
 
 namespace py = pybind11;
+
+namespace oneflow {
 
 ONEFLOW_API_PYBIND11_MODULE("", m) {
   m.def("CacheInt8Calibration", &CacheInt8Calibration);
   m.def("WriteInt8Calibration", &WriteInt8Calibration);
 }
+
+}  // namespace oneflow
