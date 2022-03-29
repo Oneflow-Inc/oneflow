@@ -147,26 +147,26 @@ bool NdSbpNoPartialParallel(const NdSbp& nd_sbp) {
 // NOTE: We need to make sure no partial sums in the sbps of the producer and consumer.
 void DfsTraverseRanks4NdSbp(
     int32_t depth, std::vector<int64_t>& in_parallel_ids,
-    const std::vector<int64_t>& out_parallel_ids, const Shape& parallel_hierarchy,
-    const NdIndexOffsetHelper<int64_t, SHAPE_MAX_AXIS_SIZE>& hierarchy_index_helper,
+    const std::vector<int64_t>& out_parallel_ids, const Shape& in_parallel_hierarchy,
+    const NdIndexOffsetHelper<int64_t, SHAPE_MAX_AXIS_SIZE>& in_hierarchy_index_helper,
     const NdSbp& in_nd_sbp, const std::function<void(int32_t)>& visit) {
-  if (depth >= parallel_hierarchy.NumAxes()) {
-    visit(hierarchy_index_helper.NdIndexToOffset(in_parallel_ids.data(),
-                                                 parallel_hierarchy.NumAxes()));
+  if (depth >= in_parallel_hierarchy.NumAxes()) {
+    visit(in_hierarchy_index_helper.NdIndexToOffset(in_parallel_ids.data(),
+                                                    in_parallel_hierarchy.NumAxes()));
     return;
   }
   if (in_nd_sbp.sbp_parallel(depth).has_broadcast_parallel()) {
     // If Broadcast in the sbp of the producer, only visit those ranks with the same id as the
     // current rank along the depth-dimension.
     in_parallel_ids[depth] = out_parallel_ids[depth];
-    DfsTraverseRanks4NdSbp(depth + 1, in_parallel_ids, out_parallel_ids, parallel_hierarchy,
-                           hierarchy_index_helper, in_nd_sbp, visit);
+    DfsTraverseRanks4NdSbp(depth + 1, in_parallel_ids, out_parallel_ids, in_parallel_hierarchy,
+                           in_hierarchy_index_helper, in_nd_sbp, visit);
   } else {
     // If Split or PartialSum, go through all the ranks along the depth-dimension.
-    for (int64_t i = 0; i < parallel_hierarchy.dim_vec().at(depth); i++) {
+    for (int64_t i = 0; i < in_parallel_hierarchy.dim_vec().at(depth); i++) {
       in_parallel_ids[depth] = i;
-      DfsTraverseRanks4NdSbp(depth + 1, in_parallel_ids, out_parallel_ids, parallel_hierarchy,
-                             hierarchy_index_helper, in_nd_sbp, visit);
+      DfsTraverseRanks4NdSbp(depth + 1, in_parallel_ids, out_parallel_ids, in_parallel_hierarchy,
+                             in_hierarchy_index_helper, in_nd_sbp, visit);
     }
   }
 }
@@ -414,62 +414,74 @@ class NDSliceBoxingSubTskGphBuilder final : public HierarchicalSubTskGphBuilder 
       node->Init(lbi, slice, mode, machine_id, thrd_id);
       return node;
     };
-    if (*in_parallel_desc.hierarchy() == *out_parallel_desc.hierarchy()) {
-      if (NdSbpNoPartialParallel(out_nd_sbp)
-          && (NdSbpNoPartialParallel(in_nd_sbp) || NdsbpAllSplitParallel(out_nd_sbp))) {
-        // pass
-      } else {
-        return Error::BoxingNotSupportedError();
-      }
-
-      bool producer_has_partial = !NdSbpNoPartialParallel(in_nd_sbp);
-
-      const std::vector<TensorSliceView> in_slices =
-          GetTensorSliceView(*in_parallel_desc.hierarchy(), in_nd_sbp, logical_blob_desc.shape());
-      const std::vector<TensorSliceView> out_slices =
-          GetTensorSliceView(*out_parallel_desc.hierarchy(), out_nd_sbp, logical_blob_desc.shape());
-      const int64_t out_parallel_num = out_parallel_desc.parallel_num();
-
-      const auto& parallel_hierarchy = in_parallel_desc.hierarchy();
-      int32_t hierarchy_dimension = parallel_hierarchy->NumAxes();
-      const NdIndexOffsetHelper<int64_t, SHAPE_MAX_AXIS_SIZE> hierarchy_index_helper(
-          parallel_hierarchy->dim_vec().data(), hierarchy_dimension);
-      std::vector<int64_t> in_parallel_ids(hierarchy_dimension);
-      std::vector<int64_t> out_parallel_ids(hierarchy_dimension);
-
-      FOR_RANGE(int64_t, out_id, 0, out_parallel_num) {
-        const TensorSliceView& out_slice = out_slices.at(out_id);
-        SliceBoxingTaskNode* out_node = nullptr;
-        if (producer_has_partial) {
-          out_node =
-              CreateSliceBoxingNode(out_parallel_desc, out_id, out_slice, kSliceBoxingTaskModeAdd);
-        } else {
-          out_node =
-              CreateSliceBoxingNode(out_parallel_desc, out_id, out_slice, kSliceBoxingTaskModeCopy);
-        }
-
-        const auto& visit = [&](int64_t in_id) {
-          const TensorSliceView& in_slice = in_slices.at(in_id);
-          const TensorSliceView& intersection = out_slice.Intersect(in_slice);
-          if (intersection.IsEmpty()) { return; }
-          TaskNode* in_node = sorted_in_tasks.at(in_id);
-          SliceBoxingTaskNode* in_copy_node = CreateSliceBoxingNode(
-              in_parallel_desc, in_id, intersection, kSliceBoxingTaskModeCopy);
-          in_copy_node->ConnectToSrcNodeWithSlice(in_node, NewEdge(), in_slice);
-          TaskNode* proxy_node =
-              ctx->task_graph()->GetProxyNode(in_copy_node, lbi, out_parallel_desc, out_id);
-          out_node->ConnectToSrcNodeWithSlice(proxy_node, NewEdge(), intersection);
-        };
-        hierarchy_index_helper.OffsetToNdIndex(out_id, out_parallel_ids.data(),
-                                               hierarchy_dimension);
-        DfsTraverseRanks4NdSbp(0, in_parallel_ids, out_parallel_ids, *parallel_hierarchy,
-                               hierarchy_index_helper, in_nd_sbp, visit);
-        sorted_out_tasks->push_back(out_node);
-      }
-      return BuildSubTskGphBuilderStatus("NDSliceBoxingAddSubTskGphBuilder", "One step transfer");
+    if (NdSbpNoPartialParallel(out_nd_sbp)
+        && (NdSbpNoPartialParallel(in_nd_sbp) || NdsbpAllSplitParallel(out_nd_sbp))) {
+      // pass
     } else {
       return Error::BoxingNotSupportedError();
     }
+
+    bool producer_has_partial = !NdSbpNoPartialParallel(in_nd_sbp);
+
+    const std::vector<TensorSliceView> in_slices =
+        GetTensorSliceView(*in_parallel_desc.hierarchy(), in_nd_sbp, logical_blob_desc.shape());
+    const std::vector<TensorSliceView> out_slices =
+        GetTensorSliceView(*out_parallel_desc.hierarchy(), out_nd_sbp, logical_blob_desc.shape());
+    const int64_t in_parallel_num = in_parallel_desc.parallel_num();
+    const int64_t out_parallel_num = out_parallel_desc.parallel_num();
+
+    const auto& in_parallel_hierarchy = in_parallel_desc.hierarchy();
+    int32_t in_hierarchy_dimension = in_parallel_hierarchy->NumAxes();
+    const NdIndexOffsetHelper<int64_t, SHAPE_MAX_AXIS_SIZE> in_hierarchy_index_helper(
+        in_parallel_hierarchy->dim_vec().data(), in_hierarchy_dimension);
+    std::vector<int64_t> in_parallel_ids(in_hierarchy_dimension);
+    // The corresponding parallel id of a consumer rank in the producer parallel description
+    std::vector<int64_t> out_parallel_ids(in_hierarchy_dimension);
+
+    FOR_RANGE(int64_t, out_id, 0, out_parallel_num) {
+      const TensorSliceView& out_slice = out_slices.at(out_id);
+      SliceBoxingTaskNode* out_node = nullptr;
+      if (producer_has_partial) {
+        out_node =
+            CreateSliceBoxingNode(out_parallel_desc, out_id, out_slice, kSliceBoxingTaskModeAdd);
+      } else {
+        out_node =
+            CreateSliceBoxingNode(out_parallel_desc, out_id, out_slice, kSliceBoxingTaskModeCopy);
+      }
+      const auto& visit = [&](int64_t in_id) {
+        const TensorSliceView& in_slice = in_slices.at(in_id);
+        const TensorSliceView& intersection = out_slice.Intersect(in_slice);
+        if (intersection.IsEmpty()) { return; }
+        TaskNode* in_node = sorted_in_tasks.at(in_id);
+        SliceBoxingTaskNode* in_copy_node =
+            CreateSliceBoxingNode(in_parallel_desc, in_id, intersection, kSliceBoxingTaskModeCopy);
+        in_copy_node->ConnectToSrcNodeWithSlice(in_node, NewEdge(), in_slice);
+        TaskNode* proxy_node =
+            ctx->task_graph()->GetProxyNode(in_copy_node, lbi, out_parallel_desc, out_id);
+        out_node->ConnectToSrcNodeWithSlice(proxy_node, NewEdge(), intersection);
+      };
+      // Set up out_parallel_ids
+      int64_t out_device_id = JUST(out_parallel_desc.DeviceId4ParallelId(out_id));
+      int64_t out_machine_id = JUST(out_parallel_desc.MachineId4ParallelId(out_id));
+      int64_t corresponding_in_id = 0;
+      // For example [[0, 1], [2, 3]] -> [[1, 3], [5, 6]]
+      if (in_parallel_desc.Containing(out_machine_id, out_device_id)) {
+        // 1 and 3 are in [[0, 1], [2, 3]], use the same id in the producer parallel description
+        // The id of 1 is (0, 1), the id of 3 is (1, 1)
+        corresponding_in_id =
+            JUST(in_parallel_desc.ParallelId4MachineDeviceId(out_machine_id, out_device_id));
+      } else {
+        // 5 and 7 are not in [[0, 1], [2, 3]]
+        // Then the id does not matter
+        corresponding_in_id = out_id % in_parallel_num;
+      }
+      in_hierarchy_index_helper.OffsetToNdIndex(corresponding_in_id, out_parallel_ids.data(),
+                                                in_hierarchy_dimension);
+      DfsTraverseRanks4NdSbp(0, in_parallel_ids, out_parallel_ids, *in_parallel_hierarchy,
+                             in_hierarchy_index_helper, in_nd_sbp, visit);
+      sorted_out_tasks->push_back(out_node);
+    }
+    return BuildSubTskGphBuilderStatus("NDSliceBoxingAddSubTskGphBuilder", "One step transfer");
   }
 };
 
@@ -669,7 +681,7 @@ Maybe<SubTskGphBuilderStatus> DispatchHierarchicalSubTskGphBuilder::Build(
                          &reduced_out_nd_sbp);
   const auto& in_hierarchy = reduced_in_parallel_desc.hierarchy();
   const auto& out_hierarchy = reduced_out_parallel_desc.hierarchy();
-  if (in_hierarchy->NumAxes() > 2 && *in_hierarchy == *out_hierarchy) {
+  if (in_hierarchy->NumAxes() > 2 || out_hierarchy->NumAxes() > 2) {
     return impl_->nd_slice_boxing_sub_tsk_gph_builder_->Build(
         ctx, sorted_in_tasks, sorted_out_tasks, sorted_ctrl_tasks, in_parallel_desc,
         out_parallel_desc, lbi, logical_blob_desc, in_nd_sbp, out_nd_sbp, time_shape);
