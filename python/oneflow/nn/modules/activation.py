@@ -634,11 +634,7 @@ class Softplus(Module):
         self.threshold = threshold
 
     def forward(self, x):
-        return flow.where(
-            x * self.beta > self.threshold,
-            x,
-            1 / self.beta * flow.log(1.0 + flow.exp(self.beta * x)),
-        )
+        return flow._C.softplus(x, beta=self.beta, threshold=self.threshold)
 
     def extra_repr(self):
         return f"beta={self.beta}, threshold={self.threshold}"
