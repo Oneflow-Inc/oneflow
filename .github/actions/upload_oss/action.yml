@@ -32,6 +32,7 @@ runs:
         else
             upload_core_arg+="--exclude core*"
         fi
+        set -x
         $HOME/ossutil64 cp --update ${dir_arg} ${upload_core_arg} ${{ inputs.src_path }} ${{ inputs.oss_dst_path }}
       shell: bash
       env:
