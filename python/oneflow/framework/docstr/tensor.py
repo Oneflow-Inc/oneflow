@@ -112,6 +112,13 @@ add_docstr(
 )
 
 add_docstr(
+    oneflow.Tensor.is_lazy,
+    r"""
+    Return whether this Tensor is a lazy tensor.
+    """,
+)
+
+add_docstr(
     oneflow.Tensor.atan2,
     r"""
     See :func:`oneflow.atan2`
@@ -572,6 +579,127 @@ add_docstr(
         retain_graph (bool, optional): If False, the graph used to compute the grads will be freed. Note that in nearly all cases setting this option to True is not needed and often can be worked around in a much more efficient way. Defaults to the value of create_graph.
 
         create_graph (bool, optional): If True, graph of the derivative will be constructed, allowing to compute higher order derivative products. Defaults to False.
+    """,
+)
+
+add_docstr(
+    oneflow.Tensor.grad,
+    r"""
+    Return the gradient calculated by autograd functions. This property is None by default.
+    """,
+)
+
+add_docstr(
+    oneflow.Tensor.grad_fn,
+    r"""
+    Return the function that created this tensor if it's ``requires_grad`` is True.
+    """,
+)
+
+add_docstr(
+    oneflow.Tensor.is_leaf,
+    r"""
+    Compatible with PyTorch.
+
+    All Tensors that have ``requires_grad`` which is ``False`` will be leaf Tensors by convention.
+
+    For Tensor that have ``requires_grad`` which is ``True``, they will be leaf Tensors if they
+    were created by source operations.
+
+    Only leaf Tensors will have their ``grad`` populated during a call to ``backward()``. To get
+    ``grad`` populated for non-leaf Tensors, you can use ``retain_grad()``.
+
+    For example:
+
+    .. code-block:: python
+
+        >>> import oneflow as flow
+        >>> a = flow.rand(10, requires_grad=False)
+        >>> a.is_leaf
+        True
+        >>> a = flow.rand(10, requires_grad=True)
+        >>> a.is_leaf
+        True
+        >>> b = a.cuda()
+        >>> b.is_leaf
+        False
+        >>> c = a + 2
+        >>> c.is_leaf
+        False
+    """,
+)
+
+add_docstr(
+    oneflow.Tensor.requires_grad,
+    r"""
+    Compatible with PyTorch.
+
+    Is ``True`` if gradient need to be computed for this Tensor, ``False`` otherwise.
+    """,
+)
+
+add_docstr(
+    oneflow.Tensor.requires_grad_,
+    r"""oneflow.Tensor.requires_grad_(requires_grad=True) -> Tensor
+    Compatible with PyTorch.
+
+    Args:
+        requires_grad (bool): Change the requires_grad flag for this Tensor. Default is ``True``.
+
+    For example:
+
+    .. code-block:: python
+
+        >>> import oneflow as flow
+        >>> a = flow.rand(10, requires_grad=False)
+        >>> a.requires_grad
+        False
+        >>> a = a.requires_grad_(requires_grad=True)
+        >>> a.requires_grad
+        True
+    """,
+)
+
+add_docstr(
+    oneflow.Tensor.register_hook,
+    r"""oneflow.Tensor.register_hook(hook)
+
+    Registers a backward hook.
+
+    The hook will be called every time a gradient with respect to the Tensor is computed.
+    The hook should have the following signature:
+
+    .. code-block:: 
+
+        hook(grad) -> Tensor or None
+
+
+    The hook should not modify its argument, but it can optionally return a new gradient which
+    will be used in place of ``grad``.
+
+    For example:
+
+    .. code-block:: python
+
+        >>> import oneflow as flow
+        >>> x = flow.ones(5, requires_grad=True)
+        >>> def hook(grad):
+        ...     return grad * 2
+        >>> x.register_hook(hook)
+        >>> y = x * 2
+        >>> y.sum().backward()
+        >>> x.grad
+        tensor([4., 4., 4., 4., 4.], dtype=oneflow.float32)
+    """,
+)
+
+add_docstr(
+    oneflow.Tensor.retain_grad,
+    r"""
+    Compatible with PyTorch.
+
+    Enables this Tensor to have their ``grad`` populated during ``backward()``. This is a no-op
+    for leaf tensors.
     """,
 )
 
