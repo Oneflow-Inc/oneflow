@@ -47,15 +47,13 @@ Maybe<Symbol<SbpParallel>> GetBroadcastSbp() {
 
 auto* CachedGetBroadcastSbp = DECORATE(&GetBroadcastSbp, ThreadLocalCached);
 
-int64_t CalIndex4Dim(int64_t offset, const Stride& stride, int axis) {
-  CHECK_LT(axis, stride.NumAxes());
-  int64_t index = -1;
-  for (int i = 0; i < axis + 1; ++i) {
-    index = offset / stride.At(i);
-    offset = offset % stride.At(i);
+int64_t CalIndex4Dim(int64_t offset, const Stride& stride, int dim) {
+  CHECK_LT(dim, stride.NumAxes());
+  if (dim == 0) {
+    return offset / stride.At(0);
+  } else {
+    return offset % stride.At(dim - 1) / stride.At(dim);
   }
-  CHECK_NE(index, -1);
-  return index;
 }
 
 Maybe<Shape> CalLogicalShape4Axis(const Shape& logical_shape, int axis,
@@ -76,7 +74,10 @@ Maybe<Shape> CalLogicalShape4Axis(const Shape& logical_shape, int axis,
       const int64_t split_axis = sbp_parallel.split_parallel().axis();
 
       if (sub_logical_shape->At(split_axis) > 0) {
-        CHECK_GE_OR_RETURN(sub_logical_shape->At(split_axis), dim);
+        CHECK_GE_OR_RETURN(sub_logical_shape->At(split_axis), dim)
+            << Error::RuntimeError() << "The size of tensor (" << sub_logical_shape->At(split_axis)
+            << ") be greater than or equal to parallle num (" << dim
+            << ") at non-singleton dimension " << i;
         const BalancedSplitter bs(sub_logical_shape->At(split_axis), dim);
         sub_logical_shape->Set(split_axis, bs.At(index).size());
       }
@@ -132,7 +133,10 @@ Maybe<one::Tensor> GenericSymmetricNdSbpBoxing(const std::shared_ptr<one::Tensor
   const auto& in_parallel_desc = in->placement();
   const auto& out_nd_sbp = out->nd_sbp();
   const auto& out_parallel_desc = out->placement();
-  CHECK_OR_RETURN(in_parallel_desc == out_parallel_desc);
+  CHECK_OR_RETURN(in_parallel_desc == out_parallel_desc)
+      << Error::RuntimeError() << "The placement of tensor a ("
+      << *JUST(PlacementToString(in_parallel_desc)) << ") must be the same as tensor b ("
+      << *JUST(PlacementToString(out_parallel_desc)) << ")";
   std::shared_ptr<one::Tensor> output;
 
   const auto& out_parallel_id = JUST(GetParallelId4CurrentProcessCtx(out_parallel_desc));
