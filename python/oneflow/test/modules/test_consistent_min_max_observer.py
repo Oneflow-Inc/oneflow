@@ -27,7 +27,6 @@ def _run_test_min_max_observer(
     test_case,
     placement,
     sbp,
-    device_type,
     weight_shape,
     quantization_bit,
     quantization_scheme,
@@ -63,7 +62,6 @@ class TestMinMaxObserver(flow.unittest.TestCase):
     @globaltest
     def test_min_max_observer(test_case):
         arg_dict = OrderedDict()
-        arg_dict["device_type"] = ["cpu", "cuda"]
         arg_dict["weight_shape"] = [(9, 48, 24, 10)]
         arg_dict["quantization_bit"] = [8, 2]
         arg_dict["quantization_scheme"] = ["symmetric", "affine"]
