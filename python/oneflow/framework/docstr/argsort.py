@@ -20,11 +20,11 @@ add_docstr(
     oneflow.argsort,
     """
     argsort() -> Tensor
-    This operator sorts sthe input Tensor at specified dim and return the indices of the sorted Tensor.
+    This operator sorts the input Tensor at specified dim and returns the indices of the sorted Tensor.
 
     Args:
-        input (oneflow.Tensor): The input Tensor.
-        dim (int, optional): dimension to be sorted. Defaults to the last dim (-1).
+        input (oneflow.Tensor): the input Tensor.
+        dim (int, optional): the dimension to be sorted. Defaults to the last dim (-1).
         descending (bool, optional): controls the sorting order (ascending or descending).
 
     Returns:
