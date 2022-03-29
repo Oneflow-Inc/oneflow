@@ -134,7 +134,7 @@ Maybe<Shape> InferShape(const std::shared_ptr<one::Tensor>& x, const Shape& shap
       return Error::RuntimeError() << "Invalid shape dimension " << shape.At(i);
     } else if (shape.At(i) == -1) {
       CHECK_EQ_OR_RETURN(need_infer_axis, -1)
-          << "Shape " << shape.ToString() << " has more than 1 axis that needs to be infered.";
+          << Error::RuntimeError() << "only one dimension can be inferred";
       need_infer_axis = i;
     } else {
       count *= shape.At(i);
