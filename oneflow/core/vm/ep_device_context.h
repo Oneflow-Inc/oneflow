@@ -65,7 +65,6 @@ class EpDeviceCtx : public DeviceCtx {
     return ep_event_provier_.get();
   }
 
- private:
   ep::Device* GetOrCreateEpDevice() const {
     if (unlikely(ep_device_ == nullptr)) {
       ep_device_ = Global<ep::DeviceManagerRegistry>::Get()->GetDevice(
@@ -74,6 +73,7 @@ class EpDeviceCtx : public DeviceCtx {
     }
     return ep_device_.get();
   }
+ private:
 
   ep::Stream* GetOrCreateEpStream() const {
     if (unlikely(ep_stream_ == nullptr)) {

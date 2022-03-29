@@ -21,8 +21,10 @@ limitations under the License.
 #include "oneflow/core/common/stream_role.h"
 #include "oneflow/core/common/singleton_ptr.h"
 #include "oneflow/core/vm/cuda_optional_event_record_status_querier.h"
+#include "oneflow/core/vm/ep_optional_event_record_status_querier.h"
 #include "oneflow/core/vm/stream.h"
 #include "oneflow/core/device/cuda_event.h"
+#include "oneflow/core/vm/ep_event.h"
 
 namespace oneflow {
 namespace vm {
@@ -92,6 +94,28 @@ class CudaRecordEventInstructionType final : public vm::InstructionType {
 
 #endif
 
+class EpRecordEventInstructionType final : public vm::InstructionType {
+ public:
+  EpRecordEventInstructionType() = default;
+  ~EpRecordEventInstructionType() override = default;
+
+  InstructionFuseType fuse_type() const override { return kEnableInstructionFuseAsTailOnly; }
+
+  void InitInstructionStatus(Instruction* instruction) const override {
+    auto* status_buffer = instruction->mut_status_buffer();
+    auto* stream = instruction->mut_stream();
+    instruction->stream_type().InitInstructionStatus(*stream, status_buffer);
+    auto* ep_device_ctx = static_cast<EpDeviceCtx*>(stream.device_ctx().get());
+    auto* ep_event_provider = ep_device_ctx->ep_event_provider();
+    const auto& ep_event = CHECK_NOTNULL(ep_event_provider)->GetReusedEpEvent();
+    auto* data_ptr = status_buffer->mut_buffer()->mut_data();
+    EpOptionalEventRecordStatusQuerier::MutCast(data_ptr)->reset_ep_event(ep_event);
+  }
+  std::string DebugName(const vm::InstructionMsg& instr_msg) const override {
+    return "RecordEvent";
+  }
+  void Compute(vm::Instruction* instruction) const override {}
+};
 }  // namespace vm
 
 struct GetRecordEventInstructionType {
@@ -143,7 +167,7 @@ struct GetRecordEventInstructionType {
       UNIMPLEMENTED_THEN_RETURN();
 #endif
     } else {
-      UNIMPLEMENTED_THEN_RETURN();
+      return SingletonPtr<vm::EpRecordEventInstructionType>();
     }
   }
 };

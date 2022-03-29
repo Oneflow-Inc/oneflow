@@ -19,12 +19,15 @@ limitations under the License.
 #include "oneflow/core/common/stream_role.h"
 #include "oneflow/core/common/singleton_ptr.h"
 #include "oneflow/core/vm/async_cuda_stream_type.h"
+#include "oneflow/core/vm/ep_cuda_stream_type.h"
 #include "oneflow/core/vm/control_stream_type.h"
 #include "oneflow/core/vm/cpu_stream_type.h"
 #include "oneflow/core/vm/critical_section_stream_type.h"
+#include "oneflow/core/vm/ep_d2h_stream_type.h"
 #include "oneflow/core/vm/cuda_copy_d2h_stream_type.h"
 #include "oneflow/core/vm/cuda_copy_h2d_stream_type.h"
 #include "oneflow/core/vm/cuda_stream_type.h"
+#include "oneflow/core/vm/ep_stream_type.h"
 #include "oneflow/core/vm/lazy_job_stream_type.h"
 #include "oneflow/core/vm/stream_get_stream_type.h"
 
@@ -42,7 +45,7 @@ struct GetStreamType {
     } else if (device_type == DeviceType::kCUDA) {
       return SingletonPtr<vm::CudaStreamType>();
     } else {
-      UNIMPLEMENTED_THEN_RETURN();
+      return SingletonPtr<vm::EpStreamType>();
     }
   }
   static Maybe<const vm::StreamType*> Case(StreamRoleCase<StreamRole::kHost2Device>,
@@ -50,7 +53,7 @@ struct GetStreamType {
     if (device_type == DeviceType::kCUDA) {
       return SingletonPtr<vm::CudaCopyH2DStreamType>();
     } else {
-      UNIMPLEMENTED_THEN_RETURN();
+      return SingletonPtr<vm::EpStreamType>();
     }
   }
   static Maybe<const vm::StreamType*> Case(StreamRoleCase<StreamRole::kDevice2Host>,
@@ -58,7 +61,7 @@ struct GetStreamType {
     if (device_type == DeviceType::kCUDA) {
       return SingletonPtr<vm::CudaCopyD2HStreamType>();
     } else {
-      UNIMPLEMENTED_THEN_RETURN();
+      return SingletonPtr<vm::EpD2HStreamType>();
     }
   }
   static Maybe<const vm::StreamType*> Case(StreamRoleCase<StreamRole::kSyncedLaunchedCommNet>,
@@ -68,7 +71,7 @@ struct GetStreamType {
     } else if (device_type == DeviceType::kCUDA) {
       return SingletonPtr<vm::CudaStreamType>();
     } else {
-      UNIMPLEMENTED_THEN_RETURN();
+      return SingletonPtr<vm::EpStreamType>();
     }
   }
   static Maybe<const vm::StreamType*> Case(StreamRoleCase<StreamRole::kAsyncedLaunchedCommNet>,
@@ -78,7 +81,7 @@ struct GetStreamType {
     } else if (device_type == DeviceType::kCUDA) {
       return SingletonPtr<vm::AsyncCudaStreamType>();
     } else {
-      UNIMPLEMENTED_THEN_RETURN();
+      return SingletonPtr<vm::AsyncEpStreamType>();
     }
   }
   static Maybe<const vm::StreamType*> Case(StreamRoleCase<StreamRole::kBarrier>,
