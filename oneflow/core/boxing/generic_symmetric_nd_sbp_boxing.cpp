@@ -133,10 +133,6 @@ Maybe<one::Tensor> GenericSymmetricNdSbpBoxing(const std::shared_ptr<one::Tensor
   const auto& in_parallel_desc = in->placement();
   const auto& out_nd_sbp = out->nd_sbp();
   const auto& out_parallel_desc = out->placement();
-  CHECK_OR_RETURN(in_parallel_desc == out_parallel_desc)
-      << Error::RuntimeError() << "The placement of tensor a ("
-      << *JUST(PlacementToString(in_parallel_desc)) << ") must be the same as tensor b ("
-      << *JUST(PlacementToString(out_parallel_desc)) << ")";
   std::shared_ptr<one::Tensor> output;
 
   const auto& out_parallel_id = JUST(GetParallelId4CurrentProcessCtx(out_parallel_desc));
