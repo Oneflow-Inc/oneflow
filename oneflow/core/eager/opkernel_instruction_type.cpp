@@ -187,9 +187,8 @@ struct LocalCallOpKernelUtil final {
           mut_input->hash_ = x;
           mut_input->backup_data_.resize(bytes / 4);
           memcpy(mut_input->backup_data_.data(), tmp.data(), bytes);
-          LOG(INFO) << ", gpu memory." << std::endl;
         } else {
-          LOG(INFO) << ", non gpu memory." << std::endl;
+          LOG(INFO) << "mutable input non gpu memory." << std::endl;
         }
       }
 
@@ -225,7 +224,7 @@ struct LocalCallOpKernelUtil final {
                           << ", old hash: " << output->hash_ << ", new hash: " << x << std::endl;
               }
             } else {
-              LOG(INFO) << "first! set hash to " << x << std::endl;
+              LOG(INFO) << "first! set " << base_class_output.get() << " hash to " << x << std::endl;
             }
             base_class_output->hash_ = x;
             base_class_output->backup_data_.resize(bytes / 4);

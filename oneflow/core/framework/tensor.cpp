@@ -34,12 +34,7 @@ namespace oneflow {
 
 namespace one {
 
-Parameter::Parameter(std::shared_ptr<Tensor> tensor, bool requires_grad) {
-  while (auto parameter = std::dynamic_pointer_cast<Parameter>(tensor)) {
-    tensor = parameter->tensor_;
-  }
-  this->tensor_ = tensor->detach().GetPtrOrThrow();
-  // this->tensor_ = std::move(tensor);
+Parameter::Parameter(const std::shared_ptr<Tensor> &tensor, bool requires_grad) : ProxyTensor<Parameter>(tensor->detach().GetPtrOrThrow()) {
   // TODO: in `y = flow.nn.Parameter(x)`, y should have its own "requires_grad" field
   // (align with PyTorch) instead of sharing it with x
   CHECK_JUST(this->tensor_->set_requires_grad(requires_grad));
@@ -47,13 +42,6 @@ Parameter::Parameter(std::shared_ptr<Tensor> tensor, bool requires_grad) {
   if (auto dtr_eager_blob_object = std::dynamic_pointer_cast<vm::DTREagerBlobObject>(blob_object)) {
     dtr_eager_blob_object->set_evict_attr(false);
   }
-}
-
-Maybe<MirroredTensor> Parameter::AsMirroredTensor() {
-  if (const auto& mirrored_tensor = std::dynamic_pointer_cast<MirroredTensor>(tensor_)) {
-    return mirrored_tensor;
-  }
-  RETURN_ERROR_WITH_BUG_PROMPT();
 }
 
 Maybe<void> Parameter::set_data(const std::shared_ptr<Tensor>& other) {
