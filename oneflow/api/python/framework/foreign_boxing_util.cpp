@@ -66,10 +66,7 @@ ONEFLOW_API_PYBIND11_MODULE("deprecated", m) {
       .def("TryReplaceDeviceTag", &ForeignBoxingUtil::TryReplaceDeviceTag)
       .def("Assign", &ForeignBoxingUtil::Assign);
 
-  m.def("RegisterBoxingUtilOnlyOnce",
-        [](const std::shared_ptr<oneflow::ForeignBoxingUtil>& boxing_util) {
-          oneflow::RegisterBoxingUtilOnlyOnce(boxing_util).GetOrThrow();
-        });
+  m.def("RegisterBoxingUtilOnlyOnce", &RegisterBoxingUtilOnlyOnce);
 }
 
 }  // namespace oneflow
