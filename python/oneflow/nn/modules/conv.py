@@ -347,7 +347,7 @@ class Conv2d(Module):
           - API(Compatible with PyTorch 1.11, anything incompatible must be noted in API Doc.)[ ]
           - Doc(API Doc must be provided and showed normally on the web page.)[ ]
           - Functionality and its' Test [ ]
-            - Functionality is highlly compatiable with PyTorch 1.11. [ ]
+            - Functionality is highly compatiable with PyTorch 1.11. [ ]
             - eager local [Y]
               - forward [ ]
               - backward [ ]
