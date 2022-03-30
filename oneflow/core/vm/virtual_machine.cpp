@@ -95,12 +95,21 @@ Maybe<Symbol<Stream>> GetBarrierStream() {
 }
 
 void MakeBarrierInstructions(vm::InstructionList* list,
-                             const std::function<void()>& ComputeCallback) {
-  const auto& phy_instr_operand = std::make_shared<vm::NoArgCbPhyInstrOperand>(ComputeCallback);
-  auto stream = CHECK_JUST(GetBarrierStream());
-  auto instruction = intrusive::make_shared<vm::Instruction>(
-      stream->mut_vm_stream(), SingletonPtr<vm::BarrierInstructionType>(), phy_instr_operand);
-  list->EmplaceBack(std::move(instruction));
+                             const std::function<void()>& BarrierCallback) {
+  {
+    const auto& phy_instr_operand = std::make_shared<vm::NoArgCbPhyInstrOperand>([]() {});
+    auto stream = CHECK_JUST(GetBarrierStream());
+    auto instruction = intrusive::make_shared<vm::Instruction>(
+        stream->mut_vm_stream(), SingletonPtr<vm::GlobalSyncInstructionType>(), phy_instr_operand);
+    list->EmplaceBack(std::move(instruction));
+  }
+  {
+    const auto& phy_instr_operand = std::make_shared<vm::NoArgCbPhyInstrOperand>(BarrierCallback);
+    auto stream = CHECK_JUST(GetBarrierStream());
+    auto instruction = intrusive::make_shared<vm::Instruction>(
+        stream->mut_vm_stream(), SingletonPtr<vm::BarrierInstructionType>(), phy_instr_operand);
+    list->EmplaceBack(std::move(instruction));
+  }
 }
 
 }  // namespace

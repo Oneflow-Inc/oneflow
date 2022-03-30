@@ -209,7 +209,7 @@ void VirtualMachineEngine::InitInstructions(InstructionList* pending_instruction
     const auto& instruction_type = instruction->instruction_type();
     instruction->InitStatus();
     LivelyInstructionListPushBack(instruction);
-    if (unlikely(instruction_type.IsFrontSequential())) {
+    if (unlikely(instruction_type.IsBarrier())) {
       pending_instructions->Erase(instruction);
       mut_barrier_instruction_list()->PushBack(instruction);
     }
@@ -412,7 +412,7 @@ bool VirtualMachineEngine::OnSchedulerThread(const StreamType& stream_type) {
 // instructions are scarcely received by vm, there is no need for vm to run
 // VirtualMachineEngine::TryRunBarrierInstruction every time VirtualMachineEngine::Schedule run. On
 // the other hand, `barrier_instruction_hook_.size() == 0` is more lightweight than
-// `lively_instruction_list_.Begin()?->instruction_type().IsFrontSequential()`
+// `lively_instruction_list_.Begin()?->instruction_type().IsBarrier()`
 //
 void VirtualMachineEngine::TryRunBarrierInstruction() {
   auto* sequnential_instruction = mut_barrier_instruction_list()->Begin();
@@ -422,7 +422,7 @@ void VirtualMachineEngine::TryRunBarrierInstruction() {
   // `sequnential_instruction`.
   OF_PROFILER_RANGE_PUSH("RunBarrierInstruction");
   const auto& instruction_type = sequnential_instruction->instruction_type();
-  CHECK(instruction_type.IsFrontSequential());
+  CHECK(instruction_type.IsBarrier());
   const StreamType& stream_type = sequnential_instruction->stream().stream_type();
   CHECK(OnSchedulerThread(stream_type));
   stream_type.Run(sequnential_instruction);
