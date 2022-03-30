@@ -56,5 +56,20 @@ bool IsContiguous(const DimVector& shape_vec, const StrideVector& stride_vec) {
   return contig_if_nonempty;
 }
 
+bool IsContiguous(const user_op::Tensor* tensor) {
+  const StrideVector& stride_vec = tensor->stride().StrideVec();
+  DimVector shape_vec;
+  tensor->shape().ToDimVector(&shape_vec);
+  return IsContiguous(shape_vec, stride_vec);
+}
+
+StrideParam get_StrideParam(const user_op::Tensor* tensor) {
+  const int32_t ndim = tensor->shape().NumAxes();
+  const StrideVector& stride_vec = tensor->stride().StrideVec();
+  DimVector shape_vec;
+  tensor->shape().ToDimVector(&shape_vec);
+  return StrideParam(stride_vec.data(), ndim);
+}
+
 }  // namespace one
 }  // namespace oneflow

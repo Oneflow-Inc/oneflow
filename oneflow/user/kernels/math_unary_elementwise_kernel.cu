@@ -97,18 +97,14 @@ class MathUnaryElementwiseGpuKernel final : public user_op::OpKernel,
     CHECK_LE(n, GetMaxVal<int32_t>() / 2);
     if (n == 0) { return; }
     // compute is_contiguous and construct input/output stride params
-    const int32_t ndim = tensor_x->shape().NumAxes();
-    const StrideVector& in_stride_vec = tensor_x->stride().StrideVec();
-    const StrideVector& out_stride_vec = tensor_y->stride().StrideVec();
-    DimVector in_shape_vec;
-    tensor_x->shape().ToDimVector(&in_shape_vec);
     bool is_contiguous = oneflow::one::IsContiguous(in_shape_vec, in_stride_vec);
-    StrideParam in_stride(in_stride_vec.data(), ndim), out_stride(out_stride_vec.data(), ndim);
     if (is_contiguous) {
       MathUnaryElementwiseForwardGpu<UnaryFunctor, T>
           <<<BlocksNum4ThreadsNum(n), kCudaThreadsNumPerBlock, 0,
              ctx->stream()->As<ep::CudaStream>()->cuda_stream()>>>(n, x, y);
     } else {
+      StrideParam param_in_stride = oneflow::one::get_StrideParam(tensor_x);
+      StrideParam param_out_stride = oneflow::one::get_StrideParam(tensor_y);
       MathUnaryElementwiseWithStrideForwardGpu<UnaryFunctor, T>
           <<<BlocksNum4ThreadsNum(n), kCudaThreadsNumPerBlock, 0,
              ctx->stream()->As<ep::CudaStream>()->cuda_stream()>>>(n, in_stride, out_stride, x, y);
@@ -137,33 +133,31 @@ class MathUnaryElementwiseGradGpuKernel final : public user_op::OpKernel,
     int64_t n = tensor_x->shape().elem_cnt();
     CHECK_LE(n, GetMaxVal<int32_t>() / 2);
     if (n == 0) { return; }
-    const int32_t ndim = tensor_x->shape().NumAxes();
-    const StrideVector& x_stride_vec = tensor_x->stride().StrideVec();
-    const StrideVector& dy_stride_vec = tensor_dy->stride().StrideVec();
-    const StrideVector& dx_stride_vec = tensor_dx->stride().StrideVec();
-    StrideParam x_stride(x_stride_vec.data(), ndim), dy_stride(dy_stride_vec.data(), ndim),
-        dx_stride(dx_stride_vec.data(), ndim);
-    DimVector x_shape_vec, dy_shape_vec, dx_shape_vec;
-    tensor_x->shape().ToDimVector(&x_shape_vec);
-    tensor_dy->shape().ToDimVector(&dy_shape_vec);
-    tensor_dx->shape().ToDimVector(&dx_shape_vec);
-    bool x_contiguous = oneflow::one::IsContiguous(x_shape_vec, x_stride_vec);
-    bool dy_contiguous = oneflow::one::IsContiguous(dy_shape_vec, dy_stride_vec);
+
+    bool x_contiguous = oneflow::one::IsContiguous(tensor_x);
+    bool dy_contiguous = oneflow::one::IsContiguous(tensor_dy);
     if (x_contiguous && dy_contiguous) {
       MathUnaryElementwiseBackwardGpu<UnaryFunctor, T>
           <<<BlocksNum4ThreadsNum(n), kCudaThreadsNumPerBlock, 0,
              ctx->stream()->As<ep::CudaStream>()->cuda_stream()>>>(n, x, dy, dx);
     } else if (x_contiguous) {
+      StrideParam x_stride = oneflow::one::get_StrideParam(tensor_x);
+      StrideParam dy_stride = oneflow::one::get_StrideParam(tensor_dy);
       MathUnaryElementwiseWithDyStrideDYBackwardGpu<UnaryFunctor, T>
           <<<BlocksNum4ThreadsNum(n), kCudaThreadsNumPerBlock, 0,
              ctx->stream()->As<ep::CudaStream>()->cuda_stream()>>>(n, x, dy, dx, dy_stride,
                                                                    dx_stride);
     } else if (x_contiguous) {
+      StrideParam x_stride = oneflow::one::get_StrideParam(tensor_x);
+      StrideParam x_stride = oneflow::one::get_StrideParam(tensor_dx);
       MathUnaryElementwiseWithXStrideBackwardGpu<UnaryFunctor, T>
           <<<BlocksNum4ThreadsNum(n), kCudaThreadsNumPerBlock, 0,
              ctx->stream()->As<ep::CudaStream>()->cuda_stream()>>>(n, x, dy, dx, x_stride,
                                                                    dx_stride);
     } else {
+      StrideParam x_stride = oneflow::one::get_StrideParam(tensor_x);
+      StrideParam x_stride = oneflow::one::get_StrideParam(tensor_dx);
+      StrideParam dy_stride = oneflow::one::get_StrideParam(tensor_dy);
       MathUnaryElementwiseWithStrideBackwardGpu<UnaryFunctor, T>
           <<<BlocksNum4ThreadsNum(n), kCudaThreadsNumPerBlock, 0,
              ctx->stream()->As<ep::CudaStream>()->cuda_stream()>>>(n, x, dy, dx, x_stride,

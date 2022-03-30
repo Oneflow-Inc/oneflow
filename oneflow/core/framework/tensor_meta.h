@@ -16,6 +16,7 @@ limitations under the License.
 #ifndef ONEFLOW_FRAMEWORK_TENSOR_META_H_
 #define ONEFLOW_FRAMEWORK_TENSOR_META_H_
 
+#include "oneflow/core/framework/user_op_tensor.h"
 #include "oneflow/core/framework/tensor_desc.h"
 #include "oneflow/core/common/symbol.h"
 
@@ -31,6 +32,8 @@ namespace one {
 
 bool IsContiguous(const Shape& shape, const Stride& stride);
 bool IsContiguous(const DimVector& shape, const StrideVector& stride);
+bool IsContiguous(const user_op::Tensor* tensor);
+StrideParam get_StrideParam(const user_op::Tensor* tensor);
 
 class TensorMeta : public user_op::TensorDesc {
  public:

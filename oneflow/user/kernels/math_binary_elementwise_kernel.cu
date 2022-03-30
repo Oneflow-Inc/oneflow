@@ -114,18 +114,11 @@ class MathBinaryElementwiseGpuKernel final : public user_op::OpKernel {
     if (n == 0) { return; }
 
     // compute is_contiguous and construct input/output stride params
-    const int32_t ndim = tensor_x->shape().NumAxes();
-    const StrideVector& x_stride_vec = tensor_x->stride().StrideVec();
-    const StrideVector& y_stride_vec = tensor_y->stride().StrideVec();
-    const StrideVector& z_stride_vec = tensor_z->stride().StrideVec();
-    DimVector x_shape_vec, y_shape_vec;
-    tensor_x->shape().ToDimVector(&x_shape_vec);
-    tensor_y->shape().ToDimVector(&y_shape_vec);
-    bool x_contiguous = oneflow::one::IsContiguous(x_shape_vec, x_stride_vec);
-    bool y_contiguous = oneflow::one::IsContiguous(y_shape_vec, y_stride_vec);
-    StrideParam x_stride(x_stride_vec.data(), ndim), y_stride(y_stride_vec.data(), ndim),
-        z_stride(z_stride_vec.data(), ndim);
-
+    bool x_contiguous = oneflow::one::IsContiguous(tensor_x);
+    bool y_contiguous = oneflow::one::IsContiguous(tensor_y);
+    StrideParam x_stride = oneflow::one::get_StrideParam(tensor_x);
+    StrideParam y_stride = oneflow::one::get_StrideParam(tensor_y);
+    StrideParam z_stride = oneflow::one::get_StrideParam(tensor_z);
     if (x_contiguous && y_contiguous) {
       MathBinaryElementwiseForwardGpu<BinaryFunctor, T>
           <<<BlocksNum4ThreadsNum(n), kCudaThreadsNumPerBlock, 0,
@@ -171,17 +164,9 @@ class MathBinaryElementwiseXGradGpuKernel final : public user_op::OpKernel {
     CHECK_LE(n, GetMaxVal<int32_t>() / 2);
     if (n == 0) { return; }
 
-    const int32_t ndim = tensor_x->shape().NumAxes();
-    const StrideVector& x_stride_vec = tensor_x->stride().StrideVec();
-    const StrideVector& y_stride_vec = tensor_y->stride().StrideVec();
-    const StrideVector& dz_stride_vec = tensor_dz->stride().StrideVec();
-    DimVector x_shape_vec, y_shape_vec, dz_shape_vec;
-    tensor_x->shape().ToDimVector(&x_shape_vec);
-    tensor_y->shape().ToDimVector(&y_shape_vec);
-    tensor_dz->shape().ToDimVector(&dz_shape_vec);
-    const bool x_contiguous = oneflow::one::IsContiguous(x_shape_vec, x_stride_vec);
-    const bool y_contiguous = oneflow::one::IsContiguous(y_shape_vec, y_stride_vec);
-    const bool dz_contiguous = oneflow::one::IsContiguous(dz_shape_vec, dz_stride_vec);
+    const bool x_contiguous = oneflow::one::IsContiguous(tensor_x);
+    const bool y_contiguous = oneflow::one::IsContiguous(tensor_y);
+    const bool dz_contiguous = oneflow::one::IsContiguous(tensor_dz);
     if (x_contiguous && y_contiguous && dz_contiguous) {
       MathBinaryElementwiseBackwardXGradGpu<BinaryFunctor, T>
           <<<BlocksNum4ThreadsNum(n), kCudaThreadsNumPerBlock, 0,
@@ -189,11 +174,10 @@ class MathBinaryElementwiseXGradGpuKernel final : public user_op::OpKernel {
               n, tensor_x->dptr<T>(), tensor_y->dptr<T>(), tensor_dz->dptr<T>(),
               tensor_dx->mut_dptr<T>());
     } else {
-      const StrideParam x_stride(x_stride_vec.data(), ndim);
-      const StrideParam y_stride(y_stride_vec.data(), ndim);
-      const StrideParam dz_stride(dz_stride_vec.data(), ndim);
-      const StrideVector& dx_stride_vec = tensor_dx->stride().StrideVec();
-      const StrideParam dx_stride(dx_stride_vec.data(), ndim);
+      const StrideParam x_stride = oneflow::one::get_StrideParam(tensor_x);
+      const StrideParam y_stride = oneflow::one::get_StrideParam(tensor_y);
+      const StrideParam dz_stride = oneflow::one::get_StrideParam(tensor_dz);
+      const StrideParam dx_stride = oneflow::one::get_StrideParam(tensor_dx);
       MathBinaryElementwiseStrideBackwardXGradGpu<BinaryFunctor, T>
           <<<BlocksNum4ThreadsNum(n), kCudaThreadsNumPerBlock, 0,
              ctx->stream()->As<ep::CudaStream>()->cuda_stream()>>>(
@@ -221,17 +205,9 @@ class MathBinaryElementwiseYGradGpuKernel final : public user_op::OpKernel {
     CHECK_LE(n, GetMaxVal<int32_t>() / 2);
     if (n == 0) { return; }
 
-    const int32_t ndim = tensor_x->shape().NumAxes();
-    const StrideVector& x_stride_vec = tensor_x->stride().StrideVec();
-    const StrideVector& y_stride_vec = tensor_y->stride().StrideVec();
-    const StrideVector& dz_stride_vec = tensor_dz->stride().StrideVec();
-    DimVector x_shape_vec, y_shape_vec, dz_shape_vec;
-    tensor_x->shape().ToDimVector(&x_shape_vec);
-    tensor_y->shape().ToDimVector(&y_shape_vec);
-    tensor_dz->shape().ToDimVector(&dz_shape_vec);
-    const bool x_contiguous = oneflow::one::IsContiguous(x_shape_vec, x_stride_vec);
-    const bool y_contiguous = oneflow::one::IsContiguous(y_shape_vec, y_stride_vec);
-    const bool dz_contiguous = oneflow::one::IsContiguous(dz_shape_vec, dz_stride_vec);
+    const bool x_contiguous = oneflow::one::IsContiguous(tensor_x);
+    const bool y_contiguous = oneflow::one::IsContiguous(tensor_y);
+    const bool dz_contiguous = oneflow::one::IsContiguous(tensor_dz);
     if (x_contiguous && y_contiguous && dz_contiguous) {
       MathBinaryElementwiseBackwardYGradGpu<BinaryFunctor, T>
           <<<BlocksNum4ThreadsNum(n), kCudaThreadsNumPerBlock, 0,
@@ -239,11 +215,10 @@ class MathBinaryElementwiseYGradGpuKernel final : public user_op::OpKernel {
               n, tensor_x->dptr<T>(), tensor_y->dptr<T>(), tensor_dz->dptr<T>(),
               tensor_dy->mut_dptr<T>());
     } else {
-      const StrideParam x_stride(x_stride_vec.data(), ndim);
-      const StrideParam y_stride(y_stride_vec.data(), ndim);
-      const StrideParam dz_stride(dz_stride_vec.data(), ndim);
-      const StrideVector& dy_stride_vec = tensor_dy->stride().StrideVec();
-      const StrideParam dy_stride(dy_stride_vec.data(), ndim);
+      const StrideParam x_stride = oneflow::one::get_StrideParam(tensor_x);
+      const StrideParam y_stride = oneflow::one::get_StrideParam(tensor_y);
+      const StrideParam dz_stride = oneflow::one::get_StrideParam(tensor_dz);
+      const StrideParam dy_stride = oneflow::one::get_StrideParam(tensor_dy);
       MathBinaryElementwiseStrideBackwardYGradGpu<BinaryFunctor, T>
           <<<BlocksNum4ThreadsNum(n), kCudaThreadsNumPerBlock, 0,
              ctx->stream()->As<ep::CudaStream>()->cuda_stream()>>>(

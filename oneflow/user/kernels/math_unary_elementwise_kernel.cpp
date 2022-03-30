@@ -33,18 +33,13 @@ class MathUnaryElementwiseCpuKernel final : public user_op::OpKernel {
     int64_t n = tensor_x->shape().elem_cnt();
     CHECK_LE(n, GetMaxVal<int32_t>() / 2);
     // compute is_contiguous and construct input/output stride params
-    const int32_t ndim = tensor_x->shape().NumAxes();
-    const StrideVector& in_stride_vec = tensor_x->stride().StrideVec();
-    const StrideVector& out_stride_vec = tensor_y->stride().StrideVec();
-    DimVector in_shape_vec;
-    tensor_x->shape().ToDimVector(&in_shape_vec);
-    bool is_contiguous = oneflow::one::IsContiguous(in_shape_vec, in_stride_vec);
-    StrideParam param_in_stride(in_stride_vec.data(), ndim),
-        param_out_stride(out_stride_vec.data(), ndim);
+    bool is_contiguous = oneflow::one::IsContiguous(tensor_x);
     if (is_contiguous) {
       for (int32_t i = 0; i < n; ++i) { y[i] = UnaryFunctor<T>::Forward(x[i]); }
     } else {
       for (int32_t i = 0; i < n; ++i) {
+        StrideParam param_in_stride = oneflow::one::get_StrideParam(tensor_x);
+        StrideParam param_out_stride = oneflow::one::get_StrideParam(tensor_y);
         int32_t src_idx = compute_index(i, param_in_stride, param_out_stride);
         y[i] = UnaryFunctor<T>::Forward(x[src_idx]);
       }
@@ -71,35 +66,28 @@ class MathUnaryElementwiseGradCpuKernel final : public user_op::OpKernel {
     int64_t n = tensor_x->shape().elem_cnt();
     CHECK_LE(n, GetMaxVal<int32_t>() / 2);
 
-    const int32_t ndim = tensor_x->shape().NumAxes();
-    const StrideVector& x_stride_vec = tensor_x->stride().StrideVec();
-    const StrideVector& dy_stride_vec = tensor_dy->stride().StrideVec();
-    const StrideVector& dx_stride_vec = tensor_dx->stride().StrideVec();
-    DimVector x_shape_vec, dy_shape_vec;
-    tensor_x->shape().ToDimVector(&x_shape_vec);
-    tensor_dy->shape().ToDimVector(&dy_shape_vec);
-    bool x_contiguous = oneflow::one::IsContiguous(x_shape_vec, x_stride_vec);
-    bool dy_contiguous = oneflow::one::IsContiguous(dy_shape_vec, dy_stride_vec);
+    bool x_contiguous = oneflow::one::IsContiguous(tensor_x);
+    bool dy_contiguous = oneflow::one::IsContiguous(tensor_dy);
     if (x_contiguous && dy_contiguous) {
       for (int32_t i = 0; i < n; ++i) { dx[i] = UnaryFunctor<T>::Backward(x[i], dy[i]); }
     } else if (x_contiguous) {
-      const StrideParam param_dy_stride(dy_stride_vec.data(), ndim);
-      const StrideParam param_dx_stride(dx_stride_vec.data(), ndim);
+      const StrideParam param_dy_stride = oneflow::one::get_StrideParam(tensor_dy);
+      const StrideParam param_dx_stride = oneflow::one::get_StrideParam(tensor_dx);
       for (int32_t i = 0; i < n; ++i) {
         const int32_t dy_idx = compute_index(i, param_dy_stride, param_dx_stride);
         dx[i] = UnaryFunctor<T>::Backward(x[i], dy[dy_idx]);
       }
     } else if (dy_contiguous) {
-      const StrideParam param_x_stride(x_stride_vec.data(), ndim);
-      const StrideParam param_dx_stride(dx_stride_vec.data(), ndim);
+      const StrideParam param_x_stride = oneflow::one::get_StrideParam(tensor_x);
+      const StrideParam param_dx_stride = oneflow::one::get_StrideParam(tensor_dx);
       for (int32_t i = 0; i < n; ++i) {
         int32_t x_idx = compute_index(i, param_x_stride, param_dx_stride);
         dx[i] = UnaryFunctor<T>::Backward(x[x_idx], dy[i]);
       }
     } else {
-      const StrideParam param_x_stride(x_stride_vec.data(), ndim);
-      const StrideParam param_dy_stride(dy_stride_vec.data(), ndim);
-      const StrideParam param_dx_stride(dx_stride_vec.data(), ndim);
+      const StrideParam param_x_stride = oneflow::one::get_StrideParam(tensor_x);
+      const StrideParam param_dy_stride = oneflow::one::get_StrideParam(tensor_dy);
+      const StrideParam param_dx_stride = oneflow::one::get_StrideParam(tensor_dx);
       for (int32_t i = 0; i < n; ++i) {
         const int32_t x_idx = compute_index(i, param_x_stride, param_dx_stride);
         const int32_t dy_idx = compute_index(i, param_dy_stride, param_dx_stride);
