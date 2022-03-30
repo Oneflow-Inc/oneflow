@@ -478,7 +478,7 @@ Maybe<std::string> RawPlacementToString(Symbol<ParallelDesc> placement) {
   CHECK_EQ_OR_RETURN(ranks.size(), placement->hierarchy()->elem_cnt())
       << "rank size is " << ranks.size() << ", but shape is " << placement->hierarchy()->ToString();
   const auto& ranks_str = JUST(RanksToString(0, ranks.data(), *placement->hierarchy()));
-  return "oneflow.placement(type=" + device_type + ", ranks=" + *ranks_str + ")";
+  return "oneflow.placement(type=\"" + device_type + "\", ranks=" + *ranks_str + ")";
 }
 
 Maybe<Symbol<Device>> RawGetTensorDevice(Symbol<ParallelDesc> parallel_desc) {
