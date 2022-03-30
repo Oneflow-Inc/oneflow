@@ -20,7 +20,9 @@ limitations under the License.
 #include "mlir/IR/Attributes.h"
 #include "mlir/IR/BuiltinAttributes.h"
 #include "mlir/IR/BuiltinTypes.h"
+#include "mlir/IR/OpDefinition.h"
 #include "mlir/IR/OperationSupport.h"
+#include "mlir/IR/Value.h"
 #include "oneflow/core/common/shape_vec.h"
 #include "oneflow/core/framework/tensor.h"
 #include "oneflow/core/functional/functional_api.yaml.h"
@@ -30,6 +32,9 @@ limitations under the License.
 namespace mlir {
 namespace oneflow {
 namespace {
+
+namespace functional = ::oneflow::one::functional;
+using TensorPtr = std::shared_ptr<::oneflow::one::Tensor>;
 
 class FolderGuard final {
  public:
@@ -43,8 +48,6 @@ class FolderGuard final {
   MLIRContext* context_ = nullptr;
   ::oneflow::LazyMode::Guard guard{false};
 };
-
-using TensorPtr = std::shared_ptr<::oneflow::one::Tensor>;
 
 OpFoldResult UnaryFold(MLIRContext* ctx, ArrayRef<Attribute> operands,
                        const std::function<TensorPtr(const TensorPtr&)>& f) {
@@ -99,13 +102,21 @@ OpFoldResult VariableIrOp::fold(ArrayRef<Attribute> operands) {
   return DictionaryAttr::get(getContext(), attrs);
 }
 
+OpFoldResult TransposeOp::fold(ArrayRef<Attribute> operands) {
+  return UnaryFold(getContext(), operands, [this](const auto& tensor) {
+    std::vector<int32_t> perm_;
+    for (auto& x : perm().getValue()) { perm_.emplace_back(x.cast<IntegerAttr>().getSInt()); }
+    return functional::Transpose(tensor, perm_).GetPtrOrThrow();
+  });
+}
+
 OpFoldResult ReshapeOp::fold(ArrayRef<Attribute> operands) {
   return UnaryFold(getContext(), operands, [this](const auto& tensor) {
     std::vector<int64_t> shape_vec;
     for (auto& x : shape().getValue()) {
       shape_vec.emplace_back(x.cast<mlir::IntegerAttr>().getInt());
     }
-    return ::oneflow::one::functional::Reshape(
+    return functional::Reshape(
                tensor, ::oneflow::Shape(::oneflow::DimVector(shape_vec.begin(), shape_vec.end())))
         .GetPtrOrThrow();
   });
@@ -114,11 +125,10 @@ OpFoldResult ReshapeOp::fold(ArrayRef<Attribute> operands) {
 OpFoldResult ScalarAddOp::fold(ArrayRef<Attribute> operands) {
   return UnaryFold(getContext(), operands, [this](const auto& tensor) -> TensorPtr {
     if (has_int_operand()) {
-      return ::oneflow::one::functional::ScalarAdd(tensor, int_operand(), 1, false).GetPtrOrThrow();
+      return functional::ScalarAdd(tensor, int_operand(), 1, false).GetPtrOrThrow();
     }
     if (has_float_operand()) {
-      return ::oneflow::one::functional::ScalarAdd(tensor, float_operand().convertToFloat(), 1,
-                                                   false)
+      return functional::ScalarAdd(tensor, float_operand().convertToFloat(), 1, false)
           .GetPtrOrThrow();
     }
     return nullptr;
@@ -127,25 +137,25 @@ OpFoldResult ScalarAddOp::fold(ArrayRef<Attribute> operands) {
 
 OpFoldResult SqrtOp::fold(ArrayRef<Attribute> operands) {
   return UnaryFold(getContext(), operands, [](const auto& tensor) -> TensorPtr {
-    return ::oneflow::one::functional::Sqrt(tensor).GetPtrOrThrow();
+    return functional::Sqrt(tensor).GetPtrOrThrow();
   });
 }
 
 OpFoldResult MultiplyOp::fold(ArrayRef<Attribute> operands) {
   return BinaryFold(getContext(), operands, [](const auto& lhs, const auto& rhs) -> TensorPtr {
-    return ::oneflow::one::functional::Mul(lhs, rhs).GetPtrOrThrow();
+    return functional::Mul(lhs, rhs).GetPtrOrThrow();
   });
 }
 
 OpFoldResult BroadcastDivOp::fold(ArrayRef<Attribute> operands) {
   return BinaryFold(getContext(), operands, [](const auto& lhs, const auto& rhs) -> TensorPtr {
-    return ::oneflow::one::functional::Div(lhs, rhs).GetPtrOrThrow();
+    return functional::Div(lhs, rhs).GetPtrOrThrow();
   });
 }
 
 OpFoldResult BroadcastSubOp::fold(ArrayRef<Attribute> operands) {
   return BinaryFold(getContext(), operands, [](const auto& lhs, const auto& rhs) -> TensorPtr {
-    return ::oneflow::one::functional::Sub(lhs, rhs, false).GetPtrOrThrow();
+    return functional::Sub(lhs, rhs, false).GetPtrOrThrow();
   });
 }
 
