@@ -16,7 +16,15 @@ limitations under the License.
 import oneflow as flow
 
 
+def _handle_tensors_arg(tensors):
+    new_tensors = tuple()
+
+    return new_tensors
+
+
 def meshgrid_op(*tensors, indexing="ij"):
+    if isinstance(tensors[0], (list, tuple)):
+        return flow._C.meshgrid(tensors[0], indexing)
     return flow._C.meshgrid(tensors, indexing)
 
 

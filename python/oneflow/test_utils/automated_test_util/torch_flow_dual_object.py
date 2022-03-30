@@ -143,7 +143,7 @@ def get_args(callable, *args, **kwargs):
 
     for arg in args:
         # TODO: refine codes
-        if isinstance(arg, tuple):
+        if isinstance(arg, (tuple, list)):
             pytorch_tuple_args = []
             oneflow_tuple_args = []
             for t in arg:
@@ -296,6 +296,7 @@ def get_functional_graph_res(
     **graph_kwargs,
 ):
     test_g_res = []
+    print_note_fake_program()
 
     class TestGraphOfFunctional(flow.nn.Graph):
         def __init__(self):
