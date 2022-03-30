@@ -476,45 +476,68 @@ __inline__ __device__ T BlockAllReduceAbsMax(T val) {
 }
 
 template<typename T, typename IDX>
-__global__ void QuantizeAndDequantizeBlockKernel(T* x, IDX row);
+__global__ void QuantizeAndDequantizeBlockKernel(T* x, IDX row_size, IDX col_size);
 
 template<typename T, typename IDX>
-__global__ void QuantizeAndDequantizeBlockKernel(T* x, IDX row) {
-  for (int32_t block_id = blockIdx.x, step = gridDim.x; block_id < row; block_id += step) {
-    for (int32_t col = threadIdx.x; col < kReduceBlockSize; col += blockDim.x) {
-      IDX idx = block_id * blockDim.x + col;
+__global__ void QuantizeAndDequantizeBlockKernel(T* x, IDX row_size, IDX col_size) {
+  for (int32_t row = blockIdx.x, step = gridDim.x; row < row_size; row += step) {
+    T block_quantize_factor = -1.0; 
+    for (int32_t col = threadIdx.x; col < col_size; col += blockDim.x) {
+      IDX idx = row * col_size + col;
       T x_val = x[idx];
       T quantize_factor = BlockAllReduceAbsMax<T>(x_val) / 127;
-      int8_t quantized_val = static_cast<int8_t>(x_val / quantize_factor);
-      T dequantized_val = static_cast<T>(quantized_val) * quantize_factor;
+      block_quantize_factor = max(quantize_factor, block_quantize_factor); 
+    }
+
+    for (int32_t col = threadIdx.x; col < col_size; col += blockDim.x) {
+      IDX idx = row * col_size + col;
+      T x_val = x[idx];
+      int8_t quantized_val = static_cast<int8_t>(x_val / block_quantize_factor);
+      T dequantized_val = static_cast<T>(quantized_val) * block_quantize_factor;
       x[idx] = dequantized_val;
     }
   }
 }
 
+// blockreduce 128, blocksize = 192, 需要做padding，warp(参考softmax)
+
 template<>
-__global__ void QuantizeAndDequantizeBlockKernel<half, int32_t>(half* x, int32_t row) {
-  for (int32_t block_id = blockIdx.x, step = gridDim.x; block_id < row; block_id += step) {
-    for (int32_t col = threadIdx.x; col < kReduceBlockSize; col += blockDim.x) {
-      int32_t idx = block_id * blockDim.x + col;
-      float x_val = __half2float(x[idx]);  // todo
+__global__ void QuantizeAndDequantizeBlockKernel<half, int32_t>(half* x, int32_t row_size, int32_t col_size) {
+  for (int32_t row = blockIdx.x, step = gridDim.x; row < row_size; row += step) {
+    float block_quantize_factor = -1.0; 
+    for (int32_t col = threadIdx.x; col < col_size; col += blockDim.x) {
+      int32_t idx = row * col_size + col;
+      float x_val = __half2float(x[idx]);
       float quantize_factor = BlockAllReduceAbsMax<float>(x_val) / 127;
-      int8_t quantized_val = static_cast<int8_t>(x_val / quantize_factor);
-      float dequantized_val = static_cast<float>(quantized_val) * quantize_factor;
+      block_quantize_factor = max(quantize_factor, block_quantize_factor); 
+    }
+
+    for (int32_t col = threadIdx.x; col < col_size; col += blockDim.x) {
+      int32_t idx = row * col_size + col;
+      float x_val = __half2float(x[idx]);
+      int8_t quantized_val = static_cast<int8_t>(x_val / block_quantize_factor);
+      float dequantized_val = static_cast<float>(quantized_val) * block_quantize_factor;
       x[idx] = __float2half(dequantized_val);
     }
   }
 }
 
 template<>
-__global__ void QuantizeAndDequantizeBlockKernel<half, uint32_t>(half* x, uint32_t row) {
-  for (int32_t block_id = blockIdx.x, step = gridDim.x; block_id < row; block_id += step) {
-    for (int32_t col = threadIdx.x; col < kReduceBlockSize; col += blockDim.x) {
-      uint32_t idx = block_id * blockDim.x + col;
-      float x_val = __half2float(x[idx]);  // todo
+__global__ void QuantizeAndDequantizeBlockKernel<half, uint32_t>(half* x, uint32_t row_size, uint32_t col_size) {
+  for (int32_t row = blockIdx.x, step = gridDim.x; row < row_size; row += step) {
+    float block_quantize_factor = -1.0; 
+    for (int32_t col = threadIdx.x; col < col_size; col += blockDim.x) {
+      uint32_t idx = row * col_size + col;
+      float x_val = __half2float(x[idx]);
       float quantize_factor = BlockAllReduceAbsMax<float>(x_val) / 127;
-      int8_t quantized_val = static_cast<int8_t>(x_val / quantize_factor);
-      float dequantized_val = static_cast<float>(quantized_val) * quantize_factor;
+      block_quantize_factor = max(quantize_factor, block_quantize_factor); 
+    }
+
+    for (int32_t col = threadIdx.x; col < col_size; col += blockDim.x) {
+      uint32_t idx = row * col_size + col;
+      float x_val = __half2float(x[idx]);
+      int8_t quantized_val = static_cast<int8_t>(x_val / block_quantize_factor);
+      float dequantized_val = static_cast<float>(quantized_val) * block_quantize_factor;
       x[idx] = __float2half(dequantized_val);
     }
   }
@@ -605,40 +628,38 @@ class EmbeddingShuffleKernel final : public user_op::OpKernel {
     ShuffleEmbeddings(cuda_stream, comm, parallel_id, parallel_num, num_ids, embedding_size,
                       data_type, host_num_unique_matrix, reverse_unique_cur_rank_embeddings,
                       received_embeddings);
-
-    int32_t row = parallel_num * num_ids;
-    int32_t elem_cnt = row * embedding_size;
-
-    if (embedding_shuffle_dump_counter == 70000) {
-      std::string origin_filename("EmbeddingShuffleData_"
-                                  + std::to_string(embedding_shuffle_dump_counter) + "_");
-
-      DumpToFile(ctx->stream(), origin_filename, parallel_id,
-                 parallel_num * num_ids * embedding_size * sizeof(T),
-                 cur_rank_embeddings->mut_dptr<T>());
-    }
-
-    int32_t block_num =
-        std::min((elem_cnt + kReduceBlockSize - 1) / kReduceBlockSize, kCudaMaxBlocksNum);
-    QuantizeAndDequantizeBlockKernel<T, IDX>
-        <<<block_num, kReduceBlockSize>>>(cur_rank_embeddings->mut_dptr<T>(), row);
-
-    if (embedding_shuffle_dump_counter == 70000) {
-      std::string quantized_filename("EmbeddingShuffleQuantizedData_"
-                                     + std::to_string(embedding_shuffle_dump_counter) + "_");
- 
-      DumpToFile(ctx->stream(), quantized_filename, parallel_id,
-                 parallel_num * num_ids * embedding_size * sizeof(T),
-                 cur_rank_embeddings->mut_dptr<T>());
-    }
-
-    embedding_shuffle_dump_counter += 1;
-
     // reverse unique_partition
     GatherKernelUtilImpl<DeviceType::kCUDA, T, IDX>::Forward(
         ctx->stream(), reinterpret_cast<const IDX*>(inverse_unique_partition_indices->dptr()),
         inverse_unique_partition_indices->shape().elem_cnt(), received_embeddings,
         Shape({1, parallel_num * num_ids, embedding_size}), embeddings->mut_dptr<T>(), 0);
+
+    int32_t row_size = inverse_unique_partition_indices->shape().elem_cnt();
+    int32_t elem_cnt = row_size * embedding_size;
+
+    if (embedding_shuffle_dump_counter == 70000) {
+      std::string origin_filename("EmbeddingShuffleData_"
+                                  + std::to_string(embedding_shuffle_dump_counter) + "_");
+      DumpToFile(ctx->stream(), origin_filename, parallel_id,
+                 elem_cnt * sizeof(T),
+                 embeddings->mut_dptr<T>());
+    }
+
+    int32_t block_num = std::min(row_size, kCudaMaxBlocksNum);
+    QuantizeAndDequantizeBlockKernel<T, IDX>
+        <<<block_num, kReduceBlockSize>>>(embeddings->mut_dptr<T>(), row_size, embedding_size);
+
+    if (embedding_shuffle_dump_counter == 70000) {
+      std::string quantized_filename("EmbeddingShuffleQuantizedData_"
+                                      + std::to_string(embedding_shuffle_dump_counter) + "_");
+  
+      DumpToFile(ctx->stream(), quantized_filename, parallel_id,
+                 elem_cnt * sizeof(T),
+                 embeddings->mut_dptr<T>());
+    }
+
+    embedding_shuffle_dump_counter += 1;
+
   }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
@@ -749,35 +770,36 @@ class EmbeddingGradientShuffleKernel final : public user_op::OpKernel {
                                     cuda_stream));
     }
 
-    int32_t row_size = embedding_grad->shape().At(0) * embedding_grad->shape().At(1);
-    int32_t elem_cnt = embedding_grad->shape().elem_cnt();
-
-    if (embedding_gradient_shuffle_dump_counter == 70000) {
-      std::string origin_filename("EmbeddingGradientShuffleData_"
-                                  + std::to_string(embedding_gradient_shuffle_dump_counter) + "_");
-      DumpToFile(ctx->stream(), origin_filename, parallel_id, elem_cnt * sizeof(T),
-                 embedding_grad->mut_dptr<T>());
-    }
-
-    int32_t block_num =
-        std::min(row_size, kCudaMaxBlocksNum);
-    QuantizeAndDequantizeBlockKernel<T, IDX>
-        <<<block_num, kReduceBlockSize>>>(embedding_grad->mut_dptr<T>(), row_size);
-
-    if (embedding_gradient_shuffle_dump_counter == 70000) {
-      std::string quantized_filename("EmbeddingGradientShuffleQuantizedData_"
-                                     + std::to_string(embedding_gradient_shuffle_dump_counter)
-                                     + "_");
-      DumpToFile(ctx->stream(), quantized_filename, parallel_id, elem_cnt * sizeof(T),
-                 embedding_grad->mut_dptr<T>());
-    }
-
-    embedding_gradient_shuffle_dump_counter += 1;
-
     UnsortedSegmentSumKernelUtil<DeviceType::kCUDA, T, IDX, T>::UnsortedSegmentSum(
         ctx->stream(), reinterpret_cast<const IDX*>(inverse_unique_partition_indices->dptr()),
         embedding_grad->mut_dptr<T>(), num_ids, parallel_num * num_ids, 1, embedding_size, 0,
         unique_partition_embedding_grad);
+
+    for(int64_t i =0; i < parallel_num; ++i){
+      const int64_t offset = i * num_ids * embedding_size;
+      int32_t row_size = host_num_unique_matrix[parallel_id * parallel_num + i];
+      int32_t elem_cnt = row_size * embedding_size;
+
+      if (embedding_gradient_shuffle_dump_counter == 70000) {
+        std::string origin_filename("EmbeddingGradientShuffleData_"
+                                    + std::to_string(embedding_gradient_shuffle_dump_counter) + "_" + "segment_" + std::to_string(i) + "_");
+        DumpToFile(ctx->stream(), origin_filename, parallel_id, elem_cnt * sizeof(T),
+                   unique_partition_embedding_grad + offset);
+      }
+
+      int32_t block_num = std::min(row_size, kCudaMaxBlocksNum);
+      QuantizeAndDequantizeBlockKernel<T, IDX>
+          <<<block_num, kReduceBlockSize>>>(unique_partition_embedding_grad + offset, row_size, embedding_size);
+
+      if (embedding_gradient_shuffle_dump_counter == 70000) {
+        std::string quantized_filename("EmbeddingGradientShuffleQuantizedData_"
+                                        + std::to_string(embedding_gradient_shuffle_dump_counter)
+                                        + "_" + "segment_" + std::to_string(i) + "_");
+        DumpToFile(ctx->stream(), quantized_filename, parallel_id, elem_cnt * sizeof(T),
+                   unique_partition_embedding_grad + offset);
+      }
+    }
+    embedding_gradient_shuffle_dump_counter += 1;
 
     ncclComm_t comm = kernel_state->comm();
     ShuffleEmbeddingsGrad(cuda_stream, comm, parallel_id, parallel_num, num_ids, embedding_size,
@@ -791,6 +813,9 @@ class EmbeddingGradientShuffleKernel final : public user_op::OpKernel {
         ctx->stream(), reinterpret_cast<const IDX*>(cur_rank_inverse_indices->dptr()),
         received_embedding_grad, cur_rank_num_ids, cur_rank_num_ids, 1, embedding_size, 0,
         cur_rank_unique_embedding_grad->mut_dptr<T>());
+
+  
+
   }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
