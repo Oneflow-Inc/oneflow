@@ -20,6 +20,7 @@ limitations under the License.
 #include "oneflow/core/operator/variable_op.h"
 #include "oneflow/core/register/op_blob_arg.pb.h"
 #include "oneflow/core/common/protobuf.h"
+#include "oneflow/core/common/container_util.h"
 #include "oneflow/core/framework/framework.h"
 #include "oneflow/core/job_rewriter/job_pass.h"
 #include "oneflow/core/job_rewriter/dynamic_loss_scale_job_pass_state.h"
@@ -1314,8 +1315,8 @@ Maybe<void> CountNotFiniteIfNeeded(JobPassCtx* ctx, const OpGraph& op_graph,
   if (!all_group_broadcast) {
     for (int64_t i = 0; i < partial_count_not_finite_lbns.size(); ++i) {
       count_not_finite_lbns_for_add.emplace_back(AddParallelCast(
-          job_builder, partial_count_not_finite_lbns.at(i), "P", param_group_parallel_confs.at(i),
-          "System-DynamicLossScale-ParallelCast-"));
+          job_builder, JUST(VectorAt(partial_count_not_finite_lbns, i)), "P",
+          JUST(VectorAt(param_group_parallel_confs, i)), "System-DynamicLossScale-ParallelCast-"));
     }
     count_all_parallel_conf.mutable_hierarchy()->clear_dim();
   } else {
