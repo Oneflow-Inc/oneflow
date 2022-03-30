@@ -13,15 +13,18 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
-#ifndef ONEFLOW_API_PYTHON_CALIBRATION_CALIBRATION_API_H_
-#define ONEFLOW_API_PYTHON_CALIBRATION_CALIBRATION_API_H_
+#ifndef ONEFLOW_CORE_COMMON_ENV_VAR_DEBUG_MODE_H_
+#define ONEFLOW_CORE_COMMON_ENV_VAR_DEBUG_MODE_H_
 
-#include "oneflow/api/python/calibration/calibration.h"
+#include "oneflow/core/common/env_var/env_var.h"
 
-inline void CacheInt8Calibration() { return oneflow::CacheInt8Calibration().GetOrThrow(); }
+namespace oneflow {
 
-inline void WriteInt8Calibration(const std::string& path) {
-  return oneflow::WriteInt8Calibration(path).GetOrThrow();
-}
+DEFINE_ENV_BOOL(ONEFLOW_DEBUG_MODE, false);
+DEFINE_ENV_BOOL(ONEFLOW_DEBUG, false);
 
-#endif  // ONEFLOW_API_PYTHON_CALIBRATION_CALIBRATION_ENV_H_
+inline bool IsInDebugMode() { return EnvBool<ONEFLOW_DEBUG_MODE>() || EnvBool<ONEFLOW_DEBUG>(); }
+
+}  // namespace oneflow
+
+#endif  // ONEFLOW_CORE_COMMON_ENV_VAR_DEBUG_MODE_H_
