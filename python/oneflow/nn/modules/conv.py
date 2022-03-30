@@ -232,7 +232,7 @@ class Conv1d(Module):
 
 class Conv2d(Module):
     """The interface is consistent with PyTorch.    
-    The documentation is referenced from: https://pytorch.org/docs/master/generated/torch.nn.Conv2d.html#conv2d
+    The documentation is referenced from: https://pytorch.org/docs/1.11/generated/torch.nn.Conv2d.html
     
     Applies a 2D convolution over an input signal composed of several input
     planes.
@@ -341,36 +341,46 @@ class Conv2d(Module):
         >>> output = m(input)
 
     ..
-        Feature Stage of Operator:
-        - Current Stage: [Alpha]
-        - Alpah Stage Check List
-          - API(对齐PyTorch1.11，API Review参考此标准，没有支持的参数需要注释)：[ ]
-          - 文档（提供API文档，参考PyTorch标准；另外要检查渲染出的效果）：[ ]
-          - 功能和测试
-            - 可执行 eager local 的前向和后向 [ ]
-            - 可执行 graph local 的前向和后向 [ ]
-            - 支持该算子和PyTorch对齐的主要的计算逻辑，没有支持的计算逻辑需要注释 [ ]
-          - 异常处理（异常提示，异常恢复）[ ]
-        - Beta Stage Check List
-          - API(对齐PyTorch1.11，确认无缺失参数和功能，不能因为工作量问题而不支持一个参数或者功能)： [ ]
-          - 文档（同Alpha的要求）[ ]
-          - 功能和测试
-            - eager global(必须支持) [ ]
-            - graph global(必须支持) [ ]
-          - 功能对应的性能（需要被评估，给出指标）[ ]
+        Feature Stage of Operator.
+        - Current Stage []
+        - Alpha Stage Check List [ ]
+          - API(Compatible with PyTorch 1.11, anything incompatible must be noted in API Doc.)[ ]
+          - Doc(API Doc must be provided and showed normally on the web page.)[ ]
+          - Functionality and its' Test [ ]
+            - Functionality is highlly compatiable with PyTorch 1.11. [ ]
+            - eager local [Y]
+              - forward [ ]
+              - backward [ ]
+            - graph local [ ]
+              - forward [ ]
+              - backward [ ]
+          - Exception Handling
+            - Exception Message and Hint must be provided [ ]
+        - Beta Stage Check List [ ]
+          - API(High compatibility with PyTorch 1.11, shouldn't have anything incompatible for a naive reason.)[ ]
+          - Doc(Same standard as Alpha Stage)[ ]
+          - Functionality and its' Test [ ]
+            - eager global [ ]
+              - forward [ ]
+              - backward [ ]
+            - graph gloal [ ]
+              - forward [ ]
+              - backward [ ]
+          - Performance and Scalability(Must be evaluated.)[ ]
             - CUDA kernel [ ]
             - CPU kernel [ ]
-          - 异常处理（异常提示，异常恢复） [ ]
-        - Stable Stage Check List
-          - API(同Beta)
-          - 文档（同beta）
-          - 高阶功能和测试
-            - fp16 和 AMP [ ]
+            - N nodes M devices [ ]
+          - Exception Handling [ ]
+            - Exception Message and Hint must be provided [ ]
+            - Try you best to do Exception Recovery [ ]
+        - Stable Stage Check List [ ]
+          - API(Same standard as Beta Stage)[ ]
+          - Doc(Same standard as Beta Stage)[ ]
+          - Functionality and its' Test [ ]
+            - fp16 and AMP [ ]
             - NHWC [ ]
-          - 功能对应的性能（需要被评估，给出指标）
-            - CUDA kernel [ ]
-            - CPU kernel [ ]
-          - 异常处理（异常提示，异常恢复）[ ]
+          - Performance and Scalability(Must be evaluated.)[ ]
+          - Exception Handling [ ]
     """
 
     def __init__(
