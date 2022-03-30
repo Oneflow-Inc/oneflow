@@ -658,7 +658,7 @@ class ReduceProdFunctor {
         one::OpBuilder("reduce_prod").Input("input_tensor").Output("output_tensor").Build());
   }
   Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x, const std::vector<int32_t>& axis,
-                           const bool& keepdims) const {
+                           const bool& keepdims, const Optional<Symbol<DType>>& dtype) const {
     MutableAttrMap attrs;
     TensorProcessor tensor_processor;
     Symbol<DType> lowest_dtype;
@@ -678,7 +678,9 @@ class ReduceProdFunctor {
       JUST(attrs.SetAttr<std::vector<int32_t>>("axis", axis));
     }
     JUST(attrs.SetAttr<bool>("keepdims", keepdims));
-    return OpInterpUtil::Dispatch<Tensor>(*op_, input_tuple, attrs);
+    const auto& output = JUST(OpInterpUtil::Dispatch<Tensor>(*op_, input_tuple, attrs));
+    if (dtype.has_value() && (dtype != x->dtype())) { return Cast(output, JUST(dtype)); }
+    return output;
   }
 
  private:
