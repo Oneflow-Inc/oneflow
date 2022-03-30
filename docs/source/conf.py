@@ -187,9 +187,7 @@ epub_exclude_files = ["search.html"]
 
 autodoc_default_options = {
     "undoc-members": True,
-    "exclude-members": "__weakref__",
-    "exclude-members": "__init__",
-    "exclude-members": "forward",
+    "exclude-members": "forward, extra_repr, reset_parameters",
 }
 
 
