@@ -588,7 +588,7 @@ jobs:
         with:
           repository: Oneflow-Inc/vision
           # please use a commit here
-          ref: 0a291a00167143e64c7f7e5743ea93bf6a50a6b6
+          ref: 69b140d036cf147a1d06973291145b8b7a818107
           path: ${{ env.FLOW_VISION_SRC}}
       - name: Install Flow Vision
         if: ${{ !fromJson(matrix.cache-hit) && contains(matrix.runs-on, 'self-hosted') }}
@@ -833,13 +833,13 @@ jobs:
             --benchmark-compare-fail=mean:5%
             --benchmark-min-rounds=30
           container-name: ${{ env.TEST_CONTAINER_NAME }}
-      - name: Benchmark pvt_samll
+      - name: Benchmark pvt_small
         timeout-minutes: 20
         if: ${{ !fromJson(matrix.cache-hit) && matrix.test-type == 'benchmark' && matrix.device == 'cuda' }}
         uses: Oneflow-Inc/get-oneflow/pytest-benchmark@support-auto-benchmark
         with:
-          pytest-script: ${{ env.FLOW_VISION_SRC }}/benchmark/test_pvt_samll.py
-          benchmark-id: 1-gpu-pvt_samll
+          pytest-script: ${{ env.FLOW_VISION_SRC }}/benchmark/test_pvt_small.py
+          benchmark-id: 1-gpu-pvt_small
           pytest-args: |
             -v
           pytest-compare-args: |
