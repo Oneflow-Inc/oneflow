@@ -28,16 +28,22 @@ os.environ["ONEFLOW_MLIR_ENABLE_ROUND_TRIP"] = "1"
 class MultiplyModel(nn.Module):
     def __init__(self):
         super().__init__()
-        self.x = nn.Parameter(flow.tensor([2, 2], dtype=flow.float32), False)
-        self.y = nn.Parameter(flow.tensor([3, 3], dtype=flow.float32), False)
+        self.x = nn.Parameter(
+            flow.tensor([2, 2], dtype=flow.float32), False
+        )
+        self.y = nn.Parameter(
+            flow.tensor([3, 3], dtype=flow.float32), False
+        )
 
     def forward(self):
         return self.x * self.y
 
 
-def _test_fold_multiply(test_case):
+def _test_fold_multiply(test_case, with_cuda):
     model = MultiplyModel()
 
+    if with_cuda:
+        model.to("cuda")
     eager_res = model()
 
     class MultiplyGraph(nn.Graph):
@@ -59,7 +65,8 @@ def _test_fold_multiply(test_case):
 @flow.unittest.skip_unless_1n1d()
 class TestFoldMultiply(oneflow.unittest.TestCase):
     def test_fold_multiply(test_case):
-        _test_fold_multiply(test_case)
+        _test_fold_multiply(test_case, with_cuda=False)
+        _test_fold_multiply(test_case, with_cuda=True)
 
 
 if __name__ == "__main__":

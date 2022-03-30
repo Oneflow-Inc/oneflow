@@ -46,7 +46,8 @@ mlir::DenseElementsAttr TensorToDenseElementsAttr(
     const std::shared_ptr<::oneflow::one::Tensor>& tensor, const mlir::FloatType& float_type);
 
 std::shared_ptr<::oneflow::one::Tensor> DenseElementsAttrToTensor(
-    const mlir::DenseElementsAttr& attr);
+    const mlir::Attribute& attr, const mlir::Attribute& device_tag,
+    const mlir::Attribute& device_name);
 
 }  // namespace support
 

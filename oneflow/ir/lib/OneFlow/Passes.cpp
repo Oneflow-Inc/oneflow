@@ -526,7 +526,8 @@ struct ReplaceVariableIrPattern : public ::mlir::RewritePattern {
     rewriter.replaceOp(op0, op_new->getResults());
 
     ::oneflow::Global<::oneflow::VariableTensorMgr>::Get()
-        ->Set(op.op_nameAttr().str(), support::DenseElementsAttrToTensor(tensor_attr))
+        ->Set(op.op_nameAttr().str(), support::DenseElementsAttrToTensor(
+                                          tensor_attr, op.device_tagAttr(), op.device_nameAttr()))
         .GetOrThrow();
 
     return ::mlir::success();

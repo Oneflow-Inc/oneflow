@@ -15,6 +15,7 @@ limitations under the License.
 */
 #include <iostream>
 #include <vector>
+#include "mlir/IR/Attributes.h"
 #include "mlir/IR/BuiltinAttributes.h"
 #include "mlir/IR/BuiltinTypes.h"
 
@@ -71,17 +72,27 @@ mlir::DenseElementsAttr TensorToDenseElementsAttr(
 }
 
 std::shared_ptr<::oneflow::one::Tensor> DenseElementsAttrToTensor(
-    const mlir::DenseElementsAttr& attr) {
+    const mlir::Attribute& dense_attr, const mlir::Attribute& device_tag_attr,
+    const mlir::Attribute& device_name_attr) {
   ::oneflow::LazyMode::Guard guard{false};
-  auto t = attr.getType().cast<mlir::RankedTensorType>();
-  std::vector<int64_t> shape = t.getShape().vec();
-  const auto device = ::oneflow::Device::ParseAndNew("cpu").GetOrThrow();
+  const auto dense = dense_attr.cast<mlir::DenseElementsAttr>();
+  const auto dense_type = dense.getType().cast<mlir::RankedTensorType>();
+  const auto device_tag = device_tag_attr.cast<mlir::StringAttr>().str();
+  const auto device_name =
+      device_name_attr.cast<mlir::ArrayAttr>().getValue().front().cast<mlir::StringAttr>().str();
+
+  std::vector<int64_t> shape = dense_type.getShape().vec();
+  const std::string device_info =
+      device_tag == "gpu" ? "cuda" : device_tag + device_name.substr(device_name.rfind(":"));
+  const auto device = ::oneflow::Device::ParseAndNew(device_info).GetOrThrow();
+
   std::shared_ptr<::oneflow::one::Tensor> tensor =
       ::oneflow::one::functional::Empty(
           ::oneflow::Shape(::oneflow::DimVector(shape.begin(), shape.end())),
           ::oneflow::DType::Get(::oneflow::DataType::kFloat).GetOrThrow(), device)
           .GetPtrOrThrow();
-  std::vector<float> data(attr.getValues<float>().begin(), attr.getValues<float>().end());
+
+  std::vector<float> data(dense.getValues<float>().begin(), dense.getValues<float>().end());
   const auto& callback = [&](uint64_t of_blob_ptr) {
     ::oneflow::BlobBufferCopyUtil<float>::From(of_blob_ptr, data.data(),
                                                tensor->shape()->elem_cnt())
