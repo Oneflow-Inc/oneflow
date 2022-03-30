@@ -88,7 +88,7 @@ class Testrandperm(flow.unittest.TestCase):
         arg_dict["test_functions"] = [
             _test_randperm_with_generator,
             _test_randperm_randomness,
-            _test_randperm_larg_seq_randomness,
+            _test_randperm_large_seq_randomness,
         ]
         arg_dict["N"] = [i for i in range(10, 100, 5)]
         arg_dict["device"] = ["cpu", "cuda"]
