@@ -930,7 +930,7 @@
   bind_python: True
 
 - name: "cross_entropy"
-  signature: "Tensor(Tensor input, Tensor target, Tensor weight=None, Int64 ignore_index, String reduction) => CrossEntropy"
+  signature: "Tensor(Tensor input, Tensor target, Tensor weight=None, Int64 ignore_index=-100, String reduction=\"mean\") => CrossEntropy"
   bind_python: True
 
 - name: "distributed_sparse_cross_entropy_grad"
@@ -1471,11 +1471,19 @@
   bind_python: False
 
 - name: "softplus"
-  signature: "Tensor (Tensor x) => Softplus"
+  signature: "Tensor (Tensor x, Double beta=1.0, Double threshold=20.0) => Softplus"
   bind_python: True
 
 - name: "softplus_grad"
-  signature: "Tensor (Tensor x, Tensor dy) => SoftplusGrad"
+  signature: "Tensor (Tensor x, Tensor dy, Double beta=1.0, Double threshold=20.0) => SoftplusGrad"
+  bind_python: False
+
+- name: "softshrink"
+  signature: "Tensor (Tensor x, *, Double alpha=0.5, Bool inplace=False) => SoftShrink"
+  bind_python: True
+
+- name: "softshrink_grad"
+  signature: "Tensor (Tensor y, Tensor dy, Double alpha=0.5) => SoftShrinkGrad"
   bind_python: False
 
 - name: "one_hot"
@@ -2034,6 +2042,18 @@
   signature: "Tensor (Tensor embedding_grad, Tensor num_unique_matrix, Tensor cur_rank_inverse_indices, Tensor inverse_unique_partition_indices) => OneEmbeddingEmbeddingGradientShuffle"
   bind_python: True
 
+- name: "one_embedding_lookup"
+  signature: "Tensor (Tensor shadow, Tensor ids, Tensor column_ids=None, DataType dtype, Int64 embedding_size, Int32 num_columns, String embedding_columns, String embedding_store_options) => OneEmbeddingLookup"
+  bind_python: True
+
+- name: "one_embedding_unique_key_value_pair"
+  signature: "TensorTuple (Tensor keys, Tensor values=None, Int32 num_columns) => OneEmbeddingUniqueKeyValuePair"
+  bind_python: True
+
 - name: "einsum"
   signature: "Tensor (String equation, TensorTuple operands) => EinSum"
+  bind_python: True
+
+- name: "pixel_shuffle"
+  signature: "Tensor (Tensor input, Int64 h_upscale_factor, Int64 w_upscale_factor) => PixelShuffle"
   bind_python: True

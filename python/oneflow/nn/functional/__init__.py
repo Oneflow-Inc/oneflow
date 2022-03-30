@@ -38,6 +38,7 @@ from oneflow._C import elu
 from oneflow._C import celu
 from oneflow._C import selu
 from oneflow._C import sigmoid
+from oneflow._C import softshrink
 from oneflow._C import prelu
 from oneflow._C import gelu
 from oneflow._C import glu
@@ -58,6 +59,7 @@ from oneflow._C import triplet_margin_loss
 from oneflow._C import ctc_greedy_decoder
 from oneflow._C import one_hot
 from oneflow._C import normalize
+from oneflow._C import cross_entropy
 from oneflow.nn.modules.sparse import embedding
 from oneflow.nn.modules.linear import linear
 from oneflow.nn.modules.activation import relu6
