@@ -23,6 +23,7 @@ limitations under the License.
 #include "oneflow/core/framework/consistent_tensor_infer_cache.h"
 #include "oneflow/core/operator/operator.h"
 #include "oneflow/core/profiler/profiler.h"
+#include "oneflow/core/eager/call_context.h"
 
 namespace oneflow {
 namespace one {
@@ -44,46 +45,52 @@ ZeroCopyBaseContext::ZeroCopyBaseContext(const std::shared_ptr<const ArgTuple>& 
                                          vm::EagerBlobObject* tmp_buffer)
     : input_arg_tuple_(input_arg_tuple), output_arg_tuple_(output_arg_tuple) {
   for (int i = 0; i < input_arg_tuple->size(); i++) {
-    input_tensor_views_.emplace_back(std::make_unique<EagerBlobObjectTensorView>(
-        [this, i]() -> vm::EagerBlobObject* { return input_tensors_->at(i).get(); }));
-    input_tensor_desc_views_.emplace_back(std::make_unique<EagerBlobObjectTensorDescView>(
-        [this, i]() -> vm::EagerBlobObject* { return input_tensors_->at(i).get(); }));
+    input_tensor_views_.emplace_back(
+        std::make_unique<EagerBlobObjectTensorView>([i]() -> vm::EagerBlobObject* {
+          return eager::ThreadLocalCallContextScope::Current()->inputs->at(i).get();
+        }));
+    input_tensor_desc_views_.emplace_back(
+        std::make_unique<EagerBlobObjectTensorDescView>([i]() -> vm::EagerBlobObject* {
+          return eager::ThreadLocalCallContextScope::Current()->inputs->at(i).get();
+        }));
     input_consistent_tensor_meta_views_.emplace_back(
-        std::make_unique<ConsistentTensorMetaTensorDescView>(
-            [this, i]() -> Symbol<ConsistentTensorMeta> {
-              return CHECK_NOTNULL(consistent_tensor_infer_result_)->input_tensor_metas().at(i);
-            }));
+        std::make_unique<ConsistentTensorMetaTensorDescView>([i]() -> Symbol<ConsistentTensorMeta> {
+          return CHECK_NOTNULL(
+                     eager::ThreadLocalCallContextScope::Current()->consistent_tensor_infer_result)
+              ->input_tensor_metas()
+              .at(i);
+        }));
   }
   for (int i = 0; i < output_arg_tuple->size(); i++) {
-    output_tensor_views_.emplace_back(std::make_unique<EagerBlobObjectTensorView>(
-        [this, i]() -> vm::EagerBlobObject* { return output_tensors_->at(i).get(); }));
-    output_tensor_desc_views_.emplace_back(std::make_unique<EagerBlobObjectTensorDescView>(
-        [this, i]() -> vm::EagerBlobObject* { return output_tensors_->at(i).get(); }));
+    output_tensor_views_.emplace_back(
+        std::make_unique<EagerBlobObjectTensorView>([i]() -> vm::EagerBlobObject* {
+          return eager::ThreadLocalCallContextScope::Current()->outputs->at(i).get();
+        }));
+    output_tensor_desc_views_.emplace_back(
+        std::make_unique<EagerBlobObjectTensorDescView>([i]() -> vm::EagerBlobObject* {
+          return eager::ThreadLocalCallContextScope::Current()->outputs->at(i).get();
+        }));
     output_consistent_tensor_meta_views_.emplace_back(
-        std::make_unique<ConsistentTensorMetaTensorDescView>(
-            [this, i]() -> Symbol<ConsistentTensorMeta> {
-              return CHECK_NOTNULL(consistent_tensor_infer_result_)->output_tensor_metas().at(i);
-            }));
+        std::make_unique<ConsistentTensorMetaTensorDescView>([i]() -> Symbol<ConsistentTensorMeta> {
+          return CHECK_NOTNULL(
+                     eager::ThreadLocalCallContextScope::Current()->consistent_tensor_infer_result)
+              ->output_tensor_metas()
+              .at(i);
+        }));
   }
   if (tmp_buffer != nullptr) {
     tmp_buffer_view_.reset(new EagerBlobObjectTensorView([tmp_buffer]() { return tmp_buffer; }));
   }
 }
 
-void ZeroCopyBaseContext::Update(EagerBlobObjectListRawPtr inputs,
-                                 EagerBlobObjectListRawPtr outputs,
-                                 ConsistentTensorInferResultRawPtr consistent_tensor_infer_result) {
-  input_tensors_ = inputs;
-  output_tensors_ = outputs;
-  consistent_tensor_infer_result_ = consistent_tensor_infer_result;
-}
-
 Optional<Symbol<ParallelDesc>> ZeroCopyBaseContext::parallel_desc() const {
-  if (!consistent_tensor_infer_result_) { return Optional<Symbol<ParallelDesc>>(); }
-  if (!consistent_tensor_infer_result_->input_tensor_metas().empty()) {
-    return consistent_tensor_infer_result_->input_tensor_metas().at(0)->parallel_desc();
-  } else if (!consistent_tensor_infer_result_->output_tensor_metas().empty()) {
-    return consistent_tensor_infer_result_->output_tensor_metas().at(0)->parallel_desc();
+  const auto& consistent_tensor_infer_result =
+      eager::ThreadLocalCallContextScope::Current()->consistent_tensor_infer_result;
+  if (!consistent_tensor_infer_result) { return Optional<Symbol<ParallelDesc>>(); }
+  if (!consistent_tensor_infer_result->input_tensor_metas().empty()) {
+    return consistent_tensor_infer_result->input_tensor_metas().at(0)->parallel_desc();
+  } else if (!consistent_tensor_infer_result->output_tensor_metas().empty()) {
+    return consistent_tensor_infer_result->output_tensor_metas().at(0)->parallel_desc();
   } else {
     UNIMPLEMENTED();
     return Optional<Symbol<ParallelDesc>>();
@@ -133,8 +140,10 @@ user_op::Tensor* ZeroCopyBaseContext::Tensor4ArgNameAndIndex(const std::string& 
 
 const ConsistentTensorMeta* ZeroCopyBaseContext::ConsistentTensorMeta4ArgNameAndIndex(
     const std::string& arg_name, const int32_t index) const {
-  RETURN_IF_FOUND(consistent_tensor_infer_result_->input_tensor_metas(),
-                  consistent_tensor_infer_result_->output_tensor_metas(),
+  const auto& consistent_tensor_infer_result =
+      eager::ThreadLocalCallContextScope::Current()->consistent_tensor_infer_result;
+  RETURN_IF_FOUND(consistent_tensor_infer_result->input_tensor_metas(),
+                  consistent_tensor_infer_result->output_tensor_metas(),
                   .shared_from_symbol().get());
   return nullptr;
 }
@@ -164,12 +173,9 @@ class LocalUserKernelRegContext final : public user_op::KernelRegContext {
  public:
   explicit LocalUserKernelRegContext(const std::string& device_tag,
                                      const user_op::UserOpConfWrapper* user_op_conf,
-                                     ComposedAttrMap* composed_attrs,
                                      const std::shared_ptr<const ArgTuple>& input_arg_tuple,
                                      const std::shared_ptr<const ArgTuple>& output_arg_tuple)
-      : user_op_conf_(user_op_conf),
-        composed_attrs_(composed_attrs),
-        base_ctx_(device_tag, input_arg_tuple, output_arg_tuple) {}
+      : user_op_conf_(user_op_conf), base_ctx_(device_tag, input_arg_tuple, output_arg_tuple) {}
   ~LocalUserKernelRegContext() = default;
 
   DeviceType device_type() const override { return base_ctx_.device_type(); }
@@ -182,23 +188,15 @@ class LocalUserKernelRegContext final : public user_op::KernelRegContext {
   const ArgVec& inputs() const override { return base_ctx_.inputs(); }
   const ArgVec& outputs() const override { return base_ctx_.outputs(); }
 
-  void Update(const AttrMap& attrs, EagerBlobObjectListRawPtr inputs,
-              EagerBlobObjectListRawPtr outputs,
-              ConsistentTensorInferResultRawPtr consistent_tensor_infer_result) {
-    composed_attrs_->ResetPrior(attrs);
-    base_ctx_.Update(inputs, outputs, consistent_tensor_infer_result);
-  }
-
   const user_op::UserOpConfWrapper& user_op_conf() const override { return *user_op_conf_; }
 
  private:
   const user_op::UserOpConfWrapper* user_op_conf_;
-  ComposedAttrMap* composed_attrs_;
   LocalUserKernelBaseContext base_ctx_;
 
   const std::shared_ptr<const user_op::AttrVal>& Attr4Name(
       const std::string& attr_name) const override {
-    return composed_attrs_->Attr4Name(attr_name);
+    return eager::ThreadLocalCallContextScope::Current()->composed_attrs.Attr4Name(attr_name);
   }
 };
 
@@ -209,16 +207,11 @@ class LocalUserKernelInitAndCacheContext final : public user_op::KernelInitConte
       DeviceCtx* device_ctx, const std::string& device_tag,
       const user_op::UserOpConfWrapper* user_op_conf,
       const std::shared_ptr<const ArgTuple>& input_arg_tuple,
-      const std::shared_ptr<const ArgTuple>& output_arg_tuple, EagerBlobObjectListRawPtr inputs,
-      EagerBlobObjectListRawPtr outputs,
-      ConsistentTensorInferResultRawPtr consistent_tensor_infer_result,
-      const ComposedAttrMap* composed_attrs)
+      const std::shared_ptr<const ArgTuple>& output_arg_tuple)
       : user_op_conf_(user_op_conf),
         device_ctx_(device_ctx),
-        base_ctx_(device_tag, input_arg_tuple, output_arg_tuple),
-        composed_attrs_(composed_attrs) {
-    base_ctx_.Update(inputs, outputs, consistent_tensor_infer_result);
-  }
+        base_ctx_(device_tag, input_arg_tuple, output_arg_tuple) {}
+
   ~LocalUserKernelInitAndCacheContext() override = default;
 
   ep::Stream* stream() override {
@@ -257,7 +250,7 @@ class LocalUserKernelInitAndCacheContext final : public user_op::KernelInitConte
  private:
   const std::shared_ptr<const user_op::AttrVal>& Attr4Name(
       const std::string& attr_name) const override {
-    return composed_attrs_->Attr4Name(attr_name);
+    return eager::ThreadLocalCallContextScope::Current()->composed_attrs.Attr4Name(attr_name);
   }
 
   const user_op::UserOpConfWrapper& user_op_conf() const override { return *user_op_conf_; }
@@ -265,44 +258,39 @@ class LocalUserKernelInitAndCacheContext final : public user_op::KernelInitConte
   const user_op::UserOpConfWrapper* user_op_conf_;
   DeviceCtx* device_ctx_;
   LocalUserKernelBaseContext base_ctx_;
-  const ComposedAttrMap* composed_attrs_;
 };
 
 LocalUserOpInferContext::LocalUserOpInferContext(
-    const user_op::UserOpConfWrapper* user_op_conf, const ComposedAttrMap* composed_attrs,
+    const user_op::UserOpConfWrapper* user_op_conf,
     const std::shared_ptr<const ArgTuple>& input_arg_tuple,
     const std::shared_ptr<const ArgTuple>& output_arg_tuple)
-    : user_op_conf_(user_op_conf),
-      composed_attrs_(composed_attrs),
-      zero_copy_base_ctx_(input_arg_tuple, output_arg_tuple) {}
+    : user_op_conf_(user_op_conf), zero_copy_base_ctx_(input_arg_tuple, output_arg_tuple) {}
 
 user_op::TensorDesc* LocalUserOpInferContext::TensorDesc4ArgNameAndIndex(
     const std::string& arg_name, int32_t index) {
   return zero_copy_base_ctx_.TensorDesc4ArgNameAndIndex(arg_name, index);
 }
 
-void LocalUserOpInferContext::Update(
-    EagerBlobObjectListRawPtr inputs, EagerBlobObjectListRawPtr outputs,
-    ConsistentTensorInferResultRawPtr consistent_tensor_infer_result) {
-  zero_copy_base_ctx_.Update(inputs, outputs, consistent_tensor_infer_result);
+const std::shared_ptr<const user_op::AttrVal>& LocalUserOpInferContext::Attr4Name(
+    const std::string& attr_name) const {
+  return eager::ThreadLocalCallContextScope::Current()->composed_attrs.Attr4Name(attr_name);
 }
 
 LocalUserKernelComputeContext::LocalUserKernelComputeContext(
     DeviceCtx* device_ctx, const std::string& device_tag,
-    const user_op::UserOpConfWrapper* user_op_conf, const ComposedAttrMap* composed_attrs,
+    const user_op::UserOpConfWrapper* user_op_conf,
     const std::shared_ptr<const ArgTuple>& input_arg_tuple,
     const std::shared_ptr<const ArgTuple>& output_arg_tuple, vm::EagerBlobObject* tmp_buffer)
     : user_op_conf_(user_op_conf),
-      composed_attrs_(composed_attrs),
       device_ctx_(device_ctx),
       base_ctx_(device_tag, input_arg_tuple, output_arg_tuple, tmp_buffer) {}
 
-void LocalUserKernelComputeContext::Update(
-    EagerBlobObjectListRawPtr inputs, EagerBlobObjectListRawPtr outputs,
-    ConsistentTensorInferResultRawPtr consistent_tensor_infer_result, DeviceCtx* device_ctx) {
-  device_ctx_ = device_ctx;
-  base_ctx_.Update(inputs, outputs, consistent_tensor_infer_result);
+const std::shared_ptr<const user_op::AttrVal>& LocalUserKernelComputeContext::Attr4Name(
+    const std::string& attr_name) const {
+  return eager::ThreadLocalCallContextScope::Current()->composed_attrs.Attr4Name(attr_name);
 }
+
+void LocalUserKernelComputeContext::Update(DeviceCtx* device_ctx) { device_ctx_ = device_ctx; }
 
 Maybe<void> InitTensorTupleIndexes4Bns(const std::shared_ptr<const OperatorConf>& op_conf,
                                        const ArgVec& indexed_input_pairs,
@@ -376,11 +364,10 @@ Maybe<void> InitTensorTupleIndexes4Bns(const std::shared_ptr<const OperatorConf>
     const std::shared_ptr<const ArgTuple>& input_arg_tuple,
     const std::shared_ptr<const ArgTuple>& output_arg_tuple) {
   auto opkernel = std::shared_ptr<StatefulLocalOpKernel>(new StatefulLocalOpKernel());
+  opkernel->base_attrs_ = base_attrs;
   opkernel->op_conf_ = op_conf;
   opkernel->user_op_conf_.reset(new user_op::UserOpConfWrapper(op_conf));
   opkernel->stream_ = stream;
-  opkernel->composed_attrs_for_scheduler_thread_.reset(new ComposedAttrMap(base_attrs));
-  opkernel->composed_attrs_for_main_thread_.reset(new ComposedAttrMap(base_attrs));
   opkernel->input_arg_tuple_ = input_arg_tuple;
   opkernel->output_arg_tuple_ = output_arg_tuple;
   opkernel->need_check_mem_case_ = true;
@@ -391,15 +378,13 @@ Maybe<void> InitTensorTupleIndexes4Bns(const std::shared_ptr<const OperatorConf>
 
   const std::string& device_tag = op_conf->device_tag();
   const user_op::UserOpConfWrapper* user_op_conf = opkernel->user_op_conf_.get();
-  opkernel->op_infer_ctx_for_scheduler_thread_.reset(new LocalUserOpInferContext(
-      user_op_conf, opkernel->composed_attrs_for_scheduler_thread_.get(), input_arg_tuple,
-      output_arg_tuple));
-  opkernel->compute_ctx_.reset(new LocalUserKernelComputeContext(
-      nullptr, device_tag, user_op_conf, opkernel->composed_attrs_for_scheduler_thread_.get(),
-      input_arg_tuple, output_arg_tuple, opkernel->mut_temp_blob_object()));
-  opkernel->reg_ctx_.reset(new LocalUserKernelRegContext(
-      device_tag, user_op_conf, opkernel->composed_attrs_for_main_thread_.get(), input_arg_tuple,
-      output_arg_tuple));
+  opkernel->op_infer_ctx_for_scheduler_thread_.reset(
+      new LocalUserOpInferContext(user_op_conf, input_arg_tuple, output_arg_tuple));
+  opkernel->compute_ctx_.reset(new LocalUserKernelComputeContext(nullptr, device_tag, user_op_conf,
+                                                                 input_arg_tuple, output_arg_tuple,
+                                                                 opkernel->mut_temp_blob_object()));
+  opkernel->reg_ctx_.reset(
+      new LocalUserKernelRegContext(device_tag, user_op_conf, input_arg_tuple, output_arg_tuple));
   const auto* op_reg_val =
       user_op::UserOpRegistryMgr::Get().GetOpRegistryResult(user_op_conf->op_type_name());
   CHECK_NOTNULL_OR_RETURN(op_reg_val);
@@ -421,14 +406,12 @@ Maybe<void> InitTensorTupleIndexes4Bns(const std::shared_ptr<const OperatorConf>
 
 StatefulLocalOpKernel::~StatefulLocalOpKernel() = default;
 
-Maybe<void> StatefulLocalOpKernel::ChooseOpKernel(
-    const user_op::OpKernel** user_opkernel, bool* need_temp_storage, const AttrMap& attrs,
-    EagerBlobObjectListRawPtr inputs, EagerBlobObjectListRawPtr outputs,
-    ConsistentTensorInferResultRawPtr consistent_tensor_infer_result) {
+Maybe<void> StatefulLocalOpKernel::ChooseOpKernel(const user_op::OpKernel** user_opkernel,
+                                                  bool* need_temp_storage) {
   OF_PROFILER_RANGE_GUARD("ChooseOpKernel");
-  reg_ctx_->Update(attrs, inputs, outputs, consistent_tensor_infer_result);
-
   DataType primary_dtype = kInvalidDataType;
+  const auto& inputs = eager::ThreadLocalCallContextScope::Current()->inputs;
+  const auto& outputs = eager::ThreadLocalCallContextScope::Current()->outputs;
   if (likely(!inputs->empty())) {
     primary_dtype = (*inputs)[0]->blob_desc().data_type();
   } else if (likely(!outputs->empty())) {
@@ -439,7 +422,6 @@ Maybe<void> StatefulLocalOpKernel::ChooseOpKernel(
 
   for (const auto& pair : dtype2cached_kernels_[primary_dtype]) {
     if (likely(pair.first->is_matched_hob->get(*reg_ctx_))) {
-      reg_ctx_->Update(AttrMap{}, nullptr, nullptr, nullptr);
       *need_temp_storage = pair.first->need_temp_storage;
       *user_opkernel = pair.second.get();
       return Maybe<void>::Ok();
@@ -457,20 +439,17 @@ Maybe<void> StatefulLocalOpKernel::ChooseOpKernel(
       {kernel_reg_val, std::shared_ptr<const user_op::OpKernel>(kernel)});
 
   infer_tmp_size_fn_map_.emplace(kernel, &kernel_reg_val->infer_tmp_size_fn);
-  reg_ctx_->Update(AttrMap{}, nullptr, nullptr, nullptr);
   *need_temp_storage = kernel_reg_val->need_temp_storage;
   *user_opkernel = kernel;
   return Maybe<void>::Ok();
 }
 
-void StatefulLocalOpKernel::TryInitOpKernelStateAndCache(
-    const user_op::OpKernel* op_kernel, DeviceCtx* device_ctx, EagerBlobObjectListRawPtr inputs,
-    EagerBlobObjectListRawPtr outputs,
-    ConsistentTensorInferResultRawPtr consistent_tensor_infer_result,
-    user_op::OpKernelState** state, user_op::OpKernelCache** cache) {
+void StatefulLocalOpKernel::TryInitOpKernelStateAndCache(const user_op::OpKernel* op_kernel,
+                                                         DeviceCtx* device_ctx,
+                                                         user_op::OpKernelState** state,
+                                                         user_op::OpKernelCache** cache) {
   LocalUserKernelInitAndCacheContext init_and_cache_ctx(
-      device_ctx, op_conf_->device_tag(), user_op_conf_.get(), input_arg_tuple_, output_arg_tuple_,
-      inputs, outputs, consistent_tensor_infer_result, composed_attrs_for_scheduler_thread());
+      device_ctx, op_conf_->device_tag(), user_op_conf_.get(), input_arg_tuple_, output_arg_tuple_);
   if (state != nullptr) {
     auto it = op_kernel_state_map_.find(op_kernel);
     if (it != op_kernel_state_map_.end()) {
@@ -507,10 +486,8 @@ user_op::DataTypeInferFn StatefulLocalOpKernel::DataTypeInferFn() const {
   return data_type_infer_fn_;
 }
 
-LocalUserKernelComputeContext* StatefulLocalOpKernel::UpdateComputeContext(
-    EagerBlobObjectListRawPtr inputs, EagerBlobObjectListRawPtr outputs,
-    ConsistentTensorInferResultRawPtr consistent_tensor_infer_result, DeviceCtx* device_ctx) {
-  compute_ctx_->Update(inputs, outputs, consistent_tensor_infer_result, device_ctx);
+LocalUserKernelComputeContext* StatefulLocalOpKernel::UpdateComputeContext(DeviceCtx* device_ctx) {
+  compute_ctx_->Update(device_ctx);
   return compute_ctx_.get();
 }
 
