@@ -295,6 +295,14 @@ class GraphConfig(object):
         """
         self.proto.enable_auto_parallel = mode
 
+    def enable_auto_parallel_prune_parallel_cast_ops(self, mode: bool = True):
+        """If true, then graph will use auto parallel algorithm.
+
+        Args:
+            mode (bool, optional): [description]. Default is True.
+        """
+        self.proto.enable_auto_parallel_prune_parallel_cast_ops = mode
+
     def set_auto_parallel_computation_cost_ratio(self, ratio):
         """
         Set coefficient of computation cost in auto-parallel algorithm.
