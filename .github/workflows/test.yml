@@ -530,7 +530,7 @@ jobs:
         working-directory: ${{ env.ONEFLOW_SRC }}
         run: |
           docker run -d --rm --privileged --shm-size=8g \
-            --pids-limit 1000 \
+            --pids-limit -1 \
             --cap-add=SYS_PTRACE --security-opt seccomp=unconfined \
             --runtime=nvidia \
             -v /dataset:/dataset:ro -v /model_zoo:/model_zoo:ro \
@@ -695,14 +695,6 @@ jobs:
           EXTRA_DOCKER_ARGS+=" --env ONEFLOW_THREAD_ENABLE_LOCAL_MESSAGE_QUEUE=1"
           EXTRA_DOCKER_ARGS+=" --env ONEFLOW_KERNEL_DISABLE_BLOB_ACCESS_CHECKER=1"
           echo "EXTRA_DOCKER_ARGS=${EXTRA_DOCKER_ARGS}" >> $GITHUB_ENV
-      - name: Set Thread Limit (CPU)
-        if: ${{ !fromJson(matrix.cache-hit) && matrix.device == 'cpu' }}
-        run: |
-          echo "THREAD_LIMIT=8000" >> $GITHUB_ENV
-      - name: Set Thread Limit (CUDA)
-        if: ${{ !fromJson(matrix.cache-hit) && matrix.device == 'cuda' }}
-        run: |
-          echo "THREAD_LIMIT=3000" >> $GITHUB_ENV
       - name: Enable ONEFLOW_TEST_VERBOSE
         if: ${{ contains(github.event.pull_request.labels.*.name, 'need-test-verbose') }}
         run: |
@@ -722,7 +714,6 @@ jobs:
         working-directory: ${{ env.ONEFLOW_SRC }}
         run: |
           docker run -d --rm --privileged --shm-size=8g \
-            --pids-limit ${{ env.THREAD_LIMIT }} \
             --cap-add=SYS_PTRACE --security-opt seccomp=unconfined \
             --runtime=nvidia \
             -v /dataset:/dataset:ro -v /model_zoo:/model_zoo:ro \

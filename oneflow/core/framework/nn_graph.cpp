@@ -23,6 +23,7 @@ limitations under the License.
 #include "oneflow/core/control/global_process_ctx.h"
 #include "oneflow/core/eager/eager_blob_object.h"
 #include "oneflow/core/framework/instructions_builder.h"
+#include "oneflow/core/framework/multi_client_session_context.h"
 #include "oneflow/core/framework/nd_sbp.h"
 #include "oneflow/core/framework/tensor_name_scope.h"
 #include "oneflow/core/functional/functional.h"
@@ -76,16 +77,11 @@ NNGraph::~NNGraph() {
 Maybe<void> NNGraph::Close() {
   if (!is_closed_) {
     VLOG(1) << "Try to close c nn graph name " << name_ << "." << std::endl;
-    if (runtime_inited_) {
-      CloseRuntimeBuffers();
-      runtime_.reset();
-    }
-    session_ctx_->RemoveGraphFreeEagerTensors(name_);
+    CloseRuntimeBuffers();
+    runtime_.reset();
+    Global<MultiClientSessionContext>::Get()->RemoveGraphFreeEagerTensors(name_);
     is_closed_ = true;
     VLOG(1) << "Finish close c nn graph name " << name_ << "." << std::endl;
-
-    session_ctx_.reset();
-    is_closed_ = true;
   }
   return Maybe<void>::Ok();
 }
@@ -180,7 +176,8 @@ Maybe<void> NNGraph::RegisterVariableOpNamesAndTensors(
 
 Maybe<void> NNGraph::RegisterFreeEagerTensorsToVariableOpNames() {
   JUST(vm::CurrentRankSync());
-  const auto& free_eager_tensors = session_ctx_->GetFreeEagerTensorNamePairByGraphName(name_);
+  const auto& free_eager_tensors =
+      Global<MultiClientSessionContext>::Get()->GetFreeEagerTensorNamePairByGraphName(name_);
   for (const auto& pair : free_eager_tensors) {
     const std::string& var_name = pair.first;
     const std::shared_ptr<one::Tensor>& var = pair.second;
@@ -362,7 +359,8 @@ Maybe<void> NNGraph::GetVariableRealBlobAfterSyncPlan() {
       *JUST(MapAt(&variable_op_name2tensor_, var_name)) = tensor;
       // NOTE(chengcheng): Just for tensor lifetime hold by session context in graph lifetime
       // valid.
-      session_ctx_->StoreFreeEagerTensorWithNameByGraphName(name_, tensor, var_name);
+      Global<MultiClientSessionContext>::Get()->StoreFreeEagerTensorWithNameByGraphName(
+          name_, tensor, var_name);
 
       const std::shared_ptr<one::MirroredTensor> local_var = JUST(tensor->cur_rank_phy_tensor());
       var_blob = JUST(local_var->eager_blob_object())->mut_blob();
@@ -431,23 +429,25 @@ void NNGraph::NewRuntimeBuffers() {
 }
 
 void NNGraph::CloseRuntimeBuffers() {
-  {
-    auto* buffer_mgr = Global<BufferMgr<std::shared_ptr<CriticalSectionInstance>>>::Get();
-    for (const std::string& output_op_name : outputs_op_names_) {
-      buffer_mgr->Get(GetOutputBufferName(name_, output_op_name))->Close();
+  if (runtime_inited_) {
+    {
+      auto* buffer_mgr = Global<BufferMgr<std::shared_ptr<CriticalSectionInstance>>>::Get();
+      for (const std::string& output_op_name : outputs_op_names_) {
+        buffer_mgr->Get(GetOutputBufferName(name_, output_op_name))->Close();
+      }
+      for (const std::string& input_op_name : inputs_op_names_) {
+        buffer_mgr->Get(GetInputBufferName(name_, input_op_name))->Close();
+      }
+      buffer_mgr->Get(GetOutputCriticalSectionCallbackBufferName(name_))->Close();
+      buffer_mgr->Get(GetOutputCriticalSectionWaitBufferName(name_))->Close();
+      buffer_mgr->Get(GetInputCriticalSectionCallbackBufferName(name_))->Close();
+      buffer_mgr->Get(GetInputCriticalSectionWaitBufferName(name_))->Close();
     }
-    for (const std::string& input_op_name : inputs_op_names_) {
-      buffer_mgr->Get(GetInputBufferName(name_, input_op_name))->Close();
+    {
+      auto* buffer_mgr = Global<BufferMgr<std::shared_ptr<JobInstance>>>::Get();
+      buffer_mgr->Get(GetCallbackNotifierBufferName(name_))->Close();
+      buffer_mgr->Get(GetSourceTickBufferName(name_))->Close();
     }
-    buffer_mgr->Get(GetOutputCriticalSectionCallbackBufferName(name_))->Close();
-    buffer_mgr->Get(GetOutputCriticalSectionWaitBufferName(name_))->Close();
-    buffer_mgr->Get(GetInputCriticalSectionCallbackBufferName(name_))->Close();
-    buffer_mgr->Get(GetInputCriticalSectionWaitBufferName(name_))->Close();
-  }
-  {
-    auto* buffer_mgr = Global<BufferMgr<std::shared_ptr<JobInstance>>>::Get();
-    buffer_mgr->Get(GetCallbackNotifierBufferName(name_))->Close();
-    buffer_mgr->Get(GetSourceTickBufferName(name_))->Close();
   }
 }
 

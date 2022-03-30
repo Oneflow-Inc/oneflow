@@ -19,7 +19,6 @@ limitations under the License.
 #include <string>
 #include "oneflow/api/python/job_build/job_build_and_infer.h"
 #include "oneflow/api/python/of_api_registry.h"
-#include "oneflow/core/framework/multi_client_session_context.h"
 #include "oneflow/core/framework/tensor.h"
 #include "oneflow/core/framework/nn_graph.h"
 #include "oneflow/core/job/runtime.h"
@@ -46,7 +45,7 @@ Maybe<py::object> APINNGraphAdditionalVarTensors(const std::shared_ptr<NNGraph>&
 ONEFLOW_API_PYBIND11_MODULE("nn.graph.", m) {
   using namespace oneflow;
   py::class_<NNGraph, std::shared_ptr<NNGraph>>(m, "CNNGraph")
-      .def(py::init<const std::string&, const std::shared_ptr<MultiClientSessionContext>&>())
+      .def(py::init<const std::string&>())
       .def_property_readonly("name", &NNGraph::job_name)
       .def("register_input_op_names_and_tensors", &NNGraph::RegisterInputOpNamesAndTensors)
       .def("register_output_op_names_and_tensors", &NNGraph::RegisterOutputOpNamesAndTensors)

@@ -23,7 +23,6 @@ import numpy as np
 import oneflow
 import oneflow as flow
 import oneflow.framework.graph_build_util as graph_build_util
-import oneflow.framework.scope_util as scope_util
 import oneflow.unittest
 
 
@@ -41,7 +40,7 @@ class TestGraphActivationCheckpoint(flow.unittest.TestCase):
                 self.model = model
 
             def forward(self, x):
-                scope = scope_util.current_scope()
+                scope = oneflow.current_scope()
                 scope_proto = graph_build_util.scope_to_proto(scope)
                 ck_bool = scope_proto.attr_name2attr_value["checkpointing"].at_bool
                 test_case.assertEqual(ck_bool, True)
@@ -54,7 +53,7 @@ class TestGraphActivationCheckpoint(flow.unittest.TestCase):
                 self.model = model1
 
             def forward(self, x):
-                scope = scope_util.current_scope()
+                scope = oneflow.current_scope()
                 scope_proto = graph_build_util.scope_to_proto(scope)
                 ck_bool = scope_proto.attr_name2attr_value["checkpointing"].at_bool
                 test_case.assertEqual(ck_bool, True)

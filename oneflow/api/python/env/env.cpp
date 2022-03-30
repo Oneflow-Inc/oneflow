@@ -22,31 +22,14 @@ namespace py = pybind11;
 
 namespace oneflow {
 
-Maybe<void> SwitchToShuttingDownPhase(EnvGlobalObjectsScope* env, bool is_normal_exit) {
-  if (is_normal_exit) {
-    JUST(vm::ClusterSync());
-    auto* vm = JUST(GlobalMaybe<VirtualMachine>());
-    JUST(vm->CloseVMThreads());
-  }
-  JUST(env->init_is_normal_exit(is_normal_exit));
-  SetShuttingDown(true);
-  return Maybe<void>::Ok();
-}
-
 ONEFLOW_API_PYBIND11_MODULE("", m) {
   m.def("CurrentResource", &CurrentResource);
   m.def("EnvResource", &EnvResource);
   m.def("EnableEagerEnvironment", &EnableEagerEnvironment);
 
-  py::class_<oneflow::EnvGlobalObjectsScope, std::shared_ptr<oneflow::EnvGlobalObjectsScope>>(
-      m, "EnvContext")
-      .def(py::init<>())
-      .def("init",
-           [](oneflow::EnvGlobalObjectsScope& env, const std::string& env_proto_str) {
-             return env.Init(env_proto_str).GetOrThrow();
-           })
-      .def("SwitchToShuttingDownPhase", &SwitchToShuttingDownPhase,
-           py::call_guard<py::gil_scoped_release>());
+  m.def("IsEnvInited", &IsEnvInited);
+  m.def("InitEnv", &InitEnv);
+  m.def("DestroyEnv", &DestroyEnv, py::call_guard<py::gil_scoped_release>());
 
   m.def("CurrentMachineId", &CurrentMachineId);
 

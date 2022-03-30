@@ -32,22 +32,18 @@ ONEFLOW_API_PYBIND11_MODULE("", m) {
   m.def("StartLazyGlobalSession", &StartLazyGlobalSession);
   m.def("StopLazyGlobalSession", &StopLazyGlobalSession);
 
-  using namespace oneflow;
-  py::class_<MultiClientSessionContext, std::shared_ptr<MultiClientSessionContext>>(
-      m, "SessionContext")
-      .def(py::init<const std::shared_ptr<EnvGlobalObjectsScope>&>())
-      .def("try_init",
-           [](MultiClientSessionContext& session, const std::string& config_proto_str) {
-             return session.TryInit(config_proto_str).GetOrThrow();
-           })
-      .def("update_resource",
-           [](MultiClientSessionContext& session, const std::string& reso_proto_str) {
-             return session.UpdateResource(reso_proto_str).GetOrThrow();
-           });
+  // multi-client lazy global session context
+  m.def("CreateMultiClientSessionContext", &CreateMultiClientSessionContext);
+  m.def("InitMultiClientSessionContext", &InitMultiClientSessionContext);
+  m.def("MultiClientSessionContextUpdateResource", &MultiClientSessionContextUpdateResource);
+  m.def("MultiClientSessionContextAddCGraph", &MultiClientSessionContextAddCGraph);
+  m.def("TryDestroyMultiClientSessionContext", &TryDestroyMultiClientSessionContext);
 
+  using namespace oneflow;
   m.def("NewSessionId", &NewSessionId);
   py::class_<LogicalConfigProtoContext>(m, "LogicalConfigProtoContext")
       .def(py::init<const std::string&>());
+  ;
 }
 
 }  // namespace oneflow
