@@ -992,6 +992,15 @@ class TestTensor(flow.unittest.TestCase):
         y = x.unsqueeze(random(1, 3).to(int))
         return y
 
+    def test_tensor_float(test_case):
+        x = flow.tensor(1)
+        y = float(x)
+        test_case.assertTrue(np.allclose(y, 1.0))
+    
+    def test_tensor_int(test_case):
+        x = flow.tensor(2.3)
+        y = int(x)
+        test_case.assertTrue(np.allclose(y, 2))
 
 if __name__ == "__main__":
     unittest.main()
