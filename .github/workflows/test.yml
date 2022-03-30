@@ -1155,13 +1155,13 @@ jobs:
             --benchmark-compare-fail=mean:5%
             --benchmark-min-rounds=30
           container-name: ${{ env.TEST_CONTAINER_NAME }}
-      - name: Benchmark vit-tiny_path16_224
+      - name: Benchmark vit_tiny_path16_224
         timeout-minutes: 20
         if: ${{ !fromJson(matrix.cache-hit) && matrix.test-type == 'benchmark' && matrix.device == 'cuda' }}
         uses: Oneflow-Inc/get-oneflow/pytest-benchmark@support-auto-benchmark
         with:
-          pytest-script: ${{ env.FLOW_VISION_SRC }}/benchmark/test_vit-tiny_path16_224.py
-          benchmark-id: 1-gpu-vit-tiny_path16_224
+          pytest-script: ${{ env.FLOW_VISION_SRC }}/benchmark/test_vit_tiny_path16_224.py
+          benchmark-id: 1-gpu-vit_tiny_path16_224
           pytest-args: |
             -v
           pytest-compare-args: |
