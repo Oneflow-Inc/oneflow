@@ -17,11 +17,11 @@ limitations under the License.
 #include <string>
 #include "oneflow/api/python/of_api_registry.h"
 #include "oneflow/core/job/session.h"
-#include "oneflow/core/job/env_global_objects_scope.h"
-#include "oneflow/core/framework/multi_client_session_context.h"
-#include "oneflow/api/python/session/session_api.h"
+#include "oneflow/api/python/session/session.h"
 
 namespace py = pybind11;
+
+namespace oneflow {
 
 ONEFLOW_API_PYBIND11_MODULE("", m) {
   m.def("IsSessionInited", &IsSessionInited);
@@ -49,3 +49,5 @@ ONEFLOW_API_PYBIND11_MODULE("", m) {
   py::class_<LogicalConfigProtoContext>(m, "LogicalConfigProtoContext")
       .def(py::init<const std::string&>());
 }
+
+}  // namespace oneflow
