@@ -341,7 +341,7 @@ class Conv2d(Module):
         >>> output = m(input)
 
     ..
-        Feature Stage:
+        Feature Stage of Operator:
         - Current Stage: [Alpha]
         - Alpah Stage Check List
           - API(对齐PyTorch1.11，API Review参考此标准，没有支持的参数需要注释)：[ ]
