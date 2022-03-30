@@ -495,13 +495,20 @@ def _index(self):
     ), "Only integer tensors of a single element can be converted to an index"
     return self.numpy().item()
 
+
 def _scalar_float(self):
-    assert self.numel() == 1, "only one element tensors can be converted to Python scalars"
+    assert (
+        self.numel() == 1
+    ), "only one element tensors can be converted to Python scalars"
     return self.numpy().astype(np.float64).item()
 
+
 def _scalar_int(self):
-    assert self.numel() == 1, "only one element tensors can be converted to Python scalars"
+    assert (
+        self.numel() == 1
+    ), "only one element tensors can be converted to Python scalars"
     return self.numpy().astype(np.int64).item()
+
 
 def _flatten(self, start_dim: int = 0, end_dim: int = -1):
     return flow._C.flatten(self, start_dim=start_dim, end_dim=end_dim)
