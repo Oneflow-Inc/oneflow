@@ -67,7 +67,7 @@ class TestCuda(flow.unittest.TestCase):
     def test_cuda_int_device(test_case):
         device = random_device()
         x = random_tensor().to(device)
-        x = x.cuda(1)
+        x = x.cuda(0)
         y = x.sum()
         return y
 
