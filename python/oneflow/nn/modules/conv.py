@@ -340,11 +340,37 @@ class Conv2d(Module):
         >>> m = nn.Conv2d(16, 33, (3, 5), stride=(2, 1), padding=(4, 2), dilation=(3, 1))
         >>> output = m(input)
 
-    .. _cross-correlation:
-        https://en.wikipedia.org/wiki/Cross-correlation
-
-    .. _link:
-        https://github.com/vdumoulin/conv_arithmetic/blob/master/README.md
+    ..
+        Feature Stage:
+        - Current Stage: [Alpha]
+        - Alpah Stage Check List
+          - API(对齐PyTorch1.11，API Review参考此标准，没有支持的参数需要注释)：[ ]
+          - 文档（提供API文档，参考PyTorch标准；另外要检查渲染出的效果）：[ ]
+          - 功能和测试
+            - 可执行 eager local 的前向和后向 [ ]
+            - 可执行 graph local 的前向和后向 [ ]
+            - 支持该算子和PyTorch对齐的主要的计算逻辑，没有支持的计算逻辑需要注释 [ ]
+          - 异常处理（异常提示，异常恢复）[ ]
+        - Beta Stage Check List
+          - API(对齐PyTorch1.11，确认无缺失参数和功能，不能因为工作量问题而不支持一个参数或者功能)： [ ]
+          - 文档（同Alpha的要求）[ ]
+          - 功能和测试
+            - eager global(必须支持) [ ]
+            - graph global(必须支持) [ ]
+          - 功能对应的性能（需要被评估，给出指标）[ ]
+            - CUDA kernel [ ]
+            - CPU kernel [ ]
+          - 异常处理（异常提示，异常恢复） [ ]
+        - Stable Stage Check List
+          - API(同Beta)
+          - 文档（同beta）
+          - 高阶功能和测试
+            - fp16 和 AMP [ ]
+            - NHWC [ ]
+          - 功能对应的性能（需要被评估，给出指标）
+            - CUDA kernel [ ]
+            - CPU kernel [ ]
+          - 异常处理（异常提示，异常恢复）[ ]
     """
 
     def __init__(
