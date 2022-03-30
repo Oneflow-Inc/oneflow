@@ -402,7 +402,9 @@ class NcclLogical2DSameDim1KernelCommState final : public user_op::OpKernelState
         has_independent_stream_(ctx->op_conf().has_stream_name_hint()),
         stream_name_("NONE"),
         parallel_desc_(ctx->parallel_desc()),
-        this_parallel_id_(ctx->parallel_ctx().parallel_id()) {}
+        this_parallel_id_(ctx->parallel_ctx().parallel_id()) {
+    if (has_independent_stream_) { stream_name_ = ctx->op_conf().stream_name_hint(); }
+  }
   ~NcclLogical2DSameDim1KernelCommState() = default;
 
   ncclComm_t comm() {
