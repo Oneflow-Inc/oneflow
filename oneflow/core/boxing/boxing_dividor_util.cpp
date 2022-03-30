@@ -52,10 +52,13 @@ decltype(ReplaceOutDeviceType) ReplaceOutDeviceType =
 namespace {
 
 Maybe<Symbol<PlacedNdSbp>> RawFlattenHierarchy(Symbol<PlacedNdSbp> placed_nd_sbp) {
-  CHECK_GE_OR_RETURN(placed_nd_sbp->nd_sbp()->sbp_parallel_size(), 0);
+  CHECK_GE_OR_RETURN(placed_nd_sbp->nd_sbp()->sbp_parallel_size(), 0)
+      << Error::RuntimeError() << "invalid nd_sbp with ndim equal 0";
   const auto& first_sbp_parallel = placed_nd_sbp->nd_sbp()->sbp_parallel(0);
   for (const auto& sbp_parallel : placed_nd_sbp->nd_sbp()->sbp_parallel()) {
-    CHECK_OR_RETURN(sbp_parallel == first_sbp_parallel);
+    CHECK_OR_RETURN(sbp_parallel == first_sbp_parallel)
+        << Error::RuntimeError() << "Trying to flatten nd_sbp with diff sbp in each dimension";
+    ;
   }
   std::vector<Symbol<SbpParallel>> vec{SymbolOf(first_sbp_parallel)};
   const auto& flattened_nd_sbp = JUST(GetNdSbp(vec));
@@ -77,8 +80,12 @@ Maybe<BoxingDividor> RawFlattenInHierarchy() {
 
 Maybe<Symbol<PlacedNdSbp>> RawUnflattenHierarchy(Symbol<PlacedNdSbp> in_placed_nd_sbp,
                                                  Symbol<PlacedNdSbp> out_placed_nd_sbp) {
-  CHECK_GE_OR_RETURN(in_placed_nd_sbp->nd_sbp()->sbp_parallel_size(), 0);
-  CHECK_GE_OR_RETURN(out_placed_nd_sbp->nd_sbp()->sbp_parallel_size(), 0);
+  CHECK_GE_OR_RETURN(in_placed_nd_sbp->nd_sbp()->sbp_parallel_size(), 0)
+      << Error::RuntimeError() << "invalid nd_sbp with ndim equal 0";
+  ;
+  CHECK_GE_OR_RETURN(out_placed_nd_sbp->nd_sbp()->sbp_parallel_size(), 0)
+      << Error::RuntimeError() << "invalid nd_sbp with ndim equal 0";
+  ;
   const auto& in_sbp_parallel = in_placed_nd_sbp->nd_sbp()->sbp_parallel(0);
   NdSbp unflattened_nd_sbp;
   for (int64_t i = 0; i < out_placed_nd_sbp->nd_sbp()->sbp_parallel_size(); ++i) {

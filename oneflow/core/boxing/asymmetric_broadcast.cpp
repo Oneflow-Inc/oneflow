@@ -65,7 +65,10 @@ Maybe<int64_t> CalBroadcastRoot(Symbol<ParallelDesc> src_parallel_desc,
     }
     if (machine_and_device_id_inited) { break; }
   }
-  CHECK_OR_RETURN(machine_id != -1 && device_id != -1);
+  CHECK_OR_RETURN(machine_id != -1 && device_id != -1)
+      << Error::RuntimeError() << "cannot find root rank of the Broadcast operation"
+      << ", src_placement: " << *JUST(PlacementToString(src_parallel_desc))
+      << ", dst_placement: " << *JUST(PlacementToString(dst_parallel_desc));
   return machine_id;
 }
 
@@ -88,9 +91,14 @@ Maybe<one::Tensor> AsymmetricBroadcast(const std::shared_ptr<one::Tensor>& tenso
   const auto& in_placement = in->placement();
   const auto& out_placement = out->placement();
   const auto& tensor_nd_sbp = JUST(tensor->nd_sbp());
-  CHECK_OR_RETURN(tensor_nd_sbp == in->nd_sbp());
+  CHECK_OR_RETURN(tensor_nd_sbp == in->nd_sbp())
+      << Error::RuntimeError() << "The sbp of input tensor (" << NdSbpToString(tensor_nd_sbp)
+      << ") must match the input sbp (" << NdSbpToString(in->nd_sbp()) << ")";
   const auto& tensor_placement = JUST(tensor->parallel_desc());
-  CHECK_OR_RETURN(tensor_placement == in_placement);
+  CHECK_OR_RETURN(tensor_placement == in_placement)
+      << Error::RuntimeError() << "The placement of input tensor ("
+      << *JUST(PlacementToString(tensor_placement)) << ") must match the input placement ("
+      << *JUST(PlacementToString(in_placement)) << ")";
   std::shared_ptr<one::Tensor> local_tensor = JUST(tensor->cur_rank_phy_tensor());
   if (out->placement()->Bigger(*in->placement())) {
     const auto& out_parallel_id = JUST(GetParallelId4CurrentProcessCtx(out_placement));

@@ -36,6 +36,7 @@ Maybe<BoxingInterpreterStatus> RawMakeComposedBoxingInterpreterStatus(
     const std::shared_ptr<BoxingInterpreterStatus>& lhs_status,
     const std::shared_ptr<BoxingInterpreterStatus>& rhs_status) {
   CHECK_OR_RETURN(lhs_status->dst_placed_nd_sbp() == rhs_status->src_placed_nd_sbp())
+      << Error::RuntimeError()
       << "Intermediate placed_nd_sbp must be equal when compose boxing interpreter status"
       << ". lhs_status.dst_nd_sbp: " << NdSbpToString(lhs_status->dst_placed_nd_sbp()->nd_sbp())
       << ", rhs_status.dst_nd_sbp: " << NdSbpToString(rhs_status->src_placed_nd_sbp()->nd_sbp())
@@ -44,6 +45,7 @@ Maybe<BoxingInterpreterStatus> RawMakeComposedBoxingInterpreterStatus(
       << ", rhs_status.dst_placement: "
       << *JUST(PlacementToString(rhs_status->src_placed_nd_sbp()->placement()));
   CHECK_OR_RETURN(lhs_status->logical_shape() == rhs_status->logical_shape())
+      << Error::RuntimeError()
       << "Logical_shape must be equal when compose boxing interpreter status"
       << ". lhs_status.logical_shape: " << (lhs_status->logical_shape().ToString())
       << ". rhs_status.logical_shape: " << (rhs_status->logical_shape().ToString());
@@ -95,7 +97,8 @@ Maybe<std::string> RawGetPlacementRouting(
 }
 
 Maybe<std::string> RawGetBoxingDesc(Symbol<std::vector<std::string>> sorted_boxing_names) {
-  CHECK_OR_RETURN(!sorted_boxing_names->empty()) << "sorted_boxing_names can't be empty!";
+  CHECK_OR_RETURN(!sorted_boxing_names->empty())
+      << Error::RuntimeError() << "boxing_names of boxing status can't be empty!";
   std::ostringstream ss;
   ss << sorted_boxing_names->at(0);
   for (size_t i = 1; i < sorted_boxing_names->size(); ++i) {
