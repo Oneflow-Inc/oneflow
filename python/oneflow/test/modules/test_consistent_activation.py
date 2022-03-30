@@ -56,6 +56,8 @@ def build_module(act_type):
         return torch.nn.SiLU()
     elif act_type == "selu":
         return torch.nn.SELU()
+    elif act_type == "softplus":
+        return torch.nn.Softplus()
     elif act_type == "softshrink":
         return torch.nn.Softshrink()
     else:
@@ -194,6 +196,11 @@ class TestSiluModule(flow.unittest.TestCase):
 class TestSeluModule(flow.unittest.TestCase):
     def test_selu_module(test_case):
         _test_activation_module(test_case, "selu")
+
+
+class TestSoftplusModule(flow.unittest.TestCase):
+    def test_softplus_module(test_case):
+        _test_activation_module(test_case, "softplus")
 
 
 class TestSoftshrinkModule(flow.unittest.TestCase):
