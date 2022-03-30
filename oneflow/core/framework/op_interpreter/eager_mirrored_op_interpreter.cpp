@@ -100,14 +100,8 @@ Maybe<void> NaiveInterpret(const UserOpExpr& user_op_expr, const TensorTuple& in
   std::shared_ptr<EagerBlobObjectList> output_eager_blob_objects =
       std::make_shared<EagerBlobObjectList>(outputs->size());
   auto* output_tensor_metas = ThreadLocalDefaultOutputMutTensorMetas(outputs->size());
-  std::vector<bool> inplace_flag(outputs->size());
   for (int i = 0; i < outputs->size(); i++) {
     if (dtr::is_enabled()) {
-      if (!outputs->at(i)) {
-        inplace_flag[i] = false;
-      } else {
-        inplace_flag[i] = true;
-      }
       const auto& tensor_impl = std::make_shared<DTREagerMirroredTensorImpl>();
       outputs->at(i) = std::make_shared<DTRMirroredTensor>(tensor_impl);
       output_tensor_metas->at(i) = tensor_impl->mut_tensor_meta();
@@ -198,15 +192,6 @@ Maybe<void> NaiveInterpret(const UserOpExpr& user_op_expr, const TensorTuple& in
                                       ctx, stream);
   }));
 
-  // if inplace: outputs.size() should equal to inputs.size()
-  if (dtr::is_enabled()) {
-    for (int i = 0; i < outputs->size(); i++) {
-      if (inplace_flag[i]) {
-        CHECK_NOTNULL_OR_RETURN(inputs.at(i));
-        JUST(inputs.at(i)->set_data(outputs->at(i)));
-      }
-    }
-  }
   return Maybe<void>::Ok();
 }
 

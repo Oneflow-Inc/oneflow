@@ -132,6 +132,7 @@ Maybe<void> AutogradInterpreter::Apply(const OpExpr& op_expr, const TensorTuple&
     if (dtr::is_enabled()) {
       for (int i = 0; i < outputs->size(); ++i) {
         if (mut_inputs.at(i)) {
+          JUST(inputs.at(i)->set_data(outputs->at(i)));
           mut_inputs.at(i)->set_grad_fn_node(outputs->at(i)->mut_grad_fn_node());
         }
       }

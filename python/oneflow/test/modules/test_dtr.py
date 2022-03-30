@@ -24,6 +24,21 @@ import oneflow as flow
 import oneflow.unittest
 
 
+class TestModel1(flow.nn.Module):
+
+    def __init__(self):
+        super().__init__()
+
+        self.w1 = flow.nn.Parameter(flow.ones(1))
+        self.w2 = flow.nn.Parameter(flow.ones(1))
+
+    def forward(self, x):
+        y = x + self.w1
+        y += 1
+        y = y + self.w2
+        return y
+
+
 # TODO: add a pure cpu test
 class TestDTR(flow.unittest.TestCase):
     def setUp(self):
@@ -186,6 +201,18 @@ class TestDTR(flow.unittest.TestCase):
 
         # If inplace right in DTR, y should be recomputed as 3 and x5 should be 4. Otherwise, y could be 4 and x5 could be 5
         test_case.assertTrue(np.array_equal(x5.numpy(), 4 * np.ones(x5.shape)))
+
+    
+    def test_inplace_grad_fn(test_case):
+        flow.enable_dtr(True, "2500MB", 0, "eq")
+
+        m = TestModel1().to('cuda')
+        x = flow.ones(1).requires_grad_().to('cuda')
+        loss = m(x)
+        loss.backward()
+
+        test_case.assertEqual(type(m.w1.grad), type(x))
+        test_case.assertEqual(type(m.w2.grad), type(x))
         
 
 if __name__ == "__main__":
