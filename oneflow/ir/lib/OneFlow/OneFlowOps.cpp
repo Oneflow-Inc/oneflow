@@ -328,6 +328,7 @@ void RandomMaskLikeOp::build(mlir::OpBuilder& odsBuilder, mlir::OperationState& 
 }
 
 std::string Add2Op::getOriginalOpTypeName() { return "add_n"; }
+std::string NormalizationInferenceOp::getOriginalOpTypeName() { return "normalization"; }
 
 void Job::build(OpBuilder& builder, OperationState& state, StringRef name, FunctionType type) {
   state.addAttribute(SymbolTable::getSymbolAttrName(), builder.getStringAttr(name));
