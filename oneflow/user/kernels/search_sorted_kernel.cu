@@ -64,24 +64,27 @@ __global__ void DoSearchSortedLogical(int32_t instance_num, bool is_sequence_1d,
                                       int64_t sequence_shape_last, bool right, const input_t* values_ptr,   \
                                       const input_t* sequence_ptr, const input_t* sorter_ptr,   \
                                       output_t* out_ptr) {
-  int64_t i = blockIdx.x * blockDim.x + threadIdx.x;
-  int64_t start_bd = is_sequence_1d ? 0 : i / values_shape_last * sequence_shape_last;
-  // LOG(WARNING) << "is sequence 1d: " << is_sequence_1d;
-  int64_t end_bd = start_bd + sequence_shape_last;
-  output_t pos = !right ?
-    cus_lower_bound<input_t>(start_bd, end_bd, values_ptr[i], sequence_ptr, sorter_ptr) - start_bd :
-     cus_upper_bound<input_t>(start_bd, end_bd, values_ptr[i], sequence_ptr, sorter_ptr) - start_bd;
-  out_ptr[i] = pos;
+  CUDA_1D_KERNEL_LOOP(i, instance_num) {
+    int64_t start_bd = is_sequence_1d ? 0 : i / values_shape_last * sequence_shape_last;
+    // LOG(WARNING) << "is sequence 1d: " << is_sequence_1d;
+    int64_t end_bd = start_bd + sequence_shape_last;
+    output_t pos = !right ?
+      cus_lower_bound<input_t>(start_bd, end_bd, values_ptr[i], sequence_ptr, sorter_ptr) - start_bd :
+       cus_upper_bound<input_t>(start_bd, end_bd, values_ptr[i], sequence_ptr, sorter_ptr) - start_bd;
+    out_ptr[i] = pos;
+  }
 }
 
 template<typename input_t, typename output_t>
 __global__ void DoSearchSortedScalarLogical(int64_t sequence_shape_last, bool right, const input_t& values,   \
                                       const input_t* sequence_ptr, const input_t* sorter_ptr,   \
                                       output_t* out_ptr) {
-  output_t pos = !right ?
-    cus_lower_bound<input_t>(0, sequence_shape_last, values, sequence_ptr, sorter_ptr) :
-     cus_upper_bound<input_t>(0, sequence_shape_last, values, sequence_ptr, sorter_ptr);
-  out_ptr[0] = pos;
+  CUDA_1D_KERNEL_LOOP(i, 1) {
+    output_t pos = !right ?
+      cus_lower_bound<input_t>(0, sequence_shape_last, values, sequence_ptr, sorter_ptr) :
+       cus_upper_bound<input_t>(0, sequence_shape_last, values, sequence_ptr, sorter_ptr);
+    out_ptr[0] = pos;
+  }
 }
 
 template<typename input_t, typename output_t>
