@@ -18,6 +18,7 @@ limitations under the License.
 #include "oneflow/core/common/registry_error.h"
 #include "oneflow/core/boxing/eager_boxing_interpreter.h"
 #include "oneflow/core/framework/tensor_rpc_util.h"
+#include "oneflow/core/framework/to_string.h"
 #include "oneflow/core/boxing/eager_boxing_interpreter_mgr.h"
 #include "oneflow/core/framework/nd_sbp.h"
 
@@ -26,7 +27,7 @@ namespace oneflow {
 namespace {
 Maybe<void> CheckEagerBoxingDataType(DataType val) {
   CHECK_OR_RETURN(val != DataType::kTensorBuffer && val != DataType::kOFRecord)
-      << Error::RuntimeError() << "EagerBoxing only support POD data type.";
+      << Error::RuntimeError() << "invalid boxing data type " << ToString(val);
   return Maybe<void>::Ok();
 }
 }  // namespace

@@ -98,7 +98,7 @@ Maybe<std::string> RawGetPlacementRouting(
 
 Maybe<std::string> RawGetBoxingDesc(Symbol<std::vector<std::string>> sorted_boxing_names) {
   CHECK_OR_RETURN(!sorted_boxing_names->empty())
-      << Error::RuntimeError() << "boxing_names of boxing status can't be empty!";
+      << Error::RuntimeError() << "boxing_names of eager boxing status can't be empty!";
   std::ostringstream ss;
   ss << sorted_boxing_names->at(0);
   for (size_t i = 1; i < sorted_boxing_names->size(); ++i) {
