@@ -296,7 +296,6 @@ def get_functional_graph_res(
     **graph_kwargs,
 ):
     test_g_res = []
-    print_note_fake_program()
 
     class TestGraphOfFunctional(flow.nn.Graph):
         def __init__(self):
