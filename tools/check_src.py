@@ -58,6 +58,8 @@ check_unwanted_test_scripts(
         "tensor",
         "xrt",
         "exceptions",
+        "expensive",
+        "misc",
     ],
 )
 

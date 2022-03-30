@@ -29,6 +29,7 @@ Functional operations for neural networks
 .. autofunction:: softmax 
 .. autofunction:: softplus
 .. autofunction:: tanh 
+.. autofunction:: softshrink 
 .. autofunction:: silu
 .. autofunction:: mish
 .. autofunction:: one_hot
@@ -43,3 +44,4 @@ Functional operations for neural networks
 .. autofunction:: sparse_softmax_cross_entropy
 .. autofunction:: embedding
 .. autofunction:: linear
+.. autofunction:: cross_entropy

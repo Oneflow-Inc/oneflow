@@ -22,7 +22,7 @@ import oneflow as flow
 import oneflow.unittest
 from oneflow.test_utils.automated_test_util import *
 
-from test_util import GenArgList
+from oneflow.test_utils.test_util import GenArgList
 
 
 def _test_autograd_backward(test_case, shape, device):
@@ -108,6 +108,24 @@ class TestAutograd(flow.unittest.TestCase):
         ndim = 0
         x = random_tensor(ndim=ndim, requires_grad=True).to(device)
         return x
+
+    @autotest(n=10, auto_backward=False, check_graph=False)
+    def test_grad_grad(test_case):
+        device = random_device()
+        ndim = random(1, 4).to(int)
+        x = random_tensor(ndim=ndim, requires_grad=True).to(device)
+        y = x * x * x
+        x_grad = torch.autograd.grad(
+            outputs=y,
+            inputs=x,
+            grad_outputs=torch.ones_like(y),
+            create_graph=True,
+            retain_graph=True,
+        )[0]
+        x_grad_grad = torch.autograd.grad(
+            outputs=x_grad, inputs=x, grad_outputs=torch.ones_like(x_grad)
+        )[0]
+        return x_grad_grad
 
 
 if __name__ == "__main__":
