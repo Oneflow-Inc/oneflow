@@ -62,8 +62,8 @@ Maybe<py::array> ApiEagerMirroredTensorToNumpy(const py::handle& py_tensor) {
 
 template<typename T>
 Maybe<void> CopyMirroredTensorToNumpy(const std::shared_ptr<Tensor>& tensor, py::array_t<T> array) {
-  return CopyBetweenMirroredTensorAndNumpy<T>(tensor->contiguous(), array.ptr(), BlobNumpyCopyUtil<T>::To,
-                                              "const",
+  return CopyBetweenMirroredTensorAndNumpy<T>(tensor->contiguous(), array.ptr(),
+                                              BlobNumpyCopyUtil<T>::To, "const",
                                               /*block_host_until_done=*/true);
 }
 
