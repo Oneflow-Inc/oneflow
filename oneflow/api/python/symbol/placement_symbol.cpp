@@ -248,17 +248,12 @@ ONEFLOW_API_PYBIND11_MODULE("", m) {
                                             1);
                                return p->hierarchy();
                              })
-      .def_property_readonly("ranks",
-                             [](Symbol<ParallelDesc> p) {
-                               return PlacementSymbolExportUtil::GetPlacementRanks(p).GetOrThrow();
-                             })
-      .def("__str__", [](Symbol<ParallelDesc> p) { return PlacementToString(p).GetOrThrow(); })
-      .def("__repr__", [](Symbol<ParallelDesc> p) { return PlacementToString(p).GetOrThrow(); })
+      .def_property_readonly("ranks", &PlacementSymbolExportUtil::GetPlacementRanks)
+      .def("__str__", PlacementToString)
+      .def("__repr__", PlacementToString)
       .def(py::self == py::self)
       .def(py::hash(py::self));
-  m.def("AllDevicePlacement", [](const std::string& type) {
-    return PlacementSymbolExportUtil::AllDevicePlacement(type).GetOrThrow();
-  });
+  m.def("AllDevicePlacement", &PlacementSymbolExportUtil::AllDevicePlacement);
 }
 
 }  // namespace oneflow

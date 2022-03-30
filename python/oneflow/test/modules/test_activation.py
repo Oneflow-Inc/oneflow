@@ -507,7 +507,7 @@ class TestSoftplusModule(flow.unittest.TestCase):
             _test_softplus_threshold,
             _test_softplus_backward,
         ]
-        arg_dict["device"] = ["cpu"]
+        arg_dict["device"] = ["cpu", "cuda"]
         for arg in GenArgList(arg_dict):
             arg[0](test_case, *arg[1:])
 

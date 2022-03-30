@@ -56,6 +56,8 @@ def build_module(act_type):
         return torch.nn.SELU()
     elif act_type == "threshold":
         return torch.nn.Threshold(threshold=random(), value=random())
+    elif act_type == "softplus":
+        return torch.nn.Softplus()
     elif act_type == "softshrink":
         return torch.nn.Softshrink()
     else:
@@ -194,6 +196,10 @@ class TestSeluModule(flow.unittest.TestCase):
 class TestThresholdModule(flow.unittest.TestCase):
     def test_threshold_module(test_case):
         _test_activation_module(test_case, "threshold")
+        
+class TestSoftplusModule(flow.unittest.TestCase):
+    def test_softplus_module(test_case):
+        _test_activation_module(test_case, "softplus")
 
 
 class TestSoftshrinkModule(flow.unittest.TestCase):
