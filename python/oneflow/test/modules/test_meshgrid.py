@@ -117,7 +117,7 @@ class TestMeshGridModule(flow.unittest.TestCase):
         y = random_tensor(ndim=1, dim0=random(1, 6)).to(device)
         res1 = torch.meshgrid((x, y))
         res2 = torch.meshgrid([x, y])
-        return torch.cat((res1[0], res[1], res2[0], res2[1]), 0)
+        return torch.cat((res1[0], res1[1], res2[0], res2[1]), 0)
 
 if __name__ == "__main__":
     unittest.main()
