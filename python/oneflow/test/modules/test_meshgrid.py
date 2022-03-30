@@ -93,23 +93,31 @@ class TestMeshGridModule(flow.unittest.TestCase):
         y = random_tensor(ndim=0).to(device)
         res = torch.meshgrid(x, y)
 
-    @autotest()
-    def test_meshgrid_with_random_data(test_case):
+    @autotest(auto_backward=True)
+    @unittest.skip("pytorch 1.9.0 exist not indexing")
+    def test_meshgrid_with_random_data_xy(test_case):
         device = random_device()
         x = random_tensor(ndim=1, dim0=random(1, 6)).to(device)
         y = random_tensor(ndim=1, dim0=random(1, 6)).to(device)
-        res = torch.meshgrid(x, y)
+        res = torch.meshgrid(x, y, indexing="xy")
         return torch.cat((res[0], res[1]), 0)
+
+    @autotest(auto_backward=True)
+    @unittest.skip("pytorch 1.9.0 exist not indexing")
+    def test_meshgrid_with_random_data_size(test_case):
+        device = random_device()
+        x = random_tensor(ndim=1, dim0=random(1, 6)).to(device)
+        res = torch.meshgrid(x, indexing="xy")
+        return res[0]
 
     @autotest(n=3)
     def test_meshgrid_tuple_list_with_random_data(test_case):
         device = random_device()
         x = random_tensor(ndim=1, dim0=random(1, 6)).to(device)
         y = random_tensor(ndim=1, dim0=random(1, 6)).to(device)
-        res2 = torch.meshgrid((x, y))
+        res1 = torch.meshgrid((x, y))
         res2 = torch.meshgrid([x, y])
-        return torch.cat((res2[0], res2[1]), 0)
-
+        return torch.cat((res1[0], res[1], res2[0], res2[1]), 0)
 
 if __name__ == "__main__":
     unittest.main()
