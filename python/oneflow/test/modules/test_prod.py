@@ -55,7 +55,7 @@ class TestReduceProd(flow.unittest.TestCase):
     def test_reduce_prod_with_dtype(test_case):
         device = random_device()
         ndim = random(1, 5).to(int)
-        x = random_tensor(ndim=ndim, requires_grad=False).to(device)
+        x = random_tensor(ndim=ndim, low=1.0, high=4.0, requires_grad=False).to(device)
         dim = random(0, ndim).to(int)
         y = torch.prod(x, dim, dtype=torch.int32)
 

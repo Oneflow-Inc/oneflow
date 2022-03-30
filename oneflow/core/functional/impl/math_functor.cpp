@@ -660,27 +660,27 @@ class ReduceProdFunctor {
   Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x, const std::vector<int32_t>& axis,
                            const bool& keepdims, const Optional<Symbol<DType>>& dtype) const {
     MutableAttrMap attrs;
+    std::shared_ptr<one::Tensor> tensor = x;
+    if (dtype.has_value() && (dtype != x->dtype())) { tensor = JUST(Cast(tensor, JUST(dtype))); }
     TensorProcessor tensor_processor;
     Symbol<DType> lowest_dtype;
-    if (DType::priority_order[x->dtype()->data_type()]
+    if (DType::priority_order[tensor->dtype()->data_type()]
         == DType::priority_order[DType::Bool()->data_type()]) {
       lowest_dtype = DType::Int64();
     } else {
-      lowest_dtype = x->dtype();
+      lowest_dtype = tensor->dtype();
     }
-    JUST(tensor_processor.AddInputs({x}, lowest_dtype).Apply());
+    JUST(tensor_processor.AddInputs({tensor}, lowest_dtype).Apply());
     TensorTuple input_tuple = JUST(tensor_processor.GetInputs());
     if (axis.empty()) {
-      std::vector<int32_t> reduce_axis(x->shape()->NumAxes());
+      std::vector<int32_t> reduce_axis(tensor->shape()->NumAxes());
       std::iota(reduce_axis.begin(), reduce_axis.end(), 0);
       JUST(attrs.SetAttr<std::vector<int32_t>>("axis", reduce_axis));
     } else {
       JUST(attrs.SetAttr<std::vector<int32_t>>("axis", axis));
     }
     JUST(attrs.SetAttr<bool>("keepdims", keepdims));
-    const auto& output = JUST(OpInterpUtil::Dispatch<Tensor>(*op_, input_tuple, attrs));
-    if (dtype.has_value() && (dtype != x->dtype())) { return Cast(output, JUST(dtype)); }
-    return output;
+    return JUST(OpInterpUtil::Dispatch<Tensor>(*op_, input_tuple, attrs));
   }
 
  private:
