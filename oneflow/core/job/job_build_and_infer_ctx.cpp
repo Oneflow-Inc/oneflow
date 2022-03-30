@@ -332,7 +332,7 @@ Maybe<void> JobBuildAndInferCtx::CheckOpBlobSplitability(Operator* op, int64_t p
         if (sbp_parallel.has_split_parallel()) {
           const int64_t axis = sbp_parallel.split_parallel().axis();
           CHECK_GT_OR_RETURN(current_shape.At(axis), 0);
-          CHECK_EQ_OR_RETURN(current_shape.At(axis) % parallel_hierarchy->At(i), 0)
+          CHECK_LE_OR_RETURN(current_shape.At(axis) % parallel_hierarchy->At(i), 1)
               << "op_name: " << lbi.op_name() << " blob_name: " << lbi.blob_name()
               << " cannot split blob by parallel_hierarchy: "
               << std::to_string(parallel_hierarchy->At(i));

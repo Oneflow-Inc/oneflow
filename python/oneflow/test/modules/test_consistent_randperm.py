@@ -22,9 +22,8 @@ from oneflow.test_utils.automated_test_util import *
 from oneflow.test_utils.test_util import GenArgDict
 
 
-def _test_consistent_randperm(test_case, N, placement, sbp, dtype):
-    x = flow.randperm(N, placement=placement, sbp=sbp, dtype=dtype)
-
+def _test_consistent_randperm(test_case, N, placement,generator,sbp, dtype):
+    x = flow.randperm(N, placement=placement,generator=generator, sbp=sbp, dtype=dtype)
     test_case.assertEqual(x.dtype, dtype)
     # TODO: support (B,S)
     # test_case.assertEqual(x.sbp, sbp)
@@ -47,10 +46,10 @@ def _test_graph_randperm(test_case, N, placement, sbp, dtype):
     test_case.assertEqual(x.sbp, sbp)
     test_case.assertEqual(x.placement, placement)
 
-
 class TestRandConsistent(flow.unittest.TestCase):
-    @globaltest
     def test_rand_consistent(test_case):
+        generator = flow.Generator()
+        generator.manual_seed(0)
         RandNs = [i for i in range(10, 50, 5)]
         Dtypes = [
             flow.int32,
@@ -59,7 +58,7 @@ class TestRandConsistent(flow.unittest.TestCase):
             for placement in all_placement():
                 for sbp in all_sbp(placement, max_dim=1, except_partial_sum=True):
                     for dtype in Dtypes:
-                        _test_consistent_randperm(test_case, N, placement, sbp, dtype)
+                        _test_consistent_randperm(test_case, N, placement, generator, sbp, dtype)
 
     @unittest.skipIf(os.getenv("ONEFLOW_TEST_CPU_ONLY"), "only test cpu cases")
     @flow.unittest.skip_unless_1n2d()
@@ -83,7 +82,6 @@ class TestRandConsistent(flow.unittest.TestCase):
             dtype = args["dtype"]
             for sbp in all_sbp(placement, max_dim=1, except_partial_sum=True):
                 _test_graph_randperm(test_case, N, placement, sbp, dtype)
-
 
 if __name__ == "__main__":
     unittest.main()

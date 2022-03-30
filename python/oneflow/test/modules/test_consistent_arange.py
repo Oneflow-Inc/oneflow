@@ -21,7 +21,6 @@ from oneflow.test_utils.automated_test_util import *
 
 from oneflow.test_utils.test_util import GenArgDict
 
-
 @autotest(n=1, auto_backward=False, check_graph=False)
 def _test_arange_with_random_data(test_case, placement, sbp):
     start = random(0, 10).to(int).value()
@@ -34,7 +33,6 @@ def _test_arange_with_random_data(test_case, placement, sbp):
         start=start, end=end, step=step, placement=placement, sbp=sbp
     )
     return x
-
 
 @autotest(n=1, auto_backward=True, check_graph=False)
 def _test_arange_with_float_delta(test_case, placement, sbp):
@@ -54,7 +52,6 @@ def _test_arange_with_float_delta(test_case, placement, sbp):
     )
     return x
 
-
 class TestArange(flow.unittest.TestCase):
     @globaltest
     def test_arange(test_case):
@@ -65,7 +62,6 @@ class TestArange(flow.unittest.TestCase):
             ):
                 _test_arange_with_random_data(test_case, placement, sbp)
                 _test_arange_with_float_delta(test_case, placement, sbp)
-
 
 def _test_consistent_arange(test_case, start, end, step, placement, sbp):
     x = flow.arange(start, end, step, placement=placement, sbp=sbp)
