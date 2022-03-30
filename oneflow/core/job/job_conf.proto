@@ -246,6 +246,7 @@ message JobConfigProto {
   optional double auto_parallel_transfer_cost = 703 [default = 0.0];
   optional bool enable_auto_parallel_mainstem_algo = 704 [default = false];
   optional bool enable_auto_parallel_sbp_collector = 705 [default = false];
+  optional bool enable_auto_parallel_prune_parallel_cast_ops = 706 [default = true];
   
   optional int64 concurrency_width = 1000 [default = 128];
 
