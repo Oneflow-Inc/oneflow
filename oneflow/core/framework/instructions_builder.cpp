@@ -588,6 +588,15 @@ Maybe<Symbol<Stream>> GetBarrierStream() {
 
 }  // namespace
 
+Maybe<void> InstructionsBuilder::GlobalSync() {
+  const auto& phy_instr_operand = std::make_shared<vm::NoArgCbPhyInstrOperand>([]() {});
+  auto stream = CHECK_JUST(GetBarrierStream());
+  auto instruction = intrusive::make_shared<vm::InstructionMsg>(
+      stream->mut_vm_stream(), SingletonPtr<vm::GlobalSyncInstructionType>(), phy_instr_operand);
+  instruction_list_->PushBack(instruction.Mutable());
+  return Maybe<void>::Ok();
+}
+
 Maybe<void> InstructionsBuilder::Barrier(const std::function<void()>& Callback) {
   const auto& phy_instr_operand = std::make_shared<vm::NoArgCbPhyInstrOperand>(Callback);
   auto stream = CHECK_JUST(GetBarrierStream());

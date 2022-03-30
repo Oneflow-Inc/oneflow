@@ -208,7 +208,7 @@ void VirtualMachineEngine::MoveToGarbageMsgListAndNotifyGC() {
 void VirtualMachineEngine::MakeInstructions(InstructionMsg* instr_msg,
                                             /*out*/ InstructionList* new_instruction_list) {
   const auto& instruction_type = instr_msg->instruction_type();
-  bool is_barrier_instruction = instruction_type.IsFrontSequential();
+  bool is_barrier_instruction = instruction_type.IsBarrier();
   Stream* stream = CHECK_NOTNULL(instr_msg->mut_stream());
   intrusive::shared_ptr<Instruction> instr = stream->NewInstruction(instr_msg);
   LivelyInstructionListPushBack(instr.Mutable());
@@ -415,7 +415,7 @@ bool VirtualMachineEngine::OnSchedulerThread(const StreamType& stream_type) {
 // instructions are scarcely received by vm, there is no need for vm to run
 // VirtualMachineEngine::TryRunBarrierInstruction every time VirtualMachineEngine::Schedule run. On
 // the other hand, `barrier_instruction_hook_.size() == 0` is more lightweight than
-// `lively_instruction_list_.Begin()?->instr_msg().instruction_type().IsFrontSequential()`
+// `lively_instruction_list_.Begin()?->instr_msg().instruction_type().IsBarrier()`
 //
 void VirtualMachineEngine::TryRunBarrierInstruction() {
   auto* sequnential_instruction = mut_barrier_instruction_list()->Begin();
@@ -425,7 +425,7 @@ void VirtualMachineEngine::TryRunBarrierInstruction() {
   // `sequnential_instruction`.
   OF_PROFILER_RANGE_PUSH("RunBarrierInstruction");
   const auto& instruction_type = sequnential_instruction->instr_msg().instruction_type();
-  CHECK(instruction_type.IsFrontSequential());
+  CHECK(instruction_type.IsBarrier());
   const StreamType& stream_type = sequnential_instruction->instr_msg().stream().stream_type();
   CHECK(OnSchedulerThread(stream_type));
   stream_type.Run(sequnential_instruction);

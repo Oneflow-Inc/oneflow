@@ -34,7 +34,7 @@ class BarrierInstructionType : public InstructionType {
   BarrierInstructionType() = default;
   virtual ~BarrierInstructionType() override = default;
 
-  bool IsFrontSequential() const override { return true; }
+  bool IsBarrier() const override { return true; }
 
   std::string DebugName(const vm::InstructionMsg& instr_msg) const override { return "Barrier"; }
   void Compute(Instruction* instruction) const override { Run(instruction->instr_msg()); }
@@ -47,6 +47,17 @@ class BarrierInstructionType : public InstructionType {
     CHECK_NOTNULL(ptr);
     ptr->callback()();
   }
+};
+
+class GlobalSyncInstructionType : public InstructionType {
+ public:
+  GlobalSyncInstructionType() = default;
+  virtual ~GlobalSyncInstructionType() override = default;
+
+  bool IsBarrier() const override { return true; }
+
+  std::string DebugName(const vm::InstructionMsg& instr_msg) const override { return "GlobalSync"; }
+  void Compute(Instruction* instruction) const override { OF_ENV_BARRIER(); }
 };
 
 }  // namespace vm
