@@ -456,7 +456,7 @@ def nccl_fusion_reduce_scatter(val):
 
 
 def api_nccl_fusion_all_gather(val: bool) -> None:
-    """Whether or not use nccl fusion during all  gather progress
+    """Whether or not use nccl fusion during all gather progress
 
     Args:
         val (bool): True or False
