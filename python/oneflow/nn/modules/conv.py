@@ -348,7 +348,7 @@ class Conv2d(Module):
           - Doc(API Doc must be provided and showed normally on the web page.)[ ]
           - Functionality and its' Test [ ]
             - Functionality is highly compatiable with PyTorch 1.11. [ ]
-            - eager local [Y]
+            - eager local [ ]
               - forward [ ]
               - backward [ ]
             - graph local [ ]
