@@ -820,7 +820,7 @@ class EmbeddingShuffleKernel final : public user_op::OpKernel {
     GatherKernelUtilImpl<DeviceType::kCUDA, T, IDX>::Forward(
         ctx->stream(), reinterpret_cast<const IDX*>(cur_rank_inverse_indices->dptr()),
         cur_rank_num_ids, cur_rank_quantize_factor,
-        Shape({1, cur_rank_embeddings->shape().elem_cnt() / embedding_size}),
+        Shape({1, cur_rank_embeddings->shape().elem_cnt() / embedding_size, 1}),
         reverse_cur_rank_quantize_factor, 0);
 
     ncclComm_t comm = kernel_state->comm();
@@ -839,7 +839,7 @@ class EmbeddingShuffleKernel final : public user_op::OpKernel {
     GatherKernelUtilImpl<DeviceType::kCUDA, T, IDX>::Forward(
         ctx->stream(), reinterpret_cast<const IDX*>(inverse_unique_partition_indices->dptr()),
         inverse_unique_partition_indices->shape().elem_cnt(), recv_quantize_factor,
-        Shape({1, parallel_num * num_ids}), reverse_recv_quantize_factor, 0);
+        Shape({1, parallel_num * num_ids, 1}), reverse_recv_quantize_factor, 0);
 
     int32_t dequantize_row_size = inverse_unique_partition_indices->shape().elem_cnt();
     int32_t dequantize_block_num = std::min(dequantize_row_size, kCudaMaxBlocksNum);
