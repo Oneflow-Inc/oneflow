@@ -112,7 +112,6 @@ void VirtualMachineEngine::MakeAndAppendFusedInstruction(
 
 void VirtualMachineEngine::GetRewritedPendingInstructionsByWindowSize(
     size_t window_size, InstructionMsgList* /*out*/ pending_instr_msgs) {
-  LOG(WARNING) << "Fuse";
   InstructionMsgList fused_instr_msg_list;
   INTRUSIVE_FOR_EACH_PTR(instr_msg, mut_local_pending_msg_list()) {
     if (window_size-- <= 0) { break; }

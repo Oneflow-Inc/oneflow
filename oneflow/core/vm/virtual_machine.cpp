@@ -73,7 +73,7 @@ void WorkerLoop(vm::ThreadCtx* thread_ctx, const std::function<void(vm::ThreadCt
 
 }  // namespace
 
-VirtualMachine::VirtualMachine() {
+VirtualMachine::VirtualMachine() : disable_vm_threads_(false), scheduler_stoped_(false) {
   // Class VirtualMachineEngine only cares the basic logical of vm, while class VirtualMachine
   // manages threads and condition variables.
   // In order to notify threads in VirtualMachineEngine, a notify callback lambda should be take as
@@ -86,7 +86,6 @@ VirtualMachine::VirtualMachine() {
   std::function<void()> SchedulerInitializer;
   GetSchedulerThreadInitializer(&SchedulerInitializer);
   schedule_thread_ = std::thread(&VirtualMachine::ScheduleLoop, this, SchedulerInitializer);
-  scheduler_stoped_ = false;
   transport_local_dep_object_.Reset();
 }
 
@@ -126,16 +125,16 @@ void VirtualMachine::ControlSync() {
 }
 
 Maybe<void> VirtualMachine::CloseVMThreads() {
-  CHECK_OR_RETURN(!vm_threads_closed_);
+  CHECK_OR_RETURN(!disable_vm_threads_);
   ControlSync();
   pending_notifier_.Close();
   schedule_thread_.join();
-  vm_threads_closed_ = true;
+  disable_vm_threads_ = true;
   return Maybe<void>::Ok();
 }
 
 VirtualMachine::~VirtualMachine() {
-  if (!vm_threads_closed_) { CHECK_JUST(CloseVMThreads()); }
+  if (!disable_vm_threads_) { CHECK_JUST(CloseVMThreads()); }
   CHECK(vm_->Empty());
   CHECK(vm_->CallbackEmpty());
   vm_.Reset();
@@ -180,7 +179,7 @@ Maybe<void> VirtualMachine::Receive(vm::InstructionMsgList* instr_list) {
       // `ComputeInFuseMode` will be replaced by `Compute` soon.
       instr_msg->instruction_type().ComputeInFuseMode(instr_msg);
     }
-  } else if (unlikely(vm_threads_closed_)) {
+  } else if (unlikely(disable_vm_threads_)) {
     JUST(RunInCurrentThread(instr_list));
   } else {
     const int64_t kHighWaterMark = GetInstructionHighWaterMark();
