@@ -308,6 +308,63 @@ def new_ones_op(
     return res
 
 
+def new_zeros_op(
+    x, size=None, dtype=None, device=None, placement=None, sbp=None, requires_grad=False
+):
+    if isinstance(device, str):
+        device = flow.device(device)
+    if size != None:
+        size = _single(size)
+    new_size = size
+    new_dtype = dtype
+    new_device = device
+    new_placement = placement
+    new_sbp = sbp
+    new_requires_grad = requires_grad
+    if size is None:
+        new_size = x.shape
+    if dtype is None:
+        new_dtype = x.dtype
+    if device is None:
+        new_device = x.device if x.is_local else None
+    if placement is None:
+        new_placement = x.placement if x.is_global else None
+    if sbp is None:
+        new_sbp = x.sbp if x.is_global else None
+    if new_placement is not None:
+        assert device is None
+        assert new_sbp is not None
+    assert isinstance(
+        new_size, (int, tuple, flow.Size)
+    ), f"size parameter not correct, please check!"
+    assert isinstance(
+        new_dtype, flow.dtype
+    ), f"dtype parameter not correct, please check!"
+    if new_placement is not None:
+        assert isinstance(
+            new_placement, flow.placement
+        ), f"device parameter not correct, please check!"
+        assert isinstance(
+            new_sbp, flow.sbp.sbp
+        ), f"device parameter not correct, please check!"
+    else:
+        assert isinstance(
+            new_device, (str, flow.device)
+        ), f"device parameter not correct, please check!"
+    assert isinstance(
+        new_requires_grad, bool
+    ), f"requires_grad parameter not correct, please check!"
+    if placement is not None:
+        res = flow._C.global_constant(
+            new_size, 0.0, dtype=new_dtype, placement=placement, sbp=sbp
+        )
+    else:
+        res = flow._C.constant(new_size, 0.0, dtype=new_dtype, device=new_device)
+    res.requires_grad = new_requires_grad
+    return res
+
+
+
 if __name__ == "__main__":
     import doctest
 

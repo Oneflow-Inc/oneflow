@@ -110,6 +110,17 @@ class TestConstantModule(flow.unittest.TestCase):
             requires_grad=constant(True),
         )
         return y
+    
+    @autotest(n=5, auto_backward=True, check_graph=True)
+    def test_new_zeros(test_case):
+        device = random_device()
+        x = random_tensor().to(device)
+        y = x.new_zeros(
+            (random().to(int), random().to(int), random().to(int)),
+            device=device.value(),
+            requires_grad=constant(True),
+        )
+        return y
 
     @autotest(n=10, auto_backward=True)
     def test_full_with_random_data_int(test_case):
@@ -124,6 +135,7 @@ class TestConstantModule(flow.unittest.TestCase):
         shape = random_tensor(low=1, high=6, requires_grad=False).pytorch.shape
         y = torch.full(shape, 2.0, requires_grad=True)
         return y
+
 
     def test_cast(test_case):
         arg_dict = OrderedDict()
