@@ -311,7 +311,7 @@ def FuseIntoExistingOpPass : Pass<"fuse-into-existing-op", "ModuleOp"> {
 }
 
 def ConstantFoldingPass : Pass<"constant-folding", "ModuleOp"> {
-  let summary = "";
+  let summary = "Convert a op its inference version and rewrite ops with a more performant equivalent in inference workflow.";
   let constructor = "mlir::oneflow::createConstantFoldingPass()";
 }
 
