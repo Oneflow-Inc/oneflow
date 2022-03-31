@@ -45,8 +45,8 @@ class MathBinaryElementwiseCpuKernel final : public user_op::OpKernel {
         for (int64_t i = begin; i < end; i++) { z[i] = BinaryFunctor<T>::Forward(x[i], y[i]); }
       });
     } else if (x_contiguous) {
-      StrideParam y_stride = oneflow::one::get_StrideParam(tensor_y);
-      StrideParam z_stride = oneflow::one::get_StrideParam(tensor_z);
+      StrideParam y_stride = oneflow::one::GetStrideParam(tensor_y);
+      StrideParam z_stride = oneflow::one::GetStrideParam(tensor_z);
       cpu_stream->ParallelFor(0, n, [x, y, z, y_stride, z_stride](int64_t begin, int64_t end) {
         for (int64_t i = begin; i < end; i++) {
           int32_t y_idx = compute_index(i, y_stride, z_stride);
@@ -54,8 +54,8 @@ class MathBinaryElementwiseCpuKernel final : public user_op::OpKernel {
         }
       });
     } else if (y_contiguous) {
-      StrideParam x_stride = oneflow::one::get_StrideParam(tensor_x);
-      StrideParam z_stride = oneflow::one::get_StrideParam(tensor_z);
+      StrideParam x_stride = oneflow::one::GetStrideParam(tensor_x);
+      StrideParam z_stride = oneflow::one::GetStrideParam(tensor_z);
       cpu_stream->ParallelFor(0, n, [x, y, z, x_stride, z_stride](int64_t begin, int64_t end) {
         for (int64_t i = begin; i < end; i++) {
           int32_t x_idx = compute_index(i, x_stride, z_stride);
@@ -63,9 +63,9 @@ class MathBinaryElementwiseCpuKernel final : public user_op::OpKernel {
         }
       });
     } else {
-      StrideParam x_stride = oneflow::one::get_StrideParam(tensor_x);
-      StrideParam y_stride = oneflow::one::get_StrideParam(tensor_y);
-      StrideParam z_stride = oneflow::one::get_StrideParam(tensor_z);
+      StrideParam x_stride = oneflow::one::GetStrideParam(tensor_x);
+      StrideParam y_stride = oneflow::one::GetStrideParam(tensor_y);
+      StrideParam z_stride = oneflow::one::GetStrideParam(tensor_z);
       cpu_stream->ParallelFor(0, n,
                               [x, y, z, x_stride, y_stride, z_stride](int64_t begin, int64_t end) {
                                 for (int64_t i = begin; i < end; i++) {
@@ -107,58 +107,58 @@ class MathBinaryElementwiseXGradCpuKernel final : public user_op::OpKernel {
         dx[i] = BinaryFunctor<T>::BackwardXGrad(x[i], y[i], dz[i]);
       }
     } else if (x_contiguous && y_contiguous && !dz_contiguous) {
-      const StrideParam dz_stride = oneflow::one::get_StrideParam(tensor_dz);
-      const StrideParam dx_stride = oneflow::one::get_StrideParam(tensor_dx);
+      const StrideParam dz_stride = oneflow::one::GetStrideParam(tensor_dz);
+      const StrideParam dx_stride = oneflow::one::GetStrideParam(tensor_dx);
       for (int32_t i = 0; i < n; ++i) {
         const int32_t dz_idx = compute_index(i, dz_stride, dx_stride);
         dx[i] = BinaryFunctor<T>::BackwardXGrad(x[i], y[i], dz[dz_idx]);
       }
     } else if (x_contiguous && !y_contiguous && dz_contiguous) {
-      const StrideParam y_stride = oneflow::one::get_StrideParam(tensor_y);
-      const StrideParam dx_stride = oneflow::one::get_StrideParam(tensor_dx);
+      const StrideParam y_stride = oneflow::one::GetStrideParam(tensor_y);
+      const StrideParam dx_stride = oneflow::one::GetStrideParam(tensor_dx);
       for (int32_t i = 0; i < n; ++i) {
         const int32_t y_idx = compute_index(i, y_stride, dx_stride);
         dx[i] = BinaryFunctor<T>::BackwardXGrad(x[i], y[y_idx], dz[i]);
       }
     } else if (!x_contiguous && y_contiguous && dz_contiguous) {
-      const StrideParam x_stride = oneflow::one::get_StrideParam(tensor_x);
-      const StrideParam dx_stride = oneflow::one::get_StrideParam(tensor_dx);
+      const StrideParam x_stride = oneflow::one::GetStrideParam(tensor_x);
+      const StrideParam dx_stride = oneflow::one::GetStrideParam(tensor_dx);
       for (int32_t i = 0; i < n; ++i) {
         const int32_t x_idx = compute_index(i, x_stride, dx_stride);
         dx[i] = BinaryFunctor<T>::BackwardXGrad(x[x_idx], y[i], dz[i]);
       }
     } else if (!x_contiguous && !y_contiguous && dz_contiguous) {
-      const StrideParam x_stride = oneflow::one::get_StrideParam(tensor_x);
-      const StrideParam y_stride = oneflow::one::get_StrideParam(tensor_y);
-      const StrideParam dx_stride = oneflow::one::get_StrideParam(tensor_dx);
+      const StrideParam x_stride = oneflow::one::GetStrideParam(tensor_x);
+      const StrideParam y_stride = oneflow::one::GetStrideParam(tensor_y);
+      const StrideParam dx_stride = oneflow::one::GetStrideParam(tensor_dx);
       for (int32_t i = 0; i < n; ++i) {
         const int32_t x_idx = compute_index(i, x_stride, dx_stride);
         const int32_t y_idx = compute_index(i, y_stride, dx_stride);
         dx[i] = BinaryFunctor<T>::BackwardXGrad(x[x_idx], y[y_idx], dz[i]);
       }
     } else if (!x_contiguous && y_contiguous && !dz_contiguous) {
-      const StrideParam x_stride = oneflow::one::get_StrideParam(tensor_x);
-      const StrideParam dz_stride = oneflow::one::get_StrideParam(tensor_dz);
-      const StrideParam dx_stride = oneflow::one::get_StrideParam(tensor_dx);
+      const StrideParam x_stride = oneflow::one::GetStrideParam(tensor_x);
+      const StrideParam dz_stride = oneflow::one::GetStrideParam(tensor_dz);
+      const StrideParam dx_stride = oneflow::one::GetStrideParam(tensor_dx);
       for (int32_t i = 0; i < n; ++i) {
         const int32_t x_idx = compute_index(i, x_stride, dx_stride);
         const int32_t dz_idx = compute_index(i, dz_stride, dx_stride);
         dx[i] = BinaryFunctor<T>::BackwardXGrad(x[x_idx], y[i], dz[dz_idx]);
       }
     } else if (x_contiguous && !y_contiguous && !dz_contiguous) {
-      const StrideParam y_stride = oneflow::one::get_StrideParam(tensor_y);
-      const StrideParam dz_stride = oneflow::one::get_StrideParam(tensor_dz);
-      const StrideParam dx_stride = oneflow::one::get_StrideParam(tensor_dx);
+      const StrideParam y_stride = oneflow::one::GetStrideParam(tensor_y);
+      const StrideParam dz_stride = oneflow::one::GetStrideParam(tensor_dz);
+      const StrideParam dx_stride = oneflow::one::GetStrideParam(tensor_dx);
       for (int32_t i = 0; i < n; ++i) {
         const int32_t y_idx = compute_index(i, y_stride, dx_stride);
         const int32_t dz_idx = compute_index(i, dz_stride, dx_stride);
         dx[i] = BinaryFunctor<T>::BackwardXGrad(x[i], y[y_idx], dz[dz_idx]);
       }
     } else if (!x_contiguous && !y_contiguous && !dz_contiguous) {
-      const StrideParam x_stride = oneflow::one::get_StrideParam(tensor_x);
-      const StrideParam y_stride = oneflow::one::get_StrideParam(tensor_y);
-      const StrideParam dz_stride = oneflow::one::get_StrideParam(tensor_dz);
-      const StrideParam dx_stride = oneflow::one::get_StrideParam(tensor_dx);
+      const StrideParam x_stride = oneflow::one::GetStrideParam(tensor_x);
+      const StrideParam y_stride = oneflow::one::GetStrideParam(tensor_y);
+      const StrideParam dz_stride = oneflow::one::GetStrideParam(tensor_dz);
+      const StrideParam dx_stride = oneflow::one::GetStrideParam(tensor_dx);
       for (int32_t i = 0; i < n; ++i) {
         const int32_t x_idx = compute_index(i, x_stride, dx_stride);
         const int32_t y_idx = compute_index(i, y_stride, dx_stride);

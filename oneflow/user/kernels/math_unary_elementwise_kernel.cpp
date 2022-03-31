@@ -38,8 +38,8 @@ class MathUnaryElementwiseCpuKernel final : public user_op::OpKernel {
       for (int32_t i = 0; i < n; ++i) { y[i] = UnaryFunctor<T>::Forward(x[i]); }
     } else {
       for (int32_t i = 0; i < n; ++i) {
-        StrideParam param_in_stride = oneflow::one::get_StrideParam(tensor_x);
-        StrideParam param_out_stride = oneflow::one::get_StrideParam(tensor_y);
+        StrideParam param_in_stride = oneflow::one::GetStrideParam(tensor_x);
+        StrideParam param_out_stride = oneflow::one::GetStrideParam(tensor_y);
         int32_t src_idx = compute_index(i, param_in_stride, param_out_stride);
         y[i] = UnaryFunctor<T>::Forward(x[src_idx]);
       }
@@ -71,23 +71,23 @@ class MathUnaryElementwiseGradCpuKernel final : public user_op::OpKernel {
     if (x_contiguous && dy_contiguous) {
       for (int32_t i = 0; i < n; ++i) { dx[i] = UnaryFunctor<T>::Backward(x[i], dy[i]); }
     } else if (x_contiguous) {
-      const StrideParam param_dy_stride = oneflow::one::get_StrideParam(tensor_dy);
-      const StrideParam param_dx_stride = oneflow::one::get_StrideParam(tensor_dx);
+      const StrideParam param_dy_stride = oneflow::one::GetStrideParam(tensor_dy);
+      const StrideParam param_dx_stride = oneflow::one::GetStrideParam(tensor_dx);
       for (int32_t i = 0; i < n; ++i) {
         const int32_t dy_idx = compute_index(i, param_dy_stride, param_dx_stride);
         dx[i] = UnaryFunctor<T>::Backward(x[i], dy[dy_idx]);
       }
     } else if (dy_contiguous) {
-      const StrideParam param_x_stride = oneflow::one::get_StrideParam(tensor_x);
-      const StrideParam param_dx_stride = oneflow::one::get_StrideParam(tensor_dx);
+      const StrideParam param_x_stride = oneflow::one::GetStrideParam(tensor_x);
+      const StrideParam param_dx_stride = oneflow::one::GetStrideParam(tensor_dx);
       for (int32_t i = 0; i < n; ++i) {
         int32_t x_idx = compute_index(i, param_x_stride, param_dx_stride);
         dx[i] = UnaryFunctor<T>::Backward(x[x_idx], dy[i]);
       }
     } else {
-      const StrideParam param_x_stride = oneflow::one::get_StrideParam(tensor_x);
-      const StrideParam param_dy_stride = oneflow::one::get_StrideParam(tensor_dy);
-      const StrideParam param_dx_stride = oneflow::one::get_StrideParam(tensor_dx);
+      const StrideParam param_x_stride = oneflow::one::GetStrideParam(tensor_x);
+      const StrideParam param_dy_stride = oneflow::one::GetStrideParam(tensor_dy);
+      const StrideParam param_dx_stride = oneflow::one::GetStrideParam(tensor_dx);
       for (int32_t i = 0; i < n; ++i) {
         const int32_t x_idx = compute_index(i, param_x_stride, param_dx_stride);
         const int32_t dy_idx = compute_index(i, param_dy_stride, param_dx_stride);

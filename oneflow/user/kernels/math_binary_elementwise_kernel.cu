@@ -116,9 +116,9 @@ class MathBinaryElementwiseGpuKernel final : public user_op::OpKernel {
     // compute is_contiguous and construct input/output stride params
     bool x_contiguous = oneflow::one::IsContiguous(tensor_x);
     bool y_contiguous = oneflow::one::IsContiguous(tensor_y);
-    StrideParam x_stride = oneflow::one::get_StrideParam(tensor_x);
-    StrideParam y_stride = oneflow::one::get_StrideParam(tensor_y);
-    StrideParam z_stride = oneflow::one::get_StrideParam(tensor_z);
+    StrideParam x_stride = oneflow::one::GetStrideParam(tensor_x);
+    StrideParam y_stride = oneflow::one::GetStrideParam(tensor_y);
+    StrideParam z_stride = oneflow::one::GetStrideParam(tensor_z);
     if (x_contiguous && y_contiguous) {
       MathBinaryElementwiseForwardGpu<BinaryFunctor, T>
           <<<BlocksNum4ThreadsNum(n), kCudaThreadsNumPerBlock, 0,
@@ -174,10 +174,10 @@ class MathBinaryElementwiseXGradGpuKernel final : public user_op::OpKernel {
               n, tensor_x->dptr<T>(), tensor_y->dptr<T>(), tensor_dz->dptr<T>(),
               tensor_dx->mut_dptr<T>());
     } else {
-      const StrideParam x_stride = oneflow::one::get_StrideParam(tensor_x);
-      const StrideParam y_stride = oneflow::one::get_StrideParam(tensor_y);
-      const StrideParam dz_stride = oneflow::one::get_StrideParam(tensor_dz);
-      const StrideParam dx_stride = oneflow::one::get_StrideParam(tensor_dx);
+      const StrideParam x_stride = oneflow::one::GetStrideParam(tensor_x);
+      const StrideParam y_stride = oneflow::one::GetStrideParam(tensor_y);
+      const StrideParam dz_stride = oneflow::one::GetStrideParam(tensor_dz);
+      const StrideParam dx_stride = oneflow::one::GetStrideParam(tensor_dx);
       MathBinaryElementwiseStrideBackwardXGradGpu<BinaryFunctor, T>
           <<<BlocksNum4ThreadsNum(n), kCudaThreadsNumPerBlock, 0,
              ctx->stream()->As<ep::CudaStream>()->cuda_stream()>>>(
@@ -215,10 +215,10 @@ class MathBinaryElementwiseYGradGpuKernel final : public user_op::OpKernel {
               n, tensor_x->dptr<T>(), tensor_y->dptr<T>(), tensor_dz->dptr<T>(),
               tensor_dy->mut_dptr<T>());
     } else {
-      const StrideParam x_stride = oneflow::one::get_StrideParam(tensor_x);
-      const StrideParam y_stride = oneflow::one::get_StrideParam(tensor_y);
-      const StrideParam dz_stride = oneflow::one::get_StrideParam(tensor_dz);
-      const StrideParam dy_stride = oneflow::one::get_StrideParam(tensor_dy);
+      const StrideParam x_stride = oneflow::one::GetStrideParam(tensor_x);
+      const StrideParam y_stride = oneflow::one::GetStrideParam(tensor_y);
+      const StrideParam dz_stride = oneflow::one::GetStrideParam(tensor_dz);
+      const StrideParam dy_stride = oneflow::one::GetStrideParam(tensor_dy);
       MathBinaryElementwiseStrideBackwardYGradGpu<BinaryFunctor, T>
           <<<BlocksNum4ThreadsNum(n), kCudaThreadsNumPerBlock, 0,
              ctx->stream()->As<ep::CudaStream>()->cuda_stream()>>>(

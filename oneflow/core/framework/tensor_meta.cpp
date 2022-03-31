@@ -63,7 +63,7 @@ bool IsContiguous(const user_op::Tensor* tensor) {
   return IsContiguous(shape_vec, stride_vec);
 }
 
-StrideParam get_StrideParam(const user_op::Tensor* tensor) {
+StrideParam GetStrideParam(const user_op::Tensor* tensor) {
   const int32_t ndim = tensor->shape().NumAxes();
   const StrideVector& stride_vec = tensor->stride().StrideVec();
   DimVector shape_vec;

@@ -33,7 +33,7 @@ namespace one {
 bool IsContiguous(const Shape& shape, const Stride& stride);
 bool IsContiguous(const DimVector& shape, const StrideVector& stride);
 bool IsContiguous(const user_op::Tensor* tensor);
-StrideParam get_StrideParam(const user_op::Tensor* tensor);
+StrideParam GetStrideParam(const user_op::Tensor* tensor);
 
 class TensorMeta : public user_op::TensorDesc {
  public:
