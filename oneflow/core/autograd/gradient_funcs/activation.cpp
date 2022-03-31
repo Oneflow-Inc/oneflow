@@ -461,7 +461,7 @@ class PReLU : public OpExprGradFunction<PReLUCaptureState> {
 
 struct ThresholdCaptureState : public AutoGradCaptureState {
   bool requires_grad = true;
-  double threshold;
+  double threshold = 0.0;
 };
 
 class Threshold : public OpExprGradFunction<ThresholdCaptureState> {
