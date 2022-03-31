@@ -49,8 +49,6 @@ def _test_nccl_send_recv_boxing(test_case, src_nd_sbp, dst_nd_sbp):
     # in this case, use 1d boxing
     if src_nd_sbp[0] == src_nd_sbp[1] and dst_nd_sbp[0] == dst_nd_sbp[1]:
         return
-    print("src_nd_sbp", src_nd_sbp)
-    print("dst_nd_sbp", dst_nd_sbp)
     placement = flow.placement("cuda", ranks=[[0, 1], [2, 3]])
 
     class TestGraph(flow.nn.Graph):
@@ -89,7 +87,7 @@ def gen_nd_sbp():
 @flow.unittest.skip_unless_1n4d()
 @unittest.skipIf(os.getenv("ONEFLOW_TEST_CPU_ONLY"), "only test cpu cases")
 class TestNcclSendRecvBoxing(flow.unittest.TestCase):
-    def test_nccl_send_recv_boxing_s2s(test_case):
+    def test_nccl_send_recv_boxing(test_case):
         arg_dict = OrderedDict()
         arg_dict["src_nd_sbp"] = gen_nd_sbp()
         arg_dict["dst_nd_sbp"] = gen_nd_sbp()
