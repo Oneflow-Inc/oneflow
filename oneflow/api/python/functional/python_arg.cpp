@@ -199,7 +199,7 @@ Maybe<bool> PythonArg::TypeCheck(ValueType type) const {
     case kUINT32:
     case kINT64:
     case kUINT64:
-    case kBOOL: return PyLong_Check(object_) || numpy::IsNumpyLongScalar(object_);
+    case kBOOL: return PyLong_Check(object_) || numpy::PyArrayCheckLongScalar(object_);
     case kINT32_LIST:
     case kUINT32_LIST:
     case kINT64_LIST:
@@ -207,8 +207,8 @@ Maybe<bool> PythonArg::TypeCheck(ValueType type) const {
     case kBOOL_LIST: return PyLongSequenceCheck(object_) || (size_ > 0 && PyLong_Check(object_));
     case kFLOAT:
     case kDOUBLE:
-      return PyFloat_Check(object_) || PyLong_Check(object_) || numpy::IsNumpyFloatScalar(object_)
-             || numpy::IsNumpyLongScalar(object_);
+      return PyFloat_Check(object_) || PyLong_Check(object_)
+             || numpy::PyArrayCheckFloatScalar(object_) || numpy::PyArrayCheckLongScalar(object_);
     case kFLOAT_LIST:
     case kDOUBLE_LIST:
       return PyFloatSquenceCheck(object_)
@@ -216,8 +216,8 @@ Maybe<bool> PythonArg::TypeCheck(ValueType type) const {
     case kSTRING: return PyStringCheck(object_);
     case kSTRING_LIST: return PyStringSequenceCheck(object_);
     case kSCALAR:
-      return PyScalarCheck(object_) || numpy::IsNumpyLongScalar(object_)
-             || numpy::IsNumpyFloatScalar(object_);
+      return PyScalarCheck(object_) || numpy::PyArrayCheckLongScalar(object_)
+             || numpy::PyArrayCheckFloatScalar(object_);
     case kTENSOR:
     case kTENSOR_REF: return PyTensorCheck(object_);
     case kTENSOR_TUPLE: return PyTensorTupleCheck(object_) || PyTensorSequenceCheck(object_);

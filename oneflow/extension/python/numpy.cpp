@@ -90,11 +90,11 @@ std::vector<size_t> OFStrideToNumpyStride(const StrideVector& fixed_vec, const D
   return result;
 }
 
-bool IsNumpyLongScalar(PyObject* obj) {
+bool PyArrayCheckLongScalar(PyObject* obj) {
   return PyArray_CheckScalar(obj) && PyDataType_ISINTEGER(PyArray_DescrFromScalar(obj));
 }
 
-bool IsNumpyFloatScalar(PyObject* obj) {
+bool PyArrayCheckFloatScalar(PyObject* obj) {
   return PyArray_CheckScalar(obj) && PyDataType_ISFLOAT(PyArray_DescrFromScalar(obj));
 }
 

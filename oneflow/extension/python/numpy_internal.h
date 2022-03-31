@@ -62,9 +62,9 @@ std::vector<size_t> OFShapeToNumpyShape(const DimVector& fixed_vec);
 
 std::vector<size_t> OFStrideToNumpyStride(const StrideVector& fixed_vec, const DataType data_type);
 
-bool IsNumpyLongScalar(PyObject* obj);
+bool PyArrayCheckLongScalar(PyObject* obj);
 
-bool IsNumpyFloatScalar(PyObject* obj);
+bool PyArrayCheckFloatScalar(PyObject* obj);
 
 Maybe<void> InitNumpyCAPI();
 
