@@ -342,7 +342,8 @@ class Conv2d(Module):
 
     ..
         Feature Stage of Operator.
-        - Current Stage []
+        - Maintainer List [ ]
+        - Current Stage [ ]
         - Alpha Stage Check List [ ]
           - API(Compatible with PyTorch 1.11, anything incompatible must be noted in API Doc.)[ ]
           - Doc(API Doc must be provided and showed normally on the web page.)[ ]
