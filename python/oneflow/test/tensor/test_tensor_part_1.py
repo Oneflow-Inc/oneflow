@@ -1008,7 +1008,7 @@ class TestTensor(flow.unittest.TestCase):
         x = flow.tensor(2.3)
         y = int(x)
         test_case.assertTrue(np.array_equal(y, 2))
-    
+
     def test_none_equal(test_case):
         xt = flow.randn(10)
         yt = flow.randn(10)
