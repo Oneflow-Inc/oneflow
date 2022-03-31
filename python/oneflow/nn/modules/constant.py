@@ -309,11 +309,11 @@ def new_ones_op(
 
 
 def new_zeros_op(
-    x, size, dtype=None, device=None, placement=None, sbp=None, requires_grad=False
+    x, size=None, dtype=None, device=None, placement=None, sbp=None, requires_grad=False
 ):
     if isinstance(device, str):
         device = flow.device(device)
-    if size is None:
+    if size is None or len(size) == 0:
         new_size = x.shape
     else:
         new_size =  _handle_size_arg(size)
@@ -345,7 +345,7 @@ def new_zeros_op(
             new_placement, flow.placement
         ), f"argument 'placement' must be flow.placement, not %s"  % (type(new_placement))
         assert isinstance(
-            new_sbp, flow.sbp.sbp
+            new_sbp, (flow.sbp.sbp, tuple)
         ), f"argument 'sbp' must be flow.sbp.sbp, not %s"  % (type(new_sbp))
     else:
         assert isinstance(
@@ -354,9 +354,9 @@ def new_zeros_op(
     assert isinstance(
         new_requires_grad, bool
     ), f"argument 'requires_grad' must be bool, not %s"  % (type(new_requires_grad))
-    if placement is not None:
+    if new_placement is not None:
         res = flow._C.global_constant(
-            new_size, 0.0, dtype=new_dtype, placement=placement, sbp=sbp
+            new_size, 0.0, dtype=new_dtype, placement=new_placement, sbp=new_sbp
         )
     else:
         res = flow._C.constant(new_size, 0.0, dtype=new_dtype, device=new_device)

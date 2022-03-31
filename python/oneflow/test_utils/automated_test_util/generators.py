@@ -459,7 +459,7 @@ class all_sbp(generator):
         dim=1,
         max_dim=0,
         except_split=False,
-        excpet_broadcast=False,
+        except_broadcast=False,
         except_partial_sum=False,
         valid_split_axis: Optional[Union[int, Sequence[int]]] = None,
     ):
@@ -477,7 +477,7 @@ class all_sbp(generator):
             self.dim = dim
         self.max_dim = max_dim
         self.except_split = except_split
-        self.excpet_broadcast = excpet_broadcast
+        self.excpet_broadcast = except_broadcast
         self.except_partial_sum = except_partial_sum
         if valid_split_axis is not None:
             if isinstance(valid_split_axis, int):
