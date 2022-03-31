@@ -482,24 +482,6 @@ void ShuffleEmbeddings(cudaStream_t cuda_stream, ncclComm_t comm, int64_t parall
 
 constexpr int kReduceBlockSize = 128;
 
-// template<typename T>
-// struct AbsMaxOp {
-//   __device__ __forceinline__ T operator()(const T& a, const T& b) const {
-//     return max(abs(a), abs(b));
-//   }
-// };
-
-// template<typename T>
-// __inline__ __device__ T BlockAllReduceAbsMax(T val) {
-//   typedef cub::BlockReduce<T, kReduceBlockSize> BlockReduce;
-//   __shared__ typename BlockReduce::TempStorage temp_storage;
-//   __shared__ T final_result;
-//   T result = BlockReduce(temp_storage).Reduce(val, AbsMaxOp<T>());
-//   if (threadIdx.x == 0) { final_result = result; }
-//   __syncthreads();
-//   return final_result;
-// }
-
 template<typename T>
 struct MaxOp {
   __device__ __forceinline__ T operator()(const T& a, const T& b) const { return max(a, b); }
@@ -759,7 +741,6 @@ class EmbeddingShuffleKernel final : public user_op::OpKernel {
     //          + quantize_cur_rank_embeddings_size + reverse_recv_quantize_cur_rank_embeddings_size
     //          + cur_rank_quantize_factor_size + recv_quantize_factor_size);
 
-    // int32_t row_size = num_ids;
     int32_t row_size = cur_rank_num_ids;
     int block_num = 0;
     GetNumBlocks(row_size * embedding_size, kReduceBlockSize, &block_num);
@@ -863,9 +844,6 @@ class EmbeddingShuffleKernel final : public user_op::OpKernel {
 
 OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(REGISTER_CUDA_EMBEDDING_SHUFFLE_KERNEL,
                                  FLOATING_DATA_TYPE_SEQ HALF_DATA_TYPE_SEQ, IDX_DATA_TYPE_SEQ)
-
-// OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(REGISTER_CUDA_EMBEDDING_SHUFFLE_KERNEL,
-// FLOATING_DATA_TYPE_SEQ, IDX_DATA_TYPE_SEQ)
 
 template<typename T, typename IDX>
 void ShuffleEmbeddingsGrad(cudaStream_t cuda_stream, ncclComm_t comm, int64_t parallel_id,
