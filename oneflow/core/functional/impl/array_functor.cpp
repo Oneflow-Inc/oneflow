@@ -500,7 +500,7 @@ class ConcatFunctor {
       JUST(tensor_processor.PromoteInputsToCommonDtype(true).AddInputs(partial_inputs).Apply());
       TensorTuple input_tuple = JUST(tensor_processor.GetInputs());
       outputs.emplace_back(
-          JUST(OpInterpUtil::Dispatch<Tensor>(*ops_.at(size - 1), input_tuple, attrs)));
+          JUST(OpInterpUtil::Dispatch<Tensor>(*ops_[size - 1], input_tuple, attrs)));
     }
 
     if (outputs.size() == 1) { return outputs.at(0); }
