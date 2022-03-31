@@ -53,7 +53,7 @@ def _check_cache(cache):
 
 
 class MultiTableEmbedding(Module):
-    """MultiTableEmbedding represent multi Embedding tables with same embedding_dim, dtype, and key_type.
+    r"""MultiTableEmbedding represent multi Embedding tables with same embedding_dim, dtype, and key_type.
 
     Args:
         name (str): The name of Embedding
@@ -63,6 +63,68 @@ class MultiTableEmbedding(Module):
         tables (list): list of table param which can be made by flow.one_embedding.make_table
         store_options (dict): store option of Embedding
         default_initializer (dict, optional): if tables param is None, use default_initializer to initialize table. Defaults to None.
+    
+    For example:
+
+    .. code-block:: python
+
+        >>> import oneflow as flow
+        >>> import numpy as np
+        >>> import oneflow.nn as nn
+        >>> table_size_array = [39884407,39043,17289,7420,20263,3,7120,1543,63,38532952,2953546,403346,10,2208,11938,155,4,976,14,39979772,25641295,39664985,585935,12972,108,36]
+        >>> vocab_size = sum(table_size_array)
+        >>> num_tables = len(table_size_array)
+        >>> embedding_size = 128
+        >>> scales = np.sqrt(1 / np.array(table_size_array))
+        >>> tables = [
+        >>>     flow.one_embedding.make_table(
+        >>>         flow.one_embedding.make_uniform_initializer(low=-scale, high=scale)
+        >>>     )
+        >>>     for scale in scales
+        >>> ]
+        >>> store_options = flow.one_embedding.make_cached_ssd_store_options(
+        >>>     cache_budget_mb=8192, persistent_path="/your_path_to_ssd", capacity=vocab_size,
+        >>> )
+        >>> embedding = flow.one_embedding.MultiTableEmbedding(
+        >>>     name="my_embedding",
+        >>>     embedding_dim=embedding_size,
+        >>>     dtype=flow.float,
+        >>>     key_type=flow.int64,
+        >>>     tables=tables,
+        >>>     store_options=store_options,
+        >>> )
+        >>> embedding.to("cuda")
+        >>> mlp = flow.nn.FusedMLP(
+        >>>     in_features=embedding_size * num_tables,
+        >>>     hidden_features=[512, 256, 128],
+        >>>     out_features=1,
+        >>>     skip_final_activation=True,
+        >>> )
+        >>> mlp.to("cuda")
+        >>>
+        >>> class TrainGraph(flow.nn.Graph):
+        >>>     def __init__(self,):
+        >>>         super().__init__()
+        >>>         self.embedding_lookup = embedding
+        >>>         self.mlp = mlp
+        >>>         self.add_optimizer(
+        >>>             flow.optim.SGD(self.embedding_lookup.parameters(), lr=0.1, momentum=0.0)
+        >>>         )
+        >>>         self.add_optimizer(
+        >>>             flow.optim.SGD(self.mlp.parameters(), lr=0.1, momentum=0.0)
+        >>>         ) 
+        >>>     def build(self, ids):
+        >>>         embedding = self.embedding_lookup(ids)
+        >>>         loss = self.mlp(flow.reshape(embedding, (-1, num_tables * embedding_size)))
+        >>>         loss = loss.sum()
+        >>>         loss.backward()
+        >>>         return loss 
+        >>> ids = np.random.randint(0, 1000, (100, num_tables), dtype=np.int64)
+        >>> ids_tensor = flow.tensor(ids, requires_grad=False).to("cuda")
+        >>> graph = TrainGraph()
+        >>> loss = graph(ids_tensor)
+        >>> print(loss)
+
     """
 
     def __init__(
@@ -206,9 +268,19 @@ class MultiTableEmbedding(Module):
                 )
 
     def save_snapshot(self, snapshot_name):
+        """save snapshot
+
+        Args:
+            snapshot_name (str): save snapshot to
+        """
         self.handler.SaveSnapshot(snapshot_name)
 
     def load_snapshot(self, snapshot_name):
+        """load snapshot
+
+        Args:
+            snapshot_name (str): load snapshot from
+        """
         self.handler.LoadSnapshot(snapshot_name)
 
     def forward(self, ids, table_ids=None):
