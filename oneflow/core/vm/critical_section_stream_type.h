@@ -14,8 +14,8 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-#ifndef ONEFLOW_CORE_EAGER_CRITICAL_SECTION_STREAM_TYPE_H_
-#define ONEFLOW_CORE_EAGER_CRITICAL_SECTION_STREAM_TYPE_H_
+#ifndef ONEFLOW_CORE_VM_CRITICAL_SECTION_STREAM_TYPE_H_
+#define ONEFLOW_CORE_VM_CRITICAL_SECTION_STREAM_TYPE_H_
 
 #include "oneflow/core/intrusive/flat_msg_view.h"
 #include "oneflow/core/vm/stream_type.h"
@@ -31,8 +31,6 @@ class CriticalSectionStreamType final : public StreamType {
   CriticalSectionStreamType() = default;
   virtual ~CriticalSectionStreamType() = default;
 
-  const char* stream_tag() const override { return "critical_section"; }
-
   void InitDeviceCtx(std::unique_ptr<DeviceCtx>* device_ctx, Stream* stream) const override;
 
   void InitInstructionStatus(const Stream& stream,
@@ -44,11 +42,9 @@ class CriticalSectionStreamType final : public StreamType {
   void Compute(Instruction* instruction) const override;
   bool OnSchedulerThread() const override { return false; }
   bool SupportingTransportInstructions() const override { return false; }
-  intrusive::shared_ptr<StreamDesc> MakeStreamDesc(const Resource& resource,
-                                                   int64_t this_machine_id) const override;
 };
 
 }  // namespace vm
 }  // namespace oneflow
 
-#endif  // ONEFLOW_CORE_EAGER_CRITICAL_SECTION_STREAM_TYPE_H_
+#endif  // ONEFLOW_CORE_VM_CRITICAL_SECTION_STREAM_TYPE_H_

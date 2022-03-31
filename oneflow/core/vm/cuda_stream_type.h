@@ -32,8 +32,6 @@ class CudaStreamType final : public StreamType {
   CudaStreamType() = default;
   ~CudaStreamType() override = default;
 
-  const char* stream_tag() const override { return "cuda"; }
-
   void InitDeviceCtx(std::unique_ptr<DeviceCtx>* device_ctx, Stream* stream) const override;
 
   void InitInstructionStatus(const Stream& stream,
@@ -43,8 +41,6 @@ class CudaStreamType final : public StreamType {
   bool QueryInstructionStatusDone(const Stream& stream,
                                   const InstructionStatusBuffer& status_buffer) const override;
   void Compute(Instruction* instruction) const override;
-  intrusive::shared_ptr<StreamDesc> MakeStreamDesc(const Resource& resource,
-                                                   int64_t this_machine_id) const override;
   bool OnSchedulerThread() const override { return true; }
   bool SupportingTransportInstructions() const override { return true; }
 };

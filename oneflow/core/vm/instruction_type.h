@@ -36,8 +36,7 @@ class InstructionType {
  public:
   virtual ~InstructionType() = default;
 
-  bool IsSequential() const { return IsFrontSequential(); }
-  virtual bool IsFrontSequential() const { return false; }
+  virtual bool IsBarrier() const { return false; }
   virtual InstructionFuseType fuse_type() const { return kDisableInstructionFuse; }
   virtual void Compute(Instruction* instruction) const = 0;
 
@@ -49,7 +48,7 @@ class InstructionType {
     DeleteInstructionStatus(instruction);
   }
 
-  virtual std::string DebugOpTypeName(const InstructionMsg&) const { return ""; }
+  virtual std::string DebugName(const InstructionMsg&) const = 0;
 
  protected:
   InstructionType() = default;
@@ -58,28 +57,6 @@ class InstructionType {
   virtual void InitInstructionStatus(Instruction* instruction) const;
   virtual void DeleteInstructionStatus(Instruction* instruction) const;
 };
-
-class InstrTypeId;
-const InstrTypeId& LookupInstrTypeId(const std::string& instr_type_name);
-void ForEachInstrTypeId(std::function<void(const InstrTypeId&)> DoEach);
-void RegisterInstrTypeId(const std::string& instr_type_name, const StreamType* stream_type,
-                         const InstructionType* instruction_type);
-
-template<typename T>
-const InstructionType* StaticGlobalInstructionType() {
-  static const InstructionType* instruction_type = new T();
-  return instruction_type;
-}
-
-template<typename T>
-void RegisterInstrTypeId(const std::string& instr_type_name, const StreamType* stream_type) {
-  RegisterInstrTypeId(instr_type_name, stream_type, StaticGlobalInstructionType<T>());
-}
-
-template<typename T>
-void RegisterInstructionType(const std::string& instr_type_name) {
-  RegisterInstrTypeId<T>(instr_type_name, StaticGlobalStreamType<typename T::stream_type>());
-}
 
 }  // namespace vm
 }  // namespace oneflow

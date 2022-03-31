@@ -29,8 +29,6 @@ class ControlStreamType final : public StreamType {
   ControlStreamType() = default;
   ~ControlStreamType() = default;
 
-  const char* stream_tag() const override { return "control"; }
-
   void InitDeviceCtx(std::unique_ptr<DeviceCtx>* device_ctx, Stream* stream) const override {}
 
   void InitInstructionStatus(const Stream& stream,
@@ -39,8 +37,6 @@ class ControlStreamType final : public StreamType {
                                InstructionStatusBuffer* status_buffer) const override;
   bool QueryInstructionStatusDone(const Stream& stream,
                                   const InstructionStatusBuffer& status_buffer) const override;
-  intrusive::shared_ptr<StreamDesc> MakeStreamDesc(const Resource& resource,
-                                                   int64_t this_machine_id) const override;
   void Compute(Instruction* instruction) const override;
 
   bool OnSchedulerThread() const override { return true; }

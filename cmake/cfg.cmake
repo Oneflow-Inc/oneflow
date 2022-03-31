@@ -29,7 +29,6 @@ function(GENERATE_CFG_AND_PYBIND11_CPP SRCS HDRS PYBIND_SRCS ROOT_DIR)
     APPEND
     CFG_SOURCE_FILE_CONVERT_PROTO
     oneflow/core/common/error.proto
-    oneflow/core/vm/instruction.proto
     oneflow/core/job/job_conf.proto
     oneflow/core/job/placement.proto
     oneflow/core/operator/op_conf.proto

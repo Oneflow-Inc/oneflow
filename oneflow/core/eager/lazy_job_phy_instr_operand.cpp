@@ -17,6 +17,7 @@ limitations under the License.
 #include "oneflow/core/common/container_util.h"
 #include "oneflow/core/framework/device.h"
 #include "oneflow/core/framework/stream.h"
+#include "oneflow/core/vm/virtual_machine.h"
 
 namespace oneflow {
 namespace vm {
@@ -31,7 +32,7 @@ Maybe<LocalDepObject*> RawGetEagerNcclLocalDepObject(StreamRole stream_role) {
   //   error when using local rank to create a EagerNcclLocalDepObject, but we only need an legal
   //   device so we use device 0.
   const auto& device = JUST(Device::New("cpu", 0));
-  const auto& stream = Stream::New(device, stream_role);
+  const auto& stream = JUST(::oneflow::Stream::New(device, stream_role));
   const auto& local_dep_object = stream->mut_transport_local_dep_object();
   CHECK_OR_RETURN(local_dep_object.has_value());
   return JUST(local_dep_object);
@@ -48,7 +49,7 @@ void LaunchLazyJobPhyInstrOperand::ForEachMutMirroredObject(
   for (const auto& eager_blob_object : *param_blob_objects_) {
     DoEach(CHECK_JUST(eager_blob_object->compute_local_dep_object()));
   }
-  DoEach(GetStaticGlobalTransportLocalDepObject());
+  DoEach(CHECK_JUST(GlobalMaybe<VirtualMachine>())->FindOrCreateTransportLocalDepObject());
 }
 
 }  // namespace vm

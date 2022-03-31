@@ -20,9 +20,6 @@ limitations under the License.
 #include "oneflow/core/intrusive/flat_msg.h"
 #include "oneflow/core/intrusive/intrusive.h"
 #include "oneflow/core/intrusive/object_pool.h"
-#include "oneflow/core/vm/id_util.h"
-#include "oneflow/core/vm/stream_desc.h"
-#include "oneflow/core/job/parallel_desc.h"
 
 namespace oneflow {
 

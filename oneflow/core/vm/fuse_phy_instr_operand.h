@@ -35,13 +35,10 @@ class FusePhyInstrOperand : public PhyInstrOperand {
     auto* last_instr_msg = instr_msg_list_.Last();
     INTRUSIVE_UNSAFE_FOR_EACH_PTR(instr_msg, &instr_msg_list_) {
       if (instr_msg == last_instr_msg) {
-        CHECK(instr_msg->instr_type_id().instruction_type().fuse_type()
-                  == kEnableInstructionFuseAsTailOnly
-              || instr_msg->instr_type_id().instruction_type().fuse_type()
-                     == kEnableInstructionFuseAtAnyPosition);
+        CHECK(instr_msg->instruction_type().fuse_type() == kEnableInstructionFuseAsTailOnly
+              || instr_msg->instruction_type().fuse_type() == kEnableInstructionFuseAtAnyPosition);
       } else {
-        CHECK(instr_msg->instr_type_id().instruction_type().fuse_type()
-              == kEnableInstructionFuseAtAnyPosition);
+        CHECK(instr_msg->instruction_type().fuse_type() == kEnableInstructionFuseAtAnyPosition);
       }
       if (unlikely(stream_sequential_dependence_ == nullptr)) {
         stream_sequential_dependence_ =

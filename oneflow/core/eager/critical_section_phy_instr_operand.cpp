@@ -42,7 +42,8 @@ namespace {
 
 Maybe<LocalDepObject*> RawCriticalSectionLocalDepObject() {
   const auto& device = JUST(Device::New("cpu"));
-  return Stream::New(device, StreamRole::kCriticalSection)->mut_schedule_local_dep_object();
+  return JUST(::oneflow::Stream::New(device, StreamRole::kCriticalSection))
+      ->mut_schedule_local_dep_object();
 }
 
 constexpr auto* CriticalSectionLocalDepObject =

@@ -115,7 +115,7 @@ Maybe<void> NaiveInterpret(const UserOpExpr& user_op_expr, const TensorTuple& in
 
   // Infer devices
   if (!user_op_expr.has_device_and_stream_infer_fn()) {
-    stream = GetDefaultStreamByDevice(default_device);
+    stream = JUST(GetDefaultStreamByDevice(default_device));
     for (int i = 0; i < outputs->size(); i++) {
       auto* tensor_impl = JUST(TensorImpl4Tensor(outputs->at(i)));
       *JUST(tensor_impl->mut_device()) = default_device;
@@ -161,8 +161,7 @@ Maybe<void> NaiveInterpret(const UserOpExpr& user_op_expr, const TensorTuple& in
   }
 
   JUST(PhysicalRun([&](InstructionsBuilder* builder) -> Maybe<void> {
-    return builder->LocalCallOpKernel(kernel, input_eager_blob_objects, output_eager_blob_objects,
-                                      ctx, stream);
+    return builder->Call(kernel, input_eager_blob_objects, output_eager_blob_objects, ctx, stream);
   }));
   return Maybe<void>::Ok();
 }

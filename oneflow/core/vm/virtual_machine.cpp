@@ -18,18 +18,23 @@ limitations under the License.
 #include "oneflow/core/vm/instruction.h"
 #include "oneflow/core/vm/instruction_type.h"
 #include "oneflow/core/vm/no_arg_cb_phy_instr_operand.h"
+#include "oneflow/core/vm/barrier_instruction_type.h"
 #include "oneflow/core/vm/vm_util.h"
 #include "oneflow/core/common/blocking_counter.h"
 #include "oneflow/core/common/cpp_attribute.h"
+#include "oneflow/core/common/singleton_ptr.h"
 #include "oneflow/core/control/global_process_ctx.h"
 #include "oneflow/core/job/global_for.h"
 #include "oneflow/core/common/foreign_lock_helper.h"
 #include "oneflow/core/thread/thread_consistent_id.h"
 #include "oneflow/core/framework/transport_token.h"
+#include "oneflow/core/framework/to_string.h"
+#include "oneflow/core/framework/stream_on_independent_thread.h"
 #include "oneflow/core/profiler/profiler.h"
 #include "oneflow/core/platform/include/pthread_fork.h"
 #include "oneflow/core/common/env_var/env_var.h"
 #include "oneflow/core/framework/device.h"
+#include "oneflow/core/framework/stream.h"
 
 namespace oneflow {
 
@@ -44,11 +49,7 @@ int MicrosecondsFrom(const T& start) {
 
 Maybe<void> ForEachThreadCtx(vm::VirtualMachineEngine* vm,
                              const std::function<Maybe<void>(vm::ThreadCtx*)>& DoEach) {
-  INTRUSIVE_UNSAFE_FOR_EACH_PTR(thread_ctx, vm->mut_thread_ctx_list()) {
-    const auto& stream_type = thread_ctx->stream_rt_desc().stream_type();
-    if (stream_type.OnSchedulerThread()) { continue; }
-    JUST(DoEach(thread_ctx));
-  }
+  INTRUSIVE_UNSAFE_FOR_EACH_PTR(thread_ctx, vm->mut_thread_ctx_list()) { JUST(DoEach(thread_ctx)); }
   return Maybe<void>::Ok();
 }
 
@@ -63,45 +64,6 @@ void GetCallbackThreadInitializer(std::function<void()>* Initializer) {
   *Initializer = [&]() { OF_PROFILER_NAME_THIS_HOST_THREAD("_VM::Callback"); };
 }
 
-std::type_index GetStreamTypeIndex(const vm::ThreadCtx* thread_ctx) {
-  const auto& stream_rt_desc = thread_ctx->stream_rt_desc();
-  const auto& stream_type = stream_rt_desc.stream_type();
-  return typeid(stream_type);
-}
-
-// Threads with the same stream_type share a thread_consistent_id.
-// e.g.
-//   Given there are 8 gpu thread in a single process.
-//   thread #0 is active in process #0, while others are not.
-//   thread #1 is active in process #1, while others are not.
-//   ...
-//   thread #7 is active in process #7, while others are not.
-//   to make them communicate with each other, we can allocate thread_consistent_id 1 to all those
-//   gpu threads in all processes.
-void GetWorkerThreadInitializer(intrusive::shared_ptr<vm::VirtualMachineEngine> vm,
-                                std::function<void(vm::ThreadCtx*)>* Initializer) {
-  std::set<std::type_index> stream_type_indexes;
-  INTRUSIVE_UNSAFE_FOR_EACH_PTR(thread_ctx, vm->mut_thread_ctx_list()) {
-    const auto& stream_type = thread_ctx->stream_rt_desc().stream_type();
-    if (!stream_type.SupportingTransportInstructions()) { continue; }
-    stream_type_indexes.insert(GetStreamTypeIndex(thread_ctx));
-  }
-  HashMap<std::type_index, int64_t> stream_type_index2consistent_id;
-  int64_t thread_consistent_id = kThreadConsistentIdScheduler + 1;
-  for (const auto& stream_type_index : stream_type_indexes) {
-    VLOG(3) << "transport stream type: " << stream_type_index.name();
-    stream_type_index2consistent_id[stream_type_index] = thread_consistent_id++;
-  }
-  *Initializer = [stream_type_index2consistent_id](vm::ThreadCtx* thread_ctx) {
-    const auto& stream_type_index = GetStreamTypeIndex(thread_ctx);
-    const auto& iter = stream_type_index2consistent_id.find(stream_type_index);
-    if (iter != stream_type_index2consistent_id.end()) {
-      CHECK_JUST(InitThisThreadConsistentId(iter->second, stream_type_index.name()));
-    }
-    OF_PROFILER_NAME_THIS_HOST_THREAD("_VM::Worker");
-  };
-}
-
 void WorkerLoop(vm::ThreadCtx* thread_ctx, const std::function<void(vm::ThreadCtx*)>& Initializer) {
   Initializer(thread_ctx);
   while (thread_ctx->mut_notifier()->WaitAndClearNotifiedCnt() == kNotifierStatusSuccess) {
@@ -111,39 +73,45 @@ void WorkerLoop(vm::ThreadCtx* thread_ctx, const std::function<void(vm::ThreadCt
 
 }  // namespace
 
-VirtualMachine::VirtualMachine(const Resource& resource, int64_t this_machine_id)
-    : vm_threads_closed_(false) {
+VirtualMachine::VirtualMachine() {
   // Class VirtualMachineEngine only cares the basic logical of vm, while class VirtualMachine
   // manages threads and condition variables.
   // In order to notify threads in VirtualMachineEngine, a notify callback lambda should be take as
   // an argument for VirtualMachineEngine's constructor.
-  vm_ = intrusive::make_shared<vm::VirtualMachineEngine>(
-      vm::MakeVmDesc(resource, this_machine_id).Get());
+  vm_ = intrusive::make_shared<vm::VirtualMachineEngine>();
   OF_PROFILER_NAME_THIS_HOST_THREAD("_Main");
-  std::function<void(vm::ThreadCtx*)> WorkerInitializer;
-  GetWorkerThreadInitializer(vm_, &WorkerInitializer);
-  CHECK_JUST(ForEachThreadCtx(vm_.Mutable(), [&](vm::ThreadCtx* thread_ctx) -> Maybe<void> {
-    auto thread = std::make_unique<std::thread>(&WorkerLoop, thread_ctx, WorkerInitializer);
-    worker_threads_.push_back(std::move(thread));
-    return Maybe<void>::Ok();
-  }));
   std::function<void()> CallbackInitializer;
   GetCallbackThreadInitializer(&CallbackInitializer);
   callback_thread_ = std::thread(&VirtualMachine::CallbackLoop, this, CallbackInitializer);
   std::function<void()> SchedulerInitializer;
   GetSchedulerThreadInitializer(&SchedulerInitializer);
   schedule_thread_ = std::thread(&VirtualMachine::ScheduleLoop, this, SchedulerInitializer);
+  transport_local_dep_object_.Reset();
 }
 
 namespace {
 
-void MakeCtrlSeqInstructions(vm::VirtualMachineEngine* vm, vm::InstructionMsgList* list,
-                             const std::function<void()>& ComputeCallback) {
-  const auto& phy_instr_operand = std::make_shared<vm::NoArgCbPhyInstrOperand>(ComputeCallback);
-  auto instruction = intrusive::make_shared<vm::InstructionMsg>(
-      vm, "CtrlComputeRankFrontSeqCallback", std::shared_ptr<const ParallelDesc>(),
-      phy_instr_operand);
-  list->EmplaceBack(std::move(instruction));
+Maybe<Symbol<Stream>> GetBarrierStream() {
+  auto device = JUST(Device::New("control"));
+  return Stream::New(device, StreamRole::kBarrier);
+}
+
+void MakeBarrierInstructions(vm::InstructionMsgList* list,
+                             const std::function<void()>& BarrierCallback) {
+  {
+    const auto& phy_instr_operand = std::make_shared<vm::NoArgCbPhyInstrOperand>([]() {});
+    auto stream = CHECK_JUST(GetBarrierStream());
+    auto instruction = intrusive::make_shared<vm::InstructionMsg>(
+        stream->mut_vm_stream(), SingletonPtr<vm::GlobalSyncInstructionType>(), phy_instr_operand);
+    list->EmplaceBack(std::move(instruction));
+  }
+  {
+    const auto& phy_instr_operand = std::make_shared<vm::NoArgCbPhyInstrOperand>(BarrierCallback);
+    auto stream = CHECK_JUST(GetBarrierStream());
+    auto instruction = intrusive::make_shared<vm::InstructionMsg>(
+        stream->mut_vm_stream(), SingletonPtr<vm::BarrierInstructionType>(), phy_instr_operand);
+    list->EmplaceBack(std::move(instruction));
+  }
 }
 
 }  // namespace
@@ -151,7 +119,7 @@ void MakeCtrlSeqInstructions(vm::VirtualMachineEngine* vm, vm::InstructionMsgLis
 void VirtualMachine::ControlSync() {
   auto bc = std::make_shared<BlockingCounter>(1);
   vm::InstructionMsgList list;
-  MakeCtrlSeqInstructions(mut_vm(), &list, [bc] { bc->Decrease(); });
+  MakeBarrierInstructions(&list, [bc] { bc->Decrease(); });
   CHECK_JUST(Receive(&list));
   CHECK_JUST(bc->WaitUntilCntEqualZero(VirtualMachine::GetPredicatorNoMoreInstructionsFinished()));
 }
@@ -204,12 +172,12 @@ std::string VirtualMachine::GetBlockingDebugString() {
 Maybe<void> VirtualMachine::Receive(vm::InstructionMsgList* instr_list) {
   if (unlikely(pthread_fork::IsForkedSubProcess())) {
     INTRUSIVE_FOR_EACH_PTR(instr_msg, instr_list) {
-      const auto& parallel_desc = instr_msg->phy_instr_parallel_desc();
-      CHECK_OR_RETURN(!parallel_desc || parallel_desc->device_type() == DeviceType::kCPU)
+      const auto& device = instr_msg->stream().device();
+      CHECK_OR_RETURN(device->enum_type() == DeviceType::kCPU)
           << pthread_fork::kOfCudaNotSupportInForkedSubProcess;
       // NOTE: operate `vm_` in forked subprocesses causes mysterious problems.
       // `ComputeInFuseMode` will be replaced by `Compute` soon.
-      instr_msg->mut_instr_type_id()->instruction_type().ComputeInFuseMode(instr_msg);
+      instr_msg->instruction_type().ComputeInFuseMode(instr_msg);
     }
   } else if (unlikely(vm_threads_closed_)) {
     JUST(RunInCurrentThread(instr_list));
@@ -328,13 +296,107 @@ void VirtualMachine::ScheduleLoop(const std::function<void()>& Initializer) {
     thread_ctx->mut_notifier()->Close();
     return Maybe<void>::Ok();
   }));
-  for (const auto& worker_thread : worker_threads_) { worker_thread->join(); }
+  {
+    std::unique_lock<std::mutex> lock(worker_threads_mutex_);
+    for (const auto& worker_thread : worker_threads_) { worker_thread->join(); }
+  }
 }
 
 void VirtualMachine::CallbackLoop(const std::function<void()>& Initializer) {
   Initializer();
   auto* vm = mut_vm();
   while (callback_notifier_.WaitAndClearNotifiedCnt() == kNotifierStatusSuccess) { vm->Callback(); }
+}
+
+vm::MirroredObject* VirtualMachine::FindOrCreateScheduleLocalDepObject(Symbol<Device> device,
+                                                                       StreamRole stream_role) {
+  std::unique_lock<std::recursive_mutex> lock(creating_stream_and_thread_ctx_mutex_);
+  auto key = std::make_pair(device, stream_role);
+  intrusive::shared_ptr<vm::MirroredObject>* ptr = &device_stream_role2local_dep_object_[key];
+  if (!*ptr) { *ptr = intrusive::make_shared<vm::MirroredObject>(); }
+  return ptr->Mutable();
+}
+
+vm::MirroredObject* VirtualMachine::FindOrCreateTransportLocalDepObject() {
+  std::unique_lock<std::recursive_mutex> lock(creating_stream_and_thread_ctx_mutex_);
+  if (!transport_local_dep_object_) {
+    transport_local_dep_object_ = intrusive::make_shared<vm::MirroredObject>();
+  }
+  return transport_local_dep_object_.Mutable();
+}
+
+Maybe<vm::Stream*> VirtualMachine::CreateStream(Symbol<Device> device, StreamRole stream_role) {
+  std::unique_lock<std::recursive_mutex> lock(creating_stream_and_thread_ctx_mutex_);
+  vm::ThreadCtx* thread_ctx = JUST(FindOrCreateThreadCtx(device, stream_role));
+  return JUST(CreateStream(thread_ctx, device, stream_role));
+}
+
+Maybe<vm::ThreadCtx*> VirtualMachine::FindOrCreateThreadCtx(Symbol<Device> device,
+                                                            StreamRole stream_role) {
+  std::unique_lock<std::recursive_mutex> lock(creating_stream_and_thread_ctx_mutex_);
+  vm::ThreadCtx** thread_ctx_ptr = nullptr;
+  if (StreamRoleSwitch<StreamOnIndependentThread>(stream_role)) {
+    auto key = std::make_pair(device->enum_type(), stream_role);
+    thread_ctx_ptr = &devcie_type_stream_role_2independent_thread_ctx_[key];
+  } else {
+    thread_ctx_ptr = &devcie_type2non_independent_thread_ctx_[device->enum_type()];
+  }
+  if (*thread_ctx_ptr == nullptr) { *thread_ctx_ptr = JUST(CreateThreadCtx(device, stream_role)); }
+  return *thread_ctx_ptr;
+}
+
+Maybe<vm::ThreadCtx*> VirtualMachine::CreateThreadCtx(Symbol<Device> device,
+                                                      StreamRole stream_role) {
+  std::unique_lock<std::recursive_mutex> lock(creating_stream_and_thread_ctx_mutex_);
+  // thread_ctx_ptr may be used after timout.
+  auto thread_ctx_ptr = std::make_shared<vm::ThreadCtx*>(nullptr);
+  {
+    auto bc = std::make_shared<BlockingCounter>(1);
+    vm_->InsertProbe([thread_ctx_ptr, bc](vm::VirtualMachineEngine* vm) {
+      auto thread_ctx = intrusive::make_shared<vm::ThreadCtx>();
+      vm->mut_thread_ctx_list()->PushBack(thread_ctx.Mutable());
+      *thread_ctx_ptr = thread_ctx.Mutable();
+      bc->Decrease();
+      return true;
+    });
+    pending_notifier_.Notify();
+    JUST(bc->WaitUntilCntEqualZero(VirtualMachine::GetPredicatorNoMoreInstructionsFinished()));
+  }
+  auto* thread_ctx = *thread_ctx_ptr;
+  {
+    const auto& WorkerInitializer = [device, stream_role](vm::ThreadCtx* thread_ctx) {
+      int device_type_value = static_cast<int>(device->enum_type());
+      CHECK_GT(device_type_value, 0);
+      std::string device_tag = *CHECK_JUST(DeviceTag4DeviceType(device->enum_type()));
+      if (!StreamRoleSwitch<StreamOnIndependentThread>(stream_role)) {
+        CHECK_JUST(InitThisThreadConsistentId(device_type_value + kThreadConsistentIdScheduler,
+                                              device_tag));
+      }
+      OF_PROFILER_NAME_THIS_HOST_THREAD("_VM::Worker_" + device_tag);
+    };
+    auto thread = std::make_unique<std::thread>(&WorkerLoop, thread_ctx, WorkerInitializer);
+    std::unique_lock<std::mutex> lock(worker_threads_mutex_);
+    worker_threads_.push_back(std::move(thread));
+  }
+  return thread_ctx;
+}
+
+Maybe<vm::Stream*> VirtualMachine::CreateStream(vm::ThreadCtx* thread_ctx, Symbol<Device> device,
+                                                StreamRole stream_role) {
+  std::unique_lock<std::recursive_mutex> lock(creating_stream_and_thread_ctx_mutex_);
+  // stream_ptr may be used after timout.
+  auto stream_ptr = std::make_shared<vm::Stream*>(nullptr);
+  auto bc = std::make_shared<BlockingCounter>(1);
+  vm_->InsertProbe([stream_ptr, thread_ctx, device, stream_role, bc](vm::VirtualMachineEngine* vm) {
+    auto stream = intrusive::make_shared<vm::Stream>(thread_ctx, device, stream_role);
+    thread_ctx->mut_stream_list()->PushBack(stream.Mutable());
+    *stream_ptr = stream.Mutable();
+    bc->Decrease();
+    return true;
+  });
+  pending_notifier_.Notify();
+  JUST(bc->WaitUntilCntEqualZero(VirtualMachine::GetPredicatorNoMoreInstructionsFinished()));
+  return *stream_ptr;
 }
 
 }  // namespace oneflow

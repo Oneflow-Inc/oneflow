@@ -13,16 +13,27 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
-#include "oneflow/core/vm/stream_runtime_desc.h"
+#ifndef ONEFLOW_CORE_COMMON_SINGLETON_PTR_H_
+#define ONEFLOW_CORE_COMMON_SINGLETON_PTR_H_
 
 namespace oneflow {
-namespace vm {
 
-void StreamRtDesc::__Init__(StreamDesc* stream_desc) {
-  const StreamType* stream_type = &stream_desc->stream_type();
-  reset_stream_desc(stream_desc);
-  set_stream_type(stream_type);
+namespace private_detail {
+
+template<typename T>
+const T* GlobalSingletonPtr() {
+  static const T* value = new T();
+  return value;
 }
 
-}  // namespace vm
+}  // namespace private_detail
+
+template<typename T>
+const T* SingletonPtr() {
+  thread_local const T* value = private_detail::GlobalSingletonPtr<T>();
+  return value;
+}
+
 }  // namespace oneflow
+
+#endif  // ONEFLOW_CORE_COMMON_SINGLETON_PTR_H_

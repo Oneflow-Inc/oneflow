@@ -55,7 +55,7 @@ Maybe<void> Device::Init() {
   enum_type_ = JUST(DeviceType4DeviceTag(type()));
   {
     DeviceType dev_type = enum_type_;
-    if (dev_type == kMockDevice) { dev_type = DeviceType::kCPU; }
+    if (dev_type == kMockDevice || dev_type == kControlDevice) { dev_type = DeviceType::kCPU; }
     mem_case_ = MemoryCaseUtil::MakeMemCase(dev_type, device_id_);
   }
   return Maybe<void>::Ok();

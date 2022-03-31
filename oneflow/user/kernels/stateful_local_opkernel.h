@@ -30,7 +30,7 @@ namespace oneflow {
 class AttrMap;
 
 namespace vm {
-struct LocalCallOpKernelUtil;
+struct CallInstructionUtil;
 }  // namespace vm
 
 namespace one {
@@ -420,7 +420,7 @@ class StatefulLocalOpKernel final {
   const OperatorConf& op_conf() const { return *op_conf_; }
 
  private:
-  friend struct vm::LocalCallOpKernelUtil;
+  friend struct vm::CallInstructionUtil;
   StatefulLocalOpKernel() = default;
   LocalUserKernelComputeContext* UpdateComputeContext(
       EagerBlobObjectListRawPtr inputs, EagerBlobObjectListRawPtr outputs,

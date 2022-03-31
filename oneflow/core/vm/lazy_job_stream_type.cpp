@@ -14,11 +14,11 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-#include "oneflow/core/eager/lazy_job_stream_type.h"
+#include "oneflow/core/vm/lazy_job_stream_type.h"
 #include "oneflow/core/vm/instruction_type.h"
 #include "oneflow/core/vm/instruction.h"
 #include "oneflow/core/vm/thread_ctx.h"
-#include "oneflow/core/eager/lazy_job_device_context.h"
+#include "oneflow/core/vm/lazy_job_device_context.h"
 #include "oneflow/core/vm/naive_instruction_status_querier.h"
 #include "oneflow/core/common/util.h"
 
@@ -48,19 +48,7 @@ bool LazyJobStreamType::QueryInstructionStatusDone(
 }
 
 void LazyJobStreamType::Compute(Instruction* instruction) const {
-  {
-    const auto& instr_type_id = instruction->mut_instr_msg()->instr_type_id();
-    instr_type_id.instruction_type().Compute(instruction);
-  }
-}
-
-intrusive::shared_ptr<StreamDesc> LazyJobStreamType::MakeStreamDesc(const Resource& resource,
-                                                                    int64_t this_machine_id) const {
-  auto ret = intrusive::make_shared<StreamDesc>();
-  ret->set_stream_type(StaticGlobalStreamType<LazyJobStreamType>());
-  ret->set_num_streams_per_machine(1);
-  ret->set_num_streams_per_thread(1);
-  return ret;
+  instruction->instr_msg().instruction_type().Compute(instruction);
 }
 
 }  // namespace vm

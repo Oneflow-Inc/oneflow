@@ -13,9 +13,10 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
+#ifndef ONEFLOW_CORE_EAGER_CRITICAL_SECTION_INSTRUCTION_TYPE_H_
+#define ONEFLOW_CORE_EAGER_CRITICAL_SECTION_INSTRUCTION_TYPE_H_
 
-#include "oneflow/core/eager/critical_section_stream_type.h"
-#include "oneflow/core/eager/critical_section_status_querier.h"
+#include "oneflow/core/vm/critical_section_status_querier.h"
 #include "oneflow/core/eager/critical_section_phy_instr_operand.h"
 #include "oneflow/core/job/critical_section_instance.h"
 #include "oneflow/core/framework/nn_graph_if.h"
@@ -44,8 +45,9 @@ class CriticalSectionBeginInstructionType final : public InstructionType {
   CriticalSectionBeginInstructionType() = default;
   ~CriticalSectionBeginInstructionType() = default;
 
-  using stream_type = CriticalSectionStreamType;
-
+  std::string DebugName(const vm::InstructionMsg& instr_msg) const override {
+    return "CriticalSectionBegin";
+  }
   void Compute(vm::Instruction* instruction) const override {
     OF_PROFILER_RANGE_GUARD("CriticalSectionBegin");
     {
@@ -107,8 +109,6 @@ class CriticalSectionBeginInstructionType final : public InstructionType {
   }
 };
 
-COMMAND(RegisterInstructionType<CriticalSectionBeginInstructionType>("CriticalSectionBegin"));
-
 class CriticalSectionEndInstructionType final : public InstructionType {
  public:
   CriticalSectionEndInstructionType(const CriticalSectionEndInstructionType&) = delete;
@@ -118,8 +118,9 @@ class CriticalSectionEndInstructionType final : public InstructionType {
   CriticalSectionEndInstructionType() = default;
   ~CriticalSectionEndInstructionType() = default;
 
-  using stream_type = CriticalSectionStreamType;
-
+  std::string DebugName(const vm::InstructionMsg& instr_msg) const override {
+    return "CriticalSectionEnd";
+  }
   void Compute(vm::Instruction* instruction) const override {
     const auto* ptr = instruction->instr_msg().phy_instr_operand().get();
     const auto* phy_instr_operand = dynamic_cast<const CriticalSectionEndPhyInstrOperand*>(ptr);
@@ -130,7 +131,6 @@ class CriticalSectionEndInstructionType final : public InstructionType {
   }
 };
 
-COMMAND(RegisterInstructionType<CriticalSectionEndInstructionType>("CriticalSectionEnd"));
-
 }  // namespace vm
 }  // namespace oneflow
+#endif  // ONEFLOW_CORE_EAGER_CRITICAL_SECTION_INSTRUCTION_TYPE_H_

@@ -13,28 +13,23 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
+#ifndef ONEFLOW_CORE_VM_FUSE_INSTRUCTION_TYPE_H_
+#define ONEFLOW_CORE_VM_FUSE_INSTRUCTION_TYPE_H_
+
 #include "oneflow/core/vm/instruction.h"
 #include "oneflow/core/vm/fuse_phy_instr_operand.h"
-#include "oneflow/core/vm/cuda_stream_type.h"
-#include "oneflow/core/vm/async_cuda_stream_type.h"
-#include "oneflow/core/vm/cuda_copy_h2d_stream_type.h"
-#include "oneflow/core/vm/cuda_copy_d2h_stream_type.h"
-#include "oneflow/core/vm/cpu_stream_type.h"
 #include "oneflow/core/profiler/profiler.h"
 
 namespace oneflow {
 
 namespace vm {
 
-template<typename StreamT>
 class FuseInstructionType : public vm::InstructionType {
  public:
   FuseInstructionType() = default;
   ~FuseInstructionType() override = default;
 
-  using stream_type = StreamT;
-
-  std::string DebugOpTypeName(const InstructionMsg&) const override { return "Fuse"; }
+  std::string DebugName(const InstructionMsg&) const override { return "Fuse"; }
 
   void InitInstructionStatus(Instruction* instruction) const override {
     const auto& phy_instr_operand = instruction->instr_msg().phy_instr_operand();
@@ -42,7 +37,7 @@ class FuseInstructionType : public vm::InstructionType {
     auto* instr_msg_list = CHECK_NOTNULL(ptr)->mut_instr_msg_list();
     auto* last_instr_msg = CHECK_NOTNULL(instr_msg_list->Last());
     // init instruction status by last instruction_msg.
-    last_instr_msg->instr_type_id().instruction_type().InitInstructionStatusIf(instruction);
+    last_instr_msg->instruction_type().InitInstructionStatusIf(instruction);
   }
 
   void Compute(vm::Instruction* instruction) const override {
@@ -51,24 +46,13 @@ class FuseInstructionType : public vm::InstructionType {
     auto* instr_msg_list = CHECK_NOTNULL(ptr)->mut_instr_msg_list();
     INTRUSIVE_UNSAFE_FOR_EACH_PTR(instr_msg, instr_msg_list) {
       OF_PROFILER_RANGE_PUSH("F:" + instr_msg->DebugName());
-      instr_msg->instr_type_id().instruction_type().ComputeInFuseMode(instr_msg);
+      instr_msg->instruction_type().ComputeInFuseMode(instr_msg);
       OF_PROFILER_RANGE_POP();
     }
   }
 };
 
-COMMAND(vm::RegisterInstructionType<FuseInstructionType<CpuStreamType>>("cpu.Fuse"));
-COMMAND(vm::RegisterInstructionType<FuseInstructionType<CpuStreamType>>("comm_net.Fuse"));
-
-#ifdef WITH_CUDA
-COMMAND(vm::RegisterInstructionType<FuseInstructionType<CudaStreamType>>("cuda.Fuse"));
-COMMAND(vm::RegisterInstructionType<FuseInstructionType<CudaCopyH2DStreamType>>("cuda_h2d.Fuse"));
-COMMAND(vm::RegisterInstructionType<FuseInstructionType<CudaCopyD2HStreamType>>("cuda_d2h.Fuse"));
-COMMAND(
-    vm::RegisterInstructionType<FuseInstructionType<CudaStreamType>>("sync_launched_nccl.Fuse"));
-COMMAND(vm::RegisterInstructionType<FuseInstructionType<AsyncCudaStreamType>>(
-    "async_launched_nccl.Fuse"));
-#endif
-
 }  // namespace vm
 }  // namespace oneflow
+
+#endif  // ONEFLOW_CORE_VM_FUSE_INSTRUCTION_TYPE_H_

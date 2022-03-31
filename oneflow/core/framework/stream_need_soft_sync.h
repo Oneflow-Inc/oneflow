@@ -37,7 +37,9 @@ struct NeedSoftSync {
   static bool Case(StreamRoleCase<StreamRole::kAsyncedLaunchedCommNet>, DeviceType) {
     return false;
   }
+  static bool Case(StreamRoleCase<StreamRole::kBarrier>, DeviceType) { return false; }
   static bool Case(StreamRoleCase<StreamRole::kCriticalSection>, DeviceType) { return false; }
+  static bool Case(StreamRoleCase<StreamRole::kLazyJobLauncher>, DeviceType) { return false; }
 };
 
 }  // namespace oneflow
