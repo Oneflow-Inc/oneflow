@@ -35,7 +35,6 @@ def _test_search_sorted(test_case, device):
     output = flow.searchsorted(sorted_sequence, values)
     test_case.assertTrue(np.allclose(output.numpy(), gt, 0.0001, 0.0001))
     test_case.assertTrue(output.dtype == flow.int64)
-    print("_test_search_sorted")
 
 
 def _test_search_sorted_1(test_case, device):
@@ -49,7 +48,6 @@ def _test_search_sorted_1(test_case, device):
     output = flow.searchsorted(sorted_sequence, values, right=True)
     test_case.assertTrue(np.allclose(output.numpy(), gt, 0.0001, 0.0001))
     test_case.assertTrue(output.dtype == flow.int64)
-    print("_test_search_sorted_1")
 
 
 def _test_search_sorted_2(test_case, device):
@@ -63,7 +61,6 @@ def _test_search_sorted_2(test_case, device):
     output = flow.searchsorted(sorted_sequence_1d, values)
     test_case.assertTrue(np.allclose(output.numpy(), gt, 0.0001, 0.0001))
     test_case.assertTrue(output.dtype == flow.int64)
-    print("_test_search_sorted_2")
 
 
 def _test_search_sorted_3(test_case, device):
@@ -77,7 +74,6 @@ def _test_search_sorted_3(test_case, device):
     output = flow.searchsorted(sorted_sequence, values, out_int32=True)
     test_case.assertTrue(np.allclose(output.numpy(), gt, 0.0001, 0.0001))
     test_case.assertTrue(output.dtype == flow.int32)
-    print("_test_search_sorted_3")
 
 
 def _test_search_sorted_4(test_case, device):
@@ -92,7 +88,6 @@ def _test_search_sorted_4(test_case, device):
     output = flow.searchsorted(sorted_sequence, values, sorter=sorter)
     test_case.assertTrue(np.allclose(output.numpy(), gt, 0.0001, 0.0001))
     test_case.assertTrue(output.dtype == flow.int64)
-    print("_test_search_sorted_4")
 
 
 def _test_search_sorted_5(test_case, device):
@@ -103,7 +98,6 @@ def _test_search_sorted_5(test_case, device):
     output = flow.searchsorted(sorted_sequence_1d, 5)
     test_case.assertTrue(np.allclose(output.numpy(), gt, 0.0001, 0.0001))
     test_case.assertTrue(output.dtype == flow.int64)
-    print("_test_search_sorted_5")
 
 
 def _test_search_sorted_6(test_case, device):
@@ -114,7 +108,6 @@ def _test_search_sorted_6(test_case, device):
     output = flow.searchsorted(sorted_sequence_1d, 5, right=True)
     test_case.assertTrue(np.allclose(output.numpy(), gt, 0.0001, 0.0001))
     test_case.assertTrue(output.dtype == flow.int64)
-    print("_test_search_sorted_6")
 
 
 def _test_search_sorted_7(test_case, device):
@@ -125,8 +118,6 @@ def _test_search_sorted_7(test_case, device):
     output = flow.searchsorted(sorted_sequence_1d, 5, out_int32=True)
     test_case.assertTrue(np.allclose(output.numpy(), gt, 0.0001, 0.0001))
     test_case.assertTrue(output.dtype == flow.int32)
-    print("_test_search_sorted_7")
-
 
 
 @flow.unittest.skip_unless_1n1d()

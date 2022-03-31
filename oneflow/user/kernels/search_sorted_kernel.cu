@@ -66,7 +66,6 @@ __global__ void DoSearchSortedLogical(int32_t instance_num, bool is_sequence_1d,
                                       output_t* out_ptr) {
   CUDA_1D_KERNEL_LOOP(i, instance_num) {
     int64_t start_bd = is_sequence_1d ? 0 : i / values_shape_last * sequence_shape_last;
-    // LOG(WARNING) << "is sequence 1d: " << is_sequence_1d;
     int64_t end_bd = start_bd + sequence_shape_last;
     output_t pos = !right ?
       cus_lower_bound<input_t>(start_bd, end_bd, values_ptr[i], sequence_ptr, sorter_ptr) - start_bd :
@@ -76,7 +75,7 @@ __global__ void DoSearchSortedLogical(int32_t instance_num, bool is_sequence_1d,
 }
 
 template<typename input_t, typename output_t>
-__global__ void DoSearchSortedScalarLogical(int64_t sequence_shape_last, bool right, const input_t& values,   \
+__global__ void DoSearchSortedScalarLogical(int64_t sequence_shape_last, bool right, const input_t values,   \
                                       const input_t* sequence_ptr, const input_t* sorter_ptr,   \
                                       output_t* out_ptr) {
   CUDA_1D_KERNEL_LOOP(i, 1) {
@@ -96,7 +95,6 @@ class GpuSearchSortedKernel final : public user_op::OpKernel {
  private:
   using user_op::OpKernel::Compute;
   void Compute(user_op::KernelComputeContext* ctx) const override {
-    LOG(WARNING) << "in GpuSearchSortedKernel";
     const user_op::Tensor* sorted_sequence = ctx->Tensor4ArgNameAndIndex("sorted_sequence", 0);
     const user_op::Tensor* values = ctx->Tensor4ArgNameAndIndex("values", 0);
     const user_op::Tensor* sorter = ctx->Tensor4ArgNameAndIndex("sorter", 0);
@@ -140,7 +138,6 @@ class GpuSearchSortedScalarKernel final : public user_op::OpKernel {
  private:
   using user_op::OpKernel::Compute;
   void Compute(user_op::KernelComputeContext* ctx) const override {
-    LOG(WARNING) << "in GpuSearchSortedScalarKernel";
     const user_op::Tensor* sorted_sequence = ctx->Tensor4ArgNameAndIndex("sorted_sequence", 0);
     const user_op::Tensor* sorter = ctx->Tensor4ArgNameAndIndex("sorter", 0);
     const int64_t* sorter_ptr = nullptr;

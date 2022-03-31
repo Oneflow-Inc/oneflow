@@ -58,9 +58,6 @@ int64_t cus_upper_bound(int64_t start, int64_t end, const input_t val, const inp
 }
 
 
-
-
-
 template<typename input_t, typename output_t>
 class CpuSearchSortedKernel final : public user_op::OpKernel {
  public:
@@ -77,7 +74,6 @@ class CpuSearchSortedKernel final : public user_op::OpKernel {
     const bool& right = ctx->Attr<bool>("right");
     const input_t* values_ptr = values->dptr<input_t>();
     const input_t* sequence_ptr = sorted_sequence->dptr<input_t>();
-    LOG(WARNING) << "sorter: " << sorter;
     const input_t* sorter_ptr = nullptr;
     if (sorter) {
       sorter_ptr = sorter->dptr<input_t>();
@@ -154,13 +150,5 @@ class CpuSearchSortedScalarKernel final : public user_op::OpKernel {
 
 REGISTER_CPU_SEARCH_SORTED_SCALAR_KERNEL(int64_t, int32_t)
 REGISTER_CPU_SEARCH_SORTED_SCALAR_KERNEL(int64_t, int64_t)
-
-
-
-
-
-
-
-
 
 }  // namespace oneflow
