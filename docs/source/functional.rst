@@ -15,6 +15,7 @@ Functional operations for neural networks
 .. autofunction:: hardswish
 .. autofunction:: hardtanh
 .. autofunction:: normalize
+.. autofunction:: layer_norm
 .. autofunction:: leaky_relu
 .. autofunction:: elu
 .. autofunction:: celu
@@ -40,7 +41,6 @@ Functional operations for neural networks
 .. autofunction:: affine_grid
 .. autofunction:: grid_sample
 .. autofunction:: interpolate
-.. autofunction:: layer_norm
 .. autofunction:: ctc_greedy_decoder
 .. autofunction:: sparse_softmax_cross_entropy
 .. autofunction:: embedding
