@@ -140,13 +140,11 @@ class HardShrink : public OpExprGradFunction<HardShrinkCaptureState> {
   Maybe<void> Capture(HardShrinkCaptureState* ctx, const TensorTuple& inputs,
                       const TensorTuple& outputs, const AttrMap& attrs) const override {
     CHECK_EQ_OR_RETURN(inputs.size(), 1);
-    // ctx->requires_grad = inputs.at(0)->requires_grad();
     ctx->requires_grad = JUST(oneflow::VectorAt(inputs, 0))->requires_grad();
     if (!ctx->requires_grad) { return Maybe<void>::Ok(); }
 
     ComposedAttrMap composed_attrs(attrs, base_attrs_);
     ctx->lambd = JUST(composed_attrs.GetAttr<double>("lambd"));
-    // ctx->SaveTensorForBackward(outputs.at(0));
     ctx->SaveTensorForBackward(JUST(oneflow::VectorAt(outputs, 0)));
     return Maybe<void>::Ok();
   }
@@ -156,10 +154,9 @@ class HardShrink : public OpExprGradFunction<HardShrinkCaptureState> {
     CHECK_EQ_OR_RETURN(out_grads.size(), 1);
     in_grads->resize(1);
     if (ctx->requires_grad) {
-      // const auto& y = ctx->SavedTensors().at(0);
-      // in_grads->at(0) = JUST(functional::HardShrinkGrad(y, out_grads.at(0), ctx->lambd));
       const auto& y = JUST(oneflow::VectorAt(ctx->SavedTensors(), 0));
-      *JUST(oneflow::VectorAt(in_grads, 0)) = JUST(functional::HardShrinkGrad(y, JUST(oneflow::VectorAt(out_grads, 0)), ctx->lambd));
+      *JUST(oneflow::VectorAt(in_grads, 0)) =
+          JUST(functional::HardShrinkGrad(y, JUST(oneflow::VectorAt(out_grads, 0)), ctx->lambd));
     }
     return Maybe<void>::Ok();
   }
