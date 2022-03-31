@@ -82,6 +82,7 @@ class VirtualMachine final {
   intrusive::shared_ptr<vm::MirroredObject> transport_local_dep_object_;
 
   std::thread schedule_thread_;
+  bool scheduler_stoped_;
   Notifier pending_notifier_;
   std::thread callback_thread_;
   Notifier callback_notifier_;

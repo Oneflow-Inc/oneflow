@@ -86,6 +86,7 @@ VirtualMachine::VirtualMachine() {
   std::function<void()> SchedulerInitializer;
   GetSchedulerThreadInitializer(&SchedulerInitializer);
   schedule_thread_ = std::thread(&VirtualMachine::ScheduleLoop, this, SchedulerInitializer);
+  scheduler_stoped_ = false;
   transport_local_dep_object_.Reset();
 }
 
@@ -233,6 +234,7 @@ void ScheduleUntilVMEmpty(vm::VirtualMachineEngine* vm, const vm::ScheduleCtx& s
 Maybe<void> VirtualMachine::RunInCurrentThread(vm::InstructionMsgList* instr_list) {
   CHECK_OR_RETURN(vm_->Empty());
   CHECK_OR_RETURN(vm_->CallbackEmpty());
+  CHECK_OR_RETURN(scheduler_stoped_);
   JUST(vm_->Receive(instr_list));
   ScheduleUntilVMEmpty(vm_.Mutable(), SingleThreadScheduleCtx(vm_.Mutable()));
   return Maybe<void>::Ok();
@@ -300,6 +302,7 @@ void VirtualMachine::ScheduleLoop(const std::function<void()>& Initializer) {
     std::unique_lock<std::mutex> lock(worker_threads_mutex_);
     for (const auto& worker_thread : worker_threads_) { worker_thread->join(); }
   }
+  scheduler_stoped_ = true;
 }
 
 void VirtualMachine::CallbackLoop(const std::function<void()>& Initializer) {
