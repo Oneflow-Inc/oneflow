@@ -111,7 +111,7 @@ class TestConstantModule(flow.unittest.TestCase):
         )
         return y
     
-    @autotest(n=5, auto_backward=True, check_graph=True)
+    @autotest(n=5)
     def test_new_zeros(test_case):
         device = random_device()
         x = random_tensor().to(device)

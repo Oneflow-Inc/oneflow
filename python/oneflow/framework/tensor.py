@@ -553,7 +553,7 @@ def _new_ones(
 
 def _new_zeros(
     self,
-    size=None,
+    *size,
     dtype=None,
     device=None,
     placement=None,

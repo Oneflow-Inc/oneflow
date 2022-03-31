@@ -309,20 +309,20 @@ def new_ones_op(
 
 
 def new_zeros_op(
-    x, size=None, dtype=None, device=None, placement=None, sbp=None, requires_grad=False
+    x, size, dtype=None, device=None, placement=None, sbp=None, requires_grad=False
 ):
     if isinstance(device, str):
         device = flow.device(device)
-    if size != None:
-        size = _single(size)
-    new_size = size
+    if size is None:
+        new_size = x.shape
+    else:
+        new_size =  _handle_size_arg(size)
     new_dtype = dtype
     new_device = device
     new_placement = placement
     new_sbp = sbp
     new_requires_grad = requires_grad
-    if size is None:
-        new_size = x.shape
+
     if dtype is None:
         new_dtype = x.dtype
     if device is None:
@@ -334,26 +334,27 @@ def new_zeros_op(
     if new_placement is not None:
         assert device is None
         assert new_sbp is not None
+    print("new_size >>>>>", new_size)
     assert isinstance(
-        new_size, (int, tuple, flow.Size)
-    ), f"size parameter not correct, please check!"
+        new_size, (int, tuple, list, flow.Size)
+    ), f"argument 'size' must be tuple of ints, not %s" % (type(new_size))
     assert isinstance(
         new_dtype, flow.dtype
-    ), f"dtype parameter not correct, please check!"
+    ), f"argument 'dtype' must be flow.dtype, not %s"  % (type(new_dtype))
     if new_placement is not None:
         assert isinstance(
             new_placement, flow.placement
-        ), f"device parameter not correct, please check!"
+        ), f"argument 'placement' must be flow.placement, not %s"  % (type(new_placement))
         assert isinstance(
             new_sbp, flow.sbp.sbp
-        ), f"device parameter not correct, please check!"
+        ), f"argument 'sbp' must be flow.sbp.sbp, not %s"  % (type(new_sbp))
     else:
         assert isinstance(
             new_device, (str, flow.device)
-        ), f"device parameter not correct, please check!"
+        ), f"argument 'device' must be flow.device, not %s"  % (type(new_device))
     assert isinstance(
         new_requires_grad, bool
-    ), f"requires_grad parameter not correct, please check!"
+    ), f"argument 'requires_grad' must be bool, not %s"  % (type(new_requires_grad))
     if placement is not None:
         res = flow._C.global_constant(
             new_size, 0.0, dtype=new_dtype, placement=placement, sbp=sbp
