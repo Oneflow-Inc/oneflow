@@ -19,6 +19,7 @@ limitations under the License.
 #include <string>
 
 #include "oneflow/api/python/functional/indexing.h"
+#include "oneflow/extension/python/numpy.h"
 #include "oneflow/core/common/just.h"
 #include "oneflow/core/common/scalar.h"
 #include "oneflow/core/framework/dtype.h"
@@ -195,8 +196,9 @@ Maybe<std::vector<Symbol<SbpParallel>>> PyUnpackSbpParallelSequence(PyObject* ob
 
 // Tensor index
 bool PyTensorIndexCheck(PyObject* obj) {
-  return PySlice_Check(obj) || PyLong_Check(obj) || obj == Py_Ellipsis || obj == Py_None
-         || PyTensorCheck(obj) || PySequence_Check(obj) || PyUnicode_Check(obj);
+  return PySlice_Check(obj) || PyLong_Check(obj) || numpy::PyArrayCheckLongScalar(obj)
+         || obj == Py_Ellipsis || obj == Py_None || PyTensorCheck(obj) || PySequence_Check(obj)
+         || PyUnicode_Check(obj);
 }
 Maybe<TensorIndex> PyUnpackTensorIndex(PyObject* obj) {
   auto tensor_index = std::make_shared<TensorIndex>();

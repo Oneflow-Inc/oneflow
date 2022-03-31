@@ -193,6 +193,8 @@ Maybe<IndexItem> UnpackIndexItem(PyObject* object) {
     return std::make_shared<IndexItem>(start, end, step);
   } else if (PyLong_Check(object) && object != Py_False && object != Py_True) {
     return std::make_shared<IndexItem>(static_cast<int64_t>(PyLong_AsLongLong(object)));
+  } else if (numpy::PyArrayCheckLongScalar(object)) {
+    return std::make_shared<IndexItem>(static_cast<int64_t>(PyLong_AsLongLong(object)));
   } else if (object == Py_False || object == Py_True) {
     return std::make_shared<IndexItem>(object == Py_True);
   } else if (object == Py_None) {
