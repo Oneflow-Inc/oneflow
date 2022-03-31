@@ -25,6 +25,7 @@ from oneflow.test_utils.test_util import GenArgList
 
 import oneflow as flow
 import oneflow.unittest
+from random import shuffle
 
 
 @flow.unittest.skip_unless_1n1d()
@@ -259,6 +260,19 @@ class TestSigmoidModule(flow.unittest.TestCase):
         return y
 
     @autotest()
+    def test_sigmoid_module_stride_with_random_data(test_case):
+        m = torch.nn.Sigmoid()
+        m.train(random())
+        device = random_device()
+        m.to(device)
+        x = random_tensor().to(device)
+        permute_list = list(range(5))
+        shuffle(permute_list)
+        x2 = x.permute(permute_list)
+        y = m(x2)
+        return y
+
+    @autotest()
     def test_sigmoid_module_with_0dim_data(test_case):
         m = torch.nn.Sigmoid()
         m.train(random())
@@ -438,6 +452,19 @@ class TestLogSigmoidModule(flow.unittest.TestCase):
         x = random_tensor().to(device)
         y = m(x)
         return y
+    
+    @autotest()
+    def test_logsigmoid_module_stride_with_random_data(test_case):
+        m = torch.nn.LogSigmoid()
+        m.train(random())
+        device = random_device()
+        m.to(device)
+        x = random_tensor().to(device)
+        permute_list = list(range(5))
+        shuffle(permute_list)
+        x2 = x.permute(permute_list)
+        y = m(x2)
+        return y
 
     @autotest()
     def test_logsigmoid_module_with_0dim_data(test_case):
@@ -520,6 +547,20 @@ class TestSoftplusModule(flow.unittest.TestCase):
         m.to(device)
         x = random_tensor().to(device)
         y = m(x)
+        return y
+    
+    @unittest.skip("pytorch softplus backward has bug")
+    @autotest()
+    def test_softplus_module_stride_with_random_data(test_case):
+        m = torch.nn.Softplus(beta=random() | nothing(), threshold=random() | nothing())
+        m.train(random())
+        device = random_device()
+        m.to(device)
+        x = random_tensor().to(device)
+        permute_list = list(range(5))
+        shuffle(permute_list)
+        x2 = x.permute(permute_list)
+        y = m(x2)
         return y
 
 

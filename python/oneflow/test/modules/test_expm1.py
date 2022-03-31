@@ -24,6 +24,7 @@ import oneflow as flow
 import oneflow.unittest
 
 from oneflow.test_utils.automated_test_util import *
+from random import shuffle
 
 
 def _test_expm1_impl(test_case, device, shape):
@@ -56,6 +57,16 @@ class TestExpm1Module(flow.unittest.TestCase):
         device = random_device()
         input = random_tensor().to(device)
         y = torch.expm1(input)
+        return y
+
+    @autotest(check_graph=True)
+    def test_expm1_flow_stride_with_random_data(test_case):
+        device = random_device()
+        input = random_tensor().to(device)
+        permute_list = list(range(5))
+        shuffle(permute_list)
+        x = input.permute(permute_list)
+        y = torch.expm1(x)
         return y
 
     @autotest(auto_backward=False, check_graph=True)

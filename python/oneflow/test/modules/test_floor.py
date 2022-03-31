@@ -24,6 +24,7 @@ import oneflow as flow
 import oneflow.unittest
 
 from oneflow.test_utils.automated_test_util import *
+from random import shuffle
 
 
 def _test_floor(test_case, shape, device):
@@ -58,6 +59,16 @@ class TestFloor(flow.unittest.TestCase):
         device = random_device()
         x = random_tensor().to(device)
         y = torch.floor(x)
+        return y
+
+    @autotest(check_graph=True)
+    def test_flow_floor_stride_with_random_data(test_case):
+        device = random_device()
+        x = random_tensor().to(device)
+        permute_list = list(range(5))
+        shuffle(permute_list)
+        x2 = x.permute(permute_list)
+        y = torch.floor(x2)
         return y
 
     @autotest(check_graph=True)
