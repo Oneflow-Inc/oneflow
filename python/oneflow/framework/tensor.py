@@ -495,6 +495,14 @@ def _index(self):
     return self.numpy().item()
 
 
+def _invert(self):
+    if self.dtype != flow.bool:
+        raise TypeError(
+            "~ (operator.invert) is only implemented on integer and Boolean-type tensors"
+        )
+    return flow._C.logical_not(self)
+
+
 def _scalar_float(self):
     assert (
         self.numel() == 1
@@ -1056,6 +1064,7 @@ def RegisterMethods():
     Tensor.__len__ = _len
     Tensor.__mod__ = _fmod
     Tensor.__index__ = _index
+    Tensor.__invert__ = _invert
     Tensor.__float__ = _scalar_float
     Tensor.__int__ = _scalar_int
     Tensor.uniform_ = _uniform
