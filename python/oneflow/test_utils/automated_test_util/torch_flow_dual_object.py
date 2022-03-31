@@ -910,6 +910,8 @@ def check_tensor_equality(torch_tensor, flow_tensor, rtol=0.0001, atol=1e-05, ch
     )
     # NOTE: if check_dtype=True, then check the equality of data type
     if check_dtype:
+        print("torch_numpy.dtype >>>> ", torch_numpy.dtype)
+        print("oneflow_numpy.dtype >>>> ", oneflow_numpy.dtype)
         equality_res = equality_res and (torch_numpy.dtype == oneflow_numpy.dtype)
 
     if equality_res == False:
@@ -917,6 +919,9 @@ def check_tensor_equality(torch_tensor, flow_tensor, rtol=0.0001, atol=1e-05, ch
         print("---------Tensor Shape--------")
         print(torch_tensor.shape)
         print(flow_tensor.shape)
+        print("---------Tensor dtype--------")
+        print(torch_tensor.dtype)
+        print(flow_tensor.dtype)
     return equality_res
 
 
