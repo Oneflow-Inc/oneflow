@@ -61,6 +61,30 @@ struct LeakyReluGradFunctor<half> {
 };
 
 template<>
+struct SoftplusFunctor<half> {
+  OF_DEVICE_FUNC explicit SoftplusFunctor(float beta, float threshold)
+      : beta(beta), threshold(threshold), float_functor(SoftplusFunctor<float>(beta, threshold)) {}
+  __device__ half operator()(half x) const { return __float2half(float_functor(__half2float(x))); }
+  const float beta;
+  const float threshold;
+  SoftplusFunctor<float> float_functor;
+};
+
+template<>
+struct SoftplusGradFunctor<half> {
+  OF_DEVICE_FUNC explicit SoftplusGradFunctor(float beta, float threshold)
+      : beta(beta),
+        threshold(threshold),
+        float_functor(SoftplusGradFunctor<float>(beta, threshold)) {}
+  __device__ half operator()(half x, half dy) const {
+    return __float2half(float_functor(__half2float(x), __half2float(dy)));
+  }
+  const float beta;
+  const float threshold;
+  SoftplusGradFunctor<float> float_functor;
+};
+
+template<>
 struct CeluFunctor<half> {
   OF_DEVICE_FUNC explicit CeluFunctor(float alpha)
       : alpha(alpha), float_functor(CeluFunctor<float>(alpha)) {}
@@ -183,6 +207,29 @@ struct ReluGradFunctor<half> {
   }
 };
 
+template<>
+struct SoftShrinkFunctor<half> {
+  OF_DEVICE_FUNC explicit SoftShrinkFunctor(float alpha)
+      : alpha(alpha), float_functor(SoftShrinkFunctor<float>(alpha)) {}
+  OF_DEVICE_FUNC half operator()(half x) const {
+    return __float2half(float_functor(__half2float(x)));
+  }
+  const float alpha;
+  SoftShrinkFunctor<float> float_functor;
+};
+
+template<>
+struct SoftShrinkGradFunctor<half> {
+  OF_DEVICE_FUNC explicit SoftShrinkGradFunctor(float alpha)
+      : alpha(alpha), float_functor(SoftShrinkGradFunctor<float>(alpha)) {}
+  OF_DEVICE_FUNC half operator()(half y, half dy) const {
+    return __float2half(float_functor(__half2float(y), __half2float(dy)));
+  }
+
+  const float alpha;
+  SoftShrinkGradFunctor<float> float_functor;
+};
+
 #define REGISTER_ACTIVATION_CUDA_KERNEL(dtype)           \
   REGISTER_ELU_KERNEL(DeviceType::kCUDA, dtype);         \
   REGISTER_CELU_KERNEL(DeviceType::kCUDA, dtype);        \
@@ -192,8 +239,10 @@ struct ReluGradFunctor<half> {
   REGISTER_MISH_KERNEL(DeviceType::kCUDA, dtype);        \
   REGISTER_SILU_KERNEL(DeviceType::kCUDA, dtype);        \
   REGISTER_SELU_KERNEL(DeviceType::kCUDA, dtype);        \
+  REGISTER_SOFTSHRINK_KERNEL(DeviceType::kCUDA, dtype);  \
   REGISTER_SOFTSIGN_KERNEL(DeviceType::kCUDA, dtype);    \
   REGISTER_LEAKYRELU_KERNEL(DeviceType::kCUDA, dtype);   \
+  REGISTER_SOFTPLUS_KERNEL(DeviceType::kCUDA, dtype);    \
   REGISTER_RELU_BACKWARD_KERNEL(DeviceType::kCUDA, dtype);
 
 namespace {

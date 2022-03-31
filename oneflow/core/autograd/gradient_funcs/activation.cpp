@@ -13,8 +13,10 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
+#include "oneflow/core/common/container_util.h"
 #include "oneflow/core/framework/op_expr_grad_function.h"
 #include "oneflow/core/functional/functional.h"
+#include "oneflow/core/common/container_util.h"
 
 namespace oneflow {
 namespace one {
@@ -207,6 +209,48 @@ class LeakyRelu : public OpExprGradFunction<LeakyReluCaptureState> {
   AttrMap base_attrs_;
 };
 
+struct SoftplusCaptureState : public AutoGradCaptureState {
+  bool requires_grad = true;
+  double beta = 1.0;
+  double threshold = 20.0;
+};
+
+class Softplus : public OpExprGradFunction<SoftplusCaptureState> {
+ public:
+  Maybe<void> Init(const OpExpr& op) override {
+    const auto* fw_op_expr = dynamic_cast<const UserOpExpr*>(&op);
+    CHECK_NOTNULL_OR_RETURN(fw_op_expr);
+    base_attrs_ = MakeAttrMapFromUserOpConf(fw_op_expr->proto());
+    return Maybe<void>::Ok();
+  }
+
+  Maybe<void> Capture(SoftplusCaptureState* ctx, const TensorTuple& inputs,
+                      const TensorTuple& outputs, const AttrMap& attrs) const override {
+    CHECK_EQ_OR_RETURN(inputs.size(), 1);
+
+    ComposedAttrMap composed_attrs(attrs, base_attrs_);
+    ctx->beta = JUST(composed_attrs.GetAttr<double>("beta"));
+    ctx->threshold = JUST(composed_attrs.GetAttr<double>("threshold"));
+    ctx->SaveTensorForBackward(JUST(oneflow::VectorAt(inputs, 0)));
+    return Maybe<void>::Ok();
+  }
+
+  Maybe<void> Apply(const SoftplusCaptureState* ctx, const TensorTuple& out_grads,
+                    TensorTuple* in_grads) const override {
+    CHECK_EQ_OR_RETURN(out_grads.size(), 1);
+    in_grads->resize(1);
+    if (ctx->requires_grad) {
+      const auto& x = JUST(oneflow::VectorAt(ctx->SavedTensors(), 0));
+      *JUST(oneflow::VectorAt(in_grads, 0)) = JUST(functional::SoftplusGrad(
+          x, JUST(oneflow::VectorAt(out_grads, 0)), ctx->beta, ctx->threshold));
+    }
+    return Maybe<void>::Ok();
+  }
+
+ private:
+  AttrMap base_attrs_;
+};
+
 struct HardTanhCaptureState : public AutoGradCaptureState {
   bool requires_grad;
   double min_val;
@@ -333,6 +377,48 @@ class Celu : public OpExprGradFunction<CeluCaptureState> {
   AttrMap base_attrs_;
 };
 
+struct SoftShrinkCaptureState : public AutoGradCaptureState {
+  bool requires_grad = true;
+  double alpha = 0.5;
+};
+
+class SoftShrink : public OpExprGradFunction<SoftShrinkCaptureState> {
+ public:
+  Maybe<void> Init(const OpExpr& op) override {
+    const auto* fw_op_expr = dynamic_cast<const UserOpExpr*>(&op);
+    CHECK_NOTNULL_OR_RETURN(fw_op_expr);
+    base_attrs_ = MakeAttrMapFromUserOpConf(fw_op_expr->proto());
+    return Maybe<void>::Ok();
+  }
+
+  Maybe<void> Capture(SoftShrinkCaptureState* ctx, const TensorTuple& inputs,
+                      const TensorTuple& outputs, const AttrMap& attrs) const override {
+    CHECK_EQ_OR_RETURN(inputs.size(), 1);
+    ctx->requires_grad = JUST(oneflow::VectorAt(inputs, 0))->requires_grad();
+    if (!ctx->requires_grad) { return Maybe<void>::Ok(); }
+
+    ComposedAttrMap composed_attrs(attrs, base_attrs_);
+    ctx->alpha = JUST(composed_attrs.GetAttr<double>("alpha"));
+    ctx->SaveTensorForBackward(JUST(oneflow::VectorAt(outputs, 0)));
+    return Maybe<void>::Ok();
+  }
+
+  Maybe<void> Apply(const SoftShrinkCaptureState* ctx, const TensorTuple& out_grads,
+                    TensorTuple* in_grads) const override {
+    CHECK_EQ_OR_RETURN(out_grads.size(), 1);
+    in_grads->resize(1);
+    if (ctx->requires_grad) {
+      const auto& y = JUST(oneflow::VectorAt(ctx->SavedTensors(), 0));
+      *JUST(oneflow::VectorAt(in_grads, 0)) =
+          JUST(functional::SoftShrinkGrad(y, JUST(oneflow::VectorAt(out_grads, 0)), ctx->alpha));
+    }
+    return Maybe<void>::Ok();
+  }
+
+ private:
+  AttrMap base_attrs_;
+};
+
 struct PReLUCaptureState : public AutoGradCaptureState {
   bool input_requires_grad;
   bool alpha_requires_grad;
@@ -385,6 +471,8 @@ REGISTER_OP_EXPR_GRAD_FUNCTION("hardtanh", HardTanh);
 REGISTER_OP_EXPR_GRAD_FUNCTION("elu", Elu);
 REGISTER_OP_EXPR_GRAD_FUNCTION("celu", Celu);
 REGISTER_OP_EXPR_GRAD_FUNCTION("prelu", PReLU);
+REGISTER_OP_EXPR_GRAD_FUNCTION("softplus", Softplus);
+REGISTER_OP_EXPR_GRAD_FUNCTION("softshrink", SoftShrink);
 
 }  // namespace one
 }  // namespace oneflow
