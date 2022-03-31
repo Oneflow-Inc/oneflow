@@ -58,9 +58,7 @@ Maybe<void> InferLocalMultiReduceOpLogicalShape(user_op::InferContext* ctx) {
   CHECK_EQ_OR_RETURN(rank_mesh->NumAxes(), any_nd_sbp.sbp_parallel_size());
   int64_t split_num = 1;
   for (int64_t i = 0; i < rank_mesh->NumAxes(); ++i) {
-    if (any_nd_sbp.sbp_parallel(i).has_split_parallel()) {
-      split_num *= rank_mesh->At(i);
-    }
+    if (any_nd_sbp.sbp_parallel(i).has_split_parallel()) { split_num *= rank_mesh->At(i); }
   }
   *ctx->OutputShape("y", 0) = Shape({split_num});
   return Maybe<void>::Ok();
