@@ -13,17 +13,16 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 """
-import oneflow as flow
-from oneflow.nn.modules.utils import _single, _handle_size_arg
+import oneflow
+from oneflow.framework.docstr.utils import add_docstr
 
+add_docstr(
+    oneflow.nn.functional.layer_norm,
+    """nn.functional.layer_norm(input, normalized_shape, weight=None, bias=None, eps=1e-05) -> Tensor
 
-def expand_op(input, *sizes):
-    sizes = _handle_size_arg(sizes)
-    sizes = _single(sizes)
-    return flow._C.expand(input, sizes)
+    Applies Layer Normalization for last certain number of dimensions.
 
+    See :class:`~oneflow.nn.LayerNorm` for details.
 
-if __name__ == "__main__":
-    import doctest
-
-    doctest.testmod(raise_on_error=True)
+    """,
+)
