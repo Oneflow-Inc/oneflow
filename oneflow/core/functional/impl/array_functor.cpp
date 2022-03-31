@@ -496,18 +496,8 @@ class ConcatFunctor {
       size_t size = (i + kMaxInputCount) < ninput ? kMaxInputCount : ninput - i;
       TensorTuple partial_inputs(size);
       TensorProcessor tensor_processor;
-      Symbol<DType> target_dtype;
-      // type promotion use highest priority dtype in input tensors
-      int dtype_priority = 0; 
-      for (int j = 0; j < size; ++j) { 
-        const int priority = DType::priority_order[inputs[i + j]->dtype()->data_type()];
-        if(priority > dtype_priority){
-          target_dtype = inputs[i + j]->dtype();
-          dtype_priority = priority;
-        }
-        partial_inputs[j] = inputs[i + j];
-      }
-      JUST(tensor_processor.AddInputs(partial_inputs, target_dtype).Apply());
+      for (int j = 0; j < size; ++j) { partial_inputs[j] = inputs[i + j]; }
+      JUST(tensor_processor.PromoteInputsToCommonDtype(true).AddInputs(partial_inputs).Apply());
       TensorTuple input_tuple = JUST(tensor_processor.GetInputs());
       outputs.emplace_back(
           JUST(OpInterpUtil::Dispatch<Tensor>(*ops_.at(size - 1), input_tuple, attrs)));

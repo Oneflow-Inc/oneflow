@@ -139,13 +139,14 @@ class TestModule(flow.unittest.TestCase):
         device = random_device()
         x = random_tensor(ndim=2, dim0=random(), dim1=random()).to(device)
         return torch.cat((x, x, x), random(0, 2).to(int))
-    
+
     @autotest(n=5, check_graph=True, check_dtype=True)
-    def test_cat_with_diff_dtype(test_case):
+    def test_cat_with_diff_dtypes(test_case):
         device = random_device()
-        x = random_tensor(ndim=2, dim0=random(), dim1=random()).to(device)
+        x = random_tensor(ndim=2, dim0=random(), dim1=random()).to(device).float()
         y = x.int()
-        return torch.cat((x, y), random(0, 2).to(int))
+        z = x.double()
+        return torch.cat((x, y, z), random(0, 2).to(int))
 
     @autotest(n=1, check_graph=True, check_dtype=True)
     def test_cat_with_diff_dtype_corner_case(test_case):

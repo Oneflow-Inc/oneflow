@@ -879,7 +879,9 @@ def check_equality(dual_object: DualObject, rtol=0.0001, atol=1e-05, check_dtype
 
 @equality_checker(torch_original.Tensor, flow.Tensor)
 @equality_checker(torch_original.Tensor, flow._oneflow_internal.Tensor)
-def check_tensor_equality(torch_tensor, flow_tensor, rtol=0.0001, atol=1e-05, check_dtype=False):
+def check_tensor_equality(
+    torch_tensor, flow_tensor, rtol=0.0001, atol=1e-05, check_dtype=False
+):
     if torch_tensor.grad is not None:
         if flow_tensor.grad is None:
             print_note_fake_program()
@@ -902,11 +904,7 @@ def check_tensor_equality(torch_tensor, flow_tensor, rtol=0.0001, atol=1e-05, ch
     torch_numpy = torch_tensor.detach().cpu().numpy()
     oneflow_numpy = flow_tensor.numpy()
     equality_res = np.allclose(
-        torch_numpy,
-        oneflow_numpy,
-        rtol=rtol,
-        atol=atol,
-        equal_nan=True,
+        torch_numpy, oneflow_numpy, rtol=rtol, atol=atol, equal_nan=True,
     )
     # NOTE: if check_dtype=True, then check the equality of data type
     if check_dtype:
@@ -941,7 +939,7 @@ def autotest(
     atol=1e-05,
     check_graph=True,
     check_allclose=True,
-    check_dtype=False
+    check_dtype=False,
 ):
     verbose = os.getenv("ONEFLOW_TEST_VERBOSE") is not None
 
@@ -1029,7 +1027,12 @@ def autotest(
                 # check eager
                 for x in dual_objects_to_test:
                     if check_allclose:
-                        test_case.assertTrue(check_equality(x, rtol=rtol, atol=atol, check_dtype=check_dtype), x)
+                        test_case.assertTrue(
+                            check_equality(
+                                x, rtol=rtol, atol=atol, check_dtype=check_dtype
+                            ),
+                            x,
+                        )
 
                 if verbose:
                     print(f"{f.__name__} test eager passed.")
