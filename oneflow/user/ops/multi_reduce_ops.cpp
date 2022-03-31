@@ -54,12 +54,15 @@ Maybe<void> InferLocalMultiReduceOpLogicalShape(user_op::InferContext* ctx) {
   for (int32_t i = 1; i < ctx->input_size("x"); ++i) {
     CHECK_OR_RETURN(ctx->NdSbp4ArgNameAndIndex("x", i) == any_nd_sbp);
   }
+  auto rank_mesh = ctx->parallel_desc().hierarchy();
+  CHECK_EQ_OR_RETURN(rank_mesh->NumAxes(), any_nd_sbp.sbp_parallel_size());
   int64_t split_num = 1;
-  for (const auto& sbp : any_nd_sbp.sbp_parallel()) {
-    if (sbp.has_split_parallel()) { split_num *= sbp.split_parallel().axis(); }
+  for (int64_t i = 0; i < rank_mesh->NumAxes(); ++i) {
+    if (any_nd_sbp.sbp_parallel(i).has_split_parallel()) {
+      split_num *= rank_mesh->At(i);
+    }
   }
-  Shape* y_shape = ctx->OutputShape("y", 0);
-  *y_shape = Shape({split_num});
+  *ctx->OutputShape("y", 0) = Shape({split_num});
   return Maybe<void>::Ok();
 }
 
