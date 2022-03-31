@@ -332,9 +332,8 @@ def new_zeros_op(
     if sbp is None:
         new_sbp = x.sbp if x.is_global else None
     if new_placement is not None:
-        assert device is None
-        assert new_sbp is not None
-    print("new_size >>>>>", new_size)
+        assert device is None, "argument 'device' must be None when argument 'placement' exist"
+        assert new_sbp is not None, "argument 'sbp' must not be None when argument 'placement' exist"
     assert isinstance(
         new_size, (int, tuple, list, flow.Size)
     ), f"argument 'size' must be tuple of ints, not %s" % (type(new_size))
