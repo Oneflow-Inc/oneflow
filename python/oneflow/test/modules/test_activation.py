@@ -792,7 +792,6 @@ class TestThresholdModule(flow.unittest.TestCase):
 
     @autotest(n=5)
     def test_threshold_module_with_0dim_data(test_case):
-        # m = torch.nn.Threshold(threshold=random(), value=random())
         m = torch.nn.Threshold(
             threshold=random() | nothing(), value=random() | nothing()
         )

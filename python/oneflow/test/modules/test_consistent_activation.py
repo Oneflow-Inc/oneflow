@@ -196,7 +196,8 @@ class TestSeluModule(flow.unittest.TestCase):
 class TestThresholdModule(flow.unittest.TestCase):
     def test_threshold_module(test_case):
         _test_activation_module(test_case, "threshold")
-        
+
+
 class TestSoftplusModule(flow.unittest.TestCase):
     def test_softplus_module(test_case):
         _test_activation_module(test_case, "softplus")
