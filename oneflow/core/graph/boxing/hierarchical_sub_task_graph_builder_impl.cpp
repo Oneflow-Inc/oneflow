@@ -506,6 +506,8 @@ struct DispatchHierarchicalSubTskGphBuilder::Impl {
   std::unique_ptr<Same2DHierarchySubTskGphBuilder> same_2d_hierarchy_sub_tsk_gph_builder_;
   std::unique_ptr<ExpandToSame2DHierarchySubTskGphBuilder>
       expand_to_same_2d_hierarchy_sub_tsk_gph_builder_;
+  std::unique_ptr<NDNcclSendRecvBoxingSubTskGphBuilder>
+      nd_nccl_send_recv_boxing_sub_tsk_gph_builder_;
 };
 
 DispatchHierarchicalSubTskGphBuilder::Impl::Impl() {
@@ -513,6 +515,7 @@ DispatchHierarchicalSubTskGphBuilder::Impl::Impl() {
   same_2d_hierarchy_sub_tsk_gph_builder_.reset(new Same2DHierarchySubTskGphBuilder());
   expand_to_same_2d_hierarchy_sub_tsk_gph_builder_.reset(
       new ExpandToSame2DHierarchySubTskGphBuilder());
+  nd_nccl_send_recv_boxing_sub_tsk_gph_builder_.reset(new NDNcclSendRecvBoxingSubTskGphBuilder());
 }
 
 DispatchHierarchicalSubTskGphBuilder::DispatchHierarchicalSubTskGphBuilder() {
@@ -537,6 +540,12 @@ Maybe<SubTskGphBuilderStatus> DispatchHierarchicalSubTskGphBuilder::Build(
                          &reduced_out_nd_sbp);
   const auto& in_hierarchy = reduced_in_parallel_desc.hierarchy();
   const auto& out_hierarchy = reduced_out_parallel_desc.hierarchy();
+  if (in_hierarchy->NumAxes() > 2) {
+    return impl_->nd_nccl_send_recv_boxing_sub_tsk_gph_builder_->Build(
+        ctx, sorted_in_tasks, sorted_out_tasks, sorted_ctrl_tasks, reduced_in_parallel_desc,
+        reduced_out_parallel_desc, lbi, logical_blob_desc, reduced_in_nd_sbp, reduced_out_nd_sbp,
+        time_shape);
+  }
   if (in_hierarchy->NumAxes() <= 2 && out_hierarchy->NumAxes() <= 2) {
     if (in_hierarchy->NumAxes() == 1 && out_hierarchy->NumAxes() == 1) {
       return impl_->flat_sub_tsk_gph_builder_->Build(
