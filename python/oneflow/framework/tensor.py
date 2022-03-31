@@ -22,7 +22,6 @@ import oneflow.core.framework.variable_meta_info_pb2 as variable_meta_info_pb
 import numpy as np
 from typing import Union
 
-
 Tensor = flow._oneflow_internal.Tensor
 TensorTuple = flow._oneflow_internal.TensorTuple
 
@@ -494,6 +493,20 @@ def _index(self):
         flow.bool,
     ), "Only integer tensors of a single element can be converted to an index"
     return self.numpy().item()
+
+
+def _scalar_float(self):
+    assert (
+        self.numel() == 1
+    ), "only one element tensors can be converted to Python scalars"
+    return self.numpy().astype(np.float64).item()
+
+
+def _scalar_int(self):
+    assert (
+        self.numel() == 1
+    ), "only one element tensors can be converted to Python scalars"
+    return self.numpy().astype(np.int64).item()
 
 
 def _flatten(self, start_dim: int = 0, end_dim: int = -1):
@@ -1043,6 +1056,8 @@ def RegisterMethods():
     Tensor.__len__ = _len
     Tensor.__mod__ = _fmod
     Tensor.__index__ = _index
+    Tensor.__float__ = _scalar_float
+    Tensor.__int__ = _scalar_int
     Tensor.uniform_ = _uniform
     Tensor.trunc_normal_ = _trunc_normal_
     Tensor.kaiming_uniform_ = _kaiming_uniform
