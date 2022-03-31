@@ -482,93 +482,39 @@ void ShuffleEmbeddings(cudaStream_t cuda_stream, ncclComm_t comm, int64_t parall
 
 constexpr int kReduceBlockSize = 128;
 
+// template<typename T>
+// struct AbsMaxOp {
+//   __device__ __forceinline__ T operator()(const T& a, const T& b) const {
+//     return max(abs(a), abs(b));
+//   }
+// };
+
+// template<typename T>
+// __inline__ __device__ T BlockAllReduceAbsMax(T val) {
+//   typedef cub::BlockReduce<T, kReduceBlockSize> BlockReduce;
+//   __shared__ typename BlockReduce::TempStorage temp_storage;
+//   __shared__ T final_result;
+//   T result = BlockReduce(temp_storage).Reduce(val, AbsMaxOp<T>());
+//   if (threadIdx.x == 0) { final_result = result; }
+//   __syncthreads();
+//   return final_result;
+// }
+
 template<typename T>
-struct AbsMaxOp {
-  __device__ __forceinline__ T operator()(const T& a, const T& b) const {
-    return max(abs(a), abs(b));
-  }
+struct MaxOp {
+  __device__ __forceinline__ T operator()(const T& a, const T& b) const { return max(a, b); }
 };
 
 template<typename T>
-__inline__ __device__ T BlockAllReduceAbsMax(T val) {
+__inline__ __device__ T BlockAllReduceMax(T val) {
   typedef cub::BlockReduce<T, kReduceBlockSize> BlockReduce;
   __shared__ typename BlockReduce::TempStorage temp_storage;
   __shared__ T final_result;
-  T result = BlockReduce(temp_storage).Reduce(val, AbsMaxOp<T>());
+  T result = BlockReduce(temp_storage).Reduce(val, MaxOp<T>());
   if (threadIdx.x == 0) { final_result = result; }
   __syncthreads();
   return final_result;
 }
-
-// template<typename T, typename IDX>
-// __global__ void QuantizeAndDequantizeBlockKernel(T* x, IDX row_size, IDX col_size);
-
-// template<typename T, typename IDX>
-// __global__ void QuantizeAndDequantizeBlockKernel(T* x, IDX row_size, IDX col_size) {
-//   for (int32_t row = blockIdx.x, step = gridDim.x; row < row_size; row += step) {
-//     T block_quantize_factor = -1.0;
-//     for (int32_t col = threadIdx.x; col < col_size; col += blockDim.x) {
-//       IDX idx = row * col_size + col;
-//       T x_val = x[idx];
-//       T quantize_factor = BlockAllReduceAbsMax<T>(x_val) / 127;
-//       block_quantize_factor = max(quantize_factor, block_quantize_factor);
-//     }
-
-//     for (int32_t col = threadIdx.x; col < col_size; col += blockDim.x) {
-//       IDX idx = row * col_size + col;
-//       T x_val = x[idx];
-//       int8_t quantized_val = static_cast<int8_t>(x_val / block_quantize_factor);
-//       T dequantized_val = static_cast<T>(quantized_val) * block_quantize_factor;
-//       x[idx] = dequantized_val;
-//     }
-//   }
-// }
-
-// // blockreduce 128, blocksize = 192, 需要做padding，warp(参考softmax)
-
-// template<>
-// __global__ void QuantizeAndDequantizeBlockKernel<half, int32_t>(half* x, int32_t row_size,
-// int32_t col_size) {
-//   for (int32_t row = blockIdx.x, step = gridDim.x; row < row_size; row += step) {
-//     float block_quantize_factor = -1.0;
-//     for (int32_t col = threadIdx.x; col < col_size; col += blockDim.x) {
-//       int32_t idx = row * col_size + col;
-//       float x_val = __half2float(x[idx]);
-//       float quantize_factor = BlockAllReduceAbsMax<float>(x_val) / 127;
-//       block_quantize_factor = max(quantize_factor, block_quantize_factor);
-//     }
-
-//     for (int32_t col = threadIdx.x; col < col_size; col += blockDim.x) {
-//       int32_t idx = row * col_size + col;
-//       float x_val = __half2float(x[idx]);
-//       int8_t quantized_val = static_cast<int8_t>(x_val / block_quantize_factor);
-//       float dequantized_val = static_cast<float>(quantized_val) * block_quantize_factor;
-//       x[idx] = __float2half(dequantized_val);
-//     }
-//   }
-// }
-
-// template<>
-// __global__ void QuantizeAndDequantizeBlockKernel<half, uint32_t>(half* x, uint32_t row_size,
-// uint32_t col_size) {
-//   for (int32_t row = blockIdx.x, step = gridDim.x; row < row_size; row += step) {
-//     float block_quantize_factor = -1.0;
-//     for (int32_t col = threadIdx.x; col < col_size; col += blockDim.x) {
-//       uint32_t idx = row * col_size + col;
-//       float x_val = __half2float(x[idx]);
-//       float quantize_factor = BlockAllReduceAbsMax<float>(x_val) / 127;
-//       block_quantize_factor = max(quantize_factor, block_quantize_factor);
-//     }
-
-//     for (int32_t col = threadIdx.x; col < col_size; col += blockDim.x) {
-//       uint32_t idx = row * col_size + col;
-//       float x_val = __half2float(x[idx]);
-//       int8_t quantized_val = static_cast<int8_t>(x_val / block_quantize_factor);
-//       float dequantized_val = static_cast<float>(quantized_val) * block_quantize_factor;
-//       x[idx] = __float2half(dequantized_val);
-//     }
-//   }
-// }
 
 template<typename T, typename IDX>
 __global__ void QuantizeBlockKernel(const T* x, int8_t* quantized_out, T* quantize_factor,
@@ -578,14 +524,14 @@ template<typename T, typename IDX>
 __global__ void QuantizeBlockKernel(const T* x, int8_t* quantized_out, T* quantize_factor,
                                     IDX row_size, IDX col_size) {
   for (int32_t row = blockIdx.x, step = gridDim.x; row < row_size; row += step) {
-    T block_quantize_val = -1.0;
+    T thread_quantize_val = 0.0;
     for (int32_t col = threadIdx.x; col < col_size; col += blockDim.x) {
       IDX idx = row * col_size + col;
       T x_val = x[idx];
-      T quantize_val = BlockAllReduceAbsMax<T>(x_val) / 127;
-      block_quantize_val = max(quantize_val, block_quantize_val);
+      thread_quantize_val = max(abs(thread_quantize_val), abs(x_val));
     }
-    quantize_factor[row] = block_quantize_val;
+    T block_quantize_val = BlockAllReduceMax<T>(thread_quantize_val) / 127;
+    if (threadIdx.x == 0) { quantize_factor[row] = block_quantize_val; }
     for (int32_t col = threadIdx.x; col < col_size; col += blockDim.x) {
       IDX idx = row * col_size + col;
       T x_val = x[idx];
@@ -599,13 +545,13 @@ __global__ void QuantizeBlockKernel<half, int32_t>(const half* x, int8_t* quanti
                                                    half* quantize_factor, int32_t row_size,
                                                    int32_t col_size) {
   for (int32_t row = blockIdx.x, step = gridDim.x; row < row_size; row += step) {
-    float block_quantize_val = -1.0;
+    float thread_quantize_val = 0.0;
     for (int32_t col = threadIdx.x; col < col_size; col += blockDim.x) {
       int32_t idx = row * col_size + col;
       float x_val = __half2float(x[idx]);
-      float quantize_val = BlockAllReduceAbsMax<float>(x_val) / 127;
-      block_quantize_val = max(quantize_val, block_quantize_val);
+      thread_quantize_val = max(abs(thread_quantize_val), abs(x_val));
     }
+    float block_quantize_val = BlockAllReduceMax<float>(thread_quantize_val) / 127;
     quantize_factor[row] = __float2half(block_quantize_val);
     for (int32_t col = threadIdx.x; col < col_size; col += blockDim.x) {
       int32_t idx = row * col_size + col;
@@ -620,13 +566,13 @@ __global__ void QuantizeBlockKernel<half, uint32_t>(const half* x, int8_t* quant
                                                     half* quantize_factor, uint32_t row_size,
                                                     uint32_t col_size) {
   for (int32_t row = blockIdx.x, step = gridDim.x; row < row_size; row += step) {
-    float block_quantize_val = -1.0;
+    float thread_quantize_val = 0.0;
     for (int32_t col = threadIdx.x; col < col_size; col += blockDim.x) {
       uint32_t idx = row * col_size + col;
       float x_val = __half2float(x[idx]);
-      float quantize_val = BlockAllReduceAbsMax<float>(x_val) / 127;
-      block_quantize_val = max(quantize_val, block_quantize_val);
+      thread_quantize_val = max(abs(thread_quantize_val), abs(x_val));
     }
+    float block_quantize_val = BlockAllReduceMax<float>(thread_quantize_val) / 127;
     quantize_factor[row] = __float2half(block_quantize_val);
     for (int32_t col = threadIdx.x; col < col_size; col += blockDim.x) {
       uint32_t idx = row * col_size + col;
@@ -637,51 +583,61 @@ __global__ void QuantizeBlockKernel<half, uint32_t>(const half* x, int8_t* quant
 }
 
 template<typename T, typename IDX>
-__global__ void DequantizeBlockKernel(const int8_t* x, T* quantize_factor, T* out, IDX row_size,
-                                      IDX col_size);
-
+__global__ void DequantizeBlockKernel(const int8_t* x, T* quantize_factor, T* out, IDX col_size,
+                                      IDX elem_cnt);
 template<typename T, typename IDX>
-__global__ void DequantizeBlockKernel(const int8_t* x, T* quantize_factor, T* out, IDX row_size,
-                                      IDX col_size) {
-  for (int32_t row = blockIdx.x, step = gridDim.x; row < row_size; row += step) {
-    T block_quantize_val = quantize_factor[row];
-    for (int32_t col = threadIdx.x; col < col_size; col += blockDim.x) {
-      IDX idx = row * col_size + col;
-      const int8_t x_val = x[idx];
-      T dequantize_val = static_cast<T>(x_val) * block_quantize_val;
-      out[idx] = dequantize_val;
-    }
+__global__ void DequantizeBlockKernel(const int8_t* x, T* quantize_factor, T* out, IDX col_size,
+                                      IDX elem_cnt) {
+  CUDA_1D_KERNEL_LOOP_T(IDX, i, elem_cnt) {
+    IDX factor_idx = i / col_size;
+    T block_quantize_val = quantize_factor[factor_idx];
+    out[i] = static_cast<T>(x[i]) * block_quantize_val;
   }
 }
 
 template<>
 __global__ void DequantizeBlockKernel<half, int32_t>(const int8_t* x, half* quantize_factor,
-                                                     half* out, int32_t row_size,
-                                                     int32_t col_size) {
-  for (int32_t row = blockIdx.x, step = gridDim.x; row < row_size; row += step) {
-    half block_quantize_val = quantize_factor[row];
-    for (int32_t col = threadIdx.x; col < col_size; col += blockDim.x) {
-      int32_t idx = row * col_size + col;
-      const int8_t x_val = x[idx];
-      half dequantize_val = static_cast<half>(x_val) * block_quantize_val;
-      out[idx] = dequantize_val;
-    }
+                                                     half* out, int32_t col_size,
+                                                     int32_t elem_cnt) {
+  CUDA_1D_KERNEL_LOOP_T(int32_t, i, elem_cnt) {
+    int32_t factor_idx = i / col_size;
+    half block_quantize_val = quantize_factor[factor_idx];
+    out[i] = static_cast<half>(x[i]) * block_quantize_val;
   }
 }
 
 template<>
 __global__ void DequantizeBlockKernel<half, uint32_t>(const int8_t* x, half* quantize_factor,
-                                                      half* out, uint32_t row_size,
-                                                      uint32_t col_size) {
-  for (uint32_t row = blockIdx.x, step = gridDim.x; row < row_size; row += step) {
-    half block_quantize_val = quantize_factor[row];
-    for (uint32_t col = threadIdx.x; col < col_size; col += blockDim.x) {
-      uint32_t idx = row * col_size + col;
-      const int8_t x_val = x[idx];
-      half dequantize_val = static_cast<half>(x_val) * block_quantize_val;
-      out[idx] = dequantize_val;
-    }
+                                                      half* out, uint32_t col_size,
+                                                      uint32_t elem_cnt) {
+  CUDA_1D_KERNEL_LOOP_T(uint32_t, i, elem_cnt) {
+    uint32_t factor_idx = i / col_size;
+    half block_quantize_val = quantize_factor[factor_idx];
+    out[i] = static_cast<half>(x[i]) * block_quantize_val;
   }
+}
+
+constexpr int kNumWaves = 32;
+
+inline cudaError_t GetNumBlocks(int64_t n, int32_t block_num, int* num_blocks) {
+  int dev;
+  {
+    cudaError_t err = cudaGetDevice(&dev);
+    if (err != cudaSuccess) { return err; }
+  }
+  int sm_count;
+  {
+    cudaError_t err = cudaDeviceGetAttribute(&sm_count, cudaDevAttrMultiProcessorCount, dev);
+    if (err != cudaSuccess) { return err; }
+  }
+  int tpm;
+  {
+    cudaError_t err = cudaDeviceGetAttribute(&tpm, cudaDevAttrMaxThreadsPerMultiProcessor, dev);
+    if (err != cudaSuccess) { return err; }
+  }
+  *num_blocks = std::max<int>(1, std::min<int64_t>((n + block_num - 1) / block_num,
+                                                   sm_count * tpm / block_num * kNumWaves));
+  return cudaSuccess;
 }
 
 void DumpToFile(ep::Stream* stream, std::string filename, int64_t parallel_id, size_t data_size,
@@ -803,8 +759,11 @@ class EmbeddingShuffleKernel final : public user_op::OpKernel {
     //          + quantize_cur_rank_embeddings_size + reverse_recv_quantize_cur_rank_embeddings_size
     //          + cur_rank_quantize_factor_size + recv_quantize_factor_size);
 
-    int32_t row_size = num_ids;
-    int32_t block_num = std::min(row_size, kCudaMaxBlocksNum);
+    // int32_t row_size = num_ids;
+    int32_t row_size = cur_rank_num_ids;
+    int block_num = 0;
+    GetNumBlocks(row_size * embedding_size, kReduceBlockSize, &block_num);
+
     QuantizeBlockKernel<T, IDX><<<block_num, kReduceBlockSize>>>(
         cur_rank_embeddings->dptr<T>(), quantize_cur_rank_embeddings, cur_rank_quantize_factor,
         row_size, embedding_size);
@@ -842,10 +801,12 @@ class EmbeddingShuffleKernel final : public user_op::OpKernel {
         Shape({1, parallel_num * num_ids, 1}), reverse_recv_quantize_factor, 0);
 
     int32_t dequantize_row_size = inverse_unique_partition_indices->shape().elem_cnt();
-    int32_t dequantize_block_num = std::min(dequantize_row_size, kCudaMaxBlocksNum);
-    DequantizeBlockKernel<T, IDX><<<dequantize_block_num, kReduceBlockSize>>>(
+    int dequantize_block_num = 0;
+    GetNumBlocks(dequantize_row_size * embedding_size, 256, &dequantize_block_num);
+    IDX dequantize_elem_cnt = dequantize_row_size * embedding_size;
+    DequantizeBlockKernel<T, IDX><<<dequantize_block_num, 256>>>(
         reverse_recv_quantize_cur_rank_embeddings, reverse_recv_quantize_factor,
-        embeddings->mut_dptr<T>(), dequantize_row_size, embedding_size);
+        embeddings->mut_dptr<T>(), embedding_size, dequantize_elem_cnt);
 
     embedding_shuffle_dump_counter += 1;
   }
