@@ -206,6 +206,24 @@ add_docstr(
 )
 
 add_docstr(
+    oneflow.Tensor.storage_offset,
+    """
+    Tensor.storage_offset() -> Tensor
+
+    Returns self tensor’s offset in the underlying storage in terms of number of storage elements (not bytes).
+
+    Example:
+
+    .. code-block:: python
+
+        >>> import oneflow as flow
+        >>> x = flow.tensor([1, 2, 3, 4, 5])
+        >>> x.storage_offset()
+        0
+    """,
+)
+
+add_docstr(
     oneflow.Tensor.to_global,
     """
     Tensor.to_global(placement=None, sbp=None, grad_sbp=None) -> Tensor
@@ -1673,6 +1691,24 @@ add_docstr(
 )
 
 add_docstr(
+    oneflow.Tensor.is_contiguous,
+    r"""
+    Tensor.is_contiguous() -> bool
+
+    Returns True if `self` tensor is contiguous in memory.
+    """,
+)
+
+add_docstr(
+    oneflow.Tensor.is_cuda,
+    r"""
+    Tensor.is_cuda() -> bool
+    
+    Is `True` if the Tensor is stored on the GPU, `False` otherwise.
+    """,
+)
+
+add_docstr(
     oneflow.Tensor.is_floating_point,
     """
     See :func:`oneflow.is_floating_point`
@@ -1725,5 +1761,14 @@ add_docstr(
     oneflow.Tensor.where,
     """
     See :func:`oneflow.where`
+    """,
+)
+
+add_docstr(
+    oneflow.Tensor.zero_,
+    r"""
+    Tensor.zero_() -> Tensor
+    
+    Fills `self` tensor with zeros.
     """,
 )
