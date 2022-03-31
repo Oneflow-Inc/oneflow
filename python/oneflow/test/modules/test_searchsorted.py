@@ -24,12 +24,12 @@ import oneflow as flow
 import oneflow.unittest
 
 
-def _test_search_sorted(test_case, device):
+def _test_search_sorted(test_case, input_dtype, device):
     sorted_sequence = flow.tensor(
-        np.array([[1, 3, 5, 7, 9], [2, 4, 6, 8, 10]]), dtype=flow.int64, device=flow.device(device)
+        np.array([[1, 3, 5, 7, 9], [2, 4, 6, 8, 10]]), dtype=input_dtype, device=flow.device(device)
     )
     values = flow.tensor(
-        np.array([[3, 6, 9], [3, 6, 9]]), dtype=flow.int64, device=flow.device(device)
+        np.array([[3, 6, 9], [3, 6, 9]]), dtype=input_dtype, device=flow.device(device)
     )
     gt = np.array([[1, 3, 4], [1, 2, 4]])
     output = flow.searchsorted(sorted_sequence, values)
@@ -37,12 +37,12 @@ def _test_search_sorted(test_case, device):
     test_case.assertTrue(output.dtype == flow.int64)
 
 
-def _test_search_sorted_1(test_case, device):
+def _test_search_sorted_1(test_case, input_dtype, device):
     sorted_sequence = flow.tensor(
-        np.array([[1, 3, 5, 7, 9], [2, 4, 6, 8, 10]]), dtype=flow.int64, device=flow.device(device)
+        np.array([[1, 3, 5, 7, 9], [2, 4, 6, 8, 10]]), dtype=input_dtype, device=flow.device(device)
     )
     values = flow.tensor(
-        np.array([[3, 6, 9], [3, 6, 9]]), dtype=flow.int64, device=flow.device(device)
+        np.array([[3, 6, 9], [3, 6, 9]]), dtype=input_dtype, device=flow.device(device)
     )
     gt = np.array([[2, 3, 5], [1, 3, 4]])
     output = flow.searchsorted(sorted_sequence, values, right=True)
@@ -50,12 +50,12 @@ def _test_search_sorted_1(test_case, device):
     test_case.assertTrue(output.dtype == flow.int64)
 
 
-def _test_search_sorted_2(test_case, device):
+def _test_search_sorted_2(test_case, input_dtype, device):
     sorted_sequence_1d = flow.tensor(
-        np.array([1, 3, 5, 7, 9]), dtype=flow.int64, device=flow.device(device)
+        np.array([1, 3, 5, 7, 9]), dtype=input_dtype, device=flow.device(device)
     )
     values = flow.tensor(
-        np.array([3, 6, 9]), dtype=flow.int64, device=flow.device(device)
+        np.array([3, 6, 9]), dtype=input_dtype, device=flow.device(device)
     )
     gt = np.array([1, 3, 4])
     output = flow.searchsorted(sorted_sequence_1d, values)
@@ -63,12 +63,12 @@ def _test_search_sorted_2(test_case, device):
     test_case.assertTrue(output.dtype == flow.int64)
 
 
-def _test_search_sorted_3(test_case, device):
+def _test_search_sorted_3(test_case, input_dtype, device):
     sorted_sequence = flow.tensor(
-        np.array([[1, 3, 5, 7, 9], [2, 4, 6, 8, 10]]), dtype=flow.int64, device=flow.device(device)
+        np.array([[1, 3, 5, 7, 9], [2, 4, 6, 8, 10]]), dtype=input_dtype, device=flow.device(device)
     )
     values = flow.tensor(
-        np.array([[3, 6, 9], [3, 6, 9]]), dtype=flow.int64, device=flow.device(device)
+        np.array([[3, 6, 9], [3, 6, 9]]), dtype=input_dtype, device=flow.device(device)
     )
     gt = np.array([[1, 3, 4], [1, 2, 4]])
     output = flow.searchsorted(sorted_sequence, values, out_int32=True)
@@ -76,12 +76,12 @@ def _test_search_sorted_3(test_case, device):
     test_case.assertTrue(output.dtype == flow.int32)
 
 
-def _test_search_sorted_4(test_case, device):
+def _test_search_sorted_4(test_case, input_dtype, device):
     sorted_sequence = flow.tensor(
-        np.array([[1, 3, 5, 7, 9], [2, 4, 6, 8, 10]]), dtype=flow.int64, device=flow.device(device)
+        np.array([[1, 3, 5, 7, 9], [2, 4, 6, 8, 10]]), dtype=input_dtype, device=flow.device(device)
     )
     values = flow.tensor(
-        np.array([[3, 6, 9], [3, 6, 9]]), dtype=flow.int64, device=flow.device(device)
+        np.array([[3, 6, 9], [3, 6, 9]]), dtype=input_dtype, device=flow.device(device)
     )
     sorter = flow.tensor(np.array([[4, 3, 2, 1, 0], [3, 2, 4, 0, 1]]), dtype=flow.int64, device=flow.device(device))
     gt = np.array([[0, 5, 5], [0, 0, 2]])
@@ -90,9 +90,9 @@ def _test_search_sorted_4(test_case, device):
     test_case.assertTrue(output.dtype == flow.int64)
 
 
-def _test_search_sorted_5(test_case, device):
+def _test_search_sorted_5(test_case, input_dtype, device):
     sorted_sequence_1d = flow.tensor(
-        np.array([1, 3, 5, 7, 9]), dtype=flow.int64, device=flow.device(device)
+        np.array([1, 3, 5, 7, 9]), dtype=input_dtype, device=flow.device(device)
     )
     gt = np.array(2)
     output = flow.searchsorted(sorted_sequence_1d, 5)
@@ -100,9 +100,9 @@ def _test_search_sorted_5(test_case, device):
     test_case.assertTrue(output.dtype == flow.int64)
 
 
-def _test_search_sorted_6(test_case, device):
+def _test_search_sorted_6(test_case, input_dtype, device):
     sorted_sequence_1d = flow.tensor(
-        np.array([1, 3, 5, 7, 9]), dtype=flow.int64, device=flow.device(device)
+        np.array([1, 3, 5, 7, 9]), dtype=input_dtype, device=flow.device(device)
     )
     gt = np.array(3)
     output = flow.searchsorted(sorted_sequence_1d, 5, right=True)
@@ -110,9 +110,9 @@ def _test_search_sorted_6(test_case, device):
     test_case.assertTrue(output.dtype == flow.int64)
 
 
-def _test_search_sorted_7(test_case, device):
+def _test_search_sorted_7(test_case, input_dtype, device):
     sorted_sequence_1d = flow.tensor(
-        np.array([1, 3, 5, 7, 9]), dtype=flow.int64, device=flow.device(device)
+        np.array([1, 3, 5, 7, 9]), dtype=input_dtype, device=flow.device(device)
     )
     gt = np.array(2)
     output = flow.searchsorted(sorted_sequence_1d, 5, out_int32=True)
@@ -134,6 +134,7 @@ class TestSearch_Sorted(flow.unittest.TestCase):
             _test_search_sorted_6,
             _test_search_sorted_7,
         ]
+        arg_dict["input_dtype"] = [flow.int8, flow.int32, flow.int64, flow.float, flow.double]
         arg_dict["device"] = ["cpu", "cuda"]
         for arg in GenArgList(arg_dict):
             arg[0](test_case, *arg[1:])
