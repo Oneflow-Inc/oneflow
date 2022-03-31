@@ -13,7 +13,7 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
-#include "oneflow/core/common/optional.h"
+#include "oneflow/core/common/container_util.h"
 #include "oneflow/core/common/scalar.h"
 #include "oneflow/core/functional/functional.h"
 #include "oneflow/core/functional/impl/unary_functor.h"
@@ -388,6 +388,41 @@ class LeakyReluGradFunctor {
   std::shared_ptr<OpExpr> op_;
 };
 
+class SoftplusFunctor {
+ public:
+  SoftplusFunctor() {
+    op_ = CHECK_JUST(one::OpBuilder("softplus").Input("in").Output("out").Build());
+  }
+
+  Maybe<Tensor> operator()(const std::shared_ptr<Tensor>& x, const double& beta,
+                           const double& threshold) const {
+    MutableAttrMap attrs;
+    JUST(attrs.SetAttr<double>("beta", beta));
+    JUST(attrs.SetAttr<double>("threshold", threshold));
+    return OpInterpUtil::Dispatch<one::Tensor>(*op_, {x}, attrs);
+  }
+
+ private:
+  std::shared_ptr<OpExpr> op_;
+};
+
+class SoftplusGradFunctor {
+ public:
+  SoftplusGradFunctor() {
+    op_ = CHECK_JUST(one::OpBuilder("softplus_grad").Input("x").Input("dy").Output("dx").Build());
+  }
+  Maybe<Tensor> operator()(const std::shared_ptr<Tensor>& x, const std::shared_ptr<Tensor>& dy,
+                           const double& beta, const double& threshold) const {
+    MutableAttrMap attrs;
+    JUST(attrs.SetAttr<double>("beta", beta));
+    JUST(attrs.SetAttr<double>("threshold", threshold));
+    return OpInterpUtil::Dispatch<one::Tensor>(*op_, {x, dy}, attrs);
+  }
+
+ private:
+  std::shared_ptr<OpExpr> op_;
+};
+
 class SiluFunctor : public UnaryFunctor {
  public:
   SiluFunctor() { op_ = CHECK_JUST(one::OpBuilder("silu").Input("in").Output("out").Build()); }
@@ -438,6 +473,48 @@ class SoftSignGradFunctor : public BinaryFunctor {
   }
 };
 
+class SoftShrinkFunctor {
+ public:
+  SoftShrinkFunctor() {
+    op_ = CHECK_JUST(one::OpBuilder("softshrink").Input("in").Output("out").Build());
+  }
+
+  Maybe<Tensor> operator()(const std::shared_ptr<Tensor>& x, const double& alpha,
+                           bool inplace) const {
+    MutableAttrMap attrs;
+    CHECK_GT_OR_RETURN(alpha, 0) << "alpha must be greater than 0";
+    JUST(attrs.SetAttr<double>("alpha", alpha));
+    if (inplace) {
+      JUST(CheckInplaceValid(x));
+      std::shared_ptr<TensorTuple> outputs = std::make_shared<TensorTuple>(1);
+      *JUST(oneflow::VectorAt(outputs.get(), 0)) = x;
+      JUST(OpInterpUtil::Dispatch(*op_, {x}, outputs.get(), attrs));
+      return *JUST(oneflow::VectorAt(outputs.get(), 0));
+    } else {
+      return OpInterpUtil::Dispatch<one::Tensor>(*op_, {x}, attrs);
+    }
+  }
+
+ private:
+  std::shared_ptr<OpExpr> op_;
+};
+
+class SoftShrinkGradFunctor {
+ public:
+  SoftShrinkGradFunctor() {
+    op_ = CHECK_JUST(one::OpBuilder("softshrink_grad").Input("dy").Input("y").Output("dx").Build());
+  }
+  Maybe<Tensor> operator()(const std::shared_ptr<Tensor>& y, const std::shared_ptr<Tensor>& dy,
+                           const double& alpha) const {
+    MutableAttrMap attrs;
+    JUST(attrs.SetAttr<double>("alpha", alpha));
+    return OpInterpUtil::Dispatch<one::Tensor>(*op_, {dy, y}, attrs);
+  }
+
+ private:
+  std::shared_ptr<OpExpr> op_;
+};
+
 }  // namespace impl
 
 ONEFLOW_FUNCTION_LIBRARY(m) {
@@ -463,6 +540,8 @@ ONEFLOW_FUNCTION_LIBRARY(m) {
   m.add_functor<impl::HardSwishGradFunctor>("HardSwishGrad");
   m.add_functor<impl::LeakyReluFunctor>("LeakyRelu");
   m.add_functor<impl::LeakyReluGradFunctor>("LeakyReluGrad");
+  m.add_functor<impl::SoftplusFunctor>("Softplus");
+  m.add_functor<impl::SoftplusGradFunctor>("SoftplusGrad");
   m.add_functor<impl::SiluFunctor>("Silu");
   m.add_functor<impl::SiluGradFunctor>("SiluGrad");
   m.add_functor<impl::MishFunctor>("Mish");
@@ -471,6 +550,8 @@ ONEFLOW_FUNCTION_LIBRARY(m) {
   m.add_functor<impl::SeluGradFunctor>("SeluGrad");
   m.add_functor<impl::SoftSignFunctor>("SoftSign");
   m.add_functor<impl::SoftSignGradFunctor>("SoftSignGrad");
+  m.add_functor<impl::SoftShrinkFunctor>("SoftShrink");
+  m.add_functor<impl::SoftShrinkGradFunctor>("SoftShrinkGrad");
 };
 
 }  // namespace functional
