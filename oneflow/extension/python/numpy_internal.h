@@ -66,6 +66,8 @@ bool PyArrayCheckLongScalar(PyObject* obj);
 
 bool PyArrayCheckFloatScalar(PyObject* obj);
 
+bool PyArrayCheckBoolScalar(PyObject* obj);
+
 Maybe<void> InitNumpyCAPI();
 
 }  // namespace numpy

@@ -203,12 +203,13 @@ bool PyTensorIndexCheck(PyObject* obj) {
 Maybe<TensorIndex> PyUnpackTensorIndex(PyObject* obj) {
   auto tensor_index = std::make_shared<TensorIndex>();
   // Obvious single-entry cases.
-  if (PySlice_Check(obj)         // NOLINT
-      || PyLong_Check(obj)       // NOLINT
-      || obj == Py_Ellipsis      // NOLINT
-      || obj == Py_None          // NOLINT
-      || PyTensorCheck(obj)      // NOLINT
-      || !PySequence_Check(obj)  // NOLINT
+  if (PySlice_Check(obj)                     // NOLINT
+      || PyLong_Check(obj)                   // NOLINT
+      || numpy::PyArrayCheckLongScalar(obj)  // NOLINT
+      || obj == Py_Ellipsis                  // NOLINT
+      || obj == Py_None                      // NOLINT
+      || PyTensorCheck(obj)                  // NOLINT
+      || !PySequence_Check(obj)              // NOLINT
       || PyUnicode_Check(obj)) {
     tensor_index->emplace_back(*JUST(detail::UnpackIndexItem(obj)));
     return tensor_index;
