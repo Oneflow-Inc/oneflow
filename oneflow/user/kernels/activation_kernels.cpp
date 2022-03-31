@@ -30,6 +30,7 @@ namespace oneflow {
   REGISTER_SOFTSIGN_KERNEL(DeviceType::kCPU, dtype);    \
   REGISTER_SOFTPLUS_KERNEL(DeviceType::kCPU, dtype);    \
   REGISTER_LEAKYRELU_KERNEL(DeviceType::kCPU, dtype);   \
+  REGISTER_THRESHOLD_KERNEL(DeviceType::kCPU, dtype);   \
   REGISTER_RELU_BACKWARD_KERNEL(DeviceType::kCPU, dtype);
 
 REGISTER_ACTIVATION_CPU_KERNEL(float);
