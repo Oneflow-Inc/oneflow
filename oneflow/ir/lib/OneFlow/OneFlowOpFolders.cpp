@@ -90,7 +90,7 @@ OpFoldResult BinaryFold(MLIRContext* ctx, ArrayRef<Attribute> operands,
 
 }  // namespace
 
-OpFoldResult VariableIrOp::fold(ArrayRef<Attribute> operands) {
+OpFoldResult FrozenVariableOp::fold(ArrayRef<Attribute> operands) {
   NamedAttrList attrs;
   attrs.set(valueAttrName(), valueAttr());
   attrs.set(op_nameAttrName(), op_nameAttr());

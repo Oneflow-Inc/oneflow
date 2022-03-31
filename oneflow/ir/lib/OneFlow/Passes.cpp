@@ -489,8 +489,8 @@ struct ReplaceVariablePattern : public ::mlir::RewritePattern {
     attrs.set(op.scope_symbol_idAttrName(), op.scope_symbol_idAttr());
     attrs.set(op.hierarchyAttrName(), op.hierarchyAttr());
     attrs.set(op.nd_sbpAttrName(), op.nd_sbpAttr());
-    auto op_new = rewriter.create<oneflow::VariableIrOp>(op->getLoc(), op.output().getType(),
-                                                         ValueRange(), attrs);
+    auto op_new = rewriter.create<oneflow::FrozenVariableOp>(op->getLoc(), op.output().getType(),
+                                                             ValueRange(), attrs);
     rewriter.replaceOp(op0, op_new->getResults());
     return ::mlir::success();
   }
@@ -501,7 +501,7 @@ struct ReplaceVariableIrPattern : public ::mlir::RewritePattern {
       : ::mlir::RewritePattern("oneflow.variable_ir", 1, context, {"oneflow.variable"}) {}
   ::mlir::LogicalResult matchAndRewrite(::mlir::Operation* op0,
                                         ::mlir::PatternRewriter& rewriter) const override {
-    auto op = ::llvm::dyn_cast<oneflow::VariableIrOp>(op0);
+    auto op = ::llvm::dyn_cast<oneflow::FrozenVariableOp>(op0);
     NamedAttrList attrs;
     const auto tensor_attr = op.value();
     attrs.set(StringAttr::get(getContext(), "shape"),

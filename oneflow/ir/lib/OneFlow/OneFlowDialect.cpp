@@ -147,8 +147,8 @@ void OneFlowDialect::initialize() {
 mlir::Operation* OneFlowDialect::materializeConstant(mlir::OpBuilder& builder,
                                                      mlir::Attribute value, mlir::Type type,
                                                      mlir::Location loc) {
-  return builder.create<VariableIrOp>(loc, type, ValueRange(),
-                                      value.cast<mlir::DictionaryAttr>().getValue());
+  return builder.create<FrozenVariableOp>(loc, type, ValueRange(),
+                                          value.cast<mlir::DictionaryAttr>().getValue());
 }
 
 }  // namespace oneflow

@@ -62,9 +62,9 @@ def OneFlow_SystemOp : OneFlow_Op<"system", [OneFlow_IsImportCompatible]> {
 
 def F32ElementsAttr : FloatElementsAttr<32>;
 
-def OneFlow_VariableIrOp : OneFlow_IROp<"variable_ir", [ConstantLike, NoSideEffect]> {
+def OneFlow_FrozenVariableOp : OneFlow_IROp<"variable_ir", [ConstantLike, NoSideEffect]> {
   let summary = "Auxiliary variable op for constant folding, only exists in IR.";
-  let arguments = (ins 
+  let arguments = (ins
     F32ElementsAttr:$value,
     StrAttr:$op_name,
     StrAttr:$device_tag,

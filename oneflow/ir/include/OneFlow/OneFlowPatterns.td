@@ -374,7 +374,7 @@ def FuseConv2DBatchNormPattern : Pat<
         OneFlow_Conv2DOp : $conv_2d_op
           $x,
           (
-            OneFlow_VariableIrOp : $variable_conv_2d_weight
+            OneFlow_FrozenVariableOp : $variable_conv_2d_weight
               $value,
               $v_op_name,
               $v_device_tag,
@@ -429,8 +429,8 @@ def DeleteSameDtypeCastOpPattern : Pat<
     OneFlow_CastOp : $res
      $x,
      $cast_op_name,
-     $cast_device_tag, 
-     $cast_device_name, 
+     $cast_device_tag,
+     $cast_device_name,
      $cast_scope_symbol_id,
      $cast_hierarchy,
      $dtype
