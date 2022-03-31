@@ -24,15 +24,15 @@ import oneflow.unittest
 
 @autotest(n=1, check_graph=False)
 def _test_global_view(test_case, placement, sbp):
-    x = random_tensor(ndim=2, dim0=8, dim1=16).to_global(placement, sbp)
-    y = x.view(2, 2, 2, -1)
+    x = random_tensor(ndim=2, dim0=8, dim1=32).to_global(placement, sbp)
+    y = x.view(8, 8, 2, -1)
     return y
 
 
 @autotest(n=1, check_graph=False)
 def _test_global_view_size(test_case, placement, sbp):
-    x = random_tensor(ndim=2, dim0=8, dim1=16).to_global(placement, sbp)
-    shape = torch.Size([2, 2, 2, -1])
+    x = random_tensor(ndim=2, dim0=8, dim1=32).to_global(placement, sbp)
+    shape = torch.Size([8, 8, 2, -1])
     y = x.view(shape)
     return y
 
