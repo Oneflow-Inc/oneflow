@@ -26,10 +26,21 @@ def _test_scatter_random_data(test_case, test_scalar: bool, dim: int):
     device = random_device()
     input = random_tensor(ndim=2, dim0=2, dim1=2).to(device)
     src = 3.14 if test_scalar else random_tensor(ndim=2, dim0=2, dim1=2).to(device)
-    index = constant(
-        torch.tensor(np.array([[0, 1], [1, 0]]), dtype=torch.int64, device=device)
-    )
-    y = torch.scatter(input, dim, index, src)
+    indexes = [
+        constant(
+            torch.tensor(np.array([[0, 1], [1, 0]]), dtype=torch.int64, device=device)
+        ),
+        constant(
+            torch.tensor(np.array([[1, 0], [0, 1]]), dtype=torch.int64, device=device)
+        ),
+        constant(
+            torch.tensor(np.array([[1, 0], [1, 0]]), dtype=torch.int64, device=device)
+        ),
+        constant(
+            torch.tensor(np.array([[0, 1], [0, 1]]), dtype=torch.int64, device=device)
+        ),
+    ]
+    y = torch.scatter(input, dim, oneof(*indexes), src)
     return y
 
 
