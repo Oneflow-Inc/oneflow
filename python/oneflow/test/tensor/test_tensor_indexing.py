@@ -23,6 +23,67 @@ import oneflow as flow
 import oneflow.unittest
 
 
+def _test_numpy_scalar_indexing(test_case, numpy_x):
+    x = flow.Tensor(numpy_x)
+
+    np_scalar = np.random.choice(
+        [np.int8, np.int16, np.int32, np.int64], size=(1,)
+    ).item()
+
+    # basic_slice
+    test_case.assertTrue(np.allclose(numpy_x[np_scalar(1)], x[np_scalar(1)].numpy()))
+    test_case.assertTrue(np.allclose(numpy_x[np_scalar(-2)], x[np_scalar(-2)].numpy()))
+    test_case.assertTrue(
+        np.allclose(
+            numpy_x[np_scalar(0), np_scalar(1)], x[np_scalar(0), np_scalar(1)].numpy()
+        )
+    )
+    test_case.assertTrue(
+        np.allclose(
+            numpy_x[(np_scalar(0), np_scalar(1))],
+            x[(np_scalar(0), np_scalar(1))].numpy(),
+        )
+    )
+    test_case.assertTrue(
+        np.allclose(
+            numpy_x[((np_scalar(0), np_scalar(1)))],
+            x[((np_scalar(0), np_scalar(1)))].numpy(),
+        )
+    )
+
+    # advance indexing
+    test_case.assertTrue(
+        np.allclose(
+            numpy_x[[np_scalar(0), np_scalar(1)]],
+            x[[np_scalar(0), np_scalar(1)]].numpy(),
+        )
+    )
+    test_case.assertTrue(
+        np.allclose(
+            numpy_x[[np_scalar(0), np_scalar(1)], [np_scalar(1), np_scalar(0)]],
+            x[[np_scalar(0), np_scalar(1)], [np_scalar(1), np_scalar(0)]].numpy(),
+        )
+    )
+    test_case.assertTrue(
+        np.allclose(
+            numpy_x[
+                [
+                    [np_scalar(0), np_scalar(1)],
+                    [np_scalar(0), np_scalar(1)],
+                    [np_scalar(1), np_scalar(0)],
+                ]
+            ],
+            x[
+                [
+                    [np_scalar(0), np_scalar(1)],
+                    [np_scalar(0), np_scalar(1)],
+                    [np_scalar(1), np_scalar(0)],
+                ]
+            ].numpy(),
+        )
+    )
+
+
 def _test_basic_slice(test_case, numpy_x):
     x = flow.tensor(numpy_x)
 
@@ -277,6 +338,16 @@ class TestTensorIndexing(flow.unittest.TestCase):
 
         numpy_x = np.arange(0, 720, 1).reshape([8, 9, 10]).astype(np.float32)
         _test_combining_indexing(test_case, numpy_x)
+
+    def test_numpy_scalar_indexing(test_case):
+        numpy_x = np.arange(0, 60, 1).reshape([3, 4, 5]).astype(np.float32)
+        _test_numpy_scalar_indexing(test_case, numpy_x)
+
+        numpy_x = np.arange(0, 360, 1).reshape([3, 4, 5, 6]).astype(np.float32)
+        _test_numpy_scalar_indexing(test_case, numpy_x)
+
+        numpy_x = np.arange(0, 720, 1).reshape([8, 9, 10]).astype(np.float32)
+        _test_numpy_scalar_indexing(test_case, numpy_x)
 
     def test_mask_getitem(test_case):
         numpy_x = np.arange(0, 60, 1).reshape([3, 4, 5]).astype(np.float32)
