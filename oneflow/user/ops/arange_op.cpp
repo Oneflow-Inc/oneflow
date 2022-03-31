@@ -51,7 +51,7 @@ namespace oneflow {
 }
 
 /*static*/ Maybe<void> ArangeOp::InferPhysicalTensorDesc(user_op::InferContext* ctx) {
-   Shape* out_shape = ctx->OutputShape("out", 0);
+  Shape* out_shape = ctx->OutputShape("out", 0);
   DataType dtype = ctx->Attr<DataType>("dtype");
   int64_t range_elem_cnt = 0;
   if (IsIntegralDataType(dtype)) {

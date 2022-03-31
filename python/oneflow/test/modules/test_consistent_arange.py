@@ -67,18 +67,20 @@ class TestArange(flow.unittest.TestCase):
                 _test_arange_with_random_data(test_case, placement, sbp)
                 _test_arange_with_float_delta(test_case, placement, sbp)
 
-@autotest(n=1,check_graph=False)
+
+@autotest(n=1, check_graph=False)
 def _test_consistent_arange(test_case, start, end, step, placement, sbp):
     x1 = flow.arange(start, end, step, placement=placement, sbp=sbp)
     x2 = flow.arange(start, end, step, placement=placement, sbp=sbp)
     for i in x1.numpy():
-        j=0
-        test_case.assertEqual(x1.numpy()[j],x2.numpy()[j])
-        j = j+1
+        j = 0
+        test_case.assertEqual(x1.numpy()[j], x2.numpy()[j])
+        j = j + 1
     test_case.assertEqual(x1.sbp, sbp)
     test_case.assertEqual(x1.placement, placement)
 
-@autotest(n=1,check_graph=False)
+
+@autotest(n=1, check_graph=False)
 def _test_graph_arange(test_case, start, end, step, placement, sbp):
     class ConsistentArangeGraph(flow.nn.Graph):
         def __init__(self,):
@@ -87,14 +89,12 @@ def _test_graph_arange(test_case, start, end, step, placement, sbp):
         def build(self):
             x1 = flow.arange(start, end, step, placement=placement, sbp=sbp)
             x2 = flow.arange(start, end, step, placement=placement, sbp=sbp)
-            return [x1,x2]
+            return [x1, x2]
 
     model = ConsistentArangeGraph()
     x = model()
 
-    test_case.assertTrue(
-            np.allclose(x[0].numpy(), x[1].numpy(), atol=1e-4, rtol=1e-4)
-        )
+    test_case.assertTrue(np.allclose(x[0].numpy(), x[1].numpy(), atol=1e-4, rtol=1e-4))
     test_case.assertEqual(x[0].sbp, sbp)
     test_case.assertEqual(x[0].placement, placement)
 
@@ -112,6 +112,7 @@ class TestArangeConsistent(flow.unittest.TestCase):
                     _test_consistent_arange(
                         test_case, **args, placement=placement, sbp=sbp
                     )
+
     @globaltest
     @flow.unittest.skip_unless_1n2d()
     def test_arange_graph(test_case):
