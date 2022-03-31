@@ -42,11 +42,11 @@ class ArangeKernel final : public OpKernel {
   ~ArangeKernel() = default;
   std::shared_ptr<user_op::OpKernelCache> InitOpKernelCache(
       user_op::KernelCacheContext* ctx) const override {
-      DataType dtype = ctx->Attr<DataType>("dtype");
-      int64_t range_elem_cnt = 0;
-      int64_t parallel_num = ctx->parallel_ctx().parallel_num();
-      if(parallel_num > 1){
-        if (IsIntegralDataType(dtype)) {
+    DataType dtype = ctx->Attr<DataType>("dtype");
+    int64_t range_elem_cnt = 0;
+    int64_t parallel_num = ctx->parallel_ctx().parallel_num();
+    if (parallel_num > 1) {
+      if (IsIntegralDataType(dtype)) {
         int64_t integer_delta = ctx->Attr<int64_t>("integer_delta");
         int64_t integer_start = ctx->Attr<int64_t>("integer_start");
         int64_t integer_limit = ctx->Attr<int64_t>("integer_limit");
@@ -63,11 +63,12 @@ class ArangeKernel final : public OpKernel {
       const Shape& parallel_hierarchy = *ctx->parallel_desc().hierarchy();
       const int64_t parallel_id = ctx->parallel_ctx().parallel_id();
       view = GetTensorSliceView4ParallelId(parallel_hierarchy, nd_sbp, logical_shape, parallel_id);
-      std::shared_ptr<ArangeOpKernelCache> cache(new ArangeOpKernelCache(view.At(0).begin(), view.At(0).end()));
+      std::shared_ptr<ArangeOpKernelCache> cache(
+          new ArangeOpKernelCache(view.At(0).begin(), view.At(0).end()));
       return cache;
-      }else{
-        return nullptr;
-      }
+    } else {
+      return nullptr;
+    }
   }
 
  private:
@@ -97,14 +98,13 @@ class ArangeKernel final : public OpKernel {
       limit = static_cast<T>(float_limit);
     }
     if (arange_elem_cnt == 0) { return; }
-    if(cache == nullptr) {
-       ArangeFunctor<device_type, T>()(ctx->stream(), start, delta, arange_elem_cnt,
-                                    output);
-    }else{
+    if (cache == nullptr) {
+      ArangeFunctor<device_type, T>()(ctx->stream(), start, delta, arange_elem_cnt, output);
+    } else {
       const auto* arange_cache = dynamic_cast<const ArangeOpKernelCache*>(cache);
       auto arange_len = arange_cache->upper() - arange_cache->lower();
-      ArangeFunctor<device_type, T>()(ctx->stream(), start + arange_cache->lower(), delta, arange_len,
-                                      output);
+      ArangeFunctor<device_type, T>()(ctx->stream(), start + arange_cache->lower(), delta,
+                                      arange_len, output);
     }
   }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }

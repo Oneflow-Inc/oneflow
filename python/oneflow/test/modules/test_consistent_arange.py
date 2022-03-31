@@ -17,9 +17,11 @@ import unittest
 from collections import OrderedDict
 
 import oneflow as flow
+import numpy as np
 from oneflow.test_utils.automated_test_util import *
 
 from oneflow.test_utils.test_util import GenArgDict
+
 
 @autotest(n=1, auto_backward=False, check_graph=False)
 def _test_arange_with_random_data(test_case, placement, sbp):
@@ -65,30 +67,39 @@ class TestArange(flow.unittest.TestCase):
                 _test_arange_with_random_data(test_case, placement, sbp)
                 _test_arange_with_float_delta(test_case, placement, sbp)
 
+@autotest(n=1,check_graph=False)
 def _test_consistent_arange(test_case, start, end, step, placement, sbp):
-    x = flow.arange(start, end, step, placement=placement, sbp=sbp)
+    x1 = flow.arange(start, end, step, placement=placement, sbp=sbp)
+    x2 = flow.arange(start, end, step, placement=placement, sbp=sbp)
+    for i in x1.numpy():
+        j=0
+        test_case.assertEqual(x1.numpy()[j],x2.numpy()[j])
+        j = j+1
+    test_case.assertEqual(x1.sbp, sbp)
+    test_case.assertEqual(x1.placement, placement)
 
-    test_case.assertEqual(x.sbp, sbp)
-    test_case.assertEqual(x.placement, placement)
-
-
+@autotest(n=1,check_graph=False)
 def _test_graph_arange(test_case, start, end, step, placement, sbp):
-    class ConsistentRandGraph(flow.nn.Graph):
+    class ConsistentArangeGraph(flow.nn.Graph):
         def __init__(self,):
             super().__init__()
 
         def build(self):
-            x = flow.arange(start, end, step, placement=placement, sbp=sbp)
-            return x
+            x1 = flow.arange(start, end, step, placement=placement, sbp=sbp)
+            x2 = flow.arange(start, end, step, placement=placement, sbp=sbp)
+            return [x1,x2]
 
-    model = ConsistentRandGraph()
+    model = ConsistentArangeGraph()
     x = model()
 
-    test_case.assertEqual(x.sbp, sbp)
-    test_case.assertEqual(x.placement, placement)
+    test_case.assertTrue(
+            np.allclose(x[0].numpy(), x[1].numpy(), atol=1e-4, rtol=1e-4)
+        )
+    test_case.assertEqual(x[0].sbp, sbp)
+    test_case.assertEqual(x[0].placement, placement)
 
 
-class TestRandConsistent(flow.unittest.TestCase):
+class TestArangeConsistent(flow.unittest.TestCase):
     @globaltest
     def test_arange_consistent(test_case):
         arg_dict = OrderedDict()
@@ -101,10 +112,9 @@ class TestRandConsistent(flow.unittest.TestCase):
                     _test_consistent_arange(
                         test_case, **args, placement=placement, sbp=sbp
                     )
-
-    @unittest.skipIf(os.getenv("ONEFLOW_TEST_CPU_ONLY"), "only test cpu cases")
+    @globaltest
     @flow.unittest.skip_unless_1n2d()
-    def test_rand_graph(test_case):
+    def test_arange_graph(test_case):
         arg_dict = OrderedDict()
         arg_dict["start"] = [i for i in range(1, 5, 1)]
         arg_dict["end"] = [i for i in range(10, 50, 10)]
@@ -124,6 +134,7 @@ class TestRandConsistent(flow.unittest.TestCase):
             placement = args["placement"]
             for sbp in all_sbp(placement, max_dim=1, except_partial_sum=True):
                 _test_graph_arange(test_case, start, end, step, placement, sbp)
+
 
 if __name__ == "__main__":
     unittest.main()
