@@ -19,7 +19,9 @@ limitations under the License.
 #include "mlir/IR/BuiltinAttributes.h"
 #include "mlir/IR/BuiltinTypes.h"
 
+#include "mlir/IR/MLIRContext.h"
 #include "oneflow/api/common/ofblob.h"
+#include "oneflow/core/common/data_type.pb.h"
 #include "oneflow/core/common/just.h"
 #include "oneflow/core/job/lazy_mode.h"
 #include "oneflow/core/functional/functional_api.yaml.h"
@@ -56,27 +58,28 @@ std::vector<std::string> GetOutputKeys(const std::string& op_type_name) {
   return ret;
 }
 
-mlir::DenseElementsAttr TensorToDenseElementsAttr(
+namespace {
+
+template<typename T>
+mlir::DenseElementsAttr __TensorToDenseElementsAttr(
     const std::shared_ptr<::oneflow::one::Tensor>& tensor, const mlir::FloatType& float_type) {
   ::oneflow::LazyMode::Guard guard{false};
   auto shape = tensor->shape();
   std::vector<int64_t> shape_vec(shape->dim_vec().begin(), shape->dim_vec().end());
-  std::vector<float> data(shape->elem_cnt());
-
+  std::vector<T> data(shape->elem_cnt());
   const auto& callback = [&](uint64_t ofblob_ptr) {
-    CHECK_JUST(::oneflow::BlobBufferCopyUtil<float>::To(ofblob_ptr, data.data(), data.size()));
+    CHECK_JUST(::oneflow::BlobBufferCopyUtil<T>::To(ofblob_ptr, data.data(), data.size()));
   };
   ::oneflow::one::SyncAccessTensorWithTimeOut(tensor, callback, "const").GetOrThrow();
   return mlir::DenseElementsAttr::get(mlir::RankedTensorType::get(shape_vec, float_type),
                                       llvm::makeArrayRef(data));
 }
 
-std::shared_ptr<::oneflow::one::Tensor> DenseElementsAttrToTensor(
-    const mlir::Attribute& dense_attr, const mlir::Attribute& device_tag_attr,
-    const mlir::Attribute& device_name_attr) {
-  ::oneflow::LazyMode::Guard guard{false};
-  const auto dense = dense_attr.cast<mlir::DenseElementsAttr>();
-  const auto dense_type = dense.getType().cast<mlir::RankedTensorType>();
+template<typename T>
+std::shared_ptr<::oneflow::one::Tensor> __DenseElementsAttrToTensor(
+    const mlir::DenseElementsAttr dense_attr, const mlir::Attribute& device_tag_attr,
+    const mlir::Attribute& device_name_attr, const ::oneflow::DataType& dtype) {
+  const auto dense_type = dense_attr.getType().cast<mlir::RankedTensorType>();
   const auto device_tag = device_tag_attr.cast<mlir::StringAttr>().str();
   const auto device_name =
       device_name_attr.cast<mlir::ArrayAttr>().getValue().front().cast<mlir::StringAttr>().str();
@@ -89,17 +92,44 @@ std::shared_ptr<::oneflow::one::Tensor> DenseElementsAttrToTensor(
   std::shared_ptr<::oneflow::one::Tensor> tensor =
       ::oneflow::one::functional::Empty(
           ::oneflow::Shape(::oneflow::DimVector(shape.begin(), shape.end())),
-          ::oneflow::DType::Get(::oneflow::DataType::kFloat).GetOrThrow(), device)
+          ::oneflow::DType::Get(dtype).GetOrThrow(), device)
           .GetPtrOrThrow();
 
-  std::vector<float> data(dense.getValues<float>().begin(), dense.getValues<float>().end());
+  std::vector<T> data(dense_attr.getValues<T>().begin(), dense_attr.getValues<T>().end());
   const auto& callback = [&](uint64_t of_blob_ptr) {
-    ::oneflow::BlobBufferCopyUtil<float>::From(of_blob_ptr, data.data(),
-                                               tensor->shape()->elem_cnt())
+    ::oneflow::BlobBufferCopyUtil<T>::From(of_blob_ptr, data.data(), tensor->shape()->elem_cnt())
         .GetOrThrow();
   };
   ::oneflow::one::SyncAccessTensorWithTimeOut(tensor, callback, "mut").GetOrThrow();
   return tensor;
+}
+
+}  // namespace
+
+mlir::DenseElementsAttr TensorToDenseElementsAttr(
+    const std::shared_ptr<::oneflow::one::Tensor>& tensor, MLIRContext* ctx) {
+  const auto dtype = tensor->dtype()->data_type();
+  if (dtype == ::oneflow::DataType::kFloat) {
+    return __TensorToDenseElementsAttr<float>(tensor, mlir::FloatType::getF32(ctx));
+  }
+  llvm::errs() << "Only support float32 variables now."
+               << "\n";
+  exit(EXIT_FAILURE);
+}
+
+std::shared_ptr<::oneflow::one::Tensor> DenseElementsAttrToTensor(
+    const mlir::Attribute& dense_attr, const mlir::Attribute& device_tag_attr,
+    const mlir::Attribute& device_name_attr) {
+  ::oneflow::LazyMode::Guard guard{false};
+  const auto dense_attr_ = dense_attr.cast<mlir::DenseElementsAttr>();
+  const auto dense_element_type = dense_attr_.getElementType();
+  if (dense_element_type.isF32()) {
+    return __DenseElementsAttrToTensor<float>(dense_attr_, device_tag_attr, device_name_attr,
+                                              ::oneflow::DataType::kFloat);
+  }
+  llvm::errs() << "Only support float32 variables now."
+               << "\n";
+  exit(EXIT_FAILURE);
 }
 
 }  // namespace support

@@ -482,7 +482,7 @@ struct ReplaceVariablePattern : public ::mlir::RewritePattern {
         support::TensorToDenseElementsAttr(::oneflow::Global<::oneflow::VariableTensorMgr>::Get()
                                                ->Get(op.op_name().str())
                                                .GetPtrOrThrow(),
-                                           rewriter.getF32Type()));
+                                           rewriter.getContext()));
     attrs.set(op.op_nameAttrName(), op.op_nameAttr());
     attrs.set(op.device_tagAttrName(), op.device_tagAttr());
     attrs.set(op.device_nameAttrName(), op.device_nameAttr());

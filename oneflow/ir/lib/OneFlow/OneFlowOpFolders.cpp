@@ -59,7 +59,7 @@ OpFoldResult UnaryFold(MLIRContext* ctx, ArrayRef<Attribute> operands,
   const auto tensor = support::DenseElementsAttrToTensor(
       attr_dict.get("value"), attr_dict.get("device_tag"), attr_dict.get("device_name"));
   const auto result = f(tensor);
-  attrs.set("value", support::TensorToDenseElementsAttr(result, mlir::FloatType::getF32(ctx)));
+  attrs.set("value", support::TensorToDenseElementsAttr(result, ctx));
   attrs.set("op_name", g.GenNewVariableOpName());
 
   return attrs.getDictionary(ctx);
@@ -82,7 +82,7 @@ OpFoldResult BinaryFold(MLIRContext* ctx, ArrayRef<Attribute> operands,
 
   const auto result = f(lhs_tensor, rhs_tensor);
 
-  attrs.set("value", support::TensorToDenseElementsAttr(result, mlir::FloatType::getF32(ctx)));
+  attrs.set("value", support::TensorToDenseElementsAttr(result,ctx));
   attrs.set("op_name", g.GenNewVariableOpName());
 
   return attrs.getDictionary(ctx);
