@@ -227,24 +227,6 @@ class RingEngine final {
     }
   }
 
-  void AsyncPwrite(int fd, const void* buf, size_t count, off_t offset) {
-    if (num_readings_ == kRingQueueDepth) {
-      struct io_uring_cqe* cqe = nullptr;
-      PCHECK(io_uring_wait_cqe(&ring_, &cqe) == 0);
-      CHECK_GE(cqe->res, 0);
-      io_uring_cqe_seen(&ring_, cqe);
-    } else {
-      num_readings_ += 1;
-    }
-    io_uring_sqe* sqe = CHECK_NOTNULL(io_uring_get_sqe(&ring_));
-    io_uring_prep_write(sqe, fd, buf, count, offset);
-    pending_submit_ += 1;
-    if (pending_submit_ == kRingSubmitBatch) {
-      PCHECK(io_uring_submit(&ring_) == pending_submit_);
-      pending_submit_ = 0;
-    }
-  }
-
   void WaitUntilDone() {
     if (pending_submit_ > 0) {
       PCHECK(io_uring_submit(&ring_) == pending_submit_);
@@ -287,20 +269,6 @@ class AioEngine final {
     struct iocb* cb = &cbs_.at(num_readings_);
     cb->aio_fildes = fd;
     cb->aio_lio_opcode = IOCB_CMD_PREAD;
-    cb->aio_reqprio = 0;
-    cb->aio_buf = reinterpret_cast<uintptr_t>(buf);
-    cb->aio_nbytes = count;
-    cb->aio_offset = offset;
-    const long nr = 1;
-    PCHECK(syscall(__NR_io_submit, ctx_, nr, &cbs_ptr_.at(num_readings_)) >= 0);
-    num_readings_ += 1;
-  }
-
-  void AsyncPwrite(int fd, const void* buf, size_t count, off_t offset) {
-    if (num_readings_ == kAioQueueDepth) { WaitUntilDone(); }
-    struct iocb* cb = &cbs_.at(num_readings_);
-    cb->aio_fildes = fd;
-    cb->aio_lio_opcode = IOCB_CMD_PWRITE;
     cb->aio_reqprio = 0;
     cb->aio_buf = reinterpret_cast<uintptr_t>(buf);
     cb->aio_nbytes = count;
@@ -556,7 +524,7 @@ void PersistentTableImpl<Key, Engine>::PutBlocks(uint32_t num_keys, const void* 
   uint64_t written_blocks = 0;
   const uint64_t block_keys_size = num_values_per_block_ * sizeof(Key);
   BlockingCounter bc(1);
-  workers_.at(0)->Schedule([&](Engine* engine) {
+  workers_.at(0)->Schedule([&](Engine*) {
     while (written_blocks < num_blocks) {
       const uint64_t batch_start_block_id = start_block_id + written_blocks;
       const uint64_t batch_chunk_id = batch_start_block_id / num_logical_blocks_per_chunk_;
@@ -586,12 +554,11 @@ void PersistentTableImpl<Key, Engine>::PutBlocks(uint32_t num_keys, const void* 
       const uint64_t keys_bytes = std::min(num_keys - written_blocks * num_values_per_block_,
                                            blocks_to_write * num_values_per_block_)
                                   * sizeof(Key);
-      engine->AsyncPwrite(writable_key_file_.fd(),
-                          BytesOffset(keys, written_blocks * block_keys_size), keys_bytes,
-                          keys_offset_in_file);
+      PCHECK(pwrite(writable_key_file_.fd(), BytesOffset(keys, written_blocks * block_keys_size),
+                    keys_bytes, keys_offset_in_file)
+             == keys_bytes);
       written_blocks += blocks_to_write;
     }
-    engine->WaitUntilDone();
     bc.Decrease();
   });
   for (uint64_t i = 0; i < num_keys; ++i) {
