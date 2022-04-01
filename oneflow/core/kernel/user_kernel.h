@@ -49,6 +49,7 @@ class UserKernel final : public Kernel {
                     std::function<Blob*(const std::string&)> BnInOp2Blob) const override;
 
   bool IsStateless() const override;
+  bool IsKernelLaunchSynchronized() const override { return kernel_->IsKernelLaunchSynchronized(); }
 
   std::shared_ptr<user_op::OpKernelState> opkernel_state_;
   std::unique_ptr<const user_op::OpKernel> kernel_;

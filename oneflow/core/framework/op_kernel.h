@@ -278,6 +278,7 @@ class OpKernel {
   virtual void Compute(KernelComputeContext*) const { LOG(INFO) << "UNIMPLEMENTED"; }
   virtual void InferShape(KernelInferContext* ctx) const;
   virtual bool AlwaysComputeWhenAllOutputsEmpty() const = 0;
+  virtual bool IsKernelLaunchSynchronized() const { return true; }
 
  protected:
   OpKernel() : statefullness_(kInvalidOpKernelStatefulness) {}

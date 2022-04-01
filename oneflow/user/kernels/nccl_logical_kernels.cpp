@@ -85,6 +85,7 @@ class NcclLogicalAllReduceKernel final : public user_op::OpKernel {
                                 nccl_comm->comm(), ctx->device_ctx()->cuda_stream()));
   };
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
+  bool IsKernelLaunchSynchronized() const override { return false; }
 };
 
 class NcclLogicalReduceScatterKernel final : public user_op::OpKernel {
@@ -111,6 +112,7 @@ class NcclLogicalReduceScatterKernel final : public user_op::OpKernel {
                                     nccl_comm->comm(), ctx->device_ctx()->cuda_stream()));
   };
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
+  bool IsKernelLaunchSynchronized() const override { return false; }
 };
 
 class NcclLogicalAllGatherKernel final : public user_op::OpKernel {
@@ -137,6 +139,7 @@ class NcclLogicalAllGatherKernel final : public user_op::OpKernel {
                                 ctx->device_ctx()->cuda_stream()));
   };
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
+  bool IsKernelLaunchSynchronized() const override { return false; }
 };
 
 template<typename T>
@@ -199,6 +202,7 @@ class NcclLogicalAllGatherNoncontinuous final : public user_op::OpKernel {
         out->mut_dptr<T>());
   };
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
+  bool IsKernelLaunchSynchronized() const override { return false; }
 };
 
 size_t InferAllGatherNoncontinuousKernelTmpBufferSize(user_op::InferContext* ctx) {
@@ -327,6 +331,7 @@ class NcclLogicalS2SKernel final : public user_op::OpKernel {
     }
   };
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
+  bool IsKernelLaunchSynchronized() const override { return false; }
 };
 
 size_t InferS2SKernelTmpBufferSize(user_op::InferContext* ctx) {
