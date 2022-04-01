@@ -148,7 +148,7 @@ def _cpu(self):
 def _cuda(self, device: Union[int, str, flow.device] = None):
     if device is None:
         device = "cuda"
-    elif device is isinstance(int):
+    elif isinstance(device, int):
         device = "cuda:" + str(device)
     return self.to(device=device)
 
@@ -493,6 +493,14 @@ def _index(self):
         flow.bool,
     ), "Only integer tensors of a single element can be converted to an index"
     return self.numpy().item()
+
+
+def _invert(self):
+    if self.dtype != flow.bool:
+        raise TypeError(
+            "~ (operator.invert) is only implemented on integer and Boolean-type tensors"
+        )
+    return flow._C.logical_not(self)
 
 
 def _scalar_float(self):
@@ -1056,6 +1064,7 @@ def RegisterMethods():
     Tensor.__len__ = _len
     Tensor.__mod__ = _fmod
     Tensor.__index__ = _index
+    Tensor.__invert__ = _invert
     Tensor.__float__ = _scalar_float
     Tensor.__int__ = _scalar_int
     Tensor.uniform_ = _uniform
