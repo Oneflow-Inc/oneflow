@@ -87,6 +87,7 @@ Operators for neural networks
         Softshrink,
         Softsign, 
         Tanh,
+        Threshold,
         Upsample,
         UpsamplingBilinear2d,
         UpsamplingNearest2d,
