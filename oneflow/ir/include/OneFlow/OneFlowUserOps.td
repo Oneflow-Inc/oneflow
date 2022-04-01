@@ -9436,10 +9436,10 @@ def OneFlow_EmbeddingPutOp : OneFlow_BaseOp<"embedding_put", [DeclareOpInterface
 
 def OneFlow_IsNanOp : OneFlow_BaseOp<"isnan", [NoSideEffect, NoGrad, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
-    OneFlow_Tensor:$x
+    OneFlow_Tensor:$in
   );
   let output = (outs
-    OneFlow_Tensor:$y
+    OneFlow_Tensor:$out
   );
   let same_output_regst_num = 1;
   let has_logical_tensor_desc_infer_fn = 1;
@@ -9450,10 +9450,10 @@ def OneFlow_IsNanOp : OneFlow_BaseOp<"isnan", [NoSideEffect, NoGrad, DeclareOpIn
 
 def OneFlow_IsInfOp : OneFlow_BaseOp<"isinf", [NoSideEffect, NoGrad, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
-    OneFlow_Tensor:$x
+    OneFlow_Tensor:$in
   );
   let output = (outs
-    OneFlow_Tensor:$y
+    OneFlow_Tensor:$out
   );
   let same_output_regst_num = 1;
   let has_logical_tensor_desc_infer_fn = 1;

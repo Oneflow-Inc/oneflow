@@ -15,27 +15,27 @@ limitations under the License.
 */
 #include "oneflow/core/common/device_type.pb.h"
 #include "oneflow/core/common/data_type_seq.h"
-#include "oneflow/user/kernels/util_ops_kernel_functor.h"
+#include "oneflow/user/kernels/util_ops_kernels.h"
 
 namespace oneflow {
 namespace user_op {
 
 template<typename T>
 struct IsNanFunctor<DeviceType::kCPU, T> {
-  void operator()(ep::Stream* stream, bool* y_ptr, const T* x_ptr, const size_t elem_cnt) {
-    for (size_t i = 0; i < elem_cnt; i++) { y_ptr[i] = std::isnan(x_ptr[i]); }
-  }
+  OF_DEVICE_FUNC bool operator()(const T x) const { return std::isnan(x); }
 };
 
 template<typename T>
 struct IsInfFunctor<DeviceType::kCPU, T> {
-  void operator()(ep::Stream* stream, bool* y_ptr, const T* x_ptr, const size_t elem_cnt) {
-    for (size_t i = 0; i < elem_cnt; i++) { y_ptr[i] = std::isinf(x_ptr[i]); }
-  }
+  OF_DEVICE_FUNC bool operator()(const T x) const { return std::isinf(x); }
 };
 
-OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(INSTANTIATE_Util_OPS_FUNCTOR, (DeviceType::kCPU),
-                                 UTIL_OPS_FUNCTOR_DTYPE_SEQ);
+#define REGISTER_UTIL_OPS_CPU_KERNEL(dtype)      \
+  REGISTER_ISNAN_KERNEL(DeviceType::kCPU, dtype) \
+  REGISTER_ISINF_KERNEL(DeviceType::kCPU, dtype)
+
+REGISTER_UTIL_OPS_CPU_KERNEL(float)
+REGISTER_UTIL_OPS_CPU_KERNEL(double)
 
 }  // namespace user_op
 }  // namespace oneflow

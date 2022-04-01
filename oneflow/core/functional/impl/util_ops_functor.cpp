@@ -35,9 +35,8 @@ namespace impl {
 
 class UtilOpsFunctor {
  public:
-  Maybe<Tensor> operator()(const std::shared_ptr<Tensor> x) const {
-    auto res = JUST(OpInterpUtil::Dispatch<Tensor>(*op_, {x}));
-    return res;
+  Maybe<Tensor> operator()(const std::shared_ptr<Tensor> input) const {
+    return JUST(OpInterpUtil::Dispatch<Tensor>(*op_, {input}));
   }
 
  protected:
@@ -46,12 +45,12 @@ class UtilOpsFunctor {
 
 class IsNanFunctor final : public UtilOpsFunctor {
  public:
-  IsNanFunctor() { op_ = CHECK_JUST(one::OpBuilder("isnan").Input("x").Output("y").Build()); }
+  IsNanFunctor() { op_ = CHECK_JUST(one::OpBuilder("isnan").Input("in").Output("out").Build()); }
 };
 
 class IsInfFunctor final : public UtilOpsFunctor {
  public:
-  IsInfFunctor() { op_ = CHECK_JUST(one::OpBuilder("isinf").Input("x").Output("y").Build()); }
+  IsInfFunctor() { op_ = CHECK_JUST(one::OpBuilder("isinf").Input("in").Output("out").Build()); }
 };
 
 }  // namespace impl
