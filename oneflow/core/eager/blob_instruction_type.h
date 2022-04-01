@@ -32,12 +32,8 @@ class TensorViewInstructionType final : public vm::InstructionType {
   TensorViewInstructionType() = default;
   ~TensorViewInstructionType() override = default;
 
-  std::string DebugName(const vm::InstructionMsg& instr_msg) const override { return "TensorView"; }
+  std::string DebugName(const vm::Instruction& instruction) const override { return "TensorView"; }
   void Compute(vm::Instruction* instruction) const override;
-  void ComputeInFuseMode(vm::InstructionMsg* instr_msg) const override;
-
- private:
-  void ComputeInstrMsg(const vm::InstructionMsg& instr_msg) const;
 };
 
 class AccessBlobByCallbackInstructionType final : public vm::InstructionType {
@@ -45,14 +41,10 @@ class AccessBlobByCallbackInstructionType final : public vm::InstructionType {
   AccessBlobByCallbackInstructionType() = default;
   ~AccessBlobByCallbackInstructionType() override = default;
 
-  std::string DebugName(const vm::InstructionMsg& instr_msg) const override {
+  std::string DebugName(const vm::Instruction& instruction) const override {
     return "AccessBlobByCallback";
   }
   void Compute(vm::Instruction* instruction) const override;
-  void ComputeInFuseMode(vm::InstructionMsg* instruction_msg) const override;
-
- private:
-  void ComputeInstrMsg(const vm::InstructionMsg& instruction_msg) const;
 };
 
 class CpuRecordEventInstructionType final : public vm::InstructionType {
@@ -60,9 +52,7 @@ class CpuRecordEventInstructionType final : public vm::InstructionType {
   CpuRecordEventInstructionType() = default;
   ~CpuRecordEventInstructionType() override = default;
 
-  std::string DebugName(const vm::InstructionMsg& instr_msg) const override {
-    return "RecordEvent";
-  }
+  std::string DebugName(const vm::Instruction& instruction) const override { return "RecordEvent"; }
   void Compute(vm::Instruction* instruction) const override {}
 };
 
@@ -81,12 +71,10 @@ class CudaRecordEventInstructionType final : public vm::InstructionType {
     instruction->stream_type().InitInstructionStatus(*stream, status_buffer);
     auto* event_provider = dynamic_cast<QueryCudaEventProvider*>(stream->device_ctx().get());
     const auto& cuda_event = CHECK_NOTNULL(event_provider)->GetCudaEvent();
-    auto* data_ptr = status_buffer->mut_buffer()->mut_data();
+    auto* data_ptr = status_buffer->mut_buffer();
     CudaOptionalEventRecordStatusQuerier::MutCast(data_ptr)->reset_cuda_event(cuda_event);
   }
-  std::string DebugName(const vm::InstructionMsg& instr_msg) const override {
-    return "RecordEvent";
-  }
+  std::string DebugName(const vm::Instruction& instruction) const override { return "RecordEvent"; }
   void Compute(vm::Instruction* instruction) const override {}
 };
 

@@ -96,19 +96,19 @@ Maybe<Symbol<Stream>> GetBarrierStream() {
   return Stream::New(device, StreamRole::kBarrier);
 }
 
-void MakeBarrierInstructions(vm::InstructionMsgList* list,
+void MakeBarrierInstructions(vm::InstructionList* list,
                              const std::function<void()>& BarrierCallback) {
   {
     const auto& phy_instr_operand = std::make_shared<vm::NoArgCbPhyInstrOperand>([]() {});
     auto stream = CHECK_JUST(GetBarrierStream());
-    auto instruction = intrusive::make_shared<vm::InstructionMsg>(
+    auto instruction = intrusive::make_shared<vm::Instruction>(
         stream->mut_vm_stream(), SingletonPtr<vm::GlobalSyncInstructionType>(), phy_instr_operand);
     list->EmplaceBack(std::move(instruction));
   }
   {
     const auto& phy_instr_operand = std::make_shared<vm::NoArgCbPhyInstrOperand>(BarrierCallback);
     auto stream = CHECK_JUST(GetBarrierStream());
-    auto instruction = intrusive::make_shared<vm::InstructionMsg>(
+    auto instruction = intrusive::make_shared<vm::Instruction>(
         stream->mut_vm_stream(), SingletonPtr<vm::BarrierInstructionType>(), phy_instr_operand);
     list->EmplaceBack(std::move(instruction));
   }
@@ -118,7 +118,7 @@ void MakeBarrierInstructions(vm::InstructionMsgList* list,
 
 void VirtualMachine::ControlSync() {
   auto bc = std::make_shared<BlockingCounter>(1);
-  vm::InstructionMsgList list;
+  vm::InstructionList list;
   MakeBarrierInstructions(&list, [bc] { bc->Decrease(); });
   CHECK_JUST(Receive(&list));
   CHECK_JUST(bc->WaitUntilCntEqualZero(VirtualMachine::GetPredicatorNoMoreInstructionsFinished()));
@@ -169,18 +169,16 @@ std::string VirtualMachine::GetBlockingDebugString() {
   return vm_->GetLivelyInstructionListDebugString(limit);
 }
 
-Maybe<void> VirtualMachine::Receive(vm::InstructionMsgList* instr_list) {
+Maybe<void> VirtualMachine::Receive(vm::InstructionList* instruction_list) {
   if (unlikely(pthread_fork::IsForkedSubProcess())) {
-    INTRUSIVE_FOR_EACH_PTR(instr_msg, instr_list) {
-      const auto& device = instr_msg->stream().device();
+    INTRUSIVE_FOR_EACH_PTR(instruction, instruction_list) {
+      const auto& device = instruction->stream().device();
       CHECK_OR_RETURN(device->enum_type() == DeviceType::kCPU)
           << pthread_fork::kOfCudaNotSupportInForkedSubProcess;
-      // NOTE: operate `vm_` in forked subprocesses causes mysterious problems.
-      // `ComputeInFuseMode` will be replaced by `Compute` soon.
-      instr_msg->instruction_type().ComputeInFuseMode(instr_msg);
+      instruction->instruction_type().Compute(instruction);
     }
   } else if (unlikely(disable_vm_threads_)) {
-    JUST(RunInCurrentThread(instr_list));
+    JUST(RunInCurrentThread(instruction_list));
   } else {
     const int64_t kHighWaterMark = GetInstructionHighWaterMark();
     if (vm_->flying_instruction_cnt() > kHighWaterMark) {
@@ -197,8 +195,8 @@ Maybe<void> VirtualMachine::Receive(vm::InstructionMsgList* instr_list) {
         return Maybe<void>::Ok();
       }));
     }
-    if (JUST(vm_->Receive(instr_list))) {
-      // old pending_instruction_list is empty.
+    if (JUST(vm_->Receive(instruction_list))) {
+      // old scheduler_pending_instruction_list is empty.
       pending_notifier_.Notify();
     }
   }
@@ -212,7 +210,7 @@ class SingleThreadScheduleCtx : public vm::ScheduleCtx {
   explicit SingleThreadScheduleCtx(vm::VirtualMachineEngine* vm) : vm_(vm) {}
   ~SingleThreadScheduleCtx() = default;
 
-  void OnGarbageMsgPending() const override { vm_->Callback(); }
+  void OnGarbageInstructionPending() const override { vm_->Callback(); }
   void OnWorkerLoadPending(vm::ThreadCtx* thread_ctx) const override {
     while (thread_ctx->TryReceiveAndRun() > 0) {}
   }
@@ -224,13 +222,13 @@ class SingleThreadScheduleCtx : public vm::ScheduleCtx {
 void ScheduleUntilVMEmpty(vm::VirtualMachineEngine* vm, const vm::ScheduleCtx& schedule_ctx) {
   while (!(vm->Empty() && vm->CallbackEmpty())) {
     vm->Schedule(schedule_ctx);
-    vm->MoveToGarbageMsgListAndNotifyGC(schedule_ctx);
+    vm->MoveToGarbageListAndNotifyGC(schedule_ctx);
   }
 }
 
 }  // namespace
 
-Maybe<void> VirtualMachine::RunInCurrentThread(vm::InstructionMsgList* instr_list) {
+Maybe<void> VirtualMachine::RunInCurrentThread(vm::InstructionList* instr_list) {
   CHECK_OR_RETURN(vm_->Empty());
   CHECK_OR_RETURN(vm_->CallbackEmpty());
   CHECK_OR_RETURN(scheduler_stoped_);
@@ -246,7 +244,7 @@ class MultiThreadScheduleCtx : public vm::ScheduleCtx {
   explicit MultiThreadScheduleCtx(Notifier* cb_notifier) : cb_notifier_(cb_notifier) {}
   ~MultiThreadScheduleCtx() = default;
 
-  void OnGarbageMsgPending() const override { cb_notifier_->Notify(); }
+  void OnGarbageInstructionPending() const override { cb_notifier_->Notify(); }
   void OnWorkerLoadPending(vm::ThreadCtx* thread_ctx) const override {
     thread_ctx->mut_notifier()->Notify();
   }
@@ -287,7 +285,7 @@ void VirtualMachine::ScheduleLoop(const std::function<void()>& Initializer) {
         // used
         //  here, because VirtualMachine::ScheduleLoop is more likely to get the mutex lock.
         do { vm->Schedule(schedule_ctx); } while (!vm->ThreadUnsafeEmpty());
-        vm->MoveToGarbageMsgListAndNotifyGC(schedule_ctx);
+        vm->MoveToGarbageListAndNotifyGC(schedule_ctx);
       } while (++i < kNumSchedulingPerTimoutTest);
     } while (MicrosecondsFrom(start) < kWorkingMicroseconds);
     OF_PROFILER_RANGE_POP();

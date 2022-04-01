@@ -32,22 +32,22 @@ void CriticalSectionStreamType::InitDeviceCtx(std::unique_ptr<DeviceCtx>* device
 void CriticalSectionStreamType::InitInstructionStatus(
     const Stream& stream, InstructionStatusBuffer* status_buffer) const {
   static_assert(sizeof(CriticalSectionStatusQuerier) < kInstructionStatusBufferBytes, "");
-  CriticalSectionStatusQuerier::PlacementNew(status_buffer->mut_buffer()->mut_data());
+  CriticalSectionStatusQuerier::PlacementNew(status_buffer->mut_buffer());
 }
 
 void CriticalSectionStreamType::DeleteInstructionStatus(
     const Stream& stream, InstructionStatusBuffer* status_buffer) const {
-  auto* ptr = CriticalSectionStatusQuerier::MutCast(status_buffer->mut_buffer()->mut_data());
+  auto* ptr = CriticalSectionStatusQuerier::MutCast(status_buffer->mut_buffer());
   ptr->~CriticalSectionStatusQuerier();
 }
 
 bool CriticalSectionStreamType::QueryInstructionStatusDone(
     const Stream& stream, const InstructionStatusBuffer& status_buffer) const {
-  return CriticalSectionStatusQuerier::Cast(status_buffer.buffer().data())->QueryDone();
+  return CriticalSectionStatusQuerier::Cast(status_buffer.buffer())->QueryDone();
 }
 
 void CriticalSectionStreamType::Compute(Instruction* instruction) const {
-  instruction->instr_msg().instruction_type().Compute(instruction);
+  instruction->instruction_type().Compute(instruction);
 }
 
 }  // namespace vm

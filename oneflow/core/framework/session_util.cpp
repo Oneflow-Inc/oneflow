@@ -46,12 +46,12 @@ Maybe<void> SetDefaultSessionId(int64_t val) {
 
 Session::Session(int64_t id)
     : id_(id), is_mirrored_strategy_enabled_stack_(new std::vector<bool>()) {
-  instruction_list_.reset(new vm::InstructionMsgList());
+  instruction_list_.reset(new vm::InstructionList());
 }
 
 int64_t Session::id() const { return id_; }
 
-const std::shared_ptr<vm::InstructionMsgList>& Session::instruction_list() const {
+const std::shared_ptr<vm::InstructionList>& Session::instruction_list() const {
   return instruction_list_;
 }
 

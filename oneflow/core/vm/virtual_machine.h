@@ -44,7 +44,7 @@ class VirtualMachine final {
   bool NoMoreErasedLivelyInstructions(size_t* last_total_erased_lively_instruction_cnt) const;
   std::string GetBlockingDebugString();
 
-  Maybe<void> Receive(vm::InstructionMsgList* instr_list);
+  Maybe<void> Receive(vm::InstructionList* instr_list);
 
   const vm::VirtualMachineEngine& vm() const { return *vm_; }
 
@@ -63,7 +63,7 @@ class VirtualMachine final {
   Maybe<vm::Stream*> CreateStream(vm::ThreadCtx* thread_ctx, Symbol<Device> device,
                                   StreamRole stream_role);
 
-  Maybe<void> RunInCurrentThread(vm::InstructionMsgList* instr_list);
+  Maybe<void> RunInCurrentThread(vm::InstructionList* instr_list);
 
   bool disable_vm_threads_;
   bool scheduler_stoped_;

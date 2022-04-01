@@ -33,31 +33,30 @@ void CudaCopyD2HStreamType::InitInstructionStatus(const Stream& stream,
                                                   InstructionStatusBuffer* status_buffer) const {
   static_assert(sizeof(CudaOptionalEventRecordStatusQuerier) < kInstructionStatusBufferBytes, "");
   auto* event_provider = dynamic_cast<QueryCudaEventProvider*>(stream.device_ctx().get());
-  auto* data_ptr = status_buffer->mut_buffer()->mut_data();
+  auto* data_ptr = status_buffer->mut_buffer();
   const auto& cuda_event = CHECK_NOTNULL(event_provider)->GetCudaEvent();
   CudaOptionalEventRecordStatusQuerier::PlacementNew(data_ptr, cuda_event);
 }
 
 void CudaCopyD2HStreamType::DeleteInstructionStatus(const Stream& stream,
                                                     InstructionStatusBuffer* status_buffer) const {
-  auto* ptr =
-      CudaOptionalEventRecordStatusQuerier::MutCast(status_buffer->mut_buffer()->mut_data());
+  auto* ptr = CudaOptionalEventRecordStatusQuerier::MutCast(status_buffer->mut_buffer());
   ptr->~CudaOptionalEventRecordStatusQuerier();
 }
 
 // Returns true if the instruction launched and the cuda event completed.
 bool CudaCopyD2HStreamType::QueryInstructionStatusDone(
     const Stream& stream, const InstructionStatusBuffer& status_buffer) const {
-  return CudaOptionalEventRecordStatusQuerier::Cast(status_buffer.buffer().data())->done();
+  return CudaOptionalEventRecordStatusQuerier::Cast(status_buffer.buffer())->done();
 }
 
 // Launches a cuda kernel
 void CudaCopyD2HStreamType::Compute(Instruction* instruction) const {
   auto* stream = instruction->mut_stream();
   cudaSetDevice(stream->device_id());
-  instruction->instr_msg().instruction_type().Compute(instruction);
+  instruction->instruction_type().Compute(instruction);
   OF_CUDA_CHECK(cudaGetLastError());
-  char* data_ptr = instruction->mut_status_buffer()->mut_buffer()->mut_data();
+  char* data_ptr = instruction->mut_status_buffer()->mut_buffer();
   CudaOptionalEventRecordStatusQuerier::MutCast(data_ptr)->SetLaunched(stream->device_ctx().get());
 }
 

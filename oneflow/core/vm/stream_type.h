@@ -29,7 +29,7 @@ namespace vm {
 struct Stream;
 struct InstructionStatusBuffer;
 struct Instruction;
-struct InstructionMsg;
+struct Instruction;
 class InstructionType;
 
 class StreamType {

@@ -29,7 +29,7 @@ class Session {
   ~Session() = default;
 
   int64_t id() const;
-  const std::shared_ptr<vm::InstructionMsgList>& instruction_list() const;
+  const std::shared_ptr<vm::InstructionList>& instruction_list() const;
 
   std::shared_ptr<const std::vector<bool>> is_mirrored_strategy_enabled_stack() const {
     return is_mirrored_strategy_enabled_stack_;
@@ -41,7 +41,7 @@ class Session {
 
  private:
   int64_t id_;
-  std::shared_ptr<vm::InstructionMsgList> instruction_list_;
+  std::shared_ptr<vm::InstructionList> instruction_list_;
   std::shared_ptr<std::vector<bool>> is_mirrored_strategy_enabled_stack_;
 };
 
