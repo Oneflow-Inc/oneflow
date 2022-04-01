@@ -979,6 +979,13 @@ def _where(self, x=None, y=None):
     return flow.where(self, x, y)
 
 
+def _type(self, tensor_type: str = None) -> str:
+    if tensor_type is None:
+        return "oneflow." + self.device.type + "." + str(self.dtype).split(".")[-1]
+    _, device, dtype = tensor_type.split(".")
+    return _to(self, device=device, dtype=getattr(flow, dtype))
+
+
 def _is_floating_point(self):
     return flow.is_floating_point(self)
 
@@ -1224,6 +1231,7 @@ def RegisterMethods():
     Tensor.zero_ = _zero_
     Tensor.is_consistent = _is_consistent
     Tensor.to_consistent = _to_consistent
+    Tensor.type = _type
 
 
 def register_tensor_op(op_name):
