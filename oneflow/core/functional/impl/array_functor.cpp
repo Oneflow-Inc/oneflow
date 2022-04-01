@@ -1858,6 +1858,15 @@ class TensorGetItemFunctor {
  public:
   TensorGetItemFunctor() {}
   Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x, const TensorIndex& index) const {
+
+    // if index.size() == 1, then use select
+    if(index.size()==1){
+      auto index_item = index.at(0);
+      if(index_item.IsInteger()){
+        return JUST(functional::Select(x, 0, index_item.integer()));
+      }
+    }
+
     std::vector<detail::Slice> slice_indices;
     TensorTuple tensor_indices;
     std::vector<int64_t> target_dims;
