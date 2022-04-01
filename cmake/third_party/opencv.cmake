@@ -154,7 +154,7 @@ if(THIRD_PARTY)
      ${CMAKE_CURRENT_BINARY_DIR}/opencv/src/opencv/3rdparty/libpng/pngstruct.h
     TYPE INCLUDE COMPONENT libpng_headers)
   add_custom_target(
-    install_libpng_headers ALL
+    install_libpng_headers
     COMMAND "${CMAKE_COMMAND}" -DCMAKE_INSTALL_COMPONENT=libpng_headers
             -DCMAKE_INSTALL_PREFIX="${LIBPNG_INSTALL_DIR}"
             -DCMAKE_INSTALL_MESSAGE=${CMAKE_INSTALL_MESSAGE}

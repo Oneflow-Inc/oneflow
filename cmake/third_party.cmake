@@ -172,6 +172,8 @@ set(oneflow_third_party_dependencies
     eigen
     half_copy_headers_to_destination
     re2
+    opencv
+    install_libpng_headers
     flatbuffers
     lz4_copy_libs_to_destination
     lz4_copy_headers_to_destination)
