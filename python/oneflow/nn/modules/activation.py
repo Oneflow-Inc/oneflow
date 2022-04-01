@@ -489,9 +489,9 @@ class Hardshrink(Module):
     """
 
     def __init__(self, lambd: float = 0.5, inplace: bool = False):
+        super().__init__()
         self.inplace = inplace
         self.lambd = lambd
-        super().__init__()
 
     def forward(self, x):
         return flow._C.hardshrink(x, lambd=self.lambd, inplace=self.inplace)
