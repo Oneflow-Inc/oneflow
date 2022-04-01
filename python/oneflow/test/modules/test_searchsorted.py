@@ -49,7 +49,7 @@ def _test_search_sorted_1(test_case, input_dtype, device):
         np.array([[3, 6, 9], [3, 6, 9]]), dtype=input_dtype, device=flow.device(device)
     )
     gt = np.array([[2, 3, 5], [1, 3, 4]])
-    output = flow.searchsorted(sorted_sequence, values, right=True)
+    output = flow.searchsorted(sorted_sequence, values, right=True, side="right")
     test_case.assertTrue(np.allclose(output.numpy(), gt, 0.0001, 0.0001))
     test_case.assertTrue(output.dtype == flow.int64)
 
@@ -117,7 +117,7 @@ def _test_search_sorted_6(test_case, input_dtype, device):
         np.array([1, 3, 5, 7, 9]), dtype=input_dtype, device=flow.device(device)
     )
     gt = np.array(3)
-    output = flow.searchsorted(sorted_sequence_1d, 5, right=True)
+    output = flow.searchsorted(sorted_sequence_1d, 5, right=True, side="right")
     test_case.assertTrue(np.allclose(output.numpy(), gt, 0.0001, 0.0001))
     test_case.assertTrue(output.dtype == flow.int64)
 

@@ -3122,7 +3122,8 @@ def OneFlow_SearchSortedOp : OneFlow_BaseOp<"searchsorted", [NoSideEffect, NoGra
   );
   let attrs = (ins
     DefaultValuedAttr<BoolAttr, "false">:$out_int32,
-    DefaultValuedAttr<BoolAttr, "false">:$right
+    DefaultValuedAttr<BoolAttr, "false">:$right,
+    StrAttr:$side
   );
   let has_check_fn = 1;
   let has_logical_tensor_desc_infer_fn = 1;
@@ -3142,7 +3143,8 @@ def OneFlow_SearchSortedScalarOp : OneFlow_BaseOp<"searchsorted_scalar", [NoSide
   let attrs = (ins
     DefaultValuedAttr<BoolAttr, "false">:$out_int32,
     DefaultValuedAttr<BoolAttr, "false">:$right,
-    DefaultValuedAttr<F32Attr, "0.">:$values
+    DefaultValuedAttr<F32Attr, "0.">:$values,
+    StrAttr:$side
   );
   let has_check_fn = 1;
   let has_logical_tensor_desc_infer_fn = 1;
