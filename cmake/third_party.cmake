@@ -169,9 +169,6 @@ endif()
 
 set(oneflow_third_party_dependencies
     protobuf
-    opencv_copy_headers_to_destination
-    libpng_copy_headers_to_destination
-    opencv_copy_libs_to_destination
     eigen
     half_copy_headers_to_destination
     re2
