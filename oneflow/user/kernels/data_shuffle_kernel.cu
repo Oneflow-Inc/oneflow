@@ -865,23 +865,24 @@ template<typename T, typename IDX>
 void ShuffleEmbeddingsGrad(cudaStream_t cuda_stream, ncclComm_t comm, int64_t parallel_id,
                            int64_t parallel_num, int64_t num_ids, int64_t embedding_size,
                            DataType data_type, IDX* host_num_unique_matrix,
-                           int8_t* unique_partition_embedding_grad, int8_t* received_embeddings_grad, 
-                           T* cur_rank_quantize_factor, T* received_cur_rank_quantize_factor) {
+                           int8_t* unique_partition_embedding_grad,
+                           int8_t* received_embeddings_grad, T* cur_rank_quantize_factor,
+                           T* received_cur_rank_quantize_factor) {
   std::vector<int64_t> send_offsets;
   std::vector<int64_t> send_elem_cnt;
   std::vector<int64_t> recv_offsets;
   std::vector<int64_t> recv_elem_cnt;
-  // Shuffle Embedding Grad. 
+  // Shuffle Embedding Grad.
   MakeShuffleParams(host_num_unique_matrix, num_ids, embedding_size, parallel_id, parallel_num,
                     &send_offsets, &send_elem_cnt, &recv_offsets, &recv_elem_cnt);
   ShuffleData(cuda_stream, comm, DataType::kInt8, send_offsets, send_elem_cnt,
               unique_partition_embedding_grad, recv_offsets, recv_elem_cnt,
               received_embeddings_grad);
 
-  // Shuffle Embedding Grad. 
-  MakeShuffleParams(host_num_unique_matrix, num_ids, /*embedding_size=*/1, parallel_id, parallel_num,
-                    &send_offsets, &send_elem_cnt, &recv_offsets, &recv_elem_cnt);
-  ShuffleData(cuda_stream, comm, DataType::kInt8, send_offsets, send_elem_cnt,
+  // Shuffle Quantize factor.
+  MakeShuffleParams(host_num_unique_matrix, num_ids, /*embedding_size=*/1, parallel_id,
+                    parallel_num, &send_offsets, &send_elem_cnt, &recv_offsets, &recv_elem_cnt);
+  ShuffleData(cuda_stream, comm, data_type, send_offsets, send_elem_cnt,
               cur_rank_quantize_factor, recv_offsets, recv_elem_cnt,
               received_cur_rank_quantize_factor);
 }
@@ -935,38 +936,36 @@ class EmbeddingGradientShuffleKernel final : public user_op::OpKernel {
 
     size_t unique_partition_embedding_grad_size =
         GetCudaAlignedSize(parallel_num * num_ids * embedding_size * sizeof(T));
-    size_t received_embedding_grad_size = GetCudaAlignedSize(parallel_num * num_ids * embedding_size * sizeof(int8_t));
-
-    size_t quantize_cur_rank_embedding_grad_size = GetCudaAlignedSize(parallel_num * num_ids * embedding_size * sizeof(int8_t));
-    size_t cur_rank_quantize_factor_size = GetCudaAlignedSize(parallel_num * num_ids * sizeof(T)); 
-    size_t received_cur_rank_quantize_factor_size = cur_rank_quantize_factor_size; 
-    size_t dequantize_cur_rank_embedding_grad_size = GetCudaAlignedSize(parallel_num * num_ids * embedding_size * sizeof(T));
+    size_t received_embedding_grad_size =
+        GetCudaAlignedSize(parallel_num * num_ids * embedding_size * sizeof(int8_t));
+    size_t quantize_cur_rank_embedding_grad_size =
+        GetCudaAlignedSize(parallel_num * num_ids * embedding_size * sizeof(int8_t));
+    size_t cur_rank_quantize_factor_size = GetCudaAlignedSize(parallel_num * num_ids * sizeof(T));
+    size_t received_cur_rank_quantize_factor_size = cur_rank_quantize_factor_size;
+    size_t dequantize_cur_rank_embedding_grad_size =
+        GetCudaAlignedSize(parallel_num * num_ids * embedding_size * sizeof(T));
 
     T* unique_partition_embedding_grad = reinterpret_cast<T*>(tmp_buffer->mut_dptr());
-    int8_t* received_embedding_grad =
-        reinterpret_cast<int8_t*>(tmp_buffer->mut_dptr<char>() + unique_partition_embedding_grad_size);
-    
-    int8_t* quantize_cur_rank_embedding_grad = reinterpret_cast<int8_t*>(tmp_buffer->mut_dptr<char>() + 
-                                                                    unique_partition_embedding_grad_size + 
-                                                                    received_embedding_grad_size); // TODO
-    T* cur_rank_quantize_factor = reinterpret_cast<T*>(tmp_buffer->mut_dptr<char>() + 
-                                                        unique_partition_embedding_grad_size + 
-                                                        received_embedding_grad_size + 
-                                                        quantize_cur_rank_embedding_grad_size); 
-    T* received_cur_rank_quantize_factor = reinterpret_cast<T*>(tmp_buffer->mut_dptr<char>() + 
-                                                                unique_partition_embedding_grad_size + 
-                                                                received_embedding_grad_size + 
-                                                                quantize_cur_rank_embedding_grad_size + 
-                                                                cur_rank_quantize_factor_size); 
-    T* dequantize_cur_rank_embedding_grad = reinterpret_cast<T*>(tmp_buffer->mut_dptr<char>() + 
-                                                                 unique_partition_embedding_grad_size + 
-                                                                 received_embedding_grad_size + 
-                                                                 quantize_cur_rank_embedding_grad_size + 
-                                                                 cur_rank_quantize_factor_size + 
-                                                                 received_cur_rank_quantize_factor_size); 
+    int8_t* received_embedding_grad = reinterpret_cast<int8_t*>(
+        tmp_buffer->mut_dptr<char>() + unique_partition_embedding_grad_size);
+
+    int8_t* quantize_cur_rank_embedding_grad = reinterpret_cast<int8_t*>(
+        tmp_buffer->mut_dptr<char>() + unique_partition_embedding_grad_size
+        + received_embedding_grad_size);  
+    T* cur_rank_quantize_factor = reinterpret_cast<T*>(
+        tmp_buffer->mut_dptr<char>() + unique_partition_embedding_grad_size
+        + received_embedding_grad_size + quantize_cur_rank_embedding_grad_size);
+    T* received_cur_rank_quantize_factor =
+        reinterpret_cast<T*>(tmp_buffer->mut_dptr<char>() + unique_partition_embedding_grad_size
+                             + received_embedding_grad_size + quantize_cur_rank_embedding_grad_size
+                             + cur_rank_quantize_factor_size);
+    T* dequantize_cur_rank_embedding_grad = reinterpret_cast<T*>(
+        tmp_buffer->mut_dptr<char>() + unique_partition_embedding_grad_size
+        + received_embedding_grad_size + quantize_cur_rank_embedding_grad_size
+        + cur_rank_quantize_factor_size + received_cur_rank_quantize_factor_size);
 
     // CHECK_GE(tmp_buffer->shape().elem_cnt(),
-            //  unique_partition_embedding_grad_size + received_embedding_grad_size);
+    //  unique_partition_embedding_grad_size + received_embedding_grad_size);
 
     // unique and partition embedding grad
     for (int64_t i = 0; i < parallel_num; ++i) {
@@ -975,29 +974,29 @@ class EmbeddingGradientShuffleKernel final : public user_op::OpKernel {
           host_num_unique_matrix[parallel_id * parallel_num + i] * embedding_size * sizeof(T);
       OF_CUDA_CHECK(cudaMemsetAsync(unique_partition_embedding_grad + offset, 0, valid_value_size,
                                     cuda_stream));
-      OF_CUDA_CHECK(cudaMemsetAsync(quantize_cur_rank_embedding_grad + offset, 0, valid_value_size,
-        cuda_stream));
+      const int64_t valid_quantize_size =
+          host_num_unique_matrix[parallel_id * parallel_num + i] * embedding_size * sizeof(int8_t);
+      OF_CUDA_CHECK(cudaMemsetAsync(quantize_cur_rank_embedding_grad + offset, 0, valid_quantize_size,
+                                    cuda_stream));
     }
 
-    // inverse: batch x 26 = num_ids 
+    // inverse: batch x 26 = num_ids
     UnsortedSegmentSumKernelUtil<DeviceType::kCUDA, T, IDX, T>::UnsortedSegmentSum(
         ctx->stream(), reinterpret_cast<const IDX*>(inverse_unique_partition_indices->dptr()),
         embedding_grad->dptr<T>(), num_ids, parallel_num * num_ids, 1, embedding_size, 0,
         unique_partition_embedding_grad);
-    
-    // Quantize. 
+
+    // Quantize.
     for (int64_t i = 0; i < parallel_num; ++i) {
       const int64_t embedding_grad_offset = i * num_ids * embedding_size;
       const int64_t quantize_factor_offset = i * num_ids;
-      const int64_t valid_row_size = host_num_unique_matrix[parallel_id * parallel_num + i]; 
-      const int64_t valid_value_size = valid_row_size * embedding_size * sizeof(T);
+      const int64_t valid_row_size = host_num_unique_matrix[parallel_id * parallel_num + i];
       int block_num = 0;
       GetNumBlocks(valid_row_size * embedding_size, kReduceBlockSize, &block_num);
       QuantizeBlockKernel<T, IDX><<<block_num, kReduceBlockSize>>>(
-          unique_partition_embedding_grad + embedding_grad_offset, 
-          quantize_cur_rank_embedding_grad + embedding_grad_offset, 
-          cur_rank_quantize_factor + quantize_factor_offset,
-          valid_row_size, embedding_size);
+          unique_partition_embedding_grad + embedding_grad_offset,
+          quantize_cur_rank_embedding_grad + embedding_grad_offset,
+          cur_rank_quantize_factor + quantize_factor_offset, valid_row_size, embedding_size);
     }
 
     ncclComm_t comm = kernel_state->comm();
@@ -1006,32 +1005,30 @@ class EmbeddingGradientShuffleKernel final : public user_op::OpKernel {
     //                       received_embedding_grad);
 
     ShuffleEmbeddingsGrad(cuda_stream, comm, parallel_id, parallel_num, num_ids, embedding_size,
-      data_type, host_num_unique_matrix, quantize_cur_rank_embedding_grad,
-      received_embedding_grad, cur_rank_quantize_factor, received_cur_rank_quantize_factor);
-    
-    // DeQuantize. 
-    int64_t dequantize_cur_rank_num = 0; 
+                          data_type, host_num_unique_matrix, quantize_cur_rank_embedding_grad,
+                          received_embedding_grad, cur_rank_quantize_factor,
+                          received_cur_rank_quantize_factor);
+
+    // // DeQuantize.
+    int64_t dequantize_cur_rank_num = 0;
     for (int64_t i = 0; i < parallel_num; ++i) {
-      const int64_t embedding_grad_offset = i * num_ids * embedding_size;
-      const int64_t quantize_factor_offset = i * num_ids;
-      // Transpose host num unique matrix, and get total recv num. 
-      dequantize_cur_rank_num += host_num_unique_matrix[i * parallel_num + parallel_id]; 
+      // Transpose host num unique matrix, and get total recv num.
+      dequantize_cur_rank_num += host_num_unique_matrix[i * parallel_num + parallel_id];
     }
     int dequantize_block_num = 0;
     IDX dequantize_elem_cnt = dequantize_cur_rank_num * embedding_size;
     GetNumBlocks(dequantize_elem_cnt, 256, &dequantize_block_num);
     DequantizeBlockKernel<T, IDX><<<dequantize_block_num, 256>>>(
-      received_embedding_grad, 
-      received_cur_rank_quantize_factor,
-      dequantize_cur_rank_embedding_grad, embedding_size, dequantize_elem_cnt);
+        received_embedding_grad, received_cur_rank_quantize_factor,
+        dequantize_cur_rank_embedding_grad, embedding_size, dequantize_elem_cnt);
 
-      // unique cur_rank embedding grad
+    // unique cur_rank embedding grad
     OF_CUDA_CHECK(cudaMemsetAsync(cur_rank_unique_embedding_grad->mut_dptr(), 0,
                                   cur_rank_num_ids * embedding_size * sizeof(T), cuda_stream));
     UnsortedSegmentSumKernelUtil<DeviceType::kCUDA, T, IDX, T>::UnsortedSegmentSum(
         ctx->stream(), reinterpret_cast<const IDX*>(cur_rank_inverse_indices->dptr()),
-        dequantize_cur_rank_embedding_grad, cur_rank_num_ids, cur_rank_num_ids, 1, embedding_size, 0,
-        cur_rank_unique_embedding_grad->mut_dptr<T>());
+        dequantize_cur_rank_embedding_grad, cur_rank_num_ids, cur_rank_num_ids, 1, embedding_size,
+        0, cur_rank_unique_embedding_grad->mut_dptr<T>());
   }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
@@ -1053,26 +1050,35 @@ class EmbeddingGradientShuffleKernel final : public user_op::OpKernel {
 //         return 2 * cur_rank_embedding_grad_size;                                                  \
 //       });
 
-#define REGISTER_CUDA_EMBEDDING_GRADIENT_SHUFFLE_KERNEL(t_dtype_pair, idx_dtype_pair)             \
-  REGISTER_USER_KERNEL("embedding_gradient_shuffle")                                              \
-      .SetCreateFn<EmbeddingGradientShuffleKernel<OF_PP_PAIR_FIRST(t_dtype_pair),                 \
-                                                  OF_PP_PAIR_FIRST(idx_dtype_pair)>>()            \
-      .SetIsMatchedHob(                                                                           \
-          (user_op::HobDeviceType() == DeviceType::kCUDA)                                         \
-          && (user_op::HobDataType("embedding_grad", 0) == OF_PP_PAIR_SECOND(t_dtype_pair))       \
-          && (user_op::HobDataType("num_unique_matrix", 0) == OF_PP_PAIR_SECOND(idx_dtype_pair))) \
-      .SetInferTmpSizeFn([](user_op::InferContext* ctx) {                                         \
-        const user_op::TensorDesc& cur_rank_unique_embedding_grad =                               \
-            ctx->InputTensorDesc("cur_rank_unique_embedding_grad", 0);                            \
-        size_t cur_rank_embedding_grad_num = cur_rank_unique_embedding_grad.shape().At(0);        \
-        size_t embedding_size = cur_rank_unique_embedding_grad.shape().At(1);                     \
-        size_t unique_partition_embedding_grad_size = GetCudaAlignedSize(cur_rank_embedding_grad_num * embedding_size * sizeof(OF_PP_PAIR_FIRST(t_dtype_pair)));  \
-        size_t received_embedding_grad_size = GetCudaAlignedSize(cur_rank_embedding_grad_num * embedding_size * sizeof(int8_t));                         \
-        size_t quantize_cur_rank_embedding_grad_size = GetCudaAlignedSize(cur_rank_embedding_grad_num * embedding_size * sizeof(int8_t));                         \
-        size_t cur_rank_quantize_factor_size = GetCudaAlignedSize(cur_rank_embedding_grad_num * sizeof(OF_PP_PAIR_FIRST(t_dtype_pair)));                         \
-        size_t received_cur_rank_quantize_factor_size = cur_rank_quantize_factor_size;                        \
-        size_t dequantize_cur_rank_embedding_grad_size = GetCudaAlignedSize(cur_rank_embedding_grad_num * embedding_size * sizeof(OF_PP_PAIR_FIRST(t_dtype_pair)));  \
-        return unique_partition_embedding_grad_size + received_embedding_grad_size + quantize_cur_rank_embedding_grad_size + cur_rank_quantize_factor_size + received_cur_rank_quantize_factor_size + dequantize_cur_rank_embedding_grad_size; \
+#define REGISTER_CUDA_EMBEDDING_GRADIENT_SHUFFLE_KERNEL(t_dtype_pair, idx_dtype_pair)              \
+  REGISTER_USER_KERNEL("embedding_gradient_shuffle")                                               \
+      .SetCreateFn<EmbeddingGradientShuffleKernel<OF_PP_PAIR_FIRST(t_dtype_pair),                  \
+                                                  OF_PP_PAIR_FIRST(idx_dtype_pair)>>()             \
+      .SetIsMatchedHob(                                                                            \
+          (user_op::HobDeviceType() == DeviceType::kCUDA)                                          \
+          && (user_op::HobDataType("embedding_grad", 0) == OF_PP_PAIR_SECOND(t_dtype_pair))        \
+          && (user_op::HobDataType("num_unique_matrix", 0) == OF_PP_PAIR_SECOND(idx_dtype_pair)))  \
+      .SetInferTmpSizeFn([](user_op::InferContext* ctx) {                                          \
+        const user_op::TensorDesc& cur_rank_unique_embedding_grad =                                \
+            ctx->InputTensorDesc("cur_rank_unique_embedding_grad", 0);                             \
+        size_t cur_rank_embedding_grad_num = cur_rank_unique_embedding_grad.shape().At(0);         \
+        size_t embedding_size = cur_rank_unique_embedding_grad.shape().At(1);                      \
+        size_t unique_partition_embedding_grad_size =                                              \
+            GetCudaAlignedSize(cur_rank_embedding_grad_num * embedding_size                        \
+                               * sizeof(OF_PP_PAIR_FIRST(t_dtype_pair)));                          \
+        size_t received_embedding_grad_size =                                                      \
+            GetCudaAlignedSize(cur_rank_embedding_grad_num * embedding_size * sizeof(int8_t));     \
+        size_t quantize_cur_rank_embedding_grad_size =                                             \
+            GetCudaAlignedSize(cur_rank_embedding_grad_num * embedding_size * sizeof(int8_t));     \
+        size_t cur_rank_quantize_factor_size = GetCudaAlignedSize(                                 \
+            cur_rank_embedding_grad_num * sizeof(OF_PP_PAIR_FIRST(t_dtype_pair)));                 \
+        size_t received_cur_rank_quantize_factor_size = cur_rank_quantize_factor_size;             \
+        size_t dequantize_cur_rank_embedding_grad_size =                                           \
+            GetCudaAlignedSize(cur_rank_embedding_grad_num * embedding_size                        \
+                               * sizeof(OF_PP_PAIR_FIRST(t_dtype_pair)));                          \
+        return unique_partition_embedding_grad_size + received_embedding_grad_size                 \
+               + quantize_cur_rank_embedding_grad_size + cur_rank_quantize_factor_size             \
+               + received_cur_rank_quantize_factor_size + dequantize_cur_rank_embedding_grad_size; \
       });
 
 OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(REGISTER_CUDA_EMBEDDING_GRADIENT_SHUFFLE_KERNEL,
