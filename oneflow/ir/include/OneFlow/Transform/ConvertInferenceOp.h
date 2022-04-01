@@ -13,8 +13,8 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
-#ifndef ONEFLOW_IR_INCLUDE_ONEFLOW_TRANSFORM_CONSTANTFOLDING_H_
-#define ONEFLOW_IR_INCLUDE_ONEFLOW_TRANSFORM_CONSTANTFOLDING_H_
+#ifndef ONEFLOW_IR_INCLUDE_ONEFLOW_TRANSFORM_CONVERTINFERENCE_H_
+#define ONEFLOW_IR_INCLUDE_ONEFLOW_TRANSFORM_CONVERTINFERENCE_H_
 
 #include "mlir/Pass/Pass.h"
 
@@ -22,12 +22,14 @@ namespace mlir {
 
 namespace oneflow {
 
-std::unique_ptr<mlir::Pass> createConstantFoldingPass();
+std::unique_ptr<mlir::Pass> createPreConvertInferenceOpPass();
 
-std::unique_ptr<mlir::Pass> createPostConstantFoldingPass();
+std::unique_ptr<mlir::Pass> createConvertInferenceOpPass();
+
+std::unique_ptr<mlir::Pass> createPostConvertInferenceOpPass();
 
 }  // namespace oneflow
 
 }  // namespace mlir
 
-#endif  // ONEFLOW_IR_INCLUDE_ONEFLOW_TRANSFORM_CONSTANTFOLDING_H_
+#endif  // ONEFLOW_IR_INCLUDE_ONEFLOW_TRANSFORM_CONVERTINFERENCE_H_

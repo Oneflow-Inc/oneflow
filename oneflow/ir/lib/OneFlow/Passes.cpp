@@ -744,12 +744,15 @@ void populateGpuHelperPatterns(::mlir::RewritePatternSet& patterns) {
   patterns.add<ReplaceCopyWithGPUPattern>(patterns.getContext());
 }
 
-void populateConstantFolding(::mlir::RewritePatternSet& patterns) {
+void populatePreConvertInferenceOp(::mlir::RewritePatternSet& patterns) {
   patterns.add<ReplaceVariablePattern>(patterns.getContext());
+}
+
+void populateConvertInferenceOp(::mlir::RewritePatternSet& patterns) {
   patterns.add<FuseConv2DBatchNormPattern>(patterns.getContext());
 }
 
-void populatePostConstantFolding(::mlir::RewritePatternSet& patterns) {
+void populatePostConvertInferenceOp(::mlir::RewritePatternSet& patterns) {
   patterns.add<ReplaceVariableIrPattern>(patterns.getContext());
 }
 

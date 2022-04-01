@@ -25,6 +25,7 @@ from flowvision.models.resnet import resnet50
 
 os.environ["ONEFLOW_MLIR_ENABLE_ROUND_TRIP"] = "1"
 os.environ["ONEFLOW_MLIR_PREFER_NHWC"] = "1"
+os.environ["ONEFLOW_MLIR_ENABLE_CONSTANT_FOLDING"] = "1"
 
 
 def _test_fuse_conv_bn(test_case):

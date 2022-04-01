@@ -23,20 +23,30 @@ using namespace mlir;
 
 namespace {
 
-class ConstantFoldingPass : public ConstantFoldingPassBase<ConstantFoldingPass> {
+class PreConvertInferenceOpPass : public PreConvertInferenceOpPassBase<PreConvertInferenceOpPass> {
   void runOnOperation() override {
     Operation* op = getOperation();
     RewritePatternSet patterns(op->getContext());
-    oneflow::populateConstantFolding(patterns);
+    oneflow::populatePreConvertInferenceOp(patterns);
     (void)applyPatternsAndFoldGreedily(op, std::move(patterns));
   }
 };
 
-class PostConstantFoldingPass : public PostConstantFoldingPassBase<PostConstantFoldingPass> {
+class ConvertInferenceOpPass : public ConvertInferenceOpPassBase<ConvertInferenceOpPass> {
   void runOnOperation() override {
     Operation* op = getOperation();
     RewritePatternSet patterns(op->getContext());
-    oneflow::populatePostConstantFolding(patterns);
+    oneflow::populateConvertInferenceOp(patterns);
+    (void)applyPatternsAndFoldGreedily(op, std::move(patterns));
+  }
+};
+
+class PostConvertInferenceOpPass
+    : public PostConvertInferenceOpPassBase<PostConvertInferenceOpPass> {
+  void runOnOperation() override {
+    Operation* op = getOperation();
+    RewritePatternSet patterns(op->getContext());
+    oneflow::populatePostConvertInferenceOp(patterns);
     (void)applyPatternsAndFoldGreedily(op, std::move(patterns));
   }
 };
@@ -47,12 +57,16 @@ namespace mlir {
 
 namespace oneflow {
 
-std::unique_ptr<Pass> createConstantFoldingPass() {
-  return std::make_unique<ConstantFoldingPass>();
+std::unique_ptr<Pass> createPreConvertInferenceOpPass() {
+  return std::make_unique<PreConvertInferenceOpPass>();
 }
 
-std::unique_ptr<Pass> createPostConstantFoldingPass() {
-  return std::make_unique<PostConstantFoldingPass>();
+std::unique_ptr<Pass> createConvertInferenceOpPass() {
+  return std::make_unique<ConvertInferenceOpPass>();
+}
+
+std::unique_ptr<Pass> createPostConvertInferenceOpPass() {
+  return std::make_unique<PostConvertInferenceOpPass>();
 }
 
 }  // namespace oneflow

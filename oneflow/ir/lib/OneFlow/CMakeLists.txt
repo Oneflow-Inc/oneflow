@@ -28,7 +28,7 @@ oneflow_add_mlir_dialect_library(
   Conversion/PTXToCubin.cpp
   Transform/BufferHostRegister.cpp
   Transform/OutlineAndFuse.cpp
-  Transform/ConstantFolding.cpp
+  Transform/ConvertInferenceOp.cpp
   Passes.cpp
   ${GROUPED_OP_CPP_FILES}
   ADDITIONAL_HEADER_DIRS

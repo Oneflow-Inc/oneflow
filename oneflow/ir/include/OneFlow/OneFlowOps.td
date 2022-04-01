@@ -310,14 +310,19 @@ def FuseIntoExistingOpPass : Pass<"fuse-into-existing-op", "ModuleOp"> {
   let constructor = "mlir::oneflow::createFuseIntoExistingOpPass()";
 }
 
-def ConstantFoldingPass : Pass<"constant-folding", "ModuleOp"> {
-  let summary = "Convert a op its inference version and rewrite ops with a more performant equivalent in inference workflow.";
-  let constructor = "mlir::oneflow::createConstantFoldingPass()";
+def PreConvertInferenceOpPass : Pass<"pre-convert-inference-op", "ModuleOp"> {
+  let summary = "Convert variable op to variable ir op for constant folding.";
+  let constructor = "mlir::oneflow::createPreConvertInferenceOpPass()";
 }
 
-def PostConstantFoldingPass : Pass<"post-constant-folding", "ModuleOp"> {
-  let summary = "";
-  let constructor = "mlir::oneflow::createPostConstantFoldingPass()";
+def ConvertInferenceOpPass : Pass<"convert-inference-op", "ModuleOp"> {
+  let summary = "Convert a op its inference version and rewrite ops with a more performant equivalent in inference workflow.";
+  let constructor = "mlir::oneflow::createConvertInferenceOpPass()";
+}
+
+def PostConvertInferenceOpPass : Pass<"post-convert-inference-op", "ModuleOp"> {
+  let summary = "Convert variable ir op to variable op after contant folding.";
+  let constructor = "mlir::oneflow::createPostConvertInferenceOpPass()";
 }
 
 #endif // ONEFLOW_PASSES

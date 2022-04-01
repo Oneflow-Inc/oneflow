@@ -23,7 +23,7 @@ import oneflow.unittest
 import oneflow.nn as nn
 
 os.environ["ONEFLOW_MLIR_ENABLE_ROUND_TRIP"] = "1"
-
+os.environ["ONEFLOW_MLIR_ENABLE_CONSTANT_FOLDING"] = "1"
 
 class MultiplyModel(nn.Module):
     def __init__(self):
