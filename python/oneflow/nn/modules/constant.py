@@ -316,7 +316,7 @@ def new_zeros_op(
     if size is None or len(size) == 0:
         new_size = x.shape
     else:
-        new_size =  _handle_size_arg(size)
+        new_size = _handle_size_arg(size)
     new_dtype = dtype
     new_device = device
     new_placement = placement
@@ -332,28 +332,34 @@ def new_zeros_op(
     if sbp is None:
         new_sbp = x.sbp if x.is_global else None
     if new_placement is not None:
-        assert device is None, "argument 'device' must be None when argument 'placement' exist"
-        assert new_sbp is not None, "argument 'sbp' must not be None when argument 'placement' exist"
+        assert (
+            device is None
+        ), "argument 'device' must be None when argument 'placement' exist"
+        assert (
+            new_sbp is not None
+        ), "argument 'sbp' must not be None when argument 'placement' exist"
     assert isinstance(
         new_size, (int, tuple, list, flow.Size)
     ), f"argument 'size' must be tuple of ints, not %s" % (type(new_size))
     assert isinstance(
         new_dtype, flow.dtype
-    ), f"argument 'dtype' must be flow.dtype, not %s"  % (type(new_dtype))
+    ), f"argument 'dtype' must be flow.dtype, not %s" % (type(new_dtype))
     if new_placement is not None:
         assert isinstance(
             new_placement, flow.placement
-        ), f"argument 'placement' must be flow.placement, not %s"  % (type(new_placement))
+        ), f"argument 'placement' must be flow.placement, not %s" % (
+            type(new_placement)
+        )
         assert isinstance(
             new_sbp, (flow.sbp.sbp, tuple)
-        ), f"argument 'sbp' must be flow.sbp.sbp, not %s"  % (type(new_sbp))
+        ), f"argument 'sbp' must be flow.sbp.sbp, not %s" % (type(new_sbp))
     else:
         assert isinstance(
             new_device, (str, flow.device)
-        ), f"argument 'device' must be flow.device, not %s"  % (type(new_device))
+        ), f"argument 'device' must be flow.device, not %s" % (type(new_device))
     assert isinstance(
         new_requires_grad, bool
-    ), f"argument 'requires_grad' must be bool, not %s"  % (type(new_requires_grad))
+    ), f"argument 'requires_grad' must be bool, not %s" % (type(new_requires_grad))
     if new_placement is not None:
         res = flow._C.global_constant(
             new_size, 0.0, dtype=new_dtype, placement=new_placement, sbp=new_sbp
@@ -362,7 +368,6 @@ def new_zeros_op(
         res = flow._C.constant(new_size, 0.0, dtype=new_dtype, device=new_device)
     res.requires_grad = new_requires_grad
     return res
-
 
 
 if __name__ == "__main__":

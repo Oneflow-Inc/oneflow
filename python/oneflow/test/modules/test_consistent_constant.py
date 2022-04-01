@@ -112,17 +112,12 @@ class TestConstantConsistent(flow.unittest.TestCase):
                         _test_consistent_constant(
                             test_case, func, shape, placement, sbp
                         )
-    
- 
+
     @unittest.skipIf(os.getenv("ONEFLOW_TEST_CPU_ONLY"), "only test cpu cases")
     @flow.unittest.skip_unless_1n2d()
     def test_constant_graph(test_case):
         arg_dict = OrderedDict()
-        arg_dict["func"] = [
-            "ones",
-            "zeros",
-            "new_zeros"
-        ]
+        arg_dict["func"] = ["ones", "zeros", "new_zeros"]
         arg_dict["shape"] = [(8,), (8, 8,), (8, 8, 8)]
         arg_dict["placement"] = [
             # 1d
