@@ -970,6 +970,8 @@ class SearchSortedFunctor {
     JUST(attrs.SetAttr<bool>("out_int32", out_int32));
     JUST(attrs.SetAttr<bool>("right", right));
     if (sorter) {
+      CHECK_OR_RETURN(IsShapeMatch(sorted_sequence, JUST(sorter))) << "for searchsorted op, boundary and sorter must have the same size";
+      CHECK_OR_RETURN(JUST(sorter)->dtype()->data_type() == DataType::kInt64) << "for searchsorted op, sorter must be a tensor of long";
       return OpInterpUtil::Dispatch<Tensor>(*op_, {sorted_sequence, values, JUST(sorter)}, attrs);
     } else {
       return OpInterpUtil::Dispatch<Tensor>(*no_sorter_op_, {sorted_sequence, values}, attrs);
@@ -1017,6 +1019,8 @@ class SearchSortedScalarFunctor {
       JUST(attrs.SetAttr<double>("values", values_tmp));
     }
     if (sorter) {
+      CHECK_OR_RETURN(IsShapeMatch(sorted_sequence, JUST(sorter))) << "for searchsorted op, boundary and sorter must have the same size";
+      CHECK_OR_RETURN(JUST(sorter)->dtype()->data_type() == DataType::kInt64) << "for searchsorted op, sorter must be a tensor of long";
       return OpInterpUtil::Dispatch<Tensor>(*op_, {sorted_sequence, JUST(sorter)}, attrs);
     } else {
       return OpInterpUtil::Dispatch<Tensor>(*no_sorter_op_, {sorted_sequence}, attrs);
