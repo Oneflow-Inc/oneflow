@@ -21,7 +21,7 @@ import oneflow as flow
 import oneflow.nn as nn
 
 api_list = [
-    "Tensor", # flow.xxx
+    "Tensor",  # flow.xxx
     "BoolTensor",
     "ByteTensor",
     "CharTensor",
@@ -266,13 +266,13 @@ api_list = [
     "zeros",
     "zeros_initializer",
     "zeros_like",
-    "Adagrad", # oneflow.optim.xxx
+    "Adagrad",  # oneflow.optim.xxx
     "Adam",
     "AdamW",
     "LAMB",
     "RMSprop",
     "SGD",
-    "ChainedScheduler", # oneflow.optim.lr_scheduler.xxx
+    "ChainedScheduler",  # oneflow.optim.lr_scheduler.xxx
     "ConstantLR",
     "CosineAnnealingLR",
     "CosineAnnealingWarmRestarts",
@@ -286,7 +286,7 @@ api_list = [
     "SequentialLR",
     "StepLR",
     "WarmUpLR",
-    "AdaptiveAvgPool1d", # oneflow.nn.xxx
+    "AdaptiveAvgPool1d",  # oneflow.nn.xxx
     "AdaptiveAvgPool2d",
     "AdaptiveAvgPool3d",
     "AllReduce",
@@ -383,7 +383,7 @@ api_list = [
     "UpsamplingBilinear2d",
     "UpsamplingNearest2d",
     "ZeroPad2d",
-    "adaptive_avg_pool1d", # oneflow.nn.functional.xxx
+    "adaptive_avg_pool1d",  # oneflow.nn.functional.xxx
     "adaptive_avg_pool2d",
     "adaptive_avg_pool3d",
     "affine_grid",
@@ -434,7 +434,7 @@ api_list = [
     "tanh",
     "triplet_margin_loss",
     "upsample",
-    "CalcGain", # flow.nn.init.xxx
+    "CalcGain",  # flow.nn.init.xxx
     "calculate_gain",
     "constant_",
     "flow",
@@ -448,7 +448,7 @@ api_list = [
     "xavier_normal_",
     "xavier_uniform_",
     "zeros_",
-    "adagrad", # flow.nn.optimizer.xxx
+    "adagrad",  # flow.nn.optimizer.xxx
     "adam",
     "adamw",
     "chained_scheduler",
@@ -468,7 +468,7 @@ api_list = [
     "sequential_lr",
     "sgd",
     "step_lr",
-    "warmup_lr"
+    "warmup_lr",
 ]
 
 dir_list = [
@@ -485,11 +485,11 @@ file_func_map_list = []
 
 def get_test_func(path):
     files = os.listdir(path)
-    commit_bytes = subprocess.check_output(['git', 'rev-parse', 'HEAD'])
-    commit_str = commit_bytes.decode('utf-8').replace('\n', '')
+    commit_bytes = subprocess.check_output(["git", "rev-parse", "HEAD"])
+    commit_str = commit_bytes.decode("utf-8").replace("\n", "")
     result_func_list = []
     for file in files:
-        if not os.path.isdir(file) and file.find("__pycache__")==-1:
+        if not os.path.isdir(file) and file.find("__pycache__") == -1:
             f = open(path + "/" + file)
             last_line = ""
             iter_f = iter(f)
@@ -498,10 +498,28 @@ def get_test_func(path):
                 line = line.strip()
                 if line.startswith("def test_") and line.endswith("(test_case):"):
                     result_func_list.append(line[9:-12])
-                    file_func_map[line[9:-12]] = f" [{line[9:-12]}](" + "https://github.com/Oneflow-Inc/oneflow/blob/" + commit_str + "/python/oneflow/test/" + path + "/" + file + f"#L{line_num}) "
+                    file_func_map[line[9:-12]] = (
+                        f" [{line[9:-12]}]("
+                        + "https://github.com/Oneflow-Inc/oneflow/blob/"
+                        + commit_str
+                        + "/python/oneflow/test/"
+                        + path
+                        + "/"
+                        + file
+                        + f"#L{line_num}) "
+                    )
                 elif last_line.startswith("add_docstr"):
                     result_func_list.append(line[0:-1])
-                    file_func_map[line[0:-1]] = f" [{line[0:-1]}](" + "https://github.com/Oneflow-Inc/oneflow/blob/" + commit_str + "/python/oneflow/test/" + path + "/" + file + f"#L{line_num}) "
+                    file_func_map[line[0:-1]] = (
+                        f" [{line[0:-1]}]("
+                        + "https://github.com/Oneflow-Inc/oneflow/blob/"
+                        + commit_str
+                        + "/python/oneflow/test/"
+                        + path
+                        + "/"
+                        + file
+                        + f"#L{line_num}) "
+                    )
                 last_line = line
                 line_num += 1
     return result_func_list
@@ -515,15 +533,17 @@ for i in range(0, len(dir_list)):
     test_func_list.append(tmp_func_list)
     file_func_map_list.append(file_func_map)
 
+
 def pure_match(x, y):
     x = x.lower()
-    x = x.split('_')[0]
+    x = x.split("_")[0]
     y = y.lower()
     pos = x.find(y)
     if pos != -1:
         return True
     else:
         return False
+
 
 def match_test_func(func, func_list):
     match_res = ""
@@ -567,9 +587,9 @@ for name in api_list:
     for i in range(3):
         match_name = match_test_func(name, test_func_list[i])
         if match_name != "":
-            if(i == 0):
+            if i == 0:
                 cnt0 += 1
-            elif (i == 1):
+            elif i == 1:
                 cnt1 += 1
             else:
                 cnt2 += 1
@@ -584,9 +604,15 @@ exception_test_ratio = cnt2 * 1.0 / len(api_list)
 result_list.append(f"## Test Data Summary")
 
 result_list.append(f"- OneFlow Total API Number: ====================>{len(api_list)}")
-result_list.append(f"- Doc Test Ratio: ====================>{100*doc_test_ratio:.2f}% = {cnt0} / {len(api_list)}")
-result_list.append(f"- Compatiable/Completeness Test Ratio: ====================>{100*compatiable_completeness_test_ratio:.2f}% = {cnt1} / {len(api_list)}")
-result_list.append(f"- Exception Test Ratio: ====================>{100*exception_test_ratio:.2f}% = {cnt2} / {len(api_list)}")
+result_list.append(
+    f"- Doc Test Ratio: ====================>{100*doc_test_ratio:.2f}% = {cnt0} / {len(api_list)}"
+)
+result_list.append(
+    f"- Compatiable/Completeness Test Ratio: ====================>{100*compatiable_completeness_test_ratio:.2f}% = {cnt1} / {len(api_list)}"
+)
+result_list.append(
+    f"- Exception Test Ratio: ====================>{100*exception_test_ratio:.2f}% = {cnt2} / {len(api_list)}"
+)
 
 f = open("./README.md", "w")
 for line in result_list:
