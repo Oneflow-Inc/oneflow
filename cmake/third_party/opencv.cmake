@@ -154,7 +154,7 @@ if(THIRD_PARTY)
     TYPE INCLUDE
     COMPONENT libpng_headers)
   add_custom_target(
-    install_libpng_headers ALL
+    install_libpng_headers
     COMMAND
       "${CMAKE_COMMAND}" -DCMAKE_INSTALL_COMPONENT=libpng_headers
       -DCMAKE_INSTALL_PREFIX="${LIBPNG_INSTALL_DIR}"
