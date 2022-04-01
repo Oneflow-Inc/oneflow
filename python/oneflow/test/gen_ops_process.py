@@ -581,6 +581,7 @@ exception_test_ratio = cnt2 * 1.0 / len(api_list)
 
 result_list.append(f"## Test Data Summary")
 
+result_list.append(f"- OneFlow Total API Number: ====================>{len(api_list)}")
 result_list.append(f"- Doc Test Ratio: ====================>{doc_test_ratio*100}%")
 result_list.append(f"- Compatiable/Completeness Test Ratio: ====================>{compatiable_completeness_test_ratio*100}%")
 result_list.append(f"- Exception Test Ratio: ====================>{exception_test_ratio*100}%")
