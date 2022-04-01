@@ -13,15 +13,21 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
-#ifndef ONEFLOW_API_PYTHON_CALIBRATION_CALIBRATION_API_H_
-#define ONEFLOW_API_PYTHON_CALIBRATION_CALIBRATION_API_H_
+#ifndef ONEFLOW_CORE_EMBEDDING_CACHED_KEY_VALUE_STORE_H_
+#define ONEFLOW_CORE_EMBEDDING_CACHED_KEY_VALUE_STORE_H_
 
-#include "oneflow/api/python/calibration/calibration.h"
+#include "oneflow/core/embedding/key_value_store.h"
+#include "oneflow/core/embedding/cache.h"
 
-inline void CacheInt8Calibration() { return oneflow::CacheInt8Calibration().GetOrThrow(); }
+namespace oneflow {
 
-inline void WriteInt8Calibration(const std::string& path) {
-  return oneflow::WriteInt8Calibration(path).GetOrThrow();
-}
+namespace embedding {
 
-#endif  // ONEFLOW_API_PYTHON_CALIBRATION_CALIBRATION_ENV_H_
+std::unique_ptr<KeyValueStore> NewCachedKeyValueStore(std::unique_ptr<KeyValueStore>&& store,
+                                                      std::unique_ptr<Cache>&& cache);
+
+}  // namespace embedding
+
+}  // namespace oneflow
+
+#endif  // ONEFLOW_CORE_EMBEDDING_CACHED_KEY_VALUE_STORE_H_
