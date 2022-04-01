@@ -125,7 +125,7 @@ def _test_layernorm_backward(test_case, device):
         np.allclose(x.grad.numpy(), np.zeros(shape=input_arr.shape), 1e-05, 1e-05)
     )
 
-
+@unittest.skipIf(os.getenv("ONEFLOW_TEST_CPU_ONLY"), "only test cpu cases")
 @flow.unittest.skip_unless_1n1d()
 class TestLayerNorm(flow.unittest.TestCase):
     def test_layernorm(test_case):
