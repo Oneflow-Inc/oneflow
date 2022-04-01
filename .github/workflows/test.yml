@@ -605,7 +605,6 @@ jobs:
           benchmark-id: 1-gpu-alexnet
           pytest-args: |
             -v
-          pytest-compare-args: |
             --benchmark-compare-fail=median:5%
             --benchmark-min-rounds=500
           container-name: ${{ env.TEST_CONTAINER_NAME }}
@@ -618,7 +617,6 @@ jobs:
           benchmark-id: 1-gpu-convnext_tiny_224
           pytest-args: |
             -v
-          pytest-compare-args: |
             --benchmark-compare-fail=median:5%
             --benchmark-min-rounds=500
           container-name: ${{ env.TEST_CONTAINER_NAME }}
@@ -631,7 +629,6 @@ jobs:
           benchmark-id: 1-gpu-crossformer_tiny_patch4_group7_224
           pytest-args: |
             -v
-          pytest-compare-args: |
             --benchmark-compare-fail=median:5%
             --benchmark-min-rounds=500
           container-name: ${{ env.TEST_CONTAINER_NAME }}
@@ -644,7 +641,6 @@ jobs:
           benchmark-id: 1-gpu-cswin_tiny_224
           pytest-args: |
             -v
-          pytest-compare-args: |
             --benchmark-compare-fail=median:5%
             --benchmark-min-rounds=500
           container-name: ${{ env.TEST_CONTAINER_NAME }}
@@ -657,7 +653,6 @@ jobs:
           benchmark-id: 1-gpu-densent121
           pytest-args: |
             -v
-          pytest-compare-args: |
             --benchmark-compare-fail=median:5%
             --benchmark-min-rounds=500
           container-name: ${{ env.TEST_CONTAINER_NAME }}
@@ -670,7 +665,6 @@ jobs:
           benchmark-id: 1-gpu-ghostnet
           pytest-args: |
             -v
-          pytest-compare-args: |
             --benchmark-compare-fail=median:5%
             --benchmark-min-rounds=500
           container-name: ${{ env.TEST_CONTAINER_NAME }}
@@ -683,7 +677,6 @@ jobs:
           benchmark-id: 1-gpu-googlenet
           pytest-args: |
             -v
-          pytest-compare-args: |
             --benchmark-compare-fail=median:5%
             --benchmark-min-rounds=500
           container-name: ${{ env.TEST_CONTAINER_NAME }}
@@ -696,7 +689,6 @@ jobs:
           benchmark-id: 1-gpu-inception_v3
           pytest-args: |
             -v
-          pytest-compare-args: |
             --benchmark-compare-fail=median:5%
             --benchmark-min-rounds=500
           container-name: ${{ env.TEST_CONTAINER_NAME }}
@@ -709,7 +701,6 @@ jobs:
           benchmark-id: 1-gpu-mlp_mixer_b16_224
           pytest-args: |
             -v
-          pytest-compare-args: |
             --benchmark-compare-fail=median:5%
             --benchmark-min-rounds=500
           container-name: ${{ env.TEST_CONTAINER_NAME }}
@@ -722,7 +713,6 @@ jobs:
           benchmark-id: 1-gpu-mnasnet0_5
           pytest-args: |
             -v
-          pytest-compare-args: |
             --benchmark-compare-fail=median:5%
             --benchmark-min-rounds=500
           container-name: ${{ env.TEST_CONTAINER_NAME }}
@@ -735,7 +725,6 @@ jobs:
           benchmark-id: 1-gpu-mobilenet_v2
           pytest-args: |
             -v
-          pytest-compare-args: |
             --benchmark-compare-fail=median:5%
             --benchmark-min-rounds=500
           container-name: ${{ env.TEST_CONTAINER_NAME }}
@@ -748,7 +737,6 @@ jobs:
           benchmark-id: 1-gpu-mobilenet_v3
           pytest-args: |
             -v
-          pytest-compare-args: |
             --benchmark-compare-fail=median:5%
             --benchmark-min-rounds=500
           container-name: ${{ env.TEST_CONTAINER_NAME }}
@@ -761,7 +749,6 @@ jobs:
           benchmark-id: 1-gpu-poolformer_m36
           pytest-args: |
             -v
-          pytest-compare-args: |
             --benchmark-compare-fail=median:5%
             --benchmark-min-rounds=500
           container-name: ${{ env.TEST_CONTAINER_NAME }}
@@ -774,7 +761,6 @@ jobs:
           benchmark-id: 1-gpu-poolformer_m48
           pytest-args: |
             -v
-          pytest-compare-args: |
             --benchmark-compare-fail=median:5%
             --benchmark-min-rounds=500
           container-name: ${{ env.TEST_CONTAINER_NAME }}
@@ -787,7 +773,6 @@ jobs:
           benchmark-id: 1-gpu-poolformer_s12
           pytest-args: |
             -v
-          pytest-compare-args: |
             --benchmark-compare-fail=median:5%
             --benchmark-min-rounds=500
           container-name: ${{ env.TEST_CONTAINER_NAME }}
@@ -800,7 +785,6 @@ jobs:
           benchmark-id: 1-gpu-poolformer_s24
           pytest-args: |
             -v
-          pytest-compare-args: |
             --benchmark-compare-fail=median:5%
             --benchmark-min-rounds=500
           container-name: ${{ env.TEST_CONTAINER_NAME }}
@@ -813,7 +797,6 @@ jobs:
           benchmark-id: 1-gpu-poolformer_s36
           pytest-args: |
             -v
-          pytest-compare-args: |
             --benchmark-compare-fail=median:5%
             --benchmark-min-rounds=500
           container-name: ${{ env.TEST_CONTAINER_NAME }}
@@ -826,7 +809,6 @@ jobs:
           benchmark-id: 1-gpu-pvt_small
           pytest-args: |
             -v
-          pytest-compare-args: |
             --benchmark-compare-fail=median:5%
             --benchmark-min-rounds=500
           container-name: ${{ env.TEST_CONTAINER_NAME }}
@@ -839,7 +821,6 @@ jobs:
           benchmark-id: 1-gpu-pvt_tiny
           pytest-args: |
             -v
-          pytest-compare-args: |
             --benchmark-compare-fail=median:5%
             --benchmark-min-rounds=500
           container-name: ${{ env.TEST_CONTAINER_NAME }}
@@ -852,7 +833,6 @@ jobs:
           benchmark-id: 1-gpu-res2net50_26w_4s
           pytest-args: |
             -v
-          pytest-compare-args: |
             --benchmark-compare-fail=median:5%
             --benchmark-min-rounds=500
           container-name: ${{ env.TEST_CONTAINER_NAME }}
@@ -865,7 +845,6 @@ jobs:
           benchmark-id: 1-gpu-resmlp_12_224
           pytest-args: |
             -v
-          pytest-compare-args: |
             --benchmark-compare-fail=median:5%
             --benchmark-min-rounds=500
           container-name: ${{ env.TEST_CONTAINER_NAME }}
@@ -878,7 +857,6 @@ jobs:
           benchmark-id: 1-gpu-resnest101
           pytest-args: |
             -v
-          pytest-compare-args: |
             --benchmark-compare-fail=median:5%
             --benchmark-min-rounds=500
           container-name: ${{ env.TEST_CONTAINER_NAME }}
@@ -891,7 +869,6 @@ jobs:
           benchmark-id: 1-gpu-resnest200
           pytest-args: |
             -v
-          pytest-compare-args: |
             --benchmark-compare-fail=median:5%
             --benchmark-min-rounds=500
           container-name: ${{ env.TEST_CONTAINER_NAME }}
@@ -904,7 +881,6 @@ jobs:
           benchmark-id: 1-gpu-resnest269
           pytest-args: |
             -v
-          pytest-compare-args: |
             --benchmark-compare-fail=median:5%
             --benchmark-min-rounds=500
           container-name: ${{ env.TEST_CONTAINER_NAME }}
@@ -917,7 +893,6 @@ jobs:
           benchmark-id: 1-gpu-resnest50
           pytest-args: |
             -v
-          pytest-compare-args: |
             --benchmark-compare-fail=median:5%
             --benchmark-min-rounds=500
           container-name: ${{ env.TEST_CONTAINER_NAME }}
@@ -930,7 +905,6 @@ jobs:
           benchmark-id: 1-gpu-resnet50
           pytest-args: |
             -v
-          pytest-compare-args: |
             --benchmark-compare-fail=median:5%
             --benchmark-min-rounds=500
           container-name: ${{ env.TEST_CONTAINER_NAME }}
@@ -943,7 +917,6 @@ jobs:
           benchmark-id: 1-gpu-resnext50_32x4d
           pytest-args: |
             -v
-          pytest-compare-args: |
             --benchmark-compare-fail=median:5%
             --benchmark-min-rounds=500
           container-name: ${{ env.TEST_CONTAINER_NAME }}
@@ -956,7 +929,6 @@ jobs:
           benchmark-id: 1-gpu-rexnet_lite_1_0
           pytest-args: |
             -v
-          pytest-compare-args: |
             --benchmark-compare-fail=median:5%
             --benchmark-min-rounds=500
           container-name: ${{ env.TEST_CONTAINER_NAME }}
@@ -969,7 +941,6 @@ jobs:
           benchmark-id: 1-gpu-rexnetv1_1_0
           pytest-args: |
             -v
-          pytest-compare-args: |
             --benchmark-compare-fail=median:5%
             --benchmark-min-rounds=500
           container-name: ${{ env.TEST_CONTAINER_NAME }}
@@ -982,7 +953,6 @@ jobs:
           benchmark-id: 1-gpu-shufflenet_v2_x0_5
           pytest-args: |
             -v
-          pytest-compare-args: |
             --benchmark-compare-fail=median:5%
             --benchmark-min-rounds=500
           container-name: ${{ env.TEST_CONTAINER_NAME }}
@@ -995,7 +965,6 @@ jobs:
           benchmark-id: 1-gpu-squeezenet1_0
           pytest-args: |
             -v
-          pytest-compare-args: |
             --benchmark-compare-fail=median:5%
             --benchmark-min-rounds=500
           container-name: ${{ env.TEST_CONTAINER_NAME }}
@@ -1008,7 +977,6 @@ jobs:
           benchmark-id: 1-gpu-swin_base_patch4_window7_224
           pytest-args: |
             -v
-          pytest-compare-args: |
             --benchmark-compare-fail=median:5%
             --benchmark-min-rounds=500
           container-name: ${{ env.TEST_CONTAINER_NAME }}
@@ -1021,7 +989,6 @@ jobs:
           benchmark-id: 1-gpu-swin_small_patch4_window7_224
           pytest-args: |
             -v
-          pytest-compare-args: |
             --benchmark-compare-fail=median:5%
             --benchmark-min-rounds=500
           container-name: ${{ env.TEST_CONTAINER_NAME }}
@@ -1034,7 +1001,6 @@ jobs:
           benchmark-id: 1-gpu-swin_tiny_patch4_window7_224
           pytest-args: |
             -v
-          pytest-compare-args: |
             --benchmark-compare-fail=median:5%
             --benchmark-min-rounds=500
           container-name: ${{ env.TEST_CONTAINER_NAME }}
@@ -1047,7 +1013,6 @@ jobs:
           benchmark-id: 1-gpu-uniformer_base_ls
           pytest-args: |
             -v
-          pytest-compare-args: |
             --benchmark-compare-fail=median:5%
             --benchmark-min-rounds=500
           container-name: ${{ env.TEST_CONTAINER_NAME }}
@@ -1060,7 +1025,6 @@ jobs:
           benchmark-id: 1-gpu-uniformer_base
           pytest-args: |
             -v
-          pytest-compare-args: |
             --benchmark-compare-fail=median:5%
             --benchmark-min-rounds=500
           container-name: ${{ env.TEST_CONTAINER_NAME }}
@@ -1073,7 +1037,6 @@ jobs:
           benchmark-id: 1-gpu-uniformer_small_plus
           pytest-args: |
             -v
-          pytest-compare-args: |
             --benchmark-compare-fail=median:5%
             --benchmark-min-rounds=500
           container-name: ${{ env.TEST_CONTAINER_NAME }}
@@ -1086,7 +1049,6 @@ jobs:
           benchmark-id: 1-gpu-uniformer_small
           pytest-args: |
             -v
-          pytest-compare-args: |
             --benchmark-compare-fail=median:5%
             --benchmark-min-rounds=500
           container-name: ${{ env.TEST_CONTAINER_NAME }}
@@ -1099,7 +1061,6 @@ jobs:
           benchmark-id: 1-gpu-vit_base_path16_224
           pytest-args: |
             -v
-          pytest-compare-args: |
             --benchmark-compare-fail=median:5%
             --benchmark-min-rounds=500
           container-name: ${{ env.TEST_CONTAINER_NAME }}
@@ -1112,7 +1073,6 @@ jobs:
           benchmark-id: 1-gpu-vit_small_path16_224
           pytest-args: |
             -v
-          pytest-compare-args: |
             --benchmark-compare-fail=median:5%
             --benchmark-min-rounds=500
           container-name: ${{ env.TEST_CONTAINER_NAME }}
@@ -1125,7 +1085,6 @@ jobs:
           benchmark-id: 1-gpu-vit_tiny_path16_224
           pytest-args: |
             -v
-          pytest-compare-args: |
             --benchmark-compare-fail=median:5%
             --benchmark-min-rounds=500
           container-name: ${{ env.TEST_CONTAINER_NAME }}
@@ -1138,7 +1097,6 @@ jobs:
           benchmark-id: 1-gpu-wide_resnet50_2
           pytest-args: |
             -v
-          pytest-compare-args: |
             --benchmark-compare-fail=median:5%
             --benchmark-min-rounds=500
           container-name: ${{ env.TEST_CONTAINER_NAME }}
