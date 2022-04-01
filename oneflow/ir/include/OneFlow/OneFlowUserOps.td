@@ -9434,4 +9434,32 @@ def OneFlow_EmbeddingPutOp : OneFlow_BaseOp<"embedding_put", [DeclareOpInterface
   let has_data_type_infer_fn = 1;
 }
 
+def OneFlow_IsNanOp : OneFlow_BaseOp<"isnan", [NoSideEffect, NoGrad, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
+  let input = (ins
+    OneFlow_Tensor:$x
+  );
+  let output = (outs
+    OneFlow_Tensor:$y
+  );
+  let same_output_regst_num = 1;
+  let has_logical_tensor_desc_infer_fn = 1;
+  let has_physical_tensor_desc_infer_fn = 1;
+  let has_get_sbp_fn = 1;
+  let has_data_type_infer_fn = 1;
+}
+
+def OneFlow_IsInfOp : OneFlow_BaseOp<"isinf", [NoSideEffect, NoGrad, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
+  let input = (ins
+    OneFlow_Tensor:$x
+  );
+  let output = (outs
+    OneFlow_Tensor:$y
+  );
+  let same_output_regst_num = 1;
+  let has_logical_tensor_desc_infer_fn = 1;
+  let has_physical_tensor_desc_infer_fn = 1;
+  let has_get_sbp_fn = 1;
+  let has_data_type_infer_fn = 1;
+}
+
 #endif // GET_ONEFLOW_ONE_EMBEDDING_OP_DEFINITIONS
