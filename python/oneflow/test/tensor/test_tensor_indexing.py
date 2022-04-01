@@ -23,12 +23,8 @@ import oneflow as flow
 import oneflow.unittest
 
 
-def _test_numpy_scalar_indexing(test_case, numpy_x):
+def _test_numpy_scalar_indexing(test_case, numpy_x, np_scalar):
     x = flow.Tensor(numpy_x)
-
-    np_scalar = np.random.choice(
-        [np.int8, np.int16, np.int32, np.int64], size=(1,)
-    ).item()
 
     # basic_slice
     test_case.assertTrue(np.allclose(numpy_x[np_scalar(1)], x[np_scalar(1)].numpy()))
@@ -51,6 +47,9 @@ def _test_numpy_scalar_indexing(test_case, numpy_x):
         )
     )
 
+def _test_numpy_scalar_advance_indexing(test_case, numpy_x, np_scalar):
+    x = flow.Tensor(numpy_x)
+    
     # advance indexing
     test_case.assertTrue(
         np.allclose(
@@ -340,14 +339,26 @@ class TestTensorIndexing(flow.unittest.TestCase):
         _test_combining_indexing(test_case, numpy_x)
 
     def test_numpy_scalar_indexing(test_case):
-        numpy_x = np.arange(0, 60, 1).reshape([3, 4, 5]).astype(np.float32)
-        _test_numpy_scalar_indexing(test_case, numpy_x)
+        for np_scalar in [np.int8, np.int16, np.int32, np.int64]:
+            numpy_x = np.arange(0, 60, 1).reshape([3, 4, 5]).astype(np.float32)
+            _test_numpy_scalar_indexing(test_case, numpy_x, np_scalar)
 
-        numpy_x = np.arange(0, 360, 1).reshape([3, 4, 5, 6]).astype(np.float32)
-        _test_numpy_scalar_indexing(test_case, numpy_x)
+            numpy_x = np.arange(0, 360, 1).reshape([3, 4, 5, 6]).astype(np.float32)
+            _test_numpy_scalar_indexing(test_case, numpy_x, np_scalar)
 
-        numpy_x = np.arange(0, 720, 1).reshape([8, 9, 10]).astype(np.float32)
-        _test_numpy_scalar_indexing(test_case, numpy_x)
+            numpy_x = np.arange(0, 720, 1).reshape([8, 9, 10]).astype(np.float32)
+            _test_numpy_scalar_indexing(test_case, numpy_x, np_scalar)
+        
+        for np_scalar in [np.int32, np.int64]:
+            numpy_x = np.arange(0, 60, 1).reshape([3, 4, 5]).astype(np.float32)
+            _test_numpy_scalar_advance_indexing(test_case, numpy_x, np_scalar)
+
+            numpy_x = np.arange(0, 360, 1).reshape([3, 4, 5, 6]).astype(np.float32)
+            _test_numpy_scalar_advance_indexing(test_case, numpy_x, np_scalar)
+
+            numpy_x = np.arange(0, 720, 1).reshape([8, 9, 10]).astype(np.float32)
+            _test_numpy_scalar_advance_indexing(test_case, numpy_x, np_scalar)
+        
 
     def test_mask_getitem(test_case):
         numpy_x = np.arange(0, 60, 1).reshape([3, 4, 5]).astype(np.float32)
