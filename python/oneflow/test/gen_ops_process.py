@@ -493,15 +493,17 @@ def get_test_func(path):
             f = open(path + "/" + file)
             last_line = ""
             iter_f = iter(f)
+            line_num = 1
             for line in iter_f:
                 line = line.strip()
                 if line.startswith("def test_") and line.endswith("(test_case):"):
                     result_func_list.append(line[9:-12])
-                    file_func_map[line[9:-12]] = " [code link](" + "https://github.com/Oneflow-Inc/oneflow/blob/" + commit_str + "/python/oneflow/test/" + path + "/" + file + ") "
+                    file_func_map[line[9:-12]] = f" [{line[9:-12]}](" + "https://github.com/Oneflow-Inc/oneflow/blob/" + commit_str + "/python/oneflow/test/" + path + "/" + file + f"#L{line_num}) "
                 elif last_line.startswith("add_docstr"):
                     result_func_list.append(line[0:-1])
-                    file_func_map[line[0:-1]] = " [code link](" + "https://github.com/Oneflow-Inc/oneflow/blob/" + commit_str + "/python/oneflow/test/" + path + "/" + file + ") "
+                    file_func_map[line[0:-1]] = f" [{line[0:-1]}](" + "https://github.com/Oneflow-Inc/oneflow/blob/" + commit_str + "/python/oneflow/test/" + path + "/" + file + f"#L{line_num}) "
                 last_line = line
+                line_num += 1
     return result_func_list
 
 
