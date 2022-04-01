@@ -46,7 +46,7 @@ RtRegstDesc::RtRegstDesc(const RegstDescProto& proto) {
     sorted_blob_desc_vec_.emplace_back(std::make_unique<const BlobDesc>(BlobDesc(DataType::kChar)));
   }
 
-  if ((!memcase::IsHostMem(proto.mem_case()))
+  if ((!memory::IsHostMem(proto.mem_case()))
       || (proto.has_variable_op_name() && !proto.variable_op_name().empty())) {
     // NOTE(chengcheng): When this regst is shared with EagerBlobObject, header is ALWAYS separated.
     has_separated_header_ = true;

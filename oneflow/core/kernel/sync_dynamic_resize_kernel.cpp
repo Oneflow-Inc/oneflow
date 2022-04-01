@@ -75,7 +75,7 @@ class SyncDynamicResizeGPUKernel final : public Kernel {
     AutoMemcpy(ctx->stream(), out->mut_dptr(), in->dptr(), in->ByteSizeOfBlobBody(),
                out->mem_case(), in->mem_case());
     AutoMemcpy(ctx->stream(), cuda_host_mem_ptr->Ptr(), size->dptr(), sizeof(SizeType),
-               memcase::MakeHostMemCase(), size->mem_case());
+               memory::MakeHostMemCase(), size->mem_case());
     const auto& UpdateShape = [out, cuda_host_mem_ptr, conf, this]() {
       const int64_t new_size = *reinterpret_cast<SizeType*>(cuda_host_mem_ptr->Ptr());
       CHECK_GE(new_size, 0);

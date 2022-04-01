@@ -22,7 +22,7 @@ limitations under the License.
 
 namespace oneflow {
 
-namespace memcase {
+namespace memory {
 
 bool EqualsIgnorePinnedDevice(const MemoryCase& a, const MemoryCase& b);
 void GetPinnedHostMemoryCase(const MemoryCase& mem_case, MemoryCase* ret);
@@ -34,7 +34,7 @@ std::shared_ptr<MemoryCase> MakeMemCaseShared(const DeviceType device_type,
 MemoryCase MakeHostMemCase();
 bool IsHostMem(const MemoryCase& mem_case);
 
-}  // namespace memcase
+}  // namespace memory
 
 bool operator==(const MemoryCase& lhs, const MemoryCase& rhs);
 

@@ -19,7 +19,7 @@ limitations under the License.
 
 namespace oneflow {
 
-namespace memcase {
+namespace memory {
 
 bool EqualsIgnorePinnedDevice(const MemoryCase& a, const MemoryCase& b) {
   if (a.device_type() != b.device_type()) { return false; }
@@ -100,7 +100,7 @@ MemoryCase MakeHostMemCase() {
 
 bool IsHostMem(const MemoryCase& mem_case) { return mem_case.device_type() == DeviceType::kCPU; }
 
-}  // namespace memcase
+}  // namespace memory
 
 bool operator==(const MemoryCase& lhs, const MemoryCase& rhs) {
   return google::protobuf::util::MessageDifferencer::Equals(lhs, rhs);

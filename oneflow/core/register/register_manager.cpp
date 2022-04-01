@@ -82,7 +82,7 @@ void RegstMgr::AddPlan(const Plan& plan,
         CHECK_GE(var_blob->blob_desc().AlignedByteSizeOfBlobHeader(), mem_block.mem_size());
         CHECK_GE(mem_block.mem_size(), var_blob->blob_desc().ByteSizeOfBlobHeader());
         CHECK(mem_block_id2ptr_.emplace(mem_block_id, var_blob->mut_header_ptr()).second);
-        CHECK(memcase::IsHostMem(mem_block.mem_case()));
+        CHECK(memory::IsHostMem(mem_block.mem_case()));
       } else {
         CHECK_GE(var_blob->blob_desc().AlignedByteSizeOfBlobBody(), mem_block.mem_size());
         CHECK_GE(mem_block.mem_size(), var_blob->blob_desc().ByteSizeOfBlobBody());
@@ -93,14 +93,14 @@ void RegstMgr::AddPlan(const Plan& plan,
         //   blob has GPU op consume. We can JUST ignore this diff because it ONLY has little
         //   perf loss but correct.
         //   And this problem is NOT tensor.to("cuda") or tensor.to_global().
-        CHECK(memcase::EqualsIgnorePinnedDevice(mem_block.mem_case(), var_blob->mem_case()))
+        CHECK(memory::EqualsIgnorePinnedDevice(mem_block.mem_case(), var_blob->mem_case()))
             << " variable op name: " << var_name << " in rank: " << this_machine_id
             << " bind eager tensor failed. The eager var tensor mem_case is : "
             << var_blob->mem_case().DebugString()
             << " but graph expected_mem block mem_case is : " << mem_block.mem_case().DebugString();
       }
     } else {
-      int64_t zone_id = memcase::GetMemCaseId(mem_block.mem_case());
+      int64_t zone_id = memory::GetMemCaseId(mem_block.mem_case());
       if (zone_id2packed_chunk.find(zone_id) == zone_id2packed_chunk.end()) {
         zone_id2packed_chunk.emplace(zone_id, PackedChunkInfo(mem_block.mem_case()));
       }
@@ -206,7 +206,7 @@ void RegstMgr::NewBlobsInOneRegst(const std::vector<LbiBlobDescPair>& lbis, Regs
   char* cur_body_pointer = nullptr;
   char* cur_header_pointer = nullptr;
   if (separated_header_mem_size > 0) {
-    MemoryCase host_mem_case = memcase::MakeHostMemCase();
+    MemoryCase host_mem_case = memory::MakeHostMemCase();
     if (separated_header_mem_ptr == nullptr) {
       separated_header_mem_ptr =
           Global<MemoryAllocator>::Get()->Allocate(host_mem_case, separated_header_mem_size);

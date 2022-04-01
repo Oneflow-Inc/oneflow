@@ -30,7 +30,7 @@ class OfBlob final {
  public:
   OF_DISALLOW_COPY_AND_MOVE(OfBlob);
   OfBlob(ep::Stream* stream, Blob* blob) : stream_(stream), blob_(blob) {
-    mem_case_ = memcase::MakeHostMemCase();
+    mem_case_ = memory::MakeHostMemCase();
   }
   ~OfBlob() = default;
 

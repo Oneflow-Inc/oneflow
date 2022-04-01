@@ -73,7 +73,7 @@ class OnDemandHostBlob final {
   void Init() {
     header.resize(blob_desc_->AlignedByteSizeOfBlobHeader());
     data.resize(blob_desc_->AlignedByteSizeOfBlobBody());
-    MemoryCase host_mem_case = memcase::MakeHostMemCase();
+    MemoryCase host_mem_case = memory::MakeHostMemCase();
     blob_.reset(new Blob(host_mem_case, blob_desc_.get(), header.data(), data.data()));
   }
 

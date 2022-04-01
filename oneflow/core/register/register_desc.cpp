@@ -180,7 +180,7 @@ void InitCtrlRegstDesc(int64_t producer_task_id, RegstDescProto* ctrl_regst_prot
   ctrl_regst_proto->set_max_register_num(1);
   ctrl_regst_proto->set_register_num(1);
   ctrl_regst_proto->mutable_regst_desc_type()->mutable_ctrl_regst_desc();
-  *ctrl_regst_proto->mutable_mem_case() = memcase::MakeHostMemCase();
+  *ctrl_regst_proto->mutable_mem_case() = memory::MakeHostMemCase();
   ctrl_regst_proto->set_enable_reuse_mem(false);
   ctrl_regst_proto->set_mem_block_id(-1);
   ctrl_regst_proto->set_mem_block_offset(-1);

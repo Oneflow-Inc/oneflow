@@ -82,9 +82,9 @@ void GenChunkForMultiNNGraphMemoryReuseInMultiClient(
     // NOTE(chengcheng):
     //   only reused mem in cuda device.
     //   special cpu memory like OFRecord pb and TensorBuffer CANNOT reused by another plan.
-    if (memcase::IsHostMem(mem_block->mem_case())) { continue; }
+    if (memory::IsHostMem(mem_block->mem_case())) { continue; }
     int64_t mem_zone_uid =
-        memcase::GetUniqueMemCaseId(mem_block->machine_id(), mem_block->mem_case());
+        memory::GetUniqueMemCaseId(mem_block->machine_id(), mem_block->mem_case());
     auto it = mzuid2mem_blocks.find(mem_zone_uid);
     if (it == mzuid2mem_blocks.end()) {
       it = mzuid2mem_blocks.emplace(mem_zone_uid, HashSet<MemBlockProto*>()).first;
@@ -264,7 +264,7 @@ void PlanUtil::GenMemBlockAndChunkWithVariableOpNames4Plan(
       mem_block.set_mem_block_id(separated_mem_block_id);
       mem_block.add_job_id(job_id);
       mem_block.set_machine_id(machine_id);
-      *(mem_block.mutable_mem_case()) = memcase::GetPinnedHostMemoryCase(regst_desc->mem_case());
+      *(mem_block.mutable_mem_case()) = memory::GetPinnedHostMemoryCase(regst_desc->mem_case());
       mem_block.set_enable_reuse_mem(false);
       mem_block.set_mem_size(regst_separated_size);
       mem_block.set_thrd_id_hint(thrd_id);
@@ -341,7 +341,7 @@ void PlanUtil::CleanUselessMemBlockAndCheckValid(Plan* plan) {
         const MemBlockProto& header_mem_block = mem_block_id2mem_block.at(header_block_id);
         CHECK_EQ(header_mem_block.mem_size(), separated_header_mem_size);
         CHECK_EQ(task.machine_id(), header_mem_block.machine_id());
-        CHECK(header_mem_block.mem_case() == memcase::GetPinnedHostMemoryCase(regst.mem_case()));
+        CHECK(header_mem_block.mem_case() == memory::GetPinnedHostMemoryCase(regst.mem_case()));
         CHECK(header_mem_block.enable_reuse_mem() == false);
         const auto& header_block_job_ids = mem_block_id2job_ids[header_block_id];
         CHECK(header_block_job_ids.find(task.job_id()) != header_block_job_ids.end());
@@ -860,13 +860,13 @@ void PlanUtil::PlanMemoryLog(Plan* plan, const std::string& plan_name) {
   };
 
   for (const ChunkProto& chunk : plan->block_chunk_list().chunk()) {
-    if (memcase::IsHostMem(chunk.mem_case())) { continue; }
+    if (memory::IsHostMem(chunk.mem_case())) { continue; }
     AddMemSizeByRankDeviceIds(chunk.machine_id(), chunk.mem_case().device_id(), chunk.mem_size());
   }
 
   for (const MemBlockProto& mem_block : plan->block_chunk_list().mem_block()) {
     if (mem_block.has_chunk_id() || mem_block.has_chunk_offset()) { continue; }
-    if (memcase::IsHostMem(mem_block.mem_case())) { continue; }
+    if (memory::IsHostMem(mem_block.mem_case())) { continue; }
     AddMemSizeByRankDeviceIds(mem_block.machine_id(), mem_block.mem_case().device_id(),
                               mem_block.mem_size());
   }
