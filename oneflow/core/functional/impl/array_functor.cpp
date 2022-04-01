@@ -949,29 +949,37 @@ class SearchSortedFunctor {
                          .Output("out")
                          .Build());
     no_sorter_op_ = CHECK_JUST(one::OpBuilder("searchsorted")
-                         .Input("sorted_sequence")
-                         .Input("values")
-                         .Output("out")
-                         .Build());
+                                   .Input("sorted_sequence")
+                                   .Input("values")
+                                   .Output("out")
+                                   .Build());
   }
   Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& sorted_sequence,
-                           const std::shared_ptr<one::Tensor>& values, bool out_int32,
-                           bool right, const Optional<one::Tensor>& sorter) const {
+                           const std::shared_ptr<one::Tensor>& values, bool out_int32, bool right,
+                           const Optional<one::Tensor>& sorter) const {
     // checks
-    CHECK_OR_RETURN(values->shape()->NumAxes() > 0) << "for searchsorted op, input values tensor should have positive dimension";
-    CHECK_OR_RETURN(sorted_sequence->shape()->NumAxes() > 0) << "for searchsorted op, input sorted_sequence should have positive dimension";
-    CHECK_OR_RETURN(IsShapeMatchBeforeLastDim(sorted_sequence, values)) << "for searchsorted op, the first N-1 dimensions of boundaries " \
-                                                                           "tensor and input value tensor must match";
+    CHECK_OR_RETURN(values->shape()->NumAxes() > 0)
+        << "for searchsorted op, input values tensor should have positive dimension";
+    CHECK_OR_RETURN(sorted_sequence->shape()->NumAxes() > 0)
+        << "for searchsorted op, input sorted_sequence should have positive dimension";
+    CHECK_OR_RETURN(IsShapeMatchBeforeLastDim(sorted_sequence, values))
+        << "for searchsorted op, the first N-1 dimensions of boundaries "
+           "tensor and input value tensor must match";
     if (out_int32) {
-      CHECK_OR_RETURN(sorted_sequence->shape()->At(sorted_sequence->shape()->NumAxes()-1) < INT32_MAX) << "for searchsorted op, the size of " \
-                                                                     "input sorted_sequence' last dimension should be less than" << INT32_MAX;
+      CHECK_OR_RETURN(sorted_sequence->shape()->At(sorted_sequence->shape()->NumAxes() - 1)
+                      < INT32_MAX)
+          << "for searchsorted op, the size of "
+             "input sorted_sequence' last dimension should be less than"
+          << INT32_MAX;
     }
     MutableAttrMap attrs;
     JUST(attrs.SetAttr<bool>("out_int32", out_int32));
     JUST(attrs.SetAttr<bool>("right", right));
     if (sorter) {
-      CHECK_OR_RETURN(IsShapeMatch(sorted_sequence, JUST(sorter))) << "for searchsorted op, boundary and sorter must have the same size";
-      CHECK_OR_RETURN(JUST(sorter)->dtype()->data_type() == DataType::kInt64) << "for searchsorted op, sorter must be a tensor of long";
+      CHECK_OR_RETURN(IsShapeMatch(sorted_sequence, JUST(sorter)))
+          << "for searchsorted op, boundary and sorter must have the same size";
+      CHECK_OR_RETURN(JUST(sorter)->dtype()->data_type() == DataType::kInt64)
+          << "for searchsorted op, sorter must be a tensor of long";
       return OpInterpUtil::Dispatch<Tensor>(*op_, {sorted_sequence, values, JUST(sorter)}, attrs);
     } else {
       return OpInterpUtil::Dispatch<Tensor>(*no_sorter_op_, {sorted_sequence, values}, attrs);
@@ -991,25 +999,26 @@ class SearchSortedScalarFunctor {
                          .Input("sorter")
                          .Output("out")
                          .Build());
-    no_sorter_op_ = CHECK_JUST(one::OpBuilder("searchsorted_scalar")
-                         .Input("sorted_sequence")
-                         .Output("out")
-                         .Build());
+    no_sorter_op_ = CHECK_JUST(
+        one::OpBuilder("searchsorted_scalar").Input("sorted_sequence").Output("out").Build());
   }
   Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& sorted_sequence,
                            const Scalar& values, bool out_int32, bool right,
                            const Optional<one::Tensor>& sorter) const {
     // checks
-    CHECK_OR_RETURN(sorted_sequence->shape()->NumAxes() == 1) << "for searchsorted op, input value can be a scalar only when " \
-                                                                 "sorted_sequence tensor dimension is 1";
+    CHECK_OR_RETURN(sorted_sequence->shape()->NumAxes() == 1)
+        << "for searchsorted op, input value can be a scalar only when "
+           "sorted_sequence tensor dimension is 1";
 
     MutableAttrMap attrs;
     JUST(attrs.SetAttr<bool>("out_int32", out_int32));
     JUST(attrs.SetAttr<bool>("right", right));
     // check values Scalar and sorted_sequence one dim
     int32_t is_sequence_1d = sorted_sequence->shape()->NumAxes();
-    CHECK_OR_RETURN(is_sequence_1d == 1) << "input value can be a scalar only when boundaries " \
-                                            "tensor dimension is 1, but we got boundaries tensor dim=" << is_sequence_1d;
+    CHECK_OR_RETURN(is_sequence_1d == 1)
+        << "input value can be a scalar only when boundaries "
+           "tensor dimension is 1, but we got boundaries tensor dim="
+        << is_sequence_1d;
     bool is_values_float = values.IsFloatingPoint();
     if (is_values_float) {
       double_t values_tmp = JUST(values.As<double_t>());
@@ -1019,8 +1028,10 @@ class SearchSortedScalarFunctor {
       JUST(attrs.SetAttr<double>("values", values_tmp));
     }
     if (sorter) {
-      CHECK_OR_RETURN(IsShapeMatch(sorted_sequence, JUST(sorter))) << "for searchsorted op, boundary and sorter must have the same size";
-      CHECK_OR_RETURN(JUST(sorter)->dtype()->data_type() == DataType::kInt64) << "for searchsorted op, sorter must be a tensor of long";
+      CHECK_OR_RETURN(IsShapeMatch(sorted_sequence, JUST(sorter)))
+          << "for searchsorted op, boundary and sorter must have the same size";
+      CHECK_OR_RETURN(JUST(sorter)->dtype()->data_type() == DataType::kInt64)
+          << "for searchsorted op, sorter must be a tensor of long";
       return OpInterpUtil::Dispatch<Tensor>(*op_, {sorted_sequence, JUST(sorter)}, attrs);
     } else {
       return OpInterpUtil::Dispatch<Tensor>(*no_sorter_op_, {sorted_sequence}, attrs);

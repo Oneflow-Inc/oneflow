@@ -29,29 +29,21 @@ bool IsInplaceValid(const std::shared_ptr<Tensor>& x) {
 }
 
 bool IsShapeMatchBeforeLastDim(const std::shared_ptr<Tensor>& x, const std::shared_ptr<Tensor>& y) {
-  if (x->shape()->NumAxes() != y->shape()->NumAxes()) {
-    return false;
-  }
+  if (x->shape()->NumAxes() != y->shape()->NumAxes()) { return false; }
   const auto& x_shape = x->shape();
   const auto& y_shape = y->shape();
-  for (int64_t i = 0; i < x_shape->NumAxes()-1; ++i) {
-    if (x_shape->At(i) != y_shape->At(i)) {
-      return false;
-    }
+  for (int64_t i = 0; i < x_shape->NumAxes() - 1; ++i) {
+    if (x_shape->At(i) != y_shape->At(i)) { return false; }
   }
   return true;
 }
 
 bool IsShapeMatch(const std::shared_ptr<Tensor>& x, const std::shared_ptr<Tensor>& y) {
-  if (x->shape()->NumAxes() != y->shape()->NumAxes()) {
-    return false;
-  }
+  if (x->shape()->NumAxes() != y->shape()->NumAxes()) { return false; }
   const auto& x_shape = x->shape();
   const auto& y_shape = y->shape();
   for (int64_t i = 0; i < x_shape->NumAxes(); ++i) {
-    if (x_shape->At(i) != y_shape->At(i)) {
-      return false;
-    }
+    if (x_shape->At(i) != y_shape->At(i)) { return false; }
   }
   return true;
 }

@@ -19,15 +19,15 @@ limitations under the License.
 namespace oneflow {
 
 template<typename input_t, typename output_t>
-output_t cus_lower_bound(output_t start, output_t end, const input_t val, const input_t* bd, const int64_t* sort) {
+output_t cus_lower_bound(output_t start, output_t end, const input_t val, const input_t* bd,
+                         const int64_t* sort) {
   const output_t orig_start = start;
   while (start < end) {
     const output_t mid = start + ((end - start) >> 1);
     const input_t mid_val = sort ? bd[sort[mid] + orig_start] : bd[mid];
     if (!(mid_val >= val)) {
       start = mid + 1;
-    }
-    else {
+    } else {
       end = mid;
     }
   }
@@ -35,15 +35,15 @@ output_t cus_lower_bound(output_t start, output_t end, const input_t val, const 
 }
 
 template<typename input_t, typename output_t>
-output_t cus_upper_bound(output_t start, output_t end, const input_t val, const input_t* bd, const int64_t* sort) {
+output_t cus_upper_bound(output_t start, output_t end, const input_t val, const input_t* bd,
+                         const int64_t* sort) {
   const output_t orig_start = start;
   while (start < end) {
     const output_t mid = start + ((end - start) >> 1);
     const input_t mid_val = sort ? bd[sort[mid] + orig_start] : bd[mid];
     if (!(mid_val > val)) {
       start = mid + 1;
-    }
-    else {
+    } else {
       end = mid;
     }
   }
@@ -66,21 +66,24 @@ class CpuSearchSortedKernel final : public user_op::OpKernel {
     const input_t* values_ptr = values->dptr<input_t>();
     const input_t* sequence_ptr = sorted_sequence->dptr<input_t>();
     const int64_t* sorter_ptr = nullptr;
-    if (sorter) {
-      sorter_ptr = sorter->dptr<int64_t>();
-    }
+    if (sorter) { sorter_ptr = sorter->dptr<int64_t>(); }
     output_t* out_ptr = out->mut_dptr<output_t>();
     const int32_t instance_num = values->shape().elem_cnt();
     bool is_values_scalar = (values->shape().elem_cnt() == 1 && values->shape().NumAxes() == 0);
     bool is_sequence_1d = (sorted_sequence->shape().NumAxes() == 1);
-    output_t values_shape_last = is_values_scalar ? 1 : values->shape().At(values->shape().NumAxes()-1);
-    output_t sequence_shape_last = sorted_sequence->shape().At(sorted_sequence->shape().NumAxes()-1);
+    output_t values_shape_last =
+        is_values_scalar ? 1 : values->shape().At(values->shape().NumAxes() - 1);
+    output_t sequence_shape_last =
+        sorted_sequence->shape().At(sorted_sequence->shape().NumAxes() - 1);
     FOR_RANGE(int32_t, i, 0, instance_num) {
       output_t start_bd = is_sequence_1d ? 0 : i / values_shape_last * sequence_shape_last;
       output_t end_bd = start_bd + sequence_shape_last;
-      output_t pos = !right ?
-        cus_lower_bound<input_t, output_t>(start_bd, end_bd, values_ptr[i], sequence_ptr, sorter_ptr) - start_bd :
-         cus_upper_bound<input_t, output_t>(start_bd, end_bd, values_ptr[i], sequence_ptr, sorter_ptr) - start_bd;
+      output_t pos = !right ? cus_lower_bound<input_t, output_t>(start_bd, end_bd, values_ptr[i],
+                                                                 sequence_ptr, sorter_ptr)
+                                  - start_bd
+                            : cus_upper_bound<input_t, output_t>(start_bd, end_bd, values_ptr[i],
+                                                                 sequence_ptr, sorter_ptr)
+                                  - start_bd;
 
       out_ptr[i] = pos;
     }
@@ -88,16 +91,18 @@ class CpuSearchSortedKernel final : public user_op::OpKernel {
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
 
-#define REGISTER_CPU_SEARCH_SORTED_KERNEL(in_dtype, out_dtype)   \
-  REGISTER_USER_KERNEL("searchsorted").SetCreateFn<CpuSearchSortedKernel<OF_PP_PAIR_FIRST(in_dtype), OF_PP_PAIR_FIRST(out_dtype)>>().SetIsMatchedHob( \
-      (user_op::HobDeviceType() == DeviceType::kCPU)     \
-      && (user_op::HobDataType("sorted_sequence", 0) == OF_PP_PAIR_SECOND(in_dtype))   \
-      && (user_op::HobDataType("values", 0) == OF_PP_PAIR_SECOND(in_dtype))   \
-      && (user_op::HobDataType("out", 0) == OF_PP_PAIR_SECOND(out_dtype)));
+#define REGISTER_CPU_SEARCH_SORTED_KERNEL(in_dtype, out_dtype)                              \
+  REGISTER_USER_KERNEL("searchsorted")                                                      \
+      .SetCreateFn<                                                                         \
+          CpuSearchSortedKernel<OF_PP_PAIR_FIRST(in_dtype), OF_PP_PAIR_FIRST(out_dtype)>>() \
+      .SetIsMatchedHob(                                                                     \
+          (user_op::HobDeviceType() == DeviceType::kCPU)                                    \
+          && (user_op::HobDataType("sorted_sequence", 0) == OF_PP_PAIR_SECOND(in_dtype))    \
+          && (user_op::HobDataType("values", 0) == OF_PP_PAIR_SECOND(in_dtype))             \
+          && (user_op::HobDataType("out", 0) == OF_PP_PAIR_SECOND(out_dtype)));
 
 OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(REGISTER_CPU_SEARCH_SORTED_KERNEL, ARITHMETIC_DATA_TYPE_SEQ,
                                  INDEX_DATA_TYPE_SEQ)
-
 
 template<typename input_t, typename output_t>
 class CpuSearchSortedScalarKernel final : public user_op::OpKernel {
@@ -110,9 +115,7 @@ class CpuSearchSortedScalarKernel final : public user_op::OpKernel {
     const user_op::Tensor* sorted_sequence = ctx->Tensor4ArgNameAndIndex("sorted_sequence", 0);
     const user_op::Tensor* sorter = ctx->Tensor4ArgNameAndIndex("sorter", 0);
     const int64_t* sorter_ptr = nullptr;
-    if (sorter) {
-      sorter_ptr = sorter->dptr<int64_t>();
-    }
+    if (sorter) { sorter_ptr = sorter->dptr<int64_t>(); }
     user_op::Tensor* out = ctx->Tensor4ArgNameAndIndex("out", 0);
 
     const bool& right = ctx->Attr<bool>("right");
@@ -122,20 +125,24 @@ class CpuSearchSortedScalarKernel final : public user_op::OpKernel {
     output_t* out_ptr = out->mut_dptr<output_t>();
     output_t sequence_shape_last = sorted_sequence->shape().At(0);
 
-    output_t pos = !right ?
-      cus_lower_bound<input_t, output_t>(0, sequence_shape_last, values, sequence_ptr, sorter_ptr):
-       cus_upper_bound<input_t, output_t>(0, sequence_shape_last, values, sequence_ptr, sorter_ptr);
+    output_t pos = !right ? cus_lower_bound<input_t, output_t>(0, sequence_shape_last, values,
+                                                               sequence_ptr, sorter_ptr)
+                          : cus_upper_bound<input_t, output_t>(0, sequence_shape_last, values,
+                                                               sequence_ptr, sorter_ptr);
 
     out_ptr[0] = pos;
   }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
 
-#define REGISTER_CPU_SEARCH_SORTED_SCALAR_KERNEL(in_dtype, out_dtype)    \
-  REGISTER_USER_KERNEL("searchsorted_scalar").SetCreateFn<CpuSearchSortedScalarKernel<OF_PP_PAIR_FIRST(in_dtype), OF_PP_PAIR_FIRST(out_dtype)>>().SetIsMatchedHob( \
-      (user_op::HobDeviceType() == DeviceType::kCPU)    \
-      && (user_op::HobDataType("sorted_sequence", 0) == OF_PP_PAIR_SECOND(in_dtype))    \
-      && (user_op::HobDataType("out", 0) == OF_PP_PAIR_SECOND(out_dtype)));
+#define REGISTER_CPU_SEARCH_SORTED_SCALAR_KERNEL(in_dtype, out_dtype)                             \
+  REGISTER_USER_KERNEL("searchsorted_scalar")                                                     \
+      .SetCreateFn<                                                                               \
+          CpuSearchSortedScalarKernel<OF_PP_PAIR_FIRST(in_dtype), OF_PP_PAIR_FIRST(out_dtype)>>() \
+      .SetIsMatchedHob(                                                                           \
+          (user_op::HobDeviceType() == DeviceType::kCPU)                                          \
+          && (user_op::HobDataType("sorted_sequence", 0) == OF_PP_PAIR_SECOND(in_dtype))          \
+          && (user_op::HobDataType("out", 0) == OF_PP_PAIR_SECOND(out_dtype)));
 
 OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(REGISTER_CPU_SEARCH_SORTED_SCALAR_KERNEL, ARITHMETIC_DATA_TYPE_SEQ,
                                  INDEX_DATA_TYPE_SEQ)

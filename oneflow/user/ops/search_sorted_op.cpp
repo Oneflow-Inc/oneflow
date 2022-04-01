@@ -36,7 +36,7 @@ namespace oneflow {
 }
 
 /* static */ Maybe<void> SearchSortedOp::CheckAttr(const user_op::UserOpDefWrapper& def,
-                                              const user_op::UserOpConfWrapper& conf) {
+                                                   const user_op::UserOpConfWrapper& conf) {
   return Maybe<void>::Ok();
 }
 
@@ -49,7 +49,6 @@ namespace oneflow {
   }
   return Maybe<void>::Ok();
 }
-
 
 /* static */ Maybe<void> SearchSortedScalarOp::InferLogicalTensorDesc(user_op::InferContext* ctx) {
   *ctx->OutputShape("out", 0) = Shape({});
@@ -69,7 +68,7 @@ namespace oneflow {
 }
 
 /* static */ Maybe<void> SearchSortedScalarOp::CheckAttr(const user_op::UserOpDefWrapper& def,
-                                              const user_op::UserOpConfWrapper& conf) {
+                                                         const user_op::UserOpConfWrapper& conf) {
   return Maybe<void>::Ok();
 }
 
@@ -82,6 +81,5 @@ namespace oneflow {
   }
   return Maybe<void>::Ok();
 }
-
 
 }  // namespace oneflow
