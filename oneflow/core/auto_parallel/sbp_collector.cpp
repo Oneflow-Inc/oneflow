@@ -134,14 +134,15 @@ void SbpCollector::InitializeCopyCostFromNode2Proxy(SbpNode<NdSbpSignature>* sbp
 // Initialize copy cost from proxy of producer to consumers
 void SbpCollector::InitializeCopyCostFromProxy2Consumer(
     SbpNode<NdSbpSignature>* sbp_proxy,
-    HashMap<std::pair<std::string, std::string>, std::unordered_set<int32_t>>& consumer_bn2sbp_set,
+    const std::vector<std::pair<const OpNode*, std::string>>& consumer_bns,
     HashMap<std::string, SbpNode<NdSbpSignature>*>& op_name2sbp_node) {
   // Connect sbp proxy and consumers
-  for (const auto& consumer_bn_group : consumer_bn2sbp_set) {
+  for (const auto& consumer_bn : consumer_bns) {
     // consumer in cost model
-    SbpNode<NdSbpSignature>* sbp_node_consumer = op_name2sbp_node[consumer_bn_group.first.first];
+    SbpNode<NdSbpSignature>* sbp_node_consumer =
+        op_name2sbp_node[consumer_bn.first->op().op_name()];
     // input blob name of logical blob in consumer
-    const std::string& ibn = consumer_bn_group.first.second;
+    const std::string& ibn = consumer_bn.second;
 
     // check is_mutable in consumer
     OpNode* consumer = sbp_node_consumer->op_node;
@@ -190,6 +191,13 @@ void SbpCollector::ProxySbpCandidate(
   HashMap<std::pair<std::string, LogicalBlobId>,
           HashMap<std::pair<std::string, std::string>, std::unordered_set<int32_t>>>
       producer_lbi2consumer_bn2sbp_set;
+  // mapping from a logical blob id to index
+  HashMap<LogicalBlobId, int32_t> lbi2index;
+  // mapping from the index to producer, consuemr and corresponding input blob name, possible sbp
+  // sets
+  std::vector<const OpNode*> index2producer;
+  std::vector<std::vector<std::pair<const OpNode*, std::string>>> index2consumer_bns;
+  std::vector<std::unordered_set<int32_t>> index2sbp_set;
 
   for (auto* consumer_sbp_node : sbp_graph.NodeList) {
     auto* node = consumer_sbp_node->op_node;
@@ -209,11 +217,27 @@ void SbpCollector::ProxySbpCandidate(
 
       // not building proxy for fixed opertors
       if (op_name2sbp_node.find(producer.op().op_name()) == op_name2sbp_node.end()) { return; }
+      // decide the index of a logical blob description
+      const auto& iterator_lbi = lbi2index.find(lbi);
+      int32_t index = 0;
+      if (iterator_lbi == lbi2index.end()) {
+        index = lbi2index.size();
+        lbi2index[lbi] = index;
+        // map from lbi to the producer
+        index2producer.push_back(&producer);
+        // Initialize consumer_bns and the sbp sets
+        index2consumer_bns.resize(index + 1);
+        index2sbp_set.resize(index + 1);
+      } else {
+        index = iterator_lbi->second;
+      }
+      // Add the consumer and corresponding input blob name
+      index2consumer_bns[index].push_back({consumer_sbp_node->op_node, ibn});
+
       // a set to store the id of all possible SBP Parallel for a downstream op
       // should filter out B and other repeated SBP Parallel by pre-storing them into an
       // unordered_set
-      std::unordered_set<int32_t>& SbpParallelIDs = producer_lbi2consumer_bn2sbp_set[{
-          producer.op().op_name(), lbi}][{node->op().op_name(), ibn}];
+      std::unordered_set<int32_t>& SbpParallelIDs = index2sbp_set[index];
       // TODO: use SbpSignatureList instead of SbpSignatureObjList
       for (auto& sbp_sig : consumer_sbp_node->SbpSignatureObjList) {
         const auto& map = sbp_sig.bn_in_op2nd_sbp();
@@ -227,28 +251,28 @@ void SbpCollector::ProxySbpCandidate(
   };
 
   // A set of binary set with broadcast only
-  std::unordered_set<BinarySet, BinarySetHasher> ParallelCandidatesInitializer;
+  // std::unordered_set<BinarySet, BinarySetHasher> ParallelCandidatesInitializer;
   // BinarySet one_broadcast(SbpParallelUniverse.size());
   // one_broadcast.AddEntry(0);
   // ParallelCandidatesInitializer.insert(std::move(one_broadcast));
 
   // Decide if we should insert a proxy for each logical blob
-  for (auto& lbi7groups : producer_lbi2consumer_bn2sbp_set) {
+  for (auto& lbi_index : lbi2index) {
+    int32_t index = lbi_index.second;
     // Only insert proxy for those blobs with multiple downstream consumers.
-    if (lbi7groups.second.size() < 2) { continue; }
-    const std::string& producer_name = lbi7groups.first.first;
+    if (index2consumer_bns[index].size() < 2) { continue; }
+    // Maximum number of possible sbp in the proxy
+    int32_t max_num_sbp_proxy = std::min(max_num_sbp_proxy_, index2consumer_bns[index].size());
     // producer in cost model
+    const std::string& producer_name = index2producer[index]->op().op_name();
     SbpNode<NdSbpSignature>* sbp_node_producer = op_name2sbp_node[producer_name];
-    const LogicalBlobId& lbi = lbi7groups.first.second;
-    HashMap<std::pair<std::string, std::string>, std::unordered_set<int32_t>>& consumer_bn2sbp_set =
-        lbi7groups.second;
-    HashMap<std::pair<std::string, std::string>, std::unordered_set<int32_t>>::iterator it_begin =
-        consumer_bn2sbp_set.begin();
-    // store all the binary sets of SBP Parallel into an unordered_set.
-    std::unordered_set<BinarySet, BinarySetHasher> ParallelCandidates(
-        ParallelCandidatesInitializer);
 
-    DfsSbpSet(it_begin, consumer_bn2sbp_set, op_name2sbp_node, ParallelCandidates);
+    const LogicalBlobId& lbi = lbi_index.first;
+    // store all the binary sets of SBP Parallel into an unordered_set.
+    std::unordered_set<BinarySet, BinarySetHasher> ParallelCandidates;
+
+    DfsSbpSet(0, max_num_sbp_proxy, index2sbp_set[index], ParallelCandidates);
+
     // Initialize sbp proxy
     SbpNode<NdSbpSignature>* sbp_proxy = InitializePorxy(sbp_graph, ParallelCandidates);
     // Might be unnecessary
@@ -261,12 +285,13 @@ void SbpCollector::ProxySbpCandidate(
     InitializeCopyCostFromNode2Proxy(sbp_proxy, lbi);
 
     // Build connection and compute copy cost between proxy and consumers
-    InitializeCopyCostFromProxy2Consumer(sbp_proxy, consumer_bn2sbp_set, op_name2sbp_node);
+    InitializeCopyCostFromProxy2Consumer(sbp_proxy, index2consumer_bns[index], op_name2sbp_node);
 
     // Unloading
-    for (const auto& consumer_bn_group : consumer_bn2sbp_set) {
+    for (const auto& consumer_bn : index2consumer_bns[index]) {
       // consumer in cost model
-      SbpNode<NdSbpSignature>* sbp_node_consumer = op_name2sbp_node[consumer_bn_group.first.first];
+      SbpNode<NdSbpSignature>* sbp_node_consumer =
+          op_name2sbp_node[consumer_bn.first->op().op_name()];
       // the sbp edge connecting producer and consumer
       SbpEdge<NdSbpSignature>* edge_found =
           FindEdgeBetweenNodes(sbp_node_producer, sbp_node_consumer);
@@ -282,43 +307,23 @@ void SbpCollector::ProxySbpCandidate(
 }
 
 // Depth first search to collect Sbp Parallel information for different lbis
-void SbpCollector::DfsSbpSet(
-    HashMap<std::pair<std::string, std::string>, std::unordered_set<int32_t>>::iterator it,
-    HashMap<std::pair<std::string, std::string>, std::unordered_set<int32_t>>& consumer_bn2sbp_set,
-    HashMap<std::string, SbpNode<NdSbpSignature>*>& op_name2sbp_node,
-    std::unordered_set<BinarySet, BinarySetHasher>& ParallelCandidates) {
-  if (it == consumer_bn2sbp_set.end()) {
+void SbpCollector::DfsSbpSet(int32_t depth, int32_t max_depth,
+                             const std::unordered_set<int32_t>& sbp_sets,
+                             std::unordered_set<BinarySet, BinarySetHasher>& ParallelCandidates) {
+  if (depth > 0) {
     // store the binary set into an unordered_set
     ParallelCandidates.insert(bs_buffer);
-  } else {
-    const std::string& consumer_name = it->first.first;
-    const std::string& ibn = it->first.second;
-    SbpNode<NdSbpSignature>* consumer_sbp_node = op_name2sbp_node[consumer_name];
-    // a set to store the id of all possible SBP Parallel for a downstream op
-    // should filter out B and other repeated SBP Parallel by pre-storing them into an
-    // unordered_set
-    std::unordered_set<int32_t> SbpParallelIDs;
-    for (auto& sbp_sig : consumer_sbp_node->SbpSignatureObjList) {
-      const auto& map = sbp_sig.bn_in_op2nd_sbp();
-      const auto& iter = map.find(ibn);
-      CHECK(iter != map.end()) << "blob_name " << ibn << " not found in sbp signature";
-      const NdSbp& consumer_sbp = iter->second;
-      SbpParallelIDs.insert(SbpParallelUniverse[consumer_sbp]);
-    }
-    // next iterator
-    HashMap<std::pair<std::string, std::string>, std::unordered_set<int32_t>>::iterator it_next =
-        it;
-    ++it_next;
-    // go through all the sbp parallel of different candidates
-    for (int32_t SbpParallelNum : SbpParallelIDs) {
-      if (++accumulator[SbpParallelNum] == 1) {
-        bs_buffer.AddEntry(SbpParallelNum);
-        DfsSbpSet(it_next, consumer_bn2sbp_set, op_name2sbp_node, ParallelCandidates);
-        bs_buffer.DeleteEntry(SbpParallelNum);
-      } else {
-        DfsSbpSet(it_next, consumer_bn2sbp_set, op_name2sbp_node, ParallelCandidates);
-      }
-      accumulator[SbpParallelNum]--;
+  }
+  if (depth >= max_depth) { return; }
+
+  // go through all the sbp parallel of different candidates
+  for (int32_t SbpParallelNum : sbp_sets) {
+    if (accumulator[SbpParallelNum] == 0) {
+      bs_buffer.AddEntry(SbpParallelNum);
+      ++accumulator[SbpParallelNum];
+      DfsSbpSet(depth + 1, max_depth, sbp_sets, ParallelCandidates);
+      bs_buffer.DeleteEntry(SbpParallelNum);
+      --accumulator[SbpParallelNum];
     }
   }
 }

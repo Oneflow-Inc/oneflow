@@ -67,8 +67,7 @@ class SbpCollector {
   // Initialize copy cost from proxy of producer to consumers
   void InitializeCopyCostFromProxy2Consumer(
       SbpNode<NdSbpSignature>* sbp_proxy,
-      HashMap<std::pair<std::string, std::string>, std::unordered_set<int32_t>>&
-          consumer_bn2sbp_set,
+      const std::vector<std::pair<const OpNode*, std::string>>& consumer_bns,
       HashMap<std::string, SbpNode<NdSbpSignature>*>& op_name2sbp_node);
 
   // Export list of possible combination of Sbp Parallels
@@ -77,13 +76,12 @@ class SbpCollector {
                          SbpGraph<NdSbpSignature>& sbp_graph);
 
  private:
+  // Maximum number of possible sbp in the proxy
+  unsigned long max_num_sbp_proxy_ = 3;
+
   // Depth first search to collect Sbp Parallel information for different lbis
-  void DfsSbpSet(
-      HashMap<std::pair<std::string, std::string>, std::unordered_set<int32_t>>::iterator it,
-      HashMap<std::pair<std::string, std::string>, std::unordered_set<int32_t>>&
-          consumer_bn2sbp_set,
-      HashMap<std::string, SbpNode<NdSbpSignature>*>& op_name2sbp_node,
-      std::unordered_set<BinarySet, BinarySetHasher>& ParallelCandidates);
+  void DfsSbpSet(int32_t depth, int32_t max_depth, const std::unordered_set<int32_t>& sbp_sets,
+                 std::unordered_set<BinarySet, BinarySetHasher>& ParallelCandidates);
 };  // class SbpCollector
 
 }  // namespace auto_parallel
