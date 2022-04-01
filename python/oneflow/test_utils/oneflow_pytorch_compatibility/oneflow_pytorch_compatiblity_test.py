@@ -66,7 +66,7 @@ def get_loss(
     model_loss = []
     learning_rate = 0.01
     mom = 0.9
-    bp_iters = 100
+    bp_iters = 10
 
     for_time = 0.0
     bp_time = 0.0
@@ -155,6 +155,7 @@ def get_loss(
                     "from oneflow import Tensor",
                     "from oneflow.nn import Parameter",
                     "import math",
+                    "from flowvision.layers import *",
                 ]
                 + lines[i:]
             )

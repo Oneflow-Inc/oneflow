@@ -84,6 +84,76 @@ class TestApiCompatibility(flow.unittest.TestCase):
             test_case, "pytorch_squeezenet.py", "squeezenet1_1", "cuda", 16, 224
         )
 
+    def test_convnext_compatibility(test_case):
+        do_test_train_loss_oneflow_pytorch(
+            test_case, "pytorch_convnext.py", "convnext_tiny", "cuda", 8, 224
+        )
+
+    def test_crossformer_compatibility(test_case):
+        do_test_train_loss_oneflow_pytorch(
+            test_case,
+            "pytorch_crossformer.py",
+            "crossformer_tiny_patch4_group7_224",
+            "cuda",
+            8,
+            224,
+        )
+
+    def test_efficientnet_compatibility(test_case):
+        do_test_train_loss_oneflow_pytorch(
+            test_case,
+            "pytorch_efficientnet.py",
+            "efficientnet_b0",
+            "cuda",
+            8,
+            224,
+        )
+
+    def test_levit_compatibility(test_case):
+        do_test_train_loss_oneflow_pytorch(
+            test_case, "pytorch_levit.py", "LeViT_128S", "cuda", 8, 224,
+        )
+
+    def test_mlp_mixer_compatibility(test_case):
+        do_test_train_loss_oneflow_pytorch(
+            test_case, "pytroch_mlp_mixer.py", "mixer_s32_224", "cuda", 8, 224,
+        )
+
+    def test_poolformer_compatibility(test_case):
+        do_test_train_loss_oneflow_pytorch(
+            test_case, "pytorch_poolformer.py", "poolformer_s12", "cuda", 8, 224,
+        )
+
+    def test_pvt_compatibility(test_case):
+        do_test_train_loss_oneflow_pytorch(
+            test_case, "pytorch_pvt.py", "pvt_tiny", "cuda", 8, 224,
+        )
+
+    def test_resmlp_compatibility(test_case):
+        do_test_train_loss_oneflow_pytorch(
+            test_case, "pytorch_resmlp.py", "resmlp_12", "cuda", 8, 224,
+        )
+
+    def test_uniformer_compatibility(test_case):
+        do_test_train_loss_oneflow_pytorch(
+            test_case, "pytorch_uniformer.py", "uniformer_small", "cuda", 8, 224,
+        )
+
+    def test_swin_transformer_compatibility(test_case):
+        do_test_train_loss_oneflow_pytorch(
+            test_case,
+            "pytorch_swin_transformer.py",
+            "swin_tiny_patch4_window7_224",
+            "cuda",
+            8,
+            224,
+        )
+
+    def test_senet_compatibility(test_case):
+        do_test_train_loss_oneflow_pytorch(
+            test_case, "pytorch_senet.py", "senet154", "cuda", 2, 224,
+        )
+
 
 if __name__ == "__main__":
     unittest.main()

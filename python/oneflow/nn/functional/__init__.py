@@ -50,7 +50,7 @@ from oneflow._C import softplus
 from oneflow._C import tanh
 from oneflow._C import silu
 from oneflow._C import mish
-from oneflow._C import layer_norm
+from oneflow.nn.modules.normalization import layer_norm
 from oneflow._C import dropout
 from oneflow._C import smooth_l1_loss
 from oneflow._C import pad
