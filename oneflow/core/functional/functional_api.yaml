@@ -2065,3 +2065,4 @@
 - name: "isinf"
   signature: "Tensor (Tensor input) => IsInf"
   bind_python: True
+  
