@@ -56,7 +56,7 @@ double RocAucScore(size_t n, const L* label, const P* pred, float* buffer) {
   double rank_sum = 0;
   size_t tmp_p_samples_count = 0;
   for (size_t i = 0; i < n; ++i) {
-    if (i != 0 && fabs(buffer[i]) == fabs(buffer[i - 1])) {
+    if (i != 0 && fabs(buffer[i]) != fabs(buffer[i - 1])) {
       rank_sum += tmp_p_samples_count * (tmp_rank_sum / tmp_n);
       tmp_n = 0;
       tmp_rank_sum = 0;
@@ -106,7 +106,7 @@ class RocAucScoreKernel final : public user_op::OpKernel {
         return tmp_buffer_size;                                                             \
       })
 REGISTER_ROC_AUC_SCORE_KERNEL(DataType::kFloat, float, DataType::kFloat, float);
-REGISTER_ROC_AUC_SCORE_KERNEL(DataType::kInt, float, DataType::kFloat, float);
+REGISTER_ROC_AUC_SCORE_KERNEL(DataType::kInt32, int, DataType::kFloat, float);
 
 }  // namespace
 
