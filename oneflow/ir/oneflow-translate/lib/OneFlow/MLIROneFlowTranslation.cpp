@@ -790,7 +790,6 @@ LogicalResult ApplyRoundTripPatterns(RoundTripOneFlowJobWrapperInterface& job_wr
     module->emitError("Failed to run round-trip passes");
     return failure();
   }
-  module->dump();
   job_wrapper.DumpLog("RoundTripOneFlowJob.optimized.mlir.dot", graphviz);
   DumpMLIR(job_wrapper, module.get(), "RoundTripOneFlowJob.optimized");
   return success();
