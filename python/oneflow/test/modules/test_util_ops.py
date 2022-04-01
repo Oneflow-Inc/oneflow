@@ -21,20 +21,20 @@ from oneflow.test_utils.automated_test_util import *
 from oneflow.test_utils.test_util import GenArgList
 
 
-def _test_isnan(test_case, shape, device):
+def _test_isnan(test_case, shape, dtype, device):
     np_array = np.random.randn(*shape)
     mask = np.random.choice([1, 0], np_array.shape, p=[0.1, 0.9]).astype(bool)
     np_array[mask] = np.nan
-    of_tensor = flow.tensor(np_array)
+    of_tensor = flow.tensor(np_array, dtype=dtype, device=device)
     res = flow.isnan(of_tensor)
     test_case.assertTrue(np.allclose(res.numpy(), np.isnan(np_array)))
 
 
-def _test_isinf(test_case, shape, device):
+def _test_isinf(test_case, shape, dtype, device):
     np_array = np.random.randn(*shape)
     mask = np.random.choice([1, 0], np_array.shape, p=[0.1, 0.9]).astype(bool)
     np_array[mask] = np.inf
-    of_tensor = flow.tensor(np_array)
+    of_tensor = flow.tensor(np_array, dtype=dtype, device=device)
     res = flow.isinf(of_tensor)
     test_case.assertTrue(np.allclose(res.numpy(), np.isinf(np_array)))
 
@@ -45,6 +45,7 @@ class TestUtilOps(flow.unittest.TestCase):
         arg_dict = OrderedDict()
         arg_dict["test_fun"] = [_test_isnan, _test_isinf]
         arg_dict["shape"] = [(2, 3, 4), (1, 2, 3)]
+        arg_dict["dtype"] = [flow.float, flow.int]
         arg_dict["device"] = ["cpu", "cuda"]
         for arg in GenArgList(arg_dict):
             arg[0](test_case, *arg[1:])
