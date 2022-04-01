@@ -176,5 +176,5 @@ OneFlow Tensor Class
             var, 
             view, 
             where, 
-            zeros_, 
+            zero_, 
             nms,
