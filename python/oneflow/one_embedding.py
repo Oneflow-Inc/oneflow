@@ -71,7 +71,8 @@ class MultiTableEmbedding(Module):
         >>> import oneflow as flow
         >>> import numpy as np
         >>> import oneflow.nn as nn
-        >>> table_size_array = [39884407,39043,17289,7420,20263,3,7120,1543,63,38532952,2953546,403346,10,2208,11938,155,4,976,14,39979772,25641295,39664985,585935,12972,108,36]
+        >>> # a simple example with 3 table
+        >>> table_size_array = [39884407,39043,17289]
         >>> vocab_size = sum(table_size_array)
         >>> num_tables = len(table_size_array)
         >>> embedding_size = 128
@@ -271,7 +272,17 @@ class MultiTableEmbedding(Module):
         """save snapshot
 
         Args:
-            snapshot_name (str): save snapshot to
+            snapshot_name (str): the snapshot_name, snapshot will be saved in persistent_path/rank_id-num_rank/snapshots path
+    
+        For example:
+
+        .. code-block:: python
+
+            >>> import oneflow as flow
+            >>> # use embedding create by flow.one_embedding.MultiTableEmbedding
+            >>> embedding.save_snapshot("my_snapshot1")
+            >>> # a snapshot named "my_snapshot1" have been saved to  your_configed_persistent_path/rank_id-num_rank/snapshots
+            >>> # can be reload by flow.one_embedding.load_snapshot
         """
         self.handler.SaveSnapshot(snapshot_name)
 
@@ -279,7 +290,16 @@ class MultiTableEmbedding(Module):
         """load snapshot
 
         Args:
-            snapshot_name (str): load snapshot from
+            snapshot_name (str): the snapshot_name, snapshot will be load from persistent_path/rank_id-num_rank/snapshots path
+    
+        For example:
+
+        .. code-block:: python
+
+            >>> import oneflow as flow
+            >>> # use embedding create by flow.one_embedding.MultiTableEmbedding
+            >>> embedding.load_snapshot("my_snapshot1")
+            >>> # load a snapshot named "my_snapshot1" from your_configed_persistent_path/rank_id-num_rank/snapshots
         """
         self.handler.LoadSnapshot(snapshot_name)
 
@@ -310,7 +330,18 @@ def make_device_mem_store_options(
 
     Returns:
         dict: GPU only store_options param of MultiTableEmbedding
+    
+    For example:
+
+    .. code-block:: python
+
+        >>> import oneflow as flow
+        >>> store_options = flow.one_embedding.make_device_mem_store_options(
+        >>>     persistent_path="/your_path_to_ssd", capacity=vocab_size,
+        >>> )
+        >>> # pass the store_options to the "store_options" param of flow.one_embedding.MultiTableEmbedding
     """
+
     assert isinstance(persistent_path, (str, list, tuple))
     assert capacity > 0
     options = {
@@ -351,6 +382,17 @@ def make_cached_ssd_store_options(
 
     Returns:
         dict: SSD use GPU as cache store_options param of MultiTableEmbedding
+    
+    For example:
+
+    .. code-block:: python
+
+        >>> import oneflow as flow    
+        >>> vocab_size = 1000
+        >>> store_options = flow.one_embedding.make_cached_ssd_store_options(
+        >>>     cache_budget_mb=8192, persistent_path="/your_path_to_ssd", capacity=vocab_size,
+        >>> )
+        >>> # pass the store_options to the "store_options" param of flow.one_embedding.MultiTableEmbedding
     """
     assert isinstance(persistent_path, (str, list, tuple))
     assert cache_budget_mb > 0
@@ -392,6 +434,17 @@ def make_cached_host_mem_store_options(
 
     Returns:
         dict: host use GPU as cache store_options param of MultiTableEmbedding
+    
+    For example:
+
+    .. code-block:: python
+
+        >>> import oneflow as flow    
+        >>> vocab_size = 1000
+        >>> store_options = flow.one_embedding.make_cached_host_mem_store_options(
+        >>>     cache_budget_mb=8192, persistent_path="/your_path_to_ssd", capacity=vocab_size,
+        >>> )
+        >>> # pass the store_options to the "store_options" param of flow.one_embedding.MultiTableEmbedding
     """
     assert isinstance(persistent_path, (str, list, tuple))
     assert cache_budget_mb > 0
@@ -430,6 +483,14 @@ def make_uniform_initializer(low, high):
 
     Returns:
         dict: initializer param of make_table
+    
+    For example:
+
+    .. code-block:: python
+
+        >>> import oneflow as flow
+        >>> initializer = flow.one_embedding.make_uniform_initializer(low=-scale, high=scale)
+        >>> # pass the initializer to flow.one_embedding.make_table
     """
     return {"type": "uniform", "low": low, "high": high}
 
@@ -442,7 +503,15 @@ def make_normal_initializer(mean, std):
         std (float): A python scalar. Standard deviation of the random values to generate.
 
     Returns:
-        dict: initializer param of make_table
+        dict: initializer param of make_table    
+    
+    For example:
+
+    .. code-block:: python
+
+        >>> import oneflow as flow
+        >>> initializer = flow.one_embedding.make_normal_initializer(mean=0, std=0.01)
+        >>> # pass the initializer to flow.one_embedding.make_table
     """
     return {"type": "normal", "mean": mean, "std": std}
 
@@ -455,5 +524,17 @@ def make_table(initializer):
 
     Returns:
         dict: table param of MultiTableEmbedding tables
+    
+    For example:
+
+    .. code-block:: python
+
+        >>> import oneflow as flow
+        >>> initializer = flow.one_embedding.make_uniform_initializer(low=-scale, high=scale)
+        >>> table1 = flow.one_embedding.make_table(initializer)
+        >>> table2 = flow.one_embedding.make_table(initializer)
+        >>> tables = [table1, table2]
+        >>> # pass the tables to the "tables" param of flow.one_embedding.MultiTableEmbedding
+        
     """
     return {"initializer": initializer}
