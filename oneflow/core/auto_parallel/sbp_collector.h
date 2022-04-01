@@ -81,6 +81,7 @@ class SbpCollector {
 
   // Depth first search to collect Sbp Parallel information for different lbis
   void DfsSbpSet(int32_t depth, int32_t max_depth, const std::unordered_set<int32_t>& sbp_sets,
+                 const std::unordered_set<int32_t>::iterator sbp_set_it,
                  std::unordered_set<BinarySet, BinarySetHasher>& ParallelCandidates);
 };  // class SbpCollector
 

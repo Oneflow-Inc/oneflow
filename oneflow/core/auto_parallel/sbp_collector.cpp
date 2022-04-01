@@ -271,7 +271,8 @@ void SbpCollector::ProxySbpCandidate(
     // store all the binary sets of SBP Parallel into an unordered_set.
     std::unordered_set<BinarySet, BinarySetHasher> ParallelCandidates;
 
-    DfsSbpSet(0, max_num_sbp_proxy, index2sbp_set[index], ParallelCandidates);
+    DfsSbpSet(0, max_num_sbp_proxy, index2sbp_set[index], index2sbp_set[index].begin(),
+              ParallelCandidates);
 
     // Initialize sbp proxy
     SbpNode<NdSbpSignature>* sbp_proxy = InitializePorxy(sbp_graph, ParallelCandidates);
@@ -309,6 +310,7 @@ void SbpCollector::ProxySbpCandidate(
 // Depth first search to collect Sbp Parallel information for different lbis
 void SbpCollector::DfsSbpSet(int32_t depth, int32_t max_depth,
                              const std::unordered_set<int32_t>& sbp_sets,
+                             const std::unordered_set<int32_t>::iterator start_it,
                              std::unordered_set<BinarySet, BinarySetHasher>& ParallelCandidates) {
   if (depth > 0) {
     // store the binary set into an unordered_set
@@ -316,12 +318,17 @@ void SbpCollector::DfsSbpSet(int32_t depth, int32_t max_depth,
   }
   if (depth >= max_depth) { return; }
 
-  // go through all the sbp parallel of different candidates
-  for (int32_t SbpParallelNum : sbp_sets) {
+  // go through the rest of the sbp parallel
+  std::unordered_set<int32_t>::iterator curr_it = start_it;
+  while (curr_it != sbp_sets.end()) {
+    // Take the value out
+    int32_t SbpParallelNum = *curr_it;
+    // Then move to the next pointer
+    ++curr_it;
     if (accumulator[SbpParallelNum] == 0) {
       bs_buffer.AddEntry(SbpParallelNum);
       ++accumulator[SbpParallelNum];
-      DfsSbpSet(depth + 1, max_depth, sbp_sets, ParallelCandidates);
+      DfsSbpSet(depth + 1, max_depth, sbp_sets, curr_it, ParallelCandidates);
       bs_buffer.DeleteEntry(SbpParallelNum);
       --accumulator[SbpParallelNum];
     }
