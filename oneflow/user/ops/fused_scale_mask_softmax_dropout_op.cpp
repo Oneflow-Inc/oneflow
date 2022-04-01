@@ -37,7 +37,7 @@ namespace oneflow {
     -> Maybe<void> {
   const user_op::TensorDesc& x_desc = ctx->InputTensorDesc("x", 0);
   const user_op::TensorDesc& mask_desc = ctx->InputTensorDesc("mask", 0);
-  CHECK_OR_RETURN(mask_desc.data_type() == DataType::kInt8);
+  CHECK_OR_RETURN(mask_desc.data_type() == DataType::kBool);
   *ctx->OutputDType("y", 0) = x_desc.data_type();
   *ctx->OutputDType("softmax_y", 0) = x_desc.data_type();
   return Maybe<void>::Ok();
@@ -90,7 +90,7 @@ namespace oneflow {
   const user_op::TensorDesc& dy_desc = ctx->InputTensorDesc("dy", 0);
   const user_op::TensorDesc& mask_desc = ctx->InputTensorDesc("mask", 0);
   CHECK_OR_RETURN(dy_desc.data_type() == softmax_y_desc.data_type());
-  CHECK_OR_RETURN(mask_desc.data_type() == DataType::kInt8);
+  CHECK_OR_RETURN(mask_desc.data_type() == DataType::kBool);
   user_op::TensorDesc* dx_desc = ctx->OutputTensorDesc("dx", 0);
   *dx_desc->mut_data_type() = dy_desc.data_type();
   return Maybe<void>::Ok();

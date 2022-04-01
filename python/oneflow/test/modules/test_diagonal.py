@@ -23,7 +23,7 @@ from oneflow.test_utils.automated_test_util import *
 
 @flow.unittest.skip_unless_1n1d()
 class TestDiagonal(flow.unittest.TestCase):
-    @autotest(n=40, check_graph=True)
+    @autotest(n=10, check_graph=True)
     def test_flow_diagonal_with_random_data(test_case):
         device = random_device()
         offset = random(-5, 5).to(int)
@@ -40,7 +40,7 @@ class TestDiagonal(flow.unittest.TestCase):
         z = torch.diagonal(x, offset, dim1, dim2)
         return z
 
-    @autotest(auto_backward=False, n=40, check_graph=True)
+    @autotest(auto_backward=False, n=10, check_graph=True)
     def test_flow_diagonal_with_random_data(test_case):
         device = random_device()
         offset = random(-5, 5).to(int)

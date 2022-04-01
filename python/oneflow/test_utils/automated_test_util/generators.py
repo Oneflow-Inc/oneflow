@@ -541,6 +541,25 @@ class random_sbp(all_sbp):
         return random_util.choice(self._calc_all_sbp())
 
 
+@data_generator(torch.Tensor)
+class choice_pytorch_tensor(generator):
+    def __init__(self, a, size=None, replace=True, p=None, dtype=int):
+        self.a = a
+        self.size = size
+        self.replace = replace
+        self.p = p
+        self.dtype = dtype
+        super().__init__(
+            [self.a, self.size, self.replace, self.p, self.dtype,]
+        )
+
+    def _calc_value(self):
+        pytorch_tensor = None
+        np_arr = np.random.choice(self.a, self.size, self.replace, self.p)
+        torch_dtype = None
+        return torch.tensor(np_arr.astype(self.dtype))
+
+
 __all__ = [
     "random_pytorch_tensor",
     "random_bool",
@@ -558,4 +577,5 @@ __all__ = [
     "oneof",
     "constant",
     "nothing",
+    "choice_pytorch_tensor",
 ]

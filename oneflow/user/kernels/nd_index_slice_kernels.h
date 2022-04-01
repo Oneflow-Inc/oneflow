@@ -141,11 +141,12 @@ void TensorScatterNdAddKernel<device_type, T, I>::Compute(
       .SetIsMatchedHob((user_op::HobDeviceType() == device_type_v)                              \
                        && (user_op::HobDataType("indices", 0) == OF_PP_PAIR_SECOND(itype_pair)) \
                        && (user_op::HobDataType("out", 0) == OF_PP_PAIR_SECOND(dtype_pair)))    \
-      .SetInplaceProposalFn([](const user_op::InferContext&,                                    \
-                               user_op::AddInplaceArgPair AddInplaceArgPairFn) -> Maybe<void> { \
-        OF_RETURN_IF_ERROR(AddInplaceArgPairFn("out", 0, "params", 0, true));                   \
-        return Maybe<void>::Ok();                                                               \
-      });
+      .SetInplaceProposalFn(                                                                    \
+          [](const user_op::InferContext&,                                                      \
+             const user_op::AddInplaceArgPair& AddInplaceArgPairFn) -> Maybe<void> {            \
+            OF_RETURN_IF_ERROR(AddInplaceArgPairFn("out", 0, "params", 0, true));               \
+            return Maybe<void>::Ok();                                                           \
+          });
 
 #define REGISTER_GATHER_ND_KERNELS(device_type_v, dtype_pair, itype_pair) \
   REGISTER_GATHER_SCATTER_ND_KERNELS(gather_nd, GatherNd, device_type_v, dtype_pair, itype_pair)

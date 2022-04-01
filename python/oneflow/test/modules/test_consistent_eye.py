@@ -21,7 +21,7 @@ from oneflow.test_utils.automated_test_util import *
 
 
 @autotest(n=1, auto_backward=False, check_graph=False)
-def test_eye_impl(test_case, placement, sbp):
+def do_test_eye_impl(test_case, placement, sbp):
     n = random(1, 5).to(int).value() * 8
     m = random(1, 5).to(int).value() * 8
     x = torch.eye(n, m)
@@ -40,7 +40,7 @@ class TestEyeConsistent(flow.unittest.TestCase):
         shape = random_tensor().shape
         for placement in all_placement():
             for sbp in all_sbp(placement, max_dim=2):
-                test_eye_impl(test_case, placement, sbp)
+                do_test_eye_impl(test_case, placement, sbp)
 
 
 if __name__ == "__main__":

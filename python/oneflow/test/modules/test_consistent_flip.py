@@ -17,7 +17,7 @@ import unittest
 from collections import OrderedDict
 
 import numpy as np
-from test_util import GenArgList
+from oneflow.test_utils.test_util import GenArgList
 
 import oneflow as flow
 import oneflow.unittest
@@ -26,7 +26,7 @@ from oneflow.test_utils.automated_test_util import *
 
 
 @autotest(n=1, check_graph=False)
-def test_flip_impl(test_case, ndim, placement, sbp):
+def _test_flip_impl(test_case, ndim, placement, sbp):
     dims = [random(1, 4) * 8 for i in range(ndim)]
     x = random_tensor(ndim, *dims)
     y = x.to_global(placement=placement, sbp=sbp)
@@ -42,7 +42,7 @@ class TestFlipConsistent(flow.unittest.TestCase):
         ndim = random(1, 5).to(int).value()
         for placement in all_placement():
             for sbp in all_sbp(placement, max_dim=ndim):
-                test_flip_impl(test_case, ndim, placement, sbp)
+                _test_flip_impl(test_case, ndim, placement, sbp)
 
 
 if __name__ == "__main__":

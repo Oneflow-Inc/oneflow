@@ -44,15 +44,15 @@ struct GeluFunctor<half> {
 
 template<typename T>
 struct MaskAndScaleFunctor {
-  MaskAndScaleFunctor(const int8_t* mask, float scale) : mask(mask), scale(scale) {}
+  MaskAndScaleFunctor(const bool* mask, float scale) : mask(mask), scale(scale) {}
   __device__ T Compute(T x, int64_t i) const { return x * static_cast<T>(mask[i]) * scale; }
-  const int8_t* mask;
+  const bool* mask;
   float scale;
 };
 
 template<>
 struct MaskAndScaleFunctor<half> {
-  MaskAndScaleFunctor(const int8_t* mask, float scale) : mask(mask), scale(scale) {}
+  MaskAndScaleFunctor(const bool* mask, float scale) : mask(mask), scale(scale) {}
   __device__ half Compute(half x, int64_t i) const {
     return x * static_cast<half>(mask[i] * scale);
   }
@@ -65,25 +65,25 @@ struct MaskAndScaleFunctor<half> {
     one_or_zero_h2.y = mask_val.y;
     return __hmul2(__hmul2(x, one_or_zero_h2), h2_scale);
   }
-  const int8_t* mask;
+  const bool* mask;
   float scale;
 };
 
 template<typename T>
 struct MaskAndScaleAddFunctor {
-  MaskAndScaleAddFunctor(const int8_t* mask, const T* addend, float scale)
+  MaskAndScaleAddFunctor(const bool* mask, const T* addend, float scale)
       : mask(mask), addend(addend), scale(scale) {}
   __device__ T Compute(T x, int64_t i) const {
     return x * static_cast<T>(mask[i]) * scale + addend[i];
   }
-  const int8_t* mask;
+  const bool* mask;
   const T* addend;
   float scale;
 };
 
 template<>
 struct MaskAndScaleAddFunctor<half> {
-  MaskAndScaleAddFunctor(const int8_t* mask, const half* addend, float scale)
+  MaskAndScaleAddFunctor(const bool* mask, const half* addend, float scale)
       : mask(mask), addend(addend), scale(scale) {}
   __device__ half Compute(half x, int64_t i) const {
     return x * static_cast<half>(mask[i] * scale) + addend[i];
@@ -98,7 +98,7 @@ struct MaskAndScaleAddFunctor<half> {
     one_or_zero_h2.y = mask_val.y;
     return __hadd2(__hmul2(__hmul2(x, one_or_zero_h2), h2_scale), addend_h2[i]);
   }
-  const int8_t* mask;
+  const bool* mask;
   const half* addend;
   float scale;
 };
@@ -383,13 +383,13 @@ class FusedBiasAddMaskScaleKernel final : public user_op::OpKernel {
     const auto n = a_tensor->shape().elem_cnt();
     if (ctx->has_input("_add_to_output", 0)) {
       const user_op::Tensor* addend = ctx->Tensor4ArgNameAndIndex("_add_to_output", 0);
-      MaskAndScaleAddFunctor<T> mask_and_scale_add_functor(mask_tensor->dptr<int8_t>(),
+      MaskAndScaleAddFunctor<T> mask_and_scale_add_functor(mask_tensor->dptr<bool>(),
                                                            addend->dptr<T>(), scale);
       DispatchFusedBiasAddForwardImpl<decltype(mask_and_scale_add_functor), T>(
           ctx->stream(), mask_and_scale_add_functor, n, outer_size, bias_size, inner_size,
           a_tensor->dptr<T>(), b_tensor->dptr<T>(), out_tensor->mut_dptr<T>());
     } else {
-      MaskAndScaleFunctor<T> mask_and_scale_functor(mask_tensor->dptr<int8_t>(), scale);
+      MaskAndScaleFunctor<T> mask_and_scale_functor(mask_tensor->dptr<bool>(), scale);
       DispatchFusedBiasAddForwardImpl<decltype(mask_and_scale_functor), T>(
           ctx->stream(), mask_and_scale_functor, n, outer_size, bias_size, inner_size,
           a_tensor->dptr<T>(), b_tensor->dptr<T>(), out_tensor->mut_dptr<T>());

@@ -96,10 +96,9 @@ Maybe<void> AutogradInterpreter::Apply(const OpExpr& op_expr, const TensorTuple&
     JUST(internal_->Apply(op_expr, inputs, outputs, ctx));
   }
   // Lazy mode will construct backward compute graph in passes, so disable autograd if lazy mode.
+  std::shared_ptr<OpExprGradClosure> grad_closure(nullptr);
   if (requires_grad && !LazyMode::is_enabled()) {
-    const auto& grad_closure = JUST(op_expr.GetOrCreateOpGradClosure());
-    JUST(grad_closure->Capture(inputs, *outputs, ctx));
-
+    grad_closure = JUST(op_expr.GetOrCreateOpGradClosure());
     auto backward_fn =
         std::make_shared<std::function<Maybe<void>(const TensorTuple&, TensorTuple*, bool)>>(
             [=](const TensorTuple& out_grads, TensorTuple* in_grads,
@@ -111,6 +110,10 @@ Maybe<void> AutogradInterpreter::Apply(const OpExpr& op_expr, const TensorTuple&
     JUST(GetThreadLocalAutogradEngine()->AddBackwardFuncPtr(op_expr.op_type_name() + "_backward",
                                                             backward_fn, inputs, outputs));
   }
+  // Update outputs autograd meta
+  // Note: if requires_grad is True, we will create a new autograd meta for each output
+  // in `AddBackwardFuncPtr` to support inplace operation, so the update should after
+  // `AddBackwardFuncPtr`
   for (auto& output : *outputs) {
     output->set_is_leaf(inputs.size() == 0 || !requires_grad);
     // If the output `requires_grad` is true, it means that the output is inplaced.
@@ -137,6 +140,11 @@ Maybe<void> AutogradInterpreter::Apply(const OpExpr& op_expr, const TensorTuple&
       JUST(output->set_requires_grad(
           requires_grad && IsSupportRequireGradDataType(output->dtype()->data_type())));
     }
+  }
+  if (requires_grad && !LazyMode::is_enabled()) {
+    // Capture inputs and outputs after `AddBackwardFuncPtr` because of that grad function
+    // node has been attached to them.
+    JUST(grad_closure->Capture(inputs, *outputs, ctx));
   }
   return Maybe<void>::Ok();
 }

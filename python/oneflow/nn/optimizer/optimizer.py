@@ -46,8 +46,13 @@ class ParamGroup(object):
                 )
 
         self._options = deepcopy(default_options)
+        # rewrite options in default_options
         for key in self._options:
             if key in parameters:
+                self._options[key] = parameters[key]
+        # add excess keys in dict
+        for key in parameters:
+            if key not in self._options and key != "params":
                 self._options[key] = parameters[key]
 
         self._enable_clip_grad = False
@@ -87,7 +92,7 @@ class _SourceOpOnlyResourceDependenceMode:
 
     def __enter__(self):
         self.guard = (
-            flow._oneflow_internal.eager.multi_client.SourceOpOnlyResourceDependenceModeGuard()
+            flow._oneflow_internal.eager.SourceOpOnlyResourceDependenceModeGuard()
         )
 
     def __exit__(self, *args, **kwargs):

@@ -116,6 +116,7 @@ class OpGraph final : public Graph<OpNode, OpEdge> {
 
   void ForEachDataAndCtrlInNode(OpNode* node, const std::function<void(OpNode*)>& Handler) const;
   void ForEachDataAndCtrlOutNode(OpNode* node, const std::function<void(OpNode*)>& Handler) const;
+  void TopoForEachNodeWithCtrlEdge(const std::function<void(OpNode*)>& NodeHandler) const;
   // NOTE(chengcheng): For topo for each with ctrl edges. OpEdge is ONLY data edge.
   std::list<OpNode*> DataOrCtrlSourceNodes() const;
 

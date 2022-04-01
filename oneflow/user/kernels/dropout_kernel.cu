@@ -128,15 +128,15 @@ __device__ Pack2Type<nv_bfloat16> Make2<nv_bfloat16>(float v) {
 template<typename T, int pack_size, bool tail, bool has_addend>
 __global__ RETURN_VOID_IF_FLOAT FusedDropoutAddGpu(
     uint64_t seed, one::CUDAGeneratorState* cuda_gen_state, uint64_t inc_offset,
-    const int64_t elem_cnt, float rate, float scale, int64_t n_tail, const T* x, int8_t* mask,
-    const T* addend, T* y, const T* tail_x, int8_t* tail_mask, const T* tail_addend, T* tail_y) {
+    const int64_t elem_cnt, float rate, float scale, int64_t n_tail, const T* x, bool* mask,
+    const T* addend, T* y, const T* tail_x, bool* tail_mask, const T* tail_addend, T* tail_y) {
   int32_t global_thread_id = blockIdx.x * blockDim.x + threadIdx.x;
   curandStatePhilox4_32_10_t state;
   curand_init(seed, global_thread_id, cuda_gen_state->dev_offset, &state);
   using LoadType = cuda::elementwise::PackType<T, pack_size>;
   using LoadPack = cuda::elementwise::Pack<T, pack_size>;
-  using MaskType = cuda::elementwise::PackType<int8_t, pack_size>;
-  using MaskPack = cuda::elementwise::Pack<int8_t, pack_size>;
+  using MaskType = cuda::elementwise::PackType<bool, pack_size>;
+  using MaskPack = cuda::elementwise::Pack<bool, pack_size>;
 
   T t_scale = static_cast<T>(scale);
   RandPack4 rand_uniform_pack4;
@@ -170,7 +170,7 @@ __global__ RETURN_VOID_IF_FLOAT FusedDropoutAddGpu(
 
   if (tail && global_thread_id < n_tail) {
     const float rand_uniform = curand_uniform(&state);
-    const int8_t mask_val = rand_uniform > rate;
+    const bool mask_val = rand_uniform > rate;
     tail_mask[global_thread_id] = mask_val;
     T tmp_float_mask = static_cast<float>(mask_val);
     T tmp_tail_out = tail_x[global_thread_id] * tmp_float_mask * t_scale;
@@ -192,8 +192,8 @@ __global__ RETURN_VOID_IF_FLOAT FusedDropoutAddGpu(
 template<typename T, int pack_size, bool tail, bool has_addend>
 __global__ RETURN_VOID_IF_HALF FusedDropoutAddGpu(
     uint64_t seed, one::CUDAGeneratorState* cuda_gen_state, uint64_t inc_offset,
-    const int64_t elem_cnt, float rate, float scale, int64_t n_tail, const T* x, int8_t* mask,
-    const T* addend, T* y, const T* tail_x, int8_t* tail_mask, const T* tail_addend, T* tail_y) {
+    const int64_t elem_cnt, float rate, float scale, int64_t n_tail, const T* x, bool* mask,
+    const T* addend, T* y, const T* tail_x, bool* tail_mask, const T* tail_addend, T* tail_y) {
   int32_t global_thread_id = blockIdx.x * blockDim.x + threadIdx.x;
   curandStatePhilox4_32_10_t state;
   curand_init(seed, global_thread_id, cuda_gen_state->dev_offset, &state);
@@ -201,8 +201,8 @@ __global__ RETURN_VOID_IF_HALF FusedDropoutAddGpu(
   using LoadPack = cuda::elementwise::Pack<T, pack_size>;
   using StoreType = cuda::elementwise::PackType<Pack2Type<T>, pack_size / 2>;
   using StorePack = cuda::elementwise::Pack<Pack2Type<T>, pack_size / 2>;
-  using MaskType = cuda::elementwise::PackType<int8_t, pack_size>;
-  using MaskPack = cuda::elementwise::Pack<int8_t, pack_size>;
+  using MaskType = cuda::elementwise::PackType<bool, pack_size>;
+  using MaskPack = cuda::elementwise::Pack<bool, pack_size>;
 
   RandPack4 rand_uniform_pack4;
   Pack2Type<T> h2_scale = Make2<T>(scale);
@@ -251,7 +251,7 @@ __global__ RETURN_VOID_IF_HALF FusedDropoutAddGpu(
 
   if (tail && global_thread_id < n_tail) {
     const float rand_uniform = curand_uniform(&state);
-    const int8_t mask_val = rand_uniform > rate;
+    const bool mask_val = rand_uniform > rate;
     tail_mask[global_thread_id] = mask_val;
     float tmp_half_mask = static_cast<float>(mask_val);
     T tmp_tail_out = tail_x[global_thread_id] * static_cast<T>(tmp_half_mask) * h2_scale.x;
@@ -272,15 +272,15 @@ __global__ RETURN_VOID_IF_HALF FusedDropoutAddGpu(
 template<typename T, int pack_size, bool tail, bool has_addend>
 __global__ RETURN_VOID_IF_DOUBLE FusedDropoutAddGpu(
     uint64_t seed, one::CUDAGeneratorState* cuda_gen_state, uint64_t inc_offset,
-    const int64_t elem_cnt, float rate, float scale, int64_t n_tail, const T* x, int8_t* mask,
-    const T* addend, T* y, const T* tail_x, int8_t* tail_mask, const T* tail_addend, T* tail_y) {
+    const int64_t elem_cnt, float rate, float scale, int64_t n_tail, const T* x, bool* mask,
+    const T* addend, T* y, const T* tail_x, bool* tail_mask, const T* tail_addend, T* tail_y) {
   int32_t global_thread_id = blockIdx.x * blockDim.x + threadIdx.x;
   curandStatePhilox4_32_10_t state;
   curand_init(seed, global_thread_id, cuda_gen_state->dev_offset, &state);
   using LoadType = cuda::elementwise::PackType<T, pack_size>;
   using LoadPack = cuda::elementwise::Pack<T, pack_size>;
-  using MaskType = cuda::elementwise::PackType<int8_t, pack_size>;
-  using MaskPack = cuda::elementwise::Pack<int8_t, pack_size>;
+  using MaskType = cuda::elementwise::PackType<bool, pack_size>;
+  using MaskPack = cuda::elementwise::Pack<bool, pack_size>;
 
   RandPack4 rand_uniform_pack4;
   bool grid_loop_rand_state = 0;
@@ -320,7 +320,7 @@ __global__ RETURN_VOID_IF_DOUBLE FusedDropoutAddGpu(
 
   if (tail && global_thread_id < n_tail) {
     const float rand_uniform = curand_uniform(&state);
-    const int8_t mask_val = rand_uniform > rate;
+    const bool mask_val = rand_uniform > rate;
     tail_mask[global_thread_id] = mask_val;
     double tmp_tail_out = tail_x[global_thread_id] * mask_val * scale;
     if (has_addend) { tmp_tail_out += tail_addend[global_thread_id]; }
@@ -351,7 +351,7 @@ unsigned int ComputeGridSize(ep::Stream* stream, const int32_t block_size, const
 
 template<typename T, bool has_addend>
 void DispatchTail(ep::Stream* stream, uint64_t seed, one::CUDAGeneratorState* cuda_gen_state,
-                  const int64_t elem_cnt, float rate, float scale, const T* x, int8_t* mask,
+                  const int64_t elem_cnt, float rate, float scale, const T* x, bool* mask,
                   const T* addend, T* y) {
   unsigned int grid_size = ComputeGridSize<4>(stream, kBlockSize, elem_cnt);
   constexpr int pack_size = GetDropoutPackSize<T>();
@@ -380,7 +380,7 @@ void DispatchTail(ep::Stream* stream, uint64_t seed, one::CUDAGeneratorState* cu
 template<typename T>
 struct MaskAndScaleFunctor {
   OF_DEVICE_FUNC explicit MaskAndScaleFunctor(float scale) : scale(scale) {}
-  __device__ T operator()(T x, int8_t mask) const {
+  __device__ T operator()(T x, bool mask) const {
     return x * static_cast<T>(mask) * static_cast<T>(scale);
   }
   float scale;
@@ -390,7 +390,7 @@ struct MaskAndScaleFunctor {
 template<>
 struct MaskAndScaleFunctor<nv_bfloat16> {
   OF_DEVICE_FUNC explicit MaskAndScaleFunctor(float scale) : scale(scale) {}
-  __device__ nv_bfloat16 operator()(nv_bfloat16 x, int8_t mask) const {
+  __device__ nv_bfloat16 operator()(nv_bfloat16 x, bool mask) const {
     float float_mask = static_cast<float>(mask);
     return x * static_cast<nv_bfloat16>(float_mask) * static_cast<nv_bfloat16>(scale);
   }
@@ -434,12 +434,12 @@ class DropoutKernelGPU final : public user_op::OpKernel, public user_op::CudaGra
       const user_op::Tensor* addend = ctx->Tensor4ArgNameAndIndex("_add_to_output", 0);
       DispatchTail<T, true>(
           ctx->stream(), seed, cuda_gen_state, in->shape().elem_cnt(), rate, scale,
-          reinterpret_cast<const T*>(in->dptr()), reinterpret_cast<int8_t*>(mask->mut_dptr()),
+          reinterpret_cast<const T*>(in->dptr()), reinterpret_cast<bool*>(mask->mut_dptr()),
           reinterpret_cast<const T*>(addend->dptr()), reinterpret_cast<T*>(out->mut_dptr()));
     } else {
       DispatchTail<T, false>(ctx->stream(), seed, cuda_gen_state, in->shape().elem_cnt(), rate,
                              scale, reinterpret_cast<const T*>(in->dptr()),
-                             reinterpret_cast<int8_t*>(mask->mut_dptr()), nullptr,
+                             reinterpret_cast<bool*>(mask->mut_dptr()), nullptr,
                              reinterpret_cast<T*>(out->mut_dptr()));
     }
   }
@@ -450,7 +450,7 @@ class DropoutKernelGPU final : public user_op::OpKernel, public user_op::CudaGra
   REGISTER_USER_KERNEL("dropout").SetCreateFn<DropoutKernelGPU<cpp_type>>().SetIsMatchedHob( \
       (user_op::HobDeviceType() == DeviceType::kCUDA)                                        \
       && (user_op::HobDataType("out", 0) == data_type)                                       \
-      && (user_op::HobDataType("mask", 0) == GetDataType<int8_t>::value))
+      && (user_op::HobDataType("mask", 0) == GetDataType<bool>::value))
 
 REGISTER_DROPOUT_KERNEL_GPU(half, DataType::kFloat16);
 REGISTER_DROPOUT_KERNEL_GPU(float, DataType::kFloat);
@@ -475,7 +475,7 @@ class DropoutGradKernelGPU final : public user_op::OpKernel, public user_op::Cud
     const int64_t elem_cnt = dy->shape().elem_cnt();
     OF_CUDA_CHECK((cuda::elementwise::Binary(
         MaskAndScaleFunctor<T>(scale), elem_cnt, reinterpret_cast<T*>(dx->mut_dptr()),
-        reinterpret_cast<const T*>(dy->dptr()), reinterpret_cast<const int8_t*>(mask->dptr()),
+        reinterpret_cast<const T*>(dy->dptr()), reinterpret_cast<const bool*>(mask->dptr()),
         ctx->stream()->As<ep::CudaStream>()->cuda_stream())));
   }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }

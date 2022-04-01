@@ -32,7 +32,7 @@ struct EyeFunctor<DeviceType::kCUDA, T> final {
     RUN_CUDA_KERNEL((EyeForwardGpuKernel<T>), stream, rows, cols, rows, out);
   }
 };
-OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(INSTANTIATE_EYE_FUNCTOR, (DeviceType::kCUDA), RANGE_DATA_TYPE_SEQ);
+OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(INSTANTIATE_EYE_FUNCTOR, (DeviceType::kCUDA), EYE_DATA_TYPE_SEQ);
 }  // namespace user_op
 }  // namespace oneflow
 

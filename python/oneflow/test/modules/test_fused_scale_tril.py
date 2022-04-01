@@ -18,7 +18,7 @@ import os
 import numpy as np
 from collections import OrderedDict
 
-from test_util import GenArgDict
+from oneflow.test_utils.test_util import GenArgDict
 
 import oneflow as flow
 

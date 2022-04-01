@@ -20,7 +20,6 @@ limitations under the License.
 #include <memory>
 #include "oneflow/core/common/data_type.pb.h"
 #include "oneflow/core/framework/dtype.h"
-#include "oneflow/core/framework/tensor_arg.h"
 #include "oneflow/core/common/util.h"
 #include "oneflow/core/common/symbol.h"
 #include "oneflow/core/common/optional.h"
@@ -42,12 +41,7 @@ class MirroredTensor;
 class AutogradMeta final {
  public:
   AutogradMeta() = delete;
-  AutogradMeta(bool requires_grad, bool is_leaf)
-      : is_leaf_(is_leaf),
-        requires_grad_(requires_grad),
-        retain_grad_(false),
-        is_grad_acc_inplace_(false),
-        current_grad_(new TensorArg) {}
+  AutogradMeta(bool requires_grad, bool is_leaf);
 
   // Getters
   const std::shared_ptr<Tensor>& acc_grad() const { return acc_grad_; }

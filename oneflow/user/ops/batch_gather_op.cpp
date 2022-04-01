@@ -56,18 +56,12 @@ namespace oneflow {
           .Split(user_op::OpArg("out", 0), i)
           .Build();
     }
-    ctx->NewBuilder()
-        .Broadcast(user_op::OpArg("indices", 0))
-        .PartialSum(user_op::OpArg("in", 0))
-        .PartialSum(user_op::OpArg("out", 0))
-        .Build();
-  } else {
-    auto err = std::make_shared<cfg::ErrorProto>();
-    err->set_msg("BatchGatherOp: indices_num_axes equals " + std::to_string(indices_num_axes)
-                 + " (should be bigger than 1).");
-    err->mutable_check_failed_error();
-    return err;
   }
+  ctx->NewBuilder()
+      .Broadcast(user_op::OpArg("indices", 0))
+      .PartialSum(user_op::OpArg("in", 0))
+      .PartialSum(user_op::OpArg("out", 0))
+      .Build();
   return Maybe<void>::Ok();
 }
 

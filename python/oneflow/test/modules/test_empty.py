@@ -19,7 +19,7 @@ from collections import OrderedDict
 
 import oneflow as flow
 
-from test_util import GenArgDict
+from oneflow.test_utils.test_util import GenArgDict
 
 
 def _test_local_empty(test_case, shape, dtype, device, requires_grad):

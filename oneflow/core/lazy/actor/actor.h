@@ -73,10 +73,10 @@ class Actor : public ActorBase {
 
   // Msg Handler
   void set_msg_handler(MsgHandler val) { msg_handler_ = val; }
-#define OF_SET_MSG_HANDLER(val)                                   \
-  do {                                                            \
-    LOG(INFO) << "actor " << actor_id() << " switch to " << #val; \
-    set_msg_handler(static_cast<MsgHandler>(val));                \
+#define OF_SET_MSG_HANDLER(val)                                 \
+  do {                                                          \
+    VLOG(3) << "actor " << actor_id() << " switch to " << #val; \
+    set_msg_handler(static_cast<MsgHandler>(val));              \
   } while (0)
 
   // Common Handlers and related virtual method

@@ -70,9 +70,13 @@ template<typename T>
 struct DtypeAllReduce<T, kSum> {
   static Maybe<void> Call(const void* void_in, void* void_out, size_t elem_cnt,
                           Symbol<ParallelDesc> parallel_desc) {
+    int64_t parallel_num = parallel_desc->parallel_num();
+    if (parallel_num == 1) {
+      if (void_in != void_out) { std::memcpy(void_out, void_in, elem_cnt * sizeof(T)); }
+      return Maybe<void>::Ok();
+    }
     const T* in = reinterpret_cast<const T*>(void_in);
     T* out = reinterpret_cast<T*>(void_out);
-    int64_t parallel_num = parallel_desc->parallel_num();
     BalancedSplitter bs(elem_cnt, parallel_num);
     auto recv_buffer = std::make_unique<T[]>(bs.At(0).size());
     Optional<int64_t> parallel_id;
@@ -173,10 +177,15 @@ template<typename T>
 struct DtypeReduceScatter<T, kSum> {
   static Maybe<void> Call(const void* void_in, void* void_out, size_t elem_cnt,
                           Symbol<ParallelDesc> parallel_desc) {
+    int64_t parallel_num = parallel_desc->parallel_num();
+    if (parallel_num == 1) {
+      if (void_in != void_out) { std::memcpy(void_out, void_in, elem_cnt * sizeof(T)); }
+      return Maybe<void>::Ok();
+    }
+
     const T* in = reinterpret_cast<const T*>(void_in);
     T* out = reinterpret_cast<T*>(void_out);
 
-    int64_t parallel_num = parallel_desc->parallel_num();
     BalancedSplitter bs(elem_cnt * parallel_num, parallel_num);
     const auto& opt_parallel_id = JUST(GetParallelId4CurrentProcessCtx(parallel_desc));
     CHECK_OR_RETURN(opt_parallel_id->has_value());
@@ -246,8 +255,12 @@ Maybe<void> ReduceScatter<DeviceType::kCPU>(const void* in, void* out, size_t el
 template<>
 Maybe<void> AllGather<DeviceType::kCPU>(const void* in, void* out, size_t elem_cnt, DataType dtype,
                                         Symbol<ParallelDesc> parallel_desc, ep::Stream* stream) {
-  char* char_out = reinterpret_cast<char*>(out);
   int64_t parallel_num = parallel_desc->parallel_num();
+  if (parallel_num == 1) {
+    if (in != out) { std::memcpy(out, in, elem_cnt * GetSizeOfDataType(dtype)); }
+    return Maybe<void>::Ok();
+  }
+  char* char_out = reinterpret_cast<char*>(out);
   size_t chunk_size = elem_cnt * GetSizeOfDataType(dtype);
   BalancedSplitter bs(chunk_size * parallel_num, parallel_num);
   const auto& opt_parallel_id = JUST(GetParallelId4CurrentProcessCtx(parallel_desc));

@@ -212,7 +212,7 @@ def get_loss(
     return model_loss
 
 
-def test_train_loss_oneflow_pytorch(
+def do_test_train_loss_oneflow_pytorch(
     test_case, model_path: str, module_name: str, device: str = "cuda",
 ):
     batch_size = 16

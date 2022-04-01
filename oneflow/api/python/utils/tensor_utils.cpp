@@ -25,6 +25,7 @@ limitations under the License.
 #include "oneflow/extension/python/numpy.h"
 #include "oneflow/core/common/decorator.h"
 #include "oneflow/core/framework/consistency_check.h"
+#include "oneflow/core/functional/impl/common.h"
 
 namespace py = pybind11;
 
@@ -32,6 +33,7 @@ namespace oneflow {
 namespace one {
 
 Maybe<void> EagerMirroredTensorZeros(const std::shared_ptr<Tensor>& t) {
+  JUST(functional::CheckInplaceValid(t));
   std::shared_ptr<MirroredTensor> local_tensor;
   if (t->is_local()) {
     local_tensor = JUST(t->AsMirroredTensor());
@@ -111,6 +113,8 @@ MaybeGetTensorBufferShapesAndDTypes(const std::shared_ptr<Tensor>& t) {
 
 Maybe<void> RegisterTensorHook(const std::shared_ptr<Tensor>& self,
                                const AutogradMeta::Hook& hook) {
+  CHECK_OR_RETURN(self->requires_grad())
+      << "cannot register a hook on a tensor that doesn't require gradient";
   if (!self->grad_fn_node()) { JUST(AddAccumulateFunctionNode(self)); }
   self->mut_autograd_meta()->add_hook(hook);
   return Maybe<void>::Ok();

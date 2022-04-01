@@ -38,7 +38,7 @@ class RandomMaskGenerator<DeviceType::kCPU> final {
   }
   ~RandomMaskGenerator() = default;
 
-  void Generate(ep::Stream* stream, int64_t n, float rate, int8_t* mask);
+  void Generate(ep::Stream* stream, int64_t n, float rate, bool* mask);
 
  private:
   std::shared_ptr<one::CPUGeneratorImpl> generator_;
@@ -54,7 +54,7 @@ class RandomMaskGenerator<DeviceType::kCUDA> final {
   }
   ~RandomMaskGenerator() = default;
 
-  void Generate(ep::Stream* stream, int64_t n, float rate, int8_t* mask);
+  void Generate(ep::Stream* stream, int64_t n, float rate, bool* mask);
 
  private:
   std::shared_ptr<one::CUDAGeneratorImpl> generator_;

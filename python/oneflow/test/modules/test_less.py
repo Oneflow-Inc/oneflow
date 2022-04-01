@@ -20,7 +20,7 @@ from collections import OrderedDict
 import numpy as np
 
 from oneflow.test_utils.automated_test_util import *
-from test_util import GenArgList
+from oneflow.test_utils.test_util import GenArgList
 
 import oneflow as flow
 import oneflow.unittest
@@ -96,7 +96,7 @@ class TestLess(flow.unittest.TestCase):
         for arg in GenArgList(arg_dict):
             arg[0](test_case, *arg[1:])
 
-    @autotest(n=60, auto_backward=False, check_graph=True)
+    @autotest(n=10, auto_backward=False, check_graph=True)
     def test_less_with_random_data(test_case):
         device = random_device()
         shape = random_tensor().oneflow.shape
@@ -105,7 +105,7 @@ class TestLess(flow.unittest.TestCase):
         y = torch.lt(x1, oneof(x2, random().to(int).to(float)))
         return y
 
-    @autotest(n=60, auto_backward=False, check_graph=True)
+    @autotest(n=10, auto_backward=False, check_graph=True)
     def test_less_with_0dim_data(test_case):
         device = random_device()
         shape = random_tensor().oneflow.shape
@@ -114,7 +114,7 @@ class TestLess(flow.unittest.TestCase):
         y = torch.lt(x1, oneof(x2, random().to(int).to(float)))
         return y
 
-    @autotest(n=60, auto_backward=False, check_graph=True)
+    @autotest(n=10, auto_backward=False, check_graph=True)
     def test_tensor_less_with_random_data(test_case):
         device = random_device()
         shape = random_tensor().oneflow.shape
@@ -124,7 +124,7 @@ class TestLess(flow.unittest.TestCase):
         y2 = x1 < x2
         return (y1, y2)
 
-    @autotest(n=60, auto_backward=False, check_graph=True)
+    @autotest(n=10, auto_backward=False, check_graph=True)
     def test_less_bool_with_random_data(test_case):
         device = random_device()
         shape = random_tensor().oneflow.shape
@@ -137,7 +137,7 @@ class TestLess(flow.unittest.TestCase):
         y = torch.lt(x1, oneof(x2, random().to(int).to(float)))
         return y
 
-    @autotest(n=60, auto_backward=False, check_graph=True)
+    @autotest(n=10, auto_backward=False, check_graph=True)
     def test_tensor_less_with_0dim_data(test_case):
         device = random_device()
         shape = random_tensor().oneflow.shape

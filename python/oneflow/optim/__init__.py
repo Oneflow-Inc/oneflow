@@ -22,4 +22,3 @@ from oneflow.nn.optimizer.adagrad import Adagrad
 from oneflow.nn.optimizer.lamb import LAMB
 
 from . import lr_scheduler
-from . import utils

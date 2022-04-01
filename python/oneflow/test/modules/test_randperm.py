@@ -17,7 +17,7 @@ import oneflow as flow
 from collections import OrderedDict
 
 from oneflow.test_utils.automated_test_util import *
-from test_util import GenArgList
+from oneflow.test_utils.test_util import GenArgList
 import numpy as np
 import unittest
 
@@ -46,6 +46,13 @@ def _test_randperm_backward(test_case, N, device, dtype):
 
 def _test_randperm_randomness(test_case, N, device, dtype):
     n = np.random.randint(100, 1000)
+    x1 = flow.randperm(n, device=device)
+    x2 = flow.randperm(n, device=device)
+    test_case.assertFalse(np.all(x1.numpy() == x2.numpy()))
+
+
+def _test_randperm_large_seq_randomness(test_case, N, device, dtype):
+    n = 65536
     x1 = flow.randperm(n, device=device)
     x2 = flow.randperm(n, device=device)
     test_case.assertFalse(np.all(x1.numpy() == x2.numpy()))
@@ -81,6 +88,7 @@ class Testrandperm(flow.unittest.TestCase):
         arg_dict["test_functions"] = [
             _test_randperm_with_generator,
             _test_randperm_randomness,
+            _test_randperm_large_seq_randomness,
         ]
         arg_dict["N"] = [i for i in range(10, 100, 5)]
         arg_dict["device"] = ["cpu", "cuda"]

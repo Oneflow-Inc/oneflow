@@ -21,7 +21,7 @@ import oneflow as flow
 import oneflow.unittest
 from oneflow.test_utils.automated_test_util import *
 
-from test_util import GenArgDict
+from oneflow.test_utils.test_util import GenArgDict
 
 
 def _test_consistent_coin_flip(
@@ -80,7 +80,7 @@ class TestCoinFlipConsistent(flow.unittest.TestCase):
     @flow.unittest.skip_unless_1n2d()
     def test_coin_flip_graph(test_case):
         arg_dict = OrderedDict()
-        arg_dict["batch_size"] = [8, 64]
+        arg_dict["batch_size"] = [8]
         arg_dict["random_seed"] = [None, 1, -1]
         arg_dict["probability"] = [0.0, 0.5, 1.0]
         arg_dict["placement"] = [

@@ -16,16 +16,50 @@ limitations under the License.
 #include <list>
 #include "oneflow/core/framework/scope_util.h"
 
+#include "oneflow/core/common/just.h"
+#include "oneflow/core/framework/device.h"
+#include "oneflow/core/framework/instructions_builder.h"
+#include "oneflow/core/framework/session_util.h"
+#include "oneflow/core/job/job_conf.cfg.h"
+#include "oneflow/core/job/job_conf.pb.h"
+
 namespace oneflow {
 
 namespace {
 
+Maybe<Scope> MakeInitialScope() {
+  JobConfigProto config_proto;
+  config_proto.mutable_predict_conf();
+  config_proto.set_job_name("");
+  return MakeScope(config_proto, *JUST(Device::New("cpu")));
+}
+
 std::list<std::shared_ptr<Scope>>* ThreadLocalScopeStack() {
-  thread_local static std::list<std::shared_ptr<Scope>> scope_stack;
+  thread_local static std::list<std::shared_ptr<Scope>> scope_stack{CHECK_JUST(MakeInitialScope())};
   return &scope_stack;
 }
 
 }  // namespace
+
+Maybe<Scope> MakeScope(const JobConfigProto& config_proto, const Device& device) {
+  std::shared_ptr<Scope> scope;
+  std::shared_ptr<cfg::JobConfigProto> cfg_config_proto =
+      std::make_shared<cfg::JobConfigProto>(config_proto);
+  JUST(PhysicalRun([&](InstructionsBuilder* builder) -> Maybe<void> {
+    int64_t session_id = JUST(GetDefaultSessionId());
+    std::string device_tag = "cpu";
+    std::string machine_ids = "0";
+    std::string device_ids = "0";
+    if (device.type() == "cuda") {
+      device_tag = "gpu";
+      device_ids = std::to_string(device.device_id());
+    }
+    scope = JUST(builder->BuildInitialScope(session_id, cfg_config_proto, device_tag,
+                                            {machine_ids + ":" + device_ids}, nullptr, false));
+    return Maybe<void>::Ok();
+  }));
+  return scope;
+}
 
 Maybe<Scope> GetCurrentScope() {
   auto* scope_stack = ThreadLocalScopeStack();

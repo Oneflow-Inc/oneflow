@@ -17,7 +17,6 @@ limitations under the License.
 #define ONEFLOW_USER_DATA_DISTRIBUTED_UTIL_H_
 
 #include "oneflow/core/framework/framework.h"
-#include "oneflow/core/common/multi_client.h"
 #include "oneflow/core/common/nd_index_offset_helper.h"
 #include "oneflow/core/job/sbp_parallel.h"
 #include "oneflow/core/rpc/include/global_process_ctx.h"
@@ -29,7 +28,7 @@ namespace data {
 inline Maybe<void> InitDataSourceDistributedInfo(user_op::KernelInitContext* ctx,
                                                  size_t& world_size, int64_t& rank) {
   auto nd_sbp_str_vec = ctx->Attr<std::vector<std::string>>("nd_sbp");
-  if (nd_sbp_str_vec.empty() && JUST(IsMultiClient())) {
+  if (nd_sbp_str_vec.empty()) {
     world_size = GlobalProcessCtx::WorldSize();
     rank = GlobalProcessCtx::Rank();
   } else {

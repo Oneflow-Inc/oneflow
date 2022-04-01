@@ -26,7 +26,7 @@ add_docstr(
         other (oneflow.Tensor): A Tensor
 
     Returns:
-        oneflow.Tensor: A Tensor with int8 type.
+        oneflow.Tensor: A Tensor with bool type.
 
     For example:
 
@@ -54,7 +54,7 @@ add_docstr(
         other (oneflow.Tensor): A Tensor
 
     Returns:
-        oneflow.Tensor: A Tensor with int8 type.
+        oneflow.Tensor: A Tensor with bool type.
 
     For example:
 

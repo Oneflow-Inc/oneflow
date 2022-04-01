@@ -21,7 +21,7 @@ import numpy as np
 import oneflow as flow
 
 import oneflow.unittest
-from test_util import GenArgList
+from oneflow.test_utils.test_util import GenArgList
 
 from oneflow.test_utils.automated_test_util import *
 
@@ -48,9 +48,7 @@ def _test_different_dtype(test_case, device, shape):
     test_case.assertTrue(not np.allclose(y1.numpy(), y2.numpy(), atol=1e-4, rtol=1e-4))
     test_case.assertTrue(shape == y1.shape)
 
-    with test_case.assertRaises(
-        oneflow._oneflow_internal.exception.UnimplementedException
-    ):
+    with test_case.assertRaises(NotImplementedError):
         flow.randn(*shape, dtype=flow.int32, device=flow.device(device))
 
 

@@ -16,13 +16,13 @@ limitations under the License.
 
 import unittest
 from collections import OrderedDict
-from test_util import GenArgDict
+from oneflow.test_utils.test_util import GenArgDict
 import numpy as np
 import oneflow as flow
 import oneflow.unittest
 
 from oneflow.test_utils.automated_test_util import *
-from test_util import GenArgList
+from oneflow.test_utils.test_util import GenArgList
 
 
 def _test_fused_dot_feature_interaction(
@@ -113,7 +113,7 @@ def _test_fused_dot_feature_interaction(
             atol=1e-4,
         )
     )
-    test_case.assertTrue(np.allclose(fused_R.numpy(), R.numpy(), rtol=1e-4, atol=1e-4))
+    test_case.assertTrue(np.allclose(fused_R.numpy(), R.numpy(), rtol=1e-3, atol=1e-3))
 
 
 @unittest.skipIf(os.getenv("ONEFLOW_TEST_CPU_ONLY"), "only test cpu cases")

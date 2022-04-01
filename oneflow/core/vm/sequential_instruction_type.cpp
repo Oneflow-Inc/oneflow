@@ -52,6 +52,7 @@ class ComputeRankFrontSeqCallbackInstructionType final
   using stream_type = ControlStreamType;
 
   void Compute(Instruction* instruction) const override { Run(instruction->instr_msg()); }
+  void ComputeInFuseMode(InstructionMsg* instr_msg) const override { Run(*instr_msg); }
 };
 COMMAND(RegisterInstructionType<ComputeRankFrontSeqCallbackInstructionType>(
     "ComputeRankFrontSeqCallback"));

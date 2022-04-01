@@ -16,6 +16,11 @@ limitations under the License.
 #include "OneFlow/OneFlowOps.h"
 #include "OneFlow/OneFlowDialect.h"
 #include "OneFlow/Passes.h"
+#include "llvm/ADT/DenseSet.h"
+#include "llvm/ADT/SmallVector.h"
+#include "mlir/IR/Attributes.h"
+#include "mlir/IR/OperationSupport.h"
+#include "oneflow/core/framework/random_generator.h"
 
 #include "mlir/Conversion/LinalgToLLVM/LinalgToLLVM.h"
 #include "mlir/Conversion/MemRefToLLVM/MemRefToLLVM.h"
@@ -142,28 +147,6 @@ NamedAttrList GetJitOpAttributes(::mlir::PatternRewriter& rewriter, StringRef op
   return attributes;
 }
 
-::llvm::SmallVector<::mlir::Value, 4> OutlineBatchMatMul(::mlir::PatternRewriter& rewriter,
-                                                         mlir::OpResult matmul_res) {
-  if (auto batch_matmul_op = llvm::dyn_cast<BatchMatmulOp>(matmul_res.getDefiningOp())) {
-    auto op_name = batch_matmul_op.op_name();
-    SmallVector<::mlir::Value, 2> operands;
-    operands.push_back(batch_matmul_op.a());
-    operands.push_back(batch_matmul_op.b());
-    SmallVector<::mlir::Value, 1> results;
-    results.push_back(batch_matmul_op.out());
-    NamedAttrList attributes =
-        GetJitOpAttributes(rewriter, op_name, operands.size(), results.size(), batch_matmul_op);
-    SmallVector<Operation*, 4> ops = {batch_matmul_op};
-    auto function =
-        GetOrInsertFuncOp(rewriter, batch_matmul_op->getLoc(), op_name, operands, results, ops);
-    auto created =
-        rewriter.create<MlirJitOp>(batch_matmul_op.getLoc(), function, attributes, operands);
-    if (failed(DumpAssembly(rewriter, created))) exit(1);
-    return created->getResults();
-  }
-  return {};
-}
-
 static StringRef sanitizeIdentifier(StringRef name, SmallString<16>& buffer,
                                     StringRef allowedPunctChars = "$._",
                                     bool allowTrailingDigit = true) {
@@ -283,7 +266,6 @@ bool IsScalarTensor(Value value) {
   return false;
 }
 
-bool IsChannelFirst(mlir::StringAttr data_format) { return data_format.str() == "channels_first"; }
 bool HasZeroPadding(mlir::ArrayAttr padding) {
   for (auto val : padding.getValue()) {
     if (val.cast<IntegerAttr>().getValue().getSExtValue() != 0) return false;
@@ -292,20 +274,26 @@ bool HasZeroPadding(mlir::ArrayAttr padding) {
 }
 
 bool IsPaddingCouldBeAssimilatedIntoConv(::mlir::ArrayAttr padding_before,
-                                         ::mlir::ArrayAttr padding_after) {
+                                         ::mlir::ArrayAttr padding_after,
+                                         ::mlir::StringAttr data_format) {
   if (padding_before.size() == 4 && padding_after.size() == 4) {
     if (padding_before.getValue().equals(padding_after.getValue())) {
-      return padding_before.getValue()[0].cast<IntegerAttr>().getValue().getSExtValue() == 0
-             && padding_before.getValue()[1].cast<IntegerAttr>().getValue().getSExtValue() == 0;
+      if (data_format.str() == "channels_first") {
+        return padding_before.getValue()[0].cast<IntegerAttr>().getValue().getSExtValue() == 0
+               && padding_before.getValue()[1].cast<IntegerAttr>().getValue().getSExtValue() == 0;
+      }
+      if (data_format.str() == "channels_last") {
+        return padding_before.getValue()[0].cast<IntegerAttr>().getValue().getSExtValue() == 0
+               && padding_before.getValue()[3].cast<IntegerAttr>().getValue().getSExtValue() == 0;
+      }
     }
   }
   return false;
 }
 
-ArrayAttr getSI32ArrayAttr(::mlir::PatternRewriter& rewriter, ArrayRef<int32_t> values) {
-  auto attrs = llvm::to_vector<8>(llvm::map_range(
-      values, [&](int32_t v) -> Attribute { return rewriter.getSI32IntegerAttr(v); }));
-  return rewriter.getArrayAttr(attrs);
+IntegerAttr getSI64IntegerAttr(::mlir::PatternRewriter& rewriter, int64_t value) {
+  return IntegerAttr::get(rewriter.getIntegerType(64, /*isSigned=*/true),
+                          APInt(64, value, /*isSigned=*/true));
 }
 
 ::llvm::SmallVector<::mlir::Value, 4> CreateConv2dAndErasePad(::mlir::PatternRewriter& rewriter,
@@ -320,8 +308,15 @@ ArrayAttr getSI32ArrayAttr(::mlir::PatternRewriter& rewriter, ArrayRef<int32_t> 
       if (conv_op.bias()) operands.push_back(conv_op.bias());
       if (conv_op.bias_multiplier()) operands.push_back(conv_op.bias_multiplier());
       llvm::SmallVector<int32_t> padding_before_array;
-      for (auto val : pad_op.padding_before().getValue().take_back(2)) {
-        padding_before_array.push_back(val.cast<IntegerAttr>().getValue().getSExtValue());
+      if (conv_op.data_formatAttr().getValue().str() == "channels_first") {
+        for (auto val : pad_op.padding_before().getValue().take_back(2)) {
+          padding_before_array.push_back(val.cast<IntegerAttr>().getValue().getSExtValue());
+        }
+      } else {
+        padding_before_array.push_back(
+            pad_op.padding_before().getValue()[1].cast<IntegerAttr>().getValue().getSExtValue());
+        padding_before_array.push_back(
+            pad_op.padding_before().getValue()[2].cast<IntegerAttr>().getValue().getSExtValue());
       }
       attributes.set(conv_op.padding_beforeAttrName(),
                      getSI32ArrayAttr(rewriter, padding_before_array));
@@ -336,6 +331,99 @@ ArrayAttr getSI32ArrayAttr(::mlir::PatternRewriter& rewriter, ArrayRef<int32_t> 
   return {};
 }
 
+::llvm::SmallVector<::mlir::Value, 4> CreateFusedBiasAddMaskScale(::mlir::PatternRewriter& rewriter,
+                                                                  OpResult dropout_result,
+                                                                  OpResult bias_add_result,
+                                                                  Operation* mask) {
+  if (auto dropout_op = llvm::dyn_cast<oneflow::DropoutOp>(dropout_result.getDefiningOp())) {
+    if (auto bias_add_op = llvm::dyn_cast<oneflow::BiasAddOp>(bias_add_result.getDefiningOp())) {
+      SmallVector<Value, 4> operands;
+      operands.push_back(bias_add_op.a());
+      operands.push_back(bias_add_op.b());
+      operands.push_back(mask->getResults()[0]);
+      NamedAttrList fused_bias_add_dropout_attributes = dropout_op->getAttrs();
+      fused_bias_add_dropout_attributes.append(llvm::StringRef("axis"), bias_add_op.axisAttr());
+      fused_bias_add_dropout_attributes.append(llvm::StringRef("scale"), dropout_op.rateAttr());
+      fused_bias_add_dropout_attributes.erase(dropout_op.rateAttrName());
+      auto res = rewriter
+                     .create<oneflow::FusedBiasAddMaskScaleOp>(
+                         dropout_op->getLoc(), dropout_op->getResultTypes().front(), operands,
+                         fused_bias_add_dropout_attributes)
+                     ->getResults();
+      // bias_add and dropout op is expected to be erased if it is not used
+      return res;
+    }
+  }
+  return {};
+}
+
+mlir::IntegerAttr GetDefaultSeed(::mlir::PatternRewriter& rewriter) {
+  const auto gen = CHECK_JUST(::oneflow::one::DefaultAutoGenerator());
+  return getSI64IntegerAttr(rewriter, (int64_t)gen->current_seed());
+}
+
+LogicalResult InitTransposeAttributes(Operation* op, NamedAttrList& transpose_attributes,
+                                      PatternRewriter& rewriter) {
+  if (op->hasTrait<OpTrait::IsOpConfCompatible>()) {
+    oneflow::UserOpAdaptor op_to_replace_adaptor(op->getOperands(), op->getAttrDictionary());
+    transpose_attributes.set(OpTrait::IsOpConfCompatible<void>::getDeviceTagAttr(),
+                             op_to_replace_adaptor.device_tagAttr());
+    transpose_attributes.set(OpTrait::IsOpConfCompatible<void>::getDeviceNameAttr(),
+                             op_to_replace_adaptor.device_name());
+    transpose_attributes.set(OpTrait::IsOpConfCompatible<void>::getHierarchyAttr(),
+                             op_to_replace_adaptor.hierarchyAttr());
+    transpose_attributes.set(OpTrait::IsOpConfCompatible<void>::getOpNameAttr(),
+                             rewriter.getStringAttr(op_to_replace_adaptor.op_name().str()));
+
+    transpose_attributes.set(OpTrait::IsOpConfCompatible<void>::getScopeSymbolIDAttr(),
+                             op_to_replace_adaptor.scope_symbol_idAttr());
+    return success();
+  } else {
+    op->emitError("must be a op of trait IsOpConfCompatible!");
+    return failure();
+  }
+}
+
+bool IsAddToOutputNone(ValueRange value) { return (int)value.size() > 0 ? false : true; }
+
+llvm::SmallVector<int32_t> getChannelLastTransposePerm() { return {0, 2, 3, 1}; }
+
+llvm::SmallVector<int32_t> getChannelFirstTransposePerm() { return {0, 3, 1, 2}; }
+
+llvm::SmallVector<mlir::Value, 4> getInputOperandTransposeOp(NCHWCompatible op, Value val,
+                                                             NamedAttrList transpose_attributes,
+                                                             int num_transposed_operand,
+                                                             PatternRewriter& rewriter) {
+  oneflow::UserOpAdaptor op_to_replace_adaptor(op->getOperands(), op->getAttrDictionary());
+  std::string transpose_name = op_to_replace_adaptor.op_name().str() + "_transpose_input_"
+                               + std::to_string(num_transposed_operand);
+  transpose_attributes.set(llvm::StringRef("op_name"), rewriter.getStringAttr(transpose_name));
+  SmallVector<Value, 4> input_operands;
+  input_operands.push_back(val);
+  auto res = rewriter
+                 .create<oneflow::TransposeOp>(op.getLoc(), val.getType(), input_operands,
+                                               transpose_attributes)
+                 ->getResults();
+  return res;
+}
+
+TransposeOp getResultTransposeOp(NCHWCompatible op, Value val, NamedAttrList transpose_attributes,
+                                 int num_transposed_result, PatternRewriter& rewriter) {
+  oneflow::UserOpAdaptor op_to_replace_adaptor(op->getOperands(), op->getAttrDictionary());
+  std::string transpose_name = op_to_replace_adaptor.op_name().str() + "_transpose_output_"
+                               + std::to_string(num_transposed_result);
+  transpose_attributes.set(llvm::StringRef("op_name"), rewriter.getStringAttr(transpose_name));
+  SmallVector<Value, 4> operands;
+  operands.push_back(val);
+  TransposeOp transpose_op = rewriter.create<oneflow::TransposeOp>(op.getLoc(), val.getType(),
+                                                                   operands, transpose_attributes);
+  return transpose_op;
+}
+
+bool IsSameDtype(mlir::OpResult cast_result, mlir::Value input) {
+  return cast_result.getType() == input.getType();
+}
+
 }  // namespace oneflow
 
 }  // namespace mlir
@@ -345,6 +433,58 @@ ArrayAttr getSI32ArrayAttr(::mlir::PatternRewriter& rewriter, ArrayRef<int32_t> 
 namespace mlir {
 
 namespace oneflow {
+struct AutoNhwcPattern : public OpInterfaceRewritePattern<NCHWCompatible> {
+  explicit AutoNhwcPattern(mlir::MLIRContext* context)
+      : OpInterfaceRewritePattern<NCHWCompatible>(context, /*benefit=*/1) {}
+
+ public:
+  LogicalResult matchAndRewrite(NCHWCompatible op, PatternRewriter& rewriter) const override {
+    llvm::SmallVector<int32_t> perm = getChannelLastTransposePerm();
+    llvm::SmallVector<int32_t> result_perm = getChannelFirstTransposePerm();
+
+    NamedAttrList transpose_attributes;
+    if (InitTransposeAttributes(op, transpose_attributes, rewriter).succeeded()) {
+      transpose_attributes.append(llvm::StringRef("perm"), getSI32ArrayAttr(rewriter, perm));
+    } else {
+      return failure();
+    }
+
+    if (op.IsNCHW()) {
+      // create transpose op for input operand
+      SmallVector<Value, 4> tranposed_operands;
+      llvm::DenseSet<Value> operand_transpose = op.OperandsToTranspose();
+      int num_transposed_operand = 0;
+      for (Value operand : op->getOperands()) {
+        if (operand_transpose.find(operand) != operand_transpose.end()) {
+          SmallVector<Value, 4> input_res = getInputOperandTransposeOp(
+              op, operand, transpose_attributes, num_transposed_operand, rewriter);
+          tranposed_operands.push_back(input_res[0]);
+          num_transposed_operand += 1;
+        }
+      }
+      // create NHWC op
+      SmallVector<Value, 4> created_results = op.NchwToNhwc(tranposed_operands, rewriter);
+      // create transpose op for results
+      int num_transposed_result = 0;
+      transpose_attributes.set(llvm::StringRef("perm"), getSI32ArrayAttr(rewriter, result_perm));
+      llvm::DenseSet<Value> transpose_result = op.ResultsToTranspose();
+
+      for (Value result : op->getOpResults()) {
+        if (transpose_result.find(result) != transpose_result.end()) {
+          if (auto result_transpose_op =
+                  getResultTransposeOp(op, created_results[num_transposed_result],
+                                       transpose_attributes, num_transposed_result, rewriter)) {
+            result.replaceAllUsesWith(result_transpose_op);
+            num_transposed_result += 1;
+          } else {
+            return failure();
+          }
+        }
+      }
+    }
+    return success();
+  }
+};
 
 void BroadcastMulOp::getCanonicalizationPatterns(RewritePatternSet& results, MLIRContext* context) {
   results.insert<BroadcastMulToScalarMulPattern>(context);
@@ -409,7 +549,6 @@ LogicalResult LowerModuleToCUDALLVM(mlir::MLIRContext* context, ModuleOp module)
 
 void populateFuserPasses(::mlir::RewritePatternSet& patterns) {
   patterns.add<MulCastPattern>(patterns.getContext());
-  patterns.add<BatchMatmulPattern>(patterns.getContext());
 }
 
 void populateFuserForExistingOp(::mlir::RewritePatternSet& patterns) {
@@ -417,7 +556,11 @@ void populateFuserForExistingOp(::mlir::RewritePatternSet& patterns) {
   patterns.add<FusedScaleTrilPattern>(patterns.getContext());
   patterns.add<FusedScaleTrilPattern2>(patterns.getContext());
   patterns.add<FusedPadConv2DPattern>(patterns.getContext());
+  patterns.add<FusedBiasAddDropoutPattern>(patterns.getContext());
   patterns.add<NormalizationAddReluPattern>(patterns.getContext());
+  patterns.add<DeleteSameDtypeCastOpPattern>(patterns.getContext());
+  bool enable_nhwc = ::oneflow::ParseBooleanFromEnv("ONEFLOW_MLIR_PREFER_NHWC", false);
+  if (enable_nhwc) { patterns.add<AutoNhwcPattern>(patterns.getContext()); }
 }
 
 void populateGpuHelperPatterns(::mlir::RewritePatternSet& patterns) {

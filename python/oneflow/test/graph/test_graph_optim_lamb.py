@@ -13,6 +13,7 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 """
+import os
 import unittest
 from collections import OrderedDict
 import numpy as np
@@ -159,7 +160,9 @@ def compare_with_numpy_lamb(
 class TestLamb(flow.unittest.TestCase):
     def test_lamb(test_case):
         arg_dict = OrderedDict()
-        arg_dict["device"] = ["cpu", "cuda"]
+        arg_dict["device"] = ["cuda"]
+        if os.getenv("ONEFLOW_TEST_CPU_ONLY"):
+            arg_dict["device"] = ["cpu"]
         arg_dict["x_shape"] = [(10,)]
         arg_dict["learning_rate"] = [0.1, 1e-3]
         arg_dict["train_iters"] = [10]

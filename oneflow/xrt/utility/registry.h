@@ -74,7 +74,7 @@ class Registry : public RegistryBase {
 
   void Register(const Key& key, Factory factory, const Attribute& attribute) {
     if (!factories_.emplace(key, MakeFactory(factory, attribute)).second) {
-      LOG(INFO) << "Factory (" << key << ") has been registered more than once.";
+      LOG(WARNING) << "Factory (" << key << ") has been registered more than once.";
     }
   }
 

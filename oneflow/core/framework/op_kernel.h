@@ -311,7 +311,7 @@ class OpKernel {
   virtual void Compute(KernelComputeContext* ctx, OpKernelState*, const OpKernelCache*) const {
     Compute(ctx);
   }
-  virtual void Compute(KernelComputeContext*) const { LOG(INFO) << "UNIMPLEMENTED"; }
+  virtual void Compute(KernelComputeContext*) const { LOG(WARNING) << "UNIMPLEMENTED"; }
   virtual void InferShape(KernelInferContext* ctx) const;
   virtual bool AlwaysComputeWhenAllOutputsEmpty() const = 0;
 

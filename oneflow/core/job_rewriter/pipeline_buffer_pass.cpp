@@ -114,11 +114,11 @@ void TryInsertOrUseBufferOpToDstNode(
                 ->emplace(buffer_op_name, dst_node->parallel_desc().parallel_conf())
                 .second);
 
-      LOG(INFO) << "\n Insert buffer op : [" << buffer_op_name << "](buffer_size:" << buffer_size
-                << ") \n from [" << src_node->op().op_name()
-                << "] (stage_id:" << std::to_string(src_stage_id) << ") -> ["
-                << dst_node->op().op_name() << "] (stage_id:" << std::to_string(dst_stage_id)
-                << ") \n";
+      VLOG(3) << "\n Insert buffer op : [" << buffer_op_name << "](buffer_size:" << buffer_size
+              << ") \n from [" << src_node->op().op_name()
+              << "] (stage_id:" << std::to_string(src_stage_id) << ") -> ["
+              << dst_node->op().op_name() << "] (stage_id:" << std::to_string(dst_stage_id)
+              << ") \n";
     }
 
     auto mut_op_it = mut_op_name2conf->find(dst_op_name);
@@ -209,12 +209,11 @@ void TryInsertOrUseBufferOpBothSrcDst(
       mut_op_it = mut_op_name2conf->emplace(dst_op_name, dst_node->op().op_conf()).first;
     }
 
-    LOG(INFO) << "\n Insert buffer op pair : src_buffer = <" << src_buffer_op_name
-              << ">(buffer_size:" << src_buffer_size << ") , dst_buffer = <" << dst_buffer_op_name
-              << ">(buffer_size:" << dst_buffer_size << ") \n from [" << src_node->op().op_name()
-              << "] (stage_id:" << std::to_string(src_stage_id) << ") -> ["
-              << dst_node->op().op_name() << "] (stage_id:" << std::to_string(dst_stage_id)
-              << ") \n";
+    VLOG(3) << "\n Insert buffer op pair : src_buffer = <" << src_buffer_op_name
+            << ">(buffer_size:" << src_buffer_size << ") , dst_buffer = <" << dst_buffer_op_name
+            << ">(buffer_size:" << dst_buffer_size << ") \n from [" << src_node->op().op_name()
+            << "] (stage_id:" << std::to_string(src_stage_id) << ") -> ["
+            << dst_node->op().op_name() << "] (stage_id:" << std::to_string(dst_stage_id) << ") \n";
 
     const std::string dst_buffer_out = user_op::UserOpConfWrapper(dst_conf).output("out", 0);
     for (const std::string& ibn : op_edge->lbi2ibns().at(lbi)) {
@@ -242,7 +241,7 @@ Maybe<void> PipelineBufferPass::Apply(const OpGraph& op_graph, JobBuilder* job_b
 
   if (max_stage_id == 0) { return Maybe<void>::Ok(); }
   const int64_t total_stage_num = max_stage_id + 1;
-  LOG(INFO) << "total stage num = " << total_stage_num;
+  VLOG(3) << "total stage num = " << total_stage_num;
 
   HashMap<std::string, OperatorConf> buffer_op_name2op_conf;
   HashMap<std::string, ParallelConf> buffer_op_name2parallel_conf;

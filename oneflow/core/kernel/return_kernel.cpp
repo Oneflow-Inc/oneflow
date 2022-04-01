@@ -16,7 +16,6 @@ limitations under the License.
 #include "oneflow/core/kernel/kernel.h"
 #include "oneflow/core/common/buffer_manager.h"
 #include "oneflow/core/job/critical_section_instance.h"
-#include "oneflow/core/common/multi_client.h"
 #include "oneflow/core/job/global_for.h"
 
 namespace oneflow {
@@ -33,31 +32,22 @@ class ReturnKernel final : public Kernel {
 };
 
 void ReturnKernel::ForwardDataContent(KernelContext* ctx) const {
-  if (CHECK_JUST(IsMultiClient())) {
-    CHECK(this->op_conf().return_conf().has_job_name());
-    const auto& job_name = this->op_conf().return_conf().job_name();
-    const auto& op_name = this->op_conf().name();
-    auto* buffer_mgr = Global<BufferMgr<std::shared_ptr<CriticalSectionInstance>>>::Get();
-    auto* buffer = buffer_mgr->Get(GetOutputBufferName(job_name, op_name));
-    std::shared_ptr<CriticalSectionInstance> critical_section_instance;
-    BufferStatus buffer_status = buffer->TryReceive(&critical_section_instance);
-    CHECK_NE(buffer_status, kBufferStatusEmpty);
-    if (buffer_status == kBufferStatusSuccess) {
-      OfBlob ofblob(ctx->stream(), ctx->BnInOp2Blob("in"));
-      critical_section_instance->AccessBlobByOpName(reinterpret_cast<uint64_t>(&ofblob), op_name);
-    }
-  } else {
-    AutoMemcpy(ctx->stream(), ctx->BnInOp2Blob("out"), ctx->BnInOp2Blob("in"));
-    CHECK_JUST(ctx->stream()->Sync());
+  CHECK(this->op_conf().return_conf().has_job_name());
+  const auto& job_name = this->op_conf().return_conf().job_name();
+  const auto& op_name = this->op_conf().name();
+  auto* buffer_mgr = Global<BufferMgr<std::shared_ptr<CriticalSectionInstance>>>::Get();
+  auto* buffer = buffer_mgr->Get(GetOutputBufferName(job_name, op_name));
+  std::shared_ptr<CriticalSectionInstance> critical_section_instance;
+  BufferStatus buffer_status = buffer->TryReceive(&critical_section_instance);
+  CHECK_NE(buffer_status, kBufferStatusEmpty);
+  if (buffer_status == kBufferStatusSuccess) {
+    OfBlob ofblob(ctx->stream(), ctx->BnInOp2Blob("in"));
+    critical_section_instance->AccessBlobByOpName(reinterpret_cast<uint64_t>(&ofblob), op_name);
   }
 }
 
 void ReturnKernel::ForwardHeader(KernelContext* ctx) const {
-  if (CHECK_JUST(IsMultiClient())) {
-    // Do nothing.
-  } else {
-    ctx->BnInOp2Blob("out")->CopyHeaderFrom(ctx->BnInOp2Blob("in"));
-  }
+  // Do nothing.
 }
 
 REGISTER_KERNEL(OperatorConf::kReturnConf, ReturnKernel);
