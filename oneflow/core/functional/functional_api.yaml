@@ -2057,3 +2057,7 @@
 - name: "pixel_shuffle"
   signature: "Tensor (Tensor input, Int64 h_upscale_factor, Int64 w_upscale_factor) => PixelShuffle"
   bind_python: True
+
+- name: "roc_auc_score"
+  signature: "Tensor (Tensor label, Tensor pred) => RocAucScore"
+  bind_python: True

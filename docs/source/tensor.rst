@@ -127,6 +127,7 @@ OneFlow Tensor Class
             requires_grad_,
             reshape, 
             retain_grad,
+            roc_auc_score, 
             roll,
             round, 
             rsqrt, 
