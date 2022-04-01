@@ -584,9 +584,9 @@ exception_test_ratio = cnt2 * 1.0 / len(api_list)
 result_list.append(f"## Test Data Summary")
 
 result_list.append(f"- OneFlow Total API Number: ====================>{len(api_list)}")
-result_list.append(f"- Doc Test Ratio: ====================>{doc_test_ratio*100}%")
-result_list.append(f"- Compatiable/Completeness Test Ratio: ====================>{compatiable_completeness_test_ratio*100}%")
-result_list.append(f"- Exception Test Ratio: ====================>{exception_test_ratio*100}%")
+result_list.append(f"- Doc Test Ratio: ====================>{100*doc_test_ratio:.2f}% = {cnt0} / {len(api_list)}")
+result_list.append(f"- Compatiable/Completeness Test Ratio: ====================>{100*compatiable_completeness_test_ratio:.2f}% = {cnt1} / {len(api_list)}")
+result_list.append(f"- Exception Test Ratio: ====================>{100*exception_test_ratio:.2f}% = {cnt2} / {len(api_list)}")
 
 f = open("./README.md", "w")
 for line in result_list:
