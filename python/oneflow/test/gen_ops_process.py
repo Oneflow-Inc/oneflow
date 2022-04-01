@@ -14,6 +14,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 """
 import os
+import subprocess
 
 from numpy import triu_indices
 import oneflow as flow
@@ -484,6 +485,8 @@ file_func_map_list = []
 
 def get_test_func(path):
     files = os.listdir(path)
+    commit_bytes = subprocess.check_output(['git', 'rev-parse', 'HEAD'])
+    commit_str = commit_bytes.decode('utf-8').replace('\n', '')
     result_func_list = []
     for file in files:
         if not os.path.isdir(file) and file.find("__pycache__")==-1:
@@ -494,10 +497,10 @@ def get_test_func(path):
                 line = line.strip()
                 if line.startswith("def test_") and line.endswith("(test_case):"):
                     result_func_list.append(line[9:-12])
-                    file_func_map[line[9:-12]] = path + "/" + file
+                    file_func_map[line[9:-12]] = " [code link](" + "https://github.com/Oneflow-Inc/oneflow/blob/" + commit_str + "/python/oneflow/test/" + path + "/" + file + ") "
                 elif last_line.startswith("add_docstr"):
                     result_func_list.append(line[0:-1])
-                    file_func_map[line[0:-1]] = path + "/" + file
+                    file_func_map[line[0:-1]] = " [code link](" + "https://github.com/Oneflow-Inc/oneflow/blob/" + commit_str + "/python/oneflow/test/" + path + "/" + file + ") "
                 last_line = line
     return result_func_list
 
