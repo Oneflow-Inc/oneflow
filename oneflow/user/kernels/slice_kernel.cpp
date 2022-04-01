@@ -20,7 +20,6 @@ limitations under the License.
 #include "oneflow/core/kernel/cuda_graph_support.h"
 #include "oneflow/user/kernels/op_kernel_wrapper.h"
 #include "oneflow/user/kernels/slice_util.h"
-#include "oneflow/core/ep/include/primitive/memset.h"
 
 namespace oneflow {
 
@@ -332,13 +331,9 @@ class LogicalSliceKernel final : public user_op::OpKernel {
     const user_op::Tensor* x_tensor = ctx->Tensor4ArgNameAndIndex("x", 0);
     const SliceContext& slice_ctx =
         dynamic_cast<const OpKernelCacheWrapper<SliceContext>*>(cache)->Get();
-    auto device_type = y_tensor->mem_case().device_type();
-    std::unique_ptr<ep::primitive::Memset> memset_primitive =
-        ep::primitive::NewPrimitive<ep::primitive::MemsetFactory>(device_type);
-    CHECK(memset_primitive);
-    CHECK_EQ(device_type, ctx->stream()->device_type());
+    CHECK_EQ(y_tensor->mem_case().device_type(), ctx->stream()->device_type());
     size_t out_bytes_size = y_tensor->shape().elem_cnt() * GetSizeOfDataType(y_tensor->data_type());
-    memset_primitive->Launch(ctx->stream(), y_tensor->mut_dptr(), 0, out_bytes_size);
+    AutoMemset(ctx->stream(), y_tensor->mut_dptr(), 0, out_bytes_size, y_tensor->mem_case());
     SwitchWriteSlice(SwitchCase(y_tensor->shape().NumAxes(), y_tensor->data_type()), ctx, x_tensor,
                      y_tensor, slice_ctx, true);
   }
