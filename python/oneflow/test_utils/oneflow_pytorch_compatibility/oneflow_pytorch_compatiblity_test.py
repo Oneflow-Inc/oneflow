@@ -66,7 +66,7 @@ def get_loss(
     model_loss = []
     learning_rate = 0.01
     mom = 0.9
-    bp_iters = 10
+    bp_iters = 100
 
     for_time = 0.0
     bp_time = 0.0

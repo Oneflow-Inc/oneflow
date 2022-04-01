@@ -1528,6 +1528,7 @@ add_docstr(
 add_docstr(
     oneflow.Tensor.reshape_as,
     """
+    Tensor.reshape_as(other) -> Tensor
     Returns this tensor as the same shape as other.
     self.reshape_as(other) is equivalent to self.reshape(other.sizes()).
     This method returns a view if other.sizes() is compatible with the current shape.
