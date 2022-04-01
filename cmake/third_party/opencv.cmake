@@ -13,8 +13,7 @@ set(OPENCV_URL https://github.com/Oneflow-Inc/opencv/archive/51cef2651.tar.gz)
 use_mirror(VARIABLE OPENCV_URL URL ${OPENCV_URL})
 
 set(OPENCV_LIBRARY_NAMES libopencv_imgproc.a libopencv_imgcodecs.a libopencv_core.a)
-set(OPENCV_3RDPARTY_LIBRARY_NAMES libIlmImf.a liblibjasper.a liblibpng.a liblibtiff.a
-                                  liblibwebp.a)
+set(OPENCV_3RDPARTY_LIBRARY_NAMES libIlmImf.a liblibjasper.a liblibpng.a liblibtiff.a liblibwebp.a)
 
 foreach(LIBRARY_NAME ${OPENCV_LIBRARY_NAMES})
   list(APPEND OPENCV_STATIC_LIBRARIES ${OPENCV_LIBRARY_DIR}/${LIBRARY_NAME})
@@ -144,20 +143,21 @@ if(THIRD_PARTY)
     add_dependencies(opencv zlib)
   endif()
 
-  install(FILES
-     ${CMAKE_CURRENT_BINARY_DIR}/opencv/src/opencv/3rdparty/libpng/pngconf.h
-     ${CMAKE_CURRENT_BINARY_DIR}/opencv/src/opencv/3rdparty/libpng/pngdebug.h
-     ${CMAKE_CURRENT_BINARY_DIR}/opencv/src/opencv/3rdparty/libpng/png.h
-     ${CMAKE_CURRENT_BINARY_DIR}/opencv/src/opencv/3rdparty/libpng/pnginfo.h
-     ${CMAKE_CURRENT_BINARY_DIR}/opencv/src/opencv/3rdparty/libpng/pnglibconf.h
-     ${CMAKE_CURRENT_BINARY_DIR}/opencv/src/opencv/3rdparty/libpng/pngpriv.h
-     ${CMAKE_CURRENT_BINARY_DIR}/opencv/src/opencv/3rdparty/libpng/pngstruct.h
-    TYPE INCLUDE COMPONENT libpng_headers)
+  install(
+    FILES ${CMAKE_CURRENT_BINARY_DIR}/opencv/src/opencv/3rdparty/libpng/pngconf.h
+          ${CMAKE_CURRENT_BINARY_DIR}/opencv/src/opencv/3rdparty/libpng/pngdebug.h
+          ${CMAKE_CURRENT_BINARY_DIR}/opencv/src/opencv/3rdparty/libpng/png.h
+          ${CMAKE_CURRENT_BINARY_DIR}/opencv/src/opencv/3rdparty/libpng/pnginfo.h
+          ${CMAKE_CURRENT_BINARY_DIR}/opencv/src/opencv/3rdparty/libpng/pnglibconf.h
+          ${CMAKE_CURRENT_BINARY_DIR}/opencv/src/opencv/3rdparty/libpng/pngpriv.h
+          ${CMAKE_CURRENT_BINARY_DIR}/opencv/src/opencv/3rdparty/libpng/pngstruct.h
+    TYPE INCLUDE
+    COMPONENT libpng_headers)
   add_custom_target(
-    install_libpng_headers
-    COMMAND "${CMAKE_COMMAND}" -DCMAKE_INSTALL_COMPONENT=libpng_headers
-            -DCMAKE_INSTALL_PREFIX="${LIBPNG_INSTALL_DIR}"
-            -DCMAKE_INSTALL_MESSAGE=${CMAKE_INSTALL_MESSAGE}
-            -P "${CMAKE_BINARY_DIR}/cmake_install.cmake"
+    install_libpng_headers ALL
+    COMMAND
+      "${CMAKE_COMMAND}" -DCMAKE_INSTALL_COMPONENT=libpng_headers
+      -DCMAKE_INSTALL_PREFIX="${LIBPNG_INSTALL_DIR}"
+      -DCMAKE_INSTALL_MESSAGE=${CMAKE_INSTALL_MESSAGE} -P "${CMAKE_BINARY_DIR}/cmake_install.cmake"
     DEPENDS opencv)
 endif(THIRD_PARTY)
