@@ -73,11 +73,11 @@ class AddFunctor {
         || (alpha.IsFloatingPoint()
             && std::fabs(alpha.Value<double>() - 1.0) < std::numeric_limits<double>::epsilon())) {
       JUST(tensor_processor.PromoteInputsToCommonDtype(true)
-               .AddInputs({input->contiguous(), other->contiguous()})
+               .AddInputs({input, other})
                .Apply());
     } else {
       JUST(tensor_processor.PromoteInputsToCommonDtype(true)
-               .AddInputs({input->contiguous(), JUST(functional::ScalarMul(alpha, other))})
+               .AddInputs({input, JUST(functional::ScalarMul(alpha, other))})
                .Apply());
     }
     TensorTuple input_vec = JUST(tensor_processor.GetInputs());
@@ -131,7 +131,7 @@ class MulFunctor {
                            const std::shared_ptr<one::Tensor>& y) const {
     TensorProcessor tensor_processor;
     JUST(tensor_processor.PromoteInputsToCommonDtype(true)
-             .AddInputs({x->contiguous(), y->contiguous()})
+             .AddInputs({x, y})
              .Apply());
     TensorTuple input_vec = JUST(tensor_processor.GetInputs());
 
@@ -156,11 +156,11 @@ class InplaceMulFunctor {
     TensorProcessor tensor_processor;
     if (y->requires_grad()) {
       JUST(tensor_processor.PromoteInputsToCommonDtype(true)
-               .AddInputs({JUST(Identity(x->contiguous())), y->contiguous()})
+               .AddInputs({JUST(Identity(x)), y})
                .Apply());
     } else {
       JUST(tensor_processor.PromoteInputsToCommonDtype(true)
-               .AddInputs({x->contiguous(), y->contiguous()})
+               .AddInputs({x, y})
                .Apply());
     }
     const TensorTuple& input_vec = JUST(tensor_processor.GetInputs());

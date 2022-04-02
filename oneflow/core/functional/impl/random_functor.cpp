@@ -55,7 +55,7 @@ class BernoulliFunctor {
 
     const auto& distribution_state = std::make_shared<DistributionKernelState>(gen);
 
-    return OpInterpUtil::Dispatch<Tensor>(*bernoulli_op_, {x->contiguous()},
+    return OpInterpUtil::Dispatch<Tensor>(*bernoulli_op_, {x},
                                           OpExprInterpContext(bernoulli_attrs, distribution_state));
   }
 
