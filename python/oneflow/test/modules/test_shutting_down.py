@@ -1,4 +1,4 @@
-/*
+"""
 Copyright 2020 The OneFlow Authors. All rights reserved.
 
 Licensed under the Apache License, Version 2.0 (the "License");
@@ -12,19 +12,31 @@ distributed under the License is distributed on an "AS IS" BASIS,
 WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
-*/
-#include <pybind11/pybind11.h>
-#include <string>
-#include "oneflow/api/python/of_api_registry.h"
-#include "oneflow/api/python/calibration/calibration.h"
+"""
+import oneflow
+import os
 
-namespace py = pybind11;
 
-namespace oneflow {
+world_size = os.getenv("WORLD_SIZE")
 
-ONEFLOW_API_PYBIND11_MODULE("", m) {
-  m.def("CacheInt8Calibration", &CacheInt8Calibration);
-  m.def("WriteInt8Calibration", &WriteInt8Calibration);
-}
 
-}  // namespace oneflow
+class TestCallWhenShuttingDown:
+    def __init__(self):
+        self.oneflow = oneflow
+        tensor = oneflow.ones((2, 2))
+        print(tensor)
+
+    def __del__(self, of=oneflow):
+        if world_size == 1:
+            tensor = of.ones((2, 2))
+
+
+test_call_when_shutting_down = TestCallWhenShuttingDown()
+
+
+class TestSyncWhenShuttingDown:
+    def __del__(self, of=oneflow):
+        of._oneflow_internal.eager.Sync()
+
+
+test_sync_when_shutting_down = TestSyncWhenShuttingDown()
