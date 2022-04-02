@@ -51,12 +51,6 @@ bool Int2IntListMapContaining(const Int2IntListMap& bigger, const Int2IntListMap
 }  // namespace
 
 PYBIND11_MODULE(_oneflow_internal, m) {
-  m.def("MasterSendAbort", []() {
-    if (Global<EnvGlobalObjectsScope>::Get() != nullptr) {
-      return ClusterInstruction::MasterSendAbort();
-    }
-  });
-
   using IntList = std::vector<int64_t>;
   using Int2IntListMap = std::unordered_map<int64_t, std::shared_ptr<IntList>>;
 
