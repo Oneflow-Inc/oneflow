@@ -125,6 +125,7 @@ def rand_op(
 
 
     """
+    size = _handle_size_arg(size)
     assert out is None, "out not supported yet"
     assert layout is None, "layout not supported yet"
     if placement is not None:
