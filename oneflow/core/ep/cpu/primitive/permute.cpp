@@ -67,7 +67,6 @@ class PermuteImpl : public Permute {
 };
 
 #ifdef WITH_ONEDNN
-// Onednn only supports up to 32bit type of data
 constexpr size_t kMaxOneDnnMovementSize = 4;
 constexpr size_t kMaxOneDnnMapSize = 5;
 uint32_t OnednnDatatypeTagMap[kMaxOneDnnMapSize] = {0, dnnl_u8, dnnl_f16, 0, dnnl_s32};
