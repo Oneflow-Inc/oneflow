@@ -133,14 +133,14 @@ class HardShrink : public OpExprGradFunction<HardShrinkCaptureState> {
  public:
   Maybe<void> Init(const OpExpr& op) override {
     const auto* fw_op_expr = dynamic_cast<const UserOpExpr*>(&op);
-    CHECK_NOTNULL_OR_RETURN(fw_op_expr);
+    CHECK_NOTNULL_OR_RETURN(fw_op_expr) << "Forward op must be not null";
     base_attrs_ = MakeAttrMapFromUserOpConf(fw_op_expr->proto());
     return Maybe<void>::Ok();
   }
 
   Maybe<void> Capture(HardShrinkCaptureState* ctx, const TensorTuple& inputs,
                       const TensorTuple& outputs, const AttrMap& attrs) const override {
-    CHECK_EQ_OR_RETURN(inputs.size(), 1);
+    CHECK_EQ_OR_RETURN(inputs.size(), 1) << "Input grad size must be equal 1";
     ctx->requires_grad = JUST(oneflow::VectorAt(inputs, 0))->requires_grad();
     if (!ctx->requires_grad) { return Maybe<void>::Ok(); }
 
@@ -152,7 +152,7 @@ class HardShrink : public OpExprGradFunction<HardShrinkCaptureState> {
 
   Maybe<void> Apply(const HardShrinkCaptureState* ctx, const TensorTuple& out_grads,
                     TensorTuple* in_grads) const override {
-    CHECK_EQ_OR_RETURN(out_grads.size(), 1);
+    CHECK_EQ_OR_RETURN(out_grads.size(), 1) << "Output grad size must be equal 1";
     in_grads->resize(1);
     if (ctx->requires_grad) {
       const auto& y = JUST(oneflow::VectorAt(ctx->SavedTensors(), 0));
