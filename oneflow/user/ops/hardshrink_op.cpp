@@ -44,7 +44,7 @@ namespace oneflow {
   const Shape& y_shape = ctx->InputShape("y", 0);
   const Shape& dy_shape = ctx->InputShape("dy", 0);
   Shape* dx_shape = ctx->OutputShape("dx", 0);
-  CHECK_OR_RETURN(dy_shape == y_shape);
+  CHECK_OR_RETURN(dy_shape == y_shape) << "The shape of y_grad and y must be same.";
   *dx_shape = dy_shape;
   return Maybe<void>::Ok();
 }
@@ -66,7 +66,8 @@ namespace oneflow {
 }
 
 /* static */ Maybe<void> HardShrinkGradOp::InferDataType(user_op::InferContext* ctx) {
-  CHECK_EQ_OR_RETURN(ctx->InputDType("dy", 0), ctx->InputDType("y", 0));
+  CHECK_EQ_OR_RETURN(ctx->InputDType("dy", 0), ctx->InputDType("y", 0))
+      << "The dtype of y_grad and y must be same.";
   *ctx->OutputDType("dx", 0) = ctx->InputDType("y", 0);
   return Maybe<void>::Ok();
 }
