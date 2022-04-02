@@ -18,10 +18,13 @@ import unittest
 from collections import OrderedDict
 
 import numpy as np
+
+from oneflow.test_utils.automated_test_util import *
 from oneflow.test_utils.test_util import GenArgList
 
 import oneflow as flow
 import oneflow.unittest
+from oneflow.test_utils.automated_test_util.torch_flow_dual_object import autotest
 
 
 def _test_search_sorted(test_case, input_dtype, device):
@@ -156,6 +159,18 @@ class TestSearch_Sorted(flow.unittest.TestCase):
         arg_dict["device"] = ["cpu", "cuda"]
         for arg in GenArgList(arg_dict):
             arg[0](test_case, *arg[1:])
+
+    @autotest(n=10, auto_backward=False, rtol=1e-3, atol=1e-3)
+    def test_search_sorted(test_case):
+        device = random_device()
+        sorted_sequence = random_tensor(ndim=4, dim0=2, dim1=3, dim2=4, dim3=5).to(device)
+        print(sorted_sequence.shape)
+        values = random_tensor(ndim=4, dim0=2, dim1=3, dim2=4).to(device)
+        print(values.shape)
+        sorter = random_tensor(ndim=4, dim0=2, dim1=3, dim2=4, dim3=5).to(device)
+        is_right = oneof(True, False)
+        return torch.searchsorted(sorted_sequence, values, out_int32=oneof(True, False),   \
+            right=is_right, side=("right" if is_right else "left"), sorter=oneof(sorter, None))
 
 
 if __name__ == "__main__":
