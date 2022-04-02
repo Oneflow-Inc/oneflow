@@ -21,8 +21,9 @@ namespace oneflow {
 
 namespace vm {
 
-void EpBackendHostAllocator::Allocate(char** mem_ptr, std::size_t size) {
-  CHECK_JUST(ep_device_->AllocPinned(allocation_options_, reinterpret_cast<void**>(mem_ptr), size));
+Maybe<void> EpBackendHostAllocator::Allocate(char** mem_ptr, std::size_t size) {
+  JUST(ep_device_->AllocPinned(allocation_options_, reinterpret_cast<void**>(mem_ptr), size));
+  return Maybe<void>::Ok();
 }
 
 void EpBackendHostAllocator::Deallocate(char* mem_ptr, std::size_t size) {

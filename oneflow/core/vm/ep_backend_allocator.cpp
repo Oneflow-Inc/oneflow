@@ -20,8 +20,8 @@ limitations under the License.
 namespace oneflow {
 namespace vm {
 
-void EpBackendAllocator::Allocate(char** mem_ptr, std::size_t size) {
-  CHECK_JUST(ep_device_->Alloc(allocation_options_, reinterpret_cast<void**>(mem_ptr), size));
+Maybe<void> EpBackendAllocator::Allocate(char** mem_ptr, std::size_t size) {
+  return ep_device_->Alloc(allocation_options_, reinterpret_cast<void**>(mem_ptr), size);
 }
 
 void EpBackendAllocator::Deallocate(char* mem_ptr, std::size_t size) {

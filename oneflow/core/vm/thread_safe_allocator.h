@@ -31,7 +31,7 @@ class ThreadSafeAllocator final : public Allocator {
       : Allocator(), backend_allocator_(std::move(backend_allocator)) {}
   ~ThreadSafeAllocator() override = default;
 
-  void Allocate(char** mem_ptr, std::size_t size) override;
+  Maybe<void> Allocate(char** mem_ptr, std::size_t size) override;
   void Deallocate(char* mem_ptr, std::size_t size) override;
 
  private:

@@ -28,8 +28,9 @@ class BinAllocator final : public Allocator {
   explicit BinAllocator(size_t alignment, std::unique_ptr<Allocator>&& backend);
   ~BinAllocator() override;
 
-  void Allocate(char** mem_ptr, std::size_t size) override;
+  Maybe<void> Allocate(char** mem_ptr, std::size_t size) override;
   void Deallocate(char* mem_ptr, std::size_t size) override;
+  void Shrink() override { DeallocateFreeBlockForGarbageCollection(); }
 
  private:
   static constexpr int32_t kInvalidBinNum = -1;
@@ -110,7 +111,7 @@ class BinAllocator final : public Allocator {
   void MergeNeighbourFreePiece(Piece* lhs, Piece* rhs);
   void RemovePieceFromBin(Piece* piece);
 
-  bool AllocateBlockToExtendTotalMem(size_t aligned_size);
+  Maybe<bool> AllocateBlockToExtendTotalMem(size_t aligned_size);
   bool DeallocateFreeBlockForGarbageCollection();
 
   const size_t alignment_;
