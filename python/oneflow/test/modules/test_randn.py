@@ -74,7 +74,6 @@ def _test_with_generator(test_case, device, shape):
     test_case.assertTrue(np.allclose(y1.numpy(), y2.numpy(), atol=1e-4, rtol=1e-4))
 
 
-
 def _test_randn_tuple_shape(test_case, device, shape):
     y1 = flow.randn(shape, device=flow.device(device))
     y2 = flow.randn(shape, device=flow.device(device))
