@@ -28,8 +28,7 @@ limitations under the License.
 namespace oneflow {
 namespace one {
 
-static std::unordered_set<std::string> view_op_set{"slice", "reshape", "view", "transpose",
-                                                   "expand_dims"};
+static std::unordered_set<std::string> view_ops_set{"to_contiguous"};
 
 Maybe<void> LazyInterpreter::Apply(const OpExpr& op_expr, const TensorTuple& inputs,
                                    TensorTuple* outputs, const OpExprInterpContext& ctx) const {
@@ -94,13 +93,14 @@ Maybe<void> AutogradInterpreter::Apply(const OpExpr& op_expr, const TensorTuple&
         std::any_of(inputs.begin(), inputs.end(),
                     [](const std::shared_ptr<Tensor>& tensor) { return tensor->requires_grad(); });
   }
-  const TensorTuple* contiguous_inputs;
-  if (view_op_set.find(op_expr.op_type_name()) != view_op_set.end()) {
-    TensorTuple tmp_inputs(inputs.size());
-    for (size_t i = 0; i < inputs.size(); ++i) { tmp_inputs[i] = inputs[i]->contiguous(); }
+  const TensorTuple* contiguous_inputs = &inputs;
+  TensorTuple tmp_inputs(inputs.size());
+  // NOTE: if this op not in view_ops_set, then need to tensor->contiguous()
+  if (view_ops_set.find(op_expr.op_type_name()) == view_ops_set.end()) {
+    for (size_t i = 0; i < inputs.size(); i++) { 
+      tmp_inputs.at(i) = inputs.at(i)->contiguous();
+    }
     contiguous_inputs = &tmp_inputs;
-  } else {
-    contiguous_inputs = &inputs;
   }
 
   {
@@ -120,7 +120,7 @@ Maybe<void> AutogradInterpreter::Apply(const OpExpr& op_expr, const TensorTuple&
               return Maybe<void>::Ok();
             });
     JUST(GetThreadLocalAutogradEngine()->AddBackwardFuncPtr(op_expr.op_type_name() + "_backward",
-                                                            backward_fn, inputs, outputs));
+                                                            backward_fn, *contiguous_inputs, outputs));
   }
   // Update outputs autograd meta
   // Note: if requires_grad is True, we will create a new autograd meta for each output

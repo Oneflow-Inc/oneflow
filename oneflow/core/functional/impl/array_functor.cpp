@@ -616,7 +616,7 @@ class ExpandFunctor {
 
     // if input tensor is eager local, then try return tensor's view
     if (view::IsViewApplicable(x)) { return view::Expand(x, in_shape, expand_shape); }
-    return OpInterpUtil::Dispatch<Tensor>(*op_, {x->contiguous()}, attrs);
+    return OpInterpUtil::Dispatch<Tensor>(*op_, {x}, attrs);
   }
 
  private:
@@ -1546,7 +1546,7 @@ class UpsampleBilinear2DFunctor {
     JUST(attrs.SetAttr<float>("width_scale", width_scale));
     JUST(attrs.SetAttr<bool>("align_corners", align_corners));
     JUST(attrs.SetAttr<std::string>("data_format", data_format));
-    return OpInterpUtil::Dispatch<Tensor>(*op_, {x->contiguous()}, attrs);
+    return OpInterpUtil::Dispatch<Tensor>(*op_, {x}, attrs);
   }
 
  private:
