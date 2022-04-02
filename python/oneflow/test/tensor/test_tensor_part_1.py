@@ -758,6 +758,12 @@ class TestTensor(flow.unittest.TestCase):
         return x.log1p()
 
     @autotest(check_graph=True)
+    def test_log2_tensor_with_random_data(test_case):
+        device = random_device()
+        x = random_tensor().to(device)
+        return x.log2()
+
+    @autotest(check_graph=True)
     def test_neg_tensor_with_random_data(test_case):
         device = random_device()
         x = random_tensor().to(device)
@@ -990,6 +996,13 @@ class TestTensor(flow.unittest.TestCase):
         device = random_device()
         x = random_tensor().to(device)
         y = x.unsqueeze(random(1, 3).to(int))
+        return y
+
+    @autotest(n=3, auto_backward=False, check_graph=True)
+    def test_flow_invert_with_random_data(test_case):
+        device = random_device()
+        x = random_tensor().to(device, dtype=torch.bool)
+        y = ~x
         return y
 
     def test_tensor_float(test_case):
