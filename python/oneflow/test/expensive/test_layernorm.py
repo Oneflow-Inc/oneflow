@@ -141,6 +141,7 @@ class TestLayerNorm(flow.unittest.TestCase):
         for arg in GenArgList(arg_dict):
             arg[0](test_case, *arg[1:])
 
+    @unittest.skip("TODO: guoran, different behavior of __shfl_sync in sm_61")
     @autotest(n=20, auto_backward=True, rtol=1.0, atol=1.0)
     def test_layernorm_with_random_data_warp(test_case):
         device = "cuda"
