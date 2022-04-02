@@ -13,25 +13,30 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 """
-
-import unittest
-
-import oneflow as flow
-import oneflow.unittest
+import oneflow
+import os
 
 
-@flow.unittest.skip_unless_1n1d()
-class TestModule(flow.unittest.TestCase):
-    def test_reshape_exception_only_one_dim_infered(test_case):
-        # torch exception and messge:
-        #
-        #   RuntimeError: only one dimension can be inferred
-        #
-        x = flow.tensor((2, 2))
-        with test_case.assertRaises(RuntimeError) as ctx:
-            y = x.reshape((-1, -1))
-        test_case.assertEqual("only one dimension can be inferred", str(ctx.exception))
+world_size = os.getenv("WORLD_SIZE")
 
 
-if __name__ == "__main__":
-    unittest.main()
+class TestCallWhenShuttingDown:
+    def __init__(self):
+        self.oneflow = oneflow
+        tensor = oneflow.ones((2, 2))
+        print(tensor)
+
+    def __del__(self, of=oneflow):
+        if world_size == 1:
+            tensor = of.ones((2, 2))
+
+
+test_call_when_shutting_down = TestCallWhenShuttingDown()
+
+
+class TestSyncWhenShuttingDown:
+    def __del__(self, of=oneflow):
+        of._oneflow_internal.eager.Sync()
+
+
+test_sync_when_shutting_down = TestSyncWhenShuttingDown()
