@@ -30,6 +30,7 @@ option(WITH_MLIR_CUDA_CODEGEN "" OFF)
 option(OF_SOFTMAX_USE_FAST_MATH "" ON)
 option(OF_LAYER_NORM_USE_FAST_MATH "" ON)
 option(TREAT_WARNINGS_AS_ERRORS "" ON)
+option(MAYBE_NEED_ERROR_MSG_CHECK "" OFF)
 # Reference:
 # https://medium.com/@alasher/colored-c-compiler-output-with-ninja-clang-gcc-10bfe7f2b949
 option(OF_FORCE_COLORED_DIAGNOSTICS "Always produce ANSI-colored diagnostics (GNU/Clang only)." ON)
