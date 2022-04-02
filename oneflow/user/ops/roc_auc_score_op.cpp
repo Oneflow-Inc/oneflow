@@ -34,7 +34,7 @@ namespace oneflow {
 }
 
 /* static */ Maybe<void> RocAucScoreOp::InferDataType(user_op::InferContext* ctx) {
-  *ctx->OutputDType("out", 0) = ctx->InputDType("pred", 0);
+  *ctx->OutputDType("out", 0) = DType::kFloat;
   return Maybe<void>::Ok();
 }
 
