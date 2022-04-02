@@ -42,11 +42,9 @@ namespace vm {
 
 struct CallInstructionUtil final {
   static inline Maybe<void> Compute(const vm::Instruction& instruction) {
-    OF_PROFILER_RANGE_PUSH("ResetPrior");
     auto* operand = CallInstructionUtil::GetCallPhyInstrOperand(instruction);
     DeviceCtx* device_ctx = instruction.stream().device_ctx().get();
     operand->mut_call_ctx()->device_ctx = device_ctx;
-    OF_PROFILER_RANGE_POP();
     OF_PROFILER_RANGE_PUSH("AllocateOutputBlobsMemory");
     JUST(AllocateOutputBlobsMemory(operand, device_ctx));
     OF_PROFILER_RANGE_POP();
