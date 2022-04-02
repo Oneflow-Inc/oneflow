@@ -99,10 +99,10 @@ class TestApiCompatibility(flow.unittest.TestCase):
             224,
         )
 
-    def test_efficientnet_compatibility(test_case):
-        do_test_train_loss_oneflow_pytorch(
-            test_case, "pytorch_efficientnet.py", "efficientnet_b0", "cuda", 8, 224,
-        )
+    # def test_efficientnet_compatibility(test_case):
+    #     do_test_train_loss_oneflow_pytorch(
+    #         test_case, "pytorch_efficientnet.py", "efficientnet_b0", "cuda", 8, 224,
+    #     )
 
     def test_levit_compatibility(test_case):
         do_test_train_loss_oneflow_pytorch(
