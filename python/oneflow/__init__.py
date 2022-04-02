@@ -147,6 +147,7 @@ from oneflow._C import matmul
 from oneflow._C import bernoulli
 from oneflow._C import round
 from oneflow._C import softplus
+from oneflow._C import threshold
 from oneflow._C import tril
 from oneflow._C import triu
 from oneflow._C import pad
@@ -212,7 +213,7 @@ from oneflow.framework.tensor_str import set_printoptions
 
 if not env_util.HasAllMultiClientEnvVars():
     env_util.SetDefaultMultiClientEnvVars()
-env_util.api_env_init()
+_oneflow_global_unique_env_ = env_util.create_env()
 oneflow._oneflow_internal.RegisterGILForeignLockHelper()
 oneflow._oneflow_internal.InitDefaultConsistentTransportTokenScope()
 session_ctx.OpenDefaultSession(
@@ -259,13 +260,8 @@ hook = ExitHook()
 
 
 def atexit_hook(hook):
-    if hook.is_normal_exit():
-        if oneflow._oneflow_internal.IsEnvInited():
-            oneflow._oneflow_internal.eager.Sync()
     oneflow.framework.session_context.TryCloseDefaultSession()
-    if hook.is_normal_exit():
-        oneflow._oneflow_internal.DestroyEnv()
-    oneflow._oneflow_internal.SetShuttingDown()
+    _oneflow_global_unique_env_.SwitchToShuttingDownPhase(hook.is_normal_exit())
 
 
 atexit.register(atexit_hook, hook)
@@ -285,9 +281,6 @@ import oneflow.nn.image
 from oneflow.framework.check_point_v2 import load
 from oneflow.framework.check_point_v2 import save
 from oneflow.framework.dtype import convert_oneflow_dtype_to_numpy_dtype, dtypes
-from oneflow.framework.env_util import (
-    api_enable_eager_execution as enable_eager_execution,
-)
 from oneflow.framework.function_util import FunctionConfig
 from oneflow.framework.function_util import FunctionConfig as function_config
 from oneflow.framework.generator import create_generator as Generator
@@ -399,7 +392,7 @@ from . import (
     boxing,
     backends,
     amp,
-)  # , saved_model NOTE(chengcheng): unavailable now
+)
 import oneflow.utils.data
 import oneflow.comm
 import oneflow.framework.docstr as docstr

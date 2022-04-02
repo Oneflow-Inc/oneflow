@@ -1,4 +1,4 @@
-/*
+"""
 Copyright 2020 The OneFlow Authors. All rights reserved.
 
 Licensed under the Apache License, Version 2.0 (the "License");
@@ -12,19 +12,17 @@ distributed under the License is distributed on an "AS IS" BASIS,
 WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
-*/
-#include <pybind11/pybind11.h>
-#include <string>
-#include "oneflow/api/python/of_api_registry.h"
-#include "oneflow/api/python/calibration/calibration.h"
+"""
+import oneflow
+from oneflow.framework.docstr.utils import add_docstr
 
-namespace py = pybind11;
+add_docstr(
+    oneflow.nn.functional.layer_norm,
+    """nn.functional.layer_norm(input, normalized_shape, weight=None, bias=None, eps=1e-05) -> Tensor
 
-namespace oneflow {
+    Applies Layer Normalization for last certain number of dimensions.
 
-ONEFLOW_API_PYBIND11_MODULE("", m) {
-  m.def("CacheInt8Calibration", &CacheInt8Calibration);
-  m.def("WriteInt8Calibration", &WriteInt8Calibration);
-}
+    See :class:`~oneflow.nn.LayerNorm` for details.
 
-}  // namespace oneflow
+    """,
+)

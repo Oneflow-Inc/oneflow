@@ -20,7 +20,7 @@ from collections import OrderedDict
 from oneflow.test_utils.automated_test_util import *
 from oneflow.test_utils.test_util import GenArgList
 
-
+# TODO(): random_tensor can't generate a tensor with nan or inf element.
 def _test_isnan(test_case, shape, dtype, device):
     np_array = np.random.randn(*shape)
     mask = np.random.choice([1, 0], np_array.shape, p=[0.1, 0.9]).astype(bool)
