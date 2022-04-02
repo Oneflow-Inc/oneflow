@@ -146,7 +146,6 @@ class TestGraphIOCheck(flow.unittest.TestCase):
                     self.m = CustomModule()
 
                 def build(self, t):
-                    temp = flow.zeros(2, 2, dtype=flow.int64)
                     rt = self.m(t)
                     return rt
 
@@ -178,9 +177,6 @@ class TestGraphIOCheck(flow.unittest.TestCase):
 
         # test tensor
         test_output(x, Tensor)
-
-        # test None
-        test_output(None, None)
 
     def test_graph_outputs_buffer(test_case):
         class CustomModuleIOCheck(flow.nn.Module):

@@ -54,7 +54,7 @@ class RandomMaskLikeKernel final : public user_op::OpKernel, public user_op::Cud
     const user_op::Tensor* like = ctx->Tensor4ArgNameAndIndex("like", 0);
     user_op::Tensor* out = ctx->Tensor4ArgNameAndIndex("out", 0);
     int64_t elem_cnt = like->shape().elem_cnt();
-    int8_t* mask = out->mut_dptr<int8_t>();
+    bool* mask = out->mut_dptr<bool>();
     auto* random_mask_like_state = dynamic_cast<RandomMaskLikeKernelState*>(state);
     CHECK_NOTNULL(random_mask_like_state);
     const auto& generator = random_mask_like_state->generator();

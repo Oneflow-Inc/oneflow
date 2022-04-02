@@ -59,6 +59,7 @@ check_unwanted_test_scripts(
         "xrt",
         "exceptions",
         "expensive",
+        "misc",
     ],
 )
 

@@ -18,7 +18,7 @@ import unittest
 from collections import OrderedDict
 
 import numpy as np
-from test_util import GenArgList
+from oneflow.test_utils.test_util import GenArgList
 
 import oneflow as flow
 import oneflow.unittest
@@ -109,6 +109,15 @@ class TestMeshGridModule(flow.unittest.TestCase):
         x = random_tensor(ndim=1, dim0=random(1, 6)).to(device)
         res = torch.meshgrid(x, indexing="xy")
         return res[0]
+
+    @autotest(n=3)
+    def test_meshgrid_tuple_list_with_random_data(test_case):
+        device = random_device()
+        x = random_tensor(ndim=1, dim0=random(1, 6)).to(device)
+        y = random_tensor(ndim=1, dim0=random(1, 6)).to(device)
+        res1 = torch.meshgrid((x, y))
+        res2 = torch.meshgrid([x, y])
+        return torch.cat((res1[0], res1[1], res2[0], res2[1]), 0)
 
 
 if __name__ == "__main__":

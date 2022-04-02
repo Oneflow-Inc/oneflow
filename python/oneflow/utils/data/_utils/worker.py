@@ -305,7 +305,7 @@ def _worker_loop(
         signal_handling._set_worker_signal_handlers()
         signal.signal(signal.SIGTERM, cleanup_shm_at_exit)
         signal.signal(signal.SIGINT, cleanup_shm_at_exit)
-        # TODO:flow.set_num_threads(1)
+        flow.set_num_threads(1)
         seed = base_seed + worker_id
         random.seed(seed)
         generator.manual_seed(seed)

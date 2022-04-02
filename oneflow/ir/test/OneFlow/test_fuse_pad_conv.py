@@ -27,14 +27,20 @@ import oneflow as flow
 import oneflow.unittest
 
 
-def do_pad_conv_graph(test_case, with_cuda, with_bias):
-    x = flow.randn(2, 3, 4, 5)
+def do_pad_conv_graph(test_case, with_cuda, with_bias, with_nchw=True):
+    if with_nchw:
+        x = flow.randn(2, 3, 4, 5)
+    else:
+        x = flow.randn(2, 4, 5, 3)
     conv = flow.nn.Conv2d(3, 3, 2, 1, bias=with_bias)
     if with_cuda:
         x = x.cuda()
         conv.to("cuda")
 
-    pad_x = flow.nn.functional.pad(x, (1, 1, 1, 1))
+    if with_nchw:
+        pad_x = flow.nn.functional.pad(x, (1, 1, 1, 1))
+    else:
+        pad_x = flow.nn.functional.pad(x, (0, 0, 1, 1, 1, 1))
     eager_conv_x = conv(pad_x)
 
     class GraphToRun(flow.nn.Graph):
@@ -43,7 +49,11 @@ def do_pad_conv_graph(test_case, with_cuda, with_bias):
             self.conv = conv
 
         def build(self, x):
-            return self.conv(flow.nn.functional.pad(x, (1, 1, 1, 1)))
+            if with_nchw:
+                pad_x = flow.nn.functional.pad(x, (1, 1, 1, 1))
+            else:
+                pad_x = flow.nn.functional.pad(x, (0, 0, 1, 1, 1, 1))
+            return self.conv(pad_x)
 
     graph_to_run = GraphToRun()
     lazy_conv_x = graph_to_run(x)
@@ -57,6 +67,8 @@ class TestFusePadConv(oneflow.unittest.TestCase):
         do_pad_conv_graph(test_case, False, True)
         do_pad_conv_graph(test_case, True, False)
         do_pad_conv_graph(test_case, False, False)
+        do_pad_conv_graph(test_case, True, False, True)
+        do_pad_conv_graph(test_case, False, False, True)
 
 
 if __name__ == "__main__":

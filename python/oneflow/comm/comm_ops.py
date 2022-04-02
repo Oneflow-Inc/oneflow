@@ -46,7 +46,7 @@ def all_reduce(tensor):
         >>> flow.comm.all_reduce(tensor)
         >>> tensor.numpy()
         array([[3, 5],
-               [7, 9]])
+               [7, 9]], dtype=int64)
 
     """
     assert isinstance(tensor, flow._oneflow_internal.Tensor)
@@ -257,7 +257,7 @@ def barrier():
     Synchronizes all processes.
 
     """
-    flow._oneflow_internal.eager.multi_client.Sync()
+    flow._oneflow_internal.eager.Sync()
 
 
 def reduce_scatter(output, input_list):

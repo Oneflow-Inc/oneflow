@@ -14,7 +14,6 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 #include "oneflow/core/graph/task_graph.h"
-#include "oneflow/core/common/multi_client.h"
 #include "oneflow/core/common/util.h"
 #include "oneflow/core/graph/inplace_lbi_graph.h"
 #include "oneflow/core/register/blob_desc.h"
@@ -293,7 +292,7 @@ void GenSortedCompTaskNodes(const OpNode* op_node, std::vector<CompTaskNode*>* s
       StreamId::stream_index_t stream_index = 0;
       if (op_node->op().op_conf().has_stream_name_hint()) {
         const std::string& stream_name_hint = op_node->op().op_conf().stream_name_hint();
-        LOG(INFO) << "set op: " << op_node->op().op_name() << " to stream: " << stream_name_hint;
+        VLOG(3) << "set op: " << op_node->op().op_name() << " to stream: " << stream_name_hint;
         stream_index = Global<TaskStreamIndexManager>::Get()->GetNamedTaskStreamIndex(
             device_id, stream_name_hint);
       } else {

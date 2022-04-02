@@ -19,7 +19,7 @@ from multiprocessing.pool import Pool
 import numpy as np
 
 from oneflow.test_utils.automated_test_util import *
-from test_util import GenArgList
+from oneflow.test_utils.test_util import GenArgList
 
 import oneflow as flow
 
@@ -38,7 +38,7 @@ def _test_fork_sub_process(id):
 @flow.unittest.skip_unless_1n1d()
 class TestForkSubProcess(flow.unittest.TestCase):
     def test_fork_sub_process(test_case):
-        flow._oneflow_internal.eager.multi_client.Sync()
+        flow._oneflow_internal.eager.Sync()
         print("=============main process start=============")
         # process pool
         num_process = 4

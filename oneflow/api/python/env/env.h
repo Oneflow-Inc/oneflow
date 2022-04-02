@@ -18,13 +18,13 @@ limitations under the License.
 
 #include <string>
 #include <google/protobuf/text_format.h>
-#include "oneflow/core/common/multi_client.h"
 #include "oneflow/core/common/protobuf.h"
 #include "oneflow/core/job/cluster.h"
 #include "oneflow/core/job/cluster_instruction.h"
 #include "oneflow/core/job/env_global_objects_scope.h"
 #include "oneflow/core/job/global_for.h"
 #include "oneflow/core/job/resource_desc.h"
+#include "oneflow/core/job/graph_verbose_step_lr_util.h"
 #include "oneflow/core/control/global_process_ctx.h"
 #include "oneflow/core/rpc/include/base.h"
 
@@ -46,30 +46,13 @@ inline Maybe<void> EnableEagerEnvironment(bool enable_eager_execution) {
   return Maybe<void>::Ok();
 }
 
-inline Maybe<bool> IsEnvInited() { return Global<EnvGlobalObjectsScope>::Get() != nullptr; }
-
-inline Maybe<void> DestroyEnv() {
-  if (Global<EnvGlobalObjectsScope>::Get() == nullptr) { return Maybe<void>::Ok(); }
-  if (JUST(IsMultiClient())) {
-    OF_ENV_BARRIER();
-  } else {
-    if (GlobalProcessCtx::IsThisProcessMaster()) { ClusterInstruction::MasterSendHalt(); }
-  }
-  Global<EnvGlobalObjectsScope>::Delete();
-  return Maybe<void>::Ok();
-}
-
-inline Maybe<void> InitEnv(const std::string& env_proto_str, bool is_multi_client) {
+inline Maybe<EnvGlobalObjectsScope> CreateEnv(const std::string& env_proto_str) {
   EnvProto env_proto;
   CHECK_OR_RETURN(TxtString2PbMessage(env_proto_str, &env_proto))
       << "failed to parse env_proto" << env_proto_str;
-  CHECK_ISNULL_OR_RETURN(Global<EnvGlobalObjectsScope>::Get());
-  // Global<T>::New is not allowed to be called here
-  // because glog is not constructed yet and LOG(INFO) has bad bahavior
-  Global<EnvGlobalObjectsScope>::SetAllocated(new EnvGlobalObjectsScope());
-  JUST(Global<EnvGlobalObjectsScope>::Get()->Init(env_proto));
-  if (!GlobalProcessCtx::IsThisProcessMaster() && !is_multi_client) { JUST(Cluster::WorkerLoop()); }
-  return Maybe<void>::Ok();
+  auto env = std::make_shared<EnvGlobalObjectsScope>();
+  JUST(env->Init(env_proto));
+  return env;
 }
 
 inline Maybe<long long> CurrentMachineId() { return GlobalProcessCtx::Rank(); }
@@ -93,6 +76,11 @@ inline Maybe<void> SetFLAGS_v(int32_t v_level) {
   return Maybe<void>::Ok();
 }
 inline Maybe<int32_t> GetFLAGS_v() { return FLAGS_v; }
+inline Maybe<void> SetGraphLRVerbose(bool verbose) {
+  SetGraphVerboseStepLr(verbose);
+  return Maybe<void>::Ok();
+}
+inline bool GetGraphLRVerbose() { return IsOpenGraphVerboseStepLr(); }
 }  // namespace oneflow
 
 #endif  // ONEFLOW_API_PYTHON_ENV_ENV_H_

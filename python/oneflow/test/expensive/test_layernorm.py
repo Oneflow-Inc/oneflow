@@ -23,7 +23,7 @@ import oneflow.unittest
 
 
 from oneflow.test_utils.automated_test_util import *
-from test_util import GenArgList
+from oneflow.test_utils.test_util import GenArgList
 
 input_arr = np.array(
     [

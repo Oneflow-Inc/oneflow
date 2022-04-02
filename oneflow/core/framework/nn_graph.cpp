@@ -70,18 +70,18 @@ Maybe<std::string> GetTensorMetaString(const std::shared_ptr<one::Tensor>& tenso
 }  // namespace
 
 NNGraph::~NNGraph() {
-  VLOG(2) << "graph destructor Try to close c nn graph name " << name_ << "." << std::endl;
+  VLOG(1) << "Graph destructor Try to close c nn graph name " << name_ << "." << std::endl;
   CHECK_JUST(Close());
 }
 
 Maybe<void> NNGraph::Close() {
   if (!is_closed_) {
-    VLOG(2) << "Try to close c nn graph name " << name_ << "." << std::endl;
+    VLOG(1) << "Try to close c nn graph name " << name_ << "." << std::endl;
     CloseRuntimeBuffers();
     runtime_.reset();
     Global<MultiClientSessionContext>::Get()->RemoveGraphFreeEagerTensors(name_);
     is_closed_ = true;
-    VLOG(2) << "Finish close c nn graph name " << name_ << "." << std::endl;
+    VLOG(1) << "Finish close c nn graph name " << name_ << "." << std::endl;
   }
   return Maybe<void>::Ok();
 }
@@ -262,12 +262,13 @@ Maybe<void> NNGraph::CompileAndInitRuntime() {
     Compiler().Compile(&job_, &plan_, /* need_job_complete */ true);
     PlanUtil::GenMemBlockAndChunkWithVariableOpNames4Plan(&plan_, variable_op_names_);
 
-    LOG(INFO) << "\njob_id: " << job_ctx->job_id() << " , job_name: " << name_
-              << " , compile time: " << (GetCurTime() - start) / 1000000000.0 << " seconds.\n";
+    VLOG(1) << "Graph name: " << name_ << " compile time: " << (GetCurTime() - start) / 1000000000.0
+            << " seconds.";
     if (Global<ResourceDesc, ForSession>::Get()->enable_debug_mode()) {
       TeePersistentLogStream::Create("job_" + name_ + "_plan")->Write(plan_);
       PlanUtil::ToDotFile(plan_, "job_" + name_ + "_plan.dot");
     }
+    PlanUtil::GenRegisterHint(&plan_);
     // TODO(chengcheng): test collective boxing for multi-job.
     PlanUtil::GenCollectiveBoxingPlan(&job_, &plan_);
     // PlanUtil::SetForceInplaceMemBlock(&plan_); NOTE(chengcheng): only for ssp.

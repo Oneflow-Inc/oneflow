@@ -13,7 +13,6 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
-#include "oneflow/core/common/multi_client.h"
 #include "oneflow/core/job_rewriter/job_completer.h"
 #include "oneflow/core/job_rewriter/job_pass.h"
 #include "oneflow/core/job_rewriter/autograd.h"
@@ -33,30 +32,12 @@ Maybe<void> CheckOpGraph(const OpGraph& op_graph) {
   JUST(op_graph.MaybeForEachNode([&](OpNode* op_node) -> Maybe<void> {
     size_t in_cnt = 0;
     op_graph.ForEachDataAndCtrlInNode(op_node, [&](OpNode*) { ++in_cnt; });
-    if (in_cnt == 0) {
-      // NOTE(chengcheng):
-      //   in single-client source op is SourceTickOpConf,
-      //   in multi-client source op is WaitAndSendIdsOpConf_
-      if (JUST(IsMultiClient())) {
-        CHECK_OR_RETURN(op_node->op().op_conf().has_wait_and_send_ids_conf());
-      } else {
-        CHECK_OR_RETURN(op_node->op().op_conf().has_source_tick_conf());
-      }
-    }
+    if (in_cnt == 0) { CHECK_OR_RETURN(op_node->op().op_conf().has_wait_and_send_ids_conf()); }
 
     size_t out_cnt = 0;
     op_graph.ForEachDataAndCtrlOutNode(op_node, [&](OpNode*) { ++out_cnt; });
 
-    if (out_cnt == 0) {
-      // NOTE(chengcheng):
-      //   in single-client source op is SinkTickOpConf,
-      //   in multi-client source op is CallbackNotifyOpConf.
-      if (JUST(IsMultiClient())) {
-        CHECK_OR_RETURN(op_node->op().op_conf().has_callback_notify_conf());
-      } else {
-        CHECK_OR_RETURN(op_node->op().op_conf().has_sink_tick_conf());
-      }
-    }
+    if (out_cnt == 0) { CHECK_OR_RETURN(op_node->op().op_conf().has_callback_notify_conf()); }
     return Maybe<void>::Ok();
   }));
   return Maybe<void>::Ok();
@@ -135,9 +116,6 @@ Maybe<void> JobCompleter::Complete(Job* job) const {
   // complete tick ops
   JUST(WithOpGraphAndMutJobBuilder(job, &AutoPrependTick));
   JUST(WithOpGraphAndMutJobBuilder(job, &AddTickForTimeShape));
-  JUST(WithOpGraphAndMutJobBuilder(job, &SingleClientAutoSourceAndSinkTick));
-  JUST(WithOpGraphAndMutJobBuilder(job, &SingleClientAddGlobalInputCriticalSections));
-  JUST(WithOpGraphAndMutJobBuilder(job, &SingleClientAddGlobalOutputCriticalSections));
   JUST(WithOpGraphAndMutJob(job, &MultiClientAutoSourceAndSinkTick));
   JUST(WithOpGraphAndMutJob(job, &MultiClientAutoInterfaceCriticalSectionTick));
   JUST(JobPass4Name("SystemOpFillJobNamePass")(job, &job_pass_ctx));

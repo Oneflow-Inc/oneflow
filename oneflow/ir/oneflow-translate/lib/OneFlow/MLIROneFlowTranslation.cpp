@@ -107,7 +107,8 @@ LogicalResult JobImporter::AppendCtrlInOperand(const ::oneflow::OperatorConf& op
   for (auto& ctrl_in_op_name : op.ctrl_in_op_name()) {
     auto it = op_name2ctrl_result_.find(ctrl_in_op_name);
     if (it == op_name2ctrl_result_.end()) {
-      GetModule().emitError("IR result not found for ctrl in op: " + ctrl_in_op_name);
+      GetModule().emitError("ctrl edge result of this op not found: " + ctrl_in_op_name
+                            + ". op being controlled: " + op.name());
       return failure();
     } else {
       operand_vec.push_back(it->second);
@@ -175,10 +176,12 @@ LogicalResult JobImporter::AddDeviceName(const ::oneflow::OperatorConf& op,
 Type JobImporter::GetTensorTypeOfLbn(const std::string& lbn) {
   Type ret = this->GetBuilder().getNoneType();
   job_wrapper_.QueryLogicalBlob(
-      lbn,
-      [this, &ret](const int64_t* shape_begin, const int64_t* shape_end, ::oneflow::DataType dt) {
+      lbn, [this, &ret, &lbn](const int64_t* shape_begin, const int64_t* shape_end,
+                              ::oneflow::DataType dt) {
         if (auto t = this->GetTypeFromOneFlowDataType(dt)) {
           ret = RankedTensorType::get(ArrayRef<int64_t>(shape_begin, shape_end), t.getValue());
+        } else {
+          llvm::errs() << "fail to get data tensor type for: " << lbn << "\n";
         }
       });
   return ret;
@@ -629,11 +632,13 @@ LogicalResult JobImporter::TryToUpdateJob() {
   auto ConvertOp = [&](Operation* op) -> WalkResult {
     if (op->hasTrait<OpTrait::IsOpConfCompatible>()) {
       if (llvm::dyn_cast<oneflow::UserOp>(op)) {
-        op->emitError("excepted concrete UserOp, but got generic UserOp: ") << *op;
-        return WalkResult::interrupt();
+        if (failed(ConvertUserOp(op, new_job))) {
+          op->emitError("failed to convert generic UserOp: ") << *op;
+          return WalkResult::interrupt();
+        }
       } else if (llvm::dyn_cast<oneflow::SystemOp>(op)) {
         if (failed(ConvertSystemOp(op, new_job))) {
-          op->emitError("failed to process SystemOp: ") << *op;
+          op->emitError("failed to convert SystemOp: ") << *op;
           return WalkResult::interrupt();
         }
       } else if (llvm::dyn_cast<oneflow::VariableOp>(op)) {
@@ -694,10 +699,22 @@ LogicalResult JobImporter::ConvertUserOp(Operation* op, ::oneflow::Job& job) {
 
   auto* op_conf = job.mutable_net()->add_op();
   auto* user_conf = op_conf->mutable_user_conf();
-  if (!succeeded(ConvertUserOpInputs(op, user_op_adaptor, user_conf))) { return failure(); }
-  if (!succeeded(ConvertUserOpOutputs(op, user_op_adaptor, user_conf))) { return failure(); }
-  if (!succeeded(ConvertUserOpAttributes(op, user_op_adaptor, *op_conf))) { return failure(); }
-  if (!succeeded(ConvertCtrlInputs(op, *op_conf))) { return failure(); }
+  if (!succeeded(ConvertUserOpInputs(op, user_op_adaptor, user_conf))) {
+    op->emitError("fail to convert user op inputs");
+    return failure();
+  }
+  if (!succeeded(ConvertUserOpOutputs(op, user_op_adaptor, user_conf))) {
+    op->emitError("fail to convert user op outputs");
+    return failure();
+  }
+  if (!succeeded(ConvertUserOpAttributes(op, user_op_adaptor, *op_conf))) {
+    op->emitError("fail to convert user op attributes");
+    return failure();
+  }
+  if (!succeeded(ConvertCtrlInputs(op, *op_conf))) {
+    op->emitError("fail to convert user op control inputs");
+    return failure();
+  }
   return success();
 }
 

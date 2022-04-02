@@ -75,7 +75,7 @@ void LocalCtrlClient::NotifyDone(const std::string& name) {
 
 void LocalCtrlClient::WaitUntilDone(const std::string& name) {
   std::unique_lock<std::mutex> lck(done_names_mtx_);
-  LOG(INFO) << "waiting for name: " << name;
+  VLOG(3) << "waiting for name: " << name;
   done_names_cv_.wait(lck);
   CHECK(done_names_.find(name) != done_names_.end());
 }
@@ -111,7 +111,7 @@ void LocalCtrlClient::PullKV(const std::string& k,
   while (true) {
     auto it = kv_.find(k);
     if (it == kv_.end()) {
-      LOG(INFO) << "waiting for key: " << k;
+      VLOG(3) << "waiting for key: " << k;
       kv_cv_.wait(lck);
     } else {
       VGetter(it->second);
@@ -177,8 +177,8 @@ class DryRunCtrlClient : public CtrlClient {
     Barrier(barrier_name, Global<EnvDesc>::Get()->TotalMachineNum());
   }
   void Barrier(const std::string& barrier_name, int32_t barrier_num) override {
-    LOG(INFO) << "skipping barrier in dry run, barrier name: " << barrier_name
-              << ", barrier num: " << barrier_num;
+    VLOG(3) << "skipping barrier in dry run, barrier name: " << barrier_name
+            << ", barrier num: " << barrier_num;
   }
 
   TryLockResult TryLock(const std::string& name) override {

@@ -18,7 +18,7 @@ limitations under the License.
 namespace oneflow {
 
 void RuntimeCtx::NewCounter(const std::string& name, int64_t val) {
-  LOG(INFO) << "NewCounter " << name << " " << val;
+  VLOG(3) << "NewCounter " << name << " " << val;
   CHECK(counters_.emplace(name, std::make_unique<BlockingCounter>(val)).second);
 }
 
@@ -26,7 +26,7 @@ void RuntimeCtx::DecreaseCounter(const std::string& name) {
   auto it = counters_.find(name);
   CHECK(it != counters_.end());
   int64_t cur_val = it->second->Decrease();
-  LOG(INFO) << "DecreaseCounter " << name << ", current val is " << cur_val;
+  VLOG(3) << "DecreaseCounter " << name << ", current val is " << cur_val;
 }
 
 void RuntimeCtx::WaitUntilCntEqualZero(const std::string& name) {

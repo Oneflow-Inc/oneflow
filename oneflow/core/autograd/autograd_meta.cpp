@@ -16,6 +16,7 @@ limitations under the License.
 
 #include "oneflow/core/framework/tensor.h"
 #include "oneflow/core/framework/dtype.h"
+#include "oneflow/core/framework/tensor_arg.h"
 #include "oneflow/core/autograd/autograd_meta.h"
 #include "oneflow/core/functional/functional.h"
 
@@ -54,6 +55,13 @@ Maybe<Tensor> TensorInfo::zeros() const {
     return functional::ConsistentConstant(*shape_.get(), 0, dtype_, parallel_desc, sbp_tuple);
   }
 }
+
+AutogradMeta::AutogradMeta(bool requires_grad, bool is_leaf)
+    : is_leaf_(is_leaf),
+      requires_grad_(requires_grad),
+      retain_grad_(false),
+      is_grad_acc_inplace_(false),
+      current_grad_(new TensorArg) {}
 
 Maybe<void> AutogradMeta::set_acc_grad(const std::shared_ptr<Tensor>& grad) {
   if (const auto& static_zeros_tensor = std::dynamic_pointer_cast<StaticZerosTensor>(grad)) {
