@@ -22,7 +22,6 @@ import oneflow.core.framework.variable_meta_info_pb2 as variable_meta_info_pb
 import numpy as np
 from typing import Union
 
-
 Tensor = flow._oneflow_internal.Tensor
 TensorTuple = flow._oneflow_internal.TensorTuple
 
@@ -399,6 +398,10 @@ def _diagonal(self, offset=0, dim1=0, dim2=1):
 
 def _log1p(self):
     return flow.log1p(self)
+
+
+def _log2(self):
+    return flow._C.log2(self)
 
 
 def _reciprocal(self):
@@ -1113,6 +1116,7 @@ def RegisterMethods():
     Tensor.diag = _diag
     Tensor.diagonal = _diagonal
     Tensor.log1p = _log1p
+    Tensor.log2 = _log2
     Tensor.add = _add
     Tensor.add_ = _add_inplace
     Tensor.div = _truediv
