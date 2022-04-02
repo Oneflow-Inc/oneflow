@@ -19,25 +19,40 @@ from collections import OrderedDict
 import numpy as np
 import oneflow as flow
 from oneflow.test_utils.test_util import GenArgList
+from sklearn.metrics import roc_auc_score
 
 
-def _test_roc_auc_score(test_case, label_dtype, inputs):
-    label = flow.tensor(inputs["label"], dtype=label_dtype)
-    pred = flow.Tensor(inputs["pred"])
+def _test_roc_auc_score(test_case, label_dtype):
+    inputs = [
+        {"label": [0, 0, 1, 1], "pred": [0.1, 0.4, 0.35, 0.8], "score": 0.75},
+        {"label": [0, 1, 0, 1], "pred": [0.5, 0.5, 0.5, 0.5], "score": 0.5},
+    ]
+    for data in inputs:
+        label = flow.tensor(data["label"], dtype=label_dtype)
+        pred = flow.Tensor(data["pred"])
+        of_score = flow.roc_auc_score(label, pred)
+        test_case.assertTrue(np.allclose(of_score.numpy()[0], data["score"]))
+
+
+def _compare_roc_auc_score(test_case, label_dtype):
+    n_examples = 16384
+    label = np.random.randint(0, 2, n_examples)
+    pred = np.random.random(n_examples)
+    score = roc_auc_score(label, pred)
+
+    label = flow.tensor(label, dtype=label_dtype)
+    pred = flow.Tensor(pred)
     of_score = flow.roc_auc_score(label, pred)
-    test_case.assertTrue(np.allclose(of_score.numpy()[0], inputs["score"]))
+
+    test_case.assertTrue(np.allclose(of_score.numpy()[0], score))
 
 
 @flow.unittest.skip_unless_1n1d()
 class TestNMS(flow.unittest.TestCase):
     def test_roc_auc_score(test_case):
         arg_dict = OrderedDict()
-        arg_dict["test_fun"] = [_test_roc_auc_score]
+        arg_dict["test_fun"] = [_test_roc_auc_score, _compare_roc_auc_score]
         arg_dict["label_dtype"] = [flow.int32, flow.float]
-        arg_dict["inputs"] = [
-            {"label": [0, 0, 1, 1], "pred": [0.1, 0.4, 0.35, 0.8], "score": 0.75},
-            {"label": [0, 1, 0, 1], "pred": [0.5, 0.5, 0.5, 0.5], "score": 0.5},
-        ]
         for arg in GenArgList(arg_dict):
             arg[0](test_case, *arg[1:])
 
