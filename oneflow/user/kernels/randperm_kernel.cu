@@ -102,11 +102,8 @@ class GpuRandPermKernel final : public user_op::OpKernel {
         reinterpret_cast<void*>(reinterpret_cast<char*>(value_base) + indices_aligned_bytes);
     size_t temp_storage_bytes = GetCubSortPairsTempStorageSize<int32_t>(n);
 
-                        stream->As<ep::CudaStream>()->cuda_stream()>>>(n, value_base, key_base,
-                                                                       curand_states);
-    GeneKeysAndValues<<<block_num, thread_num, 0,
-                        stream->As<ep::CudaStream>()->cuda_stream()>>>(n, value_base, key_base,
-                                                                       curand_states);
+    GeneKeysAndValues<<<block_num, thread_num, 0, stream->As<ep::CudaStream>()->cuda_stream()>>>(
+        n, value_base, key_base, curand_states);
 
     auto err = cub::DeviceRadixSort::SortPairs(
         /* d_temp_storage */ tmp_base,
