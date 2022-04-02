@@ -102,6 +102,10 @@ class GpuRandPermKernel final : public user_op::OpKernel {
         reinterpret_cast<void*>(reinterpret_cast<char*>(value_base) + indices_aligned_bytes);
     size_t temp_storage_bytes = GetCubSortPairsTempStorageSize<int32_t>(n);
 
+<<<<<<< HEAD
+=======
+    stream->As<ep::CudaStream>()->cuda_stream() >>> (n, value_base, key_base, curand_states);
+>>>>>>> 20d6cb61d77e24f7a6b8cc732910ad705336fb0f
     GeneKeysAndValues<<<block_num, thread_num, 0, stream->As<ep::CudaStream>()->cuda_stream()>>>(
         n, value_base, key_base, curand_states);
 
