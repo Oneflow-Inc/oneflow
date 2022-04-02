@@ -20,7 +20,7 @@ limitations under the License.
 
 namespace oneflow {
 namespace user_op {
-
+#ifdef WITH_CUDA
 template<typename T>
 struct IsNanFunctor<DeviceType::kCUDA, T, std::enable_if_t<std::is_floating_point<T>::value>> {
   __device__ bool operator()(const T x) const { return isnan(x); }
@@ -55,7 +55,9 @@ struct IsInfFunctor<DeviceType::kCUDA, half> {
   REGISTER_ISNAN_KERNEL(device, OF_PP_PAIR_FIRST(dtype_pair)) \
   REGISTER_ISINF_KERNEL(device, OF_PP_PAIR_FIRST(dtype_pair))
 
+REGISTER_UTIL_OPS_CUDA_KERNEL(DeviceType::kCUDA, (half))
 OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(REGISTER_UTIL_OPS_CUDA_KERNEL, (DeviceType::kCUDA),
                                  UTIL_OPS_DATA_TYPE_SEQ);
+#endif  // WITH_CUDA
 }  // namespace user_op
 }  // namespace oneflow
