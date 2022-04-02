@@ -515,11 +515,11 @@ def normal_op(
 ):
     size = _handle_size_arg(size)
     size = _single(size)
-    print(size)
     return flow._C.normal(
             mean=mean,
             std=std,
             size=size,
+            out=out,
             dtype=dtype,
             device=device,
             generator=generator,
