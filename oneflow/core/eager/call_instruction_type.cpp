@@ -52,7 +52,7 @@ struct CallInstructionUtil final {
       OF_PROFILER_RANGE_PUSH("TryAllocateTempStorageBlobMemory");
       InferTempStorageBlobDesc(operand);
       JUST(ResetTempStorageBlob(operand));
-      JUST(TryAllocateTempStorageBlobMemory(operand, device_ctx));
+      JUST(TryAllocateTempStorageBlobMemory(operand, device_ctx->mut_allocator()));
       OF_PROFILER_RANGE_POP();
     }
     user_op::OpKernelState* state = nullptr;
@@ -65,7 +65,7 @@ struct CallInstructionUtil final {
     OpKernelCompute(operand, device_ctx, state, cache);
     if (unlikely(operand->need_temp_storage())) {
       OF_PROFILER_RANGE_PUSH("DeallocateTempStorageBlobMemory");
-      JUST(DeallocateTempStorageBlobMemory(operand, device_ctx));
+      JUST(DeallocateTempStorageBlobMemory(operand));
       OF_PROFILER_RANGE_POP();
     }
     return Maybe<void>::Ok();
@@ -110,14 +110,14 @@ struct CallInstructionUtil final {
                                                       DeviceCtx* device_ctx) {
     for (const auto& blob_object : *operand->outputs()) {
       JUST(blob_object->TryInitBlob());
-      JUST(blob_object->TryAllocateBlobBodyMemory(device_ctx));
+      JUST(blob_object->TryAllocateBlobBodyMemory(device_ctx->mut_allocator()));
     }
     return Maybe<void>::Ok();
   }
 
   static inline Maybe<void> TryAllocateTempStorageBlobMemory(CallPhyInstrOperand* operand,
-                                                             DeviceCtx* device_ctx) {
-    return operand->mut_opkernel()->mut_temp_blob_object()->TryAllocateBlobBodyMemory(device_ctx);
+                                                             vm::Allocator* allocator) {
+    return operand->mut_opkernel()->mut_temp_blob_object()->TryAllocateBlobBodyMemory(allocator);
   }
 
   static inline void OpKernelCompute(CallPhyInstrOperand* operand, DeviceCtx* device_ctx,
@@ -132,8 +132,7 @@ struct CallInstructionUtil final {
     opkernel->UpdateComputeContext(nullptr);
   }
 
-  static inline Maybe<void> DeallocateTempStorageBlobMemory(CallPhyInstrOperand* operand,
-                                                            DeviceCtx* device_ctx) {
+  static inline Maybe<void> DeallocateTempStorageBlobMemory(CallPhyInstrOperand* operand) {
     return operand->mut_opkernel()->mut_temp_blob_object()->DeallocateBlobDataPtr();
   }
 };

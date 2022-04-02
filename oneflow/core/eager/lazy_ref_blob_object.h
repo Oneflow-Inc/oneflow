@@ -38,7 +38,7 @@ class LazyRefBlobObject final : public BlobObject {
   const Blob& blob() const override { return *ref_blob_; }
   Blob* mut_blob() override { return ref_blob_; }
 
-  Maybe<void> TryAllocateBlobBodyMemory(DeviceCtx* device_ctx) override {
+  Maybe<void> TryAllocateBlobBodyMemory(vm::Allocator* allocator) override {
     // do nothing
     return Maybe<void>::Ok();
   };

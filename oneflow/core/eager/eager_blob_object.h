@@ -108,7 +108,7 @@ class EagerBlobObject final : public BlobObject {
   Maybe<void> InitBlob();
   Maybe<void> InitBlobWithOffset(const int64_t offset);
 
-  Maybe<void> TryAllocateBlobBodyMemory(DeviceCtx* device_ctx) override;
+  Maybe<void> TryAllocateBlobBodyMemory(vm::Allocator* allocator) override;
   Maybe<void> DeallocateBlobDataPtr() override {
     tensor_storage_->Release();
     tensor_storage_.reset(new TensorStorage);

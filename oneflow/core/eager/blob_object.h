@@ -25,6 +25,8 @@ class ParallelDesc;
 
 namespace vm {
 
+class Allocator;
+
 class BlobObject {
  public:
   BlobObject(const std::shared_ptr<MemoryCase>& mem_case, const std::shared_ptr<Shape>& shape,
@@ -40,7 +42,7 @@ class BlobObject {
   virtual const Blob& blob() const = 0;
   virtual Blob* mut_blob() = 0;
   virtual Maybe<void> TryInitBlob() = 0;
-  virtual Maybe<void> TryAllocateBlobBodyMemory(DeviceCtx* device_ctx) = 0;
+  virtual Maybe<void> TryAllocateBlobBodyMemory(vm::Allocator* allocator) = 0;
   virtual Maybe<void> DeallocateBlobDataPtr() = 0;
 
   Maybe<void> CheckMemCase(const ParallelDesc& parallel_desc, int64_t machine_id) const;
