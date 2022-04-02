@@ -966,9 +966,9 @@ class SearchSortedFunctor {
         << "for searchsorted op, the first N-1 dimensions of boundaries "
            "tensor and input value tensor must match";
     CHECK_OR_RETURN(side == "right" || side == "left")
-	<< "for searchsorted op, side can only be 'left' or 'right'";
+        << "for searchsorted op, side can only be 'left' or 'right'";
     CHECK_OR_RETURN(!right || side == "right")
-	<< "side and right can't be set to opposites, got side of left while right was True";
+        << "side and right can't be set to opposites, got side of left while right was True";
     right = (side == "right") || right;
     if (out_int32) {
       CHECK_OR_RETURN(sorted_sequence->shape()->At(sorted_sequence->shape()->NumAxes() - 1)
@@ -1008,16 +1008,16 @@ class SearchSortedScalarFunctor {
         one::OpBuilder("searchsorted_scalar").Input("sorted_sequence").Output("out").Build());
   }
   Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& sorted_sequence,
-                           const Scalar& values, bool out_int32, bool right,
-                           std::string side, const Optional<one::Tensor>& sorter) const {
+                           const Scalar& values, bool out_int32, bool right, std::string side,
+                           const Optional<one::Tensor>& sorter) const {
     // checks
     CHECK_OR_RETURN(sorted_sequence->shape()->NumAxes() == 1)
         << "for searchsorted op, input value can be a scalar only when "
            "sorted_sequence tensor dimension is 1";
     CHECK_OR_RETURN(side == "right" || side == "left")
-	<< "for searchsorted op, side can only be 'left' or 'right'";
+        << "for searchsorted op, side can only be 'left' or 'right'";
     CHECK_OR_RETURN(!right || side == "right")
-	<< "side and right can't be set to opposites, got side of left while right was True";
+        << "side and right can't be set to opposites, got side of left while right was True";
     right = (side == "right") || right;
     MutableAttrMap attrs;
     JUST(attrs.SetAttr<bool>("out_int32", out_int32));
