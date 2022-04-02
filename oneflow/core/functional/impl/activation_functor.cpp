@@ -97,8 +97,7 @@ class PReluGradFunctor {
     } else {
       JUST(attrs.SetAttr<bool>("alpha_requires_grad", false));
     }
-    return OpInterpUtil::Dispatch<one::TensorTuple>(
-        *op_, {dy, x, alpha}, attrs);
+    return OpInterpUtil::Dispatch<one::TensorTuple>(*op_, {dy, x, alpha}, attrs);
   }
 
  private:

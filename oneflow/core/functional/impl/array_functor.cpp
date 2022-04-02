@@ -283,8 +283,7 @@ class WhereFunctor {
   Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& condition,
                            const std::shared_ptr<one::Tensor>& x,
                            const std::shared_ptr<one::Tensor>& y) const {
-    return OpInterpUtil::Dispatch<Tensor>(
-        *op_, {condition, x, y});
+    return OpInterpUtil::Dispatch<Tensor>(*op_, {condition, x, y});
   }
 
  private:
@@ -791,8 +790,7 @@ class DimScatterFunctor {
                            const std::shared_ptr<one::Tensor>& src) const {
     MutableAttrMap attrs;
     JUST(attrs.SetAttr<int32_t>("dim", dim));
-    return OpInterpUtil::Dispatch<Tensor>(
-        *op_, {input, index, src}, attrs);
+    return OpInterpUtil::Dispatch<Tensor>(*op_, {input, index, src}, attrs);
   }
 
  private:
@@ -814,8 +812,7 @@ class DimScatterAddFunctor {
                            const std::shared_ptr<one::Tensor>& src) const {
     MutableAttrMap attrs;
     JUST(attrs.SetAttr<int32_t>("dim", dim));
-    return OpInterpUtil::Dispatch<Tensor>(
-        *op_, {input, index, src}, attrs);
+    return OpInterpUtil::Dispatch<Tensor>(*op_, {input, index, src}, attrs);
   }
 
  private:
@@ -837,8 +834,7 @@ class DimScatterAddLikeFunctor {
                            const std::shared_ptr<one::Tensor>& src) const {
     MutableAttrMap attrs;
     JUST(attrs.SetAttr<int32_t>("dim", dim));
-    return OpInterpUtil::Dispatch<Tensor>(
-        *op_, {like, index, src}, attrs);
+    return OpInterpUtil::Dispatch<Tensor>(*op_, {like, index, src}, attrs);
   }
 
  private:
@@ -860,8 +856,7 @@ class DimScatterMulFunctor {
                            const std::shared_ptr<one::Tensor>& src) const {
     MutableAttrMap attrs;
     JUST(attrs.SetAttr<int32_t>("dim", dim));
-    return OpInterpUtil::Dispatch<Tensor>(
-        *op_, {input, index, src}, attrs);
+    return OpInterpUtil::Dispatch<Tensor>(*op_, {input, index, src}, attrs);
   }
 
  private:
@@ -972,8 +967,7 @@ class ScatterNdFunctor {
                            const std::shared_ptr<one::Tensor>& updates, const Shape& shape) const {
     MutableAttrMap attrs;
     JUST(attrs.SetAttr<Shape>("shape", shape));
-    return OpInterpUtil::Dispatch<Tensor>(*op_, {indices, updates},
-                                          attrs);
+    return OpInterpUtil::Dispatch<Tensor>(*op_, {indices, updates}, attrs);
   }
 
  private:
@@ -1000,13 +994,10 @@ class TensorScatterNdUpdateFunctor {
       JUST(CheckInplaceValid(tensor));
       auto outputs = std::make_shared<TensorTuple>(1);
       outputs->at(0) = tensor;
-      JUST(OpInterpUtil::Dispatch(
-          *op_, {tensor, indices, updates},
-          outputs.get()));
+      JUST(OpInterpUtil::Dispatch(*op_, {tensor, indices, updates}, outputs.get()));
       return outputs->at(0);
     } else {
-      return OpInterpUtil::Dispatch<Tensor>(
-          *op_, {tensor, indices, updates});
+      return OpInterpUtil::Dispatch<Tensor>(*op_, {tensor, indices, updates});
     }
   }
 
@@ -1027,8 +1018,7 @@ class ScatterNdLikeFunctor {
   Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& like,
                            const std::shared_ptr<one::Tensor>& updates,
                            const std::shared_ptr<one::Tensor>& indices) const {
-    return OpInterpUtil::Dispatch<Tensor>(
-        *op_, {like, updates, indices});
+    return OpInterpUtil::Dispatch<Tensor>(*op_, {like, updates, indices});
   }
 
  private:
@@ -1252,8 +1242,7 @@ class LogicalSliceAssignFunctor {
     JUST(attrs.SetAttr<std::vector<int64_t>>("start", start));
     JUST(attrs.SetAttr<std::vector<int64_t>>("stop", stop));
     JUST(attrs.SetAttr<std::vector<int64_t>>("step", step));
-    JUST(
-        OpInterpUtil::Dispatch<TensorTuple>(*op_, {ref, value}, attrs));
+    JUST(OpInterpUtil::Dispatch<TensorTuple>(*op_, {ref, value}, attrs));
     return Maybe<void>::Ok();
   }
 
@@ -1718,8 +1707,7 @@ class UnsortedSegmentSumLikeFunctor {
                            const std::shared_ptr<one::Tensor>& like, const int64_t& axis) const {
     MutableAttrMap attrs;
     JUST(attrs.SetAttr<int64_t>("axis", axis));
-    return OpInterpUtil::Dispatch<Tensor>(
-        *op_, {x, segment_ids, like}, attrs);
+    return OpInterpUtil::Dispatch<Tensor>(*op_, {x, segment_ids, like}, attrs);
   }
 
  private:
@@ -1861,7 +1849,8 @@ class TensorGetItemFunctor {
     // // if index.size() == 1, then use select
     // if (index.size() == 1) {
     //   auto index_item = index.at(0);
-    //   if (index_item.IsInteger()) { return JUST(functional::Select(x, 0, index_item.integer())); }
+    //   if (index_item.IsInteger()) { return JUST(functional::Select(x, 0, index_item.integer()));
+    //   }
     // }
 
     std::vector<detail::Slice> slice_indices;
@@ -2030,8 +2019,7 @@ class ElementwiseMinimumGradFunctor {
   Maybe<TensorTuple> operator()(const std::shared_ptr<one::Tensor>& dz,
                                 const std::shared_ptr<one::Tensor>& x,
                                 const std::shared_ptr<one::Tensor>& y) const {
-    return OpInterpUtil::Dispatch<TensorTuple>(
-        *op_, {dz, x, y});
+    return OpInterpUtil::Dispatch<TensorTuple>(*op_, {dz, x, y});
   }
 
  private:
@@ -2052,8 +2040,7 @@ class ElementwiseMaximumGradFunctor {
   Maybe<TensorTuple> operator()(const std::shared_ptr<one::Tensor>& dz,
                                 const std::shared_ptr<one::Tensor>& x,
                                 const std::shared_ptr<one::Tensor>& y) const {
-    return OpInterpUtil::Dispatch<TensorTuple>(
-        *op_, {dz, x, y});
+    return OpInterpUtil::Dispatch<TensorTuple>(*op_, {dz, x, y});
   }
 
  private:
@@ -2073,8 +2060,7 @@ class DivGradFunctor {
   Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& dz,
                            const std::shared_ptr<one::Tensor>& z,
                            const std::shared_ptr<one::Tensor>& y) const {
-    return OpInterpUtil::Dispatch<Tensor>(*op_,
-                                          {dz, z, y});
+    return OpInterpUtil::Dispatch<Tensor>(*op_, {dz, z, y});
   }
 
  private:
@@ -2096,8 +2082,7 @@ class BroadcastPowXGradFunctor {
                            const std::shared_ptr<one::Tensor>& x,
                            const std::shared_ptr<one::Tensor>& y,
                            const std::shared_ptr<one::Tensor>& z) const {
-    return OpInterpUtil::Dispatch<Tensor>(*op_,
-                                          {dz, x, y, z});
+    return OpInterpUtil::Dispatch<Tensor>(*op_, {dz, x, y, z});
   }
 
  private:
@@ -2119,8 +2104,7 @@ class BroadcastPowYGradFunctor {
                            const std::shared_ptr<one::Tensor>& x,
                            const std::shared_ptr<one::Tensor>& y,
                            const std::shared_ptr<one::Tensor>& z) const {
-    return OpInterpUtil::Dispatch<Tensor>(
-        *op_, {dz, x, y, z});
+    return OpInterpUtil::Dispatch<Tensor>(*op_, {dz, x, y, z});
   }
 
  private:
@@ -2353,8 +2337,7 @@ class UnsortedBatchSegmentSumFunctor {
                            const int64_t& num_segments) const {
     MutableAttrMap attrs;
     JUST(attrs.SetAttr<int64_t>("num_segments", num_segments));
-    return OpInterpUtil::Dispatch<Tensor>(*op_, {data, segment_ids},
-                                          attrs);
+    return OpInterpUtil::Dispatch<Tensor>(*op_, {data, segment_ids}, attrs);
   }
 
  protected:
@@ -2399,9 +2382,7 @@ class MaskedFillFunctor {
         max_shape.Set(i, std::max(x_extend_shape.At(i), mask_extend_shape.At(i)));
       }
       return OpInterpUtil::Dispatch<Tensor>(
-          *op_,
-          {JUST(Expand(x, max_shape)), JUST(Expand(mask, max_shape))},
-          attrs);
+          *op_, {JUST(Expand(x, max_shape)), JUST(Expand(mask, max_shape))}, attrs);
     }
     return OpInterpUtil::Dispatch<Tensor>(*op_, {x, mask}, attrs);
   }
@@ -2634,8 +2615,7 @@ class InTopKFunctor {
     CHECK_EQ_OR_RETURN(predictions->ndim(), 2) << "The dimension of predictions must be 2";
     MutableAttrMap attrs;
     JUST(attrs.SetAttr<int32_t>("k", k));
-    return OpInterpUtil::Dispatch<Tensor>(*op_, {targets, predictions},
-                                          attrs);
+    return OpInterpUtil::Dispatch<Tensor>(*op_, {targets, predictions}, attrs);
   }
 
  private:
@@ -2742,8 +2722,7 @@ class RepeatFunctor {
     Shape output_reshape(DimVector(output_reshape_vec.begin(), output_reshape_vec.end()));
     std::shared_ptr<one::Tensor> reshaped_tensor = JUST(Reshape(input, input_reshape));
     std::shared_ptr<one::Tensor> expanded_tensor = JUST(Expand(reshaped_tensor, expand_shape));
-    std::shared_ptr<one::Tensor> result =
-        JUST(Reshape(expanded_tensor, output_reshape));
+    std::shared_ptr<one::Tensor> result = JUST(Reshape(expanded_tensor, output_reshape));
     return result;
   }
 };

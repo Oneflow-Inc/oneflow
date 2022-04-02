@@ -34,9 +34,7 @@ class BinaryFunctor {
   Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x,
                            const std::shared_ptr<one::Tensor>& y) const {
     TensorProcessor tensor_processor;
-    JUST(tensor_processor.PromoteInputsToCommonDtype(true)
-             .AddInputs({x->contiguous(), y->contiguous()})
-             .Apply());
+    JUST(tensor_processor.PromoteInputsToCommonDtype(true).AddInputs({x, y}).Apply());
     TensorTuple input_tuple = JUST(tensor_processor.GetInputs());
     return OpInterpUtil::Dispatch<Tensor>(*op_, input_tuple);
   }
@@ -53,7 +51,7 @@ class BinaryFloatFunctor {
   Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x,
                            const std::shared_ptr<one::Tensor>& y) const {
     TensorProcessor tensor_processor;
-    JUST(tensor_processor.AddInputs({x->contiguous(), y->contiguous()}, DType::Float()).Apply());
+    JUST(tensor_processor.AddInputs({x, y}, DType::Float()).Apply());
     TensorTuple input_tuple = JUST(tensor_processor.GetInputs());
     return OpInterpUtil::Dispatch<Tensor>(*op_, input_tuple);
   }
@@ -71,9 +69,7 @@ class BinaryGradFunctor {
                            const std::shared_ptr<one::Tensor>& y,
                            const std::shared_ptr<one::Tensor>& dz) const {
     TensorProcessor tensor_processor;
-    JUST(tensor_processor.PromoteInputsToCommonDtype(true)
-             .AddInputs({x->contiguous(), y->contiguous(), dz})
-             .Apply());
+    JUST(tensor_processor.PromoteInputsToCommonDtype(true).AddInputs({x, y, dz}).Apply());
     TensorTuple input_tuple = JUST(tensor_processor.GetInputs());
     return OpInterpUtil::Dispatch<Tensor>(*op_, input_tuple);
   }
@@ -90,9 +86,7 @@ class InplaceableBinaryFunctor {
   Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x,
                            const std::shared_ptr<one::Tensor>& y, bool inplace) const {
     TensorProcessor tensor_processor;
-    JUST(tensor_processor.PromoteInputsToCommonDtype(true)
-             .AddInputs({x->contiguous(), y->contiguous()})
-             .Apply());
+    JUST(tensor_processor.PromoteInputsToCommonDtype(true).AddInputs({x, y}).Apply());
     TensorTuple input_tuple = JUST(tensor_processor.GetInputs());
     if (inplace) {
       std::shared_ptr<one::Tensor>& x_cast = input_tuple.at(0);

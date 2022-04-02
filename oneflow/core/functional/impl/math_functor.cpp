@@ -525,8 +525,7 @@ class ReduceDeviceStageGradBaseFunctor {
                            const std::vector<int32_t>& axis) const {
     MutableAttrMap attrs;
     JUST(attrs.SetAttr<std::vector<int32_t>>("axis", axis));
-    return OpInterpUtil::Dispatch<Tensor>(
-        *op_, {out_diff, mask, count}, attrs);
+    return OpInterpUtil::Dispatch<Tensor>(*op_, {out_diff, mask, count}, attrs);
   }
   virtual ~ReduceDeviceStageGradBaseFunctor() = default;
 
@@ -574,8 +573,7 @@ class ReduceGlobalStageBaseFunctor {
     MutableAttrMap attrs;
     JUST(attrs.SetAttr<std::vector<int32_t>>("axis", axis));
     JUST(attrs.SetAttr<bool>("keepdims", keepdims));
-    return OpInterpUtil::Dispatch<TensorTuple>(*op_, {in, device_count},
-                                               attrs);
+    return OpInterpUtil::Dispatch<TensorTuple>(*op_, {in, device_count}, attrs);
   }
   virtual ~ReduceGlobalStageBaseFunctor() = default;
 
@@ -600,8 +598,7 @@ class ReduceGlobalStageGradBaseFunctor {
     MutableAttrMap attrs;
     JUST(attrs.SetAttr<std::vector<int32_t>>("axis", axis));
     JUST(attrs.SetAttr<bool>("keepdims", keepdims));
-    return OpInterpUtil::Dispatch<Tensor>(
-        *op_, {out_diff, mask, device_count}, attrs);
+    return OpInterpUtil::Dispatch<Tensor>(*op_, {out_diff, mask, device_count}, attrs);
   }
   virtual ~ReduceGlobalStageGradBaseFunctor() = default;
 
@@ -1001,8 +998,7 @@ class ClampBaseFunctor {
       std::shared_ptr<TensorTuple> outputs = std::make_shared<TensorTuple>(1);
       outputs->at(0) = x;
       if (x->requires_grad()) {
-        JUST(OpInterpUtil::Dispatch(*op, {JUST(functional::Identity(x))},
-                                    outputs.get(), attrs));
+        JUST(OpInterpUtil::Dispatch(*op, {JUST(functional::Identity(x))}, outputs.get(), attrs));
       } else {
         JUST(OpInterpUtil::Dispatch(*op, {x}, outputs.get(), attrs));
       }
@@ -1560,11 +1556,9 @@ class MinimumFunctor {
   Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x,
                            const std::shared_ptr<one::Tensor>& y) const {
     if (*x->shape() == *y->shape()) {
-      return OpInterpUtil::Dispatch<Tensor>(*elementwise_minimum_op_,
-                                            {x, y});
+      return OpInterpUtil::Dispatch<Tensor>(*elementwise_minimum_op_, {x, y});
     } else {
-      return OpInterpUtil::Dispatch<Tensor>(*broadcast_minimum_op_,
-                                            {x, y});
+      return OpInterpUtil::Dispatch<Tensor>(*broadcast_minimum_op_, {x, y});
     }
   }
 
@@ -1585,11 +1579,9 @@ class MaximumFunctor {
   Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x,
                            const std::shared_ptr<one::Tensor>& y) const {
     if (*x->shape() == *y->shape()) {
-      return OpInterpUtil::Dispatch<Tensor>(*elementwise_maximum_op_,
-                                            {x, y});
+      return OpInterpUtil::Dispatch<Tensor>(*elementwise_maximum_op_, {x, y});
     } else {
-      return OpInterpUtil::Dispatch<Tensor>(*broadcast_maximum_op_,
-                                            {x, y});
+      return OpInterpUtil::Dispatch<Tensor>(*broadcast_maximum_op_, {x, y});
     }
   }
 
