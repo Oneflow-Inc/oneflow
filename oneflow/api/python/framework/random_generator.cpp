@@ -22,6 +22,18 @@ namespace py = pybind11;
 
 namespace oneflow {
 
+namespace {
+
+int64_t UnpackLong(PyObject* py_obj) {
+  int overflow = -1;
+  long long val = PyLong_AsLongLongAndOverflow(py_obj, &overflow);
+  if (val == -1 && PyErr_Occurred()) { throw std::runtime_error("Python exception occurs"); }
+  if (overflow != 0) { throw std::runtime_error("Overflow when unpacking long"); }
+  return (int64_t)val;
+}
+
+}  // namespace
+
 Maybe<one::Generator> CreateGenerator(const std::string& device_tag) {
   std::string device_name = "";
   int device_index = -1;
@@ -34,20 +46,35 @@ ONEFLOW_API_PYBIND11_MODULE("", m) {
       .def(py::init([](const std::string& device_tag) {
         return CreateGenerator(device_tag).GetPtrOrThrow();
       }))
-      .def("manual_seed", &one::Generator::set_current_seed)
+      .def("manual_seed",
+           [](std::shared_ptr<one::Generator> generator, const py::object& seed) {
+             int64_t seed_val = UnpackLong(seed.ptr());
+             generator->set_current_seed(seed_val);
+           })
       .def("initial_seed", &one::Generator::current_seed)
       .def("seed", &one::Generator::seed)
       .def_property_readonly("device", &one::Generator::device)
       .def("get_state", &one::Generator::GetState)
       .def("set_state", &one::Generator::SetState);
 
-  m.def("manual_seed", [](uint64_t seed) { return one::ManualSeed(seed); });
+  m.def("manual_seed", [](const py::object& seed) -> Maybe<one::Generator> {
+    int64_t seed_val = UnpackLong(seed.ptr());
+    return one::ManualSeed(seed_val);
+  });
+  m.def("manual_seed", [](const py::object& seed, const std::string& device, int device_index) {
+    int64_t seed_val = UnpackLong(seed.ptr());
+    return one::ManualSeed(seed_val, device, device_index);
+  });
   m.def("create_generator", &CreateGenerator);
   m.def("default_generator", [](const std::string& device_tag) -> Maybe<one::Generator> {
     std::string device_name = "";
     int device_index = -1;
     JUST(ParsingDeviceTag(device_tag, &device_name, &device_index));
     return one::DefaultGenerator(device_name, device_index);
+  });
+  m.def("ManualSeedAllCudaGenerator", [](const py::object& seed) {
+    int64_t seed_val = UnpackLong(seed.ptr());
+    return one::ManualSeedAllCudaGenerator(seed_val);
   });
 }
 
