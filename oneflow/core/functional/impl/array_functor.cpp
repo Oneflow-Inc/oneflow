@@ -939,7 +939,8 @@ class ArgSortFunctor {
   std::shared_ptr<OpExpr> op_;
 };
 
-inline bool IsShapeMatchBeforeLastDim(const std::shared_ptr<Tensor>& x, const std::shared_ptr<Tensor>& y) {
+inline bool IsShapeMatchBeforeLastDim(const std::shared_ptr<Tensor>& x,
+                                      const std::shared_ptr<Tensor>& y) {
   if (x->shape()->NumAxes() != y->shape()->NumAxes()) { return false; }
   const auto& x_shape = x->shape();
   const auto& y_shape = y->shape();

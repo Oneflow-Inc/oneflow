@@ -19,8 +19,7 @@ limitations under the License.
 namespace oneflow {
 
 template<typename T, typename K>
-K cus_lower_bound(K start, K end, const T val, const T* bd,
-                         const int64_t* sort) {
+K cus_lower_bound(K start, K end, const T val, const T* bd, const int64_t* sort) {
   const K orig_start = start;
   while (start < end) {
     const K mid = start + ((end - start) >> 1);
@@ -35,8 +34,7 @@ K cus_lower_bound(K start, K end, const T val, const T* bd,
 }
 
 template<typename T, typename K>
-K cus_upper_bound(K start, K end, const T val, const T* bd,
-                         const int64_t* sort) {
+K cus_upper_bound(K start, K end, const T val, const T* bd, const int64_t* sort) {
   const K orig_start = start;
   while (start < end) {
     const K mid = start + ((end - start) >> 1);
@@ -71,19 +69,16 @@ class CpuSearchSortedKernel final : public user_op::OpKernel {
     const int32_t instance_num = values->shape().elem_cnt();
     bool is_values_scalar = (values->shape().elem_cnt() == 1 && values->shape().NumAxes() == 0);
     bool is_sequence_1d = (sorted_sequence->shape().NumAxes() == 1);
-    K values_shape_last =
-        is_values_scalar ? 1 : values->shape().At(values->shape().NumAxes() - 1);
-    K sequence_shape_last =
-        sorted_sequence->shape().At(sorted_sequence->shape().NumAxes() - 1);
+    K values_shape_last = is_values_scalar ? 1 : values->shape().At(values->shape().NumAxes() - 1);
+    K sequence_shape_last = sorted_sequence->shape().At(sorted_sequence->shape().NumAxes() - 1);
     FOR_RANGE(int32_t, i, 0, instance_num) {
       K start_bd = is_sequence_1d ? 0 : i / values_shape_last * sequence_shape_last;
       K end_bd = start_bd + sequence_shape_last;
-      K pos = !right ? cus_lower_bound<T, K>(start_bd, end_bd, values_ptr[i],
-                                                                 sequence_ptr, sorter_ptr)
-                                  - start_bd
-                            : cus_upper_bound<T, K>(start_bd, end_bd, values_ptr[i],
-                                                                 sequence_ptr, sorter_ptr)
-                                  - start_bd;
+      K pos = !right
+                  ? cus_lower_bound<T, K>(start_bd, end_bd, values_ptr[i], sequence_ptr, sorter_ptr)
+                        - start_bd
+                  : cus_upper_bound<T, K>(start_bd, end_bd, values_ptr[i], sequence_ptr, sorter_ptr)
+                        - start_bd;
 
       out_ptr[i] = pos;
     }
@@ -125,10 +120,9 @@ class CpuSearchSortedScalarKernel final : public user_op::OpKernel {
     K* out_ptr = out->mut_dptr<K>();
     K sequence_shape_last = sorted_sequence->shape().At(0);
 
-    K pos = !right ? cus_lower_bound<T, K>(0, sequence_shape_last, values,
-                                                               sequence_ptr, sorter_ptr)
-                          : cus_upper_bound<T, K>(0, sequence_shape_last, values,
-                                                               sequence_ptr, sorter_ptr);
+    K pos = !right
+                ? cus_lower_bound<T, K>(0, sequence_shape_last, values, sequence_ptr, sorter_ptr)
+                : cus_upper_bound<T, K>(0, sequence_shape_last, values, sequence_ptr, sorter_ptr);
 
     out_ptr[0] = pos;
   }
