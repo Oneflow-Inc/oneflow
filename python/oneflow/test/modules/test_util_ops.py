@@ -27,8 +27,7 @@ def _test_isnan(test_case, shape, dtype, device):
     np_array[mask] = np.nan
     of_tensor = flow.tensor(np_array, dtype=dtype, device=device)
     res = flow.isnan(of_tensor)
-    test_case.assertTrue(np.allclose(res.numpy(), np.isnan(np_array)))
-
+    test_case.assertTrue(np.allclose(res.numpy(), np.isnan(of_tensor.numpy())))
 
 def _test_isinf(test_case, shape, dtype, device):
     np_array = np.random.randn(*shape)
@@ -36,7 +35,7 @@ def _test_isinf(test_case, shape, dtype, device):
     np_array[mask] = np.inf
     of_tensor = flow.tensor(np_array, dtype=dtype, device=device)
     res = flow.isinf(of_tensor)
-    test_case.assertTrue(np.allclose(res.numpy(), np.isinf(np_array)))
+    test_case.assertTrue(np.allclose(res.numpy(), np.isinf(of_tensor.numpy())))
 
 
 @flow.unittest.skip_unless_1n1d()
