@@ -33,6 +33,8 @@ class TransferCostHelper final {
   Maybe<double> AskSymmetricTransferCost(size_t data_size, Type type);
 };
 
+const TransferCostHelper& GetTransferCostHelper();
+
 }  // namespace oneflow
 
 #endif  // ONEFLOW_CORE_AUTO_PARALLEL_TRANSFER_COST_HELPER_H_

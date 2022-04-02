@@ -44,7 +44,7 @@ message TransferCostConfig {
         optional double k1 = 1 [default = 1.0];
         optional double k2 = 2 [default = 1.0];
         optional double b = 3 [default = 0.0];
-        optional double x0= 4 [default = 0.0];
+        optional double x0 = 4 [default = 0.0];
     }
     // this repeated means number of nodes with [2, 4, 8]
     repeated Value nccl_all2all = 1;

@@ -52,4 +52,9 @@ Maybe<double> TransferCostHelper::AskSymmetricTransferCost(size_t data_size, Typ
   return k * (data_size - value->x0()) + value->b();
 }
 
+const TransferCostHelper& GetTransferCostHelper() {
+  static TransferCostHelper helper;
+  return helper;
+}
+
 }  // namespace oneflow
