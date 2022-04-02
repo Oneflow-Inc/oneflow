@@ -72,36 +72,6 @@ struct MultiReduce<DeviceType::kCUDA, T, TransformFn, ReduceFn> {
   }
 };
 
-// TODO(zwx): These functors may be needed when supporting half data type
-/*
-template<>
-struct Abs<half> {
-  __device__ __forceinline__ half operator()(half x) const {
-    return __hlt(x, GetZeroVal<half>()) ? __hneg(x) : x;
-  }
-};
-
-template<>
-struct PowByZero<half> {
-  __device__ __forceinline__ half operator()(half x) const {
-    return x == GetZeroVal<half>() ? x : GetOneVal<half>();
-  }
-};
-
-template<>
-struct AbsPow<half> {
-  explicit AbsPow(float base) : base_(base) {}
-
-  __device__ __forceinline__ half operator()(half x) {
-    half abs_x = __hlt(x, GetZeroVal<half>()) ? __hneg(x) : x;
-    return __float2half(pow(__half2float(x), base_));
-  }
-
-  private:
-  float base_;
-};
-*/
-
 REGISTER_MULTI_REDUCE_SUM_POW_ABS_KERNEL(DeviceType::kCUDA, float)
 REGISTER_MULTI_REDUCE_SUM_POW_ABS_KERNEL(DeviceType::kCUDA, double)
 
