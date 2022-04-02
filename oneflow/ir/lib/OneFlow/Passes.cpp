@@ -385,25 +385,25 @@ NamedAttrList GetUserOpCommonAttrs(MLIRContext* ctx, const std::string& op_name)
           conv_op->getLoc(), conv_op->getResultTypes(),
           SmallVector<Value, 4>({bn_op.gamma(), sqrt_op.y()}), GetUserOpCommonAttrs(ctx, "div"));
 
-      auto reshape_op_attrs = GetUserOpCommonAttrs(ctx, "reshape");
-      auto bn_gamma_shape = bn_op.gamma()
-                                .getDefiningOp()
-                                ->getAttrDictionary()
-                                .get("value")
-                                .cast<mlir::DenseElementsAttr>()
-                                .getType()
-                                .cast<mlir::RankedTensorType>()
-                                .getShape();
-      auto conv_weight_shape = conv_op.weight()
-                                   .getDefiningOp()
-                                   ->getAttrDictionary()
-                                   .get("value")
-                                   .cast<mlir::DenseElementsAttr>()
-                                   .getType()
-                                   .cast<mlir::RankedTensorType>()
-                                   .getShape();
+      auto bn_gamma_variable_op =
+          llvm::dyn_cast<oneflow::FrozenVariableOp>(bn_op.gamma().getDefiningOp());
+      if (!bn_gamma_variable_op) {
+        emitError(conv_op.getLoc()) << "Gamma of batchnorm should be a FrozenVariableOp.";
+      }
+      auto bn_gamma_shape =
+          bn_gamma_variable_op.value().getType().cast<mlir::RankedTensorType>().getShape();
+
+      auto conv_weight_variable_op =
+          llvm::dyn_cast<oneflow::FrozenVariableOp>(conv_op.weight().getDefiningOp());
+      if (!conv_weight_variable_op) {
+        emitError(conv_op.getLoc()) << "Weight of conv2d should be a FrozenVariableOp.";
+      }
+      auto conv_weight_shape =
+          conv_weight_variable_op.value().getType().cast<mlir::RankedTensorType>().getShape();
+
       std::vector<int64_t> bn_gamma_new_shape({bn_gamma_shape.front()});
       for (int i = 1; i < conv_weight_shape.size(); ++i) { bn_gamma_new_shape.emplace_back(1); }
+      auto reshape_op_attrs = GetUserOpCommonAttrs(ctx, "reshape");
       reshape_op_attrs.set("shape", ArrayAttr::get(ctx, llvm::to_vector<8>(llvm::map_range(
                                                             ArrayRef<int64_t>(bn_gamma_new_shape),
                                                             [&](int64_t v) -> Attribute {
