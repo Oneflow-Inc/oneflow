@@ -55,7 +55,6 @@ struct IsInfFunctor<DeviceType::kCUDA, half> {
   REGISTER_ISNAN_KERNEL(device, OF_PP_PAIR_FIRST(dtype_pair)) \
   REGISTER_ISINF_KERNEL(device, OF_PP_PAIR_FIRST(dtype_pair))
 
-// REGISTER_UTIL_OPS_CUDA_KERNEL(DeviceType::kCUDA, OF_PP_MAKE_TUPLE_SEQ(half, kFloat16))
 OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(REGISTER_UTIL_OPS_CUDA_KERNEL, (DeviceType::kCUDA),
                                  UTIL_OPS_DATA_TYPE_SEQ);
 }  // namespace user_op
