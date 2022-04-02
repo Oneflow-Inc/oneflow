@@ -28,8 +28,9 @@ class Allocator {
 
   virtual Maybe<void> Allocate(char** mem_ptr, std::size_t size) = 0;
   virtual void Deallocate(char* mem_ptr, std::size_t size) = 0;
-  virtual void Shrink() {}
-  virtual void DeviceReset() {}
+  virtual bool IsCached() const = 0;
+  virtual void Shrink() = 0;
+  virtual void DeviceReset() = 0;
 
  protected:
   Allocator() = default;

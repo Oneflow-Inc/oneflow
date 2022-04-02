@@ -21,7 +21,6 @@ limitations under the License.
 #include "oneflow/core/vm/async_cuda_stream_type.h"
 #include "oneflow/core/vm/async_ep_stream_type.h"
 #include "oneflow/core/vm/control_stream_type.h"
-#include "oneflow/core/vm/cpu_stream_type.h"
 #include "oneflow/core/vm/critical_section_stream_type.h"
 #include "oneflow/core/vm/ep_d2h_stream_type.h"
 #include "oneflow/core/vm/cuda_copy_d2h_stream_type.h"
@@ -41,9 +40,7 @@ struct GetStreamType {
   }
   static Maybe<const vm::StreamType*> Case(StreamRoleCase<StreamRole::kCompute>,
                                            DeviceType device_type) {
-    if (device_type == DeviceType::kCPU) {
-      return SingletonPtr<vm::CpuStreamType>();
-    } else if (device_type == DeviceType::kCUDA) {
+    if (device_type == DeviceType::kCUDA) {
       if (ThreadLocalEnvBool<ONEFLOW_EP_BASED_CUDA>()) {
         return SingletonPtr<vm::EpStreamType>();
       } else {
@@ -91,9 +88,7 @@ struct GetStreamType {
   }
   static Maybe<const vm::StreamType*> Case(StreamRoleCase<StreamRole::kSyncedLaunchedCommNet>,
                                            DeviceType device_type) {
-    if (device_type == DeviceType::kCPU) {
-      return SingletonPtr<vm::CpuStreamType>();
-    } else if (device_type == DeviceType::kCUDA) {
+    if (device_type == DeviceType::kCUDA) {
       if (ThreadLocalEnvBool<ONEFLOW_EP_BASED_CUDA>()) {
         return SingletonPtr<vm::EpStreamType>();
       } else {
@@ -109,9 +104,7 @@ struct GetStreamType {
   }
   static Maybe<const vm::StreamType*> Case(StreamRoleCase<StreamRole::kAsyncedLaunchedCommNet>,
                                            DeviceType device_type) {
-    if (device_type == DeviceType::kCPU) {
-      return SingletonPtr<vm::CpuStreamType>();
-    } else if (device_type == DeviceType::kCUDA) {
+    if (device_type == DeviceType::kCUDA) {
       if (ThreadLocalEnvBool<ONEFLOW_EP_BASED_CUDA>()) {
         return SingletonPtr<vm::AsyncEpStreamType>();
       } else {

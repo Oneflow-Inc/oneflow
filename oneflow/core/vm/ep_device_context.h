@@ -76,7 +76,7 @@ class EpDeviceCtx : public DeviceCtx {
  private:
   ep::Stream* GetOrCreateEpStream() const {
     if (unlikely(ep_stream_ == nullptr)) {
-      ep_stream_ = dynamic_cast<ep::CudaStream*>(GetOrCreateEpDevice()->CreateStream());
+      ep_stream_ = GetOrCreateEpDevice()->CreateStream();
       CHECK(ep_stream_ != nullptr);
     }
     return ep_stream_;
@@ -86,7 +86,7 @@ class EpDeviceCtx : public DeviceCtx {
   Symbol<Device> device_;
   std::unique_ptr<EpEventProvider> ep_event_provier_;
   mutable std::shared_ptr<ep::Device> ep_device_;
-  mutable ep::CudaStream* ep_stream_;
+  mutable ep::Stream* ep_stream_;
   std::unique_ptr<Allocator> ep_allocator_;
 };
 

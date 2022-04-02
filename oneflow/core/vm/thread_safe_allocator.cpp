@@ -29,6 +29,16 @@ void ThreadSafeAllocator::Deallocate(char* mem_ptr, std::size_t size) {
   backend_allocator_->Deallocate(mem_ptr, size);
 }
 
+void ThreadSafeAllocator::Shrink() {
+  std::unique_lock<std::mutex> lock(mutex4backend_allocator_);
+  backend_allocator_->Shrink();
+}
+
+void ThreadSafeAllocator::DeviceReset() {
+  std::unique_lock<std::mutex> lock(mutex4backend_allocator_);
+  backend_allocator_->DeviceReset();
+}
+
 Maybe<void> SingleThreadOnlyAllocator::Allocate(char** mem_ptr, std::size_t size) {
   CheckUniqueThreadAccess();
   return backend_allocator_->Allocate(mem_ptr, size);
@@ -37,6 +47,16 @@ Maybe<void> SingleThreadOnlyAllocator::Allocate(char** mem_ptr, std::size_t size
 void SingleThreadOnlyAllocator::Deallocate(char* mem_ptr, std::size_t size) {
   CheckUniqueThreadAccess();
   backend_allocator_->Deallocate(mem_ptr, size);
+}
+
+void SingleThreadOnlyAllocator::Shrink() {
+  CheckUniqueThreadAccess();
+  backend_allocator_->Shrink();
+}
+
+void SingleThreadOnlyAllocator::DeviceReset() {
+  CheckUniqueThreadAccess();
+  backend_allocator_->DeviceReset();
 }
 
 void SingleThreadOnlyAllocator::CheckUniqueThreadAccess() {

@@ -45,7 +45,7 @@ class CpuDeviceCtx final : public DeviceCtx {
  private:
   std::shared_ptr<ep::Device> device_;
   ep::Stream* stream_;
-};  // namespace oneflow
+};
 
 }  // namespace oneflow
 

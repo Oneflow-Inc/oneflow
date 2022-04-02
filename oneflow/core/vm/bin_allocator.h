@@ -30,7 +30,9 @@ class BinAllocator final : public Allocator {
 
   Maybe<void> Allocate(char** mem_ptr, std::size_t size) override;
   void Deallocate(char* mem_ptr, std::size_t size) override;
+  bool IsCached() const override { return true; }
   void Shrink() override { DeallocateFreeBlockForGarbageCollection(); }
+  void DeviceReset() override { backend_->DeviceReset(); }
 
  private:
   static constexpr int32_t kInvalidBinNum = -1;

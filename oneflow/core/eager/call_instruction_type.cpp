@@ -45,6 +45,8 @@ struct CallInstructionUtil final {
     auto* operand = CallInstructionUtil::GetCallPhyInstrOperand(instruction);
     DeviceCtx* device_ctx = instruction.stream().device_ctx().get();
     operand->mut_call_ctx()->device_ctx = device_ctx;
+    CHECK_OR_RETURN(device_ctx->mut_allocator()->IsCached())
+        << "device_type: " << instruction.stream().device()->type();
     OF_PROFILER_RANGE_PUSH("AllocateOutputBlobsMemory");
     JUST(AllocateOutputBlobsMemory(operand, device_ctx));
     OF_PROFILER_RANGE_POP();
@@ -52,6 +54,11 @@ struct CallInstructionUtil final {
       OF_PROFILER_RANGE_PUSH("TryAllocateTempStorage");
       InferTempStorageSize(operand);
       JUST(TryAllocateTempStorage(operand, device_ctx->mut_allocator()));
+      OF_PROFILER_RANGE_POP();
+      // Since memory block is cached in allocator, it's safe to deallocate tmp buffer before kernel
+      // executed.
+      OF_PROFILER_RANGE_PUSH("DeallocateTempStorage");
+      DeallocateTempStorage(operand, device_ctx->mut_allocator());
       OF_PROFILER_RANGE_POP();
     }
     user_op::OpKernelState* state = nullptr;
@@ -62,12 +69,6 @@ struct CallInstructionUtil final {
       OF_PROFILER_RANGE_POP();
     }
     OpKernelCompute(operand, device_ctx, state, cache);
-    if (unlikely(operand->need_temp_storage())) {
-      OF_PROFILER_RANGE_PUSH("DeallocateTempStorage");
-      DeallocateTempStorage(operand, device_ctx);
-      OF_PROFILER_RANGE_POP();
-    }
-    operand->mut_call_ctx()->device_ctx = nullptr;
     return Maybe<void>::Ok();
   }
 
@@ -125,13 +126,12 @@ struct CallInstructionUtil final {
     OF_PROFILER_RANGE_POP();
   }
 
-  static inline void DeallocateTempStorage(CallPhyInstrOperand* operand, DeviceCtx* device_ctx) {
+  static inline void DeallocateTempStorage(CallPhyInstrOperand* operand, vm::Allocator* allocator) {
     if (operand->mut_call_ctx()->tmp_buffer_size > 0) {
       CHECK_NOTNULL(operand->mut_call_ctx()->tmp_buffer_ptr);
-      device_ctx->mut_allocator()->Deallocate(operand->mut_call_ctx()->tmp_buffer_ptr,
-                                              operand->mut_call_ctx()->tmp_buffer_size);
+      allocator->Deallocate(operand->mut_call_ctx()->tmp_buffer_ptr,
+                            operand->mut_call_ctx()->tmp_buffer_size);
     }
-    operand->mut_call_ctx()->tmp_buffer_ptr = nullptr;
   }
 };
 
