@@ -30,7 +30,6 @@ import google.protobuf.text_format as pbtxt
 
 import oneflow
 import oneflow.env
-import oneflow.framework.env_util as env_util
 import oneflow.sysconfig
 from oneflow.core.job.env_pb2 import EnvProto
 
@@ -144,7 +143,6 @@ def find_free_port():
         return s.getsockname()[1]
 
 
-_unittest_env_initilized = False
 _unittest_worker_initilized = False
 
 
@@ -184,144 +182,7 @@ def call(conn=None, cmd=None, msg=None):
     return conn.recv().decode()
 
 
-def launch_worker_via_agent(host=None, env_proto=None):
-    print("[unittest]", "launching worker via agent at", host)
-    from multiprocessing.connection import Client
-
-    address = ("localhost", worker_agent_port())
-    conn = Client(address, authkey=worker_agent_authkey().encode())
-    cast(conn=conn, cmd="host", msg=host)
-    cast(conn=conn, cmd="env_proto", msg=pbtxt.MessageToString(env_proto))
-    assert call(conn=conn, cmd="start_worker") == "ok"
-    print("[unittest]", "worker launched via agent at", host)
-    conn.close()
-
-
-class TestCase(unittest.TestCase):
-    def setUp(self):
-        global _unittest_env_initilized
-        global _unittest_worker_initilized
-        if has_node_list():
-            assert node_size() > 1
-            if _unittest_worker_initilized == False:
-                master_port = os.getenv("ONEFLOW_TEST_MASTER_PORT")
-                assert master_port, "env var ONEFLOW_TEST_MASTER_PORT not set"
-                oneflow.env.ctrl_port(int(master_port))
-                data_port = os.getenv("ONEFLOW_TEST_DATA_PORT")
-                if data_port:
-                    oneflow.env.data_port(int(data_port))
-                if enable_init_by_host_list():
-                    oneflow.env.machine(node_list())
-                    data_port = os.getenv("ONEFLOW_TEST_DATA_PORT")
-                    print("initializing worker...")
-                    for machine in env_util.default_env_proto.machine:
-                        if machine.id == 0:
-                            pass
-                        else:
-                            launch_worker_via_agent(
-                                host=machine.addr, env_proto=env_util.default_env_proto
-                            )
-                else:
-                    ctrl_port = os.getenv("ONEFLOW_TEST_CTRL_PORT")
-                    config_rank_ctrl_port = -1
-                    if ctrl_port:
-                        config_rank_ctrl_port = int(ctrl_port)
-                    if has_world_size():
-                        config_world_size = world_size()
-                    else:
-                        config_world_size = 0
-                    config_node_size = -1
-                    env_node_size = os.getenv("ONEFLOW_TEST_NODE_SIZE")
-                    if env_node_size:
-                        config_node_size = int(env_node_size)
-                    bootstrap_conf_list = oneflow.env.init_bootstrap_confs(
-                        node_list(),
-                        int(master_port),
-                        config_world_size,
-                        config_rank_ctrl_port,
-                        config_node_size,
-                    )
-                    worker_env_proto = EnvProto()
-                    worker_env_proto.CopyFrom(env_util.default_env_proto)
-                    worker_env_proto.ClearField("ctrl_bootstrap_conf")
-                    for bootstrap_conf in bootstrap_conf_list:
-                        if bootstrap_conf.rank == 0:
-                            continue
-                        assert bootstrap_conf.HasField("host")
-                        worker_env_proto.ctrl_bootstrap_conf.CopyFrom(bootstrap_conf)
-                        launch_worker_via_agent(
-                            host=bootstrap_conf.host, env_proto=worker_env_proto
-                        )
-                _unittest_worker_initilized = True
-        elif device_num() > 1 and enable_multi_process():
-            master_port = find_free_port()
-            oneflow.env.ctrl_port(master_port)
-            config_world_size = device_num()
-            bootstrap_conf_list = oneflow.env.init_bootstrap_confs(
-                ["127.0.0.1"], master_port, config_world_size
-            )
-            env_proto = env_util.default_env_proto
-            assert (
-                len(env_proto.machine) == 1
-                and env_proto.HasField("ctrl_bootstrap_conf") == 1
-            )
-            run_dir = os.getenv("HOME") + "/oneflow_temp/" + str(uuid.uuid1())
-            run_dir = os.path.abspath(os.path.expanduser(run_dir))
-            if not os.path.exists(run_dir):
-                os.makedirs(run_dir)
-            for rank in range(1, config_world_size):
-                worker_env_proto = EnvProto()
-                worker_env_proto.CopyFrom(env_proto)
-                worker_env_proto.ctrl_bootstrap_conf.rank = rank
-                worker_env_proto.cpp_logging_conf.log_dir = (
-                    run_dir + "/log_" + str(rank)
-                )
-                env_file = NamedTemporaryFile(delete=False)
-                if sys.version_info >= (3, 0):
-                    env_file.write(pbtxt.MessageToString(worker_env_proto).encode())
-                else:
-                    env_file.write(pbtxt.MessageToString(worker_env_proto))
-                env_file.close()
-                if not os.path.exists(run_dir + "/log_" + str(rank)):
-                    os.mkdir(run_dir + "/log_" + str(rank))
-                os.system(
-                    "cp "
-                    + env_file.name
-                    + " "
-                    + run_dir
-                    + "/log_"
-                    + str(rank)
-                    + "/env_proto_"
-                    + str(rank)
-                    + ".proto"
-                )
-                oneflow_cmd = (
-                    "python3 -m oneflow --start_worker"
-                    + " --env_proto="
-                    + run_dir
-                    + "/log_"
-                    + str(rank)
-                    + "/"
-                    + "env_proto_"
-                    + str(rank)
-                    + ".proto"
-                )
-                subprocess.Popen(
-                    oneflow_cmd,
-                    stdout=subprocess.DEVNULL,
-                    stderr=subprocess.DEVNULL,
-                    shell=True,
-                )
-                os.remove(env_file.name)
-            atexit.register(
-                oneflow.deprecated.delete_worker_of_multi_process, run_dir=run_dir
-            )
-        log_dir = os.getenv("ONEFLOW_TEST_LOG_DIR")
-        if log_dir:
-            oneflow.env.log_dir(log_dir)
-        if _unittest_env_initilized == False:
-            env_util.api_env_init()
-            _unittest_env_initilized = True
+TestCase = unittest.TestCase
 
 
 def skip_unless(n, d):
