@@ -178,6 +178,8 @@ oneflow
             CharTensor,
             IntTensor,
             LongTensor,
+            isnan,
+            isinf
 
 .. autofunction:: oneflow.relu
 .. autofunction:: oneflow.set_num_threads

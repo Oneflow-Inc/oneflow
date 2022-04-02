@@ -1757,3 +1757,17 @@ add_docstr(
     See :func:`oneflow.where`
     """,
 )
+
+add_docstr(
+    oneflow.Tensor.isnan,
+    """
+    See :func:`oneflow.isnan`
+    """,
+)
+
+add_docstr(
+    oneflow.Tensor.isinf,
+    """
+    See :func:`oneflow.isinf`
+    """,
+)
