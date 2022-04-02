@@ -325,12 +325,7 @@ class Optimizer(object):
             optimizer_conf.mutable_clip_conf().mutable_clip_by_global_norm()
         )
         clip_grad_norm.set_max_norm(max_norm)
-        if norm_type == float("inf"):
-            clip_grad_norm.set_inf_norm_type(True)
-        elif norm_type == -float("-inf"):
-            clip_grad_norm.set_neg_inf_norm_type(True)
-        else:
-            clip_grad_norm.set_norm_type(norm_type)
+        clip_grad_norm.set_norm_type(norm_type)
 
     @property
     def support_sparse(self):
