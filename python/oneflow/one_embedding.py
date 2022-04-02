@@ -330,16 +330,8 @@ def make_device_mem_store_options(
 
     Returns:
         dict: GPU only store_options param of MultiTableEmbedding
-    
-    For example:
 
-    .. code-block:: python
-
-        >>> import oneflow as flow
-        >>> store_options = flow.one_embedding.make_device_mem_store_options(
-        >>>     persistent_path="/your_path_to_ssd", capacity=vocab_size,
-        >>> )
-        >>> # pass the store_options to the "store_options" param of flow.one_embedding.MultiTableEmbedding
+    See :func:`oneflow.one_embedding.make_cached_ssd_store_options`
     """
 
     assert isinstance(persistent_path, (str, list, tuple))
@@ -382,13 +374,12 @@ def make_cached_ssd_store_options(
 
     Returns:
         dict: SSD use GPU as cache store_options param of MultiTableEmbedding
-    
+
     For example:
 
     .. code-block:: python
 
         >>> import oneflow as flow    
-        >>> vocab_size = 1000
         >>> store_options = flow.one_embedding.make_cached_ssd_store_options(
         >>>     cache_budget_mb=8192, persistent_path="/your_path_to_ssd", capacity=vocab_size,
         >>> )
@@ -434,17 +425,8 @@ def make_cached_host_mem_store_options(
 
     Returns:
         dict: host use GPU as cache store_options param of MultiTableEmbedding
-    
-    For example:
 
-    .. code-block:: python
-
-        >>> import oneflow as flow    
-        >>> vocab_size = 1000
-        >>> store_options = flow.one_embedding.make_cached_host_mem_store_options(
-        >>>     cache_budget_mb=8192, persistent_path="/your_path_to_ssd", capacity=vocab_size,
-        >>> )
-        >>> # pass the store_options to the "store_options" param of flow.one_embedding.MultiTableEmbedding
+    See :func:`oneflow.one_embedding.make_cached_ssd_store_options`
     """
     assert isinstance(persistent_path, (str, list, tuple))
     assert cache_budget_mb > 0
