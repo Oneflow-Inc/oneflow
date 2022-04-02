@@ -1364,6 +1364,7 @@ class NormalFunctor {
  public:
   NormalFunctor() { op_ = CHECK_JUST(one::OpBuilder("normal").Output("out").Build()); }
   Maybe<Tensor> operator()(const float& mean, const float& std, const Shape& shape, 
+                           const Optional<one::Tensor>& out,
                            const Optional<Symbol<DType>>& dtype,
                            const Optional<Symbol<Device>>& device,
                            const Optional<one::Generator>& generator,
@@ -1387,6 +1388,17 @@ class NormalFunctor {
     const auto& distribution_state = std::make_shared<DistributionKernelState>(gen);
 
     OpExprInterpContext ctx(attrs, distribution_state);
+
+    if (out.has_value()) {
+      std::shared_ptr<one::Tensor> out_tensor = JUST(out);
+      Symbol<Device> out_tensor_device = JUST(out_tensor->device());
+      CHECK_OR_RETURN(out_tensor_device == JUST(device));
+      std::shared_ptr<TensorTuple> outputs = std::make_shared<TensorTuple>(1);
+      outputs->at(0) = out_tensor;
+      JUST(OpInterpUtil::Dispatch(*op_, {}, outputs.get(), ctx));
+      return outputs->at(0);
+    }
+
     ctx.device = device;
     auto result = JUST(OpInterpUtil::Dispatch<Tensor>(*op_, {}, ctx));
     JUST(result->set_requires_grad(requires_grad));
