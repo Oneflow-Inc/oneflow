@@ -87,7 +87,7 @@ if __name__ == "__main__":
         "--build_dir", required=True,
     )
     parser.add_argument(
-        "--check-error-msg", action='store_true', default=False,
+        "--check-error-msg", action="store_true", default=False,
     )
     args = parser.parse_args()
     loop = asyncio.get_event_loop()
@@ -106,7 +106,5 @@ if __name__ == "__main__":
     else:
         command = f"cd .. && {cmd} -warnings-as-errors='{warnings_as_errors}'"
 
-    ret_code = loop.run_until_complete(
-        run_command(command)
-    )
+    ret_code = loop.run_until_complete(run_command(command))
     exit(ret_code)
