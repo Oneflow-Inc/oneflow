@@ -29,6 +29,11 @@ namespace oneflow {
 
 /* static */ Maybe<void> IsNanOp::GetSbp(user_op::SbpContext* ctx) {
   ctx->NewBuilder().Broadcast(ctx->inputs()).Broadcast(ctx->outputs()).Build();
+  const auto& in_tensor = ctx->LogicalTensorDesc4InputArgNameAndIndex("in", 0);
+  for (int i = 0; i < in_tensor.shape().NumAxes(); ++i) {
+    ctx->NewBuilder().Split(ctx->inputs(), i).Split(ctx->outputs(), i).Build();
+  }
+  ctx->NewBuilder().PartialSum(ctx->inputs()).PartialSum(ctx->outputs()).Build();
   return Maybe<void>::Ok();
 }
 
@@ -48,6 +53,11 @@ namespace oneflow {
 
 /* static */ Maybe<void> IsInfOp::GetSbp(user_op::SbpContext* ctx) {
   ctx->NewBuilder().Broadcast(ctx->inputs()).Broadcast(ctx->outputs()).Build();
+  const auto& in_tensor = ctx->LogicalTensorDesc4InputArgNameAndIndex("in", 0);
+  for (int i = 0; i < in_tensor.shape().NumAxes(); ++i) {
+    ctx->NewBuilder().Split(ctx->inputs(), i).Split(ctx->outputs(), i).Build();
+  }
+  ctx->NewBuilder().PartialSum(ctx->inputs()).PartialSum(ctx->outputs()).Build();
   return Maybe<void>::Ok();
 }
 
