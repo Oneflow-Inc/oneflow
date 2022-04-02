@@ -32,7 +32,7 @@ CudaHostAllocator::~CudaHostAllocator() {
 Maybe<void> CudaHostAllocator::Allocate(char** mem_ptr, std::size_t size) {
   std::size_t granularity = std::ceil(std::log2(size));
   CHECK_GE_OR_RETURN(granularity, 0);
-  CHECK_LT_OR_RETURN(granularity, kMaxGranularity);
+  CHECK_LT_OR_RETURN(granularity, kCudaHostMaxGranularity);
   CHECK_LE_OR_RETURN(size, 1 << granularity);
   CudaCurrentDeviceGuard guard(device_id_);
   std::unique_lock<std::mutex> lock(mutex_);

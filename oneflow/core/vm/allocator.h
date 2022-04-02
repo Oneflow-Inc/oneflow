@@ -17,6 +17,7 @@ limitations under the License.
 #define ONEFLOW_CORE_VM_ALLOCATOR_H_
 
 #include <cstddef>
+#include "oneflow/core/common/maybe.h"
 
 namespace oneflow {
 namespace vm {

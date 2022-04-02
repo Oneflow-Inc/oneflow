@@ -29,9 +29,9 @@ void ThreadSafeAllocator::Deallocate(char* mem_ptr, std::size_t size) {
   backend_allocator_->Deallocate(mem_ptr, size);
 }
 
-void SingleThreadOnlyAllocator::Allocate(char** mem_ptr, std::size_t size) {
+Maybe<void> SingleThreadOnlyAllocator::Allocate(char** mem_ptr, std::size_t size) {
   CheckUniqueThreadAccess();
-  backend_allocator_->Allocate(mem_ptr, size);
+  return backend_allocator_->Allocate(mem_ptr, size);
 }
 
 void SingleThreadOnlyAllocator::Deallocate(char* mem_ptr, std::size_t size) {

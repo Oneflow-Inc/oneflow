@@ -68,8 +68,8 @@ Maybe<void> EagerBlobObject::TryAllocateBlobBodyMemory(DeviceCtx* device_ctx) {
     return Maybe<void>::Ok();
   }
   {
-    JUST(allocator->Allocate(&dptr, required_body_bytes));
     char* dptr = nullptr;
+    JUST(allocator->Allocate(&dptr, required_body_bytes));
     // reset tensor_storage_;
     const auto& Free = [allocator, required_body_bytes](char* dptr) {
       if (IsShuttingDown()) { return; }

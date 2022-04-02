@@ -47,7 +47,7 @@ class SingleThreadOnlyAllocator final : public Allocator {
         accessed_thread_id_(std::this_thread::get_id()) {}
   ~SingleThreadOnlyAllocator() override = default;
 
-  void Allocate(char** mem_ptr, std::size_t size) override;
+  Maybe<void> Allocate(char** mem_ptr, std::size_t size) override;
   void Deallocate(char* mem_ptr, std::size_t size) override;
 
  private:
