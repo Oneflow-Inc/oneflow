@@ -50,9 +50,21 @@ Maybe<void> VarOp::GetSbp(user_op::SbpContext* ctx) {
   const Shape& input_shape = ctx->LogicalTensorDesc4InputArgNameAndIndex("input", 0).shape();
   const int64_t ndim = input_shape.NumAxes();
   const std::vector<int32_t> axis = ctx->Attr<std::vector<int32_t>>("dim");
-  for (int i = 0; i < ndim; i++) {
-    if (std::find(axis.begin(), axis.end(), i) == axis.end()) {
-      ctx->NewBuilder().Split(ctx->inputs(), i).Split(ctx->outputs(), i).Build();
+  const bool keepdim = ctx->Attr<bool>("keepdim");
+  if (keepdim) {
+    for (int i = 0; i < ndim; i++) {
+      if (std::find(axis.begin(), axis.end(), i) == axis.end()) {
+        ctx->NewBuilder().Split(ctx->inputs(), i).Split(ctx->outputs(), i).Build();
+      }
+    }
+  } else {
+    int offset = 0;
+    for (int i = 0; i < ndim; i++) {
+      if (std::find(axis.begin(), axis.end(), i) == axis.end()) {
+        ctx->NewBuilder().Split(ctx->inputs(), i).Split(ctx->outputs(), i - offset).Build();
+      } else {
+        offset += 1;
+      }
     }
   }
   return Maybe<void>::Ok();
