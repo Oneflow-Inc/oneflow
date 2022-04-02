@@ -81,12 +81,14 @@ def _test_randn_tuple_shape(test_case, device, shape):
     test_case.assertTrue(not np.array_equal(y1.numpy(), y2.numpy()))
     test_case.assertTrue(shape == y1.shape)
 
+
 def _test_randn_with_flow_size(test_case, device, shape):
     y1 = flow.randn(flow.Size(shape), device=flow.device(device))
     y2 = flow.randn(flow.Size(shape), device=flow.device(device))
 
     test_case.assertTrue(not np.array_equal(y1.numpy(), y2.numpy()))
     test_case.assertTrue(shape == y1.shape)
+
 
 @flow.unittest.skip_unless_1n1d()
 class TestRandnModule(flow.unittest.TestCase):

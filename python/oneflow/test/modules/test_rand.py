@@ -79,12 +79,15 @@ def _test_with_generator(test_case, device, shape):
     )
     test_case.assertTrue(np.allclose(y1.numpy(), y2.numpy(), atol=1e-4, rtol=1e-4))
 
+
 def _test_rand_with_flow_size(test_case, device, shape):
     y1 = flow.rand(flow.Size(shape), device=flow.device(device))
     y2 = flow.rand(flow.Size(shape), device=flow.device(device))
 
     test_case.assertTrue(not np.array_equal(y1.numpy(), y2.numpy()))
     test_case.assertTrue(shape == y1.shape)
+
+
 @flow.unittest.skip_unless_1n1d()
 class TestRandModule(flow.unittest.TestCase):
     def test_0d_randint(test_case):
