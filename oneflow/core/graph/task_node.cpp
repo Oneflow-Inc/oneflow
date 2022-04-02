@@ -15,6 +15,7 @@ limitations under the License.
 */
 #include "oneflow/core/graph/task_node.h"
 #include "oneflow/core/job/id_manager.h"
+#include "oneflow/core/memory/memory_case_util.h"
 
 namespace oneflow {
 
@@ -313,7 +314,11 @@ void TaskNode::InitProducedRegstMemCase(MemoryCase* mem_case) {
 }
 
 void TaskNode::PinConsumedRegstMemCase(MemoryCase* mem_case) {
-  if (mem_case->device_type() != DeviceType::kCPU) { return; }
+  // When a node located on non-cpu device consumes a cpu regst,
+  // the regst memory should be pinned on host memory (locked page memory).
+  // When the regst is not on host, skip pinning
+  if (!memory::IsHostMem(*mem_case)) { return; }
+  // When the node is located on host, skip pinning
   if (device_type() == DeviceType::kCPU) { return; }
   mem_case->set_pinned_device_type(device_type());
   mem_case->set_pinned_device_id(stream_id().device_id().device_index());

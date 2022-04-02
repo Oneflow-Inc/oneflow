@@ -30,7 +30,7 @@ bool EqualsIgnorePinnedDevice(const MemoryCase& a, const MemoryCase& b) {
 void GetPinnedHostMemoryCase(const MemoryCase& mem_case, MemoryCase* ret) {
   ret->set_device_type(DeviceType::kCPU);
   ret->set_device_id(0);
-  if (mem_case.device_type() != DeviceType::kCPU) {
+  if (!IsHostMem(mem_case)) {
     ret->set_pinned_device_type(mem_case.device_type());
     ret->set_pinned_device_id(mem_case.device_id());
   }
