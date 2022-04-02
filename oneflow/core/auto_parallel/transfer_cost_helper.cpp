@@ -34,7 +34,7 @@ int32_t GetTransferCostConfigIdx4NodeNum(int32_t node_num) {
 
 }  // namespace
 
-Maybe<double> TransferCostHelper::AskSymmetricTransferCost(size_t data_size, Type type) {
+Maybe<double> TransferCostHelper::AskSymmetricTransferCost(size_t data_size, Type type) const {
   const TransferCostConfig& transfer_config =
       Global<ResourceDesc, ForSession>::Get()->GetTransferCostConfig();
   int32_t node_num = Global<ResourceDesc, ForSession>::Get()->GpuDeviceNum();

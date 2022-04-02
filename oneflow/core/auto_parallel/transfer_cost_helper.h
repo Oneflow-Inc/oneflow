@@ -30,7 +30,7 @@ class TransferCostHelper final {
     kNcclReduceScatter,
   };
 
-  Maybe<double> AskSymmetricTransferCost(size_t data_size, Type type);
+  Maybe<double> AskSymmetricTransferCost(size_t data_size, Type type) const;
 };
 
 const TransferCostHelper& GetTransferCostHelper();

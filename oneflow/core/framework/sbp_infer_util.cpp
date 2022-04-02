@@ -21,6 +21,7 @@ limitations under the License.
 #include "oneflow/core/common/util.h"
 #include "oneflow/core/job/lazy_mode.h"
 #include "oneflow/core/job/parallel_desc.h"
+#include "oneflow/core/auto_parallel/transfer_cost_helper.h"
 
 namespace oneflow {
 
@@ -79,15 +80,25 @@ Maybe<double> ComputCopyCostBetweenTwoSbpParallel(const SbpParallel& producer_sb
       if (consumer_sbp_parallel.has_split_parallel()
           && producer_sbp_parallel.has_split_parallel()) {
         // S(0)->S(1), S(1)->S(0), etc.
-        return logical_blob_size * (producer_parallel_desc.parallel_num() - 1)
-               / producer_parallel_desc.parallel_num();
+        return GetTransferCostHelper().AskSymmetricTransferCost(logical_blob_size,
+                                                                TransferCostHelper::kNcclAll2All);
+      } else if (consumer_sbp_parallel.has_split_parallel()
+                 && producer_sbp_parallel.has_broadcast_parallel()) {
+        // S->B/P
+        return GetTransferCostHelper().AskSymmetricTransferCost(logical_blob_size,
+                                                                TransferCostHelper::kNcclAllGather);
+      } else if (consumer_sbp_parallel.has_partial_sum_parallel()
+                 && producer_sbp_parallel.has_split_parallel()) {
+        // P->S
+        return GetTransferCostHelper().AskSymmetricTransferCost(
+            logical_blob_size, TransferCostHelper::kNcclReduceScatter);
       } else {
-        // P->S, S->B/P
-        return logical_blob_size * (producer_parallel_desc.parallel_num() - 1);
+        return Error::InvalidValueError("Unknow boxing type");
       }
     }
     // P->B
-    return 2 * logical_blob_size * (producer_parallel_desc.parallel_num() - 1);
+    return GetTransferCostHelper().AskSymmetricTransferCost(logical_blob_size,
+                                                            TransferCostHelper::kNcclAllReduce);
   } else {
     // Not supporting P->P for different placement
     if (LazyMode::is_enabled()) {
