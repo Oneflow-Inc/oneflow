@@ -161,6 +161,7 @@ class TestLayerNorm(flow.unittest.TestCase):
         y = m(x)
         return y
 
+    @unittest.skip("TODO: guoran, different behavior of __shfl_sync in sm_61")
     @autotest(n=10, auto_backward=True, rtol=1e-3, atol=1e-3)
     def test_layernorm_with_random_data_shared_mem(test_case):
         device = "cuda"
@@ -180,6 +181,7 @@ class TestLayerNorm(flow.unittest.TestCase):
         y = m(x)
         return y
 
+    @unittest.skip("TODO: guoran, different behavior of __shfl_sync in sm_61")
     @autotest(n=5, auto_backward=True, rtol=1e-3, atol=1e-3)
     def test_layernorm_with_random_data_uncached(test_case):
         device = "cuda"
