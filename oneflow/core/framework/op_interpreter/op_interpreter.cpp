@@ -97,9 +97,7 @@ Maybe<void> AutogradInterpreter::Apply(const OpExpr& op_expr, const TensorTuple&
   TensorTuple tmp_inputs(inputs.size());
   // NOTE: if this op not in view_ops_set, then need to tensor->contiguous()
   if (view_ops_set.find(op_expr.op_type_name()) == view_ops_set.end()) {
-    for (size_t i = 0; i < inputs.size(); i++) { 
-      tmp_inputs.at(i) = inputs.at(i)->contiguous();
-    }
+    for (size_t i = 0; i < inputs.size(); i++) { tmp_inputs.at(i) = inputs.at(i)->contiguous(); }
     contiguous_inputs = &tmp_inputs;
   }
 
@@ -119,8 +117,8 @@ Maybe<void> AutogradInterpreter::Apply(const OpExpr& op_expr, const TensorTuple&
               JUST(grad_closure->Apply(out_grads, in_grads));
               return Maybe<void>::Ok();
             });
-    JUST(GetThreadLocalAutogradEngine()->AddBackwardFuncPtr(op_expr.op_type_name() + "_backward",
-                                                            backward_fn, *contiguous_inputs, outputs));
+    JUST(GetThreadLocalAutogradEngine()->AddBackwardFuncPtr(
+        op_expr.op_type_name() + "_backward", backward_fn, *contiguous_inputs, outputs));
   }
   // Update outputs autograd meta
   // Note: if requires_grad is True, we will create a new autograd meta for each output
