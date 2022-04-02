@@ -44,7 +44,7 @@ void BinarySet::Initialize(int32_t size_of_set) {
 }
 
 // Check if i-th element in this subset
-int32_t BinarySet::CheckExistency(int32_t i) {
+int32_t BinarySet::CheckExistency(int32_t i) const {
   int32_t k = i / bit_of_BinarySetEntryType;
   int32_t j = i % bit_of_BinarySetEntryType;
   return BinarySetValues[k] >> j & 1;
@@ -91,7 +91,7 @@ int32_t BinarySet::Total() {
 }
 
 // Output all the elements in the subset
-void BinarySet::OutPut(std::vector<int32_t>& out) {
+void BinarySet::OutPut(std::vector<int32_t>& out) const {
   out.clear();
   for (int32_t i = 0; i < SizeOfSet; i++) {
     if (CheckExistency(i)) { out.emplace_back(i); }
@@ -99,7 +99,7 @@ void BinarySet::OutPut(std::vector<int32_t>& out) {
 }
 
 // Output all the elements in the subset
-void BinarySet::QuickOutPut(std::vector<int32_t>& out) {
+void BinarySet::QuickOutPut(std::vector<int32_t>& out) const {
   out.clear();
   for (int32_t i = 0; i < BinarySetValues.size(); i++) {
     BinarySetEntryType x = BinarySetValues[i];

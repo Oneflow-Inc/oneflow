@@ -186,11 +186,6 @@ void SbpCollector::ProxySbpCandidate(
   // HashMap<std::string, HashMap<LogicalBlobId, SbpNode<NdSbpSignature>*>>&
   //     op_name2lbi2sbp_proxy;
 
-  // mapping from a logical blob id to a group of consumers and corresponding input blob names.
-  // mapping from consumers and input blob names to an unordered_set of SBP Parallel.
-  HashMap<std::pair<std::string, LogicalBlobId>,
-          HashMap<std::pair<std::string, std::string>, std::unordered_set<int32_t>>>
-      producer_lbi2consumer_bn2sbp_set;
   // mapping from a logical blob id to index
   HashMap<LogicalBlobId, int32_t> lbi2index;
   // mapping from the index to producer, consuemr and corresponding input blob name, possible sbp
