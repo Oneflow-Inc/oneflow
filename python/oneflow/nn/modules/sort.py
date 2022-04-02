@@ -34,7 +34,7 @@ def sort_op(input, dim: int = -1, descending: bool = False):
         perm = get_perm_when_transpose_axis_to_last_dim(num_dims, dim)
         x = flow._C.transpose(input, perm=perm)
         indices = flow._C.arg_sort(x, direction)
-        indices = flow._C.transpose(indices, perm=get_inversed_perm(perm)).contiguous()
+        indices = flow._C.transpose(indices, perm=get_inversed_perm(perm))
         return (flow.gather(input, dim, indices), indices)
 
 
