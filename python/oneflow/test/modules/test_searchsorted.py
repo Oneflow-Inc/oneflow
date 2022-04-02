@@ -180,6 +180,5 @@ class TestSearch_Sorted(flow.unittest.TestCase):
             sorter=oneof(sorter, None),
         )
 
-
 if __name__ == "__main__":
     unittest.main()

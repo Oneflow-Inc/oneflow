@@ -939,6 +939,16 @@ class ArgSortFunctor {
   std::shared_ptr<OpExpr> op_;
 };
 
+inline bool IsShapeMatchBeforeLastDim(const std::shared_ptr<Tensor>& x, const std::shared_ptr<Tensor>& y) {
+  if (x->shape()->NumAxes() != y->shape()->NumAxes()) { return false; }
+  const auto& x_shape = x->shape();
+  const auto& y_shape = y->shape();
+  for (int64_t i = 0; i < x_shape->NumAxes() - 1; ++i) {
+    if (x_shape->At(i) != y_shape->At(i)) { return false; }
+  }
+  return true;
+}
+
 class SearchSortedFunctor {
  public:
   SearchSortedFunctor() {
@@ -981,7 +991,7 @@ class SearchSortedFunctor {
     JUST(attrs.SetAttr<bool>("out_int32", out_int32));
     JUST(attrs.SetAttr<bool>("right", right));
     if (sorter) {
-      CHECK_OR_RETURN(IsShapeMatch(sorted_sequence, JUST(sorter)))
+      CHECK_OR_RETURN(*sorted_sequence->shape() == *JUST(sorter)->shape())
           << "for searchsorted op, boundary and sorter must have the same size";
       CHECK_OR_RETURN(JUST(sorter)->dtype()->data_type() == DataType::kInt64)
           << "for searchsorted op, sorter must be a tensor of long";
@@ -1037,7 +1047,7 @@ class SearchSortedScalarFunctor {
       JUST(attrs.SetAttr<double>("values", values_tmp));
     }
     if (sorter) {
-      CHECK_OR_RETURN(IsShapeMatch(sorted_sequence, JUST(sorter)))
+      CHECK_OR_RETURN(*sorted_sequence->shape() == *JUST(sorter)->shape())
           << "for searchsorted op, boundary and sorter must have the same size";
       CHECK_OR_RETURN(JUST(sorter)->dtype()->data_type() == DataType::kInt64)
           << "for searchsorted op, sorter must be a tensor of long";
