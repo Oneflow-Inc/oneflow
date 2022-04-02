@@ -27,14 +27,8 @@ CallPhyInstrOperand::CallPhyInstrOperand(
     const std::shared_ptr<const one::ConsistentTensorInferResult>& consistent_tensor_infer_result,
     const one::OpExprInterpContext& op_interp_ctx,
     const one::DevVmDepObjectConsumeMode dev_vm_dep_object_consume_mode)
-    : call_ctx_{
-        .composed_attrs = ComposedAttrMap(op_interp_ctx.attrs, opkernel->base_attrs()),
-        .inputs = inputs,
-        .outputs = outputs,
-        .consistent_tensor_infer_result = consistent_tensor_infer_result,
-        .op_interp_ctx = op_interp_ctx,
-      },
-      opkernel_(opkernel),
+    : call_ctx_(ComposedAttrMap(op_interp_ctx.attrs, opkernel->base_attrs()), inputs, outputs,
+                consistent_tensor_infer_result, op_interp_ctx, opkernel),
       dev_vm_dep_object_consume_mode_(dev_vm_dep_object_consume_mode),
       input_dependences_(),
       output_dependences_() {
@@ -46,7 +40,8 @@ CallPhyInstrOperand::CallPhyInstrOperand(
 
 Maybe<void> CallPhyInstrOperand::Init() {
   return WithThisCallContext([this]() -> Maybe<void> {
-    return mut_opkernel()->ChooseOpKernel(&user_opkernel_, &need_temp_storage_);
+    return mut_opkernel()->ChooseOpKernel(&user_opkernel_, &infer_tmp_size_fn_,
+                                          &need_temp_storage_);
   });
 }
 
