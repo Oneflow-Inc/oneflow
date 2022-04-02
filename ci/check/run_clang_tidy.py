@@ -97,9 +97,10 @@ if __name__ == "__main__":
         .read_text()
         .strip()
     )
+    command = f"git diff -U0 master | {downloaded[1]} -clang-tidy-binary {downloaded[0]} -path {args.build_dir} -j $(nproc) -p1 -allow-enabling-alpha-checkers -extra-arg=-Xclang -extra-arg=-analyzer-config -extra-arg=-Xclang -extra-arg=aggressive-binary-operation-simplification=true"
     ret_code = loop.run_until_complete(
         run_command(
-            f"cd .. && git diff -U0 master | {downloaded[1]} -clang-tidy-binary {downloaded[0]} -path {args.build_dir} -j $(nproc) -p1  -allow-enabling-alpha-checkers -extra-arg=-Xclang -extra-arg=-analyzer-config -extra-arg=-Xclang -extra-arg=aggressive-binary-operation-simplification=true -warnings-as-errors='{warnings_as_errors}'"
+            f"cd .. && {command} -warnings-as-errors='{warnings_as_errors}' && {command} -checks=-*,maybe-need-error-msg -warnings-as-errors=* -skip-line-filter"
         )
     )
     exit(ret_code)

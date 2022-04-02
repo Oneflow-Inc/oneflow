@@ -67,7 +67,7 @@ const std::string& ConsistentToConsistentOpExpr::op_type_name() const {
 }
 
 const std::string& CastToConsistentOpExpr::op_type_name() const {
-  static const std::string kOpTypeName = "cast_to_consistent";
+  static const std::string kOpTypeName = "cast_to_consistenti";
   return kOpTypeName;
 }
 
