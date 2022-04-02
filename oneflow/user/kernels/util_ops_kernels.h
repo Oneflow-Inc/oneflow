@@ -25,13 +25,18 @@ limitations under the License.
 
 namespace oneflow {
 namespace user_op {
+#define UTIL_OPS_DATA_TYPE_SEQ \
+  FLOATING_DATA_TYPE_SEQ       \
+  INT_DATA_TYPE_SEQ            \
+  UNSIGNED_INT_DATA_TYPE_SEQ   \
+  OF_PP_MAKE_TUPLE_SEQ(half, DataType::kFloat16)
 
-template<DeviceType device_type, typename T>
+template<DeviceType device_type, typename T, typename Enable = void>
 struct IsNanFunctor {
   OF_DEVICE_FUNC bool operator()(const T x) const;
 };
 
-template<DeviceType device_type, typename T>
+template<DeviceType device_type, typename T, typename Enable = void>
 struct IsInfFunctor {
   OF_DEVICE_FUNC bool operator()(const T x) const;
 };

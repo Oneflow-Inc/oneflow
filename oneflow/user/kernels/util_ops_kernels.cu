@@ -22,8 +22,13 @@ namespace oneflow {
 namespace user_op {
 
 template<typename T>
-struct IsNanFunctor<DeviceType::kCUDA, T> {
-  OF_DEVICE_FUNC bool operator()(const T x) const { return isnan(x); }
+struct IsNanFunctor<DeviceType::kCUDA, T, std::enable_if_t<std::is_floating_point<T>::value>> {
+  __device__ bool operator()(const T x) const { return isnan(x); }
+};
+
+template<typename T>
+struct IsNanFunctor<DeviceType::kCUDA, T, std::enable_if_t<!std::is_floating_point<T>::value>> {
+  __device__ bool operator()(const T x) const { return false; }
 };
 
 template<>
@@ -32,8 +37,13 @@ struct IsNanFunctor<DeviceType::kCUDA, half> {
 };
 
 template<typename T>
-struct IsInfFunctor<DeviceType::kCUDA, T> {
-  OF_DEVICE_FUNC bool operator()(const T x) const { return isinf(x); }
+struct IsInfFunctor<DeviceType::kCUDA, T, std::enable_if_t<std::is_floating_point<T>::value>> {
+  __device__ bool operator()(const T x) const { return isinf(x); }
+};
+
+template<typename T>
+struct IsInfFunctor<DeviceType::kCUDA, T, std::enable_if_t<!std::is_floating_point<T>::value>> {
+  __device__ bool operator()(const T x) const { return false; }
 };
 
 template<>
@@ -41,13 +51,12 @@ struct IsInfFunctor<DeviceType::kCUDA, half> {
   __device__ bool operator()(const half x) const { return __hisinf(x); }
 };
 
-#define REGISTER_UTIL_OPS_CUDA_KERNEL(dtype)      \
-  REGISTER_ISNAN_KERNEL(DeviceType::kCUDA, dtype) \
-  REGISTER_ISINF_KERNEL(DeviceType::kCUDA, dtype)
+#define REGISTER_UTIL_OPS_CUDA_KERNEL(device, dtype_pair)     \
+  REGISTER_ISNAN_KERNEL(device, OF_PP_PAIR_FIRST(dtype_pair)) \
+  REGISTER_ISINF_KERNEL(device, OF_PP_PAIR_FIRST(dtype_pair))
 
-REGISTER_UTIL_OPS_CUDA_KERNEL(float)
-REGISTER_UTIL_OPS_CUDA_KERNEL(double)
-REGISTER_UTIL_OPS_CUDA_KERNEL(half)
-
+// REGISTER_UTIL_OPS_CUDA_KERNEL(DeviceType::kCUDA, OF_PP_MAKE_TUPLE_SEQ(half, kFloat16))
+OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(REGISTER_UTIL_OPS_CUDA_KERNEL, (DeviceType::kCUDA),
+                                 UTIL_OPS_DATA_TYPE_SEQ);
 }  // namespace user_op
 }  // namespace oneflow

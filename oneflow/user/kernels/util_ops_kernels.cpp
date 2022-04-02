@@ -21,21 +21,31 @@ namespace oneflow {
 namespace user_op {
 
 template<typename T>
-struct IsNanFunctor<DeviceType::kCPU, T> {
+struct IsNanFunctor<DeviceType::kCPU, T, std::enable_if_t<std::is_floating_point<T>::value>> {
   OF_DEVICE_FUNC bool operator()(const T x) const { return std::isnan(x); }
 };
 
 template<typename T>
-struct IsInfFunctor<DeviceType::kCPU, T> {
+struct IsNanFunctor<DeviceType::kCPU, T, std::enable_if_t<!std::is_floating_point<T>::value>> {
+  OF_DEVICE_FUNC bool operator()(const T x) const { return false; }
+};
+
+template<typename T>
+struct IsInfFunctor<DeviceType::kCPU, T, std::enable_if_t<std::is_floating_point<T>::value>> {
   OF_DEVICE_FUNC bool operator()(const T x) const { return std::isinf(x); }
 };
 
-#define REGISTER_UTIL_OPS_CPU_KERNEL(dtype)      \
-  REGISTER_ISNAN_KERNEL(DeviceType::kCPU, dtype) \
-  REGISTER_ISINF_KERNEL(DeviceType::kCPU, dtype)
+template<typename T>
+struct IsInfFunctor<DeviceType::kCPU, T, std::enable_if_t<!std::is_floating_point<T>::value>> {
+  OF_DEVICE_FUNC bool operator()(const T x) const { return false; }
+};
 
-REGISTER_UTIL_OPS_CPU_KERNEL(float)
-REGISTER_UTIL_OPS_CPU_KERNEL(double)
+#define REGISTER_UTIL_OPS_CPU_KERNEL(device, dtype_pair)      \
+  REGISTER_ISNAN_KERNEL(device, OF_PP_PAIR_FIRST(dtype_pair)) \
+  REGISTER_ISINF_KERNEL(device, OF_PP_PAIR_FIRST(dtype_pair))
+
+OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(REGISTER_UTIL_OPS_CPU_KERNEL, (DeviceType::kCPU),
+                                 UTIL_OPS_DATA_TYPE_SEQ);
 
 }  // namespace user_op
 }  // namespace oneflow
