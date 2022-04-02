@@ -35,7 +35,7 @@ namespace oneflow {
 
 namespace vm {
 
-struct VmDesc;
+class VmDesc;
 class VirtualMachineEngine final : public intrusive::Base {
  public:
   // types
