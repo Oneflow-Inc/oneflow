@@ -61,7 +61,7 @@ Maybe<double> ComputCopyCostBetweenTwoSbpParallel(const SbpParallel& producer_sb
   }
 
   // NOTE: A tensor placed on cpu with a consumer operator that accepts cuda inputs would be
-  // transfered to cuda later. We might not have correct parallel description at this moment.
+  // transferred to cuda later. We might not have correct parallel description at this moment.
   if (producer_parallel_desc == consumer_parallel_desc) {
     // Same sbp, no cost: S->S, B->B, P->P
     if (producer_sbp_parallel == consumer_sbp_parallel) { return 0.0; }

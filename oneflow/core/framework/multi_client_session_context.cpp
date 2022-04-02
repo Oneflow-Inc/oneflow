@@ -56,6 +56,18 @@ int32_t GetGpuDeviceNum() {
 
 int32_t GetCpuDeviceNum() { return std::thread::hardware_concurrency(); }
 
+Maybe<void> InitTransferCostConfig(Resource* resource) {
+  TransferCostConfig* transfer_cost_config = resource->mutable_transfer_cost_config();
+  // [2nodes, 4nodes, 8nodes]
+  for (int i = 0; i < 3; ++i) {
+    transfer_cost_config->add_nccl_all2all();
+    transfer_cost_config->add_nccl_all_reduce();
+    transfer_cost_config->add_nccl_all_gather();
+    transfer_cost_config->add_nccl_reduce_scatter();
+  }
+  return Maybe<void>::Ok();
+}
+
 }  // namespace
 
 Maybe<void> MultiClientSessionContext::TryInit(const ConfigProto& config_proto) {
@@ -80,8 +92,9 @@ Maybe<void> MultiClientSessionContext::TryInit(const ConfigProto& config_proto) 
       resource.set_gpu_device_num(GetGpuDeviceNum());
       resource.set_cpu_device_num(GetCpuDeviceNum());
     }
+    JUST(InitTransferCostConfig(&resource));
 
-    // NOTE(chengcheng): detele first because in EnvGlobalObjectScope has created ResourceDesc.
+    // NOTE(chengcheng): delete first because in EnvGlobalObjectScope has created ResourceDesc.
     if (Global<ResourceDesc, ForSession>::Get() != nullptr) {
       // TODO(chengcheng): reorganize dependency of all Global objects.
       Global<ResourceDesc, ForSession>::Delete();

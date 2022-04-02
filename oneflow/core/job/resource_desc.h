@@ -41,6 +41,7 @@ class ResourceDesc final {
   int32_t GpuDeviceNum() const { return resource_.gpu_device_num(); }
   int32_t MemZoneNum() const { return GpuDeviceNum() + 1; }
   int32_t MaxMdSaveWorkerNum() const { return resource_.max_mdsave_worker_num(); }
+  const TransferCostConfig& GetTransferCostConfig() { return resource_.transfer_cost_config(); }
   size_t reserved_host_mem_byte() const { return resource_.reserved_host_mem_mbyte() * kMB; }
   size_t reserved_device_mem_byte() const { return resource_.reserved_device_mem_mbyte() * kMB; }
   bool enable_thread_local_cache() const { return resource_.enable_thread_local_cache(); }

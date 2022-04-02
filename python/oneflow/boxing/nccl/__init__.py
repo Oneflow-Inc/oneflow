@@ -38,3 +38,7 @@ from oneflow.framework.config_util import (
 from oneflow.framework.config_util import (
     api_disable_group_boxing_by_dst_parallel as disable_group_boxing_by_dst_parallel,
 )
+
+from oneflow.framework.config_util import (
+    api_nccl_transfer_cost_param as set_nccl_transfer_cost_param,
+)

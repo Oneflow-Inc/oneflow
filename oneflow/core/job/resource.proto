@@ -34,6 +34,25 @@ message CudnnConfig {
   optional bool cudnn_conv_enable_pseudo_half = 9 [default = true];
 }
 
+message TransferCostConfig {
+    message Value {
+        //
+        //            k1(x-x0) + b (x<x0)
+        // cost(ns) = 
+        //            k2(x-x0) + b (x>=x0)
+        //
+        optional double k1 = 1 [default = 1.0];
+        optional double k2 = 2 [default = 1.0];
+        optional double b = 3 [default = 0.0];
+        optional double x0= 4 [default = 0.0];
+    }
+    // this repeated means number of nodes with [2, 4, 8]
+    repeated Value nccl_all2all = 1;
+    repeated Value nccl_all_reduce = 2;
+    repeated Value nccl_all_gather = 3;
+    repeated Value nccl_reduce_scatter = 4;
+}
+
 message Resource {
   optional int32 machine_num = 1 [default = 0];
   optional int32 gpu_device_num = 4 [default = 0];
@@ -61,4 +80,7 @@ message Resource {
   // io_conf
   optional bool enable_model_io_v2 = 41 [default = false];
   optional bool enable_legacy_model_io = 42 [default = false];
+
+  // transfer cost configs
+  optional TransferCostConfig transfer_cost_config = 51;
 }

@@ -16,6 +16,7 @@ limitations under the License.
 import os
 import sys
 import traceback
+import math
 
 import oneflow._oneflow_internal
 import oneflow.core.job.resource_pb2 as resource_util
@@ -549,6 +550,56 @@ def nccl_enable_mixed_fusion(val):
     sess = session_ctx.GetDefaultSession()
     assert type(val) is bool
     sess.config_proto.resource.collective_boxing_conf.nccl_enable_mixed_fusion = val
+
+
+@enable_if.condition(hob.in_normal_mode & ~hob.session_initialized)
+def nccl_transfer_cost_param(cost_param):
+    sess = session_ctx.GetDefaultSession()
+
+    def set_cost_param(type_name, node_num, param):
+        assert node_num & (node_num - 1) == 0
+        idx = int(math.log2(node_num)) - 1
+        k1, k2, b, x0 = param
+        getattr(sess.config_proto.resource.transfer_cost_config, type_name)[idx].k1 = k1
+        getattr(sess.config_proto.resource.transfer_cost_config, type_name)[idx].k2 = k2
+        getattr(sess.config_proto.resource.transfer_cost_config, type_name)[idx].b = b
+        getattr(sess.config_proto.resource.transfer_cost_config, type_name)[idx].x0 = x0
+
+    for type_name in ["all2all", "all_reduce", "all_gather", "reduce_scatter"]:
+        for k, v in cost_param[type_name]:
+            set_cost_param(type_name, k, v)
+
+
+def api_nccl_transfer_cost_param(cost_param) -> None:
+    """Set up nccl cost function parameters.
+
+    .. math::
+        cost(ns) = \\begin{case}
+        k1 * (x - x0) + b, & x < x0 \\\\
+        k2 * (x - x0) + b, & x >= x0
+        \\end{case}
+
+    Args:
+        cost_param (Dict): the cost parameters for each transfer cost. The key are
+          "all2ll", "all_reduce", "all_gather", "reduce_scatter" and the value are
+          `2/4/8: [k1, k2, b, x0]`.
+
+    For example:
+
+    .. code-block:: python
+        
+        import oneflow as flow
+
+        cost_param_dict = {
+            "all2all": {2: [0.5, 1.0, 1.0, 1e4], 4: [0.5, 1.0, 1.0, 1e4]},
+            "all_reduce": {2: [0.5, 1.0, 1.0, 1e4], 4: [0.5, 1.0, 1.0, 1e4]},
+            "all_gather": {2: [0.5, 1.0, 1.0, 1e4], 4: [0.5, 1.0, 1.0, 1e4]},
+            "reduce_scatter": {2: [0.5, 1.0, 1.0, 1e4], 4: [0.5, 1.0, 1.0, 1e4]},
+        }
+        flow.boxing.nccl.set_nccl_transfer_cost_param(cost_param_dict)
+
+    """
+    return enable_if.unique([nccl_transfer_cost_param, do_nothing])(cost_param)
 
 
 @enable_if.condition(hob.in_normal_mode & hob.session_initialized)
