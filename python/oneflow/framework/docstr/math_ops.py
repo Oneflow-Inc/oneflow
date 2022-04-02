@@ -1134,6 +1134,7 @@ add_docstr(
     .. code-block:: python
 
         >>> import oneflow as flow
+        >>> import numpy as np
         >>> input1 = flow.tensor(np.random.randn(2, 6), dtype=flow.float32)
         >>> input2 = flow.tensor(np.random.randn(6, 5), dtype=flow.float32)
         >>> of_out = flow.mm(input1, input2)
