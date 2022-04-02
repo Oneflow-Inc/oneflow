@@ -1607,6 +1607,32 @@ add_docstr(
 )
 
 add_docstr(
+    oneflow.Tensor.type,
+    r"""Returns the type if dtype is not provided, else casts this object to the specified type.
+
+    Args:
+        tensor_type (oneflow.dtype, str, optional):
+            the desired dtype. If None, return the dtype of tensor. Default: None
+
+    For example:
+
+    .. code-block:: python
+
+        >>> import oneflow as flow
+        >>> x = flow.randn(2, dtype=flow.float32)
+        >>> x.type()
+        'oneflow.cpu.float32'
+        >>> x.type(flow.int8).type()
+        'oneflow.cpu.int8'
+        >>> x.type("flow.cuda.float64").type()
+        'oneflow.cuda.float64'
+        >>> x.type("flow.cuda.float64").device
+        device(type='cuda', index=0)
+
+    """,
+)
+
+add_docstr(
     oneflow.Tensor.int,
     r"""`Tensor.int()` is equivalent to `Tensor.to(flow.int32)`. See to().
 

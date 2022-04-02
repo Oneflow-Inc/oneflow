@@ -1006,9 +1006,7 @@ def _parse_typestr(s: str):
     return of_str, device, dtype
 
 
-def _type(
-    self, tensor_type: Union[str, flow._oneflow_internal.dtype, None] = None
-) -> str:
+def _type(self, tensor_type: Union[str, flow._oneflow_internal.dtype, None] = None):
     if tensor_type is None:
         _, dtype = str(self.dtype).split(".")
         return ".".join(["oneflow", self.device.type, dtype])
@@ -1018,7 +1016,7 @@ def _type(
 
     # TODO: flow._oneflow_internal.dtype only contains cpu dtype
     elif isinstance(tensor_type, flow._oneflow_internal.dtype):
-        return _to(self, device="cpu", dtype=tensor_type)
+        return _to(self, device=self.device.type, dtype=tensor_type)
 
 
 def _is_floating_point(self):
