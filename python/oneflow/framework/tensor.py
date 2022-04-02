@@ -983,11 +983,42 @@ def _where(self, x=None, y=None):
     return flow.where(self, x, y)
 
 
-def _type(self, tensor_type: str = None) -> str:
+def _parse_typestr(s: str):
+    of_str, device, dtype = None, None, None
+    splits = s.split(".")
+    if len(splits) == 1:
+        of_str, device, dtype = "oneflow", "cpu", splits[0]
+    elif len(splits) == 2:
+        of_str, dtype = splits
+        device = "cpu"
+    elif len(splits) == 3:
+        of_str, device, dtype = splits
+
+    if (
+        of_str not in ["oneflow", "flow"]
+        or not hasattr(flow, dtype)
+        or getattr(flow, dtype) not in flow.dtypes()
+    ):
+        raise ValueError(f"Invalid type: {s}")
+    if device not in ("cpu", "cuda"):
+        raise ValueError(f'device must be "cpu" or "cuda", got {device}')
+    dtype = getattr(flow, dtype)
+    return of_str, device, dtype
+
+
+def _type(
+    self, tensor_type: Union[str, flow._oneflow_internal.dtype, None] = None
+) -> str:
     if tensor_type is None:
-        return "oneflow." + self.device.type + "." + str(self.dtype).split(".")[-1]
-    _, device, dtype = tensor_type.split(".")
-    return _to(self, device=device, dtype=getattr(flow, dtype))
+        _, dtype = str(self.dtype).split(".")
+        return ".".join(["oneflow", self.device.type, dtype])
+    if isinstance(tensor_type, str):
+        _, device, dtype = _parse_typestr(tensor_type)
+        return _to(self, device=device, dtype=dtype)
+
+    # TODO: flow._oneflow_internal.dtype only contains cpu dtype
+    elif isinstance(tensor_type, flow._oneflow_internal.dtype):
+        return _to(self, device="cpu", dtype=tensor_type)
 
 
 def _is_floating_point(self):

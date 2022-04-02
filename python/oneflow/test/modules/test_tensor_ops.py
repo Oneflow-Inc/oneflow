@@ -34,7 +34,15 @@ def _test_type_as(test_case, shape, device, src_dtype, tgt_dtype):
     test_case.assertEqual(input.dtype, target.dtype)
 
 
-def _test_type(test_case, shape, src_device, tgt_device, src_dtype, tgt_dtype):
+def _test_type_noparam(test_case, shape, src_device, src_dtype):
+    np_input = np.random.rand(*shape)
+    input = flow.tensor(np_input, dtype=src_dtype, device=src_device)
+    test_case.assertEqual(
+        input.type(), "oneflow." + src_device + "." + str(src_dtype).split(".")[-1]
+    )
+
+
+def _test_type_tensor(test_case, shape, src_device, tgt_device, src_dtype, tgt_dtype):
     np_input = np.random.rand(*shape)
     input = flow.tensor(np_input, dtype=src_dtype, device=src_device)
     target = flow.tensor(np_input, dtype=tgt_dtype, device=tgt_device)
@@ -44,6 +52,13 @@ def _test_type(test_case, shape, src_device, tgt_device, src_dtype, tgt_dtype):
     input = input.type(target.type())
     test_case.assertEqual(input.dtype, target.dtype)
     test_case.assertEqual(input.device, target.device)
+
+
+def _test_type_dtype(test_case, shape, src_device, src_dtype, dtype):
+    np_input = np.random.rand(*shape)
+    input = flow.tensor(np_input, dtype=src_dtype, device=src_device)
+    input = input.type(dtype)
+    test_case.assertEqual(input.dtype, dtype)
 
 
 def _test_is_floating_point(test_case, shape, device, dtype):
@@ -212,56 +227,38 @@ class TestTensorOps(flow.unittest.TestCase):
             _test_type_as(test_case, *arg)
 
     def test_type(test_case):
+        dtype_list = [
+            flow.int64,
+            flow.int32,
+            flow.uint8,
+            flow.int8,
+            flow.float16,
+            flow.float32,
+            flow.float64,
+            flow.bool,
+            flow.float,
+        ]
+
         arg_dict = OrderedDict()
         arg_dict["shape"] = [(1, 2), (3, 4, 5), (2, 3, 4, 5)]
         arg_dict["src_device"] = ["cpu", "cuda"]
         arg_dict["tgt_device"] = ["cpu", "cuda"]
-        arg_dict["src_dtype"] = [
-            flow.int64,
-            flow.int32,
-            flow.int8,
-            flow.float32,
-            flow.float64,
-        ]
-        arg_dict["tgt_dtype"] = [
-            flow.int64,
-            flow.int32,
-            flow.int8,
-            flow.float32,
-            flow.float64,
-        ]
+        arg_dict["src_dtype"] = dtype_list
+        arg_dict["tgt_dtype"] = dtype_list
         for arg in GenArgList(arg_dict):
-            _test_type(test_case, *arg)
+            _test_type_tensor(test_case, *arg)
 
+        arg_dict = OrderedDict()
+        arg_dict["shape"] = [(1, 2), (3, 4, 5), (2, 3, 4, 5)]
         arg_dict["src_device"] = ["cpu", "cuda"]
-        arg_dict["src_dtype"] = [
-            flow.int64,
-            flow.int32,
-            flow.int8,
-            flow.float32,
-            flow.float64,
-        ]
-        arg_dict["tgt_device"] = ["cuda"]
-        arg_dict["tgt_dtype"] = [flow.float16]
+        arg_dict["src_dtype"] = dtype_list
         for arg in GenArgList(arg_dict):
-            _test_type(test_case, *arg)
+            _test_type_noparam(test_case, *arg)
 
-        arg_dict["src_device"] = ["cuda"]
-        arg_dict["tgt_device"] = ["cpu", "cuda"]
-        arg_dict["src_dtype"] = [
-            flow.int64,
-            flow.int32,
-            flow.int8,
-            flow.float32,
-            flow.float64,
-        ]
-        arg_dict["tgt_dtype"] = [
-            flow.int64,
-            flow.int32,
-            flow.int8,
-            flow.float32,
-            flow.float64,
-        ]
+        # TODO: flow.dtype() only contains cpu dtype, "flow.cuda.float32" is invalid
+        arg_dict["dtype"] = dtype_list
+        for arg in GenArgList(arg_dict):
+            _test_type_dtype(test_case, *arg)
 
     def test_is_floating_point(test_case):
         arg_dict = OrderedDict()
