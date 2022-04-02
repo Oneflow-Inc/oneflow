@@ -20,6 +20,7 @@ limitations under the License.
 #include "oneflow/core/operator/operator.h"
 #include "oneflow/core/eager/eager_blob_object.h"
 #include "oneflow/core/vm/stream.h"
+#include "oneflow/core/vm/allocator.h"
 #include "oneflow/core/vm/thread_ctx.h"
 #include "oneflow/core/eager/call_instruction_type.h"
 #include "oneflow/core/eager/call_phy_instr_operand.h"
@@ -41,18 +42,16 @@ namespace vm {
 
 struct CallInstructionUtil final {
   static inline Maybe<void> Compute(const vm::Instruction& instruction) {
-    OF_PROFILER_RANGE_PUSH("ResetPrior");
     auto* operand = CallInstructionUtil::GetCallPhyInstrOperand(instruction);
     DeviceCtx* device_ctx = instruction.stream().device_ctx().get();
-    OF_PROFILER_RANGE_POP();
+    operand->mut_call_ctx()->device_ctx = device_ctx;
     OF_PROFILER_RANGE_PUSH("AllocateOutputBlobsMemory");
     JUST(AllocateOutputBlobsMemory(operand, device_ctx));
     OF_PROFILER_RANGE_POP();
     if (unlikely(operand->need_temp_storage())) {
-      OF_PROFILER_RANGE_PUSH("TryAllocateTempStorageBlobMemory");
-      InferTempStorageBlobDesc(operand);
-      JUST(ResetTempStorageBlob(operand));
-      JUST(TryAllocateTempStorageBlobMemory(operand, device_ctx->mut_allocator()));
+      OF_PROFILER_RANGE_PUSH("TryAllocateTempStorage");
+      InferTempStorageSize(operand);
+      JUST(TryAllocateTempStorage(operand, device_ctx->mut_allocator()));
       OF_PROFILER_RANGE_POP();
     }
     user_op::OpKernelState* state = nullptr;
@@ -64,10 +63,11 @@ struct CallInstructionUtil final {
     }
     OpKernelCompute(operand, device_ctx, state, cache);
     if (unlikely(operand->need_temp_storage())) {
-      OF_PROFILER_RANGE_PUSH("DeallocateTempStorageBlobMemory");
-      JUST(DeallocateTempStorageBlobMemory(operand));
+      OF_PROFILER_RANGE_PUSH("DeallocateTempStorage");
+      DeallocateTempStorage(operand, device_ctx);
       OF_PROFILER_RANGE_POP();
     }
+    operand->mut_call_ctx()->device_ctx = nullptr;
     return Maybe<void>::Ok();
   }
 
@@ -77,19 +77,11 @@ struct CallInstructionUtil final {
   }
 
  private:
-  static inline void InferTempStorageBlobDesc(CallPhyInstrOperand* operand) {
-    const auto& InferTmpSizeFn = operand->opkernel().GetInferTmpSizeFn(operand->user_opkernel());
-    auto* temp_blob_desc = operand->mut_opkernel()->mut_temp_blob_object()->mut_blob_desc();
-    CHECK(temp_blob_desc->data_type() == DataType::kChar);
-    one::LocalUserOpInferContext* op_infer_ctx =
-        operand->opkernel().op_infer_ctx_for_scheduler_thread();
-    size_t temp_size = InferTmpSizeFn(op_infer_ctx);
-    temp_blob_desc->mut_shape() = Shape({static_cast<int64_t>(temp_size)});
-    temp_blob_desc->set_is_dynamic(true);
-  }
-
-  static inline Maybe<void> ResetTempStorageBlob(CallPhyInstrOperand* operand) {
-    return operand->mut_opkernel()->mut_temp_blob_object()->InitBlob();
+  static inline void InferTempStorageSize(CallPhyInstrOperand* operand) {
+    const auto& InferTmpSizeFn = operand->infer_tmp_size_fn();
+    CHECK(static_cast<bool>(InferTmpSizeFn))
+        << operand->opkernel().op_conf().user_conf().op_type_name();
+    operand->mut_call_ctx()->tmp_buffer_size = InferTmpSizeFn(operand->opkernel().op_infer_ctx());
   }
 
   static inline void TryInitOpKernelStateAndCache(CallPhyInstrOperand* operand,
@@ -102,8 +94,7 @@ struct CallInstructionUtil final {
       // skipped.
       state = nullptr;
     }
-    operand->mut_opkernel()->TryInitOpKernelStateAndCache(operand->user_opkernel(), device_ctx,
-                                                          state, cache);
+    operand->mut_opkernel()->TryInitOpKernelStateAndCache(operand->user_opkernel(), state, cache);
   }
 
   static inline Maybe<void> AllocateOutputBlobsMemory(CallPhyInstrOperand* operand,
@@ -115,25 +106,32 @@ struct CallInstructionUtil final {
     return Maybe<void>::Ok();
   }
 
-  static inline Maybe<void> TryAllocateTempStorageBlobMemory(CallPhyInstrOperand* operand,
-                                                             vm::Allocator* allocator) {
-    return operand->mut_opkernel()->mut_temp_blob_object()->TryAllocateBlobBodyMemory(allocator);
+  static inline Maybe<void> TryAllocateTempStorage(CallPhyInstrOperand* operand,
+                                                   vm::Allocator* allocator) {
+    if (operand->mut_call_ctx()->tmp_buffer_size > 0) {
+      JUST(allocator->Allocate(&operand->mut_call_ctx()->tmp_buffer_ptr,
+                               operand->mut_call_ctx()->tmp_buffer_size));
+    }
+    return Maybe<void>::Ok();
   }
 
   static inline void OpKernelCompute(CallPhyInstrOperand* operand, DeviceCtx* device_ctx,
                                      user_op::OpKernelState* state,
                                      const user_op::OpKernelCache* cache) {
     auto* opkernel = operand->mut_opkernel();
-    auto* compute_ctx = opkernel->UpdateComputeContext(device_ctx);
+    auto* compute_ctx = opkernel->GetComputeContext();
     OF_PROFILER_RANGE_PUSH("Compute");
     operand->user_opkernel()->Compute(compute_ctx, state, cache);
     OF_PROFILER_RANGE_POP();
-    // tensor tuples are not allowed to be hold by StatefulLocalOpKernel
-    opkernel->UpdateComputeContext(nullptr);
   }
 
-  static inline Maybe<void> DeallocateTempStorageBlobMemory(CallPhyInstrOperand* operand) {
-    return operand->mut_opkernel()->mut_temp_blob_object()->DeallocateBlobDataPtr();
+  static inline void DeallocateTempStorage(CallPhyInstrOperand* operand, DeviceCtx* device_ctx) {
+    if (operand->mut_call_ctx()->tmp_buffer_size > 0) {
+      CHECK_NOTNULL(operand->mut_call_ctx()->tmp_buffer_ptr);
+      device_ctx->mut_allocator()->Deallocate(operand->mut_call_ctx()->tmp_buffer_ptr,
+                                              operand->mut_call_ctx()->tmp_buffer_size);
+    }
+    operand->mut_call_ctx()->tmp_buffer_ptr = nullptr;
   }
 };
 
