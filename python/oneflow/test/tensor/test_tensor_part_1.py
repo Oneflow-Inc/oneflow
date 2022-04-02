@@ -475,7 +475,7 @@ class TestTensor(flow.unittest.TestCase):
         compare_setitem_with_numpy(x, se[1, :, 2], v)
 
     @flow.unittest.skip_unless_1n1d()
-    @autotest(auto_backward=False, check_graph=True)
+    @autotest(check_graph=True)
     def test_setitem_with_random_data(test_case):
         device = random_device()
         x = random_tensor(low=0, high=0, ndim=1, dim0=16).to(device)
