@@ -37,6 +37,7 @@ limitations under the License.
 #include "oneflow/user/kernels/dropout_kernel.h"
 #include "oneflow/core/register/ofblob.h"
 #include "oneflow/core/common/container_util.h"
+#include "oneflow/user/kernels/distributions/common.h"
 
 namespace oneflow {
 namespace one {
@@ -1359,6 +1360,43 @@ class GridSampleFunctor {
   std::shared_ptr<OpExpr> op_;
 };
 
+class NormalFunctor {
+ public:
+  NormalFunctor() { op_ = CHECK_JUST(one::OpBuilder("normal").Output("out").Build()); }
+  Maybe<Tensor> operator()(const float& mean, const float& std, const Shape& shape, 
+                           const Optional<Symbol<DType>>& dtype,
+                           const Optional<Symbol<Device>>& device,
+                           const Optional<one::Generator>& generator,
+                           const bool& requires_grad) const {
+    DataType dtype_val = DataType::kFloat;
+    if (dtype.has_value()) {
+      dtype_val = JUST(dtype)->data_type();
+      if (dtype_val != DataType::kFloat && dtype_val != DataType::kDouble) {
+        OF_UNIMPLEMENTED() << "Only support float and double in normal().";
+      }
+    }
+
+    const auto gen = generator.value_or(JUST(one::DefaultAutoGenerator()));
+    MutableAttrMap attrs;
+    JUST(attrs.SetAttr<double>("mean", mean));
+    JUST(attrs.SetAttr<double>("std", std));
+    JUST(attrs.SetAttr<Shape>("shape", shape));
+    JUST(attrs.SetAttr<DataType>("dtype", dtype_val));
+    JUST(attrs.SetAttr<int64_t>("seed", gen->current_seed()));
+
+    const auto& distribution_state = std::make_shared<DistributionKernelState>(gen);
+
+    OpExprInterpContext ctx(attrs, distribution_state);
+    ctx.device = device;
+    auto result = JUST(OpInterpUtil::Dispatch<Tensor>(*op_, {}, ctx));
+    JUST(result->set_requires_grad(requires_grad));
+    return result;
+  }
+
+ private:
+  std::shared_ptr<OpExpr> op_;
+};
+
 class NormalizationFunctor {
  public:
   NormalizationFunctor() {
@@ -2612,6 +2650,7 @@ ONEFLOW_FUNCTION_LIBRARY(m) {
       "OneEmbeddingEmbeddingGradientShuffle");
   m.add_functor<impl::OneEmbeddingLookupFunctor>("OneEmbeddingLookup");
   m.add_functor<impl::OneEmbeddingUniqueKeyValuePairFunctor>("OneEmbeddingUniqueKeyValuePair");
+  m.add_functor<impl::NormalFunctor>("Normal");
 };
 
 }  // namespace functional

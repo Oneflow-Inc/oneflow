@@ -13,12 +13,12 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 """
-from typing import Optional, Union
+from typing import Optional, Union, List
 
 import oneflow as flow
 from oneflow.nn.module import Module
-from oneflow.nn.modules.utils import _single
-
+from oneflow.nn.common_types import _size_any_t
+from oneflow.nn.modules.utils import _single, _handle_size_arg
 
 def _rand_op_common_process(
     size, device=None, generator=None, placement=None, sbp=None
@@ -503,6 +503,28 @@ def randperm_op(
             n=n, device=device, generator=generator, requires_grad=requires_grad
         ).to(dtype)
 
+def normal_op(
+    mean,
+    std,
+    *size: Union[_size_any_t, flow.Size, List[int]],
+    out=None,
+    generator=None,
+    dtype: Optional[flow.dtype] = None,
+    device: Union[flow.device, str, None] = None,
+    requires_grad: bool = False
+):
+    size = _handle_size_arg(size)
+    size = _single(size)
+    print(size)
+    return flow._C.normal(
+            mean=mean,
+            std=std,
+            size=size,
+            dtype=dtype,
+            device=device,
+            generator=generator,
+            requires_grad=requires_grad,
+        )
 
 if __name__ == "__main__":
     import doctest
