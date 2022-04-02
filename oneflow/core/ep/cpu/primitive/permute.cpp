@@ -108,10 +108,10 @@ class OneDnnPermuteImpl : public Permute {
 
     src_stride[onednn_num_dims - 1] = 1;
     dst_stride[onednn_permute[onednn_num_dims - 1]] = 1;
-    for (int64_t dim = onednn_num_dims - 2; dim >= 0; dim--) {
-      int index = onednn_permute[dim + 1];
-      src_stride[dim] = src_stride[dim + 1] * onednn_dims[dim + 1];
-      dst_stride[onednn_permute[dim]] = dst_stride[index] * onednn_dims[index];
+    for (int64_t i = onednn_num_dims - 2; i >= 0; i--) {
+      src_stride[i] = src_stride[i + 1] * onednn_dims[i + 1];
+      dst_stride[onednn_permute[i]] =
+          dst_stride[onednn_permute[i + 1]] * onednn_dims[onednn_permute[i + 1]];
     }
 
     dnnl::memory::data_type onednn_data_type =
