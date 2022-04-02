@@ -13,27 +13,30 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
-#ifndef ONEFLOW_CORE_VM_ALLOCATOR_H_
-#define ONEFLOW_CORE_VM_ALLOCATOR_H_
+#ifndef ONEFLOW_CORE_VM_CUDA_BACKEND_ALLOCATOR_H_
+#define ONEFLOW_CORE_VM_CUDA_BACKEND_ALLOCATOR_H_
 
-#include <cstddef>
+#include <cstdint>
+#include "oneflow/core/vm/allocator.h"
+#include "oneflow/core/common/util.h"
 
 namespace oneflow {
 namespace vm {
 
-class Allocator {
+class CudaBackendAllocator final : public Allocator {
  public:
-  virtual ~Allocator() = default;
+  explicit CudaBackendAllocator(int64_t device_id) : device_id_(device_id) {}
+  ~CudaBackendAllocator() override = default;
 
-  virtual void Allocate(char** mem_ptr, std::size_t size) = 0;
-  virtual void Deallocate(char* mem_ptr, std::size_t size) = 0;
-  virtual void DeviceReset() {}
+  void Allocate(char** mem_ptr, std::size_t size) override;
+  void Deallocate(char* mem_ptr, std::size_t size) override;
+  void DeviceReset() override;
 
- protected:
-  Allocator() = default;
+ private:
+  int64_t device_id_;
 };
 
 }  // namespace vm
 }  // namespace oneflow
 
-#endif  // ONEFLOW_CORE_VM_ALLOCATOR_H_
+#endif  // ONEFLOW_CORE_VM_CUDA_BACKEND_ALLOCATOR_H_
