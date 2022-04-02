@@ -98,12 +98,10 @@ class EpRecordEventInstructionType final : public vm::InstructionType {
     auto* ep_device_ctx = static_cast<EpDeviceCtx*>(stream->device_ctx().get());
     auto* ep_event_provider = ep_device_ctx->ep_event_provider();
     const auto& ep_event = CHECK_NOTNULL(ep_event_provider)->GetReusedEpEvent();
-    auto* data_ptr = status_buffer->mut_buffer()->mut_data();
+    auto* data_ptr = status_buffer->mut_buffer();
     EpOptionalEventRecordStatusQuerier::MutCast(data_ptr)->reset_ep_event(ep_event);
   }
-  std::string DebugName(const vm::InstructionMsg& instr_msg) const override {
-    return "RecordEvent";
-  }
+  std::string DebugName(const vm::Instruction& instruction) const override { return "RecordEvent"; }
   void Compute(vm::Instruction* instruction) const override {}
 };
 }  // namespace vm
