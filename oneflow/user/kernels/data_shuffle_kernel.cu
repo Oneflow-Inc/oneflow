@@ -562,38 +562,165 @@ __global__ void QuantizeBlockKernel<half, uint32_t>(const half* x, int8_t* quant
   }
 }
 
-template<typename T, typename IDX>
-__global__ void DequantizeBlockKernel(const int8_t* x, T* quantize_factor, T* out, IDX col_size,
+// warp reduce version. 
+constexpr int32_t kWarpSize = 32; 
+
+template<typename T, int N>
+struct GetPackType{
+    using type = typename std::aligned_storage<N*sizeof(T), N*sizeof(T)>::type; 
+}; 
+
+template<typename T, int N> 
+using PackType = typename GetPackType<T, N>::type; 
+
+template<typename T, int N>
+union Pack{
+    static_assert(sizeof(PackType<T, N>) == sizeof(T) * N, ""); 
+    __device__ Pack(){
+        // do nothing
+    }
+    PackType<T, N> storage; 
+    T elem[N]; 
+}; 
+
+template<typename T>
+struct DefaultComputeType {
+  using type = T;
+};
+
+template<>
+struct DefaultComputeType<half> {
+  using type = float;
+};
+
+template<typename SRC, typename DST>
+struct DirectLoad{
+    DirectLoad(const SRC* src, int64_t row_size): src(src), row_size(row_size){}
+    template<int N> 
+    __device__ void load(DST* dst, int64_t row, int64_t col){
+        Pack<SRC, N> pack; 
+        const int64_t offset = (row * row_size + col) / N; 
+        pack.storage = *(reinterpret_cast<const PackType<SRC, N>*>(src) + offset); 
+        #pragma unroll 
+        for(int i = 0; i < N; i++){
+            dst[i] = static_cast<DST>(pack.elem[i]); 
+        }
+    }
+    const SRC* src; 
+    int64_t row_size; 
+};
+
+template<typename SRC, typename DST>
+struct DirectStore{
+    DirectStore(DST* dst, int64_t row_size): dst(dst), row_size(row_size){}
+    template<int N> 
+    __device__ void store(const SRC* src, int64_t row, int64_t col){
+        Pack<DST, N> pack; 
+        const int64_t offset = (row*row_size + col) / N; 
+        #pragma unroll 
+        for(int i =0; i < N; i++){
+            pack.elem[i] = static_cast<DST>(src[i]); 
+        }
+        *(reinterpret_cast<PackType<DST, N>*>(dst) + offset) = pack.storage; 
+    }
+    DST* dst; 
+    int64_t row_size;  
+};
+
+template<typename T>
+struct AbsMaxOp{
+    __device__ __forceinline__ T operator()(const T& a, const T& b){
+        return max(abs(a), abs(b)); 
+    }
+}; 
+
+template<template<typename> class ReduceOp, typename T, int32_t thread_group_width=kWarpSize>
+__inline__ __device__ T WarpAllReduce(T val){
+    for(int32_t lane_mask = thread_group_width/2; lane_mask > 0; lane_mask /= 2){
+        val = ReduceOp<T>()(val, __shfl_xor_sync(0xffffffff, val, lane_mask)); 
+    }
+    return val; 
+}
+
+template<typename LOAD, typename STORE, 
+         typename ComputeType, 
+         int pack_size, 
+         int cols_per_thread, int32_t thread_group_width, 
+         int rows_per_access, bool padding>
+__global__ void QuantizeWarpImplKernel(LOAD load, STORE store, ComputeType* quantize_factor, int64_t rows, const int64_t cols){
+    static_assert(cols_per_thread % pack_size == 0, "");
+    static_assert(thread_group_width <= kWarpSize, "");
+    static_assert(kWarpSize % thread_group_width == 0, "");
+    constexpr int num_packs = cols_per_thread / pack_size; 
+    assert(cols <= cols_per_thread * thread_group_width); 
+    ComputeType buf[rows_per_access][cols_per_thread]; 
+    const int global_thread_group_id = blockIdx.x * blockDim.y + threadIdx.y; 
+    const int num_global_thread_group = gridDim.x * blockDim.y; 
+    const int lane_id = threadIdx.x; 
+    const int64_t step = num_global_thread_group * rows_per_access; 
+    for(int64_t row = global_thread_group_id * rows_per_access; row < rows; row += step){
+        ComputeType thread_abs_max[rows_per_access]; 
+        #pragma unroll 
+        for(int row_id = 0; row_id < rows_per_access; row_id++){
+            ComputeType* row_buf = buf[row_id]; 
+            // init 
+            thread_abs_max[row_id] = 0.0; 
+            #pragma unroll 
+            for(int pack_id=0; pack_id < num_packs; pack_id++){
+                const int pack_offset = pack_id * pack_size; 
+                const int col = (pack_id * thread_group_width + lane_id) * pack_size; 
+                if(!padding || col < cols){
+                    load.template load<pack_size>(row_buf + pack_offset, row + row_id, col); 
+                    #pragma unroll 
+                    for(int i = 0; i < pack_size; i++){
+                        thread_abs_max[row_id] = max(thread_abs_max[row_id], abs(row_buf[pack_offset + i])); 
+                    }
+                } else {
+                    #pragma unroll 
+                    for(int i = 0; i < pack_size; i++){
+                        row_buf[pack_offset + i] = 0.0; 
+                    }
+                }
+            }
+        }
+        ComputeType warp_max[rows_per_access]; 
+        #pragma unroll 
+        for(int row_id =0; row_id < rows_per_access; row_id++){
+            warp_max[row_id] = WarpAllReduce<AbsMaxOp, ComputeType, thread_group_width>(thread_abs_max[row_id]);
+            quantize_factor[row+row_id] = warp_max[row_id]; 
+        }
+        for(int row_id = 0; row_id < rows_per_access; row_id++){
+            ComputeType* row_buf = buf[row_id]; 
+            ComputeType warp_max_val = warp_max[row_id]; 
+            
+            #pragma unroll 
+            for(int col=0; col < cols_per_thread; col++){
+                row_buf[col] = row_buf[col] / warp_max_val * 127; 
+            }
+            #pragma unroll 
+            for(int pack_id = 0; pack_id < num_packs; pack_id++){
+                const int pack_offset = pack_id * pack_size; 
+                const int col = (pack_id * thread_group_width + lane_id) * pack_size; 
+                if(!padding || col < cols){
+                    store.template store<pack_size>(row_buf + pack_id * pack_size, row + row_id, col); 
+                }
+            }
+        }
+    }
+}
+
+
+
+template<typename T, typename ComputeType, typename IDX>
+__global__ void DequantizeBlockKernel(const int8_t* x, ComputeType* quantize_factor, T* out, IDX col_size,
                                       IDX elem_cnt);
-template<typename T, typename IDX>
-__global__ void DequantizeBlockKernel(const int8_t* x, T* quantize_factor, T* out, IDX col_size,
+template<typename T, typename ComputeType, typename IDX>
+__global__ void DequantizeBlockKernel(const int8_t* x, ComputeType* quantize_factor, T* out, IDX col_size,
                                       IDX elem_cnt) {
   CUDA_1D_KERNEL_LOOP_T(IDX, i, elem_cnt) {
     IDX factor_idx = i / col_size;
-    T block_quantize_val = quantize_factor[factor_idx];
+    T block_quantize_val = static_cast<T>(quantize_factor[factor_idx]);
     out[i] = static_cast<T>(x[i]) * block_quantize_val;
-  }
-}
-
-template<>
-__global__ void DequantizeBlockKernel<half, int32_t>(const int8_t* x, half* quantize_factor,
-                                                     half* out, int32_t col_size,
-                                                     int32_t elem_cnt) {
-  CUDA_1D_KERNEL_LOOP_T(int32_t, i, elem_cnt) {
-    int32_t factor_idx = i / col_size;
-    half block_quantize_val = quantize_factor[factor_idx];
-    out[i] = static_cast<half>(x[i]) * block_quantize_val;
-  }
-}
-
-template<>
-__global__ void DequantizeBlockKernel<half, uint32_t>(const int8_t* x, half* quantize_factor,
-                                                      half* out, uint32_t col_size,
-                                                      uint32_t elem_cnt) {
-  CUDA_1D_KERNEL_LOOP_T(uint32_t, i, elem_cnt) {
-    uint32_t factor_idx = i / col_size;
-    half block_quantize_val = quantize_factor[factor_idx];
-    out[i] = static_cast<half>(x[i]) * block_quantize_val;
   }
 }
 
@@ -618,6 +745,14 @@ inline cudaError_t GetNumBlocks(int64_t n, int32_t block_num, int* num_blocks) {
   *num_blocks = std::max<int>(1, std::min<int64_t>((n + block_num - 1) / block_num,
                                                    sm_count * tpm / block_num * kNumWaves));
   return cudaSuccess;
+}
+
+DataType GetComputeType(DataType data_type){
+  if(data_type == DataType::kFloat16){
+    return DataType::kFloat; 
+  }else{
+    return data_type;
+  }
 }
 
 template<typename T, typename IDX>
@@ -698,6 +833,7 @@ class EmbeddingShuffleKernel final : public user_op::OpKernel {
           inverse_unique_partition_indices->shape().elem_cnt(), received_embeddings,
           Shape({1, parallel_num * num_ids, embedding_size}), embeddings->mut_dptr<T>(), 0);
     } else {
+      using ComputeType = typename DefaultComputeType<T>::type; 
       size_t reverse_unique_cur_rank_embeddings_size =
           GetCudaAlignedSize(parallel_num * num_ids * embedding_size * sizeof(int8_t));
       size_t received_embeddings_size = reverse_unique_cur_rank_embeddings_size;
@@ -705,11 +841,10 @@ class EmbeddingShuffleKernel final : public user_op::OpKernel {
       size_t reverse_recv_quantize_cur_rank_embeddings_size =
           GetCudaAlignedSize(parallel_num * num_ids * embedding_size * sizeof(T));
       size_t cur_rank_quantize_factor_size =
-          GetCudaAlignedSize(cur_rank_embeddings->shape().At(0) * sizeof(T));
+          GetCudaAlignedSize(cur_rank_embeddings->shape().At(0) * sizeof(ComputeType));
       size_t reverse_cur_rank_quantize_factor_size = cur_rank_quantize_factor_size;
       size_t recv_quantize_factor_size = cur_rank_quantize_factor_size;
       size_t reverse_recv_quantize_factor_size = cur_rank_quantize_factor_size;
-
       int8_t* reverse_unique_cur_rank_embeddings =
           reinterpret_cast<int8_t*>(tmp_buffer->mut_dptr());
       int8_t* received_embeddings = reinterpret_cast<int8_t*>(
@@ -720,32 +855,37 @@ class EmbeddingShuffleKernel final : public user_op::OpKernel {
       int8_t* reverse_recv_quantize_cur_rank_embeddings = reinterpret_cast<int8_t*>(
           tmp_buffer->mut_dptr<char>() + reverse_unique_cur_rank_embeddings_size
           + received_embeddings_size + quantize_cur_rank_embeddings_size);
-      T* cur_rank_quantize_factor = reinterpret_cast<T*>(
+      ComputeType* cur_rank_quantize_factor = reinterpret_cast<ComputeType*>(
           tmp_buffer->mut_dptr<char>() + reverse_unique_cur_rank_embeddings_size
           + received_embeddings_size + quantize_cur_rank_embeddings_size
           + reverse_recv_quantize_cur_rank_embeddings_size);
-      T* reverse_cur_rank_quantize_factor = reinterpret_cast<T*>(
+      ComputeType* reverse_cur_rank_quantize_factor = reinterpret_cast<ComputeType*>(
           tmp_buffer->mut_dptr<char>() + reverse_unique_cur_rank_embeddings_size
           + received_embeddings_size + quantize_cur_rank_embeddings_size
           + reverse_recv_quantize_cur_rank_embeddings_size + cur_rank_quantize_factor_size);
-      T* recv_quantize_factor = reinterpret_cast<T*>(
+      ComputeType* recv_quantize_factor = reinterpret_cast<ComputeType*>(
           tmp_buffer->mut_dptr<char>() + reverse_unique_cur_rank_embeddings_size
           + received_embeddings_size + quantize_cur_rank_embeddings_size
           + reverse_recv_quantize_cur_rank_embeddings_size + cur_rank_quantize_factor_size
           + reverse_cur_rank_quantize_factor_size);
-      T* reverse_recv_quantize_factor = reinterpret_cast<T*>(
+      ComputeType* reverse_recv_quantize_factor = reinterpret_cast<ComputeType*>(
           tmp_buffer->mut_dptr<char>() + reverse_unique_cur_rank_embeddings_size
           + received_embeddings_size + quantize_cur_rank_embeddings_size
           + reverse_recv_quantize_cur_rank_embeddings_size + cur_rank_quantize_factor_size
           + reverse_cur_rank_quantize_factor_size + recv_quantize_factor_size);
-      int32_t row_size = cur_rank_num_ids;
+      DataType compute_data_type = GetComputeType(data_type); 
+      int64_t row_size = cur_rank_num_ids;
       int block_num = 0;
       GetNumBlocks(row_size * embedding_size, kReduceBlockSize, &block_num);
-
-      QuantizeBlockKernel<T, IDX><<<block_num, kReduceBlockSize, 0, cuda_stream>>>(
-          cur_rank_embeddings->dptr<T>(), quantize_cur_rank_embeddings, cur_rank_quantize_factor,
-          row_size, embedding_size);
-
+      // QuantizeBlockKernel<T, IDX><<<block_num, kReduceBlockSize, 0, cuda_stream>>>(
+      //     cur_rank_embeddings->dptr<T>(), quantize_cur_rank_embeddings, cur_rank_quantize_factor,
+      //     row_size, embedding_size);
+      DirectLoad<T, ComputeType> load(cur_rank_embeddings->dptr<T>(), embedding_size);
+      DirectStore<ComputeType, int8_t> store(quantize_cur_rank_embeddings, embedding_size); 
+      dim3 warp_size(32, 4); 
+      int cols_per_thread = embedding_size / 32; 
+      QuantizeWarpImplKernel<decltype(load), decltype(store), ComputeType, 4, 4, kWarpSize, 1, false><<<block_num, warp_size, 0, cuda_stream>>>(
+        load, store, cur_rank_quantize_factor, row_size, embedding_size); 
       // reverse cur_rank embedding unique
       GatherKernelUtilImpl<DeviceType::kCUDA, int8_t, IDX>::Forward(
           ctx->stream(), reinterpret_cast<const IDX*>(cur_rank_inverse_indices->dptr()),
@@ -754,7 +894,7 @@ class EmbeddingShuffleKernel final : public user_op::OpKernel {
           reverse_unique_cur_rank_embeddings, 0);
 
       // reverse cur_rank quantize factor unique
-      GatherKernelUtilImpl<DeviceType::kCUDA, T, IDX>::Forward(
+      GatherKernelUtilImpl<DeviceType::kCUDA, ComputeType, IDX>::Forward(
           ctx->stream(), reinterpret_cast<const IDX*>(cur_rank_inverse_indices->dptr()),
           cur_rank_num_ids, cur_rank_quantize_factor,
           Shape({1, cur_rank_embeddings->shape().elem_cnt() / embedding_size, 1}),
@@ -763,7 +903,7 @@ class EmbeddingShuffleKernel final : public user_op::OpKernel {
       ncclComm_t comm = kernel_state->comm();
 
       ShuffleEmbeddings(cuda_stream, comm, parallel_id, parallel_num, num_ids, embedding_size,
-                        data_type, host_num_unique_matrix, reverse_unique_cur_rank_embeddings,
+                        compute_data_type, host_num_unique_matrix, reverse_unique_cur_rank_embeddings,
                         received_embeddings, reverse_cur_rank_quantize_factor,
                         recv_quantize_factor);
 
@@ -774,7 +914,7 @@ class EmbeddingShuffleKernel final : public user_op::OpKernel {
           Shape({1, parallel_num * num_ids, embedding_size}),
           reverse_recv_quantize_cur_rank_embeddings, 0);
 
-      GatherKernelUtilImpl<DeviceType::kCUDA, T, IDX>::Forward(
+      GatherKernelUtilImpl<DeviceType::kCUDA, ComputeType, IDX>::Forward(
           ctx->stream(), reinterpret_cast<const IDX*>(inverse_unique_partition_indices->dptr()),
           inverse_unique_partition_indices->shape().elem_cnt(), recv_quantize_factor,
           Shape({1, parallel_num * num_ids, 1}), reverse_recv_quantize_factor, 0);
@@ -783,7 +923,7 @@ class EmbeddingShuffleKernel final : public user_op::OpKernel {
       int dequantize_block_num = 0;
       GetNumBlocks(dequantize_row_size * embedding_size, 256, &dequantize_block_num);
       IDX dequantize_elem_cnt = dequantize_row_size * embedding_size;
-      DequantizeBlockKernel<T, IDX><<<dequantize_block_num, 256, 0, cuda_stream>>>(
+      DequantizeBlockKernel<T, ComputeType, IDX><<<dequantize_block_num, 256, 0, cuda_stream>>>(
           reverse_recv_quantize_cur_rank_embeddings, reverse_recv_quantize_factor,
           embeddings->mut_dptr<T>(), embedding_size, dequantize_elem_cnt);
     }
@@ -843,6 +983,8 @@ class EmbeddingShuffleKernel final : public user_op::OpKernel {
 
 OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(REGISTER_CUDA_EMBEDDING_SHUFFLE_KERNEL,
                                  FLOATING_DATA_TYPE_SEQ HALF_DATA_TYPE_SEQ, IDX_DATA_TYPE_SEQ)
+// OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(REGISTER_CUDA_EMBEDDING_SHUFFLE_KERNEL,
+  // FLOATING_DATA_TYPE_SEQ , IDX_DATA_TYPE_SEQ)
 
 template<typename T, typename IDX>
 void ShuffleEmbeddingsGrad(cudaStream_t cuda_stream, ncclComm_t comm, int64_t parallel_id,
@@ -969,10 +1111,6 @@ class EmbeddingGradientShuffleKernel final : public user_op::OpKernel {
           host_num_unique_matrix[parallel_id * parallel_num + i] * embedding_size * sizeof(T);
       OF_CUDA_CHECK(cudaMemsetAsync(unique_partition_embedding_grad + offset, 0, valid_value_size,
                                     cuda_stream));
-      // const int64_t valid_quantize_size =
-      //     host_num_unique_matrix[parallel_id * parallel_num + i] * embedding_size * sizeof(int8_t);
-      // OF_CUDA_CHECK(cudaMemsetAsync(quantize_cur_rank_embedding_grad + offset, 0,
-      //                               valid_quantize_size, cuda_stream));
     }
 
     // inverse: batch x 26 = num_ids
@@ -1022,7 +1160,7 @@ class EmbeddingGradientShuffleKernel final : public user_op::OpKernel {
     int dequantize_block_num = 0;
     IDX dequantize_elem_cnt = dequantize_cur_rank_num * embedding_size;
     GetNumBlocks(dequantize_elem_cnt, 256, &dequantize_block_num);
-    DequantizeBlockKernel<T, IDX><<<dequantize_block_num, 256, 0, cuda_stream>>>(
+    DequantizeBlockKernel<T, T, IDX><<<dequantize_block_num, 256, 0, cuda_stream>>>(
         received_embedding_grad, received_cur_rank_quantize_factor,
         dequantize_cur_rank_embedding_grad, embedding_size, dequantize_elem_cnt);
     // unique cur_rank embedding grad
@@ -1062,6 +1200,7 @@ class EmbeddingGradientShuffleKernel final : public user_op::OpKernel {
           && (user_op::HobDataType("embedding_grad", 0) == OF_PP_PAIR_SECOND(t_dtype_pair))        \
           && (user_op::HobDataType("num_unique_matrix", 0) == OF_PP_PAIR_SECOND(idx_dtype_pair)))  \
       .SetInferTmpSizeFn([](user_op::InferContext* ctx) {                                          \
+        using ComputeType = typename DefaultComputeType<OF_PP_PAIR_FIRST(t_dtype_pair)>::type;  \
         const user_op::TensorDesc& cur_rank_unique_embedding_grad =                                \
             ctx->InputTensorDesc("cur_rank_unique_embedding_grad", 0);                             \
         size_t cur_rank_embedding_grad_num = cur_rank_unique_embedding_grad.shape().At(0);         \
@@ -1074,7 +1213,7 @@ class EmbeddingGradientShuffleKernel final : public user_op::OpKernel {
         size_t quantize_cur_rank_embedding_grad_size =                                             \
             GetCudaAlignedSize(cur_rank_embedding_grad_num * embedding_size * sizeof(int8_t));     \
         size_t cur_rank_quantize_factor_size = GetCudaAlignedSize(                                 \
-            cur_rank_embedding_grad_num * sizeof(OF_PP_PAIR_FIRST(t_dtype_pair)));                 \
+            cur_rank_embedding_grad_num * sizeof(ComputeType));                 \
         size_t received_cur_rank_quantize_factor_size = cur_rank_quantize_factor_size;             \
         size_t dequantize_cur_rank_embedding_grad_size =                                           \
             GetCudaAlignedSize(cur_rank_embedding_grad_num * embedding_size                        \
@@ -1084,8 +1223,12 @@ class EmbeddingGradientShuffleKernel final : public user_op::OpKernel {
                + received_cur_rank_quantize_factor_size + dequantize_cur_rank_embedding_grad_size; \
       });
 
+// OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(REGISTER_CUDA_EMBEDDING_GRADIENT_SHUFFLE_KERNEL,
+//                                  FLOATING_DATA_TYPE_SEQ HALF_DATA_TYPE_SEQ, IDX_DATA_TYPE_SEQ)
+
 OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(REGISTER_CUDA_EMBEDDING_GRADIENT_SHUFFLE_KERNEL,
-                                 FLOATING_DATA_TYPE_SEQ HALF_DATA_TYPE_SEQ, IDX_DATA_TYPE_SEQ)
+  FLOATING_DATA_TYPE_SEQ , IDX_DATA_TYPE_SEQ)
+
 
 template<typename K, typename V, typename IDX>
 class UniqueKeyValuePairKernel final : public user_op::OpKernel {
