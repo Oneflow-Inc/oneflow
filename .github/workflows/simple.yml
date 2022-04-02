@@ -1,12 +1,8 @@
 name: Simple CI
 on:
   pull_request:
-    types: [review_requested]
-    branches:
-      - "*"
-  push:
-    branches:
-      - master
+    types: [opened, review_requested, ready_for_review, synchronize, unlocked]
+
   workflow_dispatch:
     inputs:
       placeholder:
