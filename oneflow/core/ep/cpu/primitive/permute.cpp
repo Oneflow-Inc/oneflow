@@ -68,7 +68,7 @@ class PermuteImpl : public Permute {
 
 #ifdef WITH_ONEDNN
 // Onednn only supports up to 32bit type of data
-constexpr size_t kMaxOneDNNMovementSize = 4;
+constexpr size_t kMaxOneDnnMovementSize = 4;
 constexpr size_t kMaxOneDnnMapSize = 5;
 uint32_t OnednnDatatypeTagMap[kMaxOneDnnMapSize] = {0, dnnl_u8, dnnl_f16, 0, dnnl_s32};
 class OneDnnPermuteImpl : public Permute {
@@ -98,11 +98,11 @@ class OneDnnPermuteImpl : public Permute {
       onednn_permute[dim] = permutation[dim];
     }
     size_t movement_size = GetSizeOfDataType(data_type);
-    if (movement_size > kMaxOneDNNMovementSize) {
-      onednn_dims[onednn_num_dims] = movement_size / kMaxOneDNNMovementSize;
+    if (movement_size > kMaxOneDnnMovementSize) {
+      onednn_dims[onednn_num_dims] = movement_size / kMaxOneDnnMovementSize;
       onednn_permute[onednn_num_dims] = onednn_num_dims;
       onednn_num_dims = onednn_num_dims + 1;
-      movement_size = kMaxOneDNNMovementSize;
+      movement_size = kMaxOneDnnMovementSize;
     }
     onednn_dims.resize(onednn_num_dims);
 
