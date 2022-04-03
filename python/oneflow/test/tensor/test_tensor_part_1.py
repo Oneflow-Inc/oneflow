@@ -235,25 +235,17 @@ class TestTensor(flow.unittest.TestCase):
         x = flow.Tensor(*shape)
         test_case.assertTrue(x.is_local)
 
-        with test_case.assertRaises(
-            oneflow._oneflow_internal.exception.RuntimeException
-        ):
+        with test_case.assertRaises(RuntimeError):
             x.global_id()
 
-        with test_case.assertRaises(
-            oneflow._oneflow_internal.exception.RuntimeException
-        ):
+        with test_case.assertRaises(RuntimeError):
             x.sbp
 
-        with test_case.assertRaises(
-            oneflow._oneflow_internal.exception.RuntimeException
-        ):
+        with test_case.assertRaises(RuntimeError):
             x.placement
 
         if x.dtype != flow.tensor_buffer:
-            with test_case.assertRaises(
-                oneflow._oneflow_internal.exception.RuntimeException
-            ):
+            with test_case.assertRaises(RuntimeError):
                 x._tensor_buffer_shapes_and_dtypes
 
     @flow.unittest.skip_unless_1n1d()
@@ -766,6 +758,12 @@ class TestTensor(flow.unittest.TestCase):
         return x.log1p()
 
     @autotest(check_graph=True)
+    def test_log2_tensor_with_random_data(test_case):
+        device = random_device()
+        x = random_tensor().to(device)
+        return x.log2()
+
+    @autotest(check_graph=True)
     def test_neg_tensor_with_random_data(test_case):
         device = random_device()
         x = random_tensor().to(device)
@@ -999,6 +997,23 @@ class TestTensor(flow.unittest.TestCase):
         x = random_tensor().to(device)
         y = x.unsqueeze(random(1, 3).to(int))
         return y
+
+    @autotest(n=3, auto_backward=False, check_graph=True)
+    def test_flow_invert_with_random_data(test_case):
+        device = random_device()
+        x = random_tensor().to(device, dtype=torch.bool)
+        y = ~x
+        return y
+
+    def test_tensor_float(test_case):
+        x = flow.tensor(1)
+        y = float(x)
+        test_case.assertTrue(np.array_equal(y, 1.0))
+
+    def test_tensor_int(test_case):
+        x = flow.tensor(2.3)
+        y = int(x)
+        test_case.assertTrue(np.array_equal(y, 2))
 
 
 if __name__ == "__main__":

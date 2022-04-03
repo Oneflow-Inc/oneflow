@@ -21,34 +21,10 @@ namespace py = pybind11;
 
 namespace oneflow {
 
-namespace {
-
-bool PyHasSharedOpKernelObject4ParallelConfSymbol(
-    const std::shared_ptr<ParallelDesc>& parallel_conf_sym) {
-  return HasSharedOpKernelObject4ParallelConfSymbol(parallel_conf_sym).GetOrThrow();
-}
-
-std::shared_ptr<compatible_py::Object> PyGetSharedOpKernelObject4ParallelConfSymbol(
-    const std::shared_ptr<ParallelDesc>& parallel_conf_sym) {
-  return GetOpKernelObject4ParallelConfSymbol(parallel_conf_sym).GetPtrOrThrow();
-}
-
-void PySetSharedOpKernelObject4ParallelConfSymbol(
-    const std::shared_ptr<ParallelDesc>& parallel_conf_sym,
-    const std::shared_ptr<compatible_py::Object>& shared_opkernel_object) {
-  return SetSharedOpKernelObject4ParallelConfSymbol(parallel_conf_sym, shared_opkernel_object)
-      .GetOrThrow();
-}
-
-}  // namespace
-
 ONEFLOW_API_PYBIND11_MODULE("", m) {
-  m.def("HasSharedOpKernelObject4ParallelConfSymbol",
-        &PyHasSharedOpKernelObject4ParallelConfSymbol);
-  m.def("GetSharedOpKernelObject4ParallelConfSymbol",
-        &PyGetSharedOpKernelObject4ParallelConfSymbol);
-  m.def("SetSharedOpKernelObject4ParallelConfSymbol",
-        &PySetSharedOpKernelObject4ParallelConfSymbol);
+  m.def("HasSharedOpKernelObject4ParallelConfSymbol", &HasSharedOpKernelObject4ParallelConfSymbol);
+  m.def("GetSharedOpKernelObject4ParallelConfSymbol", &GetOpKernelObject4ParallelConfSymbol);
+  m.def("SetSharedOpKernelObject4ParallelConfSymbol", &SetSharedOpKernelObject4ParallelConfSymbol);
 }
 
 }  // namespace oneflow
