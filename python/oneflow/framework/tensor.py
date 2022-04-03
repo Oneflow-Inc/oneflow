@@ -118,7 +118,12 @@ def _meta_repr(self):
 
 
 def _eq(self, other):
-    return flow._C.equal(self, other)
+    if self is None and other is None:
+        return True
+    elif self is None or other is None:
+        return False
+    else:
+        return flow._C.equal(self, other)
 
 
 def _ne(self, other):
@@ -560,6 +565,12 @@ def _new_ones(
     requires_grad=False,
 ):
     return flow.new_ones(self, size, dtype, device, placement, sbp, requires_grad)
+
+
+def _new_zeros(
+    self, *size, dtype=None, device=None, placement=None, sbp=None, requires_grad=False,
+):
+    return flow.new_zeros(self, size, dtype, device, placement, sbp, requires_grad)
 
 
 def _rsqrt(self):
@@ -1165,6 +1176,7 @@ def RegisterMethods():
     Tensor.minimum = _minimum
     Tensor.maximum = _maximum
     Tensor.new_ones = _new_ones
+    Tensor.new_zeros = _new_zeros
     Tensor.pow = _pow
     Tensor.rsqrt = _rsqrt
     Tensor.sqrt = _sqrt
