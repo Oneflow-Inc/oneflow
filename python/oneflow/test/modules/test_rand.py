@@ -48,9 +48,7 @@ def _test_different_dtype(test_case, device, shape):
     test_case.assertTrue(not np.array_equal(y1.numpy(), y2.numpy()))
     test_case.assertTrue(shape == y1.shape)
 
-    with test_case.assertRaises(
-        oneflow._oneflow_internal.exception.UnimplementedException
-    ):
+    with test_case.assertRaises(NotImplementedError):
         flow.rand(*shape, dtype=flow.int32, device=flow.device(device))
 
 
