@@ -13,25 +13,16 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 """
+import oneflow
+from oneflow.framework.docstr.utils import add_docstr
 
-import unittest
+add_docstr(
+    oneflow.nn.functional.layer_norm,
+    """nn.functional.layer_norm(input, normalized_shape, weight=None, bias=None, eps=1e-05) -> Tensor
 
-import oneflow as flow
-import oneflow.unittest
+    Applies Layer Normalization for last certain number of dimensions.
 
+    See :class:`~oneflow.nn.LayerNorm` for details.
 
-@flow.unittest.skip_unless_1n1d()
-class TestModule(flow.unittest.TestCase):
-    def test_reshape_exception_only_one_dim_infered(test_case):
-        # torch exception and messge:
-        #
-        #   RuntimeError: only one dimension can be inferred
-        #
-        x = flow.tensor((2, 2))
-        with test_case.assertRaises(RuntimeError) as ctx:
-            y = x.reshape((-1, -1))
-        test_case.assertEqual("only one dimension can be inferred", str(ctx.exception))
-
-
-if __name__ == "__main__":
-    unittest.main()
+    """,
+)
