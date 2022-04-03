@@ -118,7 +118,12 @@ def _meta_repr(self):
 
 
 def _eq(self, other):
-    return flow._C.equal(self, other)
+    if self is None and other is None:
+        return True
+    elif self is None or other is None:
+        return False
+    else:
+        return flow._C.equal(self, other)
 
 
 def _ne(self, other):
