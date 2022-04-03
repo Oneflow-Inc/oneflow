@@ -484,6 +484,12 @@ Maybe<void> DTRComputeInstruction(const vm::InstructionMsg& instr_msg) {
   auto operand = LocalCallOpKernelUtil::GetLocalCallOpKernelPhyInstrOperand(instr_msg);
   DeviceCtx* device_ctx = instr_msg.phy_instr_stream()->device_ctx().get();
 
+  if (dtr::is_enabled()) {
+    LOG(INFO) << "****" << "START-DTRComputeInstruction" << "-" << instr_msg.instr_type_name() << std::endl;
+    // LOG(INFO) << "****" << "START-DTRComputeInstruction" << "-" << instr_msg.instr_type_name().substr(0, 3) << std::endl;
+    LOG(INFO) << "****" << "OP-" << operand->opkernel().op_type_name() << std::endl;
+  }
+
   if (dtr::is_enabled_and_debug()) {
     LOG(INFO) << "all compute start for " << operand->opkernel().op_type_name() << std::endl;
     LOG(INFO) << "start pinning input tensors..";
@@ -504,6 +510,10 @@ Maybe<void> DTRComputeInstruction(const vm::InstructionMsg& instr_msg) {
     }
   }
   if (dtr::debug_level() >= 3) { JUST(Global<dtr::TensorPool>::Get()->display2()); }
+  if (dtr::is_enabled()) {
+    LOG(INFO) << "****" << "END-DTRComputeInstruction" << "-" << instr_msg.instr_type_name() << std::endl;
+    // LOG(INFO) << "****" << "END-DTRComputeInstruction" << "-" << instr_msg.instr_type_name().substr(0, 3) << std::endl;
+  }
   return Maybe<void>::Ok();
 }
 

@@ -120,6 +120,7 @@ Maybe<void> DTREagerBlobObject::evict() {
   evict_flag_ = true;
   // NOTE: DeallocateBlobDataPtr() resets tensor_storage_, which is not we want
   tensor_storage_->Release();
+  LOG(INFO) << "****" << "EVICT-" << this << "-" << BlobBodyBytes() << std::endl;
   if (blob_) { blob_->reset_dptr(nullptr); }
   CHECK_OR_RETURN(!is_in_memory());
   Global<dtr::TensorPool>::Get()->inc_num_eviction();

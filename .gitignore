@@ -42,3 +42,4 @@ unittest-log-*
 /tmp
 /python/oneflow/test/dataloader/data-test/
 /python/oneflow/include/
+!/tools/test_parser.txt
