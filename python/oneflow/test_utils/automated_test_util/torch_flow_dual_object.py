@@ -923,12 +923,14 @@ def check_tensor_equality(
 
 @equality_checker(int, int)
 @equality_checker(bool, bool)
-def check_basetype_equality(a, b, ignored1, ignored2):
+def check_basetype_equality(a, b, ignored1, ignored2, check_dtype=False):
+    if check_dtype:
+        return (a == b) and (type(a) == type(b))
     return a == b
 
 
 @equality_checker(type(None), type(None))
-def check_nonetype_equality(a, b, ignored1, ignored2):
+def check_nonetype_equality(a, b, ignored1, ignored2, check_dtype=False):
     return True
 
 
