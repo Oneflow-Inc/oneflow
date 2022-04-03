@@ -98,6 +98,7 @@ class TestRandModule(flow.unittest.TestCase):
             arg[0](test_case, *arg[1:])
 
 
+@unittest.skipIf(os.getenv("ONEFLOW_TEST_CPU_ONLY"), "only test cpu cases")
 @flow.unittest.skip_unless_1n2d()
 class TestRandOnNonDefaultDevice(flow.unittest.TestCase):
     def test_non_default_device(test_case):

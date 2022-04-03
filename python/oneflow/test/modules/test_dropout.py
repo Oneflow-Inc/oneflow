@@ -329,6 +329,7 @@ class TestModule(flow.unittest.TestCase):
         return m(x)
 
 
+@unittest.skipIf(os.getenv("ONEFLOW_TEST_CPU_ONLY"), "only test cpu cases")
 @flow.unittest.skip_unless_1n2d()
 class TestDropoutOnNonDefaultDevice(flow.unittest.TestCase):
     def test_non_default_device(test_case):
