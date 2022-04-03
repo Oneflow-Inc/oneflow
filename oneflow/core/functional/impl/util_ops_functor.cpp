@@ -35,7 +35,7 @@ namespace impl {
 
 class UtilOpsFunctor {
  public:
-  Maybe<Tensor> operator()(const std::shared_ptr<Tensor> input) const {
+  Maybe<Tensor> operator()(const std::shared_ptr<Tensor>& input) const {
     return JUST(OpInterpUtil::Dispatch<Tensor>(*op_, {input}));
   }
 
