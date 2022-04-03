@@ -13,6 +13,11 @@ env:
   ONEFLOW_TIMEOUT_SECONDS: 90
   ONEFLOW_THRAED_LOCAL_CACHED_SIZE: 16384
   TEST_WITH_TORCH_IMG_TAG: registry.cn-beijing.aliyuncs.com/oneflow/test-with-pytorch-1.9.0-cuda10.2-cudnn7-runtime:9b7ac2af8823bf537a636f8589fd60f51d4af348
+  # fow down-stream libs, please use commit, not branch
+  FLOW_VISION_REF: 1a19ffe7ffdc2fa11b806e98b70829fac3a0ba69
+  FLOW_VISION_SRC: flow_vision
+  LIBAI_REF: 7d31d9781e5f2d559dc0820f599e0bed798488ca
+  LIBAI_SRC: libai
 
 jobs:
   check-priority-pr:
@@ -563,6 +568,26 @@ jobs:
           ls ${ONEFLOW_WHEEL_PATH}
           docker exec ${TEST_CONTAINER_NAME} python3 -m pip config set global.index-url https://pypi.tuna.tsinghua.edu.cn/simple
           docker exec ${TEST_CONTAINER_NAME} python3 -m pip install --find-links=${ONEFLOW_WHEEL_PATH} oneflow
+      - name: Checkout Oneflow-Inc/vision
+        if: ${{ !fromJson(matrix.cache-hit) && contains(matrix.runs-on, 'self-hosted') }}
+        uses: actions/checkout@v2
+        with:
+          repository: Oneflow-Inc/vision
+          ref: ${{ env.FLOW_VISION_REF }}
+          path: ${{ env.FLOW_VISION_SRC}}
+      - name: Checkout Oneflow-Inc/libai
+        if: ${{ !fromJson(matrix.cache-hit) && contains(matrix.runs-on, 'self-hosted') }}
+        uses: actions/checkout@v2
+        with:
+          repository: Oneflow-Inc/libai
+          ref: ${{ env.LIBAI_REF }}
+          path: ${{ env.LIBAI_SRC}}
+      - name: Install downstream libs
+        if: ${{ !fromJson(matrix.cache-hit) && contains(matrix.runs-on, 'self-hosted') }}
+        run: |
+          docker exec ${TEST_CONTAINER_NAME} python3 -m pip install -e ${{ env.FLOW_VISION_SRC}}
+          docker exec ${TEST_CONTAINER_NAME} python3 -m pip install pybind11 --user
+          docker exec ${TEST_CONTAINER_NAME} python3 -m pip install -e ${{ env.LIBAI_SRC}}
       - name: Module API test (distributed)
         timeout-minutes: 90
         if: ${{ !fromJson(matrix.cache-hit) && matrix.test-type == 'module' && matrix.device == 'cuda' && fromJson(matrix.is-distributed) }}
@@ -622,8 +647,6 @@ jobs:
       TEST_WITH_TF_IMG_TAG: registry.cn-beijing.aliyuncs.com/oneflow/test-with-tf-2.3.0:2f831e9354298a11447578e869d983959feb046f
       SSH_TANK_HOST: 192.168.1.13
       SSH_TANK_PATH: /tank
-      FLOW_VISION_SRC: flow_vision
-      LIBAI_SRC: libai
       METRICS_DIR: metrics
     steps:
       - name: Fix permissions
@@ -754,16 +777,14 @@ jobs:
         uses: actions/checkout@v2
         with:
           repository: Oneflow-Inc/vision
-          # please use a commit here
-          ref: 1a19ffe7ffdc2fa11b806e98b70829fac3a0ba69
+          ref: ${{ env.FLOW_VISION_REF }}
           path: ${{ env.FLOW_VISION_SRC}}
       - name: Checkout Oneflow-Inc/libai
         if: ${{ !fromJson(matrix.cache-hit) && contains(matrix.runs-on, 'self-hosted') }}
         uses: actions/checkout@v2
         with:
           repository: Oneflow-Inc/libai
-          # please use a commit here
-          ref: 7d31d9781e5f2d559dc0820f599e0bed798488ca
+          ref: ${{ env.LIBAI_REF }}
           path: ${{ env.LIBAI_SRC}}
       - name: Install OneFlow
         if: ${{ !fromJson(matrix.cache-hit) && contains(matrix.runs-on, 'self-hosted') }}
