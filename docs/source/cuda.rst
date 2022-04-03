@@ -6,6 +6,7 @@ ONEFLOW.CUDA
 .. automodule:: oneflow.cuda
     :members: is_available,
         device_count,
+        current_device,
         HalfTensor,
         FloatTensor,
         DoubleTensor,

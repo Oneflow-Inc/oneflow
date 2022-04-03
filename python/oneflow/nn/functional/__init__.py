@@ -38,6 +38,7 @@ from oneflow._C import elu
 from oneflow._C import celu
 from oneflow._C import selu
 from oneflow._C import sigmoid
+from oneflow._C import softshrink
 from oneflow._C import prelu
 from oneflow._C import gelu
 from oneflow._C import glu
@@ -47,6 +48,7 @@ from oneflow._C import softsign
 from oneflow._C import softmax
 from oneflow._C import softplus
 from oneflow._C import tanh
+from oneflow._C import threshold
 from oneflow._C import silu
 from oneflow._C import mish
 from oneflow._C import layer_norm

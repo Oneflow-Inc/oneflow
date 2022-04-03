@@ -14,24 +14,29 @@ See the License for the specific language governing permissions and
 limitations under the License.
 """
 import oneflow
+import os
+
+
+world_size = os.getenv("WORLD_SIZE")
 
 
 class TestCallWhenShuttingDown:
     def __init__(self):
+        self.oneflow = oneflow
         tensor = oneflow.ones((2, 2))
         print(tensor)
 
-    def __del__(self):
-        tensor = oneflow.ones((2, 2))
-        print(tensor)
+    def __del__(self, of=oneflow):
+        if world_size == 1:
+            tensor = of.ones((2, 2))
 
 
 test_call_when_shutting_down = TestCallWhenShuttingDown()
 
 
 class TestSyncWhenShuttingDown:
-    def __del__(self):
-        oneflow._oneflow_internal.eager.Sync()
+    def __del__(self, of=oneflow):
+        of._oneflow_internal.eager.Sync()
 
 
 test_sync_when_shutting_down = TestSyncWhenShuttingDown()
