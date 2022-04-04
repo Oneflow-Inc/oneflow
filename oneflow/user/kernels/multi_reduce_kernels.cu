@@ -18,6 +18,7 @@ limitations under the License.
 #include "oneflow/core/cuda/atomic.cuh"
 #include "oneflow/core/device/cuda_util.h"
 #include <cub/cub.cuh>
+#include <limits>
 
 namespace oneflow {
 
@@ -32,10 +33,11 @@ struct MultiReduceParamsPack {
 };
 
 template<typename T, typename TransformFn, typename ReduceFn>
-__global__ void MultiReduceGpu(TransformFn transform, const MultiReduceParamsPack<T> pack_params,
-                               T* out) {
+__global__ void MultiBlockReduceGpu(TransformFn transform,
+                                    const MultiReduceParamsPack<T> pack_params, const T init,
+                                    T* out) {
   ReduceFn reduce_fn{};
-  T t_out = *out;
+  T t_out = init;
   for (int i = 0; i < pack_params.size; ++i) {
     const auto& param = pack_params.params[i];
     CUDA_1D_KERNEL_LOOP(j, param.size) { t_out = reduce_fn(t_out, transform(param.data[j])); }
@@ -43,7 +45,48 @@ __global__ void MultiReduceGpu(TransformFn transform, const MultiReduceParamsPac
   typedef cub::BlockReduce<T, kCudaThreadsNumPerBlock> BlockReduce;
   __shared__ typename BlockReduce::TempStorage temp_storage;
   T b_out = BlockReduce(temp_storage).Reduce(t_out, reduce_fn);
-  if (threadIdx.x == 0) { cuda::atomic::Add(out, b_out); }
+  if (threadIdx.x == 0) { out[blockIdx.x] = b_out; }
+}
+
+template<typename T, typename ReduceFn>
+__global__ void BlockReduceGpu(const T* in, T* out) {
+  ReduceFn reduce_fn{};
+  typedef cub::BlockReduce<T, kCudaThreadsNumPerBlock> BlockReduce;
+  __shared__ typename BlockReduce::TempStorage temp_storage;
+  T b_out = BlockReduce(temp_storage).Reduce(in[threadIdx.x], reduce_fn);
+  if (threadIdx.x == 0) { out[blockIdx.x] = b_out; }
+}
+
+size_t InferTempStorageSize(user_op::InferContext* ctx) {
+  auto input_size = ctx->input_size("x");
+  if (input_size == 0) { return 0; }
+  int64_t max_elem_cnt = 0;
+  int64_t pack_size = 0;
+  int32_t num_blocks = 0;
+  for (size_t i = 0; i < input_size; ++i) {
+    int64_t elem_cnt = ctx->InputShape("x", i).elem_cnt();
+    max_elem_cnt = std::max(max_elem_cnt, elem_cnt);
+    pack_size++;
+    if (pack_size == kMultiReduceMaxPackSize || i == input_size - 1) {
+      CHECK_LT(max_elem_cnt, std::numeric_limits<int32_t>::max());
+      num_blocks += BlocksNum4ThreadsNum(static_cast<int32_t>(max_elem_cnt));
+      max_elem_cnt = 0;
+      pack_size = 0;
+    }
+  }
+  CHECK_LT(num_blocks, kCudaThreadsNumPerBlock * kCudaThreadsNumPerBlock * kCudaThreadsNumPerBlock)
+      << "Too much blocks needed for computing " << ctx->op_name() << ", should be less than "
+      << kCudaThreadsNumPerBlock << "*" << kCudaThreadsNumPerBlock << "*" << kCudaThreadsNumPerBlock
+      << ", but got " << num_blocks;
+  int32_t num_groups = 0;
+  if (num_blocks > kCudaThreadsNumPerBlock) {
+    num_groups += (num_blocks - 1) / kCudaThreadsNumPerBlock + 1;
+  }
+  if (num_groups > kCudaThreadsNumPerBlock) {
+    num_groups += (num_groups - 1) / kCudaThreadsNumPerBlock + 1;
+  }
+  size_t elem_size = GetSizeOfDataType(ctx->InputDType("x", 0));
+  return GetCudaAlignedSize((num_blocks + num_groups) * elem_size);
 }
 
 }  // namespace
@@ -51,12 +94,9 @@ __global__ void MultiReduceGpu(TransformFn transform, const MultiReduceParamsPac
 template<typename T, typename TransformFn, typename ReduceFn>
 struct MultiReduce<DeviceType::kCUDA, T, TransformFn, ReduceFn> {
   void operator()(ep::Stream* stream, TransformFn transform,
-                  const std::vector<MultiReduceParam<T>>& params, T init, T* ret) {
-    std::unique_ptr<ep::primitive::Fill> fill =
-        ep::primitive::NewPrimitive<ep::primitive::FillFactory>(stream->device_type(),
-                                                                GetDataType<T>::value);
-    CHECK(fill);
-    fill->Launch(stream, ret, init, 1);
+                  const std::vector<MultiReduceParam<T>>& params, T init, T* ret, T* temp) {
+    CHECK_NOTNULL(temp);
+    int32_t total_num_blocks = 0;
     for (size_t i = 0; i < params.size(); i += kMultiReduceMaxPackSize) {
       MultiReduceParamsPack<T> pack_params{};
       size_t max_elem_cnt = 0;
@@ -65,17 +105,61 @@ struct MultiReduce<DeviceType::kCUDA, T, TransformFn, ReduceFn> {
         pack_params.params[j] = params[i + j];
         max_elem_cnt = std::max<size_t>(max_elem_cnt, pack_params.params[j].size);
       }
-      MultiReduceGpu<T, TransformFn, ReduceFn>
-          <<<BlocksNum4ThreadsNum(max_elem_cnt), kCudaThreadsNumPerBlock, 0,
-             stream->As<ep::CudaStream>()->cuda_stream()>>>(transform, pack_params, ret);
+      int32_t num_blocks = BlocksNum4ThreadsNum(max_elem_cnt);
+      MultiBlockReduceGpu<T, TransformFn, ReduceFn>
+          <<<num_blocks, kCudaThreadsNumPerBlock, 0, stream->As<ep::CudaStream>()->cuda_stream()>>>(
+              transform, pack_params, init, temp + total_num_blocks);
+      total_num_blocks += num_blocks;
+    }
+    RecursiveBlockReduce(stream, total_num_blocks, temp, ret);
+  }
+
+  void RecursiveBlockReduce(ep::Stream* stream, const int32_t nblocks, T* workspace, T* out) {
+    if (nblocks <= kCudaThreadsNumPerBlock) {
+      BlockReduceGpu<T, ReduceFn>
+          <<<1, nblocks, 0, stream->As<ep::CudaStream>()->cuda_stream()>>>(workspace, out);
+    } else {
+      int32_t ngroups = (nblocks - 1) / kCudaThreadsNumPerBlock + 1;
+      int32_t tail = nblocks % kCudaThreadsNumPerBlock;
+      int32_t nnblocks = (tail == 0) ? ngroups : (ngroups - 1);
+      if (nnblocks > 0) {
+        BlockReduceGpu<T, ReduceFn>
+            <<<nnblocks, kCudaThreadsNumPerBlock, 0, stream->As<ep::CudaStream>()->cuda_stream()>>>(
+                workspace, workspace + nblocks);
+      }
+      if (tail != 0) {
+        BlockReduceGpu<T, ReduceFn><<<1, tail, 0, stream->As<ep::CudaStream>()->cuda_stream()>>>(
+            workspace + nnblocks * kCudaThreadsNumPerBlock, workspace + nblocks + nnblocks);
+      }
+      RecursiveBlockReduce(stream, ngroups, workspace + nblocks + ngroups, out);
     }
   }
 };
 
-REGISTER_MULTI_REDUCE_SUM_POW_ABS_KERNEL(DeviceType::kCUDA, float)
-REGISTER_MULTI_REDUCE_SUM_POW_ABS_KERNEL(DeviceType::kCUDA, double)
+#define REGISTER_MULTI_REDUCE_SUM_POW_ABS_CUDA_KERNEL(dtype)                           \
+  REGISTER_USER_KERNEL("multi_reduce_sum_pow_abs")                                     \
+      .SetCreateFn<MultiReduceSumPowAbsKernel<DeviceType::kCUDA, dtype>>()             \
+      .SetIsMatchedHob((user_op::HobDeviceType() == DeviceType::kCUDA)                 \
+                       && (user_op::HobDataType("y", 0) == GetDataType<dtype>::value)) \
+      .SetInferTmpSizeFn(InferTempStorageSize);
 
-REGISTER_MULTI_REDUCE_XIMUM_ABS_KERNELS(DeviceType::kCUDA, float)
-REGISTER_MULTI_REDUCE_XIMUM_ABS_KERNELS(DeviceType::kCUDA, double)
+#define REGISTER_MULTI_REDUCE_XIMUM_ABS_CUDA_KERNEL(op_type_name, ximum_enum, dtype)   \
+  REGISTER_USER_KERNEL(op_type_name)                                                   \
+      .SetCreateFn<MultiReduceXimumAbsKernel<DeviceType::kCUDA, dtype, ximum_enum>>()  \
+      .SetIsMatchedHob((user_op::HobDeviceType() == DeviceType::kCUDA)                 \
+                       && (user_op::HobDataType("y", 0) == GetDataType<dtype>::value)) \
+      .SetInferTmpSizeFn(InferTempStorageSize);
+
+#define REGISTER_MULTI_REDUCE_XIMUM_ABS_CUDA_KERNELS(dtype)                                     \
+  REGISTER_MULTI_REDUCE_XIMUM_ABS_CUDA_KERNEL("multi_reduce_max_abs", Ximum::kMax, dtype)       \
+  REGISTER_MULTI_REDUCE_XIMUM_ABS_CUDA_KERNEL("multi_reduce_min_abs", Ximum::kMin, dtype)       \
+  REGISTER_MULTI_REDUCE_XIMUM_ABS_CUDA_KERNEL("local_multi_reduce_max_abs", Ximum::kMax, dtype) \
+  REGISTER_MULTI_REDUCE_XIMUM_ABS_CUDA_KERNEL("local_multi_reduce_min_abs", Ximum::kMin, dtype)
+
+REGISTER_MULTI_REDUCE_SUM_POW_ABS_CUDA_KERNEL(float)
+REGISTER_MULTI_REDUCE_SUM_POW_ABS_CUDA_KERNEL(double)
+
+REGISTER_MULTI_REDUCE_XIMUM_ABS_CUDA_KERNELS(float)
+REGISTER_MULTI_REDUCE_XIMUM_ABS_CUDA_KERNELS(double)
 
 }  // namespace oneflow

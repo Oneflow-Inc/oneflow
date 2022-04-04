@@ -32,13 +32,13 @@ struct MultiReduceParam {
 template<DeviceType device_type, typename T, typename TransformFn, typename ReduceFn>
 struct MultiReduce {
   void operator()(ep::Stream* stream, TransformFn transform,
-                  const std::vector<MultiReduceParam<T>>& params, T init, T* ret);
+                  const std::vector<MultiReduceParam<T>>& params, T init, T* ret, T* temp);
 };
 
 template<typename T, typename TransformFn, typename ReduceFn>
 struct MultiReduce<DeviceType::kCPU, T, TransformFn, ReduceFn> {
   void operator()(ep::Stream* stream, TransformFn transform,
-                  const std::vector<MultiReduceParam<T>>& params, T init, T* ret) {
+                  const std::vector<MultiReduceParam<T>>& params, T init, T* ret, T* temp) {
     *ret = init;
     ReduceFn reduce{};
     FOR_RANGE(size_t, i, 0, params.size()) {
