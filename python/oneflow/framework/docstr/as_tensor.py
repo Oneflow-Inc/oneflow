@@ -42,17 +42,9 @@ add_docstr(
         >>> import numpy as np
         
         >>> a = np.array([1, 2, 3])
-        >>> t = flow.as_tensor(a)
-        >>> t
-        tensor([1, 2, 3])
-        >>> t[0] = -1
-        >>> a
-        array([-1, 2, 3])
-        
-        >>> a = np.array([1, 2, 3])
         >>> t = flow.as_tensor(a, device=flow.device('cuda'))
         >>> t
-        tensor([1, 2, 3])
+        tensor([1, 2, 3], device='cuda:0', dtype=oneflow.int64)
         >>> t[0] = -1
         >>> a
         array([1, 2, 3])
