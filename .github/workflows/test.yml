@@ -589,7 +589,7 @@ jobs:
         with:
           repository: Oneflow-Inc/vision
           # please use a commit here
-          ref: d861d79f2fe9e8529e8f7ce18401898cfa5a26d4
+          ref: fcc972615585edbff31cdf6394e645a4c52f6005
           path: ${{ env.FLOW_VISION_SRC}}
       - name: Install Flow Vision
         if: ${{ !fromJson(matrix.cache-hit) && contains(matrix.runs-on, 'self-hosted') }}
