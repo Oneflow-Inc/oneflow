@@ -163,7 +163,7 @@ class TestDefaultGenerator(flow.unittest.TestCase):
         x.uniform_()
 
         flow.manual_seed(0)
-        y = flow.ones(2).to('cuda')
+        y = flow.ones(2).to("cuda")
         y.uniform_()
 
         test_case.assertTrue(np.allclose(x.numpy(), y.numpy()))
