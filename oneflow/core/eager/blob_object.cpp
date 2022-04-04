@@ -25,7 +25,10 @@ Maybe<void> BlobObject::CheckMemCase(const ParallelDesc& parallel_desc, int64_t 
   CHECK_EQ_OR_RETURN(parallel_desc.device_type(), this->mem_case_->device_type())
       << "DeviceType: " << *JUST(DeviceTag4DeviceType(parallel_desc.device_type()))
       << " not match MemoryCase: " << this->mem_case_->DebugString();
-  CHECK_OR_RETURN(parallel_desc.Containing(machine_id, this->mem_case_->device_id()));
+  CHECK_OR_RETURN(parallel_desc.Containing(machine_id, this->mem_case_->device_id()))
+      << *JUST(PlacementToString(parallel_desc)) << " does not contain "
+      << "@" << machine_id << ":" << *JUST(DeviceTag4DeviceType(parallel_desc.device_type())) << ":"
+      << this->mem_case_->device_id();
   return Maybe<void>::Ok();
 }
 
