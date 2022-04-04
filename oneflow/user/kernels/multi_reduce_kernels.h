@@ -43,34 +43,30 @@ class MultiReduceSumPowAbsKernel final : public user_op::OpKernel,
     }
     user_op::Tensor* y = ctx->Tensor4ArgNameAndIndex("y", 0);
     T* y_dptr = y->mut_dptr<T>();
+    user_op::Tensor* temp = ctx->Tensor4ArgNameAndIndex("tmp_buffer", 0);
+    T* tmp_dptr = temp ? temp->mut_dptr<T>() : nullptr;
     float p = ctx->Attr<float>("p");
     if (p == 0) {
       PowByZero<T> func{};
       MultiReduce<device_type, T, decltype(func), BinaryAdd<T>> reduce_sum{};
-      reduce_sum(ctx->stream(), func, params, GetZeroVal<T>(), y_dptr);
+      reduce_sum(ctx->stream(), func, params, GetZeroVal<T>(), y_dptr, tmp_dptr);
     } else if (p == 1) {
       Abs<T> func{};
       MultiReduce<device_type, T, decltype(func), BinaryAdd<T>> reduce_sum{};
-      reduce_sum(ctx->stream(), func, params, GetZeroVal<T>(), y_dptr);
+      reduce_sum(ctx->stream(), func, params, GetZeroVal<T>(), y_dptr, tmp_dptr);
     } else if (p == 2) {
       Square<T> func{};
       MultiReduce<device_type, T, decltype(func), BinaryAdd<T>> reduce_sum{};
-      reduce_sum(ctx->stream(), func, params, GetZeroVal<T>(), y_dptr);
+      reduce_sum(ctx->stream(), func, params, GetZeroVal<T>(), y_dptr, tmp_dptr);
     } else {
       AbsPow<T> func{p};
       MultiReduce<device_type, T, decltype(func), BinaryAdd<T>> reduce_sum{};
-      reduce_sum(ctx->stream(), func, params, GetZeroVal<T>(), y_dptr);
+      reduce_sum(ctx->stream(), func, params, GetZeroVal<T>(), y_dptr, tmp_dptr);
     }
   }
 
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
-
-#define REGISTER_MULTI_REDUCE_SUM_POW_ABS_KERNEL(device, dtype) \
-  REGISTER_USER_KERNEL("multi_reduce_sum_pow_abs")              \
-      .SetCreateFn<MultiReduceSumPowAbsKernel<device, dtype>>() \
-      .SetIsMatchedHob((user_op::HobDeviceType() == device)     \
-                       && (user_op::HobDataType("y", 0) == GetDataType<dtype>::value));
 
 enum class Ximum {
   kMax = 0,
@@ -96,13 +92,16 @@ class MultiReduceXimumAbsKernel final : public user_op::OpKernel, public user_op
       params[i].data = x->dptr<T>();
     }
     user_op::Tensor* y = ctx->Tensor4ArgNameAndIndex("y", 0);
+    user_op::Tensor* temp = ctx->Tensor4ArgNameAndIndex("tmp_buffer", 0);
+    T* tmp_dptr = temp ? temp->mut_dptr<T>() : nullptr;
     Abs<T> abs{};
     if (X == Ximum::kMax) {
       MultiReduce<device_type, T, decltype(abs), BinaryMax<T>> reduce_max{};
-      reduce_max(ctx->stream(), abs, params, GetZeroVal<T>(), y->mut_dptr<T>());
+      reduce_max(ctx->stream(), abs, params, GetZeroVal<T>(), y->mut_dptr<T>(), tmp_dptr);
     } else if (X == Ximum::kMin) {
       MultiReduce<device_type, T, decltype(abs), BinaryMin<T>> reduce_min{};
-      reduce_min(ctx->stream(), abs, params, std::numeric_limits<T>::max(), y->mut_dptr<T>());
+      reduce_min(ctx->stream(), abs, params, std::numeric_limits<T>::max(), y->mut_dptr<T>(),
+                 tmp_dptr);
     } else {
       UNIMPLEMENTED();
     }
@@ -110,18 +109,6 @@ class MultiReduceXimumAbsKernel final : public user_op::OpKernel, public user_op
 
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
-
-#define REGISTER_MULTI_REDUCE_XIMUM_ABS_KERNEL(op_type_name, ximum_enum, device, dtype) \
-  REGISTER_USER_KERNEL(op_type_name)                                                    \
-      .SetCreateFn<MultiReduceXimumAbsKernel<device, dtype, ximum_enum>>()              \
-      .SetIsMatchedHob((user_op::HobDeviceType() == device)                             \
-                       && (user_op::HobDataType("y", 0) == GetDataType<dtype>::value));
-
-#define REGISTER_MULTI_REDUCE_XIMUM_ABS_KERNELS(device, dtype)                                     \
-  REGISTER_MULTI_REDUCE_XIMUM_ABS_KERNEL("multi_reduce_max_abs", Ximum::kMax, device, dtype)       \
-  REGISTER_MULTI_REDUCE_XIMUM_ABS_KERNEL("multi_reduce_min_abs", Ximum::kMin, device, dtype)       \
-  REGISTER_MULTI_REDUCE_XIMUM_ABS_KERNEL("local_multi_reduce_max_abs", Ximum::kMax, device, dtype) \
-  REGISTER_MULTI_REDUCE_XIMUM_ABS_KERNEL("local_multi_reduce_min_abs", Ximum::kMin, device, dtype)
 
 }  // namespace oneflow
 
