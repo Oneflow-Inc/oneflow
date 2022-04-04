@@ -22,7 +22,6 @@ import oneflow.core.framework.variable_meta_info_pb2 as variable_meta_info_pb
 import numpy as np
 from typing import Union
 
-
 Tensor = flow._oneflow_internal.Tensor
 TensorTuple = flow._oneflow_internal.TensorTuple
 
@@ -119,7 +118,12 @@ def _meta_repr(self):
 
 
 def _eq(self, other):
-    return flow._C.equal(self, other)
+    if self is None and other is None:
+        return True
+    elif self is None or other is None:
+        return False
+    else:
+        return flow._C.equal(self, other)
 
 
 def _ne(self, other):
@@ -401,6 +405,10 @@ def _log1p(self):
     return flow.log1p(self)
 
 
+def _log2(self):
+    return flow._C.log2(self)
+
+
 def _reciprocal(self):
     return flow.reciprocal(self)
 
@@ -557,6 +565,12 @@ def _new_ones(
     requires_grad=False,
 ):
     return flow.new_ones(self, size, dtype, device, placement, sbp, requires_grad)
+
+
+def _new_zeros(
+    self, *size, dtype=None, device=None, placement=None, sbp=None, requires_grad=False,
+):
+    return flow.new_zeros(self, size, dtype, device, placement, sbp, requires_grad)
 
 
 def _rsqrt(self):
@@ -1113,6 +1127,7 @@ def RegisterMethods():
     Tensor.diag = _diag
     Tensor.diagonal = _diagonal
     Tensor.log1p = _log1p
+    Tensor.log2 = _log2
     Tensor.add = _add
     Tensor.add_ = _add_inplace
     Tensor.div = _truediv
@@ -1153,6 +1168,7 @@ def RegisterMethods():
     Tensor.minimum = _minimum
     Tensor.maximum = _maximum
     Tensor.new_ones = _new_ones
+    Tensor.new_zeros = _new_zeros
     Tensor.pow = _pow
     Tensor.rsqrt = _rsqrt
     Tensor.sqrt = _sqrt
