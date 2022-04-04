@@ -33,7 +33,13 @@ struct IsNanFunctor<DeviceType::kCUDA, T, std::enable_if_t<!std::is_floating_poi
 
 template<>
 struct IsNanFunctor<DeviceType::kCUDA, half> {
-  __device__ bool operator()(const half x) const { return __hisnan(x); }
+  __device__ bool operator()(const half x) const {
+#if __CUDA_ARCH__ >= 530 || !defined(__CUDA_ARCH__)
+    return __hisnan(x);
+#else
+    return isnan(__half2float(x));
+#endif /* __CUDA_ARCH__ >= 530 || !defined(__CUDA_ARCH__) */
+  }
 };
 
 template<typename T>
@@ -48,7 +54,13 @@ struct IsInfFunctor<DeviceType::kCUDA, T, std::enable_if_t<!std::is_floating_poi
 
 template<>
 struct IsInfFunctor<DeviceType::kCUDA, half> {
-  __device__ bool operator()(const half x) const { return __hisinf(x); }
+  __device__ bool operator()(const half x) const {
+#if __CUDA_ARCH__ >= 530 || !defined(__CUDA_ARCH__)
+    return __hisinf(x);
+#else
+    return isinf(__half2float(x));
+#endif /* __CUDA_ARCH__ >= 530 || !defined(__CUDA_ARCH__) */
+  }
 };
 
 #define REGISTER_UTIL_OPS_CUDA_KERNEL(device, dtype_pair)     \
