@@ -117,7 +117,7 @@ class TestRandnOnNonDefaultDevice(flow.unittest.TestCase):
     def test_with_generator(test_case):
         gen = flow.Generator("cuda")
         x = flow.randn(2, 3, device="cuda", generator=gen)
-        test_case.assertEqual(x.device, flow.device(f"cuda:{flow.env.rank()}"))
+        test_case.assertEqual(x.device, flow.device(f"cuda:{flow.env.get_rank()}"))
 
 
 if __name__ == "__main__":
