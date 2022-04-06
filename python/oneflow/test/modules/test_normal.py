@@ -39,8 +39,9 @@ def _test_normal(test_case, mean, std, shape, device, dtype):
         dtype=dtype,
         device=flow.device(device)
     )
-    test_case.assertTrue(not np.array_equal(y1.numpy(), y2.numpy()))
-    test_case.assertTrue(shape == y1.shape and dtype == y1.dtype)
+    test_case.assertFalse(np.array_equal(y1.numpy(), y2.numpy()))
+    test_case.assertEqual(shape, y1.shape)
+    test_case.assertEqual(dtype, y1.dtype)
 
 def _test_with_generator(test_case, mean, std, shape, device, dtype):
     dtype = type_name_to_flow_type[dtype]
@@ -63,7 +64,7 @@ def _test_with_generator(test_case, mean, std, shape, device, dtype):
         dtype=dtype,
         device=flow.device(device)
     )
-    test_case.assertTrue(np.allclose(y1.numpy(), y2.numpy(), atol=1e-4, rtol=1e-4))
+    test_case.assertTrue(np.array_equal(y1.numpy(), y2.numpy()))
 
 
 def _test_backward(test_case, mean, std, shape, device, dtype):
@@ -79,7 +80,7 @@ def _test_backward(test_case, mean, std, shape, device, dtype):
     y = x.sum()
     y.backward()
     test_case.assertTrue(
-        np.allclose(np.ones(shape), x.grad.numpy(), atol=1e-4, rtol=1e-4)
+        np.array_equal(np.ones(shape), x.grad.numpy())
     )
 
 
