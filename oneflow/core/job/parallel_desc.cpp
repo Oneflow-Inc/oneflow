@@ -169,8 +169,7 @@ Maybe<Symbol<Device>> ParallelDesc::GetTensorDevice4CurrentProcessCtx(
   int64_t machine_id = 0;
   int64_t device_id = 0;
   GlobalProcessCtx::GetCurrentMachineIdAndDeviceId(&machine_id, &device_id);
-  const auto& device =
-      JUST(Device::ThreadLocalGetOrNew(Device::Type4DeviceTag(device_tag()), device_id));
+  const auto& device = JUST(Device::ThreadLocalGetOrNew(device_tag(), device_id));
   int64_t parallel_id_val = -1;
   if (TryGetParallelId(machine_id, device_id, &parallel_id_val)) {
     *parallel_id = parallel_id_val;
@@ -457,7 +456,7 @@ Maybe<std::string> RanksToString(int64_t axis, const int64_t* ranks, const Shape
 }
 
 Maybe<std::string> RawPlacementToString(Symbol<ParallelDesc> placement) {
-  std::string device_type = placement->device_tag() == "gpu" ? "\"cuda\"" : "\"cpu\"";
+  const std::string& device_type = placement->device_tag();
   std::vector<int64_t> sorted_node_ids;
   sorted_node_ids.reserve(placement->sorted_machine_ids().size());
   HashMap<int64_t, std::vector<int64_t>> node_id2sorted_dev_phy_ids;
@@ -479,14 +478,14 @@ Maybe<std::string> RawPlacementToString(Symbol<ParallelDesc> placement) {
   CHECK_EQ_OR_RETURN(ranks.size(), placement->hierarchy()->elem_cnt())
       << "rank size is " << ranks.size() << ", but shape is " << placement->hierarchy()->ToString();
   const auto& ranks_str = JUST(RanksToString(0, ranks.data(), *placement->hierarchy()));
-  return "oneflow.placement(type=" + device_type + ", ranks=" + *ranks_str + ")";
+  return "oneflow.placement(type=\"" + device_type + "\", ranks=" + *ranks_str + ")";
 }
 
 Maybe<Symbol<Device>> RawGetTensorDevice(Symbol<ParallelDesc> parallel_desc) {
   int64_t machine_id = 0;
   int64_t device_id = 0;
   GlobalProcessCtx::GetCurrentMachineIdAndDeviceId(&machine_id, &device_id);
-  const auto& type = Device::Type4DeviceTag(parallel_desc->device_tag());
+  const auto& type = parallel_desc->device_tag();
   return JUST(Device::ThreadLocalGetOrNew(type, device_id));
 }
 
