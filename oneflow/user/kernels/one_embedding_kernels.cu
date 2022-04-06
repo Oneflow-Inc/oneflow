@@ -46,60 +46,12 @@ struct EmbeddingInitializer {
   };
 };
 
-struct EmbeddingTable {
-  EmbeddingInitializer initializer;
-};
-
 constexpr size_t kMaxTables = 128;
-
-struct TablesParam {
-  int32_t num_tables = 0;
-  EmbeddingTable tables[kMaxTables];
-};
 
 struct InitializersParam {
   int32_t num_initializers = 0;
   EmbeddingInitializer initializers[kMaxTables];
 };
-
-void ParseTableFromJson(const nlohmann::json& initializer, EmbeddingTable* embedding_table) {
-  CHECK(initializer.contains("type"));
-  CHECK(initializer["type"].is_string());
-  std::string type = initializer["type"].get<std::string>();
-  if (type == "uniform") {
-    embedding_table->initializer.type = InitializerType::kUniform;
-    CHECK(initializer.contains("low"));
-    CHECK(initializer.contains("high"));
-    CHECK(initializer["low"].is_number());
-    CHECK(initializer["high"].is_number());
-    embedding_table->initializer.uniform_param.low = initializer["low"];
-    embedding_table->initializer.uniform_param.high = initializer["high"];
-  } else if (type == "normal") {
-    CHECK(initializer.contains("mean"));
-    CHECK(initializer.contains("std"));
-    CHECK(initializer["mean"].is_number());
-    CHECK(initializer["std"].is_number());
-    embedding_table->initializer.type = InitializerType::kNormal;
-    embedding_table->initializer.normal_param.mean = initializer["mean"];
-    embedding_table->initializer.normal_param.std = initializer["std"];
-  } else {
-    UNIMPLEMENTED();
-  }
-}
-
-void ParseEmbeddingTables(const std::string& json_serialized, TablesParam* param) {
-  auto json_object = nlohmann::json::parse(json_serialized);
-  CHECK(json_object.contains("tables"));
-  auto tables = json_object["tables"];
-  CHECK(tables.is_array());
-  CHECK_LE(tables.size(), kMaxTables);
-  for (int32_t i = 0; i < tables.size(); ++i) {
-    auto table = tables.at(i);
-    CHECK(table.contains("initializer"));
-    ParseTableFromJson(table["initializer"], &(param->tables[i]));
-  }
-  param->num_tables = tables.size();
-}
 
 void ParseInitializerFromJson(const nlohmann::json& initializer,
                               EmbeddingInitializer* embedding_initializer) {
@@ -127,35 +79,57 @@ void ParseInitializerFromJson(const nlohmann::json& initializer,
   }
 }
 
+void SetInitializerIndex(int32_t row_id, int32_t col_start, int32_t col_end, int32_t line_size,
+                         int8_t index, int8_t* initializer_index) {
+  int32_t row_offset = row_id * line_size;
+  for (int32_t col = col_start; col < col_end; ++col) {
+    initializer_index[row_offset + col] = index;
+  }
+}
+
 void ParseInitializers(const int32_t line_size, const int32_t embedding_size,
                        const std::string& json_serialized, InitializersParam* param,
-                       int8_t* host_initializer_index, int8_t* device_initializer_index) {
+                       int8_t** host_initializer_index, int8_t** device_initializer_index) {
   auto json_object = nlohmann::json::parse(json_serialized);
   CHECK(json_object.contains("tables"));
   auto tables = json_object["tables"];
   CHECK(tables.is_array());
   CHECK_LE(tables.size(), kMaxTables);
-  for (int32_t i = 0; i < tables.size(); ++i) {
+  const int32_t num_tables = tables.size();
+  int32_t offset = 0;
+  param->initializers[0].type = InitializerType::kZero;
+  offset++;
+  OF_CUDA_CHECK(cudaMallocHost(host_initializer_index, num_tables * line_size * sizeof(int8_t)));
+  OF_CUDA_CHECK(cudaMalloc(device_initializer_index, num_tables * line_size * sizeof(int8_t)));
+  for (int32_t i = 0; i < num_tables; ++i) {
     auto table = tables.at(i);
-    CHECK(table.contains("initializer"));
-    ParseInitializerFromJson(table["initializer"], &(param->initializers[i]));
-  }
-  param->initializers[tables.size()].type = InitializerType::kZero;
-  const size_t initializer_index_size = tables.size() * line_size * sizeof(int8_t);
-  // OF_CUDA_CHECK(cudaMallocHost(&host_initializer_index, initializer_index_size));
-  // OF_CUDA_CHECK(cudaMalloc(&device_initializer_index, initializer_index_size));
-  for (int32_t i = 0; i < tables.size(); ++i) {
-    for (int32_t j = 0; j < line_size; ++j) {
-      if (j < embedding_size) {
-        host_initializer_index[i * line_size + j] = i;
-      } else {
-        host_initializer_index[i * line_size + j] = tables.size();
+    if (table.contains("initializer")) {
+      ParseInitializerFromJson(table["initializer"], &(param->initializers[offset]));
+      SetInitializerIndex(i, 0, embedding_size, line_size, offset, *host_initializer_index);
+      offset++;
+    } else if (table.contains("columns")) {
+      auto columns = table["columns"];
+      CHECK(columns.is_array());
+      int32_t col_start = 0;
+      for (int k = 0; k < columns.size(); ++k) {
+        auto column = columns.at(k);
+        CHECK(column.contains("initializer"));
+        CHECK(column.contains("column_dim"));
+        ParseInitializerFromJson(column["initializer"], &(param->initializers[offset]));
+        int32_t col_end = col_start + column["column_dim"].get<int32_t>();
+        SetInitializerIndex(i, col_start, col_end, line_size, offset, *host_initializer_index);
+        col_start = col_end;
+        offset++;
       }
+      CHECK_EQ(col_start, embedding_size);
+    } else {
+      UNIMPLEMENTED();
     }
+    SetInitializerIndex(i, embedding_size, line_size, line_size, 0, *host_initializer_index);
   }
-  param->num_initializers = tables.size() + 1;
-  OF_CUDA_CHECK(cudaMemcpy(device_initializer_index, host_initializer_index, initializer_index_size,
-                           cudaMemcpyDefault));
+  param->num_initializers = offset;
+  OF_CUDA_CHECK(cudaMemcpy(*device_initializer_index, *host_initializer_index,
+                           num_tables * line_size * sizeof(int8_t), cudaMemcpyDefault));
 }
 
 template<typename IDX>
@@ -165,7 +139,6 @@ class EmbeddingKernelState final : public user_op::OpKernelState {
       : device_index_(-1), generator_(CHECK_JUST(one::MakeGenerator(DeviceType::kCUDA))) {
     OF_CUDA_CHECK(cudaGetDevice(&device_index_));
     OF_CUDA_CHECK(cudaMallocHost(&host_num_keys_, sizeof(IDX)));
-    ParseEmbeddingTables(ctx->Attr<std::string>("embedding_tables"), &tables_param_);
     key_value_store_ = Global<embedding::EmbeddingManager>::Get()->GetKeyValueStore(
         ctx->Attr<std::string>("embedding_name"), ctx->parallel_ctx().parallel_id());
     uint32_t max_query_length =
@@ -174,10 +147,8 @@ class EmbeddingKernelState final : public user_op::OpKernelState {
 
     const int64_t embedding_size = ctx->Attr<int64_t>("embedding_size");
     const int64_t line_size = ctx->Attr<int64_t>("line_size");
-    OF_CUDA_CHECK(cudaMallocHost(&host_initializer_index_, 26 * 128 * sizeof(int8_t)));
-    OF_CUDA_CHECK(cudaMalloc(&device_initializer_index_, 26 * 128 * sizeof(int8_t)));
     ParseInitializers(line_size, embedding_size, ctx->Attr<std::string>("embedding_tables"),
-                      &initializers_param_, host_initializer_index_, device_initializer_index_);
+                      &initializers_param_, &host_initializer_index_, &device_initializer_index_);
   }
   ~EmbeddingKernelState() override {
     CudaCurrentDeviceGuard guard(device_index_);
@@ -200,7 +171,6 @@ class EmbeddingKernelState final : public user_op::OpKernelState {
   void* host_num_keys_;
   std::shared_ptr<one::Generator> generator_;
   embedding::KeyValueStore* key_value_store_;
-  TablesParam tables_param_;
 
   InitializersParam initializers_param_;
   int8_t* host_initializer_index_;

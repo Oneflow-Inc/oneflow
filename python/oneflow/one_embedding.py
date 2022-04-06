@@ -134,14 +134,27 @@ class MultiTableEmbedding(Module):
         if tables is not None:
             assert isinstance(tables, (list, tuple))
             for table in tables:
-                assert isinstance(table, dict)
-                assert table.__contains__("initializer")
-                _check_initializer(table["initializer"])
+                if table.__contains__("columns"):
+                    assert not table.__contains__("initializer")
+                    columns_dim = 0
+                    columns = table["columns"]
+                    for column in columns:
+                        assert isinstance(column, dict)
+                        assert column.__contains__("initializer")
+                        _check_initializer(column["initializer"])
+                        assert column.__contains__("column_dim")
+                        columns_dim = columns_dim + column["column_dim"]
+                    assert columns_dim == embedding_dim
+                else:
+                    assert isinstance(table, dict)
+                    assert table.__contains__("initializer")
+                    _check_initializer(table["initializer"])
             embedding_tables["tables"] = tables
         else:
             assert default_initializer is not None
             _check_initializer(default_initializer)
             embedding_tables["tables"] = [{"initializer": default_initializer}]
+
         key_value_store_options["parallel_num"] = parallel_num
         self.key_value_store_options = json.dumps(key_value_store_options)
         self.embedding_tables = json.dumps(embedding_tables)
@@ -309,6 +322,15 @@ def make_normal_initializer(mean, std):
     return {"type": "normal", "mean": mean, "std": std}
 
 
-def make_table(initializer):
-    return {"initializer": initializer}
+def make_table(param):
+    if isinstance(param, dict):
+        table = {"initializer": param}
+    elif isinstance(param, (list, tuple)):
+        table = {"columns": param}
+    else:
+        raise ValueError("param must be initializer or columns")
+    return table
 
+
+def make_column(initializer, column_dim):
+    return {"initializer": initializer, "column_dim": column_dim}
