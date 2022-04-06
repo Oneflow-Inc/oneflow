@@ -276,7 +276,6 @@ class TensorDotFunctor {
     for (auto i : dims_a) if_dot_dims_a[i] = true;
     for (auto i : dims_b) if_dot_dims_b[i] = true;
 
-    // a shape(3,2,5) b shape(5,1,2) dim1(0, 2)
     std::vector<int32_t> broadcast_dims_a, broadcast_dims_b;
     for (int64_t i = 0; i < dims_a.size(); i++) {
       int64_t size_a = a->shape()->At(dims_a[i]);
@@ -288,8 +287,6 @@ class TensorDotFunctor {
       } else {
         CHECK_EQ_OR_RETURN(size_a, size_b) << "The corresponding dim must be equal, got " << size_a
                                            << " in tensor a and " << size_b << " in tensor b";
-        std::cout << "check dim " << i << " , got " << size_a << " of tensor a, and " << size_b
-                  << " of tensor b" << std::endl;
       }
     }
     auto reduced_a = a;
@@ -298,15 +295,6 @@ class TensorDotFunctor {
       reduced_a = JUST(functional::ReduceSum(a, broadcast_dims_a, true));
     if (!broadcast_dims_b.empty())
       reduced_b = JUST(functional::ReduceSum(b, broadcast_dims_b, true));
-
-    std::cout << std::endl << "shape a is :";
-    for (int i = 0; i < reduced_a->shape()->NumAxes(); i++) {
-      std::cout << reduced_a->shape()->At(i) << " ";
-    }
-    std::cout << std::endl << "shape b is :";
-    for (int i = 0; i < reduced_b->shape()->NumAxes(); i++) {
-      std::cout << reduced_b->shape()->At(i) << " ";
-    }
 
     int64_t rshape_a = 1, rshape_b = 1;
     std::vector<int32_t> pa, pb;
@@ -321,7 +309,6 @@ class TensorDotFunctor {
       }
     }
 
-    // for (int64_t i = dims_a.size() - 1; i >= 0; i--) pa.emplace_back(dims_a[i]);
     for (auto i : dims_a) pa.emplace_back(i);
     for (auto i : dims_b) pb.emplace_back(i);
 
