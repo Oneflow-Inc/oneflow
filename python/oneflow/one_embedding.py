@@ -366,7 +366,7 @@ def make_cached_ssd_store_options(
     """make SSD use GPU as cache store_options param of MultiTableEmbedding
 
     Args:
-        cache_budget_mb (int): the mb budget of per GPU as cache.
+        cache_budget_mb (int): the MB budget of per GPU as cache.
         persistent_path (str, list): persistent storage path of Embedding, must use fast SSD because of frequently random disk access during training. If passed a str, current rank Embedding will be saved in path/rank_id-num_ranks path. If passed a list, the list length must equals num_ranks, each elem of list represent the path of rank_id Embedding.
         capacity (int): total capacity of Embedding
         size_factor (int, optional): store size factor of embedding_dim, if SGD update, and momentum = 0, should be 1, if momentum > 0, it should be 2. if Adam, should be 3. Defaults to 1.
@@ -418,7 +418,7 @@ def make_cached_host_mem_store_options(
     """make host use GPU as cache store_options param of MultiTableEmbedding
 
     Args:
-        cache_budget_mb (int): the mb budget of per GPU as cache
+        cache_budget_mb (int): the MB budget of per GPU as cache.
         persistent_path (str, list): persistent storage path of Embedding. If passed a str, current rank Embedding will be saved in path/rank_id-num_ranks path. If passed a list, the list length must equals num_ranks, each elem of list represent the path of rank_id Embedding.
         capacity (int): total capacity of Embedding
         size_factor (int, optional): store size factor of embedding_dim, if SGD update, and momentum = 0, should be 1, if momentum > 0, it should be 2. if Adam, should be 3. Defaults to 1.
