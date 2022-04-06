@@ -66,7 +66,7 @@ def _test_global_where_scalar(test_case, placement, sbp):
 # PyTorch error: element 0 of tensors does not require grad and does not have a grad_fn
 @autotest(n=1, auto_backward=False, check_graph=False)
 def _test_where_x_y_none(test_case, placement, sbp):
-    condition = random_tensor(ndim=2, dim0=2, dim1=2, low=-1, high=1).to_global(
+    condition = random_tensor(ndim=2, dim0=8, dim1=8, low=-1, high=1).to_global(
         placement, sbp
     )
     y = torch.where(condition)
