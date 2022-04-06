@@ -32,13 +32,13 @@ double RocAucScore(size_t n, const L* label, const P* pred, float* buffer) {
   }
   const size_t n_samples_count = n - p_samples_count;
   constexpr size_t kParallelSortThreshold = 1024;
+  auto comp = [](float a, float b) { return fabs(a) < fabs(b); };
   if (n < kParallelSortThreshold) {
-    std::sort(buffer, buffer + n, [](float a, float b) { return fabs(a) < fabs(b); });
+    std::sort(buffer, buffer + n, comp);
   } else {
     const size_t m2 = n / 2;
     const size_t m1 = m2 / 2;
     const size_t m3 = (m2 + n) / 2;
-    auto comp = [](float a, float b) { return fabs(a) < fabs(b); };
     std::thread t0([&] { std::sort(buffer, buffer + m1, comp); });
     std::thread t1([&] { std::sort(buffer + m1, buffer + m2, comp); });
     std::thread t2([&] { std::sort(buffer + m2, buffer + m3, comp); });
