@@ -61,7 +61,7 @@ bool AsyncEpStreamType::QueryInstructionStatusDone(
 }
 
 void AsyncEpStreamType::Compute(Instruction* instruction) const {
-  OF_PROFILER_RANGE_PUSH("S:" + instruction->instr_msg().DebugName());
+  OF_PROFILER_RANGE_PUSH_POP_GUARD("S:" + instruction->instr_msg().DebugName());
   auto* stream = instruction->mut_stream();
   auto* ep_device_ctx = static_cast<EpDeviceCtx*>(stream->device_ctx().get());
   auto* ep_device = ep_device_ctx->GetOrCreateEpDevice();
@@ -69,7 +69,6 @@ void AsyncEpStreamType::Compute(Instruction* instruction) const {
   instruction->instruction_type().ComputeIf(instruction);
   char* data_ptr = instruction->mut_status_buffer()->mut_buffer();
   EpOptionalEventRecordStatusQuerier::MutCast(data_ptr)->SetLaunched(ep_device_ctx);
-  OF_PROFILER_RANGE_POP();
 }
 
 }  // namespace vm

@@ -31,7 +31,7 @@ namespace oneflow {
 namespace vm {
 
 void VirtualMachineEngine::ReleaseInstruction(Instruction* instruction) {
-  OF_PROFILER_RANGE_PUSH("R:" + instruction->DebugName());
+  OF_PROFILER_RANGE_PUSH_POP_GUARD("R:" + instruction->DebugName());
   auto* access_list = instruction->mut_access_list();
   INTRUSIVE_FOR_EACH(access, access_list) {
     CHECK_GT(access->ref_cnt(), 1);
@@ -48,17 +48,15 @@ void VirtualMachineEngine::ReleaseInstruction(Instruction* instruction) {
     out_edges->Erase(out_edge);
     out_instruction->mut_in_edges()->Erase(out_edge);
     if (Dispatchable(out_instruction)) {
-      OF_PROFILER_RANGE_PUSH("E:" + out_instruction->DebugName());
+      OF_PROFILER_RANGE_PUSH_POP_GUARD("E:" + out_instruction->DebugName());
       mut_ready_instruction_list()->PushBack(out_instruction);
-      OF_PROFILER_RANGE_POP();
     }
   }
-  OF_PROFILER_RANGE_POP();
 }
 
 // Handle pending instructions, and try schedule them to ready list.
 void VirtualMachineEngine::HandleLocalPending() {
-  OF_PROFILER_RANGE_PUSH("HandleLocalPending");
+  OF_PROFILER_RANGE_PUSH_POP_GUARD("HandleLocalPending");
   InstructionList pending_instructions;
   constexpr static int kPendingHandleWindow = 10;
   GetRewritedPendingInstructionsByWindowSize(kPendingHandleWindow, &pending_instructions);
@@ -70,7 +68,6 @@ void VirtualMachineEngine::HandleLocalPending() {
       pending_instructions.Erase(instruction);
     }
   }
-  OF_PROFILER_RANGE_POP();
 }
 
 namespace {
@@ -303,25 +300,22 @@ bool VirtualMachineEngine::Dispatchable(Instruction* instruction) const {
 void VirtualMachineEngine::DispatchAndPrescheduleInstructions(const ScheduleCtx& schedule_ctx) {
   ReadyInstructionList tmp_ready_instruction_list;
   mut_ready_instruction_list()->MoveTo(&tmp_ready_instruction_list);
-  OF_PROFILER_RANGE_PUSH("DispatchAndPrescheduleInstructions");
+  OF_PROFILER_RANGE_PUSH_POP_GUARD("DispatchAndPrescheduleInstructions");
   INTRUSIVE_FOR_EACH(instruction, &tmp_ready_instruction_list) {
     // Erases `instruction` from tmp_ready_instruction_list before dispatching, because
     // `instruction.dispatched_instruction_hook_` are used in DispatchInstruction.
     tmp_ready_instruction_list.Erase(instruction.Mutable());
-    OF_PROFILER_RANGE_PUSH("D:" + instruction->DebugName());
+    OF_PROFILER_RANGE_PUSH_POP_GUARD("D:" + instruction->DebugName());
     DispatchInstruction(instruction.Mutable(), schedule_ctx);
     // preschedule instructions
     INTRUSIVE_UNSAFE_FOR_EACH_PTR(edge, instruction->mut_out_edges()) {
       auto* out_instruction = edge->mut_dst_instruction();
       if (Dispatchable(out_instruction)) {
-        OF_PROFILER_RANGE_PUSH("P:" + out_instruction->DebugName());
+        OF_PROFILER_RANGE_PUSH_POP_GUARD("P:" + out_instruction->DebugName());
         mut_ready_instruction_list()->PushBack(out_instruction);
-        OF_PROFILER_RANGE_POP();
       }
     }
-    OF_PROFILER_RANGE_POP();
   }
-  OF_PROFILER_RANGE_POP();
 }
 
 namespace {
@@ -381,13 +375,11 @@ void VirtualMachineEngine::DispatchInstruction(Instruction* instruction,
 
 // Returns true if old scheduler_pending_instruction_list is empty
 Maybe<bool> VirtualMachineEngine::Receive(InstructionList* compute_instruction_list) {
-  OF_PROFILER_RANGE_PUSH("vm:Receive");
+  OF_PROFILER_RANGE_PUSH_POP_GUARD("vm:Receive");
   INTRUSIVE_UNSAFE_FOR_EACH_PTR(compute_instruction, compute_instruction_list) {
-    OF_PROFILER_RANGE_PUSH(compute_instruction->DebugName());
-    OF_PROFILER_RANGE_POP();
+    OF_PROFILER_RANGE_PUSH_POP_GUARD(compute_instruction->DebugName());
   }
   bool old_list_empty = mut_pending_msg_list()->MoveFrom(compute_instruction_list);
-  OF_PROFILER_RANGE_POP();
   return old_list_empty;
 }
 
@@ -468,7 +460,7 @@ void VirtualMachineEngine::TryRunBarrierInstruction() {
   if (likely(sequnential_instruction != mut_lively_instruction_list()->Begin())) { return; }
   // All instructions before `sequnential_instruction` are handled now, it's time to handle
   // `sequnential_instruction`.
-  OF_PROFILER_RANGE_PUSH("RunBarrierInstruction");
+  OF_PROFILER_RANGE_PUSH_POP_GUARD("RunBarrierInstruction");
   const auto& instruction_type = sequnential_instruction->instruction_type();
   CHECK(instruction_type.IsBarrier());
   const StreamType& stream_type = sequnential_instruction->stream().stream_type();
@@ -476,7 +468,6 @@ void VirtualMachineEngine::TryRunBarrierInstruction() {
   stream_type.Run(sequnential_instruction);
   mut_barrier_instruction_list()->Erase(sequnential_instruction);
   LivelyInstructionListErase(sequnential_instruction);
-  OF_PROFILER_RANGE_POP();
 }
 
 void VirtualMachineEngine::Schedule(const ScheduleCtx& schedule_ctx) {

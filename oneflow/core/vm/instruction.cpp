@@ -42,11 +42,10 @@ void Instruction::__Init__(Stream* stream, const InstructionType* instruction_ty
 void Instruction::InitStatus() { instruction_type().InitInstructionStatusIf(this); }
 
 void Instruction::DeleteStatusAndClearEdges() {
-  OF_PROFILER_RANGE_PUSH("Instruction::DeleteStatusAndClearEdges");
+  OF_PROFILER_RANGE_PUSH_POP_GUARD("Instruction::DeleteStatusAndClearEdges");
   instruction_type().DeleteInstructionStatusIf(this);
   mut_in_edges()->Clear();
   mut_out_edges()->Clear();
-  OF_PROFILER_RANGE_POP();
 }
 
 bool Instruction::Done() const {

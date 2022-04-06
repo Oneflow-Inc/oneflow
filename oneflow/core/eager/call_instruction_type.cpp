@@ -48,24 +48,20 @@ struct CallInstructionUtil final {
     call_ctx->device_ctx = device_ctx;
     CHECK_OR_RETURN(device_ctx->mut_allocator()->IsCached())
         << "device_type: " << instruction.stream().device()->type();
-    OF_PROFILER_RANGE_PUSH("AllocateOutputBlobsMemory");
+    OF_PROFILER_RANGE_PUSH_POP_GUARD("AllocateOutputBlobsMemory");
     JUST(AllocateOutputBlobsMemory(operand, device_ctx));
-    OF_PROFILER_RANGE_POP();
     if (unlikely(operand->need_temp_storage())) {
-      OF_PROFILER_RANGE_PUSH("TryAllocateTempStorage");
+      OF_PROFILER_RANGE_PUSH_POP_GUARD("TryAllocateTempStorage");
       InferTempStorageSize(operand);
       JUST(TryAllocateTempStorage(operand, device_ctx->mut_allocator()));
-      OF_PROFILER_RANGE_POP();
       // Since memory block is cached in allocator, it's safe to deallocate tmp buffer before kernel
       // executed.
-      OF_PROFILER_RANGE_PUSH("DeallocateTempStorage");
+      OF_PROFILER_RANGE_PUSH_POP_GUARD("DeallocateTempStorage");
       DeallocateTempStorage(operand, device_ctx->mut_allocator());
-      OF_PROFILER_RANGE_POP();
     }
     if (operand->user_opkernel()->has_state_or_cache()) {
-      OF_PROFILER_RANGE_PUSH("TryInitOpKernelStateAndCache");
+      OF_PROFILER_RANGE_PUSH_POP_GUARD("TryInitOpKernelStateAndCache");
       TryInitOpKernelStateAndCache(operand, device_ctx, &call_ctx->state, &call_ctx->cache);
-      OF_PROFILER_RANGE_POP();
     }
     return Maybe<void>::Ok();
   }
@@ -125,9 +121,8 @@ struct CallInstructionUtil final {
                                      const user_op::OpKernelCache* cache) {
     auto* opkernel = operand->mut_opkernel();
     auto* compute_ctx = opkernel->GetComputeContext();
-    OF_PROFILER_RANGE_PUSH("Compute");
+    OF_PROFILER_RANGE_PUSH_POP_GUARD("Compute");
     operand->user_opkernel()->Compute(compute_ctx, state, cache);
-    OF_PROFILER_RANGE_POP();
   }
 
   static inline void DeallocateTempStorage(CallPhyInstrOperand* operand, vm::Allocator* allocator) {

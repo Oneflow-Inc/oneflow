@@ -51,14 +51,13 @@ bool AsyncCudaStreamType::QueryInstructionStatusDone(
 }
 
 void AsyncCudaStreamType::Compute(Instruction* instruction) const {
-  OF_PROFILER_RANGE_PUSH("S:" + instruction->DebugName());
+  OF_PROFILER_RANGE_PUSH_POP_GUARD("S:" + instruction->DebugName());
   auto* stream = instruction->mut_stream();
   cudaSetDevice(stream->device_id());
   instruction->instruction_type().ComputeIf(instruction);
   OF_CUDA_CHECK(cudaGetLastError());
   char* data_ptr = instruction->mut_status_buffer()->mut_buffer();
   CudaOptionalEventRecordStatusQuerier::MutCast(data_ptr)->SetLaunched(stream->device_ctx().get());
-  OF_PROFILER_RANGE_POP();
 }
 
 }  // namespace vm
