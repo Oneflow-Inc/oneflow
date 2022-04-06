@@ -597,7 +597,7 @@ def _squeeze(self, dim=None):
     return flow._C.squeeze(self, dim=dim)
 
 
-def _squeeze_(self, dim=None):
+def _squeeze_inplace(self, dim=None):
     return flow._C.squeeze_(self, dim=dim)
 
 
@@ -1210,7 +1210,7 @@ def RegisterMethods():
     Tensor.tile = _tile
     Tensor.split = _split
     Tensor.squeeze = _squeeze
-    Tensor.squeeze_ = _squeeze_
+    Tensor.squeeze_ = _squeeze_inplace
     Tensor.swapaxes = _swapaxes
     Tensor.unfold = _unfold
     Tensor.narrow = _narrow

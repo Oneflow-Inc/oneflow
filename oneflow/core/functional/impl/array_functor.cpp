@@ -709,7 +709,7 @@ class InplaceSqueezeFunctor {
   Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& input,
                            const Optional<std::vector<int32_t>>& dim) const {
     JUST(CheckInplaceValid(input));
-    int32_t ndim = input->shape()->NumAxes();
+    const int32_t ndim = input->shape()->NumAxes();
     std::vector<int32_t> squeeze_dims;
     squeeze_dims.reserve(ndim);
     if (dim.has_value()) {
