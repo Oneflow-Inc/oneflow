@@ -81,7 +81,8 @@ Maybe<void> SplitSparseSoftmaxCrossEntropyOpPass::Apply(const OpGraph& op_graph,
         *stat_distribution_for_consumer.add_sbp_parallel() = SbpParallel(sbp);
       }
     }
-    CHECK(has_split_axis_parallel);
+
+    if (!has_split_axis_parallel) { return; }
 
     auto reduce_max_device_stage_op =
         user_op::UserOpConfWrapperBuilder(op_name + "-split_softmax_reduce_max_device_stage")
