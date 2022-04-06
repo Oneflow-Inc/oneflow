@@ -18,7 +18,6 @@ limitations under the License.
 
 #include <string>
 #include <google/protobuf/text_format.h>
-#include "oneflow/api/python/session/session_api.h"
 #include "oneflow/core/common/protobuf.h"
 #include "oneflow/core/control/ctrl_client.h"
 #include "oneflow/core/control/global_process_ctx.h"
@@ -119,7 +118,6 @@ inline Maybe<void> CreateMultiClientSessionContext() {
 
 inline Maybe<void> InitMultiClientSessionContext(const std::string& config_proto_str) {
   CHECK_NOTNULL_OR_RETURN(Global<MultiClientSessionContext>::Get());
-  CHECK_NOTNULL_OR_RETURN(Global<EnvGlobalObjectsScope>::Get());
   CHECK_NOTNULL_OR_RETURN(Global<EnvDesc>::Get()) << "env not found";
 
   ConfigProto config_proto;
