@@ -48,15 +48,6 @@ __global__ void MultiBlockReduceGpu(TransformFn transform,
   if (threadIdx.x == 0) { out[blockIdx.x] = b_out; }
 }
 
-template<typename T, typename ReduceFn>
-__global__ void BlockReduceGpu(const T* in, T* out) {
-  ReduceFn reduce_fn{};
-  typedef cub::BlockReduce<T, kCudaThreadsNumPerBlock> BlockReduce;
-  __shared__ typename BlockReduce::TempStorage temp_storage;
-  T b_out = BlockReduce(temp_storage).Reduce(in[threadIdx.x], reduce_fn);
-  if (threadIdx.x == 0) { out[blockIdx.x] = b_out; }
-}
-
 size_t InferTempStorageSize(user_op::InferContext* ctx) {
   auto input_size = ctx->input_size("x");
   if (input_size == 0) { return 0; }
@@ -78,15 +69,8 @@ size_t InferTempStorageSize(user_op::InferContext* ctx) {
       << "Too much blocks needed for computing " << ctx->op_name() << ", should be less than "
       << kCudaThreadsNumPerBlock << "*" << kCudaThreadsNumPerBlock << "*" << kCudaThreadsNumPerBlock
       << ", but got " << num_blocks;
-  int32_t num_groups = 0;
-  if (num_blocks > kCudaThreadsNumPerBlock) {
-    num_groups += (num_blocks - 1) / kCudaThreadsNumPerBlock + 1;
-  }
-  if (num_groups > kCudaThreadsNumPerBlock) {
-    num_groups += (num_groups - 1) / kCudaThreadsNumPerBlock + 1;
-  }
   size_t elem_size = GetSizeOfDataType(ctx->InputDType("x", 0));
-  return GetCudaAlignedSize((num_blocks + num_groups) * elem_size);
+  return GetCudaAlignedSize(num_blocks * elem_size * 2);
 }
 
 }  // namespace
@@ -111,28 +95,20 @@ struct MultiReduce<DeviceType::kCUDA, T, TransformFn, ReduceFn> {
               transform, pack_params, init, temp + total_num_blocks);
       total_num_blocks += num_blocks;
     }
-    RecursiveBlockReduce(stream, total_num_blocks, temp, ret);
-  }
-
-  void RecursiveBlockReduce(ep::Stream* stream, const int32_t nblocks, T* workspace, T* out) {
-    if (nblocks <= kCudaThreadsNumPerBlock) {
-      BlockReduceGpu<T, ReduceFn>
-          <<<1, nblocks, 0, stream->As<ep::CudaStream>()->cuda_stream()>>>(workspace, out);
-    } else {
-      int32_t ngroups = (nblocks - 1) / kCudaThreadsNumPerBlock + 1;
-      int32_t tail = nblocks % kCudaThreadsNumPerBlock;
-      int32_t nnblocks = (tail == 0) ? ngroups : (ngroups - 1);
-      if (nnblocks > 0) {
-        BlockReduceGpu<T, ReduceFn>
-            <<<nnblocks, kCudaThreadsNumPerBlock, 0, stream->As<ep::CudaStream>()->cuda_stream()>>>(
-                workspace, workspace + nblocks);
-      }
-      if (tail != 0) {
-        BlockReduceGpu<T, ReduceFn><<<1, tail, 0, stream->As<ep::CudaStream>()->cuda_stream()>>>(
-            workspace + nnblocks * kCudaThreadsNumPerBlock, workspace + nblocks + nnblocks);
-      }
-      RecursiveBlockReduce(stream, ngroups, workspace + nblocks + ngroups, out);
-    }
+    size_t wksp_size = 0;
+    auto DeviceReduce = [&](void* temp_storage) -> void {
+      OF_CUDA_CHECK(cub::DeviceReduce::Reduce(temp_storage, wksp_size, temp, ret, total_num_blocks,
+                                              ReduceFn{}, init,
+                                              stream->As<ep::CudaStream>()->cuda_stream()));
+    };
+    DeviceReduce(nullptr);
+    // NOTE(zwx): We have allocated the temp storage with the space
+    //  that can hold all the elements to reduce,
+    //  normally the `temp_storage_bytes` for cub::DeviceReduce shouldn't exceed it.
+    CHECK_LE(wksp_size, total_num_blocks * sizeof(T))
+        << wksp_size << " size in bytes of temp storage is needed for doing cub::DeviceReduce, "
+        << "but only allocated " << total_num_blocks * sizeof(T);
+    DeviceReduce(temp + total_num_blocks);
   }
 };
 
