@@ -91,6 +91,9 @@ jobs:
             cmake_generator: "Ninja"
             build_shared_libs: "OFF"
           - test_suite: ubuntu
+            cmake_build_type: "Debug"
+            build_shared_libs: "OFF"
+          - test_suite: ubuntu
             cmake_generator: "Unix Makefiles"
             cmake_build_type: "Release"
     steps:
