@@ -24,25 +24,26 @@ import oneflow as flow
 
 
 def _test_normal(test_case, mean, std, shape, device, dtype):
+    dtype = type_name_to_flow_type[dtype]
     y1 = flow.normal(
         mean,
         std,
         *shape,
-        dtype=type_name_to_flow_type[dtype],
+        dtype=dtype,
         device=flow.device(device)
     )
     y2 = flow.normal(
         mean,
         std,
         *shape,
-        dtype=type_name_to_flow_type[dtype],
+        dtype=dtype,
         device=flow.device(device)
     )
-    test_case.assertTrue(not np.allclose(y1.numpy(), y2.numpy(), atol=1e-4, rtol=1e-4))
-    test_case.assertTrue(shape == y1.shape)
-
+    test_case.assertTrue(not np.array_equal(y1.numpy(), y2.numpy()))
+    test_case.assertTrue(shape == y1.shape and dtype == y1.dtype)
 
 def _test_with_generator(test_case, mean, std, shape, device, dtype):
+    dtype = type_name_to_flow_type[dtype]
     gen = flow.Generator()
     gen.manual_seed(0)
     y1 = flow.normal(
@@ -50,7 +51,7 @@ def _test_with_generator(test_case, mean, std, shape, device, dtype):
         std,
         *shape,
         generator=gen,
-        dtype=type_name_to_flow_type[dtype],
+        dtype=dtype,
         device=flow.device(device)
     )
     gen.manual_seed(0)
@@ -59,18 +60,19 @@ def _test_with_generator(test_case, mean, std, shape, device, dtype):
         std,
         *shape,
         generator=gen,
-        dtype=type_name_to_flow_type[dtype],
+        dtype=dtype,
         device=flow.device(device)
     )
     test_case.assertTrue(np.allclose(y1.numpy(), y2.numpy(), atol=1e-4, rtol=1e-4))
 
 
 def _test_backward(test_case, mean, std, shape, device, dtype):
+    dtype = type_name_to_flow_type[dtype]
     x = flow.normal(
         mean,
         std,
         *shape,
-        dtype=type_name_to_flow_type[dtype],
+        dtype=dtype,
         device=flow.device(device),
         requires_grad=True
     )
