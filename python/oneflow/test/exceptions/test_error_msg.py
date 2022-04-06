@@ -13,24 +13,26 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 """
-
 import unittest
-
 import oneflow as flow
 import oneflow.unittest
+import oneflow.nn.functional as F
+import torch
 
 
 @flow.unittest.skip_unless_1n1d()
-class TestModule(flow.unittest.TestCase):
-    def test_reshape_exception_only_one_dim_infered(test_case):
-        # torch exception and messge:
-        #
-        #   RuntimeError: only one dimension can be inferred
-        #
-        x = flow.tensor((2, 2))
-        with test_case.assertRaises(RuntimeError) as ctx:
-            y = x.reshape((-1, -1))
-        test_case.assertEqual("only one dimension can be inferred", str(ctx.exception))
+class TestErrorMsg(flow.unittest.TestCase):
+    def test_torch_error_msg(test_case):
+        with test_case.assertRaises(flow._oneflow_internal.exception.Exception) as exp:
+            F.pad(torch.randn(2, 2))
+        test_case.assertTrue("torch.Tensor" in str(exp.exception))
+
+    def test_numpy_error_msg(test_case):
+        import numpy as np
+
+        with test_case.assertRaises(flow._oneflow_internal.exception.Exception) as exp:
+            F.pad(np.random.randn(2, 2))
+        test_case.assertTrue("numpy" in str(exp.exception))
 
 
 if __name__ == "__main__":
