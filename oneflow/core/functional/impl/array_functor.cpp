@@ -970,7 +970,7 @@ class SearchSortedFunctor {
   }
   Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& sorted_sequence,
                            const std::shared_ptr<one::Tensor>& values, bool out_int32, bool right,
-                           std::string side, const Optional<one::Tensor>& sorter) const {
+                           const std::string& side, const Optional<one::Tensor>& sorter) const {
     // checks
     CHECK_OR_RETURN(values->shape()->NumAxes() > 0)
         << "for searchsorted op, input values tensor should have positive dimension";
@@ -1022,8 +1022,8 @@ class SearchSortedScalarFunctor {
         one::OpBuilder("searchsorted_scalar").Input("sorted_sequence").Output("out").Build());
   }
   Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& sorted_sequence,
-                           const Scalar& values, bool out_int32, bool right, std::string side,
-                           const Optional<one::Tensor>& sorter) const {
+                           const Scalar& values, bool out_int32, bool right,
+                           const std::string& side, const Optional<one::Tensor>& sorter) const {
     // checks
     CHECK_OR_RETURN(sorted_sequence->shape()->NumAxes() == 1)
         << "for searchsorted op, input value can be a scalar only when "
