@@ -121,8 +121,10 @@ Maybe<void> EagerMirroredTensorImpl::InitEagerBlobObject(
 Maybe<void> EagerMirroredTensorImpl::set_eager_blob_object(
     std::shared_ptr<vm::EagerBlobObject> eager_blob_object) {
   eager_blob_object_ = eager_blob_object;
-  CHECK_OR_RETURN(eager_blob_object_->shape_ptr().get() == tensor_meta()->shape_ptr().get());
-  CHECK_OR_RETURN(eager_blob_object_->data_type() == tensor_meta()->dtype());
+  CHECK_OR_RETURN(eager_blob_object_->shape_ptr().get() == tensor_meta()->shape_ptr().get())
+      << kOfBugIssueUploadPrompt;
+  CHECK_OR_RETURN(eager_blob_object_->data_type() == tensor_meta()->dtype())
+      << kOfBugIssueUploadPrompt;
   JUST(UpdateTensorStorage());
   return Maybe<void>::Ok();
 }
