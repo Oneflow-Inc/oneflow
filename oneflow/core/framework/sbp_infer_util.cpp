@@ -76,25 +76,24 @@ Maybe<double> ComputCopyCostBetweenTwoSbpParallel(const SbpParallel& producer_sb
     double logical_blob_size =
         logical_blob_desc.shape().elem_cnt() * GetSizeOfDataType(logical_blob_desc.data_type());
     // has S
+    TransferCostHelper::Type transfer_type;
     if (consumer_sbp_parallel.has_split_parallel() || producer_sbp_parallel.has_split_parallel()) {
       if (consumer_sbp_parallel.has_split_parallel()
           && producer_sbp_parallel.has_split_parallel()) {
         // S(0)->S(1), S(1)->S(0), etc.
-        return GetTransferCostHelper().AskSymmetricTransferCost(logical_blob_size,
-                                                                TransferCostHelper::kNcclAll2All);
+        transfer_type = TransferCostHelper::kNcclAll2All;
       } else if (consumer_sbp_parallel.has_split_parallel()
                  && producer_sbp_parallel.has_broadcast_parallel()) {
         // S->B/P
-        return GetTransferCostHelper().AskSymmetricTransferCost(logical_blob_size,
-                                                                TransferCostHelper::kNcclAllGather);
+        transfer_type = TransferCostHelper::kNcclAllGather;
       } else if (consumer_sbp_parallel.has_partial_sum_parallel()
                  && producer_sbp_parallel.has_split_parallel()) {
         // P->S
-        return GetTransferCostHelper().AskSymmetricTransferCost(
-            logical_blob_size, TransferCostHelper::kNcclReduceScatter);
+        transfer_type = TransferCostHelper::kNcclReduceScatter;
       } else {
         return Error::InvalidValueError("Unknow boxing type");
       }
+      return GetTransferCostHelper().AskSymmetricTransferCost(logical_blob_size, transfer_type);
     }
     // P->B
     return GetTransferCostHelper().AskSymmetricTransferCost(logical_blob_size,
