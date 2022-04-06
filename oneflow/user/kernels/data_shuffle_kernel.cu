@@ -477,38 +477,8 @@ void ShuffleEmbeddings(cudaStream_t cuda_stream, ncclComm_t comm, int64_t parall
               reverse_cur_rank_quantize_factor, recv_offsets, recv_elem_cnt, recv_quantize_factor);
 }
 
-constexpr int kReduceBlockSize = 128;
-
 // warp reduce version.
 constexpr int32_t kWarpSize = 32;
-
-// template<typename T, int N>
-// struct GetPackType {
-//   using type = typename std::aligned_storage<N * sizeof(T), N * sizeof(T)>::type;
-// };
-
-// template<typename T, int N>
-// using PackType = typename GetPackType<T, N>::type;
-
-// template<typename T, int N>
-// union Pack {
-//   static_assert(sizeof(PackType<T, N>) == sizeof(T) * N, "");
-//   __device__ Pack() {
-//     // do nothing
-//   }
-//   PackType<T, N> storage;
-//   T elem[N];
-// };
-
-// template<typename T>
-// struct DefaultComputeType {
-//   using type = T;
-// };
-
-// template<>
-// struct DefaultComputeType<half> {
-//   using type = float;
-// };
 
 template<typename T>
 __device__ T abs_func(const T& a) {
@@ -532,7 +502,7 @@ __device__ int8_t quantize_convert(const T x) {
 
 template<>
 __device__ int8_t quantize_convert<half>(const half x) {
-  return __half2short_ru(x);
+  return __half2short_rz(x);
 }
 
 template<typename T>
@@ -571,6 +541,7 @@ inline cudaError_t GetWarpImplNumBlocks(int64_t block_size, int64_t max_blocks, 
       std::max<int>(1, std::min<int64_t>(max_blocks, sm_count * tpm / block_size * waves));
   return cudaSuccess;
 }
+
 template<typename T, int pack_size, int cols_per_thread, int thread_group_width,
          int rows_per_access, bool padding>
 __global__ void QuantizeWarpImplKernel(const T* src, int8_t* dst, T* quantize_factor,
@@ -620,14 +591,12 @@ __global__ void QuantizeWarpImplKernel(const T* src, int8_t* dst, T* quantize_fa
     T warp_max[rows_per_access];
 #pragma unroll
     for (int row_id = 0; row_id < rows_per_access; row_id++) {
-      warp_max[row_id] =
-          WarpAbsMaxAllReduce<T, thread_group_width>(thread_abs_max[row_id]) / static_cast<T>(127);
+      warp_max[row_id] = WarpAbsMaxAllReduce<T, thread_group_width>(thread_abs_max[row_id]);
       quantize_factor[row + row_id] = warp_max[row_id];
     }
     for (int row_id = 0; row_id < rows_per_access; row_id++) {
       T* row_buf = buf[row_id];
-      T warp_max_val = warp_max[row_id];
-
+      T warp_max_val = warp_max[row_id] / static_cast<T>(127);
 #pragma unroll
       for (int col = 0; col < cols_per_thread; col++) {
         row_buf[col] = row_buf[col] / warp_max_val;
@@ -824,7 +793,7 @@ __global__ void DequantizeKernel(const int8_t* x, T* quantize_factor, T* out, ID
   for (int index = global_thread_id * pack_size; index < elem_cnt;
        index += gridDim.x * blockDim.x * pack_size) {
     IDX quantize_factor_idx = index / col_size;
-    T quantize_factor_val = quantize_factor[quantize_factor_idx];
+    T quantize_factor_val = quantize_factor[quantize_factor_idx] / static_cast<T>(127);
     using LoadPackType = cuda::elementwise::PackType<int8_t, pack_size>;
     using LoadPack = cuda::elementwise::Pack<int8_t, pack_size>;
     using StorePackType = cuda::elementwise::PackType<T, pack_size>;
@@ -860,8 +829,6 @@ inline cudaError_t LaunchDequantizeKernel(cudaStream_t stream, const int8_t* src
   int32_t quantized_src_pack_size = cuda::elementwise::PackSize<int8_t>();
   int32_t dst_pack_size = cuda::elementwise::PackSize<T>();
   int32_t launch_pack_size = min(quantized_src_pack_size, dst_pack_size);
-  printf("Launch pack size is: %d \n", launch_pack_size);
-  printf("Col size is: %ld \n", col_size);
   if (launch_pack_size == 8 && col_size % 8 == 0) {
     cudaError_t err = DispatchDequantizeKernelPackSize<T, IDX, 8>(stream, src, quantize_factor, dst,
                                                                   col_size, elem_cnt);
@@ -1000,14 +967,6 @@ class EmbeddingShuffleKernel final : public user_op::OpKernel {
           + received_embeddings_size + quantize_cur_rank_embeddings_size
           + reverse_recv_quantize_cur_rank_embeddings_size + cur_rank_quantize_factor_size
           + reverse_cur_rank_quantize_factor_size + recv_quantize_factor_size);
-      // int32_t row_size = cur_rank_num_ids;
-      // int block_num = 0;
-      // GetNumBlocks(row_size * embedding_size, kReduceBlockSize, &block_num);
-
-      // QuantizeBlockKernel<T, IDX><<<block_num, kReduceBlockSize, 0, cuda_stream>>>(
-      //     cur_rank_embeddings->dptr<T>(), quantize_cur_rank_embeddings, cur_rank_quantize_factor,
-      //     row_size, embedding_size);
-
       int64_t row_size = cur_rank_num_ids;
       DispatchQuantizeWarpImplPackSize<T>()(cuda_stream, cur_rank_embeddings->dptr<T>(),
                                             quantize_cur_rank_embeddings, cur_rank_quantize_factor,
