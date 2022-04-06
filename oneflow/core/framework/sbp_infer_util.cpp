@@ -84,7 +84,7 @@ Maybe<double> ComputCopyCostBetweenTwoSbpParallel(const SbpParallel& producer_sb
         transfer_type = TransferCostHelper::kNcclAll2All;
       } else if (consumer_sbp_parallel.has_split_parallel()
                  && producer_sbp_parallel.has_broadcast_parallel()) {
-        // S->B/P
+        // S->B
         transfer_type = TransferCostHelper::kNcclAllGather;
       } else if (consumer_sbp_parallel.has_partial_sum_parallel()
                  && producer_sbp_parallel.has_split_parallel()) {
