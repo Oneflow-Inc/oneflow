@@ -331,7 +331,6 @@ class LogicalSliceKernel final : public user_op::OpKernel {
     const user_op::Tensor* x_tensor = ctx->Tensor4ArgNameAndIndex("x", 0);
     const SliceContext& slice_ctx =
         dynamic_cast<const OpKernelCacheWrapper<SliceContext>*>(cache)->Get();
-    CHECK_EQ(y_tensor->mem_case().device_type(), ctx->stream()->device_type());
     size_t out_bytes_size = y_tensor->shape().elem_cnt() * GetSizeOfDataType(y_tensor->data_type());
     AutoMemset(ctx->stream(), y_tensor->mut_dptr(), 0, out_bytes_size, y_tensor->mem_case());
     SwitchWriteSlice(SwitchCase(y_tensor->shape().NumAxes(), y_tensor->data_type()), ctx, x_tensor,
