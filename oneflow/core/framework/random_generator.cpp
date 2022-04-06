@@ -14,6 +14,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 #include "oneflow/core/framework/random_generator.h"
+#include "oneflow/core/framework/to_string.h"
 
 #include <mutex>
 #include "oneflow/core/control/global_process_ctx.h"
@@ -136,11 +137,11 @@ Maybe<Generator> DefaultGenerator(const std::string& device, int device_index) {
 }
 
 Maybe<Generator> DefaultGenerator(DeviceType device, int device_index) {
-  return DefaultGenerator(DeviceTypeName(device), device_index);
+  return DefaultGenerator(*JUST(DeviceTag4DeviceType(device)), device_index);
 }
 
 Maybe<Generator> MakeGenerator(DeviceType device, int device_index) {
-  return MakeGenerator(DeviceTypeName(device), device_index);
+  return MakeGenerator(*JUST(DeviceTag4DeviceType(device)), device_index);
 }
 
 }  // namespace one
