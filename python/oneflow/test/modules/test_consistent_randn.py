@@ -59,6 +59,7 @@ class TestRandnConsistent(flow.unittest.TestCase):
                     placement, max_dim=len(shape), except_partial_sum=True
                 ):
                     _test_consistent_randn(test_case, shape, placement, sbp)
+
     @globaltest
     def test_randn_graph(test_case):
         arg_dict = OrderedDict()
