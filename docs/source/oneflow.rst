@@ -166,6 +166,7 @@ oneflow
             set_printoptions,
             decode_onerec,
             from_numpy,
+            as_tensor,
             cumsum,
             topk,
             nms,
@@ -178,6 +179,8 @@ oneflow
             CharTensor,
             IntTensor,
             LongTensor,
+            isnan,
+            isinf
 
 .. autofunction:: oneflow.relu
 .. autofunction:: oneflow.set_num_threads

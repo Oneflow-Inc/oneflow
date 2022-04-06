@@ -556,6 +556,7 @@ jobs:
         if: ${{ !fromJson(matrix.cache-hit) && contains(matrix.runs-on, 'self-hosted') }}
         run: |
           docker exec ${{ env.TEST_CONTAINER_NAME }} ls
+          docker exec ${{ env.TEST_CONTAINER_NAME }} python3 -m pip list
       - name: Install OneFlow
         if: ${{ !fromJson(matrix.cache-hit) && contains(matrix.runs-on, 'self-hosted') }}
         run: |
@@ -747,6 +748,7 @@ jobs:
         if: ${{ !fromJson(matrix.cache-hit) && contains(matrix.runs-on, 'self-hosted') }}
         run: |
           docker exec ${{ env.TEST_CONTAINER_NAME }} ls
+          docker exec ${{ env.TEST_CONTAINER_NAME }} python3 -m pip list
       - name: Checkout Oneflow-Inc/vision
         if: ${{ !fromJson(matrix.cache-hit) && contains(matrix.runs-on, 'self-hosted') }}
         uses: actions/checkout@v2
@@ -804,7 +806,7 @@ jobs:
               issue_number: context.issue.number,
               owner: context.repo.owner,
               repo: context.repo.repo,
-              body: "View latest API docs preview at: https://oneflow-staging.oss-cn-beijing.aliyuncs.com/${{ env.DOCS_PATH }}")
+              body: "View latest API docs preview at: https://staging.oneflow.info/${{ env.DOCS_PATH }}/"
             })
       - name: Doctest
         timeout-minutes: 45
