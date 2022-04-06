@@ -1818,3 +1818,17 @@ add_docstr(
     Fills `self` tensor with zeros.
     """,
 )
+
+add_docstr(
+    oneflow.Tensor.isnan,
+    """
+    See :func:`oneflow.isnan`
+    """,
+)
+
+add_docstr(
+    oneflow.Tensor.isinf,
+    """
+    See :func:`oneflow.isinf`
+    """,
+)

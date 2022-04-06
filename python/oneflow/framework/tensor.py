@@ -1036,6 +1036,14 @@ def _to_consistent(self, *args, **kwargs):
     raise RuntimeError(".to_consistent has been removed, please use .to_global instead")
 
 
+def _isnan(self):
+    return flow.isnan(self)
+
+
+def _isinf(self):
+    return flow.isinf(self)
+
+
 def RegisterMethods():
     Tensor.__mul__ = lambda self, other: self.mul(other)
     Tensor.__rmul__ = lambda self, other: self.mul(other)
@@ -1245,6 +1253,8 @@ def RegisterMethods():
     Tensor.zero_ = _zero_
     Tensor.is_consistent = _is_consistent
     Tensor.to_consistent = _to_consistent
+    Tensor.isnan = _isnan
+    Tensor.isinf = _isinf
 
 
 def register_tensor_op(op_name):
