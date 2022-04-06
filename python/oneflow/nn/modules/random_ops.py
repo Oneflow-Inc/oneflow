@@ -503,6 +503,7 @@ def randperm_op(
             n=n, device=device, generator=generator, requires_grad=requires_grad
         ).to(dtype)
 
+
 def normal_op(
     mean,
     std,
@@ -516,15 +517,15 @@ def normal_op(
     size = _handle_size_arg(size)
     size = _single(size)
     return flow._C.normal(
-            mean=mean,
-            std=std,
-            size=size,
-            out=out,
-            dtype=dtype,
-            device=device,
-            generator=generator,
-            requires_grad=requires_grad,
-        )
+        mean=mean,
+        std=std,
+        size=size,
+        out=out,
+        dtype=dtype,
+        device=device,
+        generator=generator,
+        requires_grad=requires_grad,
+    )
 
 if __name__ == "__main__":
     import doctest

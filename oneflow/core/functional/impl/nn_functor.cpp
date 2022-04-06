@@ -1363,9 +1363,8 @@ class GridSampleFunctor {
 class NormalFunctor {
  public:
   NormalFunctor() { op_ = CHECK_JUST(one::OpBuilder("normal").Output("out").Build()); }
-  Maybe<Tensor> operator()(const float& mean, const float& std, const Shape& shape, 
-                           const Optional<one::Tensor>& out,
-                           const Optional<Symbol<DType>>& dtype,
+  Maybe<Tensor> operator()(const float& mean, const float& std, const Shape& shape,
+                           const Optional<one::Tensor>& out, const Optional<Symbol<DType>>& dtype,
                            const Optional<Symbol<Device>>& device,
                            const Optional<one::Generator>& generator,
                            const bool& requires_grad) const {
