@@ -26,5 +26,10 @@ def is_available() -> bool:
 
 
 def device_count() -> int:
-    r"""Returns the number of GPUs available.."""
+    r"""Returns the number of GPUs available."""
     return flow._oneflow_internal.CudaGetDeviceCount()
+
+
+def current_device() -> int:
+    r"""Returns local rank as device index."""
+    return flow._oneflow_internal.GetCudaDeviceIndex()

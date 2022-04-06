@@ -32,11 +32,13 @@ from oneflow.nn.modules.activation import (
     ReLU6,
     Sigmoid,
     Softmax,
+    Softshrink,
     Softplus,
     Tanh,
     SELU,
     SiLU,
     Softsign,
+    Threshold,
 )
 
 from oneflow.nn.modules.all_reduce import AllReduce
