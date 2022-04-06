@@ -35,8 +35,11 @@ test_call_when_shutting_down = TestCallWhenShuttingDown()
 
 
 class TestSyncWhenShuttingDown:
-    def __del__(self, of=oneflow):
-        of._oneflow_internal.eager.Sync()
+    def __init__(self):
+        self.eager = oneflow._oneflow_internal.eager
+
+    def __del__(self):
+        self.eager.Sync()
 
 
 test_sync_when_shutting_down = TestSyncWhenShuttingDown()
