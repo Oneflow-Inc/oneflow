@@ -726,12 +726,12 @@ class InplaceSqueezeFunctor {
         if (input->shape()->At(i) == 1) { squeeze_dims.emplace_back(i); }
       }
     }
-    
+
     MutableAttrMap attrs;
     JUST(attrs.SetAttr<std::vector<int32_t>>("axes", squeeze_dims));
 
-    if (view::IsViewApplicable(input)) { 
-      return view::Squeeze(input, squeeze_dims); 
+    if (view::IsViewApplicable(input)) {
+      return view::Squeeze(input, squeeze_dims);
     } else {
       auto outputs = std::make_shared<TensorTuple>(1);
       outputs->at(0) = input;
