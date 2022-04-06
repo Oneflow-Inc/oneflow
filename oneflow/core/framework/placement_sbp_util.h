@@ -21,6 +21,7 @@ limitations under the License.
 #include "oneflow/core/common/symbol.h"
 #include "oneflow/core/common/decorator.h"
 #include "oneflow/core/job/sbp_parallel.h"
+#include "oneflow/core/framework/stride.h"
 
 namespace oneflow {
 
@@ -81,6 +82,8 @@ extern Maybe<void> (*CheckIsNdSbpBoxingAcyclic)(Symbol<PlacedNdSbp> in, Symbol<P
 extern Maybe<void> (*CheckIsNdSbpBoxingAcyclicWithDecompose)(Symbol<PlacedNdSbp> in,
                                                              Symbol<PlacedNdSbp> out,
                                                              const Shape& logical_shape);
+
+int64_t CalcIndex4Axis(int64_t offset, const Stride& stride, int axis);
 
 static constexpr auto* GetSubConsistentTensorMeta =
     DECORATE(&private_details::CalcSubConsistentTensorMeta, ThreadLocal);

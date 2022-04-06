@@ -38,29 +38,22 @@ namespace private_details {
 namespace {
 
 using IndexVector = DimVector;
-using StrideVector = DimVector;
 
-void GetStrideVector(const Shape& shape, StrideVector* strides) {
-  strides->resize(shape.NumAxes());
-  for (int i = 0; i < shape.NumAxes(); ++i) { strides->at(i) = shape.Count(i + 1); }
-}
-
-Maybe<void> GetIndexesFromOffset(const StrideVector& strides, int64_t offset,
-                                 IndexVector* indexes) {
-  indexes->resize(strides.size());
-  for (int i = 0; i < strides.size(); ++i) {
-    indexes->at(i) = offset / strides.at(i);
-    offset = offset % strides.at(i);
+Maybe<void> GetIndexesFromOffset(const Stride& strides, int64_t offset, IndexVector* indexes) {
+  indexes->resize(strides.NumAxes());
+  for (int i = 0; i < strides.NumAxes(); ++i) {
+    indexes->at(i) = offset / strides.At(i);
+    offset = offset % strides.At(i);
   }
   CHECK_EQ_OR_RETURN(offset, 0);
   return Maybe<void>::Ok();
 }
 
-Maybe<void> GetOffsetFromIndexes(const StrideVector& strides, const IndexVector& indexes,
+Maybe<void> GetOffsetFromIndexes(const Stride& strides, const IndexVector& indexes,
                                  int64_t* offset) {
-  CHECK_EQ_OR_RETURN(strides.size(), indexes.size());
+  CHECK_EQ_OR_RETURN(strides.NumAxes(), indexes.size());
   *offset = 0;
-  for (int i = 0; i < strides.size(); ++i) { *offset += indexes.at(i) * strides.at(i); }
+  for (int i = 0; i < strides.NumAxes(); ++i) { *offset += indexes.at(i) * strides.At(i); }
   return Maybe<void>::Ok();
 }
 
@@ -139,50 +132,28 @@ Maybe<Symbol<ParallelDesc>> CalcSelectedSubParallelDesc(Symbol<ParallelDesc> par
 
 static auto* GetSelectedSubParallelDesc = DECORATE(&CalcSelectedSubParallelDesc, ThreadLocal);
 
-Maybe<std::vector<int64_t>> GetSubParallelIds4Axis(const Shape& hierarchy_shape, int axis,
-                                                   int64_t parallel_id) {
-  CHECK_GT_OR_RETURN(hierarchy_shape.NumAxes(), axis);
-  StrideVector hierarchy_strides{};
-  GetStrideVector(hierarchy_shape, &hierarchy_strides);
-  IndexVector indexes{};
-  JUST(GetIndexesFromOffset(hierarchy_strides, parallel_id, &indexes));
-  std::function<void(const DimVector&, DimVector*)> SubIndex2OriginIndex;
-  JUST(GetSubIndex2OriginIndex(indexes, axis, &SubIndex2OriginIndex));
-  const auto& broadcast_shape = JUST(GetSubShape4Axis(hierarchy_shape, axis));
-  StrideVector broadcast_strides{};
-  GetStrideVector(*broadcast_shape, &broadcast_strides);
-  const auto& origin_offsets = std::make_shared<std::vector<int64_t>>(broadcast_shape->elem_cnt());
-  for (int64_t i = 0; i < broadcast_shape->elem_cnt(); ++i) {
-    IndexVector broadcast_indexes{};
-    JUST(GetIndexesFromOffset(broadcast_strides, i, &broadcast_indexes));
-    IndexVector origin_indexes{};
-    SubIndex2OriginIndex(broadcast_indexes, &origin_indexes);
-    int64_t origin_offset = -1;
-    JUST(GetOffsetFromIndexes(hierarchy_strides, origin_indexes, &origin_offset));
-    origin_offsets->at(i) = origin_offset;
-  }
-  return origin_offsets;
-}
-
 }  // namespace
 
 Maybe<Symbol<ParallelDesc>> CalcSubParallelDesc4Axis(Symbol<ParallelDesc> parallel_desc, int axis) {
   const auto& opt_parallel_id = JUST(GetParallelId4CurrentProcessCtx(parallel_desc));
   int64_t parallel_id = JUST(*opt_parallel_id);
   const auto& hierarchy_shape = *parallel_desc->hierarchy();
-  const auto& slected_parallel_ids =
-      JUST(GetSubParallelIds4Axis(hierarchy_shape, axis, parallel_id));
+  Stride hierarchy_strides(hierarchy_shape);
+
+  int64_t index = CalcIndex4Axis(parallel_id, hierarchy_strides, axis);
+
+  int64_t stride = hierarchy_strides.At(axis);
+
+  int64_t start_parallel_id = parallel_id - index * stride;
   ParallelConf parallel_conf;
   parallel_conf.set_device_tag(parallel_desc->device_tag());
-  bool found_parallel_id = false;
-  for (int64_t i : *slected_parallel_ids) {
-    found_parallel_id = found_parallel_id || (i == parallel_id);
-    int64_t machine_id = JUST(parallel_desc->MachineId4ParallelId(i));
-    int64_t device_id = JUST(parallel_desc->DeviceId4ParallelId(i));
+  for (int64_t i = 0; i < hierarchy_shape.At(axis); ++i) {
+    int64_t id = start_parallel_id + i * stride;
+    int64_t machine_id = JUST(parallel_desc->MachineId4ParallelId(id));
+    int64_t device_id = JUST(parallel_desc->DeviceId4ParallelId(id));
     parallel_conf.add_device_name(std::string("@") + std::to_string(machine_id) + ":"
                                   + std::to_string(device_id));
   }
-  CHECK_OR_RETURN(found_parallel_id);
   return SymbolOf(ParallelDesc(parallel_conf));
 }
 
@@ -190,15 +161,13 @@ Maybe<std::vector<int64_t>> GetSelectedParallelIds(const Shape& hierarchy_shape,
                                                    const std::vector<int>& axis2is_selected,
                                                    int64_t parallel_id) {
   CHECK_EQ_OR_RETURN(hierarchy_shape.NumAxes(), axis2is_selected.size());
-  StrideVector hierarchy_strides{};
-  GetStrideVector(hierarchy_shape, &hierarchy_strides);
+  Stride hierarchy_strides(hierarchy_shape);
   IndexVector indexes{};
   JUST(GetIndexesFromOffset(hierarchy_strides, parallel_id, &indexes));
   std::function<void(const DimVector&, DimVector*)> SelectedIndex2OriginIndex;
   JUST(GetSelectedIndex2OriginIndex(indexes, axis2is_selected, &SelectedIndex2OriginIndex));
   const auto& broadcast_shape = JUST(GetSelectedShape(hierarchy_shape, axis2is_selected));
-  StrideVector broadcast_strides{};
-  GetStrideVector(*broadcast_shape, &broadcast_strides);
+  Stride broadcast_strides(*broadcast_shape);
   const auto& origin_offsets = std::make_shared<std::vector<int64_t>>(broadcast_shape->elem_cnt());
   for (int64_t i = 0; i < broadcast_shape->elem_cnt(); ++i) {
     IndexVector broadcast_indexes{};
@@ -753,6 +722,15 @@ Maybe<void> RawCheckIsNdSbpBoxingAcyclicWithDecompose(Symbol<PlacedNdSbp> in,
 }
 
 }  // namespace
+
+int64_t CalcIndex4Axis(int64_t offset, const Stride& stride, int axis) {
+  CHECK_LT(axis, stride.NumAxes());
+  if (axis == 0) {
+    return offset / stride.At(0);
+  } else {
+    return offset % stride.At(axis - 1) / stride.At(axis);
+  }
+}
 
 decltype(CheckIsNdSbpBoxingAcyclic) CheckIsNdSbpBoxingAcyclic =
     DECORATE(&RawCheckIsNdSbpBoxingAcyclic, ThreadLocal);

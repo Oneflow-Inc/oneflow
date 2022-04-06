@@ -27,8 +27,6 @@ namespace oneflow {
 
 namespace {
 
-using StrideVector = DimVector;
-
 bool RawIsAllBroadcastNdSbpAfterDim(Symbol<NdSbp> nd_sbp, int dim) {
   for (int i = dim; i < nd_sbp->sbp_parallel_size(); ++i) {
     if (!nd_sbp->sbp_parallel(i).has_broadcast_parallel()) { return false; }
@@ -47,15 +45,6 @@ Maybe<Symbol<SbpParallel>> GetBroadcastSbp() {
 
 auto* CachedGetBroadcastSbp = DECORATE(&GetBroadcastSbp, ThreadLocalCached);
 
-int64_t CalIndex4Dim(int64_t offset, const Stride& stride, int dim) {
-  CHECK_LT(dim, stride.NumAxes());
-  if (dim == 0) {
-    return offset / stride.At(0);
-  } else {
-    return offset % stride.At(dim - 1) / stride.At(dim);
-  }
-}
-
 Maybe<Shape> CalLogicalShape4Axis(const Shape& logical_shape, int axis,
                                   Symbol<ParallelDesc> parallel_desc, Symbol<NdSbp> nd_sbp) {
   CHECK_LT_OR_RETURN(axis, nd_sbp->sbp_parallel_size());
@@ -69,15 +58,15 @@ Maybe<Shape> CalLogicalShape4Axis(const Shape& logical_shape, int axis,
   FOR_RANGE(int64_t, i, 0, axis) {
     const auto& sbp_parallel = nd_sbp->sbp_parallel(i);
     if (sbp_parallel.has_split_parallel()) {
-      int64_t index = CalIndex4Dim(parallel_id, hierarchy_stride, i);
+      int64_t index = CalcIndex4Axis(parallel_id, hierarchy_stride, i);
       int64_t dim = hierarchy_shape.At(i);
       const int64_t split_axis = sbp_parallel.split_parallel().axis();
 
       if (sub_logical_shape->At(split_axis) > 0) {
         CHECK_GE_OR_RETURN(sub_logical_shape->At(split_axis), dim)
             << Error::RuntimeError() << "The size of tensor (" << sub_logical_shape->At(split_axis)
-            << ") be greater than or equal to parallle num (" << dim
-            << ") at non-singleton dimension " << i;
+            << ") at split dimension (" << i
+            << ") should be greater than or equal to parallle num (" << dim << ")";
         const BalancedSplitter bs(sub_logical_shape->At(split_axis), dim);
         sub_logical_shape->Set(split_axis, bs.At(index).size());
       }
@@ -90,7 +79,7 @@ Maybe<Shape> CalLogicalShape4Axis(const Shape& logical_shape, int axis,
 static constexpr auto* GetLogicalShape4Axis =
     DECORATE(&CalLogicalShape4Axis, ThreadLocalCachedCopiable);
 
-Maybe<int> CalFirstDiffSbpDim(Symbol<NdSbp> in_nd_sbp, Symbol<NdSbp> out_nd_sbp) {
+Maybe<int> CalcTheFirstDiffAxisBetweenTwoNdSbp(Symbol<NdSbp> in_nd_sbp, Symbol<NdSbp> out_nd_sbp) {
   CHECK_EQ_OR_RETURN(in_nd_sbp->sbp_parallel_size(), out_nd_sbp->sbp_parallel_size());
   int dim = 0;
   for (; dim < in_nd_sbp->sbp_parallel_size(); ++dim) {
@@ -98,8 +87,6 @@ Maybe<int> CalFirstDiffSbpDim(Symbol<NdSbp> in_nd_sbp, Symbol<NdSbp> out_nd_sbp)
   }
   return dim;
 }
-
-static constexpr auto* CachedCalFirstDiffSbpDim = DECORATE(&CalFirstDiffSbpDim, ThreadLocalCached);
 
 Maybe<one::Tensor> Apply1DBoxing(const std::shared_ptr<one::Tensor>& input, Symbol<NdSbp> in_nd_sbp,
                                  Symbol<NdSbp> out_nd_sbp, Symbol<ParallelDesc> in_parallel_desc,
@@ -139,7 +126,7 @@ Maybe<one::Tensor> GenericSymmetricNdSbpBoxing(const std::shared_ptr<one::Tensor
   if (out_parallel_id->has_value()) {
     output = input;
 
-    int first_diff_sbp_dim = JUST(CachedCalFirstDiffSbpDim(in->nd_sbp(), out_nd_sbp));
+    int first_diff_sbp_dim = JUST(CalcTheFirstDiffAxisBetweenTwoNdSbp(in->nd_sbp(), out_nd_sbp));
     Symbol<SbpParallel> broadcast_sbp = JUST(CachedGetBroadcastSbp());
 
     const auto& opt_parallel_id = JUST(GetParallelId4CurrentProcessCtx(in_parallel_desc));
@@ -164,7 +151,7 @@ Maybe<one::Tensor> GenericSymmetricNdSbpBoxing(const std::shared_ptr<one::Tensor
       std::shared_ptr<one::Tensor> local_tensor = JUST(output->cur_rank_phy_tensor());
       const auto& sub_parallel_desc = JUST(CalcSubParallelDesc4Axis(in_parallel_desc, i));
 
-      int64_t index = CalIndex4Dim(parallel_id, hierarchy_stride, i);
+      int64_t index = CalcIndex4Axis(parallel_id, hierarchy_stride, i);
 
       const auto& physical_shape =
           *JUST(GetPhysicalShape(sub_logical_shape, *one_dim_nd_sbp, *sub_parallel_desc, index));
@@ -193,13 +180,13 @@ Maybe<one::Tensor> GenericSymmetricNdSbpBoxing(const std::shared_ptr<one::Tensor
     // e.g.
     // If out_nd_sbp is (S(0), S(0), S(1))
     // Altered state of sbp is (S(0), B, B) -> (S(0), S(0), B) -> (S(0), S(0), S(1))
+    std::shared_ptr<Shape> sub_logical_shape = JUST(GetLogicalShape4Axis(
+        logical_shape, first_diff_sbp_dim, in_parallel_desc, JUST(output->nd_sbp())));
     for (int64_t i = first_diff_sbp_dim; i < out_nd_sbp->sbp_parallel_size(); ++i) {
       const auto& sbp_parallel = out_nd_sbp->sbp_parallel(i);
       if (sbp_parallel.has_broadcast_parallel()) { continue; }
 
       const auto& nd_sbp = JUST(output->nd_sbp());
-      const auto& sub_logical_shape =
-          *JUST(GetLogicalShape4Axis(logical_shape, i, in_parallel_desc, nd_sbp));
 
       const auto& sub_parallel_desc = JUST(CalcSubParallelDesc4Axis(in_parallel_desc, i));
 
@@ -207,7 +194,7 @@ Maybe<one::Tensor> GenericSymmetricNdSbpBoxing(const std::shared_ptr<one::Tensor
 
       std::shared_ptr<one::Tensor> sub_global_tensor = JUST(one::functional::LocalToConsistent(
           local_tensor, sub_parallel_desc, *JUST(GetSbpList(JUST(SbpToNdSbp(broadcast_sbp)))),
-          sub_logical_shape, local_tensor->dtype()));
+          *sub_logical_shape, local_tensor->dtype()));
 
       const auto& one_dim_nd_sbp = JUST(SbpToNdSbp(sbp_parallel));
       sub_global_tensor = JUST(Apply1DBoxing(sub_global_tensor, JUST(SbpToNdSbp(broadcast_sbp)),
@@ -215,16 +202,18 @@ Maybe<one::Tensor> GenericSymmetricNdSbpBoxing(const std::shared_ptr<one::Tensor
 
       local_tensor = JUST(sub_global_tensor->cur_rank_phy_tensor());
 
-      int64_t index = CalIndex4Dim(parallel_id, hierarchy_stride, i);
+      int64_t index = CalcIndex4Axis(parallel_id, hierarchy_stride, i);
       const auto& physical_shape =
-          *JUST(GetPhysicalShape(sub_logical_shape, *one_dim_nd_sbp, *sub_parallel_desc, index));
-      CHECK_EQ_OR_RETURN(physical_shape, *local_tensor->shape());
+          JUST(GetPhysicalShape(*sub_logical_shape, *one_dim_nd_sbp, *sub_parallel_desc, index));
+      CHECK_EQ_OR_RETURN(*physical_shape, *local_tensor->shape());
 
       const auto& new_nd_sbp = JUST(SetSbpAtAxis(*nd_sbp, sbp_parallel, i));
 
       output = JUST(one::functional::LocalToConsistent(local_tensor, in_parallel_desc,
                                                        *JUST(GetSbpList(new_nd_sbp)), logical_shape,
                                                        local_tensor->dtype()));
+      // physical_shape of this axis is logical shape of next axis
+      sub_logical_shape = physical_shape;
     }
   } else {
     one::ConsistentTensorMeta tensor_meta(input->shape(), input->dtype()->data_type(), out_nd_sbp,
