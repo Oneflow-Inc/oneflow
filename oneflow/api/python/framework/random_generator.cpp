@@ -14,6 +14,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 #include <pybind11/pybind11.h>
+#include "oneflow/api/python/functional/common.h"
 #include "oneflow/api/python/of_api_registry.h"
 #include "oneflow/core/framework/random_generator.h"
 #include "oneflow/core/framework/tensor.h"
@@ -21,18 +22,6 @@ limitations under the License.
 namespace py = pybind11;
 
 namespace oneflow {
-
-namespace {
-
-int64_t UnpackLong(PyObject* py_obj) {
-  int overflow = -1;
-  long long val = PyLong_AsLongLongAndOverflow(py_obj, &overflow);
-  if (val == -1 && PyErr_Occurred()) { throw std::runtime_error("Python exception occurs"); }
-  if (overflow != 0) { throw std::runtime_error("Overflow when unpacking long"); }
-  return (int64_t)val;
-}
-
-}  // namespace
 
 Maybe<one::Generator> CreateGenerator(const std::string& device_tag) {
   std::string device_name = "";
@@ -47,9 +36,10 @@ ONEFLOW_API_PYBIND11_MODULE("", m) {
         return CreateGenerator(device_tag).GetPtrOrThrow();
       }))
       .def("manual_seed",
-           [](std::shared_ptr<one::Generator> generator, const py::object& seed) {
-             int64_t seed_val = UnpackLong(seed.ptr());
+           [](std::shared_ptr<one::Generator> generator, const py::object& seed) -> Maybe<void> {
+             int64_t seed_val = JUST(one::functional::PyUnpackLong(seed.ptr()));
              generator->set_current_seed(seed_val);
+             return Maybe<void>::Ok();
            })
       .def("initial_seed", &one::Generator::current_seed)
       .def("seed", &one::Generator::seed)
@@ -58,13 +48,14 @@ ONEFLOW_API_PYBIND11_MODULE("", m) {
       .def("set_state", &one::Generator::SetState);
 
   m.def("manual_seed", [](const py::object& seed) -> Maybe<one::Generator> {
-    int64_t seed_val = UnpackLong(seed.ptr());
+    int64_t seed_val = JUST(one::functional::PyUnpackLong(seed.ptr()));
     return one::ManualSeed(seed_val);
   });
-  m.def("manual_seed", [](const py::object& seed, const std::string& device, int device_index) {
-    int64_t seed_val = UnpackLong(seed.ptr());
-    return one::ManualSeed(seed_val, device, device_index);
-  });
+  m.def("manual_seed",
+        [](const py::object& seed, const std::string& device, int device_index) -> Maybe<void> {
+          int64_t seed_val = JUST(one::functional::PyUnpackLong(seed.ptr()));
+          return one::ManualSeed(seed_val, device, device_index);
+        });
   m.def("create_generator", &CreateGenerator);
   m.def("default_generator", [](const std::string& device_tag) -> Maybe<one::Generator> {
     std::string device_name = "";
@@ -72,8 +63,8 @@ ONEFLOW_API_PYBIND11_MODULE("", m) {
     JUST(ParsingDeviceTag(device_tag, &device_name, &device_index));
     return one::DefaultGenerator(device_name, device_index);
   });
-  m.def("ManualSeedAllCudaGenerator", [](const py::object& seed) {
-    int64_t seed_val = UnpackLong(seed.ptr());
+  m.def("ManualSeedAllCudaGenerator", [](const py::object& seed) -> Maybe<void> {
+    int64_t seed_val = JUST(one::functional::PyUnpackLong(seed.ptr()));
     return one::ManualSeedAllCudaGenerator(seed_val);
   });
 }

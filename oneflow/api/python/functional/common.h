@@ -169,6 +169,9 @@ Maybe<TensorIndex> PyUnpackTensorIndex(PyObject* obj);
 bool PyOpExprCheck(PyObject* obj);
 Maybe<OpExpr> PyUnpackOpExpr(PyObject* obj);
 
+// int64_t
+Maybe<int64_t> PyUnpackLong(PyObject* py_obj);
+
 }  // namespace functional
 }  // namespace one
 }  // namespace oneflow
