@@ -146,6 +146,7 @@ oneflow
             tan, 
             tanh, 
             tensor, 
+            tensordot,
             tile, 
             transpose,
             t,

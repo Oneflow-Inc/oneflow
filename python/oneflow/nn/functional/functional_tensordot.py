@@ -19,7 +19,7 @@ from typing import Union, List, Tuple
 # oneflow._C.max_poolXd returns a TensorTuple, to align torch,
 # here we return different result according to the param `return_indices`.
 def tensordot(a, b, dims: Union[int, List[List[int]]] = 2):
-    if not isinstance(dims, (oneflow.Tensor, int, list, tuple)):
+    if not isinstance(dims, (oneflow._oneflow_internal.Tensor, int, list, tuple)):
         raise TypeError(
             f"oneflow.tensordot expects dims to be one of oneflow.Tensor, int, List[List[int]] or Tuple[List[int], List[int]], but got {type(dims)}"
         )
@@ -29,7 +29,7 @@ def tensordot(a, b, dims: Union[int, List[List[int]]] = 2):
         dim_a = list(range(a.dim() - dims, a.dim()))
         dim_b = list(range(dims))
 
-    elif isinstance(dims, (list, tuple, oneflow.Tensor)):
+    elif isinstance(dims, (list, tuple, oneflow._oneflow_internal.Tensor)):
         assert len(dims) == 2
         dim_a = list(dims[0])
         dim_b = list(dims[1])
