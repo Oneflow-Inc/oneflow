@@ -26,16 +26,23 @@ from oneflow.test_utils.test_util import GenArgDict
 
 
 def _test_consistent_constant(test_case, func, shape, placement, sbp):
+    func2 = None
     if func == "ones":
         func = flow.ones
         np_res = np.ones(shape)
     elif func == "zeros":
         func = flow.zeros
         np_res = np.zeros(shape)
+    elif func == "new_zeros":
+        func = flow.zeros
+        np_res = np.zeros(shape)
+        func2 = flow.new_zeros
     else:
         raise NotImplementedError
 
     x = func(*shape, placement=placement, sbp=sbp)
+    if func2:
+        x = func2(x)
 
     test_case.assertEqual(x.shape, flow.Size(shape))
     test_case.assertEqual(x.sbp, sbp)
@@ -49,12 +56,17 @@ def _test_consistent_constant(test_case, func, shape, placement, sbp):
 
 
 def _test_graph_constant(test_case, func, shape, placement, sbp):
+    func2 = None
     if func == "ones":
         func = flow.ones
         np_res = np.ones(shape)
     elif func == "zeros":
         func = flow.zeros
         np_res = np.zeros(shape)
+    elif func == "new_zeros":
+        func = flow.zeros
+        np_res = np.zeros(shape)
+        func2 = flow.new_zeros
     else:
         raise NotImplementedError
 
@@ -64,6 +76,8 @@ def _test_graph_constant(test_case, func, shape, placement, sbp):
 
         def build(self):
             x = func(*shape, placement=placement, sbp=sbp)
+            if func2:
+                x = func2(x)
             return x
 
     model = ConsistentConstantGraph()
@@ -87,6 +101,7 @@ class TestConstantConsistent(flow.unittest.TestCase):
         functions = [
             "ones",
             "zeros",
+            "new_zeros",
         ]
         for func in functions:
             for shape in shapes:
@@ -102,10 +117,7 @@ class TestConstantConsistent(flow.unittest.TestCase):
     @flow.unittest.skip_unless_1n2d()
     def test_constant_graph(test_case):
         arg_dict = OrderedDict()
-        arg_dict["func"] = [
-            "ones",
-            "zeros",
-        ]
+        arg_dict["func"] = ["ones", "zeros", "new_zeros"]
         arg_dict["shape"] = [(8,), (8, 8,), (8, 8, 8)]
         arg_dict["placement"] = [
             # 1d

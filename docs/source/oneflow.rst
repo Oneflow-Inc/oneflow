@@ -166,6 +166,7 @@ oneflow
             set_printoptions,
             decode_onerec,
             from_numpy,
+            as_tensor,
             cumsum,
             topk,
             nms,
@@ -183,6 +184,8 @@ oneflow
             initial_seed,
             get_rng_state,
             set_rng_state,
+            isnan,
+            isinf
 
 .. autofunction:: oneflow.relu
 .. autofunction:: oneflow.set_num_threads
