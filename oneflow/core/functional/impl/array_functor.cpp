@@ -15,6 +15,7 @@ limitations under the License.
 */
 
 #include "oneflow/core/autograd/autograd_mode.h"
+#include "oneflow/core/common/data_type.pb.h"
 #include "oneflow/core/common/maybe.h"
 #include "oneflow/core/common/scalar.h"
 #include "oneflow/core/common/global.h"
@@ -35,6 +36,7 @@ limitations under the License.
 #include "oneflow/core/framework/random_generator_impl.h"
 #include "oneflow/core/functional/functional.h"
 #include "oneflow/core/functional/function_library.h"
+#include "oneflow/core/functional/functional_api.yaml.h"
 #include "oneflow/core/functional/sequence_function.h"
 #include "oneflow/core/functional/impl/common.h"
 #include "oneflow/core/functional/impl/unary_functor.h"
@@ -2400,8 +2402,38 @@ class MeshgridFunctor {
   }
 };
 
-namespace {
+class IndexSelectFunctor {
+ public:
+  Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& input, const int64_t& dim,
+                           const std::shared_ptr<one::Tensor>& index) const {
+    const int64_t input_num_axes = input->shape()->NumAxes();
+    const int64_t index_num_axes = index->shape()->NumAxes();
+    CHECK_EQ_OR_RETURN(index_num_axes, 1)
+        << "IndexError: index_select(): Index is supposed to be a vector";
+    CHECK_EQ_OR_RETURN(index->dtype()->data_type(), kInt64)
+        << "RuntimeError: index_select(): Expected dtype int32 or int64 for index";
+    CHECK_LE_OR_RETURN(dim, input_num_axes)
+        << "IndexError: Dimension out of range (expected to be in range of [" << -input_num_axes
+        << ", " << input_num_axes - 1 << "], but got " << dim << ")";
+    int64_t new_dim = dim;
+    if (dim < 0) { new_dim += input_num_axes; }
+    DimVector index_broad_cast(input_num_axes);
+    for (int i = 0; i < input_num_axes; i++) { index_broad_cast[i] = input->shape()->At(i); }
+    index_broad_cast[new_dim] = 1;
+    auto index_gather = JUST(
+        functional::Expand(JUST(functional::Slice(index, {0}, {1}, {1})), Shape(index_broad_cast)));
+    for (int i = 1; i < index->dim(0); i++) {
+      index_gather = JUST(functional::Concat(
+          {index_gather, JUST(functional::Expand(JUST(functional::Slice(index, {i}, {i + 1}, {1})),
+                                                 Shape(index_broad_cast)))},
+          new_dim));
+    }
 
+    return JUST(functional::DimGather(input, new_dim, index_gather, false));
+  }
+};
+
+namespace {
 inline Maybe<bool> device_equal(const std::string& device_name, const int device_id,
                                 Symbol<Device> device) {
   return (device_name == device->type() && device_id == device->device_id());
@@ -2814,6 +2846,7 @@ ONEFLOW_FUNCTION_LIBRARY(m) {
   m.add_functor<impl::UnsortedBatchSegmentSumFunctor>("UnsortedBatchSegmentSum");
   m.add_functor<impl::MaskedFillFunctor>("MaskedFill");
   m.add_functor<impl::MeshgridFunctor>("Meshgrid");
+  m.add_functor<impl::IndexSelectFunctor>("IndexSelect");
   m.add_functor<impl::ToFunctor, impl::To2Functor, impl::To3Functor, impl::To4Functor>("To");
   m.add_functor<impl::TopKFunctor>("TopK");
   m.add_functor<impl::InTopKFunctor>("InTopK");
