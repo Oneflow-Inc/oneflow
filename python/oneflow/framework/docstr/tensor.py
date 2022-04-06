@@ -425,6 +425,13 @@ add_docstr(
 )
 
 add_docstr(
+    oneflow.Tensor.squeeze_,
+    """
+    In-place version of :func:`oneflow.Tensor.squeeze`
+    """,
+)
+
+add_docstr(
     oneflow.Tensor.unfold,
     """
     The interface is consistent with PyTorch.

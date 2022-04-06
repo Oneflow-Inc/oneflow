@@ -701,6 +701,49 @@ class SqueezeFunctor {
   std::shared_ptr<OpExpr> op_;
 };
 
+class InplaceSqueezeFunctor {
+ public:
+  InplaceSqueezeFunctor() {
+    op_ = CHECK_JUST(one::OpBuilder("squeeze").Input("in").Output("out").Build());
+  }
+  Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& input,
+                           const Optional<std::vector<int32_t>>& dim) const {
+    JUST(CheckInplaceValid(input));
+    int32_t ndim = input->shape()->NumAxes();
+    std::vector<int32_t> squeeze_dims;
+    squeeze_dims.reserve(ndim);
+    if (dim.has_value()) {
+      std::vector<int32_t> dims = *JUST(dim);
+      for (int32_t dim_i : dims) {
+        CHECK_OR_RETURN((dim_i >= -ndim) && (dim_i <= ndim - 1))
+            << "Dimension out of range (expected to be in range of  [" << -ndim << "," << ndim - 1
+            << "], but got " << dim_i;
+        if (dim_i < 0) { dim_i += ndim; }
+        if (input->shape()->At(dim_i) == 1) { squeeze_dims.emplace_back(dim_i); }
+      }
+    } else {
+      for (int i = 0; i < ndim; ++i) {
+        if (input->shape()->At(i) == 1) { squeeze_dims.emplace_back(i); }
+      }
+    }
+    
+    MutableAttrMap attrs;
+    JUST(attrs.SetAttr<std::vector<int32_t>>("axes", squeeze_dims));
+
+    if (view::IsViewApplicable(input)) { 
+      return view::Squeeze(input, squeeze_dims); 
+    } else {
+      auto outputs = std::make_shared<TensorTuple>(1);
+      outputs->at(0) = input;
+      JUST(OpInterpUtil::Dispatch(*op_, {input}, outputs.get(), attrs));
+      return outputs->at(0);
+    }
+  }
+
+ private:
+  std::shared_ptr<OpExpr> op_;
+};
+
 class RollFunctor {
  public:
   RollFunctor() { op_ = CHECK_JUST(one::OpBuilder("roll").Input("in").Output("out").Build()); }
@@ -2740,6 +2783,7 @@ ONEFLOW_FUNCTION_LIBRARY(m) {
   m.add_functor<impl::ExpandDimsFunctor>("ExpandDims");
   m.add_functor<impl::ExpandDimsFunctor>("Unsqueeze");
   m.add_functor<impl::SqueezeFunctor>("Squeeze");
+  m.add_functor<impl::InplaceSqueezeFunctor>("InplaceSqueeze");
   m.add_functor<impl::RollFunctor>("Roll");
   m.add_functor<impl::GatherFunctor>("Gather");
   m.add_functor<impl::DimGatherFunctor>("DimGather");
