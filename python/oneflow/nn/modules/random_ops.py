@@ -514,6 +514,33 @@ def normal_op(
     device: Union[flow.device, str, None] = None,
     requires_grad: bool = False
 ):
+    r"""
+    Returns a tensor of random numbers drawn from separate normal distributions whose mean and standard deviation are given.
+
+    Args:
+        mean (float):  the mean for all distributions
+        std (float):  the standard deviation for all distributions
+        size (int...):  a sequence of integers defining the shape of the output tensor.
+
+    Keyword args:
+        out (Tensor, optional):  the output tensor.
+        generator(:class:`oneflow.Generator`, optional):  a pseudorandom number generator for sampling
+        dtype (:class:`oneflow.dtype`, optional): the desired data type of returned tensor.
+            Default: `oneflow.float32`.
+        device: the desired device of returned tensor. Default: cpu.
+        requires_grad(bool, optional): If autograd should record operations on the returned tensor. Default: False.
+
+    Example:
+
+    .. code-block:: python
+
+        >>> import oneflow as flow
+        >>> generator = flow.Generator()
+        >>> generator.manual_seed(0)
+        >>> y = flow.normal(0, 1, 5, generator=generator)
+        >>> y
+        tensor([2.2122, 1.1631, 0.7740, 0.4838, 1.0434], dtype=oneflow.float32)
+    """
     size = _handle_size_arg(size)
     size = _single(size)
     return flow._C.normal(

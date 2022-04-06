@@ -98,6 +98,7 @@ oneflow
             negative, 
             new_ones,
             nonzero,
+            normal,
             numel, 
             ne, 
             empty,
