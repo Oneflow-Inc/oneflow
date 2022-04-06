@@ -73,7 +73,7 @@ Maybe<double> ComputCopyCostBetweenTwoSbpParallel(const SbpParallel& producer_sb
     // arbitrary i.
     if (consumer_sbp_parallel.has_partial_sum_parallel()) { return 1.0; }
 
-    double logical_blob_size =
+    size_t logical_blob_size =
         logical_blob_desc.shape().elem_cnt() * GetSizeOfDataType(logical_blob_desc.data_type());
     // has S
     TransferCostHelper::Type transfer_type;
@@ -107,7 +107,7 @@ Maybe<double> ComputCopyCostBetweenTwoSbpParallel(const SbpParallel& producer_sb
       }
     }
 
-    double logical_blob_size =
+    size_t logical_blob_size =
         logical_blob_desc.shape().elem_cnt() * GetSizeOfDataType(logical_blob_desc.data_type());
     double overall_cost = logical_blob_size;
     // ? -> B
