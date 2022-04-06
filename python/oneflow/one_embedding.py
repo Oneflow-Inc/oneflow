@@ -72,7 +72,7 @@ class MultiTableEmbedding(Module):
         >>> import numpy as np
         >>> import oneflow.nn as nn
         >>> # a simple example with 3 table
-        >>> table_size_array = [39884407,39043,17289]
+        >>> table_size_array = [39884407, 39043, 17289]
         >>> vocab_size = sum(table_size_array)
         >>> num_tables = len(table_size_array)
         >>> embedding_size = 128
@@ -272,7 +272,7 @@ class MultiTableEmbedding(Module):
         """save snapshot
 
         Args:
-            snapshot_name (str): the snapshot_name, snapshot will be saved in persistent_path/rank_id-num_rank/snapshots path
+            snapshot_name (str): the snapshot_name, snapshot will be saved in the snapshots dir under your_configed_persistent_path
     
         For example:
 
@@ -281,8 +281,8 @@ class MultiTableEmbedding(Module):
             >>> import oneflow as flow
             >>> # use embedding create by flow.one_embedding.MultiTableEmbedding
             >>> embedding.save_snapshot("my_snapshot1")
-            >>> # a snapshot named "my_snapshot1" have been saved to  your_configed_persistent_path/rank_id-num_rank/snapshots
-            >>> # can be reload by flow.one_embedding.load_snapshot
+            >>> # a snapshot named "my_snapshot1" have been saved in the "snapshots" dir under your_configed_persistent_path
+            >>> # which can be reload by flow.one_embedding.load_snapshot
         """
         self.handler.SaveSnapshot(snapshot_name)
 
@@ -290,7 +290,7 @@ class MultiTableEmbedding(Module):
         """load snapshot
 
         Args:
-            snapshot_name (str): the snapshot_name, snapshot will be load from persistent_path/rank_id-num_rank/snapshots path
+            snapshot_name (str): the snapshot_name, snapshot will be load from your_configed_persistent_path
     
         For example:
 
@@ -299,7 +299,7 @@ class MultiTableEmbedding(Module):
             >>> import oneflow as flow
             >>> # use embedding create by flow.one_embedding.MultiTableEmbedding
             >>> embedding.load_snapshot("my_snapshot1")
-            >>> # load a snapshot named "my_snapshot1" from your_configed_persistent_path/rank_id-num_rank/snapshots
+            >>> # load a snapshot named "my_snapshot1" from your_configed_persistent_path
         """
         self.handler.LoadSnapshot(snapshot_name)
 
@@ -323,7 +323,7 @@ def make_device_mem_store_options(
     """make GPU only store_options param of MultiTableEmbedding
 
     Args:
-        persistent_path (str, list): persistent storage path of Embedding
+        persistent_path (str, list): persistent storage path of Embedding. If passed a str, current rank Embedding will be saved in path/rank_id-num_ranks path. If passed a list, the list length must equals num_ranks, each elem of list represent the path of rank_id Embedding.
         capacity (int): total capacity of Embedding
         size_factor (int, optional): store size factor of embedding_dim, if SGD update, and momentum = 0, should be 1, if momentum > 0, it should be 2. if Adam, should be 3. Defaults to 1.
         physical_block_size (int, optional): physical_block_size should be sector size. Defaults to 512.
@@ -331,7 +331,7 @@ def make_device_mem_store_options(
     Returns:
         dict: GPU only store_options param of MultiTableEmbedding
 
-    See :func:`oneflow.one_embedding.make_cached_ssd_store_options`
+    See also :func:`oneflow.one_embedding.make_cached_ssd_store_options`
     """
 
     assert isinstance(persistent_path, (str, list, tuple))
@@ -366,8 +366,8 @@ def make_cached_ssd_store_options(
     """make SSD use GPU as cache store_options param of MultiTableEmbedding
 
     Args:
-        cache_budget_mb (int): the mb budget of per GPU as cache
-        persistent_path (str, list): persistent storage path of Embedding, must use fast SSD because of frequently random disk access during training
+        cache_budget_mb (int): the mb budget of per GPU as cache.
+        persistent_path (str, list): persistent storage path of Embedding, must use fast SSD because of frequently random disk access during training. If passed a str, current rank Embedding will be saved in path/rank_id-num_ranks path. If passed a list, the list length must equals num_ranks, each elem of list represent the path of rank_id Embedding.
         capacity (int): total capacity of Embedding
         size_factor (int, optional): store size factor of embedding_dim, if SGD update, and momentum = 0, should be 1, if momentum > 0, it should be 2. if Adam, should be 3. Defaults to 1.
         physical_block_size (int, optional): physical_block_size should be sector size. Defaults to 512.
@@ -384,6 +384,7 @@ def make_cached_ssd_store_options(
         >>>     cache_budget_mb=8192, persistent_path="/your_path_to_ssd", capacity=vocab_size,
         >>> )
         >>> # pass the store_options to the "store_options" param of flow.one_embedding.MultiTableEmbedding
+        >>> # ...
     """
     assert isinstance(persistent_path, (str, list, tuple))
     assert cache_budget_mb > 0
@@ -418,7 +419,7 @@ def make_cached_host_mem_store_options(
 
     Args:
         cache_budget_mb (int): the mb budget of per GPU as cache
-        persistent_path (str, list): persistent storage path of Embedding
+        persistent_path (str, list): persistent storage path of Embedding. If passed a str, current rank Embedding will be saved in path/rank_id-num_ranks path. If passed a list, the list length must equals num_ranks, each elem of list represent the path of rank_id Embedding.
         capacity (int): total capacity of Embedding
         size_factor (int, optional): store size factor of embedding_dim, if SGD update, and momentum = 0, should be 1, if momentum > 0, it should be 2. if Adam, should be 3. Defaults to 1.
         physical_block_size (int, optional): physical_block_size should be sector size. Defaults to 512.
@@ -426,7 +427,7 @@ def make_cached_host_mem_store_options(
     Returns:
         dict: host use GPU as cache store_options param of MultiTableEmbedding
 
-    See :func:`oneflow.one_embedding.make_cached_ssd_store_options`
+    See also :func:`oneflow.one_embedding.make_cached_ssd_store_options`
     """
     assert isinstance(persistent_path, (str, list, tuple))
     assert cache_budget_mb > 0
@@ -473,6 +474,7 @@ def make_uniform_initializer(low, high):
         >>> import oneflow as flow
         >>> initializer = flow.one_embedding.make_uniform_initializer(low=-scale, high=scale)
         >>> # pass the initializer to flow.one_embedding.make_table
+        >>> # ...
     """
     return {"type": "uniform", "low": low, "high": high}
 
@@ -494,6 +496,7 @@ def make_normal_initializer(mean, std):
         >>> import oneflow as flow
         >>> initializer = flow.one_embedding.make_normal_initializer(mean=0, std=0.01)
         >>> # pass the initializer to flow.one_embedding.make_table
+        >>> # ...
     """
     return {"type": "normal", "mean": mean, "std": std}
 
@@ -517,6 +520,7 @@ def make_table(initializer):
         >>> table2 = flow.one_embedding.make_table(initializer)
         >>> tables = [table1, table2]
         >>> # pass the tables to the "tables" param of flow.one_embedding.MultiTableEmbedding
+        >>> # ...
         
     """
     return {"initializer": initializer}
