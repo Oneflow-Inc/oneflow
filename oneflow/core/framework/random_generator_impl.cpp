@@ -359,7 +359,7 @@ Maybe<void> AutoGeneratorImpl::SetState(const std::shared_ptr<Tensor>& tensor_st
     JUST(ParsingDeviceTag(splits.at(i), &device_name, &device_index));
     detail::DeviceKey device_key;
     const auto& device = JUST(Device::New(device_name, device_index));
-    device_key.device_type = JUST(DeviceType4DeviceTag(JUST(device->of_type())));
+    device_key.device_type = JUST(DeviceType4DeviceTag(device->type()));
     device_key.device_index = device_index;
     auto it = generators_.find(device_key);
     if (it == generators_.end()) {
