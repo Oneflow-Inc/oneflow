@@ -23,15 +23,14 @@ limitations under the License.
 #include "oneflow/core/cuda/atomic.cuh"
 #include "oneflow/core/ep/include/primitive/copy_nd.h"
 #include "oneflow/core/ep/include/primitive/cast.h"
+#include "oneflow/core/ep/include/primitive/memcpy.h"
+#include "oneflow/core/common/str_util.h"
 
 namespace oneflow {
 
 namespace {
 
-enum class InitializerType {
-  kUniform,
-  kNormal,
-};
+enum class InitializerType { kUniform, kNormal, kZero };
 
 struct EmbeddingInitializer {
   InitializerType type;
@@ -47,54 +46,116 @@ struct EmbeddingInitializer {
   };
 };
 
-struct EmbeddingColumn {
+struct EmbeddingTable {
   EmbeddingInitializer initializer;
 };
 
-constexpr size_t kMaxColumns = 128;
+constexpr size_t kMaxTables = 128;
 
-struct ColumnsParam {
-  int32_t num_columns = 0;
-  EmbeddingColumn columns[kMaxColumns];
+struct TablesParam {
+  int32_t num_tables = 0;
+  EmbeddingTable tables[kMaxTables];
 };
 
-void ParseColumnFromJson(const nlohmann::json& initializer, EmbeddingColumn* embedding_column) {
+struct InitializersParam {
+  int32_t num_initializers = 0;
+  EmbeddingInitializer initializers[kMaxTables];
+};
+
+void ParseTableFromJson(const nlohmann::json& initializer, EmbeddingTable* embedding_table) {
   CHECK(initializer.contains("type"));
   CHECK(initializer["type"].is_string());
   std::string type = initializer["type"].get<std::string>();
   if (type == "uniform") {
-    embedding_column->initializer.type = InitializerType::kUniform;
+    embedding_table->initializer.type = InitializerType::kUniform;
     CHECK(initializer.contains("low"));
     CHECK(initializer.contains("high"));
     CHECK(initializer["low"].is_number());
     CHECK(initializer["high"].is_number());
-    embedding_column->initializer.uniform_param.low = initializer["low"];
-    embedding_column->initializer.uniform_param.high = initializer["high"];
+    embedding_table->initializer.uniform_param.low = initializer["low"];
+    embedding_table->initializer.uniform_param.high = initializer["high"];
   } else if (type == "normal") {
     CHECK(initializer.contains("mean"));
     CHECK(initializer.contains("std"));
     CHECK(initializer["mean"].is_number());
     CHECK(initializer["std"].is_number());
-    embedding_column->initializer.type = InitializerType::kNormal;
-    embedding_column->initializer.normal_param.mean = initializer["mean"];
-    embedding_column->initializer.normal_param.std = initializer["std"];
+    embedding_table->initializer.type = InitializerType::kNormal;
+    embedding_table->initializer.normal_param.mean = initializer["mean"];
+    embedding_table->initializer.normal_param.std = initializer["std"];
   } else {
     UNIMPLEMENTED();
   }
 }
 
-void ParseEmbeddingColumns(const std::string& json_serialized, ColumnsParam* param) {
+void ParseEmbeddingTables(const std::string& json_serialized, TablesParam* param) {
   auto json_object = nlohmann::json::parse(json_serialized);
-  CHECK(json_object.contains("columns"));
-  auto columns = json_object["columns"];
-  CHECK(columns.is_array());
-  CHECK_LE(columns.size(), kMaxColumns);
-  for (int32_t i = 0; i < columns.size(); ++i) {
-    auto column = columns.at(i);
-    CHECK(column.contains("initializer"));
-    ParseColumnFromJson(column["initializer"], &(param->columns[i]));
+  CHECK(json_object.contains("tables"));
+  auto tables = json_object["tables"];
+  CHECK(tables.is_array());
+  CHECK_LE(tables.size(), kMaxTables);
+  for (int32_t i = 0; i < tables.size(); ++i) {
+    auto table = tables.at(i);
+    CHECK(table.contains("initializer"));
+    ParseTableFromJson(table["initializer"], &(param->tables[i]));
   }
-  param->num_columns = columns.size();
+  param->num_tables = tables.size();
+}
+
+void ParseInitializerFromJson(const nlohmann::json& initializer,
+                              EmbeddingInitializer* embedding_initializer) {
+  CHECK(initializer.contains("type"));
+  CHECK(initializer["type"].is_string());
+  std::string type = initializer["type"].get<std::string>();
+  if (type == "uniform") {
+    embedding_initializer->type = InitializerType::kUniform;
+    CHECK(initializer.contains("low"));
+    CHECK(initializer.contains("high"));
+    CHECK(initializer["low"].is_number());
+    CHECK(initializer["high"].is_number());
+    embedding_initializer->uniform_param.low = initializer["low"];
+    embedding_initializer->uniform_param.high = initializer["high"];
+  } else if (type == "normal") {
+    CHECK(initializer.contains("mean"));
+    CHECK(initializer.contains("std"));
+    CHECK(initializer["mean"].is_number());
+    CHECK(initializer["std"].is_number());
+    embedding_initializer->type = InitializerType::kNormal;
+    embedding_initializer->normal_param.mean = initializer["mean"];
+    embedding_initializer->normal_param.std = initializer["std"];
+  } else {
+    UNIMPLEMENTED();
+  }
+}
+
+void ParseInitializers(const int32_t line_size, const int32_t embedding_size,
+                       const std::string& json_serialized, InitializersParam* param,
+                       int8_t* host_initializer_index, int8_t* device_initializer_index) {
+  auto json_object = nlohmann::json::parse(json_serialized);
+  CHECK(json_object.contains("tables"));
+  auto tables = json_object["tables"];
+  CHECK(tables.is_array());
+  CHECK_LE(tables.size(), kMaxTables);
+  for (int32_t i = 0; i < tables.size(); ++i) {
+    auto table = tables.at(i);
+    CHECK(table.contains("initializer"));
+    ParseInitializerFromJson(table["initializer"], &(param->initializers[i]));
+  }
+  param->initializers[tables.size()].type = InitializerType::kZero;
+  const size_t initializer_index_size = tables.size() * line_size * sizeof(int8_t);
+  // OF_CUDA_CHECK(cudaMallocHost(&host_initializer_index, initializer_index_size));
+  // OF_CUDA_CHECK(cudaMalloc(&device_initializer_index, initializer_index_size));
+  for (int32_t i = 0; i < tables.size(); ++i) {
+    for (int32_t j = 0; j < line_size; ++j) {
+      if (j < embedding_size) {
+        host_initializer_index[i * line_size + j] = i;
+      } else {
+        host_initializer_index[i * line_size + j] = tables.size();
+      }
+    }
+  }
+  param->num_initializers = tables.size() + 1;
+  OF_CUDA_CHECK(cudaMemcpy(device_initializer_index, host_initializer_index, initializer_index_size,
+                           cudaMemcpyDefault));
 }
 
 template<typename IDX>
@@ -104,16 +165,25 @@ class EmbeddingKernelState final : public user_op::OpKernelState {
       : device_index_(-1), generator_(CHECK_JUST(one::MakeGenerator(DeviceType::kCUDA))) {
     OF_CUDA_CHECK(cudaGetDevice(&device_index_));
     OF_CUDA_CHECK(cudaMallocHost(&host_num_keys_, sizeof(IDX)));
-    ParseEmbeddingColumns(ctx->Attr<std::string>("embedding_columns"), &columns_param_);
+    ParseEmbeddingTables(ctx->Attr<std::string>("embedding_tables"), &tables_param_);
     key_value_store_ = Global<embedding::EmbeddingManager>::Get()->GetKeyValueStore(
         ctx->Attr<std::string>("embedding_name"), ctx->parallel_ctx().parallel_id());
     uint32_t max_query_length =
         ctx->TensorDesc4ArgNameAndIndex("unique_ids", 0)->shape().elem_cnt();
     key_value_store_->ReserveQueryLength(max_query_length);
+
+    const int64_t embedding_size = ctx->Attr<int64_t>("embedding_size");
+    const int64_t line_size = ctx->Attr<int64_t>("line_size");
+    OF_CUDA_CHECK(cudaMallocHost(&host_initializer_index_, 26 * 128 * sizeof(int8_t)));
+    OF_CUDA_CHECK(cudaMalloc(&device_initializer_index_, 26 * 128 * sizeof(int8_t)));
+    ParseInitializers(line_size, embedding_size, ctx->Attr<std::string>("embedding_tables"),
+                      &initializers_param_, host_initializer_index_, device_initializer_index_);
   }
   ~EmbeddingKernelState() override {
     CudaCurrentDeviceGuard guard(device_index_);
     OF_CUDA_CHECK(cudaFreeHost(host_num_keys_));
+    OF_CUDA_CHECK(cudaFreeHost(host_initializer_index_));
+    OF_CUDA_CHECK(cudaFree(device_initializer_index_));
   }
 
   void* HostNumKeys() { return host_num_keys_; }
@@ -122,14 +192,19 @@ class EmbeddingKernelState final : public user_op::OpKernelState {
 
   one::Generator* generator() { return generator_.get(); }
 
-  const ColumnsParam& Columns() { return columns_param_; }
+  const int8_t* InitializerIndex() { return device_initializer_index_; }
+  const InitializersParam& Initializers() { return initializers_param_; }
 
  private:
   int device_index_;
   void* host_num_keys_;
   std::shared_ptr<one::Generator> generator_;
   embedding::KeyValueStore* key_value_store_;
-  ColumnsParam columns_param_;
+  TablesParam tables_param_;
+
+  InitializersParam initializers_param_;
+  int8_t* host_initializer_index_;
+  int8_t* device_initializer_index_;
 };
 
 template<typename IDX>
@@ -197,9 +272,10 @@ class EmbeddingTmpBufferManager final {
 template<typename T, typename U>
 __global__ void InitValueKernel(uint64_t seed, one::CUDAGeneratorState* cuda_gen_state,
                                 uint64_t inc_offset, const int32_t line_size,
-                                const int32_t embedding_size, ColumnsParam param,
-                                const U* column_ids, const uint32_t* num_missing_keys,
-                                const uint32_t* missing_indices, T* values) {
+                                const int32_t embedding_size, InitializersParam param,
+                                const int8_t* initializer_index, const U* table_ids,
+                                const uint32_t* num_missing_keys, const uint32_t* missing_indices,
+                                T* values) {
   int32_t global_thread_id = blockIdx.x * blockDim.x + threadIdx.x;
   curandStatePhilox4_32_10_t state;
   curand_init(seed, global_thread_id, cuda_gen_state->dev_offset, &state);
@@ -209,22 +285,23 @@ __global__ void InitValueKernel(uint64_t seed, one::CUDAGeneratorState* cuda_gen
     int col = i - row * line_size;
     const uint32_t index = missing_indices[row];
     const int64_t offset = index * line_size + col;
-    const int32_t column_idx = column_ids[index];
-    assert(column_idx < param.num_columns);
-    EmbeddingInitializer initializer = param.columns[column_idx].initializer;
-    T value = 0;
-    if (col < embedding_size) {
-      if (initializer.type == InitializerType::kUniform) {
-        const float low = initializer.uniform_param.low;
-        const float high = initializer.uniform_param.high;
-        value = curand_uniform(&state) * (high - low) + low;
-      } else if (initializer.type == InitializerType::kNormal) {
-        const float mean = initializer.normal_param.mean;
-        const float std = initializer.normal_param.std;
-        value = (curand_normal(&state) + mean) / std;
-      } else {
-        __trap();
-      }
+    const int32_t table_idx = table_ids[index];
+    const int32_t initializer_idx = initializer_index[table_idx * line_size + col];
+    assert(initializer_idx < param.num_initializers);
+    EmbeddingInitializer initializer = param.initializers[initializer_idx];
+    T value;
+    if (initializer.type == InitializerType::kUniform) {
+      const float low = initializer.uniform_param.low;
+      const float high = initializer.uniform_param.high;
+      value = curand_uniform(&state) * (high - low) + low;
+    } else if (initializer.type == InitializerType::kNormal) {
+      const float mean = initializer.normal_param.mean;
+      const float std = initializer.normal_param.std;
+      value = (curand_normal(&state) + mean) / std;
+    } else if (initializer.type == InitializerType::kZero) {
+      value = 0;
+    } else {
+      __trap();
     }
     values[offset] = value;
   }
@@ -242,7 +319,7 @@ template<typename T, typename U, typename IDX>
 void LookupAndInitMissing(ep::Stream* stream, EmbeddingKernelState<IDX>* embedding_state,
                           const int64_t num_ids, const int32_t embedding_size,
                           const int32_t line_size, const void* num_unique_ptr,
-                          const void* unique_ids, const void* column_ids, T* values_ptr,
+                          const void* unique_ids, const void* table_ids, T* values_ptr,
                           void* tmp_buffer_ptr, uint32_t* return_num_unique,
                           const bool put_to_kv_store) {
   const auto& generator = embedding_state->generator();
@@ -252,7 +329,8 @@ void LookupAndInitMissing(ep::Stream* stream, EmbeddingKernelState<IDX>* embeddi
   uint64_t seed = cuda_generator->current_seed();
   one::CUDAGeneratorState* cuda_gen_state = cuda_generator->cuda_gen_state();
   embedding::KeyValueStore* store = embedding_state->KeyValueStore();
-  const ColumnsParam& param = embedding_state->Columns();
+  const InitializersParam& param = embedding_state->Initializers();
+  const int8_t* initializer_index = embedding_state->InitializerIndex();
   bool need_value_buffer = (values_ptr == nullptr);
   EmbeddingTmpBufferManager buffer_manager(tmp_buffer_ptr, num_ids, line_size * sizeof(T),
                                            need_value_buffer);
@@ -280,8 +358,8 @@ void LookupAndInitMissing(ep::Stream* stream, EmbeddingKernelState<IDX>* embeddi
     const uint64_t inc_offset = std::ceil(elem_cnt / num_blocks / kCudaThreadsNumPerBlock);
     InitValueKernel<T, U>
         <<<num_blocks, kCudaThreadsNumPerBlock, 0, stream->As<ep::CudaStream>()->cuda_stream()>>>(
-            seed, cuda_gen_state, inc_offset, line_size, embedding_size, param,
-            reinterpret_cast<const U*>(column_ids), num_missing_ptr, missing_indices, store_values);
+            seed, cuda_gen_state, inc_offset, line_size, embedding_size, param, initializer_index,
+            reinterpret_cast<const U*>(table_ids), num_missing_ptr, missing_indices, store_values);
   }
   if (put_to_kv_store) { store->Put(stream, num_unique, unique_ids, store_values); }
   *return_num_unique = num_unique;
@@ -359,7 +437,7 @@ class EmbeddingPrefetchKernel final : public user_op::OpKernel {
 
     const user_op::Tensor* num_unique_ids = ctx->Tensor4ArgNameAndIndex("num_unique_ids", 0);
     const user_op::Tensor* unique_ids = ctx->Tensor4ArgNameAndIndex("unique_ids", 0);
-    const user_op::Tensor* column_ids = ctx->Tensor4ArgNameAndIndex("column_ids", 0);
+    const user_op::Tensor* table_ids = ctx->Tensor4ArgNameAndIndex("table_ids", 0);
     user_op::Tensor* tmp_buffer = ctx->Tensor4ArgNameAndIndex("tmp_buffer", 0);
     const int64_t embedding_size = ctx->Attr<int64_t>("embedding_size");
     const int64_t line_size = ctx->Attr<int64_t>("line_size");
@@ -367,7 +445,7 @@ class EmbeddingPrefetchKernel final : public user_op::OpKernel {
     T* values_ptr = nullptr;
     LookupAndInitMissing<T, U, IDX>(ctx->stream(), embedding_state, unique_ids->shape().elem_cnt(),
                                     embedding_size, line_size, num_unique_ids->dptr(),
-                                    unique_ids->dptr(), column_ids->dptr(), values_ptr,
+                                    unique_ids->dptr(), table_ids->dptr(), values_ptr,
                                     tmp_buffer->mut_dptr(), &num_unique, true);
   }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
@@ -385,21 +463,21 @@ class EmbeddingPrefetchKernel final : public user_op::OpKernel {
   OF_PP_MAKE_TUPLE_SEQ(uint32_t, DataType::kUInt32) \
   OF_PP_MAKE_TUPLE_SEQ(int32_t, DataType::kInt32)
 
-#define REGISTER_CUDA_EMBEDDING_PREFETCH_KERNEL(t_dtype_pair, column_dtype_pair, idx_dtype_pair) \
-  REGISTER_USER_KERNEL("embedding_prefetch")                                                     \
-      .SetCreateFn<EmbeddingPrefetchKernel<OF_PP_PAIR_FIRST(t_dtype_pair),                       \
-                                           OF_PP_PAIR_FIRST(column_dtype_pair),                  \
-                                           OF_PP_PAIR_FIRST(idx_dtype_pair)>>()                  \
-      .SetIsMatchedHob(                                                                          \
-          (user_op::HobDeviceType() == DeviceType::kCUDA)                                        \
-          && (user_op::HobDataType("column_ids", 0) == OF_PP_PAIR_SECOND(column_dtype_pair))     \
-          && (user_op::HobDataType("num_unique_ids", 0) == OF_PP_PAIR_SECOND(idx_dtype_pair)))   \
-      .SetInferTmpSizeFn([](user_op::InferContext* ctx) {                                        \
-        const user_op::TensorDesc& unique_ids = ctx->InputTensorDesc("unique_ids", 0);           \
-        EmbeddingTmpBufferManager buffer_manager(                                                \
-            nullptr, unique_ids.shape().elem_cnt(),                                              \
-            ctx->Attr<int64_t>("line_size") * sizeof(OF_PP_PAIR_FIRST(t_dtype_pair)), true);     \
-        return buffer_manager.TotalBufferSize();                                                 \
+#define REGISTER_CUDA_EMBEDDING_PREFETCH_KERNEL(t_dtype_pair, table_dtype_pair, idx_dtype_pair) \
+  REGISTER_USER_KERNEL("embedding_prefetch")                                                    \
+      .SetCreateFn<EmbeddingPrefetchKernel<OF_PP_PAIR_FIRST(t_dtype_pair),                      \
+                                           OF_PP_PAIR_FIRST(table_dtype_pair),                  \
+                                           OF_PP_PAIR_FIRST(idx_dtype_pair)>>()                 \
+      .SetIsMatchedHob(                                                                         \
+          (user_op::HobDeviceType() == DeviceType::kCUDA)                                       \
+          && (user_op::HobDataType("table_ids", 0) == OF_PP_PAIR_SECOND(table_dtype_pair))      \
+          && (user_op::HobDataType("num_unique_ids", 0) == OF_PP_PAIR_SECOND(idx_dtype_pair)))  \
+      .SetInferTmpSizeFn([](user_op::InferContext* ctx) {                                       \
+        const user_op::TensorDesc& unique_ids = ctx->InputTensorDesc("unique_ids", 0);          \
+        EmbeddingTmpBufferManager buffer_manager(                                               \
+            nullptr, unique_ids.shape().elem_cnt(),                                             \
+            ctx->Attr<int64_t>("line_size") * sizeof(OF_PP_PAIR_FIRST(t_dtype_pair)), true);    \
+        return buffer_manager.TotalBufferSize();                                                \
       });
 
 OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(REGISTER_CUDA_EMBEDDING_PREFETCH_KERNEL, EMBEDDING_DATA_TYPE_SEQ,
@@ -424,7 +502,7 @@ class EmbeddingLookupKernel final : public user_op::OpKernel {
     CHECK(embedding_state != nullptr);
     const user_op::Tensor* num_unique_ids = ctx->Tensor4ArgNameAndIndex("num_unique_ids", 0);
     const user_op::Tensor* unique_ids = ctx->Tensor4ArgNameAndIndex("unique_ids", 0);
-    const user_op::Tensor* column_ids = ctx->Tensor4ArgNameAndIndex("column_ids", 0);
+    const user_op::Tensor* table_ids = ctx->Tensor4ArgNameAndIndex("table_ids", 0);
     user_op::Tensor* unique_values = ctx->Tensor4ArgNameAndIndex("unique_values", 0);
     user_op::Tensor* tmp_buffer = ctx->Tensor4ArgNameAndIndex("tmp_buffer", 0);
     const int64_t embedding_size = ctx->Attr<int64_t>("embedding_size");
@@ -432,8 +510,8 @@ class EmbeddingLookupKernel final : public user_op::OpKernel {
     uint32_t num_unique;
     LookupAndInitMissing<T, U, IDX>(
         ctx->stream(), embedding_state, unique_ids->shape().elem_cnt(), embedding_size, line_size,
-        num_unique_ids->dptr(), unique_ids->dptr(), column_ids->dptr(),
-        unique_values->mut_dptr<T>(), tmp_buffer->mut_dptr(), &num_unique, false);
+        num_unique_ids->dptr(), unique_ids->dptr(), table_ids->dptr(), unique_values->mut_dptr<T>(),
+        tmp_buffer->mut_dptr(), &num_unique, false);
     if (ctx->has_output("embeddings", 0)) {
       user_op::Tensor* embeddings = ctx->Tensor4ArgNameAndIndex("embeddings", 0);
       CopyValuesToEmbeddings<T>(ctx->stream(), num_unique, embedding_size, line_size,
@@ -444,15 +522,15 @@ class EmbeddingLookupKernel final : public user_op::OpKernel {
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
 
-#define REGISTER_CUDA_EMBEDDING_LOOKUP_KERNEL(t_dtype_pair, column_dtype_pair, idx_dtype_pair) \
+#define REGISTER_CUDA_EMBEDDING_LOOKUP_KERNEL(t_dtype_pair, table_dtype_pair, idx_dtype_pair)  \
   REGISTER_USER_KERNEL("embedding_lookup")                                                     \
       .SetCreateFn<EmbeddingLookupKernel<OF_PP_PAIR_FIRST(t_dtype_pair),                       \
-                                         OF_PP_PAIR_FIRST(column_dtype_pair),                  \
+                                         OF_PP_PAIR_FIRST(table_dtype_pair),                   \
                                          OF_PP_PAIR_FIRST(idx_dtype_pair)>>()                  \
       .SetIsMatchedHob(                                                                        \
           (user_op::HobDeviceType() == DeviceType::kCUDA)                                      \
           && (user_op::HobDataType("unique_values", 0) == OF_PP_PAIR_SECOND(t_dtype_pair))     \
-          && (user_op::HobDataType("column_ids", 0) == OF_PP_PAIR_SECOND(column_dtype_pair))   \
+          && (user_op::HobDataType("table_ids", 0) == OF_PP_PAIR_SECOND(table_dtype_pair))     \
           && (user_op::HobDataType("num_unique_ids", 0) == OF_PP_PAIR_SECOND(idx_dtype_pair))) \
       .SetInferTmpSizeFn([](user_op::InferContext* ctx) {                                      \
         const user_op::TensorDesc& unique_ids = ctx->InputTensorDesc("unique_ids", 0);         \

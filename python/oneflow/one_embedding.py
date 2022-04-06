@@ -137,16 +137,15 @@ class MultiTableEmbedding(Module):
                 assert isinstance(table, dict)
                 assert table.__contains__("initializer")
                 _check_initializer(table["initializer"])
-            # TODO(guoran): change "columns" to "tables" and modify c++ code
-            embedding_tables["columns"] = tables
+            embedding_tables["tables"] = tables
         else:
             assert default_initializer is not None
             _check_initializer(default_initializer)
-            embedding_tables["columns"] = [{"initializer": default_initializer}]
+            embedding_tables["tables"] = [{"initializer": default_initializer}]
         key_value_store_options["parallel_num"] = parallel_num
         self.key_value_store_options = json.dumps(key_value_store_options)
         self.embedding_tables = json.dumps(embedding_tables)
-        self.num_tables = len(embedding_tables["columns"])
+        self.num_tables = len(embedding_tables["tables"])
         self.local_rank = flow.env.get_local_rank()
         self.rank_id = flow.env.get_rank()
         self.world_size = parallel_num
@@ -312,3 +311,4 @@ def make_normal_initializer(mean, std):
 
 def make_table(initializer):
     return {"initializer": initializer}
+

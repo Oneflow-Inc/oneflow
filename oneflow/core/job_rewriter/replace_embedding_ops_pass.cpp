@@ -127,7 +127,7 @@ void BuildEmbeddingLookup(JobPassCtx* ctx, JobBuilder* job_builder, const int64_
                           bool has_embedding_prefetch, const ParallelConf& parallel_conf,
                           const user_op::UserOpConfWrapper& embedding_op,
                           const std::string& num_unique_ids_lbn, const std::string& unique_ids_lbn,
-                          const std::string& unique_columns_lbn, std::string* embedding_lbn,
+                          const std::string& unique_table_ids_lbn, std::string* embedding_lbn,
                           std::string* unique_values_lbn) {
   auto AddIdentityOp = [&](const std::string& in_lbn) -> std::string {
     return BuildIdentityOp(job_builder, in_lbn, parallel_conf, embedding_op);
@@ -141,12 +141,12 @@ void BuildEmbeddingLookup(JobPassCtx* ctx, JobBuilder* job_builder, const int64_
         embedding_prefetch_op_builder.OpTypeName("embedding_prefetch")
             .Input("num_unique_ids", AddIdentityOp(num_unique_ids_lbn))
             .Input("unique_ids", AddIdentityOp(unique_ids_lbn))
-            .Input("column_ids", AddIdentityOp(unique_columns_lbn))
+            .Input("table_ids", AddIdentityOp(unique_table_ids_lbn))
             .Output("context")
             .Attr<int64_t>("embedding_size", embedding_size)
             .Attr<int64_t>("line_size", line_size)
-            .Attr<std::string>("embedding_columns",
-                               embedding_op.attr<std::string>("embedding_columns"))
+            .Attr<std::string>("embedding_tables",
+                               embedding_op.attr<std::string>("embedding_tables"))
             .Attr<std::string>("embedding_name", embedding_name)
             .ScopeSymbolId(embedding_op.op_conf().scope_symbol_id())
             .Build();
@@ -162,12 +162,12 @@ void BuildEmbeddingLookup(JobPassCtx* ctx, JobBuilder* job_builder, const int64_
   embedding_lookup_op_builder.OpTypeName("embedding_lookup")
       .Input("num_unique_ids", AddIdentityOp(num_unique_ids_lbn))
       .Input("unique_ids", AddIdentityOp(unique_ids_lbn))
-      .Input("column_ids", AddIdentityOp(unique_columns_lbn))
+      .Input("table_ids", AddIdentityOp(unique_table_ids_lbn))
       .Output("unique_values")
       .Attr<DataType>("dtype", embedding_op.attr<DataType>("dtype"))
       .Attr<int64_t>("embedding_size", embedding_size)
       .Attr<int64_t>("line_size", line_size)
-      .Attr<std::string>("embedding_columns", embedding_op.attr<std::string>("embedding_columns"))
+      .Attr<std::string>("embedding_tables", embedding_op.attr<std::string>("embedding_tables"))
       .Attr<std::string>("embedding_name", embedding_name)
       .ScopeSymbolId(embedding_op.op_conf().scope_symbol_id());
   if (has_embedding_prefetch) { embedding_lookup_op_builder.Input("context", context_lbn); }
@@ -361,22 +361,22 @@ void BuildIdShuffle(bool use_system_gather, const std::string& embedding_name,
                     std::vector<OperatorConf>* add_ops,
                     std::string* inner_inverse_unique_partition_indices_lbn,
                     std::string* num_unique_ids_lbn, std::string* unique_ids_lbn,
-                    std::string* unique_columns_lbn, std::string* inverse_indices_lbn,
+                    std::string* unique_table_ids_lbn, std::string* inverse_indices_lbn,
                     std::string* num_unique_matrix_lbn) {
-  const int32_t num_columns = embedding_op.attr<int32_t>("num_columns");
+  const int32_t num_tables = embedding_op.attr<int32_t>("num_tables");
   if (use_system_gather) {
     user_op::UserOpConfWrapperBuilder unique_op_builder(embedding_op.op_name()
-                                                        + "_unique_ids_and_columns");
+                                                        + "_unique_ids_and_tables");
     unique_op_builder.OpTypeName("unique_key_value_pair")
         .Input("keys", embedding_op.input("ids", 0))
         .Output("num_unique")
         .Output("unique_keys")
         .Output("unique_values")
         .Output("inverse_indices")
-        .Attr<int32_t>("num_columns", num_columns)
+        .Attr<int32_t>("num_tables", num_tables)
         .ScopeSymbolId(embedding_op.op_conf().scope_symbol_id());
-    if (embedding_op.has_input("column_ids", 0)) {
-      unique_op_builder.Input("values", embedding_op.input("column_ids", 0));
+    if (embedding_op.has_input("table_ids", 0)) {
+      unique_op_builder.Input("values", embedding_op.input("table_ids", 0));
     }
     user_op::UserOpConfWrapper unique_op = unique_op_builder.Build();
     OperatorConf unique_new_op_conf = unique_op.op_conf();
@@ -384,7 +384,7 @@ void BuildIdShuffle(bool use_system_gather, const std::string& embedding_name,
     add_ops->push_back(unique_new_op_conf);
     *num_unique_ids_lbn = unique_op.output("num_unique", 0);
     *unique_ids_lbn = unique_op.output("unique_keys", 0);
-    *unique_columns_lbn = unique_op.output("unique_values", 0);
+    *unique_table_ids_lbn = unique_op.output("unique_values", 0);
     *inverse_indices_lbn = unique_op.output("inverse_indices", 0);
   } else {
     user_op::UserOpConfWrapperBuilder id_shuffle_op_builder(embedding_op.op_name() + "_id_shuffle");
@@ -393,13 +393,13 @@ void BuildIdShuffle(bool use_system_gather, const std::string& embedding_name,
         .Output("inverse_unique_partition_indices")
         .Output("cur_rank_num_unique")
         .Output("cur_rank_unique_ids")
-        .Output("cur_rank_unique_column_ids")
+        .Output("cur_rank_unique_table_ids")
         .Output("cur_rank_inverse_indices")
         .Output("num_unique_matrix")
-        .Attr<int32_t>("num_columns", num_columns)
+        .Attr<int32_t>("num_tables", num_tables)
         .ScopeSymbolId(embedding_op.op_conf().scope_symbol_id());
-    if (embedding_op.has_input("column_ids", 0)) {
-      id_shuffle_op_builder.Input("column_ids", embedding_op.input("column_ids", 0));
+    if (embedding_op.has_input("table_ids", 0)) {
+      id_shuffle_op_builder.Input("table_ids", embedding_op.input("table_ids", 0));
     }
     user_op::UserOpConfWrapper id_shuffle_op = id_shuffle_op_builder.Build();
     OperatorConf id_shuffle_new_op_conf = id_shuffle_op.op_conf();
@@ -409,7 +409,7 @@ void BuildIdShuffle(bool use_system_gather, const std::string& embedding_name,
         id_shuffle_op.output("inverse_unique_partition_indices", 0);
     *num_unique_ids_lbn = id_shuffle_op.output("cur_rank_num_unique", 0);
     *unique_ids_lbn = id_shuffle_op.output("cur_rank_unique_ids", 0);
-    *unique_columns_lbn = id_shuffle_op.output("cur_rank_unique_column_ids", 0);
+    *unique_table_ids_lbn = id_shuffle_op.output("cur_rank_unique_table_ids", 0);
     *inverse_indices_lbn = id_shuffle_op.output("cur_rank_inverse_indices", 0);
     *num_unique_matrix_lbn = id_shuffle_op.output("num_unique_matrix", 0);
   }
@@ -563,13 +563,13 @@ Maybe<void> ReplaceEmbeddingOps::Apply(const OpGraph& op_graph, JobBuilder* job_
     std::string inner_inverse_unique_partition_indices_lbn;
     std::string num_unique_ids_lbn;
     std::string unique_ids_lbn;
-    std::string unique_columns_lbn;
+    std::string unique_table_ids_lbn;
     std::string inverse_indices_lbn;
     std::string num_unique_matrix_lbn;
 
     BuildIdShuffle(use_system_gather, options.Name(), embedding_op, &add_ops,
                    &inner_inverse_unique_partition_indices_lbn, &num_unique_ids_lbn,
-                   &unique_ids_lbn, &unique_columns_lbn, &inverse_indices_lbn,
+                   &unique_ids_lbn, &unique_table_ids_lbn, &inverse_indices_lbn,
                    &num_unique_matrix_lbn);
 
     bool has_embedding_prefetch = (!options.IsFullCache()) ? true : false;
@@ -578,7 +578,7 @@ Maybe<void> ReplaceEmbeddingOps::Apply(const OpGraph& op_graph, JobBuilder* job_
     std::string embedding_lbn, unique_values_lbn;
     BuildEmbeddingLookup(ctx, job_builder, embedding_size, options.LineSize(), options.Name(),
                          has_embedding_prefetch, op_node->parallel_desc().parallel_conf(),
-                         embedding_op, num_unique_ids_lbn, unique_ids_lbn, unique_columns_lbn,
+                         embedding_op, num_unique_ids_lbn, unique_ids_lbn, unique_table_ids_lbn,
                          &embedding_lbn, &unique_values_lbn);
 
     if (use_system_gather) {
