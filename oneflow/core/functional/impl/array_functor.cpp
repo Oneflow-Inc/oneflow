@@ -495,9 +495,12 @@ class ConcatFunctor {
     for (int i = 0; i < ninput; i += kMaxInputCount) {
       size_t size = (i + kMaxInputCount) < ninput ? kMaxInputCount : ninput - i;
       TensorTuple partial_inputs(size);
+      TensorProcessor tensor_processor;
       for (int j = 0; j < size; ++j) { partial_inputs[j] = inputs[i + j]; }
+      JUST(tensor_processor.PromoteInputsToCommonDtype(true).AddInputs(partial_inputs).Apply());
+      TensorTuple input_tuple = JUST(tensor_processor.GetInputs());
       outputs.emplace_back(
-          JUST(OpInterpUtil::Dispatch<Tensor>(*ops_.at(size - 1), partial_inputs, attrs)));
+          JUST(OpInterpUtil::Dispatch<Tensor>(*ops_[size - 1], input_tuple, attrs)));
     }
 
     if (outputs.size() == 1) { return outputs.at(0); }
@@ -1785,7 +1788,8 @@ class SliceView1dContiguousFunctor {
   SliceView1dContiguousFunctor() = default;
   Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x, int64_t start,
                            int64_t end) const {
-    return JUST(view::Slice(x, {start}, {end}, {1}));
+    if (view::IsViewApplicable(x)) { return JUST(view::Slice(x, {start}, {end}, {1})); }
+    return JUST(functional::Slice(x, {start}, {end}, {1}));
   }
 };
 
