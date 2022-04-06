@@ -62,7 +62,7 @@ void EpStreamType::Compute(Instruction* instruction) const {
   auto* ep_device_ctx = static_cast<EpDeviceCtx*>(stream->device_ctx().get());
   auto* ep_device = ep_device_ctx->GetOrCreateEpDevice();
   ep_device->SetAsActiveDevice();
-  instruction->instruction_type().Compute(instruction);
+  instruction->instruction_type().ComputeIf(instruction);
   char* data_ptr = instruction->mut_status_buffer()->mut_buffer();
   EpOptionalEventRecordStatusQuerier::MutCast(data_ptr)->SetLaunched(ep_device_ctx);
   OF_PROFILER_RANGE_POP();

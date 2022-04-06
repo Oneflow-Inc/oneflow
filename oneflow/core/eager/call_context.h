@@ -55,7 +55,9 @@ struct CallContext {
         tmp_buffer_size(0),
         shape_view(&tmp_buffer_size, 1),
         mut_shape_view(&tmp_buffer_size, 1),
-        device_ctx(nullptr) {}
+        device_ctx(nullptr),
+        state(nullptr),
+        cache(nullptr) {}
 
   ComposedAttrMap composed_attrs;
   one::EagerBlobObjectListPtr inputs;
@@ -68,6 +70,8 @@ struct CallContext {
   ShapeView shape_view;
   MutShapeView mut_shape_view;
   DeviceCtx* device_ctx;
+  user_op::OpKernelState* state;
+  user_op::OpKernelCache* cache;
 };
 
 class ThreadLocalCallContextScope final {

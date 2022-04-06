@@ -49,7 +49,7 @@ bool CpuStreamType::QueryInstructionStatusDone(const Stream& stream,
 
 void CpuStreamType::Compute(Instruction* instruction) const {
   OF_PROFILER_RANGE_PUSH("S:" + instruction->DebugName());
-  instruction->instruction_type().Compute(instruction);
+  instruction->instruction_type().ComputeIf(instruction);
   auto* status_buffer = instruction->mut_status_buffer();
   NaiveInstrStatusQuerier::MutCast(status_buffer->mut_buffer())->set_done();
   OF_PROFILER_RANGE_POP();

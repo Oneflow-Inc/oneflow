@@ -46,7 +46,11 @@ class ReleaseTensorInstructionType : public vm::InstructionType {
   std::string DebugName(const vm::Instruction& instruction) const override {
     return "ReleaseTensor";
   }
-  void Compute(vm::Instruction* instruction) const override { Release(*instruction); }
+  Maybe<void> Infer(vm::Instruction* instruction) const override {
+    Release(*instruction);
+    return Maybe<void>::Ok();
+  }
+  void Compute(vm::Instruction* instruction) const override {}
 };
 
 #ifdef WITH_CUDA

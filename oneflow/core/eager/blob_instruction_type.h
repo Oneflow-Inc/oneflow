@@ -37,6 +37,7 @@ class TensorViewInstructionType final : public vm::InstructionType {
   ~TensorViewInstructionType() override = default;
 
   std::string DebugName(const vm::Instruction& instruction) const override { return "TensorView"; }
+  Maybe<void> Infer(vm::Instruction* instruction) const override { return Maybe<void>::Ok(); }
   void Compute(vm::Instruction* instruction) const override;
 };
 
@@ -48,6 +49,7 @@ class AccessBlobByCallbackInstructionType final : public vm::InstructionType {
   std::string DebugName(const vm::Instruction& instruction) const override {
     return "AccessBlobByCallback";
   }
+  Maybe<void> Infer(vm::Instruction* instruction) const override { return Maybe<void>::Ok(); }
   void Compute(vm::Instruction* instruction) const override;
 };
 
@@ -57,6 +59,7 @@ class CpuRecordEventInstructionType final : public vm::InstructionType {
   ~CpuRecordEventInstructionType() override = default;
 
   std::string DebugName(const vm::Instruction& instruction) const override { return "RecordEvent"; }
+  Maybe<void> Infer(vm::Instruction* instruction) const override { return Maybe<void>::Ok(); }
   void Compute(vm::Instruction* instruction) const override {}
 };
 
@@ -79,6 +82,7 @@ class CudaRecordEventInstructionType final : public vm::InstructionType {
     CudaOptionalEventRecordStatusQuerier::MutCast(data_ptr)->reset_cuda_event(cuda_event);
   }
   std::string DebugName(const vm::Instruction& instruction) const override { return "RecordEvent"; }
+  Maybe<void> Infer(vm::Instruction* instruction) const override { return Maybe<void>::Ok(); }
   void Compute(vm::Instruction* instruction) const override {}
 };
 
@@ -102,6 +106,7 @@ class EpRecordEventInstructionType final : public vm::InstructionType {
     EpOptionalEventRecordStatusQuerier::MutCast(data_ptr)->reset_ep_event(ep_event);
   }
   std::string DebugName(const vm::Instruction& instruction) const override { return "RecordEvent"; }
+  Maybe<void> Infer(vm::Instruction* instruction) const override { return Maybe<void>::Ok(); }
   void Compute(vm::Instruction* instruction) const override {}
 };
 }  // namespace vm

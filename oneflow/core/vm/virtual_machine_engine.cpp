@@ -25,6 +25,7 @@ limitations under the License.
 #include "oneflow/core/common/cpp_attribute.h"
 #include "oneflow/core/common/global.h"
 #include "oneflow/core/common/singleton_ptr.h"
+#include "oneflow/core/vm/allocator.h"
 
 namespace oneflow {
 namespace vm {
@@ -323,11 +324,52 @@ void VirtualMachineEngine::DispatchAndPrescheduleInstructions(const ScheduleCtx&
   OF_PROFILER_RANGE_POP();
 }
 
+namespace {
+
+void StreamWaitPreviousInstructionsDone(vm::Stream* stream, vm::Instruction* instruction) {
+  auto* running_list = stream->mut_running_instruction_list();
+  CHECK_GE(running_list->size(), 1);
+  CHECK_EQ(running_list->Last(), instruction);
+  if (running_list->size() == 1) { return; }
+  auto* prev = running_list->Prev(instruction);
+  // busy wait the previous instruction done.
+  while (!prev->Done()) {}
+}
+
+std::string DebugDeviceReset(vm::Stream* stream) {
+  stream->device_ctx()->mut_allocator()->DeviceReset();
+  return "reset device";
+}
+
+}  // namespace
+
 void VirtualMachineEngine::DispatchInstruction(Instruction* instruction,
                                                const ScheduleCtx& schedule_ctx) {
   auto* stream = instruction->mut_stream();
   stream->mut_running_instruction_list()->PushBack(instruction);
   if (stream->active_stream_hook().empty()) { mut_active_stream_list()->PushBack(stream); }
+  // Infer
+  {
+    const auto& ret = TRY(instruction->instruction_type().InferIf(instruction));
+    if (unlikely(!ret.IsOk())) {
+      if (ret.error()->has_out_of_memory_error()) {
+        // Waits previous instructions done before shrinking memory..
+        StreamWaitPreviousInstructionsDone(stream, instruction);
+        // Shrinks allocator to reduce fragmentation of memory.
+        {
+          auto* allocator = stream->device_ctx()->mut_allocator();
+          CHECK(allocator->IsCached());
+          allocator->Shrink();
+        }
+        // Infers the instruction again.
+        CHECK_JUST_MSG(instruction->instruction_type().InferIf(instruction),
+                       std::stringstream() << DebugDeviceReset(stream));
+      } else {
+        CHECK_JUST(ret);
+      }
+    }
+  }
+  // Compute
   const auto& stream_type = stream->stream_type();
   if (OnSchedulerThread(stream_type)) {
     stream_type.Run(instruction);

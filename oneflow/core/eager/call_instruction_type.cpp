@@ -41,10 +41,11 @@ namespace oneflow {
 namespace vm {
 
 struct CallInstructionUtil final {
-  static inline Maybe<void> Compute(const vm::Instruction& instruction) {
+  static inline Maybe<void> Infer(const vm::Instruction& instruction) {
     auto* operand = CallInstructionUtil::GetCallPhyInstrOperand(instruction);
     DeviceCtx* device_ctx = instruction.stream().device_ctx().get();
-    operand->mut_call_ctx()->device_ctx = device_ctx;
+    auto* call_ctx = operand->mut_call_ctx();
+    call_ctx->device_ctx = device_ctx;
     CHECK_OR_RETURN(device_ctx->mut_allocator()->IsCached())
         << "device_type: " << instruction.stream().device()->type();
     OF_PROFILER_RANGE_PUSH("AllocateOutputBlobsMemory");
@@ -61,15 +62,18 @@ struct CallInstructionUtil final {
       DeallocateTempStorage(operand, device_ctx->mut_allocator());
       OF_PROFILER_RANGE_POP();
     }
-    user_op::OpKernelState* state = nullptr;
-    user_op::OpKernelCache* cache = nullptr;
     if (operand->user_opkernel()->has_state_or_cache()) {
       OF_PROFILER_RANGE_PUSH("TryInitOpKernelStateAndCache");
-      TryInitOpKernelStateAndCache(operand, device_ctx, &state, &cache);
+      TryInitOpKernelStateAndCache(operand, device_ctx, &call_ctx->state, &call_ctx->cache);
       OF_PROFILER_RANGE_POP();
     }
-    OpKernelCompute(operand, device_ctx, state, cache);
     return Maybe<void>::Ok();
+  }
+
+  static inline void Compute(const vm::Instruction& instruction) {
+    auto* operand = CallInstructionUtil::GetCallPhyInstrOperand(instruction);
+    auto* call_ctx = operand->mut_call_ctx();
+    OpKernelCompute(operand, call_ctx->device_ctx, call_ctx->state, call_ctx->cache);
   }
 
   static inline CallPhyInstrOperand* GetCallPhyInstrOperand(const vm::Instruction& instruction) {
@@ -135,10 +139,17 @@ struct CallInstructionUtil final {
   }
 };
 
+Maybe<void> CallInstructionType::Infer(vm::Instruction* instruction) const {
+  auto* ptr = instruction->phy_instr_operand().get();
+  auto* operand = dynamic_cast<CallPhyInstrOperand*>(ptr);
+  CHECK_NOTNULL_OR_RETURN(operand);
+  return operand->WithThisCallContext([&] { return CallInstructionUtil::Infer(*instruction); });
+}
+
 void CallInstructionType::Compute(vm::Instruction* instruction) const {
   auto* ptr = instruction->phy_instr_operand().get();
   auto* operand = CHECK_NOTNULL(dynamic_cast<CallPhyInstrOperand*>(ptr));
-  operand->WithThisCallContext([&] { CHECK_JUST(CallInstructionUtil::Compute(*instruction)); });
+  operand->WithThisCallContext([&] { CallInstructionUtil::Compute(*instruction); });
 }
 
 std::string CallInstructionType::DebugName(const vm::Instruction& instruction) const {
