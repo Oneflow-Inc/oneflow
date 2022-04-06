@@ -189,6 +189,8 @@ from oneflow._C import not_equal
 from oneflow._C import not_equal as ne
 from oneflow._C import less as lt
 from oneflow._C import less_equal as le
+from oneflow._C import isnan
+from oneflow._C import isinf
 from oneflow._oneflow_internal import _set_num_threads as set_num_threads
 
 from . import sbp
@@ -212,7 +214,7 @@ from oneflow.framework.tensor_str import set_printoptions
 
 if not env_util.HasAllMultiClientEnvVars():
     env_util.SetDefaultMultiClientEnvVars()
-env_util.api_env_init()
+_oneflow_global_unique_env_ = env_util.create_env()
 oneflow._oneflow_internal.RegisterGILForeignLockHelper()
 oneflow._oneflow_internal.InitDefaultConsistentTransportTokenScope()
 session_ctx.OpenDefaultSession(
@@ -259,13 +261,8 @@ hook = ExitHook()
 
 
 def atexit_hook(hook):
-    if hook.is_normal_exit():
-        if oneflow._oneflow_internal.IsEnvInited():
-            oneflow._oneflow_internal.eager.Sync()
     oneflow.framework.session_context.TryCloseDefaultSession()
-    if hook.is_normal_exit():
-        oneflow._oneflow_internal.DestroyEnv()
-    oneflow._oneflow_internal.SetShuttingDown()
+    _oneflow_global_unique_env_.SwitchToShuttingDownPhase(hook.is_normal_exit())
 
 
 atexit.register(atexit_hook, hook)
@@ -285,9 +282,6 @@ import oneflow.nn.image
 from oneflow.framework.check_point_v2 import load
 from oneflow.framework.check_point_v2 import save
 from oneflow.framework.dtype import convert_oneflow_dtype_to_numpy_dtype, dtypes
-from oneflow.framework.env_util import (
-    api_enable_eager_execution as enable_eager_execution,
-)
 from oneflow.framework.function_util import FunctionConfig
 from oneflow.framework.function_util import FunctionConfig as function_config
 from oneflow.framework.generator import create_generator as Generator
@@ -323,6 +317,7 @@ from oneflow.nn.modules.constant import ones_op as ones
 from oneflow.nn.modules.constant import zeros_op as zeros
 from oneflow.nn.modules.constant import full_op as full
 from oneflow.nn.modules.constant import new_ones_op as new_ones
+from oneflow.nn.modules.constant import new_zeros_op as new_zeros
 from oneflow.nn.modules.empty import empty_op as empty
 from oneflow.nn.modules.dataset import tensor_buffer_to_list_of_tensors
 from oneflow._C import movedim
@@ -399,7 +394,7 @@ from . import (
     boxing,
     backends,
     amp,
-)  # , saved_model NOTE(chengcheng): unavailable now
+)
 import oneflow.utils.data
 import oneflow.comm
 import oneflow.framework.docstr as docstr
