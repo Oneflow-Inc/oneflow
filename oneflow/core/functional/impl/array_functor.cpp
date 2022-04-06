@@ -734,9 +734,9 @@ class InplaceSqueezeFunctor {
       return view::Squeeze(input, squeeze_dims);
     } else {
       auto outputs = std::make_shared<TensorTuple>(1);
-      outputs->at(0) = input;
+      (*outputs)[0] = input;
       JUST(OpInterpUtil::Dispatch(*op_, {input}, outputs.get(), attrs));
-      return outputs->at(0);
+      return (*outputs)[0];
     }
   }
 
