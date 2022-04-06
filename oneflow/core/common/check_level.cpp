@@ -13,8 +13,12 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
+#include <cstdlib>
+#include <type_traits>
+#include "oneflow/core/common/just.h"
+#include "oneflow/core/common/maybe.h"
+#include "oneflow/core/common/env_var/debug_mode.h"
 #include "oneflow/xrt/utility/env.h"
-#include "oneflow/core/common/check_level.h"
 
 namespace oneflow {
 
