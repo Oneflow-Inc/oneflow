@@ -264,6 +264,87 @@ class BatchMatMulFunctor {
   std::shared_ptr<OpExpr> batch_matmul_op_;
 };
 
+class TensorDotFunctor {
+ public:
+  Maybe<Tensor> operator()(const std::shared_ptr<Tensor>& a, const std::shared_ptr<Tensor>& b,
+                           const std::vector<int64_t>& dims_a,
+                           const std::vector<int64_t>& dims_b) const {
+    CHECK_EQ_OR_RETURN(dims_a.size(), dims_b.size())
+        << "dims1 and dims2 must have same size, got " << dims_a.size() << " and " << dims_b.size();
+    std::vector<bool> if_dot_dims_a(a->shape()->NumAxes(), false);
+    std::vector<bool> if_dot_dims_b(b->shape()->NumAxes(), false);
+    for (auto i : dims_a) if_dot_dims_a[i] = true;
+    for (auto i : dims_b) if_dot_dims_b[i] = true;
+
+    // a shape(3,2,5) b shape(5,1,2) dim1(0, 2)
+    std::vector<int32_t> broadcast_dims_a, broadcast_dims_b;
+    for (int64_t i = 0; i < dims_a.size(); i++) {
+      int64_t size_a = a->shape()->At(dims_a[i]);
+      int64_t size_b = b->shape()->At(dims_b[i]);
+      if (size_a == 1) {
+        broadcast_dims_b.emplace_back(dims_b[i]);
+      } else if (size_b == 1) {
+        broadcast_dims_a.emplace_back(dims_a[i]);
+      } else {
+        CHECK_EQ_OR_RETURN(size_a, size_b) << "The corresponding dim must be equal, got " << size_a
+                                           << " in tensor a and " << size_b << " in tensor b";
+        std::cout << "check dim " << i << " , got " << size_a << " of tensor a, and " << size_b
+                  << " of tensor b" << std::endl;
+      }
+    }
+    auto reduced_a = a;
+    auto reduced_b = b;
+    if (!broadcast_dims_a.empty())
+      reduced_a = JUST(functional::ReduceSum(a, broadcast_dims_a, true));
+    if (!broadcast_dims_b.empty())
+      reduced_b = JUST(functional::ReduceSum(b, broadcast_dims_b, true));
+
+    std::cout << std::endl << "shape a is :";
+    for (int i = 0; i < reduced_a->shape()->NumAxes(); i++) {
+      std::cout << reduced_a->shape()->At(i) << " ";
+    }
+    std::cout << std::endl << "shape b is :";
+    for (int i = 0; i < reduced_b->shape()->NumAxes(); i++) {
+      std::cout << reduced_b->shape()->At(i) << " ";
+    }
+
+    int64_t rshape_a = 1, rshape_b = 1;
+    std::vector<int32_t> pa, pb;
+    pa.reserve(a->shape()->NumAxes());
+    pb.reserve(b->shape()->NumAxes());
+    std::vector<int64_t> non_dot_dims;
+    for (int64_t i = 0; i < a->shape()->NumAxes(); i++) {
+      if (!if_dot_dims_a[i]) {
+        non_dot_dims.emplace_back(a->shape()->At(i));
+        pa.emplace_back(i);
+        rshape_a *= reduced_a->shape()->At(i);
+      }
+    }
+
+    // for (int64_t i = dims_a.size() - 1; i >= 0; i--) pa.emplace_back(dims_a[i]);
+    for (auto i : dims_a) pa.emplace_back(i);
+    for (auto i : dims_b) pb.emplace_back(i);
+
+    for (int64_t i = 0; i < b->shape()->NumAxes(); i++) {
+      if (!if_dot_dims_b[i]) {
+        non_dot_dims.emplace_back(b->shape()->At(i));
+        pb.emplace_back(i);
+        rshape_b *= reduced_b->shape()->At(i);
+      }
+    }
+
+    int64_t dshape = 1;
+    for (auto i : dims_a) dshape *= reduced_a->shape()->At(i);
+    auto permute_a =
+        JUST(Reshape(JUST(Permute(reduced_a, pa)), Shape(DimVector({rshape_a, dshape}))));
+    auto permute_b =
+        JUST(Reshape(JUST(Permute(reduced_b, pb)), Shape(DimVector({dshape, rshape_b}))));
+
+    return Reshape(JUST(functional::MatMul(permute_a, permute_b, false, false, 1.0)),
+                   Shape(DimVector({rshape_a, rshape_b})));
+  }
+};
+
 class FusedMLPFunctor {
  public:
   FusedMLPFunctor() {
@@ -2547,6 +2628,7 @@ ONEFLOW_FUNCTION_LIBRARY(m) {
   m.add_functor<impl::DeConv3dFunctor>("Deconv3d");
   m.add_functor<impl::MatMulFunctor>("MatMul");
   m.add_functor<impl::BatchMatMulFunctor>("BatchMatMul");
+  m.add_functor<impl::TensorDotFunctor>("TensorDot");
   m.add_functor<impl::FusedMLPFunctor>("FusedMLP");
   m.add_functor<impl::LayerNormFunctor>("LayerNorm");
   m.add_functor<impl::LayerNormAffineFunctor>("LayerNormAffine");
