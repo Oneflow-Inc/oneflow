@@ -60,7 +60,7 @@ class MultiTableEmbedding(Module):
         embedding_dim (int): the size of each embedding vector
         dtype (flow.dtype): the data type of embeddings
         key_type (flow.dtype): the data type of feature ids
-        tables (list): list of table param which can be made by flow.one_embedding.make_table_option
+        tables (list): list of table param which can be made by flow.one_embedding.make_table_options
         store_options (dict): store option of Embedding
         default_initializer (dict, optional): if tables param is None, use default_initializer to initialize table. Defaults to None.
     
@@ -78,7 +78,7 @@ class MultiTableEmbedding(Module):
         >>> embedding_size = 128
         >>> scales = np.sqrt(1 / np.array(table_size_array))
         >>> tables = [
-        >>>     flow.one_embedding.make_table_option(
+        >>>     flow.one_embedding.make_table_options(
         >>>         flow.one_embedding.make_uniform_initializer(low=-scale, high=scale)
         >>>     )
         >>>     for scale in scales
@@ -458,14 +458,14 @@ def make_cached_host_mem_store_options(
 
 
 def make_uniform_initializer(low, high):
-    """make uniform initializer param of make_table_option
+    """make uniform initializer param of make_table_options
 
     Args:
         low (float): A python scalar. Lower bound of the range of random values to generate.
         high (float): A python scalar. Upper bound of the range of random values to generate.
 
     Returns:
-        dict: initializer param of make_table_option
+        dict: initializer param of make_table_options
     
     For example:
 
@@ -473,21 +473,21 @@ def make_uniform_initializer(low, high):
 
         >>> import oneflow as flow
         >>> initializer = flow.one_embedding.make_uniform_initializer(low=-scale, high=scale)
-        >>> # pass the initializer to flow.one_embedding.make_table_option
+        >>> # pass the initializer to flow.one_embedding.make_table_options
         >>> # ...
     """
     return {"type": "uniform", "low": low, "high": high}
 
 
 def make_normal_initializer(mean, std):
-    """make normal initializer param of make_table_option
+    """make normal initializer param of make_table_options
 
     Args:
         mean (float): A python scalar. Mean of the random values to generate.
         std (float): A python scalar. Standard deviation of the random values to generate.
 
     Returns:
-        dict: initializer param of make_table_option
+        dict: initializer param of make_table_options
     
     For example:
 
@@ -495,13 +495,13 @@ def make_normal_initializer(mean, std):
 
         >>> import oneflow as flow
         >>> initializer = flow.one_embedding.make_normal_initializer(mean=0, std=0.01)
-        >>> # pass the initializer to flow.one_embedding.make_table_option
+        >>> # pass the initializer to flow.one_embedding.make_table_options
         >>> # ...
     """
     return {"type": "normal", "mean": mean, "std": std}
 
 
-def make_table_option(initializer):
+def make_table_options(initializer):
     """make table param of MultiTableEmbedding tables
 
     Args:
@@ -516,8 +516,8 @@ def make_table_option(initializer):
 
         >>> import oneflow as flow
         >>> initializer = flow.one_embedding.make_uniform_initializer(low=-scale, high=scale)
-        >>> table1 = flow.one_embedding.make_table_option(initializer)
-        >>> table2 = flow.one_embedding.make_table_option(initializer)
+        >>> table1 = flow.one_embedding.make_table_options(initializer)
+        >>> table2 = flow.one_embedding.make_table_options(initializer)
         >>> tables = [table1, table2]
         >>> # pass the tables to the "tables" param of flow.one_embedding.MultiTableEmbedding
         >>> # ...
@@ -527,8 +527,8 @@ def make_table_option(initializer):
 
 
 def make_table(initializer):
-    """same as oneflow.one_embedding.make_table_option
+    """same as oneflow.one_embedding.make_table_options
 
-    See also :func:`oneflow.one_embedding.make_table_option`
+    See also :func:`oneflow.one_embedding.make_table_options`
     """
-    return make_table_option(initializer)
+    return make_table_options(initializer)
