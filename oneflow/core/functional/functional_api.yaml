@@ -1139,7 +1139,7 @@
 
 - name: "pooling_grad"
   signature:
-    "Tensor (Tensor x, Tensor y, Tensor indice, Tensor dy, String mode, Int32 ndims,
+    "Tensor (Tensor x, Tensor indice, Tensor dy, String mode, Int32 ndims,
     String data_format, Int32List padding, Int32List kernel_size,
     Int32List stride, Int32List dilation, Bool return_indices, Bool ceil_mode) => PoolingNdGrad"
   bind_python: False
@@ -1675,7 +1675,7 @@
 
 - name: "avg_pooling_grad"
   signature:
-    "Tensor (Tensor x, Tensor y, Tensor dy, Int32 ndims, String data_format, Int32List padding,
+    "Tensor (Tensor x, Tensor dy, Int32 ndims, String data_format, Int32List padding,
     Int32List kernel_size, Int32List stride, Bool ceil_mode, Bool count_include_pad,
     Int32 divisor_override=0) => AvgPoolingNdGrad"
   bind_python: False
