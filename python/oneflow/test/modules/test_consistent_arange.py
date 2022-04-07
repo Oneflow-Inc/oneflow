@@ -21,6 +21,7 @@ import numpy as np
 from oneflow.test_utils.automated_test_util import *
 
 from oneflow.test_utils.test_util import GenArgDict
+import math
 
 
 @autotest(n=1, auto_backward=False, check_graph=False)
@@ -55,7 +56,6 @@ def _test_arange_with_float_delta(test_case, placement, sbp):
     )
     return x
 
-
 class TestArange(flow.unittest.TestCase):
     @globaltest
     def test_arange(test_case):
@@ -67,17 +67,16 @@ class TestArange(flow.unittest.TestCase):
                 _test_arange_with_random_data(test_case, placement, sbp)
                 _test_arange_with_float_delta(test_case, placement, sbp)
 
-
 @autotest(n=1, check_graph=False)
 def _test_consistent_arange(test_case, start, end, step, placement, sbp):
-    x1 = flow.arange(start, end, step, placement=placement, sbp=sbp)
-    x2 = flow.arange(start, end, step, placement=placement, sbp=sbp)
-    for i in x1.numpy():
-        j = 0
-        test_case.assertEqual(x1.numpy()[j], x2.numpy()[j])
-        j = j + 1
-    test_case.assertEqual(x1.sbp, sbp)
-    test_case.assertEqual(x1.placement, placement)
+    if (math.ceil((end-start)/step))%2 == 1:
+        end = end + step
+    x = flow.arange(start, end, step, placement=placement, sbp=sbp)
+    y1 = x.to_global(placement=placement, sbp=sbp)
+    y2 = np.arange(start, end, step)
+    test_case.assertTrue(np.allclose(y1.numpy(), y2, atol=1e-4, rtol=1e-4))
+    test_case.assertEqual(x.sbp, sbp)
+    test_case.assertEqual(x.placement, placement)
 
 
 @autotest(n=1, check_graph=False)
@@ -87,39 +86,36 @@ def _test_graph_arange(test_case, start, end, step, placement, sbp):
             super().__init__()
 
         def build(self):
-            x1 = flow.arange(start, end, step, placement=placement, sbp=sbp)
-            x2 = flow.arange(start, end, step, placement=placement, sbp=sbp)
-            return [x1, x2]
+            x = flow.arange(start, end, step, placement=placement, sbp=sbp)
+            return x
 
     model = ConsistentArangeGraph()
     x = model()
-
-    test_case.assertTrue(np.allclose(x[0].numpy(), x[1].numpy(), atol=1e-4, rtol=1e-4))
-    test_case.assertEqual(x[0].sbp, sbp)
-    test_case.assertEqual(x[0].placement, placement)
+    y = np.arange(start, end, step)
+    test_case.assertTrue(np.allclose(x.numpy(), y, atol=1e-4, rtol=1e-4))
+    test_case.assertEqual(x.sbp, sbp)
+    test_case.assertEqual(x.placement, placement)
 
 
 class TestArangeConsistent(flow.unittest.TestCase):
     @globaltest
     def test_arange_consistent(test_case):
         arg_dict = OrderedDict()
-        arg_dict["start"] = [i for i in range(1, 5, 1)]
-        arg_dict["end"] = [i for i in range(10, 50, 10)]
-        arg_dict["step"] = [i for i in range(1, 5, 1)]
+        arg_dict["start"] = [i for i in range(1,5,1)]
+        arg_dict["end"] = [i for i in range(10,50,10)]
+        arg_dict["step"] = [i for i in range(1,5,1)]
         for args in GenArgDict(arg_dict):
             for placement in all_placement():
                 for sbp in all_sbp(placement, max_dim=1, except_partial_sum=True):
                     _test_consistent_arange(
                         test_case, **args, placement=placement, sbp=sbp
                     )
-
     @globaltest
-    @flow.unittest.skip_unless_1n2d()
     def test_arange_graph(test_case):
         arg_dict = OrderedDict()
-        arg_dict["start"] = [i for i in range(1, 5, 1)]
-        arg_dict["end"] = [i for i in range(10, 50, 10)]
-        arg_dict["step"] = [i for i in range(1, 5, 1)]
+        arg_dict["start"] = [i for i in range(1,5,1)]
+        arg_dict["end"] = [i for i in range(10,30,10)]
+        arg_dict["step"] = [i for i in range(1,5,1)]
         arg_dict["placement"] = [
             # 1d
             flow.placement("cpu", ranks=[0, 1]),
@@ -132,10 +128,11 @@ class TestArangeConsistent(flow.unittest.TestCase):
             start = args["start"]
             end = args["end"]
             step = args["step"]
+            if (math.ceil((end-start)/step))%2 == 1:
+                end = end + step
             placement = args["placement"]
             for sbp in all_sbp(placement, max_dim=1, except_partial_sum=True):
                 _test_graph_arange(test_case, start, end, step, placement, sbp)
-
 
 if __name__ == "__main__":
     unittest.main()
