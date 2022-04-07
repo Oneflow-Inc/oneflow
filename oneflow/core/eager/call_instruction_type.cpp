@@ -121,7 +121,6 @@ struct CallInstructionUtil final {
                                      const user_op::OpKernelCache* cache) {
     auto* opkernel = operand->mut_opkernel();
     auto* compute_ctx = opkernel->GetComputeContext();
-    OF_PROFILER_RANGE_PUSH_POP_GUARD("Compute");
     operand->user_opkernel()->Compute(compute_ctx, state, cache);
   }
 

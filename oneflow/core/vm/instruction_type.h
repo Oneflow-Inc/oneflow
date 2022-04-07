@@ -19,6 +19,7 @@ limitations under the License.
 #include <glog/logging.h>
 #include "oneflow/core/common/maybe.h"
 #include "oneflow/core/vm/stream_type.h"
+#include "oneflow/core/profiler/profiler.h"
 
 namespace oneflow {
 namespace vm {
@@ -36,8 +37,14 @@ class InstructionType {
  public:
   virtual ~InstructionType() = default;
 
-  Maybe<void> InferIf(Instruction* instruction) const { return Infer(instruction); }
-  void ComputeIf(Instruction* instruction) const { Compute(instruction); }
+  Maybe<void> InferIf(Instruction* instruction) const {
+    OF_PROFILER_RANGE_PUSH_POP_GUARD(std::string("Infer:") + DebugName(*instruction));
+    return Infer(instruction);
+  }
+  void ComputeIf(Instruction* instruction) const {
+    OF_PROFILER_RANGE_PUSH_POP_GUARD(std::string("Compute:") + DebugName(*instruction));
+    Compute(instruction);
+  }
 
   virtual bool IsBarrier() const { return false; }
   virtual InstructionFuseType fuse_type() const { return kDisableInstructionFuse; }
