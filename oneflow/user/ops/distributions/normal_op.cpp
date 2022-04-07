@@ -27,7 +27,7 @@ namespace oneflow {
 }
 
 /*static*/ Maybe<void> NormalOp::InferPhysicalTensorDesc(user_op::InferContext* ctx) {
-   return InferLogicalTensorDesc(ctx);
+  return InferLogicalTensorDesc(ctx);
 }
 
 /* static */ Maybe<void> NormalOp::GetSbp(user_op::SbpContext* ctx) {
