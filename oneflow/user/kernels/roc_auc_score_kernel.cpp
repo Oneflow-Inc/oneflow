@@ -101,7 +101,7 @@ class RocAucScoreKernel final : public user_op::OpKernel {
                        && (user_op::HobDataType("pred", 0) == pred_type))                   \
       .SetInferTmpSizeFn([](user_op::InferContext* ctx) -> size_t {                         \
         const Shape& pred_shape = ctx->InputShape("pred", 0);                               \
-        size_t tmp_buffer_size = pred_shape.elem_cnt() * sizeof(pred_type);                 \
+        size_t tmp_buffer_size = pred_shape.elem_cnt() * sizeof(float);                     \
         return tmp_buffer_size;                                                             \
       })
 REGISTER_ROC_AUC_SCORE_KERNEL(DataType::kFloat, float, DataType::kFloat, float);
