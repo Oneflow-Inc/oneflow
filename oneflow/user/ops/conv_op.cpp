@@ -392,6 +392,26 @@ Maybe<void> GenerateBackwardOpConf4Conv(const user_op::UserOpWrapper& op, user_o
   return Maybe<void>::Ok();
 }
 
+/* static */ Maybe<double> ConvDataGradOp::GetComputeComplexity(
+    user_op::ComputeComplexityFnContext* ctx) {
+  const user_op::TensorDesc* filter = ctx->TensorDesc4ArgNameAndIndex("filter", 0);
+  const user_op::TensorDesc* dy = ctx->TensorDesc4ArgNameAndIndex("dy", 0);
+
+  double cost = std::accumulate(filter->shape().dim_vec().begin(), filter->shape().dim_vec().end(),
+                                2.0, std::multiplies<double>())
+                * std::accumulate(dy->shape().dim_vec().begin(), dy->shape().dim_vec().end(), 1.0,
+                                  std::multiplies<double>());
+
+  const auto& nd_sbp = ctx->NdSbp4ArgNameAndIndex("dy", 0);
+  const auto& parallel_hierarchy = ctx->parallel_desc().hierarchy();
+  for (int32_t dim_sbp = 0; dim_sbp < nd_sbp.sbp_parallel_size(); dim_sbp++) {
+    if (nd_sbp.sbp_parallel(dim_sbp).has_split_parallel()) {
+      cost /= parallel_hierarchy->At(dim_sbp);
+    }
+  }
+  return cost;
+}
+
 /* static */ Maybe<void> ConvFilterGradOp::InferLogicalTensorDesc(user_op::InferContext* ctx) {
   const user_op::TensorDesc& dy = ctx->InputTensorDesc("dy", 0);
   const user_op::TensorDesc& x = ctx->InputTensorDesc("x", 0);
@@ -458,6 +478,27 @@ Maybe<void> GenerateBackwardOpConf4Conv(const user_op::UserOpWrapper& op, user_o
   return Maybe<void>::Ok();
 }
 
+/* static */ Maybe<double> ConvFilterGradOp::GetComputeComplexity(
+    user_op::ComputeComplexityFnContext* ctx) {
+  const user_op::TensorDesc* filter_diff = ctx->TensorDesc4ArgNameAndIndex("filter_diff", 0);
+  const user_op::TensorDesc* dy = ctx->TensorDesc4ArgNameAndIndex("dy", 0);
+
+  double cost =
+      std::accumulate(filter_diff->shape().dim_vec().begin(), filter_diff->shape().dim_vec().end(),
+                      2.0, std::multiplies<double>())
+      * std::accumulate(dy->shape().dim_vec().begin(), dy->shape().dim_vec().end(), 1.0,
+                        std::multiplies<double>());
+
+  const auto& nd_sbp = ctx->NdSbp4ArgNameAndIndex("dy", 0);
+  const auto& parallel_hierarchy = ctx->parallel_desc().hierarchy();
+  for (int32_t dim_sbp = 0; dim_sbp < nd_sbp.sbp_parallel_size(); dim_sbp++) {
+    if (nd_sbp.sbp_parallel(dim_sbp).has_split_parallel()) {
+      cost /= parallel_hierarchy->At(dim_sbp);
+    }
+  }
+  return cost;
+}
+
 /* static */ Maybe<void> ConvBiasGradOp::InferLogicalTensorDesc(user_op::InferContext* ctx) {
   const user_op::TensorDesc& dy = ctx->InputTensorDesc("dy", 0);
   user_op::TensorDesc* bias_diff = ctx->OutputTensorDesc("bias_diff", 0);
@@ -505,6 +546,28 @@ Maybe<void> GenerateBackwardOpConf4Conv(const user_op::UserOpWrapper& op, user_o
   user_op::TensorDesc* bias_diff = ctx->OutputTensorDesc("bias_diff", 0);
   *bias_diff->mut_data_type() = dy.data_type();
   return Maybe<void>::Ok();
+}
+
+/* static */ Maybe<double> ConvBiasGradOp::GetComputeComplexity(
+    user_op::ComputeComplexityFnContext* ctx) {
+  const user_op::TensorDesc* dy = ctx->TensorDesc4ArgNameAndIndex("dy", 0);
+  const std::string data_format = ctx->Attr<std::string>("data_format");
+  int32_t c = 0;
+  if (data_format == "channels_first") {
+    c = dy->shape().At(1);
+  } else {
+    c = dy->shape().At(dy->shape().NumAxes() - 1);
+  }
+  double cost = std::accumulate(dy->shape().dim_vec().begin(), dy->shape().dim_vec().end(), 2.0 * c,
+                                std::multiplies<double>());
+  const auto& nd_sbp = ctx->NdSbp4ArgNameAndIndex("dy", 0);
+  const auto& parallel_hierarchy = ctx->parallel_desc().hierarchy();
+  for (int32_t dim_sbp = 0; dim_sbp < nd_sbp.sbp_parallel_size(); dim_sbp++) {
+    if (nd_sbp.sbp_parallel(dim_sbp).has_split_parallel()) {
+      cost /= parallel_hierarchy->At(dim_sbp);
+    }
+  }
+  return cost;
 }
 
 REGISTER_USER_OP_GRAD("conv1d").SetGenBackwardOpConfFn(GenerateBackwardOpConf4Conv);
