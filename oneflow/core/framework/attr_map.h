@@ -32,7 +32,7 @@ class MutableAttrMap;
 class MutableCfgAttrMap;
 
 // Make sure AttrName2AttrVal is a ordered map.
-using AttrName2AttrVal = std::map<std::string, std::shared_ptr<const user_op::AttrVal>>;
+using AttrName2AttrVal = std::vector<std::pair<std::string, std::shared_ptr<const user_op::AttrVal>>>;
 
 class AttrName2AttrValWrapper {
  public:
@@ -56,7 +56,14 @@ class AttrName2AttrValWrapper {
   const_iterator begin() const { return attrs_->begin(); }
   const_iterator end() const { return attrs_->end(); }
 
-  const_iterator find(const std::string& attr_name) const { return attrs_->find(attr_name); }
+  const_iterator find(const std::string& attr_name) const {
+    for (auto it = begin(); it != end(); it++) {
+      if (it->first == attr_name) {
+        return it;
+      }
+    }
+    return end();
+  }
 
   size_t hash_value() const { return hash_value_; }
 

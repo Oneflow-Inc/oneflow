@@ -165,7 +165,6 @@ class Instruction final : public intrusive::Base {
     static const auto default_val = intrusive::make_shared<InstructionMsg>();
     return default_val.Get();
   }
-  const std::shared_ptr<const ParallelDesc>& parallel_desc() const { return parallel_desc_; }
   const InstructionStatusBuffer& status_buffer() const { return status_buffer_.Get(); }
   const intrusive::ListHook& instruction_hook() const { return instruction_hook_; }
   const intrusive::ListHook& dispatched_instruction_hook() const {
@@ -188,7 +187,6 @@ class Instruction final : public intrusive::Base {
   }
   void reset_instr_msg(InstructionMsg* instr_msg) { instr_msg_.Reset(instr_msg); }
   void clear_instr_msg() { instr_msg_.Reset(); }
-  std::shared_ptr<const ParallelDesc>* mut_parallel_desc() { return &parallel_desc_; }
   InstructionStatusBuffer* mut_status_buffer() { return status_buffer_.Mutable(); }
   InEdgeList* mut_in_edges() { return &in_edges_; }
   OutEdgeList* mut_out_edges() { return &out_edges_; }
@@ -211,7 +209,6 @@ class Instruction final : public intrusive::Base {
       : intrusive_ref_(),
         status_buffer_(),
         instr_msg_(),
-        parallel_desc_(),
         stream_(),
         access_list_(),
         in_edges_(),
@@ -225,7 +222,6 @@ class Instruction final : public intrusive::Base {
   // fields
   FlatMsg<InstructionStatusBuffer> status_buffer_;
   intrusive::shared_ptr<InstructionMsg> instr_msg_;
-  std::shared_ptr<const ParallelDesc> parallel_desc_;
   Stream* stream_;
   // lists
   DependenceAccessList access_list_;

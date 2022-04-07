@@ -27,11 +27,13 @@ limitations under the License.
 namespace oneflow {
 namespace one {
 
-int32_t TryGetTensorTupleIndex(const std::unordered_map<std::string, std::vector<int32_t>>&
-                                   arg_name2bn_index2tensor_tuple_index,
-                               const std::string& arg_name, const int32_t arg_index) {
-  auto it = arg_name2bn_index2tensor_tuple_index.find(arg_name);
-  if (it != arg_name2bn_index2tensor_tuple_index.end()) { return it->second.at(arg_index); }
+int32_t TryGetTensorTupleIndex(
+    const std::vector<std::pair<std::string, int32_t>>& indexed_arg_name_and_index,
+    const std::string& arg_name, const int32_t arg_index) {
+  for (size_t i = 0; i < indexed_arg_name_and_index.size(); i++) {
+    const auto& pair = indexed_arg_name_and_index[i];
+    if (pair.second == arg_index && pair.first == arg_name) { return i; }
+  }
   return -1;
 }
 
@@ -110,12 +112,11 @@ const ParallelContext& ZeroCopyBaseContext::parallel_ctx() const {
   }
 }
 
-#define RETURN_IF_FOUND(inputs, outputs, post_action)                                             \
-  int32_t i = TryGetTensorTupleIndex(input_arg_tuple_->arg_name2bn_index2tensor_tuple_index(),    \
-                                     arg_name, index);                                            \
-  if (i >= 0) { return (inputs).at(i) post_action; }                                              \
-  i = TryGetTensorTupleIndex(output_arg_tuple_->arg_name2bn_index2tensor_tuple_index(), arg_name, \
-                             index);                                                              \
+#define RETURN_IF_FOUND(inputs, outputs, post_action)                                           \
+  int32_t i =                                                                                   \
+      TryGetTensorTupleIndex(input_arg_tuple_->indexed_arg_name_and_index(), arg_name, index);  \
+  if (i >= 0) { return (inputs).at(i) post_action; }                                            \
+  i = TryGetTensorTupleIndex(output_arg_tuple_->indexed_arg_name_and_index(), arg_name, index); \
   if (i >= 0) { return (outputs).at(i) post_action; }
 
 user_op::TensorDesc* ZeroCopyBaseContext::TensorDesc4ArgNameAndIndex(const std::string& arg_name,

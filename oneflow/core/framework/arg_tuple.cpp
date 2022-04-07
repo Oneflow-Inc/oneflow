@@ -55,11 +55,11 @@ ArgTuple::ArgTuple(const std::vector<std::string>& indexed_bns) : indexed_bns_(i
 }
 
 int32_t ArgTuple::TensorTupleIndex4ArgNameAndIndex(const std::string& name, int32_t index) const {
-  const auto& map = arg_name2bn_index2tensor_tuple_index_;
-  const auto& iter = map.find(name);
-  if (iter == map.end()) { return -1; }
-  const auto& vec = iter->second;
-  return vec.at(index);
+  for (size_t i = 0; i < indexed_arg_name_and_index_.size(); i++) {
+    const auto& pair = indexed_arg_name_and_index_[i];
+    if (pair.second == index && pair.first == name) { return i; }
+  }
+  return -1;
 }
 
 }  // namespace oneflow

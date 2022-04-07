@@ -19,6 +19,7 @@ limitations under the License.
 #include "oneflow/core/vm/instruction_type.h"
 #include "oneflow/core/vm/no_arg_cb_phy_instr_operand.h"
 #include "oneflow/core/vm/vm_util.h"
+#include "oneflow/core/device/cpu_device_context.h"
 #include "oneflow/core/common/blocking_counter.h"
 #include "oneflow/core/common/cpp_attribute.h"
 #include "oneflow/core/control/global_process_ctx.h"

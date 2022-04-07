@@ -37,6 +37,7 @@ class CudaLocalCallOpKernelInstructionType final : public LocalCallOpKernelInstr
   using stream_type = vm::CudaStreamType;
 };
 COMMAND(vm::RegisterInstructionType<CudaLocalCallOpKernelInstructionType>("gpu.LocalCallOpKernel"));
+COMMAND(vm::RegisterInstructionType<CudaLocalCallOpKernelInstructionType>("cuda.LocalCallOpKernel"));
 
 class AsyncCudaLocalCallOpKernelInstructionType final : public LocalCallOpKernelInstructionType {
  public:

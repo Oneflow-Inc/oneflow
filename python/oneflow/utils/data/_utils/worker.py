@@ -287,6 +287,7 @@ def _worker_loop(
 ):
     # See NOTE [ Data Loader Multiprocessing Shutdown Logic ] for details on the
     # logic of this function.
+    print(f'worker pid: {os.getpid()}')
     try:
 
         def cleanup_shm_at_exit(num, frame):

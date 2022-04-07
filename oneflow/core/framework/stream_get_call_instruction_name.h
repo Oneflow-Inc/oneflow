@@ -18,77 +18,79 @@ limitations under the License.
 
 #include <glog/logging.h>
 #include <string>
+#include "oneflow/core/common/decorator.h"
 #include "oneflow/core/common/stream_role.h"
 #include "oneflow/core/common/device_type.h"
 #include "oneflow/core/common/maybe.h"
+#include "oneflow/core/common/util.h"
+#include "oneflow/core/framework/device.h"
 #include "oneflow/core/framework/to_string.h"
 
 namespace oneflow {
 
 struct GetCallInstructionName {
-  static Maybe<const std::string&> Case(StreamRoleCase<StreamRole::kInvalid>,
-                                        DeviceType device_type) {  // NOLINT
-    static constexpr auto* Get = DECORATE(&Call::Invalid, ThreadLocal);
-    return *JUST(Get(device_type));
+  static std::string Case(StreamRoleCase<StreamRole::kInvalid>,
+                                        Symbol<Device> device) {  // NOLINT
+    UNIMPLEMENTED();
   }
-  static Maybe<const std::string&> Case(StreamRoleCase<StreamRole::kCompute>,
-                                        DeviceType device_type) {
+  static std::string Case(StreamRoleCase<StreamRole::kCompute>,
+                                        Symbol<Device> device) {
     static constexpr auto* Get = DECORATE(&Call::Compute, ThreadLocal);
-    return *JUST(Get(device_type));
+    return Get(device);
   }
-  static Maybe<const std::string&> Case(StreamRoleCase<StreamRole::kHost2Device>,
-                                        DeviceType device_type) {
+  static std::string Case(StreamRoleCase<StreamRole::kHost2Device>,
+                                        Symbol<Device> device) {
     static constexpr auto* Get = DECORATE(&Call::Host2Device, ThreadLocal);
-    return *JUST(Get(device_type));
+    return Get(device);
   }
-  static Maybe<const std::string&> Case(StreamRoleCase<StreamRole::kDevice2Host>,
-                                        DeviceType device_type) {
+  static std::string Case(StreamRoleCase<StreamRole::kDevice2Host>,
+                                        Symbol<Device> device) {
     static constexpr auto* Get = DECORATE(&Call::Device2Host, ThreadLocal);
-    return *JUST(Get(device_type));
+    return Get(device);
   }
-  static Maybe<const std::string&> Case(StreamRoleCase<StreamRole::kSyncedLaunchedCommNet>,
-                                        DeviceType device_type) {
+  static std::string Case(StreamRoleCase<StreamRole::kSyncedLaunchedCommNet>,
+                                        Symbol<Device> device) {
     static constexpr auto* Get = DECORATE(&Call::SyncedLaunchedCommNet, ThreadLocal);
-    return *JUST(Get(device_type));
+    return Get(device);
   }
-  static Maybe<const std::string&> Case(StreamRoleCase<StreamRole::kAsyncedLaunchedCommNet>,
-                                        DeviceType device_type) {
+  static std::string Case(StreamRoleCase<StreamRole::kAsyncedLaunchedCommNet>,
+                                        Symbol<Device> device) {
     static constexpr auto* Get = DECORATE(&Call::AsyncedLaunchedCommNet, ThreadLocal);
-    return *JUST(Get(device_type));
+    return Get(device);
   }
-  static Maybe<const std::string&> Case(StreamRoleCase<StreamRole::kCriticalSection>,
-                                        DeviceType device_type) {
+  static std::string Case(StreamRoleCase<StreamRole::kCriticalSection>,
+                                        Symbol<Device> device) {
     static constexpr auto* Get = DECORATE(&Call::CriticalSection, ThreadLocal);
-    return *JUST(Get(device_type));
+    return Get(device);
   }
 
  private:
   struct Call {
-    static Maybe<std::string> Invalid(DeviceType device_type) {  // NOLINT
-      UNIMPLEMENTED_THEN_RETURN();
+    static std::string Invalid(Symbol<Device> device) {  // NOLINT
+      UNIMPLEMENTED();
     }
-    static Maybe<std::string> Compute(DeviceType device_type) {
-      return *JUST(DeviceTag4DeviceType(device_type)) + ".LocalCallOpKernel";
+    static std::string Compute(Symbol<Device> device) {
+      return device->type() + ".LocalCallOpKernel";
     }
-    static Maybe<std::string> Host2Device(DeviceType device_type) {
-      CHECK_EQ_OR_RETURN(device_type, kCUDA);
+    static std::string Host2Device(Symbol<Device> device) {
+      CHECK_EQ_OR_RETURN(device->enum_type(), kCUDA);
       return std::string("cuda_h2d.LocalCallOpKernel");
     }
-    static Maybe<std::string> Device2Host(DeviceType device_type) {
-      CHECK_EQ_OR_RETURN(device_type, kCUDA);
+    static std::string Device2Host(Symbol<Device> device) {
+      CHECK_EQ_OR_RETURN(device->enum_type(), kCUDA);
       return std::string("cuda_d2h.LocalCallOpKernel");
     }
-    static Maybe<std::string> SyncedLaunchedCommNet(DeviceType device_type) {
-      if (device_type == kCPU) { return std::string("cpu.LocalCallOpKernel"); }
-      CHECK_EQ_OR_RETURN(device_type, kCUDA);
+    static std::string SyncedLaunchedCommNet(Symbol<Device> device) {
+      if (device->enum_type() == kCPU) { return std::string("cpu.LocalCallOpKernel"); }
+      CHECK_EQ_OR_RETURN(device->enum_type(), kCUDA);
       return std::string("gpu.LocalCallOpKernel");
     }
-    static Maybe<std::string> AsyncedLaunchedCommNet(DeviceType device_type) {
-      if (device_type == kCPU) { return std::string("cpu.LocalCallOpKernel"); }
-      CHECK_EQ_OR_RETURN(device_type, kCUDA);
+    static std::string AsyncedLaunchedCommNet(Symbol<Device> device) {
+      if (device->enum_type() == kCPU) { return std::string("cpu.LocalCallOpKernel"); }
+      CHECK_EQ_OR_RETURN(device->enum_type(), kCUDA);
       return std::string("async.gpu.LocalCallOpKernel");
     }
-    static Maybe<std::string> CriticalSection(DeviceType device_type) {
+    static std::string CriticalSection(Symbol<Device> device) {
       UNIMPLEMENTED_THEN_RETURN();
     }
   };

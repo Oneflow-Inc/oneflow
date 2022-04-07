@@ -78,7 +78,6 @@ void Instruction::Init(InstructionMsg* instr_msg, Stream* stream,
   reset_instr_msg(instr_msg);
   set_stream(stream);
   instr_msg->instr_type_id().instruction_type().InitInstructionStatusIf(this);
-  *mut_parallel_desc() = parallel_desc;
 }
 
 void Instruction::Delete() {

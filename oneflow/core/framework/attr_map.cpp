@@ -66,14 +66,15 @@ namespace {
 
 AttrName2AttrValWrapper MakeAttrName2AttrValWrapper(
     const std::initializer_list<AttrMap::value_type>& init) {
-  const auto& attrs = std::make_shared<AttrName2AttrVal>();
-  for (const auto& pair : init) { attrs->emplace(pair.first, pair.second); }
+  const auto& attrs = std::make_shared<AttrName2AttrVal>(init);
   return AttrName2AttrValWrapper(attrs);
 }
 
 AttrName2AttrValWrapper MakeAttrName2AttrValWrapper(const MutableAttrMap& other) {
   const auto& attrs = std::make_shared<AttrName2AttrVal>();
-  for (const auto& pair : other) { attrs->emplace(pair.first, pair.second); }
+  for (const auto& pair : other) {
+    attrs->emplace_back(pair.first, pair.second);
+  }
   return AttrName2AttrValWrapper(attrs);
 }
 
@@ -81,7 +82,7 @@ AttrName2AttrValWrapper MakeAttrName2AttrValWrapper(const MutableCfgAttrMap& oth
   const auto& attrs = std::make_shared<AttrName2AttrVal>();
   for (const auto& pair : other) {
     const auto& attr_value = CHECK_JUST(user_op::AttrValueUtil::ToCppAttrValue(*pair.second));
-    attrs->emplace(pair.first, attr_value);
+    attrs->emplace_back(pair.first, attr_value);
   }
   return AttrName2AttrValWrapper(attrs);
 }
@@ -124,7 +125,7 @@ AttrMap MakeAttrMapFromUserOpConf(const UserOpConf& user_op_conf) {
   for (const auto& kv : user_op_conf.attr()) {
     auto cpp_attr_value = user_op::AttrValueUtil::ToCppAttrValue(kv.second);
     if (cpp_attr_value.IsOk()) {
-      attrs->emplace(kv.first, CHECK_JUST(cpp_attr_value));
+      attrs->emplace_back(kv.first, CHECK_JUST(cpp_attr_value));
     } else {
       LOG(ERROR) << user_op_conf.DebugString()
                  << " failed to convert to cpp attr value, key: " << kv.first;

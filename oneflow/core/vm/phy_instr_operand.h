@@ -20,6 +20,7 @@ limitations under the License.
 #include <set>
 #include <vector>
 #include <memory>
+#include "oneflow/core/common/fixed_vector.h"
 #include "oneflow/core/intrusive/intrusive.h"
 
 namespace oneflow {
@@ -27,7 +28,7 @@ namespace vm {
 
 struct MirroredObject;
 
-using DependenceVector = std::vector<MirroredObject*>;
+using DependenceVector = fixed_vector<MirroredObject*, 200>;
 
 // physical instruction operand
 class PhyInstrOperand {

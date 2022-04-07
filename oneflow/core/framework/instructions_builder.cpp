@@ -356,8 +356,8 @@ Maybe<void> InstructionsBuilder::LocalCallOpKernel(
   auto phy_instr_operand = JUST(vm::LocalCallOpKernelPhyInstrOperand::New(
       opkernel, input_eager_blob_objects, output_eager_blob_objects, consistent_tensor_infer_result,
       ctx, *one::CurrentDevVmDepObjectConsumeMode()));
-  const auto& instruction_name = JUST(StreamRoleSwitch<GetCallInstructionName>(
-      stream->stream_role(), stream->device()->enum_type()));
+  const auto& instruction_name = StreamRoleSwitch<GetCallInstructionName>(
+          stream->stream_role(), stream->device());
   auto instruction = intrusive::make_shared<vm::InstructionMsg>(
       Global<VirtualMachine>::Get()->mut_vm(), instruction_name, parallel_desc_sym,
       phy_instr_operand);

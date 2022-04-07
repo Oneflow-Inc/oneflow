@@ -27,19 +27,10 @@ Maybe<void> LocalCallOpKernelPhyInstrOperand::Init() {
   return Maybe<void>::Ok();
 }
 
-void LocalCallOpKernelPhyInstrOperand::ForEachConstMirroredObject(
-    const std::function<void(vm::MirroredObject* compute)>& DoEach) const {
-  const auto& input_list = inputs();
-  for (int64_t index : opkernel().input_tuple_indexes4const_ibns()) {
-    const auto& input = input_list->at(index);
-    DoEach(CHECK_JUST(input->compute_local_dep_object()));
-  }
-}
-
 void LocalCallOpKernelPhyInstrOperand::InitStreamSequentialDependence() {
   const auto& stream = opkernel().stream();
   auto* device_schedule_dep_object = stream->mut_schedule_local_dep_object();
-  if (StreamRoleSwitch<IsCommNetStream>(stream->stream_role())) {
+  if (stream->stream_role() == StreamRole::kAsyncedLaunchedCommNet || stream->stream_role() == StreamRole::kSyncedLaunchedCommNet) {
     // Sequantialize nccl instructions to avoid deadlock
     stream_sequential_dependence_ = device_schedule_dep_object;
   } else {
@@ -53,31 +44,52 @@ void LocalCallOpKernelPhyInstrOperand::InitStreamSequentialDependence() {
   }
 }
 
-void LocalCallOpKernelPhyInstrOperand::ForEachMutMirroredObject(
-    const std::function<void(vm::MirroredObject* compute)>& DoEach) const {
-  const auto& stream = opkernel().stream();
-  const auto& opt_transport_dep_object = stream->mut_transport_local_dep_object();
-  if (opt_transport_dep_object.has_value()) { DoEach(CHECK_JUST(opt_transport_dep_object)); }
+LocalCallOpKernelPhyInstrOperand::LocalCallOpKernelPhyInstrOperand(
+    const std::shared_ptr<one::StatefulLocalOpKernel>& opkernel,
+    const one::EagerBlobObjectListPtr& inputs, const one::EagerBlobObjectListPtr& outputs,
+    const std::shared_ptr<const one::ConsistentTensorInferResult>& consistent_tensor_infer_result,
+    const one::OpExprInterpContext& op_interp_ctx_,
+    const one::DevVmDepObjectConsumeMode dev_vm_dep_object_consume_mode)
+    : opkernel_(opkernel),
+      inputs_(inputs),
+      outputs_(outputs),
+      consistent_tensor_infer_result_(consistent_tensor_infer_result),
+      op_interp_ctx_(op_interp_ctx_),
+      user_opkernel_(nullptr),
+      need_temp_storage_(false),
+      dev_vm_dep_object_consume_mode_(dev_vm_dep_object_consume_mode),
+      input_dependences_(),
+      output_dependences_() {
+  {
+    for (int64_t index : opkernel->input_tuple_indexes4const_ibns()) {
+      const auto& input = inputs->at(index);
+      input_dependences_.push_back(CHECK_JUST(input->compute_local_dep_object()));
+    }
+  }
+  {
+    const auto& stream = opkernel->stream();
+    const auto& opt_transport_dep_object = stream->mut_transport_local_dep_object();
+    if (opt_transport_dep_object.has_value()) {
+      output_dependences_.push_back(CHECK_JUST(opt_transport_dep_object));
+    }
 
-  const auto& input_list = inputs();
-  for (int64_t index : opkernel().input_tuple_indexes4mut_ibns()) {
-    const auto& input = input_list->at(index);
-    DoEach(CHECK_JUST(input->compute_local_dep_object()));
+    for (int64_t index : opkernel->input_tuple_indexes4mut_ibns()) {
+      const auto& input = inputs->at(index);
+      output_dependences_.push_back(CHECK_JUST(input->compute_local_dep_object()));
+    }
+    for (int64_t index : opkernel->output_tuple_indexes4mut_obns()) {
+      const auto& output = outputs->at(index);
+      output_dependences_.push_back(CHECK_JUST(output->compute_local_dep_object()));
+    }
   }
-  const auto& output_list = outputs();
-  for (int64_t index : opkernel().output_tuple_indexes4mut_obns()) {
-    const auto& output = output_list->at(index);
-    DoEach(CHECK_JUST(output->compute_local_dep_object()));
+  {
+    for (int64_t index : opkernel->output_tuple_indexes4mut2_obns()) {
+      const auto& output = outputs->at(index);
+      output_dependences_.push_back(CHECK_JUST(output->compute_local_dep_object()));
+    }
   }
-}
 
-void LocalCallOpKernelPhyInstrOperand::ForEachMut2MirroredObject(
-    const std::function<void(vm::MirroredObject* compute)>& DoEach) const {
-  const auto& output_list = outputs();
-  for (int64_t index : opkernel().output_tuple_indexes4mut2_obns()) {
-    const auto& output = output_list->at(index);
-    DoEach(CHECK_JUST(output->compute_local_dep_object()));
-  }
+  InitStreamSequentialDependence();
 }
 
 }  // namespace vm
