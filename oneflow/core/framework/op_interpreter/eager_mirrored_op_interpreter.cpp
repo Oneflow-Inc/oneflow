@@ -126,7 +126,7 @@ Maybe<void> NaiveInterpret(const UserOpExpr& user_op_expr, const TensorTuple& in
   }
 
   // Infer shapes and dtypes
-  const auto& device_tag = JUST(stream->device()->of_type());
+  const auto& device_tag = stream->device()->type();
   JUST(user_op_expr.InferPhysicalShapeAndDType(
       attrs, device_tag,
       [&](int32_t i) -> const TensorMeta* {
