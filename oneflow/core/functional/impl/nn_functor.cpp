@@ -18,6 +18,7 @@ limitations under the License.
 #include "oneflow/core/common/maybe.h"
 #include "oneflow/core/common/optional.h"
 #include "oneflow/core/common/scalar.h"
+#include "oneflow/core/common/shape_vec.h"
 #include "oneflow/core/framework/attr_map.h"
 #include "oneflow/core/framework/op_builder.h"
 #include "oneflow/core/framework/op_expr.h"
@@ -29,6 +30,7 @@ limitations under the License.
 #include "oneflow/core/framework/random_generator.h"
 #include "oneflow/core/functional/functional.h"
 #include "oneflow/core/functional/function_library.h"
+#include "oneflow/core/functional/functional_api.yaml.h"
 #include "oneflow/core/functional/sequence_function.h"
 #include "oneflow/core/functional/impl/common.h"
 #include "oneflow/core/functional/impl/unary_functor.h"
@@ -271,6 +273,27 @@ class TensorDotFunctor {
                            const std::vector<int64_t>& dims_b) const {
     CHECK_EQ_OR_RETURN(dims_a.size(), dims_b.size())
         << "dims1 and dims2 must have same size, got " << dims_a.size() << " and " << dims_b.size();
+
+    std::cout << "dims_a" << std::endl;
+    for (auto i : dims_a) std::cout << i << " ";
+
+    std::cout << "dims_b" << std::endl;
+    for (auto i : dims_b) std::cout << i << " ";
+
+    if (dims_a.empty() && dims_b.empty()) {
+      std::vector<int64_t> shape_sum;
+      shape_sum.reserve(a->shape()->NumAxes() + b->shape()->NumAxes());
+      for (int64_t i = 0; i < a->shape()->NumAxes(); i++) {
+        shape_sum.emplace_back(a->shape()->At(i));
+      }
+      for (int64_t i = 0; i < b->shape()->NumAxes(); i++) {
+        shape_sum.emplace_back(b->shape()->At(i));
+      }
+      auto reshape_a = JUST(Reshape(a, Shape(DimVector{-1, 1})));
+      auto reshape_b = JUST(Reshape(b, Shape(DimVector{1, -1})));
+      return JUST(Reshape(JUST(functional::MatMul(a, b, false, false, 1.0)),
+                          Shape(DimVector(shape_sum.begin(), shape_sum.end()))));
+    }
     std::vector<bool> if_dot_dims_a(a->shape()->NumAxes(), false);
     std::vector<bool> if_dot_dims_b(b->shape()->NumAxes(), false);
     for (auto i : dims_a) if_dot_dims_a[i] = true;
@@ -296,7 +319,8 @@ class TensorDotFunctor {
     if (!broadcast_dims_b.empty())
       reduced_b = JUST(functional::ReduceSum(b, broadcast_dims_b, true));
 
-    int64_t rshape_a = 1, rshape_b = 1;
+    int64_t rsize_a = 1, rsize_b = 1;
+    std::vector<int64_t> rshape_a, rshape_b;
     std::vector<int32_t> pa, pb;
     pa.reserve(a->shape()->NumAxes());
     pb.reserve(b->shape()->NumAxes());
@@ -305,7 +329,8 @@ class TensorDotFunctor {
       if (!if_dot_dims_a[i]) {
         non_dot_dims.emplace_back(a->shape()->At(i));
         pa.emplace_back(i);
-        rshape_a *= reduced_a->shape()->At(i);
+        rsize_a *= reduced_a->shape()->At(i);
+        rshape_a.emplace_back(reduced_a->shape()->At(i));
       }
     }
 
@@ -316,19 +341,21 @@ class TensorDotFunctor {
       if (!if_dot_dims_b[i]) {
         non_dot_dims.emplace_back(b->shape()->At(i));
         pb.emplace_back(i);
-        rshape_b *= reduced_b->shape()->At(i);
+        rsize_b *= reduced_b->shape()->At(i);
+        rshape_b.emplace_back(reduced_b->shape()->At(i));
       }
     }
+    rshape_a.insert(rshape_a.end(), rshape_b.begin(), rshape_b.end());
 
     int64_t dshape = 1;
     for (auto i : dims_a) dshape *= reduced_a->shape()->At(i);
     auto permute_a =
-        JUST(Reshape(JUST(Permute(reduced_a, pa)), Shape(DimVector({rshape_a, dshape}))));
+        JUST(Reshape(JUST(Permute(reduced_a, pa)), Shape(DimVector({rsize_a, dshape}))));
     auto permute_b =
-        JUST(Reshape(JUST(Permute(reduced_b, pb)), Shape(DimVector({dshape, rshape_b}))));
+        JUST(Reshape(JUST(Permute(reduced_b, pb)), Shape(DimVector({dshape, rsize_b}))));
 
     return Reshape(JUST(functional::MatMul(permute_a, permute_b, false, false, 1.0)),
-                   Shape(DimVector({rshape_a, rshape_b})));
+                   Shape(DimVector({rshape_a.begin(), rshape_a.end()})));
   }
 };
 
