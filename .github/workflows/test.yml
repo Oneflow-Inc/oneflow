@@ -79,13 +79,13 @@ jobs:
       - name: Check Python format
         id: py_check
         run: |
-          python3 -m pip install black==19.10b0
+          python3 -m pip install black==22.3.0
           python3 ci/check/run_py_format.py --source_dir $PWD
       - name: Run Python Format
         id: py_fmt
         if: ${{ failure() }}
         run: |
-          python3 -m pip install black==19.10b0
+          python3 -m pip install black==22.3.0
           python3 ci/check/run_py_format.py --source_dir $PWD --fix
       - name: Check CMake format
         id: cmake_check

@@ -29,7 +29,7 @@ if __name__ == "__main__":
     os.chdir(arguments.source_dir)
 
     version_cmd = sys.executable + " -m {} --version | grep {} > /dev/null"
-    BLACK_VER = "19.10b0"
+    BLACK_VER = "22.3.0"
     if os.system(version_cmd.format("black", BLACK_VER)):
         print(
             f"Please install black {BLACK_VER}. For instance, run 'python3 -m pip install black=={BLACK_VER} --user'"
