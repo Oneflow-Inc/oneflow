@@ -388,6 +388,41 @@ class LeakyReluGradFunctor {
   std::shared_ptr<OpExpr> op_;
 };
 
+class SoftplusFunctor {
+ public:
+  SoftplusFunctor() {
+    op_ = CHECK_JUST(one::OpBuilder("softplus").Input("in").Output("out").Build());
+  }
+
+  Maybe<Tensor> operator()(const std::shared_ptr<Tensor>& x, const double& beta,
+                           const double& threshold) const {
+    MutableAttrMap attrs;
+    JUST(attrs.SetAttr<double>("beta", beta));
+    JUST(attrs.SetAttr<double>("threshold", threshold));
+    return OpInterpUtil::Dispatch<one::Tensor>(*op_, {x}, attrs);
+  }
+
+ private:
+  std::shared_ptr<OpExpr> op_;
+};
+
+class SoftplusGradFunctor {
+ public:
+  SoftplusGradFunctor() {
+    op_ = CHECK_JUST(one::OpBuilder("softplus_grad").Input("x").Input("dy").Output("dx").Build());
+  }
+  Maybe<Tensor> operator()(const std::shared_ptr<Tensor>& x, const std::shared_ptr<Tensor>& dy,
+                           const double& beta, const double& threshold) const {
+    MutableAttrMap attrs;
+    JUST(attrs.SetAttr<double>("beta", beta));
+    JUST(attrs.SetAttr<double>("threshold", threshold));
+    return OpInterpUtil::Dispatch<one::Tensor>(*op_, {x, dy}, attrs);
+  }
+
+ private:
+  std::shared_ptr<OpExpr> op_;
+};
+
 class SiluFunctor : public UnaryFunctor {
  public:
   SiluFunctor() { op_ = CHECK_JUST(one::OpBuilder("silu").Input("in").Output("out").Build()); }
@@ -464,6 +499,41 @@ class SoftShrinkFunctor {
   std::shared_ptr<OpExpr> op_;
 };
 
+class ThresholdFunctor {
+ public:
+  ThresholdFunctor() {
+    op_ = CHECK_JUST(one::OpBuilder("threshold").Input("in").Output("out").Build());
+  }
+
+  Maybe<Tensor> operator()(const std::shared_ptr<Tensor>& x, const double& threshold,
+                           const double& value) const {
+    MutableAttrMap attrs;
+    JUST(attrs.SetAttr<double>("threshold_val", threshold));
+    JUST(attrs.SetAttr<double>("value", value));
+    return OpInterpUtil::Dispatch<one::Tensor>(*op_, {x}, attrs);
+  }
+
+ private:
+  std::shared_ptr<OpExpr> op_;
+};
+
+class ThresholdGradFunctor {
+ public:
+  ThresholdGradFunctor() {
+    op_ = CHECK_JUST(one::OpBuilder("threshold_grad").Input("x").Input("dy").Output("dx").Build());
+  }
+
+  Maybe<Tensor> operator()(const std::shared_ptr<Tensor>& x, const std::shared_ptr<Tensor>& dy,
+                           const double& threshold) const {
+    MutableAttrMap attrs;
+    JUST(attrs.SetAttr<double>("threshold_val", threshold));
+    return OpInterpUtil::Dispatch<one::Tensor>(*op_, {x, dy}, attrs);
+  }
+
+ private:
+  std::shared_ptr<OpExpr> op_;
+};
+
 class SoftShrinkGradFunctor {
  public:
   SoftShrinkGradFunctor() {
@@ -505,6 +575,8 @@ ONEFLOW_FUNCTION_LIBRARY(m) {
   m.add_functor<impl::HardSwishGradFunctor>("HardSwishGrad");
   m.add_functor<impl::LeakyReluFunctor>("LeakyRelu");
   m.add_functor<impl::LeakyReluGradFunctor>("LeakyReluGrad");
+  m.add_functor<impl::SoftplusFunctor>("Softplus");
+  m.add_functor<impl::SoftplusGradFunctor>("SoftplusGrad");
   m.add_functor<impl::SiluFunctor>("Silu");
   m.add_functor<impl::SiluGradFunctor>("SiluGrad");
   m.add_functor<impl::MishFunctor>("Mish");
@@ -513,6 +585,8 @@ ONEFLOW_FUNCTION_LIBRARY(m) {
   m.add_functor<impl::SeluGradFunctor>("SeluGrad");
   m.add_functor<impl::SoftSignFunctor>("SoftSign");
   m.add_functor<impl::SoftSignGradFunctor>("SoftSignGrad");
+  m.add_functor<impl::ThresholdFunctor>("Threshold");
+  m.add_functor<impl::ThresholdGradFunctor>("ThresholdGrad");
   m.add_functor<impl::SoftShrinkFunctor>("SoftShrink");
   m.add_functor<impl::SoftShrinkGradFunctor>("SoftShrinkGrad");
 };

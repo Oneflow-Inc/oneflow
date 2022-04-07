@@ -30,7 +30,8 @@ py::object AddFunctionDoc(py::object f, const std::string& doc_string) {
   if (PyCFunction_Check(obj)) {
     auto* f = (PyCFunctionObject*)obj;
     if (f->m_ml->ml_doc) {
-      THROW(RuntimeError) << "function " << f->m_ml->ml_name << " already has a docstring.";
+      THROW(RuntimeError) << "function " << f->m_ml->ml_name << " already has a docstring "
+                          << "shows: " << f->m_ml->ml_doc;
     }
     f->m_ml->ml_doc = doc_str;
   } else if (PyFunction_Check(obj)) {
@@ -52,6 +53,9 @@ py::object AddFunctionDoc(py::object f, const std::string& doc_string) {
     py::setattr(f, "__doc__", py::reinterpret_steal<py::object>(PyUnicode_FromString(doc_str)));
   } else if (Py_TYPE(obj)->tp_name == PyProperty_Type.tp_name) {
     py::setattr(f, "__doc__", py::reinterpret_steal<py::object>(PyUnicode_FromString(doc_str)));
+  } else if (PyInstanceMethod_Check(obj)) {
+    auto* f = (PyCFunctionObject*)(PyInstanceMethod_Function(obj));
+    f->m_ml->ml_doc = doc_str;
   } else {
     THROW(RuntimeError) << "function is " << Py_TYPE(obj)->tp_name << ", not a valid function.";
   }

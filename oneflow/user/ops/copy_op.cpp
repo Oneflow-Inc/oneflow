@@ -24,10 +24,10 @@ namespace {
 
 Maybe<Symbol<Stream>> MakeCopyStream(const Symbol<Device>& in_device,
                                      const Symbol<Device>& out_device) {
-  if (JUST(in_device->of_type()) == "gpu" && JUST(out_device->of_type()) == "cpu") {
+  if (in_device->type() == "cuda" && out_device->type() == "cpu") {
     const auto device = JUST(Device::New("cuda", in_device->device_id()));
     return Stream::New(device, StreamRole::kDevice2Host);
-  } else if (JUST(in_device->of_type()) == "cpu" && JUST(out_device->of_type()) == "gpu") {
+  } else if (in_device->type() == "cpu" && out_device->type() == "cuda") {
     const auto device = JUST(Device::New("cuda", out_device->device_id()));
     return Stream::New(device, StreamRole::kHost2Device);
   } else {

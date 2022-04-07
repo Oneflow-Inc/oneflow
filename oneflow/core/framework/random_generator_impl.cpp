@@ -20,7 +20,7 @@ limitations under the License.
 #include "oneflow/core/framework/instructions_builder.h"
 #include "oneflow/core/framework/tensor_util.h"
 #include "oneflow/core/functional/functional.h"
-#include "oneflow/core/job/env_global_objects_scope.h"
+#include "oneflow/core/vm/virtual_machine.h"
 #include "oneflow/core/register/ofblob.h"
 #include "oneflow/core/vm/vm_util.h"
 #ifdef WITH_CUDA
@@ -35,7 +35,7 @@ namespace one {
 namespace {
 
 Maybe<void> CPUSynchronize() {
-  if (Global<EnvGlobalObjectsScope>::Get() != nullptr) { return vm::CurrentRankSync(); }
+  if (Global<VirtualMachine>::Get() != nullptr) { return vm::CurrentRankSync(); }
   return Maybe<void>::Ok();
 }
 
@@ -359,7 +359,7 @@ Maybe<void> AutoGeneratorImpl::SetState(const std::shared_ptr<Tensor>& tensor_st
     JUST(ParsingDeviceTag(splits.at(i), &device_name, &device_index));
     detail::DeviceKey device_key;
     const auto& device = JUST(Device::New(device_name, device_index));
-    device_key.device_type = JUST(DeviceType4DeviceTag(JUST(device->of_type())));
+    device_key.device_type = JUST(DeviceType4DeviceTag(device->type()));
     device_key.device_index = device_index;
     auto it = generators_.find(device_key);
     if (it == generators_.end()) {
