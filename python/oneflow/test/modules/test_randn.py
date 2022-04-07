@@ -125,5 +125,18 @@ class TestRandnModule(flow.unittest.TestCase):
             arg[0](test_case, *arg[1:])
 
 
+@unittest.skipIf(os.getenv("ONEFLOW_TEST_CPU_ONLY"), "only test cpu cases")
+@flow.unittest.skip_unless_1n2d()
+class TestRandnOnNonDefaultDevice(flow.unittest.TestCase):
+    def test_non_default_device(test_case):
+        x = flow.randn(2, 3, device="cuda:1")
+        test_case.assertEqual(x.device, flow.device("cuda:1"))
+
+    def test_with_generator(test_case):
+        gen = flow.Generator("cuda")
+        x = flow.randn(2, 3, device="cuda", generator=gen)
+        test_case.assertEqual(x.device, flow.device(f"cuda:{flow.env.get_rank()}"))
+
+
 if __name__ == "__main__":
     unittest.main()
