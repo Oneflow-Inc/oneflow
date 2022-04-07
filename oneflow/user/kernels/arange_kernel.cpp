@@ -17,9 +17,6 @@ limitations under the License.
 #include "oneflow/user/kernels/arange_kernel_util.h"
 #include "oneflow/core/common/data_type.h"
 #include "oneflow/core/job/nd_sbp_util.h"
-#include "oneflow/core/common/container_util.h"
-#include "oneflow/core/register/tensor_slice_view.h"
-#include "oneflow/core/framework/user_op_kernel_registry.h"
 
 namespace oneflow {
 namespace user_op {
