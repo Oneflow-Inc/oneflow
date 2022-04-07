@@ -39,31 +39,6 @@ def _test_consistent_normal(test_case, placement, sbp, mean, std, shape, dtype):
     test_case.assertEqual(x.sbp, sbp)
     test_case.assertEqual(x.placement, placement)
 
-# def _test_graph_normal(test_case, placement, sbp, mean, std, shape, dtype):
-#     dtype = type_name_to_flow_type[dtype]
-#     class ConsistentNormalGraph(flow.nn.Graph):
-#         def __init__(self,):
-#             super().__init__()
-
-#         def build(self):      
-#             x = flow.normal(
-#                 mean,
-#                 std,
-#                 *shape,
-#                 placement=placement,
-#                 sbp=sbp,
-#                 dtype=dtype,
-#             )
-#             return x
-
-#     model = ConsistentNormalGraph()
-#     x = model()
-
-#     test_case.assertEqual(x.shape, shape)
-#     test_case.assertEqual(x.dtype, dtype)
-#     test_case.assertEqual(x.sbp, sbp)
-#     test_case.assertEqual(x.placement, placement)
-
 class TestNormalConsistent(flow.unittest.TestCase):
     @globaltest
     def test_normal_consistent(test_case):
@@ -78,20 +53,6 @@ class TestNormalConsistent(flow.unittest.TestCase):
                     placement, max_dim=len(arg[2]), except_partial_sum=True
                 ):
                     _test_consistent_normal(test_case, placement, sbp, *arg)
-
-    # @globaltest
-    # def test_normal_graph(test_case):
-    #     arg_dict = OrderedDict()
-    #     arg_dict["mean"] = [-1, 0, 1]
-    #     arg_dict["std"] = [1, 2, 8]
-    #     arg_dict["shape"] = [(2, 3), (2, 3, 4), (2, 3, 4, 5)]
-    #     arg_dict["dtype"] = ["float32", "double"]
-    #     for arg in GenArgList(arg_dict):
-    #         for placement in all_placement():
-    #             for sbp in all_sbp(
-    #                 placement, max_dim=len(arg[2]), except_partial_sum=True
-    #             ):
-    #                 _test_graph_normal(test_case, placement, sbp, *arg)
 
 if __name__ == "__main__":
     unittest.main()
