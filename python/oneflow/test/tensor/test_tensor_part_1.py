@@ -118,7 +118,8 @@ class TestTensor(flow.unittest.TestCase):
         np_arr = np.array(tensor)
         test_case.assertEqual(np_arr.shape, (5,))
         test_case.assertEqual(np_arr.dtype, np.float32)
-        test_case.assertEqual(np.allclose(np_arr, tensor.numpy()))
+        test_case.assertTrue(np.allclose(np_arr, tensor.numpy()))
+        test_case.assertEqual(str(np_arr), str(tensor.numpy()))
 
     @flow.unittest.skip_unless_1n1d()
     @autotest(check_graph=True)
