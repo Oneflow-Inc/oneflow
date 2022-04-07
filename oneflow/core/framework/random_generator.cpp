@@ -51,7 +51,7 @@ Maybe<void> ManualSeed(uint64_t seed, const std::string& device, int device_inde
 }
 
 Maybe<void> ManualSeed(uint64_t seed, DeviceType device, int device_index) {
-  return ManualSeed(seed, DeviceTypeName(device), device_index);
+  return ManualSeed(seed, *JUST(DeviceTag4DeviceType(device)), device_index);
 }
 
 namespace detail {
