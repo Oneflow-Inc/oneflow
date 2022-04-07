@@ -33,17 +33,18 @@ limitations under the License.
 namespace oneflow {
 namespace vm {
 
-void TensorViewInstructionType::Compute(vm::Instruction* instruction) const {
+Maybe<void> TensorViewInstructionType::Infer(vm::Instruction* instruction) const {
   const auto& phy_instr_operand = instruction->phy_instr_operand();
-  CHECK(static_cast<bool>(phy_instr_operand));
+  CHECK_OR_RETURN(static_cast<bool>(phy_instr_operand));
   const auto* ptr = dynamic_cast<const vm::TensorViewOperand*>(phy_instr_operand.get());
-  CHECK_NOTNULL(ptr);
+  CHECK_NOTNULL_OR_RETURN(ptr);
   DeviceCtx* device_ctx = instruction->stream().device_ctx().get();
   OfBlob input_ofblob(device_ctx->stream(), ptr->eager_blob_object()->mut_blob());
   OfBlob view_ofblob(device_ctx->stream(), ptr->view_eager_blob_object()->mut_blob());
 
   void* input_ptr = input_ofblob.mut_blob()->mut_raw_dptr();
   view_ofblob.mut_blob()->reset_dptr(static_cast<char*>(input_ptr));
+  return Maybe<void>::Ok();
 }
 
 void AccessBlobByCallbackInstructionType::Compute(vm::Instruction* instruction) const {

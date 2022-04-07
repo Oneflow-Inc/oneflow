@@ -37,8 +37,8 @@ class TensorViewInstructionType final : public vm::InstructionType {
   ~TensorViewInstructionType() override = default;
 
   std::string DebugName(const vm::Instruction& instruction) const override { return "TensorView"; }
-  Maybe<void> Infer(vm::Instruction* instruction) const override { return Maybe<void>::Ok(); }
-  void Compute(vm::Instruction* instruction) const override;
+  Maybe<void> Infer(vm::Instruction* instruction) const override;
+  void Compute(vm::Instruction* instruction) const override {}
 };
 
 class AccessBlobByCallbackInstructionType final : public vm::InstructionType {
