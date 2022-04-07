@@ -88,7 +88,7 @@ class RocAucScoreKernel final : public user_op::OpKernel {
     CHECK_EQ(label->shape().elem_cnt(), pred->shape().elem_cnt());
     CHECK_EQ(out->shape().elem_cnt(), 1);
     out_ptr[0] = RocAucScore(label->shape().elem_cnt(), label->dptr<L>(), pred->dptr<P>(),
-                             tmp_buffer->mut_dptr<P>());
+                             tmp_buffer->mut_dptr<float>());
   }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
