@@ -25,9 +25,11 @@ limitations under the License.
 #include "oneflow/core/common/cpp_attribute.h"
 #include "oneflow/core/common/global.h"
 #include "oneflow/core/common/singleton_ptr.h"
+#include "oneflow/core/common/env_var/env_var.h"
 #include "oneflow/core/vm/allocator.h"
 
 namespace oneflow {
+
 namespace vm {
 
 void VirtualMachineEngine::ReleaseInstruction(Instruction* instruction) {
@@ -364,9 +366,8 @@ void VirtualMachineEngine::DispatchInstruction(Instruction* instruction,
     }
   }
   // Compute
-  const auto& stream_type = stream->stream_type();
-  if (OnSchedulerThread(stream_type)) {
-    stream_type.Run(instruction);
+  if (OnSchedulerThread(*stream)) {
+    stream->stream_type().Run(instruction);
   } else {
     stream->mut_thread_ctx()->mut_worker_pending_instruction_list()->PushBack(instruction);
     schedule_ctx.OnWorkerLoadPending(stream->mut_thread_ctx());
@@ -390,8 +391,9 @@ Maybe<bool> VirtualMachineEngine::Receive(
   return Receive(&instruction_list);
 }
 
-bool VirtualMachineEngine::OnSchedulerThread(const StreamType& stream_type) {
-  return stream_type.OnSchedulerThread() || pthread_fork::IsForkedSubProcess();
+bool VirtualMachineEngine::OnSchedulerThread(const vm::Stream& stream) {
+  if (unlikely(pthread_fork::IsForkedSubProcess())) { return true; }
+  return stream.on_scheduler_thread();
 }
 
 // Barrier instructions are run after all previous lively instructions.
@@ -463,8 +465,8 @@ void VirtualMachineEngine::TryRunBarrierInstruction() {
   OF_PROFILER_RANGE_PUSH_POP_GUARD("RunBarrierInstruction");
   const auto& instruction_type = sequnential_instruction->instruction_type();
   CHECK(instruction_type.IsBarrier());
+  CHECK(OnSchedulerThread(sequnential_instruction->stream()));
   const StreamType& stream_type = sequnential_instruction->stream().stream_type();
-  CHECK(OnSchedulerThread(stream_type));
   stream_type.Run(sequnential_instruction);
   mut_barrier_instruction_list()->Erase(sequnential_instruction);
   LivelyInstructionListErase(sequnential_instruction);

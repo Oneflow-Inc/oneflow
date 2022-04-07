@@ -57,7 +57,12 @@ class Stream final : public intrusive::Base {
   int64_t device_id() const;
   Symbol<Device> device() const { return device_; }
   StreamRole stream_role() const { return stream_role_; }
+  bool on_scheduler_thread() const { return on_scheduler_thread_; }
   const StreamType& stream_type() const;
+
+  // list hooks
+  intrusive::ListHook active_stream_hook_;
+  intrusive::ListHook thread_ctx_stream_hook_;
 
  private:
   void MoveToFreeList(intrusive::shared_ptr<Instruction>&& instruction);
@@ -67,15 +72,16 @@ class Stream final : public intrusive::Base {
   intrusive::Ref* mut_intrusive_ref() { return &intrusive_ref_; }
 
   Stream()
-      : intrusive_ref_(),
+      : active_stream_hook_(),
+        thread_ctx_stream_hook_(),
+        intrusive_ref_(),
         thread_ctx_(),
         device_(),
         stream_role_(StreamRole::kInvalid),
         stream_type_(),
         device_ctx_(),
         running_instruction_list_(),
-        active_stream_hook_(),
-        thread_ctx_stream_hook_() {}
+        on_scheduler_thread_(false) {}
   intrusive::Ref intrusive_ref_;
   // fields
   ThreadCtx* thread_ctx_;
@@ -85,11 +91,7 @@ class Stream final : public intrusive::Base {
   std::unique_ptr<DeviceCtx> device_ctx_;
   // lists
   DispatchedInstructionList running_instruction_list_;
-
- public:
-  // list hooks
-  intrusive::ListHook active_stream_hook_;
-  intrusive::ListHook thread_ctx_stream_hook_;
+  bool on_scheduler_thread_;
 };
 
 }  // namespace vm

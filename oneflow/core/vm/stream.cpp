@@ -19,6 +19,7 @@ limitations under the License.
 #include "oneflow/core/common/cpp_attribute.h"
 #include "oneflow/core/framework/device.h"
 #include "oneflow/core/vm/stream_get_stream_type.h"
+#include "oneflow/core/framework/stream_on_independent_thread.h"
 
 namespace oneflow {
 namespace vm {
@@ -29,6 +30,7 @@ void Stream::__Init__(ThreadCtx* thread_ctx, Symbol<Device> device, StreamRole s
   stream_role_ = stream_role;
   stream_type_ = CHECK_JUST(StreamRoleSwitch<GetStreamType>(stream_role, device->enum_type()));
   stream_type_->InitDeviceCtx(mut_device_ctx(), this);
+  on_scheduler_thread_ = stream_type_->OnSchedulerThread(stream_role);
 }
 
 int64_t Stream::device_id() const { return device_->device_id(); }

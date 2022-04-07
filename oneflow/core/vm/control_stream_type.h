@@ -39,9 +39,8 @@ class ControlStreamType final : public StreamType {
                                   const InstructionStatusBuffer& status_buffer) const override;
   void Compute(Instruction* instruction) const override;
 
-  bool OnSchedulerThread() const override { return true; }
+  bool OnSchedulerThread(StreamRole) const override { return true; }
   bool SupportingTransportInstructions() const override { return false; }
-  bool IsControlStreamType() const override { return true; }
 };
 
 }  // namespace vm

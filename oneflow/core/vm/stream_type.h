@@ -21,6 +21,7 @@ limitations under the License.
 #include <glog/logging.h>
 #include "oneflow/core/device/device_context.h"
 #include "oneflow/core/job/resource.pb.h"
+#include "oneflow/core/common/stream_role.h"
 
 namespace oneflow {
 
@@ -48,9 +49,8 @@ class StreamType {
                                           const InstructionStatusBuffer& status_buffer) const = 0;
   virtual void Compute(Instruction* instruction) const = 0;
 
-  virtual bool OnSchedulerThread() const = 0;
+  virtual bool OnSchedulerThread(StreamRole stream_role) const;
   virtual bool SupportingTransportInstructions() const = 0;
-  virtual bool IsControlStreamType() const { return false; }
 
  protected:
   StreamType() = default;
