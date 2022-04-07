@@ -31,6 +31,7 @@ limitations under the License.
 #include "oneflow/core/job/foreign_callback.h"
 #include "oneflow/core/framework/nd_sbp.h"
 #include "oneflow/core/framework/sbp_infer_util.h"
+#include "oneflow/core/framework/placement_sbp_util.h"
 
 namespace oneflow {
 
@@ -1550,25 +1551,11 @@ Maybe<Shape> Get1dHierarchyPhysicalShape(const Shape& logical_shape,
   return physical;
 }
 
-Maybe<std::vector<int64_t>> GetIndexesFromOffset(const Shape& parallel_hierarchy, int64_t offset) {
-  auto indexes = std::make_shared<std::vector<int64_t>>();
-  indexes->resize(parallel_hierarchy.NumAxes());
-  for (int i = 0; i < parallel_hierarchy.NumAxes(); ++i) {
-    indexes->at(i) = offset / parallel_hierarchy.Count(i + 1);
-    offset = offset % parallel_hierarchy.Count(i + 1);
-  }
-  CHECK_EQ_OR_RETURN(offset, 0);
-  return indexes;
-}
-
-static constexpr auto* CachedGetIndexesFromOffset =
-    DECORATE(&GetIndexesFromOffset, ThreadLocalCopiable);
-
 Maybe<Shape> GetNdHierarchyPhysicalShape(const Shape& logical_shape, const NdSbp& nd_sbp,
                                          const Shape& parallel_hierarchy,
                                          const int64_t parallel_id) {
   std::shared_ptr<Shape> physical = std::make_shared<Shape>(logical_shape);
-  const auto& indexes = JUST(CachedGetIndexesFromOffset(parallel_hierarchy, parallel_id));
+  Stride hierarch_stride(parallel_hierarchy);
   FOR_RANGE(int64_t, i, 0, parallel_hierarchy.NumAxes()) {
     const auto& sbp_parallel = nd_sbp.sbp_parallel(i);
     if (sbp_parallel.has_split_parallel()) {
@@ -1580,7 +1567,7 @@ Maybe<Shape> GetNdHierarchyPhysicalShape(const Shape& logical_shape, const NdSbp
         if (physical->At(split_axis) > 0) {
           CHECK_GE_OR_RETURN(physical->At(split_axis), parallel_hierarchy.At(i));
           const BalancedSplitter bs(physical->At(split_axis), parallel_hierarchy.At(i));
-          physical->Set(split_axis, bs.At(indexes->at(i)).size());
+          physical->Set(split_axis, bs.At(CalcIndex4Axis(parallel_id, hierarch_stride, i)).size());
         }
       }
     }
