@@ -82,16 +82,18 @@ Maybe<double> ComputCopyCostBetweenTwoSbpParallel(const SbpParallel& producer_sb
           && producer_sbp_parallel.has_split_parallel()) {
         // S(0)->S(1), S(1)->S(0), etc.
         transfer_type = TransferCostHelper::kNcclAll2All;
-      } else if (consumer_sbp_parallel.has_split_parallel()
-                 && producer_sbp_parallel.has_broadcast_parallel()) {
+      } else if (producer_sbp_parallel.has_split_parallel()
+                 && consumer_sbp_parallel.has_broadcast_parallel()) {
         // S->B
         transfer_type = TransferCostHelper::kNcclAllGather;
-      } else if (consumer_sbp_parallel.has_partial_sum_parallel()
-                 && producer_sbp_parallel.has_split_parallel()) {
+      } else if (producer_sbp_parallel.has_partial_sum_parallel()
+                 && consumer_sbp_parallel.has_split_parallel()) {
         // P->S
         transfer_type = TransferCostHelper::kNcclReduceScatter;
       } else {
-        return Error::InvalidValueError("Unknow boxing type");
+        return Error::InvalidValueError("Unknow boxing type: "
+                                        + SbpParallelToString(producer_sbp_parallel) + " -> "
+                                        + SbpParallelToString(consumer_sbp_parallel));
       }
       return GetTransferCostHelper().AskSymmetricTransferCost(logical_blob_size, transfer_type);
     }
