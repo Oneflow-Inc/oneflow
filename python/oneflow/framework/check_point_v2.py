@@ -373,7 +373,8 @@ def save(
         ), f"out of range (expected to be in range of [0, {flow.env.get_world_size()}), but got {global_dst_rank})."
         if flow.env.get_rank() == global_dst_rank:
             write_to_path(path)
-    if global_dst_rank is None:
+    else:
+        # global_dst_rank is None
         write_to_path(path)
 
 
