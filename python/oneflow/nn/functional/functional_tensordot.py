@@ -26,7 +26,6 @@ def tensordot(a, b, dims: Union[int, List[List[int]]] = 2):
 
     if isinstance(dims, int):
         assert dims >= 0 and dims <= min(a.dim(), b.dim())
-        import ipdb; ipdb.set_trace()
         dim_a = list(range(a.dim() - dims, a.dim()))
         dim_b = list(range(dims))
 

@@ -274,12 +274,6 @@ class TensorDotFunctor {
     CHECK_EQ_OR_RETURN(dims_a.size(), dims_b.size())
         << "dims1 and dims2 must have same size, got " << dims_a.size() << " and " << dims_b.size();
 
-    std::cout << "dims_a" << std::endl;
-    for (auto i : dims_a) std::cout << i << " ";
-
-    std::cout << "dims_b" << std::endl;
-    for (auto i : dims_b) std::cout << i << " ";
-
     if (dims_a.empty() && dims_b.empty()) {
       std::vector<int64_t> shape_sum;
       shape_sum.reserve(a->shape()->NumAxes() + b->shape()->NumAxes());
@@ -291,7 +285,7 @@ class TensorDotFunctor {
       }
       auto reshape_a = JUST(Reshape(a, Shape(DimVector{-1, 1})));
       auto reshape_b = JUST(Reshape(b, Shape(DimVector{1, -1})));
-      return JUST(Reshape(JUST(functional::MatMul(a, b, false, false, 1.0)),
+      return JUST(Reshape(JUST(functional::MatMul(reshape_a, reshape_b, false, false, 1.0)),
                           Shape(DimVector(shape_sum.begin(), shape_sum.end()))));
     }
     std::vector<bool> if_dot_dims_a(a->shape()->NumAxes(), false);

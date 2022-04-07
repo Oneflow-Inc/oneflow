@@ -26,29 +26,23 @@ class TestTensordot(flow.unittest.TestCase):
     def test_tensordot(test_case):
         device = random_device()
         dims = random()
-        dims_list = [random(high=4).to(int).value() for i in range(dims.to(int).value() + 5)]
+        dims_list = [random(high=4).to(int).value() for i in range(dims.to(int).value() + 4)]
         x = random_tensor(
-            ndim=5,
+            ndim=4,
             dim0=dims_list[0],
             dim1=dims_list[1],
             dim2=dims_list[2],
             dim3=dims_list[3],
-            dim4=dims_list[4],
         ).to(device)
         y = random_tensor(
-            ndim=5,
+            ndim=4,
             dim0=dims_list[0 + dims.to(int).value()],
             dim1=dims_list[1 + dims.to(int).value()],
             dim2=dims_list[2 + dims.to(int).value()],
             dim3=dims_list[3 + dims.to(int).value()],
-            dim4=dims_list[4 + dims.to(int).value()],
         ).to(device)
 
-        print("dimlist: ", dims_list)
-        print("ndim: ", dims.to(int).value())
-        print("oneflow: ----", x.shape)
-        print("torch: ----", y.shape)
-        z = torch.tensordot(x, y, dims=5 - dims.to(int).value())
+        z = torch.tensordot(x, y, dims=4 - dims.to(int).value())
         return z
 
 
