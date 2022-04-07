@@ -1,4 +1,4 @@
-black==19.10b0; python_version >= "3.6"
+black==22.3.0; python_version >= "3.6"
 numpy>=1.17.0
 protobuf
 wheel
