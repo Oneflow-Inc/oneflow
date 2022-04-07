@@ -14,12 +14,10 @@ See the License for the specific language governing permissions and
 limitations under the License.
 """
 
-from tkinter import X
 import unittest
-import numpy as np
 from collections import OrderedDict
 
-from oneflow.test_utils.test_util import GenArgList, GenArgDict,type_name_to_flow_type
+from oneflow.test_utils.test_util import GenArgList,type_name_to_flow_type
 from oneflow.test_utils.automated_test_util import *
 import oneflow as flow
 
