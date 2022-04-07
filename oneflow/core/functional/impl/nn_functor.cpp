@@ -198,10 +198,6 @@ class DeConv3dFunctor : public DeConvBaseFunctor {
 
 class MatrixMatmulFunctor {
  public:
-  MatrixMatmulFunctor() {
-    matmul_op_ = CHECK_JUST(one::OpBuilder("matmul").Input("a").Input("b").Output("out").Build());
-  }
-
   Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& a,
                            const std::shared_ptr<one::Tensor>& b) const {
     const auto& a_shape = a->shape();
@@ -213,15 +209,8 @@ class MatrixMatmulFunctor {
         << "Tensor a and b shapes cannot be multiplied. (" << a_shape->At(0) << "x"
         << a_shape->At(1) << " and " << b_shape->At(0) << "x" << b_shape->At(1) << ").";
 
-    MutableAttrMap attrs;
-    JUST(attrs.SetAttr<bool>("transpose_a", false));
-    JUST(attrs.SetAttr<bool>("transpose_b", false));
-    JUST(attrs.SetAttr<double>("alpha", 1.));
-    return OpInterpUtil::Dispatch<Tensor>(*matmul_op_, {a, b}, attrs);
+    return JUST(functional::MatMul(a, b, false, false, 1.0));
   }
-
- private:
-  std::shared_ptr<OpExpr> matmul_op_;
 };
 
 class MatMulFunctor {
