@@ -31,7 +31,7 @@ class TestNewTensor(flow.unittest.TestCase):
         new_tensor = tensor.new_tensor(data)
         test_case.assertEqual(new_tensor.dtype, tensor.dtype)
         test_case.assertEqual(new_tensor.device, tensor.device)
-    
+
     @flow.unittest.skip_unless_1n1d()
     def test_new_local_tensor_with_spec_args(test_case):
         tensor = flow.randn(5)
@@ -57,7 +57,9 @@ class TestNewTensor(flow.unittest.TestCase):
         sbp = flow.sbp.split(0)
         tensor = flow.randn(4, 4, placement=placement, sbp=sbp)
         data = [[1, 2], [3, 4]]
-        new_tensor = tensor.new_tensor(data, placement=placement, sbp=flow.sbp.broadcast)
+        new_tensor = tensor.new_tensor(
+            data, placement=placement, sbp=flow.sbp.broadcast
+        )
         test_case.assertEqual(new_tensor.dtype, tensor.dtype)
         test_case.assertEqual(new_tensor.placement, placement)
         test_case.assertEqual(new_tensor.sbp, flow.sbp.broadcast)

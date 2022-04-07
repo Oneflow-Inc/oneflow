@@ -1040,21 +1040,29 @@ def _isinf(self):
     return flow.isinf(self)
 
 
-def _new_tensor(self, data, dtype=None, device=None, requires_grad=False, placement=None, sbp=None):
+def _new_tensor(
+    self, data, dtype=None, device=None, requires_grad=False, placement=None, sbp=None
+):
     if dtype is None:
         dtype = self.dtype
     if self.is_local:
-        assert placement is None and sbp is None, "self is local tensor, placement and sbp are expected to be None." 
+        assert (
+            placement is None and sbp is None
+        ), "self is local tensor, placement and sbp are expected to be None."
         if device is None:
             device = self.device
-        return flow.tensor(data, dtype=dtype, device=device, requires_grad=requires_grad)
+        return flow.tensor(
+            data, dtype=dtype, device=device, requires_grad=requires_grad
+        )
     else:
         assert device is None, "self is global tensor, device is expected to be None."
         if placement is None:
             placement = self.placement
         if sbp is None:
             sbp = self.sbp
-        return flow.tensor(data, dtype=dtype, placement=placement, sbp=sbp, requires_grad=requires_grad)
+        return flow.tensor(
+            data, dtype=dtype, placement=placement, sbp=sbp, requires_grad=requires_grad
+        )
 
 
 def RegisterMethods():
