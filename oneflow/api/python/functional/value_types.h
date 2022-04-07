@@ -102,6 +102,7 @@ enum ValueType : int {
   kGENERATOR_REF,
   kGENERATOR_MAYBE,
   kTENSOR_INDEX,
+  kTENSOR_INDEX_REF,
   kDEVICE,
   kPARALLEL_DESC,
   kSBP_PARALLEL,
@@ -163,6 +164,7 @@ VALUE_TYPE_OF_IMPL(one::Generator, kGENERATOR);
 VALUE_TYPE_OF_IMPL(std::shared_ptr<one::Generator>, kGENERATOR_REF);
 VALUE_TYPE_OF_IMPL(Maybe<one::Generator>, kGENERATOR_MAYBE);
 VALUE_TYPE_OF_IMPL(TensorIndex, kTENSOR_INDEX);
+VALUE_TYPE_OF_IMPL(std::shared_ptr<TensorIndex>, kTENSOR_INDEX_REF);
 VALUE_TYPE_OF_IMPL(Symbol<Device>, kDEVICE);
 VALUE_TYPE_OF_IMPL(Symbol<ParallelDesc>, kPARALLEL_DESC);
 VALUE_TYPE_OF_IMPL(Symbol<SbpParallel>, kSBP_PARALLEL);
@@ -176,7 +178,7 @@ VALUE_TYPE_OF_IMPL(const PyObject*, kPY_OBJECT);
 
 #undef VALUE_TYPE_OF_IMPL
 
-Maybe<const std::string&> ValueTypeName(ValueType type);
+const std::string& ValueTypeName(ValueType type);
 
 bool IsIntegralType(ValueType type);
 bool IsIntegralListType(ValueType type);

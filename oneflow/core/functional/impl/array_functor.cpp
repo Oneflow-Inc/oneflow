@@ -43,6 +43,8 @@ limitations under the License.
 #include "oneflow/core/job/global_for.h"
 #include "oneflow/core/job/lazy_mode.h"
 
+#include "oneflow/core/profiler/profiler.h"
+
 namespace oneflow {
 namespace one {
 namespace functional {
@@ -1797,6 +1799,10 @@ class TensorGetItemFunctor {
  public:
   TensorGetItemFunctor() {}
   Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x, const TensorIndex& index) const {
+    std::shared_ptr<one::Tensor> result;
+    OF_PROFILER_RANGE_PUSH("impl");
+
+    {
     std::vector<detail::Slice> slice_indices;
     TensorTuple tensor_indices;
     std::vector<int64_t> target_dims;
@@ -1829,7 +1835,6 @@ class TensorGetItemFunctor {
       }
       return true;
     }();
-    std::shared_ptr<one::Tensor> result;
     if (is_identity) {
       result = expand_input;
     } else {
@@ -1842,6 +1847,8 @@ class TensorGetItemFunctor {
 
     // TODO(): Returns a view of tensor `x`.
     if (result == x) { result = JUST(Identity(x)); }
+    }
+    OF_PROFILER_RANGE_POP();
     return result;
   }
 };

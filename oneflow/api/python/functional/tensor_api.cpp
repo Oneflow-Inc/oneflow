@@ -60,7 +60,7 @@ class TensorWithDataFunctor {
           1);
       if (ret != 0) { return Error::RuntimeError(); }
 
-      const auto& other = JUST(PyUnpackTensor(data));
+      const auto& other = PyUnpackTensor(data);
       return MakeTensorFromOtherTensor(other, dtype, device, requires_grad);
     } else {
       // Make tensor from python sequence or numpy array.
@@ -89,7 +89,7 @@ class ConsistentTensorWithDataFunctor {
           1);
       if (ret != 0) { return Error::RuntimeError(); }
 
-      const auto& other = JUST(PyUnpackTensor(data));
+      const auto& other = PyUnpackTensor(data);
       return MakeTensorFromOtherTensor(other, dtype, placement, sbp_tuple, requires_grad);
     }
     // Make consistent tensor from python sequence or numpy array.
@@ -139,7 +139,7 @@ class TensorWithDataCtorFunctor {
 
     const auto& dtype = DType::Float();
     if (PyTensorCheck(data)) {
-      const auto& other = JUST(PyUnpackTensor(data));
+      const auto& other = PyUnpackTensor(data);
       return MakeTensorFromOtherTensor(other, dtype, device,
                                        /*requires_grad=*/false);
     }
@@ -165,7 +165,7 @@ class ConsistentTensorWithDataCtorFunctor {
 
     const auto& dtype = DType::Float();
     if (PyTensorCheck(data)) {
-      const auto& other = JUST(PyUnpackTensor(data));
+      const auto& other = PyUnpackTensor(data);
       return MakeTensorFromOtherTensor(other, dtype, placement, sbp_tuple,
                                        /*requires_grad=*/false);
     }

@@ -54,7 +54,7 @@ struct ArgumentDef {
         keyword_only(arg_keyword_only),
         optional(arg_optional),
         has_default_value(true) {
-    default_value = std::make_shared<detail::TypedImmediate<T>>(arg_val);
+    default_value = std::make_shared<detail::TypedDefaultVal<T>>(arg_val);
   }
 
   std::string name;
@@ -64,7 +64,7 @@ struct ArgumentDef {
   bool keyword_only;
   bool optional;
   bool has_default_value;
-  std::shared_ptr<const detail::Immediate> default_value;
+  std::shared_ptr<const detail::DefaultVal> default_value;
 };
 
 struct FunctionDef {
