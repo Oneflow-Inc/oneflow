@@ -20,13 +20,14 @@ limitations under the License.
 #include <type_traits>
 #include "oneflow/core/common/just.h"
 #include "oneflow/core/common/maybe.h"
+#include "oneflow/core/common/env_var/debug_mode.h"
 #include "oneflow/xrt/utility/env.h"
 
 namespace oneflow {
 
 bool IsEnvEnabled(int32_t check_level) {
   static const int env_check_level = EnvToInt(ONEFOW_CHECK_LEVEL, -1);
-  static const bool env_debug_mode = EnvToBool(ONEFLOW_DEBUG_MODE, false);
+  static const bool env_debug_mode = IsInDebugMode();
   return env_debug_mode || env_check_level >= check_level;
 }
 

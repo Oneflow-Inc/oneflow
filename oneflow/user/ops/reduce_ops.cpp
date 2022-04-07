@@ -23,15 +23,19 @@ namespace oneflow {
 Maybe<void> InferTensorDescFn(user_op::InferContext* ctx) {
   const Shape& input_shape = ctx->InputShape("input_tensor", 0);
   const auto& reduce_axes = ctx->Attr<std::vector<int32_t>>("axis");
-  CHECK_OR_RETURN(!reduce_axes.empty());
-  const AxisVector reduce_axes_vec = {reduce_axes.begin(), reduce_axes.end()};
-  const Shape& reduce_shape = CreateReducedShape(input_shape, reduce_axes_vec);
-  const bool keepdims = ctx->Attr<bool>("keepdims");
   Shape* output_shape = ctx->OutputShape("output_tensor", 0);
-  if (keepdims) {
-    *output_shape = reduce_shape;
+  // For 0-dim Tensor
+  if (reduce_axes.empty()) {
+    *output_shape = input_shape;
   } else {
-    *output_shape = reduce_shape.RemoveOnes(reduce_axes_vec);
+    const AxisVector reduce_axes_vec = {reduce_axes.begin(), reduce_axes.end()};
+    const Shape& reduce_shape = CreateReducedShape(input_shape, reduce_axes_vec);
+    const bool keepdims = ctx->Attr<bool>("keepdims");
+    if (keepdims) {
+      *output_shape = reduce_shape;
+    } else {
+      *output_shape = reduce_shape.RemoveOnes(reduce_axes_vec);
+    }
   }
   return Maybe<void>::Ok();
 }
