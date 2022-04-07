@@ -48,8 +48,7 @@ def api_scope_config(**kwargs):
 
 
 def api_current_scope():
-    """ Return current scope
-    """
+    """Return current scope"""
     return oneflow._oneflow_internal.GetCurrentScope()
 
 

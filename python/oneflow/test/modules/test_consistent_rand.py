@@ -34,7 +34,9 @@ def _test_consistent_rand(test_case, shape, placement, sbp):
 
 def _test_graph_rand(test_case, shape, placement, sbp):
     class ConsistentRandGraph(flow.nn.Graph):
-        def __init__(self,):
+        def __init__(
+            self,
+        ):
             super().__init__()
 
         def build(self):
@@ -52,7 +54,14 @@ def _test_graph_rand(test_case, shape, placement, sbp):
 class TestRandConsistent(flow.unittest.TestCase):
     @globaltest
     def test_rand_consistent(test_case):
-        shapes = [(8,), (8, 8,), (8, 8, 8)]
+        shapes = [
+            (8,),
+            (
+                8,
+                8,
+            ),
+            (8, 8, 8),
+        ]
         for shape in shapes:
             for placement in all_placement():
                 for sbp in all_sbp(
@@ -64,14 +73,31 @@ class TestRandConsistent(flow.unittest.TestCase):
     @flow.unittest.skip_unless_1n2d()
     def test_rand_graph(test_case):
         arg_dict = OrderedDict()
-        arg_dict["shape"] = [(8,), (8, 8,), (8, 8, 8)]
+        arg_dict["shape"] = [
+            (8,),
+            (
+                8,
+                8,
+            ),
+            (8, 8, 8),
+        ]
         arg_dict["placement"] = [
             # 1d
             flow.placement("cpu", ranks=[0, 1]),
             flow.placement("cuda", ranks=[0, 1]),
             # 2d
-            flow.placement("cpu", ranks=[[0, 1],]),
-            flow.placement("cuda", ranks=[[0, 1],]),
+            flow.placement(
+                "cpu",
+                ranks=[
+                    [0, 1],
+                ],
+            ),
+            flow.placement(
+                "cuda",
+                ranks=[
+                    [0, 1],
+                ],
+            ),
         ]
         for args in GenArgDict(arg_dict):
             shape = args["shape"]

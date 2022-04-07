@@ -81,7 +81,7 @@ class Linear(Module):
 
         >>> import numpy as np
         >>> import oneflow as flow
-        
+
 
         >>> m = flow.nn.Linear(20, 30, False)
         >>> input = flow.Tensor(np.random.randn(128, 20))
@@ -129,7 +129,7 @@ def linear(input, weight, bias=None):
         - Weight: :math:`(out\_features, in\_features)`
         - Bias: :math:`(out\_features)`
         - Output: :math:`(N, *, out\_features)`
-    
+
     For example:
 
     .. code-block:: python
@@ -142,7 +142,7 @@ def linear(input, weight, bias=None):
         >>> output = flow.nn.functional.linear(input, weight)
         >>> output.size()
         oneflow.Size([128, 30])
-    
+
     """
     res = flow._C.matmul(input, weight, transpose_a=False, transpose_b=True)
     if bias is not None:

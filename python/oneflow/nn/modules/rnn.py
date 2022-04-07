@@ -267,10 +267,12 @@ class RNN(Module):
                 # )
 
                 hy1_f = flow.matmul(
-                    x_t_f, getattr(self, "weight_ih_l{}{}".format(layer, "")),
+                    x_t_f,
+                    getattr(self, "weight_ih_l{}{}".format(layer, "")),
                 )
                 hy2_f = flow.matmul(
-                    hid_t_f, getattr(self, "weight_hh_l{}{}".format(layer, "")),
+                    hid_t_f,
+                    getattr(self, "weight_hh_l{}{}".format(layer, "")),
                 )
 
                 if self.bias:
@@ -591,10 +593,12 @@ class GRU(Module):
                 # )
 
                 gi_f = flow.matmul(
-                    x_t_f, getattr(self, "weight_ih_l{}{}".format(layer, "")),
+                    x_t_f,
+                    getattr(self, "weight_ih_l{}{}".format(layer, "")),
                 )
                 gh_f = flow.matmul(
-                    hid_t_f, getattr(self, "weight_hh_l{}{}".format(layer, "")),
+                    hid_t_f,
+                    getattr(self, "weight_hh_l{}{}".format(layer, "")),
                 )
                 if self.bias:
                     gi_f += getattr(self, "bias_ih_l{}{}".format(layer, ""))
@@ -1005,10 +1009,12 @@ class LSTM(nn.Module):
                 # )
 
                 gi_f = flow.matmul(
-                    x_t_f, getattr(self, "weight_ih_l{}{}".format(layer, "")),
+                    x_t_f,
+                    getattr(self, "weight_ih_l{}{}".format(layer, "")),
                 )
                 gh_f = flow.matmul(
-                    hid_t_f, getattr(self, "weight_hh_l{}{}".format(layer, "")),
+                    hid_t_f,
+                    getattr(self, "weight_hh_l{}{}".format(layer, "")),
                 )
                 if self.bias:
                     gi_f += getattr(self, "bias_ih_l{}{}".format(layer, ""))

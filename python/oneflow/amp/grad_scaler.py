@@ -18,7 +18,7 @@ limitations under the License.
 class GradScaler(object):
     def __init__(
         self,
-        init_scale=2.0 ** 16,
+        init_scale=2.0**16,
         growth_factor=2.0,
         backoff_factor=0.5,
         growth_interval=2000,

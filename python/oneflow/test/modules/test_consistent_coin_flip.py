@@ -41,7 +41,9 @@ def _test_graph_coin_flip(
     test_case, batch_size, random_seed, probability, placement, sbp
 ):
     class ConsistentCoinFlipGraph(flow.nn.Graph):
-        def __init__(self,):
+        def __init__(
+            self,
+        ):
             super().__init__()
             self.m = flow.nn.CoinFlip(
                 batch_size, random_seed, probability, placement=placement, sbp=sbp
@@ -89,7 +91,12 @@ class TestCoinFlipConsistent(flow.unittest.TestCase):
             # TODO: CoinFlip support cuda kernel
             #  flow.placement("cuda", ranks=[0, 1]),
             # 2d
-            flow.placement("cpu", ranks=[[0, 1],]),
+            flow.placement(
+                "cpu",
+                ranks=[
+                    [0, 1],
+                ],
+            ),
             # TODO: CoinFlip support cuda kernel
             #  flow.placement("cuda", ranks=[[0, 1],]),
         ]

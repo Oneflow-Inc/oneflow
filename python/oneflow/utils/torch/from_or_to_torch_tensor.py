@@ -34,12 +34,12 @@ def from_torch(torch_tensor):
 
     Create a oneflow tensor from torch tensor.
 
-    The returned tensor and torch tensor share the same memory. 
-    
+    The returned tensor and torch tensor share the same memory.
+
     .. note::
         Currently only cpu tensor, local tensor is supported.
 
-        This function can be used in special data processing stages, torch's some cpu ops can be used. 
+        This function can be used in special data processing stages, torch's some cpu ops can be used.
 
     Args:
         input (torch.Tensor): Input Tensor
@@ -56,7 +56,7 @@ def from_torch(torch_tensor):
 
         torch_t = torch.tensor([[1, 2, 3], [4, 5, 6]])
         flow_t = flow.utils.from_torch(torch_t)
-    
+
     This feature ``from_torch`` is at Alpha Stage.
     """
     try:
@@ -78,8 +78,8 @@ def to_torch(flow_tensor):
 
     Create a torch tensor from oneflow tensor.
 
-    The returned tensor and oneflow tensor share the same memory. 
-    
+    The returned tensor and oneflow tensor share the same memory.
+
     .. note::
         Currently only cpu tensor, local tensor is supported.
 

@@ -89,20 +89,55 @@ class TestGraphIOCheck(flow.unittest.TestCase):
 
         g = CustomGraphIOCheck()
 
-        x = flow.tensor(np.random.randn(1,), dtype=flow.float32)
+        x = flow.tensor(
+            np.random.randn(
+                1,
+            ),
+            dtype=flow.float32,
+        )
 
-        t2 = flow.tensor(np.random.randn(1,), dtype=flow.float32)
-        t3 = flow.tensor(np.random.randn(1,), dtype=flow.float32)
+        t2 = flow.tensor(
+            np.random.randn(
+                1,
+            ),
+            dtype=flow.float32,
+        )
+        t3 = flow.tensor(
+            np.random.randn(
+                1,
+            ),
+            dtype=flow.float32,
+        )
         lt0 = list()
         lt0.append(t2)
         lt0.append(t3)
-        t7 = flow.tensor(np.random.randn(1,), dtype=flow.float32)
+        t7 = flow.tensor(
+            np.random.randn(
+                1,
+            ),
+            dtype=flow.float32,
+        )
         dic2 = {"kw2": t7}
         lt0.append(dic2)
 
-        t4 = flow.tensor(np.random.randn(1,), dtype=flow.float32)
-        t5 = flow.tensor(np.random.randn(1,), dtype=flow.float32)
-        t6 = flow.tensor(np.random.randn(1,), dtype=flow.float32)
+        t4 = flow.tensor(
+            np.random.randn(
+                1,
+            ),
+            dtype=flow.float32,
+        )
+        t5 = flow.tensor(
+            np.random.randn(
+                1,
+            ),
+            dtype=flow.float32,
+        )
+        t6 = flow.tensor(
+            np.random.randn(
+                1,
+            ),
+            dtype=flow.float32,
+        )
         lt1 = list()
         lt1.append(t5)
         lt1.append(t6)

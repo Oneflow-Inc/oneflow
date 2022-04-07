@@ -32,7 +32,13 @@ def _test_unfold_with_random_data(test_case, placement, sbp):
     )
     m.train(random())
     m.to_global(placement, sbp)
-    x = random_tensor(ndim=4, dim0=8, dim1=2, dim2=4, dim3=2,).to_global(placement, sbp)
+    x = random_tensor(
+        ndim=4,
+        dim0=8,
+        dim1=2,
+        dim2=4,
+        dim3=2,
+    ).to_global(placement, sbp)
     y = m(x)
     return y
 

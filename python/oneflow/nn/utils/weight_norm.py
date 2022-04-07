@@ -119,10 +119,10 @@ def weight_norm(module: T_module, name: str = "weight", dim: int = 0) -> T_modul
     By default, with ``dim=0``, the norm is computed independently per output
     channel/plane. To compute a norm over the entire weight tensor, use
     ``dim=None``.
-    
+
     See https://arxiv.org/abs/1602.07868
 
-    This document description is refereced to the Pytorch document. 
+    This document description is refereced to the Pytorch document.
     https://pytorch.org/docs/stable/generated/torch.nn.utils.weight_norm.html
 
     Args:
@@ -132,7 +132,7 @@ def weight_norm(module: T_module, name: str = "weight", dim: int = 0) -> T_modul
 
     Returns:
         The original module with the weight norm hook
-    
+
     For example:
 
     .. code-block:: python

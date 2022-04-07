@@ -28,11 +28,11 @@ def is_tensor_op(obj):
 
     Args:
         obj (Object): Object to test
-    
+
     For example:
 
     .. code-block:: python
-    
+
         >>> import oneflow as flow
 
         >>> x=flow.tensor([1,2,3])

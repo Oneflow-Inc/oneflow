@@ -40,7 +40,10 @@ class ProcessRaisedException(ProcessException):
     """
 
     def __init__(
-        self, msg: str, error_index: int, error_pid: int,
+        self,
+        msg: str,
+        error_index: int,
+        error_pid: int,
     ):
         super().__init__(msg, error_index, error_pid)
 
@@ -114,7 +117,10 @@ class ProcessContext:
             return True
 
         # Wait for any process to fail or all of them to succeed.
-        ready = multiprocessing.connection.wait(self.sentinels.keys(), timeout=timeout,)
+        ready = multiprocessing.connection.wait(
+            self.sentinels.keys(),
+            timeout=timeout,
+        )
 
         error_index = None
         for sentinel in ready:
@@ -188,7 +194,9 @@ def start_processes(
     for i in range(nprocs):
         error_queue = mp.SimpleQueue()
         process = mp.Process(
-            target=_wrap, args=(fn, i, args, error_queue), daemon=daemon,
+            target=_wrap,
+            args=(fn, i, args, error_queue),
+            daemon=daemon,
         )
         process.start()
         error_queues.append(error_queue)

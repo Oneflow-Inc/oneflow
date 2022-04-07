@@ -49,27 +49,27 @@ class SGD(Optimizer):
         momentum (float, optional): Momentum factor (default: 0.0)
         weight_decay (float, optional): weight decay (L2 penalty) (default: 0.0)
 
-    For example: 
+    For example:
 
-    Example 1: 
+    Example 1:
 
-    .. code-block:: python 
+    .. code-block:: python
 
-        # Assume net is a custom model. 
+        # Assume net is a custom model.
         sgd = flow.optim.SGD(net.parameters(), lr=1e-3)
 
         for epoch in range(epochs):
-            # Read data, Compute the loss and so on. 
+            # Read data, Compute the loss and so on.
             # ...
             loss.backward()
             sgd.step()
             sgd.zero_grad()
 
-    Example 2: 
+    Example 2:
 
-    .. code-block:: python 
+    .. code-block:: python
 
-        # Assume net is a custom model. 
+        # Assume net is a custom model.
         sgd = flow.optim.SGD(
             [
                 {
@@ -82,16 +82,16 @@ class SGD(Optimizer):
         )
 
         for epoch in range(epochs):
-            # Read data, Compute the loss and so on. 
+            # Read data, Compute the loss and so on.
             # ...
             loss.backward()
             sgd.clip_grad()
             sgd.step()
             sgd.zero_grad()
 
-    If you want to use clip_grad, you can refer this example. 
+    If you want to use clip_grad, you can refer this example.
 
-    For more details of `clip_grad_max_norm` and `clip_grad_norm_type`, you can refer to :func:`oneflow.nn.utils.clip_grad_norm_`. 
+    For more details of `clip_grad_max_norm` and `clip_grad_norm_type`, you can refer to :func:`oneflow.nn.utils.clip_grad_norm_`.
 
     """
 

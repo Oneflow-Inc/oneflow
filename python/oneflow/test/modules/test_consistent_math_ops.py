@@ -104,7 +104,10 @@ def _test_pow_with_scalar(test_case, placement, sbp, ndim):
 @autotest(n=1, auto_backward=False, check_graph=False)
 def _test_floordiv_with_scalar(test_case, placement, sbp, ndim):
     dim_list = [random(1, 3).to(int).value() * 8 for _ in range(ndim)]
-    x = random_tensor(ndim, *dim_list,).to_global(placement, sbp)
+    x = random_tensor(
+        ndim,
+        *dim_list,
+    ).to_global(placement, sbp)
     y = random().to(float)
     z = torch.floor_divide(x, y)
     return z

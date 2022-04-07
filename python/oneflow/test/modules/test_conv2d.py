@@ -1149,7 +1149,13 @@ test_conv2d_dilation_output = np.array(
 
 
 def _test_conv2d(
-    test_case, conv, data, weight, output, bias=None, device="cuda",
+    test_case,
+    conv,
+    data,
+    weight,
+    output,
+    bias=None,
+    device="cuda",
 ):
     to_device = flow.device(device)
     x = flow.tensor(data, dtype=flow.float32, device=to_device)
@@ -1162,7 +1168,14 @@ def _test_conv2d(
 
 
 def _test_conv2d_backward(
-    test_case, conv, data, weight, data_grad, weight_grad, bias=None, device="cuda",
+    test_case,
+    conv,
+    data,
+    weight,
+    data_grad,
+    weight_grad,
+    bias=None,
+    device="cuda",
 ):
     to_device = flow.device(device)
     x = flow.tensor(data, dtype=flow.float32, device=to_device, requires_grad=True)

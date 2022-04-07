@@ -39,7 +39,11 @@ class SharedMemory:
     def __reduce__(self):
         return (
             self.__class__,
-            (self.name, False, self.size,),
+            (
+                self.name,
+                False,
+                self.size,
+            ),
         )
 
     def __repr__(self):

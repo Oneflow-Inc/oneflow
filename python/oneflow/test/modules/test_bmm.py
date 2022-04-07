@@ -102,7 +102,10 @@ class TestModule(flow.unittest.TestCase):
         device = random_device()
         mat1 = random_tensor(ndim=3, dim0=2, dim1=4, dim2=3).to(device)
         mat2 = random_tensor(ndim=3, dim0=2, dim1=3, dim2=4).to(device)
-        y = torch.bmm(mat1, mat2,)
+        y = torch.bmm(
+            mat1,
+            mat2,
+        )
         return y
 
 

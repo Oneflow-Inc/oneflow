@@ -213,7 +213,10 @@ def get_loss(
 
 
 def do_test_train_loss_oneflow_pytorch(
-    test_case, model_path: str, module_name: str, device: str = "cuda",
+    test_case,
+    model_path: str,
+    module_name: str,
+    device: str = "cuda",
 ):
     batch_size = 16
     image_nd = np.random.rand(batch_size, 3, 224, 224).astype(np.float32)

@@ -27,7 +27,10 @@ from oneflow.test_utils.test_util import GenArgDict
 
 
 def _test_fused_scale_tril(
-    test_case, shape, diagonal=0, scale=1.0,
+    test_case,
+    shape,
+    diagonal=0,
+    scale=1.0,
 ):
     x = np.random.rand(*shape)
     # Different dtype will result in insert of cast op causing pass to fail.

@@ -42,7 +42,7 @@ def gen_quant_scale_for_min_max_symmetric(weight, quantization_bit):
 def gen_quant_scale_for_min_max_affine(weight, quantization_bit):
     weight_max = np.max(weight)
     weight_min = np.min(weight)
-    denominator = 2.0 ** quantization_bit - 1
+    denominator = 2.0**quantization_bit - 1
     scale = (weight_max - weight_min) / denominator
     zero_point = -np.round(weight_min / scale)
     return (scale, zero_point)

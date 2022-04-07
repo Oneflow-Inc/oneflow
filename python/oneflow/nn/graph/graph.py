@@ -211,7 +211,11 @@ class Graph(object):
         return self.__run(*args, **kwargs)
 
     def add_optimizer(
-        self, optim: Optimizer, *, lr_sch: LRScheduler = None, is_sparse: bool = False,
+        self,
+        optim: Optimizer,
+        *,
+        lr_sch: LRScheduler = None,
+        is_sparse: bool = False,
     ):
         r"""Add an optimizer, an learning rate scheduler to the graph.
 
@@ -232,9 +236,9 @@ class Graph(object):
         to make the loss tensor a scalar tensor.
 
         Note:
-            If you want to output the learning rate information for each step, 
+            If you want to output the learning rate information for each step,
             set the ``verbose`` parameter of the ``lr_scheduler`` to ``True``, and you will see the result at rank 0.
-            
+
             This feature is the same as eager mode.
 
         For example:
@@ -300,8 +304,7 @@ class Graph(object):
             self.config._train(True)
 
     def set_grad_scaler(self, grad_scaler: GradScaler = None):
-        r"""Set the GradScaler for gradient and loss scaling.
-        """
+        r"""Set the GradScaler for gradient and loss scaling."""
         assert isinstance(grad_scaler, (GradScaler, StaticGradScaler))
         self._grad_scaler = grad_scaler
 
@@ -335,7 +338,9 @@ class Graph(object):
             module = block.origin
             if module is not None:
                 module.state_dict(
-                    sub_destination, "", keep_vars=False,
+                    sub_destination,
+                    "",
+                    keep_vars=False,
                 )
             destination[name] = sub_destination
         # Get additional states.
@@ -401,14 +406,12 @@ class Graph(object):
 
     @property
     def name(self):
-        r"""Name auto-generated for this graph.
-        """
+        r"""Name auto-generated for this graph."""
         return self._name
 
     @property
     def training(self):
-        r"""In traninig mode if the graph has an optimizer.
-        """
+        r"""In traninig mode if the graph has an optimizer."""
         return self.config.training
 
     def debug(
@@ -518,8 +521,7 @@ class Graph(object):
         return shallow_repr
 
     def __print(self, s_level=2, v_level=0, msg: str = ""):
-        r"""Do print according to info level.
-        """
+        r"""Do print according to info level."""
         assert isinstance(s_level, int)
         assert isinstance(v_level, int)
         assert isinstance(msg, str)
@@ -672,7 +674,9 @@ class Graph(object):
         # Complie graph to execution plan and init Runtime
         try:
             self.__print(
-                0, 0, self._shallow_repr() + " start building plan.",
+                0,
+                0,
+                self._shallow_repr() + " start building plan.",
             )
             compile_and_init_start = time.perf_counter()
             self._c_nn_graph.complie_and_init_runtime()
@@ -1038,7 +1042,10 @@ class Graph(object):
                 return mapping_tensor_or_none(arg)
             else:
                 self.__io_item_check(
-                    arg, None, io_type, leaf_node._prefix + "_" + leaf_node._name,
+                    arg,
+                    None,
+                    io_type,
+                    leaf_node._prefix + "_" + leaf_node._name,
                 )
 
         out = io_node.map_leaf(leaf_node_fn)
@@ -1079,7 +1086,10 @@ class Graph(object):
             with oneflow._oneflow_internal.lazy_mode.guard(False):
                 if t.is_global:
                     eager_out = oneflow.empty(
-                        shape, dtype=dtype, placement=t.placement, sbp=t.sbp,
+                        shape,
+                        dtype=dtype,
+                        placement=t.placement,
+                        sbp=t.sbp,
                     )
                 else:
                     eager_out = oneflow.empty(shape, dtype=dtype, device=t.device)

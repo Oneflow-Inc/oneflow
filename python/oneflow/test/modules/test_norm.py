@@ -30,8 +30,8 @@ def _np_vector_norm_backward(x, ord=2, dim=None):
         if ord == 0:
             return re
         else:
-            temp = np.sum(np.abs(x ** ord), dim) ** (1.0 / ord - 1)
-            re = np.where(x ** ord < 0, -temp, temp) * x ** (ord - 1)
+            temp = np.sum(np.abs(x**ord), dim) ** (1.0 / ord - 1)
+            re = np.where(x**ord < 0, -temp, temp) * x ** (ord - 1)
     elif dim == None and x.ndim == 1:
         if ord == 0:
             return re
@@ -44,8 +44,8 @@ def _np_vector_norm_backward(x, ord=2, dim=None):
             re[min_ind] += 1 if x[min_ind] != 0 else 0
             re = np.where(x < 0, -re, re)
         else:
-            temp = np.sum(np.abs(x ** ord)) ** (1.0 / ord - 1)
-            re = np.where(x ** ord < 0, -temp, temp) * x ** (ord - 1)
+            temp = np.sum(np.abs(x**ord)) ** (1.0 / ord - 1)
+            re = np.where(x**ord < 0, -temp, temp) * x ** (ord - 1)
     elif (
         isinstance(ord, float)
         and isinstance(dim, int)
@@ -91,7 +91,7 @@ def _np_matrix_norm_backward(x, ord="fro"):
                 re[j] += 1 if x[j] != 0 else 0
             re = np.where(x < 0, -re, re)
     elif ord == "fro":
-        re = np.sum(x ** 2) ** (-0.5) * x
+        re = np.sum(x**2) ** (-0.5) * x
     elif isinstance(ord, float) and ord in [float("inf"), float("-inf")]:
         if ord == float("inf"):
             max_ind = np.argmax(np.sum(np.abs(x), 1))

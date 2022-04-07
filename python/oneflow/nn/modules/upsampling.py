@@ -21,10 +21,10 @@ from oneflow.nn.module import Module
 
 
 class Upsample(Module):
-    """The interface is consistent with PyTorch.    
-    
+    """The interface is consistent with PyTorch.
+
     The documentation is referenced from: https://pytorch.org/docs/1.9.0/_modules/torch/nn/modules/upsampling.html#Upsample
-    
+
     Upsamples a given multi-channel 1D (temporal), 2D (spatial) or 3D (volumetric) data.
 
     The input data is assumed to be of the form
@@ -160,7 +160,7 @@ class UpsamplingNearest2d(Upsample):
 
         >>> import numpy as np
         >>> import oneflow as flow
-        
+
         >>> input = flow.tensor(np.arange(1, 5).reshape((1, 1, 2, 2)), dtype=flow.float32)
         >>> input = input.to("cuda")
         >>> m = flow.nn.UpsamplingNearest2d(scale_factor=2.0)
@@ -214,7 +214,7 @@ class UpsamplingBilinear2d(Upsample):
 
         >>> import numpy as np
         >>> import oneflow as flow
-        
+
         >>> input = flow.tensor(np.arange(1, 5).reshape((1, 1, 2, 2)), dtype=flow.float32)
         >>> input = input.to("cuda")
         >>> m = flow.nn.UpsamplingBilinear2d(scale_factor=2.0)

@@ -57,7 +57,12 @@ def np_ctc_greedy_decoder(log_probs, input_lengths, merge_repeated=True):
 
 
 def compare_with_np(
-    device_type, data_type, max_input_length, batch_size, num_classes, merge_repeated,
+    device_type,
+    data_type,
+    max_input_length,
+    batch_size,
+    num_classes,
+    merge_repeated,
 ):
     assert data_type in ["float32", "double"]
     assert device_type in ["cpu", "cuda"]

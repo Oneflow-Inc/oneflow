@@ -26,7 +26,8 @@ from test_xrt import *
 
 
 res50_module = resnet50(
-    replace_stride_with_dilation=[False, False, False], norm_layer=flow.nn.BatchNorm2d,
+    replace_stride_with_dilation=[False, False, False],
+    norm_layer=flow.nn.BatchNorm2d,
 ).eval()
 
 

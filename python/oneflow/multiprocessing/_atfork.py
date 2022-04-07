@@ -26,7 +26,6 @@ if sys.platform == "win32" or sys.version_info < (3, 7):
 
         _util.register_after_fork(_register, wrapper)
 
-
 else:
     import os
 

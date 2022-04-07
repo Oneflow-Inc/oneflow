@@ -19,8 +19,8 @@ import oneflow as flow
 
 
 def affine_grid(theta, size: List[int], align_corners: bool = False):
-    """The interface is consistent with PyTorch.    
-    The documentation is referenced from: 
+    """The interface is consistent with PyTorch.
+    The documentation is referenced from:
     https://pytorch.org/docs/stable/generated/torch.nn.functional.affine_grid.html?highlight=affine_grid#torch.nn.functional.affine_grid
 
     Generates a 2D or 3D flow field (sampling grid), given a batch of

@@ -123,11 +123,17 @@ def _test_mul_impl(test_case, device):
 
 def inplace_mul_tensors_helper(test_case, device, arr_0, arr_y):
     of_x = flow.tensor(
-        arr_0, dtype=flow.float32, device=flow.device(device), requires_grad=True,
+        arr_0,
+        dtype=flow.float32,
+        device=flow.device(device),
+        requires_grad=True,
     )
     of_inplace_x = of_x + 1
     of_y = flow.tensor(
-        arr_y, dtype=flow.float32, device=flow.device(device), requires_grad=True,
+        arr_y,
+        dtype=flow.float32,
+        device=flow.device(device),
+        requires_grad=True,
     )
     id_inpalce_x = id(of_inplace_x)
     of_inplace_x.mul_(of_y)

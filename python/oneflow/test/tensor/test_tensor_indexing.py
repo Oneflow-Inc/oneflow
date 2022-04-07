@@ -117,7 +117,11 @@ def _test_advanced_indexing(test_case, numpy_x):
     test_case.assertTrue(
         np.allclose(
             numpy_x[:, np.array([[0, 1], [1, 1]]), np.array([[1, 0], [1, 1]])],
-            x[:, flow.tensor([[0, 1], [1, 1]]), flow.tensor([[1, 0], [1, 1]]),].numpy(),
+            x[
+                :,
+                flow.tensor([[0, 1], [1, 1]]),
+                flow.tensor([[1, 0], [1, 1]]),
+            ].numpy(),
         )
     )
 

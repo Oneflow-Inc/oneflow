@@ -568,7 +568,13 @@ def _new_ones(
 
 
 def _new_zeros(
-    self, *size, dtype=None, device=None, placement=None, sbp=None, requires_grad=False,
+    self,
+    *size,
+    dtype=None,
+    device=None,
+    placement=None,
+    sbp=None,
+    requires_grad=False,
 ):
     return flow.new_zeros(self, size, dtype, device, placement, sbp, requires_grad)
 
@@ -711,7 +717,11 @@ def _uniform(self, a=0, b=1):
 
 
 def _trunc_normal_(
-    self, mean=0.0, std=1.0, a=-2.0, b=2.0,
+    self,
+    mean=0.0,
+    std=1.0,
+    a=-2.0,
+    b=2.0,
 ):
     initializer_conf = flow.truncated_normal_initializer(mean=mean, stddev=std)
     res = _init_by_initializer_conf(self, initializer_conf)
@@ -797,7 +807,8 @@ def _init_by_initializer_conf(tensor, initializer_conf, random_seed=None):
         tensor.copy_(src_tensor)
     else:
         _copy_from_numpy_to_eager_local_tensor(
-            tensor, np_arr,
+            tensor,
+            np_arr,
         )
     return tensor
 

@@ -64,7 +64,10 @@ def _test_tensor_scatter_nd_update_t(test_case, device):
 
 def _test_tensor_scatter_nd_update_backward(test_case, device):
     origin = flow.tensor(
-        np.arange(8), dtype=flow.float, device=flow.device(device), requires_grad=True,
+        np.arange(8),
+        dtype=flow.float,
+        device=flow.device(device),
+        requires_grad=True,
     )
     indices = flow.tensor(
         np.array([[1], [6], [4]]), dtype=flow.int, device=flow.device(device)

@@ -24,11 +24,11 @@ class Flatten(Module):
     Args:
         start_dim: first dim to flatten (default = 1).
         end_dim: last dim to flatten (default = -1).
-    
 
-    For example: 
 
-    .. code-block:: python 
+    For example:
+
+    .. code-block:: python
 
         >>> import oneflow as flow
         >>> input = flow.Tensor(32, 1, 5, 5)

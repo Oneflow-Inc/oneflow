@@ -45,16 +45,16 @@ def prod_op(input, dim=None, keepdim=False):
 
 def all_op(input, dim=None, keepdim=False):
     """Computes if all elements in the input tensor to true.
-    
+
     Args:
         input (oneflow.Tensor): the Input Tensor
         dim (int, optional): the dimension to reduce. Default: `None`
         keepdim (bool, optional): whether the output tensor has dim retained or not. Default: `False`
 
     Returns:
-        Tensor(oneflow.Tensor(dtype=int8)): If :attr:`dim` is `None`, returns 
+        Tensor(oneflow.Tensor(dtype=int8)): If :attr:`dim` is `None`, returns
         the logical all value of all elements in the `input` tensor.
-    
+
     For example:
 
     .. code-block:: python
@@ -74,16 +74,16 @@ def all_op(input, dim=None, keepdim=False):
 
 def any_op(input, dim=None, keepdim=False):
     """Computes if any elements in the input tensor to true.
-    
+
     Args:
         input (oneflow.Tensor): the Input Tensor
         dim (int, optional): the dimension to reduce. Default: `None`
         keepdim (bool, optional): whether the output tensor has dim retained or not. Default: `False`
 
     Returns:
-        Tensor(oneflow.Tensor(dtype=int8)): If :attr:`dim` is `None`, returns 
+        Tensor(oneflow.Tensor(dtype=int8)): If :attr:`dim` is `None`, returns
         the logical any value of all elements in the `input` tensor.
-    
+
     For example:
 
     .. code-block:: python

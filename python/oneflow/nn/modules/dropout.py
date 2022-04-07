@@ -54,7 +54,7 @@ class Dropout(_DropoutNd):
     training. This means that during evaluation the module simply computes an
     identity function.
 
-    Additionally, we can pass an extra Tensor `addend` which shape is consistent with input Tensor. 
+    Additionally, we can pass an extra Tensor `addend` which shape is consistent with input Tensor.
     The `addend` Tensor will be add in result after dropout, it is very useful in model's residual connection structure.
 
     Args:
@@ -68,13 +68,13 @@ class Dropout(_DropoutNd):
 
     For example:
 
-    example 1: 
+    example 1:
 
     .. code-block:: python
 
         >>> import numpy as np
         >>> import oneflow as flow
-        
+
         >>> m = flow.nn.Dropout(p=0)
         >>> arr = np.array(
         ...    [
@@ -89,14 +89,14 @@ class Dropout(_DropoutNd):
         tensor([[-0.7797,  0.2264,  0.2458,  0.4163],
                 [ 0.4299,  0.3626, -0.4892,  0.4141],
                 [-1.4115,  1.2183, -0.5503,  0.6520]], dtype=oneflow.float32)
-    
-    example 2: 
-    
+
+    example 2:
+
     .. code-block:: python
 
         >>> import numpy as np
         >>> import oneflow as flow
-        
+
         >>> m = flow.nn.Dropout(p=0)
         >>> arr = np.array(
         ...    [

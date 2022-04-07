@@ -365,33 +365,57 @@ if __name__ == "__main__":
 
     parser = argparse.ArgumentParser()
     parser.add_argument(
-        "--custom_img_tag", type=str, required=False, default=None,
+        "--custom_img_tag",
+        type=str,
+        required=False,
+        default=None,
     )
     parser.add_argument(
-        "--container_name", type=str, required=False, default=None,
+        "--container_name",
+        type=str,
+        required=False,
+        default=None,
     )
     parser.add_argument(
-        "--cache_dir", type=str, required=False, default=None,
+        "--cache_dir",
+        type=str,
+        required=False,
+        default=None,
     )
     default_wheel_house_dir = os.path.join(os.getcwd(), "wheelhouse")
     parser.add_argument(
-        "--wheel_house_dir", type=str, required=False, default=default_wheel_house_dir,
+        "--wheel_house_dir",
+        type=str,
+        required=False,
+        default=default_wheel_house_dir,
     )
     parser.add_argument("--python_version", type=str, required=True)
     parser.add_argument(
-        "--cuda_version", type=str, required=False, default="10.2",
+        "--cuda_version",
+        type=str,
+        required=False,
+        default="10.2",
     )
     parser.add_argument(
-        "--package_name", type=str, required=False, default="oneflow",
+        "--package_name",
+        type=str,
+        required=False,
+        default="oneflow",
     )
     parser.add_argument(
         "--extra_oneflow_cmake_args", action="append", nargs="+", default=[]
     )
     parser.add_argument(
-        "--extra_docker_args", type=str, required=False, default="",
+        "--extra_docker_args",
+        type=str,
+        required=False,
+        default="",
     )
     parser.add_argument(
-        "--oneflow_src_dir", type=str, required=False, default=os.getcwd(),
+        "--oneflow_src_dir",
+        type=str,
+        required=False,
+        default=os.getcwd(),
     )
     parser.add_argument(
         "--skip_third_party", default=False, action="store_true", required=False
@@ -490,7 +514,8 @@ if __name__ == "__main__":
                 args.container_name = f"manylinux-build-run-by-{getpass.getuser()}"
             assert args.container_name
             subprocess.call(
-                f"docker rm -f {args.container_name}", shell=True,
+                f"docker rm -f {args.container_name}",
+                shell=True,
             )
             extra_docker_args += f" --name {args.container_name}"
             user_img_tag = f"{img_prefix}:{user}"

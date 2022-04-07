@@ -50,9 +50,17 @@ def compare_loss(device_type, dim, reduction, cls, data_generator):
         rtol=1e-05,
         atol=1e-05,
     )
-    assert np.allclose(loss_none.numpy(), loss_mean.numpy(), rtol=1e-05, atol=1e-05,)
     assert np.allclose(
-        x.grad.to_local().numpy(), x1.grad.to_local().numpy(), rtol=1e-05, atol=1e-05,
+        loss_none.numpy(),
+        loss_mean.numpy(),
+        rtol=1e-05,
+        atol=1e-05,
+    )
+    assert np.allclose(
+        x.grad.to_local().numpy(),
+        x1.grad.to_local().numpy(),
+        rtol=1e-05,
+        atol=1e-05,
     )
 
 

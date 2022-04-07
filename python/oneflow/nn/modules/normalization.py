@@ -73,8 +73,7 @@ class GroupNorm(Module):
         >>> m = flow.nn.GroupNorm(1, 6)
         >>> # Activating the module
         >>> output = m(input)
-    
-"""
+    """
 
     def __init__(
         self,
@@ -181,7 +180,7 @@ class LayerNorm(Module):
 
         >>> import numpy as np
         >>> import oneflow as flow
-        
+
         >>> input_arr = np.array(
         ...     [
         ...         [

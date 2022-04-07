@@ -35,7 +35,7 @@ class LAMB(Optimizer):
         & S_t = \\beta_2*S_{t-1} + (1-\\beta_2)*{grad} \\odot {grad}
 
         & \\hat{u} = \\frac{{V_t}}{\\sqrt{{S_t}}+\\epsilon}
-        
+
         & \\hat{r} = learning\\_rate * \\frac{||param_{old}||_2}{||\\hat{u}||_2}
 
         & param_{new} = param_{old} - \\hat{r} * \\hat{u}
@@ -52,9 +52,9 @@ class LAMB(Optimizer):
         adam_w_mode (bool, optional): apply L2 regularization or weight decay True for
             decoupled weight decay (also known as AdamW) (default: True)
         do_bias_correction (bool, optional): whether to do bias correction (default: True)
-        amsgrad (bool, optional): whether to use the AMSGrad variant of this algorithm. 
+        amsgrad (bool, optional): whether to use the AMSGrad variant of this algorithm.
         NOT SUPPORTED now! (default: False)
-        
+
     .. _Large Batch Optimization for Deep Learning\\: Training BERT in 76 minutes:
         https://arxiv.org/abs/1904.00962
 

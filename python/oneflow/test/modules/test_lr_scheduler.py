@@ -30,16 +30,28 @@ from oneflow.test_utils.test_util import GenArgDict
 
 
 def compare_with_torch_reduce_lr(
-    test_case, mode, factor, patience, threshold, threshold_mode, cooldown, min_lr, eps,
+    test_case,
+    mode,
+    factor,
+    patience,
+    threshold,
+    threshold_mode,
+    cooldown,
+    min_lr,
+    eps,
 ):
     optimizer_flow = flow.optim.SGD(
-        [{"params": [Parameter(flow.Tensor([1.0]))]},],
+        [
+            {"params": [Parameter(flow.Tensor([1.0]))]},
+        ],
         lr=TestLrScheduler.base_lr,
         momentum=0.9,
     )
 
     optimizer_torch = torch.optim.SGD(
-        [{"params": [torch.nn.Parameter(torch.Tensor([1.0]))]},],
+        [
+            {"params": [torch.nn.Parameter(torch.Tensor([1.0]))]},
+        ],
         lr=TestLrScheduler.base_lr,
         momentum=0.9,
     )
@@ -167,7 +179,7 @@ class TestLrScheduler(flow.unittest.TestCase):
             for step in milestones:
                 if current_step >= step:
                     count += 1
-            return base_lr * gamma ** count
+            return base_lr * gamma**count
 
         gamma = 0.1
         milestones = [5, 11, 15]
@@ -185,7 +197,7 @@ class TestLrScheduler(flow.unittest.TestCase):
         )
 
         def exponential_lr_step(base_lr, current_step, gamma):
-            return base_lr * gamma ** current_step
+            return base_lr * gamma**current_step
 
         gamma = 0.1
         exponential_lr = flow.optim.lr_scheduler.ExponentialLR(optimizer, gamma=gamma)
@@ -285,7 +297,10 @@ class TestLrScheduler(flow.unittest.TestCase):
         optimizer = flow.optim.SGD([param])
         cosine_scheduler = flow.optim.lr_scheduler.CosineAnnealingLR(optimizer, 100)
         lr_scheduler = flow.optim.lr_scheduler.WarmUpLR(
-            cosine_scheduler, warmup_factor=0.1, warmup_iters=5, warmup_method="linear",
+            cosine_scheduler,
+            warmup_factor=0.1,
+            warmup_iters=5,
+            warmup_method="linear",
         )
         for _ in range(random.randint(1, 10)):
             lr_scheduler.step()
@@ -449,7 +464,10 @@ class WarmupLRTestCase(flow.unittest.TestCase):
         optimizer = flow.optim.SGD([param], lr)
         cos_annl_lr = flow.optim.lr_scheduler.CosineAnnealingLR(optimizer, T_max=10)
         warmup_lr = flow.optim.lr_scheduler.WarmupLR(
-            cos_annl_lr, warmup_factor=0.5, warmup_iters=5, warmup_method="constant",
+            cos_annl_lr,
+            warmup_factor=0.5,
+            warmup_iters=5,
+            warmup_method="constant",
         )
 
         expected_lrs = [
@@ -492,7 +510,10 @@ class WarmupLRTestCase(flow.unittest.TestCase):
         optimizer = flow.optim.SGD([param], lr=0.1)
         cos_annl_lr = flow.optim.lr_scheduler.CosineAnnealingLR(optimizer, T_max=20)
         warmup_lr = flow.optim.lr_scheduler.WarmupLR(
-            cos_annl_lr, warmup_factor=0.1, warmup_iters=5, warmup_method="linear",
+            cos_annl_lr,
+            warmup_factor=0.1,
+            warmup_iters=5,
+            warmup_method="linear",
         )
 
         expected_lrs = [
@@ -582,7 +603,10 @@ class WarmupLRTestCase(flow.unittest.TestCase):
         optimizer = flow.optim.SGD([param], lr=0.001)
         multistep_lr = flow.optim.lr_scheduler.MultiStepLR(optimizer, [10])
         warmup_lr = flow.optim.lr_scheduler.WarmupLR(
-            multistep_lr, warmup_factor=0.5, warmup_iters=5, warmup_method="linear",
+            multistep_lr,
+            warmup_factor=0.5,
+            warmup_iters=5,
+            warmup_method="linear",
         )
         expected_lrs = [
             0.0005,
@@ -778,7 +802,9 @@ class CosineAnnealingWarmRestartsTestCase(flow.unittest.TestCase):
         param = flow.nn.Parameter(flow.ones(3, 4))
         optimizer = flow.optim.SGD([param], lr=0.1)
         cosa_r_lr = flow.optim.lr_scheduler.CosineAnnealingWarmRestarts(
-            optimizer, T_0=10, eta_min=0.01,
+            optimizer,
+            T_0=10,
+            eta_min=0.01,
         )
         # fmt: off
         expected_lrs = [0.1, 0.09779754323328192, 0.09140576474687263, 0.08145033635316129, 0.06890576474687264, 0.05500000000000001, 0.04109423525312737, 0.028549663646838717, 0.01859423525312737, 0.012202456766718092, 0.1, 0.09779754323328192, 0.09140576474687263, 0.08145033635316129, 0.06890576474687264, 0.05500000000000001, 0.04109423525312737, 0.028549663646838717, 0.01859423525312737, 0.012202456766718092, 0.1, 0.09779754323328192, 0.09140576474687263, 0.08145033635316129, 0.06890576474687264, 0.05500000000000001, 0.04109423525312737, 0.028549663646838717, 0.01859423525312737, 0.012202456766718092, 0.1, 0.09779754323328192, 0.09140576474687263, 0.08145033635316129, 0.06890576474687264, 0.05500000000000001, 0.04109423525312737, 0.028549663646838717, 0.01859423525312737, 0.012202456766718092, 0.1, 0.09779754323328192, 0.09140576474687263, 0.08145033635316129, 0.06890576474687264, 0.05500000000000001, 0.04109423525312737, 0.028549663646838717, 0.01859423525312737, 0.012202456766718092]
@@ -798,7 +824,10 @@ class CosineAnnealingWarmRestartsTestCase(flow.unittest.TestCase):
         param = flow.nn.Parameter(flow.ones(3, 4))
         optimizer = flow.optim.SGD([param], lr=0.1)
         cosa_r_lr = flow.optim.lr_scheduler.CosineAnnealingWarmRestarts(
-            optimizer, T_0=10, T_mult=2, eta_min=0.01,
+            optimizer,
+            T_0=10,
+            T_mult=2,
+            eta_min=0.01,
         )
         # fmt: off
         expected_lrs = [0.1, 0.09779754323328192, 0.09140576474687263, 0.08145033635316129, 0.06890576474687264, 0.05500000000000001, 0.04109423525312737, 0.028549663646838717, 0.01859423525312737, 0.012202456766718092, 0.1, 0.0994459753267812, 0.09779754323328192, 0.09509529358847656, 0.09140576474687263, 0.08681980515339464, 0.08145033635316129, 0.07542957248827961, 0.06890576474687264, 0.0620395509268104, 0.05500000000000001, 0.04796044907318963, 0.04109423525312737, 0.034570427511720396, 0.028549663646838717, 0.023180194846605363, 0.01859423525312737, 0.014904706411523451, 0.012202456766718092, 0.010554024673218806, 0.1, 0.09986128001799077, 0.0994459753267812, 0.09875664641789544, 0.09779754323328192, 0.0965745789630079, 0.09509529358847656, 0.09336880739593416, 0.09140576474687263, 0.0892182684520014, 0.08681980515339464, 0.08422516217485827, 0.08145033635316129, 0.0785124354122177, 0.07542957248827961, 0.07222075445642905, 0.06890576474687264, 0.06550504137351576, 0.0620395509268104, 0.05853065930775304, 0.05500000000000001, 0.05146934069224699, 0.04796044907318963, 0.04449495862648427, 0.04109423525312737, 0.03777924554357097, 0.034570427511720396, 0.031487564587782305, 0.028549663646838717, 0.02577483782514174, 0.023180194846605363, 0.02078173154799861, 0.01859423525312737, 0.016631192604065852, 0.014904706411523451, 0.013425421036992097, 0.012202456766718092, 0.011243353582104555, 0.010554024673218806, 0.010138719982009242]
@@ -818,7 +847,12 @@ class CosineAnnealingWarmRestartsTestCase(flow.unittest.TestCase):
         param = flow.nn.Parameter(flow.ones(3, 4))
         optimizer = flow.optim.SGD([param], lr=0.1)
         cosa_r_lr = flow.optim.lr_scheduler.CosineAnnealingWarmRestarts(
-            optimizer, T_0=10, T_mult=2, decay_rate=0.5, restart_limit=2, eta_min=0.01,
+            optimizer,
+            T_0=10,
+            T_mult=2,
+            decay_rate=0.5,
+            restart_limit=2,
+            eta_min=0.01,
         )
         # fmt: off
         expected_lrs = [0.1, 0.09779754323328192, 0.09140576474687263, 0.08145033635316129, 0.06890576474687264, 0.05500000000000001, 0.04109423525312737, 0.028549663646838717, 0.01859423525312737, 0.012202456766718092, 0.05, 0.04975376681190276, 0.04902113032590308, 0.04782013048376736, 0.04618033988749895, 0.044142135623730955, 0.04175570504584947, 0.03907980999479094, 0.03618033988749895, 0.03312868930080462, 0.03, 0.02687131069919539, 0.023819660112501053, 0.020920190005209068, 0.018244294954150538, 0.01585786437626905, 0.013819660112501053, 0.012179869516232645, 0.01097886967409693, 0.010246233188097247, 0.01, 0.01, 0.01, 0.01, 0.01, 0.01, 0.01, 0.01, 0.01, 0.01, 0.01, 0.01, 0.01, 0.01, 0.01, 0.01, 0.01, 0.01, 0.01, 0.01]

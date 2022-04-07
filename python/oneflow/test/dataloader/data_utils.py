@@ -86,7 +86,10 @@ def load_data_mnist(
 
 
 def get_fashion_mnist_dataset(
-    resize=None, root="./data-test/fashion-mnist", download=True, source_url=None,
+    resize=None,
+    root="./data-test/fashion-mnist",
+    download=True,
+    source_url=None,
 ):
     root = os.path.expanduser(root)
     trans = []

@@ -31,7 +31,11 @@ from oneflow.test_utils.test_util import (
 
 
 def compare_with_torch(
-    device_type, data_type, label_type, batch_size, num_classes,
+    device_type,
+    data_type,
+    label_type,
+    batch_size,
+    num_classes,
 ):
     data_type = type_name_to_flow_type[data_type]
     label_type = type_name_to_flow_type[label_type]
@@ -63,7 +67,11 @@ def compare_with_torch(
 
 
 def compare_eager_global_with_torch(
-    device_type, data_type, label_type, batch_size, num_classes,
+    device_type,
+    data_type,
+    label_type,
+    batch_size,
+    num_classes,
 ):
     data_type = type_name_to_flow_type[data_type]
     label_type = type_name_to_flow_type[label_type]
@@ -112,7 +120,11 @@ def compare_eager_global_with_torch(
 
 
 def compare_eager_2d_global_with_torch(
-    device_type, data_type, label_type, batch_size, num_classes,
+    device_type,
+    data_type,
+    label_type,
+    batch_size,
+    num_classes,
 ):
     data_type = type_name_to_flow_type[data_type]
     label_type = type_name_to_flow_type[label_type]
@@ -176,7 +188,11 @@ def compare_eager_2d_global_with_torch(
 
 
 def compare_lazy_global_with_torch(
-    device_type, data_type, label_type, batch_size, num_classes,
+    device_type,
+    data_type,
+    label_type,
+    batch_size,
+    num_classes,
 ):
     data_type = type_name_to_flow_type[data_type]
     label_type = type_name_to_flow_type[label_type]

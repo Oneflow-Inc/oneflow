@@ -160,8 +160,10 @@ def JobBuildAndInferCtx_MirroredBlobGetSubLbi(job_name, lbn, index):
 def JobBuildAndInferCtx_GetStaticShape(job_name, lbn):
     job_name = str(job_name)
     lbn = str(lbn)
-    axis_str = oneflow._oneflow_internal.JobBuildAndInferCtx_GetSerializedIdListAsStaticShape(
-        job_name, lbn
+    axis_str = (
+        oneflow._oneflow_internal.JobBuildAndInferCtx_GetSerializedIdListAsStaticShape(
+            job_name, lbn
+        )
     )
     int_list = text_format.Parse(axis_str, record_util.Int64List())
     return tuple(map(int, int_list.value))
@@ -191,8 +193,10 @@ def JobBuildAndInferCtx_DisableBoxing(job_name, lbn):
 def JobBuildAndInferCtx_GetSplitAxisFromProducerView(job_name, lbn):
     job_name = str(job_name)
     lbn = str(lbn)
-    split_axis_str = oneflow._oneflow_internal.JobBuildAndInferCtx_GetSplitAxisFromProducerView(
-        job_name, lbn
+    split_axis_str = (
+        oneflow._oneflow_internal.JobBuildAndInferCtx_GetSplitAxisFromProducerView(
+            job_name, lbn
+        )
     )
     split_axis = text_format.Parse(split_axis_str, dtype_util.OptInt64())
     if split_axis.HasField("value"):
@@ -217,8 +221,10 @@ def JobBuildAndInferCtx_GetParallelConfFromProducerView(job_name, lbn):
 
 def GetMachine2DeviceIdListOFRecordFromParallelConf(parallel_conf):
     serialized_parallel_conf = str(parallel_conf)
-    ofrecord = oneflow._oneflow_internal.GetMachine2DeviceIdListOFRecordFromParallelConf(
-        serialized_parallel_conf
+    ofrecord = (
+        oneflow._oneflow_internal.GetMachine2DeviceIdListOFRecordFromParallelConf(
+            serialized_parallel_conf
+        )
     )
     return text_format.Parse(ofrecord, record_util.OFRecord())
 

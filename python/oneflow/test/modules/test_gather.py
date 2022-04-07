@@ -95,7 +95,9 @@ def _test_gather_backward(test_case, device):
         input, dtype=flow.float32, requires_grad=True, device=flow.device(device)
     )
     output = flow.gather(
-        of_input, 0, flow.tensor(index, dtype=flow.int, device=flow.device(device)),
+        of_input,
+        0,
+        flow.tensor(index, dtype=flow.int, device=flow.device(device)),
     )
     out_sum = output.sum()
     out_sum.backward()

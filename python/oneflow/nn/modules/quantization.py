@@ -19,7 +19,7 @@ from oneflow.nn.module import Module
 
 class Quantization(Module):
     """
-    
+
     Simulate the quantize operation in inference time.
 
     The output will be computed as:
@@ -60,11 +60,11 @@ class Quantization(Module):
         >>> import oneflow as flow
 
         >>> weight = (np.random.random((2, 3, 4, 5)) - 0.5).astype(np.float32)
-        
+
         >>> input_tensor = flow.tensor(
         ...    weight, dtype=flow.float32
         ... )
-        
+
         >>> quantization_bit = 8
         >>> quantization_scheme = "symmetric"
         >>> quantization_formula = "google"
@@ -72,7 +72,7 @@ class Quantization(Module):
 
         >>> min_max_observer = flow.nn.MinMaxObserver(quantization_formula=quantization_formula, quantization_bit=quantization_bit,
         ... quantization_scheme=quantization_scheme, per_layer_quantization=per_layer_quantization)
-        >>> quantization = flow.nn.Quantization(quantization_formula=quantization_formula, quantization_bit=quantization_bit, 
+        >>> quantization = flow.nn.Quantization(quantization_formula=quantization_formula, quantization_bit=quantization_bit,
         ... quantization_scheme=quantization_scheme)
 
         >>> scale, zero_point = min_max_observer(

@@ -151,9 +151,9 @@ class DistributedSampler(Sampler[T_co]):
         return self.num_samples
 
     def set_epoch(self, epoch: int) -> None:
-        """Sets the epoch for this sampler. 
-        When :attr:`shuffle=True`, this ensures all replicas use a different random 
-        ordering for each epoch. Otherwise, the next iteration of this sampler 
+        """Sets the epoch for this sampler.
+        When :attr:`shuffle=True`, this ensures all replicas use a different random
+        ordering for each epoch. Otherwise, the next iteration of this sampler
         will yield the same ordering.
 
         Args:

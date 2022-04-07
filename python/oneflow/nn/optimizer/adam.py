@@ -51,7 +51,7 @@ class Adam(Optimizer):
         eps (float, optional): term added to the denominator to improve
             numerical stability (default: 1e-8)
         weight_decay (float, optional): weight decay (L2 penalty) (default: 0)
-        amsgrad (bool, optional): whether to use the AMSGrad variant of this algorithm. (default: False) 
+        amsgrad (bool, optional): whether to use the AMSGrad variant of this algorithm. (default: False)
         do_bias_correction (bool, optional): Whether do bias correction (default: True)
 
     .. _Adam\\: A Method for Stochastic Optimization:
@@ -60,27 +60,27 @@ class Adam(Optimizer):
     .. _Decoupled Weight Decay Regularization:
         https://arxiv.org/abs/1711.05101
 
-    For example: 
+    For example:
 
-    Example 1: 
+    Example 1:
 
-    .. code-block:: python 
+    .. code-block:: python
 
-        # Assume net is a custom model. 
+        # Assume net is a custom model.
         adam = flow.optim.Adam(net.parameters(), lr=1e-3)
 
         for epoch in range(epochs):
-            # Read data, Compute the loss and so on. 
+            # Read data, Compute the loss and so on.
             # ...
             loss.backward()
             adam.step()
             adam.zero_grad()
 
-    Example 2: 
+    Example 2:
 
-    .. code-block:: python 
+    .. code-block:: python
 
-        # Assume net is a custom model. 
+        # Assume net is a custom model.
         adam = flow.optim.Adam(
             [
                 {
@@ -93,18 +93,18 @@ class Adam(Optimizer):
         )
 
         for epoch in range(epochs):
-            # Read data, Compute the loss and so on. 
+            # Read data, Compute the loss and so on.
             # ...
             loss.backward()
             adam.clip_grad()
             adam.step()
             adam.zero_grad()
 
-    If you want to use clip_grad, you can refer this example. 
+    If you want to use clip_grad, you can refer this example.
 
-    For more details of `clip_grad_max_norm` and `clip_grad_norm_type`, you can refer to :func:`oneflow.nn.utils.clip_grad_norm_`. 
+    For more details of `clip_grad_max_norm` and `clip_grad_norm_type`, you can refer to :func:`oneflow.nn.utils.clip_grad_norm_`.
 
-    
+
     """
 
     def __init__(

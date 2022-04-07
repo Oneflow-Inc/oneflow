@@ -162,11 +162,13 @@ def _test_embedding_gradient_shuffle(test_case):
                 _,
                 cur_rank_inverse_indices,
             ) = flow._C.one_embedding_id_shuffle(ids, column_ids, num_columns)
-            cur_rank_unique_embedding_grad = flow._C.one_embedding_embedding_gradient_shuffle(
-                embedding_grad,
-                num_unique_matrix,
-                cur_rank_inverse_indices,
-                inverse_unique_partition_indices,
+            cur_rank_unique_embedding_grad = (
+                flow._C.one_embedding_embedding_gradient_shuffle(
+                    embedding_grad,
+                    num_unique_matrix,
+                    cur_rank_inverse_indices,
+                    inverse_unique_partition_indices,
+                )
             )
             return (
                 cur_rank_unique_embedding_grad,
@@ -246,9 +248,12 @@ def _test_unique_key_value(test_case, has_column_id, num_columns):
             )
 
     graph = TestGraph()
-    (num_unique, unique_ids, unique_column_ids, inverse_indices,) = graph(
-        ids_tensor, column_ids_tensor
-    )
+    (
+        num_unique,
+        unique_ids,
+        unique_column_ids,
+        inverse_indices,
+    ) = graph(ids_tensor, column_ids_tensor)
     np_unique_ids, np_inverse = np.unique(ids, return_inverse=True)
     np_num_unique = np_unique_ids.size
     test_case.assertTrue(np.array_equal(np_num_unique, num_unique[0]))

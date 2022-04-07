@@ -48,12 +48,15 @@ async def run_command(cmd=None, dry=False, name=None):
         print(f"[dry] {cmd}")
         return 0
     process = await asyncio.create_subprocess_shell(
-        cmd, stdout=asyncio.subprocess.PIPE, stderr=asyncio.subprocess.PIPE,
+        cmd,
+        stdout=asyncio.subprocess.PIPE,
+        stderr=asyncio.subprocess.PIPE,
     )
     l = lambda x: split_and_print(f"[{name}]" if name else "", x)
     # l = lambda x: x
     await asyncio.gather(
-        handle_stream(process.stdout, l), handle_stream(process.stderr, l),
+        handle_stream(process.stdout, l),
+        handle_stream(process.stderr, l),
     )
     await process.wait()
     return process.returncode
@@ -128,7 +131,8 @@ if __name__ == "__main__":
     args = parser.parse_args()
     exts = [".h", ".cc", ".cpp", ".cu", ".cuh"]
     files = filter(
-        lambda p: p.suffix in exts, pathlib.Path(args.source_dir).rglob("*"),
+        lambda p: p.suffix in exts,
+        pathlib.Path(args.source_dir).rglob("*"),
     )
     loop = asyncio.get_event_loop()
     files = [str(f) for f in files]

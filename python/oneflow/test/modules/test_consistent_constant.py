@@ -71,7 +71,9 @@ def _test_graph_constant(test_case, func, shape, placement, sbp):
         raise NotImplementedError
 
     class ConsistentConstantGraph(flow.nn.Graph):
-        def __init__(self,):
+        def __init__(
+            self,
+        ):
             super().__init__()
 
         def build(self):
@@ -97,7 +99,14 @@ def _test_graph_constant(test_case, func, shape, placement, sbp):
 class TestConstantConsistent(flow.unittest.TestCase):
     @globaltest
     def test_constant_consistent(test_case):
-        shapes = [(8,), (8, 8,), (8, 8, 8)]
+        shapes = [
+            (8,),
+            (
+                8,
+                8,
+            ),
+            (8, 8, 8),
+        ]
         functions = [
             "ones",
             "zeros",
@@ -118,14 +127,31 @@ class TestConstantConsistent(flow.unittest.TestCase):
     def test_constant_graph(test_case):
         arg_dict = OrderedDict()
         arg_dict["func"] = ["ones", "zeros", "new_zeros"]
-        arg_dict["shape"] = [(8,), (8, 8,), (8, 8, 8)]
+        arg_dict["shape"] = [
+            (8,),
+            (
+                8,
+                8,
+            ),
+            (8, 8, 8),
+        ]
         arg_dict["placement"] = [
             # 1d
             flow.placement("cpu", ranks=[0, 1]),
             flow.placement("cuda", ranks=[0, 1]),
             # 2d
-            flow.placement("cpu", ranks=[[0, 1],]),
-            flow.placement("cuda", ranks=[[0, 1],]),
+            flow.placement(
+                "cpu",
+                ranks=[
+                    [0, 1],
+                ],
+            ),
+            flow.placement(
+                "cuda",
+                ranks=[
+                    [0, 1],
+                ],
+            ),
         ]
         for args in GenArgDict(arg_dict):
             func = args["func"]

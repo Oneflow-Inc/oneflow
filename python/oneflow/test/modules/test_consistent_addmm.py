@@ -34,7 +34,11 @@ def _test_addmm_with_random_data(test_case, placement, sbp):
     mat1 = random_tensor(ndim=2, dim0=m, dim1=k).to_global(placement=placement, sbp=sbp)
     mat2 = random_tensor(ndim=2, dim0=k, dim1=n).to_global(placement=placement, sbp=sbp)
     y = torch.addmm(
-        input, mat1, mat2, beta=random().to(float), alpha=random().to(float),
+        input,
+        mat1,
+        mat2,
+        beta=random().to(float),
+        alpha=random().to(float),
     )
     return y
 
@@ -50,7 +54,11 @@ def _test_addmm_broadcast_with_random_data(test_case, placement, sbp):
     mat1 = random_tensor(ndim=2, dim0=m, dim1=k).to_global(placement=placement, sbp=sbp)
     mat2 = random_tensor(ndim=2, dim0=k, dim1=n).to_global(placement=placement, sbp=sbp)
     y = torch.addmm(
-        input, mat1, mat2, beta=random().to(float), alpha=random().to(float),
+        input,
+        mat1,
+        mat2,
+        beta=random().to(float),
+        alpha=random().to(float),
     )
     return y
 

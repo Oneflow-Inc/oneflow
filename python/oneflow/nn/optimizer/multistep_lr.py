@@ -21,8 +21,8 @@ from .lr_scheduler import LRScheduler
 
 class MultiStepLR(LRScheduler):
     """
-    Decays the learning rate of each parameter group by gamma once the number of step 
-    reaches one of the milestones. Notice that such decay can happen simultaneously with 
+    Decays the learning rate of each parameter group by gamma once the number of step
+    reaches one of the milestones. Notice that such decay can happen simultaneously with
     other changes to the learning rate from outside this scheduler.When last_step=-1, sets initial lr as lr.
 
     Args:
@@ -65,7 +65,7 @@ class MultiStepLR(LRScheduler):
 
     def get_lr(self, base_lr, step):
         sect = bisect.bisect_right(self.milestones, step)
-        factor = self.gamma ** sect
+        factor = self.gamma**sect
         return base_lr * factor
 
     def _generate_conf_for_graph(self, lr_conf):

@@ -198,11 +198,13 @@ def _test_embedding_gradient_shuffle(test_case):
                 _,
                 cur_rank_inverse_indices,
             ) = flow._C.one_embedding_id_shuffle(ids, column_ids, num_columns)
-            cur_rank_unique_embedding_grad = flow._C.one_embedding_embedding_gradient_shuffle(
-                embedding_grad,
-                num_unique_matrix,
-                cur_rank_inverse_indices,
-                inverse_unique_partition_indices,
+            cur_rank_unique_embedding_grad = (
+                flow._C.one_embedding_embedding_gradient_shuffle(
+                    embedding_grad,
+                    num_unique_matrix,
+                    cur_rank_inverse_indices,
+                    inverse_unique_partition_indices,
+                )
             )
             return (
                 cur_rank_unique_embedding_grad,

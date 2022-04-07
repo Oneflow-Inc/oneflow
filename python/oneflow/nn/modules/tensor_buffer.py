@@ -78,7 +78,7 @@ def tensor_to_tensor_buffer(x, instance_dims: int):
         >>> output = flow.tensor_buffer_to_tensor(x, instance_shape=(64, 64), dtype=flow.float)
         >>> output.shape
         oneflow.Size([4, 16, 64, 64])
-    
+
     """
     return flow._C.tensor_to_tensor_buffer(x, instance_dims)
 

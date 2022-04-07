@@ -35,7 +35,9 @@ def _test_consistent_randint(test_case, shape, placement, sbp, dtype):
 
 def _test_graph_randint(test_case, shape, placement, sbp, dtype):
     class ConsistentRandintGraph(flow.nn.Graph):
-        def __init__(self,):
+        def __init__(
+            self,
+        ):
             super().__init__()
 
         def build(self):
@@ -54,7 +56,14 @@ def _test_graph_randint(test_case, shape, placement, sbp, dtype):
 class TestRandintConsistent(flow.unittest.TestCase):
     @globaltest
     def test_randint_consistent(test_case):
-        shapes = [(8,), (8, 8,), (8, 8, 8)]
+        shapes = [
+            (8,),
+            (
+                8,
+                8,
+            ),
+            (8, 8, 8),
+        ]
         dtypes = [
             flow.uint8,
             flow.int8,
@@ -77,7 +86,14 @@ class TestRandintConsistent(flow.unittest.TestCase):
     @flow.unittest.skip_unless_1n2d()
     def test_randint_graph(test_case):
         arg_dict = OrderedDict()
-        arg_dict["shape"] = [(8,), (8, 8,), (8, 8, 8)]
+        arg_dict["shape"] = [
+            (8,),
+            (
+                8,
+                8,
+            ),
+            (8, 8, 8),
+        ]
         arg_dict["dtype"] = [
             flow.uint8,
             flow.int32,
@@ -88,8 +104,18 @@ class TestRandintConsistent(flow.unittest.TestCase):
             flow.placement("cpu", ranks=[0, 1]),
             flow.placement("cuda", ranks=[0, 1]),
             # 2d
-            flow.placement("cpu", ranks=[[0, 1],]),
-            flow.placement("cuda", ranks=[[0, 1],]),
+            flow.placement(
+                "cpu",
+                ranks=[
+                    [0, 1],
+                ],
+            ),
+            flow.placement(
+                "cuda",
+                ranks=[
+                    [0, 1],
+                ],
+            ),
         ]
         for args in GenArgDict(arg_dict):
             shape = args["shape"]

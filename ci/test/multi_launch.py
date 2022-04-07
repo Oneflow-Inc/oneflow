@@ -44,7 +44,10 @@ def parse_args():
         description="helper to start multiple distributed launches in parallel"
     )
     parser.add_argument(
-        "--files", type=str, help="files to run, support pattern", required=True,
+        "--files",
+        type=str,
+        help="files to run, support pattern",
+        required=True,
     )
     parser.add_argument(
         "--group_size",
@@ -53,7 +56,10 @@ def parse_args():
         required=True,
     )
     parser.add_argument(
-        "--device_num", type=int, help="how many devices to run on", required=True,
+        "--device_num",
+        type=int,
+        help="how many devices to run on",
+        required=True,
     )
     parser.add_argument(
         "-n",
@@ -69,10 +75,16 @@ def parse_args():
         default=False,
     )
     parser.add_argument(
-        "--shuffle", action="store_true", required=False, default=False,
+        "--shuffle",
+        action="store_true",
+        required=False,
+        default=False,
     )
     parser.add_argument(
-        "--verbose", action="store_true", required=False, default=False,
+        "--verbose",
+        action="store_true",
+        required=False,
+        default=False,
     )
     parser.add_argument(
         "--master_port",
@@ -129,7 +141,9 @@ async def launch_multiple(
         if auto_cuda_env:
             env = dict(env, CUDA_VISIBLE_DEVICES=cuda_visible_devices)
         process = run_and_capture(
-            cmd=cmd, prefix=f"[wg={i}][device={cuda_visible_devices}]", env=env,
+            cmd=cmd,
+            prefix=f"[wg={i}][device={cuda_visible_devices}]",
+            env=env,
         )
         spawns.append(process)
     await asyncio.gather(*spawns)

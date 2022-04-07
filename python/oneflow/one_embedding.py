@@ -272,7 +272,11 @@ def make_cached_ssd_store_options(
 
 
 def make_cached_host_mem_store_options(
-    cache_budget_mb, persistent_path, capacity, size_factor=1, physical_block_size=512,
+    cache_budget_mb,
+    persistent_path,
+    capacity,
+    size_factor=1,
+    physical_block_size=512,
 ):
     assert isinstance(persistent_path, (str, list, tuple))
     assert cache_budget_mb > 0

@@ -39,7 +39,10 @@ class TestSelect(flow.unittest.TestCase):
     @autotest(check_graph=True)
     def test_flow_select_1dim(test_case):
         device = random_device()
-        x = random_tensor(ndim=1, dim0=random(3, 6),).to(device)
+        x = random_tensor(
+            ndim=1,
+            dim0=random(3, 6),
+        ).to(device)
         index = random(0, 2).to(int)
         z = torch.select(x, 0, index)
         return z

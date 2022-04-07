@@ -550,7 +550,13 @@ class choice_pytorch_tensor(generator):
         self.p = p
         self.dtype = dtype
         super().__init__(
-            [self.a, self.size, self.replace, self.p, self.dtype,]
+            [
+                self.a,
+                self.size,
+                self.replace,
+                self.p,
+                self.dtype,
+            ]
         )
 
     def _calc_value(self):

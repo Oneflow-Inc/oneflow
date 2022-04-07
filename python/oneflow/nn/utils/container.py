@@ -153,7 +153,7 @@ def get_list(T):
 
         def insert(self, index: int, module: T) -> None:
             """Insert a given module before a given index in the list.
-    
+
             Arguments:
                 index (int): index to insert.
                 module (nn.Module): module to insert
@@ -164,7 +164,7 @@ def get_list(T):
 
         def append(self: T, module: T) -> T:
             """Appends a given module to the end of the list.
-    
+
             Arguments:
                 module (nn.Module): module to append
             """
@@ -173,7 +173,7 @@ def get_list(T):
 
         def extend(self: T, modules: Iterable[Module]) -> T:
             """Appends modules from a Python iterable to the end of the list.
-    
+
             Arguments:
                 modules (iterable): iterable of modules to append
             """
@@ -219,13 +219,12 @@ def get_dict(T):
             return key in self._modules
 
         def clear(self) -> None:
-            """Remove all items from the ModuleDict.
-            """
+            """Remove all items from the ModuleDict."""
             self._modules.clear()
 
         def pop(self, key: str) -> T:
             """Remove key from the ModuleDict and return its module.
-    
+
             Arguments:
                 key (string): key to pop from the ModuleDict
             """
@@ -234,18 +233,15 @@ def get_dict(T):
             return v
 
         def keys(self) -> Iterable[str]:
-            """Return an iterable of the ModuleDict keys.
-            """
+            """Return an iterable of the ModuleDict keys."""
             return self._modules.keys()
 
         def items(self) -> Iterable[Tuple[str, T]]:
-            """Return an iterable of the ModuleDict key/value pairs.
-            """
+            """Return an iterable of the ModuleDict key/value pairs."""
             return self._modules.items()
 
         def values(self) -> Iterable[T]:
-            """Return an iterable of the ModuleDict values.
-            """
+            """Return an iterable of the ModuleDict values."""
             return self._modules.values()
 
         def update(self, modules: Mapping[str, T]) -> None:
@@ -336,9 +332,9 @@ def get_para_list(T):
 
         def append(self: T, parameter) -> T:
             """Appends a given parameter at the end of the list.
-    
+
             Arguments:
-    
+
                 parameter (nn.Parameter): parameter to append
             """
             self.register_parameter(str(len(self)), parameter)
@@ -346,9 +342,9 @@ def get_para_list(T):
 
         def extend(self: T, parameters) -> T:
             """Appends parameters from a Python iterable to the end of the list.
-    
+
             Arguments:
-    
+
                 parameters (iterable): iterable of parameters to append
             """
             if not isinstance(parameters, collections.abc.Iterable):
@@ -417,15 +413,14 @@ def get_para_dict(T):
             return key in self._parameters
 
         def clear(self) -> None:
-            """Remove all items from the ParameterDict.
-            """
+            """Remove all items from the ParameterDict."""
             self._parameters.clear()
 
         def pop(self, key: str):
             r"""Remove key from the ParameterDict and return its parameter.
-    
+
             Args:
-    
+
                 key (string): key to pop from the ParameterDict
             """
             v = self[key]
@@ -433,33 +428,30 @@ def get_para_dict(T):
             return v
 
         def keys(self) -> Iterable[str]:
-            r"""Return an iterable of the ParameterDict keys.
-            """
+            r"""Return an iterable of the ParameterDict keys."""
             return self._parameters.keys()
 
         def items(self):
-            r"""Return an iterable of the ParameterDict key/value pairs.
-            """
+            r"""Return an iterable of the ParameterDict key/value pairs."""
             return self._parameters.items()
 
         def values(self):
-            r"""Return an iterable of the ParameterDict values.
-            """
+            r"""Return an iterable of the ParameterDict values."""
             return self._parameters.values()
 
         def update(self, parameters) -> None:
             r"""Update the :class:`~flow.nn.ParameterDict` with the key-value pairs from a
             mapping or an iterable, overwriting existing keys.
-    
+
             .. note::
                 If :attr:`parameters` is an ``OrderedDict``, a :class:`~flow.nn.ParameterDict`, or
                 an iterable of key-value pairs, the order of new elements in it is preserved.
-         
+
             Args:
                 parameters (iterable): a mapping (dictionary) from string to
                     :class:`~flow.nn.Parameter`, or an iterable of
                     key-value pairs of type (string, :class:`~flow.nn.Parameter`)
-    
+
             """
             if not isinstance(parameters, container_abcs.Iterable):
                 raise TypeError(

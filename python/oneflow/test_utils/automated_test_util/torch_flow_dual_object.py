@@ -259,7 +259,11 @@ def get_args_copy(args, kwargs):
 # NOTE(lixiang): When oneflow is of type nn.Module, build the following Graph for testing.
 #   graph_train_oneflow: is a deepcopy of oneflow.
 def get_module_graph_test(graph_train_oneflow, oneflow, *args):
-    of_sgd = flow.optim.SGD(graph_train_oneflow.parameters(), lr=0.001, momentum=0.9,)
+    of_sgd = flow.optim.SGD(
+        graph_train_oneflow.parameters(),
+        lr=0.001,
+        momentum=0.9,
+    )
     graph_train_parameters_len = 0
     for param in oneflow._parameters.values():
         if param is not None:
@@ -334,13 +338,15 @@ def get_functional_graph_res(
             test_g = TestGraphOfFunctional()
             if verbose:
                 print(
-                    "Run graph of function: ", repr(oneflow),
+                    "Run graph of function: ",
+                    repr(oneflow),
                 )
                 test_g.debug(3)
             test_g_res = test_g()
             if verbose:
                 print(
-                    "The result after running graph functional: ", test_g_res,
+                    "The result after running graph functional: ",
+                    test_g_res,
                 )
     except Exception as e:
         print_note_fake_program()
@@ -370,7 +376,8 @@ def get_tensor_graph_res(
         test_g_res = test_g()
         if verbose:
             print(
-                "The result after running graph tensor method: ", test_g_res,
+                "The result after running graph tensor method: ",
+                test_g_res,
             )
     except Exception as e:
         print_note_fake_program()
@@ -384,23 +391,27 @@ def get_oneflow_eager_res(
     if not is_tesnor_method:
         if verbose:
             print(
-                "Before running eager module or functional: ", repr(oneflow),
+                "Before running eager module or functional: ",
+                repr(oneflow),
             )
 
         oneflow_res = oneflow(*oneflow_args, **oneflow_kwargs)
         if verbose:
             print(
-                "The result after running eager module or functional: ", oneflow_res,
+                "The result after running eager module or functional: ",
+                oneflow_res,
             )
     else:
         if verbose:
             print(
-                "Before running eager tensor method: ", repr(oneflow),
+                "Before running eager tensor method: ",
+                repr(oneflow),
             )
         oneflow_res = oneflow(*oneflow_args, **oneflow_kwargs)
         if verbose:
             print(
-                "The result after running eager tensor method: ", oneflow_res,
+                "The result after running eager tensor method: ",
+                oneflow_res,
             )
     return oneflow_res
 
@@ -428,7 +439,8 @@ def oneflow_eager_run_with_graph_check(
     if testing_graph:
         if verbose:
             print(
-                "After running eager module or functional: ", repr(oneflow),
+                "After running eager module or functional: ",
+                repr(oneflow),
             )
         find_check_module_func = True
         ignore_apis_list = ["tensor", "train"]
@@ -442,7 +454,8 @@ def oneflow_eager_run_with_graph_check(
             test_g_res = test_g(*graph_args)
             if verbose:
                 print(
-                    "The result after running graph module: ", test_g_res,
+                    "The result after running graph module: ",
+                    test_g_res,
                 )
         elif oneflow.__name__ in ignore_apis_list:
             find_check_module_func = False
@@ -493,7 +506,8 @@ def oneflow_tensor_eager_run_with_graph_check(
     if testing_graph:
         if verbose:
             print(
-                "After running eager tensor method: ", repr(oneflow_method),
+                "After running eager tensor method: ",
+                repr(oneflow_method),
             )
 
         test_g_res = get_tensor_graph_res(
@@ -561,7 +575,12 @@ def get_pytorch_oneflow_res(
         oneflow_res = torch_tensor_to_flow(pytorch_res)
     else:
         oneflow_res = oneflow_eager_run_with_graph_check(
-            oneflow, oneflow_args, oneflow_kwargs, testing_graph, verbose, *args,
+            oneflow,
+            oneflow_args,
+            oneflow_kwargs,
+            testing_graph,
+            verbose,
+            *args,
         )
     return pytorch_res, oneflow_res
 
@@ -592,7 +611,12 @@ def get_pytorch_oneflow_tensor_res(
             )
         raise PyTorchDoesNotSupportError(e)
     oneflow_res = oneflow_tensor_eager_run_with_graph_check(
-        oneflow, oneflow_method, oneflow_args, oneflow_kwargs, testing_graph, verbose,
+        oneflow,
+        oneflow_method,
+        oneflow_args,
+        oneflow_kwargs,
+        testing_graph,
+        verbose,
     )
     return pytorch_res, oneflow_res
 
@@ -793,7 +817,9 @@ class DualObject:
             if is_global():
                 oneflow = oneflow.to_global(
                     placement=flow.env.all_device_placement("cpu"),
-                    sbp=[flow.sbp.broadcast,],
+                    sbp=[
+                        flow.sbp.broadcast,
+                    ],
                 )
             if testing:
                 dual_modules_to_test.append(self)
@@ -891,7 +917,11 @@ def check_tensor_equality(
         torch_grad = torch_tensor.grad.detach().cpu().numpy()
         flow_grad = flow_tensor.grad.numpy()
         if not np.allclose(
-            torch_grad, flow_grad, rtol=rtol, atol=atol, equal_nan=True,
+            torch_grad,
+            flow_grad,
+            rtol=rtol,
+            atol=atol,
+            equal_nan=True,
         ):
             print_note_fake_program()
             print("---------Grad Shape--------")
@@ -904,7 +934,11 @@ def check_tensor_equality(
     torch_numpy = torch_tensor.detach().cpu().numpy()
     oneflow_numpy = flow_tensor.numpy()
     equality_res = np.allclose(
-        torch_numpy, oneflow_numpy, rtol=rtol, atol=atol, equal_nan=True,
+        torch_numpy,
+        oneflow_numpy,
+        rtol=rtol,
+        atol=atol,
+        equal_nan=True,
     )
     # NOTE: if check_dtype=True, then check the equality of data type
     if check_dtype:
@@ -1095,7 +1129,12 @@ def random_tensor(
 
 
 def choice_tensor(
-    a, size=None, replace=True, p=None, dtype=int, requires_grad=False,
+    a,
+    size=None,
+    replace=True,
+    p=None,
+    dtype=int,
+    requires_grad=False,
 ):
     """Generates a random sample from a given 1-D array, which aligns with numpy.random.choice
     see https://numpy.org/doc/stable/reference/random/generated/numpy.random.choice.html for details

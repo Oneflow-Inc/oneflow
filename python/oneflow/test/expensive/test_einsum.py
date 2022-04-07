@@ -25,7 +25,11 @@ class TestEinsum(flow.unittest.TestCase):
     @autotest(n=20, check_graph=True)
     def test_einsum_matrix_transpose(test_case):
         device = random_device()
-        x = random_tensor(ndim=2, dim0=random(1, 6), dim1=random(1, 6),).to(device)
+        x = random_tensor(
+            ndim=2,
+            dim0=random(1, 6),
+            dim1=random(1, 6),
+        ).to(device)
         z = torch.einsum("ij->ji", x)
         return z
 
@@ -34,8 +38,16 @@ class TestEinsum(flow.unittest.TestCase):
         device = random_device()
         dim0 = random(1, 6)
         dim1 = random(1, 6)
-        x = random_tensor(ndim=2, dim0=dim0, dim1=dim1,).to(device)
-        y = random_tensor(ndim=2, dim0=dim0, dim1=dim1,).to(device)
+        x = random_tensor(
+            ndim=2,
+            dim0=dim0,
+            dim1=dim1,
+        ).to(device)
+        y = random_tensor(
+            ndim=2,
+            dim0=dim0,
+            dim1=dim1,
+        ).to(device)
         z = torch.einsum("ij,ij->ij", x, y)
         return z
 
@@ -43,7 +55,11 @@ class TestEinsum(flow.unittest.TestCase):
     def test_einsum_get_diagonal(test_case):
         device = random_device()
         dim = random(1, 6)
-        x = random_tensor(ndim=2, dim0=dim, dim1=dim,).to(device)
+        x = random_tensor(
+            ndim=2,
+            dim0=dim,
+            dim1=dim,
+        ).to(device)
         z = torch.einsum("ii->i", x)
         return z
 
@@ -64,14 +80,22 @@ class TestEinsum(flow.unittest.TestCase):
     @autotest(n=20, check_graph=True)
     def test_einsum_reduce_sum(test_case):
         device = random_device()
-        x = random_tensor(ndim=2, dim0=random(1, 6), dim1=random(1, 6),).to(device)
+        x = random_tensor(
+            ndim=2,
+            dim0=random(1, 6),
+            dim1=random(1, 6),
+        ).to(device)
         z = torch.einsum("ij->", x)
         return z
 
     @autotest(n=20, check_graph=True)
     def test_einsum_matrix_column_sum(test_case):
         device = random_device()
-        x = random_tensor(ndim=2, dim0=random(1, 6), dim1=random(1, 6),).to(device)
+        x = random_tensor(
+            ndim=2,
+            dim0=random(1, 6),
+            dim1=random(1, 6),
+        ).to(device)
         z = torch.einsum("ij->j", x)
         return z
 
@@ -80,8 +104,15 @@ class TestEinsum(flow.unittest.TestCase):
         device = random_device()
         dim0 = random(1, 6)
         dim1 = random(1, 6)
-        x = random_tensor(ndim=2, dim0=dim0, dim1=dim1,).to(device)
-        y = random_tensor(ndim=1, dim0=dim1,).to(device)
+        x = random_tensor(
+            ndim=2,
+            dim0=dim0,
+            dim1=dim1,
+        ).to(device)
+        y = random_tensor(
+            ndim=1,
+            dim0=dim1,
+        ).to(device)
         # NOTE(Liang Depeng): the same as 'ik,k->i'
         z = torch.einsum("ik,k", x, y)
         return z
@@ -92,8 +123,16 @@ class TestEinsum(flow.unittest.TestCase):
         dim0 = random(1, 6)
         dim1 = random(1, 6)
         dim2 = random(1, 6)
-        x = random_tensor(ndim=2, dim0=dim0, dim1=dim1,).to(device)
-        y = random_tensor(ndim=2, dim0=dim1, dim1=dim2,).to(device)
+        x = random_tensor(
+            ndim=2,
+            dim0=dim0,
+            dim1=dim1,
+        ).to(device)
+        y = random_tensor(
+            ndim=2,
+            dim0=dim1,
+            dim1=dim2,
+        ).to(device)
         # NOTE(Liang Depeng): the same as 'ik,kj->ij'
         z = torch.einsum("ik,kj", x, y)
         return z
@@ -102,8 +141,14 @@ class TestEinsum(flow.unittest.TestCase):
     def test_einsum_vector_inner_product(test_case):
         device = random_device()
         dim0 = random(1, 6)
-        x = random_tensor(ndim=1, dim0=dim0,).to(device)
-        y = random_tensor(ndim=1, dim0=dim0,).to(device)
+        x = random_tensor(
+            ndim=1,
+            dim0=dim0,
+        ).to(device)
+        y = random_tensor(
+            ndim=1,
+            dim0=dim0,
+        ).to(device)
         # NOTE(Liang Depeng): the same as 'i,i->'
         z = torch.einsum("i,i", x, y)
         return z
@@ -113,8 +158,16 @@ class TestEinsum(flow.unittest.TestCase):
         device = random_device()
         dim0 = random(1, 6)
         dim1 = random(1, 6)
-        x = random_tensor(ndim=2, dim0=dim0, dim1=dim1,).to(device)
-        y = random_tensor(ndim=2, dim0=dim0, dim1=dim1,).to(device)
+        x = random_tensor(
+            ndim=2,
+            dim0=dim0,
+            dim1=dim1,
+        ).to(device)
+        y = random_tensor(
+            ndim=2,
+            dim0=dim0,
+            dim1=dim1,
+        ).to(device)
         # NOTE(Liang Depeng): the same as 'ij,ij->'
         z = torch.einsum("ij,ij", x, y)
         return z
@@ -122,8 +175,14 @@ class TestEinsum(flow.unittest.TestCase):
     @autotest(n=20, check_graph=True)
     def test_einsum_vector_outer_product(test_case):
         device = random_device()
-        x = random_tensor(ndim=1, dim0=random(1, 6),).to(device)
-        y = random_tensor(ndim=1, dim0=random(1, 6),).to(device)
+        x = random_tensor(
+            ndim=1,
+            dim0=random(1, 6),
+        ).to(device)
+        y = random_tensor(
+            ndim=1,
+            dim0=random(1, 6),
+        ).to(device)
         # NOTE(Liang Depeng): the same as 'i,j->ij'
         z = torch.einsum("i,j", x, y)
         return z
@@ -133,8 +192,18 @@ class TestEinsum(flow.unittest.TestCase):
         device = random_device()
         dim0 = random(1, 6)
         dim1 = random(1, 6)
-        x = random_tensor(ndim=3, dim0=dim0, dim1=random(1, 6), dim2=dim1,).to(device)
-        y = random_tensor(ndim=3, dim0=dim0, dim1=dim1, dim2=random(1, 6),).to(device)
+        x = random_tensor(
+            ndim=3,
+            dim0=dim0,
+            dim1=random(1, 6),
+            dim2=dim1,
+        ).to(device)
+        y = random_tensor(
+            ndim=3,
+            dim0=dim0,
+            dim1=dim1,
+            dim2=random(1, 6),
+        ).to(device)
         z = torch.einsum("ijk,ikl->ijl", x, y)
         return z
 
@@ -144,7 +213,11 @@ class TestEinsum(flow.unittest.TestCase):
         dim0 = random(1, 6)
         dim1 = random(1, 6)
         x = random_tensor(
-            ndim=4, dim0=random(1, 6), dim1=dim0, dim2=dim1, dim3=random(1, 6),
+            ndim=4,
+            dim0=random(1, 6),
+            dim1=dim0,
+            dim2=dim1,
+            dim3=random(1, 6),
         ).to(device)
         y = random_tensor(
             ndim=5,
@@ -163,18 +236,34 @@ class TestEinsum(flow.unittest.TestCase):
         dim0 = random(1, 6)
         dim1 = random(1, 6)
         dim2 = random(1, 6)
-        x = random_tensor(ndim=2, dim0=dim0, dim1=dim1,).to(device)
-        y = random_tensor(ndim=3, dim0=random(1, 6), dim1=dim1, dim2=dim2,).to(device)
-        w = random_tensor(ndim=2, dim0=dim0, dim1=dim2,).to(device)
+        x = random_tensor(
+            ndim=2,
+            dim0=dim0,
+            dim1=dim1,
+        ).to(device)
+        y = random_tensor(
+            ndim=3,
+            dim0=random(1, 6),
+            dim1=dim1,
+            dim2=dim2,
+        ).to(device)
+        w = random_tensor(
+            ndim=2,
+            dim0=dim0,
+            dim1=dim2,
+        ).to(device)
         z = torch.einsum("ik,jkl,il->ij", x, y, w)
         return z
 
     @autotest(n=20, auto_backward=False, check_graph=True)
     def test_einsum_0_size_tensor(test_case):
         device = random_device()
-        x = random_tensor(ndim=3, dim0=random(1, 6), dim1=0, dim2=random(1, 6),).to(
-            device
-        )
+        x = random_tensor(
+            ndim=3,
+            dim0=random(1, 6),
+            dim1=0,
+            dim2=random(1, 6),
+        ).to(device)
         z = torch.einsum("ijk", x)
         return z
 
@@ -183,9 +272,17 @@ class TestEinsum(flow.unittest.TestCase):
         device = random_device()
         dim0 = random(1, 6)
         x = random_tensor(
-            ndim=4, dim0=random(1, 6), dim1=dim0, dim2=random(1, 6), dim3=random(1, 6),
+            ndim=4,
+            dim0=random(1, 6),
+            dim1=dim0,
+            dim2=random(1, 6),
+            dim3=random(1, 6),
         ).to(device)
-        y = random_tensor(ndim=2, dim0=dim0, dim1=random(1, 6),).to(device)
+        y = random_tensor(
+            ndim=2,
+            dim0=dim0,
+            dim1=random(1, 6),
+        ).to(device)
         z = torch.einsum("b n h w, n d -> b d h w", x, y)
         return z
 
@@ -194,8 +291,16 @@ class TestEinsum(flow.unittest.TestCase):
         device = random_device()
         dim0 = random(1, 6)
         dim1 = random(1, 6)
-        x = random_tensor(ndim=2, dim0=dim0, dim1=dim1,).to(device)
-        y = random_tensor(ndim=2, dim0=dim0, dim1=dim1,).to(device)
+        x = random_tensor(
+            ndim=2,
+            dim0=dim0,
+            dim1=dim1,
+        ).to(device)
+        y = random_tensor(
+            ndim=2,
+            dim0=dim0,
+            dim1=dim1,
+        ).to(device)
         z = torch.einsum("n d, n d -> n", x, y)
         return z
 
@@ -203,8 +308,16 @@ class TestEinsum(flow.unittest.TestCase):
     def test_einsum_matmul2(test_case):
         device = random_device()
         dim0 = random(1, 6)
-        x = random_tensor(ndim=2, dim0=random(1, 6), dim1=dim0,).to(device)
-        y = random_tensor(ndim=2, dim0=random(1, 6), dim1=dim0,).to(device)
+        x = random_tensor(
+            ndim=2,
+            dim0=random(1, 6),
+            dim1=dim0,
+        ).to(device)
+        y = random_tensor(
+            ndim=2,
+            dim0=random(1, 6),
+            dim1=dim0,
+        ).to(device)
         z = torch.einsum("i d, j d -> i j", x, y)
         return z
 
@@ -215,10 +328,18 @@ class TestEinsum(flow.unittest.TestCase):
         dim1 = random(1, 6)
         dim2 = random(1, 6)
         x = random_tensor(
-            ndim=4, dim0=dim0, dim1=dim1, dim2=random(1, 6), dim3=dim2,
+            ndim=4,
+            dim0=dim0,
+            dim1=dim1,
+            dim2=random(1, 6),
+            dim3=dim2,
         ).to(device)
         y = random_tensor(
-            ndim=4, dim0=dim0, dim1=dim1, dim2=random(1, 6), dim3=dim2,
+            ndim=4,
+            dim0=dim0,
+            dim1=dim1,
+            dim2=random(1, 6),
+            dim3=dim2,
         ).to(device)
         z = torch.einsum("b h i d, b h j d -> b h i j", x, y)
         return z
@@ -244,9 +365,18 @@ class TestEinsum(flow.unittest.TestCase):
         dim0 = random(1, 6)
         dim1 = random(1, 6)
         dim2 = random(1, 6)
-        x = random_tensor(ndim=3, dim0=dim0, dim1=dim1, dim2=dim2,).to(device)
+        x = random_tensor(
+            ndim=3,
+            dim0=dim0,
+            dim1=dim1,
+            dim2=dim2,
+        ).to(device)
         y = random_tensor(
-            ndim=4, dim0=dim0, dim1=dim1, dim2=random(1, 6), dim3=dim2,
+            ndim=4,
+            dim0=dim0,
+            dim1=dim1,
+            dim2=random(1, 6),
+            dim3=dim2,
         ).to(device)
         z = torch.einsum("b i d, b i j d -> b i j", x, y)
         return z
@@ -257,9 +387,18 @@ class TestEinsum(flow.unittest.TestCase):
         dim0 = random(1, 6)
         dim1 = random(1, 6)
         x = random_tensor(
-            ndim=4, dim0=dim0, dim1=random(1, 6), dim2=random(1, 6), dim3=dim1,
+            ndim=4,
+            dim0=dim0,
+            dim1=random(1, 6),
+            dim2=random(1, 6),
+            dim3=dim1,
         ).to(device)
-        y = random_tensor(ndim=3, dim0=dim0, dim1=random(1, 6), dim2=dim1,).to(device)
+        y = random_tensor(
+            ndim=3,
+            dim0=dim0,
+            dim1=random(1, 6),
+            dim2=dim1,
+        ).to(device)
         z = torch.einsum("b x i d, b j d -> b x i j", x, y)
         return z
 
@@ -269,9 +408,18 @@ class TestEinsum(flow.unittest.TestCase):
         dim0 = random(1, 6)
         dim1 = random(1, 6)
         x = random_tensor(
-            ndim=4, dim0=dim0, dim1=random(1, 6), dim2=random(1, 6), dim3=dim1,
+            ndim=4,
+            dim0=dim0,
+            dim1=random(1, 6),
+            dim2=random(1, 6),
+            dim3=dim1,
         ).to(device)
-        y = random_tensor(ndim=3, dim0=dim0, dim1=dim1, dim2=random(1, 6),).to(device)
+        y = random_tensor(
+            ndim=3,
+            dim0=dim0,
+            dim1=dim1,
+            dim2=random(1, 6),
+        ).to(device)
         z = torch.einsum("b x i j, b j d -> b x i d", x, y)
         return z
 
@@ -280,8 +428,18 @@ class TestEinsum(flow.unittest.TestCase):
         device = random_device()
         dim0 = random(1, 6)
         dim1 = random(1, 6)
-        x = random_tensor(ndim=3, dim0=random(1, 6), dim1=dim0, dim2=dim1,).to(device)
-        y = random_tensor(ndim=3, dim0=dim0, dim1=dim1, dim2=random(1, 6),).to(device)
+        x = random_tensor(
+            ndim=3,
+            dim0=random(1, 6),
+            dim1=dim0,
+            dim2=dim1,
+        ).to(device)
+        y = random_tensor(
+            ndim=3,
+            dim0=dim0,
+            dim1=dim1,
+            dim2=random(1, 6),
+        ).to(device)
         z = torch.einsum("hij, ijc->ihc", x, y)
         return z
 
@@ -290,8 +448,18 @@ class TestEinsum(flow.unittest.TestCase):
         device = random_device()
         dim0 = random(1, 6)
         dim1 = random(1, 6)
-        x = random_tensor(ndim=3, dim0=dim0, dim1=dim1, dim2=random(1, 6),).to(device)
-        y = random_tensor(ndim=3, dim0=dim0, dim1=dim1, dim2=random(1, 6),).to(device)
+        x = random_tensor(
+            ndim=3,
+            dim0=dim0,
+            dim1=dim1,
+            dim2=random(1, 6),
+        ).to(device)
+        y = random_tensor(
+            ndim=3,
+            dim0=dim0,
+            dim1=dim1,
+            dim2=random(1, 6),
+        ).to(device)
         z = torch.einsum("rac,rab->rbc", x, y)
         return z
 
@@ -300,8 +468,17 @@ class TestEinsum(flow.unittest.TestCase):
         device = random_device()
         dim0 = random(1, 6)
         dim1 = random(1, 6)
-        x = random_tensor(ndim=2, dim0=dim0, dim1=dim1,).to(device)
-        y = random_tensor(ndim=3, dim0=dim0, dim1=dim1, dim2=random(1, 6),).to(device)
+        x = random_tensor(
+            ndim=2,
+            dim0=dim0,
+            dim1=dim1,
+        ).to(device)
+        y = random_tensor(
+            ndim=3,
+            dim0=dim0,
+            dim1=dim1,
+            dim2=random(1, 6),
+        ).to(device)
         z = torch.einsum("ra,rab->rb", x, y)
         return z
 
@@ -310,8 +487,18 @@ class TestEinsum(flow.unittest.TestCase):
         device = random_device()
         dim0 = random(1, 6)
         dim1 = random(1, 6)
-        x = random_tensor(ndim=3, dim0=random(1, 6), dim1=dim0, dim2=dim1,).to(device)
-        y = random_tensor(ndim=3, dim0=random(1, 6), dim1=dim0, dim2=dim1,).to(device)
+        x = random_tensor(
+            ndim=3,
+            dim0=random(1, 6),
+            dim1=dim0,
+            dim2=dim1,
+        ).to(device)
+        y = random_tensor(
+            ndim=3,
+            dim0=random(1, 6),
+            dim1=dim0,
+            dim2=dim1,
+        ).to(device)
         z = torch.einsum("qhc,khc->qkh", x, y)
         return z
 
@@ -319,10 +506,17 @@ class TestEinsum(flow.unittest.TestCase):
     def test_einsum_alphaflod_usecase5(test_case):
         device = random_device()
         dim0 = random(1, 6)
-        x = random_tensor(ndim=2, dim0=random(1, 6), dim1=dim0,).to(device)
-        y = random_tensor(ndim=3, dim0=dim0, dim1=random(1, 6), dim2=random(1, 6),).to(
-            device
-        )
+        x = random_tensor(
+            ndim=2,
+            dim0=random(1, 6),
+            dim1=dim0,
+        ).to(device)
+        y = random_tensor(
+            ndim=3,
+            dim0=dim0,
+            dim1=random(1, 6),
+            dim2=random(1, 6),
+        ).to(device)
         z = torch.einsum("nm, mrc->nrc", x, y)
         return z
 
@@ -331,8 +525,18 @@ class TestEinsum(flow.unittest.TestCase):
         device = random_device()
         dim0 = random(1, 6)
         dim1 = random(1, 6)
-        x = random_tensor(ndim=3, dim0=dim0, dim1=random(1, 6), dim2=dim1,).to(device)
-        y = random_tensor(ndim=3, dim0=dim0, dim1=random(1, 6), dim2=dim1,).to(device)
+        x = random_tensor(
+            ndim=3,
+            dim0=dim0,
+            dim1=random(1, 6),
+            dim2=dim1,
+        ).to(device)
+        y = random_tensor(
+            ndim=3,
+            dim0=dim0,
+            dim1=random(1, 6),
+            dim2=dim1,
+        ).to(device)
         z = torch.einsum("abc,adc->bdc", x, y)
         return z
 
@@ -342,9 +546,18 @@ class TestEinsum(flow.unittest.TestCase):
         dim0 = random(1, 6)
         dim1 = random(1, 6)
         x = random_tensor(
-            ndim=4, dim0=random(1, 6), dim1=dim0, dim2=dim1, dim3=random(1, 6),
+            ndim=4,
+            dim0=random(1, 6),
+            dim1=dim0,
+            dim2=dim1,
+            dim3=random(1, 6),
         ).to(device)
-        y = random_tensor(ndim=3, dim0=dim0, dim1=dim1, dim2=random(1, 6),).to(device)
+        y = random_tensor(
+            ndim=3,
+            dim0=dim0,
+            dim1=dim1,
+            dim2=random(1, 6),
+        ).to(device)
         z = torch.einsum("dceb,cef->dbf", x, y)
         return z
 
@@ -352,12 +565,18 @@ class TestEinsum(flow.unittest.TestCase):
     def test_einsum_alphaflod_usecase8(test_case):
         device = random_device()
         dim0 = random(1, 6)
-        x = random_tensor(ndim=3, dim0=dim0, dim1=random(1, 6), dim2=random(1, 6),).to(
-            device
-        )
-        y = random_tensor(ndim=3, dim0=dim0, dim1=random(1, 6), dim2=random(1, 6),).to(
-            device
-        )
+        x = random_tensor(
+            ndim=3,
+            dim0=dim0,
+            dim1=random(1, 6),
+            dim2=random(1, 6),
+        ).to(device)
+        y = random_tensor(
+            ndim=3,
+            dim0=dim0,
+            dim1=random(1, 6),
+            dim2=random(1, 6),
+        ).to(device)
         z = torch.einsum("acb,ade->dceb", x, y)
         return z
 
@@ -365,10 +584,17 @@ class TestEinsum(flow.unittest.TestCase):
     def test_einsum_alphaflod_usecase9(test_case):
         device = random_device()
         dim0 = random(1, 6)
-        x = random_tensor(ndim=3, dim0=random(1, 6), dim1=random(1, 6), dim2=dim0,).to(
-            device
-        )
-        y = random_tensor(ndim=2, dim0=dim0, dim1=random(1, 6),).to(device)
+        x = random_tensor(
+            ndim=3,
+            dim0=random(1, 6),
+            dim1=random(1, 6),
+            dim2=dim0,
+        ).to(device)
+        y = random_tensor(
+            ndim=2,
+            dim0=dim0,
+            dim1=random(1, 6),
+        ).to(device)
         z = torch.einsum("qkc,ch->hqk", x, y)
         return z
 
@@ -379,7 +605,11 @@ class TestEinsum(flow.unittest.TestCase):
         dim1 = random(1, 6)
         dim2 = random(1, 6)
         x = random_tensor(
-            ndim=4, dim0=dim0, dim1=dim1, dim2=random(1, 6), dim3=dim2,
+            ndim=4,
+            dim0=dim0,
+            dim1=dim1,
+            dim2=random(1, 6),
+            dim3=dim2,
         ).to(device)
         y = random_tensor(
             ndim=4, dim0=dim0, dim1=dim2, dim2=dim1, dim3=random(1, 6)
@@ -391,12 +621,18 @@ class TestEinsum(flow.unittest.TestCase):
     def test_einsum_alphaflod_usecase11(test_case):
         device = random_device()
         dim0 = random(1, 6)
-        x = random_tensor(ndim=3, dim0=random(1, 6), dim1=random(1, 6), dim2=dim0,).to(
-            device
-        )
-        y = random_tensor(ndim=3, dim0=dim0, dim1=random(1, 6), dim2=random(1, 6),).to(
-            device
-        )
+        x = random_tensor(
+            ndim=3,
+            dim0=random(1, 6),
+            dim1=random(1, 6),
+            dim2=dim0,
+        ).to(device)
+        y = random_tensor(
+            ndim=3,
+            dim0=dim0,
+            dim1=random(1, 6),
+            dim2=random(1, 6),
+        ).to(device)
         z = torch.einsum("bqa,ahc->bqhc", x, y)
         return z
 
@@ -404,12 +640,18 @@ class TestEinsum(flow.unittest.TestCase):
     def test_einsum_ellipsis_usecase1(test_case):
         device = random_device()
         dim0 = random(1, 6)
-        x = random_tensor(ndim=3, dim0=random(1, 6), dim1=random(1, 6), dim2=dim0,).to(
-            device
-        )
-        y = random_tensor(ndim=3, dim0=random(1, 6), dim1=random(1, 6), dim2=dim0,).to(
-            device
-        )
+        x = random_tensor(
+            ndim=3,
+            dim0=random(1, 6),
+            dim1=random(1, 6),
+            dim2=dim0,
+        ).to(device)
+        y = random_tensor(
+            ndim=3,
+            dim0=random(1, 6),
+            dim1=random(1, 6),
+            dim2=dim0,
+        ).to(device)
         z = torch.einsum("...lc, ...c -> ...l", x, y)
         return z
 
@@ -418,7 +660,12 @@ class TestEinsum(flow.unittest.TestCase):
         device = random_device()
         dim0 = random(1, 6)
         dim1 = random(1, 6)
-        x = random_tensor(ndim=3, dim0=random(1, 6), dim1=dim0, dim2=dim1,).to(device)
+        x = random_tensor(
+            ndim=3,
+            dim0=random(1, 6),
+            dim1=dim0,
+            dim2=dim1,
+        ).to(device)
         y = random_tensor(ndim=3, dim0=random(1, 6), dim1=dim0, dim2=dim1).to(device)
         z = torch.einsum("...lc, ...lc -> ...l", x, y)
         return z
@@ -427,9 +674,12 @@ class TestEinsum(flow.unittest.TestCase):
     def test_einsum_ellipsis_usecase3(test_case):
         device = random_device()
         dim0 = random(1, 6)
-        x = random_tensor(ndim=3, dim0=random(1, 6), dim1=random(1, 6), dim2=dim0,).to(
-            device
-        )
+        x = random_tensor(
+            ndim=3,
+            dim0=random(1, 6),
+            dim1=random(1, 6),
+            dim2=dim0,
+        ).to(device)
         y = random_tensor(ndim=3, dim0=random(1, 6), dim1=random(1, 6), dim2=dim0).to(
             device
         )

@@ -30,7 +30,8 @@ def _test_eager_boxing_with_non_overlapping_placement_p_to_s1(
 ):
     if flow.env.get_rank() == 0:
         np_arr = np.array(
-            [[4, 6, 5, 20], [6, 8, 9, 0], [3, 7, 5, 0], [6, 8, 9, 0]], dtype=np.float32,
+            [[4, 6, 5, 20], [6, 8, 9, 0], [3, 7, 5, 0], [6, 8, 9, 0]],
+            dtype=np.float32,
         )
     elif flow.env.get_rank() == 1:
         np_arr = np.array(
@@ -39,11 +40,13 @@ def _test_eager_boxing_with_non_overlapping_placement_p_to_s1(
         )
     elif flow.env.get_rank() == 2:
         np_arr = np.array(
-            [[9, 6, 5, 8], [4, 9, 7, 0], [2, 5, 7, 9], [6, 8, 10, 0]], dtype=np.float32,
+            [[9, 6, 5, 8], [4, 9, 7, 0], [2, 5, 7, 9], [6, 8, 10, 0]],
+            dtype=np.float32,
         )
     elif flow.env.get_rank() == 3:
         np_arr = np.array(
-            [[9, 4, 5, 8], [7, 2, 9, 5], [6, 3, 9, 2], [3, 7, 5, 8]], dtype=np.float32,
+            [[9, 4, 5, 8], [7, 2, 9, 5], [6, 3, 9, 2], [3, 7, 5, 8]],
+            dtype=np.float32,
         )
     device = flow.device(in_device)
     tensor = flow.tensor(np_arr, device=device, dtype=flow.float32)
@@ -56,14 +59,30 @@ def _test_eager_boxing_with_non_overlapping_placement_p_to_s1(
         test_case.assertTrue(
             np.array_equal(
                 y.to_local().numpy(),
-                np.array([[6, 16], [9, 17], [7, 13], [12, 16],], dtype=np.float32,),
+                np.array(
+                    [
+                        [6, 16],
+                        [9, 17],
+                        [7, 13],
+                        [12, 16],
+                    ],
+                    dtype=np.float32,
+                ),
             )
         )
     if flow.env.get_rank() == 3:
         test_case.assertTrue(
             np.array_equal(
                 y.to_local().numpy(),
-                np.array([[15, 27], [19, 5], [11, 9], [15, 4],], dtype=np.float32,),
+                np.array(
+                    [
+                        [15, 27],
+                        [19, 5],
+                        [11, 9],
+                        [15, 4],
+                    ],
+                    dtype=np.float32,
+                ),
             )
         )
 
@@ -73,7 +92,8 @@ def _test_eager_boxing_with_non_overlapping_placement_b_to_s1(
 ):
     if flow.env.get_rank() == 0:
         np_arr = np.array(
-            [[4, 6, 5, 20], [6, 8, 9, 0], [3, 7, 5, 0], [6, 8, 9, 0]], dtype=np.float32,
+            [[4, 6, 5, 20], [6, 8, 9, 0], [3, 7, 5, 0], [6, 8, 9, 0]],
+            dtype=np.float32,
         )
     elif flow.env.get_rank() == 1:
         np_arr = np.array(
@@ -82,11 +102,13 @@ def _test_eager_boxing_with_non_overlapping_placement_b_to_s1(
         )
     elif flow.env.get_rank() == 2:
         np_arr = np.array(
-            [[9, 6, 5, 8], [4, 9, 7, 0], [2, 5, 7, 9], [6, 8, 10, 0]], dtype=np.float32,
+            [[9, 6, 5, 8], [4, 9, 7, 0], [2, 5, 7, 9], [6, 8, 10, 0]],
+            dtype=np.float32,
         )
     elif flow.env.get_rank() == 3:
         np_arr = np.array(
-            [[9, 4, 5, 8], [7, 2, 9, 5], [6, 3, 9, 2], [3, 7, 5, 8]], dtype=np.float32,
+            [[9, 4, 5, 8], [7, 2, 9, 5], [6, 3, 9, 2], [3, 7, 5, 8]],
+            dtype=np.float32,
         )
     device = flow.device(in_device)
     tensor = flow.tensor(np_arr, device=device, dtype=flow.float32)
@@ -99,14 +121,30 @@ def _test_eager_boxing_with_non_overlapping_placement_b_to_s1(
         test_case.assertTrue(
             np.array_equal(
                 y.to_local().numpy(),
-                np.array([[4, 6], [6, 8], [3, 7], [6, 8],], dtype=np.float32,),
+                np.array(
+                    [
+                        [4, 6],
+                        [6, 8],
+                        [3, 7],
+                        [6, 8],
+                    ],
+                    dtype=np.float32,
+                ),
             )
         )
     if flow.env.get_rank() == 3:
         test_case.assertTrue(
             np.array_equal(
                 y.to_local().numpy(),
-                np.array([[5, 20], [9, 0], [5, 0], [9, 0],], dtype=np.float32,),
+                np.array(
+                    [
+                        [5, 20],
+                        [9, 0],
+                        [5, 0],
+                        [9, 0],
+                    ],
+                    dtype=np.float32,
+                ),
             )
         )
 
@@ -116,7 +154,8 @@ def _test_eager_boxing_with_non_overlapping_placement_s0_to_s1(
 ):
     if flow.env.get_rank() == 0:
         np_arr = np.array(
-            [[4, 6, 5, 20], [6, 8, 9, 0], [3, 7, 5, 0], [6, 8, 9, 0]], dtype=np.float32,
+            [[4, 6, 5, 20], [6, 8, 9, 0], [3, 7, 5, 0], [6, 8, 9, 0]],
+            dtype=np.float32,
         )
     elif flow.env.get_rank() == 1:
         np_arr = np.array(
@@ -125,11 +164,13 @@ def _test_eager_boxing_with_non_overlapping_placement_s0_to_s1(
         )
     elif flow.env.get_rank() == 2:
         np_arr = np.array(
-            [[9, 6, 5, 8], [4, 9, 7, 0], [2, 5, 7, 9], [6, 8, 10, 0]], dtype=np.float32,
+            [[9, 6, 5, 8], [4, 9, 7, 0], [2, 5, 7, 9], [6, 8, 10, 0]],
+            dtype=np.float32,
         )
     elif flow.env.get_rank() == 3:
         np_arr = np.array(
-            [[9, 4, 5, 8], [7, 2, 9, 5], [6, 3, 9, 2], [3, 7, 5, 8]], dtype=np.float32,
+            [[9, 4, 5, 8], [7, 2, 9, 5], [6, 3, 9, 2], [3, 7, 5, 8]],
+            dtype=np.float32,
         )
     device = flow.device(in_device)
     tensor = flow.tensor(np_arr, device=device, dtype=flow.float32)
@@ -143,7 +184,16 @@ def _test_eager_boxing_with_non_overlapping_placement_s0_to_s1(
             np.array_equal(
                 y.to_local().numpy(),
                 np.array(
-                    [[4, 6], [6, 8], [3, 7], [6, 8], [2, 10], [3, 9], [4, 6], [6, 8],],
+                    [
+                        [4, 6],
+                        [6, 8],
+                        [3, 7],
+                        [6, 8],
+                        [2, 10],
+                        [3, 9],
+                        [4, 6],
+                        [6, 8],
+                    ],
                     dtype=np.float32,
                 ),
             )
@@ -174,7 +224,8 @@ def _test_eager_boxing_with_non_overlapping_placement_s1_to_s1(
 ):
     if flow.env.get_rank() == 0:
         np_arr = np.array(
-            [[4, 6, 5, 20], [6, 8, 9, 0], [3, 7, 5, 0], [6, 8, 9, 0]], dtype=np.float32,
+            [[4, 6, 5, 20], [6, 8, 9, 0], [3, 7, 5, 0], [6, 8, 9, 0]],
+            dtype=np.float32,
         )
     elif flow.env.get_rank() == 1:
         np_arr = np.array(
@@ -183,11 +234,13 @@ def _test_eager_boxing_with_non_overlapping_placement_s1_to_s1(
         )
     elif flow.env.get_rank() == 2:
         np_arr = np.array(
-            [[9, 6, 5, 8], [4, 9, 7, 0], [2, 5, 7, 9], [6, 8, 10, 0]], dtype=np.float32,
+            [[9, 6, 5, 8], [4, 9, 7, 0], [2, 5, 7, 9], [6, 8, 10, 0]],
+            dtype=np.float32,
         )
     elif flow.env.get_rank() == 3:
         np_arr = np.array(
-            [[9, 4, 5, 8], [7, 2, 9, 5], [6, 3, 9, 2], [3, 7, 5, 8]], dtype=np.float32,
+            [[9, 4, 5, 8], [7, 2, 9, 5], [6, 3, 9, 2], [3, 7, 5, 8]],
+            dtype=np.float32,
         )
     device = flow.device(in_device)
     tensor = flow.tensor(np_arr, device=device, dtype=flow.float32)
@@ -202,7 +255,16 @@ def _test_eager_boxing_with_non_overlapping_placement_s1_to_s1(
             np.array_equal(
                 z.to_local().numpy(),
                 np.array(
-                    [[4, 6], [6, 8], [3, 7], [6, 8], [2, 10], [3, 9], [4, 6], [6, 8],],
+                    [
+                        [4, 6],
+                        [6, 8],
+                        [3, 7],
+                        [6, 8],
+                        [2, 10],
+                        [3, 9],
+                        [4, 6],
+                        [6, 8],
+                    ],
                     dtype=np.float32,
                 ),
             )
@@ -233,7 +295,8 @@ def _test_eager_boxing_with_non_overlapping_placement_s1_to_s0(
 ):
     if flow.env.get_rank() == 0:
         np_arr = np.array(
-            [[4, 6, 5, 20], [6, 8, 9, 0], [3, 7, 5, 0], [6, 8, 9, 0]], dtype=np.float32,
+            [[4, 6, 5, 20], [6, 8, 9, 0], [3, 7, 5, 0], [6, 8, 9, 0]],
+            dtype=np.float32,
         )
     elif flow.env.get_rank() == 1:
         np_arr = np.array(
@@ -242,11 +305,13 @@ def _test_eager_boxing_with_non_overlapping_placement_s1_to_s0(
         )
     elif flow.env.get_rank() == 2:
         np_arr = np.array(
-            [[9, 6, 5, 8], [4, 9, 7, 0], [2, 5, 7, 9], [6, 8, 10, 0]], dtype=np.float32,
+            [[9, 6, 5, 8], [4, 9, 7, 0], [2, 5, 7, 9], [6, 8, 10, 0]],
+            dtype=np.float32,
         )
     elif flow.env.get_rank() == 3:
         np_arr = np.array(
-            [[9, 4, 5, 8], [7, 2, 9, 5], [6, 3, 9, 2], [3, 7, 5, 8]], dtype=np.float32,
+            [[9, 4, 5, 8], [7, 2, 9, 5], [6, 3, 9, 2], [3, 7, 5, 8]],
+            dtype=np.float32,
         )
     device = flow.device(in_device)
     tensor = flow.tensor(np_arr, device=device, dtype=flow.float32)
@@ -261,7 +326,12 @@ def _test_eager_boxing_with_non_overlapping_placement_s1_to_s0(
             np.array_equal(
                 z.to_local().numpy(),
                 np.array(
-                    [[4, 6, 5, 20], [6, 8, 9, 0], [3, 7, 5, 0], [6, 8, 9, 0],],
+                    [
+                        [4, 6, 5, 20],
+                        [6, 8, 9, 0],
+                        [3, 7, 5, 0],
+                        [6, 8, 9, 0],
+                    ],
                     dtype=np.float32,
                 ),
             )
@@ -271,7 +341,12 @@ def _test_eager_boxing_with_non_overlapping_placement_s1_to_s0(
             np.array_equal(
                 z.to_local().numpy(),
                 np.array(
-                    [[2, 10, 10, 7], [3, 9, 10, 5], [4, 6, 6, 9], [6, 8, 6, 4],],
+                    [
+                        [2, 10, 10, 7],
+                        [3, 9, 10, 5],
+                        [4, 6, 6, 9],
+                        [6, 8, 6, 4],
+                    ],
                     dtype=np.float32,
                 ),
             )
@@ -283,7 +358,8 @@ def _test_eager_boxing_with_non_overlapping_placement_s1_to_b(
 ):
     if flow.env.get_rank() == 0:
         np_arr = np.array(
-            [[4, 6, 5, 20], [6, 8, 9, 0], [3, 7, 5, 0], [6, 8, 9, 0]], dtype=np.float32,
+            [[4, 6, 5, 20], [6, 8, 9, 0], [3, 7, 5, 0], [6, 8, 9, 0]],
+            dtype=np.float32,
         )
     elif flow.env.get_rank() == 1:
         np_arr = np.array(
@@ -292,11 +368,13 @@ def _test_eager_boxing_with_non_overlapping_placement_s1_to_b(
         )
     elif flow.env.get_rank() == 2:
         np_arr = np.array(
-            [[9, 6, 5, 8], [4, 9, 7, 0], [2, 5, 7, 9], [6, 8, 10, 0]], dtype=np.float32,
+            [[9, 6, 5, 8], [4, 9, 7, 0], [2, 5, 7, 9], [6, 8, 10, 0]],
+            dtype=np.float32,
         )
     elif flow.env.get_rank() == 3:
         np_arr = np.array(
-            [[9, 4, 5, 8], [7, 2, 9, 5], [6, 3, 9, 2], [3, 7, 5, 8]], dtype=np.float32,
+            [[9, 4, 5, 8], [7, 2, 9, 5], [6, 3, 9, 2], [3, 7, 5, 8]],
+            dtype=np.float32,
         )
     device = flow.device(in_device)
     tensor = flow.tensor(np_arr, device=device, dtype=flow.float32)
@@ -351,7 +429,8 @@ def _test_eager_boxing_with_non_overlapping_placement_s1_to_p(
 ):
     if flow.env.get_rank() == 0:
         np_arr = np.array(
-            [[4, 6, 5, 20], [6, 8, 9, 0], [3, 7, 5, 0], [6, 8, 9, 0]], dtype=np.float32,
+            [[4, 6, 5, 20], [6, 8, 9, 0], [3, 7, 5, 0], [6, 8, 9, 0]],
+            dtype=np.float32,
         )
     elif flow.env.get_rank() == 1:
         np_arr = np.array(
@@ -360,11 +439,13 @@ def _test_eager_boxing_with_non_overlapping_placement_s1_to_p(
         )
     elif flow.env.get_rank() == 2:
         np_arr = np.array(
-            [[9, 6, 5, 8], [4, 9, 7, 0], [2, 5, 7, 9], [6, 8, 10, 0]], dtype=np.float32,
+            [[9, 6, 5, 8], [4, 9, 7, 0], [2, 5, 7, 9], [6, 8, 10, 0]],
+            dtype=np.float32,
         )
     elif flow.env.get_rank() == 3:
         np_arr = np.array(
-            [[9, 4, 5, 8], [7, 2, 9, 5], [6, 3, 9, 2], [3, 7, 5, 8]], dtype=np.float32,
+            [[9, 4, 5, 8], [7, 2, 9, 5], [6, 3, 9, 2], [3, 7, 5, 8]],
+            dtype=np.float32,
         )
     device = flow.device(in_device)
     tensor = flow.tensor(np_arr, device=device, dtype=flow.float32)
@@ -419,7 +500,8 @@ def _test_eager_boxing_with_overlapping_placement_p_to_s1(
 ):
     if flow.env.get_rank() == 0:
         np_arr = np.array(
-            [[4, 6, 5, 20], [6, 8, 9, 0], [3, 7, 5, 0], [6, 8, 9, 0]], dtype=np.float32,
+            [[4, 6, 5, 20], [6, 8, 9, 0], [3, 7, 5, 0], [6, 8, 9, 0]],
+            dtype=np.float32,
         )
     elif flow.env.get_rank() == 1:
         np_arr = np.array(
@@ -428,11 +510,13 @@ def _test_eager_boxing_with_overlapping_placement_p_to_s1(
         )
     elif flow.env.get_rank() == 2:
         np_arr = np.array(
-            [[9, 6, 5, 8], [4, 9, 7, 0], [2, 5, 7, 9], [6, 8, 10, 0]], dtype=np.float32,
+            [[9, 6, 5, 8], [4, 9, 7, 0], [2, 5, 7, 9], [6, 8, 10, 0]],
+            dtype=np.float32,
         )
     elif flow.env.get_rank() == 3:
         np_arr = np.array(
-            [[9, 4, 5, 8], [7, 2, 9, 5], [6, 3, 9, 2], [3, 7, 5, 8]], dtype=np.float32,
+            [[9, 4, 5, 8], [7, 2, 9, 5], [6, 3, 9, 2], [3, 7, 5, 8]],
+            dtype=np.float32,
         )
     device = flow.device(in_device)
     tensor = flow.tensor(np_arr, device=device, dtype=flow.float32)
@@ -445,14 +529,30 @@ def _test_eager_boxing_with_overlapping_placement_p_to_s1(
         test_case.assertTrue(
             np.array_equal(
                 y.to_local().numpy(),
-                np.array([[15, 20], [16, 19], [13, 16], [15, 23],], dtype=np.float32,),
+                np.array(
+                    [
+                        [15, 20],
+                        [16, 19],
+                        [13, 16],
+                        [15, 23],
+                    ],
+                    dtype=np.float32,
+                ),
             )
         )
     if flow.env.get_rank() == 3:
         test_case.assertTrue(
             np.array_equal(
                 y.to_local().numpy(),
-                np.array([[20, 35], [28, 10], [20, 11], [20, 12],], dtype=np.float32,),
+                np.array(
+                    [
+                        [20, 35],
+                        [28, 10],
+                        [20, 11],
+                        [20, 12],
+                    ],
+                    dtype=np.float32,
+                ),
             )
         )
 
@@ -462,7 +562,8 @@ def _test_eager_boxing_with_overlapping_placement_b_to_s1(
 ):
     if flow.env.get_rank() == 0:
         np_arr = np.array(
-            [[4, 6, 5, 20], [6, 8, 9, 0], [3, 7, 5, 0], [6, 8, 9, 0]], dtype=np.float32,
+            [[4, 6, 5, 20], [6, 8, 9, 0], [3, 7, 5, 0], [6, 8, 9, 0]],
+            dtype=np.float32,
         )
     elif flow.env.get_rank() == 1:
         np_arr = np.array(
@@ -471,11 +572,13 @@ def _test_eager_boxing_with_overlapping_placement_b_to_s1(
         )
     elif flow.env.get_rank() == 2:
         np_arr = np.array(
-            [[9, 6, 5, 8], [4, 9, 7, 0], [2, 5, 7, 9], [6, 8, 10, 0]], dtype=np.float32,
+            [[9, 6, 5, 8], [4, 9, 7, 0], [2, 5, 7, 9], [6, 8, 10, 0]],
+            dtype=np.float32,
         )
     elif flow.env.get_rank() == 3:
         np_arr = np.array(
-            [[9, 4, 5, 8], [7, 2, 9, 5], [6, 3, 9, 2], [3, 7, 5, 8]], dtype=np.float32,
+            [[9, 4, 5, 8], [7, 2, 9, 5], [6, 3, 9, 2], [3, 7, 5, 8]],
+            dtype=np.float32,
         )
     device = flow.device(in_device)
     tensor = flow.tensor(np_arr, device=device, dtype=flow.float32)
@@ -488,14 +591,30 @@ def _test_eager_boxing_with_overlapping_placement_b_to_s1(
         test_case.assertTrue(
             np.array_equal(
                 y.to_local().numpy(),
-                np.array([[4, 6], [6, 8], [3, 7], [6, 8],], dtype=np.float32,),
+                np.array(
+                    [
+                        [4, 6],
+                        [6, 8],
+                        [3, 7],
+                        [6, 8],
+                    ],
+                    dtype=np.float32,
+                ),
             )
         )
     if flow.env.get_rank() == 3:
         test_case.assertTrue(
             np.array_equal(
                 y.to_local().numpy(),
-                np.array([[5, 20], [9, 0], [5, 0], [9, 0],], dtype=np.float32,),
+                np.array(
+                    [
+                        [5, 20],
+                        [9, 0],
+                        [5, 0],
+                        [9, 0],
+                    ],
+                    dtype=np.float32,
+                ),
             )
         )
 
@@ -505,7 +624,8 @@ def _test_eager_boxing_with_overlapping_placement_s0_to_s1(
 ):
     if flow.env.get_rank() == 0:
         np_arr = np.array(
-            [[4, 6, 5, 20], [6, 8, 9, 0], [3, 7, 5, 0], [6, 8, 9, 0]], dtype=np.float32,
+            [[4, 6, 5, 20], [6, 8, 9, 0], [3, 7, 5, 0], [6, 8, 9, 0]],
+            dtype=np.float32,
         )
     elif flow.env.get_rank() == 1:
         np_arr = np.array(
@@ -514,11 +634,13 @@ def _test_eager_boxing_with_overlapping_placement_s0_to_s1(
         )
     elif flow.env.get_rank() == 2:
         np_arr = np.array(
-            [[9, 6, 5, 8], [4, 9, 7, 0], [2, 5, 7, 9], [6, 8, 10, 0]], dtype=np.float32,
+            [[9, 6, 5, 8], [4, 9, 7, 0], [2, 5, 7, 9], [6, 8, 10, 0]],
+            dtype=np.float32,
         )
     elif flow.env.get_rank() == 3:
         np_arr = np.array(
-            [[9, 4, 5, 8], [7, 2, 9, 5], [6, 3, 9, 2], [3, 7, 5, 8]], dtype=np.float32,
+            [[9, 4, 5, 8], [7, 2, 9, 5], [6, 3, 9, 2], [3, 7, 5, 8]],
+            dtype=np.float32,
         )
     device = flow.device(in_device)
     tensor = flow.tensor(np_arr, device=device, dtype=flow.float32)
@@ -964,7 +1086,8 @@ def _test_eager_boxing_with_in_placement_contain_out_placement_p_to_s1(
 ):
     if flow.env.get_rank() == 0:
         np_arr = np.array(
-            [[4, 6, 5, 20], [6, 8, 9, 0], [3, 7, 5, 0], [6, 8, 9, 0]], dtype=np.float32,
+            [[4, 6, 5, 20], [6, 8, 9, 0], [3, 7, 5, 0], [6, 8, 9, 0]],
+            dtype=np.float32,
         )
     elif flow.env.get_rank() == 1:
         np_arr = np.array(
@@ -973,11 +1096,13 @@ def _test_eager_boxing_with_in_placement_contain_out_placement_p_to_s1(
         )
     elif flow.env.get_rank() == 2:
         np_arr = np.array(
-            [[9, 6, 5, 8], [4, 9, 7, 0], [2, 5, 7, 9], [6, 8, 10, 0]], dtype=np.float32,
+            [[9, 6, 5, 8], [4, 9, 7, 0], [2, 5, 7, 9], [6, 8, 10, 0]],
+            dtype=np.float32,
         )
     elif flow.env.get_rank() == 3:
         np_arr = np.array(
-            [[9, 4, 5, 8], [7, 2, 9, 5], [6, 3, 9, 2], [3, 7, 5, 8]], dtype=np.float32,
+            [[9, 4, 5, 8], [7, 2, 9, 5], [6, 3, 9, 2], [3, 7, 5, 8]],
+            dtype=np.float32,
         )
     device = flow.device(in_device)
     tensor = flow.tensor(np_arr, device=device, dtype=flow.float32)
@@ -990,14 +1115,30 @@ def _test_eager_boxing_with_in_placement_contain_out_placement_p_to_s1(
         test_case.assertTrue(
             np.array_equal(
                 y.to_local().numpy(),
-                np.array([[15, 20], [16, 19], [13, 16], [15, 23],], dtype=np.float32,),
+                np.array(
+                    [
+                        [15, 20],
+                        [16, 19],
+                        [13, 16],
+                        [15, 23],
+                    ],
+                    dtype=np.float32,
+                ),
             )
         )
     if flow.env.get_rank() == 3:
         test_case.assertTrue(
             np.array_equal(
                 y.to_local().numpy(),
-                np.array([[20, 35], [28, 10], [20, 11], [20, 12],], dtype=np.float32,),
+                np.array(
+                    [
+                        [20, 35],
+                        [28, 10],
+                        [20, 11],
+                        [20, 12],
+                    ],
+                    dtype=np.float32,
+                ),
             )
         )
 
@@ -1007,7 +1148,8 @@ def _test_eager_boxing_with_in_placement_contain_out_placement_b_to_s1(
 ):
     if flow.env.get_rank() == 0:
         np_arr = np.array(
-            [[4, 6, 5, 20], [6, 8, 9, 0], [3, 7, 5, 0], [6, 8, 9, 0]], dtype=np.float32,
+            [[4, 6, 5, 20], [6, 8, 9, 0], [3, 7, 5, 0], [6, 8, 9, 0]],
+            dtype=np.float32,
         )
     elif flow.env.get_rank() == 1:
         np_arr = np.array(
@@ -1016,11 +1158,13 @@ def _test_eager_boxing_with_in_placement_contain_out_placement_b_to_s1(
         )
     elif flow.env.get_rank() == 2:
         np_arr = np.array(
-            [[9, 6, 5, 8], [4, 9, 7, 0], [2, 5, 7, 9], [6, 8, 10, 0]], dtype=np.float32,
+            [[9, 6, 5, 8], [4, 9, 7, 0], [2, 5, 7, 9], [6, 8, 10, 0]],
+            dtype=np.float32,
         )
     elif flow.env.get_rank() == 3:
         np_arr = np.array(
-            [[9, 4, 5, 8], [7, 2, 9, 5], [6, 3, 9, 2], [3, 7, 5, 8]], dtype=np.float32,
+            [[9, 4, 5, 8], [7, 2, 9, 5], [6, 3, 9, 2], [3, 7, 5, 8]],
+            dtype=np.float32,
         )
     device = flow.device(in_device)
     tensor = flow.tensor(np_arr, device=device, dtype=flow.float32)
@@ -1033,14 +1177,30 @@ def _test_eager_boxing_with_in_placement_contain_out_placement_b_to_s1(
         test_case.assertTrue(
             np.array_equal(
                 y.to_local().numpy(),
-                np.array([[4, 6], [6, 8], [3, 7], [6, 8],], dtype=np.float32,),
+                np.array(
+                    [
+                        [4, 6],
+                        [6, 8],
+                        [3, 7],
+                        [6, 8],
+                    ],
+                    dtype=np.float32,
+                ),
             )
         )
     if flow.env.get_rank() == 3:
         test_case.assertTrue(
             np.array_equal(
                 y.to_local().numpy(),
-                np.array([[5, 20], [9, 0], [5, 0], [9, 0],], dtype=np.float32,),
+                np.array(
+                    [
+                        [5, 20],
+                        [9, 0],
+                        [5, 0],
+                        [9, 0],
+                    ],
+                    dtype=np.float32,
+                ),
             )
         )
 
@@ -1050,7 +1210,8 @@ def _test_eager_boxing_with_in_placement_contain_out_placement_s0_to_s1(
 ):
     if flow.env.get_rank() == 0:
         np_arr = np.array(
-            [[4, 6, 5, 20], [6, 8, 9, 0], [3, 7, 5, 0], [6, 8, 9, 0]], dtype=np.float32,
+            [[4, 6, 5, 20], [6, 8, 9, 0], [3, 7, 5, 0], [6, 8, 9, 0]],
+            dtype=np.float32,
         )
     elif flow.env.get_rank() == 1:
         np_arr = np.array(
@@ -1059,11 +1220,13 @@ def _test_eager_boxing_with_in_placement_contain_out_placement_s0_to_s1(
         )
     elif flow.env.get_rank() == 2:
         np_arr = np.array(
-            [[9, 6, 5, 8], [4, 9, 7, 0], [2, 5, 7, 9], [6, 8, 10, 0]], dtype=np.float32,
+            [[9, 6, 5, 8], [4, 9, 7, 0], [2, 5, 7, 9], [6, 8, 10, 0]],
+            dtype=np.float32,
         )
     elif flow.env.get_rank() == 3:
         np_arr = np.array(
-            [[9, 4, 5, 8], [7, 2, 9, 5], [6, 3, 9, 2], [3, 7, 5, 8]], dtype=np.float32,
+            [[9, 4, 5, 8], [7, 2, 9, 5], [6, 3, 9, 2], [3, 7, 5, 8]],
+            dtype=np.float32,
         )
     device = flow.device(in_device)
     tensor = flow.tensor(np_arr, device=device, dtype=flow.float32)
@@ -1125,7 +1288,8 @@ def _test_eager_boxing_with_in_placement_contain_out_placement_s1_to_s1(
 ):
     if flow.env.get_rank() == 0:
         np_arr = np.array(
-            [[4, 6, 5, 20], [6, 8, 9, 0], [3, 7, 5, 0], [6, 8, 9, 0]], dtype=np.float32,
+            [[4, 6, 5, 20], [6, 8, 9, 0], [3, 7, 5, 0], [6, 8, 9, 0]],
+            dtype=np.float32,
         )
     elif flow.env.get_rank() == 1:
         np_arr = np.array(
@@ -1134,11 +1298,13 @@ def _test_eager_boxing_with_in_placement_contain_out_placement_s1_to_s1(
         )
     elif flow.env.get_rank() == 2:
         np_arr = np.array(
-            [[9, 6, 5, 8], [4, 9, 7, 0], [2, 5, 7, 9], [6, 8, 10, 0]], dtype=np.float32,
+            [[9, 6, 5, 8], [4, 9, 7, 0], [2, 5, 7, 9], [6, 8, 10, 0]],
+            dtype=np.float32,
         )
     elif flow.env.get_rank() == 3:
         np_arr = np.array(
-            [[9, 4, 5, 8], [7, 2, 9, 5], [6, 3, 9, 2], [3, 7, 5, 8]], dtype=np.float32,
+            [[9, 4, 5, 8], [7, 2, 9, 5], [6, 3, 9, 2], [3, 7, 5, 8]],
+            dtype=np.float32,
         )
     device = flow.device(in_device)
     tensor = flow.tensor(np_arr, device=device, dtype=flow.float32)
@@ -1152,14 +1318,30 @@ def _test_eager_boxing_with_in_placement_contain_out_placement_s1_to_s1(
         test_case.assertTrue(
             np.array_equal(
                 z.to_local().numpy(),
-                np.array([[4, 6], [6, 8], [3, 7], [6, 8],], dtype=np.float32,),
+                np.array(
+                    [
+                        [4, 6],
+                        [6, 8],
+                        [3, 7],
+                        [6, 8],
+                    ],
+                    dtype=np.float32,
+                ),
             )
         )
     if flow.env.get_rank() == 3:
         test_case.assertTrue(
             np.array_equal(
                 z.to_local().numpy(),
-                np.array([[5, 20], [9, 0], [5, 0], [9, 0],], dtype=np.float32,),
+                np.array(
+                    [
+                        [5, 20],
+                        [9, 0],
+                        [5, 0],
+                        [9, 0],
+                    ],
+                    dtype=np.float32,
+                ),
             )
         )
 
@@ -1169,7 +1351,8 @@ def _test_eager_boxing_with_in_placement_contain_out_placement_s1_to_s0(
 ):
     if flow.env.get_rank() == 0:
         np_arr = np.array(
-            [[4, 6, 5, 20], [6, 8, 9, 0], [3, 7, 5, 0], [6, 8, 9, 0]], dtype=np.float32,
+            [[4, 6, 5, 20], [6, 8, 9, 0], [3, 7, 5, 0], [6, 8, 9, 0]],
+            dtype=np.float32,
         )
     elif flow.env.get_rank() == 1:
         np_arr = np.array(
@@ -1178,11 +1361,13 @@ def _test_eager_boxing_with_in_placement_contain_out_placement_s1_to_s0(
         )
     elif flow.env.get_rank() == 2:
         np_arr = np.array(
-            [[9, 6, 5, 8], [4, 9, 7, 0], [2, 5, 7, 9], [6, 8, 10, 0]], dtype=np.float32,
+            [[9, 6, 5, 8], [4, 9, 7, 0], [2, 5, 7, 9], [6, 8, 10, 0]],
+            dtype=np.float32,
         )
     elif flow.env.get_rank() == 3:
         np_arr = np.array(
-            [[9, 4, 5, 8], [7, 2, 9, 5], [6, 3, 9, 2], [3, 7, 5, 8]], dtype=np.float32,
+            [[9, 4, 5, 8], [7, 2, 9, 5], [6, 3, 9, 2], [3, 7, 5, 8]],
+            dtype=np.float32,
         )
     device = flow.device(in_device)
     tensor = flow.tensor(np_arr, device=device, dtype=flow.float32)
@@ -1196,14 +1381,26 @@ def _test_eager_boxing_with_in_placement_contain_out_placement_s1_to_s0(
         test_case.assertTrue(
             np.array_equal(
                 z.to_local().numpy(),
-                np.array([[4, 6, 5, 20], [6, 8, 9, 0],], dtype=np.float32,),
+                np.array(
+                    [
+                        [4, 6, 5, 20],
+                        [6, 8, 9, 0],
+                    ],
+                    dtype=np.float32,
+                ),
             )
         )
     if flow.env.get_rank() == 3:
         test_case.assertTrue(
             np.array_equal(
                 z.to_local().numpy(),
-                np.array([[3, 7, 5, 0], [6, 8, 9, 0],], dtype=np.float32,),
+                np.array(
+                    [
+                        [3, 7, 5, 0],
+                        [6, 8, 9, 0],
+                    ],
+                    dtype=np.float32,
+                ),
             )
         )
 
@@ -1213,7 +1410,8 @@ def _test_eager_boxing_with_in_placement_contain_out_placement_s1_to_p(
 ):
     if flow.env.get_rank() == 0:
         np_arr = np.array(
-            [[4, 6, 5, 20], [6, 8, 9, 0], [3, 7, 5, 0], [6, 8, 9, 0]], dtype=np.float32,
+            [[4, 6, 5, 20], [6, 8, 9, 0], [3, 7, 5, 0], [6, 8, 9, 0]],
+            dtype=np.float32,
         )
     elif flow.env.get_rank() == 1:
         np_arr = np.array(
@@ -1222,11 +1420,13 @@ def _test_eager_boxing_with_in_placement_contain_out_placement_s1_to_p(
         )
     elif flow.env.get_rank() == 2:
         np_arr = np.array(
-            [[9, 6, 5, 8], [4, 9, 7, 0], [2, 5, 7, 9], [6, 8, 10, 0]], dtype=np.float32,
+            [[9, 6, 5, 8], [4, 9, 7, 0], [2, 5, 7, 9], [6, 8, 10, 0]],
+            dtype=np.float32,
         )
     elif flow.env.get_rank() == 3:
         np_arr = np.array(
-            [[9, 4, 5, 8], [7, 2, 9, 5], [6, 3, 9, 2], [3, 7, 5, 8]], dtype=np.float32,
+            [[9, 4, 5, 8], [7, 2, 9, 5], [6, 3, 9, 2], [3, 7, 5, 8]],
+            dtype=np.float32,
         )
     device = flow.device(in_device)
     tensor = flow.tensor(np_arr, device=device, dtype=flow.float32)
@@ -1241,7 +1441,12 @@ def _test_eager_boxing_with_in_placement_contain_out_placement_s1_to_p(
             np.array_equal(
                 z.to_local().numpy(),
                 np.array(
-                    [[4, 6, 5, 0], [6, 8, 9, 0], [3, 7, 5, 0], [6, 8, 9, 0],],
+                    [
+                        [4, 6, 5, 0],
+                        [6, 8, 9, 0],
+                        [3, 7, 5, 0],
+                        [6, 8, 9, 0],
+                    ],
                     dtype=np.float32,
                 ),
             )
@@ -1251,7 +1456,12 @@ def _test_eager_boxing_with_in_placement_contain_out_placement_s1_to_p(
             np.array_equal(
                 z.to_local().numpy(),
                 np.array(
-                    [[0, 0, 0, 20], [0, 0, 0, 0], [0, 0, 0, 0], [0, 0, 0, 0],],
+                    [
+                        [0, 0, 0, 20],
+                        [0, 0, 0, 0],
+                        [0, 0, 0, 0],
+                        [0, 0, 0, 0],
+                    ],
                     dtype=np.float32,
                 ),
             )
@@ -1263,7 +1473,8 @@ def _test_eager_boxing_with_in_placement_contain_out_placement_s1_to_b(
 ):
     if flow.env.get_rank() == 0:
         np_arr = np.array(
-            [[4, 6, 5, 20], [6, 8, 9, 0], [3, 7, 5, 0], [6, 8, 9, 0]], dtype=np.float32,
+            [[4, 6, 5, 20], [6, 8, 9, 0], [3, 7, 5, 0], [6, 8, 9, 0]],
+            dtype=np.float32,
         )
     elif flow.env.get_rank() == 1:
         np_arr = np.array(
@@ -1272,11 +1483,13 @@ def _test_eager_boxing_with_in_placement_contain_out_placement_s1_to_b(
         )
     elif flow.env.get_rank() == 2:
         np_arr = np.array(
-            [[9, 6, 5, 8], [4, 9, 7, 0], [2, 5, 7, 9], [6, 8, 10, 0]], dtype=np.float32,
+            [[9, 6, 5, 8], [4, 9, 7, 0], [2, 5, 7, 9], [6, 8, 10, 0]],
+            dtype=np.float32,
         )
     elif flow.env.get_rank() == 3:
         np_arr = np.array(
-            [[9, 4, 5, 8], [7, 2, 9, 5], [6, 3, 9, 2], [3, 7, 5, 8]], dtype=np.float32,
+            [[9, 4, 5, 8], [7, 2, 9, 5], [6, 3, 9, 2], [3, 7, 5, 8]],
+            dtype=np.float32,
         )
     device = flow.device(in_device)
     tensor = flow.tensor(np_arr, device=device, dtype=flow.float32)
@@ -1291,7 +1504,12 @@ def _test_eager_boxing_with_in_placement_contain_out_placement_s1_to_b(
             np.array_equal(
                 z.to_local().numpy(),
                 np.array(
-                    [[4, 6, 5, 20], [6, 8, 9, 0], [3, 7, 5, 0], [6, 8, 9, 0],],
+                    [
+                        [4, 6, 5, 20],
+                        [6, 8, 9, 0],
+                        [3, 7, 5, 0],
+                        [6, 8, 9, 0],
+                    ],
                     dtype=np.float32,
                 ),
             )
@@ -1301,7 +1519,12 @@ def _test_eager_boxing_with_in_placement_contain_out_placement_s1_to_b(
             np.array_equal(
                 z.to_local().numpy(),
                 np.array(
-                    [[4, 6, 5, 20], [6, 8, 9, 0], [3, 7, 5, 0], [6, 8, 9, 0],],
+                    [
+                        [4, 6, 5, 20],
+                        [6, 8, 9, 0],
+                        [3, 7, 5, 0],
+                        [6, 8, 9, 0],
+                    ],
                     dtype=np.float32,
                 ),
             )
@@ -1313,7 +1536,8 @@ def _test_eager_boxing_with_out_placement_contain_in_placement_p_to_s1(
 ):
     if flow.env.get_rank() == 0:
         np_arr = np.array(
-            [[4, 6, 5, 20], [6, 8, 9, 0], [3, 7, 5, 0], [6, 8, 9, 0]], dtype=np.float32,
+            [[4, 6, 5, 20], [6, 8, 9, 0], [3, 7, 5, 0], [6, 8, 9, 0]],
+            dtype=np.float32,
         )
     elif flow.env.get_rank() == 1:
         np_arr = np.array(
@@ -1322,11 +1546,13 @@ def _test_eager_boxing_with_out_placement_contain_in_placement_p_to_s1(
         )
     elif flow.env.get_rank() == 2:
         np_arr = np.array(
-            [[9, 6, 5, 8], [4, 9, 7, 0], [2, 5, 7, 9], [6, 8, 10, 0]], dtype=np.float32,
+            [[9, 6, 5, 8], [4, 9, 7, 0], [2, 5, 7, 9], [6, 8, 10, 0]],
+            dtype=np.float32,
         )
     elif flow.env.get_rank() == 3:
         np_arr = np.array(
-            [[9, 4, 5, 8], [7, 2, 9, 5], [6, 3, 9, 2], [3, 7, 5, 8]], dtype=np.float32,
+            [[9, 4, 5, 8], [7, 2, 9, 5], [6, 3, 9, 2], [3, 7, 5, 8]],
+            dtype=np.float32,
         )
     device = flow.device(in_device)
     tensor = flow.tensor(np_arr, device=device, dtype=flow.float32)
@@ -1339,28 +1565,60 @@ def _test_eager_boxing_with_out_placement_contain_in_placement_p_to_s1(
         test_case.assertTrue(
             np.array_equal(
                 y.to_local().numpy(),
-                np.array([[15], [16], [13], [15],], dtype=np.float32,),
+                np.array(
+                    [
+                        [15],
+                        [16],
+                        [13],
+                        [15],
+                    ],
+                    dtype=np.float32,
+                ),
             )
         )
     if flow.env.get_rank() == 1:
         test_case.assertTrue(
             np.array_equal(
                 y.to_local().numpy(),
-                np.array([[20], [19], [16], [23],], dtype=np.float32,),
+                np.array(
+                    [
+                        [20],
+                        [19],
+                        [16],
+                        [23],
+                    ],
+                    dtype=np.float32,
+                ),
             )
         )
     if flow.env.get_rank() == 2:
         test_case.assertTrue(
             np.array_equal(
                 y.to_local().numpy(),
-                np.array([[20], [28], [20], [20],], dtype=np.float32,),
+                np.array(
+                    [
+                        [20],
+                        [28],
+                        [20],
+                        [20],
+                    ],
+                    dtype=np.float32,
+                ),
             )
         )
     if flow.env.get_rank() == 3:
         test_case.assertTrue(
             np.array_equal(
                 y.to_local().numpy(),
-                np.array([[35], [10], [11], [12],], dtype=np.float32,),
+                np.array(
+                    [
+                        [35],
+                        [10],
+                        [11],
+                        [12],
+                    ],
+                    dtype=np.float32,
+                ),
             )
         )
 
@@ -1370,7 +1628,8 @@ def _test_eager_boxing_with_out_placement_contain_in_placement_b_to_s1(
 ):
     if flow.env.get_rank() == 0:
         np_arr = np.array(
-            [[4, 6, 5, 20], [6, 8, 9, 0], [3, 7, 5, 0], [6, 8, 9, 0]], dtype=np.float32,
+            [[4, 6, 5, 20], [6, 8, 9, 0], [3, 7, 5, 0], [6, 8, 9, 0]],
+            dtype=np.float32,
         )
     elif flow.env.get_rank() == 1:
         np_arr = np.array(
@@ -1379,11 +1638,13 @@ def _test_eager_boxing_with_out_placement_contain_in_placement_b_to_s1(
         )
     elif flow.env.get_rank() == 2:
         np_arr = np.array(
-            [[9, 6, 5, 8], [4, 9, 7, 0], [2, 5, 7, 9], [6, 8, 10, 0]], dtype=np.float32,
+            [[9, 6, 5, 8], [4, 9, 7, 0], [2, 5, 7, 9], [6, 8, 10, 0]],
+            dtype=np.float32,
         )
     elif flow.env.get_rank() == 3:
         np_arr = np.array(
-            [[9, 4, 5, 8], [7, 2, 9, 5], [6, 3, 9, 2], [3, 7, 5, 8]], dtype=np.float32,
+            [[9, 4, 5, 8], [7, 2, 9, 5], [6, 3, 9, 2], [3, 7, 5, 8]],
+            dtype=np.float32,
         )
     device = flow.device(in_device)
     tensor = flow.tensor(np_arr, device=device, dtype=flow.float32)
@@ -1396,28 +1657,60 @@ def _test_eager_boxing_with_out_placement_contain_in_placement_b_to_s1(
         test_case.assertTrue(
             np.array_equal(
                 y.to_local().numpy(),
-                np.array([[4], [6], [3], [6],], dtype=np.float32,),
+                np.array(
+                    [
+                        [4],
+                        [6],
+                        [3],
+                        [6],
+                    ],
+                    dtype=np.float32,
+                ),
             )
         )
     if flow.env.get_rank() == 1:
         test_case.assertTrue(
             np.array_equal(
                 y.to_local().numpy(),
-                np.array([[6], [8], [7], [8],], dtype=np.float32,),
+                np.array(
+                    [
+                        [6],
+                        [8],
+                        [7],
+                        [8],
+                    ],
+                    dtype=np.float32,
+                ),
             )
         )
     if flow.env.get_rank() == 2:
         test_case.assertTrue(
             np.array_equal(
                 y.to_local().numpy(),
-                np.array([[5], [9], [5], [9],], dtype=np.float32,),
+                np.array(
+                    [
+                        [5],
+                        [9],
+                        [5],
+                        [9],
+                    ],
+                    dtype=np.float32,
+                ),
             )
         )
     if flow.env.get_rank() == 3:
         test_case.assertTrue(
             np.array_equal(
                 y.to_local().numpy(),
-                np.array([[20], [0], [0], [0],], dtype=np.float32,),
+                np.array(
+                    [
+                        [20],
+                        [0],
+                        [0],
+                        [0],
+                    ],
+                    dtype=np.float32,
+                ),
             )
         )
 
@@ -1427,7 +1720,8 @@ def _test_eager_boxing_with_out_placement_contain_in_placement_s0_to_s1(
 ):
     if flow.env.get_rank() == 0:
         np_arr = np.array(
-            [[4, 6, 5, 20], [6, 8, 9, 0], [3, 7, 5, 0], [6, 8, 9, 0]], dtype=np.float32,
+            [[4, 6, 5, 20], [6, 8, 9, 0], [3, 7, 5, 0], [6, 8, 9, 0]],
+            dtype=np.float32,
         )
     elif flow.env.get_rank() == 1:
         np_arr = np.array(
@@ -1436,11 +1730,13 @@ def _test_eager_boxing_with_out_placement_contain_in_placement_s0_to_s1(
         )
     elif flow.env.get_rank() == 2:
         np_arr = np.array(
-            [[9, 6, 5, 8], [4, 9, 7, 0], [2, 5, 7, 9], [6, 8, 10, 0]], dtype=np.float32,
+            [[9, 6, 5, 8], [4, 9, 7, 0], [2, 5, 7, 9], [6, 8, 10, 0]],
+            dtype=np.float32,
         )
     elif flow.env.get_rank() == 3:
         np_arr = np.array(
-            [[9, 4, 5, 8], [7, 2, 9, 5], [6, 3, 9, 2], [3, 7, 5, 8]], dtype=np.float32,
+            [[9, 4, 5, 8], [7, 2, 9, 5], [6, 3, 9, 2], [3, 7, 5, 8]],
+            dtype=np.float32,
         )
     device = flow.device(in_device)
     tensor = flow.tensor(np_arr, device=device, dtype=flow.float32)
@@ -1454,7 +1750,20 @@ def _test_eager_boxing_with_out_placement_contain_in_placement_s0_to_s1(
             np.array_equal(
                 y.to_local().numpy(),
                 np.array(
-                    [[4], [6], [3], [6], [2], [3], [4], [6], [9], [7], [6], [3],],
+                    [
+                        [4],
+                        [6],
+                        [3],
+                        [6],
+                        [2],
+                        [3],
+                        [4],
+                        [6],
+                        [9],
+                        [7],
+                        [6],
+                        [3],
+                    ],
                     dtype=np.float32,
                 ),
             )
@@ -1464,7 +1773,20 @@ def _test_eager_boxing_with_out_placement_contain_in_placement_s0_to_s1(
             np.array_equal(
                 y.to_local().numpy(),
                 np.array(
-                    [[6], [8], [7], [8], [10], [9], [6], [8], [4], [2], [3], [7],],
+                    [
+                        [6],
+                        [8],
+                        [7],
+                        [8],
+                        [10],
+                        [9],
+                        [6],
+                        [8],
+                        [4],
+                        [2],
+                        [3],
+                        [7],
+                    ],
                     dtype=np.float32,
                 ),
             )
@@ -1474,7 +1796,20 @@ def _test_eager_boxing_with_out_placement_contain_in_placement_s0_to_s1(
             np.array_equal(
                 y.to_local().numpy(),
                 np.array(
-                    [[5], [9], [5], [9], [10], [10], [6], [6], [5], [9], [9], [5],],
+                    [
+                        [5],
+                        [9],
+                        [5],
+                        [9],
+                        [10],
+                        [10],
+                        [6],
+                        [6],
+                        [5],
+                        [9],
+                        [9],
+                        [5],
+                    ],
                     dtype=np.float32,
                 ),
             )
@@ -1484,7 +1819,20 @@ def _test_eager_boxing_with_out_placement_contain_in_placement_s0_to_s1(
             np.array_equal(
                 y.to_local().numpy(),
                 np.array(
-                    [[20], [0], [0], [0], [7], [5], [9], [4], [8], [5], [2], [8],],
+                    [
+                        [20],
+                        [0],
+                        [0],
+                        [0],
+                        [7],
+                        [5],
+                        [9],
+                        [4],
+                        [8],
+                        [5],
+                        [2],
+                        [8],
+                    ],
                     dtype=np.float32,
                 ),
             )
@@ -1767,7 +2115,11 @@ def _test_eager_boxing_with_out_placement_contain_in_placement_s1_to_s0(
             np.array_equal(
                 z.to_local().numpy(),
                 np.array(
-                    [[4, 6, 5, 20, 8, 9], [6, 8, 9, 0, 4, 6], [3, 7, 5, 0, 3, 5],],
+                    [
+                        [4, 6, 5, 20, 8, 9],
+                        [6, 8, 9, 0, 4, 6],
+                        [3, 7, 5, 0, 3, 5],
+                    ],
                     dtype=np.float32,
                 ),
             )
@@ -1777,7 +2129,11 @@ def _test_eager_boxing_with_out_placement_contain_in_placement_s1_to_s0(
             np.array_equal(
                 z.to_local().numpy(),
                 np.array(
-                    [[6, 8, 9, 0, 8, 7], [2, 10, 10, 7, 10, 3], [3, 9, 10, 5, 5, 6],],
+                    [
+                        [6, 8, 9, 0, 8, 7],
+                        [2, 10, 10, 7, 10, 3],
+                        [3, 9, 10, 5, 5, 6],
+                    ],
                     dtype=np.float32,
                 ),
             )
@@ -1787,7 +2143,11 @@ def _test_eager_boxing_with_out_placement_contain_in_placement_s1_to_s0(
             np.array_equal(
                 z.to_local().numpy(),
                 np.array(
-                    [[4, 6, 6, 9, 8, 6], [6, 8, 6, 4, 5, 3], [9, 4, 5, 8, 9, 6],],
+                    [
+                        [4, 6, 6, 9, 8, 6],
+                        [6, 8, 6, 4, 5, 3],
+                        [9, 4, 5, 8, 9, 6],
+                    ],
                     dtype=np.float32,
                 ),
             )
@@ -1797,7 +2157,11 @@ def _test_eager_boxing_with_out_placement_contain_in_placement_s1_to_s0(
             np.array_equal(
                 z.to_local().numpy(),
                 np.array(
-                    [[7, 2, 9, 5, 4, 1], [6, 3, 9, 2, 5, 2], [3, 7, 5, 8, 9, 3],],
+                    [
+                        [7, 2, 9, 5, 4, 1],
+                        [6, 3, 9, 2, 5, 2],
+                        [3, 7, 5, 8, 9, 3],
+                    ],
                     dtype=np.float32,
                 ),
             )
@@ -1860,7 +2224,16 @@ def _test_eager_boxing_with_out_placement_contain_in_placement_s1_to_s1(
             np.array_equal(
                 z.to_local().numpy(),
                 np.array(
-                    [[4, 6], [6, 8], [3, 7], [6, 8], [2, 10], [3, 9], [4, 6], [6, 8],],
+                    [
+                        [4, 6],
+                        [6, 8],
+                        [3, 7],
+                        [6, 8],
+                        [2, 10],
+                        [3, 9],
+                        [4, 6],
+                        [6, 8],
+                    ],
                     dtype=np.float32,
                 ),
             )
@@ -1889,7 +2262,16 @@ def _test_eager_boxing_with_out_placement_contain_in_placement_s1_to_s1(
             np.array_equal(
                 z.to_local().numpy(),
                 np.array(
-                    [[8, 9], [4, 6], [3, 5], [8, 7], [10, 3], [5, 6], [8, 6], [5, 3],],
+                    [
+                        [8, 9],
+                        [4, 6],
+                        [3, 5],
+                        [8, 7],
+                        [10, 3],
+                        [5, 6],
+                        [8, 6],
+                        [5, 3],
+                    ],
                     dtype=np.float32,
                 ),
             )
@@ -1975,7 +2357,14 @@ def _test_eager_boxing_with_same_placement_p_to_s1(test_case, in_device, out_dev
             np.array_equal(
                 y.to_local().numpy(),
                 np.array(
-                    [[15, 20], [16, 19], [13, 16], [15, 23], [17, 19], [16, 20],],
+                    [
+                        [15, 20],
+                        [16, 19],
+                        [13, 16],
+                        [15, 23],
+                        [17, 19],
+                        [16, 20],
+                    ],
                     dtype=np.float32,
                 ),
             )
@@ -1985,7 +2374,14 @@ def _test_eager_boxing_with_same_placement_p_to_s1(test_case, in_device, out_dev
             np.array_equal(
                 y.to_local().numpy(),
                 np.array(
-                    [[20, 35], [28, 10], [20, 11], [20, 12], [25, 5], [22, 6],],
+                    [
+                        [20, 35],
+                        [28, 10],
+                        [20, 11],
+                        [20, 12],
+                        [25, 5],
+                        [22, 6],
+                    ],
                     dtype=np.float32,
                 ),
             )
@@ -1995,7 +2391,14 @@ def _test_eager_boxing_with_same_placement_p_to_s1(test_case, in_device, out_dev
             np.array_equal(
                 y.to_local().numpy(),
                 np.array(
-                    [[27, 18], [13, 13], [16, 13], [22, 13], [10, 8], [12, 6],],
+                    [
+                        [27, 18],
+                        [13, 13],
+                        [16, 13],
+                        [22, 13],
+                        [10, 8],
+                        [12, 6],
+                    ],
                     dtype=np.float32,
                 ),
             )
@@ -2062,7 +2465,15 @@ def _test_eager_boxing_with_same_placement_b_to_s1(test_case, in_device, out_dev
             np.array_equal(
                 y.to_local().numpy(),
                 np.array(
-                    [[4, 6], [6, 8], [3, 7], [6, 8], [6, 8], [6, 8],], dtype=np.float32,
+                    [
+                        [4, 6],
+                        [6, 8],
+                        [3, 7],
+                        [6, 8],
+                        [6, 8],
+                        [6, 8],
+                    ],
+                    dtype=np.float32,
                 ),
             )
         )
@@ -2071,7 +2482,14 @@ def _test_eager_boxing_with_same_placement_b_to_s1(test_case, in_device, out_dev
             np.array_equal(
                 y.to_local().numpy(),
                 np.array(
-                    [[5, 20], [9, 0], [5, 0], [9, 0], [9, 0], [6, 4],],
+                    [
+                        [5, 20],
+                        [9, 0],
+                        [5, 0],
+                        [9, 0],
+                        [9, 0],
+                        [6, 4],
+                    ],
                     dtype=np.float32,
                 ),
             )
@@ -2081,7 +2499,15 @@ def _test_eager_boxing_with_same_placement_b_to_s1(test_case, in_device, out_dev
             np.array_equal(
                 y.to_local().numpy(),
                 np.array(
-                    [[8, 9], [4, 6], [3, 5], [8, 7], [4, 6], [5, 3],], dtype=np.float32,
+                    [
+                        [8, 9],
+                        [4, 6],
+                        [3, 5],
+                        [8, 7],
+                        [4, 6],
+                        [5, 3],
+                    ],
+                    dtype=np.float32,
                 ),
             )
         )
@@ -2719,7 +3145,12 @@ def _test_eager_boxing_s_to_b(
 
     if flow.env.get_rank() in out_device_list:
         test_case.assertTrue(
-            np.allclose(z.to_local().numpy(), x.to_local().numpy(), 1e-5, 1e-5,)
+            np.allclose(
+                z.to_local().numpy(),
+                x.to_local().numpy(),
+                1e-5,
+                1e-5,
+            )
         )
     test_case.assertEqual(z.placement, new_placement)
 
@@ -2786,7 +3217,12 @@ def _test_eager_boxing_p_to_b(
 
     if flow.env.get_rank() in out_device_list:
         test_case.assertTrue(
-            np.allclose(z.to_local().numpy(), x.to_local().numpy(), 1e-5, 1e-5,)
+            np.allclose(
+                z.to_local().numpy(),
+                x.to_local().numpy(),
+                1e-5,
+                1e-5,
+            )
         )
 
 
@@ -3235,7 +3671,10 @@ class TestEagerConsistentCast1DTo2DSBP(flow.unittest.TestCase):
         )
         test_case.assertEqual(z.placement, placement2)
         test_case.assertTrue(
-            np.array_equal(z.to_local().numpy(), np.ones((2, 8), dtype=np.int32),)
+            np.array_equal(
+                z.to_local().numpy(),
+                np.ones((2, 8), dtype=np.int32),
+            )
         )
 
 
@@ -3256,7 +3695,10 @@ class TestEagerConsistentCast2DTo1DSBP(flow.unittest.TestCase):
         z = y.to_global(placement=placement1, sbp=[flow.sbp.split(0)])
         test_case.assertEqual(z.placement, placement1)
         test_case.assertTrue(
-            np.array_equal(z.to_local().numpy(), np.ones((1, 8), dtype=np.int32),)
+            np.array_equal(
+                z.to_local().numpy(),
+                np.ones((1, 8), dtype=np.int32),
+            )
         )
 
 
@@ -3264,7 +3706,10 @@ def _test_eager_global_cast_1d_uneven_split(test_case, device_type, shape):
     np_arr = np.random.uniform(-1e-05, 1e-05, shape)
     placement = flow.placement(device_type, range(flow.env.get_world_size()))
     x = flow.tensor(
-        np_arr, dtype=flow.float32, device=device_type, requires_grad=False,
+        np_arr,
+        dtype=flow.float32,
+        device=device_type,
+        requires_grad=False,
     )
     x = x.to_global(placement=placement, sbp=[flow.sbp.broadcast])
     # B To S(0)
@@ -3327,7 +3772,10 @@ def _test_eager_global_n_dim_reduce(test_case, device_type, src_sbp, dst_sbp):
     # oneflow.placement(type="cuda", ranks=[[0]])
     # (src_sbp, src_sbp)
     x = flow.tensor(
-        np_arr, placement=placement0, sbp=[src_sbp, src_sbp], requires_grad=False,
+        np_arr,
+        placement=placement0,
+        sbp=[src_sbp, src_sbp],
+        requires_grad=False,
     )
 
     # oneflow.placement(type="cuda", ranks=[[0,1],[2,3]])
@@ -3412,9 +3860,19 @@ def _test_eager_boxing_one_to_n_with_diff_dim(
 
     rank = flow.env.get_rank()
     if rank == 0 or rank == 2:
-        test_case.assertTrue(np.array_equal(y.to_local().numpy(), np.array([1, 2]),))
+        test_case.assertTrue(
+            np.array_equal(
+                y.to_local().numpy(),
+                np.array([1, 2]),
+            )
+        )
     elif rank == 1 or rank == 3:
-        test_case.assertTrue(np.array_equal(y.to_local().numpy(), np.array([3, 4]),))
+        test_case.assertTrue(
+            np.array_equal(
+                y.to_local().numpy(),
+                np.array([3, 4]),
+            )
+        )
 
 
 def _test_eager_boxing_n_to_one_with_diff_dim(
@@ -3432,7 +3890,10 @@ def _test_eager_boxing_n_to_one_with_diff_dim(
     rank = flow.env.get_rank()
     if rank == 0:
         test_case.assertTrue(
-            np.array_equal(y.to_local().numpy(), np.array([1, 2, 3, 4]),)
+            np.array_equal(
+                y.to_local().numpy(),
+                np.array([1, 2, 3, 4]),
+            )
         )
 
 
@@ -3474,7 +3935,10 @@ def _test_asymmetric_mix_1d_2d_eager_boxing_with_random_placement(
     out_placement = flow.placement(type=out_device_type, ranks=out_device_list)
     np_arr = np.random.uniform(-1e-05, 1e-05, shape)
     x = flow.tensor(
-        np_arr, dtype=flow.float32, device=in_device_type, requires_grad=False,
+        np_arr,
+        dtype=flow.float32,
+        device=in_device_type,
+        requires_grad=False,
     )
     x = x.to_global(in_placement, in_sbp)
     y = x.to_global(out_placement, out_sbp)

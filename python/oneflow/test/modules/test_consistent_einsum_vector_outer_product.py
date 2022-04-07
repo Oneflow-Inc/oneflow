@@ -24,8 +24,14 @@ from oneflow.test_utils.automated_test_util import *
 
 @autotest(n=2, check_graph=False)
 def _test_einsum_vector_outer_product(test_case, placement, sbp):
-    x = random_tensor(ndim=1, dim0=random(1, 3) * 8,)
-    y = random_tensor(ndim=1, dim0=random(1, 3) * 8,)
+    x = random_tensor(
+        ndim=1,
+        dim0=random(1, 3) * 8,
+    )
+    y = random_tensor(
+        ndim=1,
+        dim0=random(1, 3) * 8,
+    )
     g_x = x.to_global(placement=placement, sbp=sbp)
     g_y = y.to_global(placement=placement, sbp=sbp)
     # NOTE(Liang Depeng): the same as 'i,j->ij'

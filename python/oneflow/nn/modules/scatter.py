@@ -22,32 +22,32 @@ __all__ = ["scatter", "scatter_add", "scatter_nd", "tensor_scatter_nd_update"]
 
 
 def scatter(input, dim, index, src):
-    r"""This operator writes the elements specified by `index` along with the axis 
+    r"""This operator writes the elements specified by `index` along with the axis
     `dim` from the `src` into the `input`.
 
     Take a 3-D blob as example, the output is specified by:
-    
+
     .. code-block:: python
 
         input[index[i][j][k]][j][k] = src[i][j][k]  # if dim == 0
         input[i][index[i][j][k]][k] = src[i][j][k]  # if dim == 1
         input[i][j][index[i][j][k]] = src[i][j][k]  # if dim == 2
 
-    input, index and src (if it is a Tensor) should all have the same number of dimensions. 
-    It is also required that index.shape(d) <= src.shape(d) for all dimensions d, 
+    input, index and src (if it is a Tensor) should all have the same number of dimensions.
+    It is also required that index.shape(d) <= src.shape(d) for all dimensions d,
     and that index.shape(d) <= self.shape(d) for all dimensions d != dim.
     Note that index and src do not broadcast.
 
     Args:
         input (Tensor): The input blob.
         dim (int): The axis along which to index
-        index (Tensor): The index blob of elements to scatter. 
+        index (Tensor): The index blob of elements to scatter.
         src (Tensor or float): The source blob whose elements will be scatterd and updated to output.
 
     Returns:
-        Tensor: The scatterd Tensor. 
+        Tensor: The scatterd Tensor.
 
-    For example: 
+    For example:
 
     .. code-block:: python
 
@@ -72,7 +72,7 @@ def scatter_add(input, dim, index, src):
     r"""This operator scatter the src with addition operation according to index along dim into the input.
 
     Take a 3-D blob as example, the output is specified by:
-    
+
     .. code-block:: python
 
         input[index[i][j][k]][j][k] += src[i][j][k]  # if dim == 0
@@ -82,13 +82,13 @@ def scatter_add(input, dim, index, src):
     Args:
         input (Tensor): The input blob.
         dim (int): The axis along which to index
-        index (Tensor): The index blob of elements to scatter. 
+        index (Tensor): The index blob of elements to scatter.
         src (Tensor): The source blob whose elements will be scatterd and added to output.
 
     Returns:
-        Tensor: The scatterd Tensor. 
+        Tensor: The scatterd Tensor.
 
-    For example: 
+    For example:
 
     .. code-block:: python
 

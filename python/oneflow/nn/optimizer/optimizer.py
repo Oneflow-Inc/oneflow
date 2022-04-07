@@ -28,7 +28,9 @@ import oneflow as flow
 
 class ParamGroup(object):
     def __init__(
-        self, parameters: Dict[str, Any], default_options: Dict,
+        self,
+        parameters: Dict[str, Any],
+        default_options: Dict,
     ):
         # ParamGroup must be constructed by Dict["params": parameters: List[Parameter, Tensor or TensorBlock], "...": ...]
         assert isinstance(parameters, dict) and "params" in parameters
@@ -235,12 +237,12 @@ class Optimizer(object):
         raise NotImplementedError()
 
     def clip_grad(self):
-        r"""Clips gradient norm of an iterable of parameters. 
+        r"""Clips gradient norm of an iterable of parameters.
         The norm is computed over all gradients together, as if they were concatenated into a single vector.
 
-        You can set the max_norm and norm_type. 
+        You can set the max_norm and norm_type.
 
-        For more details, you can refer to the documentation of each optimizer(like Adam, SGD and so on). 
+        For more details, you can refer to the documentation of each optimizer(like Adam, SGD and so on).
 
         You can also refer the code in :func:`oneflow.nn.utils.clip_grad_norm_`
 

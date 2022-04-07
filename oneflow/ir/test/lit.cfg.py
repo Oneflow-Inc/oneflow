@@ -80,7 +80,9 @@ llvm_config.with_environment("ONEFLOW_MLIR_STDOUT", "1")
 llvm_config.with_environment("ONEFLOW_MLIR_ENABLE_CODEGEN_FUSERS", "1")
 llvm_config.with_environment("ONEFLOW_MLIR_ENABLE_ROUND_TRIP", "1")
 llvm_config.with_environment(
-    "PYTHONPATH", os.path.join(config.oneflow_src_root, "python"), append_path=True,
+    "PYTHONPATH",
+    os.path.join(config.oneflow_src_root, "python"),
+    append_path=True,
 )
 
 tool_dirs = [config.oneflow_tools_dir, config.llvm_tools_dir]

@@ -15,11 +15,21 @@ from datetime import date
 from pathlib import Path
 
 HARD_CODED_AFFILIATIONS = {
-    "192.168.1.11": ["192.168.1.12",],
-    "192.168.1.12": ["192.168.1.11",],
-    "192.168.1.13": ["192.168.1.11",],
-    "192.168.1.15": ["192.168.1.16",],
-    "192.168.1.16": ["192.168.1.15",],
+    "192.168.1.11": [
+        "192.168.1.12",
+    ],
+    "192.168.1.12": [
+        "192.168.1.11",
+    ],
+    "192.168.1.13": [
+        "192.168.1.11",
+    ],
+    "192.168.1.15": [
+        "192.168.1.16",
+    ],
+    "192.168.1.16": [
+        "192.168.1.15",
+    ],
 }
 
 
@@ -61,13 +71,17 @@ def find_free_port():
 
 
 async def spawn_shell(cmd: str = None):
-    p = await asyncio.create_subprocess_shell(cmd,)
+    p = await asyncio.create_subprocess_shell(
+        cmd,
+    )
     await p.wait()
     assert p.returncode == 0, cmd
 
 
 async def spawn_shell_ignoring_failure(cmd: str = None):
-    p = await asyncio.create_subprocess_shell(cmd,)
+    p = await asyncio.create_subprocess_shell(
+        cmd,
+    )
     await p.wait()
 
 
@@ -413,7 +427,13 @@ if __name__ == "__main__":
             f"-v {oneflow_wheel_path}:{oneflow_wheel_path}:ro"
         )
         whl_paths = [
-            name for name in glob.glob(os.path.join(oneflow_wheel_path, f"*.whl",))
+            name
+            for name in glob.glob(
+                os.path.join(
+                    oneflow_wheel_path,
+                    f"*.whl",
+                )
+            )
         ]
         if len(whl_paths) == 1:
             oneflow_wheel_path = whl_paths[0]
@@ -485,7 +505,8 @@ if __name__ == "__main__":
             name
             for name in glob.glob(
                 os.path.join(
-                    args.oneflow_python_path, f"oneflow/_oneflow_internal.*.so",
+                    args.oneflow_python_path,
+                    f"oneflow/_oneflow_internal.*.so",
                 )
             )
         ]

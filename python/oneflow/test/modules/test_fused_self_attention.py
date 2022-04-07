@@ -31,7 +31,9 @@ def _test_fused_self_attention(test_case, batch_size, seq_len, num_heads, head_s
     fused_input = flow.Tensor(x).to("cuda")
     fused_input.requires_grad = True
     (fused_qmk, fused_v) = flow._C.fused_self_attention(
-        fused_input, head_size=head_size, alpha=1.0,
+        fused_input,
+        head_size=head_size,
+        alpha=1.0,
     )
     fused_atten = flow.matmul(fused_qmk, fused_v)
     fused_atten_sum = fused_atten.sum()
@@ -81,7 +83,10 @@ def _test_fused_self_attention(test_case, batch_size, seq_len, num_heads, head_s
     )
     test_case.assertTrue(
         np.allclose(
-            fused_input.grad.numpy(), origin_input.grad.numpy(), atol=1e-4, rtol=1e-4,
+            fused_input.grad.numpy(),
+            origin_input.grad.numpy(),
+            atol=1e-4,
+            rtol=1e-4,
         )
     )
 

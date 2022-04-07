@@ -80,16 +80,16 @@ class CosineAnnealingWarmRestarts(LRScheduler):
             epoch = math.floor(
                 math.log(1 - step / self.T_0 * (1 - self.T_mult), self.T_mult)
             )
-            epoch_steps = self.T_mult ** epoch * self.T_0
+            epoch_steps = self.T_mult**epoch * self.T_0
             step_in_epoch = (
-                step - (1 - self.T_mult ** epoch) / (1 - self.T_mult) * self.T_0
+                step - (1 - self.T_mult**epoch) / (1 - self.T_mult) * self.T_0
             )
         else:
             epoch = step // self.T_0
             epoch_steps = self.T_0
             step_in_epoch = step - (epoch_steps * epoch)
 
-        gamma = self.decay_rate ** epoch
+        gamma = self.decay_rate**epoch
         if self.restart_limit == 0 or (
             self.restart_limit > 0 and epoch < self.restart_limit
         ):

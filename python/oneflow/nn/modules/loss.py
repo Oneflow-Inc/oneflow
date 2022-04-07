@@ -135,7 +135,7 @@ class CrossEntropyLoss(_WeightedLoss):
 
         >>> import oneflow as flow
         >>> import numpy as np
-        
+
         >>> input = flow.tensor(
         ...    [[-0.1664078, -1.7256707, -0.14690138],
         ...        [-0.21474946, 0.53737473, 0.99684894],
@@ -635,7 +635,7 @@ class CTCLoss(_Loss):
     .. code-block:: python
 
         >>> import oneflow as flow
-        
+
         >>> log_probs = flow.tensor(
         ...    [
         ...        [[-1.1031, -0.7998, -1.5200], [-0.9808, -1.1363, -1.1908]],

@@ -57,7 +57,7 @@ class ReduceLROnPlateau(object):
             each update. Default: ``False``.
 
     For example:
-    
+
     .. code-block:: python
 
         optimizer = flow.optim.SGD(model.parameters(), lr=0.1, momentum=0.9)

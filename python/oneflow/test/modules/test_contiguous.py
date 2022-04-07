@@ -43,7 +43,9 @@ class TestContiguous(flow.unittest.TestCase):
         permute_list = [0, 1]
         shuffle(permute_list)
         x = random_tensor(
-            ndim=ndim, dim0=random(1, 32).to(int), dim1=random(1, 59).to(int),
+            ndim=ndim,
+            dim0=random(1, 32).to(int),
+            dim1=random(1, 59).to(int),
         ).to(device)
         y = x.permute(permute_list)
         z = y.contiguous()

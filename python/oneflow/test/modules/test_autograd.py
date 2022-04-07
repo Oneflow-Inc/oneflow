@@ -30,7 +30,7 @@ def _test_autograd_backward(test_case, shape, device):
     of_input = flow.tensor(
         np_input, dtype=flow.float32, device=flow.device(device), requires_grad=True
     )
-    of_out = of_input ** 2
+    of_out = of_input**2
     of_out_sum = of_out.sum()
     of_out_sum.backward()
     test_case.assertTrue(
@@ -39,7 +39,7 @@ def _test_autograd_backward(test_case, shape, device):
     of_input = flow.tensor(
         np_input, dtype=flow.float32, device=flow.device(device), requires_grad=True
     )
-    of_out = of_input ** 2
+    of_out = of_input**2
     of_out_sum = of_out.sum()
     of_out_sum.backward(flow.ones_like(of_out_sum) * 3)
     test_case.assertTrue(
@@ -48,7 +48,7 @@ def _test_autograd_backward(test_case, shape, device):
     of_input = flow.tensor(
         np_input, dtype=flow.float32, device=flow.device(device), requires_grad=True
     )
-    of_out = of_input ** 2
+    of_out = of_input**2
     of_out_sum = of_out.sum()
     of_out_sum.backward(retain_graph=True)
     of_out_sum.backward(retain_graph=True)
@@ -62,7 +62,7 @@ def _test_autograd_grad(test_case, shape, device):
     of_input = flow.tensor(
         np_input, dtype=flow.float32, device=flow.device(device), requires_grad=True
     )
-    of_out = of_input ** 2
+    of_out = of_input**2
     of_out_sum = of_out.sum()
     grad = flow.autograd.grad(of_out_sum, of_input)[0]
     test_case.assertTrue(of_input.grad is None)
@@ -70,7 +70,7 @@ def _test_autograd_grad(test_case, shape, device):
     of_input = flow.tensor(
         np_input, dtype=flow.float32, device=flow.device(device), requires_grad=True
     )
-    of_out = of_input ** 2
+    of_out = of_input**2
     of_out_sum = of_out.sum()
     grad = flow.autograd.grad(of_out_sum, of_input, flow.ones_like(of_out_sum) * 3)[0]
     test_case.assertTrue(np.allclose(grad.numpy(), np_input * 6, 0.0001, 0.0001))

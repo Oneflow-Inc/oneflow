@@ -29,7 +29,7 @@ class Fold(Module):
         stride: _size_2_t = 1,
     ) -> None:
         r"""Combines an array of sliding local blocks into a large containing
-        tensor, it also called `col2img`. 
+        tensor, it also called `col2img`.
 
         Consider a batched :attr:`input` tensor containing sliding local blocks,
         e.g., patches of images, of shape :math:`(N, C \times  \prod(\text{kernel\_size}), L)`,
@@ -48,17 +48,17 @@ class Fold(Module):
                 - \text{dilation}[d] \times (\text{kernel\_size}[d] - 1) - 1}{\text{stride}[d]} + 1\right\rfloor,
 
         Args:
-            output_size (_size_2_t): The spatial dimension of output tensor. 
-            kernel_size (_size_2_t): The size of kernel. 
+            output_size (_size_2_t): The spatial dimension of output tensor.
+            kernel_size (_size_2_t): The size of kernel.
             dilation (_size_2_t, optional): The dilation rate. Defaults to 1.
             padding (_size_2_t, optional): The padding value. Defaults to 0.
             stride (_size_2_t, optional): The stride of sliding window. Defaults to 1.
 
-        For example: 
+        For example:
 
-        .. code-block:: python 
+        .. code-block:: python
 
-            >>> import oneflow as flow 
+            >>> import oneflow as flow
             >>> import numpy as np
 
             >>> x_tensor = flow.Tensor(np.random.randn(1, 9, 16))
@@ -103,7 +103,7 @@ class Unfold(Module):
         padding: _size_2_t = 0,
         stride: _size_2_t = 1,
     ) -> None:
-        r"""This op extracts elements in a local window from input tensor, it also called `img2col`. 
+        r"""This op extracts elements in a local window from input tensor, it also called `img2col`.
 
         Consider a batched :attr:`input` tensor of shape :math:`(N, C, *)`,
         where :math:`N` is the batch dimension, :math:`C` is the channel dimension,
@@ -129,17 +129,17 @@ class Unfold(Module):
 
 
         Args:
-            kernel_size (_size_2_t): The size of kernel. 
+            kernel_size (_size_2_t): The size of kernel.
             dilation (_size_2_t, optional): The dilation rate. Defaults to 1.
             padding (_size_2_t, optional): The padding value. Defaults to 0.
             stride (_size_2_t, optional): The stride of sliding window. Defaults to 1.
 
-        For example: 
+        For example:
 
-        .. code-block:: python 
+        .. code-block:: python
 
-            >>> import oneflow as flow 
-            >>> import numpy as np 
+            >>> import oneflow as flow
+            >>> import numpy as np
 
             >>> x_tensor = flow.Tensor(np.random.randn(1, 1, 4, 4))
             >>> unfold = flow.nn.Unfold(kernel_size=3, padding=1)

@@ -29,7 +29,10 @@ class TestStd(flow.unittest.TestCase):
         dim = random(low=0, high=6).to(int)
         x = random_tensor(ndim=all_dim, low=2, high=6).to(device)
         z = torch.std(
-            x, dim=dim, unbiased=random().to(bool), keepdim=random().to(bool),
+            x,
+            dim=dim,
+            unbiased=random().to(bool),
+            keepdim=random().to(bool),
         )
         return z
 
@@ -44,7 +47,10 @@ class TestStd(flow.unittest.TestCase):
             dim2=random(2, 4),
             dim3=random(2, 4),
         ).to(device)
-        z = x.std(dim=dim, keepdim=random().to(bool),)
+        z = x.std(
+            dim=dim,
+            keepdim=random().to(bool),
+        )
         return z
 
 

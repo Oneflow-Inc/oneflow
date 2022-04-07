@@ -22,8 +22,7 @@ import oneflow._oneflow_internal.oneflow.core.job.job_conf as job_conf_cfg
 
 
 class GraphConfig(object):
-    r"""For configuration of nn.Graph.
-    """
+    r"""For configuration of nn.Graph."""
 
     def __init__(self):
         super().__init__()
@@ -125,7 +124,7 @@ class GraphConfig(object):
                     self.bn1 = flow.nn.BatchNorm1d(100)
                     self.config.allow_fuse_add_to_output(True)
                 def build(self, x):
-                    bn = self.bn1(x) 
+                    bn = self.bn1(x)
                     out = bn + x
                     return out
 
@@ -138,7 +137,7 @@ class GraphConfig(object):
 
     def allow_fuse_cast_scale(self, mode: bool = True):
         r"""If set to true, try to fuse cast and scalar_mul_by_tensor to improve performance.
-    
+
         For example:
 
         .. code-block:: python
@@ -251,10 +250,10 @@ class GraphConfig(object):
 
            XLA: https://www.tensorflow.org/xla
 
-        If you need to use XLA to optimize the model running speed, you need to compile the XLA version of oneflow. 
-        
-        Tutorial for build with XLA: 
-        
+        If you need to use XLA to optimize the model running speed, you need to compile the XLA version of oneflow.
+
+        Tutorial for build with XLA:
+
         https://github.com/Oneflow-Inc/oneflow/blob/master/oneflow/xrt/README.md#build-with-xla
 
         For example:
@@ -285,10 +284,10 @@ class GraphConfig(object):
 
            TensorRT: https://developer.nvidia.com/tensorrt
 
-        If you need to use TensorRT to optimize the model running speed, you need to compile the TensorRT version of oneflow. 
+        If you need to use TensorRT to optimize the model running speed, you need to compile the TensorRT version of oneflow.
 
-        Tutorial for build with TensorRT: 
-        
+        Tutorial for build with TensorRT:
+
         https://github.com/Oneflow-Inc/oneflow/blob/master/oneflow/xrt/README.md#build-with-tensorrt
 
         For example:
@@ -345,7 +344,7 @@ class GraphConfig(object):
         self.proto.mutable_xrt_config().set_use_openvino(value)
 
     def enable_cudnn_conv_heuristic_search_algo(self, mode: bool = True):
-        r""" Whether enable cudnn conv operatioin to use heuristic search algorithm.
+        r"""Whether enable cudnn conv operatioin to use heuristic search algorithm.
 
         For example:
 
@@ -363,14 +362,16 @@ class GraphConfig(object):
                     return self.m(x)
 
             graph = Graph()
-    
+
         Args:
             mode (bool, optional): The default vaule is True.
         """
         self.proto.set_cudnn_conv_heuristic_search_algo(mode)
 
     def _generate_optimizer_and_variable_configs(
-        self, opt_dict: OptDict = None, variables_conf: OrderedDict = None,
+        self,
+        opt_dict: OptDict = None,
+        variables_conf: OrderedDict = None,
     ):
         opt_dict.generate_optimizer_and_variable_configs(self.proto, variables_conf)
 

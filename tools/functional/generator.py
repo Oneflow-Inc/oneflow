@@ -462,8 +462,10 @@ class Generator:
                 )
                 schema_fmt += "  using R = {0};\n".format(return_type)
                 schema_fmt += "\n"
-                schema_fmt += "  static constexpr FType* func = &functional::{0};\n".format(
-                    signature._name
+                schema_fmt += (
+                    "  static constexpr FType* func = &functional::{0};\n".format(
+                        signature._name
+                    )
                 )
                 schema_fmt += "  static constexpr size_t max_args = {0};\n".format(
                     signature._max_args_count
@@ -471,8 +473,10 @@ class Generator:
                 schema_fmt += "  static constexpr size_t max_pos_args = {0};\n".format(
                     signature._max_positional_args_count
                 )
-                schema_fmt += '  static constexpr char const* signature = "{0}";\n'.format(
-                    _escape_quote(signature.to_string(drop_name=True))
+                schema_fmt += (
+                    '  static constexpr char const* signature = "{0}";\n'.format(
+                        _escape_quote(signature.to_string(drop_name=True))
+                    )
                 )
                 schema_fmt += "  static FunctionDef function_def;\n"
                 schema_fmt += "};\n"

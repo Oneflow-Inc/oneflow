@@ -31,8 +31,7 @@ from oneflow.framework.function_desc import FunctionDesc
 
 
 class FunctionConfig(object):
-    """OneFlow function's configurations.
-    """
+    """OneFlow function's configurations."""
 
     def __init__(self) -> None:
         self.function_desc = FunctionDesc()

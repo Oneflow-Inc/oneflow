@@ -193,10 +193,10 @@ def interpolate(
     align_corners=None,
     recompute_scale_factor=None,
 ):
-    """The interface is consistent with PyTorch.    
-    
+    """The interface is consistent with PyTorch.
+
     The documentation is referenced from: https://pytorch.org/docs/1.9.0/_modules/torch/nn/functional.html#interpolate
-    
+
 
     Down/up samples the input to either the given :attr:`size` or the given
     :attr:`scale_factor`
@@ -266,7 +266,7 @@ def interpolate(
 
         >>> import oneflow as flow
         >>> import numpy as np
-        
+
         >>> input = flow.tensor(np.arange(1, 5).reshape((1, 1, 4)), dtype=flow.float32)
         >>> output = flow.nn.functional.interpolate(input, scale_factor=2.0, mode="linear")
         >>> output

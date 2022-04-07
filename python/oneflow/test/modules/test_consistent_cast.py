@@ -1045,28 +1045,40 @@ class TestConsistentCast_1ToN(flow.unittest.TestCase):
             test_case.assertTrue(
                 np.array_equal(
                     split_tensor.to_local().numpy(),
-                    np.array([[4, 6, 5, 20]], dtype=np.float32,),
+                    np.array(
+                        [[4, 6, 5, 20]],
+                        dtype=np.float32,
+                    ),
                 )
             )
         elif flow.env.get_rank() == 1:
             test_case.assertTrue(
                 np.array_equal(
                     split_tensor.to_local().numpy(),
-                    np.array([[6, 2, 5, 7]], dtype=np.float32,),
+                    np.array(
+                        [[6, 2, 5, 7]],
+                        dtype=np.float32,
+                    ),
                 )
             )
         elif flow.env.get_rank() == 2:
             test_case.assertTrue(
                 np.array_equal(
                     split_tensor.to_local().numpy(),
-                    np.array([[3, 7, 5, 4]], dtype=np.float32,),
+                    np.array(
+                        [[3, 7, 5, 4]],
+                        dtype=np.float32,
+                    ),
                 )
             )
         elif flow.env.get_rank() == 3:
             test_case.assertTrue(
                 np.array_equal(
                     split_tensor.to_local().numpy(),
-                    np.array([[6, 8, 9, 4]], dtype=np.float32,),
+                    np.array(
+                        [[6, 8, 9, 4]],
+                        dtype=np.float32,
+                    ),
                 )
             )
 

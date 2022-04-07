@@ -32,7 +32,8 @@ def print_result(build_matrix=None, test_matrix=None, out=None):
     }
     for k, v in root.items():
         print_github_action_output(
-            name=k, value=json.dumps(v),
+            name=k,
+            value=json.dumps(v),
         )
     if out:
         with open(out, "w+") as f:
@@ -56,7 +57,9 @@ if __name__ == "__main__":
 
     parser = argparse.ArgumentParser()
     parser.add_argument(
-        "--labels", type=lambda x: (str(x).replace(" ", "").split(",")), required=True,
+        "--labels",
+        type=lambda x: (str(x).replace(" ", "").split(",")),
+        required=True,
     )
     parser.add_argument("--out", type=str, required=False)
     args = parser.parse_args()
@@ -164,5 +167,7 @@ if __name__ == "__main__":
             ],
         }
         print_result(
-            build_matrix=full_build_matrix, test_matrix=full_test_matrix, out=args.out,
+            build_matrix=full_build_matrix,
+            test_matrix=full_test_matrix,
+            out=args.out,
         )

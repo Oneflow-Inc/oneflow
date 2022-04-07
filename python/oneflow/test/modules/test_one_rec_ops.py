@@ -42,7 +42,7 @@ def download_file(out_path: str, url):
     from tqdm import tqdm
 
     resp = requests.get(url=url, stream=True)
-    MB = 1024 ** 2
+    MB = 1024**2
     size = int(resp.headers["Content-Length"]) / MB
     print("File size: %.4f MB, downloading..." % size)
     with open(out_path, "wb") as f:

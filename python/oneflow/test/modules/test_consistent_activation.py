@@ -44,7 +44,8 @@ def build_module(act_type):
         return torch.nn.Hardswish()
     elif act_type == "hardtanh":
         return torch.nn.Hardtanh(
-            min_val=random().to(float), max_val=random().to(float),
+            min_val=random().to(float),
+            max_val=random().to(float),
         )
     elif act_type == "leakyrelu":
         return torch.nn.LeakyReLU(negative_slope=random())

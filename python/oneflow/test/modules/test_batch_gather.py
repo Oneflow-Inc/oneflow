@@ -59,12 +59,18 @@ def _test_batch_gather(test_case, shape, device):
 
     test_case.assertTrue(
         np.allclose(
-            x_tensor.grad.numpy(), x_tensor_gather.grad.numpy(), atol=1e-4, rtol=1e-4,
+            x_tensor.grad.numpy(),
+            x_tensor_gather.grad.numpy(),
+            atol=1e-4,
+            rtol=1e-4,
         )
     )
     test_case.assertTrue(
         np.allclose(
-            x_tensor.grad.numpy(), x_tensor_gather.grad.numpy(), atol=1e-4, rtol=1e-4,
+            x_tensor.grad.numpy(),
+            x_tensor_gather.grad.numpy(),
+            atol=1e-4,
+            rtol=1e-4,
         )
     )
 

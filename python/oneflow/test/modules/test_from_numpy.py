@@ -38,8 +38,8 @@ class TestFromNumpy(flow.unittest.TestCase):
     def test_use_ops(test_case):
         np_arr = np.random.randn(3, 4, 5)
         tensor = flow.from_numpy(np_arr)
-        res = tensor ** 2
-        test_case.assertTrue(np.allclose(np_arr ** 2, res.numpy()))
+        res = tensor**2
+        test_case.assertTrue(np.allclose(np_arr**2, res.numpy()))
 
     def test_more_dtype(test_case):
         for dtype in [

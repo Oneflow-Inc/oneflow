@@ -51,7 +51,7 @@ def clip_grad_norm_(
     Returns:
         Parameters after cliping gradient norm
         Total norm of the parameters (viewed as a single vector).
-    
+
 
     For example:
 

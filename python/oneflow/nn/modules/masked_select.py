@@ -34,7 +34,7 @@ def masked_select_op(input, mask):
 
         >>> import oneflow as flow
         >>> import numpy as np
-        
+
         >>> input = flow.tensor(np.array([[-0.4620, 0.3139], [0.3898, -0.7197], [0.0478, -0.1657]]), dtype=flow.float32)
         >>> mask = input.gt(0.05)
         >>> out = flow.masked_select(input, mask)
@@ -45,12 +45,11 @@ def masked_select_op(input, mask):
     assert len(input.shape) == len(
         mask.shape
     ), f"The dim of masked_select module's inputs can not match, please check!"
-    assert input.is_global == mask.is_global, (
-        f"input tensor is %s tensor, but mask is %s tensor"
-        % (
-            "global" if input.is_global else "local",
-            "global" if mask.is_global else "local",
-        )
+    assert (
+        input.is_global == mask.is_global
+    ), f"input tensor is %s tensor, but mask is %s tensor" % (
+        "global" if input.is_global else "local",
+        "global" if mask.is_global else "local",
     )
     res = flow._C.mul(input, mask)
 

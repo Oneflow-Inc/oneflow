@@ -45,7 +45,7 @@ class ExponentialLR(LRScheduler):
         super().__init__(optimizer, last_step, verbose)
 
     def get_lr(self, base_lr, step):
-        return base_lr * (self.gamma ** step)
+        return base_lr * (self.gamma**step)
 
     def _generate_conf_for_graph(self, lr_conf):
         step_conf = lr_conf.mutable_step_conf()

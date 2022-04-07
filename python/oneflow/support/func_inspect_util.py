@@ -20,14 +20,13 @@ if sys.version_info > (2, 7) and sys.version_info < (3, 0):
 
     def GetArgNameAndDefaultTuple(func):
         """
-      returns a dictionary of arg_name:default_values for the input function
-      """
+        returns a dictionary of arg_name:default_values for the input function
+        """
         (args, varargs, keywords, defaults) = inspect.getargspec(func)
         defaults = list(defaults) if defaults is not None else []
         while len(defaults) < len(args):
             defaults.insert(0, None)
         return tuple(zip(args, defaults))
-
 
 elif sys.version_info >= (3, 0):
 
@@ -39,7 +38,6 @@ elif sys.version_info >= (3, 0):
                 for (k, v) in signature.parameters.items()
             ]
         )
-
 
 else:
     raise NotImplementedError

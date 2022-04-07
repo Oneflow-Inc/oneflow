@@ -186,7 +186,7 @@ class BatchNorm1d(_BatchNorm):
 
         >>> import oneflow as flow
         >>> import numpy as np
-        
+
         >>> x = flow.Tensor(np.random.randn(20, 100))
         >>> m = flow.nn.BatchNorm1d(100)
         >>> y = m(x)
@@ -263,7 +263,7 @@ class BatchNorm2d(_BatchNorm):
 
         >>> import oneflow as flow
         >>> import numpy as np
-        
+
         >>> x = flow.Tensor(np.random.randn(4, 2, 8, 3))
         >>> m = flow.nn.BatchNorm2d(num_features=2, eps=1e-5, momentum=0.1)
         >>> y = m(x)

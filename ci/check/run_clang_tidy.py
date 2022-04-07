@@ -47,11 +47,14 @@ async def run_command(cmd=None, dry=False, name=None):
         print(f"[dry] {cmd}")
         return 0
     process = await asyncio.create_subprocess_shell(
-        cmd, stdout=asyncio.subprocess.PIPE, stderr=asyncio.subprocess.PIPE,
+        cmd,
+        stdout=asyncio.subprocess.PIPE,
+        stderr=asyncio.subprocess.PIPE,
     )
     l = lambda x: split_and_print(f"[{name}]" if name else "", x)
     await asyncio.gather(
-        handle_stream(process.stdout, l), handle_stream(process.stderr, l),
+        handle_stream(process.stdout, l),
+        handle_stream(process.stderr, l),
     )
     await process.wait()
     return process.returncode
@@ -84,7 +87,8 @@ if __name__ == "__main__":
         description="Runs clang-tidy on all of the source files."
     )
     parser.add_argument(
-        "--build_dir", required=True,
+        "--build_dir",
+        required=True,
     )
     args = parser.parse_args()
     loop = asyncio.get_event_loop()

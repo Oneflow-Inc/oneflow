@@ -27,9 +27,22 @@ def _test_einsum_bilinear_transformation(test_case, placement, sbp):
     dim0 = random(1, 3) * 8
     dim1 = random(1, 3) * 8
     dim2 = random(1, 3) * 8
-    x = random_tensor(ndim=2, dim0=dim0, dim1=dim1,)
-    y = random_tensor(ndim=3, dim0=random(1, 3) * 8, dim1=dim1, dim2=dim2,)
-    w = random_tensor(ndim=2, dim0=dim0, dim1=dim2,)
+    x = random_tensor(
+        ndim=2,
+        dim0=dim0,
+        dim1=dim1,
+    )
+    y = random_tensor(
+        ndim=3,
+        dim0=random(1, 3) * 8,
+        dim1=dim1,
+        dim2=dim2,
+    )
+    w = random_tensor(
+        ndim=2,
+        dim0=dim0,
+        dim1=dim2,
+    )
     g_x = x.to_global(placement=placement, sbp=sbp)
     g_y = y.to_global(placement=placement, sbp=sbp)
     g_w = w.to_global(placement=placement, sbp=sbp)

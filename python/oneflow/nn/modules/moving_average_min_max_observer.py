@@ -21,7 +21,7 @@ from oneflow.nn.module import Module
 
 class MovingAverageMinMaxObserver(Module):
     """
-    
+
     Compute the quantization parameters based on the moving average of the input tensor's min and max values.
 
     First compute the moving\\_max and moving\\_min value of input tensor:
@@ -87,7 +87,7 @@ class MovingAverageMinMaxObserver(Module):
         >>> import oneflow as flow
 
         >>> weight = (np.random.random((2, 3, 4, 5)) - 0.5).astype(np.float32)
-        
+
         >>> input_tensor = flow.tensor(
         ...    weight, dtype=flow.float32
         ... )
@@ -96,13 +96,13 @@ class MovingAverageMinMaxObserver(Module):
         ...   np.zeros((1,)).astype(np.float32),
         ...    dtype=flow.int64,
         ... )
-        
+
         >>> momentum = 0.95
         >>> quantization_bit = 8
         >>> quantization_scheme = "symmetric"
         >>> quantization_formula = "google"
 
-        >>> moving_average_min_max_observer = flow.nn.MovingAverageMinMaxObserver(training=True, quantization_formula=quantization_formula, 
+        >>> moving_average_min_max_observer = flow.nn.MovingAverageMinMaxObserver(training=True, quantization_formula=quantization_formula,
         ...                                                                       stop_update_after_iters=1, quantization_bit=quantization_bit,
         ...                                                                       quantization_scheme=quantization_scheme, momentum=momentum,
         ...                                                                       )

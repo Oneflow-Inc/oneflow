@@ -23,7 +23,7 @@ from oneflow.nn.module import Module
 
 
 def argwhere_op(input, dtype: Optional[flow.dtype] = flow.int32):
-    """This operator finds the indices of input Tensor `input` elements that are non-zero. 
+    """This operator finds the indices of input Tensor `input` elements that are non-zero.
 
     It returns a list in which each element is a coordinate that points to a non-zero element in the condition.
 

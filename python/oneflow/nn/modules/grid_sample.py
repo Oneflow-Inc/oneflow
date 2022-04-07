@@ -24,8 +24,8 @@ def grid_sample(
     padding_mode: str = "zeros",
     align_corners: bool = False,
 ):
-    """The interface is consistent with PyTorch.    
-    The documentation is referenced from: 
+    """The interface is consistent with PyTorch.
+    The documentation is referenced from:
     https://pytorch.org/docs/stable/generated/torch.nn.functional.grid_sample.html?highlight=grid_sample#torch.nn.functional.grid_sample
 
     Given an :attr:`input` and a flow-field :attr:`grid`, computes the
@@ -112,7 +112,7 @@ def grid_sample(
     .. _`cubic convolution algorithm`: https://en.wikipedia.org/wiki/Bicubic_interpolation
     .. _`PIL`: https://github.com/python-pillow/Pillow/blob/4634eafe3c695a014267eefdce830b4a825beed7/src/libImaging/Resample.c#L51
     .. _`OpenCV`: https://github.com/opencv/opencv/blob/f345ed564a06178670750bad59526cfa4033be55/modules/imgproc/src/resize.cpp#L908
-    
+
     Examples::
 
         >>> import oneflow as flow

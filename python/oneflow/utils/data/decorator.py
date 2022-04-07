@@ -96,9 +96,7 @@ class non_deterministic(object):
         # Decorate with a functional argument
         if not (
             isinstance(args[0], Type)
-            and issubclass(  # type: ignore
-                args[0], IterDataPipe
-            )
+            and issubclass(args[0], IterDataPipe)  # type: ignore
         ):
             raise TypeError(
                 "Only `IterDataPipe` can be decorated, but {} is found".format(

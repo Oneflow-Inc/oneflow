@@ -184,7 +184,7 @@ class TestPow(flow.unittest.TestCase):
         device = random_device()
         x = random_tensor().to(device)
         y = random().to(int)
-        return y ** x
+        return y**x
 
     @autotest()
     def test_pow_elementwise_with_random_data(test_case):

@@ -216,7 +216,7 @@ def full_op(
     requires_grad: bool = False,
 ):
     """
-    Creates a tensor of size `size` filled with fill_value. 
+    Creates a tensor of size `size` filled with fill_value.
     The tensor’s dtype is inferred from `value`.
 
     Args:
@@ -233,7 +233,7 @@ def full_op(
     .. code-block:: python
 
         >>> import oneflow as flow
-        >>> y = flow.full((5,),5) 
+        >>> y = flow.full((5,),5)
         >>> y
         tensor([5, 5, 5, 5, 5], dtype=oneflow.int64)
         >>> y = flow.full((2,3),5.0) # construct local tensor

@@ -22,7 +22,9 @@ from generator import Generator
 
 parser = argparse.ArgumentParser()
 parser.add_argument(
-    "--project_source_dir", type=str, help="The project source code directory.",
+    "--project_source_dir",
+    type=str,
+    help="The project source code directory.",
 )
 args = parser.parse_args()
 

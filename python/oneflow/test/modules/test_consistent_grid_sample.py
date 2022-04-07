@@ -45,7 +45,11 @@ def _test_flow_grid_sample_cudnn(test_case, placement, sbp):
         placement=placement, sbp=sbp
     )
     output = torch.nn.functional.grid_sample(
-        input, grid, mode=mode, padding_mode=padding_mode, align_corners=align_corners,
+        input,
+        grid,
+        mode=mode,
+        padding_mode=padding_mode,
+        align_corners=align_corners,
     )
     return output
 
@@ -80,7 +84,11 @@ def _test_flow_grid_sample_4d(test_case, placement, sbp):
         placement=placement, sbp=sbp
     )
     output = torch.nn.functional.grid_sample(
-        input, grid, mode=mode, padding_mode=padding_mode, align_corners=align_corners,
+        input,
+        grid,
+        mode=mode,
+        padding_mode=padding_mode,
+        align_corners=align_corners,
     )
     return output
 
@@ -108,7 +116,11 @@ def _test_flow_grid_sample_5d(test_case, placement, sbp):
         ndim=5, dim0=N, dim1=C, dim2=in_D, dim3=in_H, dim4=in_W
     ).to_global(placement=placement, sbp=sbp)
     output = torch.nn.functional.grid_sample(
-        input, grid, mode=mode, padding_mode=padding_mode, align_corners=align_corners,
+        input,
+        grid,
+        mode=mode,
+        padding_mode=padding_mode,
+        align_corners=align_corners,
     )
     return output
 

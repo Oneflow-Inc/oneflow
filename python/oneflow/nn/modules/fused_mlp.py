@@ -40,7 +40,7 @@ class FusedMLP(Module):
           are the same shape as the input and :math:`H_{out} = {out\\_features}`.
 
     Attr:
-        - :attr:`skip_final_activation`: Whether to skip final hidden layer's activation. Default: False. 
+        - :attr:`skip_final_activation`: Whether to skip final hidden layer's activation. Default: False.
 
     For example:
 
@@ -48,7 +48,7 @@ class FusedMLP(Module):
 
         >>> import numpy as np
         >>> import oneflow as flow
-        
+
 
         >>> m = flow.nn.FusedMLP(128, [256, 512], 1024).to("cuda")
         >>> input = flow.Tensor(np.random.randn(1, 128)).to("cuda")
@@ -95,7 +95,8 @@ class FusedMLP(Module):
                     f"weight_{idx}",
                     flow.nn.Parameter(
                         flow.Tensor(
-                            self.hidden_features[idx], self.hidden_features[idx - 1],
+                            self.hidden_features[idx],
+                            self.hidden_features[idx - 1],
                         )
                     ),
                 )

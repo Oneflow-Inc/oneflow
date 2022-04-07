@@ -63,7 +63,9 @@ class BlockType:
 
 class Block(object):
     def __init__(
-        self, prefix: str = "", name: str = "",
+        self,
+        prefix: str = "",
+        name: str = "",
     ):
         self._name = name
         self._name_prefix = prefix
@@ -103,7 +105,10 @@ class Block(object):
 
 class ModuleBlock(Block):
     def __init__(
-        self, prefix: str = "", name: str = "", origin: Module = None,
+        self,
+        prefix: str = "",
+        name: str = "",
+        origin: Module = None,
     ):
         assert not isinstance(origin, Block)
         super().__init__(prefix, name)
@@ -273,7 +278,10 @@ class ModuleBlock(Block):
                 return oneflow._C.identity(t)
 
             args, _ = self.__map_io(
-                "output", insert_identity, "insert_identity", *args,
+                "output",
+                insert_identity,
+                "insert_identity",
+                *args,
             )
         return args
 
@@ -518,8 +526,7 @@ class ModuleBlock(Block):
         return shallow_repr
 
     def __print(self, s_level=2, v_level=0, msg: str = ""):
-        r"""Do print according to info level.
-        """
+        r"""Do print according to info level."""
         assert isinstance(s_level, int)
         assert isinstance(v_level, int)
         assert isinstance(msg, str)
@@ -547,7 +554,10 @@ class LazyBuilder(object):
 
 class TensorBlock(Block):
     def __init__(
-        self, prefix: str = "", name: str = "", origin: Union[Parameter, Tensor] = None,
+        self,
+        prefix: str = "",
+        name: str = "",
+        origin: Union[Parameter, Tensor] = None,
     ):
         assert not isinstance(origin, Block)
         super().__init__(prefix, name)
@@ -616,7 +626,10 @@ class TensorBlock(Block):
 
 class SequentialBlock(get_seq(ModuleBlock)):
     def __init__(
-        self, prefix: str = "", name: str = "", origin: Sequential = None,
+        self,
+        prefix: str = "",
+        name: str = "",
+        origin: Sequential = None,
     ):
         super().__init__()
         self._name_prefix = prefix
@@ -626,7 +639,10 @@ class SequentialBlock(get_seq(ModuleBlock)):
 
 class ModuleListBlock(get_list(ModuleBlock)):
     def __init__(
-        self, prefix: str = "", name: str = "", origin: ModuleList = None,
+        self,
+        prefix: str = "",
+        name: str = "",
+        origin: ModuleList = None,
     ):
         super().__init__()
         self._name_prefix = prefix
@@ -639,7 +655,10 @@ class ModuleListBlock(get_list(ModuleBlock)):
 
 class ModuleDictBlock(get_dict(ModuleBlock)):
     def __init__(
-        self, prefix: str = "", name: str = "", origin: ModuleDict = None,
+        self,
+        prefix: str = "",
+        name: str = "",
+        origin: ModuleDict = None,
     ):
         super().__init__()
         self._name_prefix = prefix
@@ -649,7 +668,10 @@ class ModuleDictBlock(get_dict(ModuleBlock)):
 
 class ParameterListBlock(get_para_list(ModuleBlock)):
     def __init__(
-        self, prefix: str = "", name: str = "", origin: ParameterList = None,
+        self,
+        prefix: str = "",
+        name: str = "",
+        origin: ParameterList = None,
     ):
         super().__init__()
         self._name_prefix = prefix
@@ -670,7 +692,10 @@ class ParameterListBlock(get_para_list(ModuleBlock)):
 
 class ParameterDictBlock(get_para_dict(ModuleBlock)):
     def __init__(
-        self, prefix: str = "", name: str = "", origin: ParameterDict = None,
+        self,
+        prefix: str = "",
+        name: str = "",
+        origin: ParameterDict = None,
     ):
         super().__init__()
         self._name_prefix = prefix

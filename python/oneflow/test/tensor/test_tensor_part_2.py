@@ -602,7 +602,12 @@ class TestTensor(flow.unittest.TestCase):
             )
             return [y, y_grad]
 
-        np_input = np.random.randn(2, 4, 5, 6,)
+        np_input = np.random.randn(
+            2,
+            4,
+            5,
+            6,
+        )
         of_input = flow.tensor(np_input, dtype=flow.float32, requires_grad=True)
         of_out = of_input.mish()
 
@@ -620,7 +625,12 @@ class TestTensor(flow.unittest.TestCase):
             y_grad = _sig * (1 + x * (1 - _sig))
             return [y, y_grad]
 
-        np_input = np.random.randn(2, 4, 5, 6,)
+        np_input = np.random.randn(
+            2,
+            4,
+            5,
+            6,
+        )
         of_input = flow.tensor(np_input, dtype=flow.float32, requires_grad=True)
         of_out = of_input.silu()
 
@@ -640,7 +650,12 @@ class TestTensor(flow.unittest.TestCase):
             y_grad = np.where(x < 0, _scale * _alpha * np.exp(x), _scale)
             return [y, y_grad]
 
-        np_input = np.random.randn(2, 4, 5, 6,)
+        np_input = np.random.randn(
+            2,
+            4,
+            5,
+            6,
+        )
         of_input = flow.tensor(np_input, dtype=flow.float32, requires_grad=True)
         of_out = of_input.selu()
 
@@ -658,7 +673,12 @@ class TestTensor(flow.unittest.TestCase):
             y_grad = 1 / np.square(1 + np.abs(x))
             return [y, y_grad]
 
-        np_input = np.random.randn(2, 4, 5, 6,)
+        np_input = np.random.randn(
+            2,
+            4,
+            5,
+            6,
+        )
         of_input = flow.tensor(np_input, dtype=flow.float32, requires_grad=True)
         of_out = of_input.softsign()
 
@@ -738,7 +758,9 @@ class TestTensor(flow.unittest.TestCase):
         x = random_tensor(ndim=5, dim0=1, dim1=1, dim2=1, dim3=1, dim4=1)
         ndim = 5
         expand_size = random_expand_size
-        dim_size = [1,] * ndim
+        dim_size = [
+            1,
+        ] * ndim
         random_index = random(0, ndim).to(int).value()
         dim_size[random_index] = expand_size
         return x.expand(*dim_size)
@@ -749,7 +771,9 @@ class TestTensor(flow.unittest.TestCase):
         x = random_tensor(ndim=5, dim0=1, dim1=1, dim2=1, dim3=1, dim4=1)
         ndim = 5
         expand_size = random_expand_size
-        dim_size = [1,] * ndim
+        dim_size = [
+            1,
+        ] * ndim
         random_index = random(0, ndim).to(int).value()
         dim_size[random_index] = expand_size
         y = torch.ones(dim_size)
@@ -795,7 +819,10 @@ class TestTensor(flow.unittest.TestCase):
         test_case.assertEqual(y.placement, placement)
 
         y_default_dtype = flow.tensor(
-            x, placement=placement, sbp=[flow.sbp.split(0)], requires_grad=False,
+            x,
+            placement=placement,
+            sbp=[flow.sbp.split(0)],
+            requires_grad=False,
         )
         test_case.assertTrue(y_default_dtype.dtype == flow.int32)
 

@@ -59,7 +59,7 @@ class PReLU(Module):
 
         >>> import numpy as np
         >>> import oneflow as flow
-        
+
         >>> m = flow.nn.PReLU()
         >>> input = flow.tensor(np.asarray([[[[1, -2], [3, 4]]]]), dtype=flow.float32)
         >>> print(m(input).numpy())
@@ -208,7 +208,7 @@ class Tanh(Module):
 
         >>> import numpy as np
         >>> import oneflow as flow
-        
+
         >>> x = np.array([-1, 0, 1]).astype(np.float32)
         >>> input = flow.Tensor(x)
         >>> tanh = flow.nn.Tanh()
@@ -351,7 +351,7 @@ class GELU(Module):
 
         >>> import numpy as np
         >>> import oneflow as flow
-        
+
         >>> x = np.array([-0.5, 0, 0.5]).astype(np.float32)
         >>> input = flow.Tensor(x)
         >>> gelu = flow.nn.GELU()
@@ -386,7 +386,7 @@ class Sigmoid(Module):
 
         >>> import numpy as np
         >>> import oneflow as flow
-        
+
         >>> x = flow.Tensor(np.array([0.81733328, 0.43621480, 0.10351428]))
         >>> m = flow.nn.Sigmoid()
         >>> out = m(x)
@@ -483,7 +483,7 @@ class Softmax(Module):
 
         >>> import numpy as np
         >>> import oneflow as flow
-        
+
         >>> m = flow.nn.Softmax(dim = 2)
         >>> x = flow.Tensor(
         ...    np.array(
@@ -530,7 +530,7 @@ class LogSoftmax(Module):
 
         >>> import numpy as np
         >>> import oneflow as flow
-        
+
         >>> m = flow.nn.LogSoftmax(dim=1)
         >>> x = flow.Tensor(
         ...    np.array(
@@ -573,7 +573,7 @@ class LogSigmoid(Module):
 
         >>> import numpy as np
         >>> import oneflow as flow
-        
+
         >>> x = np.array([-0.5, 0, 0.5]).astype(np.float32)
         >>> input = flow.Tensor(x)
         >>> logsigmoid = flow.nn.LogSigmoid()
@@ -618,7 +618,7 @@ class Softplus(Module):
 
         >>> import numpy as np
         >>> import oneflow as flow
-        
+
         >>> x = np.array([-0.5, 0, 0.5]).astype(np.float32)
         >>> input = flow.Tensor(x)
         >>> softplus = flow.nn.Softplus()
@@ -839,7 +839,7 @@ class Mish(Module):
 
         >>> import numpy as np
         >>> import oneflow as flow
-        
+
         >>> x = np.array([1, 2, 3]).astype(np.float32)
         >>> input = flow.Tensor(x)
         >>> mish = flow.nn.Mish()
@@ -861,9 +861,9 @@ class SiLU(Module):
     r"""SiLU(Swish) activation:
 
     .. math::
-    
+
         \text{SiLU}(x) = x * sigmoid(x)
-    
+
     .. note::
         See `Gaussian Error Linear Units (GELUs) <https://arxiv.org/abs/1606.08415>`_
         where the SiLU (Sigmoid Linear Unit) was originally coined, and see
@@ -871,16 +871,16 @@ class SiLU(Module):
         in Reinforcement Learning <https://arxiv.org/abs/1702.03118>`_ and `Swish:
         a Self-Gated Activation Function <https://arxiv.org/abs/1710.05941v1>`_
         where the SiLU was experimented with later.
-    
+
     Shape:
         - Input: :math:`(N, *)` where `*` means, any number of additional
           dimensions
         - Output: :math:`(N, *)`, same shape as the input
-    
+
     For example:
-    
+
     .. code-block:: python
-    
+
         >>> import numpy as np
         >>> import oneflow as flow
 
@@ -904,34 +904,34 @@ class SiLU(Module):
 class SELU(Module):
     r"""Applies the element-wise function:
 
-    The formula is: 
-    
-    .. math::  
-    
+    The formula is:
+
+    .. math::
+
         \text{SELU}(x) = \text{scale} * (\max(0,x) + \min(0, \alpha * (\exp(x) - 1)))
-    
+
     with :math:`\alpha = 1.6732632423543772848170429916717` and
-    
+
     :math:`\text{scale} = 1.0507009873554804934193349852946`.
-    
+
     .. warning::
-    
+
         When using ``kaiming_normal`` or ``kaiming_normal_`` for initialisation,
         ``nonlinearity='linear'`` should be used instead of ``nonlinearity='selu'``
         in order to get `Self-Normalizing Neural Networks`_.
         See :func:`torch.nn.init.calculate_gain` for more information.
-    
+
     More details can be found in the paper `Self-Normalizing Neural Networks <https://arxiv.org/abs/1706.02515>`_.
-    
+
     Shape:
         - Input: :math:`(N, *)` where `*` means, any number of additional
           dimensions
         - Output: :math:`(N, *)`, same shape as the input
-    
+
     For example:
-    
+
     .. code-block:: python
-    
+
         >>> import numpy as np
         >>> import oneflow as flow
         >>> x = np.array([1, 2, 3]).astype(np.float32)
@@ -1008,21 +1008,21 @@ class Softshrink(Module):
 class Softsign(Module):
     r"""The SoftSign activation.
 
-    The formula is: 
-    
-    .. math::  
-    
+    The formula is:
+
+    .. math::
+
         SoftSign(x) = \frac{x}{1 + |x|}
-    
+
     Shape:
         - Input: :math:`(N, *)` where `*` means, any number of additional
           dimensions
         - Output: :math:`(N, *)`, same shape as the input
-    
+
     For example:
-    
+
     .. code-block:: python
-    
+
         >>> import numpy as np
         >>> import oneflow as flow
         >>> x = np.array([1, 2, 3]).astype(np.float32)
@@ -1045,7 +1045,7 @@ class GLU(Module):
     r"""The GLU activation.
 
     Args:
-        input (Tensor, float): input tensor. 
+        input (Tensor, float): input tensor.
         dim (int, optional): dimension on which to split the input. Default: -1
 
     Shape:
@@ -1053,9 +1053,9 @@ class GLU(Module):
           dimensions
         - Output: :math:`(\ast_1, M, \ast_2)` where :math:`M=N/2`
 
-    The formula is: 
-    
-    .. math::  
+    The formula is:
+
+    .. math::
 
         GLU(input) = GLU(a, b) = a \otimes sigmoid(b)
 
@@ -1063,9 +1063,9 @@ class GLU(Module):
         where input is split in half along dim to form a and b, ⊗ is the element-wise product between matrices.
 
     For example:
-    
+
     .. code-block:: python
-    
+
         >>> import oneflow as flow
         >>> import oneflow.nn as nn
         >>> m = nn.GLU()
@@ -1074,7 +1074,7 @@ class GLU(Module):
         >>> y
         tensor([[0.9526, 1.9640],
                 [4.9954, 5.9980]], dtype=oneflow.float32)
-    
+
     """
 
     def __init__(self, dim: Optional[int] = -1):

@@ -39,12 +39,12 @@ def constant_initializer(
 
     Returns:
         initializer_conf_util.InitializerConf:  An InitializerConf object.
-    
-    For example: 
+
+    For example:
 
     Example 1:
 
-    .. code-block:: python 
+    .. code-block:: python
 
         import oneflow as flow
         import oneflow.typing as tp
@@ -74,7 +74,7 @@ def constant_initializer(
 
     Example 2:
 
-    .. code-block:: python 
+    .. code-block:: python
 
         import oneflow as flow
         import numpy as np
@@ -91,7 +91,7 @@ def constant_initializer(
                 kernel_size=3,
                 strides=1,
                 padding='SAME',
-                kernel_initializer=initializer, 
+                kernel_initializer=initializer,
                 name="Conv2d"
             )
             return conv2d
@@ -124,11 +124,11 @@ def zeros_initializer(
     Returns:
         initializer_conf_util.InitializerConf: constant_initializer
 
-    For example: 
+    For example:
 
-    Example 1: 
+    Example 1:
 
-    .. code-block:: python 
+    .. code-block:: python
 
         import oneflow as flow
         import oneflow.typing as tp
@@ -156,9 +156,9 @@ def zeros_initializer(
 
         # out [0. 0. 0.]
 
-    Example 2: 
+    Example 2:
 
-    .. code-block:: python 
+    .. code-block:: python
 
         import oneflow as flow
         import numpy as np
@@ -175,7 +175,7 @@ def zeros_initializer(
                 kernel_size=3,
                 strides=1,
                 padding='SAME',
-                kernel_initializer=initializer, 
+                kernel_initializer=initializer,
                 name="Conv2d"
             )
             return conv2d
@@ -201,11 +201,11 @@ def ones_initializer(
     Returns:
         initializer_conf_util.InitializerConf: constant_initializer
 
-    For example: 
+    For example:
 
-    Example 1: 
+    Example 1:
 
-    .. code-block:: python 
+    .. code-block:: python
 
         import oneflow as flow
         import oneflow.typing as tp
@@ -233,9 +233,9 @@ def ones_initializer(
 
         # out [1. 1. 1.]
 
-    Example 2: 
+    Example 2:
 
-    .. code-block:: python 
+    .. code-block:: python
 
         import oneflow as flow
         import numpy as np
@@ -252,7 +252,7 @@ def ones_initializer(
                 kernel_size=3,
                 strides=1,
                 padding='SAME',
-                kernel_initializer=initializer, 
+                kernel_initializer=initializer,
                 name="Conv2d"
             )
             return conv2d
@@ -260,7 +260,7 @@ def ones_initializer(
 
         x = np.random.randn(1, 256, 32, 32).astype(np.float32)
         out = conv2d_one_Job(x)
-        
+
         # out.shape (1, 128, 32, 32)
 
     """
@@ -270,7 +270,7 @@ def ones_initializer(
 def random_uniform_initializer(
     minval: float = 0, maxval: float = 1, dtype: flow.dtype = flow.float
 ) -> initializer_conf_util.InitializerConf:
-    """Initializer that generates blobs with a uniform distribution. 
+    """Initializer that generates blobs with a uniform distribution.
 
     Args:
         minval (float, optional): A python scalar. Lower bound of the range of random values to generate. Defaults to 0.
@@ -283,11 +283,11 @@ def random_uniform_initializer(
     Returns:
         initializer_conf_util.InitializerConf:  Initial configuration
 
-    For example: 
+    For example:
 
-    Example 1: 
+    Example 1:
 
-    .. code-block:: python 
+    .. code-block:: python
 
         import oneflow as flow
         import oneflow.typing as tp
@@ -315,9 +315,9 @@ def random_uniform_initializer(
 
         # out [0.07557311 0.3943565  0.31875622]
 
-    Example 2: 
+    Example 2:
 
-    .. code-block:: python 
+    .. code-block:: python
 
         import oneflow as flow
         import numpy as np
@@ -335,7 +335,7 @@ def random_uniform_initializer(
                 kernel_size=3,
                 strides=1,
                 padding='SAME',
-                kernel_initializer=initializer, 
+                kernel_initializer=initializer,
                 name="Conv2d"
             )
             return conv2d
@@ -343,7 +343,7 @@ def random_uniform_initializer(
 
         x = np.random.randn(1, 256, 32, 32).astype(np.float32)
         out = conv2d_random_uniform_Job(x)
-        
+
         # out.shape (1, 128, 32, 32)
 
     """
@@ -377,11 +377,11 @@ def random_normal_initializer(
     Returns:
         initializer_conf_util.InitializerConf: Initial configuration
 
-    For example: 
+    For example:
 
-    Example 1: 
+    Example 1:
 
-    .. code-block:: python 
+    .. code-block:: python
 
         import oneflow as flow
         import oneflow.typing as tp
@@ -409,9 +409,9 @@ def random_normal_initializer(
 
         # out [1.4190257 2.7663114 1.7114428]
 
-    Example 2: 
+    Example 2:
 
-    .. code-block:: python 
+    .. code-block:: python
 
         import oneflow as flow
         import numpy as np
@@ -429,7 +429,7 @@ def random_normal_initializer(
                 kernel_size=3,
                 strides=1,
                 padding='SAME',
-                kernel_initializer=initializer, 
+                kernel_initializer=initializer,
                 name="Conv2d"
             )
             return conv2d
@@ -463,11 +463,11 @@ def truncated_normal_initializer(
     Returns:
         initializer_conf_util.InitializerConf: Initial configuration
 
-    For example: 
+    For example:
 
-    Example 1: 
+    Example 1:
 
-    .. code-block:: python 
+    .. code-block:: python
 
         import oneflow as flow
         import oneflow.typing as tp
@@ -495,9 +495,9 @@ def truncated_normal_initializer(
 
         # out [1.8303236  0.09787154 0.83049864]
 
-    Example 2: 
+    Example 2:
 
-    .. code-block:: python 
+    .. code-block:: python
 
         import oneflow as flow
         import numpy as np
@@ -515,7 +515,7 @@ def truncated_normal_initializer(
                 kernel_size=3,
                 strides=1,
                 padding='SAME',
-                kernel_initializer=initializer, 
+                kernel_initializer=initializer,
                 name="Conv2d"
             )
             return conv2d
@@ -536,19 +536,19 @@ def truncated_normal_initializer(
 def glorot_uniform_initializer(
     data_format: str = "",
 ) -> initializer_conf_util.InitializerConf:
-    """Initializer that generates a Xavier uniform distribution. 
-    
-    It also can be called as `oneflow.glorot_uniform_initializer`.  
+    """Initializer that generates a Xavier uniform distribution.
 
-    The equation is: 
+    It also can be called as `oneflow.glorot_uniform_initializer`.
 
-    .. math:: 
+    The equation is:
+
+    .. math::
 
         W\\sim U(-\\sqrt{\\frac{{6}}{{n_j+n_{j+1}}}},\\sqrt{\\frac{{6}}{{n_j+n_{j+1}}}})
 
-    :math:`U` means uniform distribution 
+    :math:`U` means uniform distribution
 
-    :math:`n_j` means the amount of Nth layer parameters 
+    :math:`n_j` means the amount of Nth layer parameters
 
     Args:
         data_format (str, optional): The data format. Defaults to "".
@@ -556,11 +556,11 @@ def glorot_uniform_initializer(
     Returns:
         initializer_conf_util.InitializerConf: Initial configuration
 
-    For example: 
+    For example:
 
     Example 1:
 
-    .. code-block:: python 
+    .. code-block:: python
 
         import oneflow as flow
         import oneflow.typing as tp
@@ -590,9 +590,9 @@ def glorot_uniform_initializer(
         #      [-0.8011227  -0.29729813 -0.26769108]
         #      [ 0.9208976  -0.5971756  -0.15077025]]
 
-    Example 2: 
+    Example 2:
 
-    .. code-block:: python 
+    .. code-block:: python
 
         import oneflow as flow
         import numpy as np
@@ -609,7 +609,7 @@ def glorot_uniform_initializer(
                 kernel_size=3,
                 strides=1,
                 padding='SAME',
-                kernel_initializer=initializer, 
+                kernel_initializer=initializer,
                 name="Conv2d"
             )
             return conv2d
@@ -627,19 +627,19 @@ def glorot_uniform_initializer(
 def glorot_normal_initializer(
     data_format: str = "",
 ) -> initializer_conf_util.InitializerConf:
-    """Initializer that generates a Xavier normal distribution. 
-    
-    It also can be called as `oneflow.glorot_normal_initializer`.  
+    """Initializer that generates a Xavier normal distribution.
 
-    The equation is: 
+    It also can be called as `oneflow.glorot_normal_initializer`.
 
-    .. math:: 
+    The equation is:
+
+    .. math::
 
         W\\sim N(0, \\sqrt{\\frac{{2}}{{n_j+n_{j+1}}}})
 
-    :math:`N` means normal distribution 
+    :math:`N` means normal distribution
 
-    :math:`n_j` means the amount of Nth layer parameters 
+    :math:`n_j` means the amount of Nth layer parameters
 
     Args:
         data_format (str, optional): The data format. Defaults to "".
@@ -647,11 +647,11 @@ def glorot_normal_initializer(
     Returns:
         initializer_conf_util.InitializerConf: Initial configuration
 
-    For example: 
+    For example:
 
-    Example 1: 
+    Example 1:
 
-    .. code-block:: python 
+    .. code-block:: python
 
         import oneflow as flow
         import oneflow.typing as tp
@@ -681,9 +681,9 @@ def glorot_normal_initializer(
         #      [ 1.4007381  -0.08172473  0.36579943]
         #      [-0.6461796  -0.15923311  0.33653972]]
 
-    Example 2: 
+    Example 2:
 
-    .. code-block:: python 
+    .. code-block:: python
 
         import oneflow as flow
         import numpy as np
@@ -700,7 +700,7 @@ def glorot_normal_initializer(
                 kernel_size=3,
                 strides=1,
                 padding='SAME',
-                kernel_initializer=initializer, 
+                kernel_initializer=initializer,
                 name="Conv2d"
             )
             return conv2d
@@ -725,15 +725,15 @@ def variance_scaling_initializer(
 
     When the distribution is "truncated_normal"
 
-    The equation is: 
+    The equation is:
 
-    .. math:: 
+    .. math::
 
         W\\sim N(0, \\sqrt{\\frac{{scale}}{{n}}})
 
-    If mode is "fan_in", the "n" is the number of input units in the weight Blob. 
+    If mode is "fan_in", the "n" is the number of input units in the weight Blob.
 
-    If mode is "fan_out", the "n" is the number of output units in the weight Blob. 
+    If mode is "fan_out", the "n" is the number of output units in the weight Blob.
 
     if mode is "fan_avg", the "n" is the average of the number of input and output units in the weight Blob
 
@@ -746,11 +746,11 @@ def variance_scaling_initializer(
     Returns:
         initializer_conf_util.InitializerConf: Initial configuration
 
-    For example: 
+    For example:
 
-    Example 1: 
+    Example 1:
 
-    .. code-block:: python 
+    .. code-block:: python
 
         import oneflow as flow
         import oneflow.typing as tp
@@ -780,9 +780,9 @@ def variance_scaling_initializer(
         #      [-0.49665168  0.10231158 -0.19194333]
         #      [-0.7902896  -1.7034698  -0.38695997]]
 
-    Example 2: 
+    Example 2:
 
-    .. code-block:: python 
+    .. code-block:: python
 
         import oneflow as flow
         import numpy as np
@@ -799,7 +799,7 @@ def variance_scaling_initializer(
                 kernel_size=3,
                 strides=1,
                 padding='SAME',
-                kernel_initializer=initializer, 
+                kernel_initializer=initializer,
                 name="Conv2d"
             )
             return conv2d
@@ -841,23 +841,23 @@ def kaiming_initializer(
 
     When distribution is "random_normal"
 
-    The equation is: 
+    The equation is:
 
-    .. math:: 
+    .. math::
 
         W \\sim N(0, \\sqrt{\\frac{{2}}{{n}}})
 
     When distribution is "random_uniform"
 
-    The equation is: 
+    The equation is:
 
-    .. math:: 
+    .. math::
 
         W \\sim U(-\\sqrt{\\frac{{6}}{{n}}}, \\sqrt{\\frac{{6}}{{n}}})
-    
-    If mode is "fan_in", the "n" is the number of input units in the weight Blob. 
 
-    If mode is "fan_out", the "n" is the number of output units in the weight Blob. 
+    If mode is "fan_in", the "n" is the number of input units in the weight Blob.
+
+    If mode is "fan_out", the "n" is the number of output units in the weight Blob.
 
     if mode is "fan_avg", the "n" is the average of the number of input and output units in the weight Blob
 
@@ -875,11 +875,11 @@ def kaiming_initializer(
     Returns:
         [type]: flow.random_normal_initializer or flow.random_uniform_initializer
 
-    For example: 
+    For example:
 
-    Example 1: 
+    Example 1:
 
-    .. code-block:: python 
+    .. code-block:: python
 
         import oneflow as flow
         import oneflow.typing as tp
@@ -891,8 +891,8 @@ def kaiming_initializer(
 
         @flow.global_function()
         def kaiming_Job() -> None:
-            init = flow.kaiming_initializer(shape=(3, 3), 
-                                            mode="fan_avg", 
+            init = flow.kaiming_initializer(shape=(3, 3),
+                                            mode="fan_avg",
                                             nonlinearity="relu")
             blob = flow.get_variable(
                 "blob-weight",
@@ -911,10 +911,10 @@ def kaiming_initializer(
         #      [ 0.30729076 -0.19158769  0.2709008 ]
         #      [-0.95830524 -0.05093324  0.28178614]]
 
-    Example 2: 
+    Example 2:
 
-    .. code-block:: python 
-    
+    .. code-block:: python
+
         import oneflow as flow
         import numpy as np
         import oneflow.typing as tp
@@ -930,7 +930,7 @@ def kaiming_initializer(
                 kernel_size=3,
                 strides=1,
                 padding='SAME',
-                kernel_initializer=initializer, 
+                kernel_initializer=initializer,
                 name="Conv2d"
             )
             return conv2d
@@ -1053,7 +1053,7 @@ def CalcGain(nonlinearity, param):
             negative_slope = param
         else:
             raise ValueError("negative_slope {} not a valid number".format(param))
-        return math.sqrt(2.0 / (1 + negative_slope ** 2))
+        return math.sqrt(2.0 / (1 + negative_slope**2))
     elif nonlinearity == "selu":
         return 3.0 / 4
     else:

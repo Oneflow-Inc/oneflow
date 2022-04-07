@@ -72,9 +72,9 @@ class ConvUtil(object):
 
 
 class Conv1d(Module):
-    """The interface is consistent with PyTorch.    
+    """The interface is consistent with PyTorch.
     The documentation is referenced from: https://pytorch.org/docs/master/generated/torch.nn.Conv1d.html#conv1d
-    
+
     Applies a 1D convolution over an input signal composed of several input
     planes.
 
@@ -142,14 +142,14 @@ class Conv1d(Module):
             sampled from :math:`\\mathcal{U}(-\\sqrt{k}, \\sqrt{k})` where
             :math:`k = \\frac{groups}{C_\\text{in} * \\text{kernel\\_size}}`
 
-    For example: 
+    For example:
 
     .. code-block:: python
 
         >>> import numpy as np
         >>> import oneflow as flow
         >>> import oneflow.nn as nn
-        
+
         >>> arr = np.random.randn(20, 16, 50)
         >>> input = flow.Tensor(arr)
         >>> m = nn.Conv1d(16, 33, 3, stride=2)
@@ -231,9 +231,9 @@ class Conv1d(Module):
 
 
 class Conv2d(Module):
-    """The interface is consistent with PyTorch.    
+    """The interface is consistent with PyTorch.
     The documentation is referenced from: https://pytorch.org/docs/master/generated/torch.nn.Conv2d.html#conv2d
-    
+
     Applies a 2D convolution over an input signal composed of several input
     planes.
 
@@ -327,14 +327,14 @@ class Conv2d(Module):
             sampled from :math:`\\mathcal{U}(-\\sqrt{k}, \\sqrt{k})` where
             :math:`k = \\frac{groups}{C_\\text{in} * \\prod_{i=0}^{1}\\text{kernel_size}[i]}`
 
-    For example: 
+    For example:
 
     .. code-block:: python
 
         >>> import numpy as np
         >>> import oneflow as flow
         >>> import oneflow.nn as nn
-        
+
         >>> arr = np.random.randn(20, 16, 50, 100)
         >>> input = flow.Tensor(arr)
         >>> m = nn.Conv2d(16, 33, (3, 5), stride=(2, 1), padding=(4, 2), dilation=(3, 1))
@@ -435,9 +435,9 @@ class Conv2d(Module):
 
 
 class Conv3d(Module):
-    r"""The interface is consistent with PyTorch.    
+    r"""The interface is consistent with PyTorch.
     The documentation is referenced from: https://pytorch.org/docs/master/generated/torch.nn.Conv3d.html#conv3d
-    
+
     Applies a 3D convolution over an input signal composed of several input
     planes.
 
@@ -481,7 +481,7 @@ class Conv3d(Module):
         dilation (int or tuple, optional): Spacing between kernel elements. Default: 1
         groups (int, optional): Number of blocked connections from input channels to output channels. Default: 1
         bias (bool, optional): If ``True``, adds a learnable bias to the output. Default: ``True``
-    
+
     Shape:
         - Input: :math:`(N, C_{in}, D_{in}, H_{in}, W_{in})`
         - Output: :math:`(N, C_{out}, D_{out}, H_{out}, W_{out})` where
@@ -510,7 +510,7 @@ class Conv3d(Module):
                          sampled from :math:`\mathcal{U}(-\sqrt{k}, \sqrt{k})` where
                          :math:`k = \frac{groups}{C_\text{in} * \prod_{i=0}^{2}\text{kernel\_size}[i]}`
 
-    For example: 
+    For example:
 
     .. code-block:: python
 
@@ -522,7 +522,7 @@ class Conv3d(Module):
         >>> input = flow.Tensor(arr)
         >>> m = nn.Conv3d(2, 4, kernel_size=3, stride=1)
         >>> output = m(input)
-        
+
     .. _cross-correlation:
         https://en.wikipedia.org/wiki/Cross-correlation
     .. _link:
@@ -675,7 +675,7 @@ class ConvTranspose1d(Module):
                          If :attr:`bias` is ``True``, then the values of these weights are
                          sampled from :math:`\mathcal{U}(-\sqrt{k}, \sqrt{k})` where
                          :math:`k = \frac{groups}{C_\text{out} * \\text{kernel\\_size}}`
-    
+
     .. _cross-correlation:
         https://en.wikipedia.org/wiki/Cross-correlation
 
@@ -743,14 +743,14 @@ class ConvTranspose1d(Module):
 
 class ConvTranspose2d(Module):
     """
-    
+
     Applies a 2D transposed convolution operator over an input image composed of several input planes.
 
     This module can be seen as the gradient of Conv2d with respect to its input.
     It is also known as a fractionally-strided convolution or
     a deconvolution (although it is not an actual deconvolution operation).
 
-    Args:  
+    Args:
         in_channels (int): Number of channels in the input image
         out_channels (int): Number of channels produced by the convolution
         kernel_size (int or tuple): Size of the convolving kernel
@@ -768,12 +768,12 @@ class ConvTranspose2d(Module):
         - Output: :math:`(N, C_{out}, H_{out}, W_{out})` where
 
         .. math::
-              H_{out} = (H_{in} - 1) \\times \\text{stride}[0] - 2 \\times \\text{padding}[0] + \\text{dilation}[0] 
+              H_{out} = (H_{in} - 1) \\times \\text{stride}[0] - 2 \\times \\text{padding}[0] + \\text{dilation}[0]
 
                         \\times (\\text{kernel_size}[0] - 1) + \\text{output_padding}[0] + 1
         .. math::
               W_{out} = (W_{in} - 1) \\times \\text{stride}[1] - 2 \\times \\text{padding}[1] + \\text{dilation}[1]
-              
+
                         \\times (\\text{kernel_size}[1] - 1) + \\text{output_padding}[1] + 1
 
     Attributes:
@@ -793,7 +793,7 @@ class ConvTranspose2d(Module):
         >>> import numpy as np
         >>> import oneflow as flow
         >>> import oneflow.nn as nn
-        
+
         >>> m = nn.ConvTranspose2d(16, 33, 3, stride=2)
         >>> # non-square kernels and unequal stride and with padding
         >>> m = nn.ConvTranspose2d(16, 33, (3, 5), stride=(2, 1), padding=(4, 2))
@@ -927,7 +927,7 @@ class ConvTranspose3d(Module):
         groups (int, optional): Number of blocked connections from input channels to output channels. Default: 1
         bias (bool, optional): If ``True``, adds a learnable bias to the output. Default: ``True``
         dilation (int or tuple, optional): Spacing between kernel elements. Default: 1
-    
+
 
     Shape:
         - Input: :math:`(N, C_{in}, D_{in}, H_{in}, W_{in})`

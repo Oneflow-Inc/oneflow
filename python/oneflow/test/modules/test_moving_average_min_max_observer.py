@@ -50,7 +50,7 @@ def gen_quant_scale_for_moving_average_min_max_affine(
 ):
     activation_max = np.max(activation)
     activation_min = np.min(activation)
-    denominator = 2.0 ** quantization_bit - 1
+    denominator = 2.0**quantization_bit - 1
     if moving_max[0] == 0:
         moving_max[0] = activation_max
     else:

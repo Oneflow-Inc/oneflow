@@ -41,7 +41,7 @@ def gen_quant_scale_for_min_max_symmetric(weight, quantization_bit):
 def gen_quant_scale_for_min_max_affine(weight, quantization_bit):
     weight_max = np.max(weight)
     weight_min = np.min(weight)
-    denominator = 2.0 ** quantization_bit - 1
+    denominator = 2.0**quantization_bit - 1
     scale = (weight_max - weight_min) / denominator
     zero_point = -np.round(weight_min / scale)
     return (scale, zero_point)
@@ -64,7 +64,7 @@ def fake_quant_per_layer_symmetric(input, quantization_bit, scale):
 
 
 def fake_quant_per_layer_affine(input, quantization_bit, scale, zero_point):
-    upper_bound = 2.0 ** quantization_bit - 1
+    upper_bound = 2.0**quantization_bit - 1
     lower_bound = 0
     return (
         np.clip(np.rint(input / scale + zero_point), lower_bound, upper_bound)
@@ -75,7 +75,7 @@ def fake_quant_per_layer_affine(input, quantization_bit, scale, zero_point):
 def fake_quant_per_layer_cambricon(input, quantization_bit, shift):
     upper_bound = 2.0 ** (quantization_bit - 1) - 1
     lower_bound = -upper_bound
-    scale = 2 ** shift
+    scale = 2**shift
     return np.clip(np.rint(input / scale), lower_bound, upper_bound) * scale
 
 

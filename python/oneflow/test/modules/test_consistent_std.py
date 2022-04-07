@@ -30,7 +30,12 @@ def _test_global_std_flow_with_random_data(test_case, placement, sbp):
         dim2=random(1, 4) * 8,
         dim3=random(1, 4) * 8,
     ).to_global(placement, sbp)
-    z = torch.std(x, dim=dim, unbiased=random().to(bool), keepdim=random().to(bool),)
+    z = torch.std(
+        x,
+        dim=dim,
+        unbiased=random().to(bool),
+        keepdim=random().to(bool),
+    )
     return z
 
 
@@ -44,7 +49,10 @@ def _test_global_std_tensor_with_random_data(test_case, placement, sbp):
         dim2=random(1, 4) * 8,
         dim3=random(1, 4) * 8,
     ).to_global(placement, sbp)
-    z = x.std(dim=dim, keepdim=random().to(bool),)
+    z = x.std(
+        dim=dim,
+        keepdim=random().to(bool),
+    )
     return z
 
 

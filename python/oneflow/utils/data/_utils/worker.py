@@ -107,7 +107,6 @@ if IS_WINDOWS:
                 )
             return not self.manager_dead
 
-
 else:
 
     class ManagerWatchdog(object):  # type: ignore[no-redef]

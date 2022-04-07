@@ -17,10 +17,10 @@ import oneflow as flow
 
 
 def sparse_softmax_cross_entropy(labels, logits):
-    """The interface is consistent with TensorFlow.    
-    The documentation is referenced from: 
+    """The interface is consistent with TensorFlow.
+    The documentation is referenced from:
     https://www.tensorflow.org/api_docs/python/tf/nn/sparse_softmax_cross_entropy_with_logits
-    
+
     Computes sparse softmax cross entropy between `logits` and `labels`.
 
     Measures the probability error in discrete classification tasks in which the

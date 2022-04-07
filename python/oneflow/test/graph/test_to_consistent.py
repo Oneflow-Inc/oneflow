@@ -195,8 +195,7 @@ class MyGraph(flow.nn.Graph):
 class ToGlobalGraphTestCase(oneflow.unittest.TestCase):
     # @unittest.skipIf(True, "")
     def test_fwd_P2B(test_case):
-        """ compare eager fwd and lazy bwd
-        """
+        """compare eager fwd and lazy bwd"""
         rank = flow.env.get_rank()
         # pid = os.getpid()
         # print(f"[{pid}][{rank}] ToGlobalGraphTestCase.test_fwd_P2B")
@@ -231,8 +230,7 @@ class ToGlobalGraphTestCase(oneflow.unittest.TestCase):
 
     # @unittest.skipIf(True, "")
     def test_bwd_P2B(test_case):
-        """ compare eager bwd and lazy bwd
-        """
+        """compare eager bwd and lazy bwd"""
         rank = flow.env.get_rank()
         # pid = os.getpid()
         # print(f"[{pid}][{rank}] ToGlobalGraphTestCase.test_bwd_P2B")
@@ -241,7 +239,9 @@ class ToGlobalGraphTestCase(oneflow.unittest.TestCase):
         local_y = flow.tensor(y, dtype=flow.float32, device=flow.device(f"cuda:{rank}"))
 
         z = flow._C.matmul(
-            local_y, flow.cat([local_x, local_x], dim=0), transpose_b=True,
+            local_y,
+            flow.cat([local_x, local_x], dim=0),
+            transpose_b=True,
         )
         z = flow._C.relu(z)
         z = z.sum()
@@ -276,8 +276,7 @@ class ToGlobalGraphTestCase(oneflow.unittest.TestCase):
 
     # @unittest.skipIf(True, "")
     def test_multi_graph(test_case):
-        """ compare two lazy fwd
-        """
+        """compare two lazy fwd"""
         rank = flow.env.get_rank()
         # pid = os.getpid()
         # print(f"[{pid}][{rank}] ToGlobalGraphTestCase.test_multi_graph")

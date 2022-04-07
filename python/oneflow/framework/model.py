@@ -169,8 +169,7 @@ class CheckpointConfig(object):
 
 
 class Callback(ABC):
-    """ Abstract base class used to build new callbacks.
-    """
+    """Abstract base class used to build new callbacks."""
 
     def on_training_step_end(
         self,
@@ -181,14 +180,15 @@ class Callback(ABC):
         pass
 
     def on_validation_step_end(
-        self, outputs: Optional[Union[Tensor, Tuple[Tensor, ...]]], step_idx: int = 0,
+        self,
+        outputs: Optional[Union[Tensor, Tuple[Tensor, ...]]],
+        step_idx: int = 0,
     ):
         pass
 
 
 class Model(ABC, Module):
-    """A high level API for model training and validation.
-    """
+    """A high level API for model training and validation."""
 
     def __init__(self, *args, **kwargs):
         super().__init__()
@@ -199,18 +199,15 @@ class Model(ABC, Module):
         )
 
     def forward(self, *args, **kwargs):
-        """Same as `nn.Module.forward()`, here is to define the operations you want to use for prediction.
-        """
+        """Same as `nn.Module.forward()`, here is to define the operations you want to use for prediction."""
         raise NotImplementedError
 
     def training_step(self, *args, **kwargs):
-        """Operates on a single batch of data from the training set and return loss.
-        """
+        """Operates on a single batch of data from the training set and return loss."""
         raise NotImplementedError()
 
     def validation_step(self, *args, **kwargs):
-        """Operates on a single batch of data from the validation set.
-        """
+        """Operates on a single batch of data from the validation set."""
         raise NotImplementedError()
 
     def configure_optimizers(self):
@@ -227,8 +224,7 @@ class Model(ABC, Module):
         callbacks: Optional[Union[Callback, List[Callback]]] = None,
         max_steps: int = 100,
     ):
-        """ Runs the full training and validation routine.
-        """
+        """Runs the full training and validation routine."""
         self._max_steps = max_steps
         self._sub_models = self._get_and_check_sub_models(
             training_config, validation_config, checkpoint_config, callbacks
@@ -571,14 +567,12 @@ class CheckpointModel(SubModel):
                 )
 
     def _load_checkpoint(self, dirpath: str):
-        """Load model states from a checkpoint.
-        """
+        """Load model states from a checkpoint."""
         stat_dict = flow.load(path=dirpath)
         self._model.load_state_dict(stat_dict)
 
     def _save_checkpoint(self, dirpath: str):
-        """Save model states as a checkpoint.
-        """
+        """Save model states as a checkpoint."""
         stat_dict = self._model.state_dict()
         flow.save(stat_dict, dirpath)
 
@@ -703,14 +697,12 @@ class CheckpointModelOOPStyle(SubModel):
                 )
 
     def _load_checkpoint(self, dirpath: str):
-        """Load model states from a checkpoint.
-        """
+        """Load model states from a checkpoint."""
         stat_dict = flow.load(path=dirpath)
         self._model.load_state_dict(stat_dict)
 
     def _save_checkpoint(self, dirpath: str):
-        """Save model states as a checkpoint.
-        """
+        """Save model states as a checkpoint."""
         stat_dict = self._model.state_dict()
         flow.save(stat_dict, dirpath)
 

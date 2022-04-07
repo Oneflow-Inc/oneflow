@@ -61,7 +61,7 @@ def asin_op(input):
 
 def arcsin_op(input):
     """
-  
+
     Alias for :func:`oneflow.asin`
     """
     return flow._C.asin(input)
@@ -104,7 +104,7 @@ def asinh_op(input):
 
 def arcsinh_op(input):
     """
-  
+
     Alias for :func:`oneflow.asinh`
     """
     return flow._C.asinh(input)
@@ -123,7 +123,7 @@ def asinh_op_tensor(input):
 def inplace_sin_op_tensor(input):
     """
     In-place version of :func:`oneflow.sin`
-    
+
     """
     return flow._C.sin_(input)
 
@@ -141,14 +141,14 @@ def atan_op(input):
     For example:
 
     .. code-block:: python
-    
+
         >>> import oneflow as flow
         >>> import numpy as np
         >>> input = flow.tensor(np.array([0.5, 0.6, 0.7]), dtype=flow.float32)
         >>> output = flow.atan(input)
         >>> output.shape
         oneflow.Size([3])
-        
+
     """
     return flow._C.atan(input)
 
@@ -156,7 +156,7 @@ def atan_op(input):
 def arctan_op(input):
     """
     Alias for :func:`oneflow.atan`
-    
+
     """
     return flow._C.atan(input)
 
@@ -234,8 +234,8 @@ def addmm_op(input, mat1, mat2, alpha=1, beta=1):
         >>> import numpy as np
         >>> import oneflow as flow
         >>> input = flow.tensor(np.array([[1,2,4],[5,11,9.1]]))
-        >>> mat1 = flow.tensor(np.array([[7.3,1.9,7.3],[10.2,1,5.5]])) 
-        >>> mat2 = flow.tensor(np.array([[7.3,1.9,7.3],[10.2,1,5.5],[3.7,2.2,8.1]])) 
+        >>> mat1 = flow.tensor(np.array([[7.3,1.9,7.3],[10.2,1,5.5]]))
+        >>> mat2 = flow.tensor(np.array([[7.3,1.9,7.3],[10.2,1,5.5],[3.7,2.2,8.1]]))
         >>> output = flow.addmm(input, mat1, mat2)
         >>> output
         tensor([[100.6800,  33.8300, 126.8700],

@@ -23,14 +23,14 @@ if CN_DOCS:
 
 # -- Project information -----------------------------------------------------
 
-project = u"OneFlow"
-copyright = u"2020, OneFlow"
-author = u"OneFlow"
+project = "OneFlow"
+copyright = "2020, OneFlow"
+author = "OneFlow"
 
 # The short X.Y version
-version = u""
+version = ""
 # The full version, including alpha/beta/rc tags
-release = u""
+release = ""
 
 # -- General configuration ---------------------------------------------------
 
@@ -63,7 +63,7 @@ master_doc = "index"
 #
 # This is also used if you do content translation via gettext catalogs.
 # Usually you set "language" from the command line for these cases.
-language = u"en"
+language = "en"
 
 # List of patterns, relative to source directory, that match files and
 # directories to ignore when looking for source files.
@@ -133,8 +133,8 @@ latex_documents = [
     (
         master_doc,
         "OneFlow.tex",
-        u"OneFlow API Reference",
-        u"Oneflow Contributors",
+        "OneFlow API Reference",
+        "Oneflow Contributors",
         "manual",
     ),
 ]
@@ -144,7 +144,7 @@ latex_documents = [
 
 # One entry per manual page. List of tuples
 # (source start file, name, description, authors, manual section).
-man_pages = [(master_doc, "oneflow", u"OneFlow API Reference", [author], 1)]
+man_pages = [(master_doc, "oneflow", "OneFlow API Reference", [author], 1)]
 
 
 # -- Options for Texinfo output ----------------------------------------------
@@ -156,7 +156,7 @@ texinfo_documents = [
     (
         master_doc,
         "OneFlow",
-        u"OneFlow API Reference",
+        "OneFlow API Reference",
         author,
         "OneFlow",
         "OneFlow API Reference",

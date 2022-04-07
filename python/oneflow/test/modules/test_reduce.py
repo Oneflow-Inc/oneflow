@@ -27,7 +27,8 @@ from oneflow.test_utils.test_util import GenArgList
 def _test_reduce(test_case, dst, device):
     if flow.env.get_rank() == 0:
         np_arr = np.array(
-            [[4, 6, 5, 20], [6, 8, 9, 0], [3, 7, 5, 0], [6, 8, 9, 0]], dtype=np.float32,
+            [[4, 6, 5, 20], [6, 8, 9, 0], [3, 7, 5, 0], [6, 8, 9, 0]],
+            dtype=np.float32,
         )
     elif flow.env.get_rank() == 1:
         np_arr = np.array(
@@ -36,11 +37,13 @@ def _test_reduce(test_case, dst, device):
         )
     elif flow.env.get_rank() == 2:
         np_arr = np.array(
-            [[9, 6, 5, 8], [4, 9, 7, 0], [2, 5, 7, 9], [6, 8, 10, 0]], dtype=np.float32,
+            [[9, 6, 5, 8], [4, 9, 7, 0], [2, 5, 7, 9], [6, 8, 10, 0]],
+            dtype=np.float32,
         )
     elif flow.env.get_rank() == 3:
         np_arr = np.array(
-            [[9, 4, 5, 8], [7, 2, 9, 5], [6, 3, 9, 2], [3, 7, 5, 8]], dtype=np.float32,
+            [[9, 4, 5, 8], [7, 2, 9, 5], [6, 3, 9, 2], [3, 7, 5, 8]],
+            dtype=np.float32,
         )
     x = flow.tensor(np_arr, device=device, dtype=flow.float32)
     flow._C.local_reduce(x, dst=dst)

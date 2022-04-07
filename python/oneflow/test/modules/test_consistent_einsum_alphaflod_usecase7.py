@@ -27,9 +27,18 @@ def _test_einsum_alphaflod_usecase7(test_case, placement, sbp):
     dim0 = random(1, 3) * 8
     dim1 = random(1, 3) * 8
     x = random_tensor(
-        ndim=4, dim0=random(1, 3) * 8, dim1=dim0, dim2=dim1, dim3=random(1, 3) * 8,
+        ndim=4,
+        dim0=random(1, 3) * 8,
+        dim1=dim0,
+        dim2=dim1,
+        dim3=random(1, 3) * 8,
     )
-    y = random_tensor(ndim=3, dim0=dim0, dim1=dim1, dim2=random(1, 3) * 8,)
+    y = random_tensor(
+        ndim=3,
+        dim0=dim0,
+        dim1=dim1,
+        dim2=random(1, 3) * 8,
+    )
     g_x = x.to_global(placement=placement, sbp=sbp)
     g_y = y.to_global(placement=placement, sbp=sbp)
     z = torch.einsum("dceb,cef->dbf", g_x, g_y)

@@ -62,7 +62,7 @@ class StepLR(LRScheduler):
 
     def get_lr(self, base_lr, step):
         step_stage = math.floor(step / self.step_size)
-        factor = self.gamma ** step_stage
+        factor = self.gamma**step_stage
         return base_lr * factor
 
     def _generate_conf_for_graph(self, lr_conf):

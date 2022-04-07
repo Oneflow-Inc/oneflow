@@ -23,72 +23,72 @@ from oneflow.nn.parameter import Parameter
 
 
 class Adagrad(Optimizer):
-    r"""Implements Adagrad Optimizer. 
+    r"""Implements Adagrad Optimizer.
 
-        The formula is: 
+    The formula is:
 
-        .. math:: 
+    .. math::
 
-            & S_{t} = S_{t-1} + grad \odot grad 
-            
-            & decay\_lr = \frac{learning\_rate}{(1 + (train\_step - 1) * lr\_decay)}
+        & S_{t} = S_{t-1} + grad \odot grad
 
-            & X_{t} = X_{t-1} - \frac{decay\_lr}{\sqrt{S_{t} + \epsilon}} \odot grad
+        & decay\_lr = \frac{learning\_rate}{(1 + (train\_step - 1) * lr\_decay)}
 
-        Args:
-            params (Union[Iterator[Parameter], List[Dict]]): iterable of parameters to optimize or dicts defining
-            parameter groups
-            lr (float, optional): The learning rate. Defaults to 0.001.
-            lr_decay (float, optional): The decay factor of learning rate. Defaults to 0.0.
-            weight_decay (float, optional): The weight decay. Defaults to 0.
-            initial_accumulator_value (float, optional): The initial value of S. Defaults to 0.0.
-            eps (float, optional): A small constant terms added to the denominator to improve numerical stability. Defaults to 1e-10.
-        
-        For example: 
+        & X_{t} = X_{t-1} - \frac{decay\_lr}{\sqrt{S_{t} + \epsilon}} \odot grad
 
-        Example 1: 
+    Args:
+        params (Union[Iterator[Parameter], List[Dict]]): iterable of parameters to optimize or dicts defining
+        parameter groups
+        lr (float, optional): The learning rate. Defaults to 0.001.
+        lr_decay (float, optional): The decay factor of learning rate. Defaults to 0.0.
+        weight_decay (float, optional): The weight decay. Defaults to 0.
+        initial_accumulator_value (float, optional): The initial value of S. Defaults to 0.0.
+        eps (float, optional): A small constant terms added to the denominator to improve numerical stability. Defaults to 1e-10.
 
-        .. code-block:: python
+    For example:
 
-            # Assume net is a custom model. 
-            adagrad = flow.optim.Adagrad(net.parameters(), lr=1e-3)
+    Example 1:
 
-            for epoch in range(epochs):
-                # Read data, Compute the loss and so on. 
-                # ...
-                loss.backward()
-                adagrad.step()
-                adagrad.zero_grad()
+    .. code-block:: python
 
-        Example 2: 
+        # Assume net is a custom model.
+        adagrad = flow.optim.Adagrad(net.parameters(), lr=1e-3)
 
-        .. code-block:: python 
+        for epoch in range(epochs):
+            # Read data, Compute the loss and so on.
+            # ...
+            loss.backward()
+            adagrad.step()
+            adagrad.zero_grad()
 
-            # Assume net is a custom model. 
-            adagrad = flow.optim.Adagrad(
-                [
-                    {
-                        "params": net.parameters(),
-                        "lr": learning_rate,
-                        "clip_grad_max_norm": 0.5,
-                        "clip_grad_norm_type": 2.0,
-                    }
-                ],
-            )
+    Example 2:
 
-            for epoch in range(epochs):
-                # Read data, Compute the loss and so on. 
-                # ...
-                loss.backward()
-                adagrad.clip_grad()
-                adagrad.step()
-                adagrad.zero_grad()
+    .. code-block:: python
 
-        If you want to use clip_grad, you can refer this example. 
+        # Assume net is a custom model.
+        adagrad = flow.optim.Adagrad(
+            [
+                {
+                    "params": net.parameters(),
+                    "lr": learning_rate,
+                    "clip_grad_max_norm": 0.5,
+                    "clip_grad_norm_type": 2.0,
+                }
+            ],
+        )
 
-        For more details of `clip_grad_max_norm` and `clip_grad_norm_type`, you can refer to :func:`oneflow.nn.utils.clip_grad_norm_`. 
-        
-        """
+        for epoch in range(epochs):
+            # Read data, Compute the loss and so on.
+            # ...
+            loss.backward()
+            adagrad.clip_grad()
+            adagrad.step()
+            adagrad.zero_grad()
+
+    If you want to use clip_grad, you can refer this example.
+
+    For more details of `clip_grad_max_norm` and `clip_grad_norm_type`, you can refer to :func:`oneflow.nn.utils.clip_grad_norm_`.
+
+    """
 
     def __init__(
         self,

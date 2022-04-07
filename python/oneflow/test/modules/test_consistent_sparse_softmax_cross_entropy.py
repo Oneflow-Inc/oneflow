@@ -29,7 +29,13 @@ from oneflow.test_utils.automated_test_util.torch_flow_dual_object import global
 
 
 def _compare_eager_global_with_torch(
-    placement, logits_sbp, labels_sbp, data_type, label_type, batch_size, num_classes,
+    placement,
+    logits_sbp,
+    labels_sbp,
+    data_type,
+    label_type,
+    batch_size,
+    num_classes,
 ):
     data_type = type_name_to_flow_type[data_type]
     label_type = type_name_to_flow_type[label_type]
@@ -78,7 +84,13 @@ def _compare_eager_global_with_torch(
 
 
 def _compare_lazy_global_with_torch(
-    placement, logits_sbp, labels_sbp, data_type, label_type, batch_size, num_classes,
+    placement,
+    logits_sbp,
+    labels_sbp,
+    data_type,
+    label_type,
+    batch_size,
+    num_classes,
 ):
     data_type = type_name_to_flow_type[data_type]
     label_type = type_name_to_flow_type[label_type]

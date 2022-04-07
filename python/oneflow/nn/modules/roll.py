@@ -18,16 +18,16 @@ from oneflow.framework.tensor import register_tensor_op
 
 
 def roll_op(input, shifts, dims=None):
-    """Roll the tensor along the given dimension(s). 
-    
-    Elements that are shifted beyond the last position are re-introduced at the first position. 
-    
+    """Roll the tensor along the given dimension(s).
+
+    Elements that are shifted beyond the last position are re-introduced at the first position.
+
     If a dimension is not specified, the tensor will be flattened before rolling and then restored to the original shape.
 
     Args:
         input (oneflow.Tensor): the input Tensor.
-        shifts (int or tuple of python:ints): The number of places by which the elements of the tensor are shifted. 
-                                              If shifts is a tuple, dims must be a tuple of the same size, 
+        shifts (int or tuple of python:ints): The number of places by which the elements of the tensor are shifted.
+                                              If shifts is a tuple, dims must be a tuple of the same size,
                                               and each dimension will be rolled by the corresponding value.
         dims (int or tuple of python:ints): Axis along which to roll.
 

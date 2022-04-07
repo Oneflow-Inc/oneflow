@@ -107,13 +107,13 @@ class _FusedBatchNorm(_FusedNormBase):
 
 
 class FusedBatchNorm1d(_FusedBatchNorm):
-    """Applies Fused Batch Normalization over a 2D or 3D input, the formula is: 
-    
-    .. math:: 
+    """Applies Fused Batch Normalization over a 2D or 3D input, the formula is:
+
+    .. math::
 
         out = ReLU(BatchNorm(input) + addend)
 
-    The formula of Batch Normalization is: 
+    The formula of Batch Normalization is:
 
     .. math::
 
@@ -172,8 +172,8 @@ class FusedBatchNorm1d(_FusedBatchNorm):
 
         >>> import oneflow as flow
         >>> import numpy as np
-        
-        >>> x = flow.Tensor(np.random.randn(20, 100)).to("cuda") # FusedBatchNorm support in GPU currently. 
+
+        >>> x = flow.Tensor(np.random.randn(20, 100)).to("cuda") # FusedBatchNorm support in GPU currently.
         >>> m = flow.nn.FusedBatchNorm1d(num_features=100, eps=1e-5, momentum=0.1).to("cuda")
         >>> y = m(x, addend=None)
 
@@ -187,13 +187,13 @@ class FusedBatchNorm1d(_FusedBatchNorm):
 
 
 class FusedBatchNorm2d(_FusedBatchNorm):
-    """Applies Fused Batch Normalization over a 4D input, the formula is: 
-    
-    .. math:: 
+    """Applies Fused Batch Normalization over a 4D input, the formula is:
+
+    .. math::
 
         out = ReLU(BatchNorm(input) + addend)
 
-    The formula of Batch Normalization is: 
+    The formula of Batch Normalization is:
 
     .. math::
 
@@ -252,8 +252,8 @@ class FusedBatchNorm2d(_FusedBatchNorm):
 
         >>> import oneflow as flow
         >>> import numpy as np
-        
-        >>> x = flow.Tensor(np.random.randn(4, 2, 8, 3)).to("cuda") # FusedBatchNorm support in GPU currently. 
+
+        >>> x = flow.Tensor(np.random.randn(4, 2, 8, 3)).to("cuda") # FusedBatchNorm support in GPU currently.
         >>> m = flow.nn.FusedBatchNorm2d(num_features=2, eps=1e-5, momentum=0.1).to("cuda")
         >>> y = m(x, addend=None)
 
@@ -277,13 +277,13 @@ class FusedBatchNorm2d(_FusedBatchNorm):
 
 
 class FusedBatchNorm3d(_FusedBatchNorm):
-    r"""Applies Fused Batch Normalization over a 5D input, the formula is: 
-    
-    .. math:: 
+    r"""Applies Fused Batch Normalization over a 5D input, the formula is:
+
+    .. math::
 
         out = ReLU(BatchNorm(input) + addend)
 
-    The formula of Batch Normalization is: 
+    The formula of Batch Normalization is:
 
     .. math::
 
@@ -343,7 +343,7 @@ class FusedBatchNorm3d(_FusedBatchNorm):
         >>> import oneflow as flow
         >>> import numpy as np
 
-        >>> x = flow.Tensor(np.random.randn(3, 2, 5, 8, 4)).to("cuda") # FusedBatchNorm support in GPU currently. 
+        >>> x = flow.Tensor(np.random.randn(3, 2, 5, 8, 4)).to("cuda") # FusedBatchNorm support in GPU currently.
         >>> m = flow.nn.FusedBatchNorm3d(num_features=2, eps=1e-5, momentum=0.1).to("cuda")
         >>> y = m(x, addend=None)
 

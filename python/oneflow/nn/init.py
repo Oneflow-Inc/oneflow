@@ -132,7 +132,7 @@ def kaiming_normal_(
     r"""
     The interface is consistent with PyTorch.
     The documentation is referenced from: https://pytorch.org/docs/stable/nn.init.html.
-    
+
     Fills the input `Tensor` with values according to the method
     described in `Delving deep into rectifiers: Surpassing human-level
     performance on ImageNet classification` - He, K. et al. (2015), using a

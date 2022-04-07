@@ -85,10 +85,18 @@ if __name__ == "__main__":
         default="oss-cn-beijing.aliyuncs.com",
     )
     parser.add_argument(
-        "-b", "--bucket", type=str, required=False, default="oneflow-public",
+        "-b",
+        "--bucket",
+        type=str,
+        required=False,
+        default="oneflow-public",
     )
     parser.add_argument(
-        "-d", "--dir_key", type=str, required=False, default="nightly",
+        "-d",
+        "--dir_key",
+        type=str,
+        required=False,
+        default="nightly",
     )
     parser.add_argument("--index_key", action="append", nargs="+")
     args = parser.parse_args()

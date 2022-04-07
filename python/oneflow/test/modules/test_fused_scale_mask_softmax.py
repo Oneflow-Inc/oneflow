@@ -26,7 +26,12 @@ import oneflow.unittest
 
 
 def _test_fused_scale_mask_softmax(
-    test_case, batch_size, num_heads, seq_length, fill_value, scale_value,
+    test_case,
+    batch_size,
+    num_heads,
+    seq_length,
+    fill_value,
+    scale_value,
 ):
 
     x = np.random.randn(batch_size, num_heads, seq_length, seq_length)
@@ -39,7 +44,10 @@ def _test_fused_scale_mask_softmax(
     fused_x_tensor.requires_grad = True
 
     fused_out = flow._C.fused_scale_mask_softmax(
-        fused_x_tensor, fused_mask_tensor, fill_value=fill_value, scale=scale_value,
+        fused_x_tensor,
+        fused_mask_tensor,
+        fill_value=fill_value,
+        scale=scale_value,
     )
 
     origin_x_tensor = flow.tensor(x).to("cuda")

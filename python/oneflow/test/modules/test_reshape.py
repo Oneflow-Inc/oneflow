@@ -73,7 +73,15 @@ def _test_reshape_scalar(test_case, device):
     test_case.assertTrue(np.array_equal(x.shape, ()))
     a = flow.reshape(x, (1,))
     test_case.assertTrue(np.array_equal(a.shape, (1,)))
-    b = flow.reshape(x, (1, 1, 1, 1,))
+    b = flow.reshape(
+        x,
+        (
+            1,
+            1,
+            1,
+            1,
+        ),
+    )
     test_case.assertTrue(np.array_equal(b.shape, (1, 1, 1, 1)))
     c = flow.reshape(b, ())
     test_case.assertTrue(np.array_equal(c.shape, ()))

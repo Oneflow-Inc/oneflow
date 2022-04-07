@@ -20,7 +20,7 @@ from oneflow.nn.module import Module
 
 class MinMaxObserver(Module):
     """
-    
+
     Compute the quantization parameters of the input tensor.
 
     First compute the max and min values of input tensor:
@@ -67,16 +67,16 @@ class MinMaxObserver(Module):
     For example:
 
     .. code-block:: python
-        
+
         >>> import numpy as np
         >>> import oneflow as flow
 
         >>> weight = (np.random.random((2, 3, 4, 5)) - 0.5).astype(np.float32)
-        
+
         >>> input_tensor = flow.tensor(
         ...    weight, dtype=flow.float32
         ... )
-        
+
         >>> quantization_bit = 8
         >>> quantization_scheme = "symmetric"
         >>> quantization_formula = "google"

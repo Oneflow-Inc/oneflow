@@ -183,7 +183,9 @@ def _test_expand_backward(test_case, device):
 
 
 def random_expand(x, ndim, expand_size):
-    dim_size = [1,] * ndim
+    dim_size = [
+        1,
+    ] * ndim
     random_index = random(0, ndim).to(int).value()
     dim_size[random_index] = expand_size
     return x.expand(*dim_size)

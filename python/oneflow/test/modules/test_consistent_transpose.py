@@ -58,7 +58,9 @@ def _test_global_tranpose_negative_dim(test_case, placement, sbp):
 
 def _test_global_transpose_backward(test_case, placement, sbp):
     x = flow.tensor(
-        np.random.randn(8, 16, 8, 16), dtype=flow.float32, requires_grad=True,
+        np.random.randn(8, 16, 8, 16),
+        dtype=flow.float32,
+        requires_grad=True,
     ).to_global(flow.env.all_device_placement("cpu"), flow.sbp.broadcast)
     x = x.to_global(placement, sbp)
     x.retain_grad()
@@ -71,7 +73,9 @@ def _test_global_transpose_backward(test_case, placement, sbp):
 
 def _test_global_transpose_backward_v2(test_case, placement, sbp):
     x = flow.tensor(
-        np.random.randn(8, 16, 8, 16), dtype=flow.float32, requires_grad=True,
+        np.random.randn(8, 16, 8, 16),
+        dtype=flow.float32,
+        requires_grad=True,
     ).to_global(flow.env.all_device_placement("cpu"), flow.sbp.broadcast)
     x = x.to_global(placement, sbp)
     x.retain_grad()
