@@ -327,6 +327,16 @@ class TestTensorIndexing(flow.unittest.TestCase):
         for arg in GenArgList(arg_dict):
             arg[0](test_case, *arg[1:])
 
+    def test_indecies_on_different_devices(test_case):
+        x = flow.ones(3, 10)
+        y = flow.ones(3, 10).cuda()
+
+        idx = [flow.tensor([1, 2]), flow.tensor([2, 0]).cuda()]
+        idx1 = [flow.tensor([1, 2]).cuda(), flow.tensor([2, 0])]
+
+        test_case.assertTrue(np.allclose(x[idx].numpy(), np.array([1, 1])))
+        test_case.assertTrue(np.allclose(y[idx1].numpy(), np.array([1, 1])))
+
 
 if __name__ == "__main__":
     unittest.main()
