@@ -88,7 +88,7 @@ TensorSliceView GetTensorSliceView4ParallelRank(const Shape& parallel_hierarchy,
         const int64_t split_axis = sbp_parallel.split_parallel().axis();
         CHECK_GE(split_axis, 0);
         CHECK_LT(split_axis, ranges.size());
-        CHECK_EQ(ranges[split_axis].size() % parallel_hierarchy.At(i), 0);
+        CHECK_LE(ranges[split_axis].size() % parallel_hierarchy.At(i), 1);
         const int64_t range_size = ranges[split_axis].size() / parallel_hierarchy.At(i);
         const int64_t dim_start = ranges[split_axis].begin() + parallel_rank.at(i) * range_size;
         ranges[split_axis].mut_begin() = dim_start;

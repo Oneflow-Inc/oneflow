@@ -46,7 +46,7 @@ def _test_graph_randperm(test_case, N, placement, sbp, dtype):
     print(x)
 
     test_case.assertEqual(x.dtype, dtype)
-   # test_case.assertEqual(x.sbp, sbp)
+    # test_case.assertEqual(x.sbp, sbp)
     test_case.assertEqual(x.placement, placement)
 
 
@@ -56,12 +56,7 @@ class TestRandConsistent(flow.unittest.TestCase):
     def test_rand_consistent(test_case):
         RandNs = [i for i in range(10, 50, 10)]
         Dtypes = [
-            flow.uint8,
-            flow.int8,
             flow.int32,
-            flow.int64,
-            flow.float32,
-            flow.float64,
         ]
         for N in RandNs:
             for placement in all_placement():

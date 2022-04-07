@@ -39,11 +39,10 @@ __global__ void GeneKeysAndValues(const int32_t n, int32_t* values, int32_t* key
   }
 }
 
-__global__ void tempcopy2output(const int32_t n, const int32_t offset, int32_t* temp, int32_t* output) {
-  CUDA_1D_KERNEL_LOOP(i, n) {
-    output[i] = temp[offset + i];
-  }
- }
+__global__ void tempcopy2output(const int32_t n, const int32_t offset, int32_t* temp,
+                                int32_t* output) {
+  CUDA_1D_KERNEL_LOOP(i, n) { output[i] = temp[offset + i]; }
+}
 class GpuRandPermKernelCache final : public user_op::OpKernelCache {
  public:
   GpuRandPermKernelCache(int32_t lower, int32_t upper) : lower_(lower), upper_(upper) {}
@@ -61,9 +60,9 @@ class GpuRandPermKernel final : public user_op::OpKernel {
  public:
   GpuRandPermKernel() = default;
   ~GpuRandPermKernel() = default;
-   std::shared_ptr<user_op::OpKernelCache> InitOpKernelCache(
+  std::shared_ptr<user_op::OpKernelCache> InitOpKernelCache(
       user_op::KernelCacheContext* ctx) const override {
-     int64_t parallel_num = ctx->parallel_ctx().parallel_num();
+    int64_t parallel_num = ctx->parallel_ctx().parallel_num();
     const NdSbp& nd_sbp = ctx->NdSbp4ArgNameAndIndex("out", 0);
     if (parallel_num > 1) {
       const Shape& hierarchy = *ctx->parallel_desc().hierarchy();
@@ -82,6 +81,16 @@ class GpuRandPermKernel final : public user_op::OpKernel {
       user_op::KernelInitContext* ctx) const override {
     const auto& generator = CHECK_JUST(one::MakeGenerator(kCUDA));
     generator->set_current_seed(ctx->Attr<int64_t>("seed"));
+
+    int64_t parallel_num = ctx->parallel_ctx().parallel_num();
+    const NdSbp& nd_sbp = ctx->NdSbp4ArgNameAndIndex("out", 0);
+    if (parallel_num > 1) {
+      const Shape& hierarchy = *ctx->parallel_desc().hierarchy();
+      int64_t parallel_id = ctx->parallel_ctx().parallel_id();
+      int32_t n = ctx->Attr<int32_t>("n");
+      const Shape& logical_shape = Shape({n});
+      view = GetTensorSliceView4ParallelId(hierarchy, nd_sbp, logical_shape, parallel_id);
+    }
     return std::make_shared<DistributionKernelState>(generator);
   }
 
@@ -114,53 +123,55 @@ class GpuRandPermKernel final : public user_op::OpKernel {
     int32_t* value_base =
         reinterpret_cast<int32_t*>(reinterpret_cast<char*>(key_base) + 2 * key_aligned_bytes);
     const int32_t indices_aligned_bytes = GetCudaAlignedSize(n * sizeof(int32_t));
-    int32_t* temp_buffer_base = reinterpret_cast<int32_t*>(reinterpret_cast<char*>(value_base) + indices_aligned_bytes);
+    int32_t* temp_buffer_base =
+        reinterpret_cast<int32_t*>(reinterpret_cast<char*>(value_base) + indices_aligned_bytes);
     const int32_t temp_buffer_aligned_bytes = GetCudaAlignedSize(n * sizeof(int32_t));
 
-    void* tmp_base =
-        reinterpret_cast<void*>(reinterpret_cast<char*>(temp_buffer_base) + temp_buffer_aligned_bytes);
+    void* tmp_base = reinterpret_cast<void*>(reinterpret_cast<char*>(temp_buffer_base)
+                                             + temp_buffer_aligned_bytes);
     size_t temp_storage_bytes = InferTempStorageForSortPairsDescending<int32_t, int32_t>(1, n);
 
     GeneKeysAndValues<<<block_num, kCudaThreadsNumPerBlock, 0,
                         ctx->stream()->As<ep::CudaStream>()->cuda_stream()>>>(
         n, value_base, key_base, curand_states);
-    if(cache==nullptr){
+    if (cache == nullptr) {
       auto err = cub::DeviceRadixSort::SortPairs(
-        /* d_temp_storage */ tmp_base,
-        /* temp_storage_bytes */ temp_storage_bytes,
-        /* d_keys_in */ key_base,
-        /* d_keys_out */ key_base + n,
-        /* d_values_in */ value_base,
-        /* d_values_out */ output,
-        /* num_items */ n,
-        /* begin_bit */ 0,
-        /* end_bit */ sizeof(int32_t) * 8,
-        /* stream */ ctx->stream()->As<ep::CudaStream>()->cuda_stream());
-        OF_CUDA_CHECK(err);
-    }else{
+          /* d_temp_storage */ tmp_base,
+          /* temp_storage_bytes */ temp_storage_bytes,
+          /* d_keys_in */ key_base,
+          /* d_keys_out */ key_base + n,
+          /* d_values_in */ value_base,
+          /* d_values_out */ temp_buffer_base,
+          /* num_items */ n,
+          /* begin_bit */ 0,
+          /* end_bit */ sizeof(int32_t) * 8,
+          /* stream */ ctx->stream()->As<ep::CudaStream>()->cuda_stream());
+      OF_CUDA_CHECK(err);
+    } else {
       auto err = cub::DeviceRadixSort::SortPairs(
-        /* d_temp_storage */ tmp_base,
-        /* temp_storage_bytes */ temp_storage_bytes,
-        /* d_keys_in */ key_base,
-        /* d_keys_out */ key_base + n,
-        /* d_values_in */ value_base,
-        /* d_values_out */ temp_buffer_base,
-        /* num_items */ n,
-        /* begin_bit */ 0,
-        /* end_bit */ sizeof(int32_t) * 8,
-        /* stream */ ctx->stream()->As<ep::CudaStream>()->cuda_stream());
-    OF_CUDA_CHECK(err);
-    const auto* randperm_cache = dynamic_cast<const GpuRandPermKernelCache*>(cache);
-    auto len = randperm_cache->upper() - randperm_cache->lower();
-    const int64_t offset = randperm_cache->lower();
-    tempcopy2output<<<block_num, kCudaThreadsNumPerBlock, 0,
-                    ctx->stream()->As<ep::CudaStream>()->cuda_stream()>>>(
-    len, offset, temp_buffer_base, output);
+          /* d_temp_storage */ tmp_base,
+          /* temp_storage_bytes */ temp_storage_bytes,
+          /* d_keys_in */ key_base,
+          /* d_keys_out */ key_base + n,
+          /* d_values_in */ value_base,
+          /* d_values_out */ temp_buffer_base,
+          /* num_items */ n,
+          /* begin_bit */ 0,
+          /* end_bit */ sizeof(int32_t) * 8,
+          /* stream */ ctx->stream()->As<ep::CudaStream>()->cuda_stream());
+      OF_CUDA_CHECK(err);
+      const auto* randperm_cache = dynamic_cast<const GpuRandPermKernelCache*>(cache);
+      auto len = randperm_cache->upper() - randperm_cache->lower();
+      const int64_t offset = randperm_cache->lower();
+      tempcopy2output<<<block_num, kCudaThreadsNumPerBlock, 0,
+                        ctx->stream()->As<ep::CudaStream>()->cuda_stream()>>>(
+          len, offset, temp_buffer_base, output);
     }
   }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
-  private:
-    mutable TensorSliceView view;
+
+ private:
+  mutable TensorSliceView view;
 };
 REGISTER_USER_KERNEL("randperm")
     .SetCreateFn<GpuRandPermKernel>()
@@ -177,6 +188,7 @@ REGISTER_USER_KERNEL("randperm")
       const int32_t temp_storage_bytes =
           InferTempStorageForSortPairsDescending<int32_t, int32_t>(1, n);
 
-      return sorted_in_aligned_bytes + indices_aligned_bytes + temp_storage_bytes + temp_aligned_bytes;
+      return sorted_in_aligned_bytes + indices_aligned_bytes + temp_storage_bytes
+             + temp_aligned_bytes;
     });
 }  // namespace oneflow

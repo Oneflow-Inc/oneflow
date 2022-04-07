@@ -25,7 +25,7 @@ limitations under the License.
 #include "oneflow/core/register/tensor_slice_view.h"
 
 namespace oneflow {
-  class CpuRandPermKernelCache final : public user_op::OpKernelCache {
+class CpuRandPermKernelCache final : public user_op::OpKernelCache {
  public:
   CpuRandPermKernelCache(int32_t lower, int32_t upper) : lower_(lower), upper_(upper) {}
   ~CpuRandPermKernelCache() override = default;
@@ -38,14 +38,13 @@ namespace oneflow {
   const int32_t upper_;
 };
 
-
 class CpuRandPermKernel final : public user_op::OpKernel {
  public:
   CpuRandPermKernel() = default;
   ~CpuRandPermKernel() = default;
   std::shared_ptr<user_op::OpKernelCache> InitOpKernelCache(
       user_op::KernelCacheContext* ctx) const override {
-     int64_t parallel_num = ctx->parallel_ctx().parallel_num();
+    int64_t parallel_num = ctx->parallel_ctx().parallel_num();
     const NdSbp& nd_sbp = ctx->NdSbp4ArgNameAndIndex("out", 0);
     if (parallel_num > 1) {
       const Shape& hierarchy = *ctx->parallel_desc().hierarchy();
@@ -83,14 +82,14 @@ class CpuRandPermKernel final : public user_op::OpKernel {
     CHECK_NOTNULL(generator);
     if (cache == nullptr) {
       user_op::ArangeFunctor<DeviceType::kCPU, int32_t>()(ctx->stream(), 0, 1, n, output);
-    std::shuffle(output, output + n, cpu_generator->engine());
+      std::shuffle(output, output + n, cpu_generator->engine());
     } else {
       const auto* arange_cache = dynamic_cast<const CpuRandPermKernelCache*>(cache);
       user_op::ArangeFunctor<DeviceType::kCPU, int32_t>()(ctx->stream(), 0, 1, n, temp);
       std::shuffle(temp, temp + n, cpu_generator->engine());
       auto len = arange_cache->upper() - arange_cache->lower();
       memcpy(output, temp + arange_cache->lower(), sizeof(int32_t) * len);
-   }
+    }
   }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 
