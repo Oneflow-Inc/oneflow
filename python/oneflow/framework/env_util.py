@@ -59,7 +59,14 @@ def api_enable_dtr(val: bool = False, thres: str = "1500MB", debug_level: int = 
         thres (int | str, optional): Cuda memory threshold. Defaults to 1500MB.
         debug_level (int, optional): higher means more debug info. Defaults to 0.
     """
-    return enable_if.unique([enable_dtr])(val, thres, debug_level, heuristic)
+    if isinstance(thres, str):
+        out = str2bytes(thres)
+    elif isinstance(thres, int):
+        out = thres
+    else:
+        raise TypeError("CUDA memory value should be a str or an int.")
+
+    return oneflow._oneflow_internal.dtr.enable(val, out, debug_level, heuristic)
 
 
 def api_is_dtr_enabled() -> bool:
@@ -68,7 +75,7 @@ def api_is_dtr_enabled() -> bool:
     Returns:
         bool: [description]
     """
-    return enable_if.unique([is_dtr_enabled])()
+    return oneflow._oneflow_internal.dtr.is_enabled()
 
 
 def str2bytes(input):
@@ -79,22 +86,6 @@ def str2bytes(input):
         raise ValueError("Wrong memory input: should be value + units(b, kb, mb, gb).")
     else:
         return int(float(out[0][0]) * 1024 ** magnitude.index(out[0][1].lower()))
-
-
-@enable_if.condition(hob.in_normal_mode & ~hob.any_global_function_defined)
-def enable_dtr(val=False, thres="1500MB", debug=False, heuristic="full"):
-    if isinstance(thres, str):
-        out = str2bytes(thres)
-    elif isinstance(thres, int):
-        out = thres
-    else:
-        raise TypeError("CUDA memory value should be a str or an int.")
-
-    return oneflow._oneflow_internal.dtr.enable(val, out, debug, heuristic)
-
-@enable_if.condition(hob.in_normal_mode)
-def is_dtr_enabled() -> bool:
-    return oneflow._oneflow_internal.dtr.is_enabled()
 
 
 def check_non_localhost_proxy_and_print_warning():
