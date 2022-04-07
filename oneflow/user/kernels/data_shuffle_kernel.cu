@@ -22,7 +22,6 @@ limitations under the License.
 #include "oneflow/user/kernels/unsorted_segment_sum_kernel_util.h"
 #include "oneflow/core/cuda/atomic.cuh"
 #include "oneflow/core/embedding/hash_functions.cuh"
-#include "oneflow/core/ep/include/primitive/memcpy.h"
 #include "oneflow/core/cuda/elementwise.cuh"
 
 namespace oneflow {
@@ -542,8 +541,8 @@ inline cudaError_t GetWarpImplNumBlocks(int64_t block_size, int64_t max_blocks, 
   return cudaSuccess;
 }
 
-template<typename T, int pack_size, int cols_per_thread, int thread_group_width,
-         int rows_per_access, bool padding>
+template<typename T, typename ComputeType, int pack_size, int cols_per_thread,
+         int thread_group_width, int rows_per_access, bool padding>
 __global__ void QuantizeWarpImplKernel(const T* src, int8_t* dst, T* quantize_factor,
                                        const int64_t rows, const int64_t cols) {
   static_assert(cols_per_thread % pack_size == 0, "");
@@ -596,10 +595,11 @@ __global__ void QuantizeWarpImplKernel(const T* src, int8_t* dst, T* quantize_fa
     }
     for (int row_id = 0; row_id < rows_per_access; row_id++) {
       T* row_buf = buf[row_id];
-      T warp_max_val = warp_max[row_id] / static_cast<T>(127);
+      ComputeType warp_max_val =
+          static_cast<ComputeType>(warp_max[row_id]) / static_cast<ComputeType>(127);
 #pragma unroll
       for (int col = 0; col < cols_per_thread; col++) {
-        row_buf[col] = row_buf[col] / warp_max_val;
+        row_buf[col] = static_cast<T>(static_cast<ComputeType>(row_buf[col]) / warp_max_val);
       }
 #pragma unroll
       for (int pack_id = 0; pack_id < num_packs; pack_id++) {
@@ -618,8 +618,8 @@ __global__ void QuantizeWarpImplKernel(const T* src, int8_t* dst, T* quantize_fa
   }
 }
 
-template<typename T, int pack_size, int cols_per_thread, int thread_group_width,
-         int rows_per_access, bool padding>
+template<typename T, typename ComputeType, int pack_size, int cols_per_thread,
+         int thread_group_width, int rows_per_access, bool padding>
 inline cudaError_t LaunchQuantizeWarpImpl(cudaStream_t stream, const T* src, int8_t* dst,
                                           T* quantize_factor, const int64_t rows,
                                           const int64_t cols) {
@@ -635,42 +635,44 @@ inline cudaError_t LaunchQuantizeWarpImpl(cudaStream_t stream, const T* src, int
   cudaError_t err = GetWarpImplNumBlocks(block_size, num_blocks, waves, &grid_dim_x);
   if (err != cudaSuccess) { return err; }
 
-  QuantizeWarpImplKernel<T, pack_size, cols_per_thread, thread_group_width, rows_per_access,
-                         padding>
+  QuantizeWarpImplKernel<T, ComputeType, pack_size, cols_per_thread, thread_group_width,
+                         rows_per_access, padding>
       <<<grid_dim_x, block_dim, 0, stream>>>(src, dst, quantize_factor, rows, cols);
   return cudaPeekAtLastError();
 }
 
-template<typename T, int pack_size, int cols_per_thread, int thread_group_width,
-         int rows_per_access>
+template<typename T, typename ComputeType, int pack_size, int cols_per_thread,
+         int thread_group_width, int rows_per_access>
 inline cudaError_t DispatchQuantizeWarpImplPadding(cudaStream_t stream, const T* src, int8_t* dst,
                                                    T* quantize_factor, const int64_t rows,
                                                    const int64_t cols) {
   if (cols == cols_per_thread * thread_group_width) {
-    return LaunchQuantizeWarpImpl<T, pack_size, cols_per_thread, thread_group_width,
+    return LaunchQuantizeWarpImpl<T, ComputeType, pack_size, cols_per_thread, thread_group_width,
                                   rows_per_access, false>(stream, src, dst, quantize_factor, rows,
                                                           cols);
   } else {
-    return LaunchQuantizeWarpImpl<T, pack_size, cols_per_thread, thread_group_width,
+    return LaunchQuantizeWarpImpl<T, ComputeType, pack_size, cols_per_thread, thread_group_width,
                                   rows_per_access, true>(stream, src, dst, quantize_factor, rows,
                                                          cols);
   }
 }
 
-template<typename T, int pack_size>
+template<typename T, typename ComputeType, int pack_size>
 typename std::enable_if<pack_size == 1, cudaError_t>::type DispatchQuantizeWarpImplCols(
     cudaStream_t stream, const T* src, int8_t* dst, T* quantize_factor, const int64_t rows,
     const int64_t cols) {
   if (cols <= 0) { return cudaErrorInvalidValue; }
-#define DEFINE_ONE_ELIF(thread_group_width)                                                   \
-  else if (cols <= (thread_group_width)*pack_size) {                                          \
-    if (rows % 2 == 0) {                                                                      \
-      return DispatchQuantizeWarpImplPadding<T, pack_size, pack_size, thread_group_width, 2>( \
-          stream, src, dst, quantize_factor, rows, cols);                                     \
-    } else {                                                                                  \
-      return DispatchQuantizeWarpImplPadding<T, pack_size, pack_size, thread_group_width, 1>( \
-          stream, src, dst, quantize_factor, rows, cols);                                     \
-    }                                                                                         \
+#define DEFINE_ONE_ELIF(thread_group_width)                                                       \
+  else if (cols <= (thread_group_width)*pack_size) {                                              \
+    if (rows % 2 == 0) {                                                                          \
+      return DispatchQuantizeWarpImplPadding<T, ComputeType, pack_size, pack_size,                \
+                                             thread_group_width, 2>(stream, src, dst,             \
+                                                                    quantize_factor, rows, cols); \
+    } else {                                                                                      \
+      return DispatchQuantizeWarpImplPadding<T, ComputeType, pack_size, pack_size,                \
+                                             thread_group_width, 1>(stream, src, dst,             \
+                                                                    quantize_factor, rows, cols); \
+    }                                                                                             \
   }
   DEFINE_ONE_ELIF(1)
   DEFINE_ONE_ELIF(2)
@@ -679,10 +681,10 @@ typename std::enable_if<pack_size == 1, cudaError_t>::type DispatchQuantizeWarpI
   DEFINE_ONE_ELIF(16)
   DEFINE_ONE_ELIF(32)
 #undef DEFINE_ONE_ELIF
-#define DEFINE_ONE_ELIF(col)                                                 \
-  else if (cols <= (col)*kWarpSize) {                                        \
-    return DispatchQuantizeWarpImplPadding<T, pack_size, col, kWarpSize, 1>( \
-        stream, src, dst, quantize_factor, rows, cols);                      \
+#define DEFINE_ONE_ELIF(col)                                                              \
+  else if (cols <= (col)*kWarpSize) {                                                     \
+    return DispatchQuantizeWarpImplPadding<T, ComputeType, pack_size, col, kWarpSize, 1>( \
+        stream, src, dst, quantize_factor, rows, cols);                                   \
   }
   DEFINE_ONE_ELIF(2)
   DEFINE_ONE_ELIF(3)
@@ -721,20 +723,22 @@ typename std::enable_if<pack_size == 1, cudaError_t>::type DispatchQuantizeWarpI
   }
 }
 
-template<typename T, int pack_size>
+template<typename T, typename ComputeType, int pack_size>
 typename std::enable_if<pack_size == 2, cudaError_t>::type DispatchQuantizeWarpImplCols(
     cudaStream_t stream, const T* src, int8_t* dst, T* quantize_factor, const int64_t rows,
     const int64_t cols) {
   if (cols <= 0) { return cudaErrorInvalidValue; }
-#define DEFINE_ONE_ELIF(thread_group_width)                                                   \
-  else if (cols <= (thread_group_width)*pack_size) {                                          \
-    if (rows % 2 == 0) {                                                                      \
-      return DispatchQuantizeWarpImplPadding<T, pack_size, pack_size, thread_group_width, 2>( \
-          stream, src, dst, quantize_factor, rows, cols);                                     \
-    } else {                                                                                  \
-      return DispatchQuantizeWarpImplPadding<T, pack_size, pack_size, thread_group_width, 1>( \
-          stream, src, dst, quantize_factor, rows, cols);                                     \
-    }                                                                                         \
+#define DEFINE_ONE_ELIF(thread_group_width)                                                       \
+  else if (cols <= (thread_group_width)*pack_size) {                                              \
+    if (rows % 2 == 0) {                                                                          \
+      return DispatchQuantizeWarpImplPadding<T, ComputeType, pack_size, pack_size,                \
+                                             thread_group_width, 2>(stream, src, dst,             \
+                                                                    quantize_factor, rows, cols); \
+    } else {                                                                                      \
+      return DispatchQuantizeWarpImplPadding<T, ComputeType, pack_size, pack_size,                \
+                                             thread_group_width, 1>(stream, src, dst,             \
+                                                                    quantize_factor, rows, cols); \
+    }                                                                                             \
   }
   DEFINE_ONE_ELIF(1)
   DEFINE_ONE_ELIF(2)
@@ -743,10 +747,10 @@ typename std::enable_if<pack_size == 2, cudaError_t>::type DispatchQuantizeWarpI
   DEFINE_ONE_ELIF(16)
   DEFINE_ONE_ELIF(32)
 #undef DEFINE_ONE_ELIF
-#define DEFINE_ONE_ELIF(col)                                                 \
-  else if (cols <= (col)*kWarpSize) {                                        \
-    return DispatchQuantizeWarpImplPadding<T, pack_size, col, kWarpSize, 1>( \
-        stream, src, dst, quantize_factor, rows, cols);                      \
+#define DEFINE_ONE_ELIF(col)                                                              \
+  else if (cols <= (col)*kWarpSize) {                                                     \
+    return DispatchQuantizeWarpImplPadding<T, ComputeType, pack_size, col, kWarpSize, 1>( \
+        stream, src, dst, quantize_factor, rows, cols);                                   \
   }
   DEFINE_ONE_ELIF(4)
   DEFINE_ONE_ELIF(6)
@@ -769,23 +773,25 @@ typename std::enable_if<pack_size == 2, cudaError_t>::type DispatchQuantizeWarpI
   }
 }
 
-template<typename T>
+template<typename T, typename ComputeType>
 struct DispatchQuantizeWarpImplPackSize {
   cudaError_t operator()(cudaStream_t stream, const T* src, int8_t* dst, T* quantize_factor,
                          const int64_t rows, const int64_t cols) {
     if (cols % 2 == 0) {
-      return DispatchQuantizeWarpImplCols<T, 2>(stream, src, dst, quantize_factor, rows, cols);
+      return DispatchQuantizeWarpImplCols<T, ComputeType, 2>(stream, src, dst, quantize_factor,
+                                                             rows, cols);
     } else {
-      return DispatchQuantizeWarpImplCols<T, 1>(stream, src, dst, quantize_factor, rows, cols);
+      return DispatchQuantizeWarpImplCols<T, ComputeType, 1>(stream, src, dst, quantize_factor,
+                                                             rows, cols);
     }
   }
 };
 
-template<typename T, typename IDX, int pack_size>
+template<typename T, typename ComputeType, typename IDX, int pack_size>
 __global__ void DequantizeKernel(const int8_t* x, T* quantize_factor, T* out, IDX col_size,
                                  IDX elem_cnt);
 
-template<typename T, typename IDX, int pack_size>
+template<typename T, typename ComputeType, typename IDX, int pack_size>
 __global__ void DequantizeKernel(const int8_t* x, T* quantize_factor, T* out, IDX col_size,
                                  IDX elem_cnt) {
   IDX global_thread_id = blockIdx.x * blockDim.x + threadIdx.x;
@@ -793,7 +799,8 @@ __global__ void DequantizeKernel(const int8_t* x, T* quantize_factor, T* out, ID
   for (int index = global_thread_id * pack_size; index < elem_cnt;
        index += gridDim.x * blockDim.x * pack_size) {
     IDX quantize_factor_idx = index / col_size;
-    T quantize_factor_val = quantize_factor[quantize_factor_idx] / static_cast<T>(127);
+    ComputeType quantize_factor_val = static_cast<ComputeType>(quantize_factor[quantize_factor_idx])
+                                      / static_cast<ComputeType>(127);
     using LoadPackType = cuda::elementwise::PackType<int8_t, pack_size>;
     using LoadPack = cuda::elementwise::Pack<int8_t, pack_size>;
     using StorePackType = cuda::elementwise::PackType<T, pack_size>;
@@ -803,13 +810,14 @@ __global__ void DequantizeKernel(const int8_t* x, T* quantize_factor, T* out, ID
     load_pack.storage = *(reinterpret_cast<const LoadPackType*>(x) + index / pack_size);
 #pragma unroll
     for (int i = 0; i < pack_size; i++) {
-      store_pack.elem[i] = static_cast<T>(load_pack.elem[i]) * quantize_factor_val;
+      store_pack.elem[i] =
+          static_cast<T>(static_cast<ComputeType>(load_pack.elem[i]) * quantize_factor_val);
     }
     *(reinterpret_cast<StorePackType*>(out) + index / pack_size) = store_pack.storage;
   }
 }
 
-template<typename T, typename IDX, int pack_size>
+template<typename T, typename ComputeType, typename IDX, int pack_size>
 cudaError_t DispatchDequantizeKernelPackSize(cudaStream_t stream, const int8_t* src,
                                              T* quantize_factor, T* dst, const int64_t col_size,
                                              const int64_t elem_cnt) {
@@ -817,12 +825,13 @@ cudaError_t DispatchDequantizeKernelPackSize(cudaStream_t stream, const int8_t* 
   int grid_size = 0;
   cudaError_t err = cuda::elementwise::GetNumBlocks(pack_num, &grid_size);
   if (err != cudaSuccess) { return err; }
-  DequantizeKernel<T, IDX, pack_size><<<grid_size, cuda::elementwise::kBlockSize, 0, stream>>>(
-      src, quantize_factor, dst, col_size, elem_cnt);
+  DequantizeKernel<T, ComputeType, IDX, pack_size>
+      <<<grid_size, cuda::elementwise::kBlockSize, 0, stream>>>(src, quantize_factor, dst, col_size,
+                                                                elem_cnt);
   return cudaSuccess;
 }
 
-template<typename T, typename IDX>
+template<typename T, typename ComputeType, typename IDX>
 inline cudaError_t LaunchDequantizeKernel(cudaStream_t stream, const int8_t* src,
                                           T* quantize_factor, T* dst, const int64_t col_size,
                                           const int64_t elem_cnt) {
@@ -830,24 +839,34 @@ inline cudaError_t LaunchDequantizeKernel(cudaStream_t stream, const int8_t* src
   int32_t dst_pack_size = cuda::elementwise::PackSize<T>();
   int32_t launch_pack_size = min(quantized_src_pack_size, dst_pack_size);
   if (launch_pack_size == 8 && col_size % 8 == 0) {
-    cudaError_t err = DispatchDequantizeKernelPackSize<T, IDX, 8>(stream, src, quantize_factor, dst,
-                                                                  col_size, elem_cnt);
+    cudaError_t err = DispatchDequantizeKernelPackSize<T, ComputeType, IDX, 8>(
+        stream, src, quantize_factor, dst, col_size, elem_cnt);
     if (err != cudaSuccess) { return err; }
   } else if (launch_pack_size == 4 && col_size % 4 == 0) {
-    cudaError_t err = DispatchDequantizeKernelPackSize<T, IDX, 4>(stream, src, quantize_factor, dst,
-                                                                  col_size, elem_cnt);
+    cudaError_t err = DispatchDequantizeKernelPackSize<T, ComputeType, IDX, 4>(
+        stream, src, quantize_factor, dst, col_size, elem_cnt);
     if (err != cudaSuccess) { return err; }
   } else if (launch_pack_size == 2 && col_size % 2 == 0) {
-    cudaError_t err = DispatchDequantizeKernelPackSize<T, IDX, 2>(stream, src, quantize_factor, dst,
-                                                                  col_size, elem_cnt);
+    cudaError_t err = DispatchDequantizeKernelPackSize<T, ComputeType, IDX, 2>(
+        stream, src, quantize_factor, dst, col_size, elem_cnt);
     if (err != cudaSuccess) { return err; }
   } else {
-    cudaError_t err = DispatchDequantizeKernelPackSize<T, IDX, 1>(stream, src, quantize_factor, dst,
-                                                                  col_size, elem_cnt);
+    cudaError_t err = DispatchDequantizeKernelPackSize<T, ComputeType, IDX, 1>(
+        stream, src, quantize_factor, dst, col_size, elem_cnt);
     if (err != cudaSuccess) { return err; }
   }
   return cudaPeekAtLastError();
 }
+
+template<typename T>
+struct DefaultComputeType {
+  using type = T;
+};
+
+template<>
+struct DefaultComputeType<half> {
+  using type = float;
+};
 
 template<typename T, typename IDX>
 class EmbeddingShuffleKernel final : public user_op::OpKernel {
@@ -876,7 +895,7 @@ class EmbeddingShuffleKernel final : public user_op::OpKernel {
     user_op::Tensor* embeddings = ctx->Tensor4ArgNameAndIndex("embeddings", 0);
     user_op::Tensor* tmp_buffer = ctx->Tensor4ArgNameAndIndex("tmp_buffer", 0);
     ncclComm_t comm = kernel_state->comm();
-
+    using ComputeType = typename DefaultComputeType<T>::type;
     const int64_t embedding_size = cur_rank_embeddings->shape().At(1);
     IDX* host_num_unique_matrix = kernel_state->HostNumUniqueMatrix();
     DataType data_type = cur_rank_embeddings->data_type();
@@ -968,9 +987,9 @@ class EmbeddingShuffleKernel final : public user_op::OpKernel {
           + received_embeddings_size + quantize_cur_rank_embeddings_size
           + reverse_recv_quantize_cur_rank_embeddings_size + cur_rank_quantize_factor_size
           + reverse_cur_rank_quantize_factor_size + recv_quantize_factor_size);
-      DispatchQuantizeWarpImplPackSize<T>()(cuda_stream, cur_rank_embeddings->dptr<T>(),
-                                            quantize_cur_rank_embeddings, cur_rank_quantize_factor,
-                                            cur_rank_num_ids, embedding_size);
+      DispatchQuantizeWarpImplPackSize<T, ComputeType>()(
+          cuda_stream, cur_rank_embeddings->dptr<T>(), quantize_cur_rank_embeddings,
+          cur_rank_quantize_factor, cur_rank_num_ids, embedding_size);
       // reverse cur_rank embedding unique
       GatherKernelUtilImpl<DeviceType::kCUDA, int8_t, IDX>::Forward(
           ctx->stream(), reinterpret_cast<const IDX*>(cur_rank_inverse_indices->dptr()),
@@ -1004,7 +1023,7 @@ class EmbeddingShuffleKernel final : public user_op::OpKernel {
 
       int32_t dequantize_row_size = inverse_unique_partition_indices->shape().elem_cnt();
       IDX dequantize_elem_cnt = dequantize_row_size * embedding_size;
-      OF_CUDA_CHECK((LaunchDequantizeKernel<T, IDX>(
+      OF_CUDA_CHECK((LaunchDequantizeKernel<T, ComputeType, IDX>(
           cuda_stream, reverse_recv_quantize_cur_rank_embeddings, reverse_recv_quantize_factor,
           embeddings->mut_dptr<T>(), embedding_size, dequantize_elem_cnt)));
     }
@@ -1132,6 +1151,7 @@ class EmbeddingGradientShuffleKernel final : public user_op::OpKernel {
     const int64_t parallel_id = ctx->parallel_ctx().parallel_id();
     user_op::Tensor* tmp_buffer = ctx->Tensor4ArgNameAndIndex("tmp_buffer", 0);
     ncclComm_t comm = kernel_state->comm();
+    using ComputeType = typename DefaultComputeType<T>::type;
     bool enable_quantize_comm = ParseBooleanFromEnv("ONEEMBEDDING_ENABLE_QUANTIZE_COMM", false);
     cudaStream_t cuda_stream = ctx->stream()->As<ep::CudaStream>()->cuda_stream();
     OF_CUDA_CHECK(cudaMemcpyAsync(host_num_unique_matrix, num_unique_matrix->dptr(),
@@ -1231,7 +1251,7 @@ class EmbeddingGradientShuffleKernel final : public user_op::OpKernel {
         const int64_t embedding_grad_offset = i * num_ids * embedding_size;
         const int64_t quantize_factor_offset = i * num_ids;
         const int64_t valid_row_size = host_num_unique_matrix[parallel_id * parallel_num + i];
-        DispatchQuantizeWarpImplPackSize<T>()(
+        DispatchQuantizeWarpImplPackSize<T, ComputeType>()(
             cuda_stream, unique_partition_embedding_grad + embedding_grad_offset,
             quantize_cur_rank_embedding_grad + embedding_grad_offset,
             cur_rank_quantize_factor + quantize_factor_offset, valid_row_size, embedding_size);
@@ -1257,7 +1277,7 @@ class EmbeddingGradientShuffleKernel final : public user_op::OpKernel {
         dequantize_cur_rank_num += host_num_unique_matrix[i * parallel_num + parallel_id];
       }
       IDX dequantize_elem_cnt = dequantize_cur_rank_num * embedding_size;
-      OF_CUDA_CHECK((LaunchDequantizeKernel<T, IDX>(
+      OF_CUDA_CHECK((LaunchDequantizeKernel<T, ComputeType, IDX>(
           cuda_stream, received_embedding_grad, received_cur_rank_quantize_factor,
           dequantize_cur_rank_embedding_grad, embedding_size, dequantize_elem_cnt)));
       // unique cur_rank embedding grad

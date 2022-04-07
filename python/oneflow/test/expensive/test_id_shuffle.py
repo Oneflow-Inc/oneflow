@@ -86,13 +86,23 @@ def _test_id_shuffle(test_case, has_column_id, num_columns):
 
 
 def _test_quantize(np_data, np_dtype):
-    quantize_factor = np.max(np.abs(np_data), axis=2) / 127
-    quantize_factor = np.expand_dims(quantize_factor, axis=2)
-    np_data = np_data / quantize_factor
-    np_data = np_data.astype(np.int8)
-    np_data = np_data.astype(np_dtype) * quantize_factor
-    # np_data = np_data.astype(np_dtype)
+    # When use float16, ComputeType is set to as Float.
+    abs_max_factor = np.max(np.abs(np_data), axis=2)
+    abs_max_factor = np.expand_dims(abs_max_factor, axis=2)
+    int8_factor = np.ones(abs_max_factor.shape, dtype=np.float32) * 127.0
+    quantize_factor = abs_max_factor.astype(np.float32) / int8_factor
 
+    # Covert to Compute Type.
+    np_data.astype(np.float32)
+    np_data = np_data / quantize_factor
+    np_data = np_data.astype(np_dtype)
+    np_data = np_data.astype(np.int8)
+
+    # Covert to Compute Type.
+    np_data = np_data.astype(np.float32)
+    dequantize_factor = abs_max_factor.astype(np.float32) / int8_factor
+    np_data = np_data * dequantize_factor
+    np_data = np_data.astype(np_dtype)
     return np_data
 
 
