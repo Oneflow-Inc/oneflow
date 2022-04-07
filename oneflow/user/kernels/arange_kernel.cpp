@@ -100,7 +100,7 @@ class ArangeKernel final : public OpKernel {
     } else {
       const auto* arange_cache = dynamic_cast<const ArangeOpKernelCache*>(cache);
       auto arange_len = arange_cache->upper() - arange_cache->lower();
-      ArangeFunctor<device_type, T>()(ctx->stream(), start + delta*arange_cache->lower(), delta,
+      ArangeFunctor<device_type, T>()(ctx->stream(), start + delta * arange_cache->lower(), delta,
                                       arange_len, output);
     }
   }

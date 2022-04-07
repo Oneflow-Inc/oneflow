@@ -56,6 +56,7 @@ def _test_arange_with_float_delta(test_case, placement, sbp):
     )
     return x
 
+
 class TestArange(flow.unittest.TestCase):
     @globaltest
     def test_arange(test_case):
@@ -67,9 +68,10 @@ class TestArange(flow.unittest.TestCase):
                 _test_arange_with_random_data(test_case, placement, sbp)
                 _test_arange_with_float_delta(test_case, placement, sbp)
 
+
 @autotest(n=1, check_graph=False)
 def _test_consistent_arange(test_case, start, end, step, placement, sbp):
-    if (math.ceil((end-start)/step))%2 == 1:
+    if (math.ceil((end - start) / step)) % 2 == 1:
         end = end + step
     x = flow.arange(start, end, step, placement=placement, sbp=sbp)
     y1 = x.to_global(placement=placement, sbp=sbp)
@@ -101,21 +103,22 @@ class TestArangeConsistent(flow.unittest.TestCase):
     @globaltest
     def test_arange_consistent(test_case):
         arg_dict = OrderedDict()
-        arg_dict["start"] = [i for i in range(1,5,1)]
-        arg_dict["end"] = [i for i in range(10,50,10)]
-        arg_dict["step"] = [i for i in range(1,5,1)]
+        arg_dict["start"] = [i for i in range(1, 5, 1)]
+        arg_dict["end"] = [i for i in range(10, 50, 10)]
+        arg_dict["step"] = [i for i in range(1, 5, 1)]
         for args in GenArgDict(arg_dict):
             for placement in all_placement():
                 for sbp in all_sbp(placement, max_dim=1, except_partial_sum=True):
                     _test_consistent_arange(
                         test_case, **args, placement=placement, sbp=sbp
                     )
+
     @globaltest
     def test_arange_graph(test_case):
         arg_dict = OrderedDict()
-        arg_dict["start"] = [i for i in range(1,5,1)]
-        arg_dict["end"] = [i for i in range(10,30,10)]
-        arg_dict["step"] = [i for i in range(1,5,1)]
+        arg_dict["start"] = [i for i in range(1, 5, 1)]
+        arg_dict["end"] = [i for i in range(10, 30, 10)]
+        arg_dict["step"] = [i for i in range(1, 5, 1)]
         arg_dict["placement"] = [
             # 1d
             flow.placement("cpu", ranks=[0, 1]),
@@ -128,11 +131,12 @@ class TestArangeConsistent(flow.unittest.TestCase):
             start = args["start"]
             end = args["end"]
             step = args["step"]
-            if (math.ceil((end-start)/step))%2 == 1:
+            if (math.ceil((end - start) / step)) % 2 == 1:
                 end = end + step
             placement = args["placement"]
             for sbp in all_sbp(placement, max_dim=1, except_partial_sum=True):
                 _test_graph_arange(test_case, start, end, step, placement, sbp)
+
 
 if __name__ == "__main__":
     unittest.main()
