@@ -467,6 +467,8 @@ def normal_op(
     std,
     *size: Union[_size_any_t, flow.Size, List[int]],
     out=None,
+    placement: flow.placement = None,
+    sbp: flow._oneflow_internal.sbp.sbp = None,
     generator=None,
     dtype: Optional[flow.dtype] = None,
     device: Union[flow.device, str, None] = None,
@@ -482,6 +484,10 @@ def normal_op(
 
     Keyword args:
         out (Tensor, optional):  the output tensor.
+        placement (flow.placement, optional): The desired device of returned global tensor. If None, will
+          construct local tensor.
+        sbp (flow.sbp, optional): The desired sbp of returned global tensor. It must be equal with the
+          numbers of placement.
         generator(:class:`oneflow.Generator`, optional):  a pseudorandom number generator for sampling
         dtype (:class:`oneflow.dtype`, optional): the desired data type of returned tensor.
             Default: `oneflow.float32`.
@@ -501,16 +507,30 @@ def normal_op(
     """
     size = _handle_size_arg(size)
     size = _single(size)
-    return flow._C.normal(
-        mean=mean,
-        std=std,
-        size=size,
-        out=out,
-        dtype=dtype,
-        device=device,
-        generator=generator,
-        requires_grad=requires_grad,
-    )
+    if placement is not None:
+        return flow._C.normal(
+            mean=mean,
+            std=std,
+            size=size,
+            out=out,
+            placement=placement,
+            sbp=sbp,
+            dtype=dtype,
+            device=device,
+            generator=generator,
+            requires_grad=requires_grad,
+        )
+    else:
+        return flow._C.normal(
+            mean=mean,
+            std=std,
+            size=size,
+            out=out,
+            dtype=dtype,
+            device=device,
+            generator=generator,
+            requires_grad=requires_grad,
+        )
 
 if __name__ == "__main__":
     import doctest
