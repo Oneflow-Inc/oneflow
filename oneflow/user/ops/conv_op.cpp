@@ -395,14 +395,14 @@ Maybe<void> GenerateBackwardOpConf4Conv(const user_op::UserOpWrapper& op, user_o
 /* static */ Maybe<double> ConvDataGradOp::GetComputeComplexity(
     user_op::ComputeComplexityFnContext* ctx) {
   const user_op::TensorDesc* filter = ctx->TensorDesc4ArgNameAndIndex("filter", 0);
-  const user_op::TensorDesc* dy = ctx->TensorDesc4ArgNameAndIndex("dy", 0);
+  const user_op::TensorDesc* dx = ctx->TensorDesc4ArgNameAndIndex("dx", 0);
 
   double cost = std::accumulate(filter->shape().dim_vec().begin(), filter->shape().dim_vec().end(),
                                 2.0, std::multiplies<double>())
-                * std::accumulate(dy->shape().dim_vec().begin(), dy->shape().dim_vec().end(), 1.0,
+                * std::accumulate(dx->shape().dim_vec().begin(), dx->shape().dim_vec().end(), 1.0,
                                   std::multiplies<double>());
 
-  const auto& nd_sbp = ctx->NdSbp4ArgNameAndIndex("dy", 0);
+  const auto& nd_sbp = ctx->NdSbp4ArgNameAndIndex("dx", 0);
   const auto& parallel_hierarchy = ctx->parallel_desc().hierarchy();
   for (int32_t dim_sbp = 0; dim_sbp < nd_sbp.sbp_parallel_size(); dim_sbp++) {
     if (nd_sbp.sbp_parallel(dim_sbp).has_split_parallel()) {
