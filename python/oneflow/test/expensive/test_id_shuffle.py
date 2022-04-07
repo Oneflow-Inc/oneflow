@@ -108,9 +108,9 @@ def _test_quantize(np_data, np_dtype):
 
 def _test_embedding_shuffle(test_case, dtype, enable_quantize):
     if enable_quantize:
-        os.environ["ONEEMBEDDING_ENABLE_QUANTIZE_COMM"] = "1"
+        os.environ["ONEFLOW_ONE_EMBEDDING_ENABLE_QUANTIZE_COMM"] = "1"
     else:
-        os.environ["ONEEMBEDDING_ENABLE_QUANTIZE_COMM"] = "0"
+        os.environ["ONEFLOW_ONE_EMBEDDING_ENABLE_QUANTIZE_COMM"] = "0"
     batch_size = 512
     num_columns = 26
     ids = np.random.randint(0, 1000, (batch_size, num_columns), dtype=np.int64)
@@ -157,7 +157,7 @@ def _test_embedding_shuffle(test_case, dtype, enable_quantize):
     np_embeddings = data[ids]
 
     # Quantized numpy embedding.
-    if os.environ.get("ONEEMBEDDING_ENABLE_QUANTIZE_COMM") == "1":
+    if os.environ.get("ONEFLOW_ONE_EMBEDDING_ENABLE_QUANTIZE_COMM") == "1":
         np_embeddings = _test_quantize(np_embeddings, np_dtype)
 
     test_case.assertTrue(
@@ -167,9 +167,9 @@ def _test_embedding_shuffle(test_case, dtype, enable_quantize):
 
 def _test_embedding_gradient_shuffle(test_case, enable_quantize):
     if enable_quantize:
-        os.environ["ONEEMBEDDING_ENABLE_QUANTIZE_COMM"] = "1"
+        os.environ["ONEFLOW_ONE_EMBEDDING_ENABLE_QUANTIZE_COMM"] = "1"
     else:
-        os.environ["ONEEMBEDDING_ENABLE_QUANTIZE_COMM"] = "0"
+        os.environ["ONEFLOW_ONE_EMBEDDING_ENABLE_QUANTIZE_COMM"] = "0"
     batch_size = 512
     num_columns = 26
     embedding_size = 128
@@ -232,7 +232,7 @@ def _test_embedding_gradient_shuffle(test_case, enable_quantize):
             ]
         )
         # Quantize Embedding Gradient.
-        if os.environ.get("ONEEMBEDDING_ENABLE_QUANTIZE_COMM") == "1":
+        if os.environ.get("ONEFLOW_ONE_EMBEDDING_ENABLE_QUANTIZE_COMM") == "1":
             quantize_factor = np.max(np.abs(np_data))
             np_data = np_data / (quantize_factor / 127.0)
             np_data = np_data.astype(np.int8)
