@@ -571,7 +571,7 @@
 
 - name: "normal"
   signature:
-    "Tensor (Float mean,  Float std, Shape size, *, Tensor out=None, DataType dtype=None, Device device=None, 
+    "Tensor (Float mean, Float std, Shape size, *, Tensor out=None, DataType dtype=None, Device device=None, 
     Generator generator=None, Bool requires_grad=False) => Normal"
   bind_python: True
 
