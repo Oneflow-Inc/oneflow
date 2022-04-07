@@ -16,8 +16,6 @@ limitations under the License.
 import oneflow
 from typing import Union, List, Tuple
 
-# oneflow._C.max_poolXd returns a TensorTuple, to align torch,
-# here we return different result according to the param `return_indices`.
 def tensordot(a, b, dims: Union[int, List[List[int]]] = 2):
     if not isinstance(dims, (oneflow._oneflow_internal.Tensor, int, list, tuple)):
         raise TypeError(
