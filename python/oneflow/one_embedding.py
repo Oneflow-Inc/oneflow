@@ -527,7 +527,7 @@ def make_table_options(initializer):
 
 
 def make_table(initializer):
-    """same as oneflow.one_embedding.make_table_options
+    """alias of `oneflow.one_embedding.make_table_options`
 
     See also :func:`oneflow.one_embedding.make_table_options`
     """
