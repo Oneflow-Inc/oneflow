@@ -1,0 +1,67 @@
+"""
+Copyright 2020 The OneFlow Authors. All rights reserved.
+
+Licensed under the Apache License, Version 2.0 (the "License");
+you may not use this file except in compliance with the License.
+You may obtain a copy of the License at
+
+    http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+See the License for the specific language governing permissions and
+limitations under the License.
+"""
+
+import unittest
+from collections import OrderedDict
+
+import numpy as np
+import oneflow as flow
+import oneflow.unittest
+from oneflow.test_utils.automated_test_util import *
+
+
+class TestNewTensor(flow.unittest.TestCase):
+    @flow.unittest.skip_unless_1n1d()
+    def test_new_local_tensor_with_default_args(test_case):
+        tensor = flow.randn(5)
+        data = [[1, 2], [3, 4]]
+        new_tensor = tensor.new_tensor(data)
+        test_case.assertEqual(new_tensor.dtype, tensor.dtype)
+        test_case.assertEqual(new_tensor.device, tensor.device)
+    
+    @flow.unittest.skip_unless_1n1d()
+    def test_new_local_tensor_with_spec_args(test_case):
+        tensor = flow.randn(5)
+        data = [[1, 2], [3, 4]]
+        new_tensor = tensor.new_tensor(data, flow.int64, "cuda")
+        test_case.assertEqual(new_tensor.dtype, flow.int64)
+        test_case.assertEqual(new_tensor.device, flow.device("cuda"))
+
+    @flow.unittest.skip_unless_1n2d()
+    def test_new_global_tensor_with_default_args(test_case):
+        placement = flow.placement(type="cpu", rank=[0, 1])
+        sbp = flow.sbp.split(0)
+        tensor = flow.randn(4, 4, placement=placement, sbp=sbp)
+        data = [[1, 2], [3, 4]]
+        new_tensor = tensor.new_tensor(data)
+        test_case.assertEqual(new_tensor.dtype, tensor.dtype)
+        test_case.assertEqual(new_tensor.placement, placement)
+        test_case.assertEqual(new_tensor.sbp, sbp)
+
+    @flow.unittest.skip_unless_1n2d()
+    def test_new_global_tensor_with_spec_args(test_case):
+        placement = flow.placement(type="cpu", rank=[0, 1])
+        sbp = flow.sbp.split(0)
+        tensor = flow.randn(4, 4, placement=placement, sbp=sbp)
+        data = [[1, 2], [3, 4]]
+        new_tensor = tensor.new_tensor(data, placement=placement, sbp=flow.sbp.broadcast)
+        test_case.assertEqual(new_tensor.dtype, tensor.dtype)
+        test_case.assertEqual(new_tensor.placement, placement)
+        test_case.assertEqual(new_tensor.sbp, flow.sbp.broadcast)
+
+
+if __name__ == "__main__":
+    unittest.main()
