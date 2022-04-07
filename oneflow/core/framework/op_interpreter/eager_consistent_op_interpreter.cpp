@@ -126,7 +126,7 @@ Maybe<void> Interpret(const UserOpExpr& user_op_expr, const TensorTuple& inputs,
     for (int i = 0; i < outputs->size(); ++i) {
       if ((*outputs)[i]) {
         const auto& nd_sbp = JUST((*outputs)[i]->nd_sbp());
-        (*outputs)[i]->set_consumer_nd_sbp_constraint(nd_sbp);
+        JUST((*outputs)[i]->set_consumer_nd_sbp_constraint(nd_sbp));
       }
     }
     const auto& infer_args = JUST(ConsistentTensorMetaInferArgs::New(ctx.attrs, inputs));
@@ -141,7 +141,7 @@ Maybe<void> Interpret(const UserOpExpr& user_op_expr, const TensorTuple& inputs,
           output_tensor_metas.at(i), tensor_device, parallel_id, false, false));
       (*outputs)[i].reset(new ConsistentTensor(tensor_impl));
     } else {
-      (*outputs)[i]->set_consumer_nd_sbp_constraint(NullOpt);
+      JUST((*outputs)[i]->set_consumer_nd_sbp_constraint(NullOpt));
     }
   }
   // Do nothing if output_tensors has 0-size shape. Since the input of some ops is 0-size but the
