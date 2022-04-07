@@ -42,7 +42,7 @@ struct MaxOp {
 template<template<typename> class ReductionOp, typename T, int thread_group_width = kWarpSize>
 __inline__ __device__ T WarpAllReduce(T val) {
   for (int mask = thread_group_width / 2; mask > 0; mask /= 2) {
-    val = ReductionOp<T>()(val, __shfl_xor_sync(0xffffffff, val, mask));
+    val = ReductionOp<T>()(val, __shfl_xor_sync(0xffffffff, val, mask, thread_group_width));
   }
   return val;
 }
@@ -210,9 +210,9 @@ __inline__ __device__ void WelfordWarpReduce(T thread_mean, T thread_m2, T threa
   *m2 = thread_m2;
   *count = thread_count;
   for (int mask = thread_group_width / 2; mask > 0; mask /= 2) {
-    T b_mean = __shfl_down_sync(0xffffffff, *mean, mask);
-    T b_m2 = __shfl_down_sync(0xffffffff, *m2, mask);
-    T b_count = __shfl_down_sync(0xffffffff, *count, mask);
+    T b_mean = __shfl_down_sync(0xffffffff, *mean, mask, thread_group_width);
+    T b_m2 = __shfl_down_sync(0xffffffff, *m2, mask, thread_group_width);
+    T b_count = __shfl_down_sync(0xffffffff, *count, mask, thread_group_width);
     WelfordCombine(b_mean, b_m2, b_count, mean, m2, count);
   }
 }
