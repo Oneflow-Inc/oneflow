@@ -259,8 +259,12 @@ class CacheImpl : public Cache {
     if (options.value_memory_kind == CacheOptions::MemoryKind::kDevice) {
       OF_CUDA_CHECK(cudaMalloc(&values_, values_size));
     } else if (options.value_memory_kind == CacheOptions::MemoryKind::kHost) {
-      OF_CUDA_CHECK(
-          NumaAwareCudaMallocHost(device_index_, reinterpret_cast<void**>(&values_), values_size));
+      if (ParseBooleanFromEnv("ONEFLOW_ONE_EMBEDDING_DISABLE_NUMA_AWARE_ALLOCATION", false)) {
+        OF_CUDA_CHECK(cudaMallocHost(&values_, values_size));
+      } else {
+        OF_CUDA_CHECK(NumaAwareCudaMallocHost(device_index_, reinterpret_cast<void**>(&values_),
+                                              values_size));
+      }
     } else {
       UNIMPLEMENTED();
     }
