@@ -61,7 +61,6 @@ COMMAND(vm::RegisterInstructionType<FuseInstructionType<CpuStreamType>>("cpu.Fus
 COMMAND(vm::RegisterInstructionType<FuseInstructionType<CpuStreamType>>("comm_net.Fuse"));
 
 #ifdef WITH_CUDA
-COMMAND(vm::RegisterInstructionType<FuseInstructionType<CudaStreamType>>("gpu.Fuse"));
 COMMAND(vm::RegisterInstructionType<FuseInstructionType<CudaStreamType>>("cuda.Fuse"));
 COMMAND(vm::RegisterInstructionType<FuseInstructionType<CudaCopyH2DStreamType>>("cuda_h2d.Fuse"));
 COMMAND(vm::RegisterInstructionType<FuseInstructionType<CudaCopyD2HStreamType>>("cuda_d2h.Fuse"));
