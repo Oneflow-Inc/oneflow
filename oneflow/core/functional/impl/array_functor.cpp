@@ -789,7 +789,8 @@ class DimScatterFunctor {
                            const std::shared_ptr<one::Tensor>& index,
                            const std::shared_ptr<one::Tensor>& src) const {
     MutableAttrMap attrs;
-    JUST(attrs.SetAttr<int32_t>("dim", dim));
+    const int32_t ndim = input->shape()->NumAxes();
+    JUST(attrs.SetAttr<int32_t>("dim", dim < 0 ? dim + ndim : dim));
     return OpInterpUtil::Dispatch<Tensor>(*op_, {input, index, src}, attrs);
   }
 
@@ -875,7 +876,8 @@ class DimScatterUpdateScalarFunctor {
   Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& input, const int32_t& dim,
                            const std::shared_ptr<one::Tensor>& index, const Scalar& src) const {
     MutableAttrMap attrs;
-    JUST(attrs.SetAttr<int32_t>("dim", dim));
+    const int32_t ndim = input->shape()->NumAxes();
+    JUST(attrs.SetAttr<int32_t>("dim", dim < 0 ? dim + ndim : dim));
     JUST(attrs.SetAttr<float>("src_scalar", JUST(src.As<float>())));
     return OpInterpUtil::Dispatch<Tensor>(*op_, {input, index}, attrs);
   }
