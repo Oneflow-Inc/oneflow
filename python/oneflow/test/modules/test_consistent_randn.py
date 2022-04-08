@@ -94,13 +94,10 @@ class TestRandnConsistent(flow.unittest.TestCase):
                     placement, max_dim=len(shape), except_partial_sum=True
                 ):
                     _test_consistent_randn(test_case, shape, placement, sbp)
-<<<<<<< HEAD
                     _test_different_dtype(test_case, shape, placement, sbp)
                     _test_backward(test_case, shape, placement, sbp)
                     _test_with_generator(test_case, shape, placement, sbp)
                     _test_randn_tuple_shape(test_case, shape, placement, sbp)
-=======
->>>>>>> f8da37a749fd760d9559425689621c3951d92619
 
     @globaltest
     def test_randn_graph(test_case):
