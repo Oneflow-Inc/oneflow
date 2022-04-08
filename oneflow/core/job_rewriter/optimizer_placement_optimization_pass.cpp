@@ -228,8 +228,14 @@ Maybe<void> RewriteDistributedSplit(const OpGraph& op_graph, JobBuilder* builder
     if (n->op().op_conf().has_variable_conf()) {
       const Shape shape(n->op().op_conf().variable_conf().shape());
       const int64_t parallel_num = n->parallel_desc().parallel_num();
+      bool is_1d_broadcast = false;
+      if (n->op().op_conf().variable_conf().nd_sbp_size() == 1 &&
+          n->op().op_conf().variable_conf().nd_sbp(0) == "B") {
+        // NOTE(strint): Only 1D Broadcast Variable will be split by ZeRO.
+        is_1d_broadcast = true;
+      }
       // Parameter needs to be able to evenly splited and one slice size >= threshold
-      return shape.At(0) % parallel_num == 0 && shape.elem_cnt() >= threshold * parallel_num;
+      return is_1d_broadcast && shape.At(0) % parallel_num == 0 && shape.elem_cnt() >= threshold * parallel_num;
     } else {
       return IsS0SignatureSupported(n);
     }
