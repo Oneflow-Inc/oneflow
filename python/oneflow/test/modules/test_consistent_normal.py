@@ -16,12 +16,11 @@ limitations under the License.
 
 import unittest
 from collections import OrderedDict
-
 from oneflow.test_utils.test_util import GenArgList,type_name_to_flow_type
 from oneflow.test_utils.automated_test_util import *
 import oneflow as flow
 
-def _test_consistent_normal(test_case, placement, sbp, mean, std, shape, dtype):
+def _test_consistent_normal(test_case, placement, sbp, mean, std, shape, dtype, requires_grad):
     dtype = type_name_to_flow_type[dtype]
     x = flow.normal(
         mean,
@@ -30,12 +29,14 @@ def _test_consistent_normal(test_case, placement, sbp, mean, std, shape, dtype):
         placement=placement,
         sbp=sbp,
         dtype=dtype,
+        requires_grad=requires_grad,
     )
 
     test_case.assertEqual(x.shape, shape)
     test_case.assertEqual(x.dtype, dtype)
     test_case.assertEqual(x.sbp, sbp)
     test_case.assertEqual(x.placement, placement)
+    test_case.assertEqual(x.requires_grad, requires_grad)
 
 class TestNormalConsistent(flow.unittest.TestCase):
     @globaltest
@@ -43,8 +44,9 @@ class TestNormalConsistent(flow.unittest.TestCase):
         arg_dict = OrderedDict()
         arg_dict["mean"] = [-1, 0, 1]
         arg_dict["std"] = [1, 2, 8]
-        arg_dict["shape"] = [(2, 3), (2, 3, 4), (2, 3, 4, 5)]
+        arg_dict["shape"] = [(8, 8), (8, 8, 8), (8, 8, 8, 8)]
         arg_dict["dtype"] = ["float32", "double"]
+        arg_dict["requires_grad"] = [True, False]
         for arg in GenArgList(arg_dict):
             for placement in all_placement():
                 for sbp in all_sbp(
