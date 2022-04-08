@@ -758,6 +758,12 @@ class TestTensor(flow.unittest.TestCase):
         return x.log1p()
 
     @autotest(check_graph=True)
+    def test_log2_tensor_with_random_data(test_case):
+        device = random_device()
+        x = random_tensor().to(device)
+        return x.log2()
+
+    @autotest(check_graph=True)
     def test_neg_tensor_with_random_data(test_case):
         device = random_device()
         x = random_tensor().to(device)
@@ -1008,6 +1014,15 @@ class TestTensor(flow.unittest.TestCase):
         x = flow.tensor(2.3)
         y = int(x)
         test_case.assertTrue(np.array_equal(y, 2))
+
+    def test_none_equal(test_case):
+        xt = flow.randn(10)
+        yt = flow.randn(10)
+        z = None in [xt, yt]
+        test_case.assertTrue(np.array_equal(z, False))
+        zt = None
+        z = None in [xt, yt, zt]
+        test_case.assertTrue(np.array_equal(z, True))
 
 
 if __name__ == "__main__":
