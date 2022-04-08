@@ -306,7 +306,6 @@ Maybe<Tensor> LocalToConsistent(const std::shared_ptr<Tensor>& x,
   MutableAttrMap attrs;
   JUST(attrs.SetAttr<Shape>("shape", *shape));
   JUST(attrs.SetAttr<DataType>("dtype", dtype));
-  JUST(attrs.SetAttr<bool>("is_balanced", is_balanced));
   const auto& output = JUST(OpInterpUtil::Dispatch<one::Tensor>(
       *op, {input}, OpExprInterpContext(attrs, parallel_desc, nd_sbp)));
   return output;
@@ -347,7 +346,6 @@ class LocalToConsistentFunctor {
     MutableAttrMap attrs;
     JUST(attrs.SetAttr<Shape>("shape", shape));
     JUST(attrs.SetAttr<DataType>("dtype", dtype->data_type()));
-    JUST(attrs.SetAttr<bool>("is_balanced", false));
     DisableCheckConsistentTensorMetaScope scope{};
     const auto& tensor = JUST(OpInterpUtil::Dispatch<one::Tensor>(
         *op_, {input}, OpExprInterpContext(attrs, parallel_desc, nd_sbp)));
