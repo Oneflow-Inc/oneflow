@@ -76,6 +76,7 @@ def _test_consistent_arange(test_case, start, end, step, placement, sbp):
     x = flow.arange(start, end, step, placement=placement, sbp=sbp)
     y1 = x.to_global(placement=placement, sbp=sbp)
     y2 = np.arange(start, end, step)
+    print("x: ",x)
     test_case.assertTrue(np.allclose(y1.numpy(), y2, atol=1e-4, rtol=1e-4))
     test_case.assertEqual(x.sbp, sbp)
     test_case.assertEqual(x.placement, placement)
