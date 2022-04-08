@@ -1,12 +1,9 @@
 /*
 Copyright 2020 The OneFlow Authors. All rights reserved.
-
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
 You may obtain a copy of the License at
-
     http://www.apache.org/licenses/LICENSE-2.0
-
 Unless required by applicable law or agreed to in writing, software
 distributed under the License is distributed on an "AS IS" BASIS,
 WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -495,16 +492,6 @@ __device__ T max_func(const T a, const T b) {
 }
 
 template<typename T>
-__device__ int8_t quantize_convert(const T x) {
-  return static_cast<int8_t>(x);
-}
-
-template<>
-__device__ int8_t quantize_convert<half>(const half x) {
-  return __half2short_rz(x);
-}
-
-template<typename T>
 struct AbsMaxOp {
   __device__ __forceinline__ T operator()(const T a, const T b) {
     return max_func<T>(abs_func<T>(a), abs_func<T>(b));
@@ -593,10 +580,10 @@ __global__ void QuantizeWarpImplKernel(const T* src, int8_t* dst, T* quantize_fa
           WarpAbsMaxAllReduce<ComputeType, thread_group_width>(thread_abs_max[row_id]);
       quantize_factor[row + row_id] = static_cast<T>(warp_max[row_id]);
       ComputeType* row_buf = buf[row_id];
-      ComputeType warp_max_val = warp_max[row_id] / static_cast<ComputeType>(127);
+      ComputeType quantize_factor_val = static_cast<ComputeType>(127) / warp_max[row_id];
 #pragma unroll
       for (int col = 0; col < cols_per_thread; col++) {
-        row_buf[col] = row_buf[col] / warp_max_val;
+        row_buf[col] = row_buf[col] * quantize_factor_val;
       }
 #pragma unroll
       for (int pack_id = 0; pack_id < num_packs; pack_id++) {
@@ -606,7 +593,7 @@ __global__ void QuantizeWarpImplKernel(const T* src, int8_t* dst, T* quantize_fa
         if (!padding || col < cols) {
           const int64_t store_offset = ((row + row_id) * cols + col) / pack_size;
           for (int i = 0; i < pack_size; i++) {
-            store_pack.elem[i] = quantize_convert<T>(row_buf[pack_id * pack_size + i]);
+            store_pack.elem[i] = static_cast<int8_t>(row_buf[pack_id * pack_size + i]);
           }
           *(reinterpret_cast<StoreType*>(dst) + store_offset) = store_pack.storage;
         }
@@ -614,6 +601,7 @@ __global__ void QuantizeWarpImplKernel(const T* src, int8_t* dst, T* quantize_fa
     }
   }
 }
+
 
 template<typename T, typename ComputeType, int pack_size, int cols_per_thread,
          int thread_group_width, int rows_per_access, bool padding>
