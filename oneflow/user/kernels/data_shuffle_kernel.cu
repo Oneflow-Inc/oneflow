@@ -550,7 +550,7 @@ __global__ void QuantizeWarpImplKernel(const T* src, int8_t* dst, T* quantize_fa
   static_assert(kWarpSize % thread_group_width == 0, "");
   constexpr int num_packs = cols_per_thread / pack_size;
   assert(cols <= cols_per_thread * thread_group_width);
-  T buf[rows_per_access][cols_per_thread];
+  ComputeType buf[rows_per_access][cols_per_thread];
   const int global_thread_group_id = blockIdx.x * blockDim.y + threadIdx.y;
   const int num_global_thread_group = gridDim.x * blockDim.y;
   const int lane_id = threadIdx.x;
@@ -561,10 +561,10 @@ __global__ void QuantizeWarpImplKernel(const T* src, int8_t* dst, T* quantize_fa
   using StorePack = cuda::elementwise::Pack<int8_t, pack_size>;
 
   for (int64_t row = global_thread_group_id * rows_per_access; row < rows; row += step) {
-    T thread_abs_max[rows_per_access];
+    ComputeType thread_abs_max[rows_per_access];
 #pragma unroll
     for (int row_id = 0; row_id < rows_per_access; row_id++) {
-      T* row_buf = buf[row_id];
+      ComputeType* row_buf = buf[row_id];
       thread_abs_max[row_id] = 0.0;
 #pragma unroll
       for (int pack_id = 0; pack_id < num_packs; pack_id++) {
@@ -575,9 +575,8 @@ __global__ void QuantizeWarpImplKernel(const T* src, int8_t* dst, T* quantize_fa
           const int64_t load_offset = ((row + row_id) * cols + col) / pack_size;
           load_pack.storage = *(reinterpret_cast<const LoadType*>(src) + load_offset);
 #pragma unroll
-          for (int i = 0; i < pack_size; i++) { row_buf[pack_offset + i] = load_pack.elem[i]; }
-#pragma unroll
           for (int i = 0; i < pack_size; i++) {
+            row_buf[pack_offset + i] = static_cast<ComputeType>(load_pack.elem[i]);
             thread_abs_max[row_id] =
                 max_func(thread_abs_max[row_id], abs_func(row_buf[pack_offset + i]));
           }
@@ -587,19 +586,17 @@ __global__ void QuantizeWarpImplKernel(const T* src, int8_t* dst, T* quantize_fa
         }
       }
     }
-    T warp_max[rows_per_access];
+    ComputeType warp_max[rows_per_access];
 #pragma unroll
     for (int row_id = 0; row_id < rows_per_access; row_id++) {
-      warp_max[row_id] = WarpAbsMaxAllReduce<T, thread_group_width>(thread_abs_max[row_id]);
-      quantize_factor[row + row_id] = warp_max[row_id];
-    }
-    for (int row_id = 0; row_id < rows_per_access; row_id++) {
-      T* row_buf = buf[row_id];
-      ComputeType warp_max_val =
-          static_cast<ComputeType>(warp_max[row_id]) / static_cast<ComputeType>(127);
+      warp_max[row_id] =
+          WarpAbsMaxAllReduce<ComputeType, thread_group_width>(thread_abs_max[row_id]);
+      quantize_factor[row + row_id] = static_cast<T>(warp_max[row_id]);
+      ComputeType* row_buf = buf[row_id];
+      ComputeType warp_max_val = warp_max[row_id] / static_cast<ComputeType>(127);
 #pragma unroll
       for (int col = 0; col < cols_per_thread; col++) {
-        row_buf[col] = static_cast<T>(static_cast<ComputeType>(row_buf[col]) / warp_max_val);
+        row_buf[col] = row_buf[col] / warp_max_val;
       }
 #pragma unroll
       for (int pack_id = 0; pack_id < num_packs; pack_id++) {
@@ -902,7 +899,8 @@ class EmbeddingShuffleKernel final : public user_op::OpKernel {
     const int64_t num_ids = inverse_unique_partition_indices->shape().elem_cnt();
     const int64_t parallel_num = ctx->parallel_ctx().parallel_num();
     const int64_t parallel_id = ctx->parallel_ctx().parallel_id();
-    bool enable_quantize_comm = ParseBooleanFromEnv("ONEFLOW_ONE_EMBEDDING_ENABLE_QUANTIZE_COMM", false);
+    bool enable_quantize_comm =
+        ParseBooleanFromEnv("ONEFLOW_ONE_EMBEDDING_ENABLE_QUANTIZE_COMM", false);
     cudaStream_t cuda_stream = ctx->stream()->As<ep::CudaStream>()->cuda_stream();
     OF_CUDA_CHECK(cudaMemcpyAsync(
         host_num_unique_matrix, reinterpret_cast<const IDX*>(num_unique_matrix->dptr()),
@@ -1044,7 +1042,7 @@ class EmbeddingShuffleKernel final : public user_op::OpKernel {
             ctx->InputTensorDesc("cur_rank_embeddings", 0);                                       \
         const user_op::TensorDesc& embeddings = ctx->InputTensorDesc("embeddings", 0);            \
         bool enable_quantize_comm =                                                               \
-            ParseBooleanFromEnv("ONEFLOW_ONE_EMBEDDING_ENABLE_QUANTIZE_COMM", false);                      \
+            ParseBooleanFromEnv("ONEFLOW_ONE_EMBEDDING_ENABLE_QUANTIZE_COMM", false);             \
         size_t tmp_size = 0;                                                                      \
         if (!enable_quantize_comm) {                                                              \
           size_t reverse_cur_rank_embeddings_size = GetCudaAlignedSize(                           \
@@ -1152,7 +1150,8 @@ class EmbeddingGradientShuffleKernel final : public user_op::OpKernel {
     user_op::Tensor* tmp_buffer = ctx->Tensor4ArgNameAndIndex("tmp_buffer", 0);
     ncclComm_t comm = kernel_state->comm();
     using ComputeType = typename DefaultComputeType<T>::type;
-    bool enable_quantize_comm = ParseBooleanFromEnv("ONEFLOW_ONE_EMBEDDING_ENABLE_QUANTIZE_COMM", false);
+    bool enable_quantize_comm =
+        ParseBooleanFromEnv("ONEFLOW_ONE_EMBEDDING_ENABLE_QUANTIZE_COMM", false);
     cudaStream_t cuda_stream = ctx->stream()->As<ep::CudaStream>()->cuda_stream();
     OF_CUDA_CHECK(cudaMemcpyAsync(host_num_unique_matrix, num_unique_matrix->dptr(),
                                   parallel_num * parallel_num * sizeof(IDX), cudaMemcpyDefault,
@@ -1307,7 +1306,7 @@ class EmbeddingGradientShuffleKernel final : public user_op::OpKernel {
         size_t embedding_size = cur_rank_unique_embedding_grad.shape().At(1);                     \
         size_t cur_rank_embedding_grad_elem_cnt = cur_rank_embedding_grad_num * embedding_size;   \
         bool enable_quantize_comm =                                                               \
-            ParseBooleanFromEnv("ONEFLOW_ONE_EMBEDDING_ENABLE_QUANTIZE_COMM", false);                      \
+            ParseBooleanFromEnv("ONEFLOW_ONE_EMBEDDING_ENABLE_QUANTIZE_COMM", false);             \
         size_t tmp_size = 0;                                                                      \
         if (!enable_quantize_comm) {                                                              \
           size_t cur_rank_embedding_grad_size = GetCudaAlignedSize(                               \
