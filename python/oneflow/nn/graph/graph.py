@@ -1178,7 +1178,7 @@ class Graph(object):
         # Ensure vm has finished running this graph.
         if self._session._env.is_shutting_down():
             # Env shutting down will do sync in SwitchToShuttingDownPhase.
-            # So it's save to skip sync here.
+            # So it's safe to skip sync here.
             return
         oneflow._oneflow_internal.eager.Sync()
 
