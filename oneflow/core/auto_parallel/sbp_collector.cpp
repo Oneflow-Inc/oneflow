@@ -36,6 +36,59 @@ bool IfIntersectAll(
 
   return true;
 }
+
+// Find unique sbp sets
+void FindUniqueSbpSets(
+    const HashMap<std::pair<std::string, std::string>, BinarySet>& consumer_bn2sbp_set,
+    const std::unordered_set<int32_t>& all_sbp_set, std::vector<int32_t>& accumulator,
+    BinarySet& unique_sbps) {
+  std::vector<int32_t> sbp_ids;
+  // count the number of sbp
+  for (const auto& sbp_set_group : consumer_bn2sbp_set) {
+    sbp_set_group.second.QuickOutPut(sbp_ids);
+    for (int32_t sbp_id : sbp_ids) { accumulator[sbp_id]++; }
+  }
+  // find unique sbp and clear the accumulator
+  for (const auto& sbp_id : all_sbp_set) {
+    if (accumulator[sbp_id] == 1) { unique_sbps.AddEntry(sbp_id); }
+    accumulator[sbp_id] = 0;
+  }
+}
+
+// Find unique sbp groups
+void FindUniqueSbpGroups(
+    const HashMap<std::pair<std::string, std::string>, BinarySet>& consumer_bn2sbp_set,
+    const std::unordered_set<int32_t>& all_sbp_set, std::vector<int32_t>& accumulator,
+    BinarySet& bs_buffer, std::vector<BinarySet>& unique_sbp_groups) {
+  // find the unique sbp sets
+  BinarySet unique_sbps(accumulator.size());
+  FindUniqueSbpSets(consumer_bn2sbp_set, all_sbp_set, accumulator, unique_sbps);
+
+  // A: {B, S0, S1, S2, S3}, C: {B, S0}, D: {B, S0}
+  // {S1, S2, S3} show up only once, a parallel candidate should not contain two of them
+  for (const auto& sbp_set_group : consumer_bn2sbp_set) {
+    unique_sbps.IntersectionTo(sbp_set_group.second, bs_buffer);
+    // Find those unique sbp groups with more than two sbp
+    // For example {B, S1, S2} is an impossible proxy candidate,
+    // since {S1, S2} is only contained by A but not contained by C and D.
+    // A could be either S1 or S2. The tensor do not need to be transferred to both S1 and S2.
+    if (bs_buffer.Total() >= 2) { unique_sbp_groups.push_back(bs_buffer); }
+  }
+  bs_buffer.Clear();
+}
+
+// If not contains two sbp from a same unique group
+bool No2SbpFromSameUniqueGroup(BinarySet& bs, const std::vector<BinarySet>& unique_sbp_groups) {
+  BinarySet intersection(bs.SizeOfSet);
+  for (const auto& unique_sbp_group : unique_sbp_groups) {
+    bs.IntersectionTo(unique_sbp_group, intersection);
+    // For example {B, S1, S2} is an impossible proxy candidate,
+    // since {S1, S2} is only contained by A but not contained by C and D.
+    // A could be either S1 or S2. The tensor do not need to be transferred to both S1 and S2.
+    if (intersection.Total() >= 2) { return false; }
+  }
+  return true;
+}
 }  // namespace
 
 // Default constructor for SbpCollector
@@ -270,9 +323,16 @@ void SbpCollector::ProxySbpCandidate(
 
     // generate sbp proxy
     SbpNode<NdSbpSignature>* sbp_proxy = sbp_graph.GenerateNode();
+
+    // A: {B, S0, S1, S2, S3}, C: {B, S0}, D: {B, S0}
+    // {S1, S2, S3} show up only once, a parallel candidate should not contain two of them
+    std::vector<BinarySet> unique_sbp_groups;
+    FindUniqueSbpGroups(index2consumer_bn2sbp_set[index], index2sbp_set[index], accumulator,
+                        bs_buffer, unique_sbp_groups);
+
     // Depth first search to collect Sbp Parallel information for the whole sbp set
     DfsSbpSet(0, max_num_sbp_proxy, index2sbp_set[index], index2sbp_set[index].begin(),
-              index2consumer_bn2sbp_set[index], sbp_proxy->ParallelCandidates);
+              index2consumer_bn2sbp_set[index], unique_sbp_groups, sbp_proxy->ParallelCandidates);
 
     // Initialize computation cost
     sbp_proxy->Cost.resize(sbp_proxy->ParallelCandidates.size(), 0);
@@ -310,9 +370,10 @@ void SbpCollector::DfsSbpSet(
     int32_t depth, int32_t max_depth, const std::unordered_set<int32_t>& sbp_sets,
     const std::unordered_set<int32_t>::iterator start_it,
     HashMap<std::pair<std::string, std::string>, BinarySet>& consumer_bn2sbp_set,
-    std::vector<BinarySet>& ParallelCandidates) {
+    const std::vector<BinarySet>& unique_sbp_groups, std::vector<BinarySet>& ParallelCandidates) {
   if (depth > 0) {
-    if (IfIntersectAll(consumer_bn2sbp_set, bs_buffer)) {
+    if (IfIntersectAll(consumer_bn2sbp_set, bs_buffer)
+        && No2SbpFromSameUniqueGroup(bs_buffer, unique_sbp_groups)) {
       // store the binary set into an unordered_set
       ParallelCandidates.push_back(bs_buffer);
     }
@@ -329,7 +390,8 @@ void SbpCollector::DfsSbpSet(
     if (accumulator[SbpParallelNum] == 0) {
       bs_buffer.AddEntry(SbpParallelNum);
       ++accumulator[SbpParallelNum];
-      DfsSbpSet(depth + 1, max_depth, sbp_sets, curr_it, consumer_bn2sbp_set, ParallelCandidates);
+      DfsSbpSet(depth + 1, max_depth, sbp_sets, curr_it, consumer_bn2sbp_set, unique_sbp_groups,
+                ParallelCandidates);
       bs_buffer.DeleteEntry(SbpParallelNum);
       --accumulator[SbpParallelNum];
     }

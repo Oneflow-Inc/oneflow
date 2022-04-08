@@ -79,6 +79,7 @@ class SbpCollector {
   void DfsSbpSet(int32_t depth, int32_t max_depth, const std::unordered_set<int32_t>& sbp_sets,
                  const std::unordered_set<int32_t>::iterator sbp_set_it,
                  HashMap<std::pair<std::string, std::string>, BinarySet>& consumer_bn2sbp_set,
+                 const std::vector<BinarySet>& unique_sbp_groups,
                  std::vector<BinarySet>& ParallelCandidates);
 };  // class SbpCollector
 
