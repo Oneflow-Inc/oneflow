@@ -43,6 +43,9 @@ void BinarySet::Initialize(int32_t size_of_set) {
   BinarySetValues.resize(k, 0);
 }
 
+// Clear all the elements in the set
+void BinarySet::Clear() { BinarySetValues.assign(BinarySetValues.size(), 0); }
+
 // Check if i-th element in this subset
 int32_t BinarySet::CheckExistency(int32_t i) const {
   int32_t k = i / bit_of_BinarySetEntryType;

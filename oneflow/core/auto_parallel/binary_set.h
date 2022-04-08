@@ -46,6 +46,8 @@ class BinarySet {
 
   // Initialization
   void Initialize(int32_t size_of_set);
+  // Clear all the elements in the set
+  void Clear();
   // Check if i-th element in this subset
   int32_t CheckExistency(int32_t i) const;
   // Add i-th element into this subset
