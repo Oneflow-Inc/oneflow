@@ -54,6 +54,8 @@ class BinarySet {
   void DeleteEntry(int32_t i);
   // Get the union with another subset and store it into u
   void UnionTo(BinarySet& bs, BinarySet& u);
+  // If this binary set intersects another one
+  bool IfIntersect(const BinarySet& bs) const;
   // Get the intersection with another subset and store it into i
   void IntersectionTo(BinarySet& bs, BinarySet& i);
   // Count number of elements in this subset

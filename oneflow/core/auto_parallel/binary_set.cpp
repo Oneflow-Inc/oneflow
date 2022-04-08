@@ -68,8 +68,18 @@ void BinarySet::UnionTo(BinarySet& bs, BinarySet& u) {
     u.BinarySetValues[k] = BinarySetValues[k] | bs.BinarySetValues[k];
   }
 }
+// If this binary set intersects another one
+bool BinarySet::IfIntersect(const BinarySet& bs) const {
+  int32_t min_bs_size = std::min(BinarySetValues.size(), bs.BinarySetValues.size());
+  for (int32_t k = 0; k < min_bs_size; k++) {
+    if (BinarySetValues[k] & bs.BinarySetValues[k]) { return true; }
+  }
+  return false;
+}
 // Get the intersection with another subset and store it into i
 void BinarySet::IntersectionTo(BinarySet& bs, BinarySet& i) {
+  int32_t min_bs_size = std::min(BinarySetValues.size(), bs.BinarySetValues.size());
+  if (min_bs_size > i.BinarySetValues.size()) { i.BinarySetValues.resize(min_bs_size, 0); }
   for (int32_t k = 0; k < BinarySetValues.size(); k++) {
     i.BinarySetValues[k] = BinarySetValues[k] & bs.BinarySetValues[k];
   }
