@@ -57,9 +57,9 @@ class BinarySet {
   // If this binary set intersects another one
   bool IfIntersect(const BinarySet& bs) const;
   // Get the intersection with another subset and store it into i
-  void IntersectionTo(BinarySet& bs, BinarySet& i);
+  void IntersectionTo(const BinarySet& bs, BinarySet& i) const;
   // Count number of elements in this subset
-  int32_t Total();
+  int32_t Total() const;
   // Output all the elements in the subset
   void OutPut(std::vector<int32_t>& out) const;
   // Output all the elements in the subset

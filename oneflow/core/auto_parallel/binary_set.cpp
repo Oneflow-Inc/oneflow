@@ -77,7 +77,7 @@ bool BinarySet::IfIntersect(const BinarySet& bs) const {
   return false;
 }
 // Get the intersection with another subset and store it into i
-void BinarySet::IntersectionTo(BinarySet& bs, BinarySet& i) {
+void BinarySet::IntersectionTo(const BinarySet& bs, BinarySet& i) const {
   int32_t min_bs_size = std::min(BinarySetValues.size(), bs.BinarySetValues.size());
   if (min_bs_size > i.BinarySetValues.size()) { i.BinarySetValues.resize(min_bs_size, 0); }
   for (int32_t k = 0; k < BinarySetValues.size(); k++) {
@@ -85,7 +85,7 @@ void BinarySet::IntersectionTo(BinarySet& bs, BinarySet& i) {
   }
 }
 // Count number of elements in this subset
-int32_t BinarySet::Total() {
+int32_t BinarySet::Total() const {
   int32_t t = 0;
   for (int32_t k = 0; k < BinarySetValues.size(); k++) {
     BinarySetEntryType bsv = BinarySetValues[k];
