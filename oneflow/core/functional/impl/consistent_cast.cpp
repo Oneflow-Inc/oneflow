@@ -53,7 +53,7 @@ namespace impl {
 
 namespace {
 
-// NOTE: use env variable 'ONEFLOW_EAGER_LOCAL_TO_GLOBAL_BALANCED_OVERRIDE' indicate whether the 
+// NOTE: use env variable 'ONEFLOW_EAGER_LOCAL_TO_GLOBAL_BALANCED_OVERRIDE' indicate whether the
 // shape and dtype of input tensor on each rank is the same when cast local tensor to global tensor.
 // If set true, there will be no meta-information synchronization on each rank.
 Optional<bool> ParseEagerLocalToGlobalBalancedOverride() {
