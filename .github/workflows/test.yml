@@ -589,7 +589,7 @@ jobs:
         with:
           repository: Oneflow-Inc/vision
           # please use a commit here
-          ref: fcc972615585edbff31cdf6394e645a4c52f6005
+          ref: b5ee9c32622baf835483c0c740a33c3f3a3290f4
           path: ${{ env.FLOW_VISION_SRC}}
       - name: Install Flow Vision
         if: ${{ !fromJson(matrix.cache-hit) && contains(matrix.runs-on, 'self-hosted') }}
@@ -950,7 +950,7 @@ jobs:
         with:
           repository: Oneflow-Inc/vision
           # please use a commit here
-          ref: a3886ac2d4b5d218d2e940d7c25bbfb82b14f080
+          ref: b5ee9c32622baf835483c0c740a33c3f3a3290f4
           path: ${{ env.FLOW_VISION_SRC}}
       - name: Checkout Oneflow-Inc/libai
         if: ${{ !fromJson(matrix.cache-hit) && contains(matrix.runs-on, 'self-hosted') }}

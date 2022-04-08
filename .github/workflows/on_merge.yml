@@ -17,4 +17,4 @@ jobs:
     steps:
       - uses: Oneflow-Inc/get-oneflow/update-benchmark-history@support-auto-benchmark
         name: Update benchmark history
-        timeout-minutes: 5
+        timeout-minutes: 10
