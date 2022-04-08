@@ -791,7 +791,8 @@ class DimScatterFunctor {
                            const std::shared_ptr<one::Tensor>& index,
                            const std::shared_ptr<one::Tensor>& src) const {
     MutableAttrMap attrs;
-    JUST(attrs.SetAttr<int32_t>("dim", dim));
+    const int32_t ndim = input->shape()->NumAxes();
+    JUST(attrs.SetAttr<int32_t>("dim", dim < 0 ? dim + ndim : dim));
     return OpInterpUtil::Dispatch<Tensor>(*op_, {input, index, src}, attrs);
   }
 
@@ -877,7 +878,8 @@ class DimScatterUpdateScalarFunctor {
   Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& input, const int32_t& dim,
                            const std::shared_ptr<one::Tensor>& index, const Scalar& src) const {
     MutableAttrMap attrs;
-    JUST(attrs.SetAttr<int32_t>("dim", dim));
+    const int32_t ndim = input->shape()->NumAxes();
+    JUST(attrs.SetAttr<int32_t>("dim", dim < 0 ? dim + ndim : dim));
     JUST(attrs.SetAttr<float>("src_scalar", JUST(src.As<float>())));
     return OpInterpUtil::Dispatch<Tensor>(*op_, {input, index}, attrs);
   }
@@ -2469,7 +2471,6 @@ class ToFunctor {
 
     if (input->is_consistent()) {
       std::string device_type = device_.value_or(JUST(input->parallel_desc())->device_tag());
-      if (device_type == "gpu") { device_type = "cuda"; }
       CHECK_OR_RETURN(device_type == "cpu" || device_type == "cuda")
           << "Only string device without device id (eg. \"cpu\" or \"cuda\") is expected "
           << "for consistent tensor, but got " << device_.value_or("");
