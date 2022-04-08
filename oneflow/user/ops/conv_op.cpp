@@ -394,13 +394,17 @@ Maybe<void> GenerateBackwardOpConf4Conv(const user_op::UserOpWrapper& op, user_o
 
 /* static */ Maybe<double> ConvDataGradOp::GetComputeComplexity(
     user_op::ComputeComplexityFnContext* ctx) {
-  const user_op::TensorDesc* filter = ctx->TensorDesc4ArgNameAndIndex("filter", 0);
+  const std::vector<int32_t> kernel_size = ctx->Attr<std::vector<int32_t>>("kernel_size");
   const user_op::TensorDesc* dx = ctx->TensorDesc4ArgNameAndIndex("dx", 0);
+  const user_op::TensorDesc* dy = ctx->TensorDesc4ArgNameAndIndex("dy", 0);
+  const size_t c_dim =
+      ctx->Attr<std::string>("data_format") == "channels_first" ? 1 : dy->shape().NumAxes() - 1;
 
-  double cost = std::accumulate(filter->shape().dim_vec().begin(), filter->shape().dim_vec().end(),
-                                2.0, std::multiplies<double>())
-                * std::accumulate(dx->shape().dim_vec().begin(), dx->shape().dim_vec().end(), 1.0,
-                                  std::multiplies<double>());
+  double cost =
+      std::accumulate(kernel_size.begin(), kernel_size.end(), 1.0, std::multiplies<double>())
+      * std::accumulate(dx->shape().dim_vec().begin(), dx->shape().dim_vec().end(), 1.0,
+                        std::multiplies<double>())
+      * 2.0 * dy->shape().At(c_dim);
 
   const auto& nd_sbp = ctx->NdSbp4ArgNameAndIndex("dx", 0);
   const auto& parallel_hierarchy = ctx->parallel_desc().hierarchy();
@@ -480,14 +484,17 @@ Maybe<void> GenerateBackwardOpConf4Conv(const user_op::UserOpWrapper& op, user_o
 
 /* static */ Maybe<double> ConvFilterGradOp::GetComputeComplexity(
     user_op::ComputeComplexityFnContext* ctx) {
-  const user_op::TensorDesc* filter_diff = ctx->TensorDesc4ArgNameAndIndex("filter_diff", 0);
+  const std::vector<int32_t> kernel_size = ctx->Attr<std::vector<int32_t>>("kernel_size");
   const user_op::TensorDesc* dy = ctx->TensorDesc4ArgNameAndIndex("dy", 0);
+  const user_op::TensorDesc* x = ctx->TensorDesc4ArgNameAndIndex("x", 0);
+  const size_t c_dim =
+      ctx->Attr<std::string>("data_format") == "channels_first" ? 1 : dy->shape().NumAxes() - 1;
 
   double cost =
-      std::accumulate(filter_diff->shape().dim_vec().begin(), filter_diff->shape().dim_vec().end(),
-                      2.0, std::multiplies<double>())
+      std::accumulate(kernel_size.begin(), kernel_size.end(), 1.0, std::multiplies<double>())
       * std::accumulate(dy->shape().dim_vec().begin(), dy->shape().dim_vec().end(), 1.0,
-                        std::multiplies<double>());
+                        std::multiplies<double>())
+      * 2.0 * x->shape().At(c_dim);
 
   const auto& nd_sbp = ctx->NdSbp4ArgNameAndIndex("dy", 0);
   const auto& parallel_hierarchy = ctx->parallel_desc().hierarchy();
@@ -552,13 +559,7 @@ Maybe<void> GenerateBackwardOpConf4Conv(const user_op::UserOpWrapper& op, user_o
     user_op::ComputeComplexityFnContext* ctx) {
   const user_op::TensorDesc* dy = ctx->TensorDesc4ArgNameAndIndex("dy", 0);
   const std::string data_format = ctx->Attr<std::string>("data_format");
-  int32_t c = 0;
-  if (data_format == "channels_first") {
-    c = dy->shape().At(1);
-  } else {
-    c = dy->shape().At(dy->shape().NumAxes() - 1);
-  }
-  double cost = std::accumulate(dy->shape().dim_vec().begin(), dy->shape().dim_vec().end(), 2.0 * c,
+  double cost = std::accumulate(dy->shape().dim_vec().begin(), dy->shape().dim_vec().end(), 1.0,
                                 std::multiplies<double>());
   const auto& nd_sbp = ctx->NdSbp4ArgNameAndIndex("dy", 0);
   const auto& parallel_hierarchy = ctx->parallel_desc().hierarchy();
