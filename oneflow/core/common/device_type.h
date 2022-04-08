@@ -31,14 +31,6 @@ struct hash<oneflow::DeviceType> final {
 
 namespace oneflow {
 
-inline std::string DeviceTypeName(DeviceType device_type) {
-  switch (device_type) {
-    case kCPU: return "cpu";
-    case kCUDA: return "cuda";
-    default: return "invalid";
-  }
-}
-
 inline std::string PrintAvailableDevices() {
   std::string str("[");
   str += "\"cpu\"";
