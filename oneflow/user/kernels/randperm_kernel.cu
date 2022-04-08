@@ -102,16 +102,6 @@ class GpuRandPermKernel final : public user_op::OpKernel {
       user_op::KernelInitContext* ctx) const override {
     const auto& generator = CHECK_JUST(one::MakeGenerator(kCUDA));
     generator->set_current_seed(ctx->Attr<int64_t>("seed"));
-
-    int64_t parallel_num = ctx->parallel_ctx().parallel_num();
-    const NdSbp& nd_sbp = ctx->NdSbp4ArgNameAndIndex("out", 0);
-    if (parallel_num > 1) {
-      const Shape& hierarchy = *ctx->parallel_desc().hierarchy();
-      int64_t parallel_id = ctx->parallel_ctx().parallel_id();
-      int32_t n = ctx->Attr<int32_t>("n");
-      const Shape& logical_shape = Shape({n});
-      view = GetTensorSliceView4ParallelId(hierarchy, nd_sbp, logical_shape, parallel_id);
-    }
     return std::make_shared<DistributionKernelState>(generator);
   }
 
@@ -162,7 +152,7 @@ class GpuRandPermKernel final : public user_op::OpKernel {
           /* d_keys_in */ key_base,
           /* d_keys_out */ key_base + n,
           /* d_values_in */ value_base,
-          /* d_values_out */ temp_buffer_base,
+          /* d_values_out */ output,
           /* num_items */ n,
           /* begin_bit */ 0,
           /* end_bit */ sizeof(int32_t) * 8,
