@@ -79,7 +79,9 @@ pygments_style = None
 # The theme to use for HTML and HTML Help pages.  See the documentation for
 # a list of builtin themes.
 #
-html_theme = "furo"
+# html_theme = "furo"
+html_theme = "sphinx_rtd_theme"
+
 
 # Theme options are theme-specific and customize the look and feel of a theme
 # further.  For a list of options available for each theme, see the
@@ -202,4 +204,4 @@ def should_skip_member(app, what, name, obj, skip, options):
 
 
 def setup(app):
-    app.connect("autodoc-skip-member", should_skip_member)
+    app.add_css_file("css/line_space.css")
