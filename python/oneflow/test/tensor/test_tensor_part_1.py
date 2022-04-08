@@ -113,6 +113,15 @@ class TestTensor(flow.unittest.TestCase):
         test_case.assertTrue(np.allclose(output.numpy(), np_arr))
 
     @flow.unittest.skip_unless_1n1d()
+    def test_construct_np_array_from_tensor(test_case):
+        tensor = flow.randn(5)
+        np_arr = np.array(tensor)
+        test_case.assertEqual(np_arr.shape, (5,))
+        test_case.assertEqual(np_arr.dtype, np.float32)
+        test_case.assertTrue(np.allclose(np_arr, tensor.numpy()))
+        test_case.assertEqual(str(np_arr), str(tensor.numpy()))
+
+    @flow.unittest.skip_unless_1n1d()
     @autotest(check_graph=True)
     def test_tensor_sign_with_random_data(test_case):
         device = random_device()
