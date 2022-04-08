@@ -73,7 +73,8 @@ Maybe<BoxingFunctionT> RawGetBoxingFunction(const std::string& method_name, Symb
 
 Maybe<BoxingFunctionT> GetBoxingFunction(const std::string& method_name, Symbol<PlacedNdSbp> in,
                                          Symbol<PlacedNdSbp> out, const Shape& logical_shape) {
-  return DECORATE(&RawGetBoxingFunction, ThreadLocalCopiable)(method_name, in, out, logical_shape);
+  return DECORATE(&RawGetBoxingFunction, ThreadLocalCachedCopiable)(method_name, in, out,
+                                                                    logical_shape);
 }
 
 void RegisterBoxingFunction(const std::string& method_name, const BoxingCheckerT& Checker,
@@ -100,7 +101,8 @@ Maybe<BoxingInterpreterStatus> AtomicBoxingExpr::Check(Symbol<PlacedNdSbp> in,
 Maybe<BoxingFunctionT> AtomicBoxingExpr::GetBoxingFunction(Symbol<PlacedNdSbp> in,
                                                            Symbol<PlacedNdSbp> out,
                                                            const Shape& logical_shape) const {
-  return DECORATE(&RawGetBoxingFunction, ThreadLocalCopiable)(boxing_name_, in, out, logical_shape);
+  return DECORATE(&RawGetBoxingFunction, ThreadLocalCachedCopiable)(boxing_name_, in, out,
+                                                                    logical_shape);
 }
 
 Maybe<BoxingInterpreterStatus> DivideAndConquerBoxingExpr::Check(Symbol<PlacedNdSbp> in,

@@ -134,6 +134,12 @@ class KeyValueStoreOptions final {
     CHECK(persistent_table.contains("physical_block_size"));
     CHECK(persistent_table["physical_block_size"].is_number());
     persistent_table_phisical_block_size_ = persistent_table["physical_block_size"].get<int64_t>();
+    if (persistent_table.contains("capacity_hint")) {
+      CHECK(persistent_table["capacity_hint"].is_number());
+      persistent_table_capacity_hint_ = persistent_table["capacity_hint"].get<int64_t>();
+    } else {
+      persistent_table_capacity_hint_ = 0;
+    }
   }
   ~KeyValueStoreOptions() = default;
   int64_t KeyTypeSize() const { return key_type_size_; }
@@ -143,6 +149,7 @@ class KeyValueStoreOptions final {
   const std::vector<CacheOptions>& GetCachesOptions() const { return cache_options_; }
   const std::vector<std::string>& PersistentTablePaths() const { return persistent_table_paths_; }
   int64_t PersistentTablePhysicalBlockSize() const { return persistent_table_phisical_block_size_; }
+  int64_t PersistentTableCapacityHint() const { return persistent_table_capacity_hint_; }
   bool IsFullCache() const {
     if (cache_options_.size() > 0 && cache_options_.at(0).policy == CacheOptions::Policy::kFull) {
       return true;
@@ -157,6 +164,7 @@ class KeyValueStoreOptions final {
   int64_t line_size_;
   std::vector<std::string> persistent_table_paths_;
   int64_t persistent_table_phisical_block_size_;
+  int64_t persistent_table_capacity_hint_;
   std::vector<CacheOptions> cache_options_;
 };
 
