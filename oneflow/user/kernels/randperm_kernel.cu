@@ -43,7 +43,6 @@ __global__ void GeneKeysAndValues(const int32_t n, int32_t* values, int32_t* key
   state[id] = local_state;
 }
 
-
 __global__ void tempcopy2output(const int32_t n, const int32_t offset, int32_t* temp,
                                 int32_t* output) {
   CUDA_1D_KERNEL_LOOP(i, n) { output[i] = temp[offset + i]; }
