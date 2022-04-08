@@ -18,6 +18,7 @@ import unittest
 from collections import OrderedDict
 
 import oneflow as flow
+import numpy as np
 import oneflow.unittest
 from oneflow.test_utils.automated_test_util import *
 
@@ -25,11 +26,46 @@ from oneflow.test_utils.test_util import GenArgDict
 
 
 def _test_consistent_randn(test_case, shape, placement, sbp):
-    x = flow.randn(*shape, placement=placement, sbp=sbp)
+    x1 = flow.randn(*shape, placement=placement, sbp=sbp)
+    x2 = flow.randn(*shape, placement=placement, sbp=sbp)
+    print("x1: ",x1,"x2: ",x2)
+    test_case.assertTrue(not np.allclose(x1.numpy(), x2.numpy(), atol=1e-4, rtol=1e-4))
+    test_case.assertEqual(x1.shape, flow.Size(shape))
+    test_case.assertEqual(x1.sbp, sbp)
+    test_case.assertEqual(x1.placement, placement)
 
-    test_case.assertEqual(x.shape, flow.Size(shape))
-    test_case.assertEqual(x.sbp, sbp)
-    test_case.assertEqual(x.placement, placement)
+def _test_different_dtype(test_case, shape, placement, sbp):
+    x1 = flow.randn(*shape,dtype=flow.float32, placement=placement, sbp=sbp)
+    x2 = flow.randn(*shape,dtype=flow.float64, placement=placement, sbp=sbp)
+    test_case.assertTrue(not np.allclose(x1.numpy(), x2.numpy(), atol=1e-4, rtol=1e-4))
+    test_case.assertEqual(x1.shape, flow.Size(shape))
+
+def _test_backward(test_case, shape, placement, sbp):
+    x = flow.randn(*shape, placement=placement, sbp=sbp, requires_grad=True)
+    y = x.sum()
+    y.backward()
+    test_case.assertTrue(
+        np.allclose(np.ones(shape), x.grad.numpy(), atol=1e-4, rtol=1e-4)
+    )
+
+def _test_with_generator(test_case, shape, placement, sbp):
+    gen = flow.Generator()
+    gen.manual_seed(0)
+    y1 = flow.randn(
+        *shape, placement=placement, sbp=sbp, generator=gen
+    )
+    gen.manual_seed(0)
+    y2 = flow.randn(
+        *shape, placement=placement, sbp=sbp, generator=gen
+    )
+    test_case.assertTrue(np.allclose(y1.numpy(), y2.numpy(), atol=1e-4, rtol=1e-4))
+
+def _test_randn_tuple_shape(test_case, shape, placement, sbp):
+    y1 = flow.randn(*shape, placement=placement, sbp=sbp)
+    y2 = flow.randn(*shape, placement=placement, sbp=sbp)
+
+    test_case.assertTrue(not np.array_equal(y1.numpy(), y2.numpy()))
+    test_case.assertTrue(shape == y1.shape)
 
 
 def _test_graph_randn(test_case, shape, placement, sbp):
@@ -59,6 +95,10 @@ class TestRandnConsistent(flow.unittest.TestCase):
                     placement, max_dim=len(shape), except_partial_sum=True
                 ):
                     _test_consistent_randn(test_case, shape, placement, sbp)
+                    _test_different_dtype(test_case, shape, placement, sbp)
+                    _test_backward(test_case, shape, placement, sbp)
+                    _test_with_generator(test_case, shape, placement, sbp)
+                    _test_randn_tuple_shape(test_case, shape, placement, sbp)
     @globaltest
     def test_randn_graph(test_case):
         arg_dict = OrderedDict()
