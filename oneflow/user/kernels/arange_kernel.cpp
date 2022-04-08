@@ -59,7 +59,8 @@ class ArangeKernel final : public OpKernel {
       const NdSbp& nd_sbp = ctx->NdSbp4ArgNameAndIndex("out", 0);
       const Shape& parallel_hierarchy = *ctx->parallel_desc().hierarchy();
       const int64_t parallel_id = ctx->parallel_ctx().parallel_id();
-      TensorSliceView view = GetTensorSliceView4ParallelId(parallel_hierarchy, nd_sbp, logical_shape, parallel_id);
+      TensorSliceView view =
+          GetTensorSliceView4ParallelId(parallel_hierarchy, nd_sbp, logical_shape, parallel_id);
       std::shared_ptr<ArangeOpKernelCache> cache(
           new ArangeOpKernelCache(view.At(0).begin(), view.At(0).end()));
       return cache;
