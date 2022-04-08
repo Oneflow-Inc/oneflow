@@ -304,6 +304,15 @@ class MultiTableEmbedding(Module):
         self.handler.LoadSnapshot(snapshot_name)
 
     def forward(self, ids, table_ids=None):
+        """forward of MultiTableEmbedding
+
+        Args:
+            ids (flow.tensor): the feature ids
+            table_ids (flow.tensor, optional): the table_id of each id, must be same shape as ids. There is no need to pass table_ids, if has config only one table or the ids has shape (batch_size, num_tables), and each column's id belongs to the column_id th table, otherwise, you should pass the tensor_ids.
+
+        Returns:
+            flow.tensor: the result of embedding lookup
+        """
         assert self.key_type == ids.dtype, "ids data_type must equals key_type"
         return flow._C.one_embedding_lookup(
             self.shadow,
