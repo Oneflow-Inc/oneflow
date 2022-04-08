@@ -20,6 +20,7 @@ from oneflow.nn.module import Module
 from oneflow.nn.common_types import _size_any_t
 from oneflow.nn.modules.utils import _single, _handle_size_arg
 
+
 def _rand_op_common_process(
     size, device=None, generator=None, placement=None, sbp=None
 ):
@@ -531,6 +532,7 @@ def normal_op(
             generator=generator,
             requires_grad=requires_grad,
         )
+
 
 if __name__ == "__main__":
     import doctest

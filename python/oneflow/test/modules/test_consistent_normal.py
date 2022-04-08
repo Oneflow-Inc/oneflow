@@ -16,11 +16,14 @@ limitations under the License.
 
 import unittest
 from collections import OrderedDict
-from oneflow.test_utils.test_util import GenArgList,type_name_to_flow_type
+from oneflow.test_utils.test_util import GenArgList, type_name_to_flow_type
 from oneflow.test_utils.automated_test_util import *
 import oneflow as flow
 
-def _test_consistent_normal(test_case, placement, sbp, mean, std, shape, dtype, requires_grad):
+
+def _test_consistent_normal(
+    test_case, placement, sbp, mean, std, shape, dtype, requires_grad
+):
     dtype = type_name_to_flow_type[dtype]
     x = flow.normal(
         mean,
@@ -38,6 +41,7 @@ def _test_consistent_normal(test_case, placement, sbp, mean, std, shape, dtype, 
     test_case.assertEqual(x.placement, placement)
     test_case.assertEqual(x.requires_grad, requires_grad)
 
+
 class TestNormalConsistent(flow.unittest.TestCase):
     @globaltest
     def test_normal_consistent(test_case):
@@ -53,6 +57,7 @@ class TestNormalConsistent(flow.unittest.TestCase):
                     placement, max_dim=len(arg[2]), except_partial_sum=True
                 ):
                     _test_consistent_normal(test_case, placement, sbp, *arg)
+
 
 if __name__ == "__main__":
     unittest.main()
