@@ -55,7 +55,7 @@ OF_DEVICE_FUNC void DoDimGather(const DimOpIndexNdHelper<IDX_T>& input_nd_helper
   XPU_1D_KERNEL_LOOP(index_offset, elem_cnt) {
     IDX_T coordinate[kDimGatherMaxDimCount] = {0};
     const IDX_T x = index[index_offset];
-#ifdef __CUDA_ARCH__
+#ifdef WITH_CUDA
     assert(x < dim_lengh && "gather index is out of bounds");
 #else
     CHECK_LE(x, dim_lengh) << "RuntimeError: index " << x << " is out of bounds for dimension "
