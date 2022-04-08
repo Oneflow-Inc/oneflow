@@ -488,7 +488,7 @@ Maybe<void> GenerateBackwardOpConf4Conv(const user_op::UserOpWrapper& op, user_o
   const user_op::TensorDesc* dy = ctx->TensorDesc4ArgNameAndIndex("dy", 0);
   const user_op::TensorDesc* x = ctx->TensorDesc4ArgNameAndIndex("x", 0);
   const size_t c_dim =
-      ctx->Attr<std::string>("data_format") == "channels_first" ? 1 : dy->shape().NumAxes() - 1;
+      ctx->Attr<std::string>("data_format") == "channels_first" ? 1 : x->shape().NumAxes() - 1;
 
   double cost =
       std::accumulate(kernel_size.begin(), kernel_size.end(), 1.0, std::multiplies<double>())
