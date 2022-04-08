@@ -34,7 +34,7 @@ class ToGlobal(Module):
         return flow._C.to_global(x, placement=placement, sbp=sbp)
 
 
-def to_global_op(input, placement=None, sbp=None, grad_sbp=None, is_balanced=False):
+def to_global_op(input, placement=None, sbp=None, grad_sbp=None):
     assert isinstance(input, Tensor)
 
     def _check_sbp(sbp):
@@ -76,7 +76,7 @@ def to_global_op(input, placement=None, sbp=None, grad_sbp=None, is_balanced=Fal
 
     if grad_sbp is None:
         grad_sbp = tuple()
-    return flow._C.to_global(input, placement, sbp, grad_sbp, is_balanced)
+    return flow._C.to_global(input, placement, sbp, grad_sbp)
 
 
 class ToLocal(Module):

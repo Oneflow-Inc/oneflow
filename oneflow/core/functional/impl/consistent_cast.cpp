@@ -53,6 +53,21 @@ namespace impl {
 
 namespace {
 
+Optional<bool> ParseEagerLocalToGlobalBalancedOverride() {
+  const char* env_p = std::getenv("ONEFLOW_EAGER_LOCAL_TO_GLOBAL_BALANCED_OVERRIDE");
+  if (env_p == nullptr) {
+    return Optional<bool>();
+  } else {
+    return ParseBooleanFromEnv("ONEFLOW_EAGER_LOCAL_TO_GLOBAL_BALANCED_OVERRIDE", false);
+  }
+}
+
+bool GetLocalToGlobalIsBalanced(bool is_balanced) {
+  thread_local Optional<bool> eager_local_to_global_balanced_override =
+      ParseEagerLocalToGlobalBalancedOverride();
+  return eager_local_to_global_balanced_override.value_or(is_balanced);
+}
+
 // clang-format off
 FLAT_MSG_BEGIN(FlatShapeAndDataType);
   // Methods
@@ -259,7 +274,7 @@ Maybe<Tensor> ConsistentToConsistent(const std::shared_ptr<Tensor>& x,
 Maybe<Tensor> LocalToConsistent(const std::shared_ptr<Tensor>& x,
                                 Symbol<ParallelDesc> parallel_desc,
                                 const std::vector<Symbol<SbpParallel>>& sbp_parallels,
-                                const std::shared_ptr<OpExpr>& op, bool is_balanced) {
+                                const std::shared_ptr<OpExpr>& op) {
   CHECK_OR_RETURN(!x->is_lazy())
       << "local_tensor.to_global() is not supported within nn.Graph for now";
   CHECK_OR_RETURN(x->is_local()) << Error::UnimplementedError() << "local tensors supported only";
@@ -285,6 +300,7 @@ Maybe<Tensor> LocalToConsistent(const std::shared_ptr<Tensor>& x,
   Symbol<NdSbp> nd_sbp = JUST(GetNdSbp(sbp_parallels));
   const auto& shape = std::make_shared<Shape>();
   DataType dtype = x->dtype()->data_type();
+  bool is_balanced = GetLocalToGlobalIsBalanced(false);
   JUST(GetLogicalShapeAndDataType(shape.get(), &dtype, x->shape(), parallel_desc, nd_sbp,
                                   is_balanced));
   MutableAttrMap attrs;
@@ -352,8 +368,7 @@ class ToConsistentFunctor {
   Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x,
                            Symbol<ParallelDesc> parallel_desc,
                            const std::vector<Symbol<SbpParallel>>& sbp_parallels,
-                           const std::vector<Symbol<SbpParallel>>& grad_sbp_parallels,
-                           bool is_balanced) const {
+                           const std::vector<Symbol<SbpParallel>>& grad_sbp_parallels) const {
     JUST(CheckDeviceIdsIsValid(parallel_desc));
     NonRecursiveMetaInfoConsistencyCheckScope scope;
     JUST(MetaInfoConsistencyCheck(parallel_desc, sbp_parallels, grad_sbp_parallels, 1));
@@ -361,8 +376,7 @@ class ToConsistentFunctor {
     if (x->is_consistent()) {
       tensor = JUST(ConsistentToConsistent(x, parallel_desc, sbp_parallels, grad_sbp_parallels));
     } else {
-      tensor = JUST(
-          LocalToConsistent(x, parallel_desc, sbp_parallels, local_to_consistent_op_, is_balanced));
+      tensor = JUST(LocalToConsistent(x, parallel_desc, sbp_parallels, local_to_consistent_op_));
     }
     return tensor;
   }

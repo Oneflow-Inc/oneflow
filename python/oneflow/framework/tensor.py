@@ -859,8 +859,8 @@ def _to(self, *args, **kwargs):
     return flow._C.to(self, *new_args, **kwargs)
 
 
-def _to_global(self, placement=None, sbp=None, grad_sbp=None, is_balanced=False):
-    return flow.to_global(self, placement, sbp, grad_sbp, is_balanced)
+def _to_global(self, placement=None, sbp=None, grad_sbp=None):
+    return flow.to_global(self, placement, sbp, grad_sbp)
 
 
 def _to_local(self):
