@@ -540,10 +540,6 @@ class Generator:
                     params = []
                     for j in range(len(signature._args)):
                         cpp_type = _std_decay(signature._args[j]._cpp_type)
-                        #if cpp_type == "TensorIndex":
-                        #    #params.append("*r[{0}].As<std::shared_ptr<{1}>>()".format(j, cpp_type))
-                        #    params.append("PyUnpackTensorIndex(r[{0}].object())".format(j))
-                        #else:
                         params.append("r[{0}].As<{1}>()".format(j, cpp_type))
                     schema_fmt += "    return CastToPyObject(functional::{0}({1}));\n".format(signature._name, ", ".join(params))
                     schema_fmt += "  }\n"
