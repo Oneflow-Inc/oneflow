@@ -180,7 +180,8 @@ oneflow
             IntTensor,
             LongTensor,
             isnan,
-            isinf
+            isinf,
+            searchsorted
 
 .. autofunction:: oneflow.relu
 .. autofunction:: oneflow.set_num_threads
