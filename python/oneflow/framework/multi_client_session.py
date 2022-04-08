@@ -34,7 +34,7 @@ class MultiClientSession(object):
         self._id = sess_id
         self._env = env
         assert self._env is not None
-        # TODO(strint): Remove old session. 
+        # TODO(strint): Remove old session.
         self._internal_sess = oneflow._oneflow_internal.RegsiterSession(sess_id)
         # New a MultiClientSessionContext
         self._session_ctx = oneflow._oneflow_internal.SessionContext(self._env._env_cxt)
