@@ -67,7 +67,8 @@ class SbpCollector {
   // Initialize copy cost from proxy of producer to consumers
   void InitializeCopyCostFromProxy2Consumer(
       SbpNode<NdSbpSignature>* sbp_proxy,
-      const std::vector<std::pair<const OpNode*, std::string>>& consumer_bns,
+      HashMap<std::pair<std::string, std::string>, std::unordered_set<int32_t>>&
+          consumer_bn2sbp_set,
       HashMap<std::string, SbpNode<NdSbpSignature>*>& op_name2sbp_node);
 
   // Export list of possible combination of Sbp Parallels

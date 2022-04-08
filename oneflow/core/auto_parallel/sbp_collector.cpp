@@ -134,15 +134,14 @@ void SbpCollector::InitializeCopyCostFromNode2Proxy(SbpNode<NdSbpSignature>* sbp
 // Initialize copy cost from proxy of producer to consumers
 void SbpCollector::InitializeCopyCostFromProxy2Consumer(
     SbpNode<NdSbpSignature>* sbp_proxy,
-    const std::vector<std::pair<const OpNode*, std::string>>& consumer_bns,
+    HashMap<std::pair<std::string, std::string>, std::unordered_set<int32_t>>& consumer_bn2sbp_set,
     HashMap<std::string, SbpNode<NdSbpSignature>*>& op_name2sbp_node) {
   // Connect sbp proxy and consumers
-  for (const auto& consumer_bn : consumer_bns) {
+  for (const auto& consumer_bn_group : consumer_bn2sbp_set) {
     // consumer in cost model
-    SbpNode<NdSbpSignature>* sbp_node_consumer =
-        op_name2sbp_node[consumer_bn.first->op().op_name()];
+    SbpNode<NdSbpSignature>* sbp_node_consumer = op_name2sbp_node[consumer_bn_group.first.first];
     // input blob name of logical blob in consumer
-    const std::string& ibn = consumer_bn.second;
+    const std::string& ibn = consumer_bn_group.first.second;
 
     // check is_mutable in consumer
     OpNode* consumer = sbp_node_consumer->op_node;
@@ -191,8 +190,10 @@ void SbpCollector::ProxySbpCandidate(
   // mapping from the index to producer, consuemr and corresponding input blob name, possible sbp
   // sets
   std::vector<const OpNode*> index2producer;
-  std::vector<std::vector<std::pair<const OpNode*, std::string>>> index2consumer_bns;
   std::vector<std::unordered_set<int32_t>> index2sbp_set;
+  // mapping from consumers and input blob names to an unordered_set of SBP Parallel.
+  std::vector<HashMap<std::pair<std::string, std::string>, std::unordered_set<int32_t>>>
+      index2consumer_bn2sbp_set;
 
   for (auto* consumer_sbp_node : sbp_graph.NodeList) {
     auto* node = consumer_sbp_node->op_node;
@@ -221,18 +222,18 @@ void SbpCollector::ProxySbpCandidate(
         // map from lbi to the producer
         index2producer.push_back(&producer);
         // Initialize consumer_bns and the sbp sets
-        index2consumer_bns.resize(index + 1);
+        index2consumer_bn2sbp_set.resize(index + 1);
         index2sbp_set.resize(index + 1);
       } else {
         index = iterator_lbi->second;
       }
-      // Add the consumer and corresponding input blob name
-      index2consumer_bns[index].push_back({consumer_sbp_node->op_node, ibn});
 
       // a set to store the id of all possible SBP Parallel for a downstream op
-      // should filter out B and other repeated SBP Parallel by pre-storing them into an
-      // unordered_set
-      std::unordered_set<int32_t>& SbpParallelIDs = index2sbp_set[index];
+      // should filter out repeated SBP Parallel by pre-storing them into an unordered_set
+      std::unordered_set<int32_t>& SbpParallelIDs =
+          index2consumer_bn2sbp_set[index][{node->op().op_name(), ibn}];
+      // The union sbp set of all the consumers
+      std::unordered_set<int32_t>& UnionSbpParallelIDs = index2sbp_set[index];
       // TODO: use SbpSignatureList instead of SbpSignatureObjList
       for (auto& sbp_sig : consumer_sbp_node->SbpSignatureObjList) {
         const auto& map = sbp_sig.bn_in_op2nd_sbp();
@@ -240,7 +241,9 @@ void SbpCollector::ProxySbpCandidate(
         CHECK(iter != map.end()) << "blob_name " << ibn << " not found in sbp signature";
         const NdSbp& consumer_sbp = iter->second;
         // filter out repeated SBP
-        SbpParallelIDs.insert(SbpParallelUniverse[consumer_sbp]);
+        int32_t sbp_universe_id = SbpParallelUniverse[consumer_sbp];
+        SbpParallelIDs.insert(sbp_universe_id);
+        UnionSbpParallelIDs.insert(sbp_universe_id);
       }
     }
   };
@@ -255,9 +258,10 @@ void SbpCollector::ProxySbpCandidate(
   for (auto& lbi_index : lbi2index) {
     int32_t index = lbi_index.second;
     // Only insert proxy for those blobs with multiple downstream consumers.
-    if (index2consumer_bns[index].size() < 2) { continue; }
+    if (index2consumer_bn2sbp_set[index].size() < 2) { continue; }
     // Maximum number of possible sbp in the proxy
-    int32_t max_num_sbp_proxy = std::min(max_num_sbp_proxy_, index2consumer_bns[index].size());
+    int32_t max_num_sbp_proxy =
+        std::min(max_num_sbp_proxy_, index2consumer_bn2sbp_set[index].size());
     // producer in cost model
     const std::string& producer_name = index2producer[index]->op().op_name();
     SbpNode<NdSbpSignature>* sbp_node_producer = op_name2sbp_node[producer_name];
@@ -281,13 +285,13 @@ void SbpCollector::ProxySbpCandidate(
     InitializeCopyCostFromNode2Proxy(sbp_proxy, lbi);
 
     // Build connection and compute copy cost between proxy and consumers
-    InitializeCopyCostFromProxy2Consumer(sbp_proxy, index2consumer_bns[index], op_name2sbp_node);
+    InitializeCopyCostFromProxy2Consumer(sbp_proxy, index2consumer_bn2sbp_set[index],
+                                         op_name2sbp_node);
 
     // Unloading
-    for (const auto& consumer_bn : index2consumer_bns[index]) {
+    for (const auto& consumer_bn_group : index2consumer_bn2sbp_set[index]) {
       // consumer in cost model
-      SbpNode<NdSbpSignature>* sbp_node_consumer =
-          op_name2sbp_node[consumer_bn.first->op().op_name()];
+      SbpNode<NdSbpSignature>* sbp_node_consumer = op_name2sbp_node[consumer_bn_group.first.first];
       // the sbp edge connecting producer and consumer
       SbpEdge<NdSbpSignature>* edge_found =
           FindEdgeBetweenNodes(sbp_node_producer, sbp_node_consumer);
