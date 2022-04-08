@@ -26,6 +26,8 @@ limitations under the License.
 #include "oneflow/core/profiler/profiler.h"
 #include "oneflow/core/common/cpp_attribute.h"
 #include "oneflow/core/common/global.h"
+#include "oneflow/core/common/foreign_lock_helper.h"
+#include <typeinfo>
 
 namespace oneflow {
 namespace vm {
@@ -189,19 +191,20 @@ void VirtualMachineEngine::ReleaseFinishedInstructions(const ScheduleCtx& schedu
       // in stream->DeleteInstruction(...)
       intrusive::shared_ptr<InstructionMsg> instr_msg(instruction_ptr->mut_instr_msg());
       stream->DeleteInstruction(LivelyInstructionListErase(instruction_ptr));
-      MoveInstructionMsgToGarbageMsgList(std::move(instr_msg), schedule_ctx);
+      static constexpr int kFlushWindowSize = 32;
+      MoveInstructionMsgToGarbageMsgList(kFlushWindowSize, std::move(instr_msg), schedule_ctx);
     }
     if (stream->running_instruction_list().empty()) { mut_active_stream_list()->Erase(stream); }
   }
 }
 
 void VirtualMachineEngine::MoveInstructionMsgToGarbageMsgList(
-    intrusive::shared_ptr<InstructionMsg>&& instr_msg, const ScheduleCtx& schedule_ctx) {
+    int flush_window_size, intrusive::shared_ptr<InstructionMsg>&& instr_msg,
+    const ScheduleCtx& schedule_ctx) {
   local_garbage_msg_list_.EmplaceBack(std::move(instr_msg));
-  static constexpr int kWindowSize = 32;
   // local_garbage_msg_list_ is the cache of garbage_msg_list_.
   // `kWindowSize` controls the frequency of the usage of mutexed list.
-  if (unlikely(local_garbage_msg_list_.size() > kWindowSize)) {
+  if (unlikely(local_garbage_msg_list_.size() > flush_window_size)) {
     MoveToGarbageMsgListAndNotifyGC(schedule_ctx);
   }
 }
@@ -487,7 +490,7 @@ bool VirtualMachineEngine::OnSchedulerThread(const StreamType& stream_type) {
 // the other hand, `barrier_instruction_hook_.size() == 0` is more lightweight than
 // `lively_instruction_list_.Begin()?->instr_msg().instr_type_id().instruction_type().IsFrontSequential()`
 //
-void VirtualMachineEngine::TryRunBarrierInstruction() {
+void VirtualMachineEngine::TryRunBarrierInstruction(const ScheduleCtx& schedule_ctx) {
   auto* sequnential_instruction = mut_barrier_instruction_list()->Begin();
   CHECK_NOTNULL(sequnential_instruction);
   if (likely(sequnential_instruction != mut_lively_instruction_list()->Begin())) { return; }
@@ -501,7 +504,10 @@ void VirtualMachineEngine::TryRunBarrierInstruction() {
   CHECK(OnSchedulerThread(stream_type));
   stream_type.Run(sequnential_instruction);
   mut_barrier_instruction_list()->Erase(sequnential_instruction);
+  intrusive::shared_ptr<InstructionMsg> instr_msg(sequnential_instruction->mut_instr_msg());
   LivelyInstructionListErase(sequnential_instruction);
+  constexpr int kZeroWindowSize = 0;  // flush immediately.
+  MoveInstructionMsgToGarbageMsgList(kZeroWindowSize, std::move(instr_msg), schedule_ctx);
   OF_PROFILER_RANGE_POP();
 }
 
@@ -509,7 +515,7 @@ void VirtualMachineEngine::Schedule(const ScheduleCtx& schedule_ctx) {
   // Release finished instructions and try to schedule out instructions in DAG onto ready list.
   if (unlikely(mut_active_stream_list()->size())) { ReleaseFinishedInstructions(schedule_ctx); }
   // Try run the first barrier instruction.
-  if (unlikely(mut_barrier_instruction_list()->size())) { TryRunBarrierInstruction(); }
+  if (unlikely(mut_barrier_instruction_list()->size())) { TryRunBarrierInstruction(schedule_ctx); }
   // Handle pending instructions, and try schedule them to ready list.
   // Use thread_unsafe_size to avoid acquiring mutex lock.
   // The inconsistency between pending_msg_list.list_head_.list_head_.container_ and
@@ -542,7 +548,34 @@ void VirtualMachineEngine::Schedule(const ScheduleCtx& schedule_ctx) {
 void VirtualMachineEngine::Callback() {
   InstructionMsgList garbage_msg_list;
   mut_garbage_msg_list()->MoveTo(&garbage_msg_list);
-  // destruct garbage_msg_list.
+  INTRUSIVE_FOR_EACH(garbage, &garbage_msg_list) {
+    CHECK_JUST(Global<ForeignLockHelper>::Get()->WithScopedAcquire([&]() -> Maybe<void> {
+      garbage_msg_list.Erase(garbage.Mutable());
+      // There may be a tiny gap between appending `garbage` to garbage_list and dereferencing
+      // `garbage` in scheduler thread or work thread.
+      //  e.g.
+      //
+      //   void Foo() {
+      //     auto garbage = GetGarbage();
+      //     AppendToGarbageList(garbage);
+      //
+      //     // **Callback thread maybe handle garbage in the same time**. From it's point view,
+      //     ref_cnt > 1.
+      //
+      //     garbage.reset(); // explicitly dereference garbage for better understood.
+      //   }
+      //
+      while (garbage->ref_cnt() > 1) {
+        // Do nothing. Wait until all other threads ref_cnts released.
+      }
+      CHECK_NOTNULL(garbage->phy_instr_operand());
+      while (garbage->phy_instr_operand().use_count() > 1) {
+        // Do nothing. Wait until all other threads ref_cnts released.
+      }
+      // Destruct garbage.
+      return Maybe<void>::Ok();
+    }));
+  }
 }
 
 bool VirtualMachineEngine::ThreadUnsafeEmpty() const {
