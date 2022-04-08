@@ -36,7 +36,7 @@ ONEFLOW_API_PYBIND11_MODULE("", m) {
         return CreateGenerator(device_tag).GetPtrOrThrow();
       }))
       .def("manual_seed",
-           [](std::shared_ptr<one::Generator> generator, const py::object& seed) -> Maybe<void> {
+           [](const std::shared_ptr<one::Generator>& generator, const py::object& seed) -> Maybe<void> {
              int64_t seed_val = JUST(one::functional::PyUnpackLong(seed.ptr()));
              generator->set_current_seed(seed_val);
              return Maybe<void>::Ok();
