@@ -139,19 +139,21 @@ bool CommNetIBEnabled() {
 
 }  // namespace
 
-EnvGlobalObjectsScope::EnvGlobalObjectsScope() {
-  CHECK(Global<EnvGlobalObjectsScope>::Get() == nullptr);
-  Global<EnvGlobalObjectsScope>::SetAllocated(this);
+EnvGlobalObjectsScope::EnvGlobalObjectsScope(const std::string& env_proto_str) {
+  EnvProto env_proto;
+  CHECK(TxtString2PbMessage(env_proto_str, &env_proto))
+      << "failed to parse env_proto" << env_proto_str;
+  CHECK_JUST(Init(env_proto));
 }
 
-Maybe<void> EnvGlobalObjectsScope::Init(const std::string& env_proto_str) {
-  EnvProto env_proto;
-  CHECK_OR_RETURN(TxtString2PbMessage(env_proto_str, &env_proto))
-      << "failed to parse env_proto" << env_proto_str;
-  return Init(env_proto);
+EnvGlobalObjectsScope::EnvGlobalObjectsScope(const EnvProto& env_proto) {
+  CHECK_JUST(Init(env_proto));
 }
 
 Maybe<void> EnvGlobalObjectsScope::Init(const EnvProto& env_proto) {
+  CHECK(Global<EnvGlobalObjectsScope>::Get() == nullptr);
+  Global<EnvGlobalObjectsScope>::SetAllocated(this);
+
   InitLogging(env_proto.cpp_logging_conf());
   Global<EnvDesc>::New(env_proto);
   Global<ProcessCtx>::New();

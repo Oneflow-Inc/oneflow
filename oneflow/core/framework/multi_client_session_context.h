@@ -50,6 +50,9 @@ class MultiClientSessionContext {
   void RemoveGraphFreeEagerTensors(const std::string& graph_name);
 
  private:
+  MultiClientSessionContext() {}
+
+ private:
   bool is_inited_ = false;
   std::shared_ptr<EnvGlobalObjectsScope> env_ctx_;
   HashMap<std::string, std::vector<std::pair<std::string, std::shared_ptr<one::Tensor>>>>

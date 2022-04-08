@@ -45,8 +45,7 @@ def EnvResource():
 def GetEnvContext(env_proto):
     assert type(env_proto) is env_pb2.EnvProto
     env_proto_str = text_format.MessageToString(env_proto)
-    env_ctx = oneflow._oneflow_internal.EnvContext()
-    env_ctx.init(env_proto_str)
+    env_ctx = oneflow._oneflow_internal.EnvContext(env_proto_str)
     return env_ctx
 
 
