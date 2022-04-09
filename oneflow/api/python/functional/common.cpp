@@ -296,6 +296,15 @@ Maybe<OpExpr> PyUnpackOpExpr(PyObject* obj) {
   return py::cast<std::shared_ptr<OpExpr>>(handle);
 }
 
+// int64_t
+Maybe<int64_t> PyUnpackLong(PyObject* py_obj) {
+  int overflow = -1;
+  long long val = PyLong_AsLongLongAndOverflow(py_obj, &overflow);
+  if (val == -1 && PyErr_Occurred()) { return Error::RuntimeError() << "Python exception occurs"; }
+  if (overflow != 0) { return Error::RuntimeError() << "Overflow when unpacking long"; }
+  return (int64_t)val;
+}
+
 }  // namespace functional
 }  // namespace one
 }  // namespace oneflow
