@@ -109,6 +109,7 @@ REGISTER_ROC_AUC_SCORE_KERNEL(DataType::kFloat, float, DataType::kFloat, float);
 REGISTER_ROC_AUC_SCORE_KERNEL(DataType::kInt32, int, DataType::kFloat, float);
 REGISTER_ROC_AUC_SCORE_KERNEL(DataType::kInt64, int64_t, DataType::kFloat, float);
 REGISTER_ROC_AUC_SCORE_KERNEL(DataType::kInt8, int8_t, DataType::kFloat, float);
+REGISTER_ROC_AUC_SCORE_KERNEL(DataType::kUInt8, uint8_t, DataType::kFloat, float);
 
 }  // namespace
 
