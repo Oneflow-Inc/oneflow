@@ -19,6 +19,7 @@ import inspect
 import copy
 import os
 import warnings
+import gc
 
 import numpy as np
 import oneflow as flow
@@ -843,6 +844,10 @@ class DualObject:
         else:
             return self.pytorch == other
 
+    def __del__(self):
+        # force running gc to avoid the periodic gc related to metaclass
+        gc.collect()
+
 
 dual_modules_to_test = []
 dual_objects_to_test = []
@@ -956,6 +961,8 @@ def autotest(
             loop_limit = successful_runs_needed * 20
             current_run = 0
             while successful_runs_needed > 0:
+                # force running gc to avoid the periodic gc related to metaclass
+                gc.collect()
                 clear_note_fake_program()
                 if current_run > loop_limit:
                     raise ValueError(
