@@ -81,6 +81,7 @@ def _test_masked_select_broadcast(test_case, device):
     np_grad = [[[3.0, 1.0], [2.0, 3.0], [1.0, 3.0]]]
     test_case.assertTrue(np.allclose(x.grad.numpy(), np_grad, 1e-05, 1e-05))
 
+
 @flow.unittest.skip_unless_1n1d()
 class TestMaskedSelect(flow.unittest.TestCase):
     def test_masked_select(test_case):
@@ -96,6 +97,7 @@ class TestMaskedSelect(flow.unittest.TestCase):
         flow_res = flow.masked_select(x, mask)
         np_res = [1, 1, 1, 1, 1, 1]
         test_case.assertTrue(np.allclose(flow_res.numpy(), np_res, 1e-05, 1e-05))
+
 
 if __name__ == "__main__":
     unittest.main()
