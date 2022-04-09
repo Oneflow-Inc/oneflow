@@ -104,8 +104,11 @@ class RocAucScoreKernel final : public user_op::OpKernel {
         size_t tmp_buffer_size = pred_shape.elem_cnt() * sizeof(float);                     \
         return tmp_buffer_size;                                                             \
       })
+REGISTER_ROC_AUC_SCORE_KERNEL(DataType::kDouble, double, DataType::kFloat, float);
 REGISTER_ROC_AUC_SCORE_KERNEL(DataType::kFloat, float, DataType::kFloat, float);
 REGISTER_ROC_AUC_SCORE_KERNEL(DataType::kInt32, int, DataType::kFloat, float);
+REGISTER_ROC_AUC_SCORE_KERNEL(DataType::kInt64, int64_t, DataType::kFloat, float);
+REGISTER_ROC_AUC_SCORE_KERNEL(DataType::kInt8, int8_t, DataType::kFloat, float);
 
 }  // namespace
 

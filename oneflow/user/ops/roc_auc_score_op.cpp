@@ -20,8 +20,8 @@ namespace oneflow {
 
 /* static */ Maybe<void> RocAucScoreOp::InferLogicalTensorDesc(user_op::InferContext* ctx) {
   user_op::TensorDesc* out_desc = ctx->OutputTensorDesc("out", 0);
-  const Shape& pred_shape = ctx->Attr<Shape>("pred");
-  const Shape& label_shape = ctx->Attr<Shape>("label");
+  const Shape& pred_shape = ctx->InputTensorDesc("pred", 0).shape();
+  const Shape& label_shape = ctx->InputTensorDesc("label", 0).shape();
   CHECK_EQ_OR_RETURN(pred_shape.elem_cnt(), label_shape.elem_cnt())
       << "pred and label MUST have same element count";
   out_desc->set_is_dynamic(false);
