@@ -17,14 +17,11 @@ limitations under the License.
 #include "oneflow/api/python/functional/common.h"
 #include "oneflow/api/python/functional/python_arg.h"
 
-#include "oneflow/api/python/of_api_registry.h"
-#include "oneflow/core/functional/functional.h"
-
 namespace oneflow {
 namespace one {
 namespace functional {
 
-void FunctionSignature::ReportKwargsError(PyObject* kwargs) const {
+void FunctionSchema::ReportKwargsError(PyObject* kwargs) const {
   PyObject *key, *value;
   Py_ssize_t pos = 0;
 
@@ -50,8 +47,8 @@ void FunctionSignature::ReportKwargsError(PyObject* kwargs) const {
 }
 
 // The argument parsing refers to the implementation of Pytorch.
-bool FunctionSignature::Parse(PyObject* args, PyObject* kwargs, PythonArg* parsed_args,
-                              bool raise_exception) const {
+bool FunctionSchema::Parse(PyObject* args, PyObject* kwargs, PythonArg* parsed_args,
+                           bool raise_exception) const {
   bool treat_args_as_list = false;
   size_t nargs = args ? PyTuple_Size(args) : 0;
   size_t remaining_kwargs = kwargs ? PyDict_Size(kwargs) : 0;

@@ -530,6 +530,7 @@ class Generator:
                 )
                 schema_fmt += "\n"
                 schema_fmt += "PyObject* {0}(PyObject* self, PyObject* args, PyObject* kwargs) {{\n".format(name)
+                schema_fmt += "  PythonFrameGuard pf;\n"
                 schema_fmt += "  static PythonArgParser<{0}> parser(\"{1}\");\n".format(", ".join(schema_types), name)
                 schema_fmt += "  ParsedArgs<{0}> r;\n".format(max_args_count)
                 schema_fmt += "  int idx = parser.Parse(args, kwargs, &r);\n"

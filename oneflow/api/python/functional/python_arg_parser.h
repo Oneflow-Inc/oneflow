@@ -16,13 +16,10 @@ limitations under the License.
 #ifndef ONEFLOW_API_PYTHON_FUNCTIONAL_PYTHON_ARG_PARSER_H_
 #define ONEFLOW_API_PYTHON_FUNCTIONAL_PYTHON_ARG_PARSER_H_
 
-#include <pybind11/pybind11.h>
 #include <Python.h>
 
-#include "oneflow/api/python/functional/common.h"
 #include "oneflow/api/python/functional/function_def.h"
 #include "oneflow/api/python/functional/python_arg.h"
-#include "oneflow/core/common/just.h"
 #include "oneflow/core/common/throw.h"
 #include "oneflow/core/common/util.h"
 
@@ -35,24 +32,17 @@ class ParsedArgs {
  public:
   ParsedArgs() = default;
 
-  const PythonArg& operator[](size_t idx) const {
-    CHECK_LT_OR_THROW(idx, N) << "index " << idx << " is out of bound [0, " << N << ")";
-    return data[idx];
-  }
-
-  PythonArg& operator[](size_t idx) {
-    CHECK_LT_OR_THROW(idx, N) << "index " << idx << " is out of bound [0, " << N << ")";
-    return data[idx];
-  }
+  const PythonArg& operator[](size_t idx) const { return data[idx]; }
+  PythonArg& operator[](size_t idx) { return data[idx]; }
 
  public:
   PythonArg data[N];
 };
 
-class FunctionSignature {
+class FunctionSchema {
  public:
-  FunctionSignature() = default;
-  FunctionSignature(const std::string& signature, const FunctionDef* def, size_t max_pos_nargs)
+  FunctionSchema() = default;
+  FunctionSchema(const std::string& signature, const FunctionDef* def, size_t max_pos_nargs)
       : signature_(signature), def_(def), max_pos_nargs_(max_pos_nargs) {}
 
   const std::string& signature() const { return signature_; }
@@ -84,7 +74,7 @@ class PythonArgParser {
   int Parse(PyObject* args, PyObject* kwargs, ParsedArgs<N>* parsed_args) const {
     bool raise_exception = (kSchemaSize == 1);
     for (int i = 0; i < kSchemaSize; ++i) {
-      if (signatures_[i].Parse(args, kwargs, parsed_args->data, raise_exception)) { return i; }
+      if (schema_[i].Parse(args, kwargs, parsed_args->data, raise_exception)) { return i; }
     }
     ReportInvalidArgsError(args, kwargs);
     return -1;
@@ -94,22 +84,21 @@ class PythonArgParser {
   template<size_t... I>
   void Init(std::index_sequence<I...>) {
     __attribute__((__unused__)) int dummy[] = {
-        ((void)(signatures_[I] = FunctionSignature(
-                    schema_t<I>::signature, &schema_t<I>::function_def, schema_t<I>::max_pos_args)),
+        ((void)(schema_[I] = FunctionSchema(schema_t<I>::signature, &schema_t<I>::function_def,
+                                            schema_t<I>::max_pos_args)),
          0)...};
   }
 
   void ReportInvalidArgsError(PyObject* args, PyObject* kwargs) const {
     std::ostringstream ss;
     ss << name_ << "(): received an invalid combination of arguments. The valid signatures are:";
-    for (int i = 0; i < kSchemaSize; ++i) {
-      ss << "\n\t*" << i << ": " << signatures_[i].signature();
-    }
+    for (int i = 0; i < kSchemaSize; ++i) { ss << "\n\t*" << i << ": " << schema_[i].signature(); }
     THROW(TypeError) << ss.str();
   }
 
+ private:
   std::string name_;
-  FunctionSignature signatures_[kSchemaSize];
+  FunctionSchema schema_[kSchemaSize];
 };
 
 }  // namespace functional
