@@ -42,7 +42,7 @@ def api_all_device_placement(device_type: str) -> oneflow._oneflow_internal.plac
 
         # Runs on 4 ranks
         import oneflow as flow
-        
+
         p = flow.env.all_device_placement("cuda") # oneflow.placement(type="cuda", ranks=[0, 1, 2, 3])
         p = flow.env.all_device_placement("cpu") # oneflow.placement(type="cpu", ranks=[0, 1, 2, 3])
 
@@ -221,15 +221,9 @@ class EnvHolder(object):
 
 
 def GetEnv():
-    global _env_holder
-    if _env_holder is None:
-        _env_holder = EnvHolder()
-    else:
-        print("Environment has been initialized, this env init will do nothing.")
-    return _env_holder
+    return EnvHolder()
 
 
-_env_holder = None
 device_tag2default_parallel_conf = {}
 default_env_proto = _DefaultEnvProto()
 config_master_addr = ctrl_bootstrap_pb.Address()
