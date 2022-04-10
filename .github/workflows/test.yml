@@ -500,6 +500,11 @@ jobs:
           set -x
           docker run --rm -v $PWD:$PWD -w $PWD busybox rm -rf *
           docker run --rm -v $PWD:$PWD -w $PWD busybox rm -rf .pytest_cache
+      - name: Checkout Oneflow-Inc/oneflow
+        uses: actions/checkout@v2
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+          repository: ${{github.event.pull_request.head.repo.full_name}}
       - name: Checkout Oneflow-Inc/vision
         if: ${{ !fromJson(matrix.cache-hit) && contains(matrix.runs-on, 'self-hosted') }}
         uses: actions/checkout@v2
