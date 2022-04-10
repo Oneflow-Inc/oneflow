@@ -45,11 +45,7 @@ ONEFLOW_API_PYBIND11_MODULE("", m) {
 
   py::class_<oneflow::EnvGlobalObjectsScope, std::shared_ptr<oneflow::EnvGlobalObjectsScope>>(
       m, "EnvContext")
-      .def(py::init<>())
-      .def("init",
-           [](oneflow::EnvGlobalObjectsScope& env, const std::string& env_proto_str) {
-             return env.Init(env_proto_str).GetOrThrow();
-           })
+      .def(py::init<const std::string&>())
       .def("SwitchToShuttingDownPhase", &SwitchToShuttingDownPhase,
            py::call_guard<py::gil_scoped_release>());
 

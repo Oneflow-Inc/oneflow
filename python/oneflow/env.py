@@ -13,6 +13,7 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 """
+from oneflow.framework.env_util import api_all_device_placement as all_device_placement
 import oneflow._oneflow_internal
 from oneflow.framework.env_util import api_all_device_placement as all_device_placement
 

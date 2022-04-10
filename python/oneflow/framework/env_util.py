@@ -201,8 +201,22 @@ class EnvHolder(object):
         if not HasAllMultiClientEnvVars():
             SetDefaultMultiClientEnvVars()
         self._env_cxt = create_env()
+        self._shutting_down = [False]
 
-    def SwitchToShuttingDownPhase(self, is_normal_exit=True):
+    def is_shutting_down(self):
+        """
+        Whether the interpreter is currently shutting down.
+        For use in finalizers, __del__ methods, and similar; it is advised
+        to early bind this function rather than look it up when calling it,
+        since at shutdown module globals may be cleared.
+
+        Please refer to: https://github.com/Oneflow-Inc/OneTeam/issues/1219#issuecomment-1092370402
+        This solution is obtained from cupy code: https://github.com/cupy/cupy/pull/2809
+        """
+        return self._shutting_down[0]
+
+    def switch_to_shutting_down(self, is_normal_exit=True):
+        self._shutting_down[0] = True
         self._env_cxt.SwitchToShuttingDownPhase(is_normal_exit)
 
 

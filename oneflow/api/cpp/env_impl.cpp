@@ -114,8 +114,7 @@ OneFlowEnv::OneFlowEnv() {
   of::EnvProto env_proto;
   CompleteEnvProto(env_proto);
 
-  env_ctx_ = std::make_shared<of::EnvGlobalObjectsScope>();
-  CHECK_JUST(env_ctx_->Init(env_proto));
+  env_ctx_ = std::make_shared<of::EnvGlobalObjectsScope>(env_proto);
 
   of::ConfigProto config_proto;
   config_proto.mutable_resource()->set_cpu_device_num(1);  // useless, will be set in TryInit
