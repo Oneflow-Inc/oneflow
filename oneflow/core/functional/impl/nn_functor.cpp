@@ -151,10 +151,16 @@ class DeConvBaseFunctor {
     int32_t kernel_idx_offset = 2;
     if (data_format == "channels_last") { kernel_idx_offset = 1; }
 
+    if (groups == 1) {
+      JUST(deconv_attrs.SetAttr<int32_t>("filters", (weight->shape())->At(1)));
+    } else {
+      JUST(deconv_attrs.SetAttr<int32_t>("filters", filters));
+    }
+
     for (int i = 0; i < num_spatial_dims_; i++) {
       kernel_size_vec.at(i) = ((weight->shape())->At(i + kernel_idx_offset));
     }
-    JUST(deconv_attrs.SetAttr<int32_t>("filters", filters));
+
     JUST(deconv_attrs.SetAttr<std::vector<int32_t>>("padding_before", padding));
     JUST(deconv_attrs.SetAttr<std::vector<int32_t>>("kernel_size", kernel_size_vec));
     JUST(deconv_attrs.SetAttr<std::vector<int32_t>>("output_padding", output_padding));
