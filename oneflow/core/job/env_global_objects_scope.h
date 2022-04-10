@@ -39,7 +39,6 @@ class EnvGlobalObjectsScope final {
   }
 
  private:
-  EnvGlobalObjectsScope() {}
   Maybe<void> Init(const EnvProto& env_proto);
 
  private:
