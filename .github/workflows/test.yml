@@ -11,6 +11,7 @@ env:
   OSS_ACCESS_KEY_ID: ${{ secrets.OSS_ACCESS_KEY_ID }}
   OSS_ACCESS_KEY_SECRET: ${{ secrets.OSS_ACCESS_KEY_SECRET }}
   ONEFLOW_TIMEOUT_SECONDS: 90
+  ONEFLOW_THRAED_LOCAL_CACHED_SIZE: 16384
   FLOW_VISION_SRC: flow_vision
   TEST_WITH_TORCH_IMG_TAG: registry.cn-beijing.aliyuncs.com/oneflow/test-with-pytorch-1.9.0-cuda10.2-cudnn7-runtime:70729b0680b5a32daba6f50b56e0c169cd1636fa
 
@@ -595,7 +596,6 @@ jobs:
         run: |
           docker exec ${TEST_CONTAINER_NAME} python3 -m pip install -e ${{ env.FLOW_VISION_SRC}}
       # start pytest benchmark
-
       - name: Benchmark Test
         timeout-minutes: 100
         if: ${{ !fromJson(matrix.cache-hit) && matrix.test-type == 'benchmark' && matrix.device == 'cuda' }}
