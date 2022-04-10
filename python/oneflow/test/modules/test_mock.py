@@ -1,4 +1,4 @@
-/*
+"""
 Copyright 2020 The OneFlow Authors. All rights reserved.
 
 Licensed under the Apache License, Version 2.0 (the "License");
@@ -12,16 +12,27 @@ distributed under the License is distributed on an "AS IS" BASIS,
 WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
-*/
-#ifndef ONEFLOW_API_PYTHON_CALIBRATION_CALIBRATION_API_H_
-#define ONEFLOW_API_PYTHON_CALIBRATION_CALIBRATION_API_H_
+"""
 
-#include "oneflow/api/python/calibration/calibration.h"
+import unittest
+from collections import OrderedDict
 
-inline void CacheInt8Calibration() { return oneflow::CacheInt8Calibration().GetOrThrow(); }
+import numpy as np
 
-inline void WriteInt8Calibration(const std::string& path) {
-  return oneflow::WriteInt8Calibration(path).GetOrThrow();
-}
+import oneflow as flow
+import oneflow.unittest
 
-#endif  // ONEFLOW_API_PYTHON_CALIBRATION_CALIBRATION_ENV_H_
+
+@flow.unittest.skip_unless_1n1d()
+class TestMockModule(flow.unittest.TestCase):
+    def test_mock_device(test_case):
+        device = flow.device("mock")
+        test_case.assertEqual(device.type, "mock")
+
+    def test_mock_placement(test_case):
+        placement = flow.placement("mock", [0])
+        test_case.assertEqual(placement.type, "mock")
+
+
+if __name__ == "__main__":
+    unittest.main()
