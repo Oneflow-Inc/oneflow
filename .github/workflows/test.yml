@@ -603,8 +603,8 @@ jobs:
         with:
           collect-path: ${{ env.FLOW_VISION_SRC }}/benchmark
           container-name: ${{ env.TEST_CONTAINER_NAME }}
-          unkown-threshold: 5
-          error-threshold: 10
+          unkown-threshold: 10
+          error-threshold: 30
 
       # end pytest benchmark
       - name: Print stacks in all core files
