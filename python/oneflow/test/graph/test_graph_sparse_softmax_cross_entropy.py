@@ -1,3 +1,4 @@
+import os
 import unittest
 import numpy as np
 import oneflow as flow
@@ -84,6 +85,7 @@ def _compare_with_nn_cross_entropy_loss(
     test_case.assertTrue(np.allclose(grad_a, grad_b), f"\n{grad_a}\nvs.\n{grad_b}")
 
 
+@unittest.skipIf(os.getenv("ONEFLOW_TEST_CPU_ONLY"), "only test cpu cases")
 class TestSparseSoftmaxCrossEntropyGraph(oneflow.unittest.TestCase):
     @flow.unittest.skip_unless_1n1d()
     def test_local(test_case):
