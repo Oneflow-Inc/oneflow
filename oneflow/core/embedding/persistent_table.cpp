@@ -515,7 +515,7 @@ template<typename Key, typename Engine>
 void PersistentTableImpl<Key, Engine>::PutBlocks(uint32_t num_keys, const void* keys,
                                                  const void* blocks) {
   std::lock_guard<std::recursive_mutex> lock(mutex_);
-  const uint32_t num_blocks = RoundUp(num_keys, num_values_per_block_);
+  const uint32_t num_blocks = RoundUp(num_keys, num_values_per_block_) / num_values_per_block_;
   const uint32_t num_padded_keys = num_blocks * num_values_per_block_;
   const uint64_t start_index = physical_table_size_;
   physical_table_size_ += num_padded_keys;
