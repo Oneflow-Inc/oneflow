@@ -263,7 +263,8 @@ Maybe<void> CheckDataType(user_op::InferContext* ctx) {
     user_op::InferContext* ctx) {
   JUST(CheckDataShape(ctx));
   const Shape& unique_embeddings_shape = ctx->InputShape("unique_embeddings", 0);
-  CHECK_EQ_OR_RETURN(unique_embeddings_shape.At(1), 2 * ctx->InputShape("embedding_grad", 0).At(1));
+  CHECK_EQ_OR_RETURN(unique_embeddings_shape.At(1), 2 * ctx->InputShape("embedding_grad", 0).At(1))
+      << "please adjust size_factor of MultiTableEmbedding's store_options to 2";
   *ctx->OutputShape("updated_unique_embeddings", 0) = unique_embeddings_shape;
   return Maybe<void>::Ok();
 }
@@ -293,7 +294,8 @@ Maybe<void> CheckDataType(user_op::InferContext* ctx) {
 /* static */ Maybe<void> AdamEmbeddingUpdateOp::InferLogicalTensorDesc(user_op::InferContext* ctx) {
   JUST(CheckDataShape(ctx));
   const Shape& unique_embeddings_shape = ctx->InputShape("unique_embeddings", 0);
-  CHECK_EQ_OR_RETURN(unique_embeddings_shape.At(1), 2 * ctx->InputShape("embedding_grad", 0).At(1));
+  CHECK_EQ_OR_RETURN(unique_embeddings_shape.At(1), 3 * ctx->InputShape("embedding_grad", 0).At(1))
+      << "please adjust size_factor of MultiTableEmbedding's store_options to 3";
   *ctx->OutputShape("updated_unique_embeddings", 0) = unique_embeddings_shape;
   return Maybe<void>::Ok();
 }
