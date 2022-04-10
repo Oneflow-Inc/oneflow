@@ -133,7 +133,7 @@ class Conv3dFunctor : public ConvBaseFunctor {
   }
 };
 
-class  DeConvBaseFunctor {
+class DeConvBaseFunctor {
  public:
   explicit DeConvBaseFunctor() {
     bias_op_ = CHECK_JUST(one::OpBuilder("bias_add").Input("a").Input("b").Output("out").Build());
