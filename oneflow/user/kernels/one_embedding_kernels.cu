@@ -222,7 +222,7 @@ __global__ void InitValueKernel(uint64_t seed, one::CUDAGeneratorState* cuda_gen
       } else if (initializer.type == InitializerType::kNormal) {
         const float mean = initializer.normal_param.mean;
         const float std = initializer.normal_param.std;
-        value = (curand_normal(&state) + mean) / std;
+        value = curand_normal(&state) * std + mean;
       } else {
         __trap();
       }
