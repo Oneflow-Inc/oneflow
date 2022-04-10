@@ -14,6 +14,8 @@ env:
   ONEFLOW_THRAED_LOCAL_CACHED_SIZE: 16384
   FLOW_VISION_SRC: flow_vision
   FLOW_VISION_COMMIT: 90acf53c77f69d6bbc26d805079d7765a3cb2608
+  LIBAI_SRC: libai
+  LIBAI_COMMIT: 7d31d9781e5f2d559dc0820f599e0bed798488ca
   TEST_WITH_TORCH_IMG_TAG: registry.cn-beijing.aliyuncs.com/oneflow/test-with-pytorch-1.9.0-cuda10.2-cudnn7-runtime:70729b0680b5a32daba6f50b56e0c169cd1636fa
 
 jobs:
@@ -845,7 +847,7 @@ jobs:
         with:
           repository: Oneflow-Inc/libai
           # please use a commit here
-          ref: 7d31d9781e5f2d559dc0820f599e0bed798488ca
+          ref: ${{ env.LIBAI_COMMIT}}
           path: ${{ env.LIBAI_SRC}}
       - name: Remove container
         timeout-minutes: 45
