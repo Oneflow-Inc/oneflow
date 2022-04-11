@@ -44,6 +44,7 @@ add_docstr(
 
     .. code-block:: python
 
+        >>> import oneflow as flow
         >>> import oneflow.nn.functional as F
         
         >>> inputs = flow.randn(20, 16, 50)
@@ -79,6 +80,7 @@ add_docstr(
 
     .. code-block:: python
 
+        >>> import oneflow as flow
         >>> import oneflow.nn.functional as F
         
         >>> inputs = flow.randn(1, 4, 5, 5)
@@ -116,6 +118,7 @@ add_docstr(
 
     .. code-block:: python
 
+        >>> import oneflow as flow
         >>> import oneflow.nn.functional as F
         
         >>> inputs = flow.randn(20, 16, 50, 10, 20)
