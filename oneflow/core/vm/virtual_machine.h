@@ -65,7 +65,8 @@ class VirtualMachine final {
 
   Maybe<void> RunInCurrentThread(vm::InstructionMsgList* instr_list);
 
-  bool vm_threads_closed_;
+  bool disable_vm_threads_;
+  bool scheduler_stoped_;
   intrusive::shared_ptr<vm::VirtualMachineEngine> vm_;
 
   // for asynchronized execution
