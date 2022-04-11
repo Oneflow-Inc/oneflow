@@ -180,6 +180,11 @@ oneflow
             CharTensor,
             IntTensor,
             LongTensor,
+            seed,
+            manual_seed,
+            initial_seed,
+            get_rng_state,
+            set_rng_state,
             isnan,
             isinf
 
