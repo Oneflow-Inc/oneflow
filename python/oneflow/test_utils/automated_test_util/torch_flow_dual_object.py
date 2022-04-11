@@ -386,7 +386,6 @@ def get_oneflow_eager_res(
             print(
                 "Before running eager module or functional: ", repr(oneflow),
             )
-            print_note_fake_program()
 
         oneflow_res = oneflow(*oneflow_args, **oneflow_kwargs)
         if verbose:
