@@ -16,7 +16,7 @@ limitations under the License.
 #include <cstdint>
 #ifdef WITH_CUDA
 #include "oneflow/core/cuda/elementwise.cuh"
-#include "oneflow/user/kernels/pooling_kernel_util.h"
+#include "oneflow/user/kernels/max_pooling_kernel_util.h"
 #include "oneflow/core/ep/cuda/cuda_stream.h"
 
 namespace oneflow {

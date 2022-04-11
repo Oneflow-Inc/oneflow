@@ -110,9 +110,9 @@ class ConvDataGradFunctor {
   std::shared_ptr<OpExpr> op_;
 };
 
-class PoolingNdGradFunctor {
+class MaxPoolingNdGradFunctor {
  public:
-  PoolingNdGradFunctor() {
+  MaxPoolingNdGradFunctor() {
     for (const auto& mode : {"max"}) {
       for (int ndims = 1; ndims <= 3; ++ndims) {
         const auto& op_type_name = GetOpTypeName(mode, ndims);
@@ -147,7 +147,7 @@ class PoolingNdGradFunctor {
     const auto& op_type_name = GetOpTypeName(mode, ndims);
     const auto& it = op_expr_map_.find(op_type_name);
     CHECK_OR_RETURN(it != op_expr_map_.end())
-        << "Encounter unsupported op " << op_type_name << " in PoolingNdGradFunctor.";
+        << "Encounter unsupported op " << op_type_name << " in MaxPoolingNdGradFunctor.";
     CHECK_NOTNULL_OR_RETURN(it->second);
     return OpInterpUtil::Dispatch<Tensor>(*it->second, {x, indice, dy}, attrs);
   }
@@ -1014,7 +1014,7 @@ ONEFLOW_FUNCTION_LIBRARY(m) {
   m.add_functor<impl::CombinedMarginLossGradFunctor>("CombinedMarginLossGrad");
   m.add_functor<impl::AffineGridGradFunctor>("AffineGridGrad");
   m.add_functor<impl::GridSampleGradFunctor>("GridSampleGrad");
-  m.add_functor<impl::PoolingNdGradFunctor>("PoolingNdGrad");
+  m.add_functor<impl::MaxPoolingNdGradFunctor>("MaxPoolingNdGrad");
   m.add_functor<impl::PadGradFunctor>("PadGrad");
   m.add_functor<impl::AvgPoolingNdGradFunctor>("AvgPoolingNdGrad");
   m.add_functor<impl::NormalizationGradFunctor>("NormalizationGrad");

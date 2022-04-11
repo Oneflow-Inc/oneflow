@@ -26,7 +26,7 @@ namespace one {
 
 namespace {
 
-struct PoolingCaptureState : public AutoGradCaptureState {
+struct MaxPoolingCaptureState : public AutoGradCaptureState {
   bool requires_grad;
   size_t input_index;
   size_t indice_index;
@@ -40,16 +40,16 @@ struct PoolingCaptureState : public AutoGradCaptureState {
   bool ceil_mode;
 };
 
-class PoolingNdGrad : public OpExprGradFunction<PoolingCaptureState> {
+class MaxPoolingNdGrad : public OpExprGradFunction<MaxPoolingCaptureState> {
  public:
-  virtual ~PoolingNdGrad() = default;
+  virtual ~MaxPoolingNdGrad() = default;
 
-  using OpExprGradFunction<PoolingCaptureState>::Init;
+  using OpExprGradFunction<MaxPoolingCaptureState>::Init;
 
   Maybe<void> Init(const OpExpr& op, const std::string& mode);
-  Maybe<void> Capture(PoolingCaptureState* ctx, const TensorTuple& inputs,
+  Maybe<void> Capture(MaxPoolingCaptureState* ctx, const TensorTuple& inputs,
                       const TensorTuple& outputs, const AttrMap& attrs) const override;
-  Maybe<void> Apply(const PoolingCaptureState* ctx, const TensorTuple& out_grads,
+  Maybe<void> Apply(const MaxPoolingCaptureState* ctx, const TensorTuple& out_grads,
                     TensorTuple* in_grads) const override;
 
  private:
@@ -57,7 +57,7 @@ class PoolingNdGrad : public OpExprGradFunction<PoolingCaptureState> {
   AttrMap base_attrs_;
 };
 
-Maybe<void> PoolingNdGrad::Init(const OpExpr& op, const std::string& mode) {
+Maybe<void> MaxPoolingNdGrad::Init(const OpExpr& op, const std::string& mode) {
   const auto* fw_op_expr = dynamic_cast<const UserOpExpr*>(&op);
   CHECK_NOTNULL_OR_RETURN(fw_op_expr);
   base_attrs_ = MakeAttrMapFromUserOpConf(fw_op_expr->proto());
@@ -65,7 +65,7 @@ Maybe<void> PoolingNdGrad::Init(const OpExpr& op, const std::string& mode) {
   return Maybe<void>::Ok();
 }
 
-Maybe<void> PoolingNdGrad::Capture(PoolingCaptureState* ctx, const TensorTuple& inputs,
+Maybe<void> MaxPoolingNdGrad::Capture(MaxPoolingCaptureState* ctx, const TensorTuple& inputs,
                                    const TensorTuple& outputs, const AttrMap& attrs) const {
   ctx->requires_grad = inputs.at(0)->requires_grad();
   if (!ctx->requires_grad) { return Maybe<void>::Ok(); }
@@ -84,7 +84,7 @@ Maybe<void> PoolingNdGrad::Capture(PoolingCaptureState* ctx, const TensorTuple& 
   return Maybe<void>::Ok();
 }
 
-Maybe<void> PoolingNdGrad::Apply(const PoolingCaptureState* ctx, const TensorTuple& out_grads,
+Maybe<void> MaxPoolingNdGrad::Apply(const MaxPoolingCaptureState* ctx, const TensorTuple& out_grads,
                                  TensorTuple* in_grads) const {
   if (!ctx->requires_grad) { return Maybe<void>::Ok(); }
   CHECK_LE_OR_RETURN(out_grads.size(), 2);
@@ -94,7 +94,7 @@ Maybe<void> PoolingNdGrad::Apply(const PoolingCaptureState* ctx, const TensorTup
   const auto& indice = ctx->SavedTensors().at(ctx->indice_index);
 
   in_grads->resize(1);
-  in_grads->at(0) = JUST(functional::PoolingNdGrad(
+  in_grads->at(0) = JUST(functional::MaxPoolingNdGrad(
       input, indice, out_grads.at(0), mode_, ndims, ctx->data_format, ctx->padding,
       ctx->kernel_size, ctx->stride, ctx->dilation, ctx->return_indices, ctx->ceil_mode));
 
@@ -103,9 +103,9 @@ Maybe<void> PoolingNdGrad::Apply(const PoolingCaptureState* ctx, const TensorTup
 
 }  // namespace
 
-class MaxpoolNdGrad final : public PoolingNdGrad {
+class MaxpoolNdGrad final : public MaxPoolingNdGrad {
  public:
-  Maybe<void> Init(const OpExpr& op) override { return PoolingNdGrad::Init(op, "max"); }
+  Maybe<void> Init(const OpExpr& op) override { return MaxPoolingNdGrad::Init(op, "max"); }
 };
 
 REGISTER_OP_EXPR_GRAD_FUNCTION("maxpool_1d", MaxpoolNdGrad);
