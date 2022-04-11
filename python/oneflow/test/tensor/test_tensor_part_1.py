@@ -113,6 +113,15 @@ class TestTensor(flow.unittest.TestCase):
         test_case.assertTrue(np.allclose(output.numpy(), np_arr))
 
     @flow.unittest.skip_unless_1n1d()
+    def test_construct_np_array_from_tensor(test_case):
+        tensor = flow.randn(5)
+        np_arr = np.array(tensor)
+        test_case.assertEqual(np_arr.shape, (5,))
+        test_case.assertEqual(np_arr.dtype, np.float32)
+        test_case.assertTrue(np.allclose(np_arr, tensor.numpy()))
+        test_case.assertEqual(str(np_arr), str(tensor.numpy()))
+
+    @flow.unittest.skip_unless_1n1d()
     @autotest(check_graph=True)
     def test_tensor_sign_with_random_data(test_case):
         device = random_device()
@@ -473,6 +482,19 @@ class TestTensor(flow.unittest.TestCase):
         compare_setitem_with_numpy(x, se[:, :, 2], v)
         x = flow.Tensor(2, 3, 4)
         compare_setitem_with_numpy(x, se[1, :, 2], v)
+
+    @flow.unittest.skip_unless_1n1d()
+    @autotest(check_graph=True)
+    def test_setitem_with_random_data(test_case):
+        device = random_device()
+        x = random_tensor(low=0, high=0, ndim=1, dim0=16).to(device)
+        y = random_tensor(low=-2, high=2, ndim=1, dim0=16).to(device)
+        idx = random_tensor(
+            low=0, high=15, ndim=1, dim0=20, dtype=int, requires_grad=False
+        ).to(device)
+        z = y[idx]
+        x[idx] = z
+        return x
 
     @flow.unittest.skip_unless_1n1d()
     def test_div(test_case):
