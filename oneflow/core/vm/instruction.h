@@ -46,6 +46,8 @@ class InstructionMsg final : public intrusive::Base {
 
   std::string DebugName() const;
 
+  intrusive::Ref::RefCntType ref_cnt() const { return intrusive_ref_.ref_cnt(); }
+
  private:
   friend class intrusive::Ref;
   intrusive::Ref* mut_intrusive_ref() { return &intrusive_ref_; }

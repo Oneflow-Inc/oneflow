@@ -33,7 +33,7 @@ limitations under the License.
 #include "oneflow/core/common/blocking_counter.h"
 #include "oneflow/core/common/singleton_ptr.h"
 #include "oneflow/core/rpc/include/global_process_ctx.h"
-#include "oneflow/core/vm/no_arg_cb_phy_instr_operand.h"
+#include "oneflow/core/vm/barrier_phy_instr_operand.h"
 #include "oneflow/core/vm/access_blob_arg_cb_phy_instr_operand.h"
 #include "oneflow/core/vm/consume_local_dep_object_phy_instr_operand.h"
 #include "oneflow/core/eager/release_tensor_instruction_type.h"
@@ -588,8 +588,17 @@ Maybe<Symbol<Stream>> GetBarrierStream() {
 
 }  // namespace
 
+Maybe<void> InstructionsBuilder::GlobalSync() {
+  const auto& phy_instr_operand = std::make_shared<vm::BarrierPhyInstrOperand>([]() {});
+  auto stream = CHECK_JUST(GetBarrierStream());
+  auto instruction = intrusive::make_shared<vm::InstructionMsg>(
+      stream->mut_vm_stream(), SingletonPtr<vm::GlobalSyncInstructionType>(), phy_instr_operand);
+  instruction_list_->PushBack(instruction.Mutable());
+  return Maybe<void>::Ok();
+}
+
 Maybe<void> InstructionsBuilder::Barrier(const std::function<void()>& Callback) {
-  const auto& phy_instr_operand = std::make_shared<vm::NoArgCbPhyInstrOperand>(Callback);
+  const auto& phy_instr_operand = std::make_shared<vm::BarrierPhyInstrOperand>(Callback);
   auto stream = CHECK_JUST(GetBarrierStream());
   auto instruction = intrusive::make_shared<vm::InstructionMsg>(
       stream->mut_vm_stream(), SingletonPtr<vm::BarrierInstructionType>(), phy_instr_operand);

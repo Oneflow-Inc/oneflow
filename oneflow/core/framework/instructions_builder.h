@@ -103,6 +103,7 @@ class InstructionsBuilder : public std::enable_shared_from_this<InstructionsBuil
   template<typename T>
   Maybe<void> TensorView(const T input_tensor, const T view_tensor);
 
+  Maybe<void> GlobalSync();
   Maybe<void> Barrier(const std::function<void()>& callback);
 
   Maybe<Scope> BuildInitialScope(int64_t session_id,

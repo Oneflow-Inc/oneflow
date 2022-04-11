@@ -36,8 +36,7 @@ class InstructionType {
  public:
   virtual ~InstructionType() = default;
 
-  bool IsSequential() const { return IsFrontSequential(); }
-  virtual bool IsFrontSequential() const { return false; }
+  virtual bool IsBarrier() const { return false; }
   virtual InstructionFuseType fuse_type() const { return kDisableInstructionFuse; }
   virtual void Compute(Instruction* instruction) const = 0;
 

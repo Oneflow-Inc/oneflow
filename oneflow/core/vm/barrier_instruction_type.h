@@ -23,7 +23,7 @@ limitations under the License.
 #include "oneflow/core/vm/instruction_type.h"
 #include "oneflow/core/vm/instruction.h"
 #include "oneflow/core/vm/virtual_machine_engine.h"
-#include "oneflow/core/vm/no_arg_cb_phy_instr_operand.h"
+#include "oneflow/core/vm/barrier_phy_instr_operand.h"
 #include "oneflow/core/control/global_process_ctx.h"
 
 namespace oneflow {
@@ -34,7 +34,7 @@ class BarrierInstructionType : public InstructionType {
   BarrierInstructionType() = default;
   virtual ~BarrierInstructionType() override = default;
 
-  bool IsFrontSequential() const override { return true; }
+  bool IsBarrier() const override { return true; }
 
   std::string DebugName(const vm::InstructionMsg& instr_msg) const override { return "Barrier"; }
   void Compute(Instruction* instruction) const override { Run(instruction->instr_msg()); }
@@ -42,11 +42,19 @@ class BarrierInstructionType : public InstructionType {
  protected:
   void Run(const InstructionMsg& instr_msg) const {
     const auto& phy_instr_operand = instr_msg.phy_instr_operand();
-    CHECK(static_cast<bool>(phy_instr_operand));
-    const auto* ptr = dynamic_cast<const NoArgCbPhyInstrOperand*>(phy_instr_operand.get());
-    CHECK_NOTNULL(ptr);
-    ptr->callback()();
+    CHECK_NOTNULL(dynamic_cast<const BarrierPhyInstrOperand*>(phy_instr_operand.get()));
   }
+};
+
+class GlobalSyncInstructionType : public InstructionType {
+ public:
+  GlobalSyncInstructionType() = default;
+  virtual ~GlobalSyncInstructionType() override = default;
+
+  bool IsBarrier() const override { return true; }
+
+  std::string DebugName(const vm::InstructionMsg& instr_msg) const override { return "GlobalSync"; }
+  void Compute(Instruction* instruction) const override { OF_ENV_BARRIER(); }
 };
 
 }  // namespace vm
