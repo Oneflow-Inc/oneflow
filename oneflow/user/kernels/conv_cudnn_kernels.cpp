@@ -175,6 +175,7 @@ class ConvGpuKernel final : public user_op::OpKernel, public user_op::CudaGraphS
   void Compute(user_op::KernelComputeContext* ctx, user_op::OpKernelState*,
                const user_op::OpKernelCache* cache) const override {
     const user_op::Tensor* in = ctx->Tensor4ArgNameAndIndex("in", 0);
+    if (in->shape().elem_cnt() == 0) return;
     const user_op::Tensor* weight = ctx->Tensor4ArgNameAndIndex("weight", 0);
     user_op::Tensor* buf = ctx->Tensor4ArgNameAndIndex("tmp_buffer", 0);
     user_op::Tensor* out = ctx->Tensor4ArgNameAndIndex("out", 0);
@@ -218,6 +219,7 @@ class ConvGpuKernel final : public user_op::OpKernel, public user_op::CudaGraphS
                        && (user_op::HobDataType("in", 0) == GetDataType<dtype>::value))            \
       .SetInferTmpSizeFn([](user_op::InferContext* ctx) -> size_t {                                \
         const auto& in = ctx->InputTensorDesc("in", 0);                                            \
+        if (in.shape().elem_cnt() == 0) return 0;                                                  \
         const auto& weight = ctx->InputTensorDesc("weight", 0);                                    \
         const auto* out = ctx->OutputTensorDesc("out", 0);                                         \
         const auto& cudnn_conf = Global<ResourceDesc, ForSession>::Get()->resource().cudnn_conf(); \
