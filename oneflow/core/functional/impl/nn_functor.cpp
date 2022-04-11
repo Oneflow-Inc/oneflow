@@ -1392,11 +1392,13 @@ class NormalFunctor {
     if (out.has_value()) {
       std::shared_ptr<one::Tensor> out_tensor = JUST(out);
       Symbol<Device> out_tensor_device = JUST(out_tensor->device());
-      CHECK_OR_RETURN(out_tensor_device == JUST(device));
+      CHECK_OR_RETURN(out_tensor_device == JUST(device))
+          << "Please check whether the out tensor device matches the parameter device.";
       std::shared_ptr<TensorTuple> outputs = std::make_shared<TensorTuple>(1);
-      outputs->at(0) = out_tensor;
+      (*outputs)[0] = out_tensor;
+      // *oneflow::VectorAt(outputs, 0) = out_tensor;
       JUST(OpInterpUtil::Dispatch(*op_, {}, outputs.get(), ctx));
-      return outputs->at(0);
+      return (*outputs)[0];
     }
 
     ctx.device = device;
@@ -1445,13 +1447,14 @@ class ConsistentNormalFunctor {
     if (out.has_value()) {
       std::shared_ptr<one::Tensor> out_tensor = JUST(out);
       Symbol<Device> out_tensor_device = JUST(out_tensor->device());
-      CHECK_OR_RETURN(out_tensor_device == JUST(device));
+      CHECK_OR_RETURN(out_tensor_device == JUST(device))
+          << "Please check whether the out tensor device matches the parameter device.";
       std::shared_ptr<TensorTuple> outputs = std::make_shared<TensorTuple>(1);
-      outputs->at(0) = out_tensor;
+      (*outputs)[0] = out_tensor;
       JUST(OpInterpUtil::Dispatch(
           *op_, {}, outputs.get(),
           OpExprInterpContext(attrs, placement, nd_sbp, distribution_state)));
-      return outputs->at(0);
+      return (*outputs)[0];
     }
 
     auto result = JUST(OpInterpUtil::Dispatch<Tensor>(
