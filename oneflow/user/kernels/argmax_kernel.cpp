@@ -49,7 +49,7 @@ class CpuArgMaxKernel final : public user_op::OpKernel {
         bc.Decrease();
       });
     }
-    bc.WaitUntilCntEqualZero();
+    bc.WaitForeverUntilCntEqualZero();
   }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };

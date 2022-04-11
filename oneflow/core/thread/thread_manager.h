@@ -67,7 +67,7 @@ void MultiThreadLoop(size_t num, const DoEachT& DoEach) {
     });
   }
   // buzy loop wait.
-  bc.WaitUntilCntEqualZero();
+  bc.WaitForeverUntilCntEqualZero();
 }
 
 }  // namespace oneflow

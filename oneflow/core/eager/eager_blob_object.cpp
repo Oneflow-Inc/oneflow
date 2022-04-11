@@ -25,11 +25,10 @@ namespace vm {
 EagerBlobObject::EagerBlobObject(const std::shared_ptr<MemoryCase>& mem_case,
                                  const std::shared_ptr<Shape>& shape, DataType data_type,
                                  const std::shared_ptr<TensorStorage>& tensor_storage,
-                                 const Optional<LocalDepObject*>& dep_object)
+                                 const intrusive::shared_ptr<LocalDepObject>& dep_object)
     : BlobObject(mem_case, shape, data_type),
       tensor_storage_(tensor_storage),
       is_shape_synced_(true),
-      storage_offset_(0),
       compute_local_dep_object_(dep_object) {
   CHECK(static_cast<bool>(shape));
   CHECK(static_cast<bool>(tensor_storage));
@@ -40,7 +39,9 @@ Maybe<void> EagerBlobObject::TryInitBlob() {
   return Maybe<void>::Ok();
 }
 
-Maybe<void> EagerBlobObject::InitBlob() {
+Maybe<void> EagerBlobObject::InitBlob() { return InitBlobWithOffset(0); }
+
+Maybe<void> EagerBlobObject::InitBlobWithOffset(const int64_t offset) {
   CHECK_NE_OR_RETURN(blob_desc_.data_type(), DataType::kInvalidDataType);
   if (!blob_desc_.shape().is_initialized()) { blob_desc_.set_shape(Shape(DimVector{})); }
   {
@@ -48,7 +49,7 @@ Maybe<void> EagerBlobObject::InitBlob() {
     int64_t header_byte_size = blob_desc_.AlignedByteSizeOfBlobHeader();
     header_buffer_ = std::make_unique<char[]>(header_byte_size);
   }
-  blob_.reset(new Blob(*mem_case_, &blob_desc_, header_buffer_.get(), nullptr));
+  blob_.reset(new Blob(*mem_case_, &blob_desc_, header_buffer_.get(), nullptr, offset));
   return Maybe<void>::Ok();
 }
 
@@ -77,8 +78,7 @@ Maybe<void> EagerBlobObject::TryAllocateBlobBodyMemory(DeviceCtx* device_ctx) {
     tensor_storage_->set_blob_dptr(std::unique_ptr<char, std::function<void(char*)>>(dptr, Free),
                                    required_body_bytes);
 
-    int64_t storage_offset_bytes = storage_offset_ * GetSizeOfDataType(blob_desc_.data_type());
-    blob->reset_dptr(dptr + storage_offset_bytes);
+    blob->reset_dptr(dptr);
     InitNonPODTypeBlobIfNeed(tensor_storage_->non_pod_allocator(), blob_.get());
   }
   return Maybe<void>::Ok();

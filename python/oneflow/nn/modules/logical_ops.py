@@ -54,19 +54,7 @@ def logical_and_op(input, other):
 
         >>> out = flow.logical_and(input1, input2)
         >>> out
-        tensor([1, 0, 0], dtype=oneflow.int8)
-
-    """
-    return LogicalAnd()(input, other)
-
-
-@register_tensor_op("logical_and")
-def logical_and_op_tensor(input, other):
-    """
-
-    logical_and() -> Tensor
-
-    See :func:`oneflow.logical_and`
+        tensor([ True, False, False], dtype=oneflow.bool)
 
     """
     return LogicalAnd()(input, other)
@@ -108,19 +96,7 @@ def logical_or_op(input, other):
 
         >>> out = flow.logical_or(input1, input2)
         >>> out
-        tensor([1, 0, 1], dtype=oneflow.int8)
-
-    """
-    return LogicalOr()(input, other)
-
-
-@register_tensor_op("logical_or")
-def logical_or_op_tensor(input, other):
-    """
-
-    logical_or() -> Tensor
-
-    See :func:`oneflow.logical_or`
+        tensor([ True, False,  True], dtype=oneflow.bool)
 
     """
     return LogicalOr()(input, other)
@@ -149,7 +125,7 @@ def logical_xor_op(input, other):
         >>> input2 = flow.tensor(np.array([1, 0, 0]).astype(np.float32), dtype=flow.float32)
         >>> out = flow.logical_xor(input1, input2)
         >>> out
-        tensor([0, 0, 1], dtype=oneflow.int8)
+        tensor([False, False,  True], dtype=oneflow.bool)
 
     """
 
@@ -158,17 +134,6 @@ def logical_xor_op(input, other):
         if other.dtype != input.dtype:
             other = flow.cast(other, input.dtype)
     return flow._C.logical_xor(input, other)
-
-
-@register_tensor_op("logical_xor")
-def logical_xor_op_tensor(input, other):
-    """
-    logical_xor() -> Tensor
-
-    See :func:`oneflow.logical_xor`
-
-    """
-    return logical_xor_op(input, other)
 
 
 if __name__ == "__main__":

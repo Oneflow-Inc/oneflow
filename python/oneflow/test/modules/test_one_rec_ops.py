@@ -77,9 +77,10 @@ def ensure_dataset():
 class TestOneRecOpsModule(flow.unittest.TestCase):
     def test_read_decode(test_case):
         files = [ensure_dataset()]
-        readdata = flow.read_onerec(
-            files, batch_size=10, random_shuffle=True, shuffle_mode="batch"
+        onerec_reader = flow.nn.OneRecReader(
+            files, batch_size=10, shuffle=True, shuffle_mode="batch"
         )
+        readdata = onerec_reader()
         labels = flow.decode_onerec(
             readdata, key="labels", dtype=flow.int32, shape=(1,)
         )
@@ -89,17 +90,18 @@ class TestOneRecOpsModule(flow.unittest.TestCase):
         test_case.assertTrue(labels.shape == (10, 1))
         test_case.assertTrue(dense_fields.shape == (10, 13))
 
-    def test_consistent_one_rec(test_case):
+    def test_global_one_rec(test_case):
         batch_size = 10
         files = [ensure_dataset()]
-        record_reader = flow.read_onerec(
+        onerec_reader = flow.nn.OneRecReader(
             files,
             batch_size=batch_size,
-            random_shuffle=True,
+            shuffle=True,
             shuffle_mode="batch",
-            placement=flow.placement("cpu", {0: [0]}),
+            placement=flow.placement("cpu", ranks=[0]),
             sbp=[flow.sbp.split(0)],
         )
+        record_reader = onerec_reader()
         label = flow.decode_onerec(
             record_reader, key="labels", dtype=flow.int32, shape=(1,)
         )

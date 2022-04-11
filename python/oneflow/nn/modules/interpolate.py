@@ -104,15 +104,7 @@ class Interpolate(Module):
                 scale_factors = [self.scale_factor for _ in range(dim)]
         else:
             raise ValueError("either size or scale_factor should be defined")
-        if self.recompute_scale_factor is None:
-            if scale_factors is not None:
-                for scale in scale_factors:
-                    if math.floor(scale) != scale:
-                        warnings.warn(
-                            "The default behavior for interpolate/upsample with float scale_factor changed in 1.6.0 to align with other frameworks/libraries, and now uses scale_factor directly, instead of relying on the computed output size. If you wish to restore the old behavior, please set recompute_scale_factor=True. See the documentation of nn.Upsample for details. "
-                        )
-                    break
-        elif self.recompute_scale_factor and self.size is not None:
+        if self.recompute_scale_factor and self.size is not None:
             raise ValueError(
                 "recompute_scale_factor is not meaningful with an explicit size."
             )
@@ -267,9 +259,6 @@ def interpolate(
         When scale_factor is specified, if recompute_scale_factor=True,
         scale_factor is used to compute the output_size which will then
         be used to infer new scales for the interpolation.
-        The default behavior for recompute_scale_factor changed to False
-        in 1.6.0, and scale_factor is used in the interpolation
-        calculation.
 
     For example:
 

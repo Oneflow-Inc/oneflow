@@ -34,7 +34,7 @@ class AssignOp final : public Operator {
  private:
   Maybe<void> GetSbpSignatures(
       const std::function<Maybe<const BlobDesc&>(const std::string&)>& LogicalBlobDesc4Ibn,
-      cfg::SbpSignatureList* sbp_sig_list) const override;
+      SbpSignatureList* sbp_sig_list) const override;
 };
 
 Maybe<void> AssignOp::InitFromOpConf() {
@@ -75,7 +75,7 @@ Maybe<void> AssignOp::InferOutBlobDescs(
 
 Maybe<void> AssignOp::GetSbpSignatures(
     const std::function<Maybe<const BlobDesc&>(const std::string&)>& LogicalBlobDesc4Ibn,
-    cfg::SbpSignatureList* sbp_sig_list) const {
+    SbpSignatureList* sbp_sig_list) const {
   SbpSignatureBuilder()
       .Split(input_bns(), 0)
       .MakeSplitSignatureListBuilder(

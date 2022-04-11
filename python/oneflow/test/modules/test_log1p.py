@@ -30,7 +30,13 @@ class TestLog1pModule(flow.unittest.TestCase):
     @autotest(check_graph=True)
     def test_log1p_with_random_data(test_case):
         device = random_device()
-        x = random_pytorch_tensor().to(device)
+        x = random_tensor().to(device)
+        return torch.log1p(x)
+
+    @autotest(check_graph=True)
+    def test_log1p_with_0dim_data(test_case):
+        device = random_device()
+        x = random_tensor(ndim=0).to(device)
         return torch.log1p(x)
 
 

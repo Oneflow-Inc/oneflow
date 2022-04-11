@@ -14,7 +14,6 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 #include "oneflow/core/common/container_util.h"
-#include "oneflow/core/common/multi_client.h"
 #include "oneflow/core/common/protobuf.h"
 #include "oneflow/core/job_rewriter/autotick.h"
 #include "oneflow/core/job/job_builder.h"
@@ -23,7 +22,6 @@ limitations under the License.
 #include "oneflow/core/common/container_util.h"
 #include "oneflow/core/common/buffer_manager.h"
 #include "oneflow/core/job/global_for.h"
-#include "oneflow/core/common/multi_client.h"
 
 namespace oneflow {
 
@@ -571,27 +569,7 @@ Maybe<void> AutoSourceAndSinkTick(
   return Maybe<void>::Ok();
 }
 
-Maybe<void> SingleClientAutoSourceAndSinkTick(const OpGraph& op_graph, JobBuilder* job_builder) {
-  if (JUST(IsMultiClient())) { return Maybe<void>::Ok(); }
-  auto* critical_section =
-      Global<CriticalSectionDesc>::Get()->AddCriticalSection(GlobalJobDesc().job_id());
-  critical_section->mutable_total_job_critical_section();
-  auto* src_map = critical_section->mutable_machine_id2source_tick_op_name();
-  const auto& DoEachSrc = [&](int64_t machine_id, const std::string& op_name) -> Maybe<void> {
-    (*src_map)[machine_id] = op_name;
-    return Maybe<void>::Ok();
-  };
-  auto* sink_map = critical_section->mutable_machine_id2sink_tick_op_name();
-  const auto& DoEachSink = [&](int64_t machine_id, const std::string& op_name) -> Maybe<void> {
-    (*sink_map)[machine_id] = op_name;
-    return Maybe<void>::Ok();
-  };
-  JUST(AutoSourceAndSinkTick(op_graph, job_builder, DoEachSrc, DoEachSink));
-  return Maybe<void>::Ok();
-}
-
 Maybe<void> MultiClientAutoSourceAndSinkTick(const OpGraph& op_graph, Job* job) {
-  if (!JUST(IsMultiClient())) { return Maybe<void>::Ok(); }
   HashMap<int64_t, std::string> machine_id2src_op_name;
   HashMap<int64_t, std::string> machine_id2sink_op_name;
   {
@@ -781,7 +759,6 @@ Maybe<void> ConnectCriticalSectionCallbackToJobSoleDstSubsetTick(
 }  // namespace
 
 Maybe<void> MultiClientAutoInterfaceCriticalSectionTick(const OpGraph& op_graph, Job* job) {
-  if (!JUST(IsMultiClient())) { return Maybe<void>::Ok(); }
   JobBuilder job_builder(job);
   std::vector<std::shared_ptr<LogicalBlobId>> critical_section_callback_lbis;
   {
@@ -808,32 +785,6 @@ Maybe<void> MultiClientAutoInterfaceCriticalSectionTick(const OpGraph& op_graph,
   }
   JUST(ConnectCriticalSectionCallbackToJobSoleDstSubsetTick(op_graph, &job_builder,
                                                             critical_section_callback_lbis));
-  return Maybe<void>::Ok();
-}
-
-Maybe<void> SingleClientAddGlobalInputCriticalSections(const OpGraph& op_graph,
-                                                       JobBuilder* job_builder) {
-  if (JUST(IsMultiClient())) { return Maybe<void>::Ok(); }
-  JUST(ForEachInputCriticalSectionOpNodes(
-      op_graph,
-      [&](const HashSet<const OpNode*>& op_nodes,
-          const std::vector<std::string>& lbi_producer_op_names) -> Maybe<void> {
-        JUST(AddGlobalInputOutputCriticalSection(op_nodes, lbi_producer_op_names, job_builder));
-        return Maybe<void>::Ok();
-      }));
-  return Maybe<void>::Ok();
-}
-
-Maybe<void> SingleClientAddGlobalOutputCriticalSections(const OpGraph& op_graph,
-                                                        JobBuilder* job_builder) {
-  if (JUST(IsMultiClient())) { return Maybe<void>::Ok(); }
-  JUST(ForEachOutputCriticalSectionOpNodes(
-      op_graph,
-      [&](const HashSet<const OpNode*>& op_nodes,
-          const std::vector<std::string>& lbi_producer_op_names) -> Maybe<void> {
-        JUST(AddGlobalInputOutputCriticalSection(op_nodes, lbi_producer_op_names, job_builder));
-        return Maybe<void>::Ok();
-      }));
   return Maybe<void>::Ok();
 }
 

@@ -18,6 +18,7 @@ limitations under the License.
 #include "oneflow/core/framework/op_interpreter/op_interpreter_util.h"
 #include "oneflow/core/functional/functional.h"
 #include "oneflow/core/job/lazy_mode.h"
+#include "oneflow/core/framework/nd_sbp.h"
 
 namespace oneflow {
 namespace one {
@@ -65,8 +66,12 @@ class Narrow : public OpExprGradFunction<NarrowCaptureState> {
       std::shared_ptr<Tensor> like;
       if (LazyMode::is_enabled()) {
         like = ctx->SavedTensors().at(0);
-      } else {
+      } else if (dy->is_local()) {
         like = JUST(functional::Empty(ctx->shape, dy->dtype(), JUST(dy->device())));
+      } else {
+        like = JUST(
+            functional::ConsistentEmpty(ctx->shape, dy->dtype(), JUST(dy->parallel_desc()),
+                                        *JUST(private_details::RawGetSbpList(JUST(dy->nd_sbp())))));
       }
       in_grads->resize(1);
       in_grads->at(0) = JUST(functional::NarrowGrad(dy, like, ctx->dim, ctx->start, ctx->length));

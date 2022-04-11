@@ -125,6 +125,7 @@ class FlipGrad1DCpuKernel final : public user_op::OpKernel {
       .SetIsMatchedHob((user_op::HobDeviceType() == DeviceType::kCPU)               \
                        && (user_op::HobDataType("dx", 0) == GetDataType<dtype>::value));
 
+REGISTER_FLIP_CPU_KERNEL(bool)
 REGISTER_FLIP_CPU_KERNEL(float)
 REGISTER_FLIP_CPU_KERNEL(double)
 REGISTER_FLIP_CPU_KERNEL(uint8_t)

@@ -27,7 +27,9 @@ namespace functional {
 
 namespace impl {
 
-#define INPLACE_UNARY_FLOAT_FUNC_SEQ OF_PP_MAKE_TUPLE_SEQ("sin", InplaceSin)
+#define INPLACE_UNARY_FLOAT_FUNC_SEQ      \
+  OF_PP_MAKE_TUPLE_SEQ("sin", InplaceSin) \
+  OF_PP_MAKE_TUPLE_SEQ("floor", InplaceFloor)
 
 #define UNARY_FUNC_SEQ                                       \
   OF_PP_MAKE_TUPLE_SEQ("abs", Abs)                           \
@@ -39,8 +41,7 @@ namespace impl {
   OF_PP_MAKE_TUPLE_SEQ("log_sigmoid", LogSigmoid)            \
   OF_PP_MAKE_TUPLE_SEQ("reciprocal_no_nan", ReciprocalNoNan) \
   OF_PP_MAKE_TUPLE_SEQ("rint", Rint)                         \
-  OF_PP_MAKE_TUPLE_SEQ("round", Round)                       \
-  OF_PP_MAKE_TUPLE_SEQ("softplus", Softplus)
+  OF_PP_MAKE_TUPLE_SEQ("round", Round)
 
 #define FLOAT_UNARY_FUNC_SEQ                     \
   OF_PP_MAKE_TUPLE_SEQ("acosh", Acosh)           \
@@ -146,13 +147,13 @@ ONEFLOW_FUNCTION_LIBRARY(m) {
   ADD_UNARY_FUNCTOR(Sign, "Sign");
   ADD_UNARY_FUNCTOR(Sin, "Sin");
   ADD_UNARY_FUNCTOR(Sinh, "Sinh");
-  ADD_UNARY_FUNCTOR(Softplus, "Softplus");
   ADD_UNARY_FUNCTOR(Sqrt, "Sqrt");
   ADD_UNARY_FUNCTOR(Square, "Square");
   ADD_UNARY_FUNCTOR(Tan, "Tan");
   ADD_UNARY_FUNCTOR(Tanh, "Tanh");
   m.add_functor<LogicalNotFunctor>("LogicalNot");
   m.add_functor<InplaceSinFunctor>("Sin_");
+  m.add_functor<InplaceFloorFunctor>("Floor_");
 };
 
 #undef ADD_UNARY_FUNCTOR

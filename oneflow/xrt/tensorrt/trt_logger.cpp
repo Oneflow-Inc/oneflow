@@ -24,7 +24,7 @@ namespace nv {
 
 using ILogger = ::nvinfer1::ILogger;
 
-void Logger::log(ILogger::Severity severity, const char* msg) {
+void Logger::log(ILogger::Severity severity, const char* msg) TRT_OPTIONAL_NOEXCEPT {
   switch (severity) {
     case ILogger::Severity::kVERBOSE:
     case ILogger::Severity::kINFO: {

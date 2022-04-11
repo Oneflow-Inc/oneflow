@@ -24,38 +24,38 @@ namespace data {
 template<typename LoadTarget>
 class GroupBatchDataset final : public Dataset<LoadTarget> {
  public:
-  using BaseDataset = Dataset<LoadTarget>;
-  using BaseDatasetUnqPtr = std::unique_ptr<BaseDataset>;
-  using LoadTargetShdPtr = std::shared_ptr<LoadTarget>;
-  using LoadTargetShdPtrVec = std::vector<LoadTargetShdPtr>;
+  using Base = Dataset<LoadTarget>;
+  using SampleType = typename Base::SampleType;
+  using BatchType = typename Base::BatchType;
+  using NestedDS = Dataset<LoadTarget>;
 
   GroupBatchDataset(size_t batch_size,
-                    const std::function<int64_t(const LoadTargetShdPtr&)>& GroupId4Sample,
-                    BaseDatasetUnqPtr&& dataset)
-      : base_(std::move(dataset)),
+                    const std::function<int64_t(const SampleType&)>& GroupId4Sample,
+                    std::unique_ptr<NestedDS>&& dataset)
+      : nested_ds_(std::move(dataset)),
         batch_size_(batch_size),
         group_fn_(GroupId4Sample),
         order_count_(0) {}
   ~GroupBatchDataset() = default;
 
-  LoadTargetShdPtrVec Next() override {
-    LoadTargetShdPtrVec ret;
+  BatchType Next() override {
+    BatchType batch;
     int64_t group_id = FindEarliestBatchGroupId();
     auto group_it = group_id2buffered_samples_.find(group_id);
     if (group_it != group_id2buffered_samples_.end()) {
       auto& batch_sample_list = group_it->second;
       if (!batch_sample_list.empty()) {
-        std::swap(ret, batch_sample_list.front().data);
+        std::swap(batch, batch_sample_list.front().data);
         batch_sample_list.pop_front();
       }
     }
-    while (ret.size() < batch_size_) {
-      LoadTargetShdPtrVec next_sample_vec = base_->Next();
-      CHECK_EQ(next_sample_vec.size(), 1);
-      int64_t next_group_id = group_fn_(next_sample_vec[0]);
+    while (batch.size() < batch_size_) {
+      auto next_batch = nested_ds_->Next();
+      CHECK_EQ(next_batch.size(), 1);
+      int64_t next_group_id = group_fn_(next_batch[0]);
       if (group_id == -1) { group_id = next_group_id; }
       if (group_id == next_group_id) {
-        ret.emplace_back(std::move(next_sample_vec[0]));
+        batch.emplace_back(std::move(next_batch[0]));
       } else {
         auto group_it = group_id2buffered_samples_.find(next_group_id);
         if (group_it == group_id2buffered_samples_.end()) {
@@ -65,16 +65,16 @@ class GroupBatchDataset final : public Dataset<LoadTarget> {
         auto& batch_sample_list = group_it->second;
         if (batch_sample_list.empty() || batch_sample_list.back().data.size() == batch_size_) {
           BatchSample batch_sample;
-          std::swap(batch_sample.data, next_sample_vec);
+          std::swap(batch_sample.data, next_batch);
           batch_sample.data.reserve(batch_size_);
           batch_sample.order = order_count_++;
           batch_sample_list.emplace_back(std::move(batch_sample));
         } else {
-          batch_sample_list.back().data.emplace_back(std::move(next_sample_vec[0]));
+          batch_sample_list.back().data.emplace_back(std::move(next_batch[0]));
         }
       }
     }
-    return ret;
+    return batch;
   }
 
  private:
@@ -93,13 +93,13 @@ class GroupBatchDataset final : public Dataset<LoadTarget> {
   }
 
   struct BatchSample {
-    LoadTargetShdPtrVec data;
+    BatchType data;
     int64_t order;
   };
 
-  BaseDatasetUnqPtr base_;
+  std::unique_ptr<NestedDS> nested_ds_;
   size_t batch_size_;
-  std::function<int64_t(const LoadTargetShdPtr&)> group_fn_;
+  std::function<int64_t(const SampleType&)> group_fn_;
   std::map<int64_t, std::list<BatchSample>> group_id2buffered_samples_;
   int64_t order_count_;
 };

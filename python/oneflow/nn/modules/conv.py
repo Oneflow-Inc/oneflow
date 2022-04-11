@@ -14,6 +14,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 """
 import math
+import os
 
 import oneflow as flow
 from oneflow.nn import init
@@ -181,6 +182,7 @@ class Conv1d(Module):
         self.padding = _single(padding)
         self.dilation = _single(dilation)
         self.groups = groups
+        self.channel_pos = "channels_first"
         assert in_channels % groups == 0
         assert out_channels % groups == 0
         self.in_channels = in_channels
@@ -210,6 +212,7 @@ class Conv1d(Module):
             padding=self.padding,
             dilation=self.dilation,
             groups=self.groups,
+            channel_pos=self.channel_pos,
         )
 
     def extra_repr(self):
@@ -364,13 +367,25 @@ class Conv2d(Module):
         self.padding = _pair(padding)
         self.dilation = _pair(dilation)
         self.groups = groups
+
+        if os.getenv("ONEFLOW_ENABLE_NHWC") == "1":
+            self.channel_pos = "channels_last"
+        else:
+            self.channel_pos = "channels_first"
+
         assert in_channels % groups == 0
         assert out_channels % groups == 0
         self.in_channels = in_channels
         self.out_channels = out_channels
-        self.weight = flow.nn.Parameter(
-            flow.Tensor(out_channels, in_channels // groups, *self.kernel_size)
-        )
+        if self.channel_pos == "channels_first":
+            self.weight = flow.nn.Parameter(
+                flow.Tensor(out_channels, in_channels // groups, *self.kernel_size)
+            )
+        else:
+            self.weight = flow.nn.Parameter(
+                flow.Tensor(out_channels, *self.kernel_size, in_channels // groups)
+            )
+
         self.out_channel_groups = out_channels // groups
         self.bias = None
         if bias:
@@ -385,13 +400,15 @@ class Conv2d(Module):
             init.uniform_(self.bias, -bound, bound)
 
     def forward(self, x):
-        if x.shape[1] != self.in_channels:
-            raise ValueError("The input channels should be equal to self.in_channels")
-        # TODO(zwx): Use `tensor.device_type()` method to help checking if x is on cpu.
-        # Using `if x.device == flow.device("cpu"):` will fail as consistent tensor has
-        # no device, however using `x.is_cuda` is not a good choice.
-
-        res = flow._C.conv2d(
+        if self.channel_pos == "channels_first":
+            in_channel_axis = 1
+        else:
+            in_channel_axis = 3
+        if x.shape[in_channel_axis] != self.in_channels:
+            raise ValueError(
+                f"The input channels {x.shape[in_channel_axis]} should be equal to self.in_channels {self.in_channels}."
+            )
+        return flow._C.conv2d(
             x,
             self.weight,
             self.bias,
@@ -399,8 +416,8 @@ class Conv2d(Module):
             padding=self.padding,
             dilation=self.dilation,
             groups=self.groups,
+            channel_pos=self.channel_pos,
         )
-        return res
 
     def extra_repr(self):
         s = "{in_channels}, {out_channels}, kernel_size={kernel_size}, stride={stride}"
@@ -533,6 +550,7 @@ class Conv3d(Module):
         self.padding = _triple(padding)
         self.dilation = _triple(dilation)
         self.groups = groups
+        self.channel_pos = "channels_first"
         assert in_channels % groups == 0, "in_channels must be divisible by groups"
         assert out_channels % groups == 0, "out_channels must be divisible by groups"
         self.in_channels = in_channels
@@ -564,6 +582,7 @@ class Conv3d(Module):
             padding=self.padding,
             dilation=self.dilation,
             groups=self.groups,
+            channel_pos=self.channel_pos,
         )
 
     def extra_repr(self):

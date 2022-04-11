@@ -17,7 +17,7 @@ import unittest
 from collections import OrderedDict
 
 import numpy as np
-from test_util import GenArgList
+from oneflow.test_utils.test_util import GenArgList
 
 from oneflow.test_utils.automated_test_util import *
 import oneflow as flow
@@ -37,10 +37,10 @@ class TestTripletMarginLoss(flow.unittest.TestCase):
         m.train(random())
         device = random_device()
         m.to(device)
-        shape = random_tensor(ndim=2, dim0=random(1, 8)).value().shape
-        anchor = random_pytorch_tensor(len(shape), *shape).to(device)
-        pos = random_pytorch_tensor(len(shape), *shape).to(device)
-        neg = random_pytorch_tensor(len(shape), *shape).to(device)
+        shape = random_tensor(ndim=2, dim0=random(1, 8)).pytorch.shape
+        anchor = random_tensor(len(shape), *shape).to(device)
+        pos = random_tensor(len(shape), *shape).to(device)
+        neg = random_tensor(len(shape), *shape).to(device)
         y = m(anchor, pos, neg)
         return y
 

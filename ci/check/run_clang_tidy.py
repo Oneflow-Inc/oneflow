@@ -59,9 +59,9 @@ async def run_command(cmd=None, dry=False, name=None):
 
 def download(build_dir, dry=False) -> Optional[List[str]]:
     urls = [
-        "https://github.com/Oneflow-Inc/llvm-project/releases/download/latest/clang-tidy-489012f-x86_64.AppImage"
+        "https://github.com/Oneflow-Inc/llvm-project/releases/download/llvmorg-13.0.0-maybe/clang-tidy-13.AppImage"
         if os.getenv("CI")
-        else "https://oneflow-static.oss-cn-beijing.aliyuncs.com/bin/clang-tidy/linux-x86_64/clang-tidy.AppImage",
+        else "https://oneflow-static.oss-cn-beijing.aliyuncs.com/bin/clang-tidy/linux-x86_64/clang-tidy-13.AppImage",
         "https://raw.githubusercontent.com/oneflow-inc/llvm-project/maybe/clang-tools-extra/clang-tidy/tool/clang-tidy-diff.py",
     ]
     dst_dir = f"{build_dir}/cache/bin"

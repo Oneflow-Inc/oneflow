@@ -19,7 +19,7 @@ limitations under the License.
 #include "oneflow/user/data/data_reader.h"
 #include "oneflow/user/data/coco_parser.h"
 #include "oneflow/core/common/str_util.h"
-#include <json.hpp>
+#include "nlohmann/json.hpp"
 
 namespace oneflow {
 namespace data {
@@ -27,11 +27,14 @@ namespace data {
 class COCODataReader final : public DataReader<COCOImage> {
  public:
   COCODataReader(user_op::KernelInitContext* ctx);
-  ~COCODataReader() = default;
+  ~COCODataReader() override;
 
  protected:
   using DataReader<COCOImage>::loader_;
   using DataReader<COCOImage>::parser_;
+
+ private:
+  size_t batch_size_;
 };
 
 class COCOMeta final {

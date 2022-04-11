@@ -166,12 +166,12 @@ class ConvGpuKernel final : public user_op::OpKernel, public user_op::CudaGraphS
     return state;
   }
 
- private:
   std::shared_ptr<user_op::OpKernelCache> InitOpKernelCache(
       user_op::KernelCacheContext* ctx) const override {
     return CreateConvCudnnOpKernelCache(ctx);
   }
 
+ private:
   void Compute(user_op::KernelComputeContext* ctx, user_op::OpKernelState*,
                const user_op::OpKernelCache* cache) const override {
     const user_op::Tensor* in = ctx->Tensor4ArgNameAndIndex("in", 0);

@@ -14,43 +14,12 @@ See the License for the specific language governing permissions and
 limitations under the License.
 """
 import oneflow as flow
-from oneflow.framework.tensor import register_tensor_op
+from oneflow.nn.modules.utils import _single, _handle_size_arg
 
 
-@register_tensor_op("expand")
 def expand_op(input, *sizes):
-    """This operator expand the input tensor to a larger size.
-
-    Passing -1 as the size for a dimension means not changing the size of that dimension.
-
-    Tensor can be also expanded to a larger number of dimensions and the new ones will be appended at the front.
-
-    For the new dimensions, the size cannot be set to -1.
-
-    Args:
-        input (oneflow.Tensor): The input Tensor.
-        *sizes  (oneflow.Size or int): The desired expanded size.
-
-    Returns:
-        oneflow.Tensor: The result Tensor.
-
-    For example:
-
-    .. code-block:: python
-
-        >>> import oneflow as flow
-        >>> import numpy as np
-        >>> x = np.array([[[[0, 1]],
-        ...               [[2, 3]],
-        ...               [[4, 5]]]]).astype(np.int32)
-        >>> input = flow.Tensor(x)
-        >>> input.shape
-        oneflow.Size([1, 3, 1, 2])
-        >>> out = input.expand(1, 3, 2, 2)
-        >>> out.shape
-        oneflow.Size([1, 3, 2, 2])
-
-    """
+    sizes = _handle_size_arg(sizes)
+    sizes = _single(sizes)
     return flow._C.expand(input, sizes)
 
 

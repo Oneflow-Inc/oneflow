@@ -26,9 +26,9 @@ class ReluOp : public OpenvinoOpKernel {
  public:
   void Compile(OpenvinoOpContext* ctx) override {
     std::shared_ptr<ngraph::Node> ngraph_node =
-        std::make_shared<ngraph::op::Relu>(ctx->Input("in_0"));
+        std::make_shared<ngraph::op::Relu>(ctx->Input("x_0"));
     ngraph_node->set_friendly_name(ctx->op_name().c_str());
-    ctx->SetOutput("out_0", ngraph_node);
+    ctx->SetOutput("y_0", ngraph_node);
   }
 };
 

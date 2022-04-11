@@ -47,7 +47,8 @@ void UnsortedSegmentSumKernelUtil<DeviceType::kCPU, T, K, T>::UnsortedSegmentSum
                                                OF_PP_PAIR_FIRST(index_type_pair),                \
                                                OF_PP_PAIR_FIRST(in_type_pair)>;
 OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(INITIATE_UNSORTED_SEGMENT_SUM_KERNEL_UTIL_CPU,
-                                 UNSORTED_SEGMENT_SUM_DATA_TYPE_SEQ, INDEX_DATA_TYPE_SEQ);
+                                 UNSORTED_SEGMENT_SUM_DATA_TYPE_SEQ,
+                                 UNSORTED_SEGMENT_SUM_INDEX_TYPE_SEQ);
 
 #undef INITIATE_UNSORTED_SEGMENT_SUM_KERNEL_UTIL_CPU
 

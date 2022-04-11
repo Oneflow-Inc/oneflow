@@ -14,6 +14,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 #include <algorithm>
+#include "gtest/gtest.h"
 #include "oneflow/core/common/util.h"
 #include "oneflow/core/common/symbol.h"
 #include "oneflow/core/job/placement.pb.h"

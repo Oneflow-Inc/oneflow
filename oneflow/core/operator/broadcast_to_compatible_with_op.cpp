@@ -95,7 +95,7 @@ class BroadcastToCompatibleWithOp final : public Operator {
 
   Maybe<void> GetSbpSignatures(
       const std::function<Maybe<const BlobDesc&>(const std::string&)>& LogicalBlobDesc4Ibn,
-      cfg::SbpSignatureList* sbp_sig_list) const override {
+      SbpSignatureList* sbp_sig_list) const override {
     Shape broadcasted_shape{1};
     for (const std::string& ibn : input_bns()) {
       const Shape& input_shape = JUST(LogicalBlobDesc4Ibn(ibn)).shape();
@@ -114,7 +114,7 @@ class BroadcastToCompatibleWithOp final : public Operator {
 
     FOR_RANGE(int64_t, i, 0, broadcast_num_axes) {
       if (broadcasted_shape.At(i) == 1) { continue; }
-      cfg::SbpSignature sbp_sig;
+      SbpSignature sbp_sig;
       for (const auto& pair : ibn2extend_shape) {
         if (pair.second.At(i) == 1) {
           (*sbp_sig.mutable_bn_in_op2sbp_parallel())[pair.first].mutable_broadcast_parallel();

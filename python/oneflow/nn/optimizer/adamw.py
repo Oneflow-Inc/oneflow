@@ -112,7 +112,7 @@ class AdamW(Optimizer):
 
     def __init__(
         self,
-        parameters: Union[Iterator[Parameter], List[Dict]],
+        params: Union[Iterator[Parameter], List[Dict]],
         lr: float = 0.001,
         betas: Tuple[float, float] = (0.9, 0.999),
         eps: float = 1e-08,
@@ -138,20 +138,28 @@ class AdamW(Optimizer):
         options["bias_correction2"] = 1.0
         options["do_bias_correction"] = do_bias_correction
         options["amsgrad"] = amsgrad
-        super().__init__(parameters, options)
+        super().__init__(params, options)
 
         for param_group in self.param_groups:
             for param in param_group.parameters:
                 assert param.is_leaf, "parameters must be leaf tensor"
                 self._state[param] = dict()
 
-        self._op = (
+        self._op_with_amsgrad = (
             flow.stateful_op("adam_update")
             .Input("model")
             .Input("model_diff")
             .Input("m")
             .Input("v")
             .Input("max_v")
+            .Build()
+        )
+        self._op_without_amsgrad = (
+            flow.stateful_op("adam_update")
+            .Input("model")
+            .Input("model_diff")
+            .Input("m")
+            .Input("v")
             .Build()
         )
 
@@ -195,16 +203,27 @@ class AdamW(Optimizer):
                         self._state[param]["exp_avg"] = flow.zeros_like(param)
                     if "exp_avg_sq" not in self._state[param]:
                         self._state[param]["exp_avg_sq"] = flow.zeros_like(param)
-                    if "max_exp_avg_sq" not in self._state[param]:
-                        self._state[param]["max_exp_avg_sq"] = flow.zeros_like(param)
+                    if param_group["amsgrad"]:
+                        if "max_exp_avg_sq" not in self._state[param]:
+                            self._state[param]["max_exp_avg_sq"] = flow.zeros_like(
+                                param
+                            )
                     m_tensor = self._state[param]["exp_avg"]
                     v_tensor = self._state[param]["exp_avg_sq"]
-                    max_v_tensor = self._state[param]["max_exp_avg_sq"]
-                    flow._C.dispatch_adam_update(
-                        self._op,
-                        (param, param.grad, m_tensor, v_tensor, max_v_tensor),
-                        **kwargs,
-                    )
+
+                    if param_group["amsgrad"]:
+                        max_v_tensor = self._state[param]["max_exp_avg_sq"]
+                        flow._C.dispatch_adam_update(
+                            self._op_with_amsgrad,
+                            (param, param.grad, m_tensor, v_tensor, max_v_tensor),
+                            **kwargs,
+                        )
+                    else:
+                        flow._C.dispatch_adam_update(
+                            self._op_without_amsgrad,
+                            (param, param.grad, m_tensor, v_tensor),
+                            **kwargs,
+                        )
 
             self._state["step"] += 1
             return loss

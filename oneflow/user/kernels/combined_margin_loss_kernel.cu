@@ -84,7 +84,7 @@ std::shared_ptr<user_op::OpKernelCache> CreateCombinedMarginLossOpKernelCache(
     user_op::KernelCacheContext* ctx, const std::string& in_arg_name) {
   if (ctx->parallel_ctx().parallel_num() == 1) { return nullptr; }
 
-  const cfg::SbpParallel& in_sbp = ctx->SbpParallel4ArgNameAndIndex(in_arg_name, 0);
+  const SbpParallel& in_sbp = ctx->SbpParallel4ArgNameAndIndex(in_arg_name, 0);
   if (in_sbp.has_split_parallel() && in_sbp.split_parallel().axis() == 1
       && ctx->parallel_ctx().parallel_num() > 1) {
     CHECK(ctx->SbpParallel4ArgNameAndIndex("label", 0).has_broadcast_parallel());
@@ -109,7 +109,6 @@ class CombinedMarginLossGpuKernel final : public user_op::OpKernel {
   CombinedMarginLossGpuKernel() = default;
   ~CombinedMarginLossGpuKernel() override = default;
 
-  using user_op::OpKernel::InitOpKernelCache;
   std::shared_ptr<user_op::OpKernelCache> InitOpKernelCache(
       user_op::KernelCacheContext* ctx) const override {
     return CreateCombinedMarginLossOpKernelCache(ctx, "x");
@@ -168,7 +167,6 @@ class CombinedMarginLossGradGpuKernel final : public user_op::OpKernel {
   CombinedMarginLossGradGpuKernel() = default;
   ~CombinedMarginLossGradGpuKernel() override = default;
 
-  using user_op::OpKernel::InitOpKernelCache;
   std::shared_ptr<user_op::OpKernelCache> InitOpKernelCache(
       user_op::KernelCacheContext* ctx) const override {
     return CreateCombinedMarginLossOpKernelCache(ctx, "dy");

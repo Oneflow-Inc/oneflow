@@ -21,7 +21,8 @@ limitations under the License.
 namespace oneflow {
 
 Shape CreateReducedShape(const ShapeView& shape, const AxisVector& axis_vec) {
-  CHECK_EQ(axis_vec.empty(), false);
+  // For 0-dim Tensor
+  if (axis_vec.empty()) { return Shape({}); }
   DimVector dim_vec;
   shape.ToDimVector(&dim_vec);
   for (int64_t axis : axis_vec) { dim_vec.at(ShiftNegativeAxis(axis, shape.NumAxes())) = 1; }
@@ -36,6 +37,15 @@ Shape CreateLeftExtendedShape(const ShapeView& shape, int ndims_left_extend_to) 
   for (; i < left_ones_num; ++i) { dim_vec.at(i) = 1LL; }
   for (; i < ndims_left_extend_to; ++i) { dim_vec.at(i) = shape.At(i - left_ones_num); }
   return Shape(std::move(dim_vec));
+}
+
+Shape ZeroDimCompatiableShape(const Shape& shape) {
+  if (shape.NumAxes() == 0 && shape.elem_cnt() == 1) {
+    DimVector dim_vec;
+    dim_vec.emplace_back(1);
+    return Shape(dim_vec);
+  }
+  return shape;
 }
 
 Shape CreateReducedShapeOrOnesShape(const ShapeView& shape, const AxisVector& axis_vec) {

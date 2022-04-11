@@ -101,7 +101,7 @@ Maybe<void> FixPipelineStageIdPass::Apply(const OpGraph& op_graph, JobBuilder* j
 
   if (max_stage_id == 0) { return Maybe<void>::Ok(); }
   const int64_t total_stage_num = max_stage_id + 1;
-  LOG(INFO) << "total stage num = " << total_stage_num;
+  VLOG(3) << "total stage num = " << total_stage_num;
 
   HashMap<std::string, const OpNode*> op_name2node;
   HashMap<std::string, std::vector<const OpNode*>> placement2op_nodes;
@@ -125,11 +125,11 @@ Maybe<void> FixPipelineStageIdPass::Apply(const OpGraph& op_graph, JobBuilder* j
     for (const OpNode* this_node : pair.second) {
       int64_t this_stage_id = GetStageIdHint(this_node);
       if (this_stage_id != max_stage_id) {
-        LOG(INFO) << " In FixPipelineStageIdPass, op_name: " << this_node->op().op_name()
-                  << " origin_stage_id = " << this_stage_id
-                  << " is different with same placement : " << pair.first
-                  << " max_stage_id: " << max_stage_id
-                  << " , so change this op to the max stage id.\n";
+        VLOG(3) << " In FixPipelineStageIdPass, op_name: " << this_node->op().op_name()
+                << " origin_stage_id = " << this_stage_id
+                << " is different with same placement : " << pair.first
+                << " max_stage_id: " << max_stage_id
+                << " , so change this op to the max stage id.\n";
         OperatorConf new_op_conf = this_node->op().op_conf();
         int64_t new_scope_symbol_id =
             JUST(NewScopeWithStageId(new_op_conf.scope_symbol_id(), max_stage_id));

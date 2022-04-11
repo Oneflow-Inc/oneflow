@@ -260,7 +260,7 @@ Maybe<void> GetWhereInputArgModify(const GetInputArgModifier& GetInputArgModifie
 }
 /*static*/ Maybe<void> WhereOp::InferDataType(user_op::InferContext* ctx) {
   const DataType& cond_dtype = ctx->InputDType("condition", 0);
-  CHECK_OR_RETURN(IsIntegralDataType(cond_dtype));
+  CHECK_OR_RETURN(IsBoolDataType(cond_dtype) || IsIntegralDataType(cond_dtype));
   const DataType& x_dtype = ctx->InputDType("x", 0);
   CHECK_EQ_OR_RETURN(x_dtype, ctx->InputDType("y", 0));
   *ctx->OutputDType("out", 0) = x_dtype;
@@ -282,7 +282,7 @@ Maybe<void> GetWhereInputArgModify(const GetInputArgModifier& GetInputArgModifie
 }
 /*static*/ Maybe<void> WhereScalarXOp::InferDataType(user_op::InferContext* ctx) {
   const DataType& cond_dtype = ctx->InputDType("condition", 0);
-  CHECK_OR_RETURN(IsIntegralDataType(cond_dtype));
+  CHECK_OR_RETURN(IsBoolDataType(cond_dtype) || IsIntegralDataType(cond_dtype));
   const DataType& y_dtype = ctx->InputDType("y", 0);
   if (ctx->Attr<bool>("has_int_operand")) {
     CHECK_EQ_OR_RETURN(y_dtype, GetDataType<int64_t>::value)
@@ -290,6 +290,9 @@ Maybe<void> GetWhereInputArgModify(const GetInputArgModifier& GetInputArgModifie
   } else if (ctx->Attr<bool>("has_float_operand")) {
     CHECK_EQ_OR_RETURN(y_dtype, GetDataType<double>::value)
         << "expected scalar type " << GetDataType<double>::value << "but found " << y_dtype;
+  } else if (ctx->Attr<bool>("has_bool_operand")) {
+    CHECK_EQ_OR_RETURN(y_dtype, GetDataType<bool>::value)
+        << "expected scalar type " << GetDataType<bool>::value << "but found " << y_dtype;
   }
   *ctx->OutputDType("out", 0) = y_dtype;
   return Maybe<void>::Ok();
@@ -310,14 +313,17 @@ Maybe<void> GetWhereInputArgModify(const GetInputArgModifier& GetInputArgModifie
 }
 /*static*/ Maybe<void> WhereScalarYOp::InferDataType(user_op::InferContext* ctx) {
   const DataType& cond_dtype = ctx->InputDType("condition", 0);
-  CHECK_OR_RETURN(IsIntegralDataType(cond_dtype));
+  CHECK_OR_RETURN(IsBoolDataType(cond_dtype) || IsIntegralDataType(cond_dtype));
   const DataType& x_dtype = ctx->InputDType("x", 0);
   if (ctx->Attr<bool>("has_int_operand")) {
     CHECK_EQ_OR_RETURN(x_dtype, GetDataType<int64_t>::value)
-        << "expected scalar type " << x_dtype << "but found " << GetDataType<int64_t>::value;
+        << "expected scalar type " << GetDataType<int64_t>::value << "but found " << x_dtype;
   } else if (ctx->Attr<bool>("has_float_operand")) {
     CHECK_EQ_OR_RETURN(x_dtype, GetDataType<double>::value)
-        << "expected scalar type " << x_dtype << "but found " << GetDataType<double>::value;
+        << "expected scalar type " << GetDataType<double>::value << "but found " << x_dtype;
+  } else if (ctx->Attr<bool>("has_bool_operand")) {
+    CHECK_EQ_OR_RETURN(x_dtype, GetDataType<bool>::value)
+        << "expected scalar type " << GetDataType<bool>::value << "but found " << x_dtype;
   }
   *ctx->OutputDType("out", 0) = x_dtype;
   return Maybe<void>::Ok();
@@ -338,8 +344,10 @@ Maybe<void> GetWhereInputArgModify(const GetInputArgModifier& GetInputArgModifie
 }
 /*static*/ Maybe<void> WhereScalarXyOp::InferDataType(user_op::InferContext* ctx) {
   const DataType& cond_dtype = ctx->InputDType("condition", 0);
-  CHECK_OR_RETURN(IsIntegralDataType(cond_dtype));
-  if (ctx->Attr<bool>("has_x_int_operand") && ctx->Attr<bool>("has_y_int_operand")) {
+  CHECK_OR_RETURN(IsBoolDataType(cond_dtype) || IsIntegralDataType(cond_dtype));
+  if (ctx->Attr<bool>("has_x_bool_operand") && ctx->Attr<bool>("has_y_bool_operand")) {
+    *ctx->OutputDType("out", 0) = GetDataType<bool>::value;
+  } else if (ctx->Attr<bool>("has_x_int_operand") && ctx->Attr<bool>("has_y_int_operand")) {
     *ctx->OutputDType("out", 0) = GetDataType<int64_t>::value;
   } else if (ctx->Attr<bool>("has_x_float_operand") && ctx->Attr<bool>("has_y_float_operand")) {
     *ctx->OutputDType("out", 0) = GetDataType<double>::value;

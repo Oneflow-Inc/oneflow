@@ -30,7 +30,7 @@ class RtInstrTypeId final {
 
   RtInstrTypeId(const InstrTypeId& instr_type_id, StreamRtDesc* stream_rt_desc)
       : instr_type_id_(instr_type_id), stream_rt_desc_(stream_rt_desc) {
-    if (stream_rt_desc->stream_type_id().stream_type().IsControlStreamType()) {
+    if (stream_rt_desc->stream_type().IsControlStreamType()) {
       get_stream_ = &StreamRtDesc::GetSoleStream;
     } else {
       get_stream_ = &StreamRtDesc::GetDeviceStream;
