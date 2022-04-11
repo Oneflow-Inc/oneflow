@@ -24,7 +24,7 @@ add_docstr(
     Find the indices from the innermost dimension of sorted_sequence such that, if the corresponding values in
     values were inserted before the indices, when sorted, the order of the corresponding innermost dimension
     within sorted_sequence would be preserved. Return a new tensor with the same size as values. If right is
-    False or side is ‘left (default), then the left boundary of sorted_sequence is closed. More formally, the
+    False or side is left (default), then the left boundary of sorted_sequence is closed. More formally, the
     returned index satisfies the following rules:
 
     =================  =========  ==========================================================================
