@@ -1,0 +1,107 @@
+"""
+Copyright 2020 The OneFlow Authors. All rights reserved.
+
+Licensed under the Apache License, Version 2.0 (the "License");
+you may not use this file except in compliance with the License.
+You may obtain a copy of the License at
+
+    http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+See the License for the specific language governing permissions and
+limitations under the License.
+"""
+
+import unittest
+from collections import OrderedDict
+from oneflow.test_utils.automated_test_util import *
+from oneflow.test_utils.test_util import GenArgList
+
+import oneflow as flow
+import numpy as np
+
+
+def __check(test_case, input, axis, keepdims, device):
+    of_out = flow.amax(input, axis=axis, keepdims=keepdims)
+    if type(axis) is list:
+        if len(axis) == 0:
+            axis = None
+        else:
+            axis = tuple(axis)
+    np_out = np.amax(input.numpy(), axis=axis, keepdims=keepdims)
+    test_case.assertTrue(np.allclose(of_out.numpy(), np_out, rtol=0.0001, atol=1e-05,))
+
+
+def _test_amax_with_negative_axis(test_case, device):
+    input = flow.tensor(
+        np.random.randn(3, 5, 6, 8), dtype=flow.float32, device=flow.device(device)
+    )
+    axis = random(-4, 0).to(int).value()
+    keepdims = random_bool().value()
+    __check(test_case, input, axis, keepdims, device)
+
+
+def _test_amax_with_positive_axis(test_case, device):
+    input = flow.tensor(
+        np.random.randn(3, 5, 6, 8), dtype=flow.float32, device=flow.device(device)
+    )
+    axis = random(0, 4).to(int).value()
+    keepdims = random_bool().value()
+    __check(test_case, input, axis, keepdims, device)
+
+
+def _test_amax_with_multiple_axes(test_case, device):
+    input = flow.tensor(
+        np.random.randn(3, 5, 6, 8), dtype=flow.float32, device=flow.device(device)
+    )
+    axes = set()
+    num_axes = random(1, 4).to(int).value()
+    for _ in range(num_axes):
+        axes.add(random(0, 4).to(int).value())
+    keepdims = random_bool().value()
+    __check(test_case, input, list(axes), keepdims, device)
+
+
+def _test_amax_with_empty_axis(test_case, device):
+    input = flow.tensor(
+        np.random.randn(3, 5, 6, 8), dtype=flow.float32, device=flow.device(device)
+    )
+    keepdims = random_bool().value()
+    __check(test_case, input, None, keepdims, device)
+
+def _test_amax_keepdims(test_case, device):
+    input = flow.tensor(
+        np.random.randn(3, 5, 6, 8), dtype=flow.float32, device=flow.device(device)
+    )
+    axis = random(-4, 4).to(int).value()
+    keepdims = True
+    __check(test_case, input, axis, keepdims, device)
+
+def _test_amax_not_keepdims(test_case, device):
+    input = flow.tensor(
+        np.random.randn(3, 5, 6, 8), dtype=flow.float32, device=flow.device(device)
+    )
+    axis = random(-4, 4).to(int).value()
+    keepdims = False
+    __check(test_case, input, axis, keepdims, device)
+
+@flow.unittest.skip_unless_1n1d()
+class TestAmax(flow.unittest.TestCase):
+    @autotest(check_graph=True)
+    def test_amax(test_case):
+        arg_dict = OrderedDict()
+        arg_dict["test_fun"] = [
+            _test_amax_with_negative_axis,
+            _test_amax_with_positive_axis,
+            _test_amax_with_multiple_axes,
+            _test_amax_with_empty_axis,
+        ]
+        arg_dict["device"] = ["cpu", "cuda"]
+        for arg in GenArgList(arg_dict):
+            arg[0](test_case, *arg[1:])
+
+
+if __name__ == "__main__":
+    unittest.main()

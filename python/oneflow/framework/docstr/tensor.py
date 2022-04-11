@@ -750,6 +750,13 @@ add_docstr(
 )
 
 add_docstr(
+    oneflow.Tensor.amax,
+    """
+    See :func:`oneflow.amax`
+    """,
+)
+
+add_docstr(
     oneflow.Tensor.cast,
     """
     See :func:`oneflow.cast`

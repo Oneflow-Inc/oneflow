@@ -411,6 +411,24 @@ class Min2Functor {
   }
 };
 
+class AmaxFunctor {
+ public:
+  Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x,
+                           const Optional<std::vector<int32_t>>& axis, const bool& keepdims) const {
+    if (!axis.has_value()) { return ReduceMax(x, {}, keepdims); }
+
+    const int32_t ndim = x->ndim();
+    const std::vector<int32_t>& dims = *JUST(axis);
+    for (const auto& dim : dims) {
+      if (dim < -ndim || dim >= ndim) {
+        return Error::IndexError() << "Dimension out of range (expected to be in range of ["
+                                   << -ndim << ", " << ndim - 1 << "], but got " << dim << ")";
+      }
+    }
+    return ReduceMax(x, dims, keepdims);
+  }
+};
+
 class ReduceSumFunctor {
  public:
   ReduceSumFunctor() {
@@ -2787,6 +2805,7 @@ ONEFLOW_FUNCTION_LIBRARY(m) {
   m.add_functor<ReduceMeanFunctor>("ReduceMean");
   m.add_functor<ReduceMinFunctor>("ReduceMin");
   m.add_functor<MinFunctor, Min2Functor>("Min");
+  m.add_functor<AmaxFunctor>("Amax");
   m.add_functor<ReduceSumFunctor>("ReduceSum");
   m.add_functor<ReduceAllFunctor>("ReduceAll");
   m.add_functor<ReduceAnyFunctor>("ReduceAny");

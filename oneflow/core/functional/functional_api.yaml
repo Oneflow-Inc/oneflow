@@ -336,6 +336,10 @@
     ]
   bind_python: True
 
+- name: "amax"
+  signature: "Tensor (Tensor input, Int32List[1] axis=None, Bool keepdims=False) => Amax"
+  bind_python: True
+
 - name: "permute"
   signature: "Tensor (Tensor input, Int32List dims) => Permute"
   bind_python: True
