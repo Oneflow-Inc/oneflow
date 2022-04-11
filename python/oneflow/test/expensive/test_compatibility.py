@@ -59,10 +59,10 @@ class TestApiCompatibility(flow.unittest.TestCase):
             test_case, "pytorch_mnasnet.py", "mnasnet1_0", "cuda", 16, 224
         )
 
-    def test_rexnet_compatibility(test_case):
-        do_test_train_loss_oneflow_pytorch(
-            test_case, "pytorch_rexnet.py", "rexnetv1_1_0", "cuda", 16, 224
-        )
+    # def test_rexnet_compatibility(test_case):
+    #     do_test_train_loss_oneflow_pytorch(
+    #         test_case, "pytorch_rexnet.py", "rexnetv1_1_0", "cuda", 16, 224
+    #     )
 
     def test_rexnetv1_lite_compatibility(test_case):
         do_test_train_loss_oneflow_pytorch(
