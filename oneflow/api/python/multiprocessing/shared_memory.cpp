@@ -25,12 +25,12 @@ namespace py = pybind11;
 ONEFLOW_API_PYBIND11_MODULE("multiprocessing", m) {
   py::class_<ipc::SharedMemory, std::shared_ptr<ipc::SharedMemory>>(m, "SharedMemory")
       .def(py::init([](const std::string& name, bool create, size_t size) {
-             if (create) { return ipc::SharedMemory::Open(size).GetPtrOrThrow(); }
-             return ipc::SharedMemory::Open(name).GetPtrOrThrow();
+             if (create) { return ipc::SharedMemory::Open(size, create).GetPtrOrThrow(); }
+             return ipc::SharedMemory::Open(name, create).GetPtrOrThrow();
            }),
            py::arg("name") = "", py::arg("create") = false, py::arg("size") = 0)
-      .def("close", [](ipc::SharedMemory* shm) { return shm->Close().GetOrThrow(); })
-      .def("unlink", [](ipc::SharedMemory* shm) { return shm->Unlink().GetOrThrow(); })
+      .def("close", &ipc::SharedMemory::Close)
+      .def("unlink", &ipc::SharedMemory::Unlink)
       .def_property_readonly("buf",
                              [](ipc::SharedMemory* shm) {
                                return py::memoryview::from_memory(shm->mut_buf(), shm->size());

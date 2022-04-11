@@ -47,8 +47,8 @@ class SharedMemory final {
   SharedMemory(SharedMemory&&) = delete;
   ~SharedMemory();
 
-  static Maybe<SharedMemory> Open(size_t size);
-  static Maybe<SharedMemory> Open(const std::string& name);
+  static Maybe<SharedMemory> Open(size_t size, bool create);
+  static Maybe<SharedMemory> Open(const std::string& name, bool create);
 
   const char* buf() const { return buf_; }
   char* mut_buf() { return buf_; }

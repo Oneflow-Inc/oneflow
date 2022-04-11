@@ -143,7 +143,7 @@ def get_args(callable, *args, **kwargs):
 
     for arg in args:
         # TODO: refine codes
-        if isinstance(arg, tuple):
+        if isinstance(arg, (tuple, list)):
             pytorch_tuple_args = []
             oneflow_tuple_args = []
             for t in arg:
@@ -857,7 +857,7 @@ def equality_checker(torch_type, flow_type):
     return deco
 
 
-def check_equality(dual_object: DualObject, rtol=0.0001, atol=1e-05):
+def check_equality(dual_object: DualObject, rtol=0.0001, atol=1e-05, check_dtype=False):
     checker = torch_type2checker.get(
         (type(dual_object.pytorch), type(dual_object.oneflow)), None
     )
@@ -874,12 +874,14 @@ def check_equality(dual_object: DualObject, rtol=0.0001, atol=1e-05):
         + " and "
         + str(type(dual_object.oneflow))
     )
-    return checker(dual_object.pytorch, dual_object.oneflow, rtol, atol)
+    return checker(dual_object.pytorch, dual_object.oneflow, rtol, atol, check_dtype)
 
 
 @equality_checker(torch_original.Tensor, flow.Tensor)
 @equality_checker(torch_original.Tensor, flow._oneflow_internal.Tensor)
-def check_tensor_equality(torch_tensor, flow_tensor, rtol=0.0001, atol=1e-05):
+def check_tensor_equality(
+    torch_tensor, flow_tensor, rtol=0.0001, atol=1e-05, check_dtype=False
+):
     if torch_tensor.grad is not None:
         if flow_tensor.grad is None:
             print_note_fake_program()
@@ -899,29 +901,36 @@ def check_tensor_equality(torch_tensor, flow_tensor, rtol=0.0001, atol=1e-05):
                 f"Grads are not equal. PyTorch grad: \n{torch_grad}\n, OneFlow grad: \n{flow_grad}"
             )
             return False
+    torch_numpy = torch_tensor.detach().cpu().numpy()
+    oneflow_numpy = flow_tensor.numpy()
     equality_res = np.allclose(
-        torch_tensor.detach().cpu().numpy(),
-        flow_tensor.numpy(),
-        rtol=rtol,
-        atol=atol,
-        equal_nan=True,
+        torch_numpy, oneflow_numpy, rtol=rtol, atol=atol, equal_nan=True,
     )
+    # NOTE: if check_dtype=True, then check the equality of data type
+    if check_dtype:
+        equality_res = equality_res and (torch_numpy.dtype == oneflow_numpy.dtype)
+
     if equality_res == False:
         print_note_fake_program()
         print("---------Tensor Shape--------")
         print(torch_tensor.shape)
         print(flow_tensor.shape)
+        print("---------Tensor dtype--------")
+        print(torch_tensor.dtype)
+        print(flow_tensor.dtype)
     return equality_res
 
 
 @equality_checker(int, int)
 @equality_checker(bool, bool)
-def check_basetype_equality(a, b, ignored1, ignored2):
+def check_basetype_equality(a, b, ignored1, ignored2, check_dtype=False):
+    if check_dtype:
+        return (a == b) and (type(a) == type(b))
     return a == b
 
 
 @equality_checker(type(None), type(None))
-def check_nonetype_equality(a, b, ignored1, ignored2):
+def check_nonetype_equality(a, b, ignored1, ignored2, check_dtype=False):
     return True
 
 
@@ -932,6 +941,7 @@ def autotest(
     atol=1e-05,
     check_graph=True,
     check_allclose=True,
+    check_dtype=False,
 ):
     verbose = os.getenv("ONEFLOW_TEST_VERBOSE") is not None
 
@@ -1019,7 +1029,12 @@ def autotest(
                 # check eager
                 for x in dual_objects_to_test:
                     if check_allclose:
-                        test_case.assertTrue(check_equality(x, rtol=rtol, atol=atol), x)
+                        test_case.assertTrue(
+                            check_equality(
+                                x, rtol=rtol, atol=atol, check_dtype=check_dtype
+                            ),
+                            x,
+                        )
 
                 if verbose:
                     print(f"{f.__name__} test eager passed.")

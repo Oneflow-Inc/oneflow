@@ -186,6 +186,46 @@ class TestDDP(flow.unittest.TestCase):
         for dev_type in test_device:
             test_case._test_out_of_order_execution(dev_type)
 
+    def _test_ddp_with_partial_requires_grad_parameter(test_case, dev_type):
+        class Model(flow.nn.Module):
+            def __init__(self):
+                super().__init__()
+                self.w1 = flow.nn.Parameter(flow.Tensor([1]), requires_grad=False)
+                self.w2 = flow.nn.Parameter(flow.Tensor([2]))
+                self.w3 = flow.nn.Parameter(flow.Tensor([3]))
+
+            def forward(self, x):
+                if flow.env.get_rank() == 0:
+                    x *= self.w1
+                    x *= self.w2
+                    x *= self.w3
+                else:
+                    x *= self.w3
+                    x *= self.w2
+                    x *= self.w1
+                return x
+
+        rank = flow.env.get_rank()
+        if rank == 0:
+            x = flow.Tensor([1])
+        elif rank == 1:
+            x = flow.Tensor([2])
+        else:
+            raise ValueError()
+
+        x = x.to(dev_type)
+        m = Model().to(dev_type)
+        m = ddp(m, bucket_size=1)
+        y = m(x)
+        y.backward()
+
+        test_case.assertTrue(np_allclose_with_shape(m.w2.grad.numpy(), np.array([4.5])))
+        test_case.assertTrue(np_allclose_with_shape(m.w3.grad.numpy(), np.array([3])))
+
+    def test_ddp_with_partial_requires_grad_parameter(test_case):
+        for dev_type in test_device:
+            test_case._test_ddp_with_partial_requires_grad_parameter(dev_type)
+
     def _test_ddp_two_iters(test_case, dev_type):
         class Mul(flow.nn.Module):
             def __init__(self):

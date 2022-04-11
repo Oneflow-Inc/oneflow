@@ -220,7 +220,7 @@ def compare_lazy_global_with_torch(
     of_output = of_output.to_global(placement=placement, sbp=[flow.sbp.broadcast])
     of_output = of_output.to_local()
 
-    flow._oneflow_internal.eager.multi_client.Sync()
+    flow._oneflow_internal.eager.Sync()
 
     if rank == 0:
         assert np.allclose(

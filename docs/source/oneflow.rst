@@ -147,9 +147,6 @@ oneflow
             tanh, 
             tensor, 
             tile, 
-            to, 
-            to_global,
-            to_local,
             transpose,
             t,
             tril, 
@@ -169,6 +166,7 @@ oneflow
             set_printoptions,
             decode_onerec,
             from_numpy,
+            as_tensor,
             cumsum,
             topk,
             nms,
@@ -181,6 +179,13 @@ oneflow
             CharTensor,
             IntTensor,
             LongTensor,
+            seed,
+            manual_seed,
+            initial_seed,
+            get_rng_state,
+            set_rng_state,
+            isnan,
+            isinf
 
 .. autofunction:: oneflow.relu
 .. autofunction:: oneflow.set_num_threads

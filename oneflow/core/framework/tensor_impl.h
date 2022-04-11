@@ -69,6 +69,7 @@ class TensorImpl {
   virtual Maybe<bool> has_eager_blob_object() const = 0;
   virtual Maybe<const Stride> stride() const { OF_UNIMPLEMENTED(); }
   virtual Maybe<int64_t> storage_offset() const { OF_UNIMPLEMENTED(); }
+  virtual bool is_contiguous() const = 0;
 
   // Getters for autograd
   Maybe<Tensor> acc_grad() const;
@@ -112,6 +113,7 @@ class MirroredTensorImpl : public TensorImpl {
   DataType dtype() const override { return tensor_meta_->dtype(); }
   const Symbol<Device>& device() const { return tensor_meta_->device(); }
   const std::shared_ptr<const MirroredTensorMeta>& tensor_meta() const { return tensor_meta_; }
+  bool is_contiguous() const override { return tensor_meta_->is_contiguous(); }
 
   // Setters
   MirroredTensorMeta* mut_tensor_meta() {
@@ -157,7 +159,9 @@ class ConsistentTensorImpl : public TensorImpl {
   Maybe<bool> has_eager_blob_object() const override { RETURN_ERROR_WITH_BUG_PROMPT(); }
 
   // Setters
-  void set_consumer_nd_sbp_constraint(Symbol<NdSbp> val) { consumer_nd_sbp_constraint_ = val; }
+  void set_consumer_nd_sbp_constraint(const Optional<Symbol<NdSbp>>& val) {
+    consumer_nd_sbp_constraint_ = val;
+  }
 
   ConsistentTensorMeta* mut_tensor_meta() {
     PRINT_BUG_PROMPT_AND_ABORT();
@@ -196,6 +200,11 @@ class LazyMirroredTensorImpl final : public MirroredTensorImpl {
   // Getters
   const std::shared_ptr<const Shape>& shape() const override { return tensor_meta()->shape_ptr(); }
   bool is_lazy() const override { return true; }
+  bool is_contiguous() const override {
+    // TODO:(zhaoluyang) default return true for now,
+    // but should return real status while stride/view mechanism is ready in lazy-mirrored mode
+    return true;
+  }
 
   // Getters valid only for EagerMirroredTensorImpl
   Maybe<vm::EagerBlobObject> eager_blob_object() const override { RETURN_ERROR_WITH_BUG_PROMPT(); }
@@ -222,6 +231,7 @@ class EagerMirroredTensorImpl final : public MirroredTensorImpl {
   const std::shared_ptr<const Shape>& shape() const override;
   Maybe<MirroredTensorImpl> detach() const override;
   bool is_lazy() const override { return false; }
+  bool is_contiguous() const override { return tensor_meta_->is_contiguous(); }
 
   // Getters valid only for EagerMirroredTensorImpl
   Maybe<vm::EagerBlobObject> eager_blob_object() const override {
@@ -264,6 +274,12 @@ class LazyConsistentTensorImpl final : public ConsistentTensorImpl {
   // Getters
   bool is_lazy() const override { return true; }
 
+  bool is_contiguous() const override {
+    // TODO:(zhaoluyang) default return true for now,
+    // but should return real status while stride/view mechanism is ready in lazy-consistent mode
+    return true;
+  }
+
   Maybe<ConsistentTensorImpl> detach() const override;
 };
 
@@ -274,6 +290,12 @@ class EagerConsistentTensorImpl final : public ConsistentTensorImpl {
 
   // Getters
   bool is_lazy() const override { return false; }
+
+  bool is_contiguous() const override {
+    // TODO:(zhaoluyang) default return true for now,
+    // but should return real status while stride/view mechanism is ready in eager-consistent mode
+    return true;
+  }
 
   Maybe<MirroredTensor> cur_rank_phy_tensor() const override { return cur_rank_phy_tensor_; }
   void reset_cur_rank_phy_tensor(const std::shared_ptr<MirroredTensor>& val) {

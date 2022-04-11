@@ -47,26 +47,13 @@ def api_scope_config(**kwargs):
     return ScopeContext(scope)
 
 
-def api_current_scope():
+def current_scope():
     """ Return current scope
     """
     return oneflow._oneflow_internal.GetCurrentScope()
 
 
 from oneflow import oneflow_deprecate
-
-
-@oneflow_deprecate()
-def deprecated_current_scope(*args, **kwargs):
-    print(
-        "WARNING:",
-        "oneflow.scope.current_scope",
-        "will be removed in the future, use {} instead.".format(
-            "oneflow.current_scope"
-        ),
-    )
-    print(traceback.format_stack()[-2])
-    return api_current_scope(*args, **kwargs)
 
 
 def MakeScope(build_func):
@@ -95,14 +82,6 @@ def MakeInitialScope(job_conf, device_tag, machine_device_ids, hierarchy, is_mir
 
     oneflow._oneflow_internal.deprecated.PhysicalRun(BuildInitialScope)
     return scope
-
-
-def InitScopeStack():
-    job_conf = job_conf_cfg.JobConfigProto()
-    job_conf.mutable_predict_conf()
-    job_conf.set_job_name("")
-    scope = MakeInitialScope(job_conf, "cpu", ["0:0"], None, is_mirrored=False)
-    oneflow._oneflow_internal.InitGlobalScopeStack(scope)
 
 
 @contextmanager
