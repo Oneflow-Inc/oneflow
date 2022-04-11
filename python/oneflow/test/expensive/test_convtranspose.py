@@ -24,7 +24,6 @@ from oneflow.test_utils.automated_test_util import *
 import oneflow as flow
 import oneflow.nn as nn
 import oneflow.unittest
-import oneflow.nn.functional as F
 
 
 def _test_convtranspose1d_bias_false(test_case, device):
@@ -368,25 +367,22 @@ class TestConvTranspose(flow.unittest.TestCase):
         return y
 
     def test_functional_conv_transpose1d(test_case):
-        inputs = torch.randn(20, 16, 50)
-        weights = torch.randn(16, 33, 5)
-        outputs = F.conv_transpose1d(inputs, weights)
+        inputs = torch.ones(20, 16, 50)
+        weights = torch.ones(16, 33, 5)
+        outputs = torch.nn.functional.conv_transpose1d(inputs, weights)
         return outputs
-
 
     def test_functional_conv_transpose2d(test_case):
-        inputs = torch.randn(1, 4, 5, 5)
-        weights = torch.randn(4, 8, 3, 3)
-        outputs = F.conv_transpose2d(inputs, weights, padding=1)
+        inputs = torch.ones(1, 4, 5, 5)
+        weights = torch.ones(4, 8, 3, 3)
+        outputs = torch.nn.functional.conv_transpose2d(inputs, weights, padding=1)
         return outputs
-
 
     def test_functional_conv_transpose3d(test_case):
-        inputs = torch.randn(20, 16, 50, 10, 20)
-        weights = torch.randn(16, 33, 3, 3, 3)
-        outputs = F.conv_transpose3d(inputs, weights)
+        inputs = torch.ones(20, 16, 50, 10, 20)
+        weights = torch.ones(16, 33, 3, 3, 3)
+        outputs = torch.nn.functional.conv_transpose3d(inputs, weights)
         return outputs
-
 
 
 if __name__ == "__main__":
