@@ -65,7 +65,7 @@ def BroadcastMulToScalarMulPattern : Pat<
 def GetFirstValue :
   NativeCodeCall<"*$0.begin()">;
 
-def IsGPU: Constraint<CPred<"$0.getValue().equals(\"gpu\")">, "is GPU device">;
+def IsGPU: Constraint<CPred<"$0.getValue().equals(\"cuda\")">, "is GPU device">;
 
 def FusedScaleTrilPattern : Pat<
   (

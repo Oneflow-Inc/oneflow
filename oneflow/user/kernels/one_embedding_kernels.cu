@@ -23,14 +23,13 @@ limitations under the License.
 #include "oneflow/core/cuda/atomic.cuh"
 #include "oneflow/core/ep/include/primitive/copy_nd.h"
 #include "oneflow/core/ep/include/primitive/cast.h"
-#include "oneflow/core/ep/include/primitive/memcpy.h"
-#include "oneflow/core/common/str_util.h"
+#include "oneflow/core/ep/include/device.h"
 
 namespace oneflow {
 
 namespace {
 
-enum class InitializerType { kUniform, kNormal, kZero };
+enum class InitializerType { kUniform, kNormal, kConstant };
 
 struct EmbeddingInitializer {
   InitializerType type;
@@ -43,6 +42,9 @@ struct EmbeddingInitializer {
       float mean;
       float std;
     } normal_param;
+    struct {
+      float value;
+    } constant_param;
   };
 };
 
@@ -91,16 +93,21 @@ void ParseInitializers(const int32_t line_size, const int32_t embedding_size,
                        const std::string& json_serialized, InitializersParam* param,
                        int8_t** host_initializer_index, int8_t** device_initializer_index) {
   auto json_object = nlohmann::json::parse(json_serialized);
+  CHECK(json_object.contains("column_dims"));
+  std::vector<int64_t> column_dims = json_object["column_dims"];
+
   CHECK(json_object.contains("tables"));
   auto tables = json_object["tables"];
   CHECK(tables.is_array());
   CHECK_LE(tables.size(), kMaxTables);
   const int32_t num_tables = tables.size();
   int32_t offset = 0;
-  param->initializers[0].type = InitializerType::kZero;
+  param->initializers[0].type = InitializerType::kConstant;
+  param->initializers[0].constant_param.value = 0;
   offset++;
   OF_CUDA_CHECK(cudaMallocHost(host_initializer_index, num_tables * line_size * sizeof(int8_t)));
   OF_CUDA_CHECK(cudaMalloc(device_initializer_index, num_tables * line_size * sizeof(int8_t)));
+  
   for (int32_t i = 0; i < num_tables; ++i) {
     auto table = tables.at(i);
     if (table.contains("initializer")) {
@@ -110,13 +117,13 @@ void ParseInitializers(const int32_t line_size, const int32_t embedding_size,
     } else if (table.contains("columns")) {
       auto columns = table["columns"];
       CHECK(columns.is_array());
+      CHECK_EQ(column_dims.size(), columns.size());
       int32_t col_start = 0;
       for (int k = 0; k < columns.size(); ++k) {
         auto column = columns.at(k);
         CHECK(column.contains("initializer"));
-        CHECK(column.contains("column_dim"));
         ParseInitializerFromJson(column["initializer"], &(param->initializers[offset]));
-        int32_t col_end = col_start + column["column_dim"].get<int32_t>();
+        int32_t col_end = col_start + column_dims.at(k);
         SetInitializerIndex(i, col_start, col_end, line_size, offset, *host_initializer_index);
         col_start = col_end;
         offset++;
@@ -267,9 +274,9 @@ __global__ void InitValueKernel(uint64_t seed, one::CUDAGeneratorState* cuda_gen
     } else if (initializer.type == InitializerType::kNormal) {
       const float mean = initializer.normal_param.mean;
       const float std = initializer.normal_param.std;
-      value = (curand_normal(&state) + mean) / std;
-    } else if (initializer.type == InitializerType::kZero) {
-      value = 0;
+      value = curand_normal(&state) * std + mean;
+    } else if (initializer.type == InitializerType::kConstant) {
+      value = initializer.constant_param.value;
     } else {
       __trap();
     }
@@ -295,7 +302,7 @@ void LookupAndInitMissing(ep::Stream* stream, EmbeddingKernelState<IDX>* embeddi
   const auto& generator = embedding_state->generator();
   CHECK_NOTNULL(generator);
   std::shared_ptr<one::CUDAGeneratorImpl> cuda_generator =
-      CHECK_JUST(generator->template Get<one::CUDAGeneratorImpl>());
+      CHECK_JUST(generator->template Get<one::CUDAGeneratorImpl>(stream->device()->device_index()));
   uint64_t seed = cuda_generator->current_seed();
   one::CUDAGeneratorState* cuda_gen_state = cuda_generator->cuda_gen_state();
   embedding::KeyValueStore* store = embedding_state->KeyValueStore();
