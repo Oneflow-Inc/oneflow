@@ -46,11 +46,11 @@ add_docstr(
     .. code-block:: python
 
         >>> import oneflow as flow
-        >>> import numpy as np
+        >>> import oneflow.nn.functional as F
         
-        >>> input = flow.tensor(np.random.randn(33, 16, 30), dtype=flow.float32)
-        >>> filters = flow.tensor(np.random.randn(20, 16, 5), dtype=flow.float32)
-        >>> out = flow._C.conv1d(input, filters,stride=[1], padding=[0], dilation=[1], channel_pos="channels_first")
+        >>> input = flow.randn(33, 16, 30)
+        >>> filters = flow.randn(20, 16, 5)
+        >>> F.conv1d(inputs, filters)
         """,
 )
 add_docstr(
@@ -77,7 +77,17 @@ add_docstr(
           a tuple `(dH, dW)`. Default: 1
         groups: split input into groups, :math:`\text{in_channels}` should be divisible by the
           number of groups. Default: 1
-    
+
+    For examples:
+
+    .. code-block:: python
+
+        >>> import oneflow as flow
+        >>> import oneflow.nn.functional as F
+        
+        >>> input = flow.randn(8, 4, 3, 3)
+        >>> filters = flow.randn(1, 4, 5, 5)
+        >>> F.conv2d(inputs, filters, padding=1)
     
         """,
 )
@@ -108,7 +118,17 @@ add_docstr(
           a tuple `(dD, dH, dW)`. Default: 1
         groups: split input into groups, :math:`\text{in_channels}` should be
           divisible by the number of groups. Default: 1
+
+    For examples:
+
+    .. code-block:: python
+
+        >>> import oneflow as flow
+        >>> import oneflow.nn.functional as F
         
+        >>> input = flow.randn(33, 16, 3, 3, 3)
+        >>> filters = flow.randn(20, 16, 50, 10, 20)
+        >>> F.conv3d(inputs, filters)
         
     """,
 )
