@@ -40,8 +40,7 @@ namespace oneflow {
 /* static */ Maybe<void> RocAucScoreOp::InferDataType(user_op::InferContext* ctx) {
   *ctx->OutputDType("out", 0) = DataType::kFloat;
   const user_op::TensorDesc& label = ctx->InputTensorDesc("label", 0);
-  CHECK_OR_RETURN(IsFloatingDataType(label.data_type())
-                  || IsIntegralDataType(label.data_type()));
+  CHECK_OR_RETURN(IsFloatingDataType(label.data_type()) || IsIntegralDataType(label.data_type()));
   const user_op::TensorDesc& pred = ctx->InputTensorDesc("pred", 0);
   CHECK_OR_RETURN(pred.data_type() == DataType::kFloat);
   return Maybe<void>::Ok();
