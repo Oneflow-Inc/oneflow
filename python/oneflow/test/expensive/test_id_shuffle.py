@@ -19,7 +19,6 @@ from collections import OrderedDict
 from oneflow.test_utils.test_util import GenArgDict
 import numpy as np
 import oneflow as flow
-import oneflow.unittest
 
 from oneflow.test_utils.automated_test_util import *
 
@@ -184,7 +183,6 @@ def _test_embedding_gradient_shuffle(test_case, enable_quantize):
     else:
         np_tolerance = 1e-4
         os.environ["ONEFLOW_ONE_EMBEDDING_ENABLE_QUANTIZE_COMM"] = "0"
-    np.random.seed(0)
     batch_size = 512
     num_columns = 26
     embedding_size = 128
