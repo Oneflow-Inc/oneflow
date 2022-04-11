@@ -76,7 +76,7 @@ add_docstr(
         dilation: the spacing between kernel elements. Can be a single number or
           a tuple `(dH, dW)`. Default: 1
     
-        For examples:
+    For examples:
 
     .. code-block:: python
 
@@ -114,7 +114,7 @@ add_docstr(
         dilation: the spacing between kernel elements. Can be a single number or
           a tuple `(dT, dH, dW)`. Default: 1
         
-        For examples:
+    For examples:
 
     .. code-block:: python
 
