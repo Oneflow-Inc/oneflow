@@ -462,13 +462,13 @@ def make_normal_initializer(mean, std):
 
 
 def make_table_options(param):
-    """make table param of MultiTableEmbedding tables
+    """make table param of Embedding tables
 
     Args:
         param (dict or list): param can be initializer or list of column_option. initializer can be made by make_uniform_initializer or make_normal_initializer, column options can be made by make_column_options
 
     Returns:
-        dict: table param of MultiTableEmbedding/MultiTableMultiColumnEmbedding tables
+        dict: table param of Embedding tables
     
     For example:
 
@@ -479,7 +479,7 @@ def make_table_options(param):
         >>> table1 = flow.one_embedding.make_table_options(initializer)
         >>> table2 = flow.one_embedding.make_table_options(initializer)
         >>> tables = [table1, table2]
-        >>> # pass the tables to the "tables" param of flow.one_embedding.MultiTableEmbedding
+        >>> # pass the tables to the "tables" param of flow.one_embedding.MultiTableEmbedding or flow.one_embedding.MultiTableMultiColumnEmbedding
         >>> # ...
         
     """
