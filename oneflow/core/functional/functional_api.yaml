@@ -772,21 +772,21 @@
   signature:
     'Tensor (Tensor x, Tensor weight, Tensor bias=None, Int32List[1] strides=1, 
     Int32List[1] padding=0, Int32List[1] output_padding=0, Int32 groups=1, 
-    Int32List[1] dilation=1, Int32 filters=1, String data_format="channels_first") => Deconv1d'
+    Int32List[1] dilation=1, String data_format="channels_first") => Deconv1d'
   bind_python: True
 
 - name: "deconv2d"
   signature:
     'Tensor (Tensor x, Tensor weight, Tensor bias=None, Int32List[1] strides=1, 
     Int32List[1] padding=0, Int32List[1] output_padding=0, Int32 groups=1, 
-    Int32List[1] dilation=1, Int32 filters=1, String data_format="channels_first") => Deconv2d'
+    Int32List[1] dilation=1, String data_format="channels_first") => Deconv2d'
   bind_python: True
 
 - name: "deconv3d"
   signature:
     'Tensor (Tensor x, Tensor weight, Tensor bias=None, Int32List[1] strides=1, 
     Int32List[1] padding=0, Int32List[1] output_padding=0, Int32 groups=1, 
-    Int32List[1] dilation=1, Int32 filters=1,String data_format="channels_first") => Deconv3d'
+    Int32List[1] dilation=1, String data_format="channels_first") => Deconv3d'
   bind_python: True
 
 - name: "expand"
