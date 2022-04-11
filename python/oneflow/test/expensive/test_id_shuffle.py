@@ -85,7 +85,17 @@ def _test_id_shuffle(test_case, has_column_id, num_columns):
     # when has_column_id=False, we can not test column ids because in this case same ids not lead to same column id
 
 
-def _test_quantize(np_data, np_dtype):
+def quantize_func(x):
+    sign = np.sign(x)
+    abs_val = np.abs(x)
+    abs_val += 0.5
+    floor_val = np.floor(abs_val)
+    floor_val = floor_val.astype(np.int8)
+    out = floor_val * sign
+    return out
+
+
+def embedding_shuffle_quantize(np_data, np_dtype):
     # When use float16, ComputeType is set to as Float.
     np_reduce_data = np_data.astype(np.float32)
     abs_max_factor = np.max(np.abs(np_reduce_data), axis=2)
@@ -98,7 +108,7 @@ def _test_quantize(np_data, np_dtype):
     # Covert to Compute Type.
     np_data.astype(np.float32)
     np_data = np_data * quantize_factor
-    np_data = np_data.astype(np.int8)
+    np_data = quantize_func(np_data)
 
     # Covert to Compute Type.
     np_data = np_data.astype(np.float32)
@@ -160,16 +170,19 @@ def _test_embedding_shuffle(test_case, dtype, enable_quantize):
 
     # Quantized numpy embedding.
     if os.environ.get("ONEFLOW_ONE_EMBEDDING_ENABLE_QUANTIZE_COMM") == "1":
-        np_embeddings = _test_quantize(np_embeddings, np_dtype)
+        np_embeddings = embedding_shuffle_quantize(np_embeddings, np_dtype)
     test_case.assertTrue(
         np.allclose(embeddings.numpy(), np_embeddings, atol=1e-4, rtol=1e-4)
     )
 
 
 def _test_embedding_gradient_shuffle(test_case, enable_quantize):
+    np_tolerance = 0
     if enable_quantize:
+        np_tolerance = 0.5
         os.environ["ONEFLOW_ONE_EMBEDDING_ENABLE_QUANTIZE_COMM"] = "1"
     else:
+        np_tolerance = 1e-4
         os.environ["ONEFLOW_ONE_EMBEDDING_ENABLE_QUANTIZE_COMM"] = "0"
     np.random.seed(0)
     batch_size = 512
@@ -179,9 +192,9 @@ def _test_embedding_gradient_shuffle(test_case, enable_quantize):
     column_ids = (
         ids % num_columns
     )  # same id must have same column id, so in this case get column_ids from ids
-    embedding_grad = np.random.rand(batch_size, num_columns, embedding_size).astype(
-        np.float32
-    )
+    embedding_grad = np.random.uniform(
+        low=-1, high=1, size=(batch_size, num_columns, embedding_size)
+    ).astype(np.float32)
     ids_tensor = flow.tensor(ids, requires_grad=False).to("cuda")
     column_ids_tensor = flow.tensor(
         column_ids.astype(np.int32), requires_grad=False
@@ -224,23 +237,25 @@ def _test_embedding_gradient_shuffle(test_case, enable_quantize):
     np_unique_ids, np_inverse = np.unique(ids, return_inverse=True)
     np_num_unique = np_unique_ids.size
     np_cur_rank_unique_embedding_grad = np.zeros(
-        cur_rank_unique_embedding_grad.shape
+        cur_rank_unique_embedding_grad.shape, dtype=np.float32
     ).reshape(-1, embedding_size)
+
+    embedding_grad = embedding_grad.reshape(-1, embedding_size)
     for k in range(np_num_unique):
-        np_cur_rank_unique_embedding_grad[k, :]
-        np_data = sum(
-            embedding_grad.reshape(-1, embedding_size)[
-                np.where(ids.flatten() == np_unique_ids[k])[0]
-            ]
-        )
+        np_data = sum(embedding_grad[np.where(ids.flatten() == np_unique_ids[k])[0]])
         # Quantize Embedding Gradient.
         if os.environ.get("ONEFLOW_ONE_EMBEDDING_ENABLE_QUANTIZE_COMM") == "1":
-            quantize_factor = np.max(np.abs(np_data))
-            np_data = np_data / (quantize_factor / 127.0)
-            np_data = np_data.astype(np.int8)
-            np_data = np_data.astype(np.float32) * quantize_factor / 127.0
+            abs_max_factor = np.max(np.abs(np_data))
+            int8_factor = np.full(abs_max_factor.shape, 127.0, dtype=np.float32)
+            quantize_factor = int8_factor / abs_max_factor
+            np_data = np_data * quantize_factor
+            np_data = quantize_func(np_data)
+            np_data = np_data.astype(np.float32)
+            dequantize_factor = abs_max_factor / int8_factor
+            np_data = np_data * dequantize_factor
 
         np_cur_rank_unique_embedding_grad[k, :] = np_data
+
     reversed_ids = cur_rank_unique_ids[cur_rank_inverse_indices][
         inverse_unique_partition_indices
     ]
@@ -252,13 +267,13 @@ def _test_embedding_gradient_shuffle(test_case, enable_quantize):
         of_cur_rank_embedding_grad, (-1, embedding_size)
     )
     np_cur_rank_embedding_grad = np_cur_rank_unique_embedding_grad[np_inverse]
-    print(np.max(np.abs(of_cur_rank_embedding_grad.numpy().flatten()-np_cur_rank_embedding_grad.flatten())))
+
     test_case.assertTrue(
         np.allclose(
             of_cur_rank_embedding_grad.numpy().flatten(),
             np_cur_rank_embedding_grad.flatten(),
-            atol=1e-4,
-            rtol=1e-4,
+            atol=np_tolerance,
+            rtol=np_tolerance,
         )
     )
 
@@ -314,12 +329,12 @@ def _test_unique_key_value(test_case, has_column_id, num_columns):
 @unittest.skipIf(os.getenv("ONEFLOW_TEST_CPU_ONLY"), "only test cpu cases")
 @flow.unittest.skip_unless_1n1d()
 class DataShuffleTestCase(flow.unittest.TestCase):
-    # def test_id_shuffle(test_case):
-    #     arg_dict = OrderedDict()
-    #     arg_dict["has_column_id"] = [True, False]
-    #     arg_dict["num_columns"] = [1, 26]
-    #     for kwargs in GenArgDict(arg_dict):
-    #         _test_id_shuffle(test_case, **kwargs)
+    def test_id_shuffle(test_case):
+        arg_dict = OrderedDict()
+        arg_dict["has_column_id"] = [True, False]
+        arg_dict["num_columns"] = [1, 26]
+        for kwargs in GenArgDict(arg_dict):
+            _test_id_shuffle(test_case, **kwargs)
 
     def test_embedding_shuffle(test_case):
         arg_dict = OrderedDict()
@@ -329,21 +344,18 @@ class DataShuffleTestCase(flow.unittest.TestCase):
         for kwargs in GenArgDict(arg_dict):
             _test_embedding_shuffle(test_case, **kwargs)
 
-    # def test_embedding_gradient_shuffle(test_case):
-    #     arg_dict = OrderedDict()
-    #     # arg_dict["enable_quantize"] = [True, False]
-    #     # arg_dict["enable_quantize"] = [False]
-    #     arg_dict["enable_quantize"] = [True]
+    def test_embedding_gradient_shuffle(test_case):
+        arg_dict = OrderedDict()
+        arg_dict["enable_quantize"] = [True, False]
+        for kwargs in GenArgDict(arg_dict):
+            _test_embedding_gradient_shuffle(test_case, **kwargs)
 
-    #     for kwargs in GenArgDict(arg_dict):
-    #         _test_embedding_gradient_shuffle(test_case, **kwargs)
-
-    # def test_unique_key_value(test_case):
-    #     arg_dict = OrderedDict()
-    #     arg_dict["has_column_id"] = [True, False]
-    #     arg_dict["num_columns"] = [13, 26, 1]
-    #     for kwargs in GenArgDict(arg_dict):
-    #         _test_unique_key_value(test_case, **kwargs)
+    def test_unique_key_value(test_case):
+        arg_dict = OrderedDict()
+        arg_dict["has_column_id"] = [True, False]
+        arg_dict["num_columns"] = [13, 26, 1]
+        for kwargs in GenArgDict(arg_dict):
+            _test_unique_key_value(test_case, **kwargs)
 
 
 if __name__ == "__main__":

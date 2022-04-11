@@ -1,9 +1,12 @@
 /*
 Copyright 2020 The OneFlow Authors. All rights reserved.
+
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
 You may obtain a copy of the License at
+
     http://www.apache.org/licenses/LICENSE-2.0
+
 Unless required by applicable law or agreed to in writing, software
 distributed under the License is distributed on an "AS IS" BASIS,
 WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -481,27 +484,34 @@ __device__ T abs_func(const T& a) {
   return abs(a);
 }
 
-template<>
-__device__ half abs_func<half>(const half& a) {
-  return __habs(a);
-}
-
 template<typename T>
 __device__ T max_func(const T a, const T b) {
-  return a > b ? a : b;
+  return fmaxf(a, b);
 }
 
 template<typename T>
-struct AbsMaxOp {
-  __device__ __forceinline__ T operator()(const T a, const T b) {
-    return max_func<T>(abs_func<T>(a), abs_func<T>(b));
+__device__ int8_t sign_func(const T x) {
+  if (x > static_cast<T>(0.0)) {
+    return static_cast<int8_t>(1.0);
+  } else if (x == static_cast<T>(0.0)) {
+    return static_cast<int8_t>(0.0);
+  } else {
+    return static_cast<int8_t>(-1.0);
   }
-};
+}
+
+template<typename T>
+__device__ int8_t quantize_func(const T x) {
+  int8_t sign_val = sign_func(x);
+  T abs_val = abs_func<T>(x);
+  T floor_val = floor(abs_val + static_cast<T>(0.5));
+  return static_cast<int8_t>(floor_val) * sign_val;
+}
 
 template<typename T, int thread_group_width = kWarpSize>
-__inline__ __device__ T WarpAbsMaxAllReduce(T val) {
+__inline__ __device__ T WarpMaxAllReduce(T val) {
   for (int32_t lane_mask = thread_group_width / 2; lane_mask > 0; lane_mask /= 2) {
-    val = AbsMaxOp<T>()(val, __shfl_xor_sync(0xffffffff, val, lane_mask));
+    val = max(val, __shfl_xor_sync(0xffffffff, val, lane_mask, thread_group_width));
   }
   return val;
 }
@@ -576,11 +586,10 @@ __global__ void QuantizeWarpImplKernel(const T* src, int8_t* dst, T* quantize_fa
     ComputeType warp_max[rows_per_access];
 #pragma unroll
     for (int row_id = 0; row_id < rows_per_access; row_id++) {
-      warp_max[row_id] =
-          WarpAbsMaxAllReduce<ComputeType, thread_group_width>(thread_abs_max[row_id]);
+      warp_max[row_id] = WarpMaxAllReduce<ComputeType, thread_group_width>(thread_abs_max[row_id]);
       quantize_factor[row + row_id] = static_cast<T>(warp_max[row_id]);
       ComputeType* row_buf = buf[row_id];
-      ComputeType quantize_factor_val = static_cast<ComputeType>(127) / warp_max[row_id];
+      ComputeType quantize_factor_val = static_cast<ComputeType>(127.0) / warp_max[row_id];
 #pragma unroll
       for (int col = 0; col < cols_per_thread; col++) {
         row_buf[col] = row_buf[col] * quantize_factor_val;
@@ -593,7 +602,7 @@ __global__ void QuantizeWarpImplKernel(const T* src, int8_t* dst, T* quantize_fa
         if (!padding || col < cols) {
           const int64_t store_offset = ((row + row_id) * cols + col) / pack_size;
           for (int i = 0; i < pack_size; i++) {
-            store_pack.elem[i] = static_cast<int8_t>(row_buf[pack_id * pack_size + i]);
+            store_pack.elem[i] = quantize_func<ComputeType>(row_buf[pack_id * pack_size + i]);
           }
           *(reinterpret_cast<StoreType*>(dst) + store_offset) = store_pack.storage;
         }
@@ -601,7 +610,6 @@ __global__ void QuantizeWarpImplKernel(const T* src, int8_t* dst, T* quantize_fa
     }
   }
 }
-
 
 template<typename T, typename ComputeType, int pack_size, int cols_per_thread,
          int thread_group_width, int rows_per_access, bool padding>
@@ -785,7 +793,7 @@ __global__ void DequantizeKernel(const int8_t* x, T* quantize_factor, T* out, ID
        index += gridDim.x * blockDim.x * pack_size) {
     IDX quantize_factor_idx = index / col_size;
     ComputeType quantize_factor_val = static_cast<ComputeType>(quantize_factor[quantize_factor_idx])
-                                      / static_cast<ComputeType>(127);
+                                      / static_cast<ComputeType>(127.0);
     using LoadPackType = cuda::elementwise::PackType<int8_t, pack_size>;
     using LoadPack = cuda::elementwise::Pack<int8_t, pack_size>;
     using StorePackType = cuda::elementwise::PackType<T, pack_size>;
@@ -1175,7 +1183,6 @@ class EmbeddingGradientShuffleKernel final : public user_op::OpKernel {
           embedding_grad->dptr<T>(), num_ids, parallel_num * num_ids, 1, embedding_size, 0,
           unique_partition_embedding_grad);
 
-      ncclComm_t comm = kernel_state->comm();
       ShuffleEmbeddingsGrad(cuda_stream, comm, parallel_id, parallel_num, num_ids, embedding_size,
                             data_type, host_num_unique_matrix, unique_partition_embedding_grad,
                             received_embedding_grad);
@@ -1189,8 +1196,7 @@ class EmbeddingGradientShuffleKernel final : public user_op::OpKernel {
           cur_rank_unique_embedding_grad->mut_dptr<T>());
     } else {
       size_t received_embedding_grad_size = GetCudaAlignedSize(full_elem_cnt * sizeof(int8_t));
-      size_t quantize_cur_rank_embedding_grad_size =
-          GetCudaAlignedSize(full_elem_cnt * sizeof(int8_t));
+      size_t quantize_cur_rank_embedding_grad_size = received_embedding_grad_size;
       size_t cur_rank_quantize_factor_size = GetCudaAlignedSize(full_num_ids * sizeof(T));
       size_t received_cur_rank_quantize_factor_size = cur_rank_quantize_factor_size;
       size_t dequantize_cur_rank_embedding_grad_size =
@@ -1310,9 +1316,8 @@ class EmbeddingGradientShuffleKernel final : public user_op::OpKernel {
           size_t cur_rank_quantize_factor_size = GetCudaAlignedSize(                              \
               cur_rank_embedding_grad_num * sizeof(OF_PP_PAIR_FIRST(t_dtype_pair)));              \
           size_t received_cur_rank_quantize_factor_size = cur_rank_quantize_factor_size;          \
-          size_t dequantize_cur_rank_embedding_grad_size =                                        \
-              GetCudaAlignedSize(cur_rank_embedding_grad_num * embedding_size                     \
-                                 * sizeof(OF_PP_PAIR_FIRST(t_dtype_pair)));                       \
+          size_t dequantize_cur_rank_embedding_grad_size = GetCudaAlignedSize(                    \
+              cur_rank_embedding_grad_elem_cnt * sizeof(OF_PP_PAIR_FIRST(t_dtype_pair)));         \
           tmp_size = unique_partition_embedding_grad_size + received_embedding_grad_size          \
                      + quantize_cur_rank_embedding_grad_size + cur_rank_quantize_factor_size      \
                      + received_cur_rank_quantize_factor_size                                     \
