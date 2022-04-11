@@ -101,7 +101,7 @@ def _test_module_placement_change(test_case, placement, sbp):
         def __init__(self, param1, param2):
             super().__init__()
             self.param1 = param1
-            self.param2 = param2  
+            self.param2 = param2
 
     tensor0 = flow.nn.Parameter(flow.Tensor(2, 3, device=flow.device("cpu")))
     tensor1 = flow.nn.Parameter(flow.Tensor(2, 3, device=flow.device("cpu")))
