@@ -58,7 +58,6 @@ Maybe<void> GrpcRpcManager::CreateClient() {
 GrpcRpcManager::~GrpcRpcManager() {
   auto* grpc_client = dynamic_cast<GrpcCtrlClient*>(Global<CtrlClient>::Get());
   CHECK_NOTNULL(grpc_client);
-  grpc_client->StopHeartbeat();
   OF_ENV_BARRIER();
   Global<CtrlClient>::Delete();
   CHECK_NOTNULL(Global<CtrlServer>::Get());

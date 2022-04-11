@@ -19,11 +19,11 @@ namespace oneflow {
 
 namespace {
 
-#define GRPC_CHECK(x) CHECK_EQ(x.error_code(), grpc::StatusCode::OK)
+#define GRPC_CHECK(x) CHECK_EQ((x).error_code(), grpc::StatusCode::OK)
 
 }  // namespace
 
-GrpcCtrlClient::~GrpcCtrlClient() { StopHeartbeat(); }
+GrpcCtrlClient::~GrpcCtrlClient() {}
 
 GrpcCtrlClient::GrpcCtrlClient(const ProcessCtx& process_ctx) : process_ctx_(process_ctx) {
   rpc_client_.ReserveStubsOfSize(process_ctx.ctrl_addr_size());
@@ -33,29 +33,6 @@ GrpcCtrlClient::GrpcCtrlClient(const ProcessCtx& process_ctx) : process_ctx_(pro
     rpc_client_.AddStub(std::move(new_stub));
     rpc_client_.LoadServer(address.host(), rpc_client_.GetStubAt(i));
   }
-  need_heartbeat_thread_stop_ = false;
-  heartbeat_thread_ = std::thread([this]() {
-    std::mt19937 gen(NewRandomSeed());
-    std::uniform_int_distribution<int32_t> sleep_second_dis(7, 13);
-    LoadServerRequest request;
-    LoadServerResponse response;
-    while (true) {
-      const auto wait_duration = std::chrono::seconds(sleep_second_dis(gen));
-      {
-        std::unique_lock<std::mutex> lck(need_heartbeat_thread_stop_mtx_);
-        const bool stopped = need_heartbeat_thread_stop_cv_.wait_for(
-            lck, wait_duration, [&]() { return need_heartbeat_thread_stop_; });
-        if (stopped) { break; }
-      }
-      for (size_t i = 0; i < rpc_client_.GetStubSize(); ++i) {
-        grpc::ClientContext client_ctx;
-        request.set_addr(this->process_ctx().ctrl_addr(i).host());
-        GRPC_CHECK(rpc_client_.GetStubAt(i)->CallMethod<CtrlMethod::kLoadServer>(
-            &client_ctx, request, &response))
-            << "Machine " << i << " lost";
-      }
-    }
-  });
 }
 
 void GrpcCtrlClient::Barrier(const std::string& barrier_name) { rpc_client_.Barrier(barrier_name); }
@@ -109,16 +86,5 @@ int32_t GrpcCtrlClient::IncreaseCount(const std::string& k, int32_t v) {
 }
 
 void GrpcCtrlClient::EraseCount(const std::string& k) { rpc_client_.EraseCount(k); }
-
-void GrpcCtrlClient::StopHeartbeat() {
-  bool already_stopped = false;
-  {
-    std::unique_lock<std::mutex> lck(need_heartbeat_thread_stop_mtx_);
-    already_stopped = need_heartbeat_thread_stop_;
-    need_heartbeat_thread_stop_ = true;
-    need_heartbeat_thread_stop_cv_.notify_all();
-  }
-  if (!already_stopped) { heartbeat_thread_.join(); }
-}
 
 }  // namespace oneflow

@@ -14,6 +14,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 #include <chrono>
+#include <thread>
 #include "oneflow/core/common/spin_counter.h"
 #include "oneflow/core/common/global.h"
 #include "oneflow/core/common/foreign_lock_helper.h"
