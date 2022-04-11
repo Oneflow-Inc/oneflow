@@ -18,14 +18,15 @@ limitations under the License.
 
 #include <functional>
 #include "oneflow/core/intrusive/intrusive.h"
-#include "oneflow/core/intrusive/channel.h"
+#include "oneflow/core/intrusive/mutexed_list.h"
+#include "oneflow/core/common/notifier.h"
 #include "oneflow/core/vm/stream.h"
 
 namespace oneflow {
 namespace vm {
 
-using PendingInstructionChannel =
-    intrusive::Channel<INTRUSIVE_FIELD(Instruction, pending_instruction_hook_)>;
+using PendingInstructionMutexedList =
+    intrusive::MutexedList<INTRUSIVE_FIELD(Instruction, pending_instruction_hook_)>;
 using PendingInstructionList =
     intrusive::List<INTRUSIVE_FIELD(Instruction, pending_instruction_hook_)>;
 
@@ -39,24 +40,31 @@ class ThreadCtx final : public intrusive::Base {
 
   // Setters
   StreamList* mut_stream_list() { return &stream_list_; }
-  PendingInstructionChannel* mut_pending_instruction_list() { return &pending_instruction_list_; }
+  PendingInstructionMutexedList* mut_pending_instruction_list() {
+    return &pending_instruction_list_;
+  }
 
   // methods
   size_t TryReceiveAndRun();
-  intrusive::ChannelStatus ReceiveAndRun();
+
+  Notifier* mut_notifier() { return &notifier_; }
 
  private:
-  template<intrusive::ChannelStatus (PendingInstructionChannel::*Move)(PendingInstructionList*)>
-  intrusive::ChannelStatus MoveAndRun(size_t* cnt);
-
   friend class intrusive::Ref;
   intrusive::Ref* mut_intrusive_ref() { return &intrusive_ref_; }
 
-  ThreadCtx() : intrusive_ref_(), stream_list_(), pending_instruction_list_(), thread_ctx_hook_() {}
+  ThreadCtx()
+      : intrusive_ref_(),
+        stream_list_(),
+        pending_instruction_mutex_(),
+        pending_instruction_list_(&pending_instruction_mutex_),
+        thread_ctx_hook_() {}
   intrusive::Ref intrusive_ref_;
   // lists
   StreamList stream_list_;
-  PendingInstructionChannel pending_instruction_list_;
+  std::mutex pending_instruction_mutex_;
+  PendingInstructionMutexedList pending_instruction_list_;
+  Notifier notifier_;
 
  public:
   // list hooks
