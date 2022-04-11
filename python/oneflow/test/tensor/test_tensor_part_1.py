@@ -1052,5 +1052,6 @@ class TestTensor(flow.unittest.TestCase):
         y = x.half()
         test_case.assertTrue(y.dtype == flow.float16)
 
+
 if __name__ == "__main__":
     unittest.main()
