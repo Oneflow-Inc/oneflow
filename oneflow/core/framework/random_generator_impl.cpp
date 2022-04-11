@@ -16,6 +16,7 @@ limitations under the License.
 #include "oneflow/core/framework/random_generator_impl.h"
 
 #include "oneflow/core/common/util.h"
+#include "oneflow/core/common/cpp_attribute.h"
 #include "oneflow/core/framework/device.h"
 #include "oneflow/core/framework/instructions_builder.h"
 #include "oneflow/core/framework/tensor_util.h"
@@ -23,6 +24,7 @@ limitations under the License.
 #include "oneflow/core/vm/virtual_machine.h"
 #include "oneflow/core/register/ofblob.h"
 #include "oneflow/core/vm/vm_util.h"
+#include "oneflow/core/platform/include/pthread_fork.h"
 #ifdef WITH_CUDA
 #include "oneflow/core/device/cuda_util.h"
 #include <cuda.h>
@@ -224,7 +226,10 @@ void AutoGeneratorImpl::set_current_seed(uint64_t seed) {
   CHECK_JUST(CPUSynchronize());
   std::lock_guard<std::mutex> lock(mutex_);
   seed_ = seed;
-  for (const auto& it : generators_) { it.second->set_current_seed(seed); }
+  for (const auto& it : generators_) {
+    if (unlikely(pthread_fork::IsForkedSubProcess() && it.first.device_type == kCUDA)) { continue; }
+    it.second->set_current_seed(seed);
+  }
 }
 
 struct AutoGeneratorState {
