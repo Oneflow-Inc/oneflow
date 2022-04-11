@@ -151,7 +151,7 @@ class DeConvBaseFunctor {
     int32_t kernel_idx_offset = 2;
     if (data_format == "channels_last") { kernel_idx_offset = 1; }
     for (int i = 0; i < num_spatial_dims_; i++) {
-      kernel_size_vec.at(i) = ((weight->shape())->At(i + kernel_idx_offset));
+      kernel_size_vec[i] = ((weight->shape())->At(i + kernel_idx_offset));
     }
 
     JUST(deconv_attrs.SetAttr<int32_t>("filters", (weight->shape())->At(1) * groups));
