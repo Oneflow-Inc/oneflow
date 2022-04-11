@@ -696,7 +696,7 @@ class MultiTableMultiColumnEmbedding(Embedding):
             for dim in embedding_dim:
                 assert isinstance(dim, int)
         else:
-            assert isinstance(dim, int)
+            assert isinstance(embedding_dim, int)
 
         super().__init__(
             name,
