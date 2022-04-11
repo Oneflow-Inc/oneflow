@@ -367,20 +367,20 @@ class TestConvTranspose(flow.unittest.TestCase):
         return y
 
     def test_functional_conv_transpose1d(test_case):
-        inputs = torch.ones(20, 16, 50)
-        weights = torch.ones(16, 33, 5)
+        inputs = torch.ones(1, 2, 3)
+        weights = torch.ones(2, 3, 3)
         outputs = torch.nn.functional.conv_transpose1d(inputs, weights)
         return outputs
 
     def test_functional_conv_transpose2d(test_case):
         inputs = torch.ones(1, 4, 5, 5)
-        weights = torch.ones(4, 8, 3, 3)
+        weights = torch.ones(4, 3, 3, 3)
         outputs = torch.nn.functional.conv_transpose2d(inputs, weights, padding=1)
         return outputs
 
     def test_functional_conv_transpose3d(test_case):
-        inputs = torch.ones(20, 16, 50, 10, 20)
-        weights = torch.ones(16, 33, 3, 3, 3)
+        inputs = torch.ones(1, 4, 2, 2, 2)
+        weights = torch.ones(4, 2, 3, 3, 3)
         outputs = torch.nn.functional.conv_transpose3d(inputs, weights)
         return outputs
 
