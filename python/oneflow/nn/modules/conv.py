@@ -735,7 +735,6 @@ class ConvTranspose1d(Module):
             self.output_padding,
             self.groups,
             self.dilation,
-            self.filters,
             "channels_first",
         )
 
@@ -861,7 +860,6 @@ class ConvTranspose2d(Module):
             self.output_padding,
             self.groups,
             self.dilation,
-            self.filters,
             "channels_first",
         )
         return res
@@ -1023,7 +1021,6 @@ class ConvTranspose3d(Module):
             self.output_padding,
             self.groups,
             self.dilation,
-            self.filters,
             "channels_first",
         )
 
