@@ -480,12 +480,12 @@ class Hardshrink(Module):
     
         >>> import numpy as np
         >>> import oneflow as flow
-        >>> x = np.array([-1, 0, 0.2, 0.5]).astype(np.float32)
+        >>> x = np.array([-1.1, 0, 0.2, 0.5]).astype(np.float32)
         >>> input = flow.Tensor(x)
         >>> hardshrink = flow.nn.Hardshrink(lambd=0.5)
         >>> out = hardshrink(input)
         >>> out
-        tensor([-1.0000,  0.0000,  0.0000,  0.0000], dtype=oneflow.float32)
+        tensor([-1.1000,  0.0000,  0.0000,  0.0000], dtype=oneflow.float32)
     """
 
     def __init__(self, lambd: float = 0.5, inplace: bool = False):
