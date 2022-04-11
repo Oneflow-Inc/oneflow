@@ -239,7 +239,7 @@ void SbpCollector::ProxySbpCandidate(
 
   // mapping from a logical blob id to index
   HashMap<LogicalBlobId, int32_t> lbi2index;
-  // mapping from the index to producer, consuemr and corresponding input blob name, possible sbp
+  // mapping from the index to producer, consumer and corresponding input blob name, possible sbp
   // sets
   std::vector<const OpNode*> index2producer;
   std::vector<std::unordered_set<int32_t>> index2sbp_set;
@@ -253,7 +253,7 @@ void SbpCollector::ProxySbpCandidate(
     // If not support boxing, just skip it.
     if (IsClassRegistered<int32_t, DisableInputBoxingGroup>(op_type_case)) { return; }
     for (const std::string& ibn : node->op().input_bns()) {
-      // Skip those blobs who enforc same SBP.
+      // Skip those blobs who enforce same SBP.
       if (IsSameSbp(node, ibn)) {
         // Enforcing same SBP. Can not collect sbp from this blob.
         continue;
@@ -262,7 +262,7 @@ void SbpCollector::ProxySbpCandidate(
       const LogicalBlobId& lbi = node->op().BnInOp2Lbi(ibn);
       const OpNode& producer = node->ProducerOpNode4Lbi(lbi);
 
-      // not building proxy for fixed opertors
+      // not building proxy for fixed operators
       if (op_name2sbp_node.find(producer.op().op_name()) == op_name2sbp_node.end()) { return; }
       // decide the index of a logical blob description
       const auto& iterator_lbi = lbi2index.find(lbi);
@@ -357,7 +357,7 @@ void SbpCollector::ProxySbpCandidate(
       // unload logical blob from sbp edges
       edge_found->UnloadLbi(lbi);
       // Do not clip this edge. Save it for wait time.
-      // clip this edge if it no longer carrys any blob
+      // clip this edge if it no longer carries any blob
       // We don't clip edges now since we have transfer cost
       // if (edge_found->EmptyLbi() && edge_found->WaitTime <= 0.0 && edge_found->WaitTime > -0.5)
       // sbp_graph.ClipEdge(edge_found);
