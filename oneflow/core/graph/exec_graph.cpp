@@ -14,6 +14,8 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 #include "oneflow/core/graph/exec_graph.h"
+#include <sstream>
+#include "oneflow/core/common/just.h"
 #include "oneflow/core/graph/op_graph.h"
 
 namespace oneflow {
@@ -92,9 +94,9 @@ Maybe<void> CheckPhysicalBlobDesc(
       continue;
     }
     if (*JUST(op.GetParallelDesc4BnInOp(bn)) == *op_parallel_desc) {
-      JUST(CheckPhysicalBlobDesc(*JUST(GetLogicalBlobDesc(bn)),
+      JUST_MSG(CheckPhysicalBlobDesc(*JUST(GetLogicalBlobDesc(bn)),
                                  nd_sbp_signature->bn_in_op2nd_sbp().at(bn), *op_parallel_desc,
-                                 parallel_ctx, *physical_blob_desc));
+                                 parallel_ctx, *physical_blob_desc), std::stringstream() << " check physical shape failed, op name " << op.op_loc());
     }
   }
   return Maybe<void>::Ok();
