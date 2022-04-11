@@ -23,7 +23,7 @@ namespace oneflow {
   const Shape& pred_shape = ctx->InputTensorDesc("pred", 0).shape();
   const Shape& label_shape = ctx->InputTensorDesc("label", 0).shape();
   CHECK_EQ_OR_RETURN(pred_shape.elem_cnt(), label_shape.elem_cnt())
-      << "pred and label MUST have same element count";
+      << "pred and label MUST have same element count.";
   out_desc->set_is_dynamic(false);
   *out_desc->mut_shape() = Shape({1});
   return Maybe<void>::Ok();
@@ -40,9 +40,11 @@ namespace oneflow {
 /* static */ Maybe<void> RocAucScoreOp::InferDataType(user_op::InferContext* ctx) {
   *ctx->OutputDType("out", 0) = DataType::kFloat;
   const user_op::TensorDesc& label = ctx->InputTensorDesc("label", 0);
-  CHECK_OR_RETURN(IsFloatingDataType(label.data_type()) || IsIntegralDataType(label.data_type()));
+  CHECK_OR_RETURN(IsFloatingDataType(label.data_type()) || IsIntegralDataType(label.data_type()))
+      << "Input `label` data type " << DataType_Name(label.data_type()) << " is not supported.";
   const user_op::TensorDesc& pred = ctx->InputTensorDesc("pred", 0);
-  CHECK_OR_RETURN(pred.data_type() == DataType::kFloat);
+  CHECK_OR_RETURN(pred.data_type() == DataType::kFloat)
+      << "Input `pred` data type " << DataType_Name(pred.data_type()) << " is not supported.";
   return Maybe<void>::Ok();
 }
 
