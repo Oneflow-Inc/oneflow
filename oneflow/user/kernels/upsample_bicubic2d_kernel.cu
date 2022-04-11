@@ -46,11 +46,11 @@ __global__ void UpsampleBicubic2dForward(const int64_t elem_cnt, const T* in_dpt
     T* out = out_dptr;
 
     const T real_x = GetAreaPixel(scale_width, output_x, align_corners, /*cubic=*/true);
-    int64_t input_x = std::floor(1.0 * real_x);
+    int64_t input_x = floor(1.0 * real_x);
     const T t_x = real_x - input_x;
 
     const T real_y = GetAreaPixel(scale_height, output_y, align_corners, /*cubic=*/true);
-    int64_t input_y = std::floor(1.0 * real_y);
+    int64_t input_y = floor(1.0 * real_y);
     const T t_y = real_y - input_y;
 
     for (int64_t c = 0; c < channels * nbatch; c++) {
@@ -92,11 +92,11 @@ __global__ void UpsampleBicubic2dBackward(const int64_t elem_cnt, const T* dy_dp
     const T* out = dy_dptr;
 
     T real_x = GetAreaPixel(scale_width, output_x, align_corners, true);
-    int64_t input_x = std::floor(1.0 * real_x);
+    int64_t input_x = floor(1.0 * real_x);
     T t_x = real_x - input_x;
 
     T real_y = GetAreaPixel(scale_height, output_y, align_corners, true);
-    int64_t input_y = std::floor(1.0 * real_y);
+    int64_t input_y = floor(1.0 * real_y);
     T t_y = real_y - input_y;
 
     T x_coeffs[4];
@@ -105,7 +105,7 @@ __global__ void UpsampleBicubic2dBackward(const int64_t elem_cnt, const T* dy_dp
     get_cubic_upsample_coefficients<T>(x_coeffs, t_x);
     get_cubic_upsample_coefficients<T>(y_coeffs, t_y);
 
-    for (int64_t c = 0; c < channels; c++) {
+    for (int64_t c = 0; c < channels * nbatch; c++) {
       T out_value = out[output_y * out_width + output_x];
 
       for (int64_t i = 0; i < 4; i++) {
