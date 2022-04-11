@@ -107,7 +107,7 @@ void ParseInitializers(const int32_t line_size, const int32_t embedding_size,
   offset++;
   OF_CUDA_CHECK(cudaMallocHost(host_initializer_index, num_tables * line_size * sizeof(int8_t)));
   OF_CUDA_CHECK(cudaMalloc(device_initializer_index, num_tables * line_size * sizeof(int8_t)));
-  
+
   for (int32_t i = 0; i < num_tables; ++i) {
     auto table = tables.at(i);
     if (table.contains("initializer")) {
