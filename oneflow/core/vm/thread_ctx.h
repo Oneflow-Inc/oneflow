@@ -58,6 +58,7 @@ class ThreadCtx final : public intrusive::Base {
         stream_list_(),
         pending_instruction_mutex_(),
         pending_instruction_list_(&pending_instruction_mutex_),
+        notifier_(),
         thread_ctx_hook_() {}
   intrusive::Ref intrusive_ref_;
   // lists

@@ -74,7 +74,7 @@ void WorkerLoop(vm::ThreadCtx* thread_ctx, const std::function<void(vm::ThreadCt
 
 }  // namespace
 
-VirtualMachine::VirtualMachine() : vm_threads_closed_(false) {
+VirtualMachine::VirtualMachine() : disable_vm_threads_(false), scheduler_stoped_(false) {
   // Class VirtualMachineEngine only cares the basic logical of vm, while class VirtualMachine
   // manages threads and condition variables.
   // In order to notify threads in VirtualMachineEngine, a notify callback lambda should be take as
@@ -126,16 +126,16 @@ void VirtualMachine::ControlSync() {
 }
 
 Maybe<void> VirtualMachine::CloseVMThreads() {
-  CHECK_OR_RETURN(!vm_threads_closed_);
+  CHECK_OR_RETURN(!disable_vm_threads_);
   ControlSync();
   pending_notifier_.Close();
   schedule_thread_.join();
-  vm_threads_closed_ = true;
+  disable_vm_threads_ = true;
   return Maybe<void>::Ok();
 }
 
 VirtualMachine::~VirtualMachine() {
-  if (!vm_threads_closed_) { CHECK_JUST(CloseVMThreads()); }
+  if (!disable_vm_threads_) { CHECK_JUST(CloseVMThreads()); }
   CHECK(vm_->Empty());
   CHECK(vm_->CallbackEmpty());
   vm_.Reset();
@@ -180,7 +180,7 @@ Maybe<void> VirtualMachine::Receive(vm::InstructionMsgList* instr_list) {
       // `ComputeInFuseMode` will be replaced by `Compute` soon.
       instr_msg->instruction_type().ComputeInFuseMode(instr_msg);
     }
-  } else if (unlikely(vm_threads_closed_)) {
+  } else if (unlikely(disable_vm_threads_)) {
     JUST(RunInCurrentThread(instr_list));
   } else {
     const int64_t kHighWaterMark = GetInstructionHighWaterMark();
@@ -234,6 +234,7 @@ void ScheduleUntilVMEmpty(vm::VirtualMachineEngine* vm, const vm::ScheduleCtx& s
 Maybe<void> VirtualMachine::RunInCurrentThread(vm::InstructionMsgList* instr_list) {
   CHECK_OR_RETURN(vm_->Empty());
   CHECK_OR_RETURN(vm_->CallbackEmpty());
+  CHECK_OR_RETURN(scheduler_stoped_);
   JUST(vm_->Receive(instr_list));
   ScheduleUntilVMEmpty(vm_.Mutable(), SingleThreadScheduleCtx(vm_.Mutable()));
   return Maybe<void>::Ok();
@@ -301,6 +302,7 @@ void VirtualMachine::ScheduleLoop(const std::function<void()>& Initializer) {
     std::unique_lock<std::mutex> lock(worker_threads_mutex_);
     for (const auto& worker_thread : worker_threads_) { worker_thread->join(); }
   }
+  scheduler_stoped_ = true;
 }
 
 void VirtualMachine::CallbackLoop(const std::function<void()>& Initializer) {
