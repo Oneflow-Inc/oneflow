@@ -19,7 +19,7 @@ from oneflow.framework.docstr.utils import add_docstr
 add_docstr(
     oneflow._C.deconv1d,
     r"""
-    conv_transpose1d(input, weight, bias=None, stride=[1], padding=[0], dilation=[1], groups=1) -> Tensor
+    conv_transpose1d(input, weight, bias=None, stride=1, padding=0, output_padding=0, groups=1, dilation=1) -> Tensor
 
     The documentation is referenced from: https://pytorch.org/docs/stable/generated/torch.nn.functional.conv_transpose1d.html
 
@@ -55,7 +55,7 @@ add_docstr(
 add_docstr(
     oneflow._C.deconv2d,
     r"""
-    conv_transpose2d(input, weight, bias=None, stride=[1], padding=[0], dilation=[1], groups=1) -> Tensor
+    conv_transpose2d(input, weight, bias=None, stride=1, padding=0, output_padding=0, groups=1, dilation=1) -> Tensor
 
     The documentation is referenced from: https://pytorch.org/docs/stable/generated/torch.nn.functional.conv_transpose3d.html
 
@@ -91,7 +91,7 @@ add_docstr(
 add_docstr(
     oneflow._C.deconv3d,
     r"""
-    conv_transpose3d(input, weight, bias=None, stride=[1], padding=[0], dilation=[1], groups=1) -> Tensor
+    conv_transpose3d(input, weight, bias=None, stride=1, padding=0, output_padding=0, groups=1, dilation=1) -> Tensor
 
     The documentation is referenced from: https://pytorch.org/docs/stable/generated/torch.nn.functional.conv_transpose3d.html
 
