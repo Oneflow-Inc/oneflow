@@ -141,35 +141,25 @@ class DeConvBaseFunctor {
   virtual ~DeConvBaseFunctor() = default;
   Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x,
                            const std::shared_ptr<one::Tensor>& weight,
-                           const Optional<one::Tensor>& bias, const std::vector<int32_t>& strides,
+                           const Optional<one::Tensor>& bias, const std::vector<int32_t>& stride,
                            const std::vector<int32_t>& padding,
                            const std::vector<int32_t>& output_padding, const int32_t& groups,
                            const std::vector<int32_t>& dilation,
                            const std::string& data_format) const {
     MutableAttrMap deconv_attrs;
     std::vector<int32_t> kernel_size_vec(num_spatial_dims_);
-    std::vector<int32_t> dilation_vec(num_spatial_dims_);
-    std::vector<int32_t> strides_vec(num_spatial_dims_);
-    std::vector<int32_t> padding_vec(num_spatial_dims_);
-    std::vector<int32_t> output_padding_vec(num_spatial_dims_);
     int32_t kernel_idx_offset = 2;
     if (data_format == "channels_last") { kernel_idx_offset = 1; }
-    for (int i = 0; i < dilation.size(); i++) { dilation_vec.at(i) = dilation.at(i); }
-    for (int i = 0; i < strides.size(); i++) { strides_vec.at(i) = strides.at(i); }
-    for (int i = 0; i < padding.size(); i++) { padding_vec.at(i) = padding.at(i); }
-    for (int i = 0; i < output_padding.size(); i++) {
-      output_padding_vec.at(i) = output_padding.at(i);
-    }
     for (int i = 0; i < num_spatial_dims_; i++) {
       kernel_size_vec.at(i) = ((weight->shape())->At(i + kernel_idx_offset));
     }
 
     JUST(deconv_attrs.SetAttr<int32_t>("filters", (weight->shape())->At(1) * groups));
-    JUST(deconv_attrs.SetAttr<std::vector<int32_t>>("padding_before", padding_vec));
+    JUST(deconv_attrs.SetAttr<std::vector<int32_t>>("padding_before", padding));
     JUST(deconv_attrs.SetAttr<std::vector<int32_t>>("kernel_size", kernel_size_vec));
-    JUST(deconv_attrs.SetAttr<std::vector<int32_t>>("output_padding", output_padding_vec));
-    JUST(deconv_attrs.SetAttr<std::vector<int32_t>>("strides", strides_vec));
-    JUST(deconv_attrs.SetAttr<std::vector<int32_t>>("dilation_rate", dilation_vec));
+    JUST(deconv_attrs.SetAttr<std::vector<int32_t>>("output_padding", output_padding));
+    JUST(deconv_attrs.SetAttr<std::vector<int32_t>>("strides", stride));
+    JUST(deconv_attrs.SetAttr<std::vector<int32_t>>("dilation_rate", dilation));
     JUST(deconv_attrs.SetAttr<int32_t>("groups", groups));
     JUST(deconv_attrs.SetAttr<std::string>("data_format", data_format));
     std::shared_ptr<one::Tensor> deconv_out = nullptr;
