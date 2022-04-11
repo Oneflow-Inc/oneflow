@@ -70,6 +70,7 @@ def _test_scatter_add_random_data(test_case, placement):
     return torch.scatter_add(input, dim, index, src)
 
 
+@flow.unittest.skip_unless_1n2d()
 class TestScatterOps(flow.unittest.TestCase):
     @globaltest
     def test_scatter_ops(test_case):
