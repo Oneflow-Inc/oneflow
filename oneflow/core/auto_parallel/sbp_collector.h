@@ -73,7 +73,7 @@ class SbpCollector {
 
  private:
   // Maximum number of possible sbp in the proxy
-  unsigned long max_num_sbp_proxy_ = 3;
+  const unsigned long max_num_sbp_proxy_ = 3;
 
   // Depth first search to collect Sbp Parallel information for the whole sbp set
   void DfsSbpSet(int32_t depth, int32_t max_depth, const std::unordered_set<int32_t>& sbp_sets,
