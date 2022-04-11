@@ -21,7 +21,7 @@ import oneflow.unittest
 
 class TestNewTensor(flow.unittest.TestCase):
     @flow.unittest.skip_unless_1n1d()
-    def test_new_local_tensor_with_default_args(test_case):
+    def test_new_tensor_local_mode_with_default_args(test_case):
         tensor = flow.randn(5)
         data = [[1, 2], [3, 4]]
         new_tensor = tensor.new_tensor(data)
@@ -29,7 +29,7 @@ class TestNewTensor(flow.unittest.TestCase):
         test_case.assertEqual(new_tensor.device, tensor.device)
 
     @flow.unittest.skip_unless_1n1d()
-    def test_new_local_tensor_with_spec_args(test_case):
+    def test_new_tensor_local_mode_with_spec_args(test_case):
         tensor = flow.randn(5)
         data = [[1, 2], [3, 4]]
         new_tensor = tensor.new_tensor(data, flow.int64, "cuda")
@@ -37,7 +37,7 @@ class TestNewTensor(flow.unittest.TestCase):
         test_case.assertEqual(new_tensor.device, flow.device("cuda"))
 
     @flow.unittest.skip_unless_1n2d()
-    def test_new_global_tensor_with_default_args(test_case):
+    def test_new_tensor_global_mode_with_default_args(test_case):
         placement = flow.placement(type="cpu", rank=[0, 1])
         sbp = flow.sbp.split(0)
         tensor = flow.randn(4, 4, placement=placement, sbp=sbp)
@@ -48,7 +48,7 @@ class TestNewTensor(flow.unittest.TestCase):
         test_case.assertEqual(new_tensor.sbp, sbp)
 
     @flow.unittest.skip_unless_1n2d()
-    def test_new_global_tensor_with_spec_args(test_case):
+    def test_new_tensor_global_mode_with_spec_args(test_case):
         placement = flow.placement(type="cpu", rank=[0, 1])
         sbp = flow.sbp.split(0)
         tensor = flow.randn(4, 4, placement=placement, sbp=sbp)
