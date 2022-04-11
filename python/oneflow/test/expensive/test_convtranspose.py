@@ -367,23 +367,26 @@ class TestConvTranspose(flow.unittest.TestCase):
         y = m(x)
         return y
 
-    @autotest()
     def test_functional_conv_transpose1d(test_case):
         inputs = torch.randn(20, 16, 50)
         weights = torch.randn(16, 33, 5)
-        return F.conv_transpose1d(inputs, weights)
+        outputs = F.conv_transpose1d(inputs, weights)
+        return outputs
 
-    @autotest()
+
     def test_functional_conv_transpose2d(test_case):
         inputs = torch.randn(1, 4, 5, 5)
         weights = torch.randn(4, 8, 3, 3)
-        return F.conv_transpose2d(inputs, weights, padding=1)
+        outputs = F.conv_transpose2d(inputs, weights, padding=1)
+        return outputs
 
-    @autotest()
+
     def test_functional_conv_transpose3d(test_case):
         inputs = torch.randn(20, 16, 50, 10, 20)
         weights = torch.randn(16, 33, 3, 3, 3)
-        return F.conv_transpose3d(inputs, weights)
+        outputs = F.conv_transpose3d(inputs, weights)
+        return outputs
+
 
 
 if __name__ == "__main__":
