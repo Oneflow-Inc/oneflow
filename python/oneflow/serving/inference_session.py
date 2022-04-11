@@ -117,7 +117,7 @@ class ModelVersionPolicy(enum.Enum):
 
 class SessionOption(object):
     def __init__(self):
-        self.device_tag = "gpu"
+        self.device_tag = "cuda"
         self.device_num = 1
         self.is_mirrored_view = False
 
@@ -199,7 +199,7 @@ class InferenceSession(object):
             config_proto.session_id = 0
             self.config_proto_ = config_proto
             # self.config_proto_ = session_util._GetDefaultConfigProto()
-        if self.option_.device_tag == "gpu":
+        if self.option_.device_tag == "cuda":
             self.config_proto_.resource.gpu_device_num = self.option_.device_num
         elif self.option_.device_tag == "cpu":
             self.config_proto_.resource.cpu_device_num = self.option_.device_num
@@ -262,7 +262,7 @@ class InferenceSession(object):
 
     def compile(self, op_list):
         self._check_status(self.SessionStatus.OPEN)
-        scope = flow.current_scope()
+        scope = scope_util.current_scope()
         device_tag = scope.device_parallel_desc_symbol.device_tag
         for op_conf in op_list:
             if _need_check_device_tag(op_conf) and op_conf.device_tag != device_tag:
