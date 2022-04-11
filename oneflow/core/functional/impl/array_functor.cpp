@@ -15,6 +15,7 @@ limitations under the License.
 */
 
 #include "oneflow/core/autograd/autograd_mode.h"
+#include "oneflow/core/common/data_type.pb.h"
 #include "oneflow/core/common/maybe.h"
 #include "oneflow/core/common/scalar.h"
 #include "oneflow/core/common/global.h"
@@ -2410,8 +2411,10 @@ class IndexSelectFunctor {
     const int64_t index_num_axes = index->shape()->NumAxes();
     CHECK_EQ_OR_RETURN(index_num_axes, 1)
         << "IndexError: index_select(): Index is supposed to be a vector";
-    CHECK_EQ_OR_RETURN(index->dtype()->data_type(), kInt64)
-        << "RuntimeError: index_select(): Expected dtype int64 for index";
+    bool index_dtype_flag =
+        (index->dtype()->data_type() == kInt32) || (index->dtype()->data_type() == kInt64);
+    CHECK_EQ_OR_RETURN(index_dtype_flag, true)
+        << "RuntimeError: index_select(): Expected dtype int32 or int64 for index";
     int64_t new_dim = dim;
     if (dim < 0) { new_dim += input_num_axes; }
     CHECK_LE_OR_RETURN(new_dim, input_num_axes)
