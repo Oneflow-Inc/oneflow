@@ -41,8 +41,8 @@ class _NormBase(Module):
             self.weight = flow.nn.Parameter(flow.Tensor(num_features))
             self.bias = flow.nn.Parameter(flow.Tensor(num_features))
         else:
-            self.register_parameter("weight", None)
-            self.register_parameter("bias", None)
+            self.register_buffer("weight", flow.ones(num_features))
+            self.register_buffer("bias", flow.zeros(num_features))
         if self.track_running_stats:
             self.register_buffer("running_mean", flow.Tensor(num_features))
             self.register_buffer("running_var", flow.Tensor(num_features))
