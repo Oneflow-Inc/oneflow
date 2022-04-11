@@ -58,6 +58,7 @@ class TestNMS(flow.unittest.TestCase):
             flow.float,
             flow.int64,
             flow.int8,
+            flow.uint8,
         ]
         arg_dict["pred_dtype"] = [flow.float]
         for arg in GenArgList(arg_dict):
