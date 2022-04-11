@@ -28,9 +28,9 @@ add_docstr(
     See :class:`~oneflow.nn.ConvTranspose1d` for details and output shape.
 
     Args:
-        input: quantized input tensor of shape :math:`(\text{minibatch} , \text{in_channels} , iW)`
-        weight: quantized filters of shape :math:`(\text{in_channels} , \frac{\text{out_channels}}{\text{groups}} , kW)`
-        bias: **non-quantized** bias tensor of shape :math:`(\text{out_channels})`. The tensor type must be `flow.float`.
+        input: input tensor of shape :math:`(\text{minibatch} , \text{in_channels} , iW)`
+        weight: filters of shape :math:`(\text{in_channels} , \frac{\text{out_channels}}{\text{groups}} , kW)`
+        bias: optional bias of shape :math:`(\text{out_channels})`. Default: None.
         stride: the stride of the convolving kernel. Can be a single number or a
           tuple `(sW,)`. Default: 1
         padding: `dilation * (kernel_size - 1) - padding` zero-padding will be added to both sides of each dimension in the input. Can be a single number or a tuple `(padW,)`. Default: 0
@@ -63,9 +63,9 @@ add_docstr(
     See :class:`~oneflow.nn.ConvTranspose2d` for details and output shape.
 
     Args:
-        input: quantized input tensor of shape :math:`(\text{minibatch} , \text{in_channels} , iH , iW)`
-        weight: quantized filters of shape :math:`(\text{in_channels} , \frac{\text{out_channels}}{\text{groups}} , kH , kW)`
-        bias: **non-quantized** bias tensor of shape :math:`(\text{out_channels})`. The tensor type must be `flow.float`.
+        input: input tensor of shape :math:`(\text{minibatch} , \text{in_channels} , iH , iW)`
+        weight: filters of shape :math:`(\text{in_channels} , \frac{\text{out_channels}}{\text{groups}} , kH , kW)`
+        bias: optional bias of shape :math:`(\text{out_channels})`. Default: None.
         stride: the stride of the convolving kernel. Can be a single number or a
           tuple `(sH, sW)`. Default: 1
         padding: `dilation * (kernel_size - 1) - padding` zero-padding will be added to both sides of each dimension in the input. Can be a single number or a tuple `(padH, padW)`. Default: 0
@@ -98,12 +98,11 @@ add_docstr(
     See :class:`~oneflow.nn.ConvTranspose3d` for details and output shape.
 
     Args:
-        input: quantized input tensor of shape
+        input: input tensor of shape
           :math:`(\text{minibatch} , \text{in_channels} , iT , iH , iW)`
-        weight: quantized filters of shape
+        weight: filters of shape
           :math:`(\text{in_channels} , \frac{\text{out_channels}}{\text{groups}} , kT , kH , kW)`
-        bias: **non-quantized** bias tensor of shape
-          :math:`(\text{out_channels})`. The tensor type must be `flow.float`.
+        bias: optional bias of shape :math:`(\text{out_channels})`. Default: None.
         stride: the stride of the convolving kernel. Can be a single number or a
           tuple `(sD, sH, sW)`. Default: 1
         padding: `dilation * (kernel_size - 1) - padding` zero-padding will be added to both sides of each dimension in the input. Can be a single number or a tuple `(padT, padH, padW)`. Default: 0
