@@ -87,8 +87,8 @@ Maybe<void> AvgPoolingNdGrad::Apply(const AvgPoolingCaptureState* ctx, const Ten
 
   in_grads->resize(1);
   in_grads->at(0) = JUST(functional::AvgPoolingNdGrad(
-      input, out_grads.at(0), ndims, ctx->data_format, ctx->padding, ctx->kernel_size,
-      ctx->stride, ctx->ceil_mode, ctx->count_include_pad, ctx->divisor_override));
+      input, out_grads.at(0), ndims, ctx->data_format, ctx->padding, ctx->kernel_size, ctx->stride,
+      ctx->ceil_mode, ctx->count_include_pad, ctx->divisor_override));
 
   return Maybe<void>::Ok();
 }

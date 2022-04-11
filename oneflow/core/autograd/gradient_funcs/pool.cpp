@@ -91,8 +91,8 @@ Maybe<void> PoolNdGrad::Apply(const PoolCaptureState* ctx, const TensorTuple& ou
 
   in_grads->resize(1);
   in_grads->at(0) = JUST(functional::PoolNdGrad(
-      input, out_grads.at(0), mode_, ndims, ctx->data_format, ctx->padding,
-      ctx->padding_before, ctx->padding_after, ctx->pool_size, ctx->strides, ctx->ceil_mode));
+      input, out_grads.at(0), mode_, ndims, ctx->data_format, ctx->padding, ctx->padding_before,
+      ctx->padding_after, ctx->pool_size, ctx->strides, ctx->ceil_mode));
 
   return Maybe<void>::Ok();
 }

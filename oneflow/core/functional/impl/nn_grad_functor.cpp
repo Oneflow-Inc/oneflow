@@ -162,8 +162,8 @@ class PoolNdGradFunctor {
     for (const auto& mode : {"tf_max", "tf_avg"}) {
       for (int ndims = 1; ndims <= 3; ++ndims) {
         const auto& op_type_name = GetOpTypeName(mode, ndims);
-        op_expr_map_[op_type_name] = CHECK_JUST(
-            one::OpBuilder(op_type_name).Input("x").Input("dy").Output("dx").Build());
+        op_expr_map_[op_type_name] =
+            CHECK_JUST(one::OpBuilder(op_type_name).Input("x").Input("dy").Output("dx").Build());
       }
     }
   }
@@ -647,8 +647,8 @@ class AvgPoolingNdGradFunctor {
   AvgPoolingNdGradFunctor() {
     for (int ndims = 1; ndims <= 3; ++ndims) {
       const auto& op_type_name = GetOpTypeName(ndims);
-      op_expr_map_[op_type_name] = CHECK_JUST(
-          one::OpBuilder(op_type_name).Input("x").Input("dy").Output("dx").Build());
+      op_expr_map_[op_type_name] =
+          CHECK_JUST(one::OpBuilder(op_type_name).Input("x").Input("dy").Output("dx").Build());
     }
   }
   static std::string GetOpTypeName(const int32_t& ndims) {
