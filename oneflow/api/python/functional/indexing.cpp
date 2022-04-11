@@ -173,6 +173,7 @@ Maybe<Tensor> ConvertToIndexingTensor(PyObject* object) {
   if (PyArray_Check(object)) { return TensorWithData(object, NullOpt, device, false); }
 
   const auto& sizes = JUST(InferArraySizes(object));
+  // TODO(): here create a lazy tensor
   const auto& tensor = JUST(functional::Empty(*sizes, CHECK_JUST(DType::Get(dtype)), device));
   // Prevent the python object release until the callback is complete.
   Py_INCREF(object);
@@ -184,6 +185,7 @@ Maybe<Tensor> ConvertToIndexingTensor(PyObject* object) {
         [handle](uint64_t ofblob_ptr) {
           auto* of_blob = reinterpret_cast<OfBlob*>(ofblob_ptr);
           CHECK_JUST(Global<ForeignLockHelper>::Get()->WithScopedAcquire([&]() -> Maybe<void> {
+            // TODO(): here try to get eager dagta from a lazy tensor
             JUST(ParseArrayToBlob(handle.get(), of_blob->mut_blob()));
             return Maybe<void>::Ok();
           }));
