@@ -1311,13 +1311,11 @@ class EmbeddingGradientShuffleKernel final : public user_op::OpKernel {
               cur_rank_embedding_grad_elem_cnt * sizeof(OF_PP_PAIR_FIRST(t_dtype_pair)));         \
           size_t received_embedding_grad_size =                                                   \
               GetCudaAlignedSize(cur_rank_embedding_grad_elem_cnt * sizeof(int8_t));              \
-          size_t quantize_cur_rank_embedding_grad_size =                                          \
-              GetCudaAlignedSize(cur_rank_embedding_grad_elem_cnt * sizeof(int8_t));              \
+          size_t quantize_cur_rank_embedding_grad_size = received_embedding_grad_size;            \
           size_t cur_rank_quantize_factor_size = GetCudaAlignedSize(                              \
               cur_rank_embedding_grad_num * sizeof(OF_PP_PAIR_FIRST(t_dtype_pair)));              \
           size_t received_cur_rank_quantize_factor_size = cur_rank_quantize_factor_size;          \
-          size_t dequantize_cur_rank_embedding_grad_size = GetCudaAlignedSize(                    \
-              cur_rank_embedding_grad_elem_cnt * sizeof(OF_PP_PAIR_FIRST(t_dtype_pair)));         \
+          size_t dequantize_cur_rank_embedding_grad_size = unique_partition_embedding_grad_size;  \
           tmp_size = unique_partition_embedding_grad_size + received_embedding_grad_size          \
                      + quantize_cur_rank_embedding_grad_size + cur_rank_quantize_factor_size      \
                      + received_cur_rank_quantize_factor_size                                     \

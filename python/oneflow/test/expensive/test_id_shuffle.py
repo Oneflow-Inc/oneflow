@@ -176,17 +176,18 @@ def _test_embedding_shuffle(test_case, dtype, enable_quantize):
 
 
 def _test_embedding_gradient_shuffle(test_case, enable_quantize):
-    np_tolerance = 0
-    if enable_quantize:
-        np_tolerance = 0.5
-        os.environ["ONEFLOW_ONE_EMBEDDING_ENABLE_QUANTIZE_COMM"] = "1"
-    else:
-        np_tolerance = 1e-4
-        os.environ["ONEFLOW_ONE_EMBEDDING_ENABLE_QUANTIZE_COMM"] = "0"
     batch_size = 512
     num_columns = 26
     embedding_size = 128
     ids = np.random.randint(0, 1000, (batch_size, num_columns), dtype=np.int64)
+
+    if enable_quantize:
+        os.environ["ONEFLOW_ONE_EMBEDDING_ENABLE_QUANTIZE_COMM"] = "1"
+        ids = np.arange(batch_size * num_columns, dtype=np.int64)
+        np.random.shuffle(ids)
+    else:
+        os.environ["ONEFLOW_ONE_EMBEDDING_ENABLE_QUANTIZE_COMM"] = "0"
+
     column_ids = (
         ids % num_columns
     )  # same id must have same column id, so in this case get column_ids from ids
@@ -270,8 +271,8 @@ def _test_embedding_gradient_shuffle(test_case, enable_quantize):
         np.allclose(
             of_cur_rank_embedding_grad.numpy().flatten(),
             np_cur_rank_embedding_grad.flatten(),
-            atol=np_tolerance,
-            rtol=np_tolerance,
+            atol=1e-4,
+            rtol=1e-4,
         )
     )
 
