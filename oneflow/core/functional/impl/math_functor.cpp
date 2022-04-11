@@ -414,18 +414,18 @@ class Min2Functor {
 class AmaxFunctor {
  public:
   Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x,
-                           const Optional<std::vector<int32_t>>& axis, const bool& keepdims) const {
-    if (!axis.has_value()) { return ReduceMax(x, {}, keepdims); }
+                           const Optional<std::vector<int32_t>>& dim, const bool& keepdim) const {
+    if (!dim.has_value()) { return ReduceMax(x, {}, keepdim); }
 
     const int32_t ndim = x->ndim();
-    const std::vector<int32_t>& dims = *JUST(axis);
-    for (const auto& dim : dims) {
-      if (dim < -ndim || dim >= ndim) {
+    const std::vector<int32_t>& dims = *JUST(dim);
+    for (const auto& d : dims) {
+      if (d < -ndim || d >= ndim) {
         return Error::IndexError() << "Dimension out of range (expected to be in range of ["
-                                   << -ndim << ", " << ndim - 1 << "], but got " << dim << ")";
+                                   << -ndim << ", " << ndim - 1 << "], but got " << d << ")";
       }
     }
-    return ReduceMax(x, dims, keepdims);
+    return ReduceMax(x, dims, keepdim);
   }
 };
 

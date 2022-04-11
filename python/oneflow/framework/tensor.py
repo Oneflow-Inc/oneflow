@@ -389,8 +389,9 @@ def _swapaxes(self, dim0, dim1):
     return flow._C.swapaxes(self, dim0, dim1)
 
 
-def _amax(self, axis, keepdims=False):
-    return flow._C.amax(self, axis=axis, keepdims=keepdims)
+def _amax(self, dim=None, keepdim=False):
+    return flow._C.amax(self, dim=dim, keepdim=keepdim)
+
 
 def _cast(self, dtype):
     return flow.cast(self, dtype)

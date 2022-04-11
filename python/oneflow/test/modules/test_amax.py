@@ -23,33 +23,33 @@ import oneflow as flow
 import numpy as np
 
 
-def __check(test_case, input, axis, keepdims, device):
-    of_out = flow.amax(input, axis=axis, keepdims=keepdims)
-    if type(axis) is list:
-        if len(axis) == 0:
-            axis = None
+def __check(test_case, input, dim, keepdim, device):
+    of_out = flow.amax(input, dim=dim, keepdim=keepdim)
+    if type(dim) is list:
+        if len(dim) == 0:
+            dim = None
         else:
-            axis = tuple(axis)
-    np_out = np.amax(input.numpy(), axis=axis, keepdims=keepdims)
+            dim = tuple(dim)
+    np_out = np.amax(input.numpy(), axis=dim, keepdims=keepdim)
     test_case.assertTrue(np.allclose(of_out.numpy(), np_out, rtol=0.0001, atol=1e-05,))
 
 
-def _test_amax_with_negative_axis(test_case, device):
+def _test_amax_with_negative_dim(test_case, device):
     input = flow.tensor(
         np.random.randn(3, 5, 6, 8), dtype=flow.float32, device=flow.device(device)
     )
-    axis = random(-4, 0).to(int).value()
-    keepdims = random_bool().value()
-    __check(test_case, input, axis, keepdims, device)
+    dim = random(-4, 0).to(int).value()
+    keepdim = random_bool().value()
+    __check(test_case, input, dim, keepdim, device)
 
 
-def _test_amax_with_positive_axis(test_case, device):
+def _test_amax_with_positive_dim(test_case, device):
     input = flow.tensor(
         np.random.randn(3, 5, 6, 8), dtype=flow.float32, device=flow.device(device)
     )
-    axis = random(0, 4).to(int).value()
-    keepdims = random_bool().value()
-    __check(test_case, input, axis, keepdims, device)
+    dim = random(0, 4).to(int).value()
+    keepdim = random_bool().value()
+    __check(test_case, input, dim, keepdim, device)
 
 
 def _test_amax_with_multiple_axes(test_case, device):
@@ -60,32 +60,35 @@ def _test_amax_with_multiple_axes(test_case, device):
     num_axes = random(1, 4).to(int).value()
     for _ in range(num_axes):
         axes.add(random(0, 4).to(int).value())
-    keepdims = random_bool().value()
-    __check(test_case, input, list(axes), keepdims, device)
+    keepdim = random_bool().value()
+    __check(test_case, input, list(axes), keepdim, device)
 
 
-def _test_amax_with_empty_axis(test_case, device):
+def _test_amax_with_empty_dim(test_case, device):
     input = flow.tensor(
         np.random.randn(3, 5, 6, 8), dtype=flow.float32, device=flow.device(device)
     )
-    keepdims = random_bool().value()
-    __check(test_case, input, None, keepdims, device)
+    keepdim = random_bool().value()
+    __check(test_case, input, None, keepdim, device)
 
-def _test_amax_keepdims(test_case, device):
+
+def _test_amax_keepdim(test_case, device):
     input = flow.tensor(
         np.random.randn(3, 5, 6, 8), dtype=flow.float32, device=flow.device(device)
     )
-    axis = random(-4, 4).to(int).value()
-    keepdims = True
-    __check(test_case, input, axis, keepdims, device)
+    dim = random(-4, 4).to(int).value()
+    keepdim = True
+    __check(test_case, input, dim, keepdim, device)
 
-def _test_amax_not_keepdims(test_case, device):
+
+def _test_amax_not_keepdim(test_case, device):
     input = flow.tensor(
         np.random.randn(3, 5, 6, 8), dtype=flow.float32, device=flow.device(device)
     )
-    axis = random(-4, 4).to(int).value()
-    keepdims = False
-    __check(test_case, input, axis, keepdims, device)
+    dim = random(-4, 4).to(int).value()
+    keepdim = False
+    __check(test_case, input, dim, keepdim, device)
+
 
 @flow.unittest.skip_unless_1n1d()
 class TestAmax(flow.unittest.TestCase):
@@ -93,10 +96,10 @@ class TestAmax(flow.unittest.TestCase):
     def test_amax(test_case):
         arg_dict = OrderedDict()
         arg_dict["test_fun"] = [
-            _test_amax_with_negative_axis,
-            _test_amax_with_positive_axis,
+            _test_amax_with_negative_dim,
+            _test_amax_with_positive_dim,
             _test_amax_with_multiple_axes,
-            _test_amax_with_empty_axis,
+            _test_amax_with_empty_dim,
         ]
         arg_dict["device"] = ["cpu", "cuda"]
         for arg in GenArgList(arg_dict):
