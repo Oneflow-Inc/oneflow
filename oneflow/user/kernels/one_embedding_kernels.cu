@@ -46,6 +46,22 @@ struct EmbeddingInitializer {
       float value;
     } constant_param;
   };
+
+  bool operator==(const EmbeddingInitializer& rhs) const {
+    if (this->type != rhs.type) { return false; }
+    if (rhs.type == InitializerType::kUniform) {
+      return (this->uniform_param.low == rhs.uniform_param.low)
+             && (this->uniform_param.high == rhs.uniform_param.high);
+    } else if (rhs.type == InitializerType::kNormal) {
+      return (this->normal_param.mean == rhs.normal_param.mean)
+             && (this->normal_param.std == rhs.normal_param.std);
+    } else if (rhs.type == InitializerType::kNormal) {
+      return this->constant_param.value == rhs.constant_param.value;
+    } else {
+      UNIMPLEMENTED();
+      return false;
+    }
+  }
 };
 
 void ParseInitializerFromJson(const nlohmann::json& initializer,
@@ -74,6 +90,17 @@ void ParseInitializerFromJson(const nlohmann::json& initializer,
   }
 }
 
+int32_t ParseJsonToUniqueInitializerVecAndReturnOffset(
+    const nlohmann::json& initializer, std::vector<EmbeddingInitializer>* initializers) {
+  EmbeddingInitializer embedding_initializer;
+  ParseInitializerFromJson(initializer, &embedding_initializer);
+  for (int32_t i = 0; i < initializers->size(); ++i) {
+    if (initializers->at(i) == embedding_initializer) { return i; }
+  }
+  initializers->push_back(embedding_initializer);
+  return initializers->size() - 1;
+}
+
 void SetInitializerIndex(int32_t row_id, int32_t col_start, int32_t col_end, int32_t line_size,
                          int8_t index, std::vector<int8_t>* initializer_index) {
   int32_t row_offset = row_id * line_size;
@@ -83,25 +110,22 @@ void SetInitializerIndex(int32_t row_id, int32_t col_start, int32_t col_end, int
 }
 
 void ParseInitializers(const int32_t line_size, const int32_t embedding_size,
-                       const std::string& json_serialized,
+                       const float optimizer_state_init_value, const std::string& json_serialized,
                        std::vector<EmbeddingInitializer>* initializer_params,
                        std::vector<int8_t>* initializer_index) {
   auto json_object = nlohmann::json::parse(json_serialized);
   CHECK(json_object.contains("column_dims"));
   std::vector<int64_t> column_dims = json_object["column_dims"];
-  CHECK(column_dims.is_array());
   const int32_t num_columns = column_dims.size();
   CHECK(json_object.contains("tables"));
   auto tables = json_object["tables"];
   CHECK(tables.is_array());
   const int32_t num_tables = tables.size();
-  // constant initializer and user configs
-  initializer_params->resize(1 + num_tables * num_columns);
   initializer_index->resize(num_tables * line_size);
-  int32_t offset = 0;
-  initializer_params->at(0).type = InitializerType::kConstant;
-  initializer_params->at(0).constant_param.value = 0;
-  offset++;
+  EmbeddingInitializer optimizer_state_initializer;
+  optimizer_state_initializer.type = InitializerType::kConstant;
+  optimizer_state_initializer.constant_param.value = optimizer_state_init_value;
+  initializer_params->push_back(optimizer_state_initializer);
   for (int32_t i = 0; i < num_tables; ++i) {
     auto table = tables.at(i);
     CHECK(table.contains("columns"));
@@ -112,11 +136,11 @@ void ParseInitializers(const int32_t line_size, const int32_t embedding_size,
     for (int k = 0; k < columns.size(); ++k) {
       auto column = columns.at(k);
       CHECK(column.contains("initializer"));
-      ParseInitializerFromJson(column["initializer"], &initializer_params->at(offset));
+      int32_t offset =
+          ParseJsonToUniqueInitializerVecAndReturnOffset(column["initializer"], initializer_params);
       int32_t col_end = col_start + column_dims.at(k);
       SetInitializerIndex(i, col_start, col_end, line_size, offset, initializer_index);
       col_start = col_end;
-      offset++;
     }
     CHECK_EQ(col_start, embedding_size);
     SetInitializerIndex(i, embedding_size, line_size, line_size, 0, initializer_index);
@@ -138,11 +162,13 @@ class EmbeddingKernelState final : public user_op::OpKernelState {
 
     const int64_t embedding_size = ctx->Attr<int64_t>("embedding_size");
     const int64_t line_size = ctx->Attr<int64_t>("line_size");
+    const float optimizer_state_init_value = ctx->Attr<float>("optimizer_state_init_value");
 
     std::vector<EmbeddingInitializer> initializer_param;
     std::vector<int8_t> initializer_index;
-    ParseInitializers(line_size, embedding_size, ctx->Attr<std::string>("embedding_tables"),
-                      &initializer_param, &initializer_index);
+    ParseInitializers(line_size, embedding_size, optimizer_state_init_value,
+                      ctx->Attr<std::string>("embedding_tables"), &initializer_param,
+                      &initializer_index);
 
     const size_t param_size_bytes = initializer_param.size() * sizeof(EmbeddingInitializer);
     OF_CUDA_CHECK(cudaMallocHost(&host_initializer_param_, param_size_bytes));
