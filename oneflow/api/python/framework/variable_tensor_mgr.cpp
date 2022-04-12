@@ -35,7 +35,7 @@ ONEFLOW_API_PYBIND11_MODULE("", m) {
   m.def("DumpVariableTensorMgr",
         []() -> std::tuple<std::vector<std::string>, std::vector<std::shared_ptr<one::Tensor>>> {
           auto mgr = Global<VariableTensorMgr>::Get();
-          return mgr->Dump().GetOrThrow();
+          return mgr->Dump();
         });
 }
 

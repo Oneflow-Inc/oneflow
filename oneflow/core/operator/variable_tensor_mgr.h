@@ -37,14 +37,14 @@ class VariableTensorMgr final {
   OF_DISALLOW_COPY_AND_MOVE(VariableTensorMgr);
   ~VariableTensorMgr() = default;
 
-  Maybe<void> Set(const std::string& variable_op_name,
-                  const std::shared_ptr<one::Tensor>& variable_tensor);
-  Maybe<one::Tensor> Get(const std::string& variable_op_name);
-  Maybe<void> Delete(const std::string& variable_op_name);
+  void Set(const std::string& variable_op_name,
+           const std::shared_ptr<one::Tensor>& variable_tensor);
+  std::shared_ptr<one::Tensor> Get(const std::string& variable_op_name);
+  void Delete(const std::string& variable_op_name);
   Maybe<void> Fill(const std::vector<std::string>& variable_op_names,
                    const std::vector<std::shared_ptr<one::Tensor>>& variable_tensors);
-  Maybe<std::tuple<std::vector<std::string>, std::vector<std::shared_ptr<one::Tensor>>>> Dump();
-  Maybe<std::vector<std::string>> DumpNames();
+  std::tuple<std::vector<std::string>, std::vector<std::shared_ptr<one::Tensor>>> Dump();
+  std::vector<std::string> DumpNames();
 
  private:
   friend class Global<VariableTensorMgr>;

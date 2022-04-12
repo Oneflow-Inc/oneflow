@@ -250,8 +250,8 @@ Maybe<void> NNGraph::DeleteOutdatedVariableInVariableTensorMgr() {
     return Maybe<void>::Ok();
   }));
   auto mgr = ::oneflow::Global<::oneflow::VariableTensorMgr>::Get();
-  for (auto& name : mgr->DumpNames().GetOrThrow()) {
-    if (variables_set.find(name) == variables_set.end()) { mgr->Delete(name).GetOrThrow(); }
+  for (auto& name : mgr->DumpNames()) {
+    if (variables_set.find(name) == variables_set.end()) { mgr->Delete(name); }
   }
   return Maybe<void>::Ok();
 }

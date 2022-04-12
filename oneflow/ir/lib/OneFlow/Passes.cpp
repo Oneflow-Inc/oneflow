@@ -477,12 +477,10 @@ struct ReplaceVariablePattern : public ::mlir::RewritePattern {
                                         ::mlir::PatternRewriter& rewriter) const override {
     auto op = ::llvm::dyn_cast<oneflow::VariableOp>(op0);
     NamedAttrList attrs;
-    attrs.set(
-        StringAttr::get(getContext(), "value"),
-        support::TensorToDenseElementsAttr(::oneflow::Global<::oneflow::VariableTensorMgr>::Get()
-                                               ->Get(op.op_name().str())
-                                               .GetPtrOrThrow(),
-                                           rewriter.getContext()));
+    attrs.set(StringAttr::get(getContext(), "value"),
+              support::TensorToDenseElementsAttr(
+                  ::oneflow::Global<::oneflow::VariableTensorMgr>::Get()->Get(op.op_name().str()),
+                  rewriter.getContext()));
     attrs.set(op.op_nameAttrName(), op.op_nameAttr());
     attrs.set(op.device_tagAttrName(), op.device_tagAttr());
     attrs.set(op.device_nameAttrName(), op.device_nameAttr());
@@ -525,10 +523,9 @@ struct ReplaceVariableIrPattern : public ::mlir::RewritePattern {
                                                        ValueRange(), attrs);
     rewriter.replaceOp(op0, op_new->getResults());
 
-    ::oneflow::Global<::oneflow::VariableTensorMgr>::Get()
-        ->Set(op.op_nameAttr().str(), support::DenseElementsAttrToTensor(
-                                          tensor_attr, op.device_tagAttr(), op.device_nameAttr()))
-        .GetOrThrow();
+    ::oneflow::Global<::oneflow::VariableTensorMgr>::Get()->Set(
+        op.op_nameAttr().str(),
+        support::DenseElementsAttrToTensor(tensor_attr, op.device_tagAttr(), op.device_nameAttr()));
 
     return ::mlir::success();
   }
