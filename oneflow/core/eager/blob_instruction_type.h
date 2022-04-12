@@ -36,6 +36,7 @@ class TensorViewInstructionType final : public vm::InstructionType {
   TensorViewInstructionType() = default;
   ~TensorViewInstructionType() override = default;
 
+  InstructionFuseType fuse_type() const override { return kEnableInstructionFuseAtAnyPosition; }
   std::string DebugName(const vm::Instruction& instruction) const override { return "TensorView"; }
   Maybe<void> Infer(vm::Instruction* instruction) const override;
   void Compute(vm::Instruction* instruction) const override {}
