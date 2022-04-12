@@ -462,6 +462,15 @@ void BuildEmbeddingUpdate(JobPassCtx* ctx, const OpGraph& op_graph, JobBuilder* 
       embedding_update_op_builder.Input("bias_correction1", bias_correction1_lbn)
           .Input("bias_correction2", bias_correction2_lbn);
     }
+  } else if (optimizer_conf.has_adagrad_conf()) {
+    const AdagradModelUpdateConf& adagrad_conf = optimizer_conf.adagrad_conf();
+    const float lr_decay = adagrad_conf.lr_decay();
+    // TODO: set initial_accumulator_value to lookup and prefetch
+    const float initial_accumulator_value = adagrad_conf.initial_accumulator_value();
+    embedding_update_op_builder.OpTypeName("adagrad_embedding_update")
+        .Input("train_step", train_conf.train_step_lbn())
+        .Attr<float>("lr_decay", adagrad_conf.lr_decay())
+        .Attr<float>("epsilon", adagrad_conf.epsilon());
   } else {
     UNIMPLEMENTED();
   }
@@ -469,6 +478,7 @@ void BuildEmbeddingUpdate(JobPassCtx* ctx, const OpGraph& op_graph, JobBuilder* 
       .Input("unique_embeddings", unique_values_lbn)
       .Input("embedding_grad", embedding_grad_lbn)
       .Input("learning_rate", learning_rate_lbn)
+      .Attr<float>("weight_decay", optimizer_conf.weight_decay_conf().weight_decay_rate())
       .Output("updated_unique_embeddings");
   double scale = GetLossInstanceNumScaleFactor(op_graph, job_builder);
   if (train_conf.has_dynamic_loss_scale_policy()) {
