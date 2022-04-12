@@ -13,8 +13,8 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
-#ifndef ONEFLOW_CORE_VM_NO_ARG_CB_PHY_INSTR_OPERAND_H_
-#define ONEFLOW_CORE_VM_NO_ARG_CB_PHY_INSTR_OPERAND_H_
+#ifndef ONEFLOW_CORE_VM_BARRIER_PHY_INSTR_OPERAND_H_
+#define ONEFLOW_CORE_VM_BARRIER_PHY_INSTR_OPERAND_H_
 
 #include <functional>
 #include "oneflow/core/vm/phy_instr_operand.h"
@@ -23,14 +23,16 @@ namespace oneflow {
 namespace vm {
 
 // no arg callback physical instruction operand
-class NoArgCbPhyInstrOperand : public PhyInstrOperand {
+class BarrierPhyInstrOperand : public PhyInstrOperand {
  public:
-  NoArgCbPhyInstrOperand(const std::function<void()>& callback) : callback_(callback) {
+  BarrierPhyInstrOperand(const std::function<void()>& callback) : callback_(callback) {
     stream_sequential_dependence_ = nullptr;
   }
-  ~NoArgCbPhyInstrOperand() = default;
-
-  const std::function<void()>& callback() const { return callback_; }
+  ~BarrierPhyInstrOperand() {
+    // Make sure barrier callbacks run after all objects of previous instructions are destructed in
+    // Callback thread.
+    callback_();
+  }
 
   const DependenceVector& input_dependences() const override {
     static DependenceVector dependences{};
@@ -48,4 +50,4 @@ class NoArgCbPhyInstrOperand : public PhyInstrOperand {
 }  // namespace vm
 }  // namespace oneflow
 
-#endif  // ONEFLOW_CORE_VM_NO_ARG_CB_PHY_INSTR_OPERAND_H_
+#endif  // ONEFLOW_CORE_VM_BARRIER_PHY_INSTR_OPERAND_H_

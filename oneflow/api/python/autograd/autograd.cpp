@@ -96,32 +96,11 @@ Maybe<one::TensorTuple> Grad(const one::TensorTuple& outputs, const one::TensorT
       outputs, inputs, *gradients, retain_graph, create_graph);
 }
 
-}  // namespace autograd
-
-namespace {
-
-std::shared_ptr<oneflow::one::TensorTuple> BackwardOrThrow(
-    const std::shared_ptr<oneflow::one::TensorTuple>& outputs,
-    const std::shared_ptr<oneflow::one::TensorTuple>& out_grads, bool retain_graph,
-    bool create_graph) {
-  return oneflow::autograd::Backward(*outputs, *out_grads.get(), retain_graph, create_graph)
-      .GetPtrOrThrow();
-}
-
-std::shared_ptr<oneflow::one::TensorTuple> GradOrThrow(
-    const std::shared_ptr<oneflow::one::TensorTuple>& outputs,
-    const std::shared_ptr<oneflow::one::TensorTuple>& inputs,
-    const std::shared_ptr<oneflow::one::TensorTuple>& out_grads, bool retain_graph,
-    bool create_graph) {
-  return oneflow::autograd::Grad(*outputs, *inputs, *out_grads.get(), retain_graph, create_graph)
-      .GetPtrOrThrow();
-}
-
 ONEFLOW_API_PYBIND11_MODULE("autograd", m) {
-  m.def("backward", &BackwardOrThrow);
-  m.def("grad", &GradOrThrow);
+  m.def("backward", &Backward);
+  m.def("grad", &Grad);
 }
 
-}  // namespace
+}  // namespace autograd
 
 }  // namespace oneflow

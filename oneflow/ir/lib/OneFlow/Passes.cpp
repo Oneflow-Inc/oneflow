@@ -420,6 +420,10 @@ TransposeOp getResultTransposeOp(NCHWCompatible op, Value val, NamedAttrList tra
   return transpose_op;
 }
 
+bool IsSameDtype(mlir::OpResult cast_result, mlir::Value input) {
+  return cast_result.getType() == input.getType();
+}
+
 }  // namespace oneflow
 
 }  // namespace mlir
@@ -554,6 +558,7 @@ void populateFuserForExistingOp(::mlir::RewritePatternSet& patterns) {
   patterns.add<FusedPadConv2DPattern>(patterns.getContext());
   patterns.add<FusedBiasAddDropoutPattern>(patterns.getContext());
   patterns.add<NormalizationAddReluPattern>(patterns.getContext());
+  patterns.add<DeleteSameDtypeCastOpPattern>(patterns.getContext());
   bool enable_nhwc = ::oneflow::ParseBooleanFromEnv("ONEFLOW_MLIR_PREFER_NHWC", false);
   if (enable_nhwc) { patterns.add<AutoNhwcPattern>(patterns.getContext()); }
 }
