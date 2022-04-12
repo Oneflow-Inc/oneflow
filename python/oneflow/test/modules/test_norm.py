@@ -304,14 +304,13 @@ class TestNormModule(flow.unittest.TestCase):
         m = torch.linalg.norm(input, ord=ord, dim=dim, keepdim=keepdim)
         return m
 
-    @autotest(check_graph=True)
+    @autotest(n=5, auto_backward=False, check_graph=True)
     def test_ord_zero_with_random_data(test_case):
         device = random_device()
         input = random_tensor(ndim=2).to(device)
         dim = oneof((-2, -1), (0, 1), (-1, 0))
-        ord = oneof(float("inf"), float("-inf"), "fro", 1, -1, 0)
         keepdim = random().to(bool)
-        m = torch.linalg.norm(input, ord=ord, dim=dim, keepdim=keepdim)
+        m = torch.linalg.vector_norm(input, ord=0, dim=dim, keepdim=keepdim)
         return m
 
 if __name__ == "__main__":
