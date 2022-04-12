@@ -464,9 +464,7 @@ void BuildEmbeddingUpdate(JobPassCtx* ctx, const OpGraph& op_graph, JobBuilder* 
     }
   } else if (optimizer_conf.has_adagrad_conf()) {
     const AdagradModelUpdateConf& adagrad_conf = optimizer_conf.adagrad_conf();
-    const float lr_decay = adagrad_conf.lr_decay();
-    // TODO: set initial_accumulator_value to lookup and prefetch
-    const float initial_accumulator_value = adagrad_conf.initial_accumulator_value();
+    // TODO(guoran): set adagrad_conf.initial_accumulator_value to lookup and prefetch
     embedding_update_op_builder.OpTypeName("adagrad_embedding_update")
         .Input("train_step", train_conf.train_step_lbn())
         .Attr<float>("lr_decay", adagrad_conf.lr_decay())
