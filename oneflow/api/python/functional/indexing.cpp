@@ -18,8 +18,6 @@ limitations under the License.
 #include <object.h>
 #include <pybind11/pybind11.h>
 #include "oneflow/api/python/functional/common.h"
-#include "oneflow/core/common/just.h"
-#include "oneflow/core/common/maybe.h"
 #include "oneflow/extension/python/numpy.h"
 #include "oneflow/core/eager/eager_blob_object.h"
 #include "oneflow/core/register/ofblob.h"
