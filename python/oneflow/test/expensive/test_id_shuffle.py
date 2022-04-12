@@ -84,12 +84,11 @@ def _test_id_shuffle(test_case, has_column_id, num_columns):
     # when has_column_id=False, we can not test column ids because in this case same ids not lead to same column id
 
 
-def quantize_func(x):
+def round_half_away_from_zero(x):
     sign = np.sign(x)
     abs_val = np.abs(x)
     abs_val += 0.5
     floor_val = np.floor(abs_val)
-    floor_val = floor_val.astype(np.int8)
     out = floor_val * sign
     return out
 
@@ -107,7 +106,8 @@ def embedding_shuffle_quantize(np_data, np_dtype):
     # Covert to Compute Type.
     np_data.astype(np.float32)
     np_data = np_data * quantize_factor
-    np_data = quantize_func(np_data)
+    np_data = round_half_away_from_zero(np_data)
+    np_data = np_data.astype(np.int8)
 
     # Covert to Compute Type.
     np_data = np_data.astype(np.float32)
@@ -248,7 +248,8 @@ def _test_embedding_gradient_shuffle(test_case, enable_quantize):
             int8_factor = np.full(abs_max_factor.shape, 127.0, dtype=np.float32)
             quantize_factor = int8_factor / abs_max_factor
             np_data = np_data * quantize_factor
-            np_data = quantize_func(np_data)
+            np_data = round_half_away_from_zero(np_data)
+            np_data = np_data.astype(np.int8)
             np_data = np_data.astype(np.float32)
             dequantize_factor = abs_max_factor / int8_factor
             np_data = np_data * dequantize_factor

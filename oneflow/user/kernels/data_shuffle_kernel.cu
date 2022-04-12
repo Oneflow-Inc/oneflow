@@ -476,37 +476,14 @@ void ShuffleEmbeddings(cudaStream_t cuda_stream, ncclComm_t comm, int64_t parall
               reverse_cur_rank_quantize_factor, recv_offsets, recv_elem_cnt, recv_quantize_factor);
 }
 
+__device__ float RoundHalfAwayFromZero(const float x) {
+  float abs_val = abs(x);
+  float floor_val = floor(abs_val + static_cast<float>(0.5));
+  return copysignf(floor_val, x);
+}
+
 // warp reduce version.
 constexpr int32_t kWarpSize = 32;
-
-template<typename T>
-__device__ T abs_func(const T& a) {
-  return abs(a);
-}
-
-template<typename T>
-__device__ T max_func(const T a, const T b) {
-  return fmaxf(a, b);
-}
-
-template<typename T>
-__device__ int8_t sign_func(const T x) {
-  if (x > static_cast<T>(0.0)) {
-    return static_cast<int8_t>(1.0);
-  } else if (x == static_cast<T>(0.0)) {
-    return static_cast<int8_t>(0.0);
-  } else {
-    return static_cast<int8_t>(-1.0);
-  }
-}
-
-template<typename T>
-__device__ int8_t quantize_func(const T x) {
-  int8_t sign_val = sign_func(x);
-  T abs_val = abs_func<T>(x);
-  T floor_val = floor(abs_val + static_cast<T>(0.5));
-  return static_cast<int8_t>(floor_val) * sign_val;
-}
 
 template<typename T, int thread_group_width = kWarpSize>
 __inline__ __device__ T WarpMaxAllReduce(T val) {
@@ -574,8 +551,7 @@ __global__ void QuantizeWarpImplKernel(const T* src, int8_t* dst, T* quantize_fa
 #pragma unroll
           for (int i = 0; i < pack_size; i++) {
             row_buf[pack_offset + i] = static_cast<ComputeType>(load_pack.elem[i]);
-            thread_abs_max[row_id] =
-                max_func(thread_abs_max[row_id], abs_func(row_buf[pack_offset + i]));
+            thread_abs_max[row_id] = max(thread_abs_max[row_id], abs(row_buf[pack_offset + i]));
           }
         } else {
 #pragma unroll
@@ -587,12 +563,12 @@ __global__ void QuantizeWarpImplKernel(const T* src, int8_t* dst, T* quantize_fa
 #pragma unroll
     for (int row_id = 0; row_id < rows_per_access; row_id++) {
       warp_max[row_id] = WarpMaxAllReduce<ComputeType, thread_group_width>(thread_abs_max[row_id]);
-      quantize_factor[row + row_id] = static_cast<T>(warp_max[row_id]);
+      if (threadIdx.x == 0) { quantize_factor[row + row_id] = static_cast<T>(warp_max[row_id]); }
       ComputeType* row_buf = buf[row_id];
       ComputeType quantize_factor_val = static_cast<ComputeType>(127.0) / warp_max[row_id];
 #pragma unroll
       for (int col = 0; col < cols_per_thread; col++) {
-        row_buf[col] = row_buf[col] * quantize_factor_val;
+        row_buf[col] = RoundHalfAwayFromZero(row_buf[col] * quantize_factor_val);
       }
 #pragma unroll
       for (int pack_id = 0; pack_id < num_packs; pack_id++) {
@@ -602,7 +578,7 @@ __global__ void QuantizeWarpImplKernel(const T* src, int8_t* dst, T* quantize_fa
         if (!padding || col < cols) {
           const int64_t store_offset = ((row + row_id) * cols + col) / pack_size;
           for (int i = 0; i < pack_size; i++) {
-            store_pack.elem[i] = quantize_func<ComputeType>(row_buf[pack_id * pack_size + i]);
+            store_pack.elem[i] = static_cast<int8_t>(row_buf[pack_id * pack_size + i]);
           }
           *(reinterpret_cast<StoreType*>(dst) + store_offset) = store_pack.storage;
         }
