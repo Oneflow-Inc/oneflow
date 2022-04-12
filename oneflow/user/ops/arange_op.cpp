@@ -55,9 +55,7 @@ namespace oneflow {
   int64_t range_elem_cnt = 0;
   if (IsIntegralDataType(dtype)) {
     int64_t integer_delta = ctx->Attr<int64_t>("integer_delta");
-    if (integer_delta == static_cast<int64_t>(0)) {
-      return Error::RuntimeError();
-    }
+    if (integer_delta == static_cast<int64_t>(0)) { return Error::RuntimeError(); }
     int64_t integer_start = ctx->Attr<int64_t>("integer_start");
     int64_t integer_limit = ctx->Attr<int64_t>("integer_limit");
     // CHECK when limit > start, delta > 0; limit < start, delta < 0;
@@ -68,9 +66,7 @@ namespace oneflow {
     range_elem_cnt = std::ceil(static_cast<double>(integer_limit - integer_start) / integer_delta);
   } else {
     double float_delta = ctx->Attr<double>("float_delta");
-    if (float_delta == static_cast<double>(0.0)) {
-      return Error::RuntimeError();
-    }
+    if (float_delta == static_cast<double>(0.0)) { return Error::RuntimeError(); }
     double float_start = ctx->Attr<double>("float_start");
     double float_limit = ctx->Attr<double>("float_limit");
     // CHECK when limit > start, delta > 0; limit < start, delta < 0;
