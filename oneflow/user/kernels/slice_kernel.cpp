@@ -63,7 +63,7 @@ void ConstructSliceParamsLarge(const SliceContext& ctx, const std::vector<int64_
   CHECK_EQ(stop_vec.size(), ndim);
   CHECK_EQ(step_vec.size(), ndim);
 
-  std::memset(static_cast<void*>(slice_param), 0, sizeof(SliceParams));
+  std::memset(slice_param, 0, sizeof(SliceParams));
   slice_param->ndim = ndim;
   FOR_RANGE(int, i, 0, slice_param->ndim) {
     const int64_t dim_size = shape.At(i);
@@ -103,7 +103,7 @@ void ConstructSliceParamsSmall(const SliceContext& ctx, const std::vector<int64_
   CHECK_EQ(stop_vec.size(), ndim);
   CHECK_EQ(step_vec.size(), ndim);
 
-  std::memset(static_cast<void*>(slice_param), 0, sizeof(SliceParams));
+  std::memset(slice_param, 0, sizeof(SliceParams));
   slice_param->ndim = ndim;
   FOR_RANGE(int, i, 0, slice_param->ndim) {
     const int64_t start_in_full_large = start_vec.at(i);
@@ -144,15 +144,13 @@ SliceParams ConstructSliceParams(user_op::KernelComputeContext* ctx, const user_
   CHECK_EQ(step_vec.size(), ndim);
 
   SliceParams params;
-  std::memset(static_cast<void*>(&params), 0, sizeof(SliceParams));
+  std::memset(&params, 0, sizeof(SliceParams));
   if (entire->shape().NumAxes() == 1 && sliced->shape().NumAxes() == 0) {
     params.ndim = ndim;
     params.dims[0] = entire->shape().At(0);
     params.start[0] = RegulateSliceStart(start_vec.at(0), entire->shape().At(0));
     params.step[0] = step_vec.at(0);
     params.size[0] = 1;
-    params.sliced_strides[0] = 1;
-    params.entire_strides[0] = 1;
     return params;
   }
   params.ndim = ndim;
@@ -173,14 +171,9 @@ SliceParams ConstructSliceParams(user_op::KernelComputeContext* ctx, const user_
     params.step[i] = step;
     params.size[i] = slice_size;
   }
-  params.sliced_strides[ndim - 1] = 1;
-  params.entire_strides[ndim - 1] = 1;
-  for (int i = ndim - 2; i >= 0; --i) {
-    params.sliced_strides[i] = params.sliced_strides[i + 1] * params.size[i + 1];
-    params.entire_strides[i] = params.entire_strides[i + 1] * params.dims[i + 1];
-  }
   return params;
 }
+
 }  // namespace
 
 template<DeviceType device_type, typename T>
@@ -389,10 +382,6 @@ class SliceUpdateKernel final : public user_op::OpKernel {
     Memcpy<device_type>(ctx->stream(), y_tensor->mut_dptr<T>(), x_tensor->dptr<T>(),
                         y_tensor->shape().elem_cnt() * sizeof(T));
     SliceParams params = ConstructSliceParams(ctx, y_tensor, update_tensor);
-    auto stride = ctx->Attr<std::vector<int64_t>>("stride");
-    CHECK(stride.size() == 0 || stride.size() == params.ndim)
-        << "stride size should be " << params.ndim;
-    for (int i = 0; i < stride.size(); ++i) { params.entire_strides[i] = stride[i]; }
     SliceKernelUtil<device_type, T>::Backward(ctx->stream(), params, update_tensor->dptr<T>(),
                                               y_tensor->mut_dptr<T>());
   }
