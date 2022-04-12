@@ -121,7 +121,7 @@ class UpsampleBicubic2dGradCPUKernel final : public user_op::OpKernel {
     const int64_t out_width = dy_tensor->shape().At(3);
 
     if (in_height == out_height && in_width == out_width) {
-      memcpy(in_ptr, out_ptr, sizeof(T) * nbatch * channels * in_height * in_width);
+      memcpy(in_ptr, out_ptr, sizeof(T) * channels * in_height * in_width);
     } else {
       const T scale_height = GetAreaPixelScale(in_height, out_height, align_corners, height_scale);
       const T scale_width = GetAreaPixelScale(in_width, out_width, align_corners, width_scale);
