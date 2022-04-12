@@ -174,7 +174,8 @@ Maybe<void> VirtualMachine::Receive(vm::InstructionList* instruction_list) {
   if (unlikely(pthread_fork::IsForkedSubProcess())) {
     INTRUSIVE_FOR_EACH_PTR(instruction, instruction_list) {
       const auto& device = instruction->stream().device();
-      CHECK_OR_RETURN(device->enum_type() == DeviceType::kCPU)
+      CHECK_OR_RETURN(device->enum_type() == DeviceType::kCPU
+                      || device->enum_type() == DeviceType::kControlDevice)
           << pthread_fork::kOfCudaNotSupportInForkedSubProcess;
       instruction->instruction_type().ComputeIf(instruction);
     }
