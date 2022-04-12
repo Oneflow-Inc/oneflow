@@ -171,7 +171,7 @@ class TestSearch_Sorted(flow.unittest.TestCase):
             values,
             out_int32=oneof(True, False),
             # TODO: edit after pytorch upgraded to 1.11 or higher.
-            right=False
+            right=False,
         )
         return y
 
