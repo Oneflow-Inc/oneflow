@@ -241,9 +241,8 @@ Maybe<Tensor> ConsistentToConsistent(const std::shared_ptr<Tensor>& x,
       && JUST(x->parallel_desc()) == parallel_desc && grad_sbp_parallels.size() == 0) {
     return x;
   }
-  const auto& tensor = JUST(
-      OpInterpUtil::Dispatch<one::Tensor>(*op, {consistent_tensor->contiguous()},
-                                          OpExprInterpContext(AttrMap{}, parallel_desc, nd_sbp)));
+  const auto& tensor = JUST(OpInterpUtil::Dispatch<one::Tensor>(
+      *op, {consistent_tensor}, OpExprInterpContext(AttrMap{}, parallel_desc, nd_sbp)));
   if (!LazyMode::is_enabled() && tensor != x && !IsConsistentTensorMetaCheckDisabled()) {
     const auto& input_consistent_id = JUST(x->transport_token());
     const auto& output_consistend_id = JUST(tensor->transport_token());
@@ -261,22 +260,20 @@ Maybe<Tensor> LocalToConsistent(const std::shared_ptr<Tensor>& x,
   CHECK_OR_RETURN(x->is_local()) << Error::UnimplementedError() << "local tensors supported only";
   std::shared_ptr<one::Tensor> input = x;
   // copy to right device first if input's device type is wrong
-  if (JUST(JUST(input->device())->of_type()) != parallel_desc->device_tag()) {
+  if (JUST(input->device())->type() != parallel_desc->device_tag()) {
     VLOG(2) << "The device_type of the input tensor is different from placement, now copy it to "
-            << Device::Type4DeviceTag(parallel_desc->device_tag());
-    input = JUST(functional::Copy(x, Device::Type4DeviceTag(parallel_desc->device_tag()),
-                                  GlobalProcessCtx::LocalRank()));
+            << parallel_desc->device_tag();
+    input = JUST(functional::Copy(x, parallel_desc->device_tag(), GlobalProcessCtx::LocalRank()));
   }
   // copy to default device of the current rank if input's device type is right but not on default
   // device
   if (JUST(input->device())->device_id() != GlobalProcessCtx::LocalRank()) {
     VLOG(2) << "The tensor isn't on default device of the current rank., now copy it to "
             << parallel_desc->device_tag() << ": " << GlobalProcessCtx::LocalRank();
-    input = JUST(functional::Copy(x, Device::Type4DeviceTag(parallel_desc->device_tag()),
-                                  GlobalProcessCtx::LocalRank()));
+    input = JUST(functional::Copy(x, parallel_desc->device_tag(), GlobalProcessCtx::LocalRank()));
   }
   const auto& device = JUST(input->device());
-  CHECK_EQ_OR_RETURN(JUST(device->of_type()), parallel_desc->device_tag())
+  CHECK_EQ_OR_RETURN(device->type(), parallel_desc->device_tag())
       << Error::UnimplementedError() << "tensor' device type must be same with placement.";
   CHECK_EQ_OR_RETURN(device->device_id(), GlobalProcessCtx::LocalRank())
       << Error::UnimplementedError() << "tensor must be on default device of the current rank.";
@@ -288,7 +285,7 @@ Maybe<Tensor> LocalToConsistent(const std::shared_ptr<Tensor>& x,
   JUST(attrs.SetAttr<Shape>("shape", *shape));
   JUST(attrs.SetAttr<DataType>("dtype", dtype));
   const auto& output = JUST(OpInterpUtil::Dispatch<one::Tensor>(
-      *op, {input->contiguous()}, OpExprInterpContext(attrs, parallel_desc, nd_sbp)));
+      *op, {input}, OpExprInterpContext(attrs, parallel_desc, nd_sbp)));
   return output;
 }
 
@@ -311,19 +308,17 @@ class LocalToConsistentFunctor {
     CHECK_OR_RETURN(x->is_local());
     std::shared_ptr<one::Tensor> input = x;
     // copy to right device first if input's device type is wrong
-    if (JUST(JUST(input->device())->of_type()) != parallel_desc->device_tag()) {
+    if (JUST(input->device())->type() != parallel_desc->device_tag()) {
       VLOG(2) << "The device_type of the input tensor is different from placement, now copy it to "
-              << Device::Type4DeviceTag(parallel_desc->device_tag());
-      input = JUST(functional::Copy(x, Device::Type4DeviceTag(parallel_desc->device_tag()),
-                                    GlobalProcessCtx::LocalRank()));
+              << parallel_desc->device_tag();
+      input = JUST(functional::Copy(x, parallel_desc->device_tag(), GlobalProcessCtx::LocalRank()));
     }
     // copy to default device of the current rank if input's device type is right but not on default
     // device
     if (JUST(input->device())->device_id() != GlobalProcessCtx::LocalRank()) {
       VLOG(2) << "The tensor isn't on default device of the current rank., now copy it to "
               << parallel_desc->device_tag() << ": " << GlobalProcessCtx::LocalRank();
-      input = JUST(functional::Copy(x, Device::Type4DeviceTag(parallel_desc->device_tag()),
-                                    GlobalProcessCtx::LocalRank()));
+      input = JUST(functional::Copy(x, parallel_desc->device_tag(), GlobalProcessCtx::LocalRank()));
     }
     Symbol<NdSbp> nd_sbp = JUST(GetNdSbp(sbp_parallels));
     MutableAttrMap attrs;
@@ -331,7 +326,7 @@ class LocalToConsistentFunctor {
     JUST(attrs.SetAttr<DataType>("dtype", dtype->data_type()));
     DisableCheckConsistentTensorMetaScope scope{};
     const auto& tensor = JUST(OpInterpUtil::Dispatch<one::Tensor>(
-        *op_, {input->contiguous()}, OpExprInterpContext(attrs, parallel_desc, nd_sbp)));
+        *op_, {input}, OpExprInterpContext(attrs, parallel_desc, nd_sbp)));
     return tensor;
   }
 
@@ -377,7 +372,7 @@ class ConsistentToLocalFunctor {
     CHECK_OR_RETURN(!x->is_lazy())
         << "consistent_tensor.to_local() is not supported within nn.Graph for now";
     CHECK_OR_RETURN(x->is_consistent()) << "consistent tensors supported only";
-    return JUST(OpInterpUtil::Dispatch<one::Tensor>(*op_, {x->contiguous()}));
+    return JUST(OpInterpUtil::Dispatch<one::Tensor>(*op_, {x}));
   }
 
  private:

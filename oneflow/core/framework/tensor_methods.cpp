@@ -91,38 +91,7 @@ Maybe<Tensor> BasicView(const std::shared_ptr<Tensor>& input, const Shape& targe
   JUST(tensor_impl->InitEagerBlobObject(JUST(blob_object->compute_local_dep_object())));
   std::shared_ptr<Tensor> output(new MirroredTensor(tensor_impl));
 
-  // run tensor view instruction
-
-  // =============================impl1======================================
-  // // init view blob (with empty data pointer)
-  // const auto& eager_blob_object = JUST(input->eager_blob_object());
-  // const auto& view_eager_blob_object = JUST(output->eager_blob_object());
-  // JUST(view_eager_blob_object->InitBlobWithOffset(JUST(output->storage_offset())));
-  // view_eager_blob_object->set_is_shape_synced(true);
-  // view_eager_blob_object->set_last_used_stream(JUST(eager_blob_object->last_used_stream()));
-  // void* input_ptr = eager_blob_object->mut_blob()->mut_raw_dptr();
-  // view_eager_blob_object->mut_blob()->reset_dptr(static_cast<char*>(input_ptr));
-
-  // =============================impl2======================================
-  // std::unique_ptr<ep::DeviceManagerRegistry> device_manager_registry(
-  //     new ep::DeviceManagerRegistry());
-  // auto stream_device = device_manager_registry->GetDevice(device->enum_type(),
-  // device->device_id()); ep::Stream* stream = stream_device->CreateStream();
-
-  // // init view blob (with empty data pointer)
-  // const auto& eager_blob_object = JUST(input->eager_blob_object());
-  // const auto& view_eager_blob_object = JUST(output->eager_blob_object());
-  // JUST(view_eager_blob_object->InitBlobWithOffset(JUST(output->storage_offset())));
-  // view_eager_blob_object->set_is_shape_synced(true);
-  // view_eager_blob_object->set_last_used_stream(JUST(eager_blob_object->last_used_stream()));
-
-  // OfBlob input_ofblob(stream, eager_blob_object->mut_blob());
-  // OfBlob view_ofblob(stream, view_eager_blob_object->mut_blob());
-
-  // void* input_ptr = input_ofblob.mut_blob()->mut_raw_dptr();
-  // view_ofblob.mut_blob()->reset_dptr(static_cast<char*>(input_ptr));
-
-  // ==============================impl3=====================================
+  // NOTE: TensorView instruction will be reomve in the future
   JUST(PhysicalRun([&](InstructionsBuilder* builder) -> Maybe<void> {
     return builder->TensorView(JUST(input->AsMirroredTensor()), JUST(output->AsMirroredTensor()));
   }));
@@ -136,13 +105,6 @@ Maybe<Tensor> Reshape(const std::shared_ptr<Tensor>& input, const Shape& target_
 
 Maybe<Tensor> Reshape(const std::shared_ptr<Tensor>& input, const Shape& target_shape,
                       const Stride& target_stride) {
-  // TODO:(zhaoluyang) check input tensor is contiguous
-  CHECK_OR_RETURN(IsViewApplicable(input))
-      << Error::RuntimeError()
-      << "view::Reshape(): input should be eager local tensor with element count >=1 , but got "
-      << (input->is_lazy() ? "lazy tensor" : "consistent tensor")
-      << " with shape: " << input->shape()->ToString() << "; element count: " << input->nelement();
-
   int64_t storage_offset = JUST(JUST(input->AsMirroredTensor())->storage_offset());
   std::shared_ptr<Tensor> output =
       JUST(BasicView(input, target_shape, target_stride, storage_offset));
@@ -169,10 +131,6 @@ Maybe<Tensor> Reshape(const std::shared_ptr<Tensor>& input, const Shape& target_
 
 Maybe<Tensor> Slice(const std::shared_ptr<Tensor>& input, const std::vector<int64_t>& starts,
                     const std::vector<int64_t>& ends, const std::vector<int64_t>& steps) {
-  CHECK_OR_RETURN(IsViewApplicable(input))
-      << Error::RuntimeError() << "view::Slice(): input should be eager local tensor, but is "
-      << (input->is_lazy() ? "lazy tensor" : "consistent tensor")
-      << " with shape: " << input->shape()->ToString() << "; element count: " << input->nelement();
   const auto& shape = input->shape();
   const auto& strides = JUST(input->stride());
   const int64_t ndim = starts.size();
@@ -225,11 +183,6 @@ Maybe<Tensor> Slice(const std::shared_ptr<Tensor>& input, const std::vector<int6
 }
 
 Maybe<Tensor> Unsqueeze(const std::shared_ptr<Tensor>& input, const int32_t& expand_dim) {
-  CHECK_OR_RETURN(IsViewApplicable(input))
-      << Error::RuntimeError() << "view::Unsqueeze(): input should be eager local tensor, but got "
-      << (input->is_lazy() ? "lazy tensor" : "consistent tensor")
-      << " with shape: " << input->shape()->ToString() << "; element count: " << input->nelement();
-
   const auto& shape = input->shape();
   const auto& strides = JUST(input->stride());
   const auto& ndim = shape->NumAxes();
@@ -274,11 +227,6 @@ Maybe<Tensor> Unsqueeze(const std::shared_ptr<Tensor>& input, const int32_t& exp
 
 Maybe<Tensor> Squeeze(const std::shared_ptr<Tensor>& input,
                       const std::vector<int32_t>& squeeze_dims) {
-  CHECK_OR_RETURN(IsViewApplicable(input))
-      << Error::RuntimeError() << "view::Squeeze(): input should be eager local tensor, but got "
-      << (input->is_lazy() ? "lazy tensor" : "consistent tensor")
-      << " with shape: " << input->shape()->ToString() << "; element count: " << input->nelement();
-
   const auto& shape = input->shape();
   const auto& strides = JUST(input->stride());
   const int64_t ndim = shape->NumAxes();
@@ -323,11 +271,6 @@ Maybe<Tensor> Squeeze(const std::shared_ptr<Tensor>& input,
 
 Maybe<Tensor> Expand(const std::shared_ptr<Tensor>& input, const std::vector<int32_t>& in_shape,
                      const std::vector<int32_t>& expand_shape) {
-  if (!(input->is_eager() && input->is_local())) {
-    return Error::RuntimeError() << "view::Expand(): input should be eager local tensor, but got "
-                                 << (input->is_lazy() ? "lazy" : "consistent");
-  }
-
   const auto& shape = input->shape();
   const auto& strides = JUST(input->stride());
   const int64_t ndim = in_shape.size();

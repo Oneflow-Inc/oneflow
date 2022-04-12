@@ -289,7 +289,7 @@ class Topk(Module):
                 neg_input = flow.mul(x, -1)
                 indices = flow._C.top_k(neg_input, self.k)
             indices = flow._C.transpose(indices, perm=get_inversed_perm(perm))
-            return (flow.gather(input, axis, indices.contiguous()), indices)
+            return (flow.gather(input, axis, indices), indices)
 
 
 def topk_op(input, k, dim: int = None, largest: bool = True, sorted: bool = True):

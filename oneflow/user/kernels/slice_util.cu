@@ -23,31 +23,23 @@ namespace {
 
 template<typename T, int NDIM>
 __global__ void SliceForwardGpu(const int n, SliceParams params,
-                                SliceStridedIndexHelper<NDIM> entire_strided_idx_cvtr,
-                                SliceIndexHelper<NDIM> sliced_idx_cvtr,
-                                SliceStridedIndexHelper<NDIM> sliced_strided_idx_cvtr,
-                                const T* entire, T* sliced) {
+                                SliceIndexHelper<NDIM> entire_idx_cvtr,
+                                SliceIndexHelper<NDIM> sliced_idx_cvtr, const T* entire,
+                                T* sliced) {
   CUDA_1D_KERNEL_LOOP(i, n) {
-    int64_t slice_offset = 0;
-    int64_t entire_offset = 0;
-    SliceIndexToStridedOffset<NDIM>(i, params, entire_strided_idx_cvtr, sliced_idx_cvtr,
-                                    sliced_strided_idx_cvtr, &slice_offset, &entire_offset);
-    sliced[slice_offset] = entire[entire_offset];
+    int64_t offset = SliceOffsetToEntireOffset<NDIM>(i, params, entire_idx_cvtr, sliced_idx_cvtr);
+    sliced[i] = entire[offset];
   }
 }
 
 template<typename T, int NDIM>
 __global__ void SliceBackwardGpu(const int n, SliceParams params,
-                                 SliceStridedIndexHelper<NDIM> entire_strided_idx_cvtr,
-                                 SliceIndexHelper<NDIM> sliced_idx_cvtr,
-                                 SliceStridedIndexHelper<NDIM> sliced_strided_idx_cvtr, T* entire,
+                                 SliceIndexHelper<NDIM> entire_idx_cvtr,
+                                 SliceIndexHelper<NDIM> sliced_idx_cvtr, T* entire,
                                  const T* sliced) {
   CUDA_1D_KERNEL_LOOP(i, n) {
-    int64_t slice_offset = 0;
-    int64_t entire_offset = 0;
-    SliceIndexToStridedOffset<NDIM>(i, params, entire_strided_idx_cvtr, sliced_idx_cvtr,
-                                    sliced_strided_idx_cvtr, &slice_offset, &entire_offset);
-    entire[entire_offset] = sliced[slice_offset];
+    int64_t offset = SliceOffsetToEntireOffset<NDIM>(i, params, entire_idx_cvtr, sliced_idx_cvtr);
+    entire[offset] = sliced[i];
   }
 }
 
@@ -55,15 +47,12 @@ template<typename T, int NDIM>
 void LaunchSliceForward(ep::Stream* stream, const SliceParams& params, const T* entire, T* sliced) {
   CHECK_EQ(params.ndim, NDIM);
   int64_t elem_cnt = params.elem_cnt();
+  SliceIndexHelper<NDIM> entire_idx_cvtr(params.dims);
   SliceIndexHelper<NDIM> sliced_idx_cvtr(params.size);
-  SliceStridedIndexHelper<NDIM> sliced_strided_idx_cvtr(params.sliced_strides);
-  SliceStridedIndexHelper<NDIM> entire_strided_idx_cvtr(params.entire_strides);
-
   if (elem_cnt == 0) { return; }
   SliceForwardGpu<T, NDIM><<<BlocksNum4ThreadsNum(elem_cnt), kCudaThreadsNumPerBlock, 0,
                              stream->As<ep::CudaStream>()->cuda_stream()>>>(
-      elem_cnt, params, entire_strided_idx_cvtr, sliced_idx_cvtr, sliced_strided_idx_cvtr, entire,
-      sliced);
+      elem_cnt, params, entire_idx_cvtr, sliced_idx_cvtr, entire, sliced);
 }
 
 template<typename T, int NDIM>
@@ -71,13 +60,11 @@ void LaunchSliceBackward(ep::Stream* stream, const SliceParams& params, const T*
                          T* entire) {
   CHECK_EQ(params.ndim, NDIM);
   int64_t elem_cnt = params.elem_cnt();
+  SliceIndexHelper<NDIM> entire_idx_cvtr(params.dims);
   SliceIndexHelper<NDIM> sliced_idx_cvtr(params.size);
-  SliceStridedIndexHelper<NDIM> sliced_strided_idx_cvtr(params.sliced_strides);
-  SliceStridedIndexHelper<NDIM> entire_strided_idx_cvtr(params.entire_strides);
   SliceBackwardGpu<T, NDIM><<<BlocksNum4ThreadsNum(elem_cnt), kCudaThreadsNumPerBlock, 0,
                               stream->As<ep::CudaStream>()->cuda_stream()>>>(
-      elem_cnt, params, entire_strided_idx_cvtr, sliced_idx_cvtr, sliced_strided_idx_cvtr, entire,
-      sliced);
+      elem_cnt, params, entire_idx_cvtr, sliced_idx_cvtr, entire, sliced);
 }
 
 template<typename T>
@@ -117,8 +104,19 @@ template<typename T>
 void GetPackedParams(const SliceParams& params, const T* entire, const T* sliced, size_t* pack_size,
                      SliceParams* packed_params) {
   CHECK_GT(params.ndim, 0);
-  *pack_size = sizeof(T);
-  *packed_params = params;
+  const int64_t last_dim = params.ndim - 1;
+  if (params.step[last_dim] == 1) {
+    *pack_size = GetPackSize<T>(params, entire, sliced);
+    CHECK_GE(*pack_size, sizeof(T));
+    const int64_t elem_per_pack = *pack_size / sizeof(T);
+    *packed_params = params;
+    packed_params->dims[last_dim] /= elem_per_pack;
+    packed_params->start[last_dim] /= elem_per_pack;
+    packed_params->size[last_dim] /= elem_per_pack;
+  } else {
+    *pack_size = sizeof(T);
+    *packed_params = params;
+  }
 }
 
 }  // namespace
@@ -126,9 +124,10 @@ void GetPackedParams(const SliceParams& params, const T* entire, const T* sliced
 template<typename T>
 struct SliceKernelUtil<DeviceType::kCUDA, T> {
   static void Forward(ep::Stream* stream, const SliceParams& params, const T* entire, T* sliced) {
+    SliceParams fold_slice_params = FoldContiguousFullSliceDimensions(params);
     size_t pack_size;
     SliceParams packed_params{};
-    GetPackedParams<T>(params, entire, sliced, &pack_size, &packed_params);
+    GetPackedParams<T>(fold_slice_params, entire, sliced, &pack_size, &packed_params);
     if (pack_size == 1) {
       SliceSwitchUtil<uint8_t>::SwitchLaunchSliceForward(
           SwitchCase(packed_params.ndim), stream, packed_params,
@@ -155,9 +154,10 @@ struct SliceKernelUtil<DeviceType::kCUDA, T> {
   }
 
   static void Backward(ep::Stream* stream, const SliceParams& params, const T* sliced, T* entire) {
+    SliceParams fold_slice_params = FoldContiguousFullSliceDimensions(params);
     size_t pack_size;
     SliceParams packed_params{};
-    GetPackedParams<T>(params, entire, sliced, &pack_size, &packed_params);
+    GetPackedParams<T>(fold_slice_params, entire, sliced, &pack_size, &packed_params);
     if (pack_size == 1) {
       SliceSwitchUtil<uint8_t>::SwitchLaunchSliceBackward(
           SwitchCase(packed_params.ndim), stream, packed_params,

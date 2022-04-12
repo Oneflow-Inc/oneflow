@@ -97,8 +97,7 @@ class ConvBaseFunctor {
     if (bias) {
       MutableAttrMap bias_attrs;
       JUST(bias_attrs.SetAttr<int32_t>("axis", 1));
-      return OpInterpUtil::Dispatch<Tensor>(
-          *bias_op_, {conv_out->contiguous(), JUST(bias)->contiguous()}, bias_attrs);
+      return OpInterpUtil::Dispatch<Tensor>(*bias_op_, {conv_out, JUST(bias)}, bias_attrs);
     } else {
       return conv_out;
     }
@@ -158,13 +157,11 @@ class DeConvBaseFunctor {
     JUST(deconv_attrs.SetAttr<int32_t>("groups", groups));
     JUST(deconv_attrs.SetAttr<std::string>("data_format", data_format));
     std::shared_ptr<one::Tensor> deconv_out = nullptr;
-    deconv_out = JUST(OpInterpUtil::Dispatch<Tensor>(
-        *deconv_op_, {x->contiguous(), weight->contiguous()}, deconv_attrs));
+    deconv_out = JUST(OpInterpUtil::Dispatch<Tensor>(*deconv_op_, {x, weight}, deconv_attrs));
     if (bias) {
       MutableAttrMap bias_attrs;
       JUST(bias_attrs.SetAttr<int32_t>("axis", 1));
-      return OpInterpUtil::Dispatch<Tensor>(*bias_op_, {deconv_out->contiguous(), JUST(bias)},
-                                            bias_attrs);
+      return OpInterpUtil::Dispatch<Tensor>(*bias_op_, {deconv_out, JUST(bias)}, bias_attrs);
     } else {
       return deconv_out;
     }
@@ -225,14 +222,12 @@ class MatMulFunctor {
     if (a_shape->NumAxes() != b_shape->NumAxes()) {
       CHECK_EQ_OR_RETURN(b_shape->NumAxes(), 2)
           << "Not support number of dimensions of a being less than number of dimensions of b!";
-      return OpInterpUtil::Dispatch<Tensor>(*bcast_matmul_op_, {a->contiguous(), b->contiguous()},
-                                            attrs);
+      return OpInterpUtil::Dispatch<Tensor>(*bcast_matmul_op_, {a, b}, attrs);
     }
     if (a_shape->NumAxes() > 2) {
-      return OpInterpUtil::Dispatch<Tensor>(*batch_matmul_op_, {a->contiguous(), b->contiguous()},
-                                            attrs);
+      return OpInterpUtil::Dispatch<Tensor>(*batch_matmul_op_, {a, b}, attrs);
     }
-    return OpInterpUtil::Dispatch<Tensor>(*matmul_op_, {a->contiguous(), b->contiguous()}, attrs);
+    return OpInterpUtil::Dispatch<Tensor>(*matmul_op_, {a, b}, attrs);
   }
 
  private:
@@ -262,8 +257,7 @@ class BatchMatMulFunctor {
     JUST(attrs.SetAttr<bool>("transpose_a", transpose_a));
     JUST(attrs.SetAttr<bool>("transpose_b", transpose_b));
     JUST(attrs.SetAttr<double>("alpha", alpha));
-    return OpInterpUtil::Dispatch<Tensor>(*batch_matmul_op_, {a->contiguous(), b->contiguous()},
-                                          attrs);
+    return OpInterpUtil::Dispatch<Tensor>(*batch_matmul_op_, {a, b}, attrs);
   }
 
  private:
@@ -381,7 +375,7 @@ class LayerNormFunctor {
     JUST(attrs.SetAttr<double>("epsilon", epsilon));
     JUST(attrs.SetAttr<bool>("center", false));
     JUST(attrs.SetAttr<bool>("scale", false));
-    return OpInterpUtil::Dispatch<Tensor>(*op_, {x->contiguous()}, attrs);
+    return OpInterpUtil::Dispatch<Tensor>(*op_, {x}, attrs);
   }
 
  private:
@@ -410,8 +404,7 @@ class LayerNormAffineFunctor {
     JUST(attrs.SetAttr<double>("epsilon", epsilon));
     JUST(attrs.SetAttr<bool>("center", true));
     JUST(attrs.SetAttr<bool>("scale", true));
-    return OpInterpUtil::Dispatch<Tensor>(
-        *op_, {x->contiguous(), gamma->contiguous(), beta->contiguous()}, attrs);
+    return OpInterpUtil::Dispatch<Tensor>(*op_, {x, gamma, beta}, attrs);
   }
 
  private:
@@ -469,7 +462,7 @@ class PoolNDFunctor {
     JUST(attrs.SetAttr<std::vector<int32_t>>("padding_after", padding_after));
     JUST(attrs.SetAttr<std::string>("data_format", data_format));
     JUST(attrs.SetAttr<bool>("ceil_mode", ceil_mode));
-    return OpInterpUtil::Dispatch<Tensor>(*op_, {x->contiguous()}, attrs);
+    return OpInterpUtil::Dispatch<Tensor>(*op_, {x}, attrs);
   }
 
  protected:
@@ -524,7 +517,7 @@ class PoolingNDFunctor {
     JUST(attrs.SetAttr<std::vector<int32_t>>("dilation", dilation));
     JUST(attrs.SetAttr<bool>("return_indices", return_indices));
     JUST(attrs.SetAttr<bool>("ceil_mode", ceil_mode));
-    return OpInterpUtil::Dispatch<TensorTuple>(*op_, {x->contiguous()}, attrs);
+    return OpInterpUtil::Dispatch<TensorTuple>(*op_, {x}, attrs);
   }
 
  protected:
@@ -569,7 +562,7 @@ class AdaptivePoolNDFunctor {
                            const std::vector<int64_t>& output_size) const {
     MutableAttrMap attrs;
     JUST(attrs.SetAttr<std::vector<int64_t>>("output_size", output_size));
-    return OpInterpUtil::Dispatch<Tensor>(*op_, {x->contiguous()}, attrs);
+    return OpInterpUtil::Dispatch<Tensor>(*op_, {x}, attrs);
   }
 
  protected:
@@ -620,7 +613,7 @@ class MseLossFunctor : public LossFunctorBase {
                            const std::string& reduction) const {
     const auto out = sequence_function(functional::Sub)
                          .then(functional::Square)
-                         .call(input->contiguous(), target->contiguous(), /*inplace=*/false);
+                         .call(input, target, /*inplace=*/false);
     return apply_reduction(out, reduction);
   }
 };
@@ -633,7 +626,7 @@ class L1LossFunctor : public LossFunctorBase {
                            const std::string& reduction) const {
     const auto out = sequence_function(functional::Sub)
                          .then(functional::Abs)
-                         .call(input->contiguous(), target->contiguous(), /*inplace=*/false);
+                         .call(input, target, /*inplace=*/false);
     return apply_reduction(out, reduction);
   }
 };
@@ -649,9 +642,7 @@ class SmoothL1LossFunctor : LossFunctorBase {
                            const std::string& reduction) const {
     MutableAttrMap attrs;
     JUST(attrs.SetAttr<float>("beta", beta));
-    return apply_reduction(
-        OpInterpUtil::Dispatch<Tensor>(*op_, {input->contiguous(), target->contiguous()}, attrs),
-        reduction);
+    return apply_reduction(OpInterpUtil::Dispatch<Tensor>(*op_, {input, target}, attrs), reduction);
   }
 
  private:
@@ -669,9 +660,7 @@ class KLDivLossFunctor : public LossFunctorBase {
                            const std::string& reduction) const {
     MutableAttrMap attrs;
     JUST(attrs.SetAttr<bool>("log_target", log_target));
-    return apply_reduction(
-        OpInterpUtil::Dispatch<Tensor>(*op_, {input->contiguous(), target->contiguous()}, attrs),
-        reduction);
+    return apply_reduction(OpInterpUtil::Dispatch<Tensor>(*op_, {input, target}, attrs), reduction);
   }
 
  private:
@@ -692,7 +681,7 @@ class MarginRankingLossFunctor : public LossFunctorBase {
               return functional::ScalarAdd(x, Scalar(margin), /*alpha=*/1, /*inplace=*/true);
             })
             .then(std::bind(functional::Clamp, std::placeholders::_1, Scalar(0), NullOpt))
-            .call(input_1->contiguous(), input_2->contiguous(), /*inplace=*/false);
+            .call(input_1, input_2, /*inplace=*/false);
     return apply_reduction(out, reduction);
   }
 };
@@ -718,11 +707,8 @@ class BinaryCrossEntropyLossFunctor : public LossFunctorBase {
                            const std::string& reduction) const {
     MutableAttrMap attrs;
     auto out =
-        weight ? OpInterpUtil::Dispatch<Tensor>(
-            *op_weight_,
-            {input->contiguous(), target->contiguous(), JUST(ToContiguous(JUST(weight)))}, attrs)
-               : OpInterpUtil::Dispatch<Tensor>(*op_, {input->contiguous(), target->contiguous()},
-                                                attrs);
+        weight ? OpInterpUtil::Dispatch<Tensor>(*op_weight_, {input, target, JUST(weight)}, attrs)
+               : OpInterpUtil::Dispatch<Tensor>(*op_, {input, target}, attrs);
     return apply_reduction(out, reduction);
   }
 
@@ -771,24 +757,17 @@ class BinaryCrossEntropyWithLogitsLossFunctor : public LossFunctorBase {
     if (weight) {
       if (pos_weight) {
         out = JUST(OpInterpUtil::Dispatch<Tensor>(
-            *op_weight_pos_,
-            {input->contiguous(), target->contiguous(), JUST(ToContiguous(JUST(weight))),
-             JUST(ToContiguous(JUST(pos_weight)))},
-            attrs));
+            *op_weight_pos_, {input, target, JUST(weight), JUST(pos_weight)}, attrs));
       } else {
-        out = JUST(OpInterpUtil::Dispatch<Tensor>(
-            *op_weight_,
-            {input->contiguous(), target->contiguous(), JUST(ToContiguous(JUST(weight)))}, attrs));
+        out =
+            JUST(OpInterpUtil::Dispatch<Tensor>(*op_weight_, {input, target, JUST(weight)}, attrs));
       }
     } else {
       if (pos_weight) {
-        out = JUST(OpInterpUtil::Dispatch<Tensor>(
-            *op_pos_,
-            {input->contiguous(), target->contiguous(), JUST(ToContiguous(JUST(pos_weight)))},
-            attrs));
+        out = JUST(
+            OpInterpUtil::Dispatch<Tensor>(*op_pos_, {input, target, JUST(pos_weight)}, attrs));
       } else {
-        out = JUST(OpInterpUtil::Dispatch<Tensor>(*op_, {input->contiguous(), target->contiguous()},
-                                                  attrs));
+        out = JUST(OpInterpUtil::Dispatch<Tensor>(*op_, {input, target}, attrs));
       }
     }
     return apply_reduction(out, reduction);
@@ -840,23 +819,21 @@ class NllLossFunctor {
     const auto input_ = JUST(sequence_function(functional::Transpose)
                                  .then(std::bind(functional::Reshape, std::placeholders::_1,
                                                  Shape({-1, input_shape->At(1)})))
-                                 .call(input->contiguous(), input_perm));
+                                 .call(input, input_perm));
     auto target_ = JUST(functional::Flatten(target, 0, target_shape->NumAxes() - 1));
 
     std::shared_ptr<TensorTuple> kernel_result;
     std::shared_ptr<Tensor> result;
     if (weight) {
-      kernel_result = JUST(OpInterpUtil::Dispatch<TensorTuple>(
-          *op_weight_,
-          {input_->contiguous(), target_->contiguous(), JUST(ToContiguous(JUST(weight)))}, attrs));
+      kernel_result = JUST(
+          OpInterpUtil::Dispatch<TensorTuple>(*op_weight_, {input_, target_, JUST(weight)}, attrs));
     } else {
-      kernel_result = JUST(OpInterpUtil::Dispatch<TensorTuple>(
-          *op_, {input_->contiguous(), target_->contiguous()}, attrs));
+      kernel_result = JUST(OpInterpUtil::Dispatch<TensorTuple>(*op_, {input_, target_}, attrs));
     }
     result = JUST(functional::Reshape(kernel_result->at(0), *target_shape));
-    if (reduction == "none") { return JUST(ToContiguous(result)); }
+    if (reduction == "none") { return result->contiguous(); }
 
-    result = JUST(functional::ReduceSum(result->contiguous(), {}, false));
+    result = JUST(functional::ReduceSum(result, {}, false));
 
     if (reduction == "sum") { return result; }
 
@@ -901,14 +878,13 @@ class CrossEntropyFunctor {
     input_perm[input_perm.size() - 1] = 1;
     for (size_t i = 1; i < input_perm.size() - 1; ++i) { input_perm[i] = i + 1; }
 
-    const auto input_ =
-        JUST(sequence_function(functional::Transpose)
-                 .then(std::bind(functional::Reshape, std::placeholders::_1,
-                                 Shape({-1, input_shape->At(1)})))
-                 .then([this](const std::shared_ptr<one::Tensor>& x) {
-                   return OpInterpUtil::Dispatch<Tensor>(*op_log_softmax_, {x->contiguous()});
-                 })
-                 .call(input->contiguous(), input_perm));
+    const auto input_ = JUST(sequence_function(functional::Transpose)
+                                 .then(std::bind(functional::Reshape, std::placeholders::_1,
+                                                 Shape({-1, input_shape->At(1)})))
+                                 .then([this](const std::shared_ptr<one::Tensor>& x) {
+                                   return OpInterpUtil::Dispatch<Tensor>(*op_log_softmax_, {x});
+                                 })
+                                 .call(input, input_perm));
 
     const auto target_ = JUST(functional::Flatten(target, 0, target->shape()->NumAxes() - 1));
 
@@ -916,13 +892,11 @@ class CrossEntropyFunctor {
     std::shared_ptr<Tensor> result;
     if (weight) {
       kernel_result = JUST(OpInterpUtil::Dispatch<TensorTuple>(
-          *op_nll_weight_,
-          {input_->contiguous(), target_->contiguous(), JUST(ToContiguous(JUST(weight)))}, attrs));
+          *op_nll_weight_, {input_, target_, JUST(weight)}, attrs));
     } else {
-      kernel_result = JUST(OpInterpUtil::Dispatch<TensorTuple>(
-          *op_nll_, {input_->contiguous(), target_->contiguous()}, attrs));
+      kernel_result = JUST(OpInterpUtil::Dispatch<TensorTuple>(*op_nll_, {input_, target_}, attrs));
     }
-    result = JUST(functional::Reshape((*kernel_result)[0], *target_shape))->contiguous();
+    result = JUST(functional::Reshape((*kernel_result)[0], *target_shape));
     if (reduction == "none") { return result; }
 
     result = JUST(functional::ReduceSum(result, {}, false));
@@ -951,8 +925,7 @@ class SparseCrossEntropyFunctor {
     MutableAttrMap attrs;
     JUST(attrs.SetAttr<int64_t>("depth", depth));
 
-    return OpInterpUtil::Dispatch<Tensor>(*op_, {prediction->contiguous(), label->contiguous()},
-                                          attrs);
+    return OpInterpUtil::Dispatch<Tensor>(*op_, {prediction, label}, attrs);
   }
 
  private:
@@ -973,8 +946,7 @@ class SparseCrossEntropyMsFunctor {
     MutableAttrMap attrs;
     JUST(attrs.SetAttr<int64_t>("depth", depth));
 
-    return OpInterpUtil::Dispatch<Tensor>(*op_, {prediction->contiguous(), label->contiguous()},
-                                          attrs);
+    return OpInterpUtil::Dispatch<Tensor>(*op_, {prediction, label}, attrs);
   }
 
  private:
@@ -1067,8 +1039,8 @@ class SparseSoftmaxCrossEntropyFunctor {
     MutableAttrMap attrs;
     int64_t depth = logits->shape()->At(logits->shape()->NumAxes() - 1);
     JUST(attrs.SetAttr<int64_t>("depth", depth));
-    const auto& result = JUST(OpInterpUtil::Dispatch<TensorTuple>(
-        *op_sparse_softmax_cross_entropy_, {logits->contiguous(), label->contiguous()}, attrs));
+    const auto& result = JUST(OpInterpUtil::Dispatch<TensorTuple>(*op_sparse_softmax_cross_entropy_,
+                                                                  {logits, label}, attrs));
     return result->at(1);
   }
 
@@ -1078,7 +1050,7 @@ class SparseSoftmaxCrossEntropyFunctor {
     int64_t depth = logits->shape()->At(logits->shape()->NumAxes() - 1);
     JUST(attrs.SetAttr<int64_t>("depth", depth));
     const auto& result = JUST(OpInterpUtil::Dispatch<TensorTuple>(
-        *op_sparse_softmax_cross_entropy_ms_, {logits->contiguous(), label->contiguous()}, attrs));
+        *op_sparse_softmax_cross_entropy_ms_, {logits, label}, attrs));
     return result->at(1);
   }
 
@@ -1089,8 +1061,8 @@ class SparseSoftmaxCrossEntropyFunctor {
     int64_t depth = logits->shape()->At(logits->shape()->NumAxes() - 1);
     int32_t axis = logits->shape()->NumAxes() - 1;
     JUST(attrs.SetAttr<std::vector<int32_t>>("axis", {axis}));
-    const auto& max_device_stage = JUST(OpInterpUtil::Dispatch<TensorTuple>(
-        *op_reduce_max_device_stage_, {logits->contiguous()}, attrs));
+    const auto& max_device_stage =
+        JUST(OpInterpUtil::Dispatch<TensorTuple>(*op_reduce_max_device_stage_, {logits}, attrs));
     std::shared_ptr<Tensor> max_global_stage_input0 = max_device_stage->at(0);
     std::shared_ptr<Tensor> max_global_stage_input1 = max_device_stage->at(2);
 
@@ -1129,8 +1101,7 @@ class SparseSoftmaxCrossEntropyFunctor {
     JUST(attrs.SetAttr<std::vector<int32_t>>("axis", {axis}));
     JUST(attrs.SetAttr<bool>("keepdims", true));
     const auto& max_global_stage = JUST(OpInterpUtil::Dispatch<TensorTuple>(
-        *op_reduce_max_global_stage_,
-        {max_global_stage_input0->contiguous(), max_global_stage_input1->contiguous()}, attrs));
+        *op_reduce_max_global_stage_, {max_global_stage_input0, max_global_stage_input1}, attrs));
     auto& broadcast_sub_input = max_global_stage->at(0);
     if (logits_nd_sbp.sbp_parallel_size() == 2) {
       broadcast_sub_input = JUST(functional::ToConsistent(
@@ -1140,15 +1111,15 @@ class SparseSoftmaxCrossEntropyFunctor {
     // op_broadcast_sub_
     attrs.clear();
     const auto& output_broadcast_sub = JUST(OpInterpUtil::Dispatch<TensorTuple>(
-        *op_broadcast_sub_, {logits->contiguous(), broadcast_sub_input->contiguous()}, attrs));
+        *op_broadcast_sub_, {logits, broadcast_sub_input}, attrs));
     // op_exp_
-    const auto& output_exp = JUST(OpInterpUtil::Dispatch<TensorTuple>(
-        *op_exp_, {(*output_broadcast_sub)[0]->contiguous()}, attrs));
+    const auto& output_exp =
+        JUST(OpInterpUtil::Dispatch<TensorTuple>(*op_exp_, {(*output_broadcast_sub)[0]}, attrs));
     // op_reduce_sum_
     JUST(attrs.SetAttr<std::vector<int32_t>>("axis", {axis}));
     JUST(attrs.SetAttr<bool>("keepdims", true));
-    const auto& output_reduce_sum = JUST(OpInterpUtil::Dispatch<TensorTuple>(
-        *op_reduce_sum_, {(*output_exp)[0]->contiguous()}, attrs));
+    const auto& output_reduce_sum =
+        JUST(OpInterpUtil::Dispatch<TensorTuple>(*op_reduce_sum_, {(*output_exp)[0]}, attrs));
     std::shared_ptr<Tensor> broadcast_div_input1 = output_reduce_sum->at(0);
     if (logits_nd_sbp.sbp_parallel_size() == 2) {
       std::vector<Symbol<SbpParallel>> empty_grad_sbp_parallels;
@@ -1159,13 +1130,11 @@ class SparseSoftmaxCrossEntropyFunctor {
     // op_broadcast_div_
     attrs.clear();
     const auto& predictions = JUST(OpInterpUtil::Dispatch<TensorTuple>(
-        *op_broadcast_div_, {(*output_exp)[0]->contiguous(), broadcast_div_input1->contiguous()},
-        attrs));
+        *op_broadcast_div_, {(*output_exp)[0], broadcast_div_input1}, attrs));
     // op_sparse_cross_entropy_ms_
     JUST(attrs.SetAttr<int64_t>("depth", depth));
-    const auto& output = JUST(OpInterpUtil::Dispatch<Tensor>(
-        *op_sparse_cross_entropy_ms_, {(*predictions)[0]->contiguous(), label->contiguous()},
-        attrs));
+    const auto& output = JUST(OpInterpUtil::Dispatch<Tensor>(*op_sparse_cross_entropy_ms_,
+                                                             {(*predictions)[0], label}, attrs));
     return output;
   }
 
@@ -1197,7 +1166,7 @@ class SoftmaxCrossEntropyFunctor {
 
   Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& logits,
                            const std::shared_ptr<one::Tensor>& label) const {
-    return OpInterpUtil::Dispatch<Tensor>(*op_, {logits->contiguous(), label->contiguous()});
+    return OpInterpUtil::Dispatch<Tensor>(*op_, {logits, label});
   }
 
  private:
@@ -1217,8 +1186,7 @@ class SoftmaxCrossEntropyGradFunctor {
   Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& dy,
                            const std::shared_ptr<one::Tensor>& label,
                            const std::shared_ptr<one::Tensor>& prob) const {
-    return OpInterpUtil::Dispatch<Tensor>(
-        *op_, {dy->contiguous(), label->contiguous(), prob->contiguous()});
+    return OpInterpUtil::Dispatch<Tensor>(*op_, {dy, label, prob});
   }
 
  private:
@@ -1243,7 +1211,7 @@ class CombinedMarginLossFunctor {
     JUST(attrs.SetAttr<float>("m2", m2));
     JUST(attrs.SetAttr<float>("m3", m3));
     JUST(attrs.SetAttr<int64_t>("depth", x->shape()->At(1)));
-    return OpInterpUtil::Dispatch<Tensor>(*op_, {x->contiguous(), label->contiguous()}, attrs);
+    return OpInterpUtil::Dispatch<Tensor>(*op_, {x, label}, attrs);
   }
 
  private:
@@ -1296,7 +1264,7 @@ class CtcLossFunctor {
       return sequence_function(functional::Clamp)
           .then(std::bind(functional::Cast, std::placeholders::_1, log_probs->dtype()))
           .then([&](const std::shared_ptr<one::Tensor>& x) {
-            return OpInterpUtil::Dispatch<Tensor>(*op_xdivy_, {out->contiguous(), x->contiguous()});
+            return OpInterpUtil::Dispatch<Tensor>(*op_xdivy_, {out, x});
           })
           .then(std::bind(functional::ReduceMean, std::placeholders::_1, std::vector<int32_t>({}),
                           false))
@@ -1457,17 +1425,13 @@ class NormalizationFunctor {
       CHECK_OR_RETURN(moving_mean && moving_variance)
           << "Must have moving_mean and moving_variance in eval mode.";
       return OpInterpUtil::Dispatch<one::Tensor>(
-          *norm_eval_op_,
-          {x->contiguous(), JUST(moving_mean)->contiguous(), JUST(moving_variance)->contiguous(),
-           gamma_val->contiguous(), beta_val->contiguous()},
+          *norm_eval_op_, {x, JUST(moving_mean), JUST(moving_variance), gamma_val, beta_val},
           attrs);
     }
     if (moving_mean) {
       return OpInterpUtil::Dispatch<one::Tensor>(
           *norm_training_stats_op_,
-          {x->contiguous(), JUST(moving_mean)->contiguous(), JUST(moving_variance)->contiguous(),
-           gamma_val->contiguous(), beta_val->contiguous()},
-          attrs);
+          {x, JUST(moving_mean), JUST(moving_variance), gamma_val, beta_val}, attrs);
     }
     return OpInterpUtil::Dispatch<one::Tensor>(*norm_training_no_stats_op_,
                                                {x, gamma_val, beta_val}, attrs);
@@ -1560,41 +1524,31 @@ class NormalizationAddReluFunctor {
       CHECK_OR_RETURN(moving_mean && moving_variance)
           << "Must have moving_mean and moving_variance in eval mode.";
       const auto& normalize_result = JUST(OpInterpUtil::Dispatch<one::Tensor>(
-          *norm_eval_op_,
-          {x->contiguous(), JUST(moving_mean)->contiguous(), JUST(moving_variance)->contiguous(),
-           gamma->contiguous(), beta->contiguous()},
-          attrs));
+          *norm_eval_op_, {x, JUST(moving_mean), JUST(moving_variance), gamma, beta}, attrs));
       if (addend) {
-        const auto& add_result = JUST(OpInterpUtil::Dispatch<one::Tensor>(
-            *add_op_, {normalize_result->contiguous(), JUST(addend)->contiguous()}));
-        return OpInterpUtil::Dispatch<one::Tensor>(*relu_op_, {add_result->contiguous()});
+        const auto& add_result =
+            JUST(OpInterpUtil::Dispatch<one::Tensor>(*add_op_, {normalize_result, JUST(addend)}));
+        return OpInterpUtil::Dispatch<one::Tensor>(*relu_op_, {add_result});
       } else {
-        return OpInterpUtil::Dispatch<one::Tensor>(*relu_op_, {normalize_result->contiguous()});
+        return OpInterpUtil::Dispatch<one::Tensor>(*relu_op_, {normalize_result});
       }
     } else if (moving_mean) {
       if (addend) {
         return OpInterpUtil::Dispatch<one::Tensor>(
             *fused_addend_norm_training_stats_op_,
-            {x->contiguous(), JUST(addend)->contiguous(), JUST(moving_mean)->contiguous(),
-             JUST(moving_variance)->contiguous(), gamma->contiguous(), beta->contiguous()},
-            attrs);
+            {x, JUST(addend), JUST(moving_mean), JUST(moving_variance), gamma, beta}, attrs);
       } else {
         return OpInterpUtil::Dispatch<one::Tensor>(
             *fused_norm_training_stats_op_,
-            {x->contiguous(), JUST(moving_mean)->contiguous(), JUST(moving_variance)->contiguous(),
-             gamma->contiguous(), beta->contiguous()},
-            attrs);
+            {x, JUST(moving_mean), JUST(moving_variance), gamma, beta}, attrs);
       }
     } else {
       if (addend) {
-        return OpInterpUtil::Dispatch<one::Tensor>(
-            *fused_addend_norm_training_no_stats_op_,
-            {x->contiguous(), JUST(addend)->contiguous(), gamma->contiguous(), beta->contiguous()},
-            attrs);
+        return OpInterpUtil::Dispatch<one::Tensor>(*fused_addend_norm_training_no_stats_op_,
+                                                   {x, JUST(addend), gamma, beta}, attrs);
       } else {
-        return OpInterpUtil::Dispatch<one::Tensor>(
-            *fused_norm_training_no_stats_op_,
-            {x->contiguous(), gamma->contiguous(), beta->contiguous()}, attrs);
+        return OpInterpUtil::Dispatch<one::Tensor>(*fused_norm_training_no_stats_op_,
+                                                   {x, gamma, beta}, attrs);
       }
     }
   }
@@ -1647,16 +1601,16 @@ class PadFunctor {
       }
       JUST(attrs.SetAttr<std::vector<int64_t>>("padding_before", pad_before));
       JUST(attrs.SetAttr<std::vector<int64_t>>("padding_after", pad_after));
-      return OpInterpUtil::Dispatch<Tensor>(*pad_, {x->contiguous()}, attrs);
+      return OpInterpUtil::Dispatch<Tensor>(*pad_, {x}, attrs);
 
     } else if (mode == "reflect") {
       const int64_t pad_h = x->shape()->dim_vec().at(2);
       const int64_t pad_w = x->shape()->dim_vec().at(3);
       CHECK_OR_RETURN(pad[2] < pad_h && pad[3] < pad_h && pad[0] < pad_w && pad[1] < pad_w)
           << "padding size should be less than the corresponding input dimension!";
-      return OpInterpUtil::Dispatch<Tensor>(*reflect_pad_, {x->contiguous()}, attrs);
+      return OpInterpUtil::Dispatch<Tensor>(*reflect_pad_, {x}, attrs);
     } else if (mode == "replicate") {
-      return OpInterpUtil::Dispatch<Tensor>(*replicate_pad_, {x->contiguous()}, attrs);
+      return OpInterpUtil::Dispatch<Tensor>(*replicate_pad_, {x}, attrs);
     } else {
       UNIMPLEMENTED_THEN_RETURN() << "Pad mode is " << mode
                                   << ", but only constant, reflect and replicate are valid.";
@@ -1697,12 +1651,10 @@ class DropoutFunctor {
     JUST(dropout_attrs.SetAttr<float>("rate", p));
     if (addend) {
       if ((!training) || p == 0.0) {
-        JUST(OpInterpUtil::Dispatch(*add_op_, {x->contiguous(), JUST(addend)->contiguous()},
-                                    outputs.get()));
+        JUST(OpInterpUtil::Dispatch(*add_op_, {x, JUST(addend)}, outputs.get()));
       } else {
         outputs->resize(2);
-        JUST(OpInterpUtil::Dispatch(*dropout_addend_op_,
-                                    {x->contiguous(), JUST(addend)->contiguous()}, outputs.get(),
+        JUST(OpInterpUtil::Dispatch(*dropout_addend_op_, {x, JUST(addend)}, outputs.get(),
                                     OpExprInterpContext(dropout_attrs, dropout_state)));
       }
     } else {
@@ -1710,7 +1662,7 @@ class DropoutFunctor {
         return x;
       } else {
         outputs->resize(2);
-        JUST(OpInterpUtil::Dispatch(*dropout_op_, {x->contiguous()}, outputs.get(),
+        JUST(OpInterpUtil::Dispatch(*dropout_op_, {x}, outputs.get(),
                                     OpExprInterpContext(dropout_attrs, dropout_state)));
       }
     }
@@ -1733,8 +1685,7 @@ class DropoutGradFunctor {
                            const std::shared_ptr<one::Tensor>& mask, const float& scale) const {
     MutableAttrMap dropout_grad_attrs;
     JUST(dropout_grad_attrs.SetAttr<float>("scale", scale));
-    return OpInterpUtil::Dispatch<Tensor>(*dropout_grad_op_, {dy->contiguous(), mask->contiguous()},
-                                          dropout_grad_attrs);
+    return OpInterpUtil::Dispatch<Tensor>(*dropout_grad_op_, {dy, mask}, dropout_grad_attrs);
   }
 
  private:
@@ -1764,7 +1715,7 @@ class AvgPoolingNDFunctor {
     JUST(attrs.SetAttr<bool>("ceil_mode", ceil_mode));
     JUST(attrs.SetAttr<bool>("count_include_pad", count_include_pad));
     JUST(attrs.SetAttr<int32_t>("divisor_override", divisor_override));
-    return OpInterpUtil::Dispatch<Tensor>(*op_, {x->contiguous()}, attrs);
+    return OpInterpUtil::Dispatch<Tensor>(*op_, {x}, attrs);
   }
 
  protected:
@@ -1812,7 +1763,7 @@ class UnfoldFunctor {
     JUST(attrs.SetAttr<std::vector<int32_t>>("padding", padding));
     JUST(attrs.SetAttr<std::vector<int32_t>>("strides", strides));
 
-    return OpInterpUtil::Dispatch<Tensor>(*unfold_op_, {x->contiguous()}, attrs);
+    return OpInterpUtil::Dispatch<Tensor>(*unfold_op_, {x}, attrs);
   }
 
  private:
@@ -1839,7 +1790,7 @@ class FoldFunctor {
     JUST(attrs.SetAttr<std::vector<int32_t>>("padding", padding));
     JUST(attrs.SetAttr<std::vector<int32_t>>("strides", strides));
 
-    return OpInterpUtil::Dispatch<Tensor>(*fold_op_, {x->contiguous()}, attrs);
+    return OpInterpUtil::Dispatch<Tensor>(*fold_op_, {x}, attrs);
   }
 
  private:
@@ -1889,7 +1840,7 @@ class OneHotFunctor {
       JUST(attrs.SetAttr<int64_t>("integer_on_value", JUST(on_value.As<int64_t>())));
       JUST(attrs.SetAttr<int64_t>("integer_off_value", JUST(off_value.As<int64_t>())));
     }
-    return OpInterpUtil::Dispatch<Tensor>(*one_hot_op_, {input->contiguous()}, attrs);
+    return OpInterpUtil::Dispatch<Tensor>(*one_hot_op_, {input}, attrs);
   }
 
  private:
@@ -1923,8 +1874,8 @@ class L2NormalizeFunctor {
     std::swap(input_perm[final_dim], input_perm[static_cast<size_t>(axis_)]);
 
     const auto result = JUST(OpInterpUtil::Dispatch<TensorTuple>(
-        *op_, {JUST(functional::Transpose(input, input_perm))->contiguous()}, attrs));
-    return JUST(functional::Transpose((*result)[0], input_perm))->contiguous();
+        *op_, {JUST(functional::Transpose(input, input_perm))}, attrs));
+    return JUST(functional::Transpose((*result)[0], input_perm));
   }
 
  private:
@@ -1946,7 +1897,7 @@ class NormalizeFunctor {
                })
         .then([&](const auto& x) { return functional::Clamp(x, eps, NullOpt); })
         .then([&](const auto& x) { return functional::Div(input, x); })
-        .call(input->contiguous(), p, dim);
+        .call(input, p, dim);
   }
 };
 
@@ -1964,7 +1915,7 @@ class FusedSelfAttentionFunctor {
     MutableAttrMap attrs;
     JUST(attrs.SetAttr<int64_t>("head_size", head_size));
     JUST(attrs.SetAttr<float>("alpha", alpha));
-    return OpInterpUtil::Dispatch<TensorTuple>(*op_, {hidden_states->contiguous()}, attrs);
+    return OpInterpUtil::Dispatch<TensorTuple>(*op_, {hidden_states}, attrs);
   }
 
  private:
@@ -1987,10 +1938,8 @@ class FusedSelfAttentionGradFunctor {
                            const float& alpha) const {
     MutableAttrMap attrs;
     JUST(attrs.SetAttr<float>("alpha", alpha));
-    return OpInterpUtil::Dispatch<Tensor>(
-        *op_,
-        {query_mul_key_grad->contiguous(), value_grad->contiguous(), hidden_states->contiguous()},
-        attrs);
+    return OpInterpUtil::Dispatch<Tensor>(*op_, {query_mul_key_grad, value_grad, hidden_states},
+                                          attrs);
   }
 
  private:
@@ -2019,7 +1968,7 @@ class FusedScaleTrilSoftmaxMaskScaleFunctor {
     const auto& random_mask_like_state = std::make_shared<RandomMaskLikeKernelState>(gen);
 
     const auto& mask = JUST(OpInterpUtil::Dispatch<Tensor>(
-        *random_mask_like_op_, {x->contiguous()},
+        *random_mask_like_op_, {x},
         OpExprInterpContext(random_mask_like_attrs, random_mask_like_state)));
 
     float mask_scale_value = 1.0;
@@ -2029,8 +1978,7 @@ class FusedScaleTrilSoftmaxMaskScaleFunctor {
     JUST(fused_attrs.SetAttr<float>("tril_scale_value", tril_scale_value));
     JUST(fused_attrs.SetAttr<float>("mask_scale_value", mask_scale_value));
 
-    return OpInterpUtil::Dispatch<TensorTuple>(*fused_op_, {x->contiguous(), mask->contiguous()},
-                                               fused_attrs);
+    return OpInterpUtil::Dispatch<TensorTuple>(*fused_op_, {x, mask}, fused_attrs);
   }
 
  private:
@@ -2055,8 +2003,7 @@ class L2NormalizeGradFunctor {
     MutableAttrMap attrs;
     JUST(attrs.SetAttr<int32_t>("axis", axis));
     JUST(attrs.SetAttr<float>("epsilon", epsilon));
-    return OpInterpUtil::Dispatch<Tensor>(
-        *op_, {dy->contiguous(), y->contiguous(), square_x_sum->contiguous()}, attrs);
+    return OpInterpUtil::Dispatch<Tensor>(*op_, {dy, y, square_x_sum}, attrs);
   }
 
  private:
@@ -2073,7 +2020,7 @@ class FusedBiasAddGeluFunctor {
                            const std::shared_ptr<one::Tensor>& b, const int32_t& axis) const {
     MutableAttrMap attrs;
     JUST(attrs.SetAttr<int32_t>("axis", axis));
-    return OpInterpUtil::Dispatch<Tensor>(*op_, {a->contiguous(), b->contiguous()}, attrs);
+    return OpInterpUtil::Dispatch<Tensor>(*op_, {a, b}, attrs);
   }
 
  private:
@@ -2095,8 +2042,7 @@ class FusedBiasAddGeluGradFunctor {
                            const std::shared_ptr<one::Tensor>& dy, const int32_t& axis) const {
     MutableAttrMap attrs;
     JUST(attrs.SetAttr<int32_t>("axis", axis));
-    return OpInterpUtil::Dispatch<Tensor>(
-        *op_, {a->contiguous(), b->contiguous(), dy->contiguous()}, attrs);
+    return OpInterpUtil::Dispatch<Tensor>(*op_, {a, b, dy}, attrs);
   }
 
  private:
@@ -2137,13 +2083,12 @@ class FusedBiasAddDropoutFunctor {
     if (p > 0.0) {
       return SequenceFunction<Maybe<Tensor>()>([&]() -> Maybe<Tensor> {
                return OpInterpUtil::Dispatch<Tensor>(
-                   *random_mask_like_op_, {a->contiguous()},
+                   *random_mask_like_op_, {a},
                    OpExprInterpContext(random_mask_like_attrs, random_mask_like_state));
              })
           .then([&](const std::shared_ptr<one::Tensor>& x) {
-            return OpInterpUtil::Dispatch<Tensor>(
-                *fused_bias_add_mask_scale_op_, {a->contiguous(), b->contiguous(), x->contiguous()},
-                fused_bias_add_mask_attrs);
+            return OpInterpUtil::Dispatch<Tensor>(*fused_bias_add_mask_scale_op_, {a, b, x},
+                                                  fused_bias_add_mask_attrs);
           })
           .call();
     } else {
@@ -2187,7 +2132,7 @@ class FusedScaleTrilFunctor {
       JUST(attrs.SetAttr<int64_t>("integer_scale_value", JUST(scale.As<int64_t>())));
       JUST(attrs.SetAttr<bool>("is_floating_scale_value", false));
     }
-    return OpInterpUtil::Dispatch<Tensor>(*op_, {x->contiguous()}, attrs);
+    return OpInterpUtil::Dispatch<Tensor>(*op_, {x}, attrs);
   }
 
  private:
@@ -2206,7 +2151,7 @@ class FusedScaleMaskSoftmaxFunctor {
     MutableAttrMap attrs_;
     JUST(attrs_.SetAttr<float>("scale_value", scale));
     JUST(attrs_.SetAttr<float>("mask_fill_value", fill_value));
-    return OpInterpUtil::Dispatch<Tensor>(*op_, {x->contiguous(), mask->contiguous()}, attrs_);
+    return OpInterpUtil::Dispatch<Tensor>(*op_, {x, mask}, attrs_);
   }
 
  private:
@@ -2240,7 +2185,7 @@ class FusedScaleMaskSoftmaxDropoutFunctor {
     const auto& random_mask_like_state = std::make_shared<RandomMaskLikeKernelState>(gen);
 
     const auto& dropout_mask = JUST(OpInterpUtil::Dispatch<Tensor>(
-        *random_mask_like_op_, {x->contiguous()},
+        *random_mask_like_op_, {x},
         OpExprInterpContext(random_mask_like_attrs, random_mask_like_state)));
 
     float dropout_scale = 0.0;
@@ -2251,10 +2196,9 @@ class FusedScaleMaskSoftmaxDropoutFunctor {
     JUST(fused_scale_mask_softmax_dropout_attrs.SetAttr<float>("dropout_scale_value",
                                                                dropout_scale));
 
-    return OpInterpUtil::Dispatch<TensorTuple>(
-        *fused_scale_mask_softmax_dropout_op_,
-        {x->contiguous(), mask->contiguous(), dropout_mask->contiguous()},
-        fused_scale_mask_softmax_dropout_attrs);
+    return OpInterpUtil::Dispatch<TensorTuple>(*fused_scale_mask_softmax_dropout_op_,
+                                               {x, mask, dropout_mask},
+                                               fused_scale_mask_softmax_dropout_attrs);
   }
 
  private:
@@ -2277,8 +2221,7 @@ class CtcGreedyDecoderFunctor {
                                 const bool& merge_repeated) const {
     MutableAttrMap attrs;
     JUST(attrs.SetAttr<bool>("merge_repeated", merge_repeated));
-    return OpInterpUtil::Dispatch<TensorTuple>(
-        *op_, {log_probs->contiguous(), input_lengths->contiguous()}, attrs);
+    return OpInterpUtil::Dispatch<TensorTuple>(*op_, {log_probs, input_lengths}, attrs);
   }
 
  private:
@@ -2297,8 +2240,7 @@ class PariticalFCSampleDisableBoxing {
   }
   Maybe<TensorTuple> operator()(const std::shared_ptr<one::Tensor>& sampled_weight_diff,
                                 const std::shared_ptr<one::Tensor>& sampled_label) const {
-    return OpInterpUtil::Dispatch<TensorTuple>(
-        *op_, {sampled_weight_diff->contiguous(), sampled_label->contiguous()});
+    return OpInterpUtil::Dispatch<TensorTuple>(*op_, {sampled_weight_diff, sampled_label});
   }
 
  private:
@@ -2314,7 +2256,7 @@ class NmsFunctor {
     MutableAttrMap attrs;
     JUST(attrs.SetAttr<float>("iou_threshold", iou_threshold));
     JUST(attrs.SetAttr<int32_t>("keep_n", keep_n));
-    return OpInterpUtil::Dispatch<Tensor>(*op_, {x->contiguous()}, attrs);
+    return OpInterpUtil::Dispatch<Tensor>(*op_, {x}, attrs);
   }
 
  private:
@@ -2337,7 +2279,7 @@ class RoiAlignFunctor {
     JUST(attrs.SetAttr<int32_t>("pooled_w", pooled_w));
     JUST(attrs.SetAttr<int32_t>("sampling_ratio", sampling_ratio));
     JUST(attrs.SetAttr<bool>("aligned", aligned));
-    return OpInterpUtil::Dispatch<Tensor>(*op_, {x->contiguous(), rois->contiguous()}, attrs);
+    return OpInterpUtil::Dispatch<Tensor>(*op_, {x, rois}, attrs);
   }
 
  private:
@@ -2366,8 +2308,7 @@ class RoiAlignGradFunctor {
     JUST(attrs.SetAttr<int32_t>("pooled_w", pooled_w));
     JUST(attrs.SetAttr<int32_t>("sampling_ratio", sampling_ratio));
     JUST(attrs.SetAttr<bool>("aligned", aligned));
-    return OpInterpUtil::Dispatch<Tensor>(
-        *op_, {dy->contiguous(), x_like->contiguous(), rois->contiguous()}, attrs);
+    return OpInterpUtil::Dispatch<Tensor>(*op_, {dy, x_like, rois}, attrs);
   }
 
  private:

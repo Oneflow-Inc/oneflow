@@ -44,11 +44,6 @@ struct SliceParams {
   int64_t start[kSliceMaxDims];
   int64_t step[kSliceMaxDims];
   int64_t size[kSliceMaxDims];
-  int64_t stride[kSliceMaxDims];
-  bool use_stride = false;
-
-  int64_t sliced_strides[kSliceMaxDims];
-  int64_t entire_strides[kSliceMaxDims];
 
   int64_t elem_cnt() const {
     if (ndim == 0) { return 0; }
@@ -71,8 +66,6 @@ SliceParams FoldContiguousFullSliceDimensions(const SliceParams& params);
 
 template<int NDIM>
 using SliceIndexHelper = NdIndexOffsetHelper<int64_t, NDIM>;
-template<int NDIM>
-using SliceStridedIndexHelper = NdIndexStridedOffsetHelper<int64_t, NDIM>;
 
 template<int NDIM>
 OF_DEVICE_FUNC int64_t SliceOffsetToEntireOffset(int64_t offset, const SliceParams& params,
@@ -89,27 +82,6 @@ OF_DEVICE_FUNC int64_t SliceOffsetToEntireOffset(int64_t offset, const SlicePara
     assert(nd_index[i] < params.dims[i]);
   }
   return entire_idx_cvtr.NdIndexToOffset(nd_index);
-}
-
-template<int NDIM>
-OF_DEVICE_FUNC void SliceIndexToStridedOffset(
-    int64_t idx, const SliceParams& params,
-    const SliceStridedIndexHelper<NDIM>& entire_strided_idx_cvtr,
-    const SliceIndexHelper<NDIM>& sliced_idx_cvtr,
-    const SliceStridedIndexHelper<NDIM>& sliced_strided_idx_cvtr, int64_t* sliced_offset,
-    int64_t* entire_offset) {
-  int64_t nd_index[NDIM] = {0};
-  sliced_idx_cvtr.OffsetToNdIndex(idx, nd_index);
-  *sliced_offset = idx;
-#ifdef __CUDA_ARCH__
-#pragma unroll
-#endif
-  for (int64_t i = 0; i < NDIM; ++i) {
-    nd_index[i] = params.start[i] + params.step[i] * nd_index[i];
-    assert(nd_index[i] >= 0);
-    assert(nd_index[i] < params.dims[i]);
-  }
-  *entire_offset = entire_strided_idx_cvtr.NdIndexToOffset(nd_index);
 }
 
 template<DeviceType device_type, typename T>

@@ -31,7 +31,6 @@ limitations under the License.
 #include "oneflow/core/register/ofblob.h"
 #include "oneflow/core/common/blocking_then_busy.h"
 #include "oneflow/core/vm/virtual_machine.h"
-#include "oneflow/extension/python/numpy.h"
 #include "oneflow/core/common/foreign_lock_helper.h"
 
 namespace py = pybind11;

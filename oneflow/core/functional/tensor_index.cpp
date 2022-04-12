@@ -73,7 +73,7 @@ Maybe<TensorTuple> ExpandMaskIndex(const std::shared_ptr<Tensor>& index) {
 
   for (int i = 0; i < index->ndim(); ++i) {
     auto item = JUST(functional::Slice(res->at(0), {0, i}, {size, i + 1}, {1, 1}));
-    item = JUST(functional::Reshape(item->contiguous(), {size}));
+    item = JUST(functional::Reshape(item, {size}));
     indices->emplace_back(item->contiguous());
   }
   return indices;
