@@ -128,7 +128,8 @@ void BuildEmbeddingLookup(JobPassCtx* ctx, JobBuilder* job_builder, const int64_
                           const user_op::UserOpConfWrapper& embedding_op,
                           const std::string& num_unique_ids_lbn, const std::string& unique_ids_lbn,
                           const std::string& unique_columns_lbn, std::string* embedding_lbn,
-                          std::string* unique_values_lbn) {
+                          std::string* unique_values_lbn, OperatorConf* embedding_prefetch_op_conf,
+                          OperatorConf* embedding_lookup_op_conf) {
   auto AddIdentityOp = [&](const std::string& in_lbn) -> std::string {
     return BuildIdentityOp(job_builder, in_lbn, parallel_conf, embedding_op);
   };
@@ -150,9 +151,8 @@ void BuildEmbeddingLookup(JobPassCtx* ctx, JobBuilder* job_builder, const int64_
             .Attr<std::string>("embedding_name", embedding_name)
             .ScopeSymbolId(embedding_op.op_conf().scope_symbol_id())
             .Build();
-    OperatorConf embedding_prefetch_new_op_conf = embedding_prefetch_op.op_conf();
-    embedding_prefetch_new_op_conf.set_stream_name_hint(embedding_name + "_EMBEDDING");
-    job_builder->AddOps(parallel_conf, {embedding_prefetch_new_op_conf});
+    *embedding_prefetch_op_conf = embedding_prefetch_op.op_conf();
+    embedding_prefetch_op_conf->set_stream_name_hint(embedding_name + "_EMBEDDING");
     context_lbn = AddIdentityOp(embedding_prefetch_op.output("context", 0));
   }
 
@@ -181,9 +181,8 @@ void BuildEmbeddingLookup(JobPassCtx* ctx, JobBuilder* job_builder, const int64_
         .Attr<DataType>("embeddings_dtype", embeddings_dtype);
   }
   user_op::UserOpConfWrapper embedding_lookup_op = embedding_lookup_op_builder.Build();
-  OperatorConf embedding_lookup_new_op_conf = embedding_lookup_op.op_conf();
-  embedding_lookup_new_op_conf.set_stream_name_hint(embedding_name + "_EMBEDDING");
-  job_builder->AddOps(parallel_conf, {embedding_lookup_new_op_conf});
+  *embedding_lookup_op_conf = embedding_lookup_op.op_conf();
+  embedding_lookup_op_conf->set_stream_name_hint(embedding_name + "_EMBEDDING");
   if (has_embeddings_output) {
     *embedding_lbn = embedding_lookup_op.output("embeddings", 0);
   } else {
@@ -422,7 +421,7 @@ void BuildEmbeddingUpdate(JobPassCtx* ctx, const OpGraph& op_graph, JobBuilder* 
                           const std::string& num_unique_ids_lbn, const std::string& unique_ids_lbn,
                           const std::string& unique_values_lbn,
                           const std::string& embedding_grad_lbn,
-                          const std::string& learning_rate_lbn) {
+                          const std::string& learning_rate_lbn, float* optimizer_state_init_value) {
   const TrainConf& train_conf = job_builder->job().job_conf().train_conf();
   auto AddIdentityOp = [&](const std::string& in_lbn) -> std::string {
     return BuildIdentityOp(job_builder, in_lbn, parallel_conf, embedding_op);
@@ -464,7 +463,7 @@ void BuildEmbeddingUpdate(JobPassCtx* ctx, const OpGraph& op_graph, JobBuilder* 
     }
   } else if (optimizer_conf.has_adagrad_conf()) {
     const AdagradModelUpdateConf& adagrad_conf = optimizer_conf.adagrad_conf();
-    // TODO(guoran): set adagrad_conf.initial_accumulator_value to lookup and prefetch
+    *optimizer_state_init_value = adagrad_conf.initial_accumulator_value();
     embedding_update_op_builder.OpTypeName("adagrad_embedding_update")
         .Input("train_step", train_conf.train_step_lbn())
         .Attr<float>("lr_decay", adagrad_conf.lr_decay())
@@ -582,12 +581,15 @@ Maybe<void> ReplaceEmbeddingOps::Apply(const OpGraph& op_graph, JobBuilder* job_
 
     bool has_embedding_prefetch = (!options.IsFullCache()) ? true : false;
 
+    OperatorConf embedding_prefetch_op_conf;
+    OperatorConf embedding_lookup_op_conf;
     // embedding lookup op
     std::string embedding_lbn, unique_values_lbn;
     BuildEmbeddingLookup(ctx, job_builder, embedding_size, options.LineSize(), options.Name(),
                          has_embedding_prefetch, op_node->parallel_desc().parallel_conf(),
                          embedding_op, num_unique_ids_lbn, unique_ids_lbn, unique_columns_lbn,
-                         &embedding_lbn, &unique_values_lbn);
+                         &embedding_lbn, &unique_values_lbn, &embedding_prefetch_op_conf,
+                         &embedding_lookup_op_conf);
 
     if (use_system_gather) {
       user_op::UserOpConfWrapperBuilder gather_op_builder(embedding_op.op_name() + "_gather");
@@ -626,6 +628,7 @@ Maybe<void> ReplaceEmbeddingOps::Apply(const OpGraph& op_graph, JobBuilder* job_
       }
     }
 
+    float optimizer_state_init_value = 0;
     // find update op
     const OpNode* producer =
         op_graph.OpNode4OpName(GenLogicalBlobId(embedding_op.input("ids", 0)).op_name());
@@ -674,9 +677,19 @@ Maybe<void> ReplaceEmbeddingOps::Apply(const OpGraph& op_graph, JobBuilder* job_
         BuildEmbeddingUpdate(ctx, op_graph, job_builder, op_node->parallel_desc().parallel_conf(),
                              embedding_size, options.Name(), embedding_optimizer_conf, embedding_op,
                              num_unique_ids_lbn, unique_ids_lbn, unique_values_lbn,
-                             embedding_grad_lbn, learning_rate_lbn);
+                             embedding_grad_lbn, learning_rate_lbn, &optimizer_state_init_value);
       }
     }
+    auto optimizer_state_init_value_attr = ::oneflow::AttrValue();
+    optimizer_state_init_value_attr.set_at_float(optimizer_state_init_value);
+    if (has_embedding_prefetch) {
+      (*(embedding_prefetch_op_conf.mutable_user_conf()
+             ->mutable_attr()))["optimizer_state_init_value"] = optimizer_state_init_value_attr;
+      add_ops.push_back(embedding_prefetch_op_conf);
+    }
+    (*(embedding_lookup_op_conf.mutable_user_conf()
+           ->mutable_attr()))["optimizer_state_init_value"] = optimizer_state_init_value_attr;
+    add_ops.push_back(embedding_lookup_op_conf);
     job_builder->DelOps(delete_op_names);
     job_builder->AddOps(op_node->parallel_desc().parallel_conf(), add_ops);
   });
