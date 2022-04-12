@@ -26,6 +26,10 @@ def index_select_op(input, dim, index):
     assert (
         dim < len(input.shape) and dim >= 0
     ), "Value of dim is out of range(dim should be in the range of [0, input dimensions) )"
+    assert isinstance(index, Tensor), " index must be a Tensor."
+    assert (
+        index.dtype == flow.int32 or index.dtype == flow.int64
+    ), "dtype of index tensor must be int32 or int64."
     index_rshp = list(input.shape)
 
     index_rshp[dim] = 1
