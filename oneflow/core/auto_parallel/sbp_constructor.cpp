@@ -15,6 +15,7 @@ limitations under the License.
 */
 
 #include "oneflow/core/auto_parallel/sbp_constructor.h"
+#include "oneflow/core/auto_parallel/algorithm_util.h"
 #include "oneflow/core/auto_parallel/sbp_node.h"
 #include "oneflow/core/auto_parallel/sbp_util.h"
 #include "oneflow/core/graph/op_graph.h"
@@ -422,6 +423,11 @@ void SbpConstructor::PrintSBPGraphDebugInfo() {
                 << op_node->LogicalBlobDesc4Lbi(op_node->op().BnInOp2Lbi(obn)).shape().elem_cnt();
       std::cout << std::endl;
     }
+    // Print out SBP information for control edge
+    const auto& ctrl_op_names = op_node->op().op_conf().ctrl_in_op_name();
+    auto_parallel::DecideOrder(ctrl_op_names, str_order, comp);
+    for (int32_t j : str_order) { std::cout << "Ctrl Op: " << ctrl_op_names[j] << std::endl; }
+
     std::cout << std::endl;
   }
 }
