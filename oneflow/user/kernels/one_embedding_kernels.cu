@@ -89,6 +89,7 @@ void ParseInitializers(const int32_t line_size, const int32_t embedding_size,
   auto json_object = nlohmann::json::parse(json_serialized);
   CHECK(json_object.contains("column_dims"));
   std::vector<int64_t> column_dims = json_object["column_dims"];
+  CHECK(column_dims.is_array());
   const int32_t num_columns = column_dims.size();
   CHECK(json_object.contains("tables"));
   auto tables = json_object["tables"];
@@ -103,28 +104,21 @@ void ParseInitializers(const int32_t line_size, const int32_t embedding_size,
   offset++;
   for (int32_t i = 0; i < num_tables; ++i) {
     auto table = tables.at(i);
-    if (table.contains("initializer")) {
-      ParseInitializerFromJson(table["initializer"], &initializer_params->at(offset));
-      SetInitializerIndex(i, 0, embedding_size, line_size, offset, initializer_index);
+    CHECK(table.contains("columns"));
+    auto columns = table["columns"];
+    CHECK(columns.is_array());
+    CHECK_EQ(num_columns, columns.size()) << "columns size must equals num embedding dims";
+    int32_t col_start = 0;
+    for (int k = 0; k < columns.size(); ++k) {
+      auto column = columns.at(k);
+      CHECK(column.contains("initializer"));
+      ParseInitializerFromJson(column["initializer"], &initializer_params->at(offset));
+      int32_t col_end = col_start + column_dims.at(k);
+      SetInitializerIndex(i, col_start, col_end, line_size, offset, initializer_index);
+      col_start = col_end;
       offset++;
-    } else if (table.contains("columns")) {
-      auto columns = table["columns"];
-      CHECK(columns.is_array());
-      CHECK_EQ(num_columns, columns.size());
-      int32_t col_start = 0;
-      for (int k = 0; k < columns.size(); ++k) {
-        auto column = columns.at(k);
-        CHECK(column.contains("initializer"));
-        ParseInitializerFromJson(column["initializer"], &initializer_params->at(offset));
-        int32_t col_end = col_start + column_dims.at(k);
-        SetInitializerIndex(i, col_start, col_end, line_size, offset, initializer_index);
-        col_start = col_end;
-        offset++;
-      }
-      CHECK_EQ(col_start, embedding_size);
-    } else {
-      UNIMPLEMENTED();
     }
+    CHECK_EQ(col_start, embedding_size);
     SetInitializerIndex(i, embedding_size, line_size, line_size, 0, initializer_index);
   }
 }

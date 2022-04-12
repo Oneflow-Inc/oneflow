@@ -123,7 +123,8 @@ def _init(
     # initializer
     if tables is not None:
         assert isinstance(tables, (list, tuple))
-        for table in tables:
+        for i in range(len(tables)):
+            table = tables[i]
             if table.__contains__("columns"):
                 assert not table.__contains__("initializer")
                 columns = table["columns"]
@@ -136,11 +137,19 @@ def _init(
                 assert isinstance(table, dict)
                 assert table.__contains__("initializer")
                 _check_initializer(table["initializer"])
+                columns = []
+                for j in range(len(column_dims)):
+                    columns.append(make_column_options(table["initializer"]))
+                table["columns"] = columns
+                del table["initializer"]
         embedding_tables["tables"] = tables
     else:
         assert default_initializer is not None
         _check_initializer(default_initializer)
-        embedding_tables["tables"] = [{"initializer": default_initializer}]
+        columns = []
+        for j in range(len(column_dims)):
+            columns.append(make_column_options(default_initializer))
+        embedding_tables["tables"] = [{"columns": columns}]
     embedding_tables["column_dims"] = column_dims
     key_value_store_options["parallel_num"] = parallel_num
     return embedding_dim, embedding_tables, key_value_store_options
