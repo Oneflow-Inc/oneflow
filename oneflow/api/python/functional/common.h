@@ -20,6 +20,7 @@ limitations under the License.
 #include <vector>
 #include <pybind11/pybind11.h>
 
+#include "oneflow/api/python/framework/tensor.h"
 #include "oneflow/core/common/throw.h"
 #include "oneflow/core/common/maybe.h"
 #include "oneflow/core/common/preprocessor.h"
@@ -107,10 +108,6 @@ std::string PyObjectToReprStr(PyObject* obj);
 bool PyScalarCheck(PyObject* obj);
 Scalar PyUnpackScalar(PyObject* obj);
 
-// Tensor
-bool PyTensorCheck(PyObject* obj);
-std::shared_ptr<Tensor> PyUnpackTensor(PyObject* obj);
-
 // Tensor list
 bool PyTensorSequenceCheck(PyObject* obj);
 std::vector<std::shared_ptr<Tensor>> PyUnpackTensorSequence(PyObject* obj);
@@ -166,7 +163,7 @@ inline PyObject* CastToPyObject(T&& t) {
 
 template<>
 inline PyObject* CastToPyObject<Maybe<Tensor>>(Maybe<Tensor>&& t) {
-  return py::cast(t.GetPtrOrThrow()).inc_ref().ptr();
+  return PyTensor_New(t.GetPtrOrThrow());
 }
 
 template<>

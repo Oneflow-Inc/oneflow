@@ -83,7 +83,7 @@ bool FunctionSchema::Parse(PyObject* args, PyObject* kwargs, PythonArg* parsed_a
 
     if (obj) {
       if (arg_pos == 0 && treat_args_as_list && !param.keyword_only
-          && (PyLong_Check(obj) || PyTensorCheck(obj))) {
+          && (PyLong_Check(obj) || PyTensor_Check(obj))) {
         obj = args;
         arg_pos = nargs;
       } else {

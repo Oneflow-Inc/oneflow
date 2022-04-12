@@ -1055,7 +1055,7 @@ def RegisterMethods():
     Tensor.numel = _numel
     Tensor.element_size = _element_size
     Tensor.backward = _backward
-    Tensor.__getitem__ = _getitem
+    # Tensor.__getitem__ = _getitem
     Tensor.__setitem__ = _setitem
     Tensor.__str__ = _str
     Tensor.__repr__ = _repr

@@ -71,23 +71,13 @@ std::string PyObjectToReprStr(PyObject* obj) {
   return str;
 }
 
-bool PyTensorCheck(PyObject* obj) {
-  auto handle = py::reinterpret_borrow<py::object>(obj);
-  return py::isinstance<Tensor>(handle);
-}
-
-std::shared_ptr<Tensor> PyUnpackTensor(PyObject* obj) {
-  auto handle = py::reinterpret_borrow<py::object>(obj);
-  return py::cast<std::shared_ptr<Tensor>>(handle);
-}
-
 // Tensor list
 bool PyTensorSequenceCheck(PyObject* obj) {
-  return PySequenceCheck(obj, [](PyObject* item) { return PyTensorCheck(item); });
+  return PySequenceCheck(obj, [](PyObject* item) { return PyTensor_Check(item); });
 }
 std::vector<std::shared_ptr<Tensor>> PyUnpackTensorSequence(PyObject* obj) {
   return PyUnpackSequence<std::shared_ptr<Tensor>>(
-      obj, [](PyObject* item) { return PyUnpackTensor(item); });
+      obj, [](PyObject* item) { return PyTensor_Unpack(item); });
 }
 
 // TensorTuple
@@ -197,7 +187,7 @@ std::vector<Symbol<SbpParallel>> PyUnpackSbpParallelSequence(PyObject* obj) {
 // Tensor index
 bool PyTensorIndexCheck(PyObject* obj) {
   return PySlice_Check(obj) || PyLong_Check(obj) || obj == Py_Ellipsis || obj == Py_None
-         || PyTensorCheck(obj) || PySequence_Check(obj) || PyUnicode_Check(obj);
+         || PyTensor_Check(obj) || PySequence_Check(obj) || PyUnicode_Check(obj);
 }
 TensorIndex PyUnpackTensorIndex(PyObject* obj) {
   TensorIndex tensor_index;
@@ -206,7 +196,7 @@ TensorIndex PyUnpackTensorIndex(PyObject* obj) {
       || PyLong_Check(obj)       // NOLINT
       || obj == Py_Ellipsis      // NOLINT
       || obj == Py_None          // NOLINT
-      || PyTensorCheck(obj)      // NOLINT
+      || PyTensor_Check(obj)     // NOLINT
       || !PySequence_Check(obj)  // NOLINT
       || PyUnicode_Check(obj)) {
     tensor_index.emplace_back(detail::UnpackIndexItem(obj));
@@ -259,9 +249,9 @@ TensorIndex PyUnpackTensorIndex(PyObject* obj) {
           PyErr_Clear();
           break;
         }
-        if (PySequence_Check(item)  // NOLINT
-            || PySlice_Check(item)  // NOLINT
-            || PyTensorCheck(item)  // NOLINT
+        if (PySequence_Check(item)   // NOLINT
+            || PySlice_Check(item)   // NOLINT
+            || PyTensor_Check(item)  // NOLINT
             || item == Py_Ellipsis || item == Py_None) {
           commit_to_unpack = true;
         }

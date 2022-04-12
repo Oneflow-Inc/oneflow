@@ -192,9 +192,8 @@ IndexItem UnpackIndexItem(PyObject* object) {
     return IndexItem(object == Py_True);
   } else if (object == Py_None) {
     return IndexItem(NoneIndex{});
-  } else if (PyTensorCheck(object)) {
-    auto obj = py::reinterpret_borrow<py::object>(object);
-    return IndexItem(py::cast<std::shared_ptr<Tensor>>(obj));
+  } else if (PyTensor_Check(object)) {
+    return IndexItem(PyTensor_Unpack(object));
   } else if (PySequence_Check(object)) {
     return IndexItem(ConvertToIndexingTensor(object).GetPtrOrThrow());
   }

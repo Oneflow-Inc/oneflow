@@ -112,6 +112,7 @@ pybind_source_fmt = (
 
 #include "oneflow/api/python/of_api_registry.h"
 #include "oneflow/api/python/functional/common.h"
+#include "oneflow/api/python/exception/exception.h"
 #include "oneflow/api/python/functional/function_def.h"
 #include "oneflow/api/python/functional/python_arg.h"
 #include "oneflow/api/python/functional/python_arg_parser.h"
