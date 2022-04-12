@@ -128,12 +128,13 @@ OF_DEVICE_FUNC T upsample_get_value_bounded(const T* data, const int64_t width,
 
 template<typename T>
 OF_DEVICE_FUNC T cubic_convolution1(const T x, const T A) {
-  return ((A + 2.0) * x - (A + 3.0)) * x * x + 1.0;
+  return ((A + static_cast<T>(2.0)) * x - (A + static_cast<T>(3.0))) * x * x + static_cast<T>(1.0);
 }
 
 template<typename T>
 OF_DEVICE_FUNC T cubic_convolution2(const T x, const T A) {
-  return ((A * x - 5.0 * A) * x + 8.0 * A) * x - 4.0 * A;
+  return ((A * x - static_cast<T>(5.0) * A) * x + static_cast<T>(8.0) * A) * x
+         - static_cast<T>(4.0) * A;
 }
 
 template<typename T>

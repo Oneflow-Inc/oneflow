@@ -50,7 +50,8 @@ Maybe<void> RawCheckSymmetricBToP(Symbol<PlacedNdSbp> in, Symbol<PlacedNdSbp> ou
   return Maybe<void>::Ok();
 }
 
-static constexpr auto* CheckSymmetricBToP = DECORATE(&RawCheckSymmetricBToP, ThreadLocalCopiable);
+static constexpr auto* CheckSymmetricBToP =
+    DECORATE(&RawCheckSymmetricBToP, ThreadLocalCachedCopiable);
 
 }  // namespace
 
@@ -66,7 +67,6 @@ Maybe<one::Tensor> SymmetricBToP(const std::shared_ptr<one::Tensor>& tensor, Sym
   if (root == GlobalProcessCtx::Rank()) {
     // do nothing
   } else {
-    const std::string& device_type = Device::Type4DeviceTag(tensor_placement->device_tag());
     local_tensor = JUST(one::functional::ZerosLike(local_tensor));
   }
   return JUST(one::functional::LocalToConsistent(local_tensor, out->placement(),

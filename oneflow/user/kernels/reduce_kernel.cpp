@@ -283,7 +283,8 @@ class ReduceSumFloatCudaKernel final : public user_op::OpKernel, public user_op:
       ones = static_cast<const float*>(cuda_device->GetConstOnes(DataType::kFloat, reduce_size));
     }
     if ((!axis.empty()) && in_shape.NumAxes() > 0 && is_axis_contiguous
-        && (outer_size == 1 || inner_size == 1) && ones != nullptr) {
+        && (outer_size == 1 || inner_size == 1) && ones != nullptr
+        && ParseBooleanFromEnv("ONEFLOW_KERNEL_REDUCE_SUM_USE_MATMUL", false)) {
       ep::primitive::BlasTransposeType trans_a = (inner_size == 1)
                                                      ? ep::primitive::BlasTransposeType::N
                                                      : ep::primitive::BlasTransposeType::T;

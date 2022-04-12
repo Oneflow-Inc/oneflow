@@ -59,7 +59,7 @@ Maybe<void> RawCheckNcclP2B(Symbol<PlacedNdSbp> in, Symbol<PlacedNdSbp> out,
   return Maybe<void>::Ok();
 }
 
-static constexpr auto* CheckNcclP2B = DECORATE(&RawCheckNcclP2B, ThreadLocalCopiable);
+static constexpr auto* CheckNcclP2B = DECORATE(&RawCheckNcclP2B, ThreadLocalCachedCopiable);
 
 Maybe<void> RawCheckNcclP2S(Symbol<PlacedNdSbp> in, Symbol<PlacedNdSbp> out,
                             const Shape& logical_shape) {
@@ -76,7 +76,7 @@ Maybe<void> RawCheckNcclP2S(Symbol<PlacedNdSbp> in, Symbol<PlacedNdSbp> out,
   return Maybe<void>::Ok();
 }
 
-static constexpr auto* CheckNcclP2S = DECORATE(&RawCheckNcclP2S, ThreadLocalCopiable);
+static constexpr auto* CheckNcclP2S = DECORATE(&RawCheckNcclP2S, ThreadLocalCachedCopiable);
 
 Maybe<void> RawCheckNcclS2B(Symbol<PlacedNdSbp> in, Symbol<PlacedNdSbp> out,
                             const Shape& logical_shape) {
@@ -93,7 +93,7 @@ Maybe<void> RawCheckNcclS2B(Symbol<PlacedNdSbp> in, Symbol<PlacedNdSbp> out,
   return Maybe<void>::Ok();
 }
 
-static constexpr auto* CheckNcclS2B = DECORATE(&RawCheckNcclS2B, ThreadLocalCopiable);
+static constexpr auto* CheckNcclS2B = DECORATE(&RawCheckNcclS2B, ThreadLocalCachedCopiable);
 
 Maybe<void> RawCheckNcclS2S(Symbol<PlacedNdSbp> in, Symbol<PlacedNdSbp> out,
                             const Shape& logical_shape) {
@@ -117,7 +117,7 @@ Maybe<void> RawCheckNcclS2S(Symbol<PlacedNdSbp> in, Symbol<PlacedNdSbp> out,
   return Maybe<void>::Ok();
 }
 
-static constexpr auto* CheckNcclS2S = DECORATE(&RawCheckNcclS2S, ThreadLocalCopiable);
+static constexpr auto* CheckNcclS2S = DECORATE(&RawCheckNcclS2S, ThreadLocalCachedCopiable);
 
 }  // namespace
 
