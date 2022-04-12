@@ -167,6 +167,28 @@ struct LambUpdateFunctor {
   }
 };
 
+template<typename T, typename G>
+struct FtrlUpdateFunctor {
+  OF_DEVICE_FUNC void operator()(const G* model_diff, T* model, T* accumulate, T* z, T scale, float l1, float l2, float lr_power,
+                                 float lambda1, float lambda2, float beta, 
+                                 float weight_decay, float learning_rate) {
+    const T model_val = *model;
+    const T z_val = *z; 
+    T model_diff_t =
+        CastScaleRegularizeGradientFunctor<T, G>()(*model_diff, model_val, scale, l1, l2);
+    const T accumulate_val = *accumulate;
+    const T next_accumulate_val = accumulate_val + model_diff_t * model_diff_t;
+    const T sigma = (powf(next_accumulate_val, lr_power) - powf(accumulate_val, lr_power)) / learning_rate; 
+    const T new_z_val = z_val + model_diff_t - sigma * model_val; 
+    if (abs(new_z_val) < lambda1){
+      *model = static_cast<T>(0.0); 
+    } else {
+      *model = (copysignf(lambda1, new_z_val) - new_z_val) / ((beta + powf(next_accumulate_val, lr_power)) / learning_rate + lambda2); 
+    }
+    *z = new_z_val; 
+  }
+};
+
 template<DeviceType device_type>
 struct BiasCorrectionFactorKernelUtil {
  public:
@@ -231,6 +253,15 @@ struct LambUpdateKernelUtil {
                      const float* bias_correction1_ptr, const float* bias_correction2_ptr,
                      const T* scale_by_ptr, const int64_t* skip_if, const G* model_diff,
                      T* adam_diff, T* model, T* m, T* v, T* norm_buffer);
+};
+
+template<DeviceType device_type, typename T, typename G>
+struct FtrlUpdateKernelUtil {
+  static void Update(ep::Stream* stream, int64_t n, T scale, float l1, float l2, float lr_power,
+                     float lambda1, float lambda2, float beta, float weight_decay, float learning_rate_val, 
+                     const float* learning_rate, 
+                     const T* scale_by_ptr, const int64_t* skip_if, const G* model_diff, T* model,
+                     T* accumulate, T* z);
 };
 
 template<typename T, typename G, bool centered>
