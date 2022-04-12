@@ -348,7 +348,7 @@ template<typename T, typename IndexType>
 void DispatchPreluBackwardSingleAlphaTail(ep::Stream* stream, const IndexType elem_cnt, const T* x,
                                           const T* alpha, const T* dy, T* dx, T* alpha_diff,
                                           const bool alpha_requires_grad) {
-  const int pack_size = cuda::elementwise::PackSize<T>();
+  constexpr int pack_size = cuda::elementwise::PackSize<T>();
   const int64_t pack_num = elem_cnt / pack_size;
   int grid_size;
   cudaError_t err = cuda::elementwise::GetNumBlocks(pack_num, &grid_size);
