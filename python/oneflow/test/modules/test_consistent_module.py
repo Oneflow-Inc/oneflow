@@ -117,9 +117,7 @@ class TestModule(flow.unittest.TestCase):
         for placement in all_placement():
             _test_parameter(test_case, placement)
             for sbp in all_sbp(placement, max_dim=2):
-                # test_module.py test cpu only.
-                if placement.type == "cpu":
-                    _test_nested_module(test_case, placement, sbp)
+                _test_nested_module(test_case, placement, sbp)
                 _test_relu(test_case, placement, sbp)
                 _test_load_state_dict(test_case, placement, sbp)
                 _test_module_float_double(test_case, placement, sbp)
