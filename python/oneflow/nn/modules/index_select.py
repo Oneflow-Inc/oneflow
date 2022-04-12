@@ -26,16 +26,7 @@ def index_select_op(input, dim, index):
     assert (
         dim < len(input.shape) and dim >= 0
     ), "Value of dim is out of range(dim should be in the range of [0, input dimensions) )"
-    # TODO(): tolist call numpy to do tolist which raise error in graph. 
-    #assert _input_args_is_int(
-    #    index.tolist()
-    #), "input index parameter is not legal!(index should be an 1-D int tensor)"
     index_rshp = list(input.shape)
-
-    #for index_i in index:
-    #    assert (
-    #        index_i < index_rshp[dim]
-    #    ), "index is out of range(index shuold be lower than the dim-th dimension of input)"
 
     index_rshp[dim] = 1
     index_gather = index[0].expand(*index_rshp)

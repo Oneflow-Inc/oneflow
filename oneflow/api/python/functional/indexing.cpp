@@ -18,6 +18,8 @@ limitations under the License.
 #include <object.h>
 #include <pybind11/pybind11.h>
 #include "oneflow/api/python/functional/common.h"
+#include "oneflow/core/common/just.h"
+#include "oneflow/core/common/maybe.h"
 #include "oneflow/extension/python/numpy.h"
 #include "oneflow/core/eager/eager_blob_object.h"
 #include "oneflow/core/register/ofblob.h"
@@ -173,8 +175,11 @@ Maybe<Tensor> ConvertToIndexingTensor(PyObject* object) {
   if (PyArray_Check(object)) { return TensorWithData(object, NullOpt, device, false); }
 
   const auto& sizes = JUST(InferArraySizes(object));
-  // TODO(): here create a lazy tensor
+  // NOTE(strint): here needs to create a eager tensor.
+  auto lazy_mode_disabled_guard = LazyMode::Guard(/*is_enabled*/ false);
   const auto& tensor = JUST(functional::Empty(*sizes, CHECK_JUST(DType::Get(dtype)), device));
+  CHECK_OR_RETURN(tensor->is_eager());
+  LOG(ERROR) << "tensor is eager " << tensor->is_eager() << std::endl;
   // Prevent the python object release until the callback is complete.
   Py_INCREF(object);
   auto handle = std::shared_ptr<PyObject>(PyObjectPtr(object));
@@ -185,7 +190,6 @@ Maybe<Tensor> ConvertToIndexingTensor(PyObject* object) {
         [handle](uint64_t ofblob_ptr) {
           auto* of_blob = reinterpret_cast<OfBlob*>(ofblob_ptr);
           CHECK_JUST(Global<ForeignLockHelper>::Get()->WithScopedAcquire([&]() -> Maybe<void> {
-            // TODO(): here try to get eager dagta from a lazy tensor
             JUST(ParseArrayToBlob(handle.get(), of_blob->mut_blob()));
             return Maybe<void>::Ok();
           }));
