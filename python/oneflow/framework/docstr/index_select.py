@@ -69,7 +69,7 @@ add_docstr(
               - backward [Yes]
               - gpu [Yes]
               - cpu [Yes]
-            - graph local [ ] [@strint, @hjchen2]
+            - graph local [ ] [@BBuf, @strint, @hjchen2]
               - forward [Yes]
               - backward [ ]
               - gpu [Yes]
