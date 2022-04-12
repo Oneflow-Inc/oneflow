@@ -206,6 +206,54 @@ add_docstr(
 )
 
 add_docstr(
+    oneflow.Tensor.new_zeros,
+    """
+    Tensor.new_zeros(size=None, dtype=None, device=None, placement=None, sbp=None, requires_grad=False) -> Tensor
+
+    Returns a Tensor of size size filled with 0. By default, the returned Tensor has the same torch.dtype and torch.device as this tensor.
+
+    Args:
+        size (int...): a list, tuple, or flow.Size of integers defining the shape of the output tensor.
+        dtype (flow.dtype, optional):  the desired type of returned tensor. Default: if None, same flow.dtype as this tensor.
+        device (flow.device, optional): the desired device of returned tensor. Default: if None, same flow.device as this tensor.
+        placement (flow.placement, optional): the desired placement of returned global tensor. Default: if None, the returned tensor is local one using the argument `device`.
+        sbp (flow.sbp.sbp or tuple of flow.sbp.sbp, optional): the desired sbp descriptor of returned global tensor. Default: if None, the returned tensor is local one using the argument `device`.
+        requires_grad (bool, optional): If autograd should record operations on the returned tensor. Default: False.
+
+    For example:
+
+    .. code-block:: python
+
+        >>> import numpy as np
+        >>> import oneflow as flow
+
+        >>> x = flow.Tensor(np.ones((1, 2, 3)))
+        >>> y = x.new_zeros((2, 2))
+        >>> y
+        tensor([[0., 0.],
+                [0., 0.]], dtype=oneflow.float32)
+    """,
+)
+
+add_docstr(
+    oneflow.Tensor.storage_offset,
+    """
+    Tensor.storage_offset() -> Tensor
+
+    Returns self tensor’s offset in the underlying storage in terms of number of storage elements (not bytes).
+
+    Example:
+
+    .. code-block:: python
+
+        >>> import oneflow as flow
+        >>> x = flow.tensor([1, 2, 3, 4, 5])
+        >>> x.storage_offset()
+        0
+    """,
+)
+
+add_docstr(
     oneflow.Tensor.to_global,
     """
     Tensor.to_global(placement=None, sbp=None, grad_sbp=None) -> Tensor
@@ -1680,6 +1728,24 @@ add_docstr(
 )
 
 add_docstr(
+    oneflow.Tensor.is_contiguous,
+    r"""
+    Tensor.is_contiguous() -> bool
+
+    Returns True if `self` tensor is contiguous in memory.
+    """,
+)
+
+add_docstr(
+    oneflow.Tensor.is_cuda,
+    r"""
+    Tensor.is_cuda() -> bool
+    
+    Is `True` if the Tensor is stored on the GPU, `False` otherwise.
+    """,
+)
+
+add_docstr(
     oneflow.Tensor.is_floating_point,
     """
     See :func:`oneflow.is_floating_point`
@@ -1732,5 +1798,28 @@ add_docstr(
     oneflow.Tensor.where,
     """
     See :func:`oneflow.where`
+    """,
+)
+
+add_docstr(
+    oneflow.Tensor.zero_,
+    r"""
+    Tensor.zero_() -> Tensor
+    
+    Fills `self` tensor with zeros.
+    """,
+)
+
+add_docstr(
+    oneflow.Tensor.isnan,
+    """
+    See :func:`oneflow.isnan`
+    """,
+)
+
+add_docstr(
+    oneflow.Tensor.isinf,
+    """
+    See :func:`oneflow.isinf`
     """,
 )

@@ -22,7 +22,6 @@ import oneflow.core.framework.variable_meta_info_pb2 as variable_meta_info_pb
 import numpy as np
 from typing import Union
 
-
 Tensor = flow._oneflow_internal.Tensor
 TensorTuple = flow._oneflow_internal.TensorTuple
 
@@ -119,7 +118,12 @@ def _meta_repr(self):
 
 
 def _eq(self, other):
-    return flow._C.equal(self, other)
+    if self is None and other is None:
+        return True
+    elif self is None or other is None:
+        return False
+    else:
+        return flow._C.equal(self, other)
 
 
 def _ne(self, other):
@@ -149,7 +153,7 @@ def _cpu(self):
 def _cuda(self, device: Union[int, str, flow.device] = None):
     if device is None:
         device = "cuda"
-    elif device is isinstance(int):
+    elif isinstance(device, int):
         device = "cuda:" + str(device)
     return self.to(device=device)
 
@@ -401,6 +405,10 @@ def _log1p(self):
     return flow.log1p(self)
 
 
+def _log2(self):
+    return flow._C.log2(self)
+
+
 def _reciprocal(self):
     return flow.reciprocal(self)
 
@@ -496,6 +504,28 @@ def _index(self):
     return self.numpy().item()
 
 
+def _invert(self):
+    if self.dtype != flow.bool:
+        raise TypeError(
+            "~ (operator.invert) is only implemented on integer and Boolean-type tensors"
+        )
+    return flow._C.logical_not(self)
+
+
+def _scalar_float(self):
+    assert (
+        self.numel() == 1
+    ), "only one element tensors can be converted to Python scalars"
+    return self.numpy().astype(np.float64).item()
+
+
+def _scalar_int(self):
+    assert (
+        self.numel() == 1
+    ), "only one element tensors can be converted to Python scalars"
+    return self.numpy().astype(np.int64).item()
+
+
 def _flatten(self, start_dim: int = 0, end_dim: int = -1):
     return flow._C.flatten(self, start_dim=start_dim, end_dim=end_dim)
 
@@ -535,6 +565,12 @@ def _new_ones(
     requires_grad=False,
 ):
     return flow.new_ones(self, size, dtype, device, placement, sbp, requires_grad)
+
+
+def _new_zeros(
+    self, *size, dtype=None, device=None, placement=None, sbp=None, requires_grad=False,
+):
+    return flow.new_zeros(self, size, dtype, device, placement, sbp, requires_grad)
 
 
 def _rsqrt(self):
@@ -1000,6 +1036,14 @@ def _to_consistent(self, *args, **kwargs):
     raise RuntimeError(".to_consistent has been removed, please use .to_global instead")
 
 
+def _isnan(self):
+    return flow.isnan(self)
+
+
+def _isinf(self):
+    return flow.isinf(self)
+
+
 def RegisterMethods():
     Tensor.__mul__ = lambda self, other: self.mul(other)
     Tensor.__rmul__ = lambda self, other: self.mul(other)
@@ -1047,6 +1091,10 @@ def RegisterMethods():
     Tensor.__len__ = _len
     Tensor.__mod__ = _fmod
     Tensor.__index__ = _index
+    Tensor.__invert__ = _invert
+    Tensor.__float__ = _scalar_float
+    Tensor.__int__ = _scalar_int
+    Tensor.__array__ = _numpy
     Tensor.uniform_ = _uniform
     Tensor.trunc_normal_ = _trunc_normal_
     Tensor.kaiming_uniform_ = _kaiming_uniform
@@ -1092,6 +1140,7 @@ def RegisterMethods():
     Tensor.diag = _diag
     Tensor.diagonal = _diagonal
     Tensor.log1p = _log1p
+    Tensor.log2 = _log2
     Tensor.add = _add
     Tensor.add_ = _add_inplace
     Tensor.div = _truediv
@@ -1132,6 +1181,7 @@ def RegisterMethods():
     Tensor.minimum = _minimum
     Tensor.maximum = _maximum
     Tensor.new_ones = _new_ones
+    Tensor.new_zeros = _new_zeros
     Tensor.pow = _pow
     Tensor.rsqrt = _rsqrt
     Tensor.sqrt = _sqrt
@@ -1204,6 +1254,8 @@ def RegisterMethods():
     Tensor.zero_ = _zero_
     Tensor.is_consistent = _is_consistent
     Tensor.to_consistent = _to_consistent
+    Tensor.isnan = _isnan
+    Tensor.isinf = _isinf
 
 
 def register_tensor_op(op_name):
