@@ -15,18 +15,19 @@ limitations under the License.
 */
 #ifdef WITH_CUDA
 #include "gtest/gtest.h"
-#include "oneflow/core/vm/cuda_allocator.h"
+#include "oneflow/core/vm/bin_allocator.h"
+#include "oneflow/core/vm/cuda_backend_allocator.h"
 #include "oneflow/core/vm/thread_safe_allocator.h"
 #include "oneflow/core/device/cuda_util.h"
 
 namespace oneflow {
 namespace vm {
 
-TEST(CudaAllocator, cuda_allocator) {
+TEST(CudaBinAllocator, cuda_allocator) {
   int gpu_num = -1;
   cudaGetDeviceCount(&gpu_num);
   if (gpu_num <= 0) {
-    LOG(INFO) << "CudaAllocator Test: Skip because of non GPU device.";
+    LOG(INFO) << "CudaBinAllocator Test: Skip because of non GPU device.";
     return;
   }
   ASSERT_TRUE(cudaSuccess == cudaSetDevice(0));
@@ -35,10 +36,12 @@ TEST(CudaAllocator, cuda_allocator) {
   const size_t remain_bytes = 50 * 1048576;
   ASSERT_TRUE(cudaSuccess == cudaMemGetInfo(&free_bytes, &total_bytes));
   if (free_bytes <= remain_bytes || free_bytes - remain_bytes < remain_bytes) {
-    LOG(INFO) << "CudaAllocator Test: Skip because of allocator mem bytes less than 50MiB in GPU 0";
+    LOG(INFO)
+        << "CudaBinAllocator Test: Skip because of allocator mem bytes less than 50MiB in GPU 0";
     return;
   }
-  std::unique_ptr<Allocator> allo(new CudaAllocator(0));
+  std::unique_ptr<Allocator> allo(
+      new BinAllocator(kCudaMemAllocAlignSize, std::make_unique<CudaBackendAllocator>(0)));
   allo.reset(new SingleThreadOnlyAllocator(std::move(allo)));
   Allocator* a = allo.get();
   std::vector<char*> ptrs;

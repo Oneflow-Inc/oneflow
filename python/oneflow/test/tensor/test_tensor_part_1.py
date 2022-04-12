@@ -113,6 +113,15 @@ class TestTensor(flow.unittest.TestCase):
         test_case.assertTrue(np.allclose(output.numpy(), np_arr))
 
     @flow.unittest.skip_unless_1n1d()
+    def test_construct_np_array_from_tensor(test_case):
+        tensor = flow.randn(5)
+        np_arr = np.array(tensor)
+        test_case.assertEqual(np_arr.shape, (5,))
+        test_case.assertEqual(np_arr.dtype, np.float32)
+        test_case.assertTrue(np.allclose(np_arr, tensor.numpy()))
+        test_case.assertEqual(str(np_arr), str(tensor.numpy()))
+
+    @flow.unittest.skip_unless_1n1d()
     @autotest(check_graph=True)
     def test_tensor_sign_with_random_data(test_case):
         device = random_device()
@@ -475,6 +484,19 @@ class TestTensor(flow.unittest.TestCase):
         compare_setitem_with_numpy(x, se[1, :, 2], v)
 
     @flow.unittest.skip_unless_1n1d()
+    @autotest(check_graph=True)
+    def test_setitem_with_random_data(test_case):
+        device = random_device()
+        x = random_tensor(low=0, high=0, ndim=1, dim0=16).to(device)
+        y = random_tensor(low=-2, high=2, ndim=1, dim0=16).to(device)
+        idx = random_tensor(
+            low=0, high=15, ndim=1, dim0=20, dtype=int, requires_grad=False
+        ).to(device)
+        z = y[idx]
+        x[idx] = z
+        return x
+
+    @flow.unittest.skip_unless_1n1d()
     def test_div(test_case):
         x = flow.Tensor(np.random.randn(1, 1))
         y = flow.Tensor(np.random.randn(2, 3))
@@ -758,6 +780,12 @@ class TestTensor(flow.unittest.TestCase):
         return x.log1p()
 
     @autotest(check_graph=True)
+    def test_log2_tensor_with_random_data(test_case):
+        device = random_device()
+        x = random_tensor().to(device)
+        return x.log2()
+
+    @autotest(check_graph=True)
     def test_neg_tensor_with_random_data(test_case):
         device = random_device()
         x = random_tensor().to(device)
@@ -1008,6 +1036,15 @@ class TestTensor(flow.unittest.TestCase):
         x = flow.tensor(2.3)
         y = int(x)
         test_case.assertTrue(np.array_equal(y, 2))
+
+    def test_none_equal(test_case):
+        xt = flow.randn(10)
+        yt = flow.randn(10)
+        z = None in [xt, yt]
+        test_case.assertTrue(np.array_equal(z, False))
+        zt = None
+        z = None in [xt, yt, zt]
+        test_case.assertTrue(np.array_equal(z, True))
 
 
 if __name__ == "__main__":
