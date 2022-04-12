@@ -26,12 +26,18 @@ def _test_linear_train_graph_with_zero(test_case, zero_stage=1):
         P = flow.placement("cuda", ranks=[0, 1])
         B = flow.sbp.broadcast
         S0 = flow.sbp.split(0)
-        linear = flow.nn.Linear(8, 4)
-        linear = linear.to_global(placement=P, sbp=B)
-        #linear_mp = flow.nn.Linear(4, 8)
-        flow.nn.init.constant_(linear.weight, 2.068758)
-        flow.nn.init.constant_(linear.bias, 0.23)
-        of_sgd = flow.optim.SGD(linear.parameters(), lr=0.001, momentum=0.9)
+
+        linear_dp = flow.nn.Linear(8, 4)
+        linear_dp = linear_dp.to_global(placement=P, sbp=B)
+        flow.nn.init.constant_(linear_dp.weight, 2.068758)
+        flow.nn.init.constant_(linear_dp.bias, 0.23)
+
+        linear_mp = flow.nn.Linear(2, 8)
+        linear_mp = linear_mp.to_global(placement=P, sbp=S0)
+        flow.nn.init.constant_(linear_mp.weight, 2.068758)
+        flow.nn.init.constant_(linear_mp.bias, 0.23)
+
+        of_sgd = flow.optim.SGD([{"params": linear_dp.parameters()}, {"params": linear_mp.parameters()}], lr=0.001, momentum=0.9)
         grad_scaler = flow.amp.StaticGradScaler(200)
 
         x = flow.randint(1, 100, (4, 8), dtype=flow.float32, placement=P, sbp=S0)
@@ -39,7 +45,8 @@ def _test_linear_train_graph_with_zero(test_case, zero_stage=1):
         class LinearTrainGraphWithZeRO(flow.nn.Graph):
             def __init__(self):
                 super().__init__()
-                self.linear = linear
+                self.linear_dp = linear_dp
+                self.linear_mp = linear_mp
                 self.add_optimizer(of_sgd)
 
                 self.config.enable_amp(True)
@@ -60,7 +67,9 @@ def _test_linear_train_graph_with_zero(test_case, zero_stage=1):
                     flow.boxing.nccl.disable_group_boxing_by_dst_parallel(True)
 
             def build(self, x):
-                out = self.linear(x)
+                out = self.linear_dp(x)
+                out = out.to_global(placement=P, sbp=B)
+                out = self.linear_mp(x)
                 loss = out.sum()
                 loss.backward()
                 return out
@@ -68,12 +77,15 @@ def _test_linear_train_graph_with_zero(test_case, zero_stage=1):
         class LinearEvalGraphWithZeRO(flow.nn.Graph):
             def __init__(self):
                 super().__init__()
-                self.linear = linear
+                self.linear_dp = linear_dp
+                self.linear_mp = linear_mp
 
                 self.config.enable_amp(True)
 
             def build(self, x):
-                out = self.linear(x)
+                out = self.linear_dp(x)
+                out = out.to_global(placement=P, sbp=B)
+                out = self.linear_mp(x)
                 return out
 
         linear_t_g = LinearTrainGraphWithZeRO()
