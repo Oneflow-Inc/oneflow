@@ -17,8 +17,9 @@ limitations under the License.
 #include "oneflow/core/vm/virtual_machine.h"
 #include "oneflow/core/vm/instruction.h"
 #include "oneflow/core/vm/instruction_type.h"
-#include "oneflow/core/vm/no_arg_cb_phy_instr_operand.h"
+#include "oneflow/core/vm/barrier_phy_instr_operand.h"
 #include "oneflow/core/vm/barrier_instruction_type.h"
+#include "oneflow/core/vm/barrier_phy_instr_operand.h"
 #include "oneflow/core/vm/vm_util.h"
 #include "oneflow/core/common/blocking_counter.h"
 #include "oneflow/core/common/cpp_attribute.h"
@@ -99,14 +100,14 @@ Maybe<Symbol<Stream>> GetBarrierStream() {
 void MakeBarrierInstructions(vm::InstructionList* list,
                              const std::function<void()>& BarrierCallback) {
   {
-    const auto& phy_instr_operand = std::make_shared<vm::NoArgCbPhyInstrOperand>([]() {});
+    const auto& phy_instr_operand = std::make_shared<vm::BarrierPhyInstrOperand>([]() {});
     auto stream = CHECK_JUST(GetBarrierStream());
     auto instruction = intrusive::make_shared<vm::Instruction>(
         stream->mut_vm_stream(), SingletonPtr<vm::GlobalSyncInstructionType>(), phy_instr_operand);
     list->EmplaceBack(std::move(instruction));
   }
   {
-    const auto& phy_instr_operand = std::make_shared<vm::NoArgCbPhyInstrOperand>(BarrierCallback);
+    const auto& phy_instr_operand = std::make_shared<vm::BarrierPhyInstrOperand>(BarrierCallback);
     auto stream = CHECK_JUST(GetBarrierStream());
     auto instruction = intrusive::make_shared<vm::Instruction>(
         stream->mut_vm_stream(), SingletonPtr<vm::BarrierInstructionType>(), phy_instr_operand);
@@ -374,8 +375,10 @@ Maybe<vm::ThreadCtx*> VirtualMachine::CreateThreadCtx(Symbol<Device> device,
       OF_PROFILER_NAME_THIS_HOST_THREAD("_VM::Worker_" + device_tag);
     };
     auto thread = std::make_unique<std::thread>(&WorkerLoop, thread_ctx, WorkerInitializer);
-    std::unique_lock<std::mutex> lock(worker_threads_mutex_);
-    worker_threads_.push_back(std::move(thread));
+    {
+      std::unique_lock<std::mutex> lock(worker_threads_mutex_);
+      worker_threads_.push_back(std::move(thread));
+    }
   }
   return thread_ctx;
 }

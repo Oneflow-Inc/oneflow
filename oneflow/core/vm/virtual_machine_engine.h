@@ -104,14 +104,15 @@ class VirtualMachineEngine final : public intrusive::Base {
   ReadyInstructionList* mut_ready_instruction_list() { return &ready_instruction_list_; }
 
   void ReleaseFinishedInstructions(const ScheduleCtx& schedule_ctx);
-  void MoveInstructionToGarbageList(intrusive::shared_ptr<Instruction>&& instruction,
+  void MoveInstructionToGarbageList(int flush_window_size,
+                                    intrusive::shared_ptr<Instruction>&& instruction,
                                     const ScheduleCtx& schedule_ctx);
   void HandleLocalPending();
   void GetRewritedPendingInstructionsByWindowSize(size_t window_size,
                                                   InstructionList* /*out*/ pending_instructions);
   void MakeAndAppendFusedInstruction(InstructionList&& fused_instruction_list,
                                      InstructionList* /*out*/ pending_instructions);
-  void TryRunBarrierInstruction();
+  void TryRunBarrierInstruction(const ScheduleCtx& schedule_ctx);
   void DispatchAndPrescheduleInstructions(const ScheduleCtx& schedule_ctx);
   bool OnSchedulerThread(const vm::Stream& stream);
 
