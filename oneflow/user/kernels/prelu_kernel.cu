@@ -232,23 +232,32 @@ template<typename T, typename IndexType, int32_t pack_size>
 void DispatchPreluForwardPackSize(ep::Stream* stream, const int64_t elem_cnt,
                                   const int64_t alpha_size, const int64_t inner_size, const T* x,
                                   const T* alpha, T* y) {
-  const int64_t pack_num = elem_cnt / pack_size;
   int grid_size;
-  cudaError_t err = cuda::elementwise::GetNumBlocks(pack_num, &grid_size);
-
   if (pack_size >= 8 && inner_size % 8 == 0) {
+    const int64_t pack_num = elem_cnt / 8;
+    cudaError_t err = cuda::elementwise::GetNumBlocks(pack_num, &grid_size);
+
     PReluForwardMultiAlphaGpu<T, IndexType, 8>
         <<<grid_size, kBlockSize, 0, stream->As<ep::CudaStream>()->cuda_stream()>>>(
             elem_cnt, alpha_size, inner_size, x, alpha, y);
   } else if (pack_size >= 4 && inner_size % 4 == 0) {
+    const int64_t pack_num = elem_cnt / 4;
+    cudaError_t err = cuda::elementwise::GetNumBlocks(pack_num, &grid_size);
+
     PReluForwardMultiAlphaGpu<T, IndexType, 4>
         <<<grid_size, kBlockSize, 0, stream->As<ep::CudaStream>()->cuda_stream()>>>(
             elem_cnt, alpha_size, inner_size, x, alpha, y);
   } else if (pack_size >= 2 && inner_size % 2 == 0) {
+    const int64_t pack_num = elem_cnt / 2;
+    cudaError_t err = cuda::elementwise::GetNumBlocks(pack_num, &grid_size);
+
     PReluForwardMultiAlphaGpu<T, IndexType, 2>
         <<<grid_size, kBlockSize, 0, stream->As<ep::CudaStream>()->cuda_stream()>>>(
             elem_cnt, alpha_size, inner_size, x, alpha, y);
   } else {
+    const int64_t pack_num = elem_cnt;
+    cudaError_t err = cuda::elementwise::GetNumBlocks(pack_num, &grid_size);
+
     BroadcastPReluMultiAlphaNaiveForwardGpu<T>
         <<<grid_size, kBlockSize, 0, stream->As<ep::CudaStream>()->cuda_stream()>>>(
             elem_cnt, alpha_size, inner_size, x, alpha, y);
@@ -274,11 +283,11 @@ void DispatchPreluBackwardPackSize(ep::Stream* stream, const int64_t elem_cnt,
                                    const int64_t alpha_size, const int64_t inner_size, const T* x,
                                    const T* alpha, const T* dy, T* dx, T* alpha_diff,
                                    const bool alpha_requires_grad) {
-  const int64_t pack_num = elem_cnt / pack_size;
   int grid_size;
-  cudaError_t err = cuda::elementwise::GetNumBlocks(pack_num, &grid_size);
 
   if (pack_size >= 8 && inner_size % 8 == 0) {
+    const int64_t pack_num = elem_cnt / 8;
+    cudaError_t err = cuda::elementwise::GetNumBlocks(pack_num, &grid_size);
     if (alpha_requires_grad) {
       PReluBackwardMultiAlphaGpu<T, IndexType, 8, true>
           <<<grid_size, kBlockSize, 0, stream->As<ep::CudaStream>()->cuda_stream()>>>(
@@ -289,6 +298,8 @@ void DispatchPreluBackwardPackSize(ep::Stream* stream, const int64_t elem_cnt,
               elem_cnt, alpha_size, inner_size, x, alpha, dy, dx, alpha_diff);
     }
   } else if (pack_size >= 4 && inner_size % 4 == 0) {
+    const int64_t pack_num = elem_cnt / 4;
+    cudaError_t err = cuda::elementwise::GetNumBlocks(pack_num, &grid_size);
     if (alpha_requires_grad) {
       PReluBackwardMultiAlphaGpu<T, IndexType, 4, true>
           <<<grid_size, kBlockSize, 0, stream->As<ep::CudaStream>()->cuda_stream()>>>(
@@ -299,6 +310,8 @@ void DispatchPreluBackwardPackSize(ep::Stream* stream, const int64_t elem_cnt,
               elem_cnt, alpha_size, inner_size, x, alpha, dy, dx, alpha_diff);
     }
   } else if (pack_size >= 2 && inner_size % 2 == 0) {
+    const int64_t pack_num = elem_cnt / 2;
+    cudaError_t err = cuda::elementwise::GetNumBlocks(pack_num, &grid_size);
     if (alpha_requires_grad) {
       PReluBackwardMultiAlphaGpu<T, IndexType, 2, true>
           <<<grid_size, kBlockSize, 0, stream->As<ep::CudaStream>()->cuda_stream()>>>(
@@ -310,6 +323,8 @@ void DispatchPreluBackwardPackSize(ep::Stream* stream, const int64_t elem_cnt,
     }
 
   } else {
+    const int64_t pack_num = elem_cnt;
+    cudaError_t err = cuda::elementwise::GetNumBlocks(pack_num, &grid_size);
     if (alpha_requires_grad) {
       BroadcastPReluMultiAlphaNaiveBackwardGpu<T, true>
           <<<grid_size, kBlockSize, 0, stream->As<ep::CudaStream>()->cuda_stream()>>>(
