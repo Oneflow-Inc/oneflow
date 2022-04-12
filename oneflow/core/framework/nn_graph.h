@@ -16,9 +16,12 @@ limitations under the License.
 #ifndef ONEFLOW_CORE_FRAMEWORK_NN_GRAPH_H_
 #define ONEFLOW_CORE_FRAMEWORK_NN_GRAPH_H_
 
+#include <memory>
+#include "oneflow/core/common/util.h"
 #include "oneflow/core/framework/nn_graph_if.h"
 #include "oneflow/core/framework/tensor.h"
 #include "oneflow/core/framework/tensor_tuple.h"
+#include "oneflow/core/framework/multi_client_session_context.h"
 #include "oneflow/core/job/job.pb.h"
 #include "oneflow/core/job/plan.pb.h"
 #include "oneflow/core/job/runtime.h"
@@ -29,8 +32,10 @@ class Blob;
 
 class NNGraph final : public NNGraphIf {
  public:
-  explicit NNGraph(const std::string& name)
-      : name_(name), runtime_inited_(false), is_closed_(false) {}
+  explicit NNGraph(const std::string& name,
+                   const std::shared_ptr<MultiClientSessionContext>& sessioin_ctx)
+      : name_(name), session_ctx_(sessioin_ctx), runtime_inited_(false), is_closed_(false) {}
+  OF_DISALLOW_COPY_AND_MOVE(NNGraph);
   ~NNGraph();
 
   const std::string& job_name() const override { return name_; }
@@ -68,6 +73,7 @@ class NNGraph final : public NNGraphIf {
   void CloseRuntimeBuffers();
 
   std::string name_;
+  std::shared_ptr<MultiClientSessionContext> session_ctx_;
   std::vector<std::string> inputs_op_names_;
   std::vector<std::string> outputs_op_names_;
   std::vector<bool> input_tensors_valid_;
