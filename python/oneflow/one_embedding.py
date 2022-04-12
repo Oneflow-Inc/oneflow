@@ -13,8 +13,11 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 """
+from typing import Callable, Dict, Iterator, List, Union
 import oneflow as flow
 from oneflow.nn.module import Module
+from oneflow.nn.optimizer.optimizer import Optimizer
+from oneflow.nn.parameter import Parameter
 import json
 import datetime
 from oneflow._oneflow_internal import OneEmbeddingHandler
@@ -541,3 +544,121 @@ def make_table(initializer):
     See also :func:`oneflow.one_embedding.make_table_options`
     """
     return make_table_options(initializer)
+
+
+class FTRL(Optimizer):
+    def __init__(
+        self,
+        params: Union[Iterator[Parameter], List[Dict]],
+        lr: float = 0.001,
+        weight_decay: float = 0.0,
+        lr_power: float = -0.5,
+        initial_accumulator_value: float = 0.1,
+        lambda1: float = 0.0,
+        lambda2: float = 0.0,
+        beta: float = 0.0,
+    ):
+        assert lr >= 0.0, f"Invalid learning rate: {lr}"
+        assert weight_decay >= 0.0, f"Invalid weight_decay value: {weight_decay}"
+        options = dict()
+        options["lr"] = lr
+        options["weight_decay"] = weight_decay
+        options["lr_power"] = lr_power
+        options["initial_accumulator_value"] = initial_accumulator_value
+        options["lambda1"] = lambda1
+        options["lambda2"] = lambda2
+        options["beta"] = beta
+        super().__init__(params, options)
+
+        for param_group in self.param_groups:
+            for param in param_group.parameters:
+                assert param.is_leaf, "parameters must be leaf tensor"
+                self._state[param] = dict()
+                self._state[param]["accumulator_value"] = flow.zeros_like(param).fill_(
+                    initial_accumulator_value
+                )
+
+        self._op = (
+            flow.stateful_op("ftrl_update")
+            .Input("model")
+            .Input("model_diff")
+            .Input("accumulate")
+            .Input("z")
+            .Build()
+        )
+
+    def step(self, closure: Callable = None):
+        """Performs a single optimization step.
+
+        Args:
+            closure (callable, optional): A closure that reevaluates the model
+                and returns the loss.
+        """
+        with flow.no_grad():
+            loss = None
+            if closure is not None:
+                loss = closure()
+
+            for param_group in self.param_groups:
+                kwargs = {
+                    "learning_rate": param_group["lr"],
+                    "l2": param_group["weight_decay"],
+                    "lr_power": param_group["lr_power"],
+                    "lambda1": param_group["lambda1"],
+                    "lambda2": param_group["lambda2"],
+                    "beta": param_group["beta"],
+                }
+                for param in param_group.parameters:
+                    if param.grad is None:
+                        continue
+                    if "z" not in self._state[param]:
+                        self._state[param]["z"] = flow.zeros_like(param)
+
+                    accumulate_tensor = self._state[param]["accumulator_value"]
+                    z_tensor = self._state[param]["z"]
+
+                    flow._C.dispatch_ftrl_update(
+                        self._op_without_amsgrad,
+                        (param, param.grad, accumulate_tensor, z_tensor),
+                        **kwargs,
+                    )
+
+            return loss
+
+    def _generate_conf_for_graph(self, train_conf, vars_conf):
+        new_opt_confs = []
+        for param_group in self.param_groups:
+            optimizer_conf = train_conf.mutable_optimizer_conf().Add()
+
+            lr = (
+                param_group["initial_lr"]
+                if "initial_lr" in param_group
+                else param_group["lr"]
+            )
+
+            l2 = (param_group["weight_decay"],)
+            lr_power = (param_group["lr_power"],)
+            lambda1 = (param_group["lambda1"],)
+            lambda2 = (param_group["lambda2"],)
+            beta = (param_group["beta"],)
+
+            optimizer_conf.set_base_learning_rate(lr)
+
+            optimizer_conf.mutable_ftrl_conf().set_lr_power(lr_power)
+            optimizer_conf.mutable_ftrl_conf().set_lambda1(lambda1)
+            optimizer_conf.mutable_ftrl_conf().set_lambda2(lambda2)
+            optimizer_conf.mutable_ftrl_conf().set_beta(beta)
+
+            self._generate_grad_clip_conf_for_optim_conf(param_group, optimizer_conf)
+
+            for param in param_group.parameters:
+                vars_conf[param].l2 = l2
+                if param.requires_grad:
+                    optimizer_conf.add_variable_op_names(vars_conf[param].name)
+
+            new_opt_confs.append(optimizer_conf)
+        return new_opt_confs
+
+    @property
+    def support_sparse(self):
+        return True
