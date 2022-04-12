@@ -49,7 +49,7 @@ class TestNewTensor(flow.unittest.TestCase):
 
     @flow.unittest.skip_unless_1n2d()
     def test_new_tensor_global_mode_with_spec_args(test_case):
-        placement = flow.placement(type="cpu", rank=[0, 1])
+        placement = flow.placement(type="cuda", rank=[0, 1])
         sbp = flow.sbp.split(0)
         tensor = flow.randn(4, 4, placement=placement, sbp=sbp)
         data = [[1, 2], [3, 4]]
