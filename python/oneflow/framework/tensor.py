@@ -697,6 +697,19 @@ def _len(self):
     return self.shape[0]
 
 
+def _orthogonal(self, gain=1.0):
+    nout = self.shape[0]
+    nin = np.prod(self.shape[1:])
+    tmp = np.random.normal(0.0, 1.0, size=(nout, nin))
+    u, _, v = np.linalg.svd(tmp, full_matrices=False) # pylint: disable=invalid-name
+    if u.shape == tmp.shape:
+        res = u
+    else:
+        res = v
+    self = flow.tensor(res.reshape(self.shape))
+    return self
+
+
 def _uniform(self, a=0, b=1):
     if isinstance(a, Tensor):
         assert a.ndim == 0 and a.nelement() == 1, "a must be a number or scalar tensor!"
@@ -1096,6 +1109,7 @@ def RegisterMethods():
     Tensor.kaiming_uniform_ = _kaiming_uniform
     Tensor.kaiming_normal_ = _kaiming_normal
     Tensor.xavier_normal_ = _xavier_normal
+    Tensor.orthogonal_ = _orthogonal
     Tensor.xavier_uniform_ = _xavier_uniform
     Tensor.normal_ = _normal
     Tensor.fill_ = _fill
