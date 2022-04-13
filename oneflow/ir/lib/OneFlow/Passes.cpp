@@ -430,8 +430,10 @@ NamedAttrList GetUserOpCommonAttrs(MLIRContext* ctx, const std::string& op_name)
             SmallVector<Value, 4>({bn_op.beta(), mul_op_bias.out()}),
             GetUserOpCommonAttrs(ctx, "sub_bias"));
         operands.push_back(sub_op_bias.z());
+      } else {
+        emitError(conv_op.getLoc())
+            << "Fusing conv2d and batch_norm only support conv2d without bias";
       }
-      // if (conv_op.bias()) operands.push_back(conv_op.bias());
       if (conv_op.bias_multiplier()) operands.push_back(conv_op.bias_multiplier());
 
       auto new_conv_op = rewriter.create<oneflow::Conv2DOp>(
