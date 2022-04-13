@@ -380,6 +380,7 @@ Maybe<void> FtrlInputArgModifyFn(const user_op::GetInputArgModifier& GetInputArg
                                  const user_op::UserOpConfWrapper& conf) {
   JUST(SetInputArgModifierMutable(GetInputArgModifierFn, "model", 0));
   JUST(SetInputArgModifierMutable(GetInputArgModifierFn, "accumulate", 0));
+  JUST(SetInputArgModifierMutable(GetInputArgModifierFn, "z", 0));
   return Maybe<void>::Ok();
 }
 
@@ -837,6 +838,7 @@ Maybe<void> InferLarsUpdateDataType(user_op::InferContext* ctx) {
         .Split(user_op::OpArg("model", 0), axis)
         .Split(user_op::OpArg("model_diff", 0), axis)
         .Split(user_op::OpArg("accumulate", 0), axis)
+        .Split(user_op::OpArg("z", 0), axis)
         .Build();
   }
   return Maybe<void>::Ok();

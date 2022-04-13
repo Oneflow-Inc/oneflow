@@ -5748,7 +5748,7 @@ def OneFlow_FtrlUpdateOp : OneFlow_BaseOp<"ftrl_update", [NoGrad, AttrSizedOpera
     OneFlow_Tensor:$model_diff,
     Optional<OneFlow_Tensor>:$learning_rate,
     Optional<OneFlow_Tensor>:$skip_if,
-    OneFlow_Tensor:$accumlate, 
+    OneFlow_Tensor:$accumulate, 
     OneFlow_Tensor:$z
   );
   let attrs = (ins
@@ -5757,6 +5757,7 @@ def OneFlow_FtrlUpdateOp : OneFlow_BaseOp<"ftrl_update", [NoGrad, AttrSizedOpera
     DefaultValuedAttr<F32Attr, "0.">:$l1,
     DefaultValuedAttr<F32Attr, "0.">:$l2,
     DefaultValuedAttr<F32Attr, "0.">:$weight_decay, 
+    DefaultValuedAttr<F32Attr, "0.">:$lr_power, 
     DefaultValuedAttr<F32Attr, "0.">:$lambda1, 
     DefaultValuedAttr<F32Attr, "0.">:$lambda2, 
     DefaultValuedAttr<F32Attr, "0.">:$beta

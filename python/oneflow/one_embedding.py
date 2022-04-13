@@ -636,14 +636,17 @@ class FTRL(Optimizer):
                 else param_group["lr"]
             )
 
-            l2 = (param_group["weight_decay"],)
-            lr_power = (param_group["lr_power"],)
-            lambda1 = (param_group["lambda1"],)
-            lambda2 = (param_group["lambda2"],)
-            beta = (param_group["beta"],)
+            l2 = param_group["weight_decay"]
+            initial_accumulator_value = param_group["initial_accumulator_value"]
+            lr_power = param_group["lr_power"]
+            lambda1 = param_group["lambda1"]
+            lambda2 = param_group["lambda2"]
+            beta = param_group["beta"]
 
             optimizer_conf.set_base_learning_rate(lr)
-
+            optimizer_conf.mutable_ftrl_conf().set_initial_accumulator_value(
+                initial_accumulator_value
+            )
             optimizer_conf.mutable_ftrl_conf().set_lr_power(lr_power)
             optimizer_conf.mutable_ftrl_conf().set_lambda1(lambda1)
             optimizer_conf.mutable_ftrl_conf().set_lambda2(lambda2)
