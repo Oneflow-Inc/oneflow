@@ -165,7 +165,7 @@ class no_grad:
 
 class set_grad_enabled:
     r"""
-     Context-manager that enabled gradient calculation.
+    Context-manager that enabled gradient calculation.
 
     Enables gradient calculation, if it has been disabled via no_grad.
 
@@ -175,22 +175,22 @@ class set_grad_enabled:
 
 
     Args:
-        mode (bool): Flag whether to enable or disable gradient calculation. . (default: True)
+        mode (bool): Flag whether to enable or disable gradient calculation. (default: True)
 
     .. code-block:: python
 
         >>> import oneflow as flow
         >>> x = flow.ones(2, 3, requires_grad=True)
-        >>> with flow.set_grad_enabled():
+        >>> with flow.set_grad_enabled(True):
         ...     y = x * x
         >>> y.requires_grad
         True
-        >>> @flow.set_grad_enabled()
+        >>> @flow.set_grad_enabled(False)
         ... def no_grad_func(x):
         ...     return x * x
         >>> y = no_grad_func(x)
         >>> y.requires_grad
-        True
+        False
         
     """
 
@@ -210,12 +210,6 @@ class set_grad_enabled:
 
     def __exit__(self, exc_type, exc_val, exc_tb):
         pass
-
-
-
-
-
-
 
 
 if __name__ == "__main__":

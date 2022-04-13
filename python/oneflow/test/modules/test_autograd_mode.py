@@ -15,8 +15,8 @@ limitations under the License.
 """
 
 import unittest
-import oneflow as flow
 
+import oneflow as flow
 import oneflow.unittest
 
 
@@ -47,7 +47,7 @@ class TestAutogradMode(oneflow.unittest.TestCase):
         func()
         test_case.assertTrue(flow.is_grad_enabled())
 
-    def test_grad_enable(test_case):
+    def test_enable_grad(test_case):
         with flow.enable_grad():
             test_case.assertTrue(flow.is_grad_enabled())
         test_case.assertTrue(flow.is_grad_enabled())
@@ -71,7 +71,6 @@ class TestAutogradMode(oneflow.unittest.TestCase):
         func()
         test_case.assertTrue(flow.is_grad_enabled())
 
-
     def test_set_grad_enabled(test_case):
         with flow.set_grad_enabled(True):
             test_case.assertFalse(flow.is_grad_enabled())
@@ -94,9 +93,6 @@ class TestAutogradMode(oneflow.unittest.TestCase):
 
         func()
         test_case.assertTrue(flow.is_grad_enabled())
-
-
-
 
 
 if __name__ == "__main__":

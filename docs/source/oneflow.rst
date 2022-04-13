@@ -160,7 +160,7 @@ oneflow
             is_tensor,
             no_grad,
             set_grad_enabled,
-            grad_enable,
+            enable_grad,
             inference_mode,
             is_grad_enabled,
             is_floating_point,
