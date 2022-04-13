@@ -113,7 +113,7 @@ def _test_floordiv_with_scalar(test_case, placement, sbp, ndim):
 @autotest(n=1, check_graph=False)
 def _test_arccos(test_case, placement, sbp, ndim):
     dim_list = [random(1, 3).to(int).value() * 8 for _ in range(ndim)]
-    x = random_tensor(ndim, *dim_list, low=0, high=1).to_global(placement, sbp)
+    x = random_tensor(ndim, *dim_list, low=-1, high=1).to_global(placement, sbp)
     y = torch.arccos(x)
     return y
 
@@ -121,7 +121,7 @@ def _test_arccos(test_case, placement, sbp, ndim):
 @autotest(n=1, check_graph=False)
 def _test_acos(test_case, placement, sbp, ndim):
     dim_list = [random(1, 3).to(int).value() * 8 for _ in range(ndim)]
-    x = random_tensor(ndim, *dim_list, low=0, high=1).to_global(placement, sbp)
+    x = random_tensor(ndim, *dim_list, low=-1, high=1).to_global(placement, sbp)
     y = torch.acos(x)
     return y
 
