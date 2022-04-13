@@ -313,5 +313,6 @@ class TestNormModule(flow.unittest.TestCase):
         m = torch.linalg.vector_norm(input, ord=0, dim=dim, keepdim=keepdim)
         return m
 
+
 if __name__ == "__main__":
     unittest.main()
