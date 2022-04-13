@@ -97,7 +97,7 @@ Maybe<void> AutogradInterpreter::Apply(const OpExpr& op_expr, const TensorTuple&
   TensorTuple tmp_inputs(inputs.size());
   // NOTE: if this op not in view_ops_set, then need to tensor->contiguous()
   if (view_ops_set.find(op_expr.op_type_name()) == view_ops_set.end()) {
-    for (size_t i = 0; i < inputs.size(); i++) { tmp_inputs.at(i) = inputs.at(i)->contiguous(); }
+    for (size_t i = 0; i < inputs.size(); i++) { tmp_inputs[i] = inputs[i]->contiguous(); }
     contiguous_inputs = &tmp_inputs;
   }
 
