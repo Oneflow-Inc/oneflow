@@ -432,7 +432,7 @@ NamedAttrList GetUserOpCommonAttrs(MLIRContext* ctx, const std::string& op_name)
         operands.push_back(sub_op_bias.z());
       } else {
         emitError(conv_op.getLoc())
-            << "Fusing conv2d and batch_norm only support conv2d without bias";
+            << "Fusing conv2d and batch_norm only supports conv2d without bias now.";
       }
       if (conv_op.bias_multiplier()) operands.push_back(conv_op.bias_multiplier());
 
