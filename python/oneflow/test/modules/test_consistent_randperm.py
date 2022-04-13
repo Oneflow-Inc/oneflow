@@ -31,7 +31,7 @@ def _test_consistent_randperm(test_case, N, placement, sbp, dtype):
 
 
 def _test_graph_randperm(test_case, N, placement, sbp, dtype):
-    class ConsistentRandGraph(flow.nn.Graph):
+    class ConsistentRandpermGraph(flow.nn.Graph):
         def __init__(self,):
             super().__init__()
 
@@ -39,7 +39,7 @@ def _test_graph_randperm(test_case, N, placement, sbp, dtype):
             x = flow.randperm(N, placement=placement, sbp=sbp, dtype=dtype)
             return x
 
-    model = ConsistentRandGraph()
+    model = ConsistentRandpermGraph()
     x = model()
     y1 = x.to_global(placement=placement, sbp=sbp)
     y1_np_sort = np.sort(y1.numpy())
@@ -50,9 +50,9 @@ def _test_graph_randperm(test_case, N, placement, sbp, dtype):
     test_case.assertEqual(x.placement, placement)
 
 
-class TestRandConsistent(flow.unittest.TestCase):
+class TestRandpermConsistent(flow.unittest.TestCase):
     @globaltest
-    def test_rand_consistent(test_case):
+    def test_randperm_consistent(test_case):
         RandNs = [i for i in range(10, 50, 10)]
         Dtypes = [
             flow.int32,
@@ -64,7 +64,7 @@ class TestRandConsistent(flow.unittest.TestCase):
                         _test_consistent_randperm(test_case, N, placement, sbp, dtype)
 
     @globaltest
-    def test_rand_graph(test_case):
+    def test_randperm_graph(test_case):
         arg_dict = OrderedDict()
         arg_dict["N"] = [i for i in range(10, 50, 10)]
         arg_dict["placement"] = [
