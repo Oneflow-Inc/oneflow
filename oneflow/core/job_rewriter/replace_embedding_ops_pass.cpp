@@ -462,6 +462,14 @@ void BuildEmbeddingUpdate(JobPassCtx* ctx, const OpGraph& op_graph, JobBuilder* 
       embedding_update_op_builder.Input("bias_correction1", bias_correction1_lbn)
           .Input("bias_correction2", bias_correction2_lbn);
     }
+  } else if (optimizer_conf.has_ftrl_conf()) {
+    const FtrlModelUpdateConf& ftrl_conf = optimizer_conf.ftrl_conf();
+    // TODO: add accumulator initialize val
+    embedding_update_op_builder.OpTypeName("ftrl_embedding_update")
+        .Attr<float>("lr_power", ftrl_conf.lr_power())
+        .Attr<float>("lambda1", ftrl_conf.lambda1())
+        .Attr<float>("lambda2", ftrl_conf.lambda2())
+        .Attr<float>("beta", ftrl_conf.beta());
   } else {
     UNIMPLEMENTED();
   }

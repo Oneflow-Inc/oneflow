@@ -9269,8 +9269,8 @@ def OneFlow_UpsampleTrilinear3DGradOp : OneFlow_BaseOp<"upsample_trilinear_3d_gr
 #endif // GET_ONEFLOW_UPSAMPLE_OP_DEFINITIONS
 
 // Group: OneEmbedding
-// embedding_lookup_placeholder, embedding_update_placeholder, id_shuffle, embedding_shuffle, embedding_gradient_shuffle, embedding_prefetch, embedding_lookup, sgd_embedding_update, embedding_put
-// Total: 9
+// embedding_lookup_placeholder, embedding_update_placeholder, id_shuffle, embedding_shuffle, embedding_gradient_shuffle, embedding_prefetch, embedding_lookup, sgd_embedding_update, embedding_put, ftrl_embedding_update
+// Total: 10
 
 #ifdef GET_ONEFLOW_ONE_EMBEDDING_OP_DEFINITIONS
 
@@ -9521,6 +9521,36 @@ def OneFlow_EmbeddingPutOp : OneFlow_BaseOp<"embedding_put", [DeclareOpInterface
   );
   let attrs = (ins
     StrAttr:$embedding_name
+  );
+  let same_output_regst_num = 1;
+  let has_logical_tensor_desc_infer_fn = 1;
+  let has_physical_tensor_desc_infer_fn = 1;
+  let has_get_sbp_fn = 1;
+  let has_data_type_infer_fn = 1;
+}
+
+def OneFlow_FtrlEmbeddingUpdateOp : OneFlow_BaseOp<"ftrl_embedding_update", [AttrSizedOperandSegments, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
+  let input = (ins
+    OneFlow_Tensor:$num_unique_ids,
+    OneFlow_Tensor:$unique_embeddings,
+    OneFlow_Tensor:$embedding_grad,
+    OneFlow_Tensor:$learning_rate,
+    Optional<OneFlow_Tensor>:$down_scale_by_tensor,
+    Optional<OneFlow_Tensor>:$skip_if,
+    OneFlow_Tensor:$accumlate, 
+    OneFlow_Tensor:$z
+  );
+  let output = (outs
+    OneFlow_Tensor:$updated_unique_embeddings
+  );
+  let attrs = (ins
+    DefaultValuedAttr<F64Attr, "1.">:$scale,
+    DefaultValuedAttr<F32Attr, "0.">:$l1,
+    DefaultValuedAttr<F32Attr, "0.">:$l2,
+    DefaultValuedAttr<F32Attr, "0.">:$weight_decay, 
+    DefaultValuedAttr<F32Attr, "0.">:$lambda1, 
+    DefaultValuedAttr<F32Attr, "0.">:$lambda2, 
+    DefaultValuedAttr<F32Attr, "0.">:$beta
   );
   let same_output_regst_num = 1;
   let has_logical_tensor_desc_infer_fn = 1;
