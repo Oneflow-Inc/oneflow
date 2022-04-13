@@ -18,11 +18,10 @@ from collections import OrderedDict
 
 import oneflow as flow
 import oneflow.unittest
-
 from oneflow.test_utils.automated_test_util import *
 
 
-@autotest(n=10, check_graph=False)
+@autotest(n=2, check_graph=False)
 def test_sort_impl(test_case, placement, sbp):
     x_dims = [random(2, 4) * 8 for _ in range(4)]
     x = random_tensor(4, *x_dims)

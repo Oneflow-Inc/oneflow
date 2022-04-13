@@ -18,14 +18,13 @@ import unittest
 
 import oneflow as flow
 import oneflow.unittest
-
 from oneflow.test_utils.automated_test_util import *
 
 
-@autotest(n=5, check_graph=False)
+@autotest(n=2, check_graph=False)
 def test_repeat_impl(test_case, ndim, placement, sbp):
-    dims = [random(1, 4) * 8 for _ in range(ndim)]
-    repeat_size = [random(1, 4).to(int).value() for _ in range(ndim)]
+    dims = [random(1, 4).to(int).value() * 8 for _ in range(ndim)]
+    repeat_size = [random(1, 4).to(int).value() * 8 for _ in range(ndim)]
     x = random_tensor(ndim, *dims)
     y = x.to_global(placement=placement, sbp=sbp)
     z = y.repeat(repeat_size)
@@ -35,8 +34,8 @@ def test_repeat_impl(test_case, ndim, placement, sbp):
 class TestRepeatConsistent(flow.unittest.TestCase):
     @globaltest
     def test_repeat(test_case):
-        # random ndim in range [1,4]
-        ndim = random(1, 5).to(int).value()
+        # random ndim in range [1,3]
+        ndim = random(1, 4).to(int).value()
         for placement in all_placement():
             for sbp in all_sbp(placement, max_dim=ndim):
                 test_repeat_impl(test_case, ndim, placement, sbp)

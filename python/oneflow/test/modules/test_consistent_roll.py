@@ -16,14 +16,12 @@ limitations under the License.
 import unittest
 
 import numpy as np
-
 import oneflow as flow
 import oneflow.unittest
-
 from oneflow.test_utils.automated_test_util import *
 
 
-@autotest(n=10, check_graph=False)
+@autotest(n=3, check_graph=False)
 def test_roll_impl(test_case, placement, sbp):
     shifts = (
         random(-100, 100).to(int).value(),

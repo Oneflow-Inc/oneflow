@@ -14,17 +14,17 @@ See the License for the specific language governing permissions and
 limitations under the License.
 """
 
-from collections import OrderedDict
 import unittest
+from collections import OrderedDict
 
-import torch
 import numpy as np
-
 import oneflow as flow
 import oneflow.unittest
-from oneflow.test_utils.automated_test_util.torch_flow_dual_object import globaltest
+import torch
 from oneflow.test_utils.automated_test_util.generators import *
-from test_util import GenArgDict
+from oneflow.test_utils.automated_test_util.torch_flow_dual_object import \
+    globaltest
+from oneflow.test_utils.test_util import GenArgDict
 
 
 def _compare_torch_and_oneflow(
@@ -210,10 +210,10 @@ class TestRNNConsistent(oneflow.unittest.TestCase):
     def test_rnn(test_case):
         arg_dict = OrderedDict()
         arg_dict["input_size"] = [
-            8,
+            1,
         ]
         arg_dict["hidden_size"] = [
-            8,
+            1,
         ]
         arg_dict["num_layers"] = [
             1,
@@ -229,17 +229,17 @@ class TestRNNConsistent(oneflow.unittest.TestCase):
         module_sbp = flow.sbp.broadcast
         for args in GenArgDict(arg_dict):
             for placement in all_placement():
-                for in_sbp in all_sbp(placement, max_dim=3, except_partial_sum=True):
+                for in_sbp in all_sbp(placement, max_dim=1, except_partial_sum=True):
                     _test_rnn_impl(test_case, placement, module_sbp, in_sbp, **args)
 
     @globaltest
     def test_lstm(test_case):
         arg_dict = OrderedDict()
         arg_dict["input_size"] = [
-            8,
+            1,
         ]
         arg_dict["hidden_size"] = [
-            8,
+            2,
         ]
         arg_dict["num_layers"] = [
             1,
@@ -255,17 +255,17 @@ class TestRNNConsistent(oneflow.unittest.TestCase):
         module_sbp = flow.sbp.broadcast
         for args in GenArgDict(arg_dict):
             for placement in all_placement():
-                for in_sbp in all_sbp(placement, max_dim=3, except_partial_sum=True):
+                for in_sbp in all_sbp(placement, max_dim=1, except_partial_sum=True):
                     _test_lstm_impl(test_case, placement, module_sbp, in_sbp, **args)
 
     @globaltest
     def test_gru(test_case):
         arg_dict = OrderedDict()
         arg_dict["input_size"] = [
-            8,
+            1,
         ]
         arg_dict["hidden_size"] = [
-            8,
+            1,
         ]
         arg_dict["num_layers"] = [
             1,
@@ -280,7 +280,7 @@ class TestRNNConsistent(oneflow.unittest.TestCase):
         module_sbp = flow.sbp.broadcast
         for args in GenArgDict(arg_dict):
             for placement in all_placement():
-                for in_sbp in all_sbp(placement, max_dim=3, except_partial_sum=True):
+                for in_sbp in all_sbp(placement, max_dim=1, except_partial_sum=True):
                     _test_gru_impl(test_case, placement, module_sbp, in_sbp, **args)
 
 
