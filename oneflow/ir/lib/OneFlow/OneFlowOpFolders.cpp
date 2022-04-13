@@ -37,23 +37,15 @@ namespace {
 namespace functional = ::oneflow::one::functional;
 using TensorPtr = std::shared_ptr<::oneflow::one::Tensor>;
 
-class FolderGuard final {
- public:
-  explicit FolderGuard(MLIRContext* context) : context_(context) {}
-  const StringAttr GenNewVariableOpName(const std::string& key = "") const {
-    if (key == "") { return StringAttr::get(context_, "variable_" + ::oneflow::NewUniqueId()); }
-    return StringAttr::get(context_, "variable_" + key + "_" + ::oneflow::NewUniqueId());
-  }
-
- private:
-  MLIRContext* context_ = nullptr;
-  ::oneflow::LazyMode::Guard guard{false};
-};
+StringAttr GenNewVariableOpName(MLIRContext* ctx, const std::string& key = "") {
+  if (key == "") { return StringAttr::get(ctx, "variable_" + ::oneflow::NewUniqueId()); }
+  return StringAttr::get(ctx, "variable_" + key + "_" + ::oneflow::NewUniqueId());
+}
 
 OpFoldResult UnaryFold(
     MLIRContext* ctx, ArrayRef<Attribute> operands,
     const std::function<::oneflow::Maybe<::oneflow::one::Tensor>(const TensorPtr&)>& f) {
-  const FolderGuard g(ctx);
+  ::oneflow::LazyMode::Guard guard{false};
   if (!operands.front()) { return {}; }  // Important!
 
   const auto attr_dict = operands.front().cast<mlir::DictionaryAttr>();
@@ -62,7 +54,7 @@ OpFoldResult UnaryFold(
       attr_dict.get("value"), attr_dict.get("device_tag"), attr_dict.get("device_name"));
   const auto result = f(tensor).GetPtrOrThrow();
   attrs.set("value", support::TensorToDenseElementsAttr(result, ctx));
-  attrs.set("op_name", g.GenNewVariableOpName());
+  attrs.set("op_name", GenNewVariableOpName(ctx));
 
   return attrs.getDictionary(ctx);
 }
@@ -70,7 +62,7 @@ OpFoldResult UnaryFold(
 OpFoldResult BinaryFold(MLIRContext* ctx, ArrayRef<Attribute> operands,
                         const std::function<::oneflow::Maybe<::oneflow::one::Tensor>(
                             const TensorPtr&, const TensorPtr&)>& f) {
-  const FolderGuard g(ctx);
+  ::oneflow::LazyMode::Guard guard{false};
   if (!(operands.front() && operands.back())) { return {}; }  // Important!
   auto lhs_attr_dict = operands.front().cast<mlir::DictionaryAttr>();
   auto rhs_attr_dict = operands.back().cast<mlir::DictionaryAttr>();
@@ -86,7 +78,7 @@ OpFoldResult BinaryFold(MLIRContext* ctx, ArrayRef<Attribute> operands,
   const auto result = f(lhs_tensor, rhs_tensor).GetPtrOrThrow();
 
   attrs.set("value", support::TensorToDenseElementsAttr(result, ctx));
-  attrs.set("op_name", g.GenNewVariableOpName());
+  attrs.set("op_name", GenNewVariableOpName(ctx));
 
   return attrs.getDictionary(ctx);
 }
@@ -143,11 +135,11 @@ OpFoldResult SqrtOp::fold(ArrayRef<Attribute> operands) {
 }
 
 OpFoldResult MultiplyOp::fold(ArrayRef<Attribute> operands) {
-  return BinaryFold(getContext(), operands,functional::Mul);
+  return BinaryFold(getContext(), operands, functional::Mul);
 }
 
 OpFoldResult BroadcastDivOp::fold(ArrayRef<Attribute> operands) {
-  return BinaryFold(getContext(), operands,functional::Div);
+  return BinaryFold(getContext(), operands, functional::Div);
 }
 
 OpFoldResult BroadcastSubOp::fold(ArrayRef<Attribute> operands) {
