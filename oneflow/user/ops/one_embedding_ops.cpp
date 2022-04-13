@@ -22,9 +22,9 @@ namespace oneflow {
 /* static */ Maybe<void> EmbeddingLookupPlaceholderOp::InferLogicalTensorDesc(
     user_op::InferContext* ctx) {
   const Shape& ids_shape = ctx->InputShape("ids", 0);
-  if (ctx->has_input("column_ids", 0)) {
-    const Shape& column_ids_shape = ctx->InputShape("column_ids", 0);
-    CHECK_EQ_OR_RETURN(ids_shape, column_ids_shape);
+  if (ctx->has_input("table_ids", 0)) {
+    const Shape& table_ids_shape = ctx->InputShape("table_ids", 0);
+    CHECK_EQ_OR_RETURN(ids_shape, table_ids_shape) << "table_ids shape must equals ids shape";
   }
   DimVector out_dim_vec = ids_shape.dim_vec();
   const int64_t embedding_size = ctx->Attr<int64_t>("embedding_size");
@@ -43,8 +43,8 @@ namespace oneflow {
                      .Broadcast(user_op::OpArg("shadow", 0))
                      .Split(user_op::OpArg("ids", 0), 0)
                      .Split(user_op::OpArg("embeddings", 0), 0);
-  if (ctx->user_op_conf().has_input("column_ids", 0)) {
-    builder.Split(user_op::OpArg("column_ids", 0), 0);
+  if (ctx->user_op_conf().has_input("table_ids", 0)) {
+    builder.Split(user_op::OpArg("table_ids", 0), 0);
   }
   builder.Build();
   return Maybe<void>::Ok();
@@ -53,15 +53,15 @@ namespace oneflow {
 /* static */ Maybe<void> EmbeddingLookupPlaceholderOp::ModifyInputArg(
     const GetInputArgModifier& GetInputArgModifierFn, const user_op::UserOpConfWrapper& conf) {
   user_op::InputArgModifier* shadow = GetInputArgModifierFn("shadow", 0);
-  CHECK_OR_RETURN(shadow != nullptr);
+  CHECK_OR_RETURN(shadow != nullptr) << "shadow is nullptr";
   shadow->set_requires_grad(false);
   user_op::InputArgModifier* ids = GetInputArgModifierFn("ids", 0);
   CHECK_OR_RETURN(ids != nullptr);
   ids->set_requires_grad(false);
-  if (conf.has_input("column_ids", 0)) {
-    user_op::InputArgModifier* column_ids = GetInputArgModifierFn("column_ids", 0);
-    CHECK_OR_RETURN(column_ids != nullptr);
-    column_ids->set_requires_grad(false);
+  if (conf.has_input("table_ids", 0)) {
+    user_op::InputArgModifier* table_ids = GetInputArgModifierFn("table_ids", 0);
+    CHECK_OR_RETURN(table_ids != nullptr) << "table_ids is nullptr";
+    table_ids->set_requires_grad(false);
   }
   return Maybe<void>::Ok();
 }
@@ -111,8 +111,8 @@ REGISTER_USER_OP_GRAD("embedding_lookup_placeholder")
 /* static */ Maybe<void> EmbeddingPrefetchOp::InferLogicalTensorDesc(user_op::InferContext* ctx) {
   const Shape& num_unique_ids_shape = ctx->InputShape("num_unique_ids", 0);
   const Shape& unique_ids_shape = ctx->InputShape("unique_ids", 0);
-  const Shape& column_ids_shape = ctx->InputShape("column_ids", 0);
-  CHECK_EQ_OR_RETURN(unique_ids_shape, column_ids_shape);
+  const Shape& table_ids_shape = ctx->InputShape("table_ids", 0);
+  CHECK_EQ_OR_RETURN(unique_ids_shape, table_ids_shape) << "table_ids shape must equals ids shape";
   CHECK_EQ_OR_RETURN(num_unique_ids_shape.elem_cnt(), 1);
   *ctx->OutputShape("context", 0) = num_unique_ids_shape;
   return Maybe<void>::Ok();
@@ -126,7 +126,7 @@ REGISTER_USER_OP_GRAD("embedding_lookup_placeholder")
   ctx->NewBuilder()
       .Broadcast(user_op::OpArg("num_unique_ids", 0))
       .Split(user_op::OpArg("unique_ids", 0), 0)
-      .Split(user_op::OpArg("column_ids", 0), 0)
+      .Split(user_op::OpArg("table_ids", 0), 0)
       .Broadcast(user_op::OpArg("context", 0))
       .Build();
   return Maybe<void>::Ok();
@@ -140,8 +140,8 @@ REGISTER_USER_OP_GRAD("embedding_lookup_placeholder")
 /* static */ Maybe<void> EmbeddingLookupOp::InferLogicalTensorDesc(user_op::InferContext* ctx) {
   const Shape& num_unique_ids_shape = ctx->InputShape("num_unique_ids", 0);
   const Shape& unique_ids_shape = ctx->InputShape("unique_ids", 0);
-  const Shape& column_ids_shape = ctx->InputShape("column_ids", 0);
-  CHECK_EQ_OR_RETURN(unique_ids_shape, column_ids_shape);
+  const Shape& table_ids_shape = ctx->InputShape("table_ids", 0);
+  CHECK_EQ_OR_RETURN(unique_ids_shape, table_ids_shape) << "table_ids shape must equals ids shape";
   CHECK_EQ_OR_RETURN(num_unique_ids_shape.elem_cnt(), 1);
   const int64_t embedding_size = ctx->Attr<int64_t>("embedding_size");
   const int64_t line_size = ctx->Attr<int64_t>("line_size");
@@ -168,7 +168,7 @@ REGISTER_USER_OP_GRAD("embedding_lookup_placeholder")
   auto builder = ctx->NewBuilder()
                      .Broadcast(user_op::OpArg("num_unique_ids", 0))
                      .Split(user_op::OpArg("unique_ids", 0), 0)
-                     .Split(user_op::OpArg("column_ids", 0), 0)
+                     .Split(user_op::OpArg("table_ids", 0), 0)
                      .Split(ctx->outputs(), 0);
   if (ctx->user_op_conf().has_input("context", 0)) {
     builder.Broadcast(user_op::OpArg("context", 0));
