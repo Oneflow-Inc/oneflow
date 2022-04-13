@@ -1013,18 +1013,17 @@ class FtrlUpdateKernel final : public user_op::OpKernel, public user_op::CudaGra
       skip_if_ptr = skip_if->dptr<int64_t>();
     }
     FtrlUpdateKernelUtil<device_type, T, G>::Update(
-        ctx->stream(), model->shape().elem_cnt(), static_cast<T>(scale), l1, l2, 
-        lr_power, lambda1, lambda2, beta, 
-        weight_decay, learning_rate_val, learning_rate_ptr, 
-        scale_by_ptr, skip_if_ptr, model_diff->dptr<G>(), model->mut_dptr<T>(), accumulate->mut_dptr<T>(), 
+        ctx->stream(), model->shape().elem_cnt(), static_cast<T>(scale), l1, l2, lr_power, lambda1,
+        lambda2, beta, weight_decay, learning_rate_val, learning_rate_ptr, scale_by_ptr,
+        skip_if_ptr, model_diff->dptr<G>(), model->mut_dptr<T>(), accumulate->mut_dptr<T>(),
         z->mut_dptr<T>());
   }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return true; }
 };
 
-#define REGISTER_FTRL_UPDATE_KERNEL(device, dtype, gtype)                              \
-  REGISTER_USER_KERNEL("ftrl_update")                                                  \
-      .SetCreateFn<FtrlUpdateKernel<device, dtype, gtype>>()                           \
+#define REGISTER_FTRL_UPDATE_KERNEL(device, dtype, gtype)                                 \
+  REGISTER_USER_KERNEL("ftrl_update")                                                     \
+      .SetCreateFn<FtrlUpdateKernel<device, dtype, gtype>>()                              \
       .SetIsMatchedHob((user_op::HobDeviceType() == device)                               \
                        && (user_op::HobDataType("model", 0) == GetDataType<dtype>::value) \
                        && (user_op::HobDataType("model_diff", 0) == GetDataType<gtype>::value));

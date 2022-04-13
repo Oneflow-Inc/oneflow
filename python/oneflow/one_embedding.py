@@ -569,13 +569,13 @@ class FTRL(Optimizer):
         options["lambda2"] = lambda2
         options["beta"] = beta
         super().__init__(params, options)
-
+        # print("initial accumulator value is: ", options["initial_accumulator_value"])
         for param_group in self.param_groups:
             for param in param_group.parameters:
                 assert param.is_leaf, "parameters must be leaf tensor"
                 self._state[param] = dict()
                 self._state[param]["accumulator_value"] = flow.zeros_like(param).fill_(
-                    initial_accumulator_value
+                    param_group["initial_accumulator_value"]
                 )
 
         self._op = (
@@ -618,7 +618,7 @@ class FTRL(Optimizer):
                     z_tensor = self._state[param]["z"]
 
                     flow._C.dispatch_ftrl_update(
-                        self._op_without_amsgrad,
+                        self._op,
                         (param, param.grad, accumulate_tensor, z_tensor),
                         **kwargs,
                     )
