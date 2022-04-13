@@ -180,6 +180,9 @@ inline PyObject* CastToPyObject<Maybe<void>>(Maybe<void>&& t) {
   return py::none().inc_ref().ptr();
 }
 
+// int64_t
+Maybe<int64_t> PyUnpackLong(PyObject* py_obj);
+
 }  // namespace functional
 }  // namespace one
 }  // namespace oneflow

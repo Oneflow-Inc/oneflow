@@ -71,7 +71,7 @@ static int PyParameterObject_init(PyObject* self, PyObject* args, PyObject* kwar
   HANDLE_ERRORS
   PyObject* data = NULL;
   bool requires_grad = true;
-  static const char* keywords[2] = {"data", "requires_grad"};
+  static const char* keywords[3] = {"data", "requires_grad", NULL};
   if (!PyArg_ParseTupleAndKeywords(args, kwargs, "O|p:__init__", const_cast<char**>(keywords),
                                    &data, &requires_grad)) {
     return -1;
@@ -82,23 +82,6 @@ static int PyParameterObject_init(PyObject* self, PyObject* args, PyObject* kwar
   }
   return 0;
   END_HANDLE_ERRORS_RET(-1)
-}
-
-static PyObject* PyParameterObject_new(PyTypeObject* type, PyObject* args, PyObject* kwargs) {
-  HANDLE_ERRORS
-  PyObject* data = NULL;
-  bool requires_grad = true;
-  static const char* keywords[2] = {"data", "requires_grad"};
-  if (!PyArg_ParseTupleAndKeywords(args, kwargs, "O|p:__new__", const_cast<char**>(keywords), &data,
-                                   &requires_grad)) {
-    return NULL;
-  }
-  auto* self = (PyTensorObject*)PyTensorObject_Type->tp_alloc(type, 0);
-  if (self) {
-    self->data = ASSERT_PTR(Parameter::MakeTensor(PyTensor_Unpack(data), requires_grad));
-  }
-  return (PyObject*)self;
-  END_HANDLE_ERRORS
 }
 
 static Py_ssize_t PyTensorObject_length(PyTensorObject* self) {
@@ -171,12 +154,13 @@ static PyObject* PyTensorObject_contiguous(PyObject* self, PyObject* unused) {
 static PyObject* PyTensorObject_requires_grad_(PyObject* self, PyObject* args, PyObject* kwargs) {
   HANDLE_ERRORS
   bool requires_grad = true;
-  static const char* keywords[1] = {"requires_grad"};
+  static const char* keywords[2] = {"requires_grad", NULL};
   if (!PyArg_ParseTupleAndKeywords(args, kwargs, "|p:requires_grad_", const_cast<char**>(keywords),
                                    &requires_grad)) {
     return NULL;
   }
   ASSERT(PyTensor_Unpack(self)->set_requires_grad(requires_grad));
+  Py_XINCREF(self);
   return self;
   END_HANDLE_ERRORS
 }
@@ -208,6 +192,7 @@ static PyObject* PyTensorObject_clone(PyObject* self, PyObject* unused) {
 static PyObject* PyTensorObject_zeros_(PyObject* self, PyObject* unused) {
   HANDLE_ERRORS
   ASSERT(EagerMirroredTensorZeros(PyTensor_Unpack(self)));
+  Py_XINCREF(self);
   return self;
   END_HANDLE_ERRORS
 }
@@ -554,7 +539,6 @@ static PyTypeObject* MakeParameterType() {
   type->tp_basicsize = sizeof(PyTensorObject);
 
   type->tp_init = PyParameterObject_init;
-  type->tp_new = PyParameterObject_new;
 
   type->tp_base = PY_XINCREF(PyTensorObject_Type);
 

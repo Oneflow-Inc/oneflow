@@ -19,6 +19,7 @@ limitations under the License.
 #include <string>
 
 #include "oneflow/api/python/functional/indexing.h"
+#include "oneflow/extension/python/numpy.h"
 #include "oneflow/core/common/just.h"
 #include "oneflow/core/common/scalar.h"
 #include "oneflow/core/framework/dtype.h"
@@ -187,17 +188,19 @@ std::vector<Symbol<SbpParallel>> PyUnpackSbpParallelSequence(PyObject* obj) {
 // Tensor index
 bool PyTensorIndexCheck(PyObject* obj) {
   return PySlice_Check(obj) || PyLong_Check(obj) || obj == Py_Ellipsis || obj == Py_None
-         || PyTensor_Check(obj) || PySequence_Check(obj) || PyUnicode_Check(obj);
+         || PyTensor_Check(obj) || PySequence_Check(obj) || PyUnicode_Check(obj)
+         || numpy::PyArrayCheckLongScalar(obj);
 }
 TensorIndex PyUnpackTensorIndex(PyObject* obj) {
   TensorIndex tensor_index;
   // Obvious single-entry cases.
-  if (PySlice_Check(obj)         // NOLINT
-      || PyLong_Check(obj)       // NOLINT
-      || obj == Py_Ellipsis      // NOLINT
-      || obj == Py_None          // NOLINT
-      || PyTensor_Check(obj)     // NOLINT
-      || !PySequence_Check(obj)  // NOLINT
+  if (PySlice_Check(obj)                     // NOLINT
+      || PyLong_Check(obj)                   // NOLINT
+      || obj == Py_Ellipsis                  // NOLINT
+      || obj == Py_None                      // NOLINT
+      || PyTensor_Check(obj)                 // NOLINT
+      || !PySequence_Check(obj)              // NOLINT
+      || numpy::PyArrayCheckLongScalar(obj)  // NOLINT
       || PyUnicode_Check(obj)) {
     tensor_index.emplace_back(detail::UnpackIndexItem(obj));
     return tensor_index;
@@ -285,6 +288,15 @@ bool PyOpExprCheck(PyObject* obj) {
 std::shared_ptr<OpExpr> PyUnpackOpExpr(PyObject* obj) {
   auto handle = py::reinterpret_borrow<py::object>(obj);
   return py::cast<std::shared_ptr<OpExpr>>(handle);
+}
+
+// int64_t
+Maybe<int64_t> PyUnpackLong(PyObject* py_obj) {
+  int overflow = -1;
+  long long val = PyLong_AsLongLongAndOverflow(py_obj, &overflow);
+  if (val == -1 && PyErr_Occurred()) { return Error::RuntimeError() << "Python exception occurs"; }
+  if (overflow != 0) { return Error::RuntimeError() << "Overflow when unpacking long"; }
+  return (int64_t)val;
 }
 
 }  // namespace functional
