@@ -152,7 +152,7 @@ ONEFLOW_FUNCTION_LIBRARY(m) {
   ADD_UNARY_FUNCTOR(Square, "Square");
   ADD_UNARY_FUNCTOR(Tan, "Tan");
   ADD_UNARY_FUNCTOR(Tanh, "Tanh");
-  ADD_UNARY_FUNCTOR(NotEqualZero, "not_equal_zero")
+  ADD_UNARY_FUNCTOR(NotEqualZero, "NotEqualZero")
   m.add_functor<LogicalNotFunctor>("LogicalNot");
   m.add_functor<InplaceSinFunctor>("Sin_");
   m.add_functor<InplaceFloorFunctor>("Floor_");
