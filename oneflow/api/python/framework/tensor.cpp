@@ -173,7 +173,7 @@ static PyObject* PyTensorObject_retain_grad(PyObject* self, PyObject* unused) {
                         "can't retain_grad on Tensor that has requires_grad=False");
   }
   ASSERT(t->set_retain_grad(true));
-  return Py_None;
+  Py_RETURN_NONE;
   END_HANDLE_ERRORS
 }
 
@@ -201,7 +201,7 @@ static PyObject* PyTensorObject_register_hook(PyObject* self, PyObject* hook) {
   HANDLE_ERRORS
   const auto& _hook = py::cast<AutogradMeta::Hook>(py::reinterpret_borrow<py::object>(hook));
   ASSERT(RegisterTensorHook(PyTensor_Unpack(self), _hook));
-  return Py_None;
+  Py_RETURN_NONE;
   END_HANDLE_ERRORS
 }
 
@@ -210,7 +210,7 @@ static PyObject* PyTensorObject__register_post_grad_accumulation_hook(PyObject* 
   HANDLE_ERRORS
   const auto& _hook = py::cast<AutogradMeta::Hook>(py::reinterpret_borrow<py::object>(hook));
   ASSERT(RegisterTensorPostGradAccumulationHook(PyTensor_Unpack(self), _hook));
-  return Py_None;
+  Py_RETURN_NONE;
   END_HANDLE_ERRORS
 }
 
@@ -224,7 +224,7 @@ static PyObject* PyTensorObject_global_id(PyObject* self, PyObject* unused) {
 static PyObject* PyTensorObject_check_meta_consistency(PyObject* self, PyObject* unused) {
   HANDLE_ERRORS
   ASSERT(CheckMetaConsistency(PyTensor_Unpack(self)));
-  return Py_None;
+  Py_RETURN_NONE;
   END_HANDLE_ERRORS
 }
 
@@ -251,7 +251,7 @@ static PyObject* PyTensorObject_to_numpy(PyObject* self, PyObject* unused) {
     ASSERT(CopyBetweenMirroredTensorAndNumpy<T>(PyTensor_Unpack(self), array,             \
                                                 BlobNumpyCopyUtil<T>::To, "const",        \
                                                 /*block_host_until_done=*/true));         \
-    return Py_None;                                                                       \
+    Py_RETURN_NONE;                                                                       \
     END_HANDLE_ERRORS                                                                     \
   }                                                                                       \
   static PyObject* PyTensorObject__copy_from_numpy_##T(PyObject* self, PyObject* array) { \
@@ -260,7 +260,7 @@ static PyObject* PyTensorObject_to_numpy(PyObject* self, PyObject* unused) {
     ASSERT(CopyBetweenMirroredTensorAndNumpy<T>(PyTensor_Unpack(self), copied,            \
                                                 BlobNumpyCopyUtil<T>::From, "mut",        \
                                                 /*block_host_until_done=*/false));        \
-    return Py_None;                                                                       \
+    Py_RETURN_NONE;                                                                       \
     END_HANDLE_ERRORS                                                                     \
   }
 OF_PP_FOR_EACH_TUPLE(DEFINE_TENSOR_METHOD, POD_DATA_TYPE_SEQ)
@@ -286,7 +286,7 @@ static PyObject* PyTensorObject__register_storage_delete_hook(PyObject* self, Py
   HANDLE_ERRORS
   auto _hook = py::cast<std::function<void()>>(py::reinterpret_borrow<py::object>(hook));
   ASSERT(PyTensor_Unpack(self)->RegisterStorageDeleteHook(_hook));
-  return Py_None;
+  Py_RETURN_NONE;
   END_HANDLE_ERRORS
 }
 
@@ -517,6 +517,7 @@ static PyTypeObject* MakeTensorType() {
   type->tp_getset = PyTensorObject_properties;
   type->tp_methods = PyTensorObject_methods;
 
+  type->tp_as_number = &heap_type->as_number;
   type->tp_as_sequence = &PyTensorObject_as_sequence;
   type->tp_as_mapping = &PyTensorObject_as_mapping;
 
@@ -549,18 +550,21 @@ static PyTypeObject* MakeParameterType() {
 }
 
 PyObject* PyTensor_New(const std::shared_ptr<Tensor>& data) {
+  if (!data) { Py_RETURN_NONE; }
   auto* self = (PyTensorObject*)PyTensorObject_Type->tp_alloc(PyTensorObject_Type, 0);
   if (self) { self->data = data; }
   return (PyObject*)self;
 }
 
 PyObject* PyParameter_New(const std::shared_ptr<Parameter>& data) {
+  if (!data) { Py_RETURN_NONE; }
   auto* self = (PyTensorObject*)PyTensorObject_Type->tp_alloc(PyParameterObject_Type, 0);
   if (self) { self->data = data; }
   return (PyObject*)self;
 }
 
 PyObject* PyParameter_New(const std::shared_ptr<Tensor>& data, bool requires_grad) {
+  if (!data) { Py_RETURN_NONE; }
   auto* self = (PyTensorObject*)PyTensorObject_Type->tp_alloc(PyParameterObject_Type, 0);
   if (self) { self->data = ASSERT_PTR(Parameter::MakeTensor(data, requires_grad)); }
   return (PyObject*)self;

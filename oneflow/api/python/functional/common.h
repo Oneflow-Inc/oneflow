@@ -177,7 +177,7 @@ inline PyObject* CastToPyObject<Maybe<TensorTuple>>(Maybe<TensorTuple>&& t) {
 template<>
 inline PyObject* CastToPyObject<Maybe<void>>(Maybe<void>&& t) {
   t.GetOrThrow();
-  return py::none().inc_ref().ptr();
+  Py_RETURN_NONE;
 }
 
 // int64_t
