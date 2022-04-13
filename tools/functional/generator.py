@@ -554,7 +554,7 @@ class Generator:
                     )
                     schema_fmt += "  }\n"
                     i += 1
-                schema_fmt += "  return Py_None;\n"
+                schema_fmt += "  Py_RETURN_NONE;\n"
                 schema_fmt += "  END_HANDLE_ERRORS\n"
                 schema_fmt += "}\n"
 
