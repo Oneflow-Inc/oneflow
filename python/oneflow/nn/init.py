@@ -105,9 +105,6 @@ def orthogonal_(tensor, gain=1.0):
         gain: optional scaling factor
 
     Examples:
-        >>> import oneflow as flow
-        >>> import oneflow.nn as nn
-
         >>> w = flow.empty(3, 5)
         >>> nn.init.orthogonal_(w)
     """
