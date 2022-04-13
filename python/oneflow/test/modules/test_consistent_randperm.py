@@ -40,7 +40,10 @@ def _test_graph_randperm(test_case, N, placement, sbp, dtype):
 
     model = ConsistentRandGraph()
     x = model()
-
+    y1 = x.to_global(placement=placement, sbp=sbp)
+    y1_np_sort = np.sort(y1.numpy())
+    y2 = np.arange(N)
+    test_case.assertTrue(np.allclose(y1_np_sort, y, atol=1e-4, rtol=1e-4))
     test_case.assertEqual(x.dtype, dtype)
     test_case.assertEqual(x.sbp, sbp)
     test_case.assertEqual(x.placement, placement)
