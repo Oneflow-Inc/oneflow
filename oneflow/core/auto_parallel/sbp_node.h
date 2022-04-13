@@ -916,7 +916,7 @@ void SbpNode<SbpSignature>::InitializeMemoryCost() {
       // Pre-store the logical blob size for sbp with a given obn.
       HashMap<NdSbp, double> NdSbp2logical_blob_size;
       for (int32_t sbp_id = 0; sbp_id < sbp_size; sbp_id++) {
-        NdSbp& sbp = SbpSignatureList[sbp_id]->bn_in_op2nd_sbp().at(obn);
+        const NdSbp& sbp = SbpSignatureList[sbp_id]->bn_in_op2nd_sbp().at(obn);
         double logical_blob_size = 0.0;
         const auto& iterator_sbp = NdSbp2logical_blob_size.find(sbp);
         if (iterator_sbp == NdSbp2logical_blob_size.end()) {

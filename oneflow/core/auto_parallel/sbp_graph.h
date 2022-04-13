@@ -135,6 +135,13 @@ class SbpGraph {
   // Set transfer cost
   void SetTransferCost(double transfer_cost_);
 
+  // Initialize memory cost for nodes
+  void InitializeMemoryCost4Nodes();
+  // Initialize memory cost for edges
+  void InitializeMemoryCost4Edges();
+  // Initialize memory cost for edges if using sbp collector
+  void InitializeMemoryCost4Edges(const std::vector<NdSbp>& id2NdSbp);
+
  private:
   void DfsAddNbhCost(std::vector<int32_t>& nbh_id2NodeListId,
                      std::unordered_map<int32_t, int32_t>& NodeListId2nbh_id,
@@ -1054,6 +1061,26 @@ void SbpGraph<SbpSignature>::SetWaitTime(double wait_time_) {
 template<class SbpSignature>
 void SbpGraph<SbpSignature>::SetTransferCost(double transfer_cost_) {
   transfer_cost = transfer_cost_;
+}
+
+// Initialize memory cost for nodes
+template<class SbpSignature>
+void SbpGraph<SbpSignature>::InitializeMemoryCost4Nodes() {
+  for (auto* sbp_node : NodeList) { sbp_node->InitializeMemoryCost(); }
+}
+// Initialize memory cost for edges
+template<class SbpSignature>
+void SbpGraph<SbpSignature>::InitializeMemoryCost4Edges() {
+  for (auto* sbp_node : NodeList) {
+    for (auto* edge_in : sbp_node->EdgesIn) { edge_in->InitializeMemoryCost(); }
+  }
+}
+// Initialize memory cost for edges if using sbp collector
+template<class SbpSignature>
+void SbpGraph<SbpSignature>::InitializeMemoryCost4Edges(const std::vector<NdSbp>& id2NdSbp) {
+  for (auto* sbp_node : NodeList) {
+    for (auto* edge_in : sbp_node->EdgesIn) { edge_in->InitializeMemoryCost(id2NdSbp); }
+  }
 }
 
 #ifdef DEBUG_ALGORITHM_

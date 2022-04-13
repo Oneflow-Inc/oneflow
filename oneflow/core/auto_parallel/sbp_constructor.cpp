@@ -46,9 +46,20 @@ Maybe<void> SbpConstructor::InitSbpGraph(const OpGraph& op_graph, const Job& job
     SbpCollector sbp_collector;
     sbp_collector.CollectUniverse(sbp_graph_);
     sbp_collector.ProxySbpCandidate(op_graph, op_name2sbp_node_, sbp_graph_);
+    // Initialize copy cost for general edges
+    JUST(InitCopyCost(op_graph));
+    // Initialize memory cost for nodes
+    sbp_graph_.InitializeMemoryCost4Edges(sbp_collector.id2SbpParallel);
+  } else {
+    // Initialize copy cost for general edges
+    JUST(InitCopyCost(op_graph));
+    // Initialize memory cost for nodes
+    sbp_graph_.InitializeMemoryCost4Edges();
   }
 
-  JUST(InitCopyCost(op_graph));
+  // Initialize memory cost for nodes
+  sbp_graph_.InitializeMemoryCost4Nodes();
+
   // TODO:  Set all the sbp signature id to be 0 for initialization.
   //        Could revert it back to
   // sbp_graph_.RandomSbpSignature(use_sbp_collector_);
