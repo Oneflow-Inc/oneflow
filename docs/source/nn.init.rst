@@ -8,3 +8,4 @@ Operators for initialization
 .. autofunction:: oneflow.nn.init.xavier_normal_
 .. autofunction:: oneflow.nn.init.kaiming_uniform_
 .. autofunction:: oneflow.nn.init.kaiming_normal_
+.. autofunction:: oneflow.nn.init.orthogonal_
