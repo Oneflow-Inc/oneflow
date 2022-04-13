@@ -1030,41 +1030,6 @@ class ScatterNdLikeFunctor {
   std::shared_ptr<OpExpr> op_;
 };
 
-Optional<const Stride> computeStride(const int64_t elem_count, const DimVector& shape,
-                                     const StrideVector& stride, const DimVector& target_shape) {
-  if (elem_count == 0) { return NullOpt; }
-
-  int64_t view_d = target_shape.size() - 1;
-  int64_t chunk_base_stride = stride.back();
-  // std::vector<int64_t> newstride(target_shape.size());
-  DimVector newstride(target_shape.size());
-  // stride for each subspace in the chunk
-  // numel in current chunk
-  int64_t tensor_numel = 1;
-  int64_t view_numel = 1;
-  for (int64_t tensor_d = shape.size() - 1; tensor_d >= 0; tensor_d--) {
-    tensor_numel *= shape[tensor_d];
-    // if end of tensor size chunk, check view
-    if ((tensor_d == 0)
-        || (shape[tensor_d - 1] != 1 && stride[tensor_d - 1] != tensor_numel * chunk_base_stride)) {
-      while (view_d >= 0 && (view_numel < tensor_numel || target_shape[view_d] == 1)) {
-        newstride[view_d] = view_numel * chunk_base_stride;
-        view_numel *= target_shape[view_d];
-        view_d--;
-      }
-      if (view_numel != tensor_numel) { return NullOpt; }
-      if (tensor_d > 0) {
-        chunk_base_stride = stride[tensor_d - 1];
-        tensor_numel = 1;
-        view_numel = 1;
-      }
-    }
-  }
-  if (view_d != -1) { return NullOpt; }
-  Stride target_stride(newstride);
-  return target_stride;
-}
-
 class ReshapeFunctor {
  public:
   ReshapeFunctor() {
