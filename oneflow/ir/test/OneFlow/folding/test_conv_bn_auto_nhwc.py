@@ -14,7 +14,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 """
 # RUN: python3 %s | FileCheck %s
-#CHECK: oneflow.transpose
+# CHECK: oneflow.transpose
 
 import os
 import unittest
