@@ -14,6 +14,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 """
 # RUN: python3 %s | FileCheck %s
+#CHECK: oneflow.transpose
 
 import os
 import unittest
@@ -29,9 +30,10 @@ os.environ["ONEFLOW_MLIR_ENABLE_CONSTANT_FOLDING"] = "1"
 
 
 def _test_fuse_conv_bn(test_case):
-    data = flow.randn(1, 3, 224, 224)
+    data = flow.randn(1, 3, 224, 224).to("cuda")
 
     model = resnet50(pretrained=True, progress=True)
+    model.to("cuda")
     model.eval()
     eager_res = model(data)
 

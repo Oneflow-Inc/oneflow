@@ -23,6 +23,7 @@ limitations under the License.
 #include "mlir/IR/OpDefinition.h"
 #include "mlir/IR/OperationSupport.h"
 #include "mlir/IR/Value.h"
+#include "oneflow/core/common/just.h"
 #include "oneflow/core/common/shape_vec.h"
 #include "oneflow/core/framework/tensor.h"
 #include "oneflow/core/functional/functional_api.yaml.h"
@@ -49,8 +50,9 @@ class FolderGuard final {
   ::oneflow::LazyMode::Guard guard{false};
 };
 
-OpFoldResult UnaryFold(MLIRContext* ctx, ArrayRef<Attribute> operands,
-                       const std::function<TensorPtr(const TensorPtr&)>& f) {
+OpFoldResult UnaryFold(
+    MLIRContext* ctx, ArrayRef<Attribute> operands,
+    const std::function<::oneflow::Maybe<::oneflow::one::Tensor>(const TensorPtr&)>& f) {
   const FolderGuard g(ctx);
   if (!operands.front()) { return {}; }  // Important!
 
@@ -58,7 +60,7 @@ OpFoldResult UnaryFold(MLIRContext* ctx, ArrayRef<Attribute> operands,
   auto attrs = NamedAttrList(attr_dict);
   const auto tensor = support::DenseElementsAttrToTensor(
       attr_dict.get("value"), attr_dict.get("device_tag"), attr_dict.get("device_name"));
-  const auto result = f(tensor);
+  const auto result = f(tensor).GetPtrOrThrow();
   attrs.set("value", support::TensorToDenseElementsAttr(result, ctx));
   attrs.set("op_name", g.GenNewVariableOpName());
 
@@ -66,7 +68,8 @@ OpFoldResult UnaryFold(MLIRContext* ctx, ArrayRef<Attribute> operands,
 }
 
 OpFoldResult BinaryFold(MLIRContext* ctx, ArrayRef<Attribute> operands,
-                        const std::function<TensorPtr(const TensorPtr&, const TensorPtr&)>& f) {
+                        const std::function<::oneflow::Maybe<::oneflow::one::Tensor>(
+                            const TensorPtr&, const TensorPtr&)>& f) {
   const FolderGuard g(ctx);
   if (!(operands.front() && operands.back())) { return {}; }  // Important!
   auto lhs_attr_dict = operands.front().cast<mlir::DictionaryAttr>();
@@ -80,7 +83,7 @@ OpFoldResult BinaryFold(MLIRContext* ctx, ArrayRef<Attribute> operands,
                                                              rhs_attr_dict.get("device_tag"),
                                                              rhs_attr_dict.get("device_name"));
 
-  const auto result = f(lhs_tensor, rhs_tensor);
+  const auto result = f(lhs_tensor, rhs_tensor).GetPtrOrThrow();
 
   attrs.set("value", support::TensorToDenseElementsAttr(result, ctx));
   attrs.set("op_name", g.GenNewVariableOpName());
@@ -136,21 +139,15 @@ OpFoldResult ScalarAddOp::fold(ArrayRef<Attribute> operands) {
 }
 
 OpFoldResult SqrtOp::fold(ArrayRef<Attribute> operands) {
-  return UnaryFold(getContext(), operands, [](const auto& tensor) -> TensorPtr {
-    return functional::Sqrt(tensor).GetPtrOrThrow();
-  });
+  return UnaryFold(getContext(), operands, functional::Sqrt);
 }
 
 OpFoldResult MultiplyOp::fold(ArrayRef<Attribute> operands) {
-  return BinaryFold(getContext(), operands, [](const auto& lhs, const auto& rhs) -> TensorPtr {
-    return functional::Mul(lhs, rhs).GetPtrOrThrow();
-  });
+  return BinaryFold(getContext(), operands,functional::Mul);
 }
 
 OpFoldResult BroadcastDivOp::fold(ArrayRef<Attribute> operands) {
-  return BinaryFold(getContext(), operands, [](const auto& lhs, const auto& rhs) -> TensorPtr {
-    return functional::Div(lhs, rhs).GetPtrOrThrow();
-  });
+  return BinaryFold(getContext(), operands,functional::Div);
 }
 
 OpFoldResult BroadcastSubOp::fold(ArrayRef<Attribute> operands) {
