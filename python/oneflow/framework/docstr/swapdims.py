@@ -17,8 +17,11 @@ import oneflow
 from oneflow.framework.docstr.utils import add_docstr
 
 add_docstr(
-    oneflow.swapdims,
-    """This function is equivalent to torch’s swapdims function.
+    oneflow._C.swapdims,
+    """
+    swapdims(input, dim0, dim1) -> Tensor
+
+    This function is equivalent to torch’s swapdims function.
 
     For example:
 
