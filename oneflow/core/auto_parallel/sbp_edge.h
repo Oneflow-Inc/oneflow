@@ -18,6 +18,7 @@ limitations under the License.
 
 #include <assert.h>
 #include <algorithm>
+#include <string>
 #include <unordered_set>
 
 #include "oneflow/core/job/parallel_desc.h"
@@ -27,6 +28,8 @@ limitations under the License.
 #include "oneflow/core/auto_parallel/sbp_node.h"
 #include "oneflow/core/auto_parallel/sbp_util.h"
 #include "oneflow/core/graph/op_graph.h"
+#include "oneflow/core/job/sbp_parallel.pb.h"
+#include "oneflow/core/register/logical_blob_id.pb.h"
 
 namespace oneflow {
 namespace auto_parallel {
@@ -48,6 +51,8 @@ class SbpEdge {
   // Cost[sbp_i][sbp_j] is the total cost from StartNode with sbp_i to EndNode
   // with sbp_j
   std::vector<std::vector<double>> Cost;
+  // MemoryCost[sbp_i][sbp_j] is the storage for the lbi if transfer occurs
+  std::vector<std::vector<double>> MemoryCost;
   // SbpSignature for MidNode with corresponding Cost if type 3, empty otherwise
   std::vector<std::vector<int32_t>> MidNodeSbpSig;
   // Contained edge list:
@@ -144,6 +149,11 @@ class SbpEdge {
   // compute_cost = true: It is computing cost
   // compute_cost = false: It is deciding whether this edge needs the wait time.
   void InitializeCopyCost(const std::string& ibn, bool compute_cost, bool use_sbp_collector_);
+
+  // Assemble memory cost from producer to consumer
+  void InitializeMemoryCost();
+  // Assemble memory cost from producer to proxy if using sbp collector
+  void InitializeMemoryCost(const std::vector<NdSbp>& id2NdSbp);
 
   // find the cut ratio
   // (#c>cut_cost in Cost)/(#c in Cost)
@@ -447,6 +457,117 @@ void SbpEdge<SbpSignature>::InitializeCopyCost(const std::string& ibn, bool comp
         Cost[sbp_id_producer][sbp_id_consumer] += CHECK_JUST(ComputeCopyCostWithMiddleNodes(
             sbp_producer, sbp_consumer, logical_blob_desc, producer_parallel_desc,
             consumer_parallel_desc, is_same_sbp));
+      }
+    }
+  }
+}
+
+// Assemble memory cost from producer to consumer
+template<class SbpSignature>
+void SbpEdge<SbpSignature>::InitializeMemoryCost() {
+  CHECK(EndNode->op_node);
+  // It is a constant. Cost[i].size() == Cost[0].size for all i.
+  int32_t consumer_sbp_size = Cost[0].size();
+  int32_t producer_sbp_size = Cost.size();
+  // This function must be run after initialization of Cost
+  MemoryCost.resize(producer_sbp_size);
+  for (int32_t i = 0; i < producer_sbp_size; i++) { MemoryCost[i].resize(consumer_sbp_size); }
+
+  // Skip those edges containing wait times only, and those edges from proxy to consumer
+  if (EmptyLbi() || !(StartNode->op_node)) { return; }
+
+  // From producer to consumer
+  OpNode* consumer = EndNode->op_node;
+  // Find the ibn for the corresponding lbi
+  auto FindIbn4Lbi = [&](const LogicalBlobId& lbi) -> const std::string& {
+    for (const auto& ibn : consumer->op().input_bns()) {
+      if (consumer->op().BnInOp2Lbi(ibn) == lbi) { return ibn; }
+    }
+    CHECK(false) << "Can not find corresponding ibn for given lbi " << lbi.DebugString();
+  };
+  for (const auto& lbi : CarryLbis) {
+    const auto& ibn = FindIbn4Lbi(lbi);
+    // Hierarchy of parallel description of the consumer
+    const auto& consumer_hierarchy =
+        CHECK_JUST(consumer->op().GetParallelDesc4BnInOp(ibn))->hierarchy();
+    // Go through all the sbp in the consumer, we might have the same memory cost for different
+    // producer
+    for (int32_t sbp_id_consumer = 0; sbp_id_consumer < consumer_sbp_size; sbp_id_consumer++) {
+      const NdSbp& sbp_consumer =
+          EndNode->SbpSignatureList[sbp_id_consumer]->bn_in_op2nd_sbp().at(ibn);
+      Shape logical_shape(consumer->LogicalBlobDesc4Lbi(lbi).shape());
+      // Generate a new tensor buffer on the consumer side to store the transferred blob
+      double logical_blob_size = Storage4NdSbp(sbp_consumer, logical_shape, *consumer_hierarchy);
+      for (int32_t sbp_id_producer = 0; sbp_id_producer < producer_sbp_size; sbp_id_producer++) {
+        double time_cost = Cost[sbp_id_producer][sbp_id_consumer];
+        if (time_cost <= 0 || time_cost > GetValidMaxCopyCost()) {
+          // time cost = 0, no new tensor buffer, no new memory cost
+          // time cost = Inf, sorry, no need to consider the memory
+          MemoryCost[sbp_id_producer][sbp_id_consumer] += time_cost;
+        } else {
+          // Only have new memory cost for consumer if their sbp are different
+          MemoryCost[sbp_id_producer][sbp_id_consumer] += logical_blob_size;
+        }
+      }
+    }
+  }
+}
+
+// Assemble memory cost from producer to proxy if using sbp collector
+template<class SbpSignature>
+void SbpEdge<SbpSignature>::InitializeMemoryCost(const std::vector<NdSbp>& id2NdSbp) {
+  if (EndNode->op_node) {
+    InitializeMemoryCost();
+  } else {
+    // It is a constant. Cost[i].size() == Cost[0].size for all i.
+    int32_t consumer_sbp_size = Cost[0].size();
+    int32_t producer_sbp_size = Cost.size();
+    // This function must be run after initialization of Cost
+    MemoryCost.resize(producer_sbp_size);
+    for (int32_t i = 0; i < producer_sbp_size; i++) { MemoryCost[i].resize(consumer_sbp_size); }
+
+    // Skip those edges containing wait times only, and those edges from proxy to consumer
+    if (EmptyLbi() || !(StartNode->op_node)) { return; }
+
+    OpNode* producer = StartNode->op_node;
+    std::vector<int32_t> sbp_id_buffer;
+    // From producer to proxy
+    for (const auto& lbi : CarryLbis) {
+      // Is obn = lbi.blob_name() ?
+      const auto& obn = *CHECK_JUST(producer->op().obn4lbi(lbi));
+      // Assume we use the same parallel description for proxy
+      const auto& producer_hierarchy =
+          CHECK_JUST(producer->op().GetParallelDesc4BnInOp(obn))->hierarchy();
+      // Mapping from consumer sbp to storage
+      HashMap<NdSbp, double> NdSbp2logical_blob_size;
+      // Go through all the sbp signature in the producer
+      for (int32_t sbp_id_producer = 0; sbp_id_producer < producer_sbp_size; sbp_id_producer++) {
+        const NdSbp& sbp_producer =
+            StartNode->SbpSignatureList[sbp_id_producer]->bn_in_op2nd_sbp().at(obn);
+        // Go through all the parallel candidate sets in the proxy
+        for (int32_t sbp_id_consumer = 0; sbp_id_consumer < consumer_sbp_size; sbp_id_consumer++) {
+          const auto& parallel_candidate = EndNode->ParallelCandidates[sbp_id_consumer];
+          parallel_candidate.QuickOutPut(sbp_id_buffer);
+          // Go through all the sbp in a parallel candidate set
+          for (int32_t sbp_id : sbp_id_buffer) {
+            const NdSbp& sbp_consumer = id2NdSbp[sbp_id];
+            // No new memory cost for the same sbp
+            if (sbp_consumer != sbp_producer) {
+              double logical_blob_size = 0.0;
+              const auto& iterator_consumer_sbp = NdSbp2logical_blob_size.find(sbp_consumer);
+              if (iterator_consumer_sbp == NdSbp2logical_blob_size.end()) {
+                // Compute and store the memory cost of a blob under a new sbp
+                Shape logical_shape(producer->LogicalBlobDesc4Lbi(lbi).shape());
+                logical_blob_size = Storage4NdSbp(sbp_consumer, logical_shape, *producer_hierarchy);
+                NdSbp2logical_blob_size[sbp_consumer] = logical_blob_size;
+              } else {
+                // Use those pre-stored logical blob size
+                logical_blob_size = iterator_consumer_sbp->second;
+              }
+              MemoryCost[sbp_id_producer][sbp_id_consumer] += logical_blob_size;
+            }
+          }
+        }
       }
     }
   }
