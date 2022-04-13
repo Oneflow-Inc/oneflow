@@ -70,7 +70,7 @@ static void PyTensorObject_dealloc(PyObject* self) {
 static int PyParameterObject_init(PyObject* self, PyObject* args, PyObject* kwargs) {
   HANDLE_ERRORS
   PyObject* data = NULL;
-  bool requires_grad = true;
+  int requires_grad = 1;
   static const char* keywords[3] = {"data", "requires_grad", NULL};
   if (!PyArg_ParseTupleAndKeywords(args, kwargs, "O|p:__init__", const_cast<char**>(keywords),
                                    &data, &requires_grad)) {
@@ -153,7 +153,7 @@ static PyObject* PyTensorObject_contiguous(PyObject* self, PyObject* unused) {
 
 static PyObject* PyTensorObject_requires_grad_(PyObject* self, PyObject* args, PyObject* kwargs) {
   HANDLE_ERRORS
-  bool requires_grad = true;
+  int requires_grad = 1;
   static const char* keywords[2] = {"requires_grad", NULL};
   if (!PyArg_ParseTupleAndKeywords(args, kwargs, "|p:requires_grad_", const_cast<char**>(keywords),
                                    &requires_grad)) {
