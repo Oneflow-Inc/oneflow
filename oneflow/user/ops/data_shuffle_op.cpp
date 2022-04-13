@@ -21,14 +21,14 @@ namespace oneflow {
 /* static */ Maybe<void> UniqueKeyValuePairOp::InferLogicalTensorDesc(user_op::InferContext* ctx) {
   const Shape& keys_shape = ctx->InputShape("keys", 0);
   const int32_t num_tables = ctx->Attr<int32_t>("num_tables");
-  CHECK_GE_OR_RETURN(num_tables, 1);
+  CHECK_GE_OR_RETURN(num_tables, 1) << "num_tables must greater than 1, but get " << num_tables;
   if (ctx->has_input("values", 0)) {
     const Shape& values_shape = ctx->InputShape("values", 0);
-    CHECK_EQ_OR_RETURN(keys_shape, values_shape);
+    CHECK_EQ_OR_RETURN(keys_shape, values_shape) << "keys_shape must equals values_shape";
   } else {
     if (num_tables > 1) {
       CHECK_EQ_OR_RETURN(keys_shape.NumAxes(), 2);
-      CHECK_EQ_OR_RETURN(keys_shape.At(1), num_tables);
+      CHECK_EQ_OR_RETURN(keys_shape.At(1), num_tables) << "keys cols must equals num_tables";
     }
   }
   *ctx->OutputShape("num_unique", 0) = Shape({1});
@@ -61,14 +61,14 @@ namespace oneflow {
 /* static */ Maybe<void> IdShuffleOp::InferLogicalTensorDesc(user_op::InferContext* ctx) {
   const Shape& ids_shape = ctx->InputShape("ids", 0);
   const int32_t num_tables = ctx->Attr<int32_t>("num_tables");
-  CHECK_GE_OR_RETURN(num_tables, 1);
+  CHECK_GE_OR_RETURN(num_tables, 1) << "num_tables must greater than 1, but get " << num_tables;
   if (ctx->has_input("table_ids", 0)) {
     const Shape& table_ids_shape = ctx->InputShape("table_ids", 0);
-    CHECK_EQ_OR_RETURN(ids_shape, table_ids_shape);
+    CHECK_EQ_OR_RETURN(ids_shape, table_ids_shape) << "ids_shape must equals table_ids_shape";
   } else {
     if (num_tables > 1) {
       CHECK_EQ_OR_RETURN(ids_shape.NumAxes(), 2);
-      CHECK_EQ_OR_RETURN(ids_shape.At(1), num_tables);
+      CHECK_EQ_OR_RETURN(ids_shape.At(1), num_tables) << "ids cols must equals num_tables";
     }
   }
   const int64_t num_ids = ids_shape.elem_cnt();
