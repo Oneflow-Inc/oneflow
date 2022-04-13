@@ -21,7 +21,8 @@ limitations under the License.
 namespace oneflow {
 
 template<typename T>
-class CublasBiasAddReluMatmulGradKernel final : public user_op::OpKernel, public user_op::CudaGraphSupport {
+class CublasBiasAddReluMatmulGradKernel final : public user_op::OpKernel,
+                                                public user_op::CudaGraphSupport {
  public:
   CublasBiasAddReluMatmulGradKernel() = default;
   ~CublasBiasAddReluMatmulGradKernel() override = default;
