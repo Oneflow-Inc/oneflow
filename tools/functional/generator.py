@@ -522,17 +522,23 @@ class Generator:
                 )
 
             if len(schema_types) > 0:
-                module_fmt += "    {{\"{0}\", (PyCFunction)functional::{1}, METH_VARARGS | METH_KEYWORDS, NULL}},\n".format(name, name)
+                module_fmt += '    {{"{0}", (PyCFunction)functional::{1}, METH_VARARGS | METH_KEYWORDS, NULL}},\n'.format(
+                    name, name
+                )
 
                 header_fmt += "\n"
                 header_fmt += "PyObject* {0}(PyObject* self, PyObject* args, PyObject* kwargs);\n".format(
                     name
                 )
                 schema_fmt += "\n"
-                schema_fmt += "PyObject* {0}(PyObject* self, PyObject* args, PyObject* kwargs) {{\n".format(name)
+                schema_fmt += "PyObject* {0}(PyObject* self, PyObject* args, PyObject* kwargs) {{\n".format(
+                    name
+                )
                 schema_fmt += "  HANDLE_ERRORS\n"
                 schema_fmt += "  PythonFrameGuard pf;\n"
-                schema_fmt += "  static PythonArgParser<{0}> parser(\"{1}\");\n".format(", ".join(schema_types), name)
+                schema_fmt += '  static PythonArgParser<{0}> parser("{1}");\n'.format(
+                    ", ".join(schema_types), name
+                )
                 schema_fmt += "  ParsedArgs<{0}> r;\n".format(max_args_count)
                 schema_fmt += "  int idx = parser.Parse(args, kwargs, &r);\n"
                 i = 0
@@ -543,13 +549,14 @@ class Generator:
                     for j in range(len(signature._args)):
                         cpp_type = _std_decay(signature._args[j]._cpp_type)
                         params.append("r[{0}].As<{1}>()".format(j, cpp_type))
-                    schema_fmt += "    return CastToPyObject(functional::{0}({1}));\n".format(signature._name, ", ".join(params))
+                    schema_fmt += "    return CastToPyObject(functional::{0}({1}));\n".format(
+                        signature._name, ", ".join(params)
+                    )
                     schema_fmt += "  }\n"
                     i += 1
                 schema_fmt += "  return Py_None;\n"
                 schema_fmt += "  END_HANDLE_ERRORS\n"
                 schema_fmt += "}\n"
-
 
         render_file_if_different(
             target_pybind_header_file, pybind_header_fmt.format(header_fmt)
