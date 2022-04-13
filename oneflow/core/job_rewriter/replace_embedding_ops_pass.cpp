@@ -469,6 +469,7 @@ void BuildEmbeddingUpdate(JobPassCtx* ctx, const OpGraph& op_graph, JobBuilder* 
       .Input("unique_embeddings", unique_values_lbn)
       .Input("embedding_grad", embedding_grad_lbn)
       .Input("learning_rate", learning_rate_lbn)
+      .Attr<float>("weight_decay", optimizer_conf.weight_decay_conf().weight_decay_rate())
       .Output("updated_unique_embeddings");
   double scale = GetLossInstanceNumScaleFactor(op_graph, job_builder);
   if (train_conf.has_dynamic_loss_scale_policy()) {
