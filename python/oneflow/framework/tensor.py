@@ -698,17 +698,22 @@ def _len(self):
 
 
 def _orthogonal(self, gain=1.0):
-    nout = self.shape[0]
-    nin = np.prod(self.shape[1:])
-    tmp = np.random.normal(0.0, 1.0, size=(nout, nin))
-    u, _, v = np.linalg.svd(tmp, full_matrices=False) # pylint: disable=invalid-name
-    if u.shape == tmp.shape:
-        res = u
-    else:
-        res = v
-    self = flow.tensor(res.reshape(self.shape))
+    if self.ndimension() < 2:
+        raise ValueError("Only tensors with 2 or more dimensions are supported")
+    rows = self.shape[0]
+    cols = np.prod(self.shape[1:])
+    flattened = np.random.normal(0.0, 1.0, size=(rows, cols))
+    if rows < cols:
+        flattened = flattened.T
+    q, r = np.linalg.qr(flattened) 
+    d = np.diag(r, 0)
+    d = np.where(d < 0, -1, d)
+    d = np.where(d > 0, 1, d)
+    q *= d
+    if rows < cols:
+        q = q.T
+    self = gain * flow.tensor(q.reshape(self.shape))
     return self
-
 
 def _uniform(self, a=0, b=1):
     if isinstance(a, Tensor):
