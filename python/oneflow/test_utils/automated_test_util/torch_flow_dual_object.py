@@ -952,8 +952,9 @@ def check_basetype_equality(a, b, rtol=0.0001, atol=1e-05, check_dtype=False):
                 print(a[i].dtype)
                 print(b[i].dtype)
                 break
-    
+
     return equality_res
+
 
 @equality_checker(type(None), type(None))
 def check_nonetype_equality(a, b, ignored1, ignored2, check_dtype=False):
