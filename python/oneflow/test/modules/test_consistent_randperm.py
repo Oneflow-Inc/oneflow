@@ -17,6 +17,7 @@ import unittest
 from collections import OrderedDict
 
 import oneflow as flow
+import numpy as np
 from oneflow.test_utils.automated_test_util import *
 
 from oneflow.test_utils.test_util import GenArgDict
@@ -43,7 +44,7 @@ def _test_graph_randperm(test_case, N, placement, sbp, dtype):
     y1 = x.to_global(placement=placement, sbp=sbp)
     y1_np_sort = np.sort(y1.numpy())
     y2 = np.arange(N)
-    test_case.assertTrue(np.allclose(y1_np_sort, y, atol=1e-4, rtol=1e-4))
+    test_case.assertTrue(np.allclose(y1_np_sort, y2, atol=1e-4, rtol=1e-4))
     test_case.assertEqual(x.dtype, dtype)
     test_case.assertEqual(x.sbp, sbp)
     test_case.assertEqual(x.placement, placement)
