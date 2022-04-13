@@ -135,28 +135,22 @@ class Conv3dFunctor : public ConvBaseFunctor {
 
 class DeConvBaseFunctor {
  public:
-  explicit DeConvBaseFunctor(const int& num_spatial_dims) : num_spatial_dims_(num_spatial_dims) {
+  explicit DeConvBaseFunctor() {
     bias_op_ = CHECK_JUST(one::OpBuilder("bias_add").Input("a").Input("b").Output("out").Build());
   }
   virtual ~DeConvBaseFunctor() = default;
   Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x,
                            const std::shared_ptr<one::Tensor>& weight,
-                           const Optional<one::Tensor>& bias, const std::vector<int32_t>& strides,
-                           const std::vector<int32_t>& padding,
-                           const std::vector<int32_t>& output_padding, const int32_t& groups,
-                           const std::vector<int32_t>& dilation, const int32_t& filters,
-                           const std::string& data_format) const {
+                           const Optional<one::Tensor>& bias, const int32_t& filters,
+                           const std::vector<int32_t>& padding, const std::string& data_format,
+                           const std::vector<int32_t>& kernel_size,
+                           const std::vector<int32_t>& output_padding,
+                           const std::vector<int32_t>& strides,
+                           const std::vector<int32_t>& dilation, const int32_t& groups) const {
     MutableAttrMap deconv_attrs;
-    std::vector<int32_t> kernel_size_vec(num_spatial_dims_);
-    int32_t kernel_idx_offset = 2;
-    if (data_format == "channels_last") { kernel_idx_offset = 1; }
-
-    for (int i = 0; i < num_spatial_dims_; i++) {
-      kernel_size_vec.at(i) = ((weight->shape())->At(i + kernel_idx_offset));
-    }
     JUST(deconv_attrs.SetAttr<int32_t>("filters", filters));
     JUST(deconv_attrs.SetAttr<std::vector<int32_t>>("padding_before", padding));
-    JUST(deconv_attrs.SetAttr<std::vector<int32_t>>("kernel_size", kernel_size_vec));
+    JUST(deconv_attrs.SetAttr<std::vector<int32_t>>("kernel_size", kernel_size));
     JUST(deconv_attrs.SetAttr<std::vector<int32_t>>("output_padding", output_padding));
     JUST(deconv_attrs.SetAttr<std::vector<int32_t>>("strides", strides));
     JUST(deconv_attrs.SetAttr<std::vector<int32_t>>("dilation_rate", dilation));
@@ -176,12 +170,11 @@ class DeConvBaseFunctor {
  protected:
   std::shared_ptr<OpExpr> deconv_op_;
   std::shared_ptr<OpExpr> bias_op_;
-  int32_t num_spatial_dims_;
 };
 
 class DeConv1dFunctor : public DeConvBaseFunctor {
  public:
-  DeConv1dFunctor() : DeConvBaseFunctor(/*num_spatial_dims_=*/1) {
+  DeConv1dFunctor() {
     deconv_op_ =
         CHECK_JUST(one::OpBuilder("deconv1d").Input("in").Input("weight").Output("out").Build());
   }
@@ -189,7 +182,7 @@ class DeConv1dFunctor : public DeConvBaseFunctor {
 
 class DeConv2dFunctor : public DeConvBaseFunctor {
  public:
-  DeConv2dFunctor() : DeConvBaseFunctor(/*num_spatial_dims_=*/2) {
+  DeConv2dFunctor() {
     deconv_op_ =
         CHECK_JUST(one::OpBuilder("deconv2d").Input("in").Input("weight").Output("out").Build());
   }
@@ -197,7 +190,7 @@ class DeConv2dFunctor : public DeConvBaseFunctor {
 
 class DeConv3dFunctor : public DeConvBaseFunctor {
  public:
-  DeConv3dFunctor() : DeConvBaseFunctor(/*num_spatial_dims_=*/3) {
+  DeConv3dFunctor() {
     deconv_op_ =
         CHECK_JUST(one::OpBuilder("deconv3d").Input("in").Input("weight").Output("out").Build());
   }
