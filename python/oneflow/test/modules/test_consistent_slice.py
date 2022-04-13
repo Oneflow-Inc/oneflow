@@ -24,22 +24,16 @@ from oneflow.test_utils.automated_test_util import *
 
 def _check_forward_and_backward(test_case, input, of_out, torch_out):
     # compare forward
-    of_local = of_out.to_global(
-        flow.env.all_device_placement("cpu"), [flow.sbp.broadcast,]
-    ).to_local()
     test_case.assertTrue(
-        np.array_equal(of_local.numpy(), torch_out.cpu().detach().numpy())
+        np.array_equal(of_out.numpy(), torch_out.cpu().detach().numpy())
     )
 
     # compare backward
     of_out.sum().backward()
     torch_out.sum().backward()
-    of_grad_local = input.oneflow.grad.to_global(
-        flow.env.all_device_placement("cpu"), [flow.sbp.broadcast,]
-    ).to_local()
     torch_grad_local = input.pytorch.grad.cpu().detach()
     test_case.assertTrue(
-        np.array_equal(of_grad_local.numpy(), torch_grad_local.numpy())
+        np.array_equal(input.oneflow.grad.numpy(), torch_grad_local.numpy())
     )
 
 
