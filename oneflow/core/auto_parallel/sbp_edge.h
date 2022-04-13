@@ -116,7 +116,7 @@ class SbpEdge {
   // load a logical blob
   void LoadLbi(oneflow::LogicalBlobId lbi) { CarryLbis.insert(lbi); }
 
-  // check existancy of a logical blob
+  // check existency of a logical blob
   bool SearchLbi(oneflow::LogicalBlobId lbi) const {
     return CarryLbis.find(lbi) != CarryLbis.end();
   }

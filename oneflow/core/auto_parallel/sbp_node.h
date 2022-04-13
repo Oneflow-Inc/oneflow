@@ -84,7 +84,7 @@ class SbpNode {
 
   oneflow::OpNode* op_node = nullptr;
 
-  // We devide the sbp graph into multiple layers.
+  // We divide the sbp graph into multiple layers.
   // MinLayer is the minimum layer number to run this op as soon as possible.
   // MaxLayer is the maximum layer number without slowing down the whole process of the graph.
   // producer.MaxLayer < this_node.MinLayer <= this_node.MaxLayer < consumer.MinLayer
