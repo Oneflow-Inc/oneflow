@@ -76,8 +76,10 @@ NNGraph::~NNGraph() {
 Maybe<void> NNGraph::Close() {
   if (!is_closed_) {
     VLOG(1) << "Try to close c nn graph name " << name_ << "." << std::endl;
-    CloseRuntimeBuffers();
-    runtime_.reset();
+    if (runtime_inited_) {
+      CloseRuntimeBuffers();
+      runtime_.reset();
+    }
     session_ctx_->RemoveGraphFreeEagerTensors(name_);
     VLOG(1) << "Finish close c nn graph name " << name_ << "." << std::endl;
 
