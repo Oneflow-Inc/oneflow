@@ -21,8 +21,6 @@ limitations under the License.
 #include "oneflow/api/python/functional/common.h"
 #include "oneflow/core/framework/op_interpreter/dispatch_frame.h"
 
-#include "oneflow/core/profiler/profiler.h"
-
 namespace oneflow {
 namespace one {
 namespace functional {

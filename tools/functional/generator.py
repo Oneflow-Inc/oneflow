@@ -533,10 +533,8 @@ class Generator:
                 schema_fmt += "  HANDLE_ERRORS\n"
                 schema_fmt += "  PythonFrameGuard pf;\n"
                 schema_fmt += "  static PythonArgParser<{0}> parser(\"{1}\");\n".format(", ".join(schema_types), name)
-                schema_fmt += "  OF_PROFILER_RANGE_PUSH(\"parse\");\n"
                 schema_fmt += "  ParsedArgs<{0}> r;\n".format(max_args_count)
                 schema_fmt += "  int idx = parser.Parse(args, kwargs, &r);\n"
-                schema_fmt += "  OF_PROFILER_RANGE_POP();\n"
                 i = 0
                 for block in blocks:
                     signature = block._signature

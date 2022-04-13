@@ -1799,7 +1799,6 @@ class TensorGetItemFunctor {
  public:
   TensorGetItemFunctor() {}
   Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x, const TensorIndex& index) const {
-    std::shared_ptr<one::Tensor> result;
     std::vector<detail::Slice> slice_indices;
     TensorTuple tensor_indices;
     std::vector<int64_t> target_dims;
@@ -1832,6 +1831,7 @@ class TensorGetItemFunctor {
       }
       return true;
     }();
+    std::shared_ptr<one::Tensor> result;
     if (is_identity) {
       result = expand_input;
     } else {
