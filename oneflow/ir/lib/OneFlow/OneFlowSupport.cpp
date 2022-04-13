@@ -112,7 +112,7 @@ mlir::DenseElementsAttr TensorToDenseElementsAttr(
   if (dtype == ::oneflow::DataType::kFloat) {
     return __TensorToDenseElementsAttr<float>(tensor, mlir::FloatType::getF32(ctx));
   }
-  llvm::errs() << "Only support float32 variables now."
+  llvm::errs() << "Converting oneflow::Tensor to mlir::DenseElementsAttr only support float32 now."
                << "\n";
   exit(EXIT_FAILURE);
 }
@@ -127,7 +127,7 @@ std::shared_ptr<::oneflow::one::Tensor> DenseElementsAttrToTensor(
     return __DenseElementsAttrToTensor<float>(dense_attr_, device_tag_attr, device_name_attr,
                                               ::oneflow::DataType::kFloat);
   }
-  llvm::errs() << "Only support float32 variables now."
+  llvm::errs() << "Converting mlir::DenseElementsAttr to oneflow::Tensor only support float32 now."
                << "\n";
   exit(EXIT_FAILURE);
 }
