@@ -135,7 +135,12 @@ static PyObject* PyTensorObject_storage_offset(PyObject* self, PyObject* unused)
 
 static PyObject* PyTensorObject_stride(PyObject* self, PyObject* unused) {
   HANDLE_ERRORS
-  return functional::CastToPyObject(PyTensor_Unpack(self)->stride());
+  const auto& stride = ASSERT_PTR(PyTensor_Unpack(self)->stride());
+  PyObject* tup = PyTuple_New(stride->NumAxes());
+  for (int i = 0; i < stride->NumAxes(); ++i) {
+    PyTuple_SetItem(tup, i, PyLong_FromUnsignedLong(stride->At(i)));
+  }
+  return tup;
   END_HANDLE_ERRORS
 }
 
