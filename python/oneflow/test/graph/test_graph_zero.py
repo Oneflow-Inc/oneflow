@@ -32,7 +32,7 @@ def _test_linear_train_graph_with_zero(test_case, zero_stage=1):
         flow.nn.init.constant_(linear_dp.weight, 2.068758)
         flow.nn.init.constant_(linear_dp.bias, 0.23)
 
-        linear_mp = flow.nn.Linear(2, 8)
+        linear_mp = flow.nn.Linear(8, 2)
         linear_mp = linear_mp.to_global(placement=P, sbp=S0)
         flow.nn.init.constant_(linear_mp.weight, 2.068758)
         flow.nn.init.constant_(linear_mp.bias, 0.23)
@@ -51,20 +51,8 @@ def _test_linear_train_graph_with_zero(test_case, zero_stage=1):
 
                 self.config.enable_amp(True)
                 self.set_grad_scaler(grad_scaler)
-                if zero_stage == 1:
-                    print("zero stage 1 optimization")
-                    self.config.set_zero_redundancy_optimizer_mode("distributed_split")
-                    self.config.set_zero_redundancy_optimizer_min_size_after_split(1)
-                if zero_stage == 2:
-                    self.config.set_zero_redundancy_optimizer_mode("distributed_split")
-                    self.config.set_zero_redundancy_optimizer_min_size_after_split(1)
-                    flow.boxing.nccl.enable_use_compute_stream(True)
-                if zero_stage == 3:
-                    print("zero stage 3 optimization")
-                    self.config.set_zero_redundancy_optimizer_mode("distributed_split")
-                    self.config.set_zero_redundancy_optimizer_min_size_after_split(1)
-                    flow.boxing.nccl.enable_use_compute_stream(True)
-                    flow.boxing.nccl.disable_group_boxing_by_dst_parallel(True)
+                self.config.enable_zero(True, stage=zero_stage, min_splited_size=1)
+                self.debug(2)
 
             def build(self, x):
                 out = self.linear_dp(x)
@@ -103,8 +91,10 @@ def _test_linear_train_graph_with_zero(test_case, zero_stage=1):
 
         # After pass rewrite in training graph, parameters' sbp has been
         # changed from flow.sbp.broadcast to flow.sbp.split(0)
-        test_case.assertEqual(linear.weight.sbp[0], S0)
-        test_case.assertEqual(linear.bias.sbp[0], S0)
+        test_case.assertEqual(linear_dp.weight.sbp[0], S0)
+        test_case.assertEqual(linear_dp.bias.sbp[0], S0)
+        test_case.assertEqual(linear_mp.weight.sbp[0], S0)
+        test_case.assertEqual(linear_mp.bias.sbp[0], S0)
 
         # In evaluation graph, paramters's sbp are flow.sbp.split(0).
         # But their consumer will consum them as flow.sbp.broadcast.

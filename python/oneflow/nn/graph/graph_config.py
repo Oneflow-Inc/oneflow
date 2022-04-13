@@ -17,6 +17,7 @@ import os
 
 from collections import OrderedDict
 
+import oneflow
 from oneflow.nn.graph.optimizer import OptDict
 import oneflow._oneflow_internal.oneflow.core.job.job_conf as job_conf_cfg
 
@@ -45,22 +46,6 @@ class GraphConfig(object):
             return False
         raise NotImplementedError
 
-    def set_outputs_buffer_size(self, value: int = 2):
-        r"""Set the outputs buffer size of ``nn.Graph``.
-
-        When graph's outputs buffer size is greater than 2, multiple call on the graph can work like a pipeline. This makes multiple call takes less time.
-
-        The default outputs buffer size is 2.
-
-        # TODO (lixiang): Explain the meaning of the size of buffer size and add sample code.
-        # The size of the buffer size indicates the maximum number of iterations that the output of the Graph and the Graph actually executed asynchronously can overlap.
-        # If the buffer size is 1, there is no pipeline. A size of 2 means that it can execute 1 iter ahead of time. A size of 3 means that two iters can be executed ahead of time.
-
-        Args:
-            value (int): graph ouputs buffer size.
-        """
-        self._outputs_buffer_size = value
-
     def enable_amp(self, mode: bool = True):
         r"""If set to true, then graph will use mixed precision mode, it means use both float16 and float32 during model training.
 
@@ -82,9 +67,59 @@ class GraphConfig(object):
 
         Args:
             mode (bool, optional): The default vaule is True.
+
         """
         assert type(mode) is bool
         self.proto.set_enable_auto_mixed_precision(mode)
+
+    def enable_zero(self, mode: bool = True, *, stage: int = 2, min_splited_size: int = 1024):
+        r"""Enable ZeRO redundancy optimizer.
+
+        This optimzation will reduce optimizer states memory consumption as described
+        by ZeRO https://arxiv.org/abs/1910.02054 .
+
+        The default zero stage is 2.
+
+        For example:
+
+        .. code-block:: python
+
+            import oneflow as flow
+
+            class Graph(flow.nn.Graph):
+                def __init__(self):
+                    super().__init__()
+                    self.linear = flow.nn.Linear(3, 8, False)
+                    self.config.enable_zero()
+                def build(self, x):
+                    return self.linear(x)
+
+            graph = Graph()
+
+        Args:
+            mode (bool): if set to true, optimizer states of Data Parallel will be sharded across devices.
+            stage (int): optimization stage, range from 1 to 3. 
+            min_splited_size (int): min size of a sharded optimizer state.
+        """
+        if not mode:
+            self.proto.set_optimizer_placement_optimization_mode("none")
+            return
+        assert stage >= 1 and stage <= 3, "ZeRO stage must range form 1 to 3."
+        assert min_splited_size > 0, "ZeRO min size of a sharded optimizer state must > 0."
+        if stage == 1:
+            print("zero stage 1 optimization")
+            self.proto.set_optimizer_placement_optimization_mode("distributed_split")
+            self.proto.set_optimizer_placement_optimization_threshold(min_splited_size)
+        elif stage == 2:
+            self.proto.set_optimizer_placement_optimization_mode("distributed_split")
+            self.proto.set_optimizer_placement_optimization_threshold(min_splited_size)
+            oneflow.boxing.nccl.enable_use_compute_stream(True)
+        elif stage == 3:
+            print("zero stage 3 optimization")
+            self.proto.set_optimizer_placement_optimization_mode("distributed_split")
+            self.proto.set_optimizer_placement_optimization_threshold(min_splited_size)
+            oneflow.boxing.nccl.enable_use_compute_stream(True)
+            oneflow.boxing.nccl.disable_group_boxing_by_dst_parallel(True)
 
     def allow_fuse_model_update_ops(self, mode: bool = True):
         r"""If set to true, try to fuse cast + scale + l1_l2_regularize_gradient + model_update to one op to improve performance.
@@ -188,61 +223,21 @@ class GraphConfig(object):
         """
         self.proto.set_num_gradient_accumulation_steps(value)
 
-    def set_zero_redundancy_optimizer_mode(self, mode: str = "distributed_split"):
-        r"""Set mode to remove redundancy of optimizer states.
-        This optimzation will reduce optimizer states memory consumption as described
-        by ZeRO https://arxiv.org/abs/1910.02054 .
+    def set_outputs_buffer_size(self, value: int = 2):
+        r"""Set the outputs buffer size of ``nn.Graph``.
 
-        For example:
+        When graph's outputs buffer size is greater than 2, multiple call on the graph can work like a pipeline. This makes multiple call takes less time.
 
-        .. code-block:: python
+        The default outputs buffer size is 2.
 
-            import oneflow as flow
-
-            class Graph(flow.nn.Graph):
-                def __init__(self):
-                    super().__init__()
-                    self.linear = flow.nn.Linear(3, 8, False)
-                    self.config.set_zero_redundancy_optimizer_mode("distributed_split")
-                def build(self, x):
-                    return self.linear(x)
-
-            graph = Graph()
+        # TODO (lixiang): Explain the meaning of the size of buffer size and add sample code.
+        # The size of the buffer size indicates the maximum number of iterations that the output of the Graph and the Graph actually executed asynchronously can overlap.
+        # If the buffer size is 1, there is no pipeline. A size of 2 means that it can execute 1 iter ahead of time. A size of 3 means that two iters can be executed ahead of time.
 
         Args:
-            mode (str): "distributed_split" or "non_distributed". "distributed_split" mode
-                         will shard each optimizer state across devices. "non_distributed" mode
-                         will place each optimizer state to only one device.
+            value (int): graph ouputs buffer size.
         """
-        assert mode in ("distributed_split", "non_distributed")
-        self.proto.set_optimizer_placement_optimization_mode(mode)
-
-    def set_zero_redundancy_optimizer_min_size_after_split(self, value):
-        r"""Set the min size of optimizer state/grad/parameter after split.
-
-        For example:
-
-        .. code-block:: python
-
-            import oneflow as flow
-
-            class Graph(flow.nn.Graph):
-                def __init__(self):
-                    super().__init__()
-                    self.linear = flow.nn.Linear(3, 8, False)
-                    self.config.set_zero_redundancy_optimizer_mode("distributed_split")
-                    self.config.set_zero_redundancy_optimizer_min_size_after_split(1)
-                def build(self, x):
-                    return self.linear(x)
-
-            graph = Graph()
-
-        Args:
-            value (int): min size value.
-        """
-        assert isinstance(value, int)
-        assert value >= 1
-        self.proto.set_optimizer_placement_optimization_threshold(value)
+        self._outputs_buffer_size = value
 
     def enable_xla_jit(self, value=True):
         r"""Whether use xla_jit in xrt or not.
