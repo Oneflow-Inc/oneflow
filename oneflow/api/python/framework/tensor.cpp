@@ -20,6 +20,7 @@ limitations under the License.
 #include "oneflow/api/python/exception/exception.h"
 #include "oneflow/api/python/framework/size.h"
 #include "oneflow/api/python/functional/common.h"
+#include "oneflow/api/python/functional/python_arg.h"
 #include "oneflow/api/python/functional/functional_api.yaml.pybind.h"
 #include "oneflow/api/python/functional/tensor_api.yaml.pybind.h"
 #include "oneflow/api/python/of_api_registry.h"
@@ -42,22 +43,28 @@ namespace one {
 
 #define ASSERT(x) (x).GetOrThrow()
 #define ASSERT_PTR(x) (x).GetPtrOrThrow()
+#define PY_XINCREF(p) (Py_XINCREF(p), p)
+
+PyTypeObject* PyTensorObject_Type = NULL;
+PyTypeObject* PyParameterObject_Type = NULL;
 
 static int PyTensorObject_init(PyObject* self, PyObject* args, PyObject* kwargs) {
   HANDLE_ERRORS
-  if (self) {
-    PyObject* obj = functional::_legacy_tensor_ctor(NULL, args, kwargs);
-    ((PyTensorObject*)self)->data = PyTensor_Unpack(obj);
-    Py_XDECREF(obj);
-  }
+  PyObject* _self = functional::_legacy_tensor_ctor(NULL, args, kwargs);
+  ((PyTensorObject*)self)->data = PyTensor_Unpack(_self);
+  Py_XDECREF(_self);
   return 0;
   END_HANDLE_ERRORS_RET(-1)
 }
 
-static PyObject* PyTensorObject_new(PyTypeObject* type, PyObject* args, PyObject* kwargs) {
-  auto* self = (PyTensorObject*)type->tp_alloc(type, 0);
-  if (PyTensorObject_init((PyObject*)self, args, kwargs) != 0) { return NULL; }
-  return (PyObject*)self;
+static void PyTensorObject_dealloc(PyObject* self) {
+  ((PyTensorObject*)self)->data.reset();
+
+  PyObject** dict_ptr = _PyObject_GetDictPtr(self);
+  if (dict_ptr) { Py_CLEAR(*dict_ptr); }
+  auto* type = Py_TYPE(self);
+  type->tp_free(self);
+  Py_DECREF(type);
 }
 
 static int PyParameterObject_init(PyObject* self, PyObject* args, PyObject* kwargs) {
@@ -107,20 +114,20 @@ static PyObject* PyTensorObject_getitem(PyObject* self, Py_ssize_t item) {
   END_HANDLE_ERRORS
 }
 
-static PyObject* PyTensorObject_subscript(TensorSize* self, PyObject* item) {
+static PyObject* PyTensorObject_subscript(PyObject* self, PyObject* item) {
   HANDLE_ERRORS
-  PyObject* args = PyTuple_Pack(2, (PyObject*)self, item);
-  PyObject* result = functional::tensor_getitem(NULL, args, NULL);
-  Py_XDECREF(args);
-  return result;
+  const auto& p = PyTensor_Unpack(self);
+  functional::PythonArg arg(item);
+  return PyTensor_New(ASSERT_PTR(functional::TensorGetItem(p, arg.As<functional::TensorIndex>())));
   END_HANDLE_ERRORS
 }
 
-static int PyTensorObject_ass_subscript(TensorSize* self, PyObject* item, PyObject* value) {
+static int PyTensorObject_ass_subscript(PyObject* self, PyObject* item, PyObject* value) {
   HANDLE_ERRORS
-  PyObject* args = PyTuple_Pack(3, (PyObject*)self, item, value);
-  functional::tensor_setitem(NULL, args, NULL);
-  Py_XDECREF(args);
+  const auto& p = PyTensor_Unpack(self);
+  const auto& v = PyTensor_Unpack(value);
+  functional::PythonArg arg(item);
+  ASSERT(functional::TensorSetItem(p, arg.As<functional::TensorIndex>(), v));
   return 0;
   END_HANDLE_ERRORS_RET(-1)
 }
@@ -479,72 +486,83 @@ static PyGetSetDef PyTensorObject_properties[] = {
     {"sbp", (getter)PyTensorObject_sbp, NULL, NULL, NULL},
     {NULL}};
 
-static PyTypeObject* MakeTensorMetaclass() {
-  constexpr auto* name = "TensorMetaCls";
-  auto heap_type = (PyHeapTypeObject*)PyType_Type.tp_alloc(&PyType_Type, 0);
-  heap_type->ht_name = PyUnicode_FromString(name);
-  heap_type->ht_qualname = PyUnicode_FromString(name);
+// create a Tensor instance
+static PyObject* TensorMetaCls_call(PyObject* type, PyObject* args, PyObject* kwargs) {
+  return PyType_Type.tp_call(type, args, kwargs);
+}
 
-  auto type = &heap_type->ht_type;
-  type->tp_name = name;
-  Py_INCREF(&PyType_Type);
-  type->tp_base = &PyType_Type;
+static void TensorMetaCls_dealloc(PyObject* type) { PyType_Type.tp_dealloc(type); }
+
+static PyHeapTypeObject* MakeTensorMetaclass() {
+  PyObject* name = PyUnicode_FromString("TensorMetaCls");
+
+  auto* heap_type = (PyHeapTypeObject*)PyType_Type.tp_alloc(&PyType_Type, 0);
+  heap_type->ht_name = name;
+  heap_type->ht_qualname = PY_XINCREF(name);
+
+  auto* type = &heap_type->ht_type;
+  type->tp_name = "TensorMetaCls";
+  type->tp_base = PY_XINCREF(&PyType_Type);
   type->tp_flags = Py_TPFLAGS_DEFAULT | Py_TPFLAGS_BASETYPE | Py_TPFLAGS_HEAPTYPE;
+
+  type->tp_call = TensorMetaCls_call;
+  type->tp_dealloc = TensorMetaCls_dealloc;
 
   if (PyType_Ready(type) < 0) { return NULL; }
   PyObject_SetAttrString((PyObject*)type, "__module__", PyUnicode_FromString("oneflow_builtin"));
-  return type;
+  return heap_type;
 }
 
+static PyHeapTypeObject* TensorMetaclass_Type = MakeTensorMetaclass();
+
 static PyTypeObject* MakeTensorType() {
-  PyTypeObject* metaclass = MakeTensorMetaclass();
-  auto heap_type = (PyHeapTypeObject*)metaclass->tp_alloc(metaclass, 0);
+  PyObject* name = PyUnicode_FromString("Tensor");
+
+  auto* metaclass = &TensorMetaclass_Type->ht_type;
+  auto* heap_type = (PyHeapTypeObject*)metaclass->tp_alloc(metaclass, 0);
   if (!heap_type) { return NULL; }
-  heap_type->ht_name = PyUnicode_FromString("Tensor");
-  heap_type->ht_qualname = PyUnicode_FromString("Tensor");
-  auto type = &heap_type->ht_type;
+  heap_type->ht_name = name;
+  heap_type->ht_qualname = PY_XINCREF(name);
+  auto* type = &heap_type->ht_type;
   type->tp_name = "Tensor";
   type->tp_basicsize = sizeof(PyTensorObject);
 
   type->tp_init = PyTensorObject_init;
-  type->tp_new = PyTensorObject_new;
+  type->tp_dealloc = PyTensorObject_dealloc;
   type->tp_getset = PyTensorObject_properties;
   type->tp_methods = PyTensorObject_methods;
 
-  type->tp_as_number = &heap_type->as_number;
   type->tp_as_sequence = &PyTensorObject_as_sequence;
   type->tp_as_mapping = &PyTensorObject_as_mapping;
 
-  type->tp_flags |= Py_TPFLAGS_DEFAULT | Py_TPFLAGS_HEAPTYPE;
+  type->tp_flags = Py_TPFLAGS_DEFAULT | Py_TPFLAGS_BASETYPE | Py_TPFLAGS_HEAPTYPE;
 
   if (PyType_Ready(type) < 0) { return NULL; }
   return type;
 }
 
 static PyTypeObject* MakeParameterType() {
-  PyTypeObject* metaclass = MakeTensorMetaclass();
-  auto heap_type = (PyHeapTypeObject*)metaclass->tp_alloc(metaclass, 0);
+  PyObject* name = PyUnicode_FromString("nn.Parameter");
+
+  auto* metaclass = &TensorMetaclass_Type->ht_type;
+  auto* heap_type = (PyHeapTypeObject*)metaclass->tp_alloc(metaclass, 0);
   if (!heap_type) { return NULL; }
-  heap_type->ht_name = PyUnicode_FromString("nn.Parameter");
-  heap_type->ht_qualname = PyUnicode_FromString("nn.Parameter");
-  auto type = &heap_type->ht_type;
+  heap_type->ht_name = name;
+  heap_type->ht_qualname = PY_XINCREF(name);
+  auto* type = &heap_type->ht_type;
   type->tp_name = "nn.Parameter";
   type->tp_basicsize = sizeof(PyTensorObject);
 
   type->tp_init = PyParameterObject_init;
   type->tp_new = PyParameterObject_new;
 
-  Py_INCREF(PyTensorObject_Type);
-  type->tp_base = PyTensorObject_Type;
+  type->tp_base = PY_XINCREF(PyTensorObject_Type);
 
-  type->tp_flags |= Py_TPFLAGS_DEFAULT | Py_TPFLAGS_HEAPTYPE;
+  type->tp_flags = Py_TPFLAGS_DEFAULT | Py_TPFLAGS_BASETYPE | Py_TPFLAGS_HEAPTYPE;
 
   if (PyType_Ready(type) < 0) { return NULL; }
   return type;
 }
-
-PyTypeObject* PyTensorObject_Type = MakeTensorType();
-PyTypeObject* PyParameterObject_Type = MakeParameterType();
 
 PyObject* PyTensor_New(const std::shared_ptr<Tensor>& data) {
   auto* self = (PyTensorObject*)PyTensorObject_Type->tp_alloc(PyTensorObject_Type, 0);
@@ -568,14 +586,17 @@ PyObject* PyParameter_New(const std::shared_ptr<Tensor>& data, bool requires_gra
 #undef ASSERT_PTR
 
 ONEFLOW_API_PYBIND11_MODULE("", m) {
-  if (PyType_Ready(PyTensorObject_Type) < 0) { return; }
-  Py_INCREF(PyTensorObject_Type);
-  if (PyModule_AddObject(m.ptr(), "Tensor", (PyObject*)PyTensorObject_Type) < 0) { return; }
-
+  PyTensorObject_Type = MakeTensorType();
+  PyParameterObject_Type = MakeParameterType();
+  if (PyTensorObject_Type
+      && PyModule_AddObject(m.ptr(), "Tensor", (PyObject*)PyTensorObject_Type) < 0) {
+    return;
+  }
   auto nn = m.def_submodule("nn");
-  if (PyType_Ready(PyParameterObject_Type) < 0) { return; }
-  Py_INCREF(PyParameterObject_Type);
-  if (PyModule_AddObject(nn.ptr(), "Parameter", (PyObject*)PyParameterObject_Type) < 0) { return; }
+  if (PyParameterObject_Type
+      && PyModule_AddObject(nn.ptr(), "Parameter", (PyObject*)PyParameterObject_Type) < 0) {
+    return;
+  }
 }
 
 }  // namespace one
