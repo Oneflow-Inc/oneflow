@@ -15,7 +15,6 @@ limitations under the License.
 */
 #include "oneflow/core/framework/nn_graph.h"
 #include "oneflow/core/common/buffer_manager.h"
-#include "oneflow/core/common/just.h"
 #include "oneflow/core/common/maybe.h"
 #include "oneflow/core/common/scalar.h"
 #include "oneflow/core/common/util.h"
@@ -242,16 +241,16 @@ Maybe<void> NNGraph::RegisterNewVariableOpInJobPass() {
   return Maybe<void>::Ok();
 }
 Maybe<void> NNGraph::DeleteOutdatedVariableInVariableTensorMgr() {
-  std::set<std::string> variables_set;
+  std::set<std::string> variable_names;
   OpGraph op_graph(job_);
   JUST(op_graph.MaybeForEachNode([&](OpNode* op_node) -> Maybe<void> {
     if (op_node->op().op_conf().has_variable_conf() == false) { return Maybe<void>::Ok(); }
-    variables_set.insert(op_node->op().op_name());
+    variable_names.insert(op_node->op().op_name());
     return Maybe<void>::Ok();
   }));
   auto mgr = ::oneflow::Global<::oneflow::VariableTensorMgr>::Get();
   for (auto& name : mgr->DumpNames()) {
-    if (variables_set.find(name) == variables_set.end()) { mgr->Delete(name); }
+    if (variable_names.find(name) == variable_names.end()) { mgr->Delete(name); }
   }
   return Maybe<void>::Ok();
 }
