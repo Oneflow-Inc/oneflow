@@ -730,13 +730,14 @@ class ConvTranspose1d(Module):
             x,
             self.weight,
             self.bias,
-            self.stride,
-            self.padding,
-            self.output_padding,
-            self.groups,
-            self.dilation,
             self.filters,
+            self.padding,
             "channels_first",
+            self.kernel_size,
+            self.output_padding,
+            self.stride,
+            self.dilation,
+            self.groups,
         )
 
 
@@ -856,13 +857,14 @@ class ConvTranspose2d(Module):
             x,
             self.weight,
             self.bias,
-            self.stride,
-            self.padding,
-            self.output_padding,
-            self.groups,
-            self.dilation,
             self.filters,
+            self.padding,
             "channels_first",
+            self.kernel_size,
+            self.output_padding,
+            self.stride,
+            self.dilation,
+            self.groups,
         )
         return res
 
@@ -1018,13 +1020,14 @@ class ConvTranspose3d(Module):
             x,
             self.weight,
             self.bias,
-            self.stride,
-            self.padding,
-            self.output_padding,
-            self.groups,
-            self.dilation,
             self.filters,
+            self.padding,
             "channels_first",
+            self.kernel_size,
+            self.output_padding,
+            self.stride,
+            self.dilation,
+            self.groups,
         )
 
 
