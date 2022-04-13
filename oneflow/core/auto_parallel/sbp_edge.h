@@ -471,7 +471,7 @@ void SbpEdge<SbpSignature>::InitializeMemoryCost() {
   int32_t producer_sbp_size = Cost.size();
   // This function must be run after initialization of Cost
   MemoryCost.resize(producer_sbp_size);
-  for (int32_t i = 0; i < producer_sbp_size; i++) { MemoryCost[i].resize(consumer_sbp_size); }
+  for (int32_t i = 0; i < producer_sbp_size; i++) { MemoryCost[i].resize(consumer_sbp_size, 0.0); }
 
   // Skip those edges containing wait times only, and those edges from proxy to consumer
   if (EmptyLbi() || !(StartNode->op_node)) { return; }

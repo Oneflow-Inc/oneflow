@@ -23,8 +23,10 @@ limitations under the License.
 
 #include "binary_set.h"
 #include "oneflow/core/common/data_type.h"
+#include "oneflow/core/framework/sbp_infer_util.h"
 #include "oneflow/core/graph/op_graph.h"
 #include "algorithm_util.h"
+#include "oneflow/core/job/sbp_parallel.pb.h"
 
 #define ms_1 1e11
 #define us_1 1e8
@@ -79,6 +81,9 @@ class SbpNode {
 
   // Cost[sbp] is Computation Cost when using SbpSignatureList[sbp]
   std::vector<double> Cost;
+
+  // MemoryCost[sbp] is the storage for the output
+  std::vector<double> MemoryCost;
 
   std::vector<BinarySet> ParallelCandidates;
 
@@ -222,6 +227,8 @@ class SbpNode {
 
   // Assemble copy cost for all the incoming edges
   void InitializeCopyCost(bool compute_cost, bool use_sbp_collector_);
+  // Assemble memory cost for all the sbp nodes
+  void InitializeMemoryCost();
 
 };  // class SbpNode
 
@@ -887,6 +894,41 @@ void SbpNode<SbpSignature>::InitializeCopyCost(bool compute_cost, bool use_sbp_c
     for (const std::string& ibn : op_node->op().input_bns()) {
       if (producer->op().op_name() == op_node->SrcNode4Ibn(ibn).op().op_name()) {
         this_edge->InitializeCopyCost(ibn, compute_cost, use_sbp_collector_);
+      }
+    }
+  }
+}
+
+// Assemble memory cost for nodes
+template<class SbpSignature>
+void SbpNode<SbpSignature>::InitializeMemoryCost() {
+  // Assemble memory cost for node
+  int32_t sbp_size = Cost.size();
+  MemoryCost.resize(sbp_size, 0.0);
+  // We do not count the memory cost for proxy.
+  // They are counted by input edges of proxy later.
+  if (op_node) {
+    // Only calculate the memory cost for output blobs
+    for (const auto& obn : op_node->op().output_bns()) {
+      // We do not pre-store the logical blob size for {obn, sbp} here.
+      const auto& output_hierarchy =
+          CHECK_JUST(op_node->op().GetParallelDesc4BnInOp(obn))->hierarchy();
+      // Pre-store the logical blob size for sbp with a given obn.
+      HashMap<NdSbp, double> NdSbp2logical_blob_size;
+      for (int32_t sbp_id = 0; sbp_id < sbp_size; sbp_id++) {
+        NdSbp& sbp = SbpSignatureList[sbp_id]->bn_in_op2nd_sbp().at(obn);
+        double logical_blob_size = 0.0;
+        const auto& iterator_sbp = NdSbp2logical_blob_size.find(sbp);
+        if (iterator_sbp == NdSbp2logical_blob_size.end()) {
+          // Compute and store the memory cost of a blob under a new sbp
+          Shape logical_shape(CHECK_JUST(op_node->op().GetLogicalBlobDesc4Obn(obn))->shape());
+          logical_blob_size = Storage4NdSbp(sbp, logical_shape, *output_hierarchy);
+          NdSbp2logical_blob_size[sbp] = logical_blob_size;
+        } else {
+          // Use those pre-stored logical blob size
+          logical_blob_size = iterator_sbp->second;
+        }
+        MemoryCost[sbp_id] += logical_blob_size;
       }
     }
   }
