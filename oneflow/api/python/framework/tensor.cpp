@@ -496,14 +496,14 @@ static PyObject* TensorMetaCls_call(PyObject* type, PyObject* args, PyObject* kw
 static void TensorMetaCls_dealloc(PyObject* type) { PyType_Type.tp_dealloc(type); }
 
 static PyHeapTypeObject* MakeTensorMetaclass() {
-  PyObject* name = PyUnicode_FromString("TensorMetaCls");
+  PyObject* name = PyUnicode_FromString("_TensorMeta");
 
   auto* heap_type = (PyHeapTypeObject*)PyType_Type.tp_alloc(&PyType_Type, 0);
   heap_type->ht_name = name;
   heap_type->ht_qualname = PY_XINCREF(name);
 
   auto* type = &heap_type->ht_type;
-  type->tp_name = "TensorMetaCls";
+  type->tp_name = "_TensorMeta";
   type->tp_base = PY_XINCREF(&PyType_Type);
   type->tp_flags = Py_TPFLAGS_DEFAULT | Py_TPFLAGS_BASETYPE | Py_TPFLAGS_HEAPTYPE;
 
@@ -511,7 +511,7 @@ static PyHeapTypeObject* MakeTensorMetaclass() {
   type->tp_dealloc = TensorMetaCls_dealloc;
 
   if (PyType_Ready(type) < 0) { return NULL; }
-  PyObject_SetAttrString((PyObject*)type, "__module__", PyUnicode_FromString("oneflow_builtin"));
+  PyObject_SetAttrString((PyObject*)type, "__module__", PyUnicode_FromString("oneflow._C"));
   return heap_type;
 }
 
@@ -541,11 +541,12 @@ static PyTypeObject* MakeTensorType() {
   type->tp_flags = Py_TPFLAGS_DEFAULT | Py_TPFLAGS_BASETYPE | Py_TPFLAGS_HEAPTYPE;
 
   if (PyType_Ready(type) < 0) { return NULL; }
+  PyObject_SetAttrString((PyObject*)type, "__module__", PyUnicode_FromString("oneflow"));
   return type;
 }
 
 static PyTypeObject* MakeParameterType() {
-  PyObject* name = PyUnicode_FromString("nn.Parameter");
+  PyObject* name = PyUnicode_FromString("Parameter");
 
   auto* metaclass = &TensorMetaclass_Type->ht_type;
   auto* heap_type = (PyHeapTypeObject*)metaclass->tp_alloc(metaclass, 0);
@@ -553,7 +554,7 @@ static PyTypeObject* MakeParameterType() {
   heap_type->ht_name = name;
   heap_type->ht_qualname = PY_XINCREF(name);
   auto* type = &heap_type->ht_type;
-  type->tp_name = "nn.Parameter";
+  type->tp_name = "Parameter";
   type->tp_basicsize = sizeof(PyTensorObject);
 
   type->tp_init = PyParameterObject_init;
@@ -563,6 +564,7 @@ static PyTypeObject* MakeParameterType() {
   type->tp_flags = Py_TPFLAGS_DEFAULT | Py_TPFLAGS_BASETYPE | Py_TPFLAGS_HEAPTYPE;
 
   if (PyType_Ready(type) < 0) { return NULL; }
+  PyObject_SetAttrString((PyObject*)type, "__module__", PyUnicode_FromString("oneflow.nn"));
   return type;
 }
 
