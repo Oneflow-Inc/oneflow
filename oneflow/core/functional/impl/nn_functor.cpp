@@ -2652,6 +2652,47 @@ class OneEmbeddingAdamUpdateFunctor {
   std::shared_ptr<OpExpr> do_bias_correction_op_;
 };
 
+class OneEmbeddingAdagradUpdateFunctor {
+ public:
+  OneEmbeddingAdagradUpdateFunctor() {
+    // This functor is just for unittest
+    op_ = CHECK_JUST(one::OpBuilder("adagrad_embedding_update")
+                         .Input("num_unique_ids")
+                         .Input("unique_embeddings")
+                         .Input("embedding_grad")
+                         .Input("learning_rate")
+                         .Input("down_scale_by_tensor")
+                         .Input("skip_if")
+                         .Input("train_step")
+                         .Output("updated_unique_embeddings")
+                         .Build());
+  }
+
+  Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& num_unique_ids,
+                           const std::shared_ptr<one::Tensor>& unique_embeddings,
+                           const std::shared_ptr<one::Tensor>& embedding_grad,
+                           const std::shared_ptr<one::Tensor>& learning_rate,
+                           const std::shared_ptr<one::Tensor>& down_scale_by_tensor,
+                           const std::shared_ptr<one::Tensor>& skip_if,
+                           const std::shared_ptr<one::Tensor>& train_step, const double scale,
+                           const float weight_decay, const float lr_decay,
+                           const float epsilon) const {
+    MutableAttrMap attrs;
+    JUST(attrs.SetAttr<double>("scale", scale));
+    JUST(attrs.SetAttr<float>("weight_decay", weight_decay));
+    JUST(attrs.SetAttr<float>("lr_decay", lr_decay));
+    JUST(attrs.SetAttr<float>("epsilon", epsilon));
+    return OpInterpUtil::Dispatch<Tensor>(
+        *op_,
+        {num_unique_ids, unique_embeddings, embedding_grad, learning_rate, down_scale_by_tensor,
+         skip_if, train_step},
+        attrs);
+  }
+
+ private:
+  std::shared_ptr<OpExpr> op_;
+};
+
 }  // namespace impl
 
 ONEFLOW_FUNCTION_LIBRARY(m) {
@@ -2731,6 +2772,7 @@ ONEFLOW_FUNCTION_LIBRARY(m) {
   m.add_functor<impl::OneEmbeddingUniqueKeyValuePairFunctor>("OneEmbeddingUniqueKeyValuePair");
   m.add_functor<impl::OneEmbeddingSgdUpdateFunctor>("OneEmbeddingSgdUpdate");
   m.add_functor<impl::OneEmbeddingAdamUpdateFunctor>("OneEmbeddingAdamUpdate");
+  m.add_functor<impl::OneEmbeddingAdagradUpdateFunctor>("OneEmbeddingAdagradUpdate");
 };
 
 }  // namespace functional
