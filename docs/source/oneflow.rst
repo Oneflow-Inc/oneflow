@@ -151,6 +151,7 @@ oneflow
             t,
             tril, 
             unsqueeze, 
+            unbind, 
             permute,
             var, 
             where, 
