@@ -34,11 +34,11 @@ TEST(VectorAt, write_int_vector) {
 
 namespace {
 class A {
-  public:
-    explicit A(int a) : a(a) {}
-    int a;
-  };
-}
+ public:
+  explicit A(int a) : a(a) {}
+  int a;
+};
+}  // namespace
 
 TEST(VectorAt, write_custom_class_vector) {
   std::vector<A> vec = {A(1), A(2)};
