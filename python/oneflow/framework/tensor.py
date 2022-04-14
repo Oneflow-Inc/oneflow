@@ -683,6 +683,10 @@ def _split(self, split_size_or_sections=None, dim=0):
     return flow._C.split(self, split_size_or_sections, dim)
 
 
+def _unbind(self, dim=0):
+    return flow._C.unbind(self, dim)
+
+
 def _all(self, dim=None, keepdim=False):
     return flow.all(self, dim, keepdim)
 
@@ -1206,6 +1210,7 @@ def RegisterMethods():
     Tensor.repeat = _repeat
     Tensor.tile = _tile
     Tensor.split = _split
+    Tensor.unbind = _unbind
     Tensor.squeeze = _squeeze
     Tensor.swapaxes = _swapaxes
     Tensor.unfold = _unfold
