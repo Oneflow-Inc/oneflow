@@ -330,10 +330,11 @@
   bind_python: True
 
 - name: "swapaxes"
-  signature:
-    [
-      "Tensor (Tensor input, Int32 dim0, Int32 dim1) => Swapaxes",
-    ]
+  signature: "Tensor (Tensor input, Int32 dim0, Int32 dim1) => Swapaxes"
+  bind_python: True
+
+- name: "swapdims"
+  signature: "Tensor (Tensor input, Int32 dim0, Int32 dim1) => Swapdims"
   bind_python: True
 
 - name: "permute"
@@ -1873,6 +1874,12 @@
   signature: [
     "TensorTuple (Tensor x, Int64 split_size_or_sections, Int64 dim=0) => Split",
     "TensorTuple (Tensor x, Int64List split_size_or_sections, Int64 dim=0) => SplitWithSize",
+  ]
+  bind_python: True
+
+- name: "unbind"
+  signature: [
+    "TensorTuple (Tensor x, Int64 dim=0) => Unbind",
   ]
   bind_python: True
 
