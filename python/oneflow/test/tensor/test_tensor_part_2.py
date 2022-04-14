@@ -901,6 +901,14 @@ class TestTensorNumpy(flow.unittest.TestCase):
 
     @flow.unittest.skip_unless_1n1d()
     @autotest(n=5, check_graph=True)
+    def test_tensor_unbind(test_case):
+        device = random_device()
+        x = random_tensor(ndim=4).to(device)
+        y = x.unbind(random(0, 4).to(int))
+        return y
+
+    @flow.unittest.skip_unless_1n1d()
+    @autotest(n=5, check_graph=True)
     def test_tensor_swapaxes(test_case):
         device = random_device()
         x = random_tensor(ndim=3).to(device)
