@@ -28,6 +28,7 @@ class TestNewTensor(flow.unittest.TestCase):
         test_case.assertEqual(new_tensor.dtype, tensor.dtype)
         test_case.assertEqual(new_tensor.device, tensor.device)
 
+    @unittest.skipIf(os.getenv("ONEFLOW_TEST_CPU_ONLY"), "only test cpu cases")
     @flow.unittest.skip_unless_1n1d()
     def test_new_tensor_local_mode_with_spec_args(test_case):
         tensor = flow.randn(5)
@@ -47,6 +48,7 @@ class TestNewTensor(flow.unittest.TestCase):
         test_case.assertEqual(new_tensor.placement, placement)
         test_case.assertEqual(new_tensor.sbp, (sbp,))
 
+    @unittest.skipIf(os.getenv("ONEFLOW_TEST_CPU_ONLY"), "only test cpu cases")
     @flow.unittest.skip_unless_1n2d()
     def test_new_tensor_global_mode_with_spec_args(test_case):
         placement = flow.placement(type="cuda", ranks=[0, 1])
