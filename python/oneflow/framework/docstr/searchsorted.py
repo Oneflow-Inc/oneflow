@@ -66,23 +66,25 @@ add_docstr(
 
         >>> import oneflow as flow
         >>> sorted_sequence = flow.tensor([[1, 3, 5, 7, 9], [2, 4, 6, 8, 10]])
+        >>> sorted_sequence
         tensor([[ 1,  3,  5,  7,  9],
-                [ 2,  4,  6,  8, 10]])
-        >>> values = torch.tensor([[3, 6, 9], [3, 6, 9]])
+                [ 2,  4,  6,  8, 10]], dtype=oneflow.int64)
+        >>> values = flow.tensor([[3, 6, 9], [3, 6, 9]])
+        >>> values
         tensor([[3, 6, 9],
-                [3, 6, 9]])
-        >>> torch.searchsorted(sorted_sequence, values)
+                [3, 6, 9]], dtype=oneflow.int64)
+        >>> flow.searchsorted(sorted_sequence, values)
         tensor([[1, 3, 4],
-                [1, 2, 4]])
-        >>> torch.searchsorted(sorted_sequence, values, side='right')
+                [1, 2, 4]], dtype=oneflow.int64)
+        >>> flow.searchsorted(sorted_sequence, values, side='right')
         tensor([[2, 3, 5],
-                [1, 3, 4]])
-        >>> sorted_sequence_1d = torch.tensor([1, 3, 5, 7, 9])
+                [1, 3, 4]], dtype=oneflow.int64)
+        >>> sorted_sequence_1d = flow.tensor([1, 3, 5, 7, 9])
         >>> sorted_sequence_1d
-        tensor([1, 3, 5, 7, 9])
-        >>> torch.searchsorted(sorted_sequence_1d, values)
+        tensor([1, 3, 5, 7, 9], dtype=oneflow.int64)
+        >>> flow.searchsorted(sorted_sequence_1d, values)
         tensor([[1, 3, 4],
-                [1, 3, 4]])
+                [1, 3, 4]], dtype=oneflow.int64)
 
     """,
 )
