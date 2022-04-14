@@ -27,20 +27,18 @@ def _test_linear_train_graph_with_zero(test_case, zero_stage=1):
         B = flow.sbp.broadcast
         S0 = flow.sbp.split(0)
 
-        linear_dp = flow.nn.Linear(8, 4)
+        linear_dp = flow.nn.Linear(8, 4, bias=False)
         linear_dp = linear_dp.to_global(placement=P, sbp=B)
         flow.nn.init.constant_(linear_dp.weight, 2.068758)
-        flow.nn.init.constant_(linear_dp.bias, 0.23)
 
-        linear_mp = flow.nn.Linear(8, 2)
+        linear_mp = flow.nn.Linear(4, 5, bias=False)
         linear_mp = linear_mp.to_global(placement=P, sbp=S0)
         flow.nn.init.constant_(linear_mp.weight, 2.068758)
-        flow.nn.init.constant_(linear_mp.bias, 0.23)
 
         of_sgd = flow.optim.SGD([{"params": linear_dp.parameters()}, {"params": linear_mp.parameters()}], lr=0.001, momentum=0.9)
         grad_scaler = flow.amp.StaticGradScaler(200)
 
-        x = flow.randint(1, 100, (4, 8), dtype=flow.float32, placement=P, sbp=S0)
+        x = flow.randint(1, 100, (6, 8), dtype=flow.float32, placement=P, sbp=S0)
 
         class LinearTrainGraphWithZeRO(flow.nn.Graph):
             def __init__(self):
@@ -57,7 +55,7 @@ def _test_linear_train_graph_with_zero(test_case, zero_stage=1):
             def build(self, x):
                 out = self.linear_dp(x)
                 out = out.to_global(placement=P, sbp=B)
-                out = self.linear_mp(x)
+                out = self.linear_mp(out)
                 loss = out.sum()
                 loss.backward()
                 return out
@@ -73,12 +71,13 @@ def _test_linear_train_graph_with_zero(test_case, zero_stage=1):
             def build(self, x):
                 out = self.linear_dp(x)
                 out = out.to_global(placement=P, sbp=B)
-                out = self.linear_mp(x)
+                out = self.linear_mp(out)
                 return out
 
         linear_t_g = LinearTrainGraphWithZeRO()
-        linear_t_g.debug(2)
+        linear_t_g.debug(1)
         linear_e_g = LinearEvalGraphWithZeRO()
+        linear_e_g.debug(1)
 
         def one_train_iter():
             out = linear_t_g(x)
@@ -92,9 +91,7 @@ def _test_linear_train_graph_with_zero(test_case, zero_stage=1):
         # After pass rewrite in training graph, parameters' sbp has been
         # changed from flow.sbp.broadcast to flow.sbp.split(0)
         test_case.assertEqual(linear_dp.weight.sbp[0], S0)
-        test_case.assertEqual(linear_dp.bias.sbp[0], S0)
         test_case.assertEqual(linear_mp.weight.sbp[0], S0)
-        test_case.assertEqual(linear_mp.bias.sbp[0], S0)
 
         # In evaluation graph, paramters's sbp are flow.sbp.split(0).
         # But their consumer will consum them as flow.sbp.broadcast.
