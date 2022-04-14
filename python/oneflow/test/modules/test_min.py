@@ -87,7 +87,7 @@ class TestMinModule(flow.unittest.TestCase):
         x = random_tensor(ndim, *dims, dtype=float).to(device)
         y = random_tensor(ndim, *dims, dtype=int).to(device)
         return torch.min(x, y)
-    
+
     @autotest(n=5, check_graph=False, check_dtype=True)
     def test_min_broadcast_dtype_promotion(test_case):
         device = random_device()
