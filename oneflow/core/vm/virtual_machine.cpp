@@ -93,7 +93,7 @@ VirtualMachine::VirtualMachine() : disable_vm_threads_(false), scheduler_stoped_
 namespace {
 
 Maybe<Symbol<Stream>> GetBarrierStream() {
-  auto device = JUST(Device::New("control"));
+  auto device = JUST(Device::New("cpu"));
   return Stream::New(device, StreamRole::kBarrier);
 }
 
@@ -174,9 +174,9 @@ Maybe<void> VirtualMachine::Receive(vm::InstructionList* instruction_list) {
   if (unlikely(pthread_fork::IsForkedSubProcess())) {
     INTRUSIVE_FOR_EACH_PTR(instruction, instruction_list) {
       const auto& device = instruction->stream().device();
-      CHECK_OR_RETURN(device->enum_type() == DeviceType::kCPU
-                      || device->enum_type() == DeviceType::kControlDevice)
+      CHECK_OR_RETURN(device->enum_type() == DeviceType::kCPU)
           << pthread_fork::kOfCudaNotSupportInForkedSubProcess;
+      JUST(instruction->instruction_type().InferIf(instruction));
       instruction->instruction_type().ComputeIf(instruction);
     }
   } else if (unlikely(disable_vm_threads_)) {

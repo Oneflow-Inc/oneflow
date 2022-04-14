@@ -77,8 +77,10 @@ class LaunchLazyJobInstructionType final : public InstructionType {  // NOLINT
     auto* device_ctx = GetLazyJobDeviceCtx(instruction);
 
     static thread_local int64_t run_id = 0;
-    OF_PROFILER_RANGE_PUSH_POP_GUARD("WaitUntilQueueEmptyIfFrontNNGraphNotEquals");
-    device_ctx->WaitUntilQueueEmptyIfFrontNNGraphNotEquals(cur_nn_graph);
+    {
+      OF_PROFILER_RANGE_PUSH_POP_GUARD("WaitUntilQueueEmptyIfFrontNNGraphNotEquals");
+      device_ctx->WaitUntilQueueEmptyIfFrontNNGraphNotEquals(cur_nn_graph);
+    }
     {
       OF_PROFILER_RANGE_PUSH_POP_GUARD("i=" + std::to_string(run_id++) + "-MakeJobInstance");
       const auto& job_instance = MakeJobInstance(instruction);
@@ -88,9 +90,11 @@ class LaunchLazyJobInstructionType final : public InstructionType {  // NOLINT
       buffer_mgr->Get(GetCallbackNotifierBufferName(job_name))->Push(job_instance);
       buffer_mgr->Get(GetSourceTickBufferName(job_name))->Push(job_instance);
     }
+    {
+      OF_PROFILER_RANGE_PUSH_POP_GUARD("EnqueueNNGraph");
+      device_ctx->EnqueueNNGraph(cur_nn_graph);
+    }
     (void)run_id;  // disable compiler warning.
-    OF_PROFILER_RANGE_PUSH_POP_GUARD("EnqueueNNGraph");
-    device_ctx->EnqueueNNGraph(cur_nn_graph);
   }
 
  private:

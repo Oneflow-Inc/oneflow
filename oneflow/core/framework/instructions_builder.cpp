@@ -61,14 +61,14 @@ namespace oneflow {
 namespace {
 
 Maybe<Symbol<Stream>> RawGetCriticalSectionStream() {
-  return Stream::New(JUST(Device::New("control")), StreamRole::kCriticalSection);
+  return Stream::New(JUST(Device::New("cpu")), StreamRole::kCriticalSection);
 }
 
 static constexpr auto* GetCriticalSectionStream =
     DECORATE(&RawGetCriticalSectionStream, ThreadLocal);
 
 Maybe<Symbol<Stream>> RawGetLazyJobLauncherStream() {
-  return Stream::New(JUST(Device::New("control")), StreamRole::kLazyJobLauncher);
+  return Stream::New(JUST(Device::New("cpu")), StreamRole::kLazyJobLauncher);
 }
 
 static constexpr auto* GetLazyJobLauncherStream =
@@ -581,7 +581,7 @@ template Maybe<void> InstructionsBuilder::AccessBlobByCallback(
 namespace {
 
 Maybe<Symbol<Stream>> GetBarrierStream() {
-  auto device = JUST(Device::New("control"));
+  auto device = JUST(Device::New("cpu"));
   return Stream::New(device, StreamRole::kBarrier);
 }
 

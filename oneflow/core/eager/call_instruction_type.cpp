@@ -48,16 +48,22 @@ struct CallInstructionUtil final {
     call_ctx->device_ctx = device_ctx;
     CHECK_OR_RETURN(device_ctx->mut_allocator()->IsCached())
         << "device_type: " << instruction.stream().device()->type();
-    OF_PROFILER_RANGE_PUSH_POP_GUARD("AllocateOutputBlobsMemory");
-    JUST(AllocateOutputBlobsMemory(operand, device_ctx));
+    {
+      OF_PROFILER_RANGE_PUSH_POP_GUARD("AllocateOutputBlobsMemory");
+      JUST(AllocateOutputBlobsMemory(operand, device_ctx));
+    }
     if (unlikely(operand->need_temp_storage())) {
-      OF_PROFILER_RANGE_PUSH_POP_GUARD("TryAllocateTempStorage");
-      InferTempStorageSize(operand);
-      JUST(TryAllocateTempStorage(operand, device_ctx->mut_allocator()));
-      // Since memory block is cached in allocator, it's safe to deallocate tmp buffer before kernel
-      // executed.
-      OF_PROFILER_RANGE_PUSH_POP_GUARD("DeallocateTempStorage");
-      DeallocateTempStorage(operand, device_ctx->mut_allocator());
+      {
+        OF_PROFILER_RANGE_PUSH_POP_GUARD("TryAllocateTempStorage");
+        InferTempStorageSize(operand);
+        JUST(TryAllocateTempStorage(operand, device_ctx->mut_allocator()));
+      }
+      {
+        // Since memory block is cached in allocator, it's safe to deallocate tmp buffer before
+        // kernel executed.
+        OF_PROFILER_RANGE_PUSH_POP_GUARD("DeallocateTempStorage");
+        DeallocateTempStorage(operand, device_ctx->mut_allocator());
+      }
     }
     if (operand->user_opkernel()->has_state_or_cache()) {
       OF_PROFILER_RANGE_PUSH_POP_GUARD("TryInitOpKernelStateAndCache");
