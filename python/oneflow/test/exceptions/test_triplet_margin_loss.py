@@ -25,27 +25,28 @@ import oneflow.unittest
 from oneflow.test_utils.automated_test_util import *
 
 
-class TestPixelShuffleError(flow.unittest.TestCase):
-    def test_pixel_shuffle_4D_input_error(test_case):
+class TestTripletMarginLossError(flow.unittest.TestCase):
+    def test_triplet_margin_loss_reduce_type_error(test_case):
         with test_case.assertRaises(
             oneflow._oneflow_internal.exception.Exception
         ) as ctx:
-            x = flow.ones((1, 8, 4, 4, 1), dtype=flow.float32)
-            out = flow._C.pixel_shuffle(x, 2, 2)
+            anchor = flow.ones((3, 3), dtype=flow.float32)
+            positive = flow.ones((3, 3), dtype=flow.float32)
+            negative = flow.ones((3, 3), dtype=flow.float32)
+
+            triplet_loss = flow._C.triplet_margin_loss(
+                anchor,
+                positive,
+                negative,
+                margin=0.001,
+                p=2,
+                eps=1e-5,
+                swap=False,
+                reduction="just_test",
+            )
 
         test_case.assertTrue(
-            "Check failed: x->ndim() == 4 Only Accept 4D Tensor" in str(ctx.exception)
-        )
-
-    def test_pixel_shuffle_channel_divisble_error(test_case):
-        with test_case.assertRaises(
-            oneflow._oneflow_internal.exception.Exception
-        ) as ctx:
-            x = flow.ones((1, 8, 4, 4), dtype=flow.float32)
-            out = flow._C.pixel_shuffle(x, 2, 3)
-
-        test_case.assertTrue(
-            "Check failed: channel % (h_upscale_factor * w_upscale_factor) == 0 The channels of input tensor must be divisible by (upscale_factor * upscale_factor) or (h_upscale_factor * w_upscale_factor)"
+            'Check failed: [&]() -> bool { if ((reduction != "none") && (reduction != "sum") && (reduction != "mean")) return false; return true; }() Reduction should be none, sum or mean.'
             in str(ctx.exception)
         )
 

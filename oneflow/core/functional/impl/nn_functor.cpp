@@ -816,8 +816,10 @@ class NllLossFunctor {
 
     const auto& input_shape = input->shape();
     const auto& target_shape = target->shape();
-    CHECK_LE_OR_RETURN(input_shape->NumAxes(), 5);
-    CHECK_EQ_OR_RETURN(input_shape->NumAxes() - 1, target_shape->NumAxes());
+    CHECK_LE_OR_RETURN(input_shape->NumAxes(), 5)
+        << "The number of input's axis should be less equal to 5. ";
+    CHECK_EQ_OR_RETURN(input_shape->NumAxes() - 1, target_shape->NumAxes())
+        << "The number of input's axis should be equal to the number of target's axis - 1. ";
 
     MutableAttrMap attrs;
     JUST(attrs.SetAttr<int64_t>("ignore_index", ignore_index));
@@ -1089,7 +1091,7 @@ class SparseSoftmaxCrossEntropyFunctor {
             sbp.mutable_broadcast_parallel();
             new_sbp_parallels.emplace_back(sbp);
           } else {
-            CHECK_EQ_OR_RETURN(split_axis, 0);
+            CHECK_EQ_OR_RETURN(split_axis, 0) << "Split axis must equal to 0. ";
             new_sbp_parallels.emplace_back(sbp_parallel);
           }
         } else {
@@ -1268,7 +1270,7 @@ class CtcLossFunctor {
     CHECK_OR_RETURN([&]() -> bool {
       if ((reduction != "none") && (reduction != "sum") && (reduction != "mean")) return false;
       return true;
-    }());
+    }()) << "Reduction should be none, sum or mean.";
     if (reduction == "sum") { return functional::ReduceSum(out, {}, false); }
     if (reduction == "mean") {
       return sequence_function(functional::Clamp)
@@ -1302,7 +1304,7 @@ class TripletMarginLossFunctor {
     CHECK_OR_RETURN([&]() -> bool {
       if ((reduction != "none") && (reduction != "sum") && (reduction != "mean")) return false;
       return true;
-    }());
+    }()) << "Reduction should be none, sum or mean.";
     auto da_p = JUST(VectorNorm(
         JUST(ScalarAdd(eps, JUST(Sub(anchor, positive, /*inplace=*/false)), /*alpha=*/1)), p, dim,
         /*keepdim=*/false, anchor->dtype()));

@@ -25,27 +25,17 @@ import oneflow.unittest
 from oneflow.test_utils.automated_test_util import *
 
 
-class TestPixelShuffleError(flow.unittest.TestCase):
-    def test_pixel_shuffle_4D_input_error(test_case):
+class TestCrossEntropyError(flow.unittest.TestCase):
+    def test_cross_entropy_reduction_type_error(test_case):
         with test_case.assertRaises(
             oneflow._oneflow_internal.exception.Exception
         ) as ctx:
-            x = flow.ones((1, 8, 4, 4, 1), dtype=flow.float32)
-            out = flow._C.pixel_shuffle(x, 2, 2)
+            x = flow.ones((4, 4), dtype=flow.float32)
+            target = flow.ones((4, 4), dtype=flow.float32)
+            out = flow._C.cross_entropy(x, target, None, 0, "just_test")
 
         test_case.assertTrue(
-            "Check failed: x->ndim() == 4 Only Accept 4D Tensor" in str(ctx.exception)
-        )
-
-    def test_pixel_shuffle_channel_divisble_error(test_case):
-        with test_case.assertRaises(
-            oneflow._oneflow_internal.exception.Exception
-        ) as ctx:
-            x = flow.ones((1, 8, 4, 4), dtype=flow.float32)
-            out = flow._C.pixel_shuffle(x, 2, 3)
-
-        test_case.assertTrue(
-            "Check failed: channel % (h_upscale_factor * w_upscale_factor) == 0 The channels of input tensor must be divisible by (upscale_factor * upscale_factor) or (h_upscale_factor * w_upscale_factor)"
+            'Check failed: reduction == "none" || reduction == "sum" || reduction == "mean" Reduction should be none, sum or mean.'
             in str(ctx.exception)
         )
 
