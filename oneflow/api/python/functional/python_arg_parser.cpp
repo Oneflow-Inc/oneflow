@@ -26,7 +26,7 @@ void FunctionSchema::ReportKwargsError(PyObject* kwargs) const {
   Py_ssize_t pos = 0;
 
   while (PyDict_Next(kwargs, &pos, &key, &value)) {
-    if (!PyStringCheck(key)) { THROW(TypeError) << def_->name << "(): keywords must be strings."; }
+    if (!PyStringCheck(key)) { THROW(TypeError) << def_->name << "(): keywords must be strings"; }
     bool unexpected_param = true;
     const std::string string_key = PyStringAsString(key);
     for (const auto& arg : def_->argument_def) {
@@ -43,7 +43,7 @@ void FunctionSchema::ReportKwargsError(PyObject* kwargs) const {
                        << "(): got multiple values for argument '" << string_key << "'";
     }
   }
-  THROW(TypeError) << def_->name << "(): kwargs unknown error.";
+  THROW(TypeError) << def_->name << "(): kwargs unknown error";
 }
 
 // The argument parsing refers to the implementation of Pytorch.
@@ -60,7 +60,7 @@ bool FunctionSchema::Parse(PyObject* args, PyObject* kwargs, PythonArg* parsed_a
   if (nargs > max_pos_nargs_ && !treat_args_as_list) {
     if (raise_exception) {
       THROW(TypeError) << def_->name << "(): takes " << max_pos_nargs_
-                       << " positional arguments but " << nargs << " were given.";
+                       << " positional arguments but " << nargs << " were given";
     }
     return false;
   }
@@ -71,7 +71,7 @@ bool FunctionSchema::Parse(PyObject* args, PyObject* kwargs, PythonArg* parsed_a
     if (args && arg_pos < nargs) {
       if (param.keyword_only) {
         if (raise_exception) {
-          THROW(TypeError) << def_->name << "(): argument '" << param.name << "' is keyword only.";
+          THROW(TypeError) << def_->name << "(): argument '" << param.name << "' is keyword only";
         }
         return false;
       }
@@ -91,7 +91,7 @@ bool FunctionSchema::Parse(PyObject* args, PyObject* kwargs, PythonArg* parsed_a
       }
       PythonArg arg(obj, param.size);
       if ((obj == Py_None && param.optional) || PythonArgCheck(arg, param.type)) {
-        parsed_args[i] = std::move(arg);
+        parsed_args[i] = arg;
       } else {
         if (raise_exception) {
           THROW(TypeError) << def_->name << "(): argument '" << param.name << "' must be "

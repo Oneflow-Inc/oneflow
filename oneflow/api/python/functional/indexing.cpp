@@ -104,7 +104,7 @@ void ParseScalar(PyObject* object, char* data, const DataType& dtype) {
     } else {
       int64_t value = PyLong_AsLongLong(object);
       CHECK_OR_THROW(value >= 0 && value <= 255) << "Out of range 0-255.";
-      *(reinterpret_cast<uint8_t*>(data)) = value;
+      *(reinterpret_cast<uint8_t*>(data)) = static_cast<uint8_t>(value);
     }
   } else {
     THROW(RuntimeError) << "Can't parse scalar with data type " << dtype;

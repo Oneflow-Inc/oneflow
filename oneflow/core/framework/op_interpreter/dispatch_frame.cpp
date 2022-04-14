@@ -25,8 +25,6 @@ namespace oneflow {
 
 /* static */ const std::string& DispatchFrame::get_str() { return *get_str_ptr(); }
 
-/* static */ void DispatchFrame::set_str(const std::string& str) {
-  *get_str_ptr() = std::move(str);
-}
+/* static */ void DispatchFrame::set_str(const std::string& str) { *get_str_ptr() = str; }
 
 }  // namespace oneflow
