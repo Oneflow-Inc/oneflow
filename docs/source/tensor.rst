@@ -170,6 +170,7 @@ OneFlow Tensor Class
             type_as, 
             t,
             T,
+            unbind, 
             unfold, 
             uniform_, 
             unsqueeze, 
