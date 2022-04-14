@@ -595,8 +595,10 @@ Maybe<void> ReplaceEmbeddingOps::Apply(const OpGraph& op_graph, JobBuilder* job_
                    &inner_inverse_unique_partition_indices_lbn, &num_unique_ids_lbn,
                    &unique_ids_lbn, &unique_table_ids_lbn, &inverse_indices_lbn,
                    &num_unique_matrix_lbn);
-
-    bool has_embedding_prefetch = (!options.IsFullCache()) ? true : false;
+    const bool is_train_job = job_builder->job().job_conf().has_train_conf();
+    const bool no_optimizer_states = (embedding_size == options.LineSize());
+    const bool has_embedding_prefetch =
+        (!options.IsFullCache()) && (is_train_job || no_optimizer_states);
 
     OperatorConf embedding_prefetch_op_conf;
     OperatorConf embedding_lookup_op_conf;
@@ -697,6 +699,10 @@ Maybe<void> ReplaceEmbeddingOps::Apply(const OpGraph& op_graph, JobBuilder* job_
                              unique_ids_lbn, unique_values_lbn, embedding_grad_lbn,
                              learning_rate_lbn, &state_initializer);
       }
+    }
+    if ((state_initializer == "") && !no_optimizer_states) {
+      CHECK(!is_train_job) << "train job must have set state initializer";
+      MakeConstantInitializerAttr(embedding_size, options.LineSize(), {}, &state_initializer);
     }
     auto state_initializer_attr = ::oneflow::AttrValue();
     state_initializer_attr.set_at_string(state_initializer);

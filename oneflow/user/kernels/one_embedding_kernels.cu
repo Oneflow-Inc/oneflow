@@ -91,7 +91,7 @@ void ParseInitializerFromJson(const nlohmann::json& initializer,
     embedding_initializer->type = InitializerType::kConstant;
     embedding_initializer->constant_param.value = initializer["value"];
   } else {
-    UNIMPLEMENTED();
+    UNIMPLEMENTED() << "Unsupported initializer type";
   }
 }
 
@@ -106,17 +106,17 @@ int32_t ParseJsonToUniqueInitializerVecAndReturnOffset(
   return initializers->size() - 1;
 }
 
-void SetInitializerIndex(int32_t row_id, int32_t col_start, int32_t col_end, int32_t line_size,
+void SetInitializerIndex(int32_t row_id, int32_t col_start, int32_t col_end, int64_t line_size,
                          int8_t index, std::vector<int8_t>* initializer_index) {
-  int32_t row_offset = row_id * line_size;
+  int64_t row_offset = row_id * line_size;
   for (int32_t col = col_start; col < col_end; ++col) {
     initializer_index->at(row_offset + col) = index;
   }
 }
 
 void ParseAndSetStateInitializerIndex(const std::string& state_initializer,
-                                      const int32_t num_tables, const int32_t line_size,
-                                      const int32_t embedding_size,
+                                      const int32_t num_tables, const int64_t line_size,
+                                      const int64_t embedding_size,
                                       std::vector<EmbeddingInitializer>* initializer_params,
                                       std::vector<int8_t>* initializer_index) {
   if (line_size == embedding_size) { return; }
@@ -140,7 +140,7 @@ void ParseAndSetStateInitializerIndex(const std::string& state_initializer,
 void ParseAndSetModelInitializerIndex(const nlohmann::json& tables,
                                       const std::vector<int64_t>& column_dims,
                                       const int32_t num_tables, const int32_t num_columns,
-                                      const int32_t line_size, const int32_t embedding_size,
+                                      const int64_t line_size, const int64_t embedding_size,
                                       std::vector<EmbeddingInitializer>* initializer_params,
                                       std::vector<int8_t>* initializer_index) {
   for (int32_t i = 0; i < num_tables; ++i) {
@@ -148,7 +148,7 @@ void ParseAndSetModelInitializerIndex(const nlohmann::json& tables,
     CHECK(table.contains("columns"));
     auto columns = table["columns"];
     CHECK(columns.is_array());
-    CHECK_EQ(num_columns, columns.size()) << "columns size must equals num embedding dims";
+    CHECK_EQ(num_columns, columns.size()) << "columns size must equal to num embedding dims";
     int32_t col_start = 0;
     for (int k = 0; k < columns.size(); ++k) {
       auto column = columns.at(k);
@@ -163,7 +163,7 @@ void ParseAndSetModelInitializerIndex(const nlohmann::json& tables,
   }
 }
 
-void ParseInitializers(const int32_t line_size, const int32_t embedding_size,
+void ParseInitializers(const int64_t line_size, const int64_t embedding_size,
                        const std::string& state_initializer, const std::string& json_serialized,
                        std::vector<EmbeddingInitializer>* initializer_params,
                        std::vector<int8_t>* initializer_index) {
@@ -361,8 +361,8 @@ __global__ void InitValueKernel(uint64_t seed, one::CUDAGeneratorState* cuda_gen
 
 template<typename T, typename U, typename IDX>
 void LookupAndInitMissing(ep::Stream* stream, EmbeddingKernelState<IDX>* embedding_state,
-                          const int64_t num_ids, const int32_t embedding_size,
-                          const int32_t line_size, const void* num_unique_ptr,
+                          const int64_t num_ids, const int64_t embedding_size,
+                          const int64_t line_size, const void* num_unique_ptr,
                           const void* unique_ids, const void* table_ids, T* values_ptr,
                           void* tmp_buffer_ptr, uint32_t* return_num_unique,
                           const bool put_to_kv_store) {
