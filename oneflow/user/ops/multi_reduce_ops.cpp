@@ -15,13 +15,14 @@ limitations under the License.
 */
 #include "oneflow/core/framework/framework.h"
 #include "oneflow/core/framework/op_generated.h"
+#include "oneflow/core/framework/nd_sbp.h"
 
 namespace oneflow {
 
 namespace {
 
 Maybe<void> InferMultiReduceOpShape(user_op::InferContext* ctx) {
-  CHECK_GT_OR_RETURN(ctx->input_size("x"), 0);
+  CHECK_GT_OR_RETURN(ctx->input_size("x"), 0) << ctx->op_name() << "must has at least 1 input";
   *ctx->OutputShape("y", 0) = Shape({});
   return Maybe<void>::Ok();
 }
@@ -29,7 +30,9 @@ Maybe<void> InferMultiReduceOpShape(user_op::InferContext* ctx) {
 Maybe<void> InferMultiReduceOpDataType(user_op::InferContext* ctx) {
   const auto& x_0_dtype = ctx->InputDType("x", 0);
   for (size_t i = 1; i < ctx->input_size("x"); ++i) {
-    CHECK_EQ_OR_RETURN(ctx->InputDType("x", i), x_0_dtype);
+    CHECK_EQ_OR_RETURN(ctx->InputDType("x", i), x_0_dtype)
+        << ctx->op_name() << ": the " << i
+        << " th input has the different data type with the first input";
   }
   *ctx->OutputDType("y", 0) = x_0_dtype;
   return Maybe<void>::Ok();
@@ -49,25 +52,28 @@ Maybe<void> GetMultiReduceOpSbp(user_op::SbpContext* ctx) {
 }
 
 Maybe<void> InferLocalMultiReduceOpLogicalShape(user_op::InferContext* ctx) {
-  CHECK_GT_OR_RETURN(ctx->input_size("x"), 0);
+  CHECK_GT_OR_RETURN(ctx->input_size("x"), 0) << ctx->op_name() << "must has at least 1 input";
   const NdSbp& any_nd_sbp = ctx->NdSbp4ArgNameAndIndex("x", 0);
   for (int32_t i = 1; i < ctx->input_size("x"); ++i) {
-    CHECK_OR_RETURN(ctx->NdSbp4ArgNameAndIndex("x", i) == any_nd_sbp);
+    const NdSbp& input_i_sbp = ctx->NdSbp4ArgNameAndIndex("x", i);
+    CHECK_OR_RETURN(input_i_sbp == any_nd_sbp)
+        << ctx->op_name() << ": the " << i << " th arg has the different sbp with others, "
+        << NdSbpToString(input_i_sbp) << " vs. " << NdSbpToString(any_nd_sbp);
   }
   auto rank_mesh = ctx->parallel_desc().hierarchy();
-  CHECK_EQ_OR_RETURN(rank_mesh->NumAxes(), any_nd_sbp.sbp_parallel_size());
+  CHECK_EQ_OR_RETURN(rank_mesh->NumAxes(), any_nd_sbp.sbp_parallel_size())
+      << ctx->op_name() << ": ndim of ranks of " << *JUST(PlacementToString(ctx->parallel_desc()))
+      << " is mismatched with the size of sbp " << any_nd_sbp.sbp_parallel_size();
   int64_t split_num = 1;
   for (int64_t i = 0; i < rank_mesh->NumAxes(); ++i) {
-    if (any_nd_sbp.sbp_parallel(i).has_split_parallel()) {
-      split_num *= rank_mesh->At(i);
-    }
+    if (any_nd_sbp.sbp_parallel(i).has_split_parallel()) { split_num *= rank_mesh->At(i); }
   }
   *ctx->OutputShape("y", 0) = Shape({split_num});
   return Maybe<void>::Ok();
 }
 
 Maybe<void> InferLocalMultiReduceOpPhysicalShape(user_op::InferContext* ctx) {
-  CHECK_GT_OR_RETURN(ctx->input_size("x"), 0);
+  CHECK_GT_OR_RETURN(ctx->input_size("x"), 0) << ctx->op_name() << "must has at least 1 input";
   *ctx->OutputShape("y", 0) = Shape({1});
   return Maybe<void>::Ok();
 }
