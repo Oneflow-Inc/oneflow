@@ -250,33 +250,40 @@ void SbpEdge<SbpSignature>::DuplicateCost(
     const std::vector<std::pair<int32_t, int32_t>>& mergedSigId2ChildrenSigId) {
   const int32_t num_sig = mergedSigId2ChildrenSigId.size();
   std::vector<std::vector<double>> tmpCost;
+  std::vector<std::vector<double>> tmpMemoryCost;
   std::vector<std::vector<int32_t>> tmpMidNodeSbpSig;
   if (ifStart) {
     tmpCost.resize(num_sig);
+    tmpMemoryCost.resize(num_sig);
     if (MidNode) { tmpMidNodeSbpSig.resize(num_sig); }
     for (int32_t i = 0; i < num_sig; i++) {
       const int32_t sig_idx =
           ifFirst ? mergedSigId2ChildrenSigId[i].first : mergedSigId2ChildrenSigId[i].second;
       tmpCost[i] = Cost[sig_idx];
+      tmpMemoryCost[i] = MemoryCost[sig_idx];
       if (MidNode) { tmpMidNodeSbpSig[i] = MidNodeSbpSig[sig_idx]; }
     }
   } else {
     const int32_t num_start_sig = Cost.size();
     tmpCost.resize(num_start_sig);
+    tmpMemoryCost.resize(num_start_sig);
     if (MidNode) { tmpMidNodeSbpSig.resize(num_start_sig); }
     for (int32_t i = 0; i < num_start_sig; i++) {
       tmpCost[i].resize(num_sig);
+      tmpMemoryCost[i].resize(num_sig);
       if (MidNode) { tmpMidNodeSbpSig[i].resize(num_sig); }
       for (int32_t j = 0; j < num_sig; j++) {
         const int32_t sig_idx =
             ifFirst ? mergedSigId2ChildrenSigId[j].first : mergedSigId2ChildrenSigId[j].second;
         tmpCost[i][j] = Cost[i][sig_idx];
+        tmpMemoryCost[i][j] = MemoryCost[i][sig_idx];
         if (MidNode) { tmpMidNodeSbpSig[i][j] = MidNodeSbpSig[i][sig_idx]; }
       }
     }
   }
 
   Cost = tmpCost;
+  MemoryCost = tmpMemoryCost;
   if (MidNode) { MidNodeSbpSig = tmpMidNodeSbpSig; }
 }
 

@@ -256,11 +256,15 @@ SbpNode<SbpSignature>::SbpNode(SbpNode<SbpSignature>* first, SbpNode<SbpSignatur
 
   // Find all available merged-SbpSignature(edge's cost less than threshold).
   if (common_edge) {
+    // Merging A and B, if A B are connected
+    // merged cost = node cost A[i] + edge cost AB[i][j] + node cost B[j]
     double min_cost = GetMaxVal<float>();
     for (const auto& row : common_edge->Cost) {
-      for (const double& c : row) min_cost = std::min(min_cost, c);
+      for (const double& c : row) {
+        if (c < min_cost) { min_cost = c; }
+      }
     }
-    // If there is no one case can choose, we will blow up
+    // If no cases to be chosen, we will blow up
     for (int32_t i = 0; i < first->Cost.size(); i++) {
       for (int32_t j = 0; j < second->Cost.size(); j++) {
         const double edge_cost =
@@ -268,16 +272,23 @@ SbpNode<SbpSignature>::SbpNode(SbpNode<SbpSignature>* first, SbpNode<SbpSignatur
         if (edge_cost < cut_cost) {
           MergedSigId2ChildrenSigId.emplace_back(std::make_pair(i, j));
           Cost.emplace_back(edge_cost + first->Cost[i] + second->Cost[j]);
+          // Similar to Cost
+          MemoryCost.emplace_back((common_edge->StartNode == first ? common_edge->MemoryCost[i][j]
+                                                                   : common_edge->MemoryCost[j][i])
+                                  + first->MemoryCost[i] + second->MemoryCost[j]);
         }
       }
     }
     CHECK(MergedSigId2ChildrenSigId.size() > 0)
         << "0 size for merge child edge, min cost: " << min_cost;
   } else {
+    // Merging A and B, if A B are not connected
+    // merged cost = node cost A[i] + node cost B[j]
     for (int32_t i = 0; i < first->Cost.size(); i++) {
       for (int32_t j = 0; j < second->Cost.size(); j++) {
         MergedSigId2ChildrenSigId.emplace_back(std::make_pair(i, j));
         Cost.emplace_back(first->Cost[i] + second->Cost[j]);
+        MemoryCost.emplace_back(first->MemoryCost[i] + second->MemoryCost[j]);
       }
     }
   }
