@@ -54,6 +54,10 @@ static int PyTensorObject_init(PyObject* self, PyObject* args, PyObject* kwargs)
   auto* _self = (PyTensorObject*)self;
   _self->data = PyTensor_Unpack(temp);
   _self->data->set_pyobject(self);
+
+  // reset temp data to prevent clearing the pyobject
+  // when the temp is deallocated
+  ((PyTensorObject*)temp)->data.reset();
   Py_XDECREF(temp);
   return 0;
   END_HANDLE_ERRORS_RET(-1)
@@ -62,8 +66,10 @@ static int PyTensorObject_init(PyObject* self, PyObject* args, PyObject* kwargs)
 static void PyTensorObject_dealloc(PyObject* self) {
   auto* _self = (PyTensorObject*)self;
   // clear pyobject
-  _self->data->set_pyobject(NULL);
-  _self->data.reset();
+  if (_self->data) {
+    _self->data->set_pyobject(NULL);
+    _self->data.reset();
+  }
   // clear __dict__
   PyObject** dict_ptr = _PyObject_GetDictPtr(self);
   if (dict_ptr) { Py_CLEAR(*dict_ptr); }
