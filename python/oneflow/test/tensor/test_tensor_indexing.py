@@ -410,7 +410,7 @@ class TestTensorIndexing(flow.unittest.TestCase):
         for arg in GenArgList(arg_dict):
             arg[0](test_case, *arg[1:])
 
-    def test_indecies_on_different_devices_1_gpu(test_case):
+    def test_indecies_on_different_devices(test_case):
         x = flow.ones(3, 10)
         y = flow.ones(3, 10, device=flow.device("cuda:0"))
 
@@ -420,8 +420,9 @@ class TestTensorIndexing(flow.unittest.TestCase):
         test_case.assertTrue(np.allclose(x[x_idx].numpy(), np.array([1, 1])))
         test_case.assertTrue(np.allclose(y[y_idx].numpy(), np.array([1, 1])))
 
-    @flow.unittest.skip_unless_1n2d()
-    def test_indecies_on_different_devices_2_gpu(test_case):
+@flow.unittest.skip_unless_1n2d()
+class TestTensorIndexingMultiGpu(flow.unittest.TestCase):
+    def test_indecies_on_different_devices(test_case):
         x = flow.ones(3, 10, device=flow.device("cuda:0"))
         idx = [flow.tensor([1, 2], device=flow.device("cuda:1")), flow.tensor([2, 0])]
         test_case.assertTrue(np.allclose(x[idx].numpy(), np.array([1, 1])))
