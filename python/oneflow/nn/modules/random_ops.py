@@ -506,13 +506,18 @@ def normal_op(
         >>> y
         tensor([2.2122, 1.1631, 0.7740, 0.4838, 1.0434], dtype=oneflow.float32)
     """
-    size = _handle_size_arg(size)
-    size = _single(size)
+    if len(size) == 1:
+        new_shape = size[0]
+        if isinstance(new_shape, int):
+            new_shape = (new_shape,)
+    else:
+        new_shape = size
+
     if placement is not None:
         return flow._C.normal(
             mean=mean,
             std=std,
-            size=size,
+            size=new_shape,
             out=out,
             placement=placement,
             sbp=sbp,

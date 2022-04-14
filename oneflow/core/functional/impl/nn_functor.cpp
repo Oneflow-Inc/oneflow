@@ -1393,10 +1393,9 @@ class NormalFunctor {
       std::shared_ptr<one::Tensor> out_tensor = JUST(out);
       Symbol<Device> out_tensor_device = JUST(out_tensor->device());
       CHECK_OR_RETURN(out_tensor_device == JUST(device))
-          << "Please check whether the out tensor device matches the parameter device.";
+          << "RuntimeError: device type cuda does not match device type of out parameter (cpu)";
       std::shared_ptr<TensorTuple> outputs = std::make_shared<TensorTuple>(1);
       (*outputs)[0] = out_tensor;
-      // *oneflow::VectorAt(outputs, 0) = out_tensor;
       JUST(OpInterpUtil::Dispatch(*op_, {}, outputs.get(), ctx));
       return (*outputs)[0];
     }
