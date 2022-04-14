@@ -72,6 +72,18 @@ void DecideOrder(const T& v, std::vector<int32_t>& order, Compare comp) {
 // order[3] We know the strict order.
 void InverseOrder(const std::vector<int32_t>& order, std::vector<int32_t>& InvOrder);
 
+// Comparing two double
+// less than : a < b
+inline bool DoubleLessThan(double a, double b) { return a < b * 0.999999; }
+
+// less than or equal : a <= b
+inline bool DoubleLessEqual(double a, double b) { return a < b * 1.000001; }
+
+// equal : a == b
+inline bool DoubleEqual(double a, double b) {
+  return DoubleLessEqual(a, b) && DoubleLessEqual(b, a);
+}
+
 }  // namespace auto_parallel
 }  // namespace oneflow
 
