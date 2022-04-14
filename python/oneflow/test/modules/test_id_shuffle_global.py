@@ -161,9 +161,9 @@ def embedding_shuffle_quantize(np_data, np_dtype):
 
 def _test_embedding_shuffle(test_case, dtype, enable_quantize):
     if enable_quantize:
-        os.environ["ONEFLOW_ONE_EMBEDDING_ENABLE_QUANTIZE_COMM"] = "1"
+        os.environ["ONEFLOW_ONE_EMBEDDING_ENABLE_QUANTIZED_COMM"] = "1"
     else:
-        os.environ["ONEFLOW_ONE_EMBEDDING_ENABLE_QUANTIZE_COMM"] = "0"
+        os.environ["ONEFLOW_ONE_EMBEDDING_ENABLE_QUANTIZED_COMM"] = "0"
 
     batch_size = int(1024 / parallel_num)
     placement = flow.placement(type="cuda", ranks=list(range(parallel_num)))
@@ -209,7 +209,7 @@ def _test_embedding_shuffle(test_case, dtype, enable_quantize):
     np_embeddings = global_data[global_ids]
 
     # Quantized numpy embedding.
-    if os.environ.get("ONEFLOW_ONE_EMBEDDING_ENABLE_QUANTIZE_COMM") == "1":
+    if os.environ.get("ONEFLOW_ONE_EMBEDDING_ENABLE_QUANTIZED_COMM") == "1":
         np_embeddings = embedding_shuffle_quantize(np_embeddings, np_dtype)
 
     test_case.assertTrue(np.array_equal(embeddings.numpy(), np_embeddings))
@@ -219,10 +219,10 @@ def _test_embedding_gradient_shuffle(test_case, enable_quantize):
     np_tolerance = 0
     if enable_quantize:
         np_tolerance = 0.5
-        os.environ["ONEFLOW_ONE_EMBEDDING_ENABLE_QUANTIZE_COMM"] = "1"
+        os.environ["ONEFLOW_ONE_EMBEDDING_ENABLE_QUANTIZED_COMM"] = "1"
     else:
         np_tolerance = 1e-4
-        os.environ["ONEFLOW_ONE_EMBEDDING_ENABLE_QUANTIZE_COMM"] = "0"
+        os.environ["ONEFLOW_ONE_EMBEDDING_ENABLE_QUANTIZED_COMM"] = "0"
 
     batch_size = int(1024 / parallel_num)
     placement = flow.placement(type="cuda", ranks=list(range(parallel_num)))
@@ -286,7 +286,7 @@ def _test_embedding_gradient_shuffle(test_case, enable_quantize):
             ]
         )
         # Quantize Embedding Gradient.
-        if os.environ.get("ONEFLOW_ONE_EMBEDDING_ENABLE_QUANTIZE_COMM") == "1":
+        if os.environ.get("ONEFLOW_ONE_EMBEDDING_ENABLE_QUANTIZED_COMM") == "1":
             abs_max_factor = np.max(np.abs(np_data))
             int8_factor = np.full(abs_max_factor.shape, 127.0, dtype=np.float32)
             quantize_factor = int8_factor / abs_max_factor

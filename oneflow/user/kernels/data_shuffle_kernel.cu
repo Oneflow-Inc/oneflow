@@ -1014,7 +1014,7 @@ class EmbeddingShuffleKernel final : public user_op::OpKernel {
             ctx->InputTensorDesc("cur_rank_embeddings", 0);                                       \
         const user_op::TensorDesc& embeddings = ctx->InputTensorDesc("embeddings", 0);            \
         bool enable_quantize_comm =                                                               \
-            ParseBooleanFromEnv("ONEFLOW_ONE_EMBEDDING_ENABLE_QUANTIZED_COMM", false);             \
+            ParseBooleanFromEnv("ONEFLOW_ONE_EMBEDDING_ENABLE_QUANTIZED_COMM", false);            \
         size_t tmp_size = 0;                                                                      \
         if (!enable_quantize_comm) {                                                              \
           size_t reverse_cur_rank_embeddings_size = GetCudaAlignedSize(                           \
@@ -1276,7 +1276,7 @@ class EmbeddingGradientShuffleKernel final : public user_op::OpKernel {
         size_t embedding_size = cur_rank_unique_embedding_grad.shape().At(1);                     \
         size_t cur_rank_embedding_grad_elem_cnt = cur_rank_embedding_grad_num * embedding_size;   \
         bool enable_quantize_comm =                                                               \
-            ParseBooleanFromEnv("ONEFLOW_ONE_EMBEDDING_ENABLE_QUANTIZED_COMM", false);             \
+            ParseBooleanFromEnv("ONEFLOW_ONE_EMBEDDING_ENABLE_QUANTIZED_COMM", false);            \
         size_t tmp_size = 0;                                                                      \
         if (!enable_quantize_comm) {                                                              \
           size_t cur_rank_embedding_grad_size = GetCudaAlignedSize(                               \

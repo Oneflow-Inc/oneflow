@@ -119,9 +119,9 @@ def embedding_shuffle_quantize(np_data, np_dtype):
 
 def _test_embedding_shuffle(test_case, dtype, enable_quantize):
     if enable_quantize:
-        os.environ["ONEFLOW_ONE_EMBEDDING_ENABLE_QUANTIZE_COMM"] = "1"
+        os.environ["ONEFLOW_ONE_EMBEDDING_ENABLE_QUANTIZED_COMM"] = "1"
     else:
-        os.environ["ONEFLOW_ONE_EMBEDDING_ENABLE_QUANTIZE_COMM"] = "0"
+        os.environ["ONEFLOW_ONE_EMBEDDING_ENABLE_QUANTIZED_COMM"] = "0"
     batch_size = 512
     num_columns = 26
     ids = np.random.randint(0, 1000, (batch_size, num_columns), dtype=np.int64)
@@ -168,7 +168,7 @@ def _test_embedding_shuffle(test_case, dtype, enable_quantize):
     np_embeddings = data[ids]
 
     # Quantized numpy embedding.
-    if os.environ.get("ONEFLOW_ONE_EMBEDDING_ENABLE_QUANTIZE_COMM") == "1":
+    if os.environ.get("ONEFLOW_ONE_EMBEDDING_ENABLE_QUANTIZED_COMM") == "1":
         np_embeddings = embedding_shuffle_quantize(np_embeddings, np_dtype)
     test_case.assertTrue(
         np.allclose(embeddings.numpy(), np_embeddings, atol=1e-4, rtol=1e-4)
@@ -182,11 +182,11 @@ def _test_embedding_gradient_shuffle(test_case, enable_quantize):
     ids = np.random.randint(0, 1000, (batch_size, num_columns), dtype=np.int64)
 
     if enable_quantize:
-        os.environ["ONEFLOW_ONE_EMBEDDING_ENABLE_QUANTIZE_COMM"] = "1"
+        os.environ["ONEFLOW_ONE_EMBEDDING_ENABLE_QUANTIZED_COMM"] = "1"
         ids = np.arange(batch_size * num_columns, dtype=np.int64)
         np.random.shuffle(ids)
     else:
-        os.environ["ONEFLOW_ONE_EMBEDDING_ENABLE_QUANTIZE_COMM"] = "0"
+        os.environ["ONEFLOW_ONE_EMBEDDING_ENABLE_QUANTIZED_COMM"] = "0"
 
     column_ids = (
         ids % num_columns
@@ -243,7 +243,7 @@ def _test_embedding_gradient_shuffle(test_case, enable_quantize):
     for k in range(np_num_unique):
         np_data = sum(embedding_grad[np.where(ids.flatten() == np_unique_ids[k])[0]])
         # Quantize Embedding Gradient.
-        if os.environ.get("ONEFLOW_ONE_EMBEDDING_ENABLE_QUANTIZE_COMM") == "1":
+        if os.environ.get("ONEFLOW_ONE_EMBEDDING_ENABLE_QUANTIZED_COMM") == "1":
             abs_max_factor = np.max(np.abs(np_data))
             int8_factor = np.full(abs_max_factor.shape, 127.0, dtype=np.float32)
             quantize_factor = int8_factor / abs_max_factor
