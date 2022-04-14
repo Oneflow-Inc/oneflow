@@ -26,7 +26,7 @@ namespace py = pybind11;
 #define HANDLE_ERRORS try {
 #define END_HANDLE_ERRORS_RETSTMT(retstmt)                \
   }                                                       \
-  catch (py::error_already_set e) {                       \
+  catch (py::error_already_set& e) {                      \
     e.restore();                                          \
     retstmt;                                              \
   }                                                       \
