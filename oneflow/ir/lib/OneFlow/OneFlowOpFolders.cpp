@@ -36,15 +36,15 @@ namespace {
 
 namespace functional = ::oneflow::one::functional;
 using TensorPtr = std::shared_ptr<::oneflow::one::Tensor>;
+using MaybeTensor = ::oneflow::Maybe<::oneflow::one::Tensor>;
 
 StringAttr GenNewVariableOpName(MLIRContext* ctx, const std::string& key = "") {
   if (key == "") { return StringAttr::get(ctx, "variable_" + ::oneflow::NewUniqueId()); }
   return StringAttr::get(ctx, "variable_" + key + "_" + ::oneflow::NewUniqueId());
 }
 
-OpFoldResult UnaryFold(
-    MLIRContext* ctx, ArrayRef<Attribute> operands,
-    const std::function<::oneflow::Maybe<::oneflow::one::Tensor>(const TensorPtr&)>& f) {
+OpFoldResult UnaryFold(MLIRContext* ctx, ArrayRef<Attribute> operands,
+                       const std::function<MaybeTensor(const TensorPtr&)>& f) {
   ::oneflow::LazyMode::Guard guard{false};
   if (!operands.front()) { return {}; }  // Important!
 
@@ -60,8 +60,7 @@ OpFoldResult UnaryFold(
 }
 
 OpFoldResult BinaryFold(MLIRContext* ctx, ArrayRef<Attribute> operands,
-                        const std::function<::oneflow::Maybe<::oneflow::one::Tensor>(
-                            const TensorPtr&, const TensorPtr&)>& f) {
+                        const std::function<MaybeTensor(const TensorPtr&, const TensorPtr&)>& f) {
   ::oneflow::LazyMode::Guard guard{false};
   if (!(operands.front() && operands.back())) { return {}; }  // Important!
   auto lhs_attr_dict = operands.front().cast<mlir::DictionaryAttr>();
@@ -101,7 +100,7 @@ OpFoldResult TransposeOp::fold(ArrayRef<Attribute> operands) {
   return UnaryFold(getContext(), operands, [this](const auto& tensor) {
     std::vector<int32_t> perm_;
     for (auto& x : perm().getValue()) { perm_.emplace_back(x.cast<IntegerAttr>().getSInt()); }
-    return functional::Transpose(tensor, perm_).GetPtrOrThrow();
+    return functional::Transpose(tensor, perm_);
   });
 }
 
@@ -112,21 +111,18 @@ OpFoldResult ReshapeOp::fold(ArrayRef<Attribute> operands) {
       shape_vec.emplace_back(x.cast<mlir::IntegerAttr>().getInt());
     }
     return functional::Reshape(
-               tensor, ::oneflow::Shape(::oneflow::DimVector(shape_vec.begin(), shape_vec.end())))
-        .GetPtrOrThrow();
+        tensor, ::oneflow::Shape(::oneflow::DimVector(shape_vec.begin(), shape_vec.end())));
   });
 }
 
 OpFoldResult ScalarAddOp::fold(ArrayRef<Attribute> operands) {
-  return UnaryFold(getContext(), operands, [this](const auto& tensor) -> TensorPtr {
-    if (has_int_operand()) {
-      return functional::ScalarAdd(tensor, int_operand(), 1, false).GetPtrOrThrow();
-    }
+  return UnaryFold(getContext(), operands, [this](const auto& tensor) -> MaybeTensor {
+    if (has_int_operand()) { return functional::ScalarAdd(tensor, int_operand(), 1, false); }
     if (has_float_operand()) {
-      return functional::ScalarAdd(tensor, float_operand().convertToFloat(), 1, false)
-          .GetPtrOrThrow();
+      return functional::ScalarAdd(tensor, float_operand().convertToFloat(), 1, false);
     }
-    return nullptr;
+    emitError("Scalar op must has a int operand or a float operand.");
+    return TensorPtr();
   });
 }
 
@@ -143,8 +139,8 @@ OpFoldResult BroadcastDivOp::fold(ArrayRef<Attribute> operands) {
 }
 
 OpFoldResult BroadcastSubOp::fold(ArrayRef<Attribute> operands) {
-  return BinaryFold(getContext(), operands, [](const auto& lhs, const auto& rhs) -> TensorPtr {
-    return functional::Sub(lhs, rhs, false).GetPtrOrThrow();
+  return BinaryFold(getContext(), operands, [](const auto& lhs, const auto& rhs) -> MaybeTensor {
+    return functional::Sub(lhs, rhs, false);
   });
 }
 
