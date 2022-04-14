@@ -315,9 +315,9 @@ class FusedMLPFunctor {
       CHECK_EQ_OR_RETURN(bias_shape->NumAxes(), 1) << "Bias's dim should == 1";
 
       n = weight_shape->At(0);
-      CHECK_EQ_OR_RETURN(bias_shape->At(0), n) << "Bias's dim is not equal to weight's last dim. ";
+      CHECK_EQ_OR_RETURN(bias_shape->At(0), n) << "Bias's dim is not equal to weight's first dim. ";
       CHECK_EQ_OR_RETURN(weight_shape->At(1), k)
-          << "weight's first dim should be equal to input's last dim. ";
+          << "weight's second dim should be equal to input's second dim. ";
 
       // Set for next layer.
       k = n;
