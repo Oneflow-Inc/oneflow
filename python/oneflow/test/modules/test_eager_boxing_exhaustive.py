@@ -111,7 +111,7 @@ def _test_eager_boxing_2d_special_split_axis(test_case, in_device, out_device):
 
 
 @flow.unittest.skip_unless_1n4d()
-@unittest.skipIf(True, "this test has bug now")
+@unittest.skip("this test has bug now")
 class TestEagerBoxingSymmetricExhaustiveTesting(flow.unittest.TestCase):
     @globaltest
     def test_eager_boxing_normal_1d_exhaustive_testing(test_case):
