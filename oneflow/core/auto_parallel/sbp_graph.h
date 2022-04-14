@@ -67,6 +67,9 @@ class SbpGraph {
   // Compute Cost for current strategy
   double ComputeCost();
 
+  // Compute memory cost for current strategy
+  double ComputeMemoryCost();
+
   // Generate a node
   SbpNode<SbpSignature>* GenerateNode();
 
@@ -228,6 +231,20 @@ double SbpGraph<SbpSignature>::ComputeCost() {
     GraphCost += this_node->Cost[this_id];
     for (const auto& edge_out : this_node->EdgesOut) {
       GraphCost += edge_out->Cost[this_id][edge_out->EndNode->FinalSbpSignatureId];
+    }
+  }
+  return GraphCost;
+}
+
+template<class SbpSignature>
+double SbpGraph<SbpSignature>::ComputeMemoryCost() {
+  GraphCost = 0;
+  for (const auto& this_node : NodeList) {
+    int32_t this_id = this_node->FinalSbpSignatureId;
+
+    GraphCost += this_node->MemoryCost[this_id];
+    for (const auto& edge_out : this_node->EdgesOut) {
+      GraphCost += edge_out->MemoryCost[this_id][edge_out->EndNode->FinalSbpSignatureId];
     }
   }
   return GraphCost;
