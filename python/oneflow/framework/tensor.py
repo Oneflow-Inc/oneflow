@@ -1097,6 +1097,7 @@ def RegisterMethods():
     Tensor.__invert__ = _invert
     Tensor.__float__ = _scalar_float
     Tensor.__int__ = _scalar_int
+    Tensor.__array__ = _numpy
     Tensor.uniform_ = _uniform
     Tensor.trunc_normal_ = _trunc_normal_
     Tensor.kaiming_uniform_ = _kaiming_uniform
