@@ -277,7 +277,7 @@ Maybe<Tensor> Expand(const std::shared_ptr<Tensor>& input, const std::vector<int
       } else {
         if (expand_shape[target_ndim - 1 - i] != in_shape[ndim - 1 - i]) {
           return Error::RuntimeError()
-                 << "view::Expand(): The expanded size of the tensor ("
+                 << "The expanded size of the tensor ("
                  << expand_shape[target_ndim - 1 - i] << ")"
                  << "must match the existing size (" << in_shape[ndim - 1 - i]
                  << ") at non-singleton dimension " << ndim - i << ".  Target sizes: "
@@ -288,7 +288,7 @@ Maybe<Tensor> Expand(const std::shared_ptr<Tensor>& input, const std::vector<int
       }
     } else {
       if (expand_shape[target_ndim - 1 - i] == -1) {
-        return Error::RuntimeError() << "view::Expand(): The expanded size of the tensor (-1) "
+        return Error::RuntimeError() << "The expanded size of the tensor (-1) "
                                      << "isn't allowed in a leading, non-existing dimension 0";
       }
       target_dim_vec[target_ndim - 1 - i] = expand_shape[target_ndim - 1 - i];
