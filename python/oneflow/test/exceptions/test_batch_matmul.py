@@ -75,6 +75,3 @@ class TestBatchMatmulError(flow.unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
-    # x = flow.ones((4, 4), dtype=flow.float32)
-    # w = flow.ones((4, 1, 1), dtype=flow.float32)
-    # out = flow._C.batch_matmul(x, w, False, False, 1.0)
