@@ -382,26 +382,34 @@ void SbpNode<SbpSignature>::SummarizeCost() {
     ChildNodeSbpSig[child].resize(Cost.size());
 
     for (int32_t sbp_this = 0; sbp_this < Cost.size(); sbp_this++) {
-      double MinCost = 0, CurrCost;
+      double MinCost = 0.0, CurrCost = 0.0, MinMemoryCost = 0.0, CurrMemoryCost = 0.0;
       for (int32_t sbp_child = 0; sbp_child < Children[child]->Cost.size(); sbp_child++) {
         if (Children[child]->EdgesIn.size()) {
           // edge in graph: father -> child
           CurrCost = Children[child]->EdgesIn[0]->Cost[sbp_this][sbp_child]
                      + Children[child]->Cost[sbp_child];
+          CurrMemoryCost = Children[child]->EdgesIn[0]->MemoryCost[sbp_this][sbp_child]
+                           + Children[child]->MemoryCost[sbp_child];
 
         } else {
           // edge in graph: child -> father
           CurrCost = Children[child]->EdgesOut[0]->Cost[sbp_child][sbp_this]
                      + Children[child]->Cost[sbp_child];
+          CurrMemoryCost = Children[child]->EdgesOut[0]->MemoryCost[sbp_child][sbp_this]
+                           + Children[child]->MemoryCost[sbp_child];
         }
         // update MinCost with fixed SbpSignature for this node and child node
-        if (sbp_child == 0 || CurrCost < MinCost) {
+        if (sbp_child == 0 || DoubleLessThan(CurrCost, MinCost)
+            || (DoubleLessEqual(CurrCost, MinCost)
+                && DoubleLessThan(CurrMemoryCost, MinMemoryCost))) {
           MinCost = CurrCost;
+          MinMemoryCost = CurrMemoryCost;
           ChildNodeSbpSig[child][sbp_this] = sbp_child;
         }
       }
       // Add the cost for child node to this node
       Cost[sbp_this] += MinCost;
+      MemoryCost[sbp_this] += MinMemoryCost;
     }
   }
 }
