@@ -55,7 +55,7 @@ struct EmbeddingInitializer {
     } else if (rhs.type == InitializerType::kNormal) {
       return (this->normal_param.mean == rhs.normal_param.mean)
              && (this->normal_param.std == rhs.normal_param.std);
-    } else if (rhs.type == InitializerType::kNormal) {
+    } else if (rhs.type == InitializerType::kConstant) {
       return this->constant_param.value == rhs.constant_param.value;
     } else {
       UNIMPLEMENTED();
@@ -85,6 +85,11 @@ void ParseInitializerFromJson(const nlohmann::json& initializer,
     embedding_initializer->type = InitializerType::kNormal;
     embedding_initializer->normal_param.mean = initializer["mean"];
     embedding_initializer->normal_param.std = initializer["std"];
+  } else if (type == "constant") {
+    CHECK(initializer.contains("value"));
+    CHECK(initializer["value"].is_number());
+    embedding_initializer->type = InitializerType::kConstant;
+    embedding_initializer->constant_param.value = initializer["value"];
   } else {
     UNIMPLEMENTED();
   }
@@ -109,23 +114,35 @@ void SetInitializerIndex(int32_t row_id, int32_t col_start, int32_t col_end, int
   }
 }
 
-void ParseInitializers(const int32_t line_size, const int32_t embedding_size,
-                       const float optimizer_state_init_value, const std::string& json_serialized,
-                       std::vector<EmbeddingInitializer>* initializer_params,
-                       std::vector<int8_t>* initializer_index) {
-  auto json_object = nlohmann::json::parse(json_serialized);
-  CHECK(json_object.contains("column_dims"));
-  std::vector<int64_t> column_dims = json_object["column_dims"];
-  const int32_t num_columns = column_dims.size();
-  CHECK(json_object.contains("tables"));
-  auto tables = json_object["tables"];
-  CHECK(tables.is_array());
-  const int32_t num_tables = tables.size();
-  initializer_index->resize(num_tables * line_size);
-  EmbeddingInitializer optimizer_state_initializer;
-  optimizer_state_initializer.type = InitializerType::kConstant;
-  optimizer_state_initializer.constant_param.value = optimizer_state_init_value;
-  initializer_params->push_back(optimizer_state_initializer);
+void ParseAndSetStateInitializerIndex(const std::string& state_initializer,
+                                      const int32_t num_tables, const int32_t line_size,
+                                      const int32_t embedding_size,
+                                      std::vector<EmbeddingInitializer>* initializer_params,
+                                      std::vector<int8_t>* initializer_index) {
+  if (line_size == embedding_size) { return; }
+  CHECK(state_initializer != "");
+  auto initializers = nlohmann::json::parse(state_initializer);
+  CHECK(initializers.is_array());
+  const int num_states = line_size / embedding_size - 1;
+  CHECK_EQ(num_states, initializers.size());
+  for (int32_t i = 0; i < num_states; ++i) {
+    int32_t offset =
+        ParseJsonToUniqueInitializerVecAndReturnOffset(initializers.at(i), initializer_params);
+    int32_t col_start = embedding_size + i * embedding_size;
+    int32_t col_end = col_start + embedding_size;
+    CHECK_LE(col_end, line_size);
+    for (int32_t j = 0; j < num_tables; ++j) {
+      SetInitializerIndex(j, col_start, col_end, line_size, offset, initializer_index);
+    }
+  }
+}
+
+void ParseAndSetModelInitializerIndex(const nlohmann::json& tables,
+                                      const std::vector<int64_t>& column_dims,
+                                      const int32_t num_tables, const int32_t num_columns,
+                                      const int32_t line_size, const int32_t embedding_size,
+                                      std::vector<EmbeddingInitializer>* initializer_params,
+                                      std::vector<int8_t>* initializer_index) {
   for (int32_t i = 0; i < num_tables; ++i) {
     auto table = tables.at(i);
     CHECK(table.contains("columns"));
@@ -143,8 +160,26 @@ void ParseInitializers(const int32_t line_size, const int32_t embedding_size,
       col_start = col_end;
     }
     CHECK_EQ(col_start, embedding_size);
-    SetInitializerIndex(i, embedding_size, line_size, line_size, 0, initializer_index);
   }
+}
+
+void ParseInitializers(const int32_t line_size, const int32_t embedding_size,
+                       const std::string& state_initializer, const std::string& json_serialized,
+                       std::vector<EmbeddingInitializer>* initializer_params,
+                       std::vector<int8_t>* initializer_index) {
+  auto json_object = nlohmann::json::parse(json_serialized);
+  CHECK(json_object.contains("column_dims"));
+  std::vector<int64_t> column_dims = json_object["column_dims"];
+  const int32_t num_columns = column_dims.size();
+  CHECK(json_object.contains("tables"));
+  auto tables = json_object["tables"];
+  CHECK(tables.is_array());
+  const int32_t num_tables = tables.size();
+  initializer_index->resize(num_tables * line_size);
+  ParseAndSetStateInitializerIndex(state_initializer, num_tables, line_size, embedding_size,
+                                   initializer_params, initializer_index);
+  ParseAndSetModelInitializerIndex(tables, column_dims, num_tables, num_columns, line_size,
+                                   embedding_size, initializer_params, initializer_index);
 }
 
 template<typename IDX>
@@ -162,11 +197,11 @@ class EmbeddingKernelState final : public user_op::OpKernelState {
 
     const int64_t embedding_size = ctx->Attr<int64_t>("embedding_size");
     const int64_t line_size = ctx->Attr<int64_t>("line_size");
-    const float optimizer_state_init_value = ctx->Attr<float>("optimizer_state_init_value");
+    const std::string& state_initializer = ctx->Attr<std::string>("state_initializer");
 
     std::vector<EmbeddingInitializer> initializer_param;
     std::vector<int8_t> initializer_index;
-    ParseInitializers(line_size, embedding_size, optimizer_state_init_value,
+    ParseInitializers(line_size, embedding_size, state_initializer,
                       ctx->Attr<std::string>("embedding_tables"), &initializer_param,
                       &initializer_index);
 
