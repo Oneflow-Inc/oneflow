@@ -30,20 +30,6 @@ namespace oneflow {
 namespace one {
 namespace view {
 
-namespace {
-
-void CheckIsPerm(const std::vector<int32_t>& perm) {
-  std::vector<bool> is_used(perm.size(), false);
-  FOR_RANGE(size_t, i, 0, perm.size()) {
-    CHECK_GE(perm[i], 0);
-    CHECK_LE(perm[i], perm.size());
-    CHECK_EQ(is_used[perm[i]], false);
-    is_used[perm[i]] = true;
-  }
-}
-
-}  // namespace
-
 // NOTE: use env variable 'ONEFLOW_DISABLE_VIEW' control use view mechanism or not
 // If  set true, then do not use view mechanism(and view ops)
 bool IsEnvViewDisabled() {
@@ -419,7 +405,14 @@ Maybe<Tensor> Transpose(const std::shared_ptr<Tensor>& input, const std::vector<
 
   CHECK_EQ_OR_RETURN(permute.size(), ndim)
       << "permute size should be equal to input tensor's ndim, but got " << permute.size();
-  CheckIsPerm(permute);
+  auto positive_perm = permute;
+  for (auto i = 0; i < positive_perm.size(); i++) {
+    if (positive_perm[i] < 0) { positive_perm[i] += ndim; }
+    CHECK_OR_RETURN(positive_perm[i] >= 0 && positive_perm[i] < ndim)
+        << "IndexError: Dimension out of range (expected to be in range of [" << -ndim << ","
+        << ndim << " ) but got " << positive_perm[i];
+  }
+
   DimVector target_dims(ndim);
 
   StrideVector stride_vec(ndim);
