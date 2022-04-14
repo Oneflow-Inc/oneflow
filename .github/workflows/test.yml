@@ -13,7 +13,7 @@ env:
   ONEFLOW_TIMEOUT_SECONDS: 90
   ONEFLOW_THRAED_LOCAL_CACHED_SIZE: 16384
   FLOW_VISION_SRC: flow_vision
-  FLOW_VISION_COMMIT: 92bddb45ad5d903abfdbf24394aa9197b7af1fec
+  FLOW_VISION_COMMIT: ca8ebc663b58667cf8cd1b6ef0c861522780b7bb
   LIBAI_SRC: libai
   LIBAI_COMMIT: 7d31d9781e5f2d559dc0820f599e0bed798488ca
   TEST_WITH_TORCH_IMG_TAG: registry.cn-beijing.aliyuncs.com/oneflow/test-with-pytorch-1.9.0-cuda10.2-cudnn7-runtime:70729b0680b5a32daba6f50b56e0c169cd1636fa
