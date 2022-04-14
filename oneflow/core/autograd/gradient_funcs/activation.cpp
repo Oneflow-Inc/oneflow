@@ -210,6 +210,47 @@ class LeakyRelu : public OpExprGradFunction<LeakyReluCaptureState> {
   AttrMap base_attrs_;
 };
 
+struct LeakyReluYZHCaptureState : public AutoGradCaptureState {
+  bool requires_grad;
+  float alpha;
+};
+
+class LeakyReluYZH : public OpExprGradFunction<LeakyReluYZHCaptureState> {
+ public:
+  Maybe<void> Init(const OpExpr& op) override {
+    const auto* fw_op_expr = dynamic_cast<const UserOpExpr*>(&op);
+    CHECK_NOTNULL_OR_RETURN(fw_op_expr);
+    base_attrs_ = MakeAttrMapFromUserOpConf(fw_op_expr->proto());
+    return Maybe<void>::Ok();
+  }
+
+  Maybe<void> Capture(LeakyReluYZHCaptureState* ctx, const TensorTuple& inputs,
+                      const TensorTuple& outputs, const AttrMap& attrs) const override {
+    CHECK_EQ_OR_RETURN(inputs.size(), 1);
+    ctx->requires_grad = inputs.at(0)->requires_grad();
+    if (!ctx->requires_grad) { return Maybe<void>::Ok(); }
+
+    ComposedAttrMap composed_attrs(attrs, base_attrs_);
+    ctx->alpha = JUST(composed_attrs.GetAttr<float>("alpha"));
+    ctx->SaveTensorForBackward(inputs.at(0));
+    return Maybe<void>::Ok();
+  }
+
+  Maybe<void> Apply(const LeakyReluYZHCaptureState* ctx, const TensorTuple& out_grads,
+                    TensorTuple* in_grads) const override {
+    CHECK_EQ_OR_RETURN(out_grads.size(), 1);
+    in_grads->resize(1);
+    if (ctx->requires_grad) {
+      const auto& x = ctx->SavedTensors().at(0);
+      in_grads->at(0) = JUST(functional::LeakyReluYZHGrad(x, out_grads.at(0), ctx->alpha));
+    }
+    return Maybe<void>::Ok();
+  }
+
+ private:
+  AttrMap base_attrs_;
+};
+
 struct SoftplusCaptureState : public AutoGradCaptureState {
   bool requires_grad = true;
   double beta = 1.0;
@@ -510,6 +551,7 @@ REGISTER_OP_EXPR_GRAD_FUNCTION("gelu", GeLU);
 REGISTER_OP_EXPR_GRAD_FUNCTION("hardsigmoid", HardSigmoid);
 REGISTER_OP_EXPR_GRAD_FUNCTION("hardswish", HardSwish);
 REGISTER_OP_EXPR_GRAD_FUNCTION("leaky_relu", LeakyRelu);
+REGISTER_OP_EXPR_GRAD_FUNCTION("leaky_relu_yzh", LeakyReluYZH);
 REGISTER_OP_EXPR_GRAD_FUNCTION("hardtanh", HardTanh);
 REGISTER_OP_EXPR_GRAD_FUNCTION("elu", Elu);
 REGISTER_OP_EXPR_GRAD_FUNCTION("celu", Celu);

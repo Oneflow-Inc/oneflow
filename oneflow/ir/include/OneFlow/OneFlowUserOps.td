@@ -8415,6 +8415,41 @@ def OneFlow_LeakyReluOp : OneFlow_BaseOp<"leaky_relu", [NoSideEffect, DeclareOpI
   let has_data_type_infer_fn = 1;
 }
 
+def OneFlow_LeakyReluYZHOp : OneFlow_BaseOp<"leaky_relu_yzh", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
+  let input = (ins
+    OneFlow_Tensor:$x
+  );
+  let output = (outs
+    OneFlow_Tensor:$y
+  );
+  let attrs = (ins
+    DefaultValuedAttr<F32Attr, "0.">:$alpha
+  );
+
+  let has_logical_tensor_desc_infer_fn = 1;
+  let has_physical_tensor_desc_infer_fn = 1;
+  let has_get_sbp_fn = 1;
+  let has_data_type_infer_fn = 1;
+}
+
+def OneFlow_LeakyReluYZHGradOp : OneFlow_BaseOp<"leaky_relu_yzh_grad", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
+  let input = (ins
+    OneFlow_Tensor:$x,
+    OneFlow_Tensor:$dy
+  );
+  let output = (outs
+    OneFlow_Tensor:$dx
+  );
+  let attrs = (ins
+    DefaultValuedAttr<F32Attr, "0.">:$alpha
+  );
+
+  let has_logical_tensor_desc_infer_fn = 1;
+  let has_physical_tensor_desc_infer_fn = 1;
+  let has_get_sbp_fn = 1;
+  let has_data_type_infer_fn = 1;
+}
+
 def OneFlow_Log2Op : OneFlow_BaseOp<"log2", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
     OneFlow_Tensor:$x

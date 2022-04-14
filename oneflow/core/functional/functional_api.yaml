@@ -569,6 +569,14 @@
   signature: "Tensor (Tensor x, Tensor dy, Float alpha) => LeakyReluGrad"
   bind_python: False
 
+- name: "leaky_relu_yzh"
+  signature: "Tensor (Tensor x, Float alpha) => LeakyReluYZH"
+  bind_python: True
+
+- name: "leaky_relu_yzh_grad"
+  signature: "Tensor (Tensor x, Tensor dy, Float alpha) => LeakyReluYZHGrad"
+  bind_python: False
+
 - name: "normalization"
   signature:
     "Tensor (Tensor x, Tensor moving_mean=None, Tensor moving_variance=None,
