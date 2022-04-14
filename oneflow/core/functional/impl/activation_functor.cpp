@@ -388,6 +388,21 @@ class LeakyReluGradFunctor {
   std::shared_ptr<OpExpr> op_;
 };
 
+class YZHReluFunctor : public UnaryFunctor {
+ public:
+  YZHReluFunctor() {
+    op_ = CHECK_JUST(one::OpBuilder("yzh_relu").Input("x").Output("y").Build());
+  }
+
+};
+
+class YZHReluGradFunctor : public BinaryFunctor {
+ public:
+  YZHReluGradFunctor() {
+    op_ = CHECK_JUST(one::OpBuilder("yzh_relu_grad").Input("x").Input("dy").Output("dx").Build());
+  }
+};
+
 class SoftplusFunctor {
  public:
   SoftplusFunctor() {
@@ -575,6 +590,8 @@ ONEFLOW_FUNCTION_LIBRARY(m) {
   m.add_functor<impl::HardSwishGradFunctor>("HardSwishGrad");
   m.add_functor<impl::LeakyReluFunctor>("LeakyRelu");
   m.add_functor<impl::LeakyReluGradFunctor>("LeakyReluGrad");
+  m.add_functor<impl::YZHReluFunctor>("YZHRelu");
+  m.add_functor<impl::YZHReluGradFunctor>("YZHReluGrad");
   m.add_functor<impl::SoftplusFunctor>("Softplus");
   m.add_functor<impl::SoftplusGradFunctor>("SoftplusGrad");
   m.add_functor<impl::SiluFunctor>("Silu");
