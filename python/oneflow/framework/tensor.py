@@ -675,12 +675,6 @@ def _bmm(self, other):
     return flow.bmm(self, other)
 
 
-def _contiguous(self):
-    if self.is_contiguous():
-        return self
-    return flow._C.contiguous(self)
-
-
 def _chunk(self, chunks=None, dim=None):
     return flow._C.chunk(self, chunks, dim)
 
