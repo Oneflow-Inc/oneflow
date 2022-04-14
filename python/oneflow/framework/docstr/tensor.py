@@ -743,6 +743,13 @@ add_docstr(
 )
 
 add_docstr(
+    oneflow.Tensor.unbind,
+    """
+    See :func:`oneflow.unbind`
+    """,
+)
+
+add_docstr(
     oneflow.Tensor.swapaxes,
     """
     See :func:`oneflow.swapaxes`

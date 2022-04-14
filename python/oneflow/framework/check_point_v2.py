@@ -358,11 +358,24 @@ def save(
     obj = {"protocol_version": PROTOCOL_VERSION, "data": obj}
     with tensor_pickling_context(path, global_dst_rank):
         pickled_bytes = pickle.dumps(obj)
-    rank = flow.env.get_rank()
-    if global_dst_rank is None or global_dst_rank == rank:
+
+    def write_to_path(path):
         path.mkdir(exist_ok=True)
         pickle_path = path / PICKLE_FILENAME
         pickle_path.write_bytes(pickled_bytes)
+
+    if global_dst_rank is not None:
+        assert isinstance(
+            global_dst_rank, int
+        ), f"global_dst_rank expected type int, but got {type(global_dst_rank)}."
+        assert (
+            global_dst_rank >= 0 and global_dst_rank < flow.env.get_world_size()
+        ), f"out of range (expected to be in range of [0, {flow.env.get_world_size()}), but got {global_dst_rank})."
+        if flow.env.get_rank() == global_dst_rank:
+            write_to_path(path)
+    else:
+        # global_dst_rank is None
+        write_to_path(path)
 
 
 save_load_path = None
