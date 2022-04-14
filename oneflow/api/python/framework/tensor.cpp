@@ -556,22 +556,34 @@ static PyTypeObject* MakeParameterType() {
 
 PyObject* PyTensor_New(const std::shared_ptr<Tensor>& data) {
   if (!data) { Py_RETURN_NONE; }
+  if (data->pyobject()) { return PY_XINCREF((PyObject*)(data->pyobject())); }
   auto* self = (PyTensorObject*)PyTensorObject_Type->tp_alloc(PyTensorObject_Type, 0);
-  if (self) { self->data = data; }
+  if (self) {
+    self->data = data;
+    self->data->set_pyobject(self);
+  }
   return (PyObject*)self;
 }
 
 PyObject* PyParameter_New(const std::shared_ptr<Parameter>& data) {
   if (!data) { Py_RETURN_NONE; }
+  if (data->pyobject()) { return PY_XINCREF((PyObject*)(data->pyobject())); }
   auto* self = (PyTensorObject*)PyTensorObject_Type->tp_alloc(PyParameterObject_Type, 0);
-  if (self) { self->data = data; }
+  if (self) {
+    self->data = data;
+    self->data->set_pyobject(self);
+  }
   return (PyObject*)self;
 }
 
 PyObject* PyParameter_New(const std::shared_ptr<Tensor>& data, bool requires_grad) {
   if (!data) { Py_RETURN_NONE; }
+  if (data->pyobject()) { return PY_XINCREF((PyObject*)(data->pyobject())); }
   auto* self = (PyTensorObject*)PyTensorObject_Type->tp_alloc(PyParameterObject_Type, 0);
-  if (self) { self->data = ASSERT_PTR(Parameter::MakeTensor(data, requires_grad)); }
+  if (self) {
+    self->data = ASSERT_PTR(Parameter::MakeTensor(data, requires_grad));
+    self->data->set_pyobject(self);
+  }
   return (PyObject*)self;
 }
 
