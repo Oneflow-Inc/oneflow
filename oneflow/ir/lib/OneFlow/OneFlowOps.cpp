@@ -398,7 +398,7 @@ struct NormalizationInferencePattern : public OpRewritePattern<NormalizationOp> 
             op, op->getResultTypes(), op.getOperands(), op->getAttrs())) {
       return success();
     }
-    op.emitError("fail to create inference bn op");
+    op.emitError("Failed to create inference bn op");
     return failure();
   }
 };
