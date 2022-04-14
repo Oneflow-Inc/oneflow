@@ -1238,7 +1238,7 @@ class SliceUpdateFunctor {
     if (inplace) {
       JUST(CheckInplaceValid(x));
       auto outputs = std::make_shared<TensorTuple>(1);
-      (*outputs)[0] = x->contiguous();
+      (*outputs)[0] = x;
       JUST(OpInterpUtil::Dispatch(*op_, {x, update}, outputs.get(), attrs));
       return outputs->at(0);
     } else {
