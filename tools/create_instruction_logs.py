@@ -19,22 +19,22 @@ def parse(file_name):
                 # Start an op on gpu
                 instructions.append({"type": "op", "info": {"op_name": "", "tensors": []}})
                 in_command = True
-                instr_id = len(instructions) - 1
+                cur_instruction = instructions[-1]
                 continue
 
             if in_command:
                 if command[0] == "END" and command[1] == "DTRComputeInstruction" and (command[2][:3] == "gpu" or command[2][:8] == "cuda_h2d"):
                     in_command = False
                 elif command[0] == "OP":
-                    instructions[instr_id]["info"]["op_name"] = command[1].strip()
+                    cur_instruction["info"]["op_name"] = command[1].strip()
                 elif command[0] == "ALLOCATE":
-                    instructions[instr_id]["info"]["tensors"].append(("ALLOCATE", command[1], int(command[2].strip())))        # ("ALLOCATE", address, size)
+                    cur_instruction["info"]["tensors"].append(("ALLOCATE", command[1], int(command[2].strip())))        # ("ALLOCATE", address, size)
                 elif command[0] == "START" and command[1].strip() == "EvictAndFindPiece":
                     forced_evict = True
                 elif command[0] == "END" and command[1].strip() == "EvictAndFindPiece":
                     forced_evict = False
                 elif command[0] == "EVICT" and forced_evict:
-                    instructions[instr_id]["info"]["tensors"].append(("EVICT", command[1], int(command[2].strip())))
+                    cur_instruction["info"]["tensors"].append(("EVICT", command[1], int(command[2].strip())))
 
             if command[0] == "EVICT" and not forced_evict:
                 instructions.append({"type": "eager_evict", "info": (command[1], int(command[2].strip()))})
