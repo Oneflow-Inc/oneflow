@@ -50,16 +50,21 @@ PyTypeObject* PyParameterObject_Type = NULL;
 
 static int PyTensorObject_init(PyObject* self, PyObject* args, PyObject* kwargs) {
   HANDLE_ERRORS
-  PyObject* _self = functional::_legacy_tensor_ctor(NULL, args, kwargs);
-  ((PyTensorObject*)self)->data = PyTensor_Unpack(_self);
-  Py_XDECREF(_self);
+  auto* temp = functional::_legacy_tensor_ctor(NULL, args, kwargs);
+  auto* _self = (PyTensorObject*)self;
+  _self->data = PyTensor_Unpack(temp);
+  _self->data->set_pyobject(self);
+  Py_XDECREF(temp);
   return 0;
   END_HANDLE_ERRORS_RET(-1)
 }
 
 static void PyTensorObject_dealloc(PyObject* self) {
-  ((PyTensorObject*)self)->data.reset();
-
+  auto* _self = (PyTensorObject*)self;
+  // clear pyobject
+  _self->data->set_pyobject(NULL);
+  _self->data.reset();
+  // clear __dict__
   PyObject** dict_ptr = _PyObject_GetDictPtr(self);
   if (dict_ptr) { Py_CLEAR(*dict_ptr); }
   auto* type = Py_TYPE(self);
@@ -77,8 +82,9 @@ static int PyParameterObject_init(PyObject* self, PyObject* args, PyObject* kwar
     return -1;
   }
   if (self) {
-    ((PyTensorObject*)self)->data =
-        ASSERT_PTR(Parameter::MakeTensor(PyTensor_Unpack(data), requires_grad));
+    auto* _self = (PyTensorObject*)self;
+    _self->data = ASSERT_PTR(Parameter::MakeTensor(PyTensor_Unpack(data), requires_grad));
+    _self->data->set_pyobject(self);
   }
   return 0;
   END_HANDLE_ERRORS_RET(-1)
@@ -578,7 +584,6 @@ PyObject* PyParameter_New(const std::shared_ptr<Parameter>& data) {
 
 PyObject* PyParameter_New(const std::shared_ptr<Tensor>& data, bool requires_grad) {
   if (!data) { Py_RETURN_NONE; }
-  if (data->pyobject()) { return PY_XINCREF((PyObject*)(data->pyobject())); }
   auto* self = (PyTensorObject*)PyTensorObject_Type->tp_alloc(PyParameterObject_Type, 0);
   if (self) {
     self->data = ASSERT_PTR(Parameter::MakeTensor(data, requires_grad));
