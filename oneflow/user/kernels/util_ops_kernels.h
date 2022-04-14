@@ -40,6 +40,11 @@ struct IsInfFunctor {
   OF_DEVICE_FUNC bool operator()(const T x) const;
 };
 
+template<DeviceType device_type, typename T, typename Enable = void>
+struct IsFiniteFunctor {
+  OF_DEVICE_FUNC bool operator()(const T x) const;
+};
+
 // Only for util ops register. Output name is "out", input name is "in". Output dtype is bool.
 #define REGISTER_UTIL_OPS_KERNELS(device, kernel_name, dtype, functor)                          \
   REGISTER_USER_KERNEL(kernel_name)                                                             \
@@ -57,6 +62,9 @@ struct IsInfFunctor {
 
 #define REGISTER_ISINF_KERNEL(device, dtype) \
   REGISTER_UTIL_OPS_KERNELS(device, "isinf", dtype, IsInfFunctor)
+
+#define REGISTER_ISFINITE_KERNEL(device, dtype) \
+  REGISTER_UTIL_OPS_KERNELS(device, "isfinite", dtype, IsFiniteFunctor)
 
 }  // namespace user_op
 }  // namespace oneflow

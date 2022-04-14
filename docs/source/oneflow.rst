@@ -185,7 +185,8 @@ oneflow
             get_rng_state,
             set_rng_state,
             isnan,
-            isinf
+            isinf,
+            isfinite
 
 .. autofunction:: oneflow.relu
 .. autofunction:: oneflow.set_num_threads

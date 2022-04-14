@@ -40,9 +40,20 @@ struct IsInfFunctor<DeviceType::kCPU, T, std::enable_if_t<!std::is_floating_poin
   OF_DEVICE_FUNC bool operator()(const T x) const { return false; }
 };
 
+template<typename T>
+struct IsFiniteFunctor<DeviceType::kCPU, T, std::enable_if_t<std::is_floating_point<T>::value>> {
+  OF_DEVICE_FUNC bool operator()(const T x) const { return std::isfinite(x); }
+};
+
+template<typename T>
+struct IsFiniteFunctor<DeviceType::kCPU, T, std::enable_if_t<!std::is_floating_point<T>::value>> {
+  OF_DEVICE_FUNC bool operator()(const T x) const { return true; }
+};
+
 #define REGISTER_UTIL_OPS_CPU_KERNEL(device, dtype_pair)      \
   REGISTER_ISNAN_KERNEL(device, OF_PP_PAIR_FIRST(dtype_pair)) \
-  REGISTER_ISINF_KERNEL(device, OF_PP_PAIR_FIRST(dtype_pair))
+  REGISTER_ISINF_KERNEL(device, OF_PP_PAIR_FIRST(dtype_pair)) \
+  REGISTER_ISFINITE_KERNEL(device, OF_PP_PAIR_FIRST(dtype_pair))
 
 OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(REGISTER_UTIL_OPS_CPU_KERNEL, (DeviceType::kCPU),
                                  UTIL_OPS_DATA_TYPE_SEQ);

@@ -55,3 +55,23 @@ add_docstr(
 
     """,
 )
+
+add_docstr(
+    oneflow.isfinite,
+    """
+    Returns a new tensor with boolean elements representing if each element is finite or not.
+
+    Args:
+        input(Tensor): the input tensor.
+
+    Returns:
+        A boolean tensor that is True where input is finite and False elsewhere.
+
+    Example::
+
+        >>> import oneflow as flow
+        >>> flow.isfinite(flow.tensor([1, float('inf'), 2, float('-inf'), float('nan')]))
+        tensor([True,  False, True,  False, False], dtype=oneflow.bool)
+
+    """,
+)

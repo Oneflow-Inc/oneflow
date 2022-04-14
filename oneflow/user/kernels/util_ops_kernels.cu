@@ -63,9 +63,31 @@ struct IsInfFunctor<DeviceType::kCUDA, half> {
   }
 };
 
+template<typename T>
+struct IsFiniteFunctor<DeviceType::kCUDA, T, std::enable_if_t<std::is_floating_point<T>::value>> {
+  __device__ bool operator()(const T x) const { return isfinite(x); }
+};
+
+template<typename T>
+struct IsFiniteFunctor<DeviceType::kCUDA, T, std::enable_if_t<!std::is_floating_point<T>::value>> {
+  __device__ bool operator()(const T x) const { return true; }
+};
+
+template<>
+struct IsFiniteFunctor<DeviceType::kCUDA, half> {
+  __device__ bool operator()(const half x) const {
+#if __CUDA_ARCH__ >= 530 || !defined(__CUDA_ARCH__)
+    return !__hisinf(x);
+#else
+    return !isinf(__half2float(x));
+#endif /* __CUDA_ARCH__ >= 530 || !defined(__CUDA_ARCH__) */
+  }
+};
+
 #define REGISTER_UTIL_OPS_CUDA_KERNEL(device, dtype_pair)     \
   REGISTER_ISNAN_KERNEL(device, OF_PP_PAIR_FIRST(dtype_pair)) \
-  REGISTER_ISINF_KERNEL(device, OF_PP_PAIR_FIRST(dtype_pair))
+  REGISTER_ISINF_KERNEL(device, OF_PP_PAIR_FIRST(dtype_pair)) \
+  REGISTER_ISFINITE_KERNEL(device, OF_PP_PAIR_FIRST(dtype_pair))
 
 REGISTER_UTIL_OPS_CUDA_KERNEL(DeviceType::kCUDA, (half))
 OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(REGISTER_UTIL_OPS_CUDA_KERNEL, (DeviceType::kCUDA),
