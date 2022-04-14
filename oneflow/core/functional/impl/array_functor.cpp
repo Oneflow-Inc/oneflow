@@ -2162,6 +2162,23 @@ class SplitFunctor {
   }
 };
 
+class UnbindFunctor {
+ public:
+  UnbindFunctor() {}
+  Maybe<TensorTuple> operator()(const std::shared_ptr<one::Tensor>& x, const int64_t& dim) const {
+    int32_t axis = dim;
+    const int32_t ndim = x->ndim();
+    if (axis < 0) { axis += ndim; }
+    CHECK_OR_RETURN((dim >= -ndim) && (dim < ndim))
+        << "Dimension out of range (expected to be in range of [" << -ndim << "," << ndim - 1
+        << "], but got " << dim << ")";
+    int32_t dim_size = x->shape()->At(axis);
+    TensorTuple unbinds(dim_size);
+    for (int i = 0; i < dim_size; ++i) { unbinds[i] = JUST(Select(x, axis, i)); }
+    return unbinds;
+  }
+};
+
 class ChunkFunctor {
  public:
   ChunkFunctor() {}
@@ -2820,6 +2837,7 @@ ONEFLOW_FUNCTION_LIBRARY(m) {
   m.add_functor<impl::ReduceSumLikeFunctor>("ReduceSumLike");
   m.add_functor<impl::BroadcastReduceSumLikeFunctor>("BroadcastReduceSumLike");
   m.add_functor<impl::SplitFunctor>("Split");
+  m.add_functor<impl::UnbindFunctor>("Unbind");
   m.add_functor<impl::ChunkFunctor>("Chunk");
   m.add_functor<impl::SplitLikeFunctor>("SplitLike");
   m.add_functor<impl::SplitWithSizeFunctor>("SplitWithSize");
