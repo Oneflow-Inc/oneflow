@@ -781,7 +781,7 @@ LogicalResult ApplyRoundTripPatterns(RoundTripOneFlowJobWrapperInterface& job_wr
     pm.addPass(oneflow::createOutlineJitFunctionPass());
   }
   pm.addPass(oneflow::createFuseIntoExistingOpPass());
-  if (::oneflow::ParseBooleanFromEnv("ONEFLOW_MLIR_ENABLE_CONSTANT_FOLDING", false)) {
+  if (::oneflow::ParseBooleanFromEnv("ONEFLOW_MLIR_ENABLE_INFERENCE_OPTIMIZATION", false)) {
     pm.addPass(oneflow::createPreConvertInferenceOpPass());
     pm.addPass(oneflow::createConvertInferenceOpPass());
     pm.addPass(oneflow::createPostConvertInferenceOpPass());
