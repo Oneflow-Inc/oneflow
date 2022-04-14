@@ -929,6 +929,33 @@ def check_basetype_equality(a, b, ignored1, ignored2, check_dtype=False):
     return a == b
 
 
+@equality_checker(tuple, tuple)
+@equality_checker(list, list)
+def check_basetype_equality(a, b, rtol=0.0001, atol=1e-05, check_dtype=False):
+    if len(a) != len(b):
+        equality_res = False
+    else:
+        for i in range(len(a)):
+            torch_np = a[i].detach().cpu().numpy()
+            flow_np = b[i].detach().cpu().numpy()
+            equality_res = np.allclose(
+                torch_np, flow_np, rtol=rtol, atol=atol, equal_nan=True,
+            )
+            if check_dtype:
+                equality_res = equality_res and (torch_np.dtype == flow_np.dtype)
+            if equality_res == False:
+                print_note_fake_program()
+                print("---------Tensor Shape--------")
+                print(a[i].shape)
+                print(b[i].shape)
+                print("---------Tensor dtype--------")
+                print(a[i].dtype)
+                print(b[i].dtype)
+                break
+
+    return equality_res
+
+
 @equality_checker(type(None), type(None))
 def check_nonetype_equality(a, b, ignored1, ignored2, check_dtype=False):
     return True
