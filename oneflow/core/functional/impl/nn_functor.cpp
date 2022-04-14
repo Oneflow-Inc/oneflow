@@ -2588,6 +2588,70 @@ class OneEmbeddingSgdUpdateFunctor {
   std::shared_ptr<OpExpr> momentum_op_;
 };
 
+class OneEmbeddingAdamUpdateFunctor {
+ public:
+  OneEmbeddingAdamUpdateFunctor() {
+    // This functor is just for unittest
+    no_bias_correction_op_ = CHECK_JUST(one::OpBuilder("adam_embedding_update")
+                                            .Input("num_unique_ids")
+                                            .Input("unique_embeddings")
+                                            .Input("embedding_grad")
+                                            .Input("learning_rate")
+                                            .Input("down_scale_by_tensor")
+                                            .Input("skip_if")
+                                            .Output("updated_unique_embeddings")
+                                            .Build());
+    do_bias_correction_op_ = CHECK_JUST(one::OpBuilder("adam_embedding_update")
+                                            .Input("num_unique_ids")
+                                            .Input("unique_embeddings")
+                                            .Input("embedding_grad")
+                                            .Input("learning_rate")
+                                            .Input("down_scale_by_tensor")
+                                            .Input("skip_if")
+                                            .Input("bias_correction1")
+                                            .Input("bias_correction2")
+                                            .Output("updated_unique_embeddings")
+                                            .Build());
+  }
+
+  Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& num_unique_ids,
+                           const std::shared_ptr<one::Tensor>& unique_embeddings,
+                           const std::shared_ptr<one::Tensor>& embedding_grad,
+                           const std::shared_ptr<one::Tensor>& learning_rate,
+                           const std::shared_ptr<one::Tensor>& down_scale_by_tensor,
+                           const std::shared_ptr<one::Tensor>& skip_if,
+                           const Optional<one::Tensor>& bias_correction1,
+                           const Optional<one::Tensor>& bias_correction2, const double scale,
+                           const float weight_decay, const float beta1, const float beta2,
+                           const float epsilon, const bool do_bias_correction) const {
+    MutableAttrMap attrs;
+    JUST(attrs.SetAttr<double>("scale", scale));
+    JUST(attrs.SetAttr<float>("weight_decay", weight_decay));
+    JUST(attrs.SetAttr<float>("beta1", beta1));
+    JUST(attrs.SetAttr<float>("beta2", beta2));
+    JUST(attrs.SetAttr<float>("epsilon", epsilon));
+    JUST(attrs.SetAttr<bool>("do_bias_correction", do_bias_correction));
+    if (do_bias_correction) {
+      CHECK(bias_correction1);
+      CHECK(bias_correction2);
+      return OpInterpUtil::Dispatch<Tensor>(
+          *do_bias_correction_op_,
+          {num_unique_ids, unique_embeddings, embedding_grad, learning_rate, down_scale_by_tensor,
+           skip_if, JUST(bias_correction1), JUST(bias_correction2)},
+          attrs);
+    } else {
+      return OpInterpUtil::Dispatch<Tensor>(*no_bias_correction_op_,
+                                            {num_unique_ids, unique_embeddings, embedding_grad,
+                                             learning_rate, down_scale_by_tensor, skip_if},
+                                            attrs);
+    }
+  }
+
+ private:
+  std::shared_ptr<OpExpr> no_bias_correction_op_;
+  std::shared_ptr<OpExpr> do_bias_correction_op_;
+};
+
 }  // namespace impl
 
 ONEFLOW_FUNCTION_LIBRARY(m) {
@@ -2666,6 +2730,7 @@ ONEFLOW_FUNCTION_LIBRARY(m) {
   m.add_functor<impl::OneEmbeddingLookupFunctor>("OneEmbeddingLookup");
   m.add_functor<impl::OneEmbeddingUniqueKeyValuePairFunctor>("OneEmbeddingUniqueKeyValuePair");
   m.add_functor<impl::OneEmbeddingSgdUpdateFunctor>("OneEmbeddingSgdUpdate");
+  m.add_functor<impl::OneEmbeddingAdamUpdateFunctor>("OneEmbeddingAdamUpdate");
 };
 
 }  // namespace functional
