@@ -425,12 +425,7 @@ void MakeConstantInitializerAttr(const int64_t embedding_size, const int64_t lin
   for (int32_t i = 0; i < num_states; ++i) {
     nlohmann::json initializer;
     initializer["type"] = "constant";
-    float initial_value;
-    if (values.size() == 0) {
-      initial_value = 0;
-    } else {
-      initial_value = values.at(i);
-    }
+    const float initial_value = values.size() > 0 ? values.at(i) : 0.0;
     initializer["value"] = initial_value;
     initializers.push_back(initializer);
   }
