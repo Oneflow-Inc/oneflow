@@ -24,7 +24,7 @@ namespace oneflow {
   const Shape& ids_shape = ctx->InputShape("ids", 0);
   if (ctx->has_input("table_ids", 0)) {
     const Shape& table_ids_shape = ctx->InputShape("table_ids", 0);
-    CHECK_EQ_OR_RETURN(ids_shape, table_ids_shape) << "table_ids shape must equals ids shape";
+    CHECK_EQ_OR_RETURN(ids_shape, table_ids_shape) << "table_ids shape must equal to ids shape";
   }
   DimVector out_dim_vec = ids_shape.dim_vec();
   const int64_t embedding_size = ctx->Attr<int64_t>("embedding_size");
@@ -112,7 +112,8 @@ REGISTER_USER_OP_GRAD("embedding_lookup_placeholder")
   const Shape& num_unique_ids_shape = ctx->InputShape("num_unique_ids", 0);
   const Shape& unique_ids_shape = ctx->InputShape("unique_ids", 0);
   const Shape& table_ids_shape = ctx->InputShape("table_ids", 0);
-  CHECK_EQ_OR_RETURN(unique_ids_shape, table_ids_shape) << "table_ids shape must equals ids shape";
+  CHECK_EQ_OR_RETURN(unique_ids_shape, table_ids_shape)
+      << "table_ids shape must equal to ids shape";
   CHECK_EQ_OR_RETURN(num_unique_ids_shape.elem_cnt(), 1);
   *ctx->OutputShape("context", 0) = num_unique_ids_shape;
   return Maybe<void>::Ok();
@@ -141,7 +142,8 @@ REGISTER_USER_OP_GRAD("embedding_lookup_placeholder")
   const Shape& num_unique_ids_shape = ctx->InputShape("num_unique_ids", 0);
   const Shape& unique_ids_shape = ctx->InputShape("unique_ids", 0);
   const Shape& table_ids_shape = ctx->InputShape("table_ids", 0);
-  CHECK_EQ_OR_RETURN(unique_ids_shape, table_ids_shape) << "table_ids shape must equals ids shape";
+  CHECK_EQ_OR_RETURN(unique_ids_shape, table_ids_shape)
+      << "table_ids shape must equal to ids shape";
   CHECK_EQ_OR_RETURN(num_unique_ids_shape.elem_cnt(), 1);
   const int64_t embedding_size = ctx->Attr<int64_t>("embedding_size");
   const int64_t line_size = ctx->Attr<int64_t>("line_size");

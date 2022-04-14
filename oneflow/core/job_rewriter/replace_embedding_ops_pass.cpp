@@ -416,20 +416,16 @@ void BuildIdShuffle(bool use_system_gather, const std::string& embedding_name,
 
 void MakeConstantInitializerAttr(const int64_t embedding_size, const int64_t line_size,
                                  const std::vector<float>& values, std::string* initializer_attr) {
-  if(embedding_size == line_size) {return;}
+  if (embedding_size == line_size) { return; }
   const int32_t num_states = line_size / embedding_size - 1;
+  CHECK_GT(num_states, 0) << "num_states " << num_states;
   CHECK(values.size() == 0 || num_states == values.size())
       << "must set " << num_states << " optimizer states init value, but get " << values.size();
   nlohmann::json initializers;
   for (int32_t i = 0; i < num_states; ++i) {
     nlohmann::json initializer;
     initializer["type"] = "constant";
-    float initial_value;
-    if (values.size() == 0) {
-      initial_value = 0;
-    } else {
-      initial_value = values.at(i);
-    }
+    const float initial_value = values.size() > 0 ? values.at(i) : 0.0;
     initializer["value"] = initial_value;
     initializers.push_back(initializer);
   }
@@ -437,8 +433,9 @@ void MakeConstantInitializerAttr(const int64_t embedding_size, const int64_t lin
 }
 
 void BuildEmbeddingUpdate(JobPassCtx* ctx, const OpGraph& op_graph, JobBuilder* job_builder,
-                          const ParallelConf& parallel_conf, const int64_t embedding_size, const int64_t line_size,
-                          const std::string& embedding_name, const OptimizerConf& optimizer_conf,
+                          const ParallelConf& parallel_conf, const int64_t embedding_size,
+                          const int64_t line_size, const std::string& embedding_name,
+                          const OptimizerConf& optimizer_conf,
                           const user_op::UserOpConfWrapper& embedding_op,
                           const std::string& num_unique_ids_lbn, const std::string& unique_ids_lbn,
                           const std::string& unique_values_lbn,
@@ -494,7 +491,8 @@ void BuildEmbeddingUpdate(JobPassCtx* ctx, const OpGraph& op_graph, JobBuilder* 
   } else {
     UNIMPLEMENTED();
   }
-  MakeConstantInitializerAttr(embedding_size, line_size, state_constant_init_values, state_initializer);
+  MakeConstantInitializerAttr(embedding_size, line_size, state_constant_init_values,
+                              state_initializer);
   embedding_update_op_builder.Input("num_unique_ids", AddIdentityOp(num_unique_ids_lbn))
       .Input("unique_embeddings", unique_values_lbn)
       .Input("embedding_grad", embedding_grad_lbn)
@@ -603,8 +601,10 @@ Maybe<void> ReplaceEmbeddingOps::Apply(const OpGraph& op_graph, JobBuilder* job_
                    &inner_inverse_unique_partition_indices_lbn, &num_unique_ids_lbn,
                    &unique_ids_lbn, &unique_table_ids_lbn, &inverse_indices_lbn,
                    &num_unique_matrix_lbn);
-
-    bool has_embedding_prefetch = (!options.IsFullCache()) ? true : false;
+    const bool is_train_job = job_builder->job().job_conf().has_train_conf();
+    const bool no_optimizer_states = (embedding_size == options.LineSize());
+    const bool has_embedding_prefetch =
+        (!options.IsFullCache()) && (is_train_job || no_optimizer_states);
 
     OperatorConf embedding_prefetch_op_conf;
     OperatorConf embedding_lookup_op_conf;
@@ -700,10 +700,15 @@ Maybe<void> ReplaceEmbeddingOps::Apply(const OpGraph& op_graph, JobBuilder* job_
                           "System-Train-LearningRate-Scheduler_" + NewUniqueId());
 
         BuildEmbeddingUpdate(ctx, op_graph, job_builder, op_node->parallel_desc().parallel_conf(),
-                             embedding_size, options.LineSize(), options.Name(), embedding_optimizer_conf, embedding_op,
-                             num_unique_ids_lbn, unique_ids_lbn, unique_values_lbn,
-                             embedding_grad_lbn, learning_rate_lbn, &state_initializer);
+                             embedding_size, options.LineSize(), options.Name(),
+                             embedding_optimizer_conf, embedding_op, num_unique_ids_lbn,
+                             unique_ids_lbn, unique_values_lbn, embedding_grad_lbn,
+                             learning_rate_lbn, &state_initializer);
       }
+    }
+    if ((state_initializer == "") && !no_optimizer_states) {
+      CHECK(!is_train_job) << "train job must have set state initializer";
+      MakeConstantInitializerAttr(embedding_size, options.LineSize(), {}, &state_initializer);
     }
     auto state_initializer_attr = ::oneflow::AttrValue();
     state_initializer_attr.set_at_string(state_initializer);
