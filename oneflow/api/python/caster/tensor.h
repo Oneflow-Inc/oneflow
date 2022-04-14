@@ -37,7 +37,7 @@ struct tensor_type_caster {
   template<typename U>
   static handle cast(U&& src, return_value_policy policy, handle parent) {
     using namespace oneflow::one;
-    return reinterpret_steal<object>(PyTensor_New(src)).release();
+    return reinterpret_steal<object>(PyTensor_New(std::const_pointer_cast<Tensor>(src))).release();
   }
 
   operator std::shared_ptr<T>*() { return &value_; }
@@ -68,7 +68,8 @@ struct parameter_type_caster {
   template<typename U>
   static handle cast(U&& src, return_value_policy policy, handle parent) {
     using namespace oneflow::one;
-    return reinterpret_steal<object>(PyParameter_New(src)).release();
+    return reinterpret_steal<object>(PyParameter_New(std::const_pointer_cast<Parameter>(src)))
+        .release();
   }
 
   operator std::shared_ptr<T>*() { return &value_; }
@@ -87,8 +88,15 @@ template<>
 struct type_caster<std::shared_ptr<oneflow::one::Tensor>>
     : public tensor_type_caster<oneflow::one::Tensor> {};
 template<>
+struct type_caster<std::shared_ptr<const oneflow::one::Tensor>>
+    : public tensor_type_caster<const oneflow::one::Tensor> {};
+
+template<>
 struct type_caster<std::shared_ptr<oneflow::one::Parameter>>
     : public parameter_type_caster<oneflow::one::Parameter> {};
+template<>
+struct type_caster<std::shared_ptr<const oneflow::one::Parameter>>
+    : public parameter_type_caster<const oneflow::one::Parameter> {};
 
 }  // namespace detail
 }  // namespace pybind11

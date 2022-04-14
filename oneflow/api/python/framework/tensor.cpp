@@ -308,7 +308,7 @@ static PyMethodDef PyTensorObject_methods[] = {
     {"zeros_", PyTensorObject_zeros_, METH_NOARGS, NULL},
     {"register_hook", PyTensorObject_register_hook, METH_O, NULL},
     {"_register_post_grad_accumulation_hook", PyTensorObject__register_post_grad_accumulation_hook,
-     METH_VARARGS, NULL},
+     METH_O, NULL},
     {"global_id", PyTensorObject_global_id, METH_NOARGS, NULL},
     {"check_meta_consistency", PyTensorObject_check_meta_consistency, METH_NOARGS, NULL},
     {"to_numpy", PyTensorObject_to_numpy, METH_VARARGS, NULL},
