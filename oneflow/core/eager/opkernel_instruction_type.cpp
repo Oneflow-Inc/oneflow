@@ -497,6 +497,12 @@ Maybe<void> DTRComputeInstruction(vm::Instruction* instruction) {
     LOG(INFO) << "start pinning input tensors..";
   }
 
+  if (dtr::is_enabled()) {
+    LOG(INFO) << "****" << "START-DTRComputeInstruction" << "-" << instruction->instr_msg().instr_type_name() << std::endl;
+    // LOG(INFO) << "****" << "START-DTRComputeInstruction" << "-" << instruction->instr_msg().instr_type_name().substr(0, 3) << std::endl;
+    LOG(INFO) << "****" << "OP-" << operand->opkernel().op_type_name() << std::endl;
+  }
+
   const auto& inputs = GetDTRInputs(operand);
   const auto& outputs = GetDTROutputs(operand);
 
@@ -505,13 +511,18 @@ Maybe<void> DTRComputeInstruction(vm::Instruction* instruction) {
   JUST(RecursivelyCompute(operand, device_ctx));
   bool is_inplace = IsInplace(inputs, outputs);
   for (const auto& output : outputs) {
-    if (is_inplace) {
-      output->set_evict_attr(false);
-    } else {
-      JUST(Global<dtr::TensorPool>::Get()->insert(output));
-    }
+    // if (is_inplace) {
+    //   output->set_evict_attr(false);
+    // } else {
+    //   JUST(Global<dtr::TensorPool>::Get()->insert(output));
+    // }
+    JUST(Global<dtr::TensorPool>::Get()->insert(output));
   }
   if (dtr::debug_level() >= 3) { JUST(Global<dtr::TensorPool>::Get()->display2()); }
+  if (dtr::is_enabled()) {
+    LOG(INFO) << "****" << "END-DTRComputeInstruction" << "-" << instruction->instr_msg().instr_type_name() << std::endl;
+    // LOG(INFO) << "****" << "END-DTRComputeInstruction" << "-" << instruction->instr_msg().instr_type_name().substr(0, 3) << std::endl;
+  }
   return Maybe<void>::Ok();
 }
 

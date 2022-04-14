@@ -122,6 +122,7 @@ Maybe<void> DTREagerBlobObject::evict() {
     return Maybe<void>::Ok();
   }
   evict_flag_ = true;
+  LOG(INFO) << "****" << "EVICT-" << this << "-" << BlobBodyBytes() << std::endl;
   JUST(DeallocateBlobDataPtr());
   if (blob_) { blob_->reset_dptr(nullptr); }
   CHECK_OR_RETURN(!is_in_memory());

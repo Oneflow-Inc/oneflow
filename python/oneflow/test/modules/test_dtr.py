@@ -24,6 +24,21 @@ import oneflow as flow
 import oneflow.unittest
 
 
+class TestModel1(flow.nn.Module):
+
+    def __init__(self):
+        super().__init__()
+
+        self.w1 = flow.nn.Parameter(flow.ones(1))
+        self.w2 = flow.nn.Parameter(flow.ones(1))
+
+    def forward(self, x):
+        y = x + self.w1
+        y += 1
+        y = y + self.w2
+        return y
+
+
 # @unittest.skipUnless(os.getenv("OF_DTR"), "only test while DTR is on")
 class TestDTR(flow.unittest.TestCase):
     def setUp(self):
@@ -94,25 +109,25 @@ class TestDTR(flow.unittest.TestCase):
         test_case.assertFalse(flow._oneflow_internal.dtr.is_in_memory(x2))
         test_case.assertTrue(np.array_equal(x2, np.ones(x2.shape) * 2))
 
-    def test_dropout(test_case):
-        flow.enable_dtr(True, "120KB", 0, "eq")
-        m = flow.nn.Dropout(p=0.5)
+    # def test_dropout(test_case):
+    #     flow.enable_dtr(True, "120KB", 0, "eq")
+    #     m = flow.nn.Dropout(p=0.5)
 
-        x1 = flow.rand(10).to('cuda')
-        x2 = m(x1)
+    #     x1 = flow.rand(10).to('cuda')
+    #     x2 = m(x1)
 
-        flow._oneflow_internal.eager.multi_client.Sync()
-        test_case.assertTrue(flow._oneflow_internal.dtr.is_in_memory(x2))
+    #     flow._oneflow_internal.eager.multi_client.Sync()
+    #     test_case.assertTrue(flow._oneflow_internal.dtr.is_in_memory(x2))
 
-        x2_np1 = x2.numpy()
-        flow._oneflow_internal.dtr.evict(x2)
-        test_case.assertFalse(flow._oneflow_internal.dtr.is_in_memory(x2))
+    #     x2_np1 = x2.numpy()
+    #     flow._oneflow_internal.dtr.evict(x2)
+    #     test_case.assertFalse(flow._oneflow_internal.dtr.is_in_memory(x2))
 
-        x2_np2 = x2.numpy()
+    #     x2_np2 = x2.numpy()
 
-        print(x2_np1)
-        print(x2_np2)
-        test_case.assertTrue(np.array_equal(x2_np1, x2_np2))
+    #     print(x2_np1)
+    #     print(x2_np2)
+    #     test_case.assertTrue(np.array_equal(x2_np1, x2_np2))
 
     def test_bn(test_case):
         flow.enable_dtr(True, "120KB", 0, "eq")
@@ -147,6 +162,35 @@ class TestDTR(flow.unittest.TestCase):
     #     magnitude = ["b", "kb", "mb", "gb"]
     #     out = regex.findall(TestDTR.THRES)
     #     test_case.assertEqual(len(out), 1)
+
+    # def test_dtr_work_on_inplace(test_case):
+    #     flow.enable_dtr(True, "12KB", 0, "eq")
+
+    #     x1 = flow.ones(1024, requires_grad=True).to('cuda')     # 4KB (x1=1)
+    #     x2 = x1 * 2                         # 8KB (x1=1, x2=2)
+    #     y = x2 + 1                          # 12KB (x1=1, x2=2, y=3)
+    #     x2.add_(1)                          # 12KB (x1=1, x2=3, y=3)
+    #     test_case.assertEqual(x2.grad_fn.name(), 'scalar_add_backward')
+
+    #     x3 = x2 + 1                         # evict x1 (x2=3, x3=4, y=3)
+    #     x4 = x2 + 1                         # evict y (x2=3, x3=4, x4=4)
+    #     flow.comm.barrier()
+    #     test_case.assertFalse(flow._oneflow_internal.dtr.is_in_memory(y))   # make sure y is evicted
+    #     x5 = y + 1                          # evict x3, x4, y (x2, x5)
+
+    #     # If inplace right in DTR, y should be recomputed as 3 and x5 should be 4. Otherwise, y could be 4 and x5 could be 5
+    #     test_case.assertTrue(np.array_equal(x5.numpy(), 4 * np.ones(x5.shape)))
+
+    def test_inplace_grad_fn(test_case):
+        flow.enable_dtr(True, "2500MB", 0, "eq")
+
+        m = TestModel1().to('cuda')
+        x = flow.ones(1).requires_grad_().to('cuda')
+        loss = m(x)
+        loss.backward()
+
+        test_case.assertEqual(type(m.w1.grad), type(x))
+        test_case.assertEqual(type(m.w2.grad), type(x))
         
 
 if __name__ == "__main__":
