@@ -21,6 +21,7 @@ limitations under the License.
 #include <string>
 #include <unordered_set>
 
+#include "oneflow/core/auto_parallel/algorithm_util.h"
 #include "oneflow/core/job/parallel_desc.h"
 #include "oneflow/core/job/sbp_parallel.cfg.h"
 #include "oneflow/core/job/lazy_mode.h"
@@ -174,52 +175,68 @@ template<class SbpSignature>
 void SbpEdge<SbpSignature>::SummarizeCost() {
   if (MidNode) {
     Cost.resize(StartNode->Cost.size());
+    MemoryCost.resize(StartNode->MemoryCost.size());
     MidNodeSbpSig.resize(StartNode->Cost.size());
     int32_t EndNodeSbpSize = EndNode->Cost.size();
     int32_t MidNodeSbpSize = MidNode->Cost.size();
     for (int32_t sbp_start = 0; sbp_start < Cost.size(); sbp_start++) {
       Cost[sbp_start].resize(EndNodeSbpSize);
+      MemoryCost[sbp_start].resize(EndNodeSbpSize);
       MidNodeSbpSig[sbp_start].resize(EndNodeSbpSize);
       for (int32_t sbp_end = 0; sbp_end < EndNodeSbpSize; sbp_end++) {
+        // Get the reference
+        double& min_time_cost = Cost[sbp_start][sbp_end];
+        double& min_memory_cost = MemoryCost[sbp_start][sbp_end];
+        int32_t& min_sbp_mid = MidNodeSbpSig[sbp_start][sbp_end];
         for (int32_t sbp_mid = 0; sbp_mid < MidNodeSbpSize; sbp_mid++) {
           // Add middle node cost
-          double temp = MidNode->Cost[sbp_mid];
+          double curr_time_cost = MidNode->Cost[sbp_mid];
+          double curr_memory_cost = MidNode->MemoryCost[sbp_mid];
           // Add first edge cost
           if (EdgeList[0]->StartNode == StartNode) {
-            temp += EdgeList[0]->Cost[sbp_start][sbp_mid];
+            curr_time_cost += EdgeList[0]->Cost[sbp_start][sbp_mid];
+            curr_memory_cost += EdgeList[0]->MemoryCost[sbp_start][sbp_mid];
           } else {
-            temp += EdgeList[0]->Cost[sbp_mid][sbp_start];
+            curr_time_cost += EdgeList[0]->Cost[sbp_mid][sbp_start];
+            curr_memory_cost += EdgeList[0]->MemoryCost[sbp_mid][sbp_start];
           }
           // Add second edge cost
           if (EdgeList[1]->EndNode == EndNode) {
-            temp += EdgeList[1]->Cost[sbp_mid][sbp_end];
+            curr_time_cost += EdgeList[1]->Cost[sbp_mid][sbp_end];
+            curr_memory_cost += EdgeList[1]->MemoryCost[sbp_mid][sbp_end];
           } else {
-            temp += EdgeList[1]->Cost[sbp_end][sbp_mid];
+            curr_time_cost += EdgeList[1]->Cost[sbp_end][sbp_mid];
+            curr_memory_cost += EdgeList[1]->MemoryCost[sbp_end][sbp_mid];
           }
 
           // Compare and look for the minimum cost
-          if (sbp_mid == 0) {
-            Cost[sbp_start][sbp_end] = temp;
-            MidNodeSbpSig[sbp_start][sbp_end] = sbp_mid;
-          } else if (temp < Cost[sbp_start][sbp_end]) {
-            Cost[sbp_start][sbp_end] = temp;
-            MidNodeSbpSig[sbp_start][sbp_end] = sbp_mid;
+          if (sbp_mid == 0 || DoubleLessThan(curr_time_cost, min_time_cost)
+              || (DoubleLessEqual(curr_time_cost, min_time_cost)
+                  && DoubleLessThan(curr_memory_cost, min_memory_cost))) {
+            min_time_cost = curr_time_cost;
+            min_memory_cost = curr_memory_cost;
+            min_sbp_mid = sbp_mid;
           }
         }
       }
     }
   } else {
     Cost.resize(StartNode->Cost.size());
+    MemoryCost.resize(StartNode->MemoryCost.size());
     int32_t EndNodeSbpSize = EndNode->Cost.size();
     for (int32_t sbp_start = 0; sbp_start < Cost.size(); sbp_start++) {
       Cost[sbp_start].resize(EndNodeSbpSize);
+      MemoryCost[sbp_start].resize(EndNodeSbpSize);
       for (int32_t sbp_end = 0; sbp_end < EndNodeSbpSize; sbp_end++) {
-        Cost[sbp_start][sbp_end] = 0;
+        Cost[sbp_start][sbp_end] = 0.0;
+        MemoryCost[sbp_start][sbp_end] = 0.0;
         for (int32_t edge_num = 0; edge_num < EdgeList.size(); edge_num++) {
           if (EdgeList[edge_num]->StartNode == StartNode) {
             Cost[sbp_start][sbp_end] += EdgeList[edge_num]->Cost[sbp_start][sbp_end];
+            MemoryCost[sbp_start][sbp_end] += EdgeList[edge_num]->MemoryCost[sbp_start][sbp_end];
           } else {
             Cost[sbp_start][sbp_end] += EdgeList[edge_num]->Cost[sbp_end][sbp_start];
+            MemoryCost[sbp_start][sbp_end] += EdgeList[edge_num]->MemoryCost[sbp_end][sbp_start];
           }
         }
       }

@@ -241,6 +241,7 @@ int32_t SbpGraph<SbpSignature>::NodeElimination(SbpNode<SbpSignature>* this_node
     for (const auto& one_edge : this_node->EdgesOut) TwoNode.emplace_back(one_edge->EndNode);
 
     // If a node is pointing to itself, could happen when shrink from a circle
+    // [A -> B -> A] ==> [B -> A] ==> [A]
     if (TwoNode[0] == TwoNode[1]) {
       int32_t EliminationNumber = 0;
       if (this_node->EdgesOut.empty()) {
