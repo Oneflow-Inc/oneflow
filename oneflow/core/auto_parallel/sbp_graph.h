@@ -52,10 +52,6 @@ class SbpGraph {
     NodeList.clear();
   }
 
-  // Setup SbpSignature Candidates
-  void AssembleSbpSignature(const std::function<int32_t()>& CalcOrderValue4SbpSig,
-                            std::vector<SbpSignature*> GlobalSbpSignatureList);
-
   // Use our algorithm to decide SbpSignature for each op-node
   void DecideSbpSignature();
 
@@ -192,15 +188,6 @@ void SbpGraph<SbpSignature>::RemoveFromNodeList(SbpNode<SbpSignature>* this_node
 
 template<class SbpSignature>
 SbpGraph<SbpSignature>::SbpGraph() {}
-
-template<class SbpSignature>
-void SbpGraph<SbpSignature>::AssembleSbpSignature(
-    const std::function<int32_t()>& CalcOrderValue4SbpSig,
-    std::vector<SbpSignature*> GlobalSbpSignatureList) {
-  for (const auto& this_node : NodeList) {
-    this_node->InitializeSbp(CalcOrderValue4SbpSig, GlobalSbpSignatureList);
-  }
-};
 
 template<class SbpSignature>
 void SbpGraph<SbpSignature>::RandomSbpSignature(bool use_sbp_collector_) {

@@ -59,8 +59,6 @@ class SbpNode {
   std::vector<SbpSignature*> SbpSignatureList;
   // Available SbpSignature object for this node
   std::vector<SbpSignature> SbpSignatureObjList;
-  // Global SbpSignature List Size
-  int32_t GlobalSbpSigSize = -1;
   // Decide to use SbpSignature with this id
   int32_t FinalSbpSignatureId;
   // Location in NodeList
@@ -138,11 +136,6 @@ class SbpNode {
   // this node point to another node
   void PointTo(SbpNode<SbpSignature>* end_node);
 
-  // initialize the OrderValue and Find the lowest one
-  void FindLowOrderValue(const std::function<int32_t()>& CalcOrderValue4SbpSig);
-  // Initialize SbpSignature
-  void InitializeSbp(const std::function<int32_t()>& CalcOrderValue4SbpSig,
-                     std::vector<SbpSignature*> GlobalSbpSignatureList);
   // Initialize SbpSignature from Signature Objects
   void InitializeSbp();
   // Decide to use this SbpSignature
@@ -348,35 +341,7 @@ SbpNode<SbpSignature>::SbpNode(SbpNode<SbpSignature>* first, SbpNode<SbpSignatur
 }
 
 template<class SbpSignature>
-void SbpNode<SbpSignature>::FindLowOrderValue(
-    const std::function<int32_t()>& CalcOrderValue4SbpSig) {
-  LowOrderValue = 0;
-  for (int32_t i = 0; i < OrderValue.size(); i++) {
-    OrderValue[i] = CalcOrderValue4SbpSig();
-    if (OrderValue[i] < LowOrderValue) { LowOrderValue = OrderValue[i]; }
-  }
-};
-
-template<class SbpSignature>
-void SbpNode<SbpSignature>::InitializeSbp(const std::function<int32_t()>& CalcOrderValue4SbpSig,
-                                          std::vector<SbpSignature*> GlobalSbpSignatureList) {
-  GlobalSbpSigSize = GlobalSbpSignatureList.size();
-  OrderValue.resize(GlobalSbpSigSize);
-
-  FindLowOrderValue(CalcOrderValue4SbpSig);
-
-  SbpSignatureList.clear();
-  for (int32_t sbp = 0; sbp < OrderValue.size(); sbp++) {
-    if (OrderValue[sbp] == LowOrderValue) {
-      SbpSignatureList.emplace_back(GlobalSbpSignatureList[sbp]);
-    }
-  }
-  Cost.resize(SbpSignatureList.size());
-};
-
-template<class SbpSignature>
 void SbpNode<SbpSignature>::InitializeSbp() {
-  GlobalSbpSigSize = SbpSignatureObjList.size();
   SbpSignatureList.clear();
   for (int32_t i = 0; i < SbpSignatureObjList.size(); i++) {
     SbpSignatureList.emplace_back(&(SbpSignatureObjList[i]));
