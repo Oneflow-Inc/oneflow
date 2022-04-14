@@ -153,6 +153,7 @@ OneFlow Tensor Class
             stride, 
             sum,
             swapaxes, 
+            swapdims, 
             sub, 
             sub_, 
             tan, 
