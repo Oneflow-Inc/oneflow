@@ -160,11 +160,11 @@ jobs:
       - name: Wait for GPU slot
         uses: Oneflow-Inc/get-oneflow/wait-for-gpu@support-auto-benchmark
         if: env.is_secrets_accessible == '1'
-        timeout-minutes: 90
+        timeout-minutes: 150
         continue-on-error: true
         with:
           token: ${{ secrets.CI_PERSONAL_ACCESS_TOKEN }}
-          timeout-minutes: 3
+          timeout-minutes: 5
           max-try-times: 30
 
   find-build-cache:
