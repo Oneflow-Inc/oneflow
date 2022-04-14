@@ -500,9 +500,9 @@ void SbpEdge<SbpSignature>::InitializeMemoryCost() {
     for (int32_t sbp_id_consumer = 0; sbp_id_consumer < consumer_sbp_size; sbp_id_consumer++) {
       const NdSbp& sbp_consumer =
           EndNode->SbpSignatureList[sbp_id_consumer]->bn_in_op2nd_sbp().at(ibn);
-      Shape logical_shape(consumer->LogicalBlobDesc4Lbi(lbi).shape());
       // Generate a new tensor buffer on the consumer side to store the transferred blob
-      double logical_blob_size = Storage4NdSbp(sbp_consumer, logical_shape, *consumer_hierarchy);
+      double logical_blob_size =
+          Memory4NdSbp(sbp_consumer, consumer->LogicalBlobDesc4Lbi(lbi), *consumer_hierarchy);
       for (int32_t sbp_id_producer = 0; sbp_id_producer < producer_sbp_size; sbp_id_producer++) {
         double time_cost = Cost[sbp_id_producer][sbp_id_consumer];
         if (time_cost <= 0 || time_cost > GetValidMaxCopyCost()) {
@@ -562,8 +562,8 @@ void SbpEdge<SbpSignature>::InitializeMemoryCost(const std::vector<NdSbp>& id2Nd
               const auto& iterator_consumer_sbp = NdSbp2logical_blob_size.find(sbp_consumer);
               if (iterator_consumer_sbp == NdSbp2logical_blob_size.end()) {
                 // Compute and store the memory cost of a blob under a new sbp
-                Shape logical_shape(producer->LogicalBlobDesc4Lbi(lbi).shape());
-                logical_blob_size = Storage4NdSbp(sbp_consumer, logical_shape, *producer_hierarchy);
+                logical_blob_size = Memory4NdSbp(sbp_consumer, producer->LogicalBlobDesc4Lbi(lbi),
+                                                 *producer_hierarchy);
                 NdSbp2logical_blob_size[sbp_consumer] = logical_blob_size;
               } else {
                 // Use those pre-stored logical blob size

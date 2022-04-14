@@ -893,8 +893,8 @@ void SbpNode<SbpSignature>::InitializeMemoryCost() {
         const auto& iterator_sbp = NdSbp2logical_blob_size.find(sbp);
         if (iterator_sbp == NdSbp2logical_blob_size.end()) {
           // Compute and store the memory cost of a blob under a new sbp
-          Shape logical_shape(CHECK_JUST(op_node->op().GetLogicalBlobDesc4Obn(obn))->shape());
-          logical_blob_size = Storage4NdSbp(sbp, logical_shape, *output_hierarchy);
+          logical_blob_size = Memory4NdSbp(
+              sbp, *CHECK_JUST(op_node->op().GetLogicalBlobDesc4Obn(obn)), *output_hierarchy);
           NdSbp2logical_blob_size[sbp] = logical_blob_size;
         } else {
           // Use those pre-stored logical blob size

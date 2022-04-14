@@ -17,7 +17,10 @@ limitations under the License.
 #ifndef ONEFLOW_CORE_FRAMEWORK_SBP_INFER_UTIL_H_
 #define ONEFLOW_CORE_FRAMEWORK_SBP_INFER_UTIL_H_
 
+#include "oneflow/core/common/data_type.h"
 #include "oneflow/core/job/sbp_parallel.h"
+#include "oneflow/core/register/blob_desc.h"
+#include "oneflow/core/register/logical_blob_id.pb.h"
 
 namespace oneflow {
 
@@ -81,6 +84,14 @@ double ComputeSbpInferPriority(const NdSbp& producer_sbp_parallel,
                                const BlobDesc& logical_blob_desc,
                                const ParallelDesc& producer_parallel_desc,
                                const ParallelDesc& consumer_parallel_desc, bool requires_same_sbp);
+
+// Consuming memory for a blob with given nd sbp
+inline double Memory4NdSbp(const NdSbp& nd_sbp, const BlobDesc& blob_desc,
+                           const Shape& parallel_hierarchy) {
+  Shape logical_shape(blob_desc.shape());
+  return Storage4NdSbp(nd_sbp, logical_shape, parallel_hierarchy)
+         * GetSizeOfDataType(blob_desc.data_type());
+}
 
 }  // namespace oneflow
 
