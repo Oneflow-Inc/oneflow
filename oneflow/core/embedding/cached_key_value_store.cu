@@ -54,7 +54,6 @@ class CacheKeyValueStoreImpl : public KeyValueStore {
   }
   ~CacheKeyValueStoreImpl() {
     CudaCurrentDeviceGuard guard(device_index_);
-    SyncCacheToStore();
     OF_CUDA_CHECK(cudaFree(num_buffer_));
     OF_CUDA_CHECK(cudaFreeHost(host_num_buffer_));
     if (max_query_length_ != 0) {
