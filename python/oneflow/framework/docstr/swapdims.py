@@ -17,24 +17,37 @@ import oneflow
 from oneflow.framework.docstr.utils import add_docstr
 
 add_docstr(
-    oneflow._C.swapaxes,
-    """swapaxes(input, axis0, axis1) -> Tensor
-    
-    This function is equivalent to NumPy’s swapaxes function.
+    oneflow._C.swapdims,
+    """
+    swapdims(input, dim0, dim1) -> Tensor
+
+    This function is equivalent to torch’s swapdims function.
 
     For example:
 
     .. code-block:: python
     
         >>> import oneflow as flow
-               
+
         >>> x = flow.tensor([[[0,1],[2,3]],[[4,5],[6,7]]])
-        >>> x.shape
-        oneflow.Size([2, 2, 2])
-        >>> flow.swapaxes(x, 0, 1).shape
-        oneflow.Size([2, 2, 2])
-        >>> flow.swapaxes(x, 0, 2).shape
-        oneflow.Size([2, 2, 2])
+        >>> x
+        tensor([[[0, 1],
+                 [2, 3]],
+        <BLANKLINE>
+                [[4, 5],
+                 [6, 7]]], dtype=oneflow.int64)
+        >>> flow.swapdims(x, 0, 1)
+        tensor([[[0, 1],
+                 [4, 5]],
+        <BLANKLINE>
+                [[2, 3],
+                 [6, 7]]], dtype=oneflow.int64)
+        >>> flow.swapdims(x, 0, 2)
+        tensor([[[0, 4],
+                 [2, 6]],
+        <BLANKLINE>
+                [[1, 5],
+                 [3, 7]]], dtype=oneflow.int64)
 
     """,
 )
