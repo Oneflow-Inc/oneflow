@@ -110,27 +110,27 @@ def _test_eager_boxing_2d_special_split_axis(test_case, in_device, out_device):
         test_case.assertTrue(np.allclose(y.numpy(), x.numpy(), 1e-5, 1e-5))
 
 
-@flow.unittest.skip_unless_1n4d()
-@unittest.skipIf(os.getenv("ONEFLOW_TEST_CPU_ONLY"), "only test cpu cases")
-class TestEagerBoxingSymmetricExhaustiveTesting(flow.unittest.TestCase):
-    @globaltest
-    def test_eager_boxing_normal_1d_exhaustive_testing(test_case):
-        arg_dict = OrderedDict()
-        arg_dict["shape"] = [(12, 12), (18, 24), (15, 17)]
-        arg_dict["in_device"] = ["cpu", "cuda"]
-        arg_dict["out_device"] = ["cpu", "cuda"]
-        arg_dict["in_device_list"] = [[0, 1], [1, 2, 3], [0, 1, 2, 3]]
-        arg_dict["out_device_list"] = [[0, 1, 3], [0, 1, 2, 3]]
-        for arg in GenArgList(arg_dict):
-            _test_eager_boxing_normal_1d_exhaustive_testing(test_case, *arg)
+# @flow.unittest.skip_unless_1n4d()
+# @unittest.skipIf(os.getenv("ONEFLOW_TEST_CPU_ONLY"), "only test cpu cases")
+# class TestEagerBoxingSymmetricExhaustiveTesting(flow.unittest.TestCase):
+    # @globaltest
+    # def test_eager_boxing_normal_1d_exhaustive_testing(test_case):
+    #     arg_dict = OrderedDict()
+    #     arg_dict["shape"] = [(12, 12), (18, 24), (15, 17)]
+    #     arg_dict["in_device"] = ["cpu", "cuda"]
+    #     arg_dict["out_device"] = ["cpu", "cuda"]
+    #     arg_dict["in_device_list"] = [[0, 1], [1, 2, 3], [0, 1, 2, 3]]
+    #     arg_dict["out_device_list"] = [[0, 1, 3], [0, 1, 2, 3]]
+    #     for arg in GenArgList(arg_dict):
+    #         _test_eager_boxing_normal_1d_exhaustive_testing(test_case, *arg)
 
-    @globaltest
-    def test_eager_boxing_symmetric_2d_exhaustive_testing(test_case):
-        arg_dict = OrderedDict()
-        arg_dict["in_device"] = ["cpu", "cuda"]
-        arg_dict["out_device"] = ["cpu", "cuda"]
-        for arg in GenArgList(arg_dict):
-            _test_eager_boxing_symmetric_2d_exhaustive_testing(test_case, *arg)
+    # @globaltest
+    # def test_eager_boxing_symmetric_2d_exhaustive_testing(test_case):
+    #     arg_dict = OrderedDict()
+    #     arg_dict["in_device"] = ["cpu", "cuda"]
+    #     arg_dict["out_device"] = ["cpu", "cuda"]
+    #     for arg in GenArgList(arg_dict):
+    #         _test_eager_boxing_symmetric_2d_exhaustive_testing(test_case, *arg)
 
 
 @flow.unittest.skip_unless_1n4d()
