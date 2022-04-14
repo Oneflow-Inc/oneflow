@@ -364,7 +364,7 @@ def save(
         pickle_path = path / PICKLE_FILENAME
         pickle_path.write_bytes(pickled_bytes)
 
-    if global_dst_rank:
+    if global_dst_rank is not None:
         assert isinstance(
             global_dst_rank, int
         ), f"global_dst_rank expected type int, but got {type(global_dst_rank)}."
