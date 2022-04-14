@@ -82,6 +82,7 @@ parser.add_argument(
     "--high-add-n", action=PositiveArgAction, env_var_name="OF_DTR_HIGH_ADD_N"
 )
 parser.add_argument("--debug-level", type=int, default=0)
+parser.add_argument("--no-dataloader", action='store_true')
 
 args = parser.parse_args()
 
@@ -123,10 +124,7 @@ def display():
     flow._oneflow_internal.dtr.display()
 
 
-# init model
-# model = resnet50_model.resnet50(norm_layer=nn.Identity)
 model = models.resnet50()
-# model = resnet50_model.resnet50()
 
 weights = flow.load("/tmp/abcdef")
 model.load_state_dict(weights)
@@ -135,8 +133,6 @@ criterion = nn.CrossEntropyLoss()
 
 cuda0 = flow.device("cuda:0")
 
-
-# enable module to use cuda
 model.to(cuda0)
 
 criterion.to(cuda0)
@@ -144,112 +140,84 @@ criterion.to(cuda0)
 learning_rate = 0.1
 optimizer = flow.optim.SGD(model.parameters(), lr=learning_rate, momentum=0.9, weight_decay=1e-4)
 
-# no bn (only activation memory pool):
-# full: 1700MB
-# lr=1 ee=0 high add_n cost 600mb success
-# lr=1 ee=1 high add_n cost 600mb fail
-
-# has bn:
-# full: 2850mb 0.250s
-# lr=1 ee=1 high add_n cost 850mb 0.352s
-# lr=1 ee=0 high add_n cost 850mb 0.477s
-# lr=1 ee=0 high add_n cost 750mb 0.528s
-
-# max threshold 7700mb
-# no dtr: bs 80 0.631s
-# nlr=1 ee=1 bs 120 0.985s 1.56x
-# lr=1 ee=1 high add_n cost bs 280 2.59s 4.10x
-# lr=1 ee=1 high add_n cost bs 240 2.22s 3.52x
-# lr=0 ee=1 bs 160 1.34s
-# lr=1 ee=1 bs 160 1.36s
-# lr=1 ee=1 high add_n cost bs 160 1.35s 2.19x
-# lr=1 ee=1 high add_n conv cost bs 160 1.42s 2.25x
-# lr=0 ee=1 high add_n conv cost bs 160 1.45s 2.30x
-
-# new_lr=1 new_ee=1 bs 120 0.98?s
-
-# ------ new focal docker
-
-# max threshold 7650mb
-# no dtr: bs 80 0.631s
-# nlr=1 ee=1 bs 120 ?s ?x
-# lr=1 ee=1 bs 120 0.991s 1.57x
-# lr=1 ee=1 normal add_n cost bs 160 1.45s 2.30x
-# lr=1 ee=1 high add_n cost bs 160 1.44s 2.28x
-# lr=1 ee=1 normal add_n cost bs 240 2.25s 3.57x
-# lr=0 ee=1 normal add_n cost bs 240 2.26s ?x
-# lr=0 ee=1 high add_n cost bs 240 2.26s ?x
-# lr=1 ee=1 high add_n cost bs 240 2.24s 3.55x
-# lr=1 ee=0 high add_n cost bs 280 4.11s 6.51x
-# nlr=1 ee=1 bs 160 ?s ?x
-
-# ---
-
-# lr=1 ee=0 threshold 3800mb 0.72s
-# lr=1 ee=0 threshold 3500mb 0.70s
-
 normalize = transforms.Normalize(mean=[0.485, 0.456, 0.406],
                                  std=[0.229, 0.224, 0.225])
-imagenet_data = flowvision.datasets.ImageFolder(
-    "/dataset/imagenet_folder/train",
-    transforms.Compose(
-        [
-            transforms.RandomResizedCrop(224),
-            transforms.RandomHorizontalFlip(),
-            transforms.ToTensor(),
-            normalize,
-        ]
-    ),
-)
-train_data_loader = flow.utils.data.DataLoader(
-    imagenet_data, batch_size=args.bs, shuffle=True, num_workers=0
-)
+
+if args.no_dataloader:
+    global data
+    global label
+    data = flow.ones(args.bs, 3, 224, 224).to('cuda')
+    label = flow.ones(args.bs, dtype=flow.int64).to('cuda')
+
+    class FixedDataset(flow.utils.data.Dataset):
+        def __len__(self):
+            return 999999999
+
+        def __getitem__(self, idx):
+            return data, label
+
+    train_data_loader = FixedDataset()
+else:
+    imagenet_data = flowvision.datasets.ImageFolder(
+        "/dataset/imagenet_folder/train",
+        transforms.Compose(
+            [
+                transforms.RandomResizedCrop(224),
+                transforms.RandomHorizontalFlip(),
+                transforms.ToTensor(),
+                normalize,
+            ]
+        ),
+    )
+    train_data_loader = flow.utils.data.DataLoader(
+        imagenet_data, batch_size=args.bs, shuffle=True, num_workers=0
+    )
 
 total_time = 0
-for iter in range(ALL_ITERS):
-    # if args.dtr:
-    #     for x in model.parameters():
-    #         x.grad = flow.zeros_like(x).to(cuda0)
-    #
-    #     flow.comm.barrier()
+# train_bar = tqdm(train_data_loader, dynamic_ncols=True)
+
+for iter, (train_data, train_label) in enumerate(train_data_loader):
+# for iter in range(10000):
+    # train_data = data
+    # train_label = label
+    if args.dtr:
+        for x in model.parameters():
+            x.grad = flow.zeros_like(x).to(cuda0)
+
+        flow.comm.barrier()
         # temp()
+
+    train_data = train_data.to(cuda0)
+    train_label = train_label.to(cuda0)
+
     if iter >= WARMUP_ITERS:
         start_time = time.time()
 
-    train_bar = tqdm(train_data_loader, dynamic_ncols=True)
+    logits = model(train_data)
+    loss = criterion(logits, train_label)
+    del logits
+    loss.backward()
+    # train_bar.set_description(
+    #     "Epoch {}: loss: {:.4f}".format(iter + 1, loss.item())
+    # )
+    # writer.add_scalar("Loss/train/loss", loss.item(), iter)
+    # writer.flush()
+    del loss
 
-    for iter_in_epoch, (train_data, train_label) in enumerate(train_bar):
-        train_data = train_data.to(cuda0)
-        train_label = train_label.to(cuda0)
-        logits = model(train_data)
-        loss = criterion(logits, train_label)
-        del logits
-        loss.backward()
-        train_bar.set_description(
-            "Epoch {}: loss: {:.4f}".format(iter + 1, loss.item())
-        )
-        writer.add_scalar("Loss/train/loss", loss.item(), iter_in_epoch)
-        writer.flush()
-        del loss
+    optimizer.step()
+    optimizer.zero_grad(True)
 
-        flow.comm.barrier()
-        # flow.save({name: param.grad for name, param in model.named_parameters()}, f"/tmp/{args.exp_id}_iter0_grad")
-
-        optimizer.step()
-        optimizer.zero_grad(True)
-
-        flow.comm.barrier()
-        # flow.save(model.state_dict(), f"/tmp/{args.exp_id}_iter1")
+    flow.comm.barrier()
 
     if iter >= WARMUP_ITERS:
         end_time = time.time()
         this_time = end_time - start_time
-        #     print(f'iter: {iter}, time: {this_time}')
+        print(f'iter: {iter}, time: {this_time}')
         total_time += this_time
-    # print(f'iter {iter} end')
+    print(f'iter {iter} end')
 
 end_time = time.time()
 print(
-    f"{ALL_ITERS - WARMUP_ITERS} iters: avg {(total_time) / (ALL_ITERS - WARMUP_ITERS)}s"
+f"{ALL_ITERS - WARMUP_ITERS} iters: avg {(total_time) / (ALL_ITERS - WARMUP_ITERS)}s"
 )
 
