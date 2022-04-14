@@ -60,6 +60,16 @@ std::vector<std::string> GetOutputKeys(const std::string& op_type_name) {
 
 namespace {
 
+::oneflow::Symbol<::oneflow::Device> MakeDevice(const mlir::Attribute& device_tag_attr,
+                                                const mlir::Attribute& device_name_attr) {
+  const auto device_tag = device_tag_attr.cast<mlir::StringAttr>().str();
+  const auto device_name =
+      device_name_attr.cast<mlir::ArrayAttr>().getValue().front().cast<mlir::StringAttr>().str();
+  const std::string device_info =
+      device_tag == "gpu" ? "cuda" : device_tag + device_name.substr(device_name.rfind(":"));
+  return ::oneflow::Device::ParseAndNew(device_info).GetOrThrow();
+}
+
 template<typename T>
 mlir::DenseElementsAttr __TensorToDenseElementsAttr(
     const std::shared_ptr<::oneflow::one::Tensor>& tensor, const mlir::FloatType& float_type) {
@@ -80,14 +90,9 @@ std::shared_ptr<::oneflow::one::Tensor> __DenseElementsAttrToTensor(
     const mlir::DenseElementsAttr dense_attr, const mlir::Attribute& device_tag_attr,
     const mlir::Attribute& device_name_attr, const ::oneflow::DataType& dtype) {
   const auto dense_type = dense_attr.getType().cast<mlir::RankedTensorType>();
-  const auto device_tag = device_tag_attr.cast<mlir::StringAttr>().str();
-  const auto device_name =
-      device_name_attr.cast<mlir::ArrayAttr>().getValue().front().cast<mlir::StringAttr>().str();
-
   std::vector<int64_t> shape = dense_type.getShape().vec();
-  const std::string device_info =
-      device_tag == "gpu" ? "cuda" : device_tag + device_name.substr(device_name.rfind(":"));
-  const auto device = ::oneflow::Device::ParseAndNew(device_info).GetOrThrow();
+
+  const auto device = MakeDevice(device_tag_attr, device_name_attr);
 
   std::shared_ptr<::oneflow::one::Tensor> tensor =
       ::oneflow::one::functional::Empty(
