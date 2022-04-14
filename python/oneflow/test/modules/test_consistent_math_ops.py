@@ -163,7 +163,7 @@ def _test_atan2(test_case, placement, sbp, ndim):
 class TestMathOps(flow.unittest.TestCase):
     @globaltest
     def test_math_ops(test_case):
-        ndim = random().to(int).value()
+        ndim = random(1, 3).to(int).value()
         for placement in all_placement():
             for sbp in all_sbp(placement, max_dim=ndim):
                 _test_sinh(test_case, placement, sbp, ndim)
