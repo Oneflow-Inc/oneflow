@@ -978,8 +978,10 @@ class SearchSortedFunctor {
         << "for searchsorted op, input values tensor should have positive dimension";
     CHECK_OR_RETURN(sorted_sequence->shape()->NumAxes() > 0)
         << "for searchsorted op, input sorted_sequence should have positive dimension";
-    CHECK_OR_RETURN(sorted_sequence->shape()->NumAxes() == 1 || IsShapeMatchBeforeLastDim(sorted_sequence, values))
-        << "for searchsorted op, sorted_sequence should be 1 dimension or the first N-1 dimensions of boundaries "
+    CHECK_OR_RETURN(sorted_sequence->shape()->NumAxes() == 1
+                    || IsShapeMatchBeforeLastDim(sorted_sequence, values))
+        << "for searchsorted op, sorted_sequence should be 1 dimension or the first N-1 dimensions "
+           "of boundaries "
            "tensor and input value tensor must match";
     CHECK_OR_RETURN(side == "right" || side == "left")
         << "for searchsorted op, side can only be 'left' or 'right'";
