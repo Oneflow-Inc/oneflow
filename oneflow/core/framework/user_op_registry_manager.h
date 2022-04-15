@@ -81,6 +81,8 @@ struct UserOpRegisterTrigger final {
 
 #define REGISTER_NO_GRAD_USER_OP(name) REGISTER_USER_OP(name).NoGrad()
 
+#define REGISTER_SUPPORT_STRIDE_USER_OP(name) REGISTER_USER_OP(name).SupportStride()
+
 #define REGISTER_NO_GRAD_CPU_ONLY_USER_OP(name) REGISTER_NO_GRAD_USER_OP(name).SupportCpuOnly()
 
 #define REGISTER_USER_OP_GRAD(name)                                                               \

@@ -82,6 +82,12 @@ def NoGrad : OpInterface<"NoGrad"> {
   let cppNamespace = "::mlir::oneflow";
 }
 
+def SupportStride : OpInterface<"SupportStride"> {
+  let description = [{
+  }];
+  let cppNamespace = "::mlir::oneflow";
+}
+
 def CpuOnly : OpInterface<"CpuOnly"> {
   let description = [{
   }];

@@ -76,6 +76,11 @@ OpRegistry& OpRegistry::SupportCpuOnly() {
   return *this;
 }
 
+OpRegistry& OpRegistry::SupportStride() {
+  result_.is_support_stride = true;
+  return *this;
+}
+
 OpRegistry& OpRegistry::NoGrad() {
   result_.no_grad = true;
   return *this;

@@ -28,8 +28,6 @@ limitations under the License.
 namespace oneflow {
 namespace one {
 
-static std::unordered_set<std::string> view_ops_set{"to_contiguous"};
-
 Maybe<void> LazyInterpreter::Apply(const OpExpr& op_expr, const TensorTuple& inputs,
                                    TensorTuple* outputs, const OpExprInterpContext& ctx) const {
 #define APPLY_IF(op_type)                                              \
@@ -93,12 +91,14 @@ Maybe<void> AutogradInterpreter::Apply(const OpExpr& op_expr, const TensorTuple&
         std::any_of(inputs.begin(), inputs.end(),
                     [](const std::shared_ptr<Tensor>& tensor) { return tensor->requires_grad(); });
   }
+
   const TensorTuple* inputs_ptr = &inputs;
   TensorTuple tmp_inputs(inputs.size());
-  // NOTE: if this op not in view_ops_set, then need to tensor->contiguous()
-  if (view_ops_set.find(op_expr.op_type_name()) == view_ops_set.end()) {
+  // NOTE: if this op not support stride, then need to tensor->contiguous()
+  if(op_expr.IsSupportStride()){
     for (size_t i = 0; i < inputs.size(); i++) { tmp_inputs[i] = inputs[i]->contiguous(); }
     inputs_ptr = &tmp_inputs;
+  }else{
   }
 
   {

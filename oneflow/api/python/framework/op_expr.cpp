@@ -37,12 +37,12 @@ py::class_<OpT, one::BuiltinOpExpr, std::shared_ptr<OpT>> PybindExportOpExpr(
     py::module& m, const char* op_type_name) {
   using ProtoConfT = decltype(std::declval<OpT>().proto());
   return py::class_<OpT, one::BuiltinOpExpr, std::shared_ptr<OpT>>(m, op_type_name)
-      .def(py::init([](const std::string& op_name, const std::shared_ptr<ConfT>& op_conf,
+      .def(py::init([](const std::string& op_name, const bool is_support_stride, const std::shared_ptr<ConfT>& op_conf,
                        const std::vector<std::string>& indexed_ibns,
                        const std::vector<std::string>& indexed_obns) {
         typename std::decay<ProtoConfT>::type proto_op_conf;
         op_conf->ToProto(&proto_op_conf);
-        return OpT::New(op_name, std::move(proto_op_conf), indexed_ibns, indexed_obns)
+        return OpT::New(op_name, is_support_stride, std::move(proto_op_conf), indexed_ibns, indexed_obns)
             .GetPtrOrThrow();
       }))
       .def_property_readonly("proto",
@@ -66,6 +66,9 @@ ONEFLOW_API_PYBIND11_MODULE("one", m) {
   auto py_user_op_class = PybindExportOpExpr<one::UserOpExpr, cfg::UserOpConf>(m, "UserOpExpr");
   py_user_op_class.def_property_readonly(
       "op_type_name", [](const one::UserOpExpr& op) { return op.proto().op_type_name(); });
+  py_user_op_class.def_property_readonly(
+      "is_support_stride", [](const one::UserOpExpr& op) { return op.IsSupportStride(); });
+    
   PybindExportOpExpr<one::VariableOpExpr, cfg::VariableOpConf>(m, "VariableOpExpr");
   // NOTE(chengcheng): export for Lazy nn.Graph Feed/Fetch EagerTensor to/from LazyTensor.
   PybindExportOpExpr<one::FeedInputOpExpr, cfg::FeedInputOpConf>(m, "FeedInputOpExpr");

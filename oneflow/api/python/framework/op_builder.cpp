@@ -33,8 +33,8 @@ ONEFLOW_API_PYBIND11_MODULE("one", m) {
       .def(py::init<const std::string&, const std::string&>())
       .def("input", &OpBuilder::MaybeInput)
       .def("output", &OpBuilder::MaybeOutput)
-      .def("attr", &OpBuilder::MaybeAttr<cfg::AttrValue>)
-      .def("build", &OpBuilder::Build);
+      .def("attr", &OpBuilder::MaybeAttr<cfg::AttrValue>);
+    //   .def("build", &OpBuilder::Build);
 }
 
 }  // namespace one
