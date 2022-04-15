@@ -1081,7 +1081,10 @@ class ViewFunctor {
 class ToContiguousFunctor {
  public:
   ToContiguousFunctor() {
-    op_ = CHECK_JUST(one::OpBuilder("to_contiguous").Input("in").Output("out").Build(/**is_support_stride=*/true));
+    op_ = CHECK_JUST(one::OpBuilder("to_contiguous")
+                         .Input("in")
+                         .Output("out")
+                         .Build(/**is_support_stride=*/true));
   }
   Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& input) const {
     if (input->is_consistent() || input->is_lazy()) { return input; }
