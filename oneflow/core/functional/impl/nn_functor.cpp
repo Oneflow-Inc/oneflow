@@ -831,7 +831,7 @@ class NllLossFunctor {
       kernel_result = JUST(OpInterpUtil::Dispatch<TensorTuple>(*op_, {input_, target_}, attrs));
     }
     result = JUST(functional::Reshape(kernel_result->at(0), *target_shape));
-    if (reduction == "none") { return result->contiguous(); }
+    if (reduction == "none") { return result }
 
     result = JUST(functional::ReduceSum(result, {}, false));
 

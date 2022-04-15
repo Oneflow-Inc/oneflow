@@ -82,7 +82,7 @@ def NoGrad : OpInterface<"NoGrad"> {
   let cppNamespace = "::mlir::oneflow";
 }
 
-def SupportStride : OpInterface<"SupportStride"> {
+def SupportNonContiguous : OpInterface<"SupportNonContiguous"> {
   let description = [{
   }];
   let cppNamespace = "::mlir::oneflow";

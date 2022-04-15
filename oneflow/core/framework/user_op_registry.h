@@ -63,14 +63,14 @@ struct OpRegistryResult {
   OpRegistryResult()
       : cpu_only_supported(false),
         no_grad(false),
-        support_stride(false),
+        support_non_contiguous(false),
         same_output_regst_num(-1) {}
   ~OpRegistryResult() = default;
 
   std::string op_type_name;
   bool cpu_only_supported;
   bool no_grad;
-  bool support_stride;
+  bool support_non_contiguous;
   int32_t same_output_regst_num;
   UserOpDef op_def;
   CheckAttrFn check_fn;
@@ -107,7 +107,7 @@ class OpRegistry final {
   OpRegistry& OptionalOutputWithMinimum(const std::string& name, int32_t min_num);
 
   OpRegistry& SupportCpuOnly();
-  OpRegistry& SupportStride();
+  OpRegistry& SupportNonContiguous();
   OpRegistry& NoGrad();
   OpRegistry& SetOutputBufferNum(int32_t num);
 
