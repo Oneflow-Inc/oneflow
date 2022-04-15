@@ -22,6 +22,7 @@ namespace oneflow {
   REGISTER_CELU_KERNEL(DeviceType::kCPU, dtype);        \
   REGISTER_HARDSWISH_KERNEL(DeviceType::kCPU, dtype);   \
   REGISTER_HARDSIGMOID_KERNEL(DeviceType::kCPU, dtype); \
+  REGISTER_HARDSHRINK_KERNEL(DeviceType::kCPU, dtype);  \
   REGISTER_HARDTANH_KERNEL(DeviceType::kCPU, dtype);    \
   REGISTER_MISH_KERNEL(DeviceType::kCPU, dtype);        \
   REGISTER_SILU_KERNEL(DeviceType::kCPU, dtype);        \
