@@ -419,20 +419,23 @@ class FtrlEmbeddingUpdateKernel final : public user_op::OpKernel {
     const user_op::Tensor* embedding_grad = ctx->Tensor4ArgNameAndIndex("embedding_grad", 0);
     user_op::Tensor* updated_unique_embeddings =
         ctx->Tensor4ArgNameAndIndex("updated_unique_embeddings", 0);
-    CHECK_EQ(unique_embeddings->shape().NumAxes(), 2);
-    CHECK_EQ(embedding_grad->shape().NumAxes(), 2);
+    CHECK_EQ(unique_embeddings->shape().NumAxes(), 2)
+        << "The NumAxes of unique_embedding should be equal to 2. ";
+    CHECK_EQ(embedding_grad->shape().NumAxes(), 2)
+        << "The NumAxes of embedding_grad should be equal to 2. ";
     const int64_t num_keys = unique_embeddings->shape().At(0);
     const int64_t line_size = unique_embeddings->shape().At(1);
     const int64_t embedding_size = embedding_grad->shape().At(1);
-    CHECK_EQ(line_size, embedding_size * 3);
+    CHECK_EQ(line_size, embedding_size * 3)
+        << "The line_size should be equal to 3 x embedding_size. ";
     const float l1 = 0.0;
     const float l2 = 0.0;
-    const auto weight_decay = ctx->Attr<float>("weight_decay");
+    const float weight_decay = ctx->Attr<float>("weight_decay");
     const float lr_power = ctx->Attr<float>("lr_power");
     const float lambda1 = ctx->Attr<float>("lambda1");
     const float lambda2 = ctx->Attr<float>("lambda2");
     const float beta = ctx->Attr<float>("beta");
-    const auto scale = ctx->Attr<double>("scale");
+    const double scale = ctx->Attr<double>("scale");
     const T* down_scale_by_ptr = nullptr;
     if (ctx->has_input("down_scale_by_tensor", 0)) {
       const user_op::Tensor* down_scale_by_tensor =

@@ -9536,17 +9536,13 @@ def OneFlow_FtrlEmbeddingUpdateOp : OneFlow_BaseOp<"ftrl_embedding_update", [Att
     OneFlow_Tensor:$embedding_grad,
     OneFlow_Tensor:$learning_rate,
     Optional<OneFlow_Tensor>:$down_scale_by_tensor,
-    Optional<OneFlow_Tensor>:$skip_if,
-    OneFlow_Tensor:$accumlate, 
-    OneFlow_Tensor:$z
+    Optional<OneFlow_Tensor>:$skip_if
   );
   let output = (outs
     OneFlow_Tensor:$updated_unique_embeddings
   );
   let attrs = (ins
     DefaultValuedAttr<F64Attr, "1.">:$scale,
-    DefaultValuedAttr<F32Attr, "0.">:$l1,
-    DefaultValuedAttr<F32Attr, "0.">:$l2,
     DefaultValuedAttr<F32Attr, "0.">:$weight_decay, 
     DefaultValuedAttr<F32Attr, "0.">:$lambda1, 
     DefaultValuedAttr<F32Attr, "0.">:$lambda2, 

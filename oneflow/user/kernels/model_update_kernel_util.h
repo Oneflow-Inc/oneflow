@@ -185,7 +185,8 @@ struct FtrlUpdateFunctor {
       *model = static_cast<T>(0.0);
     } else {
       *model = (copysignf(lambda1, new_z_val) - new_z_val)
-               / ((beta + powf(next_accumulate_val, lr_power)) / learning_rate + lambda2);
+                   / ((beta + powf(next_accumulate_val, lr_power)) / learning_rate + lambda2)
+               - learning_rate * weight_decay * model_val;
     }
     *accumulate = next_accumulate_val;
     *z = new_z_val;

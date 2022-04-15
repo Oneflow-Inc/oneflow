@@ -2058,6 +2058,10 @@
   signature: "TensorTuple (Tensor keys, Tensor values=None, Int32 num_columns) => OneEmbeddingUniqueKeyValuePair"
   bind_python: True
 
+- name: "one_embedding_ftrl_update"
+  signature: "Tensor (Tensor num_unique_ids, Tensor unique_embeddings, Tensor embedding_grad, Tensor learning_rate, Tensor down_scale_by_tensor, Tensor skip_if, Double scale, Float weight_decay, Float lr_power, Float lambda1, Float lambda2, Float beta) => OneEmbeddingFtrlUpdate"
+  bind_python: True
+
 - name: "einsum"
   signature: "Tensor (String equation, TensorTuple operands) => EinSum"
   bind_python: True
