@@ -963,6 +963,10 @@ def _reshape(self, *shape):
     return flow._C.reshape(self, new_shape)
 
 
+def _reshape_as(self, other):
+    return _reshape(self, other.size())
+
+
 def _view(self, *shape):
     if len(shape) == 1:
         new_shape = shape[0]
@@ -1262,6 +1266,7 @@ def RegisterMethods():
     Tensor.le = _le
     Tensor.to_local = _to_local
     Tensor.reshape = _reshape
+    Tensor.reshape_as = _reshape_as
     Tensor.view = _view
     Tensor.sort = _sort
     Tensor.type_as = _type_as
