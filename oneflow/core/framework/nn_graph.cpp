@@ -241,14 +241,19 @@ Maybe<void> NNGraph::RegisterNewVariableOpInJobPass() {
   return Maybe<void>::Ok();
 }
 Maybe<void> NNGraph::DeleteOutdatedVariableInVariableTensorMgr() {
-  std::set<std::string> variable_names;
-  OpGraph op_graph(job_);
-  JUST(op_graph.MaybeForEachNode([&](OpNode* op_node) -> Maybe<void> {
-    if (op_node->op().op_conf().has_variable_conf() == false) { return Maybe<void>::Ok(); }
-    variable_names.insert(op_node->op().op_name());
-    return Maybe<void>::Ok();
-  }));
-  auto mgr = ::oneflow::Global<::oneflow::VariableTensorMgr>::Get();
+  std::set<std::string> variable_names = [&]() -> Maybe<std::set<std::string>> {
+    std::set<std::string> variable_names_;
+    OpGraph op_graph(job_);
+    JUST(op_graph.MaybeForEachNode([&](OpNode* op_node) -> Maybe<void> {
+      if (op_node->op().op_conf().has_variable_conf() == false) { return Maybe<void>::Ok(); }
+      variable_names_.insert(op_node->op().op_name());
+      return Maybe<void>::Ok();
+    }));
+    return variable_names_;
+  }()
+                                                      .GetOrThrow();
+
+  auto mgr = Global<VariableTensorMgr>::Get();
   for (auto& name : mgr->DumpNames()) {
     if (variable_names.find(name) == variable_names.end()) { mgr->Delete(name); }
   }
