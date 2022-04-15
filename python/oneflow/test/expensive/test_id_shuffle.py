@@ -118,13 +118,16 @@ def embedding_shuffle_quantize(np_data, np_dtype):
 
 
 def _test_embedding_shuffle(test_case, dtype, enable_quantize):
-    if enable_quantize:
+    batch_size = 512
+    num_columns = 26
+    embedding_size = 128
+    ids = np.random.randint(0, 1000, (batch_size, num_columns), dtype=np.int64)
+
+    enable_quantized_comm = enable_quantize and embedding_size < 1025
+    if enable_quantized_comm:
         os.environ["ONEFLOW_ONE_EMBEDDING_ENABLE_QUANTIZED_COMM"] = "1"
     else:
         os.environ["ONEFLOW_ONE_EMBEDDING_ENABLE_QUANTIZED_COMM"] = "0"
-    batch_size = 512
-    num_columns = 26
-    ids = np.random.randint(0, 1000, (batch_size, num_columns), dtype=np.int64)
 
     column_ids = (
         ids % num_columns
@@ -133,7 +136,7 @@ def _test_embedding_shuffle(test_case, dtype, enable_quantize):
         np_dtype = np.float16
     else:
         np_dtype = np.float32
-    data = np.random.rand(1000, 128).astype(np_dtype)
+    data = np.random.rand(1000, embedding_size).astype(np_dtype)
 
     ids_tensor = flow.tensor(ids, requires_grad=False).to("cuda")
     column_ids_tensor = flow.tensor(
@@ -168,7 +171,7 @@ def _test_embedding_shuffle(test_case, dtype, enable_quantize):
     np_embeddings = data[ids]
 
     # Quantized numpy embedding.
-    if os.environ.get("ONEFLOW_ONE_EMBEDDING_ENABLE_QUANTIZED_COMM") == "1":
+    if enable_quantized_comm:
         np_embeddings = embedding_shuffle_quantize(np_embeddings, np_dtype)
     test_case.assertTrue(
         np.allclose(embeddings.numpy(), np_embeddings, atol=1e-4, rtol=1e-4)
@@ -180,8 +183,8 @@ def _test_embedding_gradient_shuffle(test_case, enable_quantize):
     num_columns = 26
     embedding_size = 128
     ids = np.random.randint(0, 1000, (batch_size, num_columns), dtype=np.int64)
-
-    if enable_quantize:
+    enable_quantized_comm = enable_quantize and embedding_size < 1025
+    if enable_quantized_comm:
         os.environ["ONEFLOW_ONE_EMBEDDING_ENABLE_QUANTIZED_COMM"] = "1"
         ids = np.arange(batch_size * num_columns, dtype=np.int64)
         np.random.shuffle(ids)
@@ -243,7 +246,7 @@ def _test_embedding_gradient_shuffle(test_case, enable_quantize):
     for k in range(np_num_unique):
         np_data = sum(embedding_grad[np.where(ids.flatten() == np_unique_ids[k])[0]])
         # Quantize Embedding Gradient.
-        if os.environ.get("ONEFLOW_ONE_EMBEDDING_ENABLE_QUANTIZED_COMM") == "1":
+        if enable_quantized_comm:
             abs_max_factor = np.max(np.abs(np_data))
             int8_factor = np.full(abs_max_factor.shape, 127.0, dtype=np.float32)
             quantize_factor = int8_factor / abs_max_factor
