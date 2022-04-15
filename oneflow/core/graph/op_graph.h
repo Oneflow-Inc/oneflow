@@ -52,6 +52,8 @@ class OpNode final : public Node<OpNode, OpEdge> {
   const BlobDesc& LogicalBlobDesc4Lbi(const LogicalBlobId& lbi) const;
   const OpNode& ProducerOpNode4Lbi(const LogicalBlobId& lbi) const;
   const OpNode& SrcNode4Ibn(const std::string& bn_in_op) const;
+  double MemoryCost4Ibn(const std::string& ibn) const;
+  double MemoryCost4Obn(const std::string& obn) const;
 
   std::string VisualStr() const override;
 
@@ -132,6 +134,9 @@ class OpGraph final : public Graph<OpNode, OpEdge> {
 
   // Print the graph with SBP in order
   void PrintSBPGraphDebugInfo() const;
+
+  // Compute the memory for sbp graph
+  double AccumulateMemoryCost() const;
 
  private:
   friend class auto_parallel::SbpConstructor;

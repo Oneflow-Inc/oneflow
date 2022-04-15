@@ -14,6 +14,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 #include <string>
+#include "oneflow/core/framework/sbp_infer_util.h"
 #include "oneflow/core/graph/op_graph.h"
 #include "oneflow/core/job/job_builder.h"
 #include "oneflow/core/job/mirrored_sig_infer_hint.h"
@@ -154,6 +155,28 @@ void OpNode::InitLbi2NdSbp() {
   };
   Update(op().input_bns());
   Update(op().output_bns());
+}
+
+// Compute memory cost for input and output blob
+double OpNode::MemoryCost4Ibn(const std::string& ibn) const {
+  const auto& lbi = op().BnInOp2Lbi(ibn);
+  const OpNode& producer = ProducerOpNode4Lbi(lbi);
+  const auto& obn = *CHECK_JUST(producer.op().obn4lbi(lbi));
+  const auto& in_parallel_desc = *CHECK_JUST(producer.op().GetParallelDesc4BnInOp(obn));
+  const auto& out_parallel_desc = *CHECK_JUST(op().GetParallelDesc4BnInOp(ibn));
+  const auto& in_nd_sbp = producer.NdSbp4BnInOp(obn);
+  const auto& out_nd_sbp = NdSbp4BnInOp(ibn);
+  // Only have extract cost if transfer happens
+  if (in_parallel_desc == out_parallel_desc && in_nd_sbp == out_nd_sbp) {
+    return 0.0;
+  } else {
+    return Memory4NdSbp(out_nd_sbp, LogicalBlobDesc4Lbi(lbi), *out_parallel_desc.hierarchy());
+  }
+}
+
+double OpNode::MemoryCost4Obn(const std::string& obn) const {
+  return Memory4NdSbp(NdSbp4BnInOp(obn), *CHECK_JUST(op().GetLogicalBlobDesc4Obn(obn)),
+                      *CHECK_JUST(op().GetParallelDesc4BnInOp(obn))->hierarchy());
 }
 
 Maybe<OpGraph> OpGraph::New(const Job& job) {
@@ -603,6 +626,7 @@ void OpGraph::PrintSBPGraphDebugInfo() const {
       if (is_same_sbp) std::cout << ", same SBP";
       std::cout << ", "
                 << op_node->LogicalBlobDesc4Lbi(op_node->op().BnInOp2Lbi(ibn)).shape().elem_cnt();
+      std::cout << ", memory: " << op_node->MemoryCost4Ibn(ibn);
       std::cout << std::endl;
     }
     // Sort before printing
@@ -616,10 +640,29 @@ void OpGraph::PrintSBPGraphDebugInfo() const {
       std::cout << ", " << NdSbpToString(this_sbp_parallel);
       std::cout << ", "
                 << op_node->LogicalBlobDesc4Lbi(op_node->op().BnInOp2Lbi(obn)).shape().elem_cnt();
+      std::cout << ", memory: " << op_node->MemoryCost4Obn(obn);
       std::cout << std::endl;
     }
     std::cout << std::endl;
   }
+  // Print out total memory cost
+  std::cout << "Total memory cost: " << AccumulateMemoryCost() << std::endl;
+}
+
+// Compute the memory for sbp graph
+double OpGraph::AccumulateMemoryCost() const {
+  double sum_memory_cost = 0.0;
+  ForEachNode([&](OpNode* op_node) {
+    // Calculate the memory cost for output blobs
+    for (const auto& obn : op_node->op().output_bns()) {
+      sum_memory_cost += op_node->MemoryCost4Obn(obn);
+    }
+    // Calculate the memory cost for input edges
+    for (const auto& ibn : op_node->op().input_bns()) {
+      sum_memory_cost += op_node->MemoryCost4Ibn(ibn);
+    }
+  });
+  return sum_memory_cost;
 }
 
 }  // namespace oneflow
