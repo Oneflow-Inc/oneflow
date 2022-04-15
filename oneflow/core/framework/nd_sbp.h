@@ -41,11 +41,14 @@ namespace private_details {
 
 Maybe<Symbol<NdSbp>> RawGetNdSbp(const std::vector<Symbol<SbpParallel>>& sbp_list);
 Maybe<std::vector<Symbol<SbpParallel>>> RawGetSbpList(Symbol<NdSbp> nd_sbp);
+bool RawContainSplitSbp(Symbol<NdSbp> nd_sbp);
 
 }  // namespace private_details
 
 static constexpr auto* GetNdSbp = DECORATE(&private_details::RawGetNdSbp, ThreadLocalCopiable);
 static constexpr auto* GetSbpList = DECORATE(&private_details::RawGetSbpList, ThreadLocal);
+static constexpr auto* ContainSplitSbp =
+    DECORATE(&private_details::RawContainSplitSbp, ThreadLocal);
 const std::vector<Symbol<SbpParallel>>& GetNoneSbpList();
 
 std::string SbpToString(Symbol<SbpParallel> sbp_sym);

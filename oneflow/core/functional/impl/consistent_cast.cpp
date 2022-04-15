@@ -127,10 +127,9 @@ Maybe<HashMap<int64_t, std::shared_ptr<FlatShapeAndDataType>>> BroadcastGatherSh
         CHECK_OR_RETURN(map->emplace(rank, recv_buffer).second);
         return Maybe<void>::Ok();
       });
-  const auto& src_ranks = JUST(RankGroup::New(parallel_desc));
-  const auto& dst_ranks = JUST(RankGroupScope::CurrentRankGroup());
-  JUST(TransportUtil::BroadcastToOtherRanks(src_ranks, dst_ranks, transport_token, &ctx));
-  JUST(TransportUtil::CollectFromOtherRanks(src_ranks, dst_ranks, transport_token, &ctx));
+  const auto& rank_group = JUST(RankGroup::New(parallel_desc));
+  JUST(TransportUtil::BroadcastToOtherRanks(rank_group, rank_group, transport_token, &ctx));
+  JUST(TransportUtil::CollectFromOtherRanks(rank_group, rank_group, transport_token, &ctx));
   JUST_MSG(ctx.WaitDone(), kAsymmetricCodeErrorMsg);
   return map;
 }
@@ -209,22 +208,31 @@ Maybe<void> GetLogicalShapeAndDataType(Shape* logical_shape, DataType* /* in and
                                        bool is_balanced) {
   if (is_balanced) {
     *logical_shape = *JUST(GetLogicalShape(*physical_shape, *nd_sbp, *parallel_desc));
-    return Maybe<void>::Ok();
-  }
-  if (nd_sbp->sbp_parallel_size() == 1 && nd_sbp->sbp_parallel(0).has_split_parallel()) {
-    const auto& rank2flat_shape_dtype =
-        JUST(BroadcastGatherShapeAndDataType(*physical_shape, *dtype, parallel_desc));
-    int64_t concat_axis = nd_sbp->sbp_parallel(0).split_parallel().axis();
-    JUST(GetConcatenatedShapeAndCheckDtype(logical_shape, dtype, *rank2flat_shape_dtype,
-                                           parallel_desc, concat_axis));
   } else {
-    if (JUST(RankGroup::New(parallel_desc)) != JUST(RankGroupScope::CurrentRankGroup())) {
-      const auto& flat_shape_dtype =
-          JUST(BroadcastShapeAndDtype(*physical_shape, *dtype, parallel_desc));
-      physical_shape = JUST(flat_shape_dtype->ToShape());
-      *dtype = flat_shape_dtype->dtype();
+    if (ContainSplitSbp(nd_sbp)) {
+      *logical_shape = *physical_shape;
+      for (int32_t i = nd_sbp->sbp_parallel_size() - 1; i >= 0; --i) {
+        if (nd_sbp->sbp_parallel(i).has_split_parallel()) {
+          Symbol<ParallelDesc> sub_parallel_desc = JUST(CalcSubParallelDesc4Axis(parallel_desc, i));
+          const auto& rank2flat_shape_dtype =
+              JUST(BroadcastGatherShapeAndDataType(*logical_shape, *dtype, sub_parallel_desc));
+          int64_t concat_axis = nd_sbp->sbp_parallel(i).split_parallel().axis();
+          JUST(GetConcatenatedShapeAndCheckDtype(logical_shape, dtype, *rank2flat_shape_dtype,
+                                                 sub_parallel_desc, concat_axis));
+        }
+      }
+    } else {
+      *logical_shape = *physical_shape;
+      ConsistentTensorMeta tensor_meta(std::make_shared<const Shape>(*logical_shape), *dtype,
+                                       nd_sbp, parallel_desc);
+      JUST(TensorMetaInfoConsistencyCheck(parallel_desc, SymbolOf(tensor_meta)));
     }
-    *logical_shape = *JUST(GetLogicalShape(*physical_shape, *nd_sbp, *parallel_desc));
+  }
+  if (JUST(RankGroup::New(parallel_desc)) != JUST(RankGroupScope::CurrentRankGroup())) {
+    const auto& flat_shape_dtype =
+        JUST(BroadcastShapeAndDtype(*logical_shape, *dtype, parallel_desc));
+    *logical_shape = *JUST(flat_shape_dtype->ToShape());
+    *dtype = flat_shape_dtype->dtype();
   }
   return Maybe<void>::Ok();
 }

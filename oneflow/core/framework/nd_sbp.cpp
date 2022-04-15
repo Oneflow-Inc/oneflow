@@ -95,6 +95,13 @@ Maybe<std::vector<Symbol<SbpParallel>>> RawGetSbpList(Symbol<NdSbp> nd_sbp) {
   return vec;
 }
 
+bool RawContainSplitSbp(Symbol<NdSbp> nd_sbp) {
+  for (int32_t i = 0; i < nd_sbp->sbp_parallel_size(); ++i) {
+    if (nd_sbp->sbp_parallel(i).has_split_parallel()) { return true; }
+  }
+  return false;
+}
+
 }  // namespace private_details
 
 const std::vector<Symbol<SbpParallel>>& GetNoneSbpList() {
