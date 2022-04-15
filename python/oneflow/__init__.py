@@ -165,6 +165,7 @@ from oneflow._C import narrow
 from oneflow._C import unsqueeze
 from oneflow._C import permute
 from oneflow._C import select
+from oneflow._C import unbind
 from oneflow._C import tensor_split
 from oneflow._C import hsplit
 from oneflow._C import vsplit
@@ -181,6 +182,7 @@ from oneflow._C import cumsum
 from oneflow._C import contiguous
 from oneflow._C import cumprod
 from oneflow._C import swapaxes
+from oneflow._C import swapdims
 from oneflow._C import t
 from oneflow._C import masked_fill
 from oneflow._C import equal
