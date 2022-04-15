@@ -405,6 +405,14 @@ class IdShuffleKernel final : public user_op::OpKernel {
   OF_PP_MAKE_TUPLE_SEQ(int32_t, DataType::kInt32)   \
   OF_PP_MAKE_TUPLE_SEQ(int64_t, DataType::kInt64)
 
+#define TABLE_ID_DATA_TYPE_SEQ                      \
+  OF_PP_MAKE_TUPLE_SEQ(uint8_t, DataType::kUInt8)   \
+  OF_PP_MAKE_TUPLE_SEQ(uint32_t, DataType::kUInt32) \
+  OF_PP_MAKE_TUPLE_SEQ(uint64_t, DataType::kUInt64) \
+  OF_PP_MAKE_TUPLE_SEQ(int8_t, DataType::kInt8)     \
+  OF_PP_MAKE_TUPLE_SEQ(int32_t, DataType::kInt32)   \
+  OF_PP_MAKE_TUPLE_SEQ(int64_t, DataType::kInt64)
+
 #define IDX_DATA_TYPE_SEQ                           \
   OF_PP_MAKE_TUPLE_SEQ(uint32_t, DataType::kUInt32) \
   OF_PP_MAKE_TUPLE_SEQ(int32_t, DataType::kInt32)
@@ -435,7 +443,7 @@ class IdShuffleKernel final : public user_op::OpKernel {
       });
 
 OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(REGISTER_CUDA_ID_SHUFFLE_KERNEL, ID_DATA_TYPE_SEQ,
-                                 ID_DATA_TYPE_SEQ, IDX_DATA_TYPE_SEQ)
+                                 TABLE_ID_DATA_TYPE_SEQ, IDX_DATA_TYPE_SEQ)
 
 template<typename T, typename IDX>
 void ShuffleEmbeddings(cudaStream_t cuda_stream, ncclComm_t comm, int64_t parallel_id,
