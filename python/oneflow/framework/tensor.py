@@ -867,8 +867,18 @@ def _to(self, *args, **kwargs):
     return flow._C.to(self, *new_args, **kwargs)
 
 
-def _to_global(self, placement=None, sbp=None, grad_sbp=None):
-    return flow.to_global(self, placement, sbp, grad_sbp)
+def _local_to_global(self, placement=None, sbp=None, *, check_meta=True):
+    return flow.local_to_global(self, placement, sbp, check_meta)
+
+
+def _global_to_global(
+    self, placement=None, sbp=None, *, grad_sbp=None, check_meta=False
+):
+    return flow.global_to_global(self, placement, sbp, grad_sbp, check_meta)
+
+
+def _to_global(self, placement=None, sbp=None, **kwargs):
+    return flow.to_global(self, placement, sbp, **kwargs)
 
 
 def _to_local(self):
@@ -1200,6 +1210,8 @@ def RegisterMethods():
     Tensor.where = _where
     Tensor.norm = _norm
     Tensor.transpose = _transpose
+    Tensor.local_to_global = _local_to_global
+    Tensor.global_to_global = _global_to_global
     Tensor.to_global = _to_global
     Tensor.relu = _relu
     Tensor.softmax = _softmax
