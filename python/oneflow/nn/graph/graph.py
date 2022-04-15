@@ -127,6 +127,7 @@ class Graph(object):
         self._debug = False
         self._debug_min_s_level = 2
         self._debug_max_v_level = 0
+        self._debug_max_stack_depth = 2
         self._outputs_buffer_size = 2
         self._cur_index_of_ouputs_buffer = 0
 
@@ -204,8 +205,11 @@ class Graph(object):
             Donot override this function.
         """
         if not self._is_compiled:
-            with graph_build_util.GLogScopeContext(
-                self._debug_min_s_level, self._debug_max_v_level
+            with graph_build_util.DebugScopeContext(
+                self._debug_min_s_level,
+                self._debug_max_v_level,
+                self._debug_max_stack_depth,
+                self._debug,
             ):
                 self._compile(*args, **kwargs)
 
@@ -417,6 +421,7 @@ class Graph(object):
         v_level: int = 0,
         ranks: Optional[Union[int, List[int]]] = None,
         mode: bool = True,
+        max_stack_depth: int = 2,
     ) -> None:
         r"""Open or close debug mode of the graph.
 
@@ -433,6 +438,8 @@ class Graph(object):
 
         Use ``ranks`` to choose which rank to print the debug information.
 
+        Use ``max_stack_depth`` to specify the max Python stack depth for the debug information. 
+
         For example:
 
         .. code-block:: python
@@ -446,11 +453,14 @@ class Graph(object):
             ranks (int or list(int)): choose ranks to print the debug information. Default rank ``0``.
                 You can choose any valid rank. Ranks equals ``-1`` means debug on all ranks.
             mode (bool): whether to set debug mode (``True``) or not (``False``). Default: ``True``.
+            max_stack_depth(int): the maximum depth for the Python stack debug information. Default: ``2``
         """
         assert isinstance(v_level, int)
         assert v_level >= 0, "The min verbose debug info level is 0."
         assert v_level <= 3, "The max verbose debug info level is 3."
         assert isinstance(mode, bool)
+        assert max_stack_depth >= 0, "The min max stack depth is 0."
+        assert isinstance(max_stack_depth, int)
 
         if ranks is None:
             rank_list = [0]
@@ -470,6 +480,8 @@ class Graph(object):
             for name, block in self._blocks.items():
                 assert block.type == BlockType.MODULE
                 block.debug(v_level, ranks, mode)
+
+        self._debug_max_stack_depth = max_stack_depth
 
     def __repr__(self):
         r"""For printing the graph structure.
