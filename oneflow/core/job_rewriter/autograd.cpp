@@ -707,8 +707,7 @@ void ClipGradientByGlobalNorm(const OpGraph& op_graph, JobBuilder* job_builder,
   } else if (std::isinf(norm_type) && norm_type < 0) {
     total_norm_lbn = GlobalAbsMaxMin(op_graph, job_builder, *lbi2diff_lbi, false, &parallel_conf);
   } else {
-    total_norm_lbn =
-        GlobalNorm(op_graph, job_builder, *lbi2diff_lbi, norm_type, &parallel_conf);
+    total_norm_lbn = GlobalNorm(op_graph, job_builder, *lbi2diff_lbi, norm_type, &parallel_conf);
   }
 
   int64_t scope_symbol_id = MakeScopeSymbolId(job_builder->job().job_conf(), parallel_conf);
