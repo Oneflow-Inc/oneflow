@@ -574,7 +574,7 @@
     "Tensor (Float mean, Float std, Shape size, *, Tensor out=None, DataType dtype=None, Device device=None, 
     Generator generator=None, Bool requires_grad=False) => Normal",
     "Tensor (Float mean, Float std, Shape size, *, Tensor out=None, Placement placement, SbpList sbp, DataType dtype=None,
-    Device device=None, Generator generator=None, Bool requires_grad=False) => ConsistentNormal",
+    Generator generator=None, Bool requires_grad=False) => ConsistentNormal",
     ]
   bind_python: True
 
