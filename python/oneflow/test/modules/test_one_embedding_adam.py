@@ -30,8 +30,8 @@ def compare_with_numpy_adam(
     test_case, weight_decay, scale, learning_rate, train_iters, do_bias_correction
 ):
 
-    num_rows = 10
-    embedding_size = 3
+    num_rows = 500
+    embedding_size = 128
     model_shape = (num_rows, embedding_size)
     line_size = embedding_size * 3
 

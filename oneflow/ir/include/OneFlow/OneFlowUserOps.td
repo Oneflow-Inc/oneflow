@@ -9491,9 +9491,9 @@ def OneFlow_AdagradEmbeddingUpdateOp : OneFlow_BaseOp<"adagrad_embedding_update"
     OneFlow_Tensor:$unique_embeddings,
     OneFlow_Tensor:$embedding_grad,
     OneFlow_Tensor:$learning_rate,
+    OneFlow_Tensor:$train_step,
     Optional<OneFlow_Tensor>:$down_scale_by_tensor,
-    Optional<OneFlow_Tensor>:$skip_if,
-    Optional<OneFlow_Tensor>:$train_step
+    Optional<OneFlow_Tensor>:$skip_if
   );
   let output = (outs
     OneFlow_Tensor:$updated_unique_embeddings
