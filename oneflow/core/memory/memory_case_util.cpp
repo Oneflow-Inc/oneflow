@@ -87,7 +87,14 @@ std::shared_ptr<MemoryCase> MakeMemCaseShared(const DeviceType device_type,
                                               const int64_t device_id) {
   auto mem_case_ptr = std::make_shared<MemoryCase>();
   mem_case_ptr->set_device_type(device_type);
-  mem_case_ptr->set_device_id(device_id);
+  // We consider that there is only one cpu physical device.
+  // As non-cpu devices, a logical device map to a physical device,
+  // however as cpu devices, all logical devices map to a single physical device.
+  if (device_type == DeviceType::kCPU) {
+    mem_case_ptr->set_device_id(0);
+  } else {
+    mem_case_ptr->set_device_id(device_id);
+  }
   return mem_case_ptr;
 }
 
