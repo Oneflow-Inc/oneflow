@@ -29,7 +29,7 @@ namespace oneflow {
 
 namespace {
 
-class FlatMetaInfoConsistency;
+struct FlatMetaInfoConsistency;
 
 class CheckMetaInfoConsistencyAsyncTransportCtx : public AsyncTransportCtx {
  public:
