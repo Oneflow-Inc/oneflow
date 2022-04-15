@@ -143,6 +143,7 @@ oneflow
             sqrt, 
             square,  
             swapaxes, 
+            swapdims, 
             tan, 
             tanh, 
             tensor, 
@@ -151,6 +152,7 @@ oneflow
             t,
             tril, 
             unsqueeze, 
+            unbind, 
             permute,
             var, 
             where, 
@@ -179,6 +181,11 @@ oneflow
             CharTensor,
             IntTensor,
             LongTensor,
+            seed,
+            manual_seed,
+            initial_seed,
+            get_rng_state,
+            set_rng_state,
             isnan,
             isinf
 

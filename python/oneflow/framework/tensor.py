@@ -389,6 +389,10 @@ def _swapaxes(self, dim0, dim1):
     return flow._C.swapaxes(self, dim0, dim1)
 
 
+def _swapdims(self, dim0, dim1):
+    return flow._C.swapdims(self, dim0, dim1)
+
+
 def _cast(self, dtype):
     return flow.cast(self, dtype)
 
@@ -681,6 +685,10 @@ def _chunk(self, chunks=None, dim=None):
 
 def _split(self, split_size_or_sections=None, dim=0):
     return flow._C.split(self, split_size_or_sections, dim)
+
+
+def _unbind(self, dim=0):
+    return flow._C.unbind(self, dim)
 
 
 def _all(self, dim=None, keepdim=False):
@@ -1090,6 +1098,7 @@ def RegisterMethods():
     Tensor.__invert__ = _invert
     Tensor.__float__ = _scalar_float
     Tensor.__int__ = _scalar_int
+    Tensor.__array__ = _numpy
     Tensor.uniform_ = _uniform
     Tensor.trunc_normal_ = _trunc_normal_
     Tensor.kaiming_uniform_ = _kaiming_uniform
@@ -1205,8 +1214,10 @@ def RegisterMethods():
     Tensor.repeat = _repeat
     Tensor.tile = _tile
     Tensor.split = _split
+    Tensor.unbind = _unbind
     Tensor.squeeze = _squeeze
     Tensor.swapaxes = _swapaxes
+    Tensor.swapdims = _swapdims
     Tensor.unfold = _unfold
     Tensor.narrow = _narrow
     Tensor.unsqueeze = _unsqueeze
