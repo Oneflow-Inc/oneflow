@@ -195,8 +195,8 @@ class SgdEmbeddingUpdateKernel final : public user_op::OpKernel {
     const int64_t embedding_size = embedding_grad->shape().At(1);
     CHECK_EQ(line_size, embedding_size);
     const auto scale = ctx->Attr<double>("scale");
-    const float l1 = 0.0;
-    const float l2 = 0.0;
+    const float l1 = ctx->Attr<float>("l1");
+    const float l2 = ctx->Attr<float>("l2");
     const auto weight_decay = ctx->Attr<float>("weight_decay");
     const user_op::Tensor* learning_rate = ctx->Tensor4ArgNameAndIndex("learning_rate", 0);
     const float* learning_rate_ptr = learning_rate->dptr<float>();
@@ -264,8 +264,8 @@ class MomentumEmbeddingUpdateKernel final : public user_op::OpKernel {
     const int64_t line_size = unique_embeddings->shape().At(1);
     const int64_t embedding_size = embedding_grad->shape().At(1);
     CHECK_EQ(line_size, embedding_size * 2);
-    const float l1 = 0.0;
-    const float l2 = 0.0;
+    const float l1 = ctx->Attr<float>("l1");
+    const float l2 = ctx->Attr<float>("l2");
     const auto weight_decay = ctx->Attr<float>("weight_decay");
     const auto beta = ctx->Attr<float>("beta");
     const auto scale = ctx->Attr<double>("scale");
@@ -333,8 +333,8 @@ class AdamEmbeddingUpdateKernel final : public user_op::OpKernel {
     const int64_t embedding_size = embedding_grad->shape().At(1);
     CHECK_EQ(line_size, embedding_size * 3);
 
-    const float l1 = 0.0;
-    const float l2 = 0.0;
+    const float l1 = ctx->Attr<float>("l1");
+    const float l2 = ctx->Attr<float>("l2");
     const auto weight_decay = ctx->Attr<float>("weight_decay");
     const auto beta1 = ctx->Attr<float>("beta1");
     const auto beta2 = ctx->Attr<float>("beta2");
@@ -413,8 +413,8 @@ class AdagradEmbeddingUpdateKernel final : public user_op::OpKernel {
     const int64_t embedding_size = embedding_grad->shape().At(1);
     CHECK_EQ(line_size, embedding_size * 2);
 
-    const float l1 = 0.0;
-    const float l2 = 0.0;
+    const float l1 = ctx->Attr<float>("l1");
+    const float l2 = ctx->Attr<float>("l2");
     const auto weight_decay = ctx->Attr<float>("weight_decay");
     const auto lr_decay = ctx->Attr<float>("lr_decay");
     const auto epsilon = ctx->Attr<float>("epsilon");
