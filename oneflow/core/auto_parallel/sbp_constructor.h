@@ -38,7 +38,8 @@ class SbpConstructor final {
         use_sbp_collector_(!Global<ResourceDesc, ForSession>::Get()
                                 ->resource()
                                 .disable_group_boxing_by_dst_parallel()
-                           && job->job_conf().enable_auto_parallel_sbp_collector()) {
+                           && job->job_conf().enable_auto_parallel_sbp_collector()),
+        op_graph_(&op_graph) {
     sbp_graph_.SetWaitTime(job->job_conf().auto_parallel_wait_time());
     sbp_graph_.SetTransferCost(job->job_conf().auto_parallel_transfer_cost());
     CHECK_JUST(Init(op_graph, job));
@@ -61,6 +62,7 @@ class SbpConstructor final {
   Maybe<void> InitComputationCost(const OpGraph& op_graph);
   Maybe<void> InitCopyCost(const OpGraph& op_graph);
   Maybe<void> ApplyMainstemAlgo();
+  Maybe<HashMap<const OpNode*, HashSet<std::string>>> GetMutableOpCtrlDeps(const OpGraph& op_graph);
   // Load logical blob ids onto sbp edges
   void LoadLbi2SbpEdge(const OpGraph& op_graph);
 
@@ -68,6 +70,7 @@ class SbpConstructor final {
   bool enable_mainstem_algo_;
   bool use_sbp_collector_;
   SbpGraph<NdSbpSignature> sbp_graph_;
+  const OpGraph* op_graph_;
   HashMap<std::string, SbpNode<NdSbpSignature>*> op_name2sbp_node_;
 };
 
