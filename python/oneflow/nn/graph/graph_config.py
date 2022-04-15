@@ -72,7 +72,9 @@ class GraphConfig(object):
         assert type(mode) is bool
         self.proto.set_enable_auto_mixed_precision(mode)
 
-    def enable_zero(self, mode: bool = True, *, stage: int = 2, min_splited_size: int = 1024):
+    def enable_zero(
+        self, mode: bool = True, *, stage: int = 2, min_splited_size: int = 1024
+    ):
         r"""Enable ZeRO redundancy optimizer.
 
         This optimzation will reduce optimizer states memory consumption as described
@@ -105,7 +107,9 @@ class GraphConfig(object):
             self.proto.set_optimizer_placement_optimization_mode("none")
             return
         assert stage >= 1 and stage <= 3, "ZeRO stage must range form 1 to 3."
-        assert min_splited_size > 0, "ZeRO min size of a sharded optimizer state must > 0."
+        assert (
+            min_splited_size > 0
+        ), "ZeRO min size of a sharded optimizer state must > 0."
         if stage == 1:
             print("zero stage 1 optimization")
             self.proto.set_optimizer_placement_optimization_mode("distributed_split")

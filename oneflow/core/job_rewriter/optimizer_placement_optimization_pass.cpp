@@ -14,6 +14,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 #include "oneflow/core/common/util.h"
+#include "oneflow/core/job/sbp_parallel.pb.h"
 #include "oneflow/core/job_rewriter/job_pass.h"
 #include "oneflow/core/graph/op_graph.h"
 #include "oneflow/core/job/job_desc.h"
@@ -85,12 +86,33 @@ Maybe<void> GetDataParallelVariableAndNaiveSuccNode(
       if (cur_node->in_edges().size() > 1) { break; }
       if (cur_node->op().input_bns().size() != 1) { break; }
       const std::string& sole_ibn = cur_node->op().SoleIbn();
-      if (!cur_node->SbpParallel4BnInOp(sole_ibn).has_broadcast_parallel()) { break; }
+      LOG(ERROR) << cur_node->op().op_name()
+                 << " has sbp: " << cur_node->NdSbp4BnInOp(sole_ibn).DebugString();
+      // if (!cur_node->SbpParallel4BnInOp(sole_ibn).has_broadcast_parallel()) { break; }
+      // if (!(ibn_nd_sbp.sbp_parallel_size() == 1 &&
+      // ibn_nd_sbp.sbp_parallel(0).has_broadcast_parallel())) { break; }
+      const NdSbp& ibn_nd_sbp = cur_node->NdSbp4BnInOp(sole_ibn);
+      if (ibn_nd_sbp.sbp_parallel_size() == 0) { break; }
+      bool has_broadcast = false;
+      FOR_RANGE(int, i, 0, ibn_nd_sbp.sbp_parallel_size()) {
+        if (ibn_nd_sbp.sbp_parallel(i).has_broadcast_parallel()) { has_broadcast = true; };
+      }
+      if (!has_broadcast) { break; }
     }
     if (!IsAllowed(cur_node)) { break; }
     if (cur_node->op().output_bns().size() != 1) { break; }
     const std::string& sole_obn = cur_node->op().SoleObn();
-    if (!cur_node->SbpParallel4BnInOp(sole_obn).has_broadcast_parallel()) { break; }
+    LOG(ERROR) << cur_node->op().op_name()
+               << " has sbp: " << cur_node->NdSbp4BnInOp(sole_obn).DebugString();
+    // if (!cur_node->SbpParallel4BnInOp(sole_obn).has_broadcast_parallel()) { break; }
+    const NdSbp& obn_nd_sbp = cur_node->NdSbp4BnInOp(sole_obn);
+    // if (!(obn_nd_sbp.sbp_parallel_size() == 1 &&
+    // obn_nd_sbp.sbp_parallel(0).has_broadcast_parallel())) { break; }
+    bool has_broadcast = false;
+    FOR_RANGE(int, i, 0, obn_nd_sbp.sbp_parallel_size()) {
+      if (obn_nd_sbp.sbp_parallel(i).has_broadcast_parallel()) { has_broadcast = true; };
+    }
+    if (!has_broadcast) { break; }
     out->emplace_back(cur_node);
     if (cur_node->out_edges().size() == 1) {
       cur_node = cur_node->SoleOutEdge()->dst_node();
@@ -118,6 +140,26 @@ void SetBroadcastParallel4Consumers(JobBuilder* builder, const SequencePtr& sequ
     for (const std::string& ibn : out_node->op().input_bns()) {
       if (out_node->op().BnInOp2Lbi(ibn) == lbi) {
         SetBroadcastParallel4OpNodeIbn(builder, out_node, ibn);
+      }
+    }
+  });
+}
+
+void SetNdSbp4OpNodeIbn(JobBuilder* builder, const OpNode* node, const std::string& ibn,
+                        const NdSbp& nd_sbp) {
+  OpBlobArg op_blob_arg;
+  op_blob_arg.set_op_name(node->op().op_name());
+  op_blob_arg.set_bn_in_op(ibn);
+  builder->SetNdSbp4Oba(op_blob_arg, nd_sbp);
+}
+
+void SetNdSbp4Consumers(JobBuilder* builder, const SequencePtr& sequence, const NdSbp& nd_sbp) {
+  const OpNode* node = sequence->GetLastNode();
+  const LogicalBlobId& lbi = node->op().BnInOp2Lbi(node->op().SoleObn());
+  node->ForEachNodeOnOutEdge([&](const OpNode* out_node) {
+    for (const std::string& ibn : out_node->op().input_bns()) {
+      if (out_node->op().BnInOp2Lbi(ibn) == lbi) {
+        SetNdSbp4OpNodeIbn(builder, out_node, ibn, nd_sbp);
       }
     }
   });
@@ -243,9 +285,18 @@ Maybe<void> RewriteDistributedSplit(const OpGraph& op_graph, JobBuilder* builder
     for (int64_t i = 0; i < sorted_sequences.size(); ++i) {
       const OpNode* var_node = sorted_sequences.at(i)->GetVariableNode();
       OperatorConf new_var_op_conf = var_node->op().op_conf();
-      CHECK_EQ(pd.hierarchy()->NumAxes(), 1);
-      new_var_op_conf.mutable_variable_conf()->clear_nd_sbp();
-      *new_var_op_conf.mutable_variable_conf()->add_nd_sbp() = "S(0)";
+      const std::string& sole_obn = var_node->op().SoleObn();
+      LOG(ERROR) << var_node->op().op_name()
+                 << " has sbp: " << var_node->NdSbp4BnInOp(sole_obn).DebugString();
+      const NdSbp& var_nd_sbp = var_node->NdSbp4BnInOp(sole_obn);
+      // CHECK_EQ(pd.hierarchy()->NumAxes(), 1);
+      FOR_RANGE(int, i, 0, new_var_op_conf.variable_conf().nd_sbp_size()) {
+        if (new_var_op_conf.variable_conf().nd_sbp(i) == "B") {
+          *new_var_op_conf.mutable_variable_conf()->mutable_nd_sbp(i) = "S(0)";
+        }
+      }
+      // new_var_op_conf.mutable_variable_conf()->clear_nd_sbp();
+      // *new_var_op_conf.mutable_variable_conf()->add_nd_sbp() = "S(0)";
       if (i != 0) {
         const std::string& prev_op_name =
             sorted_sequences.at(i - 1)->GetVariableNode()->op().op_name();
@@ -253,7 +304,8 @@ Maybe<void> RewriteDistributedSplit(const OpGraph& op_graph, JobBuilder* builder
       }
       builder->MutOpsOnlyOnce({new_var_op_conf});
       // Set consumers to consum this variable op's cast op's output as Broadcast.
-      SetBroadcastParallel4Consumers(builder, sorted_sequences.at(i));
+      // SetBroadcastParallel4Consumers(builder, sorted_sequences.at(i));
+      SetNdSbp4Consumers(builder, sorted_sequences.at(i), var_nd_sbp);
     }
   };
   ForEachParallelSortedNodeSequence(op_graph, IsAllowed, SequenceCompSortedByOrderAsc,
