@@ -28,8 +28,7 @@ limitations under the License.
 namespace oneflow {
 namespace one {
 
-BuiltinOpExpr::BuiltinOpExpr(const std::string& op_name,
-                             const bool is_support_stride,
+BuiltinOpExpr::BuiltinOpExpr(const std::string& op_name, const bool is_support_stride,
                              const std::vector<std::string>& indexed_ibns,
                              const std::vector<std::string>& indexed_obns)
     : op_name_(op_name),
@@ -405,12 +404,11 @@ class UserOpExprDeviceAndStreamInferContext final : public user_op::DeviceAndStr
 
 }  // namespace
 
-UserOpExpr::UserOpExpr(const std::string& op_name, 
-                       const bool is_support_stride,
-                       UserOpConf&& proto, const AttrMap& base_attrs,
-                       const std::vector<std::string>& indexed_ibns,
+UserOpExpr::UserOpExpr(const std::string& op_name, const bool is_support_stride, UserOpConf&& proto,
+                       const AttrMap& base_attrs, const std::vector<std::string>& indexed_ibns,
                        const std::vector<std::string>& indexed_obns)
-    : BuiltinOpExprImpl<UserOpConf>(op_name, is_support_stride, std::move(proto), indexed_ibns, indexed_obns),
+    : BuiltinOpExprImpl<UserOpConf>(op_name, is_support_stride, std::move(proto), indexed_ibns,
+                                    indexed_obns),
       base_attrs_(base_attrs) {}
 
 Maybe<void> UserOpExpr::Init(const std::shared_ptr<const UserOpExpr>& self) {
@@ -428,15 +426,14 @@ Maybe<void> UserOpExpr::Init(const std::shared_ptr<const UserOpExpr>& self) {
   return Maybe<void>::Ok();
 }
 
-/* static */ Maybe<UserOpExpr> UserOpExpr::New(const std::string& op_name, 
-                                               const bool is_support_stride,
-                                               UserOpConf&& op_proto,
+/* static */ Maybe<UserOpExpr> UserOpExpr::New(const std::string& op_name,
+                                               const bool is_support_stride, UserOpConf&& op_proto,
                                                const std::vector<std::string>& indexed_ibns,
                                                const std::vector<std::string>& indexed_obns) {
   JUST(AddAttrDefaultValueAndCheckValid(&op_proto));
   AttrMap base_attrs = MakeAttrMapFromUserOpConf(op_proto);
-  std::shared_ptr<UserOpExpr> op_expr(
-      new UserOpExpr(op_name, is_support_stride, std::move(op_proto), base_attrs, indexed_ibns, indexed_obns));
+  std::shared_ptr<UserOpExpr> op_expr(new UserOpExpr(
+      op_name, is_support_stride, std::move(op_proto), base_attrs, indexed_ibns, indexed_obns));
   JUST(op_expr->Init(op_expr));
   return op_expr;
 }

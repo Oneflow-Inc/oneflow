@@ -95,10 +95,10 @@ Maybe<void> AutogradInterpreter::Apply(const OpExpr& op_expr, const TensorTuple&
   const TensorTuple* inputs_ptr = &inputs;
   TensorTuple tmp_inputs(inputs.size());
   // NOTE: if this op not support stride, then need to tensor->contiguous()
-  if(op_expr.IsSupportStride()){
+  if (op_expr.IsSupportStride()) {
     for (size_t i = 0; i < inputs.size(); i++) { tmp_inputs[i] = inputs[i]->contiguous(); }
     inputs_ptr = &tmp_inputs;
-  }else{
+  } else {
   }
 
   {
@@ -117,8 +117,8 @@ Maybe<void> AutogradInterpreter::Apply(const OpExpr& op_expr, const TensorTuple&
               JUST(grad_closure->Apply(out_grads, in_grads));
               return Maybe<void>::Ok();
             });
-    JUST(GetThreadLocalAutogradEngine()->AddBackwardFuncPtr(
-        op_expr.op_type_name() + "_backward", backward_fn, *inputs_ptr, outputs));
+    JUST(GetThreadLocalAutogradEngine()->AddBackwardFuncPtr(op_expr.op_type_name() + "_backward",
+                                                            backward_fn, *inputs_ptr, outputs));
   }
   // Update outputs autograd meta
   // Note: if requires_grad is True, we will create a new autograd meta for each output

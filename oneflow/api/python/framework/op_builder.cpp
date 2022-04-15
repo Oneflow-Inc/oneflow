@@ -34,7 +34,7 @@ ONEFLOW_API_PYBIND11_MODULE("one", m) {
       .def("input", &OpBuilder::MaybeInput)
       .def("output", &OpBuilder::MaybeOutput)
       .def("attr", &OpBuilder::MaybeAttr<cfg::AttrValue>);
-    //   .def("build", &OpBuilder::Build);
+  //   .def("build", &OpBuilder::Build);
 }
 
 }  // namespace one

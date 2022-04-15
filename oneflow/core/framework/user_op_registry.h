@@ -60,7 +60,11 @@ using OutputBlobTimeShapeInferFn = std::function<Maybe<void>(InferOutputBlobTime
 using NdSbpInferFn = std::function<Maybe<void>(InferNdSbpFnContext*)>;
 
 struct OpRegistryResult {
-  OpRegistryResult() : cpu_only_supported(false), no_grad(false), is_support_stride(false), same_output_regst_num(-1) {}
+  OpRegistryResult()
+      : cpu_only_supported(false),
+        no_grad(false),
+        is_support_stride(false),
+        same_output_regst_num(-1) {}
   ~OpRegistryResult() = default;
 
   std::string op_type_name;

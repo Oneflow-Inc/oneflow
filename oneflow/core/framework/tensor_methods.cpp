@@ -277,8 +277,7 @@ Maybe<Tensor> Expand(const std::shared_ptr<Tensor>& input, const std::vector<int
       } else {
         if (expand_shape[target_ndim - 1 - i] != in_shape[ndim - 1 - i]) {
           return Error::RuntimeError()
-                 << "The expanded size of the tensor ("
-                 << expand_shape[target_ndim - 1 - i] << ")"
+                 << "The expanded size of the tensor (" << expand_shape[target_ndim - 1 - i] << ")"
                  << "must match the existing size (" << in_shape[ndim - 1 - i]
                  << ") at non-singleton dimension " << ndim - i << ".  Target sizes: "
                  << ".  Tensor sizes: " << shape->ToString();
