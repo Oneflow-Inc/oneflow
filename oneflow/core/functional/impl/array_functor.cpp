@@ -495,9 +495,12 @@ class ConcatFunctor {
     for (int i = 0; i < ninput; i += kMaxInputCount) {
       size_t size = (i + kMaxInputCount) < ninput ? kMaxInputCount : ninput - i;
       TensorTuple partial_inputs(size);
+      TensorProcessor tensor_processor;
       for (int j = 0; j < size; ++j) { partial_inputs[j] = inputs[i + j]; }
+      JUST(tensor_processor.PromoteInputsToCommonDtype(true).AddInputs(partial_inputs).Apply());
+      TensorTuple input_tuple = JUST(tensor_processor.GetInputs());
       outputs.emplace_back(
-          JUST(OpInterpUtil::Dispatch<Tensor>(*ops_.at(size - 1), partial_inputs, attrs)));
+          JUST(OpInterpUtil::Dispatch<Tensor>(*ops_[size - 1], input_tuple, attrs)));
     }
 
     if (outputs.size() == 1) { return outputs.at(0); }
@@ -786,7 +789,8 @@ class DimScatterFunctor {
                            const std::shared_ptr<one::Tensor>& index,
                            const std::shared_ptr<one::Tensor>& src) const {
     MutableAttrMap attrs;
-    JUST(attrs.SetAttr<int32_t>("dim", dim));
+    const int32_t ndim = input->shape()->NumAxes();
+    JUST(attrs.SetAttr<int32_t>("dim", dim < 0 ? dim + ndim : dim));
     return OpInterpUtil::Dispatch<Tensor>(*op_, {input, index, src}, attrs);
   }
 
@@ -872,7 +876,8 @@ class DimScatterUpdateScalarFunctor {
   Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& input, const int32_t& dim,
                            const std::shared_ptr<one::Tensor>& index, const Scalar& src) const {
     MutableAttrMap attrs;
-    JUST(attrs.SetAttr<int32_t>("dim", dim));
+    const int32_t ndim = input->shape()->NumAxes();
+    JUST(attrs.SetAttr<int32_t>("dim", dim < 0 ? dim + ndim : dim));
     JUST(attrs.SetAttr<float>("src_scalar", JUST(src.As<float>())));
     return OpInterpUtil::Dispatch<Tensor>(*op_, {input, index}, attrs);
   }
@@ -1785,7 +1790,8 @@ class SliceView1dContiguousFunctor {
   SliceView1dContiguousFunctor() = default;
   Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x, int64_t start,
                            int64_t end) const {
-    return JUST(view::Slice(x, {start}, {end}, {1}));
+    if (view::IsViewApplicable(x)) { return JUST(view::Slice(x, {start}, {end}, {1})); }
+    return JUST(functional::Slice(x, {start}, {end}, {1}));
   }
 };
 
@@ -2144,6 +2150,23 @@ class SplitFunctor {
   }
 };
 
+class UnbindFunctor {
+ public:
+  UnbindFunctor() {}
+  Maybe<TensorTuple> operator()(const std::shared_ptr<one::Tensor>& x, const int64_t& dim) const {
+    int32_t axis = dim;
+    const int32_t ndim = x->ndim();
+    if (axis < 0) { axis += ndim; }
+    CHECK_OR_RETURN((dim >= -ndim) && (dim < ndim))
+        << "Dimension out of range (expected to be in range of [" << -ndim << "," << ndim - 1
+        << "], but got " << dim << ")";
+    int32_t dim_size = x->shape()->At(axis);
+    TensorTuple unbinds(dim_size);
+    for (int i = 0; i < dim_size; ++i) { unbinds[i] = JUST(Select(x, axis, i)); }
+    return unbinds;
+  }
+};
+
 class ChunkFunctor {
  public:
   ChunkFunctor() {}
@@ -2458,7 +2481,6 @@ class ToFunctor {
 
     if (input->is_consistent()) {
       std::string device_type = device_.value_or(JUST(input->parallel_desc())->device_tag());
-      if (device_type == "gpu") { device_type = "cuda"; }
       CHECK_OR_RETURN(device_type == "cpu" || device_type == "cuda")
           << "Only string device without device id (eg. \"cpu\" or \"cuda\") is expected "
           << "for consistent tensor, but got " << device_.value_or("");
@@ -2803,6 +2825,7 @@ ONEFLOW_FUNCTION_LIBRARY(m) {
   m.add_functor<impl::ReduceSumLikeFunctor>("ReduceSumLike");
   m.add_functor<impl::BroadcastReduceSumLikeFunctor>("BroadcastReduceSumLike");
   m.add_functor<impl::SplitFunctor>("Split");
+  m.add_functor<impl::UnbindFunctor>("Unbind");
   m.add_functor<impl::ChunkFunctor>("Chunk");
   m.add_functor<impl::SplitLikeFunctor>("SplitLike");
   m.add_functor<impl::SplitWithSizeFunctor>("SplitWithSize");

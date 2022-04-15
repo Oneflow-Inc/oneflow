@@ -13,29 +13,19 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
-#include "oneflow/core/job_rewriter/autotick.h"
+#include <cstdlib>
+#include <type_traits>
+#include "oneflow/core/common/just.h"
+#include "oneflow/core/common/maybe.h"
+#include "oneflow/core/common/env_var/debug_mode.h"
+#include "oneflow/xrt/utility/env.h"
 
 namespace oneflow {
 
-namespace {
-
-class MutDecodeRandomOpConTickInputHelper final : public MutOpConTickInputHelper {
- public:
-  MutDecodeRandomOpConTickInputHelper() : MutOpConTickInputHelper() {}
-
-  bool VirtualIsTickInputBound() const override {
-    return op_conf().decode_random_conf().has_tick();
-  }
-
-  OperatorConf NewTickInputBoundOpConf(const std::string& lbn) const override {
-    OperatorConf ret(op_conf());
-    ret.mutable_decode_random_conf()->set_tick(lbn);
-    return ret;
-  }
-};
-
-}  // namespace
-
-REGISTER_AUTO_TICK(OperatorConf::kDecodeRandomConf, MutDecodeRandomOpConTickInputHelper);
+bool IsEnvEnabled(int32_t check_level) {
+  static const int env_check_level = EnvToInt(ONEFOW_CHECK_LEVEL, -1);
+  static const bool env_debug_mode = IsInDebugMode();
+  return env_debug_mode || env_check_level >= check_level;
+}
 
 }  // namespace oneflow
