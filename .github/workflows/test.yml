@@ -1030,6 +1030,7 @@ jobs:
       - name: Speed test
         id: speed
         timeout-minutes: 20
+        continue-on-error: ${{ !contains(github.event.pull_request.labels.*.name, 'need-pass-speed-test') }}
         if: ${{ !fromJson(matrix.cache-hit) && matrix.test-type == 'speed-test' && matrix.device == 'cuda' }}
         run: |
           docker exec -e ONEFLOW_MODELS_DIR=$PWD/oneflow-models ${{ env.TEST_CONTAINER_NAME }} bash ci/test/test_speed_multi_client.sh
