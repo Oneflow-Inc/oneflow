@@ -156,7 +156,7 @@ Maybe<void> TransposeFront(const std::shared_ptr<Tensor>& input, const TensorTup
     return false;
   }();
   if (need_transpose) {
-    *output = JUST(Transpose(input, permute))->contiguous();
+    *output = JUST(Transpose(input, permute));
   } else {
     *output = input;
   }

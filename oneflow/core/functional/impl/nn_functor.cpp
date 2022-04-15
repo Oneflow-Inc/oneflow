@@ -1875,7 +1875,7 @@ class L2NormalizeFunctor {
 
     const auto result = JUST(OpInterpUtil::Dispatch<TensorTuple>(
         *op_, {JUST(functional::Transpose(input, input_perm))}, attrs));
-    return JUST(functional::Transpose((*result)[0], input_perm));
+    return functional::Transpose((*result)[0], input_perm);
   }
 
  private:
