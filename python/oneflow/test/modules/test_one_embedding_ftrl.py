@@ -36,16 +36,13 @@ def compare_with_numpy_ftrl(
     learning_rate,
     train_iters,
 ):
-
     num_rows = 500
     embedding_size = 128
     model_shape = (num_rows, embedding_size)
     line_size = embedding_size * 3
 
     num_valid_seq = np.random.randint(1, num_rows, (train_iters))
-    # skip_if_seq = [np.random.randint(2) for i in range(train_iters)]
-    skip_if_seq = [np.array([0]) for i in range(train_iters)]
-    print(num_valid_seq)
+    skip_if_seq = [np.random.randint(2) for i in range(train_iters)]
     random_grad_seq = []
     for _ in range(train_iters):
         random_grad_seq.append(np.random.uniform(size=model_shape).astype(np.float32))
@@ -158,7 +155,7 @@ class TestOptimizers(flow.unittest.TestCase):
     def test_ftrl(test_case):
         arg_dict = OrderedDict()
         arg_dict["weight_decay"] = [0, 0.1]
-        arg_dict["lr_power"] = [-0.05, -1]
+        arg_dict["lr_power"] = [-0.2, -0.05]
         arg_dict["lambda1"] = [0.1]
         arg_dict["lambda2"] = [0.00]
         arg_dict["beta"] = [1.0]
