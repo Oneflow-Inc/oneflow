@@ -420,6 +420,7 @@ class TestTensorIndexing(flow.unittest.TestCase):
         test_case.assertTrue(np.allclose(x[x_idx].numpy(), np.array([1, 1])))
         test_case.assertTrue(np.allclose(y[y_idx].numpy(), np.array([1, 1])))
 
+
 @flow.unittest.skip_unless_1n2d()
 class TestTensorIndexingMultiGpu(flow.unittest.TestCase):
     def test_indecies_on_different_devices(test_case):
