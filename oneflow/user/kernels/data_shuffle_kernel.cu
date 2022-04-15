@@ -1016,7 +1016,6 @@ class EmbeddingShuffleKernel final : public user_op::OpKernel {
       .SetInferTmpSizeFn([](user_op::InferContext* ctx) {                                         \
         const user_op::TensorDesc& cur_rank_embeddings =                                          \
             ctx->InputTensorDesc("cur_rank_embeddings", 0);                                       \
-        const user_op::TensorDesc& embeddings = ctx->InputTensorDesc("", 0);                      \
         bool enable_quantize_comm =                                                               \
             ParseBooleanFromEnv("ONEFLOW_ONE_EMBEDDING_ENABLE_QUANTIZED_COMM", false)             \
             && (cur_rank_embeddings.shape().At(1) < kMaxColSize);                                 \
