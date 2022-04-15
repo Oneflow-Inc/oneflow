@@ -110,6 +110,7 @@ class ModuleBlock(Block):
         self._debug = False
         self._debug_min_s_level = 2
         self._debug_max_v_level = 0
+        self._debug_max_stack_depth = 2
         self._type = BlockType.MODULE
         self._is_executing_forward = False
         self._modules = OrderedDict()
@@ -146,9 +147,11 @@ class ModuleBlock(Block):
         v_level: int = 0,
         ranks: Optional[Union[int, List[int]]] = None,
         mode: bool = True,
+        max_stack_depth: int = 2,
     ) -> None:
         assert isinstance(mode, bool)
         assert isinstance(v_level, int)
+        assert isinstance(max_stack_depth, int)
 
         if ranks is None:
             rank_list = [0]
@@ -165,11 +168,13 @@ class ModuleBlock(Block):
             if self._debug:
                 self._debug_min_s_level = 0
                 self._debug_max_v_level = v_level
+                self._debug_max_stack_depth = max_stack_depth
+
             if self._type == BlockType.MODULE:
 
                 def _set_child(d):
                     for (_, n) in d.items():
-                        n.debug(v_level, ranks, mode)
+                        n.debug(v_level, ranks, mode, max_stack_depth)
 
                 _set_child(self._modules)
 
@@ -203,8 +208,11 @@ class ModuleBlock(Block):
         # that hooks of nn.Modules are ignored. It is not recommended
         # to use hooks of nn.Module in nn.Graph for the moment.
         # result = self._origin.__class__.__call__(self, *args)
-        with graph_build_util.GLogScopeContext(
-            self._debug_min_s_level, self._debug_max_v_level
+        with graph_build_util.DebugScopeContext(
+            self._debug_min_s_level,
+            self._debug_max_v_level,
+            self._debug_max_stack_depth,
+            self._debug,
         ):
             result = self.__block_forward(*args, **kwargs)
 
