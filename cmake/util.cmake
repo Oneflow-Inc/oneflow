@@ -230,7 +230,6 @@ function(set_compile_options_to_oneflow_target target)
   target_treat_warnings_as_errors(${target})
   target_compile_options(${target} PRIVATE $<$<COMPILE_LANGUAGE:CXX>:-Werror=return-type>)
   # the mangled name between `struct X` and `class X` is different in MSVC ABI, remove it while windows is supported (in MSVC/cl or clang-cl)
-  target_try_compile_options(${target} -Wno-mismatched-tags)
   target_try_compile_options(${target} -Wno-covered-switch-default)
 
   if(OMP_FLAGS)
