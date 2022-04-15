@@ -168,10 +168,15 @@ add_custom_target(
   COMMAND ${Python_EXECUTABLE} ${CMAKE_CURRENT_SOURCE_DIR}/ci/check/run_clang_format.py
           --source_dir ${CMAKE_CURRENT_SOURCE_DIR}/tools/oneflow-tblgen --fix --quiet)
 # clang tidy
+set(RUN_CLANG_TIDY_ARGS --build_dir ${CMAKE_BINARY_DIR})
+if(MAYBE_NEED_ERROR_MSG_CHECK)
+  list(APPEND RUN_CLANG_TIDY_ARGS --check-error-msg)
+endif()
+message(STATUS "RUN_CLANG_TIDY_ARGS: ${RUN_CLANG_TIDY_ARGS}")
 add_custom_target(
-  of_tidy COMMAND ${Python_EXECUTABLE} ${CMAKE_SOURCE_DIR}/ci/check/run_clang_tidy.py --build_dir
-                  ${CMAKE_BINARY_DIR} DEPENDS of_git_version oneflow_deps of_cfgobj
-                                              of_functional_obj of_functional_tensor_obj)
+  of_tidy COMMAND ${Python_EXECUTABLE} ${CMAKE_SOURCE_DIR}/ci/check/run_clang_tidy.py
+                  ${RUN_CLANG_TIDY_ARGS} DEPENDS of_git_version oneflow_deps of_cfgobj
+                                                 of_functional_obj of_functional_tensor_obj)
 # generate version
 set(OF_GIT_VERSION_DIR ${CMAKE_CURRENT_BINARY_DIR}/of_git_version)
 set(OF_GIT_VERSION_FILE ${OF_GIT_VERSION_DIR}/version.cpp)
