@@ -172,7 +172,7 @@ Maybe<bool> FunctionNode::Apply(bool create_graph) {
 }
 
 void GraphFunctionNode::ReleaseData() {
-  if (!input_meta_data_.empty() && backward_fn_->status()) { backward_fn_.reset(); }
+  if (backward_fn_->status()) { backward_fn_.reset(); }
 }
 
 GraphFunctionNode::GraphFunctionNode(const std::string& name,
