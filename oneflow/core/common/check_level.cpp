@@ -13,25 +13,19 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
-#ifndef ONEFLOW_CORE_PROFILER_KERNEL_H_
-#define ONEFLOW_CORE_PROFILER_KERNEL_H_
-
-#include "oneflow/core/common/util.h"
+#include <cstdlib>
+#include <type_traits>
+#include "oneflow/core/common/just.h"
+#include "oneflow/core/common/maybe.h"
+#include "oneflow/core/common/env_var/debug_mode.h"
+#include "oneflow/xrt/utility/env.h"
 
 namespace oneflow {
 
-class Kernel;
-class KernelContext;
-class Blob;
-
-namespace profiler {
-
-void TraceKernelForwardDataContentStart(KernelContext* kernel_ctx, const Kernel* kernel);
-
-void TraceKernelForwardDataContentEnd(KernelContext* kernel_ctx, const Kernel* kernel);
-
-}  // namespace profiler
+bool IsEnvEnabled(int32_t check_level) {
+  static const int env_check_level = EnvToInt(ONEFOW_CHECK_LEVEL, -1);
+  static const bool env_debug_mode = IsInDebugMode();
+  return env_debug_mode || env_check_level >= check_level;
+}
 
 }  // namespace oneflow
-
-#endif  // ONEFLOW_CORE_PROFILER_KERNEL_H_
