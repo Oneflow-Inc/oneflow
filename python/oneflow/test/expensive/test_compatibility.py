@@ -109,10 +109,10 @@ class TestApiCompatibility(flow.unittest.TestCase):
             test_case, "pytorch_levit.py", "LeViT_128S", "cuda", 8, 224,
         )
 
-    def test_mlp_mixer_compatibility(test_case):
-        do_test_train_loss_oneflow_pytorch(
-            test_case, "pytroch_mlp_mixer.py", "mixer_s32_224", "cuda", 8, 224,
-        )
+    # def test_mlp_mixer_compatibility(test_case):
+    #     do_test_train_loss_oneflow_pytorch(
+    #         test_case, "pytroch_mlp_mixer.py", "mixer_s32_224", "cuda", 8, 224,
+    #     )
 
     def test_poolformer_compatibility(test_case):
         do_test_train_loss_oneflow_pytorch(
