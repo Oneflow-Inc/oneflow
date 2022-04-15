@@ -20,8 +20,6 @@ from collections import OrderedDict
 import numpy as np
 from random import shuffle
 
-from yaml import YAMLObject
-
 from oneflow.test_utils.automated_test_util import *
 from oneflow.test_utils.test_util import GenArgList
 
