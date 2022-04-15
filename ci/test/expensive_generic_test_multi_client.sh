@@ -27,6 +27,7 @@ export ONEFLOW_TEST_DEVICE_NUM=1
 
 COMMON_PYTEST_ARGS="--max-worker-restart=0 -x --durations=50 --capture=sys"
 python3 -m pytest ${COMMON_PYTEST_ARGS} --failed-first --dist loadfile ${parallel_spec} ${PWD}
+exit 0
 if [[ "$(python3 -c 'import oneflow.sysconfig;print(oneflow.sysconfig.has_rpc_backend_grpc())')" == *"True"* ]]; then
     export ONEFLOW_TEST_DEVICE_NUM=2
     python3 -m oneflow.distributed.launch --nproc_per_node 2 -m pytest ${COMMON_PYTEST_ARGS} ${PWD}
