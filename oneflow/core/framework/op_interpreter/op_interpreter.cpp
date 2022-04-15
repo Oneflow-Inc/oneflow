@@ -95,7 +95,7 @@ Maybe<void> AutogradInterpreter::Apply(const OpExpr& op_expr, const TensorTuple&
   const TensorTuple* inputs_ptr = &inputs;
   TensorTuple tmp_inputs(inputs.size());
   // NOTE: if this op not support stride, then need to tensor->contiguous()
-  if (!op_expr.IsSupportStride()) {
+  if (!JUST(op_expr.IsSupportStride())) {
     for (size_t i = 0; i < inputs.size(); i++) { tmp_inputs[i] = inputs[i]->contiguous(); }
     inputs_ptr = &tmp_inputs;
   }

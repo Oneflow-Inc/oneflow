@@ -123,13 +123,7 @@ OF_PP_FOR_EACH_TUPLE(DEFINE_OP_BUILDER_ATTR_FUNC, ATTR_SEQ)
 #undef DEFINE_OP_BUILDER_ATTR_FUNC
 
 Maybe<UserOpExpr> OpBuilder::Build() {
-  return UserOpExpr::New(op_name_, /**is_support_stride=*/false, std::move(proto_), indexed_ibns_,
-                         indexed_obns_);
-}
-
-Maybe<UserOpExpr> OpBuilder::Build(const bool is_support_stride) {
-  return UserOpExpr::New(op_name_, is_support_stride, std::move(proto_), indexed_ibns_,
-                         indexed_obns_);
+  return UserOpExpr::New(op_name_, std::move(proto_), indexed_ibns_, indexed_obns_);
 }
 
 }  // namespace one

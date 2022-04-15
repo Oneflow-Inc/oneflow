@@ -63,14 +63,14 @@ struct OpRegistryResult {
   OpRegistryResult()
       : cpu_only_supported(false),
         no_grad(false),
-        is_support_stride(false),
+        support_stride(false),
         same_output_regst_num(-1) {}
   ~OpRegistryResult() = default;
 
   std::string op_type_name;
   bool cpu_only_supported;
   bool no_grad;
-  bool is_support_stride;
+  bool support_stride;
   int32_t same_output_regst_num;
   UserOpDef op_def;
   CheckAttrFn check_fn;

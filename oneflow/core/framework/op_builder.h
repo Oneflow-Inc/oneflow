@@ -50,7 +50,6 @@ class OpBuilder {
   OpBuilder& Attr(const std::string& attr_name, const T& attr_value);
 
   Maybe<UserOpExpr> Build();
-  Maybe<UserOpExpr> Build(const bool is_support_stride);
 
  private:
   std::string op_name_;

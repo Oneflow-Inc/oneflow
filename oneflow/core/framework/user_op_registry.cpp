@@ -77,7 +77,7 @@ OpRegistry& OpRegistry::SupportCpuOnly() {
 }
 
 OpRegistry& OpRegistry::SupportStride() {
-  result_.is_support_stride = true;
+  result_.support_stride = true;
   return *this;
 }
 

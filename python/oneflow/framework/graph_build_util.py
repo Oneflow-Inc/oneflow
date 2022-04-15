@@ -189,7 +189,7 @@ def build_graph_output(op_name, out):
     )
 
     output_op = oneflow._oneflow_internal.one.FetchOutputOpExpr(
-        op_name, False, output_conf, ["in_0"], ["out_0"]
+        op_name, output_conf, ["in_0"], ["out_0"]
     )
     fake_eager_out = _C.dispatch_fetch_output(output_op, out)
 

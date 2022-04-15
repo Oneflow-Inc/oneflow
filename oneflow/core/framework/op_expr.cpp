@@ -28,11 +28,10 @@ limitations under the License.
 namespace oneflow {
 namespace one {
 
-BuiltinOpExpr::BuiltinOpExpr(const std::string& op_name, const bool is_support_stride,
+BuiltinOpExpr::BuiltinOpExpr(const std::string& op_name,
                              const std::vector<std::string>& indexed_ibns,
                              const std::vector<std::string>& indexed_obns)
     : op_name_(op_name),
-      is_support_stride_(is_support_stride),
       input_arg_tuple_(new ArgTuple(indexed_ibns)),
       output_arg_tuple_(new ArgTuple(indexed_obns)) {}
 
@@ -97,6 +96,26 @@ DEFINE_OPEXPR_IS_GRAD_DISABLED_DEFAULT_VALUE(DistributeAddOpConf, false);
 
 #undef DEFINE_OPEXPR_IS_GRAD_DISABLED_DEFAULT_VALUE
 
+#define DEFINE_OPEXPR_IS_SUPPORT_STRIDE_DEFAULT_VALUE(_T, _bool) \
+  template<>                                                     \
+  Maybe<bool> BuiltinOpExprImpl<_T>::IsSupportStride() const {   \
+    return _bool;                                                \
+  }
+
+DEFINE_OPEXPR_IS_SUPPORT_STRIDE_DEFAULT_VALUE(FeedInputOpConf, false);
+DEFINE_OPEXPR_IS_SUPPORT_STRIDE_DEFAULT_VALUE(FeedVariableOpConf, false);
+DEFINE_OPEXPR_IS_SUPPORT_STRIDE_DEFAULT_VALUE(FetchOutputOpConf, false);
+DEFINE_OPEXPR_IS_SUPPORT_STRIDE_DEFAULT_VALUE(VariableOpConf, false);
+DEFINE_OPEXPR_IS_SUPPORT_STRIDE_DEFAULT_VALUE(ImageDecoderRandomCropResizeOpConf, false);
+DEFINE_OPEXPR_IS_SUPPORT_STRIDE_DEFAULT_VALUE(CastToMirroredOpConf, false);
+DEFINE_OPEXPR_IS_SUPPORT_STRIDE_DEFAULT_VALUE(CastFromMirroredOpConf, false);
+DEFINE_OPEXPR_IS_SUPPORT_STRIDE_DEFAULT_VALUE(DistributeSplitOpConf, false);
+DEFINE_OPEXPR_IS_SUPPORT_STRIDE_DEFAULT_VALUE(DistributeCloneOpConf, false);
+DEFINE_OPEXPR_IS_SUPPORT_STRIDE_DEFAULT_VALUE(DistributeConcatOpConf, false);
+DEFINE_OPEXPR_IS_SUPPORT_STRIDE_DEFAULT_VALUE(DistributeAddOpConf, false);
+
+#undef DEFINE_OPEXPR_IS_SUPPORT_STRIDE_DEFAULT_VALUE
+
 template<>
 Maybe<void> BuiltinOpExprImpl<UserOpConf>::BuildOpConf(OperatorConf* op_conf,
                                                        const AttrMap& attrs) const {
@@ -132,6 +151,14 @@ Maybe<bool> BuiltinOpExprImpl<UserOpConf>::IsGradDisabled() const {
       user_op::UserOpRegistryMgr::Get().GetOpRegistryResult(proto().op_type_name());
   CHECK_NOTNULL_OR_RETURN(registry);
   return registry->no_grad;
+}
+
+template<>
+Maybe<bool> BuiltinOpExprImpl<UserOpConf>::IsSupportStride() const {
+  const auto* registry =
+      user_op::UserOpRegistryMgr::Get().GetOpRegistryResult(proto().op_type_name());
+  CHECK_NOTNULL_OR_RETURN(registry);
+  return registry->support_stride;
 }
 
 template<>
@@ -404,11 +431,10 @@ class UserOpExprDeviceAndStreamInferContext final : public user_op::DeviceAndStr
 
 }  // namespace
 
-UserOpExpr::UserOpExpr(const std::string& op_name, const bool is_support_stride, UserOpConf&& proto,
-                       const AttrMap& base_attrs, const std::vector<std::string>& indexed_ibns,
+UserOpExpr::UserOpExpr(const std::string& op_name, UserOpConf&& proto, const AttrMap& base_attrs,
+                       const std::vector<std::string>& indexed_ibns,
                        const std::vector<std::string>& indexed_obns)
-    : BuiltinOpExprImpl<UserOpConf>(op_name, is_support_stride, std::move(proto), indexed_ibns,
-                                    indexed_obns),
+    : BuiltinOpExprImpl<UserOpConf>(op_name, std::move(proto), indexed_ibns, indexed_obns),
       base_attrs_(base_attrs) {}
 
 Maybe<void> UserOpExpr::Init(const std::shared_ptr<const UserOpExpr>& self) {
@@ -426,14 +452,13 @@ Maybe<void> UserOpExpr::Init(const std::shared_ptr<const UserOpExpr>& self) {
   return Maybe<void>::Ok();
 }
 
-/* static */ Maybe<UserOpExpr> UserOpExpr::New(const std::string& op_name,
-                                               const bool is_support_stride, UserOpConf&& op_proto,
+/* static */ Maybe<UserOpExpr> UserOpExpr::New(const std::string& op_name, UserOpConf&& op_proto,
                                                const std::vector<std::string>& indexed_ibns,
                                                const std::vector<std::string>& indexed_obns) {
   JUST(AddAttrDefaultValueAndCheckValid(&op_proto));
   AttrMap base_attrs = MakeAttrMapFromUserOpConf(op_proto);
-  std::shared_ptr<UserOpExpr> op_expr(new UserOpExpr(
-      op_name, is_support_stride, std::move(op_proto), base_attrs, indexed_ibns, indexed_obns));
+  std::shared_ptr<UserOpExpr> op_expr(
+      new UserOpExpr(op_name, std::move(op_proto), base_attrs, indexed_ibns, indexed_obns));
   JUST(op_expr->Init(op_expr));
   return op_expr;
 }

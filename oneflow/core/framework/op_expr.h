@@ -48,7 +48,7 @@ class OpExpr {
   virtual int output_size() const = 0;
 
   virtual Maybe<bool> IsGradDisabled() const = 0;
-  virtual bool IsSupportStride() const = 0;
+  virtual Maybe<bool> IsSupportStride() const = 0;
 
   virtual Maybe<OpExprGradClosure> GetOrCreateOpGradClosure() const = 0;
 
@@ -58,8 +58,7 @@ class OpExpr {
 
 class BuiltinOpExpr : public OpExpr {
  public:
-  explicit BuiltinOpExpr(const std::string& op_name, const bool is_support_stride,
-                         const std::vector<std::string>& indexed_ibns,
+  explicit BuiltinOpExpr(const std::string& op_name, const std::vector<std::string>& indexed_ibns,
                          const std::vector<std::string>& indexed_obns);
 
   virtual ~BuiltinOpExpr() = default;
@@ -68,7 +67,6 @@ class BuiltinOpExpr : public OpExpr {
 
   int input_size() const override { return input_arg_tuple_->size(); }
   int output_size() const override { return output_arg_tuple_->size(); }
-  bool IsSupportStride() const { return is_support_stride_; }
 
   const std::shared_ptr<const ArgTuple>& input_arg_tuple() const { return input_arg_tuple_; }
   const std::shared_ptr<const ArgTuple>& output_arg_tuple() const { return output_arg_tuple_; }
@@ -86,7 +84,6 @@ class BuiltinOpExpr : public OpExpr {
 
  protected:
   std::string op_name_;
-  bool is_support_stride_;
   std::shared_ptr<const ArgTuple> input_arg_tuple_;
   std::shared_ptr<const ArgTuple> output_arg_tuple_;
 };
@@ -96,12 +93,11 @@ class TensorMeta;
 template<typename ProtoType>
 class BuiltinOpExprImpl : public BuiltinOpExpr {
  public:
-  static Maybe<BuiltinOpExprImpl<ProtoType>> New(const std::string& op_name,
-                                                 const bool is_support_stride, ProtoType&& op_proto,
+  static Maybe<BuiltinOpExprImpl<ProtoType>> New(const std::string& op_name, ProtoType&& op_proto,
                                                  const std::vector<std::string>& indexed_ibns,
                                                  const std::vector<std::string>& indexed_obns) {
-    return std::shared_ptr<BuiltinOpExprImpl<ProtoType>>(new BuiltinOpExprImpl<ProtoType>(
-        op_name, is_support_stride, std::move(op_proto), indexed_ibns, indexed_obns));
+    return std::shared_ptr<BuiltinOpExprImpl<ProtoType>>(
+        new BuiltinOpExprImpl<ProtoType>(op_name, std::move(op_proto), indexed_ibns, indexed_obns));
   }
 
   virtual ~BuiltinOpExprImpl() = default;
@@ -113,16 +109,17 @@ class BuiltinOpExprImpl : public BuiltinOpExpr {
 
   Maybe<bool> IsGradDisabled() const override;
 
+  Maybe<bool> IsSupportStride() const override;
+
   Maybe<OpExprGradClosure> GetOrCreateOpGradClosure() const override;
 
   Maybe<void> BuildOpConf(OperatorConf* op_conf, const AttrMap& attrs) const override;
 
  protected:
-  explicit BuiltinOpExprImpl(const std::string& op_name, const bool is_support_stride,
-                             ProtoType&& op_proto, const std::vector<std::string>& indexed_ibns,
+  explicit BuiltinOpExprImpl(const std::string& op_name, ProtoType&& op_proto,
+                             const std::vector<std::string>& indexed_ibns,
                              const std::vector<std::string>& indexed_obns)
-      : BuiltinOpExpr(op_name, is_support_stride, indexed_ibns, indexed_obns),
-        op_proto_(std::move(op_proto)) {}
+      : BuiltinOpExpr(op_name, indexed_ibns, indexed_obns), op_proto_(std::move(op_proto)) {}
 
   ProtoType op_proto_;
   mutable std::shared_ptr<OpExprGradFunctionIf> op_grad_func_;
@@ -136,8 +133,8 @@ class UserOpExpr final : public BuiltinOpExprImpl<UserOpConf> {
   UserOpExpr() = delete;
   virtual ~UserOpExpr() = default;
 
-  static Maybe<UserOpExpr> New(const std::string& op_name, const bool is_support_stride,
-                               UserOpConf&& op_proto, const std::vector<std::string>& indexed_ibns,
+  static Maybe<UserOpExpr> New(const std::string& op_name, UserOpConf&& op_proto,
+                               const std::vector<std::string>& indexed_ibns,
                                const std::vector<std::string>& indexed_obns);
 
   const AttrMap& base_attrs() const { return base_attrs_; }
@@ -167,8 +164,8 @@ class UserOpExpr final : public BuiltinOpExprImpl<UserOpConf> {
   }
 
  private:
-  UserOpExpr(const std::string& op_name, const bool is_support_stride, UserOpConf&& proto,
-             const AttrMap& base_attrs, const std::vector<std::string>& indexed_ibns,
+  UserOpExpr(const std::string& op_name, UserOpConf&& proto, const AttrMap& base_attrs,
+             const std::vector<std::string>& indexed_ibns,
              const std::vector<std::string>& indexed_obns);
   Maybe<void> Init(const std::shared_ptr<const UserOpExpr>& self);
   AttrMap base_attrs_;
@@ -191,7 +188,7 @@ class ConsistentToConsistentOpExpr : public OpExpr {
   int output_size() const override { return 1; }
 
   Maybe<bool> IsGradDisabled() const override { return false; }
-  bool IsSupportStride() const override { return false; }
+  Maybe<bool> IsSupportStride() const override { return false; }
   Maybe<OpExprGradClosure> GetOrCreateOpGradClosure() const override;
 
  protected:
@@ -210,7 +207,7 @@ class CastConsistentOpExpr : public OpExpr {
   int output_size() const override { return 1; }
 
   Maybe<bool> IsGradDisabled() const override { return false; }
-  bool IsSupportStride() const override { return false; }
+  Maybe<bool> IsSupportStride() const override { return false; }
 
  protected:
   CastConsistentOpExpr(const std::string& op_name);
@@ -284,7 +281,7 @@ class SelectTopNOpExpr final : public OpExpr {
 
   Maybe<bool> IsGradDisabled() const override { return false; }
 
-  bool IsSupportStride() const override { return false; }
+  Maybe<bool> IsSupportStride() const override { return false; }
 
   Maybe<OpExprGradClosure> GetOrCreateOpGradClosure() const override;
 
@@ -323,7 +320,7 @@ class FunctionOpExpr final : public OpExpr {
   void reset_state() const;
 
   Maybe<bool> IsGradDisabled() const override { return false; }
-  bool IsSupportStride() const override { return false; }
+  Maybe<bool> IsSupportStride() const override { return false; }
   Maybe<OpExprGradClosure> GetOrCreateOpGradClosure() const override;
 
  private:
