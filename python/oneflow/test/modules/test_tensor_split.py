@@ -36,7 +36,7 @@ class TestTensorSplitVec(flow.unittest.TestCase):
         dim = random(-3, 3).to(int)
         z = torch.tensor_split(x, (1, 2), dim)
         return z[0]
-    
+
     @autotest(n=5)
     def test_flow_tensor_split_vec_with_stride(test_case):
         device = random_device()

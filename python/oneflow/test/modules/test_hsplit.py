@@ -35,7 +35,7 @@ class TestHsplitVec(flow.unittest.TestCase):
         ).to(device)
         z = torch.hsplit(x, (1, 2))
         return z[0]
-    
+
     @autotest(n=5)
     def test_flow_hsplit_vec_with_stride(test_case):
         device = random_device()
@@ -51,6 +51,7 @@ class TestHsplitVec(flow.unittest.TestCase):
         y = x.permute(perm)
         z = torch.hsplit(y, (1, 2))
         return z[0]
+
 
 @flow.unittest.skip_unless_1n1d()
 class TestHsplitInt(flow.unittest.TestCase):

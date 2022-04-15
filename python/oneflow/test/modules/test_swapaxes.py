@@ -37,7 +37,7 @@ class TestSwapaxes(flow.unittest.TestCase):
         x = random_tensor(ndim=3).to(device)
         y = torch.swapaxes(x, random(0, 2).to(int), random(0, 2).to(int))
         return y
-    
+
     @autotest(n=10)
     def test_swapaxes_flow_with_stride(test_case):
         device = random_device()

@@ -24,7 +24,6 @@ import oneflow.unittest
 from oneflow.test_utils.automated_test_util import *
 
 
-
 @flow.unittest.skip_unless_1n1d()
 class TestUnfoldTensor(flow.unittest.TestCase):
     @autotest(n=10, auto_backward=True, check_graph=True)
@@ -36,7 +35,7 @@ class TestUnfoldTensor(flow.unittest.TestCase):
         step = random(1, 3).to(int).value()
         y = x.unfold(dimension, size, step)
         return y
-    
+
     @autotest(n=5)
     def test_unfold_tensor_with_stride(test_case):
         device = random_device()

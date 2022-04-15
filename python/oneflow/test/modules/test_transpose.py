@@ -103,7 +103,7 @@ class TestTranspose(flow.unittest.TestCase):
         x = random_tensor(ndim=4).to(device)
         y = torch.transpose(x, dim0=random(1, 3).to(int), dim1=random(1, 3).to(int))
         return y
-    
+
     @autotest(n=10, check_graph=True)
     def test_transpose_with_stride(test_case):
         device = random_device()

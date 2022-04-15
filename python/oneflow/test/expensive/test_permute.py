@@ -126,7 +126,7 @@ class TestPermute(flow.unittest.TestCase):
         ).to(device)
         y = x.permute(permute_list)
         return y
-    
+
     @autotest(n=10, check_graph=True)
     def test_permute4d_tensor_with_stride(test_case):
         device = random_device()

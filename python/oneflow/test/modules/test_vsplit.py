@@ -35,7 +35,7 @@ class TestVsplitVec(flow.unittest.TestCase):
         ).to(device)
         z = torch.vsplit(x, (1, 2))
         return z[0]
-    
+
     @autotest(n=10)
     def test_flow_vsplit_vec_with_stride(test_case):
         device = random_device()

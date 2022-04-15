@@ -35,7 +35,7 @@ class TestSplit(flow.unittest.TestCase):
         x = random_tensor(ndim=3, dim0=k0, dim1=k1, dim2=k2).to(device)
         res = torch.split(x, 2, dim=rand_dim)
         return torch.cat(res, rand_dim)
-    
+
     @autotest(n=10, check_graph=True)
     def test_flow_split_with_stride(test_case):
         k0 = random(2, 6)

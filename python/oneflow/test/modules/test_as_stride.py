@@ -43,7 +43,7 @@ class TestAsStrided(flow.unittest.TestCase):
         storage_offset = random(0, 3).to(int)
         z = torch.as_strided(x, (2, 2, 3), (1, 1, 2), storage_offset)
         return z
-    
+
     # TODO:(zhaoluyang) some bug in as_strided backward to be fixed
     @autotest(n=10, auto_backward=False, check_graph=False)
     def test_flow_as_strided_with_stride(test_case):

@@ -35,7 +35,7 @@ class TestMovedim(flow.unittest.TestCase):
         ).to(device)
         z = torch.movedim(x, (0, 1), (2, 3))
         return z
-    
+
     @autotest(n=10)
     def test_flow_movedim_with_stride(test_case):
         device = random_device()

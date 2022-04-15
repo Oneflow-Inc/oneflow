@@ -44,7 +44,7 @@ class TestNarrow(flow.unittest.TestCase):
         device = random_device()
         x = random_tensor(ndim=3, dim0=k0, dim1=k1, dim3=k2).to(device)
         return torch.narrow(x, dim=rand_dim, start=0, length=2)
-    
+
     @autotest(n=10, check_graph=True)
     def test_flow_narrow_with_stride(test_case):
         k0 = random(2, 6)
