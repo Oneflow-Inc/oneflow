@@ -15,6 +15,7 @@ limitations under the License.
 */
 
 #include "oneflow/core/common/data_type.pb.h"
+#include "oneflow/core/common/error.h"
 #include "oneflow/core/common/maybe.h"
 #include "oneflow/core/common/optional.h"
 #include "oneflow/core/common/scalar.h"
@@ -1365,42 +1366,49 @@ class NormalFunctor {
  public:
   NormalFunctor() { op_ = CHECK_JUST(one::OpBuilder("normal").Output("out").Build()); }
   Maybe<Tensor> operator()(const float& mean, const float& std, const Shape& shape,
-                           const Optional<one::Tensor>& out, const Optional<Symbol<DType>>& dtype,
-                           const Optional<Symbol<Device>>& device,
-                           const Optional<one::Generator>& generator,
+                           const Optional<one::Tensor>& out,
+                           const Optional<Symbol<DType>>& optional_dtype,
+                           const Optional<Symbol<Device>>& optional_device,
+                           const Optional<one::Generator>& optional_generator,
                            const bool& requires_grad) const {
-    DataType dtype_val = DataType::kFloat;
-    if (dtype.has_value()) {
-      dtype_val = JUST(dtype)->data_type();
-      if (dtype_val != DataType::kFloat && dtype_val != DataType::kDouble) {
+    DataType dtype = DataType::kFloat;
+    if (optional_dtype.has_value()) {
+      dtype = JUST(optional_dtype)->data_type();
+      if (dtype != DataType::kFloat && dtype != DataType::kDouble) {
         OF_UNIMPLEMENTED() << "Only support float and double in normal().";
       }
     }
 
-    const auto gen = generator.value_or(JUST(one::DefaultAutoGenerator()));
+    const auto gen = optional_generator.value_or(JUST(one::DefaultAutoGenerator()));
     MutableAttrMap attrs;
     JUST(attrs.SetAttr<double>("mean", mean));
     JUST(attrs.SetAttr<double>("std", std));
     JUST(attrs.SetAttr<Shape>("shape", shape));
-    JUST(attrs.SetAttr<DataType>("dtype", dtype_val));
+    JUST(attrs.SetAttr<DataType>("dtype", dtype));
     JUST(attrs.SetAttr<int64_t>("seed", gen->current_seed()));
 
     const auto& distribution_state = std::make_shared<DistributionKernelState>(gen);
-
     OpExprInterpContext ctx(attrs, distribution_state);
 
     if (out.has_value()) {
       std::shared_ptr<one::Tensor> out_tensor = JUST(out);
       Symbol<Device> out_tensor_device = JUST(out_tensor->device());
-      CHECK_OR_RETURN(out_tensor_device == JUST(device))
-          << "RuntimeError: device type cuda does not match device type of out parameter (cpu)";
+      Symbol<Device> device;
+      if (optional_device.has_value()) {
+        device = JUST(optional_device);
+      } else {
+        device = JUST(out_tensor->device());
+      }
+      CHECK_OR_RETURN(out_tensor_device == device)
+          << Error::RuntimeError() << "device type " << device->ToString()
+          << " does not match device type of out parameter (" << out_tensor_device->ToString();
       std::shared_ptr<TensorTuple> outputs = std::make_shared<TensorTuple>(1);
       (*outputs)[0] = out_tensor;
       JUST(OpInterpUtil::Dispatch(*op_, {}, outputs.get(), ctx));
       return (*outputs)[0];
     }
 
-    ctx.device = device;
+    ctx.device = optional_device;
     auto result = JUST(OpInterpUtil::Dispatch<Tensor>(*op_, {}, ctx));
     JUST(result->set_requires_grad(requires_grad));
     return result;
@@ -1417,7 +1425,6 @@ class ConsistentNormalFunctor {
                            const Optional<one::Tensor>& out, const Symbol<ParallelDesc>& placement,
                            const std::vector<Symbol<SbpParallel>>& sbp_tuple,
                            const Optional<Symbol<DType>>& dtype,
-                           const Optional<Symbol<Device>>& device,
                            const Optional<one::Generator>& generator,
                            const bool& requires_grad) const {
     JUST(CheckDeviceIdsIsValid(placement));
@@ -1445,9 +1452,6 @@ class ConsistentNormalFunctor {
 
     if (out.has_value()) {
       std::shared_ptr<one::Tensor> out_tensor = JUST(out);
-      Symbol<Device> out_tensor_device = JUST(out_tensor->device());
-      CHECK_OR_RETURN(out_tensor_device == JUST(device))
-          << "Please check whether the out tensor device matches the parameter device.";
       std::shared_ptr<TensorTuple> outputs = std::make_shared<TensorTuple>(1);
       (*outputs)[0] = out_tensor;
       JUST(OpInterpUtil::Dispatch(
