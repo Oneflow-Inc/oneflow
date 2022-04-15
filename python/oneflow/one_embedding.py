@@ -466,7 +466,7 @@ def make_cached_host_mem_store_options(
     return options
 
 
-def make_device_host_multi_cached_ssd_store_options(
+def make_device_host_multi_level_cached_ssd_store_options(
     device_cache_budget_mb,
     host_cache_budget_mb,
     persistent_path,
@@ -474,7 +474,7 @@ def make_device_host_multi_cached_ssd_store_options(
     size_factor=1,
     physical_block_size=512,
 ):
-    """make SSD use GPU and CPU as multi-cache store_options param of MultiTableEmbedding
+    """make SSD use GPU and CPU as multi-level cache store_options param of MultiTableEmbedding
 
     Args:
         device_cache_budget_mb (int): the MB budget of per GPU as cache.
@@ -485,14 +485,14 @@ def make_device_host_multi_cached_ssd_store_options(
         physical_block_size (int, optional): physical_block_size should be sector size. Defaults to 512.
 
     Returns:
-        dict: SSD use GPU and CPU as multi-cache store_options param of MultiTableEmbedding
+        dict: SSD use GPU and CPU as multi-level cache store_options param of MultiTableEmbedding
 
     For example:
 
     .. code-block:: python
 
         >>> import oneflow as flow    
-        >>> store_options = flow.one_embedding.make_device_host_multi_cached_ssd_store_options(
+        >>> store_options = flow.one_embedding.make_device_host_multi_level_cached_ssd_store_options(
         >>>     device_cache_budget_mb=8192, host_cache_budget_mb=81920, persistent_path="/your_path_to_ssd", capacity=vocab_size,
         >>> )
         >>> # pass the store_options to the "store_options" param of flow.one_embedding.MultiTableEmbedding
