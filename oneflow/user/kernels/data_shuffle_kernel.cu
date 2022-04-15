@@ -592,6 +592,7 @@ template<typename T, typename ComputeType, int pack_size, int cols_per_thread,
 inline cudaError_t LaunchQuantizeWarpImpl(cudaStream_t stream, const T* src, int8_t* dst,
                                           T* quantize_factor, const int64_t rows,
                                           const int64_t cols) {
+  CHECK_LE(cols, 1024) << "Quantize Warp Implement kernel only accept cols <= 1024. ";
   constexpr int block_size = 128;
   constexpr int waves = 32;
   static_assert(block_size % thread_group_width == 0, "");
