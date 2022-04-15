@@ -43,7 +43,7 @@ namespace one {
 
 #define ASSERT(x) (x).GetOrThrow()
 #define ASSERT_PTR(x) (x).GetPtrOrThrow()
-#define PY_XINCREF(p) ((Py_XINCREF(p)), p)
+#define PY_XINCREF(p) (({ Py_XINCREF(p); }), (p))
 
 PyTypeObject* PyTensorObject_Type = NULL;
 PyTypeObject* PyParameterObject_Type = NULL;
