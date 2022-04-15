@@ -484,6 +484,7 @@ __device__ float RoundHalfAwayFromZero(const float x) {
 
 // warp reduce version.
 constexpr int32_t kWarpSize = 32;
+constexpr int32_t kMaxColSize = 1024;
 
 template<typename T, int thread_group_width = kWarpSize>
 __inline__ __device__ T WarpMaxAllReduce(T val) {
@@ -592,7 +593,6 @@ template<typename T, typename ComputeType, int pack_size, int cols_per_thread,
 inline cudaError_t LaunchQuantizeWarpImpl(cudaStream_t stream, const T* src, int8_t* dst,
                                           T* quantize_factor, const int64_t rows,
                                           const int64_t cols) {
-  CHECK_LE(cols, 1024) << "Quantize Warp Implement kernel only accept cols <= 1024. ";
   constexpr int block_size = 128;
   constexpr int waves = 32;
   static_assert(block_size % thread_group_width == 0, "");
@@ -872,8 +872,11 @@ class EmbeddingShuffleKernel final : public user_op::OpKernel {
     const int64_t num_ids = inverse_unique_partition_indices->shape().elem_cnt();
     const int64_t parallel_num = ctx->parallel_ctx().parallel_num();
     const int64_t parallel_id = ctx->parallel_ctx().parallel_id();
+    // Only envrionment variable ONEFLOW_ONE_EMBEDDING_ENABLE_QUANTIZED_COMM=1 and embedding_size
+    // less equal than 1024 can use quantize.
     bool enable_quantize_comm =
-        ParseBooleanFromEnv("ONEFLOW_ONE_EMBEDDING_ENABLE_QUANTIZED_COMM", false);
+        ParseBooleanFromEnv("ONEFLOW_ONE_EMBEDDING_ENABLE_QUANTIZED_COMM", false)
+        && (embedding_size < kMaxColSize);
     cudaStream_t cuda_stream = ctx->stream()->As<ep::CudaStream>()->cuda_stream();
     OF_CUDA_CHECK(cudaMemcpyAsync(
         host_num_unique_matrix, reinterpret_cast<const IDX*>(num_unique_matrix->dptr()),
@@ -1013,9 +1016,10 @@ class EmbeddingShuffleKernel final : public user_op::OpKernel {
       .SetInferTmpSizeFn([](user_op::InferContext* ctx) {                                         \
         const user_op::TensorDesc& cur_rank_embeddings =                                          \
             ctx->InputTensorDesc("cur_rank_embeddings", 0);                                       \
-        const user_op::TensorDesc& embeddings = ctx->InputTensorDesc("embeddings", 0);            \
+        const user_op::TensorDesc& embeddings = ctx->InputTensorDesc("", 0);                      \
         bool enable_quantize_comm =                                                               \
-            ParseBooleanFromEnv("ONEFLOW_ONE_EMBEDDING_ENABLE_QUANTIZED_COMM", false);            \
+            ParseBooleanFromEnv("ONEFLOW_ONE_EMBEDDING_ENABLE_QUANTIZED_COMM", false)             \
+            && (cur_rank_embeddings.shape().At(1) < kMaxColSize);                                 \
         size_t tmp_size = 0;                                                                      \
         if (!enable_quantize_comm) {                                                              \
           size_t reverse_cur_rank_embeddings_size = GetCudaAlignedSize(                           \
@@ -1123,8 +1127,11 @@ class EmbeddingGradientShuffleKernel final : public user_op::OpKernel {
     user_op::Tensor* tmp_buffer = ctx->Tensor4ArgNameAndIndex("tmp_buffer", 0);
     ncclComm_t comm = kernel_state->comm();
     using ComputeType = typename DefaultComputeType<T>::type;
+    // Only envrionment variable ONEFLOW_ONE_EMBEDDING_ENABLE_QUANTIZED_COMM=1 and embedding_size
+    // less equal than 1024 can use quantize.
     bool enable_quantize_comm =
-        ParseBooleanFromEnv("ONEFLOW_ONE_EMBEDDING_ENABLE_QUANTIZED_COMM", false);
+        ParseBooleanFromEnv("ONEFLOW_ONE_EMBEDDING_ENABLE_QUANTIZED_COMM", false)
+        && (embedding_size < kMaxColSize);
     cudaStream_t cuda_stream = ctx->stream()->As<ep::CudaStream>()->cuda_stream();
     OF_CUDA_CHECK(cudaMemcpyAsync(host_num_unique_matrix, num_unique_matrix->dptr(),
                                   parallel_num * parallel_num * sizeof(IDX), cudaMemcpyDefault,
@@ -1277,7 +1284,8 @@ class EmbeddingGradientShuffleKernel final : public user_op::OpKernel {
         size_t embedding_size = cur_rank_unique_embedding_grad.shape().At(1);                     \
         size_t cur_rank_embedding_grad_elem_cnt = cur_rank_embedding_grad_num * embedding_size;   \
         bool enable_quantize_comm =                                                               \
-            ParseBooleanFromEnv("ONEFLOW_ONE_EMBEDDING_ENABLE_QUANTIZED_COMM", false);            \
+            ParseBooleanFromEnv("ONEFLOW_ONE_EMBEDDING_ENABLE_QUANTIZED_COMM", false)             \
+            && (embedding_size < kMaxColSize);                                                    \
         size_t tmp_size = 0;                                                                      \
         if (!enable_quantize_comm) {                                                              \
           size_t cur_rank_embedding_grad_size = GetCudaAlignedSize(                               \
