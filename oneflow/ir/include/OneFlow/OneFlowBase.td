@@ -107,7 +107,6 @@ class OneFlow_UserBaseOp<string mnemonic, list<Trait> traits = [OneFlow_Alternat
       // NOTE: vector types must have positive constant sizes, so we can't use I32ElementsAttr
       I32ArrayAttr:$input_sizes,
       I32ArrayAttr:$output_sizes
-      // BoolAttr:$is_support_stride
     );
 }
 

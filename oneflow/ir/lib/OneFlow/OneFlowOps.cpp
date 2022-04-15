@@ -150,7 +150,6 @@ struct ConcreteUserOps : public OpRewritePattern<UserOp> {
             OpTrait::AttrSizedResultSegments<void>::getResultSegmentSizeAttr(),
             rewriter.getI32VectorAttr(output_sizes)));
       }
-      // attributes.push_back("is_support_stride", rewriter.getBoolAttr(op.IsSupportStride()));
       OperationState state(op->getLoc(), OneFlowDialect::getDialectNamespace().str() + "."
                                              + op.op_type_name().str());
       state.addAttributes(attributes);
