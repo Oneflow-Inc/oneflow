@@ -35,7 +35,9 @@ Maybe<void> CheckDataTypeLike(const user_op::TensorDesc* tensor_desc,
 }
 
 Maybe<void> CheckScalarShape(const user_op::TensorDesc* tensor_desc) {
-  CHECK_EQ_OR_RETURN(tensor_desc->shape(), Shape({1}));
+  CHECK_OR_RETURN(tensor_desc->shape().NumAxes() == 0
+                  || (tensor_desc->shape().NumAxes() == 1 && tensor_desc->shape().At(0) == 1))
+      << tensor_desc->shape().DebugStr();
   return Maybe<void>::Ok();
 }
 Maybe<void> CheckScalarDataType(const user_op::TensorDesc* tensor_desc, const DataType data_type) {
