@@ -1371,11 +1371,37 @@ class NormalFunctor {
                            const Optional<Symbol<Device>>& optional_device,
                            const Optional<one::Generator>& optional_generator,
                            const bool& requires_grad) const {
-    DataType dtype = DataType::kFloat;
-    if (optional_dtype.has_value()) {
-      dtype = JUST(optional_dtype)->data_type();
-      if (dtype != DataType::kFloat && dtype != DataType::kDouble) {
-        OF_UNIMPLEMENTED() << "Only support float and double in normal().";
+
+    Symbol<DType> dtype = DType::Float();
+    Symbol<Device> device = JUST(optional_device);
+    if (out.has_value()) {
+      auto out_tensor = JUST(out);
+      Symbol<DType> output_tensor_dtype = out_tensor->dtype();
+      if (optional_dtype.has_value()) {
+        dtype = JUST(optional_dtype);
+        if (dtype->data_type() != DataType::kFloat && dtype->data_type() != DataType::kDouble) {
+          OF_UNIMPLEMENTED() << "Only support float and double in normal().";
+        }
+        CHECK_OR_RETURN(output_tensor_dtype == dtype)
+            << Error::RuntimeError() << "data type " << dtype->name()
+            << " does not match data type of out parameter (" << output_tensor_dtype->name();
+      }
+      dtype = output_tensor_dtype;
+   
+      Symbol<Device> out_tensor_device = JUST(out_tensor->device());
+      if(optional_device.has_value()) {
+        CHECK_OR_RETURN(out_tensor_device == JUST(optional_device))
+          << Error::RuntimeError() << "device type " << device->ToString()
+          << " does not match device type of out parameter (" << out_tensor_device->ToString();
+      }
+      device = out_tensor_device;
+    
+    } else {
+      if (optional_dtype.has_value()) {
+        dtype = JUST(optional_dtype);
+        if (dtype->data_type() != DataType::kFloat && dtype->data_type() != DataType::kDouble) {
+          OF_UNIMPLEMENTED() << "Only support float and double in normal().";
+        }
       }
     }
 
@@ -1384,31 +1410,19 @@ class NormalFunctor {
     JUST(attrs.SetAttr<double>("mean", mean));
     JUST(attrs.SetAttr<double>("std", std));
     JUST(attrs.SetAttr<Shape>("shape", shape));
-    JUST(attrs.SetAttr<DataType>("dtype", dtype));
+    JUST(attrs.SetAttr<DataType>("dtype", dtype->data_type()));
     JUST(attrs.SetAttr<int64_t>("seed", gen->current_seed()));
 
     const auto& distribution_state = std::make_shared<DistributionKernelState>(gen);
     OpExprInterpContext ctx(attrs, distribution_state);
-
+    ctx.device = device;
     if (out.has_value()) {
-      std::shared_ptr<one::Tensor> out_tensor = JUST(out);
-      Symbol<Device> out_tensor_device = JUST(out_tensor->device());
-      Symbol<Device> device;
-      if (optional_device.has_value()) {
-        device = JUST(optional_device);
-      } else {
-        device = JUST(out_tensor->device());
-      }
-      CHECK_OR_RETURN(out_tensor_device == device)
-          << Error::RuntimeError() << "device type " << device->ToString()
-          << " does not match device type of out parameter (" << out_tensor_device->ToString();
       std::shared_ptr<TensorTuple> outputs = std::make_shared<TensorTuple>(1);
-      (*outputs)[0] = out_tensor;
+      (*outputs)[0] = JUST(out);
       JUST(OpInterpUtil::Dispatch(*op_, {}, outputs.get(), ctx));
       return (*outputs)[0];
     }
 
-    ctx.device = optional_device;
     auto result = JUST(OpInterpUtil::Dispatch<Tensor>(*op_, {}, ctx));
     JUST(result->set_requires_grad(requires_grad));
     return result;
