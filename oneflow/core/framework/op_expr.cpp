@@ -76,10 +76,14 @@ const std::string& CastFromConsistentOpExpr::op_type_name() const {
   return kOpTypeName;
 }
 
-#define DEFINE_OPEXPR_IS_GRAD_DISABLED_DEFAULT_VALUE(_T, _bool) \
-  template<>                                                    \
-  Maybe<bool> BuiltinOpExprImpl<_T>::IsGradDisabled() const {   \
-    return _bool;                                               \
+#define DEFINE_OPEXPR_IS_GRAD_DISABLED_DEFAULT_VALUE(_T, _bool)     \
+  template<>                                                        \
+  Maybe<bool> BuiltinOpExprImpl<_T>::IsGradDisabled() const {       \
+    return _bool;                                                   \
+  }                                                                 \
+  template<>                                                        \
+  Maybe<bool> BuiltinOpExprImpl<_T>::SupportNonContiguous() const { \
+    return false;                                                   \
   }
 
 DEFINE_OPEXPR_IS_GRAD_DISABLED_DEFAULT_VALUE(FeedInputOpConf, true);
@@ -95,26 +99,6 @@ DEFINE_OPEXPR_IS_GRAD_DISABLED_DEFAULT_VALUE(DistributeConcatOpConf, false);
 DEFINE_OPEXPR_IS_GRAD_DISABLED_DEFAULT_VALUE(DistributeAddOpConf, false);
 
 #undef DEFINE_OPEXPR_IS_GRAD_DISABLED_DEFAULT_VALUE
-
-#define DEFINE_OPEXPR_IS_SUPPORT_STRIDE_DEFAULT_VALUE(_T, _bool) \
-  template<>                                                     \
-  Maybe<bool> BuiltinOpExprImpl<_T>::IsSupportStride() const {   \
-    return _bool;                                                \
-  }
-
-DEFINE_OPEXPR_IS_SUPPORT_STRIDE_DEFAULT_VALUE(FeedInputOpConf, false);
-DEFINE_OPEXPR_IS_SUPPORT_STRIDE_DEFAULT_VALUE(FeedVariableOpConf, false);
-DEFINE_OPEXPR_IS_SUPPORT_STRIDE_DEFAULT_VALUE(FetchOutputOpConf, false);
-DEFINE_OPEXPR_IS_SUPPORT_STRIDE_DEFAULT_VALUE(VariableOpConf, false);
-DEFINE_OPEXPR_IS_SUPPORT_STRIDE_DEFAULT_VALUE(ImageDecoderRandomCropResizeOpConf, false);
-DEFINE_OPEXPR_IS_SUPPORT_STRIDE_DEFAULT_VALUE(CastToMirroredOpConf, false);
-DEFINE_OPEXPR_IS_SUPPORT_STRIDE_DEFAULT_VALUE(CastFromMirroredOpConf, false);
-DEFINE_OPEXPR_IS_SUPPORT_STRIDE_DEFAULT_VALUE(DistributeSplitOpConf, false);
-DEFINE_OPEXPR_IS_SUPPORT_STRIDE_DEFAULT_VALUE(DistributeCloneOpConf, false);
-DEFINE_OPEXPR_IS_SUPPORT_STRIDE_DEFAULT_VALUE(DistributeConcatOpConf, false);
-DEFINE_OPEXPR_IS_SUPPORT_STRIDE_DEFAULT_VALUE(DistributeAddOpConf, false);
-
-#undef DEFINE_OPEXPR_IS_SUPPORT_STRIDE_DEFAULT_VALUE
 
 template<>
 Maybe<void> BuiltinOpExprImpl<UserOpConf>::BuildOpConf(OperatorConf* op_conf,
@@ -154,7 +138,7 @@ Maybe<bool> BuiltinOpExprImpl<UserOpConf>::IsGradDisabled() const {
 }
 
 template<>
-Maybe<bool> BuiltinOpExprImpl<UserOpConf>::IsSupportStride() const {
+Maybe<bool> BuiltinOpExprImpl<UserOpConf>::SupportNonContiguous() const {
   const auto* registry =
       user_op::UserOpRegistryMgr::Get().GetOpRegistryResult(proto().op_type_name());
   CHECK_NOTNULL_OR_RETURN(registry);

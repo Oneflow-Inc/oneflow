@@ -92,13 +92,17 @@ Maybe<void> AutogradInterpreter::Apply(const OpExpr& op_expr, const TensorTuple&
                     [](const std::shared_ptr<Tensor>& tensor) { return tensor->requires_grad(); });
   }
 
-  const TensorTuple* inputs_ptr = &inputs;
-  TensorTuple tmp_inputs(inputs.size());
-  // NOTE: if this op not support stride, then need to tensor->contiguous()
-  if (!JUST(op_expr.IsSupportStride())) {
-    for (size_t i = 0; i < inputs.size(); i++) { tmp_inputs[i] = inputs[i]->contiguous(); }
-    inputs_ptr = &tmp_inputs;
+#define HANDLE_NON_CONTIGUOUS_INPUT(tensor_tuple_ptr)                                       \
+  TensorTuple tmp_inputs;                                                                   \
+  if (!JUST(op_expr.SupportNonContiguous())) {                                              \
+    tmp_inputs.resize(inputs.size());                                                       \
+    for (size_t i = 0; i < inputs.size(); i++) { tmp_inputs[i] = inputs[i]->contiguous(); } \
+    tensor_tuple_ptr = &tmp_inputs;                                                         \
   }
+
+  const TensorTuple* inputs_ptr = &inputs;
+  // NOTE: if this op not support stride, then need to tensor->contiguous()
+  HANDLE_NON_CONTIGUOUS_INPUT(inputs_ptr);
 
   {
     autograd::AutoGradMode mode(false);

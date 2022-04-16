@@ -48,7 +48,7 @@ class OpExpr {
   virtual int output_size() const = 0;
 
   virtual Maybe<bool> IsGradDisabled() const = 0;
-  virtual Maybe<bool> IsSupportStride() const = 0;
+  virtual Maybe<bool> SupportNonContiguous() const = 0;
 
   virtual Maybe<OpExprGradClosure> GetOrCreateOpGradClosure() const = 0;
 
@@ -109,7 +109,7 @@ class BuiltinOpExprImpl : public BuiltinOpExpr {
 
   Maybe<bool> IsGradDisabled() const override;
 
-  Maybe<bool> IsSupportStride() const override;
+  Maybe<bool> SupportNonContiguous() const override;
 
   Maybe<OpExprGradClosure> GetOrCreateOpGradClosure() const override;
 
@@ -188,7 +188,7 @@ class ConsistentToConsistentOpExpr : public OpExpr {
   int output_size() const override { return 1; }
 
   Maybe<bool> IsGradDisabled() const override { return false; }
-  Maybe<bool> IsSupportStride() const override { return false; }
+  Maybe<bool> SupportNonContiguous() const override { return false; }
   Maybe<OpExprGradClosure> GetOrCreateOpGradClosure() const override;
 
  protected:
@@ -207,7 +207,7 @@ class CastConsistentOpExpr : public OpExpr {
   int output_size() const override { return 1; }
 
   Maybe<bool> IsGradDisabled() const override { return false; }
-  Maybe<bool> IsSupportStride() const override { return false; }
+  Maybe<bool> SupportNonContiguous() const override { return false; }
 
  protected:
   CastConsistentOpExpr(const std::string& op_name);
@@ -281,7 +281,7 @@ class SelectTopNOpExpr final : public OpExpr {
 
   Maybe<bool> IsGradDisabled() const override { return false; }
 
-  Maybe<bool> IsSupportStride() const override { return false; }
+  Maybe<bool> SupportNonContiguous() const override { return false; }
 
   Maybe<OpExprGradClosure> GetOrCreateOpGradClosure() const override;
 
@@ -320,7 +320,7 @@ class FunctionOpExpr final : public OpExpr {
   void reset_state() const;
 
   Maybe<bool> IsGradDisabled() const override { return false; }
-  Maybe<bool> IsSupportStride() const override { return false; }
+  Maybe<bool> SupportNonContiguous() const override { return false; }
   Maybe<OpExprGradClosure> GetOrCreateOpGradClosure() const override;
 
  private:
