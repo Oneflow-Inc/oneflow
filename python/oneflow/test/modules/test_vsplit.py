@@ -17,7 +17,6 @@ import unittest
 from random import shuffle
 
 from oneflow.test_utils.automated_test_util import *
-from oneflow.test_utils.test_util import test_has_same_tensor_storage
 import oneflow as flow
 import oneflow.unittest
 
@@ -51,7 +50,6 @@ class TestVsplitVec(flow.unittest.TestCase):
         shuffle(perm)
         y = x.permute(perm)
         z = torch.vsplit(y, (1, 2))
-        test_has_same_tensor_storage(test_case, y, z)
         return z[0]
 
 

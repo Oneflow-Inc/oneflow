@@ -22,7 +22,7 @@ import numpy as np
 from random import shuffle
 
 from oneflow.test_utils.automated_test_util import *
-from oneflow.test_utils.test_util import GenArgList, test_has_same_tensor_storage
+from oneflow.test_utils.test_util import GenArgList
 
 import oneflow as flow
 import oneflow.unittest
@@ -113,7 +113,6 @@ class TestTranspose(flow.unittest.TestCase):
         shuffle(permute_list)
         x = x.permute(permute_list)
         y = torch.transpose(x, dim0=random(1, 3).to(int), dim1=random(1, 3).to(int))
-        test_has_same_tensor_storage(test_case, x, y)
         return y
 
     @autotest(n=10, auto_backward=False, check_graph=True)

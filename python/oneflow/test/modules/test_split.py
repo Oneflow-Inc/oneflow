@@ -18,7 +18,6 @@ import numpy as np
 from random import shuffle
 
 from oneflow.test_utils.automated_test_util import *
-from oneflow.test_utils.test_util import test_has_same_tensor_storage
 import oneflow as flow
 import oneflow.unittest
 
@@ -48,7 +47,6 @@ class TestSplit(flow.unittest.TestCase):
         shuffle(perm)
         y = x.permute(perm)
         z = torch.split(y, 2, dim=rand_dim)
-        test_has_same_tensor_storage(test_case, y, z)
         return torch.cat(z, rand_dim)
 
     @autotest(check_graph=True)

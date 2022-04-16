@@ -22,7 +22,6 @@ import oneflow as flow
 import oneflow.unittest
 
 from oneflow.test_utils.automated_test_util import *
-from oneflow.test_utils.test_util import test_has_same_tensor_storage
 
 
 @flow.unittest.skip_unless_1n1d()
@@ -48,7 +47,6 @@ class TestUnfoldTensor(flow.unittest.TestCase):
         size = random(1, 3).to(int).value()
         step = random(1, 3).to(int).value()
         z = y.unfold(dimension, size, step)
-        test_has_same_tensor_storage(test_case, y, z)
         return z
 
     @autotest(n=10, auto_backward=True, check_graph=True)
