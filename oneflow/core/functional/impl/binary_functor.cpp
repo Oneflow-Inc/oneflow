@@ -201,7 +201,6 @@ class InplaceAddcmulFunctor {
                            const std::shared_ptr<one::Tensor>& tensor1,
                            const std::shared_ptr<one::Tensor>& tensor2,
                            const Scalar& value) const {
-      JUST(CheckInplaceValid(input));
       return SequenceFunction<Maybe<Tensor>()>(
               [&]() { return functional::Mul(tensor1, tensor2); })
         .then([&](const auto& x) { return functional::ScalarMul(value, x); })
