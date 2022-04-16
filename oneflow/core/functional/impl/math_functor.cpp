@@ -2791,8 +2791,8 @@ ONEFLOW_FUNCTION_LIBRARY(m) {
   m.add_functor<CastFunctor>("Cast");
   m.add_functor<ClampFunctor>("Clamp");
   m.add_functor<ClampInplaceFunctor>("ClampInplace");
-  m.add_functor<ClampFunctor>("Clip");
-  m.add_functor<ClampInplaceFunctor>("ClipInplace");
+  m.add_functor<ClipFunctor>("Clip");
+  m.add_functor<ClipInplaceFunctor>("ClipInplace");
   m.add_functor<SqrtSquareSumFunctor>("SqrtSquareSum");
   m.add_functor<VectorNormFunctor, ScalarVectorNormFunctor>("VectorNorm");
   m.add_functor<ScalarMatrixNormFunctor, MatrixNormFunctor>("MatrixNorm");
