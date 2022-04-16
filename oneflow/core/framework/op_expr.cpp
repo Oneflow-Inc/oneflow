@@ -141,7 +141,7 @@ template<>
 Maybe<bool> BuiltinOpExprImpl<UserOpConf>::SupportNonContiguous() const {
   const auto* registry =
       user_op::UserOpRegistryMgr::Get().GetOpRegistryResult(proto().op_type_name());
-  CHECK_NOTNULL_OR_RETURN(registry);
+  CHECK_NOTNULL_OR_RETURN(registry) << "registry create fail in function user_op::UserOpRegistryMgr::Get().GetOpRegistryResult()!";
   return registry->support_non_contiguous;
 }
 
