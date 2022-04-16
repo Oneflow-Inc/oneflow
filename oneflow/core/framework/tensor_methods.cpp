@@ -71,9 +71,10 @@ Maybe<Tensor> BasicView(const std::shared_ptr<Tensor>& input, const Shape& targe
   CHECK_OR_RETURN(JUST(input->has_eager_blob_object()));
   // new output tensor
   const auto& blob_object = JUST(input->eager_blob_object());
+  bool requires_grad = (autograd::GradMode::is_enabled() && input->requires_grad());
   auto tensor_impl = std::make_shared<EagerMirroredTensorImpl>(
-      tensor_meta, JUST(input->tensor_storage()), input->requires_grad(),
-      /*is_leaf=*/!input->requires_grad());
+      tensor_meta, JUST(input->tensor_storage()), requires_grad,
+      /*is_leaf=*/!requires_grad);
   JUST(tensor_impl->InitEagerBlobObject(JUST(blob_object->compute_local_dep_object())));
   std::shared_ptr<Tensor> output(new MirroredTensor(tensor_impl));
 
@@ -148,7 +149,7 @@ Maybe<Tensor> Slice(const std::shared_ptr<Tensor>& input, const std::vector<int6
   }
 
   auto output = JUST(BasicView(input, Shape(target_dims), Stride(target_strides), storage_offset));
-  if (input->requires_grad()) {
+  if (autograd::GradMode::is_enabled() && input->requires_grad()) {
     auto backward_fn =
         std::make_shared<std::function<Maybe<void>(const TensorTuple&, TensorTuple*, bool)>>(
             [=](const TensorTuple& out_grads, TensorTuple* in_grads,
@@ -345,7 +346,7 @@ Maybe<Tensor> Narrow(const std::shared_ptr<Tensor>& input, const int64_t& dim, c
   }
 
   auto output = JUST(BasicView(input, target_shape, Stride(stride_vec), storage_offset));
-  if (input->requires_grad()) {
+  if (autograd::GradMode::is_enabled() && input->requires_grad()) {
     auto backward_fn =
         std::make_shared<std::function<Maybe<void>(const TensorTuple&, TensorTuple*, bool)>>(
             [=](const TensorTuple& out_grads, TensorTuple* in_grads,
@@ -374,7 +375,7 @@ Maybe<Tensor> AsStrided(const std::shared_ptr<one::Tensor>& input, const std::ve
   StrideVector stride_vec(stride.size());
   for (int i = 0; i < stride.size(); ++i) { stride_vec[i] = stride[i]; }
   auto output = JUST(view::BasicView(input, target_shape, Stride(stride_vec), storage_offset));
-  if (input->requires_grad()) {
+  if (autograd::GradMode::is_enabled() && input->requires_grad()) {
     auto backward_fn =
         std::make_shared<std::function<Maybe<void>(const TensorTuple&, TensorTuple*, bool)>>(
             [=](const TensorTuple& out_grads, TensorTuple* in_grads,
@@ -421,7 +422,7 @@ Maybe<Tensor> Transpose(const std::shared_ptr<Tensor>& input, const std::vector<
   }
 
   auto output = JUST(BasicView(input, Shape(target_dims), Stride(stride_vec), storage_offset));
-  if (input->requires_grad()) {
+  if (autograd::GradMode::is_enabled() && input->requires_grad()) {
     auto backward_fn =
         std::make_shared<std::function<Maybe<void>(const TensorTuple&, TensorTuple*, bool)>>(
             [=](const TensorTuple& out_grads, TensorTuple* in_grads,
@@ -476,7 +477,7 @@ Maybe<Tensor> UnfoldTensor(const std::shared_ptr<Tensor>& input, const int32_t& 
   }
   auto output = JUST(BasicView(input, Shape(out_shape), Stride(out_stride), storage_offset));
 
-  if (input->requires_grad()) {
+  if (autograd::GradMode::is_enabled() && input->requires_grad()) {
     auto backward_fn =
         std::make_shared<std::function<Maybe<void>(const TensorTuple&, TensorTuple*, bool)>>(
             [=](const TensorTuple& out_grads, TensorTuple* in_grads,
@@ -533,7 +534,7 @@ Maybe<Tensor> Diagonal(const std::shared_ptr<Tensor>& input, const int32_t offse
   // generate view tensor
   auto output = JUST(BasicView(input, Shape(out_shape), Stride(out_stride), storage_offset));
   // autograd
-  if (input->requires_grad()) {
+  if (autograd::GradMode::is_enabled() && input->requires_grad()) {
     std::vector<int32_t> input_index{dim1, dim2};
     for (int32_t i = 0; i < ndim; i++) {
       if (i != dim1 && i != dim2) { input_index.push_back(i); }
