@@ -203,7 +203,8 @@ ONEFLOW_API_PYBIND11_MODULE("", m) {
   py::class_<Parameter, std::shared_ptr<Parameter>, Tensor>(nn, "Parameter")
       .def(py::init(&ApiNewParameter), "data"_a, "requires_grad"_a = true);
 
-  // only use for internal autotest
+  // NOTE: only use for internal autotest
+  // and will be removed when Tensor.storage() api exported
   m.def("has_same_tensor_storage",
         [](const std::shared_ptr<one::Tensor>& a,
            const std::shared_ptr<one::Tensor>& b) -> Maybe<bool> {

@@ -115,3 +115,9 @@ def Coordinate2Index(coordinate, tensor_shape):
             size_at_axis *= tensor_shape[j]
         idx += size_at_axis
     return idx
+
+
+def test_has_same_tensor_storage(test_case, x, y):
+    test_case.assertTrue(
+        flow._oneflow_internal.has_same_tensor_storage(x.oneflow, y.oneflow)
+    )

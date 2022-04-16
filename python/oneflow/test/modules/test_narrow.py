@@ -20,7 +20,7 @@ from random import shuffle
 from scipy.fftpack import ss_diff
 
 from oneflow.test_utils.automated_test_util import *
-from oneflow.test_utils.automated_test_util import util
+from oneflow.test_utils.test_util import test_has_same_tensor_storage
 
 import oneflow as flow
 import oneflow.unittest
@@ -60,7 +60,7 @@ class TestNarrow(flow.unittest.TestCase):
         shuffle(perm)
         x = x.permute(perm)
         y = torch.narrow(x, dim=rand_dim, start=0, length=2)
-        util.test_has_same_tensor_storage(test_case, x, y)
+        test_has_same_tensor_storage(test_case, x, y)
         return y
 
     @autotest(auto_backward=False, check_graph=True)

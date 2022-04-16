@@ -24,7 +24,7 @@ import oneflow as flow
 import oneflow.unittest
 
 from oneflow.test_utils.automated_test_util import *
-from oneflow.test_utils.automated_test_util import util
+from oneflow.test_utils.test_util import test_has_same_tensor_storage
 
 
 @flow.unittest.skip_unless_1n1d()
@@ -57,7 +57,7 @@ class TestChunk(flow.unittest.TestCase):
         shuffle(perm)
         y = x.permute(perm)
         z = torch.chunk(y, chunks=random(low=1, high=5).to(int), dim=dim)
-        util.test_has_same_tensor_storage(test_case, y, z)
+        test_has_same_tensor_storage(test_case, y, z)
         return torch.cat(y, dim=dim)
 
     @autotest(n=5, auto_backward=False, check_graph=True)
