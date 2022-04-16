@@ -522,7 +522,6 @@ def normal_op(
             placement=placement,
             sbp=sbp,
             dtype=dtype,
-            device=device,
             generator=generator,
             requires_grad=requires_grad,
         )
