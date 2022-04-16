@@ -1162,13 +1162,14 @@ class NarrowFunctor {
         << " (Dimension out of range, expected to be in range of [" << -ndim << ", " << ndim - 1
         << "], but got:" << dim << ")";
     if (narrow_dim < 0) { narrow_dim += ndim; }
-    CHECK_OR_RETURN((-ndim <= start) && (start <= ndim - 1))
+    const int64_t dim_length = input->shape()->At(narrow_dim);
+    CHECK_OR_RETURN((-dim_length <= start) && (start <= dim_length - 1))
         << " (Dimension out of range, expected to be in range of [" << -ndim << ", " << ndim - 1
         << "], but got:" << start << ")";
     if (narrow_start < 0) { narrow_start += ndim; }
-    CHECK_GE_OR_RETURN(input->shape()->At(narrow_dim), narrow_start + length)
+    CHECK_GE_OR_RETURN(dim_length, narrow_start + length)
         << "start (" << narrow_start << ") + length (" << length << ") exceeds dimension size ("
-        << input->shape()->At(narrow_dim) << ").";
+        << dim_length << ").";
 
     if (view::IsViewApplicable(input)) {
       return JUST(view::Narrow(input, narrow_dim, narrow_start, length));
