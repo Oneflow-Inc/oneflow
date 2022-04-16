@@ -389,6 +389,10 @@ def _swapaxes(self, dim0, dim1):
     return flow._C.swapaxes(self, dim0, dim1)
 
 
+def _swapdims(self, dim0, dim1):
+    return flow._C.swapdims(self, dim0, dim1)
+
+
 def _cast(self, dtype):
     return flow.cast(self, dtype)
 
@@ -683,6 +687,10 @@ def _split(self, split_size_or_sections=None, dim=0):
     return flow._C.split(self, split_size_or_sections, dim)
 
 
+def _unbind(self, dim=0):
+    return flow._C.unbind(self, dim)
+
+
 def _all(self, dim=None, keepdim=False):
     return flow.all(self, dim, keepdim)
 
@@ -962,6 +970,10 @@ def _reshape(self, *shape):
     return flow._C.reshape(self, new_shape)
 
 
+def _reshape_as(self, other):
+    return _reshape(self, other.size())
+
+
 def _view(self, *shape):
     if len(shape) == 1:
         new_shape = shape[0]
@@ -1213,8 +1225,10 @@ def RegisterMethods():
     Tensor.repeat = _repeat
     Tensor.tile = _tile
     Tensor.split = _split
+    Tensor.unbind = _unbind
     Tensor.squeeze = _squeeze
     Tensor.swapaxes = _swapaxes
+    Tensor.swapdims = _swapdims
     Tensor.unfold = _unfold
     Tensor.narrow = _narrow
     Tensor.unsqueeze = _unsqueeze
@@ -1234,6 +1248,7 @@ def RegisterMethods():
     Tensor.le = _le
     Tensor.to_local = _to_local
     Tensor.reshape = _reshape
+    Tensor.reshape_as = _reshape_as
     Tensor.view = _view
     Tensor.sort = _sort
     Tensor.type_as = _type_as

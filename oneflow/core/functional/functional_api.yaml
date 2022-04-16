@@ -330,10 +330,11 @@
   bind_python: True
 
 - name: "swapaxes"
-  signature:
-    [
-      "Tensor (Tensor input, Int32 dim0, Int32 dim1) => Swapaxes",
-    ]
+  signature: "Tensor (Tensor input, Int32 dim0, Int32 dim1) => Swapaxes"
+  bind_python: True
+
+- name: "swapdims"
+  signature: "Tensor (Tensor input, Int32 dim0, Int32 dim1) => Swapdims"
   bind_python: True
 
 - name: "permute"
@@ -539,6 +540,14 @@
 
 - name: "hardsigmoid_grad"
   signature: "Tensor (Tensor dy, Tensor x) => HardSigmoidGrad"
+  bind_python: False
+
+- name: "hardshrink"
+  signature: "Tensor (Tensor x, *, Double lambd=0.5, Bool inplace=False) => HardShrink"
+  bind_python: True
+
+- name: "hardshrink_grad"
+  signature: "Tensor (Tensor y, Tensor dy, Double lambd=0.5) => HardShrinkGrad"
   bind_python: False
 
 - name: "softmax"
@@ -1877,6 +1886,12 @@
   ]
   bind_python: True
 
+- name: "unbind"
+  signature: [
+    "TensorTuple (Tensor x, Int64 dim=0) => Unbind",
+  ]
+  bind_python: True
+
 - name: "chunk"
   signature: [
     "TensorTuple (Tensor x, Int64 chunks, Int64 dim=0) => Chunk",
@@ -1993,6 +2008,11 @@
 
 - name: "meshgrid"
   signature: 'TensorTuple (TensorTuple tensors, String indexing="ij") => Meshgrid'
+  bind_python: True
+
+- name: "index_select"
+  signature:
+    "Tensor (Tensor input, Int64 dim, Tensor index) => IndexSelect"
   bind_python: True
 
 - name: "decode_onerec"
