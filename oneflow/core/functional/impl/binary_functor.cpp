@@ -15,7 +15,6 @@ limitations under the License.
 */
 
 #include "oneflow/core/functional/impl/binary_functor.h"
-#include <memory>
 
 #include "oneflow/core/common/scalar.h"
 #include "oneflow/core/framework/attr_map.h"
@@ -187,9 +186,11 @@ class AddcmulFunctor {
                            const std::shared_ptr<one::Tensor>& tensor1,
                            const std::shared_ptr<one::Tensor>& tensor2,
                            const Scalar& value) const {
-      std::shared_ptr<Tensor> tensor_mul = JUST(Mul(tensor1, tensor2));
-      std::shared_ptr<Tensor> tensor_scalarmul = JUST(ScalarMul(value, tensor_mul));
-      return Add(input, tensor_scalarmul, 1, false);
+      return SequenceFunction<Maybe<Tensor>()>(
+              [&]() { return functional::Mul(tensor1, tensor2); })
+        .then([&](const auto& x) { return functional::ScalarMul(value, x); })
+        .then([&](const auto& x) { return functional::Add(input, x, 1, false); })
+        .call();
   }
 };
 
@@ -201,9 +202,11 @@ class InplaceAddcmulFunctor {
                            const std::shared_ptr<one::Tensor>& tensor2,
                            const Scalar& value) const {
       JUST(CheckInplaceValid(input));
-      std::shared_ptr<Tensor> tensor_mul = JUST(Mul(tensor1, tensor2));
-      std::shared_ptr<Tensor> tensor_scalarmul = JUST(ScalarMul(value, tensor_mul));
-      return Add(input, tensor_scalarmul, 1, true);
+      return SequenceFunction<Maybe<Tensor>()>(
+              [&]() { return functional::Mul(tensor1, tensor2); })
+        .then([&](const auto& x) { return functional::ScalarMul(value, x); })
+        .then([&](const auto& x) { return functional::Add(input, x, 1, true); })
+        .call();
   }
 };
 
@@ -395,13 +398,13 @@ class ReshapeLikeFunctor : public BinaryFunctor {
 
 ONEFLOW_FUNCTION_LIBRARY(m) {
   m.add_functor<impl::AddFunctor>("Add");
+  m.add_functor<impl::AddcmulFunctor>("Addcmul");
+  m.add_functor<impl::InplaceAddcmulFunctor>("InplaceAddcmul");
   m.add_functor<impl::Atan2Functor>("Atan2");
   m.add_functor<impl::SubFunctor>("Sub");
   m.add_functor<impl::MulFunctor>("Mul");
   m.add_functor<impl::InplaceMulFunctor>("InplaceMul");
   m.add_functor<impl::InplaceDivFunctor>("InplaceDiv");
-  m.add_functor<impl::AddcmulFunctor>("Addcmul");
-  m.add_functor<impl::InplaceAddcmulFunctor>("InplaceAddcmul");
   m.add_functor<impl::DivFunctor>("Div");
   m.add_functor<impl::PowFunctor>("Pow");
   m.add_functor<impl::BroadcastPowFunctor>("BroadcastPow");
