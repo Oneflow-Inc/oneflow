@@ -443,16 +443,13 @@ Maybe<Tensor> Transpose(const std::shared_ptr<Tensor>& input, const std::vector<
   return output;
 }
 
-Maybe<Tensor> UnfoldTensor(const std::shared_ptr<Tensor>& input, const MutableAttrMap& attrs) {
+Maybe<Tensor> UnfoldTensor(const std::shared_ptr<Tensor>& input, const int32_t& dimension,
+                           const int32_t& size, const int32_t& step) {
   const auto& shape = input->shape();
   const auto& stride = JUST(input->stride());
   const int64_t ndim = shape->NumAxes();
   int64_t storage_offset = JUST(JUST(input->AsMirroredTensor())->storage_offset());
 
-  AttrMap attr_map(attrs);
-  const int32_t dimension = JUST(attr_map.GetAttr<int32_t>("dimension"));
-  const int32_t size = JUST(attr_map.GetAttr<int32_t>("size"));
-  const int32_t step = JUST(attr_map.GetAttr<int32_t>("step"));
   CHECK_GE_OR_RETURN(dimension, 0) << "attibute dimension should be >= 0, but got " << dimension;
   CHECK_LE_OR_RETURN(dimension, ndim)
       << "attibute dimension should be <= input tensor's ndim, but got " << dimension;

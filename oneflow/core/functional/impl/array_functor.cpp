@@ -1333,7 +1333,7 @@ class UnfoldTensorFunctor {
     JUST(attrs.SetAttr<int32_t>("size", size));
     JUST(attrs.SetAttr<int32_t>("step", step));
     // if input tensor is eager local, than try return tensor's view
-    if (view::IsViewApplicable(x)) { return view::UnfoldTensor(x, attrs); }
+    if (view::IsViewApplicable(x)) { return view::UnfoldTensor(x, dimension, size, step); }
     return OpInterpUtil::Dispatch<Tensor>(*op_, {x}, attrs);
   }
 
