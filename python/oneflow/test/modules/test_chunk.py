@@ -19,12 +19,12 @@ from collections import OrderedDict
 
 import numpy as np
 from random import shuffle
-from oneflow.test_utils.test_util import GenArgList
 
 import oneflow as flow
 import oneflow.unittest
 
 from oneflow.test_utils.automated_test_util import *
+from oneflow.test_utils.automated_test_util import util
 
 
 @flow.unittest.skip_unless_1n1d()
@@ -55,8 +55,9 @@ class TestChunk(flow.unittest.TestCase):
         ).to(device)
         perm = [0, 1, 2, 3]
         shuffle(perm)
-        x = x.permute(perm)
-        y = torch.chunk(x, chunks=random(low=1, high=5).to(int), dim=dim)
+        y = x.permute(perm)
+        z = torch.chunk(y, chunks=random(low=1, high=5).to(int), dim=dim)
+        util.test_has_same_tensor_storage(test_case, y, z)
         return torch.cat(y, dim=dim)
 
     @autotest(n=5, auto_backward=False, check_graph=True)

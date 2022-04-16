@@ -21,6 +21,7 @@ from random import shuffle
 import numpy as np
 from oneflow.test_utils.test_util import GenArgList
 from oneflow.test_utils.automated_test_util import *
+from oneflow.test_utils.automated_test_util import util
 
 import oneflow as flow
 import oneflow.unittest
@@ -144,6 +145,7 @@ class TestPermute(flow.unittest.TestCase):
         permute_list2 = [0, 1, 2, 3]
         shuffle(permute_list2)
         z = y.permute(permute_list2)
+        util.test_has_same_tensor_storage(test_case, y, z)
         return z
 
     @autotest(n=5, check_graph=True)

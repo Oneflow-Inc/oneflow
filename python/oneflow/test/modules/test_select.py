@@ -17,6 +17,7 @@ import unittest
 from random import shuffle
 
 from oneflow.test_utils.automated_test_util import *
+from oneflow.test_utils.automated_test_util import util
 import oneflow as flow
 import oneflow.unittest
 

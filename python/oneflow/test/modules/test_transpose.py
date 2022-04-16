@@ -23,10 +23,10 @@ from random import shuffle
 
 from oneflow.test_utils.automated_test_util import *
 from oneflow.test_utils.test_util import GenArgList
+from oneflow.test_utils.automated_test_util import util
 
 import oneflow as flow
 import oneflow.unittest
-from oneflow.test_utils.automated_test_util import util
 
 
 def _test_transpose(test_case, device):

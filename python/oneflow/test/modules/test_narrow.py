@@ -17,7 +17,10 @@ import unittest
 import numpy as np
 from random import shuffle
 
+from scipy.fftpack import ss_diff
+
 from oneflow.test_utils.automated_test_util import *
+from oneflow.test_utils.automated_test_util import util
 
 import oneflow as flow
 import oneflow.unittest
@@ -56,7 +59,9 @@ class TestNarrow(flow.unittest.TestCase):
         perm = [0, 1, 2]
         shuffle(perm)
         x = x.permute(perm)
-        return torch.narrow(x, dim=rand_dim, start=0, length=2)
+        y = torch.narrow(x, dim=rand_dim, start=0, length=2)
+        util.test_has_same_tensor_storage(test_case, x, y)
+        return y
 
     @autotest(auto_backward=False, check_graph=True)
     def test_flow_narrow_start_bool_with_random_data(test_case):
