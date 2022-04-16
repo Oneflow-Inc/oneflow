@@ -14,6 +14,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 """
 
+from cgi import test
 import unittest
 from collections import OrderedDict
 
@@ -25,6 +26,7 @@ from oneflow.test_utils.test_util import GenArgList
 
 import oneflow as flow
 import oneflow.unittest
+from oneflow.test_utils.automated_test_util import util
 
 
 def _test_transpose(test_case, device):
@@ -112,7 +114,9 @@ class TestTranspose(flow.unittest.TestCase):
         shuffle(permute_list)
         x = x.permute(permute_list)
         y = torch.transpose(x, dim0=random(1, 3).to(int), dim1=random(1, 3).to(int))
+        util.test_has_same_tensor_storage(test_case, x, y)
         return y
+
 
     @autotest(n=10, auto_backward=False, check_graph=True)
     def test_transpose_with_0_size_data(test_case):

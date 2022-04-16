@@ -35,6 +35,7 @@ limitations under the License.
 #include "oneflow/core/framework/placement_utils.h"
 #include "oneflow/core/autograd/autograd_engine.h"
 #include "oneflow/core/common/decorator.h"
+#include "oneflow/core/framework/tensor_storage.h"
 
 namespace py = pybind11;
 
@@ -201,6 +202,12 @@ ONEFLOW_API_PYBIND11_MODULE("", m) {
   auto nn = m.def_submodule("nn");
   py::class_<Parameter, std::shared_ptr<Parameter>, Tensor>(nn, "Parameter")
       .def(py::init(&ApiNewParameter), "data"_a, "requires_grad"_a = true);
+    
+    // only use for internal autotest
+    m.def("has_same_tensor_storage",
+      [](const std::shared_ptr<one::Tensor>& a, const std::shared_ptr<one::Tensor>& b) -> Maybe<bool> { 
+          return JUST(JUST(a->AsMirroredTensor())->tensor_storage()).get() == JUST(JUST(b->AsMirroredTensor())->tensor_storage()).get();
+        });
 }
 
 }  // namespace one
