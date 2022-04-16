@@ -53,6 +53,24 @@ namespace impl {
 
 namespace {
 
+// NOTE: use env variable 'ONEFLOW_EAGER_LOCAL_TO_GLOBAL_BALANCED_OVERRIDE' indicate whether the
+// shape and dtype of input tensor on each rank is the same when cast local tensor to global tensor.
+// If set true, there will be no meta-information synchronization on each rank.
+Optional<bool> ParseEagerLocalToGlobalBalancedOverride() {
+  const char* env_p = std::getenv("ONEFLOW_EAGER_LOCAL_TO_GLOBAL_BALANCED_OVERRIDE");
+  if (env_p == nullptr) {
+    return Optional<bool>();
+  } else {
+    return ParseBooleanFromEnv("ONEFLOW_EAGER_LOCAL_TO_GLOBAL_BALANCED_OVERRIDE", false);
+  }
+}
+
+bool GetLocalToGlobalIsBalanced(bool is_balanced) {
+  thread_local Optional<bool> eager_local_to_global_balanced_override =
+      ParseEagerLocalToGlobalBalancedOverride();
+  return eager_local_to_global_balanced_override.value_or(is_balanced);
+}
+
 // clang-format off
 FLAT_MSG_BEGIN(FlatShapeAndDataType);
   // Methods
@@ -187,7 +205,12 @@ Maybe<void> GetConcatenatedShapeAndCheckDtype(
 
 Maybe<void> GetLogicalShapeAndDataType(Shape* logical_shape, DataType* /* in and out */ dtype,
                                        std::shared_ptr<const Shape> physical_shape,
-                                       Symbol<ParallelDesc> parallel_desc, Symbol<NdSbp> nd_sbp) {
+                                       Symbol<ParallelDesc> parallel_desc, Symbol<NdSbp> nd_sbp,
+                                       bool is_balanced) {
+  if (is_balanced) {
+    *logical_shape = *JUST(GetLogicalShape(*physical_shape, *nd_sbp, *parallel_desc));
+    return Maybe<void>::Ok();
+  }
   if (nd_sbp->sbp_parallel_size() == 1 && nd_sbp->sbp_parallel(0).has_split_parallel()) {
     const auto& rank2flat_shape_dtype =
         JUST(BroadcastGatherShapeAndDataType(*physical_shape, *dtype, parallel_desc));
@@ -280,7 +303,9 @@ Maybe<Tensor> LocalToConsistent(const std::shared_ptr<Tensor>& x,
   Symbol<NdSbp> nd_sbp = JUST(GetNdSbp(sbp_parallels));
   const auto& shape = std::make_shared<Shape>();
   DataType dtype = x->dtype()->data_type();
-  JUST(GetLogicalShapeAndDataType(shape.get(), &dtype, x->shape(), parallel_desc, nd_sbp));
+  bool is_balanced = GetLocalToGlobalIsBalanced(false);
+  JUST(GetLogicalShapeAndDataType(shape.get(), &dtype, x->shape(), parallel_desc, nd_sbp,
+                                  is_balanced));
   MutableAttrMap attrs;
   JUST(attrs.SetAttr<Shape>("shape", *shape));
   JUST(attrs.SetAttr<DataType>("dtype", dtype));
