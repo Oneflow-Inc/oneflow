@@ -10,7 +10,7 @@ oneflow
             abs, 
             acos, 
             acosh, 
-            add,
+            add, 
             addcmul, 
             addmm, 
             arccos, 

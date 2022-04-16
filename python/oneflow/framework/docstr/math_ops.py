@@ -1388,7 +1388,7 @@ add_docstr(
         \text{out}_i = \text{input}_i + value \times\  \text{tensor1}_i \times\ \text{tensor2}_i
         
     Args:
-        input (Tensor): the input tensor.
+        input (Tensor): the tensor to be added.
         tensor1 (Tensor): the tensor to be multiplied.
         tensor2 (Tensor): the tensor to be multiplied.
     
@@ -1404,10 +1404,10 @@ add_docstr(
 
         >>> import oneflow as flow
         
-        >>> input = flow.rand(2,3,4)
-        >>> tensor1 = flow.rand(2,3,4)
-        >>> tensor2 = flow.rand(2,3,4)
-        >>> out = flow.addcmul(input,tensor1,tensor2,value=2)
+        >>> input = flow.rand(2, 3, 4)
+        >>> tensor1 = flow.rand(2, 3, 4)
+        >>> tensor2 = flow.rand(2, 3, 4)
+        >>> out = flow.addcmul(input, tensor1, tensor2, value=2)
         >>> out.size()
         oneflow.Size([2, 3, 4])
     """,
