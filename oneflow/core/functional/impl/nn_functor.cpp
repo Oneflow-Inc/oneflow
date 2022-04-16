@@ -1438,24 +1438,41 @@ class ConsistentNormalFunctor {
   Maybe<Tensor> operator()(const float& mean, const float& std, const Shape& shape,
                            const Optional<one::Tensor>& out, const Symbol<ParallelDesc>& placement,
                            const std::vector<Symbol<SbpParallel>>& sbp_tuple,
-                           const Optional<Symbol<DType>>& dtype,
-                           const Optional<one::Generator>& generator,
+                           const Optional<Symbol<DType>>& optional_dtype,
+                           const Optional<one::Generator>& optional_generator,
                            const bool& requires_grad) const {
     JUST(CheckDeviceIdsIsValid(placement));
-    DataType dtype_val = DataType::kFloat;
-    if (dtype.has_value()) {
-      dtype_val = JUST(dtype)->data_type();
-      if (dtype_val != DataType::kFloat && dtype_val != DataType::kDouble) {
-        OF_UNIMPLEMENTED() << "Only support float and double in normal().";
+
+    Symbol<DType> dtype = DType::Float();
+    if (out.has_value()) {
+      auto out_tensor = JUST(out);
+      Symbol<DType> output_tensor_dtype = out_tensor->dtype();
+      if (optional_dtype.has_value()) {
+        dtype = JUST(optional_dtype);
+        if (dtype->data_type() != DataType::kFloat && dtype->data_type() != DataType::kDouble) {
+          OF_UNIMPLEMENTED() << "Only support float and double in normal().";
+        }
+        CHECK_OR_RETURN(output_tensor_dtype == dtype)
+            << Error::RuntimeError() << "data type " << dtype->name()
+            << " does not match data type of out parameter (" << output_tensor_dtype->name();
+      }
+      dtype = output_tensor_dtype;
+    
+    } else {
+      if (optional_dtype.has_value()) {
+        dtype = JUST(optional_dtype);
+        if (dtype->data_type() != DataType::kFloat && dtype->data_type() != DataType::kDouble) {
+          OF_UNIMPLEMENTED() << "Only support float and double in normal().";
+        }
       }
     }
 
-    const auto gen = generator.value_or(JUST(one::DefaultAutoGenerator()));
+    const auto gen = optional_generator.value_or(JUST(one::DefaultAutoGenerator()));
     MutableAttrMap attrs;
     JUST(attrs.SetAttr<double>("mean", mean));
     JUST(attrs.SetAttr<double>("std", std));
     JUST(attrs.SetAttr<Shape>("shape", shape));
-    JUST(attrs.SetAttr<DataType>("dtype", dtype_val));
+    JUST(attrs.SetAttr<DataType>("dtype", dtype->data_type()));
     JUST(attrs.SetAttr<int64_t>("seed", gen->current_seed()));
 
     const auto& distribution_state = std::make_shared<DistributionKernelState>(gen);
@@ -1464,10 +1481,9 @@ class ConsistentNormalFunctor {
       JUST(attrs.SetAttr<std::vector<std::string>>("nd_sbp", *JUST(GetNdSbpStrList(nd_sbp))));
     }
 
-    if (out.has_value()) {
-      std::shared_ptr<one::Tensor> out_tensor = JUST(out);
+    if (out.has_value()) { 
       std::shared_ptr<TensorTuple> outputs = std::make_shared<TensorTuple>(1);
-      (*outputs)[0] = out_tensor;
+      (*outputs)[0] = JUST(out);
       JUST(OpInterpUtil::Dispatch(
           *op_, {}, outputs.get(),
           OpExprInterpContext(attrs, placement, nd_sbp, distribution_state)));
