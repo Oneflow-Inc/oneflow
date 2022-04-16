@@ -202,7 +202,6 @@ ONEFLOW_API_PYBIND11_MODULE("", m) {
   auto nn = m.def_submodule("nn");
   py::class_<Parameter, std::shared_ptr<Parameter>, Tensor>(nn, "Parameter")
       .def(py::init(&ApiNewParameter), "data"_a, "requires_grad"_a = true);
-
 }
 
 }  // namespace one
