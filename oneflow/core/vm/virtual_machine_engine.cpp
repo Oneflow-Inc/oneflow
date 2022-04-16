@@ -164,6 +164,7 @@ void VirtualMachineEngine::HandleProbe() {
 }
 
 void VirtualMachineEngine::HandleLocalProbe() {
+  OF_PROFILER_RANGE_PUSH_POP_GUARD("HandleLocalProbe");
   if (unlikely(local_probe_list_.size())) {
     INTRUSIVE_FOR_EACH_PTR(probe, &local_probe_list_) {
       if (probe->probe(this)) { local_probe_list_.Erase(probe); }
@@ -173,6 +174,7 @@ void VirtualMachineEngine::HandleLocalProbe() {
 
 // Collect ready instructions onto ready_instruction_list_
 void VirtualMachineEngine::ReleaseFinishedInstructions(const ScheduleCtx& schedule_ctx) {
+  OF_PROFILER_RANGE_PUSH_POP_GUARD("ReleaseFinishedInstructions");
   INTRUSIVE_FOR_EACH_PTR(stream, mut_active_stream_list()) {
     while (true) {
       auto* instruction_ptr = stream->mut_running_instruction_list()->Begin();
@@ -302,9 +304,9 @@ bool VirtualMachineEngine::Dispatchable(Instruction* instruction) const {
 
 // Dispatch ready instructions and put prescheduled instructions onto ready_instruction_list_.
 void VirtualMachineEngine::DispatchAndPrescheduleInstructions(const ScheduleCtx& schedule_ctx) {
+  OF_PROFILER_RANGE_PUSH_POP_GUARD("DispatchAndPrescheduleInstructions");
   ReadyInstructionList tmp_ready_instruction_list;
   mut_ready_instruction_list()->MoveTo(&tmp_ready_instruction_list);
-  OF_PROFILER_RANGE_PUSH_POP_GUARD("DispatchAndPrescheduleInstructions");
   INTRUSIVE_FOR_EACH(instruction, &tmp_ready_instruction_list) {
     // Erases `instruction` from tmp_ready_instruction_list before dispatching, because
     // `instruction.dispatched_instruction_hook_` are used in DispatchInstruction.
@@ -464,7 +466,7 @@ void VirtualMachineEngine::TryRunBarrierInstruction(const ScheduleCtx& schedule_
   if (likely(sequnential_instruction != mut_lively_instruction_list()->Begin())) { return; }
   // All instructions before `sequnential_instruction` are handled now, it's time to handle
   // `sequnential_instruction`.
-  OF_PROFILER_RANGE_PUSH_POP_GUARD("RunBarrierInstruction");
+  OF_PROFILER_RANGE_PUSH_POP_GUARD("TryRunBarrierInstruction");
   const auto& instruction_type = sequnential_instruction->instruction_type();
   CHECK(instruction_type.IsBarrier());
   CHECK(OnSchedulerThread(sequnential_instruction->stream()));
@@ -495,7 +497,7 @@ void VirtualMachineEngine::Schedule(const ScheduleCtx& schedule_ctx) {
   } else if (unlikely(pending_msg_list().thread_unsafe_size())) {
     // MoveTo is under a lock.
     mut_pending_msg_list()->MoveTo(mut_local_pending_msg_list());
-    HandleLocalPending();
+    if (likely(local_pending_msg_list().size())) { HandleLocalPending(); }
   }
   // dispatch ready instructions and try to schedule out instructions in DAG onto ready list.
   if (unlikely(mut_ready_instruction_list()->size())) {
@@ -506,7 +508,7 @@ void VirtualMachineEngine::Schedule(const ScheduleCtx& schedule_ctx) {
     HandleLocalProbe();
   } else if (unlikely(probe_list_.thread_unsafe_size())) {
     probe_list_.MoveTo(&local_probe_list_);
-    HandleLocalProbe();
+    if (local_probe_list_.size()) { HandleLocalProbe(); }
   }
 }
 
