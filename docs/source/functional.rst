@@ -11,6 +11,7 @@ Functional operations for neural networks
 .. autofunction:: adaptive_avg_pool3d
 .. autofunction:: relu
 .. autofunction:: hardsigmoid
+.. autofunction:: hardshrink
 .. autofunction:: hardswish
 .. autofunction:: hardtanh
 .. autofunction:: normalize
