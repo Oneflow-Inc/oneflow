@@ -117,7 +117,6 @@ class TestTranspose(flow.unittest.TestCase):
         util.test_has_same_tensor_storage(test_case, x, y)
         return y
 
-
     @autotest(n=10, auto_backward=False, check_graph=True)
     def test_transpose_with_0_size_data(test_case):
         device = random_device()
