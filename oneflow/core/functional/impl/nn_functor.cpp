@@ -1372,21 +1372,24 @@ class NormalFunctor {
                            const Optional<one::Generator>& optional_generator,
                            const bool& requires_grad) const {
     Symbol<DType> dtype = DType::Float();
-    Symbol<Device> device = JUST(optional_device);
+    if (optional_dtype.has_value()) {
+      dtype = JUST(optional_dtype);
+      if (dtype->data_type() != DataType::kFloat && dtype->data_type() != DataType::kDouble) {
+        OF_UNIMPLEMENTED() << "Only support float and double in normal().";
+      }
+    }
+    Symbol<Device> device = JUST(Device::New("cpu"));
+    if (optional_device.has_value()) { device = JUST(optional_device); }
+
     if (out.has_value()) {
       auto out_tensor = JUST(out);
       Symbol<DType> output_tensor_dtype = out_tensor->dtype();
       if (optional_dtype.has_value()) {
-        dtype = JUST(optional_dtype);
-        if (dtype->data_type() != DataType::kFloat && dtype->data_type() != DataType::kDouble) {
-          OF_UNIMPLEMENTED() << "Only support float and double in normal().";
-        }
         CHECK_OR_RETURN(output_tensor_dtype == dtype)
             << Error::RuntimeError() << "data type " << dtype->name()
             << " does not match data type of out parameter (" << output_tensor_dtype->name();
       }
       dtype = output_tensor_dtype;
-
       Symbol<Device> out_tensor_device = JUST(out_tensor->device());
       if (optional_device.has_value()) {
         CHECK_OR_RETURN(out_tensor_device == JUST(optional_device))
@@ -1394,14 +1397,6 @@ class NormalFunctor {
             << " does not match device type of out parameter (" << out_tensor_device->ToString();
       }
       device = out_tensor_device;
-
-    } else {
-      if (optional_dtype.has_value()) {
-        dtype = JUST(optional_dtype);
-        if (dtype->data_type() != DataType::kFloat && dtype->data_type() != DataType::kDouble) {
-          OF_UNIMPLEMENTED() << "Only support float and double in normal().";
-        }
-      }
     }
 
     const auto gen = optional_generator.value_or(JUST(one::DefaultAutoGenerator()));
@@ -1443,27 +1438,22 @@ class ConsistentNormalFunctor {
     JUST(CheckDeviceIdsIsValid(placement));
 
     Symbol<DType> dtype = DType::Float();
+    if (optional_dtype.has_value()) {
+      dtype = JUST(optional_dtype);
+      if (dtype->data_type() != DataType::kFloat && dtype->data_type() != DataType::kDouble) {
+        OF_UNIMPLEMENTED() << "Only support float and double in normal().";
+      }
+    }
+
     if (out.has_value()) {
       auto out_tensor = JUST(out);
       Symbol<DType> output_tensor_dtype = out_tensor->dtype();
       if (optional_dtype.has_value()) {
-        dtype = JUST(optional_dtype);
-        if (dtype->data_type() != DataType::kFloat && dtype->data_type() != DataType::kDouble) {
-          OF_UNIMPLEMENTED() << "Only support float and double in normal().";
-        }
         CHECK_OR_RETURN(output_tensor_dtype == dtype)
             << Error::RuntimeError() << "data type " << dtype->name()
             << " does not match data type of out parameter (" << output_tensor_dtype->name();
       }
       dtype = output_tensor_dtype;
-
-    } else {
-      if (optional_dtype.has_value()) {
-        dtype = JUST(optional_dtype);
-        if (dtype->data_type() != DataType::kFloat && dtype->data_type() != DataType::kDouble) {
-          OF_UNIMPLEMENTED() << "Only support float and double in normal().";
-        }
-      }
     }
 
     const auto gen = optional_generator.value_or(JUST(one::DefaultAutoGenerator()));
