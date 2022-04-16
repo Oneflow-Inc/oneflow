@@ -1371,7 +1371,6 @@ class NormalFunctor {
                            const Optional<Symbol<Device>>& optional_device,
                            const Optional<one::Generator>& optional_generator,
                            const bool& requires_grad) const {
-
     Symbol<DType> dtype = DType::Float();
     Symbol<Device> device = JUST(optional_device);
     if (out.has_value()) {
@@ -1387,15 +1386,15 @@ class NormalFunctor {
             << " does not match data type of out parameter (" << output_tensor_dtype->name();
       }
       dtype = output_tensor_dtype;
-   
+
       Symbol<Device> out_tensor_device = JUST(out_tensor->device());
-      if(optional_device.has_value()) {
+      if (optional_device.has_value()) {
         CHECK_OR_RETURN(out_tensor_device == JUST(optional_device))
-          << Error::RuntimeError() << "device type " << device->ToString()
-          << " does not match device type of out parameter (" << out_tensor_device->ToString();
+            << Error::RuntimeError() << "device type " << device->ToString()
+            << " does not match device type of out parameter (" << out_tensor_device->ToString();
       }
       device = out_tensor_device;
-    
+
     } else {
       if (optional_dtype.has_value()) {
         dtype = JUST(optional_dtype);
