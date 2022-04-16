@@ -1155,14 +1155,23 @@ class NarrowFunctor {
   Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& input, const int64_t& dim,
                            const int64_t& start, const int64_t& length) const {
     int64_t narrow_dim = dim;
+    int64_t narrow_start = start;
     const int64_t ndim = input->shape()->NumAxes();
+    CHECK_GT_OR_RETURN(ndim, 0) << "narrow() cannot be applied to a 0-dim tensor.";
     CHECK_OR_RETURN((-ndim <= dim) && (dim <= ndim - 1))
         << " (Dimension out of range, expected to be in range of [" << -ndim << ", " << ndim - 1
         << "], but got:" << dim << ")";
     if (narrow_dim < 0) { narrow_dim += ndim; }
+    CHECK_OR_RETURN((-ndim <= start) && (start <= ndim - 1))
+        << " (Dimension out of range, expected to be in range of [" << -ndim << ", " << ndim - 1
+        << "], but got:" << start << ")";
+    if (narrow_start < 0) { narrow_start += ndim; }
+    CHECK_GE_OR_RETURN(input->shape()->At(narrow_dim), narrow_start + length)
+        << "start (" << narrow_start << ") + length (" << length << ") exceeds dimension size ("
+        << input->shape()->At(narrow_dim) << ").";
 
     if (view::IsViewApplicable(input)) {
-      return JUST(view::Narrow(input, narrow_dim, start, length));
+      return JUST(view::Narrow(input, narrow_dim, narrow_start, length));
     }
     MutableAttrMap attrs;
     JUST(attrs.SetAttr<int64_t>("dim", narrow_dim));

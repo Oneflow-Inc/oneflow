@@ -25,4 +25,3 @@ def broadcast(obj, src: int = 0):
     else:
         obj_bytes = flow._oneflow_internal.cpu_broadcast(None, src)
     return pickle.loads(obj_bytes)
-

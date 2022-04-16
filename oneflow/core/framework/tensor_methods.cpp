@@ -324,13 +324,6 @@ Maybe<Tensor> Narrow(const std::shared_ptr<Tensor>& input, const int64_t& dim, c
   const auto& shape = input->shape();
   const auto& strides = JUST(input->stride());
   const int64_t ndim = shape->NumAxes();
-  CHECK_GT_OR_RETURN(ndim, 0) << "input tensor's ndim should be > 0, but got " << ndim;
-  CHECK_GE_OR_RETURN(dim, 0) << "attribute dim should be >= 0, but got " << dim;
-  CHECK_GE_OR_RETURN(start, 0) << "attribute start should be >= 0, but got " << start;
-  CHECK_GE_OR_RETURN(length, 0) << "attribute length should be >= 0, but got " << length;
-  CHECK_GE_OR_RETURN(shape->At(dim), start + length)
-  "shape->At(dim) should be >= " << start + length << "(start+length), but got " << shape->At(dim);
-
   DimVector dim_vec;
   dim_vec.insert(dim_vec.end(), shape->dim_vec().cbegin(), shape->dim_vec().cbegin() + dim);
   dim_vec.insert(dim_vec.end(), length);
