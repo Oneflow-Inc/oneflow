@@ -1456,7 +1456,7 @@ class ConsistentNormalFunctor {
             << " does not match data type of out parameter (" << output_tensor_dtype->name();
       }
       dtype = output_tensor_dtype;
-    
+
     } else {
       if (optional_dtype.has_value()) {
         dtype = JUST(optional_dtype);
@@ -1480,7 +1480,7 @@ class ConsistentNormalFunctor {
       JUST(attrs.SetAttr<std::vector<std::string>>("nd_sbp", *JUST(GetNdSbpStrList(nd_sbp))));
     }
 
-    if (out.has_value()) { 
+    if (out.has_value()) {
       std::shared_ptr<TensorTuple> outputs = std::make_shared<TensorTuple>(1);
       (*outputs)[0] = JUST(out);
       JUST(OpInterpUtil::Dispatch(
