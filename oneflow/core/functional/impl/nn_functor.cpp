@@ -2665,6 +2665,22 @@ class OneEmbeddingUniqueKeyValuePairFunctor {
   std::shared_ptr<OpExpr> op_no_input_value_;
 };
 
+class RocAucScoreFunctor {
+ public:
+  RocAucScoreFunctor() {
+    op_ = CHECK_JUST(
+        one::OpBuilder("roc_auc_score").Input("label").Input("pred").Output("out").Build());
+  }
+
+  Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& label,
+                           const std::shared_ptr<one::Tensor>& pred) const {
+    return OpInterpUtil::Dispatch<Tensor>(*op_, {label, pred});
+  }
+
+ private:
+  std::shared_ptr<OpExpr> op_;
+};
+
 }  // namespace impl
 
 ONEFLOW_FUNCTION_LIBRARY(m) {
@@ -2744,6 +2760,8 @@ ONEFLOW_FUNCTION_LIBRARY(m) {
   m.add_functor<impl::OneEmbeddingUniqueKeyValuePairFunctor>("OneEmbeddingUniqueKeyValuePair");
   m.add_functor<impl::NormalFunctor>("Normal");
   m.add_functor<impl::ConsistentNormalFunctor>("ConsistentNormal");
+  m.add_functor<impl::RocAucScoreFunctor>("RocAucScore");
+
 };
 
 }  // namespace functional

@@ -2102,3 +2102,7 @@
 - name: "isinf"
   signature: "Tensor (Tensor input) => IsInf"
   bind_python: True
+
+- name: "roc_auc_score"
+  signature: "Tensor (Tensor label, Tensor pred) => RocAucScore"
+  bind_python: True
