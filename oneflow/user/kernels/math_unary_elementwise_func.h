@@ -157,7 +157,7 @@ template<>
 struct NotEqualZeroFunctor<float> {
   static OF_DEVICE_FUNC float Forward(const float x) { return x != 0; }
 
-  static OF_DEVICE_FUNC float Backward(const float x, const float dy) { return dy * (x != 0); }
+  static OF_DEVICE_FUNC float Backward(const float x, const float dy) { return 0.0f; }
 };
 
 template<>
@@ -433,7 +433,7 @@ template<>
 struct NotEqualZeroFunctor<double> {
   static OF_DEVICE_FUNC double Forward(const double x) { return x != 0; }
 
-  static OF_DEVICE_FUNC double Backward(const double x, const double dy) { return dy * (x != 0); }
+  static OF_DEVICE_FUNC double Backward(const double x, const double dy) { return 0.0f; }
 };
 
 template<>
@@ -735,9 +735,7 @@ template<>
 struct NotEqualZeroFunctor<half> {
   static OF_HALF_FUNC half Forward(const half x) { return x != static_cast<half>(0.0); }
 
-  static OF_HALF_FUNC half Backward(const half x, const half dy) {
-    return __hmul(dy, x != static_cast<half>(0.0));
-  }
+  static OF_HALF_FUNC half Backward(const half x, const half dy) { return GetZeroVal<half>(); }
 };
 
 template<>
