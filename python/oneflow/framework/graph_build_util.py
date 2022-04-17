@@ -94,9 +94,7 @@ class DebugScopeContext(object):
     def __init__(self, s_level, v_level=0, max_stack_depth=2, mode=False):
         self._prev_v = oneflow._oneflow_internal.GetFLAGS_v()
         self._prev_logtostderr = oneflow._oneflow_internal.GetFLAGS_alsologtostderr()
-        self._prev_max_stack_depth = (
-            oneflow._oneflow_internal.GetGraphDebugMaxStackDepth()
-        )
+        self._prev_max_stack_depth = oneflow._oneflow_internal.GetGraphDebugMaxStackDepth()
         self._prev_mode = oneflow._oneflow_internal.GetGraphDebugMode()
         self._v = max(v_level, self._prev_v)
         self._s = s_level
