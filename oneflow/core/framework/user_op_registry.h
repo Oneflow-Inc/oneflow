@@ -63,14 +63,14 @@ struct OpRegistryResult {
   OpRegistryResult()
       : cpu_only_supported(false),
         no_grad(false),
-        support_non_contiguous(false),
+        non_contiguous_supported(false),
         same_output_regst_num(-1) {}
   ~OpRegistryResult() = default;
 
   std::string op_type_name;
   bool cpu_only_supported;
   bool no_grad;
-  bool support_non_contiguous;
+  bool non_contiguous_supported;
   int32_t same_output_regst_num;
   UserOpDef op_def;
   CheckAttrFn check_fn;

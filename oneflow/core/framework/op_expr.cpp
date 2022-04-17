@@ -76,7 +76,7 @@ const std::string& CastFromConsistentOpExpr::op_type_name() const {
   return kOpTypeName;
 }
 
-#define DEFINE_OPEXPR_IS_GRAD_DISABLED_DEFAULT_VALUE(_T, _bool)     \
+#define DEFINE_OPEXPR_IS_GRAD_DISABLED_AND_SUPPORT_NON_CONTIGUOUS_DEFAULT_VALUE(_T, _bool)     \
   template<>                                                        \
   Maybe<bool> BuiltinOpExprImpl<_T>::IsGradDisabled() const {       \
     return _bool;                                                   \
@@ -86,19 +86,19 @@ const std::string& CastFromConsistentOpExpr::op_type_name() const {
     return false;                                                   \
   }
 
-DEFINE_OPEXPR_IS_GRAD_DISABLED_DEFAULT_VALUE(FeedInputOpConf, true);
-DEFINE_OPEXPR_IS_GRAD_DISABLED_DEFAULT_VALUE(FeedVariableOpConf, true);
-DEFINE_OPEXPR_IS_GRAD_DISABLED_DEFAULT_VALUE(FetchOutputOpConf, true);
-DEFINE_OPEXPR_IS_GRAD_DISABLED_DEFAULT_VALUE(VariableOpConf, true);
-DEFINE_OPEXPR_IS_GRAD_DISABLED_DEFAULT_VALUE(ImageDecoderRandomCropResizeOpConf, true);
-DEFINE_OPEXPR_IS_GRAD_DISABLED_DEFAULT_VALUE(CastToMirroredOpConf, false);
-DEFINE_OPEXPR_IS_GRAD_DISABLED_DEFAULT_VALUE(CastFromMirroredOpConf, false);
-DEFINE_OPEXPR_IS_GRAD_DISABLED_DEFAULT_VALUE(DistributeSplitOpConf, false);
-DEFINE_OPEXPR_IS_GRAD_DISABLED_DEFAULT_VALUE(DistributeCloneOpConf, false);
-DEFINE_OPEXPR_IS_GRAD_DISABLED_DEFAULT_VALUE(DistributeConcatOpConf, false);
-DEFINE_OPEXPR_IS_GRAD_DISABLED_DEFAULT_VALUE(DistributeAddOpConf, false);
+DEFINE_OPEXPR_IS_GRAD_DISABLED_AND_SUPPORT_NON_CONTIGUOUS_DEFAULT_VALUE(FeedInputOpConf, true);
+DEFINE_OPEXPR_IS_GRAD_DISABLED_AND_SUPPORT_NON_CONTIGUOUS_DEFAULT_VALUE(FeedVariableOpConf, true);
+DEFINE_OPEXPR_IS_GRAD_DISABLED_AND_SUPPORT_NON_CONTIGUOUS_DEFAULT_VALUE(FetchOutputOpConf, true);
+DEFINE_OPEXPR_IS_GRAD_DISABLED_AND_SUPPORT_NON_CONTIGUOUS_DEFAULT_VALUE(VariableOpConf, true);
+DEFINE_OPEXPR_IS_GRAD_DISABLED_AND_SUPPORT_NON_CONTIGUOUS_DEFAULT_VALUE(ImageDecoderRandomCropResizeOpConf, true);
+DEFINE_OPEXPR_IS_GRAD_DISABLED_AND_SUPPORT_NON_CONTIGUOUS_DEFAULT_VALUE(CastToMirroredOpConf, false);
+DEFINE_OPEXPR_IS_GRAD_DISABLED_AND_SUPPORT_NON_CONTIGUOUS_DEFAULT_VALUE(CastFromMirroredOpConf, false);
+DEFINE_OPEXPR_IS_GRAD_DISABLED_AND_SUPPORT_NON_CONTIGUOUS_DEFAULT_VALUE(DistributeSplitOpConf, false);
+DEFINE_OPEXPR_IS_GRAD_DISABLED_AND_SUPPORT_NON_CONTIGUOUS_DEFAULT_VALUE(DistributeCloneOpConf, false);
+DEFINE_OPEXPR_IS_GRAD_DISABLED_AND_SUPPORT_NON_CONTIGUOUS_DEFAULT_VALUE(DistributeConcatOpConf, false);
+DEFINE_OPEXPR_IS_GRAD_DISABLED_AND_SUPPORT_NON_CONTIGUOUS_DEFAULT_VALUE(DistributeAddOpConf, false);
 
-#undef DEFINE_OPEXPR_IS_GRAD_DISABLED_DEFAULT_VALUE
+#undef DEFINE_OPEXPR_IS_GRAD_DISABLED_AND_SUPPORT_NON_CONTIGUOUS_DEFAULT_VALUE
 
 template<>
 Maybe<void> BuiltinOpExprImpl<UserOpConf>::BuildOpConf(OperatorConf* op_conf,
@@ -143,7 +143,7 @@ Maybe<bool> BuiltinOpExprImpl<UserOpConf>::SupportNonContiguous() const {
       user_op::UserOpRegistryMgr::Get().GetOpRegistryResult(proto().op_type_name());
   CHECK_NOTNULL_OR_RETURN(registry) << "registry create fail in function "
                                        "user_op::UserOpRegistryMgr::Get().GetOpRegistryResult()!";
-  return registry->support_non_contiguous;
+  return registry->non_contiguous_supported;
 }
 
 template<>

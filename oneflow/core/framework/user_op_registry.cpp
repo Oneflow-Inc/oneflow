@@ -77,7 +77,7 @@ OpRegistry& OpRegistry::SupportCpuOnly() {
 }
 
 OpRegistry& OpRegistry::SupportNonContiguous() {
-  result_.support_non_contiguous = true;
+  result_.non_contiguous_supported = true;
   return *this;
 }
 
