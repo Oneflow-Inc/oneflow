@@ -2761,7 +2761,6 @@ ONEFLOW_FUNCTION_LIBRARY(m) {
   m.add_functor<impl::NormalFunctor>("Normal");
   m.add_functor<impl::ConsistentNormalFunctor>("ConsistentNormal");
   m.add_functor<impl::RocAucScoreFunctor>("RocAucScore");
-
 };
 
 }  // namespace functional
