@@ -15,6 +15,7 @@ limitations under the License.
 */
 #include "oneflow/core/embedding/persistent_table_key_value_store.h"
 #include "oneflow/core/embedding/cached_key_value_store.h"
+#include "oneflow/core/embedding/mock_key_value_store.h"
 #include "oneflow/core/embedding/cache.h"
 #include "oneflow/core/device/cuda_util.h"
 #include <gtest/gtest.h>
@@ -240,6 +241,22 @@ TEST(CachedKeyValueStore, Full) {
   cached_store->ReserveQueryLength(128);
   TestKeyValueStore(cached_store.get(), 1024, 1024, value_length);
   cached_store.reset();
+  PosixFile::RecursiveDelete(path);
+  Global<ep::DeviceManagerRegistry>::Delete();
+}
+
+TEST(MockKeyValueStore, Mock) {
+  if (!HasCudaDevice()) { return; }
+  Global<ep::DeviceManagerRegistry>::New();
+  MockKeyValueStoreOptions store_options{};
+  std::string path = CreateTempDirectory();
+  uint32_t value_length = 128;
+  store_options.value_size = value_length * sizeof(float);
+  store_options.key_size = GetSizeOfDataType(DataType::kUInt64);
+  std::unique_ptr<KeyValueStore> store = NewMockKeyValueStore(store_options);
+  store->ReserveQueryLength(128);
+  TestKeyValueStore(store.get(), 1024, 1024, value_length);
+  store.reset();
   PosixFile::RecursiveDelete(path);
   Global<ep::DeviceManagerRegistry>::Delete();
 }
