@@ -82,17 +82,11 @@ inline Maybe<void> SetGraphLRVerbose(bool verbose) {
 }
 inline bool GetGraphLRVerbose() { return IsOpenGraphVerboseStepLr(); }
 
-inline Maybe<void> SetGraphDebugMaxStackDepth(int32_t depth) {
-  *GetGraphDebugMaxStackDepthVar() = depth;
+inline Maybe<void> SetGraphDebugMaxPyStackDepth(int32_t depth) {
+  *GetGraphDebugMaxPyStackDepthVar() = depth;
   return Maybe<void>::Ok();
 }
-inline int32_t GetGraphDebugMaxStackDepth() { return *GetGraphDebugMaxStackDepthVar(); }
-
-inline Maybe<void> SetGraphDebugMode(bool mode) {
-  *GetGraphDebugModeFlag() = mode;
-  return Maybe<void>::Ok();
-}
-inline bool GetGraphDebugMode() { return *GetGraphDebugModeFlag(); }
+inline int32_t GetGraphDebugMaxPyStackDepth() { return *GetGraphDebugMaxPyStackDepthVar(); }
 }  // namespace oneflow
 
 #endif  // ONEFLOW_API_PYTHON_ENV_ENV_H_

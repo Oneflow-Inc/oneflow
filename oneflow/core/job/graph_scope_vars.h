@@ -23,8 +23,7 @@ namespace oneflow {
 bool IsOpenGraphVerboseStepLr();
 void SetGraphVerboseStepLr(bool verbose);
 
-std::atomic<int32_t>* GetGraphDebugMaxStackDepthVar();
-std::atomic<bool>* GetGraphDebugModeFlag();
+std::atomic<int32_t>* GetGraphDebugMaxPyStackDepthVar();
 }  // namespace oneflow
 
 #endif  // ONEFLOW_CORE_JOB_GRAPH_SCOPE_VARS_H_
