@@ -99,37 +99,31 @@ std::string get_cur_frame_stack_str(int32_t max_stack_depth) {
   PyFrameObject* cur_frame = PyEval_GetFrame();
   for (int32_t i = 0; i < max_stack_depth; i++) {
     if (cur_frame == NULL) break;
-
     const int32_t stack_index = (-1) * i - 1;
+
+    Py_XINCREF(cur_frame);
     cur_f_str = "Python Stack[" + std::to_string(stack_index)
                 + "]: " + PyObjectToReprStr((PyObject*)cur_frame).GetOrThrow() + "; " + cur_f_str;
+    Py_XDECREF(cur_frame);
 
-    PyFrameObject* last_frame = cur_frame;
     cur_frame = cur_frame->f_back;
-    if (cur_frame) Py_XINCREF(cur_frame);
-    if (i > 0) Py_XDECREF(last_frame);
   }
   return cur_f_str;
 }
 
 int32_t get_cur_stack_depth() {
   int32_t current_stack_depth = 0;
-  PyFrameObject* cur_frame = PyEval_GetFrame();
-  PyFrameObject* f = cur_frame;
+  PyFrameObject* f = PyEval_GetFrame();
   while (f) {
     current_stack_depth++;
-    PyFrameObject* last_f = f;
     f = f->f_back;
-    if (f != cur_frame && f != NULL) { Py_XINCREF(f); }
-
-    if (last_f != cur_frame) { Py_XDECREF(last_f); }
   }
   return current_stack_depth;
 }
 
 std::string get_cur_frame_stack_str() {
-  const bool debug_mode = GetGraphDebugMode();
-  const int32_t max_stack_depth = GetGraphDebugMaxStackDepth();
+  const bool debug_mode = CHECK_JUST(GetFLAGS_v()) >= 0;
+  const int32_t max_stack_depth = GetGraphDebugMaxPyStackDepth();
   if (debug_mode) {  // show more info for the stack trace in debug mode
     int32_t current_stack_depth = get_cur_stack_depth();
     std::string cur_f_str = get_cur_frame_stack_str(max_stack_depth);
