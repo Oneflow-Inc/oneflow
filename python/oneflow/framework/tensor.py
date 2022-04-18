@@ -1077,6 +1077,10 @@ def _new_tensor(
         )
 
 
+def _amin(self, dim=None, keepdim=False):
+    return flow._C.amin(self, dim=dim, keepdim=keepdim)
+
+
 def RegisterMethods():
     Tensor.__mul__ = lambda self, other: self.mul(other)
     Tensor.__rmul__ = lambda self, other: self.mul(other)
@@ -1151,6 +1155,7 @@ def RegisterMethods():
     Tensor.acos = _acos
     Tensor.arccos = _arccos
     Tensor.acosh = _acosh
+    Tensor.amin = _amin
     Tensor.arccosh = _arccosh
     Tensor.atanh = _atanh
     Tensor.atan2 = _atan2
