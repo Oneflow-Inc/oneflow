@@ -507,17 +507,15 @@ def normal_op(
         tensor([2.2122, 1.1631, 0.7740, 0.4838, 1.0434], dtype=oneflow.float32)
     """
     if len(size) == 1:
-        new_shape = size[0]
-        if isinstance(new_shape, int):
-            new_shape = (new_shape,)
-    else:
-        new_shape = size
+        size = size[0]
+        if isinstance(size, int):
+            size = (size,)
 
     if placement is not None:
         return flow._C.normal(
             mean=mean,
             std=std,
-            size=new_shape,
+            size=size,
             out=out,
             placement=placement,
             sbp=sbp,
