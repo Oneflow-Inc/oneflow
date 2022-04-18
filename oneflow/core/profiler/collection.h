@@ -22,6 +22,8 @@ limitations under the License.
 #include <string>
 #include <queue>
 #include "oneflow/core/profiler/util.h"
+#include "oneflow/core/common/util.h"
+#include "oneflow/core/common/global.h"
 
 namespace oneflow {
 
@@ -56,6 +58,23 @@ class ProfileMgr {
  private:
   std::queue<std::shared_ptr<Event>> events_;
   std::vector<Result> __CountResults();
+};
+
+class EventRecorder {
+ public:
+  OF_DISALLOW_COPY_AND_MOVE(EventRecorder);
+
+  explicit EventRecorder(const std::string& name) {
+    auto pmgr = Global<profiler::ProfileMgr>::Get();
+    if (pmgr) { event_ = pmgr->StartRecord(name); }
+  }
+  ~EventRecorder() {
+    auto pmgr = Global<profiler::ProfileMgr>::Get();
+    if (pmgr) { pmgr->EndRecord(event_); }
+  }
+
+ private:
+  std::shared_ptr<Event> event_;
 };
 
 }  // namespace profiler

@@ -136,13 +136,9 @@ struct LocalCallOpKernelUtil final {
         opkernel->UpdateComputeContext(operand->inputs().get(), operand->outputs().get(),
                                        operand->consistent_tensor_infer_result().get(), device_ctx);
     OF_PROFILER_RANGE_PUSH("Compute");
-    auto pmgr = Global<profiler::ProfileMgr>::Get();
-    if (pmgr == nullptr) {
+    {
+      profiler::EventRecorder er_guard(opkernel->op_type_name());
       operand->user_opkernel()->Compute(compute_ctx, state, cache);
-    } else {
-      auto event = pmgr->StartRecord(opkernel->op_type_name());
-      operand->user_opkernel()->Compute(compute_ctx, state, cache);
-      pmgr->EndRecord(event);
     }
     OF_PROFILER_RANGE_POP();
     // tensor tuples are not allowed to be hold by StatefulLocalOpKernel
