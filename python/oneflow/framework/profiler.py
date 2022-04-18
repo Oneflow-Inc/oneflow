@@ -30,3 +30,11 @@ def ProfilerStart():
 
 def ProfilerStop():
     oneflow._oneflow_internal.profiler.ProfilerStop()
+
+
+def EnableProfiler():
+    oneflow._oneflow_internal.profiler.EnableProfiler()
+
+
+def DisableProfiler():
+    return oneflow._oneflow_internal.profiler.DisableProfiler()

@@ -35,6 +35,7 @@ limitations under the License.
 #include "oneflow/core/operator/op_conf_symbol.h"
 #include "oneflow/user/kernels/stateful_local_opkernel.h"
 #include "oneflow/core/profiler/profiler.h"
+#include "oneflow/core/profiler/collection.h"
 #include "oneflow/core/common/cpp_attribute.h"
 
 namespace oneflow {
@@ -135,7 +136,14 @@ struct LocalCallOpKernelUtil final {
         opkernel->UpdateComputeContext(operand->inputs().get(), operand->outputs().get(),
                                        operand->consistent_tensor_infer_result().get(), device_ctx);
     OF_PROFILER_RANGE_PUSH("Compute");
-    operand->user_opkernel()->Compute(compute_ctx, state, cache);
+    auto pmgr = Global<profiler::ProfileMgr>::Get();
+    if (pmgr == nullptr) {
+      operand->user_opkernel()->Compute(compute_ctx, state, cache);
+    } else {
+      auto event = pmgr->StartRecord(opkernel->op_type_name());
+      operand->user_opkernel()->Compute(compute_ctx, state, cache);
+      pmgr->EndRecord(event);
+    }
     OF_PROFILER_RANGE_POP();
     // tensor tuples are not allowed to be hold by StatefulLocalOpKernel
     opkernel->UpdateComputeContext(nullptr, nullptr, nullptr, nullptr);

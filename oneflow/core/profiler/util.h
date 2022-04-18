@@ -13,26 +13,28 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
-#include <pybind11/pybind11.h>
-#include "oneflow/api/python/of_api_registry.h"
-#include "oneflow/core/profiler/profiler.h"
 
-namespace py = pybind11;
+#ifndef ONEFLOW_CORE_PROFILER_UTIL_H_
+#define ONEFLOW_CORE_PROFILER_UTIL_H_
+
+#include <cstdint>
+#include <time.h>
 
 namespace oneflow {
 
-ONEFLOW_API_PYBIND11_MODULE("profiler", m) {
-  m.def("RangePush", [](const std::string& str) { OF_PROFILER_RANGE_PUSH(str); });
+namespace profiler {
 
-  m.def("RangePop", []() { OF_PROFILER_RANGE_POP(); });
+using time_t = int64_t;
 
-  m.def("ProfilerStart", []() { profiler::ProfilerStart(); });
-
-  m.def("ProfilerStop", []() { profiler::ProfilerStop(); });
-
-  m.def("EnableProfiler", &profiler::EnableProfiler);
-
-  m.def("DisableProfiler", &profiler::DisableProfiler);
+inline time_t GetTimeNow(bool allow_monotonic = false) {
+  struct timespec t {};
+  auto mode = CLOCK_REALTIME;
+  if (allow_monotonic) { mode = CLOCK_MONOTONIC; }
+  clock_gettime(mode, &t);
+  return static_cast<time_t>(t.tv_sec) * 1000000000 + static_cast<time_t>(t.tv_nsec);
 }
 
+}  // namespace profiler
 }  // namespace oneflow
+
+#endif  // ONEFLOW_CORE_PROFILER_UTIL_H_

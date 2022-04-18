@@ -13,7 +13,47 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 """
+import json
+from prettytable import PrettyTable
 from oneflow.framework.profiler import ProfilerStart as profiler_start
 from oneflow.framework.profiler import ProfilerStop as profiler_stop
 from oneflow.framework.profiler import RangePop as range_pop
 from oneflow.framework.profiler import RangePush as range_push
+from oneflow.framework.profiler import EnableProfiler as enable_profiler
+from oneflow.framework.profiler import DisableProfiler as disable_profiler
+
+
+class profile(object):
+    def __init__(self) -> None:
+        self.result = ""
+
+    def __enter__(self):
+        enable_profiler()
+        return self
+
+    def __exit__(self, exc_type, exc_val, exc_tb):
+        self.result = disable_profiler()
+
+    # copy from pytorch: torch/autograd/profiler_util.py
+    def _format_time(self, time_us):
+        US_IN_SECOND = 1000.0 * 1000.0
+        US_IN_MS = 1000.0
+        if time_us >= US_IN_SECOND:
+            return "{:.3f}s".format(time_us / US_IN_SECOND)
+        if time_us >= US_IN_MS:
+            return "{:.3f}ms".format(time_us / US_IN_MS)
+        return "{:.3f}us".format(time_us)
+
+    def table(self):
+        result_json = json.loads(self.result)
+        t = PrettyTable()
+        t.field_names = ["Name", "Average duration", "Number of calls"]
+        for item in result_json:
+            t.add_row(
+                [
+                    item["op_name"],
+                    self._format_time(item["avg_duration"]),
+                    item["num_called"],
+                ]
+            )
+        return t.get_string()

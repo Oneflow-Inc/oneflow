@@ -15,6 +15,8 @@ limitations under the License.
 */
 
 #include "oneflow/core/profiler/profiler.h"
+#include "oneflow/core/profiler/collection.h"
+#include "oneflow/core/vm/vm_util.h"
 #ifdef OF_ENABLE_PROFILER
 #include <nvtx3/nvToolsExt.h>
 #include <sys/syscall.h>
@@ -104,6 +106,25 @@ void ProfilerStop() {
 #ifdef OF_ENABLE_PROFILER
   OF_CUDA_CHECK(cudaProfilerStop());
 #endif  // OF_ENABLE_PROFILER
+}
+
+void EnableProfiler() {
+  if (Global<ProfileMgr>::Get() == nullptr) {
+    vm::ClusterSync().GetOrThrow();
+    Global<ProfileMgr>::New();
+  }
+}
+
+// DisableProfiler will return a json of profile results.
+std::string DisableProfiler() {
+  auto pmgr = Global<ProfileMgr>::Get();
+  if (pmgr != nullptr) {
+    vm::ClusterSync().GetOrThrow();
+    std::string results = pmgr->DumpResultsJson();
+    Global<ProfileMgr>::Delete();
+    return results;
+  }
+  return "";
 }
 
 }  // namespace profiler
