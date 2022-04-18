@@ -106,7 +106,7 @@ Maybe<Tensor> Reshape(const std::shared_ptr<Tensor>& input, const Shape& target_
     backward_fn->body = [=](const TensorTuple& out_grads, TensorTuple* in_grads,
                             bool create_graph) -> Maybe<void> {
       autograd::AutoGradMode mode(create_graph);
-      CHECK_EQ_OR_RETURN(out_grads.size(), 1);
+      CHECK_EQ_OR_RETURN(out_grads.size(), 1);  // NOLINT(maybe-need-error-msg)
       in_grads->resize(1);
       *JUST(oneflow::VectorAt(in_grads, 0)) =
           JUST(functional::Reshape(JUST(oneflow::VectorAt(out_grads, 0)), input_shape));
@@ -160,7 +160,7 @@ Maybe<Tensor> Slice(const std::shared_ptr<Tensor>& input, const std::vector<int6
     backward_fn->body = [=](const TensorTuple& out_grads, TensorTuple* in_grads,
                             bool create_graph) -> Maybe<void> {
       autograd::AutoGradMode mode(create_graph);
-      CHECK_EQ_OR_RETURN(out_grads.size(), 1);
+      CHECK_EQ_OR_RETURN(out_grads.size(), 1);  // NOLINT(maybe-need-error-msg)
       in_grads->resize(1);
       (*in_grads)[0] = JUST(functional::SliceGrad(
           JUST(VectorAt(out_grads, 0)), Shape(input->shape()->dim_vec()), starts, ends, steps));
@@ -208,7 +208,7 @@ Maybe<Tensor> Unsqueeze(const std::shared_ptr<Tensor>& input, const int32_t& exp
     backward_fn->body = [=](const TensorTuple& out_grads, TensorTuple* in_grads,
                             bool create_graph) -> Maybe<void> {
       autograd::AutoGradMode mode(create_graph);
-      CHECK_EQ_OR_RETURN(out_grads.size(), 1);
+      CHECK_EQ_OR_RETURN(out_grads.size(), 1);  // NOLINT(maybe-need-error-msg)
       in_grads->resize(1);
       *JUST(oneflow::VectorAt(in_grads, 0)) =
           JUST(functional::Reshape(JUST(oneflow::VectorAt(out_grads, 0)), *shape));
@@ -257,7 +257,7 @@ Maybe<Tensor> Squeeze(const std::shared_ptr<Tensor>& input,
     backward_fn->body = [=](const TensorTuple& out_grads, TensorTuple* in_grads,
                             bool create_graph) -> Maybe<void> {
       autograd::AutoGradMode mode(create_graph);
-      CHECK_EQ_OR_RETURN(out_grads.size(), 1);
+      CHECK_EQ_OR_RETURN(out_grads.size(), 1);  // NOLINT(maybe-need-error-msg)
       in_grads->resize(1);
       *JUST(oneflow::VectorAt(in_grads, 0)) = JUST(functional::Reshape(
           JUST(oneflow::VectorAt(out_grads, 0)), Shape(input->shape()->dim_vec())));
