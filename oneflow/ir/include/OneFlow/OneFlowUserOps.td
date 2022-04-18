@@ -9357,7 +9357,7 @@ def OneFlow_EmbeddingLookupPlaceholderOp : OneFlow_BaseOp<"embedding_lookup_plac
   let input = (ins
     OneFlow_Tensor:$shadow,
     OneFlow_Tensor:$ids,
-    Optional<OneFlow_Tensor>:$column_ids
+    Optional<OneFlow_Tensor>:$table_ids
   );
   let output = (outs
     OneFlow_Tensor:$embeddings
@@ -9365,8 +9365,8 @@ def OneFlow_EmbeddingLookupPlaceholderOp : OneFlow_BaseOp<"embedding_lookup_plac
   let attrs = (ins
     OneFlow_DataType:$dtype,
     DefaultValuedAttr<SI64Attr, "0">:$embedding_size,
-    DefaultValuedAttr<SI32Attr, "1">:$num_columns,
-    StrAttr:$embedding_columns,
+    DefaultValuedAttr<SI32Attr, "1">:$num_tables,
+    StrAttr:$embedding_tables,
     StrAttr:$key_value_store_options
   );
   let has_logical_tensor_desc_infer_fn = 1;
@@ -9402,7 +9402,7 @@ def OneFlow_UniqueKeyValuePairOp : OneFlow_BaseOp<"unique_key_value_pair", [NoSi
     OneFlow_Tensor:$inverse_indices
   );
   let attrs = (ins
-    DefaultValuedAttr<SI32Attr, "1">:$num_columns
+    DefaultValuedAttr<SI32Attr, "1">:$num_tables
   );
   let same_output_regst_num = 1;
   let has_logical_tensor_desc_infer_fn = 1;
@@ -9414,18 +9414,18 @@ def OneFlow_UniqueKeyValuePairOp : OneFlow_BaseOp<"unique_key_value_pair", [NoSi
 def OneFlow_IdShuffleOp : OneFlow_BaseOp<"id_shuffle", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
     OneFlow_Tensor:$ids,
-    Optional<OneFlow_Tensor>:$column_ids
+    Optional<OneFlow_Tensor>:$table_ids
   );
   let output = (outs
     OneFlow_Tensor:$num_unique_matrix,
     OneFlow_Tensor:$inverse_unique_partition_indices,
     OneFlow_Tensor:$cur_rank_num_unique,
     OneFlow_Tensor:$cur_rank_unique_ids,
-    OneFlow_Tensor:$cur_rank_unique_column_ids,
+    OneFlow_Tensor:$cur_rank_unique_table_ids,
     OneFlow_Tensor:$cur_rank_inverse_indices
   );
   let attrs = (ins
-    DefaultValuedAttr<SI32Attr, "1">:$num_columns
+    DefaultValuedAttr<SI32Attr, "1">:$num_tables
   );
   let same_output_regst_num = 1;
   let has_logical_tensor_desc_infer_fn = 1;
@@ -9472,7 +9472,7 @@ def OneFlow_EmbeddingPrefetchOp : OneFlow_BaseOp<"embedding_prefetch", [NoSideEf
   let input = (ins
     OneFlow_Tensor:$num_unique_ids,
     OneFlow_Tensor:$unique_ids,
-    OneFlow_Tensor:$column_ids
+    OneFlow_Tensor:$table_ids
   );
   let output = (outs
     OneFlow_Tensor:$context //no practical sense, control lookup run after prefetch.
@@ -9481,7 +9481,8 @@ def OneFlow_EmbeddingPrefetchOp : OneFlow_BaseOp<"embedding_prefetch", [NoSideEf
     DefaultValuedAttr<SI64Attr, "0">:$line_size,
     DefaultValuedAttr<SI64Attr, "0">:$embedding_size,
     StrAttr:$embedding_name,
-    StrAttr:$embedding_columns
+    StrAttr:$embedding_tables,
+    StrAttr:$state_initializer
   );
   let same_output_regst_num = 1;
   let has_logical_tensor_desc_infer_fn = 1;
@@ -9494,7 +9495,7 @@ def OneFlow_EmbeddingLookupOp : OneFlow_BaseOp<"embedding_lookup", [NoSideEffect
   let input = (ins
     OneFlow_Tensor:$num_unique_ids,
     OneFlow_Tensor:$unique_ids,
-    OneFlow_Tensor:$column_ids,
+    OneFlow_Tensor:$table_ids,
     Optional<OneFlow_Tensor>:$context
   );
   let output = (outs
@@ -9507,7 +9508,8 @@ def OneFlow_EmbeddingLookupOp : OneFlow_BaseOp<"embedding_lookup", [NoSideEffect
     DefaultValuedAttr<SI64Attr, "0">:$line_size,
     DefaultValuedAttr<SI64Attr, "0">:$embedding_size,
     StrAttr:$embedding_name,
-    StrAttr:$embedding_columns
+    StrAttr:$embedding_tables,
+    StrAttr:$state_initializer
   );
   let same_output_regst_num = 1;
   let has_logical_tensor_desc_infer_fn = 1;
