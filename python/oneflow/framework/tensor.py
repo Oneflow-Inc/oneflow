@@ -705,6 +705,7 @@ def _orthogonal(self, gain=1.0):
     flattened = np.random.normal(0.0, 1.0, size=(rows, cols))
     if rows < cols:
         flattened = flattened.T
+    # TODO
     q, r = np.linalg.qr(flattened) 
     d = np.diag(r, 0)
     d = np.where(d < 0, -1, d)
