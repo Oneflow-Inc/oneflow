@@ -113,6 +113,7 @@ class TestArangeConsistent(flow.unittest.TestCase):
                         test_case, **args, placement=placement, sbp=sbp
                     )
 
+    @unittest.skipIf(os.getenv("ONEFLOW_TEST_CPU_ONLY"), "only test cpu cases")
     @globaltest
     def test_arange_graph(test_case):
         arg_dict = OrderedDict()
