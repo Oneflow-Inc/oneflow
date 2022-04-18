@@ -18,20 +18,20 @@ from oneflow.framework.docstr.utils import add_docstr
 
 add_docstr(
     oneflow.amin,
-    """This function is equivalent to PyTorch’s amin function. 
+    r"""This function is equivalent to PyTorch’s amin function. 
     The documentation is referenced from: https://pytorch.org/docs/stable/generated/torch.amin.html.
+    
     Returns the minimum value of each slice of the `input` tensor in the given dimension(s) `dim`.
+
     If `keepdim` is `True`, the output tensor is of the same size as `input` except in the dimension(s) `dim` where it is of size 1. Otherwise, `dim` is squeezed (see :func:`oneflow.squeeze`), resulting in the output tensor having 1 (or `len(dim)`) fewer dimension(s).
     
-    Args:
+    Parameters:
         input (oneflow.Tensor): the input Tensor.
-        dim (int or tuple of python:ints): the dimension or dimensions to reduce. 
+        dim (int, Tuple[int]): the dimension or dimensions to reduce. 
         keepdim (bool): whether the output tensor has `dim` retained or not.
     
-    Returns:
-        oneflow.Tensor: Maximum of the input tensor
-    
     Example:
+
     .. code-block:: python
     
         >>> import oneflow as flow
