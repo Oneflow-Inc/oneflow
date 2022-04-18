@@ -130,12 +130,12 @@ def compare_with_numpy_sgd(
 
 @flow.unittest.skip_unless_1n1d()
 class TestOptimizers(flow.unittest.TestCase):
-    def test_sgd(test_case):
+    def test_one_embedding_sgd(test_case):
         arg_dict = OrderedDict()
         arg_dict["momentum"] = [0, 0.9]
         arg_dict["weight_decay"] = [0, 0.1]
         arg_dict["scale"] = [1, 0.1]
-        arg_dict["learning_rate"] = [1]
+        arg_dict["learning_rate"] = [1, 0.9]
         arg_dict["train_iters"] = [10]
         for arg in GenArgDict(arg_dict):
             compare_with_numpy_sgd(test_case, **arg)
