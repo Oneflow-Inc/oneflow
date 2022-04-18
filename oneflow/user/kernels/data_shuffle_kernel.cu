@@ -805,9 +805,9 @@ template<typename T, typename ComputeType, typename IDX>
 inline cudaError_t LaunchDequantizeKernel(cudaStream_t stream, const int8_t* src,
                                           T* quantize_factor, T* dst, const int64_t col_size,
                                           const int64_t elem_cnt) {
-  int32_t quantized_src_pack_size = cuda::elementwise::PackSize<int8_t>();
-  int32_t dst_pack_size = cuda::elementwise::PackSize<T>();
-  int32_t launch_pack_size = min(quantized_src_pack_size, dst_pack_size);
+  constexpr int quantized_src_pack_size = cuda::elementwise::PackSize<int8_t>();
+  constexpr int dst_pack_size = cuda::elementwise::PackSize<T>();
+  int launch_pack_size = min(quantized_src_pack_size, dst_pack_size);
   if (launch_pack_size == 8 && col_size % 8 == 0) {
     cudaError_t err = DispatchDequantizeKernelPackSize<T, ComputeType, IDX, 8>(
         stream, src, quantize_factor, dst, col_size, elem_cnt);
