@@ -10,6 +10,7 @@ OneFlow Tensor Class
             add, 
             add_, 
             addmm,
+            amin,
             arccos, 
             arccosh, 
             arcsin, 
