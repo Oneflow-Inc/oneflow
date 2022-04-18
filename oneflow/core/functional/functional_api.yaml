@@ -2068,7 +2068,7 @@
   bind_python: False
 
 - name: "one_embedding_id_shuffle"
-  signature: "TensorTuple (Tensor ids, Tensor column_ids=None, Int32 num_columns=1) => OneEmbeddingIdShuffle"
+  signature: "TensorTuple (Tensor ids, Tensor table_ids=None, Int32 num_tables=1) => OneEmbeddingIdShuffle"
   bind_python: True
 
 - name: "one_embedding_embedding_shuffle"
@@ -2080,11 +2080,11 @@
   bind_python: True
 
 - name: "one_embedding_lookup"
-  signature: "Tensor (Tensor shadow, Tensor ids, Tensor column_ids=None, DataType dtype, Int64 embedding_size, Int32 num_columns, String embedding_columns, String embedding_store_options) => OneEmbeddingLookup"
+  signature: "Tensor (Tensor shadow, Tensor ids, Tensor table_ids=None, DataType dtype, Int64 embedding_size, Int32 num_tables, String embedding_tables, String embedding_store_options) => OneEmbeddingLookup"
   bind_python: True
 
 - name: "one_embedding_unique_key_value_pair"
-  signature: "TensorTuple (Tensor keys, Tensor values=None, Int32 num_columns) => OneEmbeddingUniqueKeyValuePair"
+  signature: "TensorTuple (Tensor keys, Tensor values=None, Int32 num_tables) => OneEmbeddingUniqueKeyValuePair"
   bind_python: True
 
 - name: "einsum"

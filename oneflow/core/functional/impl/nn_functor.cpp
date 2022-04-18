@@ -2496,43 +2496,43 @@ class FusedDotFeatureInteractionFunctor {
 class OneEmbeddingIdShuffleFunctor {
  public:
   OneEmbeddingIdShuffleFunctor() {
-    op_column_ids_has_in_out_ = CHECK_JUST(one::OpBuilder("id_shuffle")
-                                               .Input("ids")
-                                               .Input("column_ids")
-                                               .Output("num_unique_matrix")
-                                               .Output("inverse_unique_partition_indices")
-                                               .Output("cur_rank_num_unique")
-                                               .Output("cur_rank_unique_ids")
-                                               .Output("cur_rank_unique_column_ids")
-                                               .Output("cur_rank_inverse_indices")
-                                               .Build());
-    op_column_ids_no_in_has_out_ = CHECK_JUST(one::OpBuilder("id_shuffle")
-                                                  .Input("ids")
-                                                  .Output("num_unique_matrix")
-                                                  .Output("inverse_unique_partition_indices")
-                                                  .Output("cur_rank_num_unique")
-                                                  .Output("cur_rank_unique_ids")
-                                                  .Output("cur_rank_unique_column_ids")
-                                                  .Output("cur_rank_inverse_indices")
-                                                  .Build());
+    op_table_ids_has_in_out_ = CHECK_JUST(one::OpBuilder("id_shuffle")
+                                              .Input("ids")
+                                              .Input("table_ids")
+                                              .Output("num_unique_matrix")
+                                              .Output("inverse_unique_partition_indices")
+                                              .Output("cur_rank_num_unique")
+                                              .Output("cur_rank_unique_ids")
+                                              .Output("cur_rank_unique_table_ids")
+                                              .Output("cur_rank_inverse_indices")
+                                              .Build());
+    op_table_ids_no_in_has_out_ = CHECK_JUST(one::OpBuilder("id_shuffle")
+                                                 .Input("ids")
+                                                 .Output("num_unique_matrix")
+                                                 .Output("inverse_unique_partition_indices")
+                                                 .Output("cur_rank_num_unique")
+                                                 .Output("cur_rank_unique_ids")
+                                                 .Output("cur_rank_unique_table_ids")
+                                                 .Output("cur_rank_inverse_indices")
+                                                 .Build());
   }
 
   Maybe<TensorTuple> operator()(const std::shared_ptr<one::Tensor>& ids,
-                                const Optional<one::Tensor>& column_ids,
-                                const int32_t& num_columns) const {
+                                const Optional<one::Tensor>& table_ids,
+                                const int32_t& num_tables) const {
     MutableAttrMap attrs;
-    JUST(attrs.SetAttr<int32_t>("num_columns", num_columns));
-    if (column_ids) {
-      return OpInterpUtil::Dispatch<TensorTuple>(*op_column_ids_has_in_out_,
-                                                 {ids, JUST(column_ids)}, attrs);
+    JUST(attrs.SetAttr<int32_t>("num_tables", num_tables));
+    if (table_ids) {
+      return OpInterpUtil::Dispatch<TensorTuple>(*op_table_ids_has_in_out_, {ids, JUST(table_ids)},
+                                                 attrs);
     } else {
-      return OpInterpUtil::Dispatch<TensorTuple>(*op_column_ids_no_in_has_out_, {ids}, attrs);
+      return OpInterpUtil::Dispatch<TensorTuple>(*op_table_ids_no_in_has_out_, {ids}, attrs);
     }
   }
 
  private:
-  std::shared_ptr<OpExpr> op_column_ids_has_in_out_;
-  std::shared_ptr<OpExpr> op_column_ids_no_in_has_out_;
+  std::shared_ptr<OpExpr> op_table_ids_has_in_out_;
+  std::shared_ptr<OpExpr> op_table_ids_no_in_has_out_;
 };
 
 class OneEmbeddingEmbeddingShuffleFunctor {
@@ -2590,42 +2590,42 @@ class OneEmbeddingEmbeddingGradientShuffleFunctor {
 class OneEmbeddingLookupFunctor {
  public:
   OneEmbeddingLookupFunctor() {
-    op_has_column_ids_ = CHECK_JUST(one::OpBuilder("embedding_lookup_placeholder")
-                                        .Input("shadow")
-                                        .Input("ids")
-                                        .Input("column_ids")
-                                        .Output("embeddings")
-                                        .Build());
-    op_no_column_ids_ = CHECK_JUST(one::OpBuilder("embedding_lookup_placeholder")
+    op_has_table_ids_ = CHECK_JUST(one::OpBuilder("embedding_lookup_placeholder")
                                        .Input("shadow")
                                        .Input("ids")
+                                       .Input("table_ids")
                                        .Output("embeddings")
                                        .Build());
+    op_no_table_ids_ = CHECK_JUST(one::OpBuilder("embedding_lookup_placeholder")
+                                      .Input("shadow")
+                                      .Input("ids")
+                                      .Output("embeddings")
+                                      .Build());
   }
 
   Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& shadow,
                            const std::shared_ptr<one::Tensor>& ids,
-                           const Optional<one::Tensor>& column_ids, const Symbol<DType>& dtype,
-                           const int64_t embedding_size, const int32_t num_columns,
-                           const std::string& embedding_columns,
+                           const Optional<one::Tensor>& table_ids, const Symbol<DType>& dtype,
+                           const int64_t embedding_size, const int32_t num_tables,
+                           const std::string& embedding_tables,
                            const std::string& key_value_store_options) const {
     MutableAttrMap attrs;
     JUST(attrs.SetAttr<DataType>("dtype", dtype->data_type()));
     JUST(attrs.SetAttr<int64_t>("embedding_size", embedding_size));
-    JUST(attrs.SetAttr<int32_t>("num_columns", num_columns));
-    JUST(attrs.SetAttr<std::string>("embedding_columns", embedding_columns));
+    JUST(attrs.SetAttr<int32_t>("num_tables", num_tables));
+    JUST(attrs.SetAttr<std::string>("embedding_tables", embedding_tables));
     JUST(attrs.SetAttr<std::string>("key_value_store_options", key_value_store_options));
-    if (column_ids) {
-      return OpInterpUtil::Dispatch<Tensor>(*op_has_column_ids_, {shadow, ids, JUST(column_ids)},
+    if (table_ids) {
+      return OpInterpUtil::Dispatch<Tensor>(*op_has_table_ids_, {shadow, ids, JUST(table_ids)},
                                             attrs);
     } else {
-      return OpInterpUtil::Dispatch<Tensor>(*op_no_column_ids_, {shadow, ids}, attrs);
+      return OpInterpUtil::Dispatch<Tensor>(*op_no_table_ids_, {shadow, ids}, attrs);
     }
   }
 
  private:
-  std::shared_ptr<OpExpr> op_has_column_ids_;
-  std::shared_ptr<OpExpr> op_no_column_ids_;
+  std::shared_ptr<OpExpr> op_has_table_ids_;
+  std::shared_ptr<OpExpr> op_no_table_ids_;
 };
 
 class OneEmbeddingUniqueKeyValuePairFunctor {
@@ -2650,9 +2650,9 @@ class OneEmbeddingUniqueKeyValuePairFunctor {
 
   Maybe<TensorTuple> operator()(const std::shared_ptr<one::Tensor>& keys,
                                 const Optional<one::Tensor>& values,
-                                const int32_t num_columns) const {
+                                const int32_t num_tables) const {
     MutableAttrMap attrs;
-    JUST(attrs.SetAttr<int32_t>("num_columns", num_columns));
+    JUST(attrs.SetAttr<int32_t>("num_tables", num_tables));
     if (values) {
       return OpInterpUtil::Dispatch<TensorTuple>(*op_has_input_value_, {keys, JUST(values)}, attrs);
     } else {
