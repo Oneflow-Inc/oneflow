@@ -2728,8 +2728,9 @@ class OneEmbeddingFtrlUpdateFunctor {
                                            learning_rate, down_scale_by_tensor, skip_if},
                                           attrs);
   }
-  private:
-    std::shared_ptr<OpExpr> op_;
+
+ private:
+  std::shared_ptr<OpExpr> op_;
 };
 
 class RocAucScoreFunctor {

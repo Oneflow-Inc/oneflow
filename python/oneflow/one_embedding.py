@@ -764,6 +764,7 @@ class FTRL(Optimizer):
         lambda2 (float, optional): _description_. Defaults to 0.0.
         beta (float, optional): _description_. Defaults to 0.0.
     """
+
     def __init__(
         self,
         params: Union[Iterator[Parameter], List[Dict]],

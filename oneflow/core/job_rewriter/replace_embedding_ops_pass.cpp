@@ -490,7 +490,9 @@ void BuildEmbeddingUpdate(JobPassCtx* ctx, const OpGraph& op_graph, JobBuilder* 
         .Attr<float>("epsilon", adagrad_conf.epsilon());
   } else if (optimizer_conf.has_ftrl_conf()) {
     const FtrlModelUpdateConf& ftrl_conf = optimizer_conf.ftrl_conf();
-    // TODO: add accumulator initialize val
+    state_constant_init_values.push_back(ftrl_conf.initial_accumulator_value());
+    // For `z`, its init value is 0.0.
+    state_constant_init_values.push_back(0.0);
     embedding_update_op_builder.OpTypeName("ftrl_embedding_update")
         .Attr<float>("lr_power", ftrl_conf.lr_power())
         .Attr<float>("lambda1", ftrl_conf.lambda1())
