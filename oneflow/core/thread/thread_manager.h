@@ -38,7 +38,7 @@ class ThreadMgr final {
   ~ThreadMgr();
 
   void AddThreads(const HashSet<int64_t>& thread_ids);
-  void TryDeleteThreads(const HashSet<int64_t>& thread_ids);
+  void DeleteThreads(const HashSet<int64_t>& thread_ids);
   Thread* GetThrd(int64_t thrd_id);
 
  private:

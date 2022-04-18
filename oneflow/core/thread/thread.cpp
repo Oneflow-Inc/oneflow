@@ -51,8 +51,6 @@ void Thread::AddTask(const TaskProto& task) {
   CHECK(id2task_.emplace(task.task_id(), task).second);
 }
 
-bool Thread::Empty() const { return id2actor_ptr_.empty(); }
-
 void Thread::PollMsgChannel() {
   while (true) {
     if (local_msg_queue_.empty()) {
@@ -62,7 +60,9 @@ void Thread::PollMsgChannel() {
     local_msg_queue_.pop();
     if (msg.msg_type() == ActorMsgType::kCmdMsg) {
       if (msg.actor_cmd() == ActorCmd::kStopThread) {
-        CHECK(id2actor_ptr_.empty());
+        CHECK(id2actor_ptr_.empty())
+            << " RuntimeError! Thread: " << thrd_id_
+            << " NOT empty when stop with actor num: " << id2actor_ptr_.size();
         break;
       } else if (msg.actor_cmd() == ActorCmd::kConstructActor) {
         ConstructActor(msg.dst_actor_id());

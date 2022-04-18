@@ -107,7 +107,7 @@ Runtime::~Runtime() {
     Global<RuntimeCtx>::Get()->WaitUntilCntEqualZero(GetRunningActorCountKeyByJobId(pair.first));
   }
   OF_SESSION_BARRIER();
-  Global<ThreadMgr>::Get()->TryDeleteThreads(thread_ids_);
+  Global<ThreadMgr>::Get()->DeleteThreads(independent_thread_ids_);
   Global<boxing::collective::Scheduler>::Get()->DeletePlan(collective_boxing_scheduler_plan_token_);
 }
 
@@ -119,6 +119,14 @@ void Runtime::DumpThreadIdsFromPlan(const Plan& plan) {
     if (stream_id.rank() != this_rank) { continue; }
     int64_t thrd_id = EncodeStreamIdToInt64(stream_id);
     thread_ids_.insert(thrd_id);
+    // NOTE(chengcheng): there is not a interface to query whether a task type is indenpendent,
+    //  so use hard code.
+    if (task.task_type() == TaskType::kWaitAndSendIds
+        || task.task_type() == TaskType::kCriticalSectionWaitTick) {
+      CHECK(independent_thread_ids_.insert(thrd_id).second)
+          << " RuntimeError! Thread : " << thrd_id
+          << " not independent with task proto: " << task.DebugString();
+    }
   }
 }
 

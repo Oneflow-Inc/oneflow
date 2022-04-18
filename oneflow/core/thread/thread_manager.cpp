@@ -21,13 +21,17 @@ limitations under the License.
 namespace oneflow {
 
 ThreadMgr::~ThreadMgr() {
-  CHECK(threads_.empty()) << " Runtime Error! num = " << threads_.size()
-                          << " threads did not destroy with graph.";
+  for (auto& thread_pair : threads_) {
+    ActorMsg msg = ActorMsg::BuildCommandMsg(-1, ActorCmd::kStopThread);
+    thread_pair.second->GetMsgChannelPtr()->Send(msg);
+    thread_pair.second.reset();
+    VLOG(1) << " Actor thread: " << thread_pair.first << " finished.";
+  }
 }
 
 Thread* ThreadMgr::GetThrd(int64_t thrd_id) {
   auto iter = threads_.find(thrd_id);
-  CHECK(iter != threads_.end()) << "thread " << thrd_id << " not found";
+  CHECK(iter != threads_.end()) << " Thread: " << thrd_id << " not found";
   return iter->second.get();
 }
 
@@ -37,7 +41,7 @@ void ThreadMgr::AddThreads(const HashSet<int64_t>& thread_ids) {
     const auto& it = threads_.find(thrd_id);
     if (it != threads_.end()) {
       // NOTE(chengcheng): check thread is not null.
-      CHECK(it->second) << " Runtime Error! Thread: " << thrd_id << " in manager must be NOT null.";
+      CHECK(it->second) << " RuntimeError! Thread: " << thrd_id << " in manager must be NOT null.";
       continue;
     }
     StreamId stream_id = DecodeStreamIdFromInt64(thrd_id);
@@ -48,26 +52,18 @@ void ThreadMgr::AddThreads(const HashSet<int64_t>& thread_ids) {
   }
 }
 
-void ThreadMgr::TryDeleteThreads(const HashSet<int64_t>& thread_ids) {
+void ThreadMgr::DeleteThreads(const HashSet<int64_t>& thread_ids) {
   std::unique_lock<std::mutex> lock(mutex4del_threads_);
   for (int64_t thrd_id : thread_ids) {
     const auto& it = threads_.find(thrd_id);
-    if (it == threads_.end()) { continue; }
+    CHECK((it != threads_.end()) && (it->second))
+        << " RuntimeError! Actor thread: " << thrd_id << " non-existent but want to delete";
     auto& thread = it->second;
-    CHECK(thread) << " actor thread " << thrd_id << " non-existent but want to delete";
-    if (thread->Empty()) {
-      // NOTE(chengcheng):  Only delete thread when it is empty.
-      //   We need send Stop msg to exit the main loop of the thread. Here we can safely call reset
-      //   directly, because the thread destructor will specify actor_thread_.join() to blocking
-      //   wait for the end of the thread real execution.
-      ActorMsg msg = ActorMsg::BuildCommandMsg(-1, ActorCmd::kStopThread);
-      thread->GetMsgChannelPtr()->Send(msg);
-      thread.reset();
-      VLOG(2) << " actor thread " << thrd_id << " finish.";
-      threads_.erase(it);
-    } else {
-      LOG(INFO) << " actor thread " << thrd_id << " not delete because it is not empty.";
-    }
+    ActorMsg msg = ActorMsg::BuildCommandMsg(-1, ActorCmd::kStopThread);
+    thread->GetMsgChannelPtr()->Send(msg);
+    thread.reset();
+    VLOG(1) << " Actor thread: " << thrd_id << " finished.";
+    threads_.erase(it);
   }
 }
 
