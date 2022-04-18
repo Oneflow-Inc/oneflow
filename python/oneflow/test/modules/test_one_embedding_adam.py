@@ -17,7 +17,7 @@ limitations under the License.
 import unittest
 from collections import OrderedDict
 import tempfile
-
+import os
 import numpy as np
 from oneflow.test_utils.test_util import GenArgDict
 from optimizer_test_util import clip_grad_norm_np
