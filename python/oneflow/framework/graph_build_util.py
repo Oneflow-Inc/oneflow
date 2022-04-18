@@ -99,7 +99,9 @@ class DebugScopeContext(object):
         )
         self._v = max(v_level, self._prev_v)
         self._s = s_level
-        self._max_py_stack_depth = max(max_py_stack_depth, self._prev_max_py_stack_depth)
+        self._max_py_stack_depth = max(
+            max_py_stack_depth, self._prev_max_py_stack_depth
+        )
 
     def __enter__(self):
         oneflow._oneflow_internal.SetFLAGS_v(self._v)

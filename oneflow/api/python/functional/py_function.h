@@ -100,12 +100,8 @@ std::string get_cur_frame_stack_str(int32_t max_stack_depth) {
   for (int32_t i = 0; i < max_stack_depth; i++) {
     if (cur_frame == NULL) break;
     const int32_t stack_index = (-1) * i - 1;
-
-    Py_XINCREF(cur_frame);
     cur_f_str = "Python Stack[" + std::to_string(stack_index)
                 + "]: " + PyObjectToReprStr((PyObject*)cur_frame).GetOrThrow() + "; " + cur_f_str;
-    Py_XDECREF(cur_frame);
-
     cur_frame = cur_frame->f_back;
   }
   return cur_f_str;
