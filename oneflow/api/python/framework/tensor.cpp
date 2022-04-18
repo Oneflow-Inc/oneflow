@@ -45,6 +45,12 @@ namespace one {
 #define ASSERT_PTR(x) (x).GetPtrOrThrow()
 #define PY_XINCREF(p) (({ Py_XINCREF(p); }), (p))
 
+#if PY_VERSION_HEX < 0x03070000
+#define PYGETSET_NAME(name) const_cast<char*>(name)
+#else
+#define PYGETSET_NAME(name) (name)
+#endif
+
 PyTypeObject* PyTensorObject_Type = NULL;
 PyTypeObject* PyParameterObject_Type = NULL;
 
@@ -463,28 +469,31 @@ static PyObject* PyTensorObject_sbp(PyObject* self, void* unused) {
   END_HANDLE_ERRORS
 }
 
+// NOLINTNEXTLINE
 static PyGetSetDef PyTensorObject_properties[] = {
-    {"ndim", (getter)PyTensorObject_ndim, NULL, NULL, NULL},
-    {"shape", (getter)PyTensorObject_shape, NULL, NULL, NULL},
-    {"dtype", (getter)PyTensorObject_dtype, NULL, NULL, NULL},
-    {"is_cuda", (getter)PyTensorObject_is_cuda, NULL, NULL, NULL},
-    {"grad", (getter)PyTensorObject_grad, (setter)PyTensorObject_set_grad, NULL, NULL},
-    {"_is_grad_acc_inplace", (getter)PyTensorObject__is_grad_acc_inplace,
+    {PYGETSET_NAME("ndim"), (getter)PyTensorObject_ndim, NULL, NULL, NULL},
+    {PYGETSET_NAME("shape"), (getter)PyTensorObject_shape, NULL, NULL, NULL},
+    {PYGETSET_NAME("dtype"), (getter)PyTensorObject_dtype, NULL, NULL, NULL},
+    {PYGETSET_NAME("is_cuda"), (getter)PyTensorObject_is_cuda, NULL, NULL, NULL},
+    {PYGETSET_NAME("grad"), (getter)PyTensorObject_grad, (setter)PyTensorObject_set_grad, NULL,
+     NULL},
+    {PYGETSET_NAME("_is_grad_acc_inplace"), (getter)PyTensorObject__is_grad_acc_inplace,
      (setter)PyTensorObject_set__is_grad_acc_inplace, NULL, NULL},
-    {"data", (getter)PyTensorObject_data, (setter)PyTensorObject_set_data, NULL, NULL},
-    {"grad_fn", (getter)PyTensorObject_grad_fn, NULL, NULL, NULL},
-    {"is_leaf", (getter)PyTensorObject_is_leaf, NULL, NULL, NULL},
-    {"requires_grad", (getter)PyTensorObject_requires_grad,
+    {PYGETSET_NAME("data"), (getter)PyTensorObject_data, (setter)PyTensorObject_set_data, NULL,
+     NULL},
+    {PYGETSET_NAME("grad_fn"), (getter)PyTensorObject_grad_fn, NULL, NULL, NULL},
+    {PYGETSET_NAME("is_leaf"), (getter)PyTensorObject_is_leaf, NULL, NULL, NULL},
+    {PYGETSET_NAME("requires_grad"), (getter)PyTensorObject_requires_grad,
      (setter)PyTensorObject_set_requires_grad, NULL, NULL},
-    {"is_lazy", (getter)PyTensorObject_is_lazy, NULL, NULL, NULL},
-    {"is_eager", (getter)PyTensorObject_is_eager, NULL, NULL, NULL},
-    {"is_global", (getter)PyTensorObject_is_global, NULL, NULL, NULL},
-    {"is_local", (getter)PyTensorObject_is_local, NULL, NULL, NULL},
-    {"_tensor_buffer_shapes_and_dtypes", (getter)PyTensorObject__tensor_buffer_shapes_and_dtypes,
-     NULL, NULL, NULL},
-    {"device", (getter)PyTensorObject_device, NULL, NULL, NULL},
-    {"placement", (getter)PyTensorObject_placement, NULL, NULL, NULL},
-    {"sbp", (getter)PyTensorObject_sbp, NULL, NULL, NULL},
+    {PYGETSET_NAME("is_lazy"), (getter)PyTensorObject_is_lazy, NULL, NULL, NULL},
+    {PYGETSET_NAME("is_eager"), (getter)PyTensorObject_is_eager, NULL, NULL, NULL},
+    {PYGETSET_NAME("is_global"), (getter)PyTensorObject_is_global, NULL, NULL, NULL},
+    {PYGETSET_NAME("is_local"), (getter)PyTensorObject_is_local, NULL, NULL, NULL},
+    {PYGETSET_NAME("_tensor_buffer_shapes_and_dtypes"),
+     (getter)PyTensorObject__tensor_buffer_shapes_and_dtypes, NULL, NULL, NULL},
+    {PYGETSET_NAME("device"), (getter)PyTensorObject_device, NULL, NULL, NULL},
+    {PYGETSET_NAME("placement"), (getter)PyTensorObject_placement, NULL, NULL, NULL},
+    {PYGETSET_NAME("sbp"), (getter)PyTensorObject_sbp, NULL, NULL, NULL},
     {NULL}};
 
 // create a Tensor instance
