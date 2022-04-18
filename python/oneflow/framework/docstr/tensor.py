@@ -1846,3 +1846,10 @@ add_docstr(
     See :func:`oneflow.isinf`
     """,
 )
+
+add_docstr(
+    oneflow.Tensor.amin,
+    """
+    See :func:`oneflow.amin`
+    """,
+)
