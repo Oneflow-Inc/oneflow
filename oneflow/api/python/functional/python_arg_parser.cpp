@@ -22,7 +22,7 @@ namespace one {
 namespace functional {
 
 void FunctionSchema::ReportKwargsError(PyObject* kwargs) const {
-  PyObject *key, *value;
+  PyObject *key = nullptr, *value = nullptr;
   Py_ssize_t pos = 0;
 
   while (PyDict_Next(kwargs, &pos, &key, &value)) {
