@@ -722,6 +722,48 @@ class MultiTableMultiColumnEmbedding(Embedding):
 
 
 class FTRL(Optimizer):
+    r"""FTRL Optimizer. 
+
+    The formula is: 
+
+        .. math:: 
+
+            & accumlator_{i+1} = accumlator_{i} + grad * grad
+            
+            & sigma = (accumulator_{i+1}^{lr\_power} - accumulator_{i}^{lr\_power}) / learning\_rate
+            
+            & z_{i+1} = z_{i} + grad - sigma * param_{i}
+
+            \text{}
+                param_{i+1} = \begin{cases}
+            0 & \text{ if } |z_{i+1}| < \lambda_1 \\
+            -(\frac{\beta+accumlator_{i+1}^{lr\_power}}{learning\_rate} + \lambda_2)*(z_{i+1} - sign(z_{i+1})*\lambda_1) & \text{ otherwise } \\
+            \end{cases}
+    
+    Example 1: 
+
+    .. code-block:: python 
+
+        # Assume net is a custom model. 
+        adam = flow.one_embedding.FTRL(net.parameters(), lr=1e-3)
+
+        for epoch in range(epochs):
+            # Read data, Compute the loss and so on. 
+            # ...
+            loss.backward()
+            adam.step()
+            adam.zero_grad()
+
+    Args:
+        params (Union[Iterator[Parameter], List[Dict]]): _description_
+        lr (float, optional): _description_. Defaults to 0.001.
+        weight_decay (float, optional): _description_. Defaults to 0.0.
+        lr_power (float, optional): _description_. Defaults to -0.5.
+        initial_accumulator_value (float, optional): _description_. Defaults to 0.1.
+        lambda1 (float, optional): _description_. Defaults to 0.0.
+        lambda2 (float, optional): _description_. Defaults to 0.0.
+        beta (float, optional): _description_. Defaults to 0.0.
+    """
     def __init__(
         self,
         params: Union[Iterator[Parameter], List[Dict]],
@@ -764,6 +806,7 @@ class FTRL(Optimizer):
 
     def step(self, closure: Callable = None):
         """Performs a single optimization step.
+        
         Args:
             closure (callable, optional): A closure that reevaluates the model
                 and returns the loss.
