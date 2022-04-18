@@ -201,7 +201,7 @@ class AddcmulFunctor : public AddcmulBaseFunctor {
                            const std::shared_ptr<one::Tensor>& tensor1,
                            const std::shared_ptr<one::Tensor>& tensor2,
                            const Scalar& value) const {
-      return AddcmulBaseFunctor::operator()(input, tensor1, tensor2, value, false);
+      return AddcmulBaseFunctor::operator()(input, tensor1, tensor2, value, /*inplace=*/false);
   }
 };
 
