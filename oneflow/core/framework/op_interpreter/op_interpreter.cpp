@@ -99,16 +99,16 @@ Maybe<void> AutogradInterpreter::Apply(const OpExpr& op_expr, const TensorTuple&
   std::shared_ptr<OpExprGradClosure> grad_closure(nullptr);
   if (requires_grad && !LazyMode::is_enabled()) {
     grad_closure = JUST(op_expr.GetOrCreateOpGradClosure());
-    auto backward_fn =
-        std::make_shared<std::function<Maybe<void>(const TensorTuple&, TensorTuple*, bool)>>(
-            [=](const TensorTuple& out_grads, TensorTuple* in_grads,
-                bool create_graph) -> Maybe<void> {
-              autograd::AutoGradMode mode(create_graph);
-              JUST(grad_closure->Apply(out_grads, in_grads));
-              return Maybe<void>::Ok();
-            });
-    JUST(GetThreadLocalAutogradEngine()->AddBackwardFuncPtr(op_expr.op_type_name() + "_backward",
-                                                            backward_fn, inputs, outputs));
+    auto backward_fn = std::make_shared<BackwardFunction>();
+    backward_fn->body = [=](const TensorTuple& out_grads, TensorTuple* in_grads,
+                            bool create_graph) -> Maybe<void> {
+      autograd::AutoGradMode mode(create_graph);
+      JUST(grad_closure->Apply(out_grads, in_grads));
+      return Maybe<void>::Ok();
+    };
+    backward_fn->status = [=]() { return grad_closure->state()->SavedTensors().size() > 0; };
+    JUST(GetThreadLocalAutogradEngine()->AddNode(op_expr.op_type_name() + "_backward", backward_fn,
+                                                 inputs, outputs));
   }
   // Update outputs autograd meta
   // Note: if requires_grad is True, we will create a new autograd meta for each output
