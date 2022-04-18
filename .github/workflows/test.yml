@@ -606,7 +606,7 @@ jobs:
         with:
           collect-path: ${{ env.FLOW_VISION_SRC }}/benchmark
           container-name: ${{ env.TEST_CONTAINER_NAME }}
-          unkown-threshold: 15
+          unknown-threshold: 15
           error-threshold: 20
 
       # end pytest benchmark
