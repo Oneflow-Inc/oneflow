@@ -313,7 +313,7 @@ class FusedMLPFunctor {
       k = n;
     }
 
-#if CUDA_VERSION >= 11050
+#if CUDA_VERSION >= 11060
     DeviceType device_type{};
     if (x->is_consistent()) {
       device_type = JUST(x->parallel_desc())->device_type();
@@ -332,7 +332,7 @@ class FusedMLPFunctor {
       JUST(attrs.SetAttr<bool>("skip_final_activation", skip_final_activation));
       return OpInterpUtil::Dispatch<Tensor>(*fused_op_[weight_size], input, attrs);
     }
-#endif  // CUDA_VERSION >= 11050
+#endif  // CUDA_VERSION >= 11060
 
     // Fall back to Naive matmul + bias_add + relu
     std::shared_ptr<one::Tensor> out = x;
@@ -2728,6 +2728,21 @@ class OneEmbeddingFtrlUpdateFunctor {
                                            learning_rate, down_scale_by_tensor, skip_if},
                                           attrs);
   }
+  private:
+    std::shared_ptr<OpExpr> op_;
+};
+
+class RocAucScoreFunctor {
+ public:
+  RocAucScoreFunctor() {
+    op_ = CHECK_JUST(
+        one::OpBuilder("roc_auc_score").Input("label").Input("pred").Output("out").Build());
+  }
+
+  Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& label,
+                           const std::shared_ptr<one::Tensor>& pred) const {
+    return OpInterpUtil::Dispatch<Tensor>(*op_, {label, pred});
+  }
 
  private:
   std::shared_ptr<OpExpr> op_;
@@ -2814,6 +2829,7 @@ ONEFLOW_FUNCTION_LIBRARY(m) {
   m.add_functor<impl::OneEmbeddingAdamUpdateFunctor>("OneEmbeddingAdamUpdate");
   m.add_functor<impl::OneEmbeddingAdagradUpdateFunctor>("OneEmbeddingAdagradUpdate");
   m.add_functor<impl::OneEmbeddingFtrlUpdateFunctor>("OneEmbeddingFtrlUpdate");
+  m.add_functor<impl::RocAucScoreFunctor>("RocAucScore");
 };
 
 }  // namespace functional

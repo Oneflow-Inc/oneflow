@@ -274,7 +274,7 @@
   bind_python: True
 
 - name: "reduce_prod"
-  signature: "Tensor (Tensor x, Int32List axis, Bool keepdims=False) => ReduceProd"
+  signature: "Tensor (Tensor x, Int32List axis, Bool keepdims=False, *, DataType dtype=None) => ReduceProd"
   bind_python: True
 
 - name: "reduce_min_device_stage"
@@ -2001,6 +2001,11 @@
   signature: 'TensorTuple (TensorTuple tensors, String indexing="ij") => Meshgrid'
   bind_python: True
 
+- name: "index_select"
+  signature:
+    "Tensor (Tensor input, Int64 dim, Tensor index) => IndexSelect"
+  bind_python: True
+
 - name: "decode_onerec"
   signature: "Tensor (Tensor input, String key, DataType dtype, Shape shape, Bool is_dynamic=False, Shape reshape=None, Shape batch_padding=None) => DecodeOneRec"
   bind_python: True
@@ -2103,4 +2108,8 @@
 
 - name: "isinf"
   signature: "Tensor (Tensor input) => IsInf"
+  bind_python: True
+
+- name: "roc_auc_score"
+  signature: "Tensor (Tensor label, Tensor pred) => RocAucScore"
   bind_python: True
