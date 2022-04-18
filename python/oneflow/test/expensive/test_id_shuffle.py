@@ -23,39 +23,39 @@ import oneflow as flow
 from oneflow.test_utils.automated_test_util import *
 
 
-def _test_id_shuffle(test_case, has_column_id, num_columns):
+def _test_id_shuffle(test_case, has_table_id, num_tables):
     batch_size = 512
-    ids = np.random.randint(0, 1000, (batch_size, num_columns), dtype=np.int64)
-    if has_column_id:
-        column_ids = (
-            ids % num_columns
-        )  # same id must have same column id, so in this case get column_ids from ids
-        column_ids_tensor = flow.tensor(
-            column_ids.astype(np.int32), requires_grad=False
+    ids = np.random.randint(0, 1000, (batch_size, num_tables), dtype=np.int64)
+    if has_table_id:
+        table_ids = (
+            ids % num_tables
+        )  # same id must have same table id, so in this case get table_ids from ids
+        table_ids_tensor = flow.tensor(
+            table_ids.astype(np.int32), requires_grad=False
         ).to("cuda")
     else:
-        column_ids_tensor = None
+        table_ids_tensor = None
     ids_tensor = flow.tensor(ids, requires_grad=False).to("cuda")
 
     class TestGraph(flow.nn.Graph):
         def __init__(self):
             super().__init__()
 
-        def build(self, ids, column_ids):
+        def build(self, ids, table_ids):
             (
                 num_unique_matrix,
                 inverse_unique_partition_indices,
                 cur_rank_num_unique,
                 cur_rank_unique_ids,
-                cur_rank_unique_column_ids,
+                cur_rank_unique_table_ids,
                 cur_rank_inverse_indices,
-            ) = flow._C.one_embedding_id_shuffle(ids, column_ids, num_columns)
+            ) = flow._C.one_embedding_id_shuffle(ids, table_ids, num_tables)
             return (
                 flow.cast(num_unique_matrix, flow.int32),
                 flow.cast(inverse_unique_partition_indices, flow.int32),
                 flow.cast(cur_rank_num_unique, flow.int32),
                 flow.cast(cur_rank_unique_ids, flow.int32),
-                flow.cast(cur_rank_unique_column_ids, flow.int32),
+                flow.cast(cur_rank_unique_table_ids, flow.int32),
                 flow.cast(cur_rank_inverse_indices, flow.int32),
             )
 
@@ -65,9 +65,9 @@ def _test_id_shuffle(test_case, has_column_id, num_columns):
         inverse_unique_partition_indices,
         cur_rank_num_unique,
         cur_rank_unique_ids,
-        cur_rank_unique_column_ids,
+        cur_rank_unique_table_ids,
         cur_rank_inverse_indices,
-    ) = graph(ids_tensor, column_ids_tensor)
+    ) = graph(ids_tensor, table_ids_tensor)
     np_unique_ids, np_inverse = np.unique(ids, return_inverse=True)
     np_num_unique = np_unique_ids.size
     test_case.assertTrue(np.array_equal(np_num_unique, num_unique_matrix[0]))
@@ -76,12 +76,12 @@ def _test_id_shuffle(test_case, has_column_id, num_columns):
         inverse_unique_partition_indices
     ]
     test_case.assertTrue(np.array_equal(reversed_ids.numpy(), ids))
-    if has_column_id:
-        reversed_column_ids = cur_rank_unique_column_ids[cur_rank_inverse_indices][
+    if has_table_id:
+        reversed_table_ids = cur_rank_unique_table_ids[cur_rank_inverse_indices][
             inverse_unique_partition_indices
         ]
-        test_case.assertTrue(np.array_equal(reversed_column_ids.numpy(), column_ids))
-    # when has_column_id=False, we can not test column ids because in this case same ids not lead to same column id
+        test_case.assertTrue(np.array_equal(reversed_table_ids.numpy(), table_ids))
+    # when has_table_id=False, we can not test table ids because in this case same ids not lead to same table id
 
 
 def round_half_away_from_zero(x):
@@ -119,9 +119,9 @@ def embedding_shuffle_quantize(np_data, np_dtype):
 
 def _test_embedding_shuffle(test_case, dtype, enable_quantize):
     batch_size = 512
-    num_columns = 26
+    num_tables = 26
     embedding_size = 128
-    ids = np.random.randint(0, 1000, (batch_size, num_columns), dtype=np.int64)
+    ids = np.random.randint(0, 1000, (batch_size, num_tables), dtype=np.int64)
 
     enable_quantized_comm = enable_quantize and embedding_size < 1025
     if enable_quantized_comm:
@@ -129,9 +129,9 @@ def _test_embedding_shuffle(test_case, dtype, enable_quantize):
     else:
         os.environ["ONEFLOW_ONE_EMBEDDING_ENABLE_QUANTIZED_COMM"] = "0"
 
-    column_ids = (
-        ids % num_columns
-    )  # same id must have same column id, so in this case get column_ids from ids
+    table_ids = (
+        ids % num_tables
+    )  # same id must have same table id, so in this case get table_ids from ids
     if dtype == flow.float16:
         np_dtype = np.float16
     else:
@@ -139,16 +139,16 @@ def _test_embedding_shuffle(test_case, dtype, enable_quantize):
     data = np.random.rand(1000, embedding_size).astype(np_dtype)
 
     ids_tensor = flow.tensor(ids, requires_grad=False).to("cuda")
-    column_ids_tensor = flow.tensor(
-        column_ids.astype(np.int32), requires_grad=False
-    ).to("cuda")
+    table_ids_tensor = flow.tensor(table_ids.astype(np.int32), requires_grad=False).to(
+        "cuda"
+    )
     data_tensor = flow.tensor(data, requires_grad=False).to("cuda")
 
     class TestGraph(flow.nn.Graph):
         def __init__(self):
             super().__init__()
 
-        def build(self, ids, column_ids, data):
+        def build(self, ids, table_ids, data):
             (
                 num_unique_matrix,
                 inverse_unique_partition_indices,
@@ -156,7 +156,7 @@ def _test_embedding_shuffle(test_case, dtype, enable_quantize):
                 cur_rank_unique_ids,
                 _,
                 cur_rank_inverse_indices,
-            ) = flow._C.one_embedding_id_shuffle(ids, column_ids, num_columns)
+            ) = flow._C.one_embedding_id_shuffle(ids, table_ids, num_tables)
             unique_embeddings = flow._C.gather(data, cur_rank_unique_ids, axis=0)
             embeddings = flow._C.one_embedding_embedding_shuffle(
                 unique_embeddings,
@@ -167,7 +167,7 @@ def _test_embedding_shuffle(test_case, dtype, enable_quantize):
             return embeddings
 
     graph = TestGraph()
-    embeddings = graph(ids_tensor, column_ids_tensor, data_tensor)
+    embeddings = graph(ids_tensor, table_ids_tensor, data_tensor)
     np_embeddings = data[ids]
 
     # Quantized numpy embedding.
@@ -180,34 +180,34 @@ def _test_embedding_shuffle(test_case, dtype, enable_quantize):
 
 def _test_embedding_gradient_shuffle(test_case, enable_quantize):
     batch_size = 512
-    num_columns = 26
+    num_tables = 26
     embedding_size = 128
-    ids = np.random.randint(0, 1000, (batch_size, num_columns), dtype=np.int64)
+    ids = np.random.randint(0, 1000, (batch_size, num_tables), dtype=np.int64)
     enable_quantized_comm = enable_quantize and embedding_size < 1025
     if enable_quantized_comm:
         os.environ["ONEFLOW_ONE_EMBEDDING_ENABLE_QUANTIZED_COMM"] = "1"
-        ids = np.arange(batch_size * num_columns, dtype=np.int64)
+        ids = np.arange(batch_size * num_tables, dtype=np.int64)
         np.random.shuffle(ids)
     else:
         os.environ["ONEFLOW_ONE_EMBEDDING_ENABLE_QUANTIZED_COMM"] = "0"
 
-    column_ids = (
-        ids % num_columns
-    )  # same id must have same column id, so in this case get column_ids from ids
+    table_ids = (
+        ids % num_tables
+    )  # same id must have same table id, so in this case get table_ids from ids
     embedding_grad = np.random.uniform(
-        low=-1, high=1, size=(batch_size, num_columns, embedding_size)
+        low=-1, high=1, size=(batch_size, num_tables, embedding_size)
     ).astype(np.float32)
     ids_tensor = flow.tensor(ids, requires_grad=False).to("cuda")
-    column_ids_tensor = flow.tensor(
-        column_ids.astype(np.int32), requires_grad=False
-    ).to("cuda")
+    table_ids_tensor = flow.tensor(table_ids.astype(np.int32), requires_grad=False).to(
+        "cuda"
+    )
     embedding_grad_tensor = flow.tensor(embedding_grad, requires_grad=False).to("cuda")
 
     class TestGraph(flow.nn.Graph):
         def __init__(self):
             super().__init__()
 
-        def build(self, ids, column_ids, embedding_grad):
+        def build(self, ids, table_ids, embedding_grad):
             (
                 num_unique_matrix,
                 inverse_unique_partition_indices,
@@ -215,7 +215,7 @@ def _test_embedding_gradient_shuffle(test_case, enable_quantize):
                 cur_rank_unique_ids,
                 _,
                 cur_rank_inverse_indices,
-            ) = flow._C.one_embedding_id_shuffle(ids, column_ids, num_columns)
+            ) = flow._C.one_embedding_id_shuffle(ids, table_ids, num_tables)
             cur_rank_unique_embedding_grad = flow._C.one_embedding_embedding_gradient_shuffle(
                 embedding_grad,
                 num_unique_matrix,
@@ -235,7 +235,7 @@ def _test_embedding_gradient_shuffle(test_case, enable_quantize):
         cur_rank_unique_ids,
         cur_rank_inverse_indices,
         inverse_unique_partition_indices,
-    ) = graph(ids_tensor, column_ids_tensor, embedding_grad_tensor)
+    ) = graph(ids_tensor, table_ids_tensor, embedding_grad_tensor)
     np_unique_ids, np_inverse = np.unique(ids, return_inverse=True)
     np_num_unique = np_unique_ids.size
     np_cur_rank_unique_embedding_grad = np.zeros(
@@ -281,52 +281,50 @@ def _test_embedding_gradient_shuffle(test_case, enable_quantize):
     )
 
 
-def _test_unique_key_value(test_case, has_column_id, num_columns):
+def _test_unique_key_value(test_case, has_table_id, num_tables):
     batch_size = 128
-    ids = np.random.randint(0, 1000, (batch_size, num_columns), dtype=np.int64)
-    if has_column_id:
-        column_ids = (
-            ids % num_columns
-        )  # same id must have same column id, so in this case get column_ids from ids
-        column_ids_tensor = flow.tensor(
-            column_ids.astype(np.int32), requires_grad=False
+    ids = np.random.randint(0, 1000, (batch_size, num_tables), dtype=np.int64)
+    if has_table_id:
+        table_ids = (
+            ids % num_tables
+        )  # same id must have same table id, so in this case get table_ids from ids
+        table_ids_tensor = flow.tensor(
+            table_ids.astype(np.int32), requires_grad=False
         ).to("cuda")
     else:
-        column_ids_tensor = None
+        table_ids_tensor = None
     ids_tensor = flow.tensor(ids, requires_grad=False).to("cuda")
 
     class TestGraph(flow.nn.Graph):
         def __init__(self):
             super().__init__()
 
-        def build(self, ids, column_ids):
+        def build(self, ids, table_ids):
             (
                 num_unique,
                 unique_ids,
-                unique_column_ids,
+                unique_table_ids,
                 inverse_indices,
-            ) = flow._C.one_embedding_unique_key_value_pair(
-                ids, column_ids, num_columns
-            )
+            ) = flow._C.one_embedding_unique_key_value_pair(ids, table_ids, num_tables)
             return (
                 flow.cast(num_unique, flow.int32),
                 flow.cast(unique_ids, flow.int32),
-                flow.cast(unique_column_ids, flow.int32),
+                flow.cast(unique_table_ids, flow.int32),
                 flow.cast(inverse_indices, flow.int32),
             )
 
     graph = TestGraph()
-    (num_unique, unique_ids, unique_column_ids, inverse_indices,) = graph(
-        ids_tensor, column_ids_tensor
+    (num_unique, unique_ids, unique_table_ids, inverse_indices,) = graph(
+        ids_tensor, table_ids_tensor
     )
     np_unique_ids, np_inverse = np.unique(ids, return_inverse=True)
     np_num_unique = np_unique_ids.size
     test_case.assertTrue(np.array_equal(np_num_unique, num_unique[0]))
     reversed_ids = unique_ids[inverse_indices]
     test_case.assertTrue(np.array_equal(reversed_ids.numpy(), ids))
-    if has_column_id:
-        reversed_column_ids = unique_column_ids[inverse_indices]
-        test_case.assertTrue(np.array_equal(reversed_column_ids.numpy(), column_ids))
+    if has_table_id:
+        reversed_table_ids = unique_table_ids[inverse_indices]
+        test_case.assertTrue(np.array_equal(reversed_table_ids.numpy(), table_ids))
 
 
 @unittest.skipIf(os.getenv("ONEFLOW_TEST_CPU_ONLY"), "only test cpu cases")
@@ -334,8 +332,8 @@ def _test_unique_key_value(test_case, has_column_id, num_columns):
 class DataShuffleTestCase(flow.unittest.TestCase):
     def test_id_shuffle(test_case):
         arg_dict = OrderedDict()
-        arg_dict["has_column_id"] = [True, False]
-        arg_dict["num_columns"] = [1, 26]
+        arg_dict["has_table_id"] = [True, False]
+        arg_dict["num_tables"] = [1, 26]
         for kwargs in GenArgDict(arg_dict):
             _test_id_shuffle(test_case, **kwargs)
 
@@ -355,8 +353,8 @@ class DataShuffleTestCase(flow.unittest.TestCase):
 
     def test_unique_key_value(test_case):
         arg_dict = OrderedDict()
-        arg_dict["has_column_id"] = [True, False]
-        arg_dict["num_columns"] = [13, 26, 1]
+        arg_dict["has_table_id"] = [True, False]
+        arg_dict["num_tables"] = [13, 26, 1]
         for kwargs in GenArgDict(arg_dict):
             _test_unique_key_value(test_case, **kwargs)
 
