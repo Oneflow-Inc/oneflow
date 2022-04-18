@@ -18,6 +18,8 @@ from oneflow.nn.module import Module
 import json
 import datetime
 from oneflow._oneflow_internal import OneEmbeddingHandler
+from oneflow._oneflow_internal import PersistentTableReader
+from oneflow._oneflow_internal import PersistentTableWriter
 import numpy as np
 import traceback
 
@@ -716,3 +718,49 @@ class MultiTableMultiColumnEmbedding(Embedding):
             store_options,
             default_initializer,
         )
+
+
+def make_persistent_table_reader(
+    paths, snapshot_name, key_type, value_type, storage_dim, physical_block_size=512,
+):
+    r"""Creates a reader for reading persistent table.
+    Args:
+        paths (list): paths of tables to read
+        snapshot_name (str): name of the snapshot to read
+        key_type (flow.dtype): the data type of key
+        value_type (flow.dtype): the data type of value
+        storage_dim (int): number of elements in each value
+        physical_block_size (int, optional): physical_block_size should be sector size. Defaults to 512
+    """
+    return PersistentTableReader(
+        paths,
+        snapshot_name,
+        key_type,
+        value_type,
+        storage_dim,
+        4 * 1024,
+        physical_block_size,
+    )
+
+
+def make_persistent_table_writer(
+    paths, snapshot_name, key_type, value_type, storage_dim, physical_block_size=512,
+):
+    r"""Creates a writer for writing persistent table.
+    Args:
+        paths (list): paths of tables to write
+        snapshot_name (str): name of the snapshot to write
+        key_type (flow.dtype): the data type of key
+        value_type (flow.dtype): the data type of value
+        storage_dim (int): number of elements in each value
+        physical_block_size (int, optional): physical_block_size should be sector size. Defaults to 512
+    """
+    return PersistentTableWriter(
+        paths,
+        snapshot_name,
+        key_type,
+        value_type,
+        storage_dim,
+        4 * 1024,
+        physical_block_size,
+    )
