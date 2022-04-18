@@ -25,7 +25,7 @@ from oneflow.test_utils.test_util import GenArgDict
 
 def _test_consistent_randperm(test_case, N, placement, sbp, dtype):
     x = flow.randperm(N, placement=placement, sbp=sbp, dtype=dtype)
-    #TODO:Synchronously get a global random seed, and then each rank sets its own seed in manual_seeds
+    # TODO:Synchronously get a global random seed, and then each rank sets its own seed in manual_seeds
     test_case.assertEqual(x.dtype, dtype)
     test_case.assertEqual(x.sbp, sbp)
     test_case.assertEqual(x.placement, placement)
@@ -64,6 +64,7 @@ class TestRandpermConsistent(flow.unittest.TestCase):
                     for dtype in Dtypes:
                         _test_consistent_randperm(test_case, N, placement, sbp, dtype)
 
+    @unittest.skipIf(os.getenv("ONEFLOW_TEST_CPU_ONLY"), "only test cpu cases")
     @globaltest
     def test_randperm_graph(test_case):
         arg_dict = OrderedDict()
