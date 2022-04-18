@@ -274,7 +274,7 @@
   bind_python: True
 
 - name: "reduce_prod"
-  signature: "Tensor (Tensor x, Int32List axis, Bool keepdims=False) => ReduceProd"
+  signature: "Tensor (Tensor x, Int32List axis, Bool keepdims=False, *, DataType dtype=None) => ReduceProd"
   bind_python: True
 
 - name: "reduce_min_device_stage"
