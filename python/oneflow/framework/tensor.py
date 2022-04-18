@@ -708,8 +708,7 @@ def _orthogonal(self, gain=1.0):
     # TODO
     q, r = np.linalg.qr(flattened) 
     d = np.diag(r, 0)
-    d = np.where(d < 0, -1, d)
-    d = np.where(d > 0, 1, d)
+    d = np.sign(d)
     q *= d
     if rows < cols:
         q = q.T
