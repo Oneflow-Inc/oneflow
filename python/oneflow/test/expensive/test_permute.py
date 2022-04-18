@@ -74,7 +74,7 @@ class TestPermute(flow.unittest.TestCase):
             _test_tensor_permute_impl(test_case, *arg)
 
     @unittest.skip("pytorch 1.9.0 exist not torch.permute api")
-    @autotest()
+    @autotest(n=10)
     def test_torch_permute4d_with_random_data(test_case):
         device = random_device()
         ndim = 4
@@ -85,7 +85,7 @@ class TestPermute(flow.unittest.TestCase):
         return y
 
     @unittest.skip("pytorch 1.9.0 exist not torch.permute api")
-    @autotest()
+    @autotest(n=10)
     def test_torch_permute4d_with_random_0dim_data(test_case):
         device = random_device()
         permute_list = [0, 1, 2, 3]
@@ -94,7 +94,7 @@ class TestPermute(flow.unittest.TestCase):
         y = torch.permute(x, dims=permute_list)
         return y
 
-    @autotest(n=5, check_graph=True)
+    @autotest(n=10, check_graph=True)
     def test_permute5d_tensor_with_random_data(test_case):
         device = random_device()
         ndim = 5
@@ -111,7 +111,7 @@ class TestPermute(flow.unittest.TestCase):
         y = x.permute(permute_list)
         return y
 
-    @autotest(check_graph=True)
+    @autotest(n=10, check_graph=True)
     def test_permute4d_tensor_with_random_data(test_case):
         device = random_device()
         ndim = 4
@@ -127,7 +127,26 @@ class TestPermute(flow.unittest.TestCase):
         y = x.permute(permute_list)
         return y
 
-    @autotest(check_graph=True)
+    @autotest(n=10, check_graph=True)
+    def test_permute4d_tensor_with_stride(test_case):
+        device = random_device()
+        ndim = 4
+        permute_list1 = [0, 1, 2, 3]
+        shuffle(permute_list1)
+        x = random_tensor(
+            ndim=ndim,
+            dim0=random(1, 32).to(int),
+            dim1=random(1, 59).to(int),
+            dim2=random(1, 65).to(int),
+            dim3=random(1, 127).to(int),
+        ).to(device)
+        y = x.permute(permute_list1)
+        permute_list2 = [0, 1, 2, 3]
+        shuffle(permute_list2)
+        z = y.permute(permute_list2)
+        return z
+
+    @autotest(n=5, check_graph=True)
     def test_permute3d_tensor_with_random_data(test_case):
         device = random_device()
         ndim = 3
@@ -143,7 +162,7 @@ class TestPermute(flow.unittest.TestCase):
         y = x.permute(permute_list)
         return y
 
-    @autotest(auto_backward=False, check_graph=True)
+    @autotest(n=10, auto_backward=False, check_graph=True)
     def test_permute4d_tensor_bool_with_random_data(test_case):
         device = random_device()
         ndim = 4

@@ -15,6 +15,7 @@ limitations under the License.
 */
 
 #include "oneflow/core/autograd/autograd_mode.h"
+#include "oneflow/core/common/data_type.pb.h"
 #include "oneflow/core/common/maybe.h"
 #include "oneflow/core/common/scalar.h"
 #include "oneflow/core/common/global.h"
@@ -1030,41 +1031,6 @@ class ScatterNdLikeFunctor {
   std::shared_ptr<OpExpr> op_;
 };
 
-Optional<const Stride> computeStride(const int64_t elem_count, const DimVector& shape,
-                                     const StrideVector& stride, const DimVector& target_shape) {
-  if (elem_count == 0) { return NullOpt; }
-
-  int64_t view_d = target_shape.size() - 1;
-  int64_t chunk_base_stride = stride.back();
-  // std::vector<int64_t> newstride(target_shape.size());
-  DimVector newstride(target_shape.size());
-  // stride for each subspace in the chunk
-  // numel in current chunk
-  int64_t tensor_numel = 1;
-  int64_t view_numel = 1;
-  for (int64_t tensor_d = shape.size() - 1; tensor_d >= 0; tensor_d--) {
-    tensor_numel *= shape[tensor_d];
-    // if end of tensor size chunk, check view
-    if ((tensor_d == 0)
-        || (shape[tensor_d - 1] != 1 && stride[tensor_d - 1] != tensor_numel * chunk_base_stride)) {
-      while (view_d >= 0 && (view_numel < tensor_numel || target_shape[view_d] == 1)) {
-        newstride[view_d] = view_numel * chunk_base_stride;
-        view_numel *= target_shape[view_d];
-        view_d--;
-      }
-      if (view_numel != tensor_numel) { return NullOpt; }
-      if (tensor_d > 0) {
-        chunk_base_stride = stride[tensor_d - 1];
-        tensor_numel = 1;
-        view_numel = 1;
-      }
-    }
-  }
-  if (view_d != -1) { return NullOpt; }
-  Stride target_stride(newstride);
-  return target_stride;
-}
-
 class ReshapeFunctor {
  public:
   ReshapeFunctor() {
@@ -1185,14 +1151,24 @@ class NarrowFunctor {
   Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& input, const int64_t& dim,
                            const int64_t& start, const int64_t& length) const {
     int64_t narrow_dim = dim;
+    int64_t narrow_start = start;
     const int64_t ndim = input->shape()->NumAxes();
+    CHECK_GT_OR_RETURN(ndim, 0) << "narrow() cannot be applied to a 0-dim tensor.";
     CHECK_OR_RETURN((-ndim <= dim) && (dim <= ndim - 1))
         << " (Dimension out of range, expected to be in range of [" << -ndim << ", " << ndim - 1
         << "], but got:" << dim << ")";
     if (narrow_dim < 0) { narrow_dim += ndim; }
+    const int64_t dim_length = input->shape()->At(narrow_dim);
+    CHECK_OR_RETURN((-dim_length <= start) && (start <= dim_length - 1))
+        << " (Dimension out of range, expected to be in range of [" << -ndim << ", " << ndim - 1
+        << "], but got:" << start << ")";
+    if (narrow_start < 0) { narrow_start += ndim; }
+    CHECK_GE_OR_RETURN(dim_length, narrow_start + length)
+        << "start (" << narrow_start << ") + length (" << length << ") exceeds dimension size ("
+        << dim_length << ").";
 
     if (view::IsViewApplicable(input)) {
-      return JUST(view::Narrow(input, narrow_dim, start, length));
+      return JUST(view::Narrow(input, narrow_dim, narrow_start, length));
     }
     MutableAttrMap attrs;
     JUST(attrs.SetAttr<int64_t>("dim", narrow_dim));
@@ -1269,7 +1245,7 @@ class SliceUpdateFunctor {
     if (inplace) {
       JUST(CheckInplaceValid(x));
       auto outputs = std::make_shared<TensorTuple>(1);
-      outputs->at(0) = x->contiguous();
+      (*outputs)[0] = x;
       JUST(OpInterpUtil::Dispatch(*op_, {x, update}, outputs.get(), attrs));
       return outputs->at(0);
     } else {
@@ -1363,7 +1339,7 @@ class UnfoldTensorFunctor {
     JUST(attrs.SetAttr<int32_t>("size", size));
     JUST(attrs.SetAttr<int32_t>("step", step));
     // if input tensor is eager local, than try return tensor's view
-    if (view::IsViewApplicable(x)) { return view::UnfoldTensor(x, attrs); }
+    if (view::IsViewApplicable(x)) { return view::UnfoldTensor(x, dimension, size, step); }
     return OpInterpUtil::Dispatch<Tensor>(*op_, {x}, attrs);
   }
 
@@ -2197,6 +2173,23 @@ class SplitFunctor {
   }
 };
 
+class UnbindFunctor {
+ public:
+  UnbindFunctor() {}
+  Maybe<TensorTuple> operator()(const std::shared_ptr<one::Tensor>& x, const int64_t& dim) const {
+    int32_t axis = dim;
+    const int32_t ndim = x->ndim();
+    if (axis < 0) { axis += ndim; }
+    CHECK_OR_RETURN((dim >= -ndim) && (dim < ndim))
+        << "Dimension out of range (expected to be in range of [" << -ndim << "," << ndim - 1
+        << "], but got " << dim << ")";
+    int32_t dim_size = x->shape()->At(axis);
+    TensorTuple unbinds(dim_size);
+    for (int i = 0; i < dim_size; ++i) { unbinds[i] = JUST(Select(x, axis, i)); }
+    return unbinds;
+  }
+};
+
 class ChunkFunctor {
  public:
   ChunkFunctor() {}
@@ -2449,8 +2442,41 @@ class MeshgridFunctor {
   }
 };
 
-namespace {
+class IndexSelectFunctor {
+ public:
+  Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& input, const int64_t& dim,
+                           const std::shared_ptr<one::Tensor>& index) const {
+    const int64_t input_num_axes = input->shape()->NumAxes();
+    const int64_t index_num_axes = index->shape()->NumAxes();
+    CHECK_EQ_OR_RETURN(index_num_axes, 1)
+        << "IndexError: index_select(): Index is supposed to be a vector";
+    bool index_dtype_flag =
+        (index->dtype()->data_type() == kInt32) || (index->dtype()->data_type() == kInt64);
+    CHECK_EQ_OR_RETURN(index_dtype_flag, true)
+        << "RuntimeError: index_select(): Expected dtype int32 or int64 for index";
+    int64_t new_dim = dim;
+    if (dim < 0) { new_dim += input_num_axes; }
+    CHECK_LE_OR_RETURN(new_dim, input_num_axes)
+        << "IndexError: Dimension out of range (expected to be in range of [" << -input_num_axes
+        << ", " << input_num_axes - 1 << "], but got " << new_dim << ")";
+    DimVector index_broad_cast(input_num_axes);
+    for (int i = 0; i < input_num_axes; i++) { index_broad_cast[i] = input->shape()->At(i); }
+    index_broad_cast[new_dim] = 1;
+    Shape expand_shape(index_broad_cast);
+    auto index_gather =
+        JUST(functional::Expand(JUST(functional::Slice(index, {0}, {1}, {1})), expand_shape));
+    for (int i = 1; i < index->dim(0); i++) {
+      index_gather = JUST(functional::Concat(
+          {index_gather, JUST(functional::Expand(JUST(functional::Slice(index, {i}, {i + 1}, {1})),
+                                                 expand_shape))},
+          new_dim));
+    }
 
+    return JUST(functional::DimGather(input, new_dim, index_gather, false));
+  }
+};
+
+namespace {
 inline Maybe<bool> device_equal(const std::string& device_name, const int device_id,
                                 Symbol<Device> device) {
   return (device_name == device->type() && device_id == device->device_id());
@@ -2855,6 +2881,7 @@ ONEFLOW_FUNCTION_LIBRARY(m) {
   m.add_functor<impl::ReduceSumLikeFunctor>("ReduceSumLike");
   m.add_functor<impl::BroadcastReduceSumLikeFunctor>("BroadcastReduceSumLike");
   m.add_functor<impl::SplitFunctor>("Split");
+  m.add_functor<impl::UnbindFunctor>("Unbind");
   m.add_functor<impl::ChunkFunctor>("Chunk");
   m.add_functor<impl::SplitLikeFunctor>("SplitLike");
   m.add_functor<impl::SplitWithSizeFunctor>("SplitWithSize");
@@ -2862,6 +2889,7 @@ ONEFLOW_FUNCTION_LIBRARY(m) {
   m.add_functor<impl::UnsortedBatchSegmentSumFunctor>("UnsortedBatchSegmentSum");
   m.add_functor<impl::MaskedFillFunctor>("MaskedFill");
   m.add_functor<impl::MeshgridFunctor>("Meshgrid");
+  m.add_functor<impl::IndexSelectFunctor>("IndexSelect");
   m.add_functor<impl::ToFunctor, impl::To2Functor, impl::To3Functor, impl::To4Functor>("To");
   m.add_functor<impl::TopKFunctor>("TopK");
   m.add_functor<impl::InTopKFunctor>("InTopK");

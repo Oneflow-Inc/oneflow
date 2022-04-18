@@ -28,8 +28,6 @@ limitations under the License.
 namespace oneflow {
 namespace one {
 
-static std::unordered_set<std::string> view_ops_set{"to_contiguous"};
-
 Maybe<void> LazyInterpreter::Apply(const OpExpr& op_expr, const TensorTuple& inputs,
                                    TensorTuple* outputs, const OpExprInterpContext& ctx) const {
 #define APPLY_IF(op_type)                                              \
@@ -93,17 +91,22 @@ Maybe<void> AutogradInterpreter::Apply(const OpExpr& op_expr, const TensorTuple&
         std::any_of(inputs.begin(), inputs.end(),
                     [](const std::shared_ptr<Tensor>& tensor) { return tensor->requires_grad(); });
   }
-  const TensorTuple* contiguous_inputs = &inputs;
-  TensorTuple tmp_inputs(inputs.size());
-  // NOTE: if this op not in view_ops_set, then need to tensor->contiguous()
-  if (view_ops_set.find(op_expr.op_type_name()) == view_ops_set.end()) {
-    for (size_t i = 0; i < inputs.size(); i++) { tmp_inputs.at(i) = inputs.at(i)->contiguous(); }
-    contiguous_inputs = &tmp_inputs;
+
+// NOTE: if this op not support stride, then need to tensor->contiguous()
+#define HANDLE_NON_CONTIGUOUS_INPUT(tensor_tuple_ptr)                                       \
+  TensorTuple tmp_inputs;                                                                   \
+  if (!JUST(op_expr.SupportNonContiguous())) {                                              \
+    tmp_inputs.resize(inputs.size());                                                       \
+    for (size_t i = 0; i < inputs.size(); i++) { tmp_inputs[i] = inputs[i]->contiguous(); } \
+    tensor_tuple_ptr = &tmp_inputs;                                                         \
   }
+
+  const TensorTuple* inputs_ptr = &inputs;
+  HANDLE_NON_CONTIGUOUS_INPUT(inputs_ptr);
 
   {
     autograd::AutoGradMode mode(false);
-    JUST(internal_->Apply(op_expr, *contiguous_inputs, outputs, ctx));
+    JUST(internal_->Apply(op_expr, *inputs_ptr, outputs, ctx));
   }
   // Lazy mode will construct backward compute graph in passes, so disable autograd if lazy mode.
   std::shared_ptr<OpExprGradClosure> grad_closure(nullptr);
@@ -117,15 +120,15 @@ Maybe<void> AutogradInterpreter::Apply(const OpExpr& op_expr, const TensorTuple&
               JUST(grad_closure->Apply(out_grads, in_grads));
               return Maybe<void>::Ok();
             });
-    JUST(GetThreadLocalAutogradEngine()->AddBackwardFuncPtr(
-        op_expr.op_type_name() + "_backward", backward_fn, *contiguous_inputs, outputs));
+    JUST(GetThreadLocalAutogradEngine()->AddBackwardFuncPtr(op_expr.op_type_name() + "_backward",
+                                                            backward_fn, *inputs_ptr, outputs));
   }
   // Update outputs autograd meta
   // Note: if requires_grad is True, we will create a new autograd meta for each output
   // in `AddBackwardFuncPtr` to support inplace operation, so the update should after
   // `AddBackwardFuncPtr`
   for (auto& output : *outputs) {
-    output->set_is_leaf(contiguous_inputs->size() == 0 || !requires_grad);
+    output->set_is_leaf(inputs_ptr->size() == 0 || !requires_grad);
     // If the output `requires_grad` is true, it means that the output is inplaced.
     // The output `requires_grad` should be determined by this:
     //   - If the inplaced output `requires_grad` is true, then the autograd must be disabled,
@@ -154,7 +157,7 @@ Maybe<void> AutogradInterpreter::Apply(const OpExpr& op_expr, const TensorTuple&
   if (requires_grad && !LazyMode::is_enabled()) {
     // Capture inputs and outputs after `AddBackwardFuncPtr` because of that grad function
     // node has been attached to them.
-    JUST(grad_closure->Capture(*contiguous_inputs, *outputs, ctx));
+    JUST(grad_closure->Capture(*inputs_ptr, *outputs, ctx));
   }
   return Maybe<void>::Ok();
 }

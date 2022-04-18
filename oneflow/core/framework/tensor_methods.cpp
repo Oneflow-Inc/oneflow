@@ -30,20 +30,6 @@ namespace oneflow {
 namespace one {
 namespace view {
 
-namespace {
-
-void CheckIsPerm(const std::vector<int32_t>& perm) {
-  std::vector<bool> is_used(perm.size(), false);
-  FOR_RANGE(size_t, i, 0, perm.size()) {
-    CHECK_GE(perm[i], 0);
-    CHECK_LE(perm[i], perm.size());
-    CHECK_EQ(is_used[perm[i]], false);
-    is_used[perm[i]] = true;
-  }
-}
-
-}  // namespace
-
 // NOTE: use env variable 'ONEFLOW_DISABLE_VIEW' control use view mechanism or not
 // If  set true, then do not use view mechanism(and view ops)
 bool IsEnvViewDisabled() {
@@ -85,9 +71,10 @@ Maybe<Tensor> BasicView(const std::shared_ptr<Tensor>& input, const Shape& targe
   CHECK_OR_RETURN(JUST(input->has_eager_blob_object()));
   // new output tensor
   const auto& blob_object = JUST(input->eager_blob_object());
+  bool requires_grad = (autograd::GradMode::is_enabled() && input->requires_grad());
   auto tensor_impl = std::make_shared<EagerMirroredTensorImpl>(
-      tensor_meta, JUST(input->tensor_storage()), input->requires_grad(),
-      /*is_leaf=*/!input->requires_grad());
+      tensor_meta, JUST(input->tensor_storage()), requires_grad,
+      /*is_leaf=*/!requires_grad);
   JUST(tensor_impl->InitEagerBlobObject(JUST(blob_object->compute_local_dep_object())));
   std::shared_ptr<Tensor> output(new MirroredTensor(tensor_impl));
 
@@ -162,7 +149,7 @@ Maybe<Tensor> Slice(const std::shared_ptr<Tensor>& input, const std::vector<int6
   }
 
   auto output = JUST(BasicView(input, Shape(target_dims), Stride(target_strides), storage_offset));
-  if (input->requires_grad()) {
+  if (autograd::GradMode::is_enabled() && input->requires_grad()) {
     auto backward_fn =
         std::make_shared<std::function<Maybe<void>(const TensorTuple&, TensorTuple*, bool)>>(
             [=](const TensorTuple& out_grads, TensorTuple* in_grads,
@@ -291,8 +278,7 @@ Maybe<Tensor> Expand(const std::shared_ptr<Tensor>& input, const std::vector<int
       } else {
         if (expand_shape[target_ndim - 1 - i] != in_shape[ndim - 1 - i]) {
           return Error::RuntimeError()
-                 << "view::Expand(): The expanded size of the tensor ("
-                 << expand_shape[target_ndim - 1 - i] << ")"
+                 << "The expanded size of the tensor (" << expand_shape[target_ndim - 1 - i] << ")"
                  << "must match the existing size (" << in_shape[ndim - 1 - i]
                  << ") at non-singleton dimension " << ndim - i << ".  Target sizes: "
                  << ".  Tensor sizes: " << shape->ToString();
@@ -302,7 +288,7 @@ Maybe<Tensor> Expand(const std::shared_ptr<Tensor>& input, const std::vector<int
       }
     } else {
       if (expand_shape[target_ndim - 1 - i] == -1) {
-        return Error::RuntimeError() << "view::Expand(): The expanded size of the tensor (-1) "
+        return Error::RuntimeError() << "The expanded size of the tensor (-1) "
                                      << "isn't allowed in a leading, non-existing dimension 0";
       }
       target_dim_vec[target_ndim - 1 - i] = expand_shape[target_ndim - 1 - i];
@@ -320,7 +306,8 @@ Maybe<Tensor> Expand(const std::shared_ptr<Tensor>& input, const std::vector<int
             [=](const TensorTuple& out_grads, TensorTuple* in_grads,
                 bool create_graph) -> Maybe<void> {
               autograd::AutoGradMode mode(create_graph);
-              CHECK_EQ_OR_RETURN(out_grads.size(), 1);
+              CHECK_EQ_OR_RETURN(out_grads.size(), 1)
+                  << "out grad size should be 1, but got " << out_grads.size();
               in_grads->resize(1);
               (*in_grads)[0] = JUST(functional::ExpandGrad(out_grads[0], in_shape, expand_shape));
               return Maybe<void>::Ok();
@@ -337,12 +324,6 @@ Maybe<Tensor> Narrow(const std::shared_ptr<Tensor>& input, const int64_t& dim, c
   const auto& shape = input->shape();
   const auto& strides = JUST(input->stride());
   const int64_t ndim = shape->NumAxes();
-  CHECK_GT_OR_RETURN(ndim, 0);
-  CHECK_GE_OR_RETURN(dim, 0);
-  CHECK_GE_OR_RETURN(start, 0);
-  CHECK_GE_OR_RETURN(length, 0);
-  CHECK_GE_OR_RETURN(shape->At(dim), start + length);
-
   DimVector dim_vec;
   dim_vec.insert(dim_vec.end(), shape->dim_vec().cbegin(), shape->dim_vec().cbegin() + dim);
   dim_vec.insert(dim_vec.end(), length);
@@ -358,13 +339,14 @@ Maybe<Tensor> Narrow(const std::shared_ptr<Tensor>& input, const int64_t& dim, c
   }
 
   auto output = JUST(BasicView(input, target_shape, Stride(stride_vec), storage_offset));
-  if (input->requires_grad()) {
+  if (autograd::GradMode::is_enabled() && input->requires_grad()) {
     auto backward_fn =
         std::make_shared<std::function<Maybe<void>(const TensorTuple&, TensorTuple*, bool)>>(
             [=](const TensorTuple& out_grads, TensorTuple* in_grads,
                 bool create_graph) -> Maybe<void> {
               autograd::AutoGradMode mode(create_graph);
-              CHECK_EQ_OR_RETURN(out_grads.size(), 1);
+              CHECK_EQ_OR_RETURN(out_grads.size(), 1)
+                  << "out grad size should be 1, but got " << out_grads.size();
               auto like = JUST(functional::Empty(Shape(input->shape()->dim_vec()), input->dtype(),
                                                  JUST(input->device())));
               in_grads->resize(1);
@@ -386,13 +368,14 @@ Maybe<Tensor> AsStrided(const std::shared_ptr<one::Tensor>& input, const std::ve
   StrideVector stride_vec(stride.size());
   for (int i = 0; i < stride.size(); ++i) { stride_vec[i] = stride[i]; }
   auto output = JUST(view::BasicView(input, target_shape, Stride(stride_vec), storage_offset));
-  if (input->requires_grad()) {
+  if (autograd::GradMode::is_enabled() && input->requires_grad()) {
     auto backward_fn =
         std::make_shared<std::function<Maybe<void>(const TensorTuple&, TensorTuple*, bool)>>(
             [=](const TensorTuple& out_grads, TensorTuple* in_grads,
                 bool create_graph) -> Maybe<void> {
               autograd::AutoGradMode mode(create_graph);
-              CHECK_EQ_OR_RETURN(out_grads.size(), 1);
+              CHECK_EQ_OR_RETURN(out_grads.size(), 1)
+                  << "out grad size should be 1, but got " << out_grads.size();
               auto like = JUST(functional::Empty(Shape(input->shape()->dim_vec()), input->dtype(),
                                                  JUST(input->device())));
               in_grads->resize(1);
@@ -413,8 +396,16 @@ Maybe<Tensor> Transpose(const std::shared_ptr<Tensor>& input, const std::vector<
   const int64_t ndim = shape->NumAxes();
   int64_t storage_offset = JUST(JUST(input->AsMirroredTensor())->storage_offset());
 
-  CHECK_EQ_OR_RETURN(permute.size(), ndim);
-  CheckIsPerm(permute);
+  CHECK_EQ_OR_RETURN(permute.size(), ndim)
+      << "permute size should be equal to input tensor's ndim, but got " << permute.size();
+  auto positive_perm = permute;
+  for (auto i = 0; i < positive_perm.size(); i++) {
+    if (positive_perm[i] < 0) { positive_perm[i] += ndim; }
+    CHECK_OR_RETURN(positive_perm[i] >= 0 && positive_perm[i] < ndim)
+        << "IndexError: Dimension out of range (expected to be in range of [" << -ndim << ","
+        << ndim << " ) but got " << positive_perm[i];
+  }
+
   DimVector target_dims(ndim);
 
   StrideVector stride_vec(ndim);
@@ -424,7 +415,7 @@ Maybe<Tensor> Transpose(const std::shared_ptr<Tensor>& input, const std::vector<
   }
 
   auto output = JUST(BasicView(input, Shape(target_dims), Stride(stride_vec), storage_offset));
-  if (input->requires_grad()) {
+  if (autograd::GradMode::is_enabled() && input->requires_grad()) {
     auto backward_fn =
         std::make_shared<std::function<Maybe<void>(const TensorTuple&, TensorTuple*, bool)>>(
             [=](const TensorTuple& out_grads, TensorTuple* in_grads,
@@ -433,7 +424,8 @@ Maybe<Tensor> Transpose(const std::shared_ptr<Tensor>& input, const std::vector<
               grad_perm.resize(ndim);
               for (int i = 0; i < ndim; ++i) { grad_perm[permute[i]] = i; }
               autograd::AutoGradMode mode(create_graph);
-              CHECK_EQ_OR_RETURN(out_grads.size(), 1);
+              CHECK_EQ_OR_RETURN(out_grads.size(), 1)
+                  << "out grad size should be 1, but got " << out_grads.size();
               in_grads->resize(1);
               (*in_grads)[0] = JUST(functional::Transpose(out_grads[0], grad_perm));
               return Maybe<void>::Ok();
@@ -445,23 +437,22 @@ Maybe<Tensor> Transpose(const std::shared_ptr<Tensor>& input, const std::vector<
   return output;
 }
 
-Maybe<Tensor> UnfoldTensor(const std::shared_ptr<Tensor>& input, const MutableAttrMap& attrs) {
+Maybe<Tensor> UnfoldTensor(const std::shared_ptr<Tensor>& input, const int32_t& dimension,
+                           const int32_t& size, const int32_t& step) {
   const auto& shape = input->shape();
   const auto& stride = JUST(input->stride());
   const int64_t ndim = shape->NumAxes();
   int64_t storage_offset = JUST(JUST(input->AsMirroredTensor())->storage_offset());
 
-  AttrMap attr_map(attrs);
-  const int32_t dimension = JUST(attr_map.GetAttr<int32_t>("dimension"));
-  const int32_t size = JUST(attr_map.GetAttr<int32_t>("size"));
-  const int32_t step = JUST(attr_map.GetAttr<int32_t>("step"));
-  CHECK_GE_OR_RETURN(dimension, 0);
-  CHECK_LE_OR_RETURN(dimension, ndim);
+  CHECK_GE_OR_RETURN(dimension, 0) << "attibute dimension should be >= 0, but got " << dimension;
+  CHECK_LE_OR_RETURN(dimension, ndim)
+      << "attibute dimension should be <= input tensor's ndim, but got " << dimension;
 
   const int32_t max_size = ndim == 0 ? 1 : shape->At(dimension);
-  CHECK_GT_OR_RETURN(size, 0);
-  CHECK_LE_OR_RETURN(size, max_size);
-  CHECK_GT_OR_RETURN(step, 0);
+  CHECK_GT_OR_RETURN(size, 0) << "attibute size should be > 0, but got " << size;
+  CHECK_LE_OR_RETURN(size, max_size)
+      << "attibute size should be <= max_size(" << max_size << ") but got " << size;
+  CHECK_GT_OR_RETURN(step, 0) << "attibute step should be > 0, but got " << size;
 
   DimVector out_shape(ndim + 1);
   StrideVector out_stride(ndim + 1);
@@ -479,13 +470,14 @@ Maybe<Tensor> UnfoldTensor(const std::shared_ptr<Tensor>& input, const MutableAt
   }
   auto output = JUST(BasicView(input, Shape(out_shape), Stride(out_stride), storage_offset));
 
-  if (input->requires_grad()) {
+  if (autograd::GradMode::is_enabled() && input->requires_grad()) {
     auto backward_fn =
         std::make_shared<std::function<Maybe<void>(const TensorTuple&, TensorTuple*, bool)>>(
             [=](const TensorTuple& out_grads, TensorTuple* in_grads,
                 bool create_graph) -> Maybe<void> {
               autograd::AutoGradMode mode(create_graph);
-              CHECK_EQ_OR_RETURN(out_grads.size(), 1);
+              CHECK_EQ_OR_RETURN(out_grads.size(), 1)
+                  << "out grad size should be 1, but got " << out_grads.size();
               in_grads->resize(1);
               (*in_grads)[0] =
                   JUST(functional::UnfoldTensorGrad(out_grads[0], input, dimension, size, step));
@@ -521,7 +513,7 @@ Maybe<Tensor> Diagonal(const std::shared_ptr<Tensor>& input, const int32_t offse
     storage_offset -= offset * stride->At(dim1);
   }
 
-  CHECK_GE_OR_RETURN(ndim, 2);
+  CHECK_GE_OR_RETURN(ndim, 2) << "input tensor's ndim should be >= 2, but got " << ndim;
   // infer output shape and stride
   DimVector out_shape(shape->dim_vec());
   StrideVector out_stride(stride->StrideVec());
@@ -535,7 +527,7 @@ Maybe<Tensor> Diagonal(const std::shared_ptr<Tensor>& input, const int32_t offse
   // generate view tensor
   auto output = JUST(BasicView(input, Shape(out_shape), Stride(out_stride), storage_offset));
   // autograd
-  if (input->requires_grad()) {
+  if (autograd::GradMode::is_enabled() && input->requires_grad()) {
     std::vector<int32_t> input_index{dim1, dim2};
     for (int32_t i = 0; i < ndim; i++) {
       if (i != dim1 && i != dim2) { input_index.push_back(i); }
@@ -546,7 +538,8 @@ Maybe<Tensor> Diagonal(const std::shared_ptr<Tensor>& input, const int32_t offse
             [=](const TensorTuple& out_grads, TensorTuple* in_grads,
                 bool create_graph) -> Maybe<void> {
               autograd::AutoGradMode mode(create_graph);
-              CHECK_EQ_OR_RETURN(out_grads.size(), 1);
+              CHECK_EQ_OR_RETURN(out_grads.size(), 1)
+                  << "out grad size should be 1, but got " << out_grads.size();
               in_grads->resize(1);
               // diagonal grad(align to torch)
               std::shared_ptr<Tensor> grad_input =
