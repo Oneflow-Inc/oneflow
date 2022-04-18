@@ -24,7 +24,9 @@ import oneflow.unittest
 class TestParitalFC(flow.unittest.TestCase):
     def test_parital_fc(test_case):
         p = flow.env.all_device_placement("cuda")
-        w = flow.randn(50000, 128, placement=p, sbp=flow.sbp.broadcast, requires_grad=True)
+        w = flow.randn(
+            50000, 128, placement=p, sbp=flow.sbp.broadcast, requires_grad=True
+        )
         label = flow.randint(0, 50000, (512,), placement=p, sbp=flow.sbp.broadcast)
         num_sample = 5000
         out = flow.distributed_partial_fc_sample(w, label, num_sample)
