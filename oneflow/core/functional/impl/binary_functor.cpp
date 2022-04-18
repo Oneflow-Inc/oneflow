@@ -189,7 +189,7 @@ class AddcmulBaseFunctor {
       return SequenceFunction<Maybe<Tensor>()>(
               [&]() { return functional::Mul(tensor1, tensor2); })
         .then([&](const auto& x) { return functional::ScalarMul(value, x); })
-        .then([&](const auto& x) { return functional::Add(input, x, 1, inplace); })
+        .then([&](const auto& x) { return functional::Add(input, x, /*alpha=*/1, inplace); })
         .call();
   }
 };
