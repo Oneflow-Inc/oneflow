@@ -389,6 +389,10 @@ def _swapaxes(self, dim0, dim1):
     return flow._C.swapaxes(self, dim0, dim1)
 
 
+def _swapdims(self, dim0, dim1):
+    return flow._C.swapdims(self, dim0, dim1)
+
+
 def _cast(self, dtype):
     return flow.cast(self, dtype)
 
@@ -683,6 +687,10 @@ def _split(self, split_size_or_sections=None, dim=0):
     return flow._C.split(self, split_size_or_sections, dim)
 
 
+def _unbind(self, dim=0):
+    return flow._C.unbind(self, dim)
+
+
 def _all(self, dim=None, keepdim=False):
     return flow.all(self, dim, keepdim)
 
@@ -955,6 +963,10 @@ def _reshape(self, *shape):
     return flow._C.reshape(self, new_shape)
 
 
+def _reshape_as(self, other):
+    return _reshape(self, other.size())
+
+
 def _view(self, *shape):
     if len(shape) == 1:
         new_shape = shape[0]
@@ -1038,6 +1050,31 @@ def _isnan(self):
 
 def _isinf(self):
     return flow.isinf(self)
+
+
+def _new_tensor(
+    self, data, dtype=None, device=None, requires_grad=False, placement=None, sbp=None
+):
+    if dtype is None:
+        dtype = self.dtype
+    if self.is_local:
+        assert (
+            placement is None and sbp is None
+        ), "self is local tensor, placement and sbp are expected to be None."
+        if device is None:
+            device = self.device
+        return flow.tensor(
+            data, dtype=dtype, device=device, requires_grad=requires_grad
+        )
+    else:
+        assert device is None, "self is global tensor, device is expected to be None."
+        if placement is None:
+            placement = self.placement
+        if sbp is None:
+            sbp = self.sbp
+        return flow.tensor(
+            data, dtype=dtype, placement=placement, sbp=sbp, requires_grad=requires_grad
+        )
 
 
 def RegisterMethods():
@@ -1206,8 +1243,10 @@ def RegisterMethods():
     Tensor.repeat = _repeat
     Tensor.tile = _tile
     Tensor.split = _split
+    Tensor.unbind = _unbind
     Tensor.squeeze = _squeeze
     Tensor.swapaxes = _swapaxes
+    Tensor.swapdims = _swapdims
     Tensor.unfold = _unfold
     Tensor.narrow = _narrow
     Tensor.unsqueeze = _unsqueeze
@@ -1227,6 +1266,7 @@ def RegisterMethods():
     Tensor.le = _le
     Tensor.to_local = _to_local
     Tensor.reshape = _reshape
+    Tensor.reshape_as = _reshape_as
     Tensor.view = _view
     Tensor.sort = _sort
     Tensor.type_as = _type_as
@@ -1251,6 +1291,7 @@ def RegisterMethods():
     Tensor.to_consistent = _to_consistent
     Tensor.isnan = _isnan
     Tensor.isinf = _isinf
+    Tensor.new_tensor = _new_tensor
 
 
 def register_tensor_op(op_name):
