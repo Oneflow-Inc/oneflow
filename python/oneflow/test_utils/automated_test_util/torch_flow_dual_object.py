@@ -19,6 +19,7 @@ import inspect
 import copy
 import os
 import warnings
+import gc
 
 import numpy as np
 import oneflow as flow
@@ -336,7 +337,7 @@ def get_functional_graph_res(
                 print(
                     "Run graph of function: ", repr(oneflow),
                 )
-                test_g.debug(3)
+                test_g.debug(2)
             test_g_res = test_g()
             if verbose:
                 print(
@@ -366,7 +367,7 @@ def get_tensor_graph_res(
         test_g = TestGraphOfTensorMethod()
         if verbose:
             print("Run graph of method: ", repr(oneflow))
-            test_g.debug(3)
+            test_g.debug(2)
         test_g_res = test_g()
         if verbose:
             print(
@@ -437,7 +438,7 @@ def oneflow_eager_run_with_graph_check(
             test_g = get_module_graph_test(graph_train_oneflow, oneflow, *args)
             if verbose:
                 print("Run graph of module: ", repr(oneflow))
-                test_g.debug(3)
+                test_g.debug(2)
             # When testing module methods, kwargs are not considered.
             test_g_res = test_g(*graph_args)
             if verbose:
@@ -843,6 +844,10 @@ class DualObject:
         else:
             return self.pytorch == other
 
+    def __del__(self):
+        # force running gc to avoid the periodic gc related to metaclass
+        gc.collect()
+
 
 dual_modules_to_test = []
 dual_objects_to_test = []
@@ -983,6 +988,8 @@ def autotest(
             loop_limit = successful_runs_needed * 20
             current_run = 0
             while successful_runs_needed > 0:
+                # force running gc to avoid the periodic gc related to metaclass
+                gc.collect()
                 clear_note_fake_program()
                 if current_run > loop_limit:
                     raise ValueError(
