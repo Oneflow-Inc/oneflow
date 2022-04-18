@@ -193,12 +193,12 @@ Maybe<bool> FunctionNode::Apply(bool create_graph) {
   }
   JUST((*backward_fn_)(output_grads, &input_grads, create_graph));
   for (int i = 0; i < input_meta_data_.size(); ++i) {
-    if (input_grads.at(i)) {
+    if (JUST(VectorAt(input_grads, i))) {
       CHECK_NOTNULL_OR_RETURN(input_meta_data_.at(i))
           << op_type_name_
           << " calculate grad for tensor which requires_grad is False. Please submit an issue in "
              "`https://github.com/Oneflow-Inc/oneflow/issues` and we will fix it as soon as "
-             "possiable";
+             "possible";
       JUST(input_meta_data_.at(i)->current_grad()->PushPartialTensor(input_grads.at(i)));
     }
   }
