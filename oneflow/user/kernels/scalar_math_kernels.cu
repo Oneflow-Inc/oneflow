@@ -125,7 +125,7 @@ template<>
 struct ScalarReversePowGradFunctor<float> {
   OF_DEVICE_FUNC explicit ScalarReversePowGradFunctor(float exponent) : exponent(exponent) {}
   __device__ float operator()(float x, float dy) const {
-    return powf(exponent, x) * __logf(exponent) * dy;
+    return powf(exponent, x) * logf(exponent) * dy;
   }
   const float exponent;
 };
@@ -135,7 +135,7 @@ struct ScalarReversePowGradFunctor<half> {
   OF_DEVICE_FUNC explicit ScalarReversePowGradFunctor(half exponent) : exponent(exponent) {}
   __device__ half operator()(half x, half dy) const {
     const float exp = __half2float(exponent);
-    return __float2half(exp * powf(exp, __half2float(x)) * __logf(exp) * __half2float(dy));
+    return __float2half(exp * powf(exp, __half2float(x)) * logf(exp) * __half2float(dy));
   }
   const half exponent;
 };
