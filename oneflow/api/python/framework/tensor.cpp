@@ -323,7 +323,7 @@ static PyMethodDef PyTensorObject_methods[] = {
      METH_O, NULL},
     {"global_id", PyTensorObject_global_id, METH_NOARGS, NULL},
     {"check_meta_consistency", PyTensorObject_check_meta_consistency, METH_NOARGS, NULL},
-    {"to_numpy", PyTensorObject_to_numpy, METH_VARARGS, NULL},
+    {"to_numpy", PyTensorObject_to_numpy, METH_NOARGS, NULL},
 #define DEFINE_TENSOR_METHOD(T, type_proto)                                \
   {"_copy_to_numpy_" #T, PyTensorObject__copy_to_numpy_##T, METH_O, NULL}, \
       {"_copy_from_numpy_" #T, PyTensorObject__copy_from_numpy_##T, METH_O, NULL},
@@ -333,8 +333,7 @@ static PyMethodDef PyTensorObject_methods[] = {
          PyTensorObject__get_copy_mirrored_tensor_to_numpy_func_name, METH_NOARGS, NULL},
     {"_get_copy_mirrored_tensor_from_numpy_func_name",
      PyTensorObject__get_copy_mirrored_tensor_from_numpy_func_name, METH_NOARGS, NULL},
-    {"_register_storage_delete_hook", PyTensorObject__register_storage_delete_hook, METH_VARARGS,
-     NULL},
+    {"_register_storage_delete_hook", PyTensorObject__register_storage_delete_hook, METH_O, NULL},
     {NULL}};
 
 static PyObject* PyTensorObject_ndim(PyObject* self, void* unused) {
