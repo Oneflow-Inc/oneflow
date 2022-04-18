@@ -128,6 +128,7 @@ def compare_with_numpy_sgd(
         )
 
 
+@unittest.skipIf(os.getenv("ONEFLOW_TEST_CPU_ONLY"), "only test cpu cases")
 @flow.unittest.skip_unless_1n1d()
 class TestOptimizers(flow.unittest.TestCase):
     def test_one_embedding_sgd(test_case):
