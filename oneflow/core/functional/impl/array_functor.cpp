@@ -1104,8 +1104,7 @@ class SliceBaseFunctor {
   Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x, const std::vector<int64_t>& start,
                            const std::vector<int64_t>& stop,
                            const std::vector<int64_t>& step) const {
-    // TODO:(zhaoluyang) use view::Slice
-    // if (view::IsViewApplicable(x)) { return view::Slice(x, start, stop, step); }
+    if (view::IsViewApplicable(x)) { return view::Slice(x, start, stop, step); }
 
     MutableAttrMap attrs;
     JUST(attrs.SetAttr<std::vector<int64_t>>("start", start));
@@ -1245,15 +1244,17 @@ class SliceUpdateFunctor {
     JUST(attrs.SetAttr<std::vector<int64_t>>("start", start));
     JUST(attrs.SetAttr<std::vector<int64_t>>("stop", stop));
     JUST(attrs.SetAttr<std::vector<int64_t>>("step", step));
+    const auto& stride = JUST(x->stride())->StrideVec();
+    JUST(attrs.SetAttr<std::vector<int64_t>>("stride", {stride.begin(), stride.end()}));
 
     if (inplace) {
       JUST(CheckInplaceValid(x));
       auto outputs = std::make_shared<TensorTuple>(1);
       (*outputs)[0] = x;
-      JUST(OpInterpUtil::Dispatch(*op_, {x, update}, outputs.get(), attrs));
+      JUST(OpInterpUtil::Dispatch(*op_, {x, update->contiguous()}, outputs.get(), attrs));
       return outputs->at(0);
     } else {
-      return OpInterpUtil::Dispatch<Tensor>(*op_, {x, update}, attrs);
+      return OpInterpUtil::Dispatch<Tensor>(*op_, {x, update->contiguous()}, attrs);
     }
   }
 
@@ -1826,6 +1827,13 @@ class TensorGetItemFunctor {
  public:
   TensorGetItemFunctor() {}
   Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x, const TensorIndex& index) const {
+    // TODO:(zhaoluyang) if index.size() == 1, then use select
+    // if (index.size() == 1) {
+    //   auto index_item = index.at(0);
+    //   if (index_item.IsInteger()) { return JUST(functional::Select(x, 0, index_item.integer()));
+    //   }
+    // }
+
     std::vector<detail::Slice> slice_indices;
     TensorTuple tensor_indices;
     std::vector<int64_t> target_dims;

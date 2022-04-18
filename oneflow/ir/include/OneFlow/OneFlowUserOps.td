@@ -5805,7 +5805,7 @@ def OneFlow_SgdUpdateOp : OneFlow_BaseOp<"sgd_update", [NoGrad, AttrSizedOperand
   let has_input_arg_modify_fn = 1;
 }
 
-def OneFlow_SliceUpdateOp : OneFlow_BaseOp<"slice_update", [DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
+def OneFlow_SliceUpdateOp : OneFlow_BaseOp<"slice_update", [DeclareOpInterfaceMethods<UserOpCompatibleInterface>, SupportNonContiguous]> {
   let input = (ins
     OneFlow_Tensor:$x,
     OneFlow_Tensor:$update
@@ -5816,7 +5816,8 @@ def OneFlow_SliceUpdateOp : OneFlow_BaseOp<"slice_update", [DeclareOpInterfaceMe
   let attrs = (ins
     SI64ArrayAttr:$start,
     SI64ArrayAttr:$stop,
-    SI64ArrayAttr:$step
+    SI64ArrayAttr:$step,
+    SI64ArrayAttr:$stride
   );
   let has_logical_tensor_desc_infer_fn = 1;
   let has_physical_tensor_desc_infer_fn = 1;
