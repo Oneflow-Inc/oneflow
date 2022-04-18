@@ -29,7 +29,8 @@ namespace ep {
 
 namespace {
 
-constexpr size_t kDefaultWorkspaceSize = 4 * 1024 * 1024;  // 4M
+// constexpr size_t kDefaultWorkspaceSize = 4 * 1024 * 1024;  // 4M
+constexpr size_t kDefaultWorkspaceSize = 16 * 1024 * 1024;  // 4M
 
 void SetAffinityByDevice(int dev_id) {
   auto node_device_desc_mgr = Global<hardware::NodeDeviceDescriptorManager>::Get();

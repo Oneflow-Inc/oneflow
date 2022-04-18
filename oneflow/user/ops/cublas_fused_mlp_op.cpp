@@ -57,9 +57,13 @@ Maybe<void> InferTensorDesc4FusedMatmul(user_op::InferContext* ctx) {
     CHECK_EQ_OR_RETURN(weight_desc.shape().NumAxes(), 2);
     CHECK_EQ_OR_RETURN(bias_desc.shape().NumAxes(), 1);
 
-    n = weight_desc.shape().At(0);
+    // n = weight_desc.shape().At(0);
+    // CHECK_EQ_OR_RETURN(bias_desc.shape().At(0), n);
+    // CHECK_EQ_OR_RETURN(weight_desc.shape().At(1), k);
+
+    n = weight_desc.shape().At(1);
     CHECK_EQ_OR_RETURN(bias_desc.shape().At(0), n);
-    CHECK_EQ_OR_RETURN(weight_desc.shape().At(1), k);
+    CHECK_EQ_OR_RETURN(weight_desc.shape().At(0), k);
 
     cublas_aux_ld = n;
     // Set Middle result shape.
@@ -194,15 +198,26 @@ REGISTER_USER_OP_GRAD("cublas_fused_mlp")
 
         user_op::UserOpConfWrapperBuilder matmul_weight_grad_builder(
             op.op_name() + "_matmul_a_grad_" + std::to_string(hidden_layer_idx));
+        // user_op::UserOpConfWrapper matmul_weight_grad_op =
+        //     matmul_weight_grad_builder.Op("matmul")
+        //         .Input("a", cublas_dy)
+        //         .Input("b", op.output("hidden", hidden_layer_idx - 1))
+        //         .Output("out")
+        //         .Attr<bool>("transpose_a", true)
+        //         .Attr<bool>("transpose_b", false)
+        //         .Attr<double>("alpha", 1.0)
+        //         .Build();
+
         user_op::UserOpConfWrapper matmul_weight_grad_op =
             matmul_weight_grad_builder.Op("matmul")
                 .Input("a", cublas_dy)
                 .Input("b", op.output("hidden", hidden_layer_idx - 1))
                 .Output("out")
-                .Attr<bool>("transpose_a", true)
-                .Attr<bool>("transpose_b", false)
+                .Attr<bool>("transpose_a", false)
+                .Attr<bool>("transpose_b", true)
                 .Attr<double>("alpha", 1.0)
                 .Build();
+
         AddOp(matmul_weight_grad_op);
         if (op.NeedGenGradTensor4OpInput("weights", hidden_layer_idx)) {
           op.BindGradTensorWithOpInput(matmul_weight_grad_op.output("out", 0), "weights",
@@ -223,7 +238,7 @@ REGISTER_USER_OP_GRAD("cublas_fused_mlp")
                                                             .Input("b", op.input("weights", 0))
                                                             .Output("out")
                                                             .Attr<bool>("transpose_a", false)
-                                                            .Attr<bool>("transpose_b", false)
+                                                            .Attr<bool>("transpose_b", true)
                                                             .Attr<double>("alpha", 1.0)
                                                             .Build();
       AddOp(matmul_input_grad_op);
@@ -233,9 +248,18 @@ REGISTER_USER_OP_GRAD("cublas_fused_mlp")
       // dw:
       user_op::UserOpConfWrapperBuilder matmul_weight_grad_builder(op.op_name()
                                                                    + "_matmul_input_weight_grad");
+      // user_op::UserOpConfWrapper matmul_weight_grad_op = matmul_weight_grad_builder.Op("matmul")
+      //                                                        .Input("a", last_dy)
+      //                                                        .Input("b", op.input("x", 0))
+      //                                                        .Output("out")
+      //                                                        .Attr<bool>("transpose_a", true)
+      //                                                        .Attr<bool>("transpose_b", false)
+      //                                                        .Attr<double>("alpha", 1.0)
+      //                                                        .Build();
+      
       user_op::UserOpConfWrapper matmul_weight_grad_op = matmul_weight_grad_builder.Op("matmul")
-                                                             .Input("a", last_dy)
-                                                             .Input("b", op.input("x", 0))
+                                                             .Input("a", op.input("x", 0))
+                                                             .Input("b", last_dy)
                                                              .Output("out")
                                                              .Attr<bool>("transpose_a", true)
                                                              .Attr<bool>("transpose_b", false)

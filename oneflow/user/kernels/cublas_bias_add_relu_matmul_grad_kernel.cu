@@ -16,7 +16,7 @@ limitations under the License.
 #include "oneflow/core/kernel/cuda_graph_support.h"
 #include "oneflow/user/kernels/cublas_fused_mlp_util.cuh"
 // CUBLAS_AUX_EPILOGUE only support in cuda11.4 or higher version, in cuda11.4 it need static link.
-#if CUDA_VERSION >= 11040
+// #if CUDA_VERSION >= 11040
 
 namespace oneflow {
 
@@ -64,15 +64,28 @@ class CublasBiasAddReluMatmulGradKernel final : public user_op::OpKernel,
     weight->shape().ToDimVector(&weight_shape);
     cublasLtEpilogue_t epilogue = CUBLASLT_EPILOGUE_DRELU_BGRAD;
 
+    // InferMatmulCublasMNK(dy_shape, weight_shape,
+    //                      /*transpose_a=*/ep::primitive::BlasTransposeType::N,
+    //                      /*transpose_b=*/ep::primitive::BlasTransposeType::N, &cublas_m, &cublas_n,
+    //                      &cublas_k, &cublas_lda, &cublas_ldb, &cublas_ldc);
+
+    // SetCublasAttr(matmul_grad_cache, cublas_compute_dtype, cuda_data_type, /*need_aux=*/true,
+    //               /*transpose_a=*/ep::primitive::BlasTransposeType::N,
+    //               /*transpose_b=*/ep::primitive::BlasTransposeType::N, epilogue, d_bias->dptr(),
+    //               aux->dptr(), cublas_m, cublas_n, cublas_k, cublas_lda, cublas_ldb, cublas_ldc);
+    
     InferMatmulCublasMNK(dy_shape, weight_shape,
-                         /*transpose_a=*/ep::primitive::BlasTransposeType::N,
-                         /*transpose_b=*/ep::primitive::BlasTransposeType::N, &cublas_m, &cublas_n,
-                         &cublas_k, &cublas_lda, &cublas_ldb, &cublas_ldc);
+      /*transpose_a=*/ep::primitive::BlasTransposeType::N,
+      /*transpose_b=*/ep::primitive::BlasTransposeType::T, &cublas_m, &cublas_n,
+      &cublas_k, &cublas_lda, &cublas_ldb, &cublas_ldc);
 
     SetCublasAttr(matmul_grad_cache, cublas_compute_dtype, cuda_data_type, /*need_aux=*/true,
-                  /*transpose_a=*/ep::primitive::BlasTransposeType::N,
-                  /*transpose_b=*/ep::primitive::BlasTransposeType::N, epilogue, d_bias->dptr(),
-                  aux->dptr(), cublas_m, cublas_n, cublas_k, cublas_lda, cublas_ldb, cublas_ldc);
+    /*transpose_a=*/ep::primitive::BlasTransposeType::N,
+    /*transpose_b=*/ep::primitive::BlasTransposeType::T, epilogue, d_bias->dptr(),
+    aux->dptr(), cublas_m, cublas_n, cublas_k, cublas_lda, cublas_ldb, cublas_ldc);
+    
+    // TODO: Add algo search for grad. 
+
     /*
     a = dy, b = weight
     cublas_a=weight, cublas_b=dy
@@ -101,4 +114,4 @@ REGISTER_CUBLAS_BIAS_ADD_RELU_MATMUL_GRAD_KERNEL(half)
 
 }  // namespace oneflow
 
-#endif  // CUDA_VERSION >= 11040
+// #endif  // CUDA_VERSION >= 11040

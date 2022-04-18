@@ -16,7 +16,7 @@ limitations under the License.
 #include "oneflow/core/kernel/cuda_graph_support.h"
 #include "oneflow/user/kernels/cublas_fused_mlp_util.cuh"
 // CUBLAS_AUX_EPILOGUE only support in cuda11.4 or higher version, in cuda11.4 it need static link.
-#if CUDA_VERSION >= 11040
+// #if CUDA_VERSION >= 11040
 
 namespace oneflow {
 
@@ -102,11 +102,27 @@ class CublasFusedMLPKernel final : public user_op::OpKernel, public user_op::Cud
                     /*transpose_b=*/ep::primitive::BlasTransposeType::T, epilogue, bias->dptr(),
                     cublas_aux->dptr(), cublas_m, cublas_n, cublas_k, cublas_lda, cublas_ldb,
                     cublas_ldc);
-
+      
+      int returnedResults = 0;
+      cublasLtMatmulPreference_t preference; 
+      size_t work_space_size = 1024 * 1024 * 16; 
+      OF_CUBLAS_CHECK(cublasLtMatmulPreferenceCreate(&preference));
+      cublasLtMatmulPreferenceSetAttribute(
+        preference, CUBLASLT_MATMUL_PREF_MAX_WORKSPACE_BYTES, &(work_space_size),
+        sizeof(work_space_size));
+      cublasLtMatmulHeuristicResult_t heuristic_result = {};
+      OF_CUBLAS_CHECK(cublasLtMatmulAlgoGetHeuristic(
+        cuda_stream->cublas_lt_handle(), matmul_cache->operation_desc, 
+        matmul_cache->cublas_a_desc, matmul_cache->cublas_b_desc, 
+        matmul_cache->cublas_c_desc, matmul_cache->cublas_c_desc, 
+        preference, 1, &heuristic_result, &returnedResults));
+      
       OF_CUBLAS_CHECK(cublasLtMatmul(
           cuda_stream->cublas_lt_handle(), matmul_cache->operation_desc, &sp_alpha, weight->dptr(),
           matmul_cache->cublas_a_desc, in_buf_ptr, matmul_cache->cublas_b_desc, &sp_beta, y_ptr,
-          matmul_cache->cublas_c_desc, y_ptr, matmul_cache->cublas_c_desc, nullptr,
+          matmul_cache->cublas_c_desc, y_ptr, matmul_cache->cublas_c_desc, 
+          // nullptr,
+          &heuristic_result.algo, 
           cuda_stream->cublas_workspace(), cuda_stream->cublas_workspace_size(),
           cuda_stream->cuda_stream()));
 
@@ -133,4 +149,4 @@ REGISTER_CUBLAS_FUSED_MLP_KERNEL_GPU(nv_bfloat16, DataType::kBFloat16);
 
 }  // namespace oneflow
 
-#endif  // CUDA_VERSION >= 11040
+// #endif  // CUDA_VERSION >= 11040
