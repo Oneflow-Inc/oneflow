@@ -693,14 +693,14 @@ int32_t SbpNode<SbpSignature>::GetMinLayer(
   for (SbpEdge<SbpSignature>* this_edge : EdgesIn) {
     int32_t producer_min_layer =
         this_edge->StartNode->GetMinLayer(op_name2sbp_node, op_node2mutable_op_ctrl_deps);
-    MinLayer = std::max(MinLayer, producer_min_layer);
+    if (producer_min_layer > MinLayer) { MinLayer = producer_min_layer; }
   }
   for (const auto& ctrl_in_op_name : op_node->op().op_conf().ctrl_in_op_name()) {
     auto it = op_name2sbp_node.find(ctrl_in_op_name);
     if (it != op_name2sbp_node.end()) {
       int32_t producer_min_layer =
           it->second->GetMinLayer(op_name2sbp_node, op_node2mutable_op_ctrl_deps);
-      MinLayer = std::max(MinLayer, producer_min_layer);
+      if (producer_min_layer > MinLayer) { MinLayer = producer_min_layer; }
     }
   }
   if (op_node2mutable_op_ctrl_deps.find(op_node) != op_node2mutable_op_ctrl_deps.end()) {
@@ -709,7 +709,7 @@ int32_t SbpNode<SbpSignature>::GetMinLayer(
       if (it != op_name2sbp_node.end()) {
         int32_t producer_min_layer =
             it->second->GetMinLayer(op_name2sbp_node, op_node2mutable_op_ctrl_deps);
-        MinLayer = std::max(MinLayer, producer_min_layer);
+        if (producer_min_layer > MinLayer) { MinLayer = producer_min_layer; }
       }
     }
   }

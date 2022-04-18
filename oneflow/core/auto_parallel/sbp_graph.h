@@ -924,7 +924,7 @@ int32_t SbpGraph<SbpSignature>::ComputeLayer(
   // Find the largest minimum layer
   int32_t max_MinLayer = -1;
   for (SbpNode<SbpSignature>* this_node : NodeList) {
-    max_MinLayer = std::max(max_MinLayer, this_node->MinLayer);
+    if (max_MinLayer < this_node->MinLayer) { max_MinLayer = this_node->MinLayer; }
   }
   // Compute maximum layer
   for (SbpNode<SbpSignature>* this_node : NodeList) {
