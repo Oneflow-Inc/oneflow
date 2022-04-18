@@ -805,7 +805,7 @@ inline cudaError_t LaunchDequantizeKernel(cudaStream_t stream, const int8_t* src
                                           const int64_t elem_cnt) {
   constexpr int quantized_src_pack_size = cuda::elementwise::PackSize<int8_t>();
   constexpr int dst_pack_size = cuda::elementwise::PackSize<T>();
-  int launch_pack_size = min(quantized_src_pack_size, dst_pack_size);
+  int launch_pack_size = std::min(quantized_src_pack_size, dst_pack_size);
   if (launch_pack_size == 8 && col_size % 8 == 0) {
     cudaError_t err = DispatchDequantizeKernelPackSize<T, ComputeType, IDX, 8>(
         stream, src, quantize_factor, dst, col_size, elem_cnt);
