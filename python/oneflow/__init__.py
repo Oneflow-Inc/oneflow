@@ -153,6 +153,7 @@ from oneflow._C import triu
 from oneflow._C import pad
 from oneflow._C import transpose
 from oneflow._C import relu
+from oneflow._C import roc_auc_score
 from oneflow._C import softmax
 from oneflow._C import log_softmax
 from oneflow._C import argmax
