@@ -114,7 +114,7 @@ class TestAmax(flow.unittest.TestCase):
     @autotest()
     def test_amin_with_random_data_empty_dim(test_case):
         device = random_device()
-        ndim = random(1,6).to(int)
+        ndim = random(1, 6).to(int)
         x = random_tensor(ndim=ndim).to(device)
         y = torch.amin(x, dim=None, keepdim=random().to(bool))
         return y
@@ -122,7 +122,7 @@ class TestAmax(flow.unittest.TestCase):
     @autotest()
     def test_amin_with_random_data_multi_dims(test_case):
         device = random_device()
-        ndim = random(2,6).to(int)
+        ndim = random(2, 6).to(int)
         x = random_tensor(ndim=ndim).to(device)
         dim = set()
         for _ in range(random(1, ndim).to(int).value()):
