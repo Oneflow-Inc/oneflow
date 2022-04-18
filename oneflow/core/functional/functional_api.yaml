@@ -30,6 +30,10 @@
     ]
   bind_python: true
 
+- name: "amin"
+  signature: "Tensor (Tensor input, Int32List[1] dim=None, Bool keepdim=False) => Amin"
+  bind_python: True
+
 - name: "sub"
   signature:
     [
