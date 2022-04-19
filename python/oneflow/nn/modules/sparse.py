@@ -35,11 +35,11 @@ class Embedding(Module):
                                     i.e. it remains as a fixed "pad". For a newly constructed Embedding,
                                     the embedding vector at :attr:`padding_idx` will default to all zeros,
                                     but can be updated to another value to be used as the padding vector.
-        max_norm (float, optional): If given, each embedding vector with norm larger than max_norm is renormalized to have 
-                                    norm max_norm
-        norm_type (float, optional): The p of the p-norm to compute for the max_norm option. Default 2.
+        max_norm (float, optional): If given, each embedding vector with norm larger than :attr:`max_norm` is renormalized to have 
+                                    norm :attr:`max_norm`
+        norm_type (float, optional): The p of the p-norm to compute for the :attr:`max_norm` option. Default :attr:`2`.
         scale_grad_by_freq (boolean, optional): If given, this will scale gradients by the inverse of 
-                                                frequency of the words in the mini-batch. Default False
+                                                frequency of the words in the mini-batch. Default :attr:`False`
                                                 
     For example:
 
