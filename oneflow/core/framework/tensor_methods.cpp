@@ -312,8 +312,8 @@ Maybe<Tensor> Expand(const std::shared_ptr<Tensor>& input, const std::vector<int
     };
     backward_fn->status = []() { return true; };
     TensorTuple outputs{output};
-    JUST(GetThreadLocalAutogradEngine()->AddNode("view::expand_backward", backward_fn,
-                                                            {input}, &outputs));
+    JUST(GetThreadLocalAutogradEngine()->AddNode("view::expand_backward", backward_fn, {input},
+                                                 &outputs));
   }
   return output;
 }
@@ -346,15 +346,15 @@ Maybe<Tensor> Narrow(const std::shared_ptr<Tensor>& input, const int64_t& dim, c
       CHECK_EQ_OR_RETURN(out_grads.size(), 1)
           << "out grad size should be 1, but got " << out_grads.size();
       auto like = JUST(functional::Empty(Shape(input->shape()->dim_vec()), input->dtype(),
-                                          JUST(input->device())));
+                                         JUST(input->device())));
       in_grads->resize(1);
       (*in_grads)[0] = JUST(functional::NarrowGrad(out_grads[0], like, dim, start, length));
       return Maybe<void>::Ok();
     };
     backward_fn->status = []() { return true; };
     TensorTuple outputs{output};
-    JUST(GetThreadLocalAutogradEngine()->AddNode("view::narrow_backward", backward_fn,
-                                                            {input}, &outputs));
+    JUST(GetThreadLocalAutogradEngine()->AddNode("view::narrow_backward", backward_fn, {input},
+                                                 &outputs));
   }
   return output;
 }
@@ -375,7 +375,7 @@ Maybe<Tensor> AsStrided(const std::shared_ptr<one::Tensor>& input, const std::ve
       CHECK_EQ_OR_RETURN(out_grads.size(), 1)
           << "out grad size should be 1, but got " << out_grads.size();
       auto like = JUST(functional::Empty(Shape(input->shape()->dim_vec()), input->dtype(),
-                                          JUST(input->device())));
+                                         JUST(input->device())));
       in_grads->resize(1);
       (*in_grads)[0] =
           JUST(functional::AsStridedGrad(out_grads[0], like, size, stride, storage_offset));
@@ -383,8 +383,8 @@ Maybe<Tensor> AsStrided(const std::shared_ptr<one::Tensor>& input, const std::ve
     };
     backward_fn->status = []() { return true; };
     TensorTuple outputs{output};
-    JUST(GetThreadLocalAutogradEngine()->AddNode("view::as_strided_backward",
-                                                            backward_fn, {input}, &outputs));
+    JUST(GetThreadLocalAutogradEngine()->AddNode("view::as_strided_backward", backward_fn, {input},
+                                                 &outputs));
   }
   return output;
 }
@@ -430,8 +430,8 @@ Maybe<Tensor> Transpose(const std::shared_ptr<Tensor>& input, const std::vector<
     };
     backward_fn->status = []() { return true; };
     TensorTuple outputs{output};
-    JUST(GetThreadLocalAutogradEngine()->AddNode("view::transpose_backward", backward_fn,
-                                                            {input}, &outputs));
+    JUST(GetThreadLocalAutogradEngine()->AddNode("view::transpose_backward", backward_fn, {input},
+                                                 &outputs));
   }
   return output;
 }
@@ -483,8 +483,8 @@ Maybe<Tensor> UnfoldTensor(const std::shared_ptr<Tensor>& input, const int32_t& 
     };
     backward_fn->status = []() { return true; };
     TensorTuple outputs{output};
-    JUST(GetThreadLocalAutogradEngine()->AddNode("view::unfold_tensor_backward",
-                                                            backward_fn, {input}, &outputs));
+    JUST(GetThreadLocalAutogradEngine()->AddNode("view::unfold_tensor_backward", backward_fn,
+                                                 {input}, &outputs));
   }
 
   return output;
@@ -544,14 +544,14 @@ Maybe<Tensor> Diagonal(const std::shared_ptr<Tensor>& input, const int32_t offse
           JUST(functional::Empty(*input->shape(), input->dtype(), JUST(input->device())));
       auto diag = JUST(functional::Diagonal(grad_input, offset, dim1, dim2));
       diag = JUST(functional::Copy(out_grads[0], JUST(input->device())->type(),
-                                    JUST(input->device())->device_id()));
+                                   JUST(input->device())->device_id()));
       (*in_grads)[0] = grad_input;
       return Maybe<void>::Ok();
     };
     backward_fn->status = []() { return true; };
     TensorTuple outputs{output};
-    JUST(GetThreadLocalAutogradEngine()->AddNode("view::diagonal_backward", backward_fn,
-                                                            {input}, &outputs));
+    JUST(GetThreadLocalAutogradEngine()->AddNode("view::diagonal_backward", backward_fn, {input},
+                                                 &outputs));
   }
 
   return output;
