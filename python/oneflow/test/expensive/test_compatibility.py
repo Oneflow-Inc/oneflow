@@ -89,15 +89,15 @@ class TestApiCompatibility(flow.unittest.TestCase):
             test_case, "pytorch_convnext.py", "convnext_tiny", "cuda", 8, 224
         )
 
-    def test_crossformer_compatibility(test_case):
-        do_test_train_loss_oneflow_pytorch(
-            test_case,
-            "pytorch_crossformer.py",
-            "crossformer_tiny_patch4_group7_224",
-            "cuda",
-            8,
-            224,
-        )
+    # def test_crossformer_compatibility(test_case):
+    #     do_test_train_loss_oneflow_pytorch(
+    #         test_case,
+    #         "pytorch_crossformer.py",
+    #         "crossformer_tiny_patch4_group7_224",
+    #         "cuda",
+    #         8,
+    #         224,
+    #     )
 
     # def test_efficientnet_compatibility(test_case):
     #     do_test_train_loss_oneflow_pytorch(
@@ -151,5 +151,4 @@ class TestApiCompatibility(flow.unittest.TestCase):
 
 
 if __name__ == "__main__":
-    # unittest.main()
-    pass
+    unittest.main()
