@@ -192,6 +192,8 @@ class OpExprGradClosure {
     return impl_->ApplyIf(state_.get(), out_grads, in_grads);
   }
 
+  const std::shared_ptr<AutoGradCaptureState>& state() const { return state_; }
+
  private:
   std::shared_ptr<OpExprGradFunctionIf> impl_;
   std::shared_ptr<AutoGradCaptureState> state_;
