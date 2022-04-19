@@ -67,10 +67,7 @@ std::vector<Result> ProfileMgr::__CountResults() {
       op_names_ordered.push_back(e->op_name_);
       results[e->op_name_] = Result(e->op_name_, e->end_at_ - e->start_at_, 1);
     } else {
-      auto& r = results[e->op_name_];
-      r.all_duration_ = r.avg_duration_ * r.num_called_ + (e->end_at_ - e->start_at_);
-      r.num_called_++;
-      r.avg_duration_ = r.all_duration_ / r.num_called_;
+      results[e->op_name_].Update(e->end_at_ - e->start_at_);
     }
   }
   std::vector<Result> final_results;

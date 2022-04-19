@@ -14,27 +14,24 @@ See the License for the specific language governing permissions and
 limitations under the License.
 """
 import json
+import oneflow._oneflow_internal
 from prettytable import PrettyTable
 from oneflow.framework.profiler import ProfilerStart as profiler_start
 from oneflow.framework.profiler import ProfilerStop as profiler_stop
 from oneflow.framework.profiler import RangePop as range_pop
 from oneflow.framework.profiler import RangePush as range_push
-from oneflow.framework.profiler import EnableProfiler as enable_profiler
-from oneflow.framework.profiler import DisableProfiler as disable_profiler
-from oneflow.framework.profiler import StartRecord as start_record
-from oneflow.framework.profiler import EndRecord as end_record
 
 
-class profile(object):
+class profile:
     def __init__(self) -> None:
         self.result = ""
 
     def __enter__(self):
-        enable_profiler()
+        oneflow._oneflow_internal.profiler.EnableProfiler()
         return self
 
     def __exit__(self, exc_type, exc_val, exc_tb):
-        self.result = disable_profiler()
+        self.result = oneflow._oneflow_internal.profiler.DisableProfiler()
 
     # copy from pytorch: torch/autograd/profiler_util.py
     def _format_time(self, time_ns):
@@ -65,14 +62,14 @@ class profile(object):
         return t.get_string()
 
 
-class record_function(object):
+class record_function:
     def __init__(self, name: str) -> None:
         self.name = name
 
     def __enter__(self):
-        start_record(self.name)
+        oneflow._oneflow_internal.profiler.StartRecord(self.name)
         return self
 
     def __exit__(self, exc_type, exc_val, exc_tb):
-        end_record(self.name)
+        oneflow._oneflow_internal.profiler.EndRecord(self.name)
 

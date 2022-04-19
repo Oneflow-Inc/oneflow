@@ -68,7 +68,7 @@ void EnableProfiler();
 // DisableProfiler will return a json of profile results.
 std::string DisableProfiler();
 
-void StartRecord(const std::string& name);
+Maybe<void> StartRecord(const std::string& name);
 
 void EndRecord(const std::string& name);
 
