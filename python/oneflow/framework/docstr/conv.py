@@ -48,9 +48,9 @@ add_docstr(
         >>> import oneflow as flow
         >>> import oneflow.nn.functional as F
         
-        >>> input = flow.randn(33, 16, 30)
+        >>> inputs = flow.randn(33, 16, 30)
         >>> filters = flow.randn(20, 16, 5)
-        >>> F.conv1d(inputs, filters)
+        >>> outputs = F.conv1d(inputs, filters)
         """,
 )
 add_docstr(
@@ -85,9 +85,9 @@ add_docstr(
         >>> import oneflow as flow
         >>> import oneflow.nn.functional as F
         
-        >>> input = flow.randn(8, 4, 3, 3)
+        >>> inputs = flow.randn(8, 4, 3, 3)
         >>> filters = flow.randn(1, 4, 5, 5)
-        >>> F.conv2d(inputs, filters, padding=1)
+        >>> outputs = F.conv2d(inputs, filters, padding=1)
     
         """,
 )
@@ -126,9 +126,9 @@ add_docstr(
         >>> import oneflow as flow
         >>> import oneflow.nn.functional as F
         
-        >>> input = flow.randn(33, 16, 3, 3, 3)
-        >>> filters = flow.randn(20, 16, 50, 10, 20)
-        >>> F.conv3d(inputs, filters)
+        >>> inputs = flow.randn(20, 16, 50, 10, 20)
+        >>> filters = flow.randn(33, 16, 3, 3, 3)
+        >>> outputs = F.conv3d(inputs, filters)
         
     """,
 )
