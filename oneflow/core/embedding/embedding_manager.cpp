@@ -64,7 +64,8 @@ void EmbeddingManager::CreateKeyValueStore(const KeyValueStoreOptions& key_value
     store = NewCachedKeyValueStore(std::move(store), std::move(cache));
   }
   store->ReserveQueryLength(kDefaultMaxQueryLength);
-  key_value_store_map_.emplace(map_key, std::move(store));
+  CHECK(key_value_store_map_.emplace(map_key, std::move(store)).second)
+      << "Can't create an embedding with same name of an existing embedding, the name: " << name;
 }
 
 void EmbeddingManager::SaveSnapshot(const std::string& embedding_name, int64_t local_rank_id,
