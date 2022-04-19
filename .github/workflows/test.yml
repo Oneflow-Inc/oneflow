@@ -16,7 +16,7 @@ env:
   FLOW_VISION_COMMIT: ca8ebc663b58667cf8cd1b6ef0c861522780b7bb
   LIBAI_SRC: libai
   LIBAI_COMMIT: 7d31d9781e5f2d559dc0820f599e0bed798488ca
-  TEST_WITH_TORCH_IMG_TAG: registry.cn-beijing.aliyuncs.com/oneflow/test-with-pytorch-1.9.0-cuda10.2-cudnn7-runtime:ae2dd3ce49aac4c96da6e0caeb53e549e7770cd2
+  TEST_WITH_TORCH_IMG_TAG: registry.cn-beijing.aliyuncs.com/oneflow/test-with-pytorch-1.10.0-cuda11.3-cudnn8-runtime:06001b5bdd1a4f89f888e18d96c26f9ed2cd25d3
 
 jobs:
   check-priority-pr:
@@ -1019,7 +1019,7 @@ jobs:
         uses: actions/checkout@v2
         with:
           repository: Oneflow-Inc/models
-          ref: 51933864c0f8305db27d47db1955fe1647620b73
+          ref: d6b2b8260e87541726ed87361171438d258e6a4d
           path: oneflow-models
       - name: ResNet50 Graph DDP test
         id: models-resnet50
