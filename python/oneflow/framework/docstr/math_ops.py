@@ -1397,7 +1397,7 @@ add_docstr(
         tensor2 (Tensor): the tensor to be multiplied.
     
     Keyword args:
-        value (Number, optional): multiplier for tensor1 * tensor2.
+        value (Number, optional): multiplier for :math:`tensor1 * tensor2`.
 
     Returns:
         oneflow.Tensor: the output Tensor.
