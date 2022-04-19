@@ -21,6 +21,7 @@ limitations under the License.
 #include <memory>
 #include <string>
 #include <queue>
+#include <unordered_map>
 #include "oneflow/core/profiler/util.h"
 #include "oneflow/core/common/util.h"
 #include "oneflow/core/common/global.h"
@@ -48,6 +49,8 @@ struct Result {
   int64_t num_called_ = 0;
 };
 
+class EventRecorder;
+
 class ProfileMgr {
  public:
   ProfileMgr() = default;
@@ -57,6 +60,7 @@ class ProfileMgr {
 
  private:
   std::queue<std::shared_ptr<Event>> events_;
+
   std::vector<Result> __CountResults();
 };
 
@@ -75,6 +79,16 @@ class EventRecorder {
 
  private:
   std::shared_ptr<Event> event_;
+};
+
+class EventRecorderMgr {
+ public:
+  EventRecorderMgr() = default;
+  void AddRecorder(const std::string& name);
+  void DeleteRecorder(const std::string& name);
+
+ private:
+  std::unordered_map<std::string, std::shared_ptr<EventRecorder>> event_recorders_;
 };
 
 }  // namespace profiler

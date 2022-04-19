@@ -21,6 +21,8 @@ from oneflow.framework.profiler import RangePop as range_pop
 from oneflow.framework.profiler import RangePush as range_push
 from oneflow.framework.profiler import EnableProfiler as enable_profiler
 from oneflow.framework.profiler import DisableProfiler as disable_profiler
+from oneflow.framework.profiler import StartRecord as start_record
+from oneflow.framework.profiler import EndRecord as end_record
 
 
 class profile(object):
@@ -57,3 +59,16 @@ class profile(object):
                 ]
             )
         return t.get_string()
+
+
+class record_function(object):
+    def __init__(self, name: str) -> None:
+        self.name = name
+
+    def __enter__(self):
+        start_record(self.name)
+        return self
+
+    def __exit__(self, exc_type, exc_val, exc_tb):
+        end_record(self.name)
+

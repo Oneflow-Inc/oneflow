@@ -38,3 +38,11 @@ def EnableProfiler():
 
 def DisableProfiler():
     return oneflow._oneflow_internal.profiler.DisableProfiler()
+
+
+def StartRecord(name: str):
+    oneflow._oneflow_internal.profiler.StartRecord(name)
+
+
+def EndRecord(name: str):
+    oneflow._oneflow_internal.profiler.EndRecord(name)

@@ -13,6 +13,7 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
+#include <memory>
 #include <set>
 #include <string>
 #include "nlohmann/json.hpp"
@@ -73,6 +74,14 @@ std::vector<Result> ProfileMgr::__CountResults() {
   std::vector<Result> final_results;
   for (const auto& op_name : op_names_ordered) { final_results.push_back(results[op_name]); }
   return final_results;
+}
+
+void EventRecorderMgr::AddRecorder(const std::string& name) {
+  event_recorders_.emplace(name, std::make_shared<EventRecorder>(name));
+}
+
+void EventRecorderMgr::DeleteRecorder(const std::string& name) {
+  if (event_recorders_.find(name) != event_recorders_.end()) { event_recorders_.erase(name); }
 }
 
 }  // namespace profiler

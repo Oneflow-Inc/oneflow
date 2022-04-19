@@ -109,22 +109,35 @@ void ProfilerStop() {
 }
 
 void EnableProfiler() {
-  if (Global<ProfileMgr>::Get() == nullptr) {
-    vm::ClusterSync().GetOrThrow();
-    Global<ProfileMgr>::New();
-  }
+  vm::ClusterSync().GetOrThrow();
+  if (Global<ProfileMgr>::Get() == nullptr) { Global<ProfileMgr>::New(); }
+  if (Global<EventRecorderMgr>::Get() == nullptr) { Global<EventRecorderMgr>::New(); }
 }
 
 // DisableProfiler will return a json of profile results.
 std::string DisableProfiler() {
+  vm::ClusterSync().GetOrThrow();
+
+  auto ermgr = Global<EventRecorderMgr>::Get();
+  if (ermgr != nullptr) { Global<EventRecorderMgr>::Delete(); }
+
   auto pmgr = Global<ProfileMgr>::Get();
   if (pmgr != nullptr) {
-    vm::ClusterSync().GetOrThrow();
     std::string results = pmgr->DumpResultsJson();
     Global<ProfileMgr>::Delete();
     return results;
   }
   return "";
+}
+
+void StartRecord(const std::string& name) {
+  auto ermgr = Global<EventRecorderMgr>::Get();
+  if (ermgr != nullptr) { ermgr->AddRecorder(name); }
+}
+
+void EndRecord(const std::string& name) {
+  auto ermgr = Global<EventRecorderMgr>::Get();
+  if (ermgr != nullptr) { ermgr->DeleteRecorder(name); }
 }
 
 }  // namespace profiler
