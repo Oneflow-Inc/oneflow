@@ -358,20 +358,21 @@ def make_cached_ssd_store_options(
         >>> # ...
     """
     assert isinstance(persistent_path, (str, list, tuple))
-    assert cache_budget_mb > 0
+    assert cache_budget_mb > 0 or host_cache_budget_mb > 0
     if capacity is not None:
         assert capacity > 0
     else:
         capacity = 0
 
-    cache_list = [
-        {
-            "policy": "lru",
-            "cache_memory_budget_mb": cache_budget_mb,
-            "value_memory_kind": "device",
-        }
-    ]
-
+    cache_list = []
+    if cache_budget_mb > 0:
+        cache_list.append(
+            {
+                "policy": "lru",
+                "cache_memory_budget_mb": cache_budget_mb,
+                "value_memory_kind": "device",
+            }
+        )
     if host_cache_budget_mb > 0:
         cache_list.append(
             {
