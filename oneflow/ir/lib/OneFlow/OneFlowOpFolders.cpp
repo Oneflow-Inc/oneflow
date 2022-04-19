@@ -28,7 +28,7 @@ limitations under the License.
 #include "oneflow/core/framework/tensor.h"
 #include "oneflow/core/functional/functional_api.yaml.h"
 #include "oneflow/core/job/lazy_mode.h"
-#include "oneflow/core/operator/variable_tensor_mgr.h"
+#include "oneflow/core/framework/variable_tensor_mgr.h"
 
 namespace mlir {
 namespace oneflow {

@@ -37,7 +37,7 @@ limitations under the License.
 #include "oneflow/core/vm/vm_util.h"
 #include "oneflow/core/job/collective_boxing/scheduler.h"
 #include "oneflow/core/graph/task_stream_index_manager.h"
-#include "oneflow/core/operator/variable_tensor_mgr.h"
+#include "oneflow/core/framework/variable_tensor_mgr.h"
 #ifdef WITH_CUDA
 #include <cuda.h>
 #endif  // WITH_CUDA

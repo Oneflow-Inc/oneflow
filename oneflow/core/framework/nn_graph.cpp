@@ -37,7 +37,7 @@ limitations under the License.
 #include "oneflow/core/persistence/tee_persistent_log_stream.h"
 #include "oneflow/core/vm/vm_util.h"
 #include "oneflow/core/profiler/profiler.h"
-#include "oneflow/core/operator/variable_tensor_mgr.h"
+#include "oneflow/core/framework/variable_tensor_mgr.h"
 
 namespace oneflow {
 

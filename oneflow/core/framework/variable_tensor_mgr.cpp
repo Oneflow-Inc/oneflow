@@ -16,7 +16,8 @@ limitations under the License.
 #include <memory>
 #include <tuple>
 #include <vector>
-#include "oneflow/core/operator/variable_tensor_mgr.h"
+#include "oneflow/core/framework/variable_tensor_mgr.h"
+#include "oneflow/core/common/container_util.h"
 #include "oneflow/core/common/just.h"
 #include "oneflow/core/common/throw.h"
 #include "oneflow/core/framework/tensor.h"
@@ -45,7 +46,8 @@ Maybe<void> VariableTensorMgr::Fill(
   CHECK_EQ_OR_THROW(variable_op_names.size(), variable_tensors.size())
       << "The number of variable op names is not equal with the number of variable tensors.";
   for (size_t i = 0; i < variable_op_names.size(); ++i) {
-    Set(variable_op_names.at(i), variable_tensors.at(i));
+    Set(JUST(oneflow::VectorAt(variable_op_names, i)),
+        JUST(oneflow::VectorAt(variable_tensors, i)));
   }
   return Maybe<void>::Ok();
 }
