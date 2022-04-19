@@ -743,9 +743,23 @@ add_docstr(
 )
 
 add_docstr(
+    oneflow.Tensor.unbind,
+    """
+    See :func:`oneflow.unbind`
+    """,
+)
+
+add_docstr(
     oneflow.Tensor.swapaxes,
     """
     See :func:`oneflow.swapaxes`
+    """,
+)
+
+add_docstr(
+    oneflow.Tensor.swapdims,
+    """
+    See :func:`oneflow.swapdims`
     """,
 )
 
@@ -1553,6 +1567,22 @@ add_docstr(
     oneflow.Tensor.reshape,
     """
     See :func:`oneflow.reshape`
+    """,
+)
+
+add_docstr(
+    oneflow.Tensor.reshape_as,
+    """
+    Tensor.reshape_as(other) -> Tensor
+    Returns this tensor as the same shape as other.
+    self.reshape_as(other) is equivalent to self.reshape(other.sizes()).
+    This method returns a view if other.sizes() is compatible with the current shape.
+    See :func:`oneflow.Tensor.view` on when it is possible to return a view.
+
+    Please see reshape() for more information about reshape. See :func:`oneflow.reshape`
+
+    Parameters
+    other (oneflow.Tensor) – The result tensor has the same shape as other.
     """,
 )
 
