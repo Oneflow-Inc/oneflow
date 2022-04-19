@@ -1846,3 +1846,11 @@ add_docstr(
     See :func:`oneflow.isinf`
     """,
 )
+
+add_docstr(
+    oneflow.Tensor.byte,
+    """
+    self.half() is equivalent to self.to(oneflow.uint8).
+    See :func:`oneflow.Tensor.to`
+    """,
+)
