@@ -34,12 +34,12 @@ namespace {
 // Transform input to TensorTuple
 Maybe<one::TensorTuple> UnpackTensorTuple(const py::object& input) {
   one::TensorTuple tp;
-  if (py::isinstance<one::Tensor>(input)) {
+  if (PyTensor_Check(input.ptr())) {
     tp.emplace_back(input.cast<std::shared_ptr<one::Tensor>>());
   } else if (py::isinstance<py::tuple>(input)) {
     for (const auto& tensor : input.cast<py::tuple>()) {
-      CHECK_OR_RETURN(py::isinstance<one::Tensor>(tensor));
-      tp.emplace_back(tensor.cast<std::shared_ptr<one::Tensor>>());
+      CHECK_OR_RETURN(PyTensor_Check(tensor.ptr()));
+      tp.emplace_back(PyTensor_Unpack(tensor.ptr()));
     }
   } else {
     throw std::runtime_error("Only support tensor or list of tensors");

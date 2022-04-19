@@ -567,6 +567,11 @@ static PyTypeObject* MakeParameterType() {
   return type;
 }
 
+}  // namespace one
+}  // namespace oneflow
+
+using namespace oneflow::one;
+
 PyObject* PyTensor_New(const std::shared_ptr<Tensor>& data) {
   if (!data) { Py_RETURN_NONE; }
   if (data->pyobject()) { return PY_XINCREF((PyObject*)(data->pyobject())); }
@@ -615,6 +620,3 @@ ONEFLOW_API_PYBIND11_MODULE("", m) {
     return;
   }
 }
-
-}  // namespace one
-}  // namespace oneflow
