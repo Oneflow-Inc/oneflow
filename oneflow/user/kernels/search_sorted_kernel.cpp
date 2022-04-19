@@ -15,38 +15,9 @@ limitations under the License.
 */
 #include "oneflow/core/framework/framework.h"
 #include "oneflow/core/kernel/new_kernel_util.h"
+#include "oneflow/user/kernels/search_sorted_kernel_util.h"
 
 namespace oneflow {
-
-template<typename T, typename K>
-K cus_lower_bound(K start, K end, const T val, const T* bd, const int64_t* sort) {
-  const K orig_start = start;
-  while (start < end) {
-    const K mid = start + ((end - start) >> 1);
-    const T mid_val = sort ? bd[sort[mid] + orig_start] : bd[mid];
-    if (!(mid_val >= val)) {
-      start = mid + 1;
-    } else {
-      end = mid;
-    }
-  }
-  return start;
-}
-
-template<typename T, typename K>
-K cus_upper_bound(K start, K end, const T val, const T* bd, const int64_t* sort) {
-  const K orig_start = start;
-  while (start < end) {
-    const K mid = start + ((end - start) >> 1);
-    const T mid_val = sort ? bd[sort[mid] + orig_start] : bd[mid];
-    if (!(mid_val > val)) {
-      start = mid + 1;
-    } else {
-      end = mid;
-    }
-  }
-  return start;
-}
 
 template<typename T, typename K>
 class CpuSearchSortedKernel final : public user_op::OpKernel {

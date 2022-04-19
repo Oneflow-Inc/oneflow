@@ -17,38 +17,9 @@ limitations under the License.
 #include "oneflow/core/kernel/cuda_graph_support.h"
 #include "oneflow/core/kernel/new_kernel_util.h"
 #include "oneflow/core/device/cuda_util.h"
+#include "oneflow/user/kernels/search_sorted_kernel_util.h"
 
 namespace oneflow {
-
-template<typename T, typename K>
-OF_DEVICE_FUNC K cus_lower_bound(K start, K end, const T val, const T* bd, const int64_t* sort) {
-  const K orig_start = start;
-  while (start < end) {
-    const K mid = start + ((end - start) >> 1);
-    const T mid_val = sort ? bd[sort[mid] + orig_start] : bd[mid];
-    if (!(mid_val >= val)) {
-      start = mid + 1;
-    } else {
-      end = mid;
-    }
-  }
-  return start;
-}
-
-template<typename T, typename K>
-OF_DEVICE_FUNC K cus_upper_bound(K start, K end, const T val, const T* bd, const int64_t* sort) {
-  const K orig_start = start;
-  while (start < end) {
-    const K mid = start + ((end - start) >> 1);
-    const T mid_val = sort ? bd[sort[mid] + orig_start] : bd[mid];
-    if (!(mid_val > val)) {
-      start = mid + 1;
-    } else {
-      end = mid;
-    }
-  }
-  return start;
-}
 
 template<typename T, typename K>
 __global__ void DoSearchSortedLogical(int32_t instance_num, bool is_sequence_1d,
