@@ -23,11 +23,11 @@ namespace oneflow {
   const user_op::TensorDesc& x = ctx->InputTensorDesc("x", 0);
   const user_op::TensorDesc& y = ctx->InputTensorDesc("y", 0);
   CHECK_OR_RETURN(x.shape() == y.shape())
-      << JUST(OfStringFormat("Inconsistent tensor size, expected tensor to have the same number of "
-                             "elements, but got %d and %d elements respectively.",
-                             x.shape().elem_cnt(), y.shape().elem_cnt()));
+      << *JUST(OfStringFormat("Inconsistent tensor size, expected tensor to have the same number "
+                              "of elements, but got %d and %d elements respectively.",
+                              x.shape().elem_cnt(), y.shape().elem_cnt()));
   CHECK_OR_RETURN(x.shape().NumAxes() == 1)
-      << JUST(OfStringFormat("1D tensors expected, but got %dD tensors.", x.shape().NumAxes()));
+      << *JUST(OfStringFormat("1D tensors expected, but got %dD tensors.", x.shape().NumAxes()));
   *ctx->OutputShape("out", 0) = Shape({});
   return Maybe<void>::Ok();
 }
@@ -49,7 +49,9 @@ namespace oneflow {
 /* static */ Maybe<void> DotOp::InferDataType(user_op::InferContext* ctx) {
   const user_op::TensorDesc& x = ctx->InputTensorDesc("x", 0);
   const user_op::TensorDesc& y = ctx->InputTensorDesc("y", 0);
-  CHECK_OR_RETURN(x.data_type() == y.data_type()) << "The data type of input tensors are different";
+  CHECK_OR_RETURN(x.data_type() == y.data_type()) << *JUST(
+      OfStringFormat("expected both vectors to have same dtype, but found %s and %s.",
+                     DataType_Name(x.data_type()).c_str(), DataType_Name(y.data_type()).c_str()));
   *ctx->OutputDType("out", 0) = ctx->InputDType("x", 0);
   return Maybe<void>::Ok();
 }
