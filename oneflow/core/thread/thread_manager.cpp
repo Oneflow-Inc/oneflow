@@ -25,7 +25,7 @@ ThreadMgr::~ThreadMgr() {
     ActorMsg msg = ActorMsg::BuildCommandMsg(-1, ActorCmd::kStopThread);
     thread_pair.second->GetMsgChannelPtr()->Send(msg);
     thread_pair.second.reset();
-    VLOG(1) << " Actor thread: " << thread_pair.first << " finished.";
+    VLOG(1) << " Actor thread: " << thread_pair.first << " finished when process exits.";
   }
 }
 
@@ -42,6 +42,7 @@ void ThreadMgr::AddThreads(const HashSet<int64_t>& thread_ids) {
     if (it != threads_.end()) {
       // NOTE(chengcheng): check thread is not null.
       CHECK(it->second) << " RuntimeError! Thread: " << thrd_id << " in manager must be NOT null.";
+      VLOG(1) << " Actor thread: " << thrd_id << " reused.";
       continue;
     }
     StreamId stream_id = DecodeStreamIdFromInt64(thrd_id);
@@ -49,6 +50,7 @@ void ThreadMgr::AddThreads(const HashSet<int64_t>& thread_ids) {
     Thread* thread = new Thread(stream_id);
     CHECK_NOTNULL(thread);
     threads_[thrd_id].reset(thread);
+    VLOG(1) << " Actor thread: " << thrd_id << " created.";
   }
 }
 
@@ -62,7 +64,7 @@ void ThreadMgr::DeleteThreads(const HashSet<int64_t>& thread_ids) {
     ActorMsg msg = ActorMsg::BuildCommandMsg(-1, ActorCmd::kStopThread);
     thread->GetMsgChannelPtr()->Send(msg);
     thread.reset();
-    VLOG(1) << " Actor thread: " << thrd_id << " finished.";
+    VLOG(1) << " Actor thread: " << thrd_id << " finished when the graph is destructed.";
     threads_.erase(it);
   }
 }
