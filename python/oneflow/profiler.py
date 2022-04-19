@@ -52,11 +52,12 @@ class profile(object):
     def table(self):
         result_json = json.loads(self.result)
         t = PrettyTable()
-        t.field_names = ["Name", "Average duration", "Number of calls"]
+        t.field_names = ["Name", "All duration", "Average duration", "Number of calls"]
         for item in result_json:
             t.add_row(
                 [
                     item["op_name"],
+                    self._format_time(item["all_duration"]),
                     self._format_time(item["avg_duration"]),
                     item["num_called"],
                 ]

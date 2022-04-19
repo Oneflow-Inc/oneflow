@@ -27,13 +27,15 @@ namespace nlohmann {
 void to_json(json& j, const ::oneflow::profiler::Result& result) {
   j = json{{"op_name", result.op_name_},
            {"avg_duration", result.avg_duration_},
-           {"num_called", result.num_called_}};
+           {"num_called", result.num_called_},
+           {"all_duration", result.all_duration_}};
 }
 
 void from_json(const json& j, ::oneflow::profiler::Result& result) {
   j.at("op_name").get_to(result.op_name_);
   j.at("avg_duration").get_to(result.avg_duration_);
   j.at("num_called").get_to(result.num_called_);
+  j.at("all_duration").get_to(result.all_duration_);
 }
 
 }  // namespace nlohmann
@@ -66,9 +68,9 @@ std::vector<Result> ProfileMgr::__CountResults() {
       results[e->op_name_] = Result(e->op_name_, e->end_at_ - e->start_at_, 1);
     } else {
       auto& r = results[e->op_name_];
-      r.avg_duration_ =
-          (r.avg_duration_ * r.num_called_ + (e->end_at_ - e->start_at_)) / (r.num_called_ + 1);
+      r.all_duration_ = r.avg_duration_ * r.num_called_ + (e->end_at_ - e->start_at_);
       r.num_called_++;
+      r.avg_duration_ = r.all_duration_ / r.num_called_;
     }
   }
   std::vector<Result> final_results;
