@@ -196,7 +196,7 @@ void SetCublasEpilogue(const CublasFusedMLPKernelCache* matmul_cache, cublasLtEp
   }
 }
 
-void SetCublasAttr(const CublasFusedMLPKernelCache* matmul_grad_cache,
+void SetCublasAttr(const CublasFusedMLPKernelCache* matmul_cache,
                    const cublasComputeType_t cublas_compute_dtype,
                    const cudaDataType_t cuda_data_type, bool need_aux,
                    ep::primitive::BlasTransposeType transpose_a,
@@ -204,7 +204,7 @@ void SetCublasAttr(const CublasFusedMLPKernelCache* matmul_grad_cache,
                    const void* d_bias_ptr, const void* aux_ptr, size_t cublas_m, size_t cublas_n,
                    size_t cublas_k, int64_t cublas_lda, int64_t cublas_ldb, int64_t cublas_ldc) {
   OF_CUBLAS_CHECK(cublasLtMatmulDescSetAttribute(
-      matmul_grad_cache->operation_desc, CUBLASLT_MATMUL_DESC_COMPUTE_TYPE, &cublas_compute_dtype,
+      matmul_cache->operation_desc, CUBLASLT_MATMUL_DESC_COMPUTE_TYPE, &cublas_compute_dtype,
       sizeof(cublas_compute_dtype)));
 
   // For best performance when using the bias vector, specify beta == 0 and
@@ -212,22 +212,22 @@ void SetCublasAttr(const CublasFusedMLPKernelCache* matmul_grad_cache,
   // https://docs.nvidia.com/cuda/cublas/index.html#cublasLtPointerMode_t)
   cublasLtPointerMode_t mode = CUBLASLT_POINTER_MODE_HOST;
   OF_CUBLAS_CHECK(cublasLtMatmulDescSetAttribute(
-      matmul_grad_cache->operation_desc, CUBLASLT_MATMUL_DESC_POINTER_MODE, &mode, sizeof(mode)));
+      matmul_cache->operation_desc, CUBLASLT_MATMUL_DESC_POINTER_MODE, &mode, sizeof(mode)));
 
   // transpose_a = False, transpose_b = True. But in cublas is reversed.
   const cublasOperation_t cublas_trans_a =
       transpose_b == ep::primitive::BlasTransposeType::T ? CUBLAS_OP_T : CUBLAS_OP_N;
   const cublasOperation_t cublas_trans_b =
       transpose_a == ep::primitive::BlasTransposeType::T ? CUBLAS_OP_T : CUBLAS_OP_N;
-  OF_CUBLAS_CHECK(cublasLtMatmulDescSetAttribute(matmul_grad_cache->operation_desc,
+  OF_CUBLAS_CHECK(cublasLtMatmulDescSetAttribute(matmul_cache->operation_desc,
                                                  CUBLASLT_MATMUL_DESC_TRANSA, &cublas_trans_a,
                                                  sizeof(cublas_trans_a)));
-  OF_CUBLAS_CHECK(cublasLtMatmulDescSetAttribute(matmul_grad_cache->operation_desc,
+  OF_CUBLAS_CHECK(cublasLtMatmulDescSetAttribute(matmul_cache->operation_desc,
                                                  CUBLASLT_MATMUL_DESC_TRANSB, &cublas_trans_b,
                                                  sizeof(cublas_trans_b)));
 
   // Set epilogue
-  SetCublasEpilogue(matmul_grad_cache, epilogue, d_bias_ptr, aux_ptr);
+  SetCublasEpilogue(matmul_cache, epilogue, d_bias_ptr, aux_ptr);
   /*
   Set AUX pointer LD
   If is used for CUBLASLT_EPILOGUE_DRELU_BGRAD, the AUX_LD need to align 128bit.
@@ -238,16 +238,28 @@ void SetCublasAttr(const CublasFusedMLPKernelCache* matmul_grad_cache,
   */
   if (need_aux) {
     long aligned_aux_ld = AlignReluAuxLd(cublas_ldc);
-    OF_CUBLAS_CHECK(cublasLtMatmulDescSetAttribute(matmul_grad_cache->operation_desc,
+    OF_CUBLAS_CHECK(cublasLtMatmulDescSetAttribute(matmul_cache->operation_desc,
                                                    CUBLASLT_MATMUL_DESC_EPILOGUE_AUX_LD,
                                                    &aligned_aux_ld, sizeof(aligned_aux_ld)));
+  } else {
+    long no_need_aligned_aux_ld = 0;
+    OF_CUBLAS_CHECK(cublasLtMatmulDescSetAttribute(matmul_cache->operation_desc,
+                                                   CUBLASLT_MATMUL_DESC_EPILOGUE_AUX_LD,
+                                                   &no_need_aligned_aux_ld, sizeof(no_need_aligned_aux_ld)));
   }
+
+  if (need_aux) {
+    long aligned_aux_ld = AlignReluAuxLd(cublas_ldc);
+    OF_CUBLAS_CHECK(cublasLtMatmulDescSetAttribute(matmul_cache->operation_desc,
+                                                   CUBLASLT_MATMUL_DESC_EPILOGUE_AUX_LD,
+                                                   &aligned_aux_ld, sizeof(aligned_aux_ld)));
+  } 
   // Set matrix layout
-  SetCublasMatrixLayout(matmul_grad_cache->cublas_a_desc, cuda_data_type, cublas_trans_a, cublas_m,
+  SetCublasMatrixLayout(matmul_cache->cublas_a_desc, cuda_data_type, cublas_trans_a, cublas_m,
                         cublas_k, cublas_lda);
-  SetCublasMatrixLayout(matmul_grad_cache->cublas_b_desc, cuda_data_type, cublas_trans_b, cublas_k,
+  SetCublasMatrixLayout(matmul_cache->cublas_b_desc, cuda_data_type, cublas_trans_b, cublas_k,
                         cublas_n, cublas_ldb);
-  SetCublasMatrixLayout(matmul_grad_cache->cublas_c_desc, cuda_data_type, CUBLAS_OP_N, cublas_m,
+  SetCublasMatrixLayout(matmul_cache->cublas_c_desc, cuda_data_type, CUBLAS_OP_N, cublas_m,
                         cublas_n, cublas_ldc);
 }
 
