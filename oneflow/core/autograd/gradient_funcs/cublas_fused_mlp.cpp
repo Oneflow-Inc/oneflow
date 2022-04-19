@@ -99,7 +99,8 @@ Maybe<void> CublasFusedMLP::Capture(CublasFusedMLPCaptureState* ctx, const Tenso
 //   if (!ctx->skip_final_activation) {
 //     // step1: use dy and final output to get last layer's relu grad.
 //     last_bias_dy = JUST(functional::ReluGrad(JUST(VectorAt(out_grads, 0)),
-//                                              JUST(VectorAt(ctx->SavedTensors(), 1 + weight_num))));
+//                                              JUST(VectorAt(ctx->SavedTensors(), 1 +
+//                                              weight_num))));
 //   }
 
 //   // step2: use reduce_sum to get last layer's bias grad.
@@ -173,12 +174,12 @@ Maybe<void> CublasFusedMLP::Capture(CublasFusedMLPCaptureState* ctx, const Tenso
 //   if (JUST(VectorAt(ctx->weights_requires_grad, 0))) {
 //     // dw:
 //     *JUST(VectorAt(in_grads, 1)) =
-//         JUST(functional::MatMul(last_dy, JUST(VectorAt(ctx->SavedTensors(), 0)), true, false, 1.0));
+//         JUST(functional::MatMul(last_dy, JUST(VectorAt(ctx->SavedTensors(), 0)), true,
+//         false, 1.0));
 //   }
 
 //   return Maybe<void>::Ok();
 // }
-
 
 Maybe<void> CublasFusedMLP::Apply(const CublasFusedMLPCaptureState* ctx,
                                   const TensorTuple& out_grads, TensorTuple* in_grads) const {
@@ -243,7 +244,7 @@ Maybe<void> CublasFusedMLP::Apply(const CublasFusedMLPCaptureState* ctx,
     // dw
     if (JUST(VectorAt(ctx->weights_requires_grad, hidden_layer_idx))) {
       *JUST(VectorAt(in_grads, (1 + hidden_layer_idx))) = JUST(functional::MatMul(
-          cublas_dy, JUST(VectorAt(hiddens, hidden_layer_idx - 1)), false, true, 1.0));
+          JUST(VectorAt(hiddens, hidden_layer_idx - 1)), cublas_dy, true, false, 1.0));
     }
   }
 
@@ -268,7 +269,6 @@ Maybe<void> CublasFusedMLP::Apply(const CublasFusedMLPCaptureState* ctx,
 
   return Maybe<void>::Ok();
 }
-
 
 REGISTER_OP_EXPR_GRAD_FUNCTION("cublas_fused_mlp", CublasFusedMLP);
 

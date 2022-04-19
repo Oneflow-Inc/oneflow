@@ -85,7 +85,7 @@ class FusedMLP(Module):
             self.register_parameter(
                 f"weight_{0}",
                 flow.nn.Parameter(
-                    flow.Tensor(self.hidden_features[0], self.in_features)
+                    flow.Tensor(self.in_features, self.hidden_features[0])
                 ),
             )
             self.register_parameter(
@@ -98,7 +98,7 @@ class FusedMLP(Module):
                     f"weight_{idx}",
                     flow.nn.Parameter(
                         flow.Tensor(
-                            self.hidden_features[idx], self.hidden_features[idx - 1],
+                            self.hidden_features[idx - 1], self.hidden_features[idx],
                         )
                     ),
                 )
@@ -112,8 +112,8 @@ class FusedMLP(Module):
                 f"weight_{self.hidden_layer_num}",
                 flow.nn.Parameter(
                     flow.Tensor(
-                        self.out_features,
                         self.hidden_features[self.hidden_layer_num - 1],
+                        self.out_features,
                     )
                 ),
             )
@@ -125,7 +125,7 @@ class FusedMLP(Module):
             # there is only 1 layer.
             self.register_parameter(
                 f"weight_{0}",
-                flow.nn.Parameter(flow.Tensor(self.out_features, self.in_features)),
+                flow.nn.Parameter(flow.Tensor(self.in_features, self.out_features)),
             )
             self.register_parameter(
                 f"bias_{0}", flow.nn.Parameter(flow.Tensor(self.out_features))

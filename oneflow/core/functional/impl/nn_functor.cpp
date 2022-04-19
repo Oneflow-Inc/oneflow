@@ -304,16 +304,21 @@ class FusedMLPFunctor {
       CHECK_EQ_OR_RETURN(weight_shape->NumAxes(), 2) << "Weight's dim should == 2";
       CHECK_EQ_OR_RETURN(bias_shape->NumAxes(), 1) << "Bias's dim should == 1";
 
-      n = weight_shape->At(0);
+      // n = weight_shape->At(0);
+      // CHECK_EQ_OR_RETURN(bias_shape->At(0), n) << "Bias's dim is not equal to weight's last dim.
+      // "; CHECK_EQ_OR_RETURN(weight_shape->At(1), k)
+      //     << "weight's first dim should be equal to input's last dim. ";
+
+      n = weight_shape->At(1);
       CHECK_EQ_OR_RETURN(bias_shape->At(0), n) << "Bias's dim is not equal to weight's last dim. ";
-      CHECK_EQ_OR_RETURN(weight_shape->At(1), k)
+      CHECK_EQ_OR_RETURN(weight_shape->At(0), k)
           << "weight's first dim should be equal to input's last dim. ";
 
       // Set for next layer.
       k = n;
     }
 
-#if CUDA_VERSION >= 11060
+    // #if CUDA_VERSION >= 11060
     DeviceType device_type{};
     if (x->is_consistent()) {
       device_type = JUST(x->parallel_desc())->device_type();
@@ -330,9 +335,10 @@ class FusedMLPFunctor {
 
       MutableAttrMap attrs;
       JUST(attrs.SetAttr<bool>("skip_final_activation", skip_final_activation));
+      printf("Here use cublas FusedMLP \n");
       return OpInterpUtil::Dispatch<Tensor>(*fused_op_[weight_size], input, attrs);
     }
-#endif  // CUDA_VERSION >= 11060
+    // #endif  // CUDA_VERSION >= 11060
 
     // Fall back to Naive matmul + bias_add + relu
     std::shared_ptr<one::Tensor> out = x;

@@ -198,23 +198,13 @@ REGISTER_USER_OP_GRAD("cublas_fused_mlp")
 
         user_op::UserOpConfWrapperBuilder matmul_weight_grad_builder(
             op.op_name() + "_matmul_a_grad_" + std::to_string(hidden_layer_idx));
-        // user_op::UserOpConfWrapper matmul_weight_grad_op =
-        //     matmul_weight_grad_builder.Op("matmul")
-        //         .Input("a", cublas_dy)
-        //         .Input("b", op.output("hidden", hidden_layer_idx - 1))
-        //         .Output("out")
-        //         .Attr<bool>("transpose_a", true)
-        //         .Attr<bool>("transpose_b", false)
-        //         .Attr<double>("alpha", 1.0)
-        //         .Build();
-
         user_op::UserOpConfWrapper matmul_weight_grad_op =
             matmul_weight_grad_builder.Op("matmul")
-                .Input("a", cublas_dy)
-                .Input("b", op.output("hidden", hidden_layer_idx - 1))
+                .Input("a", op.output("hidden", hidden_layer_idx - 1))
+                .Input("b", cublas_dy)
                 .Output("out")
-                .Attr<bool>("transpose_a", false)
-                .Attr<bool>("transpose_b", true)
+                .Attr<bool>("transpose_a", true)
+                .Attr<bool>("transpose_b", false)
                 .Attr<double>("alpha", 1.0)
                 .Build();
 
@@ -248,15 +238,6 @@ REGISTER_USER_OP_GRAD("cublas_fused_mlp")
       // dw:
       user_op::UserOpConfWrapperBuilder matmul_weight_grad_builder(op.op_name()
                                                                    + "_matmul_input_weight_grad");
-      // user_op::UserOpConfWrapper matmul_weight_grad_op = matmul_weight_grad_builder.Op("matmul")
-      //                                                        .Input("a", last_dy)
-      //                                                        .Input("b", op.input("x", 0))
-      //                                                        .Output("out")
-      //                                                        .Attr<bool>("transpose_a", true)
-      //                                                        .Attr<bool>("transpose_b", false)
-      //                                                        .Attr<double>("alpha", 1.0)
-      //                                                        .Build();
-      
       user_op::UserOpConfWrapper matmul_weight_grad_op = matmul_weight_grad_builder.Op("matmul")
                                                              .Input("a", op.input("x", 0))
                                                              .Input("b", last_dy)

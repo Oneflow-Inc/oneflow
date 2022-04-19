@@ -76,12 +76,12 @@ class CublasFusedMLPKernel final : public user_op::OpKernel, public user_op::Cud
       const user_op::Tensor* bias = ctx->Tensor4ArgNameAndIndex("biases", idx);
       user_op::Tensor* cublas_aux = ctx->Tensor4ArgNameAndIndex("cublas_aux", idx);
 
-      int64_t out_feature = weight->shape().At(0);
+      int64_t out_feature = weight->shape().At(1);
       weight->shape().ToDimVector(&weight_shape);
 
       InferMatmulCublasMNK(in_shape, weight_shape,
                            /*transpose_a=*/ep::primitive::BlasTransposeType::N,
-                           /*transpose_b=*/ep::primitive::BlasTransposeType::T, &cublas_m,
+                           /*transpose_b=*/ep::primitive::BlasTransposeType::N, &cublas_m,
                            &cublas_n, &cublas_k, &cublas_lda, &cublas_ldb, &cublas_ldc);
 
       cublasLtEpilogue_t epilogue = CUBLASLT_EPILOGUE_RELU_AUX_BIAS;
@@ -99,32 +99,29 @@ class CublasFusedMLPKernel final : public user_op::OpKernel, public user_op::Cud
       }
       SetCublasAttr(matmul_cache, cublas_compute_dtype, cuda_data_type, need_aux,
                     /*transpose_a=*/ep::primitive::BlasTransposeType::N,
-                    /*transpose_b=*/ep::primitive::BlasTransposeType::T, epilogue, bias->dptr(),
+                    /*transpose_b=*/ep::primitive::BlasTransposeType::N, epilogue, bias->dptr(),
                     cublas_aux->dptr(), cublas_m, cublas_n, cublas_k, cublas_lda, cublas_ldb,
                     cublas_ldc);
-      
+
       int returnedResults = 0;
-      cublasLtMatmulPreference_t preference; 
-      size_t work_space_size = 1024 * 1024 * 16; 
+      cublasLtMatmulPreference_t preference;
+      size_t work_space_size = 1024 * 1024 * 16;
       OF_CUBLAS_CHECK(cublasLtMatmulPreferenceCreate(&preference));
-      cublasLtMatmulPreferenceSetAttribute(
-        preference, CUBLASLT_MATMUL_PREF_MAX_WORKSPACE_BYTES, &(work_space_size),
-        sizeof(work_space_size));
+      cublasLtMatmulPreferenceSetAttribute(preference, CUBLASLT_MATMUL_PREF_MAX_WORKSPACE_BYTES,
+                                           &(work_space_size), sizeof(work_space_size));
       cublasLtMatmulHeuristicResult_t heuristic_result = {};
       OF_CUBLAS_CHECK(cublasLtMatmulAlgoGetHeuristic(
-        cuda_stream->cublas_lt_handle(), matmul_cache->operation_desc, 
-        matmul_cache->cublas_a_desc, matmul_cache->cublas_b_desc, 
-        matmul_cache->cublas_c_desc, matmul_cache->cublas_c_desc, 
-        preference, 1, &heuristic_result, &returnedResults));
-      
+          cuda_stream->cublas_lt_handle(), matmul_cache->operation_desc,
+          matmul_cache->cublas_a_desc, matmul_cache->cublas_b_desc, matmul_cache->cublas_c_desc,
+          matmul_cache->cublas_c_desc, preference, 1, &heuristic_result, &returnedResults));
+
       OF_CUBLAS_CHECK(cublasLtMatmul(
           cuda_stream->cublas_lt_handle(), matmul_cache->operation_desc, &sp_alpha, weight->dptr(),
           matmul_cache->cublas_a_desc, in_buf_ptr, matmul_cache->cublas_b_desc, &sp_beta, y_ptr,
-          matmul_cache->cublas_c_desc, y_ptr, matmul_cache->cublas_c_desc, 
+          matmul_cache->cublas_c_desc, y_ptr, matmul_cache->cublas_c_desc,
           // nullptr,
-          &heuristic_result.algo, 
-          cuda_stream->cublas_workspace(), cuda_stream->cublas_workspace_size(),
-          cuda_stream->cuda_stream()));
+          &heuristic_result.algo, cuda_stream->cublas_workspace(),
+          cuda_stream->cublas_workspace_size(), cuda_stream->cuda_stream()));
 
       // Set hidden_layer ptr as next layer's input.
       in_buf_ptr = y_ptr;
