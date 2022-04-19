@@ -32,7 +32,7 @@ class AsyncCudaStreamType final : public StreamType {
   AsyncCudaStreamType() = default;
   ~AsyncCudaStreamType() override = default;
 
-  const char* device_tag() const override { return "gpu"; }
+  const char* stream_tag() const override { return "async_launched_nccl"; }
 
   void InitDeviceCtx(std::unique_ptr<DeviceCtx>* device_ctx, Stream* stream) const override;
 
@@ -45,7 +45,7 @@ class AsyncCudaStreamType final : public StreamType {
   void Compute(Instruction* instruction) const override;
   intrusive::shared_ptr<StreamDesc> MakeStreamDesc(const Resource& resource,
                                                    int64_t this_machine_id) const override;
-  bool OnSchedulerThread() const override { return false; }
+  bool OnSchedulerThread() const override { return true; }
   bool SupportingTransportInstructions() const override { return true; }
 };
 

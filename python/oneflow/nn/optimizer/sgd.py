@@ -97,7 +97,7 @@ class SGD(Optimizer):
 
     def __init__(
         self,
-        parameters: Union[Iterator[Parameter], List[Dict]],
+        params: Union[Iterator[Parameter], List[Dict]],
         lr: float = 0.001,
         momentum: float = 0.0,
         weight_decay: float = 0.0,
@@ -109,7 +109,7 @@ class SGD(Optimizer):
         options["lr"] = lr
         options["momentum"] = momentum
         options["weight_decay"] = weight_decay
-        super().__init__(parameters, options)
+        super().__init__(params, options)
 
         for param_group in self.param_groups:
             for param in param_group.parameters:
@@ -128,6 +128,12 @@ class SGD(Optimizer):
         )
 
     def step(self, closure: Callable = None):
+        """Performs a single optimization step.
+
+        Args:
+            closure (callable, optional): A closure that reevaluates the model
+                and returns the loss.
+        """
         with flow.no_grad():
             loss = None
             if closure is not None:
@@ -187,4 +193,7 @@ class SGD(Optimizer):
 
     @property
     def support_sparse(self):
+        """Whether SGD Optimizer support sparse update. 
+
+        """
         return True

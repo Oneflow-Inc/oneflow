@@ -26,6 +26,7 @@ import oneflow as flow
 import oneflow.unittest
 
 
+@flow.unittest.skip_unless_1n1d()
 class TestAffineGrid(flow.unittest.TestCase):
     def test_affine_grid_2d(test_case):
         input = flow.tensor(np.arange(1.0, 7).reshape((1, 2, 3)), dtype=flow.float32)
@@ -89,7 +90,7 @@ class TestAffineGrid(flow.unittest.TestCase):
             np.allclose(output.numpy(), groundtruth, rtol=1e-3, atol=1e-4)
         )
 
-    @autotest(rtol=1e-03, atol=1e-04, check_allclose=False, check_graph=True)
+    @autotest(n=5, rtol=1e-03, atol=1e-04, check_allclose=False, check_graph=True)
     def test_flow_affine_grid_2d_with_random_data(test_case):
         N = randint(1, 8)
         C = randint(1, 8)
@@ -97,7 +98,7 @@ class TestAffineGrid(flow.unittest.TestCase):
         W = randint(1, 8)
         device = random_device()
         align_corners = choice([True, False])
-        theta = random_pytorch_tensor(ndim=3, dim0=N, dim1=2, dim2=3).to(device)
+        theta = random_tensor(ndim=3, dim0=N, dim1=2, dim2=3).to(device)
         output = torch.nn.functional.affine_grid(
             theta, (N, C, H, W), align_corners=align_corners
         ).to(device)
@@ -112,7 +113,7 @@ class TestAffineGrid(flow.unittest.TestCase):
         W = randint(1, 8)
         device = random_device()
         align_corners = choice([True, False])
-        theta = random_pytorch_tensor(ndim=3, dim0=N, dim1=3, dim2=4).to(device)
+        theta = random_tensor(ndim=3, dim0=N, dim1=3, dim2=4).to(device)
         output = torch.nn.functional.affine_grid(
             theta, (N, C, D, H, W), align_corners=align_corners
         ).to(device)

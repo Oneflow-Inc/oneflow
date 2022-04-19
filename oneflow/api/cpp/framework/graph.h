@@ -17,9 +17,14 @@ limitations under the License.
 #ifndef ONEFLOW_API_CPP_GRAPH_H_
 #define ONEFLOW_API_CPP_GRAPH_H_
 
+#include "dtype.h"
+#include "shape.h"
 #include "device.h"
 #include "ivalue.h"
 #include "tensor.h"
+#include <cstddef>
+#include <string>
+#include <unordered_map>
 
 namespace oneflow {
 
@@ -28,6 +33,20 @@ class NNGraph;
 }  // namespace oneflow
 
 namespace oneflow_api {
+
+struct InputOutputAttribute {
+  InputOutputAttribute(DType datatype, const Shape& input_output_shape, size_t input_output_index)
+      : datatype_(datatype),
+        input_output_shape_(input_output_shape),
+        input_output_index_(input_output_index) {}
+  InputOutputAttribute() : InputOutputAttribute(DType::kInvalidDataType, Shape(), 0) {}
+
+  DType datatype_;
+  Shape input_output_shape_;
+  size_t input_output_index_;
+};
+
+using InputOutputInfos = std::unordered_map<std::string, InputOutputAttribute>;
 
 class Graph {
  public:
@@ -40,9 +59,12 @@ class Graph {
   Graph& operator=(const Graph& graph) = delete;
   Graph& operator=(Graph&& graph) noexcept;
 
+  InputOutputInfos GetInputInfos();
+  InputOutputInfos GetOutputInfos();
   IValue Forward(const IValue& inputs);
   void set_batch_size(int batch_size);
   void enable_tensorrt();
+  void enable_openvino();
 
   static Graph Load(const std::string& model_path, const Device& device = Device("cpu"));
 

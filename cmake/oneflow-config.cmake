@@ -9,9 +9,10 @@ set(ONEFLOW_INCLUDE_DIRS ${ONEFLOW_INSTALL_PREFIX}/include)
 
 find_library(ONEFLOW_LIBRARY NAMES oneflow_cpp PATHS ${ONEFLOW_INSTALL_PREFIX}/lib REQUIRED)
 
-if(NOT TARGET OneFlow::liboneflow) 
+if(NOT TARGET OneFlow::liboneflow)
   add_library(OneFlow::liboneflow INTERFACE IMPORTED)
 
   set_property(TARGET OneFlow::liboneflow PROPERTY INTERFACE_LINK_LIBRARIES ${ONEFLOW_LIBRARY})
-  set_property(TARGET OneFlow::liboneflow PROPERTY INTERFACE_INCLUDE_DIRECTORIES ${ONEFLOW_INCLUDE_DIRS})
+  set_property(TARGET OneFlow::liboneflow PROPERTY INTERFACE_INCLUDE_DIRECTORIES
+                                                   ${ONEFLOW_INCLUDE_DIRS})
 endif()

@@ -160,12 +160,12 @@ Maybe<void> BoxingOp::InferTmpBlobDesc(
 }
 
 Maybe<void> BoxingOp::InferSbpSignature(
-    cfg::SbpSignature* sbp_signature, const cfg::SbpSignature& sbp_sig_conf,
-    const std::function<int32_t(const cfg::SbpSignature&)>& CalcOrderValue4SbpSig,
+    SbpSignature* sbp_signature, const SbpSignature& sbp_sig_conf,
+    const std::function<int32_t(const SbpSignature&)>& CalcOrderValue4SbpSig,
     std::function<Maybe<const SbpInferHint*>(const std::string&)> SbpInferHint4Ibn,
     const ParallelDesc& parallel_desc) const {
   auto* bn2sbp = sbp_signature->mutable_bn_in_op2sbp_parallel();
-  const cfg::SbpParallel& sbp_parallel = JUST(SbpInferHint4Ibn(input_bns().Get(0)))->sbp_parallel();
+  const SbpParallel& sbp_parallel = JUST(SbpInferHint4Ibn(input_bns().Get(0)))->sbp_parallel();
   FOR_RANGE(int32_t, i, 0, input_bns().size()) {
     CHECK_OR_RETURN(sbp_parallel == JUST(SbpInferHint4Ibn(input_bns().Get(i)))->sbp_parallel());
   }

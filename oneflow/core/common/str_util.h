@@ -109,6 +109,15 @@ std::string GetHashKey(const T&... args) {
 
 std::string ToLower(const std::string& cap);
 
+std::string GenAlphaNumericString(size_t len);
+
+template<typename CallbackT>
+const std::string& ReturnEmptyStr(const CallbackT& Callback) {
+  Callback();
+  static std::string empty{};
+  return empty;
+}
+
 }  // namespace oneflow
 
 #endif  // ONEFLOW_CORE_COMMON_STR_UTIL_H_

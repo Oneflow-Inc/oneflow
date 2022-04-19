@@ -24,14 +24,6 @@ limitations under the License.
 
 namespace oneflow {
 namespace vm {
-class GpuLazyReferenceInstructionType : public LazyReferenceInstructionType {
- public:
-  GpuLazyReferenceInstructionType() = default;
-  ~GpuLazyReferenceInstructionType() override = default;
-
-  using stream_type = vm::AsyncCudaStreamType;
-};
-COMMAND(vm::RegisterInstructionType<GpuLazyReferenceInstructionType>("gpu.LazyReference"));
 
 class GpuAccessBlobByCallbackInstructionType final : public AccessBlobByCallbackInstructionType {
  public:
@@ -40,7 +32,7 @@ class GpuAccessBlobByCallbackInstructionType final : public AccessBlobByCallback
   using stream_type = vm::CudaStreamType;
 };
 COMMAND(vm::RegisterInstructionType<GpuAccessBlobByCallbackInstructionType>(
-    "gpu.AccessBlobByCallback"));
+    "cuda.AccessBlobByCallback"));
 
 class GpuTensorViewInstructionType final : public TensorViewInstructionType {
  public:
@@ -49,13 +41,16 @@ class GpuTensorViewInstructionType final : public TensorViewInstructionType {
 
   using stream_type = vm::CudaStreamType;
 };
-COMMAND(vm::RegisterInstructionType<GpuTensorViewInstructionType>("gpu.TensorView"));
+COMMAND(vm::RegisterInstructionType<GpuTensorViewInstructionType>("cuda.TensorView"));
 
 class GpuRecordEventInstructionType : public RecordEventInstructionType {
  public:
   GpuRecordEventInstructionType() = default;
   ~GpuRecordEventInstructionType() override = default;
   using stream_type = vm::CudaStreamType;
+
+  InstructionFuseType fuse_type() const override { return kEnableInstructionFuseAsTailOnly; }
+
   void InitInstructionStatus(Instruction* instruction) const override {
     auto* status_buffer = instruction->mut_status_buffer();
     auto* stream = instruction->mut_stream();
@@ -66,7 +61,7 @@ class GpuRecordEventInstructionType : public RecordEventInstructionType {
     CudaOptionalEventRecordStatusQuerier::MutCast(data_ptr)->reset_cuda_event(cuda_event);
   }
 };
-COMMAND(vm::RegisterInstructionType<GpuRecordEventInstructionType>("gpu.RecordEvent"));
+COMMAND(vm::RegisterInstructionType<GpuRecordEventInstructionType>("cuda.RecordEvent"));
 
 }  // namespace vm
 }  // namespace oneflow

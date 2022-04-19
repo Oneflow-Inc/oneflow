@@ -39,7 +39,7 @@ class AccTickOp final : public Operator {
       std::shared_ptr<const Shape>* time_shape) const override;
   Maybe<void> GetSbpSignatures(
       const std::function<Maybe<const BlobDesc&>(const std::string&)>& LogicalBlobDesc4Ibn,
-      cfg::SbpSignatureList* sbp_sig_list) const override;
+      SbpSignatureList* sbp_sig_list) const override;
 
  private:
 };

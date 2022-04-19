@@ -17,7 +17,7 @@ r"""Signal handling for multiprocessing data loading.
 NOTE [ Signal handling in multiprocessing data loading ]
 In cases like DataLoader, if a worker process dies due to bus error/segfault
 or just hang, the main process will hang waiting for data. This is difficult
-to avoid on PyTorch side as it can be caused by limited shm, or other
+to avoid on OneFlow side as it can be caused by limited shm, or other
 libraries users call in the workers. In this file and `DataLoader.cpp`, we make
 our best effort to provide some error message to users when such unfortunate
 events happen.

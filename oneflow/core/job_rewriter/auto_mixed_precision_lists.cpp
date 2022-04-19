@@ -25,7 +25,9 @@ const AMPList& AutoMixedPrecisionLists::WhiteList() {
                                "broadcast_matmul",
                                "fused_self_attention_query_mul_key_and_value",
                                "prelu",
-                               "tf_prelu"};
+                               "tf_prelu",
+                               "cublas_fused_mlp",
+                               "fused_dot_feature_interaction"};
   return white_list;
 }
 
@@ -47,6 +49,7 @@ const AMPList& AutoMixedPrecisionLists::GrayList() {
                               "sqrt",
                               "scalar_mul",
                               "scalar_add",
+                              "scalar_div",
                               "broadcast_add",
                               "broadcast_sub",
                               "broadcast_mul",
@@ -95,7 +98,8 @@ const AMPList& AutoMixedPrecisionLists::ClearList() {
                                "unpack",
                                "pack",
                                "nvtx_start",
-                               "nvtx_end"};
+                               "nvtx_end",
+                               "narrow"};
 
   return clear_list;
 }

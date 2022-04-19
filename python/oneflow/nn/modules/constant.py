@@ -19,7 +19,7 @@ import oneflow as flow
 from oneflow.framework.tensor import register_tensor_op
 from oneflow.nn.common_types import _size_any_t
 from oneflow.nn.module import Module
-from oneflow.nn.modules.utils import _single
+from oneflow.nn.modules.utils import _single, _handle_size_arg
 
 
 class _ConstantBase(Module):
@@ -59,7 +59,7 @@ class _ConstantBase(Module):
             else:
                 for elem in sbp:
                     assert isinstance(elem, flow.sbp.sbp), "sbp: %s" % sbp
-            assert len(self.sbp) == len(placement.hierarchy)
+            assert len(self.sbp) == len(placement.ranks.shape)
         else:
             assert sbp is None, "sbp: %s" % sbp
         self.shape = size
@@ -68,7 +68,7 @@ class _ConstantBase(Module):
 
     def forward(self):
         if self.placement is not None:
-            res = flow._C.consistent_constant(
+            res = flow._C.global_constant(
                 self.shape,
                 self.value,
                 dtype=self.dtype,
@@ -96,19 +96,6 @@ class Ones(_ConstantBase):
         super().__init__(size, 1, dtype, device, placement, sbp, requires_grad)
 
 
-def _handle_size_arg(*size):
-    assert len(size) > 0, "size of tensor doesn't exists"
-    if isinstance(size[0], (tuple, flow.Size, list)):
-        assert (
-            len(size) == 1
-        ), "shape should be specified by tuple of ints size, not tuple of tuple/list"
-        if len(size[0]) == 0:
-            size = []
-        else:
-            size = size[0]
-    return size
-
-
 def ones_op(
     *size: Union[_size_any_t, flow.Size, List[int]],
     dtype: Optional[flow.dtype] = None,
@@ -126,8 +113,8 @@ def ones_op(
          a variable number of arguments or a collection like a list or tuple.
         dtype (flow.dtype, optional): the desired data type of returned tensor.
         device (flow.device, optional): the desired device of returned tensor. Default: if None, uses the current device for the default tensor type
-        placement (flow.placement, optional): the desired placement of returned consistent tensor. Default: if None, the returned tensor is local one using the argument `device`.
-        sbp (flow.sbp.sbp or tuple of flow.sbp.sbp, optional): the desired sbp descriptor of returned consistent tensor. Default: if None, the returned tensor is local one using the argument `device`.
+        placement (flow.placement, optional): the desired placement of returned global tensor. Default: if None, the returned tensor is local one using the argument `device`.
+        sbp (flow.sbp.sbp or tuple of flow.sbp.sbp, optional): the desired sbp descriptor of returned global tensor. Default: if None, the returned tensor is local one using the argument `device`.
         requires_grad (bool, optional): If autograd should record operations on the returned tensor. Default: False.
 
     For example:
@@ -142,14 +129,14 @@ def ones_op(
         >>> y
         tensor([[1., 1., 1.],
                 [1., 1., 1.]], dtype=oneflow.float32)
-        >>> placement = flow.placement("cpu", {0: [0]})
-        >>> y = flow.ones(4, 5, placement=placement, sbp=flow.sbp.broadcast) # construct consistent tensor
-        >>> y.is_consistent
+        >>> placement = flow.placement("cpu", ranks=[0])
+        >>> y = flow.ones(4, 5, placement=placement, sbp=flow.sbp.broadcast) # construct global tensor
+        >>> y.is_global
         True
 
 
     """
-    size = _handle_size_arg(*size)
+    size = _handle_size_arg(size)
     return Ones(size, dtype, device, placement, sbp, requires_grad)()
 
 
@@ -183,8 +170,8 @@ def zeros_op(
          a variable number of arguments or a collection like a list or tuple.
         dtype (flow.dtype, optional): the desired data type of returned tensor.
         device (flow.device, optional): the desired device of returned tensor. Default: if None, uses the current device for the default tensor type
-        placement (flow.placement, optional): the desired placement of returned consistent tensor. Default: if None, the returned tensor is local one using the argument `device`.
-        sbp (flow.sbp.sbp or tuple of flow.sbp.sbp, optional): the desired sbp descriptor of returned consistent tensor. Default: if None, the returned tensor is local one using the argument `device`.
+        placement (flow.placement, optional): the desired placement of returned global tensor. Default: if None, the returned tensor is local one using the argument `device`.
+        sbp (flow.sbp.sbp or tuple of flow.sbp.sbp, optional): the desired sbp descriptor of returned global tensor. Default: if None, the returned tensor is local one using the argument `device`.
         requires_grad (bool, optional): If autograd should record operations on the returned tensor. Default: False.
 
     For example:
@@ -201,7 +188,7 @@ def zeros_op(
                 [0., 0., 0.]], dtype=oneflow.float32)
 
     """
-    size = _handle_size_arg(*size)
+    size = _handle_size_arg(size)
     return Zeros(size, dtype, device, placement, sbp, requires_grad)()
 
 
@@ -233,12 +220,12 @@ def full_op(
     The tensor’s dtype is inferred from `value`.
 
     Args:
-        size(int...): a list, tuple, or torch.Size of integers defining the shape of the output tensor.
+        size(int...): a list, tuple, or oneflow.Size of integers defining the shape of the output tensor.
         fill_value(Scalar): the value to fill the output tensor with.
         dtype (flow.dtype, optional): the desired data type of returned tensor.
         device (flow.device, optional): the desired device of returned tensor. Default: if None, uses the current device for the default tensor type
-        placement (flow.placement, optional): the desired placement of returned consistent tensor. Default: if None, the returned tensor is local one using the argument `device`.
-        sbp (flow.sbp.sbp or tuple of flow.sbp.sbp, optional): the desired sbp descriptor of returned consistent tensor. Default: if None, the returned tensor is local one using the argument `device`.
+        placement (flow.placement, optional): the desired placement of returned global tensor. Default: if None, the returned tensor is local one using the argument `device`.
+        sbp (flow.sbp.sbp or tuple of flow.sbp.sbp, optional): the desired sbp descriptor of returned global tensor. Default: if None, the returned tensor is local one using the argument `device`.
         requires_grad (bool, optional): If autograd should record operations on the returned tensor. Default: False.
 
     For example:
@@ -253,47 +240,21 @@ def full_op(
         >>> y
         tensor([[5., 5., 5.],
                 [5., 5., 5.]], dtype=oneflow.float32)
-        >>> placement = flow.placement("cpu", {0: [0]})
-        >>> y = flow.full((2,3),5.0, placement=placement, sbp=flow.sbp.broadcast)  # construct consistent tensor
-        >>> y.is_consistent
+        >>> placement = flow.placement("cpu", ranks=[0])
+        >>> y = flow.full((2,3),5.0, placement=placement, sbp=flow.sbp.broadcast)  # construct global tensor
+        >>> y.is_global
         True
 
     """
-    size = _handle_size_arg(*size)
+    size = _handle_size_arg(size)
     if dtype is None:
         dtype = flow.tensor(value).dtype
     return Full(size, value, dtype, device, placement, sbp, requires_grad)()
 
 
-@register_tensor_op("new_ones")
 def new_ones_op(
     x, size=None, dtype=None, device=None, placement=None, sbp=None, requires_grad=False
 ):
-    """
-
-    Returns a Tensor of size size filled with 1. By default, the returned Tensor has the same torch.dtype and torch.device as this tensor.
-
-    Args:
-        size (int...): a list, tuple, or flow.Size of integers defining the shape of the output tensor.
-        dtype (flow.dtype, optional):  the desired type of returned tensor. Default: if None, same flow.dtype as this tensor.
-        device (flow.device, optional): the desired device of returned tensor. Default: if None, same flow.device as this tensor.
-        placement (flow.placement, optional): the desired placement of returned consistent tensor. Default: if None, the returned tensor is local one using the argument `device`.
-        sbp (flow.sbp.sbp or tuple of flow.sbp.sbp, optional): the desired sbp descriptor of returned consistent tensor. Default: if None, the returned tensor is local one using the argument `device`.
-        requires_grad (bool, optional): If autograd should record operations on the returned tensor. Default: False.
-
-    For example:
-
-    .. code-block:: python
-
-        >>> import numpy as np
-        >>> import oneflow as flow
-
-        >>> x = flow.Tensor(np.ones((1, 2, 3)))
-        >>> y = x.new_ones((2, 2))
-        >>> y
-        tensor([[1., 1.],
-                [1., 1.]], dtype=oneflow.float32)
-    """
     if isinstance(device, str):
         device = flow.device(device)
     if size != None:
@@ -311,9 +272,9 @@ def new_ones_op(
     if device is None:
         new_device = x.device if x.is_local else None
     if placement is None:
-        new_placement = x.placement if x.is_consistent else None
+        new_placement = x.placement if x.is_global else None
     if sbp is None:
-        new_sbp = x.sbp if x.is_consistent else None
+        new_sbp = x.sbp if x.is_global else None
     if new_placement is not None:
         assert device is None
         assert new_sbp is not None
@@ -338,11 +299,73 @@ def new_ones_op(
         new_requires_grad, bool
     ), f"requires_grad parameter not correct, please check!"
     if placement is not None:
-        res = flow._C.consistent_constant(
+        res = flow._C.global_constant(
             new_size, 1.0, dtype=new_dtype, placement=placement, sbp=sbp
         )
     else:
         res = flow._C.constant(new_size, 1.0, dtype=new_dtype, device=new_device)
+    res.requires_grad = new_requires_grad
+    return res
+
+
+def new_zeros_op(
+    x, size=None, dtype=None, device=None, placement=None, sbp=None, requires_grad=False
+):
+    if isinstance(device, str):
+        device = flow.device(device)
+    if size is None or len(size) == 0:
+        new_size = x.shape
+    else:
+        new_size = _handle_size_arg(size)
+    new_dtype = dtype
+    new_device = device
+    new_placement = placement
+    new_sbp = sbp
+    new_requires_grad = requires_grad
+
+    if dtype is None:
+        new_dtype = x.dtype
+    if device is None:
+        new_device = x.device if x.is_local else None
+    if placement is None:
+        new_placement = x.placement if x.is_global else None
+    if sbp is None:
+        new_sbp = x.sbp if x.is_global else None
+    if new_placement is not None:
+        assert (
+            device is None
+        ), "argument 'device' must be None when argument 'placement' exist"
+        assert (
+            new_sbp is not None
+        ), "argument 'sbp' must not be None when argument 'placement' exist"
+    assert isinstance(
+        new_size, (int, tuple, list, flow.Size)
+    ), f"argument 'size' must be tuple of ints, not %s" % (type(new_size))
+    assert isinstance(
+        new_dtype, flow.dtype
+    ), f"argument 'dtype' must be flow.dtype, not %s" % (type(new_dtype))
+    if new_placement is not None:
+        assert isinstance(
+            new_placement, flow.placement
+        ), f"argument 'placement' must be flow.placement, not %s" % (
+            type(new_placement)
+        )
+        assert isinstance(
+            new_sbp, (flow.sbp.sbp, tuple)
+        ), f"argument 'sbp' must be flow.sbp.sbp, not %s" % (type(new_sbp))
+    else:
+        assert isinstance(
+            new_device, (str, flow.device)
+        ), f"argument 'device' must be flow.device, not %s" % (type(new_device))
+    assert isinstance(
+        new_requires_grad, bool
+    ), f"argument 'requires_grad' must be bool, not %s" % (type(new_requires_grad))
+    if new_placement is not None:
+        res = flow._C.global_constant(
+            new_size, 0.0, dtype=new_dtype, placement=new_placement, sbp=new_sbp
+        )
+    else:
+        res = flow._C.constant(new_size, 0.0, dtype=new_dtype, device=new_device)
     res.requires_grad = new_requires_grad
     return res
 

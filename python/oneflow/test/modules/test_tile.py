@@ -25,17 +25,31 @@ from oneflow.test_utils.automated_test_util import *
 class TestTile(flow.unittest.TestCase):
     @autotest(check_graph=True)
     def test_flow_tile_with_random_data(test_case):
-        x = random_pytorch_tensor(ndim=2, dim0=1, dim1=2)
+        x = random_tensor(ndim=2, dim0=1, dim1=2)
         reps = (random(1, 5).to(int), random(1, 5).to(int), random(1, 5).to(int))
         z = torch.tile(x, reps)
         return z
 
     @autotest(check_graph=True)
     def test_flow_tensor_tile_with_random_data(test_case):
-        x = random_pytorch_tensor(ndim=2, dim0=1, dim1=2)
+        x = random_tensor(ndim=2, dim0=1, dim1=2)
         reps = (random(1, 5).to(int), random(1, 5).to(int), random(1, 5).to(int))
         y = x.tile(reps)
         return y
+
+    @autotest(auto_backward=False, check_graph=True)
+    def test_flow_tile_bool_with_random_data(test_case):
+        x = random_tensor(ndim=2, dim0=1, dim1=2).to(torch.bool)
+        reps = (random(1, 5).to(int), random(1, 5).to(int), random(1, 5).to(int))
+        z = torch.tile(x, reps)
+        return z
+
+    @autotest(check_graph=True)
+    def test_flow_tile_with_0dim_data(test_case):
+        x = random_tensor(ndim=0)
+        reps = (random(1, 5).to(int), random(1, 5).to(int), random(1, 5).to(int))
+        z = torch.tile(x, reps)
+        return z
 
 
 if __name__ == "__main__":

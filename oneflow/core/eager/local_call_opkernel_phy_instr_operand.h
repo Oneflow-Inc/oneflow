@@ -16,11 +16,11 @@ limitations under the License.
 #ifndef ONEFLOW_CORE_EAGER_LOCAL_CALL_OPKERNEL_PHY_INSTR_OPERAND_H_
 #define ONEFLOW_CORE_EAGER_LOCAL_CALL_OPKERNEL_PHY_INSTR_OPERAND_H_
 
+#include "oneflow/core/vm/phy_instr_operand.h"
 #include "oneflow/core/eager/dev_vm_dep_object_consume_mode.h"
 #include "oneflow/core/eager/eager_blob_object.h"
 #include "oneflow/core/framework/attr_map.h"
 #include "oneflow/core/framework/op_interpreter.h"
-#include "oneflow/core/vm/instruction_operand.h"
 
 namespace oneflow {
 namespace one {
@@ -107,9 +107,11 @@ class LocalCallOpKernelPhyInstrOperand final : public vm::PhyInstrOperand {
     ForEachConstMirroredObject(SetInserter(&input_dependences_));
     ForEachMutMirroredObject(SetInserter(&output_dependences_));
     ForEachMut2MirroredObject(SetInserter(&output_dependences_));
+    InitStreamSequentialDependence();
   }
 
   Maybe<void> Init();
+  void InitStreamSequentialDependence();
 
   std::shared_ptr<one::StatefulLocalOpKernel> opkernel_;
   one::EagerBlobObjectListPtr inputs_;

@@ -60,9 +60,6 @@ Maybe<void> ModelUpdateConfCompatiblePass::Apply(const OpGraph& op_graph, Job* j
     optimizer_conf->mutable_learning_rate_decay()->CopyFrom(
         model_update_conf.learning_rate_decay());
   }
-  if (model_update_conf.has_warmup_conf()) {
-    optimizer_conf->mutable_warmup_conf()->CopyFrom(model_update_conf.warmup_conf());
-  }
   if (model_update_conf.has_clip_conf()) {
     optimizer_conf->mutable_clip_conf()->CopyFrom(model_update_conf.clip_conf());
   }

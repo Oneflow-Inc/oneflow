@@ -20,14 +20,14 @@ namespace oneflow {
 
 template<template<typename T> class BIN_OP, typename T>
 __global__ void DoCUDAScalarLogical(const int64_t elem_cnt, const T scalar, const T* in,
-                                    int8_t* out) {
+                                    bool* out) {
   DoScalarLogical<BIN_OP, T>(elem_cnt, scalar, in, out);
 }
 
 template<template<typename T> class BIN_OP, typename T>
 struct ScalarLogicalFunctor<DeviceType::kCUDA, BIN_OP, T> final {
   void operator()(ep::Stream* stream, const int64_t elem_cnt, const T scalar, const T* in,
-                  int8_t* out) {
+                  bool* out) {
     RUN_CUDA_KERNEL((DoCUDAScalarLogical<BIN_OP, T>), stream, BlocksNum4ThreadsNum(elem_cnt),
                     elem_cnt, scalar, in, out);
   }

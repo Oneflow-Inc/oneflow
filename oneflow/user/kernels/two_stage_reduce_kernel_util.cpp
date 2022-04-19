@@ -29,7 +29,7 @@ struct TwoStageReduceKernelUtil<DeviceType::kCPU, T, K> {
   }
 
   static void Scale(ep::Stream* stream, const int64_t n, const T* x, const K* scale, T* y) {
-    FOR_RANGE(int64_t, i, 0, n) { y[i] = x[i] * scale[i]; }
+    FOR_RANGE(int64_t, i, 0, n) { y[i] = x[i] * static_cast<T>(scale[i]); }
   }
 };
 
@@ -37,7 +37,8 @@ struct TwoStageReduceKernelUtil<DeviceType::kCPU, T, K> {
   template struct TwoStageReduceKernelUtil<DeviceType::kCPU, OF_PP_PAIR_FIRST(data_type_pair), \
                                            OF_PP_PAIR_FIRST(index_type_pair)>;
 OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(INSTANTIATE_TWO_STAGE_REDUCE_KERNEL_UTIL_CPU,
-                                 FLOATING_DATA_TYPE_SEQ INDEX_DATA_TYPE_SEQ, INT_DATA_TYPE_SEQ);
+                                 FLOATING_DATA_TYPE_SEQ INDEX_DATA_TYPE_SEQ,
+                                 INT_DATA_TYPE_SEQ BOOL_DATA_TYPE_SEQ);
 #undef INSTANTIATE_TWO_STAGE_REDUCE_KERNEL_UTIL_CPU
 
 }  // namespace oneflow

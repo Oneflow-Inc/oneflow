@@ -101,9 +101,8 @@ OF_DEVICE_FUNC void DoScatterScalarFunctor(const DimOpIndexNdHelper<IDX_T>& idx_
 #if __CUDA_ARCH__
       __trap();
 #else
-      std::cerr << "The index element " << idx_elem << " is out of bounds for dimension " << dim
-                << " with size " << upper_bound << std::endl;
-      throw Error::CheckFailedError();  // TODO: Remove throw Error.
+      UNIMPLEMENTED() << "The index element " << idx_elem << " is out of bounds for dimension "
+                      << dim << " with size " << upper_bound << ".";
 #endif
     }
     coordinate[dim] = idx_elem;

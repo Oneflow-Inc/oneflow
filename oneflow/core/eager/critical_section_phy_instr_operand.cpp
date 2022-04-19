@@ -15,6 +15,7 @@ limitations under the License.
 */
 #include "oneflow/core/eager/critical_section_phy_instr_operand.h"
 #include "oneflow/core/framework/device.h"
+#include "oneflow/core/framework/stream.h"
 #include "oneflow/core/kernel/kernel_util.h"
 #include "oneflow/core/common/decorator.h"
 #include "oneflow/core/device/device_context.h"
@@ -28,19 +29,20 @@ namespace vm {
 void CriticalSectionBeginPhyInstrOperand::ForEachMirroredObject(
     const std::function<void(vm::MirroredObject* compute)>& DoEach) const {
   for (const auto& eager_blob_object : *eager_blob_objects_) {
-    DoEach(CHECK_JUST(eager_blob_object->compute_local_dep_object())->mut_mirrored_object());
+    DoEach(CHECK_JUST(eager_blob_object->compute_local_dep_object()));
   }
 }
 
 void CriticalSectionEndPhyInstrOperand::ForEachMirroredObject(
     const std::function<void(vm::MirroredObject* compute)>& DoEach) const {
-  DoEach(CHECK_JUST(eager_blob_object_->compute_local_dep_object())->mut_mirrored_object());
+  DoEach(CHECK_JUST(eager_blob_object_->compute_local_dep_object()));
 }
 
 namespace {
 
 Maybe<LocalDepObject*> RawCriticalSectionLocalDepObject() {
-  return JUST(Device::New("critical_section"))->mut_schedule_local_dep_object();
+  const auto& device = JUST(Device::New("cpu"));
+  return Stream::New(device, StreamRole::kCriticalSection)->mut_schedule_local_dep_object();
 }
 
 constexpr auto* CriticalSectionLocalDepObject =
@@ -50,7 +52,7 @@ constexpr auto* CriticalSectionLocalDepObject =
 
 void CriticalSectionBeginPhyInstrOperand::ForEachMutMirroredObject(
     const std::function<void(vm::MirroredObject* compute)>& DoEach) const {
-  DoEach(CHECK_JUST(CriticalSectionLocalDepObject())->mut_mirrored_object());
+  DoEach(CHECK_JUST(CriticalSectionLocalDepObject()));
 }
 
 void CriticalSectionBeginPhyInstrOperand::FinishInvalidInterfaceEventRecords() {
@@ -108,7 +110,7 @@ void OutputCriticalSectionBeginPhyInstrOperand::AccessBlobByOpName(uint64_t of_b
 
 void CriticalSectionEndPhyInstrOperand::ForEachMutMirroredObject(
     const std::function<void(vm::MirroredObject* compute)>& DoEach) const {
-  DoEach(CHECK_JUST(CriticalSectionLocalDepObject())->mut_mirrored_object());
+  DoEach(CHECK_JUST(CriticalSectionLocalDepObject()));
 }
 
 }  // namespace vm

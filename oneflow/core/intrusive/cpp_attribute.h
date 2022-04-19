@@ -16,7 +16,7 @@ limitations under the License.
 #ifndef ONEFLOW_CORE_COMMON_INTRUSIVE_ATTRIBUTE_H_
 #define ONEFLOW_CORE_COMMON_INTRUSIVE_ATTRIBUTE_H_
 
-#include <gtest/gtest.h>
+#include <glog/logging.h>
 
 #define INTRUSIVE_PREDICT_TRUE GOOGLE_PREDICT_TRUE
 #define INTRUSIVE_PREDICT_FALSE GOOGLE_PREDICT_FALSE

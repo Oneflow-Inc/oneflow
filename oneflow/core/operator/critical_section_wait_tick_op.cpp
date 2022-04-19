@@ -46,7 +46,7 @@ class CriticalSectionWaitTickOp final : public Operator {
  private:
   Maybe<void> GetSbpSignatures(
       const std::function<Maybe<const BlobDesc&>(const std::string&)>& LogicalBlobDesc4Ibn,
-      cfg::SbpSignatureList* sbp_sig_list) const override;
+      SbpSignatureList* sbp_sig_list) const override;
 };
 
 Maybe<void> CriticalSectionWaitTickOp::InitFromOpConf() {
@@ -70,7 +70,7 @@ Maybe<void> CriticalSectionWaitTickOp::InferOutBlobDescs(
 
 Maybe<void> CriticalSectionWaitTickOp::GetSbpSignatures(
     const std::function<Maybe<const BlobDesc&>(const std::string&)>& LogicalBlobDesc4Ibn,
-    cfg::SbpSignatureList* sbp_sig_list) const {
+    SbpSignatureList* sbp_sig_list) const {
   return Maybe<void>::Ok();
 }
 

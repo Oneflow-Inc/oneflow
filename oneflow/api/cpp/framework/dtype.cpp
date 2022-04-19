@@ -24,7 +24,7 @@ namespace {
 std::map<DType, int32_t> DTypeSize = {
     {DType::kFloat, sizeof(float)},   {DType::kDouble, sizeof(double)},
     {DType::kInt8, sizeof(int8_t)},   {DType::kInt32, sizeof(int32_t)},
-    {DType::kInt64, sizeof(int64_t)},
+    {DType::kInt64, sizeof(int64_t)}, {DType::kBool, sizeof(bool)},
 };
 
 }

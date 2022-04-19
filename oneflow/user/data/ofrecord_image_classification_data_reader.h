@@ -33,22 +33,30 @@ class OFRecordImageClassificationDataReader final
  public:
   explicit OFRecordImageClassificationDataReader(user_op::KernelInitContext* ctx)
       : DataReader<ImageClassificationDataInstance>(ctx) {
+    batch_size_ = ctx->TensorDesc4ArgNameAndIndex("image", 0)->shape().elem_cnt();
+    if (auto* pool = TensorBufferPool::TryGet()) { pool->IncreasePoolSizeByBase(batch_size_); }
     std::unique_ptr<Dataset<TensorBuffer>> base(new OFRecordDataset(ctx));
     if (ctx->Attr<bool>("random_shuffle")) {
       base.reset(new RandomShuffleDataset<TensorBuffer>(ctx, std::move(base)));
     }
     loader_.reset(new OFRecordImageClassificationDataset(ctx, std::move(base)));
-    const int64_t batch_size = ctx->TensorDesc4ArgNameAndIndex("image", 0)->shape().elem_cnt();
+
     loader_.reset(
-        new BatchDataset<ImageClassificationDataInstance>(batch_size, std::move(loader_)));
+        new BatchDataset<ImageClassificationDataInstance>(batch_size_, std::move(loader_)));
     parser_.reset(new OFRecordImageClassificationParser());
     StartLoadThread();
   }
-  ~OFRecordImageClassificationDataReader() override = default;
+
+  ~OFRecordImageClassificationDataReader() override {
+    if (auto* pool = TensorBufferPool::TryGet()) { pool->DecreasePoolSizeByBase(batch_size_); }
+  }
 
  protected:
   using DataReader<ImageClassificationDataInstance>::loader_;
   using DataReader<ImageClassificationDataInstance>::parser_;
+
+ private:
+  size_t batch_size_;
 };
 
 }  // namespace data

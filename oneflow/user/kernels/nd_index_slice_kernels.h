@@ -103,10 +103,8 @@ void TensorScatterNdUpdateKernel<device_type, T, I>::Compute(
   Memcpy<device_type>(ctx->stream(), out->mut_dptr<T>(), params->dptr<T>(), out_bytes_size);
   if (indices->shape().elem_cnt() == 0) { return; }
   auto args = ConstructNdIndexSliceArgs<T, I>(*params, *updates, *indices);
-  FillByNdIndexFunctor<device_type, T, I>()(ctx->stream(), args, indices->dptr<I>(),
-                                            out->mut_dptr<T>(), static_cast<T>(0));
-  ScatterNdAddFunctor<device_type, T, I>()(ctx->stream(), args, indices->dptr<I>(),
-                                           updates->dptr<T>(), out->mut_dptr<T>());
+  ScatterNdUpdateFunctor<device_type, T, I>()(ctx->stream(), args, indices->dptr<I>(),
+                                              updates->dptr<T>(), out->mut_dptr<T>());
 }
 
 template<DeviceType device_type, typename T, typename I>
@@ -141,11 +139,12 @@ void TensorScatterNdAddKernel<device_type, T, I>::Compute(
       .SetIsMatchedHob((user_op::HobDeviceType() == device_type_v)                              \
                        && (user_op::HobDataType("indices", 0) == OF_PP_PAIR_SECOND(itype_pair)) \
                        && (user_op::HobDataType("out", 0) == OF_PP_PAIR_SECOND(dtype_pair)))    \
-      .SetInplaceProposalFn([](const user_op::InferContext&,                                    \
-                               user_op::AddInplaceArgPair AddInplaceArgPairFn) -> Maybe<void> { \
-        OF_RETURN_IF_ERROR(AddInplaceArgPairFn("out", 0, "params", 0, true));                   \
-        return Maybe<void>::Ok();                                                               \
-      });
+      .SetInplaceProposalFn(                                                                    \
+          [](const user_op::InferContext&,                                                      \
+             const user_op::AddInplaceArgPair& AddInplaceArgPairFn) -> Maybe<void> {            \
+            OF_RETURN_IF_ERROR(AddInplaceArgPairFn("out", 0, "params", 0, true));               \
+            return Maybe<void>::Ok();                                                           \
+          });
 
 #define REGISTER_GATHER_ND_KERNELS(device_type_v, dtype_pair, itype_pair) \
   REGISTER_GATHER_SCATTER_ND_KERNELS(gather_nd, GatherNd, device_type_v, dtype_pair, itype_pair)

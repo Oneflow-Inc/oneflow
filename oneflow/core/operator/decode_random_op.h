@@ -36,7 +36,7 @@ class DecodeRandomOp final : public Operator {
       const ParallelContext* parallel_ctx) const override;
 
  private:
-  Maybe<void> GetSbpSignatures(cfg::SbpSignatureList* sbp_sig_list) const override;
+  Maybe<void> GetSbpSignatures(SbpSignatureList* sbp_sig_list) const override;
   void VirtualGenKernelConf(std::function<const BlobDesc*(const std::string&)> GetBlobDesc4BnInOp,
                             const ParallelContext* parallel_ctx,
                             KernelConf* kernel_conf) const override;

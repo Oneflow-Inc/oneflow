@@ -40,6 +40,19 @@ bool HasNotFiniteCpu(ep::Stream* stream, const Blob* blob) {
   }
 }
 
+void DumpBlob(KernelContext* ctx, const std::string& bn) {
+  Blob* blob = ctx->BnInOp2Blob(bn);
+  if (blob != nullptr) {
+    std::ofstream ofs(bn);
+    ofs.write(blob->dptr<char>(), blob->ByteSizeOfBlobBody());
+  }
+}
+
+void DumpBlobs(KernelContext* ctx, const Kernel* kernel) {
+  for (const auto& obn : kernel->op_attribute().output_bns()) { DumpBlob(ctx, obn); }
+  for (const auto& ibn : kernel->op_attribute().input_bns()) { DumpBlob(ctx, ibn); }
+}
+
 }  // namespace
 
 void CpuCheckNumericsKernelObserver::DidForwardDataContent(KernelContext* ctx,
@@ -48,6 +61,10 @@ void CpuCheckNumericsKernelObserver::DidForwardDataContent(KernelContext* ctx,
     Blob* blob = ctx->BnInOp2Blob(obn);
     if (blob != nullptr) {
       bool has_not_finite = HasNotFiniteCpu(ctx->stream(), blob);
+      if (has_not_finite
+          && ParseBooleanFromEnv("ONEFLOW_DEBUG_KERNEL_SYNC_CHECK_NUMERICS_DUMP", false)) {
+        DumpBlobs(ctx, kernel);
+      }
       CHECK(!has_not_finite) << kernel->op_conf().name() << " : " << obn << " has nan or inf";
     }
   }

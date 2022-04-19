@@ -20,9 +20,14 @@ namespace oneflow {
 
 namespace {
 
-Maybe<void> RawCheckIdentity(Symbol<PlacedNdSbp> in, Symbol<PlacedNdSbp> out) {
+Maybe<void> RawCheckIdentity(Symbol<PlacedNdSbp> in, Symbol<PlacedNdSbp> out,
+                             const Shape& logical_shape) {
+  if (in->placement()->parallel_num() == 1) {
+    CHECK_OR_RETURN(in->placement()->EqualsIgnoringHierarchy(*out->placement()));
+    return Maybe<void>::Ok();
+  }
   CHECK_OR_RETURN(in->placement() == out->placement());
-  CHECK_OR_RETURN(in->placement()->parallel_num() == 1 || in->nd_sbp() == out->nd_sbp());
+  CHECK_OR_RETURN(in->nd_sbp() == out->nd_sbp());
   return Maybe<void>::Ok();
 }
 
@@ -41,5 +46,6 @@ Maybe<one::Tensor> GetIdentity(const std::shared_ptr<one::Tensor>& tensor, Symbo
                                                  *tensor->shape(), tensor->dtype()));
 }
 
-COMMAND(RegisterBoxingFunction("identity", DECORATE(&RawCheckIdentity, ThreadLocal), &GetIdentity));
+COMMAND(RegisterBoxingFunction("identity", DECORATE(&RawCheckIdentity, ThreadLocalCachedCopiable),
+                               &GetIdentity));
 }  // namespace oneflow

@@ -54,9 +54,6 @@ Maybe<void> AutoLearningRate::Apply(const OpGraph& op_graph, Job* job) const {
     schedule_conf->set_train_step(train_conf.train_step_lbn());
     schedule_conf->set_learning_rate(optimizer_conf.base_learning_rate());
     schedule_conf->set_out("out");
-    if (optimizer_conf.has_warmup_conf()) {
-      *schedule_conf->mutable_warmup_conf() = optimizer_conf.warmup_conf();
-    }
     if (optimizer_conf.has_learning_rate_decay()) {
       *schedule_conf->mutable_learning_rate_decay() = optimizer_conf.learning_rate_decay();
     }

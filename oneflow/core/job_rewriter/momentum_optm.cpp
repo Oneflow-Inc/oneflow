@@ -36,12 +36,12 @@ void GenerateOptimizerOpConf(JobPassCtx* ctx, const OpNode& var_op_node,
                          op_name, "out");
   }
   if (has_snapshot_path && SnapshotFS()->FileExists(file_path)) {
-    LOG(INFO) << "file_path: " << file_path;
+    VLOG(3) << "file_path: " << file_path;
     momentum_var.mutable_variable_conf()->mutable_initialize_with_snapshot()->set_path(
         JoinPath(job_builder->job().job_conf().default_initialize_with_snapshot_path(), op_name));
     momentum_var.mutable_variable_conf()->mutable_initialize_with_snapshot()->set_key("out");
   } else {
-    if (has_snapshot_path) { LOG(INFO) << file_path << " not found, will be initialized"; }
+    if (has_snapshot_path) { VLOG(3) << file_path << " not found, will be initialized"; }
     InitializerConf constant_initializer;
     constant_initializer.mutable_constant_conf()->set_value(0.f);
     *(momentum_var.mutable_variable_conf()->mutable_initializer()) = constant_initializer;

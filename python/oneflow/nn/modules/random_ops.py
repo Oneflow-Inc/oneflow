@@ -17,7 +17,7 @@ from typing import Optional, Union
 
 import oneflow as flow
 from oneflow.nn.module import Module
-from oneflow.nn.modules.utils import _single
+from oneflow.nn.modules.utils import _single, _handle_size_arg
 
 
 def _rand_op_common_process(
@@ -101,9 +101,9 @@ def rand_op(
         generator (flow.Generator, optional): a pseudorandom number generator for sampling
         device (flow.device, optional): The desired device of returned local tensor. If None, uses the
           current device.
-        placement (flow.placement, optional): The desired device of returned consistent tensor. If None, will
+        placement (flow.placement, optional): The desired device of returned global tensor. If None, will
           construct local tensor.
-        sbp (flow.sbp, optional): The desired sbp of returned consistent tensor. It must be equal with the
+        sbp (flow.sbp, optional): The desired sbp of returned global tensor. It must be equal with the
           numbers of placement.
         requires_grad (bool, optional): If autograd should record operations on the returned tensor. Default: False.
 
@@ -115,16 +115,17 @@ def rand_op(
         >>> x = flow.rand(3,3) # construct local tensor
         >>> x.shape
         oneflow.Size([3, 3])
-        >>> x.is_consistent
+        >>> x.is_global
         False
-        >>> placement = flow.placement("cpu", {0: [0]})
+        >>> placement = flow.placement("cpu", ranks=[0])
         >>> sbp = flow.sbp.broadcast
-        >>> x = flow.rand(3, 3, placement=placement, sbp=sbp) # construct consistent tensor
-        >>> x.is_consistent
+        >>> x = flow.rand(3, 3, placement=placement, sbp=sbp) # construct global tensor
+        >>> x.is_global
         True
 
 
     """
+    size = _handle_size_arg(size)
     assert out is None, "out not supported yet"
     assert layout is None, "layout not supported yet"
     if placement is not None:
@@ -146,50 +147,6 @@ def rand_op(
         )
 
 
-class RandN(Module):
-    def __init__(
-        self,
-        size,
-        generator=None,
-        dtype=None,
-        layout=None,
-        device=None,
-        placement=None,
-        sbp=None,
-        requires_grad=False,
-    ) -> None:
-        super().__init__()
-        self.requires_grad = requires_grad
-        (
-            self.size,
-            self.device,
-            self.generator,
-            self.placement,
-            self.sbp,
-        ) = _rand_op_common_process(size, device, generator, placement, sbp)
-        self.dtype = dtype
-
-    def forward(self):
-        if self.placement is not None:
-            res = flow._C.randn(
-                self.size,
-                placement=self.placement,
-                sbp=self.sbp,
-                dtype=self.dtype,
-                generator=self.generator,
-                requires_grad=self.requires_grad,
-            )
-        else:
-            res = flow._C.randn(
-                self.size,
-                dtype=self.dtype,
-                device=self.device,
-                generator=self.generator,
-                requires_grad=self.requires_grad,
-            )
-        return res
-
-
 def randn_op(
     *size,
     out=None,
@@ -203,7 +160,7 @@ def randn_op(
 ):
     """
     Returns a tensor filled with random numbers from a normal distribution with mean 0 and variance 1 (also called the standard normal distribution).
-    
+
     The shape of the tensor is defined by the variable argument ``size``.
 
     Args:
@@ -215,12 +172,12 @@ def randn_op(
         generator (flow.Generator, optional): a pseudorandom number generator for sampling
         device (flow.device, optional): The desired device of returned local tensor. If None, uses the
           current device.
-        placement (flow.placement, optional): The desired device of returned consistent tensor. If None, will
+        placement (flow.placement, optional): The desired device of returned global tensor. If None, will
           construct local tensor.
-        sbp (flow.sbp, optional): The desired sbp of returned consistent tensor. It must be equal with the
+        sbp (flow.sbp, optional): The desired sbp of returned global tensor. It must be equal with the
           numbers of placement.
         requires_grad (bool, optional): If autograd should record operations on the returned tensor. Default: False.
-    
+
     For example:
 
     .. code-block:: python
@@ -229,15 +186,16 @@ def randn_op(
         >>> x = flow.randn(3,3) # construct local tensor
         >>> x.shape
         oneflow.Size([3, 3])
-        >>> x.is_consistent
+        >>> x.is_global
         False
-        >>> placement = flow.placement("cpu", {0:[0]})
+        >>> placement = flow.placement("cpu", ranks=[0])
         >>> sbp = flow.sbp.broadcast
-        >>> x = flow.randn(3,3,placement=placement,sbp=sbp) # construct consistent tensor
-        >>> x.is_consistent
+        >>> x = flow.randn(3,3,placement=placement,sbp=sbp) # construct global tensor
+        >>> x.is_global
         True
 
     """
+    size = _handle_size_arg(size)
     assert out is None, "out not supported yet"
     assert layout is None, "layout not supported yet"
     if placement is not None:
@@ -339,9 +297,9 @@ def randint_op(
         generator (flow.Generator, optional) – a pseudorandom number generator for sampling
         device (flow.device, optional): The desired device of returned local tensor. If None, uses the
           current device.
-        placement (flow.placement, optional): The desired device of returned consistent tensor. If None, will
+        placement (flow.placement, optional): The desired device of returned global tensor. If None, will
           construct local tensor.
-        sbp (flow.sbp, optional): The desired sbp of returned consistent tensor. It must be equal with the
+        sbp (flow.sbp, optional): The desired sbp of returned global tensor. It must be equal with the
           numbers of placement.
         requires_grad (bool, optional): If autograd should record operations on the returned tensor. Default: False.
 
@@ -357,11 +315,11 @@ def randint_op(
         tensor([[2, 2, 3],
                 [4, 3, 4],
                 [2, 4, 2]], dtype=oneflow.int64)
-        >>> y.is_consistent
+        >>> y.is_global
         False
-        >>> placement = flow.placement("cpu", {0: [0]})
-        >>> y = flow.randint(0, 5, (3,3), generator=generator, placement=placement, sbp=flow.sbp.broadcast) # construct consistent tensor
-        >>> y.is_consistent
+        >>> placement = flow.placement("cpu", ranks=[0])
+        >>> y = flow.randint(0, 5, (3,3), generator=generator, placement=placement, sbp=flow.sbp.broadcast) # construct global tensor
+        >>> y.is_global
         True
 
     """
@@ -460,9 +418,9 @@ def randperm_op(
             Default: ``oneflow.int64``.
         layout: layout is not supported yet.
         device: the desired device of returned tensor. Default: cpu.
-        placement:(:class:`flow.placement`, optional): The desired device of returned consistent tensor. If None,
+        placement:(:class:`flow.placement`, optional): The desired device of returned global tensor. If None,
             will construct local tensor.
-        sbp: (:class:`flow.sbp`, optional): The desired sbp of returned consistent tensor. It must be equal with the
+        sbp: (:class:`flow.sbp`, optional): The desired sbp of returned global tensor. It must be equal with the
             numbers of placement.
         requires_grad(bool, optional): If autograd should record operations on the returned tensor. Default: False.
         pin_memory(bool, optional):pin_memory is not supported yet.
@@ -477,11 +435,11 @@ def randperm_op(
         >>> y = flow.randperm(5, generator=generator) # construct local tensor
         >>> y
         tensor([2, 4, 3, 0, 1], dtype=oneflow.int64)
-        >>> y.is_consistent
+        >>> y.is_global
         False
-        >>> placement = flow.placement("cpu", {0: [0]})
-        >>> y = flow.randperm(5, generator=generator, placement=placement, sbp=flow.sbp.broadcast) # construct consistent tensor
-        >>> y.is_consistent
+        >>> placement = flow.placement("cpu", ranks=[0])
+        >>> y = flow.randperm(5, generator=generator, placement=placement, sbp=flow.sbp.broadcast) # construct global tensor
+        >>> y.is_global
         True
 
     """
