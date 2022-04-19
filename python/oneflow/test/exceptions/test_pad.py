@@ -21,18 +21,24 @@ import torch
 
 
 @flow.unittest.skip_unless_1n1d()
-class TestErrorMsg(flow.unittest.TestCase):
-    def test_torch_error_msg(test_case):
-        with test_case.assertRaises(flow._oneflow_internal.exception.Exception) as exp:
+class TestPad(flow.unittest.TestCase):
+    def test_torch_type(test_case):
+        with test_case.assertRaises(TypeError) as exp:
             F.pad(torch.randn(2, 2))
-        test_case.assertTrue("torch.Tensor" in str(exp.exception))
+        test_case.assertTrue(
+            "pad(): argument 'x' must be tensor, not <class 'torch.Tensor'>"
+            in str(exp.exception)
+        )
 
-    def test_numpy_error_msg(test_case):
+    def test_numpy_type(test_case):
         import numpy as np
 
-        with test_case.assertRaises(flow._oneflow_internal.exception.Exception) as exp:
+        with test_case.assertRaises(TypeError) as exp:
             F.pad(np.random.randn(2, 2))
-        test_case.assertTrue("numpy" in str(exp.exception))
+        test_case.assertTrue(
+            "pad(): argument 'x' must be tensor, not <class 'numpy.ndarray'>"
+            in str(exp.exception)
+        )
 
 
 if __name__ == "__main__":

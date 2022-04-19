@@ -99,7 +99,7 @@ template<typename T>
 Error& operator<<(Error& error, const T& x) {
   std::ostringstream ss;
   ss << x;
-  if (error->stack_frame().empty()) {
+  if (error->stack_frame_size() <= 1) {
     error->set_msg(error->msg() + ss.str());
   } else {
     auto* stack_frame_top = error->mutable_stack_frame(error->stack_frame_size() - 1);

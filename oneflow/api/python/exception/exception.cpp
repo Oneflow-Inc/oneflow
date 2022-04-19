@@ -26,6 +26,7 @@ ONEFLOW_API_PYBIND11_MODULE("exception", m) {
   m.def("GetThreadLocalLastError", &ThreadLocalError);
   py::register_exception<oneflow::Exception>(m, "Exception");
   py::register_exception<oneflow::RuntimeException>(m, "RuntimeError", PyExc_RuntimeError);
+  py::register_exception<oneflow::TypeException>(m, "TypeError", PyExc_TypeError);
   py::register_exception<oneflow::IndexException>(m, "IndexError", PyExc_IndexError);
   py::register_exception<oneflow::NotImplementedException>(m, "NotImplementedError",
                                                            PyExc_NotImplementedError);

@@ -37,6 +37,11 @@ class RuntimeException : public Exception {
   using Exception::Exception;
 };
 
+class TypeException : public Exception {
+ public:
+  using Exception::Exception;
+};
+
 class IndexException : public Exception {
  public:
   using Exception::Exception;

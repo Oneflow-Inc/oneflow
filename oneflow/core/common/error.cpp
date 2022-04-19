@@ -317,6 +317,7 @@ std::string GetErrorString(const std::shared_ptr<cfg::ErrorProto>& error) {
 void ThrowError(const std::shared_ptr<cfg::ErrorProto>& error) {
   *MutThreadLocalError() = error;
   if (error->has_runtime_error()) { throw RuntimeException(GetErrorString(error)); }
+  if (error->has_type_error()) { throw TypeException(GetErrorString(error)); }
   if (error->has_index_error()) { throw IndexException(GetErrorString(error)); }
   if (error->has_unimplemented_error()) { throw NotImplementedException(GetErrorString(error)); }
   throw Exception(GetStackedErrorString(error));

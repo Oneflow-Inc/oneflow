@@ -36,8 +36,8 @@ inline size_t HashDevice(const std::string& type, int64_t device_id) {
 
 void CheckDeviceType(const std::string& type) {
   if (!TRY(DeviceType4DeviceTag(type)).IsOk()) {
-    std::string error_msg =
-        "Expected one of cpu, cuda device type at start of device string " + type;
+    std::string error_msg = "Expected one of " + PrintAvailableDevices()
+                            + " device type at start of device string: " + type;
     throw std::runtime_error(error_msg);
   }
 }
