@@ -47,6 +47,7 @@ from .clamp import *
 from .erfinv import *
 from .swapaxes import *
 from .amax import *
+from .unbind import *
 from .repeat import *
 from .tile import *
 from .tensor_t import *
@@ -61,6 +62,7 @@ from .in_top_k import *
 from .index_select import *
 from .sort import *
 from .is_floating_point import *
+from .swapdims import *
 from .where import *
 from .einsum import *
 from .oneflow import *
