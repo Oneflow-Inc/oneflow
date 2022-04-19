@@ -15,14 +15,19 @@ limitations under the License.
 */
 #include "oneflow/core/framework/framework.h"
 #include "oneflow/core/framework/op_generated.h"
+#include "oneflow/core/common/str_util.h"
 
 namespace oneflow {
 
 /* static */ Maybe<void> DotOp::InferLogicalTensorDesc(user_op::InferContext* ctx) {
   const user_op::TensorDesc& x = ctx->InputTensorDesc("x", 0);
   const user_op::TensorDesc& y = ctx->InputTensorDesc("y", 0);
-  CHECK_OR_RETURN(x.shape() == y.shape()) << "Input tensor shape is different";
-  CHECK_OR_RETURN(x.shape().NumAxes() == 1) << "Input tensor is not 1D";
+  CHECK_OR_RETURN(x.shape() == y.shape())
+      << JUST(OfStringFormat("Inconsistent tensor size, expected tensor to have the same number of "
+                             "elements, but got %d and %d elements respectively.",
+                             x.shape().elem_cnt(), y.shape().elem_cnt()));
+  CHECK_OR_RETURN(x.shape().NumAxes() == 1)
+      << JUST(OfStringFormat("1D tensors expected, but got %dD tensors.", x.shape().NumAxes()));
   *ctx->OutputShape("out", 0) = Shape({});
   return Maybe<void>::Ok();
 }

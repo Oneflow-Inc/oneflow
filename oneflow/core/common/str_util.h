@@ -118,6 +118,17 @@ const std::string& ReturnEmptyStr(const CallbackT& Callback) {
   return empty;
 }
 
+template<typename... Arg>
+Maybe<std::string> OfStringFormat(const std::string& fmt, Arg... args) {
+  // Extra space for '\0'
+  const size_t size = std::snprintf(nullptr, 0, fmt.c_str(), args...) + 1;
+  if (size <= 0) { return Error::RuntimeError() << "Error during formatting."; }
+  // auto size = static_cast<const size_t>(size_s);
+  std::unique_ptr<char[]> buf(new char[size]);
+  std::snprintf(buf.get(), size, fmt.c_str(), args...);
+  // We don't want the '\0' inside
+  return std::string(buf.get(), buf.get() + size - 1);
+}
 }  // namespace oneflow
 
 #endif  // ONEFLOW_CORE_COMMON_STR_UTIL_H_
