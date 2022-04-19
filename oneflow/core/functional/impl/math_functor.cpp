@@ -1531,10 +1531,15 @@ class MinimumFunctor {
 
   Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x,
                            const std::shared_ptr<one::Tensor>& y) const {
+    TensorProcessor tensor_processor;
+    JUST(tensor_processor.PromoteInputsToCommonDtype(true).AddInputs({x, y}).Apply());
+    TensorTuple input_tuple = JUST(tensor_processor.GetInputs());
     if (*x->shape() == *y->shape()) {
-      return OpInterpUtil::Dispatch<Tensor>(*elementwise_minimum_op_, {x, y});
+      return OpInterpUtil::Dispatch<Tensor>(*elementwise_minimum_op_,
+                                            {input_tuple[0], input_tuple[1]});
     } else {
-      return OpInterpUtil::Dispatch<Tensor>(*broadcast_minimum_op_, {x, y});
+      return OpInterpUtil::Dispatch<Tensor>(*broadcast_minimum_op_,
+                                            {input_tuple[0], input_tuple[1]});
     }
   }
 
@@ -1554,10 +1559,15 @@ class MaximumFunctor {
 
   Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x,
                            const std::shared_ptr<one::Tensor>& y) const {
+    TensorProcessor tensor_processor;
+    JUST(tensor_processor.PromoteInputsToCommonDtype(true).AddInputs({x, y}).Apply());
+    TensorTuple input_tuple = JUST(tensor_processor.GetInputs());
     if (*x->shape() == *y->shape()) {
-      return OpInterpUtil::Dispatch<Tensor>(*elementwise_maximum_op_, {x, y});
+      return OpInterpUtil::Dispatch<Tensor>(*elementwise_maximum_op_,
+                                            {input_tuple[0], input_tuple[1]});
     } else {
-      return OpInterpUtil::Dispatch<Tensor>(*broadcast_maximum_op_, {x, y});
+      return OpInterpUtil::Dispatch<Tensor>(*broadcast_maximum_op_,
+                                            {input_tuple[0], input_tuple[1]});
     }
   }
 
