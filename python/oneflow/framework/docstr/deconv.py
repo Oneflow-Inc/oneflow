@@ -49,7 +49,7 @@ add_docstr(
         
         >>> inputs = flow.randn(20, 16, 50)
         >>> weights = flow.randn(16, 33, 5)
-        >>> F.conv_transpose1d(inputs, weights)
+        >>> outputs = F.conv_transpose1d(inputs, weights)
         """,
 )
 add_docstr(
@@ -85,7 +85,7 @@ add_docstr(
         
         >>> inputs = flow.randn(1, 4, 5, 5)
         >>> weights = flow.randn(4, 8, 3, 3)
-        >>> F.conv_transpose2d(inputs, weights, padding=1)
+        >>> outputs = F.conv_transpose2d(inputs, weights, padding=1)
         """,
 )
 add_docstr(
@@ -123,6 +123,6 @@ add_docstr(
         
         >>> inputs = flow.randn(20, 16, 50, 10, 20)
         >>> weights = flow.randn(16, 33, 3, 3, 3)
-        >>> F.conv_transpose3d(inputs, weights)
+        >>> outputs = F.conv_transpose3d(inputs, weights)
     """,
 )
