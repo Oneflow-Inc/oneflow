@@ -1077,12 +1077,17 @@ def _new_tensor(
         )
 
 
+def _byte(self):
+    return flow._C.to(self, flow.uint8)
+
+
 def RegisterMethods():
     Tensor.__mul__ = lambda self, other: self.mul(other)
     Tensor.__rmul__ = lambda self, other: self.mul(other)
     Tensor.__add__ = lambda self, other: self.add(other)
     Tensor.__iadd__ = lambda self, other: self.add_(other)
     Tensor.__matmul__ = lambda self, other: self.matmul(other)
+    Tensor.byte = _byte
     Tensor.ndim = property(_ndim)
     Tensor.numpy = _numpy
     Tensor.size = _size
