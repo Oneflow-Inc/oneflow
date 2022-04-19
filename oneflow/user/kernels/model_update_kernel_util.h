@@ -175,18 +175,22 @@ struct FtrlUpdateFunctor {
                                  float beta, float weight_decay, float learning_rate) {
     const T model_val = *model;
     const T z_val = *z;
+    const float lr_reciprocal = static_cast<float>(1.0) / learning_rate;
     T model_diff_t =
         CastScaleRegularizeGradientFunctor<T, G>()(*model_diff, model_val, scale, l1, l2);
     const T accumulate_val = *accumulate;
     const T next_accumulate_val = accumulate_val + model_diff_t * model_diff_t;
-    const T sigma =
-        (powf(next_accumulate_val, lr_power) - powf(accumulate_val, lr_power)) / learning_rate;
+    const T acc_powered = pow(accumulate_val, lr_power);
+    const T next_acc_powered = pow(next_accumulate_val, lr_power);
+    const T sigma = (next_acc_powered - acc_powered) * lr_reciprocal;
     const T new_z_val = z_val + model_diff_t - sigma * model_val;
     if (abs(new_z_val) < lambda1) {
+      // TODO(zhengzekang): Not sure for model_val = 0.0 or 0.0 - learning_rate * weight_decay *
+      // model_val;
       *model = static_cast<T>(0.0);
     } else {
-      *model = (copysignf(lambda1, new_z_val) - new_z_val)
-                   / ((beta + powf(next_accumulate_val, lr_power)) / learning_rate + lambda2)
+      *model = (copysign(lambda1, new_z_val) - new_z_val)
+                   / ((beta + next_acc_powered) * lr_reciprocal + lambda2)
                - learning_rate * weight_decay * model_val;
     }
     *accumulate = next_accumulate_val;

@@ -990,7 +990,11 @@ class FtrlUpdateKernel final : public user_op::OpKernel, public user_op::CudaGra
     const float lambda1 = ctx->Attr<float>("lambda1");
     const float lambda2 = ctx->Attr<float>("lambda2");
     const float beta = ctx->Attr<float>("beta");
-    const auto weight_decay = ctx->Attr<float>("weight_decay");
+    const float weight_decay = ctx->Attr<float>("weight_decay");
+    // TODO(zhengzekang): Undefined behavior for ftrl optimizer with weight_decay in `abs(new_z_val)
+    // < lambda1` condition.
+    CHECK_EQ(weight_decay, static_cast<float>(0.0))
+        << "Currently not support for setting weight decay. ";
     const float learning_rate_val = ctx->Attr<float>("learning_rate_val");
     const float* learning_rate_ptr = nullptr;
 
@@ -1031,6 +1035,7 @@ class FtrlUpdateKernel final : public user_op::OpKernel, public user_op::CudaGra
 REGISTER_FTRL_UPDATE_KERNEL(DeviceType::kCPU, float, float);
 REGISTER_FTRL_UPDATE_KERNEL(DeviceType::kCPU, double, double);
 #ifdef WITH_CUDA
+REGISTER_FTRL_UPDATE_KERNEL(DeviceType::kCUDA, float, float16);
 REGISTER_FTRL_UPDATE_KERNEL(DeviceType::kCUDA, float, float);
 REGISTER_FTRL_UPDATE_KERNEL(DeviceType::kCUDA, double, double);
 #endif  // WITH_CUDA

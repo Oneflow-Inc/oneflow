@@ -538,6 +538,10 @@ class FtrlEmbeddingUpdateKernel final : public user_op::OpKernel {
     const float l1 = 0.0;
     const float l2 = 0.0;
     const float weight_decay = ctx->Attr<float>("weight_decay");
+    // TODO(zhengzekang): Undefined behavior for ftrl optimizer with weight_decay in `abs(new_z_val)
+    // < lambda1` condition.
+    CHECK_EQ(weight_decay, static_cast<float>(0.0))
+        << "Currently not support for setting weight decay. ";
     const float lr_power = ctx->Attr<float>("lr_power");
     const float lambda1 = ctx->Attr<float>("lambda1");
     const float lambda2 = ctx->Attr<float>("lambda2");
