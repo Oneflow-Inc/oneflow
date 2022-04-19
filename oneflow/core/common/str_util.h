@@ -118,7 +118,7 @@ const std::string& ReturnEmptyStr(const CallbackT& Callback) {
   return empty;
 }
 
-// TODO(): Use std::format when c++20 is available.
+//TODO(): Use std::format when c++20 is available.
 template<typename... Arg>
 Maybe<std::string> OfStringFormat(const std::string& fmt, Arg... args) {
   // Extra space for '\0'
