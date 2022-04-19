@@ -17,6 +17,7 @@ limitations under the License.
 #define ONEFLOW_CORE_EP_CUDA_CUDA_DEVICE_H_
 
 #include "oneflow/core/ep/include/device.h"
+#include "oneflow/core/common/data_type.h"
 
 #ifdef WITH_CUDA
 
@@ -51,6 +52,9 @@ class CudaDevice : public Device {
 
   const cudaDeviceProp& properties() const;
 
+  const void* GetConstZeros(DataType data_type, size_t n) const;
+  const void* GetConstOnes(DataType data_type, size_t n) const;
+
  private:
   int device_index_;
   std::mutex events_mutex_;
@@ -58,6 +62,11 @@ class CudaDevice : public Device {
   unsigned int event_flags_;
   cudaDeviceProp properties_;
   DeviceManager* device_manager_;
+  int64_t const_buf_elem_cnt_;
+  void* const_zeros_buffer_;
+  void* const_ones_buffer_fp32_;
+  void* const_ones_buffer_fp16_;
+  void* const_ones_buffer_bf16_;
 };
 
 }  // namespace ep

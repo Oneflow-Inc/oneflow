@@ -14,7 +14,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 #include "oneflow/core/framework/placed_nd_sbp.h"
-#include "oneflow/core/job/sbp_parallel.cfg.h"
+#include "oneflow/core/job/sbp_parallel.h"
 #include "oneflow/core/job/parallel_desc.h"
 #include "oneflow/core/common/decorator.h"
 
@@ -22,7 +22,7 @@ namespace oneflow {
 
 namespace {
 
-Maybe<Symbol<PlacedNdSbp>> RawNew(const Symbol<cfg::NdSbp>& nd_sbp,
+Maybe<Symbol<PlacedNdSbp>> RawNew(const Symbol<NdSbp>& nd_sbp,
                                   const Symbol<ParallelDesc>& placement) {
   CHECK_OR_RETURN(nd_sbp);
   CHECK_OR_RETURN(placement);

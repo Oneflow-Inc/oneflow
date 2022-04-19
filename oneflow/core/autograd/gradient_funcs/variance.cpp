@@ -89,9 +89,10 @@ Maybe<void> Variance::Apply(const VarianceState* ctx, const TensorTuple& out_gra
   in_grads->resize(1);
   in_grads->at(0) = JUST(functional::Mul(
       out_grad,
-      JUST(functional::ScalarMul(Scalar(2.0 / (elem_cnt - correction)),
-                                 JUST(functional::Sub(x, JUST(functional::ReduceMean(
-                                                             x, ctx->axis, /*keepdim=*/true))))))));
+      JUST(functional::ScalarMul(
+          Scalar(2.0 / (elem_cnt - correction)),
+          JUST(functional::Sub(x, JUST(functional::ReduceMean(x, ctx->axis, /*keepdim=*/true)),
+                               /*inplace=*/false))))));
 
   return Maybe<void>::Ok();
 }

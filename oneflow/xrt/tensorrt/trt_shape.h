@@ -44,7 +44,7 @@ inline nvinfer1::Dims ShapeToXrtDims(const Shape& shape) {
   nvinfer1::Dims dims;
   dims.nbDims = shape.NumAxes();
   for (int i = 0; i < dims.nbDims; ++i) { dims.d[i] = shape.At(i); }
-  return std::move(dims);
+  return dims;
 }
 
 class TrtShape {

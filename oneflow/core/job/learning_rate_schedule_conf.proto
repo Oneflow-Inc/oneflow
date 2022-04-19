@@ -63,6 +63,34 @@ message MultiStepConf {
   optional double gamma = 2 [default = 0.1];
 }
 
+message LinearLRConf {
+  required double start_factor = 1;
+  required double end_factor = 2;
+  required int64 total_iters = 3;
+}
+
+message ConstantLRConf {
+  required double factor = 1;
+  required int64 total_iters = 2;
+}
+
+message CosineAnnealingWarmRestartsConf {
+  required int64 t_initial = 1;
+  required int64 t_mult = 2;
+  required double eta_min = 3;
+  required double decay_rate = 4;
+  required int64 restart_limit = 5;
+}
+
+message SequentialSchedulerConf {
+  repeated LearningRateDecayConf schedulers = 1;
+  repeated int64 milestones = 2;
+  // NOTE(zwx): should be repeated bool, however it has bug in cfg
+  repeated int32 interval_rescaling = 3;
+}
+
+// TODO(zwx): ChainedSchedulerConf 
+
 message LearningRateDecayConf {
   oneof type {
     ExponentialDecayConf exponential_conf = 2000;
@@ -76,22 +104,9 @@ message LearningRateDecayConf {
     MultiStepConf multi_step_conf = 2008;
     StepConf step_conf = 2009;
     CosineAnnealingDecayConf cosine_annealing_conf = 2010;
-  }
-}
-
-message ConstantWarmupConf {
-  required int64 warmup_batches = 1;
-  required double multiplier = 2;
-}
-
-message LinearWarmupConf {
-  required int64 warmup_batches = 1;
-  required double start_multiplier = 2;
-}
-
-message WarmupConf {
-  oneof type {
-    ConstantWarmupConf constant_conf = 3000;
-    LinearWarmupConf linear_conf = 3001;
+    LinearLRConf linear_lr_conf = 2011;
+    ConstantLRConf constant_lr_conf = 2012;
+    CosineAnnealingWarmRestartsConf cosine_annealing_warm_restarts_conf = 2013;
+    SequentialSchedulerConf sequential_scheduler_conf = 2014;
   }
 }

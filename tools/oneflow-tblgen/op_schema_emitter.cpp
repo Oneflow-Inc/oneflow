@@ -135,7 +135,7 @@ void OpSchemaEmitter<Target>::run(raw_ostream& os) {
     emitBit(def, "has_logical_tensor_desc_infer_fn", &op);
     emitBit(def, "has_physical_tensor_desc_infer_fn", &op);
     emitBit(def, "has_data_type_infer_fn", &op);
-    emitBit(def, "has_device_infer_fn", &op);
+    emitBit(def, "has_device_and_stream_infer_fn", &op);
     emitBit(def, "has_input_arg_modify_fn", &op);
     emitBit(def, "has_output_arg_modify_fn", &op);
     emitBit(def, "has_output_blob_time_shape_infer_fn", &op);

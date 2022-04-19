@@ -40,7 +40,7 @@ Maybe<void> ForeignOutputOp::InferOutBlobDescs(
 
 Maybe<void> ForeignOutputOp::GetSbpSignatures(
     const std::function<Maybe<const BlobDesc&>(const std::string&)>& LogicalBlobDesc4Ibn,
-    cfg::SbpSignatureList* sbp_sig_list) const {
+    SbpSignatureList* sbp_sig_list) const {
   return Maybe<void>::Ok();
 }
 

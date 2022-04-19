@@ -216,8 +216,8 @@ class UserOpInferContext final : public user_op::InferContext {
     return job_desc_;
   }
 
-  const cfg::SbpParallel& SbpParallel4ArgNameAndIndex(const std::string& arg_name,
-                                                      int32_t index) const override {
+  const SbpParallel& SbpParallel4ArgNameAndIndex(const std::string& arg_name,
+                                                 int32_t index) const override {
     CHECK_EQ(CHECK_JUST(op_->GetOpParallelDesc())->hierarchy()->NumAxes(), 1);
     const auto& bn2sbp = CHECK_JUST(op_->sbp_signature())->bn_in_op2sbp_parallel();
     std::string bn = GenRepeatedBn(arg_name, index);
@@ -226,8 +226,7 @@ class UserOpInferContext final : public user_op::InferContext {
     return it->second;
   }
 
-  const cfg::NdSbp& NdSbp4ArgNameAndIndex(const std::string& arg_name,
-                                          int32_t index) const override {
+  const NdSbp& NdSbp4ArgNameAndIndex(const std::string& arg_name, int32_t index) const override {
     const auto& bn2nd_sbp = CHECK_JUST(op_->nd_sbp_signature())->bn_in_op2nd_sbp();
     std::string bn = GenRepeatedBn(arg_name, index);
     auto it = bn2nd_sbp.find(bn);
@@ -280,7 +279,7 @@ class UserOpSbpContext : public user_op::SbpContext {
  public:
   using ArgVec = std::vector<std::pair<std::string, int32_t>>;
 
-  UserOpSbpContext(const UserOp* op, cfg::SbpSignatureList* sbp_sig_list,
+  UserOpSbpContext(const UserOp* op, SbpSignatureList* sbp_sig_list,
                    std::function<Maybe<const BlobDesc&>(const std::string&)> LogicalBlobDesc4Ibn)
       : op_(op), sbp_sig_list_(sbp_sig_list) {
     const auto& user_op_conf = op->op_conf().user_conf();
@@ -317,7 +316,7 @@ class UserOpSbpContext : public user_op::SbpContext {
 
  private:
   const UserOp* op_;
-  cfg::SbpSignatureList* sbp_sig_list_;
+  SbpSignatureList* sbp_sig_list_;
   HashMap<std::pair<std::string, int32_t>, user_op::NaiveTensorDesc> arg2tensor_desc_;
 };
 
@@ -326,7 +325,7 @@ class UserOpInferSbpSignatureFnContext : public user_op::InferSbpSignatureFnCont
   using ArgVec = std::vector<std::pair<std::string, int32_t>>;
 
   UserOpInferSbpSignatureFnContext(
-      const UserOp* op, cfg::SbpSignature* signature, const cfg::SbpSignature& sbp_signature_conf,
+      const UserOp* op, SbpSignature* signature, const SbpSignature& sbp_signature_conf,
       std::function<Maybe<const SbpInferHint*>(const std::string&)> SbpInferHint4Ibn)
       : op_(op),
         signature_(signature),
@@ -354,11 +353,11 @@ class UserOpInferSbpSignatureFnContext : public user_op::InferSbpSignatureFnCont
   }
   const ArgVec& inputs() const override { return op_->inputs(); }
   const ArgVec& outputs() const override { return op_->outputs(); }
-  cfg::SbpSignature* mutable_sbp_signature() override { return signature_; }
-  const cfg::SbpSignature& sbp_signature_conf() const override { return sbp_signature_conf_; }
+  SbpSignature* mutable_sbp_signature() override { return signature_; }
+  const SbpSignature& sbp_signature_conf() const override { return sbp_signature_conf_; }
 
-  const cfg::SbpParallel& SbpParallelHint4InputArgNameAndIndex(const std::string& input_arg_name,
-                                                               int32_t index) const override {
+  const SbpParallel& SbpParallelHint4InputArgNameAndIndex(const std::string& input_arg_name,
+                                                          int32_t index) const override {
     auto it = arg2sbp_parallel_hint_.find(std::make_pair(input_arg_name, index));
     CHECK(it != arg2sbp_parallel_hint_.end())
         << "Cannot find input_arg_name : " << input_arg_name << " input_arg_index : " << index;
@@ -376,9 +375,9 @@ class UserOpInferSbpSignatureFnContext : public user_op::InferSbpSignatureFnCont
  private:
   const UserOp* op_;
   HashMap<std::pair<std::string, int32_t>, user_op::NaiveTensorDesc> arg2tensor_desc_;
-  HashMap<std::pair<std::string, int32_t>, cfg::SbpParallel> arg2sbp_parallel_hint_;
-  cfg::SbpSignature* signature_;
-  cfg::SbpSignature sbp_signature_conf_;
+  HashMap<std::pair<std::string, int32_t>, SbpParallel> arg2sbp_parallel_hint_;
+  SbpSignature* signature_;
+  SbpSignature sbp_signature_conf_;
   std::function<Maybe<const SbpInferHint*>(const std::string&)> sbp_infer_hint4ibn_fn_;
 };
 
@@ -417,8 +416,7 @@ class UserOpInferNdSbpFnContext : public user_op::InferNdSbpFnContext {
  public:
   using ArgVec = std::vector<std::pair<std::string, int32_t>>;
   UserOpInferNdSbpFnContext(
-      const UserOp* op, cfg::NdSbpSignature* nd_sbp_signature,
-      const cfg::NdSbpSignature& nd_sbp_constraints,
+      const UserOp* op, NdSbpSignature* nd_sbp_signature, const NdSbpSignature& nd_sbp_constraints,
       std::function<Maybe<const NdSbpInferHint*>(const std::string&)> NdSbpInferHint4Ibn)
       : op_(op),
         nd_sbp_signature_(nd_sbp_signature),
@@ -446,14 +444,14 @@ class UserOpInferNdSbpFnContext : public user_op::InferNdSbpFnContext {
     return it->second;
   }
 
-  const cfg::NdSbpSignature& nd_sbp_constraints() const override { return nd_sbp_constraints_; }
+  const NdSbpSignature& nd_sbp_constraints() const override { return nd_sbp_constraints_; }
 
-  cfg::NdSbp* NdSbp4ArgNameAndIndex(const std::string& arg_name, int32_t index) override {
+  NdSbp* NdSbp4ArgNameAndIndex(const std::string& arg_name, int32_t index) override {
     return &(*nd_sbp_signature_->mutable_bn_in_op2nd_sbp())[GenRepeatedBn(arg_name, index)];
   }
 
-  const cfg::NdSbp& NdSbpHint4InputArgNameAndIndex(const std::string& arg_name,
-                                                   int32_t index) const override {
+  const NdSbp& NdSbpHint4InputArgNameAndIndex(const std::string& arg_name,
+                                              int32_t index) const override {
     auto hint = CHECK_JUST(nd_sbp_infer_hint4ibn_fn_(GenRepeatedBn(arg_name, index)));
     return hint->nd_sbp();
   }
@@ -474,8 +472,8 @@ class UserOpInferNdSbpFnContext : public user_op::InferNdSbpFnContext {
  private:
   const UserOp* op_;
   HashMap<std::pair<std::string, int32_t>, user_op::NaiveTensorDesc> arg2tensor_desc_;
-  cfg::NdSbpSignature* nd_sbp_signature_;
-  cfg::NdSbpSignature nd_sbp_constraints_;
+  NdSbpSignature* nd_sbp_signature_;
+  NdSbpSignature nd_sbp_constraints_;
   std::function<Maybe<const NdSbpInferHint*>(const std::string&)> nd_sbp_infer_hint4ibn_fn_;
 };
 
@@ -667,8 +665,8 @@ LogicalBlobId UserOp::lbi4obn(const std::string& output_bn) const {
 }
 
 Maybe<void> UserOp::InferSbpSignature(
-    cfg::SbpSignature* sbp_signature, const cfg::SbpSignature& sbp_sig_conf,
-    const std::function<int32_t(const cfg::SbpSignature&)>& CalcOrderValue4SbpSig,
+    SbpSignature* sbp_signature, const SbpSignature& sbp_sig_conf,
+    const std::function<int32_t(const SbpSignature&)>& CalcOrderValue4SbpSig,
     std::function<Maybe<const SbpInferHint*>(const std::string&)> SbpInferHint4Ibn,
     const ParallelDesc& parallel_desc) const {
   if (val_->sbp_signature_infer_fn) {
@@ -682,7 +680,7 @@ Maybe<void> UserOp::InferSbpSignature(
 
 Maybe<void> UserOp::GetSbpSignatures(
     const std::function<Maybe<const BlobDesc&>(const std::string&)>& LogicalBlobDesc4Ibn,
-    const ParallelDesc& parallel_desc, cfg::SbpSignatureList* sbp_sig_list) const {
+    const ParallelDesc& parallel_desc, SbpSignatureList* sbp_sig_list) const {
   CHECK_OR_RETURN(val_ != nullptr)
       << "cannot find op_type: " << op_conf().user_conf().op_type_name() << " in op registry!";
   UserOpSbpContext sbp_ctx(this, sbp_sig_list, LogicalBlobDesc4Ibn);
@@ -747,7 +745,7 @@ bool IgnoreInferNdSbpFnWhenFlatHierarchy(const std::string& op_type_name) {
 }  // namespace
 
 Maybe<void> UserOp::InferNdSbpSignature(
-    cfg::NdSbpSignature* nd_sbp_signature, const cfg::NdSbpSignature& nd_sbp_constraints,
+    NdSbpSignature* nd_sbp_signature, const NdSbpSignature& nd_sbp_constraints,
     const ParallelDesc& parallel_desc,
     std::function<Maybe<const NdSbpInferHint*>(const std::string&)> NdSbpInferHint4Ibn) const {
   if (val_->nd_sbp_infer_fn

@@ -53,19 +53,22 @@ class TestLocalInplace(oneflow.unittest.TestCase):
 class TestConsistentInplace(oneflow.unittest.TestCase):
     def test_graph_inplace_gpu(test_case):
         x = flow.randn(
-            10, 10, placement=flow.placement("cuda", {0: [0, 1]}), sbp=flow.sbp.split(1)
+            10,
+            10,
+            placement=flow.placement("cuda", ranks=[0, 1]),
+            sbp=flow.sbp.split(1),
         )
         y = flow.ones(
-            10, placement=flow.placement("cuda", {0: [0, 1]}), sbp=flow.sbp.broadcast
+            10, placement=flow.placement("cuda", ranks=[0, 1]), sbp=flow.sbp.broadcast
         )
         _test_graph_lazy_inplace(test_case, x, y)
 
     def test_graph_inplace_cpu(test_case):
         x = flow.randn(
-            10, 10, placement=flow.placement("cpu", {0: [0, 1]}), sbp=flow.sbp.split(1)
+            10, 10, placement=flow.placement("cpu", ranks=[0, 1]), sbp=flow.sbp.split(1)
         )
         y = flow.ones(
-            10, placement=flow.placement("cpu", {0: [0, 1]}), sbp=flow.sbp.broadcast
+            10, placement=flow.placement("cpu", ranks=[0, 1]), sbp=flow.sbp.broadcast
         )
         _test_graph_lazy_inplace(test_case, x, y)
 

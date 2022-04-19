@@ -31,7 +31,7 @@ void TRTInt8Calibrator::setBatchSize(const int batch_size) {  // NOLINT
 }
 
 // set the batch size before constructing the thread to execute engine
-int TRTInt8Calibrator::getBatchSize() const {  // NOLINT
+int TRTInt8Calibrator::getBatchSize() const TRT_OPTIONAL_NOEXCEPT {  // NOLINT
   return batch_size_;
 }
 
@@ -115,7 +115,7 @@ bool TRTInt8Calibrator::setBatch(const std::vector<const Parameter*>& params) {
 }
 
 bool TRTInt8Calibrator::getBatch(void** bindings, const char** names,  // NOLINT
-                                 int num_bindings) {
+                                 int num_bindings) TRT_OPTIONAL_NOEXCEPT {
   std::unique_lock<std::mutex> lk(cond_mtx_);
   // Notify finish of last round of calibration.
   calib_running_ = false;
@@ -151,14 +151,14 @@ bool TRTInt8Calibrator::isDone() const {
   return done_;
 }
 
-const void* TRTInt8Calibrator::readCalibrationCache(size_t& length) {
+const void* TRTInt8Calibrator::readCalibrationCache(size_t& length) TRT_OPTIONAL_NOEXCEPT {
   if (calibration_table_.empty()) return nullptr;
   length = calibration_table_.size();
   return calibration_table_.data();
 }
 
 void TRTInt8Calibrator::writeCalibrationCache(const void* ptr,  // NOLINT
-                                              std::size_t length) {
+                                              std::size_t length) TRT_OPTIONAL_NOEXCEPT {
   calibration_table_ = std::string((const char*)ptr, length);
 }
 

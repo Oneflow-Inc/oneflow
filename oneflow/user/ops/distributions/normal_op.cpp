@@ -36,7 +36,7 @@ namespace oneflow {
 }
 
 /* static */ Maybe<void> NormalOp::InferNdSbp(user_op::InferNdSbpFnContext* ctx) {
-  cfg::SbpParallel default_sbp;
+  SbpParallel default_sbp;
   default_sbp.mutable_broadcast_parallel();
   return user_op::InferNdSbp4SrcOp(ctx, default_sbp);
 }

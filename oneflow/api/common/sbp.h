@@ -18,7 +18,7 @@ limitations under the License.
 #define ONEFLOW_API_COMMON_SBP_H_
 
 #include "oneflow/core/job/sbp_parallel.pb.h"
-#include "oneflow/core/job/sbp_parallel.cfg.h"
+#include "oneflow/core/job/sbp_parallel.h"
 #include "oneflow/core/common/symbol.h"
 #include "oneflow/core/common/maybe.h"
 
@@ -26,7 +26,7 @@ namespace oneflow {
 
 namespace api {
 
-inline Maybe<std::string> SbpToString(Symbol<cfg::SbpParallel> sbp_sym) {
+inline Maybe<std::string> SbpToString(Symbol<SbpParallel> sbp_sym) {
   std::string sbp_str = "oneflow.sbp.";
   if (sbp_sym->has_broadcast_parallel()) {
     sbp_str += "broadcast";
@@ -40,7 +40,7 @@ inline Maybe<std::string> SbpToString(Symbol<cfg::SbpParallel> sbp_sym) {
   return sbp_str;
 }
 
-inline Maybe<std::string> NdSbpToString(Symbol<cfg::NdSbp> nd_sbp) {
+inline Maybe<std::string> NdSbpToString(Symbol<NdSbp> nd_sbp) {
   std::string str = "(";
   for (int i = 0; i < nd_sbp->sbp_parallel_size(); ++i) {
     if (i > 0) { str += ", "; }

@@ -98,7 +98,7 @@ void Compiler::Compile(Job* job, Plan* plan, bool need_job_complete) const {
       counter.Decrease();
     } /* thread_pool.AddWork */);
   } /* task_gph->ForEachNode */);
-  counter.WaitUntilCntEqualZero();
+  counter.WaitForeverUntilCntEqualZero();
   // NOTE(levi): release task_gph here to decrise memory peak.
   task_gph.reset();
 

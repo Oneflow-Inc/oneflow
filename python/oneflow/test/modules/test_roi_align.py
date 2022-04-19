@@ -20,7 +20,7 @@ import numpy as np
 import math
 
 import oneflow as flow
-from test_util import GenArgList
+from oneflow.test_utils.test_util import GenArgList
 
 
 input_np = np.array(

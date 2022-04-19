@@ -35,7 +35,7 @@ class MyGraph(flow.nn.Graph):
         super().__init__()
         self.m = module
         sgd = flow.optim.SGD(module.parameters(), lr=1e-3)
-        self.add_optimizer(flow.optim.utils.SparseOptimizer(sgd))
+        self.add_optimizer(sgd, is_sparse=True)
 
     def build(self, input):
         result = self.m(input)
@@ -52,7 +52,7 @@ def _rand_input(placement=None, sbp=None):
 @flow.unittest.skip_unless_1n1d()
 class GraphSparseOptimizerTest(oneflow.unittest.TestCase):
     def test(test_case):
-        PLC = flow.placement("cuda", {0: [0]})
+        PLC = flow.placement("cuda", ranks=[0])
         SBP = flow.sbp.broadcast
         m = MyModule(PLC, SBP)
         graph = MyGraph(m)

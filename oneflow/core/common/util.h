@@ -18,9 +18,7 @@ limitations under the License.
 
 #include "oneflow/core/common/preprocessor.h"
 
-#include <gflags/gflags.h>
 #include <glog/logging.h>
-#include <gtest/gtest.h>
 #include <algorithm>
 #include <atomic>
 #include <condition_variable>
@@ -41,8 +39,6 @@ limitations under the License.
 #include "oneflow/core/common/meta_util.hpp"
 #include "oneflow/core/common/global.h"
 #include "oneflow/core/common/cpp_attribute.h"
-
-DECLARE_string(log_dir);
 
 #define CHECK_ISNULL(e) CHECK((e) == nullptr)
 
@@ -170,7 +166,8 @@ inline uint32_t NewRandomSeed() {
 #define DIM_SEQ           \
   OF_PP_MAKE_TUPLE_SEQ(1) \
   OF_PP_MAKE_TUPLE_SEQ(2) \
-  OF_PP_MAKE_TUPLE_SEQ(3) OF_PP_MAKE_TUPLE_SEQ(4) OF_PP_MAKE_TUPLE_SEQ(5) OF_PP_MAKE_TUPLE_SEQ(6)
+  OF_PP_MAKE_TUPLE_SEQ(3) \
+  OF_PP_MAKE_TUPLE_SEQ(4) OF_PP_MAKE_TUPLE_SEQ(5) OF_PP_MAKE_TUPLE_SEQ(6) OF_PP_MAKE_TUPLE_SEQ(7)
 
 #define BOOL_SEQ (true)(false)
 
@@ -238,6 +235,8 @@ class RoundModeGuard final {
 bool ParseBooleanFromEnv(const std::string& env_var, bool default_value);
 
 int64_t ParseIntegerFromEnv(const std::string& env_var, int64_t default_value);
+
+double ParseFloatFromEnv(const std::string& env_var, double default_value);
 
 std::string GetStringFromEnv(const std::string& env_var, const std::string& default_value);
 

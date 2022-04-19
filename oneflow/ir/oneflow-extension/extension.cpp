@@ -14,16 +14,18 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 #include "mlir/Parser.h"
-#include "mlir/Dialect/Linalg/IR/LinalgTypes.h"
 #include "mlir/Dialect/StandardOps/IR/Ops.h"
+#include "mlir/Dialect/Linalg/IR/Linalg.h"
 #include "mlir/ExecutionEngine/ExecutionEngine.h"
 #include "mlir/ExecutionEngine/MemRefUtils.h"
 #include "mlir/Target/LLVMIR/Dialect/LLVMIR/LLVMToLLVMIRTranslation.h"
 #include "llvm/Support/TargetSelect.h"
 #include "OneFlow/OneFlowDialect.h"
+#include "oneflow/core/common/str_util.h"
 #include "oneflow/core/common/switch_func.h"
 #include "oneflow/core/framework/framework.h"
 #include "oneflow/core/kernel/new_kernel_util.h"
+#include "oneflow/core/persistence/tee_persistent_log_stream.h"
 #include "oneflow/ir/include/OneFlow/Passes.h"
 #include "oneflow/ir/include/OneFlow/Extension.h"
 
@@ -132,7 +134,7 @@ llvm::SmallVector<OpaqueMemRefDescriptor> GetMLIRCInterfaceArgs(
 
 void WithMlirContext(
     user_op::KernelComputeContext* ctx, const llvm::SmallVector<llvm::StringRef, 4>& ext_libs,
-    const std::function<mlir::OwningModuleRef(mlir::MLIRContext* mlir_ctx)>& parse,
+    const std::function<mlir::OwningOpRef<mlir::ModuleOp>(mlir::MLIRContext* mlir_ctx)>& parse,
     const std::function<void(mlir::MLIRContext* mlir_ctx, mlir::ModuleOp module)>& lower) {
   mlir::DialectRegistry registry;
   registry
@@ -140,13 +142,19 @@ void WithMlirContext(
               mlir::tosa::TosaDialect, mlir::linalg::LinalgDialect>();
   mlir::registerLLVMDialectTranslation(registry);
   mlir::MLIRContext mlir_ctx(registry);
-  mlir::OwningModuleRef module = parse(&mlir_ctx);
+  mlir::OwningOpRef<mlir::ModuleOp> module = parse(&mlir_ctx);
   CHECK(!!module) << "fail to parse MLIR, op: " << ctx->op_name();
   if (ParseBooleanFromEnv("ONEFLOW_MLIR_STDOUT", false)) { module->print(llvm::outs()); }
   llvm::InitializeNativeTarget();
   llvm::InitializeNativeTargetAsmPrinter();
   lower(&mlir_ctx, *module);
   if (ParseBooleanFromEnv("ONEFLOW_MLIR_STDOUT", false)) { module->print(llvm::outs()); }
+  if (ParseBooleanFromEnv("ONEFLOW_MLIR_DUMP_IR", false)) {
+    std::string mlir;
+    llvm::raw_string_ostream os_mlir(mlir);
+    module->print(os_mlir);
+    TeePersistentLogStream::Create(JoinPath("jit", ctx->op_name() + ".mlir"))->Write(mlir);
+  }
   auto jit_or_error = mlir::ExecutionEngine::create(
       /* m */ *module, /* llvmModuleBuilder */ nullptr, /* transformer */ {},
       /* jitCodeGenOptLevel */ llvm::None, /* sharedLibPaths */ ext_libs);

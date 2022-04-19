@@ -36,7 +36,7 @@ struct AvgPoolingCaptureState : public AutoGradCaptureState {
   std::vector<int32_t> stride;
   bool ceil_mode;
   bool count_include_pad;
-  int64_t divisor_override;
+  int32_t divisor_override;
 };
 
 class AvgPoolingNdGrad : public OpExprGradFunction<AvgPoolingCaptureState> {
@@ -74,7 +74,7 @@ Maybe<void> AvgPoolingNdGrad::Capture(AvgPoolingCaptureState* ctx, const TensorT
   ctx->stride = JUST(composed_attrs.GetAttr<std::vector<int32_t>>("stride"));
   ctx->ceil_mode = JUST(composed_attrs.GetAttr<bool>("ceil_mode"));
   ctx->count_include_pad = JUST(composed_attrs.GetAttr<bool>("count_include_pad"));
-  ctx->divisor_override = JUST(composed_attrs.GetAttr<int64_t>("divisor_override"));
+  ctx->divisor_override = JUST(composed_attrs.GetAttr<int32_t>("divisor_override"));
 
   return Maybe<void>::Ok();
 }

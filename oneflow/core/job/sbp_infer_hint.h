@@ -16,7 +16,7 @@ limitations under the License.
 #ifndef ONEFLOW_CORE_JOB_SBP_INFER_HINT_H_
 #define ONEFLOW_CORE_JOB_SBP_INFER_HINT_H_
 
-#include "oneflow/core/job/sbp_parallel.cfg.h"
+#include "oneflow/core/job/sbp_parallel.pb.h"
 #include "oneflow/core/job/parallel_desc.h"
 #include "oneflow/core/register/blob_desc.h"
 
@@ -25,7 +25,7 @@ namespace oneflow {
 class SbpInferHint final {
  public:
   SbpInferHint(const ParallelDesc* parallel_desc, const BlobDesc* logical_blob_desc,
-               const cfg::SbpParallel* sbp_parallel)
+               const SbpParallel* sbp_parallel)
       : parallel_desc_(parallel_desc),
         logical_blob_desc_(logical_blob_desc),
         sbp_parallel_(sbp_parallel) {}
@@ -35,12 +35,12 @@ class SbpInferHint final {
   // Getters
   const ParallelDesc& parallel_desc() const { return *parallel_desc_; }
   const BlobDesc& logical_blob_desc() const { return *logical_blob_desc_; }
-  const cfg::SbpParallel& sbp_parallel() const { return *sbp_parallel_; }
+  const SbpParallel& sbp_parallel() const { return *sbp_parallel_; }
 
  private:
   const ParallelDesc* parallel_desc_;
   const BlobDesc* logical_blob_desc_;
-  const cfg::SbpParallel* sbp_parallel_;
+  const SbpParallel* sbp_parallel_;
 };
 
 }  // namespace oneflow

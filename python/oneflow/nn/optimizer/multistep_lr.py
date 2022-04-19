@@ -13,10 +13,13 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 """
-from .lr_scheduler import LrScheduler
+import bisect
+
+from .optimizer import Optimizer
+from .lr_scheduler import LRScheduler
 
 
-class MultiStepLR(LrScheduler):
+class MultiStepLR(LRScheduler):
     """
     Decays the learning rate of each parameter group by gamma once the number of step 
     reaches one of the milestones. Notice that such decay can happen simultaneously with 
@@ -45,11 +48,11 @@ class MultiStepLR(LrScheduler):
 
     def __init__(
         self,
-        optimizer,
+        optimizer: Optimizer,
         milestones: list,
         gamma: float = 0.1,
-        last_step=-1,
-        verbose=False,
+        last_step: int = -1,
+        verbose: bool = False,
     ):
         for i in range(1, len(milestones)):
             assert (
@@ -60,17 +63,13 @@ class MultiStepLR(LrScheduler):
         self.gamma = gamma
         super().__init__(optimizer, last_step, verbose)
 
-    def get_lr(self):
-        if self.last_step not in self.milestones:
-            return [group["lr"] for group in self._optimizer.param_groups]
-        else:
-            return [group["lr"] * self.gamma for group in self._optimizer.param_groups]
+    def get_lr(self, base_lr, step):
+        sect = bisect.bisect_right(self.milestones, step)
+        factor = self.gamma ** sect
+        return base_lr * factor
 
-    def _generate_conf_for_graph(self, opt_confs):
-        for opt_conf in opt_confs:
-            learning_rate_decay_conf = opt_conf.mutable_learning_rate_decay()
-            for milestone in self.milestones:
-                learning_rate_decay_conf.mutable_multi_step_conf().add_milestones(
-                    milestone
-                )
-            learning_rate_decay_conf.mutable_multi_step_conf().set_gamma(self.gamma)
+    def _generate_conf_for_graph(self, lr_conf):
+        multi_step_conf = lr_conf.mutable_multi_step_conf()
+        for milestone in self.milestones:
+            multi_step_conf.add_milestones(milestone)
+        multi_step_conf.set_gamma(self.gamma)

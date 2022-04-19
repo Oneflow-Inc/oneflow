@@ -14,7 +14,6 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 #include "oneflow/core/graph/task_graph.h"
-#include "oneflow/core/common/multi_client.h"
 #include "oneflow/core/common/util.h"
 #include "oneflow/core/graph/inplace_lbi_graph.h"
 #include "oneflow/core/register/blob_desc.h"
@@ -293,7 +292,7 @@ void GenSortedCompTaskNodes(const OpNode* op_node, std::vector<CompTaskNode*>* s
       StreamId::stream_index_t stream_index = 0;
       if (op_node->op().op_conf().has_stream_name_hint()) {
         const std::string& stream_name_hint = op_node->op().op_conf().stream_name_hint();
-        LOG(INFO) << "set op: " << op_node->op().op_name() << " to stream: " << stream_name_hint;
+        VLOG(3) << "set op: " << op_node->op().op_name() << " to stream: " << stream_name_hint;
         stream_index = Global<TaskStreamIndexManager>::Get()->GetNamedTaskStreamIndex(
             device_id, stream_name_hint);
       } else {
@@ -313,8 +312,8 @@ bool IsConnectedLbisAllSameNdSbp(const OpEdge* op_edge) {
   CHECK_GT(op_edge->lbis().size(), 0);
   HashSet<bool> predicators;
   for (const LogicalBlobId& lbi : op_edge->lbis()) {
-    const cfg::NdSbp& src_nd_sbp = src_node->NdSbp4Lbi(lbi);
-    const cfg::NdSbp& dst_nd_sbp = dst_node->NdSbp4Lbi(lbi);
+    const NdSbp& src_nd_sbp = src_node->NdSbp4Lbi(lbi);
+    const NdSbp& dst_nd_sbp = dst_node->NdSbp4Lbi(lbi);
     predicators.insert(src_nd_sbp == dst_nd_sbp);
   }
   CHECK_EQ(predicators.size(), 1);
@@ -717,8 +716,8 @@ DEFINE_BLD_SUB_TASK_GRAPH_METHOD(BldSubTskGphByBoxing) {
     std::vector<TaskNode*> out_nodes;
     out_nodes.reserve(sorted_dst_comp_tasks.size());
     std::vector<std::vector<TaskNode*>> sorted_ctrl_tasks;
-    const cfg::NdSbp& src_nd_sbp = src_op_node->NdSbp4Lbi(lbi);
-    const cfg::NdSbp& dst_nd_sbp = dst_op_node->NdSbp4Lbi(lbi);
+    const NdSbp& src_nd_sbp = src_op_node->NdSbp4Lbi(lbi);
+    const NdSbp& dst_nd_sbp = dst_op_node->NdSbp4Lbi(lbi);
     const ParallelDesc& src_parallel_desc = src_op_node->parallel_desc();
     const ParallelDesc& dst_parallel_desc = dst_op_node->parallel_desc();
     const BlobDesc& blob_desc = src_op_node->LogicalBlobDesc4Lbi(lbi);

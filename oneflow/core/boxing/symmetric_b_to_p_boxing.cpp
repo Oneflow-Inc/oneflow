@@ -25,14 +25,14 @@ namespace oneflow {
 
 namespace {
 
-bool IsAllBroadcastNdSbp(Symbol<cfg::NdSbp> nd_sbp) {
+bool IsAllBroadcastNdSbp(Symbol<NdSbp> nd_sbp) {
   for (const auto& sbp_parallel : nd_sbp->sbp_parallel()) {
     if (!sbp_parallel.has_broadcast_parallel()) { return false; }
   }
   return true;
 }
 
-bool IsAllPartialSumNdSbp(Symbol<cfg::NdSbp> nd_sbp) {
+bool IsAllPartialSumNdSbp(Symbol<NdSbp> nd_sbp) {
   for (const auto& sbp_parallel : nd_sbp->sbp_parallel()) {
     if (!sbp_parallel.has_partial_sum_parallel()) { return false; }
   }
@@ -50,7 +50,8 @@ Maybe<void> RawCheckSymmetricBToP(Symbol<PlacedNdSbp> in, Symbol<PlacedNdSbp> ou
   return Maybe<void>::Ok();
 }
 
-static constexpr auto* CheckSymmetricBToP = DECORATE(&RawCheckSymmetricBToP, ThreadLocalCopiable);
+static constexpr auto* CheckSymmetricBToP =
+    DECORATE(&RawCheckSymmetricBToP, ThreadLocalCachedCopiable);
 
 }  // namespace
 
@@ -66,7 +67,6 @@ Maybe<one::Tensor> SymmetricBToP(const std::shared_ptr<one::Tensor>& tensor, Sym
   if (root == GlobalProcessCtx::Rank()) {
     // do nothing
   } else {
-    const std::string& device_type = Device::Type4DeviceTag(tensor_placement->device_tag());
     local_tensor = JUST(one::functional::ZerosLike(local_tensor));
   }
   return JUST(one::functional::LocalToConsistent(local_tensor, out->placement(),

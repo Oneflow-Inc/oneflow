@@ -55,7 +55,7 @@ class IdentityOpTpl final : public Operator {
  private:
   Maybe<void> GetSbpSignatures(
       const std::function<Maybe<const BlobDesc&>(const std::string&)>& LogicalBlobDesc4Ibn,
-      cfg::SbpSignatureList* sbp_sig_list) const override {
+      SbpSignatureList* sbp_sig_list) const override {
     const auto bns = StdVec2PbRpf<std::string>({"in", "out"});
     SbpSignatureBuilder().PartialSum(bns).Build(sbp_sig_list->mutable_sbp_signature()->Add());
     const int64_t num_axes = JUST(LogicalBlobDesc4Ibn("in")).shape().NumAxes();
@@ -109,8 +109,7 @@ class CastToMirroredOp : public MirroredCastOp {
       const ParallelDesc& parallel_desc) const override {
     BlobDesc* out = BlobDesc4BnInOp("out");
     *out = *BlobDesc4BnInOp("in");
-    const cfg::SbpParallel& conf_sbp =
-        cfg::SbpParallel(op_conf().cast_to_mirrored_conf().sbp_parallel());
+    const SbpParallel& conf_sbp = SbpParallel(op_conf().cast_to_mirrored_conf().sbp_parallel());
     if (conf_sbp.has_split_parallel()) {
       const int64_t axis = conf_sbp.split_parallel().axis();
       CHECK_GE_OR_RETURN(axis, 0);
@@ -124,8 +123,8 @@ class CastToMirroredOp : public MirroredCastOp {
   }
 
   Maybe<void> InferSbpSignature(
-      cfg::SbpSignature* sbp_signature, const cfg::SbpSignature& sbp_sig_conf,
-      const std::function<int32_t(const cfg::SbpSignature&)>& CalcOrderValue4SbpSig,
+      SbpSignature* sbp_signature, const SbpSignature& sbp_sig_conf,
+      const std::function<int32_t(const SbpSignature&)>& CalcOrderValue4SbpSig,
       std::function<Maybe<const SbpInferHint*>(const std::string&)> SbpInferHint4Ibn,
       const ParallelDesc& parallel_desc) const override {
     CHECK_NE_OR_RETURN(op_conf().cast_to_mirrored_conf().sbp_parallel().parallel_type_case(),
@@ -134,8 +133,7 @@ class CastToMirroredOp : public MirroredCastOp {
     const auto& ibn_hint = *JUST(SbpInferHint4Ibn("in"));
     CHECK_EQ_OR_RETURN(ibn_hint.parallel_desc().parallel_num(), parallel_desc.parallel_num());
     auto* map = sbp_signature->mutable_bn_in_op2sbp_parallel();
-    const cfg::SbpParallel& conf_sbp =
-        cfg::SbpParallel(op_conf().cast_to_mirrored_conf().sbp_parallel());
+    const SbpParallel& conf_sbp = SbpParallel(op_conf().cast_to_mirrored_conf().sbp_parallel());
     CHECK_OR_RETURN(ibn_hint.sbp_parallel() == conf_sbp);
     (*map)["in"] = ibn_hint.sbp_parallel();
     (*map)["out"] = conf_sbp;
@@ -173,8 +171,7 @@ class CastFromMirroredOp : public MirroredCastOp {
       const ParallelDesc& parallel_desc) const override {
     BlobDesc* out = BlobDesc4BnInOp("out");
     *out = *BlobDesc4BnInOp("in");
-    const cfg::SbpParallel& conf_sbp =
-        cfg::SbpParallel(op_conf().cast_from_mirrored_conf().sbp_parallel());
+    const SbpParallel& conf_sbp = SbpParallel(op_conf().cast_from_mirrored_conf().sbp_parallel());
     if (conf_sbp.has_split_parallel()) {
       const int64_t axis = conf_sbp.split_parallel().axis();
       CHECK_GE_OR_RETURN(axis, 0);
@@ -184,8 +181,8 @@ class CastFromMirroredOp : public MirroredCastOp {
     return Maybe<void>::Ok();
   }
   Maybe<void> InferSbpSignature(
-      cfg::SbpSignature* sbp_signature, const cfg::SbpSignature& sbp_sig_conf,
-      const std::function<int32_t(const cfg::SbpSignature&)>& CalcOrderValue4SbpSig,
+      SbpSignature* sbp_signature, const SbpSignature& sbp_sig_conf,
+      const std::function<int32_t(const SbpSignature&)>& CalcOrderValue4SbpSig,
       std::function<Maybe<const SbpInferHint*>(const std::string&)> SbpInferHint4Ibn,
       const ParallelDesc& parallel_desc) const override {
     CHECK_NE_OR_RETURN(op_conf().cast_from_mirrored_conf().sbp_parallel().parallel_type_case(),
@@ -195,7 +192,7 @@ class CastFromMirroredOp : public MirroredCastOp {
     CHECK_EQ_OR_RETURN(ibn_hint.parallel_desc().parallel_num(), parallel_desc.parallel_num());
     auto* map = sbp_signature->mutable_bn_in_op2sbp_parallel();
     (*map)["in"] = ibn_hint.sbp_parallel();
-    (*map)["out"] = cfg::SbpParallel(op_conf().cast_from_mirrored_conf().sbp_parallel());
+    (*map)["out"] = SbpParallel(op_conf().cast_from_mirrored_conf().sbp_parallel());
     return Maybe<void>::Ok();
   }
   Maybe<void> InferMirroredSignature(

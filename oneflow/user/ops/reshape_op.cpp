@@ -30,13 +30,6 @@ namespace oneflow {
       in_shape, *outshape, {{"in", 0}}, {{"out", 0}}, ctx->parallel_num(), &builder);
 }
 
-/*static*/ Maybe<void> ReshapeOp::InferNdSbp(user_op::InferNdSbpFnContext* ctx) {
-  const Shape& in_shape = ctx->LogicalTensorDesc4InputArgNameAndIndex("in", 0).shape();
-  const Shape& shape = ctx->user_op_conf().attr<Shape>("shape");
-  const auto& out_shape = JUST(ReshapeUserOpUtil::GetLogicalOutBlobShape(in_shape, shape));
-  return ReshapeUserOpUtil::InferNdSbp(ctx, in_shape, *out_shape);
-}
-
 /*static*/ Maybe<void> ReshapeOp::InferLogicalTensorDesc(user_op::InferContext* ctx) {
   Shape shape = ctx->Attr<Shape>("shape");
   const user_op::TensorDesc& in_tensor_desc = ctx->InputTensorDesc("in", 0);

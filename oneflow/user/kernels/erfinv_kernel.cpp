@@ -14,7 +14,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 #include "oneflow/core/framework/framework.h"
-#include <math.h>
+#include <cmath>
 namespace oneflow {
 
 template<typename T>
@@ -31,6 +31,7 @@ class CpuErfinvKernel final : public user_op::OpKernel {
     const T* x_ptr = x->dptr<T>();
     T* y_ptr = y->mut_dptr<T>();
     constexpr float central_range = 0.7;
+    const T temp = static_cast<T>(2.0) / static_cast<T>(std::sqrt(M_PI));
     T a[4] = {T(0.886226899), T(-1.645349621), T(0.914624893), T(-0.140543331)};
     T b[4] = {T(-2.118377725), T(1.442710462), T(-0.329097515), T(0.012229801)};
     T c[4] = {T(-1.970840454), T(-1.624906493), T(3.429567803), T(1.641345311)};
@@ -39,8 +40,14 @@ class CpuErfinvKernel final : public user_op::OpKernel {
       T z, num, dem;
       T x = x_ptr[i];  // Promise the correctness of inplace version.
       T x_abs = std::abs(x);
-      if (x_abs > 1.0) y_ptr[i] = std::numeric_limits<T>::quiet_NaN();
-      if (x_abs == 1.0) y_ptr[i] = std::copysign(std::numeric_limits<T>::infinity(), x);
+      if (x_abs > 1.0) {
+        y_ptr[i] = std::numeric_limits<T>::quiet_NaN();
+        continue;
+      }
+      if (x_abs == 1.0) {
+        y_ptr[i] = std::copysign(std::numeric_limits<T>::infinity(), x);
+        continue;
+      }
       if (x_abs <= static_cast<T>(central_range)) {
         z = x * x;
         num = (((a[3] * z + a[2]) * z + a[1]) * z + a[0]);
@@ -52,14 +59,8 @@ class CpuErfinvKernel final : public user_op::OpKernel {
         dem = (d[1] * z + d[0]) * z + static_cast<T>(1.0);
         y_ptr[i] = std::copysign(num, x) / dem;
       }
-      y_ptr[i] = y_ptr[i]
-                 - (std::erf(y_ptr[i]) - x)
-                       / ((static_cast<T>(2.0) / static_cast<T>(std::sqrt(M_PI)))
-                          * std::exp(-y_ptr[i] * y_ptr[i]));
-      y_ptr[i] = y_ptr[i]
-                 - (std::erf(y_ptr[i]) - x)
-                       / ((static_cast<T>(2.0) / static_cast<T>(std::sqrt(M_PI)))
-                          * std::exp(-y_ptr[i] * y_ptr[i]));
+      y_ptr[i] = y_ptr[i] - (std::erf(y_ptr[i]) - x) / (temp * std::exp(-y_ptr[i] * y_ptr[i]));
+      y_ptr[i] = y_ptr[i] - (std::erf(y_ptr[i]) - x) / (temp * std::exp(-y_ptr[i] * y_ptr[i]));
     }
   }
 

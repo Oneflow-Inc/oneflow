@@ -29,8 +29,8 @@ namespace oneflow {
 
 namespace {
 
-Maybe<Symbol<cfg::NdSbp>> GetAllSplitNdSbp(int64_t axis, int64_t ndim) {
-  cfg::NdSbp split_nd_sbp;
+Maybe<Symbol<NdSbp>> GetAllSplitNdSbp(int64_t axis, int64_t ndim) {
+  NdSbp split_nd_sbp;
   for (int64_t i = 0; i < ndim; ++i) {
     split_nd_sbp.mutable_sbp_parallel()->Add()->mutable_split_parallel()->set_axis(axis);
   }
@@ -39,8 +39,8 @@ Maybe<Symbol<cfg::NdSbp>> GetAllSplitNdSbp(int64_t axis, int64_t ndim) {
 
 auto* CachedGetAllSplitNdSbp = DECORATE(&GetAllSplitNdSbp, ThreadLocal);
 
-Maybe<Symbol<cfg::NdSbp>> GetAllBroadcastNdSbp(int64_t ndim) {
-  cfg::NdSbp split_nd_sbp;
+Maybe<Symbol<NdSbp>> GetAllBroadcastNdSbp(int64_t ndim) {
+  NdSbp split_nd_sbp;
   for (int64_t i = 0; i < ndim; ++i) {
     split_nd_sbp.mutable_sbp_parallel()->Add()->mutable_broadcast_parallel();
   }
@@ -145,9 +145,7 @@ size_t InferEagerBToSKernelTmpBufferSize(user_op::InferContext* ctx) {
   if (out_parallel_num > 1) {
     CHECK_LT(out_split_axis, shape.NumAxes());
     BalancedSplitter bs(shape.At(out_split_axis), out_parallel_num);
-    const auto& opt_parallel_id = CHECK_JUST(GetParallelId4CurrentProcessCtx(out_parallel_desc));
-    int64_t parallel_id = opt_parallel_id->value_or(0);
-    shape.Set(out_split_axis, bs.At(parallel_id).size());
+    shape.Set(out_split_axis, bs.At(0).size());
   }
   size_t tensor_byte_size = shape.elem_cnt() * GetSizeOfDataType(in_tensor.data_type());
   return tensor_byte_size;
@@ -161,8 +159,9 @@ class EagerBToSKernel final : public user_op::OpKernel {
   EagerBToSKernel() = default;
   ~EagerBToSKernel() override = default;
 
-  void InitOpKernelCache(user_op::KernelCacheContext* ctx, int8_t flag,
-                         std::shared_ptr<user_op::OpKernelCache>* cache_ptr) const override {
+  void InitOpKernelCacheWithFlags(
+      user_op::KernelCacheContext* ctx, int8_t flag,
+      std::shared_ptr<user_op::OpKernelCache>* cache_ptr) const override {
     if (*cache_ptr == nullptr) { *cache_ptr = std::make_shared<EagerBToSOpKernelCache>(ctx); }
   }
 

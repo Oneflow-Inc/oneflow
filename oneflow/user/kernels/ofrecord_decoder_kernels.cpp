@@ -25,8 +25,10 @@ limitations under the License.
 #include "oneflow/user/kernels/random_crop_kernel_state.h"
 #include "oneflow/user/kernels/op_kernel_wrapper.h"
 #include "oneflow/user/kernels/random_seed_util.h"
+#include "oneflow/user/image/jpeg_decoder.h"
 
 #include <opencv2/opencv.hpp>
+#include <jpeglib.h>
 
 namespace oneflow {
 
@@ -171,40 +173,27 @@ void DecodeRandomCropImageFromOneRecord(const OFRecord& record, TensorBuffer* bu
   CHECK(feature.has_bytes_list());
   CHECK(feature.bytes_list().value_size() == 1);
   const std::string& src_data = feature.bytes_list().value(0);
+  cv::Mat image;
 
-  // cv::_InputArray image_data(src_data.data(), src_data.size());
-  // cv::Mat image = cv::imdecode(image_data, cv::IMREAD_ANYCOLOR);
-  cv::Mat image =
-      cv::imdecode(cv::Mat(1, src_data.size(), CV_8UC1, (void*)(src_data.data())),  // NOLINT
-                   ImageUtil::IsColor(color_space) ? cv::IMREAD_COLOR : cv::IMREAD_GRAYSCALE);
+  if (JpegPartialDecodeRandomCropImage(reinterpret_cast<const unsigned char*>(src_data.data()),
+                                       src_data.size(), random_crop_gen, nullptr, 0, &image)) {
+    // convert color space
+    // jpeg decode output RGB
+    if (ImageUtil::IsColor(color_space) && color_space != "RGB") {
+      ImageUtil::ConvertColor("RGB", image, color_space, image);
+    }
+  } else {
+    OpenCvPartialDecodeRandomCropImage(reinterpret_cast<const unsigned char*>(src_data.data()),
+                                       src_data.size(), random_crop_gen, color_space, image);
+    // convert color space
+    // opencv decode output BGR
+    if (ImageUtil::IsColor(color_space) && color_space != "BGR") {
+      ImageUtil::ConvertColor("BGR", image, color_space, image);
+    }
+  }
+
   int W = image.cols;
   int H = image.rows;
-
-  // random crop
-  if (random_crop_gen != nullptr) {
-    CHECK(image.data != nullptr);
-    cv::Mat image_roi;
-    CropWindow crop;
-    random_crop_gen->GenerateCropWindow({H, W}, &crop);
-    const int y = crop.anchor.At(0);
-    const int x = crop.anchor.At(1);
-    const int newH = crop.shape.At(0);
-    const int newW = crop.shape.At(1);
-    CHECK(newW > 0 && newW <= W);
-    CHECK(newH > 0 && newH <= H);
-    cv::Rect roi(x, y, newW, newH);
-    image(roi).copyTo(image_roi);
-    image = image_roi;
-    W = image.cols;
-    H = image.rows;
-    CHECK(W == newW);
-    CHECK(H == newH);
-  }
-
-  // convert color space
-  if (ImageUtil::IsColor(color_space) && color_space != "BGR") {
-    ImageUtil::ConvertColor("BGR", image, color_space, image);
-  }
 
   CHECK(image.isContinuous());
   const int c = ImageUtil::IsColor(color_space) ? 3 : 1;

@@ -322,23 +322,29 @@ __global__ void IndexedSlicesAdamUpdateGpu(
 
 template<typename T, typename G>
 __global__ void LambGradGpu(int64_t n, T scale, float l1, float l2, float beta1, float beta2,
-                            float epsilon, const T* beta1_t, const T* beta2_t,
-                            const T* scale_by_ptr, const int64_t* skip_if, const G* model_diff,
-                            T* adam_diff, T* model, T* m, T* v) {
+                            float epsilon, const T* scale_by_ptr, const int64_t* skip_if,
+                            const G* model_diff, T* adam_diff, T* model, T* m, T* v,
+                            bool do_bias_correction, float bias_correction1_val,
+                            float bias_correction2_val, const float* bias_correction1_ptr,
+                            const float* bias_correction2_ptr) {
   if (skip_if != nullptr && *skip_if != 0) { return; }
   if (scale_by_ptr != nullptr) { scale *= *scale_by_ptr; }
+  if (bias_correction1_ptr != nullptr) { bias_correction1_val = *bias_correction1_ptr; }
+  if (bias_correction2_ptr != nullptr) { bias_correction2_val = *bias_correction2_ptr; }
   CUDA_1D_KERNEL_LOOP(i, n) {
-    LambGradFunctor<T, G>()(beta1_t, beta2_t, model_diff + i, adam_diff + i, model + i, m + i,
-                            v + i, scale, l1, l2, beta1, beta2, epsilon);
+    LambGradFunctor<T, G>()(model_diff + i, adam_diff + i, model + i, m + i, v + i, scale, l1, l2,
+                            beta1, beta2, epsilon, do_bias_correction, bias_correction1_val,
+                            bias_correction2_val);
   }
 }
 
 template<typename T>
-__global__ void LambUpdateGpu(int64_t n, float weight_decay, const float* learning_rate,
-                              const int64_t* skip_if, const T* w_norm_2, const T* g_norm_2,
-                              const T* beta1_t, const T* beta2_t, const T* adam_diff, T* model) {
+__global__ void LambUpdateGpu(int64_t n, float weight_decay, float learning_rate_val,
+                              const float* learning_rate_ptr, const int64_t* skip_if,
+                              const T* w_norm_2, const T* g_norm_2, const T* adam_diff, T* model) {
   if (skip_if != nullptr && *skip_if != 0) { return; }
-  const float lr = LambLRFunctor<T>()(*learning_rate, w_norm_2, g_norm_2);
+  if (learning_rate_ptr != nullptr) { learning_rate_val = *learning_rate_ptr; }
+  const float lr = LambLRFunctor<T>()(learning_rate_val, w_norm_2, g_norm_2);
   CUDA_1D_KERNEL_LOOP(i, n) { LambUpdateFunctor<T>()(lr, weight_decay, adam_diff + i, model + i); }
 }
 
@@ -447,23 +453,27 @@ template struct AdagradUpdateKernelUtil<DeviceType::kCUDA, double, double>;
 template<typename T, typename G>
 struct LambUpdateKernelUtil<DeviceType::kCUDA, T, G> {
   static void Update(ep::Stream* stream, int64_t n, float scale, float l1, float l2, float beta1,
-                     float beta2, float epsilon, float weight_decay, const float* learning_rate,
+                     float beta2, float epsilon, float weight_decay, float learning_rate_val,
+                     bool do_bias_correction, float bias_correction1_val,
+                     float bias_correction2_val, const float* learning_rate_ptr,
+                     const float* bias_correction1_ptr, const float* bias_correction2_ptr,
                      const T* scale_by_ptr, const int64_t* skip_if, const G* model_diff,
-                     T* adam_diff, T* model, T* m, T* v, T* norm_buffer, T* beta1_t, T* beta2_t);
+                     T* adam_diff, T* model, T* m, T* v, T* norm_buffer);
 };
 
 template<typename T, typename G>
 void LambUpdateKernelUtil<DeviceType::kCUDA, T, G>::Update(
     ep::Stream* stream, int64_t n, float scale, float l1, float l2, float beta1, float beta2,
-    float epsilon, float weight_decay, const float* learning_rate, const T* scale_by_ptr,
-    const int64_t* skip_if, const G* model_diff, T* adam_diff, T* model, T* m, T* v, T* norm_buffer,
-    T* beta1_t, T* beta2_t) {
-  AdamUpdateBetaTGpu<T><<<1, 1, 0, stream->As<ep::CudaStream>()->cuda_stream()>>>(
-      beta1, beta2, skip_if, beta1_t, beta2_t);
+    float epsilon, float weight_decay, float learning_rate_val, bool do_bias_correction,
+    float bias_correction1_val, float bias_correction2_val, const float* learning_rate_ptr,
+    const float* bias_correction1_ptr, const float* bias_correction2_ptr, const T* scale_by_ptr,
+    const int64_t* skip_if, const G* model_diff, T* adam_diff, T* model, T* m, T* v,
+    T* norm_buffer) {
   LambGradGpu<T, G><<<BlocksNum4ThreadsNum(n), kCudaThreadsNumPerBlock, 0,
                       stream->As<ep::CudaStream>()->cuda_stream()>>>(
-      n, scale, l1, l2, beta1, beta2, epsilon, beta1_t, beta2_t, scale_by_ptr, skip_if, model_diff,
-      adam_diff, model, m, v);
+      n, scale, l1, l2, beta1, beta2, epsilon, scale_by_ptr, skip_if, model_diff, adam_diff, model,
+      m, v, do_bias_correction, bias_correction1_val, bias_correction2_val, bias_correction1_ptr,
+      bias_correction2_ptr);
   T* w_norm_2 = norm_buffer;
   T* g_norm_2 = norm_buffer + 1;
   Memset<DeviceType::kCUDA>(stream, norm_buffer, 0, 2 * sizeof(T));
@@ -472,28 +482,34 @@ void LambUpdateKernelUtil<DeviceType::kCUDA, T, G>::Update(
          stream->As<ep::CudaStream>()->cuda_stream()>>>(n, model, w_norm_2, adam_diff, g_norm_2);
   LambUpdateGpu<T><<<BlocksNum4ThreadsNum(n), kCudaThreadsNumPerBlock, 0,
                      stream->As<ep::CudaStream>()->cuda_stream()>>>(
-      n, weight_decay, learning_rate, skip_if, w_norm_2, g_norm_2, beta1_t, beta2_t, adam_diff,
+      n, weight_decay, learning_rate_val, learning_rate_ptr, skip_if, w_norm_2, g_norm_2, adam_diff,
       model);
 }
 
 template<typename T>
 struct LambUpdateKernelUtil<DeviceType::kCUDA, T, float16> {
   static void Update(ep::Stream* stream, int64_t n, float scale, float l1, float l2, float beta1,
-                     float beta2, float epsilon, float weight_decay, const float* learning_rate,
+                     float beta2, float epsilon, float weight_decay, float learning_rate_val,
+                     bool do_bias_correction, float bias_correction1_val,
+                     float bias_correction2_val, const float* learning_rate_ptr,
+                     const float* bias_correction1_ptr, const float* bias_correction2_ptr,
                      const T* scale_by_ptr, const int64_t* skip_if, const float16* model_diff,
-                     T* adam_diff, T* model, T* m, T* v, T* norm_buffer, T* beta1_t, T* beta2_t);
+                     T* adam_diff, T* model, T* m, T* v, T* norm_buffer);
 };
 
 template<typename T>
 void LambUpdateKernelUtil<DeviceType::kCUDA, T, float16>::Update(
     ep::Stream* stream, int64_t n, float scale, float l1, float l2, float beta1, float beta2,
-    float epsilon, float weight_decay, const float* learning_rate, const T* scale_by_ptr,
+    float epsilon, float weight_decay, float learning_rate_val, bool do_bias_correction,
+    float bias_correction1_val, float bias_correction2_val, const float* learning_rate_ptr,
+    const float* bias_correction1_ptr, const float* bias_correction2_ptr, const T* scale_by_ptr,
     const int64_t* skip_if, const float16* model_diff, T* adam_diff, T* model, T* m, T* v,
-    T* norm_buffer, T* beta1_t, T* beta2_t) {
+    T* norm_buffer) {
   LambUpdateKernelUtil<DeviceType::kCUDA, T, half>::Update(
-      stream, n, scale, l1, l2, beta1, beta2, epsilon, weight_decay, learning_rate, scale_by_ptr,
-      skip_if, reinterpret_cast<const half*>(model_diff), adam_diff, model, m, v, norm_buffer,
-      beta1_t, beta2_t);
+      stream, n, scale, l1, l2, beta1, beta2, epsilon, weight_decay, learning_rate_val,
+      do_bias_correction, bias_correction1_val, bias_correction2_val, learning_rate_ptr,
+      bias_correction1_ptr, bias_correction2_ptr, scale_by_ptr, skip_if,
+      reinterpret_cast<const half*>(model_diff), adam_diff, model, m, v, norm_buffer);
 }
 
 template struct LambUpdateKernelUtil<DeviceType::kCUDA, float, float>;
