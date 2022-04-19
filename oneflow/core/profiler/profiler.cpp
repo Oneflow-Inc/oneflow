@@ -132,12 +132,18 @@ std::string DisableProfiler() {
 
 void StartRecord(const std::string& name) {
   auto ermgr = Global<EventRecorderMgr>::Get();
-  if (ermgr != nullptr) { ermgr->AddRecorder(name); }
+  if (ermgr != nullptr) {
+    vm::ClusterSync().GetOrThrow();
+    ermgr->AddRecorder(name);
+  }
 }
 
 void EndRecord(const std::string& name) {
   auto ermgr = Global<EventRecorderMgr>::Get();
-  if (ermgr != nullptr) { ermgr->DeleteRecorder(name); }
+  if (ermgr != nullptr) {
+    vm::ClusterSync().GetOrThrow();
+    ermgr->DeleteRecorder(name);
+  }
 }
 
 }  // namespace profiler

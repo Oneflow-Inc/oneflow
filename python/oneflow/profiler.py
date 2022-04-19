@@ -37,14 +37,17 @@ class profile(object):
         self.result = disable_profiler()
 
     # copy from pytorch: torch/autograd/profiler_util.py
-    def _format_time(self, time_us):
-        US_IN_SECOND = 1000.0 * 1000.0
-        US_IN_MS = 1000.0
-        if time_us >= US_IN_SECOND:
-            return "{:.3f}s".format(time_us / US_IN_SECOND)
-        if time_us >= US_IN_MS:
-            return "{:.3f}ms".format(time_us / US_IN_MS)
-        return "{:.3f}us".format(time_us)
+    def _format_time(self, time_ns):
+        NS_IN_SECOND = 1000.0 * 1000.0 * 1000.0
+        NS_IN_MS = 1000.0 * 1000.0
+        NS_IN_US = 1000.0
+        if time_ns >= NS_IN_SECOND:
+            return "{:.3f}s".format(time_ns / NS_IN_SECOND)
+        if time_ns >= NS_IN_MS:
+            return "{:.3f}ms".format(time_ns / NS_IN_MS)
+        if time_ns >= NS_IN_US:
+            return "{:.3f}us".format(time_ns / NS_IN_US)
+        return "{:.3f}us".format(time_ns)
 
     def table(self):
         result_json = json.loads(self.result)
