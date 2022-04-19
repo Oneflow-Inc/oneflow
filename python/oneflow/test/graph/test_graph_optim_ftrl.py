@@ -23,7 +23,7 @@ from test_util import GenArgList
 from optimizer_test_util import clip_grad_norm_np
 
 import oneflow as flow
-from oneflow.one_embedding import FTRL
+from oneflow.one_embedding import Ftrl
 
 
 def compare_with_numpy_ftrl(
@@ -58,7 +58,7 @@ def compare_with_numpy_ftrl(
     simp_module.to(device)
     simp_module.train()
 
-    ftrl = FTRL(
+    ftrl = Ftrl(
         [
             {
                 "params": simp_module.parameters(),
@@ -161,7 +161,7 @@ def compare_with_numpy_ftrl_clip_grad(
     simp_module.to(device)
     simp_module.train()
 
-    ftrl = FTRL(
+    ftrl = Ftrl(
         [
             {
                 "params": simp_module.parameters(),

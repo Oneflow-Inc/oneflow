@@ -21,4 +21,4 @@ OneFlow one_embedding operations.
 .. autofunction:: oneflow.one_embedding.make_table_options
 .. autofunction:: oneflow.one_embedding.make_table
 .. automodule:: oneflow.one_embedding
-    :members: FTRL
+    :members: Ftrl

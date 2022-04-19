@@ -721,7 +721,7 @@ class MultiTableMultiColumnEmbedding(Embedding):
         )
 
 
-class FTRL(Optimizer):
+class Ftrl(Optimizer):
     r"""FTRL Optimizer. 
 
     The formula is: 

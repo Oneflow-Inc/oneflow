@@ -184,15 +184,13 @@ struct FtrlUpdateFunctor {
     const T next_acc_powered = pow(next_accumulate_val, lr_power);
     const T sigma = (next_acc_powered - acc_powered) * lr_reciprocal;
     const T new_z_val = z_val + model_diff_t - sigma * model_val;
-    if (abs(new_z_val) < lambda1) {
-      // TODO(zhengzekang): Not sure for model_val = 0.0 or 0.0 - learning_rate * weight_decay *
-      // model_val;
-      *model = static_cast<T>(0.0);
-    } else {
-      *model = (copysign(lambda1, new_z_val) - new_z_val)
-                   / ((beta + next_acc_powered) * lr_reciprocal + lambda2)
-               - learning_rate * weight_decay * model_val;
+    T new_model = static_cast<T>(0.0);
+    if (abs(new_z_val) >= lambda1) {
+      new_model = (copysign(lambda1, new_z_val) - new_z_val)
+                      / ((beta + next_acc_powered) * lr_reciprocal + lambda2)
+                  - learning_rate * weight_decay * model_val;
     }
+    *model = new_model;
     *accumulate = next_accumulate_val;
     *z = new_z_val;
   }
