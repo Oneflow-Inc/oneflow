@@ -35,14 +35,10 @@ namespace one {
 
 namespace {
 
-void GatherFunctionNodes(FunctionNode* node, std::vector<std::shared_ptr<FunctionNode>>& stack) {
-  node->ReleaseData();
-
+void GatherFunctionNodes(FunctionNode* node, std::stack<std::shared_ptr<FunctionNode>>& stack) {
   for (auto& prev_node : node->next_functions()) {
     if (prev_node) {
-      // The point from tensor to next node is released by calling ReleaseData.
-      // So prev_node's use_count is 1.
-      if (prev_node.use_count() == 1) { stack.emplace_back(prev_node); }
+      if (prev_node.use_count() == 1) { stack.push(prev_node); }
     }
   }
 }
@@ -58,15 +54,16 @@ void GatherFunctionNodes(FunctionNode* node, std::vector<std::shared_ptr<Functio
  * So we must set a custom deleter and release them iteratively.
  */
 void FunctionNodeDeleter(FunctionNode* node) {
+  std::stack<std::shared_ptr<FunctionNode>> stack;
   node->ReleaseData();
-  std::vector<std::shared_ptr<FunctionNode>> stack;
   GatherFunctionNodes(node, stack);
   delete node;
 
   while (!stack.empty()) {
-    auto node = std::move(stack.back());
-    stack.pop_back();
-    GatherFunctionNodes(node.get(), stack);
+    auto now_node = std::move(stack.top());
+    stack.pop();
+    now_node->ReleaseData();
+    GatherFunctionNodes(now_node.get(), stack);
   }
 }
 
