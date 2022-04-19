@@ -949,11 +949,11 @@ class SearchSortedFunctor {
  public:
   SearchSortedFunctor() {
     sorter_op_ = CHECK_JUST(one::OpBuilder("searchsorted")
-                         .Input("sorted_sequence")
-                         .Input("values")
-                         .Input("sorter")
-                         .Output("out")
-                         .Build());
+                                .Input("sorted_sequence")
+                                .Input("values")
+                                .Input("sorter")
+                                .Output("out")
+                                .Build());
     no_sorter_op_ = CHECK_JUST(one::OpBuilder("searchsorted")
                                    .Input("sorted_sequence")
                                    .Input("values")
@@ -973,8 +973,10 @@ class SearchSortedFunctor {
         << "but got sorted_sequence tensor device type " << JUST(sorted_sequence->device())->type()
         << " and values tensor device type " << JUST(values->device())->type();
     if (sorter) {
-      CHECK_OR_RETURN(JUST(sorted_sequence->device())->type() == JUST(JUST(sorter)->device())->type())
-          << "for searchsorted op, sorter and sorted_sequence tensors should have same device tyep, "
+      CHECK_OR_RETURN(JUST(sorted_sequence->device())->type()
+                      == JUST(JUST(sorter)->device())->type())
+          << "for searchsorted op, sorter and sorted_sequence tensors should have same device "
+             "tyep, "
           << "but got sorter tensor device type " << JUST(JUST(sorter)->device())->type()
           << " and sorted_sequence tensor device type " << JUST(sorted_sequence->device())->type();
       CHECK_OR_RETURN(*sorted_sequence->shape() == *JUST(sorter)->shape())
@@ -1004,7 +1006,8 @@ class SearchSortedFunctor {
     right = (side == "right") || right;
     JUST(attrs.SetAttr<bool>("right", right));
     if (sorter) {
-      return OpInterpUtil::Dispatch<Tensor>(*sorter_op_, {sorted_sequence, values, JUST(sorter)}, attrs);
+      return OpInterpUtil::Dispatch<Tensor>(*sorter_op_, {sorted_sequence, values, JUST(sorter)},
+                                            attrs);
     } else {
       return OpInterpUtil::Dispatch<Tensor>(*no_sorter_op_, {sorted_sequence, values}, attrs);
     }
@@ -1019,10 +1022,10 @@ class SearchSortedScalarFunctor {
  public:
   SearchSortedScalarFunctor() {
     sorter_op_ = CHECK_JUST(one::OpBuilder("searchsorted_scalar")
-                         .Input("sorted_sequence")
-                         .Input("sorter")
-                         .Output("out")
-                         .Build());
+                                .Input("sorted_sequence")
+                                .Input("sorter")
+                                .Output("out")
+                                .Build());
     no_sorter_op_ = CHECK_JUST(
         one::OpBuilder("searchsorted_scalar").Input("sorted_sequence").Output("out").Build());
   }
@@ -1035,8 +1038,10 @@ class SearchSortedScalarFunctor {
     CHECK_OR_RETURN(!right || side == "right")
         << "side and right can't be set to opposites, got side of left while right was True";
     if (sorter) {
-      CHECK_OR_RETURN(JUST(sorted_sequence->device())->type() == JUST(JUST(sorter)->device())->type())
-          << "for searchsorted op, sorter and sorted_sequence tensors should have same device tyep, "
+      CHECK_OR_RETURN(JUST(sorted_sequence->device())->type()
+                      == JUST(JUST(sorter)->device())->type())
+          << "for searchsorted op, sorter and sorted_sequence tensors should have same device "
+             "tyep, "
           << "but got sorter tensor device type " << JUST(JUST(sorter)->device())->type()
           << " and sorted_sequence tensor device type " << JUST(sorted_sequence->device())->type();
       CHECK_OR_RETURN(*sorted_sequence->shape() == *JUST(sorter)->shape())
@@ -1048,8 +1053,8 @@ class SearchSortedScalarFunctor {
     }
     CHECK_OR_RETURN(sorted_sequence->shape()->NumAxes() == 1)
         << "for searchsorted op, input value can be a scalar only when sorted_sequence tensor "
-        << "dimension is 1, but we got sorted_sequence dim("
-        << sorted_sequence->shape()->NumAxes() << ")";
+        << "dimension is 1, but we got sorted_sequence dim(" << sorted_sequence->shape()->NumAxes()
+        << ")";
     if (out_int32) {
       CHECK_OR_RETURN(sorted_sequence->shape()->At(sorted_sequence->shape()->NumAxes() - 1)
                       < INT32_MAX)
