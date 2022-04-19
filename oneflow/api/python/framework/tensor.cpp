@@ -57,6 +57,7 @@ PyTypeObject* PyParameterObject_Type = NULL;
 static int PyTensorObject_init(PyObject* self, PyObject* args, PyObject* kwargs) {
   HANDLE_ERRORS
   auto* temp = functional::_legacy_tensor_ctor(NULL, args, kwargs);
+  if (temp == nullptr && PyErr_Occurred()) { throw py::error_already_set(); }
   auto* _self = (PyTensorObject*)self;
   _self->data = PyTensor_Unpack(temp);
   _self->data->set_pyobject(self);
