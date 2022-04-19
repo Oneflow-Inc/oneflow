@@ -108,7 +108,7 @@ class ModuleBlock(Block):
         assert not isinstance(origin, Block)
         super().__init__(prefix, name)
         self._debug_min_s_level = 2
-        self._debug_max_v_level = 0
+        self._debug_max_v_level = -1
         self._debug_max_py_stack_depth = 2
         self._type = BlockType.MODULE
         self._is_executing_forward = False

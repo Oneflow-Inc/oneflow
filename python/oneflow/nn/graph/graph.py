@@ -125,7 +125,7 @@ class Graph(object):
         self._args_repr = []
         self._outs_repr = []
         self._debug_min_s_level = 2
-        self._debug_max_v_level = 0
+        self._debug_max_v_level = -1
         self._debug_max_py_stack_depth = 2
         self._outputs_buffer_size = 2
         self._cur_index_of_ouputs_buffer = 0
