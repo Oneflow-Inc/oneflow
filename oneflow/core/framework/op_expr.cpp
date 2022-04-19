@@ -76,26 +76,32 @@ const std::string& CastFromConsistentOpExpr::op_type_name() const {
   return kOpTypeName;
 }
 
-#define DEFINE_OPEXPR_IS_GRAD_DISABLED_AND_SUPPORT_NON_CONTIGUOUS_DEFAULT_VALUE(_T, _bool)     \
-  template<>                                                        \
-  Maybe<bool> BuiltinOpExprImpl<_T>::IsGradDisabled() const {       \
-    return _bool;                                                   \
-  }                                                                 \
-  template<>                                                        \
-  Maybe<bool> BuiltinOpExprImpl<_T>::SupportNonContiguous() const { \
-    return false;                                                   \
+#define DEFINE_OPEXPR_IS_GRAD_DISABLED_AND_SUPPORT_NON_CONTIGUOUS_DEFAULT_VALUE(_T, _bool) \
+  template<>                                                                               \
+  Maybe<bool> BuiltinOpExprImpl<_T>::IsGradDisabled() const {                              \
+    return _bool;                                                                          \
+  }                                                                                        \
+  template<>                                                                               \
+  Maybe<bool> BuiltinOpExprImpl<_T>::SupportNonContiguous() const {                        \
+    return false;                                                                          \
   }
 
 DEFINE_OPEXPR_IS_GRAD_DISABLED_AND_SUPPORT_NON_CONTIGUOUS_DEFAULT_VALUE(FeedInputOpConf, true);
 DEFINE_OPEXPR_IS_GRAD_DISABLED_AND_SUPPORT_NON_CONTIGUOUS_DEFAULT_VALUE(FeedVariableOpConf, true);
 DEFINE_OPEXPR_IS_GRAD_DISABLED_AND_SUPPORT_NON_CONTIGUOUS_DEFAULT_VALUE(FetchOutputOpConf, true);
 DEFINE_OPEXPR_IS_GRAD_DISABLED_AND_SUPPORT_NON_CONTIGUOUS_DEFAULT_VALUE(VariableOpConf, true);
-DEFINE_OPEXPR_IS_GRAD_DISABLED_AND_SUPPORT_NON_CONTIGUOUS_DEFAULT_VALUE(ImageDecoderRandomCropResizeOpConf, true);
-DEFINE_OPEXPR_IS_GRAD_DISABLED_AND_SUPPORT_NON_CONTIGUOUS_DEFAULT_VALUE(CastToMirroredOpConf, false);
-DEFINE_OPEXPR_IS_GRAD_DISABLED_AND_SUPPORT_NON_CONTIGUOUS_DEFAULT_VALUE(CastFromMirroredOpConf, false);
-DEFINE_OPEXPR_IS_GRAD_DISABLED_AND_SUPPORT_NON_CONTIGUOUS_DEFAULT_VALUE(DistributeSplitOpConf, false);
-DEFINE_OPEXPR_IS_GRAD_DISABLED_AND_SUPPORT_NON_CONTIGUOUS_DEFAULT_VALUE(DistributeCloneOpConf, false);
-DEFINE_OPEXPR_IS_GRAD_DISABLED_AND_SUPPORT_NON_CONTIGUOUS_DEFAULT_VALUE(DistributeConcatOpConf, false);
+DEFINE_OPEXPR_IS_GRAD_DISABLED_AND_SUPPORT_NON_CONTIGUOUS_DEFAULT_VALUE(
+    ImageDecoderRandomCropResizeOpConf, true);
+DEFINE_OPEXPR_IS_GRAD_DISABLED_AND_SUPPORT_NON_CONTIGUOUS_DEFAULT_VALUE(CastToMirroredOpConf,
+                                                                        false);
+DEFINE_OPEXPR_IS_GRAD_DISABLED_AND_SUPPORT_NON_CONTIGUOUS_DEFAULT_VALUE(CastFromMirroredOpConf,
+                                                                        false);
+DEFINE_OPEXPR_IS_GRAD_DISABLED_AND_SUPPORT_NON_CONTIGUOUS_DEFAULT_VALUE(DistributeSplitOpConf,
+                                                                        false);
+DEFINE_OPEXPR_IS_GRAD_DISABLED_AND_SUPPORT_NON_CONTIGUOUS_DEFAULT_VALUE(DistributeCloneOpConf,
+                                                                        false);
+DEFINE_OPEXPR_IS_GRAD_DISABLED_AND_SUPPORT_NON_CONTIGUOUS_DEFAULT_VALUE(DistributeConcatOpConf,
+                                                                        false);
 DEFINE_OPEXPR_IS_GRAD_DISABLED_AND_SUPPORT_NON_CONTIGUOUS_DEFAULT_VALUE(DistributeAddOpConf, false);
 
 #undef DEFINE_OPEXPR_IS_GRAD_DISABLED_AND_SUPPORT_NON_CONTIGUOUS_DEFAULT_VALUE
@@ -141,8 +147,9 @@ template<>
 Maybe<bool> BuiltinOpExprImpl<UserOpConf>::SupportNonContiguous() const {
   const auto* registry =
       user_op::UserOpRegistryMgr::Get().GetOpRegistryResult(proto().op_type_name());
-  CHECK_NOTNULL_OR_RETURN(registry) << "The op(operation) " << proto().op_type_name()
-        << " is not found. Please check whether it has been registered correctly.";
+  CHECK_NOTNULL_OR_RETURN(registry)
+      << "The op(operation) " << proto().op_type_name()
+      << " is not found. Please check whether it has been registered correctly.";
   return registry->non_contiguous_supported;
 }
 

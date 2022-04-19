@@ -98,20 +98,20 @@ Maybe<Tensor> Reshape(const std::shared_ptr<Tensor>& input, const Shape& target_
 
   if (autograd::GradMode::is_enabled() && input->requires_grad()) {
     Shape input_shape(input->shape()->dim_vec());
-    auto backward_fn =
-        std::make_shared<std::function<Maybe<void>(const TensorTuple&, TensorTuple*, bool)>>(
-            [=](const TensorTuple& out_grads, TensorTuple* in_grads,
-                bool create_graph) -> Maybe<void> {
-              autograd::AutoGradMode mode(create_graph);
-              CHECK_EQ_OR_RETURN(out_grads.size(), 1);
-              in_grads->resize(1);
-              *JUST(oneflow::VectorAt(in_grads, 0)) =
-                  JUST(functional::Reshape(JUST(oneflow::VectorAt(out_grads, 0)), input_shape));
-              return Maybe<void>::Ok();
-            });
+    auto backward_fn = std::make_shared<BackwardFunction>();
+    backward_fn->body = [=](const TensorTuple& out_grads, TensorTuple* in_grads,
+                            bool create_graph) -> Maybe<void> {
+      autograd::AutoGradMode mode(create_graph);
+      CHECK_EQ_OR_RETURN(out_grads.size(), 1);  // NOLINT(maybe-need-error-msg)
+      in_grads->resize(1);
+      *JUST(oneflow::VectorAt(in_grads, 0)) =
+          JUST(functional::Reshape(JUST(oneflow::VectorAt(out_grads, 0)), input_shape));
+      return Maybe<void>::Ok();
+    };
+    backward_fn->status = []() { return false; };
     TensorTuple outputs{output};
-    JUST(GetThreadLocalAutogradEngine()->AddBackwardFuncPtr("view::reshape_backward", backward_fn,
-                                                            {input}, &outputs));
+    JUST(GetThreadLocalAutogradEngine()->AddNode("view::reshape_backward", backward_fn, {input},
+                                                 &outputs));
   }
   return output;
 }
@@ -150,21 +150,20 @@ Maybe<Tensor> Slice(const std::shared_ptr<Tensor>& input, const std::vector<int6
 
   auto output = JUST(BasicView(input, Shape(target_dims), Stride(target_strides), storage_offset));
   if (autograd::GradMode::is_enabled() && input->requires_grad()) {
-    auto backward_fn =
-        std::make_shared<std::function<Maybe<void>(const TensorTuple&, TensorTuple*, bool)>>(
-            [=](const TensorTuple& out_grads, TensorTuple* in_grads,
-                bool create_graph) -> Maybe<void> {
-              autograd::AutoGradMode mode(create_graph);
-              CHECK_EQ_OR_RETURN(out_grads.size(), 1);
-              in_grads->resize(1);
-              (*in_grads)[0] = JUST(functional::SliceGrad(JUST(VectorAt(out_grads, 0)),
-                                                          Shape(input->shape()->dim_vec()), starts,
-                                                          ends, steps));
-              return Maybe<void>::Ok();
-            });
+    auto backward_fn = std::make_shared<BackwardFunction>();
+    backward_fn->body = [=](const TensorTuple& out_grads, TensorTuple* in_grads,
+                            bool create_graph) -> Maybe<void> {
+      autograd::AutoGradMode mode(create_graph);
+      CHECK_EQ_OR_RETURN(out_grads.size(), 1);  // NOLINT(maybe-need-error-msg)
+      in_grads->resize(1);
+      (*in_grads)[0] = JUST(functional::SliceGrad(
+          JUST(VectorAt(out_grads, 0)), Shape(input->shape()->dim_vec()), starts, ends, steps));
+      return Maybe<void>::Ok();
+    };
+    backward_fn->status = []() { return true; };
     TensorTuple outputs{output};
-    JUST(GetThreadLocalAutogradEngine()->AddBackwardFuncPtr("view::slice_backward", backward_fn,
-                                                            {input}, &outputs));
+    JUST(GetThreadLocalAutogradEngine()->AddNode("view::slice_backward", backward_fn, {input},
+                                                 &outputs));
   }
   return output;
 }
@@ -194,20 +193,20 @@ Maybe<Tensor> Unsqueeze(const std::shared_ptr<Tensor>& input, const int32_t& exp
       JUST(BasicView(input, Shape(target_dim_vec), Stride(target_stride_vec), storage_offset));
 
   if (autograd::GradMode::is_enabled() && input->requires_grad()) {
-    auto backward_fn =
-        std::make_shared<std::function<Maybe<void>(const TensorTuple&, TensorTuple*, bool)>>(
-            [=](const TensorTuple& out_grads, TensorTuple* in_grads,
-                bool create_graph) -> Maybe<void> {
-              autograd::AutoGradMode mode(create_graph);
-              CHECK_EQ_OR_RETURN(out_grads.size(), 1);
-              in_grads->resize(1);
-              *JUST(oneflow::VectorAt(in_grads, 0)) =
-                  JUST(functional::Reshape(JUST(oneflow::VectorAt(out_grads, 0)), *shape));
-              return Maybe<void>::Ok();
-            });
+    auto backward_fn = std::make_shared<BackwardFunction>();
+    backward_fn->body = [=](const TensorTuple& out_grads, TensorTuple* in_grads,
+                            bool create_graph) -> Maybe<void> {
+      autograd::AutoGradMode mode(create_graph);
+      CHECK_EQ_OR_RETURN(out_grads.size(), 1);  // NOLINT(maybe-need-error-msg)
+      in_grads->resize(1);
+      *JUST(oneflow::VectorAt(in_grads, 0)) =
+          JUST(functional::Reshape(JUST(oneflow::VectorAt(out_grads, 0)), *shape));
+      return Maybe<void>::Ok();
+    };
+    backward_fn->status = []() { return false; };
     TensorTuple outputs{output};
-    JUST(GetThreadLocalAutogradEngine()->AddBackwardFuncPtr("view::unsqueeze_backward", backward_fn,
-                                                            {input}, &outputs));
+    JUST(GetThreadLocalAutogradEngine()->AddNode("view::unsqueeze_backward", backward_fn, {input},
+                                                 &outputs));
   }
   return output;
 }
@@ -238,20 +237,20 @@ Maybe<Tensor> Squeeze(const std::shared_ptr<Tensor>& input,
       JUST(BasicView(input, Shape(target_dim_vec), Stride(target_stride_vec), storage_offset));
 
   if (autograd::GradMode::is_enabled() && input->requires_grad()) {
-    auto backward_fn =
-        std::make_shared<std::function<Maybe<void>(const TensorTuple&, TensorTuple*, bool)>>(
-            [=](const TensorTuple& out_grads, TensorTuple* in_grads,
-                bool create_graph) -> Maybe<void> {
-              autograd::AutoGradMode mode(create_graph);
-              CHECK_EQ_OR_RETURN(out_grads.size(), 1);
-              in_grads->resize(1);
-              *JUST(oneflow::VectorAt(in_grads, 0)) = JUST(functional::Reshape(
-                  JUST(oneflow::VectorAt(out_grads, 0)), Shape(input->shape()->dim_vec())));
-              return Maybe<void>::Ok();
-            });
+    auto backward_fn = std::make_shared<BackwardFunction>();
+    backward_fn->body = [=](const TensorTuple& out_grads, TensorTuple* in_grads,
+                            bool create_graph) -> Maybe<void> {
+      autograd::AutoGradMode mode(create_graph);
+      CHECK_EQ_OR_RETURN(out_grads.size(), 1);  // NOLINT(maybe-need-error-msg)
+      in_grads->resize(1);
+      *JUST(oneflow::VectorAt(in_grads, 0)) = JUST(functional::Reshape(
+          JUST(oneflow::VectorAt(out_grads, 0)), Shape(input->shape()->dim_vec())));
+      return Maybe<void>::Ok();
+    };
+    backward_fn->status = []() { return true; };
     TensorTuple outputs{output};
-    JUST(GetThreadLocalAutogradEngine()->AddBackwardFuncPtr("view::squeeze_backward", backward_fn,
-                                                            {input}, &outputs));
+    JUST(GetThreadLocalAutogradEngine()->AddNode("view::squeeze_backward", backward_fn, {input},
+                                                 &outputs));
   }
   return output;
 }
@@ -301,20 +300,20 @@ Maybe<Tensor> Expand(const std::shared_ptr<Tensor>& input, const std::vector<int
       JUST(BasicView(input, Shape(target_dim_vec), Stride(target_stride_vec), storage_offset));
 
   if (autograd::GradMode::is_enabled() && input->requires_grad()) {
-    auto backward_fn =
-        std::make_shared<std::function<Maybe<void>(const TensorTuple&, TensorTuple*, bool)>>(
-            [=](const TensorTuple& out_grads, TensorTuple* in_grads,
-                bool create_graph) -> Maybe<void> {
-              autograd::AutoGradMode mode(create_graph);
-              CHECK_EQ_OR_RETURN(out_grads.size(), 1)
-                  << "out grad size should be 1, but got " << out_grads.size();
-              in_grads->resize(1);
-              (*in_grads)[0] = JUST(functional::ExpandGrad(out_grads[0], in_shape, expand_shape));
-              return Maybe<void>::Ok();
-            });
+    auto backward_fn = std::make_shared<BackwardFunction>();
+    backward_fn->body = [=](const TensorTuple& out_grads, TensorTuple* in_grads,
+                            bool create_graph) -> Maybe<void> {
+      autograd::AutoGradMode mode(create_graph);
+      CHECK_EQ_OR_RETURN(out_grads.size(), 1)
+          << "out grad size should be 1, but got " << out_grads.size();
+      in_grads->resize(1);
+      (*in_grads)[0] = JUST(functional::ExpandGrad(out_grads[0], in_shape, expand_shape));
+      return Maybe<void>::Ok();
+    };
+    backward_fn->status = []() { return true; };
     TensorTuple outputs{output};
-    JUST(GetThreadLocalAutogradEngine()->AddBackwardFuncPtr("view::expand_backward", backward_fn,
-                                                            {input}, &outputs));
+    JUST(GetThreadLocalAutogradEngine()->AddNode("view::expand_backward", backward_fn, {input},
+                                                 &outputs));
   }
   return output;
 }
@@ -340,22 +339,22 @@ Maybe<Tensor> Narrow(const std::shared_ptr<Tensor>& input, const int64_t& dim, c
 
   auto output = JUST(BasicView(input, target_shape, Stride(stride_vec), storage_offset));
   if (autograd::GradMode::is_enabled() && input->requires_grad()) {
-    auto backward_fn =
-        std::make_shared<std::function<Maybe<void>(const TensorTuple&, TensorTuple*, bool)>>(
-            [=](const TensorTuple& out_grads, TensorTuple* in_grads,
-                bool create_graph) -> Maybe<void> {
-              autograd::AutoGradMode mode(create_graph);
-              CHECK_EQ_OR_RETURN(out_grads.size(), 1)
-                  << "out grad size should be 1, but got " << out_grads.size();
-              auto like = JUST(functional::Empty(Shape(input->shape()->dim_vec()), input->dtype(),
-                                                 JUST(input->device())));
-              in_grads->resize(1);
-              (*in_grads)[0] = JUST(functional::NarrowGrad(out_grads[0], like, dim, start, length));
-              return Maybe<void>::Ok();
-            });
+    auto backward_fn = std::make_shared<BackwardFunction>();
+    backward_fn->body = [=](const TensorTuple& out_grads, TensorTuple* in_grads,
+                            bool create_graph) -> Maybe<void> {
+      autograd::AutoGradMode mode(create_graph);
+      CHECK_EQ_OR_RETURN(out_grads.size(), 1)
+          << "out grad size should be 1, but got " << out_grads.size();
+      auto like = JUST(functional::Empty(Shape(input->shape()->dim_vec()), input->dtype(),
+                                         JUST(input->device())));
+      in_grads->resize(1);
+      (*in_grads)[0] = JUST(functional::NarrowGrad(out_grads[0], like, dim, start, length));
+      return Maybe<void>::Ok();
+    };
+    backward_fn->status = []() { return true; };
     TensorTuple outputs{output};
-    JUST(GetThreadLocalAutogradEngine()->AddBackwardFuncPtr("view::narrow_backward", backward_fn,
-                                                            {input}, &outputs));
+    JUST(GetThreadLocalAutogradEngine()->AddNode("view::narrow_backward", backward_fn, {input},
+                                                 &outputs));
   }
   return output;
 }
@@ -369,23 +368,23 @@ Maybe<Tensor> AsStrided(const std::shared_ptr<one::Tensor>& input, const std::ve
   for (int i = 0; i < stride.size(); ++i) { stride_vec[i] = stride[i]; }
   auto output = JUST(view::BasicView(input, target_shape, Stride(stride_vec), storage_offset));
   if (autograd::GradMode::is_enabled() && input->requires_grad()) {
-    auto backward_fn =
-        std::make_shared<std::function<Maybe<void>(const TensorTuple&, TensorTuple*, bool)>>(
-            [=](const TensorTuple& out_grads, TensorTuple* in_grads,
-                bool create_graph) -> Maybe<void> {
-              autograd::AutoGradMode mode(create_graph);
-              CHECK_EQ_OR_RETURN(out_grads.size(), 1)
-                  << "out grad size should be 1, but got " << out_grads.size();
-              auto like = JUST(functional::Empty(Shape(input->shape()->dim_vec()), input->dtype(),
-                                                 JUST(input->device())));
-              in_grads->resize(1);
-              (*in_grads)[0] =
-                  JUST(functional::AsStridedGrad(out_grads[0], like, size, stride, storage_offset));
-              return Maybe<void>::Ok();
-            });
+    auto backward_fn = std::make_shared<BackwardFunction>();
+    backward_fn->body = [=](const TensorTuple& out_grads, TensorTuple* in_grads,
+                            bool create_graph) -> Maybe<void> {
+      autograd::AutoGradMode mode(create_graph);
+      CHECK_EQ_OR_RETURN(out_grads.size(), 1)
+          << "out grad size should be 1, but got " << out_grads.size();
+      auto like = JUST(functional::Empty(Shape(input->shape()->dim_vec()), input->dtype(),
+                                         JUST(input->device())));
+      in_grads->resize(1);
+      (*in_grads)[0] =
+          JUST(functional::AsStridedGrad(out_grads[0], like, size, stride, storage_offset));
+      return Maybe<void>::Ok();
+    };
+    backward_fn->status = []() { return true; };
     TensorTuple outputs{output};
-    JUST(GetThreadLocalAutogradEngine()->AddBackwardFuncPtr("view::as_strided_backward",
-                                                            backward_fn, {input}, &outputs));
+    JUST(GetThreadLocalAutogradEngine()->AddNode("view::as_strided_backward", backward_fn, {input},
+                                                 &outputs));
   }
   return output;
 }
@@ -416,23 +415,23 @@ Maybe<Tensor> Transpose(const std::shared_ptr<Tensor>& input, const std::vector<
 
   auto output = JUST(BasicView(input, Shape(target_dims), Stride(stride_vec), storage_offset));
   if (autograd::GradMode::is_enabled() && input->requires_grad()) {
-    auto backward_fn =
-        std::make_shared<std::function<Maybe<void>(const TensorTuple&, TensorTuple*, bool)>>(
-            [=](const TensorTuple& out_grads, TensorTuple* in_grads,
-                bool create_graph) -> Maybe<void> {
-              std::vector<int32_t> grad_perm;
-              grad_perm.resize(ndim);
-              for (int i = 0; i < ndim; ++i) { grad_perm[permute[i]] = i; }
-              autograd::AutoGradMode mode(create_graph);
-              CHECK_EQ_OR_RETURN(out_grads.size(), 1)
-                  << "out grad size should be 1, but got " << out_grads.size();
-              in_grads->resize(1);
-              (*in_grads)[0] = JUST(functional::Transpose(out_grads[0], grad_perm));
-              return Maybe<void>::Ok();
-            });
+    auto backward_fn = std::make_shared<BackwardFunction>();
+    backward_fn->body = [=](const TensorTuple& out_grads, TensorTuple* in_grads,
+                            bool create_graph) -> Maybe<void> {
+      std::vector<int32_t> grad_perm;
+      grad_perm.resize(ndim);
+      for (int i = 0; i < ndim; ++i) { grad_perm[permute[i]] = i; }
+      autograd::AutoGradMode mode(create_graph);
+      CHECK_EQ_OR_RETURN(out_grads.size(), 1)
+          << "out grad size should be 1, but got " << out_grads.size();
+      in_grads->resize(1);
+      (*in_grads)[0] = JUST(functional::Transpose(out_grads[0], grad_perm));
+      return Maybe<void>::Ok();
+    };
+    backward_fn->status = []() { return true; };
     TensorTuple outputs{output};
-    JUST(GetThreadLocalAutogradEngine()->AddBackwardFuncPtr("view::transpose_backward", backward_fn,
-                                                            {input}, &outputs));
+    JUST(GetThreadLocalAutogradEngine()->AddNode("view::transpose_backward", backward_fn, {input},
+                                                 &outputs));
   }
   return output;
 }
@@ -471,21 +470,21 @@ Maybe<Tensor> UnfoldTensor(const std::shared_ptr<Tensor>& input, const int32_t& 
   auto output = JUST(BasicView(input, Shape(out_shape), Stride(out_stride), storage_offset));
 
   if (autograd::GradMode::is_enabled() && input->requires_grad()) {
-    auto backward_fn =
-        std::make_shared<std::function<Maybe<void>(const TensorTuple&, TensorTuple*, bool)>>(
-            [=](const TensorTuple& out_grads, TensorTuple* in_grads,
-                bool create_graph) -> Maybe<void> {
-              autograd::AutoGradMode mode(create_graph);
-              CHECK_EQ_OR_RETURN(out_grads.size(), 1)
-                  << "out grad size should be 1, but got " << out_grads.size();
-              in_grads->resize(1);
-              (*in_grads)[0] =
-                  JUST(functional::UnfoldTensorGrad(out_grads[0], input, dimension, size, step));
-              return Maybe<void>::Ok();
-            });
+    auto backward_fn = std::make_shared<BackwardFunction>();
+    backward_fn->body = [=](const TensorTuple& out_grads, TensorTuple* in_grads,
+                            bool create_graph) -> Maybe<void> {
+      autograd::AutoGradMode mode(create_graph);
+      CHECK_EQ_OR_RETURN(out_grads.size(), 1)
+          << "out grad size should be 1, but got " << out_grads.size();
+      in_grads->resize(1);
+      (*in_grads)[0] =
+          JUST(functional::UnfoldTensorGrad(out_grads[0], input, dimension, size, step));
+      return Maybe<void>::Ok();
+    };
+    backward_fn->status = []() { return true; };
     TensorTuple outputs{output};
-    JUST(GetThreadLocalAutogradEngine()->AddBackwardFuncPtr("view::unfold_tensor_backward",
-                                                            backward_fn, {input}, &outputs));
+    JUST(GetThreadLocalAutogradEngine()->AddNode("view::unfold_tensor_backward", backward_fn,
+                                                 {input}, &outputs));
   }
 
   return output;
@@ -533,26 +532,26 @@ Maybe<Tensor> Diagonal(const std::shared_ptr<Tensor>& input, const int32_t offse
       if (i != dim1 && i != dim2) { input_index.push_back(i); }
     }
 
-    auto backward_fn =
-        std::make_shared<std::function<Maybe<void>(const TensorTuple&, TensorTuple*, bool)>>(
-            [=](const TensorTuple& out_grads, TensorTuple* in_grads,
-                bool create_graph) -> Maybe<void> {
-              autograd::AutoGradMode mode(create_graph);
-              CHECK_EQ_OR_RETURN(out_grads.size(), 1)
-                  << "out grad size should be 1, but got " << out_grads.size();
-              in_grads->resize(1);
-              // diagonal grad(align to torch)
-              std::shared_ptr<Tensor> grad_input =
-                  JUST(functional::Empty(*input->shape(), input->dtype(), JUST(input->device())));
-              auto diag = JUST(functional::Diagonal(grad_input, offset, dim1, dim2));
-              diag = JUST(functional::Copy(out_grads[0], JUST(input->device())->type(),
-                                           JUST(input->device())->device_id()));
-              (*in_grads)[0] = grad_input;
-              return Maybe<void>::Ok();
-            });
+    auto backward_fn = std::make_shared<BackwardFunction>();
+    backward_fn->body = [=](const TensorTuple& out_grads, TensorTuple* in_grads,
+                            bool create_graph) -> Maybe<void> {
+      autograd::AutoGradMode mode(create_graph);
+      CHECK_EQ_OR_RETURN(out_grads.size(), 1)
+          << "out grad size should be 1, but got " << out_grads.size();
+      in_grads->resize(1);
+      // diagonal grad(align to torch)
+      std::shared_ptr<Tensor> grad_input =
+          JUST(functional::Empty(*input->shape(), input->dtype(), JUST(input->device())));
+      auto diag = JUST(functional::Diagonal(grad_input, offset, dim1, dim2));
+      diag = JUST(functional::Copy(out_grads[0], JUST(input->device())->type(),
+                                   JUST(input->device())->device_id()));
+      (*in_grads)[0] = grad_input;
+      return Maybe<void>::Ok();
+    };
+    backward_fn->status = []() { return true; };
     TensorTuple outputs{output};
-    JUST(GetThreadLocalAutogradEngine()->AddBackwardFuncPtr("view::diagonal_backward", backward_fn,
-                                                            {input}, &outputs));
+    JUST(GetThreadLocalAutogradEngine()->AddNode("view::diagonal_backward", backward_fn, {input},
+                                                 &outputs));
   }
 
   return output;
