@@ -331,8 +331,9 @@ def make_cached_ssd_store_options(
     capacity=None,
     size_factor=1,
     physical_block_size=512,
+    host_cache_budget_mb=0,
 ):
-    """make SSD use GPU as cache store_options param of MultiTableEmbedding
+    """make SSD use GPU and host as cache store_options param of MultiTableEmbedding. If cache_budget_mb > 0 and host_cache_budget_mb > 0, use GPU and host memory as multi-level cache.
 
     Args:
         cache_budget_mb (int): the MB budget of per GPU as cache.
@@ -340,9 +341,10 @@ def make_cached_ssd_store_options(
         capacity (int): total capacity of Embedding
         size_factor (int, optional): store size factor of embedding_dim, if SGD update, and momentum = 0, should be 1, if momentum > 0, it should be 2. if Adam, should be 3. Defaults to 1.
         physical_block_size (int, optional): physical_block_size should be sector size. Defaults to 512.
+        host_cache_budget_mb (int): the MB budget of host memory as cache per rank. Defaults to 0.
 
     Returns:
-        dict: SSD use GPU as cache store_options param of MultiTableEmbedding
+        dict: SSD use GPU and host as cache store_options param of MultiTableEmbedding
 
     For example:
 
@@ -361,15 +363,27 @@ def make_cached_ssd_store_options(
         assert capacity > 0
     else:
         capacity = 0
+
+    cache_list = [
+        {
+            "policy": "lru",
+            "cache_memory_budget_mb": cache_budget_mb,
+            "value_memory_kind": "device",
+        }
+    ]
+
+    if host_cache_budget_mb > 0:
+        cache_list.append(
+            {
+                "policy": "lru",
+                "cache_memory_budget_mb": host_cache_budget_mb,
+                "value_memory_kind": "host",
+            }
+        )
+
     options = {
         "kv_store": {
-            "caches": [
-                {
-                    "policy": "lru",
-                    "cache_memory_budget_mb": cache_budget_mb,
-                    "value_memory_kind": "device",
-                }
-            ],
+            "caches": cache_list,
             "persistent_table": {
                 "path": persistent_path,
                 "physical_block_size": physical_block_size,
@@ -412,69 +426,6 @@ def make_cached_host_mem_store_options(
                 {
                     "policy": "full",
                     "capacity": int(capacity),
-                    "value_memory_kind": "host",
-                },
-            ],
-            "persistent_table": {
-                "path": persistent_path,
-                "physical_block_size": physical_block_size,
-                "capacity_hint": int(capacity),
-            },
-        },
-        "size_factor": size_factor,
-    }
-    return options
-
-
-def make_device_host_multi_level_cached_ssd_store_options(
-    device_cache_budget_mb,
-    host_cache_budget_mb,
-    persistent_path,
-    capacity=None,
-    size_factor=1,
-    physical_block_size=512,
-):
-    """make SSD use GPU and CPU as multi-level cache store_options param of MultiTableEmbedding
-
-    Args:
-        device_cache_budget_mb (int): the MB budget of per GPU as cache.
-        host_cache_budget_mb (int): the MB budget of CPU as cache.
-        persistent_path (str, list): persistent storage path of Embedding, must use fast SSD because of frequently random disk access during training. If passed a str, current rank Embedding will be saved in path/rank_id-num_ranks path. If passed a list, the list length must equals num_ranks, each elem of list represent the path of rank_id Embedding.
-        capacity (int): total capacity of Embedding
-        size_factor (int, optional): store size factor of embedding_dim, if SGD update, and momentum = 0, should be 1, if momentum > 0, it should be 2. if Adam, should be 3. Defaults to 1.
-        physical_block_size (int, optional): physical_block_size should be sector size. Defaults to 512.
-
-    Returns:
-        dict: SSD use GPU and CPU as multi-level cache store_options param of MultiTableEmbedding
-
-    For example:
-
-    .. code-block:: python
-
-        >>> import oneflow as flow    
-        >>> store_options = flow.one_embedding.make_device_host_multi_level_cached_ssd_store_options(
-        >>>     device_cache_budget_mb=8192, host_cache_budget_mb=81920, persistent_path="/your_path_to_ssd", capacity=vocab_size,
-        >>> )
-        >>> # pass the store_options to the "store_options" param of flow.one_embedding.MultiTableEmbedding
-        >>> # ...
-    """
-    assert isinstance(persistent_path, (str, list, tuple))
-    assert device_cache_budget_mb > 0 and host_cache_budget_mb > 0
-    if capacity is not None:
-        assert capacity > 0
-    else:
-        capacity = 0
-    options = {
-        "kv_store": {
-            "caches": [
-                {
-                    "policy": "lru",
-                    "cache_memory_budget_mb": device_cache_budget_mb,
-                    "value_memory_kind": "device",
-                },
-                {
-                    "policy": "lru",
-                    "cache_memory_budget_mb": host_cache_budget_mb,
                     "value_memory_kind": "host",
                 },
             ],
