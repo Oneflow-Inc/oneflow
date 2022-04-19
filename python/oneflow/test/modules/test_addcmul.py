@@ -21,35 +21,43 @@ import oneflow.unittest
 
 class TestAddcmul(flow.unittest.TestCase):
     @autotest(check_graph=False)
-    def test_Addcmul(test_case):
+    def test_addcmul(test_case):
         device = random_device()
-        input = random_pytorch_tensor(2,3,4).to(device)
-        tensor1 = random_pytorch_tensor(2,3,4).to(device)
-        tensor2 = random_pytorch_tensor(2,3,4).to(device)
+        ndim = random(low=2).to(int).value()
+        shape = [random(low=2, high=4) for i in range(ndim)]
+
+        input = random_tensor(len(shape), *shape).to(device)
+        tensor1 = random_tensor(len(shape), *shape).to(device)
+        tensor2 = random_tensor(len(shape), *shape).to(device)
         value = random(3, 6).to(int)
-        z = torch.addcmul(input, tensor1, tensor2, value=value)
-        return z
+        output = torch.addcmul(input, tensor1, tensor2, value=value)
+        return output
     
     @autotest(check_graph=False)
-    def test_TensorAddcmul(test_case):
+    def test_tensor_addcmul(test_case):
         device = random_device()
-        input = random_pytorch_tensor(2,3,4).to(device)
-        tensor1 = random_pytorch_tensor(2,3,4).to(device)
-        tensor2 = random_pytorch_tensor(2,3,4).to(device)
+        ndim = random(low=2).to(int).value()
+        shape = [random(low=2, high=4) for i in range(ndim)]
+
+        input = random_tensor(len(shape), *shape).to(device)
+        tensor1 = random_tensor(len(shape), *shape).to(device)
+        tensor2 = random_tensor(len(shape), *shape).to(device)
         value = random(3, 6).to(int)
-        z = input.addcmul(tensor1, tensor2, value=value)
-        return z
+        output = input.addcmul(tensor1, tensor2, value=value)
+        return output
     
     @autotest(check_graph=False)
-    def test_TensorAddcmulInplace(test_case):
+    def test_tensor_addcmul_inplace(test_case):
         device = random_device()
-        input = random_pytorch_tensor(2,3,4).to(device)
-        input1 = input + 1
-        tensor1 = random_pytorch_tensor(2,3,4).to(device)
-        tensor2 = random_pytorch_tensor(2,3,4).to(device)
+        ndim = random(low=2).to(int).value()
+        shape = [random(low=2, high=4) for i in range(ndim)]
+
+        input = random_tensor(len(shape), *shape).to(device)
+        tensor1 = random_tensor(len(shape), *shape).to(device)
+        tensor2 = random_tensor(len(shape), *shape).to(device)
         value = random(3, 6).to(int)
-        input1.addcmul_(tensor1, tensor2, value=value)
-        return input1
+        input.addcmul_(tensor1, tensor2, value=value)
+        return input
 
 if __name__ == "__main__":
     unittest.main()
