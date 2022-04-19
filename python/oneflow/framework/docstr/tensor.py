@@ -272,7 +272,8 @@ add_docstr(
     Args:
         placement (flow.placement, optional): the desired placement of returned global tensor. Default: None
         sbp (flow.sbp.sbp or tuple of flow.sbp.sbp, optional): the desired sbp of returned global tensor. Default: None
-        check_meta (bool, optional): keyword-only argument. Indicates whether to check meta information when createing global tensor from local
+    Keyword Args:
+        check_meta (bool, optional): indicates whether to check meta information when createing global tensor from local
             tensor. Only can be set to False when the shape and dtype of the input local tensor on each rank are the same. If set to False, the
             execution of local_to_global can be accelerated. Default: True
 
@@ -316,9 +317,10 @@ add_docstr(
     Args:
         placement (flow.placement, optional): the desired placement of returned global tensor. Default: None
         sbp (flow.sbp.sbp or tuple of flow.sbp.sbp, optional): the desired sbp of returned global tensor. Default: None
-        grad_sbp (flow.sbp.sbp or tuple of flow.sbp.sbp, optional): keyword-only argument. Manually specify the sbp of this tensor's grad
+    Keyword Args:
+        grad_sbp (flow.sbp.sbp or tuple of flow.sbp.sbp, optional): manually specify the sbp of this tensor's grad
             tensor in the backward pass. If None, the grad tensor sbp will be infered automatically. Default: None
-        check_meta (bool, optional): keyword-only argument. Indicates whether to check meta information. If set to True, check the consistency
+        check_meta (bool, optional): indicates whether to check meta information. If set to True, check the consistency
             of the input meta information (placement and sbp) on each rank. Default: False
 
     .. code-block:: python
@@ -371,10 +373,11 @@ add_docstr(
     Args:
         placement (flow.placement, optional): the desired placement of returned global tensor. Default: None
         sbp (flow.sbp.sbp or tuple of flow.sbp.sbp, optional): the desired sbp of returned global tensor. Default: None
-        grad_sbp (flow.sbp.sbp or tuple of flow.sbp.sbp, optional): keyword-only argument. Manually specify the sbp of this tensor's grad
+    Keyword Args:
+        grad_sbp (flow.sbp.sbp or tuple of flow.sbp.sbp, optional): manually specify the sbp of this tensor's grad
             tensor in the backward pass. If None, the grad tensor sbp will be infered automatically. It is only used if this tensor is a
             global tensor. Default: None
-        check_meta (bool, optional): keyword-only argument. Indicates whether to check meta information. If set to True, check the input meta
+        check_meta (bool, optional): indicates whether to check meta information. If set to True, check the input meta
             information on each rank. Default: True if this tensor is a local tensor, False if this tensor is a global tensor
 
     For local tensor:
