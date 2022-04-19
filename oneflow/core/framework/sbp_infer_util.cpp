@@ -557,7 +557,7 @@ double ComputeSbpInferPriority(const NdSbp& producer_sbp_parallel,
       // consumer
       return 0.0;
     } else {
-      // Penality: this blob have different placments and sbps but it does not support boxing
+      // Penality: this blob have different placements and sbps but it does not support boxing
       return 2.0;
     }
   } else {

@@ -165,7 +165,12 @@ Maybe<void> CheckInputParallelDescIdentical(const ConsistentTensorMetaInferArgs&
   const auto& first_parallel_desc =
       infer_args.input_consistent_tensor_metas().begin()->tensor_meta()->parallel_desc();
   for (const auto& input_meta : infer_args.input_consistent_tensor_metas()) {
-    CHECK_OR_RETURN(first_parallel_desc == input_meta.tensor_meta()->parallel_desc());
+    CHECK_OR_RETURN(first_parallel_desc == input_meta.tensor_meta()->parallel_desc())
+        << Error::RuntimeError()
+        << "Expected all tensors to be on the same placement, but found "
+           "at least two placements, "
+        << *JUST(PlacementToString(first_parallel_desc)) << " and "
+        << *JUST(PlacementToString(input_meta.tensor_meta()->parallel_desc())) << "!";
   }
   return Maybe<void>::Ok();
 }

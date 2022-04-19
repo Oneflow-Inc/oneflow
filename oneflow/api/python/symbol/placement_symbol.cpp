@@ -161,7 +161,7 @@ struct PlacementSymbolExportUtil {
       if (type == "cuda") {
         const int64_t gpu_device_num = GetGpuDeviceNum();
         CHECK_NE_OR_RETURN(gpu_device_num, 0)
-            << "Can\'t construct placment with \"cuda\" type because there is no CUDA device!";
+            << "Can\'t construct placement with \"cuda\" type because there is no CUDA device!";
         device_num = std::min(device_num, gpu_device_num);
       }
       std::vector<std::string> machine_device_ids;
