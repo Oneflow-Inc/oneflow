@@ -630,8 +630,10 @@ class Module(object):
 
     def half(self: T) -> T:
         r"""Casts all floating point parameters and buffers to ``half`` datatype.
+
         .. note::
             This method modifies the module in-place.
+
         Returns:
             Module: self
         """
