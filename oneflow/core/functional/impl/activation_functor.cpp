@@ -414,9 +414,9 @@ class LeakyReluFunctor {
     if (inplace) {
       JUST(CheckInplaceValid(x));
       std::shared_ptr<TensorTuple> outputs = std::make_shared<TensorTuple>(1);
-      outputs->at(0) = x;
+      *JUST(oneflow::VectorAt(outputs.get(), 0)) = x;
       JUST(OpInterpUtil::Dispatch(*op_, {x}, outputs.get(), attrs));
-      return outputs->at(0);
+      return *JUST(oneflow::VectorAt(outputs.get(), 0));
     } else {
       return OpInterpUtil::Dispatch<one::Tensor>(*op_, {x}, attrs);
     }
