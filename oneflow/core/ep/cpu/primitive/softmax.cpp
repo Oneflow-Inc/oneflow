@@ -16,6 +16,8 @@ limitations under the License.
 #include "oneflow/core/ep/include/primitive/softmax.h"
 #include "oneflow/core/ep/include/primitive/log_softmax.h"
 #include "oneflow/core/ep/cpu/primitive/type_seq.h"
+#include "oneflow/core/ep/cpu/cpu_stream.h"
+#include "oneflow/core/ep/cpu/cpu_device.h"
 
 namespace oneflow {
 
@@ -73,6 +75,60 @@ class SoftmaxImpl : public SoftmaxBase {
   }
 };
 
+#ifdef WITH_ONEDNN
+
+template<class OneDnnSoftmax, dnnl::memory::data_type data_type>
+void SoftmaxOneDnn(Stream* stream, size_t rows, size_t cols, const void* x, void* y) {
+  CpuStream* cpu_stream = stream->As<CpuStream>();
+  size_t num_threads = static_cast<CpuDevice*>(cpu_stream->device())->GetNumThreads();  // NOLINT
+  CpuNumThreadsGuard guard(num_threads);
+
+  dnnl::engine* onednn_engine = stream->As<CpuStream>()->onednn_engine();
+  dnnl::stream* onednn_stream = stream->As<CpuStream>()->onednn_stream();
+  dnnl::memory::dims src_dims = {static_cast<dnnl::memory::dim>(cols),
+                                 static_cast<dnnl::memory::dim>(rows)};
+
+  auto src_md = dnnl::memory::desc(src_dims, data_type, dnnl::memory::format_tag::nc);
+  auto src_mem = dnnl::memory(src_md, *onednn_engine, const_cast<void*>(x));
+  auto dst_mem = dnnl::memory(src_md, *onednn_engine, y);
+  auto softmax_d = OneDnnSoftmax::desc(dnnl::prop_kind::forward, src_md, 1);
+  auto softmax_pd = OneDnnSoftmax::primitive_desc(softmax_d, *onednn_engine);
+  auto softmax_prim = OneDnnSoftmax(softmax_pd);
+
+  softmax_prim.execute(*onednn_stream, {{DNNL_ARG_SRC, src_mem}, {DNNL_ARG_DST, dst_mem}});
+  onednn_stream->wait();
+}
+
+template<typename SoftmaxBase, Algorithm algorithm, dnnl::memory::data_type data_type>
+class OneDnnSoftmaxImpl;
+
+#define CPU_PRIMITIVE_SOFTMAX_ONEDNN_IMPL(oneflow_algorithm, onednn_algorithm)               \
+  template<typename SoftmaxBase, dnnl::memory::data_type data_type>                          \
+  class OneDnnSoftmaxImpl<SoftmaxBase, oneflow_algorithm, data_type> : public SoftmaxBase {  \
+   public:                                                                                   \
+    OF_DISALLOW_COPY_AND_MOVE(OneDnnSoftmaxImpl);                                            \
+    OneDnnSoftmaxImpl() = default;                                                           \
+    ~OneDnnSoftmaxImpl() override = default;                                                 \
+                                                                                             \
+    using OneDnnClass = onednn_algorithm;                                                    \
+    void Launch(Stream* stream, size_t rows, size_t cols, const void* x, void* y) override { \
+      SoftmaxOneDnn<OneDnnClass, data_type>(stream, rows, cols, x, y);                       \
+    }                                                                                        \
+  }
+
+CPU_PRIMITIVE_SOFTMAX_ONEDNN_IMPL(Algorithm::kSoftmax, dnnl::softmax_forward);
+CPU_PRIMITIVE_SOFTMAX_ONEDNN_IMPL(Algorithm::kLogSoftmax, dnnl::logsoftmax_forward);
+
+#define CPU_PRIMITIVE_SOFTMAX_ONEDNN_TYPE_SEQ \
+  OF_PP_MAKE_TUPLE_SEQ(dnnl::memory::data_type::f32, DataType::kFloat, float)
+
+template<typename SoftmaxBase, Algorithm algorithm, dnnl::memory::data_type data_type>
+std::unique_ptr<SoftmaxBase> NewOneDnnSoftmax() {
+  return std::unique_ptr<SoftmaxBase>(new OneDnnSoftmaxImpl<SoftmaxBase, algorithm, data_type>());
+}
+
+#endif
+
 template<typename SoftmaxBase, Algorithm algorithm, typename T>
 std::unique_ptr<SoftmaxBase> NewSoftmax() {
   return std::unique_ptr<SoftmaxBase>(new SoftmaxImpl<SoftmaxBase, algorithm, T>());
@@ -86,6 +142,22 @@ class GenericSoftmaxFactoryImpl : public FactoryBase {
   ~GenericSoftmaxFactoryImpl() override = default;
 
   std::unique_ptr<SoftmaxBase> New(DataType data_type) override {
+#ifdef WITH_ONEDNN
+
+#define MAKE_NEW_ONEDNN_SOFTMAX_ENTRY(type_cpp, type_proto) \
+  {type_proto, NewOneDnnSoftmax<SoftmaxBase, algorithm, type_cpp>},
+
+#define MAKE_NEW_SOFTMAX_ENTRY(type_cpp, type_proto) \
+  {type_proto, NewSoftmax<SoftmaxBase, algorithm, type_cpp>},
+
+    static const std::map<DataType, std::function<std::unique_ptr<SoftmaxBase>()>>
+        new_softmax_handle{
+            // oneDNN softmax op
+            MAKE_NEW_ONEDNN_SOFTMAX_ENTRY(dnnl::memory::data_type::f32, DataType::kDouble)
+            // naive softmax op
+            MAKE_NEW_SOFTMAX_ENTRY(double, DataType::kDouble)};
+#undef MAKE_NEW_SOFTMAX_ENTRY
+#else
 #define MAKE_NEW_SOFTMAX_ENTRY(type_cpp, type_proto) \
   {type_proto, NewSoftmax<SoftmaxBase, algorithm, type_cpp>},
 
@@ -93,6 +165,7 @@ class GenericSoftmaxFactoryImpl : public FactoryBase {
         new_softmax_handle{
             OF_PP_FOR_EACH_TUPLE(MAKE_NEW_SOFTMAX_ENTRY, CPU_PRIMITIVE_FLOATING_TYPE_SEQ)};
 #undef MAKE_NEW_SOFTMAX_ENTRY
+#endif
     const auto it = new_softmax_handle.find(data_type);
     if (it != new_softmax_handle.end()) {
       return it->second();
