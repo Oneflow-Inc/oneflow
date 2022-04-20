@@ -32,7 +32,7 @@ class TestAddcmul(flow.unittest.TestCase):
         value = random(3, 6).to(int)
         output = torch.addcmul(input, tensor1, tensor2, value=value)
         return output
-    
+
     @autotest(check_graph=False)
     def test_tensor_addcmul(test_case):
         device = random_device()
@@ -45,7 +45,7 @@ class TestAddcmul(flow.unittest.TestCase):
         value = random(3, 6).to(int)
         output = input.addcmul(tensor1, tensor2, value=value)
         return output
-    
+
     @autotest(check_graph=False)
     def test_tensor_addcmul_inplace(test_case):
         device = random_device()
@@ -58,6 +58,7 @@ class TestAddcmul(flow.unittest.TestCase):
         value = random(3, 6).to(int)
         input.addcmul_(tensor1, tensor2, value=value)
         return input
+
 
 if __name__ == "__main__":
     unittest.main()

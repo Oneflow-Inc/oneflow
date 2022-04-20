@@ -472,11 +472,14 @@ def _cos(self):
 def _cosh(self):
     return flow.cosh(self)
 
-def _addcmul(self, tensor1, tensor2, * , value = 1):
+
+def _addcmul(self, tensor1, tensor2, *, value=1):
     return flow._C.addcmul(self, tensor1, tensor2, value=value)
 
-def _addcmul_(self, tensor1, tensor2, * , value = 1):
+
+def _addcmul_(self, tensor1, tensor2, *, value=1):
     return flow._C.addcmul_(self, tensor1, tensor2, value=value)
+
 
 def _erf(self):
     return flow.erf(self)
