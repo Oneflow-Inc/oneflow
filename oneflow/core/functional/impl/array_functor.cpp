@@ -949,10 +949,10 @@ class SearchSortedFunctor {
  public:
   SearchSortedFunctor() {
     op_ = CHECK_JUST(one::OpBuilder("searchsorted")
-                                .Input("sorted_sequence")
-                                .Input("values")
-                                .Output("out")
-                                .Build());
+                         .Input("sorted_sequence")
+                         .Input("values")
+                         .Output("out")
+                         .Build());
   }
   Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& sorted_sequence,
                            const std::shared_ptr<one::Tensor>& values, bool out_int32,
@@ -990,10 +990,8 @@ class SearchSortedFunctor {
 class SearchSortedScalarFunctor {
  public:
   SearchSortedScalarFunctor() {
-    op_ = CHECK_JUST(one::OpBuilder("searchsorted_scalar")
-                                .Input("sorted_sequence")
-                                .Output("out")
-                                .Build());
+    op_ = CHECK_JUST(
+        one::OpBuilder("searchsorted_scalar").Input("sorted_sequence").Output("out").Build());
   }
   Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& sorted_sequence,
                            const Scalar& values, bool out_int32, bool right) const {

@@ -43,10 +43,8 @@ class CpuSearchSortedKernel final : public user_op::OpKernel {
       K start_bd = is_sequence_1d ? 0 : i / values_shape_last * sequence_shape_last;
       K end_bd = start_bd + sequence_shape_last;
       K pos = !right
-                  ? cus_lower_bound<T, K>(start_bd, end_bd, values_ptr[i], sequence_ptr)
-                        - start_bd
-                  : cus_upper_bound<T, K>(start_bd, end_bd, values_ptr[i], sequence_ptr)
-                        - start_bd;
+                  ? cus_lower_bound<T, K>(start_bd, end_bd, values_ptr[i], sequence_ptr) - start_bd
+                  : cus_upper_bound<T, K>(start_bd, end_bd, values_ptr[i], sequence_ptr) - start_bd;
 
       out_ptr[i] = pos;
     }
@@ -85,9 +83,8 @@ class CpuSearchSortedScalarKernel final : public user_op::OpKernel {
     K* out_ptr = out->mut_dptr<K>();
     K sequence_shape_last = sorted_sequence->shape().At(0);
 
-    K pos = !right
-                ? cus_lower_bound<T, K>(0, sequence_shape_last, values, sequence_ptr)
-                : cus_upper_bound<T, K>(0, sequence_shape_last, values, sequence_ptr);
+    K pos = !right ? cus_lower_bound<T, K>(0, sequence_shape_last, values, sequence_ptr)
+                   : cus_upper_bound<T, K>(0, sequence_shape_last, values, sequence_ptr);
 
     out_ptr[0] = pos;
   }

@@ -24,16 +24,13 @@ namespace oneflow {
 template<typename T, typename K>
 __global__ void DoSearchSortedLogical(int32_t instance_num, bool is_sequence_1d,
                                       K values_shape_last, K sequence_shape_last, bool right,
-                                      const T* values_ptr, const T* sequence_ptr,
-                                      K* out_ptr) {
+                                      const T* values_ptr, const T* sequence_ptr, K* out_ptr) {
   CUDA_1D_KERNEL_LOOP(i, instance_num) {
     K start_bd = is_sequence_1d ? 0 : i / values_shape_last * sequence_shape_last;
     K end_bd = start_bd + sequence_shape_last;
     K pos = !right
-                ? cus_lower_bound<T, K>(start_bd, end_bd, values_ptr[i], sequence_ptr)
-                      - start_bd
-                : cus_upper_bound<T, K>(start_bd, end_bd, values_ptr[i], sequence_ptr)
-                      - start_bd;
+                ? cus_lower_bound<T, K>(start_bd, end_bd, values_ptr[i], sequence_ptr) - start_bd
+                : cus_upper_bound<T, K>(start_bd, end_bd, values_ptr[i], sequence_ptr) - start_bd;
     out_ptr[i] = pos;
   }
 }
@@ -42,9 +39,8 @@ template<typename T, typename K>
 __global__ void DoSearchSortedScalarLogical(K sequence_shape_last, bool right, const T values,
                                             const T* sequence_ptr, K* out_ptr) {
   CUDA_1D_KERNEL_LOOP(i, 1) {
-    K pos = !right
-                ? cus_lower_bound<T, K>(0, sequence_shape_last, values, sequence_ptr)
-                : cus_upper_bound<T, K>(0, sequence_shape_last, values, sequence_ptr);
+    K pos = !right ? cus_lower_bound<T, K>(0, sequence_shape_last, values, sequence_ptr)
+                   : cus_upper_bound<T, K>(0, sequence_shape_last, values, sequence_ptr);
     out_ptr[0] = pos;
   }
 }
