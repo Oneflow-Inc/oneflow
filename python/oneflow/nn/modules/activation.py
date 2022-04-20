@@ -1004,7 +1004,7 @@ class SELU(Module):
 class Softshrink(Module):
     r"""
     The interface is consistent with PyTorch.
-    The documentation is referenced from: https://pytorch.org/docs/1.10/generated/torch.nn.Softshrink.html?highlight=softshrink#torch.nn.Softshrink.
+    The documentation is referenced from: https://pytorch.org/docs/1.10/generated/torch.nn.Softshrink.html.
 
     The Softshrink activation.
 
