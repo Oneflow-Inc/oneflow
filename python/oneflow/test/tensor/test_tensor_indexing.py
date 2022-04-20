@@ -13,7 +13,7 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 """
-import random
+import os
 import unittest
 from oneflow.test_utils.test_util import GenArgList
 from collections import OrderedDict
@@ -410,6 +410,7 @@ class TestTensorIndexing(flow.unittest.TestCase):
         for arg in GenArgList(arg_dict):
             arg[0](test_case, *arg[1:])
 
+    @unittest.skipIf(os.getenv("ONEFLOW_TEST_CPU_ONLY"), "only test cpu cases")
     def test_indecies_on_different_devices(test_case):
         x = flow.ones(3, 10)
         y = flow.ones(3, 10, device=flow.device("cuda:0"))
@@ -421,7 +422,7 @@ class TestTensorIndexing(flow.unittest.TestCase):
         test_case.assertTrue(np.allclose(y[y_idx].numpy(), np.array([1, 1])))
 
 
-@flow.unittest.skip_unless_1n2d()
+@unittest.skipIf(os.getenv("ONEFLOW_TEST_CPU_ONLY"), "only test cpu cases")
 class TestTensorIndexingMultiGpu(flow.unittest.TestCase):
     def test_indecies_on_different_devices(test_case):
         x = flow.ones(3, 10, device=flow.device("cuda:0"))
