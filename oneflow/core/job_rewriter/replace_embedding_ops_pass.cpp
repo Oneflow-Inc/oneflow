@@ -102,7 +102,6 @@ Maybe<void> DynamicLossScaleAddGradient(JobPassCtx* ctx, const OpGraph& op_graph
   return Maybe<void>::Ok();
 }
 
-
 std::string AddScheduleOp(const OpGraph& op_graph, JobBuilder* job_builder,
                           const OptimizerConf& optimizer_conf, const std::string& op_name) {
   const TrainConf& train_conf = job_builder->job().job_conf().train_conf();
@@ -694,7 +693,7 @@ Maybe<void> ReplaceEmbeddingOps::Apply(const OpGraph& op_graph, JobBuilder* job_
             if (name == shadow_op_name) {
               embedding_optimizer_conf = optimizer_conf;
               found_embedding_optimizer = true;
-              if(optimizer_conf.has_clip_conf()) {
+              if (optimizer_conf.has_clip_conf()) {
                 has_clip_grad_optimizer2gradient_lbns[optimizer_conf].push_back(embedding_grad_lbn);
               }
               break;
@@ -748,14 +747,15 @@ Maybe<void> ReplaceEmbeddingOps::Apply(const OpGraph& op_graph, JobBuilder* job_
     JUST(DynamicLossScaleAddGradient(ctx, op_graph, job_builder, gradient_lbns,
                                      embedding_scope_symbol_id, embedding_parallel_conf));
   }
-  if(has_clip_grad_optimizer2gradient_lbns.size() > 0) {
-    for(const auto& pair: has_clip_grad_optimizer2gradient_lbns) {
+  if (has_clip_grad_optimizer2gradient_lbns.size() > 0) {
+    for (const auto& pair : has_clip_grad_optimizer2gradient_lbns) {
       const auto& clip_by_global_norm_pass_state =
           JUST(ctx->GetState<ClipByGlobalNormJobPassState>("clip_by_global_norm_state"));
-      const auto& param_state = clip_by_global_norm_pass_state.clip_by_global_norm_state(pair.first);
-      LOG(ERROR)<<"total_norm_lbn "<<param_state.total_norm_lbn;
-      LOG(ERROR)<<"coeff_lbn "<<param_state.coeff_lbn;
-      LOG(ERROR)<<"parallel_conf "<<param_state.parallel_conf.DebugString();
+      const auto& param_state =
+          clip_by_global_norm_pass_state.clip_by_global_norm_state(pair.first);
+      LOG(ERROR) << "total_norm_lbn " << param_state.total_norm_lbn;
+      LOG(ERROR) << "coeff_lbn " << param_state.coeff_lbn;
+      LOG(ERROR) << "parallel_conf " << param_state.parallel_conf.DebugString();
     }
   }
 

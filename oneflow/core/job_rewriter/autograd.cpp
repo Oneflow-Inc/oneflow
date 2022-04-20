@@ -695,7 +695,7 @@ std::string GlobalNorm(const OpGraph& op_graph, JobBuilder* job_builder,
   return global_pow_op.output("out", 0);
 }
 
-void ClipGradientByGlobalNorm(const OpGraph& op_graph, JobBuilder* job_builder,
+void ClipGradientByGlobalNorm(JobPassCtx* ctx, const OpGraph& op_graph, JobBuilder* job_builder,
                               HashMap<LogicalBlobId, LogicalBlobId>* lbi2diff_lbi,
                               const OptimizerConf& optimizer_conf) {
   const ClipByGlobalNormConf& conf = optimizer_conf.clip_conf().clip_by_global_norm();
@@ -772,13 +772,14 @@ void ClipGradientByGlobalNorm(const OpGraph& op_graph, JobBuilder* job_builder,
     diff_lbi = GenLogicalBlobId(scalar_mul_op.output("y", 0));
   }
 
-  if (!JUST(ctx->HasState<ClipByGlobalNormJobPassState>("clip_by_global_norm_state"))) {
-    JUST(ctx->ResetState("clip_by_global_norm_state",
-                         std::make_unique<ClipByGlobalNormJobPassState>()));
+  if (!CHECK_JUST(ctx->HasState<ClipByGlobalNormJobPassState>("clip_by_global_norm_state"))) {
+    CHECK_JUST(ctx->ResetState("clip_by_global_norm_state",
+                               std::make_unique<ClipByGlobalNormJobPassState>()));
   }
-  auto state = JUST(ctx->MutableState<ClipByGlobalNormJobPassState>("clip_by_global_norm_state"));
+  auto state =
+      CHECK_JUST(ctx->MutableState<ClipByGlobalNormJobPassState>("clip_by_global_norm_state"));
   ClipByGlobalNormState param_state(total_norm_lbn, coeff_lbn, parallel_conf);
-  state->set_loss_scale_val_lbn(optimizer_conf, param_state);
+  state->set_clip_by_global_norm_state(optimizer_conf, param_state);
 }
 
 }  // namespace
@@ -1120,10 +1121,11 @@ void RegularizeGradient(const OpGraph& op_graph, JobBuilder* job_builder,
   }
 }
 
-void ClipGradient(const OpGraph& op_graph, JobBuilder* job_builder,
-                  HashMap<LogicalBlobId, LogicalBlobId>* lbi2diff_lbi, const OptimizerConf& optimizer_conf) {
-  if (clip_conf.has_clip_by_global_norm()) {
-    ClipGradientByGlobalNorm(op_graph, job_builder, lbi2diff_lbi, optimizer_conf);
+void ClipGradient(JobPassCtx* ctx, const OpGraph& op_graph, JobBuilder* job_builder,
+                  HashMap<LogicalBlobId, LogicalBlobId>* lbi2diff_lbi,
+                  const OptimizerConf& optimizer_conf) {
+  if (optimizer_conf.clip_conf().has_clip_by_global_norm()) {
+    ClipGradientByGlobalNorm(ctx, op_graph, job_builder, lbi2diff_lbi, optimizer_conf);
   } else {
     UNIMPLEMENTED();
   }
