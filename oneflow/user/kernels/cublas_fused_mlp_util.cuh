@@ -169,7 +169,7 @@ void SetCublasMatrixLayout(cublasLtMatrixLayout_t layout_desc, cudaDataType_t cu
 void SetCublasEpilogue(const CublasFusedMLPKernelCache* matmul_cache, cublasLtEpilogue_t epilogue,
                        const void* bias_ptr, const void* aux_ptr) {
   if (epilogue == CUBLASLT_EPILOGUE_RELU_BIAS || epilogue == CUBLASLT_EPILOGUE_BIAS
-      || epilogue == CUBLASLT_EPILOGUE_RELU_AUX_BIAS || epilogue == CUBLASLT_EPILOGUE_DRELU_BGRAD) {
+      || epilogue == CUBLASLT_EPILOGUE_RELU_AUX_BIAS || epilogue == CUBLASLT_EPILOGUE_DRELU_BGRAD || epilogue == CUBLASLT_EPILOGUE_BGRADA) {
     // Set epilogue
     OF_CUBLAS_CHECK(cublasLtMatmulDescSetAttribute(
         matmul_cache->operation_desc, CUBLASLT_MATMUL_DESC_EPILOGUE, &epilogue, sizeof(epilogue)));
