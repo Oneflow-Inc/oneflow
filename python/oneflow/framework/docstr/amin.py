@@ -18,7 +18,10 @@ from oneflow.framework.docstr.utils import add_docstr
 
 add_docstr(
     oneflow.amin,
-    r"""This function is equivalent to PyTorch’s amin function. 
+    r"""
+    amin(input, dim, keepdim=False) -> Tensor  
+    
+    This function is equivalent to PyTorch’s amin function. 
     The documentation is referenced from: https://pytorch.org/docs/stable/generated/torch.amin.html.
     
     Returns the minimum value of each slice of the `input` tensor in the given dimension(s) `dim`.
