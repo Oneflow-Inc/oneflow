@@ -173,15 +173,6 @@ message VariableOpConf {
   repeated string nd_sbp = 12;
 }
 
-message DecodeRandomOpConf {
-  optional string tick = 1;
-  required string out = 2;
-  required ShapeProto shape = 3;
-  required DataType data_type = 4;
-  required InitializerConf data_initializer = 5;
-  required int64 batch_size = 8;
-}
-
 message TickOpConf {
   repeated string tick = 1;
   required string out = 2;
@@ -486,7 +477,6 @@ message OperatorConf {
   optional string loc = 11 [default = ""];
   oneof op_type {
     // system op
-    DecodeRandomOpConf decode_random_conf = 102;
     CopyHdOpConf copy_hd_conf = 105;
     CopyCommNetOpConf copy_comm_net_conf = 106;
     BoxingOpConf boxing_conf = 108;

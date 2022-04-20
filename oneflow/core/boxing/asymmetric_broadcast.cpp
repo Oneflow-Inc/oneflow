@@ -47,7 +47,7 @@ Maybe<void> RawCheckAsymmetricBroadcast(Symbol<PlacedNdSbp> in, Symbol<PlacedNdS
 }
 
 static constexpr auto* CheckAsymmetricBroadcast =
-    DECORATE(&RawCheckAsymmetricBroadcast, ThreadLocalCopiable);
+    DECORATE(&RawCheckAsymmetricBroadcast, ThreadLocalCachedCopiable);
 
 Maybe<int64_t> CalBroadcastRoot(Symbol<ParallelDesc> src_parallel_desc,
                                 Symbol<ParallelDesc> dst_parallel_desc) {
@@ -69,7 +69,7 @@ Maybe<int64_t> CalBroadcastRoot(Symbol<ParallelDesc> src_parallel_desc,
   return machine_id;
 }
 
-static constexpr auto* CachedGetBroadcastRoot = DECORATE(&CalBroadcastRoot, ThreadLocal);
+static constexpr auto* CachedGetBroadcastRoot = DECORATE(&CalBroadcastRoot, ThreadLocalCached);
 
 Maybe<one::UserOpExpr> EagerNcclBroadcast(Symbol<ParallelDesc> parallel_desc, int64_t root) {
   return one::OpBuilder("eager_nccl_broadcast", *JUST(UniqueStr("eager_nccl_broadcast")))
@@ -80,7 +80,7 @@ Maybe<one::UserOpExpr> EagerNcclBroadcast(Symbol<ParallelDesc> parallel_desc, in
       .Build();
 }
 
-static constexpr auto* CachedEagerNcclBroadcast = DECORATE(&EagerNcclBroadcast, ThreadLocal);
+static constexpr auto* CachedEagerNcclBroadcast = DECORATE(&EagerNcclBroadcast, ThreadLocalCached);
 }  // namespace
 
 Maybe<one::Tensor> AsymmetricBroadcast(const std::shared_ptr<one::Tensor>& tensor,
@@ -97,7 +97,7 @@ Maybe<one::Tensor> AsymmetricBroadcast(const std::shared_ptr<one::Tensor>& tenso
     if (out_parallel_id->has_value()) {
       const auto& in_parallel_id = JUST(GetParallelId4CurrentProcessCtx(in_placement));
       if (!in_parallel_id->has_value()) {
-        std::string device_type = Device::Type4DeviceTag(in_placement->device_tag());
+        const std::string& device_type = in_placement->device_tag();
         local_tensor = JUST(one::functional::Empty(*tensor->shape(), tensor->dtype(),
                                                    JUST(Device::New(device_type))));
       }

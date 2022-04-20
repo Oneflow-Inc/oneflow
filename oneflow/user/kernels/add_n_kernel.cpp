@@ -45,6 +45,7 @@ class AddNKernel : public OpKernel, public CudaGraphSupport {
     Tensor* out = ctx->Tensor4ArgNameAndIndex("out", 0);
     const DataType data_type = out->data_type();
     const size_t count = out->shape().elem_cnt();
+    if (count == 0) { return; }
     size_t in_num = ctx->inputs().size();
     std::vector<const void*> srcs(in_num);
     for (size_t i = 0; i < in_num; ++i) {

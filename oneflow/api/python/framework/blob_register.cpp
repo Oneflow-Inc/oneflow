@@ -84,7 +84,7 @@ ONEFLOW_API_PYBIND11_MODULE("", m) {
       .def("increase_reference_counter", &RegisteredBlobAccess::increase_reference_counter)
       .def("decrease_reference_counter", &RegisteredBlobAccess::decrease_reference_counter);
 
-  m.def("GetDefaultBlobRegister", []() { return GetDefaultBlobRegister().GetPtrOrThrow(); });
+  m.def("GetDefaultBlobRegister", &GetDefaultBlobRegister);
 }
 
 }  // namespace compatible_py
