@@ -172,7 +172,7 @@ class TestSearch_Sorted(flow.unittest.TestCase):
             values,
             out_int32=oneof(True, False),
             right=right,
-            side="right" if right==True else "left",
+            side="right" if right == True else "left",
             sorter=sorter,
         )
         return y
