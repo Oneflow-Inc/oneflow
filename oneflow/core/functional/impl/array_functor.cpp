@@ -1827,12 +1827,31 @@ class TensorGetItemFunctor {
  public:
   TensorGetItemFunctor() {}
   Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x, const TensorIndex& index) const {
-    // TODO:(zhaoluyang) if index.size() == 1, then use select
-    // if (index.size() == 1) {
-    //   auto index_item = index.at(0);
-    //   if (index_item.IsInteger()) { return JUST(functional::Select(x, 0, index_item.integer()));
-    //   }
-    // }
+    // NOTE: for speed up in special case(e.g. dataloader)
+    if(index.size()==1){
+      auto index_item = index.at(0);
+      if(index_item.IsInteger()){
+        const int64_t index = index_item.integer();
+        int32_t ndim = x->ndim();
+        CHECK_OR_RETURN(ndim > 0) << "select() cannot be applied to a 0-dim tensor.";
+
+        int32_t pos_dim = 0;
+        auto size = x->dim(pos_dim);
+        CHECK_OR_RETURN((index >= -size) && (index < size))
+            << "Index out of range (expected to be in range of [" << -size << "," << size - 1
+            << "], but got " << index << ")";
+        int32_t pos_index = index >= 0 ? index : index + size;
+
+        std::vector<int32_t> sizes(x->shape()->dim_vec().begin(), x->shape()->dim_vec().end());
+        const auto& stride = JUST(x->stride())->StrideVec();
+        std::vector<int32_t> strides(stride.begin(), stride.end());
+        auto storage_offset = JUST(x->storage_offset()) + pos_index * strides[pos_dim];
+
+        sizes.erase(sizes.begin() + pos_dim);
+        strides.erase(strides.begin() + pos_dim);
+        return view::AsStrided(x, sizes, strides, storage_offset);
+      }
+    }
 
     std::vector<detail::Slice> slice_indices;
     TensorTuple tensor_indices;
