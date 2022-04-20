@@ -1140,7 +1140,7 @@ class Threshold(Module):
     r"""The Threshold Activation. Return ``x`` if ``x`` is greater than ``threshold``, else return ``value``.
 
     The interface is consistent with PyTorch.
-    The documentation is referenced from https://pytorch.org/docs/stable/generated/torch.nn.Threshold.html.
+    The documentation is referenced from https://pytorch.org/docs/1.10/generated/torch.nn.Threshold.html.
 
     The formula is:
 
