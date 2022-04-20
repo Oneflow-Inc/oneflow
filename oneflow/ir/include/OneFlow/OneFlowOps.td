@@ -209,9 +209,8 @@ def OneFlow_Job : Op<OneFlow_Dialect, "job", [FunctionOpInterface, IsolatedFromA
     }
   }];
 
-  let parser = [{ return ::mlir::oneflow::parseJob(parser, result); }];
-  let printer = [{ return ::mlir::oneflow::print(*this, p); }];
-  let verifier = [{ return ::mlir::oneflow::verify(*this); }];
+  let hasCustomAssemblyFormat = 1;
+  let hasVerifier = 1;
 }
 
 def OneFlow_ReturnOp : Op<OneFlow_Dialect, "return", [NoSideEffect, HasParent<"Job">,
@@ -239,9 +238,8 @@ def OneFlow_ReturnOp : Op<OneFlow_Dialect, "return", [NoSideEffect, HasParent<"J
 
   let assemblyFormat = "attr-dict ($operands^ `:` type($operands))?";
 
-  let printer = [{ return ::mlir::oneflow::print(p, *this); }];
-  let verifier = [{ return ::mlir::oneflow::verify(*this); }];
-  let parser = [{ return ::mlir::oneflow::parse$cppClass(parser, result); }];
+  let hasCustomAssemblyFormat = 1;
+  let hasVerifier = 1;
 }
 
 #endif // REMOVE_ONEFLOW_MLIR_ONLY_OP_DEFINITIONS
