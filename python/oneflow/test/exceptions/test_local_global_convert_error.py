@@ -50,8 +50,10 @@ class TestModule(flow.unittest.TestCase):
 
     @flow.unittest.skip_unless_1n2d()
     def test_local_to_global_with_invalid_size(test_case):
-        x = flow.Tensor(2, 4)  # size(2, 4)
-        y = flow.Tensor(4, 4)  # size(4, 4)
+        if flow.env.get_rank() == 0:
+            x = flow.Tensor(2, 4)  # size(2, 4)
+        else:
+            x = flow.Tensor(4, 4)  # size(4, 4)
         with test_case.assertRaises(RuntimeError) as ctx:
             y = x.to_global(
                 placement=flow.env.all_device_placement("cpu"), sbp=flow.sbp.split(0)
