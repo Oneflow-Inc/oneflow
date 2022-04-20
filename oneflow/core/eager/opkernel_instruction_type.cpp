@@ -137,7 +137,7 @@ struct LocalCallOpKernelUtil final {
                                        operand->consistent_tensor_infer_result().get(), device_ctx);
     OF_PROFILER_RANGE_PUSH("Compute");
     {
-      profiler::EventRecorder er_guard(opkernel->op_type_name());
+      profiler::EventRecorder er_guard(profiler::EventType::kKernel, opkernel->op_type_name());
       operand->user_opkernel()->Compute(compute_ctx, state, cache);
     }
     OF_PROFILER_RANGE_POP();

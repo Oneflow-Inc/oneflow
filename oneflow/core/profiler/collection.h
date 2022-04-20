@@ -29,16 +29,6 @@ namespace oneflow {
 
 namespace profiler {
 
-struct Event {
-  Event() = default;
-  
-  explicit Event(const std::string& op_name) : op_name_(op_name) {}
-
-  std::string op_name_;
-  time_t start_at_ = 0;
-  time_t end_at_ = 0;
-};
-
 struct Result {
   Result() = default;
 
@@ -59,17 +49,56 @@ struct Result {
   int64_t num_called_ = 0;
 };
 
+enum class EventType { kCustom, kKernel };
+class CustomEvent;
+class KernelEvent;
+
+class IEvent {
+ public:
+  OF_DISALLOW_COPY_AND_MOVE(IEvent);
+
+  IEvent() = delete;
+  explicit IEvent(const std::string& name) : name_(name) {}
+  virtual Result ConvertToResult() = 0;
+  virtual ~IEvent() = default;
+
+  void Start();
+  void Finish();
+  const std::string& GetName() const;
+  time_t GetDuration();
+  static std::shared_ptr<IEvent> Create(EventType type, const std::string& name);
+
+ protected:
+  std::string name_;
+  time_t started_at_ = 0;
+  time_t finished_at_ = 0;
+};
+
+class CustomEvent : public IEvent {
+ public:
+  explicit CustomEvent(const std::string& custom_name) : IEvent(custom_name) {}
+  Result ConvertToResult();
+};
+
+class KernelEvent : public IEvent {
+ public:
+  explicit KernelEvent(const std::string& kernel_name) : IEvent(kernel_name) {}
+  Result ConvertToResult();
+};
+
 class EventRecorder;
 
 class ProfileMgr {
  public:
+  friend class EventRecorder;
   ProfileMgr() = default;
-  std::shared_ptr<Event> StartRecord(const std::string& op_name);
-  void EndRecord(const std::shared_ptr<Event>& event);
+  std::shared_ptr<EventRecorder> NewEventRecorder(EventType type, const std::string& name);
+  void DeleteEventRecorder(const std::string& name);
   std::string DumpResultsJson();
 
  private:
-  std::queue<std::shared_ptr<Event>> events_;
+  std::queue<std::shared_ptr<IEvent>> events_;
+  std::unordered_map<std::string, std::shared_ptr<EventRecorder>> event_recorders_;
 
   std::vector<Result> __CountResults();
 };
@@ -78,27 +107,19 @@ class EventRecorder {
  public:
   OF_DISALLOW_COPY_AND_MOVE(EventRecorder);
 
-  explicit EventRecorder(const std::string& name) {
+  explicit EventRecorder(EventType type, const std::string& name) {
+    event_ = IEvent::Create(type, name);
     auto pmgr = Global<profiler::ProfileMgr>::Get();
-    if (pmgr) { event_ = pmgr->StartRecord(name); }
+    if (pmgr) { pmgr->events_.push(event_); }
+    event_->Start();
   }
   ~EventRecorder() {
-    auto pmgr = Global<profiler::ProfileMgr>::Get();
-    if (pmgr) { pmgr->EndRecord(event_); }
+    event_->Finish();
+    event_.reset();
   }
 
  private:
-  std::shared_ptr<Event> event_;
-};
-
-class EventRecorderMgr {
- public:
-  EventRecorderMgr() = default;
-  void AddRecorder(const std::string& name);
-  void DeleteRecorder(const std::string& name);
-
- private:
-  std::unordered_map<std::string, std::shared_ptr<EventRecorder>> event_recorders_;
+  std::shared_ptr<IEvent> event_;
 };
 
 }  // namespace profiler

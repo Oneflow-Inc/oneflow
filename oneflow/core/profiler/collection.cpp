@@ -44,13 +44,31 @@ namespace oneflow {
 
 namespace profiler {
 
-std::shared_ptr<Event> ProfileMgr::StartRecord(const std::string& op_name) {
-  auto event = std::make_shared<Event>(op_name);
-  events_.push(event);
-  event->start_at_ = GetTimeNow();
-  return event;
+void IEvent::Start() { started_at_ = GetTimeNow(); }
+void IEvent::Finish() { finished_at_ = GetTimeNow(); }
+const std::string& IEvent::GetName() const { return name_; }
+time_t IEvent::GetDuration() { return finished_at_ - started_at_; }
+
+std::shared_ptr<IEvent> IEvent::Create(EventType type, const std::string& name) {
+  if (type == EventType::kCustom) { return std::make_shared<CustomEvent>(name); }
+  if (type == EventType::kKernel) { return std::make_shared<KernelEvent>(name); }
+  return nullptr;
 }
-void ProfileMgr::EndRecord(const std::shared_ptr<Event>& event) { event->end_at_ = GetTimeNow(); }
+
+Result KernelEvent::ConvertToResult() { return Result(name_, GetDuration(), 1); }
+
+Result CustomEvent::ConvertToResult() { return Result(name_, GetDuration(), 1); }
+
+std::shared_ptr<EventRecorder> ProfileMgr::NewEventRecorder(EventType type,
+                                                            const std::string& name) {
+  auto recorder = std::make_shared<EventRecorder>(type, name);
+  event_recorders_.emplace(name, recorder);
+  return recorder;
+}
+
+void ProfileMgr::DeleteEventRecorder(const std::string& name) {
+  if (event_recorders_.find(name) != event_recorders_.end()) { event_recorders_.erase(name); }
+}
 
 std::string ProfileMgr::DumpResultsJson() {
   const json j = __CountResults();
@@ -63,24 +81,17 @@ std::vector<Result> ProfileMgr::__CountResults() {
   while (!events_.empty()) {
     auto e = events_.front();
     events_.pop();
-    if (results.find(e->op_name_) == results.end()) {
-      op_names_ordered.push_back(e->op_name_);
-      results[e->op_name_] = Result(e->op_name_, e->end_at_ - e->start_at_, 1);
+    const auto& event_name = e->GetName();
+    if (results.find(event_name) == results.end()) {
+      op_names_ordered.push_back(event_name);
+      results[event_name] = e->ConvertToResult();
     } else {
-      results[e->op_name_].Update(e->end_at_ - e->start_at_);
+      results[event_name].Update(e->GetDuration());
     }
   }
   std::vector<Result> final_results;
   for (const auto& op_name : op_names_ordered) { final_results.push_back(results[op_name]); }
   return final_results;
-}
-
-void EventRecorderMgr::AddRecorder(const std::string& name) {
-  event_recorders_.emplace(name, std::make_shared<EventRecorder>(name));
-}
-
-void EventRecorderMgr::DeleteRecorder(const std::string& name) {
-  if (event_recorders_.find(name) != event_recorders_.end()) { event_recorders_.erase(name); }
 }
 
 }  // namespace profiler

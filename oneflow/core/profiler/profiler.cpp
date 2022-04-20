@@ -111,14 +111,11 @@ void ProfilerStop() {
 void EnableProfiler() {
   CHECK_JUST(vm::ClusterSync());
   if (Global<ProfileMgr>::Get() == nullptr) { Global<ProfileMgr>::New(); }
-  if (Global<EventRecorderMgr>::Get() == nullptr) { Global<EventRecorderMgr>::New(); }
 }
 
 // DisableProfiler will return a json of profile results.
 std::string DisableProfiler() {
   CHECK_JUST(vm::ClusterSync());
-  auto ermgr = Global<EventRecorderMgr>::Get();
-  if (ermgr != nullptr) { Global<EventRecorderMgr>::Delete(); }
 
   auto pmgr = Global<ProfileMgr>::Get();
   if (pmgr != nullptr) {
@@ -130,20 +127,20 @@ std::string DisableProfiler() {
 }
 
 Maybe<void> StartRecord(const std::string& name) {
-  auto ermgr = Global<EventRecorderMgr>::Get();
-  CHECK_NOTNULL_OR_RETURN(ermgr) << "EventRecorderMgr has not been initialized.";
+  auto ermgr = Global<ProfileMgr>::Get();
+  CHECK_NOTNULL_OR_RETURN(ermgr) << "ProfileMgr has not been initialized.";
   if (ermgr != nullptr) {
     CHECK_JUST(vm::ClusterSync());
-    ermgr->AddRecorder(name);
+    ermgr->NewEventRecorder(profiler::EventType::kCustom, name);
   }
   return Maybe<void>::Ok();
 }
 
 void EndRecord(const std::string& name) {
-  auto ermgr = Global<EventRecorderMgr>::Get();
+  auto ermgr = Global<ProfileMgr>::Get();
   if (ermgr != nullptr) {
     CHECK_JUST(vm::ClusterSync());
-    ermgr->DeleteRecorder(name);
+    ermgr->DeleteEventRecorder(name);
   }
 }
 
