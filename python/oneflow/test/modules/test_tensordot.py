@@ -28,10 +28,7 @@ class TestTensordot(flow.unittest.TestCase):
         dims = random()
         dims_list = [random().to(int).value() for i in range(dims.to(int).value() + 3)]
         x = random_tensor(
-            ndim=3,
-            dim0=dims_list[0],
-            dim1=dims_list[1],
-            dim2=dims_list[2],
+            ndim=3, dim0=dims_list[0], dim1=dims_list[1], dim2=dims_list[2],
         ).to(device)
         y = random_tensor(
             ndim=3,
@@ -46,16 +43,16 @@ class TestTensordot(flow.unittest.TestCase):
     @autotest(check_graph=True, n=1)
     def test_tensordot_tensordim(test_case):
         device = random_device()
-        x = random_tensor(4, 1,3,2,5).to(device)
-        y = random_tensor(4, 4,2,3,5).to(device)
-        z = torch.tensordot(x, y, dims=[[1,2,0],[2,1,0]])
+        x = random_tensor(4, 1, 3, 2, 5).to(device)
+        y = random_tensor(4, 4, 2, 3, 5).to(device)
+        z = torch.tensordot(x, y, dims=[[1, 2, 0], [2, 1, 0]])
         return z
 
     @autotest(check_graph=True)
     def test_tensordot_broadcast(test_case):
         device = random_device()
-        x = random_tensor(4, 1,1,1,1).to(device)
-        y = random_tensor(4, 2,3,4,5).to(device)
+        x = random_tensor(4, 1, 1, 1, 1).to(device)
+        y = random_tensor(4, 2, 3, 4, 5).to(device)
         z = torch.tensordot(x, y, dims=random(high=5).to(int).value())
         return z
 
