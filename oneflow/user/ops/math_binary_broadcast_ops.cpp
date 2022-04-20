@@ -77,7 +77,7 @@ Maybe<void> InferTensorDescBinaryBroadcastLogical(user_op::InferContext* ctx) {
 Maybe<void> InferDataTypeBinaryBroadcastNormal(user_op::InferContext* ctx) {
   const user_op::TensorDesc& tensor_x = ctx->InputTensorDesc("x", 0);
   const user_op::TensorDesc& tensor_y = ctx->InputTensorDesc("y", 0);
-  CHECK_EQ_OR_RETURN(tensor_x.data_type(), tensor_y.data_type());
+  CHECK_EQ_OR_RETURN(tensor_x.data_type(), tensor_y.data_type());  // NOLINT(maybe-need-error-msg)
   *ctx->OutputDType("z", 0) = ctx->InputDType("x", 0);
   return Maybe<void>::Ok();
 }
@@ -85,7 +85,7 @@ Maybe<void> InferDataTypeBinaryBroadcastNormal(user_op::InferContext* ctx) {
 Maybe<void> InferDataTypeBinaryBroadcastLogical(user_op::InferContext* ctx) {
   const user_op::TensorDesc& tensor_x = ctx->InputTensorDesc("x", 0);
   const user_op::TensorDesc& tensor_y = ctx->InputTensorDesc("y", 0);
-  CHECK_EQ_OR_RETURN(tensor_x.data_type(), tensor_y.data_type());
+  CHECK_EQ_OR_RETURN(tensor_x.data_type(), tensor_y.data_type());  // NOLINT(maybe-need-error-msg)
   *ctx->OutputDType("z", 0) = DataType::kBool;
   return Maybe<void>::Ok();
 }
