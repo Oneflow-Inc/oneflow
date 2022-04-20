@@ -587,7 +587,7 @@ class TestLeakyReLUModule(flow.unittest.TestCase):
         y = m(x)
         return y
 
-    @autotest()
+    @autotest(n=5)
     def test_leakyrelu_module_with_inplace_arg(test_case):
         m = torch.nn.LeakyReLU(
             negative_slope=random() | nothing(), inplace=random() | nothing()
