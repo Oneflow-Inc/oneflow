@@ -35,7 +35,6 @@ limitations under the License.
 #include "oneflow/core/framework/placement_utils.h"
 #include "oneflow/core/autograd/autograd_engine.h"
 #include "oneflow/core/common/decorator.h"
-#include "oneflow/core/framework/tensor_storage.h"
 
 namespace py = pybind11;
 

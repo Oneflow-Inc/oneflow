@@ -78,7 +78,7 @@ Maybe<Tensor> BasicView(const std::shared_ptr<Tensor>& input, const Shape& targe
   JUST(tensor_impl->InitEagerBlobObject(JUST(blob_object->compute_local_dep_object())));
   std::shared_ptr<Tensor> output(new MirroredTensor(tensor_impl));
 
-  // NOTE: TensorView instruction will be reomve in the future
+  // NOTE: TensorView instruction will be remove in the future
   JUST(PhysicalRun([&](InstructionsBuilder* builder) -> Maybe<void> {
     return builder->TensorView(JUST(input->AsMirroredTensor()), JUST(output->AsMirroredTensor()));
   }));
