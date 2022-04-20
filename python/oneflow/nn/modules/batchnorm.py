@@ -44,17 +44,21 @@ class _NormBase(Module):
             self.register_parameter("weight", None)
             self.register_parameter("bias", None)
         if self.track_running_stats:
-            self.register_buffer("running_mean", flow.Tensor(num_features))
-            self.register_buffer("running_var", flow.Tensor(num_features))
+            self.register_buffer("running_mean", flow.zeros(num_features))
+            self.register_buffer("running_var", flow.ones(num_features))
+            self.register_buffer("num_batches_tracked", flow.tensor(0, dtype=flow.long))
         else:
-            self.register_parameter("running_mean", None)
-            self.register_parameter("running_var", None)
+            self.register_buffer("running_mean", None)
+            self.register_buffer("running_var", None)
+            self.register_buffer("num_batches_tracked", None)
+
         self.reset_parameters()
 
     def reset_running_stats(self) -> None:
         if self.track_running_stats:
             self.running_mean.fill_(0)
             self.running_var.fill_(1)
+            self.num_batches_tracked.zero_()
 
     def reset_parameters(self) -> None:
         self.reset_running_stats()
@@ -75,6 +79,9 @@ class _NormBase(Module):
         unexpected_keys,
         error_msgs,
     ):
+        if self.track_running_stats:
+            num_batches_tracked_key = prefix + "num_batches_tracked"
+            state_dict[num_batches_tracked_key] = flow.tensor(0, dtype=flow.long)
         super(_NormBase, self)._load_from_state_dict(
             state_dict,
             prefix,
@@ -105,6 +112,9 @@ class _BatchNorm(_NormBase):
 
     def forward(self, x):
         self._check_input_dim(x)
+        if self.training and self.track_running_stats:
+            if self.num_batches_tracked is not None:
+                self.num_batches_tracked.add_(1)
         if self.training:
             is_training = True
         else:
