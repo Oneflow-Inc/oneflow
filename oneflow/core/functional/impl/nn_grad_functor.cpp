@@ -921,6 +921,28 @@ class FusedScaleMaskSoftmaxDropoutGradFunctor {
   std::shared_ptr<OpExpr> op_;
 };
 
+class CublasBiasAddReluMatmulGradFunctor {
+ public:
+  CublasBiasAddReluMatmulGradFunctor() {
+    op_ = CHECK_JUST(one::OpBuilder("cublas_bias_add_relu_matmul_grad")
+                         .Input("dy")
+                         .Input("weight")
+                         .Input("aux")
+                         .Output("d_grad")
+                         .Output("d_bias")
+                         .Build());
+  }
+  Maybe<TensorTuple> operator()(const std::shared_ptr<one::Tensor>& dy,
+                                const std::shared_ptr<one::Tensor>& weight,
+                                const std::shared_ptr<one::Tensor>& aux) const {
+    MutableAttrMap attrs;
+    return OpInterpUtil::Dispatch<TensorTuple>(*op_, {dy, weight, aux}, attrs);
+  }
+
+ private:
+  std::shared_ptr<OpExpr> op_;
+};
+
 class FusedDotFeatureInteractionGradFunctor {
  public:
   FusedDotFeatureInteractionGradFunctor() {
@@ -1010,6 +1032,7 @@ ONEFLOW_FUNCTION_LIBRARY(m) {
       "FusedScaleTrilSoftmaxMaskScaleGrad");
   m.add_functor<impl::FusedScaleMaskSoftmaxGradFunctor>("FusedScaleMaskSoftmaxGrad");
   m.add_functor<impl::FusedScaleMaskSoftmaxDropoutGradFunctor>("FusedScaleMaskSoftmaxDropoutGrad");
+  m.add_functor<impl::CublasBiasAddReluMatmulGradFunctor>("CublasBiasAddReluMatmulGrad");
   m.add_functor<impl::FusedDotFeatureInteractionGradFunctor>("FusedDotFeatureInteractionGrad");
 };
 

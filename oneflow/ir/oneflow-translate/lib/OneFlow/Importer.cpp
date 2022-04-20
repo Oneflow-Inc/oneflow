@@ -319,6 +319,10 @@ llvm::Optional<Type> Importer::GetTypeFromOneFlowDataType(::oneflow::DataType dt
       return TensorBufferElementType::get(GetMLIRContext());
     }
     if (dt == ::oneflow::DataType::kBool) { return GetBuilder().getI8Type(); }
+    if (dt == ::oneflow::DataType::kUInt16) { return GetBuilder().getIntegerType(16, false); }
+    if (dt == ::oneflow::DataType::kUInt32) { return GetBuilder().getI32Type(); }
+    if (dt == ::oneflow::DataType::kUInt64) { return GetBuilder().getI64Type(); }
+    if (dt == ::oneflow::DataType::kUInt128) { return GetBuilder().getIntegerType(128, false); }
     llvm::errs() << "unsupported data type: " << dt << "\n";
     return llvm::None;
   }

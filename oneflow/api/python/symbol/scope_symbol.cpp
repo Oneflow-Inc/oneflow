@@ -53,8 +53,7 @@ ONEFLOW_API_PYBIND11_MODULE("", m) {
           "device_parallel_desc_symbol",
           [](const Scope& x) { return x.device_parallel_desc_symbol().shared_from_symbol(); })
       .def_property_readonly("parent_scope_symbol", &Scope::parent_scope_symbol)
-      .def("MakeChildScopeProto",
-           [](const Scope& scope) { return scope.MakeChildScopeProto().GetOrThrow(); });
+      .def("MakeChildScopeProto", &Scope::MakeChildScopeProto);
 }
 
 }  // namespace oneflow

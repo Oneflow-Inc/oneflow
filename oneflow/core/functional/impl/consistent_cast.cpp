@@ -53,6 +53,24 @@ namespace impl {
 
 namespace {
 
+// NOTE: use env variable 'ONEFLOW_EAGER_LOCAL_TO_GLOBAL_BALANCED_OVERRIDE' indicate whether the
+// shape and dtype of input tensor on each rank is the same when cast local tensor to global tensor.
+// If set true, there will be no meta-information synchronization on each rank.
+Optional<bool> ParseEagerLocalToGlobalBalancedOverride() {
+  const char* env_p = std::getenv("ONEFLOW_EAGER_LOCAL_TO_GLOBAL_BALANCED_OVERRIDE");
+  if (env_p == nullptr) {
+    return Optional<bool>();
+  } else {
+    return ParseBooleanFromEnv("ONEFLOW_EAGER_LOCAL_TO_GLOBAL_BALANCED_OVERRIDE", false);
+  }
+}
+
+bool GetLocalToGlobalIsBalanced(bool is_balanced) {
+  thread_local Optional<bool> eager_local_to_global_balanced_override =
+      ParseEagerLocalToGlobalBalancedOverride();
+  return eager_local_to_global_balanced_override.value_or(is_balanced);
+}
+
 // clang-format off
 FLAT_MSG_BEGIN(FlatShapeAndDataType);
   // Methods
@@ -187,7 +205,12 @@ Maybe<void> GetConcatenatedShapeAndCheckDtype(
 
 Maybe<void> GetLogicalShapeAndDataType(Shape* logical_shape, DataType* /* in and out */ dtype,
                                        std::shared_ptr<const Shape> physical_shape,
-                                       Symbol<ParallelDesc> parallel_desc, Symbol<NdSbp> nd_sbp) {
+                                       Symbol<ParallelDesc> parallel_desc, Symbol<NdSbp> nd_sbp,
+                                       bool is_balanced) {
+  if (is_balanced) {
+    *logical_shape = *JUST(GetLogicalShape(*physical_shape, *nd_sbp, *parallel_desc));
+    return Maybe<void>::Ok();
+  }
   if (nd_sbp->sbp_parallel_size() == 1 && nd_sbp->sbp_parallel(0).has_split_parallel()) {
     const auto& rank2flat_shape_dtype =
         JUST(BroadcastGatherShapeAndDataType(*physical_shape, *dtype, parallel_desc));
@@ -260,29 +283,29 @@ Maybe<Tensor> LocalToConsistent(const std::shared_ptr<Tensor>& x,
   CHECK_OR_RETURN(x->is_local()) << Error::UnimplementedError() << "local tensors supported only";
   std::shared_ptr<one::Tensor> input = x;
   // copy to right device first if input's device type is wrong
-  if (JUST(JUST(input->device())->of_type()) != parallel_desc->device_tag()) {
+  if (JUST(input->device())->type() != parallel_desc->device_tag()) {
     VLOG(2) << "The device_type of the input tensor is different from placement, now copy it to "
-            << Device::Type4DeviceTag(parallel_desc->device_tag());
-    input = JUST(functional::Copy(x, Device::Type4DeviceTag(parallel_desc->device_tag()),
-                                  GlobalProcessCtx::LocalRank()));
+            << parallel_desc->device_tag();
+    input = JUST(functional::Copy(x, parallel_desc->device_tag(), GlobalProcessCtx::LocalRank()));
   }
   // copy to default device of the current rank if input's device type is right but not on default
   // device
   if (JUST(input->device())->device_id() != GlobalProcessCtx::LocalRank()) {
     VLOG(2) << "The tensor isn't on default device of the current rank., now copy it to "
             << parallel_desc->device_tag() << ": " << GlobalProcessCtx::LocalRank();
-    input = JUST(functional::Copy(x, Device::Type4DeviceTag(parallel_desc->device_tag()),
-                                  GlobalProcessCtx::LocalRank()));
+    input = JUST(functional::Copy(x, parallel_desc->device_tag(), GlobalProcessCtx::LocalRank()));
   }
   const auto& device = JUST(input->device());
-  CHECK_EQ_OR_RETURN(JUST(device->of_type()), parallel_desc->device_tag())
+  CHECK_EQ_OR_RETURN(device->type(), parallel_desc->device_tag())
       << Error::UnimplementedError() << "tensor' device type must be same with placement.";
   CHECK_EQ_OR_RETURN(device->device_id(), GlobalProcessCtx::LocalRank())
       << Error::UnimplementedError() << "tensor must be on default device of the current rank.";
   Symbol<NdSbp> nd_sbp = JUST(GetNdSbp(sbp_parallels));
   const auto& shape = std::make_shared<Shape>();
   DataType dtype = x->dtype()->data_type();
-  JUST(GetLogicalShapeAndDataType(shape.get(), &dtype, x->shape(), parallel_desc, nd_sbp));
+  bool is_balanced = GetLocalToGlobalIsBalanced(false);
+  JUST(GetLogicalShapeAndDataType(shape.get(), &dtype, x->shape(), parallel_desc, nd_sbp,
+                                  is_balanced));
   MutableAttrMap attrs;
   JUST(attrs.SetAttr<Shape>("shape", *shape));
   JUST(attrs.SetAttr<DataType>("dtype", dtype));
@@ -310,19 +333,17 @@ class LocalToConsistentFunctor {
     CHECK_OR_RETURN(x->is_local());
     std::shared_ptr<one::Tensor> input = x;
     // copy to right device first if input's device type is wrong
-    if (JUST(JUST(input->device())->of_type()) != parallel_desc->device_tag()) {
+    if (JUST(input->device())->type() != parallel_desc->device_tag()) {
       VLOG(2) << "The device_type of the input tensor is different from placement, now copy it to "
-              << Device::Type4DeviceTag(parallel_desc->device_tag());
-      input = JUST(functional::Copy(x, Device::Type4DeviceTag(parallel_desc->device_tag()),
-                                    GlobalProcessCtx::LocalRank()));
+              << parallel_desc->device_tag();
+      input = JUST(functional::Copy(x, parallel_desc->device_tag(), GlobalProcessCtx::LocalRank()));
     }
     // copy to default device of the current rank if input's device type is right but not on default
     // device
     if (JUST(input->device())->device_id() != GlobalProcessCtx::LocalRank()) {
       VLOG(2) << "The tensor isn't on default device of the current rank., now copy it to "
               << parallel_desc->device_tag() << ": " << GlobalProcessCtx::LocalRank();
-      input = JUST(functional::Copy(x, Device::Type4DeviceTag(parallel_desc->device_tag()),
-                                    GlobalProcessCtx::LocalRank()));
+      input = JUST(functional::Copy(x, parallel_desc->device_tag(), GlobalProcessCtx::LocalRank()));
     }
     Symbol<NdSbp> nd_sbp = JUST(GetNdSbp(sbp_parallels));
     MutableAttrMap attrs;

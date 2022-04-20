@@ -70,5 +70,50 @@ class ScalarPow : public OpExprGradFunction<ScalarPowCaptureState> {
 
 REGISTER_OP_EXPR_GRAD_FUNCTION("scalar_pow", ScalarPow);
 
+class ScalarReversePow : public OpExprGradFunction<ScalarPowCaptureState> {
+ public:
+  Maybe<void> Init(const OpExpr& op) override {
+    const auto* fw_op_expr = dynamic_cast<const UserOpExpr*>(&op);
+    base_attrs_ = MakeAttrMapFromUserOpConf(fw_op_expr->proto());
+    CHECK_NOTNULL_OR_RETURN(fw_op_expr);
+    return Maybe<void>::Ok();
+  }
+
+  Maybe<void> Capture(ScalarPowCaptureState* ctx, const TensorTuple& inputs,
+                      const TensorTuple& outputs, const AttrMap& attrs) const override {
+    CHECK_EQ_OR_RETURN(inputs.size(), 1);
+    CHECK_EQ_OR_RETURN(outputs.size(), 1);
+    ctx->requires_grad = inputs[0]->requires_grad();
+    if (!ctx->requires_grad) { return Maybe<void>::Ok(); }
+
+    ComposedAttrMap composed_attrs(attrs, base_attrs_);
+    bool has_float_operand = JUST(composed_attrs.GetAttr<bool>("has_float_operand"));
+    if (has_float_operand) {
+      ctx->operand = Scalar(JUST(composed_attrs.GetAttr<double>("float_operand")));
+    } else {
+      ctx->operand = Scalar(JUST(composed_attrs.GetAttr<int64_t>("int_operand")));
+    }
+    ctx->SaveTensorForBackward(inputs[0]);
+    return Maybe<void>::Ok();
+  }
+
+  Maybe<void> Apply(const ScalarPowCaptureState* ctx, const TensorTuple& out_grads,
+                    TensorTuple* in_grads) const override {
+    const auto& x = ctx->SavedTensors()[0];
+    MutableAttrMap attrs;
+    in_grads->resize(1);
+    if (ctx->requires_grad) {
+      (*in_grads)[0] = JUST(functional::ScalarReversePowGrad(x, out_grads[0], ctx->operand));
+    }
+    return Maybe<void>::Ok();
+  }
+
+ private:
+  std::shared_ptr<OpExpr> grad_op_;
+  AttrMap base_attrs_;
+};
+
+REGISTER_OP_EXPR_GRAD_FUNCTION("scalar_reverse_pow", ScalarReversePow);
+
 }  // namespace one
 }  // namespace oneflow
