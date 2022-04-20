@@ -355,6 +355,7 @@ Maybe<void> CheckDataType(user_op::InferContext* ctx) {
   return Maybe<void>::Ok();
 }
 
+<<<<<<< HEAD
 /* static */ Maybe<void> FtrlEmbeddingUpdateOp::InferLogicalTensorDesc(user_op::InferContext* ctx) {
   JUST(CheckDataShape(ctx));
   const Shape& unique_embeddings_shape = ctx->InputShape("unique_embeddings", 0);
@@ -385,4 +386,6 @@ Maybe<void> CheckDataType(user_op::InferContext* ctx) {
   return Maybe<void>::Ok();
 }
 
+=======
+>>>>>>> master
 }  // namespace oneflow

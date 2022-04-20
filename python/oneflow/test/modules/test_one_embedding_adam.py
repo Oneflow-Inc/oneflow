@@ -18,6 +18,7 @@ import unittest
 from collections import OrderedDict
 import tempfile
 
+import os
 import numpy as np
 from oneflow.test_utils.test_util import GenArgDict
 from optimizer_test_util import clip_grad_norm_np
@@ -27,7 +28,14 @@ from oneflow.nn.parameter import Parameter
 
 
 def compare_with_numpy_adam(
-    test_case, weight_decay, scale, learning_rate, train_iters, do_bias_correction
+    test_case,
+    weight_decay,
+    scale,
+    learning_rate,
+    train_iters,
+    do_bias_correction,
+    beta1,
+    beta2,
 ):
 
     num_rows = 500
@@ -45,8 +53,6 @@ def compare_with_numpy_adam(
     init_value = np.random.uniform(size=(num_rows, line_size)).astype(np.float32)
 
     down_scale_by = 10
-    beta1 = 0.9
-    beta2 = 0.8
     epsilon = 1e-5
 
     def adam_by_oneflow():
@@ -174,15 +180,19 @@ def compare_with_numpy_adam(
     )
 
 
+@unittest.skipIf(os.getenv("ONEFLOW_TEST_CPU_ONLY"), "only test cpu cases")
 @flow.unittest.skip_unless_1n1d()
 class TestOptimizers(flow.unittest.TestCase):
-    def test_sgd(test_case):
+    def test_one_embedding_adam(test_case):
         arg_dict = OrderedDict()
         arg_dict["weight_decay"] = [0, 0.1]
         arg_dict["scale"] = [1, 0.1]
-        arg_dict["learning_rate"] = [1]
+        arg_dict["learning_rate"] = [1, 1.5]
         arg_dict["train_iters"] = [10]
         arg_dict["do_bias_correction"] = [True, False]
+        arg_dict["beta1"] = [0.9, 0.8]
+        arg_dict["beta2"] = [0.9, 0.8]
+
         for arg in GenArgDict(arg_dict):
             compare_with_numpy_adam(test_case, **arg)
 

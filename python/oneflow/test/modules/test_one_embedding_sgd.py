@@ -18,6 +18,7 @@ import unittest
 from collections import OrderedDict
 import tempfile
 
+import os
 import numpy as np
 from oneflow.test_utils.test_util import GenArgDict
 from optimizer_test_util import clip_grad_norm_np
@@ -128,14 +129,15 @@ def compare_with_numpy_sgd(
         )
 
 
+@unittest.skipIf(os.getenv("ONEFLOW_TEST_CPU_ONLY"), "only test cpu cases")
 @flow.unittest.skip_unless_1n1d()
 class TestOptimizers(flow.unittest.TestCase):
-    def test_sgd(test_case):
+    def test_one_embedding_sgd(test_case):
         arg_dict = OrderedDict()
         arg_dict["momentum"] = [0, 0.9]
         arg_dict["weight_decay"] = [0, 0.1]
         arg_dict["scale"] = [1, 0.1]
-        arg_dict["learning_rate"] = [1]
+        arg_dict["learning_rate"] = [1, 0.9]
         arg_dict["train_iters"] = [10]
         for arg in GenArgDict(arg_dict):
             compare_with_numpy_sgd(test_case, **arg)

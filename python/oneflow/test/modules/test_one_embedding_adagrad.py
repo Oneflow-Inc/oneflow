@@ -18,6 +18,7 @@ import unittest
 from collections import OrderedDict
 import tempfile
 
+import os
 import numpy as np
 from oneflow.test_utils.test_util import GenArgDict
 from optimizer_test_util import clip_grad_norm_np
@@ -137,9 +138,10 @@ def compare_with_numpy_adagrad(
     )
 
 
+@unittest.skipIf(os.getenv("ONEFLOW_TEST_CPU_ONLY"), "only test cpu cases")
 @flow.unittest.skip_unless_1n1d()
 class TestOptimizers(flow.unittest.TestCase):
-    def test_sgd(test_case):
+    def test_one_embedding_adagrad(test_case):
         arg_dict = OrderedDict()
         arg_dict["weight_decay"] = [0, 0.1]
         arg_dict["lr_decay"] = [0, 0.1]
