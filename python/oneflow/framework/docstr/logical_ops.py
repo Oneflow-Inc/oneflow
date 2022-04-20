@@ -13,26 +13,14 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 """
-import oneflow as flow
-from oneflow.nn.module import Module
-from oneflow.framework.tensor import register_tensor_op
+import oneflow
+from oneflow.framework.docstr.utils import add_docstr
 
 
-class LogicalAnd(Module):
-    def __init__(self) -> None:
-        super().__init__()
-
-    def forward(self, input, other):
-        if type(input) == type(other):  # input and other are tensor.
-            assert input.shape == other.shape, "shape of input and other should be same"
-            if other.dtype != input.dtype:
-                other = flow.cast(other, input.dtype)
-        return flow._C.logical_and(input, other)
-
-
-def logical_and_op(input, other):
+add_docstr(
+    oneflow._C.logical_and,
     """
-    Computes the element-wise logical AND of the given input tensors. 
+    Computes the element-wise logical AND of the given input tensors.
     Zeros are treated as False and nonzeros are treated as True.
 
     Args:
@@ -48,7 +36,7 @@ def logical_and_op(input, other):
 
         >>> import numpy as np
         >>> import oneflow as flow
-        
+
         >>> input1 = flow.tensor(np.array([1, 0, 1]).astype(np.float32), dtype=flow.float32)
         >>> input2 = flow.tensor(np.array([1, 1, 0]).astype(np.float32), dtype=flow.float32)
 
@@ -56,23 +44,12 @@ def logical_and_op(input, other):
         >>> out
         tensor([ True, False, False], dtype=oneflow.bool)
 
-    """
-    return LogicalAnd()(input, other)
+    """,
+)
 
 
-class LogicalOr(Module):
-    def __init__(self) -> None:
-        super().__init__()
-
-    def forward(self, input, other):
-        if type(input) == type(other):  # input and other are tensor.
-            assert input.shape == other.shape, "shape of input and other should be same"
-            if other.dtype != input.dtype:
-                other = flow.cast(other, input.dtype)
-        return flow._C.logical_or(input, other)
-
-
-def logical_or_op(input, other):
+add_docstr(
+    oneflow._C.logical_or,
     """
     Computes the element-wise logical OR of the given input tensors. 
     Zeros are treated as False and nonzeros are treated as True.
@@ -98,11 +75,12 @@ def logical_or_op(input, other):
         >>> out
         tensor([ True, False,  True], dtype=oneflow.bool)
 
-    """
-    return LogicalOr()(input, other)
+    """,
+)
 
 
-def logical_xor_op(input, other):
+add_docstr(
+    oneflow._C.logical_xor,
     """
     Computes the element-wise logical XOR of the given input tensors. 
     Zeros are treated as False and nonzeros are treated as True.
@@ -127,16 +105,5 @@ def logical_xor_op(input, other):
         >>> out
         tensor([False, False,  True], dtype=oneflow.bool)
 
-    """
-
-    if type(input) == type(other):  # input and other are tensor.
-        assert input.shape == other.shape, "shape of input and other should be same"
-        if other.dtype != input.dtype:
-            other = flow.cast(other, input.dtype)
-    return flow._C.logical_xor(input, other)
-
-
-if __name__ == "__main__":
-    import doctest
-
-    doctest.testmod(raise_on_error=True)
+    """,
+)
