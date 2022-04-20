@@ -84,7 +84,7 @@ add_docstr(
     oneflow.Tensor.device,
     r"""
     The documentation is referenced from:
-    https://pytorch.org/docs/1.10/generated/torch.Tensor.device.html
+    https://pytorch.org/docs/1.10/generated/torch.Tensor.device.html.
     
     Is the :class:`oneflow.device` where this Tensor is, which is invalid for global tensor.
     """,
@@ -1589,7 +1589,7 @@ add_docstr(
     oneflow.Tensor.view,
     """
     The interface is consistent with PyTorch.
-    The documentation is referenced from: https://pytorch.org/docs/1.10/generated/torch.Tensor.view.html
+    The documentation is referenced from: https://pytorch.org/docs/1.10/generated/torch.Tensor.view.html.
 
     Returns a new tensor with the same data as the :attr:`self` tensor but of a
     different :attr:`shape`.

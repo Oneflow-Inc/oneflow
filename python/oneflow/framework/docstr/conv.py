@@ -21,7 +21,7 @@ add_docstr(
     r"""
     conv1d(input, weight, bias=None, stride=[1], padding=[0], dilation=[1], groups=1) -> Tensor
 
-    The documentation is referenced from: https://pytorch.org/docs/1.10/generated/torch.nn.functional.conv1d.html
+    The documentation is referenced from: https://pytorch.org/docs/1.10/generated/torch.nn.functional.conv1d.html.
 
     Applies a 1D convolution over an input signal composed of several input
     planes.
@@ -58,7 +58,7 @@ add_docstr(
     r"""
     conv2d(input, weight, bias=None, stride=[1], padding=[0], dilation=[1], groups=1) -> Tensor
 
-    The documentation is referenced from: https://pytorch.org/docs/1.10/generated/torch.nn.functional.conv2d.html
+    The documentation is referenced from: https://pytorch.org/docs/1.10/generated/torch.nn.functional.conv2d.html.
 
     Applies a 2D convolution over an input image composed of several input
     planes.
@@ -86,7 +86,7 @@ add_docstr(
     r"""
     conv3d(input, weight, bias=None, stride=[1], padding=[0], dilation=[1], groups=1) -> Tensor
 
-    The documentation is referenced from: https://pytorch.org/docs/1.10/generated/torch.nn.functional.conv3d.html
+    The documentation is referenced from: https://pytorch.org/docs/1.10/generated/torch.nn.functional.conv3d.html.
 
     Applies a 3D convolution over an input image composed of several input
     planes.

@@ -1322,7 +1322,7 @@ add_docstr(
     Moves the dimension(s) of input at the position(s) in source to the position(s) in destination.
     Other dimensions of input that are not explicitly moved remain in their original order and appear at the positions not specified in destination.
     The documentation is referenced from:
-    https://pytorch.org/docs/1.10/generated/torch.movedim.html
+    https://pytorch.org/docs/1.10/generated/torch.movedim.html.
 
     Args:
         input (Tensor): the input tensor.
@@ -1354,7 +1354,7 @@ add_docstr(
     r"""
     Create a view of an existing oneflow.Tensor input with specified size, stride and storage_offset.
     The documentation is referenced from:
-    https://pytorch.org/docs/1.10/generated/torch.as_strided.html
+    https://pytorch.org/docs/1.10/generated/torch.as_strided.html.
 
     Args:
         input (Tensor): the input tensor.
@@ -1421,7 +1421,7 @@ add_docstr(
     Splits a tensor into multiple sub-tensors, all of which are views of input, along dimension
     dim according to the indices or number of sections specified by indices_or_sections .
     The documentation is referenced from:
-    https://pytorch.org/docs/1.10/generated/torch.tensor_split.html
+    https://pytorch.org/docs/1.10/generated/torch.tensor_split.html.
 
     Args:
         input (Tensor): the input tensor.
@@ -1465,7 +1465,7 @@ add_docstr(
     oneflow.tensor_split(input, indices_or_sections, dim=1) (the split dimension is 1), except that if indices_or_sections
     is an integer it must evenly divide the split dimension or a runtime error will be thrown.
     The documentation is referenced from:
-    https://pytorch.org/docs/1.10/generated/torch.hsplit.html
+    https://pytorch.org/docs/1.10/generated/torch.hsplit.html.
 
     Args:
         input (Tensor): the input tensor.
@@ -1506,7 +1506,7 @@ add_docstr(
     This is equivalent to calling oneflow.tensor_split(input, indices_or_sections, dim=0) (the split dimension is 0),
     except that if indices_or_sections is an integer it must evenly divide the split dimension or a runtime error will be thrown.
     The documentation is referenced from:
-    https://pytorch.org/docs/1.10/generated/torch.vsplit.html
+    https://pytorch.org/docs/1.10/generated/torch.vsplit.html.
 
     Args:
         input (Tensor): the input tensor.
