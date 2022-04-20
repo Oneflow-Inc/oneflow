@@ -540,7 +540,7 @@ Maybe<Tensor> Diagonal(const std::shared_ptr<Tensor>& input, const int32_t offse
           << "out grad size should be 1, but got " << out_grads.size();
       in_grads->resize(1);
       std::shared_ptr<one::Tensor> d_x = JUST(functional::Transpose(input, input_index));
-      in_grads->at(0) = JUST(functional::DiagonalGrad(out_grads.at(0), d_x, offset));
+      (*in_grads)[0] = JUST(functional::DiagonalGrad(out_grads[0], d_x, offset));
       return Maybe<void>::Ok();
     };
     backward_fn->status = []() { return true; };
