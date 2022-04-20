@@ -588,6 +588,16 @@ class TestLeakyReLUModule(flow.unittest.TestCase):
         return y
 
     @autotest()
+    def test_leakyrelu_module_with_inplace_arg(test_case):
+        m = torch.nn.LeakyReLU(negative_slope=random() | nothing(), inplace=random() | nothing())
+        m.train(random())
+        device = random_device()
+        m.to(device)
+        x = random_tensor().to(device)
+        y = m(x)
+        return y
+
+    @autotest()
     @unittest.skipIf(os.getenv("ONEFLOW_TEST_CPU_ONLY"), "only test cpu cases")
     def test_leakyrelu_module_with_half_random_data(test_case):
         m = torch.nn.LeakyReLU(negative_slope=random() | nothing())
