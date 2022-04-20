@@ -590,7 +590,7 @@ class TestLeakyReLUModule(flow.unittest.TestCase):
     @autotest(n=5)
     def test_leakyrelu_module_with_inplace_arg(test_case):
         m = torch.nn.LeakyReLU(
-            negative_slope=random() | nothing(), inplace=random() | nothing()
+            negative_slope=random() | nothing(), inplace=random().to(bool) | nothing()
         )
         m.train(random())
         device = random_device()
