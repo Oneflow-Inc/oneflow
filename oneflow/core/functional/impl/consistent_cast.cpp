@@ -69,7 +69,10 @@ FLAT_MSG_BEGIN(FlatShapeAndDataType);
   }
   Maybe<void> Check(const Shape& shape, DataType dtype) const {
     JUST(this->shape().Check(shape));
-    CHECK_EQ_OR_RETURN(this->dtype(), dtype);
+    CHECK_EQ_OR_RETURN(this->dtype(), dtype) << Error::RuntimeError()
+        << "Expected all tensors on each rank to be the same dtype, but found "
+            "at least two dtypes, " << DType(this->dtype()).name() << " and "
+        << DType(dtype).name() << "!";
     return Maybe<void>::Ok();
   }
   Maybe<void> ToShape(Shape* shape) const { return this->shape().ToShape(shape); }
@@ -106,7 +109,7 @@ Maybe<HashMap<int64_t, std::shared_ptr<FlatShapeAndDataType>>> BroadcastGatherSh
         *buffer = recv_buffer.get();
         *size = sizeof(FlatShapeAndDataType);
         *Cb = [recv_buffer] {};
-        CHECK_OR_RETURN(map->emplace(rank, recv_buffer).second);
+        CHECK_OR_RETURN(map->emplace(rank, recv_buffer).second);  // NOLINT(maybe-need-error-msg)
         return Maybe<void>::Ok();
       });
   const auto& src_ranks = JUST(RankGroup::New(parallel_desc));
@@ -158,16 +161,30 @@ Maybe<void> GetConcatenatedShapeAndCheckDtype(
     return JUST(MapAt(rank2flat_shape_dtype, machine_id));
   };
   const auto& first_flat_shape_dtype = JUST(GetRankPhyShapeByParallelId(0));
-  CHECK_GE_OR_RETURN(concat_axis, 0);
-  CHECK_LT_OR_RETURN(concat_axis, first_flat_shape_dtype->NumAxes());
+  CHECK_GE_OR_RETURN(concat_axis, 0)
+      << Error::RuntimeError() << "Invaild split axis (expected to be in range of [" << 0 << ", "
+      << first_flat_shape_dtype->NumAxes() << "), but got " << concat_axis << "!";
+  CHECK_LT_OR_RETURN(concat_axis, first_flat_shape_dtype->NumAxes())
+      << Error::RuntimeError() << "Split axis out of range (expected to be in range of [" << 0
+      << ", " << first_flat_shape_dtype->NumAxes() << "), but got " << concat_axis << "!";
   int64_t logical_concat_dim = first_flat_shape_dtype->At(concat_axis);
   for (int parallel_id = 1; parallel_id < parallel_desc->parallel_num(); ++parallel_id) {
     const auto& rank_flat_shape_dtype = JUST(GetRankPhyShapeByParallelId(parallel_id));
-    CHECK_EQ_OR_RETURN(rank_flat_shape_dtype->NumAxes(), first_flat_shape_dtype->NumAxes());
+    CHECK_EQ_OR_RETURN(rank_flat_shape_dtype->NumAxes(), first_flat_shape_dtype->NumAxes())
+        << Error::RuntimeError() << "Sizes of tensors must match except in dimension "
+        << concat_axis << ", but found " << JUST(first_flat_shape_dtype->ToShape())->ToString()
+        << "(rank " << JUST(parallel_desc->MachineId4ParallelId(0)) << ") and "
+        << JUST(rank_flat_shape_dtype->ToShape())->ToString() << "(rank "
+        << JUST(parallel_desc->MachineId4ParallelId(parallel_id)) << ")!";
     logical_concat_dim += rank_flat_shape_dtype->At(concat_axis);
   }
   BalancedSplitter bs(logical_concat_dim, parallel_desc->parallel_num());
-  CHECK_EQ_OR_RETURN(first_flat_shape_dtype->At(concat_axis), bs.At(0).size());
+  CHECK_EQ_OR_RETURN(first_flat_shape_dtype->At(concat_axis), bs.At(0).size())
+      << Error::RuntimeError() << "Sizes of tensors in dimension " << concat_axis
+      << " must be same or match balanced split distribution. See "
+         "https://github.com/Oneflow-Inc/oneflow/blob/master/oneflow/core/common/"
+         "balanced_splitter.h "
+         "for details of balanced split";
   JUST(first_flat_shape_dtype->ToShape(logical_shape));
   logical_shape->Set(concat_axis, logical_concat_dim);
   *dtype = first_flat_shape_dtype->dtype();
@@ -175,19 +192,40 @@ Maybe<void> GetConcatenatedShapeAndCheckDtype(
     const auto& rank_flat_shape_dtype = JUST(GetRankPhyShapeByParallelId(parallel_id));
     for (int i = 0; i < logical_shape->NumAxes(); ++i) {
       if (i == concat_axis) {
-        CHECK_EQ_OR_RETURN(rank_flat_shape_dtype->At(i), bs.At(parallel_id).size());
+        CHECK_EQ_OR_RETURN(rank_flat_shape_dtype->At(i), bs.At(parallel_id).size())
+            << Error::RuntimeError() << "Sizes of tensors in dimension " << concat_axis
+            << " must be same or match balanced split distribution. See "
+               "https://github.com/Oneflow-Inc/oneflow/blob/master/oneflow/core/common/"
+               "balanced_splitter.h "
+               "for details of balanced split";
       } else {
-        CHECK_EQ_OR_RETURN(rank_flat_shape_dtype->At(i), logical_shape->At(i));
+        CHECK_EQ_OR_RETURN(rank_flat_shape_dtype->At(i), logical_shape->At(i))
+            << Error::RuntimeError() << "Sizes of tensors must match except in dimension "
+            << concat_axis << ". Expected size " << rank_flat_shape_dtype->At(i) << " but got size "
+            << logical_shape->At(i) << " for tensor on rank "
+            << JUST(parallel_desc->MachineId4ParallelId(parallel_id)) << "!";
       }
     }
-    CHECK_EQ_OR_RETURN(*dtype, rank_flat_shape_dtype->dtype());
+    CHECK_EQ_OR_RETURN(*dtype, rank_flat_shape_dtype->dtype())
+        << Error::RuntimeError()
+        << "Expected all tensors on each rank to be the same dtype, but found "
+           "at least two dtypes, "
+        << DType(*dtype).name() << "(rank " << JUST(parallel_desc->MachineId4ParallelId(0))
+        << ") and " << DType(rank_flat_shape_dtype->dtype()).name() << "(rank "
+        << JUST(parallel_desc->MachineId4ParallelId(parallel_id)) << ")!";
+    ;
   }
   return Maybe<void>::Ok();
 }
 
 Maybe<void> GetLogicalShapeAndDataType(Shape* logical_shape, DataType* /* in and out */ dtype,
                                        std::shared_ptr<const Shape> physical_shape,
-                                       Symbol<ParallelDesc> parallel_desc, Symbol<NdSbp> nd_sbp) {
+                                       Symbol<ParallelDesc> parallel_desc, Symbol<NdSbp> nd_sbp,
+                                       bool is_balanced) {
+  if (is_balanced) {
+    *logical_shape = *JUST(GetLogicalShape(*physical_shape, *nd_sbp, *parallel_desc));
+    return Maybe<void>::Ok();
+  }
   if (nd_sbp->sbp_parallel_size() == 1 && nd_sbp->sbp_parallel(0).has_split_parallel()) {
     const auto& rank2flat_shape_dtype =
         JUST(BroadcastGatherShapeAndDataType(*physical_shape, *dtype, parallel_desc));
@@ -226,7 +264,8 @@ Maybe<Tensor> ConsistentToConsistent(const std::shared_ptr<Tensor>& x,
                                      const std::vector<Symbol<SbpParallel>>& sbp_parallels,
                                      const std::vector<Symbol<SbpParallel>>& grad_sbp_parallels) {
   const auto& consistent_tensor = JUST(x->AsConsistentTensor());
-  CHECK_NOTNULL_OR_RETURN(consistent_tensor) << "consistent tensors supported only";
+  CHECK_NOTNULL_OR_RETURN(consistent_tensor)
+      << "consistent tensors supported only";  // always true, NOLINT(maybe-need-error-msg)
   std::shared_ptr<one::OpExpr> op;
   if (unlikely(!LazyMode::is_enabled()
                && JUST(x->parallel_desc())->hierarchy()->NumAxes()
@@ -246,7 +285,7 @@ Maybe<Tensor> ConsistentToConsistent(const std::shared_ptr<Tensor>& x,
   if (!LazyMode::is_enabled() && tensor != x && !IsConsistentTensorMetaCheckDisabled()) {
     const auto& input_consistent_id = JUST(x->transport_token());
     const auto& output_consistend_id = JUST(tensor->transport_token());
-    CHECK_NE_OR_RETURN(input_consistent_id, output_consistend_id);
+    CHECK_NE_OR_RETURN(input_consistent_id, output_consistend_id);  // NOLINT(maybe-need-error-msg)
   }
   return tensor;
 }
@@ -256,33 +295,40 @@ Maybe<Tensor> LocalToConsistent(const std::shared_ptr<Tensor>& x,
                                 const std::vector<Symbol<SbpParallel>>& sbp_parallels,
                                 const std::shared_ptr<OpExpr>& op) {
   CHECK_OR_RETURN(!x->is_lazy())
+      << Error::RuntimeError()
       << "local_tensor.to_global() is not supported within nn.Graph for now";
-  CHECK_OR_RETURN(x->is_local()) << Error::UnimplementedError() << "local tensors supported only";
+  CHECK_OR_RETURN(x->is_local())
+      << Error::RuntimeError()
+      << "local tensors supported only";  // always true, NOLINT(maybe-need-error-msg)
   std::shared_ptr<one::Tensor> input = x;
   // copy to right device first if input's device type is wrong
-  if (JUST(JUST(input->device())->of_type()) != parallel_desc->device_tag()) {
+  if (JUST(input->device())->type() != parallel_desc->device_tag()) {
     VLOG(2) << "The device_type of the input tensor is different from placement, now copy it to "
-            << Device::Type4DeviceTag(parallel_desc->device_tag());
-    input = JUST(functional::Copy(x, Device::Type4DeviceTag(parallel_desc->device_tag()),
-                                  GlobalProcessCtx::LocalRank()));
+            << parallel_desc->device_tag();
+    input = JUST(functional::Copy(x, parallel_desc->device_tag(), GlobalProcessCtx::LocalRank()));
   }
   // copy to default device of the current rank if input's device type is right but not on default
   // device
   if (JUST(input->device())->device_id() != GlobalProcessCtx::LocalRank()) {
     VLOG(2) << "The tensor isn't on default device of the current rank., now copy it to "
             << parallel_desc->device_tag() << ": " << GlobalProcessCtx::LocalRank();
-    input = JUST(functional::Copy(x, Device::Type4DeviceTag(parallel_desc->device_tag()),
-                                  GlobalProcessCtx::LocalRank()));
+    input = JUST(functional::Copy(x, parallel_desc->device_tag(), GlobalProcessCtx::LocalRank()));
   }
   const auto& device = JUST(input->device());
-  CHECK_EQ_OR_RETURN(JUST(device->of_type()), parallel_desc->device_tag())
-      << Error::UnimplementedError() << "tensor' device type must be same with placement.";
+  CHECK_EQ_OR_RETURN(device->type(), parallel_desc->device_tag())
+      << Error::UnimplementedError()
+      << "tensor' device type must be same with placement.";  // always true,
+                                                              // NOLINT(maybe-need-error-msg)
   CHECK_EQ_OR_RETURN(device->device_id(), GlobalProcessCtx::LocalRank())
-      << Error::UnimplementedError() << "tensor must be on default device of the current rank.";
+      << Error::UnimplementedError()
+      << "tensor must be on default device of the current rank.";  // always true,
+                                                                   // NOLINT(maybe-need-error-msg)
   Symbol<NdSbp> nd_sbp = JUST(GetNdSbp(sbp_parallels));
   const auto& shape = std::make_shared<Shape>();
   DataType dtype = x->dtype()->data_type();
-  JUST(GetLogicalShapeAndDataType(shape.get(), &dtype, x->shape(), parallel_desc, nd_sbp));
+  bool is_balanced = GetLocalToGlobalIsBalanced(false);
+  JUST(GetLogicalShapeAndDataType(shape.get(), &dtype, x->shape(), parallel_desc, nd_sbp,
+                                  is_balanced));
   MutableAttrMap attrs;
   JUST(attrs.SetAttr<Shape>("shape", *shape));
   JUST(attrs.SetAttr<DataType>("dtype", dtype));
@@ -307,22 +353,22 @@ class LocalToConsistentFunctor {
     JUST(CheckDeviceIdsIsValid(parallel_desc));
     NonRecursiveMetaInfoConsistencyCheckScope no_recursive_meta_info_conisitency_check_scope;
     JUST(MetaInfoConsistencyCheck(parallel_desc, sbp_parallels, 1));
-    CHECK_OR_RETURN(x->is_local());
+    CHECK_OR_RETURN(x->is_local())
+        << Error::RuntimeError()
+        << "Expected local tensor for local to global operator but got global tensor";
     std::shared_ptr<one::Tensor> input = x;
     // copy to right device first if input's device type is wrong
-    if (JUST(JUST(input->device())->of_type()) != parallel_desc->device_tag()) {
+    if (JUST(input->device())->type() != parallel_desc->device_tag()) {
       VLOG(2) << "The device_type of the input tensor is different from placement, now copy it to "
-              << Device::Type4DeviceTag(parallel_desc->device_tag());
-      input = JUST(functional::Copy(x, Device::Type4DeviceTag(parallel_desc->device_tag()),
-                                    GlobalProcessCtx::LocalRank()));
+              << parallel_desc->device_tag();
+      input = JUST(functional::Copy(x, parallel_desc->device_tag(), GlobalProcessCtx::LocalRank()));
     }
     // copy to default device of the current rank if input's device type is right but not on default
     // device
     if (JUST(input->device())->device_id() != GlobalProcessCtx::LocalRank()) {
       VLOG(2) << "The tensor isn't on default device of the current rank., now copy it to "
               << parallel_desc->device_tag() << ": " << GlobalProcessCtx::LocalRank();
-      input = JUST(functional::Copy(x, Device::Type4DeviceTag(parallel_desc->device_tag()),
-                                    GlobalProcessCtx::LocalRank()));
+      input = JUST(functional::Copy(x, parallel_desc->device_tag(), GlobalProcessCtx::LocalRank()));
     }
     Symbol<NdSbp> nd_sbp = JUST(GetNdSbp(sbp_parallels));
     MutableAttrMap attrs;
@@ -374,8 +420,10 @@ class ConsistentToLocalFunctor {
 
   Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x) const {
     CHECK_OR_RETURN(!x->is_lazy())
+        << Error::RuntimeError()
         << "consistent_tensor.to_local() is not supported within nn.Graph for now";
-    CHECK_OR_RETURN(x->is_consistent()) << "consistent tensors supported only";
+    CHECK_OR_RETURN(x->is_consistent())
+        << Error::RuntimeError() << "call local_tensor.to_local() is invalid";
     return JUST(OpInterpUtil::Dispatch<one::Tensor>(*op_, {x}));
   }
 
