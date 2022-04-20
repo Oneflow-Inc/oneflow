@@ -51,12 +51,6 @@ bool UserOpDefWrapper::IsArgOptional(const std::string& name) const {
   return arg_def->is_optional();
 }
 
-std::pair<int32_t, bool> UserOpDefWrapper::ArgNumAndIsMin(const std::string& name) const {
-  const UserOpDef::ArgDef* arg_def = GetArgPointer(name);
-  CHECK_NOTNULL(arg_def);
-  return std::make_pair(arg_def->num(), arg_def->num_as_min());
-}
-
 const UserOpDef::ArgDef* UserOpDefWrapper::GetArgPointer(const std::string& name) const {
   auto it = inputs_.find(name);
   if (it != inputs_.end()) { return it->second; }

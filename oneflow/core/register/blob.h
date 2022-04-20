@@ -50,6 +50,8 @@ class Blob final {
   OF_DISALLOW_COPY_AND_MOVE(Blob);
   Blob(const MemoryCase& mem_case, const BlobDesc* blob_desc, char* header_ptr);
   Blob(const MemoryCase& mem_case, const BlobDesc* blob_desc, char* header_ptr, char* body_ptr);
+  Blob(const MemoryCase& mem_case, const BlobDesc* blob_desc, char* header_ptr, char* body_ptr,
+       const int64_t offset);
   virtual ~Blob() = default;
 
   DataType data_type() const { return blob_desc_->data_type(); }
@@ -62,19 +64,34 @@ class Blob final {
   template<typename T = void>
   const T* dptr() const {
     CheckDataType<T>(data_type());
-    return static_cast<const T*>(dptr_);
+    return reinterpret_cast<T*>(static_cast<char*>(dptr_)
+                                + storage_offset_ * GetSizeOfDataType(data_type()));
   }
   template<typename T = void>
   T* mut_dptr() {
     this->blob_access_checker()->CheckBodyMutable();
     CheckDataType<T>(data_type());
-    return static_cast<T*>(dptr_);
+    return reinterpret_cast<T*>(static_cast<char*>(dptr_)
+                                + storage_offset_ * GetSizeOfDataType(data_type()));
   }
   template<typename T = void>
   T* ForceMutDptr() {
     CheckDataType<T>(data_type());
+    return reinterpret_cast<T*>(static_cast<char*>(dptr_)
+                                + storage_offset_ * GetSizeOfDataType(data_type()));
+  }
+  template<typename T = void>
+  const T* raw_dptr() const {
+    CheckDataType<T>(data_type());
     return static_cast<T*>(dptr_);
   }
+  template<typename T = void>
+  T* mut_raw_dptr() {
+    this->blob_access_checker()->CheckBodyMutable();
+    CheckDataType<T>(data_type());
+    return static_cast<T*>(dptr_);
+  }
+
   const Shape& static_shape() const { return blob_desc_->shape(); }
   const ShapeView& shape_view() const { return *shape_view_; }
   const ShapeView& shape() const { return *shape_view_; }
@@ -103,14 +120,15 @@ class Blob final {
   const BlobAccessChecker* blob_access_checker() { return this->blob_access_checker_; }
 
  private:
-  void Init(const MemoryCase& mem_case, const BlobDesc* blob_desc, char* header_ptr,
-            char* body_ptr);
+  void Init(const MemoryCase& mem_case, const BlobDesc* blob_desc, char* header_ptr, char* body_ptr,
+            const int64_t offset);
 
   const BlobAccessChecker* blob_access_checker_;
   MemoryCase mem_case_;
   const BlobDesc* blob_desc_;
   void* dptr_;
   char* header_ptr_;
+  int64_t storage_offset_;
   std::unique_ptr<ShapeView> shape_view_;
   std::unique_ptr<MutShapeView> mut_shape_view_;
 };

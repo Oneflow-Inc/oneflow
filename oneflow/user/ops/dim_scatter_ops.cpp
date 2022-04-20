@@ -17,25 +17,25 @@ limitations under the License.
 #include "oneflow/core/common/maybe.h"
 #include "oneflow/core/framework/user_op_registry.h"
 #include "oneflow/user/kernels/dim_scatter_kernel_util.h"
+#include "oneflow/core/framework/op_generated.h"
 
 namespace oneflow {
 
-namespace user_op {
-
 namespace {
 Maybe<void> InferTensorDesc(user_op::InferContext* ctx) {
-  const TensorDesc* input =
+  const user_op::TensorDesc* input =
       ctx->has_input("input", 0) ? &ctx->InputTensorDesc("input", 0) : nullptr;
-  const TensorDesc& index = ctx->InputTensorDesc("index", 0);
-  const TensorDesc* like = ctx->has_input("like", 0) ? &ctx->InputTensorDesc("like", 0) : nullptr;
-  const TensorDesc& src = ctx->InputTensorDesc("src", 0);
+  const user_op::TensorDesc& index = ctx->InputTensorDesc("index", 0);
+  const user_op::TensorDesc* like =
+      ctx->has_input("like", 0) ? &ctx->InputTensorDesc("like", 0) : nullptr;
+  const user_op::TensorDesc& src = ctx->InputTensorDesc("src", 0);
 
   int32_t dim = ctx->Attr<int32_t>("dim");
 
   // check index.numaxes == src.num_axes == input/like.numaxes
   int64_t src_num_axes = src.shape().NumAxes();
   CHECK_GT_OR_RETURN(src_num_axes, 0);
-  CHECK_LE_OR_RETURN(src_num_axes, kDimGatherMaxDimCount);
+  CHECK_LE_OR_RETURN(src_num_axes, user_op::kDimGatherMaxDimCount);
   int64_t index_num_axes = index.shape().NumAxes();
   CHECK_EQ_OR_RETURN(src_num_axes, index_num_axes);
 
@@ -45,7 +45,7 @@ Maybe<void> InferTensorDesc(user_op::InferContext* ctx) {
   } else if (like) {
     output_num_axes = like->shape().NumAxes();
   } else {
-    throw Error::UnimplementedError();
+    OF_UNIMPLEMENTED() << "Input tensor and like tensor cannot be empty simultaneously.";
   }
   CHECK_EQ_OR_RETURN(output_num_axes, index_num_axes);
 
@@ -71,8 +71,8 @@ Maybe<void> InferTensorDesc(user_op::InferContext* ctx) {
 }
 
 Maybe<void> InferScalarTensorDesc(user_op::InferContext* ctx) {
-  const TensorDesc& input = ctx->InputTensorDesc("input", 0);
-  const TensorDesc& index = ctx->InputTensorDesc("index", 0);
+  const user_op::TensorDesc& input = ctx->InputTensorDesc("input", 0);
+  const user_op::TensorDesc& index = ctx->InputTensorDesc("index", 0);
 
   int32_t dim = ctx->Attr<int32_t>("dim");
 
@@ -87,55 +87,46 @@ Maybe<void> InferScalarTensorDesc(user_op::InferContext* ctx) {
     CHECK_LE_OR_RETURN(index.shape().At(i), input.shape().At(i));
   }
 
-  TensorDesc* out = ctx->OutputTensorDesc("output", 0);
+  user_op::TensorDesc* out = ctx->OutputTensorDesc("output", 0);
   *out->mut_shape() = input.shape();
   return Maybe<void>::Ok();
 }
 
-Maybe<void> InputArgModifierFn(user_op::GetInputArgModifier GetInputArgModifierFn,
+Maybe<void> InputArgModifierFn(const user_op::GetInputArgModifier& GetInputArgModifierFn,
                                const user_op::UserOpConfWrapper&) {
   user_op::InputArgModifier* indices_modifier = GetInputArgModifierFn("index", 0);
-  CHECK(indices_modifier != nullptr);
+  CHECK_OR_RETURN(indices_modifier != nullptr);
   indices_modifier->set_requires_grad(false);
 
   return Maybe<void>::Ok();
 }
 
-Maybe<void> InputScalarArgModifierFn(user_op::GetInputArgModifier GetInputArgModifierFn,
+Maybe<void> InputScalarArgModifierFn(const user_op::GetInputArgModifier& GetInputArgModifierFn,
                                      const user_op::UserOpConfWrapper&) {
   user_op::InputArgModifier* indices_modifier = GetInputArgModifierFn("index", 0);
-  CHECK(indices_modifier != nullptr);
+  CHECK_OR_RETURN(indices_modifier != nullptr);
   indices_modifier->set_requires_grad(false);
 
   return Maybe<void>::Ok();
 }
 
 void _SetSbp(user_op::SbpContext* ctx, const char* like_or_input) {
-  const user_op::TensorDesc& index_tensor = ctx->LogicalTensorDesc4InputArgNameAndIndex("index", 0);
-  int64_t index_num_axes = index_tensor.shape().NumAxes();
   const int32_t dim = ctx->Attr<int32_t>("dim");
 
-  FOR_RANGE(int64_t, i, 0, index_num_axes) {
-    if (i != dim) {
-      ctx->NewBuilder()
-          .Split(user_op::OpArg("index", 0), i)
-          .Split(user_op::OpArg("src", 0), i)
-          .Split(user_op::OpArg("output", 0), i)
-          .Split(user_op::OpArg(like_or_input, 0), i)
-          .Build();
-    } else {
-      ctx->NewBuilder()
-          .Split(user_op::OpArg("index", 0), i)
-          .Split(user_op::OpArg("src", 0), i)
-          .PartialSum(user_op::OpArg("output", 0))
-          .Broadcast(user_op::OpArg(like_or_input, 0))
-          .Build();
+  const Shape& index_tensor_shape = ctx->LogicalTensorDesc4InputArgNameAndIndex("index", 0).shape();
+  const Shape& src_tensor_shape = ctx->LogicalTensorDesc4InputArgNameAndIndex("src", 0).shape();
+  const Shape& input_tensor_shape =
+      ctx->LogicalTensorDesc4InputArgNameAndIndex(like_or_input, 0).shape();
 
+  FOR_RANGE(int64_t, i, 0, index_tensor_shape.NumAxes()) {
+    if (i == dim) { continue; }
+    int64_t len = index_tensor_shape.At(i);
+    if (len == src_tensor_shape.At(i) && len == input_tensor_shape.At(i)) {
       ctx->NewBuilder()
           .Split(user_op::OpArg("index", 0), i)
           .Split(user_op::OpArg("src", 0), i)
-          .PartialSum(user_op::OpArg("output", 0))
-          .PartialSum(user_op::OpArg(like_or_input, 0))
+          .Split(user_op::OpArg(like_or_input, 0), i)
+          .Split(user_op::OpArg("output", 0), i)
           .Build();
     }
   }
@@ -158,11 +149,29 @@ Maybe<void> SetSbpScatter(user_op::SbpContext* ctx) {
   return Maybe<void>::Ok();
 }
 
+Maybe<void> SetSbpScatterScalar(user_op::SbpContext* ctx) {
+  const int32_t dim = ctx->Attr<int32_t>("dim");
+
+  const Shape& index_tensor_shape = ctx->LogicalTensorDesc4InputArgNameAndIndex("index", 0).shape();
+  const Shape& input_tensor_shape = ctx->LogicalTensorDesc4InputArgNameAndIndex("input", 0).shape();
+
+  FOR_RANGE(int64_t, i, 0, index_tensor_shape.NumAxes()) {
+    if (i == dim) { continue; }
+    if (index_tensor_shape.At(i) == input_tensor_shape.At(i)) {
+      ctx->NewBuilder()
+          .Split(user_op::OpArg("index", 0), i)
+          .Split(user_op::OpArg("input", 0), i)
+          .Split(user_op::OpArg("output", 0), i)
+          .Build();
+    }
+  }
+  return Maybe<void>::Ok();
+}
+
 Maybe<void> InferDtype(user_op::InferContext* ctx) {
-  const TensorDesc& index = ctx->InputTensorDesc("index", 0);
+  const user_op::TensorDesc& index = ctx->InputTensorDesc("index", 0);
   CHECK_OR_RETURN(IsIndexDataType(index.data_type()));
   if (ctx->has_input("input", 0)) {
-    const TensorDesc& input = ctx->InputTensorDesc("input", 0);
     CHECK_EQ_OR_RETURN(ctx->InputDType("input", 0), ctx->InputDType("src", 0));
   } else {
     CHECK_EQ_OR_RETURN(ctx->InputDType("like", 0), ctx->InputDType("src", 0));
@@ -172,15 +181,15 @@ Maybe<void> InferDtype(user_op::InferContext* ctx) {
 }
 
 Maybe<void> InferScalarDtype(user_op::InferContext* ctx) {
-  const TensorDesc& index = ctx->InputTensorDesc("index", 0);
+  const user_op::TensorDesc& index = ctx->InputTensorDesc("index", 0);
   CHECK_OR_RETURN(IsIndexDataType(index.data_type()));
   *ctx->OutputDType("output", 0) = ctx->InputDType("input", 0);
   return Maybe<void>::Ok();
 }
 
 Maybe<void> ScatterBackward(user_op::BackwardOpConfContext* ctx) {
-  const TensorDesc& src = ctx->FwOp().TensorDesc4ArgNameAndIndex("src", 0);
-  const TensorDesc& index = ctx->FwOp().TensorDesc4ArgNameAndIndex("index", 0);
+  const user_op::TensorDesc& src = ctx->FwOp().TensorDesc4ArgNameAndIndex("src", 0);
+  const user_op::TensorDesc& index = ctx->FwOp().TensorDesc4ArgNameAndIndex("index", 0);
   const int64_t ndim = src.shape().NumAxes();
 
   FOR_RANGE(int64_t, i, 0, ndim) {
@@ -221,41 +230,70 @@ Maybe<void> ScatterBackward(user_op::BackwardOpConfContext* ctx) {
 
 }  // namespace
 
-#define REGISTER_SCATTER_LIKE_OP(optypename)   \
-  REGISTER_USER_OP(optypename)                 \
-      .Input("like")                           \
-      .Input("index")                          \
-      .Input("src")                            \
-      .Output("output")                        \
-      .Attr<int32_t>("dim")                    \
-      .SetTensorDescInferFn(InferTensorDesc)   \
-      .SetInputArgModifyFn(InputArgModifierFn) \
-      .SetDataTypeInferFn(InferDtype)          \
-      .SetGetSbpFn(SetSbpLike)
+/* static */ Maybe<void> DimScatterAddLikeOp::InferLogicalTensorDesc(user_op::InferContext* ctx) {
+  return InferTensorDesc(ctx);
+}
 
-#define REGISTER_SCATTER_OP(optypename)        \
-  REGISTER_USER_OP(optypename)                 \
-      .Input("input")                          \
-      .Input("index")                          \
-      .Input("src")                            \
-      .Output("output")                        \
-      .Attr<int32_t>("dim")                    \
-      .SetTensorDescInferFn(InferTensorDesc)   \
-      .SetInputArgModifyFn(InputArgModifierFn) \
-      .SetDataTypeInferFn(InferDtype)          \
-      .SetGetSbpFn(SetSbpScatter)
+/*static*/ Maybe<void> DimScatterAddLikeOp::InferPhysicalTensorDesc(user_op::InferContext* ctx) {
+  return InferLogicalTensorDesc(ctx);
+}
 
-#define REGISTER_SCATTER_SCALAR_OP(optypename)       \
-  REGISTER_USER_OP(optypename)                       \
-      .Input("input")                                \
-      .Input("index")                                \
-      .Attr<float>("src_scalar")                     \
-      .Output("output")                              \
-      .Attr<int32_t>("dim")                          \
-      .SetTensorDescInferFn(InferScalarTensorDesc)   \
-      .SetInputArgModifyFn(InputScalarArgModifierFn) \
-      .SetDataTypeInferFn(InferScalarDtype)          \
-      .SetGetSbpFn(SetSbpScatter)
+/* static */ Maybe<void> DimScatterAddLikeOp::GetSbp(user_op::SbpContext* ctx) {
+  return SetSbpLike(ctx);
+}
+
+/* static */ Maybe<void> DimScatterAddLikeOp::ModifyInputArg(
+    const GetInputArgModifier& GetInputArgModifierFn, const user_op::UserOpConfWrapper& conf) {
+  return InputArgModifierFn(GetInputArgModifierFn, conf);
+}
+
+/* static */ Maybe<void> DimScatterAddLikeOp::InferDataType(user_op::InferContext* ctx) {
+  return InferDtype(ctx);
+}
+
+#define DEF_SCATTER_OP(op_class_name)                                                             \
+  /* static */ Maybe<void> op_class_name::InferLogicalTensorDesc(user_op::InferContext* ctx) {    \
+    return InferTensorDesc(ctx);                                                                  \
+  }                                                                                               \
+                                                                                                  \
+  /*static*/ Maybe<void> op_class_name::InferPhysicalTensorDesc(user_op::InferContext* ctx) {     \
+    return InferLogicalTensorDesc(ctx);                                                           \
+  }                                                                                               \
+                                                                                                  \
+  /* static */ Maybe<void> op_class_name::GetSbp(user_op::SbpContext* ctx) {                      \
+    return SetSbpScatter(ctx);                                                                    \
+  }                                                                                               \
+                                                                                                  \
+  /* static */ Maybe<void> op_class_name::ModifyInputArg(                                         \
+      const GetInputArgModifier& GetInputArgModifierFn, const user_op::UserOpConfWrapper& conf) { \
+    return InputArgModifierFn(GetInputArgModifierFn, conf);                                       \
+  }                                                                                               \
+                                                                                                  \
+  /* static */ Maybe<void> op_class_name::InferDataType(user_op::InferContext* ctx) {             \
+    return InferDtype(ctx);                                                                       \
+  }
+
+#define DEF_SCATTER_SCALAR_OP(optypename)                                                         \
+  /* static */ Maybe<void> optypename::InferLogicalTensorDesc(user_op::InferContext* ctx) {       \
+    return InferScalarTensorDesc(ctx);                                                            \
+  }                                                                                               \
+                                                                                                  \
+  /*static*/ Maybe<void> optypename::InferPhysicalTensorDesc(user_op::InferContext* ctx) {        \
+    return InferLogicalTensorDesc(ctx);                                                           \
+  }                                                                                               \
+                                                                                                  \
+  /* static */ Maybe<void> optypename::GetSbp(user_op::SbpContext* ctx) {                         \
+    return SetSbpScatterScalar(ctx);                                                              \
+  }                                                                                               \
+                                                                                                  \
+  /* static */ Maybe<void> optypename::ModifyInputArg(                                            \
+      const GetInputArgModifier& GetInputArgModifierFn, const user_op::UserOpConfWrapper& conf) { \
+    return InputScalarArgModifierFn(GetInputArgModifierFn, conf);                                 \
+  }                                                                                               \
+                                                                                                  \
+  /* static */ Maybe<void> optypename::InferDataType(user_op::InferContext* ctx) {                \
+    return InferScalarDtype(ctx);                                                                 \
+  }
 
 #define REGISTER_SCATTER_GRAD(optypename) \
   REGISTER_USER_OP_GRAD(optypename).SetBackwardOpConfGenFn(ScatterBackward);
@@ -279,19 +317,17 @@ Maybe<void> ScatterBackward(user_op::BackwardOpConfContext* ctx) {
                                   });                                                          \
         return Maybe<void>::Ok();                                                              \
       });
+DEF_SCATTER_OP(DimScatterAddOp);
+DEF_SCATTER_OP(DimScatterUpdateOp);
+DEF_SCATTER_OP(DimScatterMulOp);
 
-REGISTER_SCATTER_LIKE_OP("dim_scatter_add_like");
-REGISTER_SCATTER_OP("dim_scatter_add");
-REGISTER_SCATTER_OP("dim_scatter_update");
-REGISTER_SCATTER_OP("dim_scatter_mul");
-
-REGISTER_SCATTER_SCALAR_OP("dim_scatter_update_scalar");
-REGISTER_SCATTER_SCALAR_OP("dim_scatter_add_scalar");
-REGISTER_SCATTER_SCALAR_OP("dim_scatter_mul_scalar");
+DEF_SCATTER_SCALAR_OP(DimScatterUpdateScalarOp);
+DEF_SCATTER_SCALAR_OP(DimScatterAddScalarOp);
+DEF_SCATTER_SCALAR_OP(DimScatterMulScalarOp);
 
 REGISTER_SCATTER_GRAD("dim_scatter_add");
 REGISTER_SCATTER_GRAD("dim_scatter_update");
 
 REGISTER_SCATTER_SCALAR_GRAD("dim_scatter_update_scalar");
-}  // namespace user_op
+
 }  // namespace oneflow

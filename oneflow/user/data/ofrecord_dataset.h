@@ -17,7 +17,6 @@ limitations under the License.
 #define ONEFLOW_USER_DATA_OFRECORD_DATASET_H_
 
 #include "oneflow/core/common/balanced_splitter.h"
-#include "oneflow/core/common/multi_client.h"
 #include "oneflow/core/common/str_util.h"
 #include "oneflow/core/framework/op_kernel.h"
 #include "oneflow/core/persistence/persistent_in_stream.h"
@@ -31,9 +30,12 @@ namespace data {
 
 class OFRecordDataset final : public Dataset<TensorBuffer> {
  public:
-  using LoadTargetPtr = std::shared_ptr<TensorBuffer>;
-  using LoadTargetPtrList = std::vector<LoadTargetPtr>;
+  using Base = Dataset<TensorBuffer>;
+  using SampleType = typename Base::SampleType;
+  using BatchType = typename Base::BatchType;
+
   OF_DISALLOW_COPY_AND_MOVE(OFRecordDataset);
+
   OFRecordDataset(user_op::KernelInitContext* ctx) {
     current_epoch_ = 0;
     shuffle_after_epoch_ = ctx->Attr<bool>("shuffle_after_epoch");
@@ -62,7 +64,7 @@ class OFRecordDataset final : public Dataset<TensorBuffer> {
       auto nd_sbp_str_vec = ctx->Attr<std::vector<std::string>>("nd_sbp");
       // NOTE(zwx): OFRecordDataset is not consistent since attr nd_sbp is empty,
       // we assume that it works in DDP
-      if (nd_sbp_str_vec.empty() && CHECK_JUST(IsMultiClient())) { is_local = true; }
+      if (nd_sbp_str_vec.empty()) { is_local = true; }
     }
     if (is_local) {
       parallel_id_ = GlobalProcessCtx::Rank();
@@ -80,12 +82,11 @@ class OFRecordDataset final : public Dataset<TensorBuffer> {
   }
   ~OFRecordDataset() = default;
 
-  LoadTargetPtrList Next() override {
-    LoadTargetPtrList ret;
-    LoadTargetPtr sample_ptr(new TensorBuffer());
-    ReadSample(*sample_ptr);
-    ret.emplace_back(std::move(sample_ptr));
-    return ret;
+  BatchType Next() override {
+    BatchType batch;
+    batch.push_back(TensorBuffer());
+    ReadSample(batch.back());
+    return batch;
   }
 
  private:

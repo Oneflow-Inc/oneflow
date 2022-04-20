@@ -14,65 +14,69 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 #include "oneflow/core/framework/framework.h"
+#include "oneflow/core/framework/op_generated.h"
 
 namespace oneflow {
 
-REGISTER_USER_OP("diagonal")
-    .Input("in")
-    .Output("out")
-    .Attr<int32_t>("offset", 0)
-    .SetTensorDescInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
-      const user_op::TensorDesc& in = ctx->InputTensorDesc("in", 0);
-      const int32_t offset = ctx->Attr<int32_t>("offset");
-      const ShapeView& in_shape = in.shape();
-      const int32_t in_dim = in_shape.NumAxes();
-      CHECK_GE_OR_RETURN(in_dim, 2);
+/* static */ Maybe<void> DiagonalOp::InferLogicalTensorDesc(user_op::InferContext* ctx) {
+  const user_op::TensorDesc& in = ctx->InputTensorDesc("in", 0);
+  const int32_t offset = ctx->Attr<int32_t>("offset");
+  const ShapeView& in_shape = in.shape();
+  const int32_t in_dim = in_shape.NumAxes();
+  CHECK_GE_OR_RETURN(in_dim, 2);
 
-      DimVector out_dim_vec = {};
-      FOR_RANGE(int32_t, index, 2, in_dim) { out_dim_vec.push_back(in_shape.At(index)); }
-      int32_t last_dim = 0;
-      if (offset >= 0) {
-        last_dim = std::min(in_shape.At(0), in_shape.At(1) - offset);
-      } else {
-        last_dim = std::min(in_shape.At(0) + offset, in_shape.At(1));
-      }
-      if (last_dim < 0) { last_dim = 0; }
-      out_dim_vec.push_back(last_dim);
+  DimVector out_dim_vec = {};
+  FOR_RANGE(int32_t, index, 2, in_dim) { out_dim_vec.push_back(in_shape.At(index)); }
+  int32_t last_dim = 0;
+  if (offset >= 0) {
+    last_dim = std::min(in_shape.At(0), in_shape.At(1) - offset);
+  } else {
+    last_dim = std::min(in_shape.At(0) + offset, in_shape.At(1));
+  }
+  if (last_dim < 0) { last_dim = 0; }
+  out_dim_vec.push_back(last_dim);
 
-      user_op::TensorDesc* out_desc = ctx->OutputTensorDesc("out", 0);
-      out_desc->set_is_dynamic(false);
-      *out_desc->mut_shape() = Shape(out_dim_vec);
-      return Maybe<void>::Ok();
-    })
-    .SetGetSbpFn([](user_op::SbpContext* ctx) -> Maybe<void> {
-      ctx->NewBuilder().PartialSum(ctx->inputs()).PartialSum(ctx->outputs()).Build();
-      return Maybe<void>::Ok();
-    })
-    .SetDataTypeInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
-      *ctx->OutputDType("out", 0) = ctx->InputDType("in", 0);
-      return Maybe<void>::Ok();
-    });
+  user_op::TensorDesc* out_desc = ctx->OutputTensorDesc("out", 0);
+  out_desc->set_is_dynamic(false);
+  *out_desc->mut_shape() = Shape(out_dim_vec);
+  return Maybe<void>::Ok();
+}
 
-REGISTER_USER_OP("diagonal_grad")
-    .Input("dy")
-    .Input("in")
-    .Attr<int32_t>("offset", 0)
-    .Output("dx")
-    .SetTensorDescInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
-      const user_op::TensorDesc& in = ctx->InputTensorDesc("in", 0);
-      const Shape& in_shape = in.shape();
-      user_op::TensorDesc* dx_desc = ctx->OutputTensorDesc("dx", 0);
-      *dx_desc->mut_shape() = Shape(in_shape.dim_vec());
-      return Maybe<void>::Ok();
-    })
-    .SetGetSbpFn([](user_op::SbpContext* ctx) -> Maybe<void> {
-      ctx->NewBuilder().PartialSum(ctx->inputs()).PartialSum(ctx->outputs()).Build();
-      return Maybe<void>::Ok();
-    })
-    .SetDataTypeInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
-      *ctx->OutputDType("dx", 0) = ctx->InputDType("dy", 0);
-      return Maybe<void>::Ok();
-    });
+/*static*/ Maybe<void> DiagonalOp::InferPhysicalTensorDesc(user_op::InferContext* ctx) {
+  return InferLogicalTensorDesc(ctx);
+}
+
+/* static */ Maybe<void> DiagonalOp::GetSbp(user_op::SbpContext* ctx) {
+  ctx->NewBuilder().PartialSum(ctx->inputs()).PartialSum(ctx->outputs()).Build();
+  return Maybe<void>::Ok();
+}
+
+/* static */ Maybe<void> DiagonalOp::InferDataType(user_op::InferContext* ctx) {
+  *ctx->OutputDType("out", 0) = ctx->InputDType("in", 0);
+  return Maybe<void>::Ok();
+}
+
+/* static */ Maybe<void> DiagonalGradOp::InferLogicalTensorDesc(user_op::InferContext* ctx) {
+  const user_op::TensorDesc& in = ctx->InputTensorDesc("in", 0);
+  const Shape& in_shape = in.shape();
+  user_op::TensorDesc* dx_desc = ctx->OutputTensorDesc("dx", 0);
+  *dx_desc->mut_shape() = Shape(in_shape.dim_vec());
+  return Maybe<void>::Ok();
+}
+
+/*static*/ Maybe<void> DiagonalGradOp::InferPhysicalTensorDesc(user_op::InferContext* ctx) {
+  return InferLogicalTensorDesc(ctx);
+}
+
+/* static */ Maybe<void> DiagonalGradOp::GetSbp(user_op::SbpContext* ctx) {
+  ctx->NewBuilder().PartialSum(ctx->inputs()).PartialSum(ctx->outputs()).Build();
+  return Maybe<void>::Ok();
+}
+
+/* static */ Maybe<void> DiagonalGradOp::InferDataType(user_op::InferContext* ctx) {
+  *ctx->OutputDType("dx", 0) = ctx->InputDType("dy", 0);
+  return Maybe<void>::Ok();
+}
 
 REGISTER_USER_OP_GRAD("diagonal")
     .SetBackwardOpConfGenFn([](user_op::BackwardOpConfContext* ctx) -> Maybe<void> {

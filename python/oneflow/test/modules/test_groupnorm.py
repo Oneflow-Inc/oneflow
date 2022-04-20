@@ -18,7 +18,7 @@ import unittest
 from collections import OrderedDict
 
 import numpy as np
-from test_util import GenArgList
+from oneflow.test_utils.test_util import GenArgList
 from oneflow.test_utils.automated_test_util import *
 
 import oneflow as flow
@@ -341,7 +341,7 @@ class TestGroupNorm(flow.unittest.TestCase):
         for arg in GenArgList(arg_dict):
             arg[0](test_case, *arg[1:])
 
-    @autotest(rtol=1e-03, atol=1e-03, check_graph=False)
+    @autotest(rtol=1e-03, atol=1e-03, check_graph=True)
     def test_group_norm_with_random_data(test_case):
         channels = random(5, 20)
         m = torch.nn.GroupNorm(
@@ -353,7 +353,7 @@ class TestGroupNorm(flow.unittest.TestCase):
         m.train(random())
         device = random_device()
         m.to(device)
-        x = random_pytorch_tensor(ndim=4, dim1=channels).to(device)
+        x = random_tensor(ndim=4, dim1=channels).to(device)
         y = m(x)
         return y
 

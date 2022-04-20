@@ -58,6 +58,7 @@ class CpuDiagonalKernel final : public user_op::OpKernel {
   ~CpuDiagonalKernel() = default;
 
  private:
+  using user_op::OpKernel::Compute;
   void Compute(user_op::KernelComputeContext* ctx) const override {
     const int32_t offset = ctx->Attr<int32_t>("offset");
     const user_op::Tensor* in = ctx->Tensor4ArgNameAndIndex("in", 0);
@@ -90,6 +91,7 @@ class CpuDiagonalBackwardKernel final : public user_op::OpKernel {
   ~CpuDiagonalBackwardKernel() = default;
 
  private:
+  using user_op::OpKernel::Compute;
   void Compute(user_op::KernelComputeContext* ctx) const override {
     const user_op::Tensor* dy = ctx->Tensor4ArgNameAndIndex("dy", 0);
     user_op::Tensor* dx = ctx->Tensor4ArgNameAndIndex("dx", 0);
@@ -127,6 +129,7 @@ class CpuDiagonalBackwardKernel final : public user_op::OpKernel {
       .SetIsMatchedHob((user_op::HobDeviceType() == DeviceType::kCPU)                    \
                        && (user_op::HobDataType("in", 0) == GetDataType<dtype>::value));
 
+REGISTER_DIAGONAL_KERNELS(bool);
 REGISTER_DIAGONAL_KERNELS(float);
 REGISTER_DIAGONAL_KERNELS(double);
 REGISTER_DIAGONAL_KERNELS(int8_t);

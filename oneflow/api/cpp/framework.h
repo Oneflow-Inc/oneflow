@@ -22,5 +22,6 @@ limitations under the License.
 #include "framework/dtype.h"
 #include "framework/tensor.h"
 #include "framework/ivalue.h"
+#include "framework/graph.h"
 
 #endif  // ONEFLOW_API_CPP_FRAMEWORK_H_

@@ -23,13 +23,9 @@ limitations under the License.
 
 namespace oneflow {
 
-namespace cfg {
-
 class NdSbp;
 
-}
-
-Maybe<void> SyncSymbolNdSbp(uint64_t symbol_id, Symbol<cfg::NdSbp>);
+Maybe<void> SyncSymbolNdSbp(uint64_t symbol_id, Symbol<NdSbp>);
 
 }  // namespace oneflow
 

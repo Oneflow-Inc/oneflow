@@ -47,7 +47,7 @@ class BroadcastElementwiseBinaryFactory : public Factory<BroadcastElementwiseBin
   ~BroadcastElementwiseBinaryFactory() override = default;
 
   virtual std::unique_ptr<BroadcastElementwiseBinary> New(BinaryOp op, DataType src_type,
-                                                          DeviceType dst_type,
+                                                          DataType dst_type,
                                                           size_t max_num_dims) = 0;
 };
 

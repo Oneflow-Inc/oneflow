@@ -21,6 +21,7 @@ limitations under the License.
 #include "oneflow/api/python/functional/tensor_api.yaml.h"
 #include "oneflow/core/common/optional.h"
 #include "oneflow/core/common/scalar.h"
+#include "oneflow/core/framework/stream.h"
 #include "oneflow/core/framework/op_builder.h"
 #include "oneflow/core/framework/op_expr.h"
 #include "oneflow/core/framework/op_interpreter/op_interpreter_util.h"
@@ -31,6 +32,7 @@ limitations under the License.
 #include "oneflow/core/functional/impl/common.h"
 #include "oneflow/core/job/lazy_mode.h"
 #include "oneflow/core/framework/nd_sbp.h"
+#include "oneflow/core/common/foreign_lock_helper.h"
 
 namespace oneflow {
 namespace one {
@@ -71,10 +73,11 @@ class ConsistentTensorWithDataFunctor {
  public:
   Maybe<Tensor> operator()(PyObject* data, const Optional<Symbol<DType>>& dtype,
                            const Symbol<ParallelDesc>& placement,
-                           const std::vector<Symbol<cfg::SbpParallel>>& sbp_tuple,
+                           const std::vector<Symbol<SbpParallel>>& sbp_tuple,
                            const bool& requires_grad) const {
     // NOTE(chengcheng): flow.Tensor or flow.tensor ONLY created by EagerTensor now.
     LazyMode::Guard lazy_mode_disabled_guard(/*is_enabled*/ false);
+    JUST(CheckDeviceIdsIsValid(placement));
 
     if (PyTensorCheck(data)) {
       // Throw warnings like pytorch.
@@ -105,8 +108,9 @@ class TensorEmptyCtorFunctor {
 class ConsistentTensorEmptyCtorFunctor {
  public:
   Maybe<Tensor> operator()(const Symbol<ParallelDesc>& placement,
-                           const std::vector<Symbol<cfg::SbpParallel>>& sbp_tuple) const {
+                           const std::vector<Symbol<SbpParallel>>& sbp_tuple) const {
     Shape shape(DimVector{0});
+    JUST(CheckDeviceIdsIsValid(placement));
     return ConsistentTensorWithShapeCtor(shape, placement, sbp_tuple);
   }
 };
@@ -147,7 +151,8 @@ class TensorWithDataCtorFunctor {
 class ConsistentTensorWithDataCtorFunctor {
  public:
   Maybe<Tensor> operator()(PyObject* data, const Symbol<ParallelDesc>& placement,
-                           const std::vector<Symbol<cfg::SbpParallel>>& sbp_tuple) const {
+                           const std::vector<Symbol<SbpParallel>>& sbp_tuple) const {
+    JUST(CheckDeviceIdsIsValid(placement));
     // Treat the single long as shape.
     if (PyLong_Check(data)) {
       int64_t size = PyLong_AsLongLong(data);
@@ -187,9 +192,10 @@ class TensorWithShapeCtorFunctor {
 class ConsistentTensorWithShapeCtorFunctor {
  public:
   Maybe<Tensor> operator()(const Shape& shape, const Symbol<ParallelDesc>& placement,
-                           const std::vector<Symbol<cfg::SbpParallel>>& sbp_tuple) const {
+                           const std::vector<Symbol<SbpParallel>>& sbp_tuple) const {
     // NOTE(chengcheng): flow.Tensor or flow.tensor ONLY created by EagerTensor now.
     LazyMode::Guard lazy_mode_disabled_guard(/*is_enabled*/ false);
+    JUST(CheckDeviceIdsIsValid(placement));
     return functional::ConsistentEmpty(shape, DType::Float(), placement, sbp_tuple);
   }
 };
@@ -219,6 +225,12 @@ class LocalTensorSharedNumpyDataFunctor {
       return Error::TypeError() << "expected np.ndarray, but got " << Py_TYPE(obj)->tp_name;
     }
     auto* array = reinterpret_cast<PyArrayObject*>(obj);
+    // TODO(wyg): support non-contiguous array.
+    if (!PyArray_IS_C_CONTIGUOUS(array)) {
+      OF_LOG_ONCE(LOG(WARNING) << "OneFlow don't support non-contiguous array now, "
+                                  "and we will copy the array to a contiguous one.");
+      array = PyArray_GETCONTIGUOUS(array);
+    }
 
     // Build TensorMeta
     int32_t dim = PyArray_NDIM(array);
@@ -227,13 +239,26 @@ class LocalTensorSharedNumpyDataFunctor {
     DataType data_type = JUST(numpy::GetOFDataTypeFromNpArray(array));
     Symbol<Device> device = JUST(Device::New("cpu"));
     const npy_intp* stride_ptr = PyArray_STRIDES(array);
-    const auto stride = std::make_shared<Stride>(DimVector(stride_ptr, stride_ptr + dim));
-    auto tensor_meta = std::make_shared<MirroredTensorMeta>(shape, data_type, device, stride, 0);
+    // stride
+    auto strides_vec = DimVector(stride_ptr, stride_ptr + dim);
+    auto element_size_in_bytes = PyArray_ITEMSIZE(array);
+    // NumPy strides use bytes. OneFlow strides use element counts.
+    for (auto& stride : strides_vec) {
+      if (stride % element_size_in_bytes != 0) {
+        return Error::RuntimeError() << "given numpy array strides not a multiple of the element "
+                                        "byte size. Copy the numpy array to reallocate the memory.";
+      }
+      stride /= element_size_in_bytes;
+    }
+    const auto strides = std::make_shared<Stride>(strides_vec);
+    auto tensor_meta = std::make_shared<MirroredTensorMeta>(shape, data_type, device, strides, 0);
 
     // Build TensorBuffer
     const auto& Free = [obj](char* dptr) {
-      py::gil_scoped_acquire gil;
-      Py_DECREF(obj);
+      CHECK_JUST(Global<ForeignLockHelper>::Get()->WithScopedAcquire([&]() -> Maybe<void> {
+        Py_DECREF(obj);
+        return Maybe<void>::Ok();
+      }));
     };
     Py_INCREF(obj);  // make TensorBuffer hold ndarray
     void* data_ptr = PyArray_DATA(array);
@@ -252,8 +277,9 @@ class LocalTensorSharedNumpyDataFunctor {
                                                                  /*ls_leaf=*/true);
 
     // Init blob
-    JUST(tensor_impl->InitEagerBlobObject(JUST(GetLocalDepObject4Device(*device))));
-    JUST(tensor_impl->eager_blob_object())->set_last_used_device(device);
+    JUST(tensor_impl->InitEagerBlobObject(NewLocalDepObject()));
+    const auto& stream = GetDefaultStreamByDevice(device);
+    JUST(tensor_impl->eager_blob_object())->set_last_used_stream(stream);
     JUST(JUST(tensor_impl->eager_blob_object())->TryInitBlob());
     JUST(tensor_impl->eager_blob_object())->mut_blob()->reset_dptr(static_cast<char*>(data_ptr));
     std::shared_ptr<Tensor> out(new MirroredTensor(tensor_impl));

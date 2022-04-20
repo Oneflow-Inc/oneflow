@@ -26,13 +26,13 @@ TEST(Api, device) {
   ASSERT_EQ(device.type(), "cpu");
 
 #ifdef WITH_CUDA
+  device = Device("cuda:0");
+  ASSERT_EQ(device.type(), "cuda");
+  ASSERT_EQ(device.device_id(), 0);
+
   device = Device("cuda", 1);
   ASSERT_EQ(device.type(), "cuda");
   ASSERT_EQ(device.device_id(), 1);
-
-  device = Device("cuda:2");
-  ASSERT_EQ(device.type(), "cuda");
-  ASSERT_EQ(device.device_id(), 2);
 #endif
 }
 

@@ -13,20 +13,22 @@ OneFlow API Reference
 
     oneflow
     tensor
+    tensor_attributes
     nn
     functional
-    module
     autograd
-    graph
-    linalg
-    image
-    optim
-    utils
     cuda
     distributed
+    linalg
+    nn.init
+    optim
+    module
+    graph
+    image
+    utils
+    env
     comm
-    placement
-    sbp
+    one_embedding
 
 
 

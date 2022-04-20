@@ -18,7 +18,12 @@ import unittest
 from collections import OrderedDict
 
 import numpy as np
-from test_util import Array2Numpy, FlattenArray, GenArgList, Index2Coordinate
+from oneflow.test_utils.test_util import (
+    Array2Numpy,
+    FlattenArray,
+    GenArgList,
+    Index2Coordinate,
+)
 
 import oneflow as flow
 import oneflow.unittest
@@ -113,7 +118,7 @@ class TestReplicationPad2dModule(flow.unittest.TestCase):
         m.train(random())
         device = random_device()
         m.to(device)
-        x = random_pytorch_tensor(ndim=4, dim1=c, dim2=h, dim3=w).to(device)
+        x = random_tensor(ndim=4, dim1=c, dim2=h, dim3=w).to(device)
         y = m(x)
         return y
 

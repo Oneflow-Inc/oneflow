@@ -14,6 +14,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 #include "oneflow/core/framework/framework.h"
+#include "oneflow/core/framework/op_generated.h"
 
 namespace oneflow {
 
@@ -112,175 +113,207 @@ Maybe<void> GetTensorScatterNdOptSbpSignatures(user_op::SbpContext* ctx) {
 
 }  // namespace
 
-REGISTER_USER_OP("gather_nd")
-    .Input("params")
-    .Input("indices")
-    .Output("out")
-    .SetTensorDescInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
-      const Shape& params_shape = ctx->InputShape("params", 0);
-      const Shape& indices_shape = ctx->InputShape("indices", 0);
-      int64_t index_ndims = indices_shape.At(indices_shape.NumAxes() - 1);
-      CHECK_LE_OR_RETURN(index_ndims, params_shape.NumAxes());
-      DimVector out_shape_vec(indices_shape.dim_vec().cbegin(), indices_shape.dim_vec().cend() - 1);
-      FOR_RANGE(int64_t, i, index_ndims, params_shape.NumAxes()) {
-        out_shape_vec.emplace_back(params_shape.At(i));
-      }
-      *ctx->OutputShape("out", 0) = Shape(out_shape_vec);
-      return Maybe<void>::Ok();
-    })
-    .SetInputArgModifyFn([](user_op::GetInputArgModifier GetInputArgModifierFn,
-                            const user_op::UserOpConfWrapper&) -> Maybe<void> {
-      user_op::InputArgModifier* indices_modifier = GetInputArgModifierFn("indices", 0);
-      CHECK_OR_RETURN(indices_modifier != nullptr);
-      indices_modifier->set_requires_grad(false);
-      return Maybe<void>::Ok();
-    })
-    .SetGetSbpFn([](user_op::SbpContext* ctx) -> Maybe<void> {
-      const user_op::TensorDesc& params_tensor =
-          ctx->LogicalTensorDesc4InputArgNameAndIndex("params", 0);
-      const user_op::TensorDesc& indices_tensor =
-          ctx->LogicalTensorDesc4InputArgNameAndIndex("indices", 0);
-      int64_t indices_num_axes = indices_tensor.shape().NumAxes();
-      FOR_RANGE(int64_t, i, 0, indices_num_axes - 1) {
-        ctx->NewBuilder()
-            .Broadcast(user_op::OpArg("params", 0))
-            .Split(user_op::OpArg("indices", 0), i)
-            .Split(user_op::OpArg("out", 0), i)
-            .Build();
-      }
-      int64_t index_ndims = indices_tensor.shape().At(indices_num_axes - 1);
-      FOR_RANGE(int64_t, i, index_ndims, params_tensor.shape().NumAxes()) {
-        ctx->NewBuilder()
-            .Split(user_op::OpArg("params", 0), i)
-            .Broadcast(user_op::OpArg("indices", 0))
-            .Split(user_op::OpArg("out", 0), i - index_ndims + indices_num_axes - 1)
-            .Build();
-      }
-      ctx->NewBuilder()
-          .PartialSum(user_op::OpArg("params", 0))
-          .Broadcast(user_op::OpArg("indices", 0))
-          .PartialSum(user_op::OpArg("out", 0))
-          .Build();
-      return Maybe<void>::Ok();
-    })
-    .SetDataTypeInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
-      *ctx->OutputDType("out", 0) = ctx->InputDType("params", 0);
-      return Maybe<void>::Ok();
-    });
+/* static */ Maybe<void> GatherNdOp::InferLogicalTensorDesc(user_op::InferContext* ctx) {
+  const Shape& params_shape = ctx->InputShape("params", 0);
+  const Shape& indices_shape = ctx->InputShape("indices", 0);
+  int64_t index_ndims = indices_shape.At(indices_shape.NumAxes() - 1);
+  CHECK_LE_OR_RETURN(index_ndims, params_shape.NumAxes());
+  DimVector out_shape_vec(indices_shape.dim_vec().cbegin(), indices_shape.dim_vec().cend() - 1);
+  FOR_RANGE(int64_t, i, index_ndims, params_shape.NumAxes()) {
+    out_shape_vec.emplace_back(params_shape.At(i));
+  }
+  *ctx->OutputShape("out", 0) = Shape(out_shape_vec);
+  return Maybe<void>::Ok();
+}
 
-REGISTER_USER_OP("scatter_nd")
-    .Input("indices")
-    .Input("updates")
-    .Output("out")
-    .Attr<Shape>("shape")
-    .SetTensorDescInferFn(InferScatterNdTensorDesc)
-    .SetDataTypeInferFn(InferScatterNdDataType)
-    .SetInputArgModifyFn([](user_op::GetInputArgModifier GetInputArgModifierFn,
-                            const user_op::UserOpConfWrapper&) -> Maybe<void> {
-      user_op::InputArgModifier* indices_modifier = GetInputArgModifierFn("indices", 0);
-      CHECK_OR_RETURN(indices_modifier != nullptr);
-      indices_modifier->set_requires_grad(false);
-      return Maybe<void>::Ok();
-    })
-    .SetGetSbpFn([](user_op::SbpContext* ctx) -> Maybe<void> {
-      const user_op::TensorDesc& indices_desc =
-          ctx->LogicalTensorDesc4InputArgNameAndIndex("indices", 0);
-      int64_t indices_num_axes = indices_desc.shape().NumAxes();
-      FOR_RANGE(int64_t, i, 0, indices_num_axes - 1) {
-        ctx->NewBuilder()
-            .Split(user_op::OpArg("indices", 0), i)
-            .Split(user_op::OpArg("updates", 0), i)
-            .Broadcast(user_op::OpArg("out", 0))
-            .Build();
-      }
-      const Shape& out_shape = ctx->Attr<Shape>("shape");
-      int64_t index_ndims = indices_desc.shape().At(indices_num_axes - 1);
-      int64_t slice_ndims = out_shape.NumAxes() - index_ndims;
-      FOR_RANGE(int64_t, i, 0, slice_ndims) {
-        ctx->NewBuilder()
-            .Broadcast(user_op::OpArg("indices", 0))
-            .Split(user_op::OpArg("updates", 0), i + indices_num_axes - 1)
-            .Split(user_op::OpArg("out", 0), i + index_ndims)
-            .Build();
-      }
-      ctx->NewBuilder()
-          .PartialSum(user_op::OpArg("updates", 0))
-          .Broadcast(user_op::OpArg("indices", 0))
-          .PartialSum(user_op::OpArg("out", 0))
-          .Build();
-      return Maybe<void>::Ok();
-    });
+/*static*/ Maybe<void> GatherNdOp::InferPhysicalTensorDesc(user_op::InferContext* ctx) {
+  return InferLogicalTensorDesc(ctx);
+}
 
-REGISTER_USER_OP("scatter_nd_like")
-    .Input("like")
-    .Input("indices")
-    .Input("updates")
-    .Output("out")
-    .SetTensorDescInferFn(InferScatterNdLikeTensorDesc)
-    .SetDataTypeInferFn(InferScatterNdLikeDataType)
-    .SetGetSbpFn([](user_op::SbpContext* ctx) -> Maybe<void> {
-      const user_op::TensorDesc& indices_tensor =
-          ctx->LogicalTensorDesc4InputArgNameAndIndex("indices", 0);
-      int64_t indices_num_axes = indices_tensor.shape().NumAxes();
-      FOR_RANGE(int64_t, i, 0, indices_num_axes - 1) {
-        ctx->NewBuilder()
-            .Broadcast(user_op::OpArg("like", 0))
-            .Split(user_op::OpArg("indices", 0), i)
-            .Split(user_op::OpArg("updates", 0), i)
-            .Broadcast(user_op::OpArg("out", 0))
-            .Build();
-      }
-      const Shape& out_shape = ctx->LogicalTensorDesc4InputArgNameAndIndex("like", 0).shape();
-      int64_t index_ndims = indices_tensor.shape().At(indices_num_axes - 1);
-      int64_t slice_ndims = out_shape.NumAxes() - index_ndims;
-      FOR_RANGE(int64_t, i, 0, slice_ndims) {
-        ctx->NewBuilder()
-            .Split(user_op::OpArg("like", 0), i + index_ndims)
-            .Broadcast(user_op::OpArg("indices", 0))
-            .Split(user_op::OpArg("updates", 0), i + indices_num_axes - 1)
-            .Split(user_op::OpArg("out", 0), i + index_ndims)
-            .Build();
-      }
-      ctx->NewBuilder()
-          .PartialSum(user_op::OpArg("like", 0))
-          .PartialSum(user_op::OpArg("updates", 0))
-          .Broadcast(user_op::OpArg("indices", 0))
-          .PartialSum(user_op::OpArg("out", 0))
-          .Build();
-      return Maybe<void>::Ok();
-    });
+/* static */ Maybe<void> GatherNdOp::GetSbp(user_op::SbpContext* ctx) {
+  const user_op::TensorDesc& params_tensor =
+      ctx->LogicalTensorDesc4InputArgNameAndIndex("params", 0);
+  const user_op::TensorDesc& indices_tensor =
+      ctx->LogicalTensorDesc4InputArgNameAndIndex("indices", 0);
+  int64_t indices_num_axes = indices_tensor.shape().NumAxes();
+  FOR_RANGE(int64_t, i, 0, indices_num_axes - 1) {
+    ctx->NewBuilder()
+        .Broadcast(user_op::OpArg("params", 0))
+        .Split(user_op::OpArg("indices", 0), i)
+        .Split(user_op::OpArg("out", 0), i)
+        .Build();
+  }
+  int64_t index_ndims = indices_tensor.shape().At(indices_num_axes - 1);
+  FOR_RANGE(int64_t, i, index_ndims, params_tensor.shape().NumAxes()) {
+    ctx->NewBuilder()
+        .Split(user_op::OpArg("params", 0), i)
+        .Broadcast(user_op::OpArg("indices", 0))
+        .Split(user_op::OpArg("out", 0), i - index_ndims + indices_num_axes - 1)
+        .Build();
+  }
+  ctx->NewBuilder()
+      .PartialSum(user_op::OpArg("params", 0))
+      .Broadcast(user_op::OpArg("indices", 0))
+      .PartialSum(user_op::OpArg("out", 0))
+      .Build();
+  return Maybe<void>::Ok();
+}
 
-REGISTER_USER_OP("tensor_scatter_nd_update")
-    .Input("params")
-    .Input("updates")
-    .Input("indices")
-    .Output("out")
-    .SetTensorDescInferFn(InferTensorScatterNdOptTensorDesc)
-    .SetDataTypeInferFn(InferTensorScatterNdOptDataType)
-    .SetGetSbpFn(GetTensorScatterNdOptSbpSignatures)
-    .SetInputArgModifyFn([](user_op::GetInputArgModifier GetInputArgModifierFn,
-                            const user_op::UserOpConfWrapper&) -> Maybe<void> {
-      user_op::InputArgModifier* indices_modifier = GetInputArgModifierFn("indices", 0);
-      CHECK_OR_RETURN(indices_modifier != nullptr);
-      indices_modifier->set_requires_grad(false);
-      return Maybe<void>::Ok();
-    });
+/* static */ Maybe<void> GatherNdOp::ModifyInputArg(
+    const GetInputArgModifier& GetInputArgModifierFn, const user_op::UserOpConfWrapper& conf) {
+  user_op::InputArgModifier* indices_modifier = GetInputArgModifierFn("indices", 0);
+  CHECK_OR_RETURN(indices_modifier != nullptr);
+  indices_modifier->set_requires_grad(false);
+  return Maybe<void>::Ok();
+}
 
-REGISTER_USER_OP("tensor_scatter_nd_add")
-    .Input("params")
-    .Input("updates")
-    .Input("indices")
-    .Output("out")
-    .SetTensorDescInferFn(InferTensorScatterNdOptTensorDesc)
-    .SetDataTypeInferFn(InferTensorScatterNdOptDataType)
-    .SetGetSbpFn(GetTensorScatterNdOptSbpSignatures)
-    .SetInputArgModifyFn([](user_op::GetInputArgModifier GetInputArgModifierFn,
-                            const user_op::UserOpConfWrapper&) -> Maybe<void> {
-      user_op::InputArgModifier* indices_modifier = GetInputArgModifierFn("indices", 0);
-      CHECK_OR_RETURN(indices_modifier != nullptr);
-      indices_modifier->set_requires_grad(false);
-      return Maybe<void>::Ok();
-    });
+/* static */ Maybe<void> GatherNdOp::InferDataType(user_op::InferContext* ctx) {
+  *ctx->OutputDType("out", 0) = ctx->InputDType("params", 0);
+  return Maybe<void>::Ok();
+}
+
+/* static */ Maybe<void> ScatterNdOp::InferLogicalTensorDesc(user_op::InferContext* ctx) {
+  return InferScatterNdTensorDesc(ctx);
+}
+
+/*static*/ Maybe<void> ScatterNdOp::InferPhysicalTensorDesc(user_op::InferContext* ctx) {
+  return InferLogicalTensorDesc(ctx);
+}
+
+/* static */ Maybe<void> ScatterNdOp::GetSbp(user_op::SbpContext* ctx) {
+  const user_op::TensorDesc& indices_desc =
+      ctx->LogicalTensorDesc4InputArgNameAndIndex("indices", 0);
+  int64_t indices_num_axes = indices_desc.shape().NumAxes();
+  FOR_RANGE(int64_t, i, 0, indices_num_axes - 1) {
+    ctx->NewBuilder()
+        .Split(user_op::OpArg("indices", 0), i)
+        .Split(user_op::OpArg("updates", 0), i)
+        .Broadcast(user_op::OpArg("out", 0))
+        .Build();
+  }
+  const Shape& out_shape = ctx->Attr<Shape>("shape");
+  int64_t index_ndims = indices_desc.shape().At(indices_num_axes - 1);
+  int64_t slice_ndims = out_shape.NumAxes() - index_ndims;
+  FOR_RANGE(int64_t, i, 0, slice_ndims) {
+    ctx->NewBuilder()
+        .Broadcast(user_op::OpArg("indices", 0))
+        .Split(user_op::OpArg("updates", 0), i + indices_num_axes - 1)
+        .Split(user_op::OpArg("out", 0), i + index_ndims)
+        .Build();
+  }
+  ctx->NewBuilder()
+      .PartialSum(user_op::OpArg("updates", 0))
+      .Broadcast(user_op::OpArg("indices", 0))
+      .PartialSum(user_op::OpArg("out", 0))
+      .Build();
+  return Maybe<void>::Ok();
+}
+
+/* static */ Maybe<void> ScatterNdOp::ModifyInputArg(
+    const GetInputArgModifier& GetInputArgModifierFn, const user_op::UserOpConfWrapper& conf) {
+  user_op::InputArgModifier* indices_modifier = GetInputArgModifierFn("indices", 0);
+  CHECK_OR_RETURN(indices_modifier != nullptr);
+  indices_modifier->set_requires_grad(false);
+  return Maybe<void>::Ok();
+}
+
+/* static */ Maybe<void> ScatterNdOp::InferDataType(user_op::InferContext* ctx) {
+  return InferScatterNdDataType(ctx);
+}
+
+/* static */ Maybe<void> ScatterNdLikeOp::InferLogicalTensorDesc(user_op::InferContext* ctx) {
+  return InferScatterNdLikeTensorDesc(ctx);
+}
+
+/*static*/ Maybe<void> ScatterNdLikeOp::InferPhysicalTensorDesc(user_op::InferContext* ctx) {
+  return InferLogicalTensorDesc(ctx);
+}
+
+/* static */ Maybe<void> ScatterNdLikeOp::GetSbp(user_op::SbpContext* ctx) {
+  const user_op::TensorDesc& indices_tensor =
+      ctx->LogicalTensorDesc4InputArgNameAndIndex("indices", 0);
+  int64_t indices_num_axes = indices_tensor.shape().NumAxes();
+  FOR_RANGE(int64_t, i, 0, indices_num_axes - 1) {
+    ctx->NewBuilder()
+        .Broadcast(user_op::OpArg("like", 0))
+        .Split(user_op::OpArg("indices", 0), i)
+        .Split(user_op::OpArg("updates", 0), i)
+        .Broadcast(user_op::OpArg("out", 0))
+        .Build();
+  }
+  const Shape& out_shape = ctx->LogicalTensorDesc4InputArgNameAndIndex("like", 0).shape();
+  int64_t index_ndims = indices_tensor.shape().At(indices_num_axes - 1);
+  int64_t slice_ndims = out_shape.NumAxes() - index_ndims;
+  FOR_RANGE(int64_t, i, 0, slice_ndims) {
+    ctx->NewBuilder()
+        .Split(user_op::OpArg("like", 0), i + index_ndims)
+        .Broadcast(user_op::OpArg("indices", 0))
+        .Split(user_op::OpArg("updates", 0), i + indices_num_axes - 1)
+        .Split(user_op::OpArg("out", 0), i + index_ndims)
+        .Build();
+  }
+  ctx->NewBuilder()
+      .PartialSum(user_op::OpArg("like", 0))
+      .PartialSum(user_op::OpArg("updates", 0))
+      .Broadcast(user_op::OpArg("indices", 0))
+      .PartialSum(user_op::OpArg("out", 0))
+      .Build();
+  return Maybe<void>::Ok();
+}
+
+/* static */ Maybe<void> ScatterNdLikeOp::InferDataType(user_op::InferContext* ctx) {
+  return InferScatterNdLikeDataType(ctx);
+}
+
+/* static */ Maybe<void> TensorScatterNdUpdateOp::InferLogicalTensorDesc(
+    user_op::InferContext* ctx) {
+  return InferTensorScatterNdOptTensorDesc(ctx);
+}
+
+/*static*/ Maybe<void> TensorScatterNdUpdateOp::InferPhysicalTensorDesc(
+    user_op::InferContext* ctx) {
+  return InferLogicalTensorDesc(ctx);
+}
+
+/* static */ Maybe<void> TensorScatterNdUpdateOp::GetSbp(user_op::SbpContext* ctx) {
+  return GetTensorScatterNdOptSbpSignatures(ctx);
+}
+
+/* static */ Maybe<void> TensorScatterNdUpdateOp::ModifyInputArg(
+    const GetInputArgModifier& GetInputArgModifierFn, const user_op::UserOpConfWrapper& conf) {
+  user_op::InputArgModifier* indices_modifier = GetInputArgModifierFn("indices", 0);
+  CHECK_OR_RETURN(indices_modifier != nullptr);
+  indices_modifier->set_requires_grad(false);
+  return Maybe<void>::Ok();
+}
+
+/* static */ Maybe<void> TensorScatterNdUpdateOp::InferDataType(user_op::InferContext* ctx) {
+  return InferTensorScatterNdOptDataType(ctx);
+}
+
+/* static */ Maybe<void> TensorScatterNdAddOp::InferLogicalTensorDesc(user_op::InferContext* ctx) {
+  return InferTensorScatterNdOptTensorDesc(ctx);
+}
+
+/*static*/ Maybe<void> TensorScatterNdAddOp::InferPhysicalTensorDesc(user_op::InferContext* ctx) {
+  return InferLogicalTensorDesc(ctx);
+}
+
+/* static */ Maybe<void> TensorScatterNdAddOp::GetSbp(user_op::SbpContext* ctx) {
+  return GetTensorScatterNdOptSbpSignatures(ctx);
+}
+
+/* static */ Maybe<void> TensorScatterNdAddOp::ModifyInputArg(
+    const GetInputArgModifier& GetInputArgModifierFn, const user_op::UserOpConfWrapper& conf) {
+  user_op::InputArgModifier* indices_modifier = GetInputArgModifierFn("indices", 0);
+  CHECK_OR_RETURN(indices_modifier != nullptr);
+  indices_modifier->set_requires_grad(false);
+  return Maybe<void>::Ok();
+}
+
+/* static */ Maybe<void> TensorScatterNdAddOp::InferDataType(user_op::InferContext* ctx) {
+  return InferTensorScatterNdOptDataType(ctx);
+}
 
 REGISTER_USER_OP_GRAD("gather_nd")
     .SetGenBackwardOpConfFn([](const user_op::UserOpWrapper& op,

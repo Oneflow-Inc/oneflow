@@ -30,35 +30,6 @@ def arange_op(
     sbp: Union[flow.sbp.sbp, List[flow.sbp.sbp]] = None,
     requires_grad: bool = False,
 ):
-    """
-    Returns a 1-D tensor of size :math:`\\left\\lfloor \\frac{\\text{end} - \\text{start}}{\\text{step}} \\right\\rfloor + 1`
-    with values from :attr:`start` to :attr:`end` with step :attr:`step`. Step is
-    the gap between two values in the tensor.
-
-    .. math::
-        \\text{out}_{i+1} = \\text{out}_i + \\text{step}.
-
-    Args:
-        start (int): the starting value for the set of points. Default: ``0``.
-        end (int): the ending value for the set of points
-        step (int): the gap between each pair of adjacent points. Default: ``1``.
-
-    Keyword args:
-        dtype(flow.dtype, optional): If `dtype` is not given, the `dtype` is inferred to be `flow.int64`.
-        device(flow.device, optional): the desired device of returned tensor. Default: if None, uses the current device for the default tensor.
-        requires_grad(bool, optional): If autograd should record operations on the returned tensor. Default: `False`.
-
-    For example:
-
-    .. code-block:: python
-
-        >>> import oneflow as flow
-        
-        >>> y = flow.arange(0, 5)
-        >>> y
-        tensor([0, 1, 2, 3, 4], dtype=oneflow.int64)
-
-    """
     if end is None:
         end = start
         start = 0
@@ -76,8 +47,8 @@ def arange_op(
         else:
             for elem in sbp:
                 assert isinstance(elem, flow.sbp.sbp), "sbp: %s" % sbp
-        assert len(sbp) == len(placement.hierarchy)
-        res = flow._C.consistent_arange(
+        assert len(sbp) == len(placement.ranks.shape)
+        res = flow._C.global_arange(
             start, end, step, dtype=dtype, placement=placement, sbp=sbp
         )
 

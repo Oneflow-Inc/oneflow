@@ -104,7 +104,7 @@ Maybe<void> PoolNdGrad::Apply(const PoolCaptureState* ctx, const TensorTuple& ou
 
 class MaxPoolNdGrad final : public PoolNdGrad {
  public:
-  Maybe<void> Init(const OpExpr& op) override { return PoolNdGrad::Init(op, "max"); }
+  Maybe<void> Init(const OpExpr& op) override { return PoolNdGrad::Init(op, "tf_max"); }
 };
 
 REGISTER_OP_EXPR_GRAD_FUNCTION("tf_max_pool_1d", MaxPoolNdGrad);
@@ -113,7 +113,7 @@ REGISTER_OP_EXPR_GRAD_FUNCTION("tf_max_pool_3d", MaxPoolNdGrad);
 
 class AvgPoolNdGrad final : public PoolNdGrad {
  public:
-  Maybe<void> Init(const OpExpr& op) override { return PoolNdGrad::Init(op, "avg"); }
+  Maybe<void> Init(const OpExpr& op) override { return PoolNdGrad::Init(op, "tf_avg"); }
 };
 
 REGISTER_OP_EXPR_GRAD_FUNCTION("tf_avg_pool_1d", AvgPoolNdGrad);

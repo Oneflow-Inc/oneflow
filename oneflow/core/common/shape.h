@@ -88,6 +88,7 @@ int64_t ShiftNegativeAxis(int64_t axis, const int64_t num_axes);
 
 Shape CreateReducedShape(const ShapeView& shape, const AxisVector& axis_vec);
 Shape CreateLeftExtendedShape(const ShapeView& shape, int ndims_extend_to);
+Shape ZeroDimCompatiableShape(const Shape& shape);
 Shape CreateReducedShapeOrOnesShape(const ShapeView& shape, const AxisVector& axis_vec);
 template<typename StreamT>
 void Shape::SerializeWithTextFormat(StreamT& out_stream) const {

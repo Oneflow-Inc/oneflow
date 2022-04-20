@@ -14,27 +14,29 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 #include "oneflow/core/framework/framework.h"
+#include "oneflow/core/framework/op_generated.h"
 
 namespace oneflow {
-REGISTER_NO_GRAD_USER_OP("eye")
-    .Output("out")
-    .Attr<int64_t>("rows")
-    .Attr<int64_t>("cols")
-    .Attr<DataType>("dtype")
-    .Attr<std::vector<std::string>>("nd_sbp")
-    .SetTensorDescInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
-      int64_t rows = ctx->Attr<int64_t>("rows");
-      int64_t cols = ctx->Attr<int64_t>("cols");
-      *ctx->OutputShape("out", 0) = Shape({rows, cols});
-      return Maybe<void>::Ok();
-    })
-    .SetGetSbpFn([](user_op::SbpContext* ctx) -> Maybe<void> {
-      ctx->NewBuilder().Broadcast(ctx->inputs()).Broadcast(ctx->outputs()).Build();
-      return Maybe<void>::Ok();
-    })
-    .SetDataTypeInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
-      *ctx->OutputDType("out", 0) = ctx->Attr<DataType>("dtype");
-      return Maybe<void>::Ok();
-    });
+
+/* static */ Maybe<void> EyeOp::InferLogicalTensorDesc(user_op::InferContext* ctx) {
+  int64_t rows = ctx->Attr<int64_t>("rows");
+  int64_t cols = ctx->Attr<int64_t>("cols");
+  *ctx->OutputShape("out", 0) = Shape({rows, cols});
+  return Maybe<void>::Ok();
+}
+
+/*static*/ Maybe<void> EyeOp::InferPhysicalTensorDesc(user_op::InferContext* ctx) {
+  return InferLogicalTensorDesc(ctx);
+}
+
+/* static */ Maybe<void> EyeOp::GetSbp(user_op::SbpContext* ctx) {
+  ctx->NewBuilder().Broadcast(ctx->inputs()).Broadcast(ctx->outputs()).Build();
+  return Maybe<void>::Ok();
+}
+
+/* static */ Maybe<void> EyeOp::InferDataType(user_op::InferContext* ctx) {
+  *ctx->OutputDType("out", 0) = ctx->Attr<DataType>("dtype");
+  return Maybe<void>::Ok();
+}
 
 }  // namespace oneflow

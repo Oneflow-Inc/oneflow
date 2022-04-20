@@ -22,6 +22,7 @@ import numpy as np
 import oneflow
 import oneflow as flow
 import oneflow._oneflow_internal
+import oneflow._oneflow_internal._C as _C
 import oneflow.framework.c_api_util as c_api_util
 import oneflow.framework.session_context as session_ctx
 import oneflow.unittest
@@ -31,7 +32,6 @@ from oneflow.framework.multi_client_session import MultiClientSession
 @flow.unittest.skip_unless_1n1d()
 class TestFeedInputTensor(unittest.TestCase):
     def test_feed_input_tensor(test_case):
-        test_case.assertTrue(oneflow.env.is_multi_client())
         test_case.assertTrue(oneflow.framework.env_util.HasAllMultiClientEnvVars())
         x = flow.Tensor(1, 1, 10, 10)
         flow.nn.init.uniform_(x, a=-1.0, b=1.0)
@@ -58,7 +58,7 @@ class TestFeedInputTensor(unittest.TestCase):
                 op_name, input_conf, ["in_0"], ["out_0"]
             )
             attrs = oneflow._oneflow_internal.MutableCfgAttrMap()
-            out_tensor = input_op.apply([x], attrs)[0]
+            out_tensor = _C.dispatch_feed_input(input_op, x)
             test_case.assertEqual(out_tensor.shape, (1, 1, 10, 10))
             test_case.assertTrue(out_tensor.is_lazy)
             test_case.assertTrue(out_tensor.is_local)

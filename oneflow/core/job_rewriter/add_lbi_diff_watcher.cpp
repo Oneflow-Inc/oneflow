@@ -55,7 +55,7 @@ Maybe<void> AddLbiDiffWatcherOpConfs::Apply(Job* job) const {
     auto* foreign_watcher_conf = foreign_watcher_op.mutable_foreign_watch_conf();
     foreign_watcher_conf->set_in(GenLogicalBlobName(diff_lbi));
     foreign_watcher_conf->set_handler_uuid(pair.watcher_uuid());
-    job_builder.AddOps(job_builder.ParallelConf4Lbi(pair.lbi()), {foreign_watcher_op});
+    job_builder.AddOps(JUST(job_builder.ParallelConf4Lbi(pair.lbi())), {foreign_watcher_op});
   }
   return Maybe<void>::Ok();
 }

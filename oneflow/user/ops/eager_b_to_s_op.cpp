@@ -16,15 +16,16 @@ limitations under the License.
 #include "oneflow/core/framework/framework.h"
 #include "oneflow/core/job/parallel_desc.h"
 #include "oneflow/core/common/decorator.h"
+#include "oneflow/core/common/balanced_splitter.h"
 #include "oneflow/core/common/shape.h"
 #include "oneflow/core/framework/device.h"
 #include "oneflow/user/ops/comm_net_device_infer_util.h"
+#include "oneflow/core/framework/op_generated.h"
 
 namespace oneflow {
 
-namespace {
-
-Maybe<void> TensorDescInfer(user_op::InferContext* ctx) {
+// Can only be called in mirrored TODO: move this comment to ods
+/* static */ Maybe<void> EagerBToSOp::InferLogicalTensorDesc(user_op::InferContext* ctx) {
   const Shape& shape = ctx->Attr<Shape>("shape");
   const std::string& out_parallel_conf_txt = ctx->Attr<std::string>("out_parallel_conf");
   const int64_t out_split_axis = ctx->Attr<int64_t>("out_split_axis");
@@ -32,35 +33,36 @@ Maybe<void> TensorDescInfer(user_op::InferContext* ctx) {
   DimVector dim_vec{shape.dim_vec()};
   int64_t out_parallel_num = out_parallel_desc->parallel_num();
   if (out_parallel_num > 1) {
-    CHECK_LE_OR_RETURN(out_split_axis, shape.NumAxes());
-    CHECK_OR_RETURN(shape.At(out_split_axis) % out_parallel_num == 0);
-    dim_vec[out_split_axis] = shape.At(out_split_axis) / out_parallel_num;
+    CHECK_LT_OR_RETURN(out_split_axis, shape.NumAxes());
+    BalancedSplitter bs(shape.At(out_split_axis), out_parallel_num);
+    const auto& opt_parallel_id = JUST(GetParallelId4CurrentProcessCtx(out_parallel_desc));
+    int64_t parallel_id = opt_parallel_id->value_or(0);
+    dim_vec[out_split_axis] = bs.At(parallel_id).size();
   }
   *ctx->OutputShape("out", 0) = Shape(dim_vec);
   return Maybe<void>::Ok();
 }
 
-}  // namespace
+/*static*/ Maybe<void> EagerBToSOp::InferPhysicalTensorDesc(user_op::InferContext* ctx) {
+  return InferLogicalTensorDesc(ctx);
+}
 
-// Can only be called in mirrored
-REGISTER_NO_GRAD_USER_OP("eager_b_to_s")
-    .Input("in")
-    .Output("out")
-    .Attr<int64_t>("out_split_axis", -1)
-    .Attr<std::string>("in_parallel_conf")
-    .Attr<std::string>("out_parallel_conf")
-    .Attr<Shape>("shape")
-    .SetTensorDescInferFn(TensorDescInfer)
-    .SetNdSbpInferFn([](user_op::InferNdSbpFnContext* ctx) -> Maybe<void> {
-      return Error::TypeError() << "eager_b_to_s op doesn't support consistent tensor!";
-    })
-    .SetDeviceInferFn(DeviceInferFn<&SyncLaunched>)
-    .SetGetSbpFn([](user_op::SbpContext* ctx) -> Maybe<void> {
-      return Error::TypeError() << "eager_b_to_s op doesn't support consistent tensor!";
-    })
-    .SetDataTypeInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
-      *ctx->OutputDType("out", 0) = ctx->InputDType("in", 0);
-      return Maybe<void>::Ok();
-    });
+/* static */ Maybe<void> EagerBToSOp::GetSbp(user_op::SbpContext* ctx) {
+  return Error::TypeError() << "eager_b_to_s op doesn't support consistent tensor!";
+}
+
+/* static */ Maybe<void> EagerBToSOp::InferNdSbp(user_op::InferNdSbpFnContext* ctx) {
+  return Error::TypeError() << "eager_b_to_s op doesn't support consistent tensor!";
+}
+
+/* static */ Maybe<void> EagerBToSOp::InferDataType(user_op::InferContext* ctx) {
+  *ctx->OutputDType("out", 0) = ctx->InputDType("in", 0);
+  return Maybe<void>::Ok();
+}
+
+/* static */ Maybe<Symbol<Stream>> EagerBToSOp::InferDeviceAndStream(
+    user_op::DeviceAndStreamInferContext* ctx) {
+  return DeviceAndStreamInferFn<&SyncLaunched>(ctx);
+}
 
 }  // namespace oneflow

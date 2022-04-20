@@ -111,7 +111,7 @@ class BroadcastPowFunctor : public BinaryFloatFunctor {
   }
 };
 
-class SubFunctor : public BinaryFunctor {
+class SubFunctor : public InplaceableBinaryFunctor {
  public:
   SubFunctor() {
     op_ = CHECK_JUST(one::OpBuilder("broadcast_sub").Input("x").Input("y").Output("z").Build());
@@ -185,6 +185,37 @@ class DivFunctor : public BinaryFloatFunctor {
   }
 };
 
+class InplaceDivFunctor {
+ public:
+  InplaceDivFunctor() {
+    broadcast_div_op_ =
+        CHECK_JUST(one::OpBuilder("broadcast_div").Input("x").Input("y").Output("z").Build());
+  }
+  Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x,
+                           const std::shared_ptr<one::Tensor>& y) const {
+    TensorProcessor tensor_processor;
+    if (y->requires_grad()) {
+      JUST(tensor_processor.PromoteInputsToCommonDtype(true)
+               .AddInputs({JUST(Identity(x)), y})
+               .Apply());
+    } else {
+      JUST(tensor_processor.PromoteInputsToCommonDtype(true).AddInputs({x, y}).Apply());
+    }
+    const TensorTuple& input_vec = JUST(tensor_processor.GetInputs());
+    const std::shared_ptr<one::Tensor>& x_cast = input_vec.at(0);
+    const std::shared_ptr<one::Tensor>& y_cast = input_vec.at(1);
+    JUST(CheckInplaceValid(x));
+    JUST(CheckInplaceCastValid(x, x_cast));
+    JUST(CheckShapeCanExpandTo(*y_cast->shape(), *x_cast->shape()));
+    std::shared_ptr<TensorTuple> outputs = std::make_shared<TensorTuple>(1);
+    outputs->at(0) = x;
+    JUST(OpInterpUtil::Dispatch(*broadcast_div_op_, input_vec, outputs.get()));
+    return outputs->at(0);
+  }
+
+ private:
+  std::shared_ptr<OpExpr> broadcast_div_op_;
+};
 class Atan2Functor : public BinaryFloatFunctor {
  public:
   Atan2Functor() {
@@ -339,6 +370,7 @@ ONEFLOW_FUNCTION_LIBRARY(m) {
   m.add_functor<impl::SubFunctor>("Sub");
   m.add_functor<impl::MulFunctor>("Mul");
   m.add_functor<impl::InplaceMulFunctor>("InplaceMul");
+  m.add_functor<impl::InplaceDivFunctor>("InplaceDiv");
   m.add_functor<impl::DivFunctor>("Div");
   m.add_functor<impl::PowFunctor>("Pow");
   m.add_functor<impl::BroadcastPowFunctor>("BroadcastPow");

@@ -19,7 +19,7 @@ limitations under the License.
 
 #include <cuda_runtime.h>
 #include <cuda.h>
-#include <json.hpp>
+#include "nlohmann/json.hpp"
 
 namespace oneflow {
 

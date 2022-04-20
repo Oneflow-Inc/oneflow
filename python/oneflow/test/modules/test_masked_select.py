@@ -18,7 +18,7 @@ import unittest
 from collections import OrderedDict
 
 import numpy as np
-from test_util import GenArgList
+from oneflow.test_utils.test_util import GenArgList
 
 import oneflow as flow
 import oneflow.unittest
@@ -90,6 +90,13 @@ class TestMaskedSelect(flow.unittest.TestCase):
         arg_dict["device"] = ["cpu", "cuda"]
         for arg in GenArgList(arg_dict):
             arg[0](test_case, *arg[1:])
+
+    def test_masked_select_broadcast(test_case):
+        x = flow.ones(2, 3, 3)
+        mask = flow.triu(flow.ones(3, 3), 1)
+        flow_res = flow.masked_select(x, mask)
+        np_res = [1, 1, 1, 1, 1, 1]
+        test_case.assertTrue(np.allclose(flow_res.numpy(), np_res, 1e-05, 1e-05))
 
 
 if __name__ == "__main__":

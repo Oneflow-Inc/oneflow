@@ -14,12 +14,15 @@ See the License for the specific language governing permissions and
 limitations under the License.
 """
 import math
+import os
 
 import oneflow as flow
 from oneflow.nn import init
 from oneflow.nn.common_types import _size_1_t, _size_2_t, _size_3_t
 from oneflow.nn.module import Module
 from oneflow.nn.modules.utils import _pair, _single, _triple
+
+from typing import Union
 
 
 def slice(x, begin, size):
@@ -68,6 +71,27 @@ class ConvUtil(object):
             result = slice(x, slice_begin, slice_size)
             result_list.append(result)
         return result_list
+
+
+def get_padding(padding, kernel_size, dilation, stride):
+    valid_padding_strings = {"same", "valid"}
+    if isinstance(padding, str):
+        if padding not in valid_padding_strings:
+            raise ValueError(
+                "Invalid padding string {!r}, should be one of {}".format(
+                    padding, valid_padding_strings
+                )
+            )
+        if padding == "same" and any(s != 1 for s in list(stride)):
+            raise ValueError("padding='same' is not supported for strided convolutions")
+
+    out_padding = [0] * len(kernel_size)
+    if padding == "same":
+        for d, k, i in zip(dilation, kernel_size, range(len(kernel_size) - 1, -1, -1)):
+            total_padding = d * (k - 1)
+            left_pad = total_padding // 2
+            out_padding[i] = left_pad
+    return out_padding
 
 
 class Conv1d(Module):
@@ -167,7 +191,7 @@ class Conv1d(Module):
         out_channels: int,
         kernel_size: _size_1_t,
         stride: _size_1_t = 1,
-        padding: _size_1_t = 0,
+        padding: Union[str, _size_1_t] = 0,
         dilation: _size_1_t = 1,
         groups: int = 1,
         bias: bool = True,
@@ -178,9 +202,14 @@ class Conv1d(Module):
         self.padding_mode = padding_mode
         self.kernel_size = _single(kernel_size)
         self.stride = _single(stride)
-        self.padding = _single(padding)
         self.dilation = _single(dilation)
+        self.padding = (
+            get_padding(padding, self.kernel_size, self.dilation, self.stride)
+            if isinstance(padding, str)
+            else _single(padding)
+        )
         self.groups = groups
+        self.channel_pos = "channels_first"
         assert in_channels % groups == 0
         assert out_channels % groups == 0
         self.in_channels = in_channels
@@ -210,6 +239,7 @@ class Conv1d(Module):
             padding=self.padding,
             dilation=self.dilation,
             groups=self.groups,
+            channel_pos=self.channel_pos,
         )
 
     def extra_repr(self):
@@ -350,7 +380,7 @@ class Conv2d(Module):
         out_channels: int,
         kernel_size: _size_2_t,
         stride: _size_2_t = 1,
-        padding: _size_2_t = 0,
+        padding: Union[str, _size_2_t] = 0,
         dilation: _size_2_t = 1,
         groups: int = 1,
         bias: bool = True,
@@ -361,16 +391,32 @@ class Conv2d(Module):
         self.padding_mode = padding_mode
         self.kernel_size = _pair(kernel_size)
         self.stride = _pair(stride)
-        self.padding = _pair(padding)
         self.dilation = _pair(dilation)
+        self.padding = (
+            get_padding(padding, self.kernel_size, self.dilation, self.stride)
+            if isinstance(padding, str)
+            else _pair(padding)
+        )
         self.groups = groups
+
+        if os.getenv("ONEFLOW_ENABLE_NHWC") == "1":
+            self.channel_pos = "channels_last"
+        else:
+            self.channel_pos = "channels_first"
+
         assert in_channels % groups == 0
         assert out_channels % groups == 0
         self.in_channels = in_channels
         self.out_channels = out_channels
-        self.weight = flow.nn.Parameter(
-            flow.Tensor(out_channels, in_channels // groups, *self.kernel_size)
-        )
+        if self.channel_pos == "channels_first":
+            self.weight = flow.nn.Parameter(
+                flow.Tensor(out_channels, in_channels // groups, *self.kernel_size)
+            )
+        else:
+            self.weight = flow.nn.Parameter(
+                flow.Tensor(out_channels, *self.kernel_size, in_channels // groups)
+            )
+
         self.out_channel_groups = out_channels // groups
         self.bias = None
         if bias:
@@ -385,13 +431,15 @@ class Conv2d(Module):
             init.uniform_(self.bias, -bound, bound)
 
     def forward(self, x):
-        if x.shape[1] != self.in_channels:
-            raise ValueError("The input channels should be equal to self.in_channels")
-        # TODO(zwx): Use `tensor.device_type()` method to help checking if x is on cpu.
-        # Using `if x.device == flow.device("cpu"):` will fail as consistent tensor has
-        # no device, however using `x.is_cuda` is not a good choice.
-
-        res = flow._C.conv2d(
+        if self.channel_pos == "channels_first":
+            in_channel_axis = 1
+        else:
+            in_channel_axis = 3
+        if x.shape[in_channel_axis] != self.in_channels:
+            raise ValueError(
+                f"The input channels {x.shape[in_channel_axis]} should be equal to self.in_channels {self.in_channels}."
+            )
+        return flow._C.conv2d(
             x,
             self.weight,
             self.bias,
@@ -399,8 +447,8 @@ class Conv2d(Module):
             padding=self.padding,
             dilation=self.dilation,
             groups=self.groups,
+            channel_pos=self.channel_pos,
         )
-        return res
 
     def extra_repr(self):
         s = "{in_channels}, {out_channels}, kernel_size={kernel_size}, stride={stride}"
@@ -518,7 +566,7 @@ class Conv3d(Module):
         out_channels: int,
         kernel_size: _size_3_t,
         stride: _size_3_t = 1,
-        padding: _size_3_t = 0,
+        padding: Union[str, _size_3_t] = 0,
         dilation: _size_3_t = 1,
         groups: int = 1,
         bias: bool = True,
@@ -530,9 +578,14 @@ class Conv3d(Module):
         self.padding_mode = padding_mode
         self.kernel_size = _triple(kernel_size)
         self.stride = _triple(stride)
-        self.padding = _triple(padding)
         self.dilation = _triple(dilation)
+        self.padding = (
+            get_padding(padding, self.kernel_size, self.dilation, self.stride)
+            if isinstance(padding, str)
+            else _triple(padding)
+        )
         self.groups = groups
+        self.channel_pos = "channels_first"
         assert in_channels % groups == 0, "in_channels must be divisible by groups"
         assert out_channels % groups == 0, "out_channels must be divisible by groups"
         self.in_channels = in_channels
@@ -564,6 +617,7 @@ class Conv3d(Module):
             padding=self.padding,
             dilation=self.dilation,
             groups=self.groups,
+            channel_pos=self.channel_pos,
         )
 
     def extra_repr(self):

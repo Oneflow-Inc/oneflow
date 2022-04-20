@@ -36,14 +36,14 @@ class VariableOp final : public Operator {
       const std::function<BlobDesc*(const std::string&)>& BlobDesc4BnInOp,
       const ParallelDesc& parallel_desc) const override;
   Maybe<void> InferSbpSignature(
-      cfg::SbpSignature* sbp_signature, const cfg::SbpSignature& sbp_sig_conf,
-      const std::function<int32_t(const cfg::SbpSignature&)>& CalcOrderValue4SbpSig,
+      SbpSignature* sbp_signature, const SbpSignature& sbp_sig_conf,
+      const std::function<int32_t(const SbpSignature&)>& CalcOrderValue4SbpSig,
       std::function<Maybe<const SbpInferHint*>(const std::string&)> SbpInferHint4Ibn,
       const ParallelDesc& parallel_desc) const override;
-  Maybe<void> GetSbpSignatures(cfg::SbpSignatureList* sbp_sig_list) const override;
+  Maybe<void> GetSbpSignatures(SbpSignatureList* sbp_sig_list) const override;
   Symbol<OperatorConf> GetOpConfWithoutOpNameAndLbn() const override;
-  Maybe<void> InferNdSbpSignature(cfg::NdSbpSignature* nd_sbp_signature,
-                                  const cfg::NdSbpSignature& nd_sbp_constraints,
+  Maybe<void> InferNdSbpSignature(NdSbpSignature* nd_sbp_signature,
+                                  const NdSbpSignature& nd_sbp_constraints,
                                   const ParallelDesc& parallel_desc,
                                   std::function<Maybe<const NdSbpInferHint*>(const std::string&)>
                                       NdSbpInferHint4Ibn) const override;

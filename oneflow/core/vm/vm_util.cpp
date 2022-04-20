@@ -14,7 +14,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 #include "oneflow/core/common/blocking_counter.h"
-#include "oneflow/core/common/multi_client.h"
+
 #include "oneflow/core/common/util.h"
 #include "oneflow/core/common/protobuf.h"
 #include "oneflow/core/job/cluster_instruction.h"
@@ -31,10 +31,6 @@ limitations under the License.
 namespace oneflow {
 namespace vm {
 
-intrusive::shared_ptr<InstructionMsg> NewInstruction(const std::string& instr_type_name) {
-  return intrusive::make_shared<InstructionMsg>(instr_type_name);
-}
-
 Maybe<void> Run(vm::InstructionMsgList* instr_msg_list) {
   auto* virtual_machine = JUST(GlobalMaybe<VirtualMachine>());
   JUST(virtual_machine->Receive(instr_msg_list));
@@ -42,29 +38,23 @@ Maybe<void> Run(vm::InstructionMsgList* instr_msg_list) {
 }
 
 Maybe<void> ClusterSync() {
-  Maybe<void> (*Run)(const std::function<Maybe<void>(InstructionsBuilder*)>& Build) =
-      JUST(IsMultiClient()) ? &PhysicalRun : &LogicalRun;
-  BlockingCounter bc(1);
-  JUST(Run([&bc](InstructionsBuilder* builder) -> Maybe<void> {
+  auto bc = std::make_shared<BlockingCounter>(1);
+  JUST(PhysicalRun([bc](InstructionsBuilder* builder) -> Maybe<void> {
     JUST(builder->ComputeGlobalFrontSeqBarrier());
-    JUST(builder->ComputeRankFrontSeqCallback([&bc]() { bc.Decrease(); }));
+    JUST(builder->ComputeRankFrontSeqCallback([bc]() { bc->Decrease(); }));
     return Maybe<void>::Ok();
   }));
-
-  bc.WaitUntilCntEqualZero();
-
+  JUST(bc->WaitUntilCntEqualZero(VirtualMachine::GetPredicatorNoMoreInstructionsFinished()));
   return Maybe<void>::Ok();
 }
 
 Maybe<void> CurrentRankSync() {
-  BlockingCounter bc(1);
-  JUST(PhysicalRun([&bc](InstructionsBuilder* builder) -> Maybe<void> {
-    JUST(builder->ComputeRankFrontSeqCallback([&bc]() { bc.Decrease(); }));
+  auto bc = std::make_shared<BlockingCounter>(1);
+  JUST(PhysicalRun([bc](InstructionsBuilder* builder) -> Maybe<void> {
+    JUST(builder->ComputeRankFrontSeqCallback([bc]() { bc->Decrease(); }));
     return Maybe<void>::Ok();
   }));
-
-  bc.WaitUntilCntEqualZero();
-
+  JUST(bc->WaitUntilCntEqualZero(VirtualMachine::GetPredicatorNoMoreInstructionsFinished()));
   return Maybe<void>::Ok();
 }
 

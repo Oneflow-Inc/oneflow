@@ -19,6 +19,8 @@ limitations under the License.
 #include <map>
 #include <vector>
 #include <functional>
+#include "oneflow/api/python/caster/maybe.h"
+#include "oneflow/api/python/caster/optional.h"
 #include "oneflow/core/common/preprocessor.h"
 
 namespace oneflow {

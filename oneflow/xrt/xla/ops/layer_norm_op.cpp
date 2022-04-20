@@ -85,10 +85,6 @@ void LayerNormOp::Compile(XlaOpContext* ctx) {
     output = xla::ConvertElementType(output, DataTypeToPrimitiveType(output_type));
   }
 
-  if (ctx->Attr<bool>("scale") && ctx->HasOutput("normalized_0")) {
-    ctx->SetOutput("normalized_0", Reshape(output, input_shape));
-  }
-
   Shape gamma_shape = Shape({norm_dims});
   // output = Reshape(output, Shape({batch_dims, norm_dims}));
   if (ctx->Attr<bool>("scale")) {
@@ -142,7 +138,10 @@ void LayerNormGradOp::Compile(XlaOpContext* ctx) {
   mean = Reshape(mean, scale_shape);
   variance = Reshape(variance, scale_shape);
   output_grad = Reshape(output_grad, bn_shape);
-
+  if (ctx->HasInput("gamma_0")) {
+    xla::XlaOp gamma = ctx->Input("gamma_0");
+    output_grad = xla::Mul(output_grad, gamma, {3} /*broadcast dim*/);
+  }
   if (ctx->InputType("mean_0") != ctx->InputType("x_0")) {
     DataType data_type = ctx->InputType("mean_0");
     activation = xla::ConvertElementType(activation, DataTypeToPrimitiveType(data_type));
@@ -173,9 +172,6 @@ void LayerNormParamGradOp::Compile(XlaOpContext* ctx) {
   while (begin_params_axis < 0) { begin_params_axis += output_shape.NumAxes(); }
   std::vector<long long> batch_dims(begin_params_axis);
   std::iota(batch_dims.begin(), batch_dims.end(), 0);
-  int norm_dims_size = output_shape.NumAxes() - begin_params_axis;
-  std::vector<long long> norm_dims(norm_dims_size);
-  std::iota(norm_dims.begin(), norm_dims.end(), begin_params_axis);
 
   xla::XlaBuilder* builder = ctx->builder();
   DataType data_type = ctx->InputType("dy_0");
@@ -184,21 +180,16 @@ void LayerNormParamGradOp::Compile(XlaOpContext* ctx) {
     xla::XlaOp beta_grad = xla::Reduce(output_grad, Zero(builder, data_type), add_func, batch_dims);
     ctx->SetOutput("beta_diff_0", beta_grad);
   }
+  xla::XlaOp x = ctx->Input("x_0");
+  xla::XlaOp mean = ctx->Input("mean_0");
+  xla::XlaOp inv_variance = ctx->Input("inv_variance_0");
   if (ctx->HasOutput("gamma_diff_0")) {
-    xla::XlaOp normalized = ctx->Input("normalized_0");
-    xla::XlaOp gamma_grad = normalized * output_grad;
+    // begin_params_axis is assumed equal to begin_norm_axis
+    xla::XlaOp gamma_grad = xla::Mul(xla::Sub(x, mean, batch_dims /*broadcast dim*/), inv_variance,
+                                     batch_dims /*broadcast dim*/)
+                            * output_grad;
     gamma_grad = xla::Reduce(gamma_grad, Zero(builder, data_type), add_func, batch_dims);
     ctx->SetOutput("gamma_diff_0", gamma_grad);
-  }
-  if (ctx->HasOutput("normalized_diff_0")) {
-    xla::XlaOp normalized_grad;
-    if (ctx->HasInput("gamma_0")) {
-      xla::XlaOp gamma = ctx->Input("gamma_0");
-      normalized_grad = xla::Mul(output_grad, gamma, norm_dims);
-    } else {
-      normalized_grad = output_grad;
-    }
-    ctx->SetOutput("normalized_diff_0", normalized_grad);
   }
 }
 

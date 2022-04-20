@@ -14,6 +14,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 #include "oneflow/core/framework/framework.h"
+#include "oneflow/core/framework/op_generated.h"
 
 namespace oneflow {
 
@@ -38,20 +39,26 @@ Maybe<void> GetSbpSignatures(user_op::SbpContext* ctx) {
 
 }  // namespace
 
-REGISTER_NO_GRAD_USER_OP("l1_l2_regularize_gradient")
-    .Input("model")
-    .Input("model_diff")
-    .Output("out")
-    .Attr<float>("l1", 0)
-    .Attr<float>("l2", 0)
-    .SetTensorDescInferFn(InferTensorDesc)
-    .SetGetSbpFn(GetSbpSignatures)
-    .SetDataTypeInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
-      const user_op::TensorDesc& model = ctx->InputTensorDesc("model", 0);
-      const user_op::TensorDesc& model_diff = ctx->InputTensorDesc("model_diff", 0);
-      CHECK_EQ_OR_RETURN(model_diff.data_type(), model.data_type());
-      *ctx->OutputDType("out", 0) = ctx->InputDType("model", 0);
-      return Maybe<void>::Ok();
-    });
+/* static */ Maybe<void> L1L2RegularizeGradientOp::InferLogicalTensorDesc(
+    user_op::InferContext* ctx) {
+  return InferTensorDesc(ctx);
+}
+
+/*static*/ Maybe<void> L1L2RegularizeGradientOp::InferPhysicalTensorDesc(
+    user_op::InferContext* ctx) {
+  return InferLogicalTensorDesc(ctx);
+}
+
+/* static */ Maybe<void> L1L2RegularizeGradientOp::GetSbp(user_op::SbpContext* ctx) {
+  return GetSbpSignatures(ctx);
+}
+
+/* static */ Maybe<void> L1L2RegularizeGradientOp::InferDataType(user_op::InferContext* ctx) {
+  const user_op::TensorDesc& model = ctx->InputTensorDesc("model", 0);
+  const user_op::TensorDesc& model_diff = ctx->InputTensorDesc("model_diff", 0);
+  CHECK_EQ_OR_RETURN(model_diff.data_type(), model.data_type());
+  *ctx->OutputDType("out", 0) = ctx->InputDType("model", 0);
+  return Maybe<void>::Ok();
+}
 
 }  // namespace oneflow

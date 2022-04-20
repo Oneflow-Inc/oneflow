@@ -33,6 +33,8 @@ class Tensor;
 namespace oneflow_api {
 
 class Tensor final {
+  friend class Graph;
+
  public:
   explicit Tensor(const Shape& shape = Shape(), const Device& device = Device("cpu"),
                   const DType& dtype = DType::kFloat);
@@ -56,7 +58,7 @@ class Tensor final {
   [[nodiscard]] const std::shared_ptr<oneflow::one::Tensor>& __internal_tensor() const;
 
   template<typename T>
-  void copy_to(T* buffer);
+  void copy_to(T* buffer) const;
 
   [[nodiscard]] static Tensor from_buffer(const void* buffer, const Shape& shape,
                                           const Device& device, const DType& dtype);

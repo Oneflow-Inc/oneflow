@@ -27,12 +27,17 @@ class Scalar {
  public:
   Scalar() : Scalar(int32_t(0)) {}
 
+  template<typename T, typename std::enable_if<std::is_same<T, bool>::value, int>::type = 0>
+  Scalar(const T& value) : value_{.b = value}, active_tag_(HAS_B) {}
+
   template<typename T, typename std::enable_if<
                            std::is_integral<T>::value && std::is_signed<T>::value, int>::type = 0>
   Scalar(const T& value) : value_{.s = value}, active_tag_(HAS_S) {}
 
-  template<typename T, typename std::enable_if<
-                           std::is_integral<T>::value && std::is_unsigned<T>::value, int>::type = 0>
+  template<typename T,
+           typename std::enable_if<std::is_integral<T>::value && std::is_unsigned<T>::value
+                                       && !std::is_same<T, bool>::value,
+                                   int>::type = 0>
   Scalar(const T& value) : value_{.u = value}, active_tag_(HAS_U) {}
 
   template<typename T, typename std::enable_if<std::is_floating_point<T>::value, int>::type = 0>
@@ -53,6 +58,7 @@ class Scalar {
   template<typename T, typename std::enable_if<std::is_scalar<T>::value, int>::type = 0>
   Maybe<T> As() const {
     switch (active_tag_) {
+      case HAS_B: return static_cast<T>(value_.b);
       case HAS_S: return static_cast<T>(value_.s);
       case HAS_U: return static_cast<T>(value_.u);
       case HAS_D: return static_cast<T>(value_.d);
@@ -65,6 +71,7 @@ class Scalar {
     return CHECK_JUST(As<T>());
   }
 
+  bool IsBool() const { return active_tag_ == HAS_B; }
   bool IsIntegral() const { return active_tag_ == HAS_S || active_tag_ == HAS_U; }
   bool IsFloatingPoint() const { return active_tag_ == HAS_D; }
   bool IsSigned() const { return active_tag_ == HAS_S || active_tag_ == HAS_D; }
@@ -82,11 +89,12 @@ class Scalar {
 
  private:
   union Value {
+    bool b;
     int64_t s;
     uint64_t u;
     double d;
   } value_;
-  enum { HAS_S, HAS_U, HAS_D, HAS_NONE } active_tag_;
+  enum { HAS_B, HAS_S, HAS_U, HAS_D, HAS_NONE } active_tag_;
 };
 
 }  // namespace oneflow

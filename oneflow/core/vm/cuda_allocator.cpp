@@ -227,8 +227,8 @@ bool CudaAllocator::DeallocateFreeBlockForGarbageCollection() {
   total_memory_bytes_ -= total_free_bytes;
 
   if (total_free_bytes > 0) {
-    LOG(INFO) << "CudaAllocator try deallocate free block for garbage collection. "
-              << " deallocate free bytes : " << total_free_bytes;
+    VLOG(3) << "CudaAllocator try deallocate free block for garbage collection. "
+            << " deallocate free bytes : " << total_free_bytes;
     cudaSetDevice(device_id_);
     for (char* ptr : free_block_ptrs) {
       auto it = mem_ptr2block_.find(ptr);
@@ -279,8 +279,8 @@ void CudaAllocator::Allocate(char** mem_ptr, std::size_t size) {
   if (piece == nullptr) {
     // NOTE(chengcheng): In some corner case on ubuntu, cuda memory not released even if OOM.
     //   So there need release all cuda memory allocated by this process before core dump.
-    LOG(INFO) << " OOM error is detected, process will exit. And it will start to reset CUDA "
-              << "device for release device memory.";
+    LOG(WARNING) << "OOM error is detected, process will exit. And it will start to reset CUDA "
+                 << "device for releasing device memory.";
     OF_CUDA_CHECK(cudaDeviceReset());
     LOG(FATAL) << "Error! : Out of memory when allocate size : " << size
                << ".\n The total_memory_bytes allocated by this CudaAllocator is : "

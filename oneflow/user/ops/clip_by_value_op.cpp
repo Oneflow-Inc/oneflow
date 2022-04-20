@@ -14,6 +14,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 #include "oneflow/core/framework/framework.h"
+#include "oneflow/core/framework/op_generated.h"
 
 namespace oneflow {
 
@@ -66,66 +67,45 @@ Maybe<void> InferClipGradDataType(user_op::InferContext* ctx) {
 
 }  // namespace
 
-REGISTER_USER_OP("clip_by_scalar")
-    .Input("x")
-    .Attr<double>("floating_min")
-    .Attr<int64_t>("integral_min")
-    .Attr<double>("floating_max")
-    .Attr<int64_t>("integral_max")
-    .Output("y")
-    .SetTensorDescInferFn(InferClipTensorDesc)
-    .SetGetSbpFn(GetClipSbpSignature)
-    .SetDataTypeInferFn(InferClipTensorDataType);
+#define DEF_CLIP_BY_VALUE_OP(op_class_name_prefix)                                               \
+  /* static */ Maybe<void> op_class_name_prefix##Op::InferLogicalTensorDesc(                     \
+      user_op::InferContext* ctx) {                                                              \
+    return InferClipTensorDesc(ctx);                                                             \
+  }                                                                                              \
+                                                                                                 \
+  /*static*/ Maybe<void> op_class_name_prefix##Op::InferPhysicalTensorDesc(                      \
+      user_op::InferContext* ctx) {                                                              \
+    return InferLogicalTensorDesc(ctx);                                                          \
+  }                                                                                              \
+                                                                                                 \
+  /* static */ Maybe<void> op_class_name_prefix##Op::GetSbp(user_op::SbpContext* ctx) {          \
+    return GetClipSbpSignature(ctx);                                                             \
+  }                                                                                              \
+                                                                                                 \
+  /* static */ Maybe<void> op_class_name_prefix##Op::InferDataType(user_op::InferContext* ctx) { \
+    return InferClipTensorDataType(ctx);                                                         \
+  }                                                                                              \
+  /* static */ Maybe<void> op_class_name_prefix##GradOp::InferLogicalTensorDesc(                 \
+      user_op::InferContext* ctx) {                                                              \
+    return InferClipGradTensorDesc(ctx);                                                         \
+  }                                                                                              \
+  /*static*/ Maybe<void> op_class_name_prefix##GradOp::InferPhysicalTensorDesc(                  \
+      user_op::InferContext* ctx) {                                                              \
+    return InferLogicalTensorDesc(ctx);                                                          \
+  }                                                                                              \
+  /* static */ Maybe<void> op_class_name_prefix##GradOp::GetSbp(user_op::SbpContext* ctx) {      \
+    return GetClipGradSbpSignature(ctx);                                                         \
+  }                                                                                              \
+  /* static */ Maybe<void> op_class_name_prefix##GradOp::InferDataType(                          \
+      user_op::InferContext* ctx) {                                                              \
+    return InferClipGradDataType(ctx);                                                           \
+  }
 
-REGISTER_USER_OP("clip_by_scalar_min")
-    .Input("x")
-    .Attr<double>("floating_min")
-    .Attr<int64_t>("integral_min")
-    .Output("y")
-    .SetTensorDescInferFn(InferClipTensorDesc)
-    .SetGetSbpFn(GetClipSbpSignature)
-    .SetDataTypeInferFn(InferClipTensorDataType);
+DEF_CLIP_BY_VALUE_OP(ClipByScalar)
+DEF_CLIP_BY_VALUE_OP(ClipByScalarMin)
+DEF_CLIP_BY_VALUE_OP(ClipByScalarMax)
 
-REGISTER_USER_OP("clip_by_scalar_max")
-    .Input("x")
-    .Attr<double>("floating_max")
-    .Attr<int64_t>("integral_max")
-    .Output("y")
-    .SetTensorDescInferFn(InferClipTensorDesc)
-    .SetGetSbpFn(GetClipSbpSignature)
-    .SetDataTypeInferFn(InferClipTensorDataType);
-
-REGISTER_USER_OP("clip_by_scalar_grad")
-    .Input("dy")
-    .Input("x")
-    .Attr<double>("floating_min")
-    .Attr<int64_t>("integral_min")
-    .Attr<double>("floating_max")
-    .Attr<int64_t>("integral_max")
-    .Output("dx")
-    .SetTensorDescInferFn(InferClipGradTensorDesc)
-    .SetGetSbpFn(GetClipGradSbpSignature)
-    .SetDataTypeInferFn(InferClipGradDataType);
-
-REGISTER_USER_OP("clip_by_scalar_min_grad")
-    .Input("dy")
-    .Input("x")
-    .Attr<double>("floating_min")
-    .Attr<int64_t>("integral_min")
-    .Output("dx")
-    .SetTensorDescInferFn(InferClipGradTensorDesc)
-    .SetGetSbpFn(GetClipGradSbpSignature)
-    .SetDataTypeInferFn(InferClipGradDataType);
-
-REGISTER_USER_OP("clip_by_scalar_max_grad")
-    .Input("dy")
-    .Input("x")
-    .Attr<double>("floating_max")
-    .Attr<int64_t>("integral_max")
-    .Output("dx")
-    .SetTensorDescInferFn(InferClipGradTensorDesc)
-    .SetGetSbpFn(GetClipGradSbpSignature)
-    .SetDataTypeInferFn(InferClipGradDataType);
+#undef DEF_CLIP_BY_VALUE_OP
 
 REGISTER_USER_OP_GRAD("clip_by_scalar")
     .SetGenBackwardOpConfFn([](const user_op::UserOpWrapper& op,

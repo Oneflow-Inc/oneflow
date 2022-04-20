@@ -14,6 +14,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 #include "oneflow/core/framework/framework.h"
+#include "oneflow/core/framework/op_generated.h"
 
 namespace oneflow {
 
@@ -64,7 +65,7 @@ Maybe<void> InputArgModifierFn(const user_op::GetInputArgModifier& GetInputArgMo
   return Maybe<void>::Ok();
 }
 
-Maybe<void> InferDataType(user_op::InferContext* ctx) {
+Maybe<void> InferDataType_(user_op::InferContext* ctx) {
   const user_op::TensorDesc& ref_desc = ctx->InputTensorDesc("ref", 0);
   const user_op::TensorDesc& value_desc = ctx->InputTensorDesc("value", 0);
   CHECK_OR_RETURN(ref_desc.data_type() == value_desc.data_type());
@@ -77,30 +78,32 @@ Maybe<void> InferDataType(user_op::InferContext* ctx) {
 
 }  // namespace
 
-REGISTER_NO_GRAD_USER_OP("assign")
-    .Input("ref")
-    .Input("value")
-    .SetTensorDescInferFn(InferTensorDesc)
-    .SetGetSbpFn(GetSbpSignatures)
-    .SetInputArgModifyFn(InputArgModifierFn)
-    .SetDataTypeInferFn(InferDataType);
+#define DEF_ASSIGN_OP(op_class_name)                                                              \
+  /* static */ Maybe<void> op_class_name::InferLogicalTensorDesc(user_op::InferContext* ctx) {    \
+    return InferTensorDesc(ctx);                                                                  \
+  }                                                                                               \
+                                                                                                  \
+  /*static*/ Maybe<void> op_class_name::InferPhysicalTensorDesc(user_op::InferContext* ctx) {     \
+    return InferLogicalTensorDesc(ctx);                                                           \
+  }                                                                                               \
+                                                                                                  \
+  /* static */ Maybe<void> op_class_name::GetSbp(user_op::SbpContext* ctx) {                      \
+    return GetSbpSignatures(ctx);                                                                 \
+  }                                                                                               \
+                                                                                                  \
+  /* static */ Maybe<void> op_class_name::ModifyInputArg(                                         \
+      const GetInputArgModifier& GetInputArgModifierFn, const user_op::UserOpConfWrapper& conf) { \
+    return InputArgModifierFn(GetInputArgModifierFn, conf);                                       \
+  }                                                                                               \
+                                                                                                  \
+  /* static */ Maybe<void> op_class_name::InferDataType(user_op::InferContext* ctx) {             \
+    return InferDataType_(ctx);                                                                   \
+  }
 
-REGISTER_NO_GRAD_USER_OP("assign_if")
-    .Input("ref")
-    .Input("value")
-    .Input("condition")
-    .SetTensorDescInferFn(InferTensorDesc)
-    .SetGetSbpFn(GetSbpSignatures)
-    .SetInputArgModifyFn(InputArgModifierFn)
-    .SetDataTypeInferFn(InferDataType);
+DEF_ASSIGN_OP(AssignUserOp)
+DEF_ASSIGN_OP(AssignIfOp)
+DEF_ASSIGN_OP(AssignIfNotOp)
 
-REGISTER_NO_GRAD_USER_OP("assign_if_not")
-    .Input("ref")
-    .Input("value")
-    .Input("condition")
-    .SetTensorDescInferFn(InferTensorDesc)
-    .SetGetSbpFn(GetSbpSignatures)
-    .SetInputArgModifyFn(InputArgModifierFn)
-    .SetDataTypeInferFn(InferDataType);
+#undef DEF_ASSIGN_OP
 
 }  // namespace oneflow

@@ -14,39 +14,40 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 #include "oneflow/core/framework/framework.h"
+#include "oneflow/core/framework/op_generated.h"
 
 namespace oneflow {
 
-namespace {
+/* static */ Maybe<void> DotOp::InferLogicalTensorDesc(user_op::InferContext* ctx) {
+  const user_op::TensorDesc& x = ctx->InputTensorDesc("x", 0);
+  const user_op::TensorDesc& y = ctx->InputTensorDesc("y", 0);
+  CHECK_OR_RETURN(x.shape() == y.shape()) << "Input tensor shape is different";
+  CHECK_OR_RETURN(x.shape().NumAxes() == 1) << "Input tensor is not 1D";
+  *ctx->OutputShape("out", 0) = Shape({});
+  return Maybe<void>::Ok();
+}
 
-REGISTER_USER_OP("dot")
-    .Input("x")
-    .Input("y")
-    .Output("out")
-    .SetTensorDescInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
-      const user_op::TensorDesc& x = ctx->InputTensorDesc("x", 0);
-      const user_op::TensorDesc& y = ctx->InputTensorDesc("y", 0);
-      CHECK_OR_RETURN(x.shape() == y.shape()) << "Input tensor shape is different";
-      CHECK_OR_RETURN(x.shape().NumAxes() == 1) << "Input tensor is not 1D";
-      *ctx->OutputShape("out", 0) = Shape({});
-      return Maybe<void>::Ok();
-    })
-    .SetGetSbpFn([](user_op::SbpContext* ctx) -> Maybe<void> {
-      ctx->NewBuilder()
-          .Split(user_op::OpArg("x", 0), 0)
-          .Split(user_op::OpArg("y", 0), 0)
-          .PartialSum(user_op::OpArg("out", 0))
-          .Build();
+/*static*/ Maybe<void> DotOp::InferPhysicalTensorDesc(user_op::InferContext* ctx) {
+  return InferLogicalTensorDesc(ctx);
+}
 
-      return Maybe<void>::Ok();
-    })
-    .SetDataTypeInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
-      const user_op::TensorDesc& x = ctx->InputTensorDesc("x", 0);
-      const user_op::TensorDesc& y = ctx->InputTensorDesc("y", 0);
-      CHECK_OR_RETURN(x.data_type() == y.data_type()) << "The input tensor type is different";
-      *ctx->OutputDType("out", 0) = ctx->InputDType("x", 0);
-      return Maybe<void>::Ok();
-    });
+/* static */ Maybe<void> DotOp::GetSbp(user_op::SbpContext* ctx) {
+  ctx->NewBuilder()
+      .Split(user_op::OpArg("x", 0), 0)
+      .Split(user_op::OpArg("y", 0), 0)
+      .PartialSum(user_op::OpArg("out", 0))
+      .Build();
+
+  return Maybe<void>::Ok();
+}
+
+/* static */ Maybe<void> DotOp::InferDataType(user_op::InferContext* ctx) {
+  const user_op::TensorDesc& x = ctx->InputTensorDesc("x", 0);
+  const user_op::TensorDesc& y = ctx->InputTensorDesc("y", 0);
+  CHECK_OR_RETURN(x.data_type() == y.data_type()) << "The data type of input tensors are different";
+  *ctx->OutputDType("out", 0) = ctx->InputDType("x", 0);
+  return Maybe<void>::Ok();
+}
 
 REGISTER_USER_OP_GRAD("dot").SetGenBackwardOpConfFn(
     [](const user_op::UserOpWrapper& op, const user_op::AddOpFn& AddOp) -> Maybe<void> {
@@ -75,7 +76,5 @@ REGISTER_USER_OP_GRAD("dot").SetGenBackwardOpConfFn(
       }
       return Maybe<void>::Ok();
     });
-
-}  // namespace
 
 }  // namespace oneflow

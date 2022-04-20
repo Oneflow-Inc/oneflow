@@ -101,8 +101,8 @@ FoldParams<INDEX_T, NDIM, SDIM>::FoldParams(const int64_t batch_size,
   out_index_helper = NdIndexOffsetHelper<INDEX_T, kOutputNDim>(output_dims);
 }
 
-// index_a format: (N, C, di, hi, wi, db, hb, wb) or (N, di, hi, wi, db, hb, wb, C)
-// index_b format: (N, C, D, H, W) or (N, D, H, W, C)
+// index_a format: (N, C, D, H, W) or (N, D, H, W, C)
+// index_b format: (N, C, di, hi, wi, db, hb, wb) or (N, di, hi, wi, db, hb, wb, C)
 // return: true indicates out-of-bound, otherwise in-bound
 template<typename INDEX_T, int NDIM, int SDIM>
 OF_DEVICE_FUNC bool FoldIndexTransform(const FoldParams<INDEX_T, NDIM, SDIM>& params,
@@ -111,7 +111,7 @@ OF_DEVICE_FUNC bool FoldIndexTransform(const FoldParams<INDEX_T, NDIM, SDIM>& pa
   index_b[0] = index_a[0];
   // channel dim index transform
   using ParamType = FoldParams<INDEX_T, NDIM, SDIM>;
-  index_b[ParamType::kInputChannelDim] = index_a[ParamType::kOutputChannelDim];
+  index_b[ParamType::kOutputChannelDim] = index_a[ParamType::kInputChannelDim];
 // spatial dim index transform
 #ifdef __CUDA_ARCH__
 #pragma unroll

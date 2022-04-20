@@ -16,6 +16,7 @@ limitations under the License.
 
 #include "oneflow/core/framework/framework.h"
 #include "oneflow/user/ops/loss_op_util.h"
+#include "oneflow/core/framework/op_generated.h"
 
 namespace oneflow {
 namespace {
@@ -42,7 +43,7 @@ Maybe<void> InferTensorDescFn(user_op::InferContext* ctx) {
   return Maybe<void>::Ok();
 }
 
-Maybe<void> InferDataType(user_op::InferContext* ctx) {
+Maybe<void> InferDataType_(user_op::InferContext* ctx) {
   const user_op::TensorDesc& input_desc = ctx->InputTensorDesc("input", 0);
   const user_op::TensorDesc& target_desc = ctx->InputTensorDesc("target", 0);
   CHECK_EQ_OR_RETURN(input_desc.data_type(), target_desc.data_type());
@@ -101,45 +102,60 @@ Maybe<void> InferGradDataType(user_op::InferContext* ctx) {
 }
 }  // namespace
 
-REGISTER_USER_OP("binary_cross_entropy_with_logits")
-    .Input("input")
-    .Input("target")
-    .OptionalInput("weight")
-    .OptionalInput("pos_weight")
-    .Output("out")
-    .Attr<bool>("has_pos_weight")
-    .SetTensorDescInferFn(InferTensorDescFn)
-    .SetInputArgModifyFn([](const user_op::GetInputArgModifier& GetInputArgModifierFn,
-                            const user_op::UserOpConfWrapper&) -> Maybe<void> {
-      user_op::InputArgModifier* target_modifier = GetInputArgModifierFn("target", 0);
-      CHECK_OR_RETURN(target_modifier != nullptr);
-      target_modifier->set_requires_grad(false);
-      return Maybe<void>::Ok();
-    })
-    .SetDataTypeInferFn(InferDataType)
-    .SetGetSbpFn(GenLossForwardDefaultGetSbpFn([](user_op::UserOpSbpSignatureBuilder& builder,
-                                                  user_op::SbpContext* ctx) {
-      if (ctx->user_op_conf().has_input("pos_weight", 0)) {
-        builder.Broadcast(user_op::OpArg("pos_weight", 0));
-      }
-    }));
+/* static */ Maybe<void> BinaryCrossEntropyWithLogitsOp::InferLogicalTensorDesc(
+    user_op::InferContext* ctx) {
+  return InferTensorDescFn(ctx);
+}
 
-REGISTER_USER_OP("binary_cross_entropy_with_logits_grad")
-    .Input("input")
-    .Input("target")
-    .OptionalInput("weight")
-    .OptionalInput("pos_weight")
-    .Input("dy")
-    .Output("dx")
-    .Attr<bool>("has_pos_weight")
-    .SetTensorDescInferFn(InferGradTensorDescFn)
-    .SetDataTypeInferFn(InferGradDataType)
-    .SetGetSbpFn(GenLossBackwardDefaultGetSbpFn([](user_op::UserOpSbpSignatureBuilder& builder,
-                                                   user_op::SbpContext* ctx) {
-      if (ctx->user_op_conf().has_input("pos_weight", 0)) {
-        builder.Broadcast(user_op::OpArg("pos_weight", 0));
-      }
-    }));
+/*static*/ Maybe<void> BinaryCrossEntropyWithLogitsOp::InferPhysicalTensorDesc(
+    user_op::InferContext* ctx) {
+  return InferLogicalTensorDesc(ctx);
+}
+
+/* static */ Maybe<void> BinaryCrossEntropyWithLogitsOp::GetSbp(user_op::SbpContext* ctx) {
+  return GenLossForwardDefaultGetSbpFn(
+      [](user_op::UserOpSbpSignatureBuilder& builder, user_op::SbpContext* ctx) {
+        if (ctx->user_op_conf().has_input("pos_weight", 0)) {
+          builder.Broadcast(user_op::OpArg("pos_weight", 0));
+        }
+      })(ctx);
+}
+
+/* static */ Maybe<void> BinaryCrossEntropyWithLogitsOp::ModifyInputArg(
+    const GetInputArgModifier& GetInputArgModifierFn, const user_op::UserOpConfWrapper& conf) {
+  user_op::InputArgModifier* target_modifier = GetInputArgModifierFn("target", 0);
+  CHECK_OR_RETURN(target_modifier != nullptr);
+  target_modifier->set_requires_grad(false);
+  return Maybe<void>::Ok();
+}
+
+/* static */ Maybe<void> BinaryCrossEntropyWithLogitsOp::InferDataType(user_op::InferContext* ctx) {
+  return InferDataType_(ctx);
+}
+
+/* static */ Maybe<void> BinaryCrossEntropyWithLogitsGradOp::InferLogicalTensorDesc(
+    user_op::InferContext* ctx) {
+  return InferGradTensorDescFn(ctx);
+}
+
+/*static*/ Maybe<void> BinaryCrossEntropyWithLogitsGradOp::InferPhysicalTensorDesc(
+    user_op::InferContext* ctx) {
+  return InferLogicalTensorDesc(ctx);
+}
+
+/* static */ Maybe<void> BinaryCrossEntropyWithLogitsGradOp::GetSbp(user_op::SbpContext* ctx) {
+  return GenLossBackwardDefaultGetSbpFn(
+      [](user_op::UserOpSbpSignatureBuilder& builder, user_op::SbpContext* ctx) {
+        if (ctx->user_op_conf().has_input("pos_weight", 0)) {
+          builder.Broadcast(user_op::OpArg("pos_weight", 0));
+        }
+      })(ctx);
+}
+
+/* static */ Maybe<void> BinaryCrossEntropyWithLogitsGradOp::InferDataType(
+    user_op::InferContext* ctx) {
+  return InferGradDataType(ctx);
+}
 
 REGISTER_USER_OP_GRAD("binary_cross_entropy_with_logits")
     .SetGenBackwardOpConfFn([](const user_op::UserOpWrapper& op,

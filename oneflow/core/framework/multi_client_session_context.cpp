@@ -15,13 +15,16 @@ limitations under the License.
 */
 
 #include "oneflow/core/common/buffer_manager.h"
-#include "oneflow/core/common/multi_client.h"
+#include "oneflow/core/common/maybe.h"
+#include "oneflow/core/common/protobuf.h"
 #include "oneflow/core/framework/multi_client_session_context.h"
 #include "oneflow/core/framework/load_library.h"
+#include "oneflow/core/job/resource.pb.h"
 #include "oneflow/core/job/version.h"
 #include "oneflow/core/job/global_for.h"
 #include "oneflow/core/job/id_manager.h"
 #include "oneflow/core/job/job_instance.h"
+#include "oneflow/core/job/critical_section_instance.h"
 #include "oneflow/core/job/job_build_and_infer_ctx_mgr.h"
 #include "oneflow/core/job/runtime_context.h"
 #include "oneflow/core/job/runtime_job_descs.h"
@@ -56,9 +59,22 @@ int32_t GetCpuDeviceNum() { return std::thread::hardware_concurrency(); }
 
 }  // namespace
 
+MultiClientSessionContext::MultiClientSessionContext(
+    const std::shared_ptr<EnvGlobalObjectsScope>& env_ctx)
+    : env_ctx_(env_ctx) {
+  CHECK(Global<MultiClientSessionContext>::Get() == nullptr);
+  Global<MultiClientSessionContext>::SetAllocated(this);
+}
+
+MultiClientSessionContext::~MultiClientSessionContext() {
+  CHECK_JUST(TryClose());
+  if (Global<MultiClientSessionContext>::Get() != nullptr) {
+    Global<MultiClientSessionContext>::SetAllocated(nullptr);
+  }
+}
+
 Maybe<void> MultiClientSessionContext::TryInit(const ConfigProto& config_proto) {
   if (!is_inited_) {
-    CHECK_OR_RETURN(JUST(IsMultiClient()));
     DumpVersionInfo();
 
     Resource resource = config_proto.resource();
@@ -99,6 +115,7 @@ Maybe<void> MultiClientSessionContext::TryInit(const ConfigProto& config_proto) 
     {
       // NOTE(chengcheng): init runtime global objects
       Global<BufferMgr<std::shared_ptr<JobInstance>>>::New();
+      Global<BufferMgr<std::shared_ptr<CriticalSectionInstance>>>::New();
       Global<RuntimeCtx>::New();
       Global<MemoryAllocator>::New();
       Global<ChunkMgr>::New();
@@ -115,23 +132,29 @@ Maybe<void> MultiClientSessionContext::TryInit(const ConfigProto& config_proto) 
   return Maybe<void>::Ok();
 }
 
-Maybe<void> MultiClientSessionContext::AddCGraph(
-    const std::shared_ptr<oneflow::NNGraph>& c_graph_ptr) {
-  graphs_.emplace_back(c_graph_ptr);
+Maybe<void> MultiClientSessionContext::TryInit(const std::string& config_proto_str) {
+  ConfigProto config_proto;
+  CHECK_OR_RETURN(TxtString2PbMessage(config_proto_str, &config_proto))
+      << "failed to parse config_proto: " << config_proto_str;
+  return TryInit(config_proto);
+}
+
+Maybe<void> MultiClientSessionContext::UpdateResource(const Resource& reso_proto) {
+  CHECK_NOTNULL_OR_RETURN((Global<ResourceDesc, ForSession>::Get()));
+  Global<ResourceDesc, ForSession>::Get()->Update(reso_proto);
   return Maybe<void>::Ok();
+}
+
+Maybe<void> MultiClientSessionContext::UpdateResource(const std::string& reso_proto_str) {
+  Resource reso_proto;
+  CHECK_OR_RETURN(TxtString2PbMessage(reso_proto_str, &reso_proto))
+      << "failed to parse config_proto: " << reso_proto_str;
+  return UpdateResource(reso_proto);
 }
 
 Maybe<void> MultiClientSessionContext::TryClose() {
   if (is_inited_) {
-    VLOG(2) << "Try to delete multi client session context." << std::endl;
-
-    // sync before NNGraph release to ensure LaunchLazyJob instruction was completed and released
-    JUST(vm::ClusterSync());
-    for (const auto& graph : graphs_) {
-      VLOG(2) << "Try to close graph: " << graph->job_name() << std::endl;
-      JUST(graph->Close());
-    }
-    graphs_.clear();
+    VLOG(1) << "Try to delete multi client session context." << std::endl;
     {
       // NOTE(chengcheng): delete runtime global objects
       Global<boxing::collective::Scheduler>::Delete();
@@ -143,6 +166,7 @@ Maybe<void> MultiClientSessionContext::TryClose() {
       Global<ChunkMgr>::Delete();
       Global<MemoryAllocator>::Delete();
       Global<RuntimeCtx>::Delete();
+      Global<BufferMgr<std::shared_ptr<CriticalSectionInstance>>>::Delete();
       Global<BufferMgr<std::shared_ptr<JobInstance>>>::Delete();
     }
 
@@ -155,8 +179,10 @@ Maybe<void> MultiClientSessionContext::TryClose() {
     // NOTE(chengcheng): New after delete because in EnvGlobalObjectScope once created ResourceDesc.
     Global<ResourceDesc, ForSession>::New(Global<ResourceDesc, ForEnv>::Get()->resource(),
                                           GlobalProcessCtx::NumOfProcessPerNode());
+    VLOG(1) << "Finish delete multi client session context." << std::endl;
+    env_ctx_.reset();
+    is_inited_ = false;
   }
-  VLOG(2) << "Finish delete multi client session context." << std::endl;
   return Maybe<void>::Ok();
 }
 

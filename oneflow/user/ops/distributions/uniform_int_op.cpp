@@ -14,41 +14,49 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 #include "oneflow/core/framework/framework.h"
+#include "oneflow/core/framework/op_generated.h"
+#include "oneflow/core/job/nd_sbp_util.h"
 
 namespace oneflow {
 
-REGISTER_NO_GRAD_USER_OP("uniform_int")
-    .Output("out")
-    .SetOutputBufferNum(1)
-    .Attr<int64_t>("from", 0)
-    .Attr<int64_t>("to", 1)
-    .Attr<int64_t>("seed")
-    .Attr<DataType>("dtype")
-    .Attr<Shape>("shape")
-    .Attr<std::vector<std::string>>("nd_sbp")
-    .SetTensorDescInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
-      Shape* out_shape = ctx->OutputShape("out", 0);
-      const Shape& shape = ctx->Attr<Shape>("shape");
-      DimVector dim_vec;
-      if (shape.NumAxes() > 0) {
-        dim_vec.insert(dim_vec.end(), shape.dim_vec().cbegin(), shape.dim_vec().cend());
-      }
-      *out_shape = Shape(dim_vec);
-      return Maybe<void>::Ok();
-    })
-    .SetGetSbpFn([](user_op::SbpContext* ctx) -> Maybe<void> {
-      ctx->NewBuilder().Broadcast(ctx->inputs()).Broadcast(ctx->outputs()).Build();
-      return Maybe<void>::Ok();
-    })
-    .SetDataTypeInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
-      auto dtype = ctx->Attr<DataType>("dtype");
-      *ctx->OutputDType("out", 0) = dtype;
-      return Maybe<void>::Ok();
-    })
-    .SetNdSbpInferFn([](user_op::InferNdSbpFnContext* ctx) -> Maybe<void> {
-      cfg::SbpParallel default_sbp;
-      default_sbp.mutable_broadcast_parallel();
-      return user_op::InferNdSbp4SrcOp(ctx, default_sbp);
-    });
+/* static */ Maybe<void> UniformIntOp::InferLogicalTensorDesc(user_op::InferContext* ctx) {
+  Shape* out_shape = ctx->OutputShape("out", 0);
+  const Shape& shape = ctx->Attr<Shape>("shape");
+  DimVector dim_vec;
+  if (shape.NumAxes() > 0) {
+    dim_vec.insert(dim_vec.end(), shape.dim_vec().cbegin(), shape.dim_vec().cend());
+  }
+  *out_shape = Shape(dim_vec);
+  return Maybe<void>::Ok();
+}
+
+/*static*/ Maybe<void> UniformIntOp::InferPhysicalTensorDesc(user_op::InferContext* ctx) {
+  const Shape& parallel_hierarchy = *ctx->parallel_desc().hierarchy();
+  const NdSbp& nd_sbp = ctx->NdSbp4ArgNameAndIndex("out", 0);
+  const Shape& logical_shape = ctx->Attr<Shape>("shape");
+  const int64_t parallel_id = ctx->parallel_ctx().parallel_id();
+  const Shape& physical_shape =
+      GetTensorSliceView4ParallelId(parallel_hierarchy, nd_sbp, logical_shape, parallel_id).shape();
+
+  *ctx->OutputShape("out", 0) = physical_shape;
+  return Maybe<void>::Ok();
+}
+
+/* static */ Maybe<void> UniformIntOp::GetSbp(user_op::SbpContext* ctx) {
+  ctx->NewBuilder().Broadcast(ctx->inputs()).Broadcast(ctx->outputs()).Build();
+  return Maybe<void>::Ok();
+}
+
+/* static */ Maybe<void> UniformIntOp::InferNdSbp(user_op::InferNdSbpFnContext* ctx) {
+  SbpParallel default_sbp;
+  default_sbp.mutable_broadcast_parallel();
+  return user_op::InferNdSbp4SrcOp(ctx, default_sbp);
+}
+
+/* static */ Maybe<void> UniformIntOp::InferDataType(user_op::InferContext* ctx) {
+  auto dtype = ctx->Attr<DataType>("dtype");
+  *ctx->OutputDType("out", 0) = dtype;
+  return Maybe<void>::Ok();
+}
 
 }  // namespace oneflow

@@ -14,8 +14,10 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 #include <algorithm>
+#include "oneflow/core/job/resource.pb.h"
 #include "oneflow/core/job/resource_desc.h"
 #include "oneflow/core/common/util.h"
+#include "oneflow/core/common/env_var/debug_mode.h"
 #include "oneflow/core/control/global_process_ctx.h"
 #ifdef WITH_CUDA
 #include <nccl.h>
@@ -57,8 +59,7 @@ int32_t ResourceDesc::ComputeThreadPoolSize() const {
 }
 
 bool ResourceDesc::enable_debug_mode() const {
-  return std::getenv("ONEFLOW_DEBUG_MODE") != nullptr || std::getenv("ONEFLOW_DEBUG") != nullptr
-         || resource_.enable_debug_mode();
+  return IsInDebugMode() || resource_.enable_debug_mode();
 }
 
 bool ResourceDesc::enable_dry_run() const { return std::getenv("ONEFLOW_DRY_RUN") != nullptr; }
@@ -80,7 +81,6 @@ bool ResourceDesc::nccl_use_compute_stream() const {
 }
 
 void ResourceDesc::DumpCudnnConf(const JobConfigProto& job_conf) {
-  resource_.clear_cudnn_conf();
   auto* cudnn_conf = resource_.mutable_cudnn_conf();
   if (job_conf.has_enable_cudnn()) { cudnn_conf->set_enable_cudnn(job_conf.enable_cudnn()); }
   if (job_conf.has_cudnn_buf_limit_mbyte()) {
@@ -108,6 +108,16 @@ void ResourceDesc::DumpCudnnConf(const JobConfigProto& job_conf) {
   }
   if (job_conf.has_cudnn_conv_enable_pseudo_half()) {
     cudnn_conf->set_cudnn_conv_enable_pseudo_half(job_conf.cudnn_conv_enable_pseudo_half());
+  }
+}
+
+void ResourceDesc::Update(const Resource& reso_conf) {
+  if (reso_conf.has_nccl_use_compute_stream()) {
+    resource_.set_nccl_use_compute_stream(reso_conf.nccl_use_compute_stream());
+  }
+  if (reso_conf.has_disable_group_boxing_by_dst_parallel()) {
+    resource_.set_disable_group_boxing_by_dst_parallel(
+        reso_conf.disable_group_boxing_by_dst_parallel());
   }
 }
 

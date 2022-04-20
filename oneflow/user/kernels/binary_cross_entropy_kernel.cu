@@ -90,17 +90,16 @@ struct BinaryCrossEntropyGradFunctor {
 
 template<>
 struct BinaryCrossEntropyGradFunctor<half> {
-  half eps_;
-  half one_;
-  BinaryCrossEntropyGradFunctor() : eps_(__float2half(1e-12)), one_(__float2half(1.f)) {}
+  BinaryCrossEntropyGradFunctor<float> float_functor;
+  BinaryCrossEntropyGradFunctor() {}
   __device__ __forceinline__ half operator()(half input_val, half target_val, half dy_val) const {
-    half divisor = (one_ - input_val) * input_val;
-    if (divisor < eps_) { divisor = eps_; }
-    return dy_val * (input_val - target_val) / divisor;
+    return __float2half(
+        float_functor(__half2float(input_val), __half2float(target_val), __half2float(dy_val)));
   }
   __device__ __forceinline__ half operator()(half input_val, half target_val, half dy_val,
                                              half weight_val) const {
-    return (*this)(input_val, target_val, dy_val) * weight_val;
+    return __float2half(float_functor(__half2float(input_val), __half2float(target_val),
+                                      __half2float(dy_val), __half2float(weight_val)));
   }
 };
 

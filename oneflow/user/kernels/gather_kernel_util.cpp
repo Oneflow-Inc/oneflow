@@ -95,7 +95,7 @@ void GatherKernelUtilImpl<DeviceType::kCPU, T, K>::Forward(ep::Stream* stream, c
   template struct GatherKernelUtilImpl<DeviceType::kCPU, OF_PP_PAIR_FIRST(in_type_pair), \
                                        OF_PP_PAIR_FIRST(index_type_pair)>;
 OF_PP_SEQ_PRODUCT_FOR_EACH_TUPLE(INITIATE_GATHER_KERNEL_UTIL_CPU_IMPL, GATHER_DATA_TYPE_SEQ,
-                                 INDEX_DATA_TYPE_SEQ);
+                                 GATHER_INDEX_TYPE_SEQ);
 #undef INITIATE_GATHER_KERNEL_UTIL_CPU_IMPL
 
 #define INITIATE_GATHER_KERNEL_UTIL(device_type, in_type_pair) \

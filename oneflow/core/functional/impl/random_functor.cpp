@@ -14,7 +14,6 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 #include "oneflow/core/common/global.h"
-#include "oneflow/core/common/multi_client.h"
 #include "oneflow/core/common/optional.h"
 #include "oneflow/core/common/protobuf.h"
 #include "oneflow/core/framework/attr_map.h"
@@ -104,10 +103,11 @@ class ConsistentRandFunctor {
  public:
   ConsistentRandFunctor() { op_ = CHECK_JUST(one::OpBuilder("uniform").Output("out").Build()); }
   Maybe<Tensor> operator()(const Shape& shape, const Symbol<ParallelDesc>& placement,
-                           const std::vector<Symbol<cfg::SbpParallel>>& sbp_tuple,
+                           const std::vector<Symbol<SbpParallel>>& sbp_tuple,
                            const Optional<Symbol<DType>>& dtype,
                            const Optional<one::Generator>& generator,
                            const bool& requires_grad) const {
+    JUST(CheckDeviceIdsIsValid(placement));
     DataType dtype_val = DataType::kFloat;
     if (dtype.has_value()) {
       dtype_val = JUST(dtype)->data_type();
@@ -178,10 +178,11 @@ class ConsistentRandNFunctor {
  public:
   ConsistentRandNFunctor() { op_ = CHECK_JUST(one::OpBuilder("normal").Output("out").Build()); }
   Maybe<Tensor> operator()(const Shape& shape, const Symbol<ParallelDesc>& placement,
-                           const std::vector<Symbol<cfg::SbpParallel>>& sbp_tuple,
+                           const std::vector<Symbol<SbpParallel>>& sbp_tuple,
                            const Optional<Symbol<DType>>& dtype,
                            const Optional<one::Generator>& generator,
                            const bool& requires_grad) const {
+    JUST(CheckDeviceIdsIsValid(placement));
     DataType dtype_val = DataType::kFloat;
     if (dtype) { dtype_val = JUST(dtype)->data_type(); }
     if (dtype_val != DataType::kFloat && dtype_val != DataType::kDouble) {
@@ -265,10 +266,11 @@ class ConsistentRandIntFunctor {
 
   Maybe<Tensor> operator()(const int64_t low, const int64_t high, const Shape& shape,
                            const Symbol<ParallelDesc>& placement,
-                           const std::vector<Symbol<cfg::SbpParallel>>& sbp_tuple,
+                           const std::vector<Symbol<SbpParallel>>& sbp_tuple,
                            const Optional<Symbol<DType>>& dtype,
                            const Optional<one::Generator>& generator,
                            const bool& requires_grad) const {
+    JUST(CheckDeviceIdsIsValid(placement));
     DataType dtype_val = DataType::kInt64;
     if (dtype) { dtype_val = JUST(dtype)->data_type(); }
 
@@ -301,10 +303,11 @@ class ConsistentRandInt2Functor {
  public:
   Maybe<Tensor> operator()(const int64_t high, const Shape& shape,
                            const Symbol<ParallelDesc>& placement,
-                           const std::vector<Symbol<cfg::SbpParallel>>& sbp_tuple,
+                           const std::vector<Symbol<SbpParallel>>& sbp_tuple,
                            const Optional<Symbol<DType>>& dtype,
                            const Optional<one::Generator>& generator,
                            const bool& requires_grad) const {
+    JUST(CheckDeviceIdsIsValid(placement));
     return ConsistentRandInt(/*low*/ 0, high, shape, placement, sbp_tuple, dtype, generator,
                              requires_grad);
   }
@@ -341,9 +344,10 @@ class ConsistentRandPermFunctor {
     randperm_op_ = CHECK_JUST(one::OpBuilder("randperm").Output("out").Build());
   }
   Maybe<Tensor> operator()(const int32_t n, const Symbol<ParallelDesc>& placement,
-                           const std::vector<Symbol<cfg::SbpParallel>>& sbp_tuple,
+                           const std::vector<Symbol<SbpParallel>>& sbp_tuple,
                            const Optional<one::Generator>& generator, const Symbol<DType>& dtype,
                            const bool& requires_grad) const {
+    JUST(CheckDeviceIdsIsValid(placement));
     const auto gen = generator.value_or(JUST(one::DefaultAutoGenerator()));
     MutableAttrMap attrs;
     JUST(attrs.SetAttr<int32_t>("n", n));

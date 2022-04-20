@@ -22,7 +22,8 @@ limitations under the License.
 #include "oneflow/core/framework/tensor.h"
 #include "oneflow/core/framework/placed_nd_sbp.h"
 #include "oneflow/core/job/parallel_desc.h"
-#include "oneflow/core/job/sbp_parallel.cfg.h"
+#include "oneflow/core/job/sbp_parallel.h"
+#include "oneflow/core/boxing/boxing_interpreter_status.h"
 
 namespace oneflow {
 
@@ -32,39 +33,25 @@ class EagerBoxingInterpreter {
   EagerBoxingInterpreter() = default;
   virtual ~EagerBoxingInterpreter() = default;
 
-  Maybe<one::Tensor> Interpret(const std::shared_ptr<one::Tensor>& input,
-                               Symbol<cfg::NdSbp> in_nd_sbp, Symbol<cfg::NdSbp> out_nd_sbp,
-                               Symbol<ParallelDesc> in_parallel_desc,
+  Maybe<one::Tensor> Interpret(const std::shared_ptr<one::Tensor>& input, Symbol<NdSbp> in_nd_sbp,
+                               Symbol<NdSbp> out_nd_sbp, Symbol<ParallelDesc> in_parallel_desc,
                                Symbol<ParallelDesc> out_parallel_desc) const;
+  virtual Maybe<BoxingInterpreterStatus> boxing_interpreter_status() const = 0;
 
  protected:
   virtual Maybe<one::Tensor> InterpretImpl(const std::shared_ptr<one::Tensor>& input,
-                                           Symbol<cfg::NdSbp> in_nd_sbp,
-                                           Symbol<cfg::NdSbp> out_nd_sbp,
+                                           Symbol<NdSbp> in_nd_sbp, Symbol<NdSbp> out_nd_sbp,
                                            Symbol<ParallelDesc> in_parallel_desc,
                                            Symbol<ParallelDesc> out_parallel_desc) const = 0;
 };
 
-struct EagerBoxingCall {
-  static Maybe<EagerBoxingCall> New(Symbol<cfg::NdSbp> in_nd_sbp, Symbol<cfg::NdSbp> out_nd_sbp,
-                                    Symbol<ParallelDesc> in_parallel_desc,
-                                    Symbol<ParallelDesc> out_parallel_desc);
-
-  Maybe<one::Tensor> Apply(const std::shared_ptr<one::Tensor>& input) const;
-
-  const std::shared_ptr<const EagerBoxingInterpreter> boxing_interpreter;
-  const Symbol<cfg::NdSbp> in_nd_sbp;
-  const Symbol<cfg::NdSbp> out_nd_sbp;
-  const Symbol<ParallelDesc> in_parallel_desc;
-  const Symbol<ParallelDesc> out_parallel_desc;
-};
-
-using BoxingCheckerT = std::function<Maybe<void>(Symbol<PlacedNdSbp> in, Symbol<PlacedNdSbp> out)>;
+using BoxingCheckerT = std::function<Maybe<void>(Symbol<PlacedNdSbp> in, Symbol<PlacedNdSbp> out,
+                                                 const Shape& logical_shape)>;
 using BoxingFunctionT = std::function<Maybe<one::Tensor>(
     const std::shared_ptr<one::Tensor>& input, Symbol<PlacedNdSbp> in, Symbol<PlacedNdSbp> out)>;
 
 Maybe<BoxingFunctionT> GetBoxingFunction(const std::string& method_name, Symbol<PlacedNdSbp> in,
-                                         Symbol<PlacedNdSbp> out);
+                                         Symbol<PlacedNdSbp> out, const Shape& logical_shape);
 
 void RegisterBoxingFunction(const std::string& method_name, const BoxingCheckerT& Check,
                             const BoxingFunctionT& BoxingFunction);
@@ -77,15 +64,21 @@ inline void RegisterBoxingFunction(
 
 class NaiveEagerBoxingInterpreter : public EagerBoxingInterpreter {
  public:
-  explicit NaiveEagerBoxingInterpreter(const std::shared_ptr<BoxingFunctionT>& boxing_function)
-      : boxing_function_(boxing_function) {}
+  explicit NaiveEagerBoxingInterpreter(
+      const std::shared_ptr<BoxingFunctionT>& boxing_function,
+      const std::shared_ptr<BoxingInterpreterStatus>& boxing_interpreter_status)
+      : boxing_function_(boxing_function), boxing_interpreter_status_(boxing_interpreter_status) {}
   NaiveEagerBoxingInterpreter(const NaiveEagerBoxingInterpreter&) = delete;
   NaiveEagerBoxingInterpreter(NaiveEagerBoxingInterpreter&&) = delete;
   ~NaiveEagerBoxingInterpreter() override = default;
 
+  Maybe<BoxingInterpreterStatus> boxing_interpreter_status() const override {
+    return boxing_interpreter_status_;
+  }
+
  private:
   Maybe<one::Tensor> InterpretImpl(const std::shared_ptr<one::Tensor>& input,
-                                   Symbol<cfg::NdSbp> in_nd_sbp, Symbol<cfg::NdSbp> out_nd_sbp,
+                                   Symbol<NdSbp> in_nd_sbp, Symbol<NdSbp> out_nd_sbp,
                                    Symbol<ParallelDesc> in_parallel_desc,
                                    Symbol<ParallelDesc> out_parallel_desc) const override {
     const auto& in_placed_nd_sbp = JUST(PlacedNdSbp::New(in_nd_sbp, in_parallel_desc));
@@ -94,6 +87,7 @@ class NaiveEagerBoxingInterpreter : public EagerBoxingInterpreter {
   }
 
   const std::shared_ptr<BoxingFunctionT> boxing_function_;
+  const std::shared_ptr<BoxingInterpreterStatus> boxing_interpreter_status_;
 };
 
 class BoxingExprIf {
@@ -102,9 +96,10 @@ class BoxingExprIf {
   BoxingExprIf(BoxingExprIf&&) = default;
   virtual ~BoxingExprIf() = default;
 
-  virtual Maybe<void> Check(Symbol<PlacedNdSbp> in, Symbol<PlacedNdSbp> out) const = 0;
-  virtual Maybe<BoxingFunctionT> GetBoxingFunction(Symbol<PlacedNdSbp> in,
-                                                   Symbol<PlacedNdSbp> out) const = 0;
+  virtual Maybe<BoxingInterpreterStatus> Check(Symbol<PlacedNdSbp> in, Symbol<PlacedNdSbp> out,
+                                               const Shape& logical_shape) const = 0;
+  virtual Maybe<BoxingFunctionT> GetBoxingFunction(Symbol<PlacedNdSbp> in, Symbol<PlacedNdSbp> out,
+                                                   const Shape& logical_shape) const = 0;
 
  protected:
   BoxingExprIf() = default;
@@ -119,9 +114,10 @@ class AtomicBoxingExpr final : public BoxingExprIf {
   explicit AtomicBoxingExpr(const std::string& boxing_name)
       : BoxingExprIf(), boxing_name_(boxing_name) {}
 
-  Maybe<void> Check(Symbol<PlacedNdSbp> in, Symbol<PlacedNdSbp> out) const override;
-  Maybe<BoxingFunctionT> GetBoxingFunction(Symbol<PlacedNdSbp> in,
-                                           Symbol<PlacedNdSbp> out) const override;
+  Maybe<BoxingInterpreterStatus> Check(Symbol<PlacedNdSbp> in, Symbol<PlacedNdSbp> out,
+                                       const Shape& logical_shape) const override;
+  Maybe<BoxingFunctionT> GetBoxingFunction(Symbol<PlacedNdSbp> in, Symbol<PlacedNdSbp> out,
+                                           const Shape& logical_shape) const override;
 
  private:
   const std::string boxing_name_;
@@ -141,9 +137,10 @@ class DivideAndConquerBoxingExpr final : public BoxingExprIf {
         lhs_conquer_(lhs_conquer),
         rhs_conquer_(rhs_conquer) {}
 
-  Maybe<void> Check(Symbol<PlacedNdSbp> in, Symbol<PlacedNdSbp> out) const override;
-  Maybe<BoxingFunctionT> GetBoxingFunction(Symbol<PlacedNdSbp> in,
-                                           Symbol<PlacedNdSbp> out) const override;
+  Maybe<BoxingInterpreterStatus> Check(Symbol<PlacedNdSbp> in, Symbol<PlacedNdSbp> out,
+                                       const Shape& logical_shape) const override;
+  Maybe<BoxingFunctionT> GetBoxingFunction(Symbol<PlacedNdSbp> in, Symbol<PlacedNdSbp> out,
+                                           const Shape& logical_shape) const override;
 
  private:
   const std::shared_ptr<BoxingDividor> boxing_dividor_;
@@ -161,9 +158,10 @@ class OrBoxingExpr final : public BoxingExprIf {
                         const std::shared_ptr<BoxingExprIf>& rhs_boxing)
       : BoxingExprIf(), lhs_boxing_(lhs_boxing), rhs_boxing_(rhs_boxing) {}
 
-  Maybe<void> Check(Symbol<PlacedNdSbp> in, Symbol<PlacedNdSbp> out) const override;
-  Maybe<BoxingFunctionT> GetBoxingFunction(Symbol<PlacedNdSbp> in,
-                                           Symbol<PlacedNdSbp> out) const override;
+  Maybe<BoxingInterpreterStatus> Check(Symbol<PlacedNdSbp> in, Symbol<PlacedNdSbp> out,
+                                       const Shape& logical_shape) const override;
+  Maybe<BoxingFunctionT> GetBoxingFunction(Symbol<PlacedNdSbp> in, Symbol<PlacedNdSbp> out,
+                                           const Shape& logical_shape) const override;
 
  private:
   const std::shared_ptr<BoxingExprIf> lhs_boxing_;

@@ -290,10 +290,10 @@ void MergeSharedInterfaceMemBlock(const std::vector<std::shared_ptr<Job>>& jobs,
                                   HashMap<int64_t, MemBlockProto>* mem_block_id2mem_block) {
   HashMap<std::string, HashSet<int64_t>> interface_op_name2job_ids =
       GetInterfaceOpName2JobIds(jobs);
-  HashSet<std::string> interface_op_names;
-  for (const auto& pair : interface_op_name2job_ids) { interface_op_names.insert(pair.first); }
+  HashSet<std::string> interfaces_op_names;
+  for (const auto& pair : interface_op_name2job_ids) { interfaces_op_names.insert(pair.first); }
   HashMap<std::string, HashMap<int64_t, std::vector<TaskProto*>>> op_name2job_id2task_protos;
-  GetOpName2JobId2TaskProtos(plan, interface_op_names, &op_name2job_id2task_protos);
+  GetOpName2JobId2TaskProtos(plan, interfaces_op_names, &op_name2job_id2task_protos);
 
   for (const auto& op_job_pair : interface_op_name2job_ids) {
     if (op_job_pair.second.size() <= 1) { continue; }

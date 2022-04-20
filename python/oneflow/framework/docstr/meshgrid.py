@@ -28,7 +28,11 @@ add_docstr(
 
     Args:
         tensors (list of Tensor): list of scalars or 1 dimensional tensors. Scalars will be
-            treated as tensors of size :math:`(1,)` automatically
+            treated as tensors of size :math:`(1,)` automatically.  
+        indexing ((string, optional): the indexing mode, either "xy" or "ij", defaults to "ij".
+            If "ij" is selected, the dimensions are in the same order as the cardinality of the inputs.
+            If "xy" is selected, the first dimension corresponds to the cardinality of 
+            the second input and the second dimension corresponds to the cardinality of the first input.
 
     Returns:
         seq (sequence of Tensors): If the input has :math:`k` tensors of size
@@ -42,11 +46,11 @@ add_docstr(
         >>> import numpy as np
         >>> import oneflow as flow
         
-        >>> input1 = flow.tensor(np.array([1, 2, 3]), dtype=flow.float32)
+        >>> input1 = flow.tensor(np.array([2, 2, 3]), dtype=flow.float32)
         >>> input2 = flow.tensor(np.array([4, 5, 6]), dtype=flow.float32)
         >>> of_x, of_y = flow.meshgrid(input1, input2)
         >>> of_x
-        tensor([[1., 1., 1.],
+        tensor([[2., 2., 2.],
                 [2., 2., 2.],
                 [3., 3., 3.]], dtype=oneflow.float32)
         >>> of_y

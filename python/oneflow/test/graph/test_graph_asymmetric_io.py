@@ -24,25 +24,25 @@ import oneflow.unittest
 @unittest.skipIf(os.getenv("ONEFLOW_TEST_CPU_ONLY"), "only test cpu cases")
 @flow.unittest.skip_unless_1n2d()
 class TestConsistentAsymmetricGraph(oneflow.unittest.TestCase):
-    def test_consistent_asymmetric_graph_gpu(test_case):
+    def test_global_asymmetric_graph_gpu(test_case):
         Broadcast = [flow.sbp.broadcast]
-        Placement_rank_0 = flow.placement("cuda", {0: [0]})
-        Placement_rank_1 = flow.placement("cuda", {0: [1]})
+        Placement_rank_0 = flow.placement("cuda", ranks=[0])
+        Placement_rank_1 = flow.placement("cuda", ranks=[1])
 
         class MyConsistentAsymmetricModule(flow.nn.Module):
             def __init__(self):
                 super().__init__()
                 self.linear1 = flow.nn.Linear(3, 8, False)
                 self.linear2 = flow.nn.Linear(8, 7, False)
-                self.linear1.to_consistent(placement=Placement_rank_0, sbp=Broadcast)
-                self.linear2.to_consistent(placement=Placement_rank_1, sbp=Broadcast)
+                self.linear1.to_global(placement=Placement_rank_0, sbp=Broadcast)
+                self.linear2.to_global(placement=Placement_rank_1, sbp=Broadcast)
                 flow.nn.init.ones_(self.linear1.weight)
                 flow.nn.init.constant_(self.linear2.weight, 2.3)
 
             def forward(self, x, y):
                 out0 = x + y
                 out1 = self.linear1(out0)
-                out1 = out1.to_consistent(placement=Placement_rank_1, sbp=Broadcast)
+                out1 = out1.to_global(placement=Placement_rank_1, sbp=Broadcast)
                 out2 = self.linear2(out1)
                 return out2
 
@@ -66,17 +66,17 @@ class TestConsistentAsymmetricGraph(oneflow.unittest.TestCase):
         np_x = np.random.randn(5, 3)
         np_y = np.ones(3)
         local_x = flow.tensor(np_x, dtype=flow.float32)
-        consistent_x = local_x.to_consistent(
-            placement=flow.placement("cuda", {0: [0, 1]}), sbp=Broadcast
+        global_x = local_x.to_global(
+            placement=flow.placement("cuda", ranks=[0, 1]), sbp=Broadcast
         )
-        local_x = consistent_x.to_local().to("cpu")
+        local_x = global_x.to_local().to("cpu")
         local_y = flow.tensor(np_y, dtype=flow.float32)
         local_out = my_local_module(local_x, local_y)
         # print("eager_local_out: ", local_out)
 
         my_module = MyConsistentAsymmetricModule()
-        x = local_x.to_consistent(placement=Placement_rank_0, sbp=Broadcast)
-        y = local_y.to_consistent(placement=Placement_rank_0, sbp=Broadcast)
+        x = local_x.to_global(placement=Placement_rank_0, sbp=Broadcast)
+        y = local_y.to_global(placement=Placement_rank_0, sbp=Broadcast)
 
         class MyAsymmetricGraph(flow.nn.Graph):
             def __init__(self):

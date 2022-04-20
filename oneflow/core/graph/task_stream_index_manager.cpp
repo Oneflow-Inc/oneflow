@@ -62,7 +62,7 @@ Maybe<StreamId::stream_index_t> TaskStreamIndexGetterRegistry::Dispatch(
   auto key = std::make_pair(device_type, task_type);
   auto it = stream_index_getter_map_.find(key);
   CHECK_OR_RETURN(it != stream_index_getter_map_.end())
-      << "TaskType: " << key.first << ", DeviceType: " << key.second << " has not been registered";
+      << "TaskType: " << key.second << ", DeviceType: " << key.first << " has not been registered";
   return it->second(generator);
 }
 

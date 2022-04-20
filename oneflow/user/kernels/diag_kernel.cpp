@@ -50,6 +50,7 @@ struct DiagGradFunctor<DeviceType::kCPU, T> final {
 
 REGISTER_DIAG_KERNELS(DeviceType::kCPU, float);
 REGISTER_DIAG_KERNELS(DeviceType::kCPU, double);
+REGISTER_DIAG_KERNELS(DeviceType::kCPU, bool);
 REGISTER_DIAG_KERNELS(DeviceType::kCPU, uint8_t);
 REGISTER_DIAG_KERNELS(DeviceType::kCPU, int8_t);
 REGISTER_DIAG_KERNELS(DeviceType::kCPU, int32_t);

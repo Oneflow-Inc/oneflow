@@ -15,11 +15,10 @@ limitations under the License.
 */
 #include "oneflow/core/job/job_build_and_infer_ctx_mgr.h"
 
-#include "oneflow/core/common/multi_client.h"
 #include "oneflow/core/common/util.h"
 #include "oneflow/core/job/global_for.h"
 #include "oneflow/core/job/lazy_mode.h"
-#include <json.hpp>
+#include "nlohmann/json.hpp"
 
 namespace oneflow {
 
@@ -106,16 +105,7 @@ Maybe<void> EagerJobBuildAndInferCtxMgr::VirtualCloseJob() {
 bool EagerExecutionEnabled() { return *Global<bool, EagerExecution>::Get(); }
 
 Maybe<JobBuildAndInferCtxMgr*> GlobalJobBuildAndInferCtxMgr() {
-  if (JUST(IsMultiClient())) {
-    return JUST(GlobalMaybe<LazyJobBuildAndInferCtxMgr>());
-  } else {
-    // single-client
-    if (EagerExecutionEnabled()) {
-      return JUST(GlobalMaybe<EagerJobBuildAndInferCtxMgr>());
-    } else {
-      return JUST(GlobalMaybe<LazyJobBuildAndInferCtxMgr>());
-    }
-  }
+  return JUST(GlobalMaybe<LazyJobBuildAndInferCtxMgr>());
 }
 
 Maybe<JobBuildAndInferCtx*> GetJobBuildAndInferCtx(const std::string& job_name) {

@@ -41,7 +41,7 @@ Maybe<void> AutoTrainStep::Apply(Job* job, JobPassCtx* ctx) const {
     return Maybe<void>::Ok();
   }
   OperatorConf variable_op_conf{};
-  const std::string train_step_name = "System-Train-TrainStep-" + job->job_conf().job_name();
+  const std::string train_step_name = "System-Train-TrainStep";
   variable_op_conf.set_name(train_step_name);
   VariableOpConf* variable_conf = variable_op_conf.mutable_variable_conf();
   variable_conf->set_out("out");

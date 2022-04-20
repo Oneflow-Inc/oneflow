@@ -37,13 +37,13 @@ se::Platform::Id GetPlatformId(const XrtDevice& device) {
   }
   CHECK(platform_id) << "Platform Id should not be nullptr. Current device is " << device
                      << ", please check it.";
-  return std::move(platform_id);
+  return platform_id;
 }
 
 const se::Platform* GetPlatform(const XrtDevice& device) {
   se::Platform::Id platform_id = GetPlatformId(device);
   MOLA_CHECK_AND_ASSIGN(auto platform, se::MultiPlatformManager::PlatformWithId(platform_id));
-  return std::move(platform);
+  return platform;
 }
 
 Eigen::ThreadPoolDevice* GetOrCreateEigenHostDevice() {
@@ -79,7 +79,7 @@ xla::LocalClient* GetOrCreateLocalClient(const XrtDevice& device) {
   // Get a local client if the client of this `client_options` has been created,
   // otherwise create a new local client by `ClientLibrary` and return it.
   MOLA_CHECK_AND_ASSIGN(auto client, xla::ClientLibrary::GetOrCreateLocalClient(client_options));
-  return std::move(client);
+  return client;
 }
 
 }  // namespace resource_mgr

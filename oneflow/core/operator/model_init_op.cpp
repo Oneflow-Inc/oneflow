@@ -31,7 +31,7 @@ class ModelInitOp : public Operator {
  private:
   Maybe<void> GetSbpSignatures(
       const std::function<Maybe<const BlobDesc&>(const std::string&)>& LogicalBlobDesc4Ibn,
-      cfg::SbpSignatureList* sbp_sig_list) const override;
+      SbpSignatureList* sbp_sig_list) const override;
 };
 
 Maybe<void> ModelInitOp::InitFromOpConf() {
@@ -71,7 +71,7 @@ Maybe<void> ModelInitOp::InferOutBlobDescs(
 
 Maybe<void> ModelInitOp::GetSbpSignatures(
     const std::function<Maybe<const BlobDesc&>(const std::string&)>& LogicalBlobDesc4Ibn,
-    cfg::SbpSignatureList* sbp_sig_list) const {
+    SbpSignatureList* sbp_sig_list) const {
   SbpSignatureBuilder()
       .Broadcast(input_bns())
       .Split(output_bns(), 0)

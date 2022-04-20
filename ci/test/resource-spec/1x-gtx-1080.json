@@ -1,0 +1,16 @@
+{
+  "version": {
+    "major": 1,
+    "minor": 0
+  },
+  "local": [
+    {
+      "vram": [
+        {
+          "id": "0",
+          "slots": 8117
+        }
+      ]
+    }
+  ]
+}

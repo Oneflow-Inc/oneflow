@@ -15,49 +15,52 @@ limitations under the License.
 */
 #include "oneflow/core/framework/framework.h"
 #include "oneflow/user/ops/comm_net_device_infer_util.h"
+#include "oneflow/core/framework/op_generated.h"
 
 namespace oneflow {
 
+/*static*/ Maybe<void> SendOp::GetSbp(user_op::SbpContext* ctx) { UNIMPLEMENTED_THEN_RETURN(); }
+/*static*/ Maybe<void> SendOp::InferLogicalTensorDesc(user_op::InferContext* ctx) {
+  // Do nothing.
+  return Maybe<void>::Ok();
+}
+/*static*/ Maybe<void> SendOp::InferPhysicalTensorDesc(user_op::InferContext* ctx) {
+  return SendOp::InferLogicalTensorDesc(ctx);
+}
+/*static*/ Maybe<void> SendOp::InferDataType(user_op::InferContext* ctx) {
+  // Do nothing.
+  return Maybe<void>::Ok();
+}
+/*static*/ Maybe<Symbol<Stream>> SendOp::InferDeviceAndStream(
+    user_op::DeviceAndStreamInferContext* ctx) {
+  return DeviceAndStreamInferFn<&SyncLaunched>(ctx);
+}
+
 namespace {
 
-REGISTER_NO_GRAD_USER_OP("send")
-    .Input("in")
-    .Attr<int64_t>("dst_process_id")
-    .SetTensorDescInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
-      // Do nothing.
-      return Maybe<void>::Ok();
-    })
-    .SetDeviceInferFn(DeviceInferFn<&SyncLaunched>)
-    .SetGetSbpFn([](user_op::SbpContext* ctx) -> Maybe<void> { UNIMPLEMENTED_THEN_RETURN(); })
-    .SetDataTypeInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
-      // Do nothing.
-      return Maybe<void>::Ok();
-    });
-
-Maybe<Symbol<Device>> GetRecvOutputDeivce(user_op::DeviceInferContext* ctx) {
+Maybe<Symbol<Device>> GetRecvOutputDeivce(user_op::DeviceAndStreamInferContext* ctx) {
   const std::string& device_type = ctx->Attr<std::string>("device_type");
   const int device_id = ctx->Attr<int64_t>("device_id");
   return Device::New(device_type, device_id);
 }
 
-REGISTER_NO_GRAD_USER_OP("recv")
-    .Output("out")
-    .Attr<int64_t>("src_process_id")
-    .Attr<DataType>("dtype")
-    .Attr<Shape>("shape")
-    .Attr<std::string>("device_type")
-    .Attr<int64_t>("device_id")
-    .SetTensorDescInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
-      *ctx->OutputShape("out", 0) = ctx->Attr<Shape>("shape");
-      return Maybe<void>::Ok();
-    })
-    .SetDeviceInferFn(DeviceInferFn<&SyncLaunched, &GetRecvOutputDeivce>)
-    .SetGetSbpFn([](user_op::SbpContext* ctx) -> Maybe<void> { UNIMPLEMENTED_THEN_RETURN(); })
-    .SetDataTypeInferFn([](user_op::InferContext* ctx) -> Maybe<void> {
-      *ctx->OutputDType("out", 0) = ctx->Attr<DataType>("dtype");
-      return Maybe<void>::Ok();
-    });
-
 }  // namespace
+
+/*static*/ Maybe<void> RecvOp::GetSbp(user_op::SbpContext* ctx) { UNIMPLEMENTED_THEN_RETURN(); }
+/*static*/ Maybe<void> RecvOp::InferLogicalTensorDesc(user_op::InferContext* ctx) {
+  *ctx->OutputShape("out", 0) = ctx->Attr<Shape>("shape");
+  return Maybe<void>::Ok();
+}
+/*static*/ Maybe<void> RecvOp::InferPhysicalTensorDesc(user_op::InferContext* ctx) {
+  return SendOp::InferLogicalTensorDesc(ctx);
+}
+/*static*/ Maybe<void> RecvOp::InferDataType(user_op::InferContext* ctx) {
+  *ctx->OutputDType("out", 0) = ctx->Attr<DataType>("dtype");
+  return Maybe<void>::Ok();
+}
+/*static*/ Maybe<Symbol<Stream>> RecvOp::InferDeviceAndStream(
+    user_op::DeviceAndStreamInferContext* ctx) {
+  return DeviceAndStreamInferFn<&SyncLaunched, &GetRecvOutputDeivce>(ctx);
+}
 
 }  // namespace oneflow

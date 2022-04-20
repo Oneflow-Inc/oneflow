@@ -20,7 +20,7 @@ from collections import OrderedDict
 import numpy as np
 
 from oneflow.test_utils.automated_test_util import *
-from test_util import GenArgList
+from oneflow.test_utils.test_util import GenArgList
 
 import oneflow as flow
 import oneflow.unittest
@@ -209,112 +209,200 @@ class TestWhere(flow.unittest.TestCase):
         for arg in GenArgList(arg_dict):
             arg[0](test_case, *arg[1:])
 
-    @autotest(check_graph=False)
+    @autotest(check_graph=True)
     def test_flow_where_tensor_with_random_data(test_case):
         k1 = random(2, 6)
         k2 = random(2, 6)
         device = random_device()
-        cond = random_pytorch_tensor(ndim=2, dim0=k1, dim1=k2).to(device)
-        x = random_pytorch_tensor(ndim=2, dim0=k1, dim1=k2).to(device)
-        y = random_pytorch_tensor(ndim=2, dim0=k1, dim1=k2).to(device)
+        cond = random_tensor(ndim=2, dim0=k1, dim1=k2).to(device)
+        x = random_tensor(ndim=2, dim0=k1, dim1=k2).to(device)
+        y = random_tensor(ndim=2, dim0=k1, dim1=k2).to(device)
         return torch.where(cond > 0, x, y)
 
-    @autotest(check_graph=False)
+    @autotest(check_graph=True)
+    def test_flow_where_tensor_with_0dim_data(test_case):
+        k1 = random(2, 6)
+        k2 = random(2, 6)
+        device = random_device()
+        cond = random_tensor(ndim=2, dim0=k1, dim1=k2).to(device)
+        x = random_tensor(ndim=0).to(device)
+        y = random_tensor(ndim=0).to(device)
+        return torch.where(cond > 0, x, y)
+
+    @autotest(check_graph=True)
     def test_flow_where_tensor_broadcast_with_random_data(test_case):
         k1 = random(2, 6)
         k2 = random(2, 6)
         device = random_device()
-        cond = random_pytorch_tensor(ndim=2, dim0=k1, dim1=k2).to(device)
-        x = random_pytorch_tensor(ndim=2, dim0=1, dim1=k2).to(device)
-        y = random_pytorch_tensor(ndim=2, dim0=k1, dim1=1).to(device)
+        cond = random_tensor(ndim=2, dim0=k1, dim1=k2).to(device)
+        x = random_tensor(ndim=2, dim0=1, dim1=k2).to(device)
+        y = random_tensor(ndim=2, dim0=k1, dim1=1).to(device)
         return torch.where(cond > 0, x, y)
 
-    @autotest(check_graph=False)
+    @autotest(check_graph=True)
     def test_flow_where_scalar_x_with_random_data(test_case):
         k1 = random(2, 6)
         k2 = random(2, 6)
         device = random_device()
-        cond = random_pytorch_tensor(ndim=2, dim0=k1, dim1=k2).to(device)
+        cond = random_tensor(ndim=2, dim0=k1, dim1=k2).to(device)
         x = random().to(float)
-        y = random_pytorch_tensor(ndim=2, dim0=k1, dim1=k2, dtype=float).to(
+        y = random_tensor(ndim=2, dim0=k1, dim1=k2, dtype=float).to(
             device=device, dtype=torch.float64
         )
         return torch.where(cond > 0, x, y)
 
-    @autotest(check_graph=False)
+    @autotest(check_graph=True)
     def test_flow_where_scalar_x_broadcast_with_random_data(test_case):
         k1 = random(2, 6)
         k2 = random(2, 6)
         device = random_device()
-        cond = random_pytorch_tensor(ndim=2, dim0=1, dim1=k2).to(device)
+        cond = random_tensor(ndim=2, dim0=1, dim1=k2).to(device)
         x = random().to(float)
-        y = random_pytorch_tensor(ndim=2, dim0=k1, dim1=1, dtype=float).to(
+        y = random_tensor(ndim=2, dim0=k1, dim1=1, dtype=float).to(
             device=device, dtype=torch.float64
         )
         return torch.where(cond > 0, x, y)
 
-    @autotest(auto_backward=False, check_graph=False)
+    @autotest(auto_backward=False, check_graph=True)
     def test_flow_where_scalar_x_int_with_random_data(test_case):
         k1 = random(2, 6)
         k2 = random(2, 6)
         device = random_device()
-        cond = random_pytorch_tensor(ndim=2, dim0=k1, dim1=k2).to(device)
+        cond = random_tensor(ndim=2, dim0=k1, dim1=k2).to(device)
         x = random().to(int)
-        y = random_pytorch_tensor(ndim=2, dim0=k1, dim1=k2, dtype=int).to(device)
+        y = random_tensor(ndim=2, dim0=k1, dim1=k2, dtype=int).to(device)
         return torch.where(cond > 0, x, y)
 
-    @autotest(check_graph=False)
+    @autotest(check_graph=True)
     def test_flow_where_scalar_y_with_random_data(test_case):
         k1 = random(2, 6)
         k2 = random(2, 6)
         device = random_device()
-        cond = random_pytorch_tensor(ndim=2, dim0=k1, dim1=k2).to(device)
-        x = random_pytorch_tensor(ndim=2, dim0=k1, dim1=k2, dtype=float).to(
+        cond = random_tensor(ndim=2, dim0=k1, dim1=k2).to(device)
+        x = random_tensor(ndim=2, dim0=k1, dim1=k2, dtype=float).to(
             device=device, dtype=torch.float64
         )
         y = random().to(float)
         return torch.where(cond > 0, x, y)
 
-    @autotest(check_graph=False)
+    @autotest(check_graph=True)
     def test_flow_where_scalar_y_broadcast_with_random_data(test_case):
         k1 = random(2, 6)
         k2 = random(2, 6)
         device = random_device()
-        cond = random_pytorch_tensor(ndim=2, dim0=1, dim1=k2).to(device)
-        x = random_pytorch_tensor(ndim=2, dim0=k1, dim1=1, dtype=float).to(
+        cond = random_tensor(ndim=2, dim0=1, dim1=k2).to(device)
+        x = random_tensor(ndim=2, dim0=k1, dim1=1, dtype=float).to(
             device=device, dtype=torch.float64
         )
         y = random().to(float)
         return torch.where(cond > 0, x, y)
 
-    @autotest(auto_backward=False, check_graph=False)
+    @autotest(auto_backward=False, check_graph=True)
     def test_flow_where_scalar_y_int_with_random_data(test_case):
         k1 = random(2, 6)
         k2 = random(2, 6)
         device = random_device()
-        cond = random_pytorch_tensor(ndim=2, dim0=k1, dim1=k2).to(device)
-        x = random_pytorch_tensor(ndim=2, dim0=k1, dim1=k2, dtype=int).to(device)
+        cond = random_tensor(ndim=2, dim0=k1, dim1=k2).to(device)
+        x = random_tensor(ndim=2, dim0=k1, dim1=k2, dtype=int).to(device)
         y = random().to(int)
         return torch.where(cond > 0, x, y)
 
-    @autotest(auto_backward=False, check_graph=False)
+    @autotest(auto_backward=False, check_graph=True)
     def test_flow_where_scalar_xy_with_random_data(test_case):
         k1 = random(2, 6)
         k2 = random(2, 6)
         device = random_device()
-        cond = random_pytorch_tensor(ndim=2, dim0=k1, dim1=k2).to(device)
+        cond = random_tensor(ndim=2, dim0=k1, dim1=k2).to(device)
         x = random().to(float)
         y = random().to(float)
         return torch.where(cond > 0, x, y)
 
-    @autotest(auto_backward=False, check_graph=False)
+    @autotest(auto_backward=False, check_graph=True)
     def test_flow_where_scalar_xy_int_with_random_data(test_case):
         k1 = random(2, 6)
         k2 = random(2, 6)
         device = random_device()
-        cond = random_pytorch_tensor(ndim=2, dim0=k1, dim1=k2).to(device)
+        cond = random_tensor(ndim=2, dim0=k1, dim1=k2).to(device)
         x = random().to(int)
         y = random().to(int)
+        return torch.where(cond > 0, x, y)
+
+    @autotest(auto_backward=False, check_graph=True)
+    def test_flow_where_tensor_bool_with_random_data(test_case):
+        k1 = random(2, 6)
+        k2 = random(2, 6)
+        device = random_device()
+        cond = random_tensor(ndim=2, dim0=k1, dim1=k2).to(device)
+        x = random_tensor(ndim=2, dim0=k1, dim1=k2).to(device=device, dtype=torch.bool)
+        y = random_tensor(ndim=2, dim0=k1, dim1=k2).to(device=device, dtype=torch.bool)
+        return torch.where(cond > 0, x, y)
+
+    @autotest(auto_backward=False, check_graph=True)
+    def test_flow_where_tensor_broadcast_bool_with_random_data(test_case):
+        k1 = random(2, 6)
+        k2 = random(2, 6)
+        device = random_device()
+        cond = random_tensor(ndim=2, dim0=k1, dim1=k2).to(device)
+        x = random_tensor(ndim=2, dim0=1, dim1=k2).to(device=device, dtype=torch.bool)
+        y = random_tensor(ndim=2, dim0=k1, dim1=1).to(device=device, dtype=torch.bool)
+        return torch.where(cond > 0, x, y)
+
+    @autotest(auto_backward=False, check_graph=True)
+    def test_flow_where_scalar_x_bool_with_random_data(test_case):
+        k1 = random(2, 6)
+        k2 = random(2, 6)
+        device = random_device()
+        cond = random_tensor(ndim=2, dim0=k1, dim1=k2).to(device)
+        x = random().to(bool)
+        y = random_tensor(ndim=2, dim0=k1, dim1=k2, dtype=float).to(
+            device=device, dtype=torch.bool
+        )
+        return torch.where(cond > 0, x, y)
+
+    @autotest(auto_backward=False, check_graph=True)
+    def test_flow_where_scalar_x_broadcast_bool_with_random_data(test_case):
+        k1 = random(2, 6)
+        k2 = random(2, 6)
+        device = random_device()
+        cond = random_tensor(ndim=2, dim0=1, dim1=k2).to(device)
+        x = random().to(bool)
+        y = random_tensor(ndim=2, dim0=k1, dim1=1, dtype=float).to(
+            device=device, dtype=torch.bool
+        )
+        return torch.where(cond > 0, x, y)
+
+    @autotest(auto_backward=False, check_graph=True)
+    def test_flow_where_scalar_y_bool_with_random_data(test_case):
+        k1 = random(2, 6)
+        k2 = random(2, 6)
+        device = random_device()
+        cond = random_tensor(ndim=2, dim0=k1, dim1=k2).to(device)
+        x = random_tensor(ndim=2, dim0=k1, dim1=k2, dtype=float).to(
+            device=device, dtype=torch.bool
+        )
+        y = random().to(bool)
+        return torch.where(cond > 0, x, y)
+
+    @autotest(auto_backward=False, check_graph=True)
+    def test_flow_where_scalar_y_broadcast_bool_with_random_data(test_case):
+        k1 = random(2, 6)
+        k2 = random(2, 6)
+        device = random_device()
+        cond = random_tensor(ndim=2, dim0=1, dim1=k2).to(device)
+        x = random_tensor(ndim=2, dim0=k1, dim1=1, dtype=float).to(
+            device=device, dtype=torch.bool
+        )
+        y = random().to(bool)
+        return torch.where(cond > 0, x, y)
+
+    @autotest(auto_backward=False, check_graph=True)
+    def test_flow_where_scalar_xy_bool_with_random_data(test_case):
+        k1 = random(2, 6)
+        k2 = random(2, 6)
+        device = random_device()
+        cond = random_tensor(ndim=2, dim0=k1, dim1=k2).to(device)
+        x = random().to(bool)
+        y = random().to(bool)
         return torch.where(cond > 0, x, y)
 
 

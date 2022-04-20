@@ -33,14 +33,14 @@ class Global final {
   template<typename... Args>
   static T* New(Args&&... args) {
     CHECK(Get() == nullptr);
-    LOG(INFO) << "NewGlobal " << typeid(T).name();
+    VLOG(3) << "NewGlobal " << typeid(T).name();
     T* ptr = new T(std::forward<Args>(args)...);
     *GetPPtr() = ptr;
     return ptr;
   }
   static void Delete() {
     if (Get() != nullptr) {
-      LOG(INFO) << "DeleteGlobal " << typeid(T).name();
+      VLOG(3) << "DeleteGlobal " << typeid(T).name();
       delete Get();
       *GetPPtr() = nullptr;
     }
@@ -54,12 +54,12 @@ class Global final {
   template<typename... Args>
   static void SessionNew(int32_t session_id, Args&&... args) {
     CHECK(Get(session_id) == nullptr);
-    LOG(INFO) << "session_id: " << session_id << ", NewGlobal " << typeid(T).name();
+    VLOG(3) << "session_id: " << session_id << ", NewGlobal " << typeid(T).name();
     GetPPtr(session_id)->reset(new T(std::forward<Args>(args)...));
   }
   static void SessionDelete(int32_t session_id) {
     if (Get(session_id) != nullptr) {
-      LOG(INFO) << "session_id: " << session_id << ", DeleteGlobal " << typeid(T).name();
+      VLOG(3) << "session_id: " << session_id << ", DeleteGlobal " << typeid(T).name();
       GetPPtr(session_id)->reset();
     }
   }

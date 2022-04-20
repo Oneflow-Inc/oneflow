@@ -15,11 +15,16 @@ limitations under the License.
 */
 
 #include "oneflow/api/python/functional/common.h"
+#include <object.h>
+#include <string>
 
 #include "oneflow/api/python/functional/indexing.h"
+#include "oneflow/extension/python/numpy.h"
+#include "oneflow/core/common/just.h"
 #include "oneflow/core/common/scalar.h"
 #include "oneflow/core/framework/dtype.h"
 #include "oneflow/core/framework/device.h"
+#include "oneflow/core/framework/op_expr.h"
 #include "oneflow/core/framework/tensor.h"
 #include "oneflow/core/framework/tensor_tuple.h"
 #include "oneflow/core/framework/random_generator.h"
@@ -53,8 +58,18 @@ bool PyStringSequenceCheck(PyObject* obj) {
   return PySequenceCheck(obj, [](PyObject* item) { return PyStringCheck(item); });
 }
 
-Maybe<const char*> PyStringAsString(PyObject* object) {
-  return PyBytes_AsString(PyUnicode_AsEncodedString(object, "utf-8", "~E~"));
+Maybe<std::string> PyStringAsString(PyObject* str_obj) {
+  PyObject* bytes = PyUnicode_AsEncodedString(str_obj, "utf-8", "~E~");
+  std::string str = PyBytes_AS_STRING(bytes);
+  Py_XDECREF(bytes);
+  return str;
+}
+
+Maybe<std::string> PyObjectToReprStr(PyObject* obj) {
+  PyObject* repr_obj = PyObject_Repr(obj);
+  std::string str = *JUST(PyStringAsString(repr_obj));
+  Py_XDECREF(repr_obj);
+  return str;
 }
 
 bool PyTensorCheck(PyObject* obj) {
@@ -91,7 +106,9 @@ Maybe<TensorTuple> PyUnpackTensorTuple(PyObject* obj) {
 bool PyScalarCheck(PyObject* obj) { return PyLong_Check(obj) || PyFloat_Check(obj); }
 
 Maybe<Scalar> PyUnpackScalar(PyObject* obj) {
-  if (PyLong_Check(obj)) {
+  if (PyBool_Check(obj)) {
+    return std::make_shared<Scalar>(obj == Py_True);
+  } else if (PyLong_Check(obj)) {
     return std::make_shared<Scalar>(static_cast<int64_t>(PyLong_AsLongLong(obj)));
   } else if (PyFloat_Check(obj)) {
     return std::make_shared<Scalar>(PyFloat_AsDouble(obj));
@@ -107,6 +124,25 @@ bool PyDTypeCheck(PyObject* obj) {
 Maybe<Symbol<DType>> PyUnpackDType(PyObject* obj) {
   auto handle = py::reinterpret_borrow<py::object>(obj);
   return *py::cast<Symbol<DType>*>(handle);
+}
+
+// DType list
+bool PyDTypeSequenceCheck(PyObject* obj) {
+  return PySequenceCheck(obj, [](PyObject* item) { return PyDTypeCheck(item); });
+}
+Maybe<std::vector<Symbol<DType>>> PyUnpackDTypeSequence(PyObject* obj) {
+  return PyUnpackSequence<Symbol<DType>>(obj, [](PyObject* item) { return PyUnpackDType(item); });
+}
+
+// Shape list
+bool PyShapeSequenceCheck(PyObject* obj) {
+  return PySequenceCheck(obj, [](PyObject* item) { return PyLongSequenceCheck(item); });
+}
+Maybe<std::vector<Shape>> PyUnpackShapeSequence(PyObject* obj) {
+  return PyUnpackSequence<Shape>(obj, [](PyObject* item) -> Maybe<Shape> {
+    const auto& shape = JUST(PyUnpackLongSequence<int64_t>(item));
+    return std::make_shared<Shape>(DimVector(shape->begin(), shape->end()));
+  });
 }
 
 // Generator
@@ -142,36 +178,38 @@ Maybe<Symbol<ParallelDesc>> PyUnpackParallelDesc(PyObject* obj) {
 // SBP
 bool PySbpParallelCheck(PyObject* obj) {
   auto handle = py::reinterpret_borrow<py::object>(obj);
-  return py::isinstance<Symbol<cfg::SbpParallel>>(handle);
+  return py::isinstance<Symbol<SbpParallel>>(handle);
 }
-Maybe<Symbol<cfg::SbpParallel>> PyUnpackSbpParallel(PyObject* obj) {
+Maybe<Symbol<SbpParallel>> PyUnpackSbpParallel(PyObject* obj) {
   auto handle = py::reinterpret_borrow<py::object>(obj);
-  return *py::cast<std::shared_ptr<Symbol<cfg::SbpParallel>>>(handle);
+  return *py::cast<std::shared_ptr<Symbol<SbpParallel>>>(handle);
 }
 
 // SBP list
 bool PySbpParallelSequenceCheck(PyObject* obj) {
   return PySequenceCheck(obj, [](PyObject* item) { return PySbpParallelCheck(item); });
 }
-Maybe<std::vector<Symbol<cfg::SbpParallel>>> PyUnpackSbpParallelSequence(PyObject* obj) {
-  return PyUnpackSequence<Symbol<cfg::SbpParallel>>(
+Maybe<std::vector<Symbol<SbpParallel>>> PyUnpackSbpParallelSequence(PyObject* obj) {
+  return PyUnpackSequence<Symbol<SbpParallel>>(
       obj, [](PyObject* item) { return PyUnpackSbpParallel(item); });
 }
 
 // Tensor index
 bool PyTensorIndexCheck(PyObject* obj) {
-  return PySlice_Check(obj) || PyLong_Check(obj) || obj == Py_Ellipsis || obj == Py_None
-         || PyTensorCheck(obj) || PySequence_Check(obj) || PyUnicode_Check(obj);
+  return PySlice_Check(obj) || PyLong_Check(obj) || numpy::PyArrayCheckLongScalar(obj)
+         || obj == Py_Ellipsis || obj == Py_None || PyTensorCheck(obj) || PySequence_Check(obj)
+         || PyUnicode_Check(obj);
 }
 Maybe<TensorIndex> PyUnpackTensorIndex(PyObject* obj) {
   auto tensor_index = std::make_shared<TensorIndex>();
   // Obvious single-entry cases.
-  if (PySlice_Check(obj)         // NOLINT
-      || PyLong_Check(obj)       // NOLINT
-      || obj == Py_Ellipsis      // NOLINT
-      || obj == Py_None          // NOLINT
-      || PyTensorCheck(obj)      // NOLINT
-      || !PySequence_Check(obj)  // NOLINT
+  if (PySlice_Check(obj)                     // NOLINT
+      || PyLong_Check(obj)                   // NOLINT
+      || numpy::PyArrayCheckLongScalar(obj)  // NOLINT
+      || obj == Py_Ellipsis                  // NOLINT
+      || obj == Py_None                      // NOLINT
+      || PyTensorCheck(obj)                  // NOLINT
+      || !PySequence_Check(obj)              // NOLINT
       || PyUnicode_Check(obj)) {
     tensor_index->emplace_back(*JUST(detail::UnpackIndexItem(obj)));
     return tensor_index;
@@ -248,6 +286,26 @@ Maybe<TensorIndex> PyUnpackTensorIndex(PyObject* obj) {
   }
   Py_DECREF(tup);
   return tensor_index;
+}
+
+// OpExpr
+bool PyOpExprCheck(PyObject* obj) {
+  auto handle = py::reinterpret_borrow<py::object>(obj);
+  return py::isinstance<OpExpr>(handle);
+}
+
+Maybe<OpExpr> PyUnpackOpExpr(PyObject* obj) {
+  auto handle = py::reinterpret_borrow<py::object>(obj);
+  return py::cast<std::shared_ptr<OpExpr>>(handle);
+}
+
+// int64_t
+Maybe<int64_t> PyUnpackLong(PyObject* py_obj) {
+  int overflow = -1;
+  long long val = PyLong_AsLongLongAndOverflow(py_obj, &overflow);
+  if (val == -1 && PyErr_Occurred()) { return Error::RuntimeError() << "Python exception occurs"; }
+  if (overflow != 0) { return Error::RuntimeError() << "Overflow when unpacking long"; }
+  return (int64_t)val;
 }
 
 }  // namespace functional

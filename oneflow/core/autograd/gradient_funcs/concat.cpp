@@ -65,11 +65,15 @@ Maybe<void> Concat::Apply(const ConcatCaptureState* ctx, const TensorTuple& out_
   in_grads->resize(ctx->input_num);
   TensorTuple like(ctx->input_num);
   for (int i = 0; i < ctx->input_num; ++i) { like[i] = ctx->SavedTensors().at(i); }
-  const auto& results = JUST(functional::SplitLike(out_grads.at(0), like, ctx->axis));
-  CHECK_EQ_OR_RETURN(results->size(), ctx->input_num);
+  if (ctx->input_num == 1) {
+    in_grads->at(0) = out_grads.at(0);
+  } else {
+    const auto& results = JUST(functional::SplitLike(out_grads.at(0), like, ctx->axis));
+    CHECK_EQ_OR_RETURN(results->size(), ctx->input_num);
 
-  for (int i = 0; i < ctx->input_num; ++i)
-    if (ctx->requires_grad.at(i)) { in_grads->at(i) = results->at(i); }
+    for (int i = 0; i < ctx->input_num; ++i)
+      if (ctx->requires_grad.at(i)) { in_grads->at(i) = results->at(i); }
+  }
   return Maybe<void>::Ok();
 }
 
