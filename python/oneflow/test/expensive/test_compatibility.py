@@ -89,31 +89,33 @@ class TestApiCompatibility(flow.unittest.TestCase):
             test_case, "pytorch_convnext.py", "convnext_tiny", "cuda", 8, 224
         )
 
-    # def test_crossformer_compatibility(test_case):
-    #     do_test_train_loss_oneflow_pytorch(
-    #         test_case,
-    #         "pytorch_crossformer.py",
-    #         "crossformer_tiny_patch4_group7_224",
-    #         "cuda",
-    #         8,
-    #         224,
-    #     )
+    @unittest.skip("may fail in ci")
+    def test_crossformer_compatibility(test_case):
+        do_test_train_loss_oneflow_pytorch(
+            test_case,
+            "pytorch_crossformer.py",
+            "crossformer_tiny_patch4_group7_224",
+            "cuda",
+            8,
+            224,
+        )
 
-    # def test_efficientnet_compatibility(test_case):
-    #     do_test_train_loss_oneflow_pytorch(
-    #         test_case, "pytorch_efficientnet.py", "efficientnet_b0", "cuda", 8, 224,
-    #     )
+    def test_efficientnet_compatibility(test_case):
+        do_test_train_loss_oneflow_pytorch(
+            test_case, "pytorch_efficientnet.py", "efficientnet_b0", "cuda", 8, 224,
+        )
 
     def test_levit_compatibility(test_case):
         do_test_train_loss_oneflow_pytorch(
             test_case, "pytorch_levit.py", "LeViT_128S", "cuda", 8, 224,
         )
 
-    # def test_mlp_mixer_compatibility(test_case):
-    #     do_test_train_loss_oneflow_pytorch(
-    #         test_case, "pytroch_mlp_mixer.py", "mixer_s32_224", "cuda", 8, 224,
-    #     )
+    def test_mlp_mixer_compatibility(test_case):
+        do_test_train_loss_oneflow_pytorch(
+            test_case, "pytroch_mlp_mixer.py", "mixer_s32_224", "cuda", 8, 224,
+        )
 
+    @unittest.skip("may fail in ci")
     def test_poolformer_compatibility(test_case):
         do_test_train_loss_oneflow_pytorch(
             test_case, "pytorch_poolformer.py", "poolformer_s12", "cuda", 8, 224,
