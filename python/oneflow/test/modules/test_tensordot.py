@@ -48,6 +48,14 @@ class TestTensordot(flow.unittest.TestCase):
         z = torch.tensordot(x, y, dims=[[1, 2, 0], [2, 1, 0]])
         return z
 
+    @autotest(check_graph=True, n=1)
+    def test_tensordot_neg_tensordim(test_case):
+        device = random_device()
+        x = random_tensor(4, 1, 3, 2, 5).to(device)
+        y = random_tensor(4, 4, 2, 3, 5).to(device)
+        z = torch.tensordot(x, y, dims=[[-3, -2, -4], [-2, -3, -4]])
+        return z
+
     @autotest(check_graph=True)
     def test_tensordot_broadcast(test_case):
         device = random_device()

@@ -18,6 +18,7 @@ limitations under the License.
 #include "oneflow/core/common/maybe.h"
 #include "oneflow/core/common/optional.h"
 #include "oneflow/core/common/scalar.h"
+#include "oneflow/core/common/shape_vec.h"
 #include "oneflow/core/framework/attr_map.h"
 #include "oneflow/core/framework/op_builder.h"
 #include "oneflow/core/framework/op_expr.h"
@@ -267,87 +268,106 @@ class BatchMatMulFunctor {
 class TensorDotFunctor {
  public:
   Maybe<Tensor> operator()(const std::shared_ptr<Tensor>& a, const std::shared_ptr<Tensor>& b,
-                           const std::vector<int64_t>& dims_a,
-                           const std::vector<int64_t>& dims_b) const {
+                           const std::vector<int64_t>& _dims_a,
+                           const std::vector<int64_t>& _dims_b) const {
+    std::vector<int64_t> dims_a(_dims_a.begin(), _dims_a.end());
+    std::vector<int64_t> dims_b(_dims_b.begin(), _dims_b.end());
+    for (int64_t i = 0; i < dims_a.size(); i++) {
+      dims_a[i] = dims_a[i] < 0 ? dims_a[i] + a->shape()->NumAxes() : dims_a[i];
+      CHECK_LT_OR_RETURN(dims_a[i], a->shape()->NumAxes()) << "The dims is invalid for Tensor a";
+      CHECK_GE_OR_RETURN(dims_a[i], 0) << "The dims is invalid for Tensor a";
+    }
+    for (int64_t i = 0; i < dims_b.size(); i++) {
+      dims_b[i] = dims_b[i] < 0 ? dims_b[i] + b->shape()->NumAxes() : dims_b[i];
+      CHECK_LT_OR_RETURN(dims_b[i], b->shape()->NumAxes()) << "The dims is invalid for Tensor b";
+      CHECK_GE_OR_RETURN(dims_b[i], 0) << "The dims is invalid for Tensor b";
+    }
+
     CHECK_EQ_OR_RETURN(dims_a.size(), dims_b.size())
         << "dims1 and dims2 must have same size, got " << dims_a.size() << " and " << dims_b.size();
 
     if (dims_a.empty() && dims_b.empty()) {
-      std::vector<int64_t> shape_sum;
-      shape_sum.reserve(a->shape()->NumAxes() + b->shape()->NumAxes());
-      for (int64_t i = 0; i < a->shape()->NumAxes(); i++) {
-        shape_sum.emplace_back(a->shape()->At(i));
-      }
+      DimVector shape_sum(a->shape()->NumAxes() + b->shape()->NumAxes());
+      for (int64_t i = 0; i < a->shape()->NumAxes(); i++) { shape_sum[i] = a->shape()->At(i); }
       for (int64_t i = 0; i < b->shape()->NumAxes(); i++) {
-        shape_sum.emplace_back(b->shape()->At(i));
+        shape_sum[i + a->shape()->NumAxes()] = b->shape()->At(i);
       }
-      auto reshape_a = JUST(Reshape(a, Shape(DimVector{-1, 1})));
-      auto reshape_b = JUST(Reshape(b, Shape(DimVector{1, -1})));
+      std::shared_ptr<Tensor> reshape_a = JUST(Reshape(a, Shape(DimVector{-1, 1})));
+      std::shared_ptr<Tensor> reshape_b = JUST(Reshape(b, Shape(DimVector{1, -1})));
       return JUST(Reshape(JUST(functional::MatMul(reshape_a, reshape_b, false, false, 1.0)),
                           Shape(DimVector(shape_sum.begin(), shape_sum.end()))));
     }
     std::vector<bool> if_dot_dims_a(a->shape()->NumAxes(), false);
     std::vector<bool> if_dot_dims_b(b->shape()->NumAxes(), false);
-    for (auto i : dims_a) if_dot_dims_a[i] = true;
-    for (auto i : dims_b) if_dot_dims_b[i] = true;
+    for (int64_t i : dims_a) if_dot_dims_a[i] = true;
+    for (int64_t i : dims_b) if_dot_dims_b[i] = true;
 
     std::vector<int32_t> broadcast_dims_a, broadcast_dims_b;
     for (int64_t i = 0; i < dims_a.size(); i++) {
       int64_t size_a = a->shape()->At(dims_a[i]);
       int64_t size_b = b->shape()->At(dims_b[i]);
-      if (size_a == 1) {
+      if (size_a == 1 && size_b > 1) {
         broadcast_dims_b.emplace_back(dims_b[i]);
-      } else if (size_b == 1) {
+      } else if (size_b == 1 && size_a > 1) {
         broadcast_dims_a.emplace_back(dims_a[i]);
       } else {
         CHECK_EQ_OR_RETURN(size_a, size_b) << "The corresponding dim must be equal, got " << size_a
                                            << " in tensor a and " << size_b << " in tensor b";
       }
     }
-    auto reduced_a = a;
-    auto reduced_b = b;
-    if (!broadcast_dims_a.empty())
-      reduced_a = JUST(functional::ReduceSum(a, broadcast_dims_a, true));
-    if (!broadcast_dims_b.empty())
-      reduced_b = JUST(functional::ReduceSum(b, broadcast_dims_b, true));
 
-    int64_t rsize_a = 1, rsize_b = 1;
-    std::vector<int64_t> rshape_a, rshape_b;
-    std::vector<int32_t> pa, pb;
-    pa.reserve(a->shape()->NumAxes());
-    pb.reserve(b->shape()->NumAxes());
+    // calculate ReduceSum for broadcasting of some axis
+    std::shared_ptr<Tensor> reduced_sum_a = a;
+    std::shared_ptr<Tensor> reduced_sum_b = b;
+    if (!broadcast_dims_a.empty())
+      reduced_sum_a = JUST(functional::ReduceSum(a, broadcast_dims_a, true));
+    if (!broadcast_dims_b.empty())
+      reduced_sum_b = JUST(functional::ReduceSum(b, broadcast_dims_b, true));
+
+    int64_t non_dot_size_a = 1, non_dot_size_b = 1;
+    std::vector<int64_t> non_dot_shape_a, non_dot_shape_b;
+    non_dot_shape_a.reserve(a->shape()->NumAxes() - dims_a.size() + b->shape()->NumAxes()
+                            - dims_b.size());
+    non_dot_shape_b.reserve(b->shape()->NumAxes() - dims_b.size());
+
+    std::vector<int32_t> permuted_a_shape, permuted_b_shape;
+    permuted_a_shape.reserve(a->shape()->NumAxes());
+    permuted_b_shape.reserve(b->shape()->NumAxes());
+
     std::vector<int64_t> non_dot_dims;
     for (int64_t i = 0; i < a->shape()->NumAxes(); i++) {
       if (!if_dot_dims_a[i]) {
         non_dot_dims.emplace_back(a->shape()->At(i));
-        pa.emplace_back(i);
-        rsize_a *= reduced_a->shape()->At(i);
-        rshape_a.emplace_back(reduced_a->shape()->At(i));
+        permuted_a_shape.emplace_back(i);
+        non_dot_size_a *= reduced_sum_a->shape()->At(i);
+        non_dot_shape_a.emplace_back(reduced_sum_a->shape()->At(i));
       }
     }
 
-    for (auto i : dims_a) pa.emplace_back(i);
-    for (auto i : dims_b) pb.emplace_back(i);
+    for (int64_t i : dims_a) permuted_a_shape.emplace_back(i);
+    for (int64_t i : dims_b) permuted_b_shape.emplace_back(i);
 
     for (int64_t i = 0; i < b->shape()->NumAxes(); i++) {
       if (!if_dot_dims_b[i]) {
         non_dot_dims.emplace_back(b->shape()->At(i));
-        pb.emplace_back(i);
-        rsize_b *= reduced_b->shape()->At(i);
-        rshape_b.emplace_back(reduced_b->shape()->At(i));
+        permuted_b_shape.emplace_back(i);
+        non_dot_size_b *= reduced_sum_b->shape()->At(i);
+        non_dot_shape_b.emplace_back(reduced_sum_b->shape()->At(i));
       }
     }
-    rshape_a.insert(rshape_a.end(), rshape_b.begin(), rshape_b.end());
+    non_dot_shape_a.insert(non_dot_shape_a.end(), non_dot_shape_b.begin(), non_dot_shape_b.end());
 
-    int64_t dshape = 1;
-    for (auto i : dims_a) dshape *= reduced_a->shape()->At(i);
-    auto permute_a =
-        JUST(Reshape(JUST(Permute(reduced_a, pa)), Shape(DimVector({rsize_a, dshape}))));
-    auto permute_b =
-        JUST(Reshape(JUST(Permute(reduced_b, pb)), Shape(DimVector({dshape, rsize_b}))));
+    int64_t dot_size = 1;
+    for (int64_t i : dims_a) dot_size *= reduced_sum_a->shape()->At(i);
+    std::shared_ptr<Tensor> permuted_a =
+        JUST(Reshape(JUST(Permute(reduced_sum_a, permuted_a_shape)),
+                     Shape(DimVector({non_dot_size_a, dot_size}))));
+    std::shared_ptr<Tensor> permuted_b =
+        JUST(Reshape(JUST(Permute(reduced_sum_b, permuted_b_shape)),
+                     Shape(DimVector({dot_size, non_dot_size_b}))));
 
-    return Reshape(JUST(functional::MatMul(permute_a, permute_b, false, false, 1.0)),
-                   Shape(DimVector({rshape_a.begin(), rshape_a.end()})));
+    return Reshape(JUST(functional::MatMul(permuted_a, permuted_b, false, false, 1.0)),
+                   Shape(DimVector({non_dot_shape_a.begin(), non_dot_shape_a.end()})));
   }
 };
 
