@@ -84,7 +84,7 @@ add_docstr(
     oneflow.Tensor.device,
     r"""
     The documentation is referenced from:
-    https://pytorch.org/docs/stable/generated/torch.Tensor.device.html#torch.Tensor.device
+    https://pytorch.org/docs/1.10/generated/torch.Tensor.device.html#torch.Tensor.device
     
     Is the :class:`oneflow.device` where this Tensor is, which is invalid for global tensor.
     """,
