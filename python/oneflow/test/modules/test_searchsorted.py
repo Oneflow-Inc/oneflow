@@ -160,18 +160,20 @@ class TestSearch_Sorted(flow.unittest.TestCase):
         for arg in GenArgList(arg_dict):
             arg[0](test_case, *arg[1:])
 
-    @autotest(n=2, auto_backward=False, check_dtype=True)
+    @autotest(n=20, auto_backward=False, check_dtype=True)
     def test_search_sorted(test_case):
         device = random_device()
         sorted_sequence = random_tensor(ndim=2, dim0=2, dim1=3).to(device)
         values = random_tensor(ndim=2, dim0=2).to(device)
-        sorter = random_tensor(ndim=2, dim0=2, dim1=3).to(device)
+        sorter = random_tensor(ndim=2, dim0=2, dim1=3, dtype=int).to(device)
+        right = oneof(True, False)
         y = torch.searchsorted(
             sorted_sequence,
             values,
             out_int32=oneof(True, False),
-            # TODO: edit after pytorch upgraded to 1.11 or higher.
-            right=False,
+            right=right,
+            side="right" if right==True else "left",
+            sorter=sorter,
         )
         return y
 
