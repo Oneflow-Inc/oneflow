@@ -208,7 +208,7 @@ IndexItem UnpackIndexItem(PyObject* object) {
   } else if (PySequence_Check(object)) {
     return IndexItem(ConvertToIndexingTensor(object).GetPtrOrThrow());
   }
-  THROW(RuntimeError) << "Invalid index " << Py_TYPE(object)->tp_name;
+  THROW(TypeError) << "Invalid index " << Py_TYPE(object)->tp_name;
   return IndexItem();
 }
 
