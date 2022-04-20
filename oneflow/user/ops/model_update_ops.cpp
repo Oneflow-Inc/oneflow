@@ -280,7 +280,8 @@ Maybe<void> InferFtrlUpdateTensorDesc(user_op::InferContext* ctx) {
   const user_op::TensorDesc& model = ctx->InputTensorDesc("model", 0);
   const Shape& shape = model.shape();
   const user_op::TensorDesc& model_diff = ctx->InputTensorDesc("model_diff", 0);
-  CHECK_EQ_OR_RETURN(model_diff.shape(), shape);
+  CHECK_EQ_OR_RETURN(model_diff.shape(), shape)
+      << "Model Diff shape is not consistent with Weight shape. ";
   const user_op::TensorDesc& accumulate = ctx->InputTensorDesc("accumulate", 0);
   const user_op::TensorDesc& z = ctx->InputTensorDesc("z", 0);
   JUST(CheckShapeLike(&accumulate, &model));
