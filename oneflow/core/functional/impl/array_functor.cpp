@@ -2869,7 +2869,7 @@ ONEFLOW_FUNCTION_LIBRARY(m) {
   m.add_functor<impl::SqueezeFunctor>("Squeeze");
   m.add_functor<impl::RollFunctor>("Roll");
   m.add_functor<impl::GatherFunctor>("Gather");
-  m.add_functor<impl::EmbeddingRenormFunctor>("Embedding_renorm");
+  m.add_functor<impl::EmbeddingRenormFunctor>("EmbeddingRenorm");
   m.add_functor<impl::EmbeddingFunctor>("Embedding");
   m.add_functor<impl::EmbeddingGradFunctor>("EmbeddingGrad");
   m.add_functor<impl::DimGatherFunctor>("DimGather");
