@@ -119,6 +119,26 @@ struct HardsigmoidGradFunctor {
 };
 
 template<typename T>
+struct HardShrinkFunctor {
+  OF_DEVICE_FUNC explicit HardShrinkFunctor(double lambd) : lambd(lambd) {}
+  OF_DEVICE_FUNC T operator()(T x) const {
+    return (x <= lambd && x >= -lambd) ? static_cast<T>(0) : x;
+  }
+
+  const T lambd;
+};
+
+template<typename T>
+struct HardShrinkGradFunctor {
+  OF_DEVICE_FUNC explicit HardShrinkGradFunctor(double lambd) : lambd(lambd) {}
+  OF_DEVICE_FUNC T operator()(T y, T dy) const {
+    return y == static_cast<T>(0) ? static_cast<T>(0) : dy;
+  }
+
+  const T lambd;
+};
+
+template<typename T>
 struct HardtanhFunctor {
   OF_DEVICE_FUNC explicit HardtanhFunctor(float min_val, float max_val)
       : min_val(min_val), max_val(max_val) {}
@@ -218,6 +238,22 @@ struct SoftSignGradFunctor {
     T val = (static_cast<T>(1) + abs(x));
     return dy / (val * val);
   }
+};
+
+template<typename T>
+struct ThresholdFunctor {
+  OF_DEVICE_FUNC explicit ThresholdFunctor(double threshold, double value)
+      : threshold(threshold), value(value) {}
+  OF_DEVICE_FUNC T operator()(T x) const { return (x > threshold) ? x : value; }
+  const T threshold;
+  const T value;
+};
+
+template<typename T>
+struct ThresholdGradFunctor {
+  OF_DEVICE_FUNC explicit ThresholdGradFunctor(double threshold) : threshold(threshold) {}
+  OF_DEVICE_FUNC T operator()(T x, T dy) const { return (x > threshold) ? dy : static_cast<T>(0); }
+  const T threshold;
 };
 
 template<typename T>
@@ -354,6 +390,40 @@ struct SoftShrinkGradFunctor {
       [](user_op::KernelComputeContext* ctx) { return HardsigmoidGradFunctor<dtype>(); }, "dx", \
       "x", "dy");
 
+#define REGISTER_HARDSHRINK_KERNEL(device, dtype)                                                \
+  REGISTER_USER_KERNEL("hardshrink")                                                             \
+      .SetCreateFn([]() {                                                                        \
+        return user_op::NewOpKernel<                                                             \
+            UnaryElemwiseXpuKernel<device, HardShrinkFunctor<dtype>, dtype, dtype>>(             \
+            [](user_op::KernelComputeContext* ctx) {                                             \
+              return HardShrinkFunctor<dtype>(ctx->Attr<double>("lambd"));                       \
+            },                                                                                   \
+            "out", "in");                                                                        \
+      })                                                                                         \
+      .SetIsMatchedHob((user_op::HobDeviceType() == device)                                      \
+                       && (user_op::HobDataType("in", 0) == GetDataType<dtype>::value))          \
+      .SetInplaceProposalFn([](const user_op::InferContext&,                                     \
+                               user_op::AddInplaceArgPair AddInplaceArgPairFn) -> Maybe<void> {  \
+        OF_RETURN_IF_ERROR(AddInplaceArgPairFn("out", 0, "in", 0, true));                        \
+        return Maybe<void>::Ok();                                                                \
+      });                                                                                        \
+  REGISTER_USER_KERNEL("hardshrink_grad")                                                        \
+      .SetCreateFn([]() {                                                                        \
+        return user_op::NewOpKernel<                                                             \
+            BinaryElemwiseXpuKernel<device, HardShrinkGradFunctor<dtype>, dtype, dtype, dtype>>( \
+            [](user_op::KernelComputeContext* ctx) {                                             \
+              return HardShrinkGradFunctor<dtype>(ctx->Attr<double>("lambd"));                   \
+            },                                                                                   \
+            "dx", "y", "dy");                                                                    \
+      })                                                                                         \
+      .SetIsMatchedHob((user_op::HobDeviceType() == device)                                      \
+                       && (user_op::HobDataType("dx", 0) == GetDataType<dtype>::value))          \
+      .SetInplaceProposalFn([](const user_op::InferContext&,                                     \
+                               user_op::AddInplaceArgPair AddInplaceArgPairFn) -> Maybe<void> {  \
+        OF_RETURN_IF_ERROR(AddInplaceArgPairFn("dx", 0, "dy", 0, true));                         \
+        return Maybe<void>::Ok();                                                                \
+      });
+
 #define REGISTER_HARDTANH_KERNEL(device, dtype)                                                 \
   REGISTER_USER_KERNEL("hardtanh")                                                              \
       .SetCreateFn([]() {                                                                       \
@@ -425,6 +495,21 @@ struct SoftShrinkGradFunctor {
       device, "softsign_grad", SoftSignGradFunctor, dtype, dtype, dtype,                          \
       [](user_op::KernelComputeContext* ctx) { return SoftSignGradFunctor<dtype>(); }, "dx", "x", \
       "dy");
+
+#define REGISTER_THRESHOLD_KERNEL(device, dtype)                                \
+  REGISTER_UNARY_ELEMWISE_USER_KERNEL(                                          \
+      device, "threshold", ThresholdFunctor, dtype, dtype,                      \
+      [](user_op::KernelComputeContext* ctx) {                                  \
+        return ThresholdFunctor<dtype>(ctx->Attr<double>("threshold_val"),      \
+                                       ctx->Attr<double>("value"));             \
+      },                                                                        \
+      "out", "in");                                                             \
+  REGISTER_BINARY_ELEMWISE_USER_KERNEL(                                         \
+      device, "threshold_grad", ThresholdGradFunctor, dtype, dtype, dtype,      \
+      [](user_op::KernelComputeContext* ctx) {                                  \
+        return ThresholdGradFunctor<dtype>(ctx->Attr<double>("threshold_val")); \
+      },                                                                        \
+      "dx", "x", "dy");
 
 #define REGISTER_SOFTPLUS_KERNEL(device, dtype)                                                   \
   REGISTER_UNARY_ELEMWISE_USER_KERNEL(                                                            \

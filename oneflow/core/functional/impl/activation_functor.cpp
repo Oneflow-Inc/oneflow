@@ -268,6 +268,51 @@ class HardSigmoidGradFunctor : public BinaryFunctor {
         CHECK_JUST(one::OpBuilder("hardsigmoid_grad").Input("dy").Input("x").Output("dx").Build());
   }
 };
+
+class HardShrinkFunctor {
+ public:
+  HardShrinkFunctor() {
+    op_ = CHECK_JUST(one::OpBuilder("hardshrink").Input("in").Output("out").Build());
+  }
+
+  Maybe<Tensor> operator()(const std::shared_ptr<Tensor>& x, const double& lambd,
+                           bool inplace) const {
+    MutableAttrMap attrs;
+    CHECK_GT_OR_RETURN(lambd, 0) << "lambd must be greater than 0";
+    JUST(attrs.SetAttr<double>("lambd", lambd));
+    if (inplace) {
+      JUST(CheckInplaceValid(x));
+      std::shared_ptr<TensorTuple> outputs = std::make_shared<TensorTuple>(1);
+      // outputs->at(0) = x;
+      *JUST(oneflow::VectorAt(outputs.get(), 0)) = x;
+      JUST(OpInterpUtil::Dispatch(*op_, {x}, outputs.get(), attrs));
+      // return outputs->at(0);
+      return *JUST(oneflow::VectorAt(outputs.get(), 0));
+    } else {
+      return OpInterpUtil::Dispatch<one::Tensor>(*op_, {x}, attrs);
+    }
+  }
+
+ private:
+  std::shared_ptr<OpExpr> op_;
+};
+
+class HardShrinkGradFunctor {
+ public:
+  HardShrinkGradFunctor() {
+    op_ = CHECK_JUST(one::OpBuilder("hardshrink_grad").Input("dy").Input("y").Output("dx").Build());
+  }
+  Maybe<Tensor> operator()(const std::shared_ptr<Tensor>& y, const std::shared_ptr<Tensor>& dy,
+                           const double& lambd) const {
+    MutableAttrMap attrs;
+    JUST(attrs.SetAttr<double>("lambd", lambd));
+    return OpInterpUtil::Dispatch<one::Tensor>(*op_, {dy, y}, attrs);
+  }
+
+ private:
+  std::shared_ptr<OpExpr> op_;
+};
+
 class SoftmaxFunctorBase {
  public:
   Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& input,
@@ -499,6 +544,41 @@ class SoftShrinkFunctor {
   std::shared_ptr<OpExpr> op_;
 };
 
+class ThresholdFunctor {
+ public:
+  ThresholdFunctor() {
+    op_ = CHECK_JUST(one::OpBuilder("threshold").Input("in").Output("out").Build());
+  }
+
+  Maybe<Tensor> operator()(const std::shared_ptr<Tensor>& x, const double& threshold,
+                           const double& value) const {
+    MutableAttrMap attrs;
+    JUST(attrs.SetAttr<double>("threshold_val", threshold));
+    JUST(attrs.SetAttr<double>("value", value));
+    return OpInterpUtil::Dispatch<one::Tensor>(*op_, {x}, attrs);
+  }
+
+ private:
+  std::shared_ptr<OpExpr> op_;
+};
+
+class ThresholdGradFunctor {
+ public:
+  ThresholdGradFunctor() {
+    op_ = CHECK_JUST(one::OpBuilder("threshold_grad").Input("x").Input("dy").Output("dx").Build());
+  }
+
+  Maybe<Tensor> operator()(const std::shared_ptr<Tensor>& x, const std::shared_ptr<Tensor>& dy,
+                           const double& threshold) const {
+    MutableAttrMap attrs;
+    JUST(attrs.SetAttr<double>("threshold_val", threshold));
+    return OpInterpUtil::Dispatch<one::Tensor>(*op_, {x, dy}, attrs);
+  }
+
+ private:
+  std::shared_ptr<OpExpr> op_;
+};
+
 class SoftShrinkGradFunctor {
  public:
   SoftShrinkGradFunctor() {
@@ -533,6 +613,8 @@ ONEFLOW_FUNCTION_LIBRARY(m) {
   m.add_functor<impl::GluFunctor>("Glu");
   m.add_functor<impl::HardSigmoidFunctor>("HardSigmoid");
   m.add_functor<impl::HardSigmoidGradFunctor>("HardSigmoidGrad");
+  m.add_functor<impl::HardShrinkFunctor>("HardShrink");
+  m.add_functor<impl::HardShrinkGradFunctor>("HardShrinkGrad");
   m.add_functor<impl::SoftmaxFunctor>("Softmax");
   m.add_functor<impl::SoftmaxGradFunctor>("SoftmaxGrad");
   m.add_functor<impl::LogSoftmaxFunctor>("LogSoftmax");
@@ -550,6 +632,8 @@ ONEFLOW_FUNCTION_LIBRARY(m) {
   m.add_functor<impl::SeluGradFunctor>("SeluGrad");
   m.add_functor<impl::SoftSignFunctor>("SoftSign");
   m.add_functor<impl::SoftSignGradFunctor>("SoftSignGrad");
+  m.add_functor<impl::ThresholdFunctor>("Threshold");
+  m.add_functor<impl::ThresholdGradFunctor>("ThresholdGrad");
   m.add_functor<impl::SoftShrinkFunctor>("SoftShrink");
   m.add_functor<impl::SoftShrinkGradFunctor>("SoftShrinkGrad");
 };

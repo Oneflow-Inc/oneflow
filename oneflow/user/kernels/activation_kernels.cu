@@ -123,6 +123,29 @@ struct HardswishGradFunctor<half> {
 };
 
 template<>
+struct HardShrinkFunctor<half> {
+  OF_DEVICE_FUNC explicit HardShrinkFunctor(float lambd)
+      : lambd(lambd), float_functor(HardShrinkFunctor<float>(lambd)) {}
+  OF_DEVICE_FUNC half operator()(half x) const {
+    return __float2half(float_functor(__half2float(x)));
+  }
+  const float lambd;
+  HardShrinkFunctor<float> float_functor;
+};
+
+template<>
+struct HardShrinkGradFunctor<half> {
+  OF_DEVICE_FUNC explicit HardShrinkGradFunctor(float lambd)
+      : lambd(lambd), float_functor(HardShrinkGradFunctor<float>(lambd)) {}
+  OF_DEVICE_FUNC half operator()(half y, half dy) const {
+    return __float2half(float_functor(__half2float(y), __half2float(dy)));
+  }
+
+  const float lambd;
+  HardShrinkGradFunctor<float> float_functor;
+};
+
+template<>
 struct MishFunctor<half> {
   OF_DEVICE_FUNC explicit MishFunctor() : float_functor(MishFunctor<float>()) {}
   OF_DEVICE_FUNC half operator()(half x) const {
@@ -195,6 +218,32 @@ struct SoftSignGradFunctor<half> {
 };
 
 template<>
+struct ThresholdFunctor<half> {
+  OF_DEVICE_FUNC explicit ThresholdFunctor(float threshold, float value)
+      : threshold(threshold),
+        value(value),
+        float_functor(ThresholdFunctor<float>(threshold, value)) {}
+  OF_DEVICE_FUNC half operator()(half x) const {
+    return __float2half(float_functor(__half2float(x)));
+  }
+  const float threshold;
+  const float value;
+  ThresholdFunctor<float> float_functor;
+};
+
+template<>
+struct ThresholdGradFunctor<half> {
+  OF_DEVICE_FUNC explicit ThresholdGradFunctor(float threshold)
+      : threshold(threshold), float_functor(ThresholdGradFunctor<float>(threshold)) {}
+  OF_DEVICE_FUNC half operator()(half x, half dy) const {
+    return __float2half(float_functor(__half2float(x), __half2float(dy)));
+  }
+
+  const float threshold;
+  ThresholdGradFunctor<float> float_functor;
+};
+
+template<>
 struct ReluGradFunctor<half> {
   OF_DEVICE_FUNC explicit ReluGradFunctor() {}
   __device__ half operator()(half y, half dy) const {
@@ -235,6 +284,7 @@ struct SoftShrinkGradFunctor<half> {
   REGISTER_CELU_KERNEL(DeviceType::kCUDA, dtype);        \
   REGISTER_HARDSWISH_KERNEL(DeviceType::kCUDA, dtype);   \
   REGISTER_HARDSIGMOID_KERNEL(DeviceType::kCUDA, dtype); \
+  REGISTER_HARDSHRINK_KERNEL(DeviceType::kCUDA, dtype);  \
   REGISTER_HARDTANH_KERNEL(DeviceType::kCUDA, dtype);    \
   REGISTER_MISH_KERNEL(DeviceType::kCUDA, dtype);        \
   REGISTER_SILU_KERNEL(DeviceType::kCUDA, dtype);        \
@@ -242,6 +292,7 @@ struct SoftShrinkGradFunctor<half> {
   REGISTER_SOFTSHRINK_KERNEL(DeviceType::kCUDA, dtype);  \
   REGISTER_SOFTSIGN_KERNEL(DeviceType::kCUDA, dtype);    \
   REGISTER_LEAKYRELU_KERNEL(DeviceType::kCUDA, dtype);   \
+  REGISTER_THRESHOLD_KERNEL(DeviceType::kCUDA, dtype);   \
   REGISTER_SOFTPLUS_KERNEL(DeviceType::kCUDA, dtype);    \
   REGISTER_RELU_BACKWARD_KERNEL(DeviceType::kCUDA, dtype);
 
