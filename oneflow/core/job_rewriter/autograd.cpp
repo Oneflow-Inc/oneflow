@@ -24,6 +24,7 @@ limitations under the License.
 #include "oneflow/core/framework/framework.h"
 #include "oneflow/core/job_rewriter/job_pass.h"
 #include "oneflow/core/job_rewriter/dynamic_loss_scale_job_pass_state.h"
+#include "oneflow/core/job_rewriter/clip_by_global_norm_job_pass_state.h"
 
 namespace oneflow {
 
@@ -696,7 +697,8 @@ std::string GlobalNorm(const OpGraph& op_graph, JobBuilder* job_builder,
 
 void ClipGradientByGlobalNorm(const OpGraph& op_graph, JobBuilder* job_builder,
                               HashMap<LogicalBlobId, LogicalBlobId>* lbi2diff_lbi,
-                              const ClipByGlobalNormConf& conf) {
+                              const OptimizerConf& optimizer_conf) {
+  const ClipByGlobalNormConf& conf = optimizer_conf.clip_conf().clip_by_global_norm();
   if (lbi2diff_lbi->empty()) { return; }
   ParallelConf parallel_conf;
   std::string total_norm_lbn;
@@ -769,6 +771,14 @@ void ClipGradientByGlobalNorm(const OpGraph& op_graph, JobBuilder* job_builder,
                         {scalar_mul_op.op_conf()});
     diff_lbi = GenLogicalBlobId(scalar_mul_op.output("y", 0));
   }
+
+  if (!JUST(ctx->HasState<ClipByGlobalNormJobPassState>("clip_by_global_norm_state"))) {
+    JUST(ctx->ResetState("clip_by_global_norm_state",
+                         std::make_unique<ClipByGlobalNormJobPassState>()));
+  }
+  auto state = JUST(ctx->MutableState<ClipByGlobalNormJobPassState>("clip_by_global_norm_state"));
+  ClipByGlobalNormState param_state(total_norm_lbn, coeff_lbn, parallel_conf);
+  state->set_loss_scale_val_lbn(optimizer_conf, param_state);
 }
 
 }  // namespace
@@ -1111,9 +1121,9 @@ void RegularizeGradient(const OpGraph& op_graph, JobBuilder* job_builder,
 }
 
 void ClipGradient(const OpGraph& op_graph, JobBuilder* job_builder,
-                  HashMap<LogicalBlobId, LogicalBlobId>* lbi2diff_lbi, const ClipConf& clip_conf) {
+                  HashMap<LogicalBlobId, LogicalBlobId>* lbi2diff_lbi, const OptimizerConf& optimizer_conf) {
   if (clip_conf.has_clip_by_global_norm()) {
-    ClipGradientByGlobalNorm(op_graph, job_builder, lbi2diff_lbi, clip_conf.clip_by_global_norm());
+    ClipGradientByGlobalNorm(op_graph, job_builder, lbi2diff_lbi, optimizer_conf);
   } else {
     UNIMPLEMENTED();
   }

@@ -19,6 +19,7 @@ limitations under the License.
 #include "oneflow/core/job_rewriter/autograd.h"
 #include "oneflow/core/embedding/key_value_store_options.h"
 #include "oneflow/core/common/container_util.h"
+#include "oneflow/core/job_rewriter/clip_by_global_norm_job_pass_state.h"
 
 namespace oneflow {
 
@@ -100,6 +101,7 @@ Maybe<void> DynamicLossScaleAddGradient(JobPassCtx* ctx, const OpGraph& op_graph
   }
   return Maybe<void>::Ok();
 }
+
 
 std::string AddScheduleOp(const OpGraph& op_graph, JobBuilder* job_builder,
                           const OptimizerConf& optimizer_conf, const std::string& op_name) {
@@ -575,6 +577,7 @@ Maybe<void> ReplaceEmbeddingOps::Apply(const OpGraph& op_graph, JobBuilder* job_
   ParallelConf embedding_parallel_conf;
   int64_t embedding_scope_symbol_id = 0;
   HashMap<std::string, OperatorConf> op_name2op_conf;
+  HashMap<OptimizerConf, std::vector<std::string>> has_clip_grad_optimizer2gradient_lbns;
   op_graph.ForEachNode([&](const OpNode* op_node) {
     const OperatorConf& op_conf = op_node->op().op_conf();
     if (!op_conf.has_user_conf()) { return; }
@@ -691,6 +694,9 @@ Maybe<void> ReplaceEmbeddingOps::Apply(const OpGraph& op_graph, JobBuilder* job_
             if (name == shadow_op_name) {
               embedding_optimizer_conf = optimizer_conf;
               found_embedding_optimizer = true;
+              if(optimizer_conf.has_clip_conf()) {
+                has_clip_grad_optimizer2gradient_lbns[optimizer_conf].push_back(embedding_grad_lbn);
+              }
               break;
             }
           }
@@ -742,6 +748,17 @@ Maybe<void> ReplaceEmbeddingOps::Apply(const OpGraph& op_graph, JobBuilder* job_
     JUST(DynamicLossScaleAddGradient(ctx, op_graph, job_builder, gradient_lbns,
                                      embedding_scope_symbol_id, embedding_parallel_conf));
   }
+  if(has_clip_grad_optimizer2gradient_lbns.size() > 0) {
+    for(const auto& pair: has_clip_grad_optimizer2gradient_lbns) {
+      const auto& clip_by_global_norm_pass_state =
+          JUST(ctx->GetState<ClipByGlobalNormJobPassState>("clip_by_global_norm_state"));
+      const auto& param_state = clip_by_global_norm_pass_state.clip_by_global_norm_state(pair.first);
+      LOG(ERROR)<<"total_norm_lbn "<<param_state.total_norm_lbn;
+      LOG(ERROR)<<"coeff_lbn "<<param_state.coeff_lbn;
+      LOG(ERROR)<<"parallel_conf "<<param_state.parallel_conf.DebugString();
+    }
+  }
+
   return Maybe<void>::Ok();
 }
 

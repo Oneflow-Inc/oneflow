@@ -160,7 +160,7 @@ Maybe<void> GenerateBackwardAndOptimizerOpConfs::Apply(Job* job, JobPassCtx* ctx
                                            model_lbi2model_diff_lbi, &cur_model_lbi2model_diff_lbi);
       if (optimizer_conf.has_clip_conf()) {
         ClipGradient(op_graph, job_builder.get(), &cur_model_lbi2model_diff_lbi,
-                     optimizer_conf.clip_conf());
+                     optimizer_conf);
       }
       RegularizeGradient(op_graph, job_builder.get(), &cur_model_lbi2model_diff_lbi);
       op_graph.ForEachNode([&](OpNode* op_node) {
