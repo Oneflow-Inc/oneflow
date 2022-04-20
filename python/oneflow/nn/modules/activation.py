@@ -860,7 +860,7 @@ class LeakyReLU(Module):
         self.inplace = inplace
 
     def forward(self, x):
-        return flow._C.leaky_relu(x, alpha=self.negative_slope, self.inplace)
+        return flow._C.leaky_relu(x, alpha=self.negative_slope, inplace=self.inplace)
 
     def extra_repr(self):
         param_str = f"negative_slope={self.negative_slope}"
