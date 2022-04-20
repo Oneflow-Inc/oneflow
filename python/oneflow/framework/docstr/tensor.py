@@ -428,7 +428,7 @@ add_docstr(
     oneflow.Tensor.unfold,
     """
     The interface is consistent with PyTorch.
-    The documentation is referenced from: https://pytorch.org/docs/stable/generated/torch.Tensor.unfold.html#torch.Tensor.unfold.
+    The documentation is referenced from: https://pytorch.org/docs/1.10/generated/torch.Tensor.unfold.html#torch.Tensor.unfold.
 
     Returns a view of the original tensor which contains all slices of `size` size from `self`
     tensor in the dimension `dimension`.
@@ -578,7 +578,7 @@ add_docstr(
     oneflow.Tensor.backward,
     """
     The interface is consistent with PyTorch.
-    The documentation is referenced from: https://pytorch.org/docs/stable/generated/torch.Tensor.backward.html#torch.Tensor.backward.
+    The documentation is referenced from: https://pytorch.org/docs/1.10/generated/torch.Tensor.backward.html#torch.Tensor.backward.
 
     Computes the gradient of current tensor w.r.t. graph leaves.
 
@@ -1589,7 +1589,7 @@ add_docstr(
     oneflow.Tensor.view,
     """
     The interface is consistent with PyTorch.
-    The documentation is referenced from: https://pytorch.org/docs/stable/generated/torch.Tensor.view.html
+    The documentation is referenced from: https://pytorch.org/docs/1.10/generated/torch.Tensor.view.html
 
     Returns a new tensor with the same data as the :attr:`self` tensor but of a
     different :attr:`shape`.
