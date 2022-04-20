@@ -30,34 +30,36 @@ namespace {
 
 constexpr size_t NUM_DIM = 20;
 
+
+
 template<typename T>
 struct AsStridedFunctor final {
-  void operator()(ep::Stream* stream, const T* input_buf, T* output_buf, const int64_t* dest_dims,
-                  const int32_t* stride, const int32_t dest_num_dims, const int32_t storage_offset,
-                  const int32_t input_num, const int32_t output_num) {
-    NdIndexOffsetHelper<int64_t, NUM_DIM> destIndexOffsetHelper(dest_dims, dest_num_dims);
-    FOR_RANGE(int64_t, i, 0, output_num) {
-      int64_t dst_index[NUM_DIM];
-      destIndexOffsetHelper.OffsetToNdIndex(i, dst_index, dest_num_dims);
-      int32_t index_in_input = storage_offset;
-      FOR_RANGE(int64_t, j, 0, dest_num_dims) { index_in_input += dst_index[j] * stride[j]; }
-      output_buf[i] = input_buf[index_in_input];
+  void operator()(ep::Stream* stream, const T* input, T* output, const int64_t* out_shape,
+                  const int32_t* stride, const int32_t out_ndim, const int32_t storage_offset,
+                  const int32_t in_elem_cnt, const int32_t out_elem_cnt) {
+    NdIndexOffsetHelper<int64_t, NUM_DIM> destIndexOffsetHelper(out_shape, out_ndim);
+    FOR_RANGE(int64_t, i, 0, out_elem_cnt) {
+      int64_t out_index[NUM_DIM];
+      destIndexOffsetHelper.OffsetToNdIndex(i, out_index, out_ndim);
+      int32_t in_offset = storage_offset;
+      FOR_RANGE(int64_t, j, 0, out_ndim) { in_offset += out_index[j] * stride[j]; }
+      output[i] = input[in_offset];
     }
   }
 };
 
 template<typename T>
 struct AsStridedGradFunctor final {
-  void operator()(ep::Stream* stream, const T* dy_buf, T* dx_buf, const int64_t* dy_dims,
-                  const int32_t* stride, const int32_t dy_num_dims, const int32_t storage_offset,
-                  const int32_t dx_num, const int32_t dy_num) {
-    NdIndexOffsetHelper<int64_t, NUM_DIM> destIndexOffsetHelper(dy_dims, dy_num_dims);
-    FOR_RANGE(int64_t, i, 0, dy_num) {
+  void operator()(ep::Stream* stream, const T* dy, T* dx, const int64_t* dy_shape,
+                  const int32_t* stride, const int32_t dy_ndim, const int32_t storage_offset,
+                  const int32_t dx_elem_cnt, const int32_t dy_elem_cnt) {
+    NdIndexOffsetHelper<int64_t, NUM_DIM> destIndexOffsetHelper(dy_shape, dy_ndim);
+    FOR_RANGE(int64_t, i, 0, dy_elem_cnt) {
       int64_t dy_index[NUM_DIM];
-      destIndexOffsetHelper.OffsetToNdIndex(i, dy_index, dy_num_dims);
-      int32_t index_in_dx = storage_offset;
-      FOR_RANGE(int64_t, j, 0, dy_num_dims) { index_in_dx += dy_index[j] * stride[j]; }
-      dx_buf[index_in_dx] += dy_buf[i];
+      destIndexOffsetHelper.OffsetToNdIndex(i, dy_index, dy_ndim);
+      int32_t in_offset = storage_offset;
+      FOR_RANGE(int64_t, j, 0, dy_ndim) { in_offset += dy_index[j] * stride[j]; }
+      dx[in_offset] += dy[i];
     }
   }
 };
@@ -79,13 +81,13 @@ class CpuAsStridedKernel final : public user_op::OpKernel {
     const auto stride = ctx->Attr<std::vector<int32_t>>("stride");
     const int32_t storage_offset = ctx->Attr<int32_t>("storage_offset");
 
-    size_t dest_num_dims = output->shape().NumAxes();
-    const int64_t* dest_dims = output->shape().ptr();
-    const size_t input_num = input->shape().Count(0);
-    const size_t output_num = output->shape().Count(0);
+    size_t out_ndim = output->shape().NumAxes();
+    const int64_t* out_shape = output->shape().ptr();
+    const size_t in_elem_cnt = input->shape().Count(0);
+    const size_t out_elem_cnt = output->shape().Count(0);
 
-    AsStridedFunctor<T>()(ctx->stream(), input->dptr<T>(), output->mut_dptr<T>(), dest_dims,
-                          stride.data(), dest_num_dims, storage_offset, input_num, output_num);
+    AsStridedFunctor<T>()(ctx->stream(), input->dptr<T>(), output->mut_dptr<T>(), out_shape,
+                          stride.data(), out_ndim, storage_offset, in_elem_cnt, out_elem_cnt);
   }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
@@ -105,15 +107,15 @@ class CpuAsStridedGradKernel final : public user_op::OpKernel {
     const auto stride = ctx->Attr<std::vector<int32_t>>("stride");
     const int32_t storage_offset = ctx->Attr<int32_t>("storage_offset");
 
-    size_t dy_num_dims = dy->shape().NumAxes();
-    const int64_t* dy_dims = dy->shape().ptr();
-    const size_t dx_num = dx->shape().Count(0);
-    const size_t dy_num = dy->shape().Count(0);
+    size_t dy_ndim = dy->shape().NumAxes();
+    const int64_t* dy_shape = dy->shape().ptr();
+    const size_t dx_elem_cnt = dx->shape().Count(0);
+    const size_t dy_elem_cnt = dy->shape().Count(0);
 
     Memset<DeviceType::kCPU>(ctx->stream(), dx->mut_dptr(), 0, dx->shape().Count(0) * sizeof(T));
 
-    AsStridedGradFunctor<T>()(ctx->stream(), dy->dptr<T>(), dx->mut_dptr<T>(), dy_dims,
-                              stride.data(), dy_num_dims, storage_offset, dx_num, dy_num);
+    AsStridedGradFunctor<T>()(ctx->stream(), dy->dptr<T>(), dx->mut_dptr<T>(), dy_shape,
+                              stride.data(), dy_ndim, storage_offset, dx_elem_cnt, dy_elem_cnt);
   }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
