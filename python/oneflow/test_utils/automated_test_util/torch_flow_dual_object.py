@@ -452,7 +452,7 @@ def oneflow_eager_run_with_graph_check(
         # 3. inspect.ismethod(oneflow) and "oneflow.nn.modules" in oneflow.__module__:  For op that only has Tensor.xxx method, and call oneflow.xxx actually, like masked_fill.
         elif (
             (
-                not oneflow.__module__ is None
+               oneflow.__module__ is not None
                 and ("oneflow.nn.modules" not in oneflow.__module__)
             )
             or inspect.isfunction(oneflow)
