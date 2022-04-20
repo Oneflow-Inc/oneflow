@@ -77,13 +77,13 @@ const std::string& CastFromConsistentOpExpr::op_type_name() const {
 }
 
 #define DEFINE_OPEXPR_IS_GRAD_DISABLED_AND_SUPPORT_NON_CONTIGUOUS_DEFAULT_VALUE(_T, flag) \
-  template<>                                                                               \
-  Maybe<bool> BuiltinOpExprImpl<_T>::IsGradDisabled() const {                              \
+  template<>                                                                              \
+  Maybe<bool> BuiltinOpExprImpl<_T>::IsGradDisabled() const {                             \
     return flag;                                                                          \
-  }                                                                                        \
-  template<>                                                                               \
-  Maybe<bool> BuiltinOpExprImpl<_T>::SupportNonContiguous() const {                        \
-    return false;                                                                          \
+  }                                                                                       \
+  template<>                                                                              \
+  Maybe<bool> BuiltinOpExprImpl<_T>::SupportNonContiguous() const {                       \
+    return false;                                                                         \
   }
 
 DEFINE_OPEXPR_IS_GRAD_DISABLED_AND_SUPPORT_NON_CONTIGUOUS_DEFAULT_VALUE(FeedInputOpConf, true);
