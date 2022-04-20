@@ -28,8 +28,8 @@ namespace oneflow {
 
 namespace vm {
 
-struct Instruction;
-struct MirroredObject;
+class Instruction;
+class MirroredObject;
 
 enum OperandAccessType {
   kConstOperandAccess = 0,

@@ -53,6 +53,24 @@ namespace impl {
 
 namespace {
 
+// NOTE: use env variable 'ONEFLOW_EAGER_LOCAL_TO_GLOBAL_BALANCED_OVERRIDE' indicate whether the
+// shape and dtype of input tensor on each rank is the same when cast local tensor to global tensor.
+// If set true, there will be no meta-information synchronization on each rank.
+Optional<bool> ParseEagerLocalToGlobalBalancedOverride() {
+  const char* env_p = std::getenv("ONEFLOW_EAGER_LOCAL_TO_GLOBAL_BALANCED_OVERRIDE");
+  if (env_p == nullptr) {
+    return Optional<bool>();
+  } else {
+    return ParseBooleanFromEnv("ONEFLOW_EAGER_LOCAL_TO_GLOBAL_BALANCED_OVERRIDE", false);
+  }
+}
+
+bool GetLocalToGlobalIsBalanced(bool is_balanced) {
+  thread_local Optional<bool> eager_local_to_global_balanced_override =
+      ParseEagerLocalToGlobalBalancedOverride();
+  return eager_local_to_global_balanced_override.value_or(is_balanced);
+}
+
 // clang-format off
 FLAT_MSG_BEGIN(FlatShapeAndDataType);
   // Methods
