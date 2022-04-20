@@ -19,7 +19,6 @@ from collections import OrderedDict
 from oneflow.test_utils.test_util import GenArgDict
 import numpy as np
 import oneflow as flow
-import oneflow.unittest
 
 from oneflow.test_utils.automated_test_util import *
 
@@ -127,15 +126,55 @@ def _test_id_shuffle(test_case, has_table_id, num_tables):
         test_case.assertTrue(np.array_equal(unique_table_ids, np_unique_table_ids))
 
 
-def _test_embedding_shuffle(test_case, dtype):
+def round_half_away_from_zero(x):
+    sign = np.sign(x)
+    abs_val = np.abs(x)
+    abs_val += 0.5
+    floor_val = np.floor(abs_val)
+    out = floor_val * sign
+    return out
+
+
+def embedding_shuffle_quantize(np_data, np_dtype):
+    # When use float16, ComputeType is set to as Float.
+    np_reduce_data = np_data.astype(np.float32)
+    abs_max_factor = np.max(np.abs(np_reduce_data), axis=2)
+    abs_max_factor = np.expand_dims(abs_max_factor, axis=2)
+    transport_quantize_factor = abs_max_factor.astype(np_dtype)
+    int8_factor = np.ones(abs_max_factor.shape, dtype=np.float32) * 127.0
+    int8_factor = int8_factor.astype(np.float32)
+    quantize_factor = int8_factor / abs_max_factor
+
+    # Covert to Compute Type.
+    np_data.astype(np.float32)
+    np_data = np_data * quantize_factor
+    np_data = round_half_away_from_zero(np_data)
+    np_data = np_data.astype(np.int8)
+
+    # Covert to Compute Type.
+    np_data = np_data.astype(np.float32)
+    dequantize_factor = transport_quantize_factor.astype(np.float32) / int8_factor
+    np_data = np_data * dequantize_factor
+    np_data = np_data.astype(np_dtype)
+    return np_data
+
+
+def _test_embedding_shuffle(test_case, dtype, enable_quantize):
     batch_size = int(1024 / parallel_num)
     placement = flow.placement(type="cuda", ranks=list(range(parallel_num)))
     num_tables = 26
+    embedding_size = 128
+    enable_quantized_comm = enable_quantize and embedding_size < 1025
+    if enable_quantized_comm:
+        os.environ["ONEFLOW_ONE_EMBEDDING_ENABLE_QUANTIZED_COMM"] = "1"
+    else:
+        os.environ["ONEFLOW_ONE_EMBEDDING_ENABLE_QUANTIZED_COMM"] = "0"
+
     if dtype == flow.float16:
         np_dtype = np.float16
     else:
         np_dtype = np.float32
-    data = np.random.rand(max_id, 128).astype(np_dtype)
+    data = np.random.rand(max_id, embedding_size).astype(np_dtype)
     data_tensor = flow.tensor(data, requires_grad=False).to_global(
         placement=placement, sbp=flow.sbp.broadcast()
     )
@@ -170,14 +209,27 @@ def _test_embedding_shuffle(test_case, dtype):
     global_ids = ids_tensor.numpy()
     global_data = data_tensor.numpy()
     np_embeddings = global_data[global_ids]
+
+    # Quantized numpy embedding.
+    if enable_quantized_comm:
+        np_embeddings = embedding_shuffle_quantize(np_embeddings, np_dtype)
+
     test_case.assertTrue(np.array_equal(embeddings.numpy(), np_embeddings))
 
 
-def _test_embedding_gradient_shuffle(test_case):
+def _test_embedding_gradient_shuffle(test_case, enable_quantize):
+    np_tolerance = 0
     batch_size = int(1024 / parallel_num)
     placement = flow.placement(type="cuda", ranks=list(range(parallel_num)))
     num_tables = 26
     embedding_size = 128
+    enable_quantized_comm = enable_quantize and embedding_size < 1025
+    if enable_quantized_comm:
+        np_tolerance = 0.5
+        os.environ["ONEFLOW_ONE_EMBEDDING_ENABLE_QUANTIZED_COMM"] = "1"
+    else:
+        np_tolerance = 1e-4
+        os.environ["ONEFLOW_ONE_EMBEDDING_ENABLE_QUANTIZED_COMM"] = "0"
     embedding_grad = np.random.rand(batch_size, num_tables, embedding_size).astype(
         np.float32
     )
@@ -230,11 +282,24 @@ def _test_embedding_gradient_shuffle(test_case):
     np_cur_rank_unique_embedding_grad = np.zeros((max_id, embedding_size))
     for k in range(np_num_unique):
         unique_id = np_unique_ids[k]
-        np_cur_rank_unique_embedding_grad[unique_id, :] = sum(
+        np_data = sum(
             global_embedding_grad.reshape(-1, embedding_size)[
                 np.where(global_ids.flatten() == unique_id)[0]
             ]
         )
+        # Quantize Embedding Gradient.
+        if enable_quantized_comm:
+            abs_max_factor = np.max(np.abs(np_data))
+            int8_factor = np.full(abs_max_factor.shape, 127.0, dtype=np.float32)
+            quantize_factor = int8_factor / abs_max_factor
+            np_data = np_data * quantize_factor
+            np_data = round_half_away_from_zero(np_data)
+            np_data = np_data.astype(np.int8)
+            np_data = np_data.astype(np.float32)
+            dequantize_factor = abs_max_factor / int8_factor
+            np_data = np_data * dequantize_factor
+
+        np_cur_rank_unique_embedding_grad[unique_id, :] = np_data
 
     cur_rank_num_ids = batch_size * num_tables * parallel_num
     of_unique_embedding_grad = np.zeros((max_id, embedding_size))
@@ -254,8 +319,8 @@ def _test_embedding_gradient_shuffle(test_case):
         np.allclose(
             of_unique_embedding_grad,
             np_cur_rank_unique_embedding_grad,
-            atol=1e-4,
-            rtol=1e-4,
+            atol=np_tolerance,
+            rtol=np_tolerance,
         ),
     )
 
@@ -273,11 +338,14 @@ class DataShuffleTestCase(flow.unittest.TestCase):
     def test_embedding_shuffle(test_case):
         arg_dict = OrderedDict()
         arg_dict["dtype"] = [flow.float32, flow.float16]
+        arg_dict["enable_quantize"] = [True, False]
+
         for kwargs in GenArgDict(arg_dict):
             _test_embedding_shuffle(test_case, **kwargs)
 
     def test_embedding_gradient_shuffle(test_case):
         arg_dict = OrderedDict()
+        arg_dict["enable_quantize"] = [True, False]
         for kwargs in GenArgDict(arg_dict):
             _test_embedding_gradient_shuffle(test_case, **kwargs)
 
