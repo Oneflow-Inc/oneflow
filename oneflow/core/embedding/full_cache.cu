@@ -238,7 +238,7 @@ class OrdinalEncoder {
  private:
   int device_index_{};
   Key* table_keys_;
-  Key* table_indices_;
+  Index* table_indices_;
   uint64_t capacity_;
   uint64_t table_capacity_;
   Index* table_size_{};
