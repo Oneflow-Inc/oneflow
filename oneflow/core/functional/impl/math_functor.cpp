@@ -651,6 +651,57 @@ class ReduceMeanFunctor {
   }
 };
 
+class MedianFunctor {
+ public:
+  MedianFunctor() {
+    op_ = CHECK_JUST(one::OpBuilder("median").Input("input").Output("output").Build());
+  }
+  Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x) const {
+    return OpInterpUtil::Dispatch<Tensor>(*op_, {x});
+  }
+
+ private:
+  std::shared_ptr<OpExpr> op_;
+};
+
+class MedianWithIndicesFunctor {
+ public:
+  MedianWithIndicesFunctor() {
+    op_ = CHECK_JUST(one::OpBuilder("median_with_indices")
+                         .Input("input")
+                         .Output("values")
+                         .Output("indices")
+                         .Build());
+  }
+  Maybe<TensorTuple> operator()(const std::shared_ptr<one::Tensor>& x, const int32_t& dim,
+                                const bool& keepdim) const {
+    MutableAttrMap attrs;
+    int32_t axis = dim;
+    if (axis < -x->ndim() || axis >= x->ndim()) {
+      return Error::IndexError() << "Dimension out of range (expected to be in range of ["
+                                 << -x->ndim() << ", " << x->ndim() - 1 << "], but got " << axis
+                                 << ")";
+    }
+    if (axis < 0) { axis += x->ndim(); }
+    std::shared_ptr<one::Tensor> tensor = x;
+    if (axis != x->ndim() - 1) {
+      tensor = JUST(functional::Squeeze(
+          JUST(functional::Transpose2dim(JUST(functional::Unsqueeze(x, -1)), axis, -1)),
+          std::vector<int32_t>({axis})));
+    }
+    std::shared_ptr<TensorTuple> result;
+    result = JUST(OpInterpUtil::Dispatch<TensorTuple>(*op_, {tensor}));
+    if (keepdim) {
+      result->at(0) = JUST(functional::Unsqueeze(result->at(0), axis));
+      result->at(1) = JUST(functional::Unsqueeze(result->at(1), axis));
+    }
+    return result;
+  }
+
+ private:
+  std::shared_ptr<OpExpr> op_;
+};
+
 class ReduceProdFunctor {
  public:
   ReduceProdFunctor() {
@@ -2769,6 +2820,8 @@ ONEFLOW_FUNCTION_LIBRARY(m) {
   m.add_functor<ReduceMeanFunctor>("ReduceMean");
   m.add_functor<ReduceMinFunctor>("ReduceMin");
   m.add_functor<MinFunctor, Min2Functor>("Min");
+  m.add_functor<MedianFunctor>("Median");
+  m.add_functor<MedianWithIndicesFunctor>("MedianWithIndices");
   m.add_functor<ReduceSumFunctor>("ReduceSum");
   m.add_functor<ReduceAllFunctor>("ReduceAll");
   m.add_functor<ReduceAnyFunctor>("ReduceAny");
