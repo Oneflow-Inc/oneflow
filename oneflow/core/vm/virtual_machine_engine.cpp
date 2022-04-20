@@ -148,7 +148,7 @@ std::string VirtualMachineEngine::GetLivelyInstructionListDebugString(int64_t de
 }
 
 void VirtualMachineEngine::LivelyInstructionListPushBack(Instruction* instruction) {
-  ++total_inserted_lively_instruction_cnt_;
+  ++total_inserted_instruction_cnt_;
   mut_lively_instruction_list()->PushBack(instruction);
 }
 
@@ -172,10 +172,9 @@ void VirtualMachineEngine::HandleLocalProbe() {
 
 intrusive::shared_ptr<Instruction> VirtualMachineEngine::LivelyInstructionListErase(
     Instruction* instruction) {
-  ++total_erased_lively_instruction_cnt_;
   auto ret = mut_lively_instruction_list()->Erase(instruction);
   static constexpr int kProbeInterval = 20;
-  if (unlikely(total_erased_lively_instruction_cnt_ % kProbeInterval) == 0) { HandleProbe(); }
+  if (unlikely(total_erased_instruction_cnt_ % kProbeInterval) == 0) { HandleProbe(); }
   return ret;
 }
 
@@ -575,6 +574,7 @@ void VirtualMachineEngine::Callback() {
       // Destruct garbage.
       return Maybe<void>::Ok();
     }));
+    ++total_erased_instruction_cnt_;
   }
 }
 

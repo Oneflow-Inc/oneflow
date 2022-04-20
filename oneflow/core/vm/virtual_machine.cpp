@@ -177,22 +177,21 @@ VirtualMachine::~VirtualMachine() {
 std::function<Maybe<bool>()> VirtualMachine::GetPredicatorNoMoreInstructionsFinished() {
   auto last_total_erased = std::make_shared<size_t>(0);
   auto* vm = Global<VirtualMachine>::Get();
-  if (vm != nullptr) { *last_total_erased = vm->vm().total_erased_lively_instruction_cnt(); }
+  if (vm != nullptr) { *last_total_erased = vm->vm().total_erased_instruction_cnt(); }
   return [last_total_erased]() -> Maybe<bool> {
     auto* vm = Global<VirtualMachine>::Get();
     CHECK_NOTNULL_OR_RETURN(vm) << "virtual machine not initialized.";
-    CHECK_OR_RETURN(!vm->NoMoreErasedLivelyInstructions(last_total_erased.get()))
+    CHECK_OR_RETURN(!vm->NoMoreErasedInstructions(last_total_erased.get()))
         << "blocking instructions\n"
         << vm->GetBlockingDebugString();
     return false;
   };
 }
 
-bool VirtualMachine::NoMoreErasedLivelyInstructions(
-    size_t* last_total_erased_lively_instruction_cnt) const {
-  size_t cnt = vm_->total_erased_lively_instruction_cnt();
-  bool no_more_erased = (*last_total_erased_lively_instruction_cnt == cnt);
-  *last_total_erased_lively_instruction_cnt = cnt;
+bool VirtualMachine::NoMoreErasedInstructions(size_t* last_total_erased_instruction_cnt) const {
+  size_t cnt = vm_->total_erased_instruction_cnt();
+  bool no_more_erased = (*last_total_erased_instruction_cnt == cnt);
+  *last_total_erased_instruction_cnt = cnt;
   return no_more_erased;
 }
 

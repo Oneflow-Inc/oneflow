@@ -70,14 +70,11 @@ class VirtualMachineEngine final : public intrusive::Base {
   }
   const Range& machine_id_range() const { return machine_id_range_; }
   std::size_t flying_instruction_cnt() const {
-    return pending_msg_list().thread_unsafe_size() + lively_instruction_list_.size();
+    return pending_msg_list().thread_unsafe_size() + local_pending_msg_list().size()
+           + (total_erased_instruction_cnt() - total_inserted_instruction_cnt());
   }
-  size_t total_inserted_lively_instruction_cnt() const {
-    return total_inserted_lively_instruction_cnt_;
-  }
-  size_t total_erased_lively_instruction_cnt() const {
-    return total_erased_lively_instruction_cnt_;
-  }
+  size_t total_inserted_instruction_cnt() const { return total_inserted_instruction_cnt_; }
+  size_t total_erased_instruction_cnt() const { return total_erased_instruction_cnt_; }
   void InsertProbe(const std::function<bool(VirtualMachineEngine*)>& ProbeFunction);
   const ActiveStreamList& active_stream_list() const { return active_stream_list_; }
   const ThreadCtxList& thread_ctx_list() const { return thread_ctx_list_; }
@@ -188,8 +185,8 @@ class VirtualMachineEngine final : public intrusive::Base {
         local_garbage_msg_list_(),
         ready_instruction_list_(),
         lively_instruction_list_(),
-        total_inserted_lively_instruction_cnt_(0),
-        total_erased_lively_instruction_cnt_(0),
+        total_inserted_instruction_cnt_(0),
+        total_erased_instruction_cnt_(0),
         probe_mutex_(),
         probe_list_(&probe_mutex_),
         local_probe_list_(),
@@ -214,8 +211,8 @@ class VirtualMachineEngine final : public intrusive::Base {
   InstructionMsgList local_garbage_msg_list_;
   ReadyInstructionList ready_instruction_list_;
   LivelyInstructionList lively_instruction_list_;
-  size_t total_inserted_lively_instruction_cnt_;
-  size_t total_erased_lively_instruction_cnt_;
+  size_t total_inserted_instruction_cnt_;
+  std::atomic<size_t> total_erased_instruction_cnt_;
   std::mutex probe_mutex_;
   intrusive::MutexedList<INTRUSIVE_FIELD(Probe, Probe::probe_hook_)> probe_list_;
   intrusive::List<INTRUSIVE_FIELD(Probe, Probe::probe_hook_)> local_probe_list_;
