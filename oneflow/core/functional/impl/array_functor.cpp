@@ -948,44 +948,20 @@ class ArgSortFunctor {
 class SearchSortedFunctor {
  public:
   SearchSortedFunctor() {
-    sorter_op_ = CHECK_JUST(one::OpBuilder("searchsorted")
+    op_ = CHECK_JUST(one::OpBuilder("searchsorted")
                                 .Input("sorted_sequence")
                                 .Input("values")
-                                .Input("sorter")
                                 .Output("out")
                                 .Build());
-    no_sorter_op_ = CHECK_JUST(one::OpBuilder("searchsorted")
-                                   .Input("sorted_sequence")
-                                   .Input("values")
-                                   .Output("out")
-                                   .Build());
   }
   Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& sorted_sequence,
-                           const std::shared_ptr<one::Tensor>& values, bool out_int32, bool right,
-                           const std::string& side, const Optional<one::Tensor>& sorter) const {
+                           const std::shared_ptr<one::Tensor>& values, bool out_int32,
+                           bool right) const {
     // checks
-    CHECK_OR_RETURN(side == "right" || side == "left")
-        << "for searchsorted op, side can only be 'left' or 'right', but got " << side;
-    CHECK_OR_RETURN(!right || side == "right")
-        << "side and right can't be set to opposites, got side of left while right was True";
     CHECK_OR_RETURN(JUST(sorted_sequence->device())->type() == JUST(values->device())->type())
         << "for searchsorted op, sorted_sequence and values tensors should have same device type "
         << "but got sorted_sequence tensor device type " << JUST(sorted_sequence->device())->type()
         << " and values tensor device type " << JUST(values->device())->type();
-    if (sorter) {
-      CHECK_OR_RETURN(JUST(sorted_sequence->device())->type()
-                      == JUST(JUST(sorter)->device())->type())
-          << "for searchsorted op, sorter and sorted_sequence tensors should have same device "
-             "tyep, "
-          << "but got sorter tensor device type " << JUST(JUST(sorter)->device())->type()
-          << " and sorted_sequence tensor device type " << JUST(sorted_sequence->device())->type();
-      CHECK_OR_RETURN(*sorted_sequence->shape() == *JUST(sorter)->shape())
-          << "for searchsorted op, sorted_sequence and sorter must have the same size, but got "
-          << "sorted_sequence tensor " << *sorted_sequence->shape() << " and got sorter tensor "
-          << *JUST(sorter)->shape();
-      CHECK_OR_RETURN(JUST(sorter)->dtype()->data_type() == DataType::kInt64)
-          << "for searchsorted op, sorter must be a tensor of long";
-    }
     CHECK_OR_RETURN(values->shape()->NumAxes() > 0)
         << "for searchsorted op, input values tensor should have positive dimension";
     CHECK_OR_RETURN(sorted_sequence->shape()->NumAxes() > 0)
@@ -1003,54 +979,25 @@ class SearchSortedFunctor {
     }
     MutableAttrMap attrs;
     JUST(attrs.SetAttr<bool>("out_int32", out_int32));
-    right = (side == "right") || right;
     JUST(attrs.SetAttr<bool>("right", right));
-    if (sorter) {
-      return OpInterpUtil::Dispatch<Tensor>(*sorter_op_, {sorted_sequence, values, JUST(sorter)},
-                                            attrs);
-    } else {
-      return OpInterpUtil::Dispatch<Tensor>(*no_sorter_op_, {sorted_sequence, values}, attrs);
-    }
+    return OpInterpUtil::Dispatch<Tensor>(*op_, {sorted_sequence, values}, attrs);
   }
 
  private:
-  std::shared_ptr<OpExpr> sorter_op_;
-  std::shared_ptr<OpExpr> no_sorter_op_;
+  std::shared_ptr<OpExpr> op_;
 };
 
 class SearchSortedScalarFunctor {
  public:
   SearchSortedScalarFunctor() {
-    sorter_op_ = CHECK_JUST(one::OpBuilder("searchsorted_scalar")
+    op_ = CHECK_JUST(one::OpBuilder("searchsorted_scalar")
                                 .Input("sorted_sequence")
-                                .Input("sorter")
                                 .Output("out")
                                 .Build());
-    no_sorter_op_ = CHECK_JUST(
-        one::OpBuilder("searchsorted_scalar").Input("sorted_sequence").Output("out").Build());
   }
   Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& sorted_sequence,
-                           const Scalar& values, bool out_int32, bool right,
-                           const std::string& side, const Optional<one::Tensor>& sorter) const {
+                           const Scalar& values, bool out_int32, bool right) const {
     // checks
-    CHECK_OR_RETURN(side == "right" || side == "left")
-        << "for searchsorted op, side can only be 'left' or 'right', but got " << side;
-    CHECK_OR_RETURN(!right || side == "right")
-        << "side and right can't be set to opposites, got side of left while right was True";
-    if (sorter) {
-      CHECK_OR_RETURN(JUST(sorted_sequence->device())->type()
-                      == JUST(JUST(sorter)->device())->type())
-          << "for searchsorted op, sorter and sorted_sequence tensors should have same device "
-             "tyep, "
-          << "but got sorter tensor device type " << JUST(JUST(sorter)->device())->type()
-          << " and sorted_sequence tensor device type " << JUST(sorted_sequence->device())->type();
-      CHECK_OR_RETURN(*sorted_sequence->shape() == *JUST(sorter)->shape())
-          << "for searchsorted op, boundary and sorter must have the same size, but got "
-          << "sorted_sequence tensor " << *sorted_sequence->shape() << " and got sorter tensor "
-          << *JUST(sorter)->shape();
-      CHECK_OR_RETURN(JUST(sorter)->dtype()->data_type() == DataType::kInt64)
-          << "for searchsorted op, sorter must be a tensor of long";
-    }
     CHECK_OR_RETURN(sorted_sequence->shape()->NumAxes() == 1)
         << "for searchsorted op, input value can be a scalar only when sorted_sequence tensor "
         << "dimension is 1, but we got sorted_sequence dim(" << sorted_sequence->shape()->NumAxes()
@@ -1063,7 +1010,6 @@ class SearchSortedScalarFunctor {
     }
     MutableAttrMap attrs;
     JUST(attrs.SetAttr<bool>("out_int32", out_int32));
-    right = (side == "right") || right;
     JUST(attrs.SetAttr<bool>("right", right));
     bool is_values_float = values.IsFloatingPoint();
     if (is_values_float) {
@@ -1073,16 +1019,11 @@ class SearchSortedScalarFunctor {
       int64_t values_tmp = JUST(values.As<int64_t>());
       JUST(attrs.SetAttr<double>("values", values_tmp));
     }
-    if (sorter) {
-      return OpInterpUtil::Dispatch<Tensor>(*sorter_op_, {sorted_sequence, JUST(sorter)}, attrs);
-    } else {
-      return OpInterpUtil::Dispatch<Tensor>(*no_sorter_op_, {sorted_sequence}, attrs);
-    }
+    return OpInterpUtil::Dispatch<Tensor>(*op_, {sorted_sequence}, attrs);
   }
 
  private:
-  std::shared_ptr<OpExpr> sorter_op_;
-  std::shared_ptr<OpExpr> no_sorter_op_;
+  std::shared_ptr<OpExpr> op_;
 };
 
 class GatherNdFunctor {

@@ -21,11 +21,13 @@ add_docstr(
     """
     searchsorted() -> oneflow.Tensor
 
-    Find the indices from the innermost dimension of sorted_sequence such that, if the corresponding values in
-    values were inserted before the indices, when sorted, the order of the corresponding innermost dimension
-    within sorted_sequence would be preserved. Return a new tensor with the same size as values. If right is
-    False or side is left (default), then the left boundary of sorted_sequence is closed. More formally, the
-    returned index satisfies the following rules:
+    The documentation is referenced from: https://pytorch.org/docs/1.10/generated/torch.searchsorted.html?highlight=searchsorted
+
+    Find the indices from the innermost dimension of sorted_sequence such that, if the corresponding values
+    in values were inserted before the indices, the order of the corresponding innermost dimension within
+    sorted_sequence would be preserved. Return a new tensor with the same size as values. If right is False
+    (default), then the left boundary of sorted_sequence is closed. More formally, the returned index
+    satisfies the following rules:
 
     =================  =========  ==========================================================================
     sorted_sequence     right      returned index satisfies
@@ -40,8 +42,7 @@ add_docstr(
 
     Args:
         sorted_sequence (Tensor): N-D or 1-D tensor, containing monotonically increasing sequence on the
-                                innermost dimension unless sorter is provided, in which case the sequence does
-                                not need to be sorted.
+                                innermost dimension.
         values (Tensor or Scalar): N-D tensor or a Scalar containing the search value(s).
         out_int32 (bool optional): indicate the output data type. torch.int32 if True, torch.int64 otherwise.
                                 Default value is False, i.e. default output data type is torch.int64.
@@ -51,14 +52,7 @@ add_docstr(
                                 pass the last index of the innermost dimension). In other words, if False, gets
                                 the lower bound index for each value in values on the corresponding innermost
                                 dimension of the sorted_sequence. If True, gets the upper bound index instead.
-                                Default value is False. side does the same and is preferred. It will error if
-                                side is set to “left” while this is True.
-        side (string, optional): the same as right but preferred. “left” corresponds to False for right and
-                                “right” corresponds to True for right. It will error if this is set to “left”
-                                while right is True.
-        sorter (LongTensor, optional): if provided, a tensor matching the shape of the unsorted sorted_sequence
-                                containing a sequence of indices that sort it in the ascending order on the
-                                innermost dimension.
+                                Default value is False.
 
     For example:
 
@@ -76,7 +70,7 @@ add_docstr(
         >>> flow.searchsorted(sorted_sequence, values)
         tensor([[1, 3, 4],
                 [1, 2, 4]], dtype=oneflow.int64)
-        >>> flow.searchsorted(sorted_sequence, values, side='right')
+        >>> flow.searchsorted(sorted_sequence, values, right=True)
         tensor([[2, 3, 5],
                 [1, 3, 4]], dtype=oneflow.int64)
         >>> sorted_sequence_1d = flow.tensor([1, 3, 5, 7, 9])

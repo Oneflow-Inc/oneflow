@@ -17,11 +17,11 @@ limitations under the License.
 #include "oneflow/core/kernel/new_kernel_util.h"
 
 template<typename T, typename K>
-OF_DEVICE_FUNC K cus_lower_bound(K start, K end, const T val, const T* bd, const int64_t* sort) {
+OF_DEVICE_FUNC K cus_lower_bound(K start, K end, const T val, const T* bd) {
   const K orig_start = start;
   while (start < end) {
     const K mid = start + ((end - start) >> 1);
-    const T mid_val = sort ? bd[sort[mid] + orig_start] : bd[mid];
+    const T mid_val = bd[mid];
     if (!(mid_val >= val)) {
       start = mid + 1;
     } else {
@@ -32,11 +32,11 @@ OF_DEVICE_FUNC K cus_lower_bound(K start, K end, const T val, const T* bd, const
 }
 
 template<typename T, typename K>
-OF_DEVICE_FUNC K cus_upper_bound(K start, K end, const T val, const T* bd, const int64_t* sort) {
+OF_DEVICE_FUNC K cus_upper_bound(K start, K end, const T val, const T* bd) {
   const K orig_start = start;
   while (start < end) {
     const K mid = start + ((end - start) >> 1);
-    const T mid_val = sort ? bd[sort[mid] + orig_start] : bd[mid];
+    const T mid_val = bd[mid];
     if (!(mid_val > val)) {
       start = mid + 1;
     } else {

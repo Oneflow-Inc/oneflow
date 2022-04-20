@@ -165,15 +165,12 @@ class TestSearch_Sorted(flow.unittest.TestCase):
         device = random_device()
         sorted_sequence = random_tensor(ndim=2, dim0=2, dim1=3).to(device)
         values = random_tensor(ndim=2, dim0=2).to(device)
-        sorter = random_tensor(ndim=2, dim0=2, dim1=3, dtype=int).to(device)
         right = oneof(True, False)
         y = torch.searchsorted(
             sorted_sequence,
             values,
             out_int32=oneof(True, False),
             right=right,
-            side="right" if right == True else "left",
-            sorter=sorter,
         )
         return y
 

@@ -25,14 +25,14 @@ template<typename T, typename K>
 __global__ void DoSearchSortedLogical(int32_t instance_num, bool is_sequence_1d,
                                       K values_shape_last, K sequence_shape_last, bool right,
                                       const T* values_ptr, const T* sequence_ptr,
-                                      const int64_t* sorter_ptr, K* out_ptr) {
+                                      K* out_ptr) {
   CUDA_1D_KERNEL_LOOP(i, instance_num) {
     K start_bd = is_sequence_1d ? 0 : i / values_shape_last * sequence_shape_last;
     K end_bd = start_bd + sequence_shape_last;
     K pos = !right
-                ? cus_lower_bound<T, K>(start_bd, end_bd, values_ptr[i], sequence_ptr, sorter_ptr)
+                ? cus_lower_bound<T, K>(start_bd, end_bd, values_ptr[i], sequence_ptr)
                       - start_bd
-                : cus_upper_bound<T, K>(start_bd, end_bd, values_ptr[i], sequence_ptr, sorter_ptr)
+                : cus_upper_bound<T, K>(start_bd, end_bd, values_ptr[i], sequence_ptr)
                       - start_bd;
     out_ptr[i] = pos;
   }
@@ -40,12 +40,11 @@ __global__ void DoSearchSortedLogical(int32_t instance_num, bool is_sequence_1d,
 
 template<typename T, typename K>
 __global__ void DoSearchSortedScalarLogical(K sequence_shape_last, bool right, const T values,
-                                            const T* sequence_ptr, const int64_t* sorter_ptr,
-                                            K* out_ptr) {
+                                            const T* sequence_ptr, K* out_ptr) {
   CUDA_1D_KERNEL_LOOP(i, 1) {
     K pos = !right
-                ? cus_lower_bound<T, K>(0, sequence_shape_last, values, sequence_ptr, sorter_ptr)
-                : cus_upper_bound<T, K>(0, sequence_shape_last, values, sequence_ptr, sorter_ptr);
+                ? cus_lower_bound<T, K>(0, sequence_shape_last, values, sequence_ptr)
+                : cus_upper_bound<T, K>(0, sequence_shape_last, values, sequence_ptr);
     out_ptr[0] = pos;
   }
 }
@@ -61,14 +60,11 @@ class GpuSearchSortedKernel final : public user_op::OpKernel {
   void Compute(user_op::KernelComputeContext* ctx) const override {
     const user_op::Tensor* sorted_sequence = ctx->Tensor4ArgNameAndIndex("sorted_sequence", 0);
     const user_op::Tensor* values = ctx->Tensor4ArgNameAndIndex("values", 0);
-    const user_op::Tensor* sorter = ctx->Tensor4ArgNameAndIndex("sorter", 0);
 
     user_op::Tensor* out = ctx->Tensor4ArgNameAndIndex("out", 0);
     const bool& right = ctx->Attr<bool>("right");
     const T* values_ptr = values->dptr<T>();
     const T* sequence_ptr = sorted_sequence->dptr<T>();
-    const int64_t* sorter_ptr = nullptr;
-    if (sorter) { sorter_ptr = sorter->dptr<int64_t>(); }
     K* out_ptr = out->mut_dptr<K>();
     const int32_t instance_num = values->shape().elem_cnt();
     bool is_values_scalar = (values->shape().elem_cnt() == 1 && values->shape().NumAxes() == 0);
@@ -77,7 +73,7 @@ class GpuSearchSortedKernel final : public user_op::OpKernel {
     K sequence_shape_last = sorted_sequence->shape().At(sorted_sequence->shape().NumAxes() - 1);
     RUN_CUDA_KERNEL((DoSearchSortedLogical<T, K>), ctx->stream(), instance_num, instance_num,
                     is_sequence_1d, values_shape_last, sequence_shape_last, right, values_ptr,
-                    sequence_ptr, sorter_ptr, out_ptr);
+                    sequence_ptr, out_ptr);
   }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
@@ -105,9 +101,6 @@ class GpuSearchSortedScalarKernel final : public user_op::OpKernel {
   using user_op::OpKernel::Compute;
   void Compute(user_op::KernelComputeContext* ctx) const override {
     const user_op::Tensor* sorted_sequence = ctx->Tensor4ArgNameAndIndex("sorted_sequence", 0);
-    const user_op::Tensor* sorter = ctx->Tensor4ArgNameAndIndex("sorter", 0);
-    const int64_t* sorter_ptr = nullptr;
-    if (sorter) { sorter_ptr = sorter->dptr<int64_t>(); }
     user_op::Tensor* out = ctx->Tensor4ArgNameAndIndex("out", 0);
 
     const bool& right = ctx->Attr<bool>("right");
@@ -117,7 +110,7 @@ class GpuSearchSortedScalarKernel final : public user_op::OpKernel {
     K* out_ptr = out->mut_dptr<K>();
     K sequence_shape_last = sorted_sequence->shape().At(0);
     RUN_CUDA_KERNEL((DoSearchSortedScalarLogical<T, K>), ctx->stream(), 1, sequence_shape_last,
-                    right, values, sequence_ptr, sorter_ptr, out_ptr);
+                    right, values, sequence_ptr, out_ptr);
   }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };

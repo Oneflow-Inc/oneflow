@@ -183,8 +183,8 @@
 - name: "searchsorted"
   signature:
     [
-      'Tensor (Tensor sorted_sequence, Tensor values, Bool out_int32=False, Bool right=False, String side="left", Tensor sorter=None) => SearchSorted',
-      'Tensor (Tensor sorted_sequence, Scalar values, Bool out_int32=False, Bool right=False, String side="left", Tensor sorter=None) => SearchSortedScalar',
+      'Tensor (Tensor sorted_sequence, Tensor values, Bool out_int32=False, Bool right=False) => SearchSorted',
+      'Tensor (Tensor sorted_sequence, Scalar values, Bool out_int32=False, Bool right=False) => SearchSortedScalar',
     ]
   bind_python: True
 

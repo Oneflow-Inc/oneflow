@@ -29,13 +29,10 @@ class CpuSearchSortedKernel final : public user_op::OpKernel {
   void Compute(user_op::KernelComputeContext* ctx) const override {
     const user_op::Tensor* sorted_sequence = ctx->Tensor4ArgNameAndIndex("sorted_sequence", 0);
     const user_op::Tensor* values = ctx->Tensor4ArgNameAndIndex("values", 0);
-    const user_op::Tensor* sorter = ctx->Tensor4ArgNameAndIndex("sorter", 0);
     user_op::Tensor* out = ctx->Tensor4ArgNameAndIndex("out", 0);
     const bool& right = ctx->Attr<bool>("right");
     const T* values_ptr = values->dptr<T>();
     const T* sequence_ptr = sorted_sequence->dptr<T>();
-    const int64_t* sorter_ptr = nullptr;
-    if (sorter) { sorter_ptr = sorter->dptr<int64_t>(); }
     K* out_ptr = out->mut_dptr<K>();
     const int32_t instance_num = values->shape().elem_cnt();
     bool is_values_scalar = (values->shape().elem_cnt() == 1 && values->shape().NumAxes() == 0);
@@ -46,9 +43,9 @@ class CpuSearchSortedKernel final : public user_op::OpKernel {
       K start_bd = is_sequence_1d ? 0 : i / values_shape_last * sequence_shape_last;
       K end_bd = start_bd + sequence_shape_last;
       K pos = !right
-                  ? cus_lower_bound<T, K>(start_bd, end_bd, values_ptr[i], sequence_ptr, sorter_ptr)
+                  ? cus_lower_bound<T, K>(start_bd, end_bd, values_ptr[i], sequence_ptr)
                         - start_bd
-                  : cus_upper_bound<T, K>(start_bd, end_bd, values_ptr[i], sequence_ptr, sorter_ptr)
+                  : cus_upper_bound<T, K>(start_bd, end_bd, values_ptr[i], sequence_ptr)
                         - start_bd;
 
       out_ptr[i] = pos;
@@ -79,9 +76,6 @@ class CpuSearchSortedScalarKernel final : public user_op::OpKernel {
  private:
   void Compute(user_op::KernelComputeContext* ctx) const override {
     const user_op::Tensor* sorted_sequence = ctx->Tensor4ArgNameAndIndex("sorted_sequence", 0);
-    const user_op::Tensor* sorter = ctx->Tensor4ArgNameAndIndex("sorter", 0);
-    const int64_t* sorter_ptr = nullptr;
-    if (sorter) { sorter_ptr = sorter->dptr<int64_t>(); }
     user_op::Tensor* out = ctx->Tensor4ArgNameAndIndex("out", 0);
 
     const bool& right = ctx->Attr<bool>("right");
@@ -92,8 +86,8 @@ class CpuSearchSortedScalarKernel final : public user_op::OpKernel {
     K sequence_shape_last = sorted_sequence->shape().At(0);
 
     K pos = !right
-                ? cus_lower_bound<T, K>(0, sequence_shape_last, values, sequence_ptr, sorter_ptr)
-                : cus_upper_bound<T, K>(0, sequence_shape_last, values, sequence_ptr, sorter_ptr);
+                ? cus_lower_bound<T, K>(0, sequence_shape_last, values, sequence_ptr)
+                : cus_upper_bound<T, K>(0, sequence_shape_last, values, sequence_ptr);
 
     out_ptr[0] = pos;
   }

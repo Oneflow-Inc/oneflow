@@ -2790,8 +2790,8 @@ def OneFlow_ImageResizeToFixedOp : OneFlow_BaseOp<"image_resize_to_fixed", [NoSi
 #endif // GET_ONEFLOW_IMAGE_OP_DEFINITIONS
 
 // Group: INDICES
-// arg_sort, argmax, argwhere, batch_gather, dim_gather, dim_scatter_add, dim_scatter_add_like, dim_scatter_add_scalar, dim_scatter_mul, dim_scatter_mul_scalar, dim_scatter_update, dim_scatter_update_scalar, gather, gather_nd, generate_random_batch_permutation_indices, image_target_resize, logical_slice, scatter_nd, scatter_nd_like, slice, slice_grad, tensor_scatter_nd_add, tensor_scatter_nd_update, unsorted_batch_segment_sum, unsorted_segment_sum, unsorted_segment_sum_like, where, where_scalar_x, where_scalar_xy, where_scalar_y, searchsorted
-// Total: 31
+// arg_sort, argmax, argwhere, batch_gather, dim_gather, dim_scatter_add, dim_scatter_add_like, dim_scatter_add_scalar, dim_scatter_mul, dim_scatter_mul_scalar, dim_scatter_update, dim_scatter_update_scalar, gather, gather_nd, generate_random_batch_permutation_indices, image_target_resize, logical_slice, scatter_nd, scatter_nd_like, slice, slice_grad, tensor_scatter_nd_add, tensor_scatter_nd_update, unsorted_batch_segment_sum, unsorted_segment_sum, unsorted_segment_sum_like, where, where_scalar_x, where_scalar_xy, where_scalar_y, searchsorted, searchsorted_scalar
+// Total: 32
 
 #ifdef GET_ONEFLOW_INDICES_OP_DEFINITIONS
 
@@ -3128,27 +3128,6 @@ def OneFlow_ScatterNdLikeOp : OneFlow_BaseOp<"scatter_nd_like", [NoSideEffect, D
   let has_data_type_infer_fn = 1;
 }
 
-def OneFlow_SearchSortedScalarOp : OneFlow_BaseOp<"searchsorted_scalar", [NoSideEffect, NoGrad, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
-  let input = (ins
-    OneFlow_Tensor:$sorted_sequence,
-    Optional<OneFlow_Tensor>:$sorter
-  );
-  let output = (outs
-    OneFlow_Tensor:$out
-  );
-  let attrs = (ins
-    DefaultValuedAttr<BoolAttr, "false">:$out_int32,
-    DefaultValuedAttr<BoolAttr, "false">:$right,
-    DefaultValuedAttr<F32Attr, "0.">:$values,
-    StrAttr:$side
-  );
-  let has_check_fn = 1;
-  let has_logical_tensor_desc_infer_fn = 1;
-  let has_physical_tensor_desc_infer_fn = 1;
-  let has_get_sbp_fn = 1;
-  let has_data_type_infer_fn = 1;
-}
-
 def OneFlow_SliceOp : OneFlow_BaseOp<"slice", [NoSideEffect, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
     OneFlow_Tensor:$x
@@ -3368,8 +3347,25 @@ def OneFlow_WhereScalarYOp : OneFlow_BaseOp<"where_scalar_y", [NoSideEffect, Dec
 def OneFlow_SearchSortedOp : OneFlow_BaseOp<"searchsorted", [NoSideEffect, NoGrad, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
   let input = (ins
     OneFlow_Tensor:$sorted_sequence,
-    OneFlow_Tensor:$values,
-    Optional<OneFlow_Tensor>:$sorter
+    OneFlow_Tensor:$values
+  );
+  let output = (outs
+    OneFlow_Tensor:$out
+  );
+  let attrs = (ins
+    DefaultValuedAttr<BoolAttr, "false">:$out_int32,
+    DefaultValuedAttr<BoolAttr, "false">:$right
+  );
+  let has_check_fn = 1;
+  let has_logical_tensor_desc_infer_fn = 1;
+  let has_physical_tensor_desc_infer_fn = 1;
+  let has_get_sbp_fn = 1;
+  let has_data_type_infer_fn = 1;
+}
+
+def OneFlow_SearchSortedScalarOp : OneFlow_BaseOp<"searchsorted_scalar", [NoSideEffect, NoGrad, DeclareOpInterfaceMethods<UserOpCompatibleInterface>]> {
+  let input = (ins
+    OneFlow_Tensor:$sorted_sequence
   );
   let output = (outs
     OneFlow_Tensor:$out
@@ -3377,7 +3373,7 @@ def OneFlow_SearchSortedOp : OneFlow_BaseOp<"searchsorted", [NoSideEffect, NoGra
   let attrs = (ins
     DefaultValuedAttr<BoolAttr, "false">:$out_int32,
     DefaultValuedAttr<BoolAttr, "false">:$right,
-    StrAttr:$side
+    DefaultValuedAttr<F32Attr, "0.">:$values
   );
   let has_check_fn = 1;
   let has_logical_tensor_desc_infer_fn = 1;
