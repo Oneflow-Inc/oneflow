@@ -54,13 +54,15 @@ void EmbeddingManager::CreateKeyValueStore(const KeyValueStoreOptions& key_value
   options.table_options.physical_block_size =
       key_value_store_options.PersistentTablePhysicalBlockSize();
   options.table_options.target_chunk_size_mb = 4 * 1024;
+  options.table_options.capacity_hint = key_value_store_options.PersistentTableCapacityHint();
   store = NewPersistentTableKeyValueStore(options);
   const std::vector<CacheOptions>& cache_options = key_value_store_options.GetCachesOptions();
   for (int i = cache_options.size() - 1; i >= 0; --i) {
     std::unique_ptr<Cache> cache = NewCache(cache_options.at(i));
     store = NewCachedKeyValueStore(std::move(store), std::move(cache));
   }
-  key_value_store_map_.emplace(map_key, std::move(store));
+  CHECK(key_value_store_map_.emplace(map_key, std::move(store)).second)
+      << "Can't create an embedding with same name of an existing embedding, the name: " << name;
 }
 
 void EmbeddingManager::SaveSnapshot(const std::string& embedding_name, int64_t local_rank_id,

@@ -14,6 +14,8 @@ mkdir -p $test_tmp_dir
 cp -r $test_dir $test_tmp_dir
 cd ${test_tmp_dir}/$(basename $test_dir)
 
+export ONEFLOW_DEBUG_MODE=1
+
 for file in $(ls ${PWD}/test_*.py)
 do
     if test -f $file
@@ -31,3 +33,5 @@ do
         fi
     fi
 done
+
+unset ONEFLOW_DEBUG_MODE
