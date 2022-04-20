@@ -60,8 +60,6 @@ def as_tensor(data, dtype=None, device=None):
                 else:
                     data = flow.tensor(data, dtype=dtype, device=device)
     else:
-        # handle tuple, list, scalar
-        data = np.array(data)
         # not shared memory in this case
         data = flow.tensor(data)
         if device is not None:

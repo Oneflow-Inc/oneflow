@@ -147,10 +147,23 @@ Maybe<Tensor> MakeLocalTensorFromData(PyObject* data, const Optional<Symbol<DTyp
     // Only NPY_CORDER is supported, and returns a new C-style contiguous array.
     array = PyArray_NewCopy((PyArrayObject*)data, NPY_CORDER);
   } else {
+    // PyArray_FromAny steals a reference to np_dtype object, so no need to decref it.
+    PyArray_Descr* np_dtype =
+        dtype.has_value()
+            ? PyArray_DescrFromType(JUST(numpy::OFDataTypeToNumpyType(JUST(dtype)->data_type())))
+            : nullptr;
     // NPY_ARRAY_DEFAULT is NPY_ARRAY_C_CONTIGUOUS | NPY_ARRAY_BEHAVED, so the
     // array with NPY_ARRAY_DEFAULT flag is C-style contiguous.
-    array = PyArray_FromAny(data, nullptr, 0, 0, NPY_ARRAY_DEFAULT | NPY_ARRAY_ENSURECOPY, nullptr);
+    array =
+        PyArray_FromAny(data, np_dtype, 0, 0, NPY_ARRAY_DEFAULT | NPY_ARRAY_ENSURECOPY, nullptr);
     if (!array) { return Error::RuntimeError() << "Can not convert input data to a numpy array."; }
+    int np_array_type = PyArray_TYPE(reinterpret_cast<PyArrayObject*>(array));
+    // Cast to float if data is double sequence, rather than numpy array.
+    if (np_array_type == NPY_DOUBLE && np_dtype == nullptr) {
+      PyObject* fp32_array = PyArray_Cast(reinterpret_cast<PyArrayObject*>(array), NPY_FLOAT);
+      Py_DECREF(array);
+      array = fp32_array;
+    }
   }
   auto* np_arr = reinterpret_cast<PyArrayObject*>(array);
   const npy_intp* dims_ptr = PyArray_SHAPE(np_arr);
@@ -168,14 +181,6 @@ Maybe<Tensor> MakeLocalTensorFromData(PyObject* data, const Optional<Symbol<DTyp
   JUST(SwitchCopyMirroredTensorFromUntypedArray(SwitchCase(data_type), tensor, array));
 
   Py_DECREF(array);
-  // Cast to float if data is double sequence, rather than numpy array.
-  Symbol<DType> dtype_;
-  if (dtype) {
-    dtype_ = JUST(dtype);
-  } else if (!dtype && data_type == DataType::kDouble && !PyArray_Check(data)) {
-    dtype_ = DType::Float();
-  }
-  if (dtype_) { tensor = JUST(functional::Cast(tensor, dtype_)); }
   JUST(tensor->set_requires_grad(requires_grad));
   return tensor;
 }
