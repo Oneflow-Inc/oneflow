@@ -34,9 +34,7 @@ def _check_sbp(sbp):
     return sbp
 
 
-def local_to_global_op(
-    input, placement=None, sbp=None, *, check_meta=True
-):
+def local_to_global_op(input, placement=None, sbp=None, *, check_meta=True):
     assert isinstance(input, Tensor)
     assert input.is_local, "input must be a local tensor"
     if placement is None or sbp is None:
