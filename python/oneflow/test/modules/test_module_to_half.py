@@ -23,8 +23,8 @@ import oneflow.unittest
 class TestModuleToHalf(flow.unittest.TestCase):
     @unittest.skipIf(os.getenv("ONEFLOW_TEST_CPU_ONLY"), "only test cpu cases")
     def test_module_to_half(test_case):
-        input = flow.randn(10,10).to(flow.float16).cuda()
-        model = flow.nn.Linear(10,20).half().cuda()
+        input = flow.randn(10, 10).to(flow.float16).cuda()
+        model = flow.nn.Linear(10, 20).half().cuda()
         output = model(input)
         test_case.assertEqual(output.dtype, flow.float16)
 
