@@ -25,14 +25,14 @@ limitations under the License.
 #include "mlir/Conversion/LinalgToLLVM/LinalgToLLVM.h"
 #include "mlir/Conversion/MemRefToLLVM/MemRefToLLVM.h"
 #include "mlir/Conversion/ReconcileUnrealizedCasts/ReconcileUnrealizedCasts.h"
-#include "mlir/Conversion/StandardToLLVM/ConvertStandardToLLVMPass.h"
+#include "mlir/Conversion/FuncToLLVM/ConvertFuncToLLVMPass.h"
 #include "mlir/Conversion/TosaToLinalg/TosaToLinalg.h"
 #include "mlir/Dialect/Affine/IR/AffineOps.h"
 #include "mlir/Dialect/Linalg/Passes.h"
 #include "mlir/Dialect/MemRef/IR/MemRef.h"
 #include "mlir/Dialect/SCF/Passes.h"
-#include "mlir/Dialect/StandardOps/IR/Ops.h"
-#include "mlir/Dialect/StandardOps/Transforms/Passes.h"
+#include "mlir/Dialect/Func/IR/FuncOps.h"
+#include "mlir/Dialect/Func/Transforms/Passes.h"
 #include "mlir/Dialect/Tensor/Transforms/Passes.h"
 #include "mlir/Dialect/Tosa/IR/TosaOps.h"
 #include "mlir/IR/BuiltinAttributes.h"
@@ -493,24 +493,24 @@ void BroadcastMulOp::getCanonicalizationPatterns(RewritePatternSet& results, MLI
 void AddLowerToLinalgMemRefPasses(PassManager& pm) {
   pm.addPass(createLowerOneFlowToTosaPass());            // lower-oneflow-to-tosa
   pm.addPass(createCSEPass());                           // cse
-  pm.addNestedPass<FuncOp>(tosa::createTosaToLinalg());  // tosa-to-linalg-on-tensors
+  pm.addNestedPass<mlir::func::FuncOp>(tosa::createTosaToLinalg());  // tosa-to-linalg-on-tensors
   auto p = createLinalgElementwiseOpFusionPass();
   if (p->initializeOptions("allow-folding-unit-dim-reshapes=true").failed()) exit(1);
-  pm.addNestedPass<FuncOp>(std::move(p));                           // linalg-fuse-elementwise-ops
-  pm.addNestedPass<FuncOp>(createLinalgBufferizePass());            // linalg-bufferize
-  pm.addNestedPass<FuncOp>(createTensorBufferizePass());            // tensor-bufferize
+  pm.addNestedPass<mlir::func::FuncOp>(std::move(p));                           // linalg-fuse-elementwise-ops
+  pm.addNestedPass<mlir::func::FuncOp>(createLinalgBufferizePass());            // linalg-bufferize
+  pm.addNestedPass<mlir::func::FuncOp>(createTensorBufferizePass());            // tensor-bufferize
   pm.addPass(createFuncBufferizePass());                            // func-bufferize
   pm.addPass(bufferization::createBufferResultsToOutParamsPass());  // buffer-results-to-out-params
   pm.addPass(createCanonicalizerPass());                            // canonicalize
-  pm.addNestedPass<FuncOp>(
+  pm.addNestedPass<mlir::func::FuncOp>(
       mlir::bufferization::createFinalizingBufferizePass());  // finalizing-bufferize
 }
 
 LogicalResult LowerModuleToLLVM(mlir::MLIRContext* context, ModuleOp module) {
   mlir::PassManager pm(context);
   AddLowerToLinalgMemRefPasses(pm);
-  pm.addNestedPass<FuncOp>(createConvertLinalgToLoopsPass());  // convert-linalg-to-loops
-  pm.addNestedPass<FuncOp>(createConvertSCFToCFPass());        // convert-scf-to-cf
+  pm.addNestedPass<mlir::func::FuncOp>(createConvertLinalgToLoopsPass());  // convert-linalg-to-loops
+  pm.addNestedPass<mlir::func::FuncOp>(createConvertSCFToCFPass());        // convert-scf-to-cf
   pm.addPass(createConvertLinalgToLLVMPass());                 // convert-linalg-to-llvm
   pm.addPass(createMemRefToLLVMPass());                        // convert-memref-to-llvm
   pm.addPass(createLowerToLLVMPass());                         // convert-std-to-llvm
@@ -527,19 +527,19 @@ LogicalResult LowerModuleToCUDALLVM(mlir::MLIRContext* context, ModuleOp module)
       ::oneflow::ParseBooleanFromEnv("ONEFLOW_MLIR_ENABLE_IR_PRINTING", false);
   context->disableMultithreading(enable_ir_printing);
   AddLowerToLinalgMemRefPasses(pm);
-  pm.addNestedPass<FuncOp>(
+  pm.addNestedPass<mlir::func::FuncOp>(
       createConvertLinalgToParallelLoopsPass());             // convert-linalg-to-parallel-loops
   pm.addPass(createMapSCFToGPUPass());                       // gpu-greedy-parallel-loop-mapping
   pm.addPass(createParallelLoopToGpuPass());                 // convert-parallel-loops-to-gpu
   pm.addPass(createGpuKernelOutliningPass());                // gpu-kernel-outlining
-  pm.addNestedPass<FuncOp>(createBufferHostRegisterPass());  // buffer-host-register
+  pm.addNestedPass<mlir::func::FuncOp>(createBufferHostRegisterPass());  // buffer-host-register
   pm.addPass(createCanonicalizerPass());                     // canonicalize
   // -pass-pipeline='gpu.module([PASS1][PASS2]...)'
   pm.addNestedPass<gpu::GPUModuleOp>(createStripDebugInfoPass());        // strip-debuginfo
   pm.addNestedPass<gpu::GPUModuleOp>(createLowerAffinePass());           // lower-affine
   pm.addNestedPass<gpu::GPUModuleOp>(createLowerGpuOpsToNVVMOpsPass());  // convert-gpu-to-nvvm
   pm.addNestedPass<gpu::GPUModuleOp>(createSerializeToCubinPass());      // out-of-tree-gpu-to-cubin
-  pm.addNestedPass<FuncOp>(createGpuCopyArgPass());                      // buffer-host-register
+  pm.addNestedPass<mlir::func::FuncOp>(createGpuCopyArgPass());                      // buffer-host-register
   pm.addPass(createGpuToLLVMConversionPass());
   if (enable_ir_printing) pm.enableIRPrinting();
   return pm.run(module);

@@ -252,7 +252,7 @@ def OneFlow_ReturnOp : Op<OneFlow_Dialect, "return", [NoSideEffect, HasParent<"J
 def LowerOneFlowToTosaPass : Pass<"lower-oneflow-to-tosa", "ModuleOp"> {
   let summary = "";
   let constructor = "mlir::oneflow::createLowerOneFlowToTosaPass()";
-  let dependentDialects = ["tosa::TosaDialect", "memref::MemRefDialect", "StandardOpsDialect"];
+  let dependentDialects = ["tosa::TosaDialect", "memref::MemRefDialect", "mlir::func::FuncDialect"];
 }
 
 def MapSCFToGPUPass : Pass<"gpu-greedy-parallel-loop-mapping", "ModuleOp"> {

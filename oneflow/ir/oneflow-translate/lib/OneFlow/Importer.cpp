@@ -27,7 +27,7 @@ limitations under the License.
 #include "OneFlow/Passes.h"
 #include "OneFlow/MLIROneFlowTranslation.h"
 
-#include "mlir/Dialect/StandardOps/IR/Ops.h"
+#include "mlir/Dialect/Func/IR/FuncOps.h"
 #include "mlir/IR/Attributes.h"
 #include "mlir/IR/Builders.h"
 #include "mlir/IR/BuiltinAttributes.h"
@@ -42,7 +42,8 @@ limitations under the License.
 #include "mlir/Support/LLVM.h"
 #include "mlir/Support/LogicalResult.h"
 #include "mlir/Transforms/Passes.h"
-#include "mlir/Translation.h"
+#include "mlir/Tools/mlir-translate/MlirTranslateMain.h"
+#include "mlir/Tools/mlir-translate/Translation.h"
 #include "mlir/Transforms/GreedyPatternRewriteDriver.h"
 
 #include "llvm-c/Core.h"

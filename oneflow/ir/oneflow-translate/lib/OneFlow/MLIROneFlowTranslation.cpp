@@ -27,7 +27,7 @@ limitations under the License.
 #include "OneFlow/Passes.h"
 #include "OneFlow/MLIROneFlowTranslation.h"
 
-#include "mlir/Dialect/StandardOps/IR/Ops.h"
+#include "mlir/Dialect/Func/IR/FuncOps.h"
 #include "mlir/IR/Attributes.h"
 #include "mlir/IR/Builders.h"
 #include "mlir/IR/BuiltinAttributes.h"
@@ -43,9 +43,10 @@ limitations under the License.
 #include "mlir/Support/LLVM.h"
 #include "mlir/Support/LogicalResult.h"
 #include "mlir/Transforms/Passes.h"
-#include "mlir/Translation.h"
+#include "mlir/Tools/mlir-translate/MlirTranslateMain.h"
+#include "mlir/Tools/mlir-translate/Translation.h"
 #include "mlir/Transforms/GreedyPatternRewriteDriver.h"
-#include "mlir/Parser.h"
+#include "mlir/Parser/Parser.h"
 
 #include "llvm-c/Core.h"
 #include "llvm/ADT/ArrayRef.h"
@@ -798,7 +799,7 @@ OwningOpRef<ModuleOp> TranslateOneFlowJobToModule(llvm::StringRef str, MLIRConte
   ::oneflow::Job job;
   google::protobuf::TextFormat::ParseFromString(cpp_str, &job);
   context->loadDialect<oneflow::OneFlowDialect>();
-  context->loadDialect<StandardOpsDialect>();
+  context->loadDialect<mlir::func::FuncDialect>();
   OwningOpRef<ModuleOp> module(
       ModuleOp::create(FileLineColLoc::get(context, "", /*line=*/0, /*column=*/0)));
   return module;
@@ -810,7 +811,7 @@ void RoundTripOneFlowJob(
   const ::oneflow::Job* job = job_wrapper.job();
   mlir::MLIRContext context;
   context.getOrLoadDialect<oneflow::OneFlowDialect>();
-  context.loadDialect<StandardOpsDialect>();
+  context.loadDialect<mlir::func::FuncDialect>();
 
   OwningOpRef<ModuleOp> module(
       ModuleOp::create(FileLineColLoc::get(&context, "", /*line=*/0, /*column=*/0)));
@@ -838,7 +839,7 @@ void SaveJobToIR(RoundTripOneFlowJobWrapperInterface& job_wrapper, const std::st
   const ::oneflow::Job* job = job_wrapper.job();
   mlir::MLIRContext context;
   context.getOrLoadDialect<oneflow::OneFlowDialect>();
-  context.loadDialect<StandardOpsDialect>();
+  context.loadDialect<mlir::func::FuncDialect>();
 
   OwningOpRef<ModuleOp> module(
       ModuleOp::create(FileLineColLoc::get(&context, "", /*line=*/0, /*column=*/0)));
@@ -872,7 +873,7 @@ void SaveJobToIR(RoundTripOneFlowJobWrapperInterface& job_wrapper, const std::st
 void LoadJobFromIR(RoundTripOneFlowJobWrapperInterface& job_wrapper, const std::string& path) {
   MLIRContext context;
   context.getOrLoadDialect<oneflow::OneFlowDialect>();
-  context.loadDialect<StandardOpsDialect>();
+  context.loadDialect<mlir::func::FuncDialect>();
   OwningOpRef<ModuleOp> module = parseSourceFile<ModuleOp>(path, &context);
   JobImporter imp(job_wrapper, &context, module.get());
   if (failed(imp.TryToUpdateJob())) {

@@ -24,8 +24,8 @@ limitations under the License.
 #include "mlir/Dialect/Affine/IR/AffineOps.h"
 #include "mlir/Dialect/Linalg/Passes.h"
 #include "mlir/Dialect/MemRef/IR/MemRef.h"
-#include "mlir/Dialect/StandardOps/IR/Ops.h"
-#include "mlir/Dialect/StandardOps/Transforms/Passes.h"
+#include "mlir/Dialect/Func/IR/FuncOps.h"
+#include "mlir/Dialect/Func/Transforms/Passes.h"
 #include "mlir/Dialect/Tosa/IR/TosaOps.h"
 #include "mlir/IR/BuiltinAttributes.h"
 #include "mlir/IR/BuiltinTypes.h"
@@ -96,7 +96,7 @@ std::unique_ptr<Pass> createLowerOneFlowToTosaPass() {
 
 void OneFlowLoweringToTosaPass::runOnOperation() {
   ConversionTarget target(getContext());
-  target.addLegalDialect<memref::MemRefDialect, StandardOpsDialect, tosa::TosaDialect>();
+  target.addLegalDialect<memref::MemRefDialect, mlir::func::FuncDialect, tosa::TosaDialect>();
   target.addIllegalDialect<OneFlowDialect>();
   RewritePatternSet patterns(&getContext());
   patterns.insert<CastOpLowering, ScalarMulByTensorOpLowering>(&getContext());
