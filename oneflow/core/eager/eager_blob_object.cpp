@@ -54,7 +54,7 @@ Maybe<void> EagerBlobObject::InitBlobWithOffset(const int64_t offset) {
 }
 
 Maybe<void> EagerBlobObject::TryAllocateBlobBodyMemory(DeviceCtx* device_ctx) {
-  vm::Allocator* allocator = device_ctx->mut_allocator();
+  vm::Allocator* allocator = device_ctx->mut_allocator(pin_memory());
   CHECK_NOTNULL_OR_RETURN(allocator);
   Blob* blob = mut_blob();
   CHECK_NOTNULL_OR_RETURN(blob);

@@ -185,7 +185,7 @@ class TensorWithShapeCtorFunctor {
     } else {
       device_ = JUST(Device::New("cpu"));
     }
-    return functional::Empty(shape, DType::Float(), device_);
+    return functional::Empty(shape, DType::Float(), device_, /**pin_memory=*/false);
   }
 };
 
@@ -277,7 +277,7 @@ class LocalTensorSharedNumpyDataFunctor {
                                                                  /*ls_leaf=*/true);
 
     // Init blob
-    JUST(tensor_impl->InitEagerBlobObject(NewLocalDepObject()));
+    JUST(tensor_impl->InitEagerBlobObject(NewLocalDepObject(), /*pin_memory=*/false));
     const auto& stream = GetDefaultStreamByDevice(device);
     JUST(tensor_impl->eager_blob_object())->set_last_used_stream(stream);
     JUST(JUST(tensor_impl->eager_blob_object())->TryInitBlob());

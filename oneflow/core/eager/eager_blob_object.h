@@ -143,11 +143,20 @@ class EagerBlobObject final : public BlobObject {
     tensor_storage_->set_last_used_stream(last_used_stream);
   }
 
+  void set_pin_memory(const bool pin_memory){
+    pin_memory_ = pin_memory;
+  }
+
+  const bool pin_memory(){
+    return pin_memory_;
+  }
+
  private:
   std::unique_ptr<Blob> blob_;
   std::unique_ptr<char[]> header_buffer_;
   std::shared_ptr<TensorStorage> tensor_storage_;
   std::atomic<bool> is_shape_synced_;
+  bool pin_memory_;
   intrusive::shared_ptr<LocalDepObject> compute_local_dep_object_;
 };
 

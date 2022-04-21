@@ -30,6 +30,7 @@ def empty_op(
         flow._oneflow_internal.sbp.sbp, List[flow._oneflow_internal.sbp.sbp]
     ] = None,
     requires_grad: bool = False,
+    pin_memory: bool = False,
 ):
     """
     Returns a tensor filled with uninitialized data.
@@ -87,7 +88,7 @@ def empty_op(
     if placement is not None:
         tensor = flow._C.global_empty(shape, dtype=dtype, placement=placement, sbp=sbp)
     else:
-        tensor = flow._C.empty(shape, dtype=dtype, device=device)
+        tensor = flow._C.empty(shape, dtype=dtype, device=device, pin_memory=pin_memory)
     tensor.requires_grad_(requires_grad)
     return tensor
 

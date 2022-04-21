@@ -47,10 +47,16 @@ class DeviceCtx {
     return nullptr;
   }
 #endif
+  void set_pin_memory(bool pin_memory){
+    pin_memory_ = pin_memory;
+  }
+  bool pin_memory() {
+    return pin_memory_;
+  }
 
   virtual ep::Stream* stream() = 0;
 
-  virtual vm::Allocator* mut_allocator() {
+  virtual vm::Allocator* mut_allocator(bool pin_memory) {
     UNIMPLEMENTED();
     return nullptr;
   }
@@ -61,6 +67,7 @@ class DeviceCtx {
   DeviceCtx() = default;
 
  private:
+  bool pin_memory_;
 };
 
 }  // namespace oneflow

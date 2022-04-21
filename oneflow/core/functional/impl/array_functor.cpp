@@ -191,10 +191,11 @@ class EmptyFunctor {
  public:
   EmptyFunctor() { op_ = CHECK_JUST(one::OpBuilder("empty").Output("out").Build()); }
   Maybe<Tensor> operator()(const Shape& shape, const Symbol<DType>& dtype,
-                           const Optional<Symbol<Device>>& device) const {
+                           const Optional<Symbol<Device>>& device, const bool pin_memory) const {
     MutableAttrMap attrs;
     JUST(attrs.SetAttr<Shape>("shape", shape));
     JUST(attrs.SetAttr<DataType>("dtype", dtype->data_type()));
+    JUST(attrs.SetAttr<bool>("pin_memory", pin_memory));
     if (device.has_value()) {
       Symbol<Device> device_symbol = JUST(device);
       return OpInterpUtil::Dispatch<Tensor>(*op_, {}, OpExprInterpContext(attrs, device_symbol));

@@ -57,7 +57,7 @@ class CudaStreamHandleDeviceCtx : public DeviceCtx, public SingleThreadQueryCuda
 
   ep::Stream* stream() override { return GetOrCreateCudaStream(); }
 
-  vm::Allocator* mut_allocator() override { return cuda_allocator_.get(); }
+  vm::Allocator* mut_allocator(bool pin_memory) override { return cuda_allocator_.get(); }
 
   DeviceType device_type() const override { return DeviceType::kCUDA; }
 

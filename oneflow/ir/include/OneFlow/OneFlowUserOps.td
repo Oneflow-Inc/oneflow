@@ -4596,6 +4596,7 @@ def OneFlow_EmptyOp : OneFlow_BaseOp<"empty", [NoSideEffect, NoGrad, DeclareOpIn
   let attrs = (ins
     OneFlow_DataType:$dtype,
     ShapeAttr:$shape,
+    DefaultValuedAttr<BoolAttr, "false">:$pin_memory,
     StrArrayAttr:$nd_sbp
   );
   let same_output_regst_num = 1;
