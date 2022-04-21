@@ -78,6 +78,12 @@ inline Maybe<void> SetGraphDebugMaxPyStackDepth(int32_t depth) {
   return Maybe<void>::Ok();
 }
 inline int32_t GetGraphDebugMaxPyStackDepth() { return *GetGraphDebugMaxPyStackDepthVar(); }
+
+inline Maybe<void> SetGraphDebugMode(bool mode) {
+  *GetGraphDebugModeFlag() = mode;
+  return Maybe<void>::Ok();
+}
+inline bool GetGraphDebugMode() { return *GetGraphDebugModeFlag(); }
 }  // namespace oneflow
 
 #endif  // ONEFLOW_API_PYTHON_ENV_ENV_H_
