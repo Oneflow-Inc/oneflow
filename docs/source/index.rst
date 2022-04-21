@@ -28,6 +28,7 @@ OneFlow API Reference
     utils
     env
     comm
+    one_embedding
 
 
 

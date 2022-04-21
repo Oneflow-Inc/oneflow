@@ -15,6 +15,7 @@ limitations under the License.
 */
 
 #include "oneflow/core/autograd/autograd_mode.h"
+#include "oneflow/core/common/data_type.pb.h"
 #include "oneflow/core/common/maybe.h"
 #include "oneflow/core/common/scalar.h"
 #include "oneflow/core/common/global.h"
@@ -495,9 +496,12 @@ class ConcatFunctor {
     for (int i = 0; i < ninput; i += kMaxInputCount) {
       size_t size = (i + kMaxInputCount) < ninput ? kMaxInputCount : ninput - i;
       TensorTuple partial_inputs(size);
+      TensorProcessor tensor_processor;
       for (int j = 0; j < size; ++j) { partial_inputs[j] = inputs[i + j]; }
+      JUST(tensor_processor.PromoteInputsToCommonDtype(true).AddInputs(partial_inputs).Apply());
+      TensorTuple input_tuple = JUST(tensor_processor.GetInputs());
       outputs.emplace_back(
-          JUST(OpInterpUtil::Dispatch<Tensor>(*ops_.at(size - 1), partial_inputs, attrs)));
+          JUST(OpInterpUtil::Dispatch<Tensor>(*ops_[size - 1], input_tuple, attrs)));
     }
 
     if (outputs.size() == 1) { return outputs.at(0); }
@@ -786,7 +790,8 @@ class DimScatterFunctor {
                            const std::shared_ptr<one::Tensor>& index,
                            const std::shared_ptr<one::Tensor>& src) const {
     MutableAttrMap attrs;
-    JUST(attrs.SetAttr<int32_t>("dim", dim));
+    const int32_t ndim = input->shape()->NumAxes();
+    JUST(attrs.SetAttr<int32_t>("dim", dim < 0 ? dim + ndim : dim));
     return OpInterpUtil::Dispatch<Tensor>(*op_, {input, index, src}, attrs);
   }
 
@@ -872,7 +877,8 @@ class DimScatterUpdateScalarFunctor {
   Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& input, const int32_t& dim,
                            const std::shared_ptr<one::Tensor>& index, const Scalar& src) const {
     MutableAttrMap attrs;
-    JUST(attrs.SetAttr<int32_t>("dim", dim));
+    const int32_t ndim = input->shape()->NumAxes();
+    JUST(attrs.SetAttr<int32_t>("dim", dim < 0 ? dim + ndim : dim));
     JUST(attrs.SetAttr<float>("src_scalar", JUST(src.As<float>())));
     return OpInterpUtil::Dispatch<Tensor>(*op_, {input, index}, attrs);
   }
@@ -1785,7 +1791,8 @@ class SliceView1dContiguousFunctor {
   SliceView1dContiguousFunctor() = default;
   Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x, int64_t start,
                            int64_t end) const {
-    return JUST(view::Slice(x, {start}, {end}, {1}));
+    if (view::IsViewApplicable(x)) { return JUST(view::Slice(x, {start}, {end}, {1})); }
+    return JUST(functional::Slice(x, {start}, {end}, {1}));
   }
 };
 
@@ -2144,6 +2151,23 @@ class SplitFunctor {
   }
 };
 
+class UnbindFunctor {
+ public:
+  UnbindFunctor() {}
+  Maybe<TensorTuple> operator()(const std::shared_ptr<one::Tensor>& x, const int64_t& dim) const {
+    int32_t axis = dim;
+    const int32_t ndim = x->ndim();
+    if (axis < 0) { axis += ndim; }
+    CHECK_OR_RETURN((dim >= -ndim) && (dim < ndim))
+        << "Dimension out of range (expected to be in range of [" << -ndim << "," << ndim - 1
+        << "], but got " << dim << ")";
+    int32_t dim_size = x->shape()->At(axis);
+    TensorTuple unbinds(dim_size);
+    for (int i = 0; i < dim_size; ++i) { unbinds[i] = JUST(Select(x, axis, i)); }
+    return unbinds;
+  }
+};
+
 class ChunkFunctor {
  public:
   ChunkFunctor() {}
@@ -2396,8 +2420,41 @@ class MeshgridFunctor {
   }
 };
 
-namespace {
+class IndexSelectFunctor {
+ public:
+  Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& input, const int64_t& dim,
+                           const std::shared_ptr<one::Tensor>& index) const {
+    const int64_t input_num_axes = input->shape()->NumAxes();
+    const int64_t index_num_axes = index->shape()->NumAxes();
+    CHECK_EQ_OR_RETURN(index_num_axes, 1)
+        << "IndexError: index_select(): Index is supposed to be a vector";
+    bool index_dtype_flag =
+        (index->dtype()->data_type() == kInt32) || (index->dtype()->data_type() == kInt64);
+    CHECK_EQ_OR_RETURN(index_dtype_flag, true)
+        << "RuntimeError: index_select(): Expected dtype int32 or int64 for index";
+    int64_t new_dim = dim;
+    if (dim < 0) { new_dim += input_num_axes; }
+    CHECK_LE_OR_RETURN(new_dim, input_num_axes)
+        << "IndexError: Dimension out of range (expected to be in range of [" << -input_num_axes
+        << ", " << input_num_axes - 1 << "], but got " << new_dim << ")";
+    DimVector index_broad_cast(input_num_axes);
+    for (int i = 0; i < input_num_axes; i++) { index_broad_cast[i] = input->shape()->At(i); }
+    index_broad_cast[new_dim] = 1;
+    Shape expand_shape(index_broad_cast);
+    auto index_gather =
+        JUST(functional::Expand(JUST(functional::Slice(index, {0}, {1}, {1})), expand_shape));
+    for (int i = 1; i < index->dim(0); i++) {
+      index_gather = JUST(functional::Concat(
+          {index_gather, JUST(functional::Expand(JUST(functional::Slice(index, {i}, {i + 1}, {1})),
+                                                 expand_shape))},
+          new_dim));
+    }
 
+    return JUST(functional::DimGather(input, new_dim, index_gather, false));
+  }
+};
+
+namespace {
 inline Maybe<bool> device_equal(const std::string& device_name, const int device_id,
                                 Symbol<Device> device) {
   return (device_name == device->type() && device_id == device->device_id());
@@ -2458,7 +2515,6 @@ class ToFunctor {
 
     if (input->is_consistent()) {
       std::string device_type = device_.value_or(JUST(input->parallel_desc())->device_tag());
-      if (device_type == "gpu") { device_type = "cuda"; }
       CHECK_OR_RETURN(device_type == "cpu" || device_type == "cuda")
           << "Only string device without device id (eg. \"cpu\" or \"cuda\") is expected "
           << "for consistent tensor, but got " << device_.value_or("");
@@ -2803,6 +2859,7 @@ ONEFLOW_FUNCTION_LIBRARY(m) {
   m.add_functor<impl::ReduceSumLikeFunctor>("ReduceSumLike");
   m.add_functor<impl::BroadcastReduceSumLikeFunctor>("BroadcastReduceSumLike");
   m.add_functor<impl::SplitFunctor>("Split");
+  m.add_functor<impl::UnbindFunctor>("Unbind");
   m.add_functor<impl::ChunkFunctor>("Chunk");
   m.add_functor<impl::SplitLikeFunctor>("SplitLike");
   m.add_functor<impl::SplitWithSizeFunctor>("SplitWithSize");
@@ -2810,6 +2867,7 @@ ONEFLOW_FUNCTION_LIBRARY(m) {
   m.add_functor<impl::UnsortedBatchSegmentSumFunctor>("UnsortedBatchSegmentSum");
   m.add_functor<impl::MaskedFillFunctor>("MaskedFill");
   m.add_functor<impl::MeshgridFunctor>("Meshgrid");
+  m.add_functor<impl::IndexSelectFunctor>("IndexSelect");
   m.add_functor<impl::ToFunctor, impl::To2Functor, impl::To3Functor, impl::To4Functor>("To");
   m.add_functor<impl::TopKFunctor>("TopK");
   m.add_functor<impl::InTopKFunctor>("InTopK");

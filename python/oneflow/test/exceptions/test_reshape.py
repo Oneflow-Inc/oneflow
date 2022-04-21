@@ -22,7 +22,7 @@ import oneflow.unittest
 
 @flow.unittest.skip_unless_1n1d()
 class TestModule(flow.unittest.TestCase):
-    def test_exception_only_one_dim_infered(test_case):
+    def test_reshape_exception_only_one_dim_infered(test_case):
         # torch exception and messge:
         #
         #   RuntimeError: only one dimension can be inferred
@@ -30,7 +30,7 @@ class TestModule(flow.unittest.TestCase):
         x = flow.tensor((2, 2))
         with test_case.assertRaises(RuntimeError) as ctx:
             y = x.reshape((-1, -1))
-        test_case.assertEqual("only one dimension can be inferred", str(ctx.exception))
+        test_case.assertTrue("only one dimension can be inferred" in str(ctx.exception))
 
 
 if __name__ == "__main__":
