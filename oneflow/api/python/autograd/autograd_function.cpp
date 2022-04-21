@@ -34,18 +34,18 @@ namespace {
 // Transform input to TensorTuple
 Maybe<one::TensorTuple> UnpackTensorTuple(const py::object& input) {
   one::TensorTuple tp;
-  if (PyTensor_Check(input.ptr())) {
+  if (one::PyTensor_Check(input.ptr())) {
     tp.emplace_back(input.cast<std::shared_ptr<one::Tensor>>());
   } else if (py::isinstance<py::tuple>(input)) {
     auto tuple = input.cast<py::tuple>();
     for (int i = 0; i < tuple.size(); ++i) {
       PyObject* obj = tuple[i].ptr();
-      if (!PyTensor_Check(obj)) {
+      if (!one::PyTensor_Check(obj)) {
         return Error::RuntimeError()
                << "expected Tensor as element " << i << ", but got "
                << one::functional::PyStringAsString(PyObject_Str((PyObject*)Py_TYPE(obj)));
       }
-      tp.emplace_back(PyTensor_Unpack(obj));
+      tp.emplace_back(one::PyTensor_Unpack(obj));
     }
   } else {
     return Error::RuntimeError() << "Only support tensor or list of tensors";

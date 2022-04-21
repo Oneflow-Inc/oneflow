@@ -577,11 +577,6 @@ static PyTypeObject* MakeParameterType() {
   return type;
 }
 
-}  // namespace one
-}  // namespace oneflow
-
-using namespace oneflow::one;
-
 PyObject* PyTensor_New(const std::shared_ptr<Tensor>& data) {
   if (!data) { Py_RETURN_NONE; }
   if (data->pyobject()) { return PY_XINCREF((PyObject*)(data->pyobject())); }
@@ -614,8 +609,13 @@ PyObject* PyParameter_New(const std::shared_ptr<Tensor>& data, bool requires_gra
   return (PyObject*)self;
 }
 
+}  // namespace one
+}  // namespace oneflow
+
 #undef ASSERT
 #undef ASSERT_PTR
+
+using namespace oneflow::one;
 
 ONEFLOW_API_PYBIND11_MODULE("", m) {
   PyTensorObject_Type = MakeTensorType();

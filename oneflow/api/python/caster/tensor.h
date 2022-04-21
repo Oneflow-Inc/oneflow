@@ -25,6 +25,7 @@ template<typename T>
 struct tensor_type_caster {
  public:
   bool load(handle src, bool convert) {
+    using namespace oneflow::one;
     value_ = nullptr;
     if (!src) { return false; }
     if (src.is_none()) { return true; }
@@ -35,9 +36,8 @@ struct tensor_type_caster {
 
   template<typename U>
   static handle cast(U&& src, return_value_policy policy, handle parent) {
-    return reinterpret_steal<object>(
-               PyTensor_New(std::const_pointer_cast<oneflow::one::Tensor>(src)))
-        .release();
+    using namespace oneflow::one;
+    return reinterpret_steal<object>(PyTensor_New(std::const_pointer_cast<Tensor>(src))).release();
   }
 
   operator std::shared_ptr<T>*() { return &value_; }
@@ -56,6 +56,7 @@ template<typename T>
 struct parameter_type_caster {
  public:
   bool load(handle src, bool convert) {
+    using namespace oneflow::one;
     value_ = nullptr;
     if (!src) { return false; }
     if (src.is_none()) { return true; }
@@ -66,8 +67,8 @@ struct parameter_type_caster {
 
   template<typename U>
   static handle cast(U&& src, return_value_policy policy, handle parent) {
-    return reinterpret_steal<object>(
-               PyParameter_New(std::const_pointer_cast<oneflow::one::Parameter>(src)))
+    using namespace oneflow::one;
+    return reinterpret_steal<object>(PyParameter_New(std::const_pointer_cast<Parameter>(src)))
         .release();
   }
 

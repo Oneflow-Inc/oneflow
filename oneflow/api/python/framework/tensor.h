@@ -31,17 +31,22 @@ typedef struct {
 extern PyTypeObject* PyTensorObject_Type;
 extern PyTypeObject* PyParameterObject_Type;
 
+inline bool PyTensor_Check(PyObject* op) { return PyObject_TypeCheck(op, PyTensorObject_Type); }
+
+inline bool PyTensor_CheckExact(PyObject* op) {
+  return op->ob_type == PyTensorObject_Type || op->ob_type == PyParameterObject_Type;
+}
+
+inline std::shared_ptr<Tensor>& PyTensor_Unpack(PyObject* op) {
+  assert(PyTensor_Check(op));
+  return ((PyTensorObject*)op)->data;
+}
+
+PyObject* PyTensor_New(const std::shared_ptr<Tensor>& data);
+PyObject* PyParameter_New(const std::shared_ptr<Parameter>& data);
+PyObject* PyParameter_New(const std::shared_ptr<Tensor>& data, bool requires_grad);
+
 }  // namespace one
 }  // namespace oneflow
-
-#define PyTensor_Check(op) PyObject_TypeCheck(op, oneflow::one::PyTensorObject_Type)
-#define PyTensor_CheckExact(op) Py_IS_TYPE(op, oneflow::one::PyTensorObject_Type)
-
-#define _PyTensor_CAST(op) (assert(PyTensor_Check(op)), (oneflow::one::PyTensorObject*)(op))
-#define PyTensor_Unpack(op) _PyTensor_CAST(op)->data
-
-PyObject* PyTensor_New(const std::shared_ptr<oneflow::one::Tensor>& data);
-PyObject* PyParameter_New(const std::shared_ptr<oneflow::one::Parameter>& data);
-PyObject* PyParameter_New(const std::shared_ptr<oneflow::one::Tensor>& data, bool requires_grad);
 
 #endif  // ONEFLOW_API_PYTHON_FRAMEWORK_TENSOR_H_
