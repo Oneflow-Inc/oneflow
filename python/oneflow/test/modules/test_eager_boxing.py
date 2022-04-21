@@ -3562,5 +3562,20 @@ class TestEagerBoxingAsymmetricMix1d2dWithRandomPlacement(flow.unittest.TestCase
                 raise NotImplementedError
 
 
+@flow.unittest.skip_unless_1n4d()
+class TestEagerBoxing2DLocalToGlobalWithBalancedSplitSize(flow.unittest.TestCase):
+    def test_eager_boxing_2d_local_to_globa_with_balanced_size(test_case):
+        placement = flow.placement(type="cpu", ranks=np.arange(4).reshape((2, 2)))
+        sbp = (flow.sbp.split(0), flow.sbp.split(1))
+        x = flow.tensor(np.arange(25).reshape((5, 5)), placement=placement, sbp=sbp)
+        y = x.to_local()
+        z = y.to_global(placement=placement, sbp=sbp)
+
+        test_case.assertEqual(z.placement, placement)
+        test_case.assertEqual(z.sbp, sbp)
+        test_case.assertEqual(z.size(), (5, 5))
+        test_case.assertTrue(np.allclose(z.numpy(), np.arange(25).reshape((5, 5)), 1e-5, 1e-5))
+
+
 if __name__ == "__main__":
     unittest.main()
