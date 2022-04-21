@@ -13,16 +13,18 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 """
+from collections import OrderedDict
 import unittest
 import numpy as np
 import oneflow as flow
 import oneflow.unittest
+from oneflow.test_utils.test_util import GenArgList
 from oneflow.test_utils.automated_test_util import *
 
 
 @flow.unittest.skip_unless_1n1d()
 class TestTensordot(flow.unittest.TestCase):
-    @autotest(check_graph=True)
+    @autotest(n=5)
     def test_tensordot_intdim(test_case):
         device = random_device()
         dims = random()
@@ -40,23 +42,49 @@ class TestTensordot(flow.unittest.TestCase):
         z = torch.tensordot(x, y, dims=3 - dims.to(int).value())
         return z
 
-    @autotest(check_graph=True, n=1)
-    def test_tensordot_tensordim(test_case):
+    @autotest(n=5)
+    def test_tensordot_list_dim(test_case):
         device = random_device()
         x = random_tensor(4, 1, 3, 2, 5).to(device)
         y = random_tensor(4, 4, 2, 3, 5).to(device)
         z = torch.tensordot(x, y, dims=[[1, 2, 0], [2, 1, 0]])
         return z
 
-    @autotest(check_graph=True, n=1)
-    def test_tensordot_neg_tensordim(test_case):
+    @autotest(n=5)
+    def test_tensordot_list_neg_dim(test_case):
         device = random_device()
         x = random_tensor(4, 1, 3, 2, 5).to(device)
         y = random_tensor(4, 4, 2, 3, 5).to(device)
         z = torch.tensordot(x, y, dims=[[-3, -2, -4], [-2, -3, -4]])
         return z
 
-    @autotest(check_graph=True)
+    def test_tensordot_tensor_dim(test_case):
+        def _test_tensor_dim(test_case, device):
+            np_dim = np.array([[1, 2, 3], [1, 2, 3]], dtype=np.int)
+            flow_dim = flow.tensor(np_dim).to(device)
+            torch_dim = torch.tensor(np_dim).to(device)
+
+            np_random_array = np.random.randn(2, 3, 4, 5)
+            flow_tensor = flow.tensor(np_random_array).to(device)
+            torch_tensor = torch.tensor(np_random_array).to(device)
+
+            flow_result = flow.tensordot(flow_tensor, flow_tensor, dims=flow_dim)
+            torch_result = torch.tensordot(torch_tensor, torch_tensor, dims=torch_dim)
+            test_case.assertTrue(
+                np.allclose(
+                    flow_result.numpy(),
+                    torch_result.cpu().numpy(),
+                    rtol=0.0001,
+                    atol=0.0001,
+                )
+            )
+
+        arg_dict = OrderedDict()
+        arg_dict["device"] = ["cpu", "cuda"]
+        for arg in GenArgList(arg_dict):
+            _test_tensor_dim(test_case, arg[0])
+
+    @autotest(n=5)
     def test_tensordot_broadcast(test_case):
         device = random_device()
         x = random_tensor(4, 1, 1, 1, 1).to(device)

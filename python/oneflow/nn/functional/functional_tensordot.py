@@ -17,25 +17,23 @@ import oneflow
 from typing import Union, List, Tuple
 
 
-def tensordot(a, b, dims: Union[int, List[List[int]]] = 2):
-    if not isinstance(dims, (oneflow._oneflow_internal.Tensor, int, list, tuple)):
+def tensordot(a, b, dims: Union[oneflow.Tensor, int, List[List[int], Tuple[List[int]]]] = 2):
+    if not isinstance(dims, (oneflow.Tensor, int, list, tuple)):
         raise TypeError(
-            f"oneflow.tensordot expects dims to be one of oneflow.Tensor, int, List[List[int]] or Tuple[List[int], List[int]], but got {type(dims)}"
+            f"oneflow.tensordot expects dims to be one of oneflow.Tensor, int, Tuple[List[int], List[int]] or List[List[int]] containing two lists, but got {type(dims)}"
         )
 
     if isinstance(dims, int):
         assert dims >= 0 and dims <= min(a.dim(), b.dim())
         dim_a = list(range(a.dim() - dims, a.dim()))
         dim_b = list(range(dims))
-
-    elif isinstance(dims, (list, tuple, oneflow._oneflow_internal.Tensor)):
+    elif isinstance(dims, (list, tuple)):
         assert len(dims) == 2
         dim_a = list(dims[0])
         dim_b = list(dims[1])
-        assert (
-            isinstance(dim_a[0], int)
-            and isinstance(dim_b[0], int)
-            and len(dim_a) == len(dim_b)
-        )
+    elif isinstance(dims, oneflow._oneflow_internal.Tensor):
+        assert len(dims) == 2
+        dim_a = dims[0].tolist()
+        dim_b = dims[1].tolist()
 
     return oneflow._C.tensordot(a, b, dim_a, dim_b)
