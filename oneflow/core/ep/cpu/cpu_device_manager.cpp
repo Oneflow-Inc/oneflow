@@ -14,6 +14,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 #include "oneflow/core/ep/cpu/cpu_device_manager.h"
+#include "oneflow/core/ep/cpu/cpu_device.h"
 
 namespace oneflow {
 
@@ -29,7 +30,7 @@ DeviceManagerRegistry* CpuDeviceManager::registry() const { return registry_; }
 std::shared_ptr<Device> CpuDeviceManager::GetDevice(size_t device_index) {
   std::lock_guard<std::mutex> lock(device_mutex_);
   if (!device_) { device_.reset(new CpuDevice(this)); }
-  device_.get()->SetNumThreads(device_num_threads_);
+  device_->SetNumThreads(device_num_threads_);
   return device_;
 }
 

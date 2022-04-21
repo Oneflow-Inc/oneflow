@@ -17,13 +17,13 @@ limitations under the License.
 #define ONEFLOW_CORE_EP_CUDA_CUDA_DEVICE_MANAGER_H_
 
 #include "oneflow/core/ep/include/device_manager.h"
-#include "oneflow/core/ep/cuda/cuda_device.h"
 
 #ifdef WITH_CUDA
 
 namespace oneflow {
-
 namespace ep {
+
+class CudaDevice;
 
 class CudaDeviceManager : public DeviceManager {
  public:

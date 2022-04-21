@@ -17,11 +17,12 @@ limitations under the License.
 #define ONEFLOW_CORE_EP_CPU_CPU_DEVICE_MANAGER_H_
 
 #include "oneflow/core/ep/include/device_manager.h"
-#include "oneflow/core/ep/cpu/cpu_device.h"
 
 namespace oneflow {
 
 namespace ep {
+
+class CpuDevice;
 
 class CpuDeviceManager : public DeviceManager {
  public:
