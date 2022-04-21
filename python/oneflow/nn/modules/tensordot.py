@@ -16,11 +16,12 @@ limitations under the License.
 import oneflow
 from typing import Union, List, Tuple
 
+oneflow.Tensor
 
 def tensordot(
-    a, b, dims: Union[oneflow._oneflow_internal.Tensor, int, List[List[int]], Tuple[List[int]]] = 2
+    a, b, dims: Union[oneflow.Tensor, int, List[List[int]], Tuple[List[int]]] = 2
 ):
-    if not isinstance(dims, (oneflow._oneflow_internal.Tensor, int, list, tuple)):
+    if not isinstance(dims, (oneflow.Tensor, int, list, tuple)):
         raise TypeError(
             f"oneflow.tensordot expects dims to be one of oneflow.Tensor, int, Tuple[List[int], List[int]] or List[List[int]] containing two lists, but got {type(dims)}"
         )
@@ -31,7 +32,7 @@ def tensordot(
         assert len(dims) == 2
         dim_a = list(dims[0])
         dim_b = list(dims[1])
-    elif isinstance(dims, oneflow._oneflow_internal.Tensor):
+    elif isinstance(dims, oneflow.Tensor):
         assert len(dims) == 2
         dim_a = dims[0].tolist()
         dim_b = dims[1].tolist()
