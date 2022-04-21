@@ -232,7 +232,7 @@ LogicalResult JobImporter::ProcessSystemOp(const ::oneflow::OperatorConf& op) {
   if (failed(AppendCtrlOutType(out_types))) { return failure(); }
   state.addOperands(operand_vec);
   state.addTypes(out_types);
-  if (auto created_op = GetBuilder().createOperation(state)) {
+  if (auto created_op = GetBuilder().create(state)) {
     if (failed(InsertOpResults(op, created_op))) { return failure(); }
   } else {
     GetModule()->emitError("fail to create op, name: " + op.name());
@@ -330,7 +330,7 @@ LogicalResult JobImporter::ProcessVariableOp(const ::oneflow::OperatorConf& op_c
   if (failed(AppendCtrlOutType(out_types))) { return failure(); }
   state.addTypes(out_types);
   // create op
-  auto op = GetBuilder().createOperation(state);
+  auto op = GetBuilder().create(state);
   if (!op) {
     GetModule()->emitError("fail to create op, name: " + op_conf.name());
     return failure();
@@ -419,7 +419,7 @@ LogicalResult JobImporter::ProcessInputOp(const ::oneflow::OperatorConf& op_conf
   if (failed(AppendCtrlOutType(out_types))) { return failure(); }
   state.addTypes(out_types);
   // create op
-  auto op = GetBuilder().createOperation(state);
+  auto op = GetBuilder().create(state);
   if (!op) {
     GetModule()->emitError("fail to create op, name: " + op_conf.name());
     return failure();
@@ -507,7 +507,7 @@ LogicalResult JobImporter::ProcessOutputOp(const ::oneflow::OperatorConf& op_con
   if (failed(AppendCtrlOutType(out_types))) { return failure(); }
   state.addTypes(out_types);
   // create op
-  auto op = GetBuilder().createOperation(state);
+  auto op = GetBuilder().create(state);
   if (!op) {
     GetModule()->emitError("fail to create op, name: " + op_conf.name());
     return failure();
@@ -765,7 +765,8 @@ Type JobImporter::GetInterfaceBlobConfType(const ::oneflow::InterfaceBlobConf& b
                                *data_type);
 }
 
-void DumpMLIR(RoundTripOneFlowJobWrapperInterface& job_wrapper, ModuleOp module, std::string name) {
+void DumpMLIR(RoundTripOneFlowJobWrapperInterface& job_wrapper, ModuleOp module,
+              const std::string& name) {
   std::string mlir;
   llvm::raw_string_ostream os_mlir(mlir);
   module->print(os_mlir);
