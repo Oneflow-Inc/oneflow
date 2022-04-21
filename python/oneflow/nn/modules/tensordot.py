@@ -28,13 +28,20 @@ def tensordot(
     if isinstance(dims, int):
         return oneflow._C.tensordot(a, b, dims)
     elif isinstance(dims, (list, tuple)):
-        assert len(dims) == 2
+        assert (
+            len(dims) == 2
+        ), f"The list/tuple of dims must contain two lists, got {len(dims)}"
         dim_a = list(dims[0])
         dim_b = list(dims[1])
     elif isinstance(dims, oneflow.Tensor):
         if dims.numel() == 1:
             return oneflow._C.tensordot(a, b, dims.item())
-        assert len(dims) == 2
+        assert (
+            dims.dim() == 2
+        ), f"The dims tensor must have two dimensions, got {dims.dim()}"
+        assert (
+            len(dims) == 2 and dims.dim() == 2
+        ), f"The dims tensor must have two rows, got {len(dims)}"
         dim_a = dims[0].tolist()
         dim_b = dims[1].tolist()
 
