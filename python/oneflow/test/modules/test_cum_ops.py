@@ -48,6 +48,13 @@ class TestCumOp(flow.unittest.TestCase):
         test_case.assertEqual(cumsum_res.dtype, flow.float)
         test_case.assertEqual(cumprod_res.dtype, flow.float)
 
+    @autotest(n=5, check_graph=True)
+    def test_cumsum(test_case):
+        device = random_device()
+        x = random_tensor().to(device)
+        dim = random(0, x.ndim.pytorch).to(int)
+        y =  x.cumsum(dim)
+        return y
 
 if __name__ == "__main__":
     unittest.main()
