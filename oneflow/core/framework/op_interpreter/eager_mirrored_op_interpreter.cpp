@@ -163,7 +163,7 @@ Maybe<void> NaiveInterpret(const UserOpExpr& user_op_expr, const TensorTuple& in
 
   for (int64_t index : kernel->output_tuple_indexes4mut2_obns()) {
     output_eager_blob_objects->at(index)->set_is_shape_synced(false);
-    output_eager_blob_objects->at(index)->set_pin_memory(false);
+    output_eager_blob_objects->at(index)->set_pin_memory(pin_memory);
   }
 
 

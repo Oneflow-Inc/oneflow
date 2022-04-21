@@ -41,9 +41,7 @@ class CpuDeviceCtx final : public DeviceCtx {
   }
   ~CpuDeviceCtx() { device_->DestroyStream(stream_); }
 
-  std::unique_ptr<DeviceCtx> Copy() const { 
-    return std::unique_ptr<DeviceCtx>(new CpuDeviceCtx()); 
-  }
+  std::unique_ptr<DeviceCtx> Copy() const { return std::unique_ptr<DeviceCtx>(new CpuDeviceCtx()); }
 
   vm::Allocator* mut_allocator(bool pin_memory) override { 
     if(this->pin_memory()){
