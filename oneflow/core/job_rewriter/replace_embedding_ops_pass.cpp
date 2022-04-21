@@ -441,7 +441,8 @@ void BuildEmbeddingUpdate(JobPassCtx* ctx, const OpGraph& op_graph, JobBuilder* 
                           const std::string& num_unique_ids_lbn, const std::string& unique_ids_lbn,
                           const std::string& unique_values_lbn,
                           const std::string& embedding_grad_lbn,
-                          const std::string& learning_rate_lbn, std::string* state_initializer) {
+                          const std::string& learning_rate_lbn, std::string* state_initializer,
+                          OperatorConf* embedding_update_new_op_conf) {
   const TrainConf& train_conf = job_builder->job().job_conf().train_conf();
   auto AddIdentityOp = [&](const std::string& in_lbn) -> std::string {
     return BuildIdentityOp(job_builder, in_lbn, parallel_conf, embedding_op);
@@ -516,9 +517,9 @@ void BuildEmbeddingUpdate(JobPassCtx* ctx, const OpGraph& op_graph, JobBuilder* 
   embedding_update_op_builder.Attr<double>("scale", scale);
   user_op::UserOpConfWrapper embedding_update_op =
       embedding_update_op_builder.ScopeSymbolId(embedding_op.op_conf().scope_symbol_id()).Build();
-  OperatorConf embedding_update_new_op_conf = embedding_update_op.op_conf();
-  embedding_update_new_op_conf.set_stream_name_hint(embedding_name + "_EMBEDDING");
-  job_builder->AddOps(parallel_conf, {embedding_update_new_op_conf});
+  *embedding_update_new_op_conf = embedding_update_op.op_conf();
+  embedding_update_new_op_conf->set_stream_name_hint(embedding_name + "_EMBEDDING");
+  // job_builder->AddOps(parallel_conf, {embedding_update_new_op_conf});
 
   user_op::UserOpConfWrapperBuilder embedding_put_op_builder(embedding_op.op_name()
                                                              + "_embedding_put");
@@ -552,6 +553,109 @@ void UpdateConsumerOpConf(const OpNode* consumer, const LogicalBlobId& out,
   }
 }
 
+void ClipGradByGlobalNorm(
+    JobPassCtx* ctx, const OpGraph& op_graph, JobBuilder* job_builder,
+    const HashMap<OptimizerConf, std::vector<std::pair<std::string, OperatorConf>>>&
+        optimizer_conf2lbns,
+    const ParallelConf& embedding_parallel_conf, const int64_t embedding_scope_symbol_id,
+    std::vector<std::string>* new_grad_lbns, HashMap<std::string, OperatorConf>* op_name2op_conf) {
+  auto clip_by_global_norm_pass_state =
+      CHECK_JUST(ctx->MutableState<ClipByGlobalNormJobPassState>("clip_by_global_norm_state"));
+  for (const auto& pair : optimizer_conf2lbns) {
+    const OptimizerConf& optimizer_conf = pair.first;
+    const auto& param_state =
+        clip_by_global_norm_pass_state->clip_by_global_norm_state(optimizer_conf);
+    const ParallelConf& parallel_conf = param_state.parallel_conf;
+    const int64_t scope_symbol_id = param_state.scope_symbol_id;
+    const ClipByGlobalNormConf& conf = optimizer_conf.clip_conf().clip_by_global_norm();
+    double norm_type = conf.norm_type();
+    float p = norm_type;
+    if (std::isinf(norm_type) && norm_type > 0) {
+      UNIMPLEMENTED();
+    } else if (std::isinf(norm_type) && norm_type < 0) {
+      UNIMPLEMENTED();
+    } else {
+      auto multi_reduce_sum_op_builder =
+          user_op::UserOpConfWrapperBuilder("System-ClipGradient-GlobalNorm-MultiReduceSumPowAbs-"
+                                            + NewUniqueId())
+              .Op("multi_reduce_sum_pow_abs")
+              .Attr("p", p)
+              .Output("y")
+              .ScopeSymbolId(embedding_scope_symbol_id);
+      for (const auto& grad_lbn : pair.second) {
+        multi_reduce_sum_op_builder.Input("x", grad_lbn.first);
+      }
+      const auto multi_reduce_sum_op = multi_reduce_sum_op_builder.Build();
+      job_builder->AddOps(embedding_parallel_conf, {multi_reduce_sum_op.op_conf()});
+
+      const std::string& total_norm_lbn = param_state.total_norm_lbn;
+      const std::string& coeff_lbn = param_state.coeff_lbn;
+      auto pow_op = user_op::UserOpConfWrapperBuilder("System-ClipGradient-GlobalNorm-GlobalPow-"
+                                                      + NewUniqueId())
+                        .Op("scalar_pow")
+                        .Input("in", total_norm_lbn)
+                        .Attr("float_operand", static_cast<double>(p))
+                        .Attr("has_float_operand", true)
+                        .Output("out")
+                        .ScopeSymbolId(scope_symbol_id)
+                        .Build();
+      job_builder->AddOps(parallel_conf, {pow_op.op_conf()});
+
+      user_op::UserOpConfWrapperBuilder add_op_builder("System-ClipGradient-GlobalNorm-Add-"
+                                                       + NewUniqueId());
+      const auto add_op = add_op_builder.Op("add_n")
+                              .Input("in", multi_reduce_sum_op.output("y", 0))
+                              .Input("in", pow_op.output("out", 0))
+                              .Output("out")
+                              .ScopeSymbolId(scope_symbol_id)
+                              .Build();
+      job_builder->AddOps(parallel_conf, {add_op.op_conf()});
+
+      auto global_pow_op = user_op::UserOpConfWrapperBuilder(
+                               "System-ClipGradient-GlobalNorm-GlobalPow-" + NewUniqueId())
+                               .Op("scalar_pow")
+                               .Input("in", add_op.output("out", 0))
+                               .Attr("float_operand", static_cast<double>(1.0 / p))
+                               .Attr("has_float_operand", true)
+                               .Output("out")
+                               .ScopeSymbolId(scope_symbol_id)
+                               .Build();
+      job_builder->AddOps(parallel_conf, {global_pow_op.op_conf()});
+      std::string new_total_norm_lbn = global_pow_op.output("out", 0);
+      // replace total_norm_lbn consumer's in
+      const LogicalBlobId total_norm_lbi = GenLogicalBlobId(total_norm_lbn);
+      const OpNode* total_norm_lbn_producer = op_graph.OpNode4OpName(total_norm_lbi.op_name());
+      for (const OpEdge* out_edge : total_norm_lbn_producer->out_edges()) {
+        const OpNode* consumer = out_edge->dst_node();
+        UpdateConsumerOpConf(consumer, total_norm_lbi, new_total_norm_lbn, op_name2op_conf);
+      }
+      ClipByGlobalNormState new_state(new_total_norm_lbn, coeff_lbn, parallel_conf,
+                                      scope_symbol_id);
+      clip_by_global_norm_pass_state->set_clip_by_global_norm_state(optimizer_conf, new_state);
+
+      for (const auto& grad_lbn : pair.second) {
+        auto scalar_mul_op = user_op::UserOpConfWrapperBuilder(
+                                 "System-ClipGradient-GlobalNorm-ScalarMul-" + NewUniqueId())
+                                 .Op("scalar_mul_by_tensor")
+                                 .Input("x", grad_lbn.first)
+                                 .Input("scalar", coeff_lbn)
+                                 .Output("y")
+                                 .ScopeSymbolId(embedding_scope_symbol_id)
+                                 .Build();
+        job_builder->AddOps(embedding_parallel_conf, {scalar_mul_op.op_conf()});
+        // TODO: update gradient lbn's consumer
+        new_grad_lbns->push_back(scalar_mul_op.output("y", 0));
+        OperatorConf update_op_conf = grad_lbn.second;
+        const auto& new_val = scalar_mul_op.output("y", 0);
+        const auto& old_val =
+            ReplaceInputLbnInOpCustomizedConf(&update_op_conf, "embedding_grad_0", new_val);
+        CHECK_EQ(grad_lbn.first, old_val);
+        job_builder->AddOps(embedding_parallel_conf, {update_op_conf});
+      }
+    }
+  }
+}
+
 }  // namespace
 
 class ReplaceEmbeddingOps final : public JobPass {
@@ -576,7 +680,8 @@ Maybe<void> ReplaceEmbeddingOps::Apply(const OpGraph& op_graph, JobBuilder* job_
   ParallelConf embedding_parallel_conf;
   int64_t embedding_scope_symbol_id = 0;
   HashMap<std::string, OperatorConf> op_name2op_conf;
-  HashMap<OptimizerConf, std::vector<std::string>> has_clip_grad_optimizer2gradient_lbns;
+  HashMap<OptimizerConf, std::vector<std::pair<std::string, OperatorConf>>>
+      has_clip_grad_optimizer2gradient_lbn_and_update_op_conf_pairs;
   op_graph.ForEachNode([&](const OpNode* op_node) {
     const OperatorConf& op_conf = op_node->op().op_conf();
     if (!op_conf.has_user_conf()) { return; }
@@ -693,9 +798,6 @@ Maybe<void> ReplaceEmbeddingOps::Apply(const OpGraph& op_graph, JobBuilder* job_
             if (name == shadow_op_name) {
               embedding_optimizer_conf = optimizer_conf;
               found_embedding_optimizer = true;
-              if (optimizer_conf.has_clip_conf()) {
-                has_clip_grad_optimizer2gradient_lbns[optimizer_conf].push_back(embedding_grad_lbn);
-              }
               break;
             }
           }
@@ -717,12 +819,17 @@ Maybe<void> ReplaceEmbeddingOps::Apply(const OpGraph& op_graph, JobBuilder* job_
         const std::string& learning_rate_lbn =
             AddScheduleOp(op_graph, job_builder, embedding_optimizer_conf,
                           "System-Train-LearningRate-Scheduler_" + NewUniqueId());
-
+        OperatorConf embedding_update_op_conf;
         BuildEmbeddingUpdate(ctx, op_graph, job_builder, op_node->parallel_desc().parallel_conf(),
                              embedding_size, options.LineSize(), l1, l2, options.Name(),
                              embedding_optimizer_conf, embedding_op, num_unique_ids_lbn,
                              unique_ids_lbn, unique_values_lbn, embedding_grad_lbn,
-                             learning_rate_lbn, &state_initializer);
+                             learning_rate_lbn, &state_initializer, &embedding_update_op_conf);
+        if (embedding_optimizer_conf.has_clip_conf()) {
+          has_clip_grad_optimizer2gradient_lbn_and_update_op_conf_pairs[embedding_optimizer_conf]
+              .emplace_back(
+                  std::make_pair(embedding_grad_lbn, std::move(embedding_update_op_conf)));
+        }
       }
     }
     if ((state_initializer == "") && !no_optimizer_states) {
@@ -742,23 +849,17 @@ Maybe<void> ReplaceEmbeddingOps::Apply(const OpGraph& op_graph, JobBuilder* job_
     job_builder->DelOps(delete_op_names);
     job_builder->AddOps(op_node->parallel_desc().parallel_conf(), add_ops);
   });
-  for (const auto& pair : op_name2op_conf) { job_builder->MutOpsOnlyOnce({pair.second}); }
+  std::vector<std::string> new_grad_lbns;
+  if (has_clip_grad_optimizer2gradient_lbn_and_update_op_conf_pairs.size() > 0) {
+    ClipGradByGlobalNorm(
+        ctx, op_graph, job_builder, has_clip_grad_optimizer2gradient_lbn_and_update_op_conf_pairs,
+        embedding_parallel_conf, embedding_scope_symbol_id, &new_grad_lbns, &op_name2op_conf);
+  }
   if (gradient_lbns.size() > 0) {
-    JUST(DynamicLossScaleAddGradient(ctx, op_graph, job_builder, gradient_lbns,
+    JUST(DynamicLossScaleAddGradient(ctx, op_graph, job_builder, new_grad_lbns,
                                      embedding_scope_symbol_id, embedding_parallel_conf));
   }
-  if (has_clip_grad_optimizer2gradient_lbns.size() > 0) {
-    for (const auto& pair : has_clip_grad_optimizer2gradient_lbns) {
-      const auto& clip_by_global_norm_pass_state =
-          JUST(ctx->GetState<ClipByGlobalNormJobPassState>("clip_by_global_norm_state"));
-      const auto& param_state =
-          clip_by_global_norm_pass_state.clip_by_global_norm_state(pair.first);
-      LOG(ERROR) << "total_norm_lbn " << param_state.total_norm_lbn;
-      LOG(ERROR) << "coeff_lbn " << param_state.coeff_lbn;
-      LOG(ERROR) << "parallel_conf " << param_state.parallel_conf.DebugString();
-    }
-  }
-
+  for (const auto& pair : op_name2op_conf) { job_builder->MutOpsOnlyOnce({pair.second}); }
   return Maybe<void>::Ok();
 }
 

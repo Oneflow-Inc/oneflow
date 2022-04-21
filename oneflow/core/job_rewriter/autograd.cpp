@@ -778,7 +778,7 @@ void ClipGradientByGlobalNorm(JobPassCtx* ctx, const OpGraph& op_graph, JobBuild
   }
   auto state =
       CHECK_JUST(ctx->MutableState<ClipByGlobalNormJobPassState>("clip_by_global_norm_state"));
-  ClipByGlobalNormState param_state(total_norm_lbn, coeff_lbn, parallel_conf);
+  ClipByGlobalNormState param_state(total_norm_lbn, coeff_lbn, parallel_conf, scope_symbol_id);
   state->set_clip_by_global_norm_state(optimizer_conf, param_state);
 }
 

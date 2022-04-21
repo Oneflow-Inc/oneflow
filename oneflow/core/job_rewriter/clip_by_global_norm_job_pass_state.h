@@ -30,7 +30,6 @@ struct hash<oneflow::PbRpf<std::string>> {
   }
 };
 
-
 template<>
 struct hash<oneflow::OptimizerConf> {
   size_t operator()(const oneflow::OptimizerConf& conf) const {
@@ -46,13 +45,18 @@ struct ClipByGlobalNormState {
   std::string total_norm_lbn;
   std::string coeff_lbn;
   ParallelConf parallel_conf;
+  int64_t scope_symbol_id;
   ClipByGlobalNormState(const std::string& total_norm_lbn, const std::string coeff_lbn,
-                        const ParallelConf& parallel_conf)
-      : total_norm_lbn(total_norm_lbn), coeff_lbn(coeff_lbn), parallel_conf(parallel_conf) {}
+                        const ParallelConf& parallel_conf, int64_t scope_symbol_id)
+      : total_norm_lbn(total_norm_lbn),
+        coeff_lbn(coeff_lbn),
+        parallel_conf(parallel_conf),
+        scope_symbol_id(scope_symbol_id) {}
   ClipByGlobalNormState& operator=(const ClipByGlobalNormState& other) {
     total_norm_lbn = other.total_norm_lbn;
     coeff_lbn = other.coeff_lbn;
     parallel_conf = other.parallel_conf;
+    scope_symbol_id = other.scope_symbol_id;
     return *this;
   }
 };
@@ -78,28 +82,23 @@ class ClipByGlobalNormJobPassState : public JobPassState {
 
   const ClipByGlobalNormState& clip_by_global_norm_state(
       const OptimizerConf& optimizer_conf) const {
-    const auto& it =
-        optimizer_conf2clip_by_global_norm_state_.find(optimizer_conf);
+    const auto& it = optimizer_conf2clip_by_global_norm_state_.find(optimizer_conf);
     CHECK(it != optimizer_conf2clip_by_global_norm_state_.end())
         << "current optimizer has no clip_by_global_norm_state";
     return it->second;
   }
   void set_clip_by_global_norm_state(const OptimizerConf& optimizer_conf,
                                      const ClipByGlobalNormState& state) {
-    const auto& it =
-        optimizer_conf2clip_by_global_norm_state_.find(optimizer_conf);
+    const auto& it = optimizer_conf2clip_by_global_norm_state_.find(optimizer_conf);
     if (it == optimizer_conf2clip_by_global_norm_state_.end()) {
-      CHECK(optimizer_conf2clip_by_global_norm_state_
-                .emplace(optimizer_conf, state)
-                .second);
+      CHECK(optimizer_conf2clip_by_global_norm_state_.emplace(optimizer_conf, state).second);
     } else {
       it->second = state;
     }
   }
 
  private:
-  HashMap<OptimizerConf, ClipByGlobalNormState>
-      optimizer_conf2clip_by_global_norm_state_;
+  HashMap<OptimizerConf, ClipByGlobalNormState> optimizer_conf2clip_by_global_norm_state_;
 };
 
 }  // namespace oneflow
