@@ -91,8 +91,8 @@ void SoftmaxOneDnn(Stream* stream, size_t rows, size_t cols, const void* x, void
   auto src_md = dnnl::memory::desc(src_dims, data_type, dnnl::memory::format_tag::nc);
   auto src_mem = dnnl::memory(src_md, *onednn_engine, const_cast<void*>(x));
   auto dst_mem = dnnl::memory(src_md, *onednn_engine, y);
-  auto softmax_d = OneDnnSoftmax::desc(dnnl::prop_kind::forward, src_md, 1);
-  auto softmax_pd = OneDnnSoftmax::primitive_desc(softmax_d, *onednn_engine);
+  auto softmax_d = typename OneDnnSoftmax::desc(dnnl::prop_kind::forward, src_md, 1);
+  auto softmax_pd = typename OneDnnSoftmax::primitive_desc(softmax_d, *onednn_engine);
   auto softmax_prim = OneDnnSoftmax(softmax_pd);
 
   softmax_prim.execute(*onednn_stream, {{DNNL_ARG_SRC, src_mem}, {DNNL_ARG_DST, dst_mem}});
@@ -118,6 +118,7 @@ class OneDnnSoftmaxImpl;
 
 CPU_PRIMITIVE_SOFTMAX_ONEDNN_IMPL(Algorithm::kSoftmax, dnnl::softmax_forward);
 CPU_PRIMITIVE_SOFTMAX_ONEDNN_IMPL(Algorithm::kLogSoftmax, dnnl::logsoftmax_forward);
+#undef CPU_PRIMITIVE_SOFTMAX_ONEDNN_IMPL
 
 #define CPU_PRIMITIVE_SOFTMAX_ONEDNN_TYPE_SEQ \
   OF_PP_MAKE_TUPLE_SEQ(dnnl::memory::data_type::f32, DataType::kFloat, float)
