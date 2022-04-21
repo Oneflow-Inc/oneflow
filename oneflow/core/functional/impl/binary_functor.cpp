@@ -184,10 +184,9 @@ class AddcmulBaseFunctor {
   AddcmulBaseFunctor() = default;
   Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& input,
                            const std::shared_ptr<one::Tensor>& tensor1,
-                           const std::shared_ptr<one::Tensor>& tensor2,
-                           const Scalar& value, bool inplace) const {
-      return SequenceFunction<Maybe<Tensor>()>(
-              [&]() { return functional::Mul(tensor1, tensor2); })
+                           const std::shared_ptr<one::Tensor>& tensor2, const Scalar& value,
+                           bool inplace) const {
+    return SequenceFunction<Maybe<Tensor>()>([&]() { return functional::Mul(tensor1, tensor2); })
         .then([&](const auto& x) { return functional::ScalarMul(value, x); })
         .then([&](const auto& x) { return functional::Add(input, x, /*alpha=*/1, inplace); })
         .call();
@@ -199,9 +198,8 @@ class AddcmulFunctor : public AddcmulBaseFunctor {
   AddcmulFunctor() = default;
   Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& input,
                            const std::shared_ptr<one::Tensor>& tensor1,
-                           const std::shared_ptr<one::Tensor>& tensor2,
-                           const Scalar& value) const {
-      return AddcmulBaseFunctor::operator()(input, tensor1, tensor2, value, /*inplace=*/false);
+                           const std::shared_ptr<one::Tensor>& tensor2, const Scalar& value) const {
+    return AddcmulBaseFunctor::operator()(input, tensor1, tensor2, value, /*inplace=*/false);
   }
 };
 
@@ -210,9 +208,8 @@ class InplaceAddcmulFunctor : public AddcmulBaseFunctor {
   InplaceAddcmulFunctor() = default;
   Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& input,
                            const std::shared_ptr<one::Tensor>& tensor1,
-                           const std::shared_ptr<one::Tensor>& tensor2,
-                           const Scalar& value) const {
-      return AddcmulBaseFunctor::operator()(input, tensor1, tensor2, value, /*inplace=*/true);
+                           const std::shared_ptr<one::Tensor>& tensor2, const Scalar& value) const {
+    return AddcmulBaseFunctor::operator()(input, tensor1, tensor2, value, /*inplace=*/true);
   }
 };
 
