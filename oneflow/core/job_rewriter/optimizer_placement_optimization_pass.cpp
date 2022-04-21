@@ -270,6 +270,7 @@ Maybe<void> RewriteDistributedSplit(const OpGraph& op_graph, JobBuilder* builder
     if (n->op().op_conf().has_variable_conf()) {
       const Shape shape(n->op().op_conf().variable_conf().shape());
       const int64_t parallel_num = n->parallel_desc().parallel_num();
+      // TODO(strint): zero with nd check size
       // Parameter needs to be able to evenly splited and one slice size >= threshold
       return shape.At(0) % parallel_num == 0 && shape.elem_cnt() >= threshold * parallel_num;
     } else {
@@ -286,17 +287,19 @@ Maybe<void> RewriteDistributedSplit(const OpGraph& op_graph, JobBuilder* builder
       const OpNode* var_node = sorted_sequences.at(i)->GetVariableNode();
       OperatorConf new_var_op_conf = var_node->op().op_conf();
       const std::string& sole_obn = var_node->op().SoleObn();
-      LOG(ERROR) << var_node->op().op_name()
+      LOG(ERROR) << var_node->op().op_name() << " can be splited, "
                  << " has sbp: " << var_node->NdSbp4BnInOp(sole_obn).DebugString();
       const NdSbp& var_nd_sbp = var_node->NdSbp4BnInOp(sole_obn);
       // CHECK_EQ(pd.hierarchy()->NumAxes(), 1);
       FOR_RANGE(int, i, 0, new_var_op_conf.variable_conf().nd_sbp_size()) {
         if (new_var_op_conf.variable_conf().nd_sbp(i) == "B") {
+          // TODO(strint): zero with nd choose dim
           *new_var_op_conf.mutable_variable_conf()->mutable_nd_sbp(i) = "S(0)";
+          LOG(ERROR) << var_node->op().op_name() << " ranks dim " << i << " sbp is changed form B to S(0) " << new_var_op_conf.variable_conf().DebugString(); 
+          // Only split one more dim.
+          break;
         }
       }
-      // new_var_op_conf.mutable_variable_conf()->clear_nd_sbp();
-      // *new_var_op_conf.mutable_variable_conf()->add_nd_sbp() = "S(0)";
       if (i != 0) {
         const std::string& prev_op_name =
             sorted_sequences.at(i - 1)->GetVariableNode()->op().op_name();
@@ -304,8 +307,8 @@ Maybe<void> RewriteDistributedSplit(const OpGraph& op_graph, JobBuilder* builder
       }
       builder->MutOpsOnlyOnce({new_var_op_conf});
       // Set consumers to consum this variable op's cast op's output as Broadcast.
-      // SetBroadcastParallel4Consumers(builder, sorted_sequences.at(i));
-      SetNdSbp4Consumers(builder, sorted_sequences.at(i), var_nd_sbp);
+      bool limit_consume_b = ParseBooleanFromEnv("ZERO_LIMIT_B", true); 
+      if (limit_consume_b) { SetNdSbp4Consumers(builder, sorted_sequences.at(i), var_nd_sbp); }
     }
   };
   ForEachParallelSortedNodeSequence(op_graph, IsAllowed, SequenceCompSortedByOrderAsc,

@@ -144,11 +144,11 @@ def _test_linear_train_graph_2d_with_zero(test_case, zero_stage=1):
                 self.config.enable_amp(True)
                 self.set_grad_scaler(grad_scaler)
                 self.config.enable_zero(True, stage=zero_stage, min_splited_size=1)
-                self.debug(2)
+                self.debug(1)
 
             def build(self, x):
                 out = self.linear_dp_mp(x)
-                out = out.to_global(placement=P, sbp=[B, S0])
+                #out = out.to_global(placement=P, sbp=[B, S0])
                 out = self.linear_mp_dp(out)
                 loss = out.sum()
                 loss.backward()
@@ -164,7 +164,7 @@ def _test_linear_train_graph_2d_with_zero(test_case, zero_stage=1):
 
             def build(self, x):
                 out = self.linear_dp_mp(x)
-                out = out.to_global(placement=P, sbp=[B, S0])
+                #out = out.to_global(placement=P, sbp=[B, S0])
                 out = self.linear_mp_dp(out)
                 return out
 
@@ -214,7 +214,7 @@ class TestLinearTrainGraphWithZeRO(oneflow.unittest.TestCase):
 @flow.unittest.skip_unless_1n4d()
 class TestLinearTrainGraph2DWithZeRO(oneflow.unittest.TestCase):
     def test_linear_train_graph_2d_with_zero_1(test_case):
-        _test_linear_train_graph_2d_with_zero(test_case, 2)
+        _test_linear_train_graph_2d_with_zero(test_case, 1)
 
 
 if __name__ == "__main__":
