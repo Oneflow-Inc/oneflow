@@ -14,6 +14,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 #include "oneflow/core/common/util.h"
+#include "oneflow/core/framework/user_op_conf.h"
 #include "oneflow/core/job/sbp_parallel.pb.h"
 #include "oneflow/core/job_rewriter/job_pass.h"
 #include "oneflow/core/graph/op_graph.h"
@@ -156,13 +157,47 @@ void SetNdSbp4OpNodeIbn(JobBuilder* builder, const OpNode* node, const std::stri
 void SetNdSbp4Consumers(JobBuilder* builder, const SequencePtr& sequence, const NdSbp& nd_sbp) {
   const OpNode* node = sequence->GetLastNode();
   const LogicalBlobId& lbi = node->op().BnInOp2Lbi(node->op().SoleObn());
-  node->ForEachNodeOnOutEdge([&](const OpNode* out_node) {
-    for (const std::string& ibn : out_node->op().input_bns()) {
-      if (out_node->op().BnInOp2Lbi(ibn) == lbi) {
-        SetNdSbp4OpNodeIbn(builder, out_node, ibn, nd_sbp);
+  int limit_consumer_mode = ParseIntegerFromEnv("ZERO_LIMIT_CONSUMER_MODE", 2); 
+  // If limit_consumer_mode == 0, no limit on consumer
+  if (limit_consumer_mode == 1) {
+    // Soft limt consumer to consume weight as Broadcast.
+    const auto parallel_cast_op =
+        user_op::UserOpConfWrapperBuilder("System-ZeRO-ParallelCast-" + node->op().op_name() + "-" + NewUniqueId())
+            .Op("hierarchical_parallel_cast")
+            .Input("in", GenLogicalBlobName(lbi))
+            .Output("out")
+            .Attr<std::vector<std::string>>("nd_sbp", NdSbpToStringList(nd_sbp))
+            .Attr<std::string>("grad_mode", "auto")
+            .Attr<std::vector<std::string>>("grad_nd_sbp", std::vector<std::string>())
+            .ScopeSymbolId(node->op().op_conf().scope_symbol_id())
+            .Build();
+    builder->AddOps(node->parallel_desc().parallel_conf(), {parallel_cast_op.op_conf()});
+    auto out_lbn = GenLogicalBlobName(parallel_cast_op.op_name(), "out");
+    node->ForEachNodeOnOutEdge([&](const OpNode* out_node) {
+      for (const std::string& ibn : out_node->op().input_bns()) {
+        if (out_node->op().BnInOp2Lbi(ibn) == lbi) {
+          // SetNdSbp4OpNodeIbn(builder, out_node, ibn, nd_sbp);
+          if (!CHECK_JUST(builder->IsInMutOpTransaction(out_node->op().op_name()))) {
+            CHECK_JUST(builder->MutOpTransactionMut(out_node->op().op_conf()));
+          }
+          OperatorConf& mut_consumer_op =
+              *CHECK_JUST(builder->MutOpTransactionGet(out_node->op().op_name()));
+          const auto& old_lbn = ReplaceInputLbnInOpCustomizedConf(&mut_consumer_op, ibn, out_lbn);
+          CHECK_EQ(old_lbn, GenLogicalBlobName(lbi));
+        }
       }
-    }
-  });
+    });
+  } else if (limit_consumer_mode == 2) {
+    // Hard limt consumer to consume weight as Broadcast.
+    // Default is 2.
+    node->ForEachNodeOnOutEdge([&](const OpNode* out_node) {
+      for (const std::string& ibn : out_node->op().input_bns()) {
+        if (out_node->op().BnInOp2Lbi(ibn) == lbi) {
+          SetNdSbp4OpNodeIbn(builder, out_node, ibn, nd_sbp);
+        }
+      }
+    });
+  }
 }
 
 std::function<int64_t(const OpNode*)> MakeGetterOpNode2TopoOrder(const OpGraph& op_graph) {
@@ -305,14 +340,15 @@ Maybe<void> RewriteDistributedSplit(const OpGraph& op_graph, JobBuilder* builder
             sorted_sequences.at(i - 1)->GetVariableNode()->op().op_name();
         new_var_op_conf.add_ctrl_in_op_name(prev_op_name);
       }
+      // TODO(strint): rewrite with MutOpTransactioin
       builder->MutOpsOnlyOnce({new_var_op_conf});
       // Set consumers to consum this variable op's cast op's output as Broadcast.
-      bool limit_consume_b = ParseBooleanFromEnv("ZERO_LIMIT_B", true); 
-      if (limit_consume_b) { SetNdSbp4Consumers(builder, sorted_sequences.at(i), var_nd_sbp); }
+      SetNdSbp4Consumers(builder, sorted_sequences.at(i), var_nd_sbp);
     }
   };
   ForEachParallelSortedNodeSequence(op_graph, IsAllowed, SequenceCompSortedByOrderAsc,
                                     PlacementSequencesAsSplitParallel);
+  JUST(builder->MutOpTransactionCommit());
   return Maybe<void>::Ok();
 }
 
