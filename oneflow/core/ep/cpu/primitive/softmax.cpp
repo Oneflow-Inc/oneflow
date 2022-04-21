@@ -120,9 +120,6 @@ CPU_PRIMITIVE_SOFTMAX_ONEDNN_IMPL(Algorithm::kSoftmax, dnnl::softmax_forward);
 CPU_PRIMITIVE_SOFTMAX_ONEDNN_IMPL(Algorithm::kLogSoftmax, dnnl::logsoftmax_forward);
 #undef CPU_PRIMITIVE_SOFTMAX_ONEDNN_IMPL
 
-#define CPU_PRIMITIVE_SOFTMAX_ONEDNN_TYPE_SEQ \
-  OF_PP_MAKE_TUPLE_SEQ(dnnl::memory::data_type::f32, DataType::kFloat, float)
-
 template<typename SoftmaxBase, Algorithm algorithm, dnnl::memory::data_type data_type>
 std::unique_ptr<SoftmaxBase> NewOneDnnSoftmax() {
   return std::unique_ptr<SoftmaxBase>(new OneDnnSoftmaxImpl<SoftmaxBase, algorithm, data_type>());
@@ -145,7 +142,7 @@ class GenericSoftmaxFactoryImpl : public FactoryBase {
   std::unique_ptr<SoftmaxBase> New(DataType data_type) override {
 #define MAKE_NEW_SOFTMAX_ENTRY(type_cpp, type_proto) \
   {type_proto, NewSoftmax<SoftmaxBase, algorithm, type_cpp>},
-  
+
 #ifdef WITH_ONEDNN
 #define MAKE_NEW_ONEDNN_SOFTMAX_ENTRY(type_cpp, type_proto) \
   {type_proto, NewOneDnnSoftmax<SoftmaxBase, algorithm, type_cpp>},
