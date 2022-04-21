@@ -53,6 +53,7 @@ class TestAddcmul(flow.unittest.TestCase):
         shape = [random(low=2, high=4) for i in range(ndim)]
 
         input = random_tensor(len(shape), *shape).to(device)
+        input = input + 1.0
         tensor1 = random_tensor(len(shape), *shape).to(device)
         tensor2 = random_tensor(len(shape), *shape).to(device)
         value = random(3, 6).to(int)
