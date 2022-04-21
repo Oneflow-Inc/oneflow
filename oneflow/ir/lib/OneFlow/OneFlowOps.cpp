@@ -94,7 +94,7 @@ LogicalResult TrimRedundantCtrl(Operation* op, PatternRewriter& rewriter) {
     }
     OperationState state(op->getLoc(), op->getName(), op->getOperands(), data_outputs.getTypes(),
                          attributes);
-    auto created = rewriter.createOperation(state);
+    auto created = rewriter.create(state);
     for (auto data_output : data_outputs) {
       data_output.replaceAllUsesWith(created->getOpResult(data_output.getResultNumber()));
     }
@@ -155,7 +155,7 @@ struct ConcreteUserOps : public OpRewritePattern<UserOp> {
       state.addAttributes(attributes);
       state.addOperands(op.getODSOperands(0) /* data in */);
       state.addTypes(op.getODSResults(0 /* data out */).getTypes());
-      if (auto created = rewriter.createOperation(state)) {
+      if (auto created = rewriter.create(state)) {
         if (created->hasTrait<OpTrait::AttrSizedOperandSegments>() == false) {
           created->removeAttr(OpTrait::AttrSizedOperandSegments<void>::getOperandSegmentSizeAttr());
         }
@@ -323,10 +323,8 @@ static ParseResult parseJob(OpAsmParser& parser, OperationState& result) {
                                                   buildFuncType);
 }
 
-static void print(Job op, OpAsmPrinter& p) {
-  FunctionType fnType = op.getType();
-  function_interface_impl::printFunctionOp(p, op, fnType.getInputs(), /*isVariadic=*/false,
-                                           fnType.getResults());
+void Job::print(OpAsmPrinter& p) {
+  function_interface_impl::printFunctionOp(p, *this, /*isVariadic=*/false);
 }
 
 static LogicalResult verify(Job op) {
@@ -336,7 +334,7 @@ static LogicalResult verify(Job op) {
   // Verify that the argument list of the function and the arg list of the entry
   // block line up.  The trait already verified that the number of arguments is
   // the same between the signature and the block.
-  auto fnInputTypes = op.getType().getInputs();
+  auto fnInputTypes = op.getFunctionType().getInputs();
   Block& entryBlock = op.front();
   for (unsigned i = 0, e = entryBlock.getNumArguments(); i != e; ++i)
     if (fnInputTypes[i] != entryBlock.getArgument(i).getType())
@@ -352,7 +350,7 @@ static LogicalResult verify(mlir::oneflow::ReturnOp op) {
   auto job = cast<Job>(op->getParentOp());
 
   // The operand number and types must match the function signature.
-  const auto& results = job.getType().getResults();
+  const auto& results = job.getFunctionType().getResults();
   if (op.getNumOperands() != results.size())
     return op.emitOpError("has ") << op.getNumOperands() << " operands, but enclosing function (@"
                                   << job.getName() << ") returns " << results.size();
