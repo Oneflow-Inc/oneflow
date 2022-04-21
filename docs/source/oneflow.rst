@@ -11,6 +11,7 @@ oneflow
             acos, 
             acosh, 
             add, 
+            addcmul, 
             addmm, 
             amin, 
             arccos, 

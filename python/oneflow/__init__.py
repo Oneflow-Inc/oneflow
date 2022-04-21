@@ -107,6 +107,7 @@ from oneflow._C import diag
 from oneflow._C import log1p
 from oneflow._C import add
 from oneflow._C import div, div_
+from oneflow._C import addcmul
 from oneflow._C import floor, floor_
 from oneflow._C import floor_divide
 from oneflow._C import mul
