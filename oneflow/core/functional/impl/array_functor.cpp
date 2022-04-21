@@ -196,7 +196,6 @@ class EmptyFunctor {
     JUST(attrs.SetAttr<Shape>("shape", shape));
     JUST(attrs.SetAttr<DataType>("dtype", dtype->data_type()));
     JUST(attrs.SetAttr<bool>("pin_memory", pin_memory));
-    printf("\nEmptyFunctor >>>>> pin_memory:%d", int(pin_memory));
     if (device.has_value()) {
       Symbol<Device> device_symbol = JUST(device);
       return OpInterpUtil::Dispatch<Tensor>(*op_, {}, OpExprInterpContext(attrs, device_symbol));
