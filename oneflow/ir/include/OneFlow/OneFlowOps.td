@@ -90,7 +90,7 @@ def OneFlow_MlirJitOp : OneFlow_BaseOp<"mlir_jit", [ CallOpInterface, DeclareOpI
       $_state.addOperands(data_input);
       $_state.addAttributes(attributes);
       $_state.addAttribute("callee", SymbolRefAttr::get(callee));
-      $_state.addTypes(callee.getType().getResults());
+      $_state.addTypes(callee.getFunctionType().getResults());
     }]>
   ];
   let extraClassDeclaration = [{
@@ -179,7 +179,7 @@ def OneFlow_Job : Op<OneFlow_Dialect, "job", [FunctionOpInterface, IsolatedFromA
 
   let arguments = (ins
     SymbolNameAttr:$sym_name,
-    TypeAttr:$type,
+    TypeAttrOf<FunctionType>:$function_type,
     OptionalAttr<StrAttr>:$sym_visibility
   );
 
@@ -192,12 +192,12 @@ def OneFlow_Job : Op<OneFlow_Dialect, "job", [FunctionOpInterface, IsolatedFromA
 
    FunctionType getFunctionType() { return function_type(); }
 
-    ArrayRef<Type> getArgumentTypes() { return getType().getInputs(); }
+    ArrayRef<Type> getArgumentTypes() { return getFunctionType().getInputs(); }
 
-    ArrayRef<Type> getResultTypes() { return getType().getResults(); }
+    ArrayRef<Type> getResultTypes() { return getFunctionType().getResults(); }
 
     LogicalResult verifyType() {
-      auto type = getTypeAttr().getValue();
+      auto type = getFunctionTypeAttr().getValue();
       if (!type.isa<FunctionType>())
         return emitOpError("requires '" + getTypeAttrName() +
                            "' attribute of function type");
