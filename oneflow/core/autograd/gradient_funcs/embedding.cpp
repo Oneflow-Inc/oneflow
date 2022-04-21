@@ -33,7 +33,7 @@ class Embedding : public OpExprGradFunction<EmbeddingCaptureState> {
   Maybe<void> Capture(EmbeddingCaptureState* ctx, const TensorTuple& inputs,
                       const TensorTuple& outputs, const AttrMap& attrs) const override;
   Maybe<void> Apply(const EmbeddingCaptureState* ctx, const TensorTuple& out_grads,
-                    TensorTuple* in_grads) const override ;
+                    TensorTuple* in_grads) const override;
 
  private:
   AttrMap base_attrs_;
@@ -47,7 +47,7 @@ Maybe<void> Embedding::Init(const OpExpr& op) {
 }
 
 Maybe<void> Embedding::Capture(EmbeddingCaptureState* ctx, const TensorTuple& inputs,
-                            const TensorTuple& outputs, const AttrMap& attrs) const {
+                               const TensorTuple& outputs, const AttrMap& attrs) const {
   ctx->requires_grad = inputs.at(0)->requires_grad();
   if (!ctx->requires_grad) { return Maybe<void>::Ok(); }
 
@@ -61,7 +61,7 @@ Maybe<void> Embedding::Capture(EmbeddingCaptureState* ctx, const TensorTuple& in
 }
 
 Maybe<void> Embedding::Apply(const EmbeddingCaptureState* ctx, const TensorTuple& out_grads,
-                          TensorTuple* in_grads) const {
+                             TensorTuple* in_grads) const {
   if (!ctx->requires_grad) { return Maybe<void>::Ok(); }
   CHECK_EQ_OR_RETURN(out_grads.size(), 1);
 
@@ -70,8 +70,8 @@ Maybe<void> Embedding::Apply(const EmbeddingCaptureState* ctx, const TensorTuple
   int32_t padding_idx = ctx->padding_idx;
   bool scale_grad_by_freq = ctx->scale_grad_by_freq;
 
-  in_grads->at(0) =
-      JUST(functional::EmbeddingGrad(out_grads.at(0), weight, indices, padding_idx, scale_grad_by_freq));
+  in_grads->at(0) = JUST(
+      functional::EmbeddingGrad(out_grads.at(0), weight, indices, padding_idx, scale_grad_by_freq));
   return Maybe<void>::Ok();
 }
 

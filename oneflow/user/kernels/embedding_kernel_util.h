@@ -21,27 +21,31 @@ limitations under the License.
 
 namespace oneflow {
 
-template<DeviceType device_type,typename T,typename index_T>
-struct EmbeddingRenormFunctor final{
-    void operator()(ep::Stream* stream, const T* in_buf, const index_T* indices_buf, T* out_buf,
-                    const double max_norm, const double norm_type, const int32_t num_indices,  const int32_t emb_size, const int32_t emb_dim, void *tmp_buf);
+template<DeviceType device_type, typename T, typename index_T>
+struct EmbeddingRenormFunctor final {
+  void operator()(ep::Stream* stream, const T* in_buf, const index_T* indices_buf, T* out_buf,
+                  const double max_norm, const double norm_type, const int32_t num_indices,
+                  const int32_t emb_size, const int32_t emb_dim, void* tmp_buf);
 };
 
-template<DeviceType device_type,typename T,typename index_T>
-struct EmbeddingFunctor final{
-    void operator()(ep::Stream* stream, const T* weight_buf, const index_T* indices_buf, T* out_buf,
-                    const int32_t padding_idx, const bool scale_grad_by_freq,  const int32_t num_indices, const int32_t emb_size, const int32_t emb_dim);
+template<DeviceType device_type, typename T, typename index_T>
+struct EmbeddingFunctor final {
+  void operator()(ep::Stream* stream, const T* weight_buf, const index_T* indices_buf, T* out_buf,
+                  const int32_t padding_idx, const bool scale_grad_by_freq,
+                  const int32_t num_indices, const int32_t emb_size, const int32_t emb_dim);
 };
 
-template<DeviceType device_type,typename T,typename index_T>
-struct EmbeddingGradFunctor final{
-    void operator()(ep::Stream* stream, const T* dy_buf, const index_T* indices_buf, T* dx_buf,
-                    const int32_t padding_idx, const bool scale_grad_by_freq,  const int32_t num_indices, const int32_t emb_size, const int32_t emb_dim, int32_t *tmp_buf);
+template<DeviceType device_type, typename T, typename index_T>
+struct EmbeddingGradFunctor final {
+  void operator()(ep::Stream* stream, const T* dy_buf, const index_T* indices_buf, T* dx_buf,
+                  const int32_t padding_idx, const bool scale_grad_by_freq,
+                  const int32_t num_indices, const int32_t emb_size, const int32_t emb_dim,
+                  int32_t* tmp_buf);
 };
 
 #define EMBEDDING_DATA_TYPE_SEQ_CPU FLOATING_DATA_TYPE_SEQ FLOAT16_DATA_TYPE_SEQ
 #define EMBEDDING_DATA_TYPE_SEQ_CUDA FLOATING_DATA_TYPE_SEQ HALF_DATA_TYPE_SEQ
 
-} // namespace oneflow
+}  // namespace oneflow
 
 #endif  // ONEFLOW_USER_KERNELS_EMBEDDING_KERNEL_UTIL_H_
