@@ -51,6 +51,14 @@ class TestTensordot(flow.unittest.TestCase):
         return z
 
     @autotest(n=5)
+    def test_tensordot_tuple_dim(test_case):
+        device = random_device()
+        x = random_tensor(4, 1, 3, 2, 5).to(device)
+        y = random_tensor(4, 4, 2, 3, 5).to(device)
+        z = torch.tensordot(x, y, dims=([1, 2, 0], [2, 1, 0]))
+        return z
+
+    @autotest(n=5)
     def test_tensordot_list_neg_dim(test_case):
         device = random_device()
         x = random_tensor(4, 1, 3, 2, 5).to(device)
