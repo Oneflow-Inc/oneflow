@@ -43,17 +43,24 @@ template<DeviceType device_type, typename IN_T, typename IDX_T>
 struct DimGatherFunctor final {
   void operator()(ep::Stream* stream, const DimOpIndexNdHelper<IDX_T>& input_nd_helper,
                   const DimOpIndexNdHelper<IDX_T>& index_nd_helper, int ndim, int64_t elem_cnt,
-                  int32_t dim, const IDX_T* index, const IN_T* input, IN_T* output);
+                  int32_t dim_length, int32_t dim, const IDX_T* index, const IN_T* input,
+                  IN_T* output);
 };
 
 template<typename IN_T, typename IDX_T>
 OF_DEVICE_FUNC void DoDimGather(const DimOpIndexNdHelper<IDX_T>& input_nd_helper,
                                 const DimOpIndexNdHelper<IDX_T>& index_nd_helper, int ndim,
-                                int64_t elem_cnt, int32_t dim, const IDX_T* index,
-                                const IN_T* input, IN_T* output) {
+                                int64_t elem_cnt, int32_t dim_length, int32_t dim,
+                                const IDX_T* index, const IN_T* input, IN_T* output) {
   XPU_1D_KERNEL_LOOP(index_offset, elem_cnt) {
     IDX_T coordinate[kDimGatherMaxDimCount] = {0};
     const IDX_T x = index[index_offset];
+#ifdef __CUDA_ARCH__
+    assert(x < dim_length && "gather index is out of bounds");
+#else
+    CHECK_LE(x, dim_length) << "RuntimeError: index " << x << " is out of bounds for dimension "
+                            << dim << " with size " << dim_length;
+#endif
     index_nd_helper.OffsetToNdIndex(index_offset, coordinate, ndim);
     coordinate[dim] = x;
 

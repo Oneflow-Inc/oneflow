@@ -21,6 +21,7 @@ from oneflow.nn.modules.activation import (
     GELU,
     GLU,
     Hardsigmoid,
+    Hardshrink,
     Hardswish,
     Hardtanh,
     LeakyReLU,
@@ -38,6 +39,7 @@ from oneflow.nn.modules.activation import (
     SELU,
     SiLU,
     Softsign,
+    Threshold,
 )
 
 from oneflow.nn.modules.all_reduce import AllReduce

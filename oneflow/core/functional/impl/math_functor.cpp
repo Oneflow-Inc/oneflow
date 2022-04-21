@@ -14,6 +14,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
+#include "oneflow/core/common/container_util.h"
 #include "oneflow/core/common/scalar.h"
 #include "oneflow/core/framework/attr_map.h"
 #include "oneflow/core/framework/nd_sbp.h"
@@ -657,27 +658,29 @@ class ReduceProdFunctor {
         one::OpBuilder("reduce_prod").Input("input_tensor").Output("output_tensor").Build());
   }
   Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x, const std::vector<int32_t>& axis,
-                           const bool& keepdims) const {
+                           const bool& keepdims, const Optional<Symbol<DType>>& dtype) const {
     MutableAttrMap attrs;
+    std::shared_ptr<one::Tensor> tensor = x;
+    if (dtype.has_value() && (dtype != x->dtype())) { tensor = JUST(Cast(tensor, JUST(dtype))); }
     TensorProcessor tensor_processor;
     Symbol<DType> lowest_dtype;
-    if (DType::priority_order[x->dtype()->data_type()]
+    if (DType::priority_order[tensor->dtype()->data_type()]
         == DType::priority_order[DType::Bool()->data_type()]) {
       lowest_dtype = DType::Int64();
     } else {
-      lowest_dtype = x->dtype();
+      lowest_dtype = tensor->dtype();
     }
-    JUST(tensor_processor.AddInputs({x}, lowest_dtype).Apply());
+    JUST(tensor_processor.AddInputs({tensor}, lowest_dtype).Apply());
     TensorTuple input_tuple = JUST(tensor_processor.GetInputs());
     if (axis.empty()) {
-      std::vector<int32_t> reduce_axis(x->shape()->NumAxes());
+      std::vector<int32_t> reduce_axis(tensor->shape()->NumAxes());
       std::iota(reduce_axis.begin(), reduce_axis.end(), 0);
       JUST(attrs.SetAttr<std::vector<int32_t>>("axis", reduce_axis));
     } else {
       JUST(attrs.SetAttr<std::vector<int32_t>>("axis", axis));
     }
     JUST(attrs.SetAttr<bool>("keepdims", keepdims));
-    return OpInterpUtil::Dispatch<Tensor>(*op_, input_tuple, attrs);
+    return JUST(OpInterpUtil::Dispatch<Tensor>(*op_, input_tuple, attrs));
   }
 
  private:
@@ -731,9 +734,11 @@ class Transpose2dimFunctor {
     if (dim1 < 0) { dim_1 += ndim; }
 
     CHECK_OR_RETURN(dim_0 >= 0 && dim0 < ndim)
-        << "Invalid dim0:" << dim_0 << " len(shape):" << ndim;
+        << "Dimension out of range (expected to be in range of [" << -ndim << ", " << ndim - 1
+        << "], but got " << dim_0 << ")";
     CHECK_OR_RETURN(dim_1 >= 0 && dim1 < ndim)
-        << "Invalid dim1:" << dim_1 << " len(shape):" << ndim;
+        << "Dimension out of range (expected to be in range of [" << -ndim << ", " << ndim - 1
+        << "], but got " << dim_1 << ")";
     for (int32_t i = 0; i < ndim; ++i) { permute.emplace_back(i); }
     std::swap(permute[dim_0], permute[dim_1]);
 
@@ -790,28 +795,6 @@ class AsStridedGradFunctor {
 
  private:
   std::shared_ptr<OpExpr> op_;
-};
-
-class SwapaxesFunctor {
- public:
-  SwapaxesFunctor() {}
-  Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x, const int32_t dim0,
-                           const int32_t dim1) const {
-    const int64_t ndim = x->shape()->NumAxes();
-    int32_t dim_0 = dim0;
-    int32_t dim_1 = dim1;
-
-    if (dim0 < 0) { dim_0 += ndim; }
-    if (dim1 < 0) { dim_1 += ndim; }
-
-    CHECK_OR_RETURN(dim_0 >= 0 && dim0 < ndim)
-        << "Dimension out of range (expected to be in range of [" << -ndim << ", " << ndim - 1
-        << "], but got " << dim_0 << ")";
-    CHECK_OR_RETURN(dim_1 >= 0 && dim1 < ndim)
-        << "Dimension out of range (expected to be in range of [" << -ndim << ", " << ndim - 1
-        << "], but got " << dim_1 << ")";
-    return Transpose2dim(x, dim0, dim1);
-  }
 };
 
 class ArangeFunctor {
@@ -1098,8 +1081,7 @@ class VectorNormFunctor {
     if (ord.IsIntegral() || ord.IsFloatingPoint()) {
       double ord_val = JUST(ord.As<double>());
       if (ord_val == 0) {
-        std::vector<int32_t> dim_column(1, 0);
-        res = JUST(ReduceSum(JUST(ScalarLogicalNotEqual(x, 0)), dim_column, keepdim));
+        res = JUST(ReduceSum(JUST(functional::NotEqualZero(x)), dim, keepdim));
       } else if (ord_val == INFINITY) {
         res = JUST(ReduceMax(JUST(Abs(x)), dim, keepdim));
       } else if (ord_val == -INFINITY) {
@@ -1525,15 +1507,11 @@ class SelectTopNFunctor {
     MutableAttrMap attr;
     JUST(attr.SetAttr<int32_t>("top_n", n));
     std::vector<bool> require_grad(n);
-    std::vector<bool> is_leaf(n);
-    for (int i = 0; i < n; ++i) {
-      is_leaf.at(i) = (inputs.at(i)->is_leaf());
-      require_grad.at(i) = (inputs.at(i)->requires_grad());
-    }
+    for (int i = 0; i < n; ++i) { require_grad[i] = JUST(VectorAt(inputs, i))->requires_grad(); }
     const auto& output = JUST(OpInterpUtil::Dispatch<one::TensorTuple>(*op_, inputs, attr));
-    for (int i = 0; i < n; ++i) {
-      inputs.at(i)->set_is_leaf(is_leaf.at(i));
-      JUST(inputs.at(i)->set_requires_grad(require_grad.at(i)));
+    for (int i = 0; i < output->size(); ++i) {
+      (*output)[i]->set_is_leaf(false);
+      JUST((*output)[i]->set_requires_grad(require_grad[i]));
     }
     return output;
   }
@@ -1553,10 +1531,15 @@ class MinimumFunctor {
 
   Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x,
                            const std::shared_ptr<one::Tensor>& y) const {
+    TensorProcessor tensor_processor;
+    JUST(tensor_processor.PromoteInputsToCommonDtype(true).AddInputs({x, y}).Apply());
+    TensorTuple input_tuple = JUST(tensor_processor.GetInputs());
     if (*x->shape() == *y->shape()) {
-      return OpInterpUtil::Dispatch<Tensor>(*elementwise_minimum_op_, {x, y});
+      return OpInterpUtil::Dispatch<Tensor>(*elementwise_minimum_op_,
+                                            {input_tuple[0], input_tuple[1]});
     } else {
-      return OpInterpUtil::Dispatch<Tensor>(*broadcast_minimum_op_, {x, y});
+      return OpInterpUtil::Dispatch<Tensor>(*broadcast_minimum_op_,
+                                            {input_tuple[0], input_tuple[1]});
     }
   }
 
@@ -1576,10 +1559,15 @@ class MaximumFunctor {
 
   Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x,
                            const std::shared_ptr<one::Tensor>& y) const {
+    TensorProcessor tensor_processor;
+    JUST(tensor_processor.PromoteInputsToCommonDtype(true).AddInputs({x, y}).Apply());
+    TensorTuple input_tuple = JUST(tensor_processor.GetInputs());
     if (*x->shape() == *y->shape()) {
-      return OpInterpUtil::Dispatch<Tensor>(*elementwise_maximum_op_, {x, y});
+      return OpInterpUtil::Dispatch<Tensor>(*elementwise_maximum_op_,
+                                            {input_tuple[0], input_tuple[1]});
     } else {
-      return OpInterpUtil::Dispatch<Tensor>(*broadcast_maximum_op_, {x, y});
+      return OpInterpUtil::Dispatch<Tensor>(*broadcast_maximum_op_,
+                                            {input_tuple[0], input_tuple[1]});
     }
   }
 
@@ -2807,7 +2795,8 @@ ONEFLOW_FUNCTION_LIBRARY(m) {
   m.add_functor<TransposeFunctor>("Permute");
   m.add_functor<AsStridedFunctor>("AsStrided");
   m.add_functor<AsStridedGradFunctor>("AsStridedGrad");
-  m.add_functor<SwapaxesFunctor>("Swapaxes");
+  m.add_functor<Transpose2dimFunctor>("Swapaxes");
+  m.add_functor<Transpose2dimFunctor>("Swapdims");
   m.add_functor<ArangeFunctor, Arange2Functor>("Arange");
   m.add_functor<ConsistentArangeFunctor, ConsistentArange2Functor>("ConsistentArange");
   m.add_functor<CastFunctor>("Cast");
