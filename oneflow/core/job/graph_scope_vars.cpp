@@ -40,4 +40,9 @@ std::atomic<int32_t>* GetGraphDebugMaxPyStackDepthVar() {
   static std::atomic<int32_t> graph_debug_max_py_stack_depth{2};
   return &graph_debug_max_py_stack_depth;
 }
+
+std::atomic<bool>* GetGraphDebugModeFlag() {
+  static std::atomic<bool> graph_debug_mode_flag{false};
+  return &graph_debug_mode_flag;
+}
 }  // namespace oneflow

@@ -118,7 +118,7 @@ int32_t get_cur_stack_depth() {
 }
 
 std::string get_cur_frame_stack_str() {
-  const bool debug_mode = CHECK_JUST(GetFLAGS_v()) >= 0;
+  const bool debug_mode = GetGraphDebugMode();
   const int32_t max_stack_depth = GetGraphDebugMaxPyStackDepth();
   if (debug_mode) {  // show more info for the stack trace in debug mode
     int32_t current_stack_depth = get_cur_stack_depth();

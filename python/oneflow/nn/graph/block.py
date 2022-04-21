@@ -107,8 +107,9 @@ class ModuleBlock(Block):
     ):
         assert not isinstance(origin, Block)
         super().__init__(prefix, name)
+        self._debug = False 
         self._debug_min_s_level = 2
-        self._debug_max_v_level = -1
+        self._debug_max_v_level = 0
         self._debug_max_py_stack_depth = 2
         self._type = BlockType.MODULE
         self._is_executing_forward = False
@@ -162,9 +163,10 @@ class ModuleBlock(Block):
 
         my_rank = get_rank()
         if -1 in rank_list or my_rank in rank_list:
-            if v_level >= 0:
+            self._debug = (v_level >= 0)
+            if self._debug:
                 self._debug_min_s_level = 0
-                self._debug_max_v_level = v_level
+                self._debug_max_v_level = max(0, v_level)
                 self._debug_max_py_stack_depth = max_py_stack_depth
 
             if self._type == BlockType.MODULE:
@@ -210,6 +212,7 @@ class ModuleBlock(Block):
         with graph_build_util.DebugScopeContext(
             self._debug_min_s_level,
             self._debug_max_v_level,
+            self._debug,
             self._debug_max_py_stack_depth,
         ):
             result = self.__block_forward(*args, **kwargs)
