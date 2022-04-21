@@ -44,7 +44,7 @@ void GatherFunctionNodes(FunctionNode* node, std::stack<std::shared_ptr<Function
 }
 
 /* NOTE:
- * It will stack overflow when releasing a very deep computation graph without
+ * Stack overflows when releasing a very deep computation graph without
  * a custom deleter.
  *
  * For example, here is a very deep computation graph:
