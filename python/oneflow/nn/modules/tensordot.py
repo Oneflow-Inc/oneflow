@@ -32,6 +32,8 @@ def tensordot(
         dim_a = list(dims[0])
         dim_b = list(dims[1])
     elif isinstance(dims, oneflow.Tensor):
+        if dims.numel() == 1:
+            return oneflow._C.tensordot(a, b, dims.item())
         assert len(dims) == 2
         dim_a = dims[0].tolist()
         dim_b = dims[1].tolist()

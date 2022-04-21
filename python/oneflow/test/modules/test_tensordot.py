@@ -93,6 +93,14 @@ class TestTensordot(flow.unittest.TestCase):
             _test_tensor_dim(test_case, arg[0])
 
     @autotest(n=5)
+    def test_tensordot_single_item_tensor_dim(test_case):
+        dims = random_tensor(1, dim0=1, low=0, high=4, dtype=int)
+        x = random_tensor(3, dim0=4, dim1=4, dim2=4)
+        y = random_tensor(3, dim0=4, dim1=4, dim2=4)
+        z = torch.tensordot(x, y, dims=dims)
+        return z
+
+    @autotest(n=5)
     def test_tensordot_broadcast(test_case):
         device = random_device()
         x = random_tensor(4, 1, 1, 1, 1).to(device)
