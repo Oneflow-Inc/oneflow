@@ -26,6 +26,7 @@ namespace oneflow {
 
 Maybe<void> FlatShape::Init(const Shape& shape) {
   CHECK_LE_OR_RETURN(shape.NumAxes(), SHAPE_MAX_AXIS_SIZE);
+  this->clear_dim();
   for (int i = 0; i < shape.NumAxes(); ++i) { *this->mutable_dim()->Add() = shape.At(i); }
   return Maybe<void>::Ok();
 }

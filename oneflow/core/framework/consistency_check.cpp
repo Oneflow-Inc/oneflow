@@ -345,8 +345,8 @@ Maybe<void> MetaInfoConsistencyCheck(const Symbol<ParallelDesc>& placement,
   return Maybe<void>::Ok();
 }
 
-Maybe<void> TensorMetaInfoConsistencyCheck(const Symbol<ParallelDesc>& placement,
-                                           Symbol<one::ConsistentTensorMeta> tensor_meta) {
+Maybe<void> TensorMetaConsistencyCheck(const Symbol<ParallelDesc>& placement,
+                                       Symbol<one::ConsistentTensorMeta> tensor_meta) {
   const auto& rank_group = JUST(RankGroup::New(placement));
   const auto& transport_token =
       JUST(TransportToken::NewTransportToken(kTransportTokenTypeCheckRankGroupConsistency));

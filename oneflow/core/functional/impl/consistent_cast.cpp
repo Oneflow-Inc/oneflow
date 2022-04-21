@@ -168,37 +168,76 @@ Maybe<FlatShapeAndDataType> BroadcastShapeAndDtype(const Shape& shape, DataType 
 Maybe<void> GetConcatenatedShapeAndCheckDtype(
     Shape* logical_shape, DataType* dtype,
     const HashMap<int64_t, std::shared_ptr<FlatShapeAndDataType>>& rank2flat_shape_dtype,
-    Symbol<ParallelDesc> parallel_desc, int64_t concat_axis) {
-  const auto& GetRankPhyShapeByParallelId =
-      [&](int64_t parallel_id) -> Maybe<FlatShapeAndDataType> {
-    int64_t machine_id = JUST(parallel_desc->MachineId4ParallelId(parallel_id));
-    return JUST(MapAt(rank2flat_shape_dtype, machine_id));
-  };
-  const auto& first_flat_shape_dtype = JUST(GetRankPhyShapeByParallelId(0));
-  CHECK_GE_OR_RETURN(concat_axis, 0);
-  CHECK_LT_OR_RETURN(concat_axis, first_flat_shape_dtype->NumAxes());
-  int64_t logical_concat_dim = first_flat_shape_dtype->At(concat_axis);
-  for (int parallel_id = 1; parallel_id < parallel_desc->parallel_num(); ++parallel_id) {
-    const auto& rank_flat_shape_dtype = JUST(GetRankPhyShapeByParallelId(parallel_id));
-    CHECK_EQ_OR_RETURN(rank_flat_shape_dtype->NumAxes(), first_flat_shape_dtype->NumAxes());
-    logical_concat_dim += rank_flat_shape_dtype->At(concat_axis);
+    Symbol<ParallelDesc> parallel_desc, Symbol<NdSbp> nd_sbp) {
+  *dtype = JUST(MapAt(rank2flat_shape_dtype, 0))->dtype();
+  HashMap<int64_t, std::shared_ptr<Shape>> rank2logical_shape;
+  for (const auto& pair : rank2flat_shape_dtype) {
+    rank2logical_shape.emplace(pair.first, JUST(pair.second->ToShape()));
+    CHECK_EQ_OR_RETURN(*dtype, pair.second->dtype());
   }
-  BalancedSplitter bs(logical_concat_dim, parallel_desc->parallel_num());
-  CHECK_EQ_OR_RETURN(first_flat_shape_dtype->At(concat_axis), bs.At(0).size());
-  JUST(first_flat_shape_dtype->ToShape(logical_shape));
-  logical_shape->Set(concat_axis, logical_concat_dim);
-  *dtype = first_flat_shape_dtype->dtype();
-  for (int parallel_id = 1; parallel_id < parallel_desc->parallel_num(); ++parallel_id) {
-    const auto& rank_flat_shape_dtype = JUST(GetRankPhyShapeByParallelId(parallel_id));
-    for (int i = 0; i < logical_shape->NumAxes(); ++i) {
-      if (i == concat_axis) {
-        CHECK_EQ_OR_RETURN(rank_flat_shape_dtype->At(i), bs.At(parallel_id).size());
-      } else {
-        CHECK_EQ_OR_RETURN(rank_flat_shape_dtype->At(i), logical_shape->At(i));
+  const auto& GetRankPhyShapeByParallelId = [&](Symbol<ParallelDesc> parallel_desc,
+                                                int64_t parallel_id) -> Maybe<Shape> {
+    int64_t machine_id = JUST(parallel_desc->MachineId4ParallelId(parallel_id));
+    return JUST(MapAt(rank2logical_shape, machine_id));
+  };
+  const auto& parallel_hierarchy = parallel_desc->hierarchy();
+  Stride parallel_stride(*parallel_hierarchy);
+  for (int32_t i = nd_sbp->sbp_parallel_size() - 1; i >= 0; --i) {
+    if (nd_sbp->sbp_parallel(i).has_split_parallel()) {
+      int64_t concat_axis = nd_sbp->sbp_parallel(i).split_parallel().axis();
+      int64_t group_size = parallel_hierarchy->Count(0, i);
+      int64_t stride = parallel_stride.At(i);
+      for (int group_id = 0; group_id < group_size; ++group_id) {
+        int64_t parallel_num_in_group = parallel_hierarchy->At(i);
+        for (int64_t stride_id = 0; stride_id < stride; ++stride_id) {
+          ParallelConf parallel_conf;
+          parallel_conf.set_device_tag(parallel_desc->device_tag());
+          int64_t start_parallel_id = group_id * parallel_num_in_group + stride_id;
+          for (int64_t parallel_id_in_group = 0; parallel_id_in_group < parallel_num_in_group;
+               ++parallel_id_in_group) {
+            int64_t id = start_parallel_id + parallel_id_in_group * stride;
+            int64_t machine_id = JUST(parallel_desc->MachineId4ParallelId(id));
+            int64_t device_id = JUST(parallel_desc->DeviceId4ParallelId(id));
+            parallel_conf.add_device_name(std::string("@") + std::to_string(machine_id) + ":"
+                                          + std::to_string(device_id));
+          }
+          Symbol<ParallelDesc> sub_parallel_desc = SymbolOf(ParallelDesc(parallel_conf));
+          std::shared_ptr<Shape> first_shape =
+              JUST(GetRankPhyShapeByParallelId(sub_parallel_desc, 0));
+          CHECK_GE_OR_RETURN(concat_axis, 0);
+          CHECK_LT_OR_RETURN(concat_axis, first_shape->NumAxes());
+
+          int64_t logical_concat_dim = first_shape->At(concat_axis);
+          for (int parallel_id = 1; parallel_id < sub_parallel_desc->parallel_num();
+               ++parallel_id) {
+            const auto& rank_shape =
+                JUST(GetRankPhyShapeByParallelId(sub_parallel_desc, parallel_id));
+            CHECK_EQ_OR_RETURN(rank_shape->NumAxes(), rank_shape->NumAxes());
+            logical_concat_dim += rank_shape->At(concat_axis);
+          }
+
+          BalancedSplitter bs(logical_concat_dim, sub_parallel_desc->parallel_num());
+          CHECK_EQ_OR_RETURN(first_shape->At(concat_axis), bs.At(0).size());
+          first_shape->Set(concat_axis, logical_concat_dim);
+
+          for (int parallel_id = 1; parallel_id < sub_parallel_desc->parallel_num();
+               ++parallel_id) {
+            std::shared_ptr<Shape> rank_shape =
+                JUST(GetRankPhyShapeByParallelId(sub_parallel_desc, parallel_id));
+            for (int i = 0; i < first_shape->NumAxes(); ++i) {
+              if (i == concat_axis) {
+                CHECK_EQ_OR_RETURN(rank_shape->At(i), bs.At(parallel_id).size());
+              } else {
+                CHECK_EQ_OR_RETURN(rank_shape->At(i), first_shape->At(i));
+              }
+            }
+            rank_shape->Set(concat_axis, logical_concat_dim);
+          }
+        }
       }
     }
-    CHECK_EQ_OR_RETURN(*dtype, rank_flat_shape_dtype->dtype());
   }
+  *logical_shape = *JUST(MapAt(rank2logical_shape, 0));
   return Maybe<void>::Ok();
 }
 
@@ -211,21 +250,15 @@ Maybe<void> GetLogicalShapeAndDataType(Shape* logical_shape, DataType* /* in and
   } else {
     if (ContainSplitSbp(nd_sbp)) {
       *logical_shape = *physical_shape;
-      for (int32_t i = nd_sbp->sbp_parallel_size() - 1; i >= 0; --i) {
-        if (nd_sbp->sbp_parallel(i).has_split_parallel()) {
-          Symbol<ParallelDesc> sub_parallel_desc = JUST(CalcSubParallelDesc4Axis(parallel_desc, i));
-          const auto& rank2flat_shape_dtype =
-              JUST(BroadcastGatherShapeAndDataType(*logical_shape, *dtype, sub_parallel_desc));
-          int64_t concat_axis = nd_sbp->sbp_parallel(i).split_parallel().axis();
-          JUST(GetConcatenatedShapeAndCheckDtype(logical_shape, dtype, *rank2flat_shape_dtype,
-                                                 sub_parallel_desc, concat_axis));
-        }
-      }
+      const auto& rank2flat_shape_dtype =
+          JUST(BroadcastGatherShapeAndDataType(*logical_shape, *dtype, parallel_desc));
+      JUST(GetConcatenatedShapeAndCheckDtype(logical_shape, dtype, *rank2flat_shape_dtype,
+                                             parallel_desc, nd_sbp));
     } else {
       *logical_shape = *physical_shape;
       ConsistentTensorMeta tensor_meta(std::make_shared<const Shape>(*logical_shape), *dtype,
                                        nd_sbp, parallel_desc);
-      JUST(TensorMetaInfoConsistencyCheck(parallel_desc, SymbolOf(tensor_meta)));
+      JUST(TensorMetaConsistencyCheck(parallel_desc, SymbolOf(tensor_meta)));
     }
   }
   if (JUST(RankGroup::New(parallel_desc)) != JUST(RankGroupScope::CurrentRankGroup())) {
