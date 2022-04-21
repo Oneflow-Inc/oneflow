@@ -25,7 +25,6 @@ limitations under the License.
 #include "mlir/IR/BuiltinAttributes.h"
 #include "mlir/IR/OpImplementation.h"
 #include "mlir/IR/OperationSupport.h"
-#include "mlir/IR/PatternMatch.h"
 #include "mlir/IR/FunctionImplementation.h"
 #include "mlir/Support/LLVM.h"
 #include "mlir/Support/LogicalResult.h"
@@ -314,7 +313,7 @@ void Job::build(OpBuilder& builder, OperationState& state, StringRef name, Funct
   state.addRegion();
 }
 
-static ParseResult parseJob(OpAsmParser& parser, OperationState& result) {
+ParseResult Job::parse(OpAsmParser& parser, OperationState& result) {
   auto buildFuncType = [](Builder& builder, ArrayRef<Type> argTypes, ArrayRef<Type> results,
                           function_interface_impl::VariadicFlag,
                           std::string&) { return builder.getFunctionType(argTypes, results); };
@@ -327,18 +326,18 @@ void Job::print(OpAsmPrinter& p) {
   function_interface_impl::printFunctionOp(p, *this, /*isVariadic=*/false);
 }
 
-static LogicalResult verify(Job op) {
+LogicalResult Job::verify() {
   // If this function is external there is nothing to do.
-  if (op.isExternal()) return success();
+  if (isExternal()) return success();
 
   // Verify that the argument list of the function and the arg list of the entry
   // block line up.  The trait already verified that the number of arguments is
   // the same between the signature and the block.
-  auto fnInputTypes = op.getFunctionType().getInputs();
-  Block& entryBlock = op.front();
+  auto fnInputTypes = getFunctionType().getInputs();
+  Block& entryBlock = front();
   for (unsigned i = 0, e = entryBlock.getNumArguments(); i != e; ++i)
     if (fnInputTypes[i] != entryBlock.getArgument(i).getType())
-      return op.emitOpError("type of entry block argument #")
+      return emitOpError("type of entry block argument #")
              << i << '(' << entryBlock.getArgument(i).getType()
              << ") must match the type of the corresponding argument in "
              << "function signature(" << fnInputTypes[i] << ')';
