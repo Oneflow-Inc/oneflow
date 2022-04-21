@@ -333,8 +333,9 @@ def make_cached_ssd_store_options(
     capacity=None,
     size_factor=1,
     physical_block_size=512,
+    host_cache_budget_mb=0,
 ):
-    """make SSD use GPU as cache store_options param of MultiTableEmbedding
+    """make SSD use GPU and host as cache store_options param of MultiTableEmbedding. If cache_budget_mb > 0 and host_cache_budget_mb > 0, use GPU and host memory as multi-level cache.
 
     Args:
         cache_budget_mb (int): the MB budget of per GPU as cache.
@@ -342,9 +343,10 @@ def make_cached_ssd_store_options(
         capacity (int): total capacity of Embedding
         size_factor (int, optional): store size factor of embedding_dim, if SGD update, and momentum = 0, should be 1, if momentum > 0, it should be 2. if Adam, should be 3. Defaults to 1.
         physical_block_size (int, optional): physical_block_size should be sector size. Defaults to 512.
+        host_cache_budget_mb (int): the MB budget of host memory as cache per rank. Defaults to 0.
 
     Returns:
-        dict: SSD use GPU as cache store_options param of MultiTableEmbedding
+        dict: SSD use GPU and host as cache store_options param of MultiTableEmbedding
 
     For example:
 
@@ -358,20 +360,33 @@ def make_cached_ssd_store_options(
         >>> # ...
     """
     assert isinstance(persistent_path, (str, list, tuple))
-    assert cache_budget_mb > 0
+    assert cache_budget_mb > 0 or host_cache_budget_mb > 0
     if capacity is not None:
         assert capacity > 0
     else:
         capacity = 0
+
+    cache_list = []
+    if cache_budget_mb > 0:
+        cache_list.append(
+            {
+                "policy": "lru",
+                "cache_memory_budget_mb": cache_budget_mb,
+                "value_memory_kind": "device",
+            }
+        )
+    if host_cache_budget_mb > 0:
+        cache_list.append(
+            {
+                "policy": "lru",
+                "cache_memory_budget_mb": host_cache_budget_mb,
+                "value_memory_kind": "host",
+            }
+        )
+
     options = {
         "kv_store": {
-            "caches": [
-                {
-                    "policy": "lru",
-                    "cache_memory_budget_mb": cache_budget_mb,
-                    "value_memory_kind": "device",
-                }
-            ],
+            "caches": cache_list,
             "persistent_table": {
                 "path": persistent_path,
                 "physical_block_size": physical_block_size,
