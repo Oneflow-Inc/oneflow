@@ -56,6 +56,19 @@ add_docstr(
         oneflow.Size([5, 7])
     
     Note:
+
+        Three common use cases are:
+
+        - dims = 0 : tensor product :math: `a \otimes b`
+
+        - dims = 1 : tensor dot product :math: `a \cdot b`
+
+        - dims = 2 : (default) tensor double contraction :math: `a : b`
+
+        The part of documentation is referenced from https://numpy.org/doc/stable/reference/generated/numpy.tensordot.html.
+
+
+    Note:
         The operation is equivalent to the series of operations:
 
         - Permute the dimensions of the tensor A that require tensordot to the end
