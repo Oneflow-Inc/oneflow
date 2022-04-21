@@ -138,7 +138,10 @@ Maybe<void> NaiveInterpret(const UserOpExpr& user_op_expr, const TensorTuple& in
         return output_tensor_metas->at(i);
       }));
 
-  const bool pin_memory = JUST(attrs.GetAttr<bool>("pin_memory")) ? JUST(attrs.GetAttr<bool>("pin_memory")) : false;
+  bool pin_memory = false;
+  if(user_op_expr.op_type_name()=="empty"){
+    pin_memory = JUST(attrs.GetAttr<bool>("pin_memory"));
+  }
 
   for (int i = 0; i < output_eager_blob_objects->size(); i++) {
     auto* tensor_impl = JUST(TensorImpl4Tensor(outputs->at(i)));
@@ -168,16 +171,6 @@ Maybe<void> NaiveInterpret(const UserOpExpr& user_op_expr, const TensorTuple& in
     return builder->LocalCallOpKernel(kernel, input_eager_blob_objects, output_eager_blob_objects,
                                       ctx, stream);
   }));
-  return Maybe<void>::Ok();
-}
-
-Maybe<void> RunEmptyOp(TensorTuple* outputs) {
-  CHECK_EQ_OR_RETURN(outputs->size(), 1);
-  auto* tensor_impl = JUST(TensorImpl4Tensor(outputs->at(0)));
-  const auto& shape = tensor_impl->tensor_meta()->shape_ptr();
-  const auto& data_type = tensor_impl->dtype();
-  const auto& device = tensor_impl->device();
-  outputs->at(0) = JUST(functional::Empty(*shape, DType(data_type), device, /**pin_memory=*/false));
   return Maybe<void>::Ok();
 }
 

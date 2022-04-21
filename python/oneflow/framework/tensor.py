@@ -1076,6 +1076,8 @@ def _new_tensor(
             data, dtype=dtype, placement=placement, sbp=sbp, requires_grad=requires_grad
         )
 
+def _pin_memory(self):
+    return flow._C.pin_memory(self)
 
 def RegisterMethods():
     Tensor.__mul__ = lambda self, other: self.mul(other)
@@ -1292,6 +1294,7 @@ def RegisterMethods():
     Tensor.isnan = _isnan
     Tensor.isinf = _isinf
     Tensor.new_tensor = _new_tensor
+    Tensor.pin_memory = _pin_memory
 
 
 def register_tensor_op(op_name):

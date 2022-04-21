@@ -35,9 +35,13 @@
   bind_python: True
 
 - name: "assign_local_tensor"
-  signature: "Void (Tensor ref, Tensor value) => AssignLocalTensorFunctor"
+  signature: "Void (Tensor ref, Tensor value) => AssignLocalTensor"
   bind_python: True
 
 - name: "from_numpy"
   signature: "Tensor (PyObject* obj) => LocalTensorSharedNumpyData"
+  bind_python: True
+
+- name: "pin_memory"
+  signature: "Tensor (Tensor input) => PinMemory"
   bind_python: True

@@ -209,6 +209,7 @@ class AssignLocalTensorFunctor {
                          const std::shared_ptr<one::Tensor>& value) const {
     CHECK_OR_RETURN(ref->is_local() && value->is_local())
         << "Both ref and value must be local tensor.";
+    MutableAttrMap attrs;
     JUST(OpInterpUtil::Dispatch<TensorTuple>(*op_, {ref, value}));
     return Maybe<void>::Ok();
   }
@@ -287,6 +288,31 @@ class LocalTensorSharedNumpyDataFunctor {
   }
 };
 
+class PinMemoryFunctor {
+ public:
+  PinMemoryFunctor() {
+    assign_op_ = CHECK_JUST(one::OpBuilder("assign").Input("ref").Input("value").Build());
+  }
+  Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& input) const {
+    // if tensor already pinned, then just return
+    if(JUST(JUST(input->AsMirroredTensor())->eager_blob_object())->pin_memory()){
+      return input;
+    }
+    const bool pin_memory = true;
+    auto shape = input->shape();
+    auto device = JUST(input->device());
+
+    CHECK_EQ_OR_RETURN(device->enum_type(), DeviceType::kCPU) << "cannot pin tensor with device: " << device->ToString() << ", only dense CPU tensors can be pinned.";
+    auto output = JUST(functional::Empty(*shape.get(), input->dtype(), device, /**pin_memory=*/pin_memory));
+    JUST(OpInterpUtil::Dispatch<TensorTuple>(*assign_op_, {output, input}));
+    return output;
+  }
+
+ private:
+  std::shared_ptr<OpExpr> assign_op_;
+};
+
+
 }  // namespace impl
 
 ONEFLOW_FUNCTION_LIBRARY(m) {
@@ -299,8 +325,9 @@ ONEFLOW_FUNCTION_LIBRARY(m) {
   m.add_functor<impl::ConsistentTensorWithDataCtorFunctor>("ConsistentTensorWithDataCtor");
   m.add_functor<impl::TensorWithShapeCtorFunctor>("TensorWithShapeCtor");
   m.add_functor<impl::ConsistentTensorWithShapeCtorFunctor>("ConsistentTensorWithShapeCtor");
-  m.add_functor<impl::AssignLocalTensorFunctor>("AssignLocalTensorFunctor");
+  m.add_functor<impl::AssignLocalTensorFunctor>("AssignLocalTensor");
   m.add_functor<impl::LocalTensorSharedNumpyDataFunctor>("LocalTensorSharedNumpyData");
+  m.add_functor<impl::PinMemoryFunctor>("PinMemory");
 }
 
 }  // namespace functional
