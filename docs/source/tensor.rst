@@ -180,3 +180,5 @@ OneFlow Tensor Class
             where, 
             zero_, 
             nms,
+            pin_memory,
+

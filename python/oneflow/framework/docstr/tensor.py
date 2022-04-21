@@ -1846,3 +1846,12 @@ add_docstr(
     See :func:`oneflow.isinf`
     """,
 )
+
+add_docstr(
+    oneflow.Tensor.pin_memory,
+    r"""
+    Tensor.pin_memory() -> Tensor
+
+    Copies the tensor to pinned memory, if it’s not already pinned.
+    """,
+)
