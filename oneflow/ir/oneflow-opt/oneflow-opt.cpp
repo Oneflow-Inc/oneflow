@@ -30,7 +30,8 @@ limitations under the License.
 #include "OneFlow/Passes.h"
 
 namespace mlir {
-struct TestOneFlowTraitFolder : public PassWrapper<TestOneFlowTraitFolder, OperationPass<mlir::func::FuncOp>> {
+struct TestOneFlowTraitFolder
+    : public PassWrapper<TestOneFlowTraitFolder, OperationPass<func::FuncOp>> {
   void runOnOperation() override {
     if (failed(applyPatternsAndFoldGreedily(getOperation(), RewritePatternSet(&getContext())))) {
       exit(1);

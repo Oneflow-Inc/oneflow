@@ -491,30 +491,30 @@ void BroadcastMulOp::getCanonicalizationPatterns(RewritePatternSet& results, MLI
 }
 
 void AddLowerToLinalgMemRefPasses(PassManager& pm) {
-  pm.addPass(createLowerOneFlowToTosaPass());            // lower-oneflow-to-tosa
-  pm.addPass(createCSEPass());                           // cse
-  pm.addNestedPass<mlir::func::FuncOp>(tosa::createTosaToLinalg());  // tosa-to-linalg-on-tensors
+  pm.addPass(createLowerOneFlowToTosaPass());                  // lower-oneflow-to-tosa
+  pm.addPass(createCSEPass());                                 // cse
+  pm.addNestedPass<func::FuncOp>(tosa::createTosaToLinalg());  // tosa-to-linalg-on-tensors
   auto p = createLinalgElementwiseOpFusionPass();
   if (p->initializeOptions("allow-folding-unit-dim-reshapes=true").failed()) exit(1);
-  pm.addNestedPass<mlir::func::FuncOp>(std::move(p));                           // linalg-fuse-elementwise-ops
-  pm.addNestedPass<mlir::func::FuncOp>(createLinalgBufferizePass());            // linalg-bufferize
-  pm.addNestedPass<mlir::func::FuncOp>(createTensorBufferizePass());            // tensor-bufferize
-  pm.addPass(createFuncBufferizePass());                            // func-bufferize
+  pm.addNestedPass<func::FuncOp>(std::move(p));                     // linalg-fuse-elementwise-ops
+  pm.addNestedPass<func::FuncOp>(createLinalgBufferizePass());      // linalg-bufferize
+  pm.addNestedPass<func::FuncOp>(createTensorBufferizePass());      // tensor-bufferize
+  pm.addPass(func::createFuncBufferizePass());                      // func-bufferize
   pm.addPass(bufferization::createBufferResultsToOutParamsPass());  // buffer-results-to-out-params
   pm.addPass(createCanonicalizerPass());                            // canonicalize
-  pm.addNestedPass<mlir::func::FuncOp>(
+  pm.addNestedPass<func::FuncOp>(
       mlir::bufferization::createFinalizingBufferizePass());  // finalizing-bufferize
 }
 
 LogicalResult LowerModuleToLLVM(mlir::MLIRContext* context, ModuleOp module) {
   mlir::PassManager pm(context);
   AddLowerToLinalgMemRefPasses(pm);
-  pm.addNestedPass<mlir::func::FuncOp>(createConvertLinalgToLoopsPass());  // convert-linalg-to-loops
-  pm.addNestedPass<mlir::func::FuncOp>(createConvertSCFToCFPass());        // convert-scf-to-cf
-  pm.addPass(createConvertLinalgToLLVMPass());                 // convert-linalg-to-llvm
-  pm.addPass(createMemRefToLLVMPass());                        // convert-memref-to-llvm
-  pm.addPass(createLowerToLLVMPass());                         // convert-std-to-llvm
-  pm.addPass(createReconcileUnrealizedCastsPass());            // reconcile-unrealized-casts
+  pm.addNestedPass<func::FuncOp>(createConvertLinalgToLoopsPass());  // convert-linalg-to-loops
+  pm.addNestedPass<func::FuncOp>(createConvertSCFToCFPass());        // convert-scf-to-cf
+  pm.addPass(createConvertLinalgToLLVMPass());                       // convert-linalg-to-llvm
+  pm.addPass(createMemRefToLLVMPass());                              // convert-memref-to-llvm
+  pm.addPass(createLowerToLLVMPass());                               // convert-std-to-llvm
+  pm.addPass(createReconcileUnrealizedCastsPass());                  // reconcile-unrealized-casts
   return pm.run(module);
 }
 
@@ -527,19 +527,19 @@ LogicalResult LowerModuleToCUDALLVM(mlir::MLIRContext* context, ModuleOp module)
       ::oneflow::ParseBooleanFromEnv("ONEFLOW_MLIR_ENABLE_IR_PRINTING", false);
   context->disableMultithreading(enable_ir_printing);
   AddLowerToLinalgMemRefPasses(pm);
-  pm.addNestedPass<mlir::func::FuncOp>(
-      createConvertLinalgToParallelLoopsPass());             // convert-linalg-to-parallel-loops
-  pm.addPass(createMapSCFToGPUPass());                       // gpu-greedy-parallel-loop-mapping
-  pm.addPass(createParallelLoopToGpuPass());                 // convert-parallel-loops-to-gpu
-  pm.addPass(createGpuKernelOutliningPass());                // gpu-kernel-outlining
-  pm.addNestedPass<mlir::func::FuncOp>(createBufferHostRegisterPass());  // buffer-host-register
-  pm.addPass(createCanonicalizerPass());                     // canonicalize
+  pm.addNestedPass<func::FuncOp>(
+      createConvertLinalgToParallelLoopsPass());  // convert-linalg-to-parallel-loops
+  pm.addPass(createMapSCFToGPUPass());            // gpu-greedy-parallel-loop-mapping
+  pm.addPass(createParallelLoopToGpuPass());      // convert-parallel-loops-to-gpu
+  pm.addPass(createGpuKernelOutliningPass());     // gpu-kernel-outlining
+  pm.addNestedPass<func::FuncOp>(createBufferHostRegisterPass());  // buffer-host-register
+  pm.addPass(createCanonicalizerPass());                           // canonicalize
   // -pass-pipeline='gpu.module([PASS1][PASS2]...)'
   pm.addNestedPass<gpu::GPUModuleOp>(createStripDebugInfoPass());        // strip-debuginfo
   pm.addNestedPass<gpu::GPUModuleOp>(createLowerAffinePass());           // lower-affine
   pm.addNestedPass<gpu::GPUModuleOp>(createLowerGpuOpsToNVVMOpsPass());  // convert-gpu-to-nvvm
   pm.addNestedPass<gpu::GPUModuleOp>(createSerializeToCubinPass());      // out-of-tree-gpu-to-cubin
-  pm.addNestedPass<mlir::func::FuncOp>(createGpuCopyArgPass());                      // buffer-host-register
+  pm.addNestedPass<func::FuncOp>(createGpuCopyArgPass());                // buffer-host-register
   pm.addPass(createGpuToLLVMConversionPass());
   if (enable_ir_printing) pm.enableIRPrinting();
   return pm.run(module);

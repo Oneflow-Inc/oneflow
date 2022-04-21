@@ -84,7 +84,7 @@ def OneFlow_MlirJitOp : OneFlow_BaseOp<"mlir_jit", [ CallOpInterface, DeclareOpI
     StrAttr:$mlir_assembly
   );
   let builders = [
-    OpBuilder<(ins "FuncOp":$callee,
+    OpBuilder<(ins "func::FuncOp":$callee,
       "NamedAttrList":$attributes,
       CArg<"ValueRange", "{}">:$data_input), [{
       $_state.addOperands(data_input);
@@ -190,11 +190,7 @@ def OneFlow_Job : Op<OneFlow_Dialect, "job", [FunctionOpInterface, IsolatedFromA
   let extraClassDeclaration = [{
     bool isDeclaration() { return isExternal(); }
 
-    /// Returns the type of this function.
-    /// TODO: use the ODS `type`
-    FunctionType getType() {
-      return getTypeAttr().getValue().cast<FunctionType>();
-    }
+   FunctionType getFunctionType() { return function_type(); }
 
     ArrayRef<Type> getArgumentTypes() { return getType().getInputs(); }
 
@@ -261,13 +257,13 @@ def MapSCFToGPUPass : Pass<"gpu-greedy-parallel-loop-mapping", "ModuleOp"> {
   let dependentDialects = ["scf::SCFDialect"];
 }
 
-def BufferHostRegisterPass : Pass<"buffer-host-register", "FuncOp"> {
+def BufferHostRegisterPass : Pass<"buffer-host-register", "func::FuncOp"> {
   let summary = "";
   let constructor = "mlir::oneflow::createBufferHostRegisterPass()";
   let dependentDialects = ["gpu::GPUDialect"];
 }
 
-def GpuCopyArgPass : Pass<"gpu-copy-arg", "FuncOp"> {
+def GpuCopyArgPass : Pass<"gpu-copy-arg", "func::FuncOp"> {
   let summary = "";
   let constructor = "mlir::oneflow::createGpuCopyArgPass()";
   let dependentDialects = ["memref::MemRefDialect", "gpu::GPUDialect"];
