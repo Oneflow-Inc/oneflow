@@ -74,7 +74,7 @@ void WorkerLoop(vm::ThreadCtx* thread_ctx, const std::function<void(vm::ThreadCt
 
 }  // namespace
 
-VirtualMachine::VirtualMachine() : disable_vm_threads_(false), scheduler_stoped_(false) {
+VirtualMachine::VirtualMachine() : disable_vm_threads_(false), scheduler_stopped_(false) {
   // Class VirtualMachineEngine only cares the basic logical of vm, while class VirtualMachine
   // manages threads and condition variables.
   // In order to notify threads in VirtualMachineEngine, a notify callback lambda should be take as
@@ -93,7 +93,7 @@ VirtualMachine::VirtualMachine() : disable_vm_threads_(false), scheduler_stoped_
 namespace {
 
 Maybe<Symbol<Stream>> GetBarrierStream() {
-  auto device = JUST(Device::New("control"));
+  auto device = JUST(Device::New("cpu"));
   return Stream::New(device, StreamRole::kBarrier);
 }
 
@@ -234,7 +234,7 @@ void ScheduleUntilVMEmpty(vm::VirtualMachineEngine* vm, const vm::ScheduleCtx& s
 Maybe<void> VirtualMachine::RunInCurrentThread(vm::InstructionMsgList* instr_list) {
   CHECK_OR_RETURN(vm_->Empty());
   CHECK_OR_RETURN(vm_->CallbackEmpty());
-  CHECK_OR_RETURN(scheduler_stoped_);
+  CHECK_OR_RETURN(scheduler_stopped_);
   JUST(vm_->Receive(instr_list));
   ScheduleUntilVMEmpty(vm_.Mutable(), SingleThreadScheduleCtx(vm_.Mutable()));
   return Maybe<void>::Ok();
@@ -302,7 +302,7 @@ void VirtualMachine::ScheduleLoop(const std::function<void()>& Initializer) {
     std::unique_lock<std::mutex> lock(worker_threads_mutex_);
     for (const auto& worker_thread : worker_threads_) { worker_thread->join(); }
   }
-  scheduler_stoped_ = true;
+  scheduler_stopped_ = true;
 }
 
 void VirtualMachine::CallbackLoop(const std::function<void()>& Initializer) {
