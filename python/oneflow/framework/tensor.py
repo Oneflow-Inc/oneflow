@@ -647,9 +647,12 @@ def _to_local(self):
     return flow.to_local(self)
 
 
-def _relu(self, inplace=False):
-    return flow.relu(self, inplace=inplace)
+def _relu(self):
+    return flow._C.relu(self)
 
+
+def _relu_inplace(self):
+    return flow.relu(self, inplace=True)
 
 def _softmax(self, dim=None):
     return flow.softmax(self, dim=dim)
@@ -1231,6 +1234,7 @@ def RegisterMethods():
     Tensor.transpose = _transpose
     Tensor.to_global = _to_global
     Tensor.relu = _relu
+    Tensor.relu_ = _relu_inplace
     Tensor.softmax = _softmax
     Tensor.log_softmax = _log_softmax
     Tensor.logical_and = _and
