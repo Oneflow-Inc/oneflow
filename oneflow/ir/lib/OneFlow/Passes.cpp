@@ -78,8 +78,9 @@ LogicalResult DumpAssembly(::mlir::PatternRewriter& rewriter, MlirJitOp op) {
 }
 
 // TODO: cfg/multi block support
-FuncOp GetOrInsertFuncOp(::mlir::PatternRewriter& rewriter, mlir::Location loc, StringRef func_name,
-                         ValueRange operands, ValueRange results, SmallVector<Operation*, 4> ops) {
+func::FuncOp GetOrInsertFuncOp(::mlir::PatternRewriter& rewriter, mlir::Location loc,
+                               StringRef func_name, ValueRange operands, ValueRange results,
+                               SmallVector<Operation*, 4> ops) {
   BlockAndValueMapping mapping;
   SmallVector<Type, 4> argument_types;
   argument_types.reserve(operands.size());
@@ -102,24 +103,24 @@ FuncOp GetOrInsertFuncOp(::mlir::PatternRewriter& rewriter, mlir::Location loc, 
   SymbolTable symbol_table(parent_module_op);
   OpBuilder::InsertionGuard guard(rewriter);
   Block::iterator insertPt(parent_func_op->getNextNode());
-  rewriter.setInsertionPointToStart(&parent_module_op.body().getBlocks().back());
+  rewriter.setInsertionPointToStart(parent_module_op.getBody());
   if (parent_func_op->hasAttr("llvm.emit_c_interface")) {
     emitError(loc) << "parent should not has attr of llvm.emit_c_interface " << *parent_func_op;
     return nullptr;
   }
-  auto function = rewriter.create<mlir::FuncOp>(loc, func_name, func_type);
+  auto function = rewriter.create<func::FuncOp>(loc, func_name, func_type);
   function->setAttr("llvm.emit_c_interface", mlir::UnitAttr::get(rewriter.getContext()));
-  function.body().emplaceBlock();
-  for (auto& arg : argument_types) { function.body().addArguments(arg, loc); }
-  for (auto argument_pair : llvm::zip(operands, function.body().getArguments())) {
+  function.getBody().emplaceBlock();
+  for (auto& arg : argument_types) { function.getBody().addArguments(arg, loc); }
+  for (auto argument_pair : llvm::zip(operands, function.getBody().getArguments())) {
     mapping.map(std::get<0>(argument_pair), std::get<1>(argument_pair));
   }
-  rewriter.setInsertionPointToStart(&function.body().front());
+  rewriter.setInsertionPointToStart(&function.getBody().front());
   ImplicitLocOpBuilder nb(loc, rewriter);
   for (auto op : ops) { nb.clone(*op, mapping); }
   SmallVector<::mlir::Value, 4> mapped_results;
   for (auto result : results) { mapped_results.push_back(mapping.lookup(result)); }
-  rewriter.create<mlir::ReturnOp>(loc, mapped_results);
+  rewriter.create<func::ReturnOp>(loc, mapped_results);
   if (symbol_table.lookup(func_name)) {
     emitError(loc) << func_name << " should not be at symbol table of ModuleOp";
     return nullptr;
@@ -513,7 +514,7 @@ LogicalResult LowerModuleToLLVM(mlir::MLIRContext* context, ModuleOp module) {
   pm.addNestedPass<func::FuncOp>(createConvertSCFToCFPass());        // convert-scf-to-cf
   pm.addPass(createConvertLinalgToLLVMPass());                       // convert-linalg-to-llvm
   pm.addPass(createMemRefToLLVMPass());                              // convert-memref-to-llvm
-  pm.addPass(createLowerToLLVMPass());                               // convert-std-to-llvm
+  pm.addPass(createConvertFuncToLLVMPass());                         // convert-std-to-llvm
   pm.addPass(createReconcileUnrealizedCastsPass());                  // reconcile-unrealized-casts
   return pm.run(module);
 }
