@@ -922,6 +922,19 @@ class TestTensorNumpy(flow.unittest.TestCase):
         x = random_tensor(ndim=3).to(device)
         y = x.swapdims(random(0, 3).to(int), random(0, 3).to(int))
         return y
+    
+    @flow.unittest.skip_unless_1n1d()
+    @autotest(n=5, auto_backward=True, check_graph=False)
+    def test_tensor_pin_memory(test_case):
+        device = random_device()
+        x = random_tensor(ndim=3).to(device)
+        x2 = x.pin_memory()
+        x3 = x2.pin_memory()
+        test_case.assertTrue(id(x.pytorch)!=id(x2.pytorch))
+        test_case.assertTrue(id(x3.pytorch)==id(x2.pytorch))
+        test_case.assertTrue(id(x.oneflow)!=id(x2.oneflow))
+        test_case.assertTrue(id(x3.oneflow)==id(x2.oneflow))
+        return x3
 
 
 if __name__ == "__main__":

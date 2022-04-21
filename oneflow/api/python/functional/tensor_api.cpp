@@ -33,6 +33,8 @@ limitations under the License.
 #include "oneflow/core/job/lazy_mode.h"
 #include "oneflow/core/framework/nd_sbp.h"
 #include "oneflow/core/common/foreign_lock_helper.h"
+#include "oneflow/core/autograd/autograd_engine.h"
+#include "oneflow/core/autograd/autograd_mode.h"
 
 namespace oneflow {
 namespace one {
@@ -301,10 +303,30 @@ class PinMemoryFunctor {
     const bool pin_memory = true;
     auto shape = input->shape();
     auto device = JUST(input->device());
+    const bool requires_grad = input->requires_grad();
 
     CHECK_EQ_OR_RETURN(device->enum_type(), DeviceType::kCPU) << "cannot pin tensor with device: " << device->ToString() << ", only dense CPU tensors can be pinned.";
     auto output = JUST(functional::Empty(*shape.get(), input->dtype(), device, /**pin_memory=*/pin_memory));
     JUST(OpInterpUtil::Dispatch<TensorTuple>(*assign_op_, {output, input}));
+    JUST(output->set_requires_grad(requires_grad));
+    
+    // if requires_grad, set backward function-node 'copy_backward'
+    if(autograd::GradMode::is_enabled() && requires_grad){
+      auto backward_fn = std::make_shared<BackwardFunction>();
+      backward_fn->body = [=](const TensorTuple& out_grads, TensorTuple* in_grads,
+                              bool create_graph) -> Maybe<void> {
+        autograd::AutoGradMode mode(create_graph);
+        CHECK_EQ_OR_RETURN(out_grads.size(), 1);  // NOLINT(maybe-need-error-msg)
+        in_grads->resize(1);
+        const Symbol<Device>& device = JUST(out_grads[0]->device());
+        (*in_grads)[0] = JUST(functional::Copy(out_grads[0], device->type(), device->device_id()););
+        return Maybe<void>::Ok();
+      };
+      backward_fn->status = []() { return true; };
+      TensorTuple outputs{output};
+      JUST(GetThreadLocalAutogradEngine()->AddNode("copy_backward", backward_fn, {input},
+                                                  &outputs));
+    }
     return output;
   }
 
