@@ -996,6 +996,68 @@ add_docstr(
 )
 
 add_docstr(
+    oneflow.median,
+    r"""
+    median(input) -> Tensor
+
+    Returns the median of the values in input.
+    The documentation is referenced from:
+    https://pytorch.org/docs/stable/generated/torch.median.html#torch.median
+
+    .. note::
+        The median is not unique for :attr:`input` tensors with an even number
+        of elements. In this case the lower of the two medians is returned.
+
+    Args:
+        input (Tensor): the input tensor.
+
+    For example:
+
+    .. code-block:: python
+
+        >>> import oneflow as flow
+        >>> x = flow.tensor((1, 2, -1), dtype=flow.float32)
+        >>> flow.median(x)
+        tensor(1., dtype=oneflow.float32)
+
+    .. function:: median(input, dim=-1, keepdim=False, *, out=None) -> (Tensor, LongTensor)
+        :noindex:
+
+    Returns a tuple ``(values, indices)`` where ``values`` contains the median of each row of :attr:`input`
+    in the dimension :attr:`dim`, and ``indices`` contains the index of the median values found in the dimension :attr:`dim`.
+
+    By default, :attr:`dim` is the last dimension of the :attr:`input` tensor.
+
+    If :attr:`keepdim` is ``True``, the output tensors are of the same size
+    as :attr:`input` except in the dimension :attr:`dim` where they are of size 1.
+    Otherwise, :attr:`dim` is squeezed (see :func:`flow.squeeze`), resulting in
+    the outputs tensor having 1 fewer dimension than :attr:`input`.
+
+    .. note::
+        The median is not unique for :attr:`input` tensors with an even number
+        of elements in the dimension :attr:`dim`. In this case the lower of the
+        two medians is returned.
+
+    Args:
+        input (Tensor): the input tensor.
+        dim (int): the dimension to reduce.
+        keepdim (bool): whether the output tensor has :attr:`dim` retained or not.
+
+    For example:
+
+    .. code-block:: python
+
+        >>> import oneflow as flow
+        >>> a = flow.tensor([[ 0.2505, -0.3982, -0.9948,  0.3518, -1.3131],
+        ...    [ 0.3180, -0.6993,  1.0436,  0.0438,  0.2270],
+        ...    [-0.2751,  0.7303,  0.2192,  0.3321,  0.2488],
+        ...    [ 1.0778, -1.9510,  0.7048,  0.4742, -0.7125]])
+        >>> flow.median(a, 1)
+        (tensor([-0.3982,  0.2270,  0.2488,  0.4742], dtype=oneflow.float32), tensor([1, 4, 4, 3], dtype=oneflow.int64))
+    """,
+)
+
+add_docstr(
     oneflow.pow,
     r"""Takes the power of each element in input with exponent and returns a tensor with the result. Exponent can be either a single float number, a single int number, or a tensor with the same shape as input.
     When exponent is a scalar value, the operation applied is:
