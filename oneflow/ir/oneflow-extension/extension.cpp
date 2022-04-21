@@ -155,9 +155,13 @@ void WithMlirContext(
     module->print(os_mlir);
     TeePersistentLogStream::Create(JoinPath("jit", ctx->op_name() + ".mlir"))->Write(mlir);
   }
-  auto jit_or_error = mlir::ExecutionEngine::create(
-      /* m */ *module, /* llvmModuleBuilder */ nullptr, /* transformer */ {},
-      /* jitCodeGenOptLevel */ llvm::None, /* sharedLibPaths */ ext_libs);
+
+  mlir::ExecutionEngineOptions jitOptions;
+  jitOptions.transformer = {};
+  jitOptions.jitCodeGenOptLevel = llvm::None;
+  jitOptions.sharedLibPaths = ext_libs;
+
+  auto jit_or_error = mlir::ExecutionEngine::create(*module, jitOptions);
   CHECK(!!jit_or_error) << "failed to create JIT exe engine, "
                         << llvm::toString(jit_or_error.takeError());
   auto jit = std::move(jit_or_error.get());
