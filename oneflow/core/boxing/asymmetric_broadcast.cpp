@@ -66,9 +66,10 @@ Maybe<int64_t> CalBroadcastRoot(Symbol<ParallelDesc> src_parallel_desc,
     if (machine_and_device_id_inited) { break; }
   }
   CHECK_OR_RETURN(machine_id != -1 && device_id != -1)
-      << Error::RuntimeError() << "cannot find root rank of the Broadcast operation"
+      << Error::RuntimeError() << "Cannot find root rank of the Broadcast operation"
       << ", src_placement: " << *JUST(PlacementToString(src_parallel_desc))
-      << ", dst_placement: " << *JUST(PlacementToString(dst_parallel_desc));
+      << ", dst_placement: " << *JUST(PlacementToString(dst_parallel_desc))
+      << "! Please make sure src_placement and dst_placement has at least one same device.";
   return machine_id;
 }
 
