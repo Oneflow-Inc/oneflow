@@ -45,7 +45,7 @@ class LazyJobDeviceCtx final : public DeviceCtx {
   }
 #endif
 
-  vm::Allocator* mut_allocator(bool pin_memory) override {
+  vm::Allocator* mut_allocator(const bool pin_memory) override {
     UNIMPLEMENTED();
     return (vm::Allocator*)nullptr;
   }

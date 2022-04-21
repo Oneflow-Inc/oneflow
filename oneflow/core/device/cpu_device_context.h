@@ -34,7 +34,7 @@ class CpuDeviceCtx final : public DeviceCtx {
     stream_ = device_->CreateStream();
     set_pin_memory(false);
   }
-  CpuDeviceCtx(bool pin_memory) {
+  CpuDeviceCtx(const bool pin_memory) {
     device_ = Global<ep::DeviceManagerRegistry>::Get()->GetDevice(DeviceType::kCPU, 0);
     stream_ = device_->CreateStream();
     set_pin_memory(pin_memory);
@@ -43,7 +43,7 @@ class CpuDeviceCtx final : public DeviceCtx {
 
   std::unique_ptr<DeviceCtx> Copy() const { return std::unique_ptr<DeviceCtx>(new CpuDeviceCtx()); }
 
-  vm::Allocator* mut_allocator(bool pin_memory) override { 
+  vm::Allocator* mut_allocator(const bool pin_memory) override { 
     if(this->pin_memory()){
       return Global<vm::CudaHostAllocator>::Get();
     }else{

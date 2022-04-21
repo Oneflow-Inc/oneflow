@@ -47,7 +47,7 @@ class DeviceCtx {
     return nullptr;
   }
 #endif
-  void set_pin_memory(bool pin_memory){
+  void set_pin_memory(const bool pin_memory){
     pin_memory_ = pin_memory;
   }
   bool pin_memory() {
@@ -56,7 +56,7 @@ class DeviceCtx {
 
   virtual ep::Stream* stream() = 0;
 
-  virtual vm::Allocator* mut_allocator(bool pin_memory) {
+  virtual vm::Allocator* mut_allocator(const bool pin_memory) {
     UNIMPLEMENTED();
     return nullptr;
   }

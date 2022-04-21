@@ -54,7 +54,7 @@ class CudaCopyD2HDeviceCtx : public DeviceCtx, public SingleThreadQueryCudaEvent
 
   ep::Stream* stream() override { return GetOrCreateCudaStream(); }
 
-  vm::Allocator* mut_allocator(bool pin_memory) override { return cuda_allocator_.get(); }
+  vm::Allocator* mut_allocator(const bool pin_memory) override { return cuda_allocator_.get(); }
 
   DeviceType device_type() const override { return DeviceType::kCUDA; }
 
