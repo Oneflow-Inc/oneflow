@@ -657,6 +657,13 @@ class MedianFunctor {
     op_ = CHECK_JUST(one::OpBuilder("median").Input("input").Output("output").Build());
   }
   Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x) const {
+    if (x->shape()->elem_cnt() == 0) {
+      return functional::To(
+          JUST(functional::Constant(Shape({1}).RemoveOnes({0}),
+                                    Scalar(std::numeric_limits<float>::quiet_NaN()),
+                                    JUST(DType::Get(DataType::kFloat)), NullOpt)),
+          x, false);
+    }
     return OpInterpUtil::Dispatch<Tensor>(*op_, {x});
   }
 
@@ -684,6 +691,8 @@ class MedianWithIndicesFunctor {
     }
     if (axis < 0) { axis += x->ndim(); }
     std::shared_ptr<one::Tensor> tensor = x;
+    CHECK_OR_RETURN(x->dim(axis) != 0)
+        << "IndexError: Expected reduction dim " << axis << " to have non-zero size.";
     if (axis != x->ndim() - 1) {
       tensor = JUST(functional::Squeeze(
           JUST(functional::Transpose2dim(JUST(functional::Unsqueeze(x, -1)), axis, -1)),

@@ -30,43 +30,33 @@ class TestMedianModule(flow.unittest.TestCase):
         x = random_tensor(ndim=ndim, dim0=random(1, 4)).to(device)
         return torch.median(x)
 
-    @autotest(n=5, check_allclose=False, check_graph=False)
+    @autotest(n=5, check_graph=False)
     def test_median_reduce_one_dim(test_case):
         device = random_device()
         ndim = random(low=2).to(int).value()
-        dims = [random(1, 8) for _ in range(ndim)]
         reduce_dim = random(high=ndim).to(int).value()
-        x = random_tensor(ndim, *dims).to(device)
-        y = torch.median(x, reduce_dim)
+        x = random_tensor(ndim).to(device)
+        return torch.median(x, reduce_dim)
 
-        # pytorch result is an instance of class 'torch.return_types.median', but oneflow is tuple
-        test_case.assertTrue(
-            np.allclose(
-                y.oneflow[0].detach().cpu().numpy(),
-                y.pytorch.values.detach().cpu().numpy(),
-                rtol=0.0001,
-                atol=1e-05,
-            )
-        )
-        test_case.assertTrue(
-            np.allclose(
-                y.oneflow[1].detach().cpu().numpy(),
-                y.pytorch.indices.detach().cpu().numpy(),
-                rtol=0.0001,
-                atol=1e-05,
-            )
-        )
+    @autotest(n=5, check_graph=False)
+    def test_median_reduce_one_dim_keepdim(test_case):
+        device = random_device()
+        ndim = random(low=2).to(int).value()
+        reduce_dim = random(high=ndim).to(int).value()
+        x = random_tensor(ndim).to(device)
+        return torch.median(x, reduce_dim, True)
 
-        y.oneflow[0].sum().backward()
-        y.pytorch.values.sum().backward()
-        test_case.assertTrue(
-            np.allclose(
-                x.oneflow.grad.detach().cpu().numpy(),
-                x.pytorch.grad.detach().cpu().numpy(),
-                rtol=0.0001,
-                atol=1e-05,
-            )
-        )
+    @autotest(n=5, auto_backward=False, check_graph=False)
+    def test_median_0size(test_case):
+        device = random_device()
+        x = random_tensor(ndim=3, dim1=0, requires_grad=False).to(device)
+        return torch.median(x)
+
+    @autotest(n=5, auto_backward=False, check_graph=False)
+    def test_median_reduce_one_dim_0size(test_case):
+        device = random_device()
+        x = random_tensor(ndim=3, dim1=0, requires_grad=False).to(device)
+        return torch.median(x, 0)
 
 
 if __name__ == "__main__":

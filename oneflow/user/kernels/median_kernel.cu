@@ -20,10 +20,10 @@ limitations under the License.
 namespace oneflow {
 
 template<typename T>
-class GpuMedianKernel final : public user_op::OpKernel {
+class CudaMedianKernel final : public user_op::OpKernel {
  public:
-  GpuMedianKernel() = default;
-  ~GpuMedianKernel() = default;
+  CudaMedianKernel() = default;
+  ~CudaMedianKernel() = default;
 
  private:
   using user_op::OpKernel::Compute;
@@ -47,7 +47,7 @@ class GpuMedianKernel final : public user_op::OpKernel {
 
 #define REGISTER_CUDA_MEDIAN_KERNEL(dtype)                                                   \
   REGISTER_USER_KERNEL("median")                                                             \
-      .SetCreateFn<GpuMedianKernel<dtype>>()                                                 \
+      .SetCreateFn<CudaMedianKernel<dtype>>()                                                \
       .SetIsMatchedHob((user_op::HobDeviceType() == DeviceType::kCUDA)                       \
                        && (user_op::HobDataType("input", 0) == GetDataType<dtype>::value))   \
       .SetInferTmpSizeFn([](user_op::InferContext* ctx) -> size_t {                          \

@@ -83,16 +83,26 @@ class MedianWithIndices : public OpExprGradFunction<MedianWithIndicesCaptureStat
     CHECK_EQ_OR_RETURN(inputs.size(), 1);
     CHECK_EQ_OR_RETURN(outputs.size(), 2);
     ctx->requires_grad = inputs.at(0)->requires_grad();
-    if (ctx->requires_grad) { ctx->SaveTensorForBackward(outputs.at(1)); }
+    if (ctx->requires_grad) {
+      ctx->SaveTensorForBackward(inputs.at(0));
+      ctx->SaveTensorForBackward(outputs.at(1));
+    }
     return Maybe<void>::Ok();
   }
   Maybe<void> Apply(const MedianWithIndicesCaptureState* ctx, const TensorTuple& out_grads,
                     TensorTuple* in_grads) const {
     if (ctx->requires_grad) {
       in_grads->resize(1);
-      const auto& indices = JUST(functional::Unsqueeze(ctx->SavedTensors().at(0), -1));
+      const auto& input = ctx->SavedTensors().at(0);
+      const auto& indices = JUST(functional::Unsqueeze(ctx->SavedTensors().at(1), -1));
       const auto& dout = JUST(functional::Unsqueeze(out_grads.at(0), -1));
-      JUST(functional::DimScatter(in_grads->at(0), -1, indices, dout));
+      printf("indices shape: %s\n.", indices->shape()->DebugStr().c_str());
+      printf("dout shape: %s\n.", dout->shape()->DebugStr().c_str());
+      printf("before dimscatter.\n");
+      in_grads->at(0) = JUST(
+          functional::DimScatter(JUST(functional::Constant(*(input->shape()), Scalar(0),
+                                                           *dout->dtype(), JUST(dout->device()))),
+                                 -1, indices, dout));
     }
     return Maybe<void>::Ok();
   }
