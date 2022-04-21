@@ -345,18 +345,18 @@ LogicalResult Job::verify() {
   return success();
 }
 
-static LogicalResult verify(mlir::oneflow::ReturnOp op) {
-  auto job = cast<Job>(op->getParentOp());
+LogicalResult ReturnOp::verify() {
+  auto job = cast<Job>((*this)->getParentOp());
 
   // The operand number and types must match the function signature.
   const auto& results = job.getFunctionType().getResults();
-  if (op.getNumOperands() != results.size())
-    return op.emitOpError("has ") << op.getNumOperands() << " operands, but enclosing function (@"
+  if (getNumOperands() != results.size())
+    return emitOpError("has ") << getNumOperands() << " operands, but enclosing function (@"
                                   << job.getName() << ") returns " << results.size();
 
   for (unsigned i = 0, e = results.size(); i != e; ++i)
-    if (op.getOperand(i).getType() != results[i])
-      return op.emitError() << "type of return operand " << i << " (" << op.getOperand(i).getType()
+    if (getOperand(i).getType() != results[i])
+      return emitError() << "type of return operand " << i << " (" << getOperand(i).getType()
                             << ") doesn't match function result type (" << results[i] << ")"
                             << " in function @" << job.getName();
 
