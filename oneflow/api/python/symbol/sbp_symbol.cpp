@@ -40,11 +40,10 @@ Maybe<std::vector<Symbol<SbpParallel>>> MakeSplitSbpParallelList(int max_split_a
 
 Maybe<Symbol<SbpParallel>> GetSplitSbpParallel(int axis) {
   CHECK_GE_OR_RETURN(axis, 0) << Error::RuntimeError()
-                              << "Split axis out of range (expected to be in range of [" << 0
-                              << ", " << kMaxSplitAxis << "), but got " << axis << "!";
+                              << "Split axis must not be negative, but got " << axis << "!";
   CHECK_LT_OR_RETURN(axis, kMaxSplitAxis)
-      << Error::RuntimeError() << "Split axis out of range (expected to be in range of [" << 0
-      << ", " << kMaxSplitAxis << "), but got " << axis << "!";
+      << Error::RuntimeError() << "Expected split axis to be less than the supported maximum axis ("
+      << kMaxSplitAxis << "), but got " << axis << "!";
   static std::vector<Symbol<SbpParallel>> split_sbp_sym_list =
       *JUST(MakeSplitSbpParallelList(kMaxSplitAxis));
   return split_sbp_sym_list.at(axis);

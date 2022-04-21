@@ -25,14 +25,13 @@ class TestModule(flow.unittest.TestCase):
         with test_case.assertRaises(RuntimeError) as ctx:
             sbp = flow.sbp.split(-1)
         test_case.assertTrue(
-            "Split axis out of range (expected to be in range of [0, 6), but got -1!"
-            in str(ctx.exception)
+            "Split axis must not be negative, but got -1!" in str(ctx.exception)
         )
 
         with test_case.assertRaises(RuntimeError) as ctx:
             sbp = flow.sbp.split(7)
         test_case.assertTrue(
-            "Split axis out of range (expected to be in range of [0, 6), but got 7!"
+            "Expected split axis to be less than the supported maximum axis (6), but got 7!"
             in str(ctx.exception)
         )
 
@@ -45,6 +44,30 @@ class TestModule(flow.unittest.TestCase):
             )
         test_case.assertTrue(
             "Split axis out of range (expected to be in range of [0, 1), but got 1!"
+            in str(ctx.exception)
+        )
+
+    @flow.unittest.skip_unless_1n1d()
+    def test_global_to_global_with_invalid_split_axis(test_case):
+        x = flow.tensor(
+            [1, 2, 3, 4],
+            placement=flow.env.all_device_placement("cpu"),
+            sbp=flow.sbp.broadcast,
+        )
+        with test_case.assertRaises(RuntimeError) as ctx:
+            y = x.to_global(sbp=flow.sbp.split(1))
+        test_case.assertTrue(
+            "Split axis out of range (expected to be in range of [0, 1), but got 1!"
+            in str(ctx.exception)
+        )
+
+    @flow.unittest.skip_unless_1n1d()
+    def test_call_to_local_for_local_tensor(test_case):
+        x = flow.tensor([1, 2, 3, 4])
+        with test_case.assertRaises(AssertionError) as ctx:
+            y = x.to_local()
+        test_case.assertTrue(
+            "Expected global tensor for to_local but got local tensor!"
             in str(ctx.exception)
         )
 

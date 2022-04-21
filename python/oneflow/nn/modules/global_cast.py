@@ -88,5 +88,5 @@ class ToLocal(Module):
 
 
 def to_local_op(input):
-    assert input.is_global, "input must be a global tensor!"
+    assert input.is_global, "Expected global tensor for to_local but got local tensor!"
     return flow._C.to_local(input)
