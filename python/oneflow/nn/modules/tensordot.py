@@ -16,7 +16,6 @@ limitations under the License.
 import oneflow
 from typing import Union, List, Tuple
 
-oneflow.Tensor
 
 def tensordot(
     a, b, dims: Union[oneflow.Tensor, int, List[List[int]], Tuple[List[int]]] = 2
