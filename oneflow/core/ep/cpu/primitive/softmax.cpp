@@ -143,13 +143,12 @@ class GenericSoftmaxFactoryImpl : public FactoryBase {
   ~GenericSoftmaxFactoryImpl() override = default;
 
   std::unique_ptr<SoftmaxBase> New(DataType data_type) override {
-#ifdef WITH_ONEDNN
-
-#define MAKE_NEW_ONEDNN_SOFTMAX_ENTRY(type_cpp, type_proto) \
-  {type_proto, NewOneDnnSoftmax<SoftmaxBase, algorithm, type_cpp>},
-
 #define MAKE_NEW_SOFTMAX_ENTRY(type_cpp, type_proto) \
   {type_proto, NewSoftmax<SoftmaxBase, algorithm, type_cpp>},
+  
+#ifdef WITH_ONEDNN
+#define MAKE_NEW_ONEDNN_SOFTMAX_ENTRY(type_cpp, type_proto) \
+  {type_proto, NewOneDnnSoftmax<SoftmaxBase, algorithm, type_cpp>},
 
     static const std::map<DataType, std::function<std::unique_ptr<SoftmaxBase>()>>
         new_softmax_handle{
@@ -157,16 +156,14 @@ class GenericSoftmaxFactoryImpl : public FactoryBase {
             MAKE_NEW_ONEDNN_SOFTMAX_ENTRY(dnnl::memory::data_type::f32, DataType::kDouble)
             // naive softmax op
             MAKE_NEW_SOFTMAX_ENTRY(double, DataType::kDouble)};
-#undef MAKE_NEW_SOFTMAX_ENTRY
-#else
-#define MAKE_NEW_SOFTMAX_ENTRY(type_cpp, type_proto) \
-  {type_proto, NewSoftmax<SoftmaxBase, algorithm, type_cpp>},
 
+#undef MAKE_NEW_ONEDNN_SOFTMAX_ENTRY
+#else
     static const std::map<DataType, std::function<std::unique_ptr<SoftmaxBase>()>>
         new_softmax_handle{
             OF_PP_FOR_EACH_TUPLE(MAKE_NEW_SOFTMAX_ENTRY, CPU_PRIMITIVE_FLOATING_TYPE_SEQ)};
-#undef MAKE_NEW_SOFTMAX_ENTRY
 #endif
+#undef MAKE_NEW_SOFTMAX_ENTRY
     const auto it = new_softmax_handle.find(data_type);
     if (it != new_softmax_handle.end()) {
       return it->second();
