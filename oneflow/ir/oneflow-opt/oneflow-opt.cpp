@@ -56,7 +56,7 @@ int32_t main(int32_t argc, char** argv) {
   mlir::registerOutlineJitFunctionPassPass();
   mlir::DialectRegistry registry;
   registry.insert<mlir::oneflow::OneFlowDialect>();
-  registry.insert<mlir::mlir::func::FuncDialect>();
+  registry.insert<mlir::func::FuncDialect>();
   registry.insert<mlir::tosa::TosaDialect>();
   registry.insert<mlir::linalg::LinalgDialect>();
   registry.insert<mlir::memref::MemRefDialect>();

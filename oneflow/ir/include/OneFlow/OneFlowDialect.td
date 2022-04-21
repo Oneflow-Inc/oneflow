@@ -11,7 +11,7 @@ def OneFlow_Dialect : Dialect {
     }];
     let cppNamespace = "::mlir::oneflow";
     let dependentDialects = [
-        "mlir::func::FuncDialect"
+        "func::FuncDialect"
     ];
 }
 
