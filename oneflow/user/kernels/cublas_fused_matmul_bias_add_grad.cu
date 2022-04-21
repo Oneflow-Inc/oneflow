@@ -17,8 +17,17 @@ limitations under the License.
 #include "oneflow/user/kernels/cublas_fused_mlp_util.cuh"
 // CUBLAS_AUX_EPILOGUE only support in cuda11.4 or higher version, in cuda11.4 it need static link.
 #if CUDA_VERSION >= 11040
+#include "stdio.h"
 
 namespace oneflow {
+
+template<typename T>
+__global__ void printkernel(const T* in, int64_t n){
+  int64_t gid = blockIdx.x * blockDim.x + threadIdx.x; 
+  printf("Here is: %f \n", in[gid]); 
+}
+
+
 
 template<typename T>
 class CublasMatmulBiasAddGradKernel final : public user_op::OpKernel,
@@ -61,17 +70,21 @@ class CublasMatmulBiasAddGradKernel final : public user_op::OpKernel,
     dy->shape().ToDimVector(&dy_shape);
     DimVector x_shape(2);
     x->shape().ToDimVector(&x_shape);
-    cublasLtEpilogue_t epilogue = CUBLASLT_EPILOGUE_BGRADA;
+    cublasLtEpilogue_t epilogue = CUBLASLT_EPILOGUE_BGRADB;
 
     InferMatmulCublasMNK(dy_shape, x_shape,
                          /*transpose_a=*/ep::primitive::BlasTransposeType::T,
                          /*transpose_b=*/ep::primitive::BlasTransposeType::N, &cublas_m, &cublas_n,
                          &cublas_k, &cublas_lda, &cublas_ldb, &cublas_ldc);
-
+    
+    printf("need to set bgrad ptr \n"); 
     SetCublasAttr(matmul_grad_cache, cublas_compute_dtype, cuda_data_type, /*need_aux=*/false,
                   /*transpose_a=*/ep::primitive::BlasTransposeType::T,
-                  /*transpose_b=*/ep::primitive::BlasTransposeType::N, epilogue, b_grad->dptr(),
+                  /*transpose_b=*/ep::primitive::BlasTransposeType::N, epilogue, b_grad->mut_dptr(),
                   /*aux_ptr=*/nullptr, cublas_m, cublas_n, cublas_k, cublas_lda, cublas_ldb, cublas_ldc);
+
+    // printkernel<T><<<1, dy->shape().elem_cnt(), 0, cuda_stream->cuda_stream()>>>(dy->dptr<T>(), dy->shape().elem_cnt()); 
+    printkernel<T><<<1, b_grad->shape().elem_cnt(), 0, cuda_stream->cuda_stream()>>>(b_grad->dptr<T>(), b_grad->shape().elem_cnt()); 
     /*
     a = dy, b = x
     cublas_a=x, cublas_b=dy
@@ -83,6 +96,7 @@ class CublasMatmulBiasAddGradKernel final : public user_op::OpKernel,
                        matmul_grad_cache->cublas_c_desc, w_grad->mut_dptr(),
                        matmul_grad_cache->cublas_c_desc, nullptr, cuda_stream->cublas_workspace(),
                        cuda_stream->cublas_workspace_size(), cuda_stream->cuda_stream()));
+    printkernel<T><<<1, b_grad->shape().elem_cnt(), 0, cuda_stream->cuda_stream()>>>(b_grad->dptr<T>(), b_grad->shape().elem_cnt()); 
   };
 
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
