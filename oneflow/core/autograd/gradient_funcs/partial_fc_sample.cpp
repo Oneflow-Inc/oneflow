@@ -57,7 +57,7 @@ Maybe<void> PartialFCSample::Capture(PartialFCSampleState* ctx, const TensorTupl
 Maybe<void> PartialFCSample::Apply(const PartialFCSampleState* ctx, const TensorTuple& out_grads,
                                    TensorTuple* in_grads) const {
   CHECK_EQ_OR_RETURN(out_grads.size(), 3);
-  in_grads->resize(1);
+  in_grads->resize(2);
   if (!ctx->requires_grad) { return Maybe<void>::Ok(); }
   const auto& diff_sampled_weight = out_grads.at(2);  // diff of sampled_weight
 
