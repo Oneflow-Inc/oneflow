@@ -82,7 +82,7 @@ DataType InferScalarType(PyObject* object) {
     }
     return scalar_type;
   }
-  THROW(RuntimeError) << "Can't infer scalar type of " << Py_TYPE(object)->tp_name;
+  THROW(TypeError) << "Can't infer scalar type of " << Py_TYPE(object)->tp_name;
   return DataType::kInvalidDataType;
 }
 
@@ -107,7 +107,7 @@ void ParseScalar(PyObject* object, char* data, const DataType& dtype) {
       *(reinterpret_cast<uint8_t*>(data)) = static_cast<uint8_t>(value);
     }
   } else {
-    THROW(RuntimeError) << "Can't parse scalar with data type " << dtype;
+    THROW(TypeError) << "Can't parse scalar with data type " << dtype;
   }
 }
 
@@ -208,7 +208,7 @@ IndexItem UnpackIndexItem(PyObject* object) {
   } else if (PySequence_Check(object)) {
     return IndexItem(ConvertToIndexingTensor(object).GetPtrOrThrow());
   }
-  THROW(RuntimeError) << "Invalid index " << Py_TYPE(object)->tp_name;
+  THROW(TypeError) << "Invalid index " << Py_TYPE(object)->tp_name;
   return IndexItem();
 }
 

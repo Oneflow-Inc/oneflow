@@ -13,8 +13,8 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
-#ifndef ONEFLOW_API_PYTHON_FRAMEWORK_PY_TENSOR_H_
-#define ONEFLOW_API_PYTHON_FRAMEWORK_PY_TENSOR_H_
+#ifndef ONEFLOW_API_PYTHON_FRAMEWORK_TENSOR_H_
+#define ONEFLOW_API_PYTHON_FRAMEWORK_TENSOR_H_
 
 #include <Python.h>
 
@@ -44,4 +44,4 @@ PyObject* PyTensor_New(const std::shared_ptr<oneflow::one::Tensor>& data);
 PyObject* PyParameter_New(const std::shared_ptr<oneflow::one::Parameter>& data);
 PyObject* PyParameter_New(const std::shared_ptr<oneflow::one::Tensor>& data, bool requires_grad);
 
-#endif  // ONEFLOW_API_PYTHON_FRAMEWORK_PY_TENSOR_H_
+#endif  // ONEFLOW_API_PYTHON_FRAMEWORK_TENSOR_H_
