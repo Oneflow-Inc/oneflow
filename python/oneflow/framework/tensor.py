@@ -473,6 +473,14 @@ def _cosh(self):
     return flow.cosh(self)
 
 
+def _addcmul(self, tensor1, tensor2, *, value=1):
+    return flow._C.addcmul(self, tensor1, tensor2, value=value)
+
+
+def _addcmul_(self, tensor1, tensor2, *, value=1):
+    return flow._C.addcmul_(self, tensor1, tensor2, value=value)
+
+
 def _erf(self):
     return flow.erf(self)
 
@@ -1196,6 +1204,8 @@ def RegisterMethods():
     Tensor.log2 = _log2
     Tensor.add = _add
     Tensor.add_ = _add_inplace
+    Tensor.addcmul = _addcmul
+    Tensor.addcmul_ = _addcmul_
     Tensor.div = _truediv
     Tensor.div_ = _truediv_inplace
     Tensor.mul = _mul
