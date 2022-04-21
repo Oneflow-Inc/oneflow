@@ -1145,6 +1145,20 @@ add_docstr(
 )
 
 add_docstr(
+    oneflow.Tensor.addcmul,
+    """
+    See :func:`oneflow.addcmul`
+    """,
+)
+
+add_docstr(
+    oneflow.Tensor.addcmul_,
+    """
+    In-place version of :func:`oneflow.Tensor.addcmul`.
+    """,
+)
+
+add_docstr(
     oneflow.Tensor.asin,
     """
     See :func:`oneflow.asin`

@@ -9,6 +9,8 @@ OneFlow Tensor Class
             acosh, 
             add, 
             add_, 
+            addcmul,
+            addcmul_,
             addmm,
             arccos, 
             arccosh, 

@@ -56,6 +56,14 @@
     ]
   bind_python: true
 
+- name: "addcmul"
+  signature: "Tensor (Tensor input, Tensor tensor1, Tensor tensor2, *, Scalar value=1) => Addcmul"
+  bind_python: true
+
+- name: "addcmul_"
+  signature: "Tensor (Tensor input, Tensor tensor1, Tensor tensor2, *, Scalar value=1) => InplaceAddcmul"
+  bind_python: true
+
 - name: "div"
   signature:
     [
