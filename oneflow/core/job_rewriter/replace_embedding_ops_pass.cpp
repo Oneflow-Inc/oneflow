@@ -434,8 +434,8 @@ void MakeConstantInitializerAttr(const int64_t embedding_size, const int64_t lin
 
 void BuildEmbeddingUpdate(JobPassCtx* ctx, const OpGraph& op_graph, JobBuilder* job_builder,
                           const ParallelConf& parallel_conf, const int64_t embedding_size,
-                          const int64_t line_size, const std::string& embedding_name,
-                          const OptimizerConf& optimizer_conf,
+                          const int64_t line_size, const float l1, const float l2,
+                          const std::string& embedding_name, const OptimizerConf& optimizer_conf,
                           const user_op::UserOpConfWrapper& embedding_op,
                           const std::string& num_unique_ids_lbn, const std::string& unique_ids_lbn,
                           const std::string& unique_values_lbn,
@@ -482,7 +482,12 @@ void BuildEmbeddingUpdate(JobPassCtx* ctx, const OpGraph& op_graph, JobBuilder* 
           .Input("bias_correction2", bias_correction2_lbn);
     }
   } else if (optimizer_conf.has_adagrad_conf()) {
-    UNIMPLEMENTED();
+    const AdagradModelUpdateConf& adagrad_conf = optimizer_conf.adagrad_conf();
+    state_constant_init_values.push_back(adagrad_conf.initial_accumulator_value());
+    embedding_update_op_builder.OpTypeName("adagrad_embedding_update")
+        .Input("train_step", train_conf.train_step_lbn())
+        .Attr<float>("lr_decay", adagrad_conf.lr_decay())
+        .Attr<float>("epsilon", adagrad_conf.epsilon());
   } else {
     UNIMPLEMENTED();
   }
@@ -492,6 +497,9 @@ void BuildEmbeddingUpdate(JobPassCtx* ctx, const OpGraph& op_graph, JobBuilder* 
       .Input("unique_embeddings", unique_values_lbn)
       .Input("embedding_grad", embedding_grad_lbn)
       .Input("learning_rate", learning_rate_lbn)
+      .Attr<float>("weight_decay", optimizer_conf.weight_decay_conf().weight_decay_rate())
+      .Attr<float>("l1", l1)
+      .Attr<float>("l2", l2)
       .Output("updated_unique_embeddings");
   double scale = GetLossInstanceNumScaleFactor(op_graph, job_builder);
   if (train_conf.has_dynamic_loss_scale_policy()) {
@@ -689,12 +697,24 @@ Maybe<void> ReplaceEmbeddingOps::Apply(const OpGraph& op_graph, JobBuilder* job_
           if (found_embedding_optimizer == true) { break; }
         }
         CHECK_EQ(found_embedding_optimizer, true);
+
+        const OpNode* shadow_node = op_graph.OpNode4OpName(shadow_op_name);
+        const VariableOpConf& shadow_variable_conf = shadow_node->op().op_conf().variable_conf();
+        float l1 = 0.0;
+        float l2 = 0.0;
+        if (shadow_variable_conf.has_regularizer()) {
+          const RegularizerConf& regularizer_conf = shadow_variable_conf.regularizer();
+          if (regularizer_conf.has_l1_l2_conf()) {
+            l1 = regularizer_conf.l1_l2_conf().l1();
+            l2 = regularizer_conf.l1_l2_conf().l2();
+          }
+        }
         const std::string& learning_rate_lbn =
             AddScheduleOp(op_graph, job_builder, embedding_optimizer_conf,
                           "System-Train-LearningRate-Scheduler_" + NewUniqueId());
 
         BuildEmbeddingUpdate(ctx, op_graph, job_builder, op_node->parallel_desc().parallel_conf(),
-                             embedding_size, options.LineSize(), options.Name(),
+                             embedding_size, options.LineSize(), l1, l2, options.Name(),
                              embedding_optimizer_conf, embedding_op, num_unique_ids_lbn,
                              unique_ids_lbn, unique_values_lbn, embedding_grad_lbn,
                              learning_rate_lbn, &state_initializer);
