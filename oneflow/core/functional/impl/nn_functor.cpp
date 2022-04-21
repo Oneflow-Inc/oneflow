@@ -17,6 +17,7 @@ limitations under the License.
 #include "oneflow/core/common/data_type.pb.h"
 #include "oneflow/core/common/maybe.h"
 #include "oneflow/core/common/optional.h"
+#include "oneflow/core/common/protobuf.h"
 #include "oneflow/core/common/scalar.h"
 #include "oneflow/core/common/shape_vec.h"
 #include "oneflow/core/framework/attr_map.h"
@@ -30,6 +31,7 @@ limitations under the License.
 #include "oneflow/core/framework/random_generator.h"
 #include "oneflow/core/functional/functional.h"
 #include "oneflow/core/functional/function_library.h"
+#include "oneflow/core/functional/functional_api.yaml.h"
 #include "oneflow/core/functional/sequence_function.h"
 #include "oneflow/core/functional/impl/common.h"
 #include "oneflow/core/functional/impl/unary_functor.h"
@@ -263,6 +265,24 @@ class BatchMatMulFunctor {
 
  private:
   std::shared_ptr<OpExpr> batch_matmul_op_;
+};
+
+class TensorDotIntDimsFunctor {
+ public:
+  Maybe<Tensor> operator()(const std::shared_ptr<Tensor>& a, const std::shared_ptr<Tensor>& b,
+                           const int64_t dims) const {
+    CHECK_GE_OR_RETURN(dims, 0) << "Dims must be greater than or equal to 0";
+    CHECK_LE_OR_RETURN(dims, a->shape()->NumAxes()) << "Dims must be less than a.dims(), which is "
+                                                    << a->shape()->NumAxes() << " but got " << dims;
+    CHECK_LE_OR_RETURN(dims, b->shape()->NumAxes()) << "Dims must be less than b.dims(), which is "
+                                                    << b->shape()->NumAxes() << " but got " << dims;
+    std::vector<int64_t> dims_a(dims), dims_b(dims);
+    for (int64_t i = 0; i < dims; i++) {
+      dims_a[i] = a->shape()->NumAxes() - dims + i;
+      dims_b[i] = i;
+    }
+    return JUST(functional::TensorDot(a, b, dims_a, dims_b));
+  }
 };
 
 class TensorDotFunctor {
@@ -2829,6 +2849,7 @@ ONEFLOW_FUNCTION_LIBRARY(m) {
   m.add_functor<impl::MatMulFunctor>("MatMul");
   m.add_functor<impl::BatchMatMulFunctor>("BatchMatMul");
   m.add_functor<impl::TensorDotFunctor>("TensorDot");
+  m.add_functor<impl::TensorDotIntDimsFunctor>("TensorDotIntDims");
   m.add_functor<impl::FusedMLPFunctor>("FusedMLP");
   m.add_functor<impl::LayerNormFunctor>("LayerNorm");
   m.add_functor<impl::LayerNormAffineFunctor>("LayerNormAffine");

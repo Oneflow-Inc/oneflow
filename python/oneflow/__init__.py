@@ -358,13 +358,13 @@ from oneflow.nn.modules.tensor_buffer import gen_tensor_buffer
 from oneflow.nn.modules.tensor_buffer import (
     tensor_buffer_to_tensor_op as tensor_buffer_to_tensor,
 )
+from oneflow.nn.modules.tensordot import tensordot
 from oneflow.nn.modules.as_tensor import as_tensor
 from oneflow.nn.modules.tensor_buffer import tensor_to_tensor_buffer
 from oneflow.nn.modules.global_cast import to_global_op as to_global
 from oneflow.nn.modules.global_cast import to_local_op as to_local
 from oneflow.nn.modules.where import where_op as where
 from oneflow.nn.modules.scatter import *
-from oneflow.nn.functional import tensordot
 from oneflow.ops.stateful_ops import StatefulOp as stateful_op
 from oneflow.ops.initializer_util import constant_initializer
 from oneflow.ops.initializer_util import glorot_normal_initializer
