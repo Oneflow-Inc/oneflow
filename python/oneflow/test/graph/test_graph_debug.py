@@ -45,12 +45,12 @@ def _graph_debug(test_case, v_level = 0, ranks=None, max_py_stack_depth=2):
         rank_list = ranks
 
     if (-1 in rank_list or rank in rank_list) and v_level >= 0: # v_level == -1 means debug mode is closed
-        test_case.assertTrue(d_g._debug_max_v_level >= 0 )
-        test_case.assertTrue(d_g.m._debug_max_v_level >= 0)
+        test_case.assertTrue(d_g._debug)
+        test_case.assertTrue(d_g.m._debug)
         print(f"ranks {ranks} rank {rank} debug is opened.")
     else:
-        test_case.assertTrue(not d_g._debug_max_v_level >= 0)
-        test_case.assertTrue(not d_g.m._debug_max_v_level >= 0)
+        test_case.assertTrue(not d_g._debug)
+        test_case.assertTrue(not d_g.m._debug)
         print(f"ranks {ranks} rank {rank} debug is closed.")
 
 @unittest.skipIf(os.getenv("ONEFLOW_TEST_CPU_ONLY"), "only test cpu cases")

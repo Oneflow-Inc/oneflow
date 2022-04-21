@@ -124,8 +124,9 @@ class Graph(object):
         self._full_job_proto = None
         self._args_repr = []
         self._outs_repr = []
+        self._debug = False
         self._debug_min_s_level = 2
-        self._debug_max_v_level = -1
+        self._debug_max_v_level = 0
         self._debug_max_py_stack_depth = 2
         self._outputs_buffer_size = 2
         self._cur_index_of_ouputs_buffer = 0
@@ -206,6 +207,7 @@ class Graph(object):
             with graph_build_util.DebugScopeContext(
                 self._debug_min_s_level,
                 self._debug_max_v_level,
+                self._debug,
                 self._debug_max_py_stack_depth,
             ):
                 self._compile(*args, **kwargs)
@@ -469,9 +471,10 @@ class Graph(object):
 
         my_rank = get_rank()
         if -1 in rank_list or my_rank in rank_list:
-            if v_level >= 0:
+            self._debug = (v_level >= 0)
+            if self._debug:
                 self._debug_min_s_level = 0
-                self._debug_max_v_level = v_level
+                self._debug_max_v_level = max(0, v_level)
             for name, block in self._blocks.items():
                 assert block.type == BlockType.MODULE
                 block.debug(v_level, ranks=ranks, max_py_stack_depth=max_py_stack_depth)
