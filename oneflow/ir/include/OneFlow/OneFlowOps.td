@@ -184,7 +184,7 @@ def OneFlow_Job : Op<OneFlow_Dialect, "job", [FunctionOpInterface, IsolatedFromA
   );
 
   let builders = [OpBuilder<(ins
-    "StringRef":$name, "FunctionType":$type)
+    "StringRef":$name, "FunctionType":$function_type)
   >];
 
   let extraClassDeclaration = [{
