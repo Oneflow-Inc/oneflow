@@ -31,7 +31,7 @@ class profile:
         return self
 
     def __exit__(self, exc_type, exc_val, exc_tb):
-        self.result = oneflow._oneflow_internal.profiler.DisableProfiler()
+        self.result = oneflow._oneflow_internal.profiler.DisableProfilerAndReturnResult()
 
     # copy from pytorch: torch/autograd/profiler_util.py
     def _format_time(self, time_ns):

@@ -65,8 +65,8 @@ class RangeGuard final {
 
 void EnableProfiler();
 
-// DisableProfiler will return a json of profile results.
-std::string DisableProfiler();
+// DisableProfilerAndReturnResult will return a json of profile results.
+std::string DisableProfilerAndReturnResult();
 
 Maybe<void> StartRecord(const std::string& name);
 

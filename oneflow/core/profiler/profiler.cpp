@@ -113,8 +113,8 @@ void EnableProfiler() {
   if (Global<ProfileMgr>::Get() == nullptr) { Global<ProfileMgr>::New(); }
 }
 
-// DisableProfiler will return a json of profile results.
-std::string DisableProfiler() {
+// DisableProfilerAndReturnResult will return a json of profile results.
+std::string DisableProfilerAndReturnResult() {
   CHECK_JUST(vm::ClusterSync());
 
   auto pmgr = Global<ProfileMgr>::Get();

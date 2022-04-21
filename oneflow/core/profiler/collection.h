@@ -74,13 +74,13 @@ class IEvent {
   time_t finished_at_ = 0;
 };
 
-class CustomEvent : public IEvent {
+class CustomEvent final : public IEvent {
  public:
   explicit CustomEvent(const std::string& custom_name) : IEvent(custom_name) {}
   Result ConvertToResult();
 };
 
-class KernelEvent : public IEvent {
+class KernelEvent final : public IEvent {
  public:
   explicit KernelEvent(const std::string& kernel_name) : IEvent(kernel_name) {}
   Result ConvertToResult();
