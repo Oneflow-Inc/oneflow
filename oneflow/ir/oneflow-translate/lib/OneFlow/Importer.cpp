@@ -451,7 +451,7 @@ LogicalResult Importer::ProcessUserOp(const ::oneflow::OperatorConf& op) {
   state.addAttributes(named_attributes);
   state.addOperands(operands);
   state.addTypes(out_types);
-  created_op = GetBuilder().createOperation(state);
+  created_op = GetBuilder().create(state);
 
   if (created_op == nullptr) {
     GetModule()->emitError("fail to create " + op.user_conf().op_type_name()
