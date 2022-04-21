@@ -180,7 +180,7 @@ class TestConvertDependency(flow.unittest.TestCase):
         test_case.assertEqual(kernel_size, (11, 11))
         test_case.assertEqual(strides, (4, 4))
         test_case.assertEqual(padding_before, (2, 2))
-        
+
         node_input_list = []
         node_output_list = []
         for node_name in nodes:
