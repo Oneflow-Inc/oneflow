@@ -61,7 +61,8 @@ namespace oneflow {
 }
 
 /* static */ Maybe<void> SearchSortedScalarOp::GetSbp(user_op::SbpContext* ctx) {
-  const user_op::TensorDesc& in_tensor = ctx->LogicalTensorDesc4InputArgNameAndIndex("sorted_sequence", 0);
+  const user_op::TensorDesc& in_tensor =
+      ctx->LogicalTensorDesc4InputArgNameAndIndex("sorted_sequence", 0);
   FOR_RANGE(int64_t, i, 0, in_tensor.shape().NumAxes() - 1) {
     ctx->NewBuilder().Split(ctx->inputs(), i).Split(ctx->outputs(), i).Build();
   }
