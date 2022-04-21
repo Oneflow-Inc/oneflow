@@ -514,7 +514,7 @@ LogicalResult LowerModuleToLLVM(mlir::MLIRContext* context, ModuleOp module) {
   pm.addNestedPass<func::FuncOp>(createConvertSCFToCFPass());        // convert-scf-to-cf
   pm.addPass(createConvertLinalgToLLVMPass());                       // convert-linalg-to-llvm
   pm.addPass(createMemRefToLLVMPass());                              // convert-memref-to-llvm
-  pm.addPass(createConvertFuncToLLVMPass());                         // convert-std-to-llvm
+  pm.addPass(createConvertFuncToLLVMPass());                         // convert-func-to-llvm
   pm.addPass(createReconcileUnrealizedCastsPass());                  // reconcile-unrealized-casts
   return pm.run(module);
 }
