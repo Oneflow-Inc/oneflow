@@ -187,7 +187,7 @@ class TensorWithShapeCtorFunctor {
     } else {
       device_ = JUST(Device::New("cpu"));
     }
-    return functional::Empty(shape, DType::Float(), device_, /**pin_memory=*/false);
+    return functional::Empty(shape, DType::Float(), device_, /*pin_memory=*/false);
   }
 };
 
@@ -291,23 +291,19 @@ class LocalTensorSharedNumpyDataFunctor {
 
 class PinMemoryFunctor {
  public:
-  PinMemoryFunctor() {
-    assign_op_ = CHECK_JUST(one::OpBuilder("assign").Input("ref").Input("value").Build());
-  }
   Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& input) const {
     // if tensor already pinned, then just return
-    CHECK_OR_RETURN(input->is_local()) << "Tensor.pin_memory() only support local tensor for now!";
+    CHECK_OR_RETURN(input->is_local()) << Error::RuntimeError() << "Tensor.pin_memory() only support local tensor for now!";
     if(JUST(JUST(input->AsMirroredTensor())->eager_blob_object())->pin_memory()){
       return input;
     }
-    const bool pin_memory = true;
     auto shape = input->shape();
     auto device = JUST(input->device());
     const bool requires_grad = input->requires_grad();
 
-    CHECK_EQ_OR_RETURN(device->enum_type(), DeviceType::kCPU) << "cannot pin tensor with device: " << device->ToString() << ", only dense CPU tensors can be pinned.";
-    auto output = JUST(functional::Empty(*shape.get(), input->dtype(), device, /**pin_memory=*/pin_memory));
-    JUST(OpInterpUtil::Dispatch<TensorTuple>(*assign_op_, {output, input}));
+    CHECK_EQ_OR_RETURN(device->enum_type(), DeviceType::kCPU) << Error::RuntimeError() << "cannot pin tensor with device: " << device->ToString() << ", only dense CPU tensors can be pinned.";
+    auto output = JUST(functional::Empty(*shape.get(), input->dtype(), device, /*pin_memory=*/true));
+    JUST(functional::AssignLocalTensor(output, input));
     JUST(output->set_requires_grad(requires_grad));
     
     // if requires_grad, set backward function-node 'copy_backward'
@@ -329,9 +325,6 @@ class PinMemoryFunctor {
     }
     return output;
   }
-
- private:
-  std::shared_ptr<OpExpr> assign_op_;
 };
 
 

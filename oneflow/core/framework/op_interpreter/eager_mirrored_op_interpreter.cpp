@@ -138,11 +138,7 @@ Maybe<void> NaiveInterpret(const UserOpExpr& user_op_expr, const TensorTuple& in
         return output_tensor_metas->at(i);
       }));
 
-  bool pin_memory = false;
-  if(user_op_expr.op_type_name()=="empty"){
-    pin_memory = JUST(attrs.GetAttr<bool>("pin_memory"));
-  }
-
+  const bool pin_memory = ctx.pin_memory.has_value() ? JUST(ctx.pin_memory) : false ;
   for (int i = 0; i < output_eager_blob_objects->size(); i++) {
     auto* tensor_impl = JUST(TensorImpl4Tensor(outputs->at(i)));
     if (!output_eager_blob_objects->at(i)) {

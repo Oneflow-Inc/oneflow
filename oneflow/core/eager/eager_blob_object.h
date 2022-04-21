@@ -147,7 +147,7 @@ class EagerBlobObject final : public BlobObject {
     pin_memory_ = pin_memory;
   }
 
-  const bool pin_memory(){
+  bool pin_memory() const {
     return pin_memory_;
   }
 

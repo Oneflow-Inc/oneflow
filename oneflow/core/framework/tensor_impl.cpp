@@ -216,11 +216,11 @@ Maybe<Shape> GetPhysicalShape(const Shape& logical_shape, const NdSbp& nd_sbp,
     auto cur_rank_phy_tensor_impl =
         std::make_shared<EagerMirroredTensorImpl>(cur_rank_phy_tensor_meta, requires_grad, is_leaf);
     const auto& dep_object = NewLocalDepObject();
-    JUST(cur_rank_phy_tensor_impl->InitEagerBlobObject(dep_object, /**pin_memory=*/false));
+    JUST(cur_rank_phy_tensor_impl->InitEagerBlobObject(dep_object, /*pin_memory=*/false));
     cur_rank_phy_tensor = std::make_shared<MirroredTensor>(cur_rank_phy_tensor_impl);
   } else {
     const auto& dtype_symbol = JUST(DType::Get(dtype));
-    const auto& empty = JUST(functional::Empty(*cur_rank_phy_shape, dtype_symbol, device, /**pin_memory=*/false));
+    const auto& empty = JUST(functional::Empty(*cur_rank_phy_shape, dtype_symbol, device, /*pin_memory=*/false));
     cur_rank_phy_tensor = JUST(empty->AsMirroredTensor());
     JUST(cur_rank_phy_tensor->set_requires_grad(requires_grad));
     cur_rank_phy_tensor->set_is_leaf(is_leaf);

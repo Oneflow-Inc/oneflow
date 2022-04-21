@@ -195,10 +195,9 @@ class EmptyFunctor {
     MutableAttrMap attrs;
     JUST(attrs.SetAttr<Shape>("shape", shape));
     JUST(attrs.SetAttr<DataType>("dtype", dtype->data_type()));
-    JUST(attrs.SetAttr<bool>("pin_memory", pin_memory));
     if (device.has_value()) {
       Symbol<Device> device_symbol = JUST(device);
-      return OpInterpUtil::Dispatch<Tensor>(*op_, {}, OpExprInterpContext(attrs, device_symbol));
+      return OpInterpUtil::Dispatch<Tensor>(*op_, {}, OpExprInterpContext(attrs, device_symbol, pin_memory));
     } else {
       return OpInterpUtil::Dispatch<Tensor>(*op_, {}, attrs);
     }
