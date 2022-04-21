@@ -1017,10 +1017,6 @@ def _numpy(self):
     return self.to_numpy()
 
 
-def _zero_(self):
-    return self.zeros_()
-
-
 def zero_(self):
     self.zero_()
     return self
@@ -1274,7 +1270,6 @@ def RegisterMethods():
     Tensor.prod = _prod
     Tensor.sin = _sin
     Tensor.sin_ = _sin_inplace
-    Tensor.zero_ = _zero_
     Tensor.is_consistent = _is_consistent
     Tensor.to_consistent = _to_consistent
     Tensor.isnan = _isnan

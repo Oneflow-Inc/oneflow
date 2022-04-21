@@ -213,7 +213,7 @@ static PyObject* PyTensorObject_clone(PyObject* self, PyObject* unused) {
   END_HANDLE_ERRORS
 }
 
-static PyObject* PyTensorObject_zeros_(PyObject* self, PyObject* unused) {
+static PyObject* PyTensorObject_zero_(PyObject* self, PyObject* unused) {
   HANDLE_ERRORS
   ASSERT(EagerMirroredTensorZeros(PyTensor_Unpack(self)));
   Py_XINCREF(self);
@@ -324,7 +324,7 @@ static PyMethodDef PyTensorObject_methods[] = {
     {"retain_grad", PyTensorObject_retain_grad, METH_NOARGS, NULL},
     {"detach", PyTensorObject_detach, METH_NOARGS, NULL},
     {"clone", PyTensorObject_clone, METH_NOARGS, NULL},
-    {"zeros_", PyTensorObject_zeros_, METH_NOARGS, NULL},
+    {"zero_", PyTensorObject_zero_, METH_NOARGS, NULL},
     {"register_hook", PyTensorObject_register_hook, METH_O, NULL},
     {"_register_post_grad_accumulation_hook", PyTensorObject__register_post_grad_accumulation_hook,
      METH_O, NULL},
