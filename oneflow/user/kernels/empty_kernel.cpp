@@ -28,7 +28,6 @@ class EmptyKernel final : public OpKernel {
 
  private:
   void Compute(user_op::KernelComputeContext* ctx) const override {
-    // bool pin_memory = ctx->Attr<bool>("pin_memory");
     auto* out = ctx->Tensor4ArgNameAndIndex("out", 0);
     auto dtype = out->data_type();
 
