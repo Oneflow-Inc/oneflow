@@ -3574,7 +3574,9 @@ class TestEagerBoxing2DLocalToGlobalWithBalancedSplitSize(flow.unittest.TestCase
         test_case.assertEqual(z.placement, placement)
         test_case.assertEqual(z.sbp, sbp)
         test_case.assertEqual(z.size(), (5, 5))
-        test_case.assertTrue(np.allclose(z.numpy(), np.arange(25).reshape((5, 5)), 1e-5, 1e-5))
+        test_case.assertTrue(
+            np.allclose(z.numpy(), np.arange(25).reshape((5, 5)), 1e-5, 1e-5)
+        )
 
 
 if __name__ == "__main__":

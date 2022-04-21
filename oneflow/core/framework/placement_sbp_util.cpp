@@ -80,25 +80,6 @@ Maybe<const Shape> GetSelectedShape(const Shape& hierarchy_shape,
   return std::make_shared<const Shape>(dim_vec);
 }
 
-Maybe<void> GetSubIndex2OriginIndex(
-    const IndexVector& indexes, int axis,
-    std::function<void(const DimVector&, DimVector*)>* SubIndex2OriginIndex) {
-  CHECK_LT_OR_RETURN(axis, indexes.size());
-  *SubIndex2OriginIndex = [=](const DimVector& selected, DimVector* origin) {
-    origin->resize(indexes.size());
-    *origin = indexes;
-    origin->at(axis) = selected.at(axis);
-  };
-  return Maybe<void>::Ok();
-}
-
-Maybe<const Shape> GetSubShape4Axis(const Shape& hierarchy_shape, int axis) {
-  CHECK_GT_OR_RETURN(hierarchy_shape.NumAxes(), axis);
-  DimVector dim_vec = DimVector(hierarchy_shape.NumAxes(), 1);
-  dim_vec.at(axis) = hierarchy_shape.At(axis);
-  return std::make_shared<const Shape>(dim_vec);
-}
-
 Maybe<Symbol<std::vector<int>>> CalcAxis2IsBroadcast(Symbol<NdSbp> nd_sbp) {
   std::vector<int> axis2is_selected(nd_sbp->sbp_parallel_size());
   for (int i = 0; i < axis2is_selected.size(); ++i) {
