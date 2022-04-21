@@ -3,8 +3,8 @@
 // RUN: -pass-pipeline='gpu.module(strip-debuginfo,lower-affine,convert-gpu-to-nvvm,out-of-tree-gpu-to-cubin)' \
 // RUN: --func-bufferize -buffer-results-to-out-params -gpu-copy-arg \
 // RUN: --finalizing-bufferize \
-// RUN: --convert-memref-to-llvm --convert-std-to-llvm \
-// RUN: -gpu-to-llvm --reconcile-unrealized-casts --print-ir-after-all \
+// RUN: --convert-memref-to-llvm --convert-func-to-llvm \
+// RUN: -gpu-to-llvm --reconcile-unrealized-casts --print-after-all \
 // RUN: | tee %test_exec_root/$(basename %s).lower.mlir \
 // RUN: | oneflow-runner \
 // RUN:   --shared-libs=%linalg_test_lib_dir/libmlir_cuda_runtime%shlibext \
@@ -17,7 +17,7 @@
 // RUN: -pass-pipeline='gpu.module(strip-debuginfo,lower-affine,convert-gpu-to-nvvm,out-of-tree-gpu-to-cubin)' \
 // RUN: --func-bufferize \
 // RUN: --finalizing-bufferize \
-// RUN: --convert-memref-to-llvm --convert-std-to-llvm \
+// RUN: --convert-memref-to-llvm --convert-func-to-llvm \
 // RUN: -gpu-to-llvm --reconcile-unrealized-casts \
 // RUN: | tee %test_exec_root/$(basename %s).lower.mlir \
 // RUN: | oneflow-runner \
