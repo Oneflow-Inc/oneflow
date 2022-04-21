@@ -97,6 +97,26 @@ struct AbsPow {
   T base_;
 };
 
+#ifdef WITH_CUDA
+template<>
+struct AbsPow<half> {
+  explicit AbsPow(const half& base) : base_(base) {}
+
+  OF_DEVICE_FUNC half operator()(const half& x) {
+#if defined(__CUDA_ARCH__)
+    float abs_x = __habs(x);
+    return pow(abs_x, base_);
+#else
+    assert(false);                   
+    return static_cast<half>(0.0);
+#endif
+  }
+
+ private:
+  float base_;
+};
+#endif
+
 }  // namespace oneflow
 
 #endif  // ONEFLOW_USER_KERNELS_MULTI_REDUCE_KERNEL_UTIL_H_
