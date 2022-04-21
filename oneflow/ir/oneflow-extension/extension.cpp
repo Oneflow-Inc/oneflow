@@ -138,7 +138,7 @@ void WithMlirContext(
     const std::function<void(mlir::MLIRContext* mlir_ctx, mlir::ModuleOp module)>& lower) {
   mlir::DialectRegistry registry;
   registry
-      .insert<mlir::oneflow::OneFlowDialect, mlir::mlir::func::FuncDialect, mlir::memref::MemRefDialect,
+      .insert<mlir::oneflow::OneFlowDialect, mlir::func::FuncDialect, mlir::memref::MemRefDialect,
               mlir::tosa::TosaDialect, mlir::linalg::LinalgDialect>();
   mlir::registerLLVMDialectTranslation(registry);
   mlir::MLIRContext mlir_ctx(registry);
