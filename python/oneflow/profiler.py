@@ -48,6 +48,13 @@ class profile:
             return "{:.3f}us".format(time_ns / NS_IN_US)
         return "{:.3f}us".format(time_ns)
 
+    def __format_event_type(self, event_type):
+        if event_type == 0:
+            return "custom"
+        if event_type == 1:
+            return "kernel"
+        raise ValueError(f"Undefined event type {event_type}.")
+
     def table(self):
         result_json = json.loads(self.result)
         t = PrettyTable()
@@ -56,6 +63,7 @@ class profile:
             "All duration",
             "Average duration",
             "Number of calls",
+            "Event type",
             "Shapes of inputs",
         ]
         for item in result_json:
@@ -65,6 +73,7 @@ class profile:
                     self._format_time(item["all_duration"]),
                     self._format_time(item["avg_duration"]),
                     item["num_called"],
+                    self.__format_event_type(item["event_type"]),
                     item["shapes"],
                 ]
             )

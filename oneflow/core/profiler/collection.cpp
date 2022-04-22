@@ -30,6 +30,7 @@ void to_json(json& j, const ::oneflow::profiler::Result& result) {
            {"avg_duration", result.avg_duration},
            {"num_called", result.num_called},
            {"all_duration", result.all_duration},
+           {"event_type", result.event_type},
            {"shapes", result.shapes}};
 }
 
@@ -38,6 +39,7 @@ void from_json(const json& j, ::oneflow::profiler::Result& result) {
   j.at("avg_duration").get_to(result.avg_duration);
   j.at("num_called").get_to(result.num_called);
   j.at("all_duration").get_to(result.all_duration);
+  j.at("event_type").get_to(result.event_type);
   j.at("shapes").get_to(result.shapes);
 }
 
@@ -58,13 +60,23 @@ std::shared_ptr<IEvent> IEvent::Create(EventType type, const std::string& name) 
   return nullptr;
 }
 
-Result KernelEvent::ConvertToResult() { return Result(name_, GetDuration(), 1, __FormatShapes()); }
+Result KernelEvent::ConvertToResult() {
+  return Result(name_, GetDuration(), 1, EventType::kKernel, __FormatShapes());
+}
+
+std::string KernelEvent::Key() { return name_ + "." + __FormatShapes(); }
 
 std::string KernelEvent::__FormatShapes() {
+  if (input_shapes_.size() == 0) { return "-"; }
   std::string result("[");
   for (size_t i = 0; i < input_shapes_.size(); ++i) {
     if (i != 0) { result += ", "; }
-    result += input_shapes_[i].ToString();
+    const std::string current_shape = input_shapes_[i].ToString();
+    if (current_shape == "()") {
+      result += "scalar";
+    } else {
+      result += current_shape;
+    }
   }
   result += "]";
   return result;
@@ -72,7 +84,11 @@ std::string KernelEvent::__FormatShapes() {
 
 void KernelEvent::RecordShape(const Shape& shape) { input_shapes_.emplace_back(shape); }
 
-Result CustomEvent::ConvertToResult() { return Result(name_, GetDuration(), 1, "-"); }
+Result CustomEvent::ConvertToResult() {
+  return Result(name_, GetDuration(), 1, EventType::kCustom, "-");
+}
+
+std::string CustomEvent::Key() { return name_; }
 
 std::string ProfileMgr::NewEventRecorder(EventType type, const std::string& name) {
   auto recorder = std::make_shared<EventRecorder>(type, name);
@@ -93,21 +109,23 @@ std::string ProfileMgr::DumpResultsJson() {
 }
 
 std::vector<Result> ProfileMgr::__CountResults() {
-  std::vector<std::string> op_names_ordered;
+  std::vector<std::string> event_keys_ordered;
   std::unordered_map<std::string, Result> results;
+
   while (!events_.empty()) {
     auto e = events_.front();
     events_.pop();
-    const auto& event_name = e->GetName();
-    if (results.find(event_name) == results.end()) {
-      op_names_ordered.push_back(event_name);
-      results.emplace(event_name, e->ConvertToResult());
+    const auto event_key = e->Key();
+    if (results.find(event_key) == results.end()) {
+      const auto result = e->ConvertToResult();
+      event_keys_ordered.push_back(event_key);
+      results.emplace(event_key, e->ConvertToResult());
     } else {
-      results[event_name].Update(e->GetDuration());
+      results[event_key].Update(e->GetDuration());
     }
   }
   std::vector<Result> final_results;
-  for (const auto& op_name : op_names_ordered) { final_results.push_back(results[op_name]); }
+  for (const auto& event_key : event_keys_ordered) { final_results.push_back(results[event_key]); }
   return final_results;
 }
 

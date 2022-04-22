@@ -31,12 +31,18 @@ namespace oneflow {
 
 namespace profiler {
 
+enum class EventType { kCustom, kKernel };
+
 struct Result {
   Result() = default;
 
   explicit Result(const std::string& name, time_t all_duration, int64_t num_called,
-                  const std::string& shapes)
-      : name(name), all_duration(all_duration), num_called(num_called), shapes(shapes) {
+                  EventType event_type, const std::string& shapes)
+      : name(name),
+        all_duration(all_duration),
+        num_called(num_called),
+        event_type(event_type),
+        shapes(shapes) {
     avg_duration = all_duration / num_called;
   }
 
@@ -50,10 +56,10 @@ struct Result {
   time_t avg_duration = 0;
   time_t all_duration = 0;
   int64_t num_called = 0;
+  EventType event_type;
   std::string shapes;
 };
 
-enum class EventType { kCustom, kKernel };
 class CustomEvent;
 class KernelEvent;
 
@@ -63,6 +69,7 @@ class IEvent {
 
   IEvent() = delete;
   explicit IEvent(const std::string& name) : name_(name) {}
+  virtual std::string Key() = 0;
   virtual Result ConvertToResult() = 0;
   virtual ~IEvent() = default;
 
@@ -81,12 +88,14 @@ class IEvent {
 class CustomEvent final : public IEvent {
  public:
   explicit CustomEvent(const std::string& custom_name) : IEvent(custom_name) {}
+  std::string Key();
   Result ConvertToResult();
 };
 
 class KernelEvent final : public IEvent {
  public:
   explicit KernelEvent(const std::string& kernel_name) : IEvent(kernel_name) {}
+  std::string Key();
   Result ConvertToResult();
   void RecordShape(const Shape& shape);
 
