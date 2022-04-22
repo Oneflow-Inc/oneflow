@@ -107,7 +107,7 @@ struct AbsPow<half> {
     float abs_x = __habs(x);
     return pow(abs_x, base_);
 #else
-    assert(false);                   
+    assert(false);
     return static_cast<half>(0.0);
 #endif
   }
