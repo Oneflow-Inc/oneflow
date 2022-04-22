@@ -91,14 +91,14 @@ def _test_amax_not_keepdim(test_case, device):
 @flow.unittest.skip_unless_1n1d()
 class TestAmax(flow.unittest.TestCase):
     def test_amax(test_case):
-        arg_dict = OrderedDict()                                                    
+        arg_dict = OrderedDict()
         arg_dict["test_fun"] = [
             _test_amax_with_negative_dim,
             _test_amax_with_positive_dim,
             _test_amax_with_multiple_axes,
             _test_amax_with_empty_dim,
             _test_amax_keepdim,
-            _test_amax_not_keepdim
+            _test_amax_not_keepdim,
         ]
         arg_dict["device"] = ["cpu", "cuda"]
         for arg in GenArgList(arg_dict):
@@ -110,12 +110,12 @@ class TestAmax(flow.unittest.TestCase):
         ndim = random(1, 6).to(int)
         x = random_tensor(ndim=ndim).to(device)
         y = torch.amax(x, dim=random(0, ndim), keepdim=random().to(bool))
-        return y 
+        return y
 
     @autotest()
     def test_amax_with_random_data_empty_dim(test_case):
         device = random_device()
-        ndim = random(1,6).to(int)
+        ndim = random(1, 6).to(int)
         x = random_tensor(ndim=ndim).to(device)
         y = torch.amax(x, dim=None, keepdim=random().to(bool))
         return y
@@ -123,13 +123,14 @@ class TestAmax(flow.unittest.TestCase):
     @autotest()
     def test_amax_with_random_data_multi_dims(test_case):
         device = random_device()
-        ndim = random(2,6).to(int)
+        ndim = random(2, 6).to(int)
         x = random_tensor(ndim=ndim).to(device)
         dim = set()
         for _ in range(random(1, ndim).to(int).value()):
             dim.add(random(0, ndim).to(int).value())
         y = torch.amax(x, dim=tuple(dim), keepdim=random().to(bool))
         return y
+
 
 if __name__ == "__main__":
     unittest.main()

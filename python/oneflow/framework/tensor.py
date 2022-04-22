@@ -391,8 +391,8 @@ def _swapaxes(self, dim0, dim1):
 
 def _amax(self, dim=None, keepdim=False):
     return flow._C.amax(self, dim=dim, keepdim=keepdim)
-  
-  
+
+
 def _swapdims(self, dim0, dim1):
     return flow._C.swapdims(self, dim0, dim1)
 
