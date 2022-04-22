@@ -44,7 +44,8 @@ Maybe<void> InferTensorDesc4MatmulBiasAddBackward(user_op::InferContext* ctx) {
 Maybe<void> InferDataType4MatmulBiasAddBackward(user_op::InferContext* ctx) {
   const user_op::TensorDesc& x_desc = ctx->InputTensorDesc("x", 0);
   const user_op::TensorDesc& dy_desc = ctx->InputTensorDesc("dy", 0);
-  CHECK_EQ_OR_RETURN(x_desc.data_type(), dy_desc.data_type());
+  CHECK_EQ_OR_RETURN(x_desc.data_type(), dy_desc.data_type())
+      << "x's datatype should be the same as y's datatype";
 
   user_op::TensorDesc* w_grad_desc = ctx->OutputTensorDesc("w_grad", 0);
   user_op::TensorDesc* b_grad_desc = ctx->OutputTensorDesc("b_grad", 0);
