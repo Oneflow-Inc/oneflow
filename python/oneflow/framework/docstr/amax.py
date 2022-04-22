@@ -19,12 +19,15 @@ from oneflow.framework.docstr.utils import add_docstr
 
 add_docstr(
     oneflow.amax,
-    """This function is equivalent to PyTorch’s amax function. It returns the maximum along a dimension.
+    """
+    oneflow.amax(input, dim=None, keepdim=False) -> Tensor
+
+    This function is equivalent to PyTorch’s amax function. It returns the maximum along a dimension.
 
     Args:
         input (oneflow.Tensor): the input Tensor.
         dim (int or List of int, optional): the dimension or the dimensions to reduce. Dim is None by default. 
-        keepdim (bool, optional): whether to retain the dimension. 
+        keepdim (bool, optional): whether to retain the dimension. keepdim is False by default. 
 
     Returns:
         oneflow.Tensor: Maximum of the input tensor
