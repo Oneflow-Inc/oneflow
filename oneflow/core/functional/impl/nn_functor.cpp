@@ -290,8 +290,8 @@ class TensorDotFunctor {
   Maybe<Tensor> operator()(const std::shared_ptr<Tensor>& a, const std::shared_ptr<Tensor>& b,
                            const std::vector<int64_t>& _dims_a,
                            const std::vector<int64_t>& _dims_b) const {
-    CHECK_EQ_OR_RETURN(dims_a.size(), dims_b.size())
-        << "dims1 and dims2 must have same size, got " << dims_a.size() << " and " << dims_b.size();
+    CHECK_EQ_OR_RETURN(_dims_a.size(), _dims_b.size())
+        << "dims1 and dims2 must have same size, got " << _dims_a.size() << " and " << _dims_b.size();
     std::vector<int64_t> dims_a(_dims_a.begin(), _dims_a.end());
     std::vector<int64_t> dims_b(_dims_b.begin(), _dims_b.end());
     for (int64_t i = 0; i < dims_a.size(); i++) {
