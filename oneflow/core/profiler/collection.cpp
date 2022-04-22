@@ -26,17 +26,19 @@ using json = nlohmann::json;
 namespace nlohmann {
 
 void to_json(json& j, const ::oneflow::profiler::Result& result) {
-  j = json{{"op_name", result.op_name},
+  j = json{{"name", result.name},
            {"avg_duration", result.avg_duration},
            {"num_called", result.num_called},
-           {"all_duration", result.all_duration}};
+           {"all_duration", result.all_duration},
+           {"shapes", result.shapes}};
 }
 
 void from_json(const json& j, ::oneflow::profiler::Result& result) {
-  j.at("op_name").get_to(result.op_name);
+  j.at("name").get_to(result.name);
   j.at("avg_duration").get_to(result.avg_duration);
   j.at("num_called").get_to(result.num_called);
   j.at("all_duration").get_to(result.all_duration);
+  j.at("shapes").get_to(result.shapes);
 }
 
 }  // namespace nlohmann
@@ -56,9 +58,21 @@ std::shared_ptr<IEvent> IEvent::Create(EventType type, const std::string& name) 
   return nullptr;
 }
 
-Result KernelEvent::ConvertToResult() { return Result(name_, GetDuration(), 1); }
+Result KernelEvent::ConvertToResult() { return Result(name_, GetDuration(), 1, __FormatShapes()); }
 
-Result CustomEvent::ConvertToResult() { return Result(name_, GetDuration(), 1); }
+std::string KernelEvent::__FormatShapes() {
+  std::string result("[");
+  for (size_t i = 0; i < input_shapes_.size(); ++i) {
+    if (i != 0) { result += ", "; }
+    result += input_shapes_[i].ToString();
+  }
+  result += "]";
+  return result;
+}
+
+void KernelEvent::RecordShape(const Shape& shape) { input_shapes_.emplace_back(shape); }
+
+Result CustomEvent::ConvertToResult() { return Result(name_, GetDuration(), 1, "-"); }
 
 std::string ProfileMgr::NewEventRecorder(EventType type, const std::string& name) {
   auto recorder = std::make_shared<EventRecorder>(type, name);
@@ -104,6 +118,13 @@ std::string ProfileMgr::__GetNextEventRecorderKey(const std::string& name) {
     event_recorders_last_id_[name]++;
   }
   return name + "." + std::to_string(event_recorders_last_id_[name]);
+}
+
+Maybe<void> EventRecorder::RecordShape4KernelEvent(const Shape& shape) {
+  auto event = std::dynamic_pointer_cast<KernelEvent>(event_);
+  CHECK_NOTNULL_OR_RETURN(event) << "Current event is not a KernelEvent.";
+  event->RecordShape(shape);
+  return Maybe<void>::Ok();
 }
 
 }  // namespace profiler

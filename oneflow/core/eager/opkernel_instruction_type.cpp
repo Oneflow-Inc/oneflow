@@ -138,6 +138,10 @@ struct LocalCallOpKernelUtil final {
     OF_PROFILER_RANGE_PUSH("Compute");
     {
       profiler::EventRecorder er_guard(profiler::EventType::kKernel, opkernel->op_type_name());
+      for (const auto& pair : compute_ctx->inputs()) {
+        CHECK_JUST(er_guard.RecordShape4KernelEvent(
+            compute_ctx->TensorDesc4ArgNameAndIndex(pair.first, pair.second)->shape()));
+      }
       operand->user_opkernel()->Compute(compute_ctx, state, cache);
     }
     OF_PROFILER_RANGE_POP();

@@ -21,9 +21,11 @@ limitations under the License.
 #include <string>
 #include <queue>
 #include <unordered_map>
+#include <vector>
 #include "oneflow/core/profiler/util.h"
 #include "oneflow/core/common/util.h"
 #include "oneflow/core/common/global.h"
+#include "oneflow/core/common/shape.h"
 
 namespace oneflow {
 
@@ -32,8 +34,9 @@ namespace profiler {
 struct Result {
   Result() = default;
 
-  explicit Result(const std::string& op_name, time_t all_duration, int64_t num_called)
-      : op_name(op_name), all_duration(all_duration), num_called(num_called) {
+  explicit Result(const std::string& name, time_t all_duration, int64_t num_called,
+                  const std::string& shapes)
+      : name(name), all_duration(all_duration), num_called(num_called), shapes(shapes) {
     avg_duration = all_duration / num_called;
   }
 
@@ -43,10 +46,11 @@ struct Result {
     avg_duration = all_duration / num_called;
   }
 
-  std::string op_name;
+  std::string name;
   time_t avg_duration = 0;
   time_t all_duration = 0;
   int64_t num_called = 0;
+  std::string shapes;
 };
 
 enum class EventType { kCustom, kKernel };
@@ -84,6 +88,11 @@ class KernelEvent final : public IEvent {
  public:
   explicit KernelEvent(const std::string& kernel_name) : IEvent(kernel_name) {}
   Result ConvertToResult();
+  void RecordShape(const Shape& shape);
+
+ private:
+  std::vector<Shape> input_shapes_;
+  std::string __FormatShapes();
 };
 
 class EventRecorder;
@@ -120,6 +129,7 @@ class EventRecorder {
     event_->Finish();
     event_.reset();
   }
+  Maybe<void> RecordShape4KernelEvent(const Shape& shape);
 
  private:
   std::shared_ptr<IEvent> event_;
