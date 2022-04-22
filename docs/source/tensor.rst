@@ -79,6 +79,7 @@ OneFlow Tensor Class
             grad, 
             grad_fn, 
             gt, 
+            half,
             in_top_k, 
             index_select,
             int, 
