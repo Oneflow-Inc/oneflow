@@ -575,7 +575,7 @@ void ClipGradByGlobalNorm(
 
   if (ctx->job_desc().enable_auto_mixed_precision()) {
     auto cast_op =
-        user_op::UserOpConfWrapperBuilder("System-DynamicLossScale-Cast-" + NewUniqueId())
+        user_op::UserOpConfWrapperBuilder("System-ClipGradient-GlobalNorm-Cast-" + NewUniqueId())
             .Op("cast")
             .Input("in", embedding_sum_pow_abs_lbn)
             .Output("out")
