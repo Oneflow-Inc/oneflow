@@ -67,12 +67,27 @@ Maybe<void> InferDataType4MatmulBiasAddBackward(user_op::InferContext* ctx) {
 }
 
 /* static */ Maybe<void> CublasMatmulBiasAddGradOp::GetSbp(user_op::SbpContext* ctx) {
+  /*
+  dy need transpose.
+
+  assume dy(m, n), x(m, k), dbias=(n, 1)
+  dw = dy_T matmul x
+
+  */
   ctx->NewBuilder()
-      .Split(user_op::OpArg("dy", 0), 0)
+      .Split(user_op::OpArg("dy", 0), 1)
       .Broadcast(user_op::OpArg("x", 0))
       .Split(user_op::OpArg("w_grad", 0), 0)
+      .Split(user_op::OpArg("b_grad", 0), 0)
+      .Build();
+
+  ctx->NewBuilder()
+      .Split(user_op::OpArg("dy", 0), 0)
+      .Split(user_op::OpArg("x", 0), 0)
+      .PartialSum(user_op::OpArg("w_grad", 0))
       .PartialSum(user_op::OpArg("b_grad", 0))
       .Build();
+
   return Maybe<void>::Ok();
 }
 
