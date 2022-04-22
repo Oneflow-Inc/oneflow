@@ -96,6 +96,10 @@ class ClipByGlobalNormJobPassState : public JobPassState {
       it->second = state;
     }
   }
+  bool has_clip_by_global_norm_state(const OptimizerConf& optimizer_conf) const {
+    const auto& it = optimizer_conf2clip_by_global_norm_state_.find(optimizer_conf);
+    return (it != optimizer_conf2clip_by_global_norm_state_.end());
+  }
 
  private:
   HashMap<OptimizerConf, ClipByGlobalNormState> optimizer_conf2clip_by_global_norm_state_;
