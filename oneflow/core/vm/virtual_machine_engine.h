@@ -46,7 +46,7 @@ class ScheduleCtx {
   virtual void OnWorkerLoadPending(vm::ThreadCtx* thread_ctx) const = 0;
 };
 
-struct VmDesc;
+class VmDesc;
 class VirtualMachineEngine final : public intrusive::Base {
  public:
   // types
@@ -138,14 +138,15 @@ class VirtualMachineEngine final : public intrusive::Base {
   ReadyInstructionList* mut_ready_instruction_list() { return &ready_instruction_list_; }
 
   void ReleaseFinishedInstructions(const ScheduleCtx& schedule_ctx);
-  void MoveInstructionMsgToGarbageMsgList(intrusive::shared_ptr<InstructionMsg>&& instr_msg,
+  void MoveInstructionMsgToGarbageMsgList(int flush_window_size,
+                                          intrusive::shared_ptr<InstructionMsg>&& instr_msg,
                                           const ScheduleCtx& schedule_ctx);
   void HandleLocalPending();
   void GetRewritedPendingInstructionsByWindowSize(size_t window_size,
                                                   InstructionMsgList* /*out*/ pending_instr_msgs);
   void MakeAndAppendFusedInstruction(InstructionMsgList&& fused_instr_msg_list,
                                      InstructionMsgList* /*out*/ pending_instr_msgs);
-  void TryRunBarrierInstruction();
+  void TryRunBarrierInstruction(const ScheduleCtx& schedule_ctx);
   void DispatchAndPrescheduleInstructions(const ScheduleCtx& schedule_ctx);
   bool OnSchedulerThread(const StreamType& stream_type);
 
