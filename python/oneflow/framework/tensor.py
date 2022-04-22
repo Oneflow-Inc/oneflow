@@ -1088,8 +1088,10 @@ def _new_tensor(
             data, dtype=dtype, placement=placement, sbp=sbp, requires_grad=requires_grad
         )
 
+
 def _pin_memory(self):
     return flow._C.pin_memory(self)
+
 
 def RegisterMethods():
     Tensor.__mul__ = lambda self, other: self.mul(other)

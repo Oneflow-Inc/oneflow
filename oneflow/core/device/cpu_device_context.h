@@ -39,9 +39,7 @@ class CpuDeviceCtx final : public DeviceCtx {
 
   vm::Allocator* mut_allocator() override { return Global<vm::CpuAllocator>::Get(); }
 
-  vm::Allocator* mut_pin_memory_allocator() { 
-    return Global<vm::CudaHostAllocator>::Get(); 
-  }
+  vm::Allocator* mut_pin_memory_allocator() { return Global<vm::CudaHostAllocator>::Get(); }
 
   DeviceType device_type() const override { return DeviceType::kCPU; }
 

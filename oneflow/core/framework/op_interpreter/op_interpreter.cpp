@@ -97,6 +97,10 @@ Maybe<void> AutogradInterpreter::Apply(const OpExpr& op_expr, const TensorTuple&
   }
   // Lazy mode will construct backward compute graph in passes, so disable autograd if lazy mode.
   std::shared_ptr<OpExprGradClosure> grad_closure(nullptr);
+  // if(op_expr.op_type_name()=="assign"){requires_grad = true; }
+  // printf("\n AutogradInterpreter::Apply >>>>>>>>>>>> op name:%s; requires_grad:%d;
+  // LazyMode::is_enabled():%d", op_expr.op_type_name().c_str(), requires_grad,
+  // LazyMode::is_enabled());
   if (requires_grad && !LazyMode::is_enabled()) {
     grad_closure = JUST(op_expr.GetOrCreateOpGradClosure());
     auto backward_fn = std::make_shared<BackwardFunction>();

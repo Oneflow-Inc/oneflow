@@ -143,13 +143,9 @@ class EagerBlobObject final : public BlobObject {
     tensor_storage_->set_last_used_stream(last_used_stream);
   }
 
-  void set_pin_memory(const bool pin_memory){
-    pin_memory_ = pin_memory;
-  }
+  void set_pin_memory(const bool pin_memory) { pin_memory_ = pin_memory; }
 
-  bool pin_memory() const {
-    return pin_memory_;
-  }
+  bool pin_memory() const { return pin_memory_; }
 
  private:
   std::unique_ptr<Blob> blob_;
