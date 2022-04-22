@@ -298,9 +298,10 @@ class PinMemoryFunctor {
     op_ = CHECK_JUST(one::OpBuilder("slice_update").Input("x").Input("update").Output("y").Build());
   }
   Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& input) const {
-    // if tensor already pinned, then just return
+    // TODO:(zhaoluyang) support consistent tensor.pin_memory()
     CHECK_OR_RETURN(input->is_local())
         << Error::RuntimeError() << "Tensor.pin_memory() only support local tensor for now!";
+    // if tensor already pinned, then just return
     if (JUST(JUST(input->AsMirroredTensor())->eager_blob_object())->pin_memory()) { return input; }
     auto shape = input->shape();
     auto device = JUST(input->device());
