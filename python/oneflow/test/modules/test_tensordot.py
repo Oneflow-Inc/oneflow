@@ -65,7 +65,17 @@ class TestTensordot(flow.unittest.TestCase):
         y = random_tensor(4, 4, 2, 3, 5).to(device)
         z = torch.tensordot(x, y, dims=[[-3, -2, -4], [-2, -3, -4]])
         return z
+    
+    @autotest(check_graph=False)
+    def test_tensordot_backward(test_case):
+        device = random_device()
+        x = random_tensor(3, 3, 4, 5).to(device)
+        y = random_tensor(2, 4, 5).to(device)
+        z = torch.tensordot(x, y, dims=[[1, 2], [0, 1]])
+        z.sum().backward()
+        
 
+    @autotest(check_graph=False)
     def test_tensordot_tensor_dim(test_case):
         def _test_tensor_dim(test_case, device):
             np_dim = np.array([[1, 2, 3], [1, 2, 3]], dtype=np.int)
@@ -92,11 +102,12 @@ class TestTensordot(flow.unittest.TestCase):
         for arg in GenArgList(arg_dict):
             _test_tensor_dim(test_case, arg[0])
 
-    @autotest(n=5)
+    @autotest(n=5, check_graph=False)
     def test_tensordot_single_item_tensor_dim(test_case):
-        dims = random_tensor(1, dim0=1, low=0, high=4, dtype=int)
-        x = random_tensor(3, dim0=4, dim1=4, dim2=4)
-        y = random_tensor(3, dim0=4, dim1=4, dim2=4)
+        device = random_device()
+        dims = random_tensor(1, dim0=1, low=0, high=4, dtype=int).to(device)
+        x = random_tensor(3, dim0=4, dim1=4, dim2=4).to(device)
+        y = random_tensor(3, dim0=4, dim1=4, dim2=4).to(device)
         z = torch.tensordot(x, y, dims=dims)
         return z
 

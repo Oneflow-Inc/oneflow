@@ -19,11 +19,11 @@ from oneflow.framework.docstr.utils import add_docstr
 add_docstr(
     oneflow.tensordot,
     r"""
-    tensordot(a, b, dims=Union[int, Tensor, Tuple[List[int]], List[List[int]]]) -> Tensor
+    tensordot(a, b, dims=Union[int, Tensor, Tuple[List[int], List[int]], List[List[int]]], out=None) -> Tensor
     
     Compute tensor dot along given dimensions.
     
-    Given two tensors a and b, and dims which has two list containing dim indices, `tensordot` traverses the two 
+    Given two tensors a and b, and dims which represent two lists containing dim indices, `tensordot` traverses the two
     lists and calculate the tensor dot along every dim pair.
 
     Args:
@@ -32,9 +32,10 @@ add_docstr(
         dims (int or list or tuple or oneflow.Tensor):
             The dims to calculate tensordot.
             If it's an integer or oneflow.Tensor with only one element,
-            the last `dims` of tensor a and the first `dims` of tensor b will be calculated.
-            If it's a list or tuple or oneflow.Tensor,
+            the last dims of tensor `a` and the first dims of tensor `b` will be calculated.
+            If it's a list or tuple or oneflow.Tensor with more than one element,
             it must contain two array-like object, which represent the dims of tensor a and tensor b to be calculated.
+        out (oneflow.Tensor): The tensor to save result (NOT IMPLEMENTED YET)
         
     Returns:
         oneflow.Tensor: The result tensor
@@ -50,7 +51,7 @@ add_docstr(
         oneflow.Size([3, 6])
         >>> b = flow.randn(5, 6, 7)
         >>> flow.tensordot(a, b, dims=1).shape
-        oneflow.Size([12, 42])
+        oneflow.Size([3, 4, 6, 7])
         >>> b = flow.randn(3, 4, 7)
         >>> flow.tensordot(a, b, dims=[[0, 1], [0, 1]]).shape
         oneflow.Size([5, 7])
@@ -100,5 +101,55 @@ add_docstr(
         >>> flow.all(result == flow.tensordot(a, b, dims))
         tensor(True, dtype=oneflow.bool)
 
+    ..
+        Feature Stage of Operator [tensordot].
+        - Maintainer List [@marigoold]
+        - Current Stage [ ]
+        - Alpha Stage Check List [ ]
+          - API(Compatible with PyTorch 1.11, anything incompatible must be noted in API Doc.)[Yes]
+          - Doc(API Doc must be provided and showed normally on the web page.)[Yes]
+          - Functionality and its' Test [ ]
+            - Functionality is highly compatiable with PyTorch 1.11. [ ] (out parameter is not implemented yet)
+            - eager local [Yes]
+              - forward [Yes]
+              - backward [Yes]
+              - gpu [Yes]
+              - cpu [Yes]
+            - graph local [ ] (when the type of param `dims` is oneflow.Tensor, the tensor.item() will make graph fail)
+              - forward [ ]
+              - backward [ ]
+              - gpu [ ]
+              - cpu [ ]
+          - Exception Handling
+            - Exception Message and Hint must be provided [Yes]
+        - Beta Stage Check List [ ]
+          - API(High compatibility with PyTorch 1.11, shouldn't have anything incompatible for a naive reason.)[ ]
+          - Doc(Same standard as Alpha Stage)[ ]
+          - Functionality and its' Test [ ]
+            - eager global [ ]
+              - forward [ ]
+              - backward [ ]
+              - gpu [ ]
+              - cpu [ ]
+            - graph gloal [ ]
+              - forward [ ]
+              - backward [ ]
+              - gpu [ ]
+              - cpu [ ]
+          - Performance and Scalability(Must be evaluated.)[ ]
+            - CUDA kernel [ ]
+            - CPU kernel [ ]
+            - N nodes M devices [ ]
+          - Exception Handling [ ]
+            - Exception Message and Hint must be provided [ ]
+            - Try you best to do Exception Recovery [ ]
+        - Stable Stage Check List [ ]
+          - API(Same standard as Beta Stage)[ ]
+          - Doc(Same standard as Beta Stage)[ ]
+          - Functionality and its' Test [ ]
+            - fp16 and AMP [ ]
+            - NHWC [ ]
+          - Performance and Scalability(Must be evaluated.)[ ]
+          - Exception Handling [ ]
     """,
 )

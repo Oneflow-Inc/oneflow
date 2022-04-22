@@ -18,8 +18,10 @@ from typing import Union, List, Tuple
 
 
 def tensordot(
-    a, b, dims: Union[oneflow.Tensor, int, List[List[int]], Tuple[List[int]]] = 2
+    a, b, dims: Union[oneflow.Tensor, int, List[List[int]], Tuple[List[int]]] = 2, out=None
 ):
+    if out is not None:
+        raise NotImplementedError("tensordot with `out` parameter which is not None is not yet implemented")
     if not isinstance(dims, (oneflow.Tensor, int, list, tuple)):
         raise TypeError(
             f"oneflow.tensordot expects dims to be one of oneflow.Tensor, int, Tuple[List[int], List[int]] or List[List[int]] containing two lists, but got {type(dims)}"
@@ -34,6 +36,7 @@ def tensordot(
         dim_a = list(dims[0])
         dim_b = list(dims[1])
     elif isinstance(dims, oneflow.Tensor):
+        print("WARNING: tensordot doesn't support graph mode when the type of `dims` is oneflow.Tensor, because the tensor.item() operation needs synchronization between CPU and GPU.\n")
         if dims.numel() == 1:
             return oneflow._C.tensordot(a, b, dims.item())
         assert (
