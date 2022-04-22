@@ -33,20 +33,20 @@ struct Result {
   Result() = default;
 
   explicit Result(const std::string& op_name, time_t all_duration, int64_t num_called)
-      : op_name_(op_name), all_duration_(all_duration), num_called_(num_called) {
-    avg_duration_ = all_duration / num_called;
+      : op_name(op_name), all_duration(all_duration), num_called(num_called) {
+    avg_duration = all_duration / num_called;
   }
 
   void Update(time_t duration) {
-    all_duration_ += duration;
-    num_called_ += 1;
-    avg_duration_ = all_duration_ / num_called_;
+    all_duration += duration;
+    num_called += 1;
+    avg_duration = all_duration / num_called;
   }
 
-  std::string op_name_;
-  time_t avg_duration_ = 0;
-  time_t all_duration_ = 0;
-  int64_t num_called_ = 0;
+  std::string op_name;
+  time_t avg_duration = 0;
+  time_t all_duration = 0;
+  int64_t num_called = 0;
 };
 
 enum class EventType { kCustom, kKernel };

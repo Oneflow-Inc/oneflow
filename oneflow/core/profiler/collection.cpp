@@ -16,6 +16,7 @@ limitations under the License.
 #include <memory>
 #include <set>
 #include <string>
+#include <unordered_map>
 #include "nlohmann/json.hpp"
 #include "oneflow/core/profiler/collection.h"
 #include "oneflow/core/profiler/util.h"
@@ -25,17 +26,17 @@ using json = nlohmann::json;
 namespace nlohmann {
 
 void to_json(json& j, const ::oneflow::profiler::Result& result) {
-  j = json{{"op_name", result.op_name_},
-           {"avg_duration", result.avg_duration_},
-           {"num_called", result.num_called_},
-           {"all_duration", result.all_duration_}};
+  j = json{{"op_name", result.op_name},
+           {"avg_duration", result.avg_duration},
+           {"num_called", result.num_called},
+           {"all_duration", result.all_duration}};
 }
 
 void from_json(const json& j, ::oneflow::profiler::Result& result) {
-  j.at("op_name").get_to(result.op_name_);
-  j.at("avg_duration").get_to(result.avg_duration_);
-  j.at("num_called").get_to(result.num_called_);
-  j.at("all_duration").get_to(result.all_duration_);
+  j.at("op_name").get_to(result.op_name);
+  j.at("avg_duration").get_to(result.avg_duration);
+  j.at("num_called").get_to(result.num_called);
+  j.at("all_duration").get_to(result.all_duration);
 }
 
 }  // namespace nlohmann
@@ -79,14 +80,14 @@ std::string ProfileMgr::DumpResultsJson() {
 
 std::vector<Result> ProfileMgr::__CountResults() {
   std::vector<std::string> op_names_ordered;
-  std::map<std::string, Result> results;
+  std::unordered_map<std::string, Result> results;
   while (!events_.empty()) {
     auto e = events_.front();
     events_.pop();
     const auto& event_name = e->GetName();
     if (results.find(event_name) == results.end()) {
       op_names_ordered.push_back(event_name);
-      results[event_name] = e->ConvertToResult();
+      results.emplace(event_name, e->ConvertToResult());
     } else {
       results[event_name].Update(e->GetDuration());
     }
