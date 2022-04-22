@@ -209,12 +209,10 @@ class AssignLocalTensorFunctor {
   }
   Maybe<void> operator()(const std::shared_ptr<one::Tensor>& ref,
                          const std::shared_ptr<one::Tensor>& value) const {
-    // JUST(CheckInplaceValid(ref)); // align check to torch
+    JUST(CheckInplaceValid(ref)); // align check to torch
     CHECK_OR_RETURN(ref->is_local() && value->is_local())
         << "Both ref and value must be local tensor.";
-    TensorTuple output(1);
-    output[0] = ref;
-    JUST(OpInterpUtil::Dispatch(*op_, TensorTuple{ref, value}, &output, {}));
+    JUST(OpInterpUtil::Dispatch<TensorTuple>(*op_, {ref, value}));
     return Maybe<void>::Ok();
   }
 
