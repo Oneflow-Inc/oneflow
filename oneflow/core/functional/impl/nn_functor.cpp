@@ -270,10 +270,12 @@ class TensorDotIntDimsFunctor {
   Maybe<Tensor> operator()(const std::shared_ptr<Tensor>& a, const std::shared_ptr<Tensor>& b,
                            const int64_t dims) const {
     CHECK_GE_OR_RETURN(dims, 0) << "Dims must be greater than or equal to 0";
-    CHECK_LE_OR_RETURN(dims, a->shape()->NumAxes()) << "Dims must be less than or equal to a.dims(), which is "
-                                                    << a->shape()->NumAxes() << " but got " << dims;
-    CHECK_LE_OR_RETURN(dims, b->shape()->NumAxes()) << "Dims must be less than or equal to b.dims(), which is "
-                                                    << b->shape()->NumAxes() << " but got " << dims;
+    CHECK_LE_OR_RETURN(dims, a->shape()->NumAxes())
+        << "Dims must be less than or equal to a.dims(), which is " << a->shape()->NumAxes()
+        << " but got " << dims;
+    CHECK_LE_OR_RETURN(dims, b->shape()->NumAxes())
+        << "Dims must be less than or equal to b.dims(), which is " << b->shape()->NumAxes()
+        << " but got " << dims;
     std::vector<int64_t> dims_a(dims), dims_b(dims);
     for (int64_t i = 0; i < dims; i++) {
       dims_a[i] = a->shape()->NumAxes() - dims + i;
@@ -288,6 +290,8 @@ class TensorDotFunctor {
   Maybe<Tensor> operator()(const std::shared_ptr<Tensor>& a, const std::shared_ptr<Tensor>& b,
                            const std::vector<int64_t>& _dims_a,
                            const std::vector<int64_t>& _dims_b) const {
+    CHECK_EQ_OR_RETURN(dims_a.size(), dims_b.size())
+        << "dims1 and dims2 must have same size, got " << dims_a.size() << " and " << dims_b.size();
     std::vector<int64_t> dims_a(_dims_a.begin(), _dims_a.end());
     std::vector<int64_t> dims_b(_dims_b.begin(), _dims_b.end());
     for (int64_t i = 0; i < dims_a.size(); i++) {
@@ -300,9 +304,6 @@ class TensorDotFunctor {
       CHECK_LT_OR_RETURN(dims_b[i], b->shape()->NumAxes()) << "The dims is invalid for Tensor b";
       CHECK_GE_OR_RETURN(dims_b[i], 0) << "The dims is invalid for Tensor b";
     }
-
-    CHECK_EQ_OR_RETURN(dims_a.size(), dims_b.size())
-        << "dims1 and dims2 must have same size, got " << dims_a.size() << " and " << dims_b.size();
 
     if (dims_a.empty() && dims_b.empty()) {
       DimVector shape_sum(a->shape()->NumAxes() + b->shape()->NumAxes());
