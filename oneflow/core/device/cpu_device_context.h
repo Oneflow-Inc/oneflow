@@ -37,9 +37,7 @@ class CpuDeviceCtx final : public DeviceCtx {
 
   std::unique_ptr<DeviceCtx> Copy() const { return std::unique_ptr<DeviceCtx>(new CpuDeviceCtx()); }
 
-  vm::Allocator* mut_allocator() override { 
-    return Global<vm::CpuAllocator>::Get(); 
-  }
+  vm::Allocator* mut_allocator() override { return Global<vm::CpuAllocator>::Get(); }
 
   vm::Allocator* mut_pin_memory_allocator() { 
     return Global<vm::CudaHostAllocator>::Get(); 

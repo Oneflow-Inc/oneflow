@@ -58,6 +58,7 @@ Maybe<void> EagerBlobObject::TryAllocateBlobBodyMemory(DeviceCtx* device_ctx) {
   const bool pin_memory = EagerBlobObject::pin_memory();
   vm::Allocator* allocator = nullptr;
   if (pin_memory && device_ctx->device_type() == DeviceType::kCPU) {
+    // only CpuDeviceCtx support pin_memory allocator
     allocator = dynamic_cast<CpuDeviceCtx*>(device_ctx)->mut_pin_memory_allocator();
   } else {
     allocator = device_ctx->mut_allocator();
