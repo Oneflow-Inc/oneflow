@@ -691,8 +691,10 @@ class MedianWithIndicesFunctor {
     }
     if (axis < 0) { axis += x->ndim(); }
     std::shared_ptr<one::Tensor> tensor = x;
-    CHECK_OR_RETURN(x->dim(axis) != 0)
-        << "IndexError: Expected reduction dim " << axis << " to have non-zero size.";
+    if (x->dim(axis) == 0) {
+      return Error::IndexError() << "IndexError: Expected reduction dim " << axis
+                                 << " to have non-zero size.";
+    }
     if (axis != x->ndim() - 1) {
       tensor = JUST(functional::Squeeze(
           JUST(functional::Transpose2dim(JUST(functional::Unsqueeze(x, -1)), axis, -1)),

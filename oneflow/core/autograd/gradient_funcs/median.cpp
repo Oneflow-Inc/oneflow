@@ -24,7 +24,7 @@ namespace oneflow {
 namespace one {
 
 struct MedianCaptureState : public AutoGradCaptureState {
-  bool requires_grad;
+  bool requires_grad = false;
 };
 
 class Median : public OpExprGradFunction<MedianCaptureState> {
@@ -72,7 +72,7 @@ class Median : public OpExprGradFunction<MedianCaptureState> {
 };
 
 struct MedianWithIndicesCaptureState : public AutoGradCaptureState {
-  bool requires_grad;
+  bool requires_grad = false;
 };
 
 class MedianWithIndices : public OpExprGradFunction<MedianWithIndicesCaptureState> {
@@ -96,9 +96,6 @@ class MedianWithIndices : public OpExprGradFunction<MedianWithIndicesCaptureStat
       const auto& input = ctx->SavedTensors().at(0);
       const auto& indices = JUST(functional::Unsqueeze(ctx->SavedTensors().at(1), -1));
       const auto& dout = JUST(functional::Unsqueeze(out_grads.at(0), -1));
-      printf("indices shape: %s\n.", indices->shape()->DebugStr().c_str());
-      printf("dout shape: %s\n.", dout->shape()->DebugStr().c_str());
-      printf("before dimscatter.\n");
       in_grads->at(0) = JUST(
           functional::DimScatter(JUST(functional::Constant(*(input->shape()), Scalar(0),
                                                            *dout->dtype(), JUST(dout->device()))),

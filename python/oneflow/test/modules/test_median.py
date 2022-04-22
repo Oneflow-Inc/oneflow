@@ -14,8 +14,6 @@ See the License for the specific language governing permissions and
 limitations under the License.
 """
 import unittest
-import numpy as np
-
 from oneflow.test_utils.automated_test_util import *
 import oneflow as flow
 import oneflow.unittest
@@ -23,14 +21,14 @@ import oneflow.unittest
 
 @flow.unittest.skip_unless_1n1d()
 class TestMedianModule(flow.unittest.TestCase):
-    @autotest(n=5, check_graph=False)
+    @autotest(n=5)
     def test_median_reduce_all_dim(test_case):
         device = random_device()
         ndim = random(1, 4).to(int).value()
         x = random_tensor(ndim=ndim, dim0=random(1, 4)).to(device)
         return torch.median(x)
 
-    @autotest(n=5, check_graph=False)
+    @autotest(n=5)
     def test_median_reduce_one_dim(test_case):
         device = random_device()
         ndim = random(low=2).to(int).value()
@@ -38,7 +36,7 @@ class TestMedianModule(flow.unittest.TestCase):
         x = random_tensor(ndim).to(device)
         return torch.median(x, reduce_dim)
 
-    @autotest(n=5, check_graph=False)
+    @autotest(n=5)
     def test_median_reduce_one_dim_keepdim(test_case):
         device = random_device()
         ndim = random(low=2).to(int).value()
