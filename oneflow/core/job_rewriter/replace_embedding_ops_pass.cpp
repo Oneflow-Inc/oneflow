@@ -102,27 +102,6 @@ Maybe<void> DynamicLossScaleAddGradient(JobPassCtx* ctx, const OpGraph& op_graph
   return Maybe<void>::Ok();
 }
 
-std::string AddScheduleOp(const OpGraph& op_graph, JobBuilder* job_builder,
-                          const OptimizerConf& optimizer_conf, const std::string& op_name) {
-  const TrainConf& train_conf = job_builder->job().job_conf().train_conf();
-  const class oneflow::OpNode* op_node =
-      op_graph.OpNode4OpName(GenLogicalBlobId(train_conf.train_step_lbn()).op_name());
-  CHECK(op_node != nullptr) << "op node not found in op graph, op name: " << op_name;
-  const ParallelConf& parallel_conf = op_node->parallel_desc().parallel_conf();
-  OperatorConf schedule_op_conf{};
-  schedule_op_conf.set_name(op_name);
-  auto* schedule_conf = schedule_op_conf.mutable_learning_rate_schedule_conf();
-  schedule_conf->set_train_step(train_conf.train_step_lbn());
-  schedule_conf->set_learning_rate(optimizer_conf.base_learning_rate());
-  schedule_conf->set_out("out");
-  if (optimizer_conf.has_learning_rate_decay()) {
-    *schedule_conf->mutable_learning_rate_decay() = optimizer_conf.learning_rate_decay();
-  }
-  schedule_op_conf.set_scope_symbol_id(op_node->op().op_conf().scope_symbol_id());
-  job_builder->AddOps(parallel_conf, {schedule_op_conf});
-  return GenLogicalBlobName(op_name, schedule_conf->out());
-}
-
 void BuildEmbeddingLookup(JobPassCtx* ctx, JobBuilder* job_builder, const int64_t embedding_size,
                           const int64_t line_size, const std::string& embedding_name,
                           bool has_embedding_prefetch, const ParallelConf& parallel_conf,
@@ -505,7 +484,6 @@ void BuildEmbeddingUpdate(JobPassCtx* ctx, const OpGraph& op_graph, JobBuilder* 
       embedding_update_op_builder.ScopeSymbolId(embedding_op.op_conf().scope_symbol_id()).Build();
   *embedding_update_new_op_conf = embedding_update_op.op_conf();
   embedding_update_new_op_conf->set_stream_name_hint(embedding_name + "_EMBEDDING");
-  // job_builder->AddOps(parallel_conf, {embedding_update_new_op_conf});
 
   user_op::UserOpConfWrapperBuilder embedding_put_op_builder(embedding_op.op_name()
                                                              + "_embedding_put");
@@ -899,7 +877,7 @@ Maybe<void> ReplaceEmbeddingOps::Apply(const OpGraph& op_graph, JobBuilder* job_
           }
           if (found_embedding_optimizer == true) { break; }
         }
-        CHECK_EQ(found_embedding_optimizer, true);
+        CHECK_EQ(found_embedding_optimizer, true) << shadow_op_name << " has not found optimizer";
 
         const OpNode* shadow_node = op_graph.OpNode4OpName(shadow_op_name);
         const VariableOpConf& shadow_variable_conf = shadow_node->op().op_conf().variable_conf();
@@ -912,9 +890,8 @@ Maybe<void> ReplaceEmbeddingOps::Apply(const OpGraph& op_graph, JobBuilder* job_
             l2 = regularizer_conf.l1_l2_conf().l2();
           }
         }
-        const std::string& learning_rate_lbn =
-            AddScheduleOp(op_graph, job_builder, embedding_optimizer_conf,
-                          "OneEmbedding-Train-LearningRate-Scheduler_" + NewUniqueId());
+        const std::string& learning_rate_lbn = embedding_optimizer_conf.learning_rate_lbn();
+
         OperatorConf embedding_update_op_conf;
         BuildEmbeddingUpdate(ctx, op_graph, job_builder, op_node->parallel_desc().parallel_conf(),
                              embedding_size, options.LineSize(), l1, l2, options.Name(),
