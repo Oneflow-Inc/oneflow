@@ -290,22 +290,7 @@ class TensorDotFunctor {
   Maybe<Tensor> operator()(const std::shared_ptr<Tensor>& a, const std::shared_ptr<Tensor>& b,
                            const std::vector<int64_t>& _dims_a,
                            const std::vector<int64_t>& _dims_b) const {
-    CHECK_EQ_OR_RETURN(_dims_a.size(), _dims_b.size())
-        << "dims1 and dims2 must have same size, got " << _dims_a.size() << " and " << _dims_b.size();
-    std::vector<int64_t> dims_a(_dims_a.begin(), _dims_a.end());
-    std::vector<int64_t> dims_b(_dims_b.begin(), _dims_b.end());
-    for (int64_t i = 0; i < dims_a.size(); i++) {
-      dims_a[i] = dims_a[i] < 0 ? dims_a[i] + a->shape()->NumAxes() : dims_a[i];
-      CHECK_LT_OR_RETURN(dims_a[i], a->shape()->NumAxes()) << "The dims is invalid for Tensor a";
-      CHECK_GE_OR_RETURN(dims_a[i], 0) << "The dims is invalid for Tensor a";
-    }
-    for (int64_t i = 0; i < dims_b.size(); i++) {
-      dims_b[i] = dims_b[i] < 0 ? dims_b[i] + b->shape()->NumAxes() : dims_b[i];
-      CHECK_LT_OR_RETURN(dims_b[i], b->shape()->NumAxes()) << "The dims is invalid for Tensor b";
-      CHECK_GE_OR_RETURN(dims_b[i], 0) << "The dims is invalid for Tensor b";
-    }
-
-    if (dims_a.empty() && dims_b.empty()) {
+    if (_dims_a.empty() && _dims_b.empty()) {
       DimVector shape_sum(a->shape()->NumAxes() + b->shape()->NumAxes());
       for (int64_t i = 0; i < a->shape()->NumAxes(); i++) { shape_sum[i] = a->shape()->At(i); }
       for (int64_t i = 0; i < b->shape()->NumAxes(); i++) {
@@ -315,6 +300,19 @@ class TensorDotFunctor {
       std::shared_ptr<Tensor> reshape_b = JUST(Reshape(b, Shape(DimVector{1, -1})));
       return JUST(Reshape(JUST(functional::MatMul(reshape_a, reshape_b, false, false, 1.0)),
                           Shape(DimVector(shape_sum.begin(), shape_sum.end()))));
+    }
+    CHECK_EQ_OR_RETURN(_dims_a.size(), _dims_b.size())
+        << "dims1 and dims2 must have same size, got " << _dims_a.size() << " and " << _dims_b.size();
+    std::vector<int64_t> dims_a(_dims_a.begin(), _dims_a.end());
+    std::vector<int64_t> dims_b(_dims_b.begin(), _dims_b.end());
+    for (int64_t i = 0; i < dims_a.size(); i++) {
+      dims_a[i] = dims_a[i] < 0 ? dims_a[i] + a->shape()->NumAxes() : dims_a[i];
+      CHECK_LT_OR_RETURN(dims_a[i], a->shape()->NumAxes()) << "The dims is invalid for Tensor a";
+      CHECK_GE_OR_RETURN(dims_a[i], 0) << "The dims is invalid for Tensor a";
+
+      dims_b[i] = dims_b[i] < 0 ? dims_b[i] + b->shape()->NumAxes() : dims_b[i];
+      CHECK_LT_OR_RETURN(dims_b[i], b->shape()->NumAxes()) << "The dims is invalid for Tensor b";
+      CHECK_GE_OR_RETURN(dims_b[i], 0) << "The dims is invalid for Tensor b";
     }
     std::vector<bool> if_dot_dims_a(a->shape()->NumAxes(), false);
     std::vector<bool> if_dot_dims_b(b->shape()->NumAxes(), false);
