@@ -23,6 +23,8 @@ import oneflow._oneflow_internal.oneflow.core.job.job_conf as job_conf_cfg
 
 class GraphConfig(object):
     r"""For configuration of nn.Graph.
+
+    This feature ``GraphConfig`` is in Stage Alpha.
     """
 
     def __init__(self):
@@ -58,6 +60,8 @@ class GraphConfig(object):
 
         Args:
             value (int): graph ouputs buffer size.
+
+        This feature ``set_outputs_buffer_size`` is in Stage Pre-alpha.
         """
         self._outputs_buffer_size = value
 
@@ -82,6 +86,8 @@ class GraphConfig(object):
 
         Args:
             mode (bool, optional): The default vaule is True.
+
+        This feature ``enable_amp`` is in Stage Alpha.
         """
         assert type(mode) is bool
         self.proto.set_enable_auto_mixed_precision(mode)
@@ -107,6 +113,8 @@ class GraphConfig(object):
 
         Args:
             mode (bool, optional): The default vaule is True.
+
+        This feature ``allow_fuse_model_update_ops`` is in Stage Pre-alpha.
         """
         self.proto.set_enable_fuse_model_update_ops(mode)
 
@@ -133,6 +141,8 @@ class GraphConfig(object):
 
         Args:
             mode (bool, optional): The default vaule is True.
+
+        This feature ``allow_fuse_add_to_output`` is in Stage Pre-alpha.
         """
         self.proto.set_enable_fuse_add_to_output(mode)
 
@@ -160,6 +170,8 @@ class GraphConfig(object):
 
         Args:
             mode (bool, optional): The default vaule is True.
+
+        This feature ``allow_fuse_cast_scale`` is in Stage Pre-alpha.
         """
         self.proto.set_enable_fuse_cast_scale(mode)
 
@@ -185,6 +197,8 @@ class GraphConfig(object):
 
         Args:
             value (int): num of steps.
+
+        This feature ``set_gradient_accumulation_steps`` is in Stage Alpha.
         """
         self.proto.set_num_gradient_accumulation_steps(value)
 
@@ -213,6 +227,8 @@ class GraphConfig(object):
             mode (str): "distributed_split" or "non_distributed". "distributed_split" mode
                          will shard each optimizer state across devices. "non_distributed" mode
                          will place each optimizer state to only one device.
+
+        This feature ``set_zero_redundancy_optimizer_mode`` is in Stage Alpha.
         """
         assert mode in ("distributed_split", "non_distributed")
         self.proto.set_optimizer_placement_optimization_mode(mode)
@@ -239,6 +255,8 @@ class GraphConfig(object):
 
         Args:
             value (int): min size value.
+
+        This feature ``set_zero_redundancy_optimizer_min_size_after_split`` is in Stage Pre-alpha.
         """
         assert isinstance(value, int)
         assert value >= 1
@@ -275,6 +293,8 @@ class GraphConfig(object):
 
         Args:
             value (bool, optional): The default vaule is True.
+
+        This feature ``enable_xla_jit`` is in Stage Alpha.
         """
         self.proto.mutable_xrt_config().set_use_xla_jit(value)
 
@@ -309,6 +329,8 @@ class GraphConfig(object):
 
         Args:
             value (bool, optional): The default vaule is True.
+
+        This feature ``enable_tensorrt`` is in Stage Alpha.
         """
         self.proto.mutable_xrt_config().set_use_tensorrt(value)
 
@@ -341,6 +363,8 @@ class GraphConfig(object):
 
         Args:
             value (bool, optional): The default vaule is True.
+
+        This feature ``enable_openvino`` is in Stage Alpha.
         """
         self.proto.mutable_xrt_config().set_use_openvino(value)
 
@@ -366,6 +390,8 @@ class GraphConfig(object):
     
         Args:
             mode (bool, optional): The default vaule is True.
+
+        This feature ``enable_cudnn_conv_heuristic_search_algo`` is in Stage Alpha.
         """
         self.proto.set_cudnn_conv_heuristic_search_algo(mode)
 
