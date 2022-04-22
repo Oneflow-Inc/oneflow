@@ -92,14 +92,17 @@ class ProfileMgr {
  public:
   friend class EventRecorder;
   ProfileMgr() = default;
-  std::shared_ptr<EventRecorder> NewEventRecorder(EventType type, const std::string& name);
-  void DeleteEventRecorder(const std::string& name);
+  std::string NewEventRecorder(EventType type, const std::string& name);
+  void DeleteEventRecorder(const std::string& event_recorder_key);
   std::string DumpResultsJson();
 
  private:
   std::queue<std::shared_ptr<IEvent>> events_;
   std::unordered_map<std::string, std::shared_ptr<EventRecorder>> event_recorders_;
+  // To prevent releasing EventRecorders of the same name.
+  std::unordered_map<std::string, int64_t> event_recorders_last_id_;
 
+  std::string __GetNextEventRecorderKey(const std::string& name);
   std::vector<Result> __CountResults();
 };
 

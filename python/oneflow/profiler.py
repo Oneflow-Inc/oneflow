@@ -31,7 +31,9 @@ class profile:
         return self
 
     def __exit__(self, exc_type, exc_val, exc_tb):
-        self.result = oneflow._oneflow_internal.profiler.DisableProfilerAndReturnResult()
+        self.result = (
+            oneflow._oneflow_internal.profiler.DisableProfilerAndReturnResult()
+        )
 
     # copy from pytorch: torch/autograd/profiler_util.py
     def _format_time(self, time_ns):
@@ -65,11 +67,14 @@ class profile:
 class record_function:
     def __init__(self, name: str) -> None:
         self.name = name
+        self.__event_recorder_key = ""
 
     def __enter__(self):
-        oneflow._oneflow_internal.profiler.StartRecord(self.name)
+        self.__event_recorder_key = oneflow._oneflow_internal.profiler.StartRecord(
+            self.name
+        )
         return self
 
     def __exit__(self, exc_type, exc_val, exc_tb):
-        oneflow._oneflow_internal.profiler.EndRecord(self.name)
+        oneflow._oneflow_internal.profiler.EndRecord(self.__event_recorder_key)
 

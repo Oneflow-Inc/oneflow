@@ -59,15 +59,17 @@ Result KernelEvent::ConvertToResult() { return Result(name_, GetDuration(), 1); 
 
 Result CustomEvent::ConvertToResult() { return Result(name_, GetDuration(), 1); }
 
-std::shared_ptr<EventRecorder> ProfileMgr::NewEventRecorder(EventType type,
-                                                            const std::string& name) {
+std::string ProfileMgr::NewEventRecorder(EventType type, const std::string& name) {
   auto recorder = std::make_shared<EventRecorder>(type, name);
-  event_recorders_.emplace(name, recorder);
-  return recorder;
+  std::string recorder_key = __GetNextEventRecorderKey(name);
+  event_recorders_.emplace(recorder_key, recorder);
+  return recorder_key;
 }
 
-void ProfileMgr::DeleteEventRecorder(const std::string& name) {
-  if (event_recorders_.find(name) != event_recorders_.end()) { event_recorders_.erase(name); }
+void ProfileMgr::DeleteEventRecorder(const std::string& event_recorder_key) {
+  if (event_recorders_.find(event_recorder_key) != event_recorders_.end()) {
+    event_recorders_.erase(event_recorder_key);
+  }
 }
 
 std::string ProfileMgr::DumpResultsJson() {
@@ -92,6 +94,15 @@ std::vector<Result> ProfileMgr::__CountResults() {
   std::vector<Result> final_results;
   for (const auto& op_name : op_names_ordered) { final_results.push_back(results[op_name]); }
   return final_results;
+}
+
+std::string ProfileMgr::__GetNextEventRecorderKey(const std::string& name) {
+  if (event_recorders_last_id_.find(name) == event_recorders_last_id_.end()) {
+    event_recorders_last_id_[name] = 0;
+  } else {
+    event_recorders_last_id_[name]++;
+  }
+  return name + "." + std::to_string(event_recorders_last_id_[name]);
 }
 
 }  // namespace profiler

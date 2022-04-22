@@ -126,22 +126,19 @@ std::string DisableProfilerAndReturnResult() {
   return "";
 }
 
-Maybe<void> StartRecord(const std::string& name) {
+Maybe<std::string> StartRecord(const std::string& name) {
   auto ermgr = Global<ProfileMgr>::Get();
   CHECK_NOTNULL_OR_RETURN(ermgr) << "ProfileMgr has not been initialized.";
-  if (ermgr != nullptr) {
-    CHECK_JUST(vm::ClusterSync());
-    ermgr->NewEventRecorder(profiler::EventType::kCustom, name);
-  }
-  return Maybe<void>::Ok();
+  CHECK_JUST(vm::ClusterSync());
+  return ermgr->NewEventRecorder(profiler::EventType::kCustom, name);
 }
 
-void EndRecord(const std::string& name) {
+Maybe<void> EndRecord(const std::string& event_recorder_key) {
   auto ermgr = Global<ProfileMgr>::Get();
-  if (ermgr != nullptr) {
-    CHECK_JUST(vm::ClusterSync());
-    ermgr->DeleteEventRecorder(name);
-  }
+  CHECK_NOTNULL_OR_RETURN(ermgr) << "ProfileMgr has not been initialized.";
+  CHECK_JUST(vm::ClusterSync());
+  ermgr->DeleteEventRecorder(event_recorder_key);
+  return Maybe<void>::Ok();
 }
 
 }  // namespace profiler

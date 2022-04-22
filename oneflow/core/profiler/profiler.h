@@ -68,9 +68,9 @@ void EnableProfiler();
 // DisableProfilerAndReturnResult will return a json of profile results.
 std::string DisableProfilerAndReturnResult();
 
-Maybe<void> StartRecord(const std::string& name);
+Maybe<std::string> StartRecord(const std::string& name);
 
-void EndRecord(const std::string& name);
+Maybe<void> EndRecord(const std::string& event_recorder_key);
 
 }  // namespace profiler
 
