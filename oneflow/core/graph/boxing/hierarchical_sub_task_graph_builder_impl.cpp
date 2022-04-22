@@ -142,6 +142,15 @@ bool NdSbpNoPartialParallel(const NdSbp& nd_sbp) {
   return true;
 }
 
+// We suffer from bottleneck when accessing the same rank at the same time.
+// For example, all the ranks start to ask data from the rank with sbp id (0, 0, 0)
+// Then (0, 0, 1), (0, 0, 2), (0, 0, 3), and (0, 1, 0) and so on.
+// If we switch it to be relative to the original id, the code would run faster.
+// For example, (0, 0, 0) send data to (0, 0, 1), 
+// while (0, 0, 1) send data to (0, 0, 2)
+// (0, 0, 2) -> (0, 0, 3)
+// (0, 0, 3) -> (0, 0, 0) and so on.
+
 // Go through all the ranks while transfer between two nd sbps with no PartialSum under the same
 // placement.
 // NOTE: We need to make sure no partial sums in the sbps of the producer and consumer.
@@ -163,8 +172,15 @@ void DfsTraverseRanks4NdSbp(
                            in_hierarchy_index_helper, in_nd_sbp, visit);
   } else {
     // If Split or PartialSum, go through all the ranks along the depth-dimension.
+    int32_t m = in_parallel_hierarchy.dim_vec().at(depth);
     for (int64_t i = 0; i < in_parallel_hierarchy.dim_vec().at(depth); i++) {
-      in_parallel_ids[depth] = i;
+      // Send to the shifted id 
+      in_parallel_ids[depth] = (out_parallel_ids[depth] + i) % m;
+      // Received from the corresponding Shifted_id(out_parallel_ids[depth], i, m)
+      // Shifted_id(a, i, m){
+      //   int32_t b = (a - i) % m;
+      //   if(b < 0){ b += m; }
+      // }
       DfsTraverseRanks4NdSbp(depth + 1, in_parallel_ids, out_parallel_ids, in_parallel_hierarchy,
                              in_hierarchy_index_helper, in_nd_sbp, visit);
     }
