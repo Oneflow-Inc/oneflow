@@ -34,6 +34,7 @@
 
 ### System Requirements
 
+- Linux. As for now, there is no pre-built release for macOS, Windows.
 - Python 3.6, 3.7, 3.8, 3.9, 3.10
 - (**Highly recommended**) Upgrade pip
 
