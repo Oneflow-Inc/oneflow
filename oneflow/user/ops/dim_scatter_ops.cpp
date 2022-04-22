@@ -111,31 +111,22 @@ Maybe<void> InputScalarArgModifierFn(const user_op::GetInputArgModifier& GetInpu
 }
 
 void _SetSbp(user_op::SbpContext* ctx, const char* like_or_input) {
-  const user_op::TensorDesc& index_tensor = ctx->LogicalTensorDesc4InputArgNameAndIndex("index", 0);
-  int64_t index_num_axes = index_tensor.shape().NumAxes();
   const int32_t dim = ctx->Attr<int32_t>("dim");
 
-  FOR_RANGE(int64_t, i, 0, index_num_axes) {
-    if (i != dim) {
-      ctx->NewBuilder()
-          .Split(user_op::OpArg("index", 0), i)
-          .Split(user_op::OpArg("src", 0), i)
-          .Split(user_op::OpArg("output", 0), i)
-          .Split(user_op::OpArg(like_or_input, 0), i)
-          .Build();
-    } else {
-      ctx->NewBuilder()
-          .Split(user_op::OpArg("index", 0), i)
-          .Split(user_op::OpArg("src", 0), i)
-          .PartialSum(user_op::OpArg("output", 0))
-          .Broadcast(user_op::OpArg(like_or_input, 0))
-          .Build();
+  const Shape& index_tensor_shape = ctx->LogicalTensorDesc4InputArgNameAndIndex("index", 0).shape();
+  const Shape& src_tensor_shape = ctx->LogicalTensorDesc4InputArgNameAndIndex("src", 0).shape();
+  const Shape& input_tensor_shape =
+      ctx->LogicalTensorDesc4InputArgNameAndIndex(like_or_input, 0).shape();
 
+  FOR_RANGE(int64_t, i, 0, index_tensor_shape.NumAxes()) {
+    if (i == dim) { continue; }
+    int64_t len = index_tensor_shape.At(i);
+    if (len == src_tensor_shape.At(i) && len == input_tensor_shape.At(i)) {
       ctx->NewBuilder()
           .Split(user_op::OpArg("index", 0), i)
           .Split(user_op::OpArg("src", 0), i)
-          .PartialSum(user_op::OpArg("output", 0))
-          .PartialSum(user_op::OpArg(like_or_input, 0))
+          .Split(user_op::OpArg(like_or_input, 0), i)
+          .Split(user_op::OpArg("output", 0), i)
           .Build();
     }
   }
@@ -158,11 +149,29 @@ Maybe<void> SetSbpScatter(user_op::SbpContext* ctx) {
   return Maybe<void>::Ok();
 }
 
+Maybe<void> SetSbpScatterScalar(user_op::SbpContext* ctx) {
+  const int32_t dim = ctx->Attr<int32_t>("dim");
+
+  const Shape& index_tensor_shape = ctx->LogicalTensorDesc4InputArgNameAndIndex("index", 0).shape();
+  const Shape& input_tensor_shape = ctx->LogicalTensorDesc4InputArgNameAndIndex("input", 0).shape();
+
+  FOR_RANGE(int64_t, i, 0, index_tensor_shape.NumAxes()) {
+    if (i == dim) { continue; }
+    if (index_tensor_shape.At(i) == input_tensor_shape.At(i)) {
+      ctx->NewBuilder()
+          .Split(user_op::OpArg("index", 0), i)
+          .Split(user_op::OpArg("input", 0), i)
+          .Split(user_op::OpArg("output", 0), i)
+          .Build();
+    }
+  }
+  return Maybe<void>::Ok();
+}
+
 Maybe<void> InferDtype(user_op::InferContext* ctx) {
   const user_op::TensorDesc& index = ctx->InputTensorDesc("index", 0);
   CHECK_OR_RETURN(IsIndexDataType(index.data_type()));
   if (ctx->has_input("input", 0)) {
-    const user_op::TensorDesc& input = ctx->InputTensorDesc("input", 0);
     CHECK_EQ_OR_RETURN(ctx->InputDType("input", 0), ctx->InputDType("src", 0));
   } else {
     CHECK_EQ_OR_RETURN(ctx->InputDType("like", 0), ctx->InputDType("src", 0));
@@ -274,7 +283,7 @@ Maybe<void> ScatterBackward(user_op::BackwardOpConfContext* ctx) {
   }                                                                                               \
                                                                                                   \
   /* static */ Maybe<void> optypename::GetSbp(user_op::SbpContext* ctx) {                         \
-    return SetSbpScatter(ctx);                                                                    \
+    return SetSbpScatterScalar(ctx);                                                              \
   }                                                                                               \
                                                                                                   \
   /* static */ Maybe<void> optypename::ModifyInputArg(                                            \

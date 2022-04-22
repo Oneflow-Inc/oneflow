@@ -27,22 +27,22 @@ parallel_num = 2
 max_id = 1000
 
 
-def get_tensors(batch_size, num_columns):
+def get_tensors(batch_size, num_tables):
     placement = flow.placement(type="cuda", ranks=list(range(parallel_num)))
-    ids = np.random.randint(0, max_id, (batch_size, num_columns), dtype=np.int64)
+    ids = np.random.randint(0, max_id, (batch_size, num_tables), dtype=np.int64)
     ids_tensor = flow.tensor(ids, requires_grad=False).to_global(
         placement=placement, sbp=flow.sbp.split(0)
     )
-    column_ids = (
-        ids % num_columns
-    )  # same id must have same column id, so in this case get column_ids from ids
-    column_ids_tensor = flow.tensor(
-        column_ids.astype(np.int32), requires_grad=False
+    table_ids = (
+        ids % num_tables
+    )  # same id must have same table id, so in this case get table_ids from ids
+    table_ids_tensor = flow.tensor(
+        table_ids.astype(np.int32), requires_grad=False
     ).to_global(placement=placement, sbp=flow.sbp.split(0))
-    return ids_tensor, column_ids_tensor
+    return ids_tensor, table_ids_tensor
 
 
-def _test_id_shuffle(test_case, has_column_id, num_columns):
+def _test_id_shuffle(test_case, has_table_id, num_tables):
     batch_size = int(1024 / parallel_num)
     placement = flow.placement(type="cuda", ranks=list(range(parallel_num)))
 
@@ -50,57 +50,57 @@ def _test_id_shuffle(test_case, has_column_id, num_columns):
         def __init__(self):
             super().__init__()
 
-        def build(self, ids, column_ids):
+        def build(self, ids, table_ids):
             (
                 num_unique_matrix,
                 inverse_unique_partition_indices,
                 cur_rank_num_unique,
                 cur_rank_unique_ids,
-                cur_rank_unique_column_ids,
+                cur_rank_unique_table_ids,
                 cur_rank_inverse_indices,
-            ) = flow._C.one_embedding_id_shuffle(ids, column_ids, num_columns)
+            ) = flow._C.one_embedding_id_shuffle(ids, table_ids, num_tables)
             return (
                 flow.cast(num_unique_matrix, flow.int32),
                 flow.cast(inverse_unique_partition_indices, flow.int32),
                 flow.cast(cur_rank_num_unique, flow.int32),
                 flow.cast(cur_rank_unique_ids, flow.int32),
-                flow.cast(cur_rank_unique_column_ids, flow.int32),
+                flow.cast(cur_rank_unique_table_ids, flow.int32),
                 flow.cast(cur_rank_inverse_indices, flow.int32),
             )
 
     graph = TestGraph()
     for i in range(10):
-        ids_tensor, column_ids_tensor = get_tensors(batch_size, num_columns)
-        if not has_column_id:
-            column_ids_tensor = None
-        graph(ids_tensor, column_ids_tensor)
+        ids_tensor, table_ids_tensor = get_tensors(batch_size, num_tables)
+        if not has_table_id:
+            table_ids_tensor = None
+        graph(ids_tensor, table_ids_tensor)
     (
         num_unique_matrix,
         inverse_unique_partition_indices,
         local_cur_rank_num_unique,
         cur_rank_unique_ids,
-        cur_rank_unique_column_ids,
+        cur_rank_unique_table_ids,
         cur_rank_inverse_indices,
-    ) = graph(ids_tensor, column_ids_tensor)
+    ) = graph(ids_tensor, table_ids_tensor)
     cur_rank_num_unique = local_cur_rank_num_unique.to_local().to_global(
         placement=placement, sbp=flow.sbp.split(0)
     )
     cur_rank_num_unique_list = []
     cur_rank_unique_ids_list = []
-    cur_rank_unique_column_ids_list = []
-    cur_rank_num_ids = batch_size * num_columns * parallel_num
+    cur_rank_unique_table_ids_list = []
+    cur_rank_num_ids = batch_size * num_tables * parallel_num
     for i in range(parallel_num):
         num_unique_i = cur_rank_num_unique.numpy()[i]
         unique_ids_i = cur_rank_unique_ids.numpy()[
             cur_rank_num_ids * i : cur_rank_num_ids * (i + 1)
         ]
-        unique_column_ids_i = cur_rank_unique_column_ids.numpy()[
+        unique_table_ids_i = cur_rank_unique_table_ids.numpy()[
             cur_rank_num_ids * i : cur_rank_num_ids * (i + 1)
         ]
         cur_rank_num_unique_list.append(num_unique_i)
         cur_rank_unique_ids_list.append(np.array(unique_ids_i[0:num_unique_i]))
-        cur_rank_unique_column_ids_list.append(
-            np.array(unique_column_ids_i[0:num_unique_i])
+        cur_rank_unique_table_ids_list.append(
+            np.array(unique_table_ids_i[0:num_unique_i])
         )
 
     global_ids = ids_tensor.numpy()
@@ -117,20 +117,20 @@ def _test_id_shuffle(test_case, has_column_id, num_columns):
     unique_ids.sort()
     np_unique_ids.sort()
     test_case.assertTrue(np.array_equal(unique_ids, np_unique_ids))
-    if has_column_id:
-        # test unique column ids
-        unique_column_ids = np.concatenate(cur_rank_unique_column_ids_list)
-        unique_column_ids.sort()
-        global_column_ids = column_ids_tensor.numpy()
-        np_unique_column_ids = global_column_ids.flatten()[np_unique_index]
-        np_unique_column_ids.sort()
-        test_case.assertTrue(np.array_equal(unique_column_ids, np_unique_column_ids))
+    if has_table_id:
+        # test unique table ids
+        unique_table_ids = np.concatenate(cur_rank_unique_table_ids_list)
+        unique_table_ids.sort()
+        global_table_ids = table_ids_tensor.numpy()
+        np_unique_table_ids = global_table_ids.flatten()[np_unique_index]
+        np_unique_table_ids.sort()
+        test_case.assertTrue(np.array_equal(unique_table_ids, np_unique_table_ids))
 
 
 def _test_embedding_shuffle(test_case, dtype):
     batch_size = int(1024 / parallel_num)
     placement = flow.placement(type="cuda", ranks=list(range(parallel_num)))
-    num_columns = 26
+    num_tables = 26
     if dtype == flow.float16:
         np_dtype = np.float16
     else:
@@ -144,7 +144,7 @@ def _test_embedding_shuffle(test_case, dtype):
         def __init__(self):
             super().__init__()
 
-        def build(self, ids, column_ids, data):
+        def build(self, ids, table_ids, data):
             (
                 num_unique_matrix,
                 inverse_unique_partition_indices,
@@ -152,7 +152,7 @@ def _test_embedding_shuffle(test_case, dtype):
                 cur_rank_unique_ids,
                 _,
                 cur_rank_inverse_indices,
-            ) = flow._C.one_embedding_id_shuffle(ids, column_ids, num_columns)
+            ) = flow._C.one_embedding_id_shuffle(ids, table_ids, num_tables)
             unique_embeddings = flow._C.gather(data, cur_rank_unique_ids, axis=0)
             embeddings = flow._C.one_embedding_embedding_shuffle(
                 unique_embeddings,
@@ -164,9 +164,9 @@ def _test_embedding_shuffle(test_case, dtype):
 
     graph = TestGraph()
     for i in range(10):
-        ids_tensor, column_ids_tensor = get_tensors(batch_size, num_columns)
-        graph(ids_tensor, column_ids_tensor, data_tensor)
-    embeddings = graph(ids_tensor, column_ids_tensor, data_tensor)
+        ids_tensor, table_ids_tensor = get_tensors(batch_size, num_tables)
+        graph(ids_tensor, table_ids_tensor, data_tensor)
+    embeddings = graph(ids_tensor, table_ids_tensor, data_tensor)
     global_ids = ids_tensor.numpy()
     global_data = data_tensor.numpy()
     np_embeddings = global_data[global_ids]
@@ -176,9 +176,9 @@ def _test_embedding_shuffle(test_case, dtype):
 def _test_embedding_gradient_shuffle(test_case):
     batch_size = int(1024 / parallel_num)
     placement = flow.placement(type="cuda", ranks=list(range(parallel_num)))
-    num_columns = 26
+    num_tables = 26
     embedding_size = 128
-    embedding_grad = np.random.rand(batch_size, num_columns, embedding_size).astype(
+    embedding_grad = np.random.rand(batch_size, num_tables, embedding_size).astype(
         np.float32
     )
     embedding_grad_tensor = flow.tensor(embedding_grad, requires_grad=False).to_global(
@@ -189,7 +189,7 @@ def _test_embedding_gradient_shuffle(test_case):
         def __init__(self):
             super().__init__()
 
-        def build(self, ids, column_ids, embedding_grad):
+        def build(self, ids, table_ids, embedding_grad):
             (
                 num_unique_matrix,
                 inverse_unique_partition_indices,
@@ -197,7 +197,7 @@ def _test_embedding_gradient_shuffle(test_case):
                 cur_rank_unique_ids,
                 _,
                 cur_rank_inverse_indices,
-            ) = flow._C.one_embedding_id_shuffle(ids, column_ids, num_columns)
+            ) = flow._C.one_embedding_id_shuffle(ids, table_ids, num_tables)
             cur_rank_unique_embedding_grad = flow._C.one_embedding_embedding_gradient_shuffle(
                 embedding_grad,
                 num_unique_matrix,
@@ -212,14 +212,14 @@ def _test_embedding_gradient_shuffle(test_case):
 
     graph = TestGraph()
     for i in range(10):
-        ids_tensor, column_ids_tensor = get_tensors(batch_size, num_columns)
-        graph(ids_tensor, column_ids_tensor, embedding_grad_tensor)
-    ids_tensor, column_ids_tensor = get_tensors(batch_size, num_columns)
+        ids_tensor, table_ids_tensor = get_tensors(batch_size, num_tables)
+        graph(ids_tensor, table_ids_tensor, embedding_grad_tensor)
+    ids_tensor, table_ids_tensor = get_tensors(batch_size, num_tables)
     (
         cur_rank_unique_embedding_grad,
         local_cur_rank_num_unique,
         cur_rank_unique_ids,
-    ) = graph(ids_tensor, column_ids_tensor, embedding_grad_tensor)
+    ) = graph(ids_tensor, table_ids_tensor, embedding_grad_tensor)
     cur_rank_num_unique = local_cur_rank_num_unique.to_local().to_global(
         placement=placement, sbp=flow.sbp.split(0)
     )
@@ -236,7 +236,7 @@ def _test_embedding_gradient_shuffle(test_case):
             ]
         )
 
-    cur_rank_num_ids = batch_size * num_columns * parallel_num
+    cur_rank_num_ids = batch_size * num_tables * parallel_num
     of_unique_embedding_grad = np.zeros((max_id, embedding_size))
     for i in range(parallel_num):
         num_unique_i = cur_rank_num_unique.numpy()[i]
@@ -265,8 +265,8 @@ def _test_embedding_gradient_shuffle(test_case):
 class DataShuffleTestCase(flow.unittest.TestCase):
     def test_id_shuffle(test_case):
         arg_dict = OrderedDict()
-        arg_dict["has_column_id"] = [True, False]
-        arg_dict["num_columns"] = [1, 26]
+        arg_dict["has_table_id"] = [True, False]
+        arg_dict["num_tables"] = [1, 26]
         for kwargs in GenArgDict(arg_dict):
             _test_id_shuffle(test_case, **kwargs)
 
