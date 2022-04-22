@@ -25,7 +25,7 @@ import oneflow.unittest
 rank = flow.env.get_rank()
 
 
-def _graph_debug(test_case, v_level = 0, ranks=None, max_py_stack_depth=2):
+def _graph_debug(test_case, v_level=0, ranks=None, max_py_stack_depth=2):
     class DebugGraph(flow.nn.Graph):
         def __init__(self):
             super().__init__()
@@ -44,7 +44,9 @@ def _graph_debug(test_case, v_level = 0, ranks=None, max_py_stack_depth=2):
     elif isinstance(ranks, list):
         rank_list = ranks
 
-    if (-1 in rank_list or rank in rank_list) and v_level >= 0: # v_level == -1 means debug mode is closed
+    if (
+        -1 in rank_list or rank in rank_list
+    ) and v_level >= 0:  # v_level == -1 means debug mode is closed
         test_case.assertTrue(d_g._debug)
         test_case.assertTrue(d_g.m._debug)
         print(f"ranks {ranks} rank {rank} debug is opened.")
@@ -52,6 +54,7 @@ def _graph_debug(test_case, v_level = 0, ranks=None, max_py_stack_depth=2):
         test_case.assertTrue(not d_g._debug)
         test_case.assertTrue(not d_g.m._debug)
         print(f"ranks {ranks} rank {rank} debug is closed.")
+
 
 @unittest.skipIf(os.getenv("ONEFLOW_TEST_CPU_ONLY"), "only test cpu cases")
 @flow.unittest.skip_unless_1n4d()
@@ -79,9 +82,10 @@ class TestGraphDebug(oneflow.unittest.TestCase):
 
     def test_graph_debug_max_py_stack_depth_2(test_case):
         _graph_debug(test_case, max_py_stack_depth=2)
-    
+
     def test_graph_debug_max_py_stack_depth_8(test_case):
         _graph_debug(test_case, max_py_stack_depth=8)
+
 
 if __name__ == "__main__":
     unittest.main()

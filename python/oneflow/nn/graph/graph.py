@@ -472,7 +472,7 @@ class Graph(object):
 
         my_rank = get_rank()
         if -1 in rank_list or my_rank in rank_list:
-            self._debug = (v_level >= 0)
+            self._debug = v_level >= 0
             if self._debug:
                 self._debug_min_s_level = 0
                 self._debug_max_v_level = max(0, v_level)
