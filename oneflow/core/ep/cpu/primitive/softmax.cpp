@@ -150,7 +150,7 @@ class GenericSoftmaxFactoryImpl : public FactoryBase {
     static const std::map<DataType, std::function<std::unique_ptr<SoftmaxBase>()>>
         new_softmax_handle{
             // oneDNN softmax op
-            MAKE_NEW_ONEDNN_SOFTMAX_ENTRY(dnnl::memory::data_type::f32, DataType::kDouble)
+            MAKE_NEW_ONEDNN_SOFTMAX_ENTRY(dnnl::memory::data_type::f32, DataType::kFloat)
             // naive softmax op
             MAKE_NEW_SOFTMAX_ENTRY(double, DataType::kDouble)};
 
