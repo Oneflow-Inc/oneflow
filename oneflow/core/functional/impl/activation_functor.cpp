@@ -70,7 +70,8 @@ class PReluFunctor {
                            const std::shared_ptr<Tensor>& alpha) const {
     int num_params = alpha->dim(0);
     CHECK_OR_RETURN(((num_params == 1) || (num_params == x->shape()->At(1))))
-        << Error::RuntimeError() << "num_parameters in prelu must be 1 or " << x->shape()->At(1);
+        << Error::RuntimeError() << "RuntimeError: num_parameters in prelu must be 1 or "
+        << x->shape()->At(1);
     return OpInterpUtil::Dispatch<Tensor>(*op_, {x, alpha});
   }
 
@@ -223,7 +224,9 @@ class GluFunctor {
   GluFunctor() {}
   Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& input, int64_t dim) const {
     auto ndim = input->ndim();
-    CHECK_GT_OR_RETURN(ndim, 0) << "glu does not support 0-dimensional tensors";
+    CHECK_GT_OR_RETURN(ndim, 0)
+        << Error::RuntimeError()
+        << "RuntimeError: glu does not support scalars because halving size must be even";
     CHECK_OR_RETURN(dim >= -ndim && dim < ndim)
         << ", Dimension out of range (expected to be in range of [" << -ndim << ", " << ndim - 1
         << "], but got " << dim << ")";
