@@ -9443,7 +9443,7 @@ def OneFlow_IdShuffleOp : OneFlow_BaseOp<"id_shuffle", [NoSideEffect, DeclareOpI
   let attrs = (ins
     DefaultValuedAttr<SI32Attr, "1">:$num_tables
   );
-  let same_output_regst_num = 1;
+  let same_output_regst_num = 2;
   let has_logical_tensor_desc_infer_fn = 1;
   let has_physical_tensor_desc_infer_fn = 1;
   let has_get_sbp_fn = 1;
