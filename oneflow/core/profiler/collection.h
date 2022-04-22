@@ -34,8 +34,6 @@ namespace profiler {
 enum class EventType { kCustom, kKernel };
 
 struct Result {
-  Result() = default;
-
   explicit Result(const std::string& name, time_t all_duration, int64_t num_called,
                   EventType event_type, const std::string& shapes)
       : name(name),

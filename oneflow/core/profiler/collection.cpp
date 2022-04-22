@@ -116,16 +116,19 @@ std::vector<Result> ProfileMgr::__CountResults() {
     auto e = events_.front();
     events_.pop();
     const auto event_key = e->Key();
-    if (results.find(event_key) == results.end()) {
+    auto event_found = results.find(event_key);
+    if (event_found != results.end()) {
+      event_found->second.Update(e->GetDuration());
+    } else {
       const auto result = e->ConvertToResult();
       event_keys_ordered.push_back(event_key);
       results.emplace(event_key, e->ConvertToResult());
-    } else {
-      results[event_key].Update(e->GetDuration());
     }
   }
   std::vector<Result> final_results;
-  for (const auto& event_key : event_keys_ordered) { final_results.push_back(results[event_key]); }
+  for (const auto& event_key : event_keys_ordered) {
+    final_results.push_back(results.find(event_key)->second);
+  }
   return final_results;
 }
 
