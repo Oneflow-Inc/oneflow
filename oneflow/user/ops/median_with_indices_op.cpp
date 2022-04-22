@@ -50,7 +50,7 @@ namespace oneflow {
 }
 
 Maybe<void> GenerateBackwardOpConf4MedianWithIndices(const user_op::UserOpWrapper& op,
-                                                     user_op::AddOpFn AddOp) {
+                                                     const user_op::AddOpFn& AddOp) {
   if (op.NeedGenGradTensor4OpInput("input", 0)) {
     const auto& input = op.arg_tensor_desc("input", 0);
     user_op::UserOpConfWrapperBuilder expand_indices_builder(op.op_name() + "_grad_expand_indices");

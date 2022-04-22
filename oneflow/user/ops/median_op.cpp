@@ -40,7 +40,7 @@ namespace oneflow {
 }
 
 Maybe<void> GenerateBackwardOpConf4Median(const user_op::UserOpWrapper& op,
-                                          user_op::AddOpFn AddOp) {
+                                          const user_op::AddOpFn& AddOp) {
   if (op.NeedGenGradTensor4OpInput("input", 0)) {
     const auto& input = op.arg_tensor_desc("input", 0);
     std::vector<int32_t> axis(input.shape().NumAxes());
