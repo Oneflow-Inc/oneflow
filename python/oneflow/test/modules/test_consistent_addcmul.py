@@ -15,30 +15,30 @@ limitations under the License.
 """
 
 import unittest
-
+from oneflow.test_utils.automated_test_util import *
 import oneflow as flow
 import oneflow.unittest
-from oneflow.test_utils.automated_test_util import *
 
 
-@autotest(n=1, auto_backward=False, check_graph=False)
-def _test_argsort_with_random_data(test_case, ndim, placement, sbp):
-    dims = [random(1, 3) * 8 for _ in range(ndim)]
-    x = random_tensor(ndim, *dims).to_global(placement=placement, sbp=sbp)
-    y = torch.argsort(
-        x, dim=random(low=-ndim, high=ndim).to(int), descending=random_bool()
-    )
-    return y
+@autotest(n=1, check_graph=False)
+def _test_addcmul(test_case, ndim, placement, sbp):
+    shape = [random(low=2, high=4) * 8 for i in range(ndim)]
+
+    input = random_tensor(ndim, *shape).to_global(placement=placement, sbp=sbp)
+    tensor1 = random_tensor(len(shape), *shape).to_global(placement=placement, sbp=sbp)
+    tensor2 = random_tensor(len(shape), *shape).to_global(placement=placement, sbp=sbp)
+    value = random(3, 6).to(int)
+    output = torch.addcmul(input, tensor1, tensor2, value=value)
+    return output
 
 
-@unittest.skip("argsort has bug not found at now.")
-class TestArgsort(flow.unittest.TestCase):
+class TestModule(flow.unittest.TestCase):
     @globaltest
-    def test_argsort(test_case):
-        ndim = random(1, 5).to(int).value()
+    def test_addcmul(test_case):
+        ndim = random(low=2).to(int).value()
         for placement in all_placement():
             for sbp in all_sbp(placement, max_dim=ndim):
-                _test_argsort_with_random_data(test_case, ndim, placement, sbp)
+                _test_addcmul(test_case, ndim, placement, sbp)
 
 
 if __name__ == "__main__":

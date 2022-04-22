@@ -1081,8 +1081,7 @@ class VectorNormFunctor {
     if (ord.IsIntegral() || ord.IsFloatingPoint()) {
       double ord_val = JUST(ord.As<double>());
       if (ord_val == 0) {
-        std::vector<int32_t> dim_column(1, 0);
-        res = JUST(ReduceSum(JUST(ScalarLogicalNotEqual(x, 0)), dim_column, keepdim));
+        res = JUST(ReduceSum(JUST(functional::NotEqualZero(x)), dim, keepdim));
       } else if (ord_val == INFINITY) {
         res = JUST(ReduceMax(JUST(Abs(x)), dim, keepdim));
       } else if (ord_val == -INFINITY) {
@@ -1532,10 +1531,15 @@ class MinimumFunctor {
 
   Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x,
                            const std::shared_ptr<one::Tensor>& y) const {
+    TensorProcessor tensor_processor;
+    JUST(tensor_processor.PromoteInputsToCommonDtype(true).AddInputs({x, y}).Apply());
+    TensorTuple input_tuple = JUST(tensor_processor.GetInputs());
     if (*x->shape() == *y->shape()) {
-      return OpInterpUtil::Dispatch<Tensor>(*elementwise_minimum_op_, {x, y});
+      return OpInterpUtil::Dispatch<Tensor>(*elementwise_minimum_op_,
+                                            {input_tuple[0], input_tuple[1]});
     } else {
-      return OpInterpUtil::Dispatch<Tensor>(*broadcast_minimum_op_, {x, y});
+      return OpInterpUtil::Dispatch<Tensor>(*broadcast_minimum_op_,
+                                            {input_tuple[0], input_tuple[1]});
     }
   }
 
@@ -1555,10 +1559,15 @@ class MaximumFunctor {
 
   Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x,
                            const std::shared_ptr<one::Tensor>& y) const {
+    TensorProcessor tensor_processor;
+    JUST(tensor_processor.PromoteInputsToCommonDtype(true).AddInputs({x, y}).Apply());
+    TensorTuple input_tuple = JUST(tensor_processor.GetInputs());
     if (*x->shape() == *y->shape()) {
-      return OpInterpUtil::Dispatch<Tensor>(*elementwise_maximum_op_, {x, y});
+      return OpInterpUtil::Dispatch<Tensor>(*elementwise_maximum_op_,
+                                            {input_tuple[0], input_tuple[1]});
     } else {
-      return OpInterpUtil::Dispatch<Tensor>(*broadcast_maximum_op_, {x, y});
+      return OpInterpUtil::Dispatch<Tensor>(*broadcast_maximum_op_,
+                                            {input_tuple[0], input_tuple[1]});
     }
   }
 
@@ -2798,8 +2807,8 @@ ONEFLOW_FUNCTION_LIBRARY(m) {
   m.add_functor<CastFunctor>("Cast");
   m.add_functor<ClampFunctor>("Clamp");
   m.add_functor<ClampInplaceFunctor>("ClampInplace");
-  m.add_functor<ClampFunctor>("Clip");
-  m.add_functor<ClampInplaceFunctor>("ClipInplace");
+  m.add_functor<ClipFunctor>("Clip");
+  m.add_functor<ClipInplaceFunctor>("ClipInplace");
   m.add_functor<SqrtSquareSumFunctor>("SqrtSquareSum");
   m.add_functor<VectorNormFunctor, ScalarVectorNormFunctor>("VectorNorm");
   m.add_functor<ScalarMatrixNormFunctor, MatrixNormFunctor>("MatrixNorm");
