@@ -501,6 +501,10 @@ def _fmod(self, other):
     return flow.fmod(self, other)
 
 
+def _half(self):
+    return flow._C.to(self, flow.float16)
+
+
 def _index(self):
     assert self.numel() == 1 and self.dtype in (
         flow.uint8,
@@ -1246,6 +1250,7 @@ def RegisterMethods():
     Tensor.unsqueeze = _unsqueeze
     Tensor.permute = _permute
     Tensor.to = _to
+    Tensor.half = _half
     Tensor.gather = _gather
     Tensor.all = _all
     Tensor.any = _any
