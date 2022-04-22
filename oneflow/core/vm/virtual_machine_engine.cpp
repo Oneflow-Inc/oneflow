@@ -528,7 +528,7 @@ void VirtualMachineEngine::Schedule(ScheduleCtx* schedule_ctx) {
   }
   schedule_ctx->inc_schedule_cnt();
   // Flush local garbage instructions list.
-  if (schedule_ctx->NeedFlushGarbageInstruction()) { FlushGarbageInstruction(schedule_ctx); }
+  if (schedule_ctx->NeedFlushGarbageInstructions()) { FlushGarbageInstruction(schedule_ctx); }
 }
 
 void VirtualMachineEngine::Callback() {

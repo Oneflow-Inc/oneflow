@@ -243,7 +243,7 @@ class SingleThreadScheduleCtx : public vm::ScheduleCtx {
   explicit SingleThreadScheduleCtx(vm::VirtualMachineEngine* vm) : vm_(vm) {}
   ~SingleThreadScheduleCtx() = default;
 
-  bool NeedFlushGarbageInstruction() const override { return true; }
+  bool NeedFlushGarbageInstructions() const override { return true; }
   void OnGarbageMsgPending() const override { vm_->Callback(); }
   void OnWorkerLoadPending(vm::ThreadCtx* thread_ctx) const override {
     while (thread_ctx->TryReceiveAndRun() > 0) {}
@@ -276,7 +276,7 @@ class MultiThreadScheduleCtx : public vm::ScheduleCtx {
   ~MultiThreadScheduleCtx() = default;
 
   constexpr static int kGarbageFlushWindowSize = 32;
-  bool NeedFlushGarbageInstruction() const override {
+  bool NeedFlushGarbageInstructions() const override {
     return schedule_cnt() % kGarbageFlushWindowSize == 0;
   }
   void OnGarbageMsgPending() const override { cb_notifier_->Notify(); }

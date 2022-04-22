@@ -45,7 +45,7 @@ class ScheduleCtx {
   int64_t schedule_cnt() const { return schedule_cnt_; }
   void inc_schedule_cnt() { ++schedule_cnt_; }
 
-  virtual bool NeedFlushGarbageInstruction() const = 0;
+  virtual bool NeedFlushGarbageInstructions() const = 0;
   virtual void OnGarbageMsgPending() const = 0;
   virtual void OnWorkerLoadPending(vm::ThreadCtx* thread_ctx) const = 0;
 
