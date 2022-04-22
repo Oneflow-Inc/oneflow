@@ -243,6 +243,7 @@ class SingleThreadScheduleCtx : public vm::ScheduleCtx {
   explicit SingleThreadScheduleCtx(vm::VirtualMachineEngine* vm) : vm_(vm) {}
   ~SingleThreadScheduleCtx() = default;
 
+  bool NeedFlushGarbageInstruction() const override { return true; }
   void OnGarbageMsgPending() const override { vm_->Callback(); }
   void OnWorkerLoadPending(vm::ThreadCtx* thread_ctx) const override {
     while (thread_ctx->TryReceiveAndRun() > 0) {}
@@ -252,11 +253,8 @@ class SingleThreadScheduleCtx : public vm::ScheduleCtx {
   vm::VirtualMachineEngine* vm_;
 };
 
-void ScheduleUntilVMEmpty(vm::VirtualMachineEngine* vm, const vm::ScheduleCtx& schedule_ctx) {
-  while (!(vm->Empty() && vm->CallbackEmpty())) {
-    vm->Schedule(schedule_ctx);
-    vm->MoveToGarbageMsgListAndNotifyGC(schedule_ctx);
-  }
+void ScheduleUntilVMEmpty(vm::VirtualMachineEngine* vm, vm::ScheduleCtx* schedule_ctx) {
+  do { vm->Schedule(schedule_ctx); } while (!(vm->Empty() && vm->CallbackEmpty()));
 }
 
 }  // namespace
@@ -265,7 +263,8 @@ Maybe<void> VirtualMachine::RunInCurrentThread(vm::InstructionMsgList* instr_lis
   CHECK_OR_RETURN(vm_->Empty());
   CHECK_OR_RETURN(vm_->CallbackEmpty());
   JUST(vm_->Receive(instr_list));
-  ScheduleUntilVMEmpty(vm_.Mutable(), SingleThreadScheduleCtx(vm_.Mutable()));
+  SingleThreadScheduleCtx schedule_ctx(vm_.Mutable());
+  ScheduleUntilVMEmpty(vm_.Mutable(), &schedule_ctx);
   return Maybe<void>::Ok();
 }
 
@@ -276,6 +275,10 @@ class MultiThreadScheduleCtx : public vm::ScheduleCtx {
   explicit MultiThreadScheduleCtx(Notifier* cb_notifier) : cb_notifier_(cb_notifier) {}
   ~MultiThreadScheduleCtx() = default;
 
+  constexpr static int kGarbageFlushWindowSize = 32;
+  bool NeedFlushGarbageInstruction() const override {
+    return schedule_cnt() % kGarbageFlushWindowSize == 0;
+  }
   void OnGarbageMsgPending() const override { cb_notifier_->Notify(); }
   void OnWorkerLoadPending(vm::ThreadCtx* thread_ctx) const override {
     thread_ctx->mut_notifier()->Notify();
@@ -316,13 +319,12 @@ void VirtualMachine::ScheduleLoop(const std::function<void()>& Initializer) {
         //  VirtualMachine::Receive may be less effiencient if the thread safe version `vm->Empty()`
         // used
         //  here, because VirtualMachine::ScheduleLoop is more likely to get the mutex lock.
-        do { vm->Schedule(schedule_ctx); } while (!vm->ThreadUnsafeEmpty());
-        vm->MoveToGarbageMsgListAndNotifyGC(schedule_ctx);
+        do { vm->Schedule(&schedule_ctx); } while (!vm->ThreadUnsafeEmpty());
       } while (++i < kNumSchedulingPerTimoutTest);
     } while (MicrosecondsFrom(start) < kWorkingMicroseconds);
     OF_PROFILER_RANGE_POP();
   }
-  ScheduleUntilVMEmpty(vm, schedule_ctx);
+  ScheduleUntilVMEmpty(vm, &schedule_ctx);
   CHECK_JUST(ForEachThreadCtx(vm_.Mutable(), [&](vm::ThreadCtx* thread_ctx) -> Maybe<void> {
     thread_ctx->mut_notifier()->Close();
     return Maybe<void>::Ok();
