@@ -654,6 +654,7 @@ def _relu(self):
 def _relu_inplace(self):
     return flow.relu(self, inplace=True)
 
+
 def _softmax(self, dim=None):
     return flow.softmax(self, dim=dim)
 
