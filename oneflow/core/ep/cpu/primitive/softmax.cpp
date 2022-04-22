@@ -85,8 +85,8 @@ void SoftmaxOneDnn(Stream* stream, size_t rows, size_t cols, const void* x, void
 
   dnnl::engine* onednn_engine = stream->As<CpuStream>()->onednn_engine();
   dnnl::stream* onednn_stream = stream->As<CpuStream>()->onednn_stream();
-  dnnl::memory::dims src_dims = {static_cast<dnnl::memory::dim>(cols),
-                                 static_cast<dnnl::memory::dim>(rows)};
+  dnnl::memory::dims src_dims = {static_cast<dnnl::memory::dim>(rows),
+                                 static_cast<dnnl::memory::dim>(cols)};
 
   auto src_md = dnnl::memory::desc(src_dims, data_type, dnnl::memory::format_tag::nc);
   auto src_mem = dnnl::memory(src_md, *onednn_engine, const_cast<void*>(x));
