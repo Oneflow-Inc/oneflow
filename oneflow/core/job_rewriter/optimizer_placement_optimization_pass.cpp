@@ -167,12 +167,12 @@ void SetNdSbp4Consumers(JobBuilder* builder, const SequencePtr& sequence, const 
             .Input("in", GenLogicalBlobName(lbi))
             .Output("out")
             .Attr<std::vector<std::string>>("nd_sbp", NdSbpToStringList(nd_sbp))
-            .Attr<std::string>("grad_mode", "auto")
+            .Attr<std::string>("grad_mode", "identity")  // don't do ndsbp cast at backward
             .Attr<std::vector<std::string>>("grad_nd_sbp", std::vector<std::string>())
             .ScopeSymbolId(node->op().op_conf().scope_symbol_id())
             .Build();
     builder->AddOps(node->parallel_desc().parallel_conf(), {parallel_cast_op.op_conf()});
-    auto out_lbn = GenLogicalBlobName(parallel_cast_op.op_name(), "out");
+    auto out_lbn = parallel_cast_op.output("out", 0);
     node->ForEachNodeOnOutEdge([&](const OpNode* out_node) {
       for (const std::string& ibn : out_node->op().input_bns()) {
         if (out_node->op().BnInOp2Lbi(ibn) == lbi) {
