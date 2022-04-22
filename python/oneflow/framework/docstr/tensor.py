@@ -1310,6 +1310,18 @@ add_docstr(
     """,
 )
 
+
+add_docstr(
+    oneflow.Tensor.half,
+    """
+    self.half() is equivalent to self.to(oneflow.float16).
+
+    See :func:`oneflow.Tensor.to`
+
+    """,
+)
+
+
 add_docstr(
     oneflow.Tensor.gather,
     """
