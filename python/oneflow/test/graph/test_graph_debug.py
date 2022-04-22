@@ -25,7 +25,7 @@ import oneflow.unittest
 rank = flow.env.get_rank()
 
 
-def _graph_debug(test_case, v_level=0, ranks=None, max_py_stack_depth=2):
+def _graph_debug(test_case, ranks=None):
     class DebugGraph(flow.nn.Graph):
         def __init__(self):
             super().__init__()
@@ -35,7 +35,7 @@ def _graph_debug(test_case, v_level=0, ranks=None, max_py_stack_depth=2):
             return x
 
     d_g = DebugGraph()
-    d_g.debug(v_level, ranks=ranks, max_py_stack_depth=max_py_stack_depth)
+    d_g.debug(0, ranks)
 
     if ranks is None:
         rank_list = [0]
@@ -44,9 +44,7 @@ def _graph_debug(test_case, v_level=0, ranks=None, max_py_stack_depth=2):
     elif isinstance(ranks, list):
         rank_list = ranks
 
-    if (
-        -1 in rank_list or rank in rank_list
-    ) and v_level >= 0:  # v_level == -1 means debug mode is closed
+    if -1 in rank_list or rank in rank_list:
         test_case.assertTrue(d_g._debug)
         test_case.assertTrue(d_g.m._debug)
         print(f"ranks {ranks} rank {rank} debug is opened.")
@@ -63,28 +61,16 @@ class TestGraphDebug(oneflow.unittest.TestCase):
         _graph_debug(test_case)
 
     def test_graph_debug_rank_0(test_case):
-        _graph_debug(test_case, ranks=0)
+        _graph_debug(test_case, 0)
 
     def test_graph_debug_rank_1(test_case):
-        _graph_debug(test_case, ranks=1)
+        _graph_debug(test_case, 1)
 
     def test_graph_debug_rank_1_and_2(test_case):
-        _graph_debug(test_case, ranks=[1, 2])
+        _graph_debug(test_case, [1, 2])
 
     def test_graph_debug_rank_all(test_case):
-        _graph_debug(test_case, ranks=-1)
-
-    def test_graph_debug_mode_closed(test_case):
-        _graph_debug(test_case, v_level=-1)
-
-    def test_graph_debug_mode_opened(test_case):
-        _graph_debug(test_case, v_level=0)
-
-    def test_graph_debug_max_py_stack_depth_2(test_case):
-        _graph_debug(test_case, max_py_stack_depth=2)
-
-    def test_graph_debug_max_py_stack_depth_8(test_case):
-        _graph_debug(test_case, max_py_stack_depth=8)
+        _graph_debug(test_case, -1)
 
 
 if __name__ == "__main__":

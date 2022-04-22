@@ -127,7 +127,6 @@ class Graph(object):
         self._debug = False
         self._debug_min_s_level = 2
         self._debug_max_v_level = 0
-        self._debug_max_py_stack_depth = 2
         self._outputs_buffer_size = 2
         self._cur_index_of_ouputs_buffer = 0
 
@@ -205,11 +204,8 @@ class Graph(object):
             Donot override this function.
         """
         if not self._is_compiled:
-            with graph_build_util.DebugScopeContext(
-                self._debug_min_s_level,
-                self._debug_max_v_level,
-                self._debug,
-                self._debug_max_py_stack_depth,
+            with graph_build_util.GLogScopeContext(
+                self._debug_min_s_level, self._debug_max_v_level
             ):
                 self._compile(*args, **kwargs)
 
@@ -419,9 +415,8 @@ class Graph(object):
     def debug(
         self,
         v_level: int = 0,
-        *,
         ranks: Optional[Union[int, List[int]]] = None,
-        max_py_stack_depth: int = 2,
+        mode: bool = True,
     ) -> None:
         r"""Open or close debug mode of the graph.
 
@@ -430,16 +425,13 @@ class Graph(object):
 
         Each nn.Module inside a nn.Graph also has a debug() method to enable debug mode.
 
-        Use ``v_level`` to choose verbose debug info level, default level is 0, max level is 3. 
-        ``v_level`` -1 will disable the debug mode of the graph (i.e. no info will be printed).
+        Use ``v_level`` to choose verbose debug info level, default level is 0, max level is 3.
         ``v_level`` 0 will print warning and graph building stages. ``v_level`` 1 will additionally
         print graph build info of each nn.Module. ``v_level`` 2 will additionally print graph build
         info of each operation. ``v_level`` 3 will additionally print more detailed info of each
         operation.
 
         Use ``ranks`` to choose which rank to print the debug information.
-
-        Use ``max_py_stack_depth`` to specify the max Python stack depth for the debug information. 
 
         For example:
 
@@ -450,16 +442,15 @@ class Graph(object):
             out_tensors = g(input_tensors)  # Will print log for debug at the first call
 
         Args:
-            v_level (int): choose verbose debug info level, default v_level is 0, max v_level is 3. v_level can be set to -1 to close the debug mode.
+            v_level (int): choose verbose debug info level, default v_level is 0, max v_level is 3.
             ranks (int or list(int)): choose ranks to print the debug information. Default rank ``0``.
                 You can choose any valid rank. Ranks equals ``-1`` means debug on all ranks.
-            max_py_stack_depth(int): the maximum depth for the Python stack debug information. Default: ``2``
+            mode (bool): whether to set debug mode (``True``) or not (``False``). Default: ``True``.
         """
         assert isinstance(v_level, int)
-        assert v_level >= -1, "The min verbose debug info level is -1."
+        assert v_level >= 0, "The min verbose debug info level is 0."
         assert v_level <= 3, "The max verbose debug info level is 3."
-        assert max_py_stack_depth >= 0, "The min max stack depth is 0."
-        assert isinstance(max_py_stack_depth, int)
+        assert isinstance(mode, bool)
 
         if ranks is None:
             rank_list = [0]
@@ -472,15 +463,13 @@ class Graph(object):
 
         my_rank = get_rank()
         if -1 in rank_list or my_rank in rank_list:
-            self._debug = v_level >= 0
+            self._debug = mode
             if self._debug:
                 self._debug_min_s_level = 0
-                self._debug_max_v_level = max(0, v_level)
+                self._debug_max_v_level = v_level
             for name, block in self._blocks.items():
                 assert block.type == BlockType.MODULE
-                block.debug(v_level, ranks=ranks, max_py_stack_depth=max_py_stack_depth)
-
-        self._debug_max_py_stack_depth = max_py_stack_depth
+                block.debug(v_level, ranks, mode)
 
     def __repr__(self):
         r"""For printing the graph structure.

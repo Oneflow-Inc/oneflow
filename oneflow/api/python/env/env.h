@@ -24,7 +24,7 @@ limitations under the License.
 #include "oneflow/core/job/env_global_objects_scope.h"
 #include "oneflow/core/job/global_for.h"
 #include "oneflow/core/job/resource_desc.h"
-#include "oneflow/core/job/graph_scope_vars.h"
+#include "oneflow/core/job/graph_verbose_step_lr_util.h"
 #include "oneflow/core/control/global_process_ctx.h"
 #include "oneflow/core/rpc/include/base.h"
 
@@ -72,18 +72,6 @@ inline Maybe<void> SetGraphLRVerbose(bool verbose) {
   return Maybe<void>::Ok();
 }
 inline bool GetGraphLRVerbose() { return IsOpenGraphVerboseStepLr(); }
-
-inline Maybe<void> SetGraphDebugMaxPyStackDepth(int32_t depth) {
-  *GetGraphDebugMaxPyStackDepthVar() = depth;
-  return Maybe<void>::Ok();
-}
-inline int32_t GetGraphDebugMaxPyStackDepth() { return *GetGraphDebugMaxPyStackDepthVar(); }
-
-inline Maybe<void> SetGraphDebugMode(bool mode) {
-  *GetGraphDebugModeFlag() = mode;
-  return Maybe<void>::Ok();
-}
-inline bool GetGraphDebugMode() { return *GetGraphDebugModeFlag(); }
 }  // namespace oneflow
 
 #endif  // ONEFLOW_API_PYTHON_ENV_ENV_H_
