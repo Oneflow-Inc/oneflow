@@ -122,21 +122,21 @@ Maybe<void> CublasFusedMLP::Apply(const CublasFusedMLPCaptureState* ctx,
                                              JUST(VectorAt(ctx->SavedTensors(), 1 + weight_num))));
   }
 
-  const bool last_layer_weight_requires_grad = JUST(VectorAt(ctx->weights_requires_grad, weight_num - 1)); 
-  const bool last_layer_bias_requires_grad = JUST(VectorAt(ctx->biases_requires_grad, weight_num - 1)); 
+  const bool last_layer_weight_requires_grad =
+      JUST(VectorAt(ctx->weights_requires_grad, weight_num - 1));
+  const bool last_layer_bias_requires_grad =
+      JUST(VectorAt(ctx->biases_requires_grad, weight_num - 1));
 
-  // For last layer, we use CublasMatmulBiasAddGrad to get wgrad and b grad. 
+  // For last layer, we use CublasMatmulBiasAddGrad to get wgrad and b grad.
   if ((last_layer_weight_requires_grad || last_layer_bias_requires_grad)) {
-    std::shared_ptr<one::Tensor> last_layer_x = x; 
-    if(weight_num != 1){
-      last_layer_x = JUST(VectorAt(hiddens, weight_num - 2)); 
-    }
-    const auto& last_layer_wgrad_bgrad = JUST(functional::CublasMatmulBiasAddGrad(
-        last_bias_dy, last_layer_x));
-    if(last_layer_weight_requires_grad){
+    std::shared_ptr<one::Tensor> last_layer_x = x;
+    if (weight_num != 1) { last_layer_x = JUST(VectorAt(hiddens, weight_num - 2)); }
+    const auto& last_layer_wgrad_bgrad =
+        JUST(functional::CublasMatmulBiasAddGrad(last_bias_dy, last_layer_x));
+    if (last_layer_weight_requires_grad) {
       *JUST(VectorAt(in_grads, weight_num)) = last_layer_wgrad_bgrad->at(0);
     }
-    if(last_layer_bias_requires_grad){
+    if (last_layer_bias_requires_grad) {
       *JUST(VectorAt(in_grads, 2 * weight_num)) = last_layer_wgrad_bgrad->at(1);
     }
   }
@@ -163,8 +163,9 @@ Maybe<void> CublasFusedMLP::Apply(const CublasFusedMLPCaptureState* ctx,
       *JUST(VectorAt(in_grads, weight_num + hidden_layer_idx)) =
           matmul_relu_bias_bgrad->at(1);  // NOLINT
     }
-    // dw, need to skip final layer, cause final layer's wgrad has been calculated. 
-    if (JUST(VectorAt(ctx->weights_requires_grad, hidden_layer_idx)) && hidden_layer_idx != weight_num - 1) {
+    // dw, need to skip final layer, cause final layer's wgrad has been calculated.
+    if (JUST(VectorAt(ctx->weights_requires_grad, hidden_layer_idx))
+        && hidden_layer_idx != weight_num - 1) {
       *JUST(VectorAt(in_grads, (1 + hidden_layer_idx))) = JUST(functional::MatMul(
           cublas_dy, JUST(VectorAt(hiddens, hidden_layer_idx - 1)), true, false, 1.0));
     }
@@ -186,7 +187,8 @@ Maybe<void> CublasFusedMLP::Apply(const CublasFusedMLPCaptureState* ctx,
   if (JUST(VectorAt(ctx->weights_requires_grad, 0)) && weight_num >= 2) {
     // dw:
     *JUST(VectorAt(in_grads, 1)) =
-        JUST(functional::MatMul(last_dy, JUST(VectorAt(ctx->SavedTensors(), 0)), true, false, 1.0)); // use x instead just vectorat
+        JUST(functional::MatMul(last_dy, JUST(VectorAt(ctx->SavedTensors(), 0)), true, false,
+                                1.0));  // use x instead just vectorat
   }
 
   return Maybe<void>::Ok();

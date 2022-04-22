@@ -25,7 +25,7 @@ namespace {
 
 Maybe<void> InferTensorDesc4MatmulBiasAddBackward(user_op::InferContext* ctx) {
   /*
-  x (m, k) 
+  x (m, k)
   w (n, k) need transpose
   bias (n, )
   y (m, n)

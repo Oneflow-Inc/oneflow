@@ -15,23 +15,28 @@ limitations under the License.
 */
 #include "oneflow/core/kernel/cuda_graph_support.h"
 #include "oneflow/user/kernels/cublas_fused_mlp_util.cuh"
+#include "oneflow/core/ep/include/primitive/memcpy.h"
+#include "oneflow/core/ep/cuda/cuda_device.h"
 // CUBLAS_AUX_EPILOGUE only support in cuda11.4 or higher version, in cuda11.4 it need static link.
 #if CUDA_VERSION >= 11040
-#include "stdio.h"
 
 namespace oneflow {
 
-template<typename T>
-__global__ void printkernel(const T* in, int64_t n){
-  int64_t gid = blockIdx.x * blockDim.x + threadIdx.x; 
-  printf("Here is: %f \n", in[gid]); 
+cudaDataType_t GetGemmComputeType(cudaDataType_t data_type) {
+  switch (data_type) {
+    case CUDA_R_32F: return CUDA_R_32F;
+    case CUDA_R_64F: return CUDA_R_64F;
+    case CUDA_R_16F: return CUDA_R_32F;
+#if CUDA_VERSION >= 11000
+    case CUDA_R_16BF: return CUDA_R_32F;
+#endif  // CUDA_VERSION >= 11000
+    default: UNIMPLEMENTED(); return CUDA_R_32F;
+  }
 }
-
-
 
 template<typename T>
 class CublasMatmulBiasAddGradKernel final : public user_op::OpKernel,
-                                                public user_op::CudaGraphSupport {
+                                            public user_op::CudaGraphSupport {
  public:
   CublasMatmulBiasAddGradKernel() = default;
   ~CublasMatmulBiasAddGradKernel() override = default;
@@ -76,35 +81,52 @@ class CublasMatmulBiasAddGradKernel final : public user_op::OpKernel,
                          /*transpose_a=*/ep::primitive::BlasTransposeType::T,
                          /*transpose_b=*/ep::primitive::BlasTransposeType::N, &cublas_m, &cublas_n,
                          &cublas_k, &cublas_lda, &cublas_ldb, &cublas_ldc);
-    
-    printf("need to set bgrad ptr \n"); 
-    SetCublasAttr(matmul_grad_cache, cublas_compute_dtype, cuda_data_type, /*need_aux=*/false,
-                  /*transpose_a=*/ep::primitive::BlasTransposeType::T,
-                  /*transpose_b=*/ep::primitive::BlasTransposeType::N, epilogue, b_grad->mut_dptr(),
-                  /*aux_ptr=*/nullptr, cublas_m, cublas_n, cublas_k, cublas_lda, cublas_ldb, cublas_ldc);
+    if (cublas_k != 1) {
+      SetCublasAttr(
+          matmul_grad_cache, cublas_compute_dtype, cuda_data_type, /*need_aux=*/false,
+          /*transpose_a=*/ep::primitive::BlasTransposeType::T,
+          /*transpose_b=*/ep::primitive::BlasTransposeType::N, epilogue, b_grad->mut_dptr(),
+          /*aux_ptr=*/nullptr, cublas_m, cublas_n, cublas_k, cublas_lda, cublas_ldb, cublas_ldc);
 
-    // printkernel<T><<<1, dy->shape().elem_cnt(), 0, cuda_stream->cuda_stream()>>>(dy->dptr<T>(), dy->shape().elem_cnt()); 
-    printkernel<T><<<1, b_grad->shape().elem_cnt(), 0, cuda_stream->cuda_stream()>>>(b_grad->dptr<T>(), b_grad->shape().elem_cnt()); 
-    /*
-    a = dy, b = x
-    cublas_a=x, cublas_b=dy
-    */
-    OF_CUBLAS_CHECK(
-        cublasLtMatmul(cuda_stream->cublas_lt_handle(), matmul_grad_cache->operation_desc,
-                       &sp_alpha, x->dptr(), matmul_grad_cache->cublas_a_desc, dy->dptr(),
-                       matmul_grad_cache->cublas_b_desc, &sp_beta, w_grad->mut_dptr(),
-                       matmul_grad_cache->cublas_c_desc, w_grad->mut_dptr(),
-                       matmul_grad_cache->cublas_c_desc, nullptr, cuda_stream->cublas_workspace(),
-                       cuda_stream->cublas_workspace_size(), cuda_stream->cuda_stream()));
-    printkernel<T><<<1, b_grad->shape().elem_cnt(), 0, cuda_stream->cuda_stream()>>>(b_grad->dptr<T>(), b_grad->shape().elem_cnt()); 
+      /*
+      a = dy, b = x
+      cublas_a=x, cublas_b=dy
+      */
+      OF_CUBLAS_CHECK(cublasLtMatmul(
+          cuda_stream->cublas_lt_handle(), matmul_grad_cache->operation_desc, &sp_alpha, x->dptr(),
+          matmul_grad_cache->cublas_a_desc, dy->dptr(), matmul_grad_cache->cublas_b_desc, &sp_beta,
+          w_grad->mut_dptr(), matmul_grad_cache->cublas_c_desc, w_grad->mut_dptr(),
+          matmul_grad_cache->cublas_c_desc, nullptr, cuda_stream->cublas_workspace(),
+          cuda_stream->cublas_workspace_size(), cuda_stream->cuda_stream()));
+    } else {
+// Cause cublasLtmatmul get wrong bias grad in cublas_k == 1.
+#if CUDA_VERSION >= 11000
+      cublasGemmAlgo_t algo = CUBLAS_GEMM_DEFAULT;
+#else
+      cublasGemmAlgo_t algo =
+          (data_type == DataType::kFloat16) ? CUBLAS_GEMM_DFALT_TENSOR_OP : CUBLAS_GEMM_DEFAULT;
+#endif
+
+      cudaDataType_t gemm_compute_type = GetGemmComputeType(cuda_data_type);
+      std::unique_ptr<ep::primitive::Memcpy> memcpy_primitive =
+          ep::primitive::NewPrimitive<ep::primitive::MemcpyFactory>(
+              ctx->stream()->device_type(), ep::primitive::MemcpyKind::kDtoD);
+      CHECK(memcpy_primitive);
+      memcpy_primitive->Launch(ctx->stream(), b_grad->mut_dptr(), dy->dptr(), cublas_n * sizeof(T));
+
+      OF_CUBLAS_CHECK(cublasGemmEx(
+          cuda_stream->cublas_handle(), CUBLAS_OP_N, CUBLAS_OP_T, cublas_m, cublas_n, cublas_k,
+          &sp_alpha, x->dptr(), cuda_data_type, cublas_lda, dy->dptr(), cuda_data_type, cublas_ldb,
+          &sp_beta, w_grad->mut_dptr(), cuda_data_type, cublas_ldc, gemm_compute_type, algo));
+    }
   };
 
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
 
-#define REGISTER_CUBLAS_MATMUL_BIAS_ADD_GRAD_KERNEL(dtype)        \
-  REGISTER_USER_KERNEL("cublas_matmul_bias_add_grad")             \
-      .SetCreateFn<CublasMatmulBiasAddGradKernel<dtype>>()         \
+#define REGISTER_CUBLAS_MATMUL_BIAS_ADD_GRAD_KERNEL(dtype)             \
+  REGISTER_USER_KERNEL("cublas_matmul_bias_add_grad")                  \
+      .SetCreateFn<CublasMatmulBiasAddGradKernel<dtype>>()             \
       .SetIsMatchedHob((user_op::HobDeviceType() == DeviceType::kCUDA) \
                        && (user_op::HobDataType("x", 0) == GetDataType<dtype>::value));
 
