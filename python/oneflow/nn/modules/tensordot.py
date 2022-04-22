@@ -15,6 +15,7 @@ limitations under the License.
 """
 import oneflow
 from typing import Union, List, Tuple
+import warnings
 
 
 def tensordot(
@@ -36,7 +37,7 @@ def tensordot(
         dim_a = list(dims[0])
         dim_b = list(dims[1])
     elif isinstance(dims, oneflow.Tensor):
-        print("WARNING: tensordot doesn't support graph mode when the type of `dims` is oneflow.Tensor, because the tensor.item() operation needs synchronization between CPU and GPU.\n")
+        warnings.warn("tensordot doesn't support graph mode when the type of `dims` is oneflow.Tensor, because the tensor.item() operation needs synchronization.")
         if dims.numel() == 1:
             return oneflow._C.tensordot(a, b, dims.item())
         assert (
