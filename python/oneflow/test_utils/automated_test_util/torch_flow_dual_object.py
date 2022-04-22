@@ -313,6 +313,7 @@ def get_functional_graph_res(
             graph_functional_layernorm.parameters(), lr=0.001, momentum=0.9,
         )
 
+    print_note_fake_program()
     class TestGraphOfFunctional(flow.nn.Graph):
         def __init__(self):
             super().__init__()
