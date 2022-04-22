@@ -59,11 +59,11 @@ add_docstr(
 
         Three common use cases are:
 
-        - dims = 0 : tensor product :math: `a \otimes b`
+        - dims = 0 : tensor product :math:`a \otimes b`
 
-        - dims = 1 : tensor dot product :math: `a \cdot b`
+        - dims = 1 : tensor dot product :math:`a \cdot b`
 
-        - dims = 2 : (default) tensor double contraction :math: `a : b`
+        - dims = 2 : (default) tensor double contraction :math:`a : b`
 
         The part of documentation is referenced from https://numpy.org/doc/stable/reference/generated/numpy.tensordot.html.
 

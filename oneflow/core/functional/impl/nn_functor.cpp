@@ -270,9 +270,9 @@ class TensorDotIntDimsFunctor {
   Maybe<Tensor> operator()(const std::shared_ptr<Tensor>& a, const std::shared_ptr<Tensor>& b,
                            const int64_t dims) const {
     CHECK_GE_OR_RETURN(dims, 0) << "Dims must be greater than or equal to 0";
-    CHECK_LE_OR_RETURN(dims, a->shape()->NumAxes()) << "Dims must be less than a.dims(), which is "
+    CHECK_LE_OR_RETURN(dims, a->shape()->NumAxes()) << "Dims must be less than or equal to a.dims(), which is "
                                                     << a->shape()->NumAxes() << " but got " << dims;
-    CHECK_LE_OR_RETURN(dims, b->shape()->NumAxes()) << "Dims must be less than b.dims(), which is "
+    CHECK_LE_OR_RETURN(dims, b->shape()->NumAxes()) << "Dims must be less than or equal to b.dims(), which is "
                                                     << b->shape()->NumAxes() << " but got " << dims;
     std::vector<int64_t> dims_a(dims), dims_b(dims);
     for (int64_t i = 0; i < dims; i++) {
