@@ -50,7 +50,7 @@ class DeviceCtx {
 
   virtual ep::Stream* stream() = 0;
 
-  virtual vm::Allocator* mut_allocator(const bool pin_memory) {
+  virtual vm::Allocator* mut_allocator() {
     UNIMPLEMENTED();
     return nullptr;
   }

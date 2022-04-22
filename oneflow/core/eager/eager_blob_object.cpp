@@ -18,6 +18,7 @@ limitations under the License.
 #include "oneflow/core/framework/to_string.h"
 #include "oneflow/core/framework/shut_down_util.h"
 #include "oneflow/core/common/shape_vec.h"
+#include "oneflow/core/device/cpu_device_context.h"
 
 namespace oneflow {
 namespace vm {
@@ -55,7 +56,12 @@ Maybe<void> EagerBlobObject::InitBlobWithOffset(const int64_t offset) {
 
 Maybe<void> EagerBlobObject::TryAllocateBlobBodyMemory(DeviceCtx* device_ctx) {
   const bool pin_memory = EagerBlobObject::pin_memory();
-  vm::Allocator* allocator = device_ctx->mut_allocator(pin_memory);
+  vm::Allocator* allocator = nullptr;
+  if (pin_memory && device_ctx->device_type() == DeviceType::kCPU) {
+    allocator = dynamic_cast<CpuDeviceCtx*>(device_ctx)->mut_pin_memory_allocator();
+  } else {
+    allocator = device_ctx->mut_allocator();
+  }
   CHECK_NOTNULL_OR_RETURN(allocator);
   Blob* blob = mut_blob();
   CHECK_NOTNULL_OR_RETURN(blob);
