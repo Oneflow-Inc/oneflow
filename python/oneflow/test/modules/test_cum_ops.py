@@ -53,8 +53,9 @@ class TestCumOp(flow.unittest.TestCase):
         device = random_device()
         x = random_tensor().to(device)
         dim = random(0, x.ndim.pytorch).to(int)
-        y =  x.cumsum(dim)
+        y = x.cumsum(dim)
         return y
+
 
 if __name__ == "__main__":
     unittest.main()
