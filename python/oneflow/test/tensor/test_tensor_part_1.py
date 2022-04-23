@@ -1058,5 +1058,6 @@ class TestTensor(flow.unittest.TestCase):
         y = x.byte()
         test_case.assertTrue(y.dtype == flow.uint8)
 
+
 if __name__ == "__main__":
     unittest.main()
