@@ -19,7 +19,10 @@ from collections import OrderedDict
 
 import oneflow as flow
 
+import oneflow.unittest
 from oneflow.test_utils.test_util import GenArgDict
+
+from oneflow.test_utils.automated_test_util import *
 
 
 def _test_local_empty(test_case, shape, dtype, device, requires_grad):
@@ -47,6 +50,17 @@ class TestEmptyOp(flow.unittest.TestCase):
         arg_dict["requires_grad"] = [True, False]
         for arg in GenArgDict(arg_dict):
             _test_local_empty(test_case, **arg)
+
+    @autotest(n=5)
+    def test_new_empty(test_case):
+        device = random_device()
+        x = random_tensor().to(device)
+        y = x.new_empty(
+            (random().to(int), random().to(int), random().to(int)),
+            device=device.value(),
+            requires_grad=constant(True),
+        )
+        return y
 
 
 if __name__ == "__main__":

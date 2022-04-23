@@ -113,6 +113,7 @@ OneFlow Tensor Class
             ne, 
             negative, 
             nelement, 
+            new_empty,
             new_ones, 
             new_zeros,
             nonzero,

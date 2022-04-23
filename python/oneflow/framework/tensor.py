@@ -571,6 +571,12 @@ def _neg(self):
     return flow._C.negative(self)
 
 
+def _new_empty(
+    self, *size, dtype=None, device=None, placement=None, sbp=None, requires_grad=False,
+):
+    return flow.new_empty(self, size, dtype, device, placement, sbp, requires_grad)
+
+
 def _new_ones(
     self,
     size=None,
