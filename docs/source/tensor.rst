@@ -180,7 +180,7 @@ OneFlow Tensor Class
             uniform_, 
             unsqueeze, 
             var, 
-            view,
+            view, 
             view_as, 
             where, 
             zero_, 

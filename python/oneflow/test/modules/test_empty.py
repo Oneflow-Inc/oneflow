@@ -51,16 +51,16 @@ class TestEmptyOp(flow.unittest.TestCase):
         for arg in GenArgDict(arg_dict):
             _test_local_empty(test_case, **arg)
 
-    @autotest(n=5)
-    def test_new_empty(test_case):
-        device = random_device()
-        x = random_tensor().to(device)
-        y = x.new_empty(
-            (random().to(int), random().to(int), random().to(int)),
-            device=device.value(),
-            requires_grad=constant(True),
-        )
-        return y
+    # @autotest(n=5)
+    # def test_new_empty(test_case):
+    #     device = random_device()
+    #     x = random_tensor().to(device)
+    #     y = x.new_empty(
+    #         (random().to(int), random().to(int), random().to(int)),
+    #         device=device.value(),
+    #         requires_grad=constant(True),
+    #     )
+    #     return y
 
 
 if __name__ == "__main__":
