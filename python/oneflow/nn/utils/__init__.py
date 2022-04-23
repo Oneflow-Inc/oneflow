@@ -16,3 +16,4 @@ limitations under the License.
 from oneflow.nn.utils.clip_grad import clip_grad_norm_, clip_grad_value_
 from oneflow.nn.utils.weight_norm import weight_norm
 from oneflow.nn.utils.weight_norm import remove_weight_norm
+from oneflow.nn.utils.spectral_norm import spectral_norm
