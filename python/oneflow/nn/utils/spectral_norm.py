@@ -175,6 +175,46 @@ def spectral_norm(module: O_module,
                   n_power_iterations: int = 1,
                   eps: float = 1e-12,
                   dim: Optional[int] = None) -> O_module:
+    r"""Applies spectral normalization to a parameter in the given module.
+
+    .. math::
+        \mathbf{W}_{SN} = \frac{\mathbf{W}}{\sigma(\mathbf{W})}, \sigma(\mathbf{W}) = \mathop{max}\limits_{\mathbf{h}: \mathbf{h} \neq 0} \frac{\|\mathbf{Wh}\|_2}{\|\mathbf{h}\|_2}
+
+    Spectral normalization stabilizes the training of discriminators (critics)
+    in Generative Adversarial Networks (GANs) by rescaling the weight tensor
+    with spectral norm :math:`\sigma` of the weight matrix calculated using power
+    iteration method. If the dimension of the weight tensor is greater than 2,
+    it is reshaped to 2D in power iteration method to get spectral norm.
+    This is implemented via a hook that calculates spectral norm and rescales
+    weight before every :meth:`~Module.forward` call.
+    
+    See https://arxiv.org/abs/1802.05957
+
+    This document description is refereced to the Pytorch document. 
+    https://pytorch.org/docs/stable/generated/torch.nn.utils.spectral_norm.html
+
+    Args:
+        module (Module): containing module
+        name (str, optional): name of weight parameter
+        n_power_iterations (int, optional): number of power iterations to calculate spectral norm
+        eps (float, optional): epsilon for numerical stability in calculating norms
+        dim (int, optional): dimension corresponding to number of outputs, the default is ``0``, except for modules that are instances of ConvTranspose{1,2,3}d, when it is ``1``
+
+    Returns:
+        The original module with the spectral norm hook
+    
+    For example:
+
+    .. code-block:: python
+
+        >>> import oneflow as flow
+        >>> m = flow.nn.utils.spectral_norm(flow.nn.Linear(20, 40))
+        >>> m
+        Linear(in_features=20, out_features=40, bias=True)
+        >>> m.weight_u.size()
+        oneflow.Size([40])
+
+    """
 
     if dim is None:
         if isinstance(module, (flow.nn.ConvTranspose1d,
