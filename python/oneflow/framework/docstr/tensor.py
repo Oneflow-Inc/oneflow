@@ -220,8 +220,8 @@ add_docstr(
         >>> tensor = flow.ones(())
         >>> tensor.new_empty((2, 3))
         >>> tensor
-        tensor([[5.8182e-18,  4.5765e-41, -1.0545e+30],
-                [3.0949e-41,  4.4842e-44,  0.0000e+00]], dtype=oneflow.float32)
+        tensor([[0., 0., 0.],
+                [0., 0., 0.]], dtype=oneflow.float32)
     """,
 )
 
