@@ -60,6 +60,7 @@ class PersistentTable {
   virtual void LoadSnapshot(const std::string& name,
                             const std::function<void(Iterator* iter)>& Hook) = 0;
   virtual void SaveSnapshot(const std::string& name) = 0;
+  virtual Iterator* ReadSnapshot(const std::string& name) = 0;
 };
 
 std::unique_ptr<PersistentTable> NewPersistentTable(const PersistentTableOptions& options);

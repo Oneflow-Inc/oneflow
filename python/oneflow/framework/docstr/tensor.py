@@ -1054,6 +1054,20 @@ add_docstr(
 )
 
 add_docstr(
+    oneflow.Tensor.addcmul,
+    """
+    See :func:`oneflow.addcmul`
+    """,
+)
+
+add_docstr(
+    oneflow.Tensor.addcmul_,
+    """
+    In-place version of :func:`oneflow.Tensor.addcmul`.
+    """,
+)
+
+add_docstr(
     oneflow.Tensor.asin,
     """
     See :func:`oneflow.asin`
@@ -1302,6 +1316,18 @@ add_docstr(
 
     """,
 )
+
+
+add_docstr(
+    oneflow.Tensor.half,
+    """
+    self.half() is equivalent to self.to(oneflow.float16).
+
+    See :func:`oneflow.Tensor.to`
+
+    """,
+)
+
 
 add_docstr(
     oneflow.Tensor.gather,
