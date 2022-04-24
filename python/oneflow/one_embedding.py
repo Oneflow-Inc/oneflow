@@ -738,7 +738,6 @@ class MultiTableMultiColumnEmbedding(Embedding):
         )
 
 
-<<<<<<< HEAD
 class Ftrl(Optimizer):
     r"""FTRL Optimizer. 
 
@@ -901,7 +900,8 @@ class Ftrl(Optimizer):
     @property
     def support_sparse(self):
         return False
-=======
+
+
 def make_persistent_table_reader(
     paths, snapshot_name, key_type, value_type, storage_dim, physical_block_size=512,
 ):
@@ -946,4 +946,3 @@ def make_persistent_table_writer(
         4 * 1024,
         physical_block_size,
     )
->>>>>>> master
