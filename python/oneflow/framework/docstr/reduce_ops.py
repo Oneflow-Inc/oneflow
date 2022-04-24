@@ -89,20 +89,14 @@ add_docstr(
 add_docstr(
     oneflow.sum,
     """
-    oneflow.sum(input) -> Tensor
+    oneflow.sum(input, dim, keepdim=False) -> Tensor
 
     Computes the sum of row of elements in a tensor in the given axis, if the axis is None, sum of all elements will be caculated.
     
     Args:
         input (oneflow.Tensor): the Input Tensor
-        dim (int or tuple of ints): the dimension to reduce. Default: `None`
+        dim (int or tuple of ints, optional): the dimension to reduce. Default: `None`
         keepdim (bool, optional): whether the output tensor has dim retained or not. Default: `False`
-
-    Returns:
-        Tensor or Tuple(oneflow.Tensor, oneflow.Tensor(dtype=int64)): If :attr:`dim` is `None`, returns 
-        the minimum value of all elements in the `input` tensor. Otherwise, returns a tuple of Tensor (values, indices), 
-        where the `values` are the minimum value of all elements in the `input` tensor,
-        the `indices` are the indices of the elements in the original input tensor.
 
     For example:
 
@@ -122,8 +116,16 @@ add_docstr(
 
 add_docstr(
     oneflow.mean,
-    """Computes the mean of row of elements in a tensor in the given axis, if the axis is None, mean of all elements will be caculated.
+    """
+    oneflow.mean(input, dim, keepdim=False) -> Tensor
     
+    Computes the mean of row of elements in a tensor in the given axis, if the axis is None, mean of all elements will be caculated.
+    
+    Args:
+        input (oneflow.Tensor): the Input Tensor
+        dim (int or tuple of ints): the dimension to reduce. Default: `None`
+        keepdim (bool, optional): whether the output tensor has dim retained or not. Default: `False`
+
     For example:
 
     .. code-block:: python
@@ -142,13 +144,17 @@ add_docstr(
 
 add_docstr(
     oneflow.prod,
-    r"""Computes the product of row of elements in a tensor in the given axis.
+    r"""
+    oneflow.prod(input, dim, keepdim=False) -> Tensor
+
+    Computes the product of row of elements in a tensor in the given axis.
     
-    note: `if the dim is None, it will return a tensor with only one element whose value is the product of all elements of input.`
+     If `keepdim` is `True`, the output tensor is of the same size as `input` except in the dimension `dim` where it is of size 1. Otherwise, `dim` is squeezed :func:`oneflow.squeeze()`, resulting in the output tensor having 1 fewer dimension than `input`. 
 
     Args:
-        input (Tensor): the source tensor
-        dim (int): the axis along which to prod
+        input (oneflow.Tensor): the Input Tensor
+        dim (int or tuple of ints): the dimension to reduce. Default: `None`
+        keepdim (bool, optional): whether the output tensor has dim retained or not. Default: `False`
 
     For example:
 
@@ -164,4 +170,29 @@ add_docstr(
         tensor([  6., 120.], dtype=oneflow.float32)
 
     """,
+)
+
+add_docstr(
+    oneflow.prod,
+    """Computes if all elements in the input tensor to true.
+    
+    Args:
+        input (oneflow.Tensor): the Input Tensor
+        dim (int, optional): the dimension to reduce. Default: `None`
+        keepdim (bool, optional): whether the output tensor has dim retained or not. Default: `False`
+
+    Returns:
+        Tensor(oneflow.Tensor(dtype=int8)): If :attr:`dim` is `None`, returns 
+        the logical all value of all elements in the `input` tensor.
+    
+    For example:
+
+    .. code-block:: python
+
+        >>> import oneflow as flow
+        >>> input = flow.arange(0, 3)
+        >>> flow.all(input)
+        tensor(False, dtype=oneflow.bool)
+
+    """
 )

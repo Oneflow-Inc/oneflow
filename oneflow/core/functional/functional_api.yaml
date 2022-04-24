@@ -266,15 +266,22 @@
   bind_python: True
 
 - name: "reduce_sum"
-  signature: "Tensor (Tensor x, Int32List axis, Bool keepdims=False) => ReduceSum"
+  signature: [
+    "Tensor (Tensor x, Int32List[1] dim, Bool keepdims=False) => ReduceSum", 
+    "Tensor (Tensor x) => ReduceSumAll"
+  ]
   bind_python: True
 
 - name: "reduce_mean"
-  signature: "Tensor (Tensor x, Int32List axis, Bool keepdims=False) => ReduceMean"
+  signature: ["Tensor (Tensor x, Int32List[1] dim, Bool keepdims=False) => ReduceMean",
+  "Tensor (Tensor x) => ReduceMeanAll"]
   bind_python: True
 
 - name: "reduce_all"
-  signature: "Tensor (Tensor x, Int32List axis, Bool keepdims=False) => ReduceAll"
+  signature: [
+    "Tensor (Tensor x, Int32List[1] axis, Bool keepdims=False) => ReduceAll",
+    "Tensor (Tensor x) => ReduceAllAll"
+  ]
   bind_python: True
 
 - name: "reduce_any"
@@ -282,7 +289,10 @@
   bind_python: True
 
 - name: "reduce_prod"
-  signature: "Tensor (Tensor x, Int32List axis, Bool keepdims=False, *, DataType dtype=None) => ReduceProd"
+  signature: [
+    "Tensor (Tensor x, Int32List[1] axis, Bool keepdims=False, *, DataType dtype=None) => ReduceProd",
+    "Tensor (Tensor x, *, DataType dtype=None) => ReduceProdAll",
+  ]
   bind_python: True
 
 - name: "reduce_min_device_stage"

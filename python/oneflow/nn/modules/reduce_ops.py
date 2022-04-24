@@ -22,27 +22,6 @@ from oneflow.nn.module import Module
 from oneflow.nn.modules.utils import _check_axis
 
 
-def sum_op(input, dim=None, keepdim=False):
-    axis_checked = _check_axis(dim, input.shape)
-    if len(axis_checked) == 0:
-        return input
-    return flow._C.reduce_sum(input, axis=axis_checked, keepdims=keepdim)
-
-
-def mean_op(input, dim=None, keepdim=False):
-    axis_checked = _check_axis(dim, input.shape)
-    if len(axis_checked) == 0:
-        return input
-    return flow._C.reduce_mean(input, axis=axis_checked, keepdims=keepdim)
-
-
-def prod_op(input, dim=None, keepdim=False, *, dtype=None):
-    axis_checked = _check_axis(dim, input.shape)
-    if len(axis_checked) == 0:
-        return input
-    return flow._C.reduce_prod(input, axis_checked, keepdim, dtype=dtype)
-
-
 def all_op(input, dim=None, keepdim=False):
     """Computes if all elements in the input tensor to true.
     

@@ -411,6 +411,30 @@ class Min2Functor {
   }
 };
 
+class ReduceSumAllFunctor {
+ public:
+  ReduceSumAllFunctor() {
+    op_ = CHECK_JUST(
+        one::OpBuilder("reduce_sum").Input("input_tensor").Output("output_tensor").Build());
+  }
+  Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x) const {
+    // const DataType dtype = x->dtype()->data_type();
+    MutableAttrMap attrs;
+    const int32_t naxis = x->shape()->NumAxes();
+    std::vector<int32_t> axis(naxis);
+    std::iota(axis.begin(), axis.end(), 0);
+    JUST(attrs.SetAttr<std::vector<int32_t>>("axis", axis));
+    JUST(attrs.SetAttr<bool>("keepdims", false));
+    TensorProcessor tensor_processor;
+    JUST(tensor_processor.AddInputs({x}, /*lowest_dtype=*/DType::Int64()).Apply());
+    TensorTuple input_tuple = JUST(tensor_processor.GetInputs());
+    return OpInterpUtil::Dispatch<Tensor>(*op_, input_tuple, attrs);
+  }
+
+ private:
+  std::shared_ptr<OpExpr> op_;
+};
+
 class ReduceSumFunctor {
  public:
   ReduceSumFunctor() {
@@ -421,13 +445,34 @@ class ReduceSumFunctor {
                            const bool& keepdims) const {
     // const DataType dtype = x->dtype()->data_type();
     MutableAttrMap attrs;
-    if (axis.empty()) {
-      std::vector<int32_t> reduce_axis(x->shape()->NumAxes());
+    const int32_t naxis = x->shape()->NumAxes();
+    if (axis.size() == 0) {
+      std::vector<int32_t> reduce_axis(naxis);
       std::iota(reduce_axis.begin(), reduce_axis.end(), 0);
       JUST(attrs.SetAttr<std::vector<int32_t>>("axis", reduce_axis));
     } else {
-      JUST(attrs.SetAttr<std::vector<int32_t>>("axis", axis));
+      CHECK_GE_OR_RETURN(naxis, axis.size())
+          << "Dimension out of range, expected to be in range of [" << -naxis << ", " << naxis - 1
+          << "], but got " << axis.size();
+      ;
+
+      std::vector<int32_t> reduce_axis(axis.size());
+      for (int i = 0; i < axis.size(); i++) {
+        CHECK_GE_OR_RETURN(naxis, axis[i])
+            << "Dimension out of range, expected to be in range of [" << -naxis << ", " << naxis - 1
+            << "], but got " << axis[i];
+        CHECK_LE_OR_RETURN(-naxis, axis[i])
+            << "Dimension out of range, expected to be in range of [" << -naxis << ", " << naxis - 1
+            << "], but got " << axis[i];
+        if (axis[i] < 0) {
+          reduce_axis[i] = axis[i] + naxis;
+        } else {
+          reduce_axis[i] = axis[i];
+        }
+      }
+      JUST(attrs.SetAttr<std::vector<int32_t>>("axis", reduce_axis));
     }
+
     JUST(attrs.SetAttr<bool>("keepdims", keepdims));
     TensorProcessor tensor_processor;
     JUST(tensor_processor.AddInputs({x}, /*lowest_dtype=*/DType::Int64()).Apply());
@@ -630,6 +675,23 @@ class ReduceMaxGlobalStageGradFunctor
   static std::string GetOpName() { return "reduce_max_global_stage_grad"; }
 };
 
+class ReduceMeanAllFunctor {
+ public:
+  ReduceMeanAllFunctor() {}
+  Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x) const {
+    // ReduceMean only calculate floating values.
+    CHECK_OR_RETURN(IsFloatingDataType(x->dtype()->data_type()))
+        << "RuntimeError: Can only calculate the mean of floating types.";
+    size_t reduce_count = 1;
+    reduce_count = x->shape()->Count(0);
+    const auto& sum = JUST(functional::ReduceSumAll(x));
+    if (reduce_count == 1 || reduce_count == 0) { return sum; }
+    CHECK_GT_OR_RETURN(reduce_count, 0);
+    return functional::ScalarMul(sum, 1.0 / reduce_count, false);
+  }
+};
+
+
 class ReduceMeanFunctor {
  public:
   ReduceMeanFunctor() {}
@@ -649,6 +711,37 @@ class ReduceMeanFunctor {
     CHECK_GT_OR_RETURN(reduce_count, 0);
     return functional::ScalarMul(sum, 1.0 / reduce_count, false);
   }
+};
+
+class ReduceProdAllFunctor {
+ public:
+  ReduceProdAllFunctor() {
+    op_ = CHECK_JUST(
+        one::OpBuilder("reduce_prod").Input("input_tensor").Output("output_tensor").Build());
+  }
+  Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x, const Optional<Symbol<DType>>& dtype) const {
+    MutableAttrMap attrs;
+    std::shared_ptr<one::Tensor> tensor = x;
+    if (dtype.has_value() && (dtype != x->dtype())) { tensor = JUST(Cast(tensor, JUST(dtype))); }
+    TensorProcessor tensor_processor;
+    Symbol<DType> lowest_dtype;
+    if (DType::priority_order[tensor->dtype()->data_type()]
+        == DType::priority_order[DType::Bool()->data_type()]) {
+      lowest_dtype = DType::Int64();
+    } else {
+      lowest_dtype = tensor->dtype();
+    }
+    JUST(tensor_processor.AddInputs({tensor}, lowest_dtype).Apply());
+    TensorTuple input_tuple = JUST(tensor_processor.GetInputs());
+      std::vector<int32_t> reduce_axis(tensor->shape()->NumAxes());
+      std::iota(reduce_axis.begin(), reduce_axis.end(), 0);
+      JUST(attrs.SetAttr<std::vector<int32_t>>("axis", reduce_axis));
+    JUST(attrs.SetAttr<bool>("keepdims", false));
+    return JUST(OpInterpUtil::Dispatch<Tensor>(*op_, input_tuple, attrs));
+  }
+
+ private:
+  std::shared_ptr<OpExpr> op_;
 };
 
 class ReduceProdFunctor {
@@ -672,12 +765,32 @@ class ReduceProdFunctor {
     }
     JUST(tensor_processor.AddInputs({tensor}, lowest_dtype).Apply());
     TensorTuple input_tuple = JUST(tensor_processor.GetInputs());
+    const int32_t naxis = x->shape()->NumAxes();
     if (axis.empty()) {
-      std::vector<int32_t> reduce_axis(tensor->shape()->NumAxes());
+      std::vector<int32_t> reduce_axis(naxis);
       std::iota(reduce_axis.begin(), reduce_axis.end(), 0);
       JUST(attrs.SetAttr<std::vector<int32_t>>("axis", reduce_axis));
     } else {
-      JUST(attrs.SetAttr<std::vector<int32_t>>("axis", axis));
+      CHECK_GE_OR_RETURN(naxis, axis.size())
+          << "Dimension out of range, expected to be in range of [" << -naxis << ", " << naxis - 1
+          << "], but got " << axis.size();
+      ;
+
+      std::vector<int32_t> reduce_axis(axis.size());
+      for (int i = 0; i < axis.size(); i++) {
+        CHECK_GE_OR_RETURN(naxis, axis[i])
+            << "Dimension out of range, expected to be in range of [" << -naxis << ", " << naxis - 1
+            << "], but got " << axis[i];
+        CHECK_LE_OR_RETURN(-naxis, axis[i])
+            << "Dimension out of range, expected to be in range of [" << -naxis << ", " << naxis - 1
+            << "], but got " << axis[i];
+        if (axis[i] < 0) {
+          reduce_axis[i] = axis[i] + naxis;
+        } else {
+          reduce_axis[i] = axis[i];
+        }
+      }
+      JUST(attrs.SetAttr<std::vector<int32_t>>("axis", reduce_axis));
     }
     JUST(attrs.SetAttr<bool>("keepdims", keepdims));
     return JUST(OpInterpUtil::Dispatch<Tensor>(*op_, input_tuple, attrs));
@@ -2779,6 +2892,7 @@ ONEFLOW_FUNCTION_LIBRARY(m) {
   m.add_functor<ReduceMinFunctor>("ReduceMin");
   m.add_functor<MinFunctor, Min2Functor>("Min");
   m.add_functor<ReduceSumFunctor>("ReduceSum");
+  m.add_functor<ReduceSumAllFunctor>("ReduceSumAll");
   m.add_functor<ReduceAllFunctor>("ReduceAll");
   m.add_functor<ReduceAnyFunctor>("ReduceAny");
   m.add_functor<ReduceProdFunctor>("ReduceProd");
