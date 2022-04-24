@@ -572,14 +572,14 @@ def _neg(self):
 
 
 def _new_empty(
-    self, size, dtype=None, device=None, placement=None, sbp=None, requires_grad=False,
+    self, *size, dtype=None, device=None, placement=None, sbp=None, requires_grad=False,
 ):
     return flow.new_empty(self, size, dtype, device, placement, sbp, requires_grad)
 
 
 def _new_ones(
     self,
-    size,
+    *size,
     dtype=None,
     device=None,
     placement=None,
@@ -590,7 +590,7 @@ def _new_ones(
 
 
 def _new_zeros(
-    self, size, dtype=None, device=None, placement=None, sbp=None, requires_grad=False,
+    self, *size, dtype=None, device=None, placement=None, sbp=None, requires_grad=False,
 ):
     return flow.new_zeros(self, size, dtype, device, placement, sbp, requires_grad)
 

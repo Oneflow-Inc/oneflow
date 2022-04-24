@@ -65,6 +65,11 @@ def empty_op(
     assert size is not None, "shape must not be None"
 
     shape = _single(_handle_size_arg(size))
+
+    assert isinstance(
+        shape, (int, tuple, list, flow.Size)
+    ), f"argument 'size' must be tuple of ints, not %s" % (type(size))
+
     if dtype is None:
         dtype = flow.float32
     if placement is None:
@@ -105,11 +110,8 @@ def empty_op(
 
 def new_empty_op(
     x, size, dtype=None, device=None, placement=None, sbp=None, requires_grad=False
-):
-    assert isinstance(
-        size, (int, tuple, list, flow.Size)
-    ), f"argument 'size' must be tuple of ints, not %s" % (type(size))
-
+):    
+    new_size = _single(_handle_size_arg(size))
     new_dtype = dtype
     new_device = device
     new_placement = placement
@@ -124,7 +126,7 @@ def new_empty_op(
     if sbp is None:
         new_sbp = x.sbp if x.is_global else None
 
-    return empty_op(size, dtype=new_dtype, device=new_device, placement=new_placement, sbp=new_sbp, requires_grad=requires_grad)
+    return empty_op(new_size, dtype=new_dtype, device=new_device, placement=new_placement, sbp=new_sbp, requires_grad=requires_grad)
 
 
 if __name__ == "__main__":
