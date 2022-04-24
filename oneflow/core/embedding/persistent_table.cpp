@@ -15,6 +15,7 @@ limitations under the License.
 */
 #include "oneflow/core/embedding/persistent_table.h"
 #include "oneflow/core/common/util.h"
+#include "oneflow/core/embedding/hash_functions.cuh"
 
 #ifdef __linux__
 
@@ -333,6 +334,9 @@ class Worker final {
 };
 
 template<typename Key, typename Engine>
+class SnapshotIteratorImpl;
+
+template<typename Key, typename Engine>
 class PersistentTableImpl : public PersistentTable {
  public:
   OF_DISALLOW_COPY_AND_MOVE(PersistentTableImpl);
@@ -354,8 +358,10 @@ class PersistentTableImpl : public PersistentTable {
   void LoadSnapshot(const std::string& name,
                     const std::function<void(Iterator* iter)>& Hook) override;
   void SaveSnapshot(const std::string& name) override;
+  Iterator* ReadSnapshot(const std::string& name) override;
 
  private:
+  friend class SnapshotIteratorImpl<Key, Engine>;
   std::string KeyFilePath(uint64_t chunk_id) const;
   std::string ValueFilePath(uint64_t chunk_id) const;
   std::string IndexFilePath(const std::string& name, uint64_t chunk_id) const;
@@ -374,6 +380,7 @@ class PersistentTableImpl : public PersistentTable {
   uint64_t num_logical_blocks_per_chunk_;
   uint64_t num_values_per_chunk_;
   uint32_t num_values_per_block_;
+  uint32_t physical_block_size_;
   uint32_t logical_block_size_;
 
   std::vector<std::unique_ptr<Worker<Engine>>> workers_;
@@ -395,6 +402,7 @@ PersistentTableImpl<Key, Engine>::PersistentTableImpl(const PersistentTableOptio
     : root_dir_(options.path),
       key_size_(options.key_size),
       value_size_(options.value_size),
+      physical_block_size_(options.physical_block_size),
       logical_block_size_(GetLogicalBlockSize(options.physical_block_size, value_size_)),
       blocks_buffer_(options.physical_block_size),
       writable_key_file_chunk_id_(-1) {
@@ -489,7 +497,8 @@ void PersistentTableImpl<Key, Engine>::Get(uint32_t num_keys, const void* keys, 
   std::lock_guard<std::recursive_mutex> lock(mutex_);
   offsets_buffer_.resize(num_keys);
   void* blocks_ptr = nullptr;
-  if (value_size_ == logical_block_size_) {
+  if (value_size_ == logical_block_size_
+      && reinterpret_cast<uintptr_t>(values) % physical_block_size_ == 0) {
     blocks_ptr = values;
   } else {
     blocks_buffer_.Resize(num_keys * logical_block_size_);
@@ -572,7 +581,8 @@ void PersistentTableImpl<Key, Engine>::Put(uint32_t num_keys, const void* keys,
                                            const void* values) {
   std::lock_guard<std::recursive_mutex> lock(mutex_);
   const void* blocks_ptr = nullptr;
-  if (value_size_ == logical_block_size_) {
+  if (value_size_ == logical_block_size_
+      && reinterpret_cast<uintptr_t>(values) % physical_block_size_ == 0) {
     blocks_ptr = values;
   } else {
     const uint32_t num_blocks = RoundUp(num_keys, num_values_per_block_);
@@ -733,6 +743,12 @@ void PersistentTableImpl<Key, Engine>::SaveSnapshot(const std::string& name) {
 }
 
 template<typename Key, typename Engine>
+PersistentTable::Iterator* PersistentTableImpl<Key, Engine>::ReadSnapshot(const std::string& name) {
+  return new SnapshotIteratorImpl<Key, Engine>(this, name, value_size_, logical_block_size_,
+                                               num_values_per_block_, num_values_per_chunk_);
+}
+
+template<typename Key, typename Engine>
 void PersistentTableImpl<Key, Engine>::ParallelFor(size_t total,
                                                    const ForRange<Engine>& for_range) {
   BlockingCounter bc(workers_.size());
@@ -752,6 +768,84 @@ void PersistentTableImpl<Key, Engine>::ParallelFor(size_t total,
   }
   bc.WaitForeverUntilCntEqualZero();
 }
+
+template<typename Key, typename Engine>
+class SnapshotIteratorImpl : public PersistentTable::Iterator {
+ public:
+  OF_DISALLOW_COPY_AND_MOVE(SnapshotIteratorImpl);
+  SnapshotIteratorImpl(PersistentTableImpl<Key, Engine>* table, const std::string& snapshot_name,
+                       uint32_t value_size, uint32_t logical_block_size,
+                       uint32_t num_values_per_block, uint64_t num_values_per_chunk)
+      : table_(table),
+        snapshot_name_(snapshot_name),
+        value_size_(value_size),
+        logical_block_size_(logical_block_size),
+        num_values_per_block_(num_values_per_block),
+        num_values_per_chunk_(num_values_per_chunk),
+        current_chunk_(0) {
+    const std::string snapshot_list = table_->SnapshotListFilePath(snapshot_name);
+    std::ifstream list_if(snapshot_list);
+    std::string index_filename;
+    while (std::getline(list_if, index_filename)) { indices_names_.push_back(index_filename); }
+  }
+  ~SnapshotIteratorImpl() override = default;
+
+  void Next(uint32_t num_keys, uint32_t* return_keys, void* keys, void* values) override {
+    *return_keys = 0;
+    while (current_chunk_ < indices_names_.size()) {
+      if (!chunk_iterator_) {
+        const std::string snapshot_base = table_->SnapshotDirPath(snapshot_name_);
+        const uint64_t chunk_id = GetChunkId(indices_names_[current_chunk_], kIndexFileNamePrefix);
+        PosixFile index_file(PosixFile::JoinPath(snapshot_base, indices_names_[current_chunk_]),
+                             O_RDONLY, 0644);
+        const size_t index_file_size = index_file.Size();
+        CHECK_EQ(index_file_size % sizeof(uint64_t), 0);
+        if (index_file_size == 0) {
+          current_chunk_ += 1;
+          continue;
+        }
+        const size_t n_entries = index_file_size / sizeof(uint64_t);
+        indices_file_.reset(new PosixMappedFile(std::move(index_file), index_file_size, PROT_READ));
+        PosixFile key_file(table_->KeyFilePath(chunk_id), O_RDONLY, 0644);
+        keys_file_.reset(new PosixMappedFile(std::move(key_file), key_file.Size(), PROT_READ));
+        PosixFile value_file(table_->ValueFilePath(chunk_id), O_RDONLY, 0644);
+        values_file_.reset(
+            new PosixMappedFile(std::move(value_file), value_file.Size(), PROT_READ));
+        chunk_iterator_.reset(new ChunkIteratorImpl<Key>(
+            value_size_, logical_block_size_, num_values_per_block_, num_values_per_chunk_,
+            chunk_id, n_entries, static_cast<const Key*>(keys_file_->ptr()),
+            static_cast<const uint64_t*>(indices_file_->ptr()), values_file_->ptr()));
+      }
+      chunk_iterator_->Next(num_keys, return_keys, keys, values);
+      if (*return_keys == 0) {
+        chunk_iterator_.reset();
+        keys_file_.reset();
+        values_file_.reset();
+        indices_file_.reset();
+        current_chunk_ += 1;
+        continue;
+      } else {
+        return;
+      }
+    }
+  }
+
+  void Reset() override { UNIMPLEMENTED(); }
+
+ private:
+  PersistentTableImpl<Key, Engine>* table_;
+  std::string snapshot_name_;
+  uint32_t value_size_;
+  uint32_t logical_block_size_;
+  uint32_t num_values_per_block_;
+  uint64_t num_values_per_chunk_;
+  size_t current_chunk_;
+  std::vector<std::string> indices_names_;
+  std::unique_ptr<PosixMappedFile> keys_file_;
+  std::unique_ptr<PosixMappedFile> values_file_;
+  std::unique_ptr<PosixMappedFile> indices_file_;
+  std::unique_ptr<ChunkIteratorImpl<Key>> chunk_iterator_;
+};
 
 template<typename Engine>
 std::unique_ptr<PersistentTable> DispatchKeyType(const PersistentTableOptions& options) {
