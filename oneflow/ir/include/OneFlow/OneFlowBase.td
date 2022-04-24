@@ -183,6 +183,7 @@ class OneFlow_TFPoolGradBaseOp<string mnemonic, list<Trait> traits = []> :
   let summary = "OneFlow pooling grad operation, align with TensorFlow";
   let input = (ins
     AnyType:$x,
+    AnyType:$y,
     AnyType:$dy
   );
   let output = (outs AnyType:$dx);

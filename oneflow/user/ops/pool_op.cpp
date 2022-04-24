@@ -79,6 +79,7 @@ Maybe<void> BwGetSbpFn(user_op::SbpContext* ctx) {
   FOR_RANGE(int64_t, i, 0, tensor.shape().NumAxes()) {
     ctx->NewBuilder()
         .Split(user_op::OpArg("x", 0), i)
+        .Split(user_op::OpArg("y", 0), i)
         .Split(user_op::OpArg("dy", 0), i)
         .Split(user_op::OpArg("dx", 0), i)
         .Build();
@@ -93,6 +94,7 @@ GenBackwardOpConfFn MakeGenBackwardOpConfFn(const std::string& mode, const int32
       user_op::UserOpConfWrapper grad_op =
           builder.Op(mode + "_pool_" + std::to_string(dim) + "d_grad")
               .Input("x", op.input("x", 0))
+              .Input("y", op.output("y", 0))
               .Input("dy", op.GetGradTensorWithOpOutput("y", 0))
               .Output("dx")
               .Attr("data_format", op.attr<std::string>("data_format"))

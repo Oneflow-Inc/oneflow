@@ -163,7 +163,7 @@ class PoolNdGradFunctor {
       for (int ndims = 1; ndims <= 3; ++ndims) {
         const auto& op_type_name = GetOpTypeName(mode, ndims);
         op_expr_map_[op_type_name] =
-            CHECK_JUST(one::OpBuilder(op_type_name).Input("x").Input("dy").Output("dx").Build());
+            CHECK_JUST(one::OpBuilder(op_type_name).Input("x").Input("y").Input("dy").Output("dx").Build());
       }
     }
   }
@@ -171,6 +171,7 @@ class PoolNdGradFunctor {
     return mode + "_pool_" + std::to_string(ndims) + "d_grad";
   }
   Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x,
+                           const std::shared_ptr<one::Tensor>& y,
                            const std::shared_ptr<one::Tensor>& dy, const std::string& mode,
                            const int32_t& ndims, const std::string& data_format,
                            const std::string& padding, const std::vector<int32_t>& padding_before,
@@ -190,7 +191,7 @@ class PoolNdGradFunctor {
     CHECK_OR_RETURN(it != op_expr_map_.end())
         << "Encounter unsupported op " << op_type_name << " in PoolNdGradFunctor.";
     CHECK_NOTNULL_OR_RETURN(it->second);
-    return OpInterpUtil::Dispatch<Tensor>(*it->second, {x, dy}, attrs);
+    return OpInterpUtil::Dispatch<Tensor>(*it->second, {x, y, dy}, attrs);
   }
 
  protected:
