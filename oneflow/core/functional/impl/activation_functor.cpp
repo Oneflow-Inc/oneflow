@@ -228,12 +228,13 @@ class GluFunctor {
         << Error::RuntimeError()
         << "RuntimeError: glu does not support scalars because halving size must be even";
     CHECK_OR_RETURN(dim >= -ndim && dim < ndim)
-        << "IndexError: Dimension out of range (expected to be in range of [" << -ndim << ", "
-        << ndim - 1 << "], but got " << dim << ")";
+        << Error::IndexError() << "IndexError: Dimension out of range (expected to be in range of ["
+        << -ndim << ", " << ndim - 1 << "], but got " << dim << ")";
     if (dim < 0) { dim += ndim; }
     int64_t nc = input->dim(dim);
-    CHECK_EQ_OR_RETURN(nc % 2, 0) << "Halving dimension must be even, but dimension " << dim
-                                  << " is size " << nc;
+    CHECK_EQ_OR_RETURN(nc % 2, 0) << Error::RuntimeError()
+                                  << "RuntimeError: Halving dimension must be even, but dimension "
+                                  << dim << " is size " << nc;
     nc = nc / 2;
     std::vector<int64_t> split_sizes(2, nc);
     const auto split_x = JUST(SplitWithSize(input, split_sizes, dim));
@@ -286,10 +287,8 @@ class HardShrinkFunctor {
     if (inplace) {
       JUST(CheckInplaceValid(x));
       std::shared_ptr<TensorTuple> outputs = std::make_shared<TensorTuple>(1);
-      // outputs->at(0) = x;
       *JUST(oneflow::VectorAt(outputs.get(), 0)) = x;
       JUST(OpInterpUtil::Dispatch(*op_, {x}, outputs.get(), attrs));
-      // return outputs->at(0);
       return *JUST(oneflow::VectorAt(outputs.get(), 0));
     } else {
       return OpInterpUtil::Dispatch<one::Tensor>(*op_, {x}, attrs);

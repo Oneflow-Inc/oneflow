@@ -50,7 +50,6 @@ class TestActivationError(flow.unittest.TestCase):
             x = flow.ones((4, 4), dtype=flow.float32, requires_grad=True)
             m = flow.nn.CELU(alpha=1.0, inplace=True)
             y = m(x)
-        print(str(context.exception))
         test_case.assertTrue(
             "RuntimeError: a leaf Tensor that requires grad is being used in an in-place operation"
             in str(context.exception)
@@ -68,7 +67,7 @@ class TestActivationError(flow.unittest.TestCase):
 
     def test_glu_dim_index_error(test_case):
         with test_case.assertRaises(Exception) as context:
-            x = flow.randn(2, 3)
+            x = flow.randn(2, 4)
             m = flow.nn.GLU(dim=3)
             y = m(x)
         test_case.assertTrue(
@@ -76,6 +75,27 @@ class TestActivationError(flow.unittest.TestCase):
             in str(context.exception)
         )
 
+    def test_glu_dim_even_runtime_error(test_case):
+        with test_case.assertRaises(Exception) as context:
+            x = flow.randn(2, 3)
+            m = flow.nn.GLU()
+            y = m(x)
+        print(str(context.exception))
+        test_case.assertTrue(
+            "RuntimeError: Halving dimension must be even, but dimension 1 is size 3"
+            in str(context.exception)
+        )
+
+    def test_hard_sigmoid_inplace_runtime_error(test_case):
+        with test_case.assertRaises(Exception) as context:
+            x = flow.randn(2)
+            x.requires_grad = True
+            m = flow.nn.Hardsigmoid(inplace=True)
+            y = m(x)
+        test_case.assertTrue(
+            "RuntimeError: a leaf Tensor that requires grad is being used in an in-place operation"
+            in str(context.exception)
+        )
 
 if __name__ == "__main__":
     unittest.main()
