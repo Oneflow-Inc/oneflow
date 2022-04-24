@@ -90,14 +90,13 @@ Result CustomEvent::ConvertToResult() {
 
 std::string CustomEvent::Key() { return name_; }
 
-std::string ProfileMgr::NewEventRecorder(EventType type, const std::string& name) {
-  auto recorder = std::make_shared<EventRecorder>(type, name);
+std::string ProfileMgr::RegisterEventRecorder(const std::shared_ptr<EventRecorder>& event_recorder,
+                                              const std::string& name) {
   std::string recorder_key = __GetNextEventRecorderKey(name);
-  event_recorders_.emplace(recorder_key, recorder);
+  event_recorders_.emplace(recorder_key, event_recorder);
   return recorder_key;
 }
-
-void ProfileMgr::DeleteEventRecorder(const std::string& event_recorder_key) {
+void ProfileMgr::UnregisterEventRecorder(const std::string& event_recorder_key) {
   if (event_recorders_.find(event_recorder_key) != event_recorders_.end()) {
     event_recorders_.erase(event_recorder_key);
   }
@@ -141,11 +140,18 @@ std::string ProfileMgr::__GetNextEventRecorderKey(const std::string& name) {
   return name + "." + std::to_string(event_recorders_last_id_[name]);
 }
 
-Maybe<void> EventRecorder::RecordShape4KernelEvent(const Shape& shape) {
-  auto event = std::dynamic_pointer_cast<KernelEvent>(event_);
-  CHECK_NOTNULL_OR_RETURN(event) << "Current event is not a KernelEvent.";
-  event->RecordShape(shape);
-  return Maybe<void>::Ok();
+std::shared_ptr<EventRecorder> EventRecorder::CreateCustomEventRecorder(const std::string& name) {
+  return std::make_shared<EventRecorder>(IEvent::Create(EventType::kCustom, name));
+}
+
+std::shared_ptr<EventRecorder> EventRecorder::CreateKernelEventRecorder(
+    const std::string& name, const ShapeGetterFuncType& shape_getter) {
+  auto event = IEvent::Create(EventType::kKernel, name);
+  auto kernel_event = std::dynamic_pointer_cast<KernelEvent>(event);
+  if (shape_getter) {
+    for (const auto& x : shape_getter()) { kernel_event->RecordShape(x); }
+  }
+  return std::make_shared<EventRecorder>(event);
 }
 
 }  // namespace profiler

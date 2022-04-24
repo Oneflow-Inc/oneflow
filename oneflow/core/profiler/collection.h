@@ -17,6 +17,7 @@ limitations under the License.
 #ifndef ONEFLOW_CORE_PROFILER_COLLECTION_H_
 #define ONEFLOW_CORE_PROFILER_COLLECTION_H_
 
+#include <functional>
 #include <memory>
 #include <string>
 #include <queue>
@@ -108,8 +109,10 @@ class ProfileMgr {
  public:
   friend class EventRecorder;
   ProfileMgr() = default;
-  std::string NewEventRecorder(EventType type, const std::string& name);
-  void DeleteEventRecorder(const std::string& event_recorder_key);
+
+  std::string RegisterEventRecorder(const std::shared_ptr<EventRecorder>& event_recorder,
+                                    const std::string& name);
+  void UnregisterEventRecorder(const std::string& event_recorder_key);
   std::string DumpResultsJson();
 
  private:
@@ -124,19 +127,29 @@ class ProfileMgr {
 
 class EventRecorder {
  public:
+  using ShapeGetterFuncType = std::function<std::vector<Shape>(void)>;
+
   OF_DISALLOW_COPY_AND_MOVE(EventRecorder);
 
-  explicit EventRecorder(EventType type, const std::string& name) {
-    event_ = IEvent::Create(type, name);
-    auto pmgr = Global<profiler::ProfileMgr>::Get();
-    if (pmgr) { pmgr->events_.push(event_); }
+  explicit EventRecorder(const std::shared_ptr<IEvent>& event) : event_(event) {
+    RegisterEventToProfileMgr(event);
     event_->Start();
   }
+
+  Maybe<void> RegisterEventToProfileMgr(const std::shared_ptr<IEvent>& event) {
+    auto pmgr = Global<profiler::ProfileMgr>::Get();
+    CHECK_NOTNULL_OR_RETURN(pmgr) << "ProfileMgr has not been initialized.";
+    pmgr->events_.push(event_);
+    return Maybe<void>::Ok();
+  }
+
   ~EventRecorder() {
     event_->Finish();
     event_.reset();
   }
-  Maybe<void> RecordShape4KernelEvent(const Shape& shape);
+  static std::shared_ptr<EventRecorder> CreateCustomEventRecorder(const std::string& name);
+  static std::shared_ptr<EventRecorder> CreateKernelEventRecorder(
+      const std::string& name, const ShapeGetterFuncType& shape_getter = {});
 
  private:
   std::shared_ptr<IEvent> event_;
