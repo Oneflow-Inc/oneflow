@@ -424,6 +424,7 @@ class TestTensorIndexing(flow.unittest.TestCase):
 
 @unittest.skipIf(os.getenv("ONEFLOW_TEST_CPU_ONLY"), "only test cpu cases")
 class TestTensorIndexingMultiGpu(flow.unittest.TestCase):
+    @flow.unittest.skip_unless_1n2d()
     def test_indecies_on_different_devices(test_case):
         x = flow.ones(3, 10, device=flow.device("cuda:0"))
         idx = [flow.tensor([1, 2], device=flow.device("cuda:1")), flow.tensor([2, 0])]
