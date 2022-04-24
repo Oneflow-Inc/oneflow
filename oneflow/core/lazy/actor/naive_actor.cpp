@@ -26,6 +26,7 @@ void NaiveActor::VirtualActorInit(const TaskProto&) {
 }
 
 REGISTER_ACTOR(TaskType::kNormalForward, NaiveActor);
+REGISTER_ACTOR(TaskType::kBuffer, NaiveActor);
 REGISTER_ACTOR(TaskType::kForeignInput, NaiveActor);
 REGISTER_ACTOR(TaskType::kForeignOutput, NaiveActor);
 REGISTER_ACTOR(TaskType::kDistributeConcat, NaiveActor);
