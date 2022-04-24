@@ -163,6 +163,8 @@ OneFlow Tensor Class
             tanh, 
             tile, 
             to,
+            local_to_global,
+            global_to_global,
             to_global,
             to_local,
             to_consistent,
