@@ -855,6 +855,13 @@ add_docstr(
 )
 
 add_docstr(
+    oneflow.Tensor.amax,
+    """
+    See :func:`oneflow.amax`
+    """,
+)
+
+add_docstr(
     oneflow.Tensor.swapdims,
     """
     See :func:`oneflow.swapdims`
