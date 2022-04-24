@@ -223,13 +223,13 @@ class GluFunctor {
  public:
   GluFunctor() {}
   Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& input, int64_t dim) const {
-    auto ndim = input->ndim();
+    const auto ndim = input->ndim();
     CHECK_GT_OR_RETURN(ndim, 0)
         << Error::RuntimeError()
         << "RuntimeError: glu does not support scalars because halving size must be even";
     CHECK_OR_RETURN(dim >= -ndim && dim < ndim)
-        << ", Dimension out of range (expected to be in range of [" << -ndim << ", " << ndim - 1
-        << "], but got " << dim << ")";
+        << "IndexError: Dimension out of range (expected to be in range of [" << -ndim << ", "
+        << ndim - 1 << "], but got " << dim << ")";
     if (dim < 0) { dim += ndim; }
     int64_t nc = input->dim(dim);
     CHECK_EQ_OR_RETURN(nc % 2, 0) << "Halving dimension must be even, but dimension " << dim

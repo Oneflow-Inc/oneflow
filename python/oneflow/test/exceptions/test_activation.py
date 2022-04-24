@@ -66,6 +66,16 @@ class TestActivationError(flow.unittest.TestCase):
             in str(context.exception)
         )
 
+    def test_glu_dim_index_error(test_case):
+        with test_case.assertRaises(Exception) as context:
+            x = flow.randn(2, 3)
+            m = flow.nn.GLU(dim=3)
+            y = m(x)
+        test_case.assertTrue(
+            "IndexError: Dimension out of range (expected to be in range of [-2, 1], but got 3)"
+            in str(context.exception)
+        )
+
 
 if __name__ == "__main__":
     unittest.main()
