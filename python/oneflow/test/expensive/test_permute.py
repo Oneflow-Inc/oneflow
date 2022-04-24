@@ -137,7 +137,6 @@ class TestPermute(flow.unittest.TestCase):
             dim0=random(1, 18).to(int),
             dim1=random(1, 78).to(int),
             dim2=random(1, 99).to(int),
-            dim3=random(1, 98).to(int),
         ).to(device)
         y = x.permute(permute_list)
         return y
