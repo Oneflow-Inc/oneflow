@@ -71,10 +71,6 @@ def _backward(self, gradient=None, retain_graph=False, create_graph=False):
         flow._oneflow_internal.nn.graph.AddTensorAsGraphLoss(self)
 
 
-def _getitem(self, key):
-    return flow._C.tensor_getitem(self, key)
-
-
 def _setitem(self, key, value):
     if self.is_global:
         if isinstance(value, (int, float)):
@@ -715,12 +711,6 @@ def _any(self, dim=None, keepdim=False):
     return flow.any(self, dim, keepdim)
 
 
-def _len(self):
-    if self.dim() == 0:
-        raise TypeError("len() of a 0-d tensor")
-    return self.shape[0]
-
-
 def _uniform(self, a=0, b=1):
     if isinstance(a, Tensor):
         assert a.ndim == 0 and a.nelement() == 1, "a must be a number or scalar tensor!"
@@ -1053,10 +1043,6 @@ def _numpy(self):
     return self.to_numpy()
 
 
-def _zero_(self):
-    return self.zeros_()
-
-
 def zero_(self):
     self.zero_()
     return self
@@ -1126,7 +1112,6 @@ def RegisterMethods():
     Tensor.numel = _numel
     Tensor.element_size = _element_size
     Tensor.backward = _backward
-    Tensor.__getitem__ = _getitem
     Tensor.__setitem__ = _setitem
     Tensor.__str__ = _str
     Tensor.__repr__ = _repr
@@ -1155,7 +1140,6 @@ def RegisterMethods():
     Tensor.__rpow__ = _rpow
     Tensor.__format__ = _format
     Tensor.__floordiv__ = _floor_divide
-    Tensor.__len__ = _len
     Tensor.__mod__ = _fmod
     Tensor.__index__ = _index
     Tensor.__invert__ = _invert
@@ -1326,7 +1310,6 @@ def RegisterMethods():
     Tensor.prod = _prod
     Tensor.sin = _sin
     Tensor.sin_ = _sin_inplace
-    Tensor.zero_ = _zero_
     Tensor.is_consistent = _is_consistent
     Tensor.to_consistent = _to_consistent
     Tensor.isnan = _isnan
