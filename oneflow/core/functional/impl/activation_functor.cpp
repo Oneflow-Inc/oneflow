@@ -71,8 +71,7 @@ class PReluFunctor {
                            const std::shared_ptr<Tensor>& alpha) const {
     int num_params = alpha->dim(0);
     CHECK_OR_RETURN(((num_params == 1) || (num_params == x->shape()->At(1))))
-        << Error::RuntimeError() << "RuntimeError: num_parameters in prelu must be 1 or "
-        << x->shape()->At(1);
+        << Error::RuntimeError() << "num_parameters in prelu must be 1 or " << x->shape()->At(1);
     return OpInterpUtil::Dispatch<Tensor>(*op_, {x, alpha});
   }
 
@@ -225,17 +224,16 @@ class GluFunctor {
   GluFunctor() {}
   Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& input, int64_t dim) const {
     const auto ndim = input->ndim();
-    CHECK_GT_OR_RETURN(ndim, 0)
-        << Error::RuntimeError()
-        << "RuntimeError: glu does not support scalars because halving size must be even";
+    CHECK_GT_OR_RETURN(ndim, 0) << Error::RuntimeError()
+                                << "glu does not support scalars because halving size must be even";
     CHECK_OR_RETURN(dim >= -ndim && dim < ndim)
-        << Error::IndexError() << "IndexError: Dimension out of range (expected to be in range of ["
-        << -ndim << ", " << ndim - 1 << "], but got " << dim << ")";
+        << Error::IndexError() << "Dimension out of range (expected to be in range of [" << -ndim
+        << ", " << ndim - 1 << "], but got " << dim << ")";
     if (dim < 0) { dim += ndim; }
     int64_t nc = input->dim(dim);
     CHECK_EQ_OR_RETURN(nc % 2, 0) << Error::RuntimeError()
-                                  << "RuntimeError: Halving dimension must be even, but dimension "
-                                  << dim << " is size " << nc;
+                                  << "Halving dimension must be even, but dimension " << dim
+                                  << " is size " << nc;
     nc = nc / 2;
     std::vector<int64_t> split_sizes(2, nc);
     const auto split_x = JUST(SplitWithSize(input, split_sizes, dim));
@@ -335,7 +333,7 @@ class SoftmaxFunctorBase {
     if (dim_ < 0) { dim_ += num_axes; }
 
     CHECK_OR_RETURN(dim_ >= -num_axes && dim_ < num_axes)
-        << Error::IndexError() << "IndexError: Dimension out of range (expected to be in range of ["
+        << Error::IndexError() << "Dimension out of range (expected to be in range of ["
         << -num_axes << ", " << num_axes - 1 << "], but got " << dim_ << ")";
 
     if (dim_ != num_axes - 1) {
@@ -530,9 +528,9 @@ class SoftShrinkFunctor {
   Maybe<Tensor> operator()(const std::shared_ptr<Tensor>& x, const double& alpha,
                            bool inplace) const {
     MutableAttrMap attrs;
-    CHECK_GE_OR_RETURN(alpha, 0)
-        << Error::RuntimeError()
-        << "RuntimeError: alpha must be greater or equal to 0, but found to be " << alpha << ".";
+    CHECK_GE_OR_RETURN(alpha, 0) << Error::RuntimeError()
+                                 << "alpha must be greater or equal to 0, but found to be " << alpha
+                                 << ".";
     JUST(attrs.SetAttr<double>("alpha", alpha));
     if (inplace) {
       JUST(CheckInplaceValid(x));

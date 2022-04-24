@@ -31,7 +31,7 @@ class TestActivationError(flow.unittest.TestCase):
             x = flow.ones((4, 4), dtype=flow.float32, requires_grad=True)
             x.relu_()
         test_case.assertTrue(
-            "RuntimeError: a leaf Tensor that requires grad is being used in an in-place operation"
+            "a leaf Tensor that requires grad is being used in an in-place operation"
             in str(context.exception)
         )
 
@@ -41,7 +41,7 @@ class TestActivationError(flow.unittest.TestCase):
             m = flow.nn.PReLU(5)
             y = m(x)
         test_case.assertTrue(
-            "RuntimeError: num_parameters in prelu must be 1 or 4"
+            "num_parameters in prelu must be 1 or 4"
             in str(context.exception)
         )
 
@@ -51,7 +51,7 @@ class TestActivationError(flow.unittest.TestCase):
             m = flow.nn.CELU(alpha=1.0, inplace=True)
             y = m(x)
         test_case.assertTrue(
-            "RuntimeError: a leaf Tensor that requires grad is being used in an in-place operation"
+            "a leaf Tensor that requires grad is being used in an in-place operation"
             in str(context.exception)
         )
 
@@ -61,7 +61,7 @@ class TestActivationError(flow.unittest.TestCase):
             m = flow.nn.GLU()
             y = m(x)
         test_case.assertTrue(
-            "RuntimeError: glu does not support scalars because halving size must be even"
+            "glu does not support scalars because halving size must be even"
             in str(context.exception)
         )
 
@@ -71,7 +71,7 @@ class TestActivationError(flow.unittest.TestCase):
             m = flow.nn.GLU(dim=3)
             y = m(x)
         test_case.assertTrue(
-            "IndexError: Dimension out of range (expected to be in range of [-2, 1], but got 3)"
+            "Dimension out of range (expected to be in range of [-2, 1], but got 3)"
             in str(context.exception)
         )
 
@@ -81,7 +81,7 @@ class TestActivationError(flow.unittest.TestCase):
             m = flow.nn.GLU()
             y = m(x)
         test_case.assertTrue(
-            "RuntimeError: Halving dimension must be even, but dimension 1 is size 3"
+            "Halving dimension must be even, but dimension 1 is size 3"
             in str(context.exception)
         )
 
@@ -92,7 +92,7 @@ class TestActivationError(flow.unittest.TestCase):
             m = flow.nn.Hardsigmoid(inplace=True)
             y = m(x)
         test_case.assertTrue(
-            "RuntimeError: a leaf Tensor that requires grad is being used in an in-place operation"
+            "a leaf Tensor that requires grad is being used in an in-place operation"
             in str(context.exception)
         )
 
@@ -103,7 +103,7 @@ class TestActivationError(flow.unittest.TestCase):
             m = flow.nn.Hardshrink(inplace=True)
             y = m(x)
         test_case.assertTrue(
-            "RuntimeError: a leaf Tensor that requires grad is being used in an in-place operation"
+            "a leaf Tensor that requires grad is being used in an in-place operation"
             in str(context.exception)
         )
 
@@ -113,7 +113,7 @@ class TestActivationError(flow.unittest.TestCase):
             m = flow.nn.Softmax(dim=2)
             y = m(x)
         test_case.assertTrue(
-            "IndexError: Dimension out of range (expected to be in range of [-2, 1], but got 2)"
+            "Dimension out of range (expected to be in range of [-2, 1], but got 2)"
             in str(context.exception)
         )
 
@@ -124,7 +124,7 @@ class TestActivationError(flow.unittest.TestCase):
             m = flow.nn.Softshrink(inplace=True)
             y = m(x)
         test_case.assertTrue(
-            "RuntimeError: a leaf Tensor that requires grad is being used in an in-place operation"
+            "a leaf Tensor that requires grad is being used in an in-place operation"
             in str(context.exception)
         )
 
@@ -135,7 +135,7 @@ class TestActivationError(flow.unittest.TestCase):
             m = flow.nn.Softshrink(-0.1)
             y = m(x)
         test_case.assertTrue(
-            "RuntimeError: alpha must be greater or equal to 0, but found to be -0.1."
+            "alpha must be greater or equal to 0, but found to be -0.1."
             in str(context.exception)
         )
 
