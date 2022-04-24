@@ -65,7 +65,7 @@ def BroadcastMulToScalarMulPattern : Pat<
 def GetFirstValue :
   NativeCodeCall<"*$0.begin()">;
 
-def IsGPU: Constraint<CPred<"$0.getValue().equals(\"gpu\")">, "is GPU device">;
+def IsGPU: Constraint<CPred<"$0.getValue().equals(\"cuda\")">, "is GPU device">;
 
 def FusedScaleTrilPattern : Pat<
   (
@@ -364,6 +364,25 @@ def ReplaceCopyWithGPUPattern : Pat<
     CreateGPUMemcpyOpFromMemrefCopy $results
   ),
   [(IsArg $dst)]
+>;
+
+def IsSameDtype : Constraint<CPred<"mlir::oneflow::IsSameDtype($0, $1)">>;
+
+def DeleteSameDtypeCastOpPattern : Pat<
+  (
+    OneFlow_CastOp : $res
+     $x,
+     $cast_op_name,
+     $cast_device_tag, 
+     $cast_device_name, 
+     $cast_scope_symbol_id,
+     $cast_hierarchy,
+     $dtype
+  ),
+  (
+    replaceWithValue $x
+  ),
+  [(IsSameDtype $res, $x)]
 >;
 
 #endif // ONEFLOW_PATTERNS

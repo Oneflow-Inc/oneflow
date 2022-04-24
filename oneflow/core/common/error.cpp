@@ -13,11 +13,13 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
+#include <stdexcept>
 #include "oneflow/core/common/error.h"
 #include "oneflow/core/common/exception.h"
 #include "oneflow/core/common/protobuf.h"
 #include "oneflow/core/common/util.h"
 #include "oneflow/core/common/error_util.h"
+#include "oneflow/core/common/env_var/debug_mode.h"
 
 namespace oneflow {
 
@@ -297,22 +299,27 @@ Error Error::InputDeviceNotMatchError() {
   return error;
 }
 
-void ThrowError(const std::shared_ptr<cfg::ErrorProto>& error) {
+std::string GetStackedErrorString(const std::shared_ptr<cfg::ErrorProto>& error) {
   const auto& maybe_error = TRY(FormatErrorStr(error));
   const auto& error_str = maybe_error.GetDataAndErrorProto(error->DebugString());
-
-  *MutThreadLocalError() = error;
   CHECK_NE(error->error_type_case(), cfg::ErrorProto::ERROR_TYPE_NOT_SET);
-  switch (error->error_type_case()) {
-#define MAKE_ENTRY(cls)                                      \
-  case cfg::ErrorProto::OF_PP_CAT(k, OF_PP_CAT(cls, Error)): \
-    throw OF_PP_CAT(cls, Exception)(error_str.first);
+  return error_str.first;
+}
 
-    OF_PP_FOR_EACH_TUPLE(MAKE_ENTRY, EXCEPTION_SEQ)
-
-#undef MAKE_ENTRY
-    default: UNIMPLEMENTED();
+std::string GetErrorString(const std::shared_ptr<cfg::ErrorProto>& error) {
+  if (IsInDebugMode()) {
+    return GetStackedErrorString(error);
+  } else {
+    return error->msg();
   }
+}
+
+void ThrowError(const std::shared_ptr<cfg::ErrorProto>& error) {
+  *MutThreadLocalError() = error;
+  if (error->has_runtime_error()) { throw RuntimeException(GetErrorString(error)); }
+  if (error->has_index_error()) { throw IndexException(GetErrorString(error)); }
+  if (error->has_unimplemented_error()) { throw NotImplementedException(GetErrorString(error)); }
+  throw Exception(GetStackedErrorString(error));
 }
 
 const std::shared_ptr<cfg::ErrorProto>& ThreadLocalError() { return *MutThreadLocalError(); }

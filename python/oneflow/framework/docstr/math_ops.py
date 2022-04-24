@@ -1379,6 +1379,45 @@ add_docstr(
 )
 
 add_docstr(
+    oneflow.addcmul,
+    r"""
+    oneflow.addcmul(input, tensor1, tensor2, *, value=1) -> Tensor
+
+    Performs the element-wise multiplication of tensor1 by tensor2, multiply the result
+    by the scalar value and add it to input.
+    The documentation is referenced from:
+    https://pytorch.org/docs/stable/generated/torch.addcmul.html
+    
+    .. math::
+        \text{out}_i = \text{input}_i + value \times\  \text{tensor1}_i \times\ \text{tensor2}_i
+        
+    Args:
+        input (Tensor): the tensor to be added.
+        tensor1 (Tensor): the tensor to be multiplied.
+        tensor2 (Tensor): the tensor to be multiplied.
+    
+    Keyword args:
+        value (Number, optional): multiplier for :math:`tensor1 * tensor2`.
+
+    Returns:
+        oneflow.Tensor: the output Tensor.
+
+    For example:
+
+    .. code-block:: python
+
+        >>> import oneflow as flow
+        
+        >>> input = flow.rand(2, 3, 4)
+        >>> tensor1 = flow.rand(2, 3, 4)
+        >>> tensor2 = flow.rand(2, 3, 4)
+        >>> out = flow.addcmul(input, tensor1, tensor2, value=2)
+        >>> out.size()
+        oneflow.Size([2, 3, 4])
+    """,
+)
+
+add_docstr(
     oneflow.eye,
     """oneflow.eye(n, m, *, device=None, requires_grad=False, placement=None, sbp) -> Tensor
 
@@ -1460,9 +1499,9 @@ add_docstr(
     r"""
     Splits input, a tensor with one or more dimensions, into multiple tensors horizontally according to indices_or_sections.
     Each split is a view of input.
-    If input is one dimensional this is equivalent to calling torch.tensor_split(input, indices_or_sections, dim=0) 
+    If input is one dimensional this is equivalent to calling oneflow.tensor_split(input, indices_or_sections, dim=0) 
     (the split dimension is zero), and if input has two or more dimensions it’s equivalent to calling 
-    torch.tensor_split(input, indices_or_sections, dim=1) (the split dimension is 1), except that if indices_or_sections
+    oneflow.tensor_split(input, indices_or_sections, dim=1) (the split dimension is 1), except that if indices_or_sections
     is an integer it must evenly divide the split dimension or a runtime error will be thrown.
     The documentation is referenced from:
     https://pytorch.org/docs/stable/generated/torch.hsplit.html#torch.hsplit
@@ -1503,7 +1542,7 @@ add_docstr(
     r"""
     Splits input, a tensor with two or more dimensions, into multiple tensors vertically according to indices_or_sections.
     Each split is a view of input.
-    This is equivalent to calling torch.tensor_split(input, indices_or_sections, dim=0) (the split dimension is 0),
+    This is equivalent to calling oneflow.tensor_split(input, indices_or_sections, dim=0) (the split dimension is 0),
     except that if indices_or_sections is an integer it must evenly divide the split dimension or a runtime error will be thrown.
     The documentation is referenced from:
     https://pytorch.org/docs/stable/generated/torch.vsplit.html#torch.vsplit

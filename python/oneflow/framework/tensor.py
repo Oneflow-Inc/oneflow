@@ -14,7 +14,6 @@ See the License for the specific language governing permissions and
 limitations under the License.
 """
 import oneflow as flow
-from oneflow._oneflow_internal.exception import IndexException
 import oneflow.framework.tensor_str as tensor_str
 import oneflow.ops.initializer_util as initializer_util
 import oneflow._oneflow_internal.lazy_mode as lazy_mode
@@ -22,7 +21,6 @@ import oneflow.core.framework.variable_meta_info_pb2 as variable_meta_info_pb
 
 import numpy as np
 from typing import Union
-
 
 Tensor = flow._oneflow_internal.Tensor
 TensorTuple = flow._oneflow_internal.TensorTuple
@@ -74,12 +72,7 @@ def _backward(self, gradient=None, retain_graph=False, create_graph=False):
 
 
 def _getitem(self, key):
-    try:
-        return flow._C.tensor_getitem(self, key)
-    except IndexException as e:
-        # The stop condition of for in python is IndexError,
-        # so we have to catch IndexException from C++ and throw IndexError
-        raise IndexError(e)
+    return flow._C.tensor_getitem(self, key)
 
 
 def _setitem(self, key, value):
@@ -125,7 +118,12 @@ def _meta_repr(self):
 
 
 def _eq(self, other):
-    return flow._C.equal(self, other)
+    if self is None and other is None:
+        return True
+    elif self is None or other is None:
+        return False
+    else:
+        return flow._C.equal(self, other)
 
 
 def _ne(self, other):
@@ -155,7 +153,7 @@ def _cpu(self):
 def _cuda(self, device: Union[int, str, flow.device] = None):
     if device is None:
         device = "cuda"
-    elif device is isinstance(int):
+    elif isinstance(device, int):
         device = "cuda:" + str(device)
     return self.to(device=device)
 
@@ -391,6 +389,10 @@ def _swapaxes(self, dim0, dim1):
     return flow._C.swapaxes(self, dim0, dim1)
 
 
+def _swapdims(self, dim0, dim1):
+    return flow._C.swapdims(self, dim0, dim1)
+
+
 def _cast(self, dtype):
     return flow.cast(self, dtype)
 
@@ -405,6 +407,10 @@ def _diagonal(self, offset=0, dim1=0, dim2=1):
 
 def _log1p(self):
     return flow.log1p(self)
+
+
+def _log2(self):
+    return flow._C.log2(self)
 
 
 def _reciprocal(self):
@@ -467,6 +473,14 @@ def _cosh(self):
     return flow.cosh(self)
 
 
+def _addcmul(self, tensor1, tensor2, *, value=1):
+    return flow._C.addcmul(self, tensor1, tensor2, value=value)
+
+
+def _addcmul_(self, tensor1, tensor2, *, value=1):
+    return flow._C.addcmul_(self, tensor1, tensor2, value=value)
+
+
 def _erf(self):
     return flow.erf(self)
 
@@ -491,6 +505,10 @@ def _fmod(self, other):
     return flow.fmod(self, other)
 
 
+def _half(self):
+    return flow._C.to(self, flow.float16)
+
+
 def _index(self):
     assert self.numel() == 1 and self.dtype in (
         flow.uint8,
@@ -500,6 +518,28 @@ def _index(self):
         flow.bool,
     ), "Only integer tensors of a single element can be converted to an index"
     return self.numpy().item()
+
+
+def _invert(self):
+    if self.dtype != flow.bool:
+        raise TypeError(
+            "~ (operator.invert) is only implemented on integer and Boolean-type tensors"
+        )
+    return flow._C.logical_not(self)
+
+
+def _scalar_float(self):
+    assert (
+        self.numel() == 1
+    ), "only one element tensors can be converted to Python scalars"
+    return self.numpy().astype(np.float64).item()
+
+
+def _scalar_int(self):
+    assert (
+        self.numel() == 1
+    ), "only one element tensors can be converted to Python scalars"
+    return self.numpy().astype(np.int64).item()
 
 
 def _flatten(self, start_dim: int = 0, end_dim: int = -1):
@@ -541,6 +581,12 @@ def _new_ones(
     requires_grad=False,
 ):
     return flow.new_ones(self, size, dtype, device, placement, sbp, requires_grad)
+
+
+def _new_zeros(
+    self, *size, dtype=None, device=None, placement=None, sbp=None, requires_grad=False,
+):
+    return flow.new_zeros(self, size, dtype, device, placement, sbp, requires_grad)
 
 
 def _rsqrt(self):
@@ -651,6 +697,10 @@ def _chunk(self, chunks=None, dim=None):
 
 def _split(self, split_size_or_sections=None, dim=0):
     return flow._C.split(self, split_size_or_sections, dim)
+
+
+def _unbind(self, dim=0):
+    return flow._C.unbind(self, dim)
 
 
 def _all(self, dim=None, keepdim=False):
@@ -816,7 +866,17 @@ def _format(self, format_spec):
 
 
 def _to(self, *args, **kwargs):
-    return flow._C.to(self, *args, **kwargs)
+    new_args = list()
+    # If device is single int, replace it with flow.device("cuda:{device}")
+    if len(args) > 0 and isinstance(args[0], int):
+        new_args.append(flow.device(f"cuda:{args[0]}"))
+        for i in range(1, len(args)):
+            new_args.append(args[i])
+    else:
+        new_args = args
+    if ("device" in kwargs) and isinstance(kwargs["device"], int):
+        kwargs["device"] = flow.device(f"cuda:{kwargs['device']}")
+    return flow._C.to(self, *new_args, **kwargs)
 
 
 def _to_global(self, placement=None, sbp=None, grad_sbp=None):
@@ -915,6 +975,10 @@ def _reshape(self, *shape):
     return flow._C.reshape(self, new_shape)
 
 
+def _reshape_as(self, other):
+    return _reshape(self, other.size())
+
+
 def _view(self, *shape):
     if len(shape) == 1:
         new_shape = shape[0]
@@ -992,6 +1056,47 @@ def _to_consistent(self, *args, **kwargs):
     raise RuntimeError(".to_consistent has been removed, please use .to_global instead")
 
 
+def _isnan(self):
+    return flow.isnan(self)
+
+
+def _isinf(self):
+    return flow.isinf(self)
+
+
+def _new_tensor(
+    self, data, dtype=None, device=None, requires_grad=False, placement=None, sbp=None
+):
+    if dtype is None:
+        dtype = self.dtype
+    if self.is_local:
+        assert (
+            placement is None and sbp is None
+        ), "self is local tensor, placement and sbp are expected to be None."
+        if device is None:
+            device = self.device
+        return flow.tensor(
+            data, dtype=dtype, device=device, requires_grad=requires_grad
+        )
+    else:
+        assert device is None, "self is global tensor, device is expected to be None."
+        if placement is None:
+            placement = self.placement
+        if sbp is None:
+            sbp = self.sbp
+        return flow.tensor(
+            data, dtype=dtype, placement=placement, sbp=sbp, requires_grad=requires_grad
+        )
+
+
+def _cumsum(self, dim, dtype=None):
+    return flow._C.cumsum(self, dim, dtype=dtype)
+
+
+def _cumprod(self, dim, dtype=None):
+    return flow._C.cumprod(self, dim, dtype=dtype)
+
+
 def RegisterMethods():
     Tensor.__mul__ = lambda self, other: self.mul(other)
     Tensor.__rmul__ = lambda self, other: self.mul(other)
@@ -1039,6 +1144,10 @@ def RegisterMethods():
     Tensor.__len__ = _len
     Tensor.__mod__ = _fmod
     Tensor.__index__ = _index
+    Tensor.__invert__ = _invert
+    Tensor.__float__ = _scalar_float
+    Tensor.__int__ = _scalar_int
+    Tensor.__array__ = _numpy
     Tensor.uniform_ = _uniform
     Tensor.trunc_normal_ = _trunc_normal_
     Tensor.kaiming_uniform_ = _kaiming_uniform
@@ -1084,8 +1193,11 @@ def RegisterMethods():
     Tensor.diag = _diag
     Tensor.diagonal = _diagonal
     Tensor.log1p = _log1p
+    Tensor.log2 = _log2
     Tensor.add = _add
     Tensor.add_ = _add_inplace
+    Tensor.addcmul = _addcmul
+    Tensor.addcmul_ = _addcmul_
     Tensor.div = _truediv
     Tensor.div_ = _truediv_inplace
     Tensor.mul = _mul
@@ -1124,6 +1236,7 @@ def RegisterMethods():
     Tensor.minimum = _minimum
     Tensor.maximum = _maximum
     Tensor.new_ones = _new_ones
+    Tensor.new_zeros = _new_zeros
     Tensor.pow = _pow
     Tensor.rsqrt = _rsqrt
     Tensor.sqrt = _sqrt
@@ -1152,13 +1265,16 @@ def RegisterMethods():
     Tensor.repeat = _repeat
     Tensor.tile = _tile
     Tensor.split = _split
+    Tensor.unbind = _unbind
     Tensor.squeeze = _squeeze
     Tensor.swapaxes = _swapaxes
+    Tensor.swapdims = _swapdims
     Tensor.unfold = _unfold
     Tensor.narrow = _narrow
     Tensor.unsqueeze = _unsqueeze
     Tensor.permute = _permute
     Tensor.to = _to
+    Tensor.half = _half
     Tensor.gather = _gather
     Tensor.all = _all
     Tensor.any = _any
@@ -1173,6 +1289,7 @@ def RegisterMethods():
     Tensor.le = _le
     Tensor.to_local = _to_local
     Tensor.reshape = _reshape
+    Tensor.reshape_as = _reshape_as
     Tensor.view = _view
     Tensor.sort = _sort
     Tensor.type_as = _type_as
@@ -1195,6 +1312,11 @@ def RegisterMethods():
     Tensor.zero_ = _zero_
     Tensor.is_consistent = _is_consistent
     Tensor.to_consistent = _to_consistent
+    Tensor.isnan = _isnan
+    Tensor.isinf = _isinf
+    Tensor.new_tensor = _new_tensor
+    Tensor.cumsum = _cumsum
+    Tensor.cumprod = _cumprod
 
 
 def register_tensor_op(op_name):
