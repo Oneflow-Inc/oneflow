@@ -118,6 +118,27 @@ class TestActivationError(flow.unittest.TestCase):
             in str(context.exception)
         )
 
+    def test_soft_shrink_inplace_runtime_error(test_case):
+        with test_case.assertRaises(Exception) as context:
+            x = flow.randn(2)
+            x.requires_grad = True
+            m = flow.nn.Softshrink(inplace=True)
+            y = m(x)
+        test_case.assertTrue(
+            "RuntimeError: a leaf Tensor that requires grad is being used in an in-place operation"
+            in str(context.exception)
+        )
+    
+    def test_soft_shrink_alpha_runtime_error(test_case):
+        with test_case.assertRaises(Exception) as context:
+            x = flow.randn(2)
+            x.requires_grad = True
+            m = flow.nn.Softshrink(-0.1)
+            y = m(x)
+        test_case.assertTrue(
+            "RuntimeError: alpha must be greater or equal to 0, but found to be -0.1."
+            in str(context.exception)
+        )
 
 if __name__ == "__main__":
     unittest.main()

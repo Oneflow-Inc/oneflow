@@ -14,6 +14,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 #include "oneflow/core/common/container_util.h"
+#include "oneflow/core/common/error.h"
 #include "oneflow/core/common/scalar.h"
 #include "oneflow/core/functional/functional.h"
 #include "oneflow/core/functional/impl/unary_functor.h"
@@ -529,7 +530,9 @@ class SoftShrinkFunctor {
   Maybe<Tensor> operator()(const std::shared_ptr<Tensor>& x, const double& alpha,
                            bool inplace) const {
     MutableAttrMap attrs;
-    CHECK_GT_OR_RETURN(alpha, 0) << "alpha must be greater than 0";
+    CHECK_GE_OR_RETURN(alpha, 0)
+        << Error::RuntimeError()
+        << "RuntimeError: alpha must be greater or equal to 0, but found to be " << alpha << ".";
     JUST(attrs.SetAttr<double>("alpha", alpha));
     if (inplace) {
       JUST(CheckInplaceValid(x));
