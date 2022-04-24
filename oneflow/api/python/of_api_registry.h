@@ -20,6 +20,7 @@ limitations under the License.
 #include <vector>
 #include <functional>
 #include "oneflow/api/python/caster/maybe.h"
+#include "oneflow/api/python/caster/tensor.h"
 #include "oneflow/api/python/caster/optional.h"
 #include "oneflow/core/common/preprocessor.h"
 
