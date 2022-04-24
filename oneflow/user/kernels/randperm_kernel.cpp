@@ -45,8 +45,8 @@ class CpuRandPermKernel final : public user_op::OpKernel {
   std::shared_ptr<user_op::OpKernelCache> InitOpKernelCache(
       user_op::KernelCacheContext* ctx) const override {
     int64_t parallel_num = ctx->parallel_ctx().parallel_num();
-    const NdSbp& nd_sbp = ctx->NdSbp4ArgNameAndIndex("out", 0);
     if (parallel_num > 1) {
+      const NdSbp& nd_sbp = ctx->NdSbp4ArgNameAndIndex("out", 0);
       const Shape& hierarchy = *ctx->parallel_desc().hierarchy();
       int64_t parallel_id = ctx->parallel_ctx().parallel_id();
       int32_t n = ctx->Attr<int32_t>("n");
