@@ -628,6 +628,17 @@ class Module(object):
         """
         return self._apply(lambda t: t.double() if t.is_floating_point() else t)
 
+    def half(self: T) -> T:
+        r"""Casts all floating point parameters and buffers to ``half`` datatype.
+
+        .. note::
+            This method modifies the module in-place.
+
+        Returns:
+            Module: self
+        """
+        return self._apply(lambda t: t.half() if t.is_floating_point() else t)
+
     def _get_name(self):
         return self.__class__.__name__
 
