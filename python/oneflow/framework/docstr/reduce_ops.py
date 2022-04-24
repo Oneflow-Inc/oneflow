@@ -18,7 +18,10 @@ from oneflow.framework.docstr.utils import add_docstr
 
 add_docstr(
     oneflow.max,
-    """Computes the maximum value of all elements in the input tensor.
+    """
+    oneflow.max(input, dim=None, keepdim=False)
+
+    Computes the maximum value of all elements in the input tensor.
     
     Args:
         input (oneflow.Tensor): the Input Tensor
@@ -50,7 +53,10 @@ add_docstr(
 
 add_docstr(
     oneflow.min,
-    """Computes the minimum value of all elements in the input tensor.
+    """
+    oneflow.min(input, dim=None, keepdim=False)
+    
+    Computes the minimum value of all elements in the input tensor.
     
     Args:
         input (oneflow.Tensor): the Input Tensor
@@ -82,8 +88,22 @@ add_docstr(
 
 add_docstr(
     oneflow.sum,
-    """Computes the sum of row of elements in a tensor in the given axis, if the axis is None, sum of all elements will be caculated.
+    """
+    oneflow.sum(input) -> Tensor
+
+    Computes the sum of row of elements in a tensor in the given axis, if the axis is None, sum of all elements will be caculated.
     
+    Args:
+        input (oneflow.Tensor): the Input Tensor
+        dim (int or tuple of ints): the dimension to reduce. Default: `None`
+        keepdim (bool, optional): whether the output tensor has dim retained or not. Default: `False`
+
+    Returns:
+        Tensor or Tuple(oneflow.Tensor, oneflow.Tensor(dtype=int64)): If :attr:`dim` is `None`, returns 
+        the minimum value of all elements in the `input` tensor. Otherwise, returns a tuple of Tensor (values, indices), 
+        where the `values` are the minimum value of all elements in the `input` tensor,
+        the `indices` are the indices of the elements in the original input tensor.
+
     For example:
 
     .. code-block:: python
