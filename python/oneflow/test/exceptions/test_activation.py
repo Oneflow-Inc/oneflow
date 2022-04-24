@@ -80,7 +80,6 @@ class TestActivationError(flow.unittest.TestCase):
             x = flow.randn(2, 3)
             m = flow.nn.GLU()
             y = m(x)
-        print(str(context.exception))
         test_case.assertTrue(
             "RuntimeError: Halving dimension must be even, but dimension 1 is size 3"
             in str(context.exception)
