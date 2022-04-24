@@ -2120,7 +2120,8 @@ class CumBaseFunctor {
   explicit CumBaseFunctor(std::string op_name) {
     op_ = CHECK_JUST(one::OpBuilder(op_name).Input("x").Output("y").Build());
   }
-  Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& input, int64_t dim) const {
+  Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& input, int64_t dim,
+                           const Optional<Symbol<DType>>& dtype) const {
     auto ndim = input->ndim();
     if (dim < 0) { dim += ndim; }
     CHECK_OR_RETURN(dim >= 0 && dim < ndim)
@@ -2130,7 +2131,11 @@ class CumBaseFunctor {
     MutableAttrMap attrs;
     JUST(attrs.SetAttr<int64_t>("dim", dim));
     TensorProcessor tensor_processor;
-    JUST(tensor_processor.AddInputs({input}, DType::Int64()).Apply());
+    if (dtype) {
+      JUST(tensor_processor.AddInputs({input}, JUST(dtype)).Apply());
+    } else {
+      JUST(tensor_processor.AddInputs({input}, DType::Int64()).Apply());
+    }
     TensorTuple input_tuple = JUST(tensor_processor.GetInputs());
     return OpInterpUtil::Dispatch<Tensor>(*op_, input_tuple, attrs);
   }
@@ -2802,8 +2807,8 @@ ONEFLOW_FUNCTION_LIBRARY(m) {
   m.add_functor<CastFunctor>("Cast");
   m.add_functor<ClampFunctor>("Clamp");
   m.add_functor<ClampInplaceFunctor>("ClampInplace");
-  m.add_functor<ClampFunctor>("Clip");
-  m.add_functor<ClampInplaceFunctor>("ClipInplace");
+  m.add_functor<ClipFunctor>("Clip");
+  m.add_functor<ClipInplaceFunctor>("ClipInplace");
   m.add_functor<SqrtSquareSumFunctor>("SqrtSquareSum");
   m.add_functor<VectorNormFunctor, ScalarVectorNormFunctor>("VectorNorm");
   m.add_functor<ScalarMatrixNormFunctor, MatrixNormFunctor>("MatrixNorm");
