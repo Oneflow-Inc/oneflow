@@ -99,6 +99,7 @@ class TestRandnConsistent(flow.unittest.TestCase):
                     _test_with_generator(test_case, shape, placement, sbp)
                     _test_randn_tuple_shape(test_case, shape, placement, sbp)
 
+    @flow.unittest.skip_unless_1n2d()
     @unittest.skipIf(os.getenv("ONEFLOW_TEST_CPU_ONLY"), "only test cpu cases")
     @globaltest
     def test_randn_graph(test_case):
