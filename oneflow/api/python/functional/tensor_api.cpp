@@ -209,7 +209,7 @@ class AssignLocalTensorFunctor {
   }
   Maybe<void> operator()(const std::shared_ptr<one::Tensor>& ref,
                          const std::shared_ptr<one::Tensor>& value) const {
-    JUST(CheckInplaceValid(ref)); // align check to torch
+    // JUST(CheckInplaceValid(ref)); // align check to torch
     CHECK_OR_RETURN(ref->is_local() && value->is_local())
         << "Both ref and value must be local tensor.";
     JUST(OpInterpUtil::Dispatch<TensorTuple>(*op_, {ref, value}));
@@ -307,22 +307,46 @@ class PinMemoryFunctor {
     CHECK_EQ_OR_RETURN(device->enum_type(), DeviceType::kCPU)
         << Error::RuntimeError() << "cannot pin tensor with device: " << device->ToString()
         << ", only dense CPU tensors can be pinned.";
-    // use slice_update
-    MutableAttrMap attrs;
-    const int32_t ndim = input->ndim();
-    std::vector<int64_t> starts(ndim, 0);
-    std::vector<int64_t> stops(ndim);
-    std::vector<int64_t> steps(ndim, 1);
-    for (int i = 0; i < ndim; ++i) { stops[i] = input->shape()->At(i); }
-    JUST(attrs.SetAttr<std::vector<int64_t>>("start", starts));
-    JUST(attrs.SetAttr<std::vector<int64_t>>("stop", stops));
-    JUST(attrs.SetAttr<std::vector<int64_t>>("step", steps));
+
     auto empty = JUST(functional::Empty(*shape.get(), input->dtype(), device, /*pin_memory=*/true));
     // TODO: remove this requires_grad
     JUST(empty->set_requires_grad(requires_grad));
-    auto outputs = TensorTuple{empty};
-    JUST(OpInterpUtil::Dispatch(*op_, TensorTuple{empty, input}, &outputs, attrs));
-    return outputs[0];
+    const int32_t ndim = input->ndim();
+    if(ndim == 0){
+      //for 0-dim case, use assign, other use slice_update
+      JUST(functional::AssignLocalTensor(empty, input));
+      // if requires_grad, set backward function-node 'copy_backward'
+      if(autograd::GradMode::is_enabled() && requires_grad){
+        auto backward_fn = std::make_shared<BackwardFunction>();
+        backward_fn->body = [=](const TensorTuple& out_grads, TensorTuple* in_grads,
+                                bool create_graph) -> Maybe<void> {
+          autograd::AutoGradMode mode(create_graph);
+          CHECK_EQ_OR_RETURN(out_grads.size(), 1);  // NOLINT(maybe-need-error-msg)
+          in_grads->resize(1);
+          const Symbol<Device>& device = JUST(out_grads[0]->device());
+          (*in_grads)[0] = JUST(functional::Copy(out_grads[0], device->type(), device->device_id()););
+          return Maybe<void>::Ok();
+        };
+        backward_fn->status = []() { return true; };
+        TensorTuple outputs{empty};
+        JUST(GetThreadLocalAutogradEngine()->AddNode("copy_backward", backward_fn, {input},
+                                                    &outputs));
+      }
+      return empty;
+    } else {
+      MutableAttrMap attrs;
+      std::vector<int64_t> starts(ndim, 0);
+      std::vector<int64_t> stops(ndim);
+      std::vector<int64_t> steps(ndim, 1);
+      for (int i = 0; i < ndim; ++i) { stops[i] = input->shape()->At(i); }
+      JUST(attrs.SetAttr<std::vector<int64_t>>("start", starts));
+      JUST(attrs.SetAttr<std::vector<int64_t>>("stop", stops));
+      JUST(attrs.SetAttr<std::vector<int64_t>>("step", steps));
+      JUST(empty->set_requires_grad(requires_grad));
+      auto outputs = TensorTuple{empty};
+      JUST(OpInterpUtil::Dispatch(*op_, TensorTuple{empty, input}, &outputs, attrs));
+      return outputs[0];
+    }
   }
 
  private:
