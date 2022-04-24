@@ -46,8 +46,8 @@ struct SGDUpdateFunctor {
 template<typename T, typename G>
 struct FusedSGDUpdateFunctor {
   OF_DEVICE_FUNC
-  void operator()(const G* model_diff, T* model, G* model_half, T scale, float l1, float l2, float weight_decay,
-                  float learning_rate) const {
+  void operator()(const G* model_diff, T* model, G* model_half, T scale, float l1, float l2,
+                  float weight_decay, float learning_rate) const {
     const T model_val = *model;
     const T model_diff_t =
         CastScaleRegularizeGradientFunctor<T, G>()(*model_diff, model_val, scale, l1, l2);
@@ -60,8 +60,9 @@ struct FusedSGDUpdateFunctor {
 template<DeviceType device_type, typename T, typename G>
 struct SGDUpdateKernelUtil {
   static void Update(ep::Stream* stream, int64_t n, T scale, float l1, float l2, float weight_decay,
-                     float learning_rate_val, bool fuse_update_cast, const float* learning_rate, const T* scale_by_ptr,
-                     const int64_t* skip_if, const G* model_diff, T* model, G* model_half);
+                     float learning_rate_val, bool fuse_update_cast, const float* learning_rate,
+                     const T* scale_by_ptr, const int64_t* skip_if, const G* model_diff, T* model,
+                     G* model_half);
 };
 
 template<DeviceType device_type, typename T, typename K, typename IDX>

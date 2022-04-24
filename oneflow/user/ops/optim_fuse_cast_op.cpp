@@ -46,21 +46,22 @@ namespace oneflow {
   return Maybe<void>::Ok();
 }
 
-REGISTER_USER_OP_GRAD("optim_fuse_cast").SetGenBackwardOpConfFn([](const user_op::UserOpWrapper& op,
-                                                        user_op::AddOpFn AddOp) -> Maybe<void> {
-  if (op.NeedGenGradTensor4OpInput("in", 0)) {
-    user_op::UserOpConfWrapperBuilder builder(op.op_name() + "_grad");
-    const DataType& dtype = op.TensorDesc4ArgNameAndIndex("in", 0).data_type();
-    user_op::UserOpConfWrapper cast_grad_op =
-        builder.Op("optim_fuse_cast")
-            .Input("in", op.GetGradTensorWithOpOutput("out", 0))
-            .Output("out")
-            .Attr<DataType>("dtype", dtype)
-            .Build();
-    op.BindGradTensorWithOpInput(cast_grad_op.output("out", 0), "in", 0);
-    AddOp(cast_grad_op);
-  }
-  return Maybe<void>::Ok();
-});
+REGISTER_USER_OP_GRAD("optim_fuse_cast")
+    .SetGenBackwardOpConfFn([](const user_op::UserOpWrapper& op,
+                               user_op::AddOpFn AddOp) -> Maybe<void> {
+      if (op.NeedGenGradTensor4OpInput("in", 0)) {
+        user_op::UserOpConfWrapperBuilder builder(op.op_name() + "_grad");
+        const DataType& dtype = op.TensorDesc4ArgNameAndIndex("in", 0).data_type();
+        user_op::UserOpConfWrapper cast_grad_op =
+            builder.Op("optim_fuse_cast")
+                .Input("in", op.GetGradTensorWithOpOutput("out", 0))
+                .Output("out")
+                .Attr<DataType>("dtype", dtype)
+                .Build();
+        op.BindGradTensorWithOpInput(cast_grad_op.output("out", 0), "in", 0);
+        AddOp(cast_grad_op);
+      }
+      return Maybe<void>::Ok();
+    });
 
 }  // namespace oneflow

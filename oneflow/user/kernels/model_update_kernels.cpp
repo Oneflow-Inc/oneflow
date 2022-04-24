@@ -126,11 +126,11 @@ class SGDUpdateKernel final : public user_op::OpKernel, public user_op::CudaGrap
     const auto weight_decay = ctx->Attr<float>("weight_decay");
     const float learning_rate_val = ctx->Attr<float>("learning_rate_val");
     const float* learning_rate_ptr = nullptr;
-    G* model_half_ptr = nullptr; 
-    bool fuse_update_cast = false; 
+    G* model_half_ptr = nullptr;
+    bool fuse_update_cast = false;
     if (ctx->has_input("model_half", 0)) {
       user_op::Tensor* model_half = ctx->Tensor4ArgNameAndIndex("model_half", 0);
-      fuse_update_cast = true; 
+      fuse_update_cast = true;
       model_half_ptr = model_half->mut_dptr<G>();
     }
     if (ctx->has_input("learning_rate", 0)) {
@@ -152,8 +152,8 @@ class SGDUpdateKernel final : public user_op::OpKernel, public user_op::CudaGrap
     }
     SGDUpdateKernelUtil<device_type, T, G>::Update(
         ctx->stream(), model->shape().elem_cnt(), static_cast<T>(scale), l1, l2, weight_decay,
-        learning_rate_val, fuse_update_cast, learning_rate_ptr, scale_by_ptr, skip_if_ptr, model_diff->dptr<G>(),
-        model->mut_dptr<T>(), model_half_ptr);
+        learning_rate_val, fuse_update_cast, learning_rate_ptr, scale_by_ptr, skip_if_ptr,
+        model_diff->dptr<G>(), model->mut_dptr<T>(), model_half_ptr);
   }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return true; }
 };

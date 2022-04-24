@@ -43,25 +43,26 @@ void SumSquares2(int64_t n, const T* src0, T* dst0, const T* src1, T* dst1) {
 template<typename T, typename G>
 struct SGDUpdateKernelUtil<DeviceType::kCPU, T, G> {
   static void Update(ep::Stream* stream, int64_t n, T scale, float l1, float l2, float weight_decay,
-                     float learning_rate_val, bool fuse_update_cast, const float* learning_rate, const T* scale_by_ptr,
-                     const int64_t* skip_if, const G* model_diff, T* model, G* model_half);
+                     float learning_rate_val, bool fuse_update_cast, const float* learning_rate,
+                     const T* scale_by_ptr, const int64_t* skip_if, const G* model_diff, T* model,
+                     G* model_half);
 };
 
 template<typename T, typename G>
 void SGDUpdateKernelUtil<DeviceType::kCPU, T, G>::Update(
     ep::Stream* stream, int64_t n, T scale, float l1, float l2, float weight_decay,
-    float learning_rate_val, bool fuse_update_cast, const float* learning_rate, const T* scale_by_ptr,
-    const int64_t* skip_if, const G* model_diff, T* model, G* model_half) {
+    float learning_rate_val, bool fuse_update_cast, const float* learning_rate,
+    const T* scale_by_ptr, const int64_t* skip_if, const G* model_diff, T* model, G* model_half) {
   if (skip_if != nullptr && *skip_if != 0) { return; }
   if (learning_rate != nullptr) { learning_rate_val = *learning_rate; }
   if (scale_by_ptr != nullptr) { scale *= *scale_by_ptr; }
   for (int64_t i = 0; i != n; ++i) {
-    if(fuse_update_cast){
-      FusedSGDUpdateFunctor<T, G>()(model_diff + i, model + i, model_half+i, scale, l1, l2, weight_decay,
-                             learning_rate_val);
+    if (fuse_update_cast) {
+      FusedSGDUpdateFunctor<T, G>()(model_diff + i, model + i, model_half + i, scale, l1, l2,
+                                    weight_decay, learning_rate_val);
     } else {
       SGDUpdateFunctor<T, G>()(model_diff + i, model + i, scale, l1, l2, weight_decay,
-                             learning_rate_val);
+                               learning_rate_val);
     }
   }
 }

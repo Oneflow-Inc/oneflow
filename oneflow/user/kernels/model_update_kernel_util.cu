@@ -25,19 +25,19 @@ namespace {
 
 template<typename T, typename G>
 __global__ void SGDUpdateGpu(int64_t n, T scale, float l1, float l2, float weight_decay,
-                             float learning_rate_val, bool fuse_update_cast, const float* learning_rate,
-                             const T* scale_by_ptr, const int64_t* skip_if, const G* model_diff,
-                             T* model, G* model_half) {
+                             float learning_rate_val, bool fuse_update_cast,
+                             const float* learning_rate, const T* scale_by_ptr,
+                             const int64_t* skip_if, const G* model_diff, T* model, G* model_half) {
   if (skip_if != nullptr && *skip_if != 0) { return; }
   if (learning_rate != nullptr) { learning_rate_val = *learning_rate; }
   if (scale_by_ptr != nullptr) { scale *= *scale_by_ptr; }
   CUDA_1D_KERNEL_LOOP(i, n) {
-    if(fuse_update_cast){
-      FusedSGDUpdateFunctor<T, G>()(model_diff + i, model + i, model_half + i, scale, l1, l2, weight_decay,
-                             learning_rate_val);
+    if (fuse_update_cast) {
+      FusedSGDUpdateFunctor<T, G>()(model_diff + i, model + i, model_half + i, scale, l1, l2,
+                                    weight_decay, learning_rate_val);
     } else {
       SGDUpdateFunctor<T, G>()(model_diff + i, model + i, scale, l1, l2, weight_decay,
-        learning_rate_val);
+                               learning_rate_val);
     }
   }
 }
@@ -86,36 +86,40 @@ __global__ void SumSquares2(int64_t n, const T* src0, T* dst0, const T* src1, T*
 template<typename T, typename G>
 struct SGDUpdateKernelUtil<DeviceType::kCUDA, T, G> {
   static void Update(ep::Stream* stream, int64_t n, T scale, float l1, float l2, float weight_decay,
-                     float learning_rate_val, bool fuse_update_cast, const float* learning_rate, const T* scale_by_ptr,
-                     const int64_t* skip_if, const G* model_diff, T* model, G* model_half);
+                     float learning_rate_val, bool fuse_update_cast, const float* learning_rate,
+                     const T* scale_by_ptr, const int64_t* skip_if, const G* model_diff, T* model,
+                     G* model_half);
 };
 
 template<typename T, typename G>
 void SGDUpdateKernelUtil<DeviceType::kCUDA, T, G>::Update(
     ep::Stream* stream, int64_t n, T scale, float l1, float l2, float weight_decay,
-    float learning_rate_val, bool fuse_update_cast, const float* learning_rate, const T* scale_by_ptr,
-    const int64_t* skip_if, const G* model_diff, T* model, G* model_half) {
+    float learning_rate_val, bool fuse_update_cast, const float* learning_rate,
+    const T* scale_by_ptr, const int64_t* skip_if, const G* model_diff, T* model, G* model_half) {
   SGDUpdateGpu<T, G><<<BlocksNum4ThreadsNum(n), kCudaThreadsNumPerBlock, 0,
                        stream->As<ep::CudaStream>()->cuda_stream()>>>(
-      n, scale, l1, l2, weight_decay, learning_rate_val, fuse_update_cast, learning_rate, scale_by_ptr, skip_if,
-      model_diff, model, model_half);
+      n, scale, l1, l2, weight_decay, learning_rate_val, fuse_update_cast, learning_rate,
+      scale_by_ptr, skip_if, model_diff, model, model_half);
 }
 
 template<typename T>
 struct SGDUpdateKernelUtil<DeviceType::kCUDA, T, float16> {
   static void Update(ep::Stream* stream, int64_t n, T scale, float l1, float l2, float weight_decay,
-                     float learning_rate_val, bool fuse_update_cast, const float* learning_rate, const T* scale_by_ptr,
-                     const int64_t* skip_if, const float16* model_diff, T* model, float16* model_half);
+                     float learning_rate_val, bool fuse_update_cast, const float* learning_rate,
+                     const T* scale_by_ptr, const int64_t* skip_if, const float16* model_diff,
+                     T* model, float16* model_half);
 };
 
 template<typename T>
 void SGDUpdateKernelUtil<DeviceType::kCUDA, T, float16>::Update(
     ep::Stream* stream, int64_t n, T scale, float l1, float l2, float weight_decay,
-    float learning_rate_val, bool fuse_update_cast, const float* learning_rate, const T* scale_by_ptr,
-    const int64_t* skip_if, const float16* model_diff, T* model, float16* model_half) {
+    float learning_rate_val, bool fuse_update_cast, const float* learning_rate,
+    const T* scale_by_ptr, const int64_t* skip_if, const float16* model_diff, T* model,
+    float16* model_half) {
   SGDUpdateKernelUtil<DeviceType::kCUDA, T, half>::Update(
-      stream, n, scale, l1, l2, weight_decay, learning_rate_val, fuse_update_cast, learning_rate, scale_by_ptr,
-      skip_if, reinterpret_cast<const half*>(model_diff), model, reinterpret_cast<half*>(model_half));
+      stream, n, scale, l1, l2, weight_decay, learning_rate_val, fuse_update_cast, learning_rate,
+      scale_by_ptr, skip_if, reinterpret_cast<const half*>(model_diff), model,
+      reinterpret_cast<half*>(model_half));
 }
 
 template struct SGDUpdateKernelUtil<DeviceType::kCUDA, double, double>;
