@@ -30,6 +30,7 @@ class CallbackNotifyCompTaskNode final : public CompTaskNode {
   void ProduceAllRegstsAndBindEdges() override;
   void ConsumeAllRegsts() override;
   void BuildExecGphAndRegst() override;
+  void InferExecInterval() override;
 };
 
 void CallbackNotifyCompTaskNode::ProduceAllRegstsAndBindEdges() {}
@@ -47,6 +48,8 @@ void CallbackNotifyCompTaskNode::BuildExecGphAndRegst() {
   CHECK(node->op()->tmp_bns().empty());
   CHECK(node->op()->output_bns().empty());
 }
+
+void CallbackNotifyCompTaskNode::InferExecInterval() { set_exec_interval(1); }
 
 REGISTER_NAMED_TASK_STREAM_INDEX_GETTER(DeviceType::kCPU, TaskType::kCallbackNotify,
                                         "CALLBACK_NOTIFY");
