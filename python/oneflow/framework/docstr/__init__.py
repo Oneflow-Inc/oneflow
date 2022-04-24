@@ -69,3 +69,4 @@ from .argsort import *
 from .module import *
 from .util_ops import *
 from .searchsorted import *
+from .deconv import *
