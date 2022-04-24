@@ -97,5 +97,27 @@ class TestActivationError(flow.unittest.TestCase):
             in str(context.exception)
         )
 
+    def test_hard_shrink_inplace_runtime_error(test_case):
+        with test_case.assertRaises(Exception) as context:
+            x = flow.randn(2)
+            x.requires_grad = True
+            m = flow.nn.Hardshrink(inplace=True)
+            y = m(x)
+        test_case.assertTrue(
+            "RuntimeError: a leaf Tensor that requires grad is being used in an in-place operation"
+            in str(context.exception)
+        )
+
+    def test_softmax_index_error(test_case):
+        with test_case.assertRaises(Exception) as context:
+            x = flow.randn(2, 4)
+            m = flow.nn.Softmax(dim=2)
+            y = m(x)
+        test_case.assertTrue(
+            "IndexError: Dimension out of range (expected to be in range of [-2, 1], but got 2)"
+            in str(context.exception)
+        )
+
+
 if __name__ == "__main__":
     unittest.main()

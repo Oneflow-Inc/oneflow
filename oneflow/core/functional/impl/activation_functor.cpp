@@ -282,7 +282,6 @@ class HardShrinkFunctor {
   Maybe<Tensor> operator()(const std::shared_ptr<Tensor>& x, const double& lambd,
                            bool inplace) const {
     MutableAttrMap attrs;
-    CHECK_GT_OR_RETURN(lambd, 0) << "lambd must be greater than 0";
     JUST(attrs.SetAttr<double>("lambd", lambd));
     if (inplace) {
       JUST(CheckInplaceValid(x));
@@ -334,8 +333,9 @@ class SoftmaxFunctorBase {
     int64_t dim_ = dim ? JUST(dim) : get_dim();
     if (dim_ < 0) { dim_ += num_axes; }
 
-    CHECK_GE_OR_RETURN(dim_, 0);
-    CHECK_LT_OR_RETURN(dim_, num_axes);
+    CHECK_OR_RETURN(dim_ >= -num_axes && dim_ < num_axes)
+        << Error::IndexError() << "IndexError: Dimension out of range (expected to be in range of ["
+        << -num_axes << ", " << num_axes - 1 << "], but got " << dim_ << ")";
 
     if (dim_ != num_axes - 1) {
       std::vector<int> input_perm(input_shape->dim_vec().size(), 0);
