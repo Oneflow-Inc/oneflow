@@ -47,8 +47,8 @@ add_docstr(
                 [6, 7]], dtype=oneflow.int64)
         >>> flow.amax(x)
         tensor(7, dtype=oneflow.int64)
-        >>> flow.amax(x, 1, True)
-        tensor([[[2, 3]],
-                [[6, 7]]], dtype=oneflow.int64)
+        >>> flow.amax(x, 0, True)
+        tensor([[[4, 5],
+                 [6, 7]]], dtype=oneflow.int64)
     """,
 )
