@@ -93,6 +93,9 @@ Maybe<void> InferSGDUpdateTensorDesc(user_op::InferContext* ctx) {
     CHECK_EQ_OR_RETURN(model_diff.shape(), shape);
   }
   JUST(CheckLearningRateShape(ctx));
+  if(ctx->has_input("model_half", 0)){
+    CHECK_EQ_OR_RETURN(ctx->InputTensorDesc("model_half", 0).shape(), shape);
+  }
   if (ctx->has_input("scale_by_tensor", 0)) {
     const auto& scale_by_tensor = ctx->InputTensorDesc("scale_by_tensor", 0);
     JUST(CheckScalarShape(&scale_by_tensor));
