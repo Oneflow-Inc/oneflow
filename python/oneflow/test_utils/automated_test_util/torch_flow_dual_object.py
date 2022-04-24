@@ -485,6 +485,7 @@ def get_oneflow_eager_res(
 def oneflow_eager_run_with_graph_check(
     oneflow, oneflow_args, oneflow_kwargs, testing_graph, verbose, *args
 ):
+    print_note_fake_program()
     if testing_graph:
         graph_args, graph_kwargs = get_args_copy(oneflow_args, oneflow_kwargs)
 
@@ -668,6 +669,7 @@ def get_pytorch_oneflow_tensor_res(
                 "PyTorch has an error but OneFlow is ok, maybe you should check your implementation to align with PyTorch."
             )
         raise PyTorchDoesNotSupportError(e)
+    print_note_fake_program()
     oneflow_res = oneflow_tensor_eager_run_with_graph_check(
         oneflow, oneflow_method, oneflow_args, oneflow_kwargs, testing_graph, verbose,
     )
@@ -693,7 +695,8 @@ def GetDualObject(name, pytorch, oneflow):
         "__str__",
         "__repr__",
     ]
-    verbose = os.getenv("ONEFLOW_TEST_VERBOSE") is not None
+    # verbose = os.getenv("ONEFLOW_TEST_VERBOSE") is not None
+    verbose = True
     pytorch_methods = dir(pytorch)
     if hasattr(pytorch, "__call__") and "__call__" not in pytorch_methods:
         pytorch_methods.append("__call__")
