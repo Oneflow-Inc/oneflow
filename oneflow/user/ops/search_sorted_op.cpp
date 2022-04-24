@@ -33,9 +33,10 @@ namespace oneflow {
   const user_op::TensorDesc& in_tensor =
       ctx->LogicalTensorDesc4InputArgNameAndIndex("sorted_sequence", 0);
   FOR_RANGE(int64_t, i, 0, in_tensor.shape().NumAxes() - 1) {
-    printf("index: %d", i);
+    printf("index: %ld", i);
     ctx->NewBuilder().Split(ctx->inputs(), i).Split(ctx->outputs(), i).Build();
   }
+  return Maybe<void>::Ok();
 }
 
 /* static */ Maybe<void> SearchSortedOp::CheckAttr(const user_op::UserOpDefWrapper& def,
