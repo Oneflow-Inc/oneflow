@@ -28,12 +28,13 @@ namespace oneflow {
 }
 
 /* static */ Maybe<void> SearchSortedOp::GetSbp(user_op::SbpContext* ctx) {
-  ctx->NewBuilder()
-      .Split(user_op::OpArg("sorted_sequence", 0), 0)
-      .Broadcast(user_op::OpArg("values", 0))
-      .Split(user_op::OpArg("out", 0), 0)
-      .Build();
-  return Maybe<void>::Ok();
+  // The current implementation can only do arg_sort in the last dimension and should use
+  // Broadcast (by default) instead of Split for that dimension
+  const user_op::TensorDesc& in_tensor = ctx->LogicalTensorDesc4InputArgNameAndIndex("sorted_sequence", 0);
+  FOR_RANGE(int64_t, i, 0, in_tensor.shape().NumAxes() - 1) {
+    printf("index: %d", i);
+    ctx->NewBuilder().Split(ctx->inputs(), i).Split(ctx->outputs(), i).Build();
+  }
 }
 
 /* static */ Maybe<void> SearchSortedOp::CheckAttr(const user_op::UserOpDefWrapper& def,

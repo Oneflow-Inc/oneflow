@@ -172,24 +172,5 @@ class TestSearchSorted(flow.unittest.TestCase):
         return y
 
 
-@autotest(n=1, check_graph=False)
-def _test_search_sorted_global(test_case, placement, sbp):
-    sorted_sequence = random_tensor(ndim=2, dim0=2, dim1=3).to_global(placement, sbp)
-    values = random_tensor(ndim=2, dim0=2).to_global(placement, flow.sbp.broadcast)
-    right = oneof(True, False)
-    y = torch.searchsorted(
-        sorted_sequence, values, out_int32=oneof(True, False), right=right,
-    )
-    return y
-
-
-class TestSearchSorted_Global(flow.unittest.TestCase):
-    @globaltest
-    def test_search_sorted(test_case):
-        placement = flow.placement("cuda", ranks=[0, 1])
-        sbp = (flow.sbp.split(0),)
-        _test_search_sorted_global(test_case, placement, sbp)
-
-
 if __name__ == "__main__":
     unittest.main()
