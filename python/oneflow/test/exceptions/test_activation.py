@@ -128,7 +128,7 @@ class TestActivationError(flow.unittest.TestCase):
             "RuntimeError: a leaf Tensor that requires grad is being used in an in-place operation"
             in str(context.exception)
         )
-    
+
     def test_soft_shrink_alpha_runtime_error(test_case):
         with test_case.assertRaises(Exception) as context:
             x = flow.randn(2)
@@ -139,6 +139,7 @@ class TestActivationError(flow.unittest.TestCase):
             "RuntimeError: alpha must be greater or equal to 0, but found to be -0.1."
             in str(context.exception)
         )
+
 
 if __name__ == "__main__":
     unittest.main()
