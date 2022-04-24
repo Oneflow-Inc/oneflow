@@ -18,6 +18,7 @@ limitations under the License.
 
 #include <Python.h>
 
+#include "oneflow/api/python/env/env.h"
 #include "oneflow/api/python/functional/common.h"
 #include "oneflow/core/framework/op_interpreter/dispatch_frame.h"
 
@@ -26,28 +27,44 @@ namespace one {
 namespace functional {
 
 namespace {
-
-inline PyFrameObject* get_frame_back(PyFrameObject* frame) {
-  assert(frame != NULL);
-  PyFrameObject* back = frame->f_back;
-  if (back != NULL) { Py_XINCREF(back); }
-  return back;
-}
-
-inline std::string get_cur_frame_stack_str() {
+std::string get_cur_frame_stack_str(int32_t max_stack_depth) {
+  std::string cur_f_str;
   PyFrameObject* cur_frame = PyEval_GetFrame();
-  if (cur_frame == NULL) return "";
-  std::string cur_f_str = "Python stack[-1]: " + PyObjectToReprStr((PyObject*)cur_frame);
-
-  PyFrameObject* back_frame = get_frame_back(cur_frame);
-  if (back_frame == NULL) return cur_f_str;
-  std::string back_f_str = PyObjectToReprStr((PyObject*)back_frame);
-  cur_f_str = "Python stack[-2]: " + back_f_str + "; " + cur_f_str;
-  Py_XDECREF(back_frame);
-
+  for (int32_t i = 0; i < max_stack_depth; i++) {
+    if (cur_frame == NULL) break;
+    const int32_t stack_index = (-1) * i - 1;
+    cur_f_str = "Python Stack[" + std::to_string(stack_index)
+                + "]: " + PyObjectToReprStr((PyObject*)cur_frame) + "; " + cur_f_str;
+    cur_frame = cur_frame->f_back;
+  }
   return cur_f_str;
 }
 
+int32_t get_cur_stack_depth() {
+  int32_t current_stack_depth = 0;
+  PyFrameObject* f = PyEval_GetFrame();
+  while (f) {
+    current_stack_depth++;
+    f = f->f_back;
+  }
+  return current_stack_depth;
+}
+
+std::string get_cur_frame_stack_str() {
+  const bool debug_mode = GetGraphDebugMode();
+  const int32_t max_stack_depth = GetGraphDebugMaxPyStackDepth();
+  if (debug_mode) {  // show more info for the stack trace in debug mode
+    int32_t current_stack_depth = get_cur_stack_depth();
+    std::string cur_f_str = get_cur_frame_stack_str(max_stack_depth);
+    if (current_stack_depth > max_stack_depth) {  // show how many stack depth remaining to be shown
+      int32_t remaining_stack_depth = current_stack_depth - max_stack_depth;
+      cur_f_str += " ... " + std::to_string(remaining_stack_depth) + " more; ";
+    }
+    return cur_f_str;
+  }
+
+  return get_cur_frame_stack_str(max_stack_depth);
+}
 }  // namespace
 
 class PythonFrameGuard {
