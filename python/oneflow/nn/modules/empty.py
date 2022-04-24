@@ -71,18 +71,29 @@ def empty_op(
         if device is None:
             device = flow.device("cpu")
     else:
-        assert device is None
+        assert (
+            device is None
+        ), "argument 'device' must be None when argument 'placement' exist"
 
     if placement is not None:
-        assert isinstance(sbp, (flow.sbp.sbp, tuple, list)), "sbp: %s" % sbp
+        assert (
+            sbp is not None
+        ), "argument 'sbp' must not be None when argument 'placement' exist"
+        assert isinstance(
+            sbp, (flow.sbp.sbp, tuple, list)
+        ), f"argument 'sbp' must be flow.sbp.sbp, not %s" % (type(sbp))
         if isinstance(sbp, flow.sbp.sbp):
             sbp = (sbp,)
         else:
             for elem in sbp:
-                assert isinstance(elem, flow.sbp.sbp), "sbp: %s" % sbp
+                assert isinstance(
+                    elem, flow.sbp.sbp
+                ), "Element in argument 'sbp' must be flow.sbp.sbp, not %s" % (type(elem))
         assert len(sbp) == len(placement.ranks.shape)
     else:
-        assert sbp is None, "sbp: %s" % sbp
+        assert (
+            sbp is None
+        ), "argument 'sbp' must be None"
 
     if placement is not None:
         tensor = flow._C.global_empty(shape, dtype=dtype, placement=placement, sbp=sbp)
@@ -93,19 +104,16 @@ def empty_op(
 
 
 def new_empty_op(
-    x, size=None, dtype=None, device=None, placement=None, sbp=None, requires_grad=False
+    x, size, dtype=None, device=None, placement=None, sbp=None, requires_grad=False
 ):
-    if isinstance(device, str):
-        device = flow.device(device)
-    if size is None or len(size) == 0:
-        new_size = x.shape
-    else:
-        new_size = _handle_size_arg(size)
+    assert isinstance(
+        size, (int, tuple, list, flow.Size)
+    ), f"argument 'size' must be tuple of ints, not %s" % (type(size))
+
     new_dtype = dtype
     new_device = device
     new_placement = placement
     new_sbp = sbp
-    new_requires_grad = requires_grad
 
     if dtype is None:
         new_dtype = x.dtype
@@ -115,43 +123,8 @@ def new_empty_op(
         new_placement = x.placement if x.is_global else None
     if sbp is None:
         new_sbp = x.sbp if x.is_global else None
-    if new_placement is not None:
-        assert (
-            device is None
-        ), "argument 'device' must be None when argument 'placement' exist"
-        assert (
-            new_sbp is not None
-        ), "argument 'sbp' must not be None when argument 'placement' exist"
-    assert isinstance(
-        new_size, (int, tuple, list, flow.Size)
-    ), f"argument 'size' must be tuple of ints, not %s" % (type(new_size))
-    assert isinstance(
-        new_dtype, flow.dtype
-    ), f"argument 'dtype' must be flow.dtype, not %s" % (type(new_dtype))
-    if new_placement is not None:
-        assert isinstance(
-            new_placement, flow.placement
-        ), f"argument 'placement' must be flow.placement, not %s" % (
-            type(new_placement)
-        )
-        assert isinstance(
-            new_sbp, (flow.sbp.sbp, tuple)
-        ), f"argument 'sbp' must be flow.sbp.sbp, not %s" % (type(new_sbp))
-    else:
-        assert isinstance(
-            new_device, (str, flow.device)
-        ), f"argument 'device' must be flow.device, not %s" % (type(new_device))
-    assert isinstance(
-        new_requires_grad, bool
-    ), f"argument 'requires_grad' must be bool, not %s" % (type(new_requires_grad))
-    if new_placement is not None:
-        res = flow._C.global_empty(
-            new_size, dtype=new_dtype, placement=new_placement, sbp=new_sbp
-        )
-    else:
-        res = flow._C.empty(new_size, dtype=new_dtype, device=new_device)
-    res.requires_grad = new_requires_grad
-    return res
+
+    return empty_op(size, dtype=new_dtype, device=new_device, placement=new_placement, sbp=new_sbp, requires_grad=requires_grad)
 
 
 if __name__ == "__main__":
