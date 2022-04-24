@@ -41,8 +41,7 @@ class TestActivationError(flow.unittest.TestCase):
             m = flow.nn.PReLU(5)
             y = m(x)
         test_case.assertTrue(
-            "num_parameters in prelu must be 1 or 4"
-            in str(context.exception)
+            "num_parameters in prelu must be 1 or 4" in str(context.exception)
         )
 
     def test_celu_inplace_runtime_error(test_case):
