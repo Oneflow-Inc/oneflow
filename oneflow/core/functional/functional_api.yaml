@@ -2059,7 +2059,7 @@
   bind_python: True
 
 - name: "cumsum"
-  signature: "Tensor (Tensor input, Int64 dim) => Cumsum"
+  signature: "Tensor (Tensor input, Int64 dim, *, DataType dtype=None) => Cumsum"
   bind_python: True
 
 - name: "cumsum_grad"
@@ -2067,7 +2067,7 @@
   bind_python: False 
 
 - name: "cumprod"
-  signature: "Tensor (Tensor input, Int64 dim) => Cumprod"
+  signature: "Tensor (Tensor input, Int64 dim, *, DataType dtype=None) => Cumprod"
   bind_python: True
 
 - name: "cumprod_grad"
