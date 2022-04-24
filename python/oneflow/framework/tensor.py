@@ -473,6 +473,14 @@ def _cosh(self):
     return flow.cosh(self)
 
 
+def _addcmul(self, tensor1, tensor2, *, value=1):
+    return flow._C.addcmul(self, tensor1, tensor2, value=value)
+
+
+def _addcmul_(self, tensor1, tensor2, *, value=1):
+    return flow._C.addcmul_(self, tensor1, tensor2, value=value)
+
+
 def _erf(self):
     return flow.erf(self)
 
@@ -495,6 +503,10 @@ def _expm1(self):
 
 def _fmod(self, other):
     return flow.fmod(self, other)
+
+
+def _half(self):
+    return flow._C.to(self, flow.float16)
 
 
 def _index(self):
@@ -1081,6 +1093,14 @@ def _new_tensor(
         )
 
 
+def _cumsum(self, dim, dtype=None):
+    return flow._C.cumsum(self, dim, dtype=dtype)
+
+
+def _cumprod(self, dim, dtype=None):
+    return flow._C.cumprod(self, dim, dtype=dtype)
+
+
 def RegisterMethods():
     Tensor.__mul__ = lambda self, other: self.mul(other)
     Tensor.__rmul__ = lambda self, other: self.mul(other)
@@ -1180,6 +1200,8 @@ def RegisterMethods():
     Tensor.log2 = _log2
     Tensor.add = _add
     Tensor.add_ = _add_inplace
+    Tensor.addcmul = _addcmul
+    Tensor.addcmul_ = _addcmul_
     Tensor.div = _truediv
     Tensor.div_ = _truediv_inplace
     Tensor.mul = _mul
@@ -1257,6 +1279,7 @@ def RegisterMethods():
     Tensor.unsqueeze = _unsqueeze
     Tensor.permute = _permute
     Tensor.to = _to
+    Tensor.half = _half
     Tensor.gather = _gather
     Tensor.all = _all
     Tensor.any = _any
@@ -1297,6 +1320,8 @@ def RegisterMethods():
     Tensor.isnan = _isnan
     Tensor.isinf = _isinf
     Tensor.new_tensor = _new_tensor
+    Tensor.cumsum = _cumsum
+    Tensor.cumprod = _cumprod
 
 
 def register_tensor_op(op_name):
