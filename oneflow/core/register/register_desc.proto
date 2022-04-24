@@ -14,6 +14,7 @@ message LbiBlobDescPair {
 message DataRegstDesc {
   repeated LbiBlobDescPair lbi2blob_desc = 1;
   required ShapeProto time_shape = 3;
+  optional int32 exec_interval = 10 [default = 1];
 }
 
 message CtrlRegstDesc {
