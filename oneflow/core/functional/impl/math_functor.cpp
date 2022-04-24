@@ -658,27 +658,29 @@ class ReduceProdFunctor {
         one::OpBuilder("reduce_prod").Input("input_tensor").Output("output_tensor").Build());
   }
   Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x, const std::vector<int32_t>& axis,
-                           const bool& keepdims) const {
+                           const bool& keepdims, const Optional<Symbol<DType>>& dtype) const {
     MutableAttrMap attrs;
+    std::shared_ptr<one::Tensor> tensor = x;
+    if (dtype.has_value() && (dtype != x->dtype())) { tensor = JUST(Cast(tensor, JUST(dtype))); }
     TensorProcessor tensor_processor;
     Symbol<DType> lowest_dtype;
-    if (DType::priority_order[x->dtype()->data_type()]
+    if (DType::priority_order[tensor->dtype()->data_type()]
         == DType::priority_order[DType::Bool()->data_type()]) {
       lowest_dtype = DType::Int64();
     } else {
-      lowest_dtype = x->dtype();
+      lowest_dtype = tensor->dtype();
     }
-    JUST(tensor_processor.AddInputs({x}, lowest_dtype).Apply());
+    JUST(tensor_processor.AddInputs({tensor}, lowest_dtype).Apply());
     TensorTuple input_tuple = JUST(tensor_processor.GetInputs());
     if (axis.empty()) {
-      std::vector<int32_t> reduce_axis(x->shape()->NumAxes());
+      std::vector<int32_t> reduce_axis(tensor->shape()->NumAxes());
       std::iota(reduce_axis.begin(), reduce_axis.end(), 0);
       JUST(attrs.SetAttr<std::vector<int32_t>>("axis", reduce_axis));
     } else {
       JUST(attrs.SetAttr<std::vector<int32_t>>("axis", axis));
     }
     JUST(attrs.SetAttr<bool>("keepdims", keepdims));
-    return OpInterpUtil::Dispatch<Tensor>(*op_, input_tuple, attrs);
+    return JUST(OpInterpUtil::Dispatch<Tensor>(*op_, input_tuple, attrs));
   }
 
  private:
@@ -1079,8 +1081,7 @@ class VectorNormFunctor {
     if (ord.IsIntegral() || ord.IsFloatingPoint()) {
       double ord_val = JUST(ord.As<double>());
       if (ord_val == 0) {
-        std::vector<int32_t> dim_column(1, 0);
-        res = JUST(ReduceSum(JUST(ScalarLogicalNotEqual(x, 0)), dim_column, keepdim));
+        res = JUST(ReduceSum(JUST(functional::NotEqualZero(x)), dim, keepdim));
       } else if (ord_val == INFINITY) {
         res = JUST(ReduceMax(JUST(Abs(x)), dim, keepdim));
       } else if (ord_val == -INFINITY) {
@@ -1530,10 +1531,15 @@ class MinimumFunctor {
 
   Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x,
                            const std::shared_ptr<one::Tensor>& y) const {
+    TensorProcessor tensor_processor;
+    JUST(tensor_processor.PromoteInputsToCommonDtype(true).AddInputs({x, y}).Apply());
+    TensorTuple input_tuple = JUST(tensor_processor.GetInputs());
     if (*x->shape() == *y->shape()) {
-      return OpInterpUtil::Dispatch<Tensor>(*elementwise_minimum_op_, {x, y});
+      return OpInterpUtil::Dispatch<Tensor>(*elementwise_minimum_op_,
+                                            {input_tuple[0], input_tuple[1]});
     } else {
-      return OpInterpUtil::Dispatch<Tensor>(*broadcast_minimum_op_, {x, y});
+      return OpInterpUtil::Dispatch<Tensor>(*broadcast_minimum_op_,
+                                            {input_tuple[0], input_tuple[1]});
     }
   }
 
@@ -1553,10 +1559,15 @@ class MaximumFunctor {
 
   Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x,
                            const std::shared_ptr<one::Tensor>& y) const {
+    TensorProcessor tensor_processor;
+    JUST(tensor_processor.PromoteInputsToCommonDtype(true).AddInputs({x, y}).Apply());
+    TensorTuple input_tuple = JUST(tensor_processor.GetInputs());
     if (*x->shape() == *y->shape()) {
-      return OpInterpUtil::Dispatch<Tensor>(*elementwise_maximum_op_, {x, y});
+      return OpInterpUtil::Dispatch<Tensor>(*elementwise_maximum_op_,
+                                            {input_tuple[0], input_tuple[1]});
     } else {
-      return OpInterpUtil::Dispatch<Tensor>(*broadcast_maximum_op_, {x, y});
+      return OpInterpUtil::Dispatch<Tensor>(*broadcast_maximum_op_,
+                                            {input_tuple[0], input_tuple[1]});
     }
   }
 
@@ -2791,8 +2802,8 @@ ONEFLOW_FUNCTION_LIBRARY(m) {
   m.add_functor<CastFunctor>("Cast");
   m.add_functor<ClampFunctor>("Clamp");
   m.add_functor<ClampInplaceFunctor>("ClampInplace");
-  m.add_functor<ClampFunctor>("Clip");
-  m.add_functor<ClampInplaceFunctor>("ClipInplace");
+  m.add_functor<ClipFunctor>("Clip");
+  m.add_functor<ClipInplaceFunctor>("ClipInplace");
   m.add_functor<SqrtSquareSumFunctor>("SqrtSquareSum");
   m.add_functor<VectorNormFunctor, ScalarVectorNormFunctor>("VectorNorm");
   m.add_functor<ScalarMatrixNormFunctor, MatrixNormFunctor>("MatrixNorm");

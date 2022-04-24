@@ -129,9 +129,8 @@ def clip_grad_norm_(
                 ),
                 norm_type,
             )
-        if error_if_nonfinite and (
-            np.isnan(total_norm.to_local().numpy()).all()
-            or np.isinf(total_norm.to_local().numpy()).all()
+        if error_if_nonfinite and flow.logical_or(
+            total_norm.isnan(), total_norm.isinf()
         ):
             raise RuntimeError(
                 f"The total norm of order {norm_type} for gradients from "
@@ -161,8 +160,8 @@ def clip_grad_norm_(
                 ),
                 norm_type,
             )
-        if error_if_nonfinite and (
-            np.isnan(total_norm.numpy()).all() or np.isinf(total_norm.numpy()).all()
+        if error_if_nonfinite and flow.logical_or(
+            total_norm.isnan(), total_norm.isinf()
         ):
             raise RuntimeError(
                 f"The total norm of order {norm_type} for gradients from "
