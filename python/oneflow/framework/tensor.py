@@ -1092,11 +1092,11 @@ def _new_tensor(
 def _byte(self):
     return flow._C.to(self, flow.uint8)
 
-  
+
 def _cumsum(self, dim, dtype=None):
     return flow._C.cumsum(self, dim, dtype=dtype)
 
-  
+
 def _cumprod(self, dim, dtype=None):
     return flow._C.cumprod(self, dim, dtype=dtype)
 
