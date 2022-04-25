@@ -16,16 +16,15 @@ limitations under the License.
 #ifndef ONEFLOW_CORE_JOB_GRAPH_SCOPE_VARS_H_
 #define ONEFLOW_CORE_JOB_GRAPH_SCOPE_VARS_H_
 
-#include "oneflow/core/common/maybe.h"
-
+#include <cstdint>
 namespace oneflow {
 
 bool IsOpenGraphVerboseStepLr();
 void SetGraphVerboseStepLr(bool verbose);
 
-Maybe<void> SetGraphDebugMaxPyStackDepth(int32_t depth);
+void SetGraphDebugMaxPyStackDepth(int32_t depth);
 int32_t GetGraphDebugMaxPyStackDepth();
-Maybe<void> SetGraphDebugMode(bool mode);
+void SetGraphDebugMode(bool mode);
 bool GetGraphDebugMode();
 }  // namespace oneflow
 
