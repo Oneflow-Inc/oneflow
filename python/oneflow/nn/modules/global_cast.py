@@ -13,7 +13,7 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 """
-from typing import Union, Dict
+import warnings
 
 import oneflow as flow
 from oneflow.framework.tensor import Tensor
@@ -38,7 +38,58 @@ def _check_sbp(sbp):
     return sbp
 
 
-def to_global_op(input, placement=None, sbp=None, grad_sbp=None) -> Union[Tensor, Dict[str, Tensor]]:
+def local_to_global_op(input, placement=None, sbp=None, *, check_meta=True):
+    assert isinstance(input, Tensor)
+    assert input.is_local, "input must be a local tensor"
+    if placement is None or sbp is None:
+        raise ValueError(
+            "Converting a local tensor to global tensor must have placement and sbp parameters."
+        )
+
+    assert isinstance(
+        placement, flow.placement
+    ), f"Invalid parameter placement with type {type(placement)}"
+
+    sbp = _check_sbp(sbp)
+    grad_sbp = tuple()
+    return flow._C.to_global(input, placement, sbp, grad_sbp, check_meta)
+
+
+def global_to_global_op(
+    input, placement=None, sbp=None, *, grad_sbp=None, check_meta=False
+):
+    assert isinstance(input, Tensor)
+    assert input.is_global, "input must be a global tensor"
+
+    sbp = _check_sbp(sbp)
+    if placement is None:
+        placement = input.placement
+
+    if sbp is None:
+        sbp = input.sbp
+
+    assert isinstance(
+        placement, flow.placement
+    ), f"Invalid parameter placement with type {type(placement)}"
+
+    grad_sbp = _check_sbp(grad_sbp)
+    if grad_sbp is None:
+        grad_sbp = tuple()
+    return flow._C.to_global(input, placement, sbp, grad_sbp, check_meta)
+
+
+def to_global_op(input, placement=None, sbp=None, **kwargs):
+    assert isinstance(input, Tensor)
+
+    if input.is_global:
+        return global_to_global_op(input=input, placement=placement, sbp=sbp, **kwargs)
+    else:
+        if "grad_sbp" in kwargs:
+            del kwargs["grad_sbp"]
+        return local_to_global_op(input=input, placement=placement, sbp=sbp, **kwargs)
+
+
+def to_global_op(input, placement=None, sbp=None, **kwargs):
     r"""Converts to a global tensor or state dict if it is local, otherwise performs designated placement and/or sbp conversion.
     
     It performs the same conversion as :func:`oneflow.Tensor.to_global` to the tensor or every tensor in the state dict.
@@ -50,8 +101,6 @@ def to_global_op(input, placement=None, sbp=None, grad_sbp=None) -> Union[Tensor
         input (flow.Tensor or dict):  
         placement (flow.placement, optional):  the desired placement of the parameters and buffers in this module. Default: None
         sbp (flow.sbp.sbp or list/tuple of flow.sbp.sbp, optional): the desired sbp of the parameters and buffers in this module. Default: None
-        grad_sbp (flow.sbp.sbp or list/tuple of flow.sbp.sbp, optional): manually specify the sbp of the input tensor's grad tensor in the backward pass.
-         If None, the grad tensor sbp will be infered automatically. It is only used if this tensor is a global tensor. Default: None
     
     Returns:
         The converted tensor / state dict.
@@ -63,25 +112,11 @@ def to_global_op(input, placement=None, sbp=None, grad_sbp=None) -> Union[Tensor
     # for a tensor input
     if isinstance(input, Tensor): 
         if input.is_global:
-            # convert global tensor to another global tensor with different placement or sbp
-            if placement is None:
-                placement = input.placement
-            if sbp is None:
-                sbp = input.sbp
-            grad_sbp = _check_sbp(grad_sbp)
+            return global_to_global_op(input=input, placement=placement, sbp=sbp, **kwargs)
         else:
-            # local tensor to global tensor
-            if placement is None or sbp is None:
-                raise ValueError(
-                    "Converting a local tensor to global tensor must have placement and sbp parameters."
-                )
-            if not isinstance(placement, flow.placement):
-                raise ValueError(f"Invalid parameter placement with type {type(placement)}")
-
-        if grad_sbp is None:
-            grad_sbp = tuple()
-
-        return flow._C.to_global(input, placement=placement, sbp=sbp, grad_sbp=grad_sbp)
+            if "grad_sbp" in kwargs:
+                del kwargs["grad_sbp"]
+            return local_to_global_op(input=input, placement=placement, sbp=sbp, **kwargs)
 
     # for a state dict input
     elif isinstance(input, dict):
@@ -89,7 +124,12 @@ def to_global_op(input, placement=None, sbp=None, grad_sbp=None) -> Union[Tensor
 
         def leaf_fn(node):
             if isinstance(node._value, Tensor):
-                return Parameter(node._value.to_global(placement=placement, sbp=sbp))
+                if node._value.is_global:
+                    return global_to_global_op(input=node._value, placement=placement, sbp=sbp, **kwargs)
+                else:
+                    if "grad_sbp" in kwargs:
+                        del kwargs["grad_sbp"]
+                    return local_to_global_op(input=node._value, placement=placement, sbp=sbp, **kwargs)
             return node._value
 
         mapped_input = input_tree.map_leaf(leaf_fn)
@@ -97,15 +137,12 @@ def to_global_op(input, placement=None, sbp=None, grad_sbp=None) -> Union[Tensor
 
 
 def to_local_op(input):
-    r"""Returns the local component of the input tensor or state dict.
+    r"""Returns the local component of the input.
 
-    It performs the same conversion as :func:`oneflow.Tensor.to_local` to the tensor or every tensor in the state dict.
-
-    Note:
-        The input tensor must be global, and it returns a empty tensor if there is no local component in the current rank.
+    It performs the same conversion as :func:`oneflow.Tensor.to_local` to the tensor(s) in the input.
     
     Returns:
-        The converted tensor / state dict.
+        The converted input.
     """
     assert isinstance(input, (Tensor, dict)), "input must be a tensor/dict!"
 
