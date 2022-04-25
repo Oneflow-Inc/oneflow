@@ -28,7 +28,6 @@ namespace {
 struct AvgPoolingCaptureState : public AutoGradCaptureState {
   bool requires_grad;
   size_t input_index;
-  size_t output_index;
 
   std::string data_format;
   std::vector<int32_t> padding;
@@ -65,7 +64,6 @@ Maybe<void> AvgPoolingNdGrad::Capture(AvgPoolingCaptureState* ctx, const TensorT
   if (!ctx->requires_grad) { return Maybe<void>::Ok(); }
 
   ctx->input_index = ctx->SaveTensorForBackward(inputs.at(0));
-  ctx->output_index = ctx->SaveTensorForBackward(outputs.at(0));
 
   ComposedAttrMap composed_attrs(attrs, base_attrs_);
   ctx->data_format = JUST(composed_attrs.GetAttr<std::string>("data_format"));
@@ -86,12 +84,11 @@ Maybe<void> AvgPoolingNdGrad::Apply(const AvgPoolingCaptureState* ctx, const Ten
 
   int32_t ndims = ctx->kernel_size.size();
   const auto& input = ctx->SavedTensors().at(ctx->input_index);
-  const auto& output = ctx->SavedTensors().at(ctx->output_index);
 
   in_grads->resize(1);
   in_grads->at(0) = JUST(functional::AvgPoolingNdGrad(
-      input, output, out_grads.at(0), ndims, ctx->data_format, ctx->padding, ctx->kernel_size,
-      ctx->stride, ctx->ceil_mode, ctx->count_include_pad, ctx->divisor_override));
+      input, out_grads.at(0), ndims, ctx->data_format, ctx->padding, ctx->kernel_size, ctx->stride,
+      ctx->ceil_mode, ctx->count_include_pad, ctx->divisor_override));
 
   return Maybe<void>::Ok();
 }
