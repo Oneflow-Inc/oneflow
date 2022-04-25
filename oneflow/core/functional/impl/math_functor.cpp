@@ -430,7 +430,6 @@ class AminFunctor {
   }
 };
 
-
 class AmaxFunctor {
  public:
   Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x,
