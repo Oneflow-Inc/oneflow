@@ -355,6 +355,10 @@
   signature: "Tensor (Tensor input, Int32 dim0, Int32 dim1) => Swapdims"
   bind_python: True
 
+- name: "amax"
+  signature: "Tensor (Tensor input, Int32List[1] dim=None, Bool keepdim=False) => Amax"
+  bind_python: True
+
 - name: "permute"
   signature: "Tensor (Tensor input, Int32List dims) => Permute"
   bind_python: True
@@ -1174,7 +1178,7 @@
 
 - name: "pooling_grad"
   signature:
-    "Tensor (Tensor x, Tensor y, Tensor indice, Tensor dy, String mode, Int32 ndims,
+    "Tensor (Tensor x, Tensor indice, Tensor dy, String mode, Int32 ndims,
     String data_format, Int32List padding, Int32List kernel_size,
     Int32List stride, Int32List dilation, Bool return_indices, Bool ceil_mode) => PoolingNdGrad"
   bind_python: False
@@ -1710,7 +1714,7 @@
 
 - name: "avg_pooling_grad"
   signature:
-    "Tensor (Tensor x, Tensor y, Tensor dy, Int32 ndims, String data_format, Int32List padding,
+    "Tensor (Tensor x, Tensor dy, Int32 ndims, String data_format, Int32List padding,
     Int32List kernel_size, Int32List stride, Bool ceil_mode, Bool count_include_pad,
     Int32 divisor_override=0) => AvgPoolingNdGrad"
   bind_python: False
@@ -1744,7 +1748,7 @@
   bind_python: False
 
 - name: "to_global"
-  signature: "Tensor (Tensor x, Placement placement, SbpList sbp, SbpList grad_sbp) => ToConsistent"
+  signature: "Tensor (Tensor x, Placement placement, SbpList sbp, SbpList grad_sbp, Bool check_meta) => ToConsistent"
   bind_python: True
 
 - name: "to_local"
@@ -2069,7 +2073,7 @@
   bind_python: True
 
 - name: "cumsum"
-  signature: "Tensor (Tensor input, Int64 dim) => Cumsum"
+  signature: "Tensor (Tensor input, Int64 dim, *, DataType dtype=None) => Cumsum"
   bind_python: True
 
 - name: "cumsum_grad"
@@ -2077,7 +2081,7 @@
   bind_python: False 
 
 - name: "cumprod"
-  signature: "Tensor (Tensor input, Int64 dim) => Cumprod"
+  signature: "Tensor (Tensor input, Int64 dim, *, DataType dtype=None) => Cumprod"
   bind_python: True
 
 - name: "cumprod_grad"
