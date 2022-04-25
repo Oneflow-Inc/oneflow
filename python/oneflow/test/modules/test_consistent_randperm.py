@@ -64,6 +64,7 @@ class TestRandpermConsistent(flow.unittest.TestCase):
                     for dtype in Dtypes:
                         _test_consistent_randperm(test_case, N, placement, sbp, dtype)
 
+    @flow.unittest.skip_unless_1n2d()
     @unittest.skipIf(os.getenv("ONEFLOW_TEST_CPU_ONLY"), "only test cpu cases")
     @globaltest
     def test_randperm_graph(test_case):
