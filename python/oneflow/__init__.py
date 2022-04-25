@@ -184,6 +184,7 @@ from oneflow._C import cumsum
 from oneflow._C import contiguous
 from oneflow._C import cumprod
 from oneflow._C import swapaxes
+from oneflow._C import amax
 from oneflow._C import swapdims
 from oneflow._C import t
 from oneflow._C import masked_fill
