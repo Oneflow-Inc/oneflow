@@ -430,6 +430,26 @@ class AminFunctor {
   }
 };
 
+
+class AmaxFunctor {
+ public:
+  Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x,
+                           const Optional<std::vector<int32_t>>& dim, const bool& keepdim) const {
+    if (!dim.has_value()) { return ReduceMax(x, {}, keepdim); }
+
+    const int32_t ndim = x->ndim();
+    std::vector<int32_t>& dims = *JUST(dim);
+    for (int i = 0; i < dims.size(); i++) {
+      if (dims[i] < -ndim || dims[i] >= ndim) {
+        return Error::IndexError() << "Dimension out of range (expected to be in range of ["
+                                   << -ndim << ", " << ndim - 1 << "], but got " << dims[i] << ")";
+      }
+      if (dims[i] < 0) { dims[i] += ndim; }
+    }
+    return ReduceMax(x, dims, keepdim);
+  }
+};
+
 class ReduceSumFunctor {
  public:
   ReduceSumFunctor() {
@@ -2139,7 +2159,8 @@ class CumBaseFunctor {
   explicit CumBaseFunctor(std::string op_name) {
     op_ = CHECK_JUST(one::OpBuilder(op_name).Input("x").Output("y").Build());
   }
-  Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& input, int64_t dim) const {
+  Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& input, int64_t dim,
+                           const Optional<Symbol<DType>>& dtype) const {
     auto ndim = input->ndim();
     if (dim < 0) { dim += ndim; }
     CHECK_OR_RETURN(dim >= 0 && dim < ndim)
@@ -2149,7 +2170,11 @@ class CumBaseFunctor {
     MutableAttrMap attrs;
     JUST(attrs.SetAttr<int64_t>("dim", dim));
     TensorProcessor tensor_processor;
-    JUST(tensor_processor.AddInputs({input}, DType::Int64()).Apply());
+    if (dtype) {
+      JUST(tensor_processor.AddInputs({input}, JUST(dtype)).Apply());
+    } else {
+      JUST(tensor_processor.AddInputs({input}, DType::Int64()).Apply());
+    }
     TensorTuple input_tuple = JUST(tensor_processor.GetInputs());
     return OpInterpUtil::Dispatch<Tensor>(*op_, input_tuple, attrs);
   }
@@ -2798,6 +2823,7 @@ ONEFLOW_FUNCTION_LIBRARY(m) {
   m.add_functor<ReduceMinFunctor>("ReduceMin");
   m.add_functor<MinFunctor, Min2Functor>("Min");
   m.add_functor<AminFunctor>("Amin");
+  m.add_functor<AmaxFunctor>("Amax");
   m.add_functor<ReduceSumFunctor>("ReduceSum");
   m.add_functor<ReduceAllFunctor>("ReduceAll");
   m.add_functor<ReduceAnyFunctor>("ReduceAny");

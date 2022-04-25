@@ -46,6 +46,7 @@ from .split import *
 from .clamp import *
 from .erfinv import *
 from .swapaxes import *
+from .amax import *
 from .unbind import *
 from .repeat import *
 from .tile import *
