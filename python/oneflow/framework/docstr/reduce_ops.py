@@ -123,7 +123,7 @@ add_docstr(
     
     Args:
         input (oneflow.Tensor): the Input Tensor
-        dim (int or tuple of ints): the dimension to reduce. Default: `None`
+        dim (int or tuple of ints, optional): the dimension to reduce. Default: `None`
         keepdim (bool, optional): whether the output tensor has dim retained or not. Default: `False`
 
     For example:
@@ -153,7 +153,7 @@ add_docstr(
 
     Args:
         input (oneflow.Tensor): the Input Tensor
-        dim (int or tuple of ints): the dimension to reduce. Default: `None`
+        dim (int or tuple of ints, optional): the dimension to reduce. Default: `None`
         keepdim (bool, optional): whether the output tensor has dim retained or not. Default: `False`
 
     For example:
