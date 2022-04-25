@@ -122,10 +122,10 @@ class TestLogicalReduce(flow.unittest.TestCase):
         return torch.any(x)
 
     @autotest(auto_backward=False)
-    def test_scalar_reduce_prob_with_random_data(test_case):
+    def test_scalar_reduce_prod_with_random_data(test_case):
         device = random_device()
         x = random_tensor(ndim=4, dtype=float, requires_grad=False).to(device)
-        return torch.prob(x)
+        return torch.prod(x)
 
     @autotest(auto_backward=False)
     def test_all_bool_input_with_random_data(test_case):
