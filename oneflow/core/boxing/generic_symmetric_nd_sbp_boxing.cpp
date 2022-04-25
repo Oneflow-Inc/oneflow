@@ -45,9 +45,9 @@ Maybe<Symbol<SbpParallel>> GetBroadcastSbp() {
 
 auto* CachedGetBroadcastSbp = DECORATE(&GetBroadcastSbp, ThreadLocalCached);
 
-Maybe<Shape> CalLogicalShape4Axis(const Shape& logical_shape, int axis,
-                                  Symbol<ParallelDesc> parallel_desc, Symbol<NdSbp> nd_sbp) {
-  CHECK_LT_OR_RETURN(axis, nd_sbp->sbp_parallel_size());
+Maybe<Shape> CalcLogicalShape4Axis(const Shape& logical_shape, int axis,
+                                   Symbol<ParallelDesc> parallel_desc, Symbol<NdSbp> nd_sbp) {
+  CHECK_LT_OR_RETURN(axis, nd_sbp->sbp_parallel_size());  // NOLINT(maybe-need-error-msg)
   std::shared_ptr<Shape> sub_logical_shape = std::make_shared<Shape>(logical_shape);
 
   const auto& opt_parallel_id = JUST(GetParallelId4CurrentProcessCtx(parallel_desc));
@@ -77,10 +77,11 @@ Maybe<Shape> CalLogicalShape4Axis(const Shape& logical_shape, int axis,
 }
 
 static constexpr auto* GetLogicalShape4Axis =
-    DECORATE(&CalLogicalShape4Axis, ThreadLocalCachedCopiable);
+    DECORATE(&CalcLogicalShape4Axis, ThreadLocalCachedCopiable);
 
 Maybe<int> CalcTheFirstDiffAxisBetweenTwoNdSbp(Symbol<NdSbp> in_nd_sbp, Symbol<NdSbp> out_nd_sbp) {
-  CHECK_EQ_OR_RETURN(in_nd_sbp->sbp_parallel_size(), out_nd_sbp->sbp_parallel_size());
+  CHECK_EQ_OR_RETURN(in_nd_sbp->sbp_parallel_size(),
+                     out_nd_sbp->sbp_parallel_size());  // NOLINT(maybe-need-error-msg)
   int dim = 0;
   for (; dim < in_nd_sbp->sbp_parallel_size(); ++dim) {
     if (in_nd_sbp->sbp_parallel(dim) != out_nd_sbp->sbp_parallel(dim)) { break; }
@@ -103,10 +104,11 @@ Maybe<one::Tensor> Apply1DBoxing(const std::shared_ptr<one::Tensor>& input, Symb
 
 Maybe<void> RawCheckGenericSymmetricNdSbpBoxing(Symbol<PlacedNdSbp> in, Symbol<PlacedNdSbp> out,
                                                 const Shape& logical_shape) {
-  CHECK_OR_RETURN(in->placement() == out->placement());
-  CHECK_OR_RETURN(in->nd_sbp() != out->nd_sbp());
-  CHECK_EQ_OR_RETURN(in->nd_sbp()->sbp_parallel_size(), out->nd_sbp()->sbp_parallel_size());
-  CHECK_GT_OR_RETURN(in->nd_sbp()->sbp_parallel_size(), 1);
+  CHECK_OR_RETURN(in->placement() == out->placement());  // NOLINT(maybe-need-error-msg)
+  CHECK_OR_RETURN(in->nd_sbp() != out->nd_sbp());        // NOLINT(maybe-need-error-msg)
+  CHECK_EQ_OR_RETURN(in->nd_sbp()->sbp_parallel_size(),
+                     out->nd_sbp()->sbp_parallel_size());    // NOLINT(maybe-need-error-msg)
+  CHECK_GT_OR_RETURN(in->nd_sbp()->sbp_parallel_size(), 1);  // NOLINT(maybe-need-error-msg)
   return Maybe<void>::Ok();
 }
 
@@ -156,7 +158,10 @@ Maybe<one::Tensor> GenericSymmetricNdSbpBoxing(const std::shared_ptr<one::Tensor
       const auto& physical_shape =
           *JUST(GetPhysicalShape(sub_logical_shape, *one_dim_nd_sbp, *sub_parallel_desc, index));
 
-      CHECK_EQ_OR_RETURN(physical_shape, *local_tensor->shape());
+      CHECK_EQ_OR_RETURN(physical_shape, *local_tensor->shape())
+          << Error::RuntimeError() << "Invalid input tensor, size of local tensor ("
+          << local_tensor->shape()->ToString() << ") does not match global tensor ("
+          << logical_shape.ToString() << ")!";
       std::shared_ptr<one::Tensor> sub_global_tensor = JUST(one::functional::LocalToConsistent(
           local_tensor, sub_parallel_desc, *JUST(GetSbpList(one_dim_nd_sbp)), sub_logical_shape,
           local_tensor->dtype()));
@@ -174,7 +179,11 @@ Maybe<one::Tensor> GenericSymmetricNdSbpBoxing(const std::shared_ptr<one::Tensor
                                                        local_tensor->dtype()));
     }
 
-    CHECK_OR_RETURN(IsAllBroadcastNdSbpAfterDim(JUST(output->nd_sbp()), first_diff_sbp_dim));
+    CHECK_OR_RETURN(IsAllBroadcastNdSbpAfterDim(JUST(output->nd_sbp()), first_diff_sbp_dim))
+        << Error::RuntimeError()
+        << "Compute generic-symmetric-nd-sbp-to-nd-sbp failed. Please submit an issue in "
+           "`https://github.com/Oneflow-Inc/oneflow/issues` and we will fix it as soon as "
+           "possible";
 
     // Convert broadcast tensor to output with out_nd_sbp data step by step
     // e.g.
@@ -205,7 +214,11 @@ Maybe<one::Tensor> GenericSymmetricNdSbpBoxing(const std::shared_ptr<one::Tensor
       int64_t index = CalcIndex4Axis(parallel_id, hierarchy_stride, i);
       const auto& physical_shape =
           JUST(GetPhysicalShape(*sub_logical_shape, *one_dim_nd_sbp, *sub_parallel_desc, index));
-      CHECK_EQ_OR_RETURN(*physical_shape, *local_tensor->shape());
+      CHECK_EQ_OR_RETURN(*physical_shape, *local_tensor->shape())
+          << Error::RuntimeError()
+          << "Compute generic-symmetric-nd-sbp-to-nd-sbp failed. Please submit an issue in "
+             "`https://github.com/Oneflow-Inc/oneflow/issues` and we will fix it as soon as "
+             "possible";
 
       const auto& new_nd_sbp = JUST(SetSbpAtAxis(*nd_sbp, sbp_parallel, i));
 
