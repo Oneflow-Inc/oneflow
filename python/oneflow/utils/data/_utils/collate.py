@@ -78,16 +78,18 @@ def default_collate(batch):
     elem = batch[0]
     elem_type = type(elem)
     if isinstance(elem, (flow.Tensor, flow._oneflow_internal.Tensor)):
-        batch_size = list(elem.shape)
-        batch_size.insert(0, len(batch))
-        numel = sum([x.numel() for x in batch])
+        out = None
+        if flow.utils.data.get_worker_info() is not None:
+            batch_size = list(elem.shape)
+            batch_size.insert(0, len(batch))
+            numel = sum([x.numel() for x in batch])
 
-        shm = shared_memory.SharedMemory(create=True, size=elem.numpy().nbytes * numel)
-        shm_numpy = np.ndarray(
-            elem.shape, dtype=elem.dtype, buffer=shm.buf
-        )
-        shm_tensor = flow._C.from_numpy(shm_numpy)
-        return flow._C.stack(batch, dim=0, out=shm_tensor)
+            shm = shared_memory.SharedMemory(create=True, size=elem.numpy().nbytes * numel)
+            shm_numpy = np.ndarray(
+                elem.shape, dtype=elem.dtype, buffer=shm.buf
+            )
+            out = flow._C.from_numpy(shm_numpy)
+        return flow._C.stack(batch, dim=0, out=out)
     elif (
         elem_type.__module__ == "numpy"
         and elem_type.__name__ != "str_"
