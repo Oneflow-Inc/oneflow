@@ -194,6 +194,9 @@ class Actor : public ActorBase {
   HashSet<int64_t> eord_regst_desc_ids_;
   int64_t remaining_eord_cnt_;
 
+  int64_t act_cnt_;
+  int64_t exec_interval_;
+
   HashMap<int64_t, std::vector<std::unique_ptr<Regst>>> produced_regsts_;
   HashMap<Regst*, int64_t> produced_regst2reading_cnt_;
   int64_t total_reading_cnt_;
