@@ -23,6 +23,7 @@ import re
 import collections
 
 import oneflow as flow
+from oneflow.multiprocessing import shared_memory
 
 
 string_classes = (str, bytes)
@@ -79,8 +80,14 @@ def default_collate(batch):
     if isinstance(elem, (flow.Tensor, flow._oneflow_internal.Tensor)):
         batch_size = list(elem.shape)
         batch_size.insert(0, len(batch))
-        empty = flow._C.empty(size=batch_size, dtype=elem.dtype)
-        return flow._C.stack(batch, dim=0, out=empty)
+        numel = sum([x.numel() for x in batch])
+
+        shm = shared_memory.SharedMemory(create=True, size=elem.numpy().nbytes * numel)
+        shm_numpy = np.ndarray(
+            elem.shape, dtype=elem.dtype, buffer=shm.buf
+        )
+        shm_tensor = flow._C.from_numpy(shm_numpy)
+        return flow._C.stack(batch, dim=0, out=shm_tensor)
     elif (
         elem_type.__module__ == "numpy"
         and elem_type.__name__ != "str_"
