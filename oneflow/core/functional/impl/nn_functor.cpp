@@ -602,7 +602,7 @@ class LossFunctorBase {
   Maybe<Tensor> apply_reduction(const Maybe<Tensor>& x, const std::string& reduction) const {
     CHECK_OR_RETURN(reduction == "none" || reduction == "sum" || reduction == "mean")
         << "Reduction should be none, sum or mean.";
-    // if (reduction == "sum") { return functional::ReduceSum(JUST(x), {}, false); }
+    if (reduction == "sum") { return functional::ReduceSum(JUST(x), {}, false); }
     if (reduction == "mean") { return functional::ReduceMean(JUST(x), {}, false); }
     return x;
   }
