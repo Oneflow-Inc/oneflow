@@ -36,7 +36,7 @@ def _test_consistent_empty(test_case, func, shape, placement, sbp):
 
     x = func(*shape, placement=placement, sbp=sbp)
     if func2:
-        x = func2(x)
+        x = func2(x, size=shape)
 
     test_case.assertEqual(x.shape, flow.Size(shape))
     test_case.assertEqual(x.sbp, sbp)
@@ -60,7 +60,7 @@ def _test_graph_empty(test_case, func, shape, placement, sbp):
         def build(self):
             x = func(*shape, placement=placement, sbp=sbp)
             if func2:
-                x = func2(x)
+                x = func2(x, size=shape)
             return x
 
     model = ConsistentEmptyGraph()
