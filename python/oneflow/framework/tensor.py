@@ -1091,14 +1091,15 @@ def _new_tensor(
 
 def _amin(self, dim=None, keepdim=False):
     return flow._C.amin(self, dim=dim, keepdim=keepdim)
-  
-  
+
+
 def _cumsum(self, dim, dtype=None):
     return flow._C.cumsum(self, dim, dtype=dtype)
 
 
 def _cumprod(self, dim, dtype=None):
     return flow._C.cumprod(self, dim, dtype=dtype)
+
 
 def RegisterMethods():
     Tensor.__mul__ = lambda self, other: self.mul(other)
