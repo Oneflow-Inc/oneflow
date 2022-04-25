@@ -102,13 +102,13 @@ class TestLogicalReduce(flow.unittest.TestCase):
         device = random_device()
         x = random_tensor(ndim=4, dtype=float, requires_grad=False).to(device)
         return torch.sum(x)
-    
+
     @autotest(auto_backward=False)
     def test_scalar_reduce_mean_with_random_data(test_case):
         device = random_device()
         x = random_tensor(ndim=4, dtype=float, requires_grad=False).to(device)
         return torch.mean(x)
-    
+
     @autotest(auto_backward=False)
     def test_scalar_reduce_all_with_random_data(test_case):
         device = random_device()
