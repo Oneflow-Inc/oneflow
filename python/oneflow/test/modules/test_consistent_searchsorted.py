@@ -15,20 +15,16 @@ limitations under the License.
 """
 
 import unittest
-from collections import OrderedDict
-
-import numpy as np
-
-from oneflow.test_utils.automated_test_util import *
-from oneflow.test_utils.test_util import GenArgList
 
 import oneflow as flow
 import oneflow.unittest
-from oneflow.test_utils.automated_test_util.torch_flow_dual_object import autotest
+
+from oneflow.test_utils.automated_test_util import *
 
 
-@autotest(n=1, check_graph=False)
+@autotest(n=1, auto_backward=False, check_graph=False)
 def _test_search_sorted(test_case, placement, sbp):
+    print(placement, sbp)
     sorted_sequence = random_tensor(ndim=2, dim0=2, dim1=3).to_global(placement, sbp)
     values = random_tensor(ndim=2, dim0=2).to_global(placement, sbp)
     right = oneof(True, False)
@@ -41,8 +37,8 @@ def _test_search_sorted(test_case, placement, sbp):
 class TestSearchSorted_Global(flow.unittest.TestCase):
     @globaltest
     def test_search_sorted(test_case):
-        placement = torch.placement("cuda", ranks=[0, 1])
-        sbp = torch.sbp.split(0)
+        placement = flow.placement(type="cuda", ranks=[0, 1])
+        sbp = (flow.sbp.split(axis=0),)
         _test_search_sorted(test_case, placement, sbp)
 
 
