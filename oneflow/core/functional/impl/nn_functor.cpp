@@ -135,24 +135,30 @@ class Conv3dFunctor : public ConvBaseFunctor {
 
 class DeConvBaseFunctor {
  public:
-  explicit DeConvBaseFunctor() {
+  explicit DeConvBaseFunctor(const int& num_spatial_dims) : num_spatial_dims_(num_spatial_dims) {
     bias_op_ = CHECK_JUST(one::OpBuilder("bias_add").Input("a").Input("b").Output("out").Build());
   }
   virtual ~DeConvBaseFunctor() = default;
   Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x,
                            const std::shared_ptr<one::Tensor>& weight,
-                           const Optional<one::Tensor>& bias, const int32_t& filters,
-                           const std::vector<int32_t>& padding, const std::string& data_format,
-                           const std::vector<int32_t>& kernel_size,
-                           const std::vector<int32_t>& output_padding,
-                           const std::vector<int32_t>& strides,
-                           const std::vector<int32_t>& dilation, const int32_t& groups) const {
+                           const Optional<one::Tensor>& bias, const std::vector<int32_t>& stride,
+                           const std::vector<int32_t>& padding,
+                           const std::vector<int32_t>& output_padding, const int32_t& groups,
+                           const std::vector<int32_t>& dilation,
+                           const std::string& data_format) const {
     MutableAttrMap deconv_attrs;
-    JUST(deconv_attrs.SetAttr<int32_t>("filters", filters));
+    std::vector<int32_t> kernel_size_vec(num_spatial_dims_);
+    int32_t kernel_idx_offset = 2;
+    if (data_format == "channels_last") { kernel_idx_offset = 1; }
+    for (int i = 0; i < num_spatial_dims_; i++) {
+      kernel_size_vec[i] = ((weight->shape())->At(i + kernel_idx_offset));
+    }
+
+    JUST(deconv_attrs.SetAttr<int32_t>("filters", (weight->shape())->At(1) * groups));
     JUST(deconv_attrs.SetAttr<std::vector<int32_t>>("padding_before", padding));
-    JUST(deconv_attrs.SetAttr<std::vector<int32_t>>("kernel_size", kernel_size));
+    JUST(deconv_attrs.SetAttr<std::vector<int32_t>>("kernel_size", kernel_size_vec));
     JUST(deconv_attrs.SetAttr<std::vector<int32_t>>("output_padding", output_padding));
-    JUST(deconv_attrs.SetAttr<std::vector<int32_t>>("strides", strides));
+    JUST(deconv_attrs.SetAttr<std::vector<int32_t>>("strides", stride));
     JUST(deconv_attrs.SetAttr<std::vector<int32_t>>("dilation_rate", dilation));
     JUST(deconv_attrs.SetAttr<int32_t>("groups", groups));
     JUST(deconv_attrs.SetAttr<std::string>("data_format", data_format));
@@ -170,11 +176,12 @@ class DeConvBaseFunctor {
  protected:
   std::shared_ptr<OpExpr> deconv_op_;
   std::shared_ptr<OpExpr> bias_op_;
+  int32_t num_spatial_dims_;
 };
 
 class DeConv1dFunctor : public DeConvBaseFunctor {
  public:
-  DeConv1dFunctor() {
+  DeConv1dFunctor() : DeConvBaseFunctor(/*num_spatial_dims_=*/1) {
     deconv_op_ =
         CHECK_JUST(one::OpBuilder("deconv1d").Input("in").Input("weight").Output("out").Build());
   }
@@ -182,7 +189,7 @@ class DeConv1dFunctor : public DeConvBaseFunctor {
 
 class DeConv2dFunctor : public DeConvBaseFunctor {
  public:
-  DeConv2dFunctor() {
+  DeConv2dFunctor() : DeConvBaseFunctor(/*num_spatial_dims_=*/2) {
     deconv_op_ =
         CHECK_JUST(one::OpBuilder("deconv2d").Input("in").Input("weight").Output("out").Build());
   }
@@ -190,7 +197,7 @@ class DeConv2dFunctor : public DeConvBaseFunctor {
 
 class DeConv3dFunctor : public DeConvBaseFunctor {
  public:
-  DeConv3dFunctor() {
+  DeConv3dFunctor() : DeConvBaseFunctor(/*num_spatial_dims_=*/3) {
     deconv_op_ =
         CHECK_JUST(one::OpBuilder("deconv3d").Input("in").Input("weight").Output("out").Build());
   }
@@ -1091,10 +1098,10 @@ class SparseSoftmaxCrossEntropyFunctor {
       s0s1_sbp_parallels.emplace_back(logits_nd_sbp.sbp_parallel(1));
       max_global_stage_input0 = JUST(functional::ToConsistent(
           max_device_stage->at(0), JUST(max_device_stage->at(0)->parallel_desc()),
-          new_sbp_parallels, s0s1_sbp_parallels));
+          new_sbp_parallels, s0s1_sbp_parallels, /* check_meta */ false));
       max_global_stage_input1 = JUST(functional::ToConsistent(
           max_device_stage->at(2), JUST(max_device_stage->at(0)->parallel_desc()),
-          new_sbp_parallels, s0s1_sbp_parallels));
+          new_sbp_parallels, s0s1_sbp_parallels, /* check_meta */ false));
     }
     // op_reduce_max_global_stage_
     attrs.clear();
@@ -1106,7 +1113,7 @@ class SparseSoftmaxCrossEntropyFunctor {
     if (logits_nd_sbp.sbp_parallel_size() == 2) {
       broadcast_sub_input = JUST(functional::ToConsistent(
           broadcast_sub_input, JUST(max_device_stage->at(0)->parallel_desc()), new_sbp_parallels,
-          new_sbp_parallels));
+          new_sbp_parallels, /* check_meta */ false));
     }
     // op_broadcast_sub_
     attrs.clear();
@@ -1125,7 +1132,7 @@ class SparseSoftmaxCrossEntropyFunctor {
       std::vector<Symbol<SbpParallel>> empty_grad_sbp_parallels;
       broadcast_div_input1 = JUST(functional::ToConsistent(
           output_reduce_sum->at(0), JUST(output_reduce_sum->at(0)->parallel_desc()),
-          new_sbp_parallels, new_sbp_parallels));
+          new_sbp_parallels, new_sbp_parallels, /* check_meta */ false));
     }
     // op_broadcast_div_
     attrs.clear();
