@@ -220,7 +220,8 @@ class TestExpand(flow.unittest.TestCase):
 
     @autotest(n=5, auto_backward=False)
     def test_flow_expand_with_0_size(test_case):
-        x = random_tensor(ndim=2, dim1=1).to(torch.bool)
+        device = random_device()
+        x = random_tensor(ndim=2, dim1=1).to(device)
         return x.expand([0, 3])
 
 

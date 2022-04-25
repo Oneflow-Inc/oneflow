@@ -413,13 +413,13 @@ class TestTensorIndexing(flow.unittest.TestCase):
 
     @autotest(n=3, auto_backward=False)
     def test_advanced_indexing_with_0_size_tensor(test_case):
-        data = torch.arange(8).reshape(2, 2, 2)  
+        device = random_device()
+        data = torch.arange(8).reshape(2, 2, 2).to(device)
         ranges = []
-        ranges.append(torch.ones(0, 1).to(torch.int64)) 
+        ranges.append(torch.ones(0, 1).to(torch.int64))
         ranges.append(torch.zeros(1, 3).to(torch.int64))
         res = data[ranges]
         return res
-        
 
 
 if __name__ == "__main__":
