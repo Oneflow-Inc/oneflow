@@ -91,8 +91,10 @@ add_docstr(
     """
     oneflow.sum(input, dim=None, keepdim=False) -> Tensor
 
-    Computes the sum of row of elements in a tensor in the given axis, if the axis is None, sum of all elements will be caculated.
+    Computes the sum of row of elements in a tensor in the given dimension. If the dimension is None, sum of all elements will be caculated.
     
+    If `keepdim` is `True`, the output tensor is of the same size as `input` except in the dimension(s) `dim` where it is of size 1. Otherwise, `dim` is squeezed :func:`oneflow.squeeze()`, resulting in the output tensor having 1 (or `len(dim)`) fewer dimension(s). 
+
     Args:
         input (oneflow.Tensor): the Input Tensor
         dim (int or tuple of ints, optional): the dimension to reduce. Default: `None`
@@ -119,8 +121,10 @@ add_docstr(
     """
     oneflow.mean(input, dim=None, keepdim=False) -> Tensor
     
-    Computes the mean of row of elements in a tensor in the given axis, if the axis is None, mean of all elements will be caculated.
+    Computes the mean of row of elements in a tensor in the given dimension. If the dimension is None, mean of all elements will be caculated.
     
+    If `keepdim` is `True`, the output tensor is of the same size as `input` except in the dimension(s) `dim` where it is of size 1. Otherwise, `dim` is squeezed :func:`oneflow.squeeze()`, resulting in the output tensor having 1 (or `len(dim)`) fewer dimension(s). 
+
     Args:
         input (oneflow.Tensor): the Input Tensor
         dim (int or tuple of ints, optional): the dimension to reduce. Default: `None`
@@ -147,9 +151,9 @@ add_docstr(
     """
     oneflow.prod(input, dim=None, keepdim=False) -> Tensor
 
-    Computes the product of row of elements in a tensor in the given axis.
+    Computes the product of row of elements in a tensor in the given dimension. If the dimension is None, product of all elements will be caculated.
     
-     If `keepdim` is `True`, the output tensor is of the same size as `input` except in the dimension `dim` where it is of size 1. Otherwise, `dim` is squeezed :func:`oneflow.squeeze()`, resulting in the output tensor having 1 fewer dimension than `input`. 
+    If `keepdim` is `True`, the output tensor is of the same size as `input` except in the dimension(s) `dim` where it is of size 1. Otherwise, `dim` is squeezed :func:`oneflow.squeeze()`, resulting in the output tensor having 1 (or `len(dim)`) fewer dimension(s). 
 
     Args:
         input (oneflow.Tensor): the Input Tensor
@@ -177,25 +181,31 @@ add_docstr(
     """
     oneflow.all(input, dim=None, keepdim=False) -> Tensor
 
-    Computes if all elements in the input tensor to true.
+    For each row of `input` in the given dimension `dim`, returns True if all element in the row evaluate to True and False otherwise. If the dimension is None, compute if all elements in the input tensor to true.
     
+    If `keepdim` is `True`, the output tensor is of the same size as `input` except in the dimension(s) `dim` where it is of size 1. Otherwise, `dim` is squeezed :func:`oneflow.squeeze()`, resulting in the output tensor having 1 (or `len(dim)`) fewer dimension(s). 
+
     Args:
         input (oneflow.Tensor): the Input Tensor
         dim (int, optional): the dimension to reduce. Default: `None`
         keepdim (bool, optional): whether the output tensor has dim retained or not. Default: `False`
 
-    Returns:
-        Tensor(oneflow.Tensor(dtype=int8)): If :attr:`dim` is `None`, returns 
-        the logical all value of all elements in the `input` tensor.
-    
     For example:
 
     .. code-block:: python
 
         >>> import oneflow as flow
-        >>> input = flow.arange(0, 3)
+        >>> input = flow.rand(5, 2) < 0.5
+        >>> input
+        tensor([[ True, False],
+                [ True,  True],
+                [False, False],
+                [False, False],
+                [ True, False]], dtype=oneflow.bool)
         >>> flow.all(input)
         tensor(False, dtype=oneflow.bool)
+        >>> flow.all(input, dim=1)
+        tensor([False,  True, False, False, False], dtype=oneflow.bool)
 
     """,
 )
@@ -205,25 +215,31 @@ add_docstr(
     """
     oneflow.any(input, dim=None, keepdim=False) -> Tensor
     
-    Computes if any elements in the input tensor to true.
+    For each row of `input` in the given dimension `dim`, returns True if any element in the row evaluate to True and False otherwise. If the dimension is None, compute if any elements in the input tensor to true.
     
+    If `keepdim` is `True`, the output tensor is of the same size as `input` except in the dimension(s) `dim` where it is of size 1. Otherwise, `dim` is squeezed :func:`oneflow.squeeze()`, resulting in the output tensor having 1 (or `len(dim)`) fewer dimension(s). 
+
     Args:
         input (oneflow.Tensor): the Input Tensor
         dim (int, optional): the dimension to reduce. Default: `None`
         keepdim (bool, optional): whether the output tensor has dim retained or not. Default: `False`
 
-    Returns:
-        Tensor(oneflow.Tensor(dtype=int8)): If :attr:`dim` is `None`, returns 
-        the logical any value of all elements in the `input` tensor.
-    
     For example:
 
     .. code-block:: python
 
         >>> import oneflow as flow
-        >>> input = flow.arange(0, 3)
+        >>> input = flow.rand(5, 2) < 0.5
+        >>> input
+        tensor([[ True, False],
+                [False,  True],
+                [False, False],
+                [False, False],
+                [False,  True]], dtype=oneflow.bool)
         >>> flow.any(input)
         tensor(True, dtype=oneflow.bool)
+        >>> flow.any(input, dim=0)
+        tensor([True, True], dtype=oneflow.bool)
 
     """,
 )
