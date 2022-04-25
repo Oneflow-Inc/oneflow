@@ -316,6 +316,9 @@ Maybe<void> LambInputArgModifyFn(const user_op::GetInputArgModifier& GetInputArg
 Maybe<void> SgdInputArgModifyFn(const user_op::GetInputArgModifier& GetInputArgModifierFn,
                                 const user_op::UserOpConfWrapper& conf) {
   JUST(SetInputArgModifierMutable(GetInputArgModifierFn, "model", 0));
+  if (conf.has_input("model_half", 0)) {
+    JUST(SetInputArgModifierMutable(GetInputArgModifierFn, "model_half", 0));
+  }
   return Maybe<void>::Ok();
 }
 
@@ -439,11 +442,14 @@ Maybe<void> InferLarsUpdateDataType(user_op::InferContext* ctx) {
 /* static */ Maybe<void> SgdUpdateOp::GetSbp(user_op::SbpContext* ctx) {
   const user_op::TensorDesc& model = ctx->LogicalTensorDesc4InputArgNameAndIndex("model", 0);
   FOR_RANGE(int64_t, axis, 0, model.shape().NumAxes()) {
-    ctx->NewBuilder()
-        .Broadcast(ctx->inputs())
-        .Split(user_op::OpArg("model", 0), axis)
-        .Split(user_op::OpArg("model_diff", 0), axis)
-        .Build();
+    auto builder = ctx->NewBuilder()
+                       .Broadcast(ctx->inputs())
+                       .Split(user_op::OpArg("model", 0), axis)
+                       .Split(user_op::OpArg("model_diff", 0), axis);
+    if (ctx->user_op_conf().has_input("model_half", 0)) {
+      builder.Split(user_op::OpArg("model_half", 0), axis);
+    }
+    builder.Build();
   }
   return Maybe<void>::Ok();
 }

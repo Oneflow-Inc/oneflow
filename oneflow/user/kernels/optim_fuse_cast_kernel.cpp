@@ -13,25 +13,9 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
-/*
-Memcpyright 2020 The OneFlow Authors. All rights reserved.
-
-Licensed under the Apache License, Version 2.0 (the "License");
-you may not use this file except in compliance with the License.
-You may obtain a copy of the License at
-
-    http://www.apache.org/licenses/LICENSE-2.0
-
-Unless required by applicable law or agreed to in writing, software
-distributed under the License is distributed on an "AS IS" BASIS,
-WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-See the License for the specific language governing permissions and
-limitations under the License.
-*/
 #include "oneflow/core/framework/framework.h"
 #include "oneflow/core/kernel/cuda_graph_support.h"
 #include "oneflow/core/ep/include/primitive/cast.h"
-#include "oneflow/core/ep/include/primitive/memcpy.h"
 #include "oneflow/user/kernels/op_kernel_wrapper.h"
 
 namespace oneflow {
@@ -46,12 +30,6 @@ std::unique_ptr<ep::primitive::Cast> NewCastPrimitive(Context* ctx) {
   const DataType out_data_type = ctx->TensorDesc4ArgNameAndIndex("out", 0)->data_type();
   return ep::primitive::NewPrimitive<ep::primitive::CastFactory>(ctx->device_type(), in_data_type,
                                                                  out_data_type);
-}
-
-template<typename Context>
-std::unique_ptr<ep::primitive::Memcpy> NewMemcpyPrimitive(Context* ctx) {
-  return ep::primitive::NewPrimitive<ep::primitive::MemcpyFactory>(
-      ctx->device_type(), ep::primitive::MemcpyKind::kDtoD);
 }
 
 class OptimFuseCastOpKernelState final : public OpKernelState {
@@ -94,11 +72,6 @@ class OptimFuseCast final : public OpKernel, public user_op::CudaGraphSupport {
       cast_primitive->Launch(ctx->stream(), input_tensor->dptr(), output_tensor->mut_dptr(),
                              elem_cnt);
       cast_state->set_one();
-    } else {
-      auto memcpy_primitive = NewMemcpyPrimitive(ctx);
-      CHECK(memcpy_primitive);
-      memcpy_primitive->Launch(ctx->stream(), output_tensor->mut_dptr(), input_tensor->dptr(),
-                               elem_cnt);
     }
   }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
@@ -110,22 +83,21 @@ auto CastPrimitiveExists() {
   });
 }
 
-auto MemcpyNdPrimitiveExists() {
-  return hob::make_custom("MemcpyNdPrimitiveExists", [](const KernelRegContext& ctx) {
-    return NewMemcpyPrimitive(&ctx).operator bool();
-  });
-}
+// REGISTER_USER_KERNEL("optim_fuse_cast")
+//     .SetCreateFn<OptimFuseCast>()
+//     .SetIsMatchedHob(CastPrimitiveExists() == true)
+//     .SetInplaceProposalFn([](const user_op::InferContext& ctx,
+//                              const user_op::AddInplaceArgPair& AddInplaceArgPairFn) ->
+//                              Maybe<void> {
+//       if (ctx.InputDType("in", 0) == ctx.Attr<DataType>("dtype")) {
+//         OF_RETURN_IF_ERROR(AddInplaceArgPairFn("out", 0, "in", 0, false));
+//       }
+//       return Maybe<void>::Ok();
+//     });
 
 REGISTER_USER_KERNEL("optim_fuse_cast")
     .SetCreateFn<OptimFuseCast>()
-    .SetIsMatchedHob(CastPrimitiveExists() == true && MemcpyNdPrimitiveExists() == true)
-    .SetInplaceProposalFn([](const user_op::InferContext& ctx,
-                             const user_op::AddInplaceArgPair& AddInplaceArgPairFn) -> Maybe<void> {
-      if (ctx.InputDType("in", 0) == ctx.Attr<DataType>("dtype")) {
-        OF_RETURN_IF_ERROR(AddInplaceArgPairFn("out", 0, "in", 0, false));
-      }
-      return Maybe<void>::Ok();
-    });
+    .SetIsMatchedHob(CastPrimitiveExists() == true);
 
 }  // namespace
 
