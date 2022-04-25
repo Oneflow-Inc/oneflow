@@ -23,11 +23,15 @@ from oneflow.test_utils.automated_test_util import *
 @autotest(n=1, check_graph=False)
 def _test_global_tensordot_against_pytorch(test_case, ndim, placement, sbp):
     k = random(2, 4) * 8
-    dims = [k for i in range(ndim)] 
+    dims = [k for i in range(ndim)]
     tensordot_dim = random(0, ndim + 1).to(int)
 
-    x = random_tensor(ndim=ndim, dim0=k, dim1=k, dim2=k, dim3=k).to_global(placement=placement, sbp=sbp)
-    y = random_tensor(ndim=ndim, dim0=k, dim1=k, dim2=k, dim3=k).to_global(placement=placement, sbp=sbp)
+    x = random_tensor(ndim=ndim, dim0=k, dim1=k, dim2=k, dim3=k).to_global(
+        placement=placement, sbp=sbp
+    )
+    y = random_tensor(ndim=ndim, dim0=k, dim1=k, dim2=k, dim3=k).to_global(
+        placement=placement, sbp=sbp
+    )
     z = torch.tensordot(x, y, dims=tensordot_dim)
     return z
 
@@ -38,7 +42,9 @@ class TestTensorDotConsistent(flow.unittest.TestCase):
         for placement in all_placement():
             for ndim in range(1, 4):
                 for sbp in all_sbp(placement, max_dim=ndim):
-                    _test_global_tensordot_against_pytorch(test_case, ndim, placement, sbp)
+                    _test_global_tensordot_against_pytorch(
+                        test_case, ndim, placement, sbp
+                    )
 
 
 if __name__ == "__main__":
