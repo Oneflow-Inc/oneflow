@@ -18,61 +18,42 @@ limitations under the License.
 
 #include "oneflow/core/job_rewriter/job_pass.h"
 
-namespace std {
-
-template<>
-struct hash<oneflow::PbRpf<std::string>> {
-  size_t operator()(const oneflow::PbRpf<std::string>& fields) const {
-    const auto& str_hash = std::hash<std::string>();
-    size_t hash = 0;
-    for (int i = 0; i < fields.size(); ++i) { oneflow::HashCombine(&hash, str_hash(fields.at(i))); }
-    return hash;
-  }
-};
-
-template<>
-struct hash<oneflow::OptimizerConf> {
-  size_t operator()(const oneflow::OptimizerConf& conf) const {
-    return std::hash<oneflow::PbRpf<std::string>>()(conf.variable_op_names());
-  }
-};
-
-}  // namespace std
-
 namespace oneflow {
 
-struct ClipByGlobalNormState {
-  std::string total_norm_lbn;
-  std::string coeff_lbn;
-  ParallelConf parallel_conf;
-  int64_t scope_symbol_id;
-  ClipByGlobalNormState(const std::string& total_norm_lbn, const std::string coeff_lbn,
-                        const ParallelConf& parallel_conf, int64_t scope_symbol_id)
-      : total_norm_lbn(total_norm_lbn),
-        coeff_lbn(coeff_lbn),
-        parallel_conf(parallel_conf),
-        scope_symbol_id(scope_symbol_id) {}
-  ClipByGlobalNormState& operator=(const ClipByGlobalNormState& other) {
-    total_norm_lbn = other.total_norm_lbn;
-    coeff_lbn = other.coeff_lbn;
-    parallel_conf = other.parallel_conf;
-    scope_symbol_id = other.scope_symbol_id;
-    return *this;
+class ClipByGlobalNormToken {
+ public:
+  ClipByGlobalNormToken(const int index, const std::string& total_norm_lbn,
+                        const std::string coeff_lbn, const ParallelConf& parallel_conf,
+                        int64_t scope_symbol_id)
+      : index_(index),
+        total_norm_lbn_(total_norm_lbn),
+        coeff_lbn_(coeff_lbn),
+        parallel_conf_(parallel_conf),
+        scope_symbol_id_(scope_symbol_id) {}
+
+  void set_total_norm_lbn(const std::string& total_norm_lbn) { total_norm_lbn_ = total_norm_lbn; }
+  int index() const { return index_; }
+  const std::string& total_norm_lbn() const { return total_norm_lbn_; }
+  const std::string& coeff_lbn() const { return coeff_lbn_; }
+  const ParallelConf& parallel_conf() const { return parallel_conf_; }
+  int64_t scope_symbol_id() const { return scope_symbol_id_; }
+
+  bool operator==(const ClipByGlobalNormToken& other) const {
+    if (index_ != other.index()) { return false; }
+    if (total_norm_lbn_ != other.total_norm_lbn()) { return false; }
+    if (coeff_lbn_ != other.coeff_lbn()) { return false; }
+    if (parallel_conf_ != other.parallel_conf()) { return false; }
+    if (scope_symbol_id_ != other.scope_symbol_id()) { return false; }
+    return true;
   }
+
+ private:
+  int index_;
+  std::string total_norm_lbn_;
+  std::string coeff_lbn_;
+  ParallelConf parallel_conf_;
+  int64_t scope_symbol_id_;
 };
-
-inline bool operator==(const oneflow::PbRpf<std::string>& lhs,
-                       const oneflow::PbRpf<std::string>& rhs) {
-  if (lhs.size() != rhs.size()) { return false; }
-  for (int i = 0; i < lhs.size(); ++i) {
-    if (lhs.at(i) != rhs.at(i)) { return false; }
-  }
-  return true;
-}
-
-inline bool operator==(const OptimizerConf& lhs, const OptimizerConf& rhs) {
-  return lhs.variable_op_names() == rhs.variable_op_names();
-}
 
 class ClipByGlobalNormJobPassState : public JobPassState {
  public:
@@ -80,29 +61,49 @@ class ClipByGlobalNormJobPassState : public JobPassState {
   ClipByGlobalNormJobPassState() = default;
   ~ClipByGlobalNormJobPassState() override = default;
 
-  const ClipByGlobalNormState& clip_by_global_norm_state(
-      const OptimizerConf& optimizer_conf) const {
-    const auto& it = optimizer_conf2clip_by_global_norm_state_.find(optimizer_conf);
-    CHECK(it != optimizer_conf2clip_by_global_norm_state_.end())
-        << "current optimizer has no clip_by_global_norm_state";
-    return it->second;
+  const ClipByGlobalNormToken& CreateClipByGlobalNormToken(const std::string& total_norm_lbn,
+                                                           const std::string coeff_lbn,
+                                                           const ParallelConf& parallel_conf,
+                                                           int64_t scope_symbol_id) {
+    int index = tokens_.size();
+    ClipByGlobalNormToken token(index, total_norm_lbn, coeff_lbn, parallel_conf, scope_symbol_id);
+    tokens_.push_back(token);
+    return tokens_.at(index);
   }
-  void set_clip_by_global_norm_state(const OptimizerConf& optimizer_conf,
-                                     const ClipByGlobalNormState& state) {
-    const auto& it = optimizer_conf2clip_by_global_norm_state_.find(optimizer_conf);
-    if (it == optimizer_conf2clip_by_global_norm_state_.end()) {
-      CHECK(optimizer_conf2clip_by_global_norm_state_.emplace(optimizer_conf, state).second);
+
+  void SetClipByGlobalNormToken(const std::string& variable_op_name,
+                                const ClipByGlobalNormToken& token) {
+    const auto& it = variable_op_name2token_index_.find(variable_op_name);
+    if (it != variable_op_name2token_index_.end()) {
+      int index = it->second;
+      if (token == tokens_.at(index)) {
+        // do nothing
+      } else {
+        CHECK_EQ(token.index(), index) << "token's index can't be changed";
+        tokens_.at(index) = token;
+      }
     } else {
-      it->second = state;
+      CHECK(tokens_.at(token.index()) == token);
+      CHECK(variable_op_name2token_index_.emplace(variable_op_name, token.index()).second)
+          << "variable_op_name " << variable_op_name;
     }
   }
-  bool has_clip_by_global_norm_state(const OptimizerConf& optimizer_conf) const {
-    const auto& it = optimizer_conf2clip_by_global_norm_state_.find(optimizer_conf);
-    return (it != optimizer_conf2clip_by_global_norm_state_.end());
+
+  const ClipByGlobalNormToken& GetClipByGlobalNormToken(const std::string& variable_op_name) {
+    const auto& it = variable_op_name2token_index_.find(variable_op_name);
+    CHECK(it != variable_op_name2token_index_.end());
+    int index = it->second;
+    return tokens_.at(index);
+  }
+
+  const bool HasClipByGlobalNormToken(const std::string& variable_op_name) {
+    const auto& it = variable_op_name2token_index_.find(variable_op_name);
+    return (it != variable_op_name2token_index_.end());
   }
 
  private:
-  HashMap<OptimizerConf, ClipByGlobalNormState> optimizer_conf2clip_by_global_norm_state_;
+  std::vector<ClipByGlobalNormToken> tokens_;
+  HashMap<std::string, int> variable_op_name2token_index_;
 };
 
 }  // namespace oneflow

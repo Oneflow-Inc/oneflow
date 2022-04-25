@@ -697,8 +697,7 @@ std::string GlobalNorm(const OpGraph& op_graph, JobBuilder* job_builder,
 
 void ClipGradientByGlobalNorm(JobPassCtx* ctx, const OpGraph& op_graph, JobBuilder* job_builder,
                               HashMap<LogicalBlobId, LogicalBlobId>* lbi2diff_lbi,
-                              const OptimizerConf& optimizer_conf) {
-  const ClipByGlobalNormConf& conf = optimizer_conf.clip_conf().clip_by_global_norm();
+                              const ClipByGlobalNormConf& conf) {
   if (lbi2diff_lbi->empty()) { return; }
   ParallelConf parallel_conf;
   std::string total_norm_lbn;
@@ -778,8 +777,13 @@ void ClipGradientByGlobalNorm(JobPassCtx* ctx, const OpGraph& op_graph, JobBuild
   }
   auto state =
       CHECK_JUST(ctx->MutableState<ClipByGlobalNormJobPassState>("clip_by_global_norm_state"));
-  ClipByGlobalNormState param_state(total_norm_lbn, coeff_lbn, parallel_conf, scope_symbol_id);
-  state->set_clip_by_global_norm_state(optimizer_conf, param_state);
+  const ClipByGlobalNormToken& token =
+      state->CreateClipByGlobalNormToken(total_norm_lbn, coeff_lbn, parallel_conf, scope_symbol_id);
+  for (auto& pair : *lbi2diff_lbi) {
+    const LogicalBlobId& lbi = pair.first;
+    const std::string& variable_op_name = lbi.op_name();
+    state->SetClipByGlobalNormToken(variable_op_name, token);
+  }
 }
 
 }  // namespace
@@ -1122,10 +1126,10 @@ void RegularizeGradient(const OpGraph& op_graph, JobBuilder* job_builder,
 }
 
 void ClipGradient(JobPassCtx* ctx, const OpGraph& op_graph, JobBuilder* job_builder,
-                  HashMap<LogicalBlobId, LogicalBlobId>* lbi2diff_lbi,
-                  const OptimizerConf& optimizer_conf) {
-  if (optimizer_conf.clip_conf().has_clip_by_global_norm()) {
-    ClipGradientByGlobalNorm(ctx, op_graph, job_builder, lbi2diff_lbi, optimizer_conf);
+                  HashMap<LogicalBlobId, LogicalBlobId>* lbi2diff_lbi, const ClipConf& clip_conf) {
+  if (clip_conf.has_clip_by_global_norm()) {
+    ClipGradientByGlobalNorm(ctx, op_graph, job_builder, lbi2diff_lbi,
+                             clip_conf.clip_by_global_norm());
   } else {
     UNIMPLEMENTED();
   }
