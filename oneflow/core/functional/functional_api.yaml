@@ -327,7 +327,7 @@
   bind_python: True
 
 - name: "reduce_max_global_stage_grad"
-  signature: "Tensor (Tensor out_diff, Tensor mask, Tensor device_count, Int32List axis, Bool keepdim=False) => ReduceMaxGlobalStageGrad"
+  signature: "Tensor (Tensor out_diff, Tensor mask, Tensor device_count, Int32List axis, Bool keepdims=False) => ReduceMaxGlobalStageGrad"
   bind_python: False
 
 - name: "transpose"
