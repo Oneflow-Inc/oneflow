@@ -218,6 +218,11 @@ class TestExpand(flow.unittest.TestCase):
         for arg in GenArgList(arg_dict):
             arg[0](test_case, *arg[1:])
 
+    @autotest(n=5, auto_backward=False)
+    def test_flow_expand_with_0_size(test_case):
+        x = random_tensor(ndim=2, dim1=1).to(torch.bool)
+        return x.expand([0, 3])
+
 
 if __name__ == "__main__":
     unittest.main()
