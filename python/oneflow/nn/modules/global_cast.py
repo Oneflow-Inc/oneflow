@@ -22,20 +22,20 @@ from oneflow.nn.module import Module
 from oneflow.nn.graph.util import IONode
 
 
-class ToGlobal(Module):
-    def __init__(self, placement, sbp):
-        super().__init__()
-        self.placement = placement
-        if isinstance(sbp, flow.sbp.sbp):
-            sbp = [sbp]
-        for elem in sbp:
-            assert isinstance(
-                elem, flow.sbp.sbp
-            ), "element %s is not an sbp instance" % (sbp)
-        self.sbp = sbp
+def _check_sbp(sbp):
+    if sbp is None:
+        pass
+    elif isinstance(sbp, (tuple, list)):
+        if not all(isinstance(sbp_item, flow.sbp.sbp) for sbp_item in sbp):
+            raise TypeError(
+                "sbp parameter must be type of oneflow.sbp.sbp or list/tuple of oneflow.sbp.sbp"
+            )
+    elif isinstance(sbp, flow.sbp.sbp):
+        sbp = (sbp,)
+    else:
+        raise TypeError(f"Invalid parameter sbp with type {type(sbp)}")
 
-    def forward(self, x, sbp, placement):
-        return flow._C.to_global(x, placement=placement, sbp=sbp)
+    return sbp
 
 
 def to_global_op(input, placement=None, sbp=None, grad_sbp=None) -> Union[Tensor, Dict[str, Tensor]]:
@@ -57,21 +57,6 @@ def to_global_op(input, placement=None, sbp=None, grad_sbp=None) -> Union[Tensor
         The converted tensor / state dict.
     """
     assert isinstance(input, (Tensor, dict)), "input must be a tensor/dict!"
-
-    def _check_sbp(sbp):
-        if sbp is None:
-            pass
-        elif isinstance(sbp, (tuple, list)):
-            if not all(isinstance(sbp_item, flow.sbp.sbp) for sbp_item in sbp):
-                raise TypeError(
-                    "sbp parameter must be type of oneflow.sbp.sbp or list/tuple of oneflow.sbp.sbp"
-                )
-        elif isinstance(sbp, flow.sbp.sbp):
-            sbp = (sbp,)
-        else:
-            raise TypeError(f"Invalid parameter sbp with type {type(sbp)}")
-
-        return sbp
 
     sbp = _check_sbp(sbp)
 
@@ -109,14 +94,6 @@ def to_global_op(input, placement=None, sbp=None, grad_sbp=None) -> Union[Tensor
 
         mapped_input = input_tree.map_leaf(leaf_fn)
         return mapped_input
-
-
-class ToLocal(Module):
-    def __init__(self):
-        super().__init__()
-
-    def forward(self, x):
-        return flow._C.to_local(x)
 
 
 def to_local_op(input):
