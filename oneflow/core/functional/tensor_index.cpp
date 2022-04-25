@@ -104,7 +104,7 @@ Maybe<TensorTuple> ExpandIndices(const TensorTuple& indices) {
           CHECK_OR_RETURN(size == expanded_size || size == 1 || expanded_size == 1)
               << "Cannot broadcast advanced index to size " << std::max(size, expanded_size)
               << " at dimension " << j << " since the size of another index is not 1.";
-          sizes[j] = std::max(size, expanded_size);
+          sizes[j] = size == 1 ? expanded_size : size;
         }
       }
       expanded_shape.reset(new Shape(sizes));

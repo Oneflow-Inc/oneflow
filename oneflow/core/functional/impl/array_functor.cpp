@@ -602,7 +602,7 @@ class ExpandFunctor {
       int index = i - shift;
       if (index >= 0) {
         if (shape.At(i) != -1 && shape.At(i) != in_shape.at(index)) {
-          CHECK_OR_RETURN(shape.At(i) > 0 && in_shape.at(index) == 1)
+          CHECK_OR_RETURN(shape.At(i) >= 0 && in_shape.at(index) == 1)
               << "Invalid expand shape " << shape.ToString();
         }
       } else {

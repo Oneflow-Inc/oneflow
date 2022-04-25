@@ -38,7 +38,7 @@ Maybe<void> getOutShapeAndStride(const std::vector<int32_t>& in_shape,
         out_shape[i] = in_shape.at(index);
         stride[i] = original_stride.at(index);
       } else {
-        CHECK_OR_RETURN(expand_shape.at(i) > 0 && in_shape.at(index) == 1)
+        CHECK_OR_RETURN(expand_shape.at(i) >= 0 && in_shape.at(index) == 1)
             << "Invalid expand shape ";
         out_shape[i] = expand_shape.at(i);
         stride[i] = 0;
