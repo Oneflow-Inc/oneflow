@@ -777,12 +777,12 @@ void ClipGradientByGlobalNorm(JobPassCtx* ctx, const OpGraph& op_graph, JobBuild
   }
   auto state =
       CHECK_JUST(ctx->MutableState<ClipByGlobalNormJobPassState>("clip_by_global_norm_state"));
-  const ClipByGlobalNormToken& token =
-      state->CreateClipByGlobalNormToken(total_norm_lbn, coeff_lbn, parallel_conf, scope_symbol_id);
+  const std::shared_ptr<TotalNormState>& total_norm_state =
+      std::make_shared<TotalNormState>(total_norm_lbn, coeff_lbn, parallel_conf, scope_symbol_id);
   for (auto& pair : *lbi2diff_lbi) {
     const LogicalBlobId& lbi = pair.first;
     const std::string& variable_op_name = lbi.op_name();
-    state->SetClipByGlobalNormToken(variable_op_name, token);
+    state->AddTotalNormState(variable_op_name, total_norm_state);
   }
 }
 

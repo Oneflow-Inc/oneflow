@@ -745,36 +745,35 @@ void ClipGradByGlobalNorm(JobPassCtx* ctx, const OpGraph& op_graph, JobBuilder* 
                         embedding_scope_symbol_id, parallel_conf, scope_symbol_id);
     }
   };
-  bool has_norm_token = false;
+  bool has_total_norm_state = false;
   std::string variable_op_name;
   for (const auto& var_op_name : optimizer_conf.variable_op_names()) {
-    if (clip_by_global_norm_pass_state->HasClipByGlobalNormToken(var_op_name)) {
-      has_norm_token = true;
+    if (clip_by_global_norm_pass_state->HasTotalNormState(var_op_name)) {
+      has_total_norm_state = true;
       variable_op_name = var_op_name;
       break;
     }
   }
   std::string coeff_lbn;
-  if (has_norm_token) {
-    // has_norm_token means there are some gradients in same optimizer group with embedding_grads,
-    // the total_norm_lbn is the global norm of other gradients, embedding_grads need to compute
-    // global norm with total_norm_lbn and update the consumer of the total_norm_lbn, no need to
-    // compute clamp coff because it has been built in autograd pass.
-    ClipByGlobalNormToken norm_token =
-        clip_by_global_norm_pass_state->GetClipByGlobalNormToken(variable_op_name);
-    const LogicalBlobId total_norm_lbi = GenLogicalBlobId(norm_token.total_norm_lbn());
+  if (has_total_norm_state) {
+    // has_total_norm_state means there are some gradients in same optimizer group with
+    // embedding_grads, the total_norm_lbn is the global norm of other gradients, embedding_grads
+    // need to compute global norm with total_norm_lbn and update the consumer of the
+    // total_norm_lbn, no need to compute clamp coff because it has been built in autograd pass.
+    const std::shared_ptr<TotalNormState>& total_norm_state =
+        clip_by_global_norm_pass_state->GetTotalNormState(variable_op_name);
+    const LogicalBlobId total_norm_lbi = GenLogicalBlobId(total_norm_state->total_norm_lbn());
     const DataType total_norm_data_type = op_graph.GetLogicalBlobDesc(total_norm_lbi).data_type();
     std::string new_total_norm_lbn =
-        NewGlobalNorm(norm_token.total_norm_lbn(), total_norm_data_type, norm_token.parallel_conf(),
-                      norm_token.scope_symbol_id());
+        NewGlobalNorm(total_norm_state->total_norm_lbn(), total_norm_data_type,
+                      total_norm_state->parallel_conf(), total_norm_state->scope_symbol_id());
     const OpNode* total_norm_lbn_producer = op_graph.OpNode4OpName(total_norm_lbi.op_name());
     for (const OpEdge* out_edge : total_norm_lbn_producer->out_edges()) {
       const OpNode* consumer = out_edge->dst_node();
       UpdateConsumerOpConf(consumer, total_norm_lbi, new_total_norm_lbn, op_name2op_conf);
     }
-    norm_token.set_total_norm_lbn(new_total_norm_lbn);
-    clip_by_global_norm_pass_state->SetClipByGlobalNormToken(variable_op_name, norm_token);
-    coeff_lbn = norm_token.coeff_lbn();
+    total_norm_state->set_total_norm_lbn(new_total_norm_lbn);
+    coeff_lbn = total_norm_state->coeff_lbn();
   } else {
     // no norm_state means there are no gradients in same optimizer group with embedding_grad,
     // embedding_grad compute the global norm and clip independently.
