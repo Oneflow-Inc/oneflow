@@ -13,6 +13,7 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
+#include <iostream>
 #include "oneflow/core/common/balanced_splitter.h"
 #include "oneflow/core/common/switch_func.h"
 #include "oneflow/core/framework/framework.h"
@@ -389,8 +390,12 @@ class LogicalSliceAssignOutKernel final : public user_op::OpKernel {
     const user_op::Tensor* value_tensor = ctx->Tensor4ArgNameAndIndex("value", 0);
     user_op::Tensor* ref_tensor = ctx->Tensor4ArgNameAndIndex("ref", 0);
     user_op::Tensor* y_tensor = ctx->Tensor4ArgNameAndIndex("y", 0);
-    AutoMemcpy(ctx->stream(), y_tensor->mut_dptr<T>(), ref_tensor->dptr<T>(),
-                        y_tensor->shape().elem_cnt() * sizeof(T), ref_tensor->mem_case(), y_tensor->mem_case());
+    // When eager executing, y_tensor shared the same memory with ref_tensor
+    if (ref_tensor->dptr<T>() != y_tensor->dptr<T>()) {
+      // lazy run
+      AutoMemcpy(ctx->stream(), y_tensor->mut_dptr<T>(), ref_tensor->dptr<T>(),
+                 y_tensor->shape().elem_cnt() * sizeof(T), ref_tensor->mem_case(), y_tensor->mem_case());
+    }
     const SliceContext& slice_ctx =
         dynamic_cast<const OpKernelCacheWrapper<SliceContext>*>(cache)->Get();
     SwitchWriteSlice(SwitchCase(value_tensor->shape().NumAxes(), value_tensor->data_type()), ctx,

@@ -165,6 +165,60 @@ class TestSliceUpdate(flow.unittest.TestCase):
         test_case.assertTrue(np.array_equal(input.grad.numpy(), np_grad))
         test_case.assertTrue(np.array_equal(update.grad.numpy(), np.ones(update.shape)))
 
+@flow.unittest.skip_unless_1n1d()
+class TestGraphSliceUpdate(flow.unittest.TestCase):
+    def test_slice_update(test_case):
+        x = np.array([1, 1, 1, 1, 1]).astype(np.float32)
+        input = flow.tensor(x, requires_grad=True)
+        update = flow.tensor(np.array([2, 3, 4]).astype(np.float32), requires_grad=True)
+        output = np.array([1.0, 2.0, 3.0, 4.0, 1.0])
+
+        class TestSliceUpdateGraph(flow.nn.Graph):
+            def __init__(self):
+                super().__init__()
+            
+            def build(self, x, update):
+                flow.slice_update(x, update, slice_tup_list=[[1, 4, 1]])
+                return x
+        
+        slice_update_g = TestSliceUpdateGraph()
+        slice_update_g.debug(2)
+
+        y = slice_update_g(input, update)
+        print("===>", y)
+        test_case.assertTrue(np.array_equal(y.numpy(), output))
+
+    def test_logical_slice_update(test_case):
+        x = np.array([1, 1, 1, 1, 1]).astype(np.float32)
+        input = flow.tensor(x, requires_grad=True)
+        update = flow.tensor(np.array([2, 3, 4]).astype(np.float32), requires_grad=True)
+        output = np.array([1.0, 2.0, 3.0, 4.0, 1.0])
+
+        class TestLogicalSliceUpdateGraph(flow.nn.Graph):
+            def __init__(self):
+                super().__init__()
+            
+            def build(self, x, update):
+                flow.logical_slice_assign(x, update, slice_tup_list=[[1, 4, 1]])
+                return x
+        
+        slice_update_g = TestLogicalSliceUpdateGraph()
+        slice_update_g.debug(2)
+
+        y = slice_update_g(input, update)
+        print("===>", y)
+        test_case.assertTrue(np.array_equal(y.numpy(), output))
+
+
+        # z = y.sum()
+        # z.backward()
+        # test_case.assertTrue(np.array_equal(y.numpy(), output))
+        # np_grad = np.zeros(x.shape)
+        # np_grad[0] = 1
+        # np_grad[4] = 1
+        # test_case.assertTrue(np.array_equal(input.grad.numpy(), np_grad))
+        # test_case.assertTrue(np.array_equal(update.grad.numpy(), np.ones(update.shape)))
+
 
 @flow.unittest.skip_unless_1n1d()
 class TestLogicalSliceAssign(flow.unittest.TestCase):
