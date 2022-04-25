@@ -44,6 +44,7 @@ limitations under the License.
 #include "oneflow/core/common/cpp_attribute.h"
 #include "oneflow/core/ccl/ccl.h"
 #include "oneflow/core/common/constant.h"
+#include "oneflow/core/common/env_var/debug_mode.h"
 
 namespace oneflow {
 namespace one {
@@ -65,10 +66,14 @@ Optional<bool> ParseEagerLocalToGlobalBalancedOverride() {
   }
 }
 
-bool GetLocalToGlobalIsBalanced(bool is_balanced) {
+bool NeedSyncAndCheckShapeAndDtype(bool check_meta_hint) {
   thread_local Optional<bool> eager_local_to_global_balanced_override =
       ParseEagerLocalToGlobalBalancedOverride();
-  return eager_local_to_global_balanced_override.value_or(is_balanced);
+  if (eager_local_to_global_balanced_override.has_value()) {
+    return IsInDebugMode() || !CHECK_JUST(eager_local_to_global_balanced_override);
+  } else {
+    return IsInDebugMode() || check_meta_hint;
+  }
 }
 
 // clang-format off
@@ -238,8 +243,14 @@ Maybe<void> GetConcatenatedShapeAndCheckDtype(
 Maybe<void> GetLogicalShapeAndDataType(Shape* logical_shape, DataType* /* in and out */ dtype,
                                        std::shared_ptr<const Shape> physical_shape,
                                        Symbol<ParallelDesc> parallel_desc, Symbol<NdSbp> nd_sbp,
-                                       bool is_balanced) {
-  if (is_balanced) {
+                                       bool sync_and_check_meta) {
+  if (!sync_and_check_meta) {
+    if (JUST(RankGroup::New(parallel_desc)) != JUST(RankGroupScope::CurrentRankGroup())) {
+      const auto& flat_shape_dtype =
+          JUST(BroadcastShapeAndDtype(*physical_shape, *dtype, parallel_desc));
+      physical_shape = JUST(flat_shape_dtype->ToShape());
+      *dtype = flat_shape_dtype->dtype();
+    }
     *logical_shape = *JUST(GetLogicalShape(*physical_shape, *nd_sbp, *parallel_desc));
     return Maybe<void>::Ok();
   }
@@ -323,7 +334,7 @@ Maybe<Tensor> ConsistentToConsistent(const std::shared_ptr<Tensor>& x,
 Maybe<Tensor> LocalToConsistent(const std::shared_ptr<Tensor>& x,
                                 Symbol<ParallelDesc> parallel_desc,
                                 const std::vector<Symbol<SbpParallel>>& sbp_parallels,
-                                const std::shared_ptr<OpExpr>& op) {
+                                const std::shared_ptr<OpExpr>& op, bool check_meta_hint) {
   CHECK_OR_RETURN(!x->is_lazy())
       << Error::RuntimeError()
       << "local_tensor.to_global() is not supported within nn.Graph for now";
@@ -350,9 +361,9 @@ Maybe<Tensor> LocalToConsistent(const std::shared_ptr<Tensor>& x,
   Symbol<NdSbp> nd_sbp = JUST(GetNdSbp(sbp_parallels));
   const auto& shape = std::make_shared<Shape>();
   DataType dtype = x->dtype()->data_type();
-  bool is_balanced = GetLocalToGlobalIsBalanced(false);
+  bool sync_and_check_meta = NeedSyncAndCheckShapeAndDtype(check_meta_hint);
   JUST(GetLogicalShapeAndDataType(shape.get(), &dtype, x->shape(), parallel_desc, nd_sbp,
-                                  is_balanced));
+                                  sync_and_check_meta));
   MutableAttrMap attrs;
   JUST(attrs.SetAttr<Shape>("shape", *shape));
   JUST(attrs.SetAttr<DataType>("dtype", dtype));
@@ -376,7 +387,7 @@ class LocalToConsistentFunctor {
                            const Shape& shape, const Symbol<DType>& dtype) const {
     JUST(CheckDeviceIdsIsValid(parallel_desc));
     NonRecursiveMetaInfoConsistencyCheckScope no_recursive_meta_info_conisitency_check_scope;
-    JUST(MetaInfoConsistencyCheck(parallel_desc, sbp_parallels, 1));
+    JUST(MetaInfoConsistencyCheck(parallel_desc, sbp_parallels, 1, /* force_check */ false));
     CHECK_OR_RETURN(x->is_local())
         << Error::RuntimeError()
         << "Expected local tensor for local_to_global but got global tensor!";
@@ -418,15 +429,18 @@ class ToConsistentFunctor {
   Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x,
                            Symbol<ParallelDesc> parallel_desc,
                            const std::vector<Symbol<SbpParallel>>& sbp_parallels,
-                           const std::vector<Symbol<SbpParallel>>& grad_sbp_parallels) const {
+                           const std::vector<Symbol<SbpParallel>>& grad_sbp_parallels,
+                           bool check_meta) const {
     JUST(CheckDeviceIdsIsValid(parallel_desc));
     NonRecursiveMetaInfoConsistencyCheckScope scope;
-    JUST(MetaInfoConsistencyCheck(parallel_desc, sbp_parallels, grad_sbp_parallels, 1));
+    JUST(MetaInfoConsistencyCheck(parallel_desc, sbp_parallels, grad_sbp_parallels, 1,
+                                  /* force_check */ check_meta));
     std::shared_ptr<Tensor> tensor;
     if (x->is_consistent()) {
       tensor = JUST(ConsistentToConsistent(x, parallel_desc, sbp_parallels, grad_sbp_parallels));
     } else {
-      tensor = JUST(LocalToConsistent(x, parallel_desc, sbp_parallels, local_to_consistent_op_));
+      tensor = JUST(
+          LocalToConsistent(x, parallel_desc, sbp_parallels, local_to_consistent_op_, check_meta));
     }
     return tensor;
   }
