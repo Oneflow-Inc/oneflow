@@ -67,6 +67,7 @@ class NNGraph final : public NNGraphIf {
  private:
   Maybe<void> RegisterFreeEagerTensorsToVariableOpNames();
   Maybe<void> RegisterNewVariableOpInJobPass();
+  Maybe<void> DeleteOutdatedVariableInVariableTensorMgr();
   Maybe<void> GetVariableRealBlobAfterSyncPlan();
 
   void NewRuntimeBuffers();

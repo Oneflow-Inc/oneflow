@@ -27,8 +27,10 @@ limitations under the License.
 #include "OneFlow/Conversion/OneFlowToTosa.h"
 #include "OneFlow/Conversion/SCFToGPU.h"
 #include "OneFlow/Transform/BufferHostRegister.h"
+#include "OneFlow/Transform/ConvertInferenceOp.h"
 #include "OneFlow/Transform/OutlineAndFuse.h"
 #include "OneFlow/Transform/AutoNhwc.h"
+
 #ifdef WITH_MLIR_CUDA_CODEGEN
 #include "OneFlow/Conversion/PTXToCubin.h"
 #endif  // WITH_MLIR_CUDA_CODEGEN
@@ -49,6 +51,10 @@ void populateFuserPasses(::mlir::RewritePatternSet& patterns);
 void populateFuserForExistingOp(::mlir::RewritePatternSet& patterns);
 void populateGpuHelperPatterns(::mlir::RewritePatternSet& patterns);
 void populateAutoNhwcPatterns(::mlir::RewritePatternSet& patterns);
+
+void populatePreConvertInferenceOp(::mlir::RewritePatternSet& patterns);
+void populateConvertInferenceOp(::mlir::RewritePatternSet& patterns);
+void populatePostConvertInferenceOp(::mlir::RewritePatternSet& patterns);
 
 }  // namespace oneflow
 
