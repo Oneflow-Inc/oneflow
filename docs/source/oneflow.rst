@@ -150,6 +150,8 @@ oneflow
             tanh, 
             tensor, 
             tile, 
+            to_global,
+            to_local,
             transpose,
             t,
             tril, 
