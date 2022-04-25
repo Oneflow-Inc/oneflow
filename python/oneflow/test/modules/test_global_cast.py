@@ -68,7 +68,7 @@ class TestToGlobalLocal(oneflow.unittest.TestCase):
         global_state_dict = flow.to_global(local_state_dict,
                                            placement=TestToGlobalLocal.placement,
                                            sbp=TestToGlobalLocal.sbp)
-        node_tree = IONode(global_state_dict)
+        node_tree = IONode(value=global_state_dict)
         for _, node in node_tree.named_nodes():
             if isinstance(node, flow.Tensor):
                 test_case.assertTrue(node.is_global)
@@ -77,7 +77,7 @@ class TestToGlobalLocal(oneflow.unittest.TestCase):
         global_state_dict = flow.to_global(global_state_dict,
                                            placement=TestToGlobalLocal.placement,
                                            sbp=TestToGlobalLocal.sbp)
-        node_tree = IONode(global_state_dict)
+        node_tree = IONode(value=global_state_dict)
         for _, node in node_tree.named_nodes():
             if isinstance(node, flow.Tensor):
                 test_case.assertTrue(node.is_global)
@@ -85,7 +85,7 @@ class TestToGlobalLocal(oneflow.unittest.TestCase):
     def _test_state_dict_to_local(test_case, global_state_dict):
         # global state dict -> local state dict
         local_state_dict = flow.to_local(global_state_dict)
-        node_tree = IONode(local_state_dict)
+        node_tree = IONode(value=local_state_dict)
         for _, node in node_tree.named_nodes():
             if isinstance(node, flow.Tensor):
                 test_case.assertFalse(node.is_global)
