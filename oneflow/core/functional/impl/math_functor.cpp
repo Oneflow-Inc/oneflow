@@ -411,14 +411,13 @@ class Min2Functor {
   }
 };
 
-class ReduceSumAllFunctor {
+class ReduceSumWholeFunctor {
  public:
-  ReduceSumAllFunctor() {
+  ReduceSumWholeFunctor() {
     op_ = CHECK_JUST(
         one::OpBuilder("reduce_sum").Input("input_tensor").Output("output_tensor").Build());
   }
   Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x) const {
-    // const DataType dtype = x->dtype()->data_type();
     MutableAttrMap attrs;
     const int32_t naxis = x->shape()->NumAxes();
     std::vector<int32_t> axis(naxis);
@@ -462,7 +461,6 @@ class ReduceSumFunctor {
   }
   Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x, const std::vector<int32_t>& axis,
                            const bool& keepdims) const {
-    // const DataType dtype = x->dtype()->data_type();
     MutableAttrMap attrs;
     const int32_t naxis = x->shape()->NumAxes();
     if (axis.size() == 0) {
@@ -503,9 +501,9 @@ class ReduceSumFunctor {
   std::shared_ptr<OpExpr> op_;
 };
 
-class ReduceAllAllFunctor {
+class ReduceAllWholeFunctor {
  public:
-  ReduceAllAllFunctor() {
+  ReduceAllWholeFunctor() {
     op_ = CHECK_JUST(
         one::OpBuilder("reduce_all").Input("input_tensor").Output("output_tensor").Build());
   }
@@ -546,9 +544,9 @@ class ReduceAllFunctor {
   std::shared_ptr<OpExpr> op_;
 };
 
-class ReduceAnyAllFunctor {
+class ReduceAnyWholeFunctor {
  public:
-  ReduceAnyAllFunctor() {
+  ReduceAnyWholeFunctor() {
     op_ = CHECK_JUST(
         one::OpBuilder("reduce_any").Input("input_tensor").Output("output_tensor").Build());
   }
@@ -752,9 +750,9 @@ class ReduceMaxGlobalStageGradFunctor
   static std::string GetOpName() { return "reduce_max_global_stage_grad"; }
 };
 
-class ReduceMeanAllFunctor {
+class ReduceMeanWholeFunctor {
  public:
-  ReduceMeanAllFunctor() {}
+  ReduceMeanWholeFunctor() {}
   Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x) const {
     // ReduceMean only calculate floating values.
     CHECK_OR_RETURN(IsFloatingDataType(x->dtype()->data_type()))
@@ -2971,18 +2969,18 @@ ONEFLOW_FUNCTION_LIBRARY(m) {
   m.add_functor<ReduceMaxFunctor>("ReduceMax");
   m.add_functor<MaxFunctor, Max2Functor>("Max");
   m.add_functor<ReduceMeanFunctor>("ReduceMean");
-  m.add_functor<ReduceMeanAllFunctor>("ReduceMeanAll");
+  m.add_functor<ReduceMeanWholeFunctor>("ReduceMeanWhole");
   m.add_functor<ReduceMinFunctor>("ReduceMin");
   m.add_functor<MinFunctor, Min2Functor>("Min");
   m.add_functor<AmaxFunctor>("Amax");
   m.add_functor<ReduceSumFunctor>("ReduceSum");
-  m.add_functor<ReduceSumAllFunctor>("ReduceSumAll");
+  m.add_functor<ReduceSumWholeFunctor>("ReduceSumWhole");
   m.add_functor<ReduceAllFunctor>("ReduceAll");
-  m.add_functor<ReduceAllAllFunctor>("ReduceAllAll");
+  m.add_functor<ReduceAllWholeFunctor>("ReduceAllWhole");
   m.add_functor<ReduceAnyFunctor>("ReduceAny");
-  m.add_functor<ReduceAnyAllFunctor>("ReduceAnyAll");
+  m.add_functor<ReduceAnyWholeFunctor>("ReduceAnyWhole");
   m.add_functor<ReduceProdFunctor>("ReduceProd");
-  m.add_functor<ReduceProdAllFunctor>("ReduceProdAll");
+  m.add_functor<ReduceProdAllFunctor>("ReduceProdWhole");
   m.add_functor<ReduceMinDeviceStageFunctor>("ReduceMinDeviceStage");
   m.add_functor<ReduceMaxDeviceStageFunctor>("ReduceMaxDeviceStage");
   m.add_functor<ReduceMinGlobalStageFunctor>("ReduceMinGlobalStage");
