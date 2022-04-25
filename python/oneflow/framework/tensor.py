@@ -385,6 +385,10 @@ def _swapaxes(self, dim0, dim1):
     return flow._C.swapaxes(self, dim0, dim1)
 
 
+def _amax(self, dim=None, keepdim=False):
+    return flow._C.amax(self, dim=dim, keepdim=keepdim)
+
+
 def _swapdims(self, dim0, dim1):
     return flow._C.swapdims(self, dim0, dim1)
 
@@ -791,7 +795,7 @@ def _copy_from_numpy_to_eager_local_tensor(eager_local_tensor, np_arr):
 
 def _init_by_initializer_conf(tensor, initializer_conf, random_seed=None):
     if random_seed is None:
-        random_seed = flow.default_generator.seed()
+        random_seed = flow.default_generator.initial_seed()
     shape = tuple(tensor.shape)
     initializer = initializer_util.GetInitializer(initializer_conf, random_seed, shape)
 
@@ -1264,6 +1268,7 @@ def RegisterMethods():
     Tensor.unbind = _unbind
     Tensor.squeeze = _squeeze
     Tensor.swapaxes = _swapaxes
+    Tensor.amax = _amax
     Tensor.swapdims = _swapdims
     Tensor.unfold = _unfold
     Tensor.narrow = _narrow
