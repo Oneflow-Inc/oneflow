@@ -22,6 +22,14 @@ from oneflow.test_utils.automated_test_util import *
 
 @flow.unittest.skip_unless_1n1d()
 class TestConv3DModule(flow.unittest.TestCase):
+    @autotest(n=3)
+    def test_nn_functional_conv3d(test_case):
+        device = random_device()
+        img = torch.ones((1, 3, 16, 16, 16), requires_grad=True).to(device)
+        kernel = torch.ones((6, 3, 3, 3, 3), requires_grad=True).to(device)
+        y = torch.nn.functional.conv3d(img, kernel)
+        return y
+
     @autotest(n=10)
     def test_conv3d_with_random_data(test_case):
         channels = random(1, 6)
