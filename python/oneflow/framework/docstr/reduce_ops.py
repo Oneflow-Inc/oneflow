@@ -89,7 +89,7 @@ add_docstr(
 add_docstr(
     oneflow.sum,
     """
-    oneflow.sum(input, dim, keepdim=False) -> Tensor
+    oneflow.sum(input, dim=None, keepdim=False) -> Tensor
 
     Computes the sum of row of elements in a tensor in the given axis, if the axis is None, sum of all elements will be caculated.
     
@@ -117,7 +117,7 @@ add_docstr(
 add_docstr(
     oneflow.mean,
     """
-    oneflow.mean(input, dim, keepdim=False) -> Tensor
+    oneflow.mean(input, dim=None, keepdim=False) -> Tensor
     
     Computes the mean of row of elements in a tensor in the given axis, if the axis is None, mean of all elements will be caculated.
     
@@ -145,7 +145,7 @@ add_docstr(
 add_docstr(
     oneflow.prod,
     """
-    oneflow.prod(input, dim, keepdim=False) -> Tensor
+    oneflow.prod(input, dim=None, keepdim=False) -> Tensor
 
     Computes the product of row of elements in a tensor in the given axis.
     
