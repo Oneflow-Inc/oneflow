@@ -411,7 +411,6 @@ class Min2Functor {
   }
 };
 
-
 class ReduceSumAllFunctor {
  public:
   ReduceSumAllFunctor() {
@@ -434,8 +433,8 @@ class ReduceSumAllFunctor {
 
  private:
   std::shared_ptr<OpExpr> op_;
-  }
-  
+};
+
 class AmaxFunctor {
  public:
   Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x,
@@ -453,7 +452,6 @@ class AmaxFunctor {
     }
     return ReduceMax(x, dims, keepdim);
   }
-
 };
 
 class ReduceSumFunctor {
@@ -505,6 +503,25 @@ class ReduceSumFunctor {
   std::shared_ptr<OpExpr> op_;
 };
 
+class ReduceAllAllFunctor {
+ public:
+  ReduceAllAllFunctor() {
+    op_ = CHECK_JUST(
+        one::OpBuilder("reduce_all").Input("input_tensor").Output("output_tensor").Build());
+  }
+  Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x) const {
+    MutableAttrMap attrs;
+    std::vector<int32_t> reduce_axis(x->shape()->NumAxes());
+    std::iota(reduce_axis.begin(), reduce_axis.end(), 0);
+    JUST(attrs.SetAttr<std::vector<int32_t>>("axis", reduce_axis));
+    JUST(attrs.SetAttr<bool>("keepdims", false));
+    return OpInterpUtil::Dispatch<Tensor>(*op_, {x}, attrs);
+  }
+
+ private:
+  std::shared_ptr<OpExpr> op_;
+};
+
 class ReduceAllFunctor {
  public:
   ReduceAllFunctor() {
@@ -529,6 +546,25 @@ class ReduceAllFunctor {
   std::shared_ptr<OpExpr> op_;
 };
 
+class ReduceAnyAllFunctor {
+ public:
+  ReduceAnyAllFunctor() {
+    op_ = CHECK_JUST(
+        one::OpBuilder("reduce_any").Input("input_tensor").Output("output_tensor").Build());
+  }
+  Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x) const {
+    MutableAttrMap attrs;
+    std::vector<int32_t> reduce_axis(x->shape()->NumAxes());
+    std::iota(reduce_axis.begin(), reduce_axis.end(), 0);
+    JUST(attrs.SetAttr<std::vector<int32_t>>("axis", reduce_axis));
+    JUST(attrs.SetAttr<bool>("keepdims", false));
+    return OpInterpUtil::Dispatch<Tensor>(*op_, {x}, attrs);
+  }
+
+ private:
+  std::shared_ptr<OpExpr> op_;
+};
+
 class ReduceAnyFunctor {
  public:
   ReduceAnyFunctor() {
@@ -538,12 +574,32 @@ class ReduceAnyFunctor {
   Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x, const std::vector<int32_t>& axis,
                            const bool& keepdims) const {
     MutableAttrMap attrs;
+    const int32_t naxis = x->shape()->NumAxes();
     if (axis.empty()) {
-      std::vector<int32_t> reduce_axis(x->shape()->NumAxes());
+      std::vector<int32_t> reduce_axis(naxis);
       std::iota(reduce_axis.begin(), reduce_axis.end(), 0);
       JUST(attrs.SetAttr<std::vector<int32_t>>("axis", reduce_axis));
     } else {
-      JUST(attrs.SetAttr<std::vector<int32_t>>("axis", axis));
+      CHECK_GE_OR_RETURN(naxis, axis.size())
+          << "Dimension out of range, expected to be in range of [" << -naxis << ", " << naxis - 1
+          << "], but got " << axis.size();
+      ;
+
+      std::vector<int32_t> reduce_axis(axis.size());
+      for (int i = 0; i < axis.size(); i++) {
+        CHECK_GE_OR_RETURN(naxis, axis[i])
+            << "Dimension out of range, expected to be in range of [" << -naxis << ", " << naxis - 1
+            << "], but got " << axis[i];
+        CHECK_LE_OR_RETURN(-naxis, axis[i])
+            << "Dimension out of range, expected to be in range of [" << -naxis << ", " << naxis - 1
+            << "], but got " << axis[i];
+        if (axis[i] < 0) {
+          reduce_axis[i] = axis[i] + naxis;
+        } else {
+          reduce_axis[i] = axis[i];
+        }
+      }
+      JUST(attrs.SetAttr<std::vector<int32_t>>("axis", reduce_axis));
     }
     JUST(attrs.SetAttr<bool>("keepdims", keepdims));
     return OpInterpUtil::Dispatch<Tensor>(*op_, {x}, attrs);
@@ -712,7 +768,6 @@ class ReduceMeanAllFunctor {
   }
 };
 
-
 class ReduceMeanFunctor {
  public:
   ReduceMeanFunctor() {}
@@ -740,7 +795,8 @@ class ReduceProdAllFunctor {
     op_ = CHECK_JUST(
         one::OpBuilder("reduce_prod").Input("input_tensor").Output("output_tensor").Build());
   }
-  Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x, const Optional<Symbol<DType>>& dtype) const {
+  Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x,
+                           const Optional<Symbol<DType>>& dtype) const {
     MutableAttrMap attrs;
     std::shared_ptr<one::Tensor> tensor = x;
     if (dtype.has_value() && (dtype != x->dtype())) { tensor = JUST(Cast(tensor, JUST(dtype))); }
@@ -754,9 +810,9 @@ class ReduceProdAllFunctor {
     }
     JUST(tensor_processor.AddInputs({tensor}, lowest_dtype).Apply());
     TensorTuple input_tuple = JUST(tensor_processor.GetInputs());
-      std::vector<int32_t> reduce_axis(tensor->shape()->NumAxes());
-      std::iota(reduce_axis.begin(), reduce_axis.end(), 0);
-      JUST(attrs.SetAttr<std::vector<int32_t>>("axis", reduce_axis));
+    std::vector<int32_t> reduce_axis(tensor->shape()->NumAxes());
+    std::iota(reduce_axis.begin(), reduce_axis.end(), 0);
+    JUST(attrs.SetAttr<std::vector<int32_t>>("axis", reduce_axis));
     JUST(attrs.SetAttr<bool>("keepdims", false));
     return JUST(OpInterpUtil::Dispatch<Tensor>(*op_, input_tuple, attrs));
   }
@@ -2915,14 +2971,18 @@ ONEFLOW_FUNCTION_LIBRARY(m) {
   m.add_functor<ReduceMaxFunctor>("ReduceMax");
   m.add_functor<MaxFunctor, Max2Functor>("Max");
   m.add_functor<ReduceMeanFunctor>("ReduceMean");
+  m.add_functor<ReduceMeanAllFunctor>("ReduceMeanAll");
   m.add_functor<ReduceMinFunctor>("ReduceMin");
   m.add_functor<MinFunctor, Min2Functor>("Min");
   m.add_functor<AmaxFunctor>("Amax");
   m.add_functor<ReduceSumFunctor>("ReduceSum");
   m.add_functor<ReduceSumAllFunctor>("ReduceSumAll");
   m.add_functor<ReduceAllFunctor>("ReduceAll");
+  m.add_functor<ReduceAllAllFunctor>("ReduceAllAll");
   m.add_functor<ReduceAnyFunctor>("ReduceAny");
+  m.add_functor<ReduceAnyAllFunctor>("ReduceAnyAll");
   m.add_functor<ReduceProdFunctor>("ReduceProd");
+  m.add_functor<ReduceProdAllFunctor>("ReduceProdAll");
   m.add_functor<ReduceMinDeviceStageFunctor>("ReduceMinDeviceStage");
   m.add_functor<ReduceMaxDeviceStageFunctor>("ReduceMaxDeviceStage");
   m.add_functor<ReduceMinGlobalStageFunctor>("ReduceMinGlobalStage");

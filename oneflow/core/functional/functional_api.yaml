@@ -279,18 +279,21 @@
 
 - name: "reduce_all"
   signature: [
-    "Tensor (Tensor x, Int32List[1] axis, Bool keepdims=False) => ReduceAll",
+    "Tensor (Tensor x, Int32List[1] dim, Bool keepdims=False) => ReduceAll",
     "Tensor (Tensor x) => ReduceAllAll"
   ]
   bind_python: True
 
 - name: "reduce_any"
-  signature: "Tensor (Tensor x, Int32List axis, Bool keepdims=False) => ReduceAny"
+  signature: [
+    "Tensor (Tensor x, Int32List dim, Bool keepdims=False) => ReduceAny",
+    "Tensor (Tensor x) => ReduceAnyAll"
+  ]
   bind_python: True
 
 - name: "reduce_prod"
   signature: [
-    "Tensor (Tensor x, Int32List[1] axis, Bool keepdims=False, *, DataType dtype=None) => ReduceProd",
+    "Tensor (Tensor x, Int32List[1] dim, Bool keepdims=False, *, DataType dtype=None) => ReduceProd",
     "Tensor (Tensor x, *, DataType dtype=None) => ReduceProdAll",
   ]
   bind_python: True
