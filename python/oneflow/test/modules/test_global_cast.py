@@ -13,6 +13,7 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 """
+from re import X
 import unittest
 
 import oneflow as flow
@@ -30,13 +31,17 @@ class GraphModel(nn.Graph):
         return self.model(x)
 
 
-@flow.unittest.skip_unless_1n2d()
 class TestToGlobalLocal(oneflow.unittest.TestCase):
     placement = flow.placement('cpu', ranks=[0, 1])
     sbp = flow.sbp.broadcast
     model = nn.Sequential(nn.Linear(8, 4), nn.ReLU(), nn.Linear(4, 2))
     local_graph_model = GraphModel(model)
     global_graph_model = GraphModel(model.to_global(placement=placement, sbp=sbp))
+
+    def test_none(test_case):
+        x = None
+        test_case.assertTrue(flow.to_global(x) is None)
+        test_case.assertTrue(flow.to_local(x) is None)
 
     def test_tensor_to_global(test_case):
         local_tensor = flow.ones((3, 4))
@@ -58,10 +63,6 @@ class TestToGlobalLocal(oneflow.unittest.TestCase):
         global_tensor = flow.ones((3, 4), placement=TestToGlobalLocal.placement, sbp=TestToGlobalLocal.sbp)
         local_tensor = flow.to_local(global_tensor)
         test_case.assertFalse(local_tensor.is_global)
-
-        # input a local tensor
-        with test_case.assertRaises(AssertionError):
-            local_tensor = flow.to_local(local_tensor)
 
     def _test_state_dict_to_global(test_case, local_state_dict):
         # local state dict -> global state dict
@@ -89,10 +90,6 @@ class TestToGlobalLocal(oneflow.unittest.TestCase):
         for _, node in node_tree.named_nodes():
             if isinstance(node, flow.Tensor):
                 test_case.assertFalse(node.is_global)
-
-        # input a local state dict
-        with test_case.assertRaises(AssertionError):
-            local_state_dict = flow.to_local(local_state_dict)
 
     def test_eagar_state_dict(test_case):
         test_case._test_state_dict_to_global(TestToGlobalLocal.model.state_dict())
