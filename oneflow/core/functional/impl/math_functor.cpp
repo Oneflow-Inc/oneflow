@@ -787,9 +787,9 @@ class ReduceMeanFunctor {
   }
 };
 
-class ReduceProdAllFunctor {
+class ReduceProdWholeFunctor {
  public:
-  ReduceProdAllFunctor() {
+  ReduceProdWholeFunctor() {
     op_ = CHECK_JUST(
         one::OpBuilder("reduce_prod").Input("input_tensor").Output("output_tensor").Build());
   }
@@ -2980,7 +2980,7 @@ ONEFLOW_FUNCTION_LIBRARY(m) {
   m.add_functor<ReduceAnyFunctor>("ReduceAny");
   m.add_functor<ReduceAnyWholeFunctor>("ReduceAnyWhole");
   m.add_functor<ReduceProdFunctor>("ReduceProd");
-  m.add_functor<ReduceProdAllFunctor>("ReduceProdWhole");
+  m.add_functor<ReduceProdWholeFunctor>("ReduceProdWhole");
   m.add_functor<ReduceMinDeviceStageFunctor>("ReduceMinDeviceStage");
   m.add_functor<ReduceMaxDeviceStageFunctor>("ReduceMaxDeviceStage");
   m.add_functor<ReduceMinGlobalStageFunctor>("ReduceMinGlobalStage");
