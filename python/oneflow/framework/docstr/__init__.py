@@ -69,3 +69,4 @@ from .argsort import *
 from .module import *
 from .util_ops import *
 from .tensordot import *
+from .deconv import *
