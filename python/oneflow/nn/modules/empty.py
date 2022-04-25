@@ -66,10 +66,6 @@ def empty_op(
 
     shape = _single(_handle_size_arg(size))
 
-    assert isinstance(
-        shape, (int, tuple, list, flow.Size)
-    ), f"argument 'size' must be tuple of ints, not %s" % (type(size))
-
     if dtype is None:
         dtype = flow.float32
     if placement is None:
