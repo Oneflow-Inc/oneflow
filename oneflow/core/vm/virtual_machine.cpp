@@ -167,7 +167,7 @@ Maybe<void> VirtualMachine::CloseVMThreads() {
 
 VirtualMachine::~VirtualMachine() {
   if (!vm_threads_closed_) { CHECK_JUST(CloseVMThreads()); }
-  CHECK(vm_->Empty());
+  CHECK(vm_->SchedulerEmpty());
   CHECK(vm_->CallbackEmpty());
   vm_.Reset();
   callback_notifier_.Close();
@@ -243,7 +243,6 @@ class SingleThreadScheduleCtx : public vm::ScheduleCtx {
   explicit SingleThreadScheduleCtx(vm::VirtualMachineEngine* vm) : vm_(vm) {}
   ~SingleThreadScheduleCtx() = default;
 
-  bool NeedFlushGarbageInstructions() const override { return true; }
   void OnGarbageMsgPending() const override { vm_->Callback(); }
   void OnWorkerLoadPending(vm::ThreadCtx* thread_ctx) const override {
     while (thread_ctx->TryReceiveAndRun() > 0) {}
@@ -253,18 +252,20 @@ class SingleThreadScheduleCtx : public vm::ScheduleCtx {
   vm::VirtualMachineEngine* vm_;
 };
 
-void ScheduleUntilVMEmpty(vm::VirtualMachineEngine* vm, vm::ScheduleCtx* schedule_ctx) {
-  do { vm->Schedule(schedule_ctx); } while (!(vm->Empty() && vm->CallbackEmpty()));
+void ScheduleUntilVMEmpty(vm::VirtualMachineEngine* vm, const vm::ScheduleCtx& schedule_ctx) {
+  do {
+    vm->Schedule(schedule_ctx);
+    vm->FlushGarbageInstructions(schedule_ctx);
+  } while (!(vm->SchedulerEmpty() && vm->CallbackEmpty()));
 }
 
 }  // namespace
 
 Maybe<void> VirtualMachine::RunInCurrentThread(vm::InstructionMsgList* instr_list) {
-  CHECK_OR_RETURN(vm_->Empty());
+  CHECK_OR_RETURN(vm_->SchedulerEmpty());
   CHECK_OR_RETURN(vm_->CallbackEmpty());
   JUST(vm_->Receive(instr_list));
-  SingleThreadScheduleCtx schedule_ctx(vm_.Mutable());
-  ScheduleUntilVMEmpty(vm_.Mutable(), &schedule_ctx);
+  ScheduleUntilVMEmpty(vm_.Mutable(), SingleThreadScheduleCtx(vm_.Mutable()));
   return Maybe<void>::Ok();
 }
 
@@ -275,10 +276,6 @@ class MultiThreadScheduleCtx : public vm::ScheduleCtx {
   explicit MultiThreadScheduleCtx(Notifier* cb_notifier) : cb_notifier_(cb_notifier) {}
   ~MultiThreadScheduleCtx() = default;
 
-  constexpr static int kGarbageFlushWindowSize = 32;
-  bool NeedFlushGarbageInstructions() const override {
-    return schedule_cnt() % kGarbageFlushWindowSize == 0;
-  }
   void OnGarbageMsgPending() const override { cb_notifier_->Notify(); }
   void OnWorkerLoadPending(vm::ThreadCtx* thread_ctx) const override {
     thread_ctx->mut_notifier()->Notify();
@@ -309,22 +306,24 @@ void VirtualMachine::ScheduleLoop(const std::function<void()>& Initializer) {
       // about 10ns.
       int i = 0;
       do {
-        // Use ThreadUnsafeEmpty to avoid acquiring mutex lock.
-        // It's safe to use ThreadUnsafeEmpty here. pending_notifier_.notified_cnt_ will be greater
-        // than zero when inconsistency between
+        // Use SchedulerThreadUnsafeEmpty to avoid acquiring mutex lock.
+        // It's safe to use SchedulerThreadUnsafeEmpty here. pending_notifier_.notified_cnt_ will be
+        // greater than zero when inconsistency between
         // vm->pending_msg_list.list_head_.list_head_.container_ and
         // vm->pending_msg_list.list_head_.list_head_.size_ occured. hence the pending
         // instructions
         // will get handled in the next iteration.
-        //  VirtualMachine::Receive may be less effiencient if the thread safe version `vm->Empty()`
+        //  VirtualMachine::Receive may be less effiencient if the thread safe version
+        //  `vm->SchedulerEmpty()`
         // used
         //  here, because VirtualMachine::ScheduleLoop is more likely to get the mutex lock.
-        do { vm->Schedule(&schedule_ctx); } while (!vm->ThreadUnsafeEmpty());
+        do { vm->Schedule(schedule_ctx); } while (!vm->SchedulerThreadUnsafeEmpty());
+        vm->FlushGarbageInstructions(schedule_ctx);
       } while (++i < kNumSchedulingPerTimoutTest);
     } while (MicrosecondsFrom(start) < kWorkingMicroseconds);
     OF_PROFILER_RANGE_POP();
   }
-  ScheduleUntilVMEmpty(vm, &schedule_ctx);
+  ScheduleUntilVMEmpty(vm, schedule_ctx);
   CHECK_JUST(ForEachThreadCtx(vm_.Mutable(), [&](vm::ThreadCtx* thread_ctx) -> Maybe<void> {
     thread_ctx->mut_notifier()->Close();
     return Maybe<void>::Ok();

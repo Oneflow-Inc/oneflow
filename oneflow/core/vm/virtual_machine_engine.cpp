@@ -164,22 +164,29 @@ void VirtualMachineEngine::HandleProbe() {
 
 void VirtualMachineEngine::HandleLocalProbe() {
   if (unlikely(local_probe_list_.size())) {
+    OF_PROFILER_RANGE_PUSH("HandleLocalProbe");
     INTRUSIVE_FOR_EACH_PTR(probe, &local_probe_list_) {
       if (probe->probe(this)) { local_probe_list_.Erase(probe); }
     }
+    OF_PROFILER_RANGE_POP();
   }
 }
 
 intrusive::shared_ptr<Instruction> VirtualMachineEngine::LivelyInstructionListErase(
-    Instruction* instruction) {
+    Instruction* instruction, const ScheduleCtx& schedule_ctx) {
+  ++total_completed_instruction_cnt_;
   auto ret = mut_lively_instruction_list()->Erase(instruction);
-  static constexpr int kProbeInterval = 20;
-  if (unlikely(total_erased_instruction_cnt_ % kProbeInterval) == 0) { HandleProbe(); }
+  static constexpr int kProbeAndFlushInterval = 64;
+  if (unlikely(total_completed_instruction_cnt_ % kProbeAndFlushInterval) == 0) {
+    HandleProbe();
+    FlushGarbageInstructions(schedule_ctx);
+  }
   return ret;
 }
 
 // Collect ready instructions onto ready_instruction_list_
-void VirtualMachineEngine::ReleaseFinishedInstructions(ScheduleCtx* schedule_ctx) {
+void VirtualMachineEngine::ReleaseFinishedInstructions(const ScheduleCtx& schedule_ctx) {
+  OF_PROFILER_RANGE_PUSH("ReleaseFinishedInstructions");
   INTRUSIVE_FOR_EACH_PTR(stream, mut_active_stream_list()) {
     while (true) {
       auto* instruction_ptr = stream->mut_running_instruction_list()->Begin();
@@ -189,16 +196,21 @@ void VirtualMachineEngine::ReleaseFinishedInstructions(ScheduleCtx* schedule_ctx
       // By referencing `instruction_ptr->mut_instr_msg()`, we can avoid instr_msg being destructed
       // in stream->DeleteInstruction(...)
       intrusive::shared_ptr<InstructionMsg> instr_msg(instruction_ptr->mut_instr_msg());
-      stream->DeleteInstruction(LivelyInstructionListErase(instruction_ptr));
+      stream->DeleteInstruction(LivelyInstructionListErase(instruction_ptr, schedule_ctx));
       local_garbage_msg_list_.EmplaceBack(std::move(instr_msg));
     }
     if (stream->running_instruction_list().empty()) { mut_active_stream_list()->Erase(stream); }
   }
+  OF_PROFILER_RANGE_POP();
 }
 
-void VirtualMachineEngine::FlushGarbageInstruction(ScheduleCtx* schedule_ctx) {
-  garbage_msg_list_.MoveFrom(&local_garbage_msg_list_);
-  schedule_ctx->OnGarbageMsgPending();
+void VirtualMachineEngine::FlushGarbageInstructions(const ScheduleCtx& schedule_ctx) {
+  if (local_garbage_msg_list_.size()) {
+    OF_PROFILER_RANGE_PUSH("FlushGarbageInstructions");
+    garbage_msg_list_.MoveFrom(&local_garbage_msg_list_);
+    schedule_ctx.OnGarbageMsgPending();
+    OF_PROFILER_RANGE_POP();
+  }
 }
 
 int64_t VirtualMachineEngine::this_machine_id() const {
@@ -300,7 +312,7 @@ bool VirtualMachineEngine::Dispatchable(Instruction* instruction) const {
 }
 
 // Dispatch ready instructions and put prescheduled instructions onto ready_instruction_list_.
-void VirtualMachineEngine::DispatchAndPrescheduleInstructions(ScheduleCtx* schedule_ctx) {
+void VirtualMachineEngine::DispatchAndPrescheduleInstructions(const ScheduleCtx& schedule_ctx) {
   ReadyInstructionList tmp_ready_instruction_list;
   mut_ready_instruction_list()->MoveTo(&tmp_ready_instruction_list);
   OF_PROFILER_RANGE_PUSH("DispatchAndPrescheduleInstructions");
@@ -325,7 +337,7 @@ void VirtualMachineEngine::DispatchAndPrescheduleInstructions(ScheduleCtx* sched
 }
 
 void VirtualMachineEngine::DispatchInstruction(Instruction* instruction,
-                                               ScheduleCtx* schedule_ctx) {
+                                               const ScheduleCtx& schedule_ctx) {
   auto* stream = instruction->mut_stream();
   stream->mut_running_instruction_list()->PushBack(instruction);
   if (stream->active_stream_hook().empty()) { mut_active_stream_list()->PushBack(stream); }
@@ -334,7 +346,7 @@ void VirtualMachineEngine::DispatchInstruction(Instruction* instruction,
     stream_type.Run(instruction);
   } else {
     stream->mut_thread_ctx()->mut_pending_instruction_list()->PushBack(instruction);
-    schedule_ctx->OnWorkerLoadPending(stream->mut_thread_ctx());
+    schedule_ctx.OnWorkerLoadPending(stream->mut_thread_ctx());
   }
 }
 
@@ -473,7 +485,7 @@ bool VirtualMachineEngine::OnSchedulerThread(const StreamType& stream_type) {
 // the other hand, `barrier_instruction_hook_.size() == 0` is more lightweight than
 // `lively_instruction_list_.Begin()?->instr_msg().instr_type_id().instruction_type().IsFrontSequential()`
 //
-void VirtualMachineEngine::TryRunBarrierInstruction(ScheduleCtx* schedule_ctx) {
+void VirtualMachineEngine::TryRunBarrierInstruction(const ScheduleCtx& schedule_ctx) {
   auto* sequnential_instruction = mut_barrier_instruction_list()->Begin();
   CHECK_NOTNULL(sequnential_instruction);
   if (likely(sequnential_instruction != mut_lively_instruction_list()->Begin())) { return; }
@@ -488,13 +500,13 @@ void VirtualMachineEngine::TryRunBarrierInstruction(ScheduleCtx* schedule_ctx) {
   stream_type.Run(sequnential_instruction);
   mut_barrier_instruction_list()->Erase(sequnential_instruction);
   intrusive::shared_ptr<InstructionMsg> instr_msg(sequnential_instruction->mut_instr_msg());
-  LivelyInstructionListErase(sequnential_instruction);
+  LivelyInstructionListErase(sequnential_instruction, schedule_ctx);
   local_garbage_msg_list_.EmplaceBack(std::move(instr_msg));
-  FlushGarbageInstruction(schedule_ctx);
+  FlushGarbageInstructions(schedule_ctx);
   OF_PROFILER_RANGE_POP();
 }
 
-void VirtualMachineEngine::Schedule(ScheduleCtx* schedule_ctx) {
+void VirtualMachineEngine::Schedule(const ScheduleCtx& schedule_ctx) {
   // Release finished instructions and try to schedule out instructions in DAG onto ready list.
   if (unlikely(mut_active_stream_list()->size())) { ReleaseFinishedInstructions(schedule_ctx); }
   // Try run the first barrier instruction.
@@ -526,9 +538,6 @@ void VirtualMachineEngine::Schedule(ScheduleCtx* schedule_ctx) {
     probe_list_.MoveTo(&local_probe_list_);
     HandleLocalProbe();
   }
-  schedule_ctx->inc_schedule_cnt();
-  // Flush local garbage instructions list.
-  if (schedule_ctx->NeedFlushGarbageInstructions()) { FlushGarbageInstruction(schedule_ctx); }
 }
 
 void VirtualMachineEngine::Callback() {
@@ -565,18 +574,18 @@ void VirtualMachineEngine::Callback() {
   }
 }
 
-bool VirtualMachineEngine::ThreadUnsafeEmpty() const {
-  return local_pending_msg_list().empty() && active_stream_list().empty()
-         && flying_instruction_cnt() == 0;
+bool VirtualMachineEngine::SchedulerThreadUnsafeEmpty() const {
+  return pending_msg_list().thread_unsafe_size() == 0 && local_pending_msg_list().empty()
+         && lively_instruction_list_.empty() && active_stream_list().empty();
 }
 
-bool VirtualMachineEngine::Empty() const {
+bool VirtualMachineEngine::SchedulerEmpty() const {
   // hook and size will be check in pending_msg_list().empty().
-  return pending_msg_list().empty() && ThreadUnsafeEmpty();
+  return pending_msg_list().empty() && SchedulerThreadUnsafeEmpty();
 }
 
 bool VirtualMachineEngine::CallbackEmpty() const {
-  return garbage_msg_list_.empty() && local_garbage_msg_list_.empty();
+  return total_erased_instruction_cnt() == total_inserted_instruction_cnt();
 }
 
 }  // namespace vm

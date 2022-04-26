@@ -39,18 +39,11 @@ class ThreadCtx;
 
 class ScheduleCtx {
  public:
-  ScheduleCtx() : schedule_cnt_(0) {}
+  ScheduleCtx() = default;
   virtual ~ScheduleCtx() = default;
 
-  int64_t schedule_cnt() const { return schedule_cnt_; }
-  void inc_schedule_cnt() { ++schedule_cnt_; }
-
-  virtual bool NeedFlushGarbageInstructions() const = 0;
   virtual void OnGarbageMsgPending() const = 0;
   virtual void OnWorkerLoadPending(vm::ThreadCtx* thread_ctx) const = 0;
-
- private:
-  int64_t schedule_cnt_;
 };
 
 class VmDesc;
@@ -78,7 +71,7 @@ class VirtualMachineEngine final : public intrusive::Base {
   const Range& machine_id_range() const { return machine_id_range_; }
   std::size_t flying_instruction_cnt() const {
     return pending_msg_list().thread_unsafe_size() + local_pending_msg_list().size()
-           + (total_erased_instruction_cnt() - total_inserted_instruction_cnt());
+           + (total_inserted_instruction_cnt() - total_erased_instruction_cnt());
   }
   size_t total_inserted_instruction_cnt() const { return total_inserted_instruction_cnt_; }
   size_t total_erased_instruction_cnt() const { return total_erased_instruction_cnt_; }
@@ -115,12 +108,12 @@ class VirtualMachineEngine final : public intrusive::Base {
   Maybe<bool> Receive(InstructionMsgList* instr_list);
   // Returns true if old pending_instruction_list is empty
   Maybe<bool> Receive(intrusive::shared_ptr<InstructionMsg>&& instruction_msg);
-  void Schedule(ScheduleCtx* schedule_ctx);
+  void Schedule(const ScheduleCtx& schedule_ctx);
   void Callback();
-  bool ThreadUnsafeEmpty() const;
-  bool Empty() const;
+  bool SchedulerThreadUnsafeEmpty() const;
+  bool SchedulerEmpty() const;
   bool CallbackEmpty() const;
-  void FlushGarbageInstruction(ScheduleCtx* schedule_ctx);
+  void FlushGarbageInstructions(const ScheduleCtx& schedule_ctx);
   std::string GetLivelyInstructionListDebugString(int64_t debug_cnt);
 
   int64_t this_machine_id() const;
@@ -140,17 +133,14 @@ class VirtualMachineEngine final : public intrusive::Base {
 
   ReadyInstructionList* mut_ready_instruction_list() { return &ready_instruction_list_; }
 
-  void ReleaseFinishedInstructions(ScheduleCtx* schedule_ctx);
-  void MoveInstructionMsgToGarbageMsgList(int flush_window_size,
-                                          intrusive::shared_ptr<InstructionMsg>&& instr_msg,
-                                          ScheduleCtx* schedule_ctx);
+  void ReleaseFinishedInstructions(const ScheduleCtx& schedule_ctx);
   void HandleLocalPending();
   void GetRewritedPendingInstructionsByWindowSize(size_t window_size,
                                                   InstructionMsgList* /*out*/ pending_instr_msgs);
   void MakeAndAppendFusedInstruction(InstructionMsgList&& fused_instr_msg_list,
                                      InstructionMsgList* /*out*/ pending_instr_msgs);
-  void TryRunBarrierInstruction(ScheduleCtx* schedule_ctx);
-  void DispatchAndPrescheduleInstructions(ScheduleCtx* schedule_ctx);
+  void TryRunBarrierInstruction(const ScheduleCtx& schedule_ctx);
+  void DispatchAndPrescheduleInstructions(const ScheduleCtx& schedule_ctx);
   bool OnSchedulerThread(const StreamType& stream_type);
 
   void ReleaseInstruction(Instruction* instruction);
@@ -162,14 +152,15 @@ class VirtualMachineEngine final : public intrusive::Base {
   DependenceAccess* AccessMirroredObject(OperandAccessType access_type,
                                          MirroredObject* mirrored_object, Instruction* instrution);
   void ConsumeMirroredObjects(Instruction* instruction);
-  void DispatchInstruction(Instruction* instruction, ScheduleCtx* schedule_ctx);
+  void DispatchInstruction(Instruction* instruction, const ScheduleCtx& schedule_ctx);
 
   bool EdgeDispatchable(const Instruction* src, const Instruction* dst) const;
   bool Dispatchable(Instruction* instruction) const;
   void TryDispatchReadyInstructions();
 
   void LivelyInstructionListPushBack(Instruction* instruction);
-  intrusive::shared_ptr<Instruction> LivelyInstructionListErase(Instruction* instruction);
+  intrusive::shared_ptr<Instruction> LivelyInstructionListErase(Instruction* instruction,
+                                                                const ScheduleCtx& schedule_ctx);
   void HandleProbe();
   void HandleLocalProbe();
 
@@ -192,6 +183,7 @@ class VirtualMachineEngine final : public intrusive::Base {
         ready_instruction_list_(),
         lively_instruction_list_(),
         total_inserted_instruction_cnt_(0),
+        total_completed_instruction_cnt_(0),
         total_erased_instruction_cnt_(0),
         probe_mutex_(),
         probe_list_(&probe_mutex_),
@@ -201,7 +193,6 @@ class VirtualMachineEngine final : public intrusive::Base {
   // fields
   intrusive::shared_ptr<VmResourceDesc> vm_resource_desc_;
   Range machine_id_range_;
-  std::atomic<int64_t> flying_instruction_cnt_;
   // lists or maps
   // Do not change the order of the following fields
   ActiveStreamList active_stream_list_;
@@ -218,6 +209,7 @@ class VirtualMachineEngine final : public intrusive::Base {
   ReadyInstructionList ready_instruction_list_;
   LivelyInstructionList lively_instruction_list_;
   size_t total_inserted_instruction_cnt_;
+  size_t total_completed_instruction_cnt_;
   std::atomic<size_t> total_erased_instruction_cnt_;
   std::mutex probe_mutex_;
   intrusive::MutexedList<INTRUSIVE_FIELD(Probe, Probe::probe_hook_)> probe_list_;
