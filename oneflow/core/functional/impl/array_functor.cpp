@@ -2173,8 +2173,10 @@ class ChunkFunctor {
   ChunkFunctor() {}
   Maybe<TensorTuple> operator()(const std::shared_ptr<one::Tensor>& x, const int64_t& chunks,
                                 const int64_t& dim) const {
-    CHECK_OR_RETURN(x->ndim() > 0) << Error::RuntimeError() << "chunk expects at least a 1-dimensional tensor.";
-    CHECK_OR_RETURN(chunks > 0) << Error::RuntimeError() << "chunk expects `chunks` to be greater than 0, got: " << chunks;
+    CHECK_OR_RETURN(x->ndim() > 0)
+        << Error::RuntimeError() << "chunk expects at least a 1-dimensional tensor.";
+    CHECK_OR_RETURN(chunks > 0) << Error::RuntimeError()
+                                << "chunk expects `chunks` to be greater than 0, got: " << chunks;
     const auto dim_size = x->shape()->Count(dim);
     int64_t split_size = (dim_size + chunks - 1) / chunks;
     if (split_size == 0 && dim_size == 0) {
