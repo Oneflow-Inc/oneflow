@@ -2205,7 +2205,7 @@ class ChunkFunctor {
                               << "chunk expects at least a 1-dimensional tensor.";
     CHECK_OR_RETURN(chunks > 0) << Error::RuntimeError()
                                 << "chunk expects `chunks` to be greater than 0, got: " << chunks;
-    CHECK_OR_RETURN(-ndim <= dim && dim < (ndim - 1))
+    CHECK_OR_RETURN(-ndim <= dim && dim <= (ndim - 1))
         << Error::IndexError() << "Dimension out of range (expected to be in range of [" << -ndim
         << ", " << ndim - 1 << "], but got " << dim << ")";
     if (dim < 0) { infferd_dim += ndim; }
