@@ -87,14 +87,13 @@ def empty_op(
             sbp = (sbp,)
         else:
             for elem in sbp:
-                assert isinstance(
-                    elem, flow.sbp.sbp
-                ), "Element in argument 'sbp' must be flow.sbp.sbp, not %s" % (type(elem))
+                assert isinstance(elem, flow.sbp.sbp), (
+                    "Element in argument 'sbp' must be flow.sbp.sbp, not %s"
+                    % (type(elem))
+                )
         assert len(sbp) == len(placement.ranks.shape)
     else:
-        assert (
-            sbp is None
-        ), "argument 'sbp' must be None"
+        assert sbp is None, "argument 'sbp' must be None"
 
     if placement is not None:
         tensor = flow._C.global_empty(shape, dtype=dtype, placement=placement, sbp=sbp)
@@ -106,7 +105,7 @@ def empty_op(
 
 def new_empty_op(
     x, size, dtype=None, device=None, placement=None, sbp=None, requires_grad=False
-):    
+):
     new_size = _single(_handle_size_arg(size))
     new_dtype = dtype
     new_device = device
@@ -122,7 +121,14 @@ def new_empty_op(
     if sbp is None:
         new_sbp = x.sbp if x.is_global else None
 
-    return empty_op(new_size, dtype=new_dtype, device=new_device, placement=new_placement, sbp=new_sbp, requires_grad=requires_grad)
+    return empty_op(
+        new_size,
+        dtype=new_dtype,
+        device=new_device,
+        placement=new_placement,
+        sbp=new_sbp,
+        requires_grad=requires_grad,
+    )
 
 
 if __name__ == "__main__":
