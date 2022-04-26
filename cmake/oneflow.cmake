@@ -287,7 +287,7 @@ set(ONEFLOW_TOOLS_DIR "${PROJECT_BINARY_DIR}/tools"
 if (
     "${LLVM_MONO_REPO_URL}" STREQUAL "https://github.com/llvm/llvm-project/archive/c63522e6ba7782c335043893ae7cbd37eca24fe5.zip"
     OR "${LLVM_MONO_REPO_URL}" STREQUAL "https://github.com/llvm/llvm-project/archive/a0595f8c99a253c65f30a151337e7aadc19ee3a1.zip"
-    OR "${LLVM_MONO_REPO_URL}" STREQUAL "https://github.com/llvm/llvm-project/archive/35e60f5de180aea55ed478298f4b40f04dcc57d1.zip"
+    OR "${LLVM_MONO_REPO_URL}" STREQUAL "https://github.com/llvm/llvm-project/archive/7eaa84eac3ba935d13f4267d3d533a6c3e1283ed.zip"
     OR "${LLVM_MONO_REPO_MD5}" STREQUAL "f2f17229cf21049663b8ef4f2b6b8062"
     OR "${LLVM_MONO_REPO_MD5}" STREQUAL "6b7c6506d5922de9632c8ff012b2f945"
     OR "${LLVM_MONO_REPO_MD5}" STREQUAL "e0ea669a9f0872d35bffda5ec6c5ac6f"

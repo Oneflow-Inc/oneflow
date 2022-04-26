@@ -186,13 +186,15 @@ def OneFlow_Job : Op<OneFlow_Dialect, "job", [FunctionOpInterface, IsolatedFromA
   );
 
   let builders = [OpBuilder<(ins
-    "StringRef":$name, "FunctionType":$function_type)
+    "StringRef":$sys_name, "FunctionType":$function_type)
   >];
 
   let extraClassDeclaration = [{
     bool isDeclaration() { return isExternal(); }
 
    FunctionType getFunctionType() { return function_type(); }
+
+   TypeAttr getFunctionTypeAttr() { return function_typeAttr(); }
 
     ArrayRef<Type> getArgumentTypes() { return getFunctionType().getInputs(); }
 
