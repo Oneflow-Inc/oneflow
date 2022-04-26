@@ -131,20 +131,8 @@ func::FuncOp GetOrInsertFuncOp(::mlir::PatternRewriter& rewriter, mlir::Location
 NamedAttrList GetJitOpAttributes(::mlir::PatternRewriter& rewriter, StringRef op_name,
                                  int32_t input_size, int32_t output_size,
                                  Operation* op_to_replace) {
-  oneflow::UserOpAdaptor op_to_replace_adaptor(op_to_replace->getOperands(),
-                                               op_to_replace->getAttrDictionary());
   NamedAttrList attributes;
-  attributes.set(OpTrait::IsOpConfCompatible<void>::getDeviceTagAttr(),
-                 op_to_replace_adaptor.device_tagAttr());
-  attributes.set(OpTrait::IsOpConfCompatible<void>::getDeviceNameAttr(),
-                 op_to_replace_adaptor.device_name());
-  attributes.set(OpTrait::IsOpConfCompatible<void>::getHierarchyAttr(),
-                 op_to_replace_adaptor.hierarchyAttr());
-  attributes.set(OpTrait::IsOpConfCompatible<void>::getOpNameAttr(),
-                 rewriter.getStringAttr(op_name));
-  // TODO: use functions in oneflow to genearated bn
-  attributes.set(OpTrait::IsOpConfCompatible<void>::getScopeSymbolIDAttr(),
-                 op_to_replace_adaptor.scope_symbol_idAttr());
+  (void)OpTrait::IsOpConfCompatible<void>::saveToNamedAttrList(op_to_replace, attributes);
   return attributes;
 }
 
@@ -366,21 +354,7 @@ mlir::IntegerAttr GetDefaultSeed(::mlir::PatternRewriter& rewriter) {
 LogicalResult InitTransposeAttributes(Operation* op, NamedAttrList& transpose_attributes,
                                       PatternRewriter& rewriter) {
   if (op->hasTrait<OpTrait::IsOpConfCompatible>()) {
-    oneflow::UserOpAdaptor op_to_replace_adaptor(op->getOperands(), op->getAttrDictionary());
-    transpose_attributes.set(OpTrait::IsOpConfCompatible<void>::getDeviceTagAttr(),
-                             op_to_replace_adaptor.device_tagAttr());
-    transpose_attributes.set(OpTrait::IsOpConfCompatible<void>::getDeviceNameAttr(),
-                             op_to_replace_adaptor.device_name());
-    transpose_attributes.set(OpTrait::IsOpConfCompatible<void>::getHierarchyAttr(),
-                             op_to_replace_adaptor.hierarchyAttr());
-    transpose_attributes.set(OpTrait::IsOpConfCompatible<void>::getOpNameAttr(),
-                             rewriter.getStringAttr(op_to_replace_adaptor.op_name().str()));
-    if (auto scope_symbol_id = op->getAttrOfType<IntegerAttr>(
-            OpTrait::IsOpConfCompatible<void>::getScopeSymbolIDAttr())) {
-      transpose_attributes.set(OpTrait::IsOpConfCompatible<void>::getScopeSymbolIDAttr(),
-                               scope_symbol_id);
-    }
-    return success();
+    return OpTrait::IsOpConfCompatible<void>::saveToNamedAttrList(op, transpose_attributes);
   } else {
     op->emitError("must be a op of trait IsOpConfCompatible!");
     return failure();
@@ -397,9 +371,8 @@ llvm::SmallVector<mlir::Value, 4> getInputOperandTransposeOp(NCHWCompatible op, 
                                                              NamedAttrList transpose_attributes,
                                                              int num_transposed_operand,
                                                              PatternRewriter& rewriter) {
-  oneflow::UserOpAdaptor op_to_replace_adaptor(op->getOperands(), op->getAttrDictionary());
-  std::string transpose_name = op_to_replace_adaptor.op_name().str() + "_transpose_input_"
-                               + std::to_string(num_transposed_operand);
+  std::string transpose_name = OpTrait::IsOpConfCompatible<void>::getOpName(op).str()
+                               + "_transpose_input_" + std::to_string(num_transposed_operand);
   transpose_attributes.set(llvm::StringRef("op_name"), rewriter.getStringAttr(transpose_name));
   SmallVector<Value, 4> input_operands;
   input_operands.push_back(val);
@@ -412,9 +385,8 @@ llvm::SmallVector<mlir::Value, 4> getInputOperandTransposeOp(NCHWCompatible op, 
 
 TransposeOp getResultTransposeOp(NCHWCompatible op, Value val, NamedAttrList transpose_attributes,
                                  int num_transposed_result, PatternRewriter& rewriter) {
-  oneflow::UserOpAdaptor op_to_replace_adaptor(op->getOperands(), op->getAttrDictionary());
-  std::string transpose_name = op_to_replace_adaptor.op_name().str() + "_transpose_output_"
-                               + std::to_string(num_transposed_result);
+  std::string transpose_name = OpTrait::IsOpConfCompatible<void>::getOpName(op).str()
+                               + "_transpose_output_" + std::to_string(num_transposed_result);
   transpose_attributes.set(llvm::StringRef("op_name"), rewriter.getStringAttr(transpose_name));
   SmallVector<Value, 4> operands;
   operands.push_back(val);
