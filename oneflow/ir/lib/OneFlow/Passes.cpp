@@ -75,7 +75,8 @@ LogicalResult DumpAssembly(::mlir::PatternRewriter& rewriter, MlirJitOp op) {
   if (auto found = symbol_table.lookup(op.op_name())) {
     found->print(os_mlir);
   } else {
-    return op.emitError("symbol of jit function not found");
+    parent_module_op->dump();
+    return op.emitError("symbol of jit function not found: " + op.op_name());
   }
   op->setAttr("mlir_assembly", rewriter.getStringAttr(mlir));
   return success();
@@ -133,10 +134,20 @@ func::FuncOp GetOrInsertFuncOp(::mlir::PatternRewriter& rewriter, mlir::Location
 }
 
 NamedAttrList GetJitOpAttributes(::mlir::PatternRewriter& rewriter, StringRef op_name,
-                                 int32_t input_size, int32_t output_size,
-                                 Operation* op_to_replace) {
+                                 int32_t input_size, int32_t output_size, Operation* op) {
   NamedAttrList attributes;
-  (void)OpTrait::IsOpConfCompatible<void>::saveToNamedAttrList(op_to_replace, attributes);
+  attributes.set(OpTrait::IsOpConfCompatible<void>::getDeviceTagAttr(),
+                 OpTrait::IsOpConfCompatible<void>::getDeviceTag(op));
+  attributes.set(OpTrait::IsOpConfCompatible<void>::getDeviceNameAttr(),
+                 OpTrait::IsOpConfCompatible<void>::getDeviceName(op));
+  if (auto hierarchy = OpTrait::IsOpConfCompatible<void>::getHierarchy(op)) {
+    attributes.set(OpTrait::IsOpConfCompatible<void>::getHierarchyAttr(), hierarchy);
+  }
+  attributes.set(OpTrait::IsOpConfCompatible<void>::getOpNameAttr(),
+                 rewriter.getStringAttr(op_name));
+  if (auto scope_symbol_id = OpTrait::IsOpConfCompatible<void>::getScopeSymbolID(op)) {
+    attributes.set(OpTrait::IsOpConfCompatible<void>::getScopeSymbolIDAttr(), scope_symbol_id);
+  }
   return attributes;
 }
 
