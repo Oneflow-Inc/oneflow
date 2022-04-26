@@ -19,7 +19,7 @@ import os
 import sys
 
 sys.path.append(os.path.abspath(os.path.dirname(__file__)))
-sys.path.append(os.path.abspath(os.path.dirname(__file__))+'/..')
+sys.path.append(os.path.abspath(os.path.dirname(__file__)) + "/..")
 
 os.environ["ONEFLOW_MLIR_ENABLE_ROUND_TRIP"] = "1"
 os.environ["ONEFLOW_MLIR_ENABLE_CODEGEN_FUSERS"] = "1"
@@ -78,7 +78,6 @@ class GraphSaveTestCase(flow.unittest.TestCase):
         job.ParseFromString(serialized_job)
 
         # TODO: run loaded job as graph and original graph, compare the result
-
 
 
 if __name__ == "__main__":

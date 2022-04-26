@@ -61,6 +61,7 @@ def do_nhwc_bacth_norm(test_case, with_cuda):
 class TestNhwcConv(oneflow.unittest.TestCase):
     def test_nhwc_conv_graph(test_case):
         import oneflow.sysconfig
+
         if oneflow.sysconfig.with_cuda():
             do_nhwc_bacth_norm(test_case, True)
         # do_nhwc_bacth_norm(test_case, False)

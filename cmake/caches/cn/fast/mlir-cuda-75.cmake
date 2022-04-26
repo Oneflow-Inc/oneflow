@@ -23,7 +23,7 @@ set(CMAKE_EXE_LINKER_FLAGS_INIT "-fuse-ld=lld" CACHE STRING "")
 set(CMAKE_MODULE_LINKER_FLAGS_INIT "-fuse-ld=lld" CACHE STRING "")
 set(CMAKE_SHARED_LINKER_FLAGS_INIT "-fuse-ld=lld" CACHE STRING "")
 set(CPU_THREADING_RUNTIME SEQ CACHE STRING
-"when using lld with TBB enabled, there will be linkage error")
+                                    "when using lld with TBB enabled, there will be linkage error")
 # https://github.com/llvm/llvm-project/issues/55010
 set(LLVM_ABI_BREAKING_CHECKS "FORCE_OFF" CACHE STRING "")
 set(BUILD_HWLOC OFF CACHE BOOL "")
