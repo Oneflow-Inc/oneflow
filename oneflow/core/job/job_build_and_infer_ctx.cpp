@@ -1021,6 +1021,7 @@ Maybe<void> LazyJobBuildAndInferCtx::Complete() {
   }
 
   if (GlobalJobDesc().Bool("__is_user_function__")) {
+    JUST(DoPass("InsertGradAccForwardPlaceholderPass"));
     JUST(DoPass("ModelUpdateConfCompatiblePass"));
     JUST(DoPass("AddInputOutputOpsPass"));
     JUST(DoPass("NormalizationExponentialAverageAutoTickPass"));
@@ -1037,6 +1038,7 @@ Maybe<void> LazyJobBuildAndInferCtx::Complete() {
     JUST(DoPass("IRRoundTripBeforeAD"));
 #endif  // WITH_MLIR
     JUST(DoPass("GenerateBackwardAndOptimizerOpConfs"));
+    JUST(DoPass("PruneGradAccForwardPlaceholderPass"));
     JUST(DoPass("ReplaceEmbeddingOps"));
     JUST(DoPass("AddSspVariableProxy"));
     JUST(DoPass("CheckpointingPass"));
