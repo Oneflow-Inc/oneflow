@@ -23,12 +23,15 @@ from oneflow.test_utils.automated_test_util import *
 
 
 @autotest(n=1, auto_backward=False, check_graph=False)
-def _test_search_sorted(test_case, placement, sbp):
-    sorted_sequence = random_tensor(ndim=2, dim0=2, dim1=3).to_global(placement, sbp)
-    values = random_tensor(ndim=2, dim0=2).to_global(placement, sbp)
-    right = oneof(True, False)
+def _test_search_sorted(test_case, placement, sbp, ndim):
+    dims = [random(1, 3) * 8 for _ in range(ndim)]
+    sorted_sequence = random_tensor(ndim, *dims).to_global(placement, sbp)
+    values = random_tensor(ndim, *dims).to_global(placement, sbp)
     y = torch.searchsorted(
-        sorted_sequence, values, out_int32=oneof(True, False), right=right,
+        sorted_sequence,
+        values,
+        out_int32=oneof(True, False),
+        right=oneof(True, False),
     )
     return y
 
@@ -36,9 +39,10 @@ def _test_search_sorted(test_case, placement, sbp):
 class TestSearchSorted_Global(flow.unittest.TestCase):
     @globaltest
     def test_search_sorted(test_case):
+        ndim = random(1, 5).to(int).value()
         for placement in all_placement():
-            for sbp in all_sbp(placement):
-                _test_search_sorted(test_case, placement, sbp)
+            for sbp in all_sbp(placement, max_dim=ndim):
+                _test_search_sorted(test_case, placement, sbp, ndim)
 
 
 if __name__ == "__main__":
