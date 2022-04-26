@@ -45,7 +45,7 @@ Maybe<void> RawCheckUnflattenHierarchy(Symbol<PlacedNdSbp> in, Symbol<PlacedNdSb
         JUST(GetPhysicalShape(logical_shape, *in->nd_sbp(), *in->placement(), in_parallel_id));
     const auto& out_physical_shape =
         JUST(GetPhysicalShape(logical_shape, *out->nd_sbp(), *out->placement(), in_parallel_id));
-    CHECK_EQ_OR_RETURN(*in_physical_shape, *out_physical_shape);
+    CHECK_EQ_OR_RETURN(*in_physical_shape, *out_physical_shape);  // NOLINT(maybe-need-error-msg)
   }
   return Maybe<void>::Ok();
 }

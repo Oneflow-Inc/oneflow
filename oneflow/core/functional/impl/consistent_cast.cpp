@@ -178,7 +178,12 @@ Maybe<void> GetConcatenatedShapeAndCheckDtype(
   HashMap<int64_t, std::shared_ptr<Shape>> rank2logical_shape;
   for (const auto& pair : rank2flat_shape_dtype) {
     rank2logical_shape.emplace(pair.first, JUST(pair.second->ToShape()));
-    CHECK_EQ_OR_RETURN(*dtype, pair.second->dtype());
+    CHECK_EQ_OR_RETURN(*dtype, pair.second->dtype())
+        << Error::RuntimeError()
+        << "Expected all tensors on each rank to be the same dtype, but found "
+           "at least two dtypes, "
+        << DType(*dtype).name() << "(rank 0) and " << DType(pair.second->dtype()).name() << "(rank "
+        << pair.first << ")!";
   }
   const auto& GetRankPhyShapeByParallelId = [&](Symbol<ParallelDesc> parallel_desc,
                                                 int64_t parallel_id) -> Maybe<Shape> {
@@ -209,20 +214,34 @@ Maybe<void> GetConcatenatedShapeAndCheckDtype(
           Symbol<ParallelDesc> sub_parallel_desc = SymbolOf(ParallelDesc(parallel_conf));
           std::shared_ptr<Shape> first_shape =
               JUST(GetRankPhyShapeByParallelId(sub_parallel_desc, 0));
-          CHECK_GE_OR_RETURN(concat_axis, 0);
-          CHECK_LT_OR_RETURN(concat_axis, first_shape->NumAxes());
+          CHECK_GE_OR_RETURN(concat_axis, 0)
+              << Error::RuntimeError() << "Split axis must not be negative, but got " << concat_axis
+              << "!";
+          CHECK_LT_OR_RETURN(concat_axis, first_shape->NumAxes())
+              << Error::RuntimeError() << "Split axis out of range (expected to be in range of ["
+              << 0 << ", " << first_shape->NumAxes() << "), but got " << concat_axis << "!)";
 
           int64_t logical_concat_dim = first_shape->At(concat_axis);
           for (int parallel_id = 1; parallel_id < sub_parallel_desc->parallel_num();
                ++parallel_id) {
             const auto& rank_shape =
                 JUST(GetRankPhyShapeByParallelId(sub_parallel_desc, parallel_id));
-            CHECK_EQ_OR_RETURN(rank_shape->NumAxes(), rank_shape->NumAxes());
+            CHECK_EQ_OR_RETURN(rank_shape->NumAxes(), first_shape->NumAxes())
+                << Error::RuntimeError() << "Sizes of tensors must match except in dimension "
+                << concat_axis << ", but found " << first_shape->ToString() << "(rank "
+                << JUST(parallel_desc->MachineId4ParallelId(0)) << ") and "
+                << rank_shape->ToString() << "(rank "
+                << JUST(parallel_desc->MachineId4ParallelId(parallel_id)) << ")!";
             logical_concat_dim += rank_shape->At(concat_axis);
           }
 
           BalancedSplitter bs(logical_concat_dim, sub_parallel_desc->parallel_num());
-          CHECK_EQ_OR_RETURN(first_shape->At(concat_axis), bs.At(0).size());
+          CHECK_EQ_OR_RETURN(first_shape->At(concat_axis), bs.At(0).size())
+              << Error::RuntimeError() << "Sizes of tensors in dimension " << concat_axis
+              << " must be same or match balanced split distribution. See "
+                 "https://github.com/Oneflow-Inc/oneflow/blob/master/oneflow/core/common/"
+                 "balanced_splitter.h "
+                 "for details of balanced split";
           first_shape->Set(concat_axis, logical_concat_dim);
 
           for (int parallel_id = 1; parallel_id < sub_parallel_desc->parallel_num();
@@ -231,9 +250,18 @@ Maybe<void> GetConcatenatedShapeAndCheckDtype(
                 JUST(GetRankPhyShapeByParallelId(sub_parallel_desc, parallel_id));
             for (int i = 0; i < first_shape->NumAxes(); ++i) {
               if (i == concat_axis) {
-                CHECK_EQ_OR_RETURN(rank_shape->At(i), bs.At(parallel_id).size());
+                CHECK_EQ_OR_RETURN(rank_shape->At(i), bs.At(parallel_id).size())
+                    << Error::RuntimeError() << "Sizes of tensors in dimension " << concat_axis
+                    << " must be same or match balanced split distribution. See "
+                       "https://github.com/Oneflow-Inc/oneflow/blob/master/oneflow/core/common/"
+                       "balanced_splitter.h "
+                       "for details of balanced split";
               } else {
-                CHECK_EQ_OR_RETURN(rank_shape->At(i), first_shape->At(i));
+                CHECK_EQ_OR_RETURN(rank_shape->At(i), first_shape->At(i))
+                    << Error::RuntimeError() << "Sizes of tensors must match except in dimension "
+                    << concat_axis << ". Expected size " << rank_shape->At(i) << " but got size "
+                    << first_shape->At(i) << " for tensor on rank "
+                    << JUST(parallel_desc->MachineId4ParallelId(parallel_id)) << "!";
               }
             }
             rank_shape->Set(concat_axis, logical_concat_dim);

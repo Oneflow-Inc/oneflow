@@ -238,7 +238,8 @@ Maybe<void> InitShapAxis2ExpandedDim(
   for (int i = 0; i < shape.NumAxes(); ++i) {
     int64_t total_dim = shape.At(i);
     shape_axis2expanded_dims->at(i).clear();
-    if (shape_axis2required_dim.at(i).empty() || shape_axis2required_dim.at(i).size() == 1) {
+    if (JUST(VectorAt(shape_axis2required_dim, i)).empty()
+        || JUST(VectorAt(shape_axis2required_dim, i)).size() == 1) {
       shape_axis2expanded_dims->at(i).emplace_back(total_dim);
     } else {
       Shape inner_shape(shape_axis2required_dim.at(i));
@@ -508,7 +509,7 @@ Maybe<Shape> GetPhysicalShape(const Shape& shape, Symbol<NdSbp> nd_sbp,
 
 Maybe<Shape> GetSubLogicalShape(Symbol<one::ConsistentTensorMeta> tensor_meta,
                                 Symbol<ParallelDesc> sub_parallel_desc, Symbol<NdSbp> sub_nd_sbp) {
-  CHECK_EQ_OR_RETURN(sub_nd_sbp->sbp_parallel_size(), 1);
+  CHECK_EQ_OR_RETURN(sub_nd_sbp->sbp_parallel_size(), 1);  // NOLINT(maybe-need-error-msg)
   const auto& logical_shape = tensor_meta->shape();
   const auto& physical_shape =
       JUST(GetPhysicalShape(logical_shape, tensor_meta->nd_sbp(), tensor_meta->parallel_desc()));
@@ -524,7 +525,7 @@ Maybe<Shape> GetSubLogicalShape(Symbol<one::ConsistentTensorMeta> tensor_meta,
 Maybe<Symbol<one::ConsistentTensorMeta>> CalcSubConsistentTensorMeta(
     Symbol<one::ConsistentTensorMeta> tensor_meta, Symbol<ParallelDesc> sub_parallel_desc,
     Symbol<NdSbp> sub_nd_sbp) {
-  CHECK_EQ_OR_RETURN(sub_nd_sbp->sbp_parallel_size(), 1);
+  CHECK_EQ_OR_RETURN(sub_nd_sbp->sbp_parallel_size(), 1);  // NOLINT(maybe-need-error-msg)
   const auto& logical_shape = JUST(GetSubLogicalShape(tensor_meta, sub_parallel_desc, sub_nd_sbp));
   one::ConsistentTensorMeta sub_consistent_tensor_meta(logical_shape, tensor_meta->dtype(),
                                                        sub_nd_sbp, sub_parallel_desc);
