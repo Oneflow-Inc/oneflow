@@ -18,7 +18,7 @@ import unittest
 import oneflow as flow
 from oneflow import nn
 import oneflow.unittest
-from oneflow.nn.graph.util import IONode
+from oneflow.nn.graph.util import IONodeType, IONode
 
 
 class GraphModel(nn.Graph):
@@ -32,22 +32,28 @@ class GraphModel(nn.Graph):
 
 class TestToGlobalLocal(oneflow.unittest.TestCase):
     placement = flow.placement('cpu', ranks=[0, 1])
-    sbp = flow.sbp.broadcast
+    sbp = (flow.sbp.broadcast,)
     model = nn.Sequential(nn.Linear(8, 4), nn.ReLU(), nn.Linear(4, 2))
     local_graph_model = GraphModel(model)
     global_graph_model = GraphModel(model.to_global(placement=placement, sbp=sbp))
 
-    def _all_global(test_case, input):
+    def _all_global(test_case, input, placement, sbp):
         node_tree = IONode(value=input)
         for _, node in node_tree.named_nodes():
-            if isinstance(node, flow.Tensor):
-                test_case.assertTrue(node.is_global)
+            if node._type == IONodeType.TENSOR:
+                value = node._value
+                test_case.assertTrue(value.is_global)
+                # check placement
+                test_case.assertEqual(placement.type, value.placement.type)
+                test_case.assertListEqual(list(placement.ranks), list(value.placement.ranks))
+                # check sbp
+                test_case.assertTupleEqual(sbp, value.sbp)
 
     def _all_local(test_case, input):
         node_tree = IONode(value=input)
         for _, node in node_tree.named_nodes():
-            if isinstance(node, flow.Tensor):
-                test_case.assertFalse(node.is_global)
+            if node._type == IONodeType.TENSOR:
+                test_case.assertFalse(node._value.is_global)
 
     def test_any_input(test_case):
         tensor = flow.zeros((3, 4))
@@ -60,7 +66,7 @@ class TestToGlobalLocal(oneflow.unittest.TestCase):
         global_inputs = []
         for i in inputs:
             ret = flow.to_global(i, placement=TestToGlobalLocal.placement, sbp=TestToGlobalLocal.sbp)
-            test_case._all_global(ret)
+            test_case._all_global(ret, placement=TestToGlobalLocal.placement, sbp=TestToGlobalLocal.sbp)
             global_inputs.append(ret)
         
         for i in global_inputs:
@@ -97,13 +103,13 @@ class TestToGlobalLocal(oneflow.unittest.TestCase):
         global_state_dict = flow.to_global(local_state_dict,
                                            placement=TestToGlobalLocal.placement,
                                            sbp=TestToGlobalLocal.sbp)
-        test_case._all_global(global_state_dict)
+        test_case._all_global(global_state_dict, placement=TestToGlobalLocal.placement, sbp=TestToGlobalLocal.sbp)
 
         # global state dict -> global state dict
         global_state_dict = flow.to_global(global_state_dict,
                                            placement=TestToGlobalLocal.placement,
                                            sbp=TestToGlobalLocal.sbp)
-        test_case._all_global(global_state_dict)
+        test_case._all_global(global_state_dict, placement=TestToGlobalLocal.placement, sbp=TestToGlobalLocal.sbp)
 
     def _test_state_dict_to_local(test_case, global_state_dict):
         # global state dict -> local state dict

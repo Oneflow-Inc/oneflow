@@ -77,9 +77,9 @@ def global_to_global_op(
 
 
 def to_global_op(input, placement=None, sbp=None, **kwargs):
-    r"""Converts the input to global if it is local, otherwise performs designated placement and/or sbp conversion.
+    r"""Converts the input tensor or input tensor(s) in list/tuple/dict to global tensor(s).
     
-    It performs the same conversion as :func:`oneflow.Tensor.to_global` to the tensor or every tensor in the state dict.
+    It performs the same conversion as :func:`oneflow.Tensor.to_global` to the tensor or every tensor in the input.
 
     Note:
         Both placement and sbp are required if the input is local, otherwise at least one of placement and sbp is required.
@@ -90,24 +90,62 @@ def to_global_op(input, placement=None, sbp=None, **kwargs):
         sbp (flow.sbp.sbp or list/tuple of flow.sbp.sbp, optional): the desired sbp of the input. Default: None
     
     Returns:
-        The converted tensor / state dict.
+        The converted input.
+
+    For a tensor input: please refer to the examples in :func:`oneflow.Tensor.to_global`.
+
+    For an input of other type (take a state dict as an example):
+
+    .. code-block:: python
+
+        >>> # Run on 2 ranks respectively
+        >>> import oneflow as flow
+        >>> from oneflow import nn
+        >>> placement = flow.placement("cpu", ranks=[0, 1]) # doctest: +SKIP
+        >>> sbp = (flow.sbp.broadcast,) # doctest: +SKIP
+        >>> model = nn.Sequential(nn.Linear(8, 4), nn.ReLU(), nn.Linear(4, 2)) # doctest: +SKIP
+        >>> global_state_dict = flow.to_global(model.state_dict(), placement, sbp) # doctest: +SKIP
+        >>> for val in state_dict.values(): # doctest: +SKIP
+        >>>     print(val.is_global) # doctest: +SKIP
+
+    .. code-block:: python
+
+        >>> # results on rank 0
+        True
+        True
+        True
+        True
+
+    .. code-block:: python
+
+        >>> # results on rank 1
+        True
+        True
+        True
+        True
     """
-    input_tree = IONode(value=input)
-
-    def leaf_fn(node):
-        if isinstance(node._value, Tensor):
-            if node._value.is_global:
-                return global_to_global_op(input=node._value, placement=placement, sbp=sbp, **kwargs)
-            else:
-                if "grad_sbp" in kwargs:
-                    del kwargs["grad_sbp"]
-                return local_to_global_op(input=node._value, placement=placement, sbp=sbp, **kwargs)
+    def _to_global_tensor(input_tensor, placement=None, sbp=None, **kwargs):
+        if input_tensor.is_global:
+            return global_to_global_op(input=input_tensor, placement=placement, sbp=sbp, **kwargs)
         else:
-            warnings.warn("Non-Tensor type: {} encountered, it will not be converted.".format(type(node._value)))
-            return node._value
+            if "grad_sbp" in kwargs:
+                del kwargs["grad_sbp"]
+            return local_to_global_op(input=input_tensor, placement=placement, sbp=sbp, **kwargs)
 
-    mapped_input = input_tree.map_leaf(leaf_fn)
-    return mapped_input
+    if isinstance(input, Tensor):
+        return _to_global_tensor(input, placement, sbp, **kwargs)
+    else:
+        input_tree = IONode(value=input)
+
+        def leaf_fn(node):
+            if isinstance(node._value, Tensor):
+                return _to_global_tensor(node._value, placement, sbp, **kwargs)
+            else:
+                warnings.warn("Non-Tensor type: {} encountered, it will not be converted.".format(type(node._value)))
+                return node._value
+
+        mapped_input = input_tree.map_leaf(leaf_fn)
+        return mapped_input
 
 
 def to_local_op(input):
@@ -117,16 +155,57 @@ def to_local_op(input):
     
     Returns:
         The converted input.
+
+    For a tensor input: please refer to the examples in :func:`oneflow.Tensor.to_local`.
+
+    For an input of other type (take a state dict as an example):
+
+    .. code-block:: python
+
+        >>> # Run on 2 ranks respectively
+        >>> import oneflow as flow
+        >>> from oneflow import nn
+        >>> placement = flow.placement("cpu", ranks=[0, 1]) # doctest: +SKIP
+        >>> sbp = (flow.sbp.broadcast,) # doctest: +SKIP
+        >>> model = nn.Sequential(nn.Linear(8, 4), nn.ReLU(), nn.Linear(4, 2)) # doctest: +SKIP
+        >>> model = model.to_global(placement=placement, sbp=sbp) # doctest: +SKIP
+        >>> local_state_dict = flow.to_local(model.state_dict()) # doctest: +SKIP
+        >>> for val in local_state_dict.values(): # doctest: +SKIP
+        >>>     print(val.is_global) # doctest: +SKIP
+
+    .. code-block:: python
+
+        >>> # results on rank 0
+        False
+        False
+        False
+        False
+
+    .. code-block:: python
+
+        >>> # results on rank 1
+        False
+        False
+        False
+        False
     """
-    input_tree = IONode(value=input)
+    def _to_local_tensor(input_tensor):
+        if not input_tensor.is_global:
+            warnings.warn("The tensor should be global, it will not be converted if not.")
+            return input_tensor
+        return flow._C.to_local(input_tensor)
 
-    def leaf_fn(node):
-        if isinstance(node._value, Tensor):
-            if not node._value.is_global:
-                warnings.warn("The tensor should be global, it will not be converted if not.")
+    if isinstance(input, Tensor):
+        return _to_local_tensor(input)
+    else:
+        input_tree = IONode(value=input)
+
+        def leaf_fn(node):
+            if isinstance(node._value, Tensor):
+                return _to_local_tensor(node._value)
+            else:
+                warnings.warn("Non-Tensor type: {} encountered, it will not be converted.".format(type(node._value)))
                 return node._value
-            return flow._C.to_local(node._value)
-        return node._value
 
-    mapped_input = input_tree.map_leaf(leaf_fn)
-    return mapped_input
+        mapped_input = input_tree.map_leaf(leaf_fn)
+        return mapped_input
