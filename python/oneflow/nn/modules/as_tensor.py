@@ -48,9 +48,7 @@ def as_tensor(data, dtype=None, device=None):
             inferred_dtype = None
             for numpy_dtype in numpy_dtype_to_oneflow_dtype_dict.keys():
                 if data.dtype == numpy_dtype:
-                    inferred_dtype = numpy_dtype_to_oneflow_dtype_dict[
-                        numpy_dtype
-                    ]
+                    inferred_dtype = numpy_dtype_to_oneflow_dtype_dict[numpy_dtype]
                     break
             if inferred_dtype is None:
                 raise TypeError("numpy-ndarray holds elements of unsupported datatype")
