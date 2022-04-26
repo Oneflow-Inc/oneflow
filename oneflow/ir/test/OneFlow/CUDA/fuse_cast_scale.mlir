@@ -1,7 +1,7 @@
 // RUN: oneflow-opt %s -lower-oneflow-to-tosa -pass-pipeline="func.func(tosa-to-linalg)" -cse --linalg-fuse-elementwise-ops -linalg-bufferize -convert-linalg-to-parallel-loops -gpu-greedy-parallel-loop-mapping \
 // RUN: -convert-parallel-loops-to-gpu -gpu-kernel-outlining -buffer-host-register -canonicalize \
 // RUN: -pass-pipeline='gpu.module(strip-debuginfo,lower-affine,convert-gpu-to-nvvm,out-of-tree-gpu-to-cubin)' \
-// RUN: --func-bufferize -buffer-results-to-out-params -gpu-copy-arg \
+// RUN: --func-bufferize -buffer-results-to-out-params -gpu-copy-arg --tensor-bufferize \
 // RUN: --finalizing-bufferize \
 // RUN: --convert-memref-to-llvm --convert-func-to-llvm \
 // RUN: -gpu-to-llvm --reconcile-unrealized-casts --print-after-all \
@@ -15,7 +15,7 @@
 // RUN: oneflow-opt %s -lower-oneflow-to-tosa -pass-pipeline="func.func(tosa-to-linalg)" -cse --linalg-fuse-elementwise-ops -linalg-bufferize -convert-linalg-to-parallel-loops -gpu-greedy-parallel-loop-mapping \
 // RUN: -convert-parallel-loops-to-gpu -gpu-kernel-outlining -buffer-host-register -canonicalize \
 // RUN: -pass-pipeline='gpu.module(strip-debuginfo,lower-affine,convert-gpu-to-nvvm,out-of-tree-gpu-to-cubin)' \
-// RUN: --func-bufferize \
+// RUN: --func-bufferize --tensor-bufferize \
 // RUN: --finalizing-bufferize \
 // RUN: --convert-memref-to-llvm --convert-func-to-llvm \
 // RUN: -gpu-to-llvm --reconcile-unrealized-casts \
