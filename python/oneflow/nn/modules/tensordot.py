@@ -43,7 +43,7 @@ def tensordot(
         dim_b = list(dims[1])
     elif isinstance(dims, oneflow.Tensor):
         warnings.warn(
-            "tensordot doesn't support graph mode when the type of `dims` is oneflow.Tensor, because the tensor.item() operation needs synchronization."
+            "tensordot doesn't support nn.Graph when the type of `dims` is oneflow.Tensor, because it needs synchronization."
         )
         if dims.numel() == 1:
             return oneflow._C.tensordot(a, b, dims.item())
