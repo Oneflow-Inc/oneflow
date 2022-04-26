@@ -47,7 +47,6 @@ Maybe<void> FuseUpdateCastOpsPass::Apply(const OpGraph& op_graph, JobBuilder* jo
   op_graph.ForEachNode([&](OpNode* op_node) {
     const auto& op_conf = op_node->op().op_conf();
     if (!op_conf.has_variable_conf()) { return; }
-    int32_t out_node_size = op_node->out_edges().size();
     LogicalBlobId model_half_lbi;
     bool if_find_cast = false;  // may remove
     for (OpEdge* find_cast_edge : op_node->out_edges()) {
