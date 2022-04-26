@@ -747,6 +747,12 @@ LogicalResult Importer::ConvertUserOpAttributes(Operation* op,
   auto user_conf = op_conf.mutable_user_conf();
   std::string op_type_name = GetOpTypeName(op);
   op_conf.mutable_user_conf()->set_op_type_name(op_type_name);
+  if (op->hasTrait<OpTrait::IsOpConfCompatible>()) {
+    if (OpTrait::IsOpConfCompatible<void>::dump_attr(op, &op_conf).failed()) {
+      return op->emitError("fail to save attr to op_conf");
+    }
+  }
+
   for (auto id_attr : op->getAttrDictionary()) {
     auto id = id_attr.getName();
     // mlir only attrs
@@ -766,17 +772,11 @@ LogicalResult Importer::ConvertUserOpAttributes(Operation* op,
     }
     // convert op conf attributes
     else if (id.strref().equals(OpTrait::IsOpConfCompatible<void>::getOpNameAttr())) {
-      std::string op_name =
-          op->getAttrOfType<StringAttr>(OpTrait::IsOpConfCompatible<void>::getOpNameAttr())
-              .getValue()
-              .str();
-      op_conf.set_name(op_name);
+      continue;
     } else if (id.strref().equals(OpTrait::IsOpConfCompatible<void>::getDeviceTagAttr())) {
       op_conf.set_device_tag(user_op_adaptor.device_tag().str());
     } else if (id.strref().equals(OpTrait::IsOpConfCompatible<void>::getScopeSymbolIDAttr())) {
-      if (auto scope_symbol_id = user_op_adaptor.scope_symbol_id()) {
-        op_conf.set_scope_symbol_id(scope_symbol_id.getValue());
-      }
+      continue;
     }
     // convert user conf attributes
     else {
