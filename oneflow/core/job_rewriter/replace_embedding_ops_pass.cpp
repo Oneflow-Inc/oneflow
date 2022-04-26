@@ -562,8 +562,7 @@ void UpdateConsumerOpConf(const OpNode* consumer, const LogicalBlobId& out,
 
 std::string GlobalAbsMaxMin(JobBuilder* job_builder,
                             const HashMap<std::string, std::string>& shadow_op_name2grad_lbn,
-                            float p, const std::string& total_norm_lbn,
-                            DataType total_norm_data_type, bool need_cast, bool max_or_min,
+                            float p, const std::string& total_norm_lbn, bool max_or_min,
                             const ParallelConf& embedding_parallel_conf,
                             const int64_t embedding_scope_symbol_id,
                             const ParallelConf& parallel_conf, const int64_t scope_symbol_id) {
@@ -599,18 +598,6 @@ std::string GlobalAbsMaxMin(JobBuilder* job_builder,
     job_builder->AddOps(embedding_parallel_conf, {group_reduce_op.op_conf()});
     embedding_reduce_lbn = group_reduce_op.output("output_tensor", 0);
   }
-  if (need_cast) {
-    auto cast_op = user_op::UserOpConfWrapperBuilder("OneEmbedding-ClipGradient-GlobalNorm-Cast-"
-                                                     + NewUniqueId())
-                       .Op("cast")
-                       .Input("in", embedding_reduce_lbn)
-                       .Output("out")
-                       .Attr<DataType>("dtype", total_norm_data_type)
-                       .ScopeSymbolId(embedding_scope_symbol_id)
-                       .Build();
-    job_builder->AddOps(embedding_parallel_conf, {cast_op.op_conf()});
-    embedding_reduce_lbn = cast_op.output("out", 0);
-  }
   if (total_norm_lbn != "") {
     auto stack_op_builder = user_op::UserOpConfWrapperBuilder(
                                 "OneEmbedding-ClipGradient-GlobalNorm-GlobalStack-" + NewUniqueId())
@@ -643,8 +630,8 @@ std::string GlobalAbsMaxMin(JobBuilder* job_builder,
 
 std::string GlobalNorm(JobBuilder* job_builder,
                        const HashMap<std::string, std::string>& shadow_op_name2grad_lbn, float p,
-                       const std::string& total_norm_lbn, DataType total_norm_data_type,
-                       bool need_cast, const ParallelConf& embedding_parallel_conf,
+                       const std::string& total_norm_lbn,
+                       const ParallelConf& embedding_parallel_conf,
                        const int64_t embedding_scope_symbol_id, const ParallelConf& parallel_conf,
                        const int64_t scope_symbol_id) {
   auto multi_reduce_sum_op_builder =
@@ -660,20 +647,7 @@ std::string GlobalNorm(JobBuilder* job_builder,
   }
   const auto multi_reduce_sum_op = multi_reduce_sum_op_builder.Build();
   job_builder->AddOps(embedding_parallel_conf, {multi_reduce_sum_op.op_conf()});
-  std::string embedding_sum_pow_abs_lbn = multi_reduce_sum_op.output("y", 0);
-
-  if (need_cast) {
-    auto cast_op = user_op::UserOpConfWrapperBuilder("OneEmbedding-ClipGradient-GlobalNorm-Cast-"
-                                                     + NewUniqueId())
-                       .Op("cast")
-                       .Input("in", embedding_sum_pow_abs_lbn)
-                       .Output("out")
-                       .Attr<DataType>("dtype", total_norm_data_type)
-                       .ScopeSymbolId(embedding_scope_symbol_id)
-                       .Build();
-    job_builder->AddOps(embedding_parallel_conf, {cast_op.op_conf()});
-    embedding_sum_pow_abs_lbn = cast_op.output("out", 0);
-  }
+  const std::string& embedding_sum_pow_abs_lbn = multi_reduce_sum_op.output("y", 0);
   std::string global_pow_in_lbn;
   if (total_norm_lbn != "") {
     auto pow_op = user_op::UserOpConfWrapperBuilder(
@@ -767,25 +741,26 @@ void ClipGradByGlobalNorm(JobPassCtx* ctx, const OpGraph& op_graph, JobBuilder* 
                           HashMap<std::string, OperatorConf>* op_name2op_conf) {
   const ClipByGlobalNormConf& conf = optimizer_conf.clip_conf().clip_by_global_norm();
   double norm_type = conf.norm_type();
-  bool need_cast = false;
   auto clip_by_global_norm_pass_state =
       CHECK_JUST(ctx->MutableState<ClipByGlobalNormJobPassState>("clip_by_global_norm_state"));
 
-  const auto NewGlobalNorm = [&](const std::string& total_norm_lbn, DataType total_norm_data_type,
+  const auto NewGlobalNorm = [&](const std::string& total_norm_lbn,
                                  const ParallelConf& parallel_conf,
                                  const int64_t scope_symbol_id) -> std::string {
     if (std::isinf(norm_type) && norm_type > 0) {
-      return GlobalAbsMaxMin(job_builder, shadow_op_name2grad_lbn, norm_type, total_norm_lbn,
-                             total_norm_data_type, need_cast, true, embedding_parallel_conf,
-                             embedding_scope_symbol_id, parallel_conf, scope_symbol_id);
+      return GlobalAbsMaxMin(job_builder, shadow_op_name2grad_lbn, norm_type, total_norm_lbn, true,
+                             embedding_parallel_conf, embedding_scope_symbol_id, parallel_conf,
+                             scope_symbol_id);
     } else if (std::isinf(norm_type) && norm_type < 0) {
-      return GlobalAbsMaxMin(job_builder, shadow_op_name2grad_lbn, norm_type, total_norm_lbn,
-                             total_norm_data_type, need_cast, false, embedding_parallel_conf,
-                             embedding_scope_symbol_id, parallel_conf, scope_symbol_id);
+      UNIMPLEMENTED()
+          << "one_embedding gradient's invalid values set to 0, so not support abs_reduce_min.";
+      return GlobalAbsMaxMin(job_builder, shadow_op_name2grad_lbn, norm_type, total_norm_lbn, false,
+                             embedding_parallel_conf, embedding_scope_symbol_id, parallel_conf,
+                             scope_symbol_id);
     } else {
       return GlobalNorm(job_builder, shadow_op_name2grad_lbn, norm_type, total_norm_lbn,
-                        total_norm_data_type, need_cast, embedding_parallel_conf,
-                        embedding_scope_symbol_id, parallel_conf, scope_symbol_id);
+                        embedding_parallel_conf, embedding_scope_symbol_id, parallel_conf,
+                        scope_symbol_id);
     }
   };
   bool has_total_norm_state = false;
@@ -806,10 +781,9 @@ void ClipGradByGlobalNorm(JobPassCtx* ctx, const OpGraph& op_graph, JobBuilder* 
     const std::shared_ptr<TotalNormState>& total_norm_state =
         clip_by_global_norm_pass_state->GetTotalNormState(variable_op_name);
     const LogicalBlobId total_norm_lbi = GenLogicalBlobId(total_norm_state->total_norm_lbn());
-    const DataType total_norm_data_type = op_graph.GetLogicalBlobDesc(total_norm_lbi).data_type();
     std::string new_total_norm_lbn =
-        NewGlobalNorm(total_norm_state->total_norm_lbn(), total_norm_data_type,
-                      total_norm_state->parallel_conf(), total_norm_state->scope_symbol_id());
+        NewGlobalNorm(total_norm_state->total_norm_lbn(), total_norm_state->parallel_conf(),
+                      total_norm_state->scope_symbol_id());
     const OpNode* total_norm_lbn_producer = op_graph.OpNode4OpName(total_norm_lbi.op_name());
     for (const OpEdge* out_edge : total_norm_lbn_producer->out_edges()) {
       const OpNode* consumer = out_edge->dst_node();
@@ -820,10 +794,8 @@ void ClipGradByGlobalNorm(JobPassCtx* ctx, const OpGraph& op_graph, JobBuilder* 
   } else {
     // no norm_state means there are no gradients in same optimizer group with embedding_grad,
     // embedding_grad compute the global norm and clip independently.
-    const DataType total_norm_data_type =
-        DataType::kFloat;  // TODO(guoran):set the embedding value type
     const std::string& new_total_norm_lbn =
-        NewGlobalNorm("", total_norm_data_type, embedding_parallel_conf, embedding_scope_symbol_id);
+        NewGlobalNorm("", embedding_parallel_conf, embedding_scope_symbol_id);
     coeff_lbn = GetClampCoeff(job_builder, new_total_norm_lbn, conf.max_norm(),
                               embedding_parallel_conf, embedding_scope_symbol_id);
   }
@@ -1067,8 +1039,6 @@ Maybe<void> ReplaceEmbeddingOps::Apply(const OpGraph& op_graph, JobBuilder* job_
     FilterEmbeddingGradients(ctx, op_graph, job_builder, shadow_op_name2grad_lbn,
                              grad_lbn2update_op_conf, embedding_parallel_conf,
                              embedding_scope_symbol_id, &op_name2op_conf);
-  }
-  if (shadow_op_name2grad_lbn.size() > 0) {
     JUST(DynamicLossScaleAddGradient(ctx, op_graph, job_builder, shadow_op_name2grad_lbn,
                                      embedding_scope_symbol_id, embedding_parallel_conf));
   }
