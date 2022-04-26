@@ -13,6 +13,8 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
+#include <algorithm>
+#include <cstdint>
 #include "oneflow/core/device/cuda_util.h"
 #include "oneflow/core/cuda/atomic.cuh"
 #include "oneflow/user/kernels/expand_kernel_utils.h"
@@ -119,8 +121,9 @@ class GpuExpandKernel final : public user_op::OpKernel {
     user_op::Tensor* out = ctx->Tensor4ArgNameAndIndex("out", 0);
     const std::vector<int32_t>& logical_expand_shape =
         ctx->Attr<std::vector<int32_t>>("logical_expand_shape");
-    for (const auto& i : logical_expand_shape) {
-      if (i == 0) { return; }
+    if (std::any_of(logical_expand_shape.begin(), logical_expand_shape.end(),
+                    [](int32_t dim_size) { return dim_size == 0; })) {
+      return;
     }
     std::vector<int32_t> in_shape;
     in_shape.resize(in->shape().NumAxes());
