@@ -63,13 +63,6 @@ Stride& Stride::CheckNumAxesIdenticalAndAssign(const Stride& stride) {
   return *this;
 }
 
-// TODO:delete
-// Stride& Stride::CheckNumAxesIdenticalAndAssign(const StrideView& stride_view) {
-//   CHECK_EQ(NumAxes(), stride_view.NumAxes());
-//   std::copy(stride_view.ptr(), stride_view.ptr() + stride_view.NumAxes(), stride_vec_.data());
-//   return *this;
-// }
-
 Stride& Stride::operator=(const Stride& stride) {
   stride_vec_ = stride.stride_vec_;
   return *this;

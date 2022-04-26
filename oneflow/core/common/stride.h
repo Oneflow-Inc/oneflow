@@ -41,8 +41,6 @@ class Stride final {
   Stride(const std::initializer_list<int64_t>& stride_vec);
   Stride& operator=(const Stride& stride);
   Stride& assign(const DimVector& stride_vec);
-  // TODO:delete
-  // Stride& CheckNumAxesIdenticalAndAssign(const StrideView& stride_view);
   Stride& CheckNumAxesIdenticalAndAssign(const Stride& stride);
   ~Stride() = default;
 
