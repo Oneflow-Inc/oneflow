@@ -44,7 +44,7 @@ Maybe<void> getOutShapeAndStride(const std::vector<int32_t>& in_shape,
         stride[i] = 0;
       }
     } else {
-      CHECK_GT_OR_RETURN(expand_shape.at(i), 0) << "Invalid expand shape ";
+      CHECK_GE_OR_RETURN(expand_shape.at(i), 0) << "Invalid expand shape ";
       out_shape[i] = expand_shape.at(i);
       if (expand_shape.at(i) == 1 && i < out_shape.size() - 1) {
         stride[i] = stride.at(i + 1);
