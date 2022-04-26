@@ -84,6 +84,15 @@ class DeviceManagerRegistry::Impl {
     factories_.at(device_type) = std::move(factory);
   }
 
+  static std::set<DeviceType> GetRegisteredDeviceTypes() {
+    std::lock_guard<std::mutex> lock(factories_mutex_);
+    std::set<DeviceType> types;
+    for (auto& factory : factories_) {
+      if (factory) { types.insert(factory->device_type()); }
+    }
+    return types;
+  }
+
  private:
   std::mutex mutex_;
   std::vector<std::unique_ptr<DeviceManager>> managers_;
@@ -125,6 +134,10 @@ std::shared_ptr<Device> DeviceManagerRegistry::GetDevice(DeviceType device_type,
 /*static*/ DeviceType DeviceManagerRegistry::GetDeviceTypeByDeviceTypeName(
     const std::string& device_type_name) {
   return Impl::GetDeviceTypeByDeviceTypeName(device_type_name);
+}
+
+/*static*/ std::set<DeviceType> DeviceManagerRegistry::GetRegisteredDeviceTypes() {
+  return Impl::GetRegisteredDeviceTypes();
 }
 
 }  // namespace ep
