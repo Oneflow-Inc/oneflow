@@ -698,7 +698,6 @@ LogicalResult JobImporter::ConvertUserOp(Operation* op, ::oneflow::Job& job) {
   oneflow::ConfOpAdaptor conf_op_adaptor(op->getOperands(), op->getAttrDictionary());
   UpdatePlacement(op, conf_op_adaptor, job);
   StringRef op_name = conf_op_adaptor.op_name();
-  oneflow::UserOpAdaptor user_op_adaptor(op->getOperands(), op->getAttrDictionary());
 
   auto* op_conf = job.mutable_net()->add_op();
   auto* user_conf = op_conf->mutable_user_conf();
