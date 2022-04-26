@@ -50,6 +50,10 @@ def OneFlow_UserOp : OneFlow_UserBaseWithCtrlOp<"user", [OneFlow_IsImportCompati
   let hasCanonicalizer = 1;
 }
 
+def OneFlow_ConfOp : OneFlow_BaseOp<"conf", [OneFlow_IsImportCompatible]> {
+  let summary = "This op is mainly used by create its adaptor in importing/exporting";
+}
+
 def OneFlow_SystemOp : OneFlow_Op<"system", [OneFlow_IsImportCompatible]> {
   let summary = "";
   let input = (ins Variadic<AnyType>:$data_input);
