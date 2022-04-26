@@ -912,8 +912,8 @@
 
 - name: "tensordot"
   signature: [
-    "Tensor (Tensor a, Tensor b, Int64List dims_a, Int64List dims_b) => TensorDot",
-    "Tensor (Tensor a, Tensor b, Int64 dims) => TensorDotIntDims"
+    "Tensor (Tensor a, Tensor b, Int32List dims_a, Int32List dims_b) => TensorDot",
+    "Tensor (Tensor a, Tensor b, Int32 dims) => TensorDotIntDims"
   ]
   bind_python: True
 
