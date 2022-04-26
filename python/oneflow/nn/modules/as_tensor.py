@@ -45,9 +45,14 @@ def as_tensor(data, dtype=None, device=None):
             else:
                 data = flow.tensor(data, device=device)
         else:
-            if data.dtype in numpy_dtype_to_oneflow_dtype_dict:
-                data_infer_flow_type = numpy_dtype_to_oneflow_dtype_dict[data.dtype]
-            else:
+            data_infer_flow_type = None
+            for numpy_dtype in numpy_dtype_to_oneflow_dtype_dict.keys():
+                if data.dtype == numpy_dtype:
+                    data_infer_flow_type = numpy_dtype_to_oneflow_dtype_dict[
+                        numpy_dtype
+                    ]
+                    break
+            if data_infer_flow_type is None:
                 raise TypeError("numpy-ndarray holds elements of unsupported datatype")
             if data_infer_flow_type is dtype:
                 if (device is None) or (device.type == "cpu"):
