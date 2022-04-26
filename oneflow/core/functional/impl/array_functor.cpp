@@ -2210,7 +2210,7 @@ class ChunkFunctor {
         << ", " << ndim - 1 << "], but got " << dim << ")";
     if (dim < 0) { infferd_dim += ndim; }
 
-    const auto dim_size = x->shape()->Count(infferd_dim);
+    const auto dim_size = x->shape()->At(infferd_dim);
     int64_t split_size = (dim_size + chunks - 1) / chunks;
     if (split_size == 0 && dim_size == 0) {
       std::vector<int64_t> split_sizes(chunks, split_size);
