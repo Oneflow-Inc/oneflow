@@ -19,6 +19,7 @@ limitations under the License.
 #include "oneflow/core/framework/op_interpreter/op_interpreter_util.h"
 #include "oneflow/core/functional/functional.h"
 #include "oneflow/core/functional/sequence_function.h"
+#include "oneflow/core/common/container_util.h"
 
 namespace oneflow {
 namespace one {
@@ -32,22 +33,19 @@ class Median : public OpExprGradFunction<MedianCaptureState> {
   Maybe<void> Init(const OpExpr& op) override { return Maybe<void>::Ok(); }
   Maybe<void> Capture(MedianCaptureState* ctx, const TensorTuple& inputs,
                       const TensorTuple& outputs, const AttrMap& attrs) const override {
-    CHECK_EQ_OR_RETURN(inputs.size(), 1);
-    CHECK_EQ_OR_RETURN(outputs.size(), 1);
-    ctx->requires_grad = inputs.at(0)->requires_grad();
+    ctx->requires_grad = JUST(VectorAt(inputs, 0))->requires_grad();
     if (ctx->requires_grad) {
-      ctx->SaveTensorForBackward(inputs.at(0));
-      ctx->SaveTensorForBackward(outputs.at(0));
+      ctx->SaveTensorForBackward(JUST(VectorAt(inputs, 0)));
+      ctx->SaveTensorForBackward(JUST(VectorAt(outputs, 0)));
     }
     return Maybe<void>::Ok();
   }
   Maybe<void> Apply(const MedianCaptureState* ctx, const TensorTuple& out_grads,
                     TensorTuple* in_grads) const override {
-    CHECK_EQ_OR_RETURN(out_grads.size(), 1);
     if (ctx->requires_grad) {
-      const auto& input = ctx->SavedTensors().at(0);
-      const auto& output = ctx->SavedTensors().at(1);
-      const auto& dy = out_grads.at(0);
+      const auto& input = JUST(VectorAt(ctx->SavedTensors(), 0));
+      const auto& output = JUST(VectorAt(ctx->SavedTensors(), 1));
+      const auto& dy = JUST(VectorAt(out_grads, 0));
       std::vector<int32_t> axis(input->ndim());
       std::iota(axis.begin(), axis.end(), 0);
       const auto cast_like =
@@ -65,7 +63,7 @@ class Median : public OpExprGradFunction<MedianCaptureState> {
                    .call());
 
       in_grads->resize(1);
-      in_grads->at(0) = JUST(functional::Mul(bcast_like_div, cast_like));
+      *JUST(VectorAt(in_grads, 0)) = JUST(functional::Mul(bcast_like_div, cast_like));
     }
     return Maybe<void>::Ok();
   }
@@ -80,23 +78,21 @@ class MedianWithIndices : public OpExprGradFunction<MedianWithIndicesCaptureStat
   Maybe<void> Init(const OpExpr& op) override { return Maybe<void>::Ok(); }
   Maybe<void> Capture(MedianWithIndicesCaptureState* ctx, const TensorTuple& inputs,
                       const TensorTuple& outputs, const AttrMap& attrs) const override {
-    CHECK_EQ_OR_RETURN(inputs.size(), 1);
-    CHECK_EQ_OR_RETURN(outputs.size(), 2);
-    ctx->requires_grad = inputs.at(0)->requires_grad();
+    ctx->requires_grad = JUST(VectorAt(inputs, 0))->requires_grad();
     if (ctx->requires_grad) {
-      ctx->SaveTensorForBackward(inputs.at(0));
-      ctx->SaveTensorForBackward(outputs.at(1));
+      ctx->SaveTensorForBackward(JUST(VectorAt(inputs, 0)));
+      ctx->SaveTensorForBackward(JUST(VectorAt(outputs, 1)));
     }
     return Maybe<void>::Ok();
   }
   Maybe<void> Apply(const MedianWithIndicesCaptureState* ctx, const TensorTuple& out_grads,
-                    TensorTuple* in_grads) const {
+                    TensorTuple* in_grads) const override {
     if (ctx->requires_grad) {
       in_grads->resize(1);
-      const auto& input = ctx->SavedTensors().at(0);
-      const auto& indices = JUST(functional::Unsqueeze(ctx->SavedTensors().at(1), -1));
-      const auto& dout = JUST(functional::Unsqueeze(out_grads.at(0), -1));
-      in_grads->at(0) = JUST(
+      const auto& input = JUST(VectorAt(ctx->SavedTensors(), 0));
+      const auto& indices = JUST(functional::Unsqueeze(JUST(VectorAt(ctx->SavedTensors(), 1)), -1));
+      const auto& dout = JUST(functional::Unsqueeze(JUST(VectorAt(out_grads, 0)), -1));
+      *JUST(VectorAt(in_grads, 0)) = JUST(
           functional::DimScatter(JUST(functional::Constant(*(input->shape()), Scalar(0),
                                                            *dout->dtype(), JUST(dout->device()))),
                                  -1, indices, dout));
