@@ -43,7 +43,7 @@ class TestChunk(flow.unittest.TestCase):
         z = torch.cat(y, dim=dim)
         return z
     
-    @autotest(n=10, auto_backward=True, check_graph=True)
+    @autotest(n=10)
     def test_flow_chunk_list_with_random_data(test_case):
         device = random_device()
         dim = random(1, 4).to(int)

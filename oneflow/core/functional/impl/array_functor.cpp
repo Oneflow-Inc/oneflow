@@ -14,7 +14,6 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-#include <cstdint>
 #include "oneflow/core/autograd/autograd_mode.h"
 #include "oneflow/core/common/data_type.pb.h"
 #include "oneflow/core/common/maybe.h"
@@ -37,7 +36,6 @@ limitations under the License.
 #include "oneflow/core/framework/random_generator_impl.h"
 #include "oneflow/core/functional/functional.h"
 #include "oneflow/core/functional/function_library.h"
-#include "oneflow/core/functional/functional_api.yaml.h"
 #include "oneflow/core/functional/sequence_function.h"
 #include "oneflow/core/functional/impl/common.h"
 #include "oneflow/core/functional/impl/unary_functor.h"
@@ -2175,8 +2173,8 @@ class ChunkFunctor {
   ChunkFunctor() {}
   Maybe<TensorTuple> operator()(const std::shared_ptr<one::Tensor>& x, const int64_t& chunks,
                                 const int64_t& dim) const {
-    CHECK_OR_RETURN(x->ndim() > 0) << "chunk expects at least a 1-dimensional tensor.";
-    CHECK_OR_RETURN(chunks > 0) << "chunk expects `chunks` to be greater than 0, got: " << chunks;
+    CHECK_OR_RETURN(x->ndim() > 0) << Error::RuntimeError() << "chunk expects at least a 1-dimensional tensor.";
+    CHECK_OR_RETURN(chunks > 0) << Error::RuntimeError() << "chunk expects `chunks` to be greater than 0, got: " << chunks;
     const auto dim_size = x->shape()->Count(dim);
     int64_t split_size = (dim_size + chunks - 1) / chunks;
     if (split_size == 0 && dim_size == 0) {
