@@ -262,8 +262,9 @@ void ScheduleUntilVMEmpty(vm::VirtualMachineEngine* vm, const vm::ScheduleCtx& s
 }  // namespace
 
 Maybe<void> VirtualMachine::RunInCurrentThread(vm::InstructionMsgList* instr_list) {
-  CHECK_OR_RETURN(vm_->SchedulerEmpty());
-  CHECK_OR_RETURN(vm_->CallbackEmpty());
+  CHECK_OR_RETURN(vm_->SchedulerEmpty()) << "vm scheduler not empty. May be a fatal error occured";
+  CHECK_OR_RETURN(vm_->CallbackEmpty())
+      << "vm callback handler not empty. May be a fatal error occured";
   JUST(vm_->Receive(instr_list));
   ScheduleUntilVMEmpty(vm_.Mutable(), SingleThreadScheduleCtx(vm_.Mutable()));
   return Maybe<void>::Ok();
