@@ -49,7 +49,7 @@ class Slice {
   int64_t step() const { return step_; }
   std::string ToString() const {
     std::stringstream ss;
-    ss << "start = " << start_ << " end = " << end_ << " step = " << step_ << "\n";
+    ss << "[" << start_ << ":" << end_ << ":" << step_ << "]\n";
     return ss.str();
   }
 
