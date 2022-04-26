@@ -2175,13 +2175,15 @@ class ChunkFunctor {
                                 const int64_t& dim) const {
     const int64_t ndim = x->ndim();
     int64_t infferd_dim = dim;
-    CHECK_OR_RETURN(ndim > 0)
-        << Error::RuntimeError() << "chunk expects at least a 1-dimensional tensor.";
+    CHECK_OR_RETURN(ndim > 0) << Error::RuntimeError()
+                              << "chunk expects at least a 1-dimensional tensor.";
     CHECK_OR_RETURN(chunks > 0) << Error::RuntimeError()
                                 << "chunk expects `chunks` to be greater than 0, got: " << chunks;
-    CHECK_OR_RETURN(-ndim <= dim && dim < (ndim-1)) << Error::IndexError() << "Dimension out of range (expected to be in range of [" << -ndim << ", " << ndim-1 << "], but got " << dim << ")" ;
-    if(dim < 0) { infferd_dim += ndim; }
-    
+    CHECK_OR_RETURN(-ndim <= dim && dim < (ndim - 1))
+        << Error::IndexError() << "Dimension out of range (expected to be in range of [" << -ndim
+        << ", " << ndim - 1 << "], but got " << dim << ")";
+    if (dim < 0) { infferd_dim += ndim; }
+
     const auto dim_size = x->shape()->Count(infferd_dim);
     int64_t split_size = (dim_size + chunks - 1) / chunks;
     if (split_size == 0 && dim_size == 0) {
