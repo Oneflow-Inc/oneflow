@@ -45,7 +45,6 @@ Maybe<void> DynamicLossScaleAddGradient(
     const HashMap<std::string, std::string>& shadow_op_name2grad_lbn, int64_t scope_symbol_id,
     const ParallelConf& parallel_conf) {
   if (job_builder->job().job_conf().train_conf().has_dynamic_loss_scale_policy()) {
-    CHECK_GT_OR_RETURN(shadow_op_name2grad_lbn.size(), 0);
     const auto& dynamic_loss_scale_state =
         JUST(ctx->GetState<DynamicLossScaleJobPassState>("dynamic_loss_scale_state"));
     const LogicalBlobId count_not_finite_lbi =
@@ -408,7 +407,6 @@ void ScaleGrad(JobPassCtx* ctx, const OpGraph& op_graph, JobBuilder* job_builder
                std::string* new_embedding_grad_lbn, std::string* update_skip_if_lbn,
                std::string* fuse_to_update_down_scale_by_lbn, double* fuse_to_update_scale) {
   *new_embedding_grad_lbn = embedding_grad_lbn;
-  *fuse_to_update_scale = 1.0;
   const TrainConf& train_conf = job_builder->job().job_conf().train_conf();
   double scale = GetLossInstanceNumScaleFactor(op_graph, job_builder);
   if (train_conf.has_dynamic_loss_scale_policy()) {
@@ -532,7 +530,7 @@ void BuildEmbeddingUpdate(JobPassCtx* ctx, const OpGraph& op_graph, JobBuilder* 
 
   std::string update_skip_if_lbn;
   std::string fuse_to_update_down_scale_by_lbn;
-  double fuse_to_update_scale;
+  double fuse_to_update_scale = 1.0;
   ScaleGrad(ctx, op_graph, job_builder, embedding_parallel_conf, embedding_scope_symbol_id,
             has_clip_grad, embedding_grad_lbn, new_embedding_grad_lbn, &update_skip_if_lbn,
             &fuse_to_update_down_scale_by_lbn, &fuse_to_update_scale);
