@@ -105,14 +105,12 @@ class DebugScopeContext(object):
             max_py_stack_depth, self._prev_max_py_stack_depth
         )
 
-
     def __enter__(self):
         oneflow._oneflow_internal.SetFLAGS_v(self._v)
         oneflow._oneflow_internal.SetGraphDebugMode(self._mode)
         if self._s == 0 and self._v >= 1:
             oneflow._oneflow_internal.SetFLAGS_alsologtostderr(True)
         oneflow._oneflow_internal.SetGraphDebugMaxPyStackDepth(self._max_py_stack_depth)
-
 
     def __exit__(self, exc_type, exc_val, exc_tb):
         if self._s == 0 and self._v >= 1:

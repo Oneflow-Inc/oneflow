@@ -73,8 +73,7 @@ class TestPermute(flow.unittest.TestCase):
             _test_permute_impl(test_case, *arg)
             _test_tensor_permute_impl(test_case, *arg)
 
-    @unittest.skip("pytorch 1.9.0 exist not torch.permute api")
-    @autotest()
+    @autotest(check_graph=False)
     def test_torch_permute4d_with_random_data(test_case):
         device = random_device()
         ndim = 4
@@ -138,7 +137,6 @@ class TestPermute(flow.unittest.TestCase):
             dim0=random(1, 18).to(int),
             dim1=random(1, 78).to(int),
             dim2=random(1, 99).to(int),
-            dim3=random(1, 98).to(int),
         ).to(device)
         y = x.permute(permute_list)
         return y
