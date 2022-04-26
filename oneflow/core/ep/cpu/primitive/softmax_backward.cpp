@@ -80,7 +80,7 @@ template<class OneDnnSoftmaxBackward, class OneDnnSoftmaxForward, dnnl::memory::
 void SoftmaxBackwardOneDnn(Stream* stream, size_t rows, size_t cols, const void* y, const void* dy,
                            void* dx) {
   CpuStream* cpu_stream = stream->As<CpuStream>();
-  size_t num_threads = static_cast<CpuDevice*>(cpu_stream->device())->GetNumThreads();  // NOLINT
+  size_t num_threads = cpu_stream->device()->GetNumThreads();
   CpuNumThreadsGuard guard(num_threads);
 
   dnnl::engine* onednn_engine = stream->As<CpuStream>()->onednn_engine();
