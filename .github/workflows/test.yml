@@ -16,6 +16,8 @@ env:
   FLOW_VISION_COMMIT: ca8ebc663b58667cf8cd1b6ef0c861522780b7bb
   LIBAI_SRC: libai
   LIBAI_COMMIT: 7d31d9781e5f2d559dc0820f599e0bed798488ca
+  ONEFLOW_FACE_SRC: oneflow_face
+  ONEFLOW_FACE_COMMIT: 1cb2da67e5f59cd85c01c4ad27b535dfb4e839ca
   TEST_WITH_TORCH_IMG_TAG: registry.cn-beijing.aliyuncs.com/oneflow/test-with-pytorch-1.10.0-cuda11.3-cudnn8-runtime:06001b5bdd1a4f89f888e18d96c26f9ed2cd25d3
 
 jobs:
@@ -854,6 +856,14 @@ jobs:
           # please use a commit here
           ref: ${{ env.LIBAI_COMMIT}}
           path: ${{ env.LIBAI_SRC}}
+      - name: Checkout Oneflow-Inc/oneflow_face
+        if: ${{ !fromJson(matrix.cache-hit) && contains(matrix.runs-on, 'self-hosted') }}
+        uses: actions/checkout@v2
+        with:
+          repository: Oneflow-Inc/libai
+          # please use a commit here
+          ref: ${{ env.ONEFLOW_FACE_COMMIT}}
+          path: ${{ env.ONEFLOW_FACE_SRC}}
       - name: Remove container
         timeout-minutes: 45
         if: ${{ contains(matrix.runs-on, 'self-hosted') }}
@@ -987,6 +997,7 @@ jobs:
           docker exec ${TEST_CONTAINER_NAME} python3 -m pip install -e ${{ env.FLOW_VISION_SRC}}
           docker exec ${TEST_CONTAINER_NAME} python3 -m pip install pybind11 --user
           docker exec ${TEST_CONTAINER_NAME} python3 -m pip install -e ${{ env.LIBAI_SRC}}
+          docker exec ${TEST_CONTAINER_NAME} python3 -m pip install -e ${{ env.ONEFLOW_FACE_SRC}}
       - name: Run OneFlow doctor
         if: ${{ !fromJson(matrix.cache-hit) && contains(matrix.runs-on, 'self-hosted') }}
         run: |
@@ -1089,6 +1100,12 @@ jobs:
           docker exec -e ONEFLOW_TEST_DEVICE_NUM=4 -w $PWD/${{ env.LIBAI_SRC }} ${{ env.TEST_CONTAINER_NAME }} python3 -m oneflow.distributed.launch --nproc_per_node 4 -m unittest -f tests/models/test_gpt.py
           docker exec -e ONEFLOW_TEST_DEVICE_NUM=4 -w $PWD/${{ env.LIBAI_SRC }} ${{ env.TEST_CONTAINER_NAME }} python3 -m oneflow.distributed.launch --nproc_per_node 4 -m unittest -f tests/models/test_t5.py
           docker exec -e ONEFLOW_TEST_DEVICE_NUM=4 -w $PWD/${{ env.LIBAI_SRC }} ${{ env.TEST_CONTAINER_NAME }} python3 -m oneflow.distributed.launch --nproc_per_node 4 -m unittest -f tests/models/test_vit.py
+      - name: oneflow_face test
+        timeout-minutes: 30
+        if: ${{ !fromJson(matrix.cache-hit) && matrix.test-type == 'misc' && matrix.device == 'cuda' }}
+        run: |
+          docker exec -e ONEFLOW_TEST_DEVICE_NUM=4 -w $PWD/${{ env.ONEFLOW_FACE_SRC }} ${{ env.TEST_CONTAINER_NAME }} python3 -m oneflow.distributed.launch --nproc_per_node 4 -m unittest -f tests/train/test_train.py
+
       - name: Expensive tests (models, cases require exclusive access to GPU)
         timeout-minutes: 45
         if: ${{ !fromJson(matrix.cache-hit) && (matrix.test-type == 'speed-test' || (matrix.test-type == 'misc' && matrix.device == 'cpu')) && !fromJson(matrix.is-distributed) }}
