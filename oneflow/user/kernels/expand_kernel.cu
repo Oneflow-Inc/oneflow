@@ -13,8 +13,6 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
-#include <algorithm>
-#include <cstdint>
 #include "oneflow/core/device/cuda_util.h"
 #include "oneflow/core/cuda/atomic.cuh"
 #include "oneflow/user/kernels/expand_kernel_utils.h"
