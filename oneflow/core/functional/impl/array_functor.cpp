@@ -958,10 +958,6 @@ class SearchSortedFunctor {
                            const std::shared_ptr<one::Tensor>& values, bool out_int32,
                            bool right) const {
     // checks
-    CHECK_OR_RETURN(JUST(sorted_sequence->device())->type() == JUST(values->device())->type())
-        << "for searchsorted op, sorted_sequence and values tensors should have same device type "
-        << "but got sorted_sequence tensor device type " << JUST(sorted_sequence->device())->type()
-        << " and values tensor device type " << JUST(values->device())->type();
     CHECK_OR_RETURN(values->shape()->NumAxes() > 0)
         << "for searchsorted op, input values tensor should have positive dimension";
     CHECK_OR_RETURN(sorted_sequence->shape()->NumAxes() > 0)
