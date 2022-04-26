@@ -235,7 +235,6 @@ Maybe<void> GetConcatenatedShapeAndCheckDtype(
         << DType(*dtype).name() << "(rank " << JUST(parallel_desc->MachineId4ParallelId(0))
         << ") and " << DType(rank_flat_shape_dtype->dtype()).name() << "(rank "
         << JUST(parallel_desc->MachineId4ParallelId(parallel_id)) << ")!";
-    ;
   }
   return Maybe<void>::Ok();
 }
