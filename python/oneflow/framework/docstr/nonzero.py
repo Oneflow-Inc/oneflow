@@ -74,7 +74,7 @@ add_docstr(
         tensor([[0],
                 [1],
                 [2],
-                [4]], dtype=oneflow.int32)
+                [4]], dtype=oneflow.int64)
         >>> flow.nonzero(flow.tensor([[0.6, 0.0, 0.0, 0.0],
         ...                             [0.0, 0.4, 0.0, 0.0],
         ...                             [0.0, 0.0, 1.2, 0.0],
@@ -82,16 +82,16 @@ add_docstr(
         tensor([[0, 0],
                 [1, 1],
                 [2, 2],
-                [3, 3]], dtype=oneflow.int32)
+                [3, 3]], dtype=oneflow.int64)
         >>> flow.nonzero(flow.tensor([1, 1, 1, 0, 1]), as_tuple=True)
-        (tensor([0, 1, 2, 4], dtype=oneflow.int32),)
+        (tensor([0, 1, 2, 4], dtype=oneflow.int64),)
         >>> flow.nonzero(flow.tensor([[0.6, 0.0, 0.0, 0.0],
         ...                             [0.0, 0.4, 0.0, 0.0],
         ...                             [0.0, 0.0, 1.2, 0.0],
         ...                             [0.0, 0.0, 0.0,-0.4]]), as_tuple=True)
-        (tensor([0, 1, 2, 3], dtype=oneflow.int32), tensor([0, 1, 2, 3], dtype=oneflow.int32))
+        (tensor([0, 1, 2, 3], dtype=oneflow.int64), tensor([0, 1, 2, 3], dtype=oneflow.int64))
         >>> flow.nonzero(flow.tensor(5), as_tuple=True)
-        (tensor([0], dtype=oneflow.int32),)
+        (tensor([0], dtype=oneflow.int64),)
 
     """,
 )
