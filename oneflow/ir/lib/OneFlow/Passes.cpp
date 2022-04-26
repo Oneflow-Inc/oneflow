@@ -484,9 +484,8 @@ void AddLowerToLinalgMemRefPasses(PassManager& pm) {
   pm.addPass(createLowerOneFlowToTosaPass());                  // lower-oneflow-to-tosa
   pm.addPass(createCSEPass());                                 // cse
   pm.addNestedPass<func::FuncOp>(tosa::createTosaToLinalg());  // tosa-to-linalg-on-tensors
-  auto p = createLinalgElementwiseOpFusionPass();
-  if (p->initializeOptions("allow-folding-unit-dim-reshapes=true").failed()) exit(1);
-  pm.addNestedPass<func::FuncOp>(std::move(p));                     // linalg-fuse-elementwise-ops
+  pm.addNestedPass<func::FuncOp>(
+      createLinalgElementwiseOpFusionPass());                       // linalg-fuse-elementwise-ops
   pm.addNestedPass<func::FuncOp>(createLinalgBufferizePass());      // linalg-bufferize
   pm.addNestedPass<func::FuncOp>(createTensorBufferizePass());      // tensor-bufferize
   pm.addPass(func::createFuncBufferizePass());                      // func-bufferize
