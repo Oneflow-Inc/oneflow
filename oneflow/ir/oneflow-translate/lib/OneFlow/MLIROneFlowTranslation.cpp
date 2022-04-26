@@ -694,7 +694,6 @@ LogicalResult JobImporter::TryToUpdateJob() {
 }
 
 LogicalResult JobImporter::ConvertUserOp(Operation* op, ::oneflow::Job& job) {
-  // TODO: concrete user op should not use generic UserOpAdaptor
   oneflow::ConfOpAdaptor conf_op_adaptor(op->getOperands(), op->getAttrDictionary());
   UpdatePlacement(op, conf_op_adaptor, job);
   StringRef op_name = conf_op_adaptor.op_name();
