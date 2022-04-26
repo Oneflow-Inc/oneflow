@@ -38,6 +38,22 @@ namespace oneflow {
 namespace one {
 namespace functional {
 
+namespace {
+std::string exception_check(int32_t base, int32_t value, bool check_ge = true,
+                            bool check_le = true) {
+  printf("%d, %d, %d, %d\n", base, value, check_ge, check_le);
+  if (check_ge) {
+    CHECK_GE_OR_RETURN(base, value) << "Dimension out of range, expected to be in range of ["
+                                    << -base << ", " << base - 1 << "], but got " << value;
+  }
+  if (check_le) {
+    CHECK_LE_OR_RETURN(-base, value) << "Dimension out of range, expected to be in range of ["
+                                     << -base << ", " << base - 1 << "], but got " << value;
+  }
+  return "";
+}
+}  // namespace
+
 namespace impl {
 
 class AddNFunctor {
@@ -475,12 +491,7 @@ class ReduceSumFunctor {
 
       std::vector<int32_t> reduce_axis(axis.size());
       for (int i = 0; i < axis.size(); i++) {
-        CHECK_GE_OR_RETURN(naxis, axis[i])
-            << "Dimension out of range, expected to be in range of [" << -naxis << ", " << naxis - 1
-            << "], but got " << axis[i];
-        CHECK_LE_OR_RETURN(-naxis, axis[i])
-            << "Dimension out of range, expected to be in range of [" << -naxis << ", " << naxis - 1
-            << "], but got " << axis[i];
+        exception_check(naxis, axis[i]);
         if (axis[i] < 0) {
           reduce_axis[i] = axis[i] + naxis;
         } else {
@@ -585,12 +596,7 @@ class ReduceAnyFunctor {
 
       std::vector<int32_t> reduce_axis(axis.size());
       for (int i = 0; i < axis.size(); i++) {
-        CHECK_GE_OR_RETURN(naxis, axis[i])
-            << "Dimension out of range, expected to be in range of [" << -naxis << ", " << naxis - 1
-            << "], but got " << axis[i];
-        CHECK_LE_OR_RETURN(-naxis, axis[i])
-            << "Dimension out of range, expected to be in range of [" << -naxis << ", " << naxis - 1
-            << "], but got " << axis[i];
+        exception_check(naxis, axis[i]);
         if (axis[i] < 0) {
           reduce_axis[i] = axis[i] + naxis;
         } else {
@@ -759,7 +765,7 @@ class ReduceMeanWholeFunctor {
         << "RuntimeError: Can only calculate the mean of floating types.";
     size_t reduce_count = 1;
     reduce_count = x->shape()->Count(0);
-    const auto& sum = JUST(functional::ReduceSumAll(x));
+    const auto& sum = JUST(functional::ReduceSumWhole(x));
     if (reduce_count == 1 || reduce_count == 0) { return sum; }
     CHECK_GT_OR_RETURN(reduce_count, 0);
     return functional::ScalarMul(sum, 1.0 / reduce_count, false);
@@ -853,6 +859,7 @@ class ReduceProdFunctor {
 
       std::vector<int32_t> reduce_axis(axis.size());
       for (int i = 0; i < axis.size(); i++) {
+        // exception_check(naxis, axis[i]);
         CHECK_GE_OR_RETURN(naxis, axis[i])
             << "Dimension out of range, expected to be in range of [" << -naxis << ", " << naxis - 1
             << "], but got " << axis[i];
