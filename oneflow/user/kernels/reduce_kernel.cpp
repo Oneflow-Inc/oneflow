@@ -97,11 +97,6 @@ class ReduceKernel final : public user_op::OpKernel, public user_op::CudaGraphSu
   REGISTER_REDUCE_ARITHMETIC_KERNELS(device, int32_t)        \
   REGISTER_REDUCE_ARITHMETIC_KERNELS(device, int64_t)
 
-#ifdef WITH_CUDA
-REGISTER_REDUCE_XPU_KERNEL("reduce_min", BinaryFuncMin, DeviceType::kCUDA, half)
-REGISTER_REDUCE_XPU_KERNEL("reduce_max", BinaryFuncMax, DeviceType::kCUDA, half)
-#endif
-
 REGISTER_REDUCE_ARITHMETIC_KERNELS_BY_DEVICE(DeviceType::kCPU)
 #ifdef WITH_CUDA
 REGISTER_REDUCE_ARITHMETIC_KERNELS_BY_DEVICE(DeviceType::kCUDA)

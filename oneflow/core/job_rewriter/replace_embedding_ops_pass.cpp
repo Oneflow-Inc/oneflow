@@ -40,13 +40,12 @@ std::string BuildIdentityOp(JobBuilder* job_builder, const std::string& in_lbn,
   return identity_op.output("out", 0);
 }
 
-Maybe<void> DynamicLossScaleAddGradient(JobPassCtx* ctx, const OpGraph& op_graph,
-                                        JobBuilder* job_builder,
-                                        const std::vector<std::string>& gradient_lbns,
-                                        int64_t scope_symbol_id,
-                                        const ParallelConf& parallel_conf) {
+Maybe<void> DynamicLossScaleAddGradient(
+    JobPassCtx* ctx, const OpGraph& op_graph, JobBuilder* job_builder,
+    const HashMap<std::string, std::string>& shadow_op_name2grad_lbn, int64_t scope_symbol_id,
+    const ParallelConf& parallel_conf) {
   if (job_builder->job().job_conf().train_conf().has_dynamic_loss_scale_policy()) {
-    CHECK_GT_OR_RETURN(gradient_lbns.size(), 0);
+    CHECK_GT_OR_RETURN(shadow_op_name2grad_lbn.size(), 0);
     const auto& dynamic_loss_scale_state =
         JUST(ctx->GetState<DynamicLossScaleJobPassState>("dynamic_loss_scale_state"));
     const LogicalBlobId count_not_finite_lbi =
@@ -56,12 +55,13 @@ Maybe<void> DynamicLossScaleAddGradient(JobPassCtx* ctx, const OpGraph& op_graph
         && op_node->op().op_conf().user_conf().op_type_name() == "identity") {
       const user_op::UserOpConfWrapper identity_op_conf(op_node->op().op_conf());
       std::string new_count_not_finite_lbn;
-      if (gradient_lbns.size() == 1) {
+      if (shadow_op_name2grad_lbn.size() == 1) {
+        const std::string& grad_lbn = shadow_op_name2grad_lbn.begin()->second;
         const auto count_not_finite_op =
             user_op::UserOpConfWrapperBuilder("OneEmbedding-DynamicLossScale-CountNotFinite-"
                                               + NewUniqueId())
                 .Op("count_not_finite")
-                .Input("x", JUST(oneflow::VectorAt(gradient_lbns, 0)))
+                .Input("x", grad_lbn)
                 .Output("y")
                 .ScopeSymbolId(op_node->op().op_conf().scope_symbol_id())
                 .Build();
@@ -74,7 +74,9 @@ Maybe<void> DynamicLossScaleAddGradient(JobPassCtx* ctx, const OpGraph& op_graph
                 .Op("multi_count_not_finite")
                 .Output("y")
                 .ScopeSymbolId(op_node->op().op_conf().scope_symbol_id());
-        for (const auto& lbn : gradient_lbns) { multi_count_not_finite_op_builder.Input("x", lbn); }
+        for (const auto& pair : shadow_op_name2grad_lbn) {
+          multi_count_not_finite_op_builder.Input("x", pair.second);
+        }
         const auto multi_count_not_finite_op = multi_count_not_finite_op_builder.Build();
         job_builder->AddOps(parallel_conf, {multi_count_not_finite_op.op_conf()});
         new_count_not_finite_lbn = multi_count_not_finite_op.output("y", 0);
@@ -897,7 +899,6 @@ Maybe<void> ReplaceEmbeddingOps::Apply(const OpGraph& op_graph, JobBuilder* job_
   HashMap<std::string, OperatorConf> op_name2op_conf;
   HashMap<std::string, std::string> shadow_op_name2grad_lbn;
   HashMap<std::string, OperatorConf> grad_lbn2update_op_conf;
-  std::vector<std::string> gradient_lbns;
   op_graph.ForEachNode([&](const OpNode* op_node) {
     const OperatorConf& op_conf = op_node->op().op_conf();
     if (!op_conf.has_user_conf()) { return; }
@@ -905,6 +906,10 @@ Maybe<void> ReplaceEmbeddingOps::Apply(const OpGraph& op_graph, JobBuilder* job_
     const user_op::UserOpConfWrapper embedding_op(op_node->op().op_conf());
     const LogicalBlobId& lbi = GenLogicalBlobId(embedding_op.input("shadow", 0));
     const std::string& shadow_op_name = lbi.op_name();
+    // assert all embeddings same placement
+    embedding_scope_symbol_id = embedding_op.op_conf().scope_symbol_id();
+    embedding_parallel_conf = op_node->parallel_desc().parallel_conf();
+
     embedding::KeyValueStoreOptions options(
         embedding_op.attr<std::string>("key_value_store_options"));
     const int64_t embedding_size = embedding_op.attr<int64_t>("embedding_size");
@@ -993,10 +998,6 @@ Maybe<void> ReplaceEmbeddingOps::Apply(const OpGraph& op_graph, JobBuilder* job_
         }
         delete_op_names.push_back(update_op_conf.op_name());
 
-        // assert all embeddings same placement
-        embedding_scope_symbol_id = embedding_op.op_conf().scope_symbol_id();
-        embedding_parallel_conf = op_node->parallel_desc().parallel_conf();
-
         OptimizerConf embedding_optimizer_conf;
         bool found_embedding_optimizer = false;
         for (const auto& optimizer_conf :
@@ -1043,7 +1044,6 @@ Maybe<void> ReplaceEmbeddingOps::Apply(const OpGraph& op_graph, JobBuilder* job_
                              &embedding_update_op_conf);
         shadow_op_name2grad_lbn[shadow_op_name] = new_embedding_grad_lbn;
         grad_lbn2update_op_conf[new_embedding_grad_lbn] = std::move(embedding_update_op_conf);
-        gradient_lbns.push_back(new_embedding_grad_lbn);
       }
     }
     if ((state_initializer == "") && !no_optimizer_states) {
@@ -1061,15 +1061,15 @@ Maybe<void> ReplaceEmbeddingOps::Apply(const OpGraph& op_graph, JobBuilder* job_
         state_initializer_attr;
     add_ops.push_back(embedding_lookup_op_conf);
     job_builder->DelOps(delete_op_names);
-    job_builder->AddOps(op_node->parallel_desc().parallel_conf(), add_ops);
+    job_builder->AddOps(embedding_parallel_conf, add_ops);
   });
   if (shadow_op_name2grad_lbn.size() > 0) {
     FilterEmbeddingGradients(ctx, op_graph, job_builder, shadow_op_name2grad_lbn,
                              grad_lbn2update_op_conf, embedding_parallel_conf,
                              embedding_scope_symbol_id, &op_name2op_conf);
   }
-  if (gradient_lbns.size() > 0) {
-    JUST(DynamicLossScaleAddGradient(ctx, op_graph, job_builder, gradient_lbns,
+  if (shadow_op_name2grad_lbn.size() > 0) {
+    JUST(DynamicLossScaleAddGradient(ctx, op_graph, job_builder, shadow_op_name2grad_lbn,
                                      embedding_scope_symbol_id, embedding_parallel_conf));
   }
   for (const auto& pair : op_name2op_conf) { job_builder->MutOpsOnlyOnce({pair.second}); }
