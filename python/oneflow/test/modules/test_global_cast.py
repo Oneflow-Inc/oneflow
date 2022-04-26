@@ -37,10 +37,35 @@ class TestToGlobalLocal(oneflow.unittest.TestCase):
     local_graph_model = GraphModel(model)
     global_graph_model = GraphModel(model.to_global(placement=placement, sbp=sbp))
 
-    def test_none(test_case):
-        x = None
-        test_case.assertTrue(flow.to_global(x) is None)
-        test_case.assertTrue(flow.to_local(x) is None)
+    def _all_global(test_case, input):
+        node_tree = IONode(value=input)
+        for _, node in node_tree.named_nodes():
+            if isinstance(node, flow.Tensor):
+                test_case.assertTrue(node.is_global)
+
+    def _all_local(test_case, input):
+        node_tree = IONode(value=input)
+        for _, node in node_tree.named_nodes():
+            if isinstance(node, flow.Tensor):
+                test_case.assertFalse(node.is_global)
+
+    def test_any_input(test_case):
+        tensor = flow.zeros((3, 4))
+        tensor_lt = [flow.tensor([1, 2, 3]), flow.randn((2, 3, 4))]
+        tensor_tp = (flow.zeros((2, 2)), flow.ones((2, 3)), flow.randn((3, 5)))
+        tensor_dt = {'tensor': tensor, 'tensor_lt': tensor_lt}
+        random_combination = [None, 1, "test_str", tensor, tensor_lt, tensor_tp, tensor_dt]
+
+        inputs = [None, 100, 'test_str', tensor, tensor_lt, tensor_tp, tensor_dt, random_combination]
+        global_inputs = []
+        for i in inputs:
+            ret = flow.to_global(i, placement=TestToGlobalLocal.placement, sbp=TestToGlobalLocal.sbp)
+            test_case._all_global(ret)
+            global_inputs.append(ret)
+        
+        for i in global_inputs:
+            ret = flow.to_local(i)
+            test_case._all_local(ret)
 
     def test_tensor_to_global(test_case):
         local_tensor = flow.ones((3, 4))
@@ -52,6 +77,10 @@ class TestToGlobalLocal(oneflow.unittest.TestCase):
         # global tensor -> global tensor
         global_tensor = flow.to_global(global_tensor, placement=TestToGlobalLocal.placement, sbp=TestToGlobalLocal.sbp)
         test_case.assertTrue(global_tensor.is_global)
+
+        # passing no placement and sbp
+        with test_case.assertRaises(ValueError):
+            global_tensor = flow.to_global(local_tensor, placement=None, sbp=None)
 
         # wrong sbp type
         with test_case.assertRaises(TypeError):
@@ -68,27 +97,21 @@ class TestToGlobalLocal(oneflow.unittest.TestCase):
         global_state_dict = flow.to_global(local_state_dict,
                                            placement=TestToGlobalLocal.placement,
                                            sbp=TestToGlobalLocal.sbp)
-        node_tree = IONode(value=global_state_dict)
-        for _, node in node_tree.named_nodes():
-            if isinstance(node, flow.Tensor):
-                test_case.assertTrue(node.is_global)
+        test_case._all_global(global_state_dict)
 
         # global state dict -> global state dict
         global_state_dict = flow.to_global(global_state_dict,
                                            placement=TestToGlobalLocal.placement,
                                            sbp=TestToGlobalLocal.sbp)
-        node_tree = IONode(value=global_state_dict)
-        for _, node in node_tree.named_nodes():
-            if isinstance(node, flow.Tensor):
-                test_case.assertTrue(node.is_global)
+        test_case._all_global(global_state_dict)
 
     def _test_state_dict_to_local(test_case, global_state_dict):
         # global state dict -> local state dict
         local_state_dict = flow.to_local(global_state_dict)
-        node_tree = IONode(value=local_state_dict)
-        for _, node in node_tree.named_nodes():
-            if isinstance(node, flow.Tensor):
-                test_case.assertFalse(node.is_global)
+        test_case._all_local(local_state_dict)
+        
+        # local input, display warning
+        local_state_dict = flow.to_local(local_state_dict)
 
     def test_eagar_state_dict(test_case):
         test_case._test_state_dict_to_global(TestToGlobalLocal.model.state_dict())
