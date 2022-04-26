@@ -275,33 +275,33 @@ class BatchMatMulFunctor {
 class TensorDotIntDimsFunctor {
  public:
   Maybe<Tensor> operator()(const std::shared_ptr<Tensor>& a, const std::shared_ptr<Tensor>& b,
-                           const int64_t dims) const {
+                           const int32_t dims) const {
     CHECK_GE_OR_RETURN(dims, 0) << "Dims must be greater than or equal to 0";
-    CHECK_LE_OR_RETURN(dims, a->shape()->NumAxes())
-        << "Dims must be less than or equal to a.dims(), which is " << a->shape()->NumAxes()
+    CHECK_LE_OR_RETURN(dims, a->ndim())
+        << "Dims must be less than or equal to a.dims(), which is " << a->ndim()
         << " but got " << dims;
-    CHECK_LE_OR_RETURN(dims, b->shape()->NumAxes())
-        << "Dims must be less than or equal to b.dims(), which is " << b->shape()->NumAxes()
+    CHECK_LE_OR_RETURN(dims, b->ndim())
+        << "Dims must be less than or equal to b.dims(), which is " << b->ndim()
         << " but got " << dims;
-    std::vector<int64_t> dims_a(dims), dims_b(dims);
-    for (int64_t i = 0; i < dims; i++) {
-      dims_a[i] = a->shape()->NumAxes() - dims + i;
-      dims_b[i] = i;
+    std::vector<int32_t> dot_dims_a(dims), dot_dims_b(dims);
+    for (int32_t i = 0; i < dims; i++) {
+      dot_dims_a[i] = a->ndim() - dims + i;
+      dot_dims_b[i] = i;
     }
-    return JUST(functional::TensorDot(a, b, dims_a, dims_b));
+    return JUST(functional::TensorDot(a, b, dot_dims_a, dot_dims_b));
   }
 };
 
 class TensorDotFunctor {
  public:
   Maybe<Tensor> operator()(const std::shared_ptr<Tensor>& a, const std::shared_ptr<Tensor>& b,
-                           const std::vector<int64_t>& _dims_a,
-                           const std::vector<int64_t>& _dims_b) const {
+                           const std::vector<int32_t>& _dims_a,
+                           const std::vector<int32_t>& _dims_b) const {
     if (_dims_a.empty() && _dims_b.empty()) {
-      DimVector shape_sum(a->shape()->NumAxes() + b->shape()->NumAxes());
-      for (int64_t i = 0; i < a->shape()->NumAxes(); i++) { shape_sum[i] = a->shape()->At(i); }
-      for (int64_t i = 0; i < b->shape()->NumAxes(); i++) {
-        shape_sum[i + a->shape()->NumAxes()] = b->shape()->At(i);
+      DimVector shape_sum(a->ndim() + b->ndim());
+      for (int64_t i = 0; i < a->ndim(); i++) { shape_sum[i] = a->shape()->At(i); }
+      for (int64_t i = 0; i < b->ndim(); i++) {
+        shape_sum[i + a->ndim()] = b->shape()->At(i);
       }
       std::shared_ptr<Tensor> reshape_a = JUST(Reshape(a, Shape(DimVector{-1, 1})));
       std::shared_ptr<Tensor> reshape_b = JUST(Reshape(b, Shape(DimVector{1, -1})));
@@ -310,21 +310,21 @@ class TensorDotFunctor {
     }
     CHECK_EQ_OR_RETURN(_dims_a.size(), _dims_b.size())
         << "dims1 and dims2 must have same size, got " << _dims_a.size() << " and " << _dims_b.size();
-    std::vector<int64_t> dims_a(_dims_a.begin(), _dims_a.end());
-    std::vector<int64_t> dims_b(_dims_b.begin(), _dims_b.end());
+    std::vector<int32_t> dims_a(_dims_a.begin(), _dims_a.end());
+    std::vector<int32_t> dims_b(_dims_b.begin(), _dims_b.end());
     for (int64_t i = 0; i < dims_a.size(); i++) {
-      dims_a[i] = dims_a[i] < 0 ? dims_a[i] + a->shape()->NumAxes() : dims_a[i];
-      CHECK_LT_OR_RETURN(dims_a[i], a->shape()->NumAxes()) << "The dims is invalid for Tensor a";
+      dims_a[i] = dims_a[i] < 0 ? dims_a[i] + a->ndim() : dims_a[i];
+      CHECK_LT_OR_RETURN(dims_a[i], a->ndim()) << "The dims is invalid for Tensor a";
       CHECK_GE_OR_RETURN(dims_a[i], 0) << "The dims is invalid for Tensor a";
 
-      dims_b[i] = dims_b[i] < 0 ? dims_b[i] + b->shape()->NumAxes() : dims_b[i];
-      CHECK_LT_OR_RETURN(dims_b[i], b->shape()->NumAxes()) << "The dims is invalid for Tensor b";
+      dims_b[i] = dims_b[i] < 0 ? dims_b[i] + b->ndim() : dims_b[i];
+      CHECK_LT_OR_RETURN(dims_b[i], b->ndim()) << "The dims is invalid for Tensor b";
       CHECK_GE_OR_RETURN(dims_b[i], 0) << "The dims is invalid for Tensor b";
     }
-    std::vector<bool> if_dot_dims_a(a->shape()->NumAxes(), false);
-    std::vector<bool> if_dot_dims_b(b->shape()->NumAxes(), false);
-    for (int64_t i : dims_a) if_dot_dims_a[i] = true;
-    for (int64_t i : dims_b) if_dot_dims_b[i] = true;
+    std::vector<bool> if_dot_dims_a(a->ndim(), false);
+    std::vector<bool> if_dot_dims_b(b->ndim(), false);
+    for (const int32_t dim_idx : dims_a) if_dot_dims_a[dim_idx] = true;
+    for (const int32_t dim_idx : dims_b) if_dot_dims_b[dim_idx] = true;
 
     std::vector<int32_t> broadcast_dims_a, broadcast_dims_b;
     for (int64_t i = 0; i < dims_a.size(); i++) {
@@ -349,32 +349,30 @@ class TensorDotFunctor {
       reduced_sum_b = JUST(functional::ReduceSum(b, broadcast_dims_b, true));
 
     int64_t non_dot_size_a = 1, non_dot_size_b = 1;
-    std::vector<int64_t> non_dot_shape_a, non_dot_shape_b;
-    non_dot_shape_a.reserve(a->shape()->NumAxes() - dims_a.size() + b->shape()->NumAxes()
+    std::vector<int32_t> non_dot_shape_a, non_dot_shape_b;
+    non_dot_shape_a.reserve(a->ndim() - dims_a.size() + b->ndim()
                             - dims_b.size());
-    non_dot_shape_b.reserve(b->shape()->NumAxes() - dims_b.size());
+    non_dot_shape_b.reserve(b->ndim() - dims_b.size());
 
-    std::vector<int32_t> permuted_a_shape, permuted_b_shape;
-    permuted_a_shape.reserve(a->shape()->NumAxes());
-    permuted_b_shape.reserve(b->shape()->NumAxes());
+    std::vector<int32_t> permuted_dims_a, permuted_dims_b;
+    permuted_dims_a.reserve(a->ndim());
+    permuted_dims_b.reserve(b->ndim());
 
-    std::vector<int64_t> non_dot_dims;
-    for (int64_t i = 0; i < a->shape()->NumAxes(); i++) {
+    // std::vector<int64_t> non_dot_dims;
+    for (int32_t i = 0; i < a->ndim(); i++) {
       if (!if_dot_dims_a[i]) {
-        non_dot_dims.emplace_back(a->shape()->At(i));
-        permuted_a_shape.emplace_back(i);
+        permuted_dims_a.emplace_back(i);
         non_dot_size_a *= reduced_sum_a->shape()->At(i);
         non_dot_shape_a.emplace_back(reduced_sum_a->shape()->At(i));
       }
     }
 
-    for (int64_t i : dims_a) permuted_a_shape.emplace_back(i);
-    for (int64_t i : dims_b) permuted_b_shape.emplace_back(i);
+    for (const int32_t dim_idx : dims_a) permuted_dims_a.emplace_back(dim_idx);
+    for (const int32_t dim_idx : dims_b) permuted_dims_b.emplace_back(dim_idx);
 
-    for (int64_t i = 0; i < b->shape()->NumAxes(); i++) {
+    for (int32_t i = 0; i < b->ndim(); i++) {
       if (!if_dot_dims_b[i]) {
-        non_dot_dims.emplace_back(b->shape()->At(i));
-        permuted_b_shape.emplace_back(i);
+        permuted_dims_b.emplace_back(i);
         non_dot_size_b *= reduced_sum_b->shape()->At(i);
         non_dot_shape_b.emplace_back(reduced_sum_b->shape()->At(i));
       }
@@ -382,12 +380,12 @@ class TensorDotFunctor {
     non_dot_shape_a.insert(non_dot_shape_a.end(), non_dot_shape_b.begin(), non_dot_shape_b.end());
 
     int64_t dot_size = 1;
-    for (int64_t i : dims_a) dot_size *= reduced_sum_a->shape()->At(i);
+    for (const int32_t dim_idx : dims_a) dot_size *= reduced_sum_a->shape()->At(dim_idx);
     std::shared_ptr<Tensor> permuted_a =
-        JUST(Reshape(JUST(Permute(reduced_sum_a, permuted_a_shape)),
+        JUST(Reshape(JUST(Permute(reduced_sum_a, permuted_dims_a)),
                      Shape(DimVector({non_dot_size_a, dot_size}))));
     std::shared_ptr<Tensor> permuted_b =
-        JUST(Reshape(JUST(Permute(reduced_sum_b, permuted_b_shape)),
+        JUST(Reshape(JUST(Permute(reduced_sum_b, permuted_dims_b)),
                      Shape(DimVector({dot_size, non_dot_size_b}))));
 
     return Reshape(JUST(functional::MatMul(permuted_a, permuted_b, false, false, 1.0)),
