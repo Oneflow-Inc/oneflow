@@ -116,11 +116,11 @@ ArrayAttr getDeviceName(Operation* op) {
 
 IntegerAttr getScopeSymbolID(Operation* op) {
   assert(op->hasTrait<OpTrait::IsOpConfCompatible>());
-  return op->getAttrOfType<IntegerAttr>(IsOpConfCompatible<void>::getDeviceTagAttr());
+  return op->getAttrOfType<IntegerAttr>(IsOpConfCompatible<void>::getScopeSymbolIDAttr());
 }
 ArrayAttr getHierarchy(Operation* op) {
   assert(op->hasTrait<OpTrait::IsOpConfCompatible>());
-  return op->getAttrOfType<ArrayAttr>(IsOpConfCompatible<void>::getDeviceTagAttr());
+  return op->getAttrOfType<ArrayAttr>(IsOpConfCompatible<void>::getHierarchyAttr());
 }
 
 LogicalResult saveAttrsToNamedAttrList(Operation* op, NamedAttrList& attributes) {
