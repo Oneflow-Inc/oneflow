@@ -25,6 +25,7 @@ limitations under the License.
 #include "oneflow/core/framework/tensor_tuple.h"
 #include "oneflow/core/functional/functional.h"
 #include "oneflow/core/functional/function_library.h"
+#include "oneflow/core/functional/sequence_function.h"
 
 namespace oneflow {
 namespace one {
@@ -72,12 +73,10 @@ class AddFunctor {
     if ((alpha.IsIntegral() && alpha.Value<int64_t>() == 1)
         || (alpha.IsFloatingPoint()
             && std::fabs(alpha.Value<double>() - 1.0) < std::numeric_limits<double>::epsilon())) {
-      JUST(tensor_processor.PromoteInputsToCommonDtype(true)
-               .AddInputs({input->contiguous(), other->contiguous()})
-               .Apply());
+      JUST(tensor_processor.PromoteInputsToCommonDtype(true).AddInputs({input, other}).Apply());
     } else {
       JUST(tensor_processor.PromoteInputsToCommonDtype(true)
-               .AddInputs({input->contiguous(), JUST(functional::ScalarMul(alpha, other))})
+               .AddInputs({input, JUST(functional::ScalarMul(alpha, other))})
                .Apply());
     }
     TensorTuple input_vec = JUST(tensor_processor.GetInputs());
@@ -130,9 +129,7 @@ class MulFunctor {
   Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x,
                            const std::shared_ptr<one::Tensor>& y) const {
     TensorProcessor tensor_processor;
-    JUST(tensor_processor.PromoteInputsToCommonDtype(true)
-             .AddInputs({x->contiguous(), y->contiguous()})
-             .Apply());
+    JUST(tensor_processor.PromoteInputsToCommonDtype(true).AddInputs({x, y}).Apply());
     TensorTuple input_vec = JUST(tensor_processor.GetInputs());
 
     if (*x->shape() == *y->shape()) { return OpInterpUtil::Dispatch<Tensor>(*mul_op_, input_vec); }
@@ -156,12 +153,10 @@ class InplaceMulFunctor {
     TensorProcessor tensor_processor;
     if (y->requires_grad()) {
       JUST(tensor_processor.PromoteInputsToCommonDtype(true)
-               .AddInputs({JUST(Identity(x->contiguous())), y->contiguous()})
+               .AddInputs({JUST(Identity(x)), y})
                .Apply());
     } else {
-      JUST(tensor_processor.PromoteInputsToCommonDtype(true)
-               .AddInputs({x->contiguous(), y->contiguous()})
-               .Apply());
+      JUST(tensor_processor.PromoteInputsToCommonDtype(true).AddInputs({x, y}).Apply());
     }
     const TensorTuple& input_vec = JUST(tensor_processor.GetInputs());
     const std::shared_ptr<one::Tensor>& x_cast = input_vec.at(0);
@@ -182,6 +177,40 @@ class InplaceMulFunctor {
  private:
   std::shared_ptr<OpExpr> mul_op_;
   std::shared_ptr<OpExpr> broadcast_mul_op_;
+};
+
+class AddcmulBaseFunctor {
+ public:
+  AddcmulBaseFunctor() = default;
+  Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& input,
+                           const std::shared_ptr<one::Tensor>& tensor1,
+                           const std::shared_ptr<one::Tensor>& tensor2, const Scalar& value,
+                           bool inplace) const {
+    return SequenceFunction<Maybe<Tensor>()>([&]() { return functional::Mul(tensor1, tensor2); })
+        .then([&](const auto& x) { return functional::ScalarMul(value, x); })
+        .then([&](const auto& x) { return functional::Add(input, x, /*alpha=*/1, inplace); })
+        .call();
+  }
+};
+
+class AddcmulFunctor : public AddcmulBaseFunctor {
+ public:
+  AddcmulFunctor() = default;
+  Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& input,
+                           const std::shared_ptr<one::Tensor>& tensor1,
+                           const std::shared_ptr<one::Tensor>& tensor2, const Scalar& value) const {
+    return AddcmulBaseFunctor::operator()(input, tensor1, tensor2, value, /*inplace=*/false);
+  }
+};
+
+class InplaceAddcmulFunctor : public AddcmulBaseFunctor {
+ public:
+  InplaceAddcmulFunctor() = default;
+  Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& input,
+                           const std::shared_ptr<one::Tensor>& tensor1,
+                           const std::shared_ptr<one::Tensor>& tensor2, const Scalar& value) const {
+    return AddcmulBaseFunctor::operator()(input, tensor1, tensor2, value, /*inplace=*/true);
+  }
 };
 
 class DivFunctor : public BinaryFloatFunctor {
@@ -372,6 +401,8 @@ class ReshapeLikeFunctor : public BinaryFunctor {
 
 ONEFLOW_FUNCTION_LIBRARY(m) {
   m.add_functor<impl::AddFunctor>("Add");
+  m.add_functor<impl::AddcmulFunctor>("Addcmul");
+  m.add_functor<impl::InplaceAddcmulFunctor>("InplaceAddcmul");
   m.add_functor<impl::Atan2Functor>("Atan2");
   m.add_functor<impl::SubFunctor>("Sub");
   m.add_functor<impl::MulFunctor>("Mul");

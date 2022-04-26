@@ -206,9 +206,150 @@ add_docstr(
 )
 
 add_docstr(
+    oneflow.Tensor.new_zeros,
+    """
+    Tensor.new_zeros(size=None, dtype=None, device=None, placement=None, sbp=None, requires_grad=False) -> Tensor
+
+    Returns a Tensor of size size filled with 0. By default, the returned Tensor has the same torch.dtype and torch.device as this tensor.
+
+    Args:
+        size (int...): a list, tuple, or flow.Size of integers defining the shape of the output tensor.
+        dtype (flow.dtype, optional):  the desired type of returned tensor. Default: if None, same flow.dtype as this tensor.
+        device (flow.device, optional): the desired device of returned tensor. Default: if None, same flow.device as this tensor.
+        placement (flow.placement, optional): the desired placement of returned global tensor. Default: if None, the returned tensor is local one using the argument `device`.
+        sbp (flow.sbp.sbp or tuple of flow.sbp.sbp, optional): the desired sbp descriptor of returned global tensor. Default: if None, the returned tensor is local one using the argument `device`.
+        requires_grad (bool, optional): If autograd should record operations on the returned tensor. Default: False.
+
+    For example:
+
+    .. code-block:: python
+
+        >>> import numpy as np
+        >>> import oneflow as flow
+
+        >>> x = flow.Tensor(np.ones((1, 2, 3)))
+        >>> y = x.new_zeros((2, 2))
+        >>> y
+        tensor([[0., 0.],
+                [0., 0.]], dtype=oneflow.float32)
+    """,
+)
+
+add_docstr(
+    oneflow.Tensor.storage_offset,
+    """
+    Tensor.storage_offset() -> Tensor
+
+    Returns self tensor’s offset in the underlying storage in terms of number of storage elements (not bytes).
+
+    Example:
+
+    .. code-block:: python
+
+        >>> import oneflow as flow
+        >>> x = flow.tensor([1, 2, 3, 4, 5])
+        >>> x.storage_offset()
+        0
+    """,
+)
+
+add_docstr(
+    oneflow.Tensor.local_to_global,
+    """
+    Tensor.local_to_global(placement=None, sbp=None, *, check_meta=Ture) -> Tensor
+
+    Creates a global tensor from a local tensor.
+
+    Note:
+        This tensor must be local tensor.
+
+        Both placement and sbp are required.
+
+        The returned global tensor takes this tensor as its local component in the current rank.
+
+        There is no data communication usually, but when sbp is ``oneflow.sbp.broadcast``, the data on rank 0 will be broadcast to other ranks.
+    
+    Args:
+        placement (flow.placement, optional): the desired placement of returned global tensor. Default: None
+        sbp (flow.sbp.sbp or tuple of flow.sbp.sbp, optional): the desired sbp of returned global tensor. Default: None
+    Keyword Args:
+        check_meta (bool, optional): indicates whether to check meta information when createing global tensor from local
+            tensor. Only can be set to False when the shape and dtype of the input local tensor on each rank are the same. If set to False, the
+            execution of local_to_global can be accelerated. Default: True
+
+    .. code-block:: python
+
+        >>> # Run on 2 ranks respectively
+        >>> import oneflow as flow
+        >>> input = flow.tensor([0., 1.], dtype=flow.float32) # doctest: +SKIP
+        >>> output = input.local_to_global(placement=flow.placement("cpu", ranks=[0, 1]), sbp=[flow.sbp.split(0)], check_meta=False) # doctest: +SKIP
+        >>> print(output.size()) # doctest: +SKIP
+        >>> print(output) # doctest: +SKIP
+
+    .. code-block:: python
+
+        >>> # results on rank 0
+        oneflow.Size([4])
+        tensor([0., 1., 0., 1.], placement=oneflow.placement(type="cpu", ranks=[0, 1]), sbp=(oneflow.sbp.split(axis=0),), dtype=oneflow.float32) 
+ 
+    .. code-block:: python
+
+        >>> # results on rank 1
+        oneflow.Size([4])
+        tensor([0., 1., 0., 1.], placement=oneflow.placement(type="cpu", ranks=[0, 1]), sbp=(oneflow.sbp.split(axis=0),), dtype=oneflow.float32)
+    """,
+)
+
+add_docstr(
+    oneflow.Tensor.global_to_global,
+    """
+    Tensor.global_to_global(placement=None, sbp=None, *, grad_sbp=None, check_meta=False) -> Tensor
+
+    Performs Tensor placement and/or sbp conversion.
+
+    Note:
+        This tensor must be global tensor.
+
+        At least one of placement and sbp is required.
+
+        If placement and sbp are all the same as this tensor's own placement and sbp, then returns this tensor own.
+    
+    Args:
+        placement (flow.placement, optional): the desired placement of returned global tensor. Default: None
+        sbp (flow.sbp.sbp or tuple of flow.sbp.sbp, optional): the desired sbp of returned global tensor. Default: None
+    Keyword Args:
+        grad_sbp (flow.sbp.sbp or tuple of flow.sbp.sbp, optional): manually specify the sbp of this tensor's grad
+            tensor in the backward pass. If None, the grad tensor sbp will be infered automatically. Default: None
+        check_meta (bool, optional): indicates whether to check meta information. If set to True, check the consistency
+            of the input meta information (placement and sbp) on each rank. Default: False
+
+    .. code-block:: python
+
+        >>> # Run on 2 ranks respectively
+        >>> import oneflow as flow
+        >>> input = flow.tensor([0., 1.], dtype=flow.float32, placement=flow.placement("cpu", ranks=[0, 1]), sbp=[flow.sbp.broadcast]) # doctest: +SKIP
+        >>> output = input.global_to_global(placement=flow.placement("cpu", ranks=[0, 1]), sbp=[flow.sbp.split(0)]) # doctest: +SKIP
+        >>> print(output.size()) # doctest: +SKIP
+        >>> print(output) # doctest: +SKIP
+
+    .. code-block:: python
+
+        >>> # results on rank 0
+        oneflow.Size([2])
+        tensor([0., 1.], placement=oneflow.placement(type="cpu", ranks=[0, 1]), sbp=(oneflow.sbp.split(axis=0),), dtype=oneflow.float32)
+
+    .. code-block:: python
+
+        >>> # results on rank 1
+        oneflow.Size([2])
+        tensor([0., 1.], placement=oneflow.placement(type="cpu", ranks=[0, 1]), sbp=(oneflow.sbp.split(axis=0),), dtype=oneflow.float32)
+    """,
+)
+
+add_docstr(
     oneflow.Tensor.to_global,
     """
-    Tensor.to_global(placement=None, sbp=None, grad_sbp=None) -> Tensor
+    Tensor.to_global(placement=None, sbp=None, **kwargs) -> Tensor
 
     Creates a global tensor if this tensor is a local tensor, otherwise performs Tensor placement and/or sbp conversion.
 
@@ -232,7 +373,12 @@ add_docstr(
     Args:
         placement (flow.placement, optional): the desired placement of returned global tensor. Default: None
         sbp (flow.sbp.sbp or tuple of flow.sbp.sbp, optional): the desired sbp of returned global tensor. Default: None
-        grad_sbp (flow.sbp.sbp or tuple of flow.sbp.sbp, optional): manually specify the sbp of this tensor's grad tensor in the backward pass. If None, the grad tensor sbp will be infered automatically. It is only used if this tensor is a global tensor. Default: None
+    Keyword Args:
+        grad_sbp (flow.sbp.sbp or tuple of flow.sbp.sbp, optional): manually specify the sbp of this tensor's grad
+            tensor in the backward pass. If None, the grad tensor sbp will be infered automatically. It is only used if this tensor is a
+            global tensor. Default: None
+        check_meta (bool, optional): indicates whether to check meta information. If set to True, check the input meta
+            information on each rank. Default: True if this tensor is a local tensor, False if this tensor is a global tensor
 
     For local tensor:
 
@@ -241,7 +387,7 @@ add_docstr(
         >>> # Run on 2 ranks respectively
         >>> import oneflow as flow
         >>> input = flow.tensor([0., 1.], dtype=flow.float32) # doctest: +SKIP
-        >>> output = input.to_global(placement=flow.placement("cpu", ranks=[0, 1]), sbp=[flow.sbp.split(0)]) # doctest: +SKIP
+        >>> output = input.to_global(placement=flow.placement("cpu", ranks=[0, 1]), sbp=[flow.sbp.split(0)], check_meta=False) # doctest: +SKIP
         >>> print(output.size()) # doctest: +SKIP
         >>> print(output) # doctest: +SKIP
 
@@ -695,9 +841,30 @@ add_docstr(
 )
 
 add_docstr(
+    oneflow.Tensor.unbind,
+    """
+    See :func:`oneflow.unbind`
+    """,
+)
+
+add_docstr(
     oneflow.Tensor.swapaxes,
     """
     See :func:`oneflow.swapaxes`
+    """,
+)
+
+add_docstr(
+    oneflow.Tensor.amax,
+    """
+    See :func:`oneflow.amax`
+    """,
+)
+
+add_docstr(
+    oneflow.Tensor.swapdims,
+    """
+    See :func:`oneflow.swapdims`
     """,
 )
 
@@ -985,6 +1152,20 @@ add_docstr(
 )
 
 add_docstr(
+    oneflow.Tensor.addcmul,
+    """
+    See :func:`oneflow.addcmul`
+    """,
+)
+
+add_docstr(
+    oneflow.Tensor.addcmul_,
+    """
+    In-place version of :func:`oneflow.Tensor.addcmul`.
+    """,
+)
+
+add_docstr(
     oneflow.Tensor.asin,
     """
     See :func:`oneflow.asin`
@@ -1233,6 +1414,18 @@ add_docstr(
 
     """,
 )
+
+
+add_docstr(
+    oneflow.Tensor.half,
+    """
+    self.half() is equivalent to self.to(dtype=oneflow.float16).
+
+    See :func:`oneflow.Tensor.to`
+
+    """,
+)
+
 
 add_docstr(
     oneflow.Tensor.gather,
@@ -1508,6 +1701,22 @@ add_docstr(
 )
 
 add_docstr(
+    oneflow.Tensor.reshape_as,
+    """
+    Tensor.reshape_as(other) -> Tensor
+    Returns this tensor as the same shape as other.
+    self.reshape_as(other) is equivalent to self.reshape(other.sizes()).
+    This method returns a view if other.sizes() is compatible with the current shape.
+    See :func:`oneflow.Tensor.view` on when it is possible to return a view.
+
+    Please see reshape() for more information about reshape. See :func:`oneflow.reshape`
+
+    Parameters
+    other (oneflow.Tensor) – The result tensor has the same shape as other.
+    """,
+)
+
+add_docstr(
     oneflow.Tensor.view,
     """
     The interface is consistent with PyTorch.
@@ -1673,6 +1882,24 @@ add_docstr(
 )
 
 add_docstr(
+    oneflow.Tensor.is_contiguous,
+    r"""
+    Tensor.is_contiguous() -> bool
+
+    Returns True if `self` tensor is contiguous in memory.
+    """,
+)
+
+add_docstr(
+    oneflow.Tensor.is_cuda,
+    r"""
+    Tensor.is_cuda() -> bool
+    
+    Is `True` if the Tensor is stored on the GPU, `False` otherwise.
+    """,
+)
+
+add_docstr(
     oneflow.Tensor.is_floating_point,
     """
     See :func:`oneflow.is_floating_point`
@@ -1725,5 +1952,28 @@ add_docstr(
     oneflow.Tensor.where,
     """
     See :func:`oneflow.where`
+    """,
+)
+
+add_docstr(
+    oneflow.Tensor.zero_,
+    r"""
+    Tensor.zero_() -> Tensor
+    
+    Fills `self` tensor with zeros.
+    """,
+)
+
+add_docstr(
+    oneflow.Tensor.isnan,
+    """
+    See :func:`oneflow.isnan`
+    """,
+)
+
+add_docstr(
+    oneflow.Tensor.isinf,
+    """
+    See :func:`oneflow.isinf`
     """,
 )

@@ -163,7 +163,9 @@ class ConsistentTensorImpl : public TensorImpl {
   Maybe<bool> has_eager_blob_object() const override { RETURN_ERROR_WITH_BUG_PROMPT(); }
 
   // Setters
-  void set_consumer_nd_sbp_constraint(Symbol<NdSbp> val) { consumer_nd_sbp_constraint_ = val; }
+  void set_consumer_nd_sbp_constraint(const Optional<Symbol<NdSbp>>& val) {
+    consumer_nd_sbp_constraint_ = val;
+  }
 
   ConsistentTensorMeta* mut_tensor_meta() {
     // return const_cast<ConsistentTensorMeta*>(tensor_meta_.get());

@@ -90,7 +90,7 @@ class ToContiguousKernel final : public user_op::OpKernel {
     const DataType in_data_type = in->data_type();
     CHECK_EQ(out->data_type(), in_data_type);
 
-    const StrideVector& stride_vec = in->stride().StrideVec();
+    const DimVector& stride_vec = in->stride().StrideVec();
     std::vector<int64_t> in_stride(in->stride().NumAxes());
     std::copy(stride_vec.begin(), stride_vec.end(), in_stride.begin());
 

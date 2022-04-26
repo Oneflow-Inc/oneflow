@@ -18,7 +18,6 @@ limitations under the License.
 #define ONEFLOW_CORE_FRAMEWORK_TENSOR_METHODS_H_
 
 #include "oneflow/core/framework/tensor.h"
-#include "oneflow/core/framework/attr_map.h"
 
 namespace oneflow {
 namespace one {
@@ -61,7 +60,8 @@ Maybe<Tensor> AsStrided(const std::shared_ptr<one::Tensor>& input, const std::ve
 
 Maybe<Tensor> Transpose(const std::shared_ptr<Tensor>& input, const std::vector<int32_t>& permute);
 
-Maybe<Tensor> UnfoldTensor(const std::shared_ptr<Tensor>& input, const MutableAttrMap& attrs);
+Maybe<Tensor> UnfoldTensor(const std::shared_ptr<Tensor>& input, const int32_t& dimension,
+                           const int32_t& size, const int32_t& step);
 
 Maybe<Tensor> Diagonal(const std::shared_ptr<Tensor>& input, const int32_t offset,
                        const int32_t dim1, const int32_t dim2);

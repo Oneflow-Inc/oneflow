@@ -73,8 +73,8 @@ Maybe<TensorTuple> ExpandMaskIndex(const std::shared_ptr<Tensor>& index) {
 
   for (int i = 0; i < index->ndim(); ++i) {
     auto item = JUST(functional::Slice(res->at(0), {0, i}, {size, i + 1}, {1, 1}));
-    item = JUST(functional::Reshape(item->contiguous(), {size}));
-    indices->emplace_back(item->contiguous());
+    item = JUST(functional::Reshape(item, {size}));
+    indices->emplace_back(item);
   }
   return indices;
 }
@@ -156,7 +156,7 @@ Maybe<void> TransposeFront(const std::shared_ptr<Tensor>& input, const TensorTup
     return false;
   }();
   if (need_transpose) {
-    *output = JUST(Transpose(input, permute))->contiguous();
+    *output = JUST(Transpose(input, permute));
   } else {
     *output = input;
   }
@@ -334,9 +334,9 @@ Maybe<Tensor> ApplyAdvancedIndexing(const std::shared_ptr<Tensor>& input,
     const auto& broadcast_sbp = JUST(MakeBroadcastSbpParallel());
     int n = JUST(input->nd_sbp())->sbp_parallel_size();
     std::vector<Symbol<SbpParallel>> grad_sbp_tuple;
-    packed_indices =
-        JUST(ToConsistent(packed_indices, placement,
-                          std::vector<Symbol<SbpParallel>>(n, broadcast_sbp), grad_sbp_tuple));
+    packed_indices = JUST(ToConsistent(packed_indices, placement,
+                                       std::vector<Symbol<SbpParallel>>(n, broadcast_sbp),
+                                       grad_sbp_tuple, /* check_meta */ false));
   } else {
     Symbol<Device> device = JUST(transposed_input->device());
     if (JUST(packed_indices->device()) != device) {

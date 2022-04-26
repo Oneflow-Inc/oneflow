@@ -45,8 +45,7 @@ class UnaryFunctor {
 
 class InplaceUnaryFunctor {
  public:
-  Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& input) const {
-    auto x = input->contiguous();
+  Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x) const {
     JUST(CheckInplaceValid(x));
     std::shared_ptr<TensorTuple> outputs = std::make_shared<TensorTuple>(1);
     outputs->at(0) = x;

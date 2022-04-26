@@ -202,7 +202,7 @@ class LocalAllReduceFunctor {
       JUST(OpInterpUtil::Dispatch(*op_expr, {op_input}, &outputs));
       return outputs[0];
     } else {
-      return OpInterpUtil::Dispatch<Tensor>(*op_expr, {op_input->contiguous()}, {});
+      return OpInterpUtil::Dispatch<Tensor>(*op_expr, {op_input}, {});
     }
   }
 };
@@ -217,7 +217,7 @@ class ConsistentAllReduceFunctor {
     }
     std::shared_ptr<OpExpr> op_expr =
         JUST(CachedEagerNcclAllReduceOpExpr(JUST(x->parallel_desc())));
-    return JUST(OpInterpUtil::Dispatch<Tensor>(*op_expr, {x->contiguous()}));
+    return JUST(OpInterpUtil::Dispatch<Tensor>(*op_expr, {x}));
   }
 };
 
@@ -239,7 +239,7 @@ class ConsistentReduceScatterFunctor {
     }
     std::shared_ptr<OpExpr> op_expr =
         JUST(CachedNcclReduceScatterOpExpr(JUST(x->parallel_desc()), op_type));
-    return JUST(OpInterpUtil::Dispatch<Tensor>(*op_expr, {x->contiguous()}));
+    return JUST(OpInterpUtil::Dispatch<Tensor>(*op_expr, {x}));
   }
 };
 
@@ -253,7 +253,7 @@ class ConsistentAllGatherFunctor {
     }
     std::shared_ptr<OpExpr> op_expr =
         JUST(CachedEagerNcclAllGatherOpExpr(JUST(x->parallel_desc())));
-    return JUST(OpInterpUtil::Dispatch<Tensor>(*op_expr, {x->contiguous()}));
+    return JUST(OpInterpUtil::Dispatch<Tensor>(*op_expr, {x}));
   }
 };
 
@@ -276,7 +276,7 @@ class ConsistentS2SFunctor {
     std::shared_ptr<OpExpr> op_expr = JUST(
         CachedEagerNcclS2SOpExpr(JUST(x->parallel_desc()), SymbolOf(in_nd_sbp->sbp_parallel(0)),
                                  SymbolOf(out_nd_sbp->sbp_parallel(0))));
-    return JUST(OpInterpUtil::Dispatch<Tensor>(*op_expr, {x->contiguous()}));
+    return JUST(OpInterpUtil::Dispatch<Tensor>(*op_expr, {x}));
   }
 };
 
@@ -298,7 +298,7 @@ class SendFunctor {
       JUST(ccl::Send<DeviceType::kCPU>(&device_type, sizeof(device_type), DataType::kChar, dst,
                                        nullptr));
     }
-    JUST(OpInterpUtil::Dispatch<TensorTuple>(*op_expr_, {x->contiguous()}, attrs));
+    JUST(OpInterpUtil::Dispatch<TensorTuple>(*op_expr_, {x}, attrs));
     return Maybe<void>::Ok();
   }
 
@@ -335,7 +335,7 @@ class RecvFunctor {
       DeviceType device_type = DeviceType::kInvalidDevice;
       JUST(ccl::Recv<DeviceType::kCPU>(&device_type, sizeof(device_type), DataType::kChar, src,
                                        nullptr));
-      device = JUST(Device::New(Device::Type4DeviceTag(*JUST(DeviceTag4DeviceType(device_type)))));
+      device = JUST(Device::New(*JUST(DeviceTag4DeviceType(device_type))));
     } else {
       UNIMPLEMENTED_THEN_RETURN() << "All or none of shape, dtype and device should have value.";
     }
@@ -375,7 +375,7 @@ class LocalReduceFunctor {
     Symbol<ParallelDesc> parallel_desc;
     if (iter == rank_group2parallel_desc.end()) {
       ParallelConf parallel_conf;
-      parallel_conf.set_device_tag(JUST(device->of_type()));
+      parallel_conf.set_device_tag(device->type());
       JUST(rank_group->ForEachRank([&parallel_conf](int64_t rank) -> Maybe<void> {
         parallel_conf.add_device_name("@" + std::to_string(rank) + ":"
                                       + std::to_string(GlobalProcessCtx::LocalRank(rank)));
@@ -389,10 +389,10 @@ class LocalReduceFunctor {
     std::shared_ptr<OpExpr> op_expr = JUST(CachedEagerNcclReduceOpExpr(parallel_desc, dst));
     if (inplace) {
       TensorTuple outputs{x};
-      JUST(OpInterpUtil::Dispatch(*op_expr, {x->contiguous()}, &outputs));
+      JUST(OpInterpUtil::Dispatch(*op_expr, {x}, &outputs));
       return x;
     } else {
-      return JUST(OpInterpUtil::Dispatch<Tensor>(*op_expr, {x->contiguous()}));
+      return JUST(OpInterpUtil::Dispatch<Tensor>(*op_expr, {x}));
     }
   }
 };

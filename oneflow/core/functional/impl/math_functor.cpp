@@ -58,7 +58,7 @@ class AddNFunctor {
       if (i == 0 && inplace) {
         JUST(CheckInplaceValid(partial_inputs.at(0)));
         std::shared_ptr<TensorTuple> outs = std::make_shared<TensorTuple>(1);
-        (*outs)[0] = partial_inputs[0]->contiguous();
+        (*outs)[0] = partial_inputs[0];
         JUST(OpInterpUtil::Dispatch(*op_.at(size - 1), partial_inputs, outs.get()));
         outputs.emplace_back((*outs)[0]);
       } else {
@@ -257,7 +257,7 @@ class ScalarPowGradFunctor {
     } else {
       UNIMPLEMENTED_THEN_RETURN() << "The scalar in ScalarPowGrad should be float or int.";
     }
-    return OpInterpUtil::Dispatch<Tensor>(*op_, {x->contiguous(), dy->contiguous()}, attrs);
+    return OpInterpUtil::Dispatch<Tensor>(*op_, {x, dy}, attrs);
   }
 
  private:
@@ -326,7 +326,7 @@ class ReduceMaxFunctor {
       JUST(attrs.SetAttr<std::vector<int32_t>>("axis", axis));
     }
     JUST(attrs.SetAttr<bool>("keepdims", keepdims));
-    return OpInterpUtil::Dispatch<Tensor>(*op_, {x->contiguous()}, attrs);
+    return OpInterpUtil::Dispatch<Tensor>(*op_, {x}, attrs);
   }
 
  private:
@@ -350,7 +350,7 @@ class ReduceMinFunctor {
       JUST(attrs.SetAttr<std::vector<int32_t>>("axis", axis));
     }
     JUST(attrs.SetAttr<bool>("keepdims", keepdims));
-    return OpInterpUtil::Dispatch<Tensor>(*op_, {x->contiguous()}, attrs);
+    return OpInterpUtil::Dispatch<Tensor>(*op_, {x}, attrs);
   }
 
  private:
@@ -411,6 +411,25 @@ class Min2Functor {
   }
 };
 
+class AmaxFunctor {
+ public:
+  Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x,
+                           const Optional<std::vector<int32_t>>& dim, const bool& keepdim) const {
+    if (!dim.has_value()) { return ReduceMax(x, {}, keepdim); }
+
+    const int32_t ndim = x->ndim();
+    std::vector<int32_t>& dims = *JUST(dim);
+    for (int i = 0; i < dims.size(); i++) {
+      if (dims[i] < -ndim || dims[i] >= ndim) {
+        return Error::IndexError() << "Dimension out of range (expected to be in range of ["
+                                   << -ndim << ", " << ndim - 1 << "], but got " << dims[i] << ")";
+      }
+      if (dims[i] < 0) { dims[i] += ndim; }
+    }
+    return ReduceMax(x, dims, keepdim);
+  }
+};
+
 class ReduceSumFunctor {
  public:
   ReduceSumFunctor() {
@@ -430,7 +449,7 @@ class ReduceSumFunctor {
     }
     JUST(attrs.SetAttr<bool>("keepdims", keepdims));
     TensorProcessor tensor_processor;
-    JUST(tensor_processor.AddInputs({x->contiguous()}, /*lowest_dtype=*/DType::Int64()).Apply());
+    JUST(tensor_processor.AddInputs({x}, /*lowest_dtype=*/DType::Int64()).Apply());
     TensorTuple input_tuple = JUST(tensor_processor.GetInputs());
     return OpInterpUtil::Dispatch<Tensor>(*op_, input_tuple, attrs);
   }
@@ -456,7 +475,7 @@ class ReduceAllFunctor {
       JUST(attrs.SetAttr<std::vector<int32_t>>("axis", axis));
     }
     JUST(attrs.SetAttr<bool>("keepdims", keepdims));
-    return OpInterpUtil::Dispatch<Tensor>(*op_, {x->contiguous()}, attrs);
+    return OpInterpUtil::Dispatch<Tensor>(*op_, {x}, attrs);
   }
 
  private:
@@ -480,7 +499,7 @@ class ReduceAnyFunctor {
       JUST(attrs.SetAttr<std::vector<int32_t>>("axis", axis));
     }
     JUST(attrs.SetAttr<bool>("keepdims", keepdims));
-    return OpInterpUtil::Dispatch<Tensor>(*op_, {x->contiguous()}, attrs);
+    return OpInterpUtil::Dispatch<Tensor>(*op_, {x}, attrs);
   }
 
  private:
@@ -501,7 +520,7 @@ class ReduceDeviceStageBaseFunctor {
                                 const std::vector<int32_t>& axis) const {
     MutableAttrMap attrs;
     JUST(attrs.SetAttr<std::vector<int32_t>>("axis", axis));
-    return OpInterpUtil::Dispatch<TensorTuple>(*op_, {in->contiguous()}, attrs);
+    return OpInterpUtil::Dispatch<TensorTuple>(*op_, {in}, attrs);
   }
   virtual ~ReduceDeviceStageBaseFunctor() = default;
 
@@ -525,8 +544,7 @@ class ReduceDeviceStageGradBaseFunctor {
                            const std::vector<int32_t>& axis) const {
     MutableAttrMap attrs;
     JUST(attrs.SetAttr<std::vector<int32_t>>("axis", axis));
-    return OpInterpUtil::Dispatch<Tensor>(
-        *op_, {out_diff->contiguous(), mask->contiguous(), count->contiguous()}, attrs);
+    return OpInterpUtil::Dispatch<Tensor>(*op_, {out_diff, mask, count}, attrs);
   }
   virtual ~ReduceDeviceStageGradBaseFunctor() = default;
 
@@ -574,8 +592,7 @@ class ReduceGlobalStageBaseFunctor {
     MutableAttrMap attrs;
     JUST(attrs.SetAttr<std::vector<int32_t>>("axis", axis));
     JUST(attrs.SetAttr<bool>("keepdims", keepdims));
-    return OpInterpUtil::Dispatch<TensorTuple>(*op_, {in->contiguous(), device_count->contiguous()},
-                                               attrs);
+    return OpInterpUtil::Dispatch<TensorTuple>(*op_, {in, device_count}, attrs);
   }
   virtual ~ReduceGlobalStageBaseFunctor() = default;
 
@@ -600,8 +617,7 @@ class ReduceGlobalStageGradBaseFunctor {
     MutableAttrMap attrs;
     JUST(attrs.SetAttr<std::vector<int32_t>>("axis", axis));
     JUST(attrs.SetAttr<bool>("keepdims", keepdims));
-    return OpInterpUtil::Dispatch<Tensor>(
-        *op_, {out_diff->contiguous(), mask->contiguous(), device_count->contiguous()}, attrs);
+    return OpInterpUtil::Dispatch<Tensor>(*op_, {out_diff, mask, device_count}, attrs);
   }
   virtual ~ReduceGlobalStageGradBaseFunctor() = default;
 
@@ -661,27 +677,29 @@ class ReduceProdFunctor {
         one::OpBuilder("reduce_prod").Input("input_tensor").Output("output_tensor").Build());
   }
   Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x, const std::vector<int32_t>& axis,
-                           const bool& keepdims) const {
+                           const bool& keepdims, const Optional<Symbol<DType>>& dtype) const {
     MutableAttrMap attrs;
+    std::shared_ptr<one::Tensor> tensor = x;
+    if (dtype.has_value() && (dtype != x->dtype())) { tensor = JUST(Cast(tensor, JUST(dtype))); }
     TensorProcessor tensor_processor;
     Symbol<DType> lowest_dtype;
-    if (DType::priority_order[x->dtype()->data_type()]
+    if (DType::priority_order[tensor->dtype()->data_type()]
         == DType::priority_order[DType::Bool()->data_type()]) {
       lowest_dtype = DType::Int64();
     } else {
-      lowest_dtype = x->dtype();
+      lowest_dtype = tensor->dtype();
     }
-    JUST(tensor_processor.AddInputs({x->contiguous()}, lowest_dtype).Apply());
+    JUST(tensor_processor.AddInputs({tensor}, lowest_dtype).Apply());
     TensorTuple input_tuple = JUST(tensor_processor.GetInputs());
     if (axis.empty()) {
-      std::vector<int32_t> reduce_axis(x->shape()->NumAxes());
+      std::vector<int32_t> reduce_axis(tensor->shape()->NumAxes());
       std::iota(reduce_axis.begin(), reduce_axis.end(), 0);
       JUST(attrs.SetAttr<std::vector<int32_t>>("axis", reduce_axis));
     } else {
       JUST(attrs.SetAttr<std::vector<int32_t>>("axis", axis));
     }
     JUST(attrs.SetAttr<bool>("keepdims", keepdims));
-    return OpInterpUtil::Dispatch<Tensor>(*op_, input_tuple, attrs);
+    return JUST(OpInterpUtil::Dispatch<Tensor>(*op_, input_tuple, attrs));
   }
 
  private:
@@ -711,7 +729,7 @@ class TransposeFunctor {
     // currently, view only support eager and local mode
     if (view::IsViewApplicable(input)) { return JUST(view::Transpose(input, positive_perm)); }
     JUST(attrs.SetAttr<std::vector<int32_t>>("perm", positive_perm));
-    return OpInterpUtil::Dispatch<Tensor>(*op_, {input->contiguous()}, attrs);
+    return OpInterpUtil::Dispatch<Tensor>(*op_, {input}, attrs);
   }
 
  private:
@@ -736,15 +754,17 @@ class Transpose2dimFunctor {
     if (dim1 < 0) { dim_1 += ndim; }
 
     CHECK_OR_RETURN(dim_0 >= 0 && dim0 < ndim)
-        << "Invalid dim0:" << dim_0 << " len(shape):" << ndim;
+        << "Dimension out of range (expected to be in range of [" << -ndim << ", " << ndim - 1
+        << "], but got " << dim_0 << ")";
     CHECK_OR_RETURN(dim_1 >= 0 && dim1 < ndim)
-        << "Invalid dim1:" << dim_1 << " len(shape):" << ndim;
+        << "Dimension out of range (expected to be in range of [" << -ndim << ", " << ndim - 1
+        << "], but got " << dim_1 << ")";
     for (int32_t i = 0; i < ndim; ++i) { permute.emplace_back(i); }
     std::swap(permute[dim_0], permute[dim_1]);
     Shape shape(DimVector(permute.begin(), permute.end()));
     if (view::IsViewApplicable(input)) { return JUST(view::Transpose(input, permute)); }
     JUST(attrs.SetAttr<std::vector<int32_t>>("perm", permute));
-    return OpInterpUtil::Dispatch<Tensor>(*op_, {input->contiguous()}, attrs);
+    return OpInterpUtil::Dispatch<Tensor>(*op_, {input}, attrs);
   }
 
  private:
@@ -794,33 +814,11 @@ class AsStridedGradFunctor {
     JUST(attrs.SetAttr<std::vector<int32_t>>("size", size));
     JUST(attrs.SetAttr<std::vector<int32_t>>("stride", stride));
     JUST(attrs.SetAttr<int32_t>("storage_offset", storage_offset));
-    return OpInterpUtil::Dispatch<Tensor>(*op_, {dy->contiguous(), input->contiguous()}, attrs);
+    return OpInterpUtil::Dispatch<Tensor>(*op_, {dy, input}, attrs);
   }
 
  private:
   std::shared_ptr<OpExpr> op_;
-};
-
-class SwapaxesFunctor {
- public:
-  SwapaxesFunctor() {}
-  Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x, const int32_t dim0,
-                           const int32_t dim1) const {
-    const int64_t ndim = x->shape()->NumAxes();
-    int32_t dim_0 = dim0;
-    int32_t dim_1 = dim1;
-
-    if (dim0 < 0) { dim_0 += ndim; }
-    if (dim1 < 0) { dim_1 += ndim; }
-
-    CHECK_OR_RETURN(dim_0 >= 0 && dim0 < ndim)
-        << "Dimension out of range (expected to be in range of [" << -ndim << ", " << ndim - 1
-        << "], but got " << dim_0 << ")";
-    CHECK_OR_RETURN(dim_1 >= 0 && dim1 < ndim)
-        << "Dimension out of range (expected to be in range of [" << -ndim << ", " << ndim - 1
-        << "], but got " << dim_1 << ")";
-    return Transpose2dim(x, dim0, dim1);
-  }
 };
 
 class ArangeFunctor {
@@ -944,7 +942,7 @@ class CastFunctor {
 
     MutableAttrMap attrs;
     JUST(attrs.SetAttr<DataType>("dtype", dtype->data_type()));
-    return OpInterpUtil::Dispatch<Tensor>(*op_, {x->contiguous()}, attrs);
+    return OpInterpUtil::Dispatch<Tensor>(*op_, {x}, attrs);
   }
 
  private:
@@ -1001,14 +999,13 @@ class ClampBaseFunctor {
       std::shared_ptr<TensorTuple> outputs = std::make_shared<TensorTuple>(1);
       outputs->at(0) = x;
       if (x->requires_grad()) {
-        JUST(OpInterpUtil::Dispatch(*op, {JUST(functional::Identity(x->contiguous()))},
-                                    outputs.get(), attrs));
+        JUST(OpInterpUtil::Dispatch(*op, {JUST(functional::Identity(x))}, outputs.get(), attrs));
       } else {
-        JUST(OpInterpUtil::Dispatch(*op, {x->contiguous()}, outputs.get(), attrs));
+        JUST(OpInterpUtil::Dispatch(*op, {x}, outputs.get(), attrs));
       }
       return outputs->at(0);
     } else {
-      return OpInterpUtil::Dispatch<Tensor>(*op, {x->contiguous()}, attrs);
+      return OpInterpUtil::Dispatch<Tensor>(*op, {x}, attrs);
     }
   }
 
@@ -1108,8 +1105,7 @@ class VectorNormFunctor {
     if (ord.IsIntegral() || ord.IsFloatingPoint()) {
       double ord_val = JUST(ord.As<double>());
       if (ord_val == 0) {
-        std::vector<int32_t> dim_column(1, 0);
-        res = JUST(ReduceSum(JUST(ScalarLogicalNotEqual(x, 0)), dim_column, keepdim));
+        res = JUST(ReduceSum(JUST(functional::NotEqualZero(x)), dim, keepdim));
       } else if (ord_val == INFINITY) {
         res = JUST(ReduceMax(JUST(Abs(x)), dim, keepdim));
       } else if (ord_val == -INFINITY) {
@@ -1488,7 +1484,7 @@ class ClampGradFunctor {
     } else {
       op = clip_op_.get();
     }
-    return OpInterpUtil::Dispatch<Tensor>(*op, {dy->contiguous(), x->contiguous()}, attrs);
+    return OpInterpUtil::Dispatch<Tensor>(*op, {dy, x}, attrs);
   }
 
  private:
@@ -1559,12 +1555,15 @@ class MinimumFunctor {
 
   Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x,
                            const std::shared_ptr<one::Tensor>& y) const {
+    TensorProcessor tensor_processor;
+    JUST(tensor_processor.PromoteInputsToCommonDtype(true).AddInputs({x, y}).Apply());
+    TensorTuple input_tuple = JUST(tensor_processor.GetInputs());
     if (*x->shape() == *y->shape()) {
       return OpInterpUtil::Dispatch<Tensor>(*elementwise_minimum_op_,
-                                            {x->contiguous(), y->contiguous()});
+                                            {input_tuple[0], input_tuple[1]});
     } else {
       return OpInterpUtil::Dispatch<Tensor>(*broadcast_minimum_op_,
-                                            {x->contiguous(), y->contiguous()});
+                                            {input_tuple[0], input_tuple[1]});
     }
   }
 
@@ -1584,12 +1583,15 @@ class MaximumFunctor {
 
   Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x,
                            const std::shared_ptr<one::Tensor>& y) const {
+    TensorProcessor tensor_processor;
+    JUST(tensor_processor.PromoteInputsToCommonDtype(true).AddInputs({x, y}).Apply());
+    TensorTuple input_tuple = JUST(tensor_processor.GetInputs());
     if (*x->shape() == *y->shape()) {
       return OpInterpUtil::Dispatch<Tensor>(*elementwise_maximum_op_,
-                                            {x->contiguous(), y->contiguous()});
+                                            {input_tuple[0], input_tuple[1]});
     } else {
       return OpInterpUtil::Dispatch<Tensor>(*broadcast_maximum_op_,
-                                            {x->contiguous(), y->contiguous()});
+                                            {input_tuple[0], input_tuple[1]});
     }
   }
 
@@ -1899,7 +1901,7 @@ class DotFunctor {
   }
   Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& input,
                            const std::shared_ptr<one::Tensor>& other) const {
-    return OpInterpUtil::Dispatch<Tensor>(*op_, {input->contiguous(), other->contiguous()});
+    return OpInterpUtil::Dispatch<Tensor>(*op_, {input, other});
   }
 
  private:
@@ -2113,7 +2115,7 @@ class ErfinvFunctor {
  public:
   ErfinvFunctor() { op_ = CHECK_JUST(one::OpBuilder("erfinv").Input("x").Output("y").Build()); }
   Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& x) const {
-    return OpInterpUtil::Dispatch<one::Tensor>(*op_, {x->contiguous()}, {});
+    return OpInterpUtil::Dispatch<one::Tensor>(*op_, {x}, {});
   }
 
  private:
@@ -2129,7 +2131,7 @@ class ErfinvInplaceFunctor {
     JUST(CheckInplaceValid(x));
     std::shared_ptr<TensorTuple> outputs = std::make_shared<TensorTuple>(1);
     outputs->at(0) = x;
-    JUST(OpInterpUtil::Dispatch(*op_, {x->contiguous()}, outputs.get(), {}));
+    JUST(OpInterpUtil::Dispatch(*op_, {x}, outputs.get(), {}));
     return outputs->at(0);
   }
 
@@ -2142,7 +2144,8 @@ class CumBaseFunctor {
   explicit CumBaseFunctor(std::string op_name) {
     op_ = CHECK_JUST(one::OpBuilder(op_name).Input("x").Output("y").Build());
   }
-  Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& input, int64_t dim) const {
+  Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& input, int64_t dim,
+                           const Optional<Symbol<DType>>& dtype) const {
     auto ndim = input->ndim();
     if (dim < 0) { dim += ndim; }
     CHECK_OR_RETURN(dim >= 0 && dim < ndim)
@@ -2152,7 +2155,11 @@ class CumBaseFunctor {
     MutableAttrMap attrs;
     JUST(attrs.SetAttr<int64_t>("dim", dim));
     TensorProcessor tensor_processor;
-    JUST(tensor_processor.AddInputs({input->contiguous()}, DType::Int64()).Apply());
+    if (dtype) {
+      JUST(tensor_processor.AddInputs({input}, JUST(dtype)).Apply());
+    } else {
+      JUST(tensor_processor.AddInputs({input}, DType::Int64()).Apply());
+    }
     TensorTuple input_tuple = JUST(tensor_processor.GetInputs());
     return OpInterpUtil::Dispatch<Tensor>(*op_, input_tuple, attrs);
   }
@@ -2800,6 +2807,7 @@ ONEFLOW_FUNCTION_LIBRARY(m) {
   m.add_functor<ReduceMeanFunctor>("ReduceMean");
   m.add_functor<ReduceMinFunctor>("ReduceMin");
   m.add_functor<MinFunctor, Min2Functor>("Min");
+  m.add_functor<AmaxFunctor>("Amax");
   m.add_functor<ReduceSumFunctor>("ReduceSum");
   m.add_functor<ReduceAllFunctor>("ReduceAll");
   m.add_functor<ReduceAnyFunctor>("ReduceAny");
@@ -2817,14 +2825,15 @@ ONEFLOW_FUNCTION_LIBRARY(m) {
   m.add_functor<TransposeFunctor>("Permute");
   m.add_functor<AsStridedFunctor>("AsStrided");
   m.add_functor<AsStridedGradFunctor>("AsStridedGrad");
-  m.add_functor<SwapaxesFunctor>("Swapaxes");
+  m.add_functor<Transpose2dimFunctor>("Swapaxes");
+  m.add_functor<Transpose2dimFunctor>("Swapdims");
   m.add_functor<ArangeFunctor, Arange2Functor>("Arange");
   m.add_functor<ConsistentArangeFunctor, ConsistentArange2Functor>("ConsistentArange");
   m.add_functor<CastFunctor>("Cast");
   m.add_functor<ClampFunctor>("Clamp");
   m.add_functor<ClampInplaceFunctor>("ClampInplace");
-  m.add_functor<ClampFunctor>("Clip");
-  m.add_functor<ClampInplaceFunctor>("ClipInplace");
+  m.add_functor<ClipFunctor>("Clip");
+  m.add_functor<ClipInplaceFunctor>("ClipInplace");
   m.add_functor<SqrtSquareSumFunctor>("SqrtSquareSum");
   m.add_functor<VectorNormFunctor, ScalarVectorNormFunctor>("VectorNorm");
   m.add_functor<ScalarMatrixNormFunctor, MatrixNormFunctor>("MatrixNorm");

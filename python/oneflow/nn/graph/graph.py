@@ -127,14 +127,16 @@ class Graph(object):
         self._debug = False
         self._debug_min_s_level = 2
         self._debug_max_v_level = 0
+        self._debug_max_py_stack_depth = 2
         self._outputs_buffer_size = 2
         self._cur_index_of_ouputs_buffer = 0
 
-        self._c_nn_graph = oneflow._oneflow_internal.nn.graph.CNNGraph(self._name)
-        session = session_ctx.GetDefaultSession()
-        assert type(session) is MultiClientSession
-        session.TryInit()
-        session.AddCGraph(self._c_nn_graph)
+        self._session = session_ctx.GetDefaultSession()
+        assert type(self._session) is MultiClientSession
+        self._session.TryInit()
+        self._c_nn_graph = oneflow._oneflow_internal.nn.graph.CNNGraph(
+            self._name, self._session._session_ctx
+        )
 
     def build(self, *args, **kwargs):
         r"""The ``build()`` method must be overridden to define neural network
@@ -203,8 +205,11 @@ class Graph(object):
             Donot override this function.
         """
         if not self._is_compiled:
-            with graph_build_util.GLogScopeContext(
-                self._debug_min_s_level, self._debug_max_v_level
+            with graph_build_util.DebugScopeContext(
+                self._debug_min_s_level,
+                self._debug_max_v_level,
+                self._debug,
+                self._debug_max_py_stack_depth,
             ):
                 self._compile(*args, **kwargs)
 
@@ -414,8 +419,9 @@ class Graph(object):
     def debug(
         self,
         v_level: int = 0,
+        *,
         ranks: Optional[Union[int, List[int]]] = None,
-        mode: bool = True,
+        max_py_stack_depth: int = 2,
     ) -> None:
         r"""Open or close debug mode of the graph.
 
@@ -424,13 +430,16 @@ class Graph(object):
 
         Each nn.Module inside a nn.Graph also has a debug() method to enable debug mode.
 
-        Use ``v_level`` to choose verbose debug info level, default level is 0, max level is 3.
+        Use ``v_level`` to choose verbose debug info level, default level is 0, max level is 3. 
+        ``v_level`` -1 will disable the debug mode of the graph (i.e. no info will be printed).
         ``v_level`` 0 will print warning and graph building stages. ``v_level`` 1 will additionally
         print graph build info of each nn.Module. ``v_level`` 2 will additionally print graph build
         info of each operation. ``v_level`` 3 will additionally print more detailed info of each
         operation.
 
         Use ``ranks`` to choose which rank to print the debug information.
+
+        Use ``max_py_stack_depth`` to specify the max Python stack depth for the debug information. 
 
         For example:
 
@@ -441,15 +450,16 @@ class Graph(object):
             out_tensors = g(input_tensors)  # Will print log for debug at the first call
 
         Args:
-            v_level (int): choose verbose debug info level, default v_level is 0, max v_level is 3.
+            v_level (int): choose verbose debug info level, default v_level is 0, max v_level is 3. v_level can be set to -1 to close the debug mode.
             ranks (int or list(int)): choose ranks to print the debug information. Default rank ``0``.
                 You can choose any valid rank. Ranks equals ``-1`` means debug on all ranks.
-            mode (bool): whether to set debug mode (``True``) or not (``False``). Default: ``True``.
+            max_py_stack_depth(int): the maximum depth for the Python stack debug information. Default: ``2``
         """
         assert isinstance(v_level, int)
-        assert v_level >= 0, "The min verbose debug info level is 0."
+        assert v_level >= -1, "The min verbose debug info level is -1."
         assert v_level <= 3, "The max verbose debug info level is 3."
-        assert isinstance(mode, bool)
+        assert max_py_stack_depth >= 0, "The min max stack depth is 0."
+        assert isinstance(max_py_stack_depth, int)
 
         if ranks is None:
             rank_list = [0]
@@ -462,13 +472,15 @@ class Graph(object):
 
         my_rank = get_rank()
         if -1 in rank_list or my_rank in rank_list:
-            self._debug = mode
+            self._debug = v_level >= 0
             if self._debug:
                 self._debug_min_s_level = 0
-                self._debug_max_v_level = v_level
+                self._debug_max_v_level = max(0, v_level)
             for name, block in self._blocks.items():
                 assert block.type == BlockType.MODULE
-                block.debug(v_level, ranks, mode)
+                block.debug(v_level, ranks=ranks, max_py_stack_depth=max_py_stack_depth)
+
+        self._debug_max_py_stack_depth = max_py_stack_depth
 
     def __repr__(self):
         r"""For printing the graph structure.
@@ -533,9 +545,7 @@ class Graph(object):
 
     @property
     def _optimization_conf_proto(self):
-        session = session_ctx.GetDefaultSession()
-        assert type(session) is MultiClientSession
-        return session.resource
+        return self._session.resource
 
     @property
     def _graph_proto(self):
@@ -708,9 +718,6 @@ class Graph(object):
         return eager_outputs
 
     def __build_graph(self, *args, **kwargs):
-        session = session_ctx.GetDefaultSession()
-        assert type(session) is MultiClientSession
-
         # Filter to get unique states in graph
         state_op_names = self._filter_states()
 
@@ -731,7 +738,7 @@ class Graph(object):
             + " end building graph builders of parameters and buffers.",
         )
 
-        with graph_build_util.graph_build_context(self.config.proto, session):
+        with graph_build_util.graph_build_context(self.config.proto, self._session):
             # Deal with inputs
             self.__print(0, 1, self._shallow_repr() + " start building graph inputs.")
             arg_op_names, lazy_args, lazy_kwargs, self._args_repr, _ = self.__build_io(
@@ -1177,6 +1184,15 @@ class Graph(object):
         raise AttributeError(
             "'{}' object has no attribute '{}'".format(type(self).__name__, name)
         )
+
+    def __del__(self):
+        # Ensure vm has finished running this graph.
+        if self._session._env.is_shutting_down():
+            # After python shutting down, it's not safe to call oneflow._oneflow_internal.eager.
+            # But shutting down will do sync in SwitchToShuttingDownPhase.
+            # So it's safe to skip sync here.
+            return
+        oneflow._oneflow_internal.eager.Sync()
 
 
 if __name__ == "__main__":

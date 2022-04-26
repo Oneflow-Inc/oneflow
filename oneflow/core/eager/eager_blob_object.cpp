@@ -47,7 +47,7 @@ Maybe<void> EagerBlobObject::InitBlobWithOffset(const int64_t offset) {
   CHECK_NE_OR_RETURN(blob_desc_.data_type(), DataType::kInvalidDataType);
   if (!blob_desc_.shape().is_initialized()) {
     blob_desc_.set_shape(Shape(DimVector{}));
-    blob_desc_.set_stride(Stride(StrideVector{}));
+    blob_desc_.set_stride(Stride(DimVector{}));
   }
   {
     header_buffer_.reset();
@@ -69,7 +69,8 @@ Maybe<void> EagerBlobObject::TryAllocateBlobBodyMemory(DeviceCtx* device_ctx) {
     return Maybe<void>::Ok();
   }
   if (tensor_storage_->blob_dptr() != nullptr) {
-    CHECK_GE_OR_RETURN(tensor_storage_->blob_bytes(), required_body_bytes);
+    CHECK_GE_OR_RETURN(tensor_storage_->blob_bytes(), blob->ByteSizeOfBlobBody())
+        << "This blob has been allocated memory, but less than needed space.";
     return Maybe<void>::Ok();
   }
   {
