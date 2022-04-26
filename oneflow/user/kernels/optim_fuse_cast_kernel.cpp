@@ -34,12 +34,12 @@ std::unique_ptr<ep::primitive::Cast> NewCastPrimitive(Context* ctx) {
 
 class OptimFuseCastOpKernelState final : public OpKernelState {
  public:
-  OptimFuseCastOpKernelState() : cast_cnt(0) {}
-  void set_one() { cast_cnt = 1; }
-  int64_t get_cast_cnt() { return cast_cnt; }
+  OptimFuseCastOpKernelState() : cast_flag(true) {}
+  void set_flag_false() { cast_flag = false; }
+  bool get_cast_flag() { return cast_flag; }
 
  private:
-  int64_t cast_cnt = 0;
+  bool cast_flag = true;
 };
 
 class OptimFuseCast final : public OpKernel, public user_op::CudaGraphSupport {
@@ -54,25 +54,20 @@ class OptimFuseCast final : public OpKernel, public user_op::CudaGraphSupport {
  private:
   void Compute(KernelComputeContext* ctx, user_op::OpKernelState* state,
                const user_op::OpKernelCache*) const override {
+    auto* cast_state = CHECK_NOTNULL(dynamic_cast<OptimFuseCastOpKernelState*>(state)); 
+    bool cast_flag = cast_state->get_cast_flag();
+    if(!cast_flag){
+      return; 
+    }
     const Tensor* input_tensor = ctx->Tensor4ArgNameAndIndex("in", 0);
     Tensor* output_tensor = ctx->Tensor4ArgNameAndIndex("out", 0);
     const int64_t elem_cnt = input_tensor->shape().elem_cnt();
-    auto* cast_state = CHECK_NOTNULL(dynamic_cast<OptimFuseCastOpKernelState*>(state));
-
-    int64_t cast_cnt = cast_state->get_cast_cnt();
-
     CHECK_EQ(output_tensor->shape().elem_cnt(), elem_cnt);
-    if (input_tensor->data_type() == output_tensor->data_type()
-        && input_tensor->dptr() == output_tensor->dptr()) {
-      return;
-    }
-    if (cast_cnt == 0) {
-      auto cast_primitive = NewCastPrimitive(ctx);
-      CHECK(cast_primitive);
-      cast_primitive->Launch(ctx->stream(), input_tensor->dptr(), output_tensor->mut_dptr(),
-                             elem_cnt);
-      cast_state->set_one();
-    }
+    auto cast_primitive = NewCastPrimitive(ctx);
+    CHECK(cast_primitive);
+    cast_primitive->Launch(ctx->stream(), input_tensor->dptr(), output_tensor->mut_dptr(),
+                            elem_cnt);
+    cast_state->set_flag_false();
   }
   bool AlwaysComputeWhenAllOutputsEmpty() const override { return false; }
 };
