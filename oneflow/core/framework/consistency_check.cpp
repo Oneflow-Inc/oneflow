@@ -347,6 +347,7 @@ Maybe<void> MetaInfoConsistencyCheck(const Symbol<ParallelDesc>& placement,
 
 Maybe<void> TensorMetaConsistencyCheck(const Symbol<ParallelDesc>& placement,
                                        Symbol<one::ConsistentTensorMeta> tensor_meta) {
+  if (!placement->containing_current_rank()) { return Maybe<void>::Ok(); }
   const auto& rank_group = JUST(RankGroup::New(placement));
   const auto& transport_token =
       JUST(TransportToken::NewTransportToken(kTransportTokenTypeCheckRankGroupConsistency));
