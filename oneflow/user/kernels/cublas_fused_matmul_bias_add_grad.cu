@@ -17,8 +17,8 @@ limitations under the License.
 #include "oneflow/user/kernels/cublas_fused_mlp_util.cuh"
 #include "oneflow/core/ep/include/primitive/memcpy.h"
 #include "oneflow/core/ep/cuda/cuda_device.h"
-// CUBLAS_AUX_EPILOGUE only support in cuda11.4 or higher version, in cuda11.4 it need static link.
-#if CUDA_VERSION >= 11040
+// CUBLASLT_EPILOGUE_BGRADB only support in cuda11.4.2 or higher version.
+#if CUDA_VERSION >= 11042
 
 namespace oneflow {
 
