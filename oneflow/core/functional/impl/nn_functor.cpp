@@ -276,13 +276,14 @@ class TensorDotIntDimsFunctor {
  public:
   Maybe<Tensor> operator()(const std::shared_ptr<Tensor>& a, const std::shared_ptr<Tensor>& b,
                            const int32_t dims) const {
-    CHECK_GE_OR_RETURN(dims, 0) << "Dims must be greater than or equal to 0";
+    CHECK_GE_OR_RETURN(dims, 0) << Error::RuntimeError()
+                                << "tensordot expects dims >= 0, but got dims=" << dims;
     CHECK_LE_OR_RETURN(dims, a->ndim())
-        << "Dims must be less than or equal to a.dims(), which is " << a->ndim()
-        << " but got " << dims;
+        << Error::RuntimeError() << "tensordot expects dims <= a.ndim which is " << a->ndim()
+        << ", but got " << dims;
     CHECK_LE_OR_RETURN(dims, b->ndim())
-        << "Dims must be less than or equal to b.dims(), which is " << b->ndim()
-        << " but got " << dims;
+        << Error::RuntimeError() << "tensordot expects dims <= b.ndim which is " << b->ndim()
+        << z ", but got " << dims;
     std::vector<int32_t> dot_dims_a(dims), dot_dims_b(dims);
     for (int32_t i = 0; i < dims; i++) {
       dot_dims_a[i] = a->ndim() - dims + i;
@@ -300,26 +301,33 @@ class TensorDotFunctor {
     if (_dims_a.empty() && _dims_b.empty()) {
       DimVector shape_sum(a->ndim() + b->ndim());
       for (int64_t i = 0; i < a->ndim(); i++) { shape_sum[i] = a->shape()->At(i); }
-      for (int64_t i = 0; i < b->ndim(); i++) {
-        shape_sum[i + a->ndim()] = b->shape()->At(i);
-      }
+      for (int64_t i = 0; i < b->ndim(); i++) { shape_sum[i + a->ndim()] = b->shape()->At(i); }
       std::shared_ptr<Tensor> reshape_a = JUST(Reshape(a, Shape(DimVector{-1, 1})));
       std::shared_ptr<Tensor> reshape_b = JUST(Reshape(b, Shape(DimVector{1, -1})));
       return JUST(Reshape(JUST(functional::MatMul(reshape_a, reshape_b, false, false, 1.0)),
                           Shape(DimVector(shape_sum.begin(), shape_sum.end()))));
     }
     CHECK_EQ_OR_RETURN(_dims_a.size(), _dims_b.size())
-        << "dims1 and dims2 must have same size, got " << _dims_a.size() << " and " << _dims_b.size();
+        << Error::RuntimeError() << "both dimension lists should have same length, got "
+        << _dims_a.size() << " and " << _dims_b.size();
     std::vector<int32_t> dims_a(_dims_a.begin(), _dims_a.end());
     std::vector<int32_t> dims_b(_dims_b.begin(), _dims_b.end());
     for (int64_t i = 0; i < dims_a.size(); i++) {
+      CHECK_LT_OR_RETURN(dims_a[i], a->ndim())
+          << Error::IndexError() << "Dimension out of range (expected to be in range of ["
+          << -a->ndim() << ", " << a->ndim() - 1 << "], but got " << dims_a[i] << ")";
+      CHECK_GE_OR_RETURN(dims_a[i], -a->ndim())
+          << Error::IndexError() << "Dimension out of range (expected to be in range of ["
+          << -a->ndim() << ", " << a->ndim() - 1 << "], but got " << dims_a[i] << ")";
       dims_a[i] = dims_a[i] < 0 ? dims_a[i] + a->ndim() : dims_a[i];
-      CHECK_LT_OR_RETURN(dims_a[i], a->ndim()) << "The dims is invalid for Tensor a";
-      CHECK_GE_OR_RETURN(dims_a[i], 0) << "The dims is invalid for Tensor a";
 
+      CHECK_LT_OR_RETURN(dims_b[i], b->ndim())
+          << Error::IndexError() << "Dimension out of range (expected to be in range of ["
+          << -b->ndim() << ", " << b->ndim() - 1 << "], but got " << dims_b[i] << ")";
+      CHECK_GE_OR_RETURN(dims_b[i], -b->ndim())
+          << Error::IndexError() << "Dimension out of range (expected to be in range of ["
+          << -b->ndim() << ", " << b->ndim() - 1 << "], but got " << dims_b[i] << ")";
       dims_b[i] = dims_b[i] < 0 ? dims_b[i] + b->ndim() : dims_b[i];
-      CHECK_LT_OR_RETURN(dims_b[i], b->ndim()) << "The dims is invalid for Tensor b";
-      CHECK_GE_OR_RETURN(dims_b[i], 0) << "The dims is invalid for Tensor b";
     }
     std::vector<bool> if_dot_dims_a(a->ndim(), false);
     std::vector<bool> if_dot_dims_b(b->ndim(), false);
@@ -335,8 +343,10 @@ class TensorDotFunctor {
       } else if (size_b == 1 && size_a > 1) {
         broadcast_dims_a.emplace_back(dims_a[i]);
       } else {
-        CHECK_EQ_OR_RETURN(size_a, size_b) << "The corresponding dim must be equal, got " << size_a
-                                           << " in tensor a and " << size_b << " in tensor b";
+        CHECK_EQ_OR_RETURN(size_a, size_b)
+            << Error::RuntimeError() << "contracted dimensions need to match, but first has size "
+            << size_a << " in dim " << dims_a[i] << " and second has size " << size_b << " in dim "
+            << dims_b[i];
       }
     }
 
@@ -350,8 +360,7 @@ class TensorDotFunctor {
 
     int64_t non_dot_size_a = 1, non_dot_size_b = 1;
     std::vector<int32_t> non_dot_shape_a, non_dot_shape_b;
-    non_dot_shape_a.reserve(a->ndim() - dims_a.size() + b->ndim()
-                            - dims_b.size());
+    non_dot_shape_a.reserve(a->ndim() - dims_a.size() + b->ndim() - dims_b.size());
     non_dot_shape_b.reserve(b->ndim() - dims_b.size());
 
     std::vector<int32_t> permuted_dims_a, permuted_dims_b;
