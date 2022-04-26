@@ -215,21 +215,20 @@ class TestLogicalSliceAssign(flow.unittest.TestCase):
         flow.logical_slice_assign(input, update, slice_tup_list=[[1, 4, 1]])
         test_case.assertTrue(np.array_equal(input.numpy(), output))
 
-    def test_logical_slice_assign_graph_1(test_case):
+    def test_logical_slice_assign_graph(test_case):
         x = np.array([1, 1, 1, 1, 1]).astype(np.float32)
         input = flow.tensor(x)
         update = flow.tensor(np.array([2, 3, 4]).astype(np.float32))
         output = np.array([1.0, 2.0, 3.0, 4.0, 1.0])
 
-        @flow.nn.Graph._to_graph
-        def func(self, input):
+        @flow.nn.Graph.to_graph
+        def test_func(input):
             flow.logical_slice_assign(input, update, slice_tup_list=[[1, 4, 1]])
             return input
 
-        out = func(input)
-        print(out)
-
-        #test_case.assertTrue(np.array_equal(input.numpy(), output))
+        # NOTE(strint): input outside the graph has not been change yet currently.
+        out = test_func(input)
+        test_case.assertTrue(np.array_equal(out.numpy(), output))
 
     def test_logical_slice_assign_negative_index(test_case):
         np_arr = np.zeros(shape=(2, 3, 4))
@@ -238,6 +237,17 @@ class TestLogicalSliceAssign(flow.unittest.TestCase):
         input[-1] = 1
         test_case.assertTrue(np.array_equal(input.numpy(), np_arr))
 
+    def test_logical_slice_assign_negative_index_graph(test_case):
+        np_arr = np.zeros(shape=(2, 3, 4))
+        input = flow.tensor(np_arr, dtype=flow.float32)
+        np_arr[-1] = 1
+        @flow.nn.Graph.to_graph
+        def test_func():
+            input[-1] = 1
+            return input
+        out = test_func()
+        test_case.assertTrue(np.array_equal(out.numpy(), np_arr))
+
     def test_logical_slice_assign_ellipsis_type(test_case):
         np_arr = np.zeros(shape=(2, 3, 4, 5, 6))
         input = flow.tensor(np_arr, dtype=flow.float32)
@@ -245,25 +255,16 @@ class TestLogicalSliceAssign(flow.unittest.TestCase):
         input[0, ::1, ..., 2:3] = 1
         test_case.assertTrue(np.array_equal(input.numpy(), np_arr))
 
-    def test_logical_slice_assign_graph(test_case):
-        x = np.array([1, 1, 1, 1, 1]).astype(np.float32)
-        input = flow.tensor(x, requires_grad=True)
-        update = flow.tensor(np.array([2, 3, 4]).astype(np.float32), requires_grad=True)
-        output = np.array([1.0, 2.0, 3.0, 4.0, 1.0])
-
-        class TestLogicalSliceUpdateGraph(flow.nn.Graph):
-            def __init__(self):
-                super().__init__()
-            
-            def build(self, x, update):
-                flow.logical_slice_assign(x, update, slice_tup_list=[[1, 4, 1]])
-                return x
-        
-        slice_update_g = TestLogicalSliceUpdateGraph()
-        slice_update_g.debug(2)
-
-        y = slice_update_g(input, update)
-        test_case.assertTrue(np.array_equal(y.numpy(), output))
+    def test_logical_slice_assign_ellipsis_type_graph(test_case):
+        np_arr = np.zeros(shape=(2, 3, 4, 5, 6))
+        input = flow.tensor(np_arr, dtype=flow.float32)
+        np_arr[0, ::1, ..., 2:3] = 1
+        @flow.nn.Graph.to_graph
+        def test_func():
+            input[0, ::1, ..., 2:3] = 1
+            return input
+        out = test_func()
+        test_case.assertTrue(np.array_equal(out.numpy(), np_arr))
 
 if __name__ == "__main__":
     unittest.main()

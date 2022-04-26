@@ -651,19 +651,29 @@ class Graph(object):
                 state2lazy_builder[state_tensor] = state_block.lazy_origin_builder()
 
     @staticmethod
-    def _to_graph(func):
+    def to_graph(func):
         """ Make a function to do static graph run.
+        This is mainly for quick test of a function run with nn.Graph.
+
+        ..
+            Feature Stage of Feature [to_graph].
+            - Maintainer List [@strint]
+            - Current Stage [Pre-alpha, note that this is an experimental feature and maybe removed without notice.]
+
         """
-        assert inspect.isfunction(func), f"{func} must be a function."
+        assert inspect.isfunction(func), f"nn.Graph.to_graph only support function currently, so {func} must be a function."
         graph_cls_name = func.__name__ + "_graph"
 
         def init(self):
             super(graph_cls_name, self).__init__()
+        
+        def build(self, *args, **kwargs):
+            return func(*args, **kwargs)
 
         graph_cls_name = type(graph_cls_name,
                               (Graph, ),
                               {"__init__": init,
-                               "build": func,
+                               "build": build,
                               })
         
         a_graph = graph_cls_name()
