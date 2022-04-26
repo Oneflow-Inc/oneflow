@@ -76,7 +76,7 @@ class SoftmaxBackwardImpl : public SoftmaxBackwardBase {
 
 #ifdef WITH_ONEDNN
 
-template<class OneDnnSoftmaxBackward, dnnl::memory::data_type data_type>
+template<class OneDnnSoftmaxBackward, class OneDnnSoftmaxForward, dnnl::memory::data_type data_type>
 void SoftmaxBackwardOneDnn(Stream* stream, size_t rows, size_t cols, const void* y, const void* dy,
                            void* dx) {
   CpuStream* cpu_stream = stream->As<CpuStream>();
@@ -85,44 +85,56 @@ void SoftmaxBackwardOneDnn(Stream* stream, size_t rows, size_t cols, const void*
 
   dnnl::engine* onednn_engine = stream->As<CpuStream>()->onednn_engine();
   dnnl::stream* onednn_stream = stream->As<CpuStream>()->onednn_stream();
-  dnnl::memory::dims src_dims = {static_cast<dnnl::memory::dim>(cols),
-                                 static_cast<dnnl::memory::dim>(rows)};
-  auto src_md = dnnl::memory::desc(src_dims, data_type, dnnl::memory::format_tag::nc);
-  auto diff_src_mem = dnnl::memory(src_md, *onednn_engine, const_cast<void*>(y));
-  auto diff_dst_mem = dnnl::memory(src_md, *onednn_engine, const_cast<void*>(dy));
-  auto dst_mem = dnnl::memory(src_md, *onednn_engine, dx);
-  auto softmax_backward_d = typename OneDnnSoftmaxBackward::desc(src_md, src_md, 1);
-  auto softmax_backward_pd =
-      typename OneDnnSoftmaxBackward::primitive_desc(softmax_backward_d, *onednn_engine);
-  auto softmax_backward_prim = OneDnnSoftmax(softmax_backward_pd);
+  dnnl::memory::dims src_dims = {static_cast<dnnl::memory::dim>(rows),
+                                 static_cast<dnnl::memory::dim>(cols)};
+  // Input and output parameters of the same data type
+  auto same_md = dnnl::memory::desc(src_dims, data_type, dnnl::memory::format_tag::nc);
+  // Backward memory
+  auto dst_mem = dnnl::memory(same_md, *onednn_engine, const_cast<void*>(y));
+  auto diff_dst_mem = dnnl::memory(same_md, *onednn_engine, const_cast<void*>(dy));
+  // Forward primitive description
+  auto softmax_forward_d = typename OneDnnSoftmaxForward::desc(dnnl::prop_kind::forward, same_md, 1);
+  auto softmax_forward_d_pd =
+      typename OneDnnSoftmaxForward::primitive_desc(softmax_forward_d, *onednn_engine);
+  // Backward primitive description
+  auto diff_src_mem = dnnl::memory(same_md, *onednn_engine, dx);
+  auto softmax_backward_d = typename OneDnnSoftmaxBackward::desc(same_md, same_md, 1);
+  auto softmax_backward_pd = typename OneDnnSoftmaxBackward::primitive_desc(
+      softmax_backward_d, *onednn_engine, softmax_forward_d_pd);
+  auto softmax_backward_prim = OneDnnSoftmaxBackward(softmax_backward_pd);
 
-  softmax_backward_prim.execute(*onednn_stream, {{DNNL_ARG_DIFF_SRC, diff_src_mem},
-                                                 {DNNL_ARG_DIFF_DST, diff_dst_mem},
-                                                 {DNNL_ARG_DST, dst_mem}});
+  softmax_backward_prim.execute(*onednn_stream, {{DNNL_ARG_DIFF_DST, diff_dst_mem},
+                                                 {DNNL_ARG_DST, dst_mem},
+                                                 {DNNL_ARG_DIFF_SRC, diff_src_mem}});
   onednn_stream->wait();
 }
 
 template<typename SoftmaxBackwardBase, Algorithm algorithm, dnnl::memory::data_type data_type>
 class OneDnnSoftmaxBackwardImpl;
 
-#define CPU_PRIMITIVE_SOFTMAX_ONEDNN_IMPL(oneflow_algorithm, onednn_algorithm)           \
-  template<typename SoftmaxBackwardBase, dnnl::memory::data_type data_type>              \
-  class OneDnnSoftmaxBackwardImpl<SoftmaxBackwardBase, oneflow_algorithm, data_type>     \
-      : public SoftmaxBackwardBase {                                                     \
-   public:                                                                               \
-    OF_DISALLOW_COPY_AND_MOVE(OneDnnSoftmaxBackwardImpl);                                \
-    OneDnnSoftmaxBackwardImpl() = default;                                               \
-    ~OneDnnSoftmaxBackwardImpl() override = default;                                     \
-                                                                                         \
-    using OneDnnClass = onednn_algorithm;                                                \
-    void Launch(Stream* stream, size_t rows, size_t cols, const void* y, const void* dy, \
-                void* dx) override {                                                     \
-      SoftmaxBackwardOneDnn<OneDnnClass, data_type>(stream, rows, cols, y, dy, dx);      \
-    }                                                                                    \
+#define CPU_PRIMITIVE_SOFTMAX_ONEDNN_IMPL(oneflow_algorithm, onednn_backward_algorithm,           \
+                                          onednn_forward_algorithm)                               \
+  template<typename SoftmaxBackwardBase, dnnl::memory::data_type data_type>                       \
+  class OneDnnSoftmaxBackwardImpl<SoftmaxBackwardBase, oneflow_algorithm, data_type>              \
+      : public SoftmaxBackwardBase {                                                              \
+   public:                                                                                        \
+    OF_DISALLOW_COPY_AND_MOVE(OneDnnSoftmaxBackwardImpl);                                         \
+    OneDnnSoftmaxBackwardImpl() = default;                                                        \
+    ~OneDnnSoftmaxBackwardImpl() override = default;                                              \
+                                                                                                  \
+    using OneDnnForwardClass = onednn_forward_algorithm;                                          \
+    using OneDnnBackwardClass = onednn_backward_algorithm;                                        \
+    void Launch(Stream* stream, size_t rows, size_t cols, const void* y, const void* dy,          \
+                void* dx) override {                                                              \
+      SoftmaxBackwardOneDnn<OneDnnBackwardClass, OneDnnForwardClass, data_type>(stream, rows,     \
+                                                                                cols, y, dy, dx); \
+    }                                                                                             \
   }
 
-CPU_PRIMITIVE_SOFTMAX_ONEDNN_IMPL(Algorithm::kSoftmax, dnnl::softmax_backward);
-CPU_PRIMITIVE_SOFTMAX_ONEDNN_IMPL(Algorithm::kLogSoftmax, dnnl::logsoftmax_backward);
+CPU_PRIMITIVE_SOFTMAX_ONEDNN_IMPL(Algorithm::kSoftmax, dnnl::softmax_backward,
+                                  dnnl::softmax_forward);
+CPU_PRIMITIVE_SOFTMAX_ONEDNN_IMPL(Algorithm::kLogSoftmax, dnnl::logsoftmax_backward,
+                                  dnnl::logsoftmax_forward);
 #undef CPU_PRIMITIVE_SOFTMAX_ONEDNN_IMPL
 
 template<typename SoftmaxBackwardBase, Algorithm algorithm, dnnl::memory::data_type data_type>
@@ -159,7 +171,7 @@ class GenericSoftmaxBackwardFactoryImpl : public BackwardFactoryBase {
             // oneDNN softmaxbackward op
             MAKE_NEW_ONEDNN_SOFTMAX_BACKWARD_ENTRY(dnnl::memory::data_type::f32, DataType::kFloat)
             // naive softmaxbackward op
-            MAKE_NEW_ONEDNN_SOFTMAX_BACKWARD_ENTRY(double, DataType::kDouble)};
+            MAKE_NEW_SOFTMAX_BACKWARD_ENTRY(double, DataType::kDouble)};
 
 #undef MAKE_NEW_ONEDNN_SOFTMAX_BACKWARD_ENTRY
 #else
