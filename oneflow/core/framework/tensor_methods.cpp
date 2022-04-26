@@ -78,7 +78,7 @@ Maybe<Tensor> BasicView(const std::shared_ptr<Tensor>& input, const Shape& targe
   JUST(tensor_impl->InitEagerBlobObject(JUST(blob_object->compute_local_dep_object())));
   std::shared_ptr<Tensor> output(new MirroredTensor(tensor_impl));
 
-  // NOTE: TensorView instruction will be reomve in the future
+  // NOTE: TensorView instruction will be remove in the future
   JUST(PhysicalRun([&](InstructionsBuilder* builder) -> Maybe<void> {
     return builder->TensorView(JUST(input->AsMirroredTensor()), JUST(output->AsMirroredTensor()));
   }));
@@ -539,13 +539,8 @@ Maybe<Tensor> Diagonal(const std::shared_ptr<Tensor>& input, const int32_t offse
       CHECK_EQ_OR_RETURN(out_grads.size(), 1)
           << "out grad size should be 1, but got " << out_grads.size();
       in_grads->resize(1);
-      // diagonal grad(align to torch)
-      std::shared_ptr<Tensor> grad_input =
-          JUST(functional::Empty(*input->shape(), input->dtype(), JUST(input->device())));
-      auto diag = JUST(functional::Diagonal(grad_input, offset, dim1, dim2));
-      diag = JUST(functional::Copy(out_grads[0], JUST(input->device())->type(),
-                                   JUST(input->device())->device_id()));
-      (*in_grads)[0] = grad_input;
+      std::shared_ptr<one::Tensor> d_x = JUST(functional::Transpose(input, input_index));
+      (*in_grads)[0] = JUST(functional::DiagonalGrad(out_grads[0], d_x, offset));
       return Maybe<void>::Ok();
     };
     backward_fn->status = []() { return true; };
