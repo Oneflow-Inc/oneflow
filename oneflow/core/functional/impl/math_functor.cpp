@@ -722,8 +722,10 @@ class MedianWithIndicesFunctor {
     std::shared_ptr<TensorTuple> result;
     result = JUST(OpInterpUtil::Dispatch<TensorTuple>(*op_, {tensor}));
     if (keepdim) {
-      result->at(0) = JUST(functional::Unsqueeze(result->at(0), axis));
-      result->at(1) = JUST(functional::Unsqueeze(result->at(1), axis));
+      *JUST(VectorAt(result.get(), 0)) =
+          JUST(functional::Unsqueeze(*JUST(VectorAt(result.get(), 0)), axis));
+      *JUST(VectorAt(result.get(), 1)) =
+          JUST(functional::Unsqueeze(*JUST(VectorAt(result.get(), 1)), axis));
     }
     return result;
   }
