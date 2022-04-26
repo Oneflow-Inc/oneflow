@@ -55,6 +55,7 @@ def _graph_debug(test_case, v_level=0, ranks=None, max_py_stack_depth=2):
         test_case.assertTrue(not d_g.m._debug)
         print(f"ranks {ranks} rank {rank} debug is closed.")
 
+
 @unittest.skipIf(os.getenv("ONEFLOW_TEST_CPU_ONLY"), "only test cpu cases")
 @flow.unittest.skip_unless_1n4d()
 class TestGraphDebug(oneflow.unittest.TestCase):
