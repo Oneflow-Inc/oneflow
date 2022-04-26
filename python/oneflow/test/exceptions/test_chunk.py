@@ -45,6 +45,18 @@ class TestModule(flow.unittest.TestCase):
         test_case.assertTrue(
             "chunk expects `chunks` to be greater than 0, got: " in str(ctx.exception)
         )
+    
+    def test_chunk_dim_param_exception(test_case):
+        # torch exception and messge:
+        #
+        #   IndexError: Dimension out of range (expected to be in range of [-2, 1], but got -3)
+        #
+        x = flow.tensor([[1, 2, 3], [4, 5, 6]])
+        with test_case.assertRaises(IndexError) as ctx:
+            y = flow.chunk(x, chunks=2, dim=-3)
+        test_case.assertTrue(
+            "Dimension out of range (expected to be in range of [-2, 1], but got -3)" in str(ctx.exception)
+        )
 
 
 if __name__ == "__main__":
