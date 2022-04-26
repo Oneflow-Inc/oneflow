@@ -771,10 +771,18 @@ class Graph(object):
                 1,
                 self._shallow_repr() + " start building graph with compile passes.",
             )
-            enable_mlir_inference_opt = os.getenv("ONEFLOW_MLIR_ENABLE_INFERENCE_OPTIMIZATION")
-            enable_mlir_inference_opt = False if enable_mlir_inference_opt is None else bool(enable_mlir_inference_opt)
+            enable_mlir_inference_opt = os.getenv(
+                "ONEFLOW_MLIR_ENABLE_INFERENCE_OPTIMIZATION"
+            )
+            enable_mlir_inference_opt = (
+                False
+                if enable_mlir_inference_opt is None
+                else bool(enable_mlir_inference_opt)
+            )
             if self.training and enable_mlir_inference_opt:
-                logging.warn("environment variable ONEFLOW_MLIR_ENABLE_INFERENCE_OPTIMIZATION will be ignored in training mode. ")
+                logging.warn(
+                    "environment variable ONEFLOW_MLIR_ENABLE_INFERENCE_OPTIMIZATION will be ignored in training mode. "
+                )
                 enable_mlir_inference_opt - False
                 del os.environ["ONEFLOW_MLIR_ENABLE_INFERENCE_OPTIMIZATION"]
             if enable_mlir_inference_opt:
