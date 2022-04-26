@@ -544,7 +544,6 @@ void BuildEmbeddingUpdate(JobPassCtx* ctx, const OpGraph& op_graph, JobBuilder* 
       .Attr<float>("l2", l2)
       .Output("updated_unique_embeddings");
   if (!update_skip_if_lbn.empty()) {
-    CHECK(!has_clip_grad);
     embedding_update_op_builder.Input("skip_if", update_skip_if_lbn);
   }
   if (!fuse_to_update_down_scale_by_lbn.empty()) {
