@@ -23,8 +23,6 @@ import oneflow.core.control.ctrl_bootstrap_pb2 as ctrl_bootstrap_pb
 import oneflow.core.job.env_pb2 as env_pb
 import oneflow.core.job.resource_pb2 as resource_util
 import oneflow.framework.c_api_util as c_api_util
-import oneflow.framework.scope_util as scope_util
-import oneflow.framework.session_context as session_ctx
 
 
 def api_all_device_placement(device_type: str) -> oneflow._oneflow_internal.placement:
@@ -42,7 +40,7 @@ def api_all_device_placement(device_type: str) -> oneflow._oneflow_internal.plac
 
         # Runs on 4 ranks
         import oneflow as flow
-        
+
         p = flow.env.all_device_placement("cuda") # oneflow.placement(type="cuda", ranks=[0, 1, 2, 3])
         p = flow.env.all_device_placement("cpu") # oneflow.placement(type="cpu", ranks=[0, 1, 2, 3])
 

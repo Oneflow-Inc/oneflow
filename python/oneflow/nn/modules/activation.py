@@ -451,6 +451,57 @@ class Hardsigmoid(Module):
         return inplace_str
 
 
+class Hardshrink(Module):
+    r"""
+    The Hardshrink activation.
+
+    The formula is:
+
+    .. math::
+        \text{Hardshrink}(x) =
+        \begin{cases}
+        x, & \text{ if } x > \lambda \\
+        x, & \text{ if } x < -\lambda \\
+        0, & \text{ otherwise }
+        \end{cases}
+
+    Args:
+        lambd: the :math:`\lambda` value for the Hardshrink formulation. Default: 0.5
+        inplace: can optionally do the operation in-place. Default: ``False``
+
+    Shape:
+        - Input: :math:`(N, *)` where `*` means, any number of additional
+          dimensions
+        - Output: :math:`(N, *)`, same shape as the input
+
+    For example:
+
+    .. code-block:: python
+    
+        >>> import numpy as np
+        >>> import oneflow as flow
+        >>> x = np.array([-1.1, 0, 0.2, 0.5]).astype(np.float32)
+        >>> input = flow.Tensor(x)
+        >>> hardshrink = flow.nn.Hardshrink(lambd=0.5)
+        >>> out = hardshrink(input)
+        >>> out
+        tensor([-1.1000,  0.0000,  0.0000,  0.0000], dtype=oneflow.float32)
+    """
+
+    def __init__(self, lambd: float = 0.5, inplace: bool = False):
+        super().__init__()
+        self.inplace = inplace
+        self.lambd = lambd
+
+    def forward(self, x):
+        return flow._C.hardshrink(x, lambd=self.lambd, inplace=self.inplace)
+
+    def extra_repr(self) -> str:
+        param_str = f"lambd={self.lambd}"
+        param_str += ", inplace=True" if self.inplace else ""
+        return param_str
+
+
 class Softmax(Module):
     """Applies the Softmax function to an n-dimensional input Tensor
     rescaling them so that the elements of the n-dimensional output Tensor
@@ -809,9 +860,7 @@ class LeakyReLU(Module):
         self.inplace = inplace
 
     def forward(self, x):
-        if self.inplace:
-            warnings.warn("LeakyReLU module do not support inplace now")
-        return flow._C.leaky_relu(x, alpha=self.negative_slope)
+        return flow._C.leaky_relu(x, alpha=self.negative_slope, inplace=self.inplace)
 
     def extra_repr(self):
         param_str = f"negative_slope={self.negative_slope}"
