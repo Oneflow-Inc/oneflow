@@ -116,7 +116,6 @@ Maybe<void> MaxPoolBackwardGetSbpFn(user_op::SbpContext* ctx) {
   FOR_RANGE(int64_t, i, 0, std::min(2, (int)tensor.shape().NumAxes())) {
     ctx->NewBuilder()
         .Split(user_op::OpArg("x", 0), i)
-        .Split(user_op::OpArg("y", 0), i)
         .Split(user_op::OpArg("indice", 0), i)
         .Split(user_op::OpArg("dy", 0), i)
         .Split(user_op::OpArg("dx", 0), i)
@@ -129,7 +128,6 @@ Maybe<void> AvgPoolBackwardGetSbpFn(user_op::SbpContext* ctx) {
   FOR_RANGE(int64_t, i, 0, 2) {
     ctx->NewBuilder()
         .Split(user_op::OpArg("x", 0), i)
-        .Split(user_op::OpArg("y", 0), i)
         .Split(user_op::OpArg("dy", 0), i)
         .Split(user_op::OpArg("dx", 0), i)
         .Build();
@@ -144,7 +142,6 @@ GenBackwardOpConfFn MaxPoolMakeBackwardOpConfFn(const std::string& mode, const i
       user_op::UserOpConfWrapper grad_op =
           builder.Op(mode + "pool_" + std::to_string(dim) + "d_grad")
               .Input("x", op.input("x", 0))
-              .Input("y", op.output("y", 0))
               .Input("indice", op.output("indice", 0))
               .Input("dy", op.GetGradTensorWithOpOutput("y", 0))
               .Output("dx")
@@ -170,7 +167,6 @@ GenBackwardOpConfFn AvgPoolMakeBackwardOpConfFn(const int32_t dim) {
       user_op::UserOpConfWrapper grad_op =
           builder.Op("avgpool_" + std::to_string(dim) + "d_grad")
               .Input("x", op.input("x", 0))
-              .Input("y", op.output("y", 0))
               .Input("dy", op.GetGradTensorWithOpOutput("y", 0))
               .Output("dx")
               .Attr("data_format", op.attr<std::string>("data_format"))
