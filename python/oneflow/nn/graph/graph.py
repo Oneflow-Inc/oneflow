@@ -653,7 +653,7 @@ class Graph(object):
     @staticmethod
     def to_graph(func):
         """ Make a function to do static graph run.
-        This is mainly for quick test of a function run with nn.Graph.
+        This is mainly for quick test of a function to run with nn.Graph.
 
         ..
             Feature Stage of Feature [to_graph].
