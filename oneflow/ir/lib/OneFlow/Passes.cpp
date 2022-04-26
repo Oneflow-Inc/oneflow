@@ -375,9 +375,11 @@ LogicalResult InitTransposeAttributes(Operation* op, NamedAttrList& transpose_at
                              op_to_replace_adaptor.hierarchyAttr());
     transpose_attributes.set(OpTrait::IsOpConfCompatible<void>::getOpNameAttr(),
                              rewriter.getStringAttr(op_to_replace_adaptor.op_name().str()));
-
-    transpose_attributes.set(OpTrait::IsOpConfCompatible<void>::getScopeSymbolIDAttr(),
-                             op_to_replace_adaptor.scope_symbol_idAttr());
+    if (auto scope_symbol_id = op->getAttrOfType<IntegerAttr>(
+            OpTrait::IsOpConfCompatible<void>::getScopeSymbolIDAttr())) {
+      transpose_attributes.set(OpTrait::IsOpConfCompatible<void>::getScopeSymbolIDAttr(),
+                               scope_symbol_id);
+    }
     return success();
   } else {
     op->emitError("must be a op of trait IsOpConfCompatible!");
