@@ -16,7 +16,7 @@ limitations under the License.
 #include <sstream>
 #include "oneflow/core/common/error_util.h"
 #include "oneflow/core/common/util.h"
-#include "oneflow/api/python/env/env.h"
+#include "oneflow/core/job/graph_scope_vars.h"
 
 namespace oneflow {
 

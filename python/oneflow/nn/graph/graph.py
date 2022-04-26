@@ -430,7 +430,7 @@ class Graph(object):
 
         Each nn.Module inside a nn.Graph also has a debug() method to enable debug mode.
 
-        Use ``v_level`` to choose verbose debug info level, default level is 0, max level is 3.
+        Use ``v_level`` to choose verbose debug info level, default level is 0, max level is 3. 
         ``v_level`` -1 will disable the debug mode of the graph (i.e. no info will be printed).
         ``v_level`` 0 will print warning and graph building stages. ``v_level`` 1 will additionally
         print graph build info of each nn.Module. ``v_level`` 2 will additionally print graph build
@@ -439,7 +439,7 @@ class Graph(object):
 
         Use ``ranks`` to choose which rank to print the debug information.
 
-        Use ``max_py_stack_depth`` to specify the max Python stack depth for the debug information.
+        Use ``max_py_stack_depth`` to specify the max Python stack depth for the debug information. 
 
         For example:
 
