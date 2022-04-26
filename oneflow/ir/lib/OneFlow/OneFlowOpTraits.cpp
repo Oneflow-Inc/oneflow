@@ -111,7 +111,7 @@ StringAttr getDeviceTag(Operation* op) {
 }
 ArrayAttr getDeviceName(Operation* op) {
   assert(op->hasTrait<OpTrait::IsOpConfCompatible>());
-  return op->getAttrOfType<ArrayAttr>(IsOpConfCompatible<void>::getDeviceTagAttr());
+  return op->getAttrOfType<ArrayAttr>(IsOpConfCompatible<void>::getDeviceNameAttr());
 }
 
 IntegerAttr getScopeSymbolID(Operation* op) {
