@@ -72,7 +72,11 @@ LogicalResult DumpAssembly(::mlir::PatternRewriter& rewriter, MlirJitOp op) {
   SymbolTable symbol_table(parent_module_op);
   std::string mlir;
   llvm::raw_string_ostream os_mlir(mlir);
-  symbol_table.lookup(op.op_name())->print(os_mlir);
+  if (auto found = symbol_table.lookup(op.op_name())) {
+    found->print(os_mlir);
+  } else {
+    return op.emitError("symbol of jit function not found");
+  }
   op->setAttr("mlir_assembly", rewriter.getStringAttr(mlir));
   return success();
 }
