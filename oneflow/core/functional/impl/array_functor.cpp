@@ -935,7 +935,7 @@ class ArgSortFunctor {
     op_ = CHECK_JUST(one::OpBuilder("arg_sort").Input("in").Output("out").Build());
   }
   Maybe<Tensor> operator()(const std::shared_ptr<one::Tensor>& in,
-                           const std::string direction) const {
+                           const std::string& direction) const {
     MutableAttrMap attrs;
     JUST(attrs.SetAttr<std::string>("direction", direction));
     return OpInterpUtil::Dispatch<Tensor>(*op_, {in}, attrs);
@@ -2515,7 +2515,6 @@ Maybe<Tensor> ConsistentTensorTo(const std::shared_ptr<Tensor>& x, const std::st
     return tensor;
   } else {
     CheckMetaConsistency(x).GetOrThrow();
-    auto old_placement = JUST(x->parallel_desc());
     auto placement = JUST(ReplacePlacementDeviceTag(input_placement, device_type));
     auto nd_sbp = JUST(x->nd_sbp());
     std::vector<Symbol<SbpParallel>> sbp_tuple(nd_sbp->sbp_parallel().size());

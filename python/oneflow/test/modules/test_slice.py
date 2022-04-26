@@ -173,12 +173,29 @@ class TestGraphSliceUpdate(flow.unittest.TestCase):
         update = flow.tensor(np.array([2, 3, 4]).astype(np.float32), requires_grad=True)
         output = np.array([1.0, 2.0, 3.0, 4.0, 1.0])
 
+        class TestModule(flow.nn.Module):
+            def __init__(self):
+                super().__init__()
+                self.weight = flow.nn.Parameter(flow.Tensor(x))
+            
+            def forward(self, x, update):
+                flow.slice_update(x, update, slice_tup_list=[[1, 4, 1]])
+                y = x + self.weight
+                return x, y
+        
+        test_m = TestModule()
+        of_sgd = flow.optim.SGD(test_m.parameters(), lr=0.001, momentum=0.9)
+
         class TestSliceUpdateGraph(flow.nn.Graph):
             def __init__(self):
                 super().__init__()
+                self.m = test_m
+                self.add_optimizer(of_sgd)
             
             def build(self, x, update):
-                flow.slice_update(x, update, slice_tup_list=[[1, 4, 1]])
+                x, y = self.m(x, update)
+                z = y.sum()
+                z.backward()
                 return x
         
         slice_update_g = TestSliceUpdateGraph()
@@ -188,7 +205,7 @@ class TestGraphSliceUpdate(flow.unittest.TestCase):
         print("===>", y)
         test_case.assertTrue(np.array_equal(y.numpy(), output))
 
-    def test_logical_slice_update(test_case):
+    def test_logical_slice_assign(test_case):
         x = np.array([1, 1, 1, 1, 1]).astype(np.float32)
         input = flow.tensor(x, requires_grad=True)
         update = flow.tensor(np.array([2, 3, 4]).astype(np.float32), requires_grad=True)
@@ -209,15 +226,6 @@ class TestGraphSliceUpdate(flow.unittest.TestCase):
         print("===>", y)
         test_case.assertTrue(np.array_equal(y.numpy(), output))
 
-
-        # z = y.sum()
-        # z.backward()
-        # test_case.assertTrue(np.array_equal(y.numpy(), output))
-        # np_grad = np.zeros(x.shape)
-        # np_grad[0] = 1
-        # np_grad[4] = 1
-        # test_case.assertTrue(np.array_equal(input.grad.numpy(), np_grad))
-        # test_case.assertTrue(np.array_equal(update.grad.numpy(), np.ones(update.shape)))
 
 
 @flow.unittest.skip_unless_1n1d()
