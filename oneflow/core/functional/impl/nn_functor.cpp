@@ -18,7 +18,6 @@ limitations under the License.
 #include "oneflow/core/common/maybe.h"
 #include "oneflow/core/common/optional.h"
 #include "oneflow/core/common/scalar.h"
-#include "oneflow/core/common/shape_vec.h"
 #include "oneflow/core/framework/attr_map.h"
 #include "oneflow/core/framework/op_builder.h"
 #include "oneflow/core/framework/op_expr.h"
@@ -296,9 +295,9 @@ class TensorDotIntDimsFunctor {
 class TensorDotFunctor {
  public:
   Maybe<Tensor> operator()(const std::shared_ptr<Tensor>& a, const std::shared_ptr<Tensor>& b,
-                           const std::vector<int32_t>& _dims_a,
-                           const std::vector<int32_t>& _dims_b) const {
-    if (_dims_a.empty() && _dims_b.empty()) {
+                           const std::vector<int32_t>& _dot_dims_a,
+                           const std::vector<int32_t>& _dot_dims_b) const {
+    if (_dot_dims_a.empty() && _dot_dims_b.empty()) {
       DimVector shape_sum(a->ndim() + b->ndim());
       for (int64_t i = 0; i < a->ndim(); i++) { shape_sum[i] = a->shape()->At(i); }
       for (int64_t i = 0; i < b->ndim(); i++) { shape_sum[i + a->ndim()] = b->shape()->At(i); }
@@ -307,37 +306,37 @@ class TensorDotFunctor {
       return JUST(Reshape(JUST(functional::MatMul(reshape_a, reshape_b, false, false, 1.0)),
                           Shape(DimVector(shape_sum.begin(), shape_sum.end()))));
     }
-    CHECK_EQ_OR_RETURN(_dims_a.size(), _dims_b.size())
+    CHECK_EQ_OR_RETURN(_dot_dims_a.size(), _dot_dims_b.size())
         << Error::RuntimeError() << "both dimension lists should have same length, got "
-        << _dims_a.size() << " and " << _dims_b.size();
-    std::vector<int32_t> dims_a(_dims_a.begin(), _dims_a.end());
-    std::vector<int32_t> dims_b(_dims_b.begin(), _dims_b.end());
-    for (int64_t i = 0; i < dims_a.size(); i++) {
-      CHECK_LT_OR_RETURN(dims_a[i], a->ndim())
+        << _dot_dims_a.size() << " and " << _dot_dims_b.size();
+    std::vector<int32_t> dot_dims_a(_dot_dims_a.begin(), _dot_dims_a.end());
+    std::vector<int32_t> dot_dims_b(_dot_dims_b.begin(), _dot_dims_b.end());
+    for (int64_t i = 0; i < dot_dims_a.size(); i++) {
+      CHECK_LT_OR_RETURN(dot_dims_a[i], a->ndim())
           << Error::IndexError() << "Dimension out of range (expected to be in range of ["
-          << -a->ndim() << ", " << a->ndim() - 1 << "], but got " << dims_a[i] << ")";
-      CHECK_GE_OR_RETURN(dims_a[i], -a->ndim())
+          << -a->ndim() << ", " << a->ndim() - 1 << "], but got " << dot_dims_a[i] << ")";
+      CHECK_GE_OR_RETURN(dot_dims_a[i], -a->ndim())
           << Error::IndexError() << "Dimension out of range (expected to be in range of ["
-          << -a->ndim() << ", " << a->ndim() - 1 << "], but got " << dims_a[i] << ")";
-      dims_a[i] = dims_a[i] < 0 ? dims_a[i] + a->ndim() : dims_a[i];
+          << -a->ndim() << ", " << a->ndim() - 1 << "], but got " << dot_dims_a[i] << ")";
+      dot_dims_a[i] = dot_dims_a[i] < 0 ? dot_dims_a[i] + a->ndim() : dot_dims_a[i];
 
-      CHECK_LT_OR_RETURN(dims_b[i], b->ndim())
+      CHECK_LT_OR_RETURN(dot_dims_b[i], b->ndim())
           << Error::IndexError() << "Dimension out of range (expected to be in range of ["
-          << -b->ndim() << ", " << b->ndim() - 1 << "], but got " << dims_b[i] << ")";
-      CHECK_GE_OR_RETURN(dims_b[i], -b->ndim())
+          << -b->ndim() << ", " << b->ndim() - 1 << "], but got " << dot_dims_b[i] << ")";
+      CHECK_GE_OR_RETURN(dot_dims_b[i], -b->ndim())
           << Error::IndexError() << "Dimension out of range (expected to be in range of ["
-          << -b->ndim() << ", " << b->ndim() - 1 << "], but got " << dims_b[i] << ")";
-      dims_b[i] = dims_b[i] < 0 ? dims_b[i] + b->ndim() : dims_b[i];
+          << -b->ndim() << ", " << b->ndim() - 1 << "], but got " << dot_dims_b[i] << ")";
+      dot_dims_b[i] = dot_dims_b[i] < 0 ? dot_dims_b[i] + b->ndim() : dot_dims_b[i];
     }
     std::vector<bool> if_dot_dims_a(a->ndim(), false);
     std::vector<bool> if_dot_dims_b(b->ndim(), false);
-    for (const int32_t dim_idx : dims_a) {
+    for (const int32_t dim_idx : dot_dims_a) {
       CHECK_EQ_OR_RETURN(if_dot_dims_a[dim_idx], false)
           << Error::RuntimeError() << "dim " << dim_idx
           << " appears multiple times in the list of dims";
       if_dot_dims_a[dim_idx] = true;
     }
-    for (const int32_t dim_idx : dims_b) {
+    for (const int32_t dim_idx : dot_dims_b) {
       CHECK_EQ_OR_RETURN(if_dot_dims_b[dim_idx], false)
           << Error::RuntimeError() << "dim " << dim_idx
           << " appears multiple times in the list of dims";
@@ -345,18 +344,18 @@ class TensorDotFunctor {
     }
 
     std::vector<int32_t> broadcast_dims_a, broadcast_dims_b;
-    for (int64_t i = 0; i < dims_a.size(); i++) {
-      int64_t size_a = a->shape()->At(dims_a[i]);
-      int64_t size_b = b->shape()->At(dims_b[i]);
+    for (int64_t i = 0; i < dot_dims_a.size(); i++) {
+      int64_t size_a = a->shape()->At(dot_dims_a[i]);
+      int64_t size_b = b->shape()->At(dot_dims_b[i]);
       if (size_a == 1 && size_b > 1) {
-        broadcast_dims_b.emplace_back(dims_b[i]);
+        broadcast_dims_b.emplace_back(dot_dims_b[i]);
       } else if (size_b == 1 && size_a > 1) {
-        broadcast_dims_a.emplace_back(dims_a[i]);
+        broadcast_dims_a.emplace_back(dot_dims_a[i]);
       } else {
         CHECK_EQ_OR_RETURN(size_a, size_b)
             << Error::RuntimeError() << "contracted dimensions need to match, but first has size "
-            << size_a << " in dim " << dims_a[i] << " and second has size " << size_b << " in dim "
-            << dims_b[i];
+            << size_a << " in dim " << dot_dims_a[i] << " and second has size " << size_b << " in dim "
+            << dot_dims_b[i];
       }
     }
 
@@ -370,14 +369,13 @@ class TensorDotFunctor {
 
     int64_t non_dot_size_a = 1, non_dot_size_b = 1;
     std::vector<int32_t> non_dot_shape_a, non_dot_shape_b;
-    non_dot_shape_a.reserve(a->ndim() - dims_a.size() + b->ndim() - dims_b.size());
-    non_dot_shape_b.reserve(b->ndim() - dims_b.size());
+    non_dot_shape_a.reserve(a->ndim() - dot_dims_a.size() + b->ndim() - dot_dims_b.size());
+    non_dot_shape_b.reserve(b->ndim() - dot_dims_b.size());
 
     std::vector<int32_t> permuted_dims_a, permuted_dims_b;
     permuted_dims_a.reserve(a->ndim());
     permuted_dims_b.reserve(b->ndim());
 
-    // std::vector<int64_t> non_dot_dims;
     for (int32_t i = 0; i < a->ndim(); i++) {
       if (!if_dot_dims_a[i]) {
         permuted_dims_a.emplace_back(i);
@@ -386,8 +384,8 @@ class TensorDotFunctor {
       }
     }
 
-    for (const int32_t dim_idx : dims_a) permuted_dims_a.emplace_back(dim_idx);
-    for (const int32_t dim_idx : dims_b) permuted_dims_b.emplace_back(dim_idx);
+    for (const int32_t dim_idx : dot_dims_a) permuted_dims_a.emplace_back(dim_idx);
+    for (const int32_t dim_idx : dot_dims_b) permuted_dims_b.emplace_back(dim_idx);
 
     for (int32_t i = 0; i < b->ndim(); i++) {
       if (!if_dot_dims_b[i]) {
@@ -399,7 +397,7 @@ class TensorDotFunctor {
     non_dot_shape_a.insert(non_dot_shape_a.end(), non_dot_shape_b.begin(), non_dot_shape_b.end());
 
     int64_t dot_size = 1;
-    for (const int32_t dim_idx : dims_a) dot_size *= reduced_sum_a->shape()->At(dim_idx);
+    for (const int32_t dim_idx : dot_dims_a) dot_size *= reduced_sum_a->shape()->At(dim_idx);
     std::shared_ptr<Tensor> permuted_a =
         JUST(Reshape(JUST(Permute(reduced_sum_a, permuted_dims_a)),
                      Shape(DimVector({non_dot_size_a, dot_size}))));
