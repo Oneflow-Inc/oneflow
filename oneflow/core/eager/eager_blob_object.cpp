@@ -47,7 +47,7 @@ Maybe<void> EagerBlobObject::InitBlobWithOffset(const int64_t offset) {
   CHECK_NE_OR_RETURN(blob_desc_.data_type(), DataType::kInvalidDataType);
   if (!blob_desc_.shape().is_initialized()) {
     blob_desc_.set_shape(Shape(DimVector{}));
-    blob_desc_.set_stride(Stride(StrideVector{}));
+    blob_desc_.set_stride(Stride(DimVector{}));
   }
   {
     header_buffer_.reset();

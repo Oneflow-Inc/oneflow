@@ -21,7 +21,6 @@ limitations under the License.
 #include "oneflow/core/memory/memory_case.pb.h"
 #include "oneflow/core/register/blob_desc.h"
 #include "oneflow/core/common/shape_view.h"
-#include "oneflow/core/common/stride_view.h"
 #include "oneflow/core/common/symbol.h"
 
 namespace oneflow {

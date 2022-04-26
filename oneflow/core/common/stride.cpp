@@ -16,7 +16,6 @@ limitations under the License.
 
 #include "oneflow/core/common/stride.h"
 #include "oneflow/core/common/stride.cfg.h"
-#include "oneflow/core/common/stride_view.h"
 #include "oneflow/core/common/protobuf.h"
 
 namespace oneflow {
@@ -44,8 +43,8 @@ Stride::Stride(const std::shared_ptr<Shape>& shape) {
 }
 
 Stride::Stride(const std::initializer_list<int64_t>& stride_vec) : stride_vec_(stride_vec) {}
-Stride::Stride(const StrideVector& stride_vec) : stride_vec_(stride_vec) {}
-Stride::Stride(StrideVector&& stride_vec) : stride_vec_(std::move(stride_vec)) {}
+Stride::Stride(const DimVector& stride_vec) : stride_vec_(stride_vec) {}
+Stride::Stride(DimVector&& stride_vec) : stride_vec_(std::move(stride_vec)) {}
 Stride::Stride(const StrideProto& stride_proto) {
   stride_vec_.assign(stride_proto.dim().begin(), stride_proto.dim().end());
 }
@@ -53,16 +52,23 @@ Stride::Stride(const cfg::StrideProto& stride_proto) {
   stride_vec_.assign(stride_proto.dim().begin(), stride_proto.dim().end());
 }
 
-Stride& Stride::assign(const StrideVector& stride_vec) {
+Stride& Stride::assign(const DimVector& stride_vec) {
   stride_vec_ = stride_vec;
   return *this;
 }
 
-Stride& Stride::CheckNumAxesIdenticalAndAssign(const StrideView& stride_view) {
-  CHECK_EQ(NumAxes(), stride_view.NumAxes());
-  std::copy(stride_view.ptr(), stride_view.ptr() + stride_view.NumAxes(), stride_vec_.data());
+Stride& Stride::CheckNumAxesIdenticalAndAssign(const Stride& stride) {
+  CHECK_EQ(NumAxes(), stride.NumAxes());
+  stride_vec_.assign(stride.StrideVec().begin(), stride.StrideVec().end());
   return *this;
 }
+
+// TODO:delete
+// Stride& Stride::CheckNumAxesIdenticalAndAssign(const StrideView& stride_view) {
+//   CHECK_EQ(NumAxes(), stride_view.NumAxes());
+//   std::copy(stride_view.ptr(), stride_view.ptr() + stride_view.NumAxes(), stride_vec_.data());
+//   return *this;
+// }
 
 Stride& Stride::operator=(const Stride& stride) {
   stride_vec_ = stride.stride_vec_;

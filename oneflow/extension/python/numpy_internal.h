@@ -60,7 +60,7 @@ Maybe<DataType> GetOFDataTypeFromNpArray(PyArrayObject* array);
 
 std::vector<size_t> OFShapeToNumpyShape(const DimVector& fixed_vec);
 
-std::vector<size_t> OFStrideToNumpyStride(const StrideVector& fixed_vec, const DataType data_type);
+std::vector<size_t> OFStrideToNumpyStride(const DimVector& fixed_vec, const DataType data_type);
 
 bool PyArrayCheckLongScalar(PyObject* obj);
 
