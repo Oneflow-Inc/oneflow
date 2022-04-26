@@ -53,7 +53,7 @@ def do_bias_add_dropout_graph(test_case, with_cuda, prob):
 
 
 @flow.unittest.skip_unless_1n1d()
-@unittest.skipUnless(oneflow.sysconfig.with_cuda())
+@unittest.skipUnless(oneflow.sysconfig.with_cuda(), "needs -DBUILD_CUDA=ON")
 class TestBiasAddDropout(oneflow.unittest.TestCase):
     def test_bias_add_dropout_graph(test_case):
         do_bias_add_dropout_graph(test_case, True, 1.0)
