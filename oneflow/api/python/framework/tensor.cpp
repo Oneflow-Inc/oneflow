@@ -34,7 +34,6 @@ limitations under the License.
 #include "oneflow/core/framework/py_distribute.h"
 #include "oneflow/core/job/placement.cfg.h"
 #include "oneflow/core/job/global_for.h"
-#include "oneflow/core/framework/stride.h"
 #include "oneflow/core/framework/dtype.h"
 #include "oneflow/core/framework/placement_utils.h"
 #include "oneflow/core/functional/functional.h"
