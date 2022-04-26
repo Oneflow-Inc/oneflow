@@ -13,72 +13,95 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 """
-# RUN: python3 %s
+# -*- Python -*-
 
 import os
-import sys
+import platform
+import re
+import subprocess
+import tempfile
 
-sys.path.append(os.path.abspath(os.path.dirname(__file__)))
+import lit.formats
+import lit.util
 
-os.environ["ONEFLOW_MLIR_ENABLE_ROUND_TRIP"] = "1"
-os.environ["ONEFLOW_MLIR_ENABLE_CODEGEN_FUSERS"] = "1"
+from lit.llvm import llvm_config
+from lit.llvm.subst import ToolSubst
+from lit.llvm.subst import FindTool
 
-import unittest
-import oneflow as flow
-import oneflow.unittest
-from oneflow.core.job import job_pb2 as job_pb
+# Configuration file for the 'lit' test runner.
 
-from networks.resnet50 import resnet50
+# name: The name of this test suite.
+config.name = "ONEFLOW"
 
+config.test_format = lit.formats.ShTest(not llvm_config.use_lit_shell)
 
-class InferGraph(flow.nn.Graph):
-    def __init__(self, placement_arg=None):
-        super().__init__()
-        model = resnet50()
-        if placement_arg is not None:
-            if "placement" in placement_arg:
-                model.to_global(**placement_arg)
-            else:
-                model.to(**placement_arg)
-        self.model = model
+# suffixes: A list of file extensions to treat as test files.
+config.suffixes = [".mlir", ".py"]
 
-    def build(self, image):
-        logits = self.model(image.to("cuda"))
-        pred = logits.softmax()
-        return pred
+# test_source_root: The root path where tests are located.
+config.test_source_root = os.path.dirname(__file__)
 
+# test_exec_root: The root path where tests should be run.
+config.test_exec_root = os.path.join(config.oneflow_obj_root, "test")
 
-@unittest.skipIf(not flow.sysconfig.with_mlir(), "only test with mlir")
-@flow.unittest.skip_unless_1n1d()
-class GraphSaveTestCase(flow.unittest.TestCase):
-    def test_save_and_load(self):
-        placement_arg = {
-            "placement": flow.placement("cuda", ranks=[0]),
-            "sbp": flow.sbp.broadcast,
-        }
-        graph = InferGraph(placement_arg)
-        image_placeholder = flow.empty(
-            (1, 3, 224, 224),
-            dtype=flow.float32,
-            placement=flow.placement("cpu", ranks=[0]),
-            sbp=flow.sbp.broadcast,
-        )
-        graph._compile(image_placeholder)
-        saved_path = os.path.join("saved_model", graph.name)
-        if not os.path.exists(saved_path):
-            os.makedirs(saved_path)
-        flow.save(graph, saved_path)
+config.substitutions.append(("%PATH%", config.environment["PATH"]))
+config.substitutions.append(("%shlibext", config.llvm_shlib_ext))
 
-        saved_ir_path = os.path.join(saved_path, "model.mlir")
-        serialized_job = oneflow._oneflow_internal.nn.graph.LoadSerializedJobFromIR(
-            saved_ir_path
-        )
-        job = job_pb.Job()
-        job.ParseFromString(serialized_job)
+llvm_config.with_system_environment(["HOME", "INCLUDE", "LIB", "TMP", "TEMP"])
 
-        # TODO: run loaded job as graph and original graph, compare the result
+llvm_config.use_default_substitutions()
 
+# excludes: A list of directories to exclude from the testsuite. The 'Inputs'
+# subdirectories contain auxiliary inputs for various tests in their parent
+# directories.
+config.excludes = [
+    "Inputs",
+    "Examples",
+    "CMakeLists.txt",
+    "README.txt",
+    "LICENSE.txt",
+    "networks",
+    "test_fuse_cast_scale.mlir.py",
+    "test_util.py",
+    "test_mlir_opt.mlir.py",
+    "lit.cfg.py",
+]
 
+# test_source_root: The root path where tests are located.
+config.test_source_root = os.path.dirname(__file__)
 
-if __name__ == "__main__":
-    unittest.main()
+# test_exec_root: The root path where tests should be run.
+config.test_exec_root = os.path.join(config.oneflow_obj_root, "test")
+config.oneflow_tools_dir = os.path.join(config.oneflow_ir_obj_root, "bin")
+
+# Tweak the PATH to include the tools dir.
+llvm_config.with_environment("PATH", config.llvm_tools_dir, append_path=True)
+
+# TODO: these two should be unnecessary
+llvm_config.with_environment(
+    "LD_LIBRARY_PATH",
+    os.path.join(config.oneflow_obj_root, "third_party_install/protobuf"),
+    append_path=True,
+)
+llvm_config.with_environment(
+    "LD_LIBRARY_PATH",
+    os.path.join(config.oneflow_obj_root, "_deps/glog-build"),
+    append_path=True,
+)
+
+llvm_config.with_environment("ONEFLOW_MLIR_STDOUT", "1")
+llvm_config.with_environment("ONEFLOW_MLIR_ENABLE_CODEGEN_FUSERS", "1")
+llvm_config.with_environment("ONEFLOW_MLIR_ENABLE_ROUND_TRIP", "1")
+llvm_config.with_environment(
+    "PYTHONPATH", os.path.join(config.oneflow_src_root, "python"), append_path=True,
+)
+
+tool_dirs = [config.oneflow_tools_dir, config.llvm_tools_dir]
+tools = ["oneflow-opt", "oneflow-translate", "oneflow-runner"]
+tools.extend(
+    [
+        ToolSubst("%linalg_test_lib_dir", config.llvm_lib_dir, unresolved="ignore"),
+        ToolSubst("%test_exec_root", config.test_exec_root, unresolved="ignore"),
+    ]
+)
+llvm_config.add_tool_substitutions(tools, tool_dirs)
