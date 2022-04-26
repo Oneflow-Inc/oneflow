@@ -661,7 +661,7 @@ llvm::Optional<std::string> GetOutputLbn(OpResult result) {
   return llvm::None;
 }
 
-LogicalResult ConvertUserOpInputs(Operation* op, oneflow::UserOpAdaptor& user_op_adaptor,
+LogicalResult ConvertUserOpInputs(Operation* op, StringRef op_name,
                                   ::oneflow::UserOpConf* user_conf) {
   std::vector<std::string> keys{};
   std::vector<int32_t> sizes{};
@@ -669,7 +669,6 @@ LogicalResult ConvertUserOpInputs(Operation* op, oneflow::UserOpAdaptor& user_op
     op->emitError("fail to convert user op inputs");
     return failure();
   }
-  const std::string op_name = user_op_adaptor.op_name().str();
   int32_t input_idx = 0;
   for (auto tuple : llvm::zip(keys, sizes)) {
     auto input_key = std::get<0>(tuple);
@@ -691,7 +690,7 @@ LogicalResult ConvertUserOpInputs(Operation* op, oneflow::UserOpAdaptor& user_op
   return success();
 }
 
-LogicalResult ConvertUserOpOutputs(Operation* op, oneflow::UserOpAdaptor& user_op_adaptor,
+LogicalResult ConvertUserOpOutputs(Operation* op, StringRef op_name,
                                    ::oneflow::UserOpConf* user_conf) {
   std::vector<std::string> keys{};
   std::vector<int32_t> sizes{};
@@ -699,14 +698,13 @@ LogicalResult ConvertUserOpOutputs(Operation* op, oneflow::UserOpAdaptor& user_o
     op->emitError("fail to convert user op outputs");
     return failure();
   }
-  const std::string op_name = user_op_adaptor.op_name().str();
   for (auto tuple : llvm::zip(keys, sizes)) {
     auto name = std::get<0>(tuple);
     auto result_size = std::get<1>(tuple);
     if (result_size == 0) continue;
     for (int32_t i = 0; i < result_size; i++) {
       auto out_s_ptr = (*user_conf->mutable_output())[name].mutable_s()->Add();
-      *(out_s_ptr) = op_name + "/" + name + "_" + std::to_string(i);
+      *(out_s_ptr) = op_name.str() + "/" + name + "_" + std::to_string(i);
     }
   }
   return success();
@@ -741,12 +739,16 @@ LogicalResult ConvertDTFromAttr(Attribute attr, ::oneflow::DataType& data_type) 
   return ConvertDT(dt_attr.getValue(), data_type);
 }
 
-LogicalResult Importer::ConvertUserOpAttributes(Operation* op,
-                                                oneflow::UserOpAdaptor& user_op_adaptor,
-                                                ::oneflow::OperatorConf& op_conf) {
+LogicalResult Importer::ConvertUserOpAttributes(Operation* op, ::oneflow::OperatorConf& op_conf) {
   auto user_conf = op_conf.mutable_user_conf();
   std::string op_type_name = GetOpTypeName(op);
   op_conf.mutable_user_conf()->set_op_type_name(op_type_name);
+  if (op->hasTrait<OpTrait::IsOpConfCompatible>()) {
+    if (OpTrait::IsOpConfCompatible<void>::dump_attr(op, &op_conf).failed()) {
+      return op->emitError("fail to save attr to op_conf");
+    }
+  }
+
   for (auto id_attr : op->getAttrDictionary()) {
     auto id = id_attr.getName();
     // mlir only attrs
@@ -766,17 +768,11 @@ LogicalResult Importer::ConvertUserOpAttributes(Operation* op,
     }
     // convert op conf attributes
     else if (id.strref().equals(OpTrait::IsOpConfCompatible<void>::getOpNameAttr())) {
-      std::string op_name =
-          op->getAttrOfType<StringAttr>(OpTrait::IsOpConfCompatible<void>::getOpNameAttr())
-              .getValue()
-              .str();
-      op_conf.set_name(op_name);
+      continue;
     } else if (id.strref().equals(OpTrait::IsOpConfCompatible<void>::getDeviceTagAttr())) {
-      op_conf.set_device_tag(user_op_adaptor.device_tag().str());
+      continue;
     } else if (id.strref().equals(OpTrait::IsOpConfCompatible<void>::getScopeSymbolIDAttr())) {
-      if (auto scope_symbol_id = user_op_adaptor.scope_symbol_id()) {
-        op_conf.set_scope_symbol_id(scope_symbol_id.getValue());
-      }
+      continue;
     }
     // convert user conf attributes
     else {

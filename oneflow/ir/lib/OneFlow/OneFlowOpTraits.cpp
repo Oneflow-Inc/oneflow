@@ -86,6 +86,20 @@ LogicalResult VerifyIsImportCompatible(Operation* op) {
   return success();
 }
 
+LogicalResult saveAttrToOpConf(Operation* op, ::oneflow::OperatorConf* op_conf) {
+  if (auto scope_symbol_id = op->getAttrOfType<IntegerAttr>(
+          OpTrait::IsOpConfCompatible<void>::getScopeSymbolIDAttr())) {
+    op_conf->set_scope_symbol_id(scope_symbol_id.getInt());
+  }
+  if (auto op_name =
+          op->getAttrOfType<StringAttr>(OpTrait::IsOpConfCompatible<void>::getOpNameAttr())) {
+    op_conf->set_name(op_name.str());
+  }
+  op_conf->set_device_tag(
+      op->getAttrOfType<StringAttr>(IsOpConfCompatible<void>::getDeviceTagAttr()).str());
+  return success();
+}
+
 }  // namespace impl
 
 }  // namespace OpTrait

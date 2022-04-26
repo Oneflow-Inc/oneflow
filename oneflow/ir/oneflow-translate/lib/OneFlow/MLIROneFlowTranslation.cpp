@@ -695,20 +695,22 @@ LogicalResult JobImporter::TryToUpdateJob() {
 
 LogicalResult JobImporter::ConvertUserOp(Operation* op, ::oneflow::Job& job) {
   // TODO: concrete user op should not use generic UserOpAdaptor
+  oneflow::ConfOpAdaptor conf_op_adaptor(op->getOperands(), op->getAttrDictionary());
+  UpdatePlacement(op, conf_op_adaptor, job);
+  StringRef op_name = conf_op_adaptor.op_name();
   oneflow::UserOpAdaptor user_op_adaptor(op->getOperands(), op->getAttrDictionary());
-  UpdatePlacement(op, user_op_adaptor, job);
 
   auto* op_conf = job.mutable_net()->add_op();
   auto* user_conf = op_conf->mutable_user_conf();
-  if (!succeeded(ConvertUserOpInputs(op, user_op_adaptor, user_conf))) {
+  if (!succeeded(ConvertUserOpInputs(op, op_name, user_conf))) {
     op->emitError("fail to convert user op inputs");
     return failure();
   }
-  if (!succeeded(ConvertUserOpOutputs(op, user_op_adaptor, user_conf))) {
+  if (!succeeded(ConvertUserOpOutputs(op, op_name, user_conf))) {
     op->emitError("fail to convert user op outputs");
     return failure();
   }
-  if (!succeeded(ConvertUserOpAttributes(op, user_op_adaptor, *op_conf))) {
+  if (!succeeded(ConvertUserOpAttributes(op, *op_conf))) {
     op->emitError("fail to convert user op attributes");
     return failure();
   }
