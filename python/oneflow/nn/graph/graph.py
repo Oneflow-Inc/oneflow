@@ -15,6 +15,7 @@ limitations under the License.
 """
 import os
 import time
+import inspect
 from collections import OrderedDict
 from functools import partial
 from typing import Dict, Optional, Union, List
@@ -648,6 +649,26 @@ class Graph(object):
                     state_config,
                 )
                 state2lazy_builder[state_tensor] = state_block.lazy_origin_builder()
+
+    @staticmethod
+    def _to_graph(func):
+        """ Make a function to do static graph run.
+        """
+        assert inspect.isfunction(func), f"{func} must be a function."
+        graph_cls_name = func.__name__ + "_graph"
+
+        def init(self):
+            super(graph_cls_name, self).__init__()
+
+        graph_cls_name = type(graph_cls_name,
+                              (Graph, ),
+                              {"__init__": init,
+                               "build": func,
+                              })
+        
+        a_graph = graph_cls_name()
+
+        return a_graph
 
     def _compile(self, *args, **kwargs):
         # Build graph

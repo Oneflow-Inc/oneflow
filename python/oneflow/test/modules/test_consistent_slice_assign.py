@@ -14,11 +14,7 @@ def _test_logical_slice_assign(test_case, placement, sbp):
 
     x = x.to_global(placement=placement, sbp=sbp)
     x[:, :2] = 3 
-    if flow.env.get_rank() == 0:
-        print("===", x)
     x_numpy[:, :2] = 3
-    if flow.env.get_rank() == 0:
-        print("---", x_numpy)
 
     test_case.assertTrue(x.sbp in [(oneflow.sbp.broadcast,)])
     test_case.assertTrue(np.array_equal(x.numpy(), x_numpy))
@@ -42,11 +38,7 @@ def _test_graph_logical_slice_assign(test_case, placement, sbp):
 
     y = slice_assing_g(x)
 
-    if flow.env.get_rank() == 0:
-        print("===y", y)
     x_numpy[:, :2] = 3
-    if flow.env.get_rank() == 0:
-        print("---x_np", x_numpy)
 
     test_case.assertTrue(y.sbp in [(oneflow.sbp.broadcast,)])
     test_case.assertTrue(np.array_equal(y.numpy(), x_numpy))
@@ -62,7 +54,7 @@ class TestGlobalLogicalSliceAssign(flow.unittest.TestCase):
                 if len(sbp) > 1 or sbp[0] != flow.sbp.broadcast:
                     continue
                 _test_logical_slice_assign(test_case, placement, sbp)
-                #_test_graph_logical_slice_assign(test_case, placement, sbp)
+                _test_graph_logical_slice_assign(test_case, placement, sbp)
 
 
 if __name__ == "__main__":
