@@ -73,6 +73,8 @@ void Compiler::Compile(Job* job, Plan* plan, bool need_job_complete) const {
   if (job_desc.enable_inplace()) { task_gph->EnableInplaceMemSharing(IsReachable); }
   task_gph->TopoForEachNode(&TaskNode::InferTimeShapeIfMeaningful);
   task_gph->TopoForEachNode(&TaskNode::InferExecInterval);
+  // TODO(chengcheng): rm CorrectExecInterval
+  task_gph->TopoForEachNode(&TaskNode::CorrectExecInterval);
   task_gph->ForEachEdge([&](TaskEdge* task_edge) { task_edge->CheckRegstLbiValid(); });
 
   // Step4: put infomation from task_gph into plan.

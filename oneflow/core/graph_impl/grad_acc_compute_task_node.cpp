@@ -29,6 +29,7 @@ class GradAccCompTaskNode final : public CompTaskNode {
   void ProduceAllRegstsAndBindEdges() override;
   void ConsumeAllRegsts() override;
   void InferExecInterval() override;
+  void CorrectExecInterval() override;
 };
 
 void GradAccCompTaskNode::ProduceAllRegstsAndBindEdges() {
@@ -59,6 +60,11 @@ void GradAccCompTaskNode::InferExecInterval() {
   CHECK(op()->op_conf().user_conf().op_type_name() == "_grad_acc");
   set_exec_interval(user_op::UserOpConfWrapper(op()->op_conf()).attr<int32_t>("acc_num"));
   ForEachNodeOnInDataEdge([](TaskNode* src_node) { CHECK_EQ(src_node->exec_interval(), 1); });
+}
+
+void GradAccCompTaskNode::CorrectExecInterval() {
+  // NOTE(chengcheng): GradAccActor need exec every iter.
+  set_exec_interval(1);
 }
 
 REGISTER_COMP_TASK_STREAM_INDEX_GETTER(TaskType::kGradAcc);

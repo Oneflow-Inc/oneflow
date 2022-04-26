@@ -102,6 +102,7 @@ class TaskNode : public Node<TaskNode, TaskEdge> {
   std::shared_ptr<Shape> GetFastestInputOutputTimeShape() const;
 
   virtual void InferExecInterval();
+  virtual void CorrectExecInterval() {}
   int32_t exec_interval() const { return exec_interval_; }
 
   void ForEachInDataEdge(const std::function<void(TaskEdge*)>& Handler) const;

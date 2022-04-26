@@ -106,21 +106,33 @@ void TaskNode::PinConsumedRegst() {
 }
 
 void TaskNode::set_exec_interval(int32_t val) {
-  CHECK_EQ(exec_interval_, -1);
   CHECK_NE(val, -1);
   exec_interval_ = val;
 }
 
 void TaskNode::InferExecInterval() {
   int32_t exec_interval = -1;
-  ForEachNodeOnInDataEdge([&exec_interval](TaskNode* src_node) {
+  ForEachNodeOnInDataEdge([&exec_interval, this](TaskNode* src_node) {
     int32_t src_exec_interval = src_node->exec_interval();
     CHECK_NE(src_exec_interval, -1);
+    exec_interval = std::max(exec_interval, src_exec_interval);
+    /*
     if (exec_interval == -1) {
       exec_interval = src_exec_interval;
     } else {
-      CHECK_EQ(exec_interval, src_exec_interval);
+      if (exec_interval != src_exec_interval) {
+        TaskProto this_proto;
+        TaskProto src_proto;
+        this->ToProto(&this_proto);
+        src_node->ToProto(&src_proto);
+        LOG(FATAL) << "cclog: ERROR! src node: " << src_proto.DebugString()
+                   << " -> this_node: " << this_proto.DebugString()
+                   << " exec interval is not equal with src: " << src_exec_interval << " vs this "
+                   << exec_interval;
+      }
+      // CHECK_EQ(exec_interval, src_exec_interval);
     }
+    */
   });
   if (exec_interval == -1) { exec_interval = 1; }
   exec_interval_ = exec_interval;
@@ -230,7 +242,7 @@ bool TaskNode::IsMeaningLess() { return produced_regsts_.empty() && consumed_reg
 void TaskNode::ToProto(TaskProto* task_proto) const {
   // Step1: process some scalar items.
   CHECK_NE(chain_id_, -1);
-  CHECK_NE(exec_interval_, -1);
+  // CHECK_NE(exec_interval_, -1);
   task_proto->set_task_type(GetTaskType());
   task_proto->set_machine_id(machine_id_);
   task_proto->set_thrd_id(thrd_id_);
