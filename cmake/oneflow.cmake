@@ -299,7 +299,7 @@ set(LLVM_MONO_REPO_URL
     "https://github.com/llvm/llvm-project/archive/35e60f5de180aea55ed478298f4b40f04dcc57d1.zip"
     CACHE STRING "")
 use_mirror(VARIABLE LLVM_MONO_REPO_URL URL ${LLVM_MONO_REPO_URL})
-set(LLVM_MONO_REPO_MD5 "7884fcad6b5d53d10323aee724dc68d8b9096a2e" CACHE STRING "")
+set(LLVM_MONO_REPO_MD5 "075fbfdf06cb3f02373ea44971af7b03" CACHE STRING "")
 set(ONEFLOW_BUILD_ROOT_DIR "${PROJECT_BINARY_DIR}")
 add_subdirectory(${PROJECT_SOURCE_DIR}/oneflow/ir)
 if(WITH_MLIR)
