@@ -154,7 +154,9 @@ def compare_with_numpy_ftrl(
 class TestOptimizers(flow.unittest.TestCase):
     def test_ftrl(test_case):
         arg_dict = OrderedDict()
-        arg_dict["weight_decay"] = [0, 0.1]
+        arg_dict["weight_decay"] = [
+            0.0
+        ]  # TODO(zzk): Currently Only support weight_decay = 0.0.
         arg_dict["lr_power"] = [-0.2, -0.05]
         arg_dict["lambda1"] = [0.1]
         arg_dict["lambda2"] = [0.00]
