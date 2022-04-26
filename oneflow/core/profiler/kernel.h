@@ -21,7 +21,7 @@ limitations under the License.
 namespace oneflow {
 
 class Kernel;
-class KernelContext;
+struct KernelContext;
 class Blob;
 
 namespace profiler {

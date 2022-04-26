@@ -21,7 +21,6 @@ from oneflow.nn.modules.activation import (
     GELU,
     GLU,
     Hardsigmoid,
-    Hardshrink,
     Hardswish,
     Hardtanh,
     LeakyReLU,

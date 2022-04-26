@@ -25,7 +25,7 @@ limitations under the License.
 namespace oneflow {
 namespace vm {
 
-class MirroredObject;
+struct MirroredObject;
 
 using DependenceVector = std::vector<MirroredObject*>;
 

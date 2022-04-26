@@ -176,7 +176,7 @@ VALUE_TYPE_OF_IMPL(const PyObject*, kPY_OBJECT);
 
 #undef VALUE_TYPE_OF_IMPL
 
-const std::string& ValueTypeName(ValueType type);
+Maybe<const std::string&> ValueTypeName(ValueType type);
 
 bool IsIntegralType(ValueType type);
 bool IsIntegralListType(ValueType type);

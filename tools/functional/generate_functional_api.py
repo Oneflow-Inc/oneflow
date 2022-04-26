@@ -97,7 +97,9 @@ pybind_header_fmt = (
     license
     + """
 
-#include <Python.h>
+#include <pybind11/pybind11.h>
+
+namespace py = pybind11;
 
 namespace oneflow {{
 namespace one {{
@@ -113,15 +115,12 @@ pybind_source_fmt = (
     license
     + """
 
-#include <Python.h>
+#include <vector>
+#include <pybind11/pybind11.h>
 
 #include "oneflow/api/python/of_api_registry.h"
-#include "oneflow/api/python/exception/exception.h"
-#include "oneflow/api/python/functional/common.h"
 #include "oneflow/api/python/functional/function_def.h"
-#include "oneflow/api/python/functional/python_arg.h"
-#include "oneflow/api/python/functional/python_arg_parser.h"
-#include "oneflow/api/python/functional/python_frame.h"
+#include "oneflow/api/python/functional/py_function.h"
 #include "oneflow/core/common/maybe.h"
 #include "oneflow/core/common/optional.h"
 #include "oneflow/core/functional/functional.h"
@@ -136,15 +135,11 @@ namespace functional {{
 namespace functional = one::functional;
 
 ONEFLOW_API_PYBIND11_MODULE("_C", m) {{
-  static PyMethodDef functions[] = {{
-{1}
-    {{NULL, NULL, 0, NULL}}
-  }};
+  py::options options;
+  options.disable_function_signatures();
 
-  PyObject* module = m.ptr();
-  if (module) {{
-    PyModule_AddFunctions(module, functions);
-  }}
+{1}
+  options.enable_function_signatures();
 }}
 
 }}  // namespace oneflow

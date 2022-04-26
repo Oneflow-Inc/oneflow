@@ -29,11 +29,11 @@ namespace functional {
 
 namespace detail {
 
-void PySliceUnpack(PyObject* object, Py_ssize_t* start, Py_ssize_t* stop, Py_ssize_t* step);
+Maybe<void> PySliceUnpack(PyObject* object, Py_ssize_t* start, Py_ssize_t* stop, Py_ssize_t* step);
 
 Maybe<Tensor> ConvertToIndexingTensor(PyObject* object);
 
-IndexItem UnpackIndexItem(PyObject* object);
+Maybe<IndexItem> UnpackIndexItem(PyObject* object);
 
 }  // namespace detail
 

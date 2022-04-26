@@ -21,9 +21,8 @@ limitations under the License.
 #ifdef WITH_CUDA
 
 namespace oneflow {
-namespace ep {
 
-class CudaDevice;
+namespace ep {
 
 class CudaDeviceManager : public DeviceManager {
  public:
@@ -40,7 +39,7 @@ class CudaDeviceManager : public DeviceManager {
 
  private:
   std::mutex devices_mutex_;
-  std::vector<std::shared_ptr<CudaDevice>> devices_;
+  std::vector<std::shared_ptr<Device>> devices_;
   DeviceManagerRegistry* registry_;
 };
 

@@ -38,8 +38,6 @@ def build_module(act_type):
         return torch.nn.Sigmoid()
     elif act_type == "hardsigmoid":
         return torch.nn.Hardsigmoid()
-    elif act_type == "hardshrink":
-        return torch.nn.Hardshrink(lambd=random())
     elif act_type == "logsigmoid":
         return torch.nn.LogSigmoid()
     elif act_type == "hardswish":
@@ -158,11 +156,6 @@ class TestSigmoidModule(flow.unittest.TestCase):
 class TestHardsigmoidModule(flow.unittest.TestCase):
     def test_hardsigmoid_module(test_case):
         _test_activation_module(test_case, "hardsigmoid")
-
-
-class TestHardshrinkModule(flow.unittest.TestCase):
-    def test_hardshrink_module(test_case):
-        _test_activation_module(test_case, "hardshrink")
 
 
 class TestLogSigmoidModule(flow.unittest.TestCase):

@@ -220,11 +220,7 @@ namespace oneflow {
 }
 
 /*static*/ Maybe<void> UpsampleLinear1DGradOp::GetSbp(user_op::SbpContext* ctx) {
-  ctx->NewBuilder()
-      .Split(user_op::OpArg("dy", 0), 0)
-      .Split(user_op::OpArg("x", 0), 0)
-      .Split(user_op::OpArg("dx", 0), 0)
-      .Build();
+  ctx->NewBuilder().Split(user_op::OpArg("dy", 0), 0).Split(user_op::OpArg("dx", 0), 0).Build();
   return Maybe<void>::Ok();
 }
 /*static*/ Maybe<void> UpsampleLinear1DGradOp::InferLogicalTensorDesc(user_op::InferContext* ctx) {
@@ -245,11 +241,7 @@ namespace oneflow {
 }
 
 /*static*/ Maybe<void> UpsampleNearest1DGradOp::GetSbp(user_op::SbpContext* ctx) {
-  ctx->NewBuilder()
-      .Split(user_op::OpArg("dy", 0), 0)
-      .Split(user_op::OpArg("x", 0), 0)
-      .Split(user_op::OpArg("dx", 0), 0)
-      .Build();
+  ctx->NewBuilder().Split(user_op::OpArg("dy", 0), 0).Split(user_op::OpArg("dx", 0), 0).Build();
   return Maybe<void>::Ok();
 }
 /*static*/ Maybe<void> UpsampleNearest1DGradOp::InferLogicalTensorDesc(user_op::InferContext* ctx) {
@@ -271,11 +263,7 @@ namespace oneflow {
 }
 
 /*static*/ Maybe<void> UpsampleNearest2DGradOp::GetSbp(user_op::SbpContext* ctx) {
-  ctx->NewBuilder()
-      .Split(user_op::OpArg("dy", 0), 0)
-      .Split(user_op::OpArg("x", 0), 0)
-      .Split(user_op::OpArg("dx", 0), 0)
-      .Build();
+  ctx->NewBuilder().Split(user_op::OpArg("dy", 0), 0).Split(user_op::OpArg("dx", 0), 0).Build();
   return Maybe<void>::Ok();
 }
 /*static*/ Maybe<void> UpsampleNearest2DGradOp::InferLogicalTensorDesc(user_op::InferContext* ctx) {
@@ -297,11 +285,7 @@ namespace oneflow {
 }
 
 /*static*/ Maybe<void> UpsampleBilinear2DGradOp::GetSbp(user_op::SbpContext* ctx) {
-  ctx->NewBuilder()
-      .Split(user_op::OpArg("dy", 0), 0)
-      .Split(user_op::OpArg("x", 0), 0)
-      .Split(user_op::OpArg("dx", 0), 0)
-      .Build();
+  ctx->NewBuilder().Split(user_op::OpArg("dy", 0), 0).Split(user_op::OpArg("dx", 0), 0).Build();
   return Maybe<void>::Ok();
 }
 /*static*/ Maybe<void> UpsampleBilinear2DGradOp::InferLogicalTensorDesc(
@@ -324,11 +308,7 @@ namespace oneflow {
 }
 
 /*static*/ Maybe<void> UpsampleBicubic2DGradOp::GetSbp(user_op::SbpContext* ctx) {
-  ctx->NewBuilder()
-      .Split(user_op::OpArg("dy", 0), 0)
-      .Split(user_op::OpArg("x", 0), 0)
-      .Split(user_op::OpArg("dx", 0), 0)
-      .Build();
+  ctx->NewBuilder().Split(user_op::OpArg("dy", 0), 0).Split(user_op::OpArg("dx", 0), 0).Build();
   return Maybe<void>::Ok();
 }
 /*static*/ Maybe<void> UpsampleBicubic2DGradOp::InferLogicalTensorDesc(user_op::InferContext* ctx) {
@@ -350,11 +330,7 @@ namespace oneflow {
 }
 
 /*static*/ Maybe<void> UpsampleGradOp::GetSbp(user_op::SbpContext* ctx) {
-  ctx->NewBuilder()
-      .Split(user_op::OpArg("dy", 0), 0)
-      .Split(user_op::OpArg("x", 0), 0)
-      .Split(user_op::OpArg("dx", 0), 0)
-      .Build();
+  ctx->NewBuilder().Split(user_op::OpArg("dy", 0), 0).Split(user_op::OpArg("dx", 0), 0).Build();
   return Maybe<void>::Ok();
 }
 /*static*/ Maybe<void> UpsampleGradOp::InferLogicalTensorDesc(user_op::InferContext* ctx) {
@@ -375,11 +351,7 @@ namespace oneflow {
 }
 
 /*static*/ Maybe<void> UpsampleNearest3DGradOp::GetSbp(user_op::SbpContext* ctx) {
-  ctx->NewBuilder()
-      .Split(user_op::OpArg("dy", 0), 0)
-      .Split(user_op::OpArg("x", 0), 0)
-      .Split(user_op::OpArg("dx", 0), 0)
-      .Build();
+  ctx->NewBuilder().Split(user_op::OpArg("dy", 0), 0).Split(user_op::OpArg("dx", 0), 0).Build();
   return Maybe<void>::Ok();
 }
 /*static*/ Maybe<void> UpsampleNearest3DGradOp::InferLogicalTensorDesc(user_op::InferContext* ctx) {
@@ -401,11 +373,7 @@ namespace oneflow {
 }
 
 /*static*/ Maybe<void> UpsampleTrilinear3DGradOp::GetSbp(user_op::SbpContext* ctx) {
-  ctx->NewBuilder()
-      .Split(user_op::OpArg("dy", 0), 0)
-      .Split(user_op::OpArg("x", 0), 0)
-      .Split(user_op::OpArg("dx", 0), 0)
-      .Build();
+  ctx->NewBuilder().Split(user_op::OpArg("dy", 0), 0).Split(user_op::OpArg("dx", 0), 0).Build();
   return Maybe<void>::Ok();
 }
 /*static*/ Maybe<void> UpsampleTrilinear3DGradOp::InferLogicalTensorDesc(

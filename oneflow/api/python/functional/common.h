@@ -20,7 +20,6 @@ limitations under the License.
 #include <vector>
 #include <pybind11/pybind11.h>
 
-#include "oneflow/api/python/framework/tensor.h"
 #include "oneflow/core/common/throw.h"
 #include "oneflow/core/common/maybe.h"
 #include "oneflow/core/common/preprocessor.h"
@@ -63,19 +62,29 @@ using PyObjectPtr = std::unique_ptr<PyObject, PyObjectPtrDeleter>;
   OF_PP_MAKE_TUPLE_SEQ(float) \
   OF_PP_MAKE_TUPLE_SEQ(double)
 
+template<typename T>
+T dereference(T&& val) {
+  return std::forward<T>(val);
+}
+
+template<typename T>
+T dereference(std::shared_ptr<T>&& val) {
+  return *val;
+}
+
 bool PySequenceCheck(PyObject* obj);
 bool PySequenceCheck(PyObject* obj, const std::function<bool(PyObject*)>& item_check);
 
 template<typename T, typename UnpackItemFunc>
-inline std::vector<T> PyUnpackSequence(PyObject* obj, UnpackItemFunc unpack_item) {
+inline Maybe<std::vector<T>> PyUnpackSequence(PyObject* obj, UnpackItemFunc unpack_item) {
   bool is_tuple = PyTuple_Check(obj);
-  CHECK_OR_THROW(is_tuple || PyList_Check(obj))
+  CHECK_OR_RETURN(is_tuple || PyList_Check(obj))
       << "The object is not list or tuple, but is " << Py_TYPE(obj)->tp_name;
   size_t size = is_tuple ? PyTuple_GET_SIZE(obj) : PyList_GET_SIZE(obj);
-  std::vector<T> values(size);
+  auto values = std::make_shared<std::vector<T>>(size);
   for (int i = 0; i < size; ++i) {
     PyObject* item = is_tuple ? PyTuple_GET_ITEM(obj, i) : PyList_GET_ITEM(obj, i);
-    values[i] = unpack_item(item);
+    values->at(i) = dereference<T>(JUST(unpack_item(item)));
   }
   return values;
 }
@@ -85,100 +94,80 @@ bool PyLongSequenceCheck(PyObject* obj);
 bool PyFloatSquenceCheck(PyObject* obj);
 
 template<typename T>
-inline std::vector<T> PyUnpackLongSequence(PyObject* obj) {
+inline Maybe<std::vector<T>> PyUnpackLongSequence(PyObject* obj) {
   return PyUnpackSequence<T>(
-      obj, [](PyObject* item) -> T { return static_cast<T>(PyLong_AsLongLong(item)); });
+      obj, [](PyObject* item) -> Maybe<T> { return static_cast<T>(PyLong_AsLongLong(item)); });
 }
 
 template<typename T>
-inline std::vector<T> PyUnpackFloatSequence(PyObject* obj) {
+inline Maybe<std::vector<T>> PyUnpackFloatSequence(PyObject* obj) {
   return PyUnpackSequence<T>(
-      obj, [](PyObject* item) -> T { return static_cast<T>(PyFloat_AsDouble(item)); });
+      obj, [](PyObject* item) -> Maybe<T> { return static_cast<T>(PyFloat_AsDouble(item)); });
 }
 
 // String
 bool PyStringCheck(PyObject* obj);
 bool PyStringSequenceCheck(PyObject* obj);
 
-std::string PyStringAsString(PyObject* obj);
+Maybe<std::string> PyStringAsString(PyObject* str_obj);
 
-std::string PyObjectToReprStr(PyObject* obj);
+Maybe<std::string> PyObjectToReprStr(PyObject* obj);
 
 // Scalar
 bool PyScalarCheck(PyObject* obj);
-Scalar PyUnpackScalar(PyObject* obj);
+Maybe<Scalar> PyUnpackScalar(PyObject* obj);
+
+// Tensor
+bool PyTensorCheck(PyObject* obj);
+Maybe<Tensor> PyUnpackTensor(PyObject* obj);
 
 // Tensor list
 bool PyTensorSequenceCheck(PyObject* obj);
-std::vector<std::shared_ptr<Tensor>> PyUnpackTensorSequence(PyObject* obj);
+Maybe<std::vector<std::shared_ptr<Tensor>>> PyUnpackTensorSequence(PyObject* obj);
 
 // TensorTuple
 bool PyTensorTupleCheck(PyObject* obj);
-std::shared_ptr<TensorTuple> PyUnpackTensorTuple(PyObject* obj);
+Maybe<TensorTuple> PyUnpackTensorTuple(PyObject* obj);
 
 // DType
 bool PyDTypeCheck(PyObject* obj);
-Symbol<DType> PyUnpackDType(PyObject* obj);
+Maybe<Symbol<DType>> PyUnpackDType(PyObject* obj);
 
 // DType list
 bool PyDTypeSequenceCheck(PyObject* obj);
-std::vector<Symbol<DType>> PyUnpackDTypeSequence(PyObject* obj);
+Maybe<std::vector<Symbol<DType>>> PyUnpackDTypeSequence(PyObject* obj);
 
 // Shape list
 bool PyShapeSequenceCheck(PyObject* obj);
-std::vector<Shape> PyUnpackShapeSequence(PyObject* obj);
+Maybe<std::vector<Shape>> PyUnpackShapeSequence(PyObject* obj);
 
 // Generator
 bool PyGeneratorCheck(PyObject* obj);
-std::shared_ptr<Generator> PyUnpackGenerator(PyObject* obj);
+Maybe<Generator> PyUnpackGenerator(PyObject* obj);
 
 // Device
 bool PyDeviceCheck(PyObject* obj);
-Symbol<Device> PyUnpackDevice(PyObject* obj);
+Maybe<Symbol<Device>> PyUnpackDevice(PyObject* obj);
 
 // Placement
 bool PyParallelDescCheck(PyObject* obj);
-Symbol<ParallelDesc> PyUnpackParallelDesc(PyObject* obj);
+Maybe<Symbol<ParallelDesc>> PyUnpackParallelDesc(PyObject* obj);
 
 // SBP
 bool PySbpParallelCheck(PyObject* obj);
-Symbol<SbpParallel> PyUnpackSbpParallel(PyObject* obj);
+Maybe<Symbol<SbpParallel>> PyUnpackSbpParallel(PyObject* obj);
 
 // SBP list
 bool PySbpParallelSequenceCheck(PyObject* obj);
-std::vector<Symbol<SbpParallel>> PyUnpackSbpParallelSequence(PyObject* obj);
+Maybe<std::vector<Symbol<SbpParallel>>> PyUnpackSbpParallelSequence(PyObject* obj);
 
 // Tensor index
 bool PyTensorIndexCheck(PyObject* obj);
-TensorIndex PyUnpackTensorIndex(PyObject* obj);
+Maybe<TensorIndex> PyUnpackTensorIndex(PyObject* obj);
 
 // OpExpr
 bool PyOpExprCheck(PyObject* obj);
-std::shared_ptr<OpExpr> PyUnpackOpExpr(PyObject* obj);
-
-template<typename T>
-inline PyObject* CastToPyObject(T&& t) {
-  return py::cast(t).inc_ref().ptr();
-}
-
-template<>
-inline PyObject* CastToPyObject<Maybe<Tensor>>(Maybe<Tensor>&& t) {
-  return PyTensor_New(t.GetPtrOrThrow());
-}
-
-template<>
-inline PyObject* CastToPyObject<Maybe<TensorTuple>>(Maybe<TensorTuple>&& t) {
-  const auto& tensor_tuple = t.GetPtrOrThrow();
-  py::tuple tup(tensor_tuple->size());
-  for (int i = 0; i < tensor_tuple->size(); ++i) { tup[i] = py::cast(tensor_tuple->at(i)); }
-  return py::cast<py::object>(tup).inc_ref().ptr();
-}
-
-template<>
-inline PyObject* CastToPyObject<Maybe<void>>(Maybe<void>&& t) {
-  t.GetOrThrow();
-  Py_RETURN_NONE;
-}
+Maybe<OpExpr> PyUnpackOpExpr(PyObject* obj);
 
 // int64_t
 Maybe<int64_t> PyUnpackLong(PyObject* py_obj);

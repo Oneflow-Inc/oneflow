@@ -269,7 +269,4 @@ class AdamW(Optimizer):
 
     @property
     def support_sparse(self):
-        """Whether AdamW Optimizer support sparse update. 
-
-        """
         return True

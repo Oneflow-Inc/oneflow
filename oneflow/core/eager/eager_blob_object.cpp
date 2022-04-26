@@ -64,8 +64,7 @@ Maybe<void> EagerBlobObject::TryAllocateBlobBodyMemory(DeviceCtx* device_ctx) {
     return Maybe<void>::Ok();
   }
   if (tensor_storage_->blob_dptr() != nullptr) {
-    CHECK_GE_OR_RETURN(tensor_storage_->blob_bytes(), blob->ByteSizeOfBlobBody())
-        << "This blob has been allocated memory, but less than needed space.";
+    CHECK_GE_OR_RETURN(tensor_storage_->blob_bytes(), required_body_bytes);
     return Maybe<void>::Ok();
   }
   {

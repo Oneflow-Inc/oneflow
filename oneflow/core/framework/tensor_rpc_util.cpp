@@ -30,7 +30,7 @@ limitations under the License.
 namespace oneflow {
 namespace private_details {
 
-struct FlatTensorConsistency;
+class FlatTensorConsistency;
 
 class CheckConsistencyAsyncTransportCtx : public AsyncTransportCtx {
  public:

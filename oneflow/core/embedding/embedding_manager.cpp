@@ -24,8 +24,6 @@ namespace embedding {
 
 #ifdef WITH_CUDA
 
-constexpr size_t kDefaultMaxQueryLength = 65536;
-
 KeyValueStore* EmbeddingManager::GetKeyValueStore(const std::string& embedding_name,
                                                   int64_t rank_id) {
   std::pair<std::string, int64_t> map_key = std::make_pair(embedding_name, rank_id);
@@ -63,9 +61,7 @@ void EmbeddingManager::CreateKeyValueStore(const KeyValueStoreOptions& key_value
     std::unique_ptr<Cache> cache = NewCache(cache_options.at(i));
     store = NewCachedKeyValueStore(std::move(store), std::move(cache));
   }
-  store->ReserveQueryLength(kDefaultMaxQueryLength);
-  CHECK(key_value_store_map_.emplace(map_key, std::move(store)).second)
-      << "Can't create an embedding with same name of an existing embedding, the name: " << name;
+  key_value_store_map_.emplace(map_key, std::move(store));
 }
 
 void EmbeddingManager::SaveSnapshot(const std::string& embedding_name, int64_t local_rank_id,

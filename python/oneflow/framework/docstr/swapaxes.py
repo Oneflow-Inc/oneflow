@@ -17,10 +17,8 @@ import oneflow
 from oneflow.framework.docstr.utils import add_docstr
 
 add_docstr(
-    oneflow._C.swapaxes,
-    """swapaxes(input, axis0, axis1) -> Tensor
-    
-    This function is equivalent to NumPy’s swapaxes function.
+    oneflow.swapaxes,
+    """This function is equivalent to NumPy’s swapaxes function.
 
     For example:
 

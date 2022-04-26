@@ -175,7 +175,6 @@ class ConvGpuKernel final : public user_op::OpKernel, public user_op::CudaGraphS
   void Compute(user_op::KernelComputeContext* ctx, user_op::OpKernelState*,
                const user_op::OpKernelCache* cache) const override {
     const user_op::Tensor* in = ctx->Tensor4ArgNameAndIndex("in", 0);
-    if (in->shape().elem_cnt() == 0) return;
     const user_op::Tensor* weight = ctx->Tensor4ArgNameAndIndex("weight", 0);
     user_op::Tensor* buf = ctx->Tensor4ArgNameAndIndex("tmp_buffer", 0);
     user_op::Tensor* out = ctx->Tensor4ArgNameAndIndex("out", 0);
@@ -219,7 +218,6 @@ class ConvGpuKernel final : public user_op::OpKernel, public user_op::CudaGraphS
                        && (user_op::HobDataType("in", 0) == GetDataType<dtype>::value))            \
       .SetInferTmpSizeFn([](user_op::InferContext* ctx) -> size_t {                                \
         const auto& in = ctx->InputTensorDesc("in", 0);                                            \
-        if (in.shape().elem_cnt() == 0) return 0;                                                  \
         const auto& weight = ctx->InputTensorDesc("weight", 0);                                    \
         const auto* out = ctx->OutputTensorDesc("out", 0);                                         \
         const auto& cudnn_conf = Global<ResourceDesc, ForSession>::Get()->resource().cudnn_conf(); \
@@ -252,7 +250,6 @@ class ConvDataGradGpuKernel final : public user_op::OpKernel, public user_op::Cu
     const user_op::Tensor* dy = ctx->Tensor4ArgNameAndIndex("dy", 0);
     const user_op::Tensor* filter = ctx->Tensor4ArgNameAndIndex("filter", 0);
     user_op::Tensor* dx = ctx->Tensor4ArgNameAndIndex("dx", 0);
-    if (dx->shape().elem_cnt() == 0) return;
     user_op::Tensor* buf = ctx->Tensor4ArgNameAndIndex("tmp_buffer", 0);
     const auto& cudnn_conf = Global<ResourceDesc, ForSession>::Get()->resource().cudnn_conf();
 
@@ -300,7 +297,6 @@ class ConvDataGradGpuKernel final : public user_op::OpKernel, public user_op::Cu
         const auto& dy = ctx->InputTensorDesc("dy", 0);                                            \
         const auto& filter = ctx->InputTensorDesc("filter", 0);                                    \
         const auto* dx = ctx->OutputTensorDesc("dx", 0);                                           \
-        if (dx->shape().elem_cnt() == 0) return 0;                                                 \
         const auto& cudnn_conf = Global<ResourceDesc, ForSession>::Get()->resource().cudnn_conf(); \
         return InferTmpSizeWithCudnn<cudnnConvolutionBwdDataAlgoPerf_t>(                           \
             dx, &filter, &dy, *ctx, cudnn_conf.has_cudnn_conv_force_bwd_data_algo(),               \
@@ -332,11 +328,6 @@ class ConvFilterGradGpuKernel final : public user_op::OpKernel, public user_op::
     const user_op::Tensor* dy = ctx->Tensor4ArgNameAndIndex("dy", 0);
     const user_op::Tensor* x = ctx->Tensor4ArgNameAndIndex("x", 0);
     user_op::Tensor* filter_diff = ctx->Tensor4ArgNameAndIndex("filter_diff", 0);
-    if (x->shape().elem_cnt() == 0) {
-      Memset<DeviceType::kCUDA>(ctx->stream(), filter_diff->mut_dptr<T>(), 0,
-                                filter_diff->shape().elem_cnt() * sizeof(T));
-      return;
-    }
     user_op::Tensor* buf = ctx->Tensor4ArgNameAndIndex("tmp_buffer", 0);
     const auto& cudnn_conf = Global<ResourceDesc, ForSession>::Get()->resource().cudnn_conf();
 
@@ -370,7 +361,6 @@ class ConvFilterGradGpuKernel final : public user_op::OpKernel, public user_op::
       .SetInferTmpSizeFn([](user_op::InferContext* ctx) -> size_t {                                \
         const auto& dy = ctx->InputTensorDesc("dy", 0);                                            \
         const auto& x = ctx->InputTensorDesc("x", 0);                                              \
-        if (x.shape().elem_cnt() == 0) return 0;                                                   \
         const auto* filter_diff = ctx->OutputTensorDesc("filter_diff", 0);                         \
         const auto& cudnn_conf = Global<ResourceDesc, ForSession>::Get()->resource().cudnn_conf(); \
         return InferTmpSizeWithCudnn<cudnnConvolutionBwdFilterAlgoPerf_t>(                         \

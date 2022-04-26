@@ -128,12 +128,6 @@ class SGD(Optimizer):
         )
 
     def step(self, closure: Callable = None):
-        """Performs a single optimization step.
-
-        Args:
-            closure (callable, optional): A closure that reevaluates the model
-                and returns the loss.
-        """
         with flow.no_grad():
             loss = None
             if closure is not None:
@@ -193,7 +187,4 @@ class SGD(Optimizer):
 
     @property
     def support_sparse(self):
-        """Whether SGD Optimizer support sparse update. 
-
-        """
         return True

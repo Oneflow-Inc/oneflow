@@ -22,8 +22,6 @@ namespace oneflow {
 
 namespace ep {
 
-class CpuDevice;
-
 class CpuDeviceManager : public DeviceManager {
  public:
   OF_DISALLOW_COPY_AND_MOVE(CpuDeviceManager);
@@ -41,7 +39,7 @@ class CpuDeviceManager : public DeviceManager {
  private:
   size_t device_num_threads_;
   std::mutex device_mutex_;
-  std::shared_ptr<CpuDevice> device_;
+  std::shared_ptr<Device> device_;
   DeviceManagerRegistry* registry_;
 };
 

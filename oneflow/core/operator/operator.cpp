@@ -845,9 +845,7 @@ Maybe<void> Operator::InferNdSbpSignature(
     for (const auto& ibn : input_bns()) {
       const NdSbpInferHint* hint = JUST(NdSbpInferHint4Ibn(ibn));
       if (hint->nd_sbp().sbp_parallel_size() != 1) {
-        CHECK_OR_RETURN(Is1dSbp(hint->nd_sbp()) || hint->parallel_desc().parallel_num() == 1)
-            << op_name() << ", " << *JUST(PlacementToString(hint->parallel_desc())) << ", "
-            << NdSbpToString(hint->nd_sbp());
+        CHECK_OR_RETURN(Is1dSbp(hint->nd_sbp()) || hint->parallel_desc().parallel_num() == 1);
       }
       ibn2sbp_infer_hint.emplace(ibn,
                                  SbpInferHint(&hint->parallel_desc(), &hint->logical_blob_desc(),

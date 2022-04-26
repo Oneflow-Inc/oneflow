@@ -67,8 +67,7 @@ namespace impl {
   OF_PP_MAKE_TUPLE_SEQ("sqrt", Sqrt)             \
   OF_PP_MAKE_TUPLE_SEQ("square", Square)         \
   OF_PP_MAKE_TUPLE_SEQ("tan", Tan)               \
-  OF_PP_MAKE_TUPLE_SEQ("tanh", Tanh)             \
-  OF_PP_MAKE_TUPLE_SEQ("not_equal_zero", NotEqualZero)
+  OF_PP_MAKE_TUPLE_SEQ("tanh", Tanh)
 
 #define LOGICAL_FLOAT_UNARY_FUNC_SEQ OF_PP_MAKE_TUPLE_SEQ("logical_not", LogicalNot)
 
@@ -152,7 +151,6 @@ ONEFLOW_FUNCTION_LIBRARY(m) {
   ADD_UNARY_FUNCTOR(Square, "Square");
   ADD_UNARY_FUNCTOR(Tan, "Tan");
   ADD_UNARY_FUNCTOR(Tanh, "Tanh");
-  ADD_UNARY_FUNCTOR(NotEqualZero, "NotEqualZero")
   m.add_functor<LogicalNotFunctor>("LogicalNot");
   m.add_functor<InplaceSinFunctor>("Sin_");
   m.add_functor<InplaceFloorFunctor>("Floor_");

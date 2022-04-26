@@ -58,27 +58,37 @@ bool PyStringSequenceCheck(PyObject* obj) {
   return PySequenceCheck(obj, [](PyObject* item) { return PyStringCheck(item); });
 }
 
-std::string PyStringAsString(PyObject* obj) {
-  PyObject* bytes = PyUnicode_AsEncodedString(obj, "utf-8", "~E~");
+Maybe<std::string> PyStringAsString(PyObject* str_obj) {
+  PyObject* bytes = PyUnicode_AsEncodedString(str_obj, "utf-8", "~E~");
   std::string str = PyBytes_AS_STRING(bytes);
   Py_XDECREF(bytes);
   return str;
 }
 
-std::string PyObjectToReprStr(PyObject* obj) {
+Maybe<std::string> PyObjectToReprStr(PyObject* obj) {
   PyObject* repr_obj = PyObject_Repr(obj);
-  std::string str = PyStringAsString(repr_obj);
+  std::string str = *JUST(PyStringAsString(repr_obj));
   Py_XDECREF(repr_obj);
   return str;
 }
 
+bool PyTensorCheck(PyObject* obj) {
+  auto handle = py::reinterpret_borrow<py::object>(obj);
+  return py::isinstance<Tensor>(handle);
+}
+
+Maybe<Tensor> PyUnpackTensor(PyObject* obj) {
+  auto handle = py::reinterpret_borrow<py::object>(obj);
+  return py::cast<std::shared_ptr<Tensor>>(handle);
+}
+
 // Tensor list
 bool PyTensorSequenceCheck(PyObject* obj) {
-  return PySequenceCheck(obj, [](PyObject* item) { return PyTensor_Check(item); });
+  return PySequenceCheck(obj, [](PyObject* item) { return PyTensorCheck(item); });
 }
-std::vector<std::shared_ptr<Tensor>> PyUnpackTensorSequence(PyObject* obj) {
+Maybe<std::vector<std::shared_ptr<Tensor>>> PyUnpackTensorSequence(PyObject* obj) {
   return PyUnpackSequence<std::shared_ptr<Tensor>>(
-      obj, [](PyObject* item) { return PyTensor_Unpack(item); });
+      obj, [](PyObject* item) { return PyUnpackTensor(item); });
 }
 
 // TensorTuple
@@ -87,7 +97,7 @@ bool PyTensorTupleCheck(PyObject* obj) {
   return py::isinstance<TensorTuple>(handle);
 }
 
-std::shared_ptr<TensorTuple> PyUnpackTensorTuple(PyObject* obj) {
+Maybe<TensorTuple> PyUnpackTensorTuple(PyObject* obj) {
   auto handle = py::reinterpret_borrow<py::object>(obj);
   return py::cast<std::shared_ptr<TensorTuple>>(handle);
 }
@@ -95,16 +105,15 @@ std::shared_ptr<TensorTuple> PyUnpackTensorTuple(PyObject* obj) {
 // Scalar
 bool PyScalarCheck(PyObject* obj) { return PyLong_Check(obj) || PyFloat_Check(obj); }
 
-Scalar PyUnpackScalar(PyObject* obj) {
+Maybe<Scalar> PyUnpackScalar(PyObject* obj) {
   if (PyBool_Check(obj)) {
-    return obj == Py_True;
+    return std::make_shared<Scalar>(obj == Py_True);
   } else if (PyLong_Check(obj)) {
-    return static_cast<int64_t>(PyLong_AsLongLong(obj));
+    return std::make_shared<Scalar>(static_cast<int64_t>(PyLong_AsLongLong(obj)));
   } else if (PyFloat_Check(obj)) {
-    return PyFloat_AsDouble(obj);
+    return std::make_shared<Scalar>(PyFloat_AsDouble(obj));
   }
-  THROW(RuntimeError) << "The object is not scalar, but is " << Py_TYPE(obj)->tp_name;
-  return 0;
+  UNIMPLEMENTED_THEN_RETURN() << "The object is not scalar, but is " << Py_TYPE(obj)->tp_name;
 }
 
 // DType
@@ -112,7 +121,7 @@ bool PyDTypeCheck(PyObject* obj) {
   auto handle = py::reinterpret_borrow<py::object>(obj);
   return py::isinstance<Symbol<DType>>(handle);
 }
-Symbol<DType> PyUnpackDType(PyObject* obj) {
+Maybe<Symbol<DType>> PyUnpackDType(PyObject* obj) {
   auto handle = py::reinterpret_borrow<py::object>(obj);
   return *py::cast<Symbol<DType>*>(handle);
 }
@@ -121,7 +130,7 @@ Symbol<DType> PyUnpackDType(PyObject* obj) {
 bool PyDTypeSequenceCheck(PyObject* obj) {
   return PySequenceCheck(obj, [](PyObject* item) { return PyDTypeCheck(item); });
 }
-std::vector<Symbol<DType>> PyUnpackDTypeSequence(PyObject* obj) {
+Maybe<std::vector<Symbol<DType>>> PyUnpackDTypeSequence(PyObject* obj) {
   return PyUnpackSequence<Symbol<DType>>(obj, [](PyObject* item) { return PyUnpackDType(item); });
 }
 
@@ -129,10 +138,10 @@ std::vector<Symbol<DType>> PyUnpackDTypeSequence(PyObject* obj) {
 bool PyShapeSequenceCheck(PyObject* obj) {
   return PySequenceCheck(obj, [](PyObject* item) { return PyLongSequenceCheck(item); });
 }
-std::vector<Shape> PyUnpackShapeSequence(PyObject* obj) {
-  return PyUnpackSequence<Shape>(obj, [](PyObject* item) -> Shape {
-    const auto& shape = PyUnpackLongSequence<int64_t>(item);
-    return Shape(DimVector(shape.begin(), shape.end()));
+Maybe<std::vector<Shape>> PyUnpackShapeSequence(PyObject* obj) {
+  return PyUnpackSequence<Shape>(obj, [](PyObject* item) -> Maybe<Shape> {
+    const auto& shape = JUST(PyUnpackLongSequence<int64_t>(item));
+    return std::make_shared<Shape>(DimVector(shape->begin(), shape->end()));
   });
 }
 
@@ -141,7 +150,7 @@ bool PyGeneratorCheck(PyObject* obj) {
   auto handle = py::reinterpret_borrow<py::object>(obj);
   return py::isinstance<Generator>(handle);
 }
-std::shared_ptr<Generator> PyUnpackGenerator(PyObject* obj) {
+Maybe<Generator> PyUnpackGenerator(PyObject* obj) {
   auto handle = py::reinterpret_borrow<py::object>(obj);
   return py::cast<std::shared_ptr<one::Generator>>(handle);
 }
@@ -151,7 +160,7 @@ bool PyDeviceCheck(PyObject* obj) {
   auto handle = py::reinterpret_borrow<py::object>(obj);
   return py::isinstance<Symbol<Device>>(handle);
 }
-Symbol<Device> PyUnpackDevice(PyObject* obj) {
+Maybe<Symbol<Device>> PyUnpackDevice(PyObject* obj) {
   auto handle = py::reinterpret_borrow<py::object>(obj);
   return *py::cast<std::shared_ptr<Symbol<Device>>>(handle);
 }
@@ -161,7 +170,7 @@ bool PyParallelDescCheck(PyObject* obj) {
   auto handle = py::reinterpret_borrow<py::object>(obj);
   return py::isinstance<Symbol<ParallelDesc>>(handle);
 }
-Symbol<ParallelDesc> PyUnpackParallelDesc(PyObject* obj) {
+Maybe<Symbol<ParallelDesc>> PyUnpackParallelDesc(PyObject* obj) {
   auto handle = py::reinterpret_borrow<py::object>(obj);
   return *py::cast<std::shared_ptr<Symbol<ParallelDesc>>>(handle);
 }
@@ -171,7 +180,7 @@ bool PySbpParallelCheck(PyObject* obj) {
   auto handle = py::reinterpret_borrow<py::object>(obj);
   return py::isinstance<Symbol<SbpParallel>>(handle);
 }
-Symbol<SbpParallel> PyUnpackSbpParallel(PyObject* obj) {
+Maybe<Symbol<SbpParallel>> PyUnpackSbpParallel(PyObject* obj) {
   auto handle = py::reinterpret_borrow<py::object>(obj);
   return *py::cast<std::shared_ptr<Symbol<SbpParallel>>>(handle);
 }
@@ -180,29 +189,29 @@ Symbol<SbpParallel> PyUnpackSbpParallel(PyObject* obj) {
 bool PySbpParallelSequenceCheck(PyObject* obj) {
   return PySequenceCheck(obj, [](PyObject* item) { return PySbpParallelCheck(item); });
 }
-std::vector<Symbol<SbpParallel>> PyUnpackSbpParallelSequence(PyObject* obj) {
+Maybe<std::vector<Symbol<SbpParallel>>> PyUnpackSbpParallelSequence(PyObject* obj) {
   return PyUnpackSequence<Symbol<SbpParallel>>(
       obj, [](PyObject* item) { return PyUnpackSbpParallel(item); });
 }
 
 // Tensor index
 bool PyTensorIndexCheck(PyObject* obj) {
-  return PySlice_Check(obj) || PyLong_Check(obj) || obj == Py_Ellipsis || obj == Py_None
-         || PyTensor_Check(obj) || PySequence_Check(obj) || PyUnicode_Check(obj)
-         || numpy::PyArrayCheckLongScalar(obj);
+  return PySlice_Check(obj) || PyLong_Check(obj) || numpy::PyArrayCheckLongScalar(obj)
+         || obj == Py_Ellipsis || obj == Py_None || PyTensorCheck(obj) || PySequence_Check(obj)
+         || PyUnicode_Check(obj);
 }
-TensorIndex PyUnpackTensorIndex(PyObject* obj) {
-  TensorIndex tensor_index;
+Maybe<TensorIndex> PyUnpackTensorIndex(PyObject* obj) {
+  auto tensor_index = std::make_shared<TensorIndex>();
   // Obvious single-entry cases.
   if (PySlice_Check(obj)                     // NOLINT
       || PyLong_Check(obj)                   // NOLINT
+      || numpy::PyArrayCheckLongScalar(obj)  // NOLINT
       || obj == Py_Ellipsis                  // NOLINT
       || obj == Py_None                      // NOLINT
-      || PyTensor_Check(obj)                 // NOLINT
+      || PyTensorCheck(obj)                  // NOLINT
       || !PySequence_Check(obj)              // NOLINT
-      || numpy::PyArrayCheckLongScalar(obj)  // NOLINT
       || PyUnicode_Check(obj)) {
-    tensor_index.emplace_back(detail::UnpackIndexItem(obj));
+    tensor_index->emplace_back(*JUST(detail::UnpackIndexItem(obj)));
     return tensor_index;
   }
   PyObject* tup = NULL;
@@ -223,7 +232,7 @@ TensorIndex PyUnpackTensorIndex(PyObject* obj) {
     // Negative size indicates a Python error in the PySequence_Size call.
     if (n < 0) {
       PyErr_Clear();
-      tensor_index.emplace_back(detail::UnpackIndexItem(obj));
+      tensor_index->emplace_back(*JUST(detail::UnpackIndexItem(obj)));
       return tensor_index;
     }
     // The follow comments are from numpy:
@@ -238,7 +247,7 @@ TensorIndex PyUnpackTensorIndex(PyObject* obj) {
      * tuple. (`a[[[1,2], [3,4]]] == a[[1,2], [3,4]]`)
      */
     if (n >= /*NPY_MAXDIMS=*/32) {
-      tensor_index.emplace_back(detail::UnpackIndexItem(obj));
+      tensor_index->emplace_back(*JUST(detail::UnpackIndexItem(obj)));
       return tensor_index;
     }
     // Check whether we should unpack the index like a tuple.
@@ -246,15 +255,15 @@ TensorIndex PyUnpackTensorIndex(PyObject* obj) {
     for (Py_ssize_t i = 0; i < n; ++i) {
       PyObject* item = PySequence_GetItem(obj, i);
       if (commit_to_unpack) {
-        CHECK_OR_THROW(item) << "Sequence index is required.";
+        CHECK_OR_RETURN(item) << "Sequence index is required.";
       } else {
         if (!item) {
           PyErr_Clear();
           break;
         }
-        if (PySequence_Check(item)   // NOLINT
-            || PySlice_Check(item)   // NOLINT
-            || PyTensor_Check(item)  // NOLINT
+        if (PySequence_Check(item)  // NOLINT
+            || PySlice_Check(item)  // NOLINT
+            || PyTensorCheck(item)  // NOLINT
             || item == Py_Ellipsis || item == Py_None) {
           commit_to_unpack = true;
         }
@@ -264,15 +273,15 @@ TensorIndex PyUnpackTensorIndex(PyObject* obj) {
     if (commit_to_unpack) {
       tup = PySequence_Tuple(obj);
     } else {
-      tensor_index.emplace_back(detail::UnpackIndexItem(obj));
+      tensor_index->emplace_back(*JUST(detail::UnpackIndexItem(obj)));
       return tensor_index;
     }
   }
 
-  tensor_index.resize(n);
+  tensor_index->resize(n);
   for (Py_ssize_t i = 0; i < n; ++i) {
     PyObject* item = PySequence_GetItem(tup, i);
-    tensor_index[i] = detail::UnpackIndexItem(item);
+    tensor_index->at(i) = *JUST(detail::UnpackIndexItem(item));
     Py_DECREF(item);
   }
   Py_DECREF(tup);
@@ -285,7 +294,7 @@ bool PyOpExprCheck(PyObject* obj) {
   return py::isinstance<OpExpr>(handle);
 }
 
-std::shared_ptr<OpExpr> PyUnpackOpExpr(PyObject* obj) {
+Maybe<OpExpr> PyUnpackOpExpr(PyObject* obj) {
   auto handle = py::reinterpret_borrow<py::object>(obj);
   return py::cast<std::shared_ptr<OpExpr>>(handle);
 }

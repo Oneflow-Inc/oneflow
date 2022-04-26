@@ -100,7 +100,7 @@ FLAT_MSG_BEGIN(InstructionStatusBuffer);
 FLAT_MSG_END(InstructionStatusBuffer);
 // clang-format on
 
-class Instruction;
+struct Instruction;
 class InstructionEdge final
     : public intrusive::Base,
       public intrusive::EnableObjectPool<InstructionEdge,
@@ -149,7 +149,7 @@ class InstructionEdge final
   intrusive::ListHook out_edge_hook_;
 };
 
-class Stream;
+struct Stream;
 class Instruction final : public intrusive::Base {
  public:
   // types

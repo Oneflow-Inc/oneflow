@@ -121,7 +121,7 @@ class ReduceLROnPlateau(object):
         self._reset()
 
     def step(self, metrics):
-        """Performs a single learning rate schedule step.
+        """Step forward once.
 
         Arguments:
             metrics (float): a metrics quantity of Measuring the effect of model training.
@@ -149,15 +149,9 @@ class ReduceLROnPlateau(object):
 
     @property
     def in_cooldown(self):
-        """Whether the learning rate scheduler in cooldown phase. 
-
-        """
         return self.cooldown_counter > 0
 
     def is_better(self, a, best):
-        """Whether the metric has improvement. 
-        
-        """
         if self.mode == "min" and self.threshold_mode == "rel":
             rel_epsilon = 1.0 - self.threshold
             return a < best * rel_epsilon

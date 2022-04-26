@@ -21,7 +21,7 @@ namespace ep {
 
 DeviceType CpuStream::device_type() const { return DeviceType::kCPU; }
 
-CpuDevice* CpuStream::device() const { return device_; }
+Device* CpuStream::device() const { return device_; }
 
 Maybe<void> CpuStream::Sync() { return Maybe<void>::Ok(); }
 

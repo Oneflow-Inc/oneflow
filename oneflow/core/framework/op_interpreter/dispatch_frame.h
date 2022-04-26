@@ -26,8 +26,7 @@ class DispatchFrame {
   DispatchFrame() = delete;
   ~DispatchFrame() = delete;
 
-  static const std::string& get_str();
-  static void set_str(const std::string& str);
+  static std::string get_str();
 
   class Guard {
    public:
@@ -42,6 +41,7 @@ class DispatchFrame {
 
  private:
   static std::string* get_str_ptr();
+  static void set_str(std::string str);
 };
 
 }  // namespace oneflow
