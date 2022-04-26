@@ -76,25 +76,8 @@ class GraphSaveTestCase(flow.unittest.TestCase):
         job = job_pb.Job()
         job.ParseFromString(serialized_job)
 
-        op_list = []
-        op_list_ = []
+        # TODO: run loaded job as graph and original graph, compare the result
 
-        for op in job.net.op:
-            op_list.append(op)
-
-        for op in graph._forward_job_proto.net.op:
-            op_list_.append(op)
-
-        def sort_by_op_name(op):
-            return op.name
-
-        op_list.sort(key=sort_by_op_name)
-        op_list_.sort(key=sort_by_op_name)
-
-        for (op, op_) in zip(op_list, op_list_):
-            # TODO: convert loc in MLIR
-            op_.ClearField("loc")
-            self.assertTrue(op == op_, {"op": op, "op_": op_})
 
 
 if __name__ == "__main__":
