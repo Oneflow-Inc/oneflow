@@ -28,10 +28,7 @@ def _test_search_sorted(test_case, placement, sbp, ndim):
     sorted_sequence = random_tensor(ndim, *dims).to_global(placement, sbp)
     values = random_tensor(ndim, *dims).to_global(placement, sbp)
     y = torch.searchsorted(
-        sorted_sequence,
-        values,
-        out_int32=oneof(True, False),
-        right=oneof(True, False),
+        sorted_sequence, values, out_int32=oneof(True, False), right=oneof(True, False),
     )
     return y
 
