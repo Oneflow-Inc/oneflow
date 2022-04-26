@@ -30,17 +30,21 @@ class TestModule(flow.unittest.TestCase):
         x = flow.tensor(3.14)
         with test_case.assertRaises(RuntimeError) as ctx:
             y = flow.chunk(x, chunks=1, dim=0)
-        test_case.assertTrue("chunk expects at least a 1-dimensional tensor" in str(ctx.exception))
-    
+        test_case.assertTrue(
+            "chunk expects at least a 1-dimensional tensor" in str(ctx.exception)
+        )
+
     def test_chunk_0_chunks_param_exception(test_case):
         # torch exception and messge:
         #
         #   RuntimeError: chunk expects `chunks` to be greater than 0, got: 0
         #
-        x = flow.tensor([[1,2,3], [4,5,6]])
+        x = flow.tensor([[1, 2, 3], [4, 5, 6]])
         with test_case.assertRaises(RuntimeError) as ctx:
             y = flow.chunk(x, chunks=0, dim=0)
-        test_case.assertTrue("chunk expects `chunks` to be greater than 0, got: " in str(ctx.exception))
+        test_case.assertTrue(
+            "chunk expects `chunks` to be greater than 0, got: " in str(ctx.exception)
+        )
 
 
 if __name__ == "__main__":

@@ -42,7 +42,7 @@ class TestChunk(flow.unittest.TestCase):
         y = torch.chunk(x, chunks=random(low=1, high=5).to(int), dim=dim)
         z = torch.cat(y, dim=dim)
         return z
-    
+
     @autotest(n=10)
     def test_flow_chunk_list_with_random_data(test_case):
         device = random_device()
